@@ -1,0 +1,12 @@
+Compiling(3)
+============
+Sandro Dias_Pinto Vitenti <sandro@isoftware.com.br>
+
+NAME
+----
+Compiling - How to compile NumCosmo
+
+FIXME
+-----
+
+FIXME

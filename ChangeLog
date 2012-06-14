@@ -1,0 +1,99 @@
+2008-08-15  Sandro Vitenti  <sandro@vitenti>
+
+	* tools/Makefile.am:
+
+2008-08-04  Sandro Vitenti  <sandro@vitenti>
+
+  * Moving headers from src/ to include/
+	* Makefile.am: Adding doc stub and gtk-doc
+	* autogen.sh:  Adding doc stub and gtk-doc
+	* configure.ac: Adding doc stub and gtk-doc
+	* docs/Makefile.am: Adding doc stub and gtk-doc
+	* docs/reference/Makefile.am: Adding doc stub and gtk-doc
+	* example/Makefile.am: Adding doc stub and gtk-doc
+	* example/q-piecewise.c (main): Adding doc stub and gtk-doc
+	* include/Makefile.am: Adding doc stub and gtk-doc
+	* include/data.h: Adding doc stub and gtk-doc
+	* include/dataset.h: Adding doc stub and gtk-doc
+	* include/distances.h: Adding doc stub and gtk-doc
+	* include/flrw.h: Adding doc stub and gtk-doc
+	* include/functions.h: Adding doc stub and gtk-doc
+	* include/healpix.h: Adding doc stub and gtk-doc
+	* include/kinematics.h: Adding doc stub and gtk-doc
+	* include/macros.h: Adding doc stub and gtk-doc
+	* include/map.h: Adding doc stub and gtk-doc
+	* include/parameters.h: Adding doc stub and gtk-doc
+	* include/priors.h: Adding doc stub and gtk-doc
+	* include/types.h: Adding doc stub and gtk-doc
+	* src/Makefile.am: Adding doc stub and gtk-doc
+	* src/data.c: Adding doc stub and gtk-doc
+	* src/data.h: Adding doc stub and gtk-doc
+	* src/dataset.c (cl_dataset_bootstrap): Adding doc stub and gtk-doc
+	* src/dataset.h: Adding doc stub and gtk-doc
+	* src/distances.c: Adding doc stub and gtk-doc
+	* src/distances.h: Adding doc stub and gtk-doc
+	* src/estimators.c: Adding doc stub and gtk-doc
+	* src/flrw.h: Adding doc stub and gtk-doc
+	* src/functions.c: Adding doc stub and gtk-doc
+	* src/functions.h: Adding doc stub and gtk-doc
+	* src/healpix.h: Adding doc stub and gtk-doc
+	* src/kinematics.c: Adding doc stub and gtk-doc
+	* src/kinematics.h: Adding doc stub and gtk-doc
+	* src/likelihood.c (cl_fit_new), 
+	(cl_likelihood_priors_grad): Adding doc stub and gtk-doc
+	* src/likelihood.h: Adding doc stub and gtk-doc
+	* src/likelihood/Makefile.am: Adding doc stub and gtk-doc
+	* src/likelihood/confidence-region.c: Adding doc stub and gtk-doc
+	* src/likelihood/least-squares.c: Adding doc stub and gtk-doc
+	* src/likelihood/multimin-simplex.c: Adding doc stub and gtk-doc
+	* src/likelihood/multimin.c: Adding doc stub and gtk-doc
+	* src/macros.h: Adding doc stub and gtk-doc
+	* src/map.h: Adding doc stub and gtk-doc
+	* src/model.c: Adding doc stub and gtk-doc
+	* src/model.h: Adding doc stub and gtk-doc
+	* src/model/E-spline.c: Adding doc stub and gtk-doc
+	* src/model/Makefile.am: Adding doc stub and gtk-doc
+	* src/model/darkenergy.c: Adding doc stub and gtk-doc
+	* src/model/lcdm.c: Adding doc stub and gtk-doc
+	* src/model/linder.c: Adding doc stub and gtk-doc
+	* src/model/padmanabhan.c: Adding doc stub and gtk-doc
+	* src/model/q-constant.c: Adding doc stub and gtk-doc
+	* src/model/q-linear.c: Adding doc stub and gtk-doc
+	* src/model/q-piecewise.c: Adding doc stub and gtk-doc
+	* src/model/quintessence.c: Adding doc stub and gtk-doc
+	* src/model/xcdm.c: Adding doc stub and gtk-doc
+	* src/parameters.c (cl_params_types_free): Adding doc stub and gtk-doc
+	* src/parameters.h: Adding doc stub and gtk-doc
+	* src/priors.c: Adding doc stub and gtk-doc
+	* src/priors.h: Adding doc stub and gtk-doc
+	* src/sphere/Makefile.am: Adding doc stub and gtk-doc
+	* src/sphere/healpix.c (cl_sphere_healpix_str2type),
+	(cl_sphere_healpix_read_map), (cl_sphere_healpix_write_map): Adding doc stub and gtk-doc
+	* src/sphere/map.c (cl_sphere_map_new), (cl_sphere_map_set_order),
+	(cl_sphere_mapsht_map2alm), (cl_sphere_mapsht_alm2map): Adding doc stub and gtk-doc
+	* src/types.h: Adding doc stub and gtk-doc
+	* src/util.c (func), (cl_util_distance_thread_pool), (func_jac),
+	(cl_util_distance_jac_thread_pool): Adding doc stub and gtk-doc
+	* src/util.h: Adding doc stub and gtk-doc
+	* src/util/Makefile.am: Adding doc stub and gtk-doc
+	* src/util/poly.c: Adding doc stub and gtk-doc
+	* src/util/spline.c: Adding doc stub and gtk-doc
+	* src/util/vector.c: Adding doc stub and gtk-doc
+	* tools/Makefile.am: Adding doc stub and gtk-doc
+	* tools/cmb_maps.c (main): Adding doc stub and gtk-doc
+
+2008-07-16  Sandro Vitenti  <sandro@vitenti>
+
+	* src/healpix.h:
+	* src/macros.h:
+	* src/map.h:
+	* src/sphere/healpix.c (cl_sphere_healpix_read_map),
+	(cl_sphere_healpix_write_map), (cl_sphere_healpix_nest2ring),
+	(cl_sphere_healpix_ring2nest):
+	* src/sphere/map.c (cl_sphere_map_new),
+	(cl_sphere_map_init_coord), (cl_sphere_map_set_order),
+	(cl_sphere_mapsht_alm2map), (cl_sphere_mapsht_alm2map_circle):
+	* src/util.c:
+	* src/util.h:
+	* tools/cmb_maps.c (main):
+

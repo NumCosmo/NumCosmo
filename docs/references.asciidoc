@@ -1,0 +1,19 @@
+References(3)
+=============
+Sandro Dias_Pinto Vitenti <sandro@isoftware.com.br>
+
+NAME
+----
+References - Project Bibliography
+
+Bibliography
+------------
+
+["latex","latex1.png",align="center",entityref="../latex1.png"]
+$y = \int_0^\infty \gamma^2 \cos(x) dx$
+
+
+- [[weinberg_cosmo_book]] Cosmology S. Weinberg
+- [[pequignot1991]] Pequignot et al. (1991)
+- [[hummer1998]] Hummer and Storey (1998)
+

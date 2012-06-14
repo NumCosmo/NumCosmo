@@ -1,0 +1,213 @@
+<?xml version="1.0"?>
+<!DOCTYPE book PUBLIC "-//OASIS//DTD DocBook XML V4.3//EN"
+               "http://www.oasis-open.org/docbook/xml/4.3/docbookx.dtd"
+[
+  <!ENTITY % local.common.attrib "xmlns:xi  CDATA  #FIXED 'http://www.w3.org/2003/XInclude'">
+]>
+<book id="index">
+  <bookinfo>
+    <title>NumCosmo Reference Manual</title>
+    <releaseinfo>
+      for NumCosmo 0.8.0.
+      The latest version of this documentation can be found on-line at
+      <ulink role="online-location" url="http://svitenti.ath.cx/numcosmo/index.html">http://svitenti.ath.cx/numcosmo/</ulink>.
+    </releaseinfo>
+  </bookinfo>
+
+  <xi:include href="theory.xml"/>
+
+  <chapter>
+    <title>NumCosmo Overview</title>
+    <xi:include href="introduction.xml"/>
+    <xi:include href="dependencies.xml"/>
+    <xi:include href="references.xml"/>
+    <xi:include href="compiling.xml"/>
+  </chapter>
+
+  <chapter>
+    <title>Numcosmo Math Objects</title>
+    <xi:include href="xml/ncm_vector.xml"/>
+    <xi:include href="xml/ncm_matrix.xml"/>
+    <xi:include href="xml/ncm_lapack.xml"/>
+    <xi:include href="xml/ncm_sparam.xml"/>
+    <xi:include href="xml/ncm_vparam.xml"/>
+    <xi:include href="xml/ncm_reparam.xml"/>
+    <xi:include href="xml/ncm_reparam_linear.xml"/>
+    <xi:include href="xml/ncm_model.xml"/>
+    <xi:include href="xml/ncm_model_ctrl.xml"/>
+    <xi:include href="xml/ncm_mset.xml"/>
+    <xi:include href="xml/ncm_mset_func.xml"/>
+    <xi:include href="xml/ncm_spline.xml"/>
+    <xi:include href="xml/ncm_spline_gsl.xml"/>
+    <xi:include href="xml/ncm_spline_cubic.xml"/>
+    <xi:include href="xml/ncm_spline_cubic_notaknot.xml"/>
+    <xi:include href="xml/ncm_spline_func.xml"/>
+    <xi:include href="xml/ncm_ode_spline.xml"/>
+    <xi:include href="xml/ncm_spline2d.xml"/>
+    <xi:include href="xml/ncm_spline2d_spline.xml"/>
+    <xi:include href="xml/ncm_spline2d_bicubic.xml"/>
+    <xi:include href="xml/ncm_spline2d_gsl.xml"/>
+    <xi:include href="xml/ncm_fftlog.xml"/>
+    <xi:include href="xml/ncm_cfg.xml"/>
+  </chapter>
+
+  <chapter>
+    <title>Base Objects</title>
+    <xi:include href="xml/nc_constants.xml"/>
+    <xi:include href="xml/nc_macros.xml"/>
+    <xi:include href="xml/recomb.xml"/>
+    <xi:include href="xml/healpix.xml"/>
+    <xi:include href="xml/map.xml"/>
+  </chapter>
+
+  <chapter>
+    <title>Models</title>
+    <xi:include href="xml/nc_hicosmo.xml"/>
+    <xi:include href="xml/nc_hicosmo_lcdm.xml"/>
+    <section>
+      <title>Darkenergy</title>
+      <xi:include href="xml/nc_hicosmo_de.xml"/>
+      <xi:include href="xml/nc_hicosmo_de_xcdm.xml"/>
+      <xi:include href="xml/nc_hicosmo_de_linder.xml"/>
+      <xi:include href="xml/nc_hicosmo_de_pad.xml"/>
+      <xi:include href="xml/nc_hicosmo_de_qe.xml"/>
+      <xi:include href="xml/quantum_gravity.xml"/>
+    </section>
+    <section>
+      <title>Kinematical</title>
+      <xi:include href="xml/nc_hicosmo_qconst.xml"/>
+      <xi:include href="xml/nc_hicosmo_qlinear.xml"/>
+      <xi:include href="xml/nc_hicosmo_qpw.xml"/>
+      <xi:include href="xml/nc_hicosmo_qspline.xml"/>
+    </section>
+  </chapter>
+
+  <chapter>
+    <title>Cosmic Quantities</title>
+    <xi:include href="xml/nc_distance.xml"/>
+    <xi:include href="xml/scalefactor.xml"/>
+  </chapter>
+  
+  <chapter>
+    <title>Perturbations</title>
+    <xi:include href="xml/linear.xml"/>
+    <xi:include href="xml/covariance.xml"/>
+  </chapter>
+
+  <chapter>
+    <title>Large Scale Structure</title>
+    <section>
+      <title>Window Function</title>
+      <xi:include href="xml/nc_window.xml"/>
+      <xi:include href="xml/nc_window_tophat.xml"/>
+      <xi:include href="xml/nc_window_gaussian.xml"/>
+    </section>
+    <section>
+      <title>Transfer Function</title>
+      <xi:include href="xml/nc_transfer_func.xml"/>
+      <xi:include href="xml/nc_transfer_func_bbks.xml"/>
+      <xi:include href="xml/nc_transfer_func_eh.xml"/>
+      <xi:include href="xml/nc_transfer_func_camb.xml"/>
+      <xi:include href="xml/nc_transfer_func_pert.xml"/>
+    </section>
+    <xi:include href="xml/nc_growth_func.xml"/>
+    <xi:include href="xml/nc_matter_var.xml"/>
+    <section>
+      <title>Multiplicity Function</title>
+      <xi:include href="xml/nc_multiplicity_func.xml"/>
+      <xi:include href="xml/nc_multiplicity_func_ps.xml"/>
+      <xi:include href="xml/nc_multiplicity_func_st.xml"/>
+      <xi:include href="xml/nc_multiplicity_func_jenkins.xml"/>
+      <xi:include href="xml/nc_multiplicity_func_warren.xml"/>
+      <xi:include href="xml/nc_multiplicity_func_tinker.xml"/>
+      <xi:include href="xml/nc_multiplicity_func_tinker_mean.xml"/>
+      <xi:include href="xml/nc_multiplicity_func_tinker_crit.xml"/>
+    </section>
+    <xi:include href="xml/nc_mass_function.xml"/>
+    <section>
+      <title>Halo Bias Function Type</title>
+      <xi:include href="xml/nc_halo_bias_type.xml"/>
+      <xi:include href="xml/nc_halo_bias_type_ps.xml"/>
+      <xi:include href="xml/nc_halo_bias_type_st_spher.xml"/>
+      <xi:include href="xml/nc_halo_bias_type_st_ellip.xml"/>
+      <xi:include href="xml/nc_halo_bias_type_tinker.xml"/>
+    </section>
+    <xi:include href="xml/nc_halo_bias_func.xml"/>
+    <xi:include href="xml/nc_galaxy_acf.xml"/>
+    <section>
+      <title>Cluster Photometric Redshift</title>
+      <xi:include href="xml/nc_cluster_photoz.xml"/>
+      <xi:include href="xml/nc_cluster_photoz_gauss_ind.xml"/>
+      <xi:include href="xml/nc_cluster_photoz_gauss_global.xml"/>
+    </section>
+    <xi:include href="xml/nc_cluster_abundance.xml"/>
+    <xi:include href="xml/catalog_parser.xml"/>
+    <xi:include href="xml/data_cluster_abundance.xml"/>
+    <xi:include href="xml/print_data.xml"/>
+    <xi:include href="xml/read_matrix.xml"/>
+  </chapter>
+  
+  <chapter>
+    <title>Cosmological Data</title>
+    <xi:include href="xml/data.xml"/>
+    <xi:include href="xml/dataset.xml"/>
+    <xi:include href="xml/data_gaussian.xml"/>
+    <xi:include href="xml/data_poisson.xml"/>    
+    <xi:include href="xml/data_onevardist.xml"/>
+    <xi:include href="xml/data_cosmic_microwave_background.xml"/>
+    <xi:include href="xml/data_hubble_function.xml"/>
+    <xi:include href="xml/data_baryonic_oscillation.xml"/>
+    <xi:include href="xml/data_distance_modulus.xml"/>
+  </chapter>
+  
+  <chapter>
+    <title>Statistical Analysis</title>
+    <xi:include href="xml/likelihood.xml"/>
+    <xi:include href="xml/priors.xml"/>
+    <xi:include href="xml/ncm_fit.xml"/>
+    <xi:include href="xml/confidence_region.xml"/>
+    <xi:include href="xml/multimin.xml"/>
+    <xi:include href="xml/nc_nlopt.xml"/>
+    <xi:include href="xml/levmar.xml"/>
+    <xi:include href="xml/multimin_simplex.xml"/>
+    <xi:include href="xml/least_squares.xml"/>
+  </chapter>
+
+  <chapter>
+    <title>Mathematical Utilities</title>
+    <xi:include href="xml/dividedifference.xml"/>
+    <xi:include href="xml/binsplit.xml"/>
+    <xi:include href="xml/trig_integral.xml"/>
+    <xi:include href="xml/poly.xml"/>
+    <xi:include href="xml/function_eval.xml"/>
+    <xi:include href="xml/quaternion.xml"/>
+    <xi:include href="xml/util.xml"/>
+    <xi:include href="xml/matrix_exp.xml"/>
+    <xi:include href="xml/mpq_tree.xml"/>
+    <xi:include href="xml/cvode_util.xml"/>
+    <xi:include href="xml/mp_spherical_bessel.xml"/>
+    <xi:include href="xml/magnus_iserles_ode.xml"/>
+    <xi:include href="xml/grid_one.xml"/>
+    <xi:include href="xml/quadrature.xml"/>
+    <xi:include href="xml/mp_spherical_bessel_integral.xml"/>
+    <xi:include href="xml/spherical_bessel.xml"/>
+    <xi:include href="xml/spherical_bessel_integral.xml"/>
+    <xi:include href="xml/mp_hypergeometric_0F1.xml"/>
+    <xi:include href="xml/function_cache.xml"/>
+    <xi:include href="xml/memory_pool.xml"/>
+    <xi:include href="xml/integral.xml"/>
+  </chapter>
+  
+  <chapter id="object-tree">
+    <title>Object Hierarchy</title>
+     <xi:include href="xml/tree_index.sgml"/>
+    <title>Object Index</title>
+     <xi:include href="xml/object_index.sgml"/>
+  </chapter>
+  <index id="api-index-full">
+    <title>API Index</title>
+    <xi:include href="xml/api-index-full.xml"><xi:fallback /></xi:include>
+  </index>
+
+  <xi:include href="xml/annotation-glossary.xml"><xi:fallback /></xi:include>
+</book>

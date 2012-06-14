@@ -1,0 +1,92 @@
+/***************************************************************************
+ *            nc_hicosmo_qlinear.h
+ *
+ *  Mon Aug 11 20:00:24 2008
+ *  Copyright  2008  Sandro Dias Pinto Vitenti
+ *  <sandro@isoftware.com.br>
+ ****************************************************************************/
+/*
+ * numcosmo
+ * Copyright (C) Sandro Dias Pinto Vitenti 2012 <sandro@isoftware.com.br>
+   * numcosmo is free software: you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License as published by the
+ * Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+   *
+ * numcosmo is distributed in the hope that it will be useful, but
+ * WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+ * See the GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License along
+ * with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+#ifndef _NC_HICOSMO_QLINEAR_H_
+#define _NC_HICOSMO_QLINEAR_H_
+
+#include <glib-object.h>
+
+G_BEGIN_DECLS
+
+#define NC_TYPE_MODEL_QLINEAR             (nc_hicosmo_qlinear_get_type ())
+#define NC_HICOSMO_QLINEAR(obj)             (G_TYPE_CHECK_INSTANCE_CAST ((obj), NC_TYPE_MODEL_QLINEAR, NcHICosmoQLinear))
+#define NC_HICOSMO_QLINEAR_CLASS(klass)     (G_TYPE_CHECK_CLASS_CAST ((klass), NC_TYPE_MODEL_QLINEAR, NcHICosmoQLinearClass))
+#define NC_IS_MODEL_QLINEAR(obj)          (G_TYPE_CHECK_INSTANCE_TYPE ((obj), NC_TYPE_MODEL_QLINEAR))
+#define NC_IS_MODEL_QLINEAR_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE ((klass), NC_TYPE_MODEL_QLINEAR))
+#define NC_HICOSMO_QLINEAR_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS ((obj), NC_TYPE_MODEL_QLINEAR, NcHICosmoQLinearClass))
+
+typedef struct _NcHICosmoQLinearClass NcHICosmoQLinearClass;
+typedef struct _NcHICosmoQLinear NcHICosmoQLinear;
+
+/**
+ * NcHICosmoQLinearParams:
+ * @NC_HICOSMO_QLINEAR_H0: FIXME
+ * @NC_HICOSMO_QLINEAR_OMEGA_T: FIXME
+ * @NC_HICOSMO_QLINEAR_CD: FIXME
+ * @NC_HICOSMO_QLINEAR_E: FIXME
+ * @NC_HICOSMO_QLINEAR_Q: FIXME
+ * @NC_HICOSMO_QLINEAR_QP: FIXME
+ * @NC_HICOSMO_QLINEAR_Z1: FIXME
+ *
+ */
+typedef enum _NcHICosmoQLinearParams
+{
+  NC_HICOSMO_QLINEAR_H0 = 0,
+  NC_HICOSMO_QLINEAR_OMEGA_T,
+  NC_HICOSMO_QLINEAR_CD,
+  NC_HICOSMO_QLINEAR_E,
+  NC_HICOSMO_QLINEAR_Q,
+  NC_HICOSMO_QLINEAR_QP,
+  NC_HICOSMO_QLINEAR_Z1,         /*< private >*/
+  NC_HICOSMO_QLINEAR_SPARAM_LEN, /*< skip >*/
+} NcHICosmoQLinearParams;
+
+#define NC_HICOSMO_QLINEAR_DEFAULT_H0      NC_C_HUBBLE_CTE_WMAP
+#define NC_HICOSMO_QLINEAR_DEFAULT_OMEGA_T ( 1.0)
+#define NC_HICOSMO_QLINEAR_DEFAULT_CD      ( 0.0)
+#define NC_HICOSMO_QLINEAR_DEFAULT_E       ( 1.0)
+#define NC_HICOSMO_QLINEAR_DEFAULT_Q       (-0.5)
+#define NC_HICOSMO_QLINEAR_DEFAULT_QP      ( 1.0)
+#define NC_HICOSMO_QLINEAR_DEFAULT_Z1      ( 0.0)
+
+struct _NcHICosmoQLinearClass
+{
+  /*< private >*/
+  NcHICosmoClass parent_class;
+};
+
+struct _NcHICosmoQLinear
+{
+  /*< private >*/
+  NcHICosmo parent_instance;
+};
+
+GType nc_hicosmo_qlinear_get_type (void) G_GNUC_CONST;
+
+NcHICosmoQLinear *nc_hicosmo_qlinear_new (void);
+gdouble nc_hicosmo_qlinear_dE (gdouble z2, gdouble z1, gdouble q, gdouble qp);
+
+G_END_DECLS
+
+#endif /* _NC_HICOSMO_QLINEAR_H_ */
