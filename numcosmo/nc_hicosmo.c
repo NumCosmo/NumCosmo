@@ -121,6 +121,20 @@ nc_hicosmo_new_from_name (GType parent_type, gchar *model_name)
 }
 
 /**
+ * nc_hicosmo_free:
+ * @hic: FIXME
+ *
+ * FIXME
+ *
+ */
+void
+nc_hicosmo_free (NcHICosmo *hic)
+{
+  g_object_unref (hic);
+}
+
+
+/**
  * nc_hicosmo_set_H0_impl: (skip)
  * @model_class: FIXME
  * @f: FIXME

@@ -186,7 +186,7 @@ gdouble nc_ca_mean_bias_Mobs_numerator (NcClusterAbundance *cad, NcHICosmo *mode
 gdouble nc_ca_mean_bias_Mobs_denominator (NcClusterAbundance *cad, NcHICosmo *model, gdouble lnMobs, gdouble z);
 
 #define _NC_CLUSTER_ABUNDANCE_NNODES 1000
-#define _NC_CLUSTER_ABUNDANCE_MIN_Z 1e-6
+#define _NC_CLUSTER_ABUNDANCE_MIN_Z  0.0
 
 gdouble _nc_cad_inv_dNdz_convergence_f (gdouble n, gdouble epsilon);
 

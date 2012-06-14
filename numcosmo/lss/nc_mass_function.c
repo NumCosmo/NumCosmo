@@ -12,12 +12,12 @@
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * numcosmo is distributed in the hope that it will be useful, but
  * WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
  * See the GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License along
  * with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
@@ -61,13 +61,13 @@ G_DEFINE_TYPE (NcMassFunction, nc_mass_function, G_TYPE_OBJECT);
  * @gf: a #NcGrowthFunc sets to #NcMassFunction:growth.
  * @mulf: a #NcMultiplicityFunc sets to #NcMassFunction:multiplicity.
  *
- * This function allocates memory for a new #NcMassFunction object and sets its properties to the values from 
- * the input arguments. 
+ * This function allocates memory for a new #NcMassFunction object and sets its properties to the values from
+ * the input arguments.
  *
  * Returns: A new #NcMassFunction.
 */
 NcMassFunction *
-nc_mass_function_new (NcDistance * dist, NcMatterVar * vp, NcGrowthFunc * gf, NcMultiplicityFunc * mulf)
+nc_mass_function_new (NcDistance *dist, NcMatterVar *vp, NcGrowthFunc *gf, NcMultiplicityFunc *mulf)
 {
   NcMassFunction *mfp = g_object_new (NC_TYPE_MASS_FUNCTION,
 				      "distance", dist,
@@ -93,10 +93,10 @@ nc_mass_function_copy (NcMassFunction * mfp)
 }
 
 /**
- * nc_mass_function_free: 
+ * nc_mass_function_free:
  * @mfp: a #NcMassFunction.
  *
- * Atomically decrements the reference count of @mfp by one. If the reference count drops to 0, 
+ * Atomically decrements the reference count of @mfp by one. If the reference count drops to 0,
  * all memory allocated by @mfp is released.
  *
 */
@@ -152,7 +152,7 @@ _nc_mass_function_set_property (GObject * object, guint prop_id, const GValue * 
   switch (prop_id)
   {
     case PROP_DISTANCE:
-      mfp->dist = g_value_get_boxed (value);
+      mfp->dist = g_value_get_object (value);
       break;
     case PROP_MATTER_VAR:
       mfp->vp = g_value_get_object (value);
@@ -161,7 +161,7 @@ _nc_mass_function_set_property (GObject * object, guint prop_id, const GValue * 
       mfp->gf = g_value_get_object (value);
       break;
     case PROP_MULTIPLICITY:
-      mfp->mulf = g_value_get_boxed (value);
+      mfp->mulf = g_value_get_object (value);
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -178,7 +178,7 @@ _nc_mass_function_get_property (GObject * object, guint prop_id, GValue * value,
   switch (prop_id)
   {
     case PROP_DISTANCE:
-      g_value_set_boxed (value, mfp->dist);
+      g_value_set_object (value, mfp->dist);
       break;
     case PROP_MATTER_VAR:
       g_value_set_object (value, mfp->vp);
@@ -187,7 +187,7 @@ _nc_mass_function_get_property (GObject * object, guint prop_id, GValue * value,
       g_value_set_object (value, mfp->gf);
       break;
     case PROP_MULTIPLICITY:
-      g_value_set_boxed (value, mfp->mulf);
+      g_value_set_object (value, mfp->mulf);
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -269,8 +269,8 @@ nc_mass_function_class_init (NcMassFunctionClass * klass)
  * @lnM: logarithm base e of mass.
  * @z: redshift.
  *
- * This function computes the comoving number density of dark matter halos at redshift z and 
- * mass M. 
+ * This function computes the comoving number density of dark matter halos at redshift z and
+ * mass M.
  *
  * Returns: dn/dlnM.
  */
@@ -300,11 +300,11 @@ nc_mass_function (NcMassFunction *mfp, NcHICosmo *model, gdouble lnM, gdouble z)
  * @model: a #NcHICosmo.
  * @lnM: logarithm base e of mass.
  * @z: redshift.
- * @dn_dlnM_ptr: pointer to comoving number density of halos. 
+ * @dn_dlnM_ptr: pointer to comoving number density of halos.
  * @sigma_ptr: pointer to the standard deviation of the density contrast.
  *
- * This function computes the standard deviation of density contrast of the matter fluctuations and 
- * the the comoving number density of dark matter halos at redshift z and mass M. 
+ * This function computes the standard deviation of density contrast of the matter fluctuations and
+ * the the comoving number density of dark matter halos at redshift z and mass M.
  * These values are stored in @sigma_ptr and @dn_dlnM_ptr, respectively.
  *
 */
@@ -333,10 +333,10 @@ nc_mass_function_sigma (NcMassFunction * mfp, NcHICosmo * model, gdouble lnM, gd
  * @vp: a #NcMatterVar.
  * @model: a #NcHICosmo.
  * @lnM: logarithm base e of mass.
- * @a_eff_ptr: FIXME  
+ * @a_eff_ptr: FIXME
  *
  * FIXME
- * 
+ *
  */
 void
 nc_mass_function_alpha_eff (NcMatterVar *vp, NcHICosmo * model, gdouble lnM, gdouble * a_eff_ptr)
@@ -358,10 +358,10 @@ typedef struct _nc_ca_integ
 /**
  * nc_mass_function_cluster_abundance_integrand:
  * @R: FIXME
- * @params: FIXME  
+ * @params: FIXME
  * FIXME
  *
- * Returns: FIXME 
+ * Returns: FIXME
 */
 gdouble
 nc_mass_function_cluster_abundance_integrand (gdouble R, gpointer params)
@@ -389,11 +389,11 @@ nc_mass_function_cluster_abundance_integrand (gdouble R, gpointer params)
  * @mfp: a #NcMassFunction.
  * @model: a #NcHICosmo.
  * @M: mass in units of h^{-1} * M_sun.
- * @z: redshift. 
- * 
+ * @z: redshift.
+ *
  * FIXME
  *
- * Returns: FIXME 
+ * Returns: FIXME
 */
 gdouble
 nc_mass_function_dn_M_to_inf_dv (NcMassFunction * mfp, NcHICosmo * model, gdouble M, gdouble z)	/* integracao em M. */
@@ -441,7 +441,7 @@ nc_mass_function_dn_M_to_inf_dv (NcMassFunction * mfp, NcHICosmo * model, gdoubl
  *
  * FIXME
  *
- * Returns: FIXME 
+ * Returns: FIXME
  */
 gdouble
 nc_mass_function_dn_M1_to_M2_dv (NcMassFunction * mfp, NcHICosmo * model, gdouble M1, gdouble M2, gdouble z)	/* integracao em M. */
@@ -473,13 +473,13 @@ nc_mass_function_dn_M1_to_M2_dv (NcMassFunction * mfp, NcHICosmo * model, gdoubl
 
 /**
  * nc_mass_function_dcomoving_volume_dzdomega:
- * @mfp: a #NcMassFunction.  
+ * @mfp: a #NcMassFunction.
  * @model: a #NcHICosmo.
  * @z: redshift.
  *
  * FIXME
  *
- * Returns: FIXME 
+ * Returns: FIXME
  */
 gdouble
 nc_mass_function_dcomoving_volume_dzdomega (NcMassFunction * mfp, NcHICosmo * model, gdouble z)
@@ -505,8 +505,7 @@ static void _nc_mass_function_generate_2Dspline_knots (NcMassFunction * mfp, NcH
  *
  */
 void
-nc_mass_function_d2NdzdlnM_optimize (NcMassFunction * mfp, NcHICosmo * model, gdouble lnMi, gdouble lnMf, gdouble zi,
-				     gdouble zf)
+nc_mass_function_d2NdzdlnM_optimize (NcMassFunction *mfp, NcHICosmo *model, gdouble lnMi, gdouble lnMf, gdouble zi, gdouble zf)
 {
   if (lnMi != mfp->lnMi || mfp->lnMf != lnMf || mfp->zi != zi || mfp->zf != zf)
   {
@@ -534,7 +533,7 @@ nc_mass_function_d2NdzdlnM_optimize (NcMassFunction * mfp, NcHICosmo * model, gd
  *
  */
 void
-nc_mass_function_d2NdzdlnM_prepare (NcMassFunction * mfp, NcHICosmo * model)
+nc_mass_function_d2NdzdlnM_prepare (NcMassFunction *mfp, NcHICosmo *model)
 {
   gint i, j;
   if (mfp->d2NdzdlnM == NULL)
@@ -573,7 +572,7 @@ nc_mass_function_d2NdzdlnM_prepare (NcMassFunction * mfp, NcHICosmo * model)
  *
  * FIXME
  *
- * Returns: FIXME 
+ * Returns: FIXME
  */
 gdouble
 nc_mass_function_d2NdzdlnM (NcMassFunction * mfp, NcHICosmo * model, gdouble lnM, gdouble z)
@@ -589,10 +588,11 @@ nc_mass_function_d2NdzdlnM (NcMassFunction * mfp, NcHICosmo * model, gdouble lnM
     d2N_dzdlnM = ncm_spline2d_eval (mfp->d2NdzdlnM, lnM, z);
   }
   else
-    d2N_dzdlnM =
-      mfp->area_survey * nc_mass_function (mfp, model, lnM, z) * nc_mass_function_dcomoving_volume_dzdomega (mfp,
-													      model,
-													      z);
+  {
+	d2N_dzdlnM = mfp->area_survey *
+	  nc_mass_function (mfp, model, lnM, z) *
+	  nc_mass_function_dcomoving_volume_dzdomega (mfp, model, z);
+  }
   return d2N_dzdlnM;
 }
 
@@ -607,7 +607,7 @@ nc_mass_function_d2NdzdlnM (NcMassFunction * mfp, NcHICosmo * model, gdouble lnM
  *
  * FIXME
  *
- * Returns: FIXME 
+ * Returns: FIXME
  */
 gdouble
 nc_mass_function_dNdz (NcMassFunction * mfp, NcHICosmo * model, gdouble lnMl, gdouble lnMu, gdouble z, gboolean spline)
@@ -642,7 +642,7 @@ nc_mass_function_dNdz (NcMassFunction * mfp, NcHICosmo * model, gdouble lnMl, gd
  *
  * FIXME
  *
- * Returns: FIXME 
+ * Returns: FIXME
  */
 gdouble
 nc_mass_function_N (NcMassFunction * mfp, NcHICosmo * model, gdouble lnMl, gdouble lnMu, gdouble zl, gdouble zu,
@@ -700,9 +700,9 @@ _encapsulated_z (gdouble z, gpointer p)
   //printf ("1 z %.5g lnM %.5g d2N % 20.15g mf % 20.15g\n", z, args->lnM, A, nc_mass_function (args->mfp, args->model, args->lnM, z));
   return A;
 
-  //return args->mfp->area_survey * 
-  //nc_dcomoving_volume_dzdomega (args->mfp, args->model, z) * 
-  //nc_mass_function (args->mfp, args->model, args->lnM, z);     
+  //return args->mfp->area_survey *
+  //nc_dcomoving_volume_dzdomega (args->mfp, args->model, z) *
+  //nc_mass_function (args->mfp, args->model, args->lnM, z);
 }
 
 static gdouble

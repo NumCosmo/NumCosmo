@@ -142,6 +142,7 @@ G_INLINE_FUNC gdouble nc_hicosmo_q (NcHICosmo *model, gdouble z);
 
 NcHICosmo *nc_hicosmo_new_from_name (GType parent_type, gchar *model_name);
 void nc_hicosmo_log_all_models (GType parent);
+void nc_hicosmo_free (NcHICosmo *hic);
 
 NcmMSetFunc *nc_hicosmo_func0_new (NcHICosmoFunc0 f0);
 NcmMSetFunc *nc_hicosmo_func1_new (NcHICosmoFunc1 f1);

@@ -37,7 +37,9 @@
 #include <numcosmo/numcosmo.h>
 
 #include <string.h>
+#include <glib-object.h>
 #include <glib.h>
+#include <gio/gio.h>
 #include <glib/gstdio.h>
 #ifdef NUMCOSMO_HAVE_SQLITE3
 #include <sqlite3.h>
@@ -97,6 +99,8 @@ ncm_cfg_init (void)
 
   ncm_cfg_register_model (NC_TYPE_WINDOW_TOPHAT);
   ncm_cfg_register_model (NC_TYPE_WINDOW_GAUSSIAN);
+
+  ncm_cfg_register_model (NC_TYPE_MATTER_VAR);
 
   ncm_cfg_register_model (NC_TYPE_TRANSFER_FUNC_EH);
 
@@ -829,4 +833,397 @@ ncm_cfg_command_line (gchar *argv[], gint argc)
   full_cmd_line_ptr[0] = '\0';
 
   return full_cmd_line;
+}
+
+/**
+ * ncm_cfg_create_from_string:
+ * @obj_ser: String containing the serialized version of the object.
+ *
+ * Parses the serialized and returns the newly created object.
+ *
+ * Returns: (transfer full): A new #GObject.
+ */
+GObject *
+ncm_cfg_create_from_string (const gchar *obj_ser)
+{
+  GError *error = NULL;
+  static gsize regex_init = FALSE;
+  static GRegex *regex = NULL;
+  GMatchInfo *match_info = NULL;
+  GObject *obj = NULL;
+  GVariant *var_obj = NULL;
+
+  if (g_once_init_enter (&regex_init))
+  {
+	regex = g_regex_new ("^([A-Z][A-Za-z]*)\\s*(.*?)\\s*$", 0, 0, &error);
+	g_once_init_leave (&regex_init, TRUE);
+  }
+
+  var_obj = g_variant_parse (G_VARIANT_TYPE ("{sa{sv}}"), obj_ser, NULL, NULL, &error);
+  g_clear_error (&error);
+  if (var_obj != NULL)
+  {
+	GVariant *obj_name = g_variant_get_child_value (var_obj, 0);
+	GVariant *params = g_variant_get_child_value (var_obj, 1);
+	obj = ncm_cfg_create_from_name_params (g_variant_get_string (obj_name, NULL), params);
+	g_variant_unref (obj_name);
+	g_variant_unref (params);
+	g_variant_unref (var_obj);
+  }
+  else if (g_regex_match (regex, obj_ser, 0, &match_info))
+  {
+	gchar *obj_name = g_match_info_fetch (match_info, 1);
+	gchar *obj_prop = g_match_info_fetch (match_info, 2);
+	GVariant *params = NULL;
+
+	if (obj_prop != NULL && strlen (obj_prop) > 0)
+	{
+	  params = g_variant_parse (G_VARIANT_TYPE_VARDICT, obj_prop, NULL, NULL, &error);
+	  if (error != NULL)
+	  {
+		g_error ("Cannot parse object '%s' parameters '%s', error %s\n", obj_name, obj_prop, error->message);
+		g_error_free (error);
+	  }
+	}
+
+	obj = ncm_cfg_create_from_name_params (obj_name, params);
+
+	if (params != NULL)
+	  g_variant_unref (params);
+	g_free (obj_name);
+	g_free (obj_prop);
+	g_match_info_free (match_info);
+  }
+  else
+  {
+    g_match_info_free (match_info);
+	g_error ("Cannot indentify object in string '%s'\n", obj_ser);
+  }
+
+  return obj;
+}
+
+/**
+ * ncm_cfg_create_from_name_params:
+ * @obj_name: string containing the object name.
+ * @params: a #GVariant containing the object parameters.
+ *
+ * FIXME
+ *
+ * Returns: (transfer full): A new #GObject.
+ */
+GObject *
+ncm_cfg_create_from_name_params (const gchar *obj_name, GVariant *params)
+{
+  GObject *obj = NULL;
+  GType gtype = g_type_from_name (obj_name);
+
+  if (gtype == 0)
+	g_error ("Object '%s' is not registered\n", obj_name);
+
+  g_assert (params == NULL || g_variant_is_of_type (params, G_VARIANT_TYPE ("a{sv}")));
+
+  if (params != NULL)
+  {
+	GVariantIter *p_iter = g_variant_iter_new (params);
+	gsize nprop = g_variant_iter_n_children (p_iter);
+	GParameter *gprop = g_new (GParameter, nprop);
+	GVariant *var = NULL;
+	guint i = 0;
+
+	while ((var = g_variant_iter_next_value (p_iter)))
+	{
+	  GVariant *var_key = g_variant_get_child_value (var, 0);
+	  GVariant *var_val = g_variant_get_child_value (var, 1);
+	  GVariant *val = g_variant_get_variant (var_val);
+	  gprop[i].name = g_variant_dup_string (var_key, NULL);
+
+	  if (g_variant_is_of_type (val, G_VARIANT_TYPE ("{sa{sv}}")))
+	  {
+		GVariant *nest_obj_key = g_variant_get_child_value (val, 0);
+		GVariant *nest_obj_params = g_variant_get_child_value (val, 1);
+		GValue lval = G_VALUE_INIT;
+		GObject *nest_obj =
+		  ncm_cfg_create_from_name_params (g_variant_get_string (nest_obj_key, NULL),
+		                                   nest_obj_params);
+		g_value_init (&lval, G_TYPE_OBJECT);
+		gprop[i].value = lval;
+		g_value_take_object (&gprop[i].value, nest_obj);
+		g_variant_unref (nest_obj_key);
+		g_variant_unref (nest_obj_params);
+	  }
+	  else if (!g_variant_is_container (val))
+		g_dbus_gvariant_to_gvalue (val, &gprop[i].value);
+	  else
+		g_error ("Invalid variant type '%s', cannot convert to GValue", g_variant_get_type_string (val));
+
+	  i++;
+	  g_variant_unref (var_key);
+	  g_variant_unref (val);
+	  g_variant_unref (var_val);
+	  g_variant_unref (var);
+	}
+
+	obj = g_object_newv (gtype, nprop, gprop);
+
+	g_free (gprop);
+	g_variant_iter_free (p_iter);
+  }
+  else
+	obj = g_object_new (gtype, NULL);
+
+  return obj;
+}
+
+static const GVariantType *
+_ncm_cfg_gtype_to_gvariant_type (GType t)
+{
+  switch (t)
+  {
+	case G_TYPE_CHAR:
+	case G_TYPE_UCHAR:
+	  return G_VARIANT_TYPE_BYTE;
+	  break;
+	case G_TYPE_BOOLEAN:
+	  return G_VARIANT_TYPE_BOOLEAN;
+	  break;
+	case G_TYPE_INT:
+	{
+	  switch (sizeof (gint))
+	  {
+		case 2:
+		  return G_VARIANT_TYPE_INT16;
+		  break;
+		case 4:
+		  return G_VARIANT_TYPE_INT32;
+		  break;
+		case 8:
+		  return G_VARIANT_TYPE_INT64;
+		  break;
+		default:
+		  g_error ("Unknown gint size %lu\n", sizeof(gint));
+		  break;
+	  }
+	  break;
+	}
+	case G_TYPE_UINT:
+	{
+	  switch (sizeof (guint))
+	  {
+		case 2:
+		  return G_VARIANT_TYPE_UINT16;
+		  break;
+		case 4:
+		  return G_VARIANT_TYPE_UINT32;
+		  break;
+		case 8:
+		  return G_VARIANT_TYPE_UINT64;
+		  break;
+		default:
+		  g_error ("Unknown gint size %lu\n", sizeof(guint));
+		  break;
+	  }
+	  break;
+	}
+	case G_TYPE_LONG:
+	{
+	  switch (sizeof (glong))
+	  {
+		case 2:
+		  return G_VARIANT_TYPE_INT16;
+		  break;
+		case 4:
+		  return G_VARIANT_TYPE_INT32;
+		  break;
+		case 8:
+		  return G_VARIANT_TYPE_INT64;
+		  break;
+		default:
+		  g_error ("Unknown gint size %lu\n", sizeof(glong));
+		  break;
+	  }
+	  break;
+	}
+	case G_TYPE_ULONG:
+	{
+	  switch (sizeof (gulong))
+	  {
+		case 2:
+		  return G_VARIANT_TYPE_UINT16;
+		  break;
+		case 4:
+		  return G_VARIANT_TYPE_UINT32;
+		  break;
+		case 8:
+		  return G_VARIANT_TYPE_UINT64;
+		  break;
+		default:
+		  g_error ("Unknown gint size %lu\n", sizeof(gulong));
+		  break;
+	  }
+	  break;
+	}
+	case G_TYPE_INT64:
+	  return G_VARIANT_TYPE_INT64;
+	  break;
+	case G_TYPE_UINT64:
+	  return G_VARIANT_TYPE_UINT64;
+	  break;
+	case G_TYPE_FLOAT:
+	case G_TYPE_DOUBLE:
+	  return G_VARIANT_TYPE_DOUBLE;
+	  break;
+	case G_TYPE_STRING:
+	  return G_VARIANT_TYPE_STRING;
+	  break;
+	case G_TYPE_VARIANT:
+	  return G_VARIANT_TYPE_VARIANT;
+	  break;
+	default:
+	  return NULL;
+	  break;
+  }
+}
+
+/**
+ * ncm_cfg_gvalue_to_gvariant:
+ * @val: a #GValue.
+ *
+ * FIXME
+ *
+ * Returns: (transfer full): A #GVariant convertion of @val.
+ */
+GVariant *
+ncm_cfg_gvalue_to_gvariant (GValue *val)
+{
+  GType t = G_VALUE_TYPE (val);
+  GType fund_t = G_TYPE_FUNDAMENTAL (t);
+  const GVariantType *var_type = _ncm_cfg_gtype_to_gvariant_type (fund_t);
+  GVariant *var = NULL;
+
+  if (var_type == NULL)
+  {
+	switch (fund_t)
+	{
+	  case G_TYPE_OBJECT:
+	  {
+		GObject *nest_obj = g_value_get_object (val);
+		if (nest_obj != NULL)
+		  var = ncm_cfg_serialize_to_variant (nest_obj);
+		break;
+	  }
+	  case G_TYPE_ENUM:
+		var = g_variant_ref_sink (g_variant_new_int32 (g_value_get_enum (val)));
+		break;
+	  case G_TYPE_FLAGS:
+		var = g_variant_ref_sink (g_variant_new_uint32 (g_value_get_flags (val)));
+		break;
+	  default:
+		g_error ("Cannot covert GValue '%s' to GVariant.", g_type_name (t));
+		break;
+	}
+  }
+  else
+	var = g_dbus_gvalue_to_gvariant (val, var_type);
+
+  return var;
+}
+
+/**
+ * ncm_cfg_serialize_to_variant:
+ * @obj: a #GObject.
+ *
+ * FIXME
+ *
+ * Returns: (transfer full): A #GVariant dictionary describing the @obj.
+ */
+GVariant *
+ncm_cfg_serialize_to_variant (GObject *obj)
+{
+  const gchar *obj_name = G_OBJECT_TYPE_NAME (obj);
+  GObjectClass *klass = G_OBJECT_GET_CLASS (obj);
+  guint n_properties, i;
+  GParamSpec **prop = g_object_class_list_properties (klass, &n_properties);
+
+  if (n_properties == 0)
+  {
+	g_free (prop);
+	return g_variant_ref_sink (g_variant_new ("{sa{sv}}", obj_name, NULL));
+  }
+  else
+  {
+	GVariantBuilder *b = g_variant_builder_new (G_VARIANT_TYPE ("a{sv}"));
+	GVariant *params, *ser_var;
+
+	for (i = 0; i < n_properties; i++)
+	{
+	  GVariant *var = NULL;
+	  GValue val = G_VALUE_INIT;
+
+	  if (!(prop[i]->flags & G_PARAM_WRITABLE))
+		continue;
+
+	  g_value_init (&val, prop[i]->value_type);
+	  g_object_get_property (obj, prop[i]->name, &val);
+
+	  var = ncm_cfg_gvalue_to_gvariant (&val);
+	  if (var == NULL)
+	  {
+		g_value_unset (&val);
+		continue;
+	  }
+
+	  g_variant_builder_add (b, "{sv}", prop[i]->name, var);
+
+	  g_variant_unref (var);
+	  g_value_unset (&val);
+	}
+
+    params = g_variant_builder_end (b);
+	g_variant_builder_unref (b);
+	g_free (prop);
+
+	ser_var = g_variant_ref_sink (g_variant_new ("{s@a{sv}}", obj_name, params));
+	return ser_var;
+  }
+}
+
+/**
+ * ncm_cfg_serialize_to_string:
+ * @obj: a #GObject.
+ * @valid_variant: FIXME.
+ *
+ * FIXME
+ *
+ * Returns: (transfer full): A string containing the serialized version of @obj.
+ */
+gchar *
+ncm_cfg_serialize_to_string (GObject *obj, gboolean valid_variant)
+{
+  GVariant *ser_var = ncm_cfg_serialize_to_variant (obj);
+  gchar *ser = NULL;
+
+  if (valid_variant)
+	ser = g_variant_print (ser_var, TRUE);
+  else
+  {
+	GVariant *params = NULL;
+	gchar *obj_name = NULL;
+	gchar *params_str;
+	g_variant_get (ser_var, "{s@a{sv}}", &obj_name, &params);
+    if (g_variant_n_children (params) == 0)
+	{
+      ser = obj_name;
+	}
+	else
+	{
+	  params_str = g_variant_print (params, TRUE);
+	  ser = g_strdup_printf ("%s%s", obj_name, params_str);
+	  g_free (params_str);
+	  g_free (obj_name);
+	}
+	g_variant_unref (params);
+  }
+  g_variant_unref (ser_var);
+  return ser;
 }

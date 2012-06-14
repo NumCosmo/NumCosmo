@@ -270,7 +270,7 @@ _ncm_model_get_property (GObject *object, guint prop_id, GValue *value, GParamSp
 	  g_value_set_uint (value, model_class->sparam_len);
 	  break;
 	case PROP_VPARAMS_LEN:
-	  g_value_set_uint (value, model_class->sparam_len);
+	  g_value_set_uint (value, model_class->vparam_len);
 	  break;
 	case PROP_IMPLEMENTATION:
 	  g_value_set_ulong (value, model_class->impl);

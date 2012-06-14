@@ -83,15 +83,15 @@ NcClusterAbundance *
 nc_cluster_abundance_new (NcClusterAbundanceOpt opt, NcMassFunction *mfp, NcHaloBiasFunc *mbiasf, gdouble zi, gdouble zf, gdouble lnMi, gdouble lnMf, NcClusterPhotoz *photoz, gdouble lnM_sigma0)
 {
   NcClusterAbundance *cad = g_object_new (NC_TYPE_CLUSTER_ABUNDANCE,
-                                          "options",                opt,
-                                          "mass-function",          mfp,
-                                          "mean-bias-function",     mbiasf,
-                                          "minimum-redshift",       zi,
-                                          "maximum-redshift",       zf,
-                                          "minimum-mass",           lnMi,
-                                          "maximum-mass",           lnMf,
-                                          "photoz",                 photoz,
-                                          "mass-observable-sigma0", lnM_sigma0,
+                                          "options",          opt,
+                                          "mass-function",    mfp,
+                                          "mean-bias",        mbiasf,
+                                          "minimum-redshift", zi,
+                                          "maximum-redshift", zf,
+                                          "minimum-mass",     lnMi,
+                                          "maximum-mass",     lnMf,
+                                          "photoz",           photoz,
+                                          "lnM-sigma0",       lnM_sigma0,
                                           NULL);
   return cad;
 }
@@ -183,7 +183,9 @@ nc_cluster_abundance_free (NcClusterAbundance *cad)
 void
 nc_cluster_abundance_set_zi (NcClusterAbundance *cad, const gdouble zi)
 {
-  cad->zi = zi;
+  if (zi < 1e-6)
+	g_warning ("Cluster abundance zi set to zero, setting to %e\n", 1e-6);
+  cad->zi = GSL_MAX (zi, 1e-6);
 }
 
 /**
@@ -496,7 +498,7 @@ nc_cluster_abundance_class_init (NcClusterAbundanceClass *klass)
    * NcClusterAbundance:minimum-redshift:
    *
    * Minimum redshift value is restricted to [_NC_CLUSTER_ABUNDANCE_MIN_Z, G_MAXDOUBLE].
-	 */
+   */
   g_object_class_install_property (object_class,
                                    PROP_ZI,
                                    g_param_spec_double ("minimum-redshift",
@@ -508,7 +510,7 @@ nc_cluster_abundance_class_init (NcClusterAbundanceClass *klass)
    * NcClusterAbundance:maximum-redshift:
    *
    * Maximum redshift value is restricted to [_NC_CLUSTER_ABUNDANCE_MIN_Z, G_MAXDOUBLE].
-	 */
+   */
   g_object_class_install_property (object_class,
                                    PROP_ZF,
                                    g_param_spec_double ("maximum-redshift",
@@ -532,7 +534,7 @@ nc_cluster_abundance_class_init (NcClusterAbundanceClass *klass)
    * NcClusterAbundance:maximum-mass:
    *
    * Maximum mass value is restricted to [11.0 * ln10, 16.0 * ln10] in units of h^{-1} M_sun.
-*/
+   */
   g_object_class_install_property (object_class,
                                    PROP_LNMF,
                                    g_param_spec_double ("maximum-mass",
@@ -544,7 +546,7 @@ nc_cluster_abundance_class_init (NcClusterAbundanceClass *klass)
    * NcClusterAbundance:photoz:
    *
    * FIXME
-	 */
+   */
   g_object_class_install_property (object_class,
                                    PROP_PHOTOZ,
                                    g_param_spec_object ("photoz",

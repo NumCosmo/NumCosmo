@@ -74,7 +74,7 @@ packagesrcdir=`cd $srcdir && pwd`
 AC_DEFINE_UNQUOTED(PACKAGE_SOURCE_DIR, "${packagesrcdir}",[PACKAGE_SOURCE_DIR])
 
 dnl Dependencies
-GLIB_REQUIRED_VERSION=2.20.0
+GLIB_REQUIRED_VERSION=2.30.0
 GSL_REQUIRED_VERSION=1.13
 GSL_GLF_REQUIRED_VERSION=1.14
 GSL_ODEIV2_REQUIRED_VERSION=1.15
@@ -167,7 +167,7 @@ dnl ***************************************************************************
 dnl Check for glib.
 dnl ***************************************************************************
 
-PKG_CHECK_MODULES(GLIB, [glib-2.0 >= $GLIB_REQUIRED_VERSION gthread-2.0 >= $GLIB_REQUIRED_VERSION gobject-2.0 >= $GLIB_REQUIRED_VERSION])
+PKG_CHECK_MODULES(GLIB, [glib-2.0 >= $GLIB_REQUIRED_VERSION gthread-2.0 >= $GLIB_REQUIRED_VERSION gobject-2.0 >= $GLIB_REQUIRED_VERSION gio-2.0 >= $GLIB_REQUIRED_VERSION])
 AC_SUBST(GLIB_CFLAGS)
 AC_SUBST(GLIB_LIBS)
 TEST_SHARED_LIBS="$TEST_SHARED_LIBS $GLIB_LIBS"

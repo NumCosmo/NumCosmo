@@ -26,7 +26,10 @@ test_ncm_model_SOURCES =  \
         test_ncm_model.c \
 	ncm_model_test.c \
 	ncm_model_test.h
-        
+
+test_ncm_object_serialization_SOURCES = \
+	test_ncm_object_serialization.c
+
 test_nc_window_SOURCES =  \
         test_nc_window.c
         
@@ -43,6 +46,7 @@ check_PROGRAMS =  \
 	test_ncm_spline    \
 	test_ncm_spline2d  \
 	test_ncm_model     \
+	test_ncm_object_serialization \
 	test_nc_window     \
 	test_nc_transfer_func \
 	test_nc_galaxy_acf
@@ -58,6 +62,8 @@ test_ncm_spline_LDADD = $(top_builddir)/numcosmo/libnumcosmo.la
 test_ncm_spline2d_LDADD = $(top_builddir)/numcosmo/libnumcosmo.la
 
 test_ncm_model_LDADD = $(top_builddir)/numcosmo/libnumcosmo.la
+
+test_ncm_object_serialization_LDADD = $(top_builddir)/numcosmo/libnumcosmo.la
 
 test_nc_window_LDADD = $(top_builddir)/numcosmo/libnumcosmo.la
 

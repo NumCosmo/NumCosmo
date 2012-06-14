@@ -234,7 +234,7 @@ nc_matter_var_class_init (NcMatterVarClass *klass)
    * This property keeps the window object.
    */
   g_object_class_install_property (object_class,
-				   PROP_STRAT,
+				   PROP_WINDOW,
 				   g_param_spec_object ("window",
 						       NULL,
 						       "Window Function.",
@@ -248,7 +248,7 @@ nc_matter_var_class_init (NcMatterVarClass *klass)
    * This property keeps the transferfunc object.
    */
   g_object_class_install_property (object_class,
-				   PROP_STRAT,
+				   PROP_TRANSFER,
 				   g_param_spec_object ("transfer",
 						       NULL,
 						       "Transfer Function.",

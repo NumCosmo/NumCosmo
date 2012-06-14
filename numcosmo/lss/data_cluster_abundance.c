@@ -468,21 +468,22 @@ _nc_data_cluster_abundance_unbinned_model_init (gpointer model, gpointer data)
   NcClusterAbundance *cad = NC_CLUSTER_ABUNDANCE (model);
   NcDataClusterAbundance *dca = (NcDataClusterAbundance *) data;
 
-  cad->zi = dca->real.zi;
-  cad->zf = dca->real.zf;
-  cad->lnMi = dca->real.lnMi;
-  cad->lnMf = dca->real.lnMf;
-//  cad->photoz_sigma0 = dca->real.photoz_sigma0;
-  g_assert_not_reached ();
-  cad->lnM_sigma0    = dca->real.lnM_sigma0;
+  cad->zi         = dca->real.zi;
+  cad->zf         = dca->real.zf;
+  cad->lnMi       = dca->real.lnMi;
+  cad->lnMf       = dca->real.lnMf;
+  cad->lnM_sigma0 = dca->real.lnM_sigma0;
   printf ("Real: % 15.5g % 15.5g\n", cad->zi, cad->zf);
+
+  //cad->photoz_sigma0 = dca->real.photoz_sigma0;
+  g_assert_not_reached ();
+  // cad->photoz_sigma0 = dca->obs.photoz_sigma0;
+  g_assert_not_reached ();
 
   cad->zi = dca->obs.zi;
   cad->zf = dca->obs.zf;
   cad->lnMi = dca->obs.lnMi;
   cad->lnMf = dca->obs.lnMf;
-  // cad->photoz_sigma0 = dca->obs.photoz_sigma0;
-  g_assert_not_reached ();
   cad->lnM_sigma0    = dca->obs.lnM_sigma0;
   printf ("Obs: % 15.5g % 15.5g\n", cad->zi, cad->zf);
 
@@ -857,45 +858,14 @@ nc_data_cluster_abundance_unbinned_new (NcClusterAbundance *cad)
  *
  */
 void
-nc_data_cluster_abundance_unbinned_init_from_sampling (NcData *data, NcmMSet *mset, NcClusterAbundanceOpt opt, gdouble area_survey, gdouble lnMi, gdouble lnMf, gdouble z_initial, gdouble z_final, gdouble photoz_sigma0, gdouble photoz_bias, gdouble lnM_sigma0, gdouble lnM_bias)
+nc_data_cluster_abundance_unbinned_init_from_sampling (NcData *data, NcmMSet *mset, NcClusterPhotoz *pz, gdouble area_survey)
 {
   NcDataClusterAbundance *dca = (NcDataClusterAbundance *) NC_DATA_DATA (data);
 
-  if (z_initial == 0.0)
-  {
-	g_message ("nc_data_cluster_abundance_unbinned_init_from_sampling: User requested zi == 0.0. Using zi = %e\n", _NC_CLUSTER_ABUNDANCE_MIN_Z);
-	z_initial = _NC_CLUSTER_ABUNDANCE_MIN_Z;
-  }
-
   dca->area_survey = area_survey;
-  dca->opt = opt;
 
-  if (opt & NC_CLUSTER_ABUNDANCE_OBS_ZM)
-  {
-	dca->obs.lnMi = lnMi;
-	dca->obs.lnMf = lnMf;
-	dca->obs.zi = z_initial;
-	dca->obs.zf = z_final;
-
-	dca->obs.photoz_sigma0 = photoz_sigma0;
-	dca->obs.photoz_bias = photoz_bias;
-	dca->obs.lnM_sigma0 = lnM_sigma0;
-	dca->obs.lnM_bias = lnM_bias;
-  }
-  else
-  {
-	printf ("init_from_sampling\n");
-	dca->real.lnMi = lnMi;
-	dca->real.lnMf = lnMf;
-	dca->real.zi = z_initial;
-	dca->real.zf = z_final;
-
-	dca->real.photoz_sigma0 = photoz_sigma0;
-	dca->real.photoz_bias = photoz_bias;
-	dca->real.lnM_sigma0 = lnM_sigma0;
-	dca->real.lnM_bias = lnM_bias;
-	printf ("z bias = % 15.5g lnM bias = % 15.5g\n", dca->real.photoz_bias, dca->real.lnM_bias);
-  }
+  if (pz != NULL)
+	dca->pz = nc_cluster_photoz_ref (pz);
 
   nc_data_model_init (data);
   nc_data_resample (data, mset, FALSE);
