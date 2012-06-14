@@ -92,7 +92,7 @@ EXTRA_HFILES=
 
 # Header files or dirs to ignore when scanning. Use base file/dir names
 # e.g. IGNORE_HFILES=gtkdebug.h gtkintl.h private_code
-IGNORE_HFILES=linear_internal.h ncm_gmodel_getset.h
+IGNORE_HFILES=linear_internal.h config.h
 
 # Images to copy into HTML directory.
 # e.g. HTML_IMAGES=$(top_srcdir)/gtk/stock-icons/stock_about_24.png
@@ -138,7 +138,7 @@ endif
 
 .asciidoc.xml:
 	asciidoc -b docbook -d manpage -o $@ $<
-	@cp $(DOC_TARGET_DIR)/$(@F) $(<D)/$(@F)
+	@if test ! "$(DOC_TARGET_DIR)/$(@F)" -ef "$(<D)/$(@F)"; then cp $(DOC_TARGET_DIR)/$(@F) $(<D)/$(@F); fi
 
 .tex.xml:
 	@echo "  DOC   Building XML from $(@F)"
@@ -148,6 +148,6 @@ endif
 	@latex --interaction=nonstopmode $< >> $(@F).htlatex.log 2>&1
 	@htlatex $< "xhtml,docbook-mml" " -cunihtf" "-cdocbk" "--interaction=nonstopmode" >> $(@F).htlatex.log 2>&1
 	@$(top_srcdir)/docs/xmltogtk.pl $(DOC_TARGET_DIR)/$(@F) > $(@F).xmltogtk.log 2>&1
-	@cp $(DOC_TARGET_DIR)/$(@F) $(<D)/$(@F)
+	@if test ! "$(DOC_TARGET_DIR)/$(@F)" -ef "$(<D)/$(@F)"; then cp $(DOC_TARGET_DIR)/$(@F) $(<D)/$(@F); fi
 
 -include $(top_srcdir)/git.mk
