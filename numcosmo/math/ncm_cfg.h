@@ -104,6 +104,7 @@ GVariant *ncm_cfg_gvalue_to_gvariant (GValue *val);
 GVariant *ncm_cfg_serialize_to_variant (GObject *obj);
 gchar *ncm_cfg_serialize_to_string (GObject *obj, gboolean valid_variant);
 
+
 G_END_DECLS
 
 #endif /* _NCM_CFG_H */

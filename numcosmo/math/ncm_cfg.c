@@ -1195,6 +1195,7 @@ ncm_cfg_serialize_to_variant (GObject *obj)
  *
  * FIXME
  *
+ *
  * Returns: (transfer full): A string containing the serialized version of @obj.
  */
 gchar *

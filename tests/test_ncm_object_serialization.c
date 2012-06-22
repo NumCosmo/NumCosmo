@@ -135,3 +135,4 @@ test_ncm_cfg_create_from_string_nest ()
   }
   g_test_trap_assert_failed ();
 }
+

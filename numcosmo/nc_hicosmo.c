@@ -28,6 +28,7 @@
  * @short_description: FIXME
  *
  * FIXME
+ *
  */
 
 #ifdef HAVE_CONFIG_H

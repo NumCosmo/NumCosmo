@@ -100,6 +100,7 @@ struct _NcHICosmoClass
  * NcHICosmo:
  *
  * FIXME
+ *
  */
 struct _NcHICosmo
 {
