@@ -135,10 +135,17 @@
     <xi:include href="xml/nc_halo_bias_func.xml"/>
     <xi:include href="xml/nc_galaxy_acf.xml"/>
     <section>
-      <title>Cluster Photometric Redshift</title>
-      <xi:include href="xml/nc_cluster_photoz.xml"/>
-      <xi:include href="xml/nc_cluster_photoz_gauss_ind.xml"/>
+      <title>Cluster Redshift</title>
+      <xi:include href="xml/nc_cluster_redshift.xml"/>
+      <xi:include href="xml/nc_cluster_redshift_nodist.xml"/>
+      <xi:include href="xml/nc_cluster_photoz_gauss.xml"/>
       <xi:include href="xml/nc_cluster_photoz_gauss_global.xml"/>
+    </section>
+    <section>
+      <title>Cluster Mass</title>
+      <xi:include href="xml/nc_cluster_mass.xml"/>
+      <xi:include href="xml/nc_cluster_mass_nodist.xml"/>
+      <xi:include href="xml/nc_cluster_mass_lnnormal.xml"/>
     </section>
     <xi:include href="xml/nc_cluster_abundance.xml"/>
     <xi:include href="xml/catalog_parser.xml"/>

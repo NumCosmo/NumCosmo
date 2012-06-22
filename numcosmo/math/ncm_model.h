@@ -29,12 +29,12 @@
 
 G_BEGIN_DECLS
 
-#define NCM_TYPE_GMODEL             (ncm_model_get_type ())
-#define NCM_MODEL(obj)             (G_TYPE_CHECK_INSTANCE_CAST ((obj), NCM_TYPE_GMODEL, NcmModel))
-#define NCM_MODEL_CLASS(klass)     (G_TYPE_CHECK_CLASS_CAST ((klass), NCM_TYPE_GMODEL, NcmModelClass))
-#define NCM_IS_GMODEL(obj)          (G_TYPE_CHECK_INSTANCE_TYPE ((obj), NCM_TYPE_GMODEL))
-#define NCM_IS_GMODEL_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE ((klass), NCM_TYPE_GMODEL))
-#define NCM_MODEL_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS ((obj), NCM_TYPE_GMODEL, NcmModelClass))
+#define NCM_TYPE_MODEL             (ncm_model_get_type ())
+#define NCM_MODEL(obj)             (G_TYPE_CHECK_INSTANCE_CAST ((obj), NCM_TYPE_MODEL, NcmModel))
+#define NCM_MODEL_CLASS(klass)     (G_TYPE_CHECK_CLASS_CAST ((klass), NCM_TYPE_MODEL, NcmModelClass))
+#define NCM_IS_MODEL(obj)          (G_TYPE_CHECK_INSTANCE_TYPE ((obj), NCM_TYPE_MODEL))
+#define NCM_IS_MODEL_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE ((klass), NCM_TYPE_MODEL))
+#define NCM_MODEL_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS ((obj), NCM_TYPE_MODEL, NcmModelClass))
 
 typedef struct _NcmModelClass NcmModelClass;
 typedef struct _NcmModel NcmModel;
@@ -157,7 +157,7 @@ void ncm_model_reparam_df (NcmModel *model, NcmVector *fv, NcmVector *v);
 void ncm_model_reparam_J (NcmModel *model, NcmMatrix *fJ, NcmMatrix *J);
 
 /*
- * GModel set functions
+ * Model set functions
  */
 #define NCM_MODEL_SET_IMPL_FUNC(NS_NAME,NsName,ns_name,type,name) \
 void \
@@ -177,7 +177,7 @@ return NS_NAME##_GET_CLASS (m)->name (NCM_MODEL (m)); \
 }
 
 /*
- * GModel functions call
+ * Model functions call
  */
 #define NCM_MODEL_FUNC1_IMPL(NS_NAME,NsName,ns_name,name) \
 G_INLINE_FUNC gdouble ns_name##_##name (NsName *m, const gdouble x) \

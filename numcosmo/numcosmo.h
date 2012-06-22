@@ -188,9 +188,13 @@
 #include <numcosmo/lss/nc_halo_bias_type_st_ellip.h>
 #include <numcosmo/lss/nc_halo_bias_type_tinker.h>
 #include <numcosmo/lss/nc_halo_bias_func.h>
-#include <numcosmo/lss/nc_cluster_photoz.h>
-#include <numcosmo/lss/nc_cluster_photoz_gauss_ind.h>
+#include <numcosmo/lss/nc_cluster_redshift.h>
+#include <numcosmo/lss/nc_cluster_redshift_nodist.h>
+#include <numcosmo/lss/nc_cluster_photoz_gauss.h>
 #include <numcosmo/lss/nc_cluster_photoz_gauss_global.h>
+#include <numcosmo/lss/nc_cluster_mass.h>
+#include <numcosmo/lss/nc_cluster_mass_nodist.h>
+#include <numcosmo/lss/nc_cluster_mass_lnnormal.h>
 #include <numcosmo/lss/nc_cluster_abundance.h>
 #include <numcosmo/lss/read_matrix.h>
 #include <numcosmo/lss/data_cluster_abundance.h>

@@ -71,7 +71,7 @@ enum
 {
   PROP_0,
   PROP_LEN,
-  PROP_GMODEL_TYPE,
+  PROP_MODEL_TYPE,
 };
 
 /**
@@ -192,7 +192,7 @@ _ncm_reparam_get_property (GObject *object, guint prop_id, GValue *value, GParam
 	case PROP_LEN:
 	  g_value_set_uint (value, reparam->length);
 	  break;
-	case PROP_GMODEL_TYPE:
+	case PROP_MODEL_TYPE:
 	  g_value_set_gtype (value, reparam->model_type);
 	  break;
 	default:
@@ -213,7 +213,7 @@ _ncm_reparam_set_property (GObject *object, guint prop_id, const GValue *value, 
 	case PROP_LEN:
 	  reparam->length = g_value_get_uint (value);
 	  break;
-	case PROP_GMODEL_TYPE:
+	case PROP_MODEL_TYPE:
 	  reparam->model_type = g_value_get_gtype (value);
 	  break;
 	default:
@@ -285,11 +285,11 @@ ncm_reparam_class_init (NcmReparamClass *klass)
                                                       0.0, G_MAXUINT, 0.0,
                                                       G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
   g_object_class_install_property (object_class,
-                                   PROP_GMODEL_TYPE,
+                                   PROP_MODEL_TYPE,
                                    g_param_spec_gtype ("model-type",
                                                       NULL,
                                                       "GType of NcmModel parent",
-                                                      NCM_TYPE_GMODEL,
+                                                      NCM_TYPE_MODEL,
                                                       G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
 

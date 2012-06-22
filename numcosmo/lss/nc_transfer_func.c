@@ -8,17 +8,17 @@
 /*
  * numcosmo
  * Copyright (C) Mariana Penna Lima 2012 <pennalima@gmail.com>
- * 
+ *
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * numcosmo is distributed in the hope that it will be useful, but
  * WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
  * See the GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License along
  * with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
@@ -26,9 +26,9 @@
 /**
  * SECTION:nc_transfer_func
  * @title: Transfer Function Abstract Class
- * @short_description: Defines the prototype of the #NcTransferFunc object. 
+ * @short_description: Defines the prototype of the #NcTransferFunc object.
  *
- * This module comprises the set of functions to compute the transfer function and  
+ * This module comprises the set of functions to compute the transfer function and
  * derived quantities. See also <link linkend="sec_transf">Transfer Function</link>.
  */
 
@@ -49,14 +49,14 @@
 #include <gsl/gsl_errno.h>
 #include <gsl/gsl_matrix.h>
 
-G_DEFINE_TYPE (NcTransferFunc, nc_transfer_func, G_TYPE_OBJECT);
+G_DEFINE_ABSTRACT_TYPE (NcTransferFunc, nc_transfer_func, G_TYPE_OBJECT);
 
 /**
  * nc_transfer_func_new_from_name:
- * @transfer_name: string which specifies the transfer function type. 
- * 
+ * @transfer_name: string which specifies the transfer function type.
+ *
  * This function returns a new #NcTransferFunc whose type is defined by @transfer_name.
- * 
+ *
  * Returns: A new #NcTransferFunc.
  */
 NcTransferFunc *
@@ -89,7 +89,7 @@ nc_transfer_func_prepare (NcTransferFunc *tf, NcHICosmo *model)
     fprintf (stderr, "You should allocate a new tf using transfer_func_new_from_name(...)\n");
     exit(0);
   }
-  
+
   if (ncm_model_ctrl_update (tf->ctrl, NCM_MODEL(model)))
     NC_TRANSFER_FUNC_GET_CLASS (tf)->prepare (tf, model);
 }
@@ -102,7 +102,7 @@ nc_transfer_func_prepare (NcTransferFunc *tf, NcHICosmo *model)
  *
  * FIXME
  *
- * Returns: FIXME 
+ * Returns: FIXME
 */
 gdouble
 nc_transfer_func_eval (NcTransferFunc *tf, NcHICosmo *model, gdouble kh)
@@ -112,7 +112,7 @@ nc_transfer_func_eval (NcTransferFunc *tf, NcHICosmo *model, gdouble kh)
     fprintf (stderr, "You should allocate a new tf using transfer_func_new_from_name(...)\n");
     exit(0);
   }
-  
+
   if (ncm_model_ctrl_update (tf->ctrl, NCM_MODEL(model)))
     NC_TRANSFER_FUNC_GET_CLASS (tf)->prepare (tf, model);
 
@@ -127,7 +127,7 @@ nc_transfer_func_eval (NcTransferFunc *tf, NcHICosmo *model, gdouble kh)
  *
  * FIXME
  *
- * Returns: FIXME 
+ * Returns: FIXME
 */
 gdouble
 nc_transfer_func_matter_powerspectrum (NcTransferFunc *tf, NcHICosmo *model, gdouble kh)
@@ -137,18 +137,18 @@ nc_transfer_func_matter_powerspectrum (NcTransferFunc *tf, NcHICosmo *model, gdo
     fprintf (stderr, "You should allocate a new tf using transfer_func_new_from_name(...)\n");
     exit(0);
   }
-  
+
   if (ncm_model_ctrl_update (tf->ctrl, NCM_MODEL(model)))
     NC_TRANSFER_FUNC_GET_CLASS (tf)->prepare (tf, model);
-	
+
   return NC_TRANSFER_FUNC_GET_CLASS (tf)->calc_matter_P (tf, model, kh);
 }
 
 /**
- * nc_transfer_func_free: 
+ * nc_transfer_func_free:
  * @tf: a #NcTransferFunc.
  *
- * Atomically decrements the reference count of @tf by one. If the reference count drops to 0, 
+ * Atomically decrements the reference count of @tf by one. If the reference count drops to 0,
  * all memory allocated by @tf is released.
  *
 */

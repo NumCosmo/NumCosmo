@@ -12,12 +12,12 @@
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * numcosmo is distributed in the hope that it will be useful, but
  * WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
  * See the GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License along
  * with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
@@ -29,26 +29,26 @@
 
 G_BEGIN_DECLS
 
-#define NCM_TYPE_GMODEL_CTRL             (ncm_model_ctrl_get_type ())
-#define NCM_MODEL_CTRL(obj)             (G_TYPE_CHECK_INSTANCE_CAST ((obj), NCM_TYPE_GMODEL_CTRL, NcmModelCtrl))
-#define NCM_MODEL_CTRL_CLASS(klass)     (G_TYPE_CHECK_CLASS_CAST ((klass), NCM_TYPE_GMODEL_CTRL, NcmModelCtrlClass))
-#define NCM_IS_GMODEL_CTRL(obj)          (G_TYPE_CHECK_INSTANCE_TYPE ((obj), NCM_TYPE_GMODEL_CTRL))
-#define NCM_IS_GMODEL_CTRL_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE ((klass), NCM_TYPE_GMODEL_CTRL))
-#define NCM_MODEL_CTRL_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS ((obj), NCM_TYPE_GMODEL_CTRL, NcmModelCtrlClass))
+#define NCM_TYPE_MODEL_CTRL             (ncm_model_ctrl_get_type ())
+#define NCM_MODEL_CTRL(obj)             (G_TYPE_CHECK_INSTANCE_CAST ((obj), NCM_TYPE_MODEL_CTRL, NcmModelCtrl))
+#define NCM_MODEL_CTRL_CLASS(klass)     (G_TYPE_CHECK_CLASS_CAST ((klass), NCM_TYPE_MODEL_CTRL, NcmModelCtrlClass))
+#define NCM_IS_MODEL_CTRL(obj)          (G_TYPE_CHECK_INSTANCE_TYPE ((obj), NCM_TYPE_MODEL_CTRL))
+#define NCM_IS_MODEL_CTRL_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE ((klass), NCM_TYPE_MODEL_CTRL))
+#define NCM_MODEL_CTRL_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS ((obj), NCM_TYPE_MODEL_CTRL, NcmModelCtrlClass))
 
 typedef struct _NcmModelCtrlClass NcmModelCtrlClass;
 typedef struct _NcmModelCtrl NcmModelCtrl;
 
 struct _NcmModelCtrlClass
 {
-	/*< private >*/
-	GObjectClass parent_class;
+  /*< private >*/
+  GObjectClass parent_class;
 };
 
 struct _NcmModelCtrl
 {
-	/*< private >*/
-	GObject parent_instance;
+  /*< private >*/
+  GObject parent_instance;
   NcmModel *model;
   gulong pkey;
 };
@@ -74,19 +74,19 @@ G_END_DECLS
 
 G_BEGIN_DECLS
 
-G_INLINE_FUNC gboolean 
+G_INLINE_FUNC gboolean
 ncm_model_ctrl_update (NcmModelCtrl *ctrl, NcmModel *model)
 {
   if (ctrl->model != model)
   {
-		ncm_model_ctrl_set_model (ctrl, model);
-    return TRUE;
+	ncm_model_ctrl_set_model (ctrl, model);
+	return TRUE;
   }
-	else if (ctrl->pkey != model->pkey)
-	{
-		ctrl->pkey = model->pkey;
-		return TRUE;
-	}
+  else if (ctrl->pkey != model->pkey)
+  {
+	ctrl->pkey = model->pkey;
+	return TRUE;
+  }
   return FALSE;
 }
 

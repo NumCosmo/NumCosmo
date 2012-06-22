@@ -49,6 +49,12 @@ struct _NcDataClusterAbundance
 {
   /*< private >*/
   NcClusterAbundanceOpt opt;
+  NcClusterRedshift *z;
+  NcClusterMass *m;
+  NcmMatrix *z_obs;
+  NcmMatrix *z_obs_params;
+  NcmMatrix *lnM_obs;
+  NcmMatrix *lnM_obs_params;
   gdouble area_survey;
   glong np;
   struct _NcDataClusterAbundanceZM real;
@@ -76,7 +82,7 @@ NcData *nc_data_cluster_abundance_binned_lnM_z_new (NcClusterAbundance *cad);
 void nc_data_cluster_abundance_binned_lnM_z_init_from_hist (NcData *data, gboolean obs, gsl_histogram2d *hist, NcClusterAbundanceOpt opt, gdouble area_survey, gdouble photoz_sigma0, gdouble photoz_bias, gdouble lnM_sigma0, gdouble lnM_bias);
 
 NcData *nc_data_cluster_abundance_unbinned_new (NcClusterAbundance *cad);
-void nc_data_cluster_abundance_unbinned_init_from_sampling (NcData *data, NcmMSet *mset, NcClusterAbundanceOpt opt, gdouble area_survey, gdouble lnMi, gdouble lnMf, gdouble z_initial, gdouble z_final, gdouble photoz_sigma0, gdouble photoz_bias, gdouble lnM_sigma0, gdouble lnM_bias);
+void nc_data_cluster_abundance_unbinned_init_from_sampling (NcData *data, NcmMSet *mset, NcClusterRedshift *clusterz, NcClusterMass *clusterm, gdouble area_survey);
 void nc_data_cluster_abundance_unbinned_init_from_text_file (NcData *data, gchar *filename, NcClusterAbundanceOpt opt, gdouble area_survey, gdouble lnMi, gdouble lnMf, gdouble z_initial, gdouble z_final, gdouble photoz_sigma0, gdouble photoz_bias, gdouble lnM_sigma0, gdouble lnM_bias);
 NcData *nc_data_cluster_abundance_unbinned_bin_data (NcData *ca_unbinned, gsl_vector *nodes);
 gsl_histogram2d *nc_data_cluster_abundance_hist_lnM_z (NcData *ca_unbinned, gsl_vector *lnM_nodes, gsl_vector *z_nodes);

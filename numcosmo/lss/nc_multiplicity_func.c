@@ -8,17 +8,17 @@
 /*
  * numcosmo
  * Copyright (C) Mariana Penna Lima 2012 <pennalima@gmail.com>
- * 
+ *
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * numcosmo is distributed in the hope that it will be useful, but
  * WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
  * See the GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License along
  * with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
@@ -41,14 +41,14 @@
 #include <math.h>
 #include <gsl/gsl_integration.h>
 
-G_DEFINE_TYPE (NcMultiplicityFunc, nc_multiplicity_func, G_TYPE_OBJECT);
+G_DEFINE_ABSTRACT_TYPE (NcMultiplicityFunc, nc_multiplicity_func, G_TYPE_OBJECT);
 
 /**
  * nc_multiplicity_func_new_from_name:
  * @multiplicity_name: string which specifies the multiplicity function type.
- * 
+ *
  * This function returns a new #NcMultiplicityFunc whose type is defined by @multiplicity_name.
- * 
+ *
  * Returns: A new #NcMultiplicityFunc.
  */
 NcMultiplicityFunc *
@@ -73,9 +73,9 @@ nc_multiplicity_func_new_from_name (gchar *multiplicity_name)
  * @z: redshift.
  *
  * FIXME
- * 
- * Returns: FIXME 
-*/ 
+ *
+ * Returns: FIXME
+*/
 gdouble
 nc_multiplicity_func_eval (NcMultiplicityFunc *mulf, NcHICosmo *model, gdouble sigma, gdouble z)
 {
@@ -83,10 +83,10 @@ nc_multiplicity_func_eval (NcMultiplicityFunc *mulf, NcHICosmo *model, gdouble s
 }
 
 /**
- * nc_multiplicity_func_free: 
+ * nc_multiplicity_func_free:
  * @mulf: a #NcMultiplicityFunc.
  *
- * Atomically decrements the reference count of @mulf by one. If the reference count drops to 0, 
+ * Atomically decrements the reference count of @mulf by one. If the reference count drops to 0,
  * all memory allocated by @mulf is released.
  *
 */

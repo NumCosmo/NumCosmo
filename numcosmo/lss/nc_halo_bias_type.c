@@ -8,17 +8,17 @@
 /*
  * numcosmo
  * Copyright (C) Mariana Penna Lima 2012 <pennalima@gmail.com>
- * 
+ *
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * numcosmo is distributed in the hope that it will be useful, but
  * WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
  * See the GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License along
  * with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
@@ -30,12 +30,12 @@
  *
  * FIXME
  */
-  
+
 #ifdef HAVE_CONFIG_H
 #  include "config.h"
 #endif /* HAVE_CONFIG_H */
 #include <numcosmo/numcosmo.h>
-  
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
@@ -44,14 +44,14 @@
 #include <gsl/gsl_const_mksa.h>
 #include <glib.h>
 
-G_DEFINE_TYPE (NcHaloBiasType, nc_halo_bias_type, G_TYPE_OBJECT);
+G_DEFINE_ABSTRACT_TYPE (NcHaloBiasType, nc_halo_bias_type, G_TYPE_OBJECT);
 
 /**
  * nc_halo_bias_type_new_from_name:
  * @bias_name: string which specifies the multiplicity function type.
- * 
+ *
  * This function returns a new #NcMultiplicityFunc whose type is defined by @multiplicity_name.
- * 
+ *
  * Returns: A new #NcHaloBiasType.
  */
 NcHaloBiasType *
@@ -75,9 +75,9 @@ nc_halo_bias_type_new_from_name (gchar *bias_name)
  * @z: redshift.
  *
  * FIXME
- * 
- * Returns: FIXME 
-*/ 
+ *
+ * Returns: FIXME
+*/
 gdouble
 nc_halo_bias_type_eval (NcHaloBiasType *biasf, gdouble sigma, gdouble z)
 {
@@ -85,10 +85,10 @@ nc_halo_bias_type_eval (NcHaloBiasType *biasf, gdouble sigma, gdouble z)
 }
 
 /**
- * nc_halo_bias_type_free: 
+ * nc_halo_bias_type_free:
  * @biasf: a #NcHaloBiasType.
  *
- * Atomically decrements the reference count of @biasf by one. If the reference count drops to 0, 
+ * Atomically decrements the reference count of @biasf by one. If the reference count drops to 0,
  * all memory allocated by @biasf is released.
  *
 */

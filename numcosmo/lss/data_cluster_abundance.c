@@ -468,24 +468,8 @@ _nc_data_cluster_abundance_unbinned_model_init (gpointer model, gpointer data)
   NcClusterAbundance *cad = NC_CLUSTER_ABUNDANCE (model);
   NcDataClusterAbundance *dca = (NcDataClusterAbundance *) data;
 
-  cad->zi         = dca->real.zi;
-  cad->zf         = dca->real.zf;
-  cad->lnMi       = dca->real.lnMi;
-  cad->lnMf       = dca->real.lnMf;
-  cad->lnM_sigma0 = dca->real.lnM_sigma0;
-  printf ("Real: % 15.5g % 15.5g\n", cad->zi, cad->zf);
-
-  //cad->photoz_sigma0 = dca->real.photoz_sigma0;
-  g_assert_not_reached ();
-  // cad->photoz_sigma0 = dca->obs.photoz_sigma0;
-  g_assert_not_reached ();
-
-  cad->zi = dca->obs.zi;
-  cad->zf = dca->obs.zf;
-  cad->lnMi = dca->obs.lnMi;
-  cad->lnMf = dca->obs.lnMf;
-  cad->lnM_sigma0    = dca->obs.lnM_sigma0;
-  printf ("Obs: % 15.5g % 15.5g\n", cad->zi, cad->zf);
+  nc_cluster_abundance_set_redshift (cad, dca->z);
+  nc_cluster_abundance_set_mass (cad, dca->m);
 
   cad->completeness  = dca->completeness;
   cad->purity        = dca->purity;
@@ -500,11 +484,12 @@ static void
 _nc_data_cluster_abundance_unbinned_prepare (NcmMSet *mset, gpointer model, gpointer data)
 {
   NcClusterAbundance *cad = NC_CLUSTER_ABUNDANCE (model);
+  NcHICosmo *hic = NC_HICOSMO (ncm_mset_peek (mset, NC_HICOSMO_ID));
   /* NcDataNClusterAbundance *dca = (NcDataNClusterAbundance *) data; FIXME */
 
-  if (ncm_model_ctrl_update (cad->ctrl, ncm_mset_peek (mset, NC_HICOSMO_ID)))
+  if (ncm_model_ctrl_update (cad->ctrl, NCM_MODEL (hic)))
   {
-	nc_cluster_abundance_prepare (cad, model);
+	nc_cluster_abundance_prepare (cad, hic);
   }
 }
 
@@ -524,144 +509,87 @@ _nc_data_cluster_abundance_resample (NcmMSet *mset, gpointer model, gpointer dat
   NcClusterAbundance *cad = NC_CLUSTER_ABUNDANCE (model);
   NcDataClusterAbundance *dca = (NcDataClusterAbundance *) data;
   gsl_rng *rng = ncm_get_rng ();
+  guint z_obs_len = nc_cluster_redshift_obs_len (cad->z);
+  guint z_obs_params_len = nc_cluster_redshift_obs_params_len (cad->z);
+  guint lnM_obs_len = nc_cluster_mass_obs_len (cad->m);
+  guint lnM_obs_params_len = nc_cluster_mass_obs_params_len (cad->m);
   guint np;
   gint i;
+  GArray *z_obs_array = NULL;
+  GArray *z_obs_params_array = NULL;
+  GArray *lnM_obs_array = NULL;
+  GArray *lnM_obs_params_array = NULL;
 
-  const gint test_mask = NC_CLUSTER_ABUNDANCE_PHOTOZ |
-	NC_CLUSTER_ABUNDANCE_MOBS |
-	NC_CLUSTER_ABUNDANCE_REAL_ZM |
-	NC_CLUSTER_ABUNDANCE_OBS_ZM;
-  const gint opt_mask = cad->opt & test_mask;
+  gdouble *zi_obs = g_new (gdouble, z_obs_len);
+  gdouble *zi_obs_params = z_obs_params_len > 0 ? g_new (gdouble, z_obs_params_len) : NULL;
+  gdouble *lnMi_obs = g_new (gdouble, lnM_obs_len);
+  gdouble *lnMi_obs_params = lnM_obs_params_len > 0 ? g_new (gdouble, lnM_obs_params_len) : NULL;
 
   np = gsl_ran_poisson (rng, cad->norma);
-
-  printf ("Dentro do resample\n");
-  switch (opt_mask)
-  {
-	case NC_CLUSTER_ABUNDANCE_REAL_ZM:
-	{
-	  if (dca->real.z_lnM == NULL)
-		dca->real.z_lnM = gsl_matrix_alloc (np, 2);
-	  else if (dca->np != np)
-	  {
-		gsl_matrix_free (dca->real.z_lnM);
-		dca->real.z_lnM = gsl_matrix_alloc (np, 2);
-	  }
-	}
-	  break;
-	case NC_CLUSTER_ABUNDANCE_OBS_ZM:
-	{
-	  if (dca->obs.z_lnM == NULL)
-		dca->obs.z_lnM = gsl_matrix_alloc (np, 2);
-	  else if (dca->np != np)
-	  {
-		gsl_matrix_free (dca->obs.z_lnM);
-		dca->obs.z_lnM = gsl_matrix_alloc (np, 2);
-	  }
-	}
-	  break;
-  }
-
   dca->np = np;
 
-  nc_cluster_abundance_prepare_inv_dNdz_no_obs (cad, NC_HICOSMO (ncm_mset_peek (mset, NC_HICOSMO_ID)));
-  //nc_cluster_abundance_prepare_inv_dNdz (cad, NC_HICOSMO(model));
+  z_obs_array = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), np * z_obs_len);
+  if (z_obs_params_len > 0)
+	z_obs_params_array = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), np * z_obs_params_len);
 
-  //printf ("# Generating unbinned %ld (z,lnM) %g\n", dca->np, cad->norma);
+  lnM_obs_array = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), np * lnM_obs_len);
+  if (lnM_obs_params_len > 0)
+	lnM_obs_params_array = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), np * lnM_obs_params_len);
 
-  switch (opt_mask)
+  printf ("# Generating unbinned %ld (z,lnM) %g\n", dca->np, cad->norma);
+  printf ("# Resampling in range [% 20.15g, % 20.15g] [% 20.15e, % 20.15e]\n", cad->zi, cad->zf, exp (cad->lnMi), exp (cad->lnMf));
+  nc_cluster_abundance_prepare_inv_dNdz (cad, NC_HICOSMO (ncm_mset_peek (mset, NC_HICOSMO_ID)));
+
+  for (i = 0; i < dca->np; i++)
   {
-	case NC_CLUSTER_ABUNDANCE_PHOTOZ:
+	const gdouble u1 = _nc_cad_inv_dNdz_convergence_f (gsl_rng_uniform_pos (rng), cad->z_epsilon);
+	const gdouble u2 = _nc_cad_inv_dNdz_convergence_f (gsl_rng_uniform_pos (rng), cad->lnM_epsilon);
+	const gdouble zi_real = ncm_spline_eval (cad->inv_z, u1);
+	const gdouble lnMi_real = ncm_spline2d_eval (cad->inv_lnM_z, u2, zi_real);
+
+    if ( nc_cluster_redshift_resample (cad->z, zi_real, lnMi_real, zi_obs, zi_obs_params) &&
+         nc_cluster_mass_resample (cad->m, zi_real, lnMi_real, lnMi_obs, lnMi_obs_params) )
 	{
-	  printf ("Chegou para gerar!\n");
-	  for (i = 0; i < dca->np; i++)
-	  {
-		gdouble zi_obs;
-		const gdouble u1 = _nc_cad_inv_dNdz_convergence_f (gsl_rng_uniform_pos (rng), cad->z_epsilon);
-		const gdouble u2 = _nc_cad_inv_dNdz_convergence_f (gsl_rng_uniform_pos (rng), cad->lnM_epsilon);
-		const gdouble zi_real = ncm_spline_eval (cad->inv_z, u1);
-		const gdouble lnMi_real = ncm_spline2d_eval (cad->inv_lnM_z, u2, zi_real);
-		//const gdouble sigma_z = cad->photoz_sigma0 * (1.0 + zi_real);
-		g_assert_not_reached ();
-
-		do {
-		  //zi_obs = zi_real + gsl_ran_gaussian (rng, sigma_z);
-		  g_assert_not_reached ();
-		} while (zi_obs < 0);
-
-		gsl_matrix_set (dca->real.z_lnM, i, 0, zi_real);
-		gsl_matrix_set (dca->real.z_lnM, i, 1, lnMi_real);
-		gsl_matrix_set (dca->obs.z_lnM, i, 0, zi_obs);
-		gsl_matrix_set (dca->obs.z_lnM, i, 1, lnMi_real);
-		printf ("% 20.15g % 20.15g % 20.15g\n", zi_real, lnMi_real, zi_obs);
-	  }
+	  g_array_append_vals (z_obs_array, zi_obs, z_obs_len);
+	  g_array_append_vals (lnM_obs_array, lnMi_obs, lnM_obs_len);
+	  if (z_obs_params_len > 0)
+		g_array_append_vals (z_obs_params_array, zi_obs_params, z_obs_params_len);
+	  if (lnM_obs_params_len > 0)
+		g_array_append_vals (lnM_obs_params_array, lnMi_obs_params, lnM_obs_params_len);
 	}
-	  break;
-	case NC_CLUSTER_ABUNDANCE_MOBS:
-	{
-	  for (i = 0; i < dca->np; i++)
-	  {
-		gdouble lnMi_obs;
-		const gdouble u1 = _nc_cad_inv_dNdz_convergence_f (gsl_rng_uniform_pos (rng), cad->z_epsilon);
-		const gdouble u2 = _nc_cad_inv_dNdz_convergence_f (gsl_rng_uniform_pos (rng), cad->lnM_epsilon);
-		const gdouble zi_real = ncm_spline_eval (cad->inv_z, u1);
-		const gdouble lnMi_real = ncm_spline2d_eval (cad->inv_lnM_z, u2, zi_real);
-		const gdouble sigma_M = cad->lnM_sigma0;
-		//printf ("% 20.15g % 20.15g % 20.15g % 20.15g\n", u1, u2, zi, lnMi);
-
-		lnMi_obs = lnMi_real + gsl_ran_gaussian (rng, sigma_M);
-
-		gsl_matrix_set (dca->real.z_lnM, i, 0, zi_real);
-		gsl_matrix_set (dca->real.z_lnM, i, 1, lnMi_real);
-		gsl_matrix_set (dca->obs.z_lnM, i, 0, zi_real);
-		gsl_matrix_set (dca->obs.z_lnM, i, 1, lnMi_obs);
-	  }
-	}
-	  break;
-	case NC_CLUSTER_ABUNDANCE_PHOTOZ | NC_CLUSTER_ABUNDANCE_MOBS:
-	{
-	  for (i = 0; i < dca->np; i++)
-	  {
-		gdouble zi_obs, lnMi_obs;
-		const gdouble u1 = _nc_cad_inv_dNdz_convergence_f (gsl_rng_uniform_pos (rng), cad->z_epsilon);
-		const gdouble u2 = _nc_cad_inv_dNdz_convergence_f (gsl_rng_uniform_pos (rng), cad->lnM_epsilon);
-		const gdouble zi_real = ncm_spline_eval (cad->inv_z, u1);
-		const gdouble lnMi_real = ncm_spline2d_eval (cad->inv_lnM_z, u2, zi_real);
-		//const gdouble sigma_z = cad->photoz_sigma0 * (1.0 + zi_real);
-		g_assert_not_reached ();
-		const gdouble sigma_M = cad->lnM_sigma0;
-		//printf ("% 20.15g % 20.15g % 20.15g % 20.15g\n", u1, u2, zi, lnMi);
-
-		do {
-		  //zi_obs = zi_real + gsl_ran_gaussian (rng, sigma_z);
-		  g_assert_not_reached ();
-		} while (zi_obs < 0);
-
-		lnMi_obs = lnMi_real + gsl_ran_gaussian (rng, sigma_M);
-
-		gsl_matrix_set (dca->real.z_lnM, i, 0, zi_real);
-		gsl_matrix_set (dca->real.z_lnM, i, 1, lnMi_real);
-		gsl_matrix_set (dca->obs.z_lnM, i, 0, zi_obs);
-		gsl_matrix_set (dca->obs.z_lnM, i, 1, lnMi_obs);
-	  }
-	}
-	  break;
-	default:
-	{
-	  for (i = 0; i < dca->np; i++)
-	  {
-		const gdouble u1 = _nc_cad_inv_dNdz_convergence_f (gsl_rng_uniform_pos (rng), cad->z_epsilon);//gsl_rng_uniform (rng);
-		const gdouble u2 = _nc_cad_inv_dNdz_convergence_f (gsl_rng_uniform_pos (rng), cad->lnM_epsilon);//gsl_rng_uniform (rng);
-		const gdouble zi_real = ncm_spline_eval (cad->inv_z, u1);
-		const gdouble lnMi_real = ncm_spline2d_eval (cad->inv_lnM_z, u2, zi_real);
-
-		//printf ("% 20.15g % 20.15g % 20.15g % 20.15g\n", u1, u2, zi, lnMi);
-
-		gsl_matrix_set (dca->real.z_lnM, i, 0, zi_real);
-		gsl_matrix_set (dca->real.z_lnM, i, 1, lnMi_real);
-	  }
-	}
+	//printf ("% 20.15g % 20.15g\n", zi_real, lnMi_real);
   }
+
+  if (dca->z_obs != NULL)
+	ncm_matrix_free (dca->z_obs);
+  dca->z_obs = ncm_matrix_new_array (z_obs_array, z_obs_len);
+  g_array_unref (z_obs_array);
+
+  if (dca->lnM_obs != NULL)
+	ncm_matrix_free (dca->lnM_obs);
+  dca->lnM_obs = ncm_matrix_new_array (lnM_obs_array, lnM_obs_len);
+  g_array_unref (lnM_obs_array);
+
+  if (z_obs_params_len > 0)
+  {
+	if (dca->z_obs_params != NULL)
+	  ncm_matrix_free (dca->z_obs_params);
+	dca->z_obs_params = ncm_matrix_new_array (z_obs_params_array, z_obs_params_len);
+	g_array_unref (z_obs_params_array);
+  }
+
+  if (lnM_obs_params_len > 0)
+  {
+	if (dca->lnM_obs_params != NULL)
+	  ncm_matrix_free (dca->lnM_obs_params);
+	dca->lnM_obs_params = ncm_matrix_new_array (lnM_obs_params_array, lnM_obs_params_len);
+	g_array_unref (lnM_obs_params_array);
+  }
+
+  g_free (zi_obs);
+  g_free (zi_obs_params);
+  g_free (lnMi_obs);
+  g_free (lnMi_obs_params);
 }
 
 static void
@@ -843,29 +771,22 @@ nc_data_cluster_abundance_unbinned_new (NcClusterAbundance *cad)
  * nc_data_cluster_abundance_unbinned_init_from_sampling:
  * @data: a #NcData.
  * @mset: a #NcmMSet.
- * @opt: a #NcClusterAbundanceOpt.
+ * @clusterz: a #NcClusterRedshift.
+ * @clusterm: a #NcClusterMass.
  * @area_survey: area in units of square degrees.
- * @lnMi: logarithm base e of the minimum mass.
- * @lnMf: logarithm base e of the maximum mass.
- * @z_initial: minimum redshift.
- * @z_final: maximum redshift.
- * @photoz_sigma0: FIXME
- * @photoz_bias: FIXME
- * @lnM_sigma0: FIXME
- * @lnM_bias: FIXME
  *
  * FIXME
  *
  */
 void
-nc_data_cluster_abundance_unbinned_init_from_sampling (NcData *data, NcmMSet *mset, NcClusterPhotoz *pz, gdouble area_survey)
+nc_data_cluster_abundance_unbinned_init_from_sampling (NcData *data, NcmMSet *mset, NcClusterRedshift *clusterz, NcClusterMass *clusterm, gdouble area_survey)
 {
   NcDataClusterAbundance *dca = (NcDataClusterAbundance *) NC_DATA_DATA (data);
 
   dca->area_survey = area_survey;
 
-  if (pz != NULL)
-	dca->pz = nc_cluster_photoz_ref (pz);
+  dca->z = nc_cluster_redshift_ref (clusterz);
+  dca->m = nc_cluster_mass_ref (clusterm);
 
   nc_data_model_init (data);
   nc_data_resample (data, mset, FALSE);

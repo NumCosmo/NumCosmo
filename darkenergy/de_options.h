@@ -79,6 +79,8 @@ struct _NcDEDataClusterEntries
   gchar *window_name;
   gchar *transfer_name;
   gchar *multiplicity_name;
+  gchar *clusterm_ser;
+  gchar *clusterz_ser;
   gint mf_ds_index;    /* refers to the multiplicity function */
   gboolean binned;
   gboolean use_photoz;
@@ -101,7 +103,7 @@ struct _NcDEDataClusterEntries
   gboolean print_mass_function;
 };
 
-#define NC_DE_DATA_CLUSTER_ENTRIES {"NcWindowTophat", "NcTransferFuncEH", "NcMultiplicityFuncTinkerMean", 0, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, 5.0e13, 1.0e16, 5000.0, 0.0, 1.4, 0.03, 0.0, 0.2, 0.0, 10, NULL, NULL, FALSE}
+#define NC_DE_DATA_CLUSTER_ENTRIES {"NcWindowTophat", "NcTransferFuncEH", "NcMultiplicityFuncTinkerMean", "NcClusterMassNodist", "NcClusterRedshiftNodist", 0, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, 5.0e13, 1.0e16, 5000.0, 0.0, 1.4, 0.03, 0.0, 0.2, 0.0, 10, NULL, NULL, FALSE}
 
 typedef struct _NcDEFitEntries NcDEFitEntries;
 
@@ -124,7 +126,7 @@ struct _NcDEFitEntries
   gboolean resample;
   gint msg_level;
   gint montecarlo;
-	gint mc_ni;
+  gint mc_ni;
   gboolean fiducial;
   gboolean mc_data;
   gboolean fit;

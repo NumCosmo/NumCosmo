@@ -112,9 +112,13 @@ nc_headers = \
         lss/nc_halo_bias_type_st_ellip.h \
         lss/nc_halo_bias_type_tinker.h   \
         lss/nc_halo_bias_func.h          \
-        lss/nc_cluster_photoz.h          \
-        lss/nc_cluster_photoz_gauss_ind.h \
+        lss/nc_cluster_redshift.h            \
+        lss/nc_cluster_redshift_nodist.h     \
+        lss/nc_cluster_photoz_gauss.h        \
         lss/nc_cluster_photoz_gauss_global.h \
+        lss/nc_cluster_mass.h                \
+        lss/nc_cluster_mass_nodist.h         \
+        lss/nc_cluster_mass_lnnormal.h       \
         lss/nc_cluster_abundance.h
 
 nc_sources = \
@@ -156,9 +160,13 @@ nc_sources = \
 	lss/nc_halo_bias_type_st_ellip.c \
 	lss/nc_halo_bias_type_tinker.c   \
 	lss/nc_halo_bias_func.c          \
-	lss/nc_cluster_photoz.c          \
-	lss/nc_cluster_photoz_gauss_ind.c \
+	lss/nc_cluster_redshift.c            \
+	lss/nc_cluster_redshift_nodist.c     \
+	lss/nc_cluster_photoz_gauss.c        \
 	lss/nc_cluster_photoz_gauss_global.c \
+	lss/nc_cluster_mass.c                \
+	lss/nc_cluster_mass_nodist.c         \
+	lss/nc_cluster_mass_lnnormal.c       \
 	lss/nc_cluster_abundance.c
 
 libnumcosmo_la_SOURCES = \

@@ -87,24 +87,76 @@ ncm_cfg_init (void)
   _log_msg_id = g_log_set_handler (G_LOG_DOMAIN, G_LOG_LEVEL_MESSAGE | G_LOG_LEVEL_DEBUG, _ncm_cfg_log_message, NULL);
   _log_stream = stdout;
 
+  ncm_cfg_register_model (NCM_TYPE_SPLINE);
+  ncm_cfg_register_model (NCM_TYPE_SPLINE_CUBIC);
+  ncm_cfg_register_model (NCM_TYPE_SPLINE_CUBIC_NOTAKNOT);
+  ncm_cfg_register_model (NCM_TYPE_SPLINE_GSL);
+
+  ncm_cfg_register_model (NCM_TYPE_SPLINE2D);
+  ncm_cfg_register_model (NCM_TYPE_SPLINE2D_BICUBIC);
+  ncm_cfg_register_model (NCM_TYPE_SPLINE2D_GSL);
+  ncm_cfg_register_model (NCM_TYPE_SPLINE2D_SPLINE);
+
+  ncm_cfg_register_model (NCM_TYPE_MODEL);
+  ncm_cfg_register_model (NCM_TYPE_MODEL_CTRL);
+
+  ncm_cfg_register_model (NCM_TYPE_REPARAM);
+  ncm_cfg_register_model (NCM_TYPE_REPARAM_LINEAR);
+
+  ncm_cfg_register_model (NC_TYPE_MODEL_QCONST);
+  ncm_cfg_register_model (NC_TYPE_MODEL_QLINEAR);
+  ncm_cfg_register_model (NC_TYPE_MODEL_QPW);
+  ncm_cfg_register_model (NC_TYPE_MODEL_QSPLINE);
   ncm_cfg_register_model (NC_TYPE_MODEL_LCDM);
   ncm_cfg_register_model (NC_TYPE_MODEL_DE_XCDM);
   ncm_cfg_register_model (NC_TYPE_MODEL_DE_LINDER);
   ncm_cfg_register_model (NC_TYPE_MODEL_DE_PAD);
   ncm_cfg_register_model (NC_TYPE_MODEL_DE_QE);
-  ncm_cfg_register_model (NC_TYPE_MODEL_QCONST);
-  ncm_cfg_register_model (NC_TYPE_MODEL_QLINEAR);
-  ncm_cfg_register_model (NC_TYPE_MODEL_QPW);
-  ncm_cfg_register_model (NC_TYPE_MODEL_QSPLINE);
 
+  ncm_cfg_register_model (NC_TYPE_WINDOW);
   ncm_cfg_register_model (NC_TYPE_WINDOW_TOPHAT);
   ncm_cfg_register_model (NC_TYPE_WINDOW_GAUSSIAN);
 
+  ncm_cfg_register_model (NC_TYPE_GROWTH_FUNC);
+
+  ncm_cfg_register_model (NC_TYPE_TRANSFER_FUNC);
+  ncm_cfg_register_model (NC_TYPE_TRANSFER_FUNC_BBKS);
+  ncm_cfg_register_model (NC_TYPE_TRANSFER_FUNC_EH);
+  ncm_cfg_register_model (NC_TYPE_TRANSFER_FUNC_CAMB);
+  ncm_cfg_register_model (NC_TYPE_TRANSFER_FUNC_PERT);
+
   ncm_cfg_register_model (NC_TYPE_MATTER_VAR);
 
-  ncm_cfg_register_model (NC_TYPE_TRANSFER_FUNC_EH);
-
+  ncm_cfg_register_model (NC_TYPE_MULTIPLICITY_FUNC);
+  ncm_cfg_register_model (NC_TYPE_MULTIPLICITY_FUNC_PS);
+  ncm_cfg_register_model (NC_TYPE_MULTIPLICITY_FUNC_ST);
+  ncm_cfg_register_model (NC_TYPE_MULTIPLICITY_FUNC_JENKINS);
+  ncm_cfg_register_model (NC_TYPE_MULTIPLICITY_FUNC_WARREN);
+  ncm_cfg_register_model (NC_TYPE_MULTIPLICITY_FUNC_TINKER);
   ncm_cfg_register_model (NC_TYPE_MULTIPLICITY_FUNC_TINKER_MEAN);
+  ncm_cfg_register_model (NC_TYPE_MULTIPLICITY_FUNC_TINKER_CRIT);
+
+  ncm_cfg_register_model (NC_TYPE_MASS_FUNCTION);
+
+  ncm_cfg_register_model (NC_TYPE_GALAXY_ACF);
+
+  ncm_cfg_register_model (NC_TYPE_CLUSTER_MASS);
+  ncm_cfg_register_model (NC_TYPE_CLUSTER_MASS_NODIST);
+
+  ncm_cfg_register_model (NC_TYPE_CLUSTER_REDSHIFT);
+  ncm_cfg_register_model (NC_TYPE_CLUSTER_REDSHIFT_NODIST);
+  ncm_cfg_register_model (NC_TYPE_CLUSTER_PHOTOZ_GAUSS_GLOBAL);
+  ncm_cfg_register_model (NC_TYPE_CLUSTER_PHOTOZ_GAUSS);
+
+  ncm_cfg_register_model (NC_TYPE_HALO_BIAS_FUNC);
+
+  ncm_cfg_register_model (NC_TYPE_HALO_BIAS_TYPE);
+  ncm_cfg_register_model (NC_TYPE_HALO_BIAS_TYPE_PS);
+  ncm_cfg_register_model (NC_TYPE_HALO_BIAS_TYPE_ST_ELLIP);
+  ncm_cfg_register_model (NC_TYPE_HALO_BIAS_TYPE_ST_SPHER);
+  ncm_cfg_register_model (NC_TYPE_HALO_BIAS_TYPE_TINKER);
+
+  ncm_cfg_register_model (NC_TYPE_CLUSTER_ABUNDANCE);
 
   numcosmo_init = TRUE;
   return;
@@ -134,7 +186,7 @@ void
 ncm_cfg_register_model (GType model)
 {
 #ifdef NCM_DEBUG_MSGS
-  GType model_type = NCM_TYPE_GMODEL;
+  GType model_type = NCM_TYPE_MODEL;
   GType model_type = g_type_next_base (model, model_type);
   g_message ("# %s: %s:%s registred\n",
              g_type_name (model_type),

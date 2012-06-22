@@ -103,22 +103,17 @@ struct _NcClusterAbundance
   GObject parent_instance;
   NcMassFunction *mfp;
   NcClusterAbundanceOpt opt;
-  NcHaloBiasFunc *mbiasf;    /*new FIXME*/
+  NcHaloBiasFunc *mbiasf;    /* new FIXME */
   NcClusterAbundanced2NdzdlnM d2NdzdlnM_val;
   NcClusterAbundancedNdz dNdz_val;
   NcClusterAbundancedNdlnM dNdlnM_val;
   NcClusterAbundanceN N_val;
-  gdouble norma;
-  gdouble log_norma;
+  NcClusterRedshift *z;
+  NcClusterMass *m;
+  gdouble norma, log_norma;
+  gdouble lnMi, lnMf, zi, zf;
   gdouble completeness_factor;
-  gdouble zi;
-  gdouble zf;
-  gdouble lnMi;
-  gdouble lnMf;
-  NcClusterPhotoz *photoz;
-  gdouble lnM_sigma0;
-  gdouble lnM_epsilon;
-  gdouble z_epsilon;
+  gdouble lnM_epsilon, z_epsilon;
   gboolean optimize;
   gsl_histogram2d *completeness;
   gsl_histogram2d *purity;
@@ -135,23 +130,16 @@ struct _NcClusterAbundance
 
 GType nc_cluster_abundance_get_type (void) G_GNUC_CONST;
 
-NcClusterAbundance *nc_cluster_abundance_new (NcClusterAbundanceOpt opt, NcMassFunction *mfp, NcHaloBiasFunc *mbiasf, gdouble zi, gdouble zf, gdouble lnMi, gdouble lnMf, NcClusterPhotoz *photoz, gdouble lnM_sigma0);
+NcClusterAbundance *nc_cluster_abundance_new (NcClusterAbundanceOpt opt, NcMassFunction *mfp, NcHaloBiasFunc *mbiasf, NcClusterRedshift *clusterz, NcClusterMass *clusterm);
 NcClusterAbundance *nc_cluster_abundance_copy (NcClusterAbundance *cad);
 void nc_cluster_abundance_free (NcClusterAbundance *cad);
 
-void nc_cluster_abundance_set_zi (NcClusterAbundance *cad, const gdouble zi);
-void nc_cluster_abundance_set_zf (NcClusterAbundance *cad, const gdouble zf);
-void nc_cluster_abundance_set_lnMi (NcClusterAbundance *cad, const gdouble lnMi);
-void nc_cluster_abundance_set_lnMf (NcClusterAbundance *cad, const gdouble lnMf);
-void nc_cluster_abundance_set_photoz (NcClusterAbundance *cad, NcClusterPhotoz *photoz);
-void nc_cluster_abundance_set_lnM_sigma0 (NcClusterAbundance *cad, const gdouble lnM_sigma0);
-
-gdouble nc_cluster_abundance_get_zi (NcClusterAbundance *cad);
-gdouble nc_cluster_abundance_get_zf (NcClusterAbundance *cad);
-gdouble nc_cluster_abundance_get_lnMi (NcClusterAbundance *cad);
-gdouble nc_cluster_abundance_get_lnMf (NcClusterAbundance *cad);
-NcClusterPhotoz *nc_cluster_abundance_get_photoz (NcClusterAbundance *cad);
-gdouble nc_cluster_abundance_get_lnM_sigma0 (NcClusterAbundance *cad);
+void nc_cluster_abundance_set_redshift (NcClusterAbundance *cad, NcClusterRedshift *clusterz);
+void nc_cluster_abundance_set_mass (NcClusterAbundance *cad, NcClusterMass *clusterm);
+NcClusterRedshift *nc_cluster_abundance_get_redshift (NcClusterAbundance *cad);
+NcClusterMass *nc_cluster_abundance_get_mass (NcClusterAbundance *cad);
+G_INLINE_FUNC NcClusterRedshift *nc_cluster_abundance_peek_redshift (NcClusterAbundance *cad);
+G_INLINE_FUNC NcClusterMass *nc_cluster_abundance_peek_mass (NcClusterAbundance *cad);
 
 void nc_cluster_abundance_set_options (NcClusterAbundance *cad, NcClusterAbundanceOpt opt);
 void nc_cluster_abundance_and_options (NcClusterAbundance *cad, NcClusterAbundanceOpt opt);
@@ -160,22 +148,22 @@ gdouble nc_cluster_abundance_d2NdzdlnM_purity_val (NcClusterAbundance *cad, NcHI
 gdouble nc_cluster_abundance_dNdz_purity_val (NcClusterAbundance *cad, NcHICosmo *model, gdouble lnMl, gdouble lnMu, gdouble z);
 void nc_cluster_abundance_prepare (NcClusterAbundance *cad, NcHICosmo *model);
 void nc_cluster_abundance_prepare_inv_dNdz (NcClusterAbundance *cad, NcHICosmo *model);
-void nc_cluster_abundance_prepare_inv_dNdz_no_obs (NcClusterAbundance *cad, NcHICosmo *model);
 void nc_cluster_abundance_prepare_inv_dNdlnM_z (NcClusterAbundance *cad, NcHICosmo *model, gdouble z);
-void nc_cluster_abundance_prepare_inv_dNdlnM_z_no_obs (NcClusterAbundance *cad, NcHICosmo *model, gdouble z);
 void nc_cluster_abundance_bin_realization (GArray *zr, gsl_histogram **h);
 void nc_cluster_abundance_realizations_save_to_file (GPtrArray *realizations, gchar *filename);
 GPtrArray *nc_cluster_abundance_realizations_read_from_file (gchar *file_realization, gint n_realizations);
 
-gdouble nc_cluster_abundance_d2NdzdlnM_photoz (NcClusterAbundance *cad, NcHICosmo *model, gdouble lnM, gdouble z_phot);
-gdouble nc_cluster_abundance_d2NdzdlnM_Mobs (NcClusterAbundance *cad, NcHICosmo *model, gdouble lnMobs, gdouble z);
-gdouble nc_cluster_abundance_d2NdzdlnM_photoz_Mobs (NcClusterAbundance *cad, NcHICosmo *model, gdouble lnMobs, gdouble zp);
+gdouble nc_cluster_abundance_d2NdzdlnM_photoz (NcClusterAbundance *cad, NcHICosmo *model, gdouble lnM, gdouble *z_obs, gdouble *z_obs_params);
+gdouble nc_cluster_abundance_d2NdzdlnM_Mobs (NcClusterAbundance *cad, NcHICosmo *model, gdouble *lnM_obs, gdouble *lnM_obs_params, gdouble z);
+gdouble nc_cluster_abundance_d2NdzdlnM_photoz_Mobs (NcClusterAbundance *cad, NcHICosmo *model, gdouble *lnM_obs, gdouble *lnM_obs_params, gdouble *z_obs, gdouble *z_obs_params);
+/*
 gdouble nc_cluster_abundance_d2NdzdlnM_Mobs_local_selection (NcClusterAbundance *cad, NcHICosmo *model, gdouble lnMobs, gdouble z);
 gdouble nc_cluster_abundance_dNdz_Mobs_local_selection (NcClusterAbundance *cad, NcHICosmo *model, gdouble lnMobs_i, gdouble lnMobs_f, gdouble z);
 gdouble nc_cluster_abundance_N_Mobs_local_selection (NcClusterAbundance *cad, NcHICosmo *model, gdouble lnMobs_i, gdouble lnMobs_f, gdouble z_i, gdouble z_f);
 gdouble nc_cluster_abundance_d2NdzdlnM_photoz_Mobs_local_selection (NcClusterAbundance *cad, NcHICosmo *model, gdouble lnMobs, gdouble zp);
 gdouble nc_cluster_abundance_dNdz_photoz_Mobs_local_selection (NcClusterAbundance *cad, NcHICosmo *model, gdouble lnMobs_i, gdouble lnMobs_f, gdouble z);
 gdouble nc_cluster_abundance_N_photoz_Mobs_local_selection (NcClusterAbundance *cad, NcHICosmo *model, gdouble lnMobs_i, gdouble lnMobs_f, gdouble zp_i, gdouble zp_f);
+*/
 
 void nc_bias_mean_prepare (NcClusterAbundance *cad, NcHICosmo *model);
 gdouble nc_bias_mean_val (NcClusterAbundance *cad, NcHICosmo *model, gdouble lnMl, gdouble lnMu, gdouble z);
@@ -193,3 +181,29 @@ gdouble _nc_cad_inv_dNdz_convergence_f (gdouble n, gdouble epsilon);
 G_END_DECLS
 
 #endif /* _NC_CLUSTER_ABUNDANCE_H_ */
+
+#ifndef _NC_CLUSTER_ABUNDANCE_INLINE_H_
+#define _NC_CLUSTER_ABUNDANCE_INLINE_H_
+
+#include <glib-object.h>
+#include <glib.h>
+
+G_BEGIN_DECLS
+
+G_INLINE_FUNC NcClusterRedshift *
+nc_cluster_abundance_peek_redshift (NcClusterAbundance *cad)
+{
+  return cad->z;
+}
+
+G_INLINE_FUNC NcClusterMass *
+nc_cluster_abundance_peek_mass (NcClusterAbundance *cad)
+{
+  return cad->m;
+}
+
+G_END_DECLS
+
+#endif /* _NC_CLUSTER_ABUNDANCE_INLINE_H_ */
+
+

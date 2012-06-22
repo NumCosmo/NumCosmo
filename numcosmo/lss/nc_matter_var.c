@@ -122,20 +122,20 @@ nc_matter_var_free (NcMatterVar * vp)
 static void
 nc_matter_var_init (NcMatterVar *vp)
 {
-  /* TODO: Add initialization code here */
   vp->r = 0.0;
   vp->spline_init = 0;
   vp->n_points_spline = 0;
+
   vp->integrand_overw2_spline = NULL;
-  vp->sigma2_over_growth = NULL;
-  vp->deriv_sigma2_over_growth = NULL;
+  vp->sigma2_over_growth = ncm_spline_cubic_notaknot_new_full (ncm_vector_new (NC_MATTER_VAR_SIGMA2_NP), ncm_vector_new (NC_MATTER_VAR_SIGMA2_NP), FALSE);
+  vp->deriv_sigma2_over_growth = ncm_spline_cubic_notaknot_new_full (ncm_vector_new (NC_MATTER_VAR_SIGMA2_NP), ncm_vector_new (NC_MATTER_VAR_SIGMA2_NP), FALSE);
+
   vp->ctrl = ncm_model_ctrl_new (NULL);
 }
 
 static void
 _nc_matter_var_dispose (GObject * object)
 {
-  /* TODO: Add deinitalization code here */
   NcMatterVar *vp = NC_MATTER_VAR (object);
   nc_window_free (vp->wp);
   nc_transfer_func_free (vp->tf);
@@ -146,14 +146,16 @@ _nc_matter_var_dispose (GObject * object)
 	ncm_spline_free (vp->sigma2_over_growth);
   if (vp->deriv_sigma2_over_growth != NULL)
 	ncm_spline_free (vp->deriv_sigma2_over_growth);
+
+  /* Chain up : end */
   G_OBJECT_CLASS (nc_matter_var_parent_class)->dispose (object);
 }
 
 static void
 _nc_matter_var_finalize (GObject *object)
 {
-  /* TODO: Add deinitalization code here */
 
+  /* Chain up : end */
   G_OBJECT_CLASS (nc_matter_var_parent_class)->finalize (object);
 }
 

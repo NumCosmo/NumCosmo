@@ -29,26 +29,26 @@
 
 G_BEGIN_DECLS
 
-#define NCM_TYPE_GMODEL_TEST             (ncm_model_test_get_type ())
-#define NCM_MODEL_TEST(obj)             (G_TYPE_CHECK_INSTANCE_CAST ((obj), NCM_TYPE_GMODEL_TEST, NcmModelTest))
-#define NCM_MODEL_TEST_CLASS(klass)     (G_TYPE_CHECK_CLASS_CAST ((klass), NCM_TYPE_GMODEL_TEST, NcmModelTestClass))
-#define NCM_IS_GMODEL_TEST(obj)          (G_TYPE_CHECK_INSTANCE_TYPE ((obj), NCM_TYPE_GMODEL_TEST))
-#define NCM_IS_GMODEL_TEST_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE ((klass), NCM_TYPE_GMODEL_TEST))
-#define NCM_MODEL_TEST_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS ((obj), NCM_TYPE_GMODEL_TEST, NcmModelTestClass))
+#define NCM_TYPE_MODEL_TEST             (ncm_model_test_get_type ())
+#define NCM_MODEL_TEST(obj)             (G_TYPE_CHECK_INSTANCE_CAST ((obj), NCM_TYPE_MODEL_TEST, NcmModelTest))
+#define NCM_MODEL_TEST_CLASS(klass)     (G_TYPE_CHECK_CLASS_CAST ((klass), NCM_TYPE_MODEL_TEST, NcmModelTestClass))
+#define NCM_IS_MODEL_TEST(obj)          (G_TYPE_CHECK_INSTANCE_TYPE ((obj), NCM_TYPE_MODEL_TEST))
+#define NCM_IS_MODEL_TEST_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE ((klass), NCM_TYPE_MODEL_TEST))
+#define NCM_MODEL_TEST_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS ((obj), NCM_TYPE_MODEL_TEST, NcmModelTestClass))
 
-#define NCM_TYPE_GMODEL_TEST_CHILD             (ncm_model_test_child_get_type ())
-#define NCM_MODEL_TEST_CHILD(obj)             (G_TYPE_CHECK_INSTANCE_CAST ((obj), NCM_TYPE_GMODEL_TEST_CHILD, NcmModelTestChild))
-#define NCM_MODEL_TEST_CHILD_CLASS(klass)     (G_TYPE_CHECK_CLASS_CAST ((klass), NCM_TYPE_GMODEL_TEST_CHILD, NcmModelTestChildClass))
-#define NCM_IS_GMODEL_TEST_CHILD(obj)          (G_TYPE_CHECK_INSTANCE_TYPE ((obj), NCM_TYPE_GMODEL_TEST_CHILD))
-#define NCM_IS_GMODEL_TEST_CHILD_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE ((klass), NCM_TYPE_GMODEL_TEST_CHILD))
-#define NCM_MODEL_TEST_CHILD_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS ((obj), NCM_TYPE_GMODEL_TEST_CHILD, NcmModelTestChildClass))
+#define NCM_TYPE_MODEL_TEST_CHILD             (ncm_model_test_child_get_type ())
+#define NCM_MODEL_TEST_CHILD(obj)             (G_TYPE_CHECK_INSTANCE_CAST ((obj), NCM_TYPE_MODEL_TEST_CHILD, NcmModelTestChild))
+#define NCM_MODEL_TEST_CHILD_CLASS(klass)     (G_TYPE_CHECK_CLASS_CAST ((klass), NCM_TYPE_MODEL_TEST_CHILD, NcmModelTestChildClass))
+#define NCM_IS_MODEL_TEST_CHILD(obj)          (G_TYPE_CHECK_INSTANCE_TYPE ((obj), NCM_TYPE_MODEL_TEST_CHILD))
+#define NCM_IS_MODEL_TEST_CHILD_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE ((klass), NCM_TYPE_MODEL_TEST_CHILD))
+#define NCM_MODEL_TEST_CHILD_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS ((obj), NCM_TYPE_MODEL_TEST_CHILD, NcmModelTestChildClass))
 
-#define NCM_TYPE_GMODEL_TEST_CHILD_CHILD             (ncm_model_test_child_child_get_type ())
-#define NCM_MODEL_TEST_CHILD_CHILD(obj)             (G_TYPE_CHECK_INSTANCE_CAST ((obj), NCM_TYPE_GMODEL_TEST_CHILD_CHILD, NcmModelTestChildChild))
-#define NCM_MODEL_TEST_CHILD_CHILD_CLASS(klass)     (G_TYPE_CHECK_CLASS_CAST ((klass), NCM_TYPE_GMODEL_TEST_CHILD_CHILD, NcmModelTestChildChildClass))
-#define NCM_IS_GMODEL_TEST_CHILD_CHILD(obj)          (G_TYPE_CHECK_INSTANCE_TYPE ((obj), NCM_TYPE_GMODEL_TEST_CHILD_CHILD))
-#define NCM_IS_GMODEL_TEST_CHILD_CHILD_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE ((klass), NCM_TYPE_GMODEL_TEST_CHILD_CHILD))
-#define NCM_MODEL_TEST_CHILD_CHILD_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS ((obj), NCM_TYPE_GMODEL_TEST_CHILD_CHILD, NcmModelTestChildChildClass))
+#define NCM_TYPE_MODEL_TEST_CHILD_CHILD             (ncm_model_test_child_child_get_type ())
+#define NCM_MODEL_TEST_CHILD_CHILD(obj)             (G_TYPE_CHECK_INSTANCE_CAST ((obj), NCM_TYPE_MODEL_TEST_CHILD_CHILD, NcmModelTestChildChild))
+#define NCM_MODEL_TEST_CHILD_CHILD_CLASS(klass)     (G_TYPE_CHECK_CLASS_CAST ((klass), NCM_TYPE_MODEL_TEST_CHILD_CHILD, NcmModelTestChildChildClass))
+#define NCM_IS_MODEL_TEST_CHILD_CHILD(obj)          (G_TYPE_CHECK_INSTANCE_TYPE ((obj), NCM_TYPE_MODEL_TEST_CHILD_CHILD))
+#define NCM_IS_MODEL_TEST_CHILD_CHILD_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE ((klass), NCM_TYPE_MODEL_TEST_CHILD_CHILD))
+#define NCM_MODEL_TEST_CHILD_CHILD_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS ((obj), NCM_TYPE_MODEL_TEST_CHILD_CHILD, NcmModelTestChildChildClass))
 
 typedef struct _NcmModelTestClass NcmModelTestClass;
 typedef struct _NcmModelTest NcmModelTest;

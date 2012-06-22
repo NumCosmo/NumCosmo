@@ -234,7 +234,7 @@ static void
 _ncm_model_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
 {
   NcmModel *model = NCM_MODEL (object);
-  g_return_if_fail (NCM_IS_GMODEL (object));
+  g_return_if_fail (NCM_IS_MODEL (object));
 
   switch (prop_id)
   {
@@ -253,7 +253,7 @@ _ncm_model_get_property (GObject *object, guint prop_id, GValue *value, GParamSp
   NcmModel *model = NCM_MODEL (object);
   NcmModelClass *model_class = NCM_MODEL_GET_CLASS (object);
 
-  g_return_if_fail (NCM_IS_GMODEL (object));
+  g_return_if_fail (NCM_IS_MODEL (object));
 
   switch (prop_id)
   {

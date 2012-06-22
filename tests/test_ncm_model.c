@@ -93,7 +93,7 @@ gchar *name, *nick;
 void
 test_ncm_model_test_type (void)
 {
-  test_type = NCM_TYPE_GMODEL_TEST;
+  test_type = NCM_TYPE_MODEL_TEST;
   {
 	NcmModelTest *tm = g_object_new (test_type, NULL);
 	ncm_model_free (NCM_MODEL (tm));
@@ -109,7 +109,7 @@ test_ncm_model_test_type (void)
 void
 test_ncm_model_test_child_type (void)
 {
-  test_type = NCM_TYPE_GMODEL_TEST_CHILD;
+  test_type = NCM_TYPE_MODEL_TEST_CHILD;
   {
 	NcmModelTest *tm = g_object_new (test_type, NULL);
 	ncm_model_free (NCM_MODEL (tm));
@@ -125,7 +125,7 @@ test_ncm_model_test_child_type (void)
 void
 test_ncm_model_test_child_child_type (void)
 {
-  test_type = NCM_TYPE_GMODEL_TEST_CHILD_CHILD;
+  test_type = NCM_TYPE_MODEL_TEST_CHILD_CHILD;
   {
 	NcmModelTest *tm = g_object_new (test_type, NULL);
 	ncm_model_free (NCM_MODEL (tm));
@@ -143,8 +143,8 @@ test_ncm_model_test_new (void)
 {
   NcmModelTest *tm = g_object_new (test_type, NULL);
   NcmModel *model;
-  g_assert (NCM_IS_GMODEL (tm));
-  g_assert (NCM_IS_GMODEL_TEST (tm));
+  g_assert (NCM_IS_MODEL (tm));
+  g_assert (NCM_IS_MODEL_TEST (tm));
   model = NCM_MODEL (tm);
 
   g_assert (ncm_model_name (model) != name);

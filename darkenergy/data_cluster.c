@@ -43,6 +43,8 @@ nc_de_data_cluster_new (NcDistance *dist, NcmMSet *mset, NcDEDataClusterEntries 
   NcGrowthFunc *gf = nc_growth_func_new ();
   NcMultiplicityFunc *mulf = nc_multiplicity_func_new_from_name (de_data_cluster->multiplicity_name);
   NcMassFunction *mfp = nc_mass_function_new (dist, vp, gf, mulf);
+  NcClusterMass *clusterm = nc_cluster_mass_new_from_name (de_data_cluster->clusterm_ser);
+  NcClusterRedshift *clusterz = nc_cluster_redshift_new_from_name (de_data_cluster->clusterz_ser);
   NcClusterAbundanceOpt opt =
 	(de_data_cluster->use_photoz ? NC_CLUSTER_ABUNDANCE_PHOTOZ  : NC_CLUSTER_ABUNDANCE_NONE) |
 	(de_data_cluster->use_Mobs   ? NC_CLUSTER_ABUNDANCE_MOBS    : NC_CLUSTER_ABUNDANCE_NONE) |
@@ -59,7 +61,7 @@ nc_de_data_cluster_new (NcDistance *dist, NcmMSet *mset, NcDEDataClusterEntries 
         g_error ("For --cluster-id 0, you must specify a fit catalog via --catalog file.fit");
       while (de_data_cluster->cata_file[i] != NULL)
       {
-        NcClusterAbundance *cad = nc_cluster_abundance_new (opt, mfp, NULL, de_data_cluster->z_initial, de_data_cluster->z_final, log(de_data_cluster->Mi), log(de_data_cluster->Mf), NULL, de_data_cluster->lnM_sigma0);
+        NcClusterAbundance *cad = nc_cluster_abundance_new (opt, mfp, NULL, clusterz, clusterm);
         NcData *dca_unbinned = nc_data_cluster_abundance_unbinned_new (cad);
         nc_cluster_abundance_catalog_load (dca_unbinned, de_data_cluster->cata_file[i], opt);
         _nc_de_data_cluster_append (de_data_cluster, dca_unbinned, ds);
@@ -77,7 +79,7 @@ nc_de_data_cluster_new (NcDistance *dist, NcmMSet *mset, NcDEDataClusterEntries 
         g_error ("For --cluster-id 1, you must specify a fit catalog via --catalog filename");
       while (de_data_cluster->cata_file[i] != NULL)
       {
-        NcClusterAbundance *cad = nc_cluster_abundance_new (opt, mfp, NULL, de_data_cluster->z_initial, de_data_cluster->z_final, log(de_data_cluster->Mi), log(de_data_cluster->Mf), NULL, de_data_cluster->lnM_sigma0);
+        NcClusterAbundance *cad = nc_cluster_abundance_new (opt, mfp, NULL, clusterz, clusterm);
         NcData *dca_unbinned = nc_data_cluster_abundance_unbinned_new (cad);
 				nc_data_cluster_abundance_unbinned_init_from_text_file (dca_unbinned, de_data_cluster->cata_file[i], opt, de_data_cluster->area_survey * gsl_pow_2 (M_PI / 180.0), log(de_data_cluster->Mi), log(de_data_cluster->Mf), de_data_cluster->z_initial, de_data_cluster->z_final, de_data_cluster->photoz_sigma0, de_data_cluster->photoz_bias, de_data_cluster->lnM_sigma0, de_data_cluster->lnM_bias);
         _nc_de_data_cluster_append (de_data_cluster, dca_unbinned, ds);
@@ -90,10 +92,12 @@ nc_de_data_cluster_new (NcDistance *dist, NcmMSet *mset, NcDEDataClusterEntries 
       break;
     case 2:
     {
-      NcClusterAbundance *cad = nc_cluster_abundance_new (opt, mfp, NULL, de_data_cluster->z_initial, de_data_cluster->z_final, log(de_data_cluster->Mi), log(de_data_cluster->Mf), NULL, de_data_cluster->lnM_sigma0);
+      NcClusterAbundance *cad = nc_cluster_abundance_new (opt, mfp, NULL, clusterz, clusterm);
       NcData *dca_unbinned = nc_data_cluster_abundance_unbinned_new (cad);
-      nc_data_cluster_abundance_unbinned_init_from_sampling (dca_unbinned, mset, opt, de_data_cluster->area_survey * gsl_pow_2 (M_PI / 180.0), log(de_data_cluster->Mi), log(de_data_cluster->Mf), de_data_cluster->z_initial, de_data_cluster->z_final, de_data_cluster->photoz_sigma0, de_data_cluster->photoz_bias, de_data_cluster->lnM_sigma0, de_data_cluster->lnM_bias);
-      if (de_data_cluster->save_cata != NULL)
+
+      nc_data_cluster_abundance_unbinned_init_from_sampling (dca_unbinned, mset, clusterz, clusterm, de_data_cluster->area_survey * gsl_pow_2 (M_PI / 180.0));
+
+	  if (de_data_cluster->save_cata != NULL)
         nc_cluster_abundance_catalog_save (dca_unbinned, de_data_cluster->save_cata, TRUE);
       _nc_de_data_cluster_append (de_data_cluster, dca_unbinned, ds);
 			g_ptr_array_add (ca_array, dca_unbinned);

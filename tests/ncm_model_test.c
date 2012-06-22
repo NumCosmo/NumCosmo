@@ -29,9 +29,9 @@
 #include <numcosmo/numcosmo.h>
 #include "ncm_model_test.h"
 
-G_DEFINE_TYPE (NcmModelTest, ncm_model_test, NCM_TYPE_GMODEL);
-G_DEFINE_TYPE (NcmModelTestChild, ncm_model_test_child, NCM_TYPE_GMODEL_TEST);
-G_DEFINE_TYPE (NcmModelTestChildChild, ncm_model_test_child_child, NCM_TYPE_GMODEL_TEST_CHILD);
+G_DEFINE_TYPE (NcmModelTest, ncm_model_test, NCM_TYPE_MODEL);
+G_DEFINE_TYPE (NcmModelTestChild, ncm_model_test_child, NCM_TYPE_MODEL_TEST);
+G_DEFINE_TYPE (NcmModelTestChildChild, ncm_model_test_child_child, NCM_TYPE_MODEL_TEST_CHILD);
 
 enum {
   PROP_0,
@@ -80,7 +80,7 @@ static void
 _ncm_model_test_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
 {
   NcmModelTest *tm = NCM_MODEL_TEST (object);
-  g_return_if_fail (NCM_IS_GMODEL_TEST (object));
+  g_return_if_fail (NCM_IS_MODEL_TEST (object));
 
   switch (prop_id)
   {
@@ -97,7 +97,7 @@ static void
 _ncm_model_test_child_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
 {
   NcmModelTestChild *tmc = NCM_MODEL_TEST_CHILD (object);
-  g_return_if_fail (NCM_IS_GMODEL_TEST_CHILD (object));
+  g_return_if_fail (NCM_IS_MODEL_TEST_CHILD (object));
 
   switch (prop_id)
   {
@@ -114,7 +114,7 @@ static void
 _ncm_model_test_child_child_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
 {
   NcmModelTestChildChild *tmcc = NCM_MODEL_TEST_CHILD_CHILD (object);
-  g_return_if_fail (NCM_IS_GMODEL_TEST_CHILD_CHILD (object));
+  g_return_if_fail (NCM_IS_MODEL_TEST_CHILD_CHILD (object));
 
   switch (prop_id)
   {
@@ -131,7 +131,7 @@ static void
 _ncm_model_test_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
 {
   NcmModelTest *tm = NCM_MODEL_TEST (object);
-  g_return_if_fail (NCM_IS_GMODEL_TEST (object));
+  g_return_if_fail (NCM_IS_MODEL_TEST (object));
 
   switch (prop_id)
   {
@@ -148,7 +148,7 @@ static void
 _ncm_model_test_child_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
 {
   NcmModelTestChild *tmc = NCM_MODEL_TEST_CHILD (object);
-  g_return_if_fail (NCM_IS_GMODEL_TEST_CHILD (object));
+  g_return_if_fail (NCM_IS_MODEL_TEST_CHILD (object));
 
   switch (prop_id)
   {
@@ -165,7 +165,7 @@ static void
 _ncm_model_test_child_child_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
 {
   NcmModelTestChildChild *tmcc = NCM_MODEL_TEST_CHILD_CHILD (object);
-  g_return_if_fail (NCM_IS_GMODEL_TEST_CHILD_CHILD (object));
+  g_return_if_fail (NCM_IS_MODEL_TEST_CHILD_CHILD (object));
 
   switch (prop_id)
   {

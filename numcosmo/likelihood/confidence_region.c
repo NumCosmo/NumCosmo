@@ -52,7 +52,6 @@ static void nc_confidence_region_numdiff_fdf (gdouble x, gpointer p, gdouble *y,
 
 static gdouble ncm_fit_cr_root_steffenson (NcConfidenceRegion *cr, gdouble x);
 static gdouble ncm_fit_cr_root_brent (NcConfidenceRegion *cr, gdouble x0, gdouble x);
-static gdouble ncm_fit_cr_root_walkto (NcConfidenceRegion *cr, gint dir);
 
 #define OUTPUT NULL
 #define ERR(i) (1.0*sqrt(ncm_matrix_get(fit->covar,i,i)))
@@ -916,29 +915,6 @@ ncm_fit_type_constrain_error (NcmFit *fit, gdouble p, gint nu, gdouble dir, NcmM
 
   return r;
   */
-}
-
-static gdouble
-ncm_fit_cr_root_walkto (NcConfidenceRegion *cr, gint dir)
-{
-  gdouble x = 0;
-  guint i;
-  printf ("#");
-  for (i = 0; i < 1000000; i++)
-  {
-	gdouble vval = nc_confidence_region_f (x, cr);
-	gdouble dval = nc_confidence_region_df (x, cr);
-	//printf("df=%g [%g]:[%g]\n", dval, x, vval);fflush (stdout);
-	dval = GSL_MAX (BASE_SCALE(cr->chi2)*100, fabs(dval));
-	printf(".");fflush (stdout);
-	if (!gsl_finite (vval) || !gsl_finite (dval))
-	  break;
-	if (vval > 0)
-	  break;
-	x += dir * BASE_SCALE(cr->chi2) / dval;
-  }
-  printf ("\n");fflush (stdout);
-  return x;
 }
 
 static gdouble
