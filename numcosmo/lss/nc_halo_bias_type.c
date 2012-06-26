@@ -57,15 +57,12 @@ G_DEFINE_ABSTRACT_TYPE (NcHaloBiasType, nc_halo_bias_type, G_TYPE_OBJECT);
 NcHaloBiasType *
 nc_halo_bias_type_new_from_name (gchar *bias_name)
 {
-  GType bias_type = g_type_from_name (bias_name);
-  if (bias_type == 0)
-  {
-	g_message ("# Invalid name of halo bias type %s\n", bias_name);
-	g_error ("Aborting...");
-  }
-  else if (!g_type_is_a (bias_type, NC_TYPE_HALO_BIAS_TYPE))
+  GObject *obj = ncm_cfg_create_from_string (bias_name);
+  GType bias_type = G_OBJECT_TYPE (obj);
+
+  if (!g_type_is_a (bias_type, NC_TYPE_HALO_BIAS_TYPE))
 	g_error ("nc_halo_bias_type_new_from_name: NcHaloBiasType %s do not descend from %s\n", bias_name, g_type_name (NC_TYPE_HALO_BIAS_TYPE));
-  return g_object_new (bias_type, NULL);
+  return NC_HALO_BIAS_TYPE (obj);
 }
 
 /**

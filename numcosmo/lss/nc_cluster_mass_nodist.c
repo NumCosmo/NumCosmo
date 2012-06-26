@@ -46,14 +46,21 @@ enum
 };
 
 static gdouble
-_nc_cluster_mass_nodist_dist_eval (NcClusterMass *clusterm, gdouble z, gdouble lnM, gdouble *lnM_obs, gdouble *lnM_obs_params)
+_nc_cluster_mass_nodist_p (NcClusterMass *clusterm, gdouble lnM, gdouble z, gdouble *lnM_obs, gdouble *lnM_obs_params)
 {
-  g_error ("This object don't implement dist_eval.");
+  g_error ("This object don't implement p.");
+  return GSL_NAN;
+}
+
+static gdouble
+_nc_cluster_mass_nodist_intp (NcClusterMass *clusterm, gdouble lnM, gdouble z)
+{
+  g_error ("This object don't implement intp.");
   return GSL_NAN;
 }
 
 static gboolean
-_nc_cluster_mass_nodist_resample (NcClusterMass *clusterm, gdouble z, gdouble lnM, gdouble *lnM_obs, gdouble *lnM_obs_params)
+_nc_cluster_mass_nodist_resample (NcClusterMass *clusterm, gdouble lnM, gdouble z, gdouble *lnM_obs, gdouble *lnM_obs_params)
 {
   NcClusterMassNodist *zn = NC_CLUSTER_MASS_NODIST (clusterm);
   lnM_obs[0] = lnM;
@@ -61,14 +68,14 @@ _nc_cluster_mass_nodist_resample (NcClusterMass *clusterm, gdouble z, gdouble ln
 }
 
 static void
-_nc_cluster_mass_nodist_integ_limits (NcClusterMass *clusterm, gdouble *lnM_obs, gdouble *lnM_obs_params, gdouble *lnM_lower, gdouble *lnM_upper)
+_nc_cluster_mass_nodist_p_limits (NcClusterMass *clusterm, gdouble *lnM_obs, gdouble *lnM_obs_params, gdouble *lnM_lower, gdouble *lnM_upper)
 {
   g_error ("This object don't implement integ_limits.");
   return;
 }
 
 static void
-_nc_cluster_mass_nodist_lnm_limits (NcClusterMass *clusterm, gdouble *lnm_lower, gdouble *lnm_upper)
+_nc_cluster_mass_nodist_n_limits (NcClusterMass *clusterm, gdouble *lnm_lower, gdouble *lnm_upper)
 {
   NcClusterMassNodist *mn = NC_CLUSTER_MASS_NODIST (clusterm);
 
@@ -142,12 +149,15 @@ nc_cluster_mass_nodist_class_init (NcClusterMassNodistClass *klass)
   GObjectClass* object_class = G_OBJECT_CLASS (klass);
   NcClusterMassClass* parent_class = NC_CLUSTER_MASS_CLASS (klass);
 
-  parent_class->dist_eval      = &_nc_cluster_mass_nodist_dist_eval;
+  parent_class->P              = &_nc_cluster_mass_nodist_p;
+  parent_class->intP           = &_nc_cluster_mass_nodist_intp;
   parent_class->resample       = &_nc_cluster_mass_nodist_resample;
-  parent_class->integ_limits   = &_nc_cluster_mass_nodist_integ_limits;
-  parent_class->lnm_limits     = &_nc_cluster_mass_nodist_lnm_limits;
+  parent_class->P_limits       = &_nc_cluster_mass_nodist_p_limits;
+  parent_class->N_limits       = &_nc_cluster_mass_nodist_n_limits;
   parent_class->obs_len        = &_nc_cluster_mass_nodist_obs_len;
   parent_class->obs_params_len = &_nc_cluster_mass_nodist_obs_params_len;
+
+  parent_class->impl = NC_CLUSTER_MASS_N_LIMTS | NC_CLUSTER_MASS_RESAMPLE;
 
   object_class->finalize     =  &nc_cluster_mass_nodist_finalize;
   object_class->set_property = &_nc_cluster_mass_nodist_set_property;

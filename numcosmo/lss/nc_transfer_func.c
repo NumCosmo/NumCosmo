@@ -62,15 +62,12 @@ G_DEFINE_ABSTRACT_TYPE (NcTransferFunc, nc_transfer_func, G_TYPE_OBJECT);
 NcTransferFunc *
 nc_transfer_func_new_from_name (gchar *transfer_name)
 {
-  GType transfer_type = g_type_from_name (transfer_name);
-  if (transfer_type == 0)
-  {
-	g_message ("# Invalid transfer name %s\n", transfer_name);
-	g_error ("Aborting...");
-  }
-  else if (!g_type_is_a (transfer_type, NC_TYPE_TRANSFER_FUNC))
+  GObject *obj = ncm_cfg_create_from_string (transfer_name);
+  GType transfer_type = G_OBJECT_TYPE (obj);
+
+  if (!g_type_is_a (transfer_type, NC_TYPE_TRANSFER_FUNC))
 	g_error ("nc_transfer_func_new_from_name: NcTransferFunc %s do not descend from %s\n", transfer_name, g_type_name (NC_TYPE_TRANSFER_FUNC));
-  return g_object_new (transfer_type, NULL);
+  return NC_TRANSFER_FUNC (obj);
 }
 
 /**

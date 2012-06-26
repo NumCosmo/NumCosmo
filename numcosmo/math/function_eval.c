@@ -40,33 +40,33 @@
 typedef struct _NcmFunctionEvalCtrl
 {
   gint active_threads;
-  gsl_function *F;
   GMutex *update;
   GCond *finish;
 } NcmFunctionEvalCtrl;
 
-typedef struct _NcmFunctionEvalArg
+typedef struct _NcmLoopFuncEval
 {
-  gdouble *x;
-	gdouble *val;
+  NcmLoopFunc lfunc;
+  glong i;
+  glong f;
+  gpointer data;
   NcmFunctionEvalCtrl *ctrl;
-} NcmFunctionEvalArg;
+} NcmLoopFuncEval;
 
 static GThreadPool *_function_thread_pool = NULL;
 
 static void
 func (gpointer data, gpointer empty)
 {
-  NcmFunctionEvalArg *arg = (NcmFunctionEvalArg *)data;
-	arg->val[0] = GSL_FN_EVAL (arg->ctrl->F, arg->x[0]);
-	
+  NcmLoopFuncEval *arg = (NcmLoopFuncEval *)data;
+  arg->lfunc (arg->i, arg->f, arg->data);
   g_mutex_lock (arg->ctrl->update);
   arg->ctrl->active_threads--;
-  g_slice_free (NcmFunctionEvalArg, arg);
+  g_slice_free (NcmLoopFuncEval, arg);
   if (arg->ctrl->active_threads == 0)
-    g_cond_signal (arg->ctrl->finish);
+	g_cond_signal (arg->ctrl->finish);
   g_mutex_unlock (arg->ctrl->update);
-	
+
   return;
 }
 
@@ -83,12 +83,12 @@ ncm_function_eval_get_pool ()
 {
   static GStaticMutex create_lock = G_STATIC_MUTEX_INIT;
   GError *err = NULL;
-  
+
   g_static_mutex_lock (&create_lock);
   if (_function_thread_pool == NULL)
   {
-    _function_thread_pool = g_thread_pool_new (func, NULL, NC_THREAD_POOL_MAX, TRUE, &err);
-    g_clear_error (&err);
+	_function_thread_pool = g_thread_pool_new (func, NULL, NCM_THREAD_POOL_MAX, TRUE, &err);
+	g_clear_error (&err);
   }
   g_static_mutex_unlock (&create_lock);
 
@@ -111,76 +111,72 @@ ncm_function_eval_set_max_threads (gint mt)
 }
 
 /**
- * ncm_function_eval_threaded: (skip)
- * @F: gsl_function to be evaluated in threads
- * @x: array of values to evaluate the function
- * @val: array to store the values of F evaluated in x
- * @n: number of elements in x
- * @x_stride: the space between elements in the x array
- * @val_stride: the space between elements in the val array
+ * ncm_function_eval_threaded_loop:
+ * @lfunc: (scope notified): #NcmLoopFunc to be evaluated in threads
+ * @i: initial index
+ * @f: final index
+ * @data: pointer to be passed to @fl
  * 
- * Using the thread pool, evaluate the gsl_function in each value of 
- * the array x[x_stride * i] and stores the result in val[val_stride * i]
- * for i in [0, n-1]. Note that F must contain a reentrant function.
+ * Using the thread pool, evaluate @fl in each value of (@f-@i)/nthreads
  * 
  */
 void
-ncm_function_eval_threaded (gsl_function *F, gdouble *x, gdouble *val, gulong n, guint x_stride, guint val_stride)
+ncm_function_eval_threaded_loop (NcmLoopFunc lfunc, glong i, glong f, gpointer data)
 {
-	NcmFunctionEvalCtrl ctrl = {n, F, NULL, NULL};
-  gint i;
+  NcmFunctionEvalCtrl ctrl = {0, NULL, NULL};
+  gint nthreads, delta, res;
 
   ncm_function_eval_get_pool ();
   ctrl.update = g_mutex_new ();
   ctrl.finish = g_cond_new ();
 
-#if NC_THREAD_POOL_MAX > 1
+  g_assert (f >= i);
+  nthreads = g_thread_pool_get_max_threads (_function_thread_pool);
+  delta = (f-i) / nthreads;
+  res = (f-i) % nthreads;
+
+#if NCM_THREAD_POOL_MAX > 1
+  if (delta == 0)
   {
-    GError *err = NULL;
-    for (i = 0; i < n; i++)
-    {
-      NcmFunctionEvalArg *arg = g_slice_new (NcmFunctionEvalArg);
-      arg->x = &x[i * x_stride];
-      arg->val = &val[i * x_stride];
-      arg->ctrl = &ctrl;
-      g_thread_pool_push (_function_thread_pool, arg, &err);
-    }
+	lfunc (i, f, data);
+  }
+  else
+  {
+	GError *err = NULL;
+	glong li = i;
+	glong lf = delta + res;
+	ctrl.active_threads = nthreads;
+	
+	do {
+	  NcmLoopFuncEval *arg = g_slice_new (NcmLoopFuncEval);
+	  arg->lfunc = lfunc;
+	  arg->i = li;
+	  arg->f = lf;
+	  arg->data = data;
+	  arg->ctrl = &ctrl;
+	  g_thread_pool_push (_function_thread_pool, arg, &err);
+	  li = lf;
+	  lf += delta;
+	} while (--nthreads);
   }
 #else
-  for (i = 0; i < n; i++)
-    val[i * x_stride] = GSL_FN_EVAL (F, x[i * x_stride]);
+  lf (i, f, data);
 #endif
 
-  printf ("Waiting for the sun\n");fflush (stdout);
   g_mutex_lock (ctrl.update);
-	while (ctrl.active_threads != 0)
-    g_cond_wait (ctrl.finish, ctrl.update);
+  while (ctrl.active_threads != 0)
+	g_cond_wait (ctrl.finish, ctrl.update);
   g_mutex_unlock (ctrl.update);
-  
-  printf  ("Unused:      %d\n", g_thread_pool_get_num_unused_threads ());fflush (stdout);
-  printf  ("Max Unused:  %d\n", g_thread_pool_get_max_unused_threads ());fflush (stdout);
-  printf  ("Running:     %d\n", g_thread_pool_get_num_threads (_function_thread_pool));fflush (stdout);
-  printf  ("Unprocessed: %d\n", g_thread_pool_unprocessed (_function_thread_pool));fflush (stdout);
-  printf  ("Unused:      %d\n", g_thread_pool_get_max_threads (_function_thread_pool));fflush (stdout);
+
+  if (FALSE)
+  {
+	printf  ("Unused:      %d\n", g_thread_pool_get_num_unused_threads ());fflush (stdout);
+	printf  ("Max Unused:  %d\n", g_thread_pool_get_max_unused_threads ());fflush (stdout);
+	printf  ("Running:     %d\n", g_thread_pool_get_num_threads (_function_thread_pool));fflush (stdout);
+	printf  ("Unprocessed: %d\n", g_thread_pool_unprocessed (_function_thread_pool));fflush (stdout);
+	printf  ("Unused:      %d\n", g_thread_pool_get_max_threads (_function_thread_pool));fflush (stdout);
+  }
 
   g_mutex_free (ctrl.update);
   g_cond_free (ctrl.finish);
-}
-
-/**
- * ncm_function_eval_threaded_vec: (skip)
- * @F: gsl_function to be evaluated in threads
- * @x: gsl_vector of values to evaluate the function
- * @val: gsl_vector to store the values of F evaluated in x
- * 
- * Using the thread pool, evaluate the gsl_function in each value of 
- * the gsl_vector x and stores the result in the gsl_vector val
- * for the x->size values of x. Note that F must contain a reentrant function.
- * 
- */
-void
-ncm_function_eval_threaded_vec (gsl_function *F, gsl_vector *x, gsl_vector *val)
-{
-  g_assert (x->size >= val->size);
-  ncm_function_eval_threaded (F, x->data, val->data, x->size, x->stride, val->stride);
 }

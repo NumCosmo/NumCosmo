@@ -36,8 +36,6 @@
 #include <numcosmo/numcosmo.h>
 
 #include <glib.h>
-#include <gsl/gsl_sf_erf.h>
-//#include <gsl/gsl_randist.h>
 
 G_DEFINE_TYPE (NcClusterPhotozGaussGlobal, nc_cluster_photoz_gauss_global, NC_TYPE_CLUSTER_REDSHIFT);
 
@@ -73,31 +71,53 @@ nc_cluster_photoz_gauss_global_new (gdouble pz_min, gdouble pz_max, gdouble z_bi
 }
 
 static gdouble
-_nc_cluster_photoz_gauss_global_dist_eval (NcClusterRedshift *clusterz, gdouble z, gdouble lnM, gdouble *z_obs, gdouble *z_obs_params)
+_nc_cluster_photoz_gauss_global_p (NcClusterRedshift *clusterz, gdouble lnM, gdouble z, gdouble *z_obs, gdouble *z_obs_params)
 {
   NcClusterPhotozGaussGlobal *pzg_global = NC_CLUSTER_PHOTOZ_GAUSS_GLOBAL (clusterz);
+  const gdouble z_eff = z + pzg_global->z_bias;
   const gdouble sqrt2_sigma = M_SQRT2 * pzg_global->sigma0 * (1.0 + z);
-  const gdouble y1 = (z_obs[0] - z - pzg_global->z_bias) / sqrt2_sigma;
+  const gdouble y1 = (z_obs[0] - z_eff) / sqrt2_sigma;
 
-  return M_2_SQRTPI / M_SQRT2 * exp (- y1 * y1) / (pzg_global->sigma0 * (1.0 + z) * (1.0 + gsl_sf_erf (z / sqrt2_sigma)));
+  return M_2_SQRTPI / M_SQRT2 * exp (- y1 * y1) / (pzg_global->sigma0 * (1.0 + z) * (1.0 + erf (z_eff / sqrt2_sigma)));
+}
+
+static gdouble
+_nc_cluster_photoz_gauss_global_intp (NcClusterRedshift *clusterz, gdouble lnM, gdouble z)
+{
+  NcClusterPhotozGaussGlobal *pzg_global = NC_CLUSTER_PHOTOZ_GAUSS_GLOBAL (clusterz);
+  const gdouble z_eff = z + pzg_global->z_bias;
+  const gdouble sqrt2_sigma = M_SQRT2 * pzg_global->sigma0 * (1.0 + z);
+  const gdouble x_min = (z_eff - pzg_global->pz_min) / sqrt2_sigma;
+  const gdouble x_max = (z_eff - pzg_global->pz_max) / sqrt2_sigma;
+
+  if (x_max > 4.0)
+  {
+	return -(erfc (x_min) - erfc (x_max)) / 
+	  (1.0 + erf (z_eff / sqrt2_sigma));
+  }
+  else
+  {
+	return (erf (x_min) - erf (x_max)) / 
+	  (1.0 + erf (z_eff / sqrt2_sigma));
+  }
 }
 
 static gboolean
-_nc_cluster_photoz_gauss_global_resample (NcClusterRedshift *clusterz, gdouble z, gdouble lnM, gdouble *z_obs, gdouble *z_obs_params)
+_nc_cluster_photoz_gauss_global_resample (NcClusterRedshift *clusterz, gdouble lnM, gdouble z, gdouble *z_obs, gdouble *z_obs_params)
 {
   NcClusterPhotozGaussGlobal *pzg_global = NC_CLUSTER_PHOTOZ_GAUSS_GLOBAL (clusterz);
   const gdouble sigma_z = pzg_global->sigma0 * (1.0 + z);
   gsl_rng *rng = ncm_get_rng ();
 
   do {
-  z_obs[0] = z + pzg_global->z_bias + gsl_ran_gaussian (rng, sigma_z);
+	z_obs[0] = z + pzg_global->z_bias + gsl_ran_gaussian (rng, sigma_z);
   } while (z_obs[0] < 0.0);
 
   return (z_obs[0] <= pzg_global->pz_max) && (z_obs[0] >= pzg_global->pz_min);
 }
 
 static void
-_nc_cluster_photoz_gauss_global_integ_limits (NcClusterRedshift *clusterz, gdouble *z_obs, gdouble *z_obs_params, gdouble *z_lower, gdouble *z_upper)
+_nc_cluster_photoz_gauss_global_p_limits (NcClusterRedshift *clusterz, gdouble *z_obs, gdouble *z_obs_params, gdouble *z_lower, gdouble *z_upper)
 {
   NcClusterPhotozGaussGlobal *pzg_global = NC_CLUSTER_PHOTOZ_GAUSS_GLOBAL (clusterz);
   const gdouble mean = z_obs[0] - pzg_global->z_bias;
@@ -111,7 +131,7 @@ _nc_cluster_photoz_gauss_global_integ_limits (NcClusterRedshift *clusterz, gdoub
 }
 
 static void
-_nc_cluster_photoz_gauss_global_z_limits (NcClusterRedshift *clusterz, gdouble *z_lower, gdouble *z_upper)
+_nc_cluster_photoz_gauss_global_n_limits (NcClusterRedshift *clusterz, gdouble *z_lower, gdouble *z_upper)
 {
   NcClusterPhotozGaussGlobal *pzg_global = NC_CLUSTER_PHOTOZ_GAUSS_GLOBAL (clusterz);
   const gdouble zl = GSL_MAX (pzg_global->pz_min - pzg_global->z_bias - 10.0 * pzg_global->sigma0 * (1.0 + pzg_global->pz_min), 0.0);
@@ -182,7 +202,7 @@ static void
 nc_cluster_photoz_gauss_global_init (NcClusterPhotozGaussGlobal *pzg_global)
 {
   pzg_global->z_bias = 0.0;
-  pzg_global->sigma0 = 0.01;
+  pzg_global->sigma0 = 0.0;
 }
 
 static void
@@ -251,12 +271,15 @@ nc_cluster_photoz_gauss_global_class_init (NcClusterPhotozGaussGlobalClass *klas
   GObjectClass* object_class = G_OBJECT_CLASS (klass);
   NcClusterRedshiftClass* parent_class = NC_CLUSTER_REDSHIFT_CLASS (klass);
 
-  parent_class->dist_eval      = &_nc_cluster_photoz_gauss_global_dist_eval;
+  parent_class->P              = &_nc_cluster_photoz_gauss_global_p;
+  parent_class->intP           = &_nc_cluster_photoz_gauss_global_intp;
   parent_class->resample       = &_nc_cluster_photoz_gauss_global_resample;
-  parent_class->integ_limits   = &_nc_cluster_photoz_gauss_global_integ_limits;
-  parent_class->z_limits       = &_nc_cluster_photoz_gauss_global_z_limits;
+  parent_class->P_limits       = &_nc_cluster_photoz_gauss_global_p_limits;
+  parent_class->N_limits       = &_nc_cluster_photoz_gauss_global_n_limits;
   parent_class->obs_len        = &_nc_cluster_photoz_gauss_global_obs_len;
   parent_class->obs_params_len = &_nc_cluster_photoz_gauss_global_obs_params_len;
+
+  parent_class->impl = NC_CLUSTER_REDSHIFT_IMPL_ALL;
 
   object_class->finalize = _nc_cluster_photoz_gauss_global_finalize;
   object_class->set_property = _nc_cluster_photoz_gauss_global_set_property;
@@ -311,7 +334,7 @@ nc_cluster_photoz_gauss_global_class_init (NcClusterPhotozGaussGlobalClass *klas
                                    g_param_spec_double ("sigma0",
                                                         NULL,
                                                         "sigma0",
-                                                        0.0, G_MAXDOUBLE, 0.0,
+                                                        0.0, G_MAXDOUBLE, 0.03,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY |G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 }
 

@@ -37,11 +37,10 @@
 
 G_BEGIN_DECLS
 
-typedef void (*NcFunctionLoop1) (gsize i, gpointer data, gpointer glob_data);
+typedef void (*NcmLoopFunc) (glong i, glong f, gpointer data);
 
-void ncm_function_eval_threaded (gsl_function *F, gdouble *x, gdouble *val, gulong n, guint x_stride, guint val_stride);
-void ncm_function_eval_threaded_vec (gsl_function *F, gsl_vector *x, gsl_vector *val);
-/* void ncm_function_eval_threaded_loop (NcFunctionLoop1 fl, gsize lp_size, gpointer glob_data); */
+void ncm_function_eval_set_max_threads (gint mt);
+void ncm_function_eval_threaded_loop (NcmLoopFunc lfunc, glong i, glong f, gpointer data);
 
 G_END_DECLS
 

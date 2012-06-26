@@ -36,7 +36,6 @@
 #include <numcosmo/numcosmo.h>
 
 #include <glib.h>
-#include <gsl/gsl_sf_erf.h>
 #include <gsl/gsl_randist.h>
 
 G_DEFINE_TYPE (NcClusterPhotozGauss, nc_cluster_photoz_gauss, NC_TYPE_CLUSTER_REDSHIFT);
@@ -62,18 +61,40 @@ nc_cluster_photoz_gauss_new ()
 }
 
 static gdouble
-_nc_cluster_photoz_gauss_dist_eval (NcClusterRedshift *clusterz, gdouble z, gdouble lnM, gdouble *z_obs, gdouble *z_obs_params)
+_nc_cluster_photoz_gauss_p (NcClusterRedshift *clusterz, gdouble lnM, gdouble z, gdouble *z_obs, gdouble *z_obs_params)
 {
   const gdouble z_bias = z_obs_params[NC_CLUSTER_PHOTOZ_GAUSS_BIAS];
+  const gdouble z_eff = z_bias + z;
   const gdouble sigma = z_obs_params[NC_CLUSTER_PHOTOZ_GAUSS_SIGMA];
   const gdouble sqrt2_sigma = M_SQRT2 * sigma;
-  const gdouble y1 = (z_obs[0] - z - z_bias) / sqrt2_sigma;
+  const gdouble y1 = (z_obs[0] - z_eff) / sqrt2_sigma;
 
-  return M_2_SQRTPI / M_SQRT2 * exp (- y1 * y1) / (sigma * (1.0 + gsl_sf_erf ( z / sqrt2_sigma )));
+  return M_2_SQRTPI / M_SQRT2 * exp (- y1 * y1) / (sigma * (1.0 + erf ( z_eff / sqrt2_sigma )));
+}
+
+static gdouble
+_nc_cluster_photoz_gauss_intp (NcClusterRedshift *clusterz, gdouble lnM, gdouble z)
+{
+  NcClusterPhotozGauss *pzg = NC_CLUSTER_PHOTOZ_GAUSS (clusterz);
+  const gdouble sigma = 0.03 * (1.0 + z);
+  const gdouble sqrt2_sigma = M_SQRT2 * sigma;
+  const gdouble x_min = (z - pzg->pz_min) / sqrt2_sigma;
+  const gdouble x_max = (z - pzg->pz_max) / sqrt2_sigma;
+
+  if (x_max > 4.0)
+  {
+	return -(erfc (x_min) - erfc (x_max)) / 
+	  (1.0 + erf ( z / sqrt2_sigma ));
+  }
+  else
+  {
+	return (erf (x_min) - erf (x_max)) / 
+	  (1.0 + erf ( z / sqrt2_sigma ));
+  }
 }
 
 static gboolean
-_nc_cluster_photoz_gauss_resample (NcClusterRedshift *clusterz, gdouble z, gdouble lnM, gdouble *z_obs, gdouble *z_obs_params)
+_nc_cluster_photoz_gauss_resample (NcClusterRedshift *clusterz, gdouble lnM, gdouble z, gdouble *z_obs, gdouble *z_obs_params)
 {
   NcClusterPhotozGauss *pzg = NC_CLUSTER_PHOTOZ_GAUSS (clusterz);
   gsl_rng *rng = ncm_get_rng ();
@@ -92,7 +113,7 @@ _nc_cluster_photoz_gauss_resample (NcClusterRedshift *clusterz, gdouble z, gdoub
 }
 
 static void
-_nc_cluster_photoz_gauss_integ_limits (NcClusterRedshift *clusterz, gdouble *z_obs, gdouble *z_obs_params, gdouble *z_lower, gdouble *z_upper)
+_nc_cluster_photoz_gauss_p_limits (NcClusterRedshift *clusterz, gdouble *z_obs, gdouble *z_obs_params, gdouble *z_lower, gdouble *z_upper)
 {
   const gdouble mean = z_obs[0] - z_obs_params[NC_CLUSTER_PHOTOZ_GAUSS_BIAS];
   const gdouble zl = GSL_MAX (mean - 10.0 * z_obs_params[NC_CLUSTER_PHOTOZ_GAUSS_SIGMA], 0.0);
@@ -105,7 +126,7 @@ _nc_cluster_photoz_gauss_integ_limits (NcClusterRedshift *clusterz, gdouble *z_o
 }
 
 static void
-_nc_cluster_photoz_gauss_z_limits (NcClusterRedshift *clusterz, gdouble *z_lower, gdouble *z_upper)
+_nc_cluster_photoz_gauss_n_limits (NcClusterRedshift *clusterz, gdouble *z_lower, gdouble *z_upper)
 {
   NcClusterPhotozGauss *pzg = NC_CLUSTER_PHOTOZ_GAUSS (clusterz);
   const gdouble zl = GSL_MAX (pzg->pz_min - 10.0 * 0.03 * (1.0 + pzg->pz_min), 0.0);
@@ -181,12 +202,15 @@ nc_cluster_photoz_gauss_class_init (NcClusterPhotozGaussClass *klass)
   GObjectClass* object_class = G_OBJECT_CLASS (klass);
   NcClusterRedshiftClass* parent_class = NC_CLUSTER_REDSHIFT_CLASS (klass);
 
-  parent_class->dist_eval      = &_nc_cluster_photoz_gauss_dist_eval;
+  parent_class->P              = &_nc_cluster_photoz_gauss_p;
+  parent_class->intP           = &_nc_cluster_photoz_gauss_intp;
   parent_class->resample       = &_nc_cluster_photoz_gauss_resample;
-  parent_class->integ_limits   = &_nc_cluster_photoz_gauss_integ_limits;
-  parent_class->z_limits       = &_nc_cluster_photoz_gauss_z_limits;
+  parent_class->P_limits       = &_nc_cluster_photoz_gauss_p_limits;
+  parent_class->N_limits       = &_nc_cluster_photoz_gauss_n_limits;
   parent_class->obs_len        = &_nc_cluster_photoz_gauss_obs_len;
   parent_class->obs_params_len = &_nc_cluster_photoz_gauss_obs_params_len;
+
+  parent_class->impl = NC_CLUSTER_REDSHIFT_IMPL_ALL;
 
   object_class->finalize = _nc_cluster_photoz_gauss_finalize;
   object_class->set_property = _nc_cluster_photoz_gauss_set_property;

@@ -153,7 +153,7 @@ AC_ARG_WITH([thread-pool-max],
             [thread_pool_max='yes'], [thread_pool_max='no'])
 
 if test "x$thread_pool_max" = "xyes"; then
-  AC_DEFINE_UNQUOTED([NC_THREAD_POOL_MAX],[$with_thread_pool_max], [Number of threads in the pool])
+  AC_DEFINE_UNQUOTED([NCM_THREAD_POOL_MAX],[$with_thread_pool_max], [Number of threads in the pool])
 fi
 
 dnl ***************************************************************************

@@ -58,8 +58,8 @@ G_BEGIN_DECLS
 #define NC_ZERO_LIMIT 1e-13
 #define NC_DEFAULT_PRECISION 1e-7
 
-#ifndef NC_THREAD_POOL_MAX
-#define NC_THREAD_POOL_MAX 5
+#ifndef NCM_THREAD_POOL_MAX
+#define NCM_THREAD_POOL_MAX 5
 #endif
 
 #define NC_MAP_ALM_SIZE(lmax) (((lmax)*(lmax) + 3*(lmax) + 2)/2)

@@ -50,6 +50,8 @@ struct _NcClusterMassLnnormal
 {
   /*< private >*/
   NcClusterMass parent_instance;
+  gdouble lnMobs_max;
+  gdouble lnMobs_min;
 };
 
 GType nc_cluster_mass_lnnormal_get_type (void) G_GNUC_CONST;

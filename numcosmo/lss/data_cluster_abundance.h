@@ -31,38 +31,22 @@ G_BEGIN_DECLS
 
 typedef struct _NcDataClusterAbundance NcDataClusterAbundance;
 
-struct _NcDataClusterAbundanceZM
-{
-  /*< private >*/
-  gsl_matrix *z_lnM;
-  gdouble zi;
-  gdouble zf;
-  gdouble lnMi;
-  gdouble lnMf;
-  gdouble photoz_sigma0;
-  gdouble photoz_bias;
-  gdouble lnM_sigma0;
-  gdouble lnM_bias;
-};
-
 struct _NcDataClusterAbundance
 {
   /*< private >*/
   NcClusterAbundanceOpt opt;
   NcClusterRedshift *z;
   NcClusterMass *m;
+  NcmVector *lnM_true;
+  NcmVector *z_true;
   NcmMatrix *z_obs;
   NcmMatrix *z_obs_params;
   NcmMatrix *lnM_obs;
   NcmMatrix *lnM_obs_params;
   gdouble area_survey;
   glong np;
-  struct _NcDataClusterAbundanceZM real;
-  struct _NcDataClusterAbundanceZM obs;
   gdouble log_np_fac;
-  gdouble Yi_mass_obs;
-  gdouble Yf_mass_obs;
-  gdouble Y_scatter;
+  gboolean use_true_data;
   gsl_histogram2d *completeness;
   gsl_histogram2d *purity;
   gsl_histogram2d *sd_lnM;
@@ -73,25 +57,19 @@ struct _NcDataClusterAbundance
 
 NcData *nc_data_cluster_abundance_binned_new (NcClusterAbundance *cad);
 void nc_data_cluster_abundance_binned_init_from_text_file_gkey (NcData *data, gboolean obs, gchar *filename);
-void nc_data_cluster_abundance_binned_init_from_fits_file (NcData *data, gchar *filename);
 void nc_data_cluster_abundance_binned_init_from_sampling (NcData *data, NcmMSet *mset, NcmVector *nodes, NcClusterAbundanceOpt opt, gboolean obs, gdouble area_survey, gdouble lnMi, gdouble lnMf, gdouble photoz_sigma0, gdouble photoz_bias, gdouble lnM_sigma0, gdouble lnM_bias);
 void nc_data_cluster_abundance_binned_save (NcData *data, gchar *filename);
 NcmMSetFunc *nc_data_cluster_abundance_binned_new_function (NcClusterAbundance *cad);
 
 NcData *nc_data_cluster_abundance_binned_lnM_z_new (NcClusterAbundance *cad);
-void nc_data_cluster_abundance_binned_lnM_z_init_from_hist (NcData *data, gboolean obs, gsl_histogram2d *hist, NcClusterAbundanceOpt opt, gdouble area_survey, gdouble photoz_sigma0, gdouble photoz_bias, gdouble lnM_sigma0, gdouble lnM_bias);
-
 NcData *nc_data_cluster_abundance_unbinned_new (NcClusterAbundance *cad);
+void nc_data_cluster_abundance_true_data (NcData *data, gboolean use_true_data);
 void nc_data_cluster_abundance_unbinned_init_from_sampling (NcData *data, NcmMSet *mset, NcClusterRedshift *clusterz, NcClusterMass *clusterm, gdouble area_survey);
-void nc_data_cluster_abundance_unbinned_init_from_text_file (NcData *data, gchar *filename, NcClusterAbundanceOpt opt, gdouble area_survey, gdouble lnMi, gdouble lnMf, gdouble z_initial, gdouble z_final, gdouble photoz_sigma0, gdouble photoz_bias, gdouble lnM_sigma0, gdouble lnM_bias);
 NcData *nc_data_cluster_abundance_unbinned_bin_data (NcData *ca_unbinned, gsl_vector *nodes);
 gsl_histogram2d *nc_data_cluster_abundance_hist_lnM_z (NcData *ca_unbinned, gsl_vector *lnM_nodes, gsl_vector *z_nodes);
 
 void nc_cluster_abundance_catalog_save (NcData *data, gchar *filename, gboolean overwrite);
-void nc_cluster_abundance_catalog_load (NcData *data, gchar *filename, NcClusterAbundanceOpt opt);
-
-void nc_cluster_matching_catalog_save (NcData *data, gchar *filename, gboolean overwrite);
-void nc_cluster_matching_catalog_load (NcData *data, gchar *filename, NcClusterAbundanceOpt opt);
+void nc_cluster_abundance_catalog_load (NcData *data, gchar *filename);
 
 G_END_DECLS
 

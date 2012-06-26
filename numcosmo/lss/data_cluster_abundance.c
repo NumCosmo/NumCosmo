@@ -52,50 +52,58 @@ _ca_data_copy (gpointer dest_ptr, gpointer src_ptr)
   NcDataClusterAbundance *dest = (NcDataClusterAbundance *) dest_ptr;
   NcDataClusterAbundance *src = (NcDataClusterAbundance *) src_ptr;
 
-  dest->area_survey        = src->area_survey;
-  dest->real.lnMi          = src->real.lnMi;
-  dest->real.lnMf          = src->real.lnMf;
-  dest->real.lnM_sigma0    = src->real.lnM_sigma0;
-  dest->real.lnM_bias      = src->real.lnM_bias;
-  dest->obs.lnMi           = src->obs.lnMi;
-  dest->obs.lnMf           = src->obs.lnMf;
-  dest->obs.lnM_sigma0     = src->obs.lnM_sigma0;
-  dest->obs.lnM_bias       = src->obs.lnM_bias;
-  dest->np                 = src->np;
-  dest->real.zi            = src->real.zi;
-  dest->real.zf            = src->real.zf;
-  dest->real.photoz_sigma0 = src->real.photoz_sigma0;
-  dest->real.photoz_bias   = src->real.photoz_bias;
-  dest->obs.zi             = src->obs.zi;
-  dest->obs.zf             = src->obs.zf;
-  dest->obs.photoz_sigma0  = src->obs.photoz_sigma0;
-  dest->obs.photoz_bias    = src->obs.photoz_bias;
+  dest->area_survey = src->area_survey;
+  dest->np          = src->np;
 
-  dest->opt                = src->opt;
-
-  if (src->real.z_lnM != NULL)
+  if (dest->z != NULL)
   {
-	if (dest->real.z_lnM == NULL)
-	  dest->real.z_lnM = gsl_matrix_alloc (src->real.z_lnM->size1, src->real.z_lnM->size2);
-	if ((dest->real.z_lnM->size1 != src->real.z_lnM->size1) || (dest->real.z_lnM->size2 != src->real.z_lnM->size2))
-	{
-	  gsl_matrix_free (dest->real.z_lnM);
-	  dest->real.z_lnM = gsl_matrix_alloc (src->real.z_lnM->size1, src->real.z_lnM->size2);
-	}
-	gsl_matrix_memcpy (dest->real.z_lnM, src->real.z_lnM);
+	nc_cluster_redshift_free (dest->z);
+	dest->z = NULL;
+  }
+  if (dest->m != NULL)
+  {
+	nc_cluster_mass_free (dest->m);
+	dest->m = NULL;
   }
 
-  if (src->obs.z_lnM != NULL)
-  {
-	if (dest->obs.z_lnM == NULL)
-	  dest->obs.z_lnM = gsl_matrix_alloc (src->obs.z_lnM->size1, src->obs.z_lnM->size2);
-	if ((dest->obs.z_lnM->size1 != src->obs.z_lnM->size1) || (dest->obs.z_lnM->size2 != src->obs.z_lnM->size2))
-	{
-	  gsl_matrix_free (dest->obs.z_lnM);
-	  dest->obs.z_lnM = gsl_matrix_alloc (src->obs.z_lnM->size1, src->obs.z_lnM->size2);
-	}
-	gsl_matrix_memcpy (dest->obs.z_lnM, src->obs.z_lnM);
+  if (src->z != NULL)
+	dest->z = nc_cluster_redshift_ref (src->z);
+  if (src->m != NULL)
+	dest->m = nc_cluster_mass_ref (src->m);
+
+#define _VECTOR_COPY(name) \
+  if (src->name != NULL) \
+  { \
+	if (dest->name == NULL) \
+	  dest->name = ncm_vector_copy (src->name); \
+	if (ncm_vector_len (dest->name) != ncm_vector_len (src->name)) \
+	{ \
+	  ncm_vector_free (dest->name); \
+	  dest->name = ncm_vector_copy (src->name); \
+	} \
+	ncm_vector_memcpy (dest->name, src->name); \
   }
+  
+#define _MATRIX_COPY(name) \
+  if (src->name != NULL) \
+  { \
+	if (dest->name == NULL) \
+	  dest->name = ncm_matrix_copy (src->name); \
+	if ((NCM_MATRIX_NROWS (dest->name) != NCM_MATRIX_NROWS (src->name)) || (NCM_MATRIX_NCOLS (dest->name) != NCM_MATRIX_NCOLS (src->name))) \
+	{ \
+	  ncm_matrix_free (dest->name); \
+	  dest->name = ncm_matrix_copy (src->name); \
+	} \
+	ncm_matrix_memcpy (dest->name, src->name); \
+  }
+
+  _VECTOR_COPY (lnM_true)
+  _VECTOR_COPY (z_true)
+
+  _MATRIX_COPY (z_obs)
+  _MATRIX_COPY (z_obs_params)
+  _MATRIX_COPY (lnM_obs)
+  _MATRIX_COPY (lnM_obs_params)
 }
 
 static gpointer
@@ -112,10 +120,26 @@ static void
 _ca_data_free (gpointer ca_ptr)
 {
   NcDataClusterAbundance *ca = (NcDataClusterAbundance *) ca_ptr;
-  if (ca->real.z_lnM != NULL)
-	gsl_matrix_free (ca->real.z_lnM);
-  if (ca->obs.z_lnM != NULL)
-	gsl_matrix_free (ca->obs.z_lnM);
+
+  if (ca->z != NULL)
+	nc_cluster_redshift_free (ca->z);
+  if (ca->m != NULL)
+	nc_cluster_mass_free (ca->m);
+  
+  if (ca->lnM_true != NULL)
+	ncm_vector_free (ca->lnM_true);
+  if (ca->z_true != NULL)
+	ncm_vector_free (ca->z_true);
+
+  if (ca->z_obs != NULL)
+	ncm_matrix_free (ca->z_obs);
+  if (ca->z_obs_params != NULL)
+	ncm_matrix_free (ca->z_obs_params);
+  if (ca->lnM_obs != NULL)
+	ncm_matrix_free (ca->lnM_obs);
+  if (ca->lnM_obs_params != NULL)
+	ncm_matrix_free (ca->lnM_obs_params);
+
   g_slice_free (NcDataClusterAbundance, ca_ptr);
 }
 
@@ -126,7 +150,7 @@ _ca_data_begin (gpointer ca_ptr)
   ca->log_np_fac = lgamma (ca->np + 1);
 }
 
-static guint _ca_data_get_length (gpointer ca_ptr) { return ((NcDataClusterAbundance *) ca_ptr)->np + 1; }
+static guint _ca_data_get_length (gpointer ca_ptr) { return ((NcDataClusterAbundance *) ca_ptr)->np; }
 
 /**
  * FIXME
@@ -180,142 +204,6 @@ nc_data_cluster_abundance_binned_new (NcClusterAbundance *cad)
   return data;
 }
 
-#define NC_DATA_CLUSTER_ABUNDANCE_GROUP "Cluster Abundance Data"
-#define NC_DATA_CLUSTER_ABUNDANCE_NKEYS 5
-
-static gchar *NC_DATA_CLUSTER_ABUNDANCE_KEYS[] = {"SurveyArea", "lnMi", "lnMf", "RedshiftNodes", "NumberCounts"};
-
-/**
- * nc_data_cluster_abundance_binned_init_from_text_file_gkey:
- * @data: a #NcData
- * @obs: TRUE if the histogram provides observational data, FALSE if it provides real values of z and mass.
- * @filename: name of the file
- *
- * FIXME
- *
- */
-void
-nc_data_cluster_abundance_binned_init_from_text_file_gkey (NcData *data, gboolean obs, gchar *filename)
-{
-  GKeyFile *kf = g_key_file_new ();
-  GError *err = NULL;
-  gint i;
-
-  g_key_file_load_from_file (kf, filename, G_KEY_FILE_NONE, &err);
-
-  if (!g_key_file_has_group (kf, NC_DATA_CLUSTER_ABUNDANCE_GROUP))
-	g_error ("File (%s) do not contain %s group.", filename, NC_DATA_CLUSTER_ABUNDANCE_GROUP);
-  for (i = 0; i < NC_DATA_CLUSTER_ABUNDANCE_NKEYS; i++)
-  {
-	if (!g_key_file_has_key (kf, NC_DATA_CLUSTER_ABUNDANCE_GROUP, NC_DATA_CLUSTER_ABUNDANCE_KEYS[i], &err))
-	  g_error ("File (%s) do not contain the key %s.", filename, NC_DATA_CLUSTER_ABUNDANCE_KEYS[i]);
-  }
-
-  {
-	NcDataStruct *dts_ca = _nc_data_struct_cluster_abundance_new ();
-	NcDataClusterAbundance *ca = NC_DATA_STRUCT_DATA (dts_ca);
-	gsize nodes_length;
-	gsize N_length;
-	gdouble *nodes = g_key_file_get_double_list (kf, NC_DATA_CLUSTER_ABUNDANCE_GROUP, NC_DATA_CLUSTER_ABUNDANCE_KEYS[3], &nodes_length, &err);
-	gdouble *bin = g_key_file_get_double_list (kf, NC_DATA_CLUSTER_ABUNDANCE_GROUP, NC_DATA_CLUSTER_ABUNDANCE_KEYS[4], &N_length, &err);
-	if (N_length + 1 != nodes_length)
-	  g_error ("Incompatible number of nodes and number counts [%zd %zd]\n", nodes_length, N_length);
-
-	ca->area_survey = g_key_file_get_double (kf, NC_DATA_CLUSTER_ABUNDANCE_GROUP, NC_DATA_CLUSTER_ABUNDANCE_KEYS[0], &err);
-	if (obs)
-	{
-	  ca->obs.lnMi = g_key_file_get_double (kf, NC_DATA_CLUSTER_ABUNDANCE_GROUP, NC_DATA_CLUSTER_ABUNDANCE_KEYS[1], &err);
-	  ca->obs.lnMi = g_key_file_get_double (kf, NC_DATA_CLUSTER_ABUNDANCE_GROUP, NC_DATA_CLUSTER_ABUNDANCE_KEYS[2], &err);
-	}
-	else
-	{
-	  ca->real.lnMi = g_key_file_get_double (kf, NC_DATA_CLUSTER_ABUNDANCE_GROUP, NC_DATA_CLUSTER_ABUNDANCE_KEYS[1], &err);
-	  ca->real.lnMi = g_key_file_get_double (kf, NC_DATA_CLUSTER_ABUNDANCE_GROUP, NC_DATA_CLUSTER_ABUNDANCE_KEYS[2], &err);
-	}
-
-	{
-	  gsl_histogram *h = gsl_histogram_alloc (N_length);
-
-	  for (i = 0; i < N_length; i++)
-	  {
-		h->range[i] = nodes[i];
-		h->bin[i] = bin[i];
-	  }
-	  h->range[i] = nodes[i];
-
-	  g_free (nodes);
-	  g_free (bin);
-
-	  if (obs)
-	  {
-		ca->obs.zi = h->range[0];
-		ca->obs.zf = h->range[h->n];
-	  }
-	  else
-	  {
-		ca->real.zi = h->range[0];
-		ca->real.zf = h->range[h->n];
-	  }
-
-	  nc_data_poisson_init_from_histogram (data, h, TRUE, dts_ca);
-	}
-  }
-
-  g_key_file_free (kf);
-}
-
-/**
- * nc_data_cluster_abundance_binned_init_from_sampling:
- * @data: a #NcData.
- * @mset: a #NcmMSet.
- * @nodes: a #NcmVector.
- * @opt: a #NcClusterAbundanceOpt.
- * @obs: TRUE if the sample observational data, FALSE if it provides real values of z and mass.
- * @area_survey: area in units of square degrees.
- * @lnMi: logarithm base e of the minimum mass.
- * @lnMf: logarithm base e of the maximum mass.
- * @photoz_sigma0: FIXME
- * @photoz_bias: FIXME
- * @lnM_sigma0: FIXME
- * @lnM_bias: FIXME
- *
- * FIXME
- */
-void
-nc_data_cluster_abundance_binned_init_from_sampling (NcData *data, NcmMSet *mset, NcmVector *nodes, NcClusterAbundanceOpt opt, gboolean obs, gdouble area_survey, gdouble lnMi, gdouble lnMf, gdouble photoz_sigma0, gdouble photoz_bias, gdouble lnM_sigma0, gdouble lnM_bias)
-{
-  NcDataStruct *dts_ca = _nc_data_struct_cluster_abundance_new ();
-  NcDataClusterAbundance *ca = NC_DATA_STRUCT_DATA (dts_ca);
-
-  ca->area_survey = area_survey;
-  ca->opt = opt;
-  if (obs)
-  {
-	ca->obs.lnMi = lnMi;
-	ca->obs.lnMf = lnMf;
-	ca->obs.zi = ncm_vector_get (nodes, 0);
-	ca->obs.zf = ncm_vector_get (nodes, ncm_vector_len (nodes) - 1);
-	ca->obs.photoz_sigma0 = photoz_sigma0;
-	ca->obs.photoz_bias = photoz_bias;
-	ca->obs.lnM_sigma0 = lnM_sigma0;
-	ca->obs.lnM_bias = lnM_bias;
-  }
-  else
-  {
-	ca->real.lnMi = lnMi;
-	ca->real.lnMf = lnMf;
-	ca->real.zi = ncm_vector_get (nodes, 0);
-	ca->real.zf = ncm_vector_get (nodes, ncm_vector_len (nodes) - 1);
-	ca->real.photoz_sigma0 = photoz_sigma0;
-	ca->real.photoz_bias = photoz_bias;
-	ca->real.lnM_sigma0 = lnM_sigma0;
-	ca->real.lnM_bias = lnM_bias;
-  }
-
-  nc_data_poisson_init_zero (data, nodes, dts_ca);
-  nc_data_resample (data, mset, FALSE);
-}
-
 /**
  * nc_data_cluster_abundance_init_from_fits_file:
  * @data: a #NcData
@@ -329,53 +217,13 @@ nc_data_cluster_abundance_init_from_fits_file (NcData *data, gchar *filename)
   g_assert_not_reached ();
 }
 
-/**
- * nc_data_cluster_abundance_binned_save:
- * @data: a #NcData.
- * @filename: name of the file.
- *
- * FIXME
- */
-void
-nc_data_cluster_abundance_binned_save (NcData *data, gchar *filename)
-{
-  GKeyFile *kf = g_key_file_new ();
-  GError *err = NULL;
-  NcDataPoisson *poisson = NC_DATA_STRUCT_DATA (data->dts);
-  NcDataClusterAbundance *ca = NC_DATA_STRUCT_DATA (poisson->extra_data);
-  gchar *file_data;
-  gsize data_size;
-
-  g_assert (data->init);
-
-  g_key_file_set_double (kf, NC_DATA_CLUSTER_ABUNDANCE_GROUP, NC_DATA_CLUSTER_ABUNDANCE_KEYS[0], ca->area_survey);
-
-  g_key_file_set_double (kf, NC_DATA_CLUSTER_ABUNDANCE_GROUP, NC_DATA_CLUSTER_ABUNDANCE_KEYS[1], ca->obs.lnMi);
-  g_key_file_set_double (kf, NC_DATA_CLUSTER_ABUNDANCE_GROUP, NC_DATA_CLUSTER_ABUNDANCE_KEYS[2], ca->obs.lnMf);
-
-  g_key_file_set_double (kf, NC_DATA_CLUSTER_ABUNDANCE_GROUP, NC_DATA_CLUSTER_ABUNDANCE_KEYS[1], ca->real.lnMi);
-  g_key_file_set_double (kf, NC_DATA_CLUSTER_ABUNDANCE_GROUP, NC_DATA_CLUSTER_ABUNDANCE_KEYS[2], ca->real.lnMf);
-
-  g_key_file_set_double_list (kf, NC_DATA_CLUSTER_ABUNDANCE_GROUP, NC_DATA_CLUSTER_ABUNDANCE_KEYS[3], poisson->h->range, poisson->h->n + 1);
-  g_key_file_set_double_list (kf, NC_DATA_CLUSTER_ABUNDANCE_GROUP, NC_DATA_CLUSTER_ABUNDANCE_KEYS[4], poisson->h->bin, poisson->h->n);
-
-  file_data = g_key_file_to_data (kf, &data_size, &err);
-  ncm_cfg_init ();
-
-  {
-	gchar *full_filename = ncm_cfg_get_fullpath ("%s", filename);
-	g_file_set_contents (full_filename, file_data, data_size, &err);
-	g_free (full_filename);
-  }
-}
-
 static void
 _nc_data_cluster_abundance_binned_f (NcmMSet *mset, gpointer obj, const gdouble *x, gdouble *f)
 {
-  NcHICosmo *model = NC_HICOSMO (ncm_mset_peek (mset, NC_HICOSMO_ID));
-  NcClusterAbundance *cad = NC_CLUSTER_ABUNDANCE (obj);
-  f[0] = nc_cluster_abundance_N_val (cad, model, cad->lnMi, cad->lnMf, cad->zi, x[0]);
-  //printf ("% 20.15g % 20.15g % 20.15g\n", cad->zi, z, mi);
+  //NcHICosmo *model = NC_HICOSMO (ncm_mset_peek (mset, NC_HICOSMO_ID));
+  //NcClusterAbundance *cad = NC_CLUSTER_ABUNDANCE (obj);
+  //f[0] = nc_cluster_abundance_N_val (cad, model, cad->lnMi, cad->lnMf, cad->zi, x[0]);
+  g_assert_not_reached ();
   return;
 }
 
@@ -409,55 +257,6 @@ nc_data_cluster_abundance_binned_lnM_z_new (NcClusterAbundance *cad)
   return NULL;
 }
 
-/**
- * nc_data_cluster_abundance_binned_lnM_z_init_from_hist: (skip)
- * @data: a #NcData.
- * @obs: TRUE if the histogram provides observational data, FALSE if it provides real values of z and mass.
- * @hist: FIXME
- * @opt: a #NcClusterAbundanceOpt.
- * @area_survey: area in units of square degrees.
- * @photoz_sigma0: FIXME
- * @photoz_bias: FIXME
- * @lnM_sigma0: FIXME
- * @lnM_bias: FIXME
- *
- * FIXME
- *
- * Returns: FIXME
- */
-void
-nc_data_cluster_abundance_binned_lnM_z_init_from_hist (NcData *data, gboolean obs, gsl_histogram2d *hist, NcClusterAbundanceOpt opt, gdouble area_survey, gdouble photoz_sigma0, gdouble photoz_bias, gdouble lnM_sigma0, gdouble lnM_bias)
-{
-  NcDataStruct *dts_ca = _nc_data_struct_cluster_abundance_new ();
-  NcDataClusterAbundance *ca = NC_DATA_STRUCT_DATA (dts_ca);
-  ca->area_survey = area_survey;
-  if (obs)
-  {
-	ca->obs.lnMi = hist->xrange[0];
-	ca->obs.lnMf = hist->xrange[hist->nx];
-	ca->obs.zi = hist->yrange[0];
-	ca->obs.zf = hist->yrange[hist->ny];
-	ca->obs.photoz_sigma0 = photoz_sigma0;
-	ca->obs.photoz_bias = photoz_bias;
-	ca->obs.lnM_sigma0 = lnM_sigma0;
-	ca->obs.lnM_bias = lnM_bias;
-  }
-  else
-  {
-	ca->real.lnMi = hist->xrange[0];
-	ca->real.lnMf = hist->xrange[hist->nx];
-	ca->real.zi = hist->yrange[0];
-	ca->real.zf = hist->yrange[hist->ny];
-	ca->real.photoz_sigma0 = photoz_sigma0;
-	ca->real.photoz_bias = photoz_bias;
-	ca->real.lnM_sigma0 = lnM_sigma0;
-	ca->real.lnM_bias = lnM_bias;
-  }
-  ca->opt = opt;
-
-  //nc_data_poisson_init_from_histogram (data, hist, FALSE, dts_ca);
-}
-
 /************************************************************************************************************
  * Unbinned abundance data                                                                                  *
  ************************************************************************************************************/
@@ -468,14 +267,15 @@ _nc_data_cluster_abundance_unbinned_model_init (gpointer model, gpointer data)
   NcClusterAbundance *cad = NC_CLUSTER_ABUNDANCE (model);
   NcDataClusterAbundance *dca = (NcDataClusterAbundance *) data;
 
+  if (dca->z == NULL || dca->m == NULL)
+	g_error ("Cannot init NcClusterAbundance missing NcClusterRedshift or NcClusterMass object.");
+  
   nc_cluster_abundance_set_redshift (cad, dca->z);
   nc_cluster_abundance_set_mass (cad, dca->m);
 
   cad->completeness  = dca->completeness;
   cad->purity        = dca->purity;
   cad->sd_lnM        = dca->sd_lnM;
-
-  nc_cluster_abundance_set_options (cad, dca->opt);
 
   cad->mfp->area_survey = dca->area_survey;
 }
@@ -513,45 +313,53 @@ _nc_data_cluster_abundance_resample (NcmMSet *mset, gpointer model, gpointer dat
   guint z_obs_params_len = nc_cluster_redshift_obs_params_len (cad->z);
   guint lnM_obs_len = nc_cluster_mass_obs_len (cad->m);
   guint lnM_obs_params_len = nc_cluster_mass_obs_params_len (cad->m);
-  guint np;
-  gint i;
+  GArray *lnM_true_array = NULL;
+  GArray *z_true_array = NULL;
   GArray *z_obs_array = NULL;
   GArray *z_obs_params_array = NULL;
   GArray *lnM_obs_array = NULL;
   GArray *lnM_obs_params_array = NULL;
+  guint total_np;
+  gint i;
 
   gdouble *zi_obs = g_new (gdouble, z_obs_len);
   gdouble *zi_obs_params = z_obs_params_len > 0 ? g_new (gdouble, z_obs_params_len) : NULL;
   gdouble *lnMi_obs = g_new (gdouble, lnM_obs_len);
   gdouble *lnMi_obs_params = lnM_obs_params_len > 0 ? g_new (gdouble, lnM_obs_params_len) : NULL;
 
-  np = gsl_ran_poisson (rng, cad->norma);
-  dca->np = np;
+  total_np = gsl_ran_poisson (rng, cad->norma);
 
-  z_obs_array = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), np * z_obs_len);
+  lnM_true_array = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), total_np);
+  z_true_array = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), total_np);
+
+  z_obs_array = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), total_np * z_obs_len);
   if (z_obs_params_len > 0)
-	z_obs_params_array = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), np * z_obs_params_len);
+	z_obs_params_array = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), total_np * z_obs_params_len);
 
-  lnM_obs_array = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), np * lnM_obs_len);
+  lnM_obs_array = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), total_np * lnM_obs_len);
   if (lnM_obs_params_len > 0)
-	lnM_obs_params_array = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), np * lnM_obs_params_len);
+	lnM_obs_params_array = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), total_np * lnM_obs_params_len);
 
-  printf ("# Generating unbinned %ld (z,lnM) %g\n", dca->np, cad->norma);
+  printf ("# Generating unbinned %u (z,lnM) %g\n", total_np, cad->norma);
   printf ("# Resampling in range [% 20.15g, % 20.15g] [% 20.15e, % 20.15e]\n", cad->zi, cad->zf, exp (cad->lnMi), exp (cad->lnMf));
   nc_cluster_abundance_prepare_inv_dNdz (cad, NC_HICOSMO (ncm_mset_peek (mset, NC_HICOSMO_ID)));
 
-  for (i = 0; i < dca->np; i++)
+  for (i = 0; i < total_np; i++)
   {
 	const gdouble u1 = _nc_cad_inv_dNdz_convergence_f (gsl_rng_uniform_pos (rng), cad->z_epsilon);
 	const gdouble u2 = _nc_cad_inv_dNdz_convergence_f (gsl_rng_uniform_pos (rng), cad->lnM_epsilon);
-	const gdouble zi_real = ncm_spline_eval (cad->inv_z, u1);
-	const gdouble lnMi_real = ncm_spline2d_eval (cad->inv_lnM_z, u2, zi_real);
+	const gdouble z_true = ncm_spline_eval (cad->inv_z, u1);
+	const gdouble lnM_true = ncm_spline2d_eval (cad->inv_lnM_z, u2, z_true);
 
-    if ( nc_cluster_redshift_resample (cad->z, zi_real, lnMi_real, zi_obs, zi_obs_params) &&
-         nc_cluster_mass_resample (cad->m, zi_real, lnMi_real, lnMi_obs, lnMi_obs_params) )
+    if ( nc_cluster_redshift_resample (cad->z, lnM_true, z_true, zi_obs, zi_obs_params) &&
+         nc_cluster_mass_resample (cad->m, lnM_true, z_true, lnMi_obs, lnMi_obs_params) )
 	{
+	  g_array_append_val (lnM_true_array, lnM_true);
+	  g_array_append_val (z_true_array, z_true);
+	  
 	  g_array_append_vals (z_obs_array, zi_obs, z_obs_len);
 	  g_array_append_vals (lnM_obs_array, lnMi_obs, lnM_obs_len);
+	  
 	  if (z_obs_params_len > 0)
 		g_array_append_vals (z_obs_params_array, zi_obs_params, z_obs_params_len);
 	  if (lnM_obs_params_len > 0)
@@ -560,11 +368,21 @@ _nc_data_cluster_abundance_resample (NcmMSet *mset, gpointer model, gpointer dat
 	//printf ("% 20.15g % 20.15g\n", zi_real, lnMi_real);
   }
 
+  if (dca->lnM_true != NULL)
+	ncm_vector_free (dca->lnM_true);
+  dca->lnM_true = ncm_vector_new_array (lnM_true_array);
+  g_array_unref (lnM_true_array);
+
+  if (dca->z_true != NULL)
+	ncm_vector_free (dca->z_true);
+  dca->z_true = ncm_vector_new_array (z_true_array);
+  g_array_unref (z_true_array);
+  
   if (dca->z_obs != NULL)
 	ncm_matrix_free (dca->z_obs);
   dca->z_obs = ncm_matrix_new_array (z_obs_array, z_obs_len);
   g_array_unref (z_obs_array);
-
+	
   if (dca->lnM_obs != NULL)
 	ncm_matrix_free (dca->lnM_obs);
   dca->lnM_obs = ncm_matrix_new_array (lnM_obs_array, lnM_obs_len);
@@ -586,6 +404,9 @@ _nc_data_cluster_abundance_resample (NcmMSet *mset, gpointer model, gpointer dat
 	g_array_unref (lnM_obs_params_array);
   }
 
+  dca->np = NCM_MATRIX_NROWS (dca->z_obs);
+  printf ("# Generated %ld | expected % 20.15g\n", dca->np, nc_cluster_abundance_n (cad, NC_HICOSMO (ncm_mset_peek (mset, NC_HICOSMO_ID))));
+ 
   g_free (zi_obs);
   g_free (zi_obs_params);
   g_free (lnMi_obs);
@@ -621,6 +442,37 @@ _nc_data_cluster_abundance_binned_resample (NcmMSet *mset, gpointer model, gpoin
   }
 }
 
+typedef struct 
+{
+  NcClusterAbundance *cad;
+  NcDataClusterAbundance *dca;
+  NcHICosmo *m;
+  gdouble *m2lnL;
+} _Evald2N;
+
+static void 
+_eval_z_p_d2n (glong i, glong f, gpointer data)
+{
+  _Evald2N *evald2n = (_Evald2N *) data;
+  glong n;
+  gdouble m2lnL = 0.0;
+  G_LOCK_DEFINE_STATIC (save_m2lnL);
+
+  for (n = i; n < f; n++)
+  {
+	const gdouble lnMn = ncm_vector_get (evald2n->dca->lnM_true, n);
+	gdouble *zn_obs = ncm_matrix_ptr (evald2n->dca->z_obs, n, 0);
+	gdouble *zn_obs_params = evald2n->dca->z_obs_params != NULL ? ncm_matrix_ptr (evald2n->dca->z_obs_params, n, 0) : NULL;
+	const gdouble mlnLn = -log (nc_cluster_abundance_z_p_d2n (evald2n->cad, evald2n->m, lnMn, zn_obs, zn_obs_params));
+	m2lnL += mlnLn;
+  }
+  
+  G_LOCK (save_m2lnL);
+  *evald2n->m2lnL += m2lnL;
+  G_UNLOCK (save_m2lnL);
+}
+
+
 static void
 _nc_data_cluster_abundance_calc_m2lnL (NcmMSet *mset, gpointer model, gpointer data, gdouble *m2lnL)
 {
@@ -630,105 +482,89 @@ _nc_data_cluster_abundance_calc_m2lnL (NcmMSet *mset, gpointer model, gpointer d
   GTimer *bench = g_timer_new ();
   gint i;
 
-  const gint test_mask = NC_CLUSTER_ABUNDANCE_PHOTOZ |
-	NC_CLUSTER_ABUNDANCE_MOBS;
-  const gint opt_mask = cad->opt & test_mask;
-
   *m2lnL = 0.0;
 
-  switch (opt_mask)
+  if (dca->use_true_data)
   {
-	case NC_CLUSTER_ABUNDANCE_PHOTOZ:
+	g_assert (dca->z_true);
+	g_assert (dca->lnM_true);
+	
+	for (i = 0; i < dca->np; i++)
 	{
-	  if (dca->opt & NC_CLUSTER_ABUNDANCE_BINMASS)
+	  const gdouble lnMi = ncm_vector_get (dca->lnM_true, i);
+	  const gdouble zi = ncm_vector_get (dca->z_true, i);
+	  const gdouble mlnLi = -log (nc_cluster_abundance_intp_d2n (cad, m, lnMi, zi));
+	  *m2lnL += mlnLi;
+	}
+  }
+  else
+  {
+	NcClusterRedshiftImpl z_impl = nc_cluster_redshift_impl (dca->z);
+	NcClusterMassImpl lnM_impl = nc_cluster_mass_impl (dca->m);
+	gboolean z_p = z_impl & NC_CLUSTER_REDSHIFT_P;
+	gboolean lnM_p = lnM_impl & NC_CLUSTER_MASS_P;
+	if (z_p && lnM_p)
+	{
+	  for (i = 0; i < dca->np; i++)
 	  {
-		for (i = 0; i < dca->np; i++)
-		{
-		  const gdouble zi = gsl_matrix_get (dca->obs.z_lnM, i, 0);
-		  *m2lnL -= log (nc_cluster_abundance_dNdz_val (cad, m, cad->lnMi, cad->lnMf, zi));
-		}
-	  }
-	  else
-	  {
-		for (i = 0; i < dca->np; i++)
-		{
-		  const gdouble zi = gsl_matrix_get (dca->obs.z_lnM, i, 0);
-		  const gdouble lnMi = gsl_matrix_get (dca->real.z_lnM, i, 1);
-		  const gdouble mlnL_i = -log (nc_cluster_abundance_d2NdzdlnM_val (cad, m, lnMi, zi));
-		  *m2lnL += mlnL_i;
-		}
+		gdouble *lnMi_obs = ncm_matrix_ptr (dca->lnM_obs, i, 0);
+		gdouble *zi_obs = ncm_matrix_ptr (dca->z_obs, i, 0);
+		gdouble *lnMi_obs_params = dca->lnM_obs_params != NULL ? ncm_matrix_ptr (dca->lnM_obs_params, i, 0) : NULL;
+		gdouble *zi_obs_params = dca->z_obs_params != NULL ? ncm_matrix_ptr (dca->z_obs_params, i, 0) : NULL;
+		
+		const gdouble mlnLi = -log (nc_cluster_abundance_z_p_lnm_p_d2n (cad, m, lnMi_obs, lnMi_obs_params, zi_obs, zi_obs_params));
+		*m2lnL += mlnLi;
 	  }
 	}
-	case NC_CLUSTER_ABUNDANCE_MOBS:
+	else if (z_p && !lnM_p)
 	{
-	  if (dca->opt & NC_CLUSTER_ABUNDANCE_BINMASS)
+	  g_assert (dca->lnM_true);
+	  _Evald2N evald2n = {cad, dca, m, m2lnL};
+
+	  ncm_function_eval_threaded_loop (&_eval_z_p_d2n, 0, dca->np, &evald2n);
+/*	  
+	  
+	  for (i = 0; i < dca->np; i++)
 	  {
-		for (i = 0; i < dca->np; i++)
-		{
-		  const gdouble zi = gsl_matrix_get (dca->real.z_lnM, i, 0);
-		  *m2lnL -= log (nc_cluster_abundance_dNdz_val (cad, m, cad->lnMi, cad->lnMf, zi));
-		}
+		const gdouble lnMi = ncm_vector_get (dca->lnM_true, i);
+		gdouble *zi_obs = ncm_matrix_ptr (dca->z_obs, i, 0);
+		gdouble *zi_obs_params = dca->z_obs_params != NULL ? ncm_matrix_ptr (dca->z_obs_params, i, 0) : NULL;
+		const gdouble mlnLi = -log (nc_cluster_abundance_z_p_d2n (cad, m, lnMi, zi_obs, zi_obs_params));
+		*m2lnL += mlnLi;
 	  }
-	  else
+*/
+	}
+	else if (!z_p && lnM_p)
+	{
+	  g_assert (dca->z_true);
+	  for (i = 0; i < dca->np; i++)
 	  {
-		for (i = 0; i < dca->np; i++)
-		{
-		  const gdouble zi = gsl_matrix_get (dca->real.z_lnM, i, 0);
-		  const gdouble lnMi = gsl_matrix_get (dca->obs.z_lnM, i, 1);
-		  const gdouble mlnL_i = -log (nc_cluster_abundance_d2NdzdlnM_val (cad, m, lnMi, zi));
-		  *m2lnL += mlnL_i;
-		}
+		gdouble *lnMi_obs = ncm_matrix_ptr (dca->lnM_obs, i, 0);
+		gdouble *lnMi_obs_params = dca->lnM_obs_params != NULL ? ncm_matrix_ptr (dca->lnM_obs_params, i, 0) : NULL;
+		const gdouble zi = ncm_vector_get (dca->z_true, i);
+		
+		const gdouble mlnLi = -log (nc_cluster_abundance_lnm_p_d2n (cad, m, lnMi_obs, lnMi_obs_params, zi));
+		*m2lnL += mlnLi;
 	  }
 	}
-	case NC_CLUSTER_ABUNDANCE_PHOTOZ | NC_CLUSTER_ABUNDANCE_MOBS:
+	else
 	{
-	  if (dca->opt & NC_CLUSTER_ABUNDANCE_BINMASS)
+	  g_assert (dca->z_true);
+	  g_assert (dca->lnM_true);
+	  for (i = 0; i < dca->np; i++)
 	  {
-		for (i = 0; i < dca->np; i++)
-		{
-		  const gdouble zi = gsl_matrix_get (dca->obs.z_lnM, i, 0);
-		  *m2lnL -= log (nc_cluster_abundance_dNdz_val (cad, m, cad->lnMi, cad->lnMf, zi));
-		}
-	  }
-	  else
-	  {
-		for (i = 0; i < dca->np; i++)
-		{
-		  const gdouble zi = gsl_matrix_get (dca->obs.z_lnM, i, 0);
-		  const gdouble lnMi = gsl_matrix_get (dca->obs.z_lnM, i, 1);
-		  const gdouble mlnL_i = -log (nc_cluster_abundance_d2NdzdlnM_val (cad, m, lnMi, zi));
-		  *m2lnL += mlnL_i;
-		}
-	  }
-	}
-	case 0:
-	{
-	  if (dca->opt & NC_CLUSTER_ABUNDANCE_BINMASS)
-	  {
-		for (i = 0; i < dca->np; i++)
-		{
-		  const gdouble zi = gsl_matrix_get (dca->real.z_lnM, i, 0);
-		  *m2lnL -= log (nc_cluster_abundance_dNdz_val (cad, m, cad->lnMi, cad->lnMf, zi));
-		}
-	  }
-	  else
-	  {
-		for (i = 0; i < dca->np; i++)
-		{
-		  const gdouble zi = gsl_matrix_get (dca->real.z_lnM, i, 0);
-		  const gdouble lnMi = gsl_matrix_get (dca->real.z_lnM, i, 1);
-		  const gdouble mlnL_i = -log (nc_cluster_abundance_d2NdzdlnM_val (cad, m, lnMi, zi));
-		  *m2lnL += mlnL_i;
-		}
+		const gdouble lnMi = ncm_vector_get (dca->lnM_true, i);
+		const gdouble zi = ncm_vector_get (dca->z_true, i);
+		const gdouble mlnLi = -log (nc_cluster_abundance_d2n (cad, m, lnMi, zi));
+		*m2lnL += mlnLi;
 	  }
 	}
   }
 
-  //printf ("% 20.15g\n", 2.0 * ((*m2lnL) + dca->np * log (cad->norma)));
-  *m2lnL += (dca->log_np_fac + cad->norma * cad->completeness_factor);
+  *m2lnL += (dca->log_np_fac + nc_cluster_abundance_n (cad, m));
 
   *m2lnL *= 2.0;
-  //printf ("# nhoc % 20.15g | took %fs\n", *m2lnL, g_timer_elapsed (bench, NULL));
+
   g_timer_destroy (bench);
 }
 
@@ -768,6 +604,26 @@ nc_data_cluster_abundance_unbinned_new (NcClusterAbundance *cad)
 }
 
 /**
+ * nc_data_cluster_abundance_true_data:
+ * @data: a #NcData.
+ * @use_true_data: FIXME
+ *
+ * FIXME
+ *
+ */
+void
+nc_data_cluster_abundance_true_data (NcData *data, gboolean use_true_data)
+{
+  NcDataClusterAbundance *dca = (NcDataClusterAbundance *) NC_DATA_DATA (data);
+  if (use_true_data)
+  {
+	g_assert (dca->lnM_true != NULL);
+	g_assert (dca->z_true != NULL);
+  }
+  dca->use_true_data = use_true_data;
+}
+
+/**
  * nc_data_cluster_abundance_unbinned_init_from_sampling:
  * @data: a #NcData.
  * @mset: a #NcmMSet.
@@ -792,150 +648,6 @@ nc_data_cluster_abundance_unbinned_init_from_sampling (NcData *data, NcmMSet *ms
   nc_data_resample (data, mset, FALSE);
 
   nc_data_init (data);
-}
-
-/**
- * nc_data_cluster_abundance_unbinned_init_from_text_file:
- * @data: a #NcData
- * @filename: name of the file
- * @opt: a #NcClusterAbundanceOpt
- * @area_survey: area in units of square degrees
- * @lnMi: logarithm base e of the minimum mass
- * @lnMf: logarithm base e of the maximum mass
- * @z_initial: minimum redshift
- * @z_final: maximum redshift
- * @photoz_sigma0: FIXME
- * @photoz_bias: FIXME
- * @lnM_sigma0: FIXME
- * @lnM_bias: FIXME
- *
- * FIXME
- */
-void
-nc_data_cluster_abundance_unbinned_init_from_text_file (NcData *data, gchar *filename, NcClusterAbundanceOpt opt, gdouble area_survey, gdouble lnMi, gdouble lnMf, gdouble z_initial, gdouble z_final, gdouble photoz_sigma0, gdouble photoz_bias, gdouble lnM_sigma0, gdouble lnM_bias)
-{
-  NcDataClusterAbundance *dca = (NcDataClusterAbundance *) NC_DATA_DATA (data);
-  FILE *catalog;
-  gint c, nlines = 0, i = 0, j = 0;
-  gdouble lnM, z;
-  glong np;
-
-  if (z_initial == 0.0)
-  {
-	g_message ("nc_data_cluster_abundance_unbinned_init_from_text_file: User requested zi == 0.0. Using zi = %e\n", _NC_CLUSTER_ABUNDANCE_MIN_Z);
-	z_initial = _NC_CLUSTER_ABUNDANCE_MIN_Z;
-  }
-
-  dca->area_survey = area_survey;
-  dca->opt = opt;
-
-  if (opt & NC_CLUSTER_ABUNDANCE_OBS_ZM)
-  {
-	dca->obs.lnMi = lnMi;
-	dca->obs.lnMf = lnMf;
-	dca->obs.zi = z_initial;
-	dca->obs.zf = z_final;
-
-	dca->obs.photoz_sigma0 = photoz_sigma0;
-	dca->obs.photoz_bias = photoz_bias;
-	dca->obs.lnM_sigma0 = lnM_sigma0;
-	dca->obs.lnM_bias = lnM_bias;
-  }
-  else
-  {
-	dca->real.lnMi = lnMi;
-	dca->real.lnMf = lnMf;
-	dca->real.zi = z_initial;
-	dca->real.zf = z_final;
-
-	dca->real.photoz_sigma0 = photoz_sigma0;
-	dca->real.photoz_bias = photoz_bias;
-	dca->real.lnM_sigma0 = lnM_sigma0;
-	dca->real.lnM_bias = lnM_bias;
-  }
-
-  if (filename == NULL)
-	g_error ("It must pass the name of the file.");
-  catalog = fopen (filename, "r");
-
-  while ((c = fgetc(catalog)) != EOF)
-	if (c == '\n') nlines++;
-  rewind (catalog);
-
-  np = 0;
-  for (i = 0; i < nlines; i++)
-  {
-	gint nread = fscanf(catalog, " %lg %lg \n", &z, &lnM);
-	if (!nread)
-	  g_error ("nc_data_cluster_abundance_unbinned_init_from_text_file[fscanf]: cant find data");
-
-	//printf("z = %.5g lnM = %.5g fscanf = %d\n", z, lnM, nread);
-
-	if ((lnM >= lnMi) && (z <= z_final))
-	{
-	  np++;
-	}
-  }
-  rewind (catalog);
-
-  if (opt & NC_CLUSTER_ABUNDANCE_OBS_ZM)
-  {
-	if (dca->obs.z_lnM == NULL)
-	  dca->obs.z_lnM = gsl_matrix_alloc (np, 2);
-	else if (dca->obs.z_lnM->size1 != np)
-	{
-	  gsl_matrix_free (dca->obs.z_lnM);
-	  dca->obs.z_lnM = gsl_matrix_alloc (np, 2);
-	}
-	//gsl_vector_ulong *v_mass = gsl_vector_alloc (np);
-	dca->np = np;
-
-	for (i = 0; i < nlines; i++)
-	{
-	  fscanf(catalog, "%lg %lg\n", &z, &lnM);
-	  //printf ("lnM = %g z = %g [%d]\n", lnM, z, j);
-
-	  if ((lnM >= lnMi) && (lnM <= lnMf) && (z <= z_final) && (z >= z_initial))
-	  {
-		//gsl_vector_set (v_mass, i, mass);
-		gsl_matrix_set (dca->obs.z_lnM, j, 0, z);
-		gsl_matrix_set (dca->obs.z_lnM, j, 1, lnM);
-		j++;
-
-		//printf ("%g %g\n", z, lnM);
-	  }
-	}
-  }
-  if (opt & NC_CLUSTER_ABUNDANCE_REAL_ZM)
-  {
-	if (dca->real.z_lnM == NULL)
-	  dca->real.z_lnM = gsl_matrix_alloc (np, 2);
-	else if (dca->obs.z_lnM->size1 != np)
-	{
-	  gsl_matrix_free (dca->real.z_lnM);
-	  dca->real.z_lnM = gsl_matrix_alloc (np, 2);
-	}
-	//gsl_vector_ulong *v_mass = gsl_vector_alloc (np);
-	dca->np = np;
-
-	for (i = 0; i < nlines; i++)
-	{
-	  fscanf(catalog, "%lg %lg\n", &z, &lnM);
-	  //printf ("lnM = %g z = %g [%d]\n", lnM, z, j);
-
-	  if ((lnM >= lnMi) && (lnM <= lnMf) && (z <= z_final) && (z >= z_initial))
-	  {
-		//gsl_vector_set (v_mass, i, mass);
-		gsl_matrix_set (dca->real.z_lnM, j, 0, z);
-		gsl_matrix_set (dca->real.z_lnM, j, 1, lnM);
-		j++;
-
-		//printf ("%g %g\n", z, lnM);
-	  }
-	}
-  }
-  nc_data_init (data);
-
 }
 
 /**
@@ -970,16 +682,18 @@ nc_data_cluster_abundance_unbinned_bin_data (NcData *ca_unbinned, gsl_vector *no
   {
 	for (i = 0; i < dca->np; i++)
 	{
-	  const gdouble z_i = gsl_matrix_get (dca->obs.z_lnM, i, 0);
+	  const gdouble z_i = 0.0;//gsl_matrix_get (dca->obs.z_lnM, i, 0);
 	  gsl_histogram_increment (hist, z_i);
+	  g_assert_not_reached ();
 	}
   }
   else
   {
 	for (i = 0; i < dca->np; i++)
 	{
-	  const gdouble z_i = gsl_matrix_get (dca->real.z_lnM, i, 0);
+	  const gdouble z_i = 0.0;//gsl_matrix_get (dca->real.z_lnM, i, 0);
 	  gsl_histogram_increment (hist, z_i);
+	  g_assert_not_reached ();
 	}
   }
 
@@ -1025,8 +739,9 @@ nc_data_cluster_abundance_hist_lnM_z (NcData *ca_unbinned, gsl_vector *lnM_nodes
   {
 	for (i = 0; i < dca->np; i++)
 	{
-	  const gdouble zi_obs = gsl_matrix_get (dca->obs.z_lnM, i, 0);
-	  const gdouble lnMi_obs = gsl_matrix_get (dca->obs.z_lnM, i, 1);
+	  const gdouble zi_obs = 0.0;//gsl_matrix_get (dca->obs.z_lnM, i, 0);
+	  const gdouble lnMi_obs = 0.0;//gsl_matrix_get (dca->obs.z_lnM, i, 1);
+	  g_assert_not_reached ();
 
 	  gsl_histogram2d_increment (hist, lnMi_obs, zi_obs);
 	}
@@ -1035,8 +750,9 @@ nc_data_cluster_abundance_hist_lnM_z (NcData *ca_unbinned, gsl_vector *lnM_nodes
   {
 	for (i = 0; i < dca->np; i++)
 	{
-	  const gdouble zi_real = gsl_matrix_get (dca->real.z_lnM, i, 0);
-	  const gdouble lnMi_real = gsl_matrix_get (dca->real.z_lnM, i, 1);
+	  const gdouble zi_real = 0.0;//gsl_matrix_get (dca->real.z_lnM, i, 0);
+	  const gdouble lnMi_real = 0.0;//gsl_matrix_get (dca->real.z_lnM, i, 1);
+	  g_assert_not_reached ();
 
 	  gsl_histogram2d_increment (hist, lnMi_real, zi_real);
 	}
@@ -1073,13 +789,57 @@ nc_cluster_abundance_catalog_save (NcData *data, gchar *filename, gboolean overw
   /*******************************************************************/
   fitsfile *fptr;       /* pointer to the FITS file, defined in fitsio.h */
   gint status;
-  glong i;
-  gint tfields = 4;
-
+  gint tfields;
+  
   gchar extname[] = "ClusterAbundance";   /* extension name */
-  gchar *ttype[] = { "Z_REAL", "lnM_REAL", "Z_OBS", "lnM_OBS" };
-  gchar *tform[] = { "1D", "1D", "1D", "1D" };
-  gchar *tunit[] = { "REAL REDSHIFT", "REAL LN_MASS", "OBSERVATIONAL REDSHIFT", "OBSERVATIONAL LN_MASS" };
+  GPtrArray *ttype_array = g_ptr_array_sized_new (10);
+  GPtrArray *tform_array = g_ptr_array_sized_new (10);
+  GPtrArray *tunit_array = g_ptr_array_sized_new (10);
+
+  guint z_obs_len = nc_cluster_redshift_obs_len (dca->z);
+  guint z_obs_params_len = nc_cluster_redshift_obs_params_len (dca->z);
+  guint lnM_obs_len = nc_cluster_mass_obs_len (dca->m);
+  guint lnM_obs_params_len = nc_cluster_mass_obs_params_len (dca->m);
+
+  g_ptr_array_set_free_func (tform_array, g_free);
+  
+  g_ptr_array_add (ttype_array, "Z_OBS");
+  g_ptr_array_add (tform_array, g_strdup_printf ("%dD", z_obs_len));
+  g_ptr_array_add (tunit_array, "REDSHIFT OBS");
+  
+  g_ptr_array_add (ttype_array, "LNM_OBS");
+  g_ptr_array_add (tform_array, g_strdup_printf ("%dD", lnM_obs_len));
+  g_ptr_array_add (tunit_array, "MASS OBS");
+  
+  if (dca->z_true != NULL)
+  {
+	g_ptr_array_add (ttype_array, "Z_TRUE");
+	g_ptr_array_add (tform_array, g_strdup ("1D"));
+	g_ptr_array_add (tunit_array, "TRUE REDSHIFT");
+  }
+
+  if (dca->lnM_true != NULL)
+  {
+	g_ptr_array_add (ttype_array, "LNM_TRUE");
+	g_ptr_array_add (tform_array, g_strdup ("1D"));
+	g_ptr_array_add (tunit_array, "TRUE LNM");
+  }
+
+  if (z_obs_params_len > 0)
+  {
+	g_ptr_array_add (ttype_array, "Z_OBS_PARAMS");
+	g_ptr_array_add (tform_array, g_strdup_printf ("%dD", z_obs_params_len));
+	g_ptr_array_add (tunit_array, "REDSHIFT OBS PARAMS");
+  }
+
+  if (lnM_obs_params_len > 0)
+  {
+	g_ptr_array_add (ttype_array, "LNM_OBS_PARAMS");
+	g_ptr_array_add (tform_array, g_strdup_printf ("%dD", lnM_obs_params_len));
+	g_ptr_array_add (tunit_array, "LNM OBS PARAMS");
+  }
+  
+  tfields = ttype_array->len;
 
   /* initialize status before calling fitsio routines */
   status = 0;
@@ -1090,99 +850,77 @@ nc_cluster_abundance_catalog_save (NcData *data, gchar *filename, gboolean overw
   /* create new FITS file */
   if (fits_create_file (&fptr, filename, &status))
 	NC_FITS_ERROR (status);
-  /*
-   if (fits_create_img (fptr,  bitpix, naxis, naxes, &status))
-   NC_FITS_ERROR (status);
 
-   if (fits_write_date (fptr, &status))
-   NC_FITS_ERROR (status);
-   */
-  /* move to 1st HDU  */
-  /*
-   if (fits_movabs_hdu (fptr, 2, &hdutype, &status))
-   NC_FITS_ERROR (status);
-   */
   /* append a new empty binary table onto the FITS file */
-  if (fits_create_tbl (fptr, BINARY_TBL, dca->np, tfields, ttype, tform,
-                       tunit, extname, &status) )
+  if (fits_create_tbl (fptr, BINARY_TBL, dca->np, tfields, (gchar **)ttype_array->pdata, (gchar **)tform_array->pdata,
+                       (gchar **)tunit_array->pdata, extname, &status) )
 	NC_FITS_ERROR (status);
 
-  if (fits_write_key(fptr, TDOUBLE, "ZI_T", &dca->real.zi, "Minimum true redshift", &status))
-	NC_FITS_ERROR(status);
-  if (fits_write_key(fptr, TDOUBLE, "ZF_T", &dca->real.zf, "Maximum true redshift", &status))
-	NC_FITS_ERROR(status);
-  if (fits_write_key(fptr, TDOUBLE, "ZI_O", &dca->obs.zi, "Minimum observational redshift", &status))
-	NC_FITS_ERROR(status);
-  if (fits_write_key(fptr, TDOUBLE, "ZF_O", &dca->obs.zf, "Maximum observational redshift", &status))
-	NC_FITS_ERROR(status);
+  {
+	gchar *z_ser = ncm_cfg_serialize_to_string (G_OBJECT (dca->z), FALSE);
+	gchar *lnM_ser = ncm_cfg_serialize_to_string (G_OBJECT (dca->m), FALSE);
+
+	if (fits_write_key(fptr, TSTRING, "Z_OBJ", z_ser, "Serialized redshift object", &status))
+	  NC_FITS_ERROR(status);
+	if (fits_write_key(fptr, TSTRING, "LNM_OBJ", lnM_ser, "Serialized mass object", &status))
+	  NC_FITS_ERROR(status);
+	
+	g_free (z_ser);
+	g_free (lnM_ser);
+  }
 
   {
 	gdouble sarea_d = dca->area_survey / gsl_pow_2 (M_PI / 180.0);
-	gdouble Mi_real = exp (dca->real.lnMi);
-	gdouble Mf_real = exp (dca->real.lnMf);
-	gdouble Mi_obs = exp (dca->obs.lnMi);
-	gdouble Mf_obs = exp (dca->obs.lnMf);
-	if (fits_write_key(fptr, TDOUBLE, "MI_T", &Mi_real, "Minimum true mass in h^{-1} * M_sun", &status))
-	  NC_FITS_ERROR(status);
-	if (fits_write_key(fptr, TDOUBLE, "MF_T", &Mf_real, "Maximum true mass in h^{-1} * M_sun", &status))
-	  NC_FITS_ERROR(status);
-	if (fits_write_key(fptr, TDOUBLE, "MI_O", &Mi_obs, "Minimum observational mass in h^{-1} * M_sun", &status))
-	  NC_FITS_ERROR(status);
-	if (fits_write_key(fptr, TDOUBLE, "MF_O", &Mf_obs, "Maximum observational mass in h^{-1} * M_sun", &status))
-	  NC_FITS_ERROR(status);
 	if (fits_write_key(fptr, TDOUBLE, "AREA", &sarea_d, "Survey area in degree square", &status))
 	  NC_FITS_ERROR(status);
   }
 
   {
-	gboolean Mobs, photoz;
-
-	Mobs = dca->opt & NC_CLUSTER_ABUNDANCE_MOBS;
-	photoz = dca->opt & NC_CLUSTER_ABUNDANCE_PHOTOZ;
-
-	if (fits_write_key(fptr, TLOGICAL, "M_OBS", &Mobs, NULL, &status))
-	  NC_FITS_ERROR(status);
-	if (fits_write_key(fptr, TLOGICAL, "PHOTOZ", &photoz, NULL, &status))
+	guint colnum = 1;
+	if (fits_write_col (fptr, TDOUBLE, colnum, 1, 1, dca->np, ncm_matrix_ptr (dca->z_obs, 0, 0), &status))
 	  NC_FITS_ERROR(status);
 
-	if (Mobs)
-	{
-	  if (fits_write_key(fptr, TDOUBLE, "M_OBS_S0", &dca->obs.lnM_sigma0, NULL, &status))
-		NC_FITS_ERROR(status);
-	}
-	if (photoz)
-	{
-	  if (fits_write_key(fptr, TDOUBLE, "PHOTOZS0", &dca->obs.photoz_sigma0, NULL, &status))
-		NC_FITS_ERROR(status);
-	}
-  }
+	colnum++;
+	if (fits_write_col (fptr, TDOUBLE, colnum, 1, 1, dca->np, ncm_matrix_ptr (dca->lnM_obs, 0, 0), &status))
+	  NC_FITS_ERROR(status);
 
-  if (dca->opt & NC_CLUSTER_ABUNDANCE_REAL_ZM)
-  {
-	for (i = 0; i < dca->np; i++)
+	if (dca->z_true != NULL)
 	{
-	  if (fits_write_col (fptr, TDOUBLE, 1, i + 1, 1, 1, gsl_matrix_ptr (dca->real.z_lnM, i, 0), &status))
+	  colnum++;
+	  if (fits_write_col (fptr, TDOUBLE, colnum, 1, 1, dca->np, ncm_vector_ptr (dca->z_true, 0), &status))
 		NC_FITS_ERROR(status);
-	  if (fits_write_col (fptr, TDOUBLE, 2, i + 1, 1, 1, gsl_matrix_ptr (dca->real.z_lnM, i, 1), &status))
-		NC_FITS_ERROR(status);
-	  //printf ("Cat fit %g %g\n", gsl_matrix_get (dca->z_lnM, i, 0), gsl_matrix_get (dca->z_lnM, i, 1));
 	}
-  }
-  else if (dca->opt & NC_CLUSTER_ABUNDANCE_OBS_ZM)
-  {
-	for (i = 0; i < dca->np; i++)
+	
+	if (dca->lnM_true != NULL)
 	{
-	  if (fits_write_col (fptr, TDOUBLE, 3, i + 1, 1, 1, gsl_matrix_ptr (dca->obs.z_lnM, i, 0), &status))
+	  colnum++;
+	  if (fits_write_col (fptr, TDOUBLE, colnum, 1, 1, dca->np, ncm_vector_ptr (dca->lnM_true, 0), &status))
 		NC_FITS_ERROR(status);
-	  if (fits_write_col (fptr, TDOUBLE, 4, i + 1, 1, 1, gsl_matrix_ptr (dca->obs.z_lnM, i, 1), &status))
-		NC_FITS_ERROR(status);
-	  //printf ("Cat fit %g %g\n", gsl_matrix_get (dca->z_lnM, i, 0), gsl_matrix_get (dca->z_lnM, i, 1));
 	}
+
+	if (z_obs_params_len > 0)
+	{
+	  colnum++;
+	  if (fits_write_col (fptr, TDOUBLE, colnum, 1, 1, dca->np, ncm_matrix_ptr (dca->z_obs_params, 0, 0), &status))
+		NC_FITS_ERROR(status);
+	} 
+
+	if (lnM_obs_params_len > 0)
+	{
+	  colnum++;
+	  if (fits_write_col (fptr, TDOUBLE, colnum, 1, 1, dca->np, ncm_matrix_ptr (dca->lnM_obs_params, 0, 0), &status))
+		NC_FITS_ERROR(status);
+	} 
+
   }
 
   if ( fits_close_file(fptr, &status) )
 	NC_FITS_ERROR(status);
 
+  g_ptr_array_unref (ttype_array);
+  g_ptr_array_unref (tform_array);
+  g_ptr_array_unref (tunit_array);
+  
   return;
 }
 
@@ -1190,19 +928,16 @@ nc_cluster_abundance_catalog_save (NcData *data, gchar *filename, gboolean overw
  * nc_cluster_abundance_catalog_load:
  * @data: a #NcData.
  * @filename: name of the file
- * @opt: a #NcClusterAbundanceOpt.
  *
  * FIXME
  *
  */
 void
-nc_cluster_abundance_catalog_load (NcData *data, gchar *filename, NcClusterAbundanceOpt opt)
+nc_cluster_abundance_catalog_load (NcData *data, gchar *filename)
 {
   NcDataClusterAbundance *dca = (NcDataClusterAbundance *) NC_DATA_DATA (data);
-  gint  status, hdutype, anynul, i;
-  gchar comment[FLEN_COMMENT], ZT_name[100], MT_name[100], ZO_name[100], MO_name[100];
-  gint zt_index, Mt_index, zo_index, Mo_index;
-  gboolean is_lnM = TRUE;
+  gint status, hdutype;
+  gchar comment[FLEN_COMMENT];
   fitsfile *fptr;
 
   status = 0;
@@ -1219,539 +954,158 @@ nc_cluster_abundance_catalog_load (NcData *data, gchar *filename, NcClusterAbund
   if (hdutype != BINARY_TBL)
 	g_error ("%s (%d): Ncuster catalog is not binary!\n", __FILE__, __LINE__);
 
-  if (fits_read_key_dbl (fptr, "ZI_T", &dca->real.zi, comment, &status))
-	g_error ("Fits file does not contain ZI_T in the header indicating the initial true redshift. Use [col #ZI_T=...] to add this information.");
+  if (dca->z != NULL)
+	nc_cluster_redshift_free (dca->z);
+  if (dca->m != NULL)
+	nc_cluster_mass_free (dca->m);
 
-  if (dca->real.zi == 0.0)
   {
-	g_message ("nc_cluster_abundance_catalog_load: Catalog requested zi_true == 0.0. Using zi_true = %e\n", _NC_CLUSTER_ABUNDANCE_MIN_Z);
-	dca->real.zi = _NC_CLUSTER_ABUNDANCE_MIN_Z;
+	gchar z_ser[1024 * 10];
+	gchar lnM_ser[1024 * 10];
+
+	if (fits_read_key_str (fptr, "Z_OBJ", z_ser, comment, &status))
+	  NC_FITS_ERROR (status);
+	if (fits_read_key_str (fptr, "LNM_OBJ", lnM_ser, comment, &status))
+	  NC_FITS_ERROR (status);
+	
+    dca->z = nc_cluster_redshift_new_from_name (z_ser);
+    dca->m = nc_cluster_mass_new_from_name (lnM_ser);
   }
 
-  if (fits_read_key_dbl (fptr, "ZF_T", &dca->real.zf, comment, &status))
-	g_error ("Fits file does not contain ZF_T in the header indicating the final true redshift. Use [col #ZF_T=...] to add this information.");
-
-  if (fits_read_key_dbl (fptr, "ZI_O", &dca->obs.zi, comment, &status))
-	g_error ("Fits file does not contain ZI_O in the header indicating the initial observational redshift. Use [col #ZI_O=...] to add this information.");
-
-  if (dca->obs.zi == 0.0)
   {
-	g_message ("nc_cluster_abundance_catalog_load: Catalog requested zi_obs == 0.0. Using zi_obs = %e\n", _NC_CLUSTER_ABUNDANCE_MIN_Z);
-	dca->obs.zi = _NC_CLUSTER_ABUNDANCE_MIN_Z;
-  }
-
-  if (fits_read_key_dbl (fptr, "ZF_O", &dca->obs.zf, comment, &status))
-	g_error ("Fits file does not contain ZF_O in the header indicating the final observational redshift. Use [col #ZF_O=...] to add this information.");
-
-  {
-	gdouble Mi_real, Mf_real, Mi_obs, Mf_obs;
-	if (fits_read_key_dbl (fptr, "MI_T", &Mi_real, comment, &status))
-	  g_error ("Fits file does not contain MI_T in the header indicating the minimum true mass. Use [col #MI_T=...] to add this information.");
-	if (fits_read_key_dbl (fptr, "MF_T", &Mf_real, comment, &status))
-	  g_error ("Fits file does not contain MF_T in the header indicating the maximum true mass. Use [col #MF_T=...] to add this information.");
-
-	dca->real.lnMi = log (Mi_real);
-	dca->real.lnMf = log (Mf_real);
-
-	if (fits_read_key_dbl (fptr, "MI_O", &Mi_obs, comment, &status))
-	  g_error ("Fits file does not contain MI_O in the header indicating the minimum observational mass. Use [col #MI_O=...] to add this information.");
-	if (fits_read_key_dbl (fptr, "MF_O", &Mf_obs, comment, &status))
-	  g_error ("Fits file does not contain MF_O in the header indicating the maximum observational mass. Use [col #MF_O=...] to add this information.");
-
-	dca->obs.lnMi = log (Mi_obs);
-	dca->obs.lnMf = log (Mf_obs);
+	glong nrows;
+	if (fits_get_num_rows (fptr, &nrows, &status))
+	  NC_FITS_ERROR(status);
+	dca->np = nrows;
   }
 
   if (fits_read_key_dbl (fptr, "AREA", &dca->area_survey, comment, &status))
 	g_error ("Fits file does not contain AREA in the header indicating the survey area (degree square). Use [col #AREA=...] to add this information.");
   dca->area_survey *= gsl_pow_2 (M_PI / 180.0);
-
+  
   {
-	gboolean Mobs, photoz;
-	if (fits_read_key_log (fptr, "M_OBS", &Mobs, comment, &status))
-	  g_error ("Fits file does not contain M_OBS in the header indicating the usage of mass observable relations. Use [col #M_OBS=T|F] to set it to TRUE or FALSE.");
-	if (Mobs)
-	{
-	  if (fits_read_key_dbl (fptr, "M_OBS_S0", &dca->obs.lnM_sigma0, comment, &status))
-		g_error ("Fits file does not contain M_OBS_S0 although it has M_OBS set true. Use [col #M_OBS_S0=...] to set its value.");
-	  dca->opt = dca->opt | NC_CLUSTER_ABUNDANCE_MOBS;
-	}
-	else
-	  dca->obs.lnM_sigma0 = 0.0;
+	gint z_obs_i, lnM_obs_i;
+	gint z_obs_tc, lnM_obs_tc;
+	glong z_obs_rp, lnM_obs_rp;
+	glong z_obs_w, lnM_obs_w;
+	
+	if (fits_get_colnum (fptr, CASESEN, "Z_OBS", &z_obs_i, &status))
+	  g_error ("Column Z_OBS not found, invalid fits file.");
 
-	if (fits_read_key_log (fptr, "PHOTOZ", &photoz, comment, &status))
-	  g_error ("Fits file does not contain PHOTOZ in the header indicating the usage of photometric redshift error. Use [col #PHOTOZ=T|F] to set it to TRUE or FALSE.");
-	if (photoz)
-	{
-	  dca->opt = dca->opt | NC_CLUSTER_ABUNDANCE_PHOTOZ;
-	  if (fits_read_key_dbl (fptr, "PHOTOZS0", &dca->obs.photoz_sigma0, comment, &status))
-		g_error ("Fits file does not contain PHOTOZS0 although it has PHOTOZ set true. Use [col #PHOTOZS0=...] to set its value.");
-	}
-	else
-	  dca->obs.photoz_sigma0 = 0.0;
-  }
-  dca->opt = dca->opt | opt;
+	if (fits_get_colnum (fptr, CASESEN, "LNM_OBS", &lnM_obs_i, &status))
+	  g_error ("Column LNM_OBS not found, invalid fits file.");
 
-  if (fits_get_colname (fptr, CASEINSEN, "ZT", ZT_name, &zt_index, &status))
-	g_error ("Column ZT|zt not found, invalid fits file.");
-  if (fits_get_colname (fptr, CASEINSEN, "ZO", ZO_name, &zo_index, &status))
-	g_error ("Column ZO|zo not found, invalid fits file.");
+	if (fits_get_coltype (fptr, z_obs_i, &z_obs_tc, &z_obs_rp, &z_obs_w, &status))
+	  g_error ("Column Z_OBS info not found, invalid fits file.");
 
+	if (fits_get_coltype (fptr, lnM_obs_i, &lnM_obs_tc, &lnM_obs_rp, &lnM_obs_w, &status))
+	  g_error ("Column LNM_OBS info not found, invalid fits file.");
 
-  fits_get_colname (fptr, CASEINSEN, "lnM_T", MT_name, &Mt_index, &status);
-  if ((status == COL_NOT_FOUND) || (status == COL_NOT_UNIQUE))
-  {
-	status = 0;
-	fits_get_colname (fptr, CASEINSEN, "M200_T", MT_name, &Mt_index, &status);
-	if ((status == COL_NOT_FOUND) || (status == COL_NOT_UNIQUE))
-	{
-	  status = 0;
-	  fits_get_colname (fptr, CASEINSEN, "MT", MT_name, &Mt_index, &status);
-	  if ((status == COL_NOT_FOUND) || (status == COL_NOT_UNIQUE))
-		g_error ("Column (lnM_T|M200_T|MT) not found, invalid fits file.");
-	}
-	is_lnM = FALSE;
-  }
+	if (nc_cluster_redshift_obs_len (dca->z) != z_obs_rp)
+	  g_error ("NcClusterRedshift object has observables length %d but fits has %ld.", 
+	           nc_cluster_redshift_obs_len (dca->z), z_obs_rp);
 
-  fits_get_colname (fptr, CASEINSEN, "lnM_O", MO_name, &Mo_index, &status);
-  if ((status == COL_NOT_FOUND) || (status == COL_NOT_UNIQUE))
-  {
-	status = 0;
-	fits_get_colname (fptr, CASEINSEN, "M200", MO_name, &Mo_index, &status);
-	if ((status == COL_NOT_FOUND) || (status == COL_NOT_UNIQUE))
-	{
-	  status = 0;
-	  fits_get_colname (fptr, CASEINSEN, "MO", MO_name, &Mo_index, &status);
-	  if ((status == COL_NOT_FOUND) || (status == COL_NOT_UNIQUE))
-		g_error ("Column (lnM_O|M200|MO) not found, invalid fits file.");
-	}
-	is_lnM = FALSE;
-  }
+	if (nc_cluster_mass_obs_len (dca->m) != lnM_obs_rp)
+	  g_error ("NcClusterMass object has observables length %d but fits has %ld.", 
+	           nc_cluster_mass_obs_len (dca->m), lnM_obs_rp);
 
-  {
-	gchar *select = g_strdup_printf (
-	                                 "%s >= % 20.15g && %s <= % 20.15g && %s >= % 20.15g && %s <= % 20.15g %s >= % 20.15g && %s <= % 20.15g && %s >= % 20.15g && %s <= % 20.15g",
-	                                 ZT_name, dca->real.zi, ZT_name, dca->real.zf,
-	                                 MT_name, is_lnM ? dca->real.lnMi : exp(dca->real.lnMi),
-	                                 MT_name, is_lnM ? dca->real.lnMf : exp(dca->real.lnMf),
-	                                 ZO_name, dca->obs.zi, ZO_name, dca->obs.zf,
-	                                 MO_name, is_lnM ? dca->obs.lnMi : exp(dca->obs.lnMi),
-	                                 MO_name, is_lnM ? dca->obs.lnMf : exp(dca->obs.lnMf));
-	fits_select_rows (fptr, fptr, select, &status);
-	NC_FITS_ERROR (status);
-	g_free (select);
-  }
+	if (dca->z_obs)
+	  ncm_matrix_free (dca->z_obs);
+    dca->z_obs = ncm_matrix_new (dca->np, z_obs_rp);
 
-  if ( fits_read_key_lng (fptr, "NAXIS2", &dca->np, comment, &status) )
-	NC_FITS_ERROR(status);
+	if (dca->lnM_obs)
+	  ncm_matrix_free (dca->lnM_obs);
+	dca->lnM_obs = ncm_matrix_new (dca->np, lnM_obs_rp);
 
-  if (dca->opt & NC_CLUSTER_ABUNDANCE_REAL_ZM)
-  {
-	if (dca->real.z_lnM != NULL)
-	{
-	  if (dca->real.z_lnM->size1 != dca->np)
-	  {
-		gsl_matrix_free (dca->real.z_lnM);
-		dca->real.z_lnM = gsl_matrix_alloc (dca->np, 2);
-	  }
-	}
-	else
-	  dca->real.z_lnM = gsl_matrix_alloc (dca->np, 2);
+	if (fits_read_col (fptr, TDOUBLE, z_obs_i, 1, 1, dca->np, NULL, ncm_matrix_ptr (dca->z_obs, 0, 0), NULL, &status))
+	  NC_FITS_ERROR(status);
 
-	if (!is_lnM)
-	{
-	  for (i = 0; i < dca->np; i++)
-	  {
-		if (fits_read_col_dbl (fptr, zt_index, i + 1, 1, 1, 0.0, gsl_matrix_ptr (dca->real.z_lnM, i, 0), &anynul, &status))
-		  NC_FITS_ERROR(status);
-		if (fits_read_col_dbl (fptr, Mt_index, i + 1, 1, 1, 0.0, gsl_matrix_ptr (dca->real.z_lnM, i, 1), &anynul, &status))
-		  NC_FITS_ERROR(status);
-		*gsl_matrix_ptr (dca->real.z_lnM, i, 1) = log (*gsl_matrix_ptr (dca->real.z_lnM, i, 1));
-	  }
-	}
-	else
-	{
-	  for (i = 0; i < dca->np; i++)
-	  {
-		if (fits_read_col_dbl (fptr, zt_index, i + 1, 1, 1, 0.0, gsl_matrix_ptr (dca->real.z_lnM, i, 0), &anynul, &status))
-		  NC_FITS_ERROR(status);
-		if (fits_read_col_dbl (fptr, Mt_index, i + 1, 1, 1, 0.0, gsl_matrix_ptr (dca->real.z_lnM, i, 1), &anynul, &status))
-		  NC_FITS_ERROR(status);
-	  }
-	}
-  }
-
-  if (dca->opt & NC_CLUSTER_ABUNDANCE_OBS_ZM)
-  {
-	if (dca->obs.z_lnM != NULL)
-	{
-	  if (dca->obs.z_lnM->size1 != dca->np)
-	  {
-		gsl_matrix_free (dca->obs.z_lnM);
-		dca->obs.z_lnM = gsl_matrix_alloc (dca->np, 2);
-	  }
-	}
-	else
-	  dca->obs.z_lnM = gsl_matrix_alloc (dca->np, 2);
-
-	if (!is_lnM)
-	{
-	  for (i = 0; i < dca->np; i++)
-	  {
-		if (fits_read_col_dbl (fptr, zo_index, i + 1, 1, 1, 0.0, gsl_matrix_ptr (dca->obs.z_lnM, i, 0), &anynul, &status))
-		  NC_FITS_ERROR(status);
-		if (fits_read_col_dbl (fptr, Mo_index, i + 1, 1, 1, 0.0, gsl_matrix_ptr (dca->obs.z_lnM, i, 1), &anynul, &status))
-		  NC_FITS_ERROR(status);
-		*gsl_matrix_ptr (dca->obs.z_lnM, i, 1) = log (*gsl_matrix_ptr (dca->obs.z_lnM, i, 1));
-	  }
-	}
-	else
-	{
-	  for (i = 0; i < dca->np; i++)
-	  {
-		if (fits_read_col_dbl (fptr, zo_index, i + 1, 1, 1, 0.0, gsl_matrix_ptr (dca->obs.z_lnM, i, 0), &anynul, &status))
-		  NC_FITS_ERROR(status);
-		if (fits_read_col_dbl (fptr, Mo_index, i + 1, 1, 1, 0.0, gsl_matrix_ptr (dca->obs.z_lnM, i, 1), &anynul, &status))
-		  NC_FITS_ERROR(status);
-	  }
-	}
-  }
-
-  if ( fits_close_file(fptr, &status) )
-	NC_FITS_ERROR(status);
-
-  nc_data_init (data);
-
-  return;
-}
-
-/**
- * nc_cluster_matching_catalog_save:
- * @data: a #NcData
- * @filename: name of the file
- * @overwrite: FIXME
- *
- * FIXME
- *
- */
-void
-nc_cluster_matching_catalog_save (NcData *data, gchar *filename, gboolean overwrite)
-{
-  NcDataClusterAbundance *dca = (NcDataClusterAbundance *) NC_DATA_DATA (data);
-  /*******************************************************************/
-  /* Create a binary table extension                                 */
-  /*******************************************************************/
-  fitsfile *fptr;       /* pointer to the FITS file, defined in fitsio.h */
-  gint status, hdutype;
-  glong i;
-  gint n_zbins = gsl_histogram2d_nx (dca->completeness);
-  /* gint n_logMbins = gsl_histogram2d_ny (dca->completeness); FIXME */
-
-  gint bitpix   =  SHORT_IMG;
-  glong naxis   =   0;
-  glong naxes[] = { 0, 0 };
-
-  gint tfields   = 3;
-
-  gchar extname[] = "NcusterAbundance";   /* extension name */
-  gchar *ttype[] = { "Z", "MASS_RANK" , "U_TWOWAY"};
-  gchar *tform[] = { "1D", "1E", "1I"};
-  gchar *tunit[] = { "REDSHIFT", "MASS", "U_TWOWAY"};
-
-  gint tfields_2   = 6;
-
-  gchar extname_2[] = "Statistics";   /* extension name */
-  gchar *ttype_2[] = { "Z_MIN", "Z_MAX", "MBINS" , "C", "P", "MDIFF_SIGMA"};
-  gchar *tform_2[] = { "1E", "1E", "E", "E", "E", "E"};
-  gchar *tunit_2[] = { "Z_MIN", "Z_MAX", "MBINS" , "COMPLETENESS", "PURITY", "MDIFF_SIGMA"};
-
-  /* initialize status before calling fitsio routines */
-  status = 0;
-
-  if (overwrite && g_file_test (filename, G_FILE_TEST_EXISTS))
-	g_unlink (filename);
-
-  /* create new FITS file */
-  if (fits_create_file (&fptr, filename, &status))
-	NC_FITS_ERROR (status);
-
-  if (fits_create_img (fptr,  bitpix, naxis, naxes, &status))
-	NC_FITS_ERROR (status);
-
-  if (fits_write_date (fptr, &status))
-	NC_FITS_ERROR (status);
-
-  /* move to 2nd HDU  */
-  if ( fits_movabs_hdu (fptr, 2, &hdutype, &status))
-	NC_FITS_ERROR (status);
-
-  /* append a new empty binary table onto the FITS file */
-  if ( fits_create_tbl (fptr, BINARY_TBL, dca->np, tfields, ttype, tform,
-                        tunit, extname, &status) )
-	NC_FITS_ERROR (status);
-
-  {
-	gdouble sarea_d = dca->area_survey / gsl_pow_2 (M_PI / 180.0);
-	if (fits_write_key(fptr, TDOUBLE, "AREA", &sarea_d, "Survey area in degree square", &status))
+	if (fits_read_col (fptr, TDOUBLE, lnM_obs_i, 1, 1, dca->np, NULL, ncm_matrix_ptr (dca->lnM_obs, 0, 0), NULL, &status))
 	  NC_FITS_ERROR(status);
   }
 
   {
-	gdouble M;
-	gint u_twoway = 1;
-	for (i = 0; i < dca->np; i++)
+	gint z_obs_params_i, lnM_obs_params_i;
+	gint z_obs_params_tc, lnM_obs_params_tc;
+	glong z_obs_params_rp, lnM_obs_params_rp;
+	glong z_obs_params_w, lnM_obs_params_w;
+	
+	if (fits_get_colnum (fptr, CASESEN, "Z_OBS_PARAMS", &z_obs_params_i, &status))
 	{
-	  if (fits_write_col (fptr, TDOUBLE, 1, i + 1, 1, 1, gsl_matrix_ptr (dca->real.z_lnM, i, 0), &status))
+      if (nc_cluster_redshift_obs_params_len (dca->z) > 0)
+		g_error ("NcClusterRedshift object has observable parameters length %d but fits has 0.", 
+		         nc_cluster_redshift_obs_params_len (dca->z));
+	}
+	else
+	{
+	  if (fits_get_coltype (fptr, z_obs_params_i, &z_obs_params_tc, &z_obs_params_rp, &z_obs_params_w, &status))
+		g_error ("Column Z_OBS_PARAMS info not found, invalid fits file.");
+
+	  if (nc_cluster_redshift_obs_params_len (dca->z) != z_obs_params_rp)
+		g_error ("NcClusterRedshift object has observable parameters length %d but fits has %ld.", 
+		         nc_cluster_redshift_obs_params_len (dca->z), z_obs_params_rp);
+
+	  if (dca->z_obs_params)
+		ncm_matrix_free (dca->z_obs_params);
+	  dca->z_obs_params = ncm_matrix_new (dca->np, z_obs_params_rp);
+
+	  if (fits_read_col (fptr, TDOUBLE, z_obs_params_i, 1, 1, dca->np, NULL, ncm_matrix_ptr (dca->z_obs_params, 0, 0), NULL, &status))
 		NC_FITS_ERROR(status);
-	  M = exp (gsl_matrix_get (dca->real.z_lnM, i, 1));
-	  if (fits_write_col (fptr, TDOUBLE, 2, i + 1, 1, 1, &M, &status))
-		NC_FITS_ERROR(status);
-	  if (fits_write_col (fptr, TINT, 3, i + 1, 1, 1, &u_twoway, &status))
+	}
+
+	if (fits_get_colnum (fptr, CASESEN, "LNM_OBS_PARAMS", &lnM_obs_params_i, &status))
+	{
+      if (nc_cluster_mass_obs_params_len (dca->m) > 0)
+		g_error ("NcClusterMass object has observable parameters length %d but fits has 0.", 
+		         nc_cluster_mass_obs_params_len (dca->m));
+	}
+	else
+	{
+	  if (fits_get_coltype (fptr, lnM_obs_params_i, &lnM_obs_params_tc, &lnM_obs_params_rp, &lnM_obs_params_w, &status))
+		g_error ("Column LNM_OBS_PARAMS info not found, invalid fits file.");
+
+	  if (nc_cluster_mass_obs_params_len (dca->m) != lnM_obs_params_rp)
+		g_error ("NcClusterMass object has observable parameters length %d but fits has %ld.", 
+		         nc_cluster_mass_obs_params_len (dca->m), lnM_obs_params_rp);
+
+	  if (dca->lnM_obs_params)
+		ncm_matrix_free (dca->lnM_obs_params);
+	  dca->lnM_obs_params = ncm_matrix_new (dca->np, lnM_obs_params_rp);
+
+
+	  if (fits_read_col (fptr, TDOUBLE, lnM_obs_params_i, 1, 1, dca->np, NULL, ncm_matrix_ptr (dca->lnM_obs_params, 0, 0), NULL, &status))
 		NC_FITS_ERROR(status);
 	}
   }
 
-  /* move to 3rd HDU  */
-  if ( fits_movabs_hdu (fptr, 4, &hdutype, &status))
-	NC_FITS_ERROR (status);
-
-  if ( fits_create_tbl (fptr, BINARY_TBL, n_zbins, tfields_2, ttype_2, tform_2, tunit_2, extname_2, &status) )
-	NC_FITS_ERROR (status);
-
   {
-	gdouble z_min, z_max, lnM_min, lnM_max, M;
-	gsl_vector *M_nodes = NULL;
-	gint m_bins = gsl_histogram2d_ny (dca->completeness);
-	M_nodes = gsl_vector_alloc (m_bins + 1);
-	for(i = 0; i < m_bins; i++)
+	gint z_true_i, lnM_true_i;
+	if (dca->z_true != NULL)
 	{
-	  gsl_histogram2d_get_yrange (dca->completeness, i, &lnM_min, &lnM_max);
-	  M = exp (lnM_min); /* corrigir!!! quero transformar em log_10 (M), FIXME*/
-	  gsl_vector_set (M_nodes, i, M);
+	  ncm_vector_free (dca->z_true);
+	  dca->z_true = NULL;
 	}
-	M = exp (lnM_max);
-	gsl_vector_set (M_nodes, m_bins, M);
-	for (i = 0; i < n_zbins; i++)
+	if (!fits_get_colnum (fptr, CASESEN, "Z_TRUE", &z_true_i, &status))
 	{
-	  gsl_histogram2d_get_xrange (dca->completeness, i, &z_min, &z_max);
-	  if (fits_write_col (fptr, TDOUBLE, 1, i + 1, 1, 1, &z_min, &status))
+	  dca->z_true = ncm_vector_new (dca->np);
+	  if (fits_read_col (fptr, TDOUBLE, z_true_i, 1, 1, dca->np, NULL, ncm_vector_ptr (dca->z_true, 0), NULL, &status))
 		NC_FITS_ERROR(status);
-	  if (fits_write_col (fptr, TDOUBLE, 2, i + 1, 1, 1, &z_max, &status))
-		NC_FITS_ERROR(status);
-	  if (fits_write_col (fptr, TDOUBLE, 3, i + 1, 1, 1, gsl_vector_ptr (M_nodes, 0), &status))
-		NC_FITS_ERROR(status);
-	  //if (fits_write_col (fptr, TDOUBLE, 4, i + 1, 1, 1, gsl_matrix_ptr (complet_matrix, i, 0), &status))
-	  //NC_FITS_ERROR(status);
-	  //if (fits_write_col (fptr, TDOUBLE, 5, i + 1, 1, 1, gsl_matrix_ptr (pur_matrix, i, 0), &status))
-	  //NC_FITS_ERROR(status);
-	  //if (fits_write_col (fptr, TDOUBLE, 6, i + 1, 1, 1, gsl_matrix_ptr (sdM_matrix, i, 0), &status))
-	  //NC_FITS_ERROR(status);
 	}
-  }
 
-  if ( fits_close_file(fptr, &status) )
-	NC_FITS_ERROR(status);
-
-  return;
-}
-
-/**
- * nc_cluster_matching_catalog_load:
- * @data: a #NcData.
- * @filename: name of the file.
- * @opt: a #NcClusterAbundanceOpt.
- *
- * FIXME
- * P.S. This function was not adapted to have columns with true and observable values of z and lnM.
- *
- */
-void
-nc_cluster_matching_catalog_load (NcData *data, gchar *filename, NcClusterAbundanceOpt opt)
-{
-  NcDataClusterAbundance *dca = (NcDataClusterAbundance *) NC_DATA_DATA (data);
-  gint  status, hdutype, anynul, i;
-  gchar comment[FLEN_COMMENT]; //Z_name[100], M_name[100];
-  gint z_index, Mobs_index, utwoway_index;
-  //gboolean is_lnM = TRUE;
-  fitsfile *fptr;
-
-  gint j, typecode, zmin_index, zmax_index, mbins_index, completeness_index, purity_index, sigmaM_index;
-  glong nbins_z, nbins_lnM, width, np_complet;
-  gsl_vector *z_range = NULL;
-  gsl_vector *mass_range = NULL;
-  gsl_matrix *complet_matrix, *pur_matrix, *sdM_matrix;
-
-  status = 0;
-
-  if (filename == NULL)
-	g_error ("nc_cluster_matching_catalog_load: null filename");
-
-  if (fits_open_file (&fptr, filename, READONLY, &status))
-	NC_FITS_ERROR(status);
-
-  if (fits_movabs_hdu (fptr, 4, &hdutype, &status))
-	NC_FITS_ERROR (status);
-  if (fits_read_key_lng (fptr, "NAXIS2", &nbins_z, comment, &status))
-	NC_FITS_ERROR(status);
-  if (fits_get_colnum (fptr, CASEINSEN, "ZMIN", &zmin_index, &status))
-	NC_FITS_ERROR(status);
-  if (fits_get_colnum (fptr, CASEINSEN, "ZMAX", &zmax_index, &status))
-	NC_FITS_ERROR(status);
-  if (fits_get_colnum (fptr, CASEINSEN, "MBINS", &mbins_index, &status))
-	NC_FITS_ERROR(status);
-  if (fits_get_colnum (fptr, CASEINSEN, "C", &completeness_index, &status))
-	NC_FITS_ERROR(status);
-  if (fits_get_coltype (fptr, completeness_index, &typecode, &np_complet, &width, &status))
-	NC_FITS_ERROR(status);
-  //printf ("np = %ld", np_complet);
-  if (fits_get_colnum (fptr, CASEINSEN, "P", &purity_index, &status))
-	NC_FITS_ERROR(status);
-  if (fits_get_colnum (fptr, CASEINSEN, "MDIFF_SIGMA", &sigmaM_index, &status))
-	NC_FITS_ERROR(status);
-
-  if (fits_get_coltype (fptr, mbins_index, &typecode, &nbins_lnM, &width, &status))
-	NC_FITS_ERROR(status);
-  nbins_lnM--; /* The function above return the number of nodes and we need the number of bins. */
-  //printf ("# typecode = %d nbins_logM = %ld width = %ld\n", typecode, nbins_logM, width);
-
-  z_range = gsl_vector_alloc (nbins_z + 1);
-  mass_range = gsl_vector_alloc (nbins_lnM + 1);
-  complet_matrix = gsl_matrix_alloc (nbins_z, nbins_lnM);
-  pur_matrix = gsl_matrix_alloc (nbins_z, nbins_lnM);
-  sdM_matrix = gsl_matrix_alloc (nbins_z, nbins_lnM);
-  dca->completeness = gsl_histogram2d_alloc (nbins_z, nbins_lnM);
-  dca->purity = gsl_histogram2d_alloc (nbins_z, nbins_lnM);
-  dca->sd_lnM = gsl_histogram2d_alloc (nbins_z, nbins_lnM);
-
-  for (j = 0; j < nbins_z; j++)
-  {
-	if (fits_read_col_dbl (fptr, zmin_index, j + 1, 1, 1, 0.0, gsl_vector_ptr (z_range, j), &anynul, &status))
-	  NC_FITS_ERROR(status);
-	if (fits_read_col_dbl (fptr, completeness_index, j + 1, 1, np_complet, 0.0, gsl_matrix_ptr (complet_matrix, j, 0), &anynul, &status))
-	  NC_FITS_ERROR(status);
-	if (fits_read_col_dbl (fptr, purity_index, j + 1, 1, np_complet, 0.0, gsl_matrix_ptr (pur_matrix, j, 0), &anynul, &status))
-	  NC_FITS_ERROR(status);
-	if (fits_read_col_dbl (fptr, sigmaM_index, j + 1, 1, np_complet, 0.0, gsl_matrix_ptr (sdM_matrix, j, 0), &anynul, &status))
-	  NC_FITS_ERROR(status);
-	//printf ("%.3g\n", gsl_vector_get (z_range, j));
-  }
-
-  if (fits_read_col_dbl (fptr, zmax_index, nbins_z, 1, 1, 0.0, gsl_vector_ptr (z_range, nbins_z), &anynul, &status))
-	NC_FITS_ERROR(status);
-  if (fits_read_col_dbl (fptr, mbins_index, 1, 1, nbins_lnM + 1, 0.0, gsl_vector_ptr (mass_range, 0), &anynul, &status))
-	NC_FITS_ERROR(status);
-  //printf ("%.3g\n", gsl_vector_get (z_range, nbins_z));
-
-  gsl_vector_scale (mass_range, M_LN10); /* Matching catalog provides logM and we need lnM. */
-  gsl_matrix_scale (sdM_matrix, M_LN10); /* Standard deviation is obtained for (logMobs - logMtrue) so we have to multiply by ln10. */
-
-  gsl_histogram2d_set_ranges (dca->completeness, gsl_vector_ptr (z_range, 0), nbins_z + 1, gsl_vector_ptr (mass_range, 0), nbins_lnM + 1);
-  gsl_histogram2d_set_ranges (dca->purity, gsl_vector_ptr (z_range, 0), nbins_z + 1, gsl_vector_ptr (mass_range, 0), nbins_lnM + 1);
-  gsl_histogram2d_set_ranges (dca->sd_lnM, gsl_vector_ptr (z_range, 0), nbins_z + 1, gsl_vector_ptr (mass_range, 0), nbins_lnM + 1);
-  //printf ("# zbin = %.3g mbin = %.3g | %ld %ld\n", gsl_vector_get (z_range, 0), gsl_vector_get (mass_range, 0), nbins_z, nbins_logM);
-
-  for (j = 0; j < nbins_z; j++)
-  {
-	//gdouble xlower, xupper;
-	gdouble x = gsl_vector_get (z_range, j);
-	//gsl_histogram2d_get_xrange (completeness, j, &xlower, &xupper);
-	//printf ("x = %.3g xlower = %.3g xupper = %.3g\n", x, xlower, xupper);
-	for (i = 0; i < nbins_lnM; i++)
+	if (dca->lnM_true != NULL)
 	{
-	  gdouble y = gsl_vector_get (mass_range, i);
-	  //printf ("y = %.3g\n", y);
-	  gsl_histogram2d_accumulate (dca->completeness, x, y, gsl_matrix_get (complet_matrix, j, i));
-	  gsl_histogram2d_accumulate (dca->purity, x, y, gsl_matrix_get (pur_matrix, j, i));
-	  gsl_histogram2d_accumulate (dca->sd_lnM, x, y, gsl_matrix_get (sdM_matrix, j, i));
-	  //printf ("p_matrix = %.3g p = %.3g\n", gsl_matrix_get (complet_matrix, j, i), gsl_histogram2d_get (completeness, j, i));
-	  //printf ("p_matrix = %.3g p = %.3g\n", gsl_matrix_get (pur_matrix, j, i), gsl_histogram2d_get (purity, j, i));
-	  //printf ("sd_matrix = %.3g sd_M = %.3g\n", gsl_matrix_get (sdM_matrix, j, i), gsl_histogram2d_get (sd_M, j, i));
+	  ncm_vector_free (dca->lnM_true);
+	  dca->lnM_true = NULL;
 	}
-  }
-
-  gsl_vector_free (z_range);
-  gsl_vector_free (mass_range);
-  gsl_matrix_free (complet_matrix);
-  gsl_matrix_free (pur_matrix);
-  gsl_matrix_free (sdM_matrix);
-
-  dca->real.zi = gsl_histogram2d_xmin (dca->sd_lnM);
-  dca->real.zf = gsl_histogram2d_xmax (dca->sd_lnM);
-  dca->real.lnMi = gsl_histogram2d_ymin (dca->sd_lnM);
-  dca->real.lnMf = gsl_histogram2d_ymax (dca->sd_lnM);
-
-  printf ("zi = %.3g zf = %.3g lnMi = %.3g lnMf = %.3g\n", dca->real.zi, dca->real.zf, dca->real.lnMi, dca->real.lnMf);
-
-  if (fits_movabs_hdu (fptr, 2, &hdutype, &status))
-	NC_FITS_ERROR (status);
-
-  if (hdutype != BINARY_TBL)
-	g_error ("%s (%d): Matching catalog is not binary!\n", __FILE__, __LINE__);
-
-  if (fits_read_key_dbl (fptr, "AREA", &dca->area_survey, comment, &status))
-	g_error ("Fits file do not contain AREA in the header indicating the survey area (degree square). Use [col #AREA=...] to add this information.");
-  dca->area_survey *= gsl_pow_2 (M_PI / 180.0);
-
-  {
-	gboolean Mobs_local, selection, photoz;
-	if (fits_read_key_log (fptr, "M_OBS_LOCAL", &Mobs_local, comment, &status))
-	  g_error ("Fits file does not contain M_OBS_LOCAL in the header indicating the usage of mass observable relations. Use [col #M_OBS_LOCAL=T|F] to set it to TRUE or FALSE.");
-	if (Mobs_local)
-	  dca->opt = dca->opt | NC_CLUSTER_ABUNDANCE_MOBS_LOCAL;
-
-	if (fits_read_key_log (fptr, "SELECTION", &selection, comment, &status))
-	  g_error ("Fits file does not contain SELECTION in the header indicating the usage of completeness and purity. Use [col #SELECTION=T|F] to set it to TRUE or FALSE.");
-	if (selection)
-	  dca->opt = dca->opt | (NC_CLUSTER_ABUNDANCE_COMPLETENESS | NC_CLUSTER_ABUNDANCE_PURITY);
-
-	if (fits_read_key_log (fptr, "PHOTOZ", &photoz, comment, &status))
-	  g_error ("Fits file does not contain PHOTOZ in the header indicating the usage of photometric redshift error. Use [col #PHOTOZ=T|F] to set it to TRUE or FALSE.");
-	if (photoz)
+	if (!fits_get_colnum (fptr, CASESEN, "LNM_TRUE", &lnM_true_i, &status))
 	{
-	  dca->opt = dca->opt | NC_CLUSTER_ABUNDANCE_PHOTOZ;
-	  if (fits_read_key_dbl (fptr, "PHOTOZS0", &dca->real.photoz_sigma0, comment, &status))
-		g_error ("Fits file does not contain PHOTOZS0 although it has PHOTOZ set true. Use [col #PHOTOZS0=...] to set its value.");
+	  dca->lnM_true = ncm_vector_new (dca->np);
+	  if (fits_read_col (fptr, TDOUBLE, lnM_true_i, 1, 1, dca->np, NULL, ncm_vector_ptr (dca->lnM_true, 0), NULL, &status))
+		NC_FITS_ERROR(status);
+
 	}
-	else
-	  dca->real.photoz_sigma0 = 0.0;
   }
-  dca->opt = dca->opt | opt;
-  printf ("opt = %d\n", dca->opt);
-  //if (fits_get_colnum (fptr, CASEINSEN, "TWOWAY", &twoway_index, &status))
-  //NC_FITS_ERROR(status);
-  if (fits_get_colnum (fptr, CASEINSEN, "U_TWOWAY", &utwoway_index, &status))
-	NC_FITS_ERROR(status);
-  if (fits_get_colnum (fptr, CASEINSEN, "Z", &z_index, &status))
-	NC_FITS_ERROR(status);
-  if (fits_get_colnum (fptr, CASEINSEN, "MASS_RANK", &Mobs_index, &status))
-	NC_FITS_ERROR(status);
-  //if (fits_get_colnum (fptr, CASEINSEN, "U_MASS_MATCH", &Mtrue_index, &status))
-  //NC_FITS_ERROR(status);
-
-  //if (fits_select_rows (fptr, fptr, "(TWOWAY == 1) || (U_TWOWAY == 1)", &status))
-  //NC_FITS_ERROR(status);
-
-  if (fits_select_rows (fptr, fptr, "(U_TWOWAY == 1)", &status))
-	NC_FITS_ERROR(status);
-
-  if (fits_read_key_lng (fptr, "NAXIS2", &dca->np, comment, &status))
-	NC_FITS_ERROR(status);
-  dca->real.z_lnM = gsl_matrix_alloc (dca->np, 2);
-  //printf ("%d %d %d %ld\n", z_index, Mobs_index, Mtrue_index, np);
-
-  for (i = 0; i < dca->np; i++)
-  {
-	gdouble M;
-	if (fits_read_col_dbl (fptr, z_index, i + 1, 1, 1, 0.0, gsl_matrix_ptr (dca->real.z_lnM, i, 0), &anynul, &status))
-	  NC_FITS_ERROR(status);
-	if (fits_read_col_dbl (fptr, Mobs_index, i + 1, 1, 1, 0.0, &M, &anynul, &status))
-	  NC_FITS_ERROR(status);
-	gsl_matrix_set (dca->real.z_lnM, i, 1, log (M));
-	//if (fits_read_col_dbl (fptr, Mtrue_index, i + 1, 1, 1, 0.0, gsl_matrix_ptr (dca->z_lnM, i, 2), &anynul, &status))
-	//NC_FITS_ERROR(status);
-	//printf ("z = %.3g Mobs = %.3g\n", gsl_matrix_get (dca->z_lnM, i, 0), gsl_matrix_get (dca->z_lnM, i, 1));
-  }
-
+  
   if ( fits_close_file(fptr, &status) )
 	NC_FITS_ERROR(status);
 

@@ -52,7 +52,7 @@ NcClusterRedshift *
 nc_cluster_redshift_new_from_name (gchar *redshift_name)
 {
   GObject *obj = ncm_cfg_create_from_string (redshift_name);
-  GType redshift_type = g_type_from_name (redshift_name);
+  GType redshift_type = G_OBJECT_TYPE (obj);
   if (!g_type_is_a (redshift_type, NC_TYPE_CLUSTER_REDSHIFT))
 	g_error ("nc_cluster_redshift_new_from_name: NcClusterRedshift %s do not descend from %s\n", redshift_name, g_type_name (NC_TYPE_CLUSTER_REDSHIFT));
   return NC_CLUSTER_REDSHIFT (obj);
@@ -87,6 +87,20 @@ nc_cluster_redshift_free (NcClusterRedshift *clusterz)
 }
 
 /**
+ * nc_cluster_redshift_impl:
+ * @clusterz: FIXME.
+ *
+ * FIXME
+ * 
+ * Returns: FIXME
+ */
+NcClusterRedshiftImpl 
+nc_cluster_redshift_impl (NcClusterRedshift *clusterz)
+{
+  return NC_CLUSTER_REDSHIFT_GET_CLASS (clusterz)->impl;
+}
+
+/**
  * nc_cluster_redshift_obs_len:
  * @clusterz: FIXME.
  *
@@ -115,7 +129,7 @@ nc_cluster_redshift_obs_params_len (NcClusterRedshift *clusterz)
 }
 
 /**
- * nc_cluster_redshift_dist_eval:
+ * nc_cluster_redshift_p:
  * @clusterz: a #NcClusterRedshift.
  * @z: true redshift.
  * @lnM: true mass.
@@ -127,9 +141,25 @@ nc_cluster_redshift_obs_params_len (NcClusterRedshift *clusterz)
  * Returns: FIXME
 */
 gdouble
-nc_cluster_redshift_dist_eval (NcClusterRedshift *clusterz, gdouble z, gdouble lnM, gdouble *z_obs, gdouble *z_obs_params)
+nc_cluster_redshift_p (NcClusterRedshift *clusterz, gdouble lnM, gdouble z, gdouble *z_obs, gdouble *z_obs_params)
 {
-  return NC_CLUSTER_REDSHIFT_GET_CLASS (clusterz)->dist_eval (clusterz, z, lnM, z_obs, z_obs_params);
+  return NC_CLUSTER_REDSHIFT_GET_CLASS (clusterz)->P (clusterz, lnM, z, z_obs, z_obs_params);
+}
+
+/**
+ * nc_cluster_redshift_intp:
+ * @clusterz: a #NcClusterRedshift.
+ * @z: true redshift.
+ * @lnM: true mass.
+ *
+ * FIXME
+ *
+ * Returns: FIXME
+ */
+gdouble
+nc_cluster_redshift_intp (NcClusterRedshift *clusterz, gdouble lnM, gdouble z)
+{
+  return NC_CLUSTER_REDSHIFT_GET_CLASS (clusterz)->intP (clusterz, lnM, z);
 }
 
 /**
@@ -146,13 +176,13 @@ nc_cluster_redshift_dist_eval (NcClusterRedshift *clusterz, gdouble z, gdouble l
  * Returns: FIXME
  */
 gboolean
-nc_cluster_redshift_resample (NcClusterRedshift *clusterz, gdouble z, gdouble lnM, gdouble *z_obs, gdouble *z_obs_params)
+nc_cluster_redshift_resample (NcClusterRedshift *clusterz, gdouble lnM, gdouble z, gdouble *z_obs, gdouble *z_obs_params)
 {
-  return NC_CLUSTER_REDSHIFT_GET_CLASS (clusterz)->resample (clusterz, z, lnM, z_obs, z_obs_params);
+  return NC_CLUSTER_REDSHIFT_GET_CLASS (clusterz)->resample (clusterz, lnM, z, z_obs, z_obs_params);
 }
 
 /**
- * nc_cluster_redshift_integ_limits:
+ * nc_cluster_redshift_p_limits:
  * @clusterz: a #NcClusterRedshift.
  * @z_obs: observed redshift.
  * @z_obs_params: observed redshift params.
@@ -163,13 +193,13 @@ nc_cluster_redshift_resample (NcClusterRedshift *clusterz, gdouble z, gdouble ln
  * The function which will call this one is responsible to allocate memory for @z_lower and @z_upper.
 */
 void
-nc_cluster_redshift_integ_limits (NcClusterRedshift *clusterz, gdouble *z_obs, gdouble *z_obs_params, gdouble *z_lower, gdouble *z_upper)
+nc_cluster_redshift_p_limits (NcClusterRedshift *clusterz, gdouble *z_obs, gdouble *z_obs_params, gdouble *z_lower, gdouble *z_upper)
 {
-  NC_CLUSTER_REDSHIFT_GET_CLASS (clusterz)->integ_limits (clusterz, z_obs, z_obs_params, z_lower, z_upper);
+  NC_CLUSTER_REDSHIFT_GET_CLASS (clusterz)->P_limits (clusterz, z_obs, z_obs_params, z_lower, z_upper);
 }
 
 /**
- * nc_cluster_redshift_z_limits:
+ * nc_cluster_redshift_n_limits:
  * @clusterz: a #NcClusterRedshift.
  * @z_lower: (out): pointer to the lower limit of the true redshift.
  * @z_upper: (out): pointer to the upper limit of the true redshift.
@@ -178,9 +208,9 @@ nc_cluster_redshift_integ_limits (NcClusterRedshift *clusterz, gdouble *z_obs, g
  * The function which will call this one is responsible to allocate memory for @z_lower and @z_upper.
  */
 void
-nc_cluster_redshift_z_limits (NcClusterRedshift *clusterz, gdouble *z_lower, gdouble *z_upper)
+nc_cluster_redshift_n_limits (NcClusterRedshift *clusterz, gdouble *z_lower, gdouble *z_upper)
 {
-  NC_CLUSTER_REDSHIFT_GET_CLASS (clusterz)->z_limits (clusterz, z_lower, z_upper);
+  NC_CLUSTER_REDSHIFT_GET_CLASS (clusterz)->N_limits (clusterz, z_lower, z_upper);
 }
 
 static void

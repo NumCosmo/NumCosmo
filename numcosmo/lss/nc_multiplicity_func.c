@@ -54,15 +54,11 @@ G_DEFINE_ABSTRACT_TYPE (NcMultiplicityFunc, nc_multiplicity_func, G_TYPE_OBJECT)
 NcMultiplicityFunc *
 nc_multiplicity_func_new_from_name (gchar *multiplicity_name)
 {
-  GType multiplicity_type = g_type_from_name (multiplicity_name);
-  if (multiplicity_type == 0)
-  {
-	g_message ("# Invalid multiplicity name %s\n", multiplicity_name);
-	g_error ("Aborting...");
-  }
-  else if (!g_type_is_a (multiplicity_type, NC_TYPE_MULTIPLICITY_FUNC))
+  GObject *obj = ncm_cfg_create_from_string (multiplicity_name);
+  GType multiplicity_type = G_OBJECT_TYPE (obj);
+  if (!g_type_is_a (multiplicity_type, NC_TYPE_MULTIPLICITY_FUNC))
 	g_error ("nc_multiplicity_func_new_from_name: NcMultiplicityFunc %s do not descend from %s\n", multiplicity_name, g_type_name (NC_TYPE_MULTIPLICITY_FUNC));
-  return g_object_new (multiplicity_type, NULL);
+  return NC_MULTIPLICITY_FUNC (obj);
 }
 
 /**

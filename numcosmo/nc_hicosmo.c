@@ -109,16 +109,12 @@ nc_hicosmo_log_all_models (GType parent)
 NcHICosmo *
 nc_hicosmo_new_from_name (GType parent_type, gchar *model_name)
 {
-  GType model_type = g_type_from_name (model_name);
-  if (model_type == 0)
-  {
-	g_message ("# Invalid model name %s\n", model_name);
-	nc_hicosmo_log_all_models (parent_type);
-	g_error ("Aborting...");
-  }
-  else if (!g_type_is_a (model_type, parent_type))
+  GObject *obj = ncm_cfg_create_from_string (model_name);
+  GType model_type = G_OBJECT_TYPE (obj);
+
+  if (!g_type_is_a (model_type, parent_type))
 	g_error ("nc_hicosmo_new_from_name: NcHICosmo %s do not descend from %s\n", model_name, g_type_name (parent_type));
-  return g_object_new (model_type, NULL);
+  return NC_HICOSMO (obj);
 }
 
 /**

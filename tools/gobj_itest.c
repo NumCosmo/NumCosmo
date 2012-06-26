@@ -379,11 +379,8 @@ main (gint argc, gchar *argv[])
     F.function = &Fjl;
     for (i = 0; i < tests; i++)
       gsl_vector_set (x, i, gsl_rng_uniform (r) * pow (10.0, 4.0 * gsl_rng_uniform (r)));
-    printf ("# Go threads %d\n", NC_THREAD_POOL_MAX);
+    printf ("# Go threads %d\n", NCM_THREAD_POOL_MAX);
     fflush (stdout);
-    g_timer_reset (bench);
-    ncm_function_eval_threaded_vec (&F, x, val);
-    printf ("# Thread took %fs\n", g_timer_elapsed (bench, NULL));
     g_timer_reset (bench);
     for (i = 0; i < x->size; i++)
       val->data[i] = GSL_FN_EVAL (&F, x->data[i]);

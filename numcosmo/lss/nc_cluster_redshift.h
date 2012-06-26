@@ -39,16 +39,38 @@ G_BEGIN_DECLS
 typedef struct _NcClusterRedshiftClass NcClusterRedshiftClass;
 typedef struct _NcClusterRedshift NcClusterRedshift;
 
+/**
+ * NcClusterRedshiftImpl:
+ * @NC_CLUSTER_REDSHIFT_P: FIXME
+ * @NC_CLUSTER_REDSHIFT_INTP: FIXME
+ * @NC_CLUSTER_REDSHIFT_RESAMPLE: FIXME
+ * @NC_CLUSTER_REDSHIFT_P_LIMITS: FIXME
+ * @NC_CLUSTER_REDSHIFT_N_LIMTS: FIXME
+ * 
+ */ 
+typedef enum _NcClusterRedshiftImpl
+{
+  NC_CLUSTER_REDSHIFT_P        = 1 << 0,
+  NC_CLUSTER_REDSHIFT_INTP     = 1 << 1,
+  NC_CLUSTER_REDSHIFT_RESAMPLE = 1 << 2,
+  NC_CLUSTER_REDSHIFT_P_LIMITS = 1 << 3,
+  NC_CLUSTER_REDSHIFT_N_LIMTS  = 1 << 4,
+} NcClusterRedshiftImpl;
+
+#define NC_CLUSTER_REDSHIFT_IMPL_ALL (~0)
+
 struct _NcClusterRedshiftClass
 {
   /*< private >*/
   GObjectClass parent_class;
-  gdouble (*dist_eval) (NcClusterRedshift *clusterz, gdouble z, gdouble lnM, gdouble *z_obs, gdouble *z_obs_params);
-  gboolean (*resample) (NcClusterRedshift *clusterz, gdouble z, gdouble lnM, gdouble *z_obs, gdouble *z_obs_params);
-  void (*integ_limits) (NcClusterRedshift *clusterz, gdouble *z_obs, gdouble *z_obs_params, gdouble *z_lower, gdouble *z_upper);
-  void (*z_limits) (NcClusterRedshift *clusterz, gdouble *z_lower, gdouble *z_upper);
+  gdouble (*P) (NcClusterRedshift *clusterz, gdouble lnM, gdouble z, gdouble *z_obs, gdouble *z_obs_params);
+  gdouble (*intP) (NcClusterRedshift *clusterz, gdouble lnM, gdouble z);
+  gboolean (*resample) (NcClusterRedshift *clusterz, gdouble lnM, gdouble z, gdouble *z_obs, gdouble *z_obs_params);
+  void (*P_limits) (NcClusterRedshift *clusterz, gdouble *z_obs, gdouble *z_obs_params, gdouble *z_lower, gdouble *z_upper);
+  void (*N_limits) (NcClusterRedshift *clusterz, gdouble *z_lower, gdouble *z_upper);
   guint (*obs_len) (NcClusterRedshift *clusterz);
   guint (*obs_params_len) (NcClusterRedshift *clusterz);
+  NcClusterRedshiftImpl impl;
 };
 
 struct _NcClusterRedshift
@@ -63,13 +85,16 @@ NcClusterRedshift *nc_cluster_redshift_new_from_name (gchar *redshift_name);
 NcClusterRedshift *nc_cluster_redshift_ref (NcClusterRedshift *clusterz);
 void nc_cluster_redshift_free (NcClusterRedshift *clusterz);
 
+NcClusterRedshiftImpl nc_cluster_redshift_impl (NcClusterRedshift *clusterz);
+
 guint nc_cluster_redshift_obs_len (NcClusterRedshift *clusterz);
 guint nc_cluster_redshift_obs_params_len (NcClusterRedshift *clusterz);
 
-gdouble nc_cluster_redshift_dist_eval (NcClusterRedshift *clusterz, gdouble z, gdouble lnM, gdouble *z_obs, gdouble *z_obs_params);
-gboolean nc_cluster_redshift_resample (NcClusterRedshift *clusterz, gdouble z, gdouble lnM, gdouble *z_obs, gdouble *z_obs_params);
-void nc_cluster_redshift_integ_limits (NcClusterRedshift *clusterz, gdouble *z_obs, gdouble *z_obs_params, gdouble *z_lower, gdouble *z_upper);
-void nc_cluster_redshift_z_limits (NcClusterRedshift *clusterz, gdouble *z_lower, gdouble *z_upper);
+gdouble nc_cluster_redshift_p (NcClusterRedshift *clusterz, gdouble lnM, gdouble z, gdouble *z_obs, gdouble *z_obs_params);
+gdouble nc_cluster_redshift_intp (NcClusterRedshift *clusterz, gdouble lnM, gdouble z);
+gboolean nc_cluster_redshift_resample (NcClusterRedshift *clusterz, gdouble lnM, gdouble z, gdouble *z_obs, gdouble *z_obs_params);
+void nc_cluster_redshift_p_limits (NcClusterRedshift *clusterz, gdouble *z_obs, gdouble *z_obs_params, gdouble *z_lower, gdouble *z_upper);
+void nc_cluster_redshift_n_limits (NcClusterRedshift *clusterz, gdouble *z_lower, gdouble *z_upper);
 
 G_END_DECLS
 

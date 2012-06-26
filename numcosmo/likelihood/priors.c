@@ -349,7 +349,7 @@ nc_prior_topological_free (NcTopologicalPrior *tp)
 }
 
 /**
- * NcTopologicalPrior:
+ * nc_prior_topological_set:
  * @tp: a #NcTopologicalPrior
  * @z: FIXME
  * @alpha: FIXME

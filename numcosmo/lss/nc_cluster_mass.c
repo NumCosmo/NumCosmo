@@ -50,7 +50,7 @@ NcClusterMass *
 nc_cluster_mass_new_from_name (gchar *mass_name)
 {
   GObject *obj = ncm_cfg_create_from_string (mass_name);
-  GType mass_type = g_type_from_name (mass_name);
+  GType mass_type = G_OBJECT_TYPE (obj);
   if (!g_type_is_a (mass_type, NC_TYPE_CLUSTER_MASS))
 	g_error ("nc_cluster_mass_new_from_name: NcClusterMass %s do not descend from %s\n", mass_name, g_type_name (NC_TYPE_CLUSTER_MASS));
   return NC_CLUSTER_MASS (obj);
@@ -84,6 +84,20 @@ nc_cluster_mass_free (NcClusterMass *clusterm)
 }
 
 /**
+ * nc_cluster_mass_impl:
+ * @clusterm: FIXME.
+ *
+ * FIXME
+ * 
+ * Returns: FIXME
+ */
+NcClusterMassImpl 
+nc_cluster_mass_impl (NcClusterMass *clusterm)
+{
+  return NC_CLUSTER_MASS_GET_CLASS (clusterm)->impl;
+}
+
+/**
  * nc_cluster_mass_obs_len:
  * @clusterm: FIXME.
  *
@@ -112,7 +126,7 @@ nc_cluster_mass_obs_params_len (NcClusterMass *clusterm)
 }
 
 /**
- * nc_cluster_mass_dist_eval:
+ * nc_cluster_mass_p:
  * @clusterm: a #NcClusterMass.
  * @z: true redshift.
  * @lnM: true mass.
@@ -124,9 +138,25 @@ nc_cluster_mass_obs_params_len (NcClusterMass *clusterm)
  * Returns: FIXME
 */
 gdouble
-nc_cluster_mass_dist_eval (NcClusterMass *clusterm, gdouble z, gdouble lnM, gdouble *lnM_obs, gdouble *lnM_obs_params)
+nc_cluster_mass_p (NcClusterMass *clusterm, gdouble lnM, gdouble z, gdouble *lnM_obs, gdouble *lnM_obs_params)
 {
-  return NC_CLUSTER_MASS_GET_CLASS (clusterm)->dist_eval (clusterm, z, lnM, lnM_obs, lnM_obs_params);
+  return NC_CLUSTER_MASS_GET_CLASS (clusterm)->P (clusterm, lnM, z, lnM_obs, lnM_obs_params);
+}
+
+/**
+ * nc_cluster_mass_intp:
+ * @clusterm: a #NcClusterMass.
+ * @z: true redshift.
+ * @lnM: true mass.
+ *
+ * FIXME
+ *
+ * Returns: FIXME
+*/
+gdouble
+nc_cluster_mass_intp (NcClusterMass *clusterm, gdouble lnM, gdouble z)
+{
+  return NC_CLUSTER_MASS_GET_CLASS (clusterm)->intP (clusterm, lnM, z);
 }
 
 /**
@@ -138,17 +168,17 @@ nc_cluster_mass_dist_eval (NcClusterMass *clusterm, gdouble z, gdouble lnM, gdou
  * @lnM_obs_params: (out): observed mass params.
  *
  * FIXME
- * The function which will call this one is responsible to allocate enough memory for @lnM_lower and @lnM_upper.
- *
-*/
+ * 
+ * Returns: FIXME
+ */
 gboolean
-nc_cluster_mass_resample (NcClusterMass *clusterm, gdouble z, gdouble lnM, gdouble *lnM_obs, gdouble *lnM_obs_params)
+nc_cluster_mass_resample (NcClusterMass *clusterm, gdouble lnM, gdouble z, gdouble *lnM_obs, gdouble *lnM_obs_params)
 {
-  return NC_CLUSTER_MASS_GET_CLASS (clusterm)->resample (clusterm, z, lnM, lnM_obs, lnM_obs_params);
+  return NC_CLUSTER_MASS_GET_CLASS (clusterm)->resample (clusterm, lnM, z, lnM_obs, lnM_obs_params);
 }
 
 /**
- * nc_cluster_mass_integ_limits:
+ * nc_cluster_mass_p_limits:
  * @clusterm: a #NcClusterMass.
  * @lnM_obs: observed mass.
  * @lnM_obs_params: observed mass params.
@@ -157,15 +187,15 @@ nc_cluster_mass_resample (NcClusterMass *clusterm, gdouble z, gdouble lnM, gdoub
  *
  * FIXME
  * The function which will call this one is responsible to allocate memory for @lnM_lower and @lnM_upper.
-*/
+ */
 void
-nc_cluster_mass_integ_limits (NcClusterMass *clusterm, gdouble *lnM_obs, gdouble *lnM_obs_params, gdouble *lnM_lower, gdouble *lnM_upper)
+nc_cluster_mass_p_limits (NcClusterMass *clusterm, gdouble *lnM_obs, gdouble *lnM_obs_params, gdouble *lnM_lower, gdouble *lnM_upper)
 {
-  NC_CLUSTER_MASS_GET_CLASS (clusterm)->integ_limits (clusterm, lnM_obs, lnM_obs_params, lnM_lower, lnM_upper);
+  NC_CLUSTER_MASS_GET_CLASS (clusterm)->P_limits (clusterm, lnM_obs, lnM_obs_params, lnM_lower, lnM_upper);
 }
 
 /**
- * nc_cluster_mass_lnm_limits:
+ * nc_cluster_mass_n_limits:
  * @clusterm: a #NcClusterMass.
  * @lnM_lower: (out): pointer to the lower limit of the true mass.
  * @lnM_upper: (out): pointer to the upper limit of the true mass.
@@ -174,9 +204,9 @@ nc_cluster_mass_integ_limits (NcClusterMass *clusterm, gdouble *lnM_obs, gdouble
  * The function which will call this one is responsible to allocate memory for @lnM_lower and @lnM_upper.
  */
 void
-nc_cluster_mass_lnm_limits (NcClusterMass *clusterm, gdouble *lnM_lower, gdouble *lnM_upper)
+nc_cluster_mass_n_limits (NcClusterMass *clusterm, gdouble *lnM_lower, gdouble *lnM_upper)
 {
-  NC_CLUSTER_MASS_GET_CLASS (clusterm)->lnm_limits (clusterm, lnM_lower, lnM_upper);
+  NC_CLUSTER_MASS_GET_CLASS (clusterm)->N_limits (clusterm, lnM_lower, lnM_upper);
 }
 
 static void

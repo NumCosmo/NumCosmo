@@ -40,16 +40,38 @@ G_BEGIN_DECLS
 typedef struct _NcClusterMassClass NcClusterMassClass;
 typedef struct _NcClusterMass NcClusterMass;
 
+/**
+ * NcClusterMassImpl:
+ * @NC_CLUSTER_MASS_P: FIXME
+ * @NC_CLUSTER_MASS_INTP: FIXME
+ * @NC_CLUSTER_MASS_RESAMPLE: FIXME
+ * @NC_CLUSTER_MASS_P_LIMITS: FIXME
+ * @NC_CLUSTER_MASS_N_LIMTS: FIXME
+ * 
+ */ 
+typedef enum _NcClusterMassImpl
+{
+  NC_CLUSTER_MASS_P        = 1 << 0,
+  NC_CLUSTER_MASS_INTP     = 1 << 1,
+  NC_CLUSTER_MASS_RESAMPLE = 1 << 2,
+  NC_CLUSTER_MASS_P_LIMITS = 1 << 3,
+  NC_CLUSTER_MASS_N_LIMTS  = 1 << 4,
+} NcClusterMassImpl;
+
+#define NC_CLUSTER_MASS_IMPL_ALL (~0)
+
 struct _NcClusterMassClass
 {
   /*< private >*/
   GObjectClass parent_class;
-  gdouble (*dist_eval) (NcClusterMass *clusterm, gdouble z, gdouble lnM, gdouble *lnM_obs, gdouble *lnM_obs_params);
-  gboolean (*resample) (NcClusterMass *clusterm, gdouble z, gdouble lnM, gdouble *lnM_obs, gdouble *lnM_obs_params);
-  void (*integ_limits) (NcClusterMass *clusterm, gdouble *lnM_obs, gdouble *lnM_obs_params, gdouble *lnM_lower, gdouble *lnM_upper);
-  void (*lnm_limits) (NcClusterMass *clusterm, gdouble *lnM_lower, gdouble *lnM_upper);
+  gdouble (*P) (NcClusterMass *clusterm, gdouble lnM, gdouble z, gdouble *lnM_obs, gdouble *lnM_obs_params);
+  gdouble (*intP) (NcClusterMass *clusterm, gdouble lnM, gdouble z);
+  gboolean (*resample) (NcClusterMass *clusterm, gdouble lnM, gdouble z, gdouble *lnM_obs, gdouble *lnM_obs_params);
+  void (*P_limits) (NcClusterMass *clusterm, gdouble *lnM_obs, gdouble *lnM_obs_params, gdouble *lnM_lower, gdouble *lnM_upper);
+  void (*N_limits) (NcClusterMass *clusterm, gdouble *lnM_lower, gdouble *lnM_upper);
   guint (*obs_len) (NcClusterMass *clusterm);
   guint (*obs_params_len) (NcClusterMass *clusterm);
+  NcClusterMassImpl impl;
 };
 
 struct _NcClusterMass
@@ -64,13 +86,16 @@ NcClusterMass *nc_cluster_mass_new_from_name (gchar *mass_name);
 NcClusterMass *nc_cluster_mass_ref (NcClusterMass *clusterm);
 void nc_cluster_mass_free (NcClusterMass *clusterm);
 
+NcClusterMassImpl nc_cluster_mass_impl (NcClusterMass *clusterm);
+
 guint nc_cluster_mass_obs_len (NcClusterMass *clusterm);
 guint nc_cluster_mass_obs_params_len (NcClusterMass *clusterm);
 
-gdouble nc_cluster_mass_dist_eval (NcClusterMass *clusterm, gdouble z, gdouble lnM, gdouble *lnM_obs, gdouble *lnM_obs_params);
-gboolean nc_cluster_mass_resample (NcClusterMass *clusterm, gdouble z, gdouble lnM, gdouble *lnM_obs, gdouble *lnM_obs_params);
-void nc_cluster_mass_integ_limits (NcClusterMass *clusterm, gdouble *lnM_obs, gdouble *lnM_obs_params, gdouble *lnM_lower, gdouble *lnM_upper);
-void nc_cluster_mass_lnm_limits (NcClusterMass *clusterm, gdouble *lnM_lower, gdouble *lnM_upper);
+gdouble nc_cluster_mass_p (NcClusterMass *clusterm, gdouble lnM, gdouble z, gdouble *lnM_obs, gdouble *lnM_obs_params);
+gdouble nc_cluster_mass_intp (NcClusterMass *clusterm, gdouble lnM, gdouble z);
+gboolean nc_cluster_mass_resample (NcClusterMass *clusterm, gdouble lnM, gdouble z, gdouble *lnM_obs, gdouble *lnM_obs_params);
+void nc_cluster_mass_p_limits (NcClusterMass *clusterm, gdouble *lnM_obs, gdouble *lnM_obs_params, gdouble *lnM_lower, gdouble *lnM_upper);
+void nc_cluster_mass_n_limits (NcClusterMass *clusterm, gdouble *lnM_lower, gdouble *lnM_upper);
 
 G_END_DECLS
 
