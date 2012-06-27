@@ -256,7 +256,6 @@ main(gint argc, gchar *argv[])
 
 	if (FALSE)
 	{
-	  GList *points;
 	  points = ncm_fit_cr2 (fit, NC_HICOSMO_ID, 0, NC_HICOSMO_ID, 1, NC_C_STATS_1SIGMA);
 	  ncm_fit_cr_points_print (points, stdout);
 	  printf ("\n\n");
@@ -317,7 +316,7 @@ main(gint argc, gchar *argv[])
 	  gdouble step;
 	  for (step = 0.10; step <= 0.81; step += 0.05)
 	  {
-		gint wpiece = nc_hicosmo_qpw_index (qpw, step) + 1;
+		wpiece = nc_hicosmo_qpw_index (qpw, step) + 1;
 		nc_hicosmo_qpw_change_params (qpw, step);
 		ncm_model_param_set (NCM_MODEL (qpw), 0, 0.0);
 		ncm_model_param_set (NCM_MODEL (qpw), wpiece, -0.2);
@@ -368,7 +367,6 @@ main(gint argc, gchar *argv[])
 	if (FALSE)
 	{
 	  gdouble range = 1.01f;
-	  gint j;
 	  gsl_matrix *q_matrix = gsl_matrix_alloc (SIZE, 1000);
 	  gsl_vector *q_bias = gsl_vector_alloc (1000);
 	  gsl_vector *q_var = gsl_vector_alloc (1000);

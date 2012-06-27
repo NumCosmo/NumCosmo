@@ -8,11 +8,11 @@ m4_define([numcosmo_micro_version], [0])
 m4_define([numcosmo_version],
           [numcosmo_major_version.numcosmo_minor_version.numcosmo_micro_version])
           
-AC_INIT(numcosmo, [numcosmo_version])
+AC_INIT([numcosmo],[numcosmo_version])
 AC_CONFIG_SRCDIR([numcosmo/numcosmo.h])
 AC_CONFIG_MACRO_DIR([m4])
 
-AC_PREREQ(2.62)
+AC_PREREQ([2.69])
 AM_INIT_AUTOMAKE([gnu -Wno-portability])
 
 PACKAGE=numcosmo
@@ -28,7 +28,7 @@ AC_SUBST(NUMCOSMO_MICRO_VERSION)
 AC_SUBST(NUMCOSMO_VERSION)
 AC_SUBST(NUMCOSMO_LT_VERSION)
 
-AM_CONFIG_HEADER(config.h)
+AC_CONFIG_HEADERS([config.h])
 
 AM_MAINTAINER_MODE
 
@@ -57,7 +57,7 @@ AC_PROG_LN_S
 AC_PROG_CC_STDC
 dnl LT_INIT([disable-shared])
 dnl AC_DISABLE_SHARED
-AC_PROG_LIBTOOL
+LT_INIT
 
 dnl check for gtk-doc
 GTK_DOC_CHECK([1.14],[--flavour no-tmpl])
@@ -100,7 +100,7 @@ AC_C_INLINE
 
 AC_MSG_CHECKING(--enable-inline)
 AC_ARG_ENABLE(inline,
-  [AC_HELP_STRING([--enable-inline], [Enable inline functions, disable to debug [[default=yes]]])],
+  [AS_HELP_STRING([--enable-inline],[Enable inline functions, disable to debug [[default=yes]]])],
   [enable_inline=$enableval],[enable_inline="yes"])
 AC_MSG_RESULT($enable_inline)
 
@@ -122,7 +122,7 @@ dnl ***************************************************************************
 
 AC_MSG_CHECKING(--enable-gobject-cast-check)
 AC_ARG_ENABLE(gobject-cast-check,
-  [AC_HELP_STRING([--enable-gobject-cast-check], [Enable GObject cast checks, good to debug but slow])],
+  [AS_HELP_STRING([--enable-gobject-cast-check],[Enable GObject cast checks, good to debug but slow])],
   [enable_gobject_cast_check=$enableval],[enable_gobject_cast_check="no"])
 AC_MSG_RESULT($enable_gobject_cast_check)
 if test "x$enable_gobject_cast_check" = "xno"; then
@@ -136,7 +136,7 @@ dnl ***************************************************************************
 
 AC_MSG_CHECKING(--enable-range-check)
 AC_ARG_ENABLE(range-check,
-  [AC_HELP_STRING([--enable-range-check], [Enable range checking for debug purposes])],
+  [AS_HELP_STRING([--enable-range-check],[Enable range checking for debug purposes])],
   [enable_range_check=$enableval],[enable_range_check="no"])
 AC_MSG_RESULT($enable_range_check)
 if test "x$enable_range_check" = "xno"; then
@@ -149,7 +149,7 @@ dnl Check for multi-thread.
 dnl ***************************************************************************
 
 AC_ARG_WITH([thread-pool-max],
-            AC_HELP_STRING([--with-thread-pool-max=N],[Number of threads in the pool]), 
+            AS_HELP_STRING([--with-thread-pool-max=N],[Number of threads in the pool]), 
             [thread_pool_max='yes'], [thread_pool_max='no'])
 
 if test "x$thread_pool_max" = "xyes"; then
@@ -187,8 +187,8 @@ AC_SUBST(GSL_LIBS)
 TEST_SHARED_LIBS="$TEST_SHARED_LIBS $GSL_LIBS"
 TEST_SHARED_CFLAGS="$TEST_SHARED_CFLAGS $GSL_CFLAGS"
 
-PKG_CHECK_EXISTS([gsl >= $GSL_GLF_REQUIRED_VERSION], [AC_DEFINE_UNQUOTED([HAVE_GSL_GLF],[1], [gsl support fixed gauss legendre rules])], [])
-PKG_CHECK_EXISTS([gsl >= $GSL_ODEIV2_REQUIRED_VERSION], [AC_DEFINE_UNQUOTED([HAVE_GSL_ODEIV2],[1], [gsl support odeiv2 ode algorightms])], [])
+PKG_CHECK_EXISTS([gsl >= $GSL_GLF_REQUIRED_VERSION], [AC_DEFINE([HAVE_GSL_GLF],[1], [gsl support fixed gauss legendre rules])], [])
+PKG_CHECK_EXISTS([gsl >= $GSL_ODEIV2_REQUIRED_VERSION], [AC_DEFINE([HAVE_GSL_ODEIV2],[1], [gsl support odeiv2 ode algorightms])], [])
 
 dnl ***************************************************************************
 dnl Check for gmp and mpfr
@@ -202,7 +202,7 @@ dnl Check for sqlite3
 dnl ***************************************************************************
 
 PKG_CHECK_MODULES(SQLITE3, [sqlite3 >= $SQLITE3_REQUIRED_VERSION],[
-  AC_DEFINE_UNQUOTED([HAVE_SQLITE3],[1], [Have the sqlite database])
+  AC_DEFINE([HAVE_SQLITE3],[1], [Have the sqlite database])
   have_sqlite3_support="#define NUMCOSMO_HAVE_SQLITE3 1"],[
   have_sqlite3_support=""])
 AC_SUBST(SQLITE3_CFLAGS)
@@ -216,7 +216,7 @@ dnl Check for fftw3
 dnl ***************************************************************************
 
 PKG_CHECK_MODULES(FFTW3, [fftw3 >= $FFTW3_REQUIRED_VERSION],[
-  AC_DEFINE_UNQUOTED([HAVE_FFTW3],[1], [Have the fast fourier package])
+  AC_DEFINE([HAVE_FFTW3],[1], [Have the fast fourier package])
   have_fftw3_support="#define NUMCOSMO_HAVE_FFTW3 1"],[
   have_fftw3_support=""])
 AC_SUBST(FFTW3_CFLAGS)
@@ -231,31 +231,31 @@ dnl ***************************************************************************
 
 AC_MSG_CHECKING([--with-atlas-path])
 AC_ARG_WITH(atlas-path,
-  [AC_HELP_STRING([--with-atlas-path=PATH], [Full Path to Atlas.])],
+  [AS_HELP_STRING([--with-atlas-path=PATH],[Full Path to Atlas.])],
   [ATLAS_PATH="-L$withval"])
 AC_MSG_RESULT($ATLAS_PATH)
 
 AC_MSG_CHECKING([--with-atlas])
 AC_ARG_WITH(atlas,
-  [AC_HELP_STRING([--with-atlas=atlas], [Atlas library name, default is 'atlas'])],
+  [AS_HELP_STRING([--with-atlas=atlas],[Atlas library name, default is 'atlas'])],
   [ATLAS="$withval"], [ATLAS="atlas"])
 AC_MSG_RESULT($ATLAS)
 
 AC_MSG_CHECKING([--with-atlas-cblas])
 AC_ARG_WITH(atlas-cblas,
-  [AC_HELP_STRING([--with-atlas-cblas=cblas], [Atlas cblas library name, default is 'cblas'])],
+  [AS_HELP_STRING([--with-atlas-cblas=cblas],[Atlas cblas library name, default is 'cblas'])],
   [ATLAS_CBLAS="$withval"], [ATLAS_CBLAS="cblas"])
 AC_MSG_RESULT($ATLAS_CBLAS)
 
 AC_MSG_CHECKING([--with-atlas-lapack])
 AC_ARG_WITH(atlas-lapack,
-  [AC_HELP_STRING([--with-atlas-lapack=lapack], [Atlas lapack library name, default is 'lapack'])],
+  [AS_HELP_STRING([--with-atlas-lapack=lapack],[Atlas lapack library name, default is 'lapack'])],
   [ATLAS_LAPACK="$withval"], [ATLAS_LAPACK="lapack"])
 AC_MSG_RESULT($ATLAS_LAPACK)
 
 AC_MSG_CHECKING([--with-atlas-extra-libs])
 AC_ARG_WITH(atlas-extra-libs,
-  [AC_HELP_STRING([--with-atlas-extra-libs=LIBS], [Atlas extra libraries, default is empty])],
+  [AS_HELP_STRING([--with-atlas-extra-libs=LIBS],[Atlas extra libraries, default is empty])],
   [ATLAS_EXTRA_LIBS="$withval"], [ATLAS_EXTRA_LIBS=""])
 AC_MSG_RESULT($ATLAS_EXTRA_LIBS)
 
@@ -288,13 +288,13 @@ dnl ***************************************************************************
 
 AC_MSG_CHECKING([--with-levmar-path])
 AC_ARG_WITH(levmar-path,
-  [AC_HELP_STRING([--with-levmar-path=PATH], [Levmar library location])],
+  [AS_HELP_STRING([--with-levmar-path=PATH],[Levmar library location])],
   [LEVMAR_PATH="-L$withval"], [LEVMAR_PATH=""])
 AC_MSG_RESULT($LEVMAR_PATH)
 
 AC_MSG_CHECKING([--with-levmar-extra-libs])
 AC_ARG_WITH(levmar-extra-libs,
-  [AC_HELP_STRING([--with-levmar-extra-libs=LIBS], [Levmar extra libraries, default is '-lf77blas -lgfortran'])],
+  [AS_HELP_STRING([--with-levmar-extra-libs=LIBS],[Levmar extra libraries, default is '-lf77blas -lgfortran'])],
   [LEVMAR_EXTRA_LIBS="$withval"], [LEVMAR_EXTRA_LIBS="-lf77blas -lgfortran"])
 AC_MSG_RESULT($LEVMAR_EXTRA_LIBS)
 
@@ -309,7 +309,7 @@ fi
 AC_SUBST(have_levmar_support)
 
 if test "x$levmar_need_prefix" = "xyes"; then
-  AC_DEFINE_UNQUOTED([NC_LEVMAR_NEED_PREFIX],[1], [Duh!])
+  AC_DEFINE([NC_LEVMAR_NEED_PREFIX],[1], [Duh!])
 fi
 
 dnl ***************************************************************************
@@ -353,7 +353,7 @@ dnl Check for nlopt
 dnl ***************************************************************************
 
 PKG_CHECK_MODULES(NLOPT, [nlopt >= 1.2],[
-  AC_DEFINE_UNQUOTED([HAVE_NLOPT],[1], [Have the NLopt package])
+  AC_DEFINE([HAVE_NLOPT],[1], [Have the NLopt package])
   have_nlopt_support="#define NUMCOSMO_HAVE_NLOPT 1"],[
   have_nlopt_support=""])
 AC_SUBST(NLOPT_CFLAGS)
@@ -362,7 +362,7 @@ AC_SUBST(have_nlopt_support)
 TEST_SHARED_LIBS="$TEST_SHARED_LIBS $NLOPT_LIBS"
 TEST_SHARED_CFLAGS="$TEST_SHARED_CFLAGS $NLOPT_CFLAGS"
 
-PKG_CHECK_EXISTS([nlopt >= 2.2], [AC_DEFINE_UNQUOTED([HAVE_NLOPT_2_2],[1], [If nlopt version is bigger than 2.2])], [])
+PKG_CHECK_EXISTS([nlopt >= 2.2], [AC_DEFINE([HAVE_NLOPT_2_2],[1], [If nlopt version is bigger than 2.2])], [])
 
 dnl ***************************************************************************
 dnl Check for sundials
@@ -377,7 +377,15 @@ if test "x$has_sundials" = "xyes"; then
 else
   AC_MSG_ERROR(Cannot find sundials-config.)
 fi
-AC_CHECK_TYPE(CVDlsDenseJacFn,[],[AC_MSG_ERROR([sundials too old, please install version >= 2.4.0])], [#include <cvodes/cvodes_direct.h>])
+AC_CHECK_TYPE([CVDlsDenseJacFn],[],[AC_MSG_ERROR([sundials too old, please install version >= 2.4.0])], [#include <cvodes/cvodes_direct.h>])
+AC_MSG_CHECKING([whenever sundials uses long int])
+AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[
+#include <cvodes/cvodes_direct.h>
+typedef int (*CVDlsDenseJacFn)(long int N, realtype t,
+                               N_Vector y, N_Vector fy,
+                               DlsMat Jac, void *user_data,
+                               N_Vector tmp1, N_Vector tmp2, N_Vector tmp3);
+]],[[1;]])],[AC_DEFINE([SUNDIALS_USES_LONG_INT],[1], [If sundials version >= 2.5.0]) AC_MSG_RESULT([yes])],[AC_MSG_RESULT([no])])
 
 dnl ***************************************************************************
 dnl Appending libs and setting up TEST_SHARED

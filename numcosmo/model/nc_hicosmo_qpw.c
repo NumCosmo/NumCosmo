@@ -307,7 +307,7 @@ nc_hicosmo_qpw_change_params_qpp (NcHICosmoQPW *qpw)
 
   if (FALSE)
   {
-	gint i,j;
+	gint j;
 	printf ("npieces: %d\n", qpw->npieces);
 	for (i = 0; i < ncm_model_len (NCM_MODEL (qpw)); i++)
 	{

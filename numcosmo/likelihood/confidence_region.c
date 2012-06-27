@@ -546,7 +546,7 @@ ncm_fit_cr2 (NcmFit *fit, NcmModelID gmid1, guint pid1, NcmModelID gmid2, guint 
 	cr->theta = 2.0 * M_PI;
 
 	{
-	  gdouble theta0 = GSL_NAN, theta;
+	  gdouble theta0 = GSL_NAN;
 	  gdouble first_theta = GSL_NAN;
 	  gdouble first_shift0 = cr->shift[0];
 	  gdouble first_shift1 = cr->shift[1];

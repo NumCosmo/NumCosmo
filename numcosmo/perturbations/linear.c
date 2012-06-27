@@ -53,7 +53,7 @@ gint _nc_default_los_step[] = {5, 50, 10, 100, 20, 200, 25, 300, 50, 0};
  * FIXME
  *
  * Returns: FIXME
-*/ 
+*/
 GArray *
 nc_pert_linear_create_los_table (gint lmax_los, gint *los_ini, gint *los_step)
 {
@@ -69,7 +69,8 @@ nc_pert_linear_create_los_table (gint lmax_los, gint *los_ini, gint *los_step)
 
   if (last_i < lmax_los)
   {
-    gint i = 0, j;
+    gint j;
+	i = 0;
     while (last_i < lmax_los)
     {
       if (los_step[i + 1] == 0)
@@ -101,7 +102,7 @@ nc_pert_linear_create_los_table (gint lmax_los, gint *los_ini, gint *los_step)
  * FIXME
  *
  * Returns: FIXME
-*/ 
+*/
 NcLinearPertWorkSpace *
 nc_pert_linear_workspace_new (NcLinearPert *pert)
 {
@@ -118,7 +119,7 @@ nc_pert_linear_workspace_new (NcLinearPert *pert)
  * nc_pert_linear_new: (skip)
  * @model: a #NcmModel
  * @lmax: FIXME
- * @tc_reltol: FIXME 
+ * @tc_reltol: FIXME
  * @reltol: FIXME
  * @tc_abstol: FIXME
  * @abstol: FIXME
@@ -126,12 +127,12 @@ nc_pert_linear_workspace_new (NcLinearPert *pert)
  * FIXME
  *
  * Returns: FIXME
-*/ 
+*/
 NcLinearPert *
 nc_pert_linear_new (NcmModel *model, guint lmax, gdouble tc_reltol, gdouble reltol, gdouble tc_abstol, gdouble abstol)
 {
   NcLinearPert *pert = g_slice_new (NcLinearPert);
-  
+
   g_assert (lmax > 2);
 
   pert->model = model;
@@ -149,19 +150,19 @@ nc_pert_linear_new (NcmModel *model, guint lmax, gdouble tc_reltol, gdouble relt
   pert->g_rec = NC_PERTURBATIONS_X2G (pert->g0, pert->recomb->x_rec);
   pert->g_rec_10m2_max[0] = NC_PERTURBATIONS_X2G (pert->g0, pert->recomb->x_rec_10m2_max[0]);
   pert->g_rec_10m2_max[1] = NC_PERTURBATIONS_X2G (pert->g0, pert->recomb->x_rec_10m2_max[1]);
-  
+
   pert->eta0 = nc_scale_factor_t_z (pert->a, 0.0);
 
 	printf ("# Recomb at %.15g %.15g %.15g %.15g %.15g | Omega_r %.15g\n", pert->recomb->x_rec - 1.0, nc_scale_factor_t_x (pert->a, pert->recomb->x_rec), nc_scale_factor_t_x (pert->a, pert->recomb->x_rec) * NC_C_HUBBLE_RADIUS / 0.7, nc_scale_factor_z_t (pert->a, 313.29 / (NC_C_HUBBLE_RADIUS / 0.70)), pert->eta0 * NC_C_HUBBLE_RADIUS / 0.70,
 	        nc_hicosmo_Omega_r (NC_HICOSMO (model)));
-  
+
   pert->lmax = lmax;
 
   pert->reltol = reltol;
   pert->abstol = abstol;
   pert->tc_reltol = tc_reltol;
   pert->tc_abstol = tc_abstol;
-  
+
   pert->sys_size = (NC_PERT_THETA_P2 + 1) + 2 * (lmax + 1 - 3);
 
   pert->solver = g_slice_new (NcLinearPertOdeSolver);
@@ -171,9 +172,9 @@ nc_pert_linear_new (NcmModel *model, guint lmax, gdouble tc_reltol, gdouble relt
   pert->solver->data = pert->solver->create (pert);
 
   pert->pws = nc_pert_linear_workspace_new (pert);
-  
+
   printf ("# lmax %d | eta0 %g\n", lmax, pert->eta0);
-  
+
   return pert;
 }
 
@@ -183,7 +184,7 @@ nc_pert_linear_new (NcmModel *model, guint lmax, gdouble tc_reltol, gdouble relt
  *
  * FIXME
  *
-*/ 
+*/
 void
 nc_pert_linear_free (NcLinearPert * pert)
 {
@@ -196,7 +197,7 @@ nc_pert_linear_free (NcLinearPert * pert)
  *
  * FIXME
  *
-*/ 
+*/
 void nc_pert_linear_splines_free (NcLinearPertSplines *pspline)
 {
   g_assert_not_reached ();
@@ -221,9 +222,9 @@ typedef struct _Nc_k_integrand_data
   glong count;
 } Nc_k_integrand_data;
 
-static gdouble 
+static gdouble
 _Nc_k_integrand (gdouble k, gpointer params)
-{  
+{
   Nc_k_integrand_data *Nc_data = (Nc_k_integrand_data *)params;
   NcLinearPertSplines *pspline = Nc_data->pspline;
   const glong l = Nc_data->l;
@@ -232,7 +233,7 @@ _Nc_k_integrand (gdouble k, gpointer params)
   glong np = ceil(xf / (2.0 * M_PI) * nppo);
   NcmGridSection x_sec[2] = {{NCM_GRID_NODES_BOTH,  0, np, 0.0, xf}, {0}};
   NcSFSphericalBesselIntSpline *int_xnjl_spline = ncm_sf_spherical_bessel_jl_xj_integrate_spline_cached_new (l, x_sec, TRUE);
-  gdouble theta_l_k; 
+  gdouble theta_l_k;
 //printf ("# Uhu![%ld] %.15g\n", l, k);
   ncm_sf_spherical_bessel_jl_xj_integrate_spline_goto (int_xnjl_spline, l);
   nc_pert_linear_spline_set_source_at (pspline, k);
@@ -244,13 +245,13 @@ _Nc_k_integrand (gdouble k, gpointer params)
 /**
  * nc_pert_linear_los_integrate:
  * @pspline: a #NcLinearPertSplines
- * @l: FIXME 
+ * @l: FIXME
  * @k: FIXME
  *
  * FIXME
  *
  * Returns: FIXME
-*/ 
+*/
 gdouble
 nc_pert_linear_los_integrate (NcLinearPertSplines *pspline, glong l, gdouble k)
 {
@@ -262,7 +263,7 @@ nc_pert_linear_los_integrate (NcLinearPertSplines *pspline, glong l, gdouble k)
 //  gint i;
 
   NcSFSphericalBesselIntSpline *int_xnjl_spline;
-  
+
   {
     glong nppo = 10;
     gdouble xf = 5250.0;
@@ -275,7 +276,7 @@ nc_pert_linear_los_integrate (NcLinearPertSplines *pspline, glong l, gdouble k)
   nc_pert_linear_spline_set_source_at (pspline, k);
 
   return ncm_sf_spherical_bessel_jl_xj_integral_spline (int_xnjl_spline, pspline->Sg[0], pspline->Sg[1], pspline->Sg[2], k);
-  
+
   if (w == NULL)
     w = nc_integral_get_workspace();
 
@@ -301,7 +302,7 @@ nc_pert_linear_los_integrate (NcLinearPertSplines *pspline, glong l, gdouble k)
   {
     gdouble deta_opt = ncm_vector_get (ldata.S0->xv, ncm_vector_len(ldata.S0->xv) - 1);
     gsl_integration_qag (&F, 0.0, deta_opt, 0.0, 1e-13, NC_INT_PARTITION, 1, *w, &res_int, &err);fflush (stdout);
-    printf ("# RES % .15e % .15e %.4e %.4e %08d\n", 
+    printf ("# RES % .15e % .15e %.4e %.4e %08d\n",
       res_int, res_rules, fabs((res_rules - res_int) / res_int), fabs(err / res_int), ldata.count);fflush (stdout);
   }
 
@@ -313,14 +314,14 @@ nc_pert_linear_los_integrate (NcLinearPertSplines *pspline, glong l, gdouble k)
 /**
  * nc_pert_transfer_function_new: (skip)
  * @pert: a #NcLinearPert
- * @k0: FIXME 
+ * @k0: FIXME
  * @k1: FIXME
  * @np: FIXME
  *
  * FIXME
  *
  * Returns: FIXME
-*/ 
+*/
 NcLinearPertTF *
 nc_pert_transfer_function_new (NcLinearPert *pert, gdouble k0, gdouble k1, gulong np)
 {
@@ -333,17 +334,17 @@ nc_pert_transfer_function_new (NcLinearPert *pert, gdouble k0, gdouble k1, gulon
   perttf->np = np;
   perttf->logPhi_logk = ncm_spline_cubic_notaknot_new_full (logkv, logPhiv, FALSE);
   perttf->pert = pert;
-  
+
   return perttf;
 }
 
 /**
- * nc_pert_transfer_function_prepare: 
+ * nc_pert_transfer_function_prepare:
  * @perttf: a #NcLinearPertTF
  *
  * FIXME
  *
-*/ 
+*/
 void
 nc_pert_transfer_function_prepare (NcLinearPertTF *perttf)
 {
@@ -357,7 +358,7 @@ nc_pert_transfer_function_prepare (NcLinearPertTF *perttf)
     perttf->pert->solver->init (perttf->pert);
     perttf->pert->solver->evol (perttf->pert, perttf->pert->g0);
     //perttf->pert->solver->evol (perttf->pert, perttf->pert->g_opt_cutoff);
-    
+
     logPhi = log (perttf->pert->solver->get (perttf->pert, NC_PERT_PHI));
 		ncm_vector_set (perttf->logPhi_logk->xv, i, logk);
 		ncm_vector_set (perttf->logPhi_logk->yv, i, logPhi);
@@ -369,15 +370,15 @@ nc_pert_transfer_function_prepare (NcLinearPertTF *perttf)
 }
 
 /**
- * nc_pert_transfer_function_get: 
+ * nc_pert_transfer_function_get:
  * @perttf: a #NcLinearPertTF
- * @kh: FIXME 
+ * @kh: FIXME
  *
  * FIXME
  *
  * Returns: FIXME
-*/ 
-gdouble 
+*/
+gdouble
 nc_pert_transfer_function_get (NcLinearPertTF *perttf, gdouble kh)
 {
   const gdouble logk = log (kh * NC_C_HUBBLE_RADIUS);
@@ -432,15 +433,15 @@ _nc_pert_linear_prepare_k_grid (NcLinearPert *pert, gdouble *k_grid, glong ni, g
  * nc_pert_linear_splines_new: (skip)
  * @pert: a #NcLinearPert
  * @types: a #NcLinearPertSplineTypes
- * @n_deta: FIXME 
+ * @n_deta: FIXME
  * @n_evol: FIXME
  * @k0: FIXME
- * @k1: FIXME 
+ * @k1: FIXME
  *
  * FIXME
  *
  * Returns: FIXME
-*/ 
+*/
 NcLinearPertSplines *
 nc_pert_linear_splines_new (NcLinearPert *pert, NcLinearPertSplineTypes types, gulong n_deta, gulong n_evol, gdouble k0, gdouble k1)
 {
@@ -452,7 +453,7 @@ nc_pert_linear_splines_new (NcLinearPert *pert, NcLinearPertSplineTypes types, g
   pspline->types = types;
   pspline->k0 = k0;
   pspline->k1 = k1;
-  
+
   pspline->ga = ncm_vector_new (n_deta);
   pspline->ka = ncm_vector_new (n_evol);
 
@@ -461,9 +462,9 @@ nc_pert_linear_splines_new (NcLinearPert *pert, NcLinearPertSplineTypes types, g
     gint j;
 
 		pspline->Sg_data[i] = ncm_vector_new (n_deta);
-		
+
     pspline->Sg[i] = ncm_spline_cubic_notaknot_new_full (pspline->ga, pspline->Sg_data[i], FALSE);
-		
+
     pspline->Sk_data[i] = ncm_matrix_new (n_deta, n_evol);
 
 		pspline->Sk[i] = g_slice_alloc (sizeof (NcmSpline *) * n_deta);
@@ -481,7 +482,7 @@ nc_pert_linear_splines_new (NcLinearPert *pert, NcLinearPertSplineTypes types, g
 
   g_assert (n_deta >= 60);
   g_assert (n_evol >= 220);
-  
+
   _nc_pert_linear_prepare_deta_grid (pert, ncm_vector_ptr (pspline->ga, 0), 20, n_deta - 40, 20);
   _nc_pert_linear_prepare_k_grid (pert, ncm_vector_ptr (pspline->ka, 0), 20, n_evol - 20, k0, k1);
 
@@ -489,12 +490,12 @@ nc_pert_linear_splines_new (NcLinearPert *pert, NcLinearPertSplineTypes types, g
 }
 
 /**
- * nc_pert_linear_prepare_splines: 
+ * nc_pert_linear_prepare_splines:
  * @pspline: a #NcLinearPertSplines
  *
  * FIXME
  *
-*/ 
+*/
 void
 nc_pert_linear_prepare_splines (NcLinearPertSplines *pspline)
 {
@@ -504,11 +505,11 @@ nc_pert_linear_prepare_splines (NcLinearPertSplines *pspline)
 
   for (i = 0; i < pspline->n_evol; i++)
   {
-    gint j;    
+    gint j;
     pert->pws->k = ncm_vector_get (pspline->ka, i);
     pert->solver->init (pert);
     pert->solver->evol (pert, pert->g_opt_cutoff);
-    
+
     if (pspline->types & NC_LINEAR_PERTURBATIONS_SPLINE_SOURCES)
     {
       for (j = 0; j < pspline->n_deta; j++)
@@ -553,14 +554,14 @@ nc_pert_linear_prepare_splines (NcLinearPertSplines *pspline)
 }
 
 /**
- * nc_pert_linear_spline_set_source_at: 
+ * nc_pert_linear_spline_set_source_at:
  * @pspline: a #NcLinearPertSplines
- * @k: FIXME 
+ * @k: FIXME
  *
  * FIXME
  *
  * Returns: FIXME
-*/ 
+*/
 gboolean
 nc_pert_linear_spline_set_source_at (NcLinearPertSplines *pspline, gdouble k)
 {
@@ -568,7 +569,7 @@ nc_pert_linear_spline_set_source_at (NcLinearPertSplines *pspline, gdouble k)
   //printf ("# Setting source at %.15g [%.15g %.15g]\n", k, pspline->k0, pspline->k1);fflush(stdout);
   g_assert (pspline->types & NC_LINEAR_PERTURBATIONS_SPLINE_SOURCES);
   g_assert ((k/pspline->k0 - 1.0 >= -1e-13) && (k/pspline->k1 - 1.0 <= 1e-13));
-  
+
   for (i = 0; i < ncm_vector_len (pspline->ga); i++)
   {
 		ncm_vector_set (pspline->Sg_data[0], i, ncm_spline_eval (pspline->Sk[0][i], k));
@@ -587,20 +588,20 @@ nc_pert_linear_spline_set_source_at (NcLinearPertSplines *pspline, gdouble k)
  * nc_pert_linear_calc_Nc_spline: (skip)
  * @pspline: a #NcLinearPertSplines
  * @pw_spline: a #NcmSpline
- * @los_table: FIXME 
+ * @los_table: FIXME
  * @n_interp: FIXME
  *
  * FIXME
  *
  * Returns: FIXME
-*/ 
+*/
 gboolean
 nc_pert_linear_calc_Nc_spline (NcLinearPertSplines *pspline, NcmSpline *pw_spline, GArray *los_table, gulong n_interp)
 {
   gint i;
   g_assert (pspline->types & NC_LINEAR_PERTURBATIONS_SPLINE_SOURCES);
   NcmVector *la, *Nca;
-  
+
   if (pspline->Nc == NULL)
   {
     la = ncm_vector_new (200);
@@ -614,7 +615,7 @@ nc_pert_linear_calc_Nc_spline (NcLinearPertSplines *pspline, NcmSpline *pw_splin
 		g_assert (ncm_vector_len (la) == los_table->len);
 		g_assert (ncm_vector_len (Nca) == los_table->len);
   }
-  
+
   for (i = 0; i < los_table->len; i++)
   {
     gint j;
@@ -623,15 +624,15 @@ nc_pert_linear_calc_Nc_spline (NcLinearPertSplines *pspline, NcmSpline *pw_splin
     gdouble tot_res;
     Nc_k_integrand_data Nc_data = {l, pspline, 0};
     gsl_function F = {&_Nc_k_integrand, &Nc_data};
-    
+
     printf ("# Integrating Nc[%d]\n", l);fflush (stdout);
 
     if (TRUE)
     {
       gsl_integration_workspace **w = nc_integral_get_workspace();
       gdouble error;
-      gsl_integration_qag (&F, 
-                           pspline->k0, 
+      gsl_integration_qag (&F,
+                           pspline->k0,
                            pspline->k1, 0.0, 1e-11, NC_INT_PARTITION, 6, *w, ncm_vector_ptr (Nca, i), &error);
       ncm_memory_pool_return (w);
       ncm_vector_set (la, i, l);
@@ -679,10 +680,10 @@ nc_pert_linear_calc_Nc_spline (NcLinearPertSplines *pspline, NcmSpline *pw_splin
   }
   ncm_spline_prepare (pspline->Nc);
 
-  return TRUE;  
+  return TRUE;
 }
 
-static gdouble 
+static gdouble
 local_los_int (gdouble deta, gpointer params)
 {
   local_los_int_data *ldata = (local_los_int_data *)params;
@@ -690,7 +691,7 @@ local_los_int (gdouble deta, gpointer params)
   gdouble kdeta = ldata->k * deta;
   gdouble kdeta2 = kdeta * kdeta;
   gdouble jl, jlp1, djl, d2jl;
-  
+
   jl = ncm_sf_spherical_bessel (l, kdeta);
   jlp1 = ncm_sf_spherical_bessel (l + 1, kdeta);
 
@@ -698,10 +699,10 @@ local_los_int (gdouble deta, gpointer params)
   d2jl = (kdeta != 0) ? (((l * (l-1.0) - kdeta2) * jl + 2.0 * kdeta * jlp1) / kdeta2) : (0.0);
 
   ldata->count++;
-  return 
+  return
     (
       ncm_spline_eval (ldata->S0, deta) * jl +
-      ncm_spline_eval (ldata->S1, deta) * djl + 
+      ncm_spline_eval (ldata->S1, deta) * djl +
       ncm_spline_eval (ldata->S2, deta) * d2jl
       );
 }

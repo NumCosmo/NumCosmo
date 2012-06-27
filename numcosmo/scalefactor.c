@@ -39,24 +39,24 @@
 #include <cvode/cvode.h>             /* prototypes for CVODE fcts. and consts. */
 #include <nvector/nvector_serial.h>  /* serial N_Vector types, fcts., and macros */
 #include <cvode/cvode_dense.h>       /* prototype for CVDense */
-#include <sundials/sundials_dense.h> /* definitions DenseMat DENSE_ELEM */   
+#include <sundials/sundials_dense.h> /* definitions DenseMat DENSE_ELEM */
 #include <sundials/sundials_types.h> /* definition of type realtype */
 
 G_DEFINE_BOXED_TYPE (NcScaleFactor, nc_scale_factor, nc_scale_factor_copy, nc_scale_factor_free);
 
 static gint dz_dt_f (realtype t, N_Vector y, N_Vector ydot, gpointer f_data);
-static gint dz_dt_J (gint N, realtype lambda, N_Vector y, N_Vector fy, DlsMat J, gpointer jac_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3);
+static gint dz_dt_J (_NCM_SUNDIALS_INT_TYPE N, realtype lambda, N_Vector y, N_Vector fy, DlsMat J, gpointer jac_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3);
 
 static gint dz_dt_conformal_f (realtype t, N_Vector y, N_Vector ydot, gpointer f_data);
-static gint dz_dt_conformal_J (gint N, realtype lambda, N_Vector y, N_Vector fy, DlsMat J, gpointer jac_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3);
+static gint dz_dt_conformal_J (_NCM_SUNDIALS_INT_TYPE N, realtype lambda, N_Vector y, N_Vector fy, DlsMat J, gpointer jac_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3);
 
 /**
  * nc_scale_factor_new:
  * @ttype: a #NcScaleFactorTimeType
- * @zf: FIXME 
- * 
+ * @zf: FIXME
+ *
  * FIXME
- * 
+ *
  * Returns: FIXME
  */
 NcScaleFactor *
@@ -70,14 +70,14 @@ nc_scale_factor_new (NcScaleFactorTimeType ttype, gdouble zf)
 	a->dist = nc_distance_new (zf);
 	a->ctrl = ncm_model_ctrl_new (NULL);
 	a->zf = zf;
-  
+
   a->cvode = CVodeCreate (CV_BDF, CV_NEWTON);
   CVODE_CHECK((void *)a->cvode, "CVodeCreate", 0, NULL);
   a->cvode_malloc = FALSE;
-  
+
   a->reltol = 1e-13;
   a->abstol = 1e-20;
-  
+
   switch (ttype)
   {
     case NC_TIME_COSMIC:
@@ -91,18 +91,18 @@ nc_scale_factor_new (NcScaleFactorTimeType ttype, gdouble zf)
     default:
       g_assert_not_reached ();
   }
-    
+
   a->y = N_VNew_Serial(1);
-  
+
   return a;
 }
 
 /**
  * nc_scale_factor_copy:
  * @a: FIXME
- * 
+ *
  * FIXME
- * 
+ *
  * Returns: FIXME
  */
 NcScaleFactor *
@@ -115,10 +115,10 @@ nc_scale_factor_copy (NcScaleFactor *a)
 /**
  * nc_scale_factor_free:
  * @a: FIXME
- * 
+ *
  * FIXME
  */
-void 
+void
 nc_scale_factor_free (NcScaleFactor *a)
 {
   if (a->a_t != NULL)
@@ -130,7 +130,7 @@ nc_scale_factor_free (NcScaleFactor *a)
 
 	ncm_model_ctrl_free (a->ctrl);
 	nc_distance_free (a->dist);
-	
+
   g_slice_free (NcScaleFactor, a);
 }
 
@@ -140,9 +140,9 @@ static void nc_scale_factor_init_cvode (NcScaleFactor *a, NcHICosmo *model);
  * nc_scale_factor_init:
  * @a: FIXME
  * @zf: FIXME
- * 
+ *
  * FIXME
- * 
+ *
  * Returns: FIXME
  */
 static void
@@ -151,7 +151,7 @@ _nc_scale_factor_init (NcScaleFactor *a, NcHICosmo *model)
   const gdouble Omega_k = nc_hicosmo_Omega_k (model);
 
   NV_Ith_S(a->y, 0) = a->zf;
-  
+
   switch (a->ttype)
   {
     case NC_TIME_COSMIC:
@@ -177,7 +177,7 @@ _nc_scale_factor_init (NcScaleFactor *a, NcHICosmo *model)
   }
 
   nc_scale_factor_init_cvode (a, model);
-  
+
   return;
 }
 
@@ -185,7 +185,7 @@ static void
 nc_scale_factor_init_cvode (NcScaleFactor *a, NcHICosmo *model)
 {
   gint flag;
-  
+
   if (a->cvode_malloc)
   {
     flag = CVodeReInit (a->cvode, a->ti, a->y);
@@ -199,23 +199,23 @@ nc_scale_factor_init_cvode (NcScaleFactor *a, NcHICosmo *model)
   }
 
   flag = CVodeSStolerances (a->cvode, a->reltol, a->abstol);
-  CVODE_CHECK(&flag, "CVodeSStolerances", 1, );  
+  CVODE_CHECK(&flag, "CVodeSStolerances", 1, );
 
   flag = CVodeSetStopTime(a->cvode, a->tf);
   CVODE_CHECK(&flag, "CVodeSetStopTime", 1, );
-  
+
   flag = CVodeSetUserData (a->cvode, model);
-  CVODE_CHECK(&flag, "CVodeSetUserData", 1, ); 
-  
+  CVODE_CHECK(&flag, "CVodeSetUserData", 1, );
+
   flag = CVodeSetMaxNumSteps(a->cvode, 500);
   CVODE_CHECK(&flag, "CVodeSetMaxNumSteps", 1, );
 
   flag = CVDense(a->cvode, 1);
   CVODE_CHECK(&flag, "CVDense", 1, );
-  
+
   flag = CVDlsSetDenseJacFn (a->cvode, a->dz_dt_J);
-  CVODE_CHECK(&flag, "CVDlsSetDenseJacFn", 1, );  
-  
+  CVODE_CHECK(&flag, "CVDlsSetDenseJacFn", 1, );
+
   return;
 }
 
@@ -223,9 +223,9 @@ nc_scale_factor_init_cvode (NcScaleFactor *a, NcHICosmo *model)
  * nc_scale_factor_z_t:
  * @a: FIXME
  * @t: FIXME
- * 
+ *
  * FIXME
- * 
+ *
  * Returns: FIXME
  */
 gdouble
@@ -238,9 +238,9 @@ nc_scale_factor_z_t (NcScaleFactor *a, gdouble t)
  * nc_scale_factor_t_z:
  * @a: FIXME
  * @z: FIXME
- * 
+ *
  * FIXME
- * 
+ *
  * Returns: FIXME
  */
 gdouble
@@ -253,9 +253,9 @@ nc_scale_factor_t_z (NcScaleFactor *a, gdouble z)
  * nc_scale_factor_t_x:
  * @a: FIXME
  * @x: FIXME
- * 
+ *
  * FIXME
- * 
+ *
  * Returns: FIXME
  */
 gdouble
@@ -268,9 +268,9 @@ nc_scale_factor_t_x (NcScaleFactor *a, gdouble x)
  * nc_scale_factor_a_t:
  * @a: FIXME
  * @t: FIXME
- * 
+ *
  * FIXME
- * 
+ *
  * Returns: FIXME
  */
 gdouble
@@ -284,9 +284,9 @@ nc_scale_factor_a_t (NcScaleFactor *a, gdouble t)
 /**
  * nc_scale_factor_calc_spline:
  * @a: FIXME
- * 
+ *
  * FIXME
- * 
+ *
  * Returns: FIXME
  */
 static void
@@ -315,7 +315,7 @@ _nc_scale_factor_calc_spline (NcScaleFactor *a)
   while (1)
   {
     gint flag;
-    
+
     flag = CVode(a->cvode, a->tf, a->y, &t, CV_ONE_STEP);
     CVODE_CHECK(&flag, "CVode", 1, );
     mzi = -NV_Ith_S (a->y, 0);
@@ -325,20 +325,20 @@ _nc_scale_factor_calc_spline (NcScaleFactor *a)
       break;
   }
 
-	if (fabs (g_array_index (y, gdouble, y->len - 1)) < 1e-10) 
+	if (fabs (g_array_index (y, gdouble, y->len - 1)) < 1e-10)
 	{
 		g_array_index (y, gdouble, y->len - 1) = 0.0;
 	}
 	else
-		g_error ("_nc_scale_factor_calc_spline today redshift must be zero not % 20.15g\n", 
+		g_error ("_nc_scale_factor_calc_spline today redshift must be zero not % 20.15g\n",
 		         fabs (g_array_index (y, gdouble, y->len - 1)));
-  
+
 	ncm_spline_set_array (a->a_t, x, y, TRUE);
 	ncm_spline_set_array (a->t_a, y, x, TRUE);
-  
+
   g_array_unref (x);
   g_array_unref (y);
-  
+
   return;
 }
 
@@ -346,9 +346,9 @@ _nc_scale_factor_calc_spline (NcScaleFactor *a)
  * nc_scale_factor_prepare:
  * @a: FIXME
  * @model: FIXME
- * 
+ *
  * FIXME
- * 
+ *
  * Returns: FIXME
  */
 void
@@ -363,9 +363,9 @@ nc_scale_factor_prepare (NcScaleFactor *a, NcHICosmo *model)
  * nc_scale_factor_prepare_if_needed:
  * @a: FIXME
  * @model: FIXME
- * 
+ *
  * FIXME
- * 
+ *
  * Returns: FIXME
  */
 void
@@ -375,7 +375,7 @@ nc_scale_factor_prepare_if_needed (NcScaleFactor *a, NcHICosmo *model)
 		nc_scale_factor_prepare (a, model);
 }
 
-static gint 
+static gint
 dz_dt_f (realtype t, N_Vector y, N_Vector ydot, gpointer f_data)
 {
   NcHICosmo *model = NC_HICOSMO (f_data);
@@ -384,11 +384,11 @@ dz_dt_f (realtype t, N_Vector y, N_Vector ydot, gpointer f_data)
   const gdouble E2 = nc_hicosmo_E2 (model, z);
   const gdouble E = sqrt(E2);
   NV_Ith_S (ydot, 0) = -x * E;
-  return 0;  
+  return 0;
 }
 
-static gint 
-dz_dt_J (gint N, realtype t, N_Vector y, N_Vector fy, DlsMat J, gpointer jac_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3)
+static gint
+dz_dt_J (_NCM_SUNDIALS_INT_TYPE N, realtype t, N_Vector y, N_Vector fy, DlsMat J, gpointer jac_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3)
 {
   NcHICosmo *model = NC_HICOSMO (jac_data);
   const gdouble z = NV_Ith_S (y, 0);
@@ -402,7 +402,7 @@ dz_dt_J (gint N, realtype t, N_Vector y, N_Vector fy, DlsMat J, gpointer jac_dat
   return 0;
 }
 
-static gint 
+static gint
 dz_dt_conformal_f (realtype t, N_Vector y, N_Vector ydot, gpointer f_data)
 {
   NcHICosmo *model = NC_HICOSMO (f_data);
@@ -410,11 +410,11 @@ dz_dt_conformal_f (realtype t, N_Vector y, N_Vector ydot, gpointer f_data)
   const gdouble E2 = nc_hicosmo_E2 (model, z);
   const gdouble E = sqrt(E2);
   NV_Ith_S(ydot, 0) = -E;
-  return 0;  
+  return 0;
 }
 
-static gint 
-dz_dt_conformal_J (gint N, realtype t, N_Vector y, N_Vector fy, DlsMat J, gpointer jac_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3)
+static gint
+dz_dt_conformal_J (_NCM_SUNDIALS_INT_TYPE N, realtype t, N_Vector y, N_Vector fy, DlsMat J, gpointer jac_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3)
 {
   NcHICosmo *model = NC_HICOSMO (jac_data);
   const gdouble z = NV_Ith_S(y,0);

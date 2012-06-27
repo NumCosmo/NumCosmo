@@ -37,6 +37,12 @@
 
 G_BEGIN_DECLS
 
+#ifdef SUNDIALS_USES_LONG_INT
+#define _NCM_SUNDIALS_INT_TYPE glong
+#else
+#define _NCM_SUNDIALS_INT_TYPE gint
+#endif
+
 #define NC_DEGREE_TO_RADIAN(a) ((a) * M_PI/180.0)
 #define NC_RADIAN_TO_DEGREE(a) ((a) * 180.0/M_PI)
 #define NC_RADIAN_0_2PI(a) ((a)-2.0 * M_PI * floor((a) / (2.0 * M_PI)))

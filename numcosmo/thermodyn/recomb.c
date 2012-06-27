@@ -637,7 +637,7 @@ H_ion_single_f (realtype x, N_Vector y, N_Vector ydot, gpointer f_data)
 }
 
 static gint
-H_ion_single_J (gint N, realtype x, N_Vector y, N_Vector fy, DlsMat J, gpointer jac_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3)
+H_ion_single_J (_NCM_SUNDIALS_INT_TYPE N, realtype x, N_Vector y, N_Vector fy, DlsMat J, gpointer jac_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3)
 {
   NcHICosmo *model = NC_HICOSMO (jac_data);
   const gdouble T0 = nc_hicosmo_T_gamma0 (model);
@@ -669,7 +669,7 @@ H_ion_single_Tm_f (realtype x, N_Vector y, N_Vector ydot, gpointer f_data)
 }
 
 static gint
-H_ion_single_Tm_J (gint N, realtype x, N_Vector y, N_Vector fy, DlsMat J, gpointer jac_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3)
+H_ion_single_Tm_J (_NCM_SUNDIALS_INT_TYPE N, realtype x, N_Vector y, N_Vector fy, DlsMat J, gpointer jac_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3)
 {
   NcHICosmo *model = NC_HICOSMO(jac_data);
   gdouble Xp = NV_Ith_S(y,0);
@@ -705,7 +705,7 @@ H_ion_full_f (realtype x, N_Vector y, N_Vector ydot, gpointer f_data)
 }
 
 static gint
-H_ion_full_J (gint N, realtype x, N_Vector y, N_Vector fy, DlsMat J, gpointer jac_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3)
+H_ion_full_J (_NCM_SUNDIALS_INT_TYPE N, realtype x, N_Vector y, N_Vector fy, DlsMat J, gpointer jac_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3)
 {
   NcHICosmo *model = NC_HICOSMO(jac_data);
   gdouble Xp = NV_Ith_S(y,0);

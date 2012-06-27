@@ -134,7 +134,6 @@ main (gint argc, gchar *argv[])
     NcHICosmoLCDM *lcdm = nc_hicosmo_lcdm_new ();
     NcDistance *dist = nc_distance_new (12.0);
     gdouble sum = 0.0;
-    guint j;
 
     ncm_model_params_print_all (NCM_MODEL (lcdm), stdout);
     for (j = 0; j < 100; j++)
@@ -370,8 +369,6 @@ main (gint argc, gchar *argv[])
   if (FALSE)
   {
     GTimer *bench = g_timer_new ();
-    gsl_function F;
-    gint i;
     gsize tests = 10000;
     gsl_rng *r = ncm_get_rng ();
     gsl_vector *x = gsl_vector_alloc (tests);

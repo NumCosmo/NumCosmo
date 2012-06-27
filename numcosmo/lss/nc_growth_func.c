@@ -106,8 +106,8 @@ growth_f (realtype z, N_Vector y, N_Vector ydot, gpointer f_data)
   return 0;
 }
 
-static int
-growth_J (int N, realtype z, N_Vector y, N_Vector fy, DlsMat J, gpointer jac_data, N_Vector tmp1, N_Vector tmp2,
+static gint
+growth_J (_NCM_SUNDIALS_INT_TYPE N, realtype z, N_Vector y, N_Vector fy, DlsMat J, gpointer jac_data, N_Vector tmp1, N_Vector tmp2,
 	  N_Vector tmp3)
 {
   NcmModel *model = NCM_MODEL (jac_data);

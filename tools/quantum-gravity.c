@@ -207,7 +207,6 @@ main(gint argc, gchar *argv[])
 	  NcHICosmoQGMode *mode = nc_hicosmo_qg_modefunc (NCM_MODEL (model), 1.0e6L, 1e-14L, 1e32L);
 	  GTimer *bench = g_timer_new ();
 	  gdouble part;
-	  gint i;
 	  printf ("# x_eq = %.15g\n", pow((1.0 - 7.83178468907193e-05) / 7.83178468907193e-05, 1.0 / (1.0 - 3.0 * 1e-4)));
 	  //nc_hicosmo_qg_modefunc_prepare_pw_spline (mode, TRUE);
 

@@ -48,7 +48,7 @@
 #include <gsl/gsl_complex_math.h>
 #include <gsl/gsl_sf_exp.h>
 
-typedef struct _NcHICosmoQG 
+typedef struct _NcHICosmoQG
 {
   gpointer cvode;
   gboolean initialized;
@@ -110,7 +110,7 @@ gboolean nc_hicosmo_qg_init_spline (NcHICosmoQG *qgint, NcmModel *model);
 NcHICosmo *
 nc_hicosmo_qg_new (void)
 {
-	g_assert_not_reached ();
+  g_assert_not_reached ();
 }
 
 
@@ -175,15 +175,15 @@ nc_hicosmo_qg_d2sqrtxxbarzeta_sqrtxxbarzeta (NcmModel *model, gdouble x, gpointe
   gdouble Or2 = Or * Or;
   gdouble Or3 = Or2 * Or;
 
-  return ( x3w / x2 * OMEGA_M * 
-          (81.0 * x9w * w2 * one_pw2 * (5.0 + 9.0 * (-2.0 + W) * W ) * Om3 + 
-           36.0 * x * x6w * W * one_pw * (-2.0 + 3.0 * W) * (-1.0 + 3.0 * W) * (7.0 + 15.0 * W) * Om2 * Or + 
+  return ( x3w / x2 * OMEGA_M *
+          (81.0 * x9w * w2 * one_pw2 * (5.0 + 9.0 * (-2.0 + W) * W ) * Om3 +
+           36.0 * x * x6w * W * one_pw * (-2.0 + 3.0 * W) * (-1.0 + 3.0 * W) * (7.0 + 15.0 * W) * Om2 * Or +
            12.0 * x2 * x3w * (1.0 + W) * (-1.0 + 3.0 * W) *
            (-28.0 + 3.0 * W * (28.0 + 9.0 * W * (-7.0 + W * (8.0 + 3.0 * W)))) * OMEGA_M * Or2
            - 32.0 * x3 * (-2.0 + 3.0 * W) * (-1.0 + 3.0 * W) * (-4.0 + 3.0 * W + 9.0 * w2) * Or3
            )
-          ) / 
-    (16.0 * gsl_pow_2 (x3w * OMEGA_M + x * Or) * 
+          ) /
+    (16.0 * gsl_pow_2 (x3w * OMEGA_M + x * Or) *
      gsl_pow_2 (9.0 * x3w * W * (1.0 + W) * OMEGA_M + 4.0 * x * Or));
 }
 
@@ -222,7 +222,7 @@ nc_hicosmo_qg_evolfunc (NcmModel *model, long double x, long double *x2d2sqrtxxb
   const long double AAA2 = AAA * AAA;
   const long double BBB = (9.0L * x3w * W * one_pw * Om + 4.0L * x * Or);
   const long double BBB2 = BBB * BBB;
-  
+
   *x2d2sqrtxxbarzeta_sqrtxxbarzeta = ( x3w * Om *
           (81.0L * x9w * w2 * one_pw2 * (5.0L + 9.0L * (-2.0L + W) * W ) * Om3 +
            36.0L * x * x6w * W * one_pw * (-2.0L + 3.0L * W) * (-1.0L + 3.0L * W) * (7.0L + 15.0L * W) * Om2 * Or +
@@ -241,7 +241,7 @@ gdouble
 nc_hicosmo_qg_xxbarzeta2 (NcmModel *model, gdouble x, gpointer userdata)
 {
   gdouble x3w = pow (x, 3.0 * W);
-  
+
   return (3.0 * gsl_pow_2 (3.0 * x3w * (1.0 + W) * OMEGA_M + 4.0 * x * OMEGA_R)) /
    (2.0 * sqrt (x * (x3w * OMEGA_M + x * OMEGA_R)) *
      (9.0 * x3w * W * (1.0 + W) * OMEGA_M + 4.0 * x * OMEGA_R));
@@ -252,9 +252,9 @@ nc_hicosmo_qg_dxxbarzeta2_xxbarzeta2 (NcmModel *model, gdouble x, gpointer userd
 {
   gdouble x3w = pow (x, 3.0 * W);
 
-  return ((-1.0 + 3.0 * W) * 
-          ( 1.0 / x + OMEGA_R * ( 1.0 / (x3w * OMEGA_M + x * OMEGA_R) - 
-                                 16.0 / ( 3.0 * x3w * (1.0 + W) * OMEGA_M + 4.0 * x * OMEGA_R) + 
+  return ((-1.0 + 3.0 * W) *
+          ( 1.0 / x + OMEGA_R * ( 1.0 / (x3w * OMEGA_M + x * OMEGA_R) -
+                                 16.0 / ( 3.0 * x3w * (1.0 + W) * OMEGA_M + 4.0 * x * OMEGA_R) +
                                  8.0 / ( 9.0 * x3w * W * (1.0 + W) * OMEGA_M + 4.0 * x * OMEGA_R)
                                  )
            )
@@ -275,7 +275,7 @@ nc_hicosmo_qg_dzeta_zeta (NcmModel *model, gdouble x, gpointer userdata)
 {
   const gdouble R = 3.0 * (1.0 + W) * OMEGA_M / (4.0 * OMEGA_R * x * pow(x, -3.0 * W));
   const gdouble F = OMEGA_X / (OMEGA_R * gsl_pow_4 (x));
-  const gdouble G1 = (6.0 * (1.0 + W) * F + 2.0 * (1.0 - 3.0 * W) * R) / (3.0 * (1.0 + W) * (1.0 + F) + 4.0 * R); 
+  const gdouble G1 = (6.0 * (1.0 + W) * F + 2.0 * (1.0 - 3.0 * W) * R) / (3.0 * (1.0 + W) * (1.0 + F) + 4.0 * R);
   const gdouble G2 = 3.0 * W * (1.0 - 3.0 * W) * R / (2.0 * (1.0 + 3.0 * W * R));
   const gdouble cs2 = (1.0 + 3.0 * W * R) / (3.0 * (1.0 + R));
 
@@ -305,7 +305,7 @@ nc_hicosmo_qg_ddzeta_zeta (NcmModel *model, gdouble x, gpointer userdata)
 {
   gdouble R = 3.0 * (1.0 + W) * OMEGA_M / (4.0 * OMEGA_R * x * pow(x, -3.0*W));
   gdouble F =  OMEGA_X / (OMEGA_R * gsl_pow_4 (x));
-  gdouble G1 = (6.0 * (1.0 + W) * F + 2.0 * (1.0 - 3.0 * W) * R) / (3.0 * (1.0 + W) * (1.0 + F) + 4.0 * R); 
+  gdouble G1 = (6.0 * (1.0 + W) * F + 2.0 * (1.0 - 3.0 * W) * R) / (3.0 * (1.0 + W) * (1.0 + F) + 4.0 * R);
   gdouble G2 = 3.0 * W * (1.0 - 3.0 * W) * R / (2.0 * (1.0 + 3.0 * W * R));
   gdouble cs2 = (1.0 + 3.0 * W * R) / (3.0 * (1.0 + R));
 
@@ -314,7 +314,7 @@ nc_hicosmo_qg_ddzeta_zeta (NcmModel *model, gdouble x, gpointer userdata)
   gdouble dG2 = (2.0 * G2 * G2 - (1.0 - 3.0 * W) * G2) / x;
 
   gdouble dzeta_zeta = (3.0 * cs2 + G1 + G2 - 2.0) / x;
-  
+
   return ((3.0 * dcs2 + dG1 + dG2)  - dzeta_zeta) / x + dzeta_zeta * dzeta_zeta;
 }
 
@@ -323,7 +323,7 @@ nc_hicosmo_qg_xddzeta_zeta_mxdzeta_zeta2_dzeta_zeta (NcmModel *model, gdouble x,
 {
   gdouble R = 3.0 * (1.0 + W) * OMEGA_M / (4.0 * OMEGA_R * x * pow(x, -3.0*W));
   gdouble F =  OMEGA_X / (OMEGA_R * gsl_pow_4 (x));
-  gdouble G1 = (6.0 * (1.0 + W)*F+2.0*(1.0-3.0*W)*R) / (3.0 * (1.0 + W)*(1.0 + F) + 4.0 * R); 
+  gdouble G1 = (6.0 * (1.0 + W)*F+2.0*(1.0-3.0*W)*R) / (3.0 * (1.0 + W)*(1.0 + F) + 4.0 * R);
   gdouble G2 = 3.0 * W * (1.0 - 3.0 * W) * R / (2.0 * (1.0 + 3.0 * W * R));
 
   gdouble dcs2 = (1.0 - 3.0 * W) / (3.0 * x) * ((1.0 - 3.0 * W)*R+3.0*W*R*R) / gsl_pow_2 (1.0 + R);
@@ -344,7 +344,7 @@ nc_hicosmo_qg_gbar2 (NcmModel *model, gdouble x)
   gdouble xb2 = xb * xb;
   gdouble xb3 = xb2 * xb;
   gdouble xb3_m3w =  xb3 * pow (xb, -3.0 * W);
-  
+
   gdouble xb6 = xb3 * xb3;
 
 //  g_assert (x < xb*1e-16);
@@ -375,19 +375,19 @@ nc_hicosmo_qg_gbarbar (NcmModel *model, gdouble x)
  * @model: FIXME
  * @x: FIXME
  * @T: FIXME
- * 
+ *
  * FIXME
- * 
+ *
  */
 void
 nc_hicosmo_qg_h_to_R_matrix (NcmModel *model, gdouble x, gsl_matrix *T)
 {
   gdouble gbar2 = nc_hicosmo_qg_gbar2 (model, x);
-  gdouble gbar = sqrt (gbar2);        
+  gdouble gbar = sqrt (gbar2);
   gdouble F_x = nc_hicosmo_qg_xxbarzeta2 (model, x, NULL) / x;
   gdouble sqrt_x_F = sqrt (1.0 / F_x);
   gdouble xdF_F = x * nc_hicosmo_qg_dxxbarzeta2_xxbarzeta2 (model, x, NULL) / 1.0;
-  
+
   g_assert ((T->size1 == T->size2) && (T->size1 == 2));
 
   gsl_matrix_set (T, 0, 0, sqrt_x_F);
@@ -401,9 +401,9 @@ nc_hicosmo_qg_h_to_R_matrix (NcmModel *model, gdouble x, gsl_matrix *T)
  * @model: FIXME
  * @x: FIXME
  * @T: FIXME
- * 
+ *
  * FIXME
- * 
+ *
  */
 void
 nc_hicosmo_qg_R_to_h_matrix (NcmModel *model, gdouble x, gsl_matrix *T)
@@ -436,10 +436,10 @@ nc_hicosmo_qg_d2a_n_deta2 (NcmModel *model, gdouble x)
   const gdouble xb3_m3w = xb3 * pow (xb, -3.0 * W);
   const gdouble xb6 = xb3 * xb3;
 
-  return x2 * 
-    ( 
-     OMEGA_R * x / xb2 + 
-     OMEGA_M * ((1.0 - 3.0 * W) / (2.0 * x * x1_m3w) + x / xb3_m3w) + 
+  return x2 *
+    (
+     OMEGA_R * x / xb2 +
+     OMEGA_M * ((1.0 - 3.0 * W) / (2.0 * x * x1_m3w) + x / xb3_m3w) +
      OMEGA_X * (2.0 / x5 + x / xb6)
     );
 }
@@ -458,7 +458,7 @@ nc_hicosmo_qg_dd2a_n_deta2_da_n (NcmModel *model, gdouble x)
   const gdouble xb6 = xb3 * xb3;
 
   return
-  - 3.0 * OMEGA_R * x4 / xb2 
+  - 3.0 * OMEGA_R * x4 / xb2
   - OMEGA_M * (3.0 * W * (1.0 - 3.0 * W) * x1_3w / 2.0 + x4 / xb3_m3w)
   - OMEGA_X * 3.0 * (x4 / xb6 - 2.0 / x2);
 }
@@ -471,7 +471,7 @@ nc_hicosmo_qg_V (NcmModel *model, gdouble x, gpointer userdata)
   gdouble x3 = x2*x;
   gdouble x4 = x2*x2;
   gdouble x3w = pow (x, 3.0 * W);
-  
+
   gdouble xb = exp(-G_B);
   gdouble xb2 = xb*xb;
   gdouble xb3 = xb2*xb;
@@ -482,7 +482,7 @@ nc_hicosmo_qg_V (NcmModel *model, gdouble x, gpointer userdata)
   gdouble E2 = E*E;
   gdouble V1 = E2 * nc_hicosmo_qg_ddzeta_zeta (model, x, NULL);
   gdouble V2 = 2.0 * E2 / x * nc_hicosmo_qg_dzeta_zeta (model, x, NULL);
-  gdouble V3 = -(OMEGA_R * x2/xb2 + OMEGA_M * ((1.0 - 3.0 * W) * x3w / (x * 2.0) + x2  * xb3w / xb3) +OMEGA_X * (2.0 / x4 + x2 / xb6)) * 
+  gdouble V3 = -(OMEGA_R * x2/xb2 + OMEGA_M * ((1.0 - 3.0 * W) * x3w / (x * 2.0) + x2  * xb3w / xb3) +OMEGA_X * (2.0 / x4 + x2 / xb6)) *
     x3 * nc_hicosmo_qg_dzeta_zeta (model, x, NULL);
 
   if (gsl_finite (V1) && gsl_finite(V2))
@@ -497,7 +497,7 @@ nc_hicosmo_qg_lambda_x (NcmModel *model, gdouble x, gpointer userdata)
   gdouble sqrt_Omega_r = sqrt(OMEGA_R);
   gdouble sqrt_Omega_m = sqrt(OMEGA_M);
   gdouble one_m3omega = (1.0 - 3.0 * W);
-  
+
   return 2.0 * asinh (pow(x, one_m3omega / 2.0) * sqrt_Omega_r / sqrt_Omega_m) / (one_m3omega * sqrt_Omega_r);
 }
 
@@ -507,9 +507,9 @@ nc_hicosmo_qg_lambda_x (NcmModel *model, gdouble x, gpointer userdata)
  * @k: FIXME
  * @lambda: FIXME
  * @sol: FIXME
- * 
+ *
  * FIXME
- * 
+ *
  * Returns: FIXME
  */
 gboolean
@@ -525,21 +525,21 @@ nc_hicosmo_qg_past_sol (NcmModel *model, gdouble k, gdouble lambda, gsl_matrix *
   gdouble s1 = gsl_sf_hyperg_0F1 (A1, argfunc);
 
   gdouble A2 = (-4.0 + 3.0 * one_p3w) / (2.0 * one_p3w);
-  gdouble s2p = pow (lambda, 1.0 + 2.0 / one_m3w); 
+  gdouble s2p = pow (lambda, 1.0 + 2.0 / one_m3w);
   gdouble s2 = s2p * gsl_sf_hyperg_0F1 (A2, argfunc);
 
   gdouble ds1 = gsl_sf_hyperg_0F1 (A1 + 1.0, argfunc) * (-2.0 * one_p3w / one_m3w) * argfunc / (A1 * lambda);
-  
-  gdouble ds2 = 
-    s2p * gsl_sf_hyperg_0F1 (A2 + 1.0, argfunc) * (-2.0 * one_p3w / one_m3w) * argfunc / (A2 * lambda) + 
+
+  gdouble ds2 =
+    s2p * gsl_sf_hyperg_0F1 (A2 + 1.0, argfunc) * (-2.0 * one_p3w / one_m3w) * argfunc / (A2 * lambda) +
     s2 * (1.0 + 2.0 / one_m3w) / lambda;
 
   gsl_matrix_set (sol, 0, 0, s1);
   gsl_matrix_set (sol, 0, 1, s2);
-  
+
   gsl_matrix_set (sol, 1, 0, ds1);
   gsl_matrix_set (sol, 1, 1, ds2);
-  
+
   return TRUE;
 }
 
@@ -602,7 +602,7 @@ nc_hicosmo_qg_dalphaprime2_dalpha (NcmModel *model, gdouble alpha, gpointer data
         OMEGA_M * x * x3w * three_1mW_2 * gsl_sf_exprel (-three_1mW_2 * alpha2) +
         OMEGA_X / x2 * 3.0 * gsl_sf_exprel (-3.0 * alpha2)
         );
-    
+
     dalphaprime2_dalpha = -alpha * cc_fact * cc_fact *
       (
         OMEGA_R * x2 * er +
@@ -643,7 +643,7 @@ nc_hicosmo_qg_h_dust_sol (NcHICosmoQGMode *qgmode, long double x, long double ax
   long double up, dup;
   long double um, dum;
   gsl_sf_result res;
-  
+
   gsl_sf_hyperg_0F1_e (1.0 + alpha_w, -f2, &res);
   resl = res.val;
   up = 1.0 / (sqrt_k) * Om_w1_4 * F2_1_3w * sqrt_pi * resl / (x3_m3w_4 * gamma_1_palpha * sin_alpha_pi);
@@ -653,7 +653,7 @@ nc_hicosmo_qg_h_dust_sol (NcHICosmoQGMode *qgmode, long double x, long double ax
 
   argp = -NC_C_PIL * alpha_w / 2.0L - NC_C_PIL / 4.0L - 2.0L * f0;
   argm =  NC_C_PIL * alpha_w / 2.0L - NC_C_PIL / 4.0L - 2.0L * f0;
-  
+
   dup = ((-3.0L * (1.0L - w) / 4.0L) * up / x + (1.0L + 3.0L * w) * f2 / (x * (1.0L + alpha_w)) / (sqrt_k) * Om_w1_4 * F2_1_3w * sqrt_pi * gsl_sf_hyperg_0F1 (2.0L + alpha_w, -f2) / (x3_m3w_4 * gamma_1_palpha * sin_alpha_pi)) * x;
   dum = ((+3.0L * (1.0L - w) / 4.0L) * um / x + (1.0L + 3.0L * w) * f2 / (x * (1.0L - alpha_w)) / (sqrt_k) * Om_w1_4 * x3_m3w_4 * F * sqrt_pi * gsl_sf_hyperg_0F1 (2.0L - alpha_w, -f2) / (F2_1_3w * gamma_1_malpha * sin_alpha_pi)) * x;
 
@@ -661,14 +661,14 @@ nc_hicosmo_qg_h_dust_sol (NcHICosmoQGMode *qgmode, long double x, long double ax
   h[1] = -dup * cosl (argp) + dum * cosl (argm);    /* Re(hbar) */
   h[2] = -(-up * sinl (argp) + um * sinl (argm));   /* Im(h) */
   h[3] = -(-dup * sinl (argp) + dum * sinl (argm)); /* Im(hbar) */
-  
+
   return;
 }
 
 void
 nc_hicosmo_qg_R_dust_sol (NcHICosmoQGMode *qgmode, gdouble x, gdouble *R)
 {
-  NcmModel *model = qgmode->model; 
+  NcmModel *model = qgmode->model;
   const gdouble E0 = NC_C_Hb_H0;
   const gdouble sqrt_Omega_m = sqrt (OMEGA_M);
   const gdouble A = sqrt (M_PI / (E0 * (1.0 + 3.0 * W) * sqrt_Omega_m) * (2.0 * W) / (3.0 * (1.0 + W)));
@@ -680,7 +680,7 @@ nc_hicosmo_qg_R_dust_sol (NcHICosmoQGMode *qgmode, gdouble x, gdouble *R)
 
   R[0] = A * nu_malpha * gsl_sf_bessel_Jnu (alpha, u);
   R[1] = -A * nu_malpha * gsl_sf_bessel_Jnu (alpha + 1.0, u) * u / nu * dnu_dx;
-  
+
   R[2] = A * nu_malpha * gsl_sf_bessel_Ynu (alpha, u);
   R[3] = -A * nu_malpha * gsl_sf_bessel_Ynu (alpha + 1.0, u) * u / nu * dnu_dx;
 }
@@ -785,16 +785,16 @@ nc_hicosmo_qgint_new ()
 
   qgint->cs2_lambda = NULL;
   qgint->V_lambda = NULL;
-  
+
   qgint->lambda = NULL;
   qgint->eta = NULL;
   qgint->x = NULL;
-  
+
   qgint->int_1_zeta2 = NULL;
   qgint->cs2zeta2_int_1_zeta2 = NULL;
 
   qgint->k_cross = NULL;
-  
+
   qgint->g = NULL;
   qgint->gbar = NULL;
   qgint->gbarbar = NULL;
@@ -807,7 +807,7 @@ nc_hicosmo_qgint_new ()
   return qgint;
 }
 
-static gint 
+static gint
 scalefactor_step (realtype t, N_Vector y, N_Vector ydot, gpointer f_data)
 {
   NcHICosmoQGScaleFactor *qgscale = (NcHICosmoQGScaleFactor *)f_data;
@@ -822,7 +822,7 @@ scalefactor_step (realtype t, N_Vector y, N_Vector ydot, gpointer f_data)
   const gdouble exp6gb_2g = exp (6.0 * G_B - 2.0 * g);
 
 //  printf ("%.15g %.15g %.15g\n", t, g, 1.0 / expg);
-  
+
   if (qgscale->first_order)
   {
     NV_Ith_S(ydot, 0) = qgscale->sign * sqrt(nc_hicosmo_qg_gbar2 (model, 1.0 / expg));
@@ -831,14 +831,14 @@ scalefactor_step (realtype t, N_Vector y, N_Vector ydot, gpointer f_data)
   else
   {
     NV_Ith_S(ydot, 0) = NV_Ith_S(y, 1);
-    NV_Ith_S(ydot, 1) = OMEGA_R * exp2gb_2g + 
+    NV_Ith_S(ydot, 1) = OMEGA_R * exp2gb_2g +
       OMEGA_M * (expg1_3w * (1.0 - 3.0 * W) / 2.0 + exp31mwgb_2g) + OMEGA_X * (2.0 * exp4g + exp6gb_2g);
   }
   return 0;
 }
 
-static gint 
-scalefactor_step_J (gint N, realtype t, N_Vector y, N_Vector fy, DlsMat J, gpointer jac_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3)
+static gint
+scalefactor_step_J (_NCM_SUNDIALS_INT_TYPE N, realtype t, N_Vector y, N_Vector fy, DlsMat J, gpointer jac_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3)
 {
   NcHICosmoQGScaleFactor *qgscale = (NcHICosmoQGScaleFactor *)jac_data;
   NcmModel *model = qgscale->model;
@@ -871,7 +871,7 @@ scalefactor_step_J (gint N, realtype t, N_Vector y, N_Vector fy, DlsMat J, gpoin
   return 0;
 }
 
-gint 
+gint
 scale_factor_root (gdouble t, N_Vector y, gdouble *gout, gpointer g_data)
 {
   NcHICosmoQGScaleFactor *qgscale = (NcHICosmoQGScaleFactor *)g_data;
@@ -881,7 +881,7 @@ scale_factor_root (gdouble t, N_Vector y, gdouble *gout, gpointer g_data)
   return 0;
 }
 
-int 
+int
 scale_factor_time (gdouble t, N_Vector y, N_Vector yQdot, gpointer fQ_data)
 {
   NcHICosmoQGScaleFactor *qgscale = (NcHICosmoQGScaleFactor *)fQ_data;
@@ -902,7 +902,7 @@ nc_hicosmo_qgint_init (NcHICosmoQG *qgint, gdouble lambda, gdouble g, gdouble gb
 
   NV_Ith_S(qgint->y, 0) = g;
   NV_Ith_S(qgint->y, 1) = gbar;
-  
+
   NV_Ith_S(qgint->yQ, 0) = eta;
   NV_Ith_S(qgint->yQ, 1) = int_1_zeta2;
   qgint->reltol = 1e-11;
@@ -910,7 +910,7 @@ nc_hicosmo_qgint_init (NcHICosmoQG *qgint, gdouble lambda, gdouble g, gdouble gb
 
   if (!qgint->initialized)
   {
-    flag = CVodeInit (qgint->cvode, &scalefactor_step, lambda, qgint->y); 
+    flag = CVodeInit (qgint->cvode, &scalefactor_step, lambda, qgint->y);
     CVODE_CHECK (&flag, "CVodeMalloc", 1, FALSE);
     CVodeQuadInit (qgint->cvode, scale_factor_time, qgint->yQ);
     qgint->initialized = TRUE;
@@ -921,7 +921,7 @@ nc_hicosmo_qgint_init (NcHICosmoQG *qgint, gdouble lambda, gdouble g, gdouble gb
     CVodeQuadReInit (qgint->cvode, qgint->yQ);
     CVODE_CHECK(&flag, "CVodeReInit", 1, FALSE);
   }
-  
+
   return TRUE;
 }
 
@@ -932,34 +932,34 @@ nc_hicosmo_qgint_set_opts (NcHICosmoQG *qgint, NcHICosmoQGScaleFactor *qgscale)
 
   flag = CVodeSStolerances (qgint->cvode, qgint->reltol, qgint->abstol);
   CVODE_CHECK(&flag, "CVodeSStolerances", 1, FALSE);
-  
+
   flag = CVodeSetMaxNumSteps(qgint->cvode, 1000000);
   CVODE_CHECK(&flag, "CVodeSetMaxNumSteps", 1, FALSE);
-  
+
   flag = CVodeSetUserData (qgint->cvode, qgscale);
   CVODE_CHECK(&flag, "CVodeSetFdata", 1, FALSE);
-  
+
   if (TRUE)
   {
     flag = CVDense(qgint->cvode, 2);
     CVODE_CHECK(&flag, "CVDense", 1, FALSE);
-    
+
     flag = CVDlsSetDenseJacFn (qgint->cvode, &scalefactor_step_J);
     CVODE_CHECK(&flag, "CVDlsSetDenseJacFn", 1, FALSE);
   }
 
 //  flag = CVodeSetStabLimDet(qgint->cvode, TRUE);
 //  CVODE_CHECK(&flag, "CVodeSetStabLimDet", 1, FALSE);
-  
-//  flag = CVodeSetMaxStep(qgint->cvode, 1.0); 
-//  CVODE_CHECK(&flag, "CVodeSetMaxStep", 1, FALSE);        
 
-//  flag = CVodeSetInitStep (qgint->cvode, 1e-15); 
+//  flag = CVodeSetMaxStep(qgint->cvode, 1.0);
 //  CVODE_CHECK(&flag, "CVodeSetMaxStep", 1, FALSE);
-  
+
+//  flag = CVodeSetInitStep (qgint->cvode, 1e-15);
+//  CVODE_CHECK(&flag, "CVodeSetMaxStep", 1, FALSE);
+
   flag = CVodeRootInit (qgint->cvode, 3, scale_factor_root);
-  CVODE_CHECK(&flag, "CVodeRootInit", 1, FALSE); 
-  
+  CVODE_CHECK(&flag, "CVodeRootInit", 1, FALSE);
+
 //  flag = CVodeSetStopTime(qgint->cvode, qgint->tf);
 //  CVODE_CHECK(&flag, "CVodeSetStopTime", 1, FALSE);
 
@@ -981,13 +981,13 @@ nc_hicosmo_qg_init_spline (NcHICosmoQG *qgint, NcmModel *model)
     NcHICosmoQGScaleFactor qgscale = {model, TRUE, -1.0};
     gboolean end_dust = FALSE;
     gdouble lambda_iQ;
-    
+
     N_Vector dstep = N_VNew_Serial (2);
 
 #define LOCAL_INIT_ARRAY(ArrAy) \
     if ((ArrAy) == NULL) ArrAy = g_array_sized_new (FALSE, FALSE, sizeof(gdouble), 2000);  \
     else g_array_set_size (ArrAy, 0)
-    
+
     LOCAL_INIT_ARRAY (qgint->lambda);
     LOCAL_INIT_ARRAY (qgint->eta);
     LOCAL_INIT_ARRAY (qgint->x);
@@ -1016,7 +1016,7 @@ nc_hicosmo_qg_init_spline (NcHICosmoQG *qgint, NcmModel *model)
 
       flag = CVode (qgint->cvode, lambda_i * 1.001, qgint->y, &lambda_i, CV_ONE_STEP);
       CVODE_CHECK (&flag, "CVode[nc_hicosmo_qg_init_spline]", 1, FALSE);
-      CVodeGetQuad (qgint->cvode, &lambda_iQ, qgint->yQ); 
+      CVodeGetQuad (qgint->cvode, &lambda_iQ, qgint->yQ);
 
       printf ("% 20.15g % 20.15g % 20.15g % 20.15g % 20.15g\n", lambda_i, NV_Ith_S (qgint->y, 0), NV_Ith_S (qgint->y, 1), NV_Ith_S (qgint->yQ, 0), exp(-NV_Ith_S (qgint->y, 0)));
       if (flag == CV_ROOT_RETURN)
@@ -1038,7 +1038,7 @@ nc_hicosmo_qg_init_spline (NcHICosmoQG *qgint, NcmModel *model)
 
       flag = CVode (qgint->cvode, lambda_i * 1.001, qgint->y, &lambda_i, CV_ONE_STEP);
       CVODE_CHECK (&flag, "CVode[nc_hicosmo_qg_init_spline]", 1, FALSE);
-      CVodeGetQuad (qgint->cvode, &lambda_iQ, qgint->yQ); 
+      CVodeGetQuad (qgint->cvode, &lambda_iQ, qgint->yQ);
 
       printf ("% 20.15g % 20.15g % 20.15g % 20.15g % 20.15g\n", lambda_i, NV_Ith_S (qgint->y, 0), NV_Ith_S (qgint->y, 1), NV_Ith_S (qgint->yQ, 0), exp(-NV_Ith_S (qgint->y, 0)));
       if (flag == CV_ROOT_RETURN)
@@ -1051,11 +1051,11 @@ nc_hicosmo_qg_init_spline (NcHICosmoQG *qgint, NcmModel *model)
     }
 */
 
-    
-    
+
+
     qgint->lambda_i = nc_hicosmo_qg_lambda_x (model, x_i, NULL);
     g_array_append_val (qgint->lambda,  qgint->lambda_i);
-    
+
     temp = 0.0; g_array_append_val (qgint->eta,  temp);
     temp = 0.0; g_array_append_val (qgint->int_1_zeta2, temp);
     temp = 0.0; g_array_append_val (qgint->cs2zeta2_int_1_zeta2, temp);
@@ -1078,7 +1078,7 @@ nc_hicosmo_qg_init_spline (NcHICosmoQG *qgint, NcmModel *model)
 
 
 
-    
+
     nc_hicosmo_qgint_init (qgint, nc_hicosmo_qg_lambda_x (model, x_i, NULL), g_i, gbar, 0.0, 0.0);
     nc_hicosmo_qgint_set_opts (qgint, &qgscale);
 
@@ -1091,13 +1091,13 @@ nc_hicosmo_qg_init_spline (NcHICosmoQG *qgint, NcmModel *model)
 
       flag = CVode (qgint->cvode, lambda_i * 1.001, qgint->y, &lambda_i, CV_NORMAL);
       CVODE_CHECK (&flag, "CVode[nc_hicosmo_qg_init_spline]", 1, FALSE);
-      CVodeGetQuad (qgint->cvode, &lambda_iQ, qgint->yQ); 
-      CVodeGetDky (qgint->cvode, lambda_i, 1, dstep); 
+      CVodeGetQuad (qgint->cvode, &lambda_iQ, qgint->yQ);
+      CVodeGetDky (qgint->cvode, lambda_i, 1, dstep);
 
       g_array_append_val (qgint->lambda, lambda_i);
       g_array_append_val (qgint->int_1_zeta2, NV_Ith_S (qgint->yQ, 1));
       g_array_append_val (qgint->eta, NV_Ith_S (qgint->yQ, 0));
-    
+
       x = exp(-NV_Ith_S (qgint->y, 0));
       g_array_append_val (qgint->x, x);
       g_array_append_val (qgint->g, NV_Ith_S (qgint->y, 0));
@@ -1114,13 +1114,13 @@ nc_hicosmo_qg_init_spline (NcHICosmoQG *qgint, NcmModel *model)
       g_array_append_val (qgint->cs2zeta2_int_1_zeta2, cs2zeta2_int_1_zeta2);
 
       xdzeta_zeta = x * nc_hicosmo_qg_dzeta_zeta (model, x, NULL);
-      
+
       if (!end_dust && (fabs(xdzeta_zeta+1) > 1e-14 || fabs((cs2-W)/W) > 1e-14))
       {
         qgint->lambda_d = lambda_i;
         end_dust = TRUE;
       }
-      
+
       k_cross = sqrt(V / cs2);
       if (k_cross < 1.0)
         g_array_append_val (qgint->k_cross, k_cross);
@@ -1139,10 +1139,10 @@ nc_hicosmo_qg_init_spline (NcHICosmoQG *qgint, NcmModel *model)
           qgscale.first_order = FALSE;
           nc_hicosmo_qgint_init (qgint, lambda_i, NV_Ith_S (qgint->y, 0), NV_Ith_S (dstep, 0), NV_Ith_S (qgint->yQ, 0), NV_Ith_S (qgint->yQ, 1));
           nc_hicosmo_qgint_set_opts (qgint, &qgscale);
-          
+
           printf ("# [%.15g] g = %.15g, gbar = %.15g | %.15g (%.15f %.15f)\n", lambda_i, NV_Ith_S (qgint->y, 0), NV_Ith_S (qgint->y, 1), sqrt(nc_hicosmo_qg_gbar2 (model, 1.0)), fabs(nc_hicosmo_qg_gbar2 (model, 1.0) - gsl_pow_2 (NV_Ith_S (qgint->y, 1))), (gbar2 - nc_hicosmo_qg_gbar2 (model, 1.0))*1e-12);
         }
-        
+
         if (roots[0] && (NV_Ith_S (qgint->y, 1) > 0.0))
         {
           qgscale.first_order = TRUE;
@@ -1161,7 +1161,7 @@ nc_hicosmo_qg_init_spline (NcHICosmoQG *qgint, NcmModel *model)
           qgint->last_lambda = 2.0 * lambda_i;
           printf ("# [%.15g] g = %.15g, gbar = %.15g | %.15g (%.15f %.15f)\n", lambda_i, NV_Ith_S (qgint->y, 0), NV_Ith_S (qgint->y, 1), sqrt(nc_hicosmo_qg_gbar2 (model, 1.0)), fabs(nc_hicosmo_qg_gbar2 (model, 1.0) - gsl_pow_2 (NV_Ith_S (qgint->y, 1))), (gbar2 - nc_hicosmo_qg_gbar2 (model, 1.0))*1e-12);
         }
-        
+
         if (roots[2])
         {
           if (NV_Ith_S (qgint->y, 1) >= 0)
@@ -1182,7 +1182,7 @@ nc_hicosmo_qg_init_spline (NcHICosmoQG *qgint, NcmModel *model)
     N_VDestroy (dstep);
     qgint->initialized_spline = TRUE;
   }
-  
+
   return TRUE;
 }
 
@@ -1193,20 +1193,20 @@ nc_hicosmo_qg_max_z (NcmModel *model, gdouble *max, gdouble *trans)
   gdouble G_B2;
 
   G_B2 = gsl_pow_2 (G_B);
-  
+
   gsl_poly_solve_cubic (0.0, -G_B2, -OMEGA_M / OMEGA_R * G_B2, &x1, &x2, &x3);
 
   if (x3 == -312.0)
     *max = x1-1.0;
   else
     *max = x3-1.0;
-  
+
   x1 = -123.0;
-  x2 = -132.0; 
+  x2 = -132.0;
   x3 = -312.0;
-  
+
   gsl_poly_solve_cubic (0.0, -G_B2 * 4.0 / 6.0, -OMEGA_M * 3.0 / (6.0 * OMEGA_R) * G_B2, &x1, &x2, &x3);
-  
+
   if (x3 == -312.0)
     *trans = x1-1.0;
   else
@@ -1215,7 +1215,7 @@ nc_hicosmo_qg_max_z (NcmModel *model, gdouble *max, gdouble *trans)
   printf ("# => %g %g\n", *max, *trans);
 
   return;
-} 
+}
 
 gdouble
 nc_hicosmo_qg_get_eta_b (NcmModel *model, gpointer userdata)
@@ -1234,20 +1234,20 @@ nc_hicosmo_qg_mode_EA2 (NcHICosmoQGMode *qgmode, gdouble x)
 
 #define _PERT_SYS_DIM 4
 static gint Rk_step (realtype t, N_Vector y, N_Vector ydot, gpointer f_data);
-static gint Rk_step_J (gint N, realtype t, N_Vector y, N_Vector fy, DlsMat J, gpointer jac_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3);
+static gint Rk_step_J (_NCM_SUNDIALS_INT_TYPE N, realtype t, N_Vector y, N_Vector fy, DlsMat J, gpointer jac_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3);
 static gint Rak_step (realtype t, N_Vector y, N_Vector ydot, gpointer f_data);
-static gint Rak_step_J (gint N, realtype t, N_Vector y, N_Vector fy, DlsMat J, gpointer jac_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3);
+static gint Rak_step_J (_NCM_SUNDIALS_INT_TYPE N, realtype t, N_Vector y, N_Vector fy, DlsMat J, gpointer jac_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3);
 static gint hk_step (realtype lambda, N_Vector y, N_Vector ydot, gpointer f_data);
-static gint hk_step_J (gint N, realtype t, N_Vector y, N_Vector fy, DlsMat J, gpointer jac_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3);
+static gint hk_step_J (_NCM_SUNDIALS_INT_TYPE N, realtype t, N_Vector y, N_Vector fy, DlsMat J, gpointer jac_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3);
 
 /**
  * nc_hicosmo_qg_pert_new: (skip)
  * @model: FIXME
  * @ax_i: FIXME
  * @x_i: FIXME
- * 
+ *
  * FIXME
- * 
+ *
  * Returns: FIXME
  */
 NcHICosmoQGMode *
@@ -1296,7 +1296,7 @@ nc_hicosmo_qg_pert_set_opts (NcHICosmoQGMode *qgmode)
 
   flag = CVodeSStolerances (qgmode->cvode, qgmode->reltol, qgmode->abstol);
   CVODE_CHECK(&flag, "CVodeSStolerances", 1, FALSE);
-  
+
   flag = CVodeSetMaxNumSteps (qgmode->cvode, 1000000);
   CVODE_CHECK(&flag, "CVodeSetMaxNumSteps", 1, FALSE);
 
@@ -1363,7 +1363,7 @@ nc_hicosmo_qg_pert_init (NcHICosmoQGMode *qgmode, gdouble k)
     flag = CVodeReInit (qgmode->cvode, qgmode->t_i, qgmode->y);
     CVODE_CHECK(&flag, "CVodeReInit", 1, FALSE);
   }
-  
+
   nc_hicosmo_qg_pert_set_opts (qgmode);
   return TRUE;
 }
@@ -1381,7 +1381,7 @@ nc_hicosmo_qg_pert_R_to_h (NcHICosmoQGMode *qgmode, gdouble x, gdouble *R)
   tmp[1] = gsl_matrix_get (T, 1, 0) * R[0] + gsl_matrix_get (T, 1, 1) * R[1];
   tmp[2] = gsl_matrix_get (T, 0, 0) * R[2] + gsl_matrix_get (T, 0, 1) * R[3];
   tmp[3] = gsl_matrix_get (T, 1, 0) * R[2] + gsl_matrix_get (T, 1, 1) * R[3];
-  R[0] = tmp[0]; R[1] = tmp[1]; R[2] = tmp[2]; R[3] = tmp[3]; 
+  R[0] = tmp[0]; R[1] = tmp[1]; R[2] = tmp[2]; R[3] = tmp[3];
 }
 
 void
@@ -1397,7 +1397,7 @@ nc_hicosmo_qg_pert_h_to_R (NcHICosmoQGMode *qgmode, gdouble x, gdouble *h)
   tmp[1] = gsl_matrix_get (T, 1, 0) * h[0] + gsl_matrix_get (T, 1, 1) * h[1];
   tmp[2] = gsl_matrix_get (T, 0, 0) * h[2] + gsl_matrix_get (T, 0, 1) * h[3];
   tmp[3] = gsl_matrix_get (T, 1, 0) * h[2] + gsl_matrix_get (T, 1, 1) * h[3];
-  h[0] = tmp[0]; h[1] = tmp[1]; h[2] = tmp[2]; h[3] = tmp[3]; 
+  h[0] = tmp[0]; h[1] = tmp[1]; h[2] = tmp[2]; h[3] = tmp[3];
 }
 
 gboolean
@@ -1412,7 +1412,7 @@ nc_hicosmo_qg_pert_switch (NcHICosmoQGMode *qgmode, NcHICosmoQGPertType type, gd
       qgmode->cvode = qgmode->cvode_R;
       qgmode->f = Rk_step;
       qgmode->jac = Rk_step_J;
-      qgmode->initialized = &qgmode->init_R;        
+      qgmode->initialized = &qgmode->init_R;
       break;
     }
     case NC_HICOSMO_QG_PERT_H:
@@ -1428,7 +1428,7 @@ nc_hicosmo_qg_pert_switch (NcHICosmoQGMode *qgmode, NcHICosmoQGPertType type, gd
       break;
   }
   qgmode->type = type;
-  
+
   qgmode->reltol = 1e-11;
   qgmode->abstol = 1e-240;
   qgmode->t = t;
@@ -1444,7 +1444,7 @@ nc_hicosmo_qg_pert_switch (NcHICosmoQGMode *qgmode, NcHICosmoQGPertType type, gd
     flag = CVodeReInit (qgmode->cvode, qgmode->t, qgmode->y);
     CVODE_CHECK(&flag, "CVodeReInit", 1, FALSE);
   }
-  
+
   nc_hicosmo_qg_pert_set_opts (qgmode);
   return TRUE;
 }
@@ -1474,7 +1474,7 @@ nc_hicosmo_qg_pert_evolve (NcHICosmoQGMode *qgmode)
   {
     flag = CVode (qgmode->cvode, alpha_eq, qgmode->y, &alpha, CV_ONE_STEP);
     CVODE_CHECK(&flag, "CVode[nc_hicosmo_qg_pert_evolve]", 1, FALSE);
-    
+
     if (TRUE)
     {
       if (alpha >= last_alpha + dalpha)
@@ -1495,13 +1495,13 @@ nc_hicosmo_qg_pert_evolve (NcHICosmoQGMode *qgmode)
 
   x = exp (alpha);
   lambda_eq = nc_hicosmo_qg_lambda_x (qgmode->cp, exp (alpha), NULL);
-  
+
   for (i = 0; i < 4; i++)
     tmp[i] = NV_Ith_S(qgmode->y, i);
   nc_hicosmo_qg_pert_h_to_R (qgmode, x, tmp);
   for (i = 0; i < 4; i++)
     NV_Ith_S(qgmode->y, i) = tmp[i];
-  
+
   nc_hicosmo_qg_pert_switch (qgmode, NC_HICOSMO_QG_PERT_CURVATURE, lambda_eq);
 
   flag = CVodeSetStopTime(qgmode->cvode, qgint->last_lambda);
@@ -1542,9 +1542,9 @@ nc_hicosmo_qg_pert_evolve (NcHICosmoQGMode *qgmode)
  * @k: FIXME
  * @x0: FIXME
  * @xf: FIXME
- * 
+ *
  * FIXME
- * 
+ *
  * Returns: FIXME
  */
 NcHICosmoQGMode *
@@ -1578,7 +1578,7 @@ nc_hicosmo_qg_pert_prepare_pw_spline (NcHICosmoQGMode *qgmode, gboolean verbose)
   if (qgmode->pw_spline == NULL)
   {
     GArray *x = g_array_sized_new (FALSE, FALSE, sizeof(gdouble), 100);
-    GArray *y = g_array_sized_new (FALSE, FALSE, sizeof(gdouble), 100);    
+    GArray *y = g_array_sized_new (FALSE, FALSE, sizeof(gdouble), 100);
     g_array_set_size (x, 100);
     g_array_set_size (y, 100);
     qgmode->pw_spline = ncm_spline_gsl_new (gsl_interp_cspline);
@@ -1593,7 +1593,7 @@ nc_hicosmo_qg_pert_prepare_pw_spline (NcHICosmoQGMode *qgmode, gboolean verbose)
   }
   else
     printf ("# Starting mode calculation\n#");
-  
+
   for (i = 0; i < 100; i++)
   {
     qgmode->k = powl (10.0L, -4.0L + 8.0L / 99.0L * i);
@@ -1626,7 +1626,7 @@ nc_hicosmo_qg_pert_powerspectrum (NcHICosmoQGMode *qgmode, gdouble x, gdouble *R
   const gdouble Rbar = hypot (R[1], R[3]);
   const gdouble Rp = Rbar * x;
   const gdouble zeta = nc_hicosmo_qg_zeta (model, x, NULL);
-  
+
   const gdouble gbar = sqrt(nc_hicosmo_qg_gbar2 (model, x));
   const gdouble delta_phi = gsl_pow_3 (x) * gbar * zeta * zeta * Rp / (sqrt (qgmode->k * M_PI) * NC_C_HUBBLE_RADIUS_PLANCK);
 
@@ -1642,10 +1642,10 @@ nc_hicosmo_qg_pert_powerspectrum (NcHICosmoQGMode *qgmode, gdouble x, gdouble *R
     const gdouble theta2 = atan (cs * qgmode->k * zeta * zeta * R[2] / P2);
     const gdouble J1 = zeta * zeta * (x * x * R[1] * R[1] / (qgmode->k * cs) + qgmode->k * cs * R[0] * R[0]) / 2.0;
     const gdouble J2 = zeta * zeta * (x * x * R[3] * R[3] / (qgmode->k * cs) + qgmode->k * cs * R[2] * R[2]) / 2.0;
-    
+
     printf ("% 12.8e % 20.15g %20.15g % 20.15g % 20.15g % 20.15g % 20.15g % 20.15g % 20.15g ", x, J1, J2, theta1, rho1, theta2, rho2, R[0], zeta);
   }
-  
+
   return delta_phi;
 }
 
@@ -1658,7 +1658,7 @@ nc_hicosmo_qg_modefunc_cvode_init (NcHICosmoQGMode *qgmode)
     f = &hk_step;
   else
     f = &Rak_step;
-  
+
   if (!*qgmode->initialized)
   {
     flag = CVodeInit(qgmode->cvode, f, qgmode->alphai, qgmode->y);
@@ -1695,7 +1695,7 @@ nc_hicosmo_qg_modefunc_init (NcHICosmoQGMode *qgmode)
     NV_Ith_S(qgmode->y, 1) *= exp (qgmode->alpha0) / alphap;
     NV_Ith_S(qgmode->y, 3) *= exp (qgmode->alpha0) / alphap;
   }
-  
+
   printf ("# % .15g % .15Lg [% .15e % .15e % .15e % .15e] % .15g\n", exp (qgmode->alpha0), qgmode->k, NV_Ith_S(qgmode->y, 0), NV_Ith_S(qgmode->y, 1), NV_Ith_S(qgmode->y, 2), NV_Ith_S(qgmode->y, 3), hypot (NV_Ith_S(qgmode->y, 0), NV_Ith_S(qgmode->y, 2)) / exp (qgmode->alpha0));
   {
     gdouble alpha = -sqrt(-2.0 * (qgmode->alpha0 + G_B));
@@ -1709,7 +1709,7 @@ nc_hicosmo_qg_modefunc_init (NcHICosmoQGMode *qgmode)
     for (i = 0; i < 4; i++)
       NV_Ith_S(qgmode->y, i) = R[i];
   }
-  
+
   qgmode->reltol = 1e-13;
   qgmode->abstol = 0.0;
 
@@ -1723,10 +1723,10 @@ nc_hicosmo_qg_modefunc_set_opts (NcHICosmoQGMode *qgmode)
 
   flag = CVodeSStolerances (qgmode->cvode, qgmode->reltol, qgmode->abstol);
   CVODE_CHECK(&flag, "CVodeSStolerances", 1, FALSE);
-  
+
   flag = CVodeSetMaxNumSteps(qgmode->cvode, 10000000);
   CVODE_CHECK(&flag, "CVodeSetMaxNumSteps", 1, FALSE);
-  
+
   flag = CVodeSetUserData (qgmode->cvode, qgmode);
   CVODE_CHECK(&flag, "CVodeSetUserData", 1, FALSE);
 
@@ -1749,16 +1749,16 @@ nc_hicosmo_qg_modefunc_set_opts (NcHICosmoQGMode *qgmode)
 
 //  flag = CVodeSetStabLimDet(qgmode->cvode, TRUE);
 //  CVODE_CHECK(&flag, "CVodeSetStabLimDet", 1, FALSE);
-  
-//  flag = CVodeSetMaxStep(qgmode->cvode, 10.0); 
-//  CVODE_CHECK(&flag, "CVodeSetMaxStep", 1, FALSE);        
-  
+
+//  flag = CVodeSetMaxStep(qgmode->cvode, 10.0);
+//  CVODE_CHECK(&flag, "CVodeSetMaxStep", 1, FALSE);
+
 //  flag = CVodeRootInit (qgmode->cvode, 2, scale_factor_root, params);
-//  CVODE_CHECK(&flag, "CVodeRootInit", 1, FALSE);        
-  
+//  CVODE_CHECK(&flag, "CVodeRootInit", 1, FALSE);
+
 //  flag = CVodeSetStopTime(qgmode->cvode, qgmode->tf);
 //  CVODE_CHECK(&flag, "CVodeSetStopTime", 1, FALSE);
-  
+
   return TRUE;
 }
 
@@ -1785,14 +1785,14 @@ nc_hicosmo_qg_modefunc_evolve (NcHICosmoQGMode *qgmode)
   NcmMIOde *mi_ode;
   gdouble tmp[4];
   gint flag, i;
-  
+
   if (FALSE)
   {
     F.func = &mi_step_f;
     F.params = qgmode;
     mi_ode = ncm_magnus_iserles_ode_new (qgmode->alpha0, &F); /* FIXME LEAK!!! */
 
-    do 
+    do
     {
       ncm_magnus_iserles_ode_step (mi_ode, 1e-5L);
       if (TRUE || (mi_ode->xi < 0 ? (mi_ode->xi > (last_x * 0.999)) : ((mi_ode->xi > (last_x * 1.001)))))
@@ -1840,9 +1840,8 @@ nc_hicosmo_qg_modefunc_evolve (NcHICosmoQGMode *qgmode)
   printf ("# Ode solver changed at %.15g.\n", exp(qgmode->alphai));
   while (1)
   {
-    gint flag;
     gdouble x_i;
-    
+
     flag = CVode (qgmode->cvode, qgmode->alphaf, qgmode->y, &x_i, CV_ONE_STEP);
     CVODE_CHECK(&flag, "CVode[nc_hicosmo_qg_modefunc_evolve]", 1, FALSE);
 
@@ -1872,14 +1871,14 @@ nc_hicosmo_qg_modefunc_evolve (NcHICosmoQGMode *qgmode)
           NV_Ith_S (qgmode->y, 3) *= alphap / hx;
         }
         nc_hicosmo_qg_R_dust_sol (qgmode, exp (-x_i * x_i / 2.0 - G_B), R);
-        
-        printf ("% .6e % .6e % .15e % .6e % .6e % .6e % .6e % .6e %.15e %.15e %.15e %.15Le\n", 
+
+        printf ("% .6e % .6e % .15e % .6e % .6e % .6e % .6e % .6e %.15e %.15e %.15e %.15Le\n",
                 exp (-x_i * x_i / 2.0 - G_B), x_i, RFo,
-                R[0], -x_i * exp (-x_i * x_i / 2.0 - G_B) * R[1], NV_Ith_S (qgmode->y, 0), NV_Ith_S (qgmode->y, 1), 
+                R[0], -x_i * exp (-x_i * x_i / 2.0 - G_B) * R[1], NV_Ith_S (qgmode->y, 0), NV_Ith_S (qgmode->y, 1),
                 NV_Ith_S (qgmode->y, 2), NV_Ith_S (qgmode->y, 3), hypot (NV_Ith_S (qgmode->y, 0), NV_Ith_S (qgmode->y, 2)) * sqrt_x_F,
                 nc_hicosmo_qg_pert_powerspectrum (qgmode, exp (-x_i * x_i / 2.0 - G_B), N_VGetArrayPointer (qgmode->y)),
                 qgmode->k);
-                
+
       }
     }
 
@@ -1888,15 +1887,15 @@ nc_hicosmo_qg_modefunc_evolve (NcHICosmoQGMode *qgmode)
       qgmode->alphai = x_i;
       break;
     }
-    
+
     if (FALSE)
     {
       glong nsteps, nfevals, 	nlinsetups, netfails;
       gint qlast, qcur;
  		 	gdouble hinused, hlast, hcur, tcur;
 
-      CVodeGetIntegratorStats (qgmode->cvode, &nsteps, &nfevals, 	 
- 		 	&nlinsetups, &netfails, &qlast, &qcur, 	 
+      CVodeGetIntegratorStats (qgmode->cvode, &nsteps, &nfevals,
+ 		 	&nlinsetups, &netfails, &qlast, &qcur,
  		 	&hinused, &hlast, &hcur, &tcur);
 
       printf ("# %ld %ld %ld %ld - %d %d - %.15e %.15e %.15e %.15e\n", nsteps, nfevals, 	nlinsetups, netfails, qlast, qcur, hinused, hlast, hcur, tcur);
@@ -1919,11 +1918,11 @@ nc_hicosmo_qg_modefunc_evolve (NcHICosmoQGMode *qgmode)
       NV_Ith_S (qgmode->y, 1) *= alphap / hx;
       NV_Ith_S (qgmode->y, 3) *= alphap / hx;
     }
-    
+
     printf ("%Lg %g %g %g %g %g %g %Lg %.15g\n", qgmode->k,
-      NV_Ith_S (qgmode->y, 0), NV_Ith_S (qgmode->y, 1), 
-      NV_Ith_S (qgmode->y, 2), NV_Ith_S (qgmode->y, 3), 
-      hypot (NV_Ith_S (qgmode->y, 0), NV_Ith_S (qgmode->y, 2)), 
+      NV_Ith_S (qgmode->y, 0), NV_Ith_S (qgmode->y, 1),
+      NV_Ith_S (qgmode->y, 2), NV_Ith_S (qgmode->y, 3),
+      hypot (NV_Ith_S (qgmode->y, 0), NV_Ith_S (qgmode->y, 2)),
       hypot (NV_Ith_S (qgmode->y, 1), NV_Ith_S (qgmode->y, 3)),
       hypotl (h[0], h[2]),
       nc_hicosmo_qg_pert_powerspectrum (qgmode, qgmode->alphaf, N_VGetArrayPointer (qgmode->y))
@@ -1932,7 +1931,7 @@ nc_hicosmo_qg_modefunc_evolve (NcHICosmoQGMode *qgmode)
   return TRUE;
 }
 
-static gint 
+static gint
 hk_step (realtype alpha, N_Vector y, N_Vector ydot, gpointer f_data)
 {
   gdouble x = exp (alpha);
@@ -1943,20 +1942,20 @@ hk_step (realtype alpha, N_Vector y, N_Vector ydot, gpointer f_data)
   gdouble k2 = gsl_pow_2 (qgmode->k);
 
   nc_hicosmo_qg_evolfunc (model, x, &x2d2sqrtxxbarzeta_sqrtxxbarzeta, &x2cs2_xxbar2);
-  
+
   NV_Ith_S(ydot, 0) = NV_Ith_S(y, 1);
   NV_Ith_S(ydot, 1) = (x2d2sqrtxxbarzeta_sqrtxxbarzeta + 1.0 / 4.0 - k2 * x2cs2_xxbar2) * NV_Ith_S(y, 0);
-  
+
   NV_Ith_S(ydot, 2) = NV_Ith_S(y, 3);
   NV_Ith_S(ydot, 3) = (x2d2sqrtxxbarzeta_sqrtxxbarzeta + 1.0 / 4.0 - k2 * x2cs2_xxbar2) * NV_Ith_S(y, 2);
-  
+
 //  fprintf (stdout, "y [%.15e] %.15e %.15e %.15e %.15e\n", x, NV_Ith_S(y, 0), NV_Ith_S(y, 1), NV_Ith_S(y, 2), NV_Ith_S(y, 3));
 //  fprintf (stdout, "dy[%.15e] %.15e %.15e %.15e %.15e\n", x, NV_Ith_S(ydot, 0), NV_Ith_S(ydot, 1), NV_Ith_S(ydot, 2), NV_Ith_S(ydot, 3));
   return 0;
 }
 
-static gint 
-hk_step_J (gint N, realtype alpha, N_Vector y, N_Vector fy, DlsMat J, gpointer jac_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3)
+static gint
+hk_step_J (_NCM_SUNDIALS_INT_TYPE N, realtype alpha, N_Vector y, N_Vector fy, DlsMat J, gpointer jac_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3)
 {
   gdouble x = exp (alpha);
   NcHICosmoQGMode *qgmode = (NcHICosmoQGMode *)jac_data;
@@ -1990,7 +1989,7 @@ hk_step_J (gint N, realtype alpha, N_Vector y, N_Vector fy, DlsMat J, gpointer j
   return 0;
 }
 
-static gint 
+static gint
 Rk_step (realtype lambda, N_Vector y, N_Vector ydot, gpointer f_data)
 {
   NcHICosmoQGMode *qgmode = (NcHICosmoQGMode *)f_data;
@@ -2012,12 +2011,12 @@ Rk_step (realtype lambda, N_Vector y, N_Vector ydot, gpointer f_data)
 
 //  fprintf (stdout, "y [%.15e] %.15e %.15e %.15e %.15e\n", x, NV_Ith_S(y, 0), NV_Ith_S(y, 1), NV_Ith_S(y, 2), NV_Ith_S(y, 3));
 //  fprintf (stdout, "dy[%.15e] %.15e %.15e %.15e %.15e\n", x, NV_Ith_S(ydot, 0), NV_Ith_S(ydot, 1), NV_Ith_S(ydot, 2), NV_Ith_S(ydot, 3));
- 
+
   return 0;
 }
 
-static gint 
-Rk_step_J (gint N, realtype lambda, N_Vector y, N_Vector fy, DlsMat J, gpointer jac_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3)
+static gint
+Rk_step_J (_NCM_SUNDIALS_INT_TYPE N, realtype lambda, N_Vector y, N_Vector fy, DlsMat J, gpointer jac_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3)
 {
   NcHICosmoQGMode *qgmode = (NcHICosmoQGMode *)jac_data;
   gdouble x = nc_hicosmo_qg_x_lambda (qgmode->model, lambda, FALSE);
@@ -2053,7 +2052,7 @@ Rk_step_J (gint N, realtype lambda, N_Vector y, N_Vector fy, DlsMat J, gpointer 
   return 0;
 }
 
-static gint 
+static gint
 Rak_step (realtype alpha, N_Vector y, N_Vector ydot, gpointer f_data)
 {
   NcHICosmoQGMode *qgmode = (NcHICosmoQGMode *)f_data;
@@ -2063,24 +2062,24 @@ Rak_step (realtype alpha, N_Vector y, N_Vector ydot, gpointer f_data)
   gdouble alphap2 = nc_hicosmo_qg_alphaprime2 (model, alpha, NULL);
   gdouble dzeta2_zeta2 = 2.0 * nc_hicosmo_qg_dzeta_zeta (model, x, NULL);
   gdouble cs2 = nc_hicosmo_qg_cs2 (model, x, NULL);
-  gdouble k2 = qgmode->k * qgmode->k;  
-  
+  gdouble k2 = qgmode->k * qgmode->k;
+
   NV_Ith_S(ydot, 0) = NV_Ith_S(y, 1);
-  NV_Ith_S(ydot, 1) = 
+  NV_Ith_S(ydot, 1) =
     (alpha * x * dzeta2_zeta2 - dalphap2_dalpha / (2.0 * alphap2)) * NV_Ith_S(y, 1) +
-    -cs2 * k2 / alphap2 * NV_Ith_S(y, 0);  
+    -cs2 * k2 / alphap2 * NV_Ith_S(y, 0);
   NV_Ith_S(ydot, 2) = NV_Ith_S(y, 3);
-  NV_Ith_S(ydot, 3) = 
+  NV_Ith_S(ydot, 3) =
     (alpha * x * dzeta2_zeta2 - dalphap2_dalpha / (2.0 * alphap2)) * NV_Ith_S(y, 3) +
     -cs2 * k2 / alphap2 * NV_Ith_S(y, 2);
-  
+
 //  fprintf (stdout, "y [%.15e] %.15e %.15e %.15e %.15e\n", x, NV_Ith_S(y, 0), NV_Ith_S(y, 1), NV_Ith_S(y, 2), NV_Ith_S(y, 3));
 //  fprintf (stdout, "dy[%.15e] %.15e %.15e %.15e %.15e\n", x, NV_Ith_S(ydot, 0), NV_Ith_S(ydot, 1), NV_Ith_S(ydot, 2), NV_Ith_S(ydot, 3));
   return 0;
 }
 
-static gint 
-Rak_step_J (gint N, realtype alpha, N_Vector y, N_Vector fy, DlsMat J, gpointer jac_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3)
+static gint
+Rak_step_J (_NCM_SUNDIALS_INT_TYPE N, realtype alpha, N_Vector y, N_Vector fy, DlsMat J, gpointer jac_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3)
 {
   NcHICosmoQGMode *qgmode = (NcHICosmoQGMode *)jac_data;
   NcmModel *model = qgmode->model;
@@ -2089,7 +2088,7 @@ Rak_step_J (gint N, realtype alpha, N_Vector y, N_Vector fy, DlsMat J, gpointer 
   gdouble alphap2 = nc_hicosmo_qg_alphaprime2 (model, alpha, NULL);
   gdouble dzeta2_zeta2 = 2.0 * nc_hicosmo_qg_dzeta_zeta (model, x, NULL);
   gdouble cs2 = nc_hicosmo_qg_cs2 (model, x, NULL);
-  gdouble k2 = qgmode->k * qgmode->k;  
+  gdouble k2 = qgmode->k * qgmode->k;
 
   DENSE_ELEM (J, 0, 0) = 0.0;
   DENSE_ELEM (J, 0, 1) = 1.0;
