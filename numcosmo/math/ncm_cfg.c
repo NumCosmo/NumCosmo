@@ -142,6 +142,7 @@ ncm_cfg_init (void)
 
   ncm_cfg_register_model (NC_TYPE_CLUSTER_MASS);
   ncm_cfg_register_model (NC_TYPE_CLUSTER_MASS_NODIST);
+  ncm_cfg_register_model (NC_TYPE_CLUSTER_MASS_LNNORMAL);
 
   ncm_cfg_register_model (NC_TYPE_CLUSTER_REDSHIFT);
   ncm_cfg_register_model (NC_TYPE_CLUSTER_REDSHIFT_NODIST);
