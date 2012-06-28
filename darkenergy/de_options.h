@@ -40,7 +40,7 @@ struct _NcDEModelEntries
   gdouble n_s;
   gdouble sigma_8;
   gdouble w[3];
-  gboolean plane;
+  gboolean flat;
   gboolean Omega_k;
   gboolean help_names;
 };

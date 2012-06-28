@@ -154,7 +154,7 @@ main (gint argc, gchar *argv[])
 	  g_error ("No parameter was set free");
   }
 
-  if (de_model.plane)
+  if (de_model.flat)
   {
 	nc_hicosmo_de_omega_x2omega_k (model);
 	ncm_model_param_set (NCM_MODEL (model), NC_HICOSMO_DE_OMEGA_X, 0.0);
