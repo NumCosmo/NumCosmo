@@ -140,6 +140,8 @@ _nc_multiplicity_func_tinker_crit_eval (NcMultiplicityFunc *mulf, NcHICosmo *mod
   gint i;
   gdouble A0 = 0.0, a0 = 0.0, b0 = 0.0, c = 0.0;
 
+  g_assert (Delta_z <= 3200.0);
+  
   for (i = 0; i < 8; i++)
   {
 	if (log10_Delta_z >= coef_A[i][1])
@@ -153,7 +155,7 @@ _nc_multiplicity_func_tinker_crit_eval (NcMultiplicityFunc *mulf, NcHICosmo *mod
 	  break;
 	}
   }
-
+  
   {
 	const gdouble A = A0 * pow(1.0 + z, -0.14);
 	const gdouble a = a0 * pow(1.0 + z, -0.06);
@@ -162,7 +164,7 @@ _nc_multiplicity_func_tinker_crit_eval (NcMultiplicityFunc *mulf, NcHICosmo *mod
 	const gdouble b = b0 * pow(1.0 + z, -alpha);
 	const gdouble f_Tinker_Delta_spline = A * (pow(sigma / b, -a) + 1.0) * exp(-c / (sigma * sigma));
 
-	//printf ("NEW % 5.5g % 5.5g % 20.15g % 20.15g % 20.15g % 20.15g\n", z, mulf_tinker_crit->Delta, Delta_z, E2, Omega_m, gsl_pow_3 (1.0 + z));
+	//printf ("NEW % 5.5g % 5.5g % 20.15g % 20.15g % 20.15g % 20.15g % 20.15g % 20.15g % 20.15g % 20.15g\n", z, Delta_z, sigma, A, a, b, c, f_Tinker_Delta_spline, Omega_m, E2);
 
 	return f_Tinker_Delta_spline;
   }

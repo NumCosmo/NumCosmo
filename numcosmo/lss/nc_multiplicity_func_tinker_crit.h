@@ -40,8 +40,6 @@ G_BEGIN_DECLS
 typedef struct _NcMultiplicityFuncTinkerCritClass NcMultiplicityFuncTinkerCritClass;
 typedef struct _NcMultiplicityFuncTinkerCrit NcMultiplicityFuncTinkerCrit;
 
-
-
 struct _NcMultiplicityFuncTinkerCritClass
 {
   /*< private >*/

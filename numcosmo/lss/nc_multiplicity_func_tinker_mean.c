@@ -142,9 +142,11 @@ _nc_multiplicity_func_tinker_mean_eval (NcMultiplicityFunc *mulf, NcHICosmo *mod
   gint i;
   gdouble A0 = 0.0, a0 = 0.0, b0 = 0.0, c = 0.0;
 
+  g_assert (Delta <= 3200.0);
+
   for (i = 0; i < 8; i++)
   {
-	if (log10_Delta >= coef_A[i][1])
+	if (log10_Delta >= coef_A[i][1] && i != 7)
 	  continue;
 	else 
 	{
@@ -155,7 +157,7 @@ _nc_multiplicity_func_tinker_mean_eval (NcMultiplicityFunc *mulf, NcHICosmo *mod
 	  break;
 	}
   }
-
+  
   {
 	const gdouble A = A0 * pow(1.0 + z, -0.14);
 	const gdouble a = a0 * pow(1.0 + z, -0.06);

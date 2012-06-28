@@ -287,7 +287,7 @@ nc_mass_function (NcMassFunction *mfp, NcHICosmo *model, gdouble lnM, gdouble z)
   //gdouble sigma = sqrt(var0) * growth;
   gdouble f = nc_multiplicity_func_eval (mfp->mulf, model, sigma, z);
   gdouble dn_dlnM = -(1.0 / (3.0 * M_rho)) * f * 0.5 * dlnvar0_dlnR;	/* dn/dlnM = - (\rho/3M) * f * (R/\sigma)* dsigma_dR */
-  //printf ("multip % .5g\n", f);
+  //printf ("multip % 20.15g % 20.15g % 20.15g\n", -(1.0 / (3.0 * M_rho)), f, 0.5 * dlnvar0_dlnR);
 
   return dn_dlnM;
 }
@@ -741,5 +741,5 @@ _nc_mass_function_generate_2Dspline_knots (NcMassFunction * mfp, NcHICosmo * mod
 
   mfp->d2NdzdlnM = ncm_spline2d_bicubic_notaknot_new ();
   ncm_spline2d_set_function (mfp->d2NdzdlnM,
-                             NCM_SPLINE_FUNCTION_SPLINE, &Fx, &Fy, mfp->lnMi, mfp->lnMf, mfp->zi, mfp->zf, 1e-5);
+                             NCM_SPLINE_FUNCTION_SPLINE, &Fx, &Fy, mfp->lnMi, mfp->lnMf, mfp->zi, mfp->zf, rel_error);
 }
