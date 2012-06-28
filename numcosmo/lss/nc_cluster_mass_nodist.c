@@ -62,9 +62,9 @@ _nc_cluster_mass_nodist_intp (NcClusterMass *clusterm, gdouble lnM, gdouble z)
 static gboolean
 _nc_cluster_mass_nodist_resample (NcClusterMass *clusterm, gdouble lnM, gdouble z, gdouble *lnM_obs, gdouble *lnM_obs_params)
 {
-  NcClusterMassNodist *zn = NC_CLUSTER_MASS_NODIST (clusterm);
+  NcClusterMassNodist *mnodist = NC_CLUSTER_MASS_NODIST (clusterm);
   lnM_obs[0] = lnM;
-  return (lnM_obs[0] <= zn->lnM_max) && (lnM_obs[0] >= zn->lnM_min);
+  return (lnM_obs[0] <= mnodist->lnM_max) && (lnM_obs[0] >= mnodist->lnM_min);
 }
 
 static void
@@ -91,16 +91,16 @@ guint _nc_cluster_mass_nodist_obs_params_len (NcClusterMass *clusterm) { return 
 static void
 _nc_cluster_mass_nodist_set_property (GObject * object, guint prop_id, const GValue * value, GParamSpec * pspec)
 {
-  NcClusterMassNodist *zn = NC_CLUSTER_MASS_NODIST (object);
+  NcClusterMassNodist *mnodist = NC_CLUSTER_MASS_NODIST (object);
   g_return_if_fail (NC_IS_CLUSTER_MASS_NODIST (object));
 
   switch (prop_id)
   {
     case PROP_LNM_MIN:
-      zn->lnM_min = g_value_get_double (value);
+      mnodist->lnM_min = g_value_get_double (value);
       break;
 	case PROP_LNM_MAX:
-      zn->lnM_max = g_value_get_double (value);
+      mnodist->lnM_max = g_value_get_double (value);
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -111,16 +111,16 @@ _nc_cluster_mass_nodist_set_property (GObject * object, guint prop_id, const GVa
 static void
 _nc_cluster_mass_nodist_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
 {
-  NcClusterMassNodist *zn = NC_CLUSTER_MASS_NODIST (object);
+  NcClusterMassNodist *mnodist = NC_CLUSTER_MASS_NODIST (object);
   g_return_if_fail (NC_IS_CLUSTER_MASS_NODIST (object));
 
   switch (prop_id)
   {
     case PROP_LNM_MIN:
-      g_value_set_double (value, zn->lnM_min);
+      g_value_set_double (value, mnodist->lnM_min);
       break;
 	case PROP_LNM_MAX:
-      g_value_set_double (value, zn->lnM_max);
+      g_value_set_double (value, mnodist->lnM_max);
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);

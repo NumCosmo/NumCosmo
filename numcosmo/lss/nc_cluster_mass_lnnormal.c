@@ -38,6 +38,16 @@
 
 G_DEFINE_TYPE (NcClusterMassLnnormal, nc_cluster_mass_lnnormal, NC_TYPE_CLUSTER_MASS);
 
+#define _NC_CLUSTER_MASS_LNNORMAL_BIAS 0.0
+#define _NC_CLUSTER_MASS_LNNORMAL_SIGMA 0.04
+
+enum
+{
+  PROP_0,
+  PROP_LNMOBS_MIN,
+  PROP_LNMOBS_MAX,
+};
+
 static gdouble
 _nc_cluster_mass_lnnormal_p (NcClusterMass *clusterm, gdouble lnM, gdouble z, gdouble *lnM_obs, gdouble *lnM_obs_params)
 {
@@ -54,7 +64,7 @@ static gdouble
 _nc_cluster_mass_lnnormal_intp (NcClusterMass *clusterm, gdouble lnM, gdouble z)
 {
   NcClusterMassLnnormal *mlnn = NC_CLUSTER_MASS_LNNORMAL (clusterm);
-  const gdouble sigma = 0.4;
+  const gdouble sigma = _NC_CLUSTER_MASS_LNNORMAL_SIGMA;
   const gdouble sqrt2_sigma = M_SQRT2 * sigma;
   const gdouble x_min = (lnM - mlnn->lnMobs_min) / sqrt2_sigma;
   const gdouble x_max = (lnM - mlnn->lnMobs_max) / sqrt2_sigma;
@@ -70,8 +80,8 @@ _nc_cluster_mass_lnnormal_resample (NcClusterMass *clusterm, gdouble lnM, gdoubl
 {
   NcClusterMassLnnormal *mlnn = NC_CLUSTER_MASS_LNNORMAL (clusterm);
   gsl_rng *rng = ncm_get_rng ();
-  const gdouble sigma = 0.4;
-  const gdouble bias = 0.0;
+  const gdouble sigma = _NC_CLUSTER_MASS_LNNORMAL_SIGMA;
+  const gdouble bias = _NC_CLUSTER_MASS_LNNORMAL_BIAS;
 
   lnM_obs_params[NC_CLUSTER_MASS_LNNORMAL_BIAS] = bias;
   lnM_obs_params[NC_CLUSTER_MASS_LNNORMAL_SIGMA] = sigma;
@@ -98,8 +108,8 @@ static void
 _nc_cluster_mass_lnnormal_n_limits (NcClusterMass *clusterm, gdouble *lnM_lower, gdouble *lnM_upper)
 {
   NcClusterMassLnnormal *mlnn = NC_CLUSTER_MASS_LNNORMAL (clusterm);
-  const gdouble lnMl = mlnn->lnMobs_min - 7.0 * 0.4;
-  const gdouble lnMu = mlnn->lnMobs_max + 7.0 * 0.4;
+  const gdouble lnMl = mlnn->lnMobs_min - 7.0 * _NC_CLUSTER_MASS_LNNORMAL_SIGMA;
+  const gdouble lnMu = mlnn->lnMobs_max + 7.0 * _NC_CLUSTER_MASS_LNNORMAL_SIGMA;
 
   *lnM_lower = lnMl;
   *lnM_upper = lnMu;
@@ -111,8 +121,50 @@ guint _nc_cluster_mass_lnnormal_obs_len (NcClusterMass *clusterm) { return 1; }
 guint _nc_cluster_mass_lnnormal_obs_params_len (NcClusterMass *clusterm) { return 2; }
 
 static void
-nc_cluster_mass_lnnormal_init (NcClusterMassLnnormal *nc_cluster_mass_lnnormal)
+_nc_cluster_mass_lnnormal_set_property (GObject * object, guint prop_id, const GValue * value, GParamSpec * pspec)
 {
+  NcClusterMassLnnormal *mlnm = NC_CLUSTER_MASS_LNNORMAL (object);
+  g_return_if_fail (NC_IS_CLUSTER_MASS_LNNORMAL (object));
+
+  switch (prop_id)
+  {
+    case PROP_LNMOBS_MIN:
+      mlnm->lnMobs_min = g_value_get_double (value);
+      break;
+	case PROP_LNMOBS_MAX:
+      mlnm->lnMobs_max = g_value_get_double (value);
+      break;
+    default:
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
+      break;
+  }
+}
+
+static void
+_nc_cluster_mass_lnnormal_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
+{
+  NcClusterMassLnnormal *mlnm = NC_CLUSTER_MASS_LNNORMAL (object);
+  g_return_if_fail (NC_IS_CLUSTER_MASS_LNNORMAL (object));
+
+  switch (prop_id)
+  {
+    case PROP_LNMOBS_MIN:
+      g_value_set_double (value, mlnm->lnMobs_min);
+      break;
+	case PROP_LNMOBS_MAX:
+      g_value_set_double (value, mlnm->lnMobs_max);
+      break;
+    default:
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
+      break;
+  }
+}
+
+static void
+nc_cluster_mass_lnnormal_init (NcClusterMassLnnormal *mlnm)
+{
+  mlnm->lnMobs_min = 0.0;
+  mlnm->lnMobs_max = 0.0;
 }
 
 static void
@@ -139,7 +191,35 @@ nc_cluster_mass_lnnormal_class_init (NcClusterMassLnnormalClass *klass)
 
   parent_class->impl = NC_CLUSTER_MASS_IMPL_ALL;
 
+  object_class->finalize     =  &nc_cluster_mass_lnnormal_finalize;
+  object_class->set_property = &_nc_cluster_mass_lnnormal_set_property;
+  object_class->get_property = &_nc_cluster_mass_lnnormal_get_property;
 
-  object_class->finalize = nc_cluster_mass_lnnormal_finalize;
+  /**
+   * NcClusterMassLnnormal:lnMobs_min:
+   *
+   * FIXME Set correct values (limits)
+   */
+  g_object_class_install_property (object_class,
+                                   PROP_LNMOBS_MIN,
+                                   g_param_spec_double ("lnMobs-min",
+                                                        NULL,
+                                                        "Minimum LnMobs",
+                                                        11.0 * M_LN10, G_MAXDOUBLE, log (5.0) + 13.0 * M_LN10,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY |G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
+  /**
+   * NcClusterMassLnnormal:lnMobs_max:
+   *
+   * FIXME Set correct values (limits)
+   */
+  g_object_class_install_property (object_class,
+                                   PROP_LNMOBS_MAX,
+                                   g_param_spec_double ("lnMobs-max",
+                                                        NULL,
+                                                        "Maximum LnMobs",
+                                                        11.0 * M_LN10, G_MAXDOUBLE, 16.0 * M_LN10,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY |G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
 }
 
