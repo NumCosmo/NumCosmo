@@ -51,9 +51,9 @@ nc_de_opt_get_model_group (NcDEModelEntries *de_model)
 	{ "omega_0",  'w', 0, G_OPTION_ARG_DOUBLE, &de_model->w[0],       "Equation of state parameter w0",                              "w0" },
 	{ "omega_1",    0, 0, G_OPTION_ARG_DOUBLE, &de_model->w[1],       "Equation of state parameter w1",                              "w1" },
 	{ "omega_2",    0, 0, G_OPTION_ARG_DOUBLE, &de_model->w[2],       "Equation of state parameter w2",                              "w2" },
-	{ "Omega_k",    0, 0, G_OPTION_ARG_NONE,   &de_model->Omega_k,    "Change variable Omega_x -> Omega_k.",                         NULL },    
-	{ "plane",      0, 0, G_OPTION_ARG_NONE,   &de_model->plane,      "Change variable Omega_x -> Omega_k and set Omega_k to zero.", NULL },    
-	{ "help-names", 0, 0, G_OPTION_ARG_NONE,   &de_model->help_names, "Print the parameters names of the chosen model", NULL },    
+	{ "Omega_k",    0, 0, G_OPTION_ARG_NONE,   &de_model->Omega_k,    "Change variable Omega_x -> Omega_k.",                         NULL },
+	{ "flat",       0, 0, G_OPTION_ARG_NONE,   &de_model->flat,       "Change variable Omega_x -> Omega_k and set Omega_k to zero.", NULL },
+	{ "help-names", 0, 0, G_OPTION_ARG_NONE,   &de_model->help_names, "Print the parameters names of the chosen model", NULL },
 	{ NULL }
   };
   GOptionGroup *model_group = g_option_group_new ("model", " - Dark energy model options", "Show help options related to dark energy model", NULL, NULL);
@@ -101,15 +101,15 @@ nc_de_opt_get_data_cluster_group (NcDEDataClusterEntries *de_data_cluster)
 	{ "Mi",            0, 0, G_OPTION_ARG_DOUBLE,         &de_data_cluster->Mi,                    "Ncuster mass minimum", "M_min" },
 	{ "Mf",            0, 0, G_OPTION_ARG_DOUBLE,         &de_data_cluster->Mf,                    "Ncuster mass maximum", "M_max" },
 	{ "area",          0, 0, G_OPTION_ARG_DOUBLE,         &de_data_cluster->area_survey,           "User must provide the area in square degree. The conversion to steradian is done internally.", NULL },
-	{ "z_initial",     0, 0, G_OPTION_ARG_DOUBLE,         &de_data_cluster->z_initial,             "Initial redshift", NULL },   
+	{ "z_initial",     0, 0, G_OPTION_ARG_DOUBLE,         &de_data_cluster->z_initial,             "Initial redshift", NULL },
 	{ "z_final",       0, 0, G_OPTION_ARG_DOUBLE,         &de_data_cluster->z_final,               "Final redshift", NULL },
 	{ "photoz_sigma0", 0, 0, G_OPTION_ARG_DOUBLE,         &de_data_cluster->photoz_sigma0,         "Standard deviation of photometric redshift sigma = sigma0 (1 + z).", NULL },
 	{ "photoz_bias",   0, 0, G_OPTION_ARG_DOUBLE,         &de_data_cluster->photoz_bias,           "Bias of the photometric redshift relation.", NULL },
 	{ "lnM_sigma0",    0, 0, G_OPTION_ARG_DOUBLE,         &de_data_cluster->lnM_sigma0,            "Standard deviation of mass observable relation sigma0.", NULL },
 	{ "lnM_bias",      0, 0, G_OPTION_ARG_DOUBLE,         &de_data_cluster->lnM_bias,              "Bias of the mass-observable relation.", NULL },
-	{ "n_bins",        0, 0, G_OPTION_ARG_INT,            &de_data_cluster->n_bins,                "Number of bins", NULL },  
+	{ "n_bins",        0, 0, G_OPTION_ARG_INT,            &de_data_cluster->n_bins,                "Number of bins", NULL },
 	{ "catalog",       0, 0, G_OPTION_ARG_FILENAME_ARRAY, &de_data_cluster->cata_file,             "Use the folowing catalog as the observational data. It can be used multiple times.", "catalog.dat"},
-	{ "save-cat",      0, 0, G_OPTION_ARG_FILENAME,       &de_data_cluster->save_cata,             "Use this option to save the catalog used. (will overwrite)", NULL },		
+	{ "save-cat",      0, 0, G_OPTION_ARG_FILENAME,       &de_data_cluster->save_cata,             "Use this option to save the catalog used. (will overwrite)", NULL },
 	{ "print_mf",      0, 0, G_OPTION_ARG_NONE,           &de_data_cluster->print_mass_function,   "Create a file and print the mass function from the used FITS catalog and the theoretical one.", NULL },
 	{ NULL }
   };
@@ -118,7 +118,7 @@ nc_de_opt_get_data_cluster_group (NcDEDataClusterEntries *de_data_cluster)
   return data_cluster_group;
 }
 
-static gboolean 
+static gboolean
 _nc_de_print_fit_list (const gchar *option_name, const gchar *value, gpointer data, GError **error)
 {
   printf ("<FIXME> PRINT HERE ALL ALGORITHMS\n");
@@ -128,7 +128,7 @@ _nc_de_print_fit_list (const gchar *option_name, const gchar *value, gpointer da
 GOptionGroup *
 nc_de_opt_get_fit_group (NcDEFitEntries *de_fit)
 {
-  GOptionEntry fit_entries[] = 
+  GOptionEntry fit_entries[] =
   {
 	{ "out",            0, 0, G_OPTION_ARG_FILENAME,     &de_fit->file_out,      "Output filename.", "output.dat" },
 	{ "minalgo",        0, 0, G_OPTION_ARG_INT,          &de_fit->min_algo,      "Minimization algorithim to be used.", NULL },
@@ -144,7 +144,7 @@ nc_de_opt_get_fit_group (NcDEFitEntries *de_fit)
 	{ "resample",       0, 0, G_OPTION_ARG_NONE,         &de_fit->resample,      "Resample model using default params", NULL },
 	{ "msg-level",      0, 0, G_OPTION_ARG_INT,          &de_fit->msg_level,     "Fit message level (0: no msg, 1: simple, 2: full)", NULL },
 	{ "montecarlo",     0, 0, G_OPTION_ARG_INT,          &de_fit->montecarlo,    "Resample the original data 'montecarlo' times.", NULL},
-	{ "mc-ni",          0, 0, G_OPTION_ARG_INT,          &de_fit->mc_ni,         "Start the 'montecarlo' at the ni realization.", NULL},		
+	{ "mc-ni",          0, 0, G_OPTION_ARG_INT,          &de_fit->mc_ni,         "Start the 'montecarlo' at the ni realization.", NULL},
 	{ "fiducial",       0, 0, G_OPTION_ARG_NONE,         &de_fit->fiducial,      "Use the fiducial model to resample.", NULL},
 	{ "mc-data",        0, 0, G_OPTION_ARG_NONE,         &de_fit->mc_data,       "Print all data from monte carlo.", NULL},
 	{ "fit",            0, 0, G_OPTION_ARG_NONE,         &de_fit->fit,           "Fit model using the selected data.", NULL},

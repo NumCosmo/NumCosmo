@@ -57,7 +57,7 @@ static gboolean spherical = FALSE;
 static gboolean resample = FALSE;
 static gboolean change_params = FALSE;
 static gboolean verbose = FALSE;
-static gboolean plane = FALSE;
+static gboolean flat = FALSE;
 
 static GOptionEntry entries[] =
 {
@@ -79,7 +79,7 @@ static GOptionEntry entries[] =
   { "test-TOP",        0, 0, G_OPTION_ARG_NONE,   &test_TOP,      "Test several topologies* and print the chi2", NULL },
   { "resample",      'R', 0, G_OPTION_ARG_NONE,   &resample,      "Resample model using default params", NULL },
   { "grid",          'G', 0, G_OPTION_ARG_NONE,   &calc_grid,     "Calculate grid", NULL },
-  { "plane",         'p', 0, G_OPTION_ARG_NONE,   &plane,         "Plane model", NULL },
+  { "flat",          'p', 0, G_OPTION_ARG_NONE,   &flat,          "Plane model", NULL },
   { "with-TOP",      'T', 0, G_OPTION_ARG_NONE,   &with_top,      "Use Topology prior", NULL },
   { "spherical",       0, 0, G_OPTION_ARG_NONE,   &spherical,     "Impose Omega_k < 0", NULL },
   { "change-params", 'c', 0, G_OPTION_ARG_NONE,   &change_params, "Change the parametrization: \\Omega_L -> \\Omega_k", NULL },
@@ -156,7 +156,7 @@ main (gint argc, gchar *argv[])
 	nc_prior_add_oneside_a_inf_const_func (lh, nc_hicosmo_func0_new (&nc_hicosmo_Omega_k),
 	                                       0.0, 1.0e-6);
 
-  if (plane)
+  if (flat)
   {
 	nc_hicosmo_de_omega_x2omega_k (model);
 	ncm_mset_param_set_ftype (mset, NC_HICOSMO_ID, NC_HICOSMO_DE_OMEGA_X, NCM_PARAM_TYPE_FIXED);
