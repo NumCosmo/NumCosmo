@@ -72,10 +72,10 @@ func (gpointer data, gpointer empty)
 
 /**
  * ncm_function_eval_get_pool: (skip)
- * 
+ *
  * Allocate if its not yet allocated and return the
  * internal GThreadPool pool.
- * 
+ *
  * Returns: the pointer to the internal GThreadPool pool
  */
 GThreadPool *
@@ -98,9 +98,9 @@ ncm_function_eval_get_pool ()
 /**
  * ncm_function_eval_set_max_threads:
  * @mt: new max threads to be used in the pool, -1 means unlimited
- * 
+ *
  * Set the new maximun number of threads to be used by the pool
- * 
+ *
  */
 void
 ncm_function_eval_set_max_threads (gint mt)
@@ -116,9 +116,9 @@ ncm_function_eval_set_max_threads (gint mt)
  * @i: initial index
  * @f: final index
  * @data: pointer to be passed to @fl
- * 
+ *
  * Using the thread pool, evaluate @fl in each value of (@f-@i)/nthreads
- * 
+ *
  */
 void
 ncm_function_eval_threaded_loop (NcmLoopFunc lfunc, glong i, glong f, gpointer data)
@@ -146,7 +146,7 @@ ncm_function_eval_threaded_loop (NcmLoopFunc lfunc, glong i, glong f, gpointer d
 	glong li = i;
 	glong lf = delta + res;
 	ctrl.active_threads = nthreads;
-	
+
 	do {
 	  NcmLoopFuncEval *arg = g_slice_new (NcmLoopFuncEval);
 	  arg->lfunc = lfunc;
@@ -160,7 +160,7 @@ ncm_function_eval_threaded_loop (NcmLoopFunc lfunc, glong i, glong f, gpointer d
 	} while (--nthreads);
   }
 #else
-  lf (i, f, data);
+  lfunc (i, f, data);
 #endif
 
   g_mutex_lock (ctrl.update);
