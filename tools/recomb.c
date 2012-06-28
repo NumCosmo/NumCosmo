@@ -65,7 +65,7 @@ static GOptionEntry entries[] =
   { "cr-x",          'x', 0, G_OPTION_ARG_INT,    &cr_params[0],  "Confidence region x parameter", NULL },
   { "cr-y",          'y', 0, G_OPTION_ARG_INT,    &cr_params[1],  "Confidence region y parameter", NULL },
   { "max-iter",      'm', 0, G_OPTION_ARG_INT,    &max_iter,      "Max number of iterations used by the minimization algorithms", NULL },
-  { "sn-id",         'S', 0, G_OPTION_ARG_INT,    &snia_id,         "ID of the SNe Ia sample to use", NULL },
+  { "sn-id",         'S', 0, G_OPTION_ARG_INT,    &snia_id,       "ID of the SNe Ia sample to use", NULL },
   { "bao-id",        'B', 0, G_OPTION_ARG_INT,    &bao_id,        "ID of the BAO sample to use", NULL },
   { "cmb-id",        'C', 0, G_OPTION_ARG_INT,    &cmb_id,        "ID of the CMB sample to use", NULL },
   { "r-inj-n",       'r', 0, G_OPTION_ARG_INT,    &r_inj,         "r_inj n", NULL },
