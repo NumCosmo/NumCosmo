@@ -102,11 +102,11 @@ _ncm_spline2d_bicubic_alloc (NcmSpline2dBicubic *s2dbc)
 
   s2dbc->bicoeff = g_slice_alloc (sizeof (NcmSpline2dBicubicCoeffs) * (NCM_MATRIX_COL_LEN (s2d->zm) - 1) * NCM_MATRIX_ROW_LEN (s2d->zm));
 
-  s2dbc->optimize_dx.s = ncm_spline_new (ncm_spline_cubic_notaknot_new (),
+  s2dbc->optimize_dx.s = ncm_spline_set (ncm_spline_cubic_notaknot_new (),
                                          s2d->yv, ncm_vector_new (ncm_vector_len (s2d->yv)), FALSE);
   s2dbc->optimize_dx.init = FALSE;
 
-  s2dbc->optimize_dy.s = ncm_spline_new (ncm_spline_cubic_notaknot_new (),
+  s2dbc->optimize_dy.s = ncm_spline_set (ncm_spline_cubic_notaknot_new (),
                                          s2d->xv, ncm_vector_new (ncm_vector_len (s2d->xv)), FALSE);
   s2dbc->optimize_dy.init = FALSE;
 }
@@ -923,12 +923,15 @@ _ncm_spline2d_bicubic_dispose (GObject *object)
 	s2d->init = FALSE;
   }
 
+  /* Chain up : end */
   G_OBJECT_CLASS (ncm_spline2d_bicubic_parent_class)->dispose (object);
 }
 
 static void
 _ncm_spline2d_bicubic_finalize (GObject *object)
 {
+
+  /* Chain up : end */
   G_OBJECT_CLASS (ncm_spline2d_bicubic_parent_class)->finalize (object);
 }
 

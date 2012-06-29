@@ -346,6 +346,12 @@ ncm_spline_new_function_spline (NcmSpline *s, gsl_function *F, gdouble xi, gdoub
 	  break;
   }
   g_list_free_full (nodes, _BIVec_free);
+
+  g_array_unref (x_array);
+  g_array_unref (xt_array);
+  g_array_unref (y_array);
+  g_array_unref (yt_array);
+
   return;
 }
 
@@ -452,6 +458,11 @@ ncm_spline_new_function_spline_lnknot (NcmSpline *s, gsl_function *F, gdouble xi
 	  break;
   }
   g_list_free_full (nodes, _BIVec_free);
+
+  g_array_unref (x_array);
+  g_array_unref (xt_array);
+  g_array_unref (y_array);
+  g_array_unref (yt_array);
 
   return;
 }

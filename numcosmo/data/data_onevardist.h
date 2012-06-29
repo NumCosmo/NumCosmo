@@ -56,17 +56,10 @@ struct _NcDataModelOneVarDist
   /*< private >*/
   NcmMSetFunc *dist;
   NcmMSetFunc *inv_pdf;
-  NcDataPrepare prepare;
-  NcDataResample resample;
-  gpointer model;
 };
 
 NcData *nc_data_onevardist_new (NcmMSetFunc *dist, NcmMSetFunc *inv_pdf);
-void nc_data_onevardist_set_model (NcData *data, gpointer model);
-
 void nc_data_onevardist_set_prepare (NcData *data, NcDataPrepare prepare);
-void nc_data_onevardist_set_resample (NcData *data, NcDataResample resample);
-
 void nc_data_onevardist_init_from_vector (NcData *data, NcmVector *x, NcDataStruct *extra_data);
 
 G_END_DECLS

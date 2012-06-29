@@ -34,7 +34,7 @@
 #  include "config.h"
 #endif /* HAVE_CONFIG_H */
 #include <numcosmo/numcosmo.h>
-  
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
@@ -62,7 +62,7 @@ nc_mass_function_print (NcData *ca_unbinned, NcHICosmo *model, FILE *out, gchar 
   NcClusterAbundance *cad = NC_CLUSTER_ABUNDANCE (NC_DATA_MODEL (ca_unbinned));
   gint i, j;
   gint nbins_M = 100;
-  gint nbins_z = 20;  
+  gint nbins_z = 20;
   gsl_vector *lnM_nodes = gsl_vector_alloc (nbins_M);
   gsl_vector *z_nodes = gsl_vector_alloc (nbins_z);
 
@@ -97,7 +97,7 @@ nc_mass_function_print (NcData *ca_unbinned, NcHICosmo *model, FILE *out, gchar 
 	gsl_histogram2d_get_yrange (h, j, &zl, &zu);
 	zm = (zu + zl) / 2.0;
 	dz = (zu - zl);
-	V = nc_mass_function_dcomoving_volume_dzdomega (cad->mfp, model, zm) * cad->mfp->area_survey * dz;
+	V = nc_mass_function_dv_dzdomega (cad->mfp, model, zm) * cad->mfp->area_survey * dz;
 	for (i = 0; i < nbins_M; i++)
 	{
 	  gdouble ln_ml, ln_mu, Mm, lnMm, log_mu, log_ml;
@@ -108,13 +108,13 @@ nc_mass_function_print (NcData *ca_unbinned, NcHICosmo *model, FILE *out, gchar 
 	  Mm = exp (lnMm);
 	  log_mu = log10 (exp(ln_mu));
 	  log_ml = log10 (exp(ln_ml));
-	  dndlog10M = M_LN10 * nc_mass_function (cad->mfp, model, lnMm, zm);
+	  dndlog10M = M_LN10 * nc_mass_function_dn_dlnm (cad->mfp, model, lnMm, zm);
 	  ca_M = (log_mu - log_ml) * V * dndlog10M;
 
 	  //printf ("log-mu = %5.5g log-ml = %5.5g\n", log_mu, log_ml);
 	  fprintf (out, "% 6.6g % 6.6e % 6.6g % 6.6g % 6.6g % 6.6g\n", zm, Mm, Nmi / ((log_mu - log_ml) * V), dndlog10M, Nmi, ca_M);
 	}
-	fprintf (out, "\n\n");		
+	fprintf (out, "\n\n");
   }
 
   gsl_vector_free (lnM_nodes);

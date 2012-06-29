@@ -90,7 +90,7 @@ ncm_ode_spline_new (NcmSpline *s, NcmOdeSplineDydx dydx, gpointer userdata, gdou
 
   NV_Ith_S(y, 0) = yi;
   CVodeInit (os->cvode, &_ncm_ode_spline_f, xi, y);
-  os->s = s;
+  os->s = ncm_spline_ref (s);
 
   os->ctrl = ncm_model_ctrl_new (NULL);
 

@@ -59,13 +59,18 @@ static void
 func (gpointer data, gpointer empty)
 {
   NcmLoopFuncEval *arg = (NcmLoopFuncEval *)data;
+  NcmFunctionEvalCtrl *ctrl = arg->ctrl;
+
   arg->lfunc (arg->i, arg->f, arg->data);
-  g_mutex_lock (arg->ctrl->update);
-  arg->ctrl->active_threads--;
   g_slice_free (NcmLoopFuncEval, arg);
-  if (arg->ctrl->active_threads == 0)
-	g_cond_signal (arg->ctrl->finish);
-  g_mutex_unlock (arg->ctrl->update);
+
+  g_mutex_lock (ctrl->update);
+
+  ctrl->active_threads--;
+  if (ctrl->active_threads == 0)
+	g_cond_signal (ctrl->finish);
+
+  g_mutex_unlock (ctrl->update);
 
   return;
 }

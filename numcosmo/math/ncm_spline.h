@@ -12,12 +12,12 @@
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * numcosmo is distributed in the hope that it will be useful, but
  * WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
  * See the GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License along
  * with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
@@ -75,8 +75,9 @@ NcmSpline *ncm_spline_copy (const NcmSpline *s);
 NcmSpline *ncm_spline_new (const NcmSpline *s, NcmVector *xv, NcmVector *yv, const gboolean init);
 NcmSpline *ncm_spline_new_array (const NcmSpline *s, GArray *x, GArray *y, const gboolean init);
 NcmSpline *ncm_spline_new_data (const NcmSpline *s, gdouble *x, gdouble *y, const gsize len, const gboolean init);
+NcmSpline *ncm_spline_set (NcmSpline *s, NcmVector *xv, NcmVector *yv, gboolean init);
+NcmSpline *ncm_spline_ref (NcmSpline *s);
 
-void ncm_spline_set (NcmSpline *s, NcmVector *xv, NcmVector *yv, gboolean init);
 void ncm_spline_set_xv (NcmSpline *s, NcmVector *xv, gboolean init);
 void ncm_spline_set_yv (NcmSpline *s, NcmVector *yv, gboolean init);
 void ncm_spline_set_array (NcmSpline *s, GArray *x, GArray *y, gboolean init);
@@ -125,54 +126,54 @@ ncm_spline_prepare_base (NcmSpline *s)
 		NCM_SPLINE_GET_CLASS (s)->prepare_base (s);
 }
 
-G_INLINE_FUNC gdouble 
-ncm_spline_eval (const NcmSpline *s, const gdouble x) 
-{ 
+G_INLINE_FUNC gdouble
+ncm_spline_eval (const NcmSpline *s, const gdouble x)
+{
   return NCM_SPLINE_GET_CLASS (s)->eval (s, x);
 }
 
-G_INLINE_FUNC gdouble 
-ncm_spline_eval_deriv (const NcmSpline *s, const gdouble x) 
-{ 
+G_INLINE_FUNC gdouble
+ncm_spline_eval_deriv (const NcmSpline *s, const gdouble x)
+{
   return NCM_SPLINE_GET_CLASS (s)->deriv (s, x);
 }
 
-G_INLINE_FUNC gdouble 
-ncm_spline_eval_deriv2 (const NcmSpline *s, const gdouble x) 
-{ 
+G_INLINE_FUNC gdouble
+ncm_spline_eval_deriv2 (const NcmSpline *s, const gdouble x)
+{
   return NCM_SPLINE_GET_CLASS (s)->deriv2 (s, x);
 }
 
-G_INLINE_FUNC gdouble 
-ncm_spline_eval_integ (const NcmSpline *s, const gdouble x0, const gdouble x1) 
-{ 
+G_INLINE_FUNC gdouble
+ncm_spline_eval_integ (const NcmSpline *s, const gdouble x0, const gdouble x1)
+{
   return NCM_SPLINE_GET_CLASS (s)->integ (s, x0, x1);
 }
 
-G_INLINE_FUNC gboolean 
+G_INLINE_FUNC gboolean
 ncm_spline_is_empty (const NcmSpline *s)
 {
 	return s->empty;
 }
 
-G_INLINE_FUNC gsize 
+G_INLINE_FUNC gsize
 ncm_spline_min_size (const NcmSpline *s)
 {
 	return NCM_SPLINE_GET_CLASS (s)->min_size (s);
 }
 
-G_INLINE_FUNC guint 
-ncm_spline_get_index (const NcmSpline *s, const gdouble x) 
+G_INLINE_FUNC guint
+ncm_spline_get_index (const NcmSpline *s, const gdouble x)
 {
   if (s->acc && ncm_vector_stride (s->xv) == 1)
-  	return gsl_interp_accel_find (s->acc, ncm_vector_ptr (s->xv, 0), s->len, x); 
+  	return gsl_interp_accel_find (s->acc, ncm_vector_ptr (s->xv, 0), s->len, x);
 	else
 		return gsl_interp_bsearch (ncm_vector_ptr (s->xv, 0), x, 0, ncm_vector_len (s->xv) - 1);
 }
 
 /* Utilities -- internal use */
 
-G_INLINE_FUNC gdouble 
+G_INLINE_FUNC gdouble
 _ncm_spline_util_integ_eval (const gdouble ai, const gdouble bi, const gdouble ci, const gdouble di, const gdouble xi, const gdouble a, const gdouble b)
 {
   const gdouble r1 = a - xi;

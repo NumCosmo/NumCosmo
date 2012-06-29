@@ -63,6 +63,8 @@ nc_de_data_cluster_new (NcDistance *dist, NcmMSet *mset, NcDEDataClusterEntries 
 	  {
 		NcClusterAbundance *cad = nc_cluster_abundance_new (opt, mfp, NULL, clusterz, clusterm);
 		NcData *dca_unbinned = nc_data_cluster_abundance_unbinned_new (cad);
+		nc_cluster_abundance_free (cad);
+
 		nc_cluster_abundance_catalog_load (dca_unbinned, de_data_cluster->cata_file[i]);
 		nc_data_cluster_abundance_true_data (dca_unbinned, de_data_cluster->use_true_data);
 		_nc_de_data_cluster_append (de_data_cluster, dca_unbinned, ds);
@@ -82,7 +84,8 @@ nc_de_data_cluster_new (NcDistance *dist, NcmMSet *mset, NcDEDataClusterEntries 
 	  {
 		NcClusterAbundance *cad = nc_cluster_abundance_new (opt, mfp, NULL, clusterz, clusterm);
 		NcData *dca_unbinned = nc_data_cluster_abundance_unbinned_new (cad);
-		
+		nc_cluster_abundance_free (cad);
+
 		//nc_data_cluster_abundance_unbinned_init_from_text_file (dca_unbinned, de_data_cluster->cata_file[i], opt, de_data_cluster->area_survey * gsl_pow_2 (M_PI / 180.0), log(de_data_cluster->Mi), log(de_data_cluster->Mf), de_data_cluster->z_initial, de_data_cluster->z_final, de_data_cluster->photoz_sigma0, de_data_cluster->photoz_bias, de_data_cluster->lnM_sigma0, de_data_cluster->lnM_bias);
 		g_assert_not_reached ();
 		nc_data_cluster_abundance_true_data (dca_unbinned, de_data_cluster->use_true_data);
@@ -99,10 +102,11 @@ nc_de_data_cluster_new (NcDistance *dist, NcmMSet *mset, NcDEDataClusterEntries 
 	{
 	  NcClusterAbundance *cad = nc_cluster_abundance_new (opt, mfp, NULL, clusterz, clusterm);
 	  NcData *dca_unbinned = nc_data_cluster_abundance_unbinned_new (cad);
+	  nc_cluster_abundance_free (cad);
 
 	  nc_data_cluster_abundance_unbinned_init_from_sampling (dca_unbinned, mset, clusterz, clusterm, de_data_cluster->area_survey * gsl_pow_2 (M_PI / 180.0));
       nc_data_cluster_abundance_true_data (dca_unbinned, de_data_cluster->use_true_data);
-	  
+
 	  if (de_data_cluster->save_cata != NULL)
 		nc_cluster_abundance_catalog_save (dca_unbinned, de_data_cluster->save_cata, TRUE);
 	  _nc_de_data_cluster_append (de_data_cluster, dca_unbinned, ds);
@@ -112,6 +116,10 @@ nc_de_data_cluster_new (NcDistance *dist, NcmMSet *mset, NcDEDataClusterEntries 
 	default:
 	  g_error ("The option --catalog-id must be between (0,2).");
   }
+
+  nc_cluster_mass_free (clusterm);
+  nc_cluster_redshift_free (clusterz);
+
   return ca_array;
 }
 

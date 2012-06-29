@@ -72,11 +72,11 @@ ncm_matrix_new (gsize nrows, gsize ncols)
 NcmMatrix *
 ncm_matrix_new_gsl (gsl_matrix *gm)
 {
-	NcmMatrix *cm = g_object_new (NCM_TYPE_MATRIX, NULL);
-	cm->gm = gm;
-	cm->mv = gsl_matrix_submatrix (gm, 0, 0, gm->size1, gm->size2);
-	cm->type = NCM_MATRIX_GSL_MATRIX;
-	return cm;
+  NcmMatrix *cm = g_object_new (NCM_TYPE_MATRIX, NULL);
+  cm->gm = gm;
+  cm->mv = gsl_matrix_submatrix (gm, 0, 0, gm->size1, gm->size2);
+  cm->type = NCM_MATRIX_GSL_MATRIX;
+  return cm;
 }
 
 /**
@@ -93,18 +93,18 @@ ncm_matrix_new_gsl (gsl_matrix *gm)
 NcmMatrix *
 ncm_matrix_new_array (GArray *a, gsize ncols)
 {
-	NcmMatrix *cm = g_object_new (NCM_TYPE_MATRIX, NULL);
-	gsize nrows = a->len / ncols;
-	gdouble *d = &g_array_index (a, gdouble, 0);
+  NcmMatrix *cm = g_object_new (NCM_TYPE_MATRIX, NULL);
+  gsize nrows = a->len / ncols;
+  gdouble *d = &g_array_index (a, gdouble, 0);
 
-	g_assert (a->len % ncols == 0);
+  g_assert (a->len % ncols == 0);
 
-	cm->mv = gsl_matrix_view_array (d, nrows, ncols);
-	cm->a = a;
-	cm->type = NCM_MATRIX_GARRAY;
-	g_array_ref (a);
+  cm->mv = gsl_matrix_view_array (d, nrows, ncols);
+  cm->a = a;
+  cm->type = NCM_MATRIX_GARRAY;
+  g_array_ref (a);
 
-	return cm;
+  return cm;
 }
 
 /**
@@ -123,12 +123,12 @@ ncm_matrix_new_array (GArray *a, gsize ncols)
 NcmMatrix *
 ncm_matrix_new_data_slice (gdouble *d, gsize nrows, gsize ncols)
 {
-	NcmMatrix *cm = g_object_new (NCM_TYPE_MATRIX, NULL);
-	cm->mv = gsl_matrix_view_array (d, nrows, ncols);
-	cm->a = NULL;
-	cm->type = NCM_MATRIX_SLICE;
+  NcmMatrix *cm = g_object_new (NCM_TYPE_MATRIX, NULL);
+  cm->mv = gsl_matrix_view_array (d, nrows, ncols);
+  cm->a = NULL;
+  cm->type = NCM_MATRIX_SLICE;
 
-	return cm;
+  return cm;
 }
 
 /**
@@ -145,9 +145,9 @@ ncm_matrix_new_data_slice (gdouble *d, gsize nrows, gsize ncols)
 NcmMatrix *
 ncm_matrix_new_data_malloc (gdouble *d, gsize nrows, gsize ncols)
 {
-	NcmMatrix *cm = ncm_matrix_new_data_slice (d, nrows, ncols);
-	cm->type = NCM_MATRIX_MALLOC;
-	return cm;
+  NcmMatrix *cm = ncm_matrix_new_data_slice (d, nrows, ncols);
+  cm->type = NCM_MATRIX_MALLOC;
+  return cm;
 }
 
 /**
@@ -165,9 +165,9 @@ ncm_matrix_new_data_malloc (gdouble *d, gsize nrows, gsize ncols)
 NcmMatrix *
 ncm_matrix_new_data_static (gdouble *d, gsize nrows, gsize ncols)
 {
-	NcmMatrix *cm = ncm_matrix_new_data_slice (d, nrows, ncols);
-	cm->type = NCM_MATRIX_DERIVED;
-	return cm;
+  NcmMatrix *cm = ncm_matrix_new_data_slice (d, nrows, ncols);
+  cm->type = NCM_MATRIX_DERIVED;
+  return cm;
 }
 
 /**
@@ -186,15 +186,15 @@ ncm_matrix_new_data_static (gdouble *d, gsize nrows, gsize ncols)
 NcmMatrix *
 ncm_matrix_new_data_static_tda (gdouble *d, gsize nrows, gsize ncols, gsize tda)
 {
-	NcmMatrix *cm = g_object_new (NCM_TYPE_MATRIX, NULL);
-	cm->mv = gsl_matrix_view_array_with_tda (d, nrows, ncols, tda);
-	cm->a = NULL;
-	cm->type = NCM_MATRIX_DERIVED;
-	return cm;
+  NcmMatrix *cm = g_object_new (NCM_TYPE_MATRIX, NULL);
+  cm->mv = gsl_matrix_view_array_with_tda (d, nrows, ncols, tda);
+  cm->a = NULL;
+  cm->type = NCM_MATRIX_DERIVED;
+  return cm;
 }
 
 /**
- * ncm_matrix_get_submatrix: (skip)
+ * ncm_matrix_get_submatrix:
  * @cm: a #NcmMatrix.
  * @k1: row index of the original matrix @cm.
  * @k2: column index of the original matrix @cm.
@@ -205,16 +205,18 @@ ncm_matrix_new_data_static_tda (gdouble *d, gsize nrows, gsize ncols, gsize tda)
  * The upper-left element of the submatrix is the element (@k1,@k2) of the original matrix.
  * The submatrix has @nrows rows and @ncols columns.
  *
- * Returns: A #NcmMatrix.
+ * Returns: (transfer full): A #NcmMatrix.
  */
 NcmMatrix *
 ncm_matrix_get_submatrix (NcmMatrix *cm, gsize k1, gsize k2, gsize nrows, gsize ncols)
 {
-	NcmMatrix *scm = g_object_new (NCM_TYPE_MATRIX, NULL);
-	scm->mv = gsl_matrix_submatrix (NCM_MATRIX_GSL (cm), k1, k2, nrows, ncols);
-	scm->pobj = G_OBJECT (cm);
-	g_object_ref (cm);
-	return scm;
+  NcmMatrix *scm = g_object_new (NCM_TYPE_MATRIX, NULL);
+  scm->mv = gsl_matrix_submatrix (NCM_MATRIX_GSL (cm), k1, k2, nrows, ncols);
+  scm->pobj = G_OBJECT (cm);
+  g_object_ref (cm);
+  scm->type = NCM_MATRIX_DERIVED;
+
+  return scm;
 }
 
 /**
@@ -241,26 +243,26 @@ ncm_matrix_get_col (NcmMatrix *cm, const gsize col)
 }
 
 /**
- * ncm_matrix_get_row: (skip)
+ * ncm_matrix_get_row:
  * @cm: a #NcmMatrix.
  * @row: row index.
  *
  * This function returns the elements of the @row row of the matrix @cm
  * into a #NcmVector.
  *
- * Returns: A #NcmVector.
+ * Returns: (transfer full): A #NcmVector.
  */
 NcmVector *
 ncm_matrix_get_row (NcmMatrix *cm, const gsize row)
 {
   NcmVector *cv = g_object_new (NCM_TYPE_VECTOR, NULL);
-	cv->vv = gsl_matrix_row (NCM_MATRIX_GSL (cm), row);
-	cv->a = NULL;
-	cv->type = NCM_VECTOR_DERIVED;
-	cv->pobj = G_OBJECT (cm);
-	g_object_ref (cm);
+  cv->vv = gsl_matrix_row (NCM_MATRIX_GSL (cm), row);
+  cv->a = NULL;
+  cv->type = NCM_VECTOR_DERIVED;
+  cv->pobj = G_OBJECT (cm);
+  g_object_ref (cm);
 
-	return cv;
+  return cv;
 }
 
 /**
@@ -274,72 +276,72 @@ ncm_matrix_get_row (NcmMatrix *cm, const gsize row)
 void
 ncm_matrix_free (NcmMatrix *cm)
 {
-	if (g_object_is_floating (cm))
-		g_object_ref_sink (cm);
-	g_object_unref (cm);
+  if (g_object_is_floating (cm))
+	g_object_ref_sink (cm);
+  g_object_unref (cm);
 }
 
 static void
 _ncm_matrix_dispose (GObject *object)
 {
-	NcmMatrix *cm = NCM_MATRIX (object);
-	if (cm->a)
-	{
-		g_array_unref (cm->a);
-		cm->a = NULL;
-	}
+  NcmMatrix *cm = NCM_MATRIX (object);
+  if (cm->a)
+  {
+	g_array_unref (cm->a);
+	cm->a = NULL;
+  }
 
-	if (cm->pobj)
-	{
-		g_object_unref (cm->pobj);
-		cm->pobj = NULL;
-	}
+  if (cm->pobj)
+  {
+	g_object_unref (cm->pobj);
+	cm->pobj = NULL;
+  }
 
-	G_OBJECT_CLASS (ncm_matrix_parent_class)->dispose (object);
+  G_OBJECT_CLASS (ncm_matrix_parent_class)->dispose (object);
 }
 
 static void
 _ncm_matrix_finalize (GObject *object)
 {
-	NcmMatrix *cm = NCM_MATRIX (object);
-	switch (cm->type)
-	{
-		case NCM_MATRIX_SLICE:
-			g_slice_free1 (sizeof(gdouble) * NCM_MATRIX_NROWS (cm) * NCM_MATRIX_NCOLS (cm), NCM_MATRIX_DATA (cm));
-			NCM_MATRIX_DATA (cm) = NULL;
-			break;
-		case NCM_MATRIX_GARRAY:
-			break;
-		case NCM_MATRIX_MALLOC:
-			g_free (NCM_MATRIX_DATA (cm));
-			NCM_MATRIX_DATA (cm) = NULL;
-			break;
-		case NCM_MATRIX_GSL_MATRIX:
-			gsl_matrix_free (cm->gm);
-			cm->gm = NULL;
-			break;
-		case NCM_MATRIX_DERIVED:
-			NCM_MATRIX_DATA (cm) = NULL;
-			break;
-	}
-	G_OBJECT_CLASS (ncm_matrix_parent_class)->finalize (object);
+  NcmMatrix *cm = NCM_MATRIX (object);
+  switch (cm->type)
+  {
+	case NCM_MATRIX_SLICE:
+	  g_slice_free1 (sizeof(gdouble) * NCM_MATRIX_NROWS (cm) * NCM_MATRIX_NCOLS (cm), NCM_MATRIX_DATA (cm));
+	  NCM_MATRIX_DATA (cm) = NULL;
+	  break;
+	case NCM_MATRIX_GARRAY:
+	  break;
+	case NCM_MATRIX_MALLOC:
+	  g_free (NCM_MATRIX_DATA (cm));
+	  NCM_MATRIX_DATA (cm) = NULL;
+	  break;
+	case NCM_MATRIX_GSL_MATRIX:
+	  gsl_matrix_free (cm->gm);
+	  cm->gm = NULL;
+	  break;
+	case NCM_MATRIX_DERIVED:
+	  NCM_MATRIX_DATA (cm) = NULL;
+	  break;
+  }
+  G_OBJECT_CLASS (ncm_matrix_parent_class)->finalize (object);
 }
 
 
 /**
- * ncm_matrix_copy: (skip)
+ * ncm_matrix_copy:
  * @cm: a constant #NcmMatrix
  *
  * Duplicates @cm setting the same values of the original propertities.
  *
- * Returns: A #NcmMatrix.
+ * Returns: (transfer full): A #NcmMatrix.
  */
 NcmMatrix *
 ncm_matrix_copy (const NcmMatrix *cm)
 {
-	NcmMatrix *cm_cp = ncm_matrix_new (NCM_MATRIX_COL_LEN (cm), NCM_MATRIX_ROW_LEN (cm));
-	ncm_matrix_memcpy (cm_cp, cm);
-	return cm_cp;
+  NcmMatrix *cm_cp = ncm_matrix_new (NCM_MATRIX_COL_LEN (cm), NCM_MATRIX_ROW_LEN (cm));
+  ncm_matrix_memcpy (cm_cp, cm);
+  return cm_cp;
 }
 
 /**
@@ -444,7 +446,6 @@ ncm_matrix_copy (const NcmMatrix *cm)
  *
  * Returns: (transfer container) (element-type double): FIXME
  */
-
 #ifndef NUMCOSMO_HAVE_INLINE
 #define NUMCOSMO_HAVE_INLINE
 #undef _NCM_MATRIX_INLINE_H_
@@ -458,17 +459,17 @@ ncm_matrix_copy (const NcmMatrix *cm)
 static void
 ncm_matrix_init (NcmMatrix *m)
 {
-	memset (&m->mv, 0, sizeof (gsl_matrix_view));
-	m->a = NULL;
-	m->gm = NULL;
-	m->pobj = NULL;
-	m->type = 0;
+  memset (&m->mv, 0, sizeof (gsl_matrix_view));
+  m->a = NULL;
+  m->gm = NULL;
+  m->pobj = NULL;
+  m->type = 0;
 }
 
 static void
 ncm_matrix_class_init (NcmMatrixClass *klass)
 {
-	GObjectClass* object_class = G_OBJECT_CLASS (klass);
-	object_class->dispose = &_ncm_matrix_dispose;
-	object_class->finalize = &_ncm_matrix_finalize;
+  GObjectClass* object_class = G_OBJECT_CLASS (klass);
+  object_class->dispose = &_ncm_matrix_dispose;
+  object_class->finalize = &_ncm_matrix_finalize;
 }

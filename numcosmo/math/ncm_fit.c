@@ -1015,8 +1015,8 @@ ncm_fit_numdiff_m2lnL_hessian (NcmFit *fit, NcmMatrix *H)
 	nd.n1 = i;
 	nd.n2 = i;
 	diff = ncm_numdiff_2_err (&F, &fx, p, p_scale, target_err, &err);
-	if (fabs(err) > target_err)
-	  g_warning ("ncm_fit_numdiff_m2lnL_hessian: effective error (% 20.15e) bigger then (% 20.15e)", err, target_err);
+	if (fabs(err / diff) > target_err)
+	  g_warning ("ncm_fit_numdiff_m2lnL_hessian: effective error (% 20.15e) bigger then (% 20.15e)", fabs(err / diff), target_err);
 	ncm_matrix_set (H, i, i, diff);
 	ncm_mset_fparam_set (fit->mset, i, p);
   }
@@ -1039,8 +1039,8 @@ ncm_fit_numdiff_m2lnL_hessian (NcmFit *fit, NcmMatrix *H)
 	  nd.p1_scale = p1_scale;
 	  nd.p2_scale = p2_scale;
 	  diff = ncm_numdiff_2_err (&F, &fx, u, u_scale, target_err, &err);
-	  if (fabs(err) > target_err)
-		g_warning ("ncm_fit_numdiff_m2lnL_hessian: effective error (% 20.15e) bigger then (% 20.15e)", err, target_err);
+	  if (fabs(err / diff) > target_err)
+		g_warning ("ncm_fit_numdiff_m2lnL_hessian: effective error (% 20.15e) bigger then (% 20.15e)", fabs(err / diff), target_err);
 	  ncm_matrix_set (H, i, j,
 	                  0.5 * ( p1_scale * p2_scale * diff -
 	                         (p2_scale / p1_scale) * ncm_matrix_get (H, i, i) -
@@ -1770,7 +1770,10 @@ static void
 ncm_fit_dispose (GObject *object)
 {
   NcmFit *fit = NCM_FIT (object);
+
   nc_likelihood_free (fit->lh);
+  ncm_mset_free (fit->mset);
+
   if (fit->fparam_len > 0)
   {
 	ncm_matrix_free (fit->covar);
@@ -1798,6 +1801,15 @@ ncm_fit_finalize (GObject *object)
 
   if (fit->simplex != NULL)
 	gsl_multimin_fminimizer_free (fit->simplex);
+
+#ifdef NUMCOSMO_HAVE_NLOPT
+#ifdef HAVE_NLOPT_2_2
+  if (fit->nlopt)
+  {
+	nlopt_destroy (fit->nlopt);
+  }
+#endif
+#endif
 
   gsl_vector_uint_free (fit->bs);
   g_timer_destroy (fit->timer);

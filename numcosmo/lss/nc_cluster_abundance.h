@@ -114,8 +114,6 @@ struct _NcClusterAbundance
   gsl_histogram2d *completeness;
   gsl_histogram2d *purity;
   gsl_histogram2d *sd_lnM;
-  NcmSpline *dNdz;
-  NcmSpline2d *d2NdzdlnM;
   NcmSpline2d *dbdlnM;    /* To compute the mean bias. FIXME*/
   NcmSpline *inv_z;
   NcmSpline *inv_lnM;
@@ -128,6 +126,7 @@ GType nc_cluster_abundance_get_type (void) G_GNUC_CONST;
 
 NcClusterAbundance *nc_cluster_abundance_new (NcClusterAbundanceOpt opt, NcMassFunction *mfp, NcHaloBiasFunc *mbiasf, NcClusterRedshift *clusterz, NcClusterMass *clusterm);
 NcClusterAbundance *nc_cluster_abundance_copy (NcClusterAbundance *cad);
+NcClusterAbundance *nc_cluster_abundance_ref (NcClusterAbundance *cad);
 void nc_cluster_abundance_free (NcClusterAbundance *cad);
 
 void nc_cluster_abundance_prepare (NcClusterAbundance *cad, NcHICosmo *model);

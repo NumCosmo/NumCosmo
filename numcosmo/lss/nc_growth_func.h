@@ -52,6 +52,8 @@ struct _NcGrowthFunc
   /*< private >*/
   GObject parent_instance;
   NcmSpline *s;
+  gpointer cvode;
+  N_Vector yv;
   gdouble one_gf0;
   gdouble zf;
   NcmModelCtrl *ctrl;

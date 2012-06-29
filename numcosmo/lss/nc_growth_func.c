@@ -137,20 +137,16 @@ growth_J (_NCM_SUNDIALS_INT_TYPE N, realtype z, N_Vector y, N_Vector fy, DlsMat 
  *
 */
 void
-nc_growth_func_prepare (NcGrowthFunc * gf, NcHICosmo * model)
+nc_growth_func_prepare (NcGrowthFunc *gf, NcHICosmo *model)
 {
-  gpointer cvode;
-  N_Vector yv;
   gdouble zf;
   gint i = _NC_MAX_SPLINE_POINTS - 1;
   GArray *x_array, *y_array;
 
   if (gf->s != NULL)
   {
-    x_array = gf->s->xv->a;
-    y_array = gf->s->yv->a;
-    /* FIXME LEAK!! */
-    ncm_spline_free (gf->s);
+    x_array = g_array_ref (gf->s->xv->a);
+    y_array = g_array_ref (gf->s->yv->a);
   }
   else
   {
@@ -161,21 +157,28 @@ nc_growth_func_prepare (NcGrowthFunc * gf, NcHICosmo * model)
   g_array_set_size (x_array, _NC_MAX_SPLINE_POINTS);
   g_array_set_size (y_array, _NC_MAX_SPLINE_POINTS);
 
-  yv = N_VNew_Serial (2);
+  NV_Ith_S (gf->yv, 0) = 1.0 / _NC_START_Z;
+  NV_Ith_S (gf->yv, 1) = -1.0 / gsl_pow_2 (_NC_START_Z);
 
-  NV_Ith_S (yv, 0) = 1.0 / _NC_START_Z;
-  NV_Ith_S (yv, 1) = -1.0 / gsl_pow_2 (_NC_START_Z);
+  if (gf->cvode == NULL)
+  {
+	gf->cvode = CVodeCreate (CV_ADAMS, CV_FUNCTIONAL);
+	CVodeInit (gf->cvode, &growth_f, _NC_START_Z, gf->yv);
+	if (FALSE)
+	{
+	  CVDense (gf->cvode, 2);
+	  CVDlsSetDenseJacFn (gf->cvode, &growth_J);
+	}
+  }
+  else
+  {
+	CVodeReInit (gf->cvode, _NC_START_Z, gf->yv);
+  }
 
-//  cvode = CVodeCreate(CV_BDF, CV_NEWTON);
-  cvode = CVodeCreate (CV_ADAMS, CV_FUNCTIONAL);
-  CVodeInit (cvode, &growth_f, _NC_START_Z, yv);
-  CVodeSStolerances (cvode, 1e-13, 0.0);
-  CVodeSetUserData (cvode, model);
-  CVodeSetMaxNumSteps (cvode, 50000);
-  CVDense (cvode, 2);
-  CVDlsSetDenseJacFn (cvode, &growth_J);
-
-  CVodeSetStopTime (cvode, 0.0);
+  CVodeSStolerances (gf->cvode, 1e-13, 0.0);
+  CVodeSetMaxNumSteps (gf->cvode, 50000);
+  CVodeSetUserData (gf->cvode, model);
+  CVodeSetStopTime (gf->cvode, 0.0);
 
   g_array_index (y_array, gdouble, i) = 1.0 / _NC_START_Z;
   g_array_index (x_array, gdouble, i) = _NC_START_Z;
@@ -183,8 +186,8 @@ nc_growth_func_prepare (NcGrowthFunc * gf, NcHICosmo * model)
 
   while (1)
   {
-    CVode (cvode, 0.0, yv, &zf, CV_ONE_STEP);
-    g_array_index (y_array, gdouble, i) = NV_Ith_S (yv, 0);
+    CVode (gf->cvode, 0.0, gf->yv, &zf, CV_ONE_STEP);
+    g_array_index (y_array, gdouble, i) = NV_Ith_S (gf->yv, 0);
     g_array_index (x_array, gdouble, i) = zf;
     if (zf == 0.0)
       break;
@@ -195,13 +198,16 @@ nc_growth_func_prepare (NcGrowthFunc * gf, NcHICosmo * model)
   }
   gf->one_gf0 = 1.0 / g_array_index (y_array, gdouble, i);
 
-  CVodeFree (&cvode);
-  N_VDestroy (yv);
   g_array_remove_range (y_array, 0, i);
   g_array_remove_range (x_array, 0, i);
 
-  gf->s = ncm_spline_cubic_notaknot_new ();
+  if (gf->s == NULL)
+	gf->s = ncm_spline_cubic_notaknot_new ();
+
   ncm_spline_set_array (gf->s, x_array, y_array, TRUE);
+
+  g_array_unref (x_array);
+  g_array_unref (y_array);
 
   return;
 }
@@ -249,23 +255,36 @@ nc_growth_func_eval_deriv (NcGrowthFunc *gf, NcHICosmo *model, gdouble z)
 static void
 nc_growth_func_init (NcGrowthFunc *gf)
 {
-  gf->s = NULL;
+  gf->s       = NULL;
+  gf->cvode   = NULL;
+  gf->yv      = N_VNew_Serial (2);
   gf->one_gf0 = 0.0;
-  gf->zf = 0.0;
-  gf->ctrl = ncm_model_ctrl_new (NULL);
+  gf->zf      = 0.0;
+  gf->ctrl    = ncm_model_ctrl_new (NULL);
 }
 
 static void
 _nc_growth_func_dispose (GObject * object)
 {
   NcGrowthFunc *gf = NC_GROWTH_FUNC (object);
+
+  if (gf->s != NULL)
+	ncm_spline_free (gf->s);
+
   ncm_model_ctrl_free (gf->ctrl);
+
+  /* Chain up : end */
   G_OBJECT_CLASS (nc_growth_func_parent_class)->dispose (object);
 }
 
 static void
 _nc_growth_func_finalize (GObject *object)
 {
+  NcGrowthFunc *gf = NC_GROWTH_FUNC (object);
+
+  CVodeFree (&gf->cvode);
+  N_VDestroy (gf->yv);
+
   /* Chain up : end */
   G_OBJECT_CLASS (nc_growth_func_parent_class)->finalize (object);
 }

@@ -138,9 +138,6 @@ enum {
 static void
 nc_hicosmo_qlinear_init (NcHICosmoQLinear *qlinear)
 {
-  NcmModel *model = NCM_MODEL (qlinear);
-  NcmModelClass *model_class = NCM_MODEL_GET_CLASS (model);
-  model->params = ncm_vector_new (model_class->sparam_len);
 }
 
 static void

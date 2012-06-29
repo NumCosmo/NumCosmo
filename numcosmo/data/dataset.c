@@ -192,27 +192,14 @@ nc_dataset_get_data (NcDataSet *ds, guint n)
 void
 nc_dataset_free0 (NcDataSet *ds, gboolean free_all)
 {
-  GList *data_list;
-  if (ds->clone)
+  if (ds->data_list != NULL)
   {
-    g_slice_free (NcDataSet, ds);
-    return;
+	if (ds->clone || !free_all)
+	  g_list_free (ds->data_list);
+	else
+	  g_list_free_full (ds->data_list, (GDestroyNotify)&nc_data_free);
   }
-
-  if (free_all)
-  {
-    data_list = g_list_first (ds->data_list);
-    while (data_list)
-    {
-      NcData *data = (NcData *)data_list->data;
-      nc_data_free0 (data, TRUE);
-      data_list = g_list_next (data_list);
-    }
-  }
-
-  g_list_free (ds->data_list);
   g_slice_free (NcDataSet, ds);
-
   return;
 }
 

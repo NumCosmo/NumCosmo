@@ -99,9 +99,9 @@ nc_likelihood_free (NcLikelihood *lh)
   if (lh->clone)
   {
 	nc_dataset_free0 (lh->ds, FALSE);
-	if (lh->priors != NULL)
-	  g_list_free (lh->priors);
   }
+  if (lh->priors != NULL)
+	g_list_free_full (lh->priors, (GDestroyNotify)&ncm_mset_func_free);
   g_slice_free (NcLikelihood, lh);
   return;
 }
@@ -116,7 +116,7 @@ nc_likelihood_free (NcLikelihood *lh)
 void
 nc_likelihood_priors_add (NcLikelihood *lh, NcmMSetFunc *prior)
 {
-  lh->priors = g_list_append (lh->priors, prior);
+  lh->priors = g_list_append (lh->priors, ncm_mset_func_ref (prior));
 }
 
 /**

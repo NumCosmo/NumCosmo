@@ -186,23 +186,6 @@ ncm_spline2d_free (NcmSpline2d *s2d)
 }
 
 /**
- * ncm_spline2d_eval:
- * @s2d: a #NcmSpline2d.
- * @x: x-coordinate value.
- * @y: y-coordinate value.
- *
- *
- * Returns: The interpolated value of a function computed at the point (@x, @y).
-   */
-gdouble
-ncm_spline2d_eval (NcmSpline2d *s2d, gdouble x, gdouble y)
-{
-  if (!s2d->init)
-	ncm_spline2d_prepare (s2d);
-  return NCM_SPLINE2D_GET_CLASS (s2d)->eval (s2d, x, y);
-}
-
-/**
  * ncm_spline2d_integ_dx:
  * @s2d: a #NcmSpline2d.
  * @xl: lower limit of integration.
@@ -385,6 +368,15 @@ ncm_spline2d_integ_dxdy_spline_y (NcmSpline2d *s2d, gdouble xl, gdouble xu, gdou
 }
 
 /**
+ * ncm_spline2d_eval:
+ * @s2d: a #NcmSpline2d.
+ * @x: x-coordinate value.
+ * @y: y-coordinate value.
+ *
+ *
+ * Returns: The interpolated value of a function computed at the point (@x, @y).
+ */
+/**
  * ncm_spline2dim_integ_total:
  * @s2d: a #NcmSpline2d.
  *
@@ -487,8 +479,8 @@ ncm_spline2d_dispose (GObject *object)
 static void
 ncm_spline2d_finalize (GObject *object)
 {
-  /* TODO: Add deinitalization code here */
 
+  /* Chain up : end */
   G_OBJECT_CLASS (ncm_spline2d_parent_class)->finalize (object);
 }
 

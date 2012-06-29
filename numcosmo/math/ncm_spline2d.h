@@ -84,7 +84,7 @@ NcmSpline2d *ncm_spline2d_copy (NcmSpline2d *s2d);
 NcmSpline2d *ncm_spline2d_new (const NcmSpline2d *s2d, NcmVector *xv, NcmVector *yv, NcmMatrix *zm, gboolean init);
 
 void ncm_spline2d_free (NcmSpline2d *s2d);
-gdouble ncm_spline2d_eval (NcmSpline2d *s2d, gdouble x, gdouble y);
+G_INLINE_FUNC gdouble ncm_spline2d_eval (NcmSpline2d *s2d, gdouble x, gdouble y);
 gdouble ncm_spline2d_integ_dx (NcmSpline2d *s2d, gdouble xl, gdouble xu, gdouble y);
 gdouble ncm_spline2d_integ_dy (NcmSpline2d *s2d, gdouble x, gdouble yl, gdouble yu);
 gdouble ncm_spline2d_integ_dxdy (NcmSpline2d *s2d, gdouble xl, gdouble xu, gdouble yl, gdouble yu);
@@ -109,6 +109,12 @@ G_END_DECLS
 #include <glib-object.h>
 
 G_BEGIN_DECLS
+
+G_INLINE_FUNC gdouble
+ncm_spline2d_eval (NcmSpline2d *s2d, gdouble x, gdouble y)
+{
+  return NCM_SPLINE2D_GET_CLASS (s2d)->eval (s2d, x, y);
+}
 
 G_INLINE_FUNC gdouble
 ncm_spline2dim_integ_total (NcmSpline2d *s2d)

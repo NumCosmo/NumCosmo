@@ -785,11 +785,15 @@ nc_distance_prepare (NcDistance *dist, NcHICosmo *model)
 
   if (dist->comoving_distance_spline == NULL)
   {
+	NcmSpline *s = ncm_spline_cubic_notaknot_new ();
 	dist->comoving_distance_spline =
-	  ncm_ode_spline_new (ncm_spline_cubic_notaknot_new (), dcddz, model, 0.0, 0.0, dist->z_f);
+	  ncm_ode_spline_new (s, dcddz, model, 0.0, 0.0, dist->z_f);
+	ncm_spline_free (s);
   }
 
   ncm_ode_spline_prepare (dist->comoving_distance_spline, model);
+
+  ncm_model_ctrl_update (dist->ctrl, NCM_MODEL (model));
 
   return;
 }
@@ -815,7 +819,7 @@ static void
 nc_distance_init (NcDistance *dist)
 {
   dist->use_cache = TRUE;
-  dist->cache = NULL;
+
   g_static_mutex_init (&dist->cache_lock);
   g_static_mutex_init (&dist->update_lock);
 
@@ -845,6 +849,7 @@ nc_distance_dispose (GObject *object)
   NcDistance *dist = NC_DISTANCE (object);
 
   g_static_mutex_free (&dist->cache_lock);
+  g_static_mutex_free (&dist->update_lock);
 
   nc_function_cache_free (dist->comoving_distance_cache);
   nc_function_cache_free (dist->time_cache);
@@ -852,13 +857,19 @@ nc_distance_dispose (GObject *object)
   nc_function_cache_free (dist->conformal_time_cache);
   nc_function_cache_free (dist->sound_horizon_cache);
 
-  g_object_unref (dist->ctrl);
+  ncm_ode_spline_free (dist->comoving_distance_spline);
+
+  ncm_model_ctrl_free (dist->ctrl);
+
+  /* Chain up : end */
   G_OBJECT_CLASS (nc_distance_parent_class)->dispose (object);
 }
 
 static void
 nc_distance_finalize (GObject *object)
 {
+
+  /* Chain up : end */
   G_OBJECT_CLASS (nc_distance_parent_class)->finalize (object);
 }
 

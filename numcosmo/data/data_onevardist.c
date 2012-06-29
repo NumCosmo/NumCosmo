@@ -67,10 +67,10 @@ _onevardist_data_copy (gpointer dest_ptr, gpointer src_ptr)
 
   if (src->extra_data && dest->extra_data)
   {
-    if (NC_DATA_STRUCT_HAS_COPY(src->extra_data))
-      NC_DATA_STRUCT_COPY (dest->extra_data, src->extra_data);
-    else
-      g_error ("NcDataStruct extra do not implement copy.");
+	if (NC_DATA_STRUCT_HAS_COPY(src->extra_data))
+	  NC_DATA_STRUCT_COPY (dest->extra_data, src->extra_data);
+	else
+	  g_error ("NcDataStruct extra do not implement copy.");
   }
 
 }
@@ -83,7 +83,7 @@ _onevardist_data_free (gpointer onevardist_ptr)
   ncm_vector_free (onevardist->x);
 
   if (onevardist->extra_data)
-    nc_data_struct_free (onevardist->extra_data);
+	nc_data_struct_free (onevardist->extra_data);
 
   g_slice_free (NcDataOneVarDist, onevardist);
 }
@@ -103,8 +103,8 @@ _onevardist_calc_m2lnL (NcmMSet *mset, gpointer model, gpointer data, gdouble *m
 
   for (i = 0; i < onevardist->np; i++)
   {
-    const gdouble x_i = ncm_vector_get (onevardist->x, i);
-    *m2lnL += ncm_mset_func_eval1 (dmovd->dist, mset, x_i);
+	const gdouble x_i = ncm_vector_get (onevardist->x, i);
+	*m2lnL += ncm_mset_func_eval1 (dmovd->dist, mset, x_i);
   }
 
   return;
@@ -132,8 +132,8 @@ _onevardist_data_end (gpointer onevardist_ptr)
 
   if (onevardist->extra_data)
   {
-    if (NC_DATA_STRUCT_HAS_END (onevardist->extra_data))
-      NC_DATA_STRUCT_END (onevardist->extra_data);
+	if (NC_DATA_STRUCT_HAS_END (onevardist->extra_data))
+	  NC_DATA_STRUCT_END (onevardist->extra_data);
   }
 }
 
@@ -146,8 +146,8 @@ _onevardist_data_begin (gpointer onevardist_ptr)
 
   if (onevardist->extra_data)
   {
-    if (NC_DATA_STRUCT_HAS_BEGIN (onevardist->extra_data))
-      NC_DATA_STRUCT_BEGIN (onevardist->extra_data);
+	if (NC_DATA_STRUCT_HAS_BEGIN (onevardist->extra_data))
+	  NC_DATA_STRUCT_BEGIN (onevardist->extra_data);
   }
 }
 
@@ -158,35 +158,32 @@ _onevardist_resample (NcmMSet *mset, gpointer model, gpointer data)
 {
   NcDataModelOneVarDist *dmovd = (NcDataModelOneVarDist *) model;
   NcDataOneVarDist *onevardist = (NcDataOneVarDist *) data;
+  gsl_rng *rng = ncm_get_rng ();
   gint i;
 
-  if (dmovd->resample)
-    dmovd->resample (mset, dmovd->model, data);
-  else
+  if (dmovd->inv_pdf == NULL)
+	g_error ("This data do not implement the inverse of the pdf.");
+
+  for (i = 0; i < onevardist->np; i++)
   {
-    gsl_rng *rng;
-
-    if (dmovd->inv_pdf == NULL)
-      g_error ("This data do not implement the inverse of the pdf.");
-
-    rng = ncm_get_rng ();
-
-    for (i = 0; i < onevardist->np; i++)
-    {
-      const gdouble u_i = gsl_rng_uniform (rng);
-      const gdouble x_i = ncm_mset_func_eval1 (dmovd->inv_pdf, mset, u_i);
-      ncm_vector_set (onevardist->x, i, x_i);
-    }
+	const gdouble u_i = gsl_rng_uniform (rng);
+	const gdouble x_i = ncm_mset_func_eval1 (dmovd->inv_pdf, mset, u_i);
+	ncm_vector_set (onevardist->x, i, x_i);
   }
 }
 
 /********************************************************************************************************/
 
-static void
-_onevardist_prepare (NcmMSet *mset, gpointer model, gpointer data)
+static gpointer
+_onevardist_model_ref (gpointer model)
 {
   NcDataModelOneVarDist *dmovd = (NcDataModelOneVarDist *) model;
-  dmovd->prepare (mset, dmovd->model, data);
+  NcDataModelOneVarDist *dmovd_ref = g_slice_new (NcDataModelOneVarDist);
+
+  dmovd_ref->dist    = ncm_mset_func_ref (dmovd->dist);
+  dmovd_ref->inv_pdf = ncm_mset_func_ref (dmovd->inv_pdf);
+
+  return dmovd_ref;
 }
 
 /********************************************************************************************************/
@@ -195,6 +192,9 @@ static void
 _onevardist_model_free (gpointer model)
 {
   NcDataModelOneVarDist *dmovd = (NcDataModelOneVarDist *) model;
+  ncm_mset_func_free (dmovd->dist);
+  ncm_mset_func_free (dmovd->inv_pdf);
+
   g_slice_free (NcDataModelOneVarDist, dmovd);
 }
 
@@ -237,12 +237,13 @@ nc_data_onevardist_new (NcmMSetFunc *dist, NcmMSetFunc *inv_pdf)
 
   dmovd->dist = dist;
   dmovd->inv_pdf = inv_pdf;
-  dmovd->model = NULL;
 
   data->name                  = name;
   data->type                  = 0;
   data->init                  = FALSE;
   data->model                 = dmovd;
+  data->model_init            = NULL;
+  data->model_ref             = &_onevardist_model_ref;
   data->model_free            = &_onevardist_model_free;
   data->dts                   = _nc_data_struct_onevardist_new ();
   data->resample              = &_onevardist_resample;
@@ -273,9 +274,9 @@ void
 nc_data_onevardist_init_from_vector (NcData *data, NcmVector *x, NcDataStruct *extra_data)
 {
   NcDataOneVarDist *onevardist = g_slice_new0 (NcDataOneVarDist);
-	onevardist->np = ncm_vector_len (x);
-	onevardist->x = x;
-	g_object_ref (x);
+  onevardist->np = ncm_vector_len (x);
+  onevardist->x = x;
+  g_object_ref (x);
 
   NC_DATA_STRUCT_DATA (data->dts) = onevardist;
   onevardist->extra_data = extra_data;
@@ -295,39 +296,5 @@ nc_data_onevardist_init_from_vector (NcData *data, NcmVector *x, NcDataStruct *e
 void
 nc_data_onevardist_set_prepare (NcData *data, NcDataPrepare prepare)
 {
-  NcDataModelOneVarDist *dmovd = (NcDataModelOneVarDist *) data->model;
-  data->prepare = &_onevardist_prepare;
-  dmovd->prepare = prepare;
-}
-
-/**
- * nc_data_onevardist_set_resample:
- * @data: FIXME
- * @resample: (scope call): FIXME
- *
- * FIXME
- *
- * Returns: FIXME
- */
-void
-nc_data_onevardist_set_resample (NcData *data, NcDataResample resample)
-{
-  NcDataModelOneVarDist *dmovd = (NcDataModelOneVarDist *) data->model;
-  dmovd->resample = resample;
-}
-
-/**
- * nc_data_onevardist_set_model:
- * @data: FIXME
- * @model: FIXME
- *
- * FIXME
- *
- * Returns: FIXME
- */
-void
-nc_data_onevardist_set_model (NcData *data, gpointer model)
-{
-  NcDataModelOneVarDist *dmovd = (NcDataModelOneVarDist *) data->model;
-  dmovd->model = model;
+  data->prepare = prepare;
 }

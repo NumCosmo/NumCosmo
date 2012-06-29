@@ -78,9 +78,6 @@ enum {
 static void
 nc_hicosmo_de_pad_init (NcHICosmoDEPad *pad)
 {
-  NcmModel *model = NCM_MODEL (pad);
-  NcmModelClass *model_class = NCM_MODEL_GET_CLASS (model);
-  model->params = ncm_vector_new (model_class->sparam_len);
 }
 
 static void

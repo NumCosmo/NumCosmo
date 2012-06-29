@@ -67,6 +67,8 @@ void nc_data_struct_free (NcDataStruct *dts);
 #define NC_DATA_STRUCT_HAS_BEGIN(dts) ((dts)->begin)
 #define NC_DATA_STRUCT_HAS_END(dts) ((dts)->end)
 
+typedef GDestroyNotify NcDataFree;
+typedef gpointer (*NcDataRef) (gpointer model);
 typedef void (*NcDataInitModel) (gpointer model, gpointer data);
 typedef void (*NcDataPrepare) (NcmMSet *mset, gpointer model, gpointer data);
 typedef void (*NcDataResample) (NcmMSet *mset, gpointer model, gpointer data);
@@ -92,7 +94,8 @@ struct _NcData
   gboolean init;
   gboolean clone;
   gpointer model;
-  void (*model_free) (gpointer model);
+  NcDataRef model_ref;
+  NcDataFree model_free;
   NcDataStruct *dts;
   NcDataResample resample;
   NcDataInitModel model_init;
@@ -117,7 +120,6 @@ struct _NcData
 NcData *nc_data_new (void);
 NcData *nc_data_copy (NcData *data);
 void nc_data_free (NcData *data);
-void nc_data_free0 (NcData *data, gboolean free_orig);
 gboolean nc_data_model_init (NcData *data);
 gboolean nc_data_begin (NcData *data);
 gboolean nc_data_init (NcData *data);

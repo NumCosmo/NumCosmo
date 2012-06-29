@@ -78,9 +78,6 @@ enum {
 static void
 nc_hicosmo_de_qe_init (NcHICosmoDEQe *qe)
 {
-  NcmModel *model = NCM_MODEL (qe);
-  NcmModelClass *model_class = NCM_MODEL_GET_CLASS (model);
-  model->params = ncm_vector_new (model_class->sparam_len);
 }
 
 static void

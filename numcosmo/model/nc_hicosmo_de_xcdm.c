@@ -77,9 +77,6 @@ enum {
 static void
 nc_hicosmo_de_xcdm_init (NcHICosmoDEXcdm *xcdm)
 {
-  NcmModel *model = NCM_MODEL (xcdm);
-  NcmModelClass *model_class = NCM_MODEL_GET_CLASS (model);
-  model->params = ncm_vector_new (model_class->sparam_len);
 }
 
 static void

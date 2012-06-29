@@ -146,8 +146,9 @@ ncm_spline_new_data (const NcmSpline *s, gdouble *x, gdouble *y, gsize len, gboo
  * This funtion sets both @xv and @yv vectors to @s.
  * The two vectors must have the same length.
  *
+ * Returns: (transfer none): FIXME
  */
-void
+NcmSpline *
 ncm_spline_set (NcmSpline *s, NcmVector *xv, NcmVector *yv, gboolean init)
 {
   g_assert (xv != NULL && yv != NULL);
@@ -195,6 +196,22 @@ ncm_spline_set (NcmSpline *s, NcmVector *xv, NcmVector *yv, gboolean init)
 
   if (init)
 	ncm_spline_prepare (s);
+
+  return s;
+}
+
+/**
+ * ncm_spline_ref:
+ * @s: a #NcmSpline.
+ *
+ * FIXME
+ *
+ * Returns: (transfer full): FIXME
+ */
+NcmSpline *
+ncm_spline_ref (NcmSpline *s)
+{
+  return g_object_ref (s);
 }
 
 /**

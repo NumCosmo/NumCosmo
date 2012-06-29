@@ -51,7 +51,6 @@ struct _NcDistance
 {
   /*< private >*/
   GObject parent_instance;
-  gpointer cache;
   NcmOdeSpline *comoving_distance_spline;
   NcFunctionCache *comoving_distance_cache;
   NcFunctionCache *time_cache;

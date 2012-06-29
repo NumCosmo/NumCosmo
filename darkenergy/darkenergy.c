@@ -68,6 +68,7 @@ main (gint argc, gchar *argv[])
   {
 	g_warning ("Invalid options. (%s)", full_cmd_line);
 	printf (g_option_context_get_help (context, TRUE, NULL));
+	g_option_context_free (context);
 	return 0;
   }
 
@@ -84,6 +85,8 @@ main (gint argc, gchar *argv[])
 	printf (g_option_context_get_help (context, TRUE, NULL));
 	return 0;
   }
+
+  g_option_context_free (context);
 
   nc_message ("# NumCosmo Version -- "NUMCOSMO_VERSION"\n");
   nc_message ("# Command Line: %s\n", full_cmd_line);
@@ -112,22 +115,20 @@ main (gint argc, gchar *argv[])
 	                           de_model.w[2]);
   }
 
+  if (de_fit.fit_params != NULL)
   {
-	gchar **cmds;
+	gchar **cmds, **cmds_orig;
 	gboolean have_free = FALSE;
 
-	if (de_fit.fit_params == NULL)
-	  g_error ("No parameter specified, use --fit-params, or --help-names to obtain a list of parameters avaliable.");
 	cmds = g_strsplit (de_fit.fit_params, ",", 0);
+	cmds_orig = cmds;
 
 	ncm_mset_param_set_all_ftype (mset, NCM_PARAM_TYPE_FIXED);
 
 	for (; cmds[0] != NULL; cmds = &cmds[1])
 	{
 	  gchar **name_cmd = g_strsplit (cmds[0], "=", 2);
-	  gchar *to_freed = cmds[0];
 	  gint index;
-	  g_free (to_freed);
 
 	  if (name_cmd[1] == NULL)
 		g_error ("Usage --fit-params H0=fit, with the equal symbol =");
@@ -146,9 +147,9 @@ main (gint argc, gchar *argv[])
 	  else
 		g_error ("Command (%s) not recognised, use fix or 0 to keep the parameter fixed and fit or 1 to fit this parameter", name_cmd[1]);
 
-	  g_free (name_cmd[0]);
-	  g_free (name_cmd[1]);
+	  g_strfreev (name_cmd);
 	}
+	g_strfreev (cmds_orig);
 
 	if (!have_free)
 	  g_error ("No parameter was set free");
@@ -212,6 +213,8 @@ main (gint argc, gchar *argv[])
 
   if (de_fit.fit)
   {
+	if (de_fit.fit_params == NULL)
+	  g_error ("No parameter specified, use --fit-params, or --help-names to obtain a list of parameters avaliable.");
 	fit->params_prec_target = 1e-5;
 	ncm_fit_run (fit, de_fit.max_iter, de_fit.msg_level);
 	ncm_fit_log_info (fit);

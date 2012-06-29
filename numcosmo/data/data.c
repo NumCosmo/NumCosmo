@@ -125,8 +125,9 @@ nc_data_new (void)
   data->type                  = 0;
   data->init                  = FALSE;
   data->model                 = NULL;
-  data->model_init            = NULL;
   data->model_free            = NULL;
+  data->model_ref             = NULL;
+  data->model_init            = NULL;
   data->dts                   = NULL;
   data->resample              = NULL;
   data->prepare               = NULL;
@@ -141,28 +142,6 @@ nc_data_new (void)
 }
 
 /**
- * nc_data_free0:
- * @data: pointer to type defined by #NcData
- * @free_orig: FIXME
- *
- * FIXME
- */
-void
-nc_data_free0 (NcData *data, gboolean free_orig)
-{
-  if (NC_DATA_STRUCT_HAS_END (data->dts))
-    NC_DATA_STRUCT_END (data->dts);
-
-  nc_data_struct_free (data->dts);
-
-  if (free_orig && data->orig != NULL)
-    nc_data_struct_free (data->orig);
-
-  g_slice_free (NcData, data);
-  return;
-}
-
-/**
  * nc_data_free:
  * @data: pointer to type defined by #NcData
  *
@@ -171,7 +150,19 @@ nc_data_free0 (NcData *data, gboolean free_orig)
 void
 nc_data_free (NcData *data)
 {
-  nc_data_free0 (data, FALSE);
+  if (NC_DATA_STRUCT_HAS_END (data->dts))
+    NC_DATA_STRUCT_END (data->dts);
+
+  nc_data_struct_free (data->dts);
+
+  if ((data->model_free != NULL) && (data->model != NULL))
+	data->model_free (data->model);
+
+  if (data->orig != NULL)
+    nc_data_struct_free (data->orig);
+
+  g_slice_free (NcData, data);
+  return;
 }
 
 /**
@@ -261,7 +252,22 @@ NcData *
 nc_data_copy (NcData *data)
 {
   NcData *clone = nc_data_new ();
-  memcpy (clone, data, sizeof (NcData));
+
+  clone->name                  = data->name;
+  clone->type                  = data->type;
+  clone->init                  = data->init;
+  clone->model                 = data->model_ref (data->model);
+  clone->model_ref             = data->model_ref;
+  clone->model_free            = data->model_free;
+  clone->model_init            = data->model_init;
+  clone->resample              = data->resample;
+  clone->prepare               = data->prepare;
+  clone->calc_leastsquares_f   = data->calc_leastsquares_f;
+  clone->calc_leastsquares_J   = data->calc_leastsquares_J;
+  clone->calc_leastsquares_f_J = data->calc_leastsquares_f_J;
+  clone->calc_m2lnL_val        = data->calc_m2lnL_val;
+  clone->calc_m2lnL_grad       = data->calc_m2lnL_grad;
+  clone->calc_m2lnL_val_grad   = data->calc_m2lnL_val_grad;
 
   if (NC_DATA_STRUCT_HAS_DUP (data->dts))
     clone->dts = nc_data_struct_copy (data->dts);

@@ -189,9 +189,13 @@ _nc_hicosmo_qspline_constructed (GObject *object)
 	}
 
 	ncm_spline_set (qspline->q_z, zv, qv, FALSE);
-	qspline->E2_z = ncm_ode_spline_new (ncm_spline_cubic_notaknot_new (),
-	                                    _nc_hicosmo_qspline_dE2dz, qspline,
-	                                    1.0, 0.0, qspline->z_f);
+	{
+	  NcmSpline *s = ncm_spline_cubic_notaknot_new ();
+	  qspline->E2_z = ncm_ode_spline_new (s,
+	                                      _nc_hicosmo_qspline_dE2dz, qspline,
+	                                      1.0, 0.0, qspline->z_f);
+	  ncm_spline_free (s);
+	}
 
 	return;
   }

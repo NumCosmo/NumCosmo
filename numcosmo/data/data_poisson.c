@@ -244,7 +244,9 @@ nc_data_poisson_new (NcDataPoissonType poisson_type)
   data->type                  = poisson_type;
   data->init                  = FALSE;
   data->model                 = NULL;
-  data->model_free            = NULL;
+  data->model_init            = NULL;
+  data->model_ref             = (NcDataRef) &ncm_mset_func_ref;
+  data->model_free            = (NcDataFree) &ncm_mset_func_free;
   data->dts                   = _nc_data_struct_poisson_new ();
   data->resample              = &_poisson_resample;
   data->prepare               = NULL;

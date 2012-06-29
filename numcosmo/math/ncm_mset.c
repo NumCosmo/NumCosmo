@@ -155,7 +155,11 @@ ncm_mset_copy_all (NcmMSet *mset)
   for (gmid = 0; gmid < NCM_MODEL_MAX_ID; gmid++)
   {
 	if (mset->model[gmid] != NULL)
-	  ncm_mset_set (mset_copy, ncm_model_copy (ncm_mset_peek (mset, gmid)));
+	{
+	  NcmModel *m_copy = ncm_model_copy (ncm_mset_peek (mset, gmid));
+	  ncm_mset_set (mset_copy, m_copy);
+	  ncm_model_free (m_copy);
+	}
   }
   return mset_copy;
 }
@@ -1084,6 +1088,12 @@ ncm_mset_dispose (GObject *object)
 static void
 ncm_mset_finalize (GObject *object)
 {
+  NcmMSet *mset = NCM_MSET (object);
+  gint i;
+  for (i = 0; i < NCM_MODEL_MAX_ID; i++)
+	g_array_unref (mset->fpi_array[i]);
+  g_array_unref (mset->pi_array);
+
   /* Chain up : end */
   G_OBJECT_CLASS (ncm_mset_parent_class)->finalize (object);
 }

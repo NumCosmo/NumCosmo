@@ -81,9 +81,6 @@ enum {
 static void
 nc_hicosmo_de_linder_init (NcHICosmoDELinder *linder)
 {
-  NcmModel *model = NCM_MODEL (linder);
-  NcmModelClass *model_class = NCM_MODEL_GET_CLASS (model);
-  model->params = ncm_vector_new (model_class->sparam_len);
 }
 
 static void

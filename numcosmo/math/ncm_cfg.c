@@ -824,15 +824,20 @@ load_save_vector_matrix(complex)
 sqlite3 *
 ncm_cfg_get_default_sqlite3 (void)
 {
-  sqlite3 *db;
-  gchar *filename = g_build_filename (PACKAGE_DATA_DIR, NC_CFG_DEFAULT_SQLITE3_FILENAME, NULL);
-  gint ret;
+  static sqlite3 *db = NULL;
+  if (db == NULL)
+  {
+	gchar *filename = g_build_filename (PACKAGE_DATA_DIR, NC_CFG_DEFAULT_SQLITE3_FILENAME, NULL);
+	gint ret;
 
-  if (!g_file_test (filename, G_FILE_TEST_EXISTS))
-	g_error ("Default database not found (%s)", filename);
-  ret = sqlite3_open(filename, &db);
-  if (ret  != SQLITE_OK)
-	g_error ("Connection to database failed: %s", sqlite3_errmsg (db));
+	if (!g_file_test (filename, G_FILE_TEST_EXISTS))
+	  g_error ("Default database not found (%s)", filename);
+	ret = sqlite3_open (filename, &db);
+	if (ret  != SQLITE_OK)
+	  g_error ("Connection to database failed: %s", sqlite3_errmsg (db));
+
+	g_free (filename);
+  }
 
   return db;
 }
@@ -989,7 +994,7 @@ ncm_cfg_create_from_name_params (const gchar *obj_name, GVariant *params)
 	  GVariant *var_key = g_variant_get_child_value (var, 0);
 	  GVariant *var_val = g_variant_get_child_value (var, 1);
 	  GVariant *val = g_variant_get_variant (var_val);
-	  gprop[i].name = g_variant_dup_string (var_key, NULL);
+	  gprop[i].name = g_variant_get_string (var_key, NULL);
 
 	  if (g_variant_is_of_type (val, G_VARIANT_TYPE ("{sa{sv}}")))
 	  {
