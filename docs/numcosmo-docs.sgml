@@ -25,7 +25,7 @@
   </chapter>
 
   <chapter>
-    <title>Numcosmo Math Objects</title>
+    <title>Numcosmo Math</title>
     <xi:include href="xml/ncm_vector.xml"/>
     <xi:include href="xml/ncm_matrix.xml"/>
     <xi:include href="xml/ncm_lapack.xml"/>
@@ -47,8 +47,18 @@
     <xi:include href="xml/ncm_spline2d_spline.xml"/>
     <xi:include href="xml/ncm_spline2d_bicubic.xml"/>
     <xi:include href="xml/ncm_spline2d_gsl.xml"/>
+    <xi:include href="xml/ncm_func_eval.xml"/>
     <xi:include href="xml/ncm_fftlog.xml"/>
     <xi:include href="xml/ncm_cfg.xml"/>
+    <section>
+      <title>Special Functions</title>
+      <xi:include href="xml/ncm_mpsf_trig_int.xml"/>
+      <xi:include href="xml/ncm_mpsf_0F1.xml"/>
+      <xi:include href="xml/ncm_mpsf_sbessel.xml"/>
+      <xi:include href="xml/ncm_mpsf_sbessel_int.xml"/>
+      <xi:include href="xml/ncm_sf_sbessel.xml"/>
+      <xi:include href="xml/ncm_sf_sbessel_int.xml"/>
+    </section>
   </chapter>
 
   <chapter>
@@ -184,22 +194,15 @@
     <title>Mathematical Utilities</title>
     <xi:include href="xml/dividedifference.xml"/>
     <xi:include href="xml/binsplit.xml"/>
-    <xi:include href="xml/trig_integral.xml"/>
     <xi:include href="xml/poly.xml"/>
-    <xi:include href="xml/function_eval.xml"/>
     <xi:include href="xml/quaternion.xml"/>
     <xi:include href="xml/util.xml"/>
     <xi:include href="xml/matrix_exp.xml"/>
     <xi:include href="xml/mpq_tree.xml"/>
     <xi:include href="xml/cvode_util.xml"/>
-    <xi:include href="xml/mp_spherical_bessel.xml"/>
     <xi:include href="xml/magnus_iserles_ode.xml"/>
     <xi:include href="xml/grid_one.xml"/>
     <xi:include href="xml/quadrature.xml"/>
-    <xi:include href="xml/mp_spherical_bessel_integral.xml"/>
-    <xi:include href="xml/spherical_bessel.xml"/>
-    <xi:include href="xml/spherical_bessel_integral.xml"/>
-    <xi:include href="xml/mp_hypergeometric_0F1.xml"/>
     <xi:include href="xml/function_cache.xml"/>
     <xi:include href="xml/memory_pool.xml"/>
     <xi:include href="xml/integral.xml"/>

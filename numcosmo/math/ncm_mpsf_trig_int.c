@@ -1,5 +1,5 @@
 /***************************************************************************
- *            trig_integral.c
+ *            ncm_mpsf_trig_int.c
  *
  *  Tue Feb  2 22:16:05 2010
  *  Copyright  2010  Sandro Dias Pinto Vitenti
@@ -21,9 +21,9 @@
  * You should have received a copy of the GNU General Public License along
  * with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
- 
+
 /**
- * SECTION:trig_integral
+ * SECTION:ncm_mpsf_trig_int
  * @title: Trigonometric Integrals
  * @short_description: Sin integral implementation with support for multiple precision calculation
  *
@@ -77,9 +77,6 @@ NCM_BINSPLIT_DECL(binsplit_sin_integral_taylor_b,v,u,n,data)
 #include "binsplit_eval.c"
 #undef _mx2
 
-/*
-
- */
 #define NC_BINSPLIT_EVAL_NAME binsplit_sin_integral_assym
 #define _m2x2 (((mpq_ptr *)data)[0])
 #define _sincos (GPOINTER_TO_INT(((gpointer *)data)[1]))
@@ -143,7 +140,7 @@ _assym_mpfr (mpq_t q, mpfr_ptr res, mp_rnd_t rnd)
   mpfr_set_q (res, q, rnd);
   mprec = res->_mpfr_exp;
 //  printf ("%ld %ld | %ld\n", prec, mprec, prec - mprec);
-  
+
   if ((prec - mprec) > 0)
   {
     gulong nf;
@@ -164,11 +161,11 @@ _assym_mpfr (mpq_t q, mpfr_ptr res, mp_rnd_t rnd)
     mpfr_div_q (sin_x, sin_x, q, rnd);
     mpfr_div_q (sin_x, sin_x, q, rnd);
     mpfr_div_q (cos_x, cos_x, q, rnd);
-    
+
     nf = ceil(fabs(prec * M_LN2 / (log (fabs(mpq_get_d (mq2_2))))));
     if (nf == 0) nf = 4;
     data[0] = mq2_2;
-    
+
     data[1] = GINT_TO_POINTER(-1);
     ncm_binsplit_eval_prec (bs, binsplit_sin_integral_assym, nf, prec - mprec);
     mpfr_mul_z (cos_x, cos_x, bs->T, rnd);
@@ -185,7 +182,7 @@ _assym_mpfr (mpq_t q, mpfr_ptr res, mp_rnd_t rnd)
     mpfr_sub (res, res, sin_x, rnd);
     mpfr_sub (res, res, cos_x, rnd);
 
-    mpq_clear (mq2_2);    
+    mpq_clear (mq2_2);
   }
   else
   {
@@ -195,22 +192,22 @@ _assym_mpfr (mpq_t q, mpfr_ptr res, mp_rnd_t rnd)
 }
 
 /**
- * ncm_sf_sin_integral_mpfr: (skip)
+ * ncm_mpsf_sin_int_mpfr: (skip)
  * @q: FIXME
  * @res: FIXME
  * @rnd: FIXME
  *
  * FIXME
-*/ 
+ */
 void
-ncm_sf_sin_integral_mpfr (mpq_t q, mpfr_ptr res, mp_rnd_t rnd)
+ncm_mpsf_sin_int_mpfr (mpq_t q, mpfr_ptr res, mp_rnd_t rnd)
 {
   gdouble x = mpq_get_d (q);
   gdouble dnmax = 1.0 / 4.0 * (-5.0 + sqrt (1.0 + 4.0 * x * x));
   gdouble nmax = (dnmax > 0) ? ceil (dnmax) : 0;
   gulong prec = mpfr_get_prec (res);
   //printf ("# dnmax %g nmax %g\n", dnmax, nmax);
-  
+
   if (nmax == 0)
     _taylor_mpfr (q, res, rnd);
   else

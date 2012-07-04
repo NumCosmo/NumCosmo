@@ -1,5 +1,5 @@
 /***************************************************************************
- *            mp_hypergeometric_0F1.h
+ *            ncm_mpsf_0F1.h
  *
  *  Thu October 13 22:17:46 2011
  *  Copyright  2011  Sandro Dias Pinto Vitenti
@@ -22,8 +22,8 @@
  * with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef _NC_SF_MP_0F1_H
-#define _NC_SF_MP_0F1_H
+#ifndef _NCM_MPSF_0F1_H
+#define _NCM_MPSF_0F1_H
 #include <string.h>
 #include <stdio.h>
 #include <gmp.h>
@@ -32,10 +32,10 @@
 
 G_BEGIN_DECLS
 
-void ncm_sf_mp_0F1 (mpq_t b, mpq_t x, mpfr_ptr res, mp_rnd_t rnd);
-void ncm_sf_mp_0F1_d (gdouble b, gdouble x, mpfr_ptr res, mp_rnd_t rnd);
+void ncm_mpsf_0F1 (mpq_t b, mpq_t x, mpfr_ptr res, mp_rnd_t rnd);
+void ncm_mpsf_0F1_d (gdouble b, gdouble x, mpfr_ptr res, mp_rnd_t rnd);
 gdouble ncm_sf_0F1 (gdouble b, gdouble x);
 
 G_END_DECLS
 
-#endif /* _NC_SF_MP_0F1_H */
+#endif /* _NCM_MPSF_0F1_H */

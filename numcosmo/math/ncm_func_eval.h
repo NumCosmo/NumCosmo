@@ -1,13 +1,13 @@
 /***************************************************************************
- *            trig_integral.h
+ *            ncm_func_eval.h
  *
- *  Tue Feb  2 22:16:05 2010
+ *  Sun Jul 25 19:50:16 2010
  *  Copyright  2010  Sandro Dias Pinto Vitenti
  *  <sandro@isoftware.com.br>
  ****************************************************************************/
 /*
  * numcosmo
- * Copyright (C) Sandro Dias Pinto Vitenti 2012 <sandro@isoftware.com.br>
+ * Copyright (C) Sandro Dias Pinto Vitenti 2012 <sandro@lapsandro>
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
@@ -22,19 +22,18 @@
  * with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef _NC_TRIG_INTEGRAL_H
-#define _NC_TRIG_INTEGRAL_H
-#include <string.h>
-#include <stdio.h>
-#include <gmp.h>
-#include <mpfr.h>
+#ifndef _NCM_FUNC_EVAL_H
+#define _NCM_FUNC_EVAL_H
+
 #include <glib.h>
-#include <gsl/gsl_permutation.h>
 
 G_BEGIN_DECLS
 
-void ncm_sf_sin_integral_mpfr (mpq_t q, mpfr_ptr res, mp_rnd_t rnd);
+typedef void (*NcmLoopFunc) (glong i, glong f, gpointer data);
+
+void ncm_func_eval_set_max_threads (gint mt);
+void ncm_func_eval_threaded_loop (NcmLoopFunc lfunc, glong i, glong f, gpointer data);
 
 G_END_DECLS
 
-#endif /* _NC_TRIG_INTEGRAL_H */
+#endif /* _NCM_FUNC_EVAL_H */

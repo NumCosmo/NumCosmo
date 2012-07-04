@@ -232,12 +232,12 @@ _Nc_k_integrand (gdouble k, gpointer params)
   gdouble xf = 5250.0;
   glong np = ceil(xf / (2.0 * M_PI) * nppo);
   NcmGridSection x_sec[2] = {{NCM_GRID_NODES_BOTH,  0, np, 0.0, xf}, {0}};
-  NcSFSphericalBesselIntSpline *int_xnjl_spline = ncm_sf_spherical_bessel_jl_xj_integrate_spline_cached_new (l, x_sec, TRUE);
+  NcSFSphericalBesselIntSpline *int_xnjl_spline = ncm_sf_sbessel_jl_xj_integrate_spline_cached_new (l, x_sec, TRUE);
   gdouble theta_l_k;
 //printf ("# Uhu![%ld] %.15g\n", l, k);
-  ncm_sf_spherical_bessel_jl_xj_integrate_spline_goto (int_xnjl_spline, l);
+  ncm_sf_sbessel_jl_xj_integrate_spline_goto (int_xnjl_spline, l);
   nc_pert_linear_spline_set_source_at (pspline, k);
-  theta_l_k = ncm_sf_spherical_bessel_jl_xj_integral_spline (int_xnjl_spline, pspline->Sg[0], pspline->Sg[1], pspline->Sg[2], k);
+  theta_l_k = ncm_sf_sbessel_jl_xj_integral_spline (int_xnjl_spline, pspline->Sg[0], pspline->Sg[1], pspline->Sg[2], k);
   Nc_data->count++;
   return theta_l_k * theta_l_k / k;
 }
@@ -269,13 +269,13 @@ nc_pert_linear_los_integrate (NcLinearPertSplines *pspline, glong l, gdouble k)
     gdouble xf = 5250.0;
     glong np = ceil(xf / (2.0 * M_PI) * nppo);
     NcmGridSection x_sec[2] = {{NCM_GRID_NODES_BOTH,  0, np, 0.0, xf}, {0}};
-    int_xnjl_spline = ncm_sf_spherical_bessel_jl_xj_integrate_spline_cached_new (l, x_sec, TRUE);
-    ncm_sf_spherical_bessel_jl_xj_integrate_spline_goto (int_xnjl_spline, l);
+    int_xnjl_spline = ncm_sf_sbessel_jl_xj_integrate_spline_cached_new (l, x_sec, TRUE);
+    ncm_sf_sbessel_jl_xj_integrate_spline_goto (int_xnjl_spline, l);
     //printf ("# Rules x_sec [%.15g %.15g] / %ld\n", 0.0, xf, np);
   }
   nc_pert_linear_spline_set_source_at (pspline, k);
 
-  return ncm_sf_spherical_bessel_jl_xj_integral_spline (int_xnjl_spline, pspline->Sg[0], pspline->Sg[1], pspline->Sg[2], k);
+  return ncm_sf_sbessel_jl_xj_integral_spline (int_xnjl_spline, pspline->Sg[0], pspline->Sg[1], pspline->Sg[2], k);
 
   if (w == NULL)
     w = nc_integral_get_workspace();
@@ -292,9 +292,9 @@ nc_pert_linear_los_integrate (NcLinearPertSplines *pspline, glong l, gdouble k)
 /*
   for (i = 0; i < ldata.S0->len - 1; i++)
   {
-    const gdouble aa = ncm_sf_mp_spherical_bessel_integrate (int_jlspline, pspline->Sg[0], l, ki, i, 0);
-    const gdouble bb = ncm_sf_mp_spherical_bessel_integrate (int_jlspline, pspline->Sg[1], l, ki, i, 1);
-    const gdouble cc = ncm_sf_mp_spherical_bessel_integrate (int_jlspline, pspline->Sg[2], l, ki, i, 2);
+    const gdouble aa = ncm_mpsf_sbessel_integrate (int_jlspline, pspline->Sg[0], l, ki, i, 0);
+    const gdouble bb = ncm_mpsf_sbessel_integrate (int_jlspline, pspline->Sg[1], l, ki, i, 1);
+    const gdouble cc = ncm_mpsf_sbessel_integrate (int_jlspline, pspline->Sg[2], l, ki, i, 2);
     res_rules += aa + bb + cc;
   }
 */
@@ -306,7 +306,7 @@ nc_pert_linear_los_integrate (NcLinearPertSplines *pspline, glong l, gdouble k)
       res_int, res_rules, fabs((res_rules - res_int) / res_int), fabs(err / res_int), ldata.count);fflush (stdout);
   }
 
-//  printf ("%.15g %.15g\n", res_rules, ncm_sf_spherical_bessel_jl_xj_integral_spline (int_xnjl_spline, pspline->Sg[0], pspline->Sg[1], pspline->Sg[2], k));
+//  printf ("%.15g %.15g\n", res_rules, ncm_sf_sbessel_jl_xj_integral_spline (int_xnjl_spline, pspline->Sg[0], pspline->Sg[1], pspline->Sg[2], k));
 
   return res_rules;
 }
@@ -692,8 +692,8 @@ local_los_int (gdouble deta, gpointer params)
   gdouble kdeta2 = kdeta * kdeta;
   gdouble jl, jlp1, djl, d2jl;
 
-  jl = ncm_sf_spherical_bessel (l, kdeta);
-  jlp1 = ncm_sf_spherical_bessel (l + 1, kdeta);
+  jl = ncm_sf_sbessel (l, kdeta);
+  jlp1 = ncm_sf_sbessel (l + 1, kdeta);
 
   djl = (kdeta != 0) ? (l * jl / kdeta - jlp1) : (0.0);
   d2jl = (kdeta != 0) ? (((l * (l-1.0) - kdeta2) * jl + 2.0 * kdeta * jlp1) / kdeta2) : (0.0);

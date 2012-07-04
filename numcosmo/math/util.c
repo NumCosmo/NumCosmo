@@ -270,6 +270,47 @@ ncm_topology_sigma_comoving_a0_lss (guint n, gdouble alpha, gdouble sigma_alpha)
   return sigma;
 }
 
+typedef struct
+{
+  mpz_t him1, him2, kim1, kim2, hi, ki, a;
+} NcmCoarseDbl;
+
+static gpointer
+_besselj_bs_alloc (void)
+{
+  NcmCoarseDbl *cdbl = g_slice_new (NcmCoarseDbl);
+
+  mpz_inits (cdbl->him1, cdbl->him2, cdbl->kim1, cdbl->kim2, cdbl->hi, cdbl->ki, cdbl->a, NULL);
+
+  return cdbl;
+}
+
+static void
+_besselj_bs_free (gpointer p)
+{
+  NcmCoarseDbl *cdbl = (NcmCoarseDbl *)p;
+
+  mpz_clears (cdbl->him1, cdbl->him2, cdbl->kim1, cdbl->kim2, cdbl->hi, cdbl->ki, cdbl->a, NULL);
+
+  g_slice_free (NcmCoarseDbl, cdbl);
+}
+
+
+NcmCoarseDbl **
+_ncm_coarse_dbl_get_bs ()
+{
+  static GStaticMutex create_lock = G_STATIC_MUTEX_INIT;
+  static NcmMemoryPool *mp = NULL;
+
+  g_static_mutex_lock (&create_lock);
+  if (mp == NULL)
+    mp = ncm_memory_pool_new (_besselj_bs_alloc, _besselj_bs_free);
+  g_static_mutex_unlock (&create_lock);
+
+  return ncm_memory_pool_get (mp);
+}
+
+
 /**
  * ncm_rational_coarce_double: (skip)
  * @x: FIXME
@@ -281,17 +322,26 @@ ncm_topology_sigma_comoving_a0_lss (guint n, gdouble alpha, gdouble sigma_alpha)
 void
 ncm_rational_coarce_double (gdouble x, mpq_t q)
 {
+  NcmCoarseDbl **cdbl_ptr = _ncm_coarse_dbl_get_bs ();
+  NcmCoarseDbl *cdbl = *cdbl_ptr;
   gint expo2 = 0;
   gdouble xo = fabs(frexp (x, &expo2));
   gdouble xi = xo;
-  mpz_t him1, him2, kim1, kim2, hi, ki, a;
+
   if (x == 0)
   {
 	mpq_set_ui (q, 0, 1);
+	ncm_memory_pool_return (cdbl_ptr);
 	return;
   }
 
-  mpz_inits (him1, him2, kim1, kim2, hi, ki, a, NULL);
+#define him1 cdbl->him1
+#define him2 cdbl->him2
+#define kim1 cdbl->kim1
+#define kim2 cdbl->kim2
+#define hi cdbl->hi
+#define ki cdbl->ki
+#define a cdbl->a
 
   mpz_set_ui (him1, 1);
   mpz_set_ui (him2, 0);
@@ -344,7 +394,15 @@ ncm_rational_coarce_double (gdouble x, mpq_t q)
 	g_error ("Wrong rational approximation for x = %.16g N(q) = %.16g [%.5e] | 2^(%d)\n", x, mpq_get_d (q), fabs(mpq_get_d (q) / x - 1), expo2);
   }
 
-  mpz_clears (him1, him2, kim1, kim2, hi, ki, a, NULL);
+  ncm_memory_pool_return (cdbl_ptr);
+
+#undef him1
+#undef him2
+#undef kim1
+#undef kim2
+#undef hi
+#undef ki
+#undef a
 
   return;
 }

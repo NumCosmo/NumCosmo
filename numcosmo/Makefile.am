@@ -31,6 +31,13 @@ ncm_sources = \
 	math/ncm_spline2d_spline.c       \
 	math/ncm_spline2d_gsl.c          \
 	math/ncm_spline2d_bicubic.c      \
+	math/ncm_func_eval.c             \
+	math/ncm_mpsf_trig_int.c         \
+	math/ncm_mpsf_sbessel.c          \
+	math/ncm_sf_sbessel.c            \
+	math/ncm_sf_sbessel_int.c        \
+	math/ncm_mpsf_sbessel_int.c      \
+	math/ncm_mpsf_0F1.c              \
 	math/ncm_fftlog.c                \
 	math/ncm_sparam.c                \
 	math/ncm_vparam.c                \
@@ -57,6 +64,13 @@ ncm_headers = \
 	math/ncm_spline2d_spline.h       \
 	math/ncm_spline2d_gsl.h          \
 	math/ncm_spline2d_bicubic.h      \
+	math/ncm_func_eval.h             \
+	math/ncm_mpsf_trig_int.h         \
+	math/ncm_mpsf_sbessel.h          \
+	math/ncm_sf_sbessel.h            \
+	math/ncm_sf_sbessel_int.h        \
+	math/ncm_mpsf_sbessel_int.h      \
+	math/ncm_mpsf_0F1.h              \
 	math/ncm_fftlog.h                \
 	math/ncm_sparam.h                \
 	math/ncm_vparam.h                \
@@ -235,28 +249,14 @@ libnumcosmo_la_SOURCES = \
 	math/quaternion.h         \
 	math/binsplit.c           \
 	math/binsplit.h           \
-	math/trig_integral.c      \
-	math/trig_integral.h      \
 	math/mpq_tree.c           \
 	math/mpq_tree.h           \
 	math/grid_one.c           \
 	math/grid_one.h           \
-	math/mp_spherical_bessel.c \
-	math/mp_spherical_bessel.h \
-	math/spherical_bessel.c    \
-	math/spherical_bessel.h    \
-	math/spherical_bessel_integral.c \
-	math/spherical_bessel_integral.h \
-	math/mp_spherical_bessel_integral.c \
-	math/mp_spherical_bessel_integral.h \
-	math/mp_hypergeometric_0F1.c \
-	math/mp_hypergeometric_0F1.h \
 	math/dividedifference.c \
 	math/dividedifference.h \
 	math/util.c             \
 	math/util.h             \
-	math/function_eval.c    \
-	math/function_eval.h    \
 	math/memory_pool.c      \
 	math/memory_pool.h      \
 	sphere/map.c            \
@@ -338,17 +338,10 @@ nobase_cosmo_include_HEADERS =  \
 	math/quaternion.h         \
 	math/binsplit.h           \
 	math/binsplit_eval.c      \
-	math/trig_integral.h      \
 	math/mpq_tree.h           \
 	math/grid_one.h           \
-	math/mp_spherical_bessel.h          \
-	math/spherical_bessel.h             \
-	math/spherical_bessel_integral.h    \
-	math/mp_spherical_bessel_integral.h \
-	math/mp_hypergeometric_0F1.h        \
 	math/dividedifference.h \
 	math/util.h             \
-	math/function_eval.h    \
 	math/memory_pool.h      \
 	sphere/healpix.h        \
 	sphere/map.h            \
