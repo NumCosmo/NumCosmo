@@ -96,8 +96,8 @@ ncm_galaxy_acf_psi_kernel (gdouble z, gpointer p)
   NcmGalaxyAcfPsiKernel *apk = (NcmGalaxyAcfPsiKernel *) p;
   const gdouble cd = nc_distance_comoving (apk->acf->dist, apk->model, z);
   const gdouble x = apk->k * cd;
-  const gdouble jl = gsl_sf_bessel_jl (apk->l, x);//ncm_sf_spherical_bessel (apk->l, x);//
-  const gdouble jlp1 = gsl_sf_bessel_jl (apk->l + 1, x); //ncm_sf_spherical_bessel (apk->l + 1, x);//
+  const gdouble jl = gsl_sf_bessel_jl (apk->l, x);//ncm_sf_sbessel (apk->l, x);//
+  const gdouble jlp1 = gsl_sf_bessel_jl (apk->l + 1, x); //ncm_sf_sbessel (apk->l + 1, x);//
   const gdouble kernel_l_jl = ncm_galaxy_acf_psi_kernel_l (z, p) * jl;
   const gdouble kernel_lp1_jlp1 = ncm_galaxy_acf_psi_kernel_lp1 (z, p) * jlp1;
   //printf ("% 20.15g % 20.15g % 20.15g\n", kernel_l_jl, kernel_lp1_jlp1, kernel_l_jl + kernel_lp1_jlp1);
@@ -117,7 +117,7 @@ ncm_galaxy_acf_psi (NcGalaxyAcf *acf, NcHICosmo *model, gdouble k, guint l)
   psi_kernel.l = l;
   psi_kernel.acf = acf;
   psi_kernel.model = model;
-  //psi_kernel.jl = ncm_sf_spherical_bessel_spline (l, 1e-5, xf, 1.0e-6);
+  //psi_kernel.jl = ncm_sf_sbessel_spline (l, 1e-5, xf, 1.0e-6);
 
   {
 	gdouble res, err;

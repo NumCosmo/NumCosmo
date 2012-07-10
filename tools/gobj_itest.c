@@ -47,7 +47,7 @@ Fsin (gdouble x, gpointer p)
 gdouble
 Fjl (gdouble x, gpointer p)
 {
-  return ncm_sf_spherical_bessel (1000, x);
+  return ncm_sf_sbessel (1000, x);
   //return sin (M_PI * x) * exp(x / 5.0);
 }
 
@@ -93,7 +93,7 @@ main (gint argc, gchar *argv[])
 
   if (TRUE)
   {
-    NcmSpline *s = ncm_sf_spherical_bessel_spline (2, 0.0, 1000.0, 1e-8);
+    NcmSpline *s = ncm_sf_sbessel_spline (2, 0.0, 1000.0, 1e-8);
     gdouble max_e = 0.0;
     guint maxi = 100000;
     GTimer *bench = g_timer_new ();
@@ -101,7 +101,7 @@ main (gint argc, gchar *argv[])
     for (i = 0; i <= maxi; i++)
     {
       gdouble x = 10.0 / (1.0 * maxi) * i;
-      gdouble jl = ncm_sf_spherical_bessel (2, x);
+      gdouble jl = ncm_sf_sbessel (2, x);
       gdouble sjl = ncm_spline_eval (s, x);
       gdouble e = fabs ((jl - sjl) / jl);
       max_e = GSL_MAX (e, max_e);
@@ -112,7 +112,7 @@ main (gint argc, gchar *argv[])
     for (i = 0; i <= maxi; i++)
     {
       gdouble x = 1000.0 / (1.0 * maxi) * i;
-      max_e += ncm_sf_spherical_bessel (2, x);
+      max_e += ncm_sf_sbessel (2, x);
     }
     printf ("# elapsed %es\n", g_timer_elapsed (bench, NULL) / maxi);
 

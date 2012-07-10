@@ -1,5 +1,5 @@
 /***************************************************************************
- *            function_eval.c
+ *            ncm_func_eval.c
  *
  *  Sun Jul 25 19:50:02 2010
  *  Copyright  2010  Sandro Dias Pinto Vitenti
@@ -23,7 +23,7 @@
  */
 
 /**
- * SECTION:function_eval
+ * SECTION:ncm_func_eval
  * @title: Function Evaluator
  * @short_description: A general purpose multi-threaded function evaluator
  *
@@ -76,7 +76,7 @@ func (gpointer data, gpointer empty)
 }
 
 /**
- * ncm_function_eval_get_pool: (skip)
+ * ncm_func_eval_get_pool: (skip)
  *
  * Allocate if its not yet allocated and return the
  * internal GThreadPool pool.
@@ -84,7 +84,7 @@ func (gpointer data, gpointer empty)
  * Returns: the pointer to the internal GThreadPool pool
  */
 GThreadPool *
-ncm_function_eval_get_pool ()
+ncm_func_eval_get_pool ()
 {
   static GStaticMutex create_lock = G_STATIC_MUTEX_INIT;
   GError *err = NULL;
@@ -101,22 +101,22 @@ ncm_function_eval_get_pool ()
 }
 
 /**
- * ncm_function_eval_set_max_threads:
+ * ncm_func_eval_set_max_threads:
  * @mt: new max threads to be used in the pool, -1 means unlimited
  *
  * Set the new maximun number of threads to be used by the pool
  *
  */
 void
-ncm_function_eval_set_max_threads (gint mt)
+ncm_func_eval_set_max_threads (gint mt)
 {
   GError *err = NULL;
-  ncm_function_eval_get_pool ();
+  ncm_func_eval_get_pool ();
   g_thread_pool_set_max_threads (_function_thread_pool, mt, &err);
 }
 
 /**
- * ncm_function_eval_threaded_loop:
+ * ncm_func_eval_threaded_loop:
  * @lfunc: (scope notified): #NcmLoopFunc to be evaluated in threads
  * @i: initial index
  * @f: final index
@@ -126,12 +126,12 @@ ncm_function_eval_set_max_threads (gint mt)
  *
  */
 void
-ncm_function_eval_threaded_loop (NcmLoopFunc lfunc, glong i, glong f, gpointer data)
+ncm_func_eval_threaded_loop (NcmLoopFunc lfunc, glong i, glong f, gpointer data)
 {
   NcmFunctionEvalCtrl ctrl = {0, NULL, NULL};
   gint nthreads, delta, res;
 
-  ncm_function_eval_get_pool ();
+  ncm_func_eval_get_pool ();
   ctrl.update = g_mutex_new ();
   ctrl.finish = g_cond_new ();
 

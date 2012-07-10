@@ -1,13 +1,13 @@
 /***************************************************************************
- *            function_eval.h
+ *            ncm_mpsf_trig_int.h
  *
- *  Sun Jul 25 19:50:16 2010
+ *  Tue Feb  2 22:16:05 2010
  *  Copyright  2010  Sandro Dias Pinto Vitenti
  *  <sandro@isoftware.com.br>
  ****************************************************************************/
 /*
  * numcosmo
- * Copyright (C) Sandro Dias Pinto Vitenti 2012 <sandro@lapsandro>
+ * Copyright (C) Sandro Dias Pinto Vitenti 2012 <sandro@isoftware.com.br>
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
@@ -22,26 +22,18 @@
  * with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-
-/**
- * @file
- * @brief FIXME
- *
- * FIXME
- */
-
-#ifndef _NC_FUNCTION_EVAL_H
-#define _NC_FUNCTION_EVAL_H
-
+#ifndef _NCM_MPSF_TRIG_INT_H
+#define _NCM_MPSF_TRIG_INT_H
+#include <string.h>
+#include <stdio.h>
+#include <gmp.h>
+#include <mpfr.h>
 #include <glib.h>
 
 G_BEGIN_DECLS
 
-typedef void (*NcmLoopFunc) (glong i, glong f, gpointer data);
-
-void ncm_function_eval_set_max_threads (gint mt);
-void ncm_function_eval_threaded_loop (NcmLoopFunc lfunc, glong i, glong f, gpointer data);
+void ncm_mpsf_sin_int_mpfr (mpq_t q, mpfr_ptr res, mp_rnd_t rnd);
 
 G_END_DECLS
 
-#endif /* _NC_FUNCTION_EVAL_H */
+#endif /* _NCM_MPSF_TRIG_INT_H */

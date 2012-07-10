@@ -50,7 +50,7 @@ mpz_t NCM_BINSPLIT_ONE;
  * FIXME
  *
  * Returns: FIXME
-*/ 
+*/
 NcmBinSplit *
 ncm_binsplit_alloc (gpointer userdata)
 {
@@ -80,7 +80,7 @@ ncm_binsplit_alloc (gpointer userdata)
     }
     g_static_mutex_unlock (&create_lock);
   }
-  
+
   return bs;
 }
 
@@ -92,16 +92,16 @@ ncm_binsplit_alloc (gpointer userdata)
  *
  * FIXME
  *
- * Returns: FIXME 
+ * Returns: FIXME
 */
-glong 
+glong
 ncm_binsplit_test_next (NcmBinSplit *bs, NcmBinSplitEval bs_eval, gulong nt)
 {
   size_t s1, s2;
   if (bs->bs[0] == NULL)
     bs->bs[0] = ncm_binsplit_alloc (bs->userdata);
 
-  bs_eval(bs->bs[0], bs->n2, bs->n2+nt);
+  bs_eval (bs->bs[0], bs->n2, bs->n2 + nt);
 
   mpz_mul (bs->temp1, bs->bs[0]->B, bs->bs[0]->Q);
   mpz_mul (bs->temp1, bs->temp1, bs->T);
@@ -114,8 +114,8 @@ ncm_binsplit_test_next (NcmBinSplit *bs, NcmBinSplitEval bs_eval, gulong nt)
 
 //  mpz_mul (bs->temp3, bs->Q, bs->B);
 //  mpfr_printf ("# %Zd/%Zd\n", bs->T, bs->temp3);
-//  printf ("# testing [%lu %lu) %zu %zu %zd | %.15e\n", bs->n2, bs->n2+nt, s1, s2, s1-s2, ncm_binsplit_get_d (bs, GMP_RNDN));
-  
+//  printf ("# testing [%lu %lu) %zu %zu %zd | %.15e\n", bs->n2, bs->n2 + nt, s1, s2, s1-s2, ncm_binsplit_get_d (bs, GMP_RNDN));
+
   return (s1 - s2);
 }
 
@@ -131,24 +131,24 @@ ncm_binsplit_test_next (NcmBinSplit *bs, NcmBinSplitEval bs_eval, gulong nt)
 void
 ncm_binsplit_join (NcmBinSplit *bs, NcmBinSplit *bs_l, NcmBinSplit *bs_r)
 {
-  mpz_ptr temp5 = bs->P; /* To be used as temporary variable, but only after 
-                          * finishing all operations involving P from both sides 
+  mpz_ptr temp5 = bs->P; /* To be used as temporary variable, but only after
+                          * finishing all operations involving P from both sides
                           */
   g_assert ((bs != bs_l) || (bs != bs_r));
   g_assert (bs_l->n2 == bs_r->n1);
-  
+
   mpz_mul (bs->temp1, bs_l->P, bs_r->P);
   mpz_mul (bs->temp2, bs_l->Q, bs_r->Q);
   mpz_mul (bs->temp3, bs_l->B, bs_r->B);
 
   mpz_mul (bs->temp4, bs_l->B, bs_l->P);
   mpz_mul (bs->temp4, bs->temp4, bs_r->T);
-  
+
   mpz_mul (temp5, bs_r->B, bs_r->Q);
   mpz_mul (temp5, temp5, bs_l->T);
 
   mpz_add (bs->temp4, bs->temp4, temp5);
-  
+
   mpz_swap (bs->P, bs->temp1);
   mpz_swap (bs->Q, bs->temp2);
   mpz_swap (bs->B, bs->temp3);
@@ -201,10 +201,10 @@ ncm_binsplit_eval_join (NcmBinSplit *bs, NcmBinSplitEval bs_eval, gulong nt)
  * @bs: a #NcmBinSplit
  * @bs_eval: a #NcmBinSplitEval
  * @step: FIXME
- * @prec: FIXME 
+ * @prec: FIXME
  *
  * FIXME
- * 
+ *
  * Returns: FIXME
 */
 gulong
@@ -219,7 +219,7 @@ ncm_binsplit_eval_prec (NcmBinSplit *bs, NcmBinSplitEval bs_eval, gulong step, g
     ncm_binsplit_eval_join (bs, bs_eval, step);
     tstep += step;
   }
-  
+
   return tstep;
 }
 
@@ -229,7 +229,7 @@ ncm_binsplit_eval_prec (NcmBinSplit *bs, NcmBinSplitEval bs_eval, gulong step, g
  * @res: FIXME
  *
  * FIXME
- * 
+ *
 */
 void
 ncm_binsplit_get (NcmBinSplit *bs, mpfr_t res)
@@ -246,7 +246,7 @@ ncm_binsplit_get (NcmBinSplit *bs, mpfr_t res)
  * @q: FIXME
  *
  * FIXME
- * 
+ *
 */
 void
 ncm_binsplit_get_q (NcmBinSplit *bs, mpq_t q)
@@ -255,17 +255,17 @@ ncm_binsplit_get_q (NcmBinSplit *bs, mpq_t q)
   mpz_set (mpq_denref(q), bs->B);
   mpz_mul (mpq_denref(q), mpq_denref(q), bs->Q);
   mpq_canonicalize (q);
-  
+
   return;
 }
 
 /**
  * ncm_binsplit_get_d: (skip)
  * @bs: a #NcmBinSplit
- * @rnd: FIXME 
+ * @rnd: FIXME
  *
  * FIXME
- * 
+ *
  * Returns: FIXME
 */
 gdouble

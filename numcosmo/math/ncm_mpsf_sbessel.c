@@ -1,5 +1,5 @@
 /***************************************************************************
- *            mp_spherical_bessel.c
+ *            ncm_mpsf_sbessel.c
  *
  *  Mon Nov 23 10:04:27 2009
  *  Copyright  2009  Sandro Dias Pinto Vitenti
@@ -23,7 +23,7 @@
  */
 
 /**
- * SECTION:mp_spherical_bessel
+ * SECTION:ncm_mpsf_sbessel
  * @title: Multiple Precision Spherical Bessel j_l
  * @short_description: Spherical bessel implementation with support for multiple precision calculation
  *
@@ -49,95 +49,95 @@
 #include <gsl/gsl_sf_bessel.h>
 
 /**
- * ncm_sf_mp_spherical_bessel_recur_new: (skip)
- * @prec: FIXME 
- * 
+ * ncm_mpsf_sbessel_recur_new: (skip)
+ * @prec: FIXME
+ *
  * FIXME
  *
  * Returns: FIXME
  */
-NcmSfMpSpherBesselRecur *
-ncm_sf_mp_spherical_bessel_recur_new (gulong prec)
+NcmMpsfSBesselRecur *
+ncm_mpsf_sbessel_recur_new (gulong prec)
 {
-  NcmSfMpSpherBesselRecur *jlrec = g_slice_new (NcmSfMpSpherBesselRecur);
+  NcmMpsfSBesselRecur *jlrec = g_slice_new (NcmMpsfSBesselRecur);
   jlrec->prec = prec;
-  
+
   mpq_init (jlrec->q);
   mpfr_inits2 (prec, jlrec->x, jlrec->jl[0], jlrec->jl[1], jlrec->temp, NULL);
-  
+
   return jlrec;
 }
 
 /**
- * ncm_sf_mp_spherical_bessel_recur_set_q: (skip)
- * @jlrec: a #NcmSfMpSpherBesselRecur
+ * ncm_mpsf_sbessel_recur_set_q: (skip)
+ * @jlrec: a #NcmMpsfSBesselRecur
  * @l: FIXME
  * @q: FIXME
- * @rnd: FIXME 
- * 
+ * @rnd: FIXME
+ *
  * FIXME
  *
 */
 void
-ncm_sf_mp_spherical_bessel_recur_set_q (NcmSfMpSpherBesselRecur *jlrec, glong l, mpq_ptr q, mp_rnd_t rnd)
+ncm_mpsf_sbessel_recur_set_q (NcmMpsfSBesselRecur *jlrec, glong l, mpq_ptr q, mp_rnd_t rnd)
 {
   jlrec->l = l;
-  
+
   mpq_set (jlrec->q, q);
   mpfr_set_q (jlrec->x, q, rnd);
-  
-  ncm_sf_mp_spherical_bessel (l + 0, q, jlrec->jl[0], rnd);
-  ncm_sf_mp_spherical_bessel (l + 1, q, jlrec->jl[1], rnd);
+
+  ncm_mpsf_sbessel (l + 0, q, jlrec->jl[0], rnd);
+  ncm_mpsf_sbessel (l + 1, q, jlrec->jl[1], rnd);
 }
 
 /**
- * ncm_sf_mp_spherical_bessel_recur_set_d: (skip)
- * @jlrec: a #NcmSfMpSpherBesselRecur
+ * ncm_mpsf_sbessel_recur_set_d: (skip)
+ * @jlrec: a #NcmMpsfSBesselRecur
  * @l: FIXME
  * @x: FIXME
- * @rnd: FIXME 
- * 
+ * @rnd: FIXME
+ *
  * FIXME
  *
 */
 void
-ncm_sf_mp_spherical_bessel_recur_set_d (NcmSfMpSpherBesselRecur *jlrec, glong l, gdouble x, mp_rnd_t rnd)
+ncm_mpsf_sbessel_recur_set_d (NcmMpsfSBesselRecur *jlrec, glong l, gdouble x, mp_rnd_t rnd)
 {
   jlrec->l = l;
 
   ncm_rational_coarce_double (x, jlrec->q);
   mpfr_set_q (jlrec->x, jlrec->q, rnd);
-  
-  ncm_sf_mp_spherical_bessel (l + 0, jlrec->q, jlrec->jl[0], rnd);
-  ncm_sf_mp_spherical_bessel (l + 1, jlrec->q, jlrec->jl[1], rnd);
+
+  ncm_mpsf_sbessel (l + 0, jlrec->q, jlrec->jl[0], rnd);
+  ncm_mpsf_sbessel (l + 1, jlrec->q, jlrec->jl[1], rnd);
 }
 
 /**
- * ncm_sf_mp_spherical_bessel_recur_free:
- * @jlrec: a #NcmSfMpSpherBesselRecur
- * 
+ * ncm_mpsf_sbessel_recur_free:
+ * @jlrec: a #NcmMpsfSBesselRecur
+ *
  * FIXME
  *
 */
 void
-ncm_sf_mp_spherical_bessel_recur_free (NcmSfMpSpherBesselRecur *jlrec)
+ncm_mpsf_sbessel_recur_free (NcmMpsfSBesselRecur *jlrec)
 {
   mpfr_clears (jlrec->x, jlrec->jl[0], jlrec->jl[1], jlrec->temp, NULL);
   mpq_clear (jlrec->q);
 
-  g_slice_free (NcmSfMpSpherBesselRecur, jlrec);
+  g_slice_free (NcmMpsfSBesselRecur, jlrec);
 }
 
 /**
- * ncm_sf_mp_spherical_bessel_recur_next: (skip)
- * @jlrec: a #NcmSfMpSpherBesselRecur
- * @rnd: FIXME 
- * 
+ * ncm_mpsf_sbessel_recur_next: (skip)
+ * @jlrec: a #NcmMpsfSBesselRecur
+ * @rnd: FIXME
+ *
  * FIXME
  *
 */
 void
-ncm_sf_mp_spherical_bessel_recur_next (NcmSfMpSpherBesselRecur *jlrec, mp_rnd_t rnd)
+ncm_mpsf_sbessel_recur_next (NcmMpsfSBesselRecur *jlrec, mp_rnd_t rnd)
 {
   if (mpfr_sgn (jlrec->x) != 0)
   {
@@ -146,21 +146,21 @@ ncm_sf_mp_spherical_bessel_recur_next (NcmSfMpSpherBesselRecur *jlrec, mp_rnd_t 
     mpfr_sub (jlrec->temp, jlrec->temp, jlrec->jl[0], rnd);
 
     mpfr_swap (jlrec->jl[0], jlrec->jl[1]);
-    mpfr_set (jlrec->jl[1], jlrec->temp, rnd);  
+    mpfr_set (jlrec->jl[1], jlrec->temp, rnd);
   }
   jlrec->l++;
 }
 
 /**
- * ncm_sf_mp_spherical_bessel_recur_previous: (skip)
- * @jlrec: a #NcmSfMpSpherBesselRecur
- * @rnd: FIXME 
- * 
+ * ncm_mpsf_sbessel_recur_previous: (skip)
+ * @jlrec: a #NcmMpsfSBesselRecur
+ * @rnd: FIXME
+ *
  * FIXME
  *
 */
 void
-ncm_sf_mp_spherical_bessel_recur_previous (NcmSfMpSpherBesselRecur *jlrec, mp_rnd_t rnd)
+ncm_mpsf_sbessel_recur_previous (NcmMpsfSBesselRecur *jlrec, mp_rnd_t rnd)
 {
   if (mpfr_sgn (jlrec->x) != 0)
   {
@@ -176,16 +176,16 @@ ncm_sf_mp_spherical_bessel_recur_previous (NcmSfMpSpherBesselRecur *jlrec, mp_rn
 }
 
 /**
- * ncm_sf_mp_spherical_bessel_recur_goto: (skip)
- * @jlrec: a #NcmSfMpSpherBesselRecur
- * @l: FIXME 
- * @rnd: FIXME 
- * 
+ * ncm_mpsf_sbessel_recur_goto: (skip)
+ * @jlrec: a #NcmMpsfSBesselRecur
+ * @l: FIXME
+ * @rnd: FIXME
+ *
  * FIXME
  *
 */
 void
-ncm_sf_mp_spherical_bessel_recur_goto (NcmSfMpSpherBesselRecur *jlrec, glong l, mp_rnd_t rnd)
+ncm_mpsf_sbessel_recur_goto (NcmMpsfSBesselRecur *jlrec, glong l, mp_rnd_t rnd)
 {
   glong sign = GSL_SIGN (l - jlrec->l);
   glong sub = labs(l - jlrec->l);
@@ -194,22 +194,22 @@ ncm_sf_mp_spherical_bessel_recur_goto (NcmSfMpSpherBesselRecur *jlrec, glong l, 
     return;
   if (sign == 1)
     for (i = 0; i < sub; i++)
-      ncm_sf_mp_spherical_bessel_recur_next (jlrec, rnd);
+      ncm_mpsf_sbessel_recur_next (jlrec, rnd);
   else
     for (i = 0; i < sub; i++)
-      ncm_sf_mp_spherical_bessel_recur_previous (jlrec, rnd);
+      ncm_mpsf_sbessel_recur_previous (jlrec, rnd);
 }
 
 /**
- * ncm_sf_mp_spherical_bessel_recur_write:
- * @jlrec: a #NcmSfMpSpherBesselRecur
- * @f: FIXME 
- * 
+ * ncm_mpsf_sbessel_recur_write:
+ * @jlrec: a #NcmMpsfSBesselRecur
+ * @f: FIXME
+ *
  * FIXME
  *
 */
-void 
-ncm_sf_mp_spherical_bessel_recur_write (NcmSfMpSpherBesselRecur *jlrec, FILE *f)
+void
+ncm_mpsf_sbessel_recur_write (NcmMpsfSBesselRecur *jlrec, FILE *f)
 {
   NCM_WRITE_UINT32(f, jlrec->prec);
   NCM_WRITE_INT32(f, jlrec->l);
@@ -220,20 +220,20 @@ ncm_sf_mp_spherical_bessel_recur_write (NcmSfMpSpherBesselRecur *jlrec, FILE *f)
 }
 
 /**
- * ncm_sf_mp_spherical_bessel_recur_read: (skip)
- * @f: FIXME 
- * 
+ * ncm_mpsf_sbessel_recur_read: (skip)
+ * @f: FIXME
+ *
  * FIXME
  *
- * Returns: FIXME 
+ * Returns: FIXME
 */
-NcmSfMpSpherBesselRecur *
-ncm_sf_mp_spherical_bessel_recur_read (FILE *f)
+NcmMpsfSBesselRecur *
+ncm_mpsf_sbessel_recur_read (FILE *f)
 {
   guint32 prec;
-  NcmSfMpSpherBesselRecur *jlrec;
+  NcmMpsfSBesselRecur *jlrec;
   NCM_READ_UINT32(f, prec);
-  jlrec = ncm_sf_mp_spherical_bessel_recur_new (prec);
+  jlrec = ncm_mpsf_sbessel_recur_new (prec);
   NCM_READ_INT32(f, jlrec->l);
   ncm_mpq_inp_raw (jlrec->q, f);
   ncm_mpfr_inp_raw (jlrec->x, f);
@@ -248,6 +248,8 @@ typedef struct __binsplit_spherical_bessel
   gulong l;
   glong sincos;
   mpq_t mq2_2;
+  mpfr_t sin;
+  mpfr_t cos;
 } _binsplit_spherical_bessel;
 
 static gpointer
@@ -255,6 +257,8 @@ _besselj_bs_alloc (void)
 {
   _binsplit_spherical_bessel *bs_data = g_slice_new (_binsplit_spherical_bessel);
   mpq_init (bs_data->mq2_2);
+  mpfr_init (bs_data->sin);
+  mpfr_init (bs_data->cos);
   return ncm_binsplit_alloc ((gpointer)bs_data);
 }
 
@@ -264,12 +268,14 @@ _besselj_bs_free (gpointer p)
   NcmBinSplit *bs = (NcmBinSplit *)p;
   _binsplit_spherical_bessel *bs_data = (_binsplit_spherical_bessel *)bs->userdata;
   mpq_clear (bs_data->mq2_2);
+  mpfr_clear (bs_data->sin);
+  mpfr_clear (bs_data->cos);
   g_slice_free (_binsplit_spherical_bessel, bs_data);
   /* Leak we dont have a free function for binsplit FIXME:LEAK */
 }
 
 NcmBinSplit **
-_ncm_sf_mp_spherical_bessel_get_bs ()
+_ncm_mpsf_sbessel_get_bs ()
 {
   static GStaticMutex create_lock = G_STATIC_MUTEX_INIT;
   static NcmMemoryPool *mp = NULL;
@@ -354,22 +360,22 @@ NCM_BINSPLIT_DECL(binsplit_spherical_bessel_assympt_q,v,u,n,data)
 static void
 _taylor_mpfr (gulong l, mpq_t q, mpfr_ptr res, mp_rnd_t rnd)
 {
-  NcmBinSplit **bs_ptr = _ncm_sf_mp_spherical_bessel_get_bs ();
+  NcmBinSplit **bs_ptr = _ncm_mpsf_sbessel_get_bs ();
   NcmBinSplit *bs = *bs_ptr;
   _binsplit_spherical_bessel *data = (_binsplit_spherical_bessel *) bs->userdata;
   gulong n;
-  
+
   data->l = l;
   mpq_mul (data->mq2_2, q, q);
   mpq_neg (data->mq2_2, data->mq2_2);
   mpq_div_2exp (data->mq2_2, data->mq2_2, 1);
 
   //mpfr_printf ("# Taylor %ld %Qd | %Qd\n", l, q, data->mq2_2);
-  
+
   ncm_binsplit_eval_prec (bs, binsplit_spherical_bessel_taylor, 10, mpfr_get_prec (res));
 
   //mpfr_printf ("# Taylor %ld %Qd | %Zd %Zd\n", l, q, bs->T, bs->Q);
-  
+
   mpfr_set_q (res, q, rnd);
   mpfr_pow_ui (res, res, l, rnd);
   mpfr_mul_z (res, res, bs->T, rnd);
@@ -385,14 +391,18 @@ _taylor_mpfr (gulong l, mpq_t q, mpfr_ptr res, mp_rnd_t rnd)
 static void
 _assympt_mpfr (gulong l, mpq_t q, mpfr_ptr res, mp_rnd_t rnd)
 {
-  NcmBinSplit **bs_ptr = _ncm_sf_mp_spherical_bessel_get_bs ();
+  NcmBinSplit **bs_ptr = _ncm_mpsf_sbessel_get_bs ();
   NcmBinSplit *bs = *bs_ptr;
   _binsplit_spherical_bessel *data = (_binsplit_spherical_bessel *) bs->userdata;
   gulong prec = mpfr_get_prec (res);
-  MPFR_DECL_INIT (sin_x, prec);
-  MPFR_DECL_INIT (cos_x, prec);
+#define sin_x data->sin
+#define cos_x data->cos
+  mpfr_set_prec (sin_x, prec);
+  mpfr_set_prec (cos_x, prec);
+
   mpfr_set_q (res, q, rnd);
   mpfr_sin_cos (sin_x, cos_x, res, rnd);
+
   switch (l % 4)
   {
     case 0:
@@ -431,7 +441,7 @@ _assympt_mpfr (gulong l, mpq_t q, mpfr_ptr res, mp_rnd_t rnd)
   binsplit_spherical_bessel_assympt (bs, 0, (l + 1) / 2 + (l + 1) % 2);
   mpfr_mul_z (sin_x, sin_x, bs->T, rnd);
   mpfr_div_z (sin_x, sin_x, bs->Q, rnd);
-  
+
   data->sincos = 1;
   if (l > 0)
   {
@@ -448,16 +458,16 @@ _assympt_mpfr (gulong l, mpq_t q, mpfr_ptr res, mp_rnd_t rnd)
 }
 
 /**
- * ncm_sf_mp_spherical_bessel: (skip)
+ * ncm_mpsf_sbessel: (skip)
  * @l: FIXME
  * @q: FIXME
  * @res: FIXME
- * @rnd: FIXME 
+ * @rnd: FIXME
  *
  * FIXME
 */
 void
-ncm_sf_mp_spherical_bessel (gulong l, mpq_t q, mpfr_ptr res, mp_rnd_t rnd)
+ncm_mpsf_sbessel (gulong l, mpq_t q, mpfr_ptr res, mp_rnd_t rnd)
 {
   gdouble x = mpq_get_d (q);
   if (x == 0)
@@ -468,7 +478,7 @@ ncm_sf_mp_spherical_bessel (gulong l, mpq_t q, mpfr_ptr res, mp_rnd_t rnd)
       mpfr_set_ui (res, 0, rnd);
     return;
   }
-  
+
   if (fabs(x) < l)
     _taylor_mpfr (l, q, res, rnd);
   else
@@ -476,20 +486,20 @@ ncm_sf_mp_spherical_bessel (gulong l, mpq_t q, mpfr_ptr res, mp_rnd_t rnd)
 }
 
 /**
- * ncm_sf_mp_spherical_bessel_d: (skip)
+ * ncm_mpsf_sbessel_d: (skip)
  * @l: FIXME
  * @x: FIXME
  * @res: FIXME
- * @rnd: FIXME 
+ * @rnd: FIXME
  *
  * FIXME
-*/
+ */
 void
-ncm_sf_mp_spherical_bessel_d (gulong l, gdouble x, mpfr_ptr res, mp_rnd_t rnd)
+ncm_mpsf_sbessel_d (gulong l, gdouble x, mpfr_ptr res, mp_rnd_t rnd)
 {
   mpq_t q;
   mpq_init (q);
   ncm_rational_coarce_double (x, q);
-  ncm_sf_mp_spherical_bessel (l, q, res, rnd);
+  ncm_mpsf_sbessel (l, q, res, rnd);
   mpq_clear (q);
 }

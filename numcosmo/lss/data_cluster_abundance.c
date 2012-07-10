@@ -572,75 +572,27 @@ _nc_data_cluster_abundance_calc_m2lnL (NcmMSet *mset, gpointer model, gpointer d
 	if (z_p && lnM_p)
 	{
 	  _Evald2N evald2n = {cad, dca, m, m2lnL};
-
-	  ncm_function_eval_threaded_loop (&_eval_z_p_lnm_p_d2n, 0, dca->np, &evald2n);
-/*
-	  for (i = 0; i < dca->np; i++)
-	  {
-		gdouble *lnMi_obs = ncm_matrix_ptr (dca->lnM_obs, i, 0);
-		gdouble *zi_obs = ncm_matrix_ptr (dca->z_obs, i, 0);
-		gdouble *lnMi_obs_params = dca->lnM_obs_params != NULL ? ncm_matrix_ptr (dca->lnM_obs_params, i, 0) : NULL;
-		gdouble *zi_obs_params = dca->z_obs_params != NULL ? ncm_matrix_ptr (dca->z_obs_params, i, 0) : NULL;
-
-		const gdouble mlnLi = -log (nc_cluster_abundance_z_p_lnm_p_d2n (cad, m, lnMi_obs, lnMi_obs_params, zi_obs, zi_obs_params));
-		*m2lnL += mlnLi;
-	  }
-*/
+	  ncm_func_eval_threaded_loop (&_eval_z_p_lnm_p_d2n, 0, dca->np, &evald2n);
 	}
 	else if (z_p && !lnM_p)
 	{
 	  g_assert (dca->lnM_true);
 	  _Evald2N evald2n = {cad, dca, m, m2lnL};
-
-	  ncm_function_eval_threaded_loop (&_eval_z_p_d2n, 0, dca->np, &evald2n);
-/*
-
-	  for (i = 0; i < dca->np; i++)
-	  {
-		const gdouble lnMi = ncm_vector_get (dca->lnM_true, i);
-		gdouble *zi_obs = ncm_matrix_ptr (dca->z_obs, i, 0);
-		gdouble *zi_obs_params = dca->z_obs_params != NULL ? ncm_matrix_ptr (dca->z_obs_params, i, 0) : NULL;
-		const gdouble mlnLi = -log (nc_cluster_abundance_z_p_d2n (cad, m, lnMi, zi_obs, zi_obs_params));
-		*m2lnL += mlnLi;
-	  }
-*/
+	  ncm_func_eval_threaded_loop (&_eval_z_p_d2n, 0, dca->np, &evald2n);
 	}
 	else if (!z_p && lnM_p)
 	{
 	  g_assert (dca->z_true);
 	  _Evald2N evald2n = {cad, dca, m, m2lnL};
-
-	  ncm_function_eval_threaded_loop (&_eval_lnm_p_d2n, 0, dca->np, &evald2n);
-
-/*
-	  for (i = 0; i < dca->np; i++)
-	  {
-		gdouble *lnMi_obs = ncm_matrix_ptr (dca->lnM_obs, i, 0);
-		gdouble *lnMi_obs_params = dca->lnM_obs_params != NULL ? ncm_matrix_ptr (dca->lnM_obs_params, i, 0) : NULL;
-		const gdouble zi = ncm_vector_get (dca->z_true, i);
-
-		const gdouble mlnLi = -log (nc_cluster_abundance_lnm_p_d2n (cad, m, lnMi_obs, lnMi_obs_params, zi));
-		*m2lnL += mlnLi;
-	  }
-*/
+	  ncm_func_eval_threaded_loop (&_eval_lnm_p_d2n, 0, dca->np, &evald2n);
 	}
 	else
 	{
 	  g_assert (dca->z_true);
 	  g_assert (dca->lnM_true);
        _Evald2N evald2n = {cad, dca, m, m2lnL};
+	  ncm_func_eval_threaded_loop (&_eval_d2n, 0, dca->np, &evald2n);
 
-	  ncm_function_eval_threaded_loop (&_eval_d2n, 0, dca->np, &evald2n);
-
-/*
-	  for (i = 0; i < dca->np; i++)
-	  {
-		const gdouble lnMi = ncm_vector_get (dca->lnM_true, i);
-		const gdouble zi = ncm_vector_get (dca->z_true, i);
-		const gdouble mlnLi = -log (nc_cluster_abundance_d2n (cad, m, lnMi, zi));
-		*m2lnL += mlnLi;
-	  }
-*/
 	}
   }
 

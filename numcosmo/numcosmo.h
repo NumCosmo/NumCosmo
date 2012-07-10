@@ -69,6 +69,14 @@
 #include <numcosmo/math/ncm_spline2d_spline.h>
 #include <numcosmo/math/ncm_spline2d_gsl.h>
 #include <numcosmo/math/ncm_spline2d_bicubic.h>
+#include <numcosmo/math/ncm_func_eval.h>
+#include <numcosmo/math/grid_one.h>
+#include <numcosmo/math/ncm_mpsf_trig_int.h>
+#include <numcosmo/math/ncm_mpsf_sbessel.h>
+#include <numcosmo/math/ncm_mpsf_sbessel_int.h>
+#include <numcosmo/math/ncm_sf_sbessel.h>
+#include <numcosmo/math/ncm_sf_sbessel_int.h>
+#include <numcosmo/math/ncm_mpsf_0F1.h>
 #include <numcosmo/math/ncm_fftlog.h>
 #include <numcosmo/math/ncm_sparam.h>
 #include <numcosmo/math/ncm_vparam.h>
@@ -117,7 +125,6 @@
 /* Utilities */
 #include <numcosmo/math/memory_pool.h>
 #include <numcosmo/math/cvode_util.h>
-#include <numcosmo/math/grid_one.h>
 #include <numcosmo/math/mpq_tree.h>
 #include <numcosmo/math/quaternion.h>
 #include <numcosmo/math/integral.h>
@@ -125,15 +132,8 @@
 #include <numcosmo/math/quadrature.h>
 #include <numcosmo/math/matrix_exp.h>
 #include <numcosmo/math/magnus_iserles_ode.h>
-#include <numcosmo/math/mp_spherical_bessel.h>
-#include <numcosmo/math/mp_spherical_bessel_integral.h>
-#include <numcosmo/math/spherical_bessel.h>
-#include <numcosmo/math/spherical_bessel_integral.h>
-#include <numcosmo/math/mp_hypergeometric_0F1.h>
-#include <numcosmo/math/trig_integral.h>
 #include <numcosmo/math/binsplit.h>
 #include <numcosmo/math/dividedifference.h>
-#include <numcosmo/math/function_eval.h>
 /* #include <numcosmo/math/cvode_util.h> */
 
 /* Model implementations */
