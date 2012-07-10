@@ -51,11 +51,17 @@ nc_galaxy_acf_new (NcGrowthFunc *gf, NcDistance *dist, NcTransferFunc *tf)
   acf->tf = tf;
   acf->b = 2.0;
   acf->s = ncm_spline_cubic_notaknot_new ();
+  {
+	NcWindow *wp = nc_window_tophat_new ();
+	acf->vp = nc_matter_var_new (NC_MATTER_VAR_FFT, wp, tf);
+	nc_window_free (wp);
+  }
   return acf;
 }
 
 typedef struct _NcmGalaxyAcfPsiKernel
 {
+  gdouble h;
   gdouble k;
   guint l;
   NcGalaxyAcf *acf;
@@ -67,7 +73,7 @@ static gdouble
 ncm_galaxy_acf_psi_kernel_l (gdouble z, gpointer p)
 {
   NcmGalaxyAcfPsiKernel *apk = (NcmGalaxyAcfPsiKernel *) p;
-  const gdouble cd = nc_distance_comoving (apk->acf->dist, apk->model, z);
+  const gdouble cd = NC_C_HUBBLE_RADIUS * nc_distance_comoving (apk->acf->dist, apk->model, z);
   const gdouble Dz = nc_growth_func_eval (apk->acf->gf, apk->model, z);
   const gdouble fz = nc_growth_func_eval_deriv (apk->acf->gf, apk->model, z);
   const gdouble x = apk->k * cd;
@@ -81,7 +87,7 @@ static gdouble
 ncm_galaxy_acf_psi_kernel_lp1 (gdouble z, gpointer p)
 {
   NcmGalaxyAcfPsiKernel *apk = (NcmGalaxyAcfPsiKernel *) p;
-  const gdouble cd = nc_distance_comoving (apk->acf->dist, apk->model, z);
+  const gdouble cd = NC_C_HUBBLE_RADIUS * nc_distance_comoving (apk->acf->dist, apk->model, z);
   const gdouble Dz = nc_growth_func_eval (apk->acf->gf, apk->model, z);
   const gdouble fz = nc_growth_func_eval_deriv (apk->acf->gf, apk->model, z);
   const gdouble x = apk->k * cd;
@@ -94,22 +100,31 @@ static gdouble
 ncm_galaxy_acf_psi_kernel (gdouble z, gpointer p)
 {
   NcmGalaxyAcfPsiKernel *apk = (NcmGalaxyAcfPsiKernel *) p;
-  const gdouble cd = nc_distance_comoving (apk->acf->dist, apk->model, z);
+  const gdouble cd = NC_C_HUBBLE_RADIUS * nc_distance_comoving (apk->acf->dist, apk->model, z);
   const gdouble x = apk->k * cd;
+  const gdouble x2 = x * x;
+  const gdouble sel_func = 1.0;
   const gdouble jl = gsl_sf_bessel_jl (apk->l, x);//ncm_sf_sbessel (apk->l, x);//
   const gdouble jlp1 = gsl_sf_bessel_jl (apk->l + 1, x); //ncm_sf_sbessel (apk->l + 1, x);//
-  const gdouble kernel_l_jl = ncm_galaxy_acf_psi_kernel_l (z, p) * jl;
-  const gdouble kernel_lp1_jlp1 = ncm_galaxy_acf_psi_kernel_lp1 (z, p) * jlp1;
-  //printf ("% 20.15g % 20.15g % 20.15g\n", kernel_l_jl, kernel_lp1_jlp1, kernel_l_jl + kernel_lp1_jlp1);
-  return kernel_l_jl + kernel_lp1_jlp1;
-}
+  gdouble Dz, fz;
+  nc_growth_func_eval_both (apk->acf->gf, apk->model, z, &Dz, &fz);
 
+  fz *= -(1 + z) / Dz;
+
+  return Dz * sel_func * (apk->acf->b * jl +
+                          fz * (
+                                ((apk->l * (1.0 - apk->l) + x2) * jl - 2 * x * jlp1) / x2
+                                )
+                          );
+}
 
 gdouble
 ncm_galaxy_acf_psi (NcGalaxyAcf *acf, NcHICosmo *model, gdouble k, guint l)
 {
   NcmGalaxyAcfPsiKernel psi_kernel;
   gsl_function F;
+  F.function = &ncm_galaxy_acf_psi_kernel_l;
+  F.function = &ncm_galaxy_acf_psi_kernel_lp1;
   F.function = &ncm_galaxy_acf_psi_kernel;
   F.params = &psi_kernel;
 
@@ -130,11 +145,15 @@ ncm_galaxy_acf_psi (NcGalaxyAcf *acf, NcHICosmo *model, gdouble k, guint l)
 static gdouble
 ncm_galaxy_acf_psi_int (gdouble mu, gpointer p)
 {
+  static glong count = 0;
   NcmGalaxyAcfPsiKernel *apk = (NcmGalaxyAcfPsiKernel *) p;
   const gdouble k = exp (mu);
   const gdouble Pk = nc_transfer_func_matter_powerspectrum (apk->acf->tf, apk->model, k);
   const gdouble psi = ncm_galaxy_acf_psi (apk->acf, apk->model, k, apk->l);
+printf ("% 20.15g % 20.15g\n", mu, psi * psi);
 //printf ("% 20.15g % 20.15g\n", mu, k * k * k * Pk * psi * psi);
+  //if ((count++) % 200 == 0)
+    //printf(".");fflush (stdout);
   return k * k * k * Pk * psi * psi;
 }
 
@@ -143,21 +162,27 @@ ncm_galaxy_acf_prepare_psi (NcGalaxyAcf *acf, NcHICosmo *model, guint l)
 {
   NcmGalaxyAcfPsiKernel psi_kernel;
   gsl_function F;
+  const gdouble sqrt_norma = nc_matter_var_sigma8_sqrtvar0 (acf->vp, model);
+  const gdouble norma = sqrt_norma * sqrt_norma;
   F.function = &ncm_galaxy_acf_psi_int;
   F.params = &psi_kernel;
+
+  psi_kernel.h = nc_hicosmo_h (model);
   psi_kernel.l = l;
   psi_kernel.acf = acf;
   psi_kernel.model = model;
 
   {
 	gdouble res, err;
+	printf("#");fflush (stdout);
 	nc_integral_locked_a_b (&F,
-	                        log (1.0e-12 * NC_C_HUBBLE_RADIUS),
-	                        log (1.0e3 * NC_C_HUBBLE_RADIUS),
+	                        log (1.0e-10 / psi_kernel.h),
+	                        log (1.0e3 / psi_kernel.h),
 	                        0.0, 1e-6,
 	                        &res, &err);
-	printf ("%u % 20.15g\n", l, res);
+	//printf ("\n%u % 20.15g\n", l, norma * res);
 	fflush (stdout);
+	exit (0);
 	//return res;
   }
 

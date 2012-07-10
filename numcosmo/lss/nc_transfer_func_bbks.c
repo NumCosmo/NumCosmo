@@ -8,17 +8,17 @@
 /*
  * numcosmo
  * Copyright (C) Mariana Penna Lima 2012 <pennalima@gmail.com>
- * 
+ *
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * numcosmo is distributed in the hope that it will be useful, but
  * WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
  * See the GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License along
  * with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
@@ -52,7 +52,7 @@ G_DEFINE_TYPE (NcTransferFuncBBKS, nc_transfer_func_bbks, NC_TYPE_TRANSFER_FUNC)
 
 /**
  * nc_transfer_func_bbks_new:
- *   
+ *
  * FIXME
  *
  * Returns: A new #NcTransferFunc.
@@ -67,11 +67,12 @@ static void
 _nc_transfer_func_bbks_prepare (NcTransferFunc *tf, NcHICosmo *model)
 {
   NcTransferFuncBBKS *tf_BBKS = NC_TRANSFER_FUNC_BBKS (tf);
+  const gdouble T_0 = nc_hicosmo_T_gamma0 (model);
   const gdouble c1 = 3.89;
-  const gdouble c2 = gsl_pow_2(16.1);
-  const gdouble c3 = gsl_pow_3(5.46);
-  const gdouble c4 = gsl_pow_4(6.71);
-  const gdouble c5 = gsl_pow_2(2.725/2.7);   /* CMB: (T_0/2.7)^2 = (2.725/2.7)^2 */
+  const gdouble c2 = gsl_pow_2 (16.1);
+  const gdouble c3 = gsl_pow_3 (5.46);
+  const gdouble c4 = gsl_pow_4 (6.71);
+  const gdouble c5 = gsl_pow_2 (T_0/2.7);   /* CMB: (T_0/2.7)^2 = (2.725/2.7)^2 */
   const gdouble h = nc_hicosmo_h (model);
   const gdouble h2 = h * h;
   const gdouble wm = nc_hicosmo_Omega_m (model) * h2;
@@ -134,7 +135,7 @@ nc_transfer_func_bbks_class_init (NcTransferFuncBBKSClass *klass)
   parent_class->prepare = &_nc_transfer_func_bbks_prepare;
   parent_class->calc = &_nc_transfer_func_bbks_calc;
   parent_class->calc_matter_P = &_nc_transfer_func_bbks_calc_matter_P;
-  
+
   object_class->finalize = nc_transfer_func_bbks_finalize;
 }
 

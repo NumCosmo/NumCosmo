@@ -359,10 +359,16 @@ PKG_CHECK_MODULES(NLOPT, [nlopt >= 1.2],[
 AC_SUBST(NLOPT_CFLAGS)
 AC_SUBST(NLOPT_LIBS)
 AC_SUBST(have_nlopt_support)
+
 TEST_SHARED_LIBS="$TEST_SHARED_LIBS $NLOPT_LIBS"
 TEST_SHARED_CFLAGS="$TEST_SHARED_CFLAGS $NLOPT_CFLAGS"
 
-PKG_CHECK_EXISTS([nlopt >= 2.2], [AC_DEFINE([HAVE_NLOPT_2_2],[1], [If nlopt version is bigger than 2.2])], [])
+PKG_CHECK_EXISTS([nlopt >= 2.2], [
+AC_DEFINE([HAVE_NLOPT_2_2],[1], [If nlopt version is bigger than 2.2])
+AC_CHECK_LIB([nlopt],[nlopt_create],,[AC_MSG_ERROR([Can't link to -lnlopt. The nlopt library is probably compiled with c++ support, recompile the C version.])],[$APPEND_LIBS])
+],[
+AC_CHECK_LIB([nlopt],[nlopt_minimize_constrained],,[AC_MSG_ERROR([Can't link to -lnlopt. The nlopt library is probably compiled with C++ support, recompile the C version.])],[$APPEND_LIBS])
+])
 
 dnl ***************************************************************************
 dnl Check for sundials
