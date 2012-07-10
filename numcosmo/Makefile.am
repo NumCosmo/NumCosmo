@@ -119,6 +119,9 @@ nc_headers = \
         lss/nc_cluster_mass.h                \
         lss/nc_cluster_mass_nodist.h         \
         lss/nc_cluster_mass_lnnormal.h       \
+        lss/nc_cluster_mass_vanderlinde.h    \
+        lss/nc_cluster_mass_benson.h         \
+        lss/nc_cluster_mass_benson_xray.h    \
         lss/nc_cluster_abundance.h
 
 nc_sources = \
@@ -167,6 +170,9 @@ nc_sources = \
 	lss/nc_cluster_mass.c                \
 	lss/nc_cluster_mass_nodist.c         \
 	lss/nc_cluster_mass_lnnormal.c       \
+	lss/nc_cluster_mass_vanderlinde.c    \
+	lss/nc_cluster_mass_benson.c         \
+	lss/nc_cluster_mass_benson_xray.c    \
 	lss/nc_cluster_abundance.c
 
 libnumcosmo_la_SOURCES = \
