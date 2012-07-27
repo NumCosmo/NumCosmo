@@ -111,7 +111,6 @@ _ncm_reparam_linear_constructed (GObject *object)
   }
 }
 
-
 static void
 _ncm_reparam_linear_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
 {
@@ -185,32 +184,37 @@ ncm_reparam_linear_finalize (GObject *object)
 static void
 _ncm_reparam_linear_copyto (NcmReparam *reparam, NcmReparam *reparam_dest)
 {
-  guint old_length = reparam_dest->length; /* save old length since chain up copy will change it */
-  NcmReparamLinear *relin = NCM_REPARAM_LINEAR (reparam);
-  NcmReparamLinear *relin_dest = NCM_REPARAM_LINEAR (reparam_dest);
-  /* Chain up */
+  /* save old length since chain up copy will change it */
+  guint old_length = reparam_dest->length;
+
+  /* Chain up : start */
   NCM_REPARAM_CLASS (ncm_reparam_linear_parent_class)->copyto (reparam, reparam_dest);
-  if (old_length != reparam->length)
+
   {
-	ncm_matrix_free (relin->T_LU);
-	ncm_matrix_free (relin->T);
-	ncm_vector_free (relin->v);
-	ncm_vector_free (relin->vp);
-	gsl_permutation_free (relin->p);
+	NcmReparamLinear *relin = NCM_REPARAM_LINEAR (reparam);
+	NcmReparamLinear *relin_dest = NCM_REPARAM_LINEAR (reparam_dest);
+	if (old_length != reparam->length)
+	{
+	  ncm_matrix_free (relin->T_LU);
+	  ncm_matrix_free (relin->T);
+	  ncm_vector_free (relin->v);
+	  ncm_vector_free (relin->vp);
+	  gsl_permutation_free (relin->p);
 
-	relin->T_LU = ncm_matrix_new (reparam->length, reparam->length);
-	relin->T = ncm_matrix_new (reparam->length, reparam->length);
-	relin->v = ncm_vector_new (reparam->length);
-	relin->vp = ncm_vector_new (reparam->length);
-	relin->p = gsl_permutation_alloc (reparam->length);
+	  relin->T_LU = ncm_matrix_new (reparam->length, reparam->length);
+	  relin->T = ncm_matrix_new (reparam->length, reparam->length);
+	  relin->v = ncm_vector_new (reparam->length);
+	  relin->vp = ncm_vector_new (reparam->length);
+	  relin->p = gsl_permutation_alloc (reparam->length);
+	}
+
+	ncm_matrix_memcpy (relin_dest->T, relin->T);
+	ncm_matrix_memcpy (relin_dest->T_LU, relin->T_LU);
+	ncm_vector_memcpy (relin_dest->v, relin->v);
+	ncm_vector_memcpy (relin_dest->vp, relin->vp);
+	gsl_permutation_memcpy (relin_dest->p, relin->p);
+	relin_dest->signum = relin->signum;
   }
-
-  ncm_matrix_memcpy (relin_dest->T, relin->T);
-  ncm_matrix_memcpy (relin_dest->T_LU, relin->T_LU);
-  ncm_vector_memcpy (relin_dest->v, relin->v);
-  ncm_vector_memcpy (relin_dest->vp, relin->vp);
-  gsl_permutation_memcpy (relin_dest->p, relin->p);
-  relin_dest->signum = relin->signum;
 }
 
 static NcmReparam *

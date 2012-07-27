@@ -157,9 +157,8 @@ _ncm_model_reset_sparams_from_reparam (NcmModel *model)
 {
   guint i;
 
+  _ncm_model_reset_sparams (model);
   g_hash_table_remove_all (model->sparams_name_id);
-  g_ptr_array_set_size (model->sparams, 0);
-  g_ptr_array_set_size (model->sparams, model->total_len);
 
   for (i = 0; i < model->total_len; i++)
   {
@@ -291,6 +290,14 @@ static NcmModel *
 _ncm_model_copy (NcmModel *model)
 {
   NcmModel *model_copy = g_object_new (G_OBJECT_TYPE (model), NULL);
+
+  if (ncm_model_peek_reparam (model))
+  {
+	NcmReparam *reparam = ncm_reparam_copy (ncm_model_peek_reparam (model));
+    ncm_model_set_reparam (model_copy, reparam);
+	ncm_reparam_free (reparam);
+  }
+
   ncm_model_copyto (model, model_copy);
   return model_copy;
 }
@@ -706,7 +713,7 @@ ncm_model_set_reparam (NcmModel *model, NcmReparam *reparam)
 {
   if (reparam != NULL)
   {
-	model->reparam = reparam;
+	model->reparam = ncm_reparam_ref (reparam);
 	model->p = model->reparam->new_params;
 	ncm_reparam_old2new (model->reparam, model, model->params, model->reparam->new_params);
 	_ncm_model_reset_sparams_from_reparam (model);
