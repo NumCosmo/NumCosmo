@@ -156,6 +156,9 @@
       <xi:include href="xml/nc_cluster_mass.xml"/>
       <xi:include href="xml/nc_cluster_mass_nodist.xml"/>
       <xi:include href="xml/nc_cluster_mass_lnnormal.xml"/>
+      <xi:include href="xml/nc_cluster_mass_vanderlinde.xml"/>
+      <xi:include href="xml/nc_cluster_mass_benson.xml"/>
+      <xi:include href="xml/nc_cluster_mass_benson_xray.xml"/>
     </section>
     <xi:include href="xml/nc_cluster_abundance.xml"/>
     <xi:include href="xml/catalog_parser.xml"/>

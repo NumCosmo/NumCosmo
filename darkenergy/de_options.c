@@ -8,11 +8,11 @@
 /*
  * numcosmo
  * Copyright (C) Sandro Dias Pinto Vitenti 2012 <sandro@isoftware.com.br>
-   * numcosmo is free software: you can redistribute it and/or modify it
+ * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
-   *
+ *
  * numcosmo is distributed in the hope that it will be useful, but
  * WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
@@ -95,18 +95,8 @@ nc_de_opt_get_data_cluster_group (NcDEDataClusterEntries *de_data_cluster)
 	{ "mf_ds_index",   0, 0, G_OPTION_ARG_INT,            &de_data_cluster->mf_ds_index,           "Determines the coefficients of the multiplicity function.", NULL },
 	{ "use-true-data", 0, 0, G_OPTION_ARG_NONE,           &de_data_cluster->use_true_data,         "Use true mass and redshift, must be avaliable.", NULL },
 	{ "binned",        0, 0, G_OPTION_ARG_NONE,           &de_data_cluster->binned,                "Binned analyses.", NULL },
-	{ "photoz",        0, 0, G_OPTION_ARG_NONE,           &de_data_cluster->use_photoz,            "Include photometric redshift uncertainty.", NULL },
-	{ "Mobs",          0, 0, G_OPTION_ARG_NONE,           &de_data_cluster->use_Mobs,              "Include mass observable relation.", NULL },
 	{ "binmass",       0, 0, G_OPTION_ARG_NONE,           &de_data_cluster->binmass,               "Use dNdz integrating the full mass function in each z.", NULL },
-	{ "Mi",            0, 0, G_OPTION_ARG_DOUBLE,         &de_data_cluster->Mi,                    "Ncuster mass minimum", "M_min" },
-	{ "Mf",            0, 0, G_OPTION_ARG_DOUBLE,         &de_data_cluster->Mf,                    "Ncuster mass maximum", "M_max" },
 	{ "area",          0, 0, G_OPTION_ARG_DOUBLE,         &de_data_cluster->area_survey,           "User must provide the area in square degree. The conversion to steradian is done internally.", NULL },
-	{ "z_initial",     0, 0, G_OPTION_ARG_DOUBLE,         &de_data_cluster->z_initial,             "Initial redshift", NULL },
-	{ "z_final",       0, 0, G_OPTION_ARG_DOUBLE,         &de_data_cluster->z_final,               "Final redshift", NULL },
-	{ "photoz_sigma0", 0, 0, G_OPTION_ARG_DOUBLE,         &de_data_cluster->photoz_sigma0,         "Standard deviation of photometric redshift sigma = sigma0 (1 + z).", NULL },
-	{ "photoz_bias",   0, 0, G_OPTION_ARG_DOUBLE,         &de_data_cluster->photoz_bias,           "Bias of the photometric redshift relation.", NULL },
-	{ "lnM_sigma0",    0, 0, G_OPTION_ARG_DOUBLE,         &de_data_cluster->lnM_sigma0,            "Standard deviation of mass observable relation sigma0.", NULL },
-	{ "lnM_bias",      0, 0, G_OPTION_ARG_DOUBLE,         &de_data_cluster->lnM_bias,              "Bias of the mass-observable relation.", NULL },
 	{ "n_bins",        0, 0, G_OPTION_ARG_INT,            &de_data_cluster->n_bins,                "Number of bins", NULL },
 	{ "catalog",       0, 0, G_OPTION_ARG_FILENAME_ARRAY, &de_data_cluster->cata_file,             "Use the folowing catalog as the observational data. It can be used multiple times.", "catalog.dat"},
 	{ "save-cat",      0, 0, G_OPTION_ARG_FILENAME,       &de_data_cluster->save_cata,             "Use this option to save the catalog used. (will overwrite)", NULL },

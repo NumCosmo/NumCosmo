@@ -84,27 +84,17 @@ struct _NcDEDataClusterEntries
   gint mf_ds_index;    /* refers to the multiplicity function */
   gboolean use_true_data;
   gboolean binned;
-  gboolean use_photoz;
   gboolean binmass;
-  gboolean use_Mobs;
   gboolean use_Mobs_local; /* sigma_lnM varies with z and lnM. (matching catalog)*/
   gboolean use_selection; /* selection function = completeness / purity (matching catalog) */
-  gdouble Mi;
-  gdouble Mf;
   gdouble area_survey;
-  gdouble z_initial;
-  gdouble z_final;
-  gdouble photoz_sigma0;
-  gdouble photoz_bias;
-  gdouble lnM_sigma0;
-  gdouble lnM_bias;
   gint n_bins;
   gchar **cata_file;
   gchar *save_cata;
   gboolean print_mass_function;
 };
 
-#define NC_DE_DATA_CLUSTER_ENTRIES {"NcWindowTophat", "NcTransferFuncEH", "NcMultiplicityFuncTinkerMean", "NcClusterMassNodist", "NcClusterRedshiftNodist", 0, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, 5.0e13, 1.0e16, 5000.0, 0.0, 1.4, 0.03, 0.0, 0.2, 0.0, 10, NULL, NULL, FALSE}
+#define NC_DE_DATA_CLUSTER_ENTRIES {"NcWindowTophat", "NcTransferFuncEH", "NcMultiplicityFuncTinkerMean", "NcClusterMassNodist", "NcClusterRedshiftNodist", 0, FALSE, FALSE, FALSE, FALSE, FALSE, 5000.0, 10, NULL, NULL, FALSE}
 
 typedef struct _NcDEFitEntries NcDEFitEntries;
 

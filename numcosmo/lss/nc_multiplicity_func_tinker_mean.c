@@ -146,7 +146,7 @@ _nc_multiplicity_func_tinker_mean_eval (NcMultiplicityFunc *mulf, NcHICosmo *mod
 
   for (i = 0; i < 8; i++)
   {
-	if (log10_Delta >= coef_A[i][1] && i != 7)
+	if (log10_Delta >= coef_A[i][1])
 	  continue;
 	else 
 	{

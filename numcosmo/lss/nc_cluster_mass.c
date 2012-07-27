@@ -128,6 +128,7 @@ nc_cluster_mass_obs_params_len (NcClusterMass *clusterm)
 /**
  * nc_cluster_mass_p:
  * @clusterm: a #NcClusterMass.
+ * @model: a #NcHICosmo. 
  * @z: true redshift.
  * @lnM: true mass.
  * @lnM_obs: observed mass.
@@ -138,14 +139,15 @@ nc_cluster_mass_obs_params_len (NcClusterMass *clusterm)
  * Returns: FIXME
 */
 gdouble
-nc_cluster_mass_p (NcClusterMass *clusterm, gdouble lnM, gdouble z, gdouble *lnM_obs, gdouble *lnM_obs_params)
+nc_cluster_mass_p (NcClusterMass *clusterm, NcHICosmo *model, gdouble lnM, gdouble z, gdouble *lnM_obs, gdouble *lnM_obs_params)
 {
-  return NC_CLUSTER_MASS_GET_CLASS (clusterm)->P (clusterm, lnM, z, lnM_obs, lnM_obs_params);
+  return NC_CLUSTER_MASS_GET_CLASS (clusterm)->P (clusterm, model, lnM, z, lnM_obs, lnM_obs_params);
 }
 
 /**
  * nc_cluster_mass_intp:
  * @clusterm: a #NcClusterMass.
+ * @model: a #NcHICosmo.
  * @z: true redshift.
  * @lnM: true mass.
  *
@@ -154,14 +156,15 @@ nc_cluster_mass_p (NcClusterMass *clusterm, gdouble lnM, gdouble z, gdouble *lnM
  * Returns: FIXME
 */
 gdouble
-nc_cluster_mass_intp (NcClusterMass *clusterm, gdouble lnM, gdouble z)
+nc_cluster_mass_intp (NcClusterMass *clusterm, NcHICosmo *model, gdouble lnM, gdouble z)
 {
-  return NC_CLUSTER_MASS_GET_CLASS (clusterm)->intP (clusterm, lnM, z);
+  return NC_CLUSTER_MASS_GET_CLASS (clusterm)->intP (clusterm, model, lnM, z);
 }
 
 /**
  * nc_cluster_mass_resample:
  * @clusterm: a #NcClusterMass.
+ * @model: a #NcHICosmo. 
  * @z: true redshift.
  * @lnM: true mass.
  * @lnM_obs: (out): observed mass.
@@ -172,14 +175,15 @@ nc_cluster_mass_intp (NcClusterMass *clusterm, gdouble lnM, gdouble z)
  * Returns: FIXME
  */
 gboolean
-nc_cluster_mass_resample (NcClusterMass *clusterm, gdouble lnM, gdouble z, gdouble *lnM_obs, gdouble *lnM_obs_params)
+nc_cluster_mass_resample (NcClusterMass *clusterm, NcHICosmo *model, gdouble lnM, gdouble z, gdouble *lnM_obs, gdouble *lnM_obs_params)
 {
-  return NC_CLUSTER_MASS_GET_CLASS (clusterm)->resample (clusterm, lnM, z, lnM_obs, lnM_obs_params);
+  return NC_CLUSTER_MASS_GET_CLASS (clusterm)->resample (clusterm,model, lnM, z, lnM_obs, lnM_obs_params);
 }
 
 /**
  * nc_cluster_mass_p_limits:
  * @clusterm: a #NcClusterMass.
+ * @model: a #NcHICosmo. 
  * @lnM_obs: observed mass.
  * @lnM_obs_params: observed mass params.
  * @lnM_lower: (out): pointer to the lower limit of the real mass integration.
@@ -189,14 +193,15 @@ nc_cluster_mass_resample (NcClusterMass *clusterm, gdouble lnM, gdouble z, gdoub
  * The function which will call this one is responsible to allocate memory for @lnM_lower and @lnM_upper.
  */
 void
-nc_cluster_mass_p_limits (NcClusterMass *clusterm, gdouble *lnM_obs, gdouble *lnM_obs_params, gdouble *lnM_lower, gdouble *lnM_upper)
+nc_cluster_mass_p_limits (NcClusterMass *clusterm, NcHICosmo *model, gdouble *lnM_obs, gdouble *lnM_obs_params, gdouble *lnM_lower, gdouble *lnM_upper)
 {
-  NC_CLUSTER_MASS_GET_CLASS (clusterm)->P_limits (clusterm, lnM_obs, lnM_obs_params, lnM_lower, lnM_upper);
+  NC_CLUSTER_MASS_GET_CLASS (clusterm)->P_limits (clusterm, model, lnM_obs, lnM_obs_params, lnM_lower, lnM_upper);
 }
 
 /**
  * nc_cluster_mass_n_limits:
  * @clusterm: a #NcClusterMass.
+ * @model: a #NcHICosmo. 
  * @lnM_lower: (out): pointer to the lower limit of the true mass.
  * @lnM_upper: (out): pointer to the upper limit of the true mass.
  *
@@ -204,9 +209,9 @@ nc_cluster_mass_p_limits (NcClusterMass *clusterm, gdouble *lnM_obs, gdouble *ln
  * The function which will call this one is responsible to allocate memory for @lnM_lower and @lnM_upper.
  */
 void
-nc_cluster_mass_n_limits (NcClusterMass *clusterm, gdouble *lnM_lower, gdouble *lnM_upper)
+nc_cluster_mass_n_limits (NcClusterMass *clusterm, NcHICosmo *model, gdouble *lnM_lower, gdouble *lnM_upper)
 {
-  NC_CLUSTER_MASS_GET_CLASS (clusterm)->N_limits (clusterm, lnM_lower, lnM_upper);
+  NC_CLUSTER_MASS_GET_CLASS (clusterm)->N_limits (clusterm, model, lnM_lower, lnM_upper);
 }
 
 static void

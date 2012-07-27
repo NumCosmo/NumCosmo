@@ -61,46 +61,11 @@ struct _NcClusterAbundanceClass
   GObjectClass parent_class;
 };
 
-/**
- * NcClusterAbundanceOpt:
- * @NC_CLUSTER_ABUNDANCE_NONE: without observational uncertainties
- * @NC_CLUSTER_ABUNDANCE_BINMASS: FIXME
- * @NC_CLUSTER_ABUNDANCE_BINZ: FIXME
- * @NC_CLUSTER_ABUNDANCE_POISSON: FIXME
- * @NC_CLUSTER_ABUNDANCE_PHOTOZ: include photometric redshift distribution (Gaussian)
- * @NC_CLUSTER_ABUNDANCE_MOBS: include mass-observable distribution (log-normal)
- * @NC_CLUSTER_ABUNDANCE_MOBS_LOCAL: include mass-observable distribution (log-normal) with standard
- * deviation as a function of mass and redshift
- * @NC_CLUSTER_ABUNDANCE_COMPLETENESS: include completeness
- * @NC_CLUSTER_ABUNDANCE_PURITY: include purity
- * @NC_CLUSTER_ABUNDANCE_REAL_ZM: FIXME
- * @NC_CLUSTER_ABUNDANCE_OBS_ZM: FIXME
- *
- * FIXME
- */
-typedef enum _NcClusterAbundanceOpt
-{
-  NC_CLUSTER_ABUNDANCE_NONE         = 0,
-  NC_CLUSTER_ABUNDANCE_BINMASS      = 1 << 0,
-  NC_CLUSTER_ABUNDANCE_BINZ         = 1 << 1,
-  NC_CLUSTER_ABUNDANCE_POISSON      = 1 << 2,
-  NC_CLUSTER_ABUNDANCE_PHOTOZ       = 1 << 3,
-  NC_CLUSTER_ABUNDANCE_MOBS         = 1 << 4,
-  NC_CLUSTER_ABUNDANCE_MOBS_LOCAL   = 1 << 5,
-  NC_CLUSTER_ABUNDANCE_COMPLETENESS = 1 << 6,
-  NC_CLUSTER_ABUNDANCE_PURITY       = 1 << 7,
-  NC_CLUSTER_ABUNDANCE_REAL_ZM      = 1 << 8,
-  NC_CLUSTER_ABUNDANCE_OBS_ZM       = 1 << 9,
-  /* NC_MEAN_BIAS                   = 1 << 5, FIXME */
-  /* NC_MEAN_BIAS_MOBS              = 1 << 6, FIXME */
-} NcClusterAbundanceOpt;
-
 struct _NcClusterAbundance
 {
   /*< private >*/
   GObject parent_instance;
   NcMassFunction *mfp;
-  NcClusterAbundanceOpt opt;
   NcHaloBiasFunc *mbiasf;    /* new FIXME */
   NcClusterRedshift *z;
   NcClusterMass *m;
@@ -124,7 +89,7 @@ struct _NcClusterAbundance
 
 GType nc_cluster_abundance_get_type (void) G_GNUC_CONST;
 
-NcClusterAbundance *nc_cluster_abundance_new (NcClusterAbundanceOpt opt, NcMassFunction *mfp, NcHaloBiasFunc *mbiasf, NcClusterRedshift *clusterz, NcClusterMass *clusterm);
+NcClusterAbundance *nc_cluster_abundance_new (NcMassFunction *mfp, NcHaloBiasFunc *mbiasf, NcClusterRedshift *clusterz, NcClusterMass *clusterm);
 NcClusterAbundance *nc_cluster_abundance_copy (NcClusterAbundance *cad);
 NcClusterAbundance *nc_cluster_abundance_ref (NcClusterAbundance *cad);
 void nc_cluster_abundance_free (NcClusterAbundance *cad);

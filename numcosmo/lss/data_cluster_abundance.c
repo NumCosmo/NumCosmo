@@ -308,6 +308,7 @@ _nc_data_cluster_abundance_resample (NcmMSet *mset, gpointer model, gpointer dat
 {
   NcClusterAbundance *cad = NC_CLUSTER_ABUNDANCE (model);
   NcDataClusterAbundance *dca = (NcDataClusterAbundance *) data;
+  NcHICosmo *mc = NC_HICOSMO (ncm_mset_peek (mset, NC_HICOSMO_ID));
   gsl_rng *rng = ncm_get_rng ();
   guint z_obs_len = nc_cluster_redshift_obs_len (cad->z);
   guint z_obs_params_len = nc_cluster_redshift_obs_params_len (cad->z);
@@ -352,7 +353,7 @@ _nc_data_cluster_abundance_resample (NcmMSet *mset, gpointer model, gpointer dat
 	const gdouble lnM_true = ncm_spline2d_eval (cad->inv_lnM_z, u2, z_true);
 
     if ( nc_cluster_redshift_resample (cad->z, lnM_true, z_true, zi_obs, zi_obs_params) &&
-         nc_cluster_mass_resample (cad->m, lnM_true, z_true, lnMi_obs, lnMi_obs_params) )
+         nc_cluster_mass_resample (cad->m, mc, lnM_true, z_true, lnMi_obs, lnMi_obs_params) )
 	{
 	  g_array_append_val (lnM_true_array, lnM_true);
 	  g_array_append_val (z_true_array, z_true);
@@ -713,16 +714,6 @@ nc_data_cluster_abundance_unbinned_bin_data (NcData *ca_unbinned, gsl_vector *no
   hist = gsl_histogram_alloc (nodes->size - 1);
   gsl_histogram_set_ranges (hist, nodes->data, nodes->size);
 
-  if (dca->opt & NC_CLUSTER_ABUNDANCE_PHOTOZ)
-  {
-	for (i = 0; i < dca->np; i++)
-	{
-	  const gdouble z_i = 0.0;//gsl_matrix_get (dca->obs.z_lnM, i, 0);
-	  gsl_histogram_increment (hist, z_i);
-	  g_assert_not_reached ();
-	}
-  }
-  else
   {
 	for (i = 0; i < dca->np; i++)
 	{
@@ -770,18 +761,6 @@ nc_data_cluster_abundance_hist_lnM_z (NcData *ca_unbinned, gsl_vector *lnM_nodes
   hist = gsl_histogram2d_alloc (lnM_nodes->size - 1, z_nodes->size - 1);
   gsl_histogram2d_set_ranges (hist, lnM_nodes->data, lnM_nodes->size, z_nodes->data, z_nodes->size);
 
-  if (dca->opt & NC_CLUSTER_ABUNDANCE_OBS_ZM)
-  {
-	for (i = 0; i < dca->np; i++)
-	{
-	  const gdouble zi_obs = 0.0;//gsl_matrix_get (dca->obs.z_lnM, i, 0);
-	  const gdouble lnMi_obs = 0.0;//gsl_matrix_get (dca->obs.z_lnM, i, 1);
-	  g_assert_not_reached ();
-
-	  gsl_histogram2d_increment (hist, lnMi_obs, zi_obs);
-	}
-  }
-  else
   {
 	for (i = 0; i < dca->np; i++)
 	{

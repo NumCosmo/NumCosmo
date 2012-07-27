@@ -34,7 +34,6 @@ typedef struct _NcDataClusterAbundance NcDataClusterAbundance;
 struct _NcDataClusterAbundance
 {
   /*< private >*/
-  NcClusterAbundanceOpt opt;
   NcClusterRedshift *z;
   NcClusterMass *m;
   NcmVector *lnM_true;
@@ -57,7 +56,7 @@ struct _NcDataClusterAbundance
 
 NcData *nc_data_cluster_abundance_binned_new (NcClusterAbundance *cad);
 void nc_data_cluster_abundance_binned_init_from_text_file_gkey (NcData *data, gboolean obs, gchar *filename);
-void nc_data_cluster_abundance_binned_init_from_sampling (NcData *data, NcmMSet *mset, NcmVector *nodes, NcClusterAbundanceOpt opt, gboolean obs, gdouble area_survey, gdouble lnMi, gdouble lnMf, gdouble photoz_sigma0, gdouble photoz_bias, gdouble lnM_sigma0, gdouble lnM_bias);
+void nc_data_cluster_abundance_binned_init_from_sampling (NcData *data, NcmMSet *mset, NcmVector *nodes, gboolean obs, gdouble area_survey, gdouble lnMi, gdouble lnMf, gdouble photoz_sigma0, gdouble photoz_bias, gdouble lnM_sigma0, gdouble lnM_bias);
 void nc_data_cluster_abundance_binned_save (NcData *data, gchar *filename);
 NcmMSetFunc *nc_data_cluster_abundance_binned_new_function (NcClusterAbundance *cad);
 
