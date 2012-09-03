@@ -539,7 +539,7 @@ static void _top_hat_cubic_spline_integration_rule_taylor (gdouble xa, gdouble x
  * This function returns the variance of the density contrast at redshift \f$ z = 0 \f$ computed at scale R FIXME
  *
  * Returns: a gdouble which is the variance \f$ \sigma^2 (R, z = 0) \f$.
-   */
+ */
 gdouble
 nc_matter_var_var0 (NcMatterVar *vp, NcHICosmo *model, gdouble lnR)
 {

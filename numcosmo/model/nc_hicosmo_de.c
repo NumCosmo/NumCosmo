@@ -122,6 +122,11 @@ nc_hicosmo_de_omega_x2omega_k (NcHICosmo *model)
   ncm_vector_set (v, NC_HICOSMO_DE_OMEGA_X, 1.0);
 
   relin = ncm_reparam_linear_new (ncm_model_len (NCM_MODEL (model)), T, v);
+  {
+	NcmReparam *reparam = NCM_REPARAM (relin);
+	NcmSParam *sp_Omegak = ncm_sparam_new ("Omegak","\\Omega_k", -5.0, 5.0, 1.0e-2, NC_HICOSMO_DEFAULT_PARAMS_ABSTOL, 0.0, NCM_PARAM_TYPE_FIXED);
+	g_ptr_array_index (reparam->sparams, NC_HICOSMO_DE_OMEGA_X) = sp_Omegak;
+  }
 
   ncm_model_set_reparam (NCM_MODEL (model), NCM_REPARAM (relin));
 
@@ -187,12 +192,12 @@ nc_hicosmo_de_class_init (NcHICosmoDEClass *klass)
                                NCM_PARAM_TYPE_FIXED);
   /* Set Omega_c param info */
   ncm_model_class_set_sparam (model_class, NC_HICOSMO_DE_OMEGA_C, "\\Omega_c", "Omegac",
-                               1e-8,   1.0, 1.0e-2,
+                               1e-8,  10.0, 1.0e-2,
                                NC_HICOSMO_DEFAULT_PARAMS_ABSTOL, NC_HICOSMO_DE_DEFAULT_OMEGA_C,
                                NCM_PARAM_TYPE_FREE);
   /* Set Omega_x param info */
   ncm_model_class_set_sparam (model_class, NC_HICOSMO_DE_OMEGA_X, "\\Omega_x", "Omegax",
-                               1e-8,   1.0, 1.0e-2,
+                               1e-8,  10.0, 1.0e-2,
                                NC_HICOSMO_DEFAULT_PARAMS_ABSTOL, NC_HICOSMO_DE_DEFAULT_OMEGA_X,
                                NCM_PARAM_TYPE_FREE);
   /* Set T_gamma0 param info */
@@ -202,7 +207,7 @@ nc_hicosmo_de_class_init (NcHICosmoDEClass *klass)
                                NCM_PARAM_TYPE_FIXED);
   /* Set Omega_b param info */
   ncm_model_class_set_sparam (model_class, NC_HICOSMO_DE_OMEGA_B, "\\Omega_b", "Omegab",
-                               1e-8,   1.0, 1.0e-2,
+                               1e-8,  10.0, 1.0e-2,
                                NC_HICOSMO_DEFAULT_PARAMS_ABSTOL, NC_HICOSMO_DE_DEFAULT_OMEGA_B,
                                NCM_PARAM_TYPE_FIXED);
   /* Set n_s param info */

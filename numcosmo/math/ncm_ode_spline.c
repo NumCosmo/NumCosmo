@@ -124,7 +124,7 @@ ncm_ode_spline_prepare (NcmOdeSpline *os, gpointer userdata)
   CVodeSetStopTime (os->cvode, os->xf);
   CVodeSetUserData (os->cvode, &f_data);
 
-  while(1)
+  while (TRUE)
   {
 	CVode (os->cvode, os->xf, os->y, &x0, CV_ONE_STEP);
 	g_array_append_val (os->x_array, x0);

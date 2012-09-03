@@ -196,7 +196,6 @@ nc_growth_func_prepare (NcGrowthFunc *gf, NcHICosmo *model)
     if (i < 0)
       g_error ("Error: More than %d points to compute the growth spline.\n", _NC_MAX_SPLINE_POINTS);
   }
-  gf->one_gf0 = 1.0 / g_array_index (y_array, gdouble, i);
 
   g_array_remove_range (y_array, 0, i);
   g_array_remove_range (x_array, 0, i);
@@ -204,7 +203,12 @@ nc_growth_func_prepare (NcGrowthFunc *gf, NcHICosmo *model)
   if (gf->s == NULL)
 	gf->s = ncm_spline_cubic_notaknot_new ();
 
-  ncm_spline_set_array (gf->s, x_array, y_array, TRUE);
+  {
+	NcmVector *xv = ncm_vector_new_array (x_array);
+	NcmVector *yv = ncm_vector_new_array (y_array);
+	ncm_vector_scale (yv, 1.0 / ncm_vector_get (yv, 0));
+	ncm_spline_set (gf->s, xv, yv, TRUE);
+  }
 
   g_array_unref (x_array);
   g_array_unref (y_array);
@@ -222,16 +226,6 @@ nc_growth_func_prepare (NcGrowthFunc *gf, NcHICosmo *model)
  *
  * Returns: The normalized groth function at @z.
 */
-gdouble
-nc_growth_func_eval (NcGrowthFunc *gf, NcHICosmo *model, gdouble z)
-{
-  if (z > _NC_START_Z || z < 0.0)
-    g_error ("Growth spline prepared for (%g, %g), %g is not included.\n", 0.0, _NC_START_Z, z);
-  if (ncm_model_ctrl_update (gf->ctrl, NCM_MODEL(model)))
-    nc_growth_func_prepare (gf, model);
-  return ncm_spline_eval (gf->s, z) * gf->one_gf0;	/* Spline normalized */
-}
-
 /**
  * nc_growth_func_eval_deriv:
  * @gf: a #NcGrowthFunc.
@@ -241,16 +235,27 @@ nc_growth_func_eval (NcGrowthFunc *gf, NcHICosmo *model, gdouble z)
  * FIXME
  *
  * Returns: FIXME
-*/
-gdouble
-nc_growth_func_eval_deriv (NcGrowthFunc *gf, NcHICosmo *model, gdouble z)
-{
-  if (z > _NC_START_Z || z < 0.0)
-    g_error ("Growth spline prepared for (%g, %g), %g is not included.\n", 0.0, _NC_START_Z, z);
-  if (ncm_model_ctrl_update (gf->ctrl, NCM_MODEL(model)))
-    nc_growth_func_prepare (gf, model);
-  return ncm_spline_eval_deriv (gf->s, z) * gf->one_gf0;	/* Spline normalized */
-}
+ */
+/**
+ * nc_growth_func_eval_both:
+ * @gf: a #NcGrowthFunc.
+ * @model: a #NcHICosmo.
+ * @z: redshift.
+ * @d: Growth function.
+ * @f: Growth function derivative.
+ *
+ * FIXME
+ *
+ * Returns: FIXME
+ */
+#ifndef NUMCOSMO_HAVE_INLINE
+#define NUMCOSMO_HAVE_INLINE
+#undef _NC_GROWTH_FUNC_INLINE_H_
+#define G_INLINE_FUNC
+#include "nc_growth_func.h"
+#undef _NC_GROWTH_FUNC_INLINE_H_
+#undef NUMCOSMO_HAVE_INLINE
+#endif /* NUMCOSMO_HAVE_INLINE */
 
 static void
 nc_growth_func_init (NcGrowthFunc *gf)
@@ -258,7 +263,6 @@ nc_growth_func_init (NcGrowthFunc *gf)
   gf->s       = NULL;
   gf->cvode   = NULL;
   gf->yv      = N_VNew_Serial (2);
-  gf->one_gf0 = 0.0;
   gf->zf      = 0.0;
   gf->ctrl    = ncm_model_ctrl_new (NULL);
 }

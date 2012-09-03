@@ -86,6 +86,7 @@ struct _NcmReparam
 GType ncm_reparam_get_type (void) G_GNUC_CONST;
 
 NcmReparam *ncm_reparam_copy (NcmReparam *reparam);
+NcmReparam *ncm_reparam_ref (NcmReparam *reparam);
 void ncm_reparam_copyto (NcmReparam *reparam, NcmReparam *reparam_dest);
 void ncm_reparam_old2new (NcmReparam *reparam, struct _NcmModel *model, NcmVector *src, NcmVector *dest);
 void ncm_reparam_new2old (NcmReparam *reparam, struct _NcmModel *model, NcmVector *src, NcmVector *dest);

@@ -67,6 +67,20 @@ ncm_reparam_copy (NcmReparam *reparam)
 	return NCM_REPARAM_GET_CLASS (reparam)->copy (reparam);
 }
 
+/**
+ * ncm_reparam_ref:
+ * @reparam: a #NcmReparam
+ *
+ * FIXME
+ *
+ * Returns: FIXME
+ */
+NcmReparam *
+ncm_reparam_ref (NcmReparam *reparam)
+{
+  return NCM_REPARAM (g_object_ref (reparam));
+}
+
 enum
 {
   PROP_0,
@@ -177,6 +191,8 @@ _ncm_reparam_constructed (GObject *object)
 	NcmReparam *reparam = NCM_REPARAM (object);
 
 	reparam->new_params = ncm_vector_new (reparam->length);
+	reparam->sparams = g_ptr_array_sized_new (reparam->length);
+	g_ptr_array_set_size (reparam->sparams, reparam->length);
   }
 }
 

@@ -54,7 +54,6 @@ struct _NcGrowthFunc
   NcmSpline *s;
   gpointer cvode;
   N_Vector yv;
-  gdouble one_gf0;
   gdouble zf;
   NcmModelCtrl *ctrl;
 };
@@ -65,9 +64,47 @@ NcGrowthFunc * nc_growth_func_new (void);
 NcGrowthFunc * nc_growth_func_copy (NcGrowthFunc *gf);
 void nc_growth_func_free (NcGrowthFunc *gf);
 void nc_growth_func_prepare (NcGrowthFunc * gf, NcHICosmo * model);
-gdouble nc_growth_func_eval (NcGrowthFunc *gf, NcHICosmo *model, gdouble z);
-gdouble nc_growth_func_eval_deriv (NcGrowthFunc *gf, NcHICosmo *model, gdouble z);
+G_INLINE_FUNC gdouble nc_growth_func_eval (NcGrowthFunc *gf, NcHICosmo *model, gdouble z);
+G_INLINE_FUNC gdouble nc_growth_func_eval_deriv (NcGrowthFunc *gf, NcHICosmo *model, gdouble z);
+G_INLINE_FUNC void nc_growth_func_eval_both (NcGrowthFunc *gf, NcHICosmo *model, gdouble z, gdouble *d, gdouble *f);
 
 G_END_DECLS
 
 #endif /* _NC_GROWTH_FUNC_H_ */
+
+#ifndef _NC_GROWTH_FUNC_INLINE_H_
+#define _NC_GROWTH_FUNC_INLINE_H_
+
+#include <glib-object.h>
+#include <gsl/gsl_spline.h>
+
+G_BEGIN_DECLS
+
+G_INLINE_FUNC gdouble
+nc_growth_func_eval (NcGrowthFunc *gf, NcHICosmo *model, gdouble z)
+{
+  if (ncm_model_ctrl_update (gf->ctrl, NCM_MODEL(model)))
+    nc_growth_func_prepare (gf, model);
+  return ncm_spline_eval (gf->s, z);
+}
+
+G_INLINE_FUNC gdouble
+nc_growth_func_eval_deriv (NcGrowthFunc *gf, NcHICosmo *model, gdouble z)
+{
+  if (ncm_model_ctrl_update (gf->ctrl, NCM_MODEL(model)))
+    nc_growth_func_prepare (gf, model);
+  return ncm_spline_eval_deriv (gf->s, z);
+}
+
+G_INLINE_FUNC void
+nc_growth_func_eval_both (NcGrowthFunc *gf, NcHICosmo *model, gdouble z, gdouble *d, gdouble *f)
+{
+  if (ncm_model_ctrl_update (gf->ctrl, NCM_MODEL(model)))
+    nc_growth_func_prepare (gf, model);
+  *d = ncm_spline_eval (gf->s, z);
+  *f = ncm_spline_eval_deriv (gf->s, z);
+}
+
+G_END_DECLS
+
+#endif /* _NC_GROWTH_FUNC_INLINE_H_ */

@@ -824,6 +824,7 @@ ncm_fit_cr_1dim (NcmFit *fit, NcmModelID gmid, guint pid, gdouble p, gint nu, gd
 {
   NcConfidenceRegion *cr = nc_confidence_region_new_1d (fit, gmid, pid);
   gdouble r_min, r_max, r, scale;
+
 #define NC_CR_1DIM_SCALE_INCR (1.1)
 
   scale = ncm_fit_covar_sd (cr->bestfit, gmid, pid);
@@ -1058,7 +1059,12 @@ ncm_fit_cr_step (NcConfidenceRegion *cr, gdouble x)
 	  case NC_CONFIDENCE_REGION_SEARCH_1D:
 	  {
 		NcmMSetPIndex *pi = ncm_fit_cr_get_pi (cr, 0);
-		ncm_mset_param_set (cr->constrained->mset, pi->gmid, pi->pid, ncm_fit_cr_get_bf_param (cr, 0) + cr->shift[0] + x);
+		gdouble p_val = ncm_fit_cr_get_bf_param (cr, 0) + cr->shift[0] + x;
+		const gdouble p_lb = ncm_mset_param_get_lower_bound (cr->constrained->mset, pi->gmid, pi->pid);
+		const gdouble p_ub = ncm_mset_param_get_upper_bound (cr->constrained->mset, pi->gmid, pi->pid);
+		p_val = GSL_MAX (p_val, p_lb);
+		p_val = GSL_MIN (p_val, p_ub);
+		ncm_mset_param_set (cr->constrained->mset, pi->gmid, pi->pid, p_val);
 	  }
 		break;
 	  case NC_CONFIDENCE_REGION_SEARCH_ELLIPTIC_RADIUS:

@@ -54,6 +54,7 @@ struct _NcGalaxyAcf
   NcDistance *dist;
   NcTransferFunc *tf;
   NcmSpline *s;
+  NcMatterVar *vp;
   gdouble b;
 };
 
