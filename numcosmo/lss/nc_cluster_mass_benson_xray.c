@@ -59,11 +59,13 @@ enum
 typedef struct _integrand_data
 {
   NcClusterMassBensonXRay *msz;
-  gdouble *xi_params;
+  gdouble *obs_params; //*xi_params;
   gdouble z;
   gdouble lnM;
-  gdouble *xi;
+  gdouble *obs; //*xi;
 } integrand_data;
+
+
 
 guint _nc_cluster_mass_benson_xray_obs_len (NcClusterMass *clusterm) { return 2; }
 guint _nc_cluster_mass_benson_xray_obs_params_len (NcClusterMass *clusterm) { return 0; }
