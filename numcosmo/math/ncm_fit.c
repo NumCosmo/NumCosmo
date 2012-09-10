@@ -1634,7 +1634,9 @@ ncm_fit_montecarlo_matrix (NcmFit *fit, NcmMSet *mset, guint maxiter, guint ni, 
   gulong total_min, total_hour, total_day;
   g_assert (nf > ni);
 
+  ncm_mset_prepare_fparam_map (mset);
   ncm_mset_fparams_get_vector (mset, bf);
+  ncm_mset_fparams_set_vector (fit->mset, bf);
 
   if (fit->mtype > NCM_FIT_RUN_MSGS_NONE)
 	g_message ( "#  Calculating [%06d] montecarlo fit\n", n);
