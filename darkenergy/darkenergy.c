@@ -263,7 +263,7 @@ main (gint argc, gchar *argv[])
 	  resample_mset = fiduc;
 	else
 	  resample_mset = fit->mset;
-
+	
 	param_matrix = ncm_fit_montecarlo_matrix (fit, resample_mset, de_fit.max_iter, de_fit.mc_ni, de_fit.montecarlo, de_fit.msg_level);
 	ncm_fit_montecarlo_matrix_mean_covar (fit, param_matrix);
 	ncm_fit_log_covar (fit);

@@ -814,6 +814,7 @@ void
 ncm_mset_fparams_get_vector (NcmMSet *mset, NcmVector *x)
 {
   guint fpi;
+  
   for (fpi = 0; fpi < mset->fparam_len; fpi++)
   {
     const NcmMSetPIndex pi = g_array_index (mset->pi_array, NcmMSetPIndex, fpi);
@@ -833,6 +834,7 @@ void
 ncm_mset_fparams_set_vector (NcmMSet *mset, const NcmVector *x)
 {
   guint fpi;
+  
   for (fpi = 0; fpi < mset->fparam_len; fpi++)
   {
     const NcmMSetPIndex pi = g_array_index (mset->pi_array, NcmMSetPIndex, fpi);
