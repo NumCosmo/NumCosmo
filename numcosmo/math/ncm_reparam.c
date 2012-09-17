@@ -73,7 +73,7 @@ ncm_reparam_copy (NcmReparam *reparam)
  *
  * FIXME
  *
- * Returns: FIXME
+ * Returns: (transfer full): FIXME
  */
 NcmReparam *
 ncm_reparam_ref (NcmReparam *reparam)

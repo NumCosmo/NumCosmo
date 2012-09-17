@@ -15,7 +15,8 @@ noinst_PROGRAMS = \
 	q-linear \
 	q-constant \
 	recomb \
-	quantum-gravity
+	quantum-gravity \
+	gobj_itest
 
 quantum_gravity_SOURCES = \
 	quantum-gravity.c
@@ -53,16 +54,14 @@ cmb_maps_SOURCES = \
 cmb_maps_LDADD = \
 	$(top_builddir)/numcosmo/libnumcosmo.la
 
-AM_CPPFLAGS = 
-
-bin_PROGRAMS = \
-	gobj_itest
-
 gobj_itest_SOURCES = \
 	gobj_itest.c
 
 gobj_itest_LDADD = \
 	$(top_builddir)/numcosmo/libnumcosmo.la
 
-## File created by the gnome-build tools
+AM_CPPFLAGS = 
 
+bin_PROGRAMS = 
+
+## File created by the gnome-build tools
