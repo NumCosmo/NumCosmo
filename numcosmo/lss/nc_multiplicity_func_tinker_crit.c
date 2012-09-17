@@ -89,7 +89,7 @@ _nc_multiplicity_func_tinker_crit_eval (NcMultiplicityFunc *mulf, NcHICosmo *mod
   NcMultiplicityFuncTinkerCrit *mulf_tinker_crit = NC_MULTIPLICITY_FUNC_TINKER_CRIT (mulf);
   const gdouble Omega_m = nc_hicosmo_Omega_m (model);
   const gdouble E2 = nc_hicosmo_E2 (model, z);
-  const gdouble Delta_z = mulf_tinker_crit->Delta * E2 / (Omega_m * gsl_pow_3 (1.0 + z));
+  gdouble Delta_z = mulf_tinker_crit->Delta * E2 / (Omega_m * gsl_pow_3 (1.0 + z));
   const gdouble log10_Delta_z = log10 (Delta_z);
   const gdouble log10_200 = log10 (200.0);
   const gdouble log10_300 = log10 (300.0);
@@ -140,7 +140,12 @@ _nc_multiplicity_func_tinker_crit_eval (NcMultiplicityFunc *mulf, NcHICosmo *mod
   gint i;
   gdouble A0 = 0.0, a0 = 0.0, b0 = 0.0, c = 0.0;
 
-  g_assert (Delta_z <= 3200.0);
+  if (Delta_z > 3200.0)
+  {
+	//g_assert (Delta_z <= 3200.0);
+	Delta_z = 3200.0;
+	g_warning ("Delta > 3200 but replaced by 3200.\n");
+  }
   
   for (i = 0; i < 8; i++)
   {
