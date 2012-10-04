@@ -341,8 +341,8 @@ _nc_data_cluster_abundance_resample (NcmMSet *mset, gpointer model, gpointer dat
   if (lnM_obs_params_len > 0)
 	lnM_obs_params_array = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), total_np * lnM_obs_params_len);
 
-  printf ("# Generating unbinned %u (z,lnM) %g\n", total_np, cad->norma);
-  printf ("# Resampling in range [% 20.15g, % 20.15g] [% 20.15e, % 20.15e]\n", cad->zi, cad->zf, exp (cad->lnMi), exp (cad->lnMf));
+  //printf ("# Generating unbinned %u (z,lnM) %g\n", total_np, cad->norma);
+  //printf ("# Resampling in range [% 20.15g, % 20.15g] [% 20.15e, % 20.15e]\n", cad->zi, cad->zf, exp (cad->lnMi), exp (cad->lnMf));
   nc_cluster_abundance_prepare_inv_dNdz (cad, NC_HICOSMO (ncm_mset_peek (mset, NC_HICOSMO_ID)));
 
   for (i = 0; i < total_np; i++)
@@ -406,7 +406,7 @@ _nc_data_cluster_abundance_resample (NcmMSet *mset, gpointer model, gpointer dat
   }
 
   dca->np = NCM_MATRIX_NROWS (dca->z_obs);
-  printf ("# Generated %ld | expected % 20.15g\n", dca->np, nc_cluster_abundance_n (cad, NC_HICOSMO (ncm_mset_peek (mset, NC_HICOSMO_ID))));
+  //printf ("# Generated %ld | expected % 20.15g\n", dca->np, nc_cluster_abundance_n (cad, NC_HICOSMO (ncm_mset_peek (mset, NC_HICOSMO_ID))));
 
   g_free (zi_obs);
   g_free (zi_obs_params);

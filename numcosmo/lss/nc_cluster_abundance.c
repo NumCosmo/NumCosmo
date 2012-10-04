@@ -741,10 +741,10 @@ nc_cluster_abundance_prepare_inv_dNdz (NcClusterAbundance *cad, NcHICosmo *model
 	  //printf ("\n\n");
 	}
   }
-  printf ("# Preparing\n");
+  //printf ("# Preparing\n");
   ncm_spline2d_prepare (cad->inv_lnM_z);
   ncm_spline_prepare (cad->inv_z);
-  printf ("# Finished\n");
+  //printf ("# Finished\n");
 }
 
 /**

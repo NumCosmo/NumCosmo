@@ -137,6 +137,8 @@ _nc_cluster_mass_vanderlinde_significance_m_p (NcClusterMass *clusterm, NcHICosm
   F.params = &data;
 
   gsl_integration_qagiu (&F, 0.0, 0.0, NC_DEFAULT_PRECISION, NC_INT_PARTITION, *w, &P, &err);
+
+  ncm_memory_pool_return (w);
   
   return P;
 }
@@ -158,6 +160,8 @@ _nc_cluster_mass_vanderlinde_intp (NcClusterMass *clusterm, NcHICosmo *model, gd
   F.params = &data;
 
   gsl_integration_qagiu (&F, 0.0, 0.0, NC_DEFAULT_PRECISION, NC_INT_PARTITION, *w, &P, &err);
+
+  ncm_memory_pool_return (w);
   
   return P;
 }
@@ -179,7 +183,7 @@ _nc_cluster_mass_vanderlinde_resample (NcClusterMass *clusterm, NcHICosmo *model
 
   xi[0] = xi_mean + gsl_ran_gaussian (rng, 1.0);
 
-  printf("M = %e z = %.5g zeta = %.5g xi = %.5g xiobs = %.5g\n", exp(lnM), z, zeta_obs, xi_mean, xi[0]);
+  //printf ("M = %e z = %.5g zeta = %.5g xi = %.5g xiobs = %.5g\n", exp(lnM), z, zeta_obs, xi_mean, xi[0]);
 
   return (xi[0] >= msz->signif_obs_min);
 }
