@@ -84,6 +84,8 @@ ncm_cfg_init (void)
   g_thread_init (NULL);
   g_type_init();
 
+  g_setenv ("CUBACORES", "0", TRUE);
+
   _log_msg_id = g_log_set_handler (G_LOG_DOMAIN, G_LOG_LEVEL_MESSAGE | G_LOG_LEVEL_DEBUG, _ncm_cfg_log_message, NULL);
   _log_stream = stdout;
 

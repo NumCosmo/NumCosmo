@@ -125,6 +125,7 @@ ncm_func_eval_set_max_threads (gint mt)
  * Using the thread pool, evaluate @fl in each value of (@f-@i)/nthreads
  *
  */
+#if NCM_THREAD_POOL_MAX > 1
 void
 ncm_func_eval_threaded_loop (NcmLoopFunc lfunc, glong i, glong f, gpointer data)
 {
@@ -140,7 +141,6 @@ ncm_func_eval_threaded_loop (NcmLoopFunc lfunc, glong i, glong f, gpointer data)
   delta = (f-i) / nthreads;
   res = (f-i) % nthreads;
 
-#if NCM_THREAD_POOL_MAX > 1
   if (delta == 0)
   {
 	lfunc (i, f, data);
@@ -164,9 +164,6 @@ ncm_func_eval_threaded_loop (NcmLoopFunc lfunc, glong i, glong f, gpointer data)
 	  lf += delta;
 	} while (--nthreads);
   }
-#else
-  lfunc (i, f, data);
-#endif
 
   g_mutex_lock (ctrl.update);
   while (ctrl.active_threads != 0)
@@ -185,3 +182,10 @@ ncm_func_eval_threaded_loop (NcmLoopFunc lfunc, glong i, glong f, gpointer data)
   g_mutex_free (ctrl.update);
   g_cond_free (ctrl.finish);
 }
+#else
+void
+ncm_func_eval_threaded_loop (NcmLoopFunc lfunc, glong i, glong f, gpointer data)
+{
+  lfunc (i, f, data);
+}
+#endif

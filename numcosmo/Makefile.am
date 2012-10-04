@@ -2,8 +2,6 @@
 
 ## Created by Anjuta
 
-INCLUDES = 
-
 AM_CFLAGS = \
 	 -Wall \
 	 -DG_LOG_DOMAIN=\"NUMCOSMO\" \

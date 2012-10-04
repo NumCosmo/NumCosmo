@@ -540,28 +540,42 @@ _eval_d2n (glong i, glong f, gpointer data)
 }
 
 static void
+_eval_intp_d2n (glong i, glong f, gpointer data)
+{
+  _Evald2N *evald2n = (_Evald2N *) data;
+  glong n;
+  gdouble m2lnL = 0.0;
+  G_LOCK_DEFINE_STATIC (save_m2lnL);
+
+  for (n = i; n < f; n++)
+  {
+	const gdouble lnMn = ncm_vector_get (evald2n->dca->lnM_true, n);
+	const gdouble zn = ncm_vector_get (evald2n->dca->z_true, n);
+	const gdouble mlnLn = -log (nc_cluster_abundance_intp_d2n (evald2n->cad, evald2n->m, lnMn, zn));
+	m2lnL += mlnLn;
+  }
+
+  G_LOCK (save_m2lnL);
+  *evald2n->m2lnL += m2lnL;
+  G_UNLOCK (save_m2lnL);
+}
+
+static void
 _nc_data_cluster_abundance_calc_m2lnL (NcmMSet *mset, gpointer model, gpointer data, gdouble *m2lnL)
 {
   NcClusterAbundance *cad = NC_CLUSTER_ABUNDANCE (model);
   NcDataClusterAbundance *dca = (NcDataClusterAbundance *) data;
   NcHICosmo *m = NC_HICOSMO (ncm_mset_peek (mset, NC_HICOSMO_ID));
   GTimer *bench = g_timer_new ();
-  gint i;
 
   *m2lnL = 0.0;
 
   if (dca->use_true_data)
   {
+	_Evald2N evald2n = {cad, dca, m, m2lnL};
 	g_assert (dca->z_true);
 	g_assert (dca->lnM_true);
-
-	for (i = 0; i < dca->np; i++)
-	{
-	  const gdouble lnMi = ncm_vector_get (dca->lnM_true, i);
-	  const gdouble zi = ncm_vector_get (dca->z_true, i);
-	  const gdouble mlnLi = -log (nc_cluster_abundance_intp_d2n (cad, m, lnMi, zi));
-	  *m2lnL += mlnLi;
-	}
+	ncm_func_eval_threaded_loop (&_eval_intp_d2n, 0, dca->np, &evald2n);
   }
   else
   {
