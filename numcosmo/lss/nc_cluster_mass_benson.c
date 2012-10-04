@@ -141,6 +141,8 @@ _nc_cluster_mass_benson_significance_m_p (NcClusterMass *clusterm, NcHICosmo *mo
   F.params = &data;
 
   gsl_integration_qagiu (&F, 0.0, 0.0, NC_DEFAULT_PRECISION, NC_INT_PARTITION, *w, &P, &err);
+
+  ncm_memory_pool_return (w);
   
   return P;
 }
@@ -163,6 +165,8 @@ _nc_cluster_mass_benson_intp (NcClusterMass *clusterm, NcHICosmo *model, gdouble
   F.params = &data;
 
   gsl_integration_qagiu (&F, 0.0, 0.0, NC_DEFAULT_PRECISION, NC_INT_PARTITION, *w, &P, &err);
+
+  ncm_memory_pool_return (w);
   
   return P;
 }
