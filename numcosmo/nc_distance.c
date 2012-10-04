@@ -629,7 +629,7 @@ nc_distance_sound_horizon (NcDistance *dist, NcHICosmo *model, gdouble z)
 }
 
 static gdouble
-sound_horizon_integral_argument(gdouble z, gpointer p)
+sound_horizon_integral_argument (gdouble z, gpointer p)
 {
   NcHICosmo *model = NC_HICOSMO (p);
   gdouble E2 = nc_hicosmo_E2 (model, z);

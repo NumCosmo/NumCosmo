@@ -25,7 +25,7 @@
 /**
  * SECTION:data_hubble_function
  * @title: Hubble Function Data
- * @short_description: #NcData object representing Hubble Function data
+ * @short_description: Object representing Hubble Function data
  *
  * FIXME
  */

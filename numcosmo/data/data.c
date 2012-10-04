@@ -24,8 +24,8 @@
 
 /**
  * SECTION:data
- * @title: Cosmological Data
- * @short_description: Data related object
+ * @title: Generic Data Object
+ * @short_description: Object representing generic data
  *
  * FIXME
  */

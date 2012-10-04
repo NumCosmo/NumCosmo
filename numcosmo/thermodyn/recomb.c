@@ -694,9 +694,9 @@ static gint
 H_ion_full_f (realtype x, N_Vector y, N_Vector ydot, gpointer f_data)
 {
   NcHICosmo *model = NC_HICOSMO(f_data);
-  const gdouble Xp = NV_Ith_S(y,0);
-  const gdouble Tm = NV_Ith_S(y,1);
-  const gdouble XHeII = NV_Ith_S(y,2);
+  const gdouble Xp = NV_Ith_S(y, 0);
+  const gdouble Tm = NV_Ith_S(y, 1);
+  const gdouble XHeII = NV_Ith_S(y, 2);
   NV_Ith_S(ydot, 0) = nc_thermodyn_H_ionization_rate (model, Xp, Tm, XHeII, x);
   NV_Ith_S(ydot, 1) = nc_thermodyn_matter_temperature_dx (model, Xp, Tm, XHeII, x);
   NV_Ith_S(ydot, 2) = nc_thermodyn_HeII_ionization_rate (model, Xp, Tm, XHeII, x);

@@ -25,7 +25,7 @@
 /**
  * SECTION:dataset
  * @title: Data Set module
- * @short_description: FIXME
+ * @short_description: Object representing a set of data
  *
  * FIXME
  */

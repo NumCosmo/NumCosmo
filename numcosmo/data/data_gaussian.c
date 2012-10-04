@@ -25,7 +25,7 @@
 /**
  * SECTION:data_gaussian
  * @title: Gaussian Data
- * @short_description: Generic Gaussian #NcData object
+ * @short_description: Generic Gaussian object
  *
  * FIXME
  */

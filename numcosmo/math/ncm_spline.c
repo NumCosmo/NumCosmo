@@ -25,7 +25,7 @@
 /**
  * SECTION:ncm_spline
  * @title: Spline abstract class
- * @short_description: Defines the prototype of the #NcmSpline object.
+ * @short_description: Defines the prototype of a general spline object.
  *
  * This class comprises all functions to provide a #NcmSpline, get its properties
  * and evaluate it given an interpolation method.

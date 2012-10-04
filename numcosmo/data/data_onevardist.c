@@ -25,7 +25,7 @@
 /**
  * SECTION:data_onevardist
  * @title: One Variable Distribution Data
- * @short_description: #NcData object representing a one variable distribution data
+ * @short_description: Object representing a one variable distribution data
  *
  * FIXME
  */

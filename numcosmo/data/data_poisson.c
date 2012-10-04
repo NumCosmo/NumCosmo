@@ -25,7 +25,7 @@
 /**
  * SECTION:data_poisson
  * @title: Poisson Distribution Data
- * @short_description: #NcData representing data from a Poisson distribution
+ * @short_description: Object representing data from a Poisson distribution
  *
  * FIXME
  */
