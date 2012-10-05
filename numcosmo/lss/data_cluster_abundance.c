@@ -613,7 +613,7 @@ _nc_data_cluster_abundance_calc_m2lnL (NcmMSet *mset, gpointer model, gpointer d
   *m2lnL += (dca->log_np_fac + nc_cluster_abundance_n (cad, m));
 
   *m2lnL *= 2.0;
-
+  
   g_timer_destroy (bench);
 }
 
