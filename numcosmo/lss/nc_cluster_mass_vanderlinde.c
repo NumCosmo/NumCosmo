@@ -68,75 +68,11 @@ typedef struct _integrand_data
   gdouble D2_2;   /* 2.0 * D * D */
 } integrand_data;
 
-/*
-static gdouble
-_p_lnzeta_lnm (NcClusterMassVanderlinde *msz, gdouble lnM, gdouble z, gdouble zeta)
-{
-  gdouble ln_zeta = log (zeta);
-  const gdouble lnM0 = log (msz->M0);
-
-  gdouble x = ln_zeta - msz->B * (lnM - lnM0) - msz->C * (log (1.0 + z) - log(1.0 + msz->z0)) - log (msz->A);
-   
-  return (M_SQRT2 / M_SQRTPI) * exp (-(x * x / (2.0 * msz->D * msz->D))) / (zeta * msz->D * (1.0 + erf((ln_zeta - x) / (M_SQRT2 * msz->D))));
-}
-*/
-
-static gdouble
-_p_lnzeta_lnm (NcClusterMassVanderlinde *msz, gdouble lnM, gdouble ln1pz_1pz0, gdouble zeta, gdouble lnA, gdouble lnM0)
-{
-  gdouble ln_zeta = log (zeta);
-
-  gdouble x = ln_zeta - msz->B * (lnM - lnM0) - msz->C * ln1pz_1pz0 - lnA;
-   
-  //return (M_SQRT2 / M_SQRTPI) * exp (-(x * x / (2.0 * msz->D * msz->D))) / (zeta * msz->D * (1.0 + erf((ln_zeta - x) / (M_SQRT2 * msz->D))));
-  return exp (-(x * x / (2.0 * msz->D * msz->D))) / (zeta * msz->D * M_SQRT2 * M_SQRTPI);
-}
-
-static gdouble
-_p_significance_zeta (NcClusterMassVanderlinde *msz, gdouble *xi, gdouble zeta)
-{
-  gdouble xi_mean = sqrt (zeta * zeta + 3.0);
-  gdouble y = xi[0] - xi_mean;
-
-  gdouble p_xi_zeta = (M_SQRT2 / M_SQRTPI) * exp (- y * y / 2.0) / 
-	(1.0 + erf (xi_mean / M_SQRT2));
-
-  return p_xi_zeta;
-}
-
-static gdouble
-_intp_significance_zeta (NcClusterMassVanderlinde *msz, gdouble zeta)
-{
-  const gdouble xi_mean = sqrt (zeta * zeta + 3.0);
-  const gdouble a = (xi_mean - msz->signif_obs_min);
-
-  if (a >= 0.0)
-	return (1.0 + erf (a / M_SQRT2)) / (1.0 + erf (xi_mean / M_SQRT2));
-  else
-	return erfc (-a / M_SQRT2) / (1.0 + erf (xi_mean / M_SQRT2));
-}
-
-/*
 static gdouble
 _nc_cluster_mass_vanderlinde_significance_m_p_integrand (gdouble zeta, gpointer userdata)
 {
   integrand_data *data = (integrand_data *) userdata;
   NcClusterMassVanderlinde *msz = data->msz;
-  //const gdouble p_lnzeta_lnm = _p_lnzeta_lnm (msz, data->lnM, data->z, zeta);
-  const gdouble p_lnzeta_lnm = _p_lnzeta_lnm (msz, data->lnM, data->ln1pz, zeta, data->lnA, data->lnM0, data->ln1pz0);
-  const gdouble p_xi_zeta = _p_significance_zeta (msz, data->xi, zeta);
-  
-  return p_lnzeta_lnm * p_xi_zeta;
-}
-*/
-
-static gdouble
-_nc_cluster_mass_vanderlinde_significance_m_p_integrand (gdouble zeta, gpointer userdata)
-{
-  integrand_data *data = (integrand_data *) userdata;
-  NcClusterMassVanderlinde *msz = data->msz;
-  //const gdouble zeta2 = exp (2.0 * lnzeta);
-  //const gdouble xi_mean = sqrt (zeta2 + 3.0);
   const gdouble lnzeta = log (zeta);
   const gdouble xi_mean = sqrt (zeta * zeta + 3.0);
   const gdouble y = data->xi[0] - xi_mean;
@@ -144,18 +80,8 @@ _nc_cluster_mass_vanderlinde_significance_m_p_integrand (gdouble zeta, gpointer 
 
   const gdouble result = exp (- y * y / 2.0 - x * x / data->D2_2) / 
 	((1.0 + erf (xi_mean / M_SQRT2)) * M_PI * msz->D * zeta);
-  
-  //const gdouble p_lnzeta_lnm = _p_lnzeta_lnm (msz, data->lnM, data->ln1pz_1pz0, exp(lnzeta), data->lnA, data->lnM0);
-  //const gdouble p_xi_zeta = _p_significance_zeta (msz, data->xi, exp(lnzeta));
-  //printf ("old: % 20.5g new: % 20.5g\n", exp(lnzeta) * p_lnzeta_lnm * p_xi_zeta, result);
-  
+   
   return result;
-  
-  //const gdouble p_lnzeta_lnm = _p_lnzeta_lnm (msz, data->lnM, data->z, zeta);
-  //const gdouble p_lnzeta_lnm = _p_lnzeta_lnm (msz, data->lnM, data->ln1pz, zeta, data->lnA, data->lnM0, data->ln1pz0);
-  //const gdouble p_xi_zeta = _p_significance_zeta (msz, data->xi, zeta);
-
-  //return p_lnzeta_lnm * p_xi_zeta;
 }
 
 static gdouble
@@ -174,12 +100,7 @@ _nc_cluster_mass_vanderlinde_significance_m_intp_integrand (gdouble zeta, gpoint
 	return plnzeta * (1.0 + erf (a / M_SQRT2)) / (1.0 + erf (xi_mean / M_SQRT2));
   else
 	return plnzeta * erfc (-a / M_SQRT2) / (1.0 + erf (xi_mean / M_SQRT2));
-
-  //const gdouble p_lnzeta_lnm = _p_lnzeta_lnm (msz, data->lnM, data->z, zeta);
-  //const gdouble p_lnzeta_lnm = _p_lnzeta_lnm (msz, data->lnM, data->ln1pz_1pz0, zeta, data->lnA, data->lnM0);
-  //const gdouble intp_zeta = _intp_significance_zeta (msz, zeta);
   
-  //return p_lnzeta_lnm * intp_zeta;
 }
 
 static gdouble
@@ -202,17 +123,31 @@ _nc_cluster_mass_vanderlinde_significance_m_p (NcClusterMass *clusterm, NcHICosm
   data.lnM0 = log (msz->M0);
   data.ln1pz_1pz0 = log ((1.0 + z) / (1.0 + msz->z0));
   data.mu = msz->B * (lnM - data.lnM0) + msz->C * data.ln1pz_1pz0 + data.lnA;
-  //data.erf_mu = 2.0 / (1.0 + erf (data.mu / (M_SQRT2 * msz->D)));
   data.D2_2 = 2.0 * msz->D * msz->D;
 
   F.function = &_nc_cluster_mass_vanderlinde_significance_m_p_integrand;
   F.params = &data;
 
-  //gsl_integration_qagi (&F, 0.0, NC_DEFAULT_PRECISION, NC_INT_PARTITION, *w, &P, &err);
-  gsl_integration_qagiu (&F, 0.0, 0.0, NC_DEFAULT_PRECISION, NC_INT_PARTITION, *w, &P, &err);
+  //gsl_integration_qagiu (&F, 0.0, 0.0, NC_DEFAULT_PRECISION, NC_INT_PARTITION, *w, &P, &err);
+  
+  {
+	gdouble Pi, a, b;
+	a = 0.0;
+	b = xi[0];
+	gsl_integration_qag (&F, a, b, 0.0, NC_DEFAULT_PRECISION, NC_INT_PARTITION, 6, *w, &Pi, &err);
+	P = Pi;
+	do {
+	  a = b;
+	  b += xi[0];
+	  gsl_integration_qag (&F, a, b, P * NC_DEFAULT_PRECISION, NC_DEFAULT_PRECISION, NC_INT_PARTITION, 6, *w, &Pi, &err); 
+	  P += Pi;
+	} while (fabs(Pi/P) > NC_DEFAULT_PRECISION);
+  }
 
   ncm_memory_pool_return (w);
-
+  
+  //printf ("qagiu: % 20.8g qag: % 20.8g rel: % 20.5g\n", P, P1, (P - P1) / P);
+  //printf ("mxi = % 20.8g mM = % 20.8g mean = % 20.8g expD = % 20.8g sd = % 20.8g\n", zeta, exp(data.mu), mean, sigma_mu, sd);
   //printf ("lnM: % 20.5g z: %20.5g xi: % 20.5g integral: % 20.5g\n", lnM, z, xi[0], P);
   
   return P;
@@ -236,14 +171,25 @@ _nc_cluster_mass_vanderlinde_intp (NcClusterMass *clusterm, NcHICosmo *model, gd
   data.lnM0 = log (msz->M0);
   data.ln1pz_1pz0 = log ((1.0 + z) / (1.0 + msz->z0));
   data.mu = msz->B * (lnM - data.lnM0) + msz->C * data.ln1pz_1pz0 + data.lnA;
-  //data.erf_mu = 2.0 / (1.0 + erf (data.mu / (M_SQRT2 * msz->D)));
   data.D2_2 = 2.0 * msz->D * msz->D;
 
   F.function = &_nc_cluster_mass_vanderlinde_significance_m_intp_integrand;
   F.params = &data;
 
-  gsl_integration_qagiu (&F, 0.0, 0.0, NC_DEFAULT_PRECISION, NC_INT_PARTITION, *w, &P, &err);
-
+  {
+	gdouble Pi, a, b;
+	a = 0.0;
+	b = msz->signif_obs_max;
+	gsl_integration_qag (&F, a, b, 0.0, NC_DEFAULT_PRECISION, NC_INT_PARTITION, 6, *w, &Pi, &err);
+	P = Pi;
+	do {
+	  a = b;
+	  b += msz->signif_obs_max;
+	  gsl_integration_qag (&F, a, b, P * NC_DEFAULT_PRECISION, NC_DEFAULT_PRECISION, NC_INT_PARTITION, 6, *w, &Pi, &err); 
+	  P += Pi;
+	} while (fabs(Pi/P) > NC_DEFAULT_PRECISION);
+  }
+  
   ncm_memory_pool_return (w);
 
   return P;
