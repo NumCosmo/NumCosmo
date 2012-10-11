@@ -29,12 +29,12 @@
 
 G_BEGIN_DECLS
 
-#define NC_TYPE_MODEL_QPW             (nc_hicosmo_qpw_get_type ())
-#define NC_HICOSMO_QPW(obj)             (G_TYPE_CHECK_INSTANCE_CAST ((obj), NC_TYPE_MODEL_QPW, NcHICosmoQPW))
-#define NC_HICOSMO_QPW_CLASS(klass)     (G_TYPE_CHECK_CLASS_CAST ((klass), NC_TYPE_MODEL_QPW, NcHICosmoQPWClass))
-#define NC_IS_MODEL_QPW(obj)          (G_TYPE_CHECK_INSTANCE_TYPE ((obj), NC_TYPE_MODEL_QPW))
-#define NC_IS_MODEL_QPW_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE ((klass), NC_TYPE_MODEL_QPW))
-#define NC_HICOSMO_QPW_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS ((obj), NC_TYPE_MODEL_QPW, NcHICosmoQPWClass))
+#define NC_TYPE_HICOSMO_QPW             (nc_hicosmo_qpw_get_type ())
+#define NC_HICOSMO_QPW(obj)             (G_TYPE_CHECK_INSTANCE_CAST ((obj), NC_TYPE_HICOSMO_QPW, NcHICosmoQPW))
+#define NC_HICOSMO_QPW_CLASS(klass)     (G_TYPE_CHECK_CLASS_CAST ((klass), NC_TYPE_HICOSMO_QPW, NcHICosmoQPWClass))
+#define NC_IS_HICOSMO_QPW(obj)          (G_TYPE_CHECK_INSTANCE_TYPE ((obj), NC_TYPE_HICOSMO_QPW))
+#define NC_IS_HICOSMO_QPW_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE ((klass), NC_TYPE_HICOSMO_QPW))
+#define NC_HICOSMO_QPW_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS ((obj), NC_TYPE_HICOSMO_QPW, NcHICosmoQPWClass))
 
 typedef struct _NcHICosmoQPWClass NcHICosmoQPWClass;
 typedef struct _NcHICosmoQPW NcHICosmoQPW;

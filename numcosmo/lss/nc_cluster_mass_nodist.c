@@ -43,6 +43,7 @@ enum
   PROP_0,
   PROP_LNM_MIN,
   PROP_LNM_MAX,
+  PROP_SIZE,
 };
 
 static gdouble
@@ -148,6 +149,7 @@ nc_cluster_mass_nodist_class_init (NcClusterMassNodistClass *klass)
 {
   GObjectClass* object_class = G_OBJECT_CLASS (klass);
   NcClusterMassClass* parent_class = NC_CLUSTER_MASS_CLASS (klass);
+  NcmModelClass *model_class = NCM_MODEL_CLASS (klass);
 
   parent_class->P              = &_nc_cluster_mass_nodist_p;
   parent_class->intP           = &_nc_cluster_mass_nodist_intp;
@@ -160,8 +162,14 @@ nc_cluster_mass_nodist_class_init (NcClusterMassNodistClass *klass)
   parent_class->impl = NC_CLUSTER_MASS_N_LIMITS | NC_CLUSTER_MASS_RESAMPLE;
 
   object_class->finalize     =  &nc_cluster_mass_nodist_finalize;
-  object_class->set_property = &_nc_cluster_mass_nodist_set_property;
-  object_class->get_property = &_nc_cluster_mass_nodist_get_property;
+  object_class->set_property = &ncm_model_class_set_property;
+  object_class->get_property = &ncm_model_class_get_property;
+
+  model_class->set_property = &_nc_cluster_mass_nodist_set_property;
+  model_class->get_property = &_nc_cluster_mass_nodist_get_property;
+
+  ncm_model_class_add_params (model_class, 0, 0, PROP_SIZE);
+  ncm_model_class_set_name_nick (model_class, "No mass distribution", "No_distribution");
 
   /**
    * NcClusterMassNodist:lnM_min:

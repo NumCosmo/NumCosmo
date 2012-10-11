@@ -35,7 +35,7 @@
 #endif /* HAVE_CONFIG_H */
 #include <numcosmo/numcosmo.h>
 
-G_DEFINE_TYPE (NcHICosmoDEPad, nc_hicosmo_de_pad, NC_TYPE_MODEL_DE);
+G_DEFINE_TYPE (NcHICosmoDEPad, nc_hicosmo_de_pad, NC_TYPE_HICOSMO_DE);
 
 #define VECTOR  (model->params)
 #define OMEGA_X (ncm_vector_get (VECTOR, NC_HICOSMO_DE_OMEGA_X))
@@ -66,7 +66,7 @@ _nc_hicosmo_de_pad_dweff_dz (NcmModel *model, gdouble z)
 NcHICosmoDEPad *
 nc_hicosmo_de_pad_new (void)
 {
-  NcHICosmoDEPad *pad = g_object_new (NC_TYPE_MODEL_DE_PAD, NULL);
+  NcHICosmoDEPad *pad = g_object_new (NC_TYPE_HICOSMO_DE_PAD, NULL);
   return pad;
 }
 

@@ -29,12 +29,12 @@
 
 G_BEGIN_DECLS
 
-#define NC_TYPE_MODEL_QCONST             (nc_hicosmo_qconst_get_type ())
-#define NC_HICOSMO_QCONST(obj)             (G_TYPE_CHECK_INSTANCE_CAST ((obj), NC_TYPE_MODEL_QCONST, NcHICosmoQConst))
-#define NC_HICOSMO_QCONST_CLASS(klass)     (G_TYPE_CHECK_CLASS_CAST ((klass), NC_TYPE_MODEL_QCONST, NcHICosmoQConstClass))
-#define NC_IS_MODEL_QCONST(obj)          (G_TYPE_CHECK_INSTANCE_TYPE ((obj), NC_TYPE_MODEL_QCONST))
-#define NC_IS_MODEL_QCONST_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE ((klass), NC_TYPE_MODEL_QCONST))
-#define NC_HICOSMO_QCONST_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS ((obj), NC_TYPE_MODEL_QCONST, NcHICosmoQConstClass))
+#define NC_TYPE_HICOSMO_QCONST             (nc_hicosmo_qconst_get_type ())
+#define NC_HICOSMO_QCONST(obj)             (G_TYPE_CHECK_INSTANCE_CAST ((obj), NC_TYPE_HICOSMO_QCONST, NcHICosmoQConst))
+#define NC_HICOSMO_QCONST_CLASS(klass)     (G_TYPE_CHECK_CLASS_CAST ((klass), NC_TYPE_HICOSMO_QCONST, NcHICosmoQConstClass))
+#define NC_IS_HICOSMO_QCONST(obj)          (G_TYPE_CHECK_INSTANCE_TYPE ((obj), NC_TYPE_HICOSMO_QCONST))
+#define NC_IS_HICOSMO_QCONST_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE ((klass), NC_TYPE_HICOSMO_QCONST))
+#define NC_HICOSMO_QCONST_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS ((obj), NC_TYPE_HICOSMO_QCONST, NcHICosmoQConstClass))
 
 typedef struct _NcHICosmoQConstClass NcHICosmoQConstClass;
 typedef struct _NcHICosmoQConst NcHICosmoQConst;

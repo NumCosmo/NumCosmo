@@ -29,12 +29,12 @@
 
 G_BEGIN_DECLS
 
-#define NC_TYPE_MODEL_DE             (nc_hicosmo_de_get_type ())
-#define NC_HICOSMO_DE(obj)             (G_TYPE_CHECK_INSTANCE_CAST ((obj), NC_TYPE_MODEL_DE, NcHICosmoDE))
-#define NC_HICOSMO_DE_CLASS(klass)     (G_TYPE_CHECK_CLASS_CAST ((klass), NC_TYPE_MODEL_DE, NcHICosmoDEClass))
-#define NC_IS_MODEL_DE(obj)          (G_TYPE_CHECK_INSTANCE_TYPE ((obj), NC_TYPE_MODEL_DE))
-#define NC_IS_MODEL_DE_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE ((klass), NC_TYPE_MODEL_DE))
-#define NC_HICOSMO_DE_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS ((obj), NC_TYPE_MODEL_DE, NcHICosmoDEClass))
+#define NC_TYPE_HICOSMO_DE             (nc_hicosmo_de_get_type ())
+#define NC_HICOSMO_DE(obj)             (G_TYPE_CHECK_INSTANCE_CAST ((obj), NC_TYPE_HICOSMO_DE, NcHICosmoDE))
+#define NC_HICOSMO_DE_CLASS(klass)     (G_TYPE_CHECK_CLASS_CAST ((klass), NC_TYPE_HICOSMO_DE, NcHICosmoDEClass))
+#define NC_IS_HICOSMO_DE(obj)          (G_TYPE_CHECK_INSTANCE_TYPE ((obj), NC_TYPE_HICOSMO_DE))
+#define NC_IS_HICOSMO_DE_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE ((klass), NC_TYPE_HICOSMO_DE))
+#define NC_HICOSMO_DE_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS ((obj), NC_TYPE_HICOSMO_DE, NcHICosmoDEClass))
 
 typedef struct _NcHICosmoDEClass NcHICosmoDEClass;
 typedef struct _NcHICosmoDE NcHICosmoDE;

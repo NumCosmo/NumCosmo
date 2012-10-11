@@ -29,12 +29,12 @@
 
 G_BEGIN_DECLS
 
-#define NC_TYPE_MODEL_QLINEAR             (nc_hicosmo_qlinear_get_type ())
-#define NC_HICOSMO_QLINEAR(obj)             (G_TYPE_CHECK_INSTANCE_CAST ((obj), NC_TYPE_MODEL_QLINEAR, NcHICosmoQLinear))
-#define NC_HICOSMO_QLINEAR_CLASS(klass)     (G_TYPE_CHECK_CLASS_CAST ((klass), NC_TYPE_MODEL_QLINEAR, NcHICosmoQLinearClass))
-#define NC_IS_MODEL_QLINEAR(obj)          (G_TYPE_CHECK_INSTANCE_TYPE ((obj), NC_TYPE_MODEL_QLINEAR))
-#define NC_IS_MODEL_QLINEAR_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE ((klass), NC_TYPE_MODEL_QLINEAR))
-#define NC_HICOSMO_QLINEAR_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS ((obj), NC_TYPE_MODEL_QLINEAR, NcHICosmoQLinearClass))
+#define NC_TYPE_HICOSMO_QLINEAR             (nc_hicosmo_qlinear_get_type ())
+#define NC_HICOSMO_QLINEAR(obj)             (G_TYPE_CHECK_INSTANCE_CAST ((obj), NC_TYPE_HICOSMO_QLINEAR, NcHICosmoQLinear))
+#define NC_HICOSMO_QLINEAR_CLASS(klass)     (G_TYPE_CHECK_CLASS_CAST ((klass), NC_TYPE_HICOSMO_QLINEAR, NcHICosmoQLinearClass))
+#define NC_IS_HICOSMO_QLINEAR(obj)          (G_TYPE_CHECK_INSTANCE_TYPE ((obj), NC_TYPE_HICOSMO_QLINEAR))
+#define NC_IS_HICOSMO_QLINEAR_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE ((klass), NC_TYPE_HICOSMO_QLINEAR))
+#define NC_HICOSMO_QLINEAR_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS ((obj), NC_TYPE_HICOSMO_QLINEAR, NcHICosmoQLinearClass))
 
 typedef struct _NcHICosmoQLinearClass NcHICosmoQLinearClass;
 typedef struct _NcHICosmoQLinear NcHICosmoQLinear;

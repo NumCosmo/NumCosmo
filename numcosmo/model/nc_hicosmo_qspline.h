@@ -29,12 +29,12 @@
 
 G_BEGIN_DECLS
 
-#define NC_TYPE_MODEL_QSPLINE             (nc_hicosmo_qspline_get_type ())
-#define NC_HICOSMO_QSPLINE(obj)             (G_TYPE_CHECK_INSTANCE_CAST ((obj), NC_TYPE_MODEL_QSPLINE, NcHICosmoQSpline))
-#define NC_HICOSMO_QSPLINE_CLASS(klass)     (G_TYPE_CHECK_CLASS_CAST ((klass), NC_TYPE_MODEL_QSPLINE, NcHICosmoQSplineClass))
-#define NC_IS_MODEL_QSPLINE(obj)          (G_TYPE_CHECK_INSTANCE_TYPE ((obj), NC_TYPE_MODEL_QSPLINE))
-#define NC_IS_MODEL_QSPLINE_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE ((klass), NC_TYPE_MODEL_QSPLINE))
-#define NC_HICOSMO_QSPLINE_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS ((obj), NC_TYPE_MODEL_QSPLINE, NcHICosmoQSplineClass))
+#define NC_TYPE_HICOSMO_QSPLINE             (nc_hicosmo_qspline_get_type ())
+#define NC_HICOSMO_QSPLINE(obj)             (G_TYPE_CHECK_INSTANCE_CAST ((obj), NC_TYPE_HICOSMO_QSPLINE, NcHICosmoQSpline))
+#define NC_HICOSMO_QSPLINE_CLASS(klass)     (G_TYPE_CHECK_CLASS_CAST ((klass), NC_TYPE_HICOSMO_QSPLINE, NcHICosmoQSplineClass))
+#define NC_IS_HICOSMO_QSPLINE(obj)          (G_TYPE_CHECK_INSTANCE_TYPE ((obj), NC_TYPE_HICOSMO_QSPLINE))
+#define NC_IS_HICOSMO_QSPLINE_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE ((klass), NC_TYPE_HICOSMO_QSPLINE))
+#define NC_HICOSMO_QSPLINE_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS ((obj), NC_TYPE_HICOSMO_QSPLINE, NcHICosmoQSplineClass))
 
 typedef struct _NcHICosmoQSplineClass NcHICosmoQSplineClass;
 typedef struct _NcHICosmoQSpline NcHICosmoQSpline;

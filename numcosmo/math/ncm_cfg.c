@@ -105,15 +105,15 @@ ncm_cfg_init (void)
   ncm_cfg_register_model (NCM_TYPE_REPARAM);
   ncm_cfg_register_model (NCM_TYPE_REPARAM_LINEAR);
 
-  ncm_cfg_register_model (NC_TYPE_MODEL_QCONST);
-  ncm_cfg_register_model (NC_TYPE_MODEL_QLINEAR);
-  ncm_cfg_register_model (NC_TYPE_MODEL_QPW);
-  ncm_cfg_register_model (NC_TYPE_MODEL_QSPLINE);
-  ncm_cfg_register_model (NC_TYPE_MODEL_LCDM);
-  ncm_cfg_register_model (NC_TYPE_MODEL_DE_XCDM);
-  ncm_cfg_register_model (NC_TYPE_MODEL_DE_LINDER);
-  ncm_cfg_register_model (NC_TYPE_MODEL_DE_PAD);
-  ncm_cfg_register_model (NC_TYPE_MODEL_DE_QE);
+  ncm_cfg_register_model (NC_TYPE_HICOSMO_QCONST);
+  ncm_cfg_register_model (NC_TYPE_HICOSMO_QLINEAR);
+  ncm_cfg_register_model (NC_TYPE_HICOSMO_QPW);
+  ncm_cfg_register_model (NC_TYPE_HICOSMO_QSPLINE);
+  ncm_cfg_register_model (NC_TYPE_HICOSMO_LCDM);
+  ncm_cfg_register_model (NC_TYPE_HICOSMO_DE_XCDM);
+  ncm_cfg_register_model (NC_TYPE_HICOSMO_DE_LINDER);
+  ncm_cfg_register_model (NC_TYPE_HICOSMO_DE_PAD);
+  ncm_cfg_register_model (NC_TYPE_HICOSMO_DE_QE);
 
   ncm_cfg_register_model (NC_TYPE_WINDOW);
   ncm_cfg_register_model (NC_TYPE_WINDOW_TOPHAT);

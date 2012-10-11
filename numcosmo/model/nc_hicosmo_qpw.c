@@ -39,7 +39,7 @@
 #include <math.h>
 #include <gsl/gsl_sf.h>
 
-G_DEFINE_TYPE (NcHICosmoQPW, nc_hicosmo_qpw, NC_TYPE_MODEL);
+G_DEFINE_TYPE (NcHICosmoQPW, nc_hicosmo_qpw, NC_TYPE_HICOSMO);
 
 #define VECTOR    (model->params)
 #define QPW_H0    (ncm_vector_get (VECTOR, NC_HICOSMO_QPW_H0))
@@ -334,7 +334,7 @@ nc_hicosmo_qpw_change_params_qpp (NcHICosmoQPW *qpw)
 NcHICosmoQPW *
 nc_hicosmo_qpw_new (guint npieces, gdouble z_f, gboolean flat)
 {
-  return g_object_new (NC_TYPE_MODEL_QPW, "qp-length", npieces, "zf", z_f, "flat", flat, NULL);
+  return g_object_new (NC_TYPE_HICOSMO_QPW, "qp-length", npieces, "zf", z_f, "flat", flat, NULL);
 }
 
 enum {
@@ -377,7 +377,7 @@ _nc_hicosmo_qpw_get_property (GObject *object, guint prop_id, GValue *value, GPa
 {
   NcHICosmoQPW *qpw = NC_HICOSMO_QPW (object);
 
-  g_return_if_fail (NC_IS_MODEL_QPW (object));
+  g_return_if_fail (NC_IS_HICOSMO_QPW (object));
 
   switch (prop_id)
   {
@@ -400,7 +400,7 @@ static void
 _nc_hicosmo_qpw_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
 {
   NcHICosmoQPW *qpw = NC_HICOSMO_QPW (object);
-  g_return_if_fail (NC_IS_MODEL_QPW (object));
+  g_return_if_fail (NC_IS_HICOSMO_QPW (object));
 
   switch (prop_id)
   {

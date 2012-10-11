@@ -37,7 +37,7 @@
 
 #include <glib.h>
 
-G_DEFINE_TYPE (NcHICosmoQSpline, nc_hicosmo_qspline, NC_TYPE_MODEL);
+G_DEFINE_TYPE (NcHICosmoQSpline, nc_hicosmo_qspline, NC_TYPE_HICOSMO);
 
 #define VECTOR     (model->params)
 #define QSPLINE_H0 (ncm_vector_get (VECTOR, NC_HICOSMO_QSPLINE_H0))
@@ -129,7 +129,7 @@ static gdouble _nc_hicosmo_qspline_Omega_t (NcmModel *model) { return OMEGA_T; }
 NcHICosmoQSpline *
 nc_hicosmo_qspline_new (NcmSpline *s, gsize np, gdouble z_f)
 {
-  NcHICosmoQSpline *qspline = g_object_new (NC_TYPE_MODEL_QSPLINE,
+  NcHICosmoQSpline *qspline = g_object_new (NC_TYPE_HICOSMO_QSPLINE,
                                           "spline", s,
                                           "zf", z_f,
                                           "q-length", np,
@@ -206,7 +206,7 @@ _nc_hicosmo_qspline_get_property (GObject *object, guint prop_id, GValue *value,
 {
   NcHICosmoQSpline *qspline = NC_HICOSMO_QSPLINE (object);
 
-  g_return_if_fail (NC_IS_MODEL_QSPLINE (object));
+  g_return_if_fail (NC_IS_HICOSMO_QSPLINE (object));
 
   switch (prop_id)
   {
@@ -229,7 +229,7 @@ static void
 _nc_hicosmo_qspline_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
 {
   NcHICosmoQSpline *qspline = NC_HICOSMO_QSPLINE (object);
-  g_return_if_fail (NC_IS_MODEL_QSPLINE (object));
+  g_return_if_fail (NC_IS_HICOSMO_QSPLINE (object));
 
   switch (prop_id)
   {

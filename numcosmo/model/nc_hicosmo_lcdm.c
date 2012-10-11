@@ -39,7 +39,7 @@
 #include <gsl/gsl_math.h>
 #include <gsl/gsl_deriv.h>
 
-G_DEFINE_TYPE (NcHICosmoLCDM, nc_hicosmo_lcdm, NC_TYPE_MODEL);
+G_DEFINE_TYPE (NcHICosmoLCDM, nc_hicosmo_lcdm, NC_TYPE_HICOSMO);
 
 #define VECTOR    (model->params)
 #define MACRO_H0  (ncm_vector_get (VECTOR, NC_HICOSMO_DE_H0))
@@ -123,7 +123,7 @@ static gdouble _nc_hicosmo_lcdm_powspec (NcmModel *model, gdouble k) { return po
 NcHICosmoLCDM *
 nc_hicosmo_lcdm_new (void)
 {
-  NcHICosmoLCDM *lcdm = g_object_new (NC_TYPE_MODEL_LCDM, NULL);
+  NcHICosmoLCDM *lcdm = g_object_new (NC_TYPE_HICOSMO_LCDM, NULL);
   return lcdm;
 }
 

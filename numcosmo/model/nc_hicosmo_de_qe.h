@@ -29,12 +29,12 @@
 
 G_BEGIN_DECLS
 
-#define NC_TYPE_MODEL_DE_QE             (nc_hicosmo_de_qe_get_type ())
-#define NC_HICOSMO_DE_QE(obj)             (G_TYPE_CHECK_INSTANCE_CAST ((obj), NC_TYPE_MODEL_DE_QE, NcHICosmoDEQe))
-#define NC_HICOSMO_DE_QE_CLASS(klass)     (G_TYPE_CHECK_CLASS_CAST ((klass), NC_TYPE_MODEL_DE_QE, NcHICosmoDEQeClass))
-#define NC_IS_MODEL_DE_QE(obj)          (G_TYPE_CHECK_INSTANCE_TYPE ((obj), NC_TYPE_MODEL_DE_QE))
-#define NC_IS_MODEL_DE_QE_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE ((klass), NC_TYPE_MODEL_DE_QE))
-#define NC_HICOSMO_DE_QE_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS ((obj), NC_TYPE_MODEL_DE_QE, NcHICosmoDEQeClass))
+#define NC_TYPE_HICOSMO_DE_QE             (nc_hicosmo_de_qe_get_type ())
+#define NC_HICOSMO_DE_QE(obj)             (G_TYPE_CHECK_INSTANCE_CAST ((obj), NC_TYPE_HICOSMO_DE_QE, NcHICosmoDEQe))
+#define NC_HICOSMO_DE_QE_CLASS(klass)     (G_TYPE_CHECK_CLASS_CAST ((klass), NC_TYPE_HICOSMO_DE_QE, NcHICosmoDEQeClass))
+#define NC_IS_HICOSMO_DE_QE(obj)          (G_TYPE_CHECK_INSTANCE_TYPE ((obj), NC_TYPE_HICOSMO_DE_QE))
+#define NC_IS_HICOSMO_DE_QE_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE ((klass), NC_TYPE_HICOSMO_DE_QE))
+#define NC_HICOSMO_DE_QE_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS ((obj), NC_TYPE_HICOSMO_DE_QE, NcHICosmoDEQeClass))
 
 typedef struct _NcHICosmoDEQeClass NcHICosmoDEQeClass;
 typedef struct _NcHICosmoDEQe NcHICosmoDEQe;

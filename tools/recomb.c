@@ -108,7 +108,7 @@ main (gint argc, gchar *argv[])
 
   dist = nc_distance_new (2.0);
   ds = nc_dataset_new ();
-  model = nc_hicosmo_new_from_name (NC_TYPE_MODEL_DE, wmodel);
+  model = nc_hicosmo_new_from_name (NC_TYPE_HICOSMO_DE, wmodel);
   mset = ncm_mset_new (NCM_MODEL (model), NULL);
 
   lh = nc_likelihood_new (ds);

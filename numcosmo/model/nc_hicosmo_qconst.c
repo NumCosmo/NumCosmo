@@ -46,7 +46,7 @@
 #include <gmp.h>
 #include <math.h>
 
-G_DEFINE_TYPE (NcHICosmoQConst, nc_hicosmo_qconst, NC_TYPE_MODEL);
+G_DEFINE_TYPE (NcHICosmoQConst, nc_hicosmo_qconst, NC_TYPE_HICOSMO);
 
 #define VECTOR   (model->params)
 #define MACRO_H0 (ncm_vector_get (VECTOR, NC_HICOSMO_QCONST_H0))
@@ -82,7 +82,7 @@ static gdouble _nc_hicosmo_qconst_Omega_t (NcmModel *model) { return OMEGA_T; }
 NcHICosmoQConst *
 nc_hicosmo_qconst_new (void)
 {
-  NcHICosmoQConst *qconst = g_object_new (NC_TYPE_MODEL_QCONST, NULL);
+  NcHICosmoQConst *qconst = g_object_new (NC_TYPE_HICOSMO_QCONST, NULL);
   return qconst;
 }
 

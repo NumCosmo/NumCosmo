@@ -2,12 +2,13 @@
  *            nc_cluster_mass.h
  *
  *  Thu June 21 23:27:30 2012
- *  Copyright  2012  Sandro Dias Pinto Vitenti
- *  <sandro@isoftware.com.br>
+ *  Copyright  2012  Mariana Penna Lima, Sandro Dias Pinto Vitenti
+ *  <pennalima@gmail.com>, <sandro@isoftware.com.br>
  ****************************************************************************/
 /*
  * numcosmo
- * Copyright (C) Sandro Dias Pinto Vitenti 2012 <sandro@isoftware.com.br>
+ * Copyright (C) Mariana Penna Lima 2012 <pennalima@gmail.com> 
+ * Sandro Dias Pinto Vitenti 2012 <sandro@isoftware.com.br>
  *
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -30,12 +31,12 @@
 
 G_BEGIN_DECLS
 
-#define NC_TYPE_CLUSTER_MASS             (nc_cluster_mass_get_type ())
-#define NC_CLUSTER_MASS(obj)             (G_TYPE_CHECK_INSTANCE_CAST ((obj), NC_TYPE_CLUSTER_MASS, NcClusterMass))
-#define NC_CLUSTER_MASS_CLASS(klass)     (G_TYPE_CHECK_CLASS_CAST ((klass), NC_TYPE_CLUSTER_MASS, NcClusterMassClass))
-#define NC_IS_CLUSTER_MASS(obj)          (G_TYPE_CHECK_INSTANCE_TYPE ((obj), NC_TYPE_CLUSTER_MASS))
-#define NC_IS_CLUSTER_MASS_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE ((klass), NC_TYPE_CLUSTER_MASS))
-#define NC_CLUSTER_MASS_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS ((obj), NC_TYPE_CLUSTER_MASS, NcClusterMassClass))
+#define NC_TYPE_CLUSTER_MASS            (nc_cluster_mass_get_type ())
+#define NC_CLUSTER_MASS(obj)            (G_TYPE_CHECK_INSTANCE_CAST ((obj), NC_TYPE_CLUSTER_MASS, NcClusterMass))
+#define NC_CLUSTER_MASS_CLASS(klass)    (G_TYPE_CHECK_CLASS_CAST ((klass), NC_TYPE_CLUSTER_MASS, NcClusterMassClass))
+#define NC_IS_CLUSTER_MASS(obj)         (G_TYPE_CHECK_INSTANCE_TYPE ((obj), NC_TYPE_CLUSTER_MASS))
+#define NC_IS_CLUSTER_MASS_CLASS(klass) (G_TYPE_CHECK_CLASS_TYPE ((klass), NC_TYPE_CLUSTER_MASS))
+#define NC_CLUSTER_MASS_GET_CLASS(obj)  (G_TYPE_INSTANCE_GET_CLASS ((obj), NC_TYPE_CLUSTER_MASS, NcClusterMassClass))
 
 typedef struct _NcClusterMassClass NcClusterMassClass;
 typedef struct _NcClusterMass NcClusterMass;
@@ -63,7 +64,7 @@ typedef enum _NcClusterMassImpl
 struct _NcClusterMassClass
 {
   /*< private >*/
-  GObjectClass parent_class;
+  NcmModelClass parent_class;
   gdouble (*P) (NcClusterMass *clusterm, NcHICosmo *model, gdouble lnM, gdouble z, gdouble *lnM_obs, gdouble *lnM_obs_params);
   gdouble (*intP) (NcClusterMass *clusterm, NcHICosmo *model, gdouble lnM, gdouble z);
   gboolean (*resample) (NcClusterMass *clusterm, NcHICosmo *model, gdouble lnM, gdouble z, gdouble *lnM_obs, gdouble *lnM_obs_params);
@@ -77,8 +78,10 @@ struct _NcClusterMassClass
 struct _NcClusterMass
 {
   /*< private >*/
-  GObject parent_instance;
+  NcmModel parent_instance;
 };
+
+extern gint32 NC_CLUSTER_MASS_ID;
 
 GType nc_cluster_mass_get_type (void) G_GNUC_CONST;
 
@@ -96,6 +99,9 @@ gdouble nc_cluster_mass_intp (NcClusterMass *clusterm, NcHICosmo *model, gdouble
 gboolean nc_cluster_mass_resample (NcClusterMass *clusterm, NcHICosmo *model, gdouble lnM, gdouble z, gdouble *lnM_obs, gdouble *lnM_obs_params);
 void nc_cluster_mass_p_limits (NcClusterMass *clusterm, NcHICosmo *model, gdouble *lnM_obs, gdouble *lnM_obs_params, gdouble *lnM_lower, gdouble *lnM_upper);
 void nc_cluster_mass_n_limits (NcClusterMass *clusterm, NcHICosmo *model, gdouble *lnM_lower, gdouble *lnM_upper);
+
+void nc_cluster_mass_log_all_models ();
+
 
 G_END_DECLS
 

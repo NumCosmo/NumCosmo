@@ -40,6 +40,31 @@ G_BEGIN_DECLS
 typedef struct _NcClusterMassBensonClass NcClusterMassBensonClass;
 typedef struct _NcClusterMassBenson NcClusterMassBenson;
 
+/**
+ * NcClusterMassBensonParams:
+ * @NC_CLUSTER_MASS_BENSON_A_SZ: normalization of the mass-observable relation
+ * @NC_CLUSTER_MASS_BENSON_B_SZ: FIXME
+ * @NC_CLUSTER_MASS_BENSON_C_SZ: FIXME
+ * @NC_CLUSTER_MASS_BENSON_D_SZ: standard deviation of the mass-observable relation 
+ *
+ * FIXME
+ */
+typedef enum _NcClusterMassBensonParams
+{
+  NC_CLUSTER_MASS_BENSON_A_SZ = 0,
+  NC_CLUSTER_MASS_BENSON_B_SZ,
+  NC_CLUSTER_MASS_BENSON_C_SZ,
+  NC_CLUSTER_MASS_BENSON_D_SZ, /*< private >*/
+  NC_CLUSTER_MASS_BENSON_SPARAM_LEN, /*< skip >*/
+} NcClusterMassBensonParams;
+
+#define NC_CLUSTER_MASS_BENSON_DEFAULT_A_SZ  (5.58)
+#define NC_CLUSTER_MASS_BENSON_DEFAULT_B_SZ  (1.32)
+#define NC_CLUSTER_MASS_BENSON_DEFAULT_C_SZ  (0.87)
+#define NC_CLUSTER_MASS_BENSON_DEFAULT_D_SZ  (0.24)
+
+#define NC_CLUSTER_MASS_BENSON_DEFAULT_PARAMS_ABSTOL (0.0)
+
 struct _NcClusterMassBensonClass
 {
   /*< private >*/
@@ -54,10 +79,10 @@ struct _NcClusterMassBenson
   gdouble signif_obs_max;  
   gdouble z0;
   gdouble M0;
-  gdouble Asz;
-  gdouble Bsz;
-  gdouble Csz;
-  gdouble Dsz;
+  //gdouble Asz;
+  //gdouble Bsz;
+  //gdouble Csz;
+  //gdouble Dsz;
 };
 
 GType nc_cluster_mass_benson_get_type (void) G_GNUC_CONST;

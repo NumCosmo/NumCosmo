@@ -2,12 +2,13 @@
  *            nc_cluster_mass.c
  *
  *  Thu June 21 23:27:03 2012
- *  Copyright  2012  Sandro Dias Pinto Vitenti
- *  <sandro@isoftware.com.br>
+ *  Copyright  2012  Mariana Penna Lima, Sandro Dias Pinto Vitenti
+ *  <pennalima@gmail.com>, <sandro@isoftware.com.br>
  ****************************************************************************/
 /*
  * numcosmo
- * Copyright (C) Sandro Dias Pinto Vitenti 2012 <sandro@isoftware.com.br>
+ * Copyright (C) Mariana Penna Lima 2012 <pennalima@gmail.com> 
+ * Sandro Dias Pinto Vitenti 2012 <sandro@isoftware.com.br>
  *
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -25,7 +26,7 @@
 
 /**
  * SECTION:nc_cluster_mass
- * @title: Cluster Abundance Mass Distribution
+ * @title: Cluster Mass Distribution
  * @short_description: FIXME
  *
  * FIXME
@@ -36,10 +37,10 @@
 #endif /* HAVE_CONFIG_H */
 #include <numcosmo/numcosmo.h>
 
-G_DEFINE_ABSTRACT_TYPE (NcClusterMass, nc_cluster_mass, G_TYPE_OBJECT);
+G_DEFINE_ABSTRACT_TYPE (NcClusterMass, nc_cluster_mass, NCM_TYPE_MODEL);
 
 /**
- * nc_cluster_mass_new_from_name:
+ * nc_cluster_mass_new_from_name: 
  * @mass_name: string which specifies the type of the mass distribution.
  *
  * This function returns a new #NcClusterMass whose type is defined by @mass_name.
@@ -215,6 +216,40 @@ nc_cluster_mass_n_limits (NcClusterMass *clusterm, NcHICosmo *model, gdouble *ln
 }
 
 static void
+_nc_cluster_mass_log_all_models_go (GType model_type, guint n)
+{
+  guint nc, i, j;
+  GType *models = g_type_children (model_type, &nc);
+  for (i = 0; i < nc; i++)
+  {
+	guint ncc;
+	GType *modelsc = g_type_children (models[i], &ncc);
+
+	g_message ("#  ");
+	for (j = 0; j < n; j++) g_message (" ");
+	g_message ("%s\n", g_type_name (models[i]));
+	if (ncc)
+	  _nc_cluster_mass_log_all_models_go (models[i], n + 2);
+
+	g_free (modelsc);
+  }
+  g_free (models);
+}
+
+/**
+ * nc_cluster_mass_log_all_models:
+ *
+ * FIXME
+ *
+ */
+void
+nc_cluster_mass_log_all_models ()
+{
+  g_message ("# Registred NcClusterMass:%s are:\n", g_type_name (NC_TYPE_CLUSTER_MASS));
+  _nc_cluster_mass_log_all_models_go (NC_TYPE_CLUSTER_MASS, 0);
+}
+
+static void
 nc_cluster_mass_init (NcClusterMass *nc_cluster_mass)
 {
 }
@@ -226,11 +261,15 @@ nc_cluster_mass_finalize (GObject *object)
   G_OBJECT_CLASS (nc_cluster_mass_parent_class)->finalize (object);
 }
 
+gint32 NC_CLUSTER_MASS_ID = -1;
+
 static void
 nc_cluster_mass_class_init (NcClusterMassClass *klass)
 {
   GObjectClass* object_class = G_OBJECT_CLASS (klass);
 
   object_class->finalize = nc_cluster_mass_finalize;
+  ncm_model_register_id (NCM_MODEL_CLASS (klass));
+  NC_CLUSTER_MASS_ID = NCM_MODEL_CLASS (klass)->model_id;
 }
 

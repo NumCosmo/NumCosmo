@@ -92,7 +92,7 @@ main (gint argc, gchar *argv[])
   nc_message ("# Command Line: %s\n", full_cmd_line);
 
   ds = nc_dataset_new ();
-  model = nc_hicosmo_new_from_name (NC_TYPE_MODEL_DE, de_model.model_name);
+  model = nc_hicosmo_new_from_name (NC_TYPE_HICOSMO_DE, de_model.model_name);
   mset = ncm_mset_new (NCM_MODEL (model), NULL);
   dist = nc_distance_new (2.0);
 

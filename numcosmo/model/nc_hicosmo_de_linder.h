@@ -29,12 +29,12 @@
 
 G_BEGIN_DECLS
 
-#define NC_TYPE_MODEL_DE_LINDER             (nc_hicosmo_de_linder_get_type ())
-#define NC_HICOSMO_DE_LINDER(obj)             (G_TYPE_CHECK_INSTANCE_CAST ((obj), NC_TYPE_MODEL_DE_LINDER, NcHICosmoDELinder))
-#define NC_HICOSMO_DE_LINDER_CLASS(klass)     (G_TYPE_CHECK_CLASS_CAST ((klass), NC_TYPE_MODEL_DE_LINDER, NcHICosmoDELinderClass))
-#define NC_IS_MODEL_DE_LINDER(obj)          (G_TYPE_CHECK_INSTANCE_TYPE ((obj), NC_TYPE_MODEL_DE_LINDER))
-#define NC_IS_MODEL_DE_LINDER_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE ((klass), NC_TYPE_MODEL_DE_LINDER))
-#define NC_HICOSMO_DE_LINDER_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS ((obj), NC_TYPE_MODEL_DE_LINDER, NcHICosmoDELinderClass))
+#define NC_TYPE_HICOSMO_DE_LINDER             (nc_hicosmo_de_linder_get_type ())
+#define NC_HICOSMO_DE_LINDER(obj)             (G_TYPE_CHECK_INSTANCE_CAST ((obj), NC_TYPE_HICOSMO_DE_LINDER, NcHICosmoDELinder))
+#define NC_HICOSMO_DE_LINDER_CLASS(klass)     (G_TYPE_CHECK_CLASS_CAST ((klass), NC_TYPE_HICOSMO_DE_LINDER, NcHICosmoDELinderClass))
+#define NC_IS_HICOSMO_DE_LINDER(obj)          (G_TYPE_CHECK_INSTANCE_TYPE ((obj), NC_TYPE_HICOSMO_DE_LINDER))
+#define NC_IS_HICOSMO_DE_LINDER_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE ((klass), NC_TYPE_HICOSMO_DE_LINDER))
+#define NC_HICOSMO_DE_LINDER_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS ((obj), NC_TYPE_HICOSMO_DE_LINDER, NcHICosmoDELinderClass))
 
 typedef struct _NcHICosmoDELinderClass NcHICosmoDELinderClass;
 typedef struct _NcHICosmoDELinder NcHICosmoDELinder;

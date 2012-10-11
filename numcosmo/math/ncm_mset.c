@@ -481,7 +481,6 @@ ncm_mset_pretty_log (NcmMSet *mset)
 		           ncm_model_param_get (model, i),
 		           (ncm_model_param_get_ftype (model, i) == NCM_PARAM_TYPE_FREE) ? "FREE" : "FIXED");
 	  }
-	  g_message ("#----------------------------------------------------------------------------------\n");
 	}
   }
 }

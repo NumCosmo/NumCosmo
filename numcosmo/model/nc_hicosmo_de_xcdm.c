@@ -37,7 +37,7 @@
 
 #include <glib.h>
 
-G_DEFINE_TYPE (NcHICosmoDEXcdm, nc_hicosmo_de_xcdm, NC_TYPE_MODEL_DE);
+G_DEFINE_TYPE (NcHICosmoDEXcdm, nc_hicosmo_de_xcdm, NC_TYPE_HICOSMO_DE);
 
 #define VECTOR  (model->params)
 #define OMEGA_X (ncm_vector_get (VECTOR, NC_HICOSMO_DE_OMEGA_X))
@@ -65,7 +65,7 @@ _nc_hicosmo_de_xcdm_dweff_dz (NcmModel *model, gdouble z)
 NcHICosmoDEXcdm *
 nc_hicosmo_de_xcdm_new (void)
 {
-  NcHICosmoDEXcdm *xcdm = g_object_new (NC_TYPE_MODEL_DE_XCDM, NULL);
+  NcHICosmoDEXcdm *xcdm = g_object_new (NC_TYPE_HICOSMO_DE_XCDM, NULL);
   return xcdm;
 }
 

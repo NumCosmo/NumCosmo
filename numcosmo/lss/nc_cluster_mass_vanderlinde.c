@@ -127,9 +127,7 @@ _nc_cluster_mass_vanderlinde_significance_m_p (NcClusterMass *clusterm, NcHICosm
 
   F.function = &_nc_cluster_mass_vanderlinde_significance_m_p_integrand;
   F.params = &data;
-
-  //gsl_integration_qagiu (&F, 0.0, 0.0, NC_DEFAULT_PRECISION, NC_INT_PARTITION, *w, &P, &err);
-  
+ 
   {
 	gdouble Pi, a, b;
 	a = 0.0;
@@ -145,10 +143,6 @@ _nc_cluster_mass_vanderlinde_significance_m_p (NcClusterMass *clusterm, NcHICosm
   }
 
   ncm_memory_pool_return (w);
-  
-  //printf ("qagiu: % 20.8g qag: % 20.8g rel: % 20.5g\n", P, P1, (P - P1) / P);
-  //printf ("mxi = % 20.8g mM = % 20.8g mean = % 20.8g expD = % 20.8g sd = % 20.8g\n", zeta, exp(data.mu), mean, sigma_mu, sd);
-  //printf ("lnM: % 20.5g z: %20.5g xi: % 20.5g integral: % 20.5g\n", lnM, z, xi[0], P);
   
   return P;
 }

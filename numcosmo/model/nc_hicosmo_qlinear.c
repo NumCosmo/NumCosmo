@@ -46,7 +46,7 @@
 #include <gmp.h>
 #include <math.h>
 
-G_DEFINE_TYPE (NcHICosmoQLinear, nc_hicosmo_qlinear, NC_TYPE_MODEL);
+G_DEFINE_TYPE (NcHICosmoQLinear, nc_hicosmo_qlinear, NC_TYPE_HICOSMO);
 
 #define VECTOR   (model->params)
 #define MACRO_H0 (ncm_vector_get (VECTOR, NC_HICOSMO_QLINEAR_H0))
@@ -126,7 +126,7 @@ static gdouble _nc_hicosmo_qlinear_Omega_t (NcmModel *model) { return OMEGA_T; }
 NcHICosmoQLinear *
 nc_hicosmo_qlinear_new (void)
 {
-  NcHICosmoQLinear *qlinear = g_object_new (NC_TYPE_MODEL_QLINEAR, NULL);
+  NcHICosmoQLinear *qlinear = g_object_new (NC_TYPE_HICOSMO_QLINEAR, NULL);
   return qlinear;
 }
 

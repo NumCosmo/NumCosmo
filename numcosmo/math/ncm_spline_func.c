@@ -260,6 +260,9 @@ ncm_spline_new_function_spline (NcmSpline *s, gsl_function *F, gdouble xi, gdoub
   gsize n = ncm_spline_min_size (s);
   guint i;
 
+  if (max_nodes == 0)
+	max_nodes = NCM_SPLINE_FUNC_DEFAULT_MAX_NODES;
+  
   g_array_set_size (xt_array, n);
   g_array_set_size (yt_array, n);
 
@@ -340,6 +343,9 @@ ncm_spline_new_function_spline (NcmSpline *s, gsl_function *F, gdouble xi, gdoub
 
 	SWAP_PTR (x_array, xt_array);
 	SWAP_PTR (y_array, yt_array);
+
+	if (x_array->len > max_nodes)
+	  g_error ("ncm_spline_new_function_spline: cannot achive requested precision with at most %zu nodes", max_nodes);
 
 	ncm_spline_set_array (s, x_array, y_array, TRUE);
 	if (improves == 0)

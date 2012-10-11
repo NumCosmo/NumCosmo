@@ -29,12 +29,12 @@
 
 G_BEGIN_DECLS
 
-#define NC_TYPE_MODEL_LCDM             (nc_hicosmo_lcdm_get_type ())
-#define NC_HICOSMO_LCDM(obj)             (G_TYPE_CHECK_INSTANCE_CAST ((obj), NC_TYPE_MODEL_LCDM, NcHICosmoLCDM))
-#define NC_HICOSMO_LCDM_CLASS(klass)     (G_TYPE_CHECK_CLASS_CAST ((klass), NC_TYPE_MODEL_LCDM, NcHICosmoLCDMClass))
-#define NC_IS_MODEL_LCDM(obj)          (G_TYPE_CHECK_INSTANCE_TYPE ((obj), NC_TYPE_MODEL_LCDM))
-#define NC_IS_MODEL_LCDM_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE ((klass), NC_TYPE_MODEL_LCDM))
-#define NC_HICOSMO_LCDM_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS ((obj), NC_TYPE_MODEL_LCDM, NcHICosmoLCDMClass))
+#define NC_TYPE_HICOSMO_LCDM             (nc_hicosmo_lcdm_get_type ())
+#define NC_HICOSMO_LCDM(obj)             (G_TYPE_CHECK_INSTANCE_CAST ((obj), NC_TYPE_HICOSMO_LCDM, NcHICosmoLCDM))
+#define NC_HICOSMO_LCDM_CLASS(klass)     (G_TYPE_CHECK_CLASS_CAST ((klass), NC_TYPE_HICOSMO_LCDM, NcHICosmoLCDMClass))
+#define NC_IS_HICOSMO_LCDM(obj)          (G_TYPE_CHECK_INSTANCE_TYPE ((obj), NC_TYPE_HICOSMO_LCDM))
+#define NC_IS_HICOSMO_LCDM_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE ((klass), NC_TYPE_HICOSMO_LCDM))
+#define NC_HICOSMO_LCDM_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS ((obj), NC_TYPE_HICOSMO_LCDM, NcHICosmoLCDMClass))
 
 typedef struct _NcHICosmoLCDMClass NcHICosmoLCDMClass;
 typedef struct _NcHICosmoLCDM NcHICosmoLCDM;

@@ -29,12 +29,12 @@
 
 G_BEGIN_DECLS
 
-#define NC_TYPE_MODEL_DE_PAD             (nc_hicosmo_de_pad_get_type ())
-#define NC_HICOSMO_DE_PAD(obj)             (G_TYPE_CHECK_INSTANCE_CAST ((obj), NC_TYPE_MODEL_DE_PAD, NcHICosmoDEPad))
-#define NC_HICOSMO_DE_PAD_CLASS(klass)     (G_TYPE_CHECK_CLASS_CAST ((klass), NC_TYPE_MODEL_DE_PAD, NcHICosmoDEPadClass))
-#define NC_IS_MODEL_DE_PAD(obj)          (G_TYPE_CHECK_INSTANCE_TYPE ((obj), NC_TYPE_MODEL_DE_PAD))
-#define NC_IS_MODEL_DE_PAD_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE ((klass), NC_TYPE_MODEL_DE_PAD))
-#define NC_HICOSMO_DE_PAD_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS ((obj), NC_TYPE_MODEL_DE_PAD, NcHICosmoDEPadClass))
+#define NC_TYPE_HICOSMO_DE_PAD             (nc_hicosmo_de_pad_get_type ())
+#define NC_HICOSMO_DE_PAD(obj)             (G_TYPE_CHECK_INSTANCE_CAST ((obj), NC_TYPE_HICOSMO_DE_PAD, NcHICosmoDEPad))
+#define NC_HICOSMO_DE_PAD_CLASS(klass)     (G_TYPE_CHECK_CLASS_CAST ((klass), NC_TYPE_HICOSMO_DE_PAD, NcHICosmoDEPadClass))
+#define NC_IS_HICOSMO_DE_PAD(obj)          (G_TYPE_CHECK_INSTANCE_TYPE ((obj), NC_TYPE_HICOSMO_DE_PAD))
+#define NC_IS_HICOSMO_DE_PAD_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE ((klass), NC_TYPE_HICOSMO_DE_PAD))
+#define NC_HICOSMO_DE_PAD_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS ((obj), NC_TYPE_HICOSMO_DE_PAD, NcHICosmoDEPadClass))
 
 typedef struct _NcHICosmoDEPadClass NcHICosmoDEPadClass;
 typedef struct _NcHICosmoDEPad NcHICosmoDEPad;

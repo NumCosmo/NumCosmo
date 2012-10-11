@@ -669,8 +669,6 @@ ncm_fit_log_covar (NcmFit *fit)
   guint free_params_len = ncm_mset_fparam_len (fit->mset);
   gchar *box = "---------------";
 
-  nc_dataset_log_info (fit->lh->ds);
-
   g_message ("# Fitted parameters covariance matrix\n");
   g_message ("#                                        ");
   for (i = 0; i < name_size; i++) g_message (" ");

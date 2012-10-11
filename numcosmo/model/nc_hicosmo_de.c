@@ -38,7 +38,7 @@
 #include <glib.h>
 #include <gsl/gsl_math.h>
 
-G_DEFINE_ABSTRACT_TYPE (NcHICosmoDE, nc_hicosmo_de, NC_TYPE_MODEL);
+G_DEFINE_ABSTRACT_TYPE (NcHICosmoDE, nc_hicosmo_de, NC_TYPE_HICOSMO);
 
 #define VECTOR    (model->params)
 #define MACRO_H0  (ncm_vector_get (VECTOR, NC_HICOSMO_DE_H0))

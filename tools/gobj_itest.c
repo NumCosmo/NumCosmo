@@ -87,7 +87,7 @@ main (gint argc, gchar *argv[])
   ncm_cfg_init ();
   if (argc > 1)
   {
-    model = nc_hicosmo_new_from_name (NC_TYPE_MODEL_DE, argv[1]);
+    model = nc_hicosmo_new_from_name (NC_TYPE_HICOSMO_DE, argv[1]);
     ncm_model_free (NCM_MODEL (model));
   }
 
