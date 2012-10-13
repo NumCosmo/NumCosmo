@@ -2,12 +2,13 @@
  *            nc_cluster_mass_nodist.c
  *
  *  Fri June 22 13:42:49 2012
- *  Copyright  2012  Sandro Dias Pinto Vitenti
- *  <sandro@isoftware.com.br>
+ *  Copyright  2012  Mariana Penna Lima, Sandro Dias Pinto Vitenti
+ *  <pennalima@gmail.com>, <sandro@isoftware.com.br>
  ****************************************************************************/
 /*
  * numcosmo
- * Copyright (C) Sandro Dias Pinto Vitenti 2012 <sandro@isoftware.com.br>
+ * Copyright (C) Mariana Penna Lima 2012 <pennalima@gmail.com> 
+ * Sandro Dias Pinto Vitenti 2012 <sandro@isoftware.com.br>
  *
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -25,7 +26,7 @@
 
 /**
  * SECTION:nc_cluster_mass_nodist
- * @title: Cluster Abundance Mass No Distribution
+ * @title: Cluster Mass No Distribution
  * @short_description: FIXME
  *
  * FIXME

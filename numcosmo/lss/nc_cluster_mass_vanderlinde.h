@@ -40,6 +40,30 @@ G_BEGIN_DECLS
 typedef struct _NcClusterMassVanderlindeClass NcClusterMassVanderlindeClass;
 typedef struct _NcClusterMassVanderlinde NcClusterMassVanderlinde;
 
+/**
+ * NcClusterMassVanderlindeParams:
+ * @NC_CLUSTER_MASS_VANDERLINDE_A_SZ: normalization of the mass-observable relation
+ * @NC_CLUSTER_MASS_VANDERLINDE_B_SZ: FIXME
+ * @NC_CLUSTER_MASS_VANDERLINDE_C_SZ: FIXME
+ * @NC_CLUSTER_MASS_VANDERLINDE_D_SZ: standard deviation of the mass-observable relation 
+ *
+ * FIXME
+ */
+typedef enum _NcClusterMassVanderlindeParams
+{
+  NC_CLUSTER_MASS_VANDERLINDE_A_SZ = 0,
+  NC_CLUSTER_MASS_VANDERLINDE_B_SZ,
+  NC_CLUSTER_MASS_VANDERLINDE_C_SZ,
+  NC_CLUSTER_MASS_VANDERLINDE_D_SZ, /*< private >*/
+  NC_CLUSTER_MASS_VANDERLINDE_SPARAM_LEN, /*< skip >*/
+} NcClusterMassVanderlindeParams;
+
+#define NC_CLUSTER_MASS_VANDERLINDE_DEFAULT_A_SZ  (6.01)
+#define NC_CLUSTER_MASS_VANDERLINDE_DEFAULT_B_SZ  (1.31)
+#define NC_CLUSTER_MASS_VANDERLINDE_DEFAULT_C_SZ  (1.6)
+#define NC_CLUSTER_MASS_VANDERLINDE_DEFAULT_D_SZ  (0.21)
+
+#define NC_CLUSTER_MASS_VANDERLINDE_DEFAULT_PARAMS_ABSTOL (0.0)
 
 
 struct _NcClusterMassVanderlindeClass
@@ -56,10 +80,6 @@ struct _NcClusterMassVanderlinde
   gdouble signif_obs_max;  
   gdouble z0;
   gdouble M0;
-  gdouble A;
-  gdouble B;
-  gdouble C;
-  gdouble D;
 };
 
 GType nc_cluster_mass_vanderlinde_get_type (void) G_GNUC_CONST;

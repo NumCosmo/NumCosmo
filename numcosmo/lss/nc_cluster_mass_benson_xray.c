@@ -39,6 +39,16 @@
 
 G_DEFINE_TYPE (NcClusterMassBensonXRay, nc_cluster_mass_benson_xray, NC_TYPE_CLUSTER_MASS);
 
+#define VECTOR (NCM_MODEL (msz)->params)
+#define A_SZ   (ncm_vector_get (VECTOR, NC_CLUSTER_MASS_BENSON_XRAY_A_SZ))
+#define B_SZ   (ncm_vector_get (VECTOR, NC_CLUSTER_MASS_BENSON_XRAY_B_SZ))
+#define C_SZ   (ncm_vector_get (VECTOR, NC_CLUSTER_MASS_BENSON_XRAY_C_SZ))
+#define D_SZ   (ncm_vector_get (VECTOR, NC_CLUSTER_MASS_BENSON_XRAY_D_SZ))
+#define A_X    (ncm_vector_get (VECTOR, NC_CLUSTER_MASS_BENSON_XRAY_A_X))
+#define B_X    (ncm_vector_get (VECTOR, NC_CLUSTER_MASS_BENSON_XRAY_B_X))
+#define C_X    (ncm_vector_get (VECTOR, NC_CLUSTER_MASS_BENSON_XRAY_C_X))
+#define D_X    (ncm_vector_get (VECTOR, NC_CLUSTER_MASS_BENSON_XRAY_D_X))
+
 enum
 {
   PROP_0,
@@ -46,14 +56,7 @@ enum
   PROP_SIGNIFICANCE_OBS_MAX,
   PROP_Z0,
   PROP_M0,
-  PROP_ASZ,
-  PROP_BSZ,
-  PROP_CSZ,
-  PROP_DSZ,
-  PROP_AX,
-  PROP_BX,
-  PROP_CX,
-  PROP_DX,
+  PROP_SIZE,
 };
 
 typedef struct _integrand_data
@@ -64,7 +67,6 @@ typedef struct _integrand_data
   gdouble lnM;
   gdouble *obs; //*xi;
 } integrand_data;
-
 
 
 guint _nc_cluster_mass_benson_xray_obs_len (NcClusterMass *clusterm) { return 2; }
@@ -89,30 +91,6 @@ _nc_cluster_mass_benson_xray_set_property (GObject * object, guint prop_id, cons
 	  break;
 	case PROP_M0:
 	  mbxr->M0 = g_value_get_double (value);
-	  break;
-	case PROP_ASZ:
-	  mbxr->Asz = g_value_get_double (value);
-	  break;
-	case PROP_BSZ:
-	  mbxr->Bsz = g_value_get_double (value);
-	  break;
-	case PROP_CSZ:
-	  mbxr->Csz = g_value_get_double (value);
-	  break;
-	case PROP_DSZ:
-	  mbxr->Dsz = g_value_get_double (value);
-	  break;
-	case PROP_AX:
-	  mbxr->Ax = g_value_get_double (value);
-	  break;
-	case PROP_BX:
-	  mbxr->Bx = g_value_get_double (value);
-	  break;
-	case PROP_CX:
-	  mbxr->Cx = g_value_get_double (value);
-	  break;
-	case PROP_DX:
-	  mbxr->Dx = g_value_get_double (value);
 	  break;
 	default:
 	  G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -140,31 +118,7 @@ _nc_cluster_mass_benson_xray_get_property (GObject *object, guint prop_id, GValu
 	case PROP_M0:
       g_value_set_double (value, mbrx->M0);
       break;
-	case PROP_ASZ:
-      g_value_set_double (value, mbrx->Asz);
-      break;
-	case PROP_BSZ:
-      g_value_set_double (value, mbrx->Bsz);
-      break;
-	case PROP_CSZ:
-      g_value_set_double (value, mbrx->Csz);
-      break;
-	case PROP_DSZ:
-      g_value_set_double (value, mbrx->Dsz);
-      break;
-	case PROP_AX:
-      g_value_set_double (value, mbrx->Ax);
-      break;
-	case PROP_BX:
-      g_value_set_double (value, mbrx->Bx);
-      break;
-	case PROP_CX:
-      g_value_set_double (value, mbrx->Cx);
-      break;
-	case PROP_DX:
-      g_value_set_double (value, mbrx->Dx);
-      break;
-    default:
+	default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
       break;
   }
@@ -177,14 +131,6 @@ nc_cluster_mass_benson_xray_init (NcClusterMassBensonXRay *mbxr)
   mbxr->signif_obs_max = 0.0;
   mbxr->z0 = 0.0;
   mbxr->M0 = 0.0;
-  mbxr->Asz = 0.0;
-  mbxr->Bsz = 0.0;
-  mbxr->Csz = 0.0;
-  mbxr->Dsz = 0.0;
-  mbxr->Ax = 0.0;
-  mbxr->Bx = 0.0;
-  mbxr->Cx = 0.0;
-  mbxr->Dx = 0.0;
 }
 
 static void
@@ -200,12 +146,142 @@ nc_cluster_mass_benson_xray_class_init (NcClusterMassBensonXRayClass *klass)
 {
   GObjectClass* object_class = G_OBJECT_CLASS (klass);
   NcClusterMassClass* parent_class = NC_CLUSTER_MASS_CLASS (klass);
+  NcmModelClass *model_class = NCM_MODEL_CLASS (klass);
 
   parent_class->obs_len = &_nc_cluster_mass_benson_xray_obs_len;
   parent_class->obs_params_len = &_nc_cluster_mass_benson_xray_obs_params_len;
 
   object_class->finalize = _nc_cluster_mass_benson_xray_finalize;
-  object_class->set_property = &_nc_cluster_mass_benson_xray_set_property;
-  object_class->get_property = &_nc_cluster_mass_benson_xray_get_property;
+  object_class->set_property = &ncm_model_class_set_property;
+  object_class->get_property = &ncm_model_class_get_property;
+
+
+  model_class->set_property = &_nc_cluster_mass_benson_xray_set_property;
+  model_class->get_property = &_nc_cluster_mass_benson_xray_get_property;
+
+  ncm_model_class_add_params (model_class, 8, 0, PROP_SIZE);
+  ncm_model_class_set_name_nick (model_class, "Benson- SZ and XRay", "Benson_SZ_XRay");
+
+  /**
+   * NcClusterMassBensonXRay:signif_obs_min:
+   *
+   * FIXME Set correct values (limits)
+   */
+  g_object_class_install_property (object_class,
+                                   PROP_SIGNIFICANCE_OBS_MIN,
+                                   g_param_spec_double ("signif-obs-min",
+                                                        NULL,
+                                                        "Minimum obsevational significance",
+                                                        2.0, G_MAXDOUBLE, 5.0,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY |G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  /**
+   * NcClusterMassBensonXray:signif_obs_max:
+   *
+   * FIXME Set correct values (limits)
+   */
+  g_object_class_install_property (object_class,
+                                   PROP_SIGNIFICANCE_OBS_MAX,
+                                   g_param_spec_double ("signif-obs-max",
+                                                        NULL,
+                                                        "Maximum obsevational significance",
+                                                        2.0, G_MAXDOUBLE, 40.0,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY |G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+ /**
+   * NcClusterMassBensonXRay:z0:
+   *
+   * Reference redshift in the SZ signal-mass scaling relation.
+   * FIXME Set correct values (limits)
+   */
+  g_object_class_install_property (object_class,
+                                   PROP_Z0,
+                                   g_param_spec_double ("z0",
+                                                        NULL,
+                                                        "Reference redshift",
+                                                        0.0, G_MAXDOUBLE, 0.6,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY |G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB)); 
+  /**
+   * NcClusterMassBensonXRay:M0:
+   *
+   * Reference mass (in h^(-1) * M_sun unit) in the SZ signal-mass scaling relation.
+   * FIXME Set correct values (limits)
+   */
+  g_object_class_install_property (object_class,
+                                   PROP_M0,
+                                   g_param_spec_double ("M0",
+                                                        NULL,
+                                                        "Reference mass",
+                                                        1.0e13, G_MAXDOUBLE, 3.0e14,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY |G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  /*
+   * SZ signal-mass scaling parameter: Asz.
+   * FIXME Set correct values (limits)
+   */
+  ncm_model_class_set_sparam (model_class, NC_CLUSTER_MASS_BENSON_XRAY_A_SZ, "A_{SZ}", "Asz",
+                               1e-8,  10.0, 1.0e-2,
+                               NC_CLUSTER_MASS_BENSON_XRAY_DEFAULT_PARAMS_ABSTOL, NC_CLUSTER_MASS_BENSON_XRAY_DEFAULT_A_SZ,
+                               NCM_PARAM_TYPE_FREE);
+
+  /*
+   * SZ signal-mass scaling parameter: Bsz.
+   * FIXME Set correct values (limits)
+   */
+  ncm_model_class_set_sparam (model_class, NC_CLUSTER_MASS_BENSON_XRAY_B_SZ, "B_{SZ}", "Bsz",
+                               1e-8,  10.0, 1.0e-2,
+                               NC_CLUSTER_MASS_BENSON_XRAY_DEFAULT_PARAMS_ABSTOL, NC_CLUSTER_MASS_BENSON_XRAY_DEFAULT_B_SZ,
+                               NCM_PARAM_TYPE_FIXED);
+
+  /*
+   * SZ signal-mass scaling parameter: Csz.
+   * FIXME Set correct values (limits)
+   */
+  ncm_model_class_set_sparam (model_class, NC_CLUSTER_MASS_BENSON_XRAY_C_SZ, "C_{SZ}", "Csz",
+                               1e-8,  10.0, 1.0e-2,
+                               NC_CLUSTER_MASS_BENSON_XRAY_DEFAULT_PARAMS_ABSTOL, NC_CLUSTER_MASS_BENSON_XRAY_DEFAULT_C_SZ,
+                               NCM_PARAM_TYPE_FIXED);
+  
+ /*
+   * SZ signal-mass scaling parameter: Dsz.
+   * FIXME Set correct values (limits)
+   */
+  ncm_model_class_set_sparam (model_class, NC_CLUSTER_MASS_BENSON_XRAY_D_SZ, "D_{SZ}", "Dsz",
+                               1e-8,  10.0, 1.0e-2,
+                               NC_CLUSTER_MASS_BENSON_XRAY_DEFAULT_PARAMS_ABSTOL, NC_CLUSTER_MASS_BENSON_XRAY_DEFAULT_D_SZ,
+                               NCM_PARAM_TYPE_FIXED);
+  /*
+   * X-ray signal-mass scaling parameter: Ax.
+   * FIXME Set correct values (limits)
+   */
+  ncm_model_class_set_sparam (model_class, NC_CLUSTER_MASS_BENSON_XRAY_A_X, "A_{X}", "Ax",
+                               1e-8,  10.0, 1.0e-2,
+                               NC_CLUSTER_MASS_BENSON_XRAY_DEFAULT_PARAMS_ABSTOL, NC_CLUSTER_MASS_BENSON_XRAY_DEFAULT_A_X,
+                               NCM_PARAM_TYPE_FREE);
+
+  /*
+   * X-ray signal-mass scaling parameter: Bx.
+   * FIXME Set correct values (limits)
+   */
+  ncm_model_class_set_sparam (model_class, NC_CLUSTER_MASS_BENSON_XRAY_B_X, "B_{X}", "Bx",
+                               1e-8,  10.0, 1.0e-2,
+                               NC_CLUSTER_MASS_BENSON_XRAY_DEFAULT_PARAMS_ABSTOL, NC_CLUSTER_MASS_BENSON_XRAY_DEFAULT_B_X,
+                               NCM_PARAM_TYPE_FIXED);
+
+  /*
+   * X-ray signal-mass scaling parameter: Cx.
+   * FIXME Set correct values (limits)
+   */
+  ncm_model_class_set_sparam (model_class, NC_CLUSTER_MASS_BENSON_XRAY_C_X, "C_{X}", "Cx",
+                               -2.0,  8.0, 1.0e-2,
+                               NC_CLUSTER_MASS_BENSON_XRAY_DEFAULT_PARAMS_ABSTOL, NC_CLUSTER_MASS_BENSON_XRAY_DEFAULT_C_X,
+                               NCM_PARAM_TYPE_FIXED);
+  
+ /*
+   * X-ray signal-mass scaling parameter: Dx.
+   * FIXME Set correct values (limits)
+   */
+  ncm_model_class_set_sparam (model_class, NC_CLUSTER_MASS_BENSON_XRAY_D_X, "D_{X}", "Dx",
+                               1e-8,  10.0, 1.0e-2,
+                               NC_CLUSTER_MASS_BENSON_XRAY_DEFAULT_PARAMS_ABSTOL, NC_CLUSTER_MASS_BENSON_XRAY_DEFAULT_D_X,
+                               NCM_PARAM_TYPE_FIXED);
+  
 }
 
