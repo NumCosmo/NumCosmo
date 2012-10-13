@@ -118,14 +118,14 @@ main (gint argc, gchar *argv[])
   if (de_fit.fit_params != NULL)
   {
 	gchar **cmds, **cmds_orig;
-	gboolean have_free = FALSE;
+	gboolean have_free = TRUE;
 
 	cmds = g_strsplit (de_fit.fit_params, ",", 0);
 	cmds_orig = cmds;
 
-	ncm_mset_param_set_all_ftype (mset, NCM_PARAM_TYPE_FIXED);
+	//ncm_mset_param_set_all_ftype (mset, NCM_PARAM_TYPE_FIXED);
 
-	for (; cmds[0] != NULL; cmds = &cmds[1])
+	for (; cmds[0] != NULL && FALSE; cmds = &cmds[1])
 	{
 	  gchar **name_cmd = g_strsplit (cmds[0], "=", 2);
 	  gint index;
@@ -263,7 +263,7 @@ main (gint argc, gchar *argv[])
 	  resample_mset = fiduc;
 	else
 	  resample_mset = fit->mset;
-	
+
 	param_matrix = ncm_fit_montecarlo_matrix (fit, resample_mset, de_fit.max_iter, de_fit.mc_ni, de_fit.montecarlo, de_fit.msg_level);
 	ncm_fit_montecarlo_matrix_mean_covar (fit, param_matrix);
 	ncm_fit_log_covar (fit);

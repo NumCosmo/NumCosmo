@@ -79,7 +79,14 @@ nc_likelihood_copy (NcLikelihood *lh_orig)
   lh->ds = nc_dataset_copy (lh_orig->ds);
 
   if (lh_orig->priors != NULL)
-	lh->priors = g_list_copy (lh_orig->priors);
+  {
+	GList *p = g_list_first (lh_orig->priors);
+	lh->priors = NULL;
+	do {
+	  nc_likelihood_priors_add (lh, ncm_mset_func_ref (NCM_MSET_FUNC (p->data)));
+	} while ((p = p->next) != NULL);
+ 	lh->priors = g_list_copy (lh_orig->priors);
+  }
   else
 	lh->priors = NULL;
   lh->clone = TRUE;
@@ -100,6 +107,7 @@ nc_likelihood_free (NcLikelihood *lh)
   {
 	nc_dataset_free0 (lh->ds, FALSE);
   }
+
   if (lh->priors != NULL)
 	g_list_free_full (lh->priors, (GDestroyNotify)&ncm_mset_func_free);
   g_slice_free (NcLikelihood, lh);

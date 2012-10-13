@@ -1015,10 +1015,8 @@ ncm_cfg_create_from_name_params (const gchar *obj_name, GVariant *params)
 		g_variant_unref (nest_obj_key);
 		g_variant_unref (nest_obj_params);
 	  }
-	  else if (!g_variant_is_container (val))
-		g_dbus_gvariant_to_gvalue (val, &gprop[i].value);
 	  else
-		g_error ("Invalid variant type '%s', cannot convert to GValue", g_variant_get_type_string (val));
+		g_dbus_gvariant_to_gvalue (val, &gprop[i].value);
 
 	  i++;
 	  g_variant_unref (var_key);

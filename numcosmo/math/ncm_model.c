@@ -484,6 +484,8 @@ ncm_model_class_get_property (GObject *object, guint prop_id, GValue *value, GPa
   const guint sparam_id = prop_id - model_class->nonparam_prop_len + model_class->parent_sparam_len;
   const guint vparam_id = sparam_id	- model_class->sparam_len + model_class->parent_vparam_len;
   const guint vparam_len_id = vparam_id	- model_class->vparam_len + model_class->parent_vparam_len;
+  const guint sparam_fit_id = vparam_len_id	- model_class->vparam_len + model_class->parent_sparam_len;
+  const guint vparam_fit_id = sparam_fit_id	- model_class->sparam_len + model_class->parent_vparam_len;
 
   if (prop_id < model_class->nonparam_prop_len && model_class->get_property)
   {
@@ -503,6 +505,28 @@ ncm_model_class_get_property (GObject *object, guint prop_id, GValue *value, GPa
   else if (vparam_len_id < model_class->vparam_len)
   {
 	g_value_set_uint (value, g_array_index (model->vparam_len, guint, vparam_len_id));
+  }
+  else if (sparam_fit_id < model_class->sparam_len)
+  {
+	g_value_set_boolean (value, ncm_model_param_get_ftype (model, sparam_fit_id) == NCM_PARAM_TYPE_FREE ? TRUE: FALSE);
+  }
+  else if (vparam_fit_id < model_class->vparam_len)
+  {
+	gsize n = g_array_index (model->vparam_len, guint, vparam_fit_id);
+	GVariantBuilder *builder;
+	GVariant *var;
+	gint i;
+
+	builder = g_variant_builder_new (G_VARIANT_TYPE ("ab"));
+	for (i = 0; i < n; i++)
+	{
+	  guint pid = ncm_model_vparam_index (model, vparam_fit_id, i);
+	  gboolean tofit = ncm_model_param_get_ftype (model, pid) == NCM_PARAM_TYPE_FREE ? TRUE: FALSE;
+	  g_variant_builder_add (builder, "b", tofit);
+	}
+	var = g_variant_new ("ab", builder);
+	g_variant_builder_unref (builder);
+	g_value_take_variant (value, var);
   }
   else
 	g_assert_not_reached ();
@@ -526,6 +550,10 @@ ncm_model_class_set_property (GObject *object, guint prop_id, const GValue *valu
   const guint sparam_id = prop_id - model_class->nonparam_prop_len + model_class->parent_sparam_len;
   const guint vparam_id = sparam_id	- model_class->sparam_len + model_class->parent_vparam_len;
   const guint vparam_len_id = vparam_id	- model_class->vparam_len + model_class->parent_vparam_len;
+  const guint sparam_fit_id = vparam_len_id	- model_class->vparam_len + model_class->parent_sparam_len;
+  const guint vparam_fit_id = sparam_fit_id	- model_class->sparam_len + model_class->parent_vparam_len;
+
+  //printf ("[%u %u] [%u %u] [%u %u] [%u %u] [%u %u] [%u %u]\n", prop_id, model_class->nonparam_prop_len, sparam_id, model_class->sparam_len, vparam_id, model_class->vparam_len, vparam_len_id, model_class->vparam_len, sparam_fit_id, model_class->sparam_len, vparam_fit_id, model_class->vparam_len);
 
   if (prop_id < model_class->nonparam_prop_len && model_class->set_property)
   {
@@ -545,6 +573,43 @@ ncm_model_class_set_property (GObject *object, guint prop_id, const GValue *valu
   {
 	guint psize = g_value_get_uint (value);
 	g_array_index (model->vparam_len, guint, vparam_len_id) = psize;
+  }
+  else if (sparam_fit_id < model_class->sparam_len)
+  {
+	gboolean tofit = g_value_get_boolean (value);
+	ncm_model_param_set_ftype (model, sparam_fit_id, tofit ? NCM_PARAM_TYPE_FREE : NCM_PARAM_TYPE_FIXED);
+  }
+  else if (vparam_fit_id < model_class->vparam_len)
+  {
+	GVariant *var = g_value_get_variant (value);
+	gsize n = g_variant_n_children (var);
+	gint i;
+
+	if (n != g_array_index (model->vparam_len, guint, vparam_fit_id))
+	  g_error ("set_property: cannot set fit type of vector parameter, variant contains %zu childs but vector dimension is %u", n, g_array_index (model->vparam_len, guint, vparam_fit_id));
+
+	if (g_variant_is_of_type (var, G_VARIANT_TYPE ("ab")))
+	{
+	  for (i = 0; i < n; i++)
+	  {
+		guint pid = ncm_model_vparam_index (model, vparam_fit_id, i);
+		gboolean tofit;
+		g_variant_get_child (var, i, "b", &tofit);
+		ncm_model_param_set_ftype (model, pid, tofit ? NCM_PARAM_TYPE_FREE : NCM_PARAM_TYPE_FIXED);
+	  }
+	}
+	else if (g_variant_is_of_type (var, G_VARIANT_TYPE ("ai")))
+	{
+	  for (i = 0; i < n; i++)
+	  {
+		guint pid = ncm_model_vparam_index (model, vparam_fit_id, i);
+		gint tofit;
+		g_variant_get_child (var, i, "i", &tofit);
+		ncm_model_param_set_ftype (model, pid, tofit ? NCM_PARAM_TYPE_FREE : NCM_PARAM_TYPE_FIXED);
+	  }
+	}
+	else
+	  g_error ("set_property: Cannot convert `%s' variant to an array of booleans", g_variant_get_type_string (var));
   }
   else
 	g_assert_not_reached ();
@@ -647,7 +712,9 @@ void
 ncm_model_class_set_sparam (NcmModelClass *model_class, guint sparam_id, gchar *symbol, gchar *name, gdouble lower_bound, gdouble upper_bound, gdouble scale, gdouble abstol, gdouble default_value, NcmParamType ppt)
 {
   GObjectClass* object_class = G_OBJECT_CLASS (model_class);
-  const guint prop_id = sparam_id + model_class->nonparam_prop_len - model_class->parent_sparam_len;
+  const guint prop_id = sparam_id - model_class->parent_sparam_len + model_class->nonparam_prop_len;
+  const guint prop_fit_id = prop_id + (model_class->sparam_len - model_class->parent_sparam_len) + 2 * (model_class->vparam_len - model_class->parent_vparam_len);
+
   NcmSParam *sparam = ncm_sparam_new (name, symbol, lower_bound, upper_bound, scale, abstol, default_value, ppt);
 
   g_assert (prop_id > 0);
@@ -656,10 +723,16 @@ ncm_model_class_set_sparam (NcmModelClass *model_class, guint sparam_id, gchar *
 	g_error ("Scalar Parameter: %u is already set\n", sparam_id);
 
   g_ptr_array_index (model_class->sparam, sparam_id) = sparam;
+
   g_object_class_install_property (object_class, prop_id,
                                    g_param_spec_double (name, NULL, symbol,
                                                         lower_bound, upper_bound, default_value,
-                                                        G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+                                                        G_PARAM_READWRITE));
+
+  g_object_class_install_property (object_class, prop_fit_id,
+                                   g_param_spec_boolean (g_strdup_printf ("%s-fit", name), NULL, g_strdup_printf ("%s:fit", symbol),
+                                                         ppt == NCM_PARAM_TYPE_FREE ? TRUE : FALSE,
+                                                         G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
 }
 
@@ -686,6 +759,8 @@ ncm_model_class_set_vparam (NcmModelClass *model_class, guint vparam_id, guint d
   GObjectClass* object_class = G_OBJECT_CLASS (model_class);
   const guint prop_id = vparam_id + model_class->nonparam_prop_len - model_class->parent_vparam_len + (model_class->sparam_len - model_class->parent_sparam_len);
   const guint prop_len_id = prop_id + (model_class->vparam_len - model_class->parent_vparam_len);
+  const guint prop_fit_id = prop_len_id + (model_class->vparam_len - model_class->parent_vparam_len) + (model_class->sparam_len - model_class->parent_sparam_len);
+
   NcmVParam *vparam = ncm_vparam_full_new (default_length, name, symbol, lower_bound, upper_bound, scale, abstol, default_value, ppt);
 
   g_assert (prop_id > 0);
@@ -701,9 +776,15 @@ ncm_model_class_set_vparam (NcmModelClass *model_class, guint vparam_id, guint d
   g_object_class_install_property (object_class, prop_len_id,
                                    g_param_spec_uint (g_strdup_printf ("%s-length", name),
                                                       NULL,
-                                                      g_strdup_printf ("Lenght of %s vector parameter", symbol),
+                                                      g_strdup_printf ("%s:length", symbol),
                                                       0, G_MAXUINT, default_length,
-                                                      G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY));
+                                                      G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
+  g_object_class_install_property (object_class, prop_fit_id,
+                                   g_param_spec_variant (g_strdup_printf ("%s-fit", name), NULL, g_strdup_printf ("%s:fit", symbol),
+                                                         G_VARIANT_TYPE_ARRAY, NULL,
+                                                         G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
 }
 
 /**
