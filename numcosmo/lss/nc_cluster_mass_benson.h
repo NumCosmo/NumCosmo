@@ -79,10 +79,6 @@ struct _NcClusterMassBenson
   gdouble signif_obs_max;  
   gdouble z0;
   gdouble M0;
-  //gdouble Asz;
-  //gdouble Bsz;
-  //gdouble Csz;
-  //gdouble Dsz;
 };
 
 GType nc_cluster_mass_benson_get_type (void) G_GNUC_CONST;

@@ -25,7 +25,7 @@
 
 /**
  * SECTION:nc_cluster_mass_lnnormal
- * @title: Cluster Abundance Mass Ln Normal Distribution
+ * @title: Cluster Mass Ln Normal Distribution
  * @short_description: FIXME
  *
  * FIXME
@@ -46,6 +46,7 @@ enum
   PROP_0,
   PROP_LNMOBS_MIN,
   PROP_LNMOBS_MAX,
+  PROP_SIZE,
 };
 
 static gdouble
@@ -180,6 +181,7 @@ nc_cluster_mass_lnnormal_class_init (NcClusterMassLnnormalClass *klass)
 {
   GObjectClass* object_class = G_OBJECT_CLASS (klass);
   NcClusterMassClass *parent_class = NC_CLUSTER_MASS_CLASS (klass);
+  NcmModelClass *model_class = NCM_MODEL_CLASS (klass);
 
   parent_class->P              = &_nc_cluster_mass_lnnormal_p;
   parent_class->intP           = &_nc_cluster_mass_lnnormal_intp;
@@ -192,8 +194,14 @@ nc_cluster_mass_lnnormal_class_init (NcClusterMassLnnormalClass *klass)
   parent_class->impl = NC_CLUSTER_MASS_IMPL_ALL;
 
   object_class->finalize     = &_nc_cluster_mass_lnnormal_finalize;
-  object_class->set_property = &_nc_cluster_mass_lnnormal_set_property;
-  object_class->get_property = &_nc_cluster_mass_lnnormal_get_property;
+  object_class->set_property = &ncm_model_class_set_property;
+  object_class->get_property = &ncm_model_class_get_property;
+
+  model_class->set_property = &_nc_cluster_mass_lnnormal_set_property;
+  model_class->get_property = &_nc_cluster_mass_lnnormal_get_property;
+
+  ncm_model_class_add_params (model_class, 0, 0, PROP_SIZE);
+  ncm_model_class_set_name_nick (model_class, "Ln-normal distribution", "Ln_Normal");
 
   /**
    * NcClusterMassLnnormal:lnMobs_min:
