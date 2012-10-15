@@ -70,12 +70,20 @@ main (gint argc, gchar *argv[])
   g_option_context_add_group (context, nc_de_opt_get_data_cluster_group (&de_data_cluster, &de_data_cluster_entries));
   g_option_context_add_group (context, nc_de_opt_get_fit_group (&de_fit, &de_fit_entries));
 
-  if(!g_option_context_parse (context, &argc, &argv, &error))
+
   {
-	fprintf (stderr, "Invalid run options:\n  %s.\n", error->message);
-	printf (g_option_context_get_help (context, TRUE, NULL));
-	g_option_context_free (context);
-	return 0;
+	gint p_argc = argc;
+	gchar **p_argv = g_strdupv (argv);
+
+	if(!g_option_context_parse (context, &p_argc, &p_argv, &error))
+	{
+	  fprintf (stderr, "Invalid run options:\n  %s.\n", error->message);
+	  printf (g_option_context_get_help (context, TRUE, NULL));
+	  g_option_context_free (context);
+	  return 0;
+	}
+
+	g_strfreev (p_argv);
   }
 
   if (de_run.runconf != NULL)
@@ -93,6 +101,7 @@ main (gint argc, gchar *argv[])
 	  printf (g_option_context_get_help (context, TRUE, NULL));
 	  return 0;
 	}
+
 	ncm_cfg_keyfile_to_arg (runconf, "DarkEnergy Model", de_model_entries,        runconf_argv, &runconf_argc);
 	ncm_cfg_keyfile_to_arg (runconf, "Data Simple",      de_data_simple_entries,  runconf_argv, &runconf_argc);
 	ncm_cfg_keyfile_to_arg (runconf, "Data Cluster",     de_data_cluster_entries, runconf_argv, &runconf_argc);
@@ -107,6 +116,15 @@ main (gint argc, gchar *argv[])
 	  g_option_context_free (context);
 	  return 0;
 	}
+
+	if(!g_option_context_parse (context, &argc, &argv, &error))
+	{
+	  fprintf (stderr, "Invalid run options:\n  %s.\n", error->message);
+	  printf (g_option_context_get_help (context, TRUE, NULL));
+	  g_option_context_free (context);
+	  return 0;
+	}
+
 	g_strfreev (runconf_argv);
   }
 
