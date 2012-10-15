@@ -36,34 +36,43 @@
  ************************************************************************************************************/
 
 GOptionGroup *
-nc_de_opt_get_model_group (NcDEModelEntries *de_model)
+nc_de_opt_get_run_group (NcDERunEntries *de_run)
+{
+  GOptionEntry run_entries[] =
+  {
+	{ "runconf",  'c', 0, G_OPTION_ARG_FILENAME, &de_run->runconf, "Configuration file defining a run.",                          NULL },
+	{ "save-run", 's', 0, G_OPTION_ARG_FILENAME, &de_run->saverun, "Save run confuguration to file.",                             NULL },
+	{ NULL }
+  };
+  GOptionGroup *run_group = g_option_group_new ("run", " - Run configuration options", "Show help options related to a run", NULL, NULL);
+  g_option_group_add_entries (run_group, run_entries);
+
+  return run_group;
+}
+
+GOptionGroup *
+nc_de_opt_get_model_group (NcDEModelEntries *de_model, GOptionEntry **de_model_entries)
 {
   GOptionEntry model_entries[] =
   {
-	{ "model",    'm', 0, G_OPTION_ARG_STRING, &de_model->model_name, "Name of the darkenergy model to be used.",                      NULL},
-	{ "H0",       'h', 0, G_OPTION_ARG_DOUBLE, &de_model->H0,         "Hubble parameter (Km/s/Mpc)",                                 "H0" },
-	{ "Omega_c",  'c', 0, G_OPTION_ARG_DOUBLE, &de_model->Omega_c,    "Dark matter density",                                         NULL },
-	{ "Omega_x",  'x', 0, G_OPTION_ARG_DOUBLE, &de_model->Omega_x,    "Dark energy density (when changing variable Omega_k)",        NULL },
-	{ "Omega_b",  'b', 0, G_OPTION_ARG_DOUBLE, &de_model->Omega_b,    "Baryonic density",                                            NULL },
-	{ "T_gamma",  't', 0, G_OPTION_ARG_DOUBLE, &de_model->T_gamma,    "CMB radiation temperature in the present epoch",              NULL },
-	{ "n_s",      'n', 0, G_OPTION_ARG_DOUBLE, &de_model->n_s,        "Spectral index",                                              NULL },
-	{ "sigma_8",  's', 0, G_OPTION_ARG_DOUBLE, &de_model->sigma_8,    "Sigma_8",                                                     NULL },
-	{ "omega_0",  'w', 0, G_OPTION_ARG_DOUBLE, &de_model->w[0],       "Equation of state parameter w0",                              "w0" },
-	{ "omega_1",    0, 0, G_OPTION_ARG_DOUBLE, &de_model->w[1],       "Equation of state parameter w1",                              "w1" },
-	{ "omega_2",    0, 0, G_OPTION_ARG_DOUBLE, &de_model->w[2],       "Equation of state parameter w2",                              "w2" },
+	{ "model",    'm', 0, G_OPTION_ARG_STRING, &de_model->model_name, "Name of the darkenergy model to be used.",                    NULL },
 	{ "Omega_k",    0, 0, G_OPTION_ARG_NONE,   &de_model->Omega_k,    "Change variable Omega_x -> Omega_k.",                         NULL },
 	{ "flat",       0, 0, G_OPTION_ARG_NONE,   &de_model->flat,       "Change variable Omega_x -> Omega_k and set Omega_k to zero.", NULL },
 	{ "help-names", 0, 0, G_OPTION_ARG_NONE,   &de_model->help_names, "Print the parameters names of the chosen model", NULL },
 	{ NULL }
   };
   GOptionGroup *model_group = g_option_group_new ("model", " - Dark energy model options", "Show help options related to dark energy model", NULL, NULL);
+
+  *de_model_entries = g_new (GOptionEntry, G_N_ELEMENTS (model_entries));
+  memcpy (*de_model_entries, model_entries, sizeof (model_entries));
+
   g_option_group_add_entries (model_group, model_entries);
 
   return model_group;
 }
 
 GOptionGroup *
-nc_de_opt_get_data_simple_group (NcDEDataSimpleEntries *de_data_simple)
+nc_de_opt_get_data_simple_group (NcDEDataSimpleEntries *de_data_simple, GOptionEntry **de_data_simple_entries)
 {
   GOptionEntry data_simple_entries[] =
   {
@@ -77,13 +86,17 @@ nc_de_opt_get_data_simple_group (NcDEDataSimpleEntries *de_data_simple)
 	{ NULL }
   };
   GOptionGroup *data_simple_group = g_option_group_new ("data", " - Cosmological data options", "Show help options related to the dataset to be used.", NULL, NULL);
+
+  *de_data_simple_entries = g_new (GOptionEntry, G_N_ELEMENTS (data_simple_entries));
+  memcpy (*de_data_simple_entries, data_simple_entries, sizeof (data_simple_entries));
+
   g_option_group_add_entries (data_simple_group, data_simple_entries);
 
   return data_simple_group;
 }
 
 GOptionGroup *
-nc_de_opt_get_data_cluster_group (NcDEDataClusterEntries *de_data_cluster)
+nc_de_opt_get_data_cluster_group (NcDEDataClusterEntries *de_data_cluster, GOptionEntry **de_data_cluster_entries)
 {
   GOptionEntry entries_cluster[] =
   {
@@ -104,6 +117,10 @@ nc_de_opt_get_data_cluster_group (NcDEDataClusterEntries *de_data_cluster)
 	{ NULL }
   };
   GOptionGroup *data_cluster_group = g_option_group_new ("cluster", " - Include cluster number counts\n\t - Use --cluster-id 0 and --catalog to use a fit file catalog\n\t - Use --cluster-id 1 and --catalog to use a text file catalog (plain two columns redshift and ln mass)\n\t - Use --cluster-id 2 to make a mock catalog from theory\n", "Show help options related to cluster", NULL, NULL);
+
+  *de_data_cluster_entries = g_new (GOptionEntry, G_N_ELEMENTS (entries_cluster));
+  memcpy (*de_data_cluster_entries, entries_cluster, sizeof (entries_cluster));
+
   g_option_group_add_entries (data_cluster_group, entries_cluster);
   return data_cluster_group;
 }
@@ -116,7 +133,7 @@ _nc_de_print_fit_list (const gchar *option_name, const gchar *value, gpointer da
 }
 
 GOptionGroup *
-nc_de_opt_get_fit_group (NcDEFitEntries *de_fit)
+nc_de_opt_get_fit_group (NcDEFitEntries *de_fit, GOptionEntry **de_fit_entries)
 {
   GOptionEntry fit_entries[] =
   {
@@ -130,7 +147,6 @@ nc_de_opt_get_fit_group (NcDEFitEntries *de_fit)
 	{ "cr-y",           0, 0, G_OPTION_ARG_INT,          &de_fit->bidim_cr[1],   "Confidence region y parameter", NULL },
 	{ "max-iter",       0, 0, G_OPTION_ARG_INT,          &de_fit->max_iter,      "Max number of iterations used by the minimization algorithms", NULL },
 	{ "err-param",      0, 0, G_OPTION_ARG_STRING_ARRAY, &de_fit->onedim_cr,     "Calculate the one dimensional confidence region", NULL },
-	{ "fit-params",     0, 0, G_OPTION_ARG_STRING,       &de_fit->fit_params,    "Parameters to be fitted, use fit-params H0=fit,Omega_m=fix,...", NULL },
 	{ "resample",       0, 0, G_OPTION_ARG_NONE,         &de_fit->resample,      "Resample model using default params", NULL },
 	{ "msg-level",      0, 0, G_OPTION_ARG_INT,          &de_fit->msg_level,     "Fit message level (0: no msg, 1: simple, 2: full)", NULL },
 	{ "montecarlo",     0, 0, G_OPTION_ARG_INT,          &de_fit->montecarlo,    "Resample the original data 'montecarlo' times.", NULL},
@@ -144,6 +160,10 @@ nc_de_opt_get_fit_group (NcDEFitEntries *de_fit)
 	{ NULL }
   };
   GOptionGroup *fit_group = g_option_group_new ("fit", " - Choices of statistical analysis", "Show help options related to model fitting", NULL, NULL);
+
+  *de_fit_entries = g_new (GOptionEntry, G_N_ELEMENTS (fit_entries));
+  memcpy (*de_fit_entries, fit_entries, sizeof (fit_entries));
+
   g_option_group_add_entries (fit_group, fit_entries);
   return fit_group;
 }

@@ -73,6 +73,9 @@ ncm_fit_new (NcLikelihood *lh, NcmMSet *mset, NcmFitType type, NcmFitGradType gt
 
   ncm_mset_prepare_fparam_map (fit->mset);
 
+  if (ncm_mset_fparam_len (fit->mset) == 0)
+	g_warning ("ncm_fit_new: mset object has 0 free parameters");
+
   fit->data_len = n + nc_likelihood_priors_length (lh);
   fit->fparam_len = ncm_mset_fparam_len (fit->mset);
   fit->dof = fit->data_len - fit->fparam_len;
@@ -374,6 +377,9 @@ ncm_fit_run (NcmFit *fit, gint niters, NcmFitRunMsgs mtype)
   fit->niter = 0;
   fit->n_func_eval = 0;
   fit->n_grad_eval = 0;
+
+  if (ncm_mset_fparam_len (fit->mset) == 0)
+	g_error ("ncm_fit_run: mset object has 0 free parameters");
 
   switch (fit->type)
   {
@@ -1168,6 +1174,10 @@ void
 ncm_fit_numdiff_m2lnL_covar (NcmFit *fit)
 {
   gint ret;
+
+  if (ncm_mset_fparam_len (fit->mset) == 0)
+	g_error ("ncm_fit_numdiff_m2lnL_covar: mset object has 0 free parameters");
+
   ncm_fit_numdiff_m2lnL_hessian (fit, fit->hessian);
   ncm_matrix_memcpy (fit->covar, fit->hessian);
   ncm_matrix_scale (fit->covar, 0.5);

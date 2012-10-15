@@ -36,6 +36,8 @@ void ncm_cfg_init (void);
 void ncm_cfg_enable_gsl_err_handler (void);
 void ncm_cfg_register_model (GType model);
 gchar *ncm_cfg_get_fullpath (gchar *filename, ...);
+void ncm_cfg_keyfile_to_arg (GKeyFile *kfile, gchar *group_name, GOptionEntry *entries, gchar **argv, gint *argc);
+void ncm_cfg_entries_to_keyfile (GKeyFile *kfile, gchar *group_name, GOptionEntry *entries);
 
 gboolean ncm_cfg_load_fftw_wisdom (gchar *filename, ...);
 gboolean ncm_cfg_save_fftw_wisdom (gchar *filename, ...);

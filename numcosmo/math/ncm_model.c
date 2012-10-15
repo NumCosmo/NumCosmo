@@ -125,7 +125,7 @@ _ncm_model_set_sparams (NcmModel *model)
   for (i = 0; i < model_class->sparam_len; i++)
   {
 	NcmSParam *sp = g_ptr_array_index (model_class->sparam, i);
-	g_array_index (model->ptypes, NcmParamType, i) = ncm_sparam_get_fit_type (sp);
+	g_array_index (model->ptypes, NcmParamType, i) = NCM_PARAM_TYPE_FIXED;
 	g_ptr_array_index (model->sparams, i) = ncm_sparam_copy (sp);
 	g_hash_table_insert (model->sparams_name_id, g_strdup (ncm_sparam_name (sp)), GUINT_TO_POINTER (i));
   }
@@ -143,7 +143,7 @@ _ncm_model_set_sparams (NcmModel *model)
 	{
 	  const guint n = pos + j;
 	  NcmSParam *sp = ncm_vparam_peek_sparam (vp, j);
-	  g_array_index (model->ptypes, NcmParamType, n) = ncm_sparam_get_fit_type (sp);
+	  g_array_index (model->ptypes, NcmParamType, n) = NCM_PARAM_TYPE_FIXED;
 	  g_ptr_array_index (model->sparams, n) = ncm_sparam_ref (sp);
 	  g_hash_table_insert (model->sparams_name_id, g_strdup (ncm_sparam_name (sp)), GUINT_TO_POINTER (n));
 	}
@@ -168,7 +168,7 @@ _ncm_model_sparams_remove_reparam (NcmModel *model)
 	  NcmSParam *sp = g_ptr_array_index (model_class->sparam, i);
 	  ncm_sparam_free (g_ptr_array_index (model->sparams, i));
 	  g_ptr_array_index (model->sparams, i) = ncm_sparam_copy (sp);
-	  g_array_index (model->ptypes, NcmParamType, i) = ncm_sparam_get_fit_type (sp);
+	  g_array_index (model->ptypes, NcmParamType, i) = NCM_PARAM_TYPE_FIXED;
 	  g_hash_table_replace (model->sparams_name_id, g_strdup (ncm_sparam_name (sp)), GUINT_TO_POINTER (i));
 	}
   }
@@ -191,7 +191,7 @@ _ncm_model_sparams_remove_reparam (NcmModel *model)
 		NcmSParam *sp = ncm_vparam_peek_sparam (vp, j);
 		ncm_sparam_free (g_ptr_array_index (model->sparams, n));
 		g_ptr_array_index (model->sparams, n) = ncm_sparam_ref (sp);
-		g_array_index (model->ptypes, NcmParamType, n) = ncm_sparam_get_fit_type (sp);
+		g_array_index (model->ptypes, NcmParamType, n) = NCM_PARAM_TYPE_FIXED;
 		g_hash_table_replace (model->sparams_name_id, g_strdup (ncm_sparam_name (sp)), GUINT_TO_POINTER (n));
 	  }
 	}
@@ -208,13 +208,11 @@ _ncm_model_reset_sparams_from_reparam (NcmModel *model)
   for (i = 0; i < model->total_len; i++)
   {
 	NcmSParam *sp = g_ptr_array_index (model->reparam->sparams, i);
-	if (sp == NULL)
-	  sp = g_ptr_array_index (model->sparams, i);
-	else
+	if (sp != NULL)
 	{
 	  ncm_sparam_free (g_ptr_array_index (model->sparams, i));
 	  g_ptr_array_index (model->sparams, i) = ncm_sparam_copy (sp);
-	  g_array_index (model->ptypes, NcmParamType, i) = ncm_sparam_get_fit_type (sp);
+	  g_array_index (model->ptypes, NcmParamType, i) = NCM_PARAM_TYPE_FIXED;
 	  g_hash_table_replace (model->sparams_name_id, g_strdup (ncm_sparam_name (sp)), GUINT_TO_POINTER (i));
 	}
   }

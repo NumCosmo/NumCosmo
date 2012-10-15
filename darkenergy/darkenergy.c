@@ -42,6 +42,7 @@ main (gint argc, gchar *argv[])
   NcDataSet *ds;
   NcLikelihood *lh;
   NcmFit *fit;
+  NcDERunEntries de_run = NC_DE_RUN_ENTRIES;
   NcDEModelEntries de_model = NC_DE_MODEL_ENTRIES;
   NcDEDataSimpleEntries de_data_simple = NC_DE_DATA_SIMPLE_ENTRIES;
   NcDEDataClusterEntries de_data_cluster = NC_DE_DATA_CLUSTER_ENTRIES;
@@ -50,6 +51,10 @@ main (gint argc, gchar *argv[])
   NcmMSet *mset, *fiduc;
   GError *error = NULL;
   GOptionContext *context;
+  GOptionEntry *de_model_entries = NULL;
+  GOptionEntry *de_data_simple_entries = NULL;
+  GOptionEntry *de_data_cluster_entries = NULL;
+  GOptionEntry *de_fit_entries = NULL;
   GPtrArray *ca_array = NULL;
   gchar *full_cmd_line = ncm_cfg_command_line (argv, argc);
 
@@ -59,17 +64,70 @@ main (gint argc, gchar *argv[])
   g_option_context_set_summary (context, "DE Summary <FIXME>");
   g_option_context_set_description (context, "DE Description <FIXME>");
 
-  g_option_context_set_main_group (context, nc_de_opt_get_model_group (&de_model));
-  g_option_context_add_group (context, nc_de_opt_get_data_simple_group (&de_data_simple));
-  g_option_context_add_group (context, nc_de_opt_get_data_cluster_group (&de_data_cluster));
-  g_option_context_add_group (context, nc_de_opt_get_fit_group (&de_fit));
+  g_option_context_set_main_group (context, nc_de_opt_get_run_group (&de_run));
+  g_option_context_add_group (context, nc_de_opt_get_model_group (&de_model, &de_model_entries));
+  g_option_context_add_group (context, nc_de_opt_get_data_simple_group (&de_data_simple, &de_data_simple_entries));
+  g_option_context_add_group (context, nc_de_opt_get_data_cluster_group (&de_data_cluster, &de_data_cluster_entries));
+  g_option_context_add_group (context, nc_de_opt_get_fit_group (&de_fit, &de_fit_entries));
 
   if(!g_option_context_parse (context, &argc, &argv, &error))
   {
-	g_warning ("Invalid options. (%s)", full_cmd_line);
+	fprintf (stderr, "Invalid run options:\n  %s.\n", error->message);
 	printf (g_option_context_get_help (context, TRUE, NULL));
 	g_option_context_free (context);
 	return 0;
+  }
+
+  if (de_run.runconf != NULL)
+  {
+	gchar **runconf_argv = g_new0 (gchar *, 1000);
+	gint runconf_argc = 0;
+	GKeyFile *runconf = g_key_file_new ();
+
+	runconf_argv[0] = g_strdup (argv[0]);
+	runconf_argc++;
+
+	if (!g_key_file_load_from_file (runconf, de_run.runconf, G_KEY_FILE_KEEP_COMMENTS | G_KEY_FILE_KEEP_TRANSLATIONS, &error))
+	{
+	  fprintf (stderr, "Invalid run configuration file: %s\n  %s\n", de_run.runconf, error->message);
+	  printf (g_option_context_get_help (context, TRUE, NULL));
+	  return 0;
+	}
+	ncm_cfg_keyfile_to_arg (runconf, "DarkEnergy Model", de_model_entries,        runconf_argv, &runconf_argc);
+	ncm_cfg_keyfile_to_arg (runconf, "Data Simple",      de_data_simple_entries,  runconf_argv, &runconf_argc);
+	ncm_cfg_keyfile_to_arg (runconf, "Data Cluster",     de_data_cluster_entries, runconf_argv, &runconf_argc);
+	ncm_cfg_keyfile_to_arg (runconf, "Fit",              de_fit_entries,          runconf_argv, &runconf_argc);
+
+	g_key_file_free (runconf);
+
+	if(!g_option_context_parse (context, &runconf_argc, &runconf_argv, &error))
+	{
+	  fprintf (stderr, "Invalid configuration file options:\n  %s.\n", error->message);
+	  printf (g_option_context_get_help (context, TRUE, NULL));
+	  g_option_context_free (context);
+	  return 0;
+	}
+	g_strfreev (runconf_argv);
+  }
+
+  if (de_run.saverun != NULL)
+  {
+	GKeyFile *runconf = g_key_file_new ();
+	gchar *runconf_data;
+	gsize len;
+
+    ncm_cfg_entries_to_keyfile (runconf, "DarkEnergy Model", de_model_entries);
+    ncm_cfg_entries_to_keyfile (runconf, "Data Simple",      de_data_simple_entries);
+    ncm_cfg_entries_to_keyfile (runconf, "Data Cluster",     de_data_cluster_entries);
+    ncm_cfg_entries_to_keyfile (runconf, "Fit",              de_fit_entries);
+
+	runconf_data = g_key_file_to_data (runconf, &len, &error);
+	if (error != NULL)
+	  fprintf (stderr, "Error converting options to configuration file:\n  %s\n", error->message);
+	if (!g_file_set_contents (de_run.saverun, runconf_data, len, &error))
+	  fprintf (stderr, "Error saving configuration file to disk:\n  %s\n", error->message);
+	g_free (runconf_data);
+	g_key_file_free (runconf);
   }
 
   if (de_fit.file_out != NULL)
@@ -81,8 +139,9 @@ main (gint argc, gchar *argv[])
       de_data_simple.H_id == -1 &&
       de_data_simple.cluster_id == -1)
   {
-	g_warning ("No dataset was chosen.");
+	printf ("No action or data was chosen.\n");
 	printf (g_option_context_get_help (context, TRUE, NULL));
+	g_option_context_free (context);
 	return 0;
   }
 
@@ -107,54 +166,6 @@ main (gint argc, gchar *argv[])
 
   lh = nc_likelihood_new (ds);
 
-  {
-	ncm_model_params_set_all (NCM_MODEL (model),
-	                           de_model.H0, de_model.Omega_c, de_model.Omega_x,
-	                           de_model.T_gamma, de_model.Omega_b, de_model.n_s,
-	                           de_model.sigma_8, de_model.w[0], de_model.w[1],
-	                           de_model.w[2]);
-  }
-
-  if (de_fit.fit_params != NULL)
-  {
-	gchar **cmds, **cmds_orig;
-	gboolean have_free = TRUE;
-
-	cmds = g_strsplit (de_fit.fit_params, ",", 0);
-	cmds_orig = cmds;
-
-	//ncm_mset_param_set_all_ftype (mset, NCM_PARAM_TYPE_FIXED);
-
-	for (; cmds[0] != NULL && FALSE; cmds = &cmds[1])
-	{
-	  gchar **name_cmd = g_strsplit (cmds[0], "=", 2);
-	  gint index;
-
-	  if (name_cmd[1] == NULL)
-		g_error ("Usage --fit-params H0=fit, with the equal symbol =");
-
-	  index = ncm_model_param_index_from_name (NCM_MODEL (model), name_cmd[0]);
-	  if (index < 0)
-		g_error ("Parameter (%s) not found, use --help-names to obtain a list of parameters names", name_cmd[0]);
-
-	  if ((strncasecmp (name_cmd[1], "fix", 3) == 0) || (strncasecmp (name_cmd[1], "0", 1) == 0))
-		ncm_mset_param_set_ftype (mset, NC_HICOSMO_ID, index, NCM_PARAM_TYPE_FIXED);
-	  else if ((strncasecmp (name_cmd[1], "fit", 3) == 0) || (strncasecmp (name_cmd[1], "1", 1) == 0))
-	  {
-		ncm_mset_param_set_ftype (mset, NC_HICOSMO_ID, index, NCM_PARAM_TYPE_FREE);
-		have_free = TRUE;
-	  }
-	  else
-		g_error ("Command (%s) not recognised, use fix or 0 to keep the parameter fixed and fit or 1 to fit this parameter", name_cmd[1]);
-
-	  g_strfreev (name_cmd);
-	}
-	g_strfreev (cmds_orig);
-
-	if (!have_free)
-	  g_error ("No parameter was set free");
-  }
-
   if (de_model.flat)
   {
 	nc_hicosmo_de_omega_x2omega_k (model);
@@ -164,6 +175,7 @@ main (gint argc, gchar *argv[])
   else if (de_model.Omega_k)
   {
 	nc_hicosmo_de_omega_x2omega_k (model);
+	ncm_mset_param_set_ftype (mset, NC_HICOSMO_ID, NC_HICOSMO_DE_OMEGA_X, NCM_PARAM_TYPE_FREE);
   }
 
   if (de_data_simple.snia_id != -1)
@@ -213,8 +225,6 @@ main (gint argc, gchar *argv[])
 
   if (de_fit.fit)
   {
-	if (de_fit.fit_params == NULL)
-	  g_error ("No parameter specified, use --fit-params, or --help-names to obtain a list of parameters avaliable.");
 	fit->params_prec_target = 1e-5;
 	ncm_fit_run (fit, de_fit.max_iter, de_fit.msg_level);
 	ncm_fit_log_info (fit);

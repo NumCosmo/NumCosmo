@@ -22,6 +22,21 @@
  * with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+typedef struct _NcDERunEntries NcDERunEntries;
+
+/**
+ * NcDERunEntries:
+ *
+ * FIXME
+ */
+struct _NcDERunEntries
+{
+  gchar *runconf;
+  gchar *saverun;
+};
+
+#define NC_DE_RUN_ENTRIES {NULL, NULL}
+
 typedef struct _NcDEModelEntries NcDEModelEntries;
 
 /**
@@ -32,20 +47,12 @@ typedef struct _NcDEModelEntries NcDEModelEntries;
 struct _NcDEModelEntries
 {
   gchar *model_name;
-  gdouble H0;
-  gdouble Omega_c;
-  gdouble Omega_x;
-  gdouble Omega_b;
-  gdouble T_gamma;
-  gdouble n_s;
-  gdouble sigma_8;
-  gdouble w[3];
   gboolean flat;
   gboolean Omega_k;
   gboolean help_names;
 };
 
-#define NC_DE_MODEL_ENTRIES {"NcHICosmoDEXcdm", 70.0, 0.25, 0.7, 0.05, 2.726, 1.0, 0.9, {-1.0, 0.0, 0.0}, FALSE, FALSE, FALSE }
+#define NC_DE_MODEL_ENTRIES {"NcHICosmoDEXcdm", FALSE, FALSE, FALSE }
 
 typedef struct _NcDEDataSimpleEntries NcDEDataSimpleEntries;
 
@@ -112,7 +119,6 @@ struct _NcDEFitEntries
   gint nsigma_fisher;
   gint bidim_cr[2];
   gchar **onedim_cr;
-  gchar *fit_params;
   gint max_iter;
   gboolean resample;
   gint msg_level;
@@ -127,12 +133,13 @@ struct _NcDEFitEntries
 };
 
 #ifdef NUMCOSMO_HAVE_NLOPT
-#define NC_DE_FIT_ENTRIES { NULL, NCM_FIT_TYPE_NLOPT_LN_NELDERMEAD, NCM_FIT_GRAD_NUMDIFF_FORWARD, -1, -1, {-1, -1}, NULL, NULL, NC_BF_MAX_ITER, FALSE, NCM_FIT_RUN_MSGS_SIMPLE, -1, 0, FALSE, FALSE, FALSE, FALSE, FALSE}
+#define NC_DE_FIT_ENTRIES { NULL, NCM_FIT_TYPE_NLOPT_LN_NELDERMEAD, NCM_FIT_GRAD_NUMDIFF_FORWARD, -1, -1, {-1, -1}, NULL, NC_BF_MAX_ITER, FALSE, NCM_FIT_RUN_MSGS_SIMPLE, -1, 0, FALSE, FALSE, FALSE, FALSE, FALSE}
 #else
-#define NC_DE_FIT_ENTRIES { NULL, NCM_FIT_TYPE_SIMPLEX,             NCM_FIT_GRAD_NUMDIFF_FORWARD, -1, -1, {-1, -1}, NULL, NULL, NC_BF_MAX_ITER, FALSE, NCM_FIT_RUN_MSGS_SIMPLE, -1, 0, FALSE, FALSE, FALSE, FALSE, FALSE}
+#define NC_DE_FIT_ENTRIES { NULL, NCM_FIT_TYPE_SIMPLEX,             NCM_FIT_GRAD_NUMDIFF_FORWARD, -1, -1, {-1, -1}, NULL, NC_BF_MAX_ITER, FALSE, NCM_FIT_RUN_MSGS_SIMPLE, -1, 0, FALSE, FALSE, FALSE, FALSE, FALSE}
 #endif
 
-GOptionGroup *nc_de_opt_get_model_group (NcDEModelEntries *de_model);
-GOptionGroup *nc_de_opt_get_data_simple_group (NcDEDataSimpleEntries *de_data_simple);
-GOptionGroup *nc_de_opt_get_data_cluster_group (NcDEDataClusterEntries *de_data_cluster);
-GOptionGroup *nc_de_opt_get_fit_group (NcDEFitEntries *de_fit_group);
+GOptionGroup *nc_de_opt_get_run_group (NcDERunEntries *de_run);
+GOptionGroup *nc_de_opt_get_model_group (NcDEModelEntries *de_model, GOptionEntry **de_model_entries);
+GOptionGroup *nc_de_opt_get_data_simple_group (NcDEDataSimpleEntries *de_data_simple, GOptionEntry **de_data_simple_entries);
+GOptionGroup *nc_de_opt_get_data_cluster_group (NcDEDataClusterEntries *de_data_cluster, GOptionEntry **de_data_cluster_entries);
+GOptionGroup *nc_de_opt_get_fit_group (NcDEFitEntries *de_fit_group, GOptionEntry **de_fit_entries);

@@ -216,7 +216,7 @@ ncm_cfg_set_logfile (gchar *filename)
 	_log_stream = out;
   else
   {
-	fprintf (stderr, "Can't open logfile (%s)\n", filename);
+	fprintf (stderr, "ncm_cfg_set_logfile: Can't open logfile (%s)\n", filename);
 	exit (-1);
   }
 }
@@ -280,6 +280,120 @@ ncm_cfg_get_fullpath (gchar *filename, ...)
 
   g_free (file);
   return full_filename;
+}
+
+/**
+ * ncm_cfg_keyfile_to_arg:
+ * @kfile: FIXME
+ * @group_name: FIXME
+ * @entries: FIXME
+ * @argv: FIXME
+ * @argc: FIXME
+ *
+ * FIXME
+ *
+ * Returns: FIXME
+ */
+void
+ncm_cfg_keyfile_to_arg (GKeyFile *kfile, gchar *group_name, GOptionEntry *entries, gchar **argv, gint *argc)
+{
+  if (g_key_file_has_group (kfile, group_name))
+  {
+	GError *error = NULL;
+	gint i;
+	for (i = 0; entries[i].long_name != NULL; i++)
+	{
+	  if (g_key_file_has_key (kfile, group_name, entries[i].long_name, &error))
+	  {
+		gchar *val = g_key_file_get_value (kfile, group_name, entries[i].long_name, &error);
+		if (entries[i].arg == G_OPTION_ARG_NONE)
+		{
+		  if ((g_ascii_strcasecmp (val, "1") == 0) ||
+		      (g_ascii_strcasecmp (val, "true") == 0))
+		  {
+			argv[argc[0]++] = g_strdup_printf ("--%s", entries[i].long_name);
+		  }
+		  g_free (val);
+		}
+		else if (strlen (val) > 0)
+		{
+		  argv[argc[0]++] = g_strdup_printf ("--%s", entries[i].long_name);
+		  argv[argc[0]++] = val;
+		}
+	  }
+	}
+  }
+}
+
+/**
+ * ncm_cfg_keyfile_to_arg:
+ * @kfile: FIXME
+ * @group_name: FIXME
+ * @entries: FIXME
+ * @argv: FIXME
+ * @argc: FIXME
+ *
+ * FIXME
+ *
+ * Returns: FIXME
+ */
+void
+ncm_cfg_entries_to_keyfile (GKeyFile *kfile, gchar *group_name, GOptionEntry *entries)
+{
+  GError *error = NULL;
+  gint i;
+  for (i = 0; entries[i].long_name != NULL; i++)
+  {
+	switch (entries[i].arg)
+	{
+	  case G_OPTION_ARG_NONE:
+	  {
+		gboolean arg_b = ((gboolean *)entries[i].arg_data)[0];
+		g_key_file_set_boolean (kfile, group_name, entries[i].long_name, arg_b);
+		break;
+	  }
+	  case G_OPTION_ARG_STRING:
+	  case G_OPTION_ARG_FILENAME:
+	  {
+		gchar **arg_s = (gchar **)entries[i].arg_data;
+		g_key_file_set_string (kfile, group_name, entries[i].long_name, *arg_s != NULL ? *arg_s : "");
+		break;
+	  }
+	  case G_OPTION_ARG_STRING_ARRAY:
+	  case G_OPTION_ARG_FILENAME_ARRAY:
+	  {
+		const gchar ***arg_as = (const gchar ***)entries[i].arg_data;
+		gchar ***arg_cas = (gchar ***)entries[i].arg_data;
+		if (*arg_cas != NULL)
+		  g_key_file_set_string_list (kfile, group_name, entries[i].long_name, *arg_as, g_strv_length (*arg_cas));
+		else
+		  g_key_file_set_string_list (kfile, group_name, entries[i].long_name, NULL, 0);
+		break;
+	  }
+	  case G_OPTION_ARG_INT:
+	  {
+		gint arg_i = ((gint *)entries[i].arg_data)[0];
+		g_key_file_set_integer (kfile, group_name, entries[i].long_name, arg_i);
+		break;
+	  }
+	  case G_OPTION_ARG_INT64:
+	  {
+		gint64 arg_l = ((gint64 *)entries[i].arg_data)[0];
+		g_key_file_set_int64 (kfile, group_name, entries[i].long_name, arg_l);
+		break;
+	  }
+	  case G_OPTION_ARG_DOUBLE:
+	  {
+		gdouble arg_d = ((double *)entries[i].arg_data)[0];
+		g_key_file_set_double (kfile, group_name, entries[i].long_name, arg_d);
+		break;
+	  }
+	  default:
+		//g_error ("ncm_cfg_entries_to_keyfile: cannot convert entry type %d to keyfile", entries[i].arg);
+		break;
+	}
+	g_key_file_set_comment (kfile, group_name, entries[i].long_name, entries[i].description, &error);
+  }
 }
 
 #ifdef NUMCOSMO_HAVE_FFTW3
