@@ -1,6 +1,4 @@
 
-INCLUDES = 
-
 AM_CFLAGS = \
 	-Wall \
 	$(GLIB_CFLAGS) \

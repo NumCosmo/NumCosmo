@@ -260,7 +260,7 @@ AC_ARG_WITH(atlas-extra-libs,
 AC_MSG_RESULT($ATLAS_EXTRA_LIBS)
 
 AC_CHECK_LIB([$ATLAS_CBLAS], [cblas_dgemv], [have_atlas_cblas='yes'],[],[$ATLAS_PATH -l$ATLAS $ATLAS_EXTRA_LIBS])
-AC_CHECK_LIB([$ATLAS_LAPACK], [sgesv_], [have_lapack='yes'],[],[])
+AC_CHECK_LIB([$ATLAS_LAPACK], [sgesv_], [have_lapack='yes'],[],[$ATLAS_PATH -l$ATLAS_CBLAS -l$ATLAS $ATLAS_EXTRA_LIBS])
 
 if test "x$have_atlas_cblas" = "xyes"; then
   GSL_LIBS=`echo $GSL_LIBS | sed 's/\-lgslcblas//g'`
