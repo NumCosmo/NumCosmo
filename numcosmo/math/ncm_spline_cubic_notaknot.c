@@ -191,6 +191,13 @@ _ncm_spline_notaknot_prepare_base (NcmSpline *s)
 	                                               &offdiag_vec.vector,
 	                                               &g_vec.vector,
 	                                               &solution_vec.vector);
+	  if (status != GSL_SUCCESS)
+	  {
+		gint i;
+		for (i = 0; i < s->len; i++)
+		  printf ("x= % 20.8g y = % 20.8g\n", ncm_vector_get (s->xv, i), ncm_vector_get (s->yv, i));
+	  }
+	  
 	  NC_TEST_GSL_RESULT ("_ncm_spline_notaknot_prepare[gsl_linalg_solve_symm_tridiag]", status);
 	}
 #endif

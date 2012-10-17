@@ -302,6 +302,8 @@ _nc_cluster_abundance_lnm_p_d2n_integrand (gdouble lnM, gpointer params)
   const gdouble p_M_Mobs = nc_cluster_mass_p (cad->m, obs_data->model, lnM, obs_data->z, obs_data->lnM_obs, obs_data->lnM_obs_params);
   const gdouble d2NdzdlnM = nc_mass_function_d2n_dzdlnm (cad->mfp, obs_data->model, lnM, obs_data->z);
 
+  //printf ("pM = % 20.8g d2NdzdlnM = % 20.8g res = % 20.8g\n", p_M_Mobs, d2NdzdlnM, p_M_Mobs * d2NdzdlnM);
+  
   return p_M_Mobs * d2NdzdlnM;
 }
 

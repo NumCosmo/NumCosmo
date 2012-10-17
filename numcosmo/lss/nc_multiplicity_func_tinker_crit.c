@@ -89,7 +89,7 @@ _nc_multiplicity_func_tinker_crit_eval (NcMultiplicityFunc *mulf, NcHICosmo *mod
   NcMultiplicityFuncTinkerCrit *mulf_tinker_crit = NC_MULTIPLICITY_FUNC_TINKER_CRIT (mulf);
   const gdouble Omega_m = nc_hicosmo_Omega_m (model);
   const gdouble E2 = nc_hicosmo_E2 (model, z);
-  gdouble Delta_z = mulf_tinker_crit->Delta * E2 / (Omega_m * gsl_pow_3 (1.0 + z));
+  const gdouble Delta_z = mulf_tinker_crit->Delta * E2 / (Omega_m * gsl_pow_3 (1.0 + z));
   const gdouble log10_Delta_z = log10 (Delta_z);
   const gdouble log10_200 = log10 (200.0);
   const gdouble log10_300 = log10 (300.0);
@@ -140,24 +140,35 @@ _nc_multiplicity_func_tinker_crit_eval (NcMultiplicityFunc *mulf, NcHICosmo *mod
   gint i;
   gdouble A0 = 0.0, a0 = 0.0, b0 = 0.0, c = 0.0;
 
-  if (Delta_z > 3200.0)
+  if (log10_Delta_z > log10_3200)
   {
-	//g_assert (Delta_z <= 3200.0);
-	Delta_z = 3200.0;
-	g_warning ("Delta > 3200 but replaced by 3200.\n");
+	const gdouble a0_fit_3200 = 1.43 + pow (log10_3200 - 2.3, 1.5);
+	const gdouble b0_fit_3200 = 1.0 + pow (log10_3200 - 1.6, -1.5);
+	const gdouble c_fit_3200 = 1.2 + pow (log10_3200 - 2.35, 1.6);
+	const gdouble A0_s_3200 = calc_polynomial (coef_A[7], log10_3200);
+	const gdouble a0_s_3200 = calc_polynomial (coef_a[7], log10_3200);
+	const gdouble b0_s_3200 = calc_polynomial (coef_b[7], log10_3200);
+	const gdouble c_s_3200  = calc_polynomial (coef_c[7], log10_3200);
+
+	A0 = A0_s_3200;
+	a0 = a0_s_3200 / a0_fit_3200 * (1.43 + pow (log10_Delta_z - 2.3, 1.5));
+	b0 = b0_s_3200 / b0_fit_3200 * (1.0 + pow (log10_3200 - 1.6, -1.5));
+	c = c_s_3200 / c_fit_3200 * (1.2 + pow (log10_3200 - 2.35, 1.6));
   }
-  
-  for (i = 0; i < 8; i++)
+  else
   {
-	if (log10_Delta_z >= coef_A[i][1])
-	  continue;
-	else 
+	for (i = 0; i < 8; i++)
 	{
-	  A0 = calc_polynomial (coef_A[i], log10_Delta_z);
-	  a0 = calc_polynomial (coef_a[i], log10_Delta_z);
-	  b0 = calc_polynomial (coef_b[i], log10_Delta_z);
-	  c = calc_polynomial (coef_c[i], log10_Delta_z);
-	  break;
+	  if (log10_Delta_z >= coef_A[i][1])
+		continue;
+	  else 
+	  {
+		A0 = calc_polynomial (coef_A[i], log10_Delta_z);
+		a0 = calc_polynomial (coef_a[i], log10_Delta_z);
+		b0 = calc_polynomial (coef_b[i], log10_Delta_z);
+		c = calc_polynomial (coef_c[i], log10_Delta_z);
+		break;
+	  }
 	}
   }
   
@@ -169,6 +180,7 @@ _nc_multiplicity_func_tinker_crit_eval (NcMultiplicityFunc *mulf, NcHICosmo *mod
 	const gdouble b = b0 * pow(1.0 + z, -alpha);
 	const gdouble f_Tinker_Delta_spline = A * (pow(sigma / b, -a) + 1.0) * exp(-c / (sigma * sigma));
 
+	//printf ("% 5.5g % 5.5g % 20.15g % 20.15g % 20.15g % 20.15g\n", z, Delta_z, A0, a0, b0, c);
 	//printf ("NEW % 5.5g % 5.5g % 20.15g % 20.15g % 20.15g % 20.15g % 20.15g % 20.15g % 20.15g % 20.15g\n", z, Delta_z, sigma, A, a, b, c, f_Tinker_Delta_spline, Omega_m, E2);
 
 	return f_Tinker_Delta_spline;

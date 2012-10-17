@@ -288,7 +288,8 @@ nc_mass_function_dn_dlnm (NcMassFunction *mfp, NcHICosmo *model, gdouble lnM, gd
   //gdouble sigma = sqrt(var0) * growth;
   gdouble f = nc_multiplicity_func_eval (mfp->mulf, model, sigma, z);
   gdouble dn_dlnM = -(1.0 / (3.0 * M_rho)) * f * 0.5 * dlnvar0_dlnR;	/* dn/dlnM = - (\rho/3M) * f * (R/\sigma)* dsigma_dR */
-  //printf ("multip % 20.15g % 20.15g % 20.15g\n", -(1.0 / (3.0 * M_rho)), f, 0.5 * dlnvar0_dlnR);
+
+  //printf ("% 20.15g f = % 20.15g % 20.15g\n", -(1.0 / (3.0 * M_rho)), f, 0.5 * dlnvar0_dlnR);
 
   return dn_dlnM;
 }
@@ -645,8 +646,8 @@ _encapsulated_z (gdouble z, gpointer p)
   gdouble A = args->mfp->area_survey *
 	nc_mass_function_dv_dzdomega (args->mfp, args->model, z) *
 	nc_mass_function_dn_dlnm (args->mfp, args->model, args->lnM, z);
-
-  //printf ("1 z %.5g lnM %.5g d2N % 20.15g mf % 20.15g\n", z, args->lnM, A, nc_mass_function_dn_dlnm (args->mfp, args->model, args->lnM, z));
+ 
+  //printf ("z %.5g lnM %.5g d2N % 20.15g mf % 20.15g dV % 20.15g\n", z, args->lnM, A, nc_mass_function_dn_dlnm (args->mfp, args->model, args->lnM, z), nc_mass_function_dv_dzdomega (args->mfp, args->model, z));
   return A;
 
   //return args->mfp->area_survey *
