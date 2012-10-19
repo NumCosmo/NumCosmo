@@ -106,7 +106,11 @@ nc_de_data_cluster_new (NcDistance *dist, NcmMSet *mset, NcDEDataClusterEntries 
       nc_data_cluster_abundance_true_data (dca_unbinned, de_data_cluster->use_true_data);
 
 	  if (de_data_cluster->save_cata != NULL)
+#ifdef NUMCOSMO_HAVE_CFITSIO
 		nc_cluster_abundance_catalog_save (dca_unbinned, de_data_cluster->save_cata, TRUE);
+#else
+                g_error ("darkenergy: cannot save file numcosmo built without support for fits files");
+#endif /* HAVE_CONFIG_H */
 	  _nc_de_data_cluster_append (de_data_cluster, dca_unbinned, ds);
 	  g_ptr_array_add (ca_array, dca_unbinned);
 	}
