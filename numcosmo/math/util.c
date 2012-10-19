@@ -100,7 +100,8 @@ ncm_random_seed ()
   }
   else
   {
-	fread (&seed, sizeof(seed), 1, devrandom);
+	if (fread (&seed, sizeof(seed), 1, devrandom) != 1)
+	  g_error ("ncm_random_seed: io error");
 	fclose (devrandom);
   }
 

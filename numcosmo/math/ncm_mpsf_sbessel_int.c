@@ -561,7 +561,10 @@ ncm_mpsf_sbessel_jl_xj_integrate_spline_save (NcmMpsfSBesselIntSpline *int_jlspl
   g_assert (int_jlspline->prepared == TRUE);
   FILE *f = ncm_cfg_fopen (filename, "w");
   gchar magic[5] = "NcSBR";
-  fwrite (magic, 1, 5, f);
+
+  if (fwrite (magic, 1, 5, f) != 5)
+    g_error ("ncm_mpsf_sbessel_jl_xj_integrate_spline_save: io error");
+
   NCM_WRITE_UINT32(f, int_jlspline->prec);
   ncm_grid_write (int_jlspline->x, f);
   ncm_grid_write (int_jlspline->k, f);
@@ -596,7 +599,8 @@ ncm_mpsf_sbessel_jl_xj_integrate_spline_load (gchar *filename)
   NcmMpsfSBesselIntSpline *int_jlspline;
   guint32 prec;
 
-  fread (magic, 1, 5, f);
+  if (fread (magic, 1, 5, f) != 5)
+    g_error ("ncm_mpsf_sbessel_jl_xj_integrate_spline_load: io error");
   NCM_READ_UINT32(f, prec);
   x_grid = ncm_grid_read (f);
   k_grid = ncm_grid_read (f);

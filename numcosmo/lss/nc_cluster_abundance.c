@@ -1091,15 +1091,19 @@ nc_cluster_abundance_realizations_read_from_file (gchar *file_realization, gint 
 	  for (i = 0; i < z_total; i++)
 	  {
 		gdouble z;
-		fscanf(frealization, "%lg\n", &z);
+		if (fscanf (frealization, "%lg\n", &z) < 1)
+		  g_error ("nc_cluster_abundance_realizations_read_from_file: io error");
 		//        printf ("%lg %u\n", z, z_total);
 		g_array_append_val(realization_z, z);
 	  }
 	  g_ptr_array_add (realizations, realization_z);
 	}
 
-	fscanf(frealization, " ");
-	fscanf(frealization, " ");
+	if (fscanf(frealization, " ") < 1)
+	  g_error ("nc_cluster_abundance_realizations_read_from_file: io error");
+	if (fscanf(frealization, " ") < 1)
+	  g_error ("nc_cluster_abundance_realizations_read_from_file: io error");
+
 	file_position = ftell(frealization);
   }
 
