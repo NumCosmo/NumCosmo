@@ -1,0 +1,27 @@
+NcClusterMass
+
+	* NcClusterMass object was adapted to NcmModel.
+	* Now the parameters of the mass-observable (M-O) 
+	  relation can be fitted. Therefore it is able to 
+	  simultaneously fit both M-O and cosmological 
+	  parameters (self-calibration).
+
+	* The integrals of NcClusterMassVanderlinde and 
+	  NcClusterMassBenson were optimized.
+	  Vanderlinde et al. http://arxiv.org/abs/1003.0003.
+	  Benson et al. http://arxiv.org/abs/1112.5435.
+
+Tinker Multiplicity Function: improvement
+
+	* Tinker et al. multiplicity function, when dark 
+	  matter halo mass is defined in terms of the 
+	  critical density, is computed using a spline 
+	  defined in the interval 200 <= Delta(z) <= 3200.
+
+	* Improvement: This function was extended to 
+	  Delta(z) > 3200. In this case the multiplicity 
+	  function is computed using the fitting function 
+	  given by Eqs.(B1 -- B4) in 
+	  http://arxiv.org/abs/0803.2706. This extension 
+	  was done properly to ensure the continuity of 
+	  the multiplicity function.
