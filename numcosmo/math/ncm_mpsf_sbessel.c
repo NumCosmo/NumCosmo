@@ -232,9 +232,9 @@ ncm_mpsf_sbessel_recur_read (FILE *f)
 {
   guint32 prec;
   NcmMpsfSBesselRecur *jlrec;
-  NCM_READ_UINT32(f, prec);
+  NCM_READ_UINT32 (f, prec);
   jlrec = ncm_mpsf_sbessel_recur_new (prec);
-  NCM_READ_INT32(f, jlrec->l);
+  NCM_READ_INT32 (f, jlrec->l);
   ncm_mpq_inp_raw (jlrec->q, f);
   ncm_mpfr_inp_raw (jlrec->x, f);
   ncm_mpfr_inp_raw (jlrec->jl[0], f);

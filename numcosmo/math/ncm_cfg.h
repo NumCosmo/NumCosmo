@@ -84,21 +84,21 @@ typedef union _NcmDoubleInt64
   gdouble x;
 } NcmDoubleInt64;
 
-#define NCM_WRITE_INT32(_ff,_ii) do { gint32 _temp_i = GINT32_TO_BE ((_ii)); fwrite (&_temp_i, sizeof(gint32), (1), _ff); } while (FALSE)
-#define NCM_WRITE_UINT32(_ff,_ii) do { guint32 _temp_i = GUINT32_TO_BE ((_ii)); fwrite (&_temp_i, sizeof(guint32), (1), _ff); } while (FALSE)
+#define NCM_WRITE_INT32(_ff,_ii) do { gint32 _temp_i = GINT32_TO_BE ((_ii)); fwrite (&_temp_i, sizeof(gint32), (1), _ff) == 1 || g_error ("NCM_WRITE_INT32: io error"); } while (FALSE)
+#define NCM_WRITE_UINT32(_ff,_ii) do { guint32 _temp_i = GUINT32_TO_BE ((_ii)); fwrite (&_temp_i, sizeof(guint32), (1), _ff)== 1 || g_error ("NCM_WRITE_UINT32: io error"); } while (FALSE)
 
-#define NCM_WRITE_INT64(_ff,_ii) do { gint64 _temp_i = GINT64_TO_BE ((_ii)); fwrite (&_temp_i, sizeof(gint64), (1), _ff); } while (FALSE)
-#define NCM_WRITE_UINT64(_ff,_ii) do { guint64 _temp_i = GUINT64_TO_BE ((_ii)); fwrite (&_temp_i, sizeof(guint64), (1), _ff); } while (FALSE)
+#define NCM_WRITE_INT64(_ff,_ii) do { gint64 _temp_i = GINT64_TO_BE ((_ii)); fwrite (&_temp_i, sizeof(gint64), (1), _ff) == 1 || g_error ("NCM_WRITE_INT64: io error"); } while (FALSE)
+#define NCM_WRITE_UINT64(_ff,_ii) do { guint64 _temp_i = GUINT64_TO_BE ((_ii)); fwrite (&_temp_i, sizeof(guint64), (1), _ff) == 1 || g_error ("NCM_WRITE_INT64: io error"); } while (FALSE)
 
-#define NCM_WRITE_DOUBLE(_ff,_ii) do { NcmDoubleInt64 _iii; _iii.x = _ii; _iii.i = GINT64_TO_BE ((_iii.i)); fwrite (&_iii.i, sizeof(gint64), (1), _ff); } while (FALSE)
+#define NCM_WRITE_DOUBLE(_ff,_ii) do { NcmDoubleInt64 _iii; _iii.x = _ii; _iii.i = GINT64_TO_BE ((_iii.i)); fwrite (&_iii.i, sizeof(gint64), (1), _ff) == 1 || g_error ("NCM_WRITE_DOUBLE: io error"); } while (FALSE)
 
-#define NCM_READ_INT32(_ff,_ii) do { gint32 _temp_i; fread (&_temp_i, sizeof(gint32), (1), _ff); _ii = GINT32_FROM_BE (_temp_i); } while (FALSE)
-#define NCM_READ_UINT32(_ff,_ii) do { guint32 _temp_i; fread (&_temp_i, sizeof(guint32), (1), _ff); _ii = GUINT32_FROM_BE (_temp_i); } while (FALSE)
+#define NCM_READ_INT32(_ff,_ii) do { gint32 _temp_i; fread (&_temp_i, sizeof(gint32), (1), _ff) == 1 || g_error ("NCM_READ_INT32: io error"); _ii = GINT32_FROM_BE (_temp_i); } while (FALSE)
+#define NCM_READ_UINT32(_ff,_ii) do { guint32 _temp_i; fread (&_temp_i, sizeof(guint32), (1), _ff) == 1 || g_error ("NCM_READ_UINT32: io error"); _ii = GUINT32_FROM_BE (_temp_i); } while (FALSE)
 
-#define NCM_READ_INT64(_ff,_ii) do { gint64 _temp_i; fread (&_temp_i, sizeof(gint64), (1), _ff); _ii = GINT64_FROM_BE (_temp_i); } while (FALSE)
-#define NCM_READ_UINT64(_ff,_ii) do { guint64 _temp_i; fread (&_temp_i, sizeof(guint64), (1), _ff); _ii = GUINT64_FROM_BE (_temp_i); } while (FALSE)
+#define NCM_READ_INT64(_ff,_ii) do { gint64 _temp_i; fread (&_temp_i, sizeof(gint64), (1), _ff) == 1 || g_error ("NCM_READ_INT64: io error"); _ii = GINT64_FROM_BE (_temp_i); } while (FALSE)
+#define NCM_READ_UINT64(_ff,_ii) do { guint64 _temp_i; fread (&_temp_i, sizeof(guint64), (1), _ff) == 1 || g_error ("NCM_READ_UINT64: io error"); _ii = GUINT64_FROM_BE (_temp_i); } while (FALSE)
 
-#define NCM_READ_DOUBLE(_ff,_ii) do { NcmDoubleInt64 _iii; fread (&_iii.i, sizeof(gint64), (1), _ff); _iii.i = GINT64_FROM_BE (_iii.i); _ii = _iii.x; } while (FALSE)
+#define NCM_READ_DOUBLE(_ff,_ii) do { NcmDoubleInt64 _iii; fread (&_iii.i, sizeof(gint64), (1), _ff) == 1 || g_error ("NCM_READ_DOUBLE: io error"); _iii.i = GINT64_FROM_BE (_iii.i); _ii = _iii.x; } while (FALSE)
 
 gchar *ncm_cfg_command_line (gchar *argv[], gint argc);
 

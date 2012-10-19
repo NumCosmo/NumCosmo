@@ -50,6 +50,7 @@ nc_de_data_cluster_new (NcDistance *dist, NcmMSet *mset, NcDEDataClusterEntries 
 
   switch (id)
   {
+#ifdef NUMCOSMO_HAVE_CFITSIO
 	case NC_DATA_CLUSTER_ABUNDANCE_FIT:
 	{
 	  gint i = 0;
@@ -94,6 +95,7 @@ nc_de_data_cluster_new (NcDistance *dist, NcmMSet *mset, NcDEDataClusterEntries 
 	  }
 	}
 	  break;
+#endif /* HAVE_CONFIG_H */
 	case NC_DATA_CLUSTER_ABUNDANCE_SAMPLING:
 	{
 	  NcClusterAbundance *cad = nc_cluster_abundance_new (mfp, NULL, clusterz, clusterm);

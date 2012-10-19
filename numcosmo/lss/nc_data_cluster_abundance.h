@@ -81,8 +81,10 @@ void nc_data_cluster_abundance_unbinned_init_from_sampling (NcData *data, NcmMSe
 NcData *nc_data_cluster_abundance_unbinned_bin_data (NcData *ca_unbinned, gsl_vector *nodes);
 gsl_histogram2d *nc_data_cluster_abundance_hist_lnM_z (NcData *ca_unbinned, gsl_vector *lnM_nodes, gsl_vector *z_nodes);
 
+#ifdef NUMCOSMO_HAVE_CFITSIO
 void nc_cluster_abundance_catalog_save (NcData *data, gchar *filename, gboolean overwrite);
 void nc_cluster_abundance_catalog_load (NcData *data, gchar *filename);
+#endif /* NUMCOSMO_HAVE_CFITSIO */
 
 G_END_DECLS
 

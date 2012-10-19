@@ -1260,7 +1260,7 @@ _ncm_cfg_gtype_to_gvariant_type (GType t)
 		  return G_VARIANT_TYPE_INT64;
 		  break;
 		default:
-		  g_error ("Unknown gint size %lu\n", sizeof(gint));
+		  g_error ("Unknown gint size %u\n", sizeof(gint));
 		  break;
 	  }
 	  break;
@@ -1279,7 +1279,7 @@ _ncm_cfg_gtype_to_gvariant_type (GType t)
 		  return G_VARIANT_TYPE_UINT64;
 		  break;
 		default:
-		  g_error ("Unknown gint size %lu\n", sizeof(guint));
+		  g_error ("Unknown gint size %u\n", sizeof(guint));
 		  break;
 	  }
 	  break;
@@ -1298,7 +1298,7 @@ _ncm_cfg_gtype_to_gvariant_type (GType t)
 		  return G_VARIANT_TYPE_INT64;
 		  break;
 		default:
-		  g_error ("Unknown gint size %lu\n", sizeof(glong));
+		  g_error ("Unknown gint size %u\n", sizeof(glong));
 		  break;
 	  }
 	  break;
@@ -1317,7 +1317,7 @@ _ncm_cfg_gtype_to_gvariant_type (GType t)
 		  return G_VARIANT_TYPE_UINT64;
 		  break;
 		default:
-		  g_error ("Unknown gint size %lu\n", sizeof(gulong));
+		  g_error ("Unknown gint size %u\n", sizeof(gulong));
 		  break;
 	  }
 	  break;

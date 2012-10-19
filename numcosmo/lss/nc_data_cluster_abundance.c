@@ -44,7 +44,9 @@
 #include <gsl/gsl_sf_erf.h>
 #include <gsl/gsl_histogram2d.h>
 #include <glib/gstdio.h>
+#ifdef NUMCOSMO_HAVE_CFITSIO
 #include <fitsio.h>
+#endif /* NUMCOSMO_HAVE_CFITSIO */
 
 static void
 _ca_data_copy (gpointer dest_ptr, gpointer src_ptr)
@@ -799,6 +801,8 @@ g_error ("FITS: %s", errormsg); \
 } \
 } while (FALSE);
 
+#ifdef NUMCOSMO_HAVE_CFITSIO
+
 /**
  * nc_cluster_abundance_catalog_save:
  * @data: a #NcData
@@ -1141,3 +1145,4 @@ nc_cluster_abundance_catalog_load (NcData *data, gchar *filename)
 
   return;
 }
+#endif /* NUMCOSMO_HAVE_CFITSIO */
