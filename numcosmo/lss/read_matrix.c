@@ -71,7 +71,8 @@ nc_arxive_open (char *filename)
     exit (0);
   }
    
-  fgets (line, MAX_LINE_SIZE, f);
+  if (fgets (line, MAX_LINE_SIZE, f) == NULL)
+    g_error ("nc_arxive_open: io error");
    /* Parte que le o cabecalho e guarda o numero de colunas e seus nomes */
   readed = 0;
   total_readed = 0;
