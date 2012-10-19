@@ -117,7 +117,7 @@ main(gint argc, gchar *argv[])
 
   if (snia_id != -1)
   {
-	NcData *snia = nc_data_distance_modulus_snia (dist, snia_id);
+	NcData *snia = nc_data_distance_mu_snia (dist, snia_id);
 	nc_dataset_append_data (ds, snia);
   }
 
@@ -125,7 +125,7 @@ main(gint argc, gchar *argv[])
 
   if (H_id != -1)
   {
-	NcData *H_data = nc_data_hubble_function (H_id);
+	NcData *H_data = nc_data_hubble (H_id);
 	nc_dataset_append_data (ds, H_data);
 	ncm_mset_param_set_ftype (mset, NC_HICOSMO_ID, NC_HICOSMO_QPW_H0, NCM_PARAM_TYPE_FREE);
   }
@@ -143,7 +143,7 @@ main(gint argc, gchar *argv[])
 
   if (with_BAO)
   {
-	NcData *bao_data = nc_data_bao (dist, NC_DATA_BAO_DV_DV_SAMPLE_PERCIVAL);
+	NcData *bao_data = nc_data_bao (dist, NC_DATA_BAO_DV_DV_PERCIVAL);
 	nc_dataset_append_data (ds, bao_data);
   }
 

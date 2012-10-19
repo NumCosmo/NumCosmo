@@ -38,6 +38,8 @@ void ncm_cfg_register_model (GType model);
 gchar *ncm_cfg_get_fullpath (gchar *filename, ...);
 void ncm_cfg_keyfile_to_arg (GKeyFile *kfile, gchar *group_name, GOptionEntry *entries, gchar **argv, gint *argc);
 void ncm_cfg_entries_to_keyfile (GKeyFile *kfile, gchar *group_name, GOptionEntry *entries);
+const GEnumValue *ncm_cfg_get_enum_by_id_name_nick (GType enum_type, const gchar *id_name_nick);
+void ncm_cfg_enum_print_all (GType enum_type, gchar *header);
 
 gboolean ncm_cfg_load_fftw_wisdom (gchar *filename, ...);
 gboolean ncm_cfg_save_fftw_wisdom (gchar *filename, ...);

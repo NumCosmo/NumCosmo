@@ -99,10 +99,6 @@
 #include <numcosmo/data/data_gaussian.h>
 #include <numcosmo/data/data_poisson.h>
 #include <numcosmo/data/data_onevardist.h>
-#include <numcosmo/data/data_distance_modulus.h>
-#include <numcosmo/data/data_hubble_function.h>
-#include <numcosmo/data/data_baryonic_oscillation.h>
-#include <numcosmo/data/data_cosmic_microwave_background.h>
 
 /* Utilities */
 #include <numcosmo/math/util.h>
@@ -200,8 +196,15 @@
 #include <numcosmo/lss/nc_cluster_mass_benson_xray.h>
 #include <numcosmo/lss/nc_cluster_abundance.h>
 #include <numcosmo/lss/read_matrix.h>
-#include <numcosmo/lss/data_cluster_abundance.h>
 #include <numcosmo/lss/catalog_parser.h>
 #include <numcosmo/lss/print_data.h>
+
+/* Observable data */
+#include <numcosmo/lss/nc_data_cluster_abundance.h>
+#include <numcosmo/data/nc_data_distance_mu.h>
+#include <numcosmo/data/nc_data_hubble.h>
+#include <numcosmo/data/nc_data_bao.h>
+#include <numcosmo/data/nc_data_cmb.h>
+
 
 #endif /* _NUMCOSMO_H */

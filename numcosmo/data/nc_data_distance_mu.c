@@ -1,5 +1,5 @@
 /***************************************************************************
- *            data_distance_modulus.c
+ *            nc_data_distance_mu.c
  *
  *  Thu Apr 22 10:37:22 2010
  *  Copyright  2010  Sandro Dias Pinto Vitenti
@@ -23,7 +23,7 @@
  */
 
 /**
- * SECTION:data
+ * SECTION:nc_data_distance_mu
  * @title: Distance Modulus Based Data
  * @short_description: FIXME
  *
@@ -49,12 +49,12 @@ static gchar *_nc_data_snia_query[] =
   "Gold sample 157", "SELECT z,mu-0.32 AS muc,s FROM supernovae WHERE quality='Gold-2004' ORDER BY z",
   "Gold sample 182 - removed low redshift", "SELECT z,mu-0.32 AS muc,s FROM supernovae WHERE quality='Gold' AND z >= 0.0233 ORDER BY z",
   "Gold sample 182", "SELECT z,mu-0.32 AS muc,s FROM supernovae WHERE quality='Gold' ORDER BY z",
-  "ESSENCE sample", "SELECT z,mu,s FROM supernovae WHERE quality='ESSENCE' ORDER BY z",
-  "Legacy sample", "SELECT z,mu+19.308,s FROM supernovae WHERE quality='LEGACY' ORDER BY z",
-  "Union sample", "SELECT z,mu,s FROM supernovae WHERE quality='UNION' ORDER BY z",
-  "CfA3 sample", "SELECT z,mu,s FROM supernovae WHERE quality='CfA3' ORDER BY z",
-  "Union2 sample", "SELECT z,mu,s FROM supernovae WHERE quality='Union2' ORDER BY z",
-	"Union2.1 sample", "SELECT z,mu,s FROM supernovae WHERE quality='Union2.1' ORDER BY z",
+  "ESSENCE sample",  "SELECT z,mu,s FROM supernovae WHERE quality='ESSENCE' ORDER BY z",
+  "Legacy sample",   "SELECT z,mu+19.308,s FROM supernovae WHERE quality='LEGACY' ORDER BY z",
+  "Union sample",    "SELECT z,mu,s FROM supernovae WHERE quality='UNION' ORDER BY z",
+  "CfA3 sample",     "SELECT z,mu,s FROM supernovae WHERE quality='CfA3' ORDER BY z",
+  "Union2 sample",   "SELECT z,mu,s FROM supernovae WHERE quality='Union2' ORDER BY z",
+  "Union2.1 sample", "SELECT z,mu,s FROM supernovae WHERE quality='Union2.1' ORDER BY z",
 };
 
 /**
@@ -67,11 +67,11 @@ static gchar *_nc_data_snia_query[] =
  * Returns: FIXME
  */
 NcData *
-nc_data_distance_modulus_snia (NcDistance *dist, NcDataDistanceModulusSNIaSampleId snia_id)
+nc_data_distance_mu_snia (NcDistance *dist, NcDataDistanceMuSNIaId snia_id)
 {
   NcData *snia = nc_data_gaussian_new (NC_DATA_GAUSSIAN_X_WMEAN);
   NcmMSetFunc *dist_mod = nc_distance_func1_new (dist, &nc_distance_modulo);
-  g_assert (snia_id < NC_DATA_DISTANCE_MODULUS_SNIA_NSAMPLES);
+  g_assert (snia_id < NC_DATA_DISTANCE_MU_SNIA_NSAMPLES);
 
   nc_data_gaussian_set_func (snia, dist_mod);
   ncm_mset_func_free (dist_mod);

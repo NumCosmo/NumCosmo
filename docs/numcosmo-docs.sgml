@@ -59,6 +59,26 @@
       <xi:include href="xml/ncm_sf_sbessel.xml"/>
       <xi:include href="xml/ncm_sf_sbessel_int.xml"/>
     </section>
+    <section>
+      <title>Data Objects</title>
+      <xi:include href="xml/data.xml"/>
+      <xi:include href="xml/dataset.xml"/>
+      <xi:include href="xml/data_gaussian.xml"/>
+      <xi:include href="xml/data_poisson.xml"/>    
+      <xi:include href="xml/data_onevardist.xml"/>
+    </section>
+    <section>
+    <title>Statistical Analysis</title>
+      <xi:include href="xml/likelihood.xml"/>
+      <xi:include href="xml/priors.xml"/>
+      <xi:include href="xml/ncm_fit.xml"/>
+      <xi:include href="xml/confidence_region.xml"/>
+      <xi:include href="xml/multimin.xml"/>
+      <xi:include href="xml/nc_nlopt.xml"/>
+      <xi:include href="xml/levmar.xml"/>
+      <xi:include href="xml/multimin_simplex.xml"/>
+      <xi:include href="xml/least_squares.xml"/>
+    </section>
   </chapter>
 
   <chapter>
@@ -93,7 +113,7 @@
   </chapter>
 
   <chapter>
-    <title>Cosmic Quantities</title>
+    <title>Cosmological Functions</title>
     <xi:include href="xml/nc_distance.xml"/>
     <xi:include href="xml/scalefactor.xml"/>
   </chapter>
@@ -162,36 +182,19 @@
     </section>
     <xi:include href="xml/nc_cluster_abundance.xml"/>
     <xi:include href="xml/catalog_parser.xml"/>
-    <xi:include href="xml/data_cluster_abundance.xml"/>
     <xi:include href="xml/print_data.xml"/>
     <xi:include href="xml/read_matrix.xml"/>
   </chapter>
   
   <chapter>
     <title>Cosmological Data</title>
-    <xi:include href="xml/data.xml"/>
-    <xi:include href="xml/dataset.xml"/>
-    <xi:include href="xml/data_gaussian.xml"/>
-    <xi:include href="xml/data_poisson.xml"/>    
-    <xi:include href="xml/data_onevardist.xml"/>
-    <xi:include href="xml/data_cosmic_microwave_background.xml"/>
-    <xi:include href="xml/data_hubble_function.xml"/>
-    <xi:include href="xml/data_baryonic_oscillation.xml"/>
-    <xi:include href="xml/data_distance_modulus.xml"/>
+    <xi:include href="xml/nc_data_cmb.xml"/>
+    <xi:include href="xml/nc_data_hubble.xml"/>
+    <xi:include href="xml/nc_data_bao.xml"/>
+    <xi:include href="xml/nc_data_distance_mu.xml"/>
+    <xi:include href="xml/nc_data_cluster_abundance.xml"/>
   </chapter>
   
-  <chapter>
-    <title>Statistical Analysis</title>
-    <xi:include href="xml/likelihood.xml"/>
-    <xi:include href="xml/priors.xml"/>
-    <xi:include href="xml/ncm_fit.xml"/>
-    <xi:include href="xml/confidence_region.xml"/>
-    <xi:include href="xml/multimin.xml"/>
-    <xi:include href="xml/nc_nlopt.xml"/>
-    <xi:include href="xml/levmar.xml"/>
-    <xi:include href="xml/multimin_simplex.xml"/>
-    <xi:include href="xml/least_squares.xml"/>
-  </chapter>
 
   <chapter>
     <title>Mathematical Utilities</title>

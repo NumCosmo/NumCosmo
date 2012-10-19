@@ -1,5 +1,5 @@
 /***************************************************************************
- *            data_hubble_function.c
+ *            nc_data_hubble.c
  *
  *  Thu Apr 22 14:34:54 2010
  *  Copyright  2010  Sandro Dias Pinto Vitenti
@@ -23,7 +23,7 @@
  */
 
 /**
- * SECTION:data_hubble_function
+ * SECTION:nc_data_hubble
  * @title: Hubble Function Data
  * @short_description: Object representing Hubble Function data
  *
@@ -51,7 +51,7 @@ static gchar *_nc_data_hubble_function_query[] =
 };
 
 /**
- * nc_data_hubble_function:
+ * nc_data_hubble:
  * @H_id: FIXME
  *
  * FIXME
@@ -59,11 +59,11 @@ static gchar *_nc_data_hubble_function_query[] =
  * Returns: FIXME
  */
 NcData *
-nc_data_hubble_function (NcDataHubbleFunctionSampleId H_id)
+nc_data_hubble (NcDataHubbleId H_id)
 {
   NcData *H_data = nc_data_gaussian_new (NC_DATA_GAUSSIAN_X_SIGMA);
   NcmMSetFunc *func = nc_hicosmo_func1_new (&nc_hicosmo_H);
-  g_assert (H_id < NC_DATA_HUBBLE_FUNCTION_NSAMPLES);
+  g_assert (H_id < NC_DATA_HUBBLE_NSAMPLES);
 
   nc_data_gaussian_set_func (H_data, func);
   ncm_mset_func_free (func);

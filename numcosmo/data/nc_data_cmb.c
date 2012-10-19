@@ -1,5 +1,5 @@
 /***************************************************************************
- *            data_cosmic_microwave_background.c
+ *            nc_data_cmb.c
  *
  *  Thu Apr 22 15:56:44 2010
  *  Copyright  2010  Sandro Dias Pinto Vitenti
@@ -23,7 +23,7 @@
  */
 
 /**
- * SECTION:data_cosmic_microwave_background
+ * SECTION:nc_data_cmb
  * @title: Cosmic Microwave Background Data
  * @short_description: CMB Data
  *
@@ -64,7 +64,7 @@ gdouble nc_cmb_distance_priors_wmap5_distpriors[] =
  * Returns: FIXME
  */
 NcData *
-nc_data_cmb (NcDistance *dist, NcDataCMBSampleId cmb_id)
+nc_data_cmb (NcDistance *dist, NcDataCMBId cmb_id)
 {
   NcData *data;
 

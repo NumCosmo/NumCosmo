@@ -63,16 +63,16 @@ typedef struct _NcDEDataSimpleEntries NcDEDataSimpleEntries;
  */
 struct _NcDEDataSimpleEntries
 {
-  gint snia_id;
-  gint bao_id;
-  gint cmb_id;
-  gint H_id;
-  gint cluster_id;
+  gchar *snia_id;
+  gchar *bao_id;
+  gchar *cmb_id;
+  gchar *H_id;
+  gchar *cluster_id;
   gboolean H0_Hst;
   gboolean BBN;
 };
 
-#define NC_DE_DATA_SIMPLE_ENTRIES {-1, -1, -1, -1, -1, FALSE, FALSE}
+#define NC_DE_DATA_SIMPLE_ENTRIES {NULL, NULL, NULL, NULL, NULL, FALSE, FALSE}
 
 typedef struct _NcDEDataClusterEntries NcDEDataClusterEntries;
 

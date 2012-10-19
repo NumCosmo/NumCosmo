@@ -134,7 +134,12 @@ nc_headers = \
         lss/nc_cluster_mass_vanderlinde.h    \
         lss/nc_cluster_mass_benson.h         \
         lss/nc_cluster_mass_benson_xray.h    \
-        lss/nc_cluster_abundance.h
+        lss/nc_cluster_abundance.h      \
+	lss/nc_data_cluster_abundance.h \
+	data/nc_data_distance_mu.h      \
+	data/nc_data_hubble.h           \
+	data/nc_data_bao.h              \
+	data/nc_data_cmb.h
 
 nc_sources = \
 	nc_hicosmo.c  \
@@ -185,7 +190,12 @@ nc_sources = \
 	lss/nc_cluster_mass_vanderlinde.c    \
 	lss/nc_cluster_mass_benson.c         \
 	lss/nc_cluster_mass_benson_xray.c    \
-	lss/nc_cluster_abundance.c
+	lss/nc_cluster_abundance.c      \
+	lss/nc_data_cluster_abundance.c \
+	data/nc_data_distance_mu.c   \
+	data/nc_data_hubble.c        \
+	data/nc_data_bao.c           \
+	data/nc_data_cmb.c
 
 libnumcosmo_la_SOURCES = \
 	$(ncm_sources)   \
@@ -209,14 +219,6 @@ libnumcosmo_la_SOURCES = \
 	data/data_poisson.h          \
 	data/dataset.c               \
 	data/dataset.h               \
-	data/data_distance_modulus.c \
-	data/data_distance_modulus.h \
-	data/data_hubble_function.c  \
-	data/data_hubble_function.h  \
-	data/data_baryonic_oscillation.h \
-	data/data_baryonic_oscillation.c \
-	data/data_cosmic_microwave_background.c \
-	data/data_cosmic_microwave_background.h \
 	model/quantum_gravity.c    \
 	model/quantum_gravity.h    \
 	likelihood/confidence_region.c \
@@ -283,8 +285,6 @@ libnumcosmo_la_SOURCES = \
 	lss/catalog_parser.h \
 	lss/read_matrix.c \
 	lss/read_matrix.h \
-	lss/data_cluster_abundance.c \
-	lss/data_cluster_abundance.h \
 	lss/print_data.c \
 	lss/print_data.h
 
@@ -319,10 +319,6 @@ nobase_cosmo_include_HEADERS =  \
 	data/data_onevardist.h       \
 	data/data_poisson.h          \
 	data/dataset.h               \
-	data/data_distance_modulus.h \
-	data/data_hubble_function.h  \
-	data/data_baryonic_oscillation.h        \
-	data/data_cosmic_microwave_background.h \
 	model/quantum_gravity.h    \
 	likelihood/confidence_region.h \
 	likelihood/least_squares.h     \
@@ -357,7 +353,6 @@ nobase_cosmo_include_HEADERS =  \
 	perturbations/hydrodyn_adiabatic.h \
 	lss/catalog_parser.h \
 	lss/read_matrix.h \
-	lss/data_cluster_abundance.h \
 	lss/print_data.h
 
 cosmo_includedir = \

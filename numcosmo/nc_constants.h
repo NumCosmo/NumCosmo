@@ -35,13 +35,13 @@
 #include <glib.h>
 #include <gsl/gsl_const_num.h>
 
-/** 
+/**
  * SECTION:nc_constants
  * @title: Numerical and Physical Constants
  * @short_description: FIXME
- * 
+ *
  * FIXME
- * 
+ *
  */
 
 G_BEGIN_DECLS
@@ -112,11 +112,11 @@ G_BEGIN_DECLS
 #define NC_C_BAO_EISENSTEIN_REDSHIFT 0.35
 #define NC_C_BAO_EISENSTEIN_A 0.469
 #define NC_C_BAO_EISENSTEIN_SIGMA_A 0.017
-#define NC_C_BAO_EISENSTEIN_Dv 1334.0
-#define NC_C_BAO_EISENSTEIN_SIGMA_Dv 88.0
+#define NC_C_BAO_EISENSTEIN_DV 1334.0
+#define NC_C_BAO_EISENSTEIN_SIGMA_DV 88.0
 
-#define NC_C_BAO_PERCIVAL_Dv_Dv 1.812
-#define NC_C_BAO_PERCIVAL_SIGMA_Dv_Dv 0.060
+#define NC_C_BAO_PERCIVAL_DV_DV 1.812
+#define NC_C_BAO_PERCIVAL_SIGMA_DV_DV 0.060
 
 #define NC_C_HUBBLE_CTE_WMAP 73.0
 #define NC_C_HUBBLE_CTE_HST  72.0

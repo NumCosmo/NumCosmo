@@ -1,7 +1,7 @@
 /***************************************************************************
- *            data_cosmic_microwave_background.h
+ *            nc_data_bao.h
  *
- *  Thu Apr 22 15:56:59 2010
+ *  Thu Apr 22 15:31:19 2010
  *  Copyright  2010  Sandro Dias Pinto Vitenti
  *  <sandro@isoftware.com.br>
  ****************************************************************************/
@@ -22,32 +22,38 @@
  * with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef _NC_DATA_COSMIC_MICROWAVE_BACKGROUND_H
-#define _NC_DATA_COSMIC_MICROWAVE_BACKGROUND_H
+#ifndef _NC_DATA_BAO_H
+#define _NC_DATA_BAO_H
 
 #include <glib.h>
+#include <gsl/gsl_eigen.h>
+
+#ifdef NUMCOSMO_HAVE_SQLITE3
+#include <sqlite3.h>
+#endif
 
 G_BEGIN_DECLS
 
 /**
- * NcDataCMBSampleId:
- * @NC_DATA_CMB_SHIFT_PARAMETER_WMAP3: FIXME
- * @NC_DATA_CMB_SHIFT_PARAMETER_WMAP5: FIXME
- * @NC_DATA_CMB_DISTANCE_PRIORS_WMAP5: FIXME
- * 
+ * NcDataBaoId:
+ * @NC_DATA_BAO_A_EISENSTEIN: FIXME
+ * @NC_DATA_BAO_DV_EISENSTEIN: FIXME
+ * @NC_DATA_BAO_R_DV_PERCIVAL: FIXME
+ * @NC_DATA_BAO_DV_DV_PERCIVAL: FIXME
+ *
  * FIXME
- */ 
-typedef enum _NcDataCMBSampleId
+ */
+typedef enum _NcDataBaoId
 {
-  NC_DATA_CMB_SHIFT_PARAMETER_WMAP3 = 0,
-  NC_DATA_CMB_SHIFT_PARAMETER_WMAP5,
-  NC_DATA_CMB_DISTANCE_PRIORS_WMAP5
-} NcDataCMBSampleId;
+  NC_DATA_BAO_A_EISENSTEIN = 0,
+  NC_DATA_BAO_DV_EISENSTEIN,
+  NC_DATA_BAO_R_DV_PERCIVAL,
+  NC_DATA_BAO_DV_DV_PERCIVAL, /*< private >*/
+  NC_DATA_BAO_NSAMPLES,       /*< skip >*/
+} NcDataBaoId;
 
-#define NC_DATA_CMB_NSAMPLES (NC_DATA_CMB_DISTANCE_PRIORS_WMAP5 + 1)
-
-NcData *nc_data_cmb (NcDistance *dist, NcDataCMBSampleId cmb_id);
+NcData *nc_data_bao (NcDistance *dist, NcDataBaoId bao_id);
 
 G_END_DECLS
 
-#endif /* _NC_DATA_COSMIC_MICROWAVE_BACKGROUND_H */
+#endif /* _NC_DATA_BAO_H */

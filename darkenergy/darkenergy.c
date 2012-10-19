@@ -151,11 +151,11 @@ main (gint argc, gchar *argv[])
   if (de_fit.file_out != NULL)
 	ncm_cfg_set_logfile (de_fit.file_out);
 
-  if (de_data_simple.snia_id == -1 &&
-      de_data_simple.cmb_id == -1 &&
-      de_data_simple.bao_id == -1 &&
-      de_data_simple.H_id == -1 &&
-      de_data_simple.cluster_id == -1)
+  if (de_data_simple.snia_id == NULL &&
+      de_data_simple.cmb_id == NULL &&
+      de_data_simple.bao_id == NULL &&
+      de_data_simple.H_id == NULL &&
+      de_data_simple.cluster_id == NULL)
   {
 	printf ("No action or data was chosen.\n");
 	printf (g_option_context_get_help (context, TRUE, NULL));
@@ -196,32 +196,69 @@ main (gint argc, gchar *argv[])
 	ncm_mset_param_set_ftype (mset, NC_HICOSMO_ID, NC_HICOSMO_DE_OMEGA_X, NCM_PARAM_TYPE_FREE);
   }
 
-  if (de_data_simple.snia_id != -1)
+  if (de_data_simple.snia_id != NULL)
   {
-	NcData *snia = nc_data_distance_modulus_snia (dist, de_data_simple.snia_id);
-	nc_dataset_append_data (ds, snia);
+	const GEnumValue *snia_id = ncm_cfg_get_enum_by_id_name_nick (NC_TYPE_DATA_DISTANCE_MU_SN_IA_ID,
+	                                                              de_data_simple.snia_id);
+	if (snia_id != NULL)
+	{
+	  NcData *snia = nc_data_distance_mu_snia (dist, snia_id->value);
+	  nc_dataset_append_data (ds, snia);
+	}
+	else
+	  g_error ("Supernovae sample '%s' not found run --snia-list to list the available options", de_data_simple.snia_id);
   }
 
-  if (de_data_simple.cmb_id != -1)
+  if (de_data_simple.cmb_id != NULL)
   {
-	NcData *cmb_data = nc_data_cmb (dist, de_data_simple.cmb_id);
-	nc_dataset_append_data (ds, cmb_data);
+	const GEnumValue *cmb_id = ncm_cfg_get_enum_by_id_name_nick (NC_TYPE_DATA_CMB_ID,
+	                                                             de_data_simple.cmb_id);
+	if (cmb_id != NULL)
+	{
+	  NcData *cmb_data = nc_data_cmb (dist, cmb_id->value);
+	  nc_dataset_append_data (ds, cmb_data);
+	}
+	else
+	  g_error ("CMB sample '%s' not found run --snia-list to list the available options", de_data_simple.cmb_id);
   }
 
-  if (de_data_simple.bao_id != -1)
+  if (de_data_simple.bao_id != NULL)
   {
-	NcData *bao_data = nc_data_bao (dist, de_data_simple.bao_id);
-	nc_dataset_append_data (ds, bao_data);
+	const GEnumValue *bao_id = ncm_cfg_get_enum_by_id_name_nick (NC_TYPE_DATA_BAO_ID,
+	                                                             de_data_simple.bao_id);
+	if (bao_id != NULL)
+	{
+	  NcData *bao_data = nc_data_bao (dist, bao_id->value);
+	  nc_dataset_append_data (ds, bao_data);
+	}
+	else
+	  g_error ("BAO sample '%s' not found run --snia-list to list the available options", de_data_simple.bao_id);
   }
 
-  if (de_data_simple.H_id != -1)
+  if (de_data_simple.H_id != NULL)
   {
-	NcData *H_data = nc_data_hubble_function (de_data_simple.H_id);
-	nc_dataset_append_data (ds, H_data);
+	const GEnumValue *H_id = ncm_cfg_get_enum_by_id_name_nick (NC_TYPE_DATA_HUBBLE_ID,
+	                                                           de_data_simple.H_id);
+	if (H_id != NULL)
+	{
+	  NcData *H_data = nc_data_hubble (H_id->value);
+	  nc_dataset_append_data (ds, H_data);
+	}
+	else
+	  g_error ("Hubble sample '%s' not found run --snia-list to list the available options", de_data_simple.H_id);
   }
 
-  if (de_data_simple.cluster_id != -1)
-	ca_array = nc_de_data_cluster_new (dist, mset, &de_data_cluster, ds, de_data_simple.cluster_id);
+  if (de_data_simple.cluster_id != NULL)
+  {
+	const GEnumValue *cluster_id = ncm_cfg_get_enum_by_id_name_nick (NC_TYPE_DATA_CLUSTER_ABUNDANCE_ID,
+	                                                                 de_data_simple.cluster_id);
+	if (cluster_id != NULL)
+	{
+	ca_array = nc_de_data_cluster_new (dist, mset, &de_data_cluster, ds, cluster_id->value);
+	}
+	else
+	  g_error ("Cluster sample '%s' not found run --snia-list to list the available options", de_data_simple.cluster_id);
+  }
 
   if (de_data_simple.BBN)
 	nc_hicosmo_de_new_add_bbn (lh);

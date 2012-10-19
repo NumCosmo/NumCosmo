@@ -1,5 +1,5 @@
 /***************************************************************************
- *            data_baryonic_oscillation.c
+ *            nc_data_bao.c
  *
  *  Thu Apr 22 15:31:32 2010
  *  Copyright  2010  Sandro Dias Pinto Vitenti
@@ -23,7 +23,7 @@
  */
 
 /**
- * SECTION:data_baryonic_oscillation
+ * SECTION:nc_data_bao
  * @title: Baryonic Oscillation Data
  * @short_description: BAO Data
  *
@@ -55,20 +55,20 @@ gdouble nc_bao_distance_priors_percival_data[] =
 /**
  * nc_data_bao:
  * @dist: a #NcDistance
- * @bao_id: bao id #NcDataBaoSampleId
+ * @bao_id: bao id #NcDataBaoId
  *
  * FIXME
  *
  * Returns: FIXME
  */
 NcData *
-nc_data_bao (NcDistance *dist, NcDataBaoSampleId bao_id)
+nc_data_bao (NcDistance *dist, NcDataBaoId bao_id)
 {
   NcData *data;
 
   switch (bao_id)
   {
-	case NC_DATA_BAO_R_DV_SAMPLE_PERCIVAL:
+	case NC_DATA_BAO_R_DV_PERCIVAL:
 	{
 	  NcmMatrix *cm = ncm_matrix_new_data_static (nc_bao_distance_priors_percival_data, 2, 4);
 	  NcmMSetFunc *func = nc_distance_func1_new (dist, &nc_distance_bao_r_Dv);
@@ -80,9 +80,9 @@ nc_data_bao (NcDistance *dist, NcDataBaoSampleId bao_id)
 	  data->name = "Percival BAO Sample R-Dv";
 	  break;
 	}
-	case NC_DATA_BAO_DV_DV_SAMPLE_PERCIVAL:
+	case NC_DATA_BAO_DV_DV_PERCIVAL:
 	{
-	  gdouble _data[2] = { NC_C_BAO_PERCIVAL_Dv_Dv, NC_C_BAO_PERCIVAL_SIGMA_Dv_Dv };
+	  gdouble _data[2] = { NC_C_BAO_PERCIVAL_DV_DV, NC_C_BAO_PERCIVAL_SIGMA_DV_DV };
 	  NcmMatrix *cm = ncm_matrix_new_data_static (_data, 1, 2);
 	  NcmMSetFunc *func = nc_distance_func0_new (dist, &nc_distance_dilation_scale_ratio);
 	  data = nc_data_gaussian_new (NC_DATA_GAUSSIAN_SIGMA);
@@ -93,7 +93,7 @@ nc_data_bao (NcDistance *dist, NcDataBaoSampleId bao_id)
 	  data->name = "Percival BAO Sample Dv-Dv";
 	  break;
 	}
-	case NC_DATA_BAO_A_SAMPLE_EISENSTEIN:
+	case NC_DATA_BAO_A_EISENSTEIN:
 	{
 	  gdouble _data[3] = { NC_C_BAO_EISENSTEIN_REDSHIFT, NC_C_BAO_EISENSTEIN_A, NC_C_BAO_EISENSTEIN_SIGMA_A };
 	  NcmMatrix *cm = ncm_matrix_new_data_static (_data, 1, 3);
@@ -106,9 +106,9 @@ nc_data_bao (NcDistance *dist, NcDataBaoSampleId bao_id)
 	  data->name = "Eisenstein BAO Sample A";
 	  break;
 	}
-	case NC_DATA_BAO_Dv_SAMPLE_EISENSTEIN:
+	case NC_DATA_BAO_DV_EISENSTEIN:
 	{
-	  gdouble _data[3] = { NC_C_BAO_EISENSTEIN_REDSHIFT, NC_C_BAO_EISENSTEIN_Dv, NC_C_BAO_EISENSTEIN_SIGMA_Dv };
+	  gdouble _data[3] = { NC_C_BAO_EISENSTEIN_REDSHIFT, NC_C_BAO_EISENSTEIN_DV, NC_C_BAO_EISENSTEIN_SIGMA_DV };
 	  NcmMatrix *cm = ncm_matrix_new_data_static (_data, 1, 3);
 	  NcmMSetFunc *func = nc_distance_func1_new (dist, &nc_distance_dilation_scale);
 	  data = nc_data_gaussian_new (NC_DATA_GAUSSIAN_X_SIGMA);

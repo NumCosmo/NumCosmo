@@ -34,7 +34,7 @@
 static void _nc_de_data_cluster_append (NcDEDataClusterEntries *de_data_cluster, NcData *dca_unbinned, NcDataSet *ds);
 
 GPtrArray *
-nc_de_data_cluster_new (NcDistance *dist, NcmMSet *mset, NcDEDataClusterEntries *de_data_cluster, NcDataSet *ds, gint id)
+nc_de_data_cluster_new (NcDistance *dist, NcmMSet *mset, NcDEDataClusterEntries *de_data_cluster, NcDataSet *ds, NcDataClusterAbundanceId id)
 {
   GPtrArray *ca_array = g_ptr_array_new ();
   NcWindow *wp = nc_window_new_from_name (de_data_cluster->window_name);
@@ -47,10 +47,10 @@ nc_de_data_cluster_new (NcDistance *dist, NcmMSet *mset, NcDEDataClusterEntries 
   NcClusterRedshift *clusterz = nc_cluster_redshift_new_from_name (de_data_cluster->clusterz_ser);
 
   ncm_mset_set (mset, NCM_MODEL (clusterm));
-  
+
   switch (id)
   {
-	case 0:
+	case NC_DATA_CLUSTER_ABUNDANCE_FIT:
 	{
 	  gint i = 0;
 	  if (de_data_cluster->cata_file == NULL)
@@ -71,7 +71,7 @@ nc_de_data_cluster_new (NcDistance *dist, NcmMSet *mset, NcDEDataClusterEntries 
 	  }
 	}
 	  break;
-	case 1:
+	case NC_DATA_CLUSTER_ABUNDANCE_TXT:
 	{
 	  gint i = 0;
 	  if (de_data_cluster->cata_file == NULL)
@@ -94,7 +94,7 @@ nc_de_data_cluster_new (NcDistance *dist, NcmMSet *mset, NcDEDataClusterEntries 
 	  }
 	}
 	  break;
-	case 2:
+	case NC_DATA_CLUSTER_ABUNDANCE_SAMPLING:
 	{
 	  NcClusterAbundance *cad = nc_cluster_abundance_new (mfp, NULL, clusterz, clusterm);
 	  NcData *dca_unbinned = nc_data_cluster_abundance_unbinned_new (cad);

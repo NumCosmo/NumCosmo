@@ -1,5 +1,5 @@
 /***************************************************************************
- *            data_cluster_abundance.h
+ *            nc_data_cluster_abundance.h
  *
  *  Tue Apr  6 01:12:58 2010
  *  Copyright  2010  Mariana Penna Lima
@@ -53,6 +53,20 @@ struct _NcDataClusterAbundance
   gulong seed;
   gchar *rnd_name;
 };
+
+/**
+ * NcDataClusterAbundanceId:
+ * @NC_DATA_CLUSTER_ABUNDANCE_FIT: FIXME
+ * @NC_DATA_CLUSTER_ABUNDANCE_TXT: FIXME
+ * @NC_DATA_CLUSTER_ABUNDANCE_SAMPLING: FIXME
+ */
+typedef enum _NcDataClusterAbundanceId
+{
+  NC_DATA_CLUSTER_ABUNDANCE_FIT,
+  NC_DATA_CLUSTER_ABUNDANCE_TXT,
+  NC_DATA_CLUSTER_ABUNDANCE_SAMPLING, /*< private >*/
+  NC_DATA_CLUSTER_ABUNDANCE_NSAMPLES, /*< skip >*/
+} NcDataClusterAbundanceId;
 
 NcData *nc_data_cluster_abundance_binned_new (NcClusterAbundance *cad);
 void nc_data_cluster_abundance_binned_init_from_text_file_gkey (NcData *data, gboolean obs, gchar *filename);

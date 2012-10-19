@@ -1,7 +1,7 @@
 /***************************************************************************
- *            data_baryonic_oscillation.h
+ *            nc_data_cmb.h
  *
- *  Thu Apr 22 15:31:19 2010
+ *  Thu Apr 22 15:56:59 2010
  *  Copyright  2010  Sandro Dias Pinto Vitenti
  *  <sandro@isoftware.com.br>
  ****************************************************************************/
@@ -22,39 +22,31 @@
  * with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef _NC_DATA_BARYONIC_OSCILLATION_H
-#define _NC_DATA_BARYONIC_OSCILLATION_H
+#ifndef _NC_DATA_CMB_H
+#define _NC_DATA_CMB_H
 
 #include <glib.h>
-#include <gsl/gsl_eigen.h>
-
-#ifdef NUMCOSMO_HAVE_SQLITE3
-#include <sqlite3.h>
-#endif
 
 G_BEGIN_DECLS
 
 /**
- * NcDataBaoSampleId:
- * @NC_DATA_BAO_A_SAMPLE_EISENSTEIN: FIXME
- * @NC_DATA_BAO_Dv_SAMPLE_EISENSTEIN: FIXME
- * @NC_DATA_BAO_R_DV_SAMPLE_PERCIVAL: FIXME
- * @NC_DATA_BAO_DV_DV_SAMPLE_PERCIVAL: FIXME
- * 
+ * NcDataCMBId:
+ * @NC_DATA_CMB_SHIFT_PARAMETER_WMAP3: FIXME
+ * @NC_DATA_CMB_SHIFT_PARAMETER_WMAP5: FIXME
+ * @NC_DATA_CMB_DISTANCE_PRIORS_WMAP5: FIXME
+ *
  * FIXME
  */
-typedef enum _NcDataBaoSampleId
+typedef enum _NcDataCMBId
 {
-  NC_DATA_BAO_A_SAMPLE_EISENSTEIN = 0,
-  NC_DATA_BAO_Dv_SAMPLE_EISENSTEIN,
-  NC_DATA_BAO_R_DV_SAMPLE_PERCIVAL,
-  NC_DATA_BAO_DV_DV_SAMPLE_PERCIVAL
-} NcDataBaoSampleId;
+  NC_DATA_CMB_SHIFT_PARAMETER_WMAP3 = 0,
+  NC_DATA_CMB_SHIFT_PARAMETER_WMAP5,
+  NC_DATA_CMB_DISTANCE_PRIORS_WMAP5, /*< private >*/
+  NC_DATA_CMB_NSAMPLES,              /*< skip >*/
+} NcDataCMBId;
 
-#define NC_DATA_BAO_NSAMPLES (NC_DATA_BAO_DV_DV_SAMPLE_PERCIVAL + 1)
-
-NcData *nc_data_bao (NcDistance *dist, NcDataBaoSampleId bao_id);
+NcData *nc_data_cmb (NcDistance *dist, NcDataCMBId cmb_id);
 
 G_END_DECLS
 
-#endif /* _NC_DATA_BARYONIC_OSCILLATION_H */
+#endif /* _NC_DATA_CMB_H */

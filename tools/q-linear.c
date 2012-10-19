@@ -112,7 +112,7 @@ main (gint argc, gchar *argv[])
 
   if (snia_id != -1)
   {
-	NcData *snia = nc_data_distance_modulus_snia (dist, snia_id);
+	NcData *snia = nc_data_distance_mu_snia (dist, snia_id);
 	nc_dataset_append_data (ds, snia);
   }
 

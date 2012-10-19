@@ -1,5 +1,5 @@
 /***************************************************************************
- *            data_hubble_function.h
+ *            nc_data_hubble.h
  *
  *  Thu Apr 22 14:35:37 2010
  *  Copyright  2010  Sandro Dias Pinto Vitenti
@@ -22,8 +22,8 @@
  * with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef _NC_DATA_HUBBLE_FUNCTION_H
-#define _NC_DATA_HUBBLE_FUNCTION_H
+#ifndef _NC_DATA_HUBBLE_H
+#define _NC_DATA_HUBBLE_H
 
 #include <glib.h>
 #include <gsl/gsl_eigen.h>
@@ -35,21 +35,20 @@
 G_BEGIN_DECLS
 
 /**
- * NcDataHubbleFunctionSampleId:
- * @NC_DATA_HUBBLE_FUNCTION_SAMPLE_VERDE: FIXME
- * @NC_DATA_HUBBLE_FUNCTION_SAMPLE_CABRE: FIXME
- * 
+ * NcDataHubbleId:
+ * @NC_DATA_HUBBLE_VERDE: FIXME
+ * @NC_DATA_HUBBLE_CABRE: FIXME
+ *
  * FIXME
- */ 
-typedef enum _NcDataHubbleFunctionSampleId
+ */
+typedef enum _NcDataHubbleId
 {
-  NC_DATA_HUBBLE_FUNCTION_SAMPLE_VERDE = 0,
-  NC_DATA_HUBBLE_FUNCTION_SAMPLE_CABRE
-} NcDataHubbleFunctionSampleId;
+  NC_DATA_HUBBLE_VERDE = 0,
+  NC_DATA_HUBBLE_CABRE,    /*< private >*/
+  NC_DATA_HUBBLE_NSAMPLES, /*< skip >*/
+} NcDataHubbleId;
 
-#define NC_DATA_HUBBLE_FUNCTION_NSAMPLES (NC_DATA_HUBBLE_FUNCTION_SAMPLE_CABRE + 1)
-
-NcData *nc_data_hubble_function (NcDataHubbleFunctionSampleId H_id);
+NcData *nc_data_hubble (NcDataHubbleId H_id);
 
 G_END_DECLS
 

@@ -396,6 +396,90 @@ ncm_cfg_entries_to_keyfile (GKeyFile *kfile, gchar *group_name, GOptionEntry *en
   }
 }
 
+
+/**
+ * ncm_cfg_get_enum_by_id_name_nick:
+ * @enum_type: FIXME
+ * @id_name_nick: FIXME
+ *
+ * FIXME
+ *
+ * Returns: FIXME
+ */
+const GEnumValue *
+ncm_cfg_get_enum_by_id_name_nick (GType enum_type, const gchar *id_name_nick)
+{
+  GEnumValue *res = NULL;
+  gchar *endptr = NULL;
+  gint64 id = g_ascii_strtoll (id_name_nick, &endptr, 10);
+  GEnumClass *enum_class = NULL;
+
+  g_assert (G_TYPE_IS_ENUM (enum_type));
+
+  enum_class = g_type_class_ref (enum_type);
+  if ((endptr == id_name_nick) || (strlen (endptr) > 0))
+  {
+	res = g_enum_get_value_by_name (enum_class, id_name_nick);
+	if (res == NULL)
+	  res = g_enum_get_value_by_nick (enum_class, id_name_nick);
+  }
+  else
+	res = g_enum_get_value (enum_class, id);
+
+  g_type_class_unref (enum_class);
+
+  return res;
+}
+
+/**
+ * ncm_cfg_enum_print_all:
+ * @enum_type: FIXME
+ * @header: FIXME
+ *
+ * FIXME
+ *
+ */
+void
+ncm_cfg_enum_print_all (GType enum_type, gchar *header)
+{
+  GEnumClass *enum_class;
+  GEnumValue *snia;
+  gint i = 0;
+  gint name_max_len = 4;
+  gint nick_max_len = 4;
+  gint pad;
+
+  g_assert (G_TYPE_IS_ENUM (enum_type));
+
+  enum_class = g_type_class_ref (enum_type);
+
+  while ((snia = g_enum_get_value (enum_class, i++)) != NULL)
+  {
+	name_max_len = GSL_MAX (name_max_len, strlen (snia->value_name));
+	nick_max_len = GSL_MAX (nick_max_len, strlen (snia->value_nick));
+  }
+
+  printf ("# %s:\n", header);
+  pad = 10 + name_max_len + nick_max_len;
+  printf ("#");
+  while (pad-- != 0)
+	printf ("-");
+  printf ("#\n");
+  printf ("# Id | %-*s | %-*s |\n", name_max_len, "Name", nick_max_len, "Nick");
+  i = 0;
+  while ((snia = g_enum_get_value (enum_class, i++)) != NULL)
+  {
+	printf ("# %02d | %-*s | %-*s |\n", snia->value, name_max_len, snia->value_name, nick_max_len, snia->value_nick);
+  }
+  pad = 10 + name_max_len + nick_max_len;
+  printf ("#");
+  while (pad-- != 0)
+	printf ("-");
+  printf ("#\n");
+
+  g_type_class_unref (enum_class);
+}
+
 #ifdef NUMCOSMO_HAVE_FFTW3
 /**
  * ncm_cfg_load_fftw_wisdom:

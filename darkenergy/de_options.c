@@ -71,16 +71,56 @@ nc_de_opt_get_model_group (NcDEModelEntries *de_model, GOptionEntry **de_model_e
   return model_group;
 }
 
+static gboolean
+_nc_de_print_snia_list (const gchar *option_name, const gchar *value, gpointer data, GError **error)
+{
+  ncm_cfg_enum_print_all (NC_TYPE_DATA_DISTANCE_MU_SN_IA_ID, "Supernovae Type Ia samples");
+  return TRUE;
+}
+
+static gboolean
+_nc_de_print_bao_list (const gchar *option_name, const gchar *value, gpointer data, GError **error)
+{
+  ncm_cfg_enum_print_all (NC_TYPE_DATA_BAO_ID, "Baryonic Acoustic Oscillations samples");
+  return TRUE;
+}
+
+static gboolean
+_nc_de_print_cmb_list (const gchar *option_name, const gchar *value, gpointer data, GError **error)
+{
+  ncm_cfg_enum_print_all (NC_TYPE_DATA_CMB_ID, "Cosmic Microwave Background samples");
+  return TRUE;
+}
+
+static gboolean
+_nc_de_print_H_list (const gchar *option_name, const gchar *value, gpointer data, GError **error)
+{
+  ncm_cfg_enum_print_all (NC_TYPE_DATA_HUBBLE_ID, "Hubble function samples");
+  return TRUE;
+}
+
+static gboolean
+_nc_de_print_cluster_list (const gchar *option_name, const gchar *value, gpointer data, GError **error)
+{
+  ncm_cfg_enum_print_all (NC_TYPE_DATA_CLUSTER_ABUNDANCE_ID, "Cluster samples");
+  return TRUE;
+}
+
 GOptionGroup *
 nc_de_opt_get_data_simple_group (NcDEDataSimpleEntries *de_data_simple, GOptionEntry **de_data_simple_entries)
 {
   GOptionEntry data_simple_entries[] =
   {
-	{ "snia-id",    'S', 0, G_OPTION_ARG_INT,    &de_data_simple->snia_id,    "ID of the SNe Ia sample to use",                      NULL },
-	{ "bao-id",     'B', 0, G_OPTION_ARG_INT,    &de_data_simple->bao_id,     "ID of the BAO sample to use",                         NULL },
-	{ "cmb-id",     'C', 0, G_OPTION_ARG_INT,    &de_data_simple->cmb_id,     "ID of the CMB sample to use",                         NULL },
-	{ "H-id",       'E', 0, G_OPTION_ARG_INT,    &de_data_simple->H_id,       "Use the H(z_i) data sample",                          NULL },
-	{ "cluster-id", 'U', 0, G_OPTION_ARG_INT,    &de_data_simple->cluster_id, "Use cluster abundance data",                          NULL },
+	{ "snia-list",       0, G_OPTION_FLAG_NO_ARG, G_OPTION_ARG_CALLBACK, &_nc_de_print_snia_list,     "Print all SNIa data avaliable.", NULL },
+	{ "bao-list",        0, G_OPTION_FLAG_NO_ARG, G_OPTION_ARG_CALLBACK, &_nc_de_print_bao_list,      "Print all BAO data avaliable.",   NULL },
+	{ "cmb-list",        0, G_OPTION_FLAG_NO_ARG, G_OPTION_ARG_CALLBACK, &_nc_de_print_cmb_list,      "Print all CMB data avaliable.",   NULL },
+	{ "H-list",          0, G_OPTION_FLAG_NO_ARG, G_OPTION_ARG_CALLBACK, &_nc_de_print_H_list,        "Print all Hubble data avaliable.",  NULL },
+	{ "cluster-list",    0, G_OPTION_FLAG_NO_ARG, G_OPTION_ARG_CALLBACK, &_nc_de_print_cluster_list,  "Print all Cluster data avaliable.",  NULL },
+	{ "snia-id",    'S', 0, G_OPTION_ARG_STRING, &de_data_simple->snia_id,    "ID of the SNe Ia sample to use",                      NULL },
+	{ "bao-id",     'B', 0, G_OPTION_ARG_STRING, &de_data_simple->bao_id,     "ID of the BAO sample to use",                         NULL },
+	{ "cmb-id",     'C', 0, G_OPTION_ARG_STRING, &de_data_simple->cmb_id,     "ID of the CMB sample to use",                         NULL },
+	{ "H-id",       'E', 0, G_OPTION_ARG_STRING, &de_data_simple->H_id,       "Use the H(z_i) data sample",                          NULL },
+	{ "cluster-id", 'U', 0, G_OPTION_ARG_STRING, &de_data_simple->cluster_id, "Use cluster abundance data",                          NULL },
 	{ "H0_Hst",     'H', 0, G_OPTION_ARG_NONE,   &de_data_simple->H0_Hst,     "Use the HST H0 data (single gaussian (H0 - 73.8) / 2.4)", NULL },
 	{ "BBN",        'N', 0, G_OPTION_ARG_NONE,   &de_data_simple->BBN,        "Use BBN Prior",                                       NULL },
 	{ NULL }
@@ -129,7 +169,7 @@ static gboolean
 _nc_de_print_fit_list (const gchar *option_name, const gchar *value, gpointer data, GError **error)
 {
   printf ("<FIXME> PRINT HERE ALL ALGORITHMS\n");
-  return FALSE;
+  return TRUE;
 }
 
 GOptionGroup *

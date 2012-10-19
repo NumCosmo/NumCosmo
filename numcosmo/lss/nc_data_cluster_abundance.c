@@ -1,5 +1,5 @@
 /***************************************************************************
- *            data_cluster_abundance.c
+ *            nc_data_cluster_abundance.c
  *
  *  Tue Apr  6 01:11:23 2010
  *  Copyright  2010  Mariana Penna Lima
@@ -23,7 +23,7 @@
  */
 
 /**
- * SECTION:data_cluster_abundance
+ * SECTION:nc_data_cluster_abundance
  * @title: Cluster Abundance Data
  * @short_description: FIXME
  *
@@ -613,7 +613,7 @@ _nc_data_cluster_abundance_calc_m2lnL (NcmMSet *mset, gpointer model, gpointer d
   *m2lnL += (dca->log_np_fac + nc_cluster_abundance_n (cad, m));
 
   *m2lnL *= 2.0;
-  
+
   g_timer_destroy (bench);
 }
 
