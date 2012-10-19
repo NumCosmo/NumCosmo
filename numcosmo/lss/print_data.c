@@ -43,7 +43,6 @@
 #include <gsl/gsl_const_mksa.h>
 #include <gsl/gsl_histogram2d.h>
 #include <glib/gstdio.h>
-#include <fitsio.h>
 
 /**
  * nc_mass_funtion_print:
