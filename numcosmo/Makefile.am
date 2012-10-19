@@ -9,6 +9,7 @@ AM_CFLAGS = \
 	 $(SUNDIALS_CFLAGS) \
 	 $(GSL_CFLAGS) \
 	 $(FFTW3_CFLAGS) \
+	 $(CFITSIO_CFLAGS) \
 	 -I$(top_srcdir)
 
 SUBDIRS = 
@@ -292,7 +293,8 @@ libnumcosmo_la_LIBADD = \
 	$(GLIB_LIBS) \
 	$(NLOPT_LIBS) \
 	$(GSL_LIBS) \
-	$(SQLITE3_LIBS)
+	$(SQLITE3_LIBS) \
+	$(CFITSIO_LIBS)
 
 libnumcosmo_la_LDFLAGS = -version-info $(NUMCOSMO_LT_VERSION)
 
@@ -301,7 +303,8 @@ AM_CPPFLAGS = \
 	$(GLIB_CFLAGS) \
 	$(NLOPT_CFLAGS) \
 	$(GSL_CFLAGS) \
-	$(SQLITE3_CFLAGS)
+	$(SQLITE3_CFLAGS) \
+	$(CFITSIO_CFLAGS)
 
 nobase_cosmo_include_HEADERS =  \
 	$(ncm_headers)          \

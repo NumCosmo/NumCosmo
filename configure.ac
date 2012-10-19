@@ -316,12 +316,12 @@ dnl ***************************************************************************
 dnl Check for cfitsio
 dnl ***************************************************************************
 
-AC_CHECK_LIB([cfitsio], [ffopen],,[cfitsio_missing="yes"],[-lm $GLIB_LIBS $APPEND_LIBS])
-if test "x$cfitsio_missing" = "xyes"; then
-  have_cfitsio_support=""
-else
-  have_cfitsio_support="#define NUMCOSMO_HAVE_CFITSIO 1"
-fi
+PKG_CHECK_MODULES(CFITSIO, [cfitsio >= 3.25],[
+  AC_DEFINE([HAVE_CFITSIO],[1], [Have the cfitsio package])
+  have_cfitsio_support="#define NUMCOSMO_HAVE_CFITSIO 1"],[
+  have_cfitsio_support=""])
+AC_SUBST(CFITSIO_CFLAGS)
+AC_SUBST(CFITSIO_LIBS)
 AC_SUBST(have_cfitsio_support)
 
 dnl ***************************************************************************
