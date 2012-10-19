@@ -66,10 +66,7 @@ nc_arxive_open (char *filename)
   
   f = fopen (filename, "r");
   if (f == NULL)
-  {
-    fprintf (stderr, "open_arxive: arxive %s, do not exist\n", filename);
-    exit (0);
-  }
+    g_error ("open_arxive: arxive %s, do not exist", filename);
    
   if (fgets (line, MAX_LINE_SIZE, f) == NULL)
     g_error ("nc_arxive_open: io error");

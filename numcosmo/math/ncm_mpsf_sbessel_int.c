@@ -480,8 +480,7 @@ ncm_mpsf_sbessel_jl_xj_integrate_spline_prepare_new (NcmMpsfSBesselIntSpline *in
     ncm_mpsf_sbessel_jl_xj_integral_recur_set_d (xnjlrec, l, x, rnd);
     printf ("%u %u %.15g\n", i, np, x);
   }
-  exit (0);
-
+  g_assert_not_reached ();
 }
 
 /**

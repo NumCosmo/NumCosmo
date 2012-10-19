@@ -82,10 +82,7 @@ void
 nc_transfer_func_prepare (NcTransferFunc *tf, NcHICosmo *model)
 {
   if (tf->ctrl == NULL)
-  {
-    fprintf (stderr, "You should allocate a new tf using transfer_func_new_from_name(...)\n");
-    exit(0);
-  }
+    g_error ("You should allocate a new tf using transfer_func_new_from_name(...)");
 
   if (ncm_model_ctrl_update (tf->ctrl, NCM_MODEL(model)))
     NC_TRANSFER_FUNC_GET_CLASS (tf)->prepare (tf, model);
@@ -105,10 +102,7 @@ gdouble
 nc_transfer_func_eval (NcTransferFunc *tf, NcHICosmo *model, gdouble kh)
 {
   if (tf->ctrl == NULL)
-  {
-    fprintf (stderr, "You should allocate a new tf using transfer_func_new_from_name(...)\n");
-    exit(0);
-  }
+    g_error ("You should allocate a new tf using transfer_func_new_from_name(...)");
 
   if (ncm_model_ctrl_update (tf->ctrl, NCM_MODEL(model)))
     NC_TRANSFER_FUNC_GET_CLASS (tf)->prepare (tf, model);
@@ -130,10 +124,7 @@ gdouble
 nc_transfer_func_matter_powerspectrum (NcTransferFunc *tf, NcHICosmo *model, gdouble kh)
 {
   if (tf->ctrl == NULL)
-  {
-    fprintf (stderr, "You should allocate a new tf using transfer_func_new_from_name(...)\n");
-    exit(0);
-  }
+    g_error ("You should allocate a new tf using transfer_func_new_from_name(...)");
 
   if (ncm_model_ctrl_update (tf->ctrl, NCM_MODEL(model)))
     NC_TRANSFER_FUNC_GET_CLASS (tf)->prepare (tf, model);

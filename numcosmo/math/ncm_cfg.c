@@ -215,10 +215,7 @@ ncm_cfg_set_logfile (gchar *filename)
   if (out != NULL)
 	_log_stream = out;
   else
-  {
-	fprintf (stderr, "ncm_cfg_set_logfile: Can't open logfile (%s)\n", filename);
-	exit (-1);
-  }
+    g_error ("ncm_cfg_set_logfile: Can't open logfile (%s)", filename);
 }
 
 /**

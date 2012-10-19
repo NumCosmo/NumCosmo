@@ -1053,10 +1053,7 @@ nc_cluster_abundance_realizations_read_from_file (gchar *file_realization, gint 
   long int file_position, goby;
 
   if (frealization == NULL)
-  {
-	fprintf (stderr, "abundance_random_generator_read_from_file: file %s, do not exist.\n", file_realization);
-	exit (0);
-  }
+    g_error ("abundance_random_generator_read_from_file: file %s, do not exist.", file_realization);
 
   file_position = ftell(frealization);
 
@@ -1076,10 +1073,7 @@ nc_cluster_abundance_realizations_read_from_file (gchar *file_realization, gint 
 		continue;
 	  }
 	  if (n_enter ==1)
-	  {
-		fprintf (stderr, "Error, it must not exist just one 'enter'.\n");
-		exit(-1);
-	  }
+            g_error ("Error, it must not exist just one 'enter'.");
 	  n_enter = 0;
 	  z_total++;
 	}

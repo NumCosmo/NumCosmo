@@ -182,8 +182,8 @@ ncm_galaxy_acf_prepare_psi (NcGalaxyAcf *acf, NcHICosmo *model, guint l)
 	                        &res, &err);
 	//printf ("\n%u % 20.15g\n", l, norma * res);
 	fflush (stdout);
-	exit (0);
-	//return res;
+	//exit (0);
+	return res;
   }
 
 /*
