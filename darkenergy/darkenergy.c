@@ -196,6 +196,11 @@ main (gint argc, gchar *argv[])
 	ncm_mset_param_set_ftype (mset, NC_HICOSMO_ID, NC_HICOSMO_DE_OMEGA_X, NCM_PARAM_TYPE_FREE);
   }
 
+  if (de_model.pos_Omega_x)
+  {
+	nc_prior_add_positive (lh, NC_HICOSMO_ID, NC_HICOSMO_DE_OMEGA_X);
+  }
+
   if (de_data_simple.snia_id != NULL)
   {
 	const GEnumValue *snia_id = ncm_cfg_get_enum_by_id_name_nick (NC_TYPE_DATA_DISTANCE_MU_SN_IA_ID,

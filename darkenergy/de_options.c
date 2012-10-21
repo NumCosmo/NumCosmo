@@ -55,10 +55,11 @@ nc_de_opt_get_model_group (NcDEModelEntries *de_model, GOptionEntry **de_model_e
 {
   GOptionEntry model_entries[] =
   {
-	{ "model",    'm', 0, G_OPTION_ARG_STRING, &de_model->model_name, "Name of the darkenergy model to be used.",                    NULL },
-	{ "Omega_k",    0, 0, G_OPTION_ARG_NONE,   &de_model->Omega_k,    "Change variable Omega_x -> Omega_k.",                         NULL },
-	{ "flat",       0, 0, G_OPTION_ARG_NONE,   &de_model->flat,       "Change variable Omega_x -> Omega_k and set Omega_k to zero.", NULL },
-	{ "help-names", 0, 0, G_OPTION_ARG_NONE,   &de_model->help_names, "Print the parameters names of the chosen model", NULL },
+	{ "model",    'm', 0, G_OPTION_ARG_STRING, &de_model->model_name,  "Name of the darkenergy model to be used.",                    NULL },
+	{ "pos_Omega_x",0, 0, G_OPTION_ARG_NONE,   &de_model->pos_Omega_x, "Positivity prior on Omega_x.",                                NULL },
+	{ "Omega_k",    0, 0, G_OPTION_ARG_NONE,   &de_model->Omega_k,     "Change variable Omega_x -> Omega_k.",                         NULL },
+	{ "flat",       0, 0, G_OPTION_ARG_NONE,   &de_model->flat,        "Change variable Omega_x -> Omega_k and set Omega_k to zero.", NULL },
+	{ "help-names", 0, 0, G_OPTION_ARG_NONE,   &de_model->help_names,  "Print the parameters names of the chosen model", NULL },
 	{ NULL }
   };
   GOptionGroup *model_group = g_option_group_new ("model", " - Dark energy model options", "Show help options related to dark energy model", NULL, NULL);

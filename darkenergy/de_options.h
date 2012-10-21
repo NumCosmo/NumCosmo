@@ -48,11 +48,12 @@ struct _NcDEModelEntries
 {
   gchar *model_name;
   gboolean flat;
+  gboolean pos_Omega_x;
   gboolean Omega_k;
   gboolean help_names;
 };
 
-#define NC_DE_MODEL_ENTRIES {"NcHICosmoDEXcdm", FALSE, FALSE, FALSE }
+#define NC_DE_MODEL_ENTRIES {"NcHICosmoDEXcdm", FALSE, FALSE, FALSE, FALSE }
 
 typedef struct _NcDEDataSimpleEntries NcDEDataSimpleEntries;
 
