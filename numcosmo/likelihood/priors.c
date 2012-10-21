@@ -155,7 +155,7 @@ static void
 positive_prior_f (NcmMSet *mset, gpointer obj, const gdouble *x, gdouble *f)
 {
   NcGaussianPrior *gp = (NcGaussianPrior *)obj;
-  f[0] = ncm_mset_param_get (mset, gp->pi.gmid, gp->pi.pid) > 0.0 ? 0.0 : GSL_POSINF;
+  f[0] = ncm_mset_orig_param_get (mset, gp->pi.gmid, gp->pi.pid) > 0.0 ? 0.0 : GSL_POSINF;
 }
 
 /**

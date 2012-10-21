@@ -624,6 +624,22 @@ ncm_mset_param_get (NcmMSet *mset, NcmModelID gmid, guint pid)
 }
 
 /**
+ * ncm_mset_orig_param_get:
+ * @mset: a #NcmMSet
+ * @gmid: FIXME
+ * @pid: FIXME
+ *
+ * FIXME
+ *
+ * Returns: FIXME
+ */
+gdouble
+ncm_mset_orig_param_get (NcmMSet *mset, NcmModelID gmid, guint pid)
+{
+  return ncm_model_orig_param_get (ncm_mset_peek (mset, gmid), pid);
+}
+
+/**
  * ncm_mset_param_name:
  * @mset: a #NcmMSet
  * @gmid: FIXME
@@ -813,7 +829,7 @@ void
 ncm_mset_fparams_get_vector (NcmMSet *mset, NcmVector *x)
 {
   guint fpi;
-  
+
   for (fpi = 0; fpi < mset->fparam_len; fpi++)
   {
     const NcmMSetPIndex pi = g_array_index (mset->pi_array, NcmMSetPIndex, fpi);
@@ -833,7 +849,7 @@ void
 ncm_mset_fparams_set_vector (NcmMSet *mset, const NcmVector *x)
 {
   guint fpi;
-  
+
   for (fpi = 0; fpi < mset->fparam_len; fpi++)
   {
     const NcmMSetPIndex pi = g_array_index (mset->pi_array, NcmMSetPIndex, fpi);

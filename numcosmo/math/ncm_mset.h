@@ -105,6 +105,7 @@ void ncm_mset_params_print_vals (NcmMSet *mset, FILE *out);
 
 void ncm_mset_param_set (NcmMSet *mset, NcmModelID gmid, guint pid, const gdouble x);
 gdouble ncm_mset_param_get (NcmMSet *mset, NcmModelID gmid, guint pid);
+gdouble ncm_mset_orig_param_get (NcmMSet *mset, NcmModelID gmid, guint pid);
 
 const gchar *ncm_mset_param_name (NcmMSet *mset, NcmModelID gmid, guint pid);
 void ncm_mset_param_set_ftype (NcmMSet *mset, NcmModelID gmid, guint pid, NcmParamType ftype);
