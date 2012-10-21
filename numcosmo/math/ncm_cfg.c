@@ -341,6 +341,7 @@ ncm_cfg_entries_to_keyfile (GKeyFile *kfile, gchar *group_name, GOptionEntry *en
   gint i;
   for (i = 0; entries[i].long_name != NULL; i++)
   {
+	gboolean skip_comment = FALSE;
 	switch (entries[i].arg)
 	{
 	  case G_OPTION_ARG_NONE:
@@ -386,10 +387,15 @@ ncm_cfg_entries_to_keyfile (GKeyFile *kfile, gchar *group_name, GOptionEntry *en
 		break;
 	  }
 	  default:
+		skip_comment = TRUE;
 		//g_error ("ncm_cfg_entries_to_keyfile: cannot convert entry type %d to keyfile", entries[i].arg);
 		break;
 	}
-	g_key_file_set_comment (kfile, group_name, entries[i].long_name, entries[i].description, &error);
+	if (!skip_comment)
+	{
+	  if (!g_key_file_set_comment (kfile, group_name, entries[i].long_name, entries[i].description, &error))
+		g_error ("ncm_cfg_entries_to_keyfile: %s", error->message);
+	}
   }
 }
 
