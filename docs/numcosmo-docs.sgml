@@ -181,7 +181,6 @@
       <xi:include href="xml/nc_cluster_mass_benson_xray.xml"/>
     </section>
     <xi:include href="xml/nc_cluster_abundance.xml"/>
-    <xi:include href="xml/catalog_parser.xml"/>
     <xi:include href="xml/print_data.xml"/>
     <xi:include href="xml/read_matrix.xml"/>
   </chapter>
