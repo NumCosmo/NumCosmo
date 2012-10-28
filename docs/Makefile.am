@@ -162,7 +162,7 @@ endif
 
 MAINTAINERCLEANFILES = $(man_MANS) $(BUILT_SOURCES)
 
-EXTRA_DIST += $(man_MANS)
+BUILT_EXTRA_DIST = $(man_MANS)
 
 dist-hook-local: dist-local-check-mans-enabled numcosmo-docs-clean all-local
 

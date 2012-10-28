@@ -1,12 +1,16 @@
 <refentry id="darkenergy">
 
+<refentryinfo><date>2012-10-28</date></refentryinfo>
+
 <refmeta>
 <refentrytitle>darkenergy</refentrytitle>
 <manvolnum>1</manvolnum>
-<refmiscinfo class="manual">User Commands</refmiscinfo>
+<refmiscinfo class='date'>2012-10-28</refmiscinfo>
+<refmiscinfo class="manual">NumCosmo Manual</refmiscinfo>
+<refmiscinfo class="source">NumCosmo Manual Pages</refmiscinfo>
 </refmeta>
 
-<refnamediv>
+<refnamediv id='darkenergy-name'>
 <refname>darkenergy</refname>
 <refpurpose>tests of dark energy models</refpurpose>
 </refnamediv>
@@ -41,5 +45,8 @@ print help and exit
 </variablelist>
 </refsect2>
 </refsect1>
-
+<refsect1 id='darkenergy-author'>
+<title>Author</title>
+<para>darkenergy was written by Sandro Dias Pinto Vitenti &lt;sandro@isoftware.com.br&gt;.</para>
+</refsect1>
 </refentry>
