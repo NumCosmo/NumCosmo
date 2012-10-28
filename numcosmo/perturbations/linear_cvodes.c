@@ -35,7 +35,9 @@
 #include <nvector/nvector_serial.h>    /* serial N_Vector types, fcts., and macros */
 #include <cvodes/cvodes_dense.h>       /* prototype for CVDense */
 #include <cvodes/cvodes_band.h>        /* prototype for CVBand */
+#if SUNDIALS_BLAS_LAPACK == 1
 #include <cvodes/cvodes_lapack.h>      /* prototype for CVBand */
+#endif /* SUNDIALS_BLAS_LAPACK */
 #include <cvodes/cvodes_diag.h>        /* prototype for CVBand */
 #include <cvode/cvode_spgmr.h>         /* prototypes & constants for CVSPGMR solver */
 #include <cvode/cvode_spbcgs.h>        /* prototypes & constants for CVSPBCG solver */

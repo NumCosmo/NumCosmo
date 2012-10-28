@@ -62,6 +62,23 @@ LT_INIT
 dnl check for gtk-doc
 GTK_DOC_CHECK([1.14],[--flavour no-tmpl])
 
+AC_ARG_ENABLE(man,
+              [AC_HELP_STRING([--enable-man],
+                              [regenerate man pages from Docbook [default=no]])],enable_man=yes,
+              enable_man=no)
+
+if test "${enable_man}" != no; then
+dnl
+dnl Check for xsltproc
+dnl
+AC_PATH_PROG([XSLTPROC], [xsltproc])
+  if test -z "$XSLTPROC"; then
+    enable_man=no
+  fi
+fi
+
+AM_CONDITIONAL(ENABLE_MAN, test x$enable_man != xno)
+
 dnl Set PACKAGE_DATA_DIR in config.h.
 if test "x${prefix}" = "xNONE"; then
   AC_DEFINE_UNQUOTED(PACKAGE_DATA_DIR, "${ac_default_prefix}/share/${PACKAGE}-${VERSION}", [PACKAGE_DATA_DIR])

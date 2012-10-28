@@ -119,6 +119,7 @@ _ncm_fftlog_constructed (GObject *object)
   /* Chain up : start */
   G_OBJECT_CLASS (ncm_fftlog_parent_class)->constructed (object);
   {
+#ifdef NUMCOSMO_HAVE_FFTW3
 	NcmFftlog *fftlog = NCM_FFTLOG (object);
 	fftlog->N_2 = (fftlog->N - 1) / 2;
 	fftlog->dr  = fftlog->L / (1.0 * fftlog->N);
@@ -129,17 +130,20 @@ _ncm_fftlog_constructed (GObject *object)
 	fftlog->p_in2out = fftw_plan_dft_1d (fftlog->N, fftlog->in, fftlog->out, FFTW_FORWARD, FFTW_PATIENT | FFTW_DESTROY_INPUT);
 	fftlog->p_out2in = fftw_plan_dft_1d (fftlog->N, fftlog->out, fftlog->in, FFTW_FORWARD, FFTW_PATIENT | FFTW_DESTROY_INPUT);
 	ncm_cfg_save_fftw_wisdom ("ncm_fftlog_wisdown.fftw3");
+#endif /* NUMCOSMO_HAVE_FFTW3 */
   }
 }
 
 static void
 ncm_fftlog_finalize (GObject *object)
 {
+#ifdef NUMCOSMO_HAVE_FFTW3
   NcmFftlog *fftlog = NCM_FFTLOG (object);
   fftw_destroy_plan (fftlog->p_in2out);
   fftw_destroy_plan (fftlog->p_out2in);
   fftw_free (fftlog->in);
   fftw_free (fftlog->out);
+#endif /* NUMCOSMO_HAVE_FFTW3 */
 
   /* Chain up : end */
   G_OBJECT_CLASS (ncm_fftlog_parent_class)->finalize (object);

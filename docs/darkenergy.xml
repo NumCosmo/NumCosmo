@@ -1,0 +1,45 @@
+<refentry id="darkenergy">
+
+<refmeta>
+<refentrytitle>darkenergy</refentrytitle>
+<manvolnum>1</manvolnum>
+<refmiscinfo class="manual">User Commands</refmiscinfo>
+</refmeta>
+
+<refnamediv>
+<refname>darkenergy</refname>
+<refpurpose>tests of dark energy models</refpurpose>
+</refnamediv>
+
+<refsynopsisdiv>
+<cmdsynopsis>
+<command>darkenergy</command>
+<arg choice="opt" rep="repeat">option</arg>
+<arg>testprogram</arg>
+</cmdsynopsis>
+</refsynopsisdiv>
+
+<refsect1><title>Description</title>
+<para><command>darkenergy</command> is a utility to run statistics 
+tests on dark energy models.
+</para>
+<para>
+When called with the <option>--help</option> option, <command>darkenergy</command>
+show the available options. 
+</para>
+
+<refsect2><title>Options</title>
+<variablelist>
+
+<varlistentry>
+<term><option>-h</option>, <option>--help</option></term>
+<listitem><para>
+print help and exit
+</para></listitem>
+</varlistentry>
+
+</variablelist>
+</refsect2>
+</refsect1>
+
+</refentry>

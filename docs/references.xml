@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE refentry PUBLIC "-//OASIS//DTD DocBook XML V4.5//EN" "http://www.oasis-open.org/docbook/xml/4.5/docbookx.dtd">
+<?asciidoc-toc?>
+<?asciidoc-numbered?>
+<refentry lang="en">
+<refentryinfo>
+    <title>References(3)</title>
+    <author>
+        <firstname>Sandro</firstname>
+        <othername>Dias Pinto</othername>
+        <surname>Vitenti</surname>
+        <email>sandro@isoftware.com.br</email>
+    </author>
+    <authorinitials>SDV</authorinitials>
+</refentryinfo>
+<refmeta>
+<refentrytitle>References</refentrytitle>
+<manvolnum>3</manvolnum>
+<refmiscinfo class="source">&#160;</refmiscinfo>
+<refmiscinfo class="manual">&#160;</refmiscinfo>
+</refmeta>
+<refnamediv>
+    <refname>References</refname>
+    <refpurpose>Project Bibliography</refpurpose>
+</refnamediv>
+<bibliography id="_bibliography">
+<title>Bibliography</title>
+<informalfigure>
+<mediaobject>
+  <imageobject>
+  <imagedata fileref="latex1.png" align="center"/>
+  </imageobject>
+  <textobject><phrase>latex1.png</phrase></textobject>
+</mediaobject>
+</informalfigure>
+<itemizedlist>
+<listitem>
+<simpara>
+<anchor id="weinberg_cosmo_book" xreflabel="[weinberg_cosmo_book]"/> Cosmology S. Weinberg
+</simpara>
+</listitem>
+<listitem>
+<simpara>
+<anchor id="pequignot1991" xreflabel="[pequignot1991]"/> Pequignot et al. (1991)
+</simpara>
+</listitem>
+<listitem>
+<simpara>
+<anchor id="hummer1998" xreflabel="[hummer1998]"/> Hummer and Storey (1998)
+</simpara>
+</listitem>
+</itemizedlist>
+</bibliography>
+</refentry>

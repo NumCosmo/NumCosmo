@@ -1,11 +1,12 @@
 ## Process this file with automake to produce Makefile.in
 
-# Files to process with asciidoc
+# Local xml files
 XML_FILES=dependencies.xml \
           compiling.xml \
           introduction.xml \
           references.xml \
-          theory.xml
+          theory.xml \
+          darkenergy.xml
 
 # We require automake 1.6 at least.
 AUTOMAKE_OPTIONS = 1.6
@@ -136,9 +137,37 @@ TESTS_ENVIRONMENT = cd $(srcdir) && \
 #TESTS = $(GTKDOC_CHECK)
 endif
 
-.asciidoc.xml:
-	asciidoc -b docbook -d manpage -o $@ $<
-	@if test ! "$(DOC_TARGET_DIR)/$(@F)" -ef "$(<D)/$(@F)"; then cp $(DOC_TARGET_DIR)/$(@F) $(<D)/$(@F); fi
+########################################################################
+
+man_MANS = darkenergy.1
+
+if ENABLE_MAN
+
+.xml.1:
+	@@XSLTPROC@ -nonet http://docbook.sourceforge.net/release/xsl/current/manpages/docbook.xsl $<
+
+dist-local-check-mans-enabled:
+	if grep "Man generation disabled" $(man_MANS) >/dev/null; then $(RM) $(man_MANS); fi
+else
+
+$(man_MANS):
+	@echo Man generation disabled.  Creating dummy $@.  Configure with --enable-man to enable it.
+	@echo Man generation disabled.  Remove this file, configure with --enable-man, and rebuild > $@
+
+dist-local-check-mans-enabled:
+	@echo "*** --enable-man must be used in order to make dist"
+	false
+
+endif
+
+MAINTAINERCLEANFILES = $(man_MANS) $(BUILT_SOURCES)
+
+EXTRA_DIST += $(man_MANS)
+
+dist-hook-local: dist-local-check-mans-enabled numcosmo-docs-clean all-local
+
+numcosmo-docs-clean: clean
+	cd $(srcdir) && rm -rf xml html
 
 .tex.xml:
 	@echo "  DOC   Building XML from $(@F)"

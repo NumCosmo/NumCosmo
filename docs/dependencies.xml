@@ -1,0 +1,160 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE refentry PUBLIC "-//OASIS//DTD DocBook XML V4.5//EN" "http://www.oasis-open.org/docbook/xml/4.5/docbookx.dtd">
+<?asciidoc-toc?>
+<?asciidoc-numbered?>
+<refentry lang="en">
+<refentryinfo>
+    <title>Library Dependencies(3)</title>
+    <author>
+        <firstname>Sandro</firstname>
+        <othername>Dias Pinto</othername>
+        <surname>Vitenti</surname>
+        <email>sandro@isoftware.com.br</email>
+    </author>
+    <authorinitials>SDV</authorinitials>
+</refentryinfo>
+<refmeta>
+<refentrytitle>Library Dependencies</refentrytitle>
+<manvolnum>3</manvolnum>
+<refmiscinfo class="source">&#160;</refmiscinfo>
+<refmiscinfo class="manual">&#160;</refmiscinfo>
+</refmeta>
+<refnamediv>
+    <refname>Dependencies</refname>
+    <refpurpose>The dependency set of NumCosmo</refpurpose>
+</refnamediv>
+<refsect1 id="req_dep">
+<title>Required Dependencies</title>
+<itemizedlist>
+<listitem>
+<simpara>
+GLib-2.0
+</simpara>
+<itemizedlist>
+<listitem>
+<simpara>
+Portability issues: types, filesystem, threads, etc;
+</simpara>
+</listitem>
+<listitem>
+<simpara>
+Several generic data structures: hash tables, binary trees, etc;
+</simpara>
+</listitem>
+<listitem>
+<simpara>
+Utilities: timers for benchmark, logging facilities, etc.
+</simpara>
+</listitem>
+</itemizedlist>
+</listitem>
+<listitem>
+<simpara>
+GSL
+</simpara>
+<itemizedlist>
+<listitem>
+<simpara>
+Special functions;
+</simpara>
+</listitem>
+<listitem>
+<simpara>
+Multidimensional minimization, including both algorithms with and
+</simpara>
+</listitem>
+<listitem>
+<simpara>
+without derivatives;
+</simpara>
+</listitem>
+<listitem>
+<simpara>
+Interpolation;
+</simpara>
+</listitem>
+<listitem>
+<simpara>
+Several other mathematical algorithms.
+</simpara>
+</listitem>
+</itemizedlist>
+</listitem>
+<listitem>
+<simpara>
+GMP/MPFR
+</simpara>
+<itemizedlist>
+<listitem>
+<simpara>
+Special function with arbitrary precision;
+</simpara>
+</listitem>
+<listitem>
+<simpara>
+Binary splitting algorithims;
+</simpara>
+</listitem>
+<listitem>
+<simpara>
+One dimensional grid with rationals.
+</simpara>
+</listitem>
+</itemizedlist>
+</listitem>
+<listitem>
+<simpara>
+FFTW3
+</simpara>
+<itemizedlist>
+<listitem>
+<simpara>
+Self optimized discrete Fourier transform used in spherical harmonics decomposition
+</simpara>
+</listitem>
+</itemizedlist>
+</listitem>
+<listitem>
+<simpara>
+CFitsio
+</simpara>
+<itemizedlist>
+<listitem>
+<simpara>
+Manipulate cmb data files
+</simpara>
+</listitem>
+</itemizedlist>
+</listitem>
+<listitem>
+<simpara>
+Sundials
+</simpara>
+<itemizedlist>
+<listitem>
+<simpara>
+Ode system solver with support to several algorithms including stiff ode systems.
+</simpara>
+</listitem>
+</itemizedlist>
+</listitem>
+</itemizedlist>
+</refsect1>
+<refsect1 id="opt_dep">
+<title>Optional Dependencies</title>
+<itemizedlist>
+<listitem>
+<simpara>
+ATLAS
+</simpara>
+<itemizedlist>
+<listitem>
+<simpara>
+Optimized basic linear algebra package (used transparently by several algorithms in GSL).
+</simpara>
+</listitem>
+</itemizedlist>
+</listitem>
+</itemizedlist>
+</refsect1>
+</refentry>

@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE refentry PUBLIC "-//OASIS//DTD DocBook XML V4.5//EN" "http://www.oasis-open.org/docbook/xml/4.5/docbookx.dtd">
+<?asciidoc-toc?>
+<?asciidoc-numbered?>
+<refentry lang="en">
+<refentryinfo>
+    <title>Compiling(3)</title>
+    <author>
+        <firstname>Sandro</firstname>
+        <othername>Dias Pinto</othername>
+        <surname>Vitenti</surname>
+        <email>sandro@isoftware.com.br</email>
+    </author>
+    <authorinitials>SDV</authorinitials>
+</refentryinfo>
+<refmeta>
+<refentrytitle>Compiling</refentrytitle>
+<manvolnum>3</manvolnum>
+<refmiscinfo class="source">&#160;</refmiscinfo>
+<refmiscinfo class="manual">&#160;</refmiscinfo>
+</refmeta>
+<refnamediv>
+    <refname>Compiling</refname>
+    <refpurpose>How to compile NumCosmo</refpurpose>
+</refnamediv>
+<refsect1 id="_fixme">
+<title>FIXME</title>
+<simpara>FIXME</simpara>
+</refsect1>
+</refentry>

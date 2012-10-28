@@ -282,7 +282,11 @@ nc_matter_var_prepare (NcMatterVar *vp, NcHICosmo *model)
 	  _nc_matter_var_prepare_splineint (vp, model);
 	  break;
 	case NC_MATTER_VAR_FFT:
+#ifdef NUMCOSMO_HAVE_FFTW3
 	  _nc_matter_var_prepare_fft (vp, model);
+#else
+          g_error ("nc_matter_var_prepare: Cannot use NC_MATTER_VAR_FFT: fftw not installed.");
+#endif
 	  break;
   }
 }
@@ -838,6 +842,7 @@ _nc_matter_var_prepare_splineint (NcMatterVar *vp, NcHICosmo *model)
   return;
 }
 
+#ifdef NUMCOSMO_HAVE_FFTW3
 static void
 _nc_matter_var_prepare_fft (NcMatterVar *vp, NcHICosmo *model)
 {
@@ -948,6 +953,7 @@ _nc_matter_var_prepare_fft (NcMatterVar *vp, NcHICosmo *model)
   ncm_spline_prepare (vp->sigma2_over_growth);
   ncm_spline_prepare (vp->deriv_sigma2_over_growth);
 }
+#endif /* NUMCOSMO_HAVE_FFTW3 */
 
 /**
  * _2f3:

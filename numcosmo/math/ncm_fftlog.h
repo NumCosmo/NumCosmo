@@ -56,10 +56,12 @@ struct _NcmFftlog
   gdouble lnr0;
   gdouble L;
   gdouble dr;
+#ifdef NUMCOSMO_HAVE_FFTW3
   fftw_complex *in;
   fftw_complex *out;
   fftw_plan p_in2out;
   fftw_plan p_out2in;
+#endif /* NUMCOSMO_HAVE_FFTW3 */
 };
 
 GType ncm_fftlog_get_type (void) G_GNUC_CONST;
