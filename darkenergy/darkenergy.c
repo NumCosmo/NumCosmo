@@ -78,7 +78,7 @@ main (gint argc, gchar *argv[])
 	if(!g_option_context_parse (context, &p_argc, &p_argv, &error))
 	{
 	  fprintf (stderr, "Invalid run options:\n  %s.\n", error->message);
-	  printf (g_option_context_get_help (context, TRUE, NULL));
+	  printf ("%s", g_option_context_get_help (context, TRUE, NULL));
 	  g_option_context_free (context);
 	  return 0;
 	}
@@ -98,7 +98,7 @@ main (gint argc, gchar *argv[])
 	if (!g_key_file_load_from_file (runconf, de_run.runconf, G_KEY_FILE_KEEP_COMMENTS | G_KEY_FILE_KEEP_TRANSLATIONS, &error))
 	{
 	  fprintf (stderr, "Invalid run configuration file: %s\n  %s\n", de_run.runconf, error->message);
-	  printf (g_option_context_get_help (context, TRUE, NULL));
+	  printf ("%s", g_option_context_get_help (context, TRUE, NULL));
 	  return 0;
 	}
 
@@ -112,7 +112,7 @@ main (gint argc, gchar *argv[])
 	if(!g_option_context_parse (context, &runconf_argc, &runconf_argv, &error))
 	{
 	  fprintf (stderr, "Invalid configuration file options:\n  %s.\n", error->message);
-	  printf (g_option_context_get_help (context, TRUE, NULL));
+	  printf ("%s", g_option_context_get_help (context, TRUE, NULL));
 	  g_option_context_free (context);
 	  return 0;
 	}
@@ -120,7 +120,7 @@ main (gint argc, gchar *argv[])
 	if(!g_option_context_parse (context, &argc, &argv, &error))
 	{
 	  fprintf (stderr, "Invalid run options:\n  %s.\n", error->message);
-	  printf (g_option_context_get_help (context, TRUE, NULL));
+	  printf ("%s", g_option_context_get_help (context, TRUE, NULL));
 	  g_option_context_free (context);
 	  return 0;
 	}
@@ -158,7 +158,7 @@ main (gint argc, gchar *argv[])
       de_data_simple.cluster_id == NULL)
   {
 	printf ("No action or data was chosen.\n");
-	printf (g_option_context_get_help (context, TRUE, NULL));
+	printf ("%s", g_option_context_get_help (context, TRUE, NULL));
 	g_option_context_free (context);
 	return 0;
   }

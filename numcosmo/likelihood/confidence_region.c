@@ -954,7 +954,7 @@ ncm_fit_cr_root_steffenson (NcConfidenceRegion *cr, gdouble x)
 	if (status)
 	{
 	  ncm_mset_params_print_vals (cr->constrained->mset, stdout);
-	  g_warning (gsl_strerror (status));
+	  g_warning ("%s", gsl_strerror (status));
 	  gsl_root_fdfsolver_free (s);
 	  return GSL_NAN;
 	}
@@ -1012,7 +1012,7 @@ ncm_fit_cr_root_brent (NcConfidenceRegion *cr, gdouble x0, gdouble x)
 	if (status)
 	{
 	  //      nc_params_print_all (cr->fit->mset, stdout);
-	  g_warning (gsl_strerror (status));
+	  g_warning ("%s", gsl_strerror (status));
 	  gsl_root_fsolver_free (s);
 	  return GSL_NAN;
 	}

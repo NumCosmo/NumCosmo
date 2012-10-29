@@ -8,11 +8,11 @@
 /*
  * numcosmo
  * Copyright (C) Sandro Dias Pinto Vitenti 2012 <sandro@isoftware.com.br>
-   * numcosmo is free software: you can redistribute it and/or modify it
+ * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
-   *
+ *
  * numcosmo is distributed in the hope that it will be useful, but
  * WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
@@ -449,7 +449,7 @@ ncm_sphPlm_x (gint l, gint m, gint order)
 	status = gsl_root_fsolver_iterate (s);
 	if (status)
 	{
-	  g_warning (gsl_strerror (status));
+	  g_warning ("%s", gsl_strerror (status));
 	  gsl_root_fsolver_free (s);
 	  return GSL_NAN;
 	}

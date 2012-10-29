@@ -58,7 +58,7 @@ _ncm_cfg_log_message (const gchar *log_domain, GLogLevelFlags log_level, const g
 {
   if (_enable_msg && _log_stream)
   {
-	fprintf (_log_stream, message);
+	fprintf (_log_stream, "%s", message);
 	if (_enable_msg_flush)
 	  fflush (_log_stream);
   }

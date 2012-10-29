@@ -1373,7 +1373,7 @@ nc_thermodyn_recomb_optical_depth_x0_x1 (NcThermodynRecomb *recomb, gdouble x0, 
   nc_thermodyn_recomb_dtau_dx_init_spline (recomb);
   ret = gsl_spline_eval_integ_e (recomb->dtau_dx_spline, -x1, -x0, recomb->dtau_dx_accel, &result);
   if (ret != GSL_SUCCESS)
-    g_error (gsl_strerror (ret));
+    g_error ("%s", gsl_strerror (ret));
 
   return -result;
 }
@@ -1397,7 +1397,7 @@ nc_thermodyn_recomb_optical_depth_R_x0_x1 (NcThermodynRecomb *recomb, gdouble x0
   nc_thermodyn_recomb_dtau_dx_init_spline (recomb);
   ret = gsl_spline_eval_integ_e (recomb->dtau_dxR_spline, -x1, -x0, recomb->dtau_dx_accel, &result);
   if (ret != GSL_SUCCESS)
-    g_error (gsl_strerror (ret));
+    g_error ("%s", gsl_strerror (ret));
 
   return -result;
 }
