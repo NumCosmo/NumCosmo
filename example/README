@@ -4,7 +4,7 @@
 Compile directly with:
 
 libtool --tag=CC --mode=link gcc simple_example.c -o simple_example \
-/home/[username]/numcosmo/numcosmo/libcosmo.la \
+/home/[username]/numcosmo/numcosmo/libnumcosmo.la \
 -I/home/[username]/numcosmo \
 `pkg-config glib-2.0 --cflags`
 
@@ -16,9 +16,4 @@ This line may need modification depending on the system. Just look
 for the missing header and add the corresponding pkg-config lib or -I
 
 ****************************************************************************
-
-If you have installed (with sudo make install) the library in your
-system, compile with:
-
-gcc simple_example.c -o simple_example `pkg-config numcosmo --libs --cflags`
 
