@@ -36,6 +36,11 @@
 #endif /* HAVE_CONFIG_H */
 #include <numcosmo/numcosmo.h>
 
+#ifndef HAVE_FFTW3_ALLOC
+#define fftw_alloc_real(n) (double *) fftw_malloc(sizeof(double) * (n))
+#define fftw_alloc_complex(n) (fftw_complex *) fftw_malloc(sizeof(fftw_complex) * (n))
+#endif /* HAVE_FFTW3_ALLOC */
+
 enum
 {
   PROP_0,
