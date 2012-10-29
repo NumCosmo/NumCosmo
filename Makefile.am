@@ -15,12 +15,12 @@ numcosmodoc_DATA = \
 	COPYING    \
 	AUTHORS    \
 	ChangeLog  \
-	INSTALL    \
 	NEWS
 
 #DISTCLEANFILES = intltool-extract intltool-merge intltool-update
 
 EXTRA_DIST = \
+	INSTALL                  \
 	$(numcosmodoc_DATA)      \
 	numcosmo.pc.in           \
 	example/simple_example.c \
