@@ -1,7 +1,7 @@
 /***************************************************************************
- *            ncm_matrix_inline.c
+ *            ncm_build_inline.h
  *
- *  Thu January 05 20:18:45 2012
+ *  Mon Oct 29 23:35:29 2012
  *  Copyright  2012  Sandro Dias Pinto Vitenti
  *  <sandro@isoftware.com.br>
  ****************************************************************************/
@@ -25,9 +25,10 @@
 #ifdef HAVE_CONFIG_H
 #  include "config.h"
 #endif /* HAVE_CONFIG_H */
-#define _NCM_MATRIX_INLINE_H_
+#ifndef G_IMPLEMENT_INLINES
+#define G_IMPLEMENT_INLINES
+#endif /* G_IMPLEMENT_INLINES */
+#ifndef NUMCOSMO_HAVE_INLINE
+#define NUMCOSMO_HAVE_INLINE
+#endif /* NUMCOSMO_HAVE_INLINE */
 #include <numcosmo/numcosmo.h>
-
-#undef _NCM_MATRIX_INLINE_H_
-#include "ncm_build_inline.h"
-#include "ncm_matrix.h"

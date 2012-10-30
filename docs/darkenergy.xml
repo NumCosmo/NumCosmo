@@ -19,7 +19,6 @@
 <cmdsynopsis>
 <command>darkenergy</command>
 <arg choice="opt" rep="repeat">option</arg>
-<arg>testprogram</arg>
 </cmdsynopsis>
 </refsynopsisdiv>
 

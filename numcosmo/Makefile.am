@@ -17,25 +17,20 @@ SUBDIRS =
 lib_LTLIBRARIES = libnumcosmo.la
 
 ncm_sources = \
+	ncm_build_inline.c                 \
 	math/ncm_cfg.c                     \
 	math/ncm_lapack.c                  \
-	math/ncm_lapack_inline.c           \
 	math/ncm_vector.c                  \
-	math/ncm_vector_inline.c           \
 	math/ncm_matrix.c                  \
-	math/ncm_matrix_inline.c           \
 	math/ncm_spline.c                  \
-	math/ncm_spline_inline.c           \
 	math/ncm_spline_gsl.c              \
 	math/ncm_spline_cubic.c            \
 	math/ncm_spline_cubic_notaknot.c   \
 	math/ncm_spline_func.c             \
 	math/ncm_spline2d.c                \
-	math/ncm_spline2d_inline.c         \
 	math/ncm_spline2d_spline.c         \
 	math/ncm_spline2d_gsl.c            \
 	math/ncm_spline2d_bicubic.c        \
-	math/ncm_spline2d_bicubic_inline.c \
 	math/ncm_func_eval.c               \
 	math/ncm_mpsf_trig_int.c           \
 	math/ncm_mpsf_sbessel.c            \
@@ -47,9 +42,7 @@ ncm_sources = \
 	math/ncm_sparam.c                  \
 	math/ncm_vparam.c                  \
 	math/ncm_model.c                   \
-	math/ncm_model_inline.c            \
 	math/ncm_model_ctrl.c              \
-	math/ncm_model_ctrl_inline.c       \
 	math/ncm_mset.c                    \
 	math/ncm_mset_func.c               \
 	math/ncm_ode_spline.c              \
@@ -152,11 +145,8 @@ nc_headers = \
 
 nc_sources = \
 	nc_hicosmo.c                 \
-	nc_hicosmo_inline.c          \
 	nc_distance.c                \
-	nc_distance_inline.c         \
 	model/nc_hicosmo_de.c        \
-	model/nc_hicosmo_de_inline.c \
 	model/nc_hicosmo_de_linder.c \
 	model/nc_hicosmo_de_pad.c    \
 	model/nc_hicosmo_de_qe.c     \
@@ -175,7 +165,6 @@ nc_sources = \
 	lss/nc_transfer_func_camb.c  \
 	lss/nc_transfer_func_pert.c  \
 	lss/nc_growth_func.c         \
-	lss/nc_growth_func_inline.c  \
 	lss/nc_matter_var.c          \
 	lss/nc_galaxy_acf.c          \
 	lss/nc_multiplicity_func.c   \
@@ -187,7 +176,6 @@ nc_sources = \
 	lss/nc_multiplicity_func_tinker_mean.c \
 	lss/nc_multiplicity_func_tinker_crit.c \
 	lss/nc_mass_function.c                 \
-	lss/nc_mass_function_inline.c          \
 	lss/nc_halo_bias_type.c                \
 	lss/nc_halo_bias_type_ps.c             \
 	lss/nc_halo_bias_type_st_spher.c       \
@@ -205,7 +193,6 @@ nc_sources = \
 	lss/nc_cluster_mass_benson.c           \
 	lss/nc_cluster_mass_benson_xray.c      \
 	lss/nc_cluster_abundance.c             \
-	lss/nc_cluster_abundance_inline.c      \
 	lss/nc_data_cluster_abundance.c        \
 	data/nc_data_distance_mu.c   \
 	data/nc_data_hubble.c        \
