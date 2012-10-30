@@ -25,10 +25,11 @@
 #ifdef HAVE_CONFIG_H
 #  include "config.h"
 #endif /* HAVE_CONFIG_H */
+
 #ifndef G_IMPLEMENT_INLINES
-#define G_IMPLEMENT_INLINES
+#  define G_IMPLEMENT_INLINES
+#else
+#  define NUMCOSMO_HAVE_INLINE
 #endif /* G_IMPLEMENT_INLINES */
-#ifndef NUMCOSMO_HAVE_INLINE
-#define NUMCOSMO_HAVE_INLINE
-#endif /* NUMCOSMO_HAVE_INLINE */
+
 #include <numcosmo/numcosmo.h>
