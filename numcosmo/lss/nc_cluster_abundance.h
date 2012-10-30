@@ -148,6 +148,7 @@ G_END_DECLS
 
 #ifndef _NC_CLUSTER_ABUNDANCE_INLINE_H_
 #define _NC_CLUSTER_ABUNDANCE_INLINE_H_
+#ifdef NUMCOSMO_HAVE_INLINE
 
 #include <glib-object.h>
 #include <glib.h>
@@ -168,6 +169,7 @@ nc_cluster_abundance_peek_mass (NcClusterAbundance *cad)
 
 G_END_DECLS
 
+#endif /* NUMCOSMO_HAVE_INLINE */
 #endif /* _NC_CLUSTER_ABUNDANCE_INLINE_H_ */
 
 

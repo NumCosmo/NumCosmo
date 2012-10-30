@@ -386,10 +386,10 @@ ncm_spline2d_integ_dxdy_spline_y (NcmSpline2d *s2d, gdouble xl, gdouble xu, gdou
  */
 #ifndef NUMCOSMO_HAVE_INLINE
 #define NUMCOSMO_HAVE_INLINE
-#undef _NCM_SPLINE_INLINE_H_
+#undef _NCM_SPLINE2D_INLINE_H_
 #define G_INLINE_FUNC
 #include "ncm_spline2d.h"
-#undef _NCM_SPLINE_INLINE_H_
+#undef _NCM_SPLINE2D_INLINE_H_
 #undef NUMCOSMO_HAVE_INLINE
 #endif /* NUMCOSMO_HAVE_INLINE */
 

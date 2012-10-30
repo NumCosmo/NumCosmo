@@ -108,6 +108,8 @@ G_INLINE_FUNC gulong ncm_model_impl (NcmModel *model);
 G_INLINE_FUNC guint ncm_model_len (NcmModel *model);
 G_INLINE_FUNC guint ncm_model_sparam_len (NcmModel *model);
 G_INLINE_FUNC guint ncm_model_vparam_array_len (NcmModel *model);
+G_INLINE_FUNC guint ncm_model_vparam_index (NcmModel *model, guint n, guint i);
+G_INLINE_FUNC guint ncm_model_vparam_len (NcmModel *model, guint n);
 G_INLINE_FUNC const gchar *ncm_model_name (NcmModel *model);
 G_INLINE_FUNC const gchar *ncm_model_nick (NcmModel *model);
 G_INLINE_FUNC NcmReparam *ncm_model_peek_reparam (NcmModel *model);

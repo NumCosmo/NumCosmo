@@ -105,6 +105,7 @@ G_END_DECLS
 
 #ifndef _NC_MASS_FUNCTION_INLINE_H_
 #define _NC_MASS_FUNCTION_INLINE_H_
+#ifdef NUMCOSMO_HAVE_INLINE
 
 #include <glib-object.h>
 
@@ -126,4 +127,5 @@ nc_mass_function_d2n_dzdlnm (NcMassFunction *mfp, NcHICosmo *model, gdouble lnM,
 
 G_END_DECLS
 
+#endif /* NUMCOSMO_HAVE_INLINE */
 #endif /* _NC_MASS_FUNCTION_INLINE_H_ */

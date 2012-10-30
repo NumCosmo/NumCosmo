@@ -107,6 +107,7 @@ G_INLINE_FUNC const NcmMatrix *ncm_matrix_new_gsl_const (gsl_matrix *m);
 G_INLINE_FUNC gdouble ncm_matrix_get (const NcmMatrix *cm, const guint i, const guint j);
 G_INLINE_FUNC gdouble *ncm_matrix_ptr (NcmMatrix *cm, const guint i, const guint j);
 G_INLINE_FUNC NcmMatrix *ncm_matrix_ref (NcmMatrix *cm);
+G_INLINE_FUNC GArray *ncm_matrix_get_array (NcmMatrix *cm);
 G_INLINE_FUNC void ncm_matrix_set (NcmMatrix *cm, const guint i, const guint j, const gdouble val);
 G_INLINE_FUNC void ncm_matrix_transpose (NcmMatrix *cm);
 G_INLINE_FUNC void ncm_matrix_set_identity (NcmMatrix *cm);

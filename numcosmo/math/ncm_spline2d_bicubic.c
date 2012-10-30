@@ -83,10 +83,10 @@ _ncm_spline2d_bicubic_copy_empty (const NcmSpline2d *s2d)
 
 #ifndef NUMCOSMO_HAVE_INLINE
 #define NUMCOSMO_HAVE_INLINE
-#undef _NCM_SPLINE_INLINE_H_
+#undef _NCM_SPLINE2D_BICUBIC_INLINE_H_
 #define G_INLINE_FUNC
 #include "ncm_spline2d_bicubic.h"
-#undef _NCM_SPLINE_INLINE_H_
+#undef _NCM_SPLINE2D_BICUBIC_INLINE_H_
 #undef NUMCOSMO_HAVE_INLINE
 #endif /* NUMCOSMO_HAVE_INLINE */
 

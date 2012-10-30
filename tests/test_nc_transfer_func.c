@@ -116,10 +116,12 @@ void
 test_nc_transfer_func_eval (void)
 {
   gint i;
+  gdouble tot = 0.0;
 
   for (i = 0; i < 100; i++)
   {
     gdouble kh = 1000.0 / 99.0 * i;
-    gdouble T = nc_transfer_func_eval (tf, model, kh);
+    gdouble T = nc_transfer_func_eval (tf, NC_HICOSMO (model), kh);
+    tot += T;
   }
 }

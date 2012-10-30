@@ -74,6 +74,7 @@ G_END_DECLS
 
 #ifndef _NC_GROWTH_FUNC_INLINE_H_
 #define _NC_GROWTH_FUNC_INLINE_H_
+#ifdef NUMCOSMO_HAVE_INLINE
 
 #include <glib-object.h>
 #include <gsl/gsl_spline.h>
@@ -107,4 +108,5 @@ nc_growth_func_eval_both (NcGrowthFunc *gf, NcHICosmo *model, gdouble z, gdouble
 
 G_END_DECLS
 
+#endif /* NUMCOSMO_HAVE_INLINE */
 #endif /* _NC_GROWTH_FUNC_INLINE_H_ */
