@@ -711,12 +711,4 @@ _nc_mass_function_generate_2Dspline_knots (NcMassFunction *mfp, NcHICosmo *model
  *
  * Returns: FIXME
  */
-#ifndef NUMCOSMO_HAVE_INLINE
-#define NUMCOSMO_HAVE_INLINE
-#undef _NC_MASS_FUNCTION_INLINE_H_
-#define G_INLINE_FUNC
-#include "nc_mass_function.h"
-#undef _NC_MASS_FUNCTION_INLINE_H_
-#undef NUMCOSMO_HAVE_INLINE
-#endif /* NUMCOSMO_HAVE_INLINE */
 

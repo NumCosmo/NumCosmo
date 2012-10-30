@@ -1,13 +1,13 @@
 /***************************************************************************
- *            ncm_lapack.c
+ *            nc_hicosmo_inline.c
  *
- *  Sun March 18 22:33:15 2012
- *  Copyright  2012  Sandro Dias Pinto Vitenti
+ *  Tue May 29 19:23:52 2007
+ *  Copyright  2007  Sandro Dias Pinto Vitenti
  *  <sandro@isoftware.com.br>
  ****************************************************************************/
 /*
  * numcosmo
- * Copyright (C) Sandro Dias Pinto Vitenti 2012 <sandro@lapsandro>
+ * Copyright (C) Sandro Dias Pinto Vitenti 2012 <sandro@isoftware.com.br>
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
@@ -22,43 +22,12 @@
  * with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-/**
- * SECTION:ncm_lapack
- * @title: Helper C functions to call lapack
- * @short_description: FIXME
- *
- * FIXME
- */
-
 #ifdef HAVE_CONFIG_H
 #  include "config.h"
 #endif /* HAVE_CONFIG_H */
+#define _NC_HICOSMO_INLINE_H_
 #include <numcosmo/numcosmo.h>
 
-#include <glib.h>
-
-/**
- * dptsv_: (skip)
- * @N: FIXME
- * @NRHS: FIXME
- * @d: FIXME
- * @e: FIXME
- * @b: FIXME
- * @ldb: FIXME
- * @info: FIXME
- *
- * FIXME
- *
- */
-
-/**
- * ncm_lapack_dptsv:
- * @d: FIXME
- * @e: FIXME
- * @b: FIXME
- * @size: FIXME
- *
- * FIXME
- *
- * Returns: FIXME
- */
+#undef _NC_HICOSMO_INLINE_H_
+#include "ncm_build_inline.h"
+#include "nc_hicosmo.h"

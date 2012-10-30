@@ -446,15 +446,6 @@ ncm_matrix_copy (const NcmMatrix *cm)
  *
  * Returns: (transfer container) (element-type double): FIXME
  */
-#ifndef NUMCOSMO_HAVE_INLINE
-#define NUMCOSMO_HAVE_INLINE
-#undef _NCM_MATRIX_INLINE_H_
-#define G_INLINE_FUNC
-#include "ncm_matrix.h"
-#undef _NCM_MATRIX_INLINE_H_
-#undef NUMCOSMO_HAVE_INLINE
-#endif /* NUMCOSMO_HAVE_INLINE */
-
 
 static void
 ncm_matrix_init (NcmMatrix *m)

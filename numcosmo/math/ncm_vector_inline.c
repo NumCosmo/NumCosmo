@@ -1,8 +1,8 @@
 /***************************************************************************
- *            ncm_lapack.c
+ *            ncm_vector_inline.c
  *
- *  Sun March 18 22:33:15 2012
- *  Copyright  2012  Sandro Dias Pinto Vitenti
+ *  Tue Jul  8 15:05:41 2008
+ *  Copyright  2008  Sandro Dias Pinto Vitenti
  *  <sandro@isoftware.com.br>
  ****************************************************************************/
 /*
@@ -22,43 +22,13 @@
  * with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-/**
- * SECTION:ncm_lapack
- * @title: Helper C functions to call lapack
- * @short_description: FIXME
- *
- * FIXME
- */
-
 #ifdef HAVE_CONFIG_H
 #  include "config.h"
 #endif /* HAVE_CONFIG_H */
+#define _NCM_VECTOR_INLINE_H_
 #include <numcosmo/numcosmo.h>
 
-#include <glib.h>
+#undef _NCM_VECTOR_INLINE_H_
+#include "ncm_build_inline.h"
+#include "ncm_vector.h"
 
-/**
- * dptsv_: (skip)
- * @N: FIXME
- * @NRHS: FIXME
- * @d: FIXME
- * @e: FIXME
- * @b: FIXME
- * @ldb: FIXME
- * @info: FIXME
- *
- * FIXME
- *
- */
-
-/**
- * ncm_lapack_dptsv:
- * @d: FIXME
- * @e: FIXME
- * @b: FIXME
- * @size: FIXME
- *
- * FIXME
- *
- * Returns: FIXME
- */

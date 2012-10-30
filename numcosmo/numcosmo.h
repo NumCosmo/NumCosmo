@@ -30,6 +30,7 @@
 #include <complex.h>
 #include <glib.h>
 #include <glib-object.h>
+#include <gsl/gsl_inline.h>
 #include <gsl/gsl_blas.h>
 #include <gsl/gsl_vector.h>
 #include <gsl/gsl_matrix.h>

@@ -1,8 +1,8 @@
 /***************************************************************************
- *            ncm_lapack.c
+ *            nc_distance_inline.c
  *
- *  Sun March 18 22:33:15 2012
- *  Copyright  2012  Sandro Dias Pinto Vitenti
+ *  Tue May  8 11:05:35 2007
+ *  Copyright  2007  Sandro Dias Pinto Vitenti
  *  <sandro@isoftware.com.br>
  ****************************************************************************/
 /*
@@ -22,43 +22,12 @@
  * with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-/**
- * SECTION:ncm_lapack
- * @title: Helper C functions to call lapack
- * @short_description: FIXME
- *
- * FIXME
- */
-
 #ifdef HAVE_CONFIG_H
 #  include "config.h"
 #endif /* HAVE_CONFIG_H */
+#define _NC_DISTANCE_INLINE_H_
 #include <numcosmo/numcosmo.h>
 
-#include <glib.h>
-
-/**
- * dptsv_: (skip)
- * @N: FIXME
- * @NRHS: FIXME
- * @d: FIXME
- * @e: FIXME
- * @b: FIXME
- * @ldb: FIXME
- * @info: FIXME
- *
- * FIXME
- *
- */
-
-/**
- * ncm_lapack_dptsv:
- * @d: FIXME
- * @e: FIXME
- * @b: FIXME
- * @size: FIXME
- *
- * FIXME
- *
- * Returns: FIXME
- */
+#undef _NC_DISTANCE_INLINE_H_
+#include "ncm_build_inline.h"
+#include "nc_distance.h"

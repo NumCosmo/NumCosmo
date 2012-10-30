@@ -1,13 +1,13 @@
 /***************************************************************************
- *            ncm_lapack.c
+ *            ncm_spline2d_bicubic.c
  *
- *  Sun March 18 22:33:15 2012
- *  Copyright  2012  Sandro Dias Pinto Vitenti
- *  <sandro@isoftware.com.br>
+ *  Sun Aug  1 17:17:08 2010
+ *  Copyright  2010  Mariana Penna Lima & Sandro Dias Pinto Vitenti
+ *  <pennalima@gmail.com>, <sandro@isoftware.com.br>
  ****************************************************************************/
 /*
  * numcosmo
- * Copyright (C) Sandro Dias Pinto Vitenti 2012 <sandro@lapsandro>
+ * Copyright (C) Mariana Penna Lima & Sandro Dias Pinto Vitenti 2012 <pennalima@gmail.com>, <sandro@isoftware.com.br>
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
@@ -22,43 +22,12 @@
  * with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-/**
- * SECTION:ncm_lapack
- * @title: Helper C functions to call lapack
- * @short_description: FIXME
- *
- * FIXME
- */
-
 #ifdef HAVE_CONFIG_H
 #  include "config.h"
 #endif /* HAVE_CONFIG_H */
+#define _NCM_SPLINE2D_BICUBIC_INLINE_H_
 #include <numcosmo/numcosmo.h>
 
-#include <glib.h>
-
-/**
- * dptsv_: (skip)
- * @N: FIXME
- * @NRHS: FIXME
- * @d: FIXME
- * @e: FIXME
- * @b: FIXME
- * @ldb: FIXME
- * @info: FIXME
- *
- * FIXME
- *
- */
-
-/**
- * ncm_lapack_dptsv:
- * @d: FIXME
- * @e: FIXME
- * @b: FIXME
- * @size: FIXME
- *
- * FIXME
- *
- * Returns: FIXME
- */
+#undef _NCM_SPLINE2D_BICUBIC_INLINE_H_
+#include "ncm_build_inline.h"
+#include "ncm_spline2d_bicubic.h"

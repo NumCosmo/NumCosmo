@@ -1309,14 +1309,6 @@ ncm_model_params_get_all (NcmModel *model)
  *
  * Returns: (transfer full): FIXME
  */
-#ifndef NUMCOSMO_HAVE_INLINE
-#define NUMCOSMO_HAVE_INLINE
-#undef _NCM_MODEL_INLINE_H_
-#define G_INLINE_FUNC
-#include "ncm_model.h"
-#undef _NCM_MODEL_INLINE_H_
-#undef NUMCOSMO_HAVE_INLINE
-#endif /* NUMCOSMO_HAVE_INLINE */
 
 /**
  * ncm_model_param_get_scale:

@@ -248,14 +248,6 @@ nc_growth_func_prepare (NcGrowthFunc *gf, NcHICosmo *model)
  *
  * Returns: FIXME
  */
-#ifndef NUMCOSMO_HAVE_INLINE
-#define NUMCOSMO_HAVE_INLINE
-#undef _NC_GROWTH_FUNC_INLINE_H_
-#define G_INLINE_FUNC
-#include "nc_growth_func.h"
-#undef _NC_GROWTH_FUNC_INLINE_H_
-#undef NUMCOSMO_HAVE_INLINE
-#endif /* NUMCOSMO_HAVE_INLINE */
 
 static void
 nc_growth_func_init (NcGrowthFunc *gf)

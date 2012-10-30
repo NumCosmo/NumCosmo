@@ -375,14 +375,6 @@ ncm_spline_get_yv (NcmSpline *s)
  *
  * Returns: The index of the lower knot of the interval @x belongs to.
  */
-#ifndef NUMCOSMO_HAVE_INLINE
-#define NUMCOSMO_HAVE_INLINE
-#undef _NCM_SPLINE_INLINE_H_
-#define G_INLINE_FUNC
-#include "ncm_spline.h"
-#undef _NCM_SPLINE_INLINE_H_
-#undef NUMCOSMO_HAVE_INLINE
-#endif /* NUMCOSMO_HAVE_INLINE */
 
 /**
  * ncm_spline_free:

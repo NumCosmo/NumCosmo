@@ -589,15 +589,6 @@ nc_cluster_abundance_get_mass (NcClusterAbundance *cad)
  *
  * Returns: (transfer none): the value of #NcClusterAbundance:mass property.
  */
-#ifndef NUMCOSMO_HAVE_INLINE
-#define NUMCOSMO_HAVE_INLINE
-#undef _NC_CLUSTER_ABUNDANCE_INLINE_H_
-#define G_INLINE_FUNC
-#include "nc_cluster_abundance.h"
-#undef _NC_CLUSTER_ABUNDANCE_INLINE_H_
-#undef NUMCOSMO_HAVE_INLINE
-#endif /* NUMCOSMO_HAVE_INLINE */
-
 
 /**
  * nc_cluster_abundance_prepare:
