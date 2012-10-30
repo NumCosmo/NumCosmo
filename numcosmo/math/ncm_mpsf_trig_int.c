@@ -33,13 +33,12 @@
 #ifdef HAVE_CONFIG_H
 #  include "config.h"
 #endif /* HAVE_CONFIG_H */
-#include <numcosmo/numcosmo.h>
+#include "build_cfg.h"
 
-#include <string.h>
-#include <stdio.h>
-#include <glib.h>
-#include <gsl/gsl_sum.h>
-#include <gsl/gsl_blas.h>
+#include "math/ncm_mpsf_trig_int.h"
+#include "math/binsplit.h"
+
+#include <math.h>
 
 #define NC_BINSPLIT_EVAL_NAME binsplit_sin_integral_taylor
 #define _mx2 (((mpq_ptr)data))
@@ -198,6 +197,7 @@ _assym_mpfr (mpq_t q, mpfr_ptr res, mp_rnd_t rnd)
  * @rnd: FIXME
  *
  * FIXME
+ * 
  */
 void
 ncm_mpsf_sin_int_mpfr (mpq_t q, mpfr_ptr res, mp_rnd_t rnd)

@@ -33,7 +33,9 @@
 #ifdef HAVE_CONFIG_H
 #  include "config.h"
 #endif /* HAVE_CONFIG_H */
-#include <numcosmo/numcosmo.h>
+#include "build_cfg.h"
+
+#include "model/nc_hicosmo_de_pad.h"
 
 G_DEFINE_TYPE (NcHICosmoDEPad, nc_hicosmo_de_pad, NC_TYPE_HICOSMO_DE);
 

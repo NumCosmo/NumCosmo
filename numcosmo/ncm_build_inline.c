@@ -1,5 +1,5 @@
 /***************************************************************************
- *            ncm_build_inline.h
+ *            ncm_build_inline.c
  *
  *  Mon Oct 29 23:35:29 2012
  *  Copyright  2012  Sandro Dias Pinto Vitenti

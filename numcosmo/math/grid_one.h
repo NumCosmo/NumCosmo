@@ -24,11 +24,14 @@
 
 #ifndef _NC_GRID_ONE_H
 #define _NC_GRID_ONE_H
-#include <string.h>
-#include <stdio.h>
-#include <gmp.h>
-#include <mpfr.h>
+
 #include <glib.h>
+#include <glib-object.h>
+
+#include <stdio.h>
+#ifndef NUMCOSMO_GIR_SCAN
+#include <gmp.h>
+#endif
 
 G_BEGIN_DECLS
 

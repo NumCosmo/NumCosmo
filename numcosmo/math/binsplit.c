@@ -33,12 +33,9 @@
 #ifdef HAVE_CONFIG_H
 #  include "config.h"
 #endif /* HAVE_CONFIG_H */
-#include <numcosmo/numcosmo.h>
+#include "build_cfg.h"
 
-#include <stdio.h>
-#include <glib.h>
-#include <gmp.h>
-#include <mpfr.h>
+#include "math/binsplit.h"
 
 static gboolean one_init = FALSE;
 mpz_t NCM_BINSPLIT_ONE;

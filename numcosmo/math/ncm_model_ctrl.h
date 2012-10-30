@@ -25,7 +25,9 @@
 #ifndef _NCM_MODEL_CTRL_H_
 #define _NCM_MODEL_CTRL_H_
 
+#include <glib.h>
 #include <glib-object.h>
+#include <numcosmo/math/ncm_model.h>
 
 G_BEGIN_DECLS
 

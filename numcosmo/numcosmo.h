@@ -25,31 +25,8 @@
 #ifndef _NUMCOSMO_H
 #define _NUMCOSMO_H
 
-#include <string.h>
-#include <math.h>
-#include <complex.h>
-#include <glib.h>
-#include <glib-object.h>
-#include <gsl/gsl_inline.h>
-#include <gsl/gsl_blas.h>
-#include <gsl/gsl_vector.h>
-#include <gsl/gsl_matrix.h>
-#include <gsl/gsl_linalg.h>
-#include <gsl/gsl_rng.h>
-#include <gsl/gsl_randist.h>
-#include <gsl/gsl_integration.h>
-#include <gsl/gsl_bspline.h>
-#include <gsl/gsl_spline.h>
-#include <gsl/gsl_multimin.h>
-#include <gsl/gsl_multifit_nlin.h>
-#include <sundials/sundials_nvector.h>
-
 /* Supported libraries and build configuration */
 #include <numcosmo/build_cfg.h>
-
-#ifdef NUMCOSMO_HAVE_FFTW3
-#include <fftw3.h>
-#endif /* NUMCOSMO_HAVE_FFTW3 */
 
 /* Macros, Constants and Enums */
 #include <numcosmo/ncm_enum_types.h>

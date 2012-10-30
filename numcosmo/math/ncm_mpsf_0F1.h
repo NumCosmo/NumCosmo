@@ -24,11 +24,14 @@
 
 #ifndef _NCM_MPSF_0F1_H
 #define _NCM_MPSF_0F1_H
-#include <string.h>
-#include <stdio.h>
+
+#include <glib.h>
+#include <glib-object.h>
+
+#ifndef NUMCOSMO_GIR_SCAN
 #include <gmp.h>
 #include <mpfr.h>
-#include <glib.h>
+#endif
 
 G_BEGIN_DECLS
 

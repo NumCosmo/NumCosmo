@@ -25,7 +25,13 @@
 #ifndef _NC_MASS_FUNCTION_H_
 #define _NC_MASS_FUNCTION_H_
 
+#include <glib.h>
 #include <glib-object.h>
+#include <numcosmo/nc_distance.h>
+#include <numcosmo/lss/nc_matter_var.h>
+#include <numcosmo/lss/nc_growth_func.h>
+#include <numcosmo/lss/nc_multiplicity_func.h>
+#include <numcosmo/math/ncm_spline2d.h>
 
 G_BEGIN_DECLS
 

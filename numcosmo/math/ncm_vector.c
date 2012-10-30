@@ -33,11 +33,9 @@
 #ifdef HAVE_CONFIG_H
 #  include "config.h"
 #endif /* HAVE_CONFIG_H */
-#include <numcosmo/numcosmo.h>
+#include "build_cfg.h"
 
-#include <glib.h>
-#include <gsl/gsl_vector.h>
-#include <sundials/sundials_nvector.h>
+#include "math/ncm_vector.h"
 
 G_DEFINE_TYPE (NcmVector, ncm_vector, G_TYPE_INITIALLY_UNOWNED);
 

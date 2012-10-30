@@ -34,19 +34,13 @@
 #ifdef HAVE_CONFIG_H
 #  include "config.h"
 #endif /* HAVE_CONFIG_H */
-#include <numcosmo/numcosmo.h>
+#include "build_cfg.h"
 
-
-#include <string.h>
-#include <stdio.h>
-#include <glib.h>
-#include <gmp.h>
-#include <mpfr.h>
-#include <gsl/gsl_sf_gamma.h>
-#include <gsl/gsl_sf_hyperg.h>
-#include <gsl/gsl_roots.h>
-#include <gsl/gsl_sf_lambert.h>
-#include <gsl/gsl_sf_bessel.h>
+#include "math/ncm_mpsf_sbessel.h"
+#include "math/util.h"
+#include "math/ncm_cfg.h"
+#include "math/binsplit.h"
+#include "math/memory_pool.h"
 
 /**
  * ncm_mpsf_sbessel_recur_new: (skip)

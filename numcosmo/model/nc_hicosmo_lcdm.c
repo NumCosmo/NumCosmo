@@ -33,11 +33,10 @@
 #ifdef HAVE_CONFIG_H
 #  include "config.h"
 #endif /* HAVE_CONFIG_H */
-#include <numcosmo/numcosmo.h>
+#include "build_cfg.h"
 
-#include <glib.h>
-#include <gsl/gsl_math.h>
-#include <gsl/gsl_deriv.h>
+#include "model/nc_hicosmo_lcdm.h"
+#include "model/nc_hicosmo_de.h"
 
 G_DEFINE_TYPE (NcHICosmoLCDM, nc_hicosmo_lcdm, NC_TYPE_HICOSMO);
 

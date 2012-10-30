@@ -34,7 +34,9 @@
 #ifdef HAVE_CONFIG_H
 #  include "config.h"
 #endif /* HAVE_CONFIG_H */
-#include <numcosmo/numcosmo.h>
+#include "build_cfg.h"
+
+#include "math/ncm_mset.h"
 
 G_DEFINE_TYPE (NcmMSet, ncm_mset, G_TYPE_OBJECT);
 G_DEFINE_BOXED_TYPE (NcmMSetPIndex, ncm_mset_pindex, ncm_mset_pindex_copy, ncm_mset_pindex_free);

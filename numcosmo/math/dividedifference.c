@@ -33,13 +33,9 @@
 #ifdef HAVE_CONFIG_H
 #  include "config.h"
 #endif /* HAVE_CONFIG_H */
-#include <numcosmo/numcosmo.h>
+#include "build_cfg.h"
 
-#include <string.h>
-#include <stdio.h>
-#include <glib.h>
-#include <gmp.h>
-#include <mpfr.h>
+#include "math/dividedifference.h"
 
 static void
 _interp_dd_direct (const gdouble *vx, const gint nt, const gint nf, const gint n, register gint xbi, register gint xbf, gdouble *dd)

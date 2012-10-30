@@ -33,10 +33,14 @@
 #ifdef HAVE_CONFIG_H
 #  include "config.h"
 #endif /* HAVE_CONFIG_H */
-#include <numcosmo/numcosmo.h>
+#include "build_cfg.h"
 
-#include <glib.h>
-#include <gsl/gsl_sf_erf.h>
+#include "lss/nc_cluster_abundance.h"
+#include "math/ncm_spline_cubic_notaknot.h"
+#include "math/ncm_spline2d_bicubic.h"
+#include "math/integral.h"
+#include "math/memory_pool.h"
+#include <gsl/gsl_histogram.h>
 
 enum
 {

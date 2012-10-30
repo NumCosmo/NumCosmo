@@ -34,7 +34,12 @@
 #ifdef HAVE_CONFIG_H
 #  include "config.h"
 #endif /* HAVE_CONFIG_H */
-#include <numcosmo/numcosmo.h>
+#include "build_cfg.h"
+
+#include "lss/nc_cluster_mass_lnnormal.h"
+#include "math/util.h"
+
+#include <gsl/gsl_randist.h>
 
 G_DEFINE_TYPE (NcClusterMassLnnormal, nc_cluster_mass_lnnormal, NC_TYPE_CLUSTER_MASS);
 

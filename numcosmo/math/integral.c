@@ -33,13 +33,16 @@
 #ifdef HAVE_CONFIG_H
 #  include "config.h"
 #endif /* HAVE_CONFIG_H */
-#include <numcosmo/numcosmo.h>
+#include "build_cfg.h"
 
-#include <glib.h>
+#include "math/integral.h"
+#include "math/memory_pool.h"
+
 #include <gsl/gsl_integration.h>
 #ifdef HAVE_LIBCUBA
-#include <cuba.h>
+#include <cuba.h>  
 #endif /* HAVE_LIBCUBA */
+
 
 static gpointer
 _integral_ws_alloc (void)

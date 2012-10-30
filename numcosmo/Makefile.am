@@ -392,12 +392,16 @@ EXTRA_DIST = \
 	nc_enum_types.h.template  \
 	nc_enum_types.h           \
 	nc_enum_types.c.template  \
-	nc_enum_types.c
+	nc_enum_types.c           \
+	ncm_gir_scan.h
+
+CLEANFILES = $(BUILT_SOURCES)
 
 -include $(INTROSPECTION_MAKEFILE)
 INTROSPECTION_GIRS =
-INTROSPECTION_SCANNER_ARGS = --add-include-path=$(srcdir) -I$(srcdir)/../ -I$(top_builddir) \
-  --identifier-prefix=Ncm --identifier-prefix=Nc --warn-all
+INTROSPECTION_SCANNER_ARGS = --add-include-path=$(srcdir) -I$(srcdir)/../ -I$(top_builddir)   \
+  --identifier-prefix=Ncm --identifier-prefix=Nc --warn-all --c-include="numcosmo/numcosmo.h" \
+  --accept-unprefixed
 
 INTROSPECTION_COMPILER_ARGS = --includedir=$(srcdir)
 #Numcosmo_1_0_gir_NAMESPACE=Nc
@@ -405,11 +409,11 @@ INTROSPECTION_COMPILER_ARGS = --includedir=$(srcdir)
 
 if HAVE_INTROSPECTION
 
-introspection_sources = numcosmo.h $(libnumcosmo_la_SOURCES)
+introspection_sources = ncm_gir_scan.h $(libnumcosmo_la_SOURCES)
 
-Numcosmo-1.0.gir: libnumcosmo.la
+Numcosmo-1.0.gir: libnumcosmo.la $(INTROSPECTION_SCANNER)
 Numcosmo_1_0_gir_INCLUDES = GObject-2.0
-Numcosmo_1_0_gir_CFLAGS = $(INCLUDES)
+Numcosmo_1_0_gir_CFLAGS = $(INCLUDES) -DNUMCOSMO_GIR_SCAN
 Numcosmo_1_0_gir_LIBS = libnumcosmo.la
 Numcosmo_1_0_gir_FILES = $(introspection_sources)
 INTROSPECTION_GIRS += Numcosmo-1.0.gir
@@ -420,6 +424,6 @@ gir_DATA = $(INTROSPECTION_GIRS)
 typelibdir = $(libdir)/girepository-1.0
 typelib_DATA = $(INTROSPECTION_GIRS:.gir=.typelib)
       
-CLEANFILES = $(gir_DATA) $(typelib_DATA)
+CLEANFILES += $(gir_DATA) $(typelib_DATA)
 
 endif

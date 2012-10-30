@@ -33,19 +33,17 @@
 #ifdef HAVE_CONFIG_H
 #  include "config.h"
 #endif /* HAVE_CONFIG_H */
-#include <numcosmo/numcosmo.h>
+#include "build_cfg.h"
 
+#include "likelihood/levmar.h"
+
+#include <gsl/gsl_blas.h>
 #ifdef NUMCOSMO_HAVE_LEVMAR
-
-#include <string.h>
-#include <glib.h>
 #ifdef NC_LEVMAR_NEED_PREFIX
 #include <levmar/levmar.h>
 #else
 #include <levmar.h>
 #endif /* NC_LEVMAR_NEED_PREFIX */
-#include <gsl/gsl_blas.h>
-#include <gsl/gsl_statistics_double.h>
 
 static void nc_residual_levmar_f (gdouble *p, gdouble *hx, gint m, gint n, gpointer adata);
 static void nc_residual_levmar_J (gdouble *p, gdouble *j, gint m, gint n, gpointer adata);

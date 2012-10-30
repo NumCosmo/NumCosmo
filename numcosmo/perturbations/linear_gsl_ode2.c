@@ -25,13 +25,13 @@
 #ifdef HAVE_CONFIG_H
 #  include "config.h"
 #endif /* HAVE_CONFIG_H */
-#include <numcosmo/numcosmo.h>
+#include "build_cfg.h"
+
+#include "perturbations/linear.h"
+
+#include <gsl/gsl_odeiv2.h>
 
 #ifdef HAVE_GSL_ODEIV2
-#include <glib.h>
-#include <gsl/gsl_sf_exp.h>
-#include <gsl/gsl_sf_bessel.h>
-#include <gsl/gsl_odeiv2.h>
 
 #include "linear_internal.h"
 
@@ -42,7 +42,7 @@ typedef struct _GSLOde2Data
   gsl_odeiv2_step *sa;
   gsl_odeiv2_control *c;
   gsl_odeiv2_evolve *e;
-	gsl_odeiv2_driver *d;
+  gsl_odeiv2_driver *d;
   gsl_odeiv2_system sys;
   gsl_vector *yi;
   gsl_vector *y;

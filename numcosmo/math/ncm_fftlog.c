@@ -34,8 +34,16 @@
 #ifdef HAVE_CONFIG_H
 #  include "config.h"
 #endif /* HAVE_CONFIG_H */
-#include <numcosmo/numcosmo.h>
+#include "build_cfg.h"
 
+#include "math/ncm_fftlog.h"
+#include "math/ncm_cfg.h"
+
+#include <math.h>
+#include <complex.h>
+#ifdef NUMCOSMO_HAVE_FFTW3 
+#include <fftw3.h>
+#endif /* NUMCOSMO_HAVE_FFTW3 */
 #ifndef HAVE_FFTW3_ALLOC
 #define fftw_alloc_real(n) (double *) fftw_malloc(sizeof(double) * (n))
 #define fftw_alloc_complex(n) (fftw_complex *) fftw_malloc(sizeof(fftw_complex) * (n))

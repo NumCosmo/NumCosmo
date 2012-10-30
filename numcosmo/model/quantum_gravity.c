@@ -33,20 +33,19 @@
 #ifdef HAVE_CONFIG_H
 #  include "config.h"
 #endif /* HAVE_CONFIG_H */
-#include <numcosmo/numcosmo.h>
+#include "build_cfg.h"
 
-#include <math.h>
-#include <glib.h>
-#include <gsl/gsl_math.h>
-#include <gsl/gsl_poly.h>
-#include <gsl/gsl_spline.h>
+#include "model/quantum_gravity.h"
+#include "math/cvode_util.h"
+#include "math/ncm_spline_gsl.h"
+#include "math/magnus_iserles_ode.h"
+
 #include <gsl/gsl_sf_hyperg.h>
-#include <gsl/gsl_sf_airy.h>
-#include <gsl/gsl_sf_gamma.h>
-#include <gsl/gsl_sf_bessel.h>
-#include <gsl/gsl_complex.h>
-#include <gsl/gsl_complex_math.h>
 #include <gsl/gsl_sf_exp.h>
+#include <gsl/gsl_sf_bessel.h>
+#include <gsl/gsl_poly.h>
+#include <nvector/nvector_serial.h>
+
 
 typedef struct _NcHICosmoQG
 {

@@ -26,6 +26,7 @@
 #define _NC_HICOSMO_DE_QE_H_
 
 #include <glib-object.h>
+#include <numcosmo/model/nc_hicosmo_de.h>
 
 G_BEGIN_DECLS
 

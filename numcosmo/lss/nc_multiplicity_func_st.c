@@ -34,12 +34,9 @@
 #ifdef HAVE_CONFIG_H
 #  include "config.h"
 #endif /* HAVE_CONFIG_H */
-#include <numcosmo/numcosmo.h>
+#include "build_cfg.h"
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <math.h>
-#include <gsl/gsl_integration.h>
+#include "lss/nc_multiplicity_func_st.h"
 
 G_DEFINE_TYPE (NcMultiplicityFuncST, nc_multiplicity_func_st, NC_TYPE_MULTIPLICITY_FUNC);
 

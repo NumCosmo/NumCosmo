@@ -33,10 +33,10 @@
 #ifdef HAVE_CONFIG_H
 #  include "config.h"
 #endif /* HAVE_CONFIG_H */
-#include <numcosmo/numcosmo.h>
+#include "build_cfg.h"
 
-#include <glib.h>
-#include <gsl/gsl_sf_erf.h>
+#include "lss/nc_cluster_redshift.h"
+#include "math/ncm_cfg.h"
 
 G_DEFINE_ABSTRACT_TYPE (NcClusterRedshift, nc_cluster_redshift, G_TYPE_OBJECT);
 

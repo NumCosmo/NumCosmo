@@ -34,12 +34,9 @@
 #ifdef HAVE_CONFIG_H
 #  include "config.h"
 #endif /* HAVE_CONFIG_H */
-#include <numcosmo/numcosmo.h>
+#include "build_cfg.h"
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <math.h>
-#include <gsl/gsl_integration.h>
+#include "lss/nc_multiplicity_func_jenkins.h"
 
 G_DEFINE_TYPE (NcMultiplicityFuncJenkins, nc_multiplicity_func_jenkins, NC_TYPE_MULTIPLICITY_FUNC);
 
@@ -70,7 +67,7 @@ enum
 NcMultiplicityFunc *
 nc_multiplicity_func_jenkins_new (gdouble A, gdouble A_tCDM, gdouble B, gdouble B_tCDM, gdouble epsilon, gdouble epsilon_tCDM)
 {
-  return g_object_new (NC_TYPE_MULTIPLICITY_FUNC_ST,
+  return g_object_new (NC_TYPE_MULTIPLICITY_FUNC_JENKINS,
                        "A", A,
                        "A-tCDM", A_tCDM,
                        "B", B, 

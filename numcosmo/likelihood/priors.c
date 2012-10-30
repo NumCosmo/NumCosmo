@@ -33,10 +33,9 @@
 #ifdef HAVE_CONFIG_H
 #  include "config.h"
 #endif /* HAVE_CONFIG_H */
-#include <numcosmo/numcosmo.h>
+#include "build_cfg.h"
 
-#include <glib.h>
-#include <gsl/gsl_sf_exp.h>
+#include "likelihood/priors.h"
 
 /***************************************************************************
  * Gaussian Prior NcFunction

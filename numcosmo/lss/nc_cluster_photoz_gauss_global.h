@@ -25,7 +25,9 @@
 #ifndef _NC_CLUSTER_PHOTOZ_GAUSS_GLOBAL_H_
 #define _NC_CLUSTER_PHOTOZ_GAUSS_GLOBAL_H_
 
+#include <glib.h>
 #include <glib-object.h>
+#include <numcosmo/lss/nc_cluster_redshift.h>
 
 G_BEGIN_DECLS
 

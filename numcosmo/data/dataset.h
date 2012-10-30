@@ -26,6 +26,8 @@
 #define _NC_DATASET_H
 
 #include <glib.h>
+#include <glib-object.h>
+#include <numcosmo/data/data.h>
 
 G_BEGIN_DECLS
 

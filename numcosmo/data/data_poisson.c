@@ -33,13 +33,13 @@
 #ifdef HAVE_CONFIG_H
 #  include "config.h"
 #endif /* HAVE_CONFIG_H */
-#include <numcosmo/numcosmo.h>
+#include "build_cfg.h"
 
-#include <glib.h>
-#include <gsl/gsl_eigen.h>
-#include <gsl/gsl_blas.h>
+#include "data/data_poisson.h"
+#include "math/util.h"
+
+#include <gsl/gsl_randist.h>
 #include <gsl/gsl_sf_gamma.h>
-#include <gmp.h>
 
 /********************************************************************************************************/
 

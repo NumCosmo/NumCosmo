@@ -33,11 +33,11 @@
 #ifdef HAVE_CONFIG_H
 #  include "config.h"
 #endif /* HAVE_CONFIG_H */
-#include <numcosmo/numcosmo.h>
+#include "build_cfg.h"
 
-#include <glib.h>
-#include <gsl/gsl_poly.h>
-#include <gsl/gsl_sf.h>
+#include "math/poly.h"
+
+#include <gsl/gsl_sf_log.h>
 
 /**
  * ncm_poly_new: (skip)

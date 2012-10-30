@@ -33,11 +33,10 @@
 #ifdef HAVE_CONFIG_H
 #  include "config.h"
 #endif /* HAVE_CONFIG_H */
-#include <numcosmo/numcosmo.h>
+#include "build_cfg.h"
 
-#include <glib.h>
-#include <math.h>
-#include <gsl/gsl_sf.h>
+#include "model/nc_hicosmo_qpw.h"
+#include "math/ncm_reparam_linear.h"
 
 G_DEFINE_TYPE (NcHICosmoQPW, nc_hicosmo_qpw, NC_TYPE_HICOSMO);
 

@@ -26,7 +26,9 @@
 #define _NC_DATA_POISSON_H
 
 #include <glib.h>
-#include <gsl/gsl_eigen.h>
+#include <glib-object.h>
+#include <numcosmo/math/ncm_mset_func.h>
+#include <numcosmo/data/data.h>
 #include <gsl/gsl_histogram.h>
 
 G_BEGIN_DECLS
@@ -41,7 +43,7 @@ typedef struct _NcDataPoisson NcDataPoisson;
 struct _NcDataPoisson
 {
   /* < private > */
-	gsl_histogram *h;
+  gsl_histogram *h;
   NcDataStruct *extra_data;
 };
 

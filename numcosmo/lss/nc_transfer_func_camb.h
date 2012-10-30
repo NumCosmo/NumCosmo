@@ -26,7 +26,10 @@
 #ifndef _NC_TRANSFER_FUNC_CAMB_H_
 #define _NC_TRANSFER_FUNC_CAMB_H_
 
+#include <glib.h>
 #include <glib-object.h>
+#include <numcosmo/math/ncm_spline.h>
+#include <numcosmo/lss/nc_transfer_func.h>
 
 G_BEGIN_DECLS
 

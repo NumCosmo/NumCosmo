@@ -25,7 +25,12 @@
 #ifndef _NCM_MODEL_H_
 #define _NCM_MODEL_H_
 
+#include <glib.h>
 #include <glib-object.h>
+#include <gsl/gsl_math.h>
+#include <numcosmo/math/ncm_sparam.h>
+#include <numcosmo/math/ncm_vparam.h>
+#include <numcosmo/math/ncm_reparam.h>
 
 G_BEGIN_DECLS
 

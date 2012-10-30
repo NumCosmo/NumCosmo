@@ -26,7 +26,9 @@
 #ifndef _NC_MULTIPLICITY_FUNC_JENKINS_H_
 #define _NC_MULTIPLICITY_FUNC_JENKINS_H_
 
+#include <glib.h>
 #include <glib-object.h>
+#include <numcosmo/lss/nc_multiplicity_func.h>
 
 G_BEGIN_DECLS
 

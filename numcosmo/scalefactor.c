@@ -33,14 +33,13 @@
 #ifdef HAVE_CONFIG_H
 #  include "config.h"
 #endif /* HAVE_CONFIG_H */
-#include <numcosmo/numcosmo.h>
+#include "build_cfg.h"
 
-#include <glib.h>
-#include <cvode/cvode.h>             /* prototypes for CVODE fcts. and consts. */
-#include <nvector/nvector_serial.h>  /* serial N_Vector types, fcts., and macros */
-#include <cvode/cvode_dense.h>       /* prototype for CVDense */
-#include <sundials/sundials_dense.h> /* definitions DenseMat DENSE_ELEM */
-#include <sundials/sundials_types.h> /* definition of type realtype */
+#include "scalefactor.h"
+#include "math/ncm_spline_cubic_notaknot.h"
+#include "math/cvode_util.h"
+
+#include <nvector/nvector_serial.h>
 
 G_DEFINE_BOXED_TYPE (NcScaleFactor, nc_scale_factor, nc_scale_factor_copy, nc_scale_factor_free);
 

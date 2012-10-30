@@ -26,7 +26,11 @@
 #define _NC_NLOPT_H
 
 #include <glib.h>
+#include <numcosmo/math/ncm_fit.h>
+
+#ifdef NUMCOSMO_HAVE_NLOPT
 #include <nlopt.h>
+#endif /* NUMCOSMO_HAVE_NLOPT */
 
 G_BEGIN_DECLS
 

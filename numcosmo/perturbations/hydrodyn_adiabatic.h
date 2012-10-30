@@ -26,6 +26,10 @@
 #define _NC_HYDRODYN_ADIABATIC_H
 
 #include <glib.h>
+#include <glib-object.h>
+
+#include <numcosmo/nc_hicosmo.h>
+#include <numcosmo/math/ncm_spline.h>
 
 G_BEGIN_DECLS
 

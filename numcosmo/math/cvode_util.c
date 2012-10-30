@@ -33,12 +33,14 @@
 #ifdef HAVE_CONFIG_H
 #  include "config.h"
 #endif /* HAVE_CONFIG_H */
-#include <numcosmo/numcosmo.h>
+#include "build_cfg.h"
 
-#include <string.h>
-#include <glib.h>
-#include <glib/gstdio.h>
+#include "math/cvode_util.h"
+
+#include <math.h>
+#include <gsl/gsl_vector.h>
 #include <gsl/gsl_blas.h>
+#include <gsl/gsl_math.h>
 
 static N_Vector    _ncm_nvector_gsl_clone (N_Vector);
 static N_Vector    _ncm_nvector_gsl_cloneempty (N_Vector);

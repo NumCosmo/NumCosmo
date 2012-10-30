@@ -26,9 +26,17 @@
 #define _NCM_CFG_H
 
 #include <glib.h>
+#include <glib/gstdio.h>
+#include <glib-object.h>
+#include <stdio.h>
+#include <gsl/gsl_vector.h>
+#include <gsl/gsl_matrix.h>
+#include <gsl/gsl_spline.h>
 #ifdef NUMCOSMO_HAVE_SQLITE3
 #include <sqlite3.h>
 #endif
+#include <numcosmo/math/ncm_spline.h>
+
 
 G_BEGIN_DECLS
 

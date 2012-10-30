@@ -26,7 +26,10 @@
 #ifndef _NC_TRANSFER_FUNC_H_
 #define _NC_TRANSFER_FUNC_H_
 
+#include <glib.h>
 #include <glib-object.h>
+#include <numcosmo/nc_hicosmo.h>
+#include <numcosmo/math/ncm_model_ctrl.h>
 
 G_BEGIN_DECLS
 

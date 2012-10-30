@@ -34,10 +34,11 @@
 #ifdef HAVE_CONFIG_H
 #  include "config.h"
 #endif /* HAVE_CONFIG_H */
-#include <numcosmo/numcosmo.h>
+#include "build_cfg.h"
+
+#include "math/ncm_matrix.h"
 
 G_DEFINE_TYPE (NcmMatrix, ncm_matrix, G_TYPE_INITIALLY_UNOWNED);
-
 
 /**
  * ncm_matrix_new:

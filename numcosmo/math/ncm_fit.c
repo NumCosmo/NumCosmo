@@ -34,16 +34,24 @@
 #ifdef HAVE_CONFIG_H
 #  include "config.h"
 #endif /* HAVE_CONFIG_H */
-#include <numcosmo/numcosmo.h>
+#include "build_cfg.h"
 
-#include <glib.h>
-#include <string.h>
-#include <gsl/gsl_statistics_double.h>
-#include <gsl/gsl_cdf.h>
-#include <gsl/gsl_histogram.h>
+#include "math/ncm_fit.h"
+#include "math/util.h"
+#include "math/integral.h"
+#include "math/memory_pool.h"
+#include "likelihood/least_squares.h"
+#include "likelihood/multimin.h"
+#include "likelihood/multimin_simplex.h"
+#include "likelihood/levmar.h"
+#include "likelihood/nc_nlopt.h"
+
 #include <gsl/gsl_blas.h>
+#include <gsl/gsl_rng.h>
+#include <gsl/gsl_cdf.h>
 #include <gsl/gsl_linalg.h>
-#include <gsl/gsl_deriv.h>
+#include <gsl/gsl_randist.h>
+#include <gsl/gsl_statistics_double.h>
 
 G_DEFINE_TYPE (NcmFit, ncm_fit, G_TYPE_OBJECT);
 

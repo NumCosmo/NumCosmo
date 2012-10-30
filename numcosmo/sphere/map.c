@@ -34,20 +34,23 @@
 #ifdef HAVE_CONFIG_H
 #  include "config.h"
 #endif /* HAVE_CONFIG_H */
-#include <numcosmo/numcosmo.h>
+#include "build_cfg.h"
 
-#include <glib/gstdio.h>
+#include "sphere/map.h"
+#include "sphere/healpix.h"
+#include "nc_constants.h"
+#include "nc_macros.h"
+#include "math/ncm_cfg.h"
+#include "math/util.h"
+
 #include <string.h>
+#include <gsl/gsl_randist.h>
+#include <gsl/gsl_math.h>
+#include <gsl/gsl_sf_log.h>
+#include <gsl/gsl_sf_legendre.h>
 #ifdef NUMCOSMO_HAVE_CFITSIO
 #include <fitsio.h>
 #endif /* NUMCOSMO_HAVE_CFITSIO */
-#include <gsl/gsl_sf_legendre.h>
-#include <gsl/gsl_complex.h>
-#include <gsl/gsl_complex_math.h>
-#include <gsl/gsl_blas.h>
-#include <gsl/gsl_sf_log.h>
-#include <gsl/gsl_sf_gamma.h>
-#include <gsl/gsl_cblas.h>
 
 /**
  * nc_sphere_map_new: (skip)

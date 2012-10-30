@@ -26,11 +26,10 @@
 #define _NC_DATA_BAO_H
 
 #include <glib.h>
-#include <gsl/gsl_eigen.h>
+#include <glib-object.h>
 
-#ifdef NUMCOSMO_HAVE_SQLITE3
-#include <sqlite3.h>
-#endif
+#include <numcosmo/data/data.h>
+#include <numcosmo/nc_distance.h>
 
 G_BEGIN_DECLS
 

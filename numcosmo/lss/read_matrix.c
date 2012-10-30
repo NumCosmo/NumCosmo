@@ -33,12 +33,11 @@
 #ifdef HAVE_CONFIG_H
 #  include "config.h"
 #endif /* HAVE_CONFIG_H */
-#include <numcosmo/numcosmo.h>
+#include "build_cfg.h"
 
-#include <stdlib.h>
-#include <stdio.h>
+#include "lss/read_matrix.h"
+
 #include <string.h>
-#include <glib.h>
 #ifdef HAVE_LIBCFITSIO
 #include <fitsio.h>
 #endif

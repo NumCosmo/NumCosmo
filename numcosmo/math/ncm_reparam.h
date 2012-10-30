@@ -25,7 +25,10 @@
 #ifndef _NCM_REPARAM_H_
 #define _NCM_REPARAM_H_
 
+#include <glib.h>
 #include <glib-object.h>
+#include <numcosmo/math/ncm_vector.h>
+#include <numcosmo/math/ncm_matrix.h>
 
 G_BEGIN_DECLS
 

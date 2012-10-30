@@ -26,7 +26,9 @@
 #ifndef _NC_CLUSTER_MASS_NODIST_H_
 #define _NC_CLUSTER_MASS_NODIST_H_
 
+#include <glib.h>
 #include <glib-object.h>
+#include <numcosmo/lss/nc_cluster_mass.h>
 
 G_BEGIN_DECLS
 

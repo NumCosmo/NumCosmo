@@ -33,9 +33,10 @@
 #ifdef HAVE_CONFIG_H
 #  include "config.h"
 #endif /* HAVE_CONFIG_H */
-#include <numcosmo/numcosmo.h>
+#include "build_cfg.h"
 
-#include <glib.h>
+#include "data/nc_data_cmb.h"
+#include "data/data_gaussian.h"
 
 /***************************************************************************
  * WMAP5 Distance priors data (arXiv:0803.0547), (astro-ph/0604051)

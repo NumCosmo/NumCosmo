@@ -26,6 +26,9 @@
 #define _NC_LINEAR_H
 
 #include <glib.h>
+#include <glib-object.h>
+#include <numcosmo/scalefactor.h>
+#include <numcosmo/thermodyn/recomb.h>
 
 G_BEGIN_DECLS
 

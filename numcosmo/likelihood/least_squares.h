@@ -26,6 +26,8 @@
 #define _NC_LEAST_SQUARES_H
 
 #include <glib.h>
+#include <glib-object.h>
+#include <numcosmo/math/ncm_fit.h>
 
 G_BEGIN_DECLS
 

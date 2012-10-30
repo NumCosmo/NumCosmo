@@ -26,6 +26,9 @@
 #define _NC_INTEGRAL_H
 
 #include <glib.h>
+#include <glib-object.h>
+#include <numcosmo/math/function_cache.h>
+#include <gsl/gsl_integration.h>
 
 G_BEGIN_DECLS
 
@@ -41,8 +44,8 @@ typedef struct _NcIntegrand2dim NcIntegrand2dim;
 struct _NcIntegrand2dim
 {
   /*< private >*/
-	gpointer userdata;
-	gdouble (*f) (gdouble x, gdouble y, gpointer userdata);
+  gpointer userdata;
+  gdouble (*f) (gdouble x, gdouble y, gpointer userdata);
 };
 
 typedef struct _NcIntegralFixed NcIntegralFixed;
@@ -79,6 +82,11 @@ void nc_integral_fixed_calc_nodes (NcIntegralFixed *intf, gsl_function *F);
 gdouble nc_integral_fixed_nodes_eval (NcIntegralFixed *intf);
 gdouble nc_integral_fixed_integ_mult (NcIntegralFixed *intf, gsl_function *F);
 gdouble nc_integral_fixed_integ_posdef_mult (NcIntegralFixed *intf, gsl_function *F, gdouble max, gdouble reltol);
+
+#define NC_INT_PARTITION 100000
+#define NC_INT_ALG 6
+#define NC_INT_ERROR 1e-13
+#define NC_INT_ABS_ERROR 1e-13
 
 G_END_DECLS
 

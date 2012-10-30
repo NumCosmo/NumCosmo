@@ -26,13 +26,14 @@
 #define _NC_CVODE_UTIL_H
 
 #include <glib.h>
-#include <cvode/cvode.h>             /* prototypes for CVODE fcts. and consts. */
-#include <nvector/nvector_serial.h>  /* serial N_Vector types, fcts., and macros */
-#include <cvode/cvode_dense.h>       /* prototype for CVDense */
-#include <cvode/cvode_band.h>        /* prototype for CVBand */
-#include <sundials/sundials_band.h>
-#include <sundials/sundials_dense.h> /* definitions DenseMat DENSE_ELEM */   
-#include <sundials/sundials_types.h> /* definition of type realtype */
+#include <glib-object.h>
+
+#include <gsl/gsl_spline.h>
+#ifndef NUMCOSMO_GIR_SCAN
+#include <cvode/cvode.h>
+#include <cvode/cvode_dense.h>
+#include <nvector/nvector_serial.h>
+#endif
 
 G_BEGIN_DECLS
 

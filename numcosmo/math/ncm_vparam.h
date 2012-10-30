@@ -26,7 +26,9 @@
 #ifndef _NCM_VPARAM_H_
 #define _NCM_VPARAM_H_
 
+#include <glib.h>
 #include <glib-object.h>
+#include <numcosmo/math/ncm_sparam.h>
 
 G_BEGIN_DECLS
 

@@ -33,10 +33,12 @@
 #ifdef HAVE_CONFIG_H
 #  include "config.h"
 #endif /* HAVE_CONFIG_H */
-#include <numcosmo/numcosmo.h>
+#include "build_cfg.h"
 
-#include <glib.h>
+#include "math/function_cache.h"
+#include "nc_macros.h"
 
+#include <gsl/gsl_math.h>
 
 /***************************************************************************
  *

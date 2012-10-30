@@ -25,7 +25,9 @@
 #ifndef _NC_HICOSMO_DE_XCDM_H_
 #define _NC_HICOSMO_DE_XCDM_H_
 
+#include <glib.h>
 #include <glib-object.h>
+#include <numcosmo/model/nc_hicosmo_de.h>
 
 G_BEGIN_DECLS
 

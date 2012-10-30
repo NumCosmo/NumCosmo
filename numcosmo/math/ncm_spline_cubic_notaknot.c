@@ -34,11 +34,13 @@
 #ifdef HAVE_CONFIG_H
 #  include "config.h"
 #endif /* HAVE_CONFIG_H */
-#include <numcosmo/numcosmo.h>
+#include "build_cfg.h"
 
-#include <glib.h>
-#include <gsl/gsl_poly.h>
-#include <gsl/gsl_sf.h>
+#include "math/ncm_spline_cubic_notaknot.h"
+#include "nc_macros.h"
+
+#include <math.h>
+#include <gsl/gsl_math.h>
 #include <gsl/gsl_linalg.h>
 
 G_DEFINE_TYPE (NcmSplineCubicNotaknot, ncm_spline_cubic_notaknot, NCM_TYPE_SPLINE_CUBIC);

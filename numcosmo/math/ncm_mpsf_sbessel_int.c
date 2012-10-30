@@ -33,13 +33,17 @@
 #ifdef HAVE_CONFIG_H
 #  include "config.h"
 #endif /* HAVE_CONFIG_H */
-#include <numcosmo/numcosmo.h>
+#include "build_cfg.h"
 
-#include <string.h>
-#include <stdio.h>
-#include <glib.h>
-#include <gmp.h>
-#include <mpfr.h>
+#include "math/ncm_mpsf_sbessel_int.h"
+#include "math/mpq_tree.h"
+#include "math/util.h"
+#include "math/ncm_cfg.h"
+#include "math/binsplit.h"
+#include "math/ncm_spline_gsl.h"
+#include "math/ncm_mpsf_trig_int.h"
+
+#include <gsl/gsl_math.h>
 #include <gsl/gsl_poly.h>
 
 /**

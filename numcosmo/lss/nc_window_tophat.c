@@ -36,14 +36,11 @@
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif /* HAVE_CONFIG_H */
-#include <numcosmo/numcosmo.h>
+#include "build_cfg.h"
 
-#include <stdio.h>
-#include <stdlib.h>
+#include "lss/nc_window_tophat.h"
 #include <math.h>
-#include <gsl/gsl_integration.h>
 #include <gsl/gsl_sf_bessel.h>
-
 
 G_DEFINE_TYPE (NcWindowTophat, nc_window_tophat, NC_TYPE_WINDOW);
 

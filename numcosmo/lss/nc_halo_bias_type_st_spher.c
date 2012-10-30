@@ -34,15 +34,11 @@
 #ifdef HAVE_CONFIG_H
 #  include "config.h"
 #endif /* HAVE_CONFIG_H */
-#include <numcosmo/numcosmo.h>
+#include "build_cfg.h"
 
-#include <stdio.h>
-#include <stdlib.h>
+#include "lss/nc_halo_bias_type_st_spher.h"
+
 #include <math.h>
-#include <glib.h>
-#include <gsl/gsl_integration.h>
-#include <gsl/gsl_const_mksa.h>
-#include <glib.h>
 
 G_DEFINE_TYPE (NcHaloBiasTypeSTSpher, nc_halo_bias_type_st_spher, NC_TYPE_HALO_BIAS_TYPE);
 

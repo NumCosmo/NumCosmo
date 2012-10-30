@@ -33,18 +33,13 @@
 #ifdef HAVE_CONFIG_H
 #  include "config.h"
 #endif /* HAVE_CONFIG_H */
-#include <numcosmo/numcosmo.h>
+#include "build_cfg.h"
 
-#include <glib.h>
-#include <gsl/gsl_sf.h>
-#include <gsl/gsl_sf_gamma.h>
-#include <gsl/gsl_math.h>
-#include <gsl/gsl_sum.h>
-#include <gsl/gsl_sf.h>
-#include <gsl/gsl_integration.h>
-#include <gsl/gsl_errno.h>
-#include <gmp.h>
-#include <math.h>
+#include "model/nc_hicosmo_qlinear.h"
+#include "math/integral.h"
+#include "math/memory_pool.h"
+#include <gsl/gsl_sf_result.h>
+#include <gsl/gsl_sf_exp.h>
 
 G_DEFINE_TYPE (NcHICosmoQLinear, nc_hicosmo_qlinear, NC_TYPE_HICOSMO);
 

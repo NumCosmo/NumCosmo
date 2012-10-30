@@ -33,12 +33,11 @@
 #ifdef HAVE_CONFIG_H
 #  include "config.h"
 #endif /* HAVE_CONFIG_H */
-#include <numcosmo/numcosmo.h>
+#include "build_cfg.h"
 
-#include <stdio.h>
-#include <glib.h>
+#include "math/mpq_tree.h"
+
 #include <gmp.h>
-#include <mpfr.h>
 
 static void
 _slice_mpq_free (gpointer q)

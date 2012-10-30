@@ -25,7 +25,11 @@
 #ifndef _NCM_MATRIX_H_
 #define _NCM_MATRIX_H_
 
+#include <glib.h>
 #include <glib-object.h>
+#include <gsl/gsl_matrix.h>
+#include <numcosmo/nc_macros.h>
+#include <numcosmo/math/ncm_vector.h>
 
 G_BEGIN_DECLS
 

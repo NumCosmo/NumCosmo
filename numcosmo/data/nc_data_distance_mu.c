@@ -33,13 +33,12 @@
 #ifdef HAVE_CONFIG_H
 #  include "config.h"
 #endif /* HAVE_CONFIG_H */
-#include <numcosmo/numcosmo.h>
+#include "build_cfg.h"
 
-#include <glib.h>
-#include <gsl/gsl_eigen.h>
-#include <gsl/gsl_blas.h>
-#include <gsl/gsl_statistics_double.h>
-#include <gmp.h>
+#include "data/nc_data_distance_mu.h"
+#include "data/data_gaussian.h"
+#include "math/ncm_cfg.h"
+
 #ifdef NUMCOSMO_HAVE_SQLITE3
 #include <sqlite3.h>
 #endif

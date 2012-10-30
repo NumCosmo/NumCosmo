@@ -26,7 +26,12 @@
 #ifndef _NC_GALAXY_ACF_H_
 #define _NC_GALAXY_ACF_H_
 
+#include <glib.h>
 #include <glib-object.h>
+#include <numcosmo/lss/nc_growth_func.h>
+#include <numcosmo/lss/nc_transfer_func.h>
+#include <numcosmo/lss/nc_matter_var.h>
+#include <numcosmo/nc_distance.h>
 
 G_BEGIN_DECLS
 

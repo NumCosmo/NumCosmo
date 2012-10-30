@@ -34,15 +34,11 @@
 #ifdef HAVE_CONFIG_H
 #  include "config.h"
 #endif /* HAVE_CONFIG_H */
-#include <numcosmo/numcosmo.h>
+#include "build_cfg.h"
 
-#include <stdio.h>
-#include <stdlib.h>
+#include "lss/nc_halo_bias_type_st_ellip.h"
+
 #include <math.h>
-#include <glib.h>
-#include <gsl/gsl_integration.h>
-#include <gsl/gsl_const_mksa.h>
-#include <glib.h>
 
 G_DEFINE_TYPE (NcHaloBiasTypeSTEllip, nc_halo_bias_type_st_ellip, NC_TYPE_HALO_BIAS_TYPE);
 
@@ -88,8 +84,6 @@ _nc_halo_bias_type_st_ellip_eval (NcHaloBiasType *biasf, gdouble sigma, gdouble 
   gdouble x2 = x * x;
   gdouble ax2_c = pow(a * x2, c);
   gdouble b_ST_ellip = 1.0  + (a * x2 + b * pow(a * x2, (1.0 - c)) - ax2_c / (sqrt(a) * (ax2_c + b * (1.0 - c) * (1.0 - c/2.0)))) / bias_st_ellip->delta_c;
-
-  printf ("a = %.5g, b=%.5g, c=%.5g, delta_c= %.5g\n", a, b, c, bias_st_ellip->delta_c);
 
   return b_ST_ellip;
 }

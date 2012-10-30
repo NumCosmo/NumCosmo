@@ -33,9 +33,10 @@
 #ifdef HAVE_CONFIG_H
 #  include "config.h"
 #endif /* HAVE_CONFIG_H */
-#include <numcosmo/numcosmo.h>
+#include "build_cfg.h"
 
-#include <glib.h>
+#include "data/nc_data_bao.h"
+#include "data/data_gaussian.h"
 
 /***************************************************************************
  * BAO Percival/Eisenstein priors data (arXiv:0705.3323)

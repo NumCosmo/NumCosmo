@@ -25,7 +25,10 @@
 #ifndef _NC_HICOSMO_DE_H_
 #define _NC_HICOSMO_DE_H_
 
+#include <glib.h>
 #include <glib-object.h>
+#include <numcosmo/nc_hicosmo.h>
+#include <numcosmo/likelihood/likelihood.h>
 
 G_BEGIN_DECLS
 

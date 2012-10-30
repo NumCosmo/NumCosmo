@@ -25,7 +25,11 @@
 #ifndef _NC_HICOSMO_H_
 #define _NC_HICOSMO_H_
 
+#include <glib.h>
 #include <glib-object.h>
+#include <numcosmo/nc_constants.h>
+#include <numcosmo/math/ncm_model.h>
+#include <numcosmo/math/ncm_mset_func.h>
 
 G_BEGIN_DECLS
 

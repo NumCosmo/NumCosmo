@@ -33,18 +33,11 @@
 #ifdef HAVE_CONFIG_H
 #  include "config.h"
 #endif /* HAVE_CONFIG_H */
-#include <numcosmo/numcosmo.h>
+#include "build_cfg.h"
 
-#include <glib.h>
-#include <gsl/gsl_sf.h>
-#include <gsl/gsl_sf_gamma.h>
-#include <gsl/gsl_math.h>
-#include <gsl/gsl_sum.h>
-#include <gsl/gsl_sf.h>
-#include <gsl/gsl_integration.h>
-#include <gsl/gsl_errno.h>
-#include <gmp.h>
-#include <math.h>
+#include "model/nc_hicosmo_qconst.h"
+#include <gsl/gsl_sf_exp.h>
+#include <gsl/gsl_sf_log.h>
 
 G_DEFINE_TYPE (NcHICosmoQConst, nc_hicosmo_qconst, NC_TYPE_HICOSMO);
 

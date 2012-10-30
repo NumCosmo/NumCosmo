@@ -34,17 +34,15 @@
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif /* HAVE_CONFIG_H */
-#include <numcosmo/numcosmo.h>
+#include "build_cfg.h"
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <math.h>
-#include <gsl/gsl_integration.h>
-#include <cvodes/cvodes.h>
+#include "lss/nc_growth_func.h"
+#include "math/ncm_spline_cubic_notaknot.h"
+
+#include <cvode/cvode.h>
+#include <cvode/cvode_dense.h>
+#include <cvode/cvode_band.h>
 #include <nvector/nvector_serial.h>
-#include <cvodes/cvodes_dense.h>
-#include <sundials/sundials_dense.h>
-#include <sundials/sundials_types.h>
 
 G_DEFINE_TYPE (NcGrowthFunc, nc_growth_func, G_TYPE_OBJECT);
 

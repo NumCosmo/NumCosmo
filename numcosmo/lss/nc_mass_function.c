@@ -33,15 +33,13 @@
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif /* HAVE_CONFIG_H */
-#include <numcosmo/numcosmo.h>
+#include "build_cfg.h"
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <math.h>
-#include <glib.h>
+#include "lss/nc_mass_function.h"
+#include "math/integral.h"
+#include "math/ncm_spline2d_bicubic.h"
+
 #include <gsl/gsl_integration.h>
-#include <gsl/gsl_const_mksa.h>
-#include <glib.h>
 
 enum
 {

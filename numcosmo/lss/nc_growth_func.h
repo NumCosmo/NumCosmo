@@ -26,8 +26,11 @@
 #ifndef _NC_GROWTH_FUNC_H_
 #define _NC_GROWTH_FUNC_H_
 
+#include <glib.h>
 #include <glib-object.h>
-#include <gsl/gsl_spline.h>
+#include <numcosmo/math/ncm_spline.h>
+#include <numcosmo/math/ncm_model_ctrl.h>
+#include <numcosmo/nc_hicosmo.h>
 
 G_BEGIN_DECLS
 

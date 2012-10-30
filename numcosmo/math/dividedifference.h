@@ -24,11 +24,11 @@
 
 #ifndef _NC_DIVIDEDIFFERENCE_H
 #define _NC_DIVIDEDIFFERENCE_H
-#include <string.h>
-#include <stdio.h>
-#include <gmp.h>
-#include <mpfr.h>
+
 #include <glib.h>
+#include <glib-object.h>
+
+
 
 G_BEGIN_DECLS
 

@@ -33,13 +33,13 @@
 #ifdef HAVE_CONFIG_H
 #  include "config.h"
 #endif /* HAVE_CONFIG_H */
-#include <numcosmo/numcosmo.h>
+#include "build_cfg.h"
+
+#include "math/quaternion.h"
+#include "math/util.h"
 
 #include <string.h>
-#include <glib.h>
-#include <glib/gstdio.h>
-#include <gsl/gsl_rng.h>
-
+#include <math.h>
 
 /**
  * nc_quaternion_new: (skip)

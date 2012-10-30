@@ -33,9 +33,12 @@
 #ifdef HAVE_CONFIG_H
 #  include "config.h"
 #endif /* HAVE_CONFIG_H */
-#include <numcosmo/numcosmo.h>
+#include "build_cfg.h"
 
-#include <glib.h>
+#include "math/ncm_spline2d_gsl.h"
+#include "math/ncm_spline_gsl.h"
+#include "math/ncm_spline2d_bicubic.h"
+
 
 G_DEFINE_TYPE (NcmSpline2dGsl, ncm_spline2d_gsl, NCM_TYPE_SPLINE2D);
 

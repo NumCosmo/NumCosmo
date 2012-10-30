@@ -33,11 +33,14 @@
 #ifdef HAVE_CONFIG_H
 #  include "config.h"
 #endif /* HAVE_CONFIG_H */
-#include <numcosmo/numcosmo.h>
+#include "build_cfg.h"
 
-#include <glib.h>
-#include <gsl/gsl_sf_exp.h>
-#include <gsl/gsl_sf_bessel.h>
+#include "perturbations/linear.h"
+#include "math/grid_one.h"
+#include "math/ncm_sf_sbessel_int.h"
+#include "math/integral.h"
+#include "math/ncm_spline_cubic_notaknot.h"
+#include "math/memory_pool.h"
 
 gint _itheta_table[3]   = {NC_PERT_THETA0, NC_PERT_THETA1, NC_PERT_THETA2};
 gint _itheta_p_table[3] = {NC_PERT_THETA_P0, NC_PERT_THETA_P1, NC_PERT_THETA_P2};

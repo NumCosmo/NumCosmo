@@ -33,7 +33,12 @@
 #ifdef HAVE_CONFIG_H
 #  include "config.h"
 #endif /* HAVE_CONFIG_H */
-#include <numcosmo/numcosmo.h>
+#include "build_cfg.h"
+
+#include "math/ncm_reparam.h"
+#include "math/ncm_model.h"
+
+#include <gsl/gsl_blas.h>
 
 G_DEFINE_ABSTRACT_TYPE (NcmReparam, ncm_reparam, G_TYPE_OBJECT);
 

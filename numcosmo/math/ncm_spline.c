@@ -34,12 +34,9 @@
 #ifdef HAVE_CONFIG_H
 #  include "config.h"
 #endif /* HAVE_CONFIG_H */
-#include <numcosmo/numcosmo.h>
+#include "build_cfg.h"
 
-#include <glib.h>
-#include <gsl/gsl_poly.h>
-#include <gsl/gsl_sf.h>
-#include <gsl/gsl_linalg.h>
+#include "math/ncm_spline.h"
 
 G_DEFINE_ABSTRACT_TYPE (NcmSpline, ncm_spline, G_TYPE_OBJECT);
 

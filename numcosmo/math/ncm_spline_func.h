@@ -26,6 +26,9 @@
 #define _NCM_SPLINE_FUNC_H
 
 #include <glib.h>
+#include <glib-object.h>
+#include <numcosmo/math/ncm_spline.h>
+#include <gsl/gsl_math.h>
 
 G_BEGIN_DECLS
 

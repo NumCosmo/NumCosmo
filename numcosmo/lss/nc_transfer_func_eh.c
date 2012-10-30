@@ -34,19 +34,10 @@
 #ifdef HAVE_CONFIG_H
 #  include "config.h"
 #endif /* HAVE_CONFIG_H */
-#include <numcosmo/numcosmo.h>
+#include "build_cfg.h"
 
-#include <glib.h>
-#include <glib/gprintf.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <math.h>
-#include <string.h>
-#include <gsl/gsl_integration.h>
+#include "lss/nc_transfer_func_eh.h"
 #include <gsl/gsl_sf_bessel.h>
-#include <gsl/gsl_spline.h>
-#include <gsl/gsl_errno.h>
-#include <gsl/gsl_matrix.h>
 
 G_DEFINE_TYPE (NcTransferFuncEH, nc_transfer_func_eh, NC_TYPE_TRANSFER_FUNC);
 

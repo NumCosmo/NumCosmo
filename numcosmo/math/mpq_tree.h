@@ -24,11 +24,9 @@
 
 #ifndef _NC_MPQ_TREE_H
 #define _NC_MPQ_TREE_H
-#include <string.h>
-#include <stdio.h>
-#include <gmp.h>
-#include <mpfr.h>
+
 #include <glib.h>
+#include <glib-object.h>
 
 G_BEGIN_DECLS
 

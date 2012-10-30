@@ -35,11 +35,9 @@
 #define _NC_DATA_DISTANCE_MU_H
 
 #include <glib.h>
-#include <gsl/gsl_eigen.h>
-
-#ifdef NUMCOSMO_HAVE_SQLITE3
-#include <sqlite3.h>
-#endif
+#include <glib-object.h>
+#include <numcosmo/data/data.h>
+#include <numcosmo/nc_distance.h>
 
 G_BEGIN_DECLS
 

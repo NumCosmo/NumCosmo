@@ -26,7 +26,13 @@
 #ifndef _NC_MATTER_VAR_H_
 #define _NC_MATTER_VAR_H_
 
+#include <glib.h>
 #include <glib-object.h>
+#include <numcosmo/nc_hicosmo.h>
+#include <numcosmo/math/ncm_model_ctrl.h>
+#include <numcosmo/math/ncm_spline.h>
+#include <numcosmo/lss/nc_window.h>
+#include <numcosmo/lss/nc_transfer_func.h>
 
 G_BEGIN_DECLS
 

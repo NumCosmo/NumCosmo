@@ -34,8 +34,9 @@
 #ifdef HAVE_CONFIG_H
 #  include "config.h"
 #endif /* HAVE_CONFIG_H */
-#include <numcosmo/numcosmo.h>
-#include <gsl/gsl_integration.h>
+#include "build_cfg.h"
+
+#include "lss/nc_cluster_mass_benson_xray.h"
 
 G_DEFINE_TYPE (NcClusterMassBensonXRay, nc_cluster_mass_benson_xray, NC_TYPE_CLUSTER_MASS);
 
