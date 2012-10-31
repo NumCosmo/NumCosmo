@@ -29,7 +29,9 @@
 
 G_BEGIN_DECLS
 
+#ifdef NUMCOSMO_HAVE_LAPACK
 void dptsv_ (gint *N, gint *NRHS, gdouble *d, gdouble *e, gdouble *b, gint *ldb, gint *info);
+#endif /* NUMCOSMO_HAVE_LAPACK */
 
 G_INLINE_FUNC gint ncm_lapack_dptsv (gdouble *d, gdouble *e, gdouble *b, guint size);
 
@@ -45,6 +47,7 @@ G_END_DECLS
 
 G_BEGIN_DECLS
 
+#ifdef NUMCOSMO_HAVE_LAPACK
 G_INLINE_FUNC gint 
 ncm_lapack_dptsv (gdouble *d, gdouble *e, gdouble *b, guint size)
 {
@@ -55,6 +58,7 @@ ncm_lapack_dptsv (gdouble *d, gdouble *e, gdouble *b, guint size)
 	dptsv_ (&N, &NRHS, d, e, b, &LDB, &info);
 	return info;
 }
+#endif /* NUMCOSMO_HAVE_LAPACK */
 
 G_END_DECLS
 
