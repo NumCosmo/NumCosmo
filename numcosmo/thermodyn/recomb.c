@@ -29,7 +29,7 @@
  *
  * The default value of the <link linkend="def_Y_p">helium primordial abundance</link>
  * is given the macro #NC_C_PRIM_HE_Y_P.
- * The primordial helium fraction is define by #NC_C_PRIM_HE_XHe.
+ * The primordial helium fraction is define by #ncm_c_prim_He_XHe ().
  *
  */
 
@@ -69,14 +69,14 @@ nc_thermodyn_H_ionization_saha (NcHICosmo *model, gdouble x)
 {
   const gdouble T0 = nc_hicosmo_T_gamma0 (model);
   const gdouble T = T0 * x;
-  const gdouble kbT = NC_C_kb * (T);
+  const gdouble kbT = ncm_c_kb () * (T);
   const gdouble x3 = gsl_pow_3 (x);
   const gdouble h2 = nc_hicosmo_h2 (model);
   const gdouble Omega_b = nc_hicosmo_Omega_b (model);
-  const gdouble lambda_e3 = gsl_pow_3 (NC_C_THERMAL_WAVELENGTH_e / sqrt(T0)) / sqrt(x3);
-  const gdouble n_H = NC_C_PRIM_H_FRAC * Omega_b * x3 * (NC_C_CRIT_DENSITY * h2) / NC_C_ENERGY_p;
+  const gdouble lambda_e3 = gsl_pow_3 (ncm_c_thermal_wl_e () / sqrt(T0)) / sqrt(x3);
+  const gdouble n_H = ncm_c_prim_H_frac () * Omega_b * x3 * (ncm_c_crit_density () * h2) / ncm_c_rest_energy_p ();
 
-  return gsl_sf_exp_mult (-NC_C_HYDROGEN_BINDING_ENERGY_1s / kbT, 1.0 / (n_H * lambda_e3)); /* FIXME */
+  return gsl_sf_exp_mult (-ncm_c_H_bind_1s () / kbT, 1.0 / (n_H * lambda_e3)); /* FIXME */
 }
 
 /**
@@ -96,14 +96,14 @@ nc_thermodyn_HeI_ionization_saha (NcHICosmo *model, gdouble x)
 {
   const gdouble T0 = nc_hicosmo_T_gamma0 (model);
   const gdouble T = T0 * x;
-  const gdouble kbT = NC_C_kb*(T);
+  const gdouble kbT = ncm_c_kb () * (T);
   const gdouble x3 = gsl_pow_3 (x);
   const gdouble h2 = nc_hicosmo_h2 (model);
   const gdouble Omega_b = nc_hicosmo_Omega_b (model);
-  const gdouble lambda_e3 = gsl_pow_3 (NC_C_THERMAL_WAVELENGTH_e / sqrt(T0)) / sqrt(x3);
-  const gdouble n_H = NC_C_PRIM_H_FRAC * Omega_b * x3 * (NC_C_CRIT_DENSITY * h2) / NC_C_ENERGY_p;
+  const gdouble lambda_e3 = gsl_pow_3 (ncm_c_thermal_wl_e () / sqrt(T0)) / sqrt(x3);
+  const gdouble n_H = ncm_c_prim_H_frac () * Omega_b * x3 * (ncm_c_crit_density () * h2) / ncm_c_rest_energy_p ();
 
-  return gsl_sf_exp_mult (-NC_C_HeI_BINDING_ENERGY_1s / kbT, 4.0 / (n_H * lambda_e3));
+  return gsl_sf_exp_mult (-ncm_c_HeI_bind_1s () / kbT, 4.0 / (n_H * lambda_e3));
 }
 
 /**
@@ -123,14 +123,14 @@ nc_thermodyn_HeII_ionization_saha (NcHICosmo *model, gdouble x)
 {
   const gdouble T0 = nc_hicosmo_T_gamma0 (model);
   const gdouble T = T0 * x;
-  const gdouble kbT = NC_C_kb * T;
+  const gdouble kbT = ncm_c_kb () * T;
   const gdouble x3 = gsl_pow_3 (x);
   const gdouble h2 = nc_hicosmo_h2 (model);
   const gdouble Omega_b = nc_hicosmo_Omega_b (model);
-  const gdouble lambda_e3 = gsl_pow_3 (NC_C_THERMAL_WAVELENGTH_e / sqrt(T0)) / sqrt(x3);
-  const gdouble n_H = NC_C_PRIM_H_FRAC * Omega_b * x3 * (NC_C_CRIT_DENSITY * h2) / NC_C_ENERGY_p;
+  const gdouble lambda_e3 = gsl_pow_3 (ncm_c_thermal_wl_e () / sqrt(T0)) / sqrt(x3);
+  const gdouble n_H = ncm_c_prim_H_frac () * Omega_b * x3 * (ncm_c_crit_density () * h2) / ncm_c_rest_energy_p ();
 
-  return gsl_sf_exp_mult (-NC_C_HeII_BINDING_ENERGY_1s / kbT, 1.0 / (n_H * lambda_e3));
+  return gsl_sf_exp_mult (-ncm_c_HeII_bind_1s () / kbT, 1.0 / (n_H * lambda_e3));
 }
 
 /**
@@ -149,12 +149,12 @@ gdouble
 nc_thermodyn_HeII_ionization_saha_x (NcHICosmo *model, gdouble frac)
 {
   const gdouble T0 = nc_hicosmo_T_gamma0 (model);
-  const gdouble kbT0 = NC_C_kb * T0;
-  const gdouble mE_kbT0 = -NC_C_HeII_BINDING_ENERGY_1s / kbT0;
-  const gdouble lambda_e3_0 = gsl_pow_3 (NC_C_THERMAL_WAVELENGTH_e/sqrt(T0));
+  const gdouble kbT0 = ncm_c_kb () * T0;
+  const gdouble mE_kbT0 = -ncm_c_HeII_bind_1s () / kbT0;
+  const gdouble lambda_e3_0 = gsl_pow_3 (ncm_c_thermal_wl_e ()/sqrt(T0));
   const gdouble h2 = nc_hicosmo_h2 (model);
   const gdouble Omega_b = nc_hicosmo_Omega_b (model);
-  const gdouble n_H0 = NC_C_PRIM_H_FRAC * Omega_b * (NC_C_CRIT_DENSITY * h2) / NC_C_ENERGY_p;
+  const gdouble n_H0 = ncm_c_prim_H_frac () * Omega_b * (ncm_c_crit_density () * h2) / ncm_c_rest_energy_p ();
   const gdouble y = 3.0 / 2.0 * gsl_sf_lambert_Wm1 (2.0 / 3.0 * mE_kbT0 * cbrt (gsl_pow_2 (lambda_e3_0 * n_H0 * frac))) / mE_kbT0;
 
   return (1.0 / y);
@@ -297,21 +297,21 @@ nc_thermodyn_H_ionization_rate_old (NcHICosmo *model, gdouble Xp, gdouble Tm, gd
   const gdouble alpha = nc_thermodyn_recomb_H_case_B (model, Tm);
   const gdouble h2 = nc_hicosmo_h2 (model);
   const gdouble Omega_b = nc_hicosmo_Omega_b (model);
-  const gdouble n_b0 = Omega_b * NC_C_CRIT_NUMBER_DENSITY_p * h2;
-  const gdouble n_0 = (1.0 - NC_C_PRIM_HE_Y_P) * n_b0;
-  const gdouble H = nc_hicosmo_H (model, x - 1.0) / (NC_C_PARSEC * 1e3);
+  const gdouble n_b0 = Omega_b * ncm_c_crit_number_density_p () * h2;
+  const gdouble n_0 = ncm_c_prim_H_frac () * n_b0;
+  const gdouble H = nc_hicosmo_H (model, x - 1.0) / ncm_c_kpc ();
   const gdouble f1 = alpha * n_0 * x * x / H;
 
   const gdouble x3 = x*x*x;
   const gdouble Tm3_2 = sqrt(gsl_pow_3 (Tm));
-  const gdouble f2na = NC_C_DECAY_H_2S_1S * (1.0 - Xp);
-  const gdouble f2nb = H / x3 / (n_0 * NC_C_HYDROGEN_LYMAN_2p_WL3_8PI);
+  const gdouble f2na = ncm_c_decay_H_rate_2s_1s () * (1.0 - Xp);
+  const gdouble f2nb = H / x3 / (n_0 * ncm_c_H_Lyman_2p_wl3_8pi ());
   const gdouble f2n = f2na + f2nb;
-  const gdouble f2da = NC_BOLTZMAN_FACTOR_H_2s(Tm) * Tm3_2 * alpha * (1.0 - Xp);
+  const gdouble f2da = ncm_c_boltzmann_factor_H_2s (Tm) * Tm3_2 * alpha * (1.0 - Xp);
   const gdouble f2d = f2na + f2nb + f2da;
   const gdouble f2 = f2n / f2d;
 
-  const gdouble S = NC_C_BOLTZMAN_FACTOR_H_1s (Tm) * Tm3_2 / (n_0 * x3);
+  const gdouble S = ncm_c_boltzmann_factor_H_1s  (Tm) * Tm3_2 / (n_0 * x3);
   const gdouble f3 = ( Xp * Xe - (1.0 - Xp) * S);
 
   return f1 * f2 * f3;
@@ -333,20 +333,20 @@ gdouble
 nc_thermodyn_H_ionization_rate (NcHICosmo *model, gdouble XH, gdouble Tm, gdouble XHeII, gdouble x)
 {
   const gdouble Xe = XH + XHeII;
-  const gdouble kbTm = NC_C_kb * Tm;
+  const gdouble kbTm = ncm_c_kb () * Tm;
   const gdouble x3 = gsl_pow_3 (x);
   const gdouble h2 = nc_hicosmo_h2 (model);
   const gdouble Omega_b = nc_hicosmo_Omega_b (model);
   const gdouble Tm3_2 = sqrt(gsl_pow_3 (Tm));
-  const gdouble lambda_e3_T3_2 = gsl_pow_3 (NC_C_THERMAL_WAVELENGTH_e);
-  const gdouble n_H = NC_C_PRIM_H_FRAC * Omega_b * x3 * (NC_C_CRIT_DENSITY * h2) / NC_C_ENERGY_p;
+  const gdouble lambda_e3_T3_2 = gsl_pow_3 (ncm_c_thermal_wl_e ());
+  const gdouble n_H = ncm_c_prim_H_frac () * Omega_b * x3 * (ncm_c_crit_density () * h2) / ncm_c_rest_energy_p ();
   const gdouble alpha_H = nc_thermodyn_recomb_H_case_B (model, Tm);
-  const gdouble beta_H = gsl_sf_exp_mult (-NC_C_HYDROGEN_BINDING_ENERGY_2s / kbTm, alpha_H * Tm3_2 / lambda_e3_T3_2);
-  const gdouble beta_H_exp_mE_kbT = gsl_sf_exp_mult (-NC_C_HYDROGEN_LYMAN_2s / kbTm, beta_H);
+  const gdouble beta_H = gsl_sf_exp_mult (-ncm_c_H_bind_2s () / kbTm, alpha_H * Tm3_2 / lambda_e3_T3_2);
+  const gdouble beta_H_exp_mE_kbT = gsl_sf_exp_mult (-ncm_c_H_Lyman_2s () / kbTm, beta_H);
   const gdouble f1 = (Xe * XH * n_H * alpha_H - beta_H_exp_mE_kbT * (1.0 - XH));
 
-  const gdouble H = nc_hicosmo_H (model, x - 1.0) / NC_C_KILO_PARSEC;
-  const gdouble KH = NC_C_HYDROGEN_LYMAN_2p_WL3_8PI / H;
+  const gdouble H = nc_hicosmo_H (model, x - 1.0) / ncm_c_kpc ();
+  const gdouble KH = ncm_c_H_Lyman_2p_wl3_8pi () / H;
   const gdouble Lambda_H = 8.22458;
   const gdouble f2 = 1.0 + KH * Lambda_H * n_H * (1.0 - XH);
 
@@ -376,18 +376,18 @@ nc_thermodyn_H_ionization_rate_grad (NcHICosmo *model, gdouble Xp, gdouble Tm, g
   const gdouble Tm2 = Tm * Tm;
   const gdouble Tm3_2 = sqrt(Tm * Tm2);
   const gdouble alpha = nc_thermodyn_recomb_H_case_B (model, Tm);
-  const gdouble beta = NC_BOLTZMAN_FACTOR_H_2s(Tm) * Tm3_2 * alpha;
+  const gdouble beta = ncm_c_boltzmann_factor_H_2s (Tm) * Tm3_2 * alpha;
 
   const gdouble h2 = nc_hicosmo_h2 (model);
   const gdouble Omega_b = nc_hicosmo_Omega_b (model);
-  const gdouble n_b0 = Omega_b * NC_C_CRIT_NUMBER_DENSITY_p * h2;
+  const gdouble n_b0 = Omega_b * ncm_c_crit_number_density_p () * h2;
   const gdouble n_0 = 0.76 * n_b0;
-  const gdouble H = nc_hicosmo_H (model, x - 1.0) / (NC_C_PARSEC * 1e3);
+  const gdouble H = nc_hicosmo_H (model, x - 1.0) / ncm_c_kpc ();
 
   const gdouble f1 = alpha * n_0 * x * x / H;
 
-  const gdouble f2na = NC_C_DECAY_H_2S_1S * (1.0 - Xp);
-  const gdouble f2nb = H / x3 / (n_0 * NC_C_HYDROGEN_LYMAN_2p_WL3_8PI);
+  const gdouble f2na = ncm_c_decay_H_rate_2s_1s () * (1.0 - Xp);
+  const gdouble f2nb = H / x3 / (n_0 * ncm_c_H_Lyman_2p_wl3_8pi ());
   const gdouble f2n = f2na + f2nb;
 
   const gdouble f2da = beta * (1.0 - Xp);
@@ -395,20 +395,20 @@ nc_thermodyn_H_ionization_rate_grad (NcHICosmo *model, gdouble Xp, gdouble Tm, g
 
   const gdouble f2 = f2n / f2d;
 
-  const gdouble S = NC_C_BOLTZMAN_FACTOR_H_1s(Tm) * Tm3_2 / (n_0 * x3);
+  const gdouble S = ncm_c_boltzmann_factor_H_1s (Tm) * Tm3_2 / (n_0 * x3);
   const gdouble f3 = ( Xp * Xe - (1.0 - Xp) * S);
 
-  const gdouble ddX = f1 * (-NC_C_DECAY_H_2S_1S / f2d) * f3 +
-    f1 * ((NC_C_DECAY_H_2S_1S + beta) * f2n / gsl_pow_2 (f2d)) * f3 +
+  const gdouble ddX = f1 * (-ncm_c_decay_H_rate_2s_1s () / f2d) * f3 +
+    f1 * ((ncm_c_decay_H_rate_2s_1s () + beta) * f2n / gsl_pow_2 (f2d)) * f3 +
     f1 * f2n / f2d * (Xe + Xp + S);
 
   const gdouble dalpha = nc_thermodyn_recomb_H_case_B_dTm (model, Tm);
   const gdouble df1 = f1 * dalpha / alpha;
   const gdouble dbeta =
-    (3.0 / 2.0 / Tm + NC_C_HYDROGEN_BINDING_ENERGY_1s / NC_C_kb / Tm2 + dalpha / alpha) * beta;
+    (3.0 / 2.0 / Tm + ncm_c_H_bind_1s () / ncm_c_kb () / Tm2 + dalpha / alpha) * beta;
   const gdouble df2 = - f2n * (dbeta * (1.0 - Xp)) / gsl_pow_2 (f2d);
   const gdouble dS =
-    (3.0 / 2.0 / Tm + NC_C_HYDROGEN_BINDING_ENERGY_2s / NC_C_kb / Tm2) * S;
+    (3.0 / 2.0 / Tm + ncm_c_H_bind_2s () / ncm_c_kb () / Tm2) * S;
   const gdouble df3 = -(1.0 - Xp) * dS;
   const gdouble ddTm = df1 * f2 * f3 + f1 * df2 * f3 + f1 * f2 * df3;
 
@@ -440,22 +440,22 @@ nc_thermodyn_HeII_ionization_rate (NcHICosmo *model, gdouble Xp, gdouble Tm, gdo
   const gdouble alpha = nc_thermodyn_recomb_HeI_case_B (model, Tm);
   const gdouble h2 = nc_hicosmo_h2 (model);
   const gdouble Omega_b = nc_hicosmo_Omega_b (model);
-  const gdouble n_b0 = Omega_b * NC_C_CRIT_NUMBER_DENSITY_p * h2;
+  const gdouble n_b0 = Omega_b * ncm_c_crit_number_density_p () * h2;
   const gdouble n_0 = 0.76 * n_b0;
-  const gdouble H = nc_hicosmo_H (model, x - 1.0) / (NC_C_PARSEC * 1e3);
+  const gdouble H = nc_hicosmo_H (model, x - 1.0) / ncm_c_kpc ();
   const gdouble f1 = alpha * n_0 * x * x / H;
 
   const gdouble x3 = x*x*x;
   const gdouble Tm3_2 = sqrt(gsl_pow_3 (Tm));
-  const gdouble f2na = NC_C_DECAY_He_2S_1S * (NC_C_PRIM_HE_XHe - XHeII);
-  const gdouble f2nb = gsl_sf_exp_mult (-NC_C_HeI_2s_m_2p_Kb / Tm, H / x3 / (n_0 * NC_C_HeI_LYMAN_2p_WL3_8PI));
+  const gdouble f2na = ncm_c_decay_He_rate_2s_1s () * (ncm_c_prim_He_XHe () - XHeII);
+  const gdouble f2nb = gsl_sf_exp_mult (-ncm_c_HeI_2s_m_2p_kb () / Tm, H / x3 / (n_0 * ncm_c_HeI_Lyman_2p_wl3_8pi ()));
   const gdouble f2n = f2na + f2nb;
-  const gdouble f2da = 4.0 * NC_BOLTZMAN_FACTOR_HeI_2s(Tm) * Tm3_2 * alpha * (NC_C_PRIM_HE_XHe - XHeII);
+  const gdouble f2da = 4.0 * ncm_c_boltzmann_factor_HeI_2s (Tm) * Tm3_2 * alpha * (ncm_c_prim_He_XHe () - XHeII);
   const gdouble f2d = f2na + f2nb + f2da;
   const gdouble f2 = f2n / f2d;
 
-  const gdouble S = 4.0 * NC_BOLTZMAN_FACTOR_HeI_1s(Tm) * Tm3_2 / (n_0 * x3);
-  const gdouble f3 = ( XHeII * Xe - (NC_C_PRIM_HE_XHe - XHeII) * S);
+  const gdouble S = 4.0 * ncm_c_boltzmann_factor_HeI_1s (Tm) * Tm3_2 / (n_0 * x3);
+  const gdouble f3 = ( XHeII * Xe - (ncm_c_prim_He_XHe () - XHeII) * S);
 
   return f1 * f2 * f3;
 }
@@ -480,36 +480,36 @@ nc_thermodyn_HeII_ionization_rate_grad (NcHICosmo *model, gdouble Xp, gdouble Tm
   const gdouble alpha = nc_thermodyn_recomb_HeI_case_B (model, Tm);
   const gdouble h2 = nc_hicosmo_h2 (model);
   const gdouble Omega_b = nc_hicosmo_Omega_b (model);
-  const gdouble n_b0 = Omega_b * NC_C_CRIT_NUMBER_DENSITY_p * h2;
+  const gdouble n_b0 = Omega_b * ncm_c_crit_number_density_p () * h2;
   const gdouble n_0 = 0.76 * n_b0;
-  const gdouble H = nc_hicosmo_H (model, x - 1.0) / (NC_C_PARSEC * 1e3);
+  const gdouble H = nc_hicosmo_H (model, x - 1.0) / ncm_c_kpc ();
   const gdouble f1 = alpha * n_0 * x * x / H;
 
   const gdouble x3 = x*x*x;
   const gdouble Tm3_2 = sqrt(gsl_pow_3 (Tm));
-  const gdouble f2na = NC_C_DECAY_He_2S_1S * (NC_C_PRIM_HE_XHe - XHeII);
-  const gdouble f2nb = gsl_sf_exp_mult (-NC_C_HeI_2s_m_2p_Kb / Tm, H / x3 / (n_0 * NC_C_HeI_LYMAN_2p_WL3_8PI));
+  const gdouble f2na = ncm_c_decay_He_rate_2s_1s () * (ncm_c_prim_He_XHe () - XHeII);
+  const gdouble f2nb = gsl_sf_exp_mult (-ncm_c_HeI_2s_m_2p_kb () / Tm, H / x3 / (n_0 * ncm_c_HeI_Lyman_2p_wl3_8pi ()));
   const gdouble f2n = f2na + f2nb;
-  const gdouble beta = 4.0 * NC_BOLTZMAN_FACTOR_HeI_2s(Tm) * Tm3_2 * alpha;
-  const gdouble f2da = beta * (NC_C_PRIM_HE_XHe - XHeII);
+  const gdouble beta = 4.0 * ncm_c_boltzmann_factor_HeI_2s (Tm) * Tm3_2 * alpha;
+  const gdouble f2da = beta * (ncm_c_prim_He_XHe () - XHeII);
   const gdouble f2d = f2na + f2nb + f2da;
   const gdouble f2 = f2n / f2d;
 
-  const gdouble S = 4.0 * NC_BOLTZMAN_FACTOR_HeI_1s(Tm) * Tm3_2 / (n_0 * x3);
-  const gdouble f3 = ( XHeII * Xe - (NC_C_PRIM_HE_XHe - XHeII) * S);
+  const gdouble S = 4.0 * ncm_c_boltzmann_factor_HeI_1s (Tm) * Tm3_2 / (n_0 * x3);
+  const gdouble f3 = ( XHeII * Xe - (ncm_c_prim_He_XHe () - XHeII) * S);
 
-  const gdouble ddXHeII = f1 * (-NC_C_DECAY_He_2S_1S / f2d) * f3 +
-    f1 * ((NC_C_DECAY_He_2S_1S + beta) * f2n / gsl_pow_2 (f2d)) * f3 +
+  const gdouble ddXHeII = f1 * (-ncm_c_decay_He_rate_2s_1s () / f2d) * f3 +
+    f1 * ((ncm_c_decay_He_rate_2s_1s () + beta) * f2n / gsl_pow_2 (f2d)) * f3 +
     f1 * f2n / f2d * (Xe + XHeII + S);
 
   const gdouble dalpha = nc_thermodyn_recomb_HeI_case_B_dTm (model, Tm);
   const gdouble df1 = f1 * dalpha / alpha;
-  const gdouble dbeta = (3.0 / 2.0 / Tm + NC_C_HeI_BINDING_ENERGY_1s / NC_C_kb / Tm2 + dalpha / alpha) * beta;
-  const gdouble df2nb = NC_C_HeI_2s_m_2p_Kb / Tm2 * f2nb;
-  const gdouble df2 = df2nb / f2d - f2n * (dbeta * (NC_C_PRIM_HE_XHe - XHeII) + df2nb) / gsl_pow_2 (f2d);
+  const gdouble dbeta = (3.0 / 2.0 / Tm + ncm_c_HeI_bind_1s () / ncm_c_kb () / Tm2 + dalpha / alpha) * beta;
+  const gdouble df2nb = ncm_c_HeI_2s_m_2p_kb () / Tm2 * f2nb;
+  const gdouble df2 = df2nb / f2d - f2n * (dbeta * (ncm_c_prim_He_XHe () - XHeII) + df2nb) / gsl_pow_2 (f2d);
   const gdouble dS =
-    (3.0 / 2.0 / Tm + NC_C_HeI_BINDING_ENERGY_2s / NC_C_kb / Tm2) * S;
-  const gdouble df3 = -(NC_C_PRIM_HE_XHe - XHeII) * dS;
+    (3.0 / 2.0 / Tm + ncm_c_HeI_bind_2s () / ncm_c_kb () / Tm2) * S;
+  const gdouble df3 = -(ncm_c_prim_He_XHe () - XHeII) * dS;
   const gdouble ddTm = df1 * f2 * f3 + f1 * df2 * f3 + f1 * f2 * df3;
 
   const gdouble ddX = f1 * f2 * XHeII;
@@ -537,14 +537,14 @@ nc_thermodyn_matter_temperature_dx_old (NcHICosmo *model, gdouble Xp, gdouble Tm
 {
   const gdouble T0 = nc_hicosmo_T_gamma0 (model);
   const gdouble T = T0 * x;
-  const gdouble H = nc_hicosmo_H (model, x - 1.0) / (NC_C_PARSEC * 1e3);
-  const gdouble f1 = (8.0  * NC_C_THOMPSON_CS * NC_C_AR *
+  const gdouble H = nc_hicosmo_H (model, x - 1.0) / ncm_c_kpc ();
+  const gdouble f1 = (8.0  * ncm_c_thomson_cs () * ncm_c_AR () *
     T0 * T0 * T0 * T0 /
-    (3.0 * NC_C_c * NC_C_MASS_e)) *
+    (3.0 * ncm_c_c () * ncm_c_mass_e ())) *
     gsl_pow_3 (x) / H;
 
   const gdouble Xe = Xp + XHeII;
-  const gdouble f2 = Xe * (Tm - T) / (1.0 + NC_C_PRIM_HE_XHe + Xe);
+  const gdouble f2 = Xe * (Tm - T) / (1.0 + ncm_c_prim_He_XHe () + Xe);
 
   const gdouble f3 = 2.0 * Tm / x;
 
@@ -568,15 +568,15 @@ nc_thermodyn_matter_temperature_dx (NcHICosmo *model, gdouble Xp, gdouble Tm, gd
 {
   const gdouble T0 = nc_hicosmo_T_gamma0 (model);
   const gdouble Tr = T0 * x;
-  const gdouble H = nc_hicosmo_H (model, x - 1.0) / NC_C_KILO_PARSEC;
+  const gdouble H = nc_hicosmo_H (model, x - 1.0) / ncm_c_kpc ();
 
-  const gdouble f1 = (8.0 * NC_C_THOMPSON_CS * NC_C_AR *
+  const gdouble f1 = (8.0 * ncm_c_thomson_cs () * ncm_c_AR () *
     T0 * T0 * T0 * T0 /
-    (3.0 * NC_C_c * NC_C_MASS_e)) *
+    (3.0 * ncm_c_c () * ncm_c_mass_e ())) *
     gsl_pow_3 (x) / H;
 
   const gdouble Xe = Xp + XHeII;
-  const gdouble f2 = Xe * (Tm - Tr) / (1.0 + NC_C_PRIM_HE_XHe + Xe);
+  const gdouble f2 = Xe * (Tm - Tr) / (1.0 + ncm_c_prim_He_XHe () + Xe);
 
   const gdouble f3 = 2.0 * Tm / x;
 
@@ -599,19 +599,19 @@ nc_thermodyn_matter_temperature_dx_grad (NcHICosmo *model, gdouble Xp, gdouble T
 {
   const gdouble T0 = nc_hicosmo_T_gamma0 (model);
   const gdouble T = T0 * x;
-  const gdouble H = nc_hicosmo_H (model, x - 1.0) / (NC_C_PARSEC * 1e3);
-  const gdouble f1 = (8.0  * NC_C_THOMPSON_CS * NC_C_AR *
+  const gdouble H = nc_hicosmo_H (model, x - 1.0) / ncm_c_kpc ();
+  const gdouble f1 = (8.0  * ncm_c_thomson_cs () * ncm_c_AR () *
     T0 * T0 * T0 * T0 /
-    (3.0 * NC_C_c * NC_C_MASS_e)) *
+    (3.0 * ncm_c_c () * ncm_c_mass_e ())) *
     gsl_pow_3 (x) / H;
 
   const gdouble Xe = Xp + XHeII;
-  const gdouble f2 = Xe * (Tm - T) / (1.0 + NC_C_PRIM_HE_XHe + Xe);
+  const gdouble f2 = Xe * (Tm - T) / (1.0 + ncm_c_prim_He_XHe () + Xe);
 
-  const gdouble df2_dX = (1.0 / Xe - 1.0 / (1.0 + NC_C_PRIM_HE_XHe + Xe)) * f2;
+  const gdouble df2_dX = (1.0 / Xe - 1.0 / (1.0 + ncm_c_prim_He_XHe () + Xe)) * f2;
   const gdouble ddXp = f1 * df2_dX;
 
-  const gdouble ddTm = f1 * Xe / (1.0 + NC_C_PRIM_HE_XHe + Xe) + 2.0 / x;
+  const gdouble ddTm = f1 * Xe / (1.0 + ncm_c_prim_He_XHe () + Xe) + 2.0 / x;
 
   const gdouble ddXHeII = ddXp;
 
@@ -780,7 +780,7 @@ nc_thermodyn_recomb_new (NcHICosmo *model, NcThermodynRecombType type)
   {
     /* Assuming XHI = 1 and XHe_n = 0 obtain the ratio [; X_{He^{++}}X_e/X_{He^+} ;] */
     const gdouble frac  = 1e-11;
-    const gdouble ratio = frac * (1.0 + NC_C_PRIM_HE_XHe * (1.0 + frac)) / ((1.0 - frac));
+    const gdouble ratio = frac * (1.0 + ncm_c_prim_He_XHe () * (1.0 + frac)) / ((1.0 - frac));
     recomb->He_single_ionized_x = nc_thermodyn_HeII_ionization_saha_x (model, ratio);
   }
 
@@ -798,7 +798,7 @@ nc_thermodyn_recomb_new (NcHICosmo *model, NcThermodynRecombType type)
     Tm = T0 * x0;
     XH = 1; /* Hydrogen is completly ionized */
     XeXHeII_XHeI = nc_thermodyn_HeI_ionization_saha (model, x0);
-    XHeII = (XeXHeII_XHeI * ncm_sqrt1px_m1 ( (1.0 + 2.0 * XeXHeII_XHeI + 4.0 * NC_C_PRIM_HE_XHe * XeXHeII_XHeI) / (XeXHeII_XHeI * XeXHeII_XHeI) ) - 1.0) / 2.0;
+    XHeII = (XeXHeII_XHeI * ncm_sqrt1px_m1 ( (1.0 + 2.0 * XeXHeII_XHeI + 4.0 * ncm_c_prim_He_XHe () * XeXHeII_XHeI) / (XeXHeII_XHeI * XeXHeII_XHeI) ) - 1.0) / 2.0;
 
     recomb->x0 = x0;
     NV_Ith_S(recomb->y0, 0) = XH;
@@ -973,8 +973,8 @@ nc_thermodyn_recomb_get_Xe_at (NcThermodynRecomb *recomb, gdouble x)
      * and all hydrogen is ionized.
      */
     const gdouble XHeIIIXe_XHeII = nc_thermodyn_HeII_ionization_saha (recomb->model, x);
-    const gdouble arg = NC_C_PRIM_HE_XHe * (NC_C_PRIM_HE_XHe + (2.0 + 6.0 * XHeIIIXe_XHeII)) / ((1.0 + XHeIIIXe_XHeII) * (1.0 + XHeIIIXe_XHeII));
-    const gdouble Xe = (2.0 + NC_C_PRIM_HE_XHe + (1.0 + XHeIIIXe_XHeII) * ncm_sqrt1px_m1 (arg)) / 2.0;
+    const gdouble arg = ncm_c_prim_He_XHe () * (ncm_c_prim_He_XHe () + (2.0 + 6.0 * XHeIIIXe_XHeII)) / ((1.0 + XHeIIIXe_XHeII) * (1.0 + XHeIIIXe_XHeII));
+    const gdouble Xe = (2.0 + ncm_c_prim_He_XHe () + (1.0 + XHeIIIXe_XHeII) * ncm_sqrt1px_m1 (arg)) / 2.0;
     return Xe;
   }
 }
@@ -987,12 +987,12 @@ dopt_depth (gdouble x, gpointer p)
   const gdouble x2 = x * x;
   const gdouble h2 = nc_hicosmo_h2 (model);
   const gdouble Omega_b = nc_hicosmo_Omega_b (model);
-  const gdouble n_b0 = Omega_b * NC_C_CRIT_NUMBER_DENSITY_p * h2;
+  const gdouble n_b0 = Omega_b * ncm_c_crit_number_density_p () * h2;
   const gdouble n_0 = 0.76 * n_b0;
-  const gdouble H = nc_hicosmo_H (model, x - 1.0) / (NC_C_KILO_PARSEC);
+  const gdouble H = nc_hicosmo_H (model, x - 1.0) / (ncm_c_kpc ());
   const gdouble Xe = nc_thermodyn_recomb_get_Xe_at (recomb, x);
 //printf ("# %.15e %.15e\n", x, Xe);
-  return NC_C_c * NC_C_THOMPSON_CS * n_0 * Xe * x2 / H;
+  return ncm_c_c () * ncm_c_thomson_cs () * n_0 * Xe * x2 / H;
 }
 
 static gdouble
@@ -1001,11 +1001,11 @@ dopt_depth_over_Xe (NcHICosmo *model, gdouble x)
   const gdouble x2 = x * x;
   const gdouble h2 = nc_hicosmo_h2 (model);
   const gdouble Omega_b = nc_hicosmo_Omega_b (model);
-  const gdouble n_b0 = Omega_b * NC_C_CRIT_NUMBER_DENSITY_p * h2;
+  const gdouble n_b0 = Omega_b * ncm_c_crit_number_density_p () * h2;
   const gdouble n_0 = 0.76 * n_b0;
-  const gdouble H = nc_hicosmo_H (model, x - 1.0) / (NC_C_PARSEC * 1e3);
+  const gdouble H = nc_hicosmo_H (model, x - 1.0) / ncm_c_kpc ();
 
-  return NC_C_c * NC_C_THOMPSON_CS * n_0 * x2 / H;
+  return ncm_c_c () * ncm_c_thomson_cs () * n_0 * x2 / H;
 }
 
 static void _nc_thermodyn_recomb_calc_peak_width (NcThermodynRecomb *recomb);

@@ -153,7 +153,7 @@ main (gint argc, gchar *argv[])
   }
 
   if (spherical)
-	nc_prior_add_oneside_a_inf_const_func (lh, nc_hicosmo_func0_new (&nc_hicosmo_Omega_k),
+	nc_prior_add_oneside_a_inf_const_func (lh, ncm_mset_func_new_hicosmo_func0 (&nc_hicosmo_Omega_k),
 	                                       0.0, 1.0e-6);
 
   if (flat)
@@ -174,7 +174,7 @@ main (gint argc, gchar *argv[])
 	ncm_mset_free (mset);
   }
 
-  printf ("# Omega_r %.15f | %.15f | %.15f\n", nc_hicosmo_Omega_r (model), NC_C_RADIATION_TEMP_TO_h2OMEGA_R (2.725), NC_C_RADIATION_h2OMEGA_R_TO_TEMP(0.49 * nc_hicosmo_Omega_r (model)));
+  printf ("# Omega_r %.15f | %.15f | %.15f\n", nc_hicosmo_Omega_r (model), ncm_c_radiation_temp_to_h2omega_r (2.725), ncm_c_radiation_h2Omega_r_to_temp(0.49 * nc_hicosmo_Omega_r (model)));
   printf ("#");
   ncm_model_params_print_all (NCM_MODEL (model), stdout);
   printf ("# z_r = %g\n", nc_distance_decoupling_redshift (dist, model));
@@ -360,7 +360,7 @@ main (gint argc, gchar *argv[])
 		  gdouble b1 = ncm_spline_eval (NC_LINEAR_PERTURBATIONS_GET_SPLINE(pspline, NC_PERT_B1), k);
 
 		  printf ("%.15g %.15g %.15g %.15g %.15g %.15g %.15g %.15g %.15g %.15g\n",
-		          k, k / NC_C_HUBBLE_RADIUS, phi, theta0, c0, b0, theta1, c1, b1, theta2);
+		          k, k / ncm_c_hubble_radius (), phi, theta0, c0, b0, theta1, c1, b1, theta2);
 		}
 	  }
 

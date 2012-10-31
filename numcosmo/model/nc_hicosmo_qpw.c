@@ -101,7 +101,13 @@ _nc_hicosmo_qpw_d2E2_dz2 (NcmModel *model, gdouble z)
 }
 
 /**
+ * nc_hicosmo_qpw_index:
+ * @qpw: FIXME
+ * @z: FIXME
+ *
  * FIXME
+ *
+ * Returns: FIXME
  */
 guint
 nc_hicosmo_qpw_index (NcHICosmoQPW *qpw, gdouble z)
@@ -141,7 +147,14 @@ _nc_hicosmo_qpw_continuity_prior_free (gpointer obj)
 }
 
 /**
+ * nc_hicosmo_qpw_add_continuity_prior:
+ * @qpw: FIXME
+ * @lh: FIXME
+ * @knot: FIXME
+ * @sigma: FIXME
+ *
  * FIXME
+ *
  */
 void
 nc_hicosmo_qpw_add_continuity_prior (NcHICosmoQPW *qpw, NcLikelihood *lh, gint knot, gdouble sigma)
@@ -157,7 +170,13 @@ nc_hicosmo_qpw_add_continuity_prior (NcHICosmoQPW *qpw, NcLikelihood *lh, gint k
 }
 
 /**
+ * nc_hicosmo_qpw_add_continuity_priors:
+ * @qpw: FIXME
+ * @lh: FIXME
+ * @sigma: FIXME
+ *
  * FIXME
+ *
  */
 void
 nc_hicosmo_qpw_add_continuity_priors (NcHICosmoQPW *qpw, NcLikelihood *lh, gdouble sigma)
@@ -175,7 +194,15 @@ _nc_hicosmo_qpw_asymptotic_cdm_free (gpointer obj)
 }
 
 /**
+ * nc_hicosmo_qpw_add_asymptotic_cdm_prior:
+ * @qpw: FIXME
+ * @lh: FIXME
+ * @z: FIXME
+ * @q: FIXME
+ * @sigma: FIXME
+ *
  * FIXME
+ *
  */
 void
 nc_hicosmo_qpw_add_asymptotic_cdm_prior (NcHICosmoQPW *qpw, NcLikelihood *lh, gdouble z, gdouble q, gdouble sigma)
@@ -190,7 +217,12 @@ nc_hicosmo_qpw_add_asymptotic_cdm_prior (NcHICosmoQPW *qpw, NcLikelihood *lh, gd
 }
 
 /**
+ * nc_hicosmo_qpw_change_params:
+ * @qpw: FIXME
+ * @z: FIXME
+ *
  * FIXME
+ *
  */
 void
 nc_hicosmo_qpw_change_params (NcHICosmoQPW *qpw, gdouble z)
@@ -284,7 +316,11 @@ nc_hicosmo_qpw_change_params (NcHICosmoQPW *qpw, gdouble z)
 }
 
 /**
+ * nc_hicosmo_qpw_change_params_qpp:
+ * @qpw: FIXME
+ *
  * FIXME
+ *
  */
 void
 nc_hicosmo_qpw_change_params_qpp (NcHICosmoQPW *qpw)

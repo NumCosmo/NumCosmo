@@ -61,7 +61,11 @@ _nc_hicosmo_de_xcdm_dweff_dz (NcmModel *model, gdouble z)
 }
 
 /**
+ * nc_hicosmo_de_xcdm_new:
+ *
  * FIXME
+ *
+ * Returns: FIXME
  */
 NcHICosmoDEXcdm *
 nc_hicosmo_de_xcdm_new (void)

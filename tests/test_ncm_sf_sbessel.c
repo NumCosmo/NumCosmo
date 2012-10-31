@@ -39,47 +39,49 @@
 gint
 main (gint argc, gchar *argv[])
 {
-  GTimer *bench = g_timer_new ();
-  gdouble total = 0.0;
-  gdouble time_elap[NTOT];
-  guint i, j;
-
-  memset (time_elap, 0, sizeof (gdouble) * NTOT);
-
-  g_test_init (&argc, &argv, NULL);
-  ncm_cfg_init ();
-  //ncm_cfg_enable_gsl_err_handler ();
-
-  for (j = 430; j <= L; j++)
+  if (FALSE)
   {
-	printf ("# L = %u\n", j);
-	for (i = 0; i < NTOT; i++)
-	{
-	  const gdouble x = pow (10.0, -XMAX * 0.5 + XMAX / (NTOT - 1.0) * i);
-	  g_timer_start (bench);
-	  {
-		const gdouble ncm_jl = ncm_sf_sbessel (j, x);
-		const gdouble gsl_jl = gsl_sf_bessel_jl (j, x);
-		const gdouble err = fabs ((ncm_jl - gsl_jl) / ncm_jl);
-		if (ncm_jl > 1.0e-250 && gsl_jl > 1.0e-250)
-		  total = GSL_MAX (err, total);
-		time_elap[i] = (j * time_elap[i] + g_timer_elapsed (bench, NULL)) / (j + 1.0);
+	GTimer *bench = g_timer_new ();
+	gdouble total = 0.0;
+	gdouble time_elap[NTOT];
+	guint i, j;
 
-		if (total > 1e-6)
+	memset (time_elap, 0, sizeof (gdouble) * NTOT);
+
+	g_test_init (&argc, &argv, NULL);
+	ncm_cfg_init ();
+	//ncm_cfg_enable_gsl_err_handler ();
+
+	for (j = 430; j <= L; j++)
+	{
+	  printf ("# L = %u\n", j);
+	  for (i = 0; i < NTOT; i++)
+	  {
+		const gdouble x = pow (10.0, -XMAX * 0.5 + XMAX / (NTOT - 1.0) * i);
+		g_timer_start (bench);
 		{
-		  printf ("%u % 20.15g % 20.15g % 20.15g %e %e\n", j, x, ncm_jl, gsl_jl, err, total);
-		  exit (0);
+		  const gdouble ncm_jl = ncm_sf_sbessel (j, x);
+		  const gdouble gsl_jl = gsl_sf_bessel_jl (j, x);
+		  const gdouble err = fabs ((ncm_jl - gsl_jl) / ncm_jl);
+		  if (ncm_jl > 1.0e-250 && gsl_jl > 1.0e-250)
+			total = GSL_MAX (err, total);
+		  time_elap[i] = (j * time_elap[i] + g_timer_elapsed (bench, NULL)) / (j + 1.0);
+
+		  if (total > 1e-6)
+		  {
+			printf ("%u % 20.15g % 20.15g % 20.15g %e %e\n", j, x, ncm_jl, gsl_jl, err, total);
+			exit (0);
+		  }
 		}
 	  }
 	}
-  }
-  printf ("# TOTAL % 20.15g\n", total);
+	printf ("# TOTAL % 20.15g\n", total);
 
-  for (i = 0; i < NTOT && FALSE; i++)
-  {
-	const gdouble x = XMAX / (NTOT - 1.0) * i;
-	printf ("% 20.15g %e\n", x, time_elap[i]);
+	for (i = 0; i < NTOT && FALSE; i++)
+	{
+	  const gdouble x = XMAX / (NTOT - 1.0) * i;
+	  printf ("% 20.15g %e\n", x, time_elap[i]);
+	}
   }
-
 }
 

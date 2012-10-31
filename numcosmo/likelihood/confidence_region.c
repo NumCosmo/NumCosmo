@@ -397,10 +397,12 @@ ncm_fit_cr_points_free (GList *points)
 }
 
 /**
- * ncm_fit_cr2_fisher:
+ * ncm_fit_cr:
  * @fit: a #NcmFit
- * @n1: FIXME
- * @n2: FIXME
+ * @gmid1: FIXME
+ * @pid1: FIXME
+ * @gmid2: FIXME
+ * @pid2: FIXME
  * @p: FIXME
  *
  * FIXME

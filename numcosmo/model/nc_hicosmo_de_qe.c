@@ -64,7 +64,11 @@ _nc_hicosmo_de_qe_dweff_dz (NcmModel *model, gdouble z)
 }
 
 /**
+ * nc_hicosmo_de_qe_new:
+ *
  * FIXME
+ *
+ * Returns: FIXME
  */
 NcHICosmoDEQe *
 nc_hicosmo_de_qe_new (void)

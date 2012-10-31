@@ -22,14 +22,6 @@
  * with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-/**
- * SECTION:nc_macros
- * @title: Library Utilities Macros
- * @short_description: FIXME
- *
- * FIXME
- */
-
 #ifndef _NC_MACROS_H
 #define _NC_MACROS_H
 
@@ -41,6 +33,24 @@ G_BEGIN_DECLS
 #define _NCM_SUNDIALS_INT_TYPE glong
 #else
 #define _NCM_SUNDIALS_INT_TYPE gint
+#endif
+
+#if (GLIB_MAJOR_VERSION == 2) && (GLIB_MINOR_VERSION < 32)
+#define _NCM_MUTEX_LOCK(l) g_static_mutex_lock (l)
+#define _NCM_MUTEX_UNLOCK(l) g_static_mutex_unlock (l)
+#define _NCM_MUTEX_TRYLOCK(l) g_static_mutex_trylock (l)
+#define _NCM_MUTEX_TYPE GStaticMutex
+#define _NCM_STATIC_MUTEX_DECL(l) static GStaticMutex l = G_STATIC_MUTEX_INIT
+#define _NCM_MUTEX_INIT(l) g_static_mutex_init (l)
+#define _NCM_MUTEX_CLEAR(l) g_static_mutex_free (l)
+#else
+#define _NCM_MUTEX_LOCK(l) g_mutex_lock (l)
+#define _NCM_MUTEX_UNLOCK(l) g_mutex_unlock (l)
+#define _NCM_MUTEX_TRYLOCK(l) g_mutex_trylock (l)
+#define _NCM_MUTEX_TYPE GMutex
+#define _NCM_STATIC_MUTEX_DECL(l) static GMutex l
+#define _NCM_MUTEX_INIT(l) g_mutex_init (l)
+#define _NCM_MUTEX_CLEAR(l) g_mutex_clear (l)
 #endif
 
 #define NC_DEGREE_TO_RADIAN(a) ((a) * M_PI/180.0)

@@ -49,7 +49,14 @@ static void nc_residual_multimin_df (const gsl_vector *x, gpointer p, gsl_vector
 static void nc_residual_multimin_fdf (const gsl_vector *x, gpointer p, gdouble *f, gsl_vector *df);
 
 /**
+ * ncm_fit_run_mm:
+ * @fit: FIXME
+ * @niters: FIXME
+ * @mtype: FIXME
+ *
  * FIXME
+ *
+ * Returns: FIXME
  */
 gboolean
 ncm_fit_run_mm (NcmFit *fit, gint niters, NcmFitRunMsgs mtype)

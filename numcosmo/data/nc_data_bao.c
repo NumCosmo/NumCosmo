@@ -83,7 +83,7 @@ nc_data_bao (NcDistance *dist, NcDataBaoId bao_id)
 	}
 	case NC_DATA_BAO_DV_DV_PERCIVAL:
 	{
-	  gdouble _data[2] = { NC_C_BAO_PERCIVAL_DV_DV, NC_C_BAO_PERCIVAL_SIGMA_DV_DV };
+	  gdouble _data[2] = { ncm_c_bao_percival_DV_DV (), ncm_c_bao_percival_sigma_DV_DV () };
 	  NcmMatrix *cm = ncm_matrix_new_data_static (_data, 1, 2);
 	  NcmMSetFunc *func = nc_distance_func0_new (dist, &nc_distance_dilation_scale_ratio);
 	  data = nc_data_gaussian_new (NC_DATA_GAUSSIAN_SIGMA);
@@ -96,7 +96,7 @@ nc_data_bao (NcDistance *dist, NcDataBaoId bao_id)
 	}
 	case NC_DATA_BAO_A_EISENSTEIN:
 	{
-	  gdouble _data[3] = { NC_C_BAO_EISENSTEIN_REDSHIFT, NC_C_BAO_EISENSTEIN_A, NC_C_BAO_EISENSTEIN_SIGMA_A };
+	  gdouble _data[3] = { ncm_c_bao_eisenstein_z (), ncm_c_bao_eisenstein_A (), ncm_c_bao_eisenstein_sigma_A () };
 	  NcmMatrix *cm = ncm_matrix_new_data_static (_data, 1, 3);
 	  NcmMSetFunc *func = nc_distance_func1_new (dist, &nc_distance_bao_A_scale);
 	  data = nc_data_gaussian_new (NC_DATA_GAUSSIAN_X_SIGMA);
@@ -109,7 +109,7 @@ nc_data_bao (NcDistance *dist, NcDataBaoId bao_id)
 	}
 	case NC_DATA_BAO_DV_EISENSTEIN:
 	{
-	  gdouble _data[3] = { NC_C_BAO_EISENSTEIN_REDSHIFT, NC_C_BAO_EISENSTEIN_DV, NC_C_BAO_EISENSTEIN_SIGMA_DV };
+	  gdouble _data[3] = { ncm_c_bao_eisenstein_z (), ncm_c_bao_eisenstein_DV (), ncm_c_bao_eisenstein_sigma_DV () };
 	  NcmMatrix *cm = ncm_matrix_new_data_static (_data, 1, 3);
 	  NcmMSetFunc *func = nc_distance_func1_new (dist, &nc_distance_dilation_scale);
 	  data = nc_data_gaussian_new (NC_DATA_GAUSSIAN_X_SIGMA);

@@ -35,7 +35,7 @@ typedef struct _NcmMIOdeFunction NcmMIOdeFunction;
 
 /**
  * NcmMIOdeFunction:
- * 
+ *
  * FIXME
  */
 struct _NcmMIOdeFunction
@@ -48,8 +48,8 @@ struct _NcmMIOdeFunction
 typedef struct _NcmMIOde NcmMIOde;
 
 /**
- * NcmMIOdeFunction:
- * 
+ * NcmMIOde:
+ *
  * FIXME
  */
 struct _NcmMIOde
@@ -77,4 +77,4 @@ G_END_DECLS
 
 #endif /* _NC_MAGNUS_ISERLES_ODE_H */
 
- 
+

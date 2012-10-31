@@ -63,7 +63,7 @@ NcData *
 nc_data_hubble (NcDataHubbleId H_id)
 {
   NcData *H_data = nc_data_gaussian_new (NC_DATA_GAUSSIAN_X_SIGMA);
-  NcmMSetFunc *func = nc_hicosmo_func1_new (&nc_hicosmo_H);
+  NcmMSetFunc *func = ncm_mset_func_new_hicosmo_func1 (&nc_hicosmo_H);
   g_assert (H_id < NC_DATA_HUBBLE_NSAMPLES);
 
   nc_data_gaussian_set_func (H_data, func);

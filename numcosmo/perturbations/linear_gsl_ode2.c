@@ -29,9 +29,8 @@
 
 #include "perturbations/linear.h"
 
-#include <gsl/gsl_odeiv2.h>
-
 #ifdef HAVE_GSL_ODEIV2
+#include <gsl/gsl_odeiv2.h>
 
 #include "linear_internal.h"
 

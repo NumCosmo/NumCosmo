@@ -18,6 +18,7 @@ lib_LTLIBRARIES = libnumcosmo.la
 
 ncm_sources = \
 	ncm_build_inline.c                 \
+	math/ncm_c.c                       \
 	math/ncm_cfg.c                     \
 	math/ncm_lapack.c                  \
 	math/ncm_vector.c                  \
@@ -51,6 +52,7 @@ ncm_sources = \
 	math/ncm_fit.c
 
 ncm_headers = \
+	math/ncm_c.h                     \
 	math/ncm_cfg.h                   \
 	math/ncm_lapack.h                \
 	math/ncm_vector.h                \
@@ -87,7 +89,6 @@ ncm_headers_internal =
 
 nc_headers = \
 	nc_macros.h    \
-	nc_constants.h \
 	nc_hicosmo.h   \
 	nc_distance.h  \
 	model/nc_hicosmo_de.h        \

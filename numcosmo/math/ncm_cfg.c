@@ -30,6 +30,14 @@
  * FIXME
  */
 
+/**
+ * SECTION:nc_macros
+ * @title: Library Utilities Macros
+ * @short_description: FIXME
+ *
+ * FIXME
+ */
+
 #ifdef HAVE_CONFIG_H
 #  include "config.h"
 #endif /* HAVE_CONFIG_H */
@@ -131,7 +139,9 @@ ncm_cfg_init (void)
 	g_mkdir_with_parents (numcosmo_path, 0755);
 
   gsl_err = gsl_set_error_handler_off ();
+#if (GLIB_MAJOR_VERSION == 2) && (GLIB_MINOR_VERSION < 32)
   g_thread_init (NULL);
+#endif
   g_type_init();
 
   g_setenv ("CUBACORES", "0", TRUE);
@@ -139,80 +149,80 @@ ncm_cfg_init (void)
   _log_msg_id = g_log_set_handler (G_LOG_DOMAIN, G_LOG_LEVEL_MESSAGE | G_LOG_LEVEL_DEBUG, _ncm_cfg_log_message, NULL);
   _log_stream = stdout;
 
-  ncm_cfg_register_model (NCM_TYPE_SPLINE);
-  ncm_cfg_register_model (NCM_TYPE_SPLINE_CUBIC);
-  ncm_cfg_register_model (NCM_TYPE_SPLINE_CUBIC_NOTAKNOT);
-  ncm_cfg_register_model (NCM_TYPE_SPLINE_GSL);
+  ncm_cfg_register_obj (NCM_TYPE_SPLINE);
+  ncm_cfg_register_obj (NCM_TYPE_SPLINE_CUBIC);
+  ncm_cfg_register_obj (NCM_TYPE_SPLINE_CUBIC_NOTAKNOT);
+  ncm_cfg_register_obj (NCM_TYPE_SPLINE_GSL);
 
-  ncm_cfg_register_model (NCM_TYPE_SPLINE2D);
-  ncm_cfg_register_model (NCM_TYPE_SPLINE2D_BICUBIC);
-  ncm_cfg_register_model (NCM_TYPE_SPLINE2D_GSL);
-  ncm_cfg_register_model (NCM_TYPE_SPLINE2D_SPLINE);
+  ncm_cfg_register_obj (NCM_TYPE_SPLINE2D);
+  ncm_cfg_register_obj (NCM_TYPE_SPLINE2D_BICUBIC);
+  ncm_cfg_register_obj (NCM_TYPE_SPLINE2D_GSL);
+  ncm_cfg_register_obj (NCM_TYPE_SPLINE2D_SPLINE);
 
-  ncm_cfg_register_model (NCM_TYPE_MODEL);
-  ncm_cfg_register_model (NCM_TYPE_MODEL_CTRL);
+  ncm_cfg_register_obj (NCM_TYPE_MODEL);
+  ncm_cfg_register_obj (NCM_TYPE_MODEL_CTRL);
 
-  ncm_cfg_register_model (NCM_TYPE_REPARAM);
-  ncm_cfg_register_model (NCM_TYPE_REPARAM_LINEAR);
+  ncm_cfg_register_obj (NCM_TYPE_REPARAM);
+  ncm_cfg_register_obj (NCM_TYPE_REPARAM_LINEAR);
 
-  ncm_cfg_register_model (NC_TYPE_HICOSMO_QCONST);
-  ncm_cfg_register_model (NC_TYPE_HICOSMO_QLINEAR);
-  ncm_cfg_register_model (NC_TYPE_HICOSMO_QPW);
-  ncm_cfg_register_model (NC_TYPE_HICOSMO_QSPLINE);
-  ncm_cfg_register_model (NC_TYPE_HICOSMO_LCDM);
-  ncm_cfg_register_model (NC_TYPE_HICOSMO_DE_XCDM);
-  ncm_cfg_register_model (NC_TYPE_HICOSMO_DE_LINDER);
-  ncm_cfg_register_model (NC_TYPE_HICOSMO_DE_PAD);
-  ncm_cfg_register_model (NC_TYPE_HICOSMO_DE_QE);
+  ncm_cfg_register_obj (NC_TYPE_HICOSMO_QCONST);
+  ncm_cfg_register_obj (NC_TYPE_HICOSMO_QLINEAR);
+  ncm_cfg_register_obj (NC_TYPE_HICOSMO_QPW);
+  ncm_cfg_register_obj (NC_TYPE_HICOSMO_QSPLINE);
+  ncm_cfg_register_obj (NC_TYPE_HICOSMO_LCDM);
+  ncm_cfg_register_obj (NC_TYPE_HICOSMO_DE_XCDM);
+  ncm_cfg_register_obj (NC_TYPE_HICOSMO_DE_LINDER);
+  ncm_cfg_register_obj (NC_TYPE_HICOSMO_DE_PAD);
+  ncm_cfg_register_obj (NC_TYPE_HICOSMO_DE_QE);
 
-  ncm_cfg_register_model (NC_TYPE_WINDOW);
-  ncm_cfg_register_model (NC_TYPE_WINDOW_TOPHAT);
-  ncm_cfg_register_model (NC_TYPE_WINDOW_GAUSSIAN);
+  ncm_cfg_register_obj (NC_TYPE_WINDOW);
+  ncm_cfg_register_obj (NC_TYPE_WINDOW_TOPHAT);
+  ncm_cfg_register_obj (NC_TYPE_WINDOW_GAUSSIAN);
 
-  ncm_cfg_register_model (NC_TYPE_GROWTH_FUNC);
+  ncm_cfg_register_obj (NC_TYPE_GROWTH_FUNC);
 
-  ncm_cfg_register_model (NC_TYPE_TRANSFER_FUNC);
-  ncm_cfg_register_model (NC_TYPE_TRANSFER_FUNC_BBKS);
-  ncm_cfg_register_model (NC_TYPE_TRANSFER_FUNC_EH);
-  ncm_cfg_register_model (NC_TYPE_TRANSFER_FUNC_CAMB);
-  ncm_cfg_register_model (NC_TYPE_TRANSFER_FUNC_PERT);
+  ncm_cfg_register_obj (NC_TYPE_TRANSFER_FUNC);
+  ncm_cfg_register_obj (NC_TYPE_TRANSFER_FUNC_BBKS);
+  ncm_cfg_register_obj (NC_TYPE_TRANSFER_FUNC_EH);
+  ncm_cfg_register_obj (NC_TYPE_TRANSFER_FUNC_CAMB);
+  ncm_cfg_register_obj (NC_TYPE_TRANSFER_FUNC_PERT);
 
-  ncm_cfg_register_model (NC_TYPE_MATTER_VAR);
+  ncm_cfg_register_obj (NC_TYPE_MATTER_VAR);
 
-  ncm_cfg_register_model (NC_TYPE_MULTIPLICITY_FUNC);
-  ncm_cfg_register_model (NC_TYPE_MULTIPLICITY_FUNC_PS);
-  ncm_cfg_register_model (NC_TYPE_MULTIPLICITY_FUNC_ST);
-  ncm_cfg_register_model (NC_TYPE_MULTIPLICITY_FUNC_JENKINS);
-  ncm_cfg_register_model (NC_TYPE_MULTIPLICITY_FUNC_WARREN);
-  ncm_cfg_register_model (NC_TYPE_MULTIPLICITY_FUNC_TINKER);
-  ncm_cfg_register_model (NC_TYPE_MULTIPLICITY_FUNC_TINKER_MEAN);
-  ncm_cfg_register_model (NC_TYPE_MULTIPLICITY_FUNC_TINKER_CRIT);
+  ncm_cfg_register_obj (NC_TYPE_MULTIPLICITY_FUNC);
+  ncm_cfg_register_obj (NC_TYPE_MULTIPLICITY_FUNC_PS);
+  ncm_cfg_register_obj (NC_TYPE_MULTIPLICITY_FUNC_ST);
+  ncm_cfg_register_obj (NC_TYPE_MULTIPLICITY_FUNC_JENKINS);
+  ncm_cfg_register_obj (NC_TYPE_MULTIPLICITY_FUNC_WARREN);
+  ncm_cfg_register_obj (NC_TYPE_MULTIPLICITY_FUNC_TINKER);
+  ncm_cfg_register_obj (NC_TYPE_MULTIPLICITY_FUNC_TINKER_MEAN);
+  ncm_cfg_register_obj (NC_TYPE_MULTIPLICITY_FUNC_TINKER_CRIT);
 
-  ncm_cfg_register_model (NC_TYPE_MASS_FUNCTION);
+  ncm_cfg_register_obj (NC_TYPE_MASS_FUNCTION);
 
-  ncm_cfg_register_model (NC_TYPE_GALAXY_ACF);
+  ncm_cfg_register_obj (NC_TYPE_GALAXY_ACF);
 
-  ncm_cfg_register_model (NC_TYPE_CLUSTER_MASS);
-  ncm_cfg_register_model (NC_TYPE_CLUSTER_MASS_NODIST);
-  ncm_cfg_register_model (NC_TYPE_CLUSTER_MASS_LNNORMAL);
-  ncm_cfg_register_model (NC_TYPE_CLUSTER_MASS_VANDERLINDE);
-  ncm_cfg_register_model (NC_TYPE_CLUSTER_MASS_BENSON);
-  ncm_cfg_register_model (NC_TYPE_CLUSTER_MASS_BENSON_XRAY);
+  ncm_cfg_register_obj (NC_TYPE_CLUSTER_MASS);
+  ncm_cfg_register_obj (NC_TYPE_CLUSTER_MASS_NODIST);
+  ncm_cfg_register_obj (NC_TYPE_CLUSTER_MASS_LNNORMAL);
+  ncm_cfg_register_obj (NC_TYPE_CLUSTER_MASS_VANDERLINDE);
+  ncm_cfg_register_obj (NC_TYPE_CLUSTER_MASS_BENSON);
+  ncm_cfg_register_obj (NC_TYPE_CLUSTER_MASS_BENSON_XRAY);
 
-  ncm_cfg_register_model (NC_TYPE_CLUSTER_REDSHIFT);
-  ncm_cfg_register_model (NC_TYPE_CLUSTER_REDSHIFT_NODIST);
-  ncm_cfg_register_model (NC_TYPE_CLUSTER_PHOTOZ_GAUSS_GLOBAL);
-  ncm_cfg_register_model (NC_TYPE_CLUSTER_PHOTOZ_GAUSS);
+  ncm_cfg_register_obj (NC_TYPE_CLUSTER_REDSHIFT);
+  ncm_cfg_register_obj (NC_TYPE_CLUSTER_REDSHIFT_NODIST);
+  ncm_cfg_register_obj (NC_TYPE_CLUSTER_PHOTOZ_GAUSS_GLOBAL);
+  ncm_cfg_register_obj (NC_TYPE_CLUSTER_PHOTOZ_GAUSS);
 
-  ncm_cfg_register_model (NC_TYPE_HALO_BIAS_FUNC);
+  ncm_cfg_register_obj (NC_TYPE_HALO_BIAS_FUNC);
 
-  ncm_cfg_register_model (NC_TYPE_HALO_BIAS_TYPE);
-  ncm_cfg_register_model (NC_TYPE_HALO_BIAS_TYPE_PS);
-  ncm_cfg_register_model (NC_TYPE_HALO_BIAS_TYPE_ST_ELLIP);
-  ncm_cfg_register_model (NC_TYPE_HALO_BIAS_TYPE_ST_SPHER);
-  ncm_cfg_register_model (NC_TYPE_HALO_BIAS_TYPE_TINKER);
+  ncm_cfg_register_obj (NC_TYPE_HALO_BIAS_TYPE);
+  ncm_cfg_register_obj (NC_TYPE_HALO_BIAS_TYPE_PS);
+  ncm_cfg_register_obj (NC_TYPE_HALO_BIAS_TYPE_ST_ELLIP);
+  ncm_cfg_register_obj (NC_TYPE_HALO_BIAS_TYPE_ST_SPHER);
+  ncm_cfg_register_obj (NC_TYPE_HALO_BIAS_TYPE_TINKER);
 
-  ncm_cfg_register_model (NC_TYPE_CLUSTER_ABUNDANCE);
+  ncm_cfg_register_obj (NC_TYPE_CLUSTER_ABUNDANCE);
 
   numcosmo_init = TRUE;
   return;
@@ -233,22 +243,16 @@ ncm_cfg_enable_gsl_err_handler (void)
 static uint nreg_model = 0;
 
 /**
- * ncm_cfg_register_model:
- * @model: FIXME
+ * ncm_cfg_register_obj:
+ * @obj: FIXME
  *
  * FIXME
  */
 void
-ncm_cfg_register_model (GType model)
+ncm_cfg_register_obj (GType obj)
 {
-#ifdef NCM_DEBUG_MSGS
-  GType model_type = NCM_TYPE_MODEL;
-  GType model_type = g_type_next_base (model, model_type);
-  g_message ("# %s: %s:%s registred\n",
-             g_type_name (model_type),
-             g_type_name (model_type),
-             g_type_name (model));
-#endif /* NCM_DEBUG_MSGS */
+  gpointer obj_class = g_type_class_ref (obj);
+  g_type_class_unref (obj_class);
   nreg_model++;
 }
 
@@ -373,16 +377,13 @@ ncm_cfg_keyfile_to_arg (GKeyFile *kfile, gchar *group_name, GOptionEntry *entrie
 }
 
 /**
- * ncm_cfg_keyfile_to_arg:
+ * ncm_cfg_entries_to_keyfile:
  * @kfile: FIXME
  * @group_name: FIXME
  * @entries: FIXME
- * @argv: FIXME
- * @argc: FIXME
  *
  * FIXME
  *
- * Returns: FIXME
  */
 void
 ncm_cfg_entries_to_keyfile (GKeyFile *kfile, gchar *group_name, GOptionEntry *entries)
@@ -426,8 +427,12 @@ ncm_cfg_entries_to_keyfile (GKeyFile *kfile, gchar *group_name, GOptionEntry *en
 	  }
 	  case G_OPTION_ARG_INT64:
 	  {
+#if !((GLIB_MAJOR_VERSION == 2) && (GLIB_MINOR_VERSION < 26))
 		gint64 arg_l = ((gint64 *)entries[i].arg_data)[0];
 		g_key_file_set_int64 (kfile, group_name, entries[i].long_name, arg_l);
+#else
+		g_error ("ncm_cfg_entries_to_keyfile: gint64 not supported, recompile "PACKAGE_NAME" with glib >= 2.26");
+#endif
 		break;
 	  }
 	  case G_OPTION_ARG_DOUBLE:
@@ -1159,6 +1164,7 @@ ncm_cfg_command_line (gchar *argv[], gint argc)
  */
 GObject *
 ncm_cfg_create_from_string (const gchar *obj_ser)
+#if !((GLIB_MAJOR_VERSION == 2) && (GLIB_MINOR_VERSION < 30))
 {
   GError *error = NULL;
   static gsize regex_init = FALSE;
@@ -1216,6 +1222,12 @@ ncm_cfg_create_from_string (const gchar *obj_ser)
 
   return obj;
 }
+#else
+{
+  g_error ("ncm_cfg_create_from_string: serialization not supported, recompile "PACKAGE_NAME" with glib >= 2.30");
+  return NULL;
+}
+#endif
 
 /**
  * ncm_cfg_create_from_name_params:
@@ -1228,6 +1240,7 @@ ncm_cfg_create_from_string (const gchar *obj_ser)
  */
 GObject *
 ncm_cfg_create_from_name_params (const gchar *obj_name, GVariant *params)
+#if !((GLIB_MAJOR_VERSION == 2) && (GLIB_MINOR_VERSION < 30))
 {
   GObject *obj = NULL;
   GType gtype = g_type_from_name (obj_name);
@@ -1286,7 +1299,14 @@ ncm_cfg_create_from_name_params (const gchar *obj_name, GVariant *params)
 
   return obj;
 }
+#else
+{
+  g_error ("ncm_cfg_create_from_name_params: serialization not supported, recompile "PACKAGE_NAME" with glib >= 2.30");
+  return NULL;
+}
+#endif
 
+#if !((GLIB_MAJOR_VERSION == 2) && (GLIB_MINOR_VERSION < 30))
 static const GVariantType *
 _ncm_cfg_gtype_to_gvariant_type (GType t)
 {
@@ -1396,6 +1416,7 @@ _ncm_cfg_gtype_to_gvariant_type (GType t)
 	  break;
   }
 }
+#endif
 
 /**
  * ncm_cfg_gvalue_to_gvariant:
@@ -1407,6 +1428,7 @@ _ncm_cfg_gtype_to_gvariant_type (GType t)
  */
 GVariant *
 ncm_cfg_gvalue_to_gvariant (GValue *val)
+#if !((GLIB_MAJOR_VERSION == 2) && (GLIB_MINOR_VERSION < 30))
 {
   GType t = G_VALUE_TYPE (val);
   GType fund_t = G_TYPE_FUNDAMENTAL (t);
@@ -1440,6 +1462,12 @@ ncm_cfg_gvalue_to_gvariant (GValue *val)
 
   return var;
 }
+#else
+{
+  g_error ("ncm_cfg_gvalue_to_gvariant: serialization not supported, recompile "PACKAGE_NAME" with glib >= 2.30");
+  return NULL;
+}
+#endif
 
 /**
  * ncm_cfg_serialize_to_variant:
@@ -1451,6 +1479,7 @@ ncm_cfg_gvalue_to_gvariant (GValue *val)
  */
 GVariant *
 ncm_cfg_serialize_to_variant (GObject *obj)
+#if !((GLIB_MAJOR_VERSION == 2) && (GLIB_MINOR_VERSION < 30))
 {
   const gchar *obj_name = G_OBJECT_TYPE_NAME (obj);
   GObjectClass *klass = G_OBJECT_GET_CLASS (obj);
@@ -1499,6 +1528,12 @@ ncm_cfg_serialize_to_variant (GObject *obj)
 	return ser_var;
   }
 }
+#else
+{
+  g_error ("ncm_cfg_serialize_to_variant: serialization not supported, recompile "PACKAGE_NAME" with glib >= 2.30");
+  return NULL;
+}
+#endif
 
 /**
  * ncm_cfg_serialize_to_string:
@@ -1512,6 +1547,7 @@ ncm_cfg_serialize_to_variant (GObject *obj)
  */
 gchar *
 ncm_cfg_serialize_to_string (GObject *obj, gboolean valid_variant)
+#if !((GLIB_MAJOR_VERSION == 2) && (GLIB_MINOR_VERSION < 30))
 {
   GVariant *ser_var = ncm_cfg_serialize_to_variant (obj);
   gchar *ser = NULL;
@@ -1540,3 +1576,9 @@ ncm_cfg_serialize_to_string (GObject *obj, gboolean valid_variant)
   g_variant_unref (ser_var);
   return ser;
 }
+#else
+{
+  g_error ("ncm_cfg_serialize_to_string: serialization not supported, recompile "PACKAGE_NAME" with glib >= 2.30");
+  return NULL;
+}
+#endif

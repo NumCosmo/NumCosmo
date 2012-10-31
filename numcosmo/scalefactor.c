@@ -171,7 +171,7 @@ _nc_scale_factor_init (NcScaleFactor *a, NcHICosmo *model)
   }
   else
   {
-    const gdouble RH_Mpc = (NC_C_c / (1.0e3 * nc_hicosmo_H0 (model)));
+    const gdouble RH_Mpc = (ncm_c_c () / (1.0e3 * nc_hicosmo_H0 (model)));
     a->a0 = RH_Mpc / sqrt (fabs (Omega_k));
   }
 

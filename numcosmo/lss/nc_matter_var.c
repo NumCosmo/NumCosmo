@@ -46,7 +46,7 @@
 #include "math/ncm_spline_cubic_notaknot.h"
 
 #include <complex.h>
-#ifdef NUMCOSMO_HAVE_FFTW3 
+#ifdef NUMCOSMO_HAVE_FFTW3
 #include <fftw3.h>
 #endif /* NUMCOSMO_HAVE_FFTW3 */
 #include <gsl/gsl_integration.h>
@@ -572,7 +572,7 @@ nc_matter_var_dlnvar0_dR (NcMatterVar *vp, NcHICosmo *model, gdouble lnR)
 }
 
 /**
- * nc_matter_var_dlnvar0_dR:
+ * nc_matter_var_dlnvar0_dlnR:
  * @vp: a #NcMatterVar.
  * @model: a #NcHICosmo.
  * @lnR: logarithm base e of the radius.
@@ -603,7 +603,7 @@ gdouble
 nc_matter_var_mass_to_R (NcMatterVar *vp, NcHICosmo *model, gdouble M)
 {
   const gdouble Omega_m = nc_hicosmo_Omega_m (model);
-  return cbrt (M / (Omega_m * nc_window_volume(vp->wp) * NC_C_CRIT_MASS_DENSITY_SOL_MPC));
+  return cbrt (M / (Omega_m * nc_window_volume(vp->wp) * ncm_c_crit_mass_density_solar_Mpc ()));
 }
 
 /**
@@ -620,7 +620,7 @@ gdouble
 nc_matter_var_R_to_mass (NcMatterVar *vp, NcHICosmo *model, gdouble R)
 {
   const gdouble Omega_m = nc_hicosmo_Omega_m (model);
-  return gsl_pow_3(R) * Omega_m * nc_window_volume(vp->wp) * NC_C_CRIT_MASS_DENSITY_SOL_MPC;
+  return gsl_pow_3(R) * Omega_m * nc_window_volume(vp->wp) * ncm_c_crit_mass_density_solar_Mpc ();
 }
 
 /**
@@ -637,7 +637,7 @@ gdouble
 nc_matter_var_lnM_to_lnR (NcMatterVar *vp, NcHICosmo *model, gdouble lnM)
 {
   const gdouble Omega_m = nc_hicosmo_Omega_m (model);
-  return (lnM - log (Omega_m * nc_window_volume(vp->wp) * NC_C_CRIT_MASS_DENSITY_SOL_MPC)) / 3.0;
+  return (lnM - log (Omega_m * nc_window_volume(vp->wp) * ncm_c_crit_mass_density_solar_Mpc ())) / 3.0;
 }
 
 /**
@@ -654,7 +654,7 @@ gdouble
 nc_matter_var_lnR_to_lnM (NcMatterVar *vp, NcHICosmo *model, gdouble lnR)
 {
   const gdouble Omega_m = nc_hicosmo_Omega_m (model);
-  return (3.0 * lnR + log (Omega_m * nc_window_volume(vp->wp) * NC_C_CRIT_MASS_DENSITY_SOL_MPC));
+  return (3.0 * lnR + log (Omega_m * nc_window_volume(vp->wp) * ncm_c_crit_mass_density_solar_Mpc ()));
 }
 
 /**

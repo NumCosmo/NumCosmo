@@ -55,7 +55,7 @@ G_DEFINE_TYPE (NcmMSetFunc, ncm_mset_func, G_TYPE_OBJECT);
 NcmMSetFunc *
 ncm_mset_func_new (NcmMSetFuncN func, guint np, guint dim, gpointer obj, GDestroyNotify free)
 {
-  NcmMSetFunc *gfunc = g_object_new (NCM_TYPE_GMSET_FUNC, NULL);
+  NcmMSetFunc *gfunc = g_object_new (NCM_TYPE_MSET_FUNC, NULL);
   gfunc->func = func;
   gfunc->np  = np;
   gfunc->dim = dim;

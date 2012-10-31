@@ -22,15 +22,6 @@
  * with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-/**
- * SECTION:nc_data_distance_mu
- * @title: Distance Modulus Data
- * @short_description: Data samples of distance modulus
- *
- * FIXME
- *
- */
-
 #ifndef _NC_DATA_DISTANCE_MU_H
 #define _NC_DATA_DISTANCE_MU_H
 

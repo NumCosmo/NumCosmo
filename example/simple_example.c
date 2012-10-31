@@ -43,7 +43,7 @@ main(int argc, gchar *argv[])
   /**************************************************************************** 
    * Printing the parameters used.
    ****************************************************************************/
-  printf ("# Model parameters: "); 
+  printf ("# Model parameters:\n"); 
   ncm_model_params_log_all (NCM_MODEL (cosmo));
 
   /**************************************************************************** 
@@ -52,7 +52,7 @@ main(int argc, gchar *argv[])
   for (i = 0; i < 10; i++)
   {
     gdouble z = 1.0 / 9.0 * i;
-    gdouble cd = NC_C_HUBBLE_RADIUS * nc_distance_comoving (dist, cosmo, z);
+    gdouble cd = ncm_c_hubble_radius () * nc_distance_comoving (dist, cosmo, z);
     printf ("% 10.8f % 20.15g\n", z, cd);
   }
 

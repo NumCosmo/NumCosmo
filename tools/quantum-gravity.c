@@ -169,7 +169,7 @@ main(gint argc, gchar *argv[])
 	nc_hicosmo_E2 (model, max);
 	printf ("# max = %g, trans = %g, E2(max) = %g, E2(trans) = %g, ETA_B = %g, T_0 = %g | %"G_GSIZE_FORMAT" %"G_GSIZE_FORMAT"\n",
 	        max, trans, nc_hicosmo_E2 (model, max), nc_hicosmo_E2 (model, trans),
-	        nc_hicosmo_qg_get_eta_b (NCM_MODEL (model), NULL), nc_hicosmo_qg_get_eta_b (NCM_MODEL (model), NULL) / NC_C_c,
+	        nc_hicosmo_qg_get_eta_b (NCM_MODEL (model), NULL), nc_hicosmo_qg_get_eta_b (NCM_MODEL (model), NULL) / ncm_c_c (),
 	        sizeof(long double), sizeof(double));
 
 	if (FALSE)

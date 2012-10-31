@@ -164,7 +164,7 @@ main(gint argc, gchar *argv[])
 	ncm_fit_log_covar (fit);
 	printf ("# jerk: % 12.4g\n", nc_hicosmo_j (NC_HICOSMO (qpw), 0.0));
 
-	//ncm_fit_error (fit, 2, NC_C_STATS_1SIGMA, 1, ERR(0));printf("\n");
+	//ncm_fit_error (fit, 2, ncm_c_stats_1sigma (), 1, ERR(0));printf("\n");
 
 	while (FALSE)
 	{
@@ -235,11 +235,11 @@ main(gint argc, gchar *argv[])
 	  guint nreg = 1;
 	  gdouble err_inf, err_sup;
 	  printf("%g",z0);
-	  ncm_fit_cr_1dim (fit, NC_HICOSMO_ID, wpiece, NC_C_STATS_1SIGMA, nreg, &err_inf, &err_sup);
-	  ncm_fit_cr_1dim (fit, NC_HICOSMO_ID, wpiece, NC_C_STATS_2SIGMA, nreg, &err_inf, &err_sup);
-	  ncm_fit_cr_1dim (fit, NC_HICOSMO_ID, wpiece, NC_C_STATS_3SIGMA, nreg, &err_inf, &err_sup);
+	  ncm_fit_cr_1dim (fit, NC_HICOSMO_ID, wpiece, ncm_c_stats_1sigma (), nreg, &err_inf, &err_sup);
+	  ncm_fit_cr_1dim (fit, NC_HICOSMO_ID, wpiece, ncm_c_stats_2sigma (), nreg, &err_inf, &err_sup);
+	  ncm_fit_cr_1dim (fit, NC_HICOSMO_ID, wpiece, ncm_c_stats_3sigma (), nreg, &err_inf, &err_sup);
 	  printf("\n");
-	  //printf("%g",z0);ncm_fit_error (fit, wpiece, NC_C_STATS_3SIGMA, 2, ERR(wpiece));
+	  //printf("%g",z0);ncm_fit_error (fit, wpiece, ncm_c_stats_3sigma (), 2, ERR(wpiece));
 	  //ncm_fit_lr_test_range (fit, wpiece, -4.0f, 4.0f, 0.01f, stdout);
 	}
 	if (FALSE)
@@ -256,35 +256,35 @@ main(gint argc, gchar *argv[])
 
 	if (FALSE)
 	{
-	  points = ncm_fit_cr2 (fit, NC_HICOSMO_ID, 0, NC_HICOSMO_ID, 1, NC_C_STATS_1SIGMA);
+	  points = ncm_fit_cr2 (fit, NC_HICOSMO_ID, 0, NC_HICOSMO_ID, 1, ncm_c_stats_1sigma ());
 	  ncm_fit_cr_points_print (points, stdout);
 	  printf ("\n\n");
 	  ncm_fit_cr_points_free (points);
-	  points = ncm_fit_cr2 (fit, NC_HICOSMO_ID, 0, NC_HICOSMO_ID, 1, NC_C_STATS_2SIGMA);
+	  points = ncm_fit_cr2 (fit, NC_HICOSMO_ID, 0, NC_HICOSMO_ID, 1, ncm_c_stats_2sigma ());
 	  ncm_fit_cr_points_print (points, stdout);
 	  printf ("\n\n");
 	  ncm_fit_cr_points_free (points);
-	  points = ncm_fit_cr2 (fit, NC_HICOSMO_ID, 0, NC_HICOSMO_ID, 1, NC_C_STATS_3SIGMA);
+	  points = ncm_fit_cr2 (fit, NC_HICOSMO_ID, 0, NC_HICOSMO_ID, 1, ncm_c_stats_3sigma ());
 	  ncm_fit_cr_points_print (points, stdout);
 	}
 
-	//ncm_fit_error (fit, wpiece, NC_C_STATS_1SIGMA, ERR(wpiece));
-	//ncm_fit_error (fit, 0, NC_C_STATS_1SIGMA, ERR(0));
-	//ncm_fit_error (fit, 1, NC_C_STATS_1SIGMA, ERR(1));
-	//ncm_fit_error (fit, 2, NC_C_STATS_1SIGMA, ERR(2));
+	//ncm_fit_error (fit, wpiece, ncm_c_stats_1sigma (), ERR(wpiece));
+	//ncm_fit_error (fit, 0, ncm_c_stats_1sigma (), ERR(0));
+	//ncm_fit_error (fit, 1, ncm_c_stats_1sigma (), ERR(1));
+	//ncm_fit_error (fit, 2, ncm_c_stats_1sigma (), ERR(2));
 	//ncm_fit_jackknife (fit, stdout, verbose);
 	//nc_likelihood_jackknife_print (fit, stdout);
 
 	switch (nsigma)
 	{
 	  case 1:
-		points = ncm_fit_cr2 (fit, NC_HICOSMO_ID, 0, NC_HICOSMO_ID, wpiece, NC_C_STATS_1SIGMA);
+		points = ncm_fit_cr2 (fit, NC_HICOSMO_ID, 0, NC_HICOSMO_ID, wpiece, ncm_c_stats_1sigma ());
 		break;
 	  case 2:
-		points = ncm_fit_cr2 (fit, NC_HICOSMO_ID, 0, NC_HICOSMO_ID, wpiece, NC_C_STATS_2SIGMA);
+		points = ncm_fit_cr2 (fit, NC_HICOSMO_ID, 0, NC_HICOSMO_ID, wpiece, ncm_c_stats_2sigma ());
 		break;
 	  case 3:
-		points = ncm_fit_cr2 (fit, NC_HICOSMO_ID, 0, NC_HICOSMO_ID, wpiece, NC_C_STATS_3SIGMA);
+		points = ncm_fit_cr2 (fit, NC_HICOSMO_ID, 0, NC_HICOSMO_ID, wpiece, ncm_c_stats_3sigma ());
 		break;
 	  default:
 		break;

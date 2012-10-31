@@ -92,7 +92,7 @@ typedef gdouble (*NcmModelFunc1) (NcmModel *model, const gdouble x);
 
 GType ncm_model_get_type (void) G_GNUC_CONST;
 
-void ncm_model_register_id (NcmModelClass *model_class);
+void ncm_model_class_register_id (NcmModelClass *model_class);
 void ncm_model_class_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec);
 void ncm_model_class_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec);
 void ncm_model_class_add_params (NcmModelClass *model_class, guint sparam_len, guint vparam_len, guint nonparam_prop_len);
@@ -109,6 +109,7 @@ gboolean ncm_model_is_equal (NcmModel *model1, NcmModel *model2);
 
 G_INLINE_FUNC NcmModel *ncm_model_ref (NcmModel *model);
 G_INLINE_FUNC NcmModelID ncm_model_id (NcmModel *model);
+G_INLINE_FUNC NcmModelID ncm_model_id_by_type (GType model_type);
 G_INLINE_FUNC gulong ncm_model_impl (NcmModel *model);
 G_INLINE_FUNC guint ncm_model_len (NcmModel *model);
 G_INLINE_FUNC guint ncm_model_sparam_len (NcmModel *model);
@@ -212,6 +213,20 @@ G_INLINE_FUNC NcmModelID
 ncm_model_id (NcmModel *model)
 {
   return NCM_MODEL_GET_CLASS (model)->model_id;
+}
+
+G_INLINE_FUNC NcmModelID
+ncm_model_id_by_type (GType model_type)
+{
+  if (!g_type_is_a (model_type, NCM_TYPE_MODEL))
+	g_error ("ncm_model_id_by_type: type (%s) is not a %s", g_type_name (model_type), g_type_name (NCM_TYPE_MODEL));
+  else
+  {
+	NcmModelClass *model_class = NCM_MODEL_CLASS (g_type_class_ref (model_type));
+	NcmModelID id = model_class->model_id;
+	g_type_class_unref (model_class);
+	return id;
+  }
 }
 
 G_INLINE_FUNC gulong

@@ -484,8 +484,8 @@ gdouble
 nc_mass_function_dv_dzdomega (NcMassFunction *mfp, NcHICosmo *model, gdouble z)
 {
   const gdouble E = sqrt (nc_hicosmo_E2 (model, z));
-  gdouble dc = NC_C_HUBBLE_RADIUS * nc_distance_comoving (mfp->dist, model, z);
-  gdouble dV_dzdOmega = gsl_pow_2 (dc) * NC_C_HUBBLE_RADIUS / E;
+  gdouble dc = ncm_c_hubble_radius () * nc_distance_comoving (mfp->dist, model, z);
+  gdouble dV_dzdOmega = gsl_pow_2 (dc) * ncm_c_hubble_radius () / E;
   return dV_dzdOmega;
 }
 
@@ -644,7 +644,7 @@ _encapsulated_z (gdouble z, gpointer p)
   gdouble A = args->mfp->area_survey *
 	nc_mass_function_dv_dzdomega (args->mfp, args->model, z) *
 	nc_mass_function_dn_dlnm (args->mfp, args->model, args->lnM, z);
- 
+
   //printf ("z %.5g lnM %.5g d2N % 20.15g mf % 20.15g dV % 20.15g\n", z, args->lnM, A, nc_mass_function_dn_dlnm (args->mfp, args->model, args->lnM, z), nc_mass_function_dv_dzdomega (args->mfp, args->model, z));
   return A;
 

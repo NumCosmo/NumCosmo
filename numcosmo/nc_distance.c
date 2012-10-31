@@ -36,7 +36,9 @@
 #include "build_cfg.h"
 
 #include "nc_distance.h"
+#include "nc_macros.h"
 #include "math/integral.h"
+#include "math/ncm_c.h"
 #include "math/ncm_spline_cubic_notaknot.h"
 
 typedef struct _ComovingDistanceArgument{
@@ -211,7 +213,7 @@ nc_distance_modulo2comoving (gint k, gdouble sqrt_Omega_k, gdouble hubble_dist, 
 gdouble
 nc_distance_hubble (NcDistance *dist, NcHICosmo *model)
 {
-  return NC_C_c / (nc_hicosmo_H0 (model) * 1.0e3);
+  return ncm_c_c () / (nc_hicosmo_H0 (model) * 1.0e3);
 }
 
 /***************************************************************************
@@ -440,7 +442,7 @@ nc_distance_modulo (NcDistance *dist, NcHICosmo *model, gdouble z)
  ****************************************************************************/
 
 /**
- * nc_distance_angular_diameter_curvature_scale
+ * nc_distance_angular_diameter_curvature_scale:
  * @dist: a #NcDistance
  * @model: a #NcHICosmo
  * @userdata: FIXME
@@ -508,7 +510,7 @@ nc_distance_shift_parameter_lss (NcDistance *dist, NcHICosmo *model)
 }
 
 /**
- * nc_distance_comoving_a0
+ * nc_distance_comoving_a0:
  * @dist: a #NcDistance
  * @model: a #NcHICosmo
  * @z: FIXME
@@ -639,7 +641,7 @@ sound_horizon_integral_argument (gdouble z, gpointer p)
   if (GSL_SIGN(E2) == -1.0)
 	return GSL_POSINF;
   return
-	1.0 / sqrt (E2 * (3.0 + 9.0 / 4.0 * (1.0 + NC_C_NEUTRINO_N_EFF * 0.2271) * omega_b / (omega_r * (1.0 + z))));
+	1.0 / sqrt (E2 * (3.0 + 9.0 / 4.0 * (1.0 + ncm_c_neutrino_n_eff () * 0.2271) * omega_b / (omega_r * (1.0 + z))));
 }
 
 /***************************************************************************
@@ -810,9 +812,6 @@ nc_distance_init (NcDistance *dist)
 {
   dist->use_cache = TRUE;
 
-  g_static_mutex_init (&dist->cache_lock);
-  g_static_mutex_init (&dist->update_lock);
-
   dist->comoving_distance_cache = nc_function_cache_new (1, NC_INT_ABS_ERROR, NC_INT_ERROR);
 
   dist->time_cache = nc_function_cache_new (1, NC_INT_ABS_ERROR, NC_INT_ERROR);
@@ -837,9 +836,6 @@ static void
 nc_distance_dispose (GObject *object)
 {
   NcDistance *dist = NC_DISTANCE (object);
-
-  g_static_mutex_free (&dist->cache_lock);
-  g_static_mutex_free (&dist->update_lock);
 
   nc_function_cache_free (dist->comoving_distance_cache);
   nc_function_cache_free (dist->time_cache);

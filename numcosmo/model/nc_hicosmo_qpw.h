@@ -68,7 +68,7 @@ typedef enum _NcHICosmoQPWVParams
   NC_HICOSMO_QPW_VPARAM_LEN, /*< skip >*/
 } NcHICosmoQPWVParams;
 
-#define NC_HICOSMO_QPW_DEFAULT_H0      NC_C_HUBBLE_CTE_WMAP
+#define NC_HICOSMO_QPW_DEFAULT_H0      ncm_c_hubble_cte_wmap ()
 #define NC_HICOSMO_QPW_DEFAULT_OMEGA_T ( 1.0)
 #define NC_HICOSMO_QPW_DEFAULT_Q0      (-0.5)
 #define NC_HICOSMO_QPW_DEFAULT_QP      ( 0.0)

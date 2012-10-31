@@ -153,9 +153,6 @@ _ca_data_begin (gpointer ca_ptr)
 
 static guint _ca_data_get_length (gpointer ca_ptr) { return ((NcDataClusterAbundance *) ca_ptr)->np; }
 
-/**
- * FIXME
- */
 static NcDataStruct *
 _nc_data_struct_cluster_abundance_new ()
 {
@@ -295,14 +292,14 @@ _nc_data_cluster_abundance_unbinned_prepare (NcmMSet *mset, gpointer model, gpoi
 }
 
 /**
- * _nc_data_cluster_abundance_resample
- * @model: a #NcmModel.
+ * _nc_data_cluster_abundance_resample:
+ * @mset: a #NcmModel.
  * @model: FIXME
  * @data: FIXME
  *
  * This function generates random numbers which are used to obtain redshift
  * and mass (logarithm base e) values...
-   *
+ *
  */
 static void
 _nc_data_cluster_abundance_resample (NcmMSet *mset, gpointer model, gpointer data)

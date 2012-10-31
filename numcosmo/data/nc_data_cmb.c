@@ -73,7 +73,7 @@ nc_data_cmb (NcDistance *dist, NcDataCMBId cmb_id)
   {
 	case NC_DATA_CMB_SHIFT_PARAMETER_WMAP3:
 	{
-	  gdouble _data[3] = { NC_C_WMAP3_REDSHIFT, NC_C_WMAP3_R, NC_C_WMAP3_SIGMA_R };
+	  gdouble _data[3] = { ncm_c_wmap3_cmb_z (), ncm_c_wmap3_cmb_R (), ncm_c_wmap3_cmb_sigma_R () };
 	  NcmMatrix *cm = ncm_matrix_new_data_static (_data, 1, 3);
 	  NcmMSetFunc *func = nc_distance_func1_new (dist, &nc_distance_shift_parameter);
 	  data = nc_data_gaussian_new (NC_DATA_GAUSSIAN_X_SIGMA);
@@ -86,7 +86,7 @@ nc_data_cmb (NcDistance *dist, NcDataCMBId cmb_id)
 	}
 	case NC_DATA_CMB_SHIFT_PARAMETER_WMAP5:
 	{
-	  gdouble _data[3] = { NC_C_WMAP5_REDSHIFT, NC_C_WMAP5_R, NC_C_WMAP5_SIGMA_R };
+	  gdouble _data[3] = { ncm_c_wmap5_cmb_z (), ncm_c_wmap5_cmb_R (), ncm_c_wmap5_cmb_sigma_R () };
 	  NcmMatrix *cm = ncm_matrix_new_data_static (_data, 1, 3);
 	  NcmMSetFunc *func = nc_distance_func1_new (dist, &nc_distance_shift_parameter);
 	  data = nc_data_gaussian_new (NC_DATA_GAUSSIAN_X_SIGMA);

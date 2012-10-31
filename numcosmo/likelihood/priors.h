@@ -71,8 +71,8 @@ gboolean nc_prior_topological_set (NcTopologicalPrior *tp, gdouble z, gdouble al
 gboolean nc_prior_add_topological (NcLikelihood *lh, gdouble z, gdouble alpha, gdouble sigma_alpha, gint n);
 
 gboolean nc_prior_add_oneside_a_inf_param (NcLikelihood *lh, NcmModelID gmid, guint pid, gdouble a, gdouble s);
-gboolean nc_prior_add_oneside_a_inf_const_func (NcLikelihood *lh, NcmMSetFunc *func, gdouble a, gdouble s);
-gboolean nc_prior_add_oneside_a_inf_func (NcLikelihood *lh, NcmMSetFunc *func, gdouble z, gdouble a, gdouble s);
+gboolean nc_prior_add_oneside_a_inf_const_func (NcLikelihood *lh, NcmMSetFunc *func, gdouble mean, gdouble s);
+gboolean nc_prior_add_oneside_a_inf_func (NcLikelihood *lh, NcmMSetFunc *func, gdouble z, gdouble mean, gdouble s);
 gboolean nc_prior_add_oneside_a_inf (NcLikelihood *lh, NcGaussianPrior *gp);
 gboolean nc_prior_add_twoside_a_b (NcLikelihood *lh, NcmModelID gmid, guint pid, gdouble a, gdouble b, gdouble s);
 gboolean nc_prior_add_positive (NcLikelihood *lh, NcmModelID gmid, guint pid);

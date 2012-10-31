@@ -125,7 +125,14 @@ static gdouble _nc_hicosmo_qspline_H0 (NcmModel *model) { return QSPLINE_H0; }
 static gdouble _nc_hicosmo_qspline_Omega_t (NcmModel *model) { return OMEGA_T; }
 
 /**
+ * nc_hicosmo_qspline_new:
+ * @s: FIXME
+ * @np: FIXME
+ * @z_f: FIXME
+ *
  * FIXME
+ *
+ * Returns: FIXME
  */
 NcHICosmoQSpline *
 nc_hicosmo_qspline_new (NcmSpline *s, gsize np, gdouble z_f)

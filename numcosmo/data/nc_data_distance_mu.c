@@ -24,10 +24,11 @@
 
 /**
  * SECTION:nc_data_distance_mu
- * @title: Distance Modulus Based Data
- * @short_description: FIXME
+ * @title: Distance Modulus Data
+ * @short_description: Data samples of distance modulus
  *
  * FIXME
+ *
  */
 
 #ifdef HAVE_CONFIG_H

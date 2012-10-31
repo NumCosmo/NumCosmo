@@ -28,6 +28,7 @@
 #include <glib.h>
 #include <glib-object.h>
 
+#include <numcosmo/nc_macros.h>
 #include <gsl/gsl_vector.h>
 
 G_BEGIN_DECLS
@@ -53,7 +54,7 @@ struct _NcFunctionCache
 {
   /*< private >*/
   GTree *tree;
-  GStaticMutex lock;
+  _NCM_MUTEX_TYPE lock;
   gboolean clear;
   guint n;
   gdouble abstol;

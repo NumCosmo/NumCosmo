@@ -82,13 +82,13 @@ _besselj_bs_free (gpointer p)
 NcmBinSplit **
 _ncm_mpsf_0F1_get_bs ()
 {
-  static GStaticMutex create_lock = G_STATIC_MUTEX_INIT;
+  _NCM_STATIC_MUTEX_DECL (create_lock);
   static NcmMemoryPool *mp = NULL;
 
-  g_static_mutex_lock (&create_lock);
+  _NCM_MUTEX_LOCK (&create_lock);
   if (mp == NULL)
 	mp = ncm_memory_pool_new (_besselj_bs_alloc, _besselj_bs_free);
-  g_static_mutex_unlock (&create_lock);
+  _NCM_MUTEX_UNLOCK (&create_lock);
 
   return ncm_memory_pool_get (mp);
 }
@@ -152,7 +152,7 @@ _taylor_0F1 (mpq_t b, mpq_t x, mpfr_ptr res, mp_rnd_t rnd)
 }
 
 /**
- * ncm_mpsf_0F1: (skip)
+ * ncm_mpsf_0F1_q: (skip)
  * @b: FIXME
  * @x: FIXME
  * @res: FIXME
@@ -161,7 +161,7 @@ _taylor_0F1 (mpq_t b, mpq_t x, mpfr_ptr res, mp_rnd_t rnd)
  * FIXME
  */
 void
-ncm_mpsf_0F1 (mpq_t b, mpq_t x, mpfr_ptr res, mp_rnd_t rnd)
+ncm_mpsf_0F1_q (mpq_t b, mpq_t x, mpfr_ptr res, mp_rnd_t rnd)
 {
   _taylor_0F1 (b, x, res, rnd);
 }
@@ -183,7 +183,7 @@ ncm_mpsf_0F1_d (gdouble b, gdouble x, mpfr_ptr res, mp_rnd_t rnd)
   mpq_init (bq);
   ncm_rational_coarce_double (b, bq);
   ncm_rational_coarce_double (x, xq);
-  ncm_mpsf_0F1 (bq, xq, res, rnd);
+  ncm_mpsf_0F1_q (bq, xq, res, rnd);
   mpq_clear (xq);
   mpq_clear (bq);
 }
