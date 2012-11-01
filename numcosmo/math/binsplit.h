@@ -24,11 +24,14 @@
 
 #ifndef _NC_BINSPLIT_H
 #define _NC_BINSPLIT_H
-#include <string.h>
-#include <stdio.h>
+
+#include <glib.h>
+#include <glib-object.h>
+
+#ifndef NUMCOSMO_GIR_SCAN
 #include <gmp.h>
 #include <mpfr.h>
-#include <glib.h>
+#endif
 
 G_BEGIN_DECLS
 

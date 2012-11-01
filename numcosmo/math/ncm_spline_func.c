@@ -35,12 +35,11 @@
 #ifdef HAVE_CONFIG_H
 #  include "config.h"
 #endif /* HAVE_CONFIG_H */
-#include <numcosmo/numcosmo.h>
+#include "build_cfg.h"
 
-#include <glib.h>
+#include "math/ncm_spline_func.h"
+
 #include <gsl/gsl_poly.h>
-#include <gsl/gsl_sf.h>
-#include <gsl/gsl_linalg.h>
 
 typedef struct { gdouble x; gdouble y; gint ok; } _BIVec;
 

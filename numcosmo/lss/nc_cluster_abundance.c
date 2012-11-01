@@ -33,10 +33,14 @@
 #ifdef HAVE_CONFIG_H
 #  include "config.h"
 #endif /* HAVE_CONFIG_H */
-#include <numcosmo/numcosmo.h>
+#include "build_cfg.h"
 
-#include <glib.h>
-#include <gsl/gsl_sf_erf.h>
+#include "lss/nc_cluster_abundance.h"
+#include "math/ncm_spline_cubic_notaknot.h"
+#include "math/ncm_spline2d_bicubic.h"
+#include "math/integral.h"
+#include "math/memory_pool.h"
+#include <gsl/gsl_histogram.h>
 
 enum
 {
@@ -589,15 +593,6 @@ nc_cluster_abundance_get_mass (NcClusterAbundance *cad)
  *
  * Returns: (transfer none): the value of #NcClusterAbundance:mass property.
  */
-#ifndef NUMCOSMO_HAVE_INLINE
-#define NUMCOSMO_HAVE_INLINE
-#undef _NC_CLUSTER_ABUNDANCE_INLINE_H_
-#define G_INLINE_FUNC
-#include "nc_cluster_abundance.h"
-#undef _NC_CLUSTER_ABUNDANCE_INLINE_H_
-#undef NUMCOSMO_HAVE_INLINE
-#endif /* NUMCOSMO_HAVE_INLINE */
-
 
 /**
  * nc_cluster_abundance_prepare:

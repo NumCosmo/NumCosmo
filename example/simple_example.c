@@ -2,38 +2,65 @@
 #include <numcosmo/numcosmo.h>
 
 int
-main()
+main(int argc, gchar *argv[])
 {
-  ClModel *model;
-  ClParams *cp;
+  NcHICosmo *cosmo;
+  NcDistance *dist;
   gint i;
-  
-  cl_cfg_init ();
-  
-  /* model = cl_model_xcdm_new (); */
-  model = cl_model_linder_new ();
-  cp = cl_model_get_params (model);
- 
-  cl_params_set (cp, CL_MODEL_DE_H0, 70.0);
-  cl_params_set (cp, CL_MODEL_DE_OMEGA_C, 0.25);
-  cl_params_set (cp, CL_MODEL_DE_OMEGA_X, 0.7);
-  cl_params_set (cp, CL_MODEL_DE_T_GAMMA0, 1.0);
-  cl_params_set (cp, CL_MODEL_DE_OMEGA_B, 0.05);
-  cl_params_set (cp, CL_MODEL_DE_SPECINDEX, 1.0);
-  cl_params_set (cp, CL_MODEL_DE_SIGMA8, 1.0);
-  //cl_params_set (cp, CL_MODEL_DE_XCDM_W, -1.1);
-  cl_params_set (cp, CL_MODEL_DE_LINDER_W0, -1.0);
-  cl_params_set (cp, CL_MODEL_DE_LINDER_W1, 1.0);
 
+  /**************************************************************************** 
+   * Start the library initializating objects, 
+   * must be called before any othe library function 
+   ****************************************************************************/  
+  ncm_cfg_init ();
+  
+  /**************************************************************************** 
+   * New homogeneous and isotropic cosmological model NcHICosmoDEXcdm 
+   ****************************************************************************/  
+  cosmo = nc_hicosmo_new_from_name (NC_TYPE_HICOSMO, "NcHICosmoDEXcdm");
+
+  /**************************************************************************** 
+   * New cosmological distance objects optimizied to perform calculations
+   * up to redshift 2.0 
+   ****************************************************************************/  
+  dist = nc_distance_new (2.0);
+ 
+ 
+  /**************************************************************************** 
+   * Setting values for the cosmological model, those not set stay in the
+   * default values. Remeber to use the _orig_ version to set the original
+   * parameters in case when a reparametrization is used.
+   ****************************************************************************/ 
+  ncm_model_orig_param_set (NCM_MODEL (cosmo), NC_HICOSMO_DE_H0, 70.0);
+  ncm_model_orig_param_set (NCM_MODEL (cosmo), NC_HICOSMO_DE_OMEGA_C, 0.25);
+  ncm_model_orig_param_set (NCM_MODEL (cosmo), NC_HICOSMO_DE_OMEGA_X, 0.7);
+  ncm_model_orig_param_set (NCM_MODEL (cosmo), NC_HICOSMO_DE_T_GAMMA0, 1.0);
+  ncm_model_orig_param_set (NCM_MODEL (cosmo), NC_HICOSMO_DE_OMEGA_B, 0.05);
+  ncm_model_orig_param_set (NCM_MODEL (cosmo), NC_HICOSMO_DE_SPECINDEX, 1.0);
+  ncm_model_orig_param_set (NCM_MODEL (cosmo), NC_HICOSMO_DE_SIGMA8, 0.9);
+  ncm_model_orig_param_set (NCM_MODEL (cosmo), NC_HICOSMO_DE_XCDM_W, -1.1);
+
+  /**************************************************************************** 
+   * Printing the parameters used.
+   ****************************************************************************/
+  printf ("# Model parameters: "); 
+  ncm_model_params_log_all (NCM_MODEL (cosmo));
+
+  /**************************************************************************** 
+   * Printing some distances up to redshift 1.0.
+   ****************************************************************************/ 
   for (i = 0; i < 10; i++)
   {
     gdouble z = 1.0 / 9.0 * i;
-    gdouble cd = CL_C_HUBBLE_RADIUS * cl_distance_comoving (cp, z, NULL);
+    gdouble cd = NC_C_HUBBLE_RADIUS * nc_distance_comoving (dist, cosmo, z);
     printf ("% 10.8f % 20.15g\n", z, cd);
   }
 
-  cl_params_free (cp);
-  cl_model_free (model);
+  /**************************************************************************** 
+   * Freeing objects.
+   ****************************************************************************/ 
+  nc_distance_free (dist);
+  ncm_model_free (NCM_MODEL (cosmo));
 
   return 0;
 }

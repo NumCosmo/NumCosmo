@@ -26,16 +26,25 @@
 #define _NC_RECOMB_H
 
 #include <glib.h>
-#include <cvodes/cvodes.h>             /* prototypes for CVODE fcts. and consts. */
-#include <nvector/nvector_serial.h>  /* serial N_Vector types, fcts., and macros */
-#include <cvodes/cvodes_dense.h>       /* prototype for CVDense */
-#include <cvodes/cvodes_band.h>        /* prototype for CVBand */
-#include <sundials/sundials_band.h>
-#include <sundials/sundials_dense.h> /* definitions DenseMat DENSE_ELEM */   
-#include <sundials/sundials_types.h> /* definition of type realtype */
-#include <gsl/gsl_chebyshev.h>
-#include <gsl/gsl_spline.h>
+#include <glib-object.h>
 
+#include <numcosmo/nc_hicosmo.h>
+#include <numcosmo/math/function_cache.h>
+
+#include <gsl/gsl_spline.h>
+#ifndef NUMCOSMO_GIR_SCAN
+#include <cvodes/cvodes.h>
+#include <cvodes/cvodes_dense.h>
+#endif
+
+/*
+#include <numcosmo/math/function_cache.h>
+#include <nvector/nvector_serial.h>
+#include <cvodes/cvodes_band.h>
+#include <sundials/sundials_band.h>
+#include <sundials/sundials_dense.h>
+#include <sundials/sundials_types.h>
+*/
 G_BEGIN_DECLS
 
 /**

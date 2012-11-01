@@ -33,17 +33,16 @@
 #ifdef HAVE_CONFIG_H
 #  include "config.h"
 #endif /* HAVE_CONFIG_H */
-#include <numcosmo/numcosmo.h>
+#include "build_cfg.h"
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <math.h>
-#include <glib.h>
-#include <gsl/gsl_integration.h>
-#include <gsl/gsl_const_mksa.h>
-#include <gsl/gsl_sf_erf.h>
-#include <gsl/gsl_histogram2d.h>
+#include "lss/nc_data_cluster_abundance.h"
+#include "math/util.h"
+#include "math/ncm_func_eval.h"
+#include "math/ncm_cfg.h"
+#include "data/data_poisson.h"
+
 #include <glib/gstdio.h>
+#include <gsl/gsl_randist.h>
 #ifdef NUMCOSMO_HAVE_CFITSIO
 #include <fitsio.h>
 #endif /* NUMCOSMO_HAVE_CFITSIO */

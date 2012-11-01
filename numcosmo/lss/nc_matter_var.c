@@ -34,28 +34,27 @@
 #ifdef HAVE_CONFIG_H
 #  include "config.h"
 #endif /* HAVE_CONFIG_H */
-#include <numcosmo/numcosmo.h>
+#include "build_cfg.h"
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <math.h>
-#include <glib.h>
-#include <gsl/gsl_math.h>
+#include "lss/nc_matter_var.h"
+#include "lss/nc_window_tophat.h"
+#include "lss/nc_window_gaussian.h"
+#include "nc_enum_types.h"
+#include "math/ncm_cfg.h"
+#include "math/integral.h"
+#include "math/ncm_spline_func.h"
+#include "math/ncm_spline_cubic_notaknot.h"
+
+#include <complex.h>
+#ifdef NUMCOSMO_HAVE_FFTW3 
+#include <fftw3.h>
+#endif /* NUMCOSMO_HAVE_FFTW3 */
 #include <gsl/gsl_integration.h>
-#include <gsl/gsl_const_mksa.h>
-#include <gsl/gsl_chebyshev.h>
-#include <gsl/gsl_spline.h>
-#include <gsl/gsl_sf_expint.h>
-#include <gsl/gsl_sf_erf.h>
-#include <gsl/gsl_sf_bessel.h>
+#include <gsl/gsl_sf_result.h>
 #include <gsl/gsl_sf_gamma.h>
+#include <gsl/gsl_sf_bessel.h>
 #include <gsl/gsl_sf_trig.h>
-
-#include <cvodes/cvodes.h>
-#include <nvector/nvector_serial.h>
-#include <cvodes/cvodes_dense.h>
-#include <sundials/sundials_dense.h>
-#include <sundials/sundials_types.h>
+#include <gsl/gsl_sf_expint.h>
 
 #define NC_MATTER_VAR_SIGMA2_NP 150
 
@@ -332,7 +331,7 @@ _nc_matter_var_over_growth2_gaussian (NcMatterVar *vp, NcHICosmo *model, gdouble
   ts.model = model;
 
   if (w == NULL)
-	w = gsl_integration_workspace_alloc (NC_INT_PARTITION);
+    w = gsl_integration_workspace_alloc (NC_INT_PARTITION);
 
   F.function = &_nc_matter_var_integrand_gaussian;
   F.params = &ts;

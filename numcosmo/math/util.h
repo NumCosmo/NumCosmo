@@ -22,12 +22,22 @@
  * with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef _NCM_H
-#define _NCM_H
+#ifndef _NCM_UTIL_H_
+#define _NCM_UTIL_H_
 
 #include <glib.h>
+#include <glib-object.h>
+
+#include <numcosmo/math/ncm_model.h>
+#include <numcosmo/data/data.h>
+#include <numcosmo/nc_distance.h>
+#include <numcosmo/math/ncm_mset_func.h>
+
+#include <gsl/gsl_rng.h>
+#ifndef NUMCOSMO_GIR_SCAN
 #include <gmp.h>
 #include <mpfr.h>
+#endif
 
 G_BEGIN_DECLS
 
@@ -66,22 +76,6 @@ gdouble ncm_numdiff_2 (gsl_function *F, gdouble *ofx, const gdouble x, const gdo
 gdouble ncm_numdiff_2_err (gsl_function *F, gdouble *ofx, const gdouble x, const gdouble ho, gdouble err, gdouble *ferr);
 gdouble ncm_sqrt1px_m1 (gdouble x);
 
-gdouble ncm_userdef0_f (NcmModel *model, gdouble z);
-gdouble ncm_userdef1_f (NcmModel *model, gdouble z);
-gdouble ncm_userdef2_f (NcmModel *model, gdouble z);
-gdouble ncm_userdef3_f (NcmModel *model, gdouble z);
-gdouble ncm_userdef4_f (NcmModel *model, gdouble z);
-gboolean ncm_userdef0_df (NcmModel *model, gdouble z, NcmVector *grad);
-gboolean ncm_userdef1_df (NcmModel *model, gdouble z, NcmVector *grad);
-gboolean ncm_userdef2_df (NcmModel *model, gdouble z, NcmVector *grad);
-gboolean ncm_userdef3_df (NcmModel *model, gdouble z, NcmVector *grad);
-gboolean ncm_userdef4_df (NcmModel *model, gdouble z, NcmVector *grad);
-gboolean ncm_model_userdef0_df (NcmModel *model, gdouble z, NcmVector *grad);
-gboolean ncm_model_userdef1_df (NcmModel *model, gdouble z, NcmVector *grad);
-gboolean ncm_model_userdef2_df (NcmModel *model, gdouble z, NcmVector *grad);
-gboolean ncm_model_userdef3_df (NcmModel *model, gdouble z, NcmVector *grad);
-gboolean ncm_model_userdef4_df (NcmModel *model, gdouble z, NcmVector *grad);
-
 G_END_DECLS
 
-#endif /* _UTIL_H */
+#endif /* _NCM_UTIL_H_ */

@@ -26,6 +26,15 @@
 #define _NC_QUANTUM_GRAVITY_H
 
 #include <glib.h>
+#include <glib-object.h>
+#include <numcosmo/math/ncm_model.h>
+#include <numcosmo/math/ncm_spline.h>
+#include <numcosmo/nc_hicosmo.h>
+
+#ifndef NUMCOSMO_GIR_SCAN
+#include <cvodes/cvodes.h>
+#include <cvodes/cvodes_dense.h>
+#endif
 
 G_BEGIN_DECLS
 

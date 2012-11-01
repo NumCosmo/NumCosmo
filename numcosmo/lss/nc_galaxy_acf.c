@@ -34,10 +34,14 @@
 #ifdef HAVE_CONFIG_H
 #  include "config.h"
 #endif /* HAVE_CONFIG_H */
-#include <numcosmo/numcosmo.h>
+#include "build_cfg.h"
+
+#include "lss/nc_galaxy_acf.h"
+#include "lss/nc_window_tophat.h"
+#include "math/integral.h"
+#include "math/ncm_spline_cubic_notaknot.h"
 
 #include <gsl/gsl_sf_bessel.h>
-
 
 G_DEFINE_TYPE (NcGalaxyAcf, nc_galaxy_acf, G_TYPE_OBJECT);
 

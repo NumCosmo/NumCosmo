@@ -25,6 +25,9 @@
 #ifndef _NC_READ_MATRIX_H
 #define _NC_READ_MATRIX_H
 
+#include <glib.h>
+#include <glib-object.h>
+
 #include <gsl/gsl_matrix.h>
 
 G_BEGIN_DECLS

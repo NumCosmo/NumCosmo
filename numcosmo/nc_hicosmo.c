@@ -34,7 +34,10 @@
 #ifdef HAVE_CONFIG_H
 #  include "config.h"
 #endif /* HAVE_CONFIG_H */
-#include <numcosmo/numcosmo.h>
+#include "build_cfg.h"
+
+#include "nc_hicosmo.h"
+#include "math/ncm_cfg.h"
 
 G_DEFINE_ABSTRACT_TYPE (NcHICosmo, nc_hicosmo, NCM_TYPE_MODEL);
 
@@ -254,25 +257,6 @@ NCM_MODEL_SET_IMPL_FUNC(NC_HICOSMO,NcHICosmo,nc_hicosmo,NcmModelFunc1,powspec)
  * Returns: FIXME
  */
 /**
- * nc_hicosmo_H0_pf:
- * @model: FIXME
- * @n: FIXME
- *
- * FIXME
- *
- * Returns: FIXME
- */
-/**
- * nc_hicosmo_H0_df:
- * @model: FIXME
- * @pt: FIXME
- * @v: FIXME
- *
- * FIXME
- *
- */
-
-/**
  * nc_hicosmo_Omega_b:
  * @model: FIXME
  *
@@ -280,25 +264,6 @@ NCM_MODEL_SET_IMPL_FUNC(NC_HICOSMO,NcHICosmo,nc_hicosmo,NcmModelFunc1,powspec)
  *
  * Returns: FIXME
  */
-/**
- * nc_hicosmo_Omega_b_pf:
- * @model: FIXME
- * @n: FIXME
- *
- * FIXME
- *
- * Returns: FIXME
- */
-/**
- * nc_hicosmo_Omega_b_df:
- * @model: FIXME
- * @pt: FIXME
- * @v: FIXME
- *
- * FIXME
- *
- */
-
 /**
  * nc_hicosmo_Omega_r:
  * @model: FIXME
@@ -308,25 +273,6 @@ NCM_MODEL_SET_IMPL_FUNC(NC_HICOSMO,NcHICosmo,nc_hicosmo,NcmModelFunc1,powspec)
  * Returns: FIXME
  */
 /**
- * nc_hicosmo_Omega_r_pf:
- * @model: FIXME
- * @n: FIXME
- *
- * FIXME
- *
- * Returns: FIXME
- */
-/**
- * nc_hicosmo_Omega_r_df:
- * @model: FIXME
- * @pt: FIXME
- * @v: FIXME
- *
- * FIXME
- *
- */
-
-/**
  * nc_hicosmo_Omega_c:
  * @model: FIXME
  *
@@ -334,25 +280,6 @@ NCM_MODEL_SET_IMPL_FUNC(NC_HICOSMO,NcHICosmo,nc_hicosmo,NcmModelFunc1,powspec)
  *
  * Returns: FIXME
  */
-/**
- * nc_hicosmo_Omega_c_pf:
- * @model: FIXME
- * @n: FIXME
- *
- * FIXME
- *
- * Returns: FIXME
- */
-/**
- * nc_hicosmo_Omega_c_df:
- * @model: FIXME
- * @pt: FIXME
- * @v: FIXME
- *
- * FIXME
- *
- */
-
 /**
  * nc_hicosmo_Omega_t:
  * @model: FIXME
@@ -362,25 +289,6 @@ NCM_MODEL_SET_IMPL_FUNC(NC_HICOSMO,NcHICosmo,nc_hicosmo,NcmModelFunc1,powspec)
  * Returns: FIXME
  */
 /**
- * nc_hicosmo_Omega_t_pf:
- * @model: FIXME
- * @n: FIXME
- *
- * FIXME
- *
- * Returns: FIXME
- */
-/**
- * nc_hicosmo_Omega_t_df:
- * @model: FIXME
- * @pt: FIXME
- * @v: FIXME
- *
- * FIXME
- *
- */
-
-/**
  * nc_hicosmo_T_gamma0:
  * @model: FIXME
  *
@@ -388,25 +296,6 @@ NCM_MODEL_SET_IMPL_FUNC(NC_HICOSMO,NcHICosmo,nc_hicosmo,NcmModelFunc1,powspec)
  *
  * Returns: FIXME
  */
-/**
- * nc_hicosmo_T_gamma0_pf:
- * @model: FIXME
- * @n: FIXME
- *
- * FIXME
- *
- * Returns: FIXME
- */
-/**
- * nc_hicosmo_T_gamma0_df:
- * @model: FIXME
- * @pt: FIXME
- * @v: FIXME
- *
- * FIXME
- *
- */
-
 /**
  * nc_hicosmo_sigma_8:
  * @model: FIXME
@@ -416,25 +305,6 @@ NCM_MODEL_SET_IMPL_FUNC(NC_HICOSMO,NcHICosmo,nc_hicosmo,NcmModelFunc1,powspec)
  * Returns: FIXME
  */
 /**
- * nc_hicosmo_sigma_8_pf:
- * @model: FIXME
- * @n: FIXME
- *
- * FIXME
- *
- * Returns: FIXME
- */
-/**
- * nc_hicosmo_sigma_8_df:
- * @model: FIXME
- * @pt: FIXME
- * @v: FIXME
- *
- * FIXME
- *
- */
-
-/**
  * nc_hicosmo_z_lss:
  * @model: FIXME
  *
@@ -442,25 +312,6 @@ NCM_MODEL_SET_IMPL_FUNC(NC_HICOSMO,NcHICosmo,nc_hicosmo,NcmModelFunc1,powspec)
  *
  * Returns: FIXME
  */
-/**
- * nc_hicosmo_z_lss_pf:
- * @model: FIXME
- * @n: FIXME
- *
- * FIXME
- *
- * Returns: FIXME
- */
-/**
- * nc_hicosmo_z_lss_df:
- * @model: FIXME
- * @pt: FIXME
- * @v: FIXME
- *
- * FIXME
- *
- */
-
 /**
  * nc_hicosmo_E2:
  * @model: FIXME
@@ -471,27 +322,6 @@ NCM_MODEL_SET_IMPL_FUNC(NC_HICOSMO,NcHICosmo,nc_hicosmo,NcmModelFunc1,powspec)
  * Returns: FIXME
  */
 /**
- * nc_hicosmo_E2_pf:
- * @model: FIXME
- * @x: FIXME
- * @n: FIXME
- *
- * FIXME
- *
- * Returns: FIXME
- */
-/**
- * nc_hicosmo_E2_df:
- * @model: FIXME
- * @pt: FIXME
- * @x: FIXME
- * @v: FIXME
- *
- * FIXME
- *
- */
-
-/**
  * nc_hicosmo_dE2_dz:
  * @model: FIXME
  * @x: FIXME
@@ -500,27 +330,6 @@ NCM_MODEL_SET_IMPL_FUNC(NC_HICOSMO,NcHICosmo,nc_hicosmo,NcmModelFunc1,powspec)
  *
  * Returns: FIXME
  */
-/**
- * nc_hicosmo_dE2_dz_pf:
- * @model: FIXME
- * @x: FIXME
- * @n: FIXME
- *
- * FIXME
- *
- * Returns: FIXME
- */
-/**
- * nc_hicosmo_dE2_dz_df:
- * @model: FIXME
- * @pt: FIXME
- * @x: FIXME
- * @v: FIXME
- *
- * FIXME
- *
- */
-
 /**
  * nc_hicosmo_d2E2_dz2:
  * @model: FIXME
@@ -531,27 +340,6 @@ NCM_MODEL_SET_IMPL_FUNC(NC_HICOSMO,NcHICosmo,nc_hicosmo,NcmModelFunc1,powspec)
  * Returns: FIXME
  */
 /**
- * nc_hicosmo_d2E2_dz2_pf:
- * @model: FIXME
- * @x: FIXME
- * @n: FIXME
- *
- * FIXME
- *
- * Returns: FIXME
- */
-/**
- * nc_hicosmo_d2E2_dz2_df:
- * @model: FIXME
- * @pt: FIXME
- * @x: FIXME
- * @v: FIXME
- *
- * FIXME
- *
- */
-
-/**
  * nc_hicosmo_powspec:
  * @model: FIXME
  * @x: FIXME
@@ -561,27 +349,6 @@ NCM_MODEL_SET_IMPL_FUNC(NC_HICOSMO,NcHICosmo,nc_hicosmo,NcmModelFunc1,powspec)
  * Returns: FIXME
  */
 /**
- * nc_hicosmo_powspec_pf:
- * @model: FIXME
- * @x: FIXME
- * @n: FIXME
- *
- * FIXME
- *
- * Returns: FIXME
- */
-/**
- * nc_hicosmo_powspec_df:
- * @model: FIXME
- * @pt: FIXME
- * @x: FIXME
- * @v: FIXME
- *
- * FIXME
- *
- */
-
-/**
  * nc_hicosmo_c_H0:
  * @model: FIXME
  *
@@ -589,7 +356,6 @@ NCM_MODEL_SET_IMPL_FUNC(NC_HICOSMO,NcHICosmo,nc_hicosmo,NcmModelFunc1,powspec)
  *
  * Returns: FIXME
  */
-
 /**
  * nc_hicosmo_Omega_k:
  * @model: a #NcHICosmo.
@@ -598,7 +364,6 @@ NCM_MODEL_SET_IMPL_FUNC(NC_HICOSMO,NcHICosmo,nc_hicosmo,NcmModelFunc1,powspec)
  *
  * Returns: FIXME
  */
-
 /**
  * nc_hicosmo_Omega_m:
  * @model: a #NcHICosmo.
@@ -608,7 +373,6 @@ NCM_MODEL_SET_IMPL_FUNC(NC_HICOSMO,NcHICosmo,nc_hicosmo,NcmModelFunc1,powspec)
  *
  * Returns: The matter density parameter at redshift zero.
  */
-
 /**
  * nc_hicosmo_H:
  * @model: FIXME
@@ -618,7 +382,6 @@ NCM_MODEL_SET_IMPL_FUNC(NC_HICOSMO,NcHICosmo,nc_hicosmo,NcmModelFunc1,powspec)
  *
  * Returns: FIXME
  */
-
 /**
  * nc_hicosmo_h:
  * @model: a #NcHICosmo
@@ -627,7 +390,6 @@ NCM_MODEL_SET_IMPL_FUNC(NC_HICOSMO,NcHICosmo,nc_hicosmo,NcmModelFunc1,powspec)
  *
  * Returns: FIXME
  */
-
 /**
  * nc_hicosmo_grad_h:
  * @model: a #NcHICosmo
@@ -636,7 +398,6 @@ NCM_MODEL_SET_IMPL_FUNC(NC_HICOSMO,NcHICosmo,nc_hicosmo,NcmModelFunc1,powspec)
  *
  * FIXME
  */
-
 /**
  * nc_hicosmo_h2:
  * @model: a #NcHICosmo
@@ -645,7 +406,6 @@ NCM_MODEL_SET_IMPL_FUNC(NC_HICOSMO,NcHICosmo,nc_hicosmo,NcmModelFunc1,powspec)
  *
  * Returns: FIXME
  */
-
 /**
  * nc_hicosmo_grad_h2:
  * @model: a #NcHICosmo
@@ -654,7 +414,6 @@ NCM_MODEL_SET_IMPL_FUNC(NC_HICOSMO,NcHICosmo,nc_hicosmo,NcmModelFunc1,powspec)
  *
  * FIXME
  */
-
 /**
  * nc_hicosmo_E:
  * @model: a #NcHICosmo
@@ -664,7 +423,6 @@ NCM_MODEL_SET_IMPL_FUNC(NC_HICOSMO,NcHICosmo,nc_hicosmo,NcmModelFunc1,powspec)
  *
  * Returns: FIXME
  */
-
 /**
  * nc_hicosmo_grad_E:
  * @model: a #NcHICosmo
@@ -674,7 +432,6 @@ NCM_MODEL_SET_IMPL_FUNC(NC_HICOSMO,NcHICosmo,nc_hicosmo,NcmModelFunc1,powspec)
  *
  * FIXME
  */
-
 /**
  * nc_hicosmo_dH_dz:
  * @model: a #NcHICosmo
@@ -684,7 +441,6 @@ NCM_MODEL_SET_IMPL_FUNC(NC_HICOSMO,NcHICosmo,nc_hicosmo,NcmModelFunc1,powspec)
  *
  * Returns: FIXME
  */
-
 /**
  * nc_hicosmo_Omega_k:
  * @model: a #NcHICosmo.
@@ -693,7 +449,6 @@ NCM_MODEL_SET_IMPL_FUNC(NC_HICOSMO,NcHICosmo,nc_hicosmo,NcmModelFunc1,powspec)
  *
  * Returns: FIXME
  */
-
 /**
  * nc_hicosmo_q:
  * @model: a #NcHICosmo
@@ -703,7 +458,6 @@ NCM_MODEL_SET_IMPL_FUNC(NC_HICOSMO,NcHICosmo,nc_hicosmo,NcmModelFunc1,powspec)
  *
  * Returns: FIXME
 */
-
 /**
  * nc_hicosmo_qp:
  * @model: a #NcHICosmo
@@ -713,7 +467,6 @@ NCM_MODEL_SET_IMPL_FUNC(NC_HICOSMO,NcHICosmo,nc_hicosmo,NcmModelFunc1,powspec)
  *
  * Returns: FIXME
  */
-
 /**
  * nc_hicosmo_j:
  * @model: a #NcHICosmo
@@ -723,15 +476,6 @@ NCM_MODEL_SET_IMPL_FUNC(NC_HICOSMO,NcHICosmo,nc_hicosmo,NcmModelFunc1,powspec)
  *
  * Returns: FIXME
  */
-
-#ifndef NUMCOSMO_HAVE_INLINE
-#define NUMCOSMO_HAVE_INLINE
-#undef _NC_HICOSMO_INLINE_H_
-#define G_INLINE_FUNC
-#include "nc_hicosmo.h"
-#undef _NC_HICOSMO_INLINE_H_
-#undef NUMCOSMO_HAVE_INLINE
-#endif /* NUMCOSMO_HAVE_INLINE */
 
 static void
 _nc_hicosmo_func0 (NcmMSet *mset, gpointer obj, const gdouble *x, gdouble *f)

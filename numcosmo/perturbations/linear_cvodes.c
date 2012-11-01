@@ -25,27 +25,20 @@
 #ifdef HAVE_CONFIG_H
 #  include "config.h"
 #endif /* HAVE_CONFIG_H */
-#include <numcosmo/numcosmo.h>
+#include "build_cfg.h"
 
-#include <glib.h>
-#include <gsl/gsl_sf_exp.h>
-#include <gsl/gsl_sf_bessel.h>
+#include "perturbations/linear.h"
+#include "math/cvode_util.h"
 
-#include <cvodes/cvodes.h>             /* prototypes for CVODE fcts. and consts. */
-#include <nvector/nvector_serial.h>    /* serial N_Vector types, fcts., and macros */
-#include <cvodes/cvodes_dense.h>       /* prototype for CVDense */
-#include <cvodes/cvodes_band.h>        /* prototype for CVBand */
+#include <cvode/cvode_diag.h>
+#include <cvode/cvode_band.h>
+#include <cvode/cvode_bandpre.h>
+#include <cvode/cvode_spbcgs.h>
+#include <nvector/nvector_serial.h>
+
 #if SUNDIALS_BLAS_LAPACK == 1
 #include <cvodes/cvodes_lapack.h>      /* prototype for CVBand */
 #endif /* SUNDIALS_BLAS_LAPACK */
-#include <cvodes/cvodes_diag.h>        /* prototype for CVBand */
-#include <cvode/cvode_spgmr.h>         /* prototypes & constants for CVSPGMR solver */
-#include <cvode/cvode_spbcgs.h>        /* prototypes & constants for CVSPBCG solver */
-#include <cvode/cvode_sptfqmr.h>       /* prototypes & constants for CVSPTFQMR solver */
-#include <cvode/cvode_bandpre.h>       /* prototypes & constants for CVBANDPRE module */
-#include <sundials/sundials_band.h>
-#include <sundials/sundials_dense.h>   /* definitions DenseMat DENSE_ELEM */
-#include <sundials/sundials_types.h>   /* definition of type realtype */
 
 #include "linear_internal.h"
 

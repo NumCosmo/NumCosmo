@@ -33,12 +33,11 @@
 #ifdef HAVE_CONFIG_H
 #  include "config.h"
 #endif /* HAVE_CONFIG_H */
-#include <numcosmo/numcosmo.h>
+#include "build_cfg.h"
 
-#include <glib.h>
-#include <string.h>
-#include <gsl/gsl_integration.h>
-#include <gsl/gsl_blas.h>
+#include "nc_distance.h"
+#include "math/integral.h"
+#include "math/ncm_spline_cubic_notaknot.h"
 
 typedef struct _ComovingDistanceArgument{
   NcHICosmo *model;
@@ -798,7 +797,6 @@ nc_distance_prepare (NcDistance *dist, NcHICosmo *model)
   return;
 }
 
-
 /**
  * nc_distance_prepare_if_needed:
  * @dist: FIXME,
@@ -806,14 +804,6 @@ nc_distance_prepare (NcDistance *dist, NcHICosmo *model)
  *
  * FIXME
  */
-#ifndef NUMCOSMO_HAVE_INLINE
-#define NUMCOSMO_HAVE_INLINE
-#undef _NC_DISTANCE_INLINE_H_
-#define G_INLINE_FUNC
-#include "nc_distance.h"
-#undef _NC_DISTANCE_INLINE_H_
-#undef NUMCOSMO_HAVE_INLINE
-#endif /* NUMCOSMO_HAVE_INLINE */
 
 static void
 nc_distance_init (NcDistance *dist)

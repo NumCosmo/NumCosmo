@@ -25,6 +25,13 @@
 #ifndef _NC_PRINT_DATA_H
 #define _NC_PRINT_DATA_H
 
+#include <glib.h>
+#include <glib-object.h>
+#include <numcosmo/nc_hicosmo.h>
+#include <numcosmo/data/data.h>
+
+#include <stdio.h>
+
 G_BEGIN_DECLS
 
 void nc_mass_function_print (NcData *ca_unbinned, NcHICosmo *model, FILE *out, gchar *header);

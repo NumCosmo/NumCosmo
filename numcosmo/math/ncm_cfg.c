@@ -30,20 +30,70 @@
  * FIXME
  */
 
-
 #ifdef HAVE_CONFIG_H
 #  include "config.h"
 #endif /* HAVE_CONFIG_H */
-#include <numcosmo/numcosmo.h>
+#include "build_cfg.h"
 
-#include <string.h>
-#include <glib-object.h>
-#include <glib.h>
+#include "math/ncm_cfg.h"
+#include "math/ncm_spline_gsl.h"
+#include "math/ncm_spline_cubic.h"
+#include "math/ncm_spline_cubic_notaknot.h"
+#include "math/ncm_spline2d_bicubic.h"
+#include "math/ncm_spline2d_gsl.h"
+#include "math/ncm_spline2d_spline.h"
+#include "math/ncm_model.h"
+#include "math/ncm_model_ctrl.h"
+#include "math/ncm_reparam_linear.h"
+#include "model/nc_hicosmo_qconst.h"
+#include "model/nc_hicosmo_qlinear.h"
+#include "model/nc_hicosmo_qpw.h"
+#include "model/nc_hicosmo_qspline.h"
+#include "model/nc_hicosmo_lcdm.h"
+#include "model/nc_hicosmo_de_xcdm.h"
+#include "model/nc_hicosmo_de_linder.h"
+#include "model/nc_hicosmo_de_pad.h"
+#include "model/nc_hicosmo_de_qe.h"
+#include "lss/nc_window_tophat.h"
+#include "lss/nc_window_gaussian.h"
+#include "lss/nc_growth_func.h"
+#include "lss/nc_transfer_func.h"
+#include "lss/nc_transfer_func_bbks.h"
+#include "lss/nc_transfer_func_eh.h"
+#include "lss/nc_transfer_func_camb.h"
+#include "lss/nc_transfer_func_pert.h"
+#include "lss/nc_matter_var.h"
+#include "lss/nc_multiplicity_func.h"
+#include "lss/nc_multiplicity_func_st.h"
+#include "lss/nc_multiplicity_func_ps.h"
+#include "lss/nc_multiplicity_func_jenkins.h"
+#include "lss/nc_multiplicity_func_warren.h"
+#include "lss/nc_multiplicity_func_tinker.h"
+#include "lss/nc_multiplicity_func_tinker_mean.h"
+#include "lss/nc_multiplicity_func_tinker_crit.h"
+#include "lss/nc_mass_function.h"
+#include "lss/nc_galaxy_acf.h"
+#include "lss/nc_cluster_mass.h"
+#include "lss/nc_cluster_mass_nodist.h"
+#include "lss/nc_cluster_mass_lnnormal.h"
+#include "lss/nc_cluster_mass_vanderlinde.h"
+#include "lss/nc_cluster_mass_benson.h"
+#include "lss/nc_cluster_mass_benson_xray.h"
+#include "lss/nc_cluster_redshift.h"
+#include "lss/nc_cluster_redshift_nodist.h"
+#include "lss/nc_cluster_photoz_gauss_global.h"
+#include "lss/nc_cluster_photoz_gauss.h"
+#include "lss/nc_halo_bias_func.h"
+#include "lss/nc_halo_bias_type_ps.h"
+#include "lss/nc_halo_bias_type_st_ellip.h"
+#include "lss/nc_halo_bias_type_st_spher.h"
+#include "lss/nc_halo_bias_type_tinker.h"
+#include "lss/nc_cluster_abundance.h"
+
 #include <gio/gio.h>
-#include <glib/gstdio.h>
-#ifdef NUMCOSMO_HAVE_SQLITE3
-#include <sqlite3.h>
-#endif
+#ifdef NUMCOSMO_HAVE_FFTW3
+#include <fftw3.h>
+#endif /* NUMCOSMO_HAVE_FFTW3 */
 
 static gchar *numcosmo_path = NULL;
 static gboolean numcosmo_init = FALSE;

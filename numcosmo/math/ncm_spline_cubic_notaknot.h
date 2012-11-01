@@ -25,7 +25,9 @@
 #ifndef _NCM_SPLINE_CUBIC_NOTAKNOT_H_
 #define _NCM_SPLINE_CUBIC_NOTAKNOT_H_
 
+#include <glib.h>
 #include <glib-object.h>
+#include <numcosmo/math/ncm_spline_cubic.h>
 
 G_BEGIN_DECLS
 

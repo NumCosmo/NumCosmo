@@ -1,13 +1,13 @@
 /***************************************************************************
- *            ncm_lapack.c
+ *            ncm_gir_scan.h
  *
- *  Sun March 18 22:33:15 2012
+ *  Wed Oct 31 11:42:12 2012
  *  Copyright  2012  Sandro Dias Pinto Vitenti
  *  <sandro@isoftware.com.br>
  ****************************************************************************/
 /*
  * numcosmo
- * Copyright (C) Sandro Dias Pinto Vitenti 2012 <sandro@lapsandro>
+ * Copyright (C) Sandro Dias Pinto Vitenti 2012 <sandro@isoftware.com.br>
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
@@ -23,42 +23,60 @@
  */
 
 /**
- * SECTION:ncm_lapack
- * @title: Helper C functions to call lapack
- * @short_description: FIXME
+ * SECTION:ncm_gir_scan
+ * @title: Gir scanning compatibility.
+ * @short_description:  Gir scanning types stubs.
  *
- * FIXME
- */
-
-#ifdef HAVE_CONFIG_H
-#  include "config.h"
-#endif /* HAVE_CONFIG_H */
-#include "build_cfg.h"
-
-#include "math/ncm_lapack.h"
-
-/**
- * dptsv_: (skip)
- * @N: FIXME
- * @NRHS: FIXME
- * @d: FIXME
- * @e: FIXME
- * @b: FIXME
- * @ldb: FIXME
- * @info: FIXME
- *
- * FIXME
- *
+ * Stubs to avoid warnings from gir scanning 
+ * all functions/structs using these types
+ * must be skipped using (skip).
+ * 
+ * These types do not represent anything, do not
+ * use this documentation.
+ * 
  */
 
 /**
- * ncm_lapack_dptsv:
- * @d: FIXME
- * @e: FIXME
- * @b: FIXME
- * @size: FIXME
- *
- * FIXME
- *
- * Returns: FIXME
+ * mpq_ptr: (skip)
  */
+typedef int mpq_ptr;
+
+/**
+ * mpq_t: (skip)
+ */
+typedef int mpq_t;
+
+/**
+ * mp_rnd_t: (skip)
+ */
+typedef int mp_rnd_t;
+
+/**
+ * mpz_t: (skip)
+ */
+typedef int mpz_t;
+
+/**
+ * mpfr_ptr: (skip)
+ */
+typedef int mpfr_ptr;
+
+/**
+ * mpfr_t: (skip)
+ */
+typedef int mpfr_t;
+
+/**
+ * CVRhsFn: (skip)
+ */
+typedef int CVRhsFn;
+
+/**
+ * CVDlsDenseJacFn: (skip)
+ */
+typedef int CVDlsDenseJacFn;
+
+/**
+ * fftw_plan: (skip)
+ */
+typedef int fftw_plan;

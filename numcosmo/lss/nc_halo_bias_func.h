@@ -25,7 +25,11 @@
 #ifndef _NC_HALO_BIAS_FUNC_H_
 #define _NC_HALO_BIAS_FUNC_H_
 
+#include <glib.h>
 #include <glib-object.h>
+#include <numcosmo/lss/nc_halo_bias_type.h>
+#include <numcosmo/nc_hicosmo.h>
+#include <numcosmo/lss/nc_mass_function.h>
 
 G_BEGIN_DECLS
 

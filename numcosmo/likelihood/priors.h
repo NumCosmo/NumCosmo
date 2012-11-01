@@ -26,6 +26,9 @@
 #define _NC_PRIORS_H
 
 #include <glib.h>
+#include <glib-object.h>
+#include <numcosmo/nc_distance.h>
+#include <numcosmo/likelihood/likelihood.h>
 
 G_BEGIN_DECLS
 

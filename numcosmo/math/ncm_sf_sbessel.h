@@ -24,11 +24,11 @@
 
 #ifndef _NCM_SF_SBESSEL_H
 #define _NCM_SF_SBESSEL_H
-#include <string.h>
-#include <stdio.h>
-#include <gmp.h>
-#include <mpfr.h>
+
 #include <glib.h>
+#include <glib-object.h>
+#include <numcosmo/math/grid_one.h>
+#include <numcosmo/math/ncm_spline.h>
 
 G_BEGIN_DECLS
 

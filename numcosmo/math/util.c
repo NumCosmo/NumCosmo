@@ -33,28 +33,22 @@
 #ifdef HAVE_CONFIG_H
 #  include "config.h"
 #endif /* HAVE_CONFIG_H */
-#include <numcosmo/numcosmo.h>
+#include "build_cfg.h"
 
-#include <string.h>
-#include <glib.h>
-#include <glib/gstdio.h>
+#include "math/util.h"
+#include "math/memory_pool.h"
+
+#include <gsl/gsl_sf_legendre.h>
+#include <gsl/gsl_roots.h>
+#include <gsl/gsl_randist.h>
+#include <gsl/gsl_complex.h>
+#include <gsl/gsl_complex_math.h>
+#ifdef NUMCOSMO_HAVE_FFTW3
+#include <fftw3.h>
+#endif /* NUMCOSMO_HAVE_FFTW3 */
 #ifdef NUMCOSMO_HAVE_CFITSIO
 #include <fitsio.h>
 #endif /* NUMCOSMO_HAVE_CFITSIO */
-#ifdef NUMCOSMO_HAVE_CHEALPIX
-#include <chealpix.h>
-#endif /* NUMCOSMO_HAVE_CHEALPIX */
-#include <gsl/gsl_integration.h>
-#include <gsl/gsl_blas.h>
-#include <gsl/gsl_bspline.h>
-#include <gsl/gsl_complex.h>
-#include <gsl/gsl_complex_math.h>
-#include <gsl/gsl_roots.h>
-#include <gsl/gsl_sf_legendre.h>
-#include <gsl/gsl_sf_bessel.h>
-#include <gsl/gsl_sf_lambert.h>
-#include <gsl/gsl_sf_gamma.h>
-#include <gsl/gsl_sf_hyperg.h>
 
 /**
  * ncm_get_rng: (skip)

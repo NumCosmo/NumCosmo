@@ -25,7 +25,11 @@
 #ifndef _NCM_SPLINE2D_H_
 #define _NCM_SPLINE2D_H_
 
+#include <glib.h>
 #include <glib-object.h>
+#include <numcosmo/math/ncm_matrix.h>
+#include <numcosmo/math/ncm_spline_func.h>
+
 
 G_BEGIN_DECLS
 

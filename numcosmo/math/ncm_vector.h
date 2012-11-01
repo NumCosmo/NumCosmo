@@ -25,7 +25,11 @@
 #ifndef _NCM_VECTOR_H_
 #define _NCM_VECTOR_H_
 
+#include <string.h>
+#include <glib.h>
 #include <glib-object.h>
+#include <gsl/gsl_vector.h>
+#include <sundials/sundials_nvector.h>
 
 G_BEGIN_DECLS
 

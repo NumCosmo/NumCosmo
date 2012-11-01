@@ -25,7 +25,10 @@
 #ifndef _NC_HICOSMO_QSPLINE_H_
 #define _NC_HICOSMO_QSPLINE_H_
 
+#include <glib.h>
 #include <glib-object.h>
+#include <numcosmo/nc_hicosmo.h>
+#include <numcosmo/math/ncm_ode_spline.h>
 
 G_BEGIN_DECLS
 

@@ -25,7 +25,12 @@
 #ifndef _NCM_MODEL_H_
 #define _NCM_MODEL_H_
 
+#include <glib.h>
 #include <glib-object.h>
+#include <gsl/gsl_math.h>
+#include <numcosmo/math/ncm_sparam.h>
+#include <numcosmo/math/ncm_vparam.h>
+#include <numcosmo/math/ncm_reparam.h>
 
 G_BEGIN_DECLS
 
@@ -108,6 +113,8 @@ G_INLINE_FUNC gulong ncm_model_impl (NcmModel *model);
 G_INLINE_FUNC guint ncm_model_len (NcmModel *model);
 G_INLINE_FUNC guint ncm_model_sparam_len (NcmModel *model);
 G_INLINE_FUNC guint ncm_model_vparam_array_len (NcmModel *model);
+G_INLINE_FUNC guint ncm_model_vparam_index (NcmModel *model, guint n, guint i);
+G_INLINE_FUNC guint ncm_model_vparam_len (NcmModel *model, guint n);
 G_INLINE_FUNC const gchar *ncm_model_name (NcmModel *model);
 G_INLINE_FUNC const gchar *ncm_model_nick (NcmModel *model);
 G_INLINE_FUNC NcmReparam *ncm_model_peek_reparam (NcmModel *model);

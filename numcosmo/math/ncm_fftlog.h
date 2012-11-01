@@ -26,7 +26,14 @@
 #ifndef _NCM_FFTLOG_H_
 #define _NCM_FFTLOG_H_
 
+#include <glib.h>
 #include <glib-object.h>
+
+#ifndef NUMCOSMO_GIR_SCAN
+#ifdef NUMCOSMO_HAVE_FFTW3
+#include <fftw3.h>
+#endif /* NUMCOSMO_HAVE_FFTW3 */
+#endif
 
 G_BEGIN_DECLS
 

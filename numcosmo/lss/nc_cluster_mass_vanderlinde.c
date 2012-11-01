@@ -34,8 +34,14 @@
 #ifdef HAVE_CONFIG_H
 #  include "config.h"
 #endif /* HAVE_CONFIG_H */
-#include <numcosmo/numcosmo.h>
-#include <gsl/gsl_integration.h>
+#include "build_cfg.h"
+
+#include "lss/nc_cluster_mass_vanderlinde.h"
+#include "math/integral.h"
+#include "math/memory_pool.h"
+#include "math/util.h"
+
+#include <gsl/gsl_randist.h>
 
 G_DEFINE_TYPE (NcClusterMassVanderlinde, nc_cluster_mass_vanderlinde, NC_TYPE_CLUSTER_MASS);
 

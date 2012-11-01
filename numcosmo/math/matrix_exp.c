@@ -33,10 +33,12 @@
 #ifdef HAVE_CONFIG_H
 #  include "config.h"
 #endif /* HAVE_CONFIG_H */
-#include <numcosmo/numcosmo.h>
+#include "build_cfg.h"
 
-#include <string.h>
-#include <glib.h>
+#include "math/matrix_exp.h"
+
+#include <math.h>
+#include <gsl/gsl_math.h>
 
 /**
  * ncm_matrix_exp_2x2: (skip)

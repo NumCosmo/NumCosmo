@@ -36,13 +36,10 @@
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif /* HAVE_CONFIG_H */
-#include <numcosmo/numcosmo.h>
+#include "build_cfg.h"
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <math.h>
-#include <gsl/gsl_integration.h>
-#include <gsl/gsl_sf_bessel.h>
+#include "lss/nc_window.h"
+#include "math/ncm_cfg.h"
 
 G_DEFINE_ABSTRACT_TYPE (NcWindow, nc_window, G_TYPE_OBJECT);
 

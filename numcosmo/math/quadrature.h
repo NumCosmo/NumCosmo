@@ -26,8 +26,13 @@
 #define _NC_QUADRATURE_H
 
 #include <glib.h>
+#include <glib-object.h>
+
 #include <gsl/gsl_permutation.h>
+#include <gsl/gsl_math.h>
 #include <gsl/gsl_sum.h>
+#include <gsl/gsl_vector.h>
+#include <gsl/gsl_matrix.h>
 
 G_BEGIN_DECLS
 

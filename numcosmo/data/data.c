@@ -33,24 +33,9 @@
 #ifdef HAVE_CONFIG_H
 #  include "config.h"
 #endif /* HAVE_CONFIG_H */
-#include <numcosmo/numcosmo.h>
+#include "build_cfg.h"
 
-#include <glib.h>
-#include <gsl/gsl_statistics.h>
-#include <gsl/gsl_blas.h>
-#include <gsl/gsl_sys.h>
-#include <gsl/gsl_rng.h>
-#include <gsl/gsl_randist.h>
-#include <gsl/gsl_bspline.h>
-#include <gsl/gsl_multifit.h>
-#include <gsl/gsl_combination.h>
-#include <gsl/gsl_sf_gamma.h>
-#include <gsl/gsl_sf_log.h>
-#include <gsl/gsl_sf_exp.h>
-#include <gsl/gsl_eigen.h>
-#include <math.h>
-#include <string.h>
-#include <gmp.h>
+#include "data/data.h"
 
 G_DEFINE_BOXED_TYPE (NcData, nc_data, nc_data_copy, nc_data_free);
 G_DEFINE_BOXED_TYPE (NcDataStruct, nc_data_struct, nc_data_struct_copy, nc_data_struct_free);

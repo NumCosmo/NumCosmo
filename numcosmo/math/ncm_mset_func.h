@@ -26,7 +26,9 @@
 #ifndef _NCM_MSET_FUNC_H_
 #define _NCM_MSET_FUNC_H_
 
+#include <glib.h>
 #include <glib-object.h>
+#include <numcosmo/math/ncm_mset.h>
 
 G_BEGIN_DECLS
 

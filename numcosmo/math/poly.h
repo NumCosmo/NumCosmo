@@ -26,6 +26,9 @@
 #define _NC_POLY_H
 
 #include <glib.h>
+#include <glib-object.h>
+
+#include <gsl/gsl_vector.h>
 
 G_BEGIN_DECLS
 

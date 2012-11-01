@@ -33,16 +33,11 @@
 #ifdef HAVE_CONFIG_H
 #  include "config.h"
 #endif /* HAVE_CONFIG_H */
-#include <numcosmo/numcosmo.h>
+#include "build_cfg.h"
 
 #ifdef NUMCOSMO_HAVE_NLOPT
 
-#include <string.h>
-#include <glib.h>
-#include <math.h>
-#include <nlopt.h>
-#include <gsl/gsl_blas.h>
-#include <gsl/gsl_statistics_double.h>
+#include "likelihood/nc_nlopt.h"
 
 typedef gdouble (*_NcmFitNLOptOldFunc) (gint n, const gdouble *x, gdouble *grad, gpointer userdata);
 static gdouble _ncm_fit_nlopt_func (guint n, const gdouble *x, gdouble *grad, gpointer userdata);

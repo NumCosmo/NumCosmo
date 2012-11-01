@@ -36,13 +36,11 @@
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif /* HAVE_CONFIG_H */
-#include <numcosmo/numcosmo.h>
+#include "build_cfg.h"
 
-#include <stdio.h>
-#include <stdlib.h>
+#include "lss/nc_window_gaussian.h"
 #include <math.h>
-#include <gsl/gsl_integration.h>
-#include <gsl/gsl_sf_bessel.h>
+#include <gsl/gsl_math.h>
 
 G_DEFINE_TYPE (NcWindowGaussian, nc_window_gaussian, NC_TYPE_WINDOW);
 

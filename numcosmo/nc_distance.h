@@ -25,7 +25,12 @@
 #ifndef _NC_DISTANCE_H_
 #define _NC_DISTANCE_H_
 
+#include <glib.h>
 #include <glib-object.h>
+#include <numcosmo/nc_hicosmo.h>
+#include <numcosmo/math/ncm_ode_spline.h>
+#include <numcosmo/math/ncm_model_ctrl.h>
+#include <numcosmo/math/function_cache.h>
 
 G_BEGIN_DECLS
 

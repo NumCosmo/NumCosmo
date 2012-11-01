@@ -33,12 +33,11 @@
 #ifdef HAVE_CONFIG_H
 #  include "config.h"
 #endif /* HAVE_CONFIG_H */
-#include <numcosmo/numcosmo.h>
+#include "build_cfg.h"
 
-#include <stdio.h>
-#include <glib.h>
-#include <gmp.h>
-#include <mpfr.h>
+#include "math/grid_one.h"
+#include "math/util.h"
+#include "math/ncm_cfg.h"
 
 /**
  * ncm_grid_new: (skip)

@@ -24,11 +24,15 @@
 
 #ifndef _NCM_MPSF_SBESSEL_H
 #define _NCM_MPSF_SBESSEL_H
-#include <string.h>
+
+#include <glib.h>
+#include <glib-object.h>
+
 #include <stdio.h>
+#ifndef NUMCOSMO_GIR_SCAN
 #include <gmp.h>
 #include <mpfr.h>
-#include <glib.h>
+#endif
 
 G_BEGIN_DECLS
 

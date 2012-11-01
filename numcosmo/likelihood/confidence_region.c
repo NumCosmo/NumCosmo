@@ -33,15 +33,16 @@
 #ifdef HAVE_CONFIG_H
 #  include "config.h"
 #endif /* HAVE_CONFIG_H */
-#include <numcosmo/numcosmo.h>
+#include "build_cfg.h"
 
-#include <glib.h>
-#include <gsl/gsl_roots.h>
-#include <gsl/gsl_cdf.h>
-#include <gsl/gsl_rng.h>
+#include "likelihood/confidence_region.h"
+#include "likelihood/priors.h"
+#include "math/util.h"
+
 #include <gsl/gsl_eigen.h>
+#include <gsl/gsl_cdf.h>
+#include <gsl/gsl_roots.h>
 #include <gsl/gsl_blas.h>
-#include <gsl/gsl_deriv.h>
 
 static gboolean ncm_fit_cr_step (NcConfidenceRegion *cr, gdouble x);
 static gdouble nc_confidence_region_f (gdouble x, gpointer p);

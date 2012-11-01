@@ -26,6 +26,10 @@
 #define _NC_HEALPIX_H
 
 #include <glib.h>
+#include <glib-object.h>
+
+#include <numcosmo/math/quaternion.h>
+#include <numcosmo/sphere/map.h>
 
 G_BEGIN_DECLS
 

@@ -33,15 +33,11 @@
 #ifdef HAVE_CONFIG_H
 #  include "config.h"
 #endif /* HAVE_CONFIG_H */
-#include <numcosmo/numcosmo.h>
+#include "build_cfg.h"
 
-#include <string.h>
-#include <glib.h>
-#include <gsl/gsl_multimin.h>
-#include <gsl/gsl_multifit_nlin.h>
+#include "likelihood/multimin.h"
+
 #include <gsl/gsl_blas.h>
-#include <gsl/gsl_statistics_double.h>
-
 
 /***************************************************************************
  * Calculate the best fit

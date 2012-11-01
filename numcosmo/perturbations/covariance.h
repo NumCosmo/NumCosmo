@@ -26,6 +26,9 @@
 #define _NC_COVARIANCE_H
 
 #include <glib.h>
+#include <glib-object.h>
+
+#include <numcosmo/perturbations/linear.h>
 
 G_BEGIN_DECLS
 

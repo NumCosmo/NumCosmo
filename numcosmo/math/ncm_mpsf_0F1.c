@@ -33,15 +33,12 @@
 #ifdef HAVE_CONFIG_H
 #  include "config.h"
 #endif /* HAVE_CONFIG_H */
-#include <numcosmo/numcosmo.h>
+#include "build_cfg.h"
 
-
-#include <string.h>
-#include <stdio.h>
-#include <glib.h>
-#include <gmp.h>
-#include <mpfr.h>
-
+#include "math/ncm_mpsf_0F1.h"
+#include "math/binsplit.h"
+#include "math/memory_pool.h"
+#include "math/util.h"
 
 typedef struct __binsplit_0F1
 {

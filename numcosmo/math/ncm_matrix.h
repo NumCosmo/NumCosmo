@@ -8,11 +8,11 @@
 /*
  * numcosmo
  * Copyright (C) Sandro Dias Pinto Vitenti 2012 <sandro@isoftware.com.br>
-   * numcosmo is free software: you can redistribute it and/or modify it
+ * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
-   *
+ *
  * numcosmo is distributed in the hope that it will be useful, but
  * WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
@@ -25,7 +25,11 @@
 #ifndef _NCM_MATRIX_H_
 #define _NCM_MATRIX_H_
 
+#include <glib.h>
 #include <glib-object.h>
+#include <gsl/gsl_matrix.h>
+#include <numcosmo/nc_macros.h>
+#include <numcosmo/math/ncm_vector.h>
 
 G_BEGIN_DECLS
 
@@ -107,6 +111,7 @@ G_INLINE_FUNC const NcmMatrix *ncm_matrix_new_gsl_const (gsl_matrix *m);
 G_INLINE_FUNC gdouble ncm_matrix_get (const NcmMatrix *cm, const guint i, const guint j);
 G_INLINE_FUNC gdouble *ncm_matrix_ptr (NcmMatrix *cm, const guint i, const guint j);
 G_INLINE_FUNC NcmMatrix *ncm_matrix_ref (NcmMatrix *cm);
+G_INLINE_FUNC GArray *ncm_matrix_get_array (NcmMatrix *cm);
 G_INLINE_FUNC void ncm_matrix_set (NcmMatrix *cm, const guint i, const guint j, const gdouble val);
 G_INLINE_FUNC void ncm_matrix_transpose (NcmMatrix *cm);
 G_INLINE_FUNC void ncm_matrix_set_identity (NcmMatrix *cm);

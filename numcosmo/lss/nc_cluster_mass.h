@@ -27,7 +27,10 @@
 #ifndef _NC_CLUSTER_MASS_H_
 #define _NC_CLUSTER_MASS_H_
 
+#include <glib.h>
 #include <glib-object.h>
+#include <numcosmo/math/ncm_model.h>
+#include <numcosmo/nc_hicosmo.h>
 
 G_BEGIN_DECLS
 

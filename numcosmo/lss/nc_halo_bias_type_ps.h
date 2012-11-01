@@ -26,7 +26,9 @@
 #ifndef _NC_HALO_BIAS_TYPE_PS_H_
 #define _NC_HALO_BIAS_TYPE_PS_H_
 
+#include <glib.h>
 #include <glib-object.h>
+#include <numcosmo/lss/nc_halo_bias_type.h>
 
 G_BEGIN_DECLS
 

@@ -26,7 +26,9 @@
 #ifndef _NC_WINDOW_GAUSSIAN_H_
 #define _NC_WINDOW_GAUSSIAN_H_
 
+#include <glib.h>
 #include <glib-object.h>
+#include <numcosmo/lss/nc_window.h>
 
 G_BEGIN_DECLS
 

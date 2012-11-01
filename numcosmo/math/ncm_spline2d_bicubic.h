@@ -25,7 +25,10 @@
 #ifndef _NCM_SPLINE2D_BICUBIC_H_
 #define _NCM_SPLINE2D_BICUBIC_H_
 
+#include <glib.h>
 #include <glib-object.h>
+#include <numcosmo/math/ncm_spline2d.h>
+#include <numcosmo/math/ncm_spline_cubic.h>
 
 G_BEGIN_DECLS
 

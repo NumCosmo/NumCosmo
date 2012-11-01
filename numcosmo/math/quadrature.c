@@ -33,18 +33,17 @@
 #ifdef HAVE_CONFIG_H
 #  include "config.h"
 #endif /* HAVE_CONFIG_H */
-#include <numcosmo/numcosmo.h>
+#include "build_cfg.h"
+
+#include "math/quadrature.h"
+#include "nc_macros.h"
 
 #include <string.h>
-#include <glib.h>
-#include <gsl/gsl_math.h>
-#include <gsl/gsl_poly.h>
-#include <gsl/gsl_spline.h>
+#include <gsl/gsl_sf_bessel.h>
+#include <gsl/gsl_sf_legendre.h>
 #include <gsl/gsl_linalg.h>
 #include <gsl/gsl_complex.h>
 #include <gsl/gsl_complex_math.h>
-#include <gsl/gsl_sf_legendre.h>
-#include <gsl/gsl_sf_bessel.h>
 
 #define LOCAL_MAX_ORDER 100
 

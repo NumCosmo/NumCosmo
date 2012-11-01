@@ -33,16 +33,11 @@
 #ifdef HAVE_CONFIG_H
 #  include "config.h"
 #endif /* HAVE_CONFIG_H */
-#include <numcosmo/numcosmo.h>
+#include "build_cfg.h"
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <math.h>
-#include <glib.h>
-#include <gsl/gsl_integration.h>
-#include <gsl/gsl_const_mksa.h>
-#include <gsl/gsl_histogram2d.h>
-#include <glib/gstdio.h>
+#include "lss/print_data.h"
+#include "lss/nc_cluster_abundance.h"
+#include "lss/nc_data_cluster_abundance.h"
 
 /**
  * nc_mass_funtion_print:

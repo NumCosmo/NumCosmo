@@ -25,7 +25,10 @@
 #ifndef _NC_HICOSMO_QPW_H_
 #define _NC_HICOSMO_QPW_H_
 
+#include <glib.h>
 #include <glib-object.h>
+#include <numcosmo/likelihood/likelihood.h>
+#include <numcosmo/nc_hicosmo.h>
 
 G_BEGIN_DECLS
 

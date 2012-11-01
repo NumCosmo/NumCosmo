@@ -26,7 +26,8 @@
 #define _NC_MAGNUS_ISERLES_ODE_H
 
 #include <glib.h>
-#include <gsl/gsl_matrix.h>
+#include <glib-object.h>
+#include <gsl/gsl_matrix_long_double.h>
 
 G_BEGIN_DECLS
 

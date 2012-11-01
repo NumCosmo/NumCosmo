@@ -26,7 +26,9 @@
 #ifndef _NC_MULTIPLICITY_FUNC_H_
 #define _NC_MULTIPLICITY_FUNC_H_
 
+#include <glib.h>
 #include <glib-object.h>
+#include <numcosmo/nc_hicosmo.h>
 
 G_BEGIN_DECLS
 

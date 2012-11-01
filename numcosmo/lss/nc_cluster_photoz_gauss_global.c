@@ -33,9 +33,13 @@
 #ifdef HAVE_CONFIG_H
 #  include "config.h"
 #endif /* HAVE_CONFIG_H */
-#include <numcosmo/numcosmo.h>
+#include "build_cfg.h"
 
-#include <glib.h>
+#include "lss/nc_cluster_photoz_gauss_global.h"
+#include "math/util.h"
+
+#include <math.h>
+#include <gsl/gsl_randist.h>
 
 G_DEFINE_TYPE (NcClusterPhotozGaussGlobal, nc_cluster_photoz_gauss_global, NC_TYPE_CLUSTER_REDSHIFT);
 

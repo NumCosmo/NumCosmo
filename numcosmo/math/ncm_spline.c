@@ -34,12 +34,9 @@
 #ifdef HAVE_CONFIG_H
 #  include "config.h"
 #endif /* HAVE_CONFIG_H */
-#include <numcosmo/numcosmo.h>
+#include "build_cfg.h"
 
-#include <glib.h>
-#include <gsl/gsl_poly.h>
-#include <gsl/gsl_sf.h>
-#include <gsl/gsl_linalg.h>
+#include "math/ncm_spline.h"
 
 G_DEFINE_ABSTRACT_TYPE (NcmSpline, ncm_spline, G_TYPE_OBJECT);
 
@@ -375,14 +372,6 @@ ncm_spline_get_yv (NcmSpline *s)
  *
  * Returns: The index of the lower knot of the interval @x belongs to.
  */
-#ifndef NUMCOSMO_HAVE_INLINE
-#define NUMCOSMO_HAVE_INLINE
-#undef _NCM_SPLINE_INLINE_H_
-#define G_INLINE_FUNC
-#include "ncm_spline.h"
-#undef _NCM_SPLINE_INLINE_H_
-#undef NUMCOSMO_HAVE_INLINE
-#endif /* NUMCOSMO_HAVE_INLINE */
 
 /**
  * ncm_spline_free:

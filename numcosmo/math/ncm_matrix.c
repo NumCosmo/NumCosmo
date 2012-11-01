@@ -34,10 +34,11 @@
 #ifdef HAVE_CONFIG_H
 #  include "config.h"
 #endif /* HAVE_CONFIG_H */
-#include <numcosmo/numcosmo.h>
+#include "build_cfg.h"
+
+#include "math/ncm_matrix.h"
 
 G_DEFINE_TYPE (NcmMatrix, ncm_matrix, G_TYPE_INITIALLY_UNOWNED);
-
 
 /**
  * ncm_matrix_new:
@@ -446,15 +447,6 @@ ncm_matrix_copy (const NcmMatrix *cm)
  *
  * Returns: (transfer container) (element-type double): FIXME
  */
-#ifndef NUMCOSMO_HAVE_INLINE
-#define NUMCOSMO_HAVE_INLINE
-#undef _NCM_MATRIX_INLINE_H_
-#define G_INLINE_FUNC
-#include "ncm_matrix.h"
-#undef _NCM_MATRIX_INLINE_H_
-#undef NUMCOSMO_HAVE_INLINE
-#endif /* NUMCOSMO_HAVE_INLINE */
-
 
 static void
 ncm_matrix_init (NcmMatrix *m)

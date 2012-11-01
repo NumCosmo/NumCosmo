@@ -33,7 +33,10 @@
 #ifdef HAVE_CONFIG_H
 #  include "config.h"
 #endif /* HAVE_CONFIG_H */
-#include <numcosmo/numcosmo.h>
+#include "build_cfg.h"
+
+#include "model/nc_hicosmo_de_qe.h"
+#include "model/nc_hicosmo_de_linder.h"
 
 G_DEFINE_TYPE (NcHICosmoDEQe, nc_hicosmo_de_qe, NC_TYPE_HICOSMO_DE);
 

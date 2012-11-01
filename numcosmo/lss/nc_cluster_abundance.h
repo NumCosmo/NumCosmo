@@ -25,11 +25,15 @@
 #ifndef _NC_CLUSTER_ABUNDANCE_H_
 #define _NC_CLUSTER_ABUNDANCE_H_
 
-#include <glib-object.h>
 #include <glib.h>
-#include <gsl/gsl_rng.h>
-#include <gsl/gsl_histogram.h>
+#include <glib-object.h>
+#include <numcosmo/nc_hicosmo.h>
+#include <numcosmo/lss/nc_mass_function.h>
+#include <numcosmo/lss/nc_halo_bias_func.h>
+#include <numcosmo/lss/nc_cluster_redshift.h>
+#include <numcosmo/lss/nc_cluster_mass.h>
 #include <gsl/gsl_histogram2d.h>
+#include <gsl/gsl_rng.h>
 
 G_BEGIN_DECLS
 
@@ -148,6 +152,7 @@ G_END_DECLS
 
 #ifndef _NC_CLUSTER_ABUNDANCE_INLINE_H_
 #define _NC_CLUSTER_ABUNDANCE_INLINE_H_
+#ifdef NUMCOSMO_HAVE_INLINE
 
 #include <glib-object.h>
 #include <glib.h>
@@ -168,6 +173,7 @@ nc_cluster_abundance_peek_mass (NcClusterAbundance *cad)
 
 G_END_DECLS
 
+#endif /* NUMCOSMO_HAVE_INLINE */
 #endif /* _NC_CLUSTER_ABUNDANCE_INLINE_H_ */
 
 

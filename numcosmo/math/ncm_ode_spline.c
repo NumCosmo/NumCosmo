@@ -33,11 +33,15 @@
 #ifdef HAVE_CONFIG_H
 #  include "config.h"
 #endif /* HAVE_CONFIG_H */
-#include <numcosmo/numcosmo.h>
+#include "build_cfg.h"
 
-#include <glib.h>
-#include <gsl/gsl_poly.h>
-#include <gsl/gsl_sf.h>
+#include "math/ncm_ode_spline.h"
+#include "math/integral.h"
+
+#include <cvode/cvode.h>
+#include <cvode/cvode_dense.h>
+#include <cvode/cvode_band.h>
+#include <nvector/nvector_serial.h> 
 #include <gsl/gsl_linalg.h>
 
 typedef struct _NcmOdeSplineDydxData NcmOdeSplineDydxData;

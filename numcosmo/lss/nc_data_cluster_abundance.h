@@ -25,6 +25,14 @@
 #ifndef _NC_DATA_NCUSTER_ABUNDANCE_H
 #define _NC_DATA_NCUSTER_ABUNDANCE_H
 
+#include <glib.h>
+#include <glib-object.h>
+#include <numcosmo/lss/nc_cluster_redshift.h>
+#include <numcosmo/lss/nc_cluster_mass.h>
+#include <numcosmo/lss/nc_cluster_abundance.h>
+#include <numcosmo/data/data.h>
+#include <numcosmo/math/ncm_vector.h>
+#include <numcosmo/math/ncm_matrix.h>
 #include <gsl/gsl_histogram2d.h>
 
 G_BEGIN_DECLS

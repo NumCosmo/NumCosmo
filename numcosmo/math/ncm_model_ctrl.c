@@ -33,7 +33,9 @@
 #ifdef HAVE_CONFIG_H
 #  include "config.h"
 #endif /* HAVE_CONFIG_H */
-#include <numcosmo/numcosmo.h>
+#include "build_cfg.h"
+
+#include "math/ncm_model_ctrl.h"
 
 enum
 {
@@ -106,14 +108,6 @@ ncm_model_ctrl_copy (NcmModelCtrl *ctrl)
  *
  * Returns: FIXME
  */
-#ifndef NUMCOSMO_HAVE_INLINE
-#define NUMCOSMO_HAVE_INLINE
-#undef _NCM_MODEL_CTRL_INLINE_H_
-#define G_INLINE_FUNC
-#include "ncm_model_ctrl.h"
-#undef _NCM_MODEL_CTRL_INLINE_H_
-#undef NUMCOSMO_HAVE_INLINE
-#endif /* NUMCOSMO_HAVE_INLINE */
 
 /**
  * ncm_model_ctrl_get_model:

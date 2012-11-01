@@ -26,9 +26,13 @@
 #define _NC_SCALEFACTOR_H
 
 #include <glib.h>
-#include <gsl/gsl_spline.h>
-#include <cvode/cvode.h>             /* prototypes for CVODE fcts. and consts. */
-#include <cvode/cvode_dense.h>       /* prototype for CVDense */
+#include <glib-object.h>
+#include <numcosmo/nc_distance.h>
+
+#ifndef NUMCOSMO_GIR_SCAN
+#include <cvode/cvode.h>
+#include <cvode/cvode_dense.h>
+#endif
 
 G_BEGIN_DECLS
 
@@ -57,11 +61,11 @@ typedef struct _NcScaleFactor NcScaleFactor;
 struct _NcScaleFactor
 {
   /*< private >*/
-	NcDistance *dist;
+  NcDistance *dist;
   NcScaleFactorTimeType ttype;
-	NcmModelCtrl *ctrl;
-	NcmSpline *a_t;
-	NcmSpline *t_a;
+  NcmModelCtrl *ctrl;
+  NcmSpline *a_t;
+  NcmSpline *t_a;
   gdouble a0;
   gdouble zf;
   gdouble ti;

@@ -33,15 +33,13 @@
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif /* HAVE_CONFIG_H */
-#include <numcosmo/numcosmo.h>
+#include "build_cfg.h"
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <math.h>
-#include <glib.h>
+#include "lss/nc_mass_function.h"
+#include "math/integral.h"
+#include "math/ncm_spline2d_bicubic.h"
+
 #include <gsl/gsl_integration.h>
-#include <gsl/gsl_const_mksa.h>
-#include <glib.h>
 
 enum
 {
@@ -711,12 +709,4 @@ _nc_mass_function_generate_2Dspline_knots (NcMassFunction *mfp, NcHICosmo *model
  *
  * Returns: FIXME
  */
-#ifndef NUMCOSMO_HAVE_INLINE
-#define NUMCOSMO_HAVE_INLINE
-#undef _NC_MASS_FUNCTION_INLINE_H_
-#define G_INLINE_FUNC
-#include "nc_mass_function.h"
-#undef _NC_MASS_FUNCTION_INLINE_H_
-#undef NUMCOSMO_HAVE_INLINE
-#endif /* NUMCOSMO_HAVE_INLINE */
 

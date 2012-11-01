@@ -34,7 +34,10 @@
 #ifdef HAVE_CONFIG_H
 #  include "config.h"
 #endif /* HAVE_CONFIG_H */
-#include <numcosmo/numcosmo.h>
+#include "build_cfg.h"
+
+#include "lss/nc_cluster_redshift_nodist.h"
+#include <gsl/gsl_math.h>
 
 G_DEFINE_TYPE (NcClusterRedshiftNodist, nc_cluster_redshift_nodist, NC_TYPE_CLUSTER_REDSHIFT);
 

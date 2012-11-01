@@ -33,11 +33,9 @@
 #ifdef HAVE_CONFIG_H
 #  include "config.h"
 #endif /* HAVE_CONFIG_H */
-#include <numcosmo/numcosmo.h>
+#include "build_cfg.h"
 
-#include <glib.h>
-#include <gsl/gsl_vector.h>
-#include <sundials/sundials_nvector.h>
+#include "math/ncm_vector.h"
 
 G_DEFINE_TYPE (NcmVector, ncm_vector, G_TYPE_INITIALLY_UNOWNED);
 
@@ -251,7 +249,7 @@ ncm_vector_get_subvector (NcmVector *cv, gsize k, gsize size)
 /**
  * ncm_vector_new_gsl_const: (skip)
  * @v: vector from GNU Scientific Library (GSL).
-   *
+ *
  * This function converts @v into a constant #NcmVector.
  *
  * Returns: A new constant #NcmVector.
@@ -409,15 +407,6 @@ ncm_vector_get_subvector (NcmVector *cv, gsize k, gsize size)
  *
  * Returns: FIXME
  */
-
-#ifndef NUMCOSMO_HAVE_INLINE
-#define NUMCOSMO_HAVE_INLINE
-#undef _NCM_VECTOR_INLINE_H_
-#define G_INLINE_FUNC
-#include "ncm_vector.h"
-#undef _NCM_VECTOR_INLINE_H_
-#undef NUMCOSMO_HAVE_INLINE
-#endif /* NUMCOSMO_HAVE_INLINE */
 
 static void
 _ncm_vector_dispose (GObject *object)

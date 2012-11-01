@@ -25,7 +25,13 @@
 #ifndef _NCM_REPARAM_LINEAR_H_
 #define _NCM_REPARAM_LINEAR_H_
 
+#include <glib.h>
 #include <glib-object.h>
+#include <numcosmo/math/ncm_reparam.h>
+#include <numcosmo/math/ncm_model.h>
+
+#include <gsl/gsl_linalg.h>
+#include <gsl/gsl_blas.h>
 
 G_BEGIN_DECLS
 

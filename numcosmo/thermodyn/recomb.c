@@ -36,21 +36,19 @@
 #ifdef HAVE_CONFIG_H
 #  include "config.h"
 #endif /* HAVE_CONFIG_H */
-#include <numcosmo/numcosmo.h>
+#include "build_cfg.h"
 
-#include <glib.h>
+#include "thermodyn/recomb.h"
+#include "math/integral.h"
+#include "math/cvode_util.h"
+#include "math/util.h"
+#include "perturbations/linear.h"
+
 #include <gsl/gsl_sf_exp.h>
-#include <gsl/gsl_odeiv.h>
-#include <gsl/gsl_chebyshev.h>
-#include <gsl/gsl_spline.h>
 #include <gsl/gsl_sf_lambert.h>
+#include <gsl/gsl_min.h>
 #include <gsl/gsl_roots.h>
-
-#include <cvode/cvode.h>             /* prototypes for CVODE fcts. and consts. */
-#include <nvector/nvector_serial.h>  /* serial N_Vector types, fcts., and macros */
-#include <cvode/cvode_dense.h>       /* prototype for CVDense */
-#include <sundials/sundials_dense.h> /* definitions DenseMat DENSE_ELEM */
-#include <sundials/sundials_types.h> /* definition of type realtype */
+#include <nvector/nvector_serial.h>
 
 #define X_TODAY 1.0
 

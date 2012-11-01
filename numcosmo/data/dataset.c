@@ -33,9 +33,9 @@
 #ifdef HAVE_CONFIG_H
 #  include "config.h"
 #endif /* HAVE_CONFIG_H */
-#include <numcosmo/numcosmo.h>
+#include "build_cfg.h"
 
-#include <glib.h>
+#include "data/dataset.h"
 
 G_DEFINE_BOXED_TYPE (NcDataSet, nc_dataset, nc_dataset_copy, nc_dataset_free);
 

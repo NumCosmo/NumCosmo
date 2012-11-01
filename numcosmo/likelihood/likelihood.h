@@ -26,6 +26,9 @@
 #define _NC_LIKELIHOOD_H
 
 #include <glib.h>
+#include <glib-object.h>
+#include <numcosmo/data/dataset.h>
+#include <numcosmo/math/ncm_mset_func.h>
 
 G_BEGIN_DECLS
 

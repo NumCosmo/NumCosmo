@@ -25,6 +25,9 @@
 #ifndef _NC_MEMORY_POOL_H
 #define _NC_MEMORY_POOL_H
 
+#include <glib.h>
+#include <glib-object.h>
+
 G_BEGIN_DECLS
 
 typedef gpointer (*NcmMemoryPoolAlloc) (void);

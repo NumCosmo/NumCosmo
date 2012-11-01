@@ -25,7 +25,9 @@
 #ifndef _NC_HICOSMO_QCONST_H_
 #define _NC_HICOSMO_QCONST_H_
 
+#include <glib.h>
 #include <glib-object.h>
+#include <numcosmo/nc_hicosmo.h>
 
 G_BEGIN_DECLS
 

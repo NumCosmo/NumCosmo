@@ -26,6 +26,9 @@
 #define _NC_DATA_GAUSSIAN_H
 
 #include <glib.h>
+#include <glib-object.h>
+#include <numcosmo/math/ncm_mset_func.h>
+#include <numcosmo/data/data.h>
 #include <gsl/gsl_eigen.h>
 
 #ifdef NUMCOSMO_HAVE_SQLITE3

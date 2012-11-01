@@ -17,36 +17,37 @@ SUBDIRS =
 lib_LTLIBRARIES = libnumcosmo.la
 
 ncm_sources = \
-	math/ncm_cfg.c                   \
-	math/ncm_lapack.c                \
-	math/ncm_vector.c                \
-	math/ncm_matrix.c                \
-	math/ncm_spline.c                \
-	math/ncm_spline_gsl.c            \
-	math/ncm_spline_cubic.c          \
-	math/ncm_spline_cubic_notaknot.c \
-	math/ncm_spline_func.c           \
-	math/ncm_spline2d.c              \
-	math/ncm_spline2d_spline.c       \
-	math/ncm_spline2d_gsl.c          \
-	math/ncm_spline2d_bicubic.c      \
-	math/ncm_func_eval.c             \
-	math/ncm_mpsf_trig_int.c         \
-	math/ncm_mpsf_sbessel.c          \
-	math/ncm_sf_sbessel.c            \
-	math/ncm_sf_sbessel_int.c        \
-	math/ncm_mpsf_sbessel_int.c      \
-	math/ncm_mpsf_0F1.c              \
-	math/ncm_fftlog.c                \
-	math/ncm_sparam.c                \
-	math/ncm_vparam.c                \
-	math/ncm_model.c                 \
-	math/ncm_model_ctrl.c            \
-	math/ncm_mset.c                  \
-	math/ncm_mset_func.c             \
-	math/ncm_ode_spline.c            \
-	math/ncm_reparam.c               \
-	math/ncm_reparam_linear.c        \
+	ncm_build_inline.c                 \
+	math/ncm_cfg.c                     \
+	math/ncm_lapack.c                  \
+	math/ncm_vector.c                  \
+	math/ncm_matrix.c                  \
+	math/ncm_spline.c                  \
+	math/ncm_spline_gsl.c              \
+	math/ncm_spline_cubic.c            \
+	math/ncm_spline_cubic_notaknot.c   \
+	math/ncm_spline_func.c             \
+	math/ncm_spline2d.c                \
+	math/ncm_spline2d_spline.c         \
+	math/ncm_spline2d_gsl.c            \
+	math/ncm_spline2d_bicubic.c        \
+	math/ncm_func_eval.c               \
+	math/ncm_mpsf_trig_int.c           \
+	math/ncm_mpsf_sbessel.c            \
+	math/ncm_sf_sbessel.c              \
+	math/ncm_sf_sbessel_int.c          \
+	math/ncm_mpsf_sbessel_int.c        \
+	math/ncm_mpsf_0F1.c                \
+	math/ncm_fftlog.c                  \
+	math/ncm_sparam.c                  \
+	math/ncm_vparam.c                  \
+	math/ncm_model.c                   \
+	math/ncm_model_ctrl.c              \
+	math/ncm_mset.c                    \
+	math/ncm_mset_func.c               \
+	math/ncm_ode_spline.c              \
+	math/ncm_reparam.c                 \
+	math/ncm_reparam_linear.c          \
 	math/ncm_fit.c
 
 ncm_headers = \
@@ -143,8 +144,8 @@ nc_headers = \
 	data/nc_data_cmb.h
 
 nc_sources = \
-	nc_hicosmo.c  \
-	nc_distance.c \
+	nc_hicosmo.c                 \
+	nc_distance.c                \
 	model/nc_hicosmo_de.c        \
 	model/nc_hicosmo_de_linder.c \
 	model/nc_hicosmo_de_pad.c    \
@@ -167,32 +168,32 @@ nc_sources = \
 	lss/nc_matter_var.c          \
 	lss/nc_galaxy_acf.c          \
 	lss/nc_multiplicity_func.c   \
-	lss/nc_multiplicity_func_ps.c \
-	lss/nc_multiplicity_func_st.c \
-	lss/nc_multiplicity_func_jenkins.c \
-	lss/nc_multiplicity_func_warren.c \
-	lss/nc_multiplicity_func_tinker.c \
+	lss/nc_multiplicity_func_ps.c          \
+	lss/nc_multiplicity_func_st.c          \
+	lss/nc_multiplicity_func_jenkins.c     \
+	lss/nc_multiplicity_func_warren.c      \
+	lss/nc_multiplicity_func_tinker.c      \
 	lss/nc_multiplicity_func_tinker_mean.c \
 	lss/nc_multiplicity_func_tinker_crit.c \
-	lss/nc_mass_function.c           \
-	lss/nc_halo_bias_type.c          \
-	lss/nc_halo_bias_type_ps.c       \
-	lss/nc_halo_bias_type_st_spher.c \
-	lss/nc_halo_bias_type_st_ellip.c \
-	lss/nc_halo_bias_type_tinker.c   \
-	lss/nc_halo_bias_func.c          \
-	lss/nc_cluster_redshift.c            \
-	lss/nc_cluster_redshift_nodist.c     \
-	lss/nc_cluster_photoz_gauss.c        \
-	lss/nc_cluster_photoz_gauss_global.c \
-	lss/nc_cluster_mass.c                \
-	lss/nc_cluster_mass_nodist.c         \
-	lss/nc_cluster_mass_lnnormal.c       \
-	lss/nc_cluster_mass_vanderlinde.c    \
-	lss/nc_cluster_mass_benson.c         \
-	lss/nc_cluster_mass_benson_xray.c    \
-	lss/nc_cluster_abundance.c      \
-	lss/nc_data_cluster_abundance.c \
+	lss/nc_mass_function.c                 \
+	lss/nc_halo_bias_type.c                \
+	lss/nc_halo_bias_type_ps.c             \
+	lss/nc_halo_bias_type_st_spher.c       \
+	lss/nc_halo_bias_type_st_ellip.c       \
+	lss/nc_halo_bias_type_tinker.c         \
+	lss/nc_halo_bias_func.c                \
+	lss/nc_cluster_redshift.c              \
+	lss/nc_cluster_redshift_nodist.c       \
+	lss/nc_cluster_photoz_gauss.c          \
+	lss/nc_cluster_photoz_gauss_global.c   \
+	lss/nc_cluster_mass.c                  \
+	lss/nc_cluster_mass_nodist.c           \
+	lss/nc_cluster_mass_lnnormal.c         \
+	lss/nc_cluster_mass_vanderlinde.c      \
+	lss/nc_cluster_mass_benson.c           \
+	lss/nc_cluster_mass_benson_xray.c      \
+	lss/nc_cluster_abundance.c             \
+	lss/nc_data_cluster_abundance.c        \
 	data/nc_data_distance_mu.c   \
 	data/nc_data_hubble.c        \
 	data/nc_data_bao.c           \
@@ -391,12 +392,16 @@ EXTRA_DIST = \
 	nc_enum_types.h.template  \
 	nc_enum_types.h           \
 	nc_enum_types.c.template  \
-	nc_enum_types.c
+	nc_enum_types.c           \
+	ncm_gir_scan.h
+
+CLEANFILES = $(BUILT_SOURCES)
 
 -include $(INTROSPECTION_MAKEFILE)
 INTROSPECTION_GIRS =
-INTROSPECTION_SCANNER_ARGS = --add-include-path=$(srcdir) -I$(srcdir)/../ -I$(top_builddir) \
-  --identifier-prefix=Ncm --identifier-prefix=Nc --warn-all
+INTROSPECTION_SCANNER_ARGS = --add-include-path=$(srcdir) -I$(srcdir)/../ -I$(top_builddir)   \
+  --identifier-prefix=Ncm --identifier-prefix=Nc --warn-all --c-include="numcosmo/numcosmo.h" \
+  --accept-unprefixed
 
 INTROSPECTION_COMPILER_ARGS = --includedir=$(srcdir)
 #Numcosmo_1_0_gir_NAMESPACE=Nc
@@ -404,11 +409,11 @@ INTROSPECTION_COMPILER_ARGS = --includedir=$(srcdir)
 
 if HAVE_INTROSPECTION
 
-introspection_sources = numcosmo.h $(libnumcosmo_la_SOURCES)
+introspection_sources = ncm_gir_scan.h $(libnumcosmo_la_SOURCES)
 
-Numcosmo-1.0.gir: libnumcosmo.la
+Numcosmo-1.0.gir: libnumcosmo.la $(INTROSPECTION_SCANNER)
 Numcosmo_1_0_gir_INCLUDES = GObject-2.0
-Numcosmo_1_0_gir_CFLAGS = $(INCLUDES)
+Numcosmo_1_0_gir_CFLAGS = $(INCLUDES) -DNUMCOSMO_GIR_SCAN
 Numcosmo_1_0_gir_LIBS = libnumcosmo.la
 Numcosmo_1_0_gir_FILES = $(introspection_sources)
 INTROSPECTION_GIRS += Numcosmo-1.0.gir
@@ -419,6 +424,6 @@ gir_DATA = $(INTROSPECTION_GIRS)
 typelibdir = $(libdir)/girepository-1.0
 typelib_DATA = $(INTROSPECTION_GIRS:.gir=.typelib)
       
-CLEANFILES = $(gir_DATA) $(typelib_DATA)
+CLEANFILES += $(gir_DATA) $(typelib_DATA)
 
 endif

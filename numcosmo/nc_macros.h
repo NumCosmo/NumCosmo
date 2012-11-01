@@ -57,10 +57,6 @@ G_BEGIN_DECLS
 #define NC_TEST_GSL_RESULT(func,ret) if (ret != GSL_SUCCESS) g_error ("%s: %s", func, gsl_strerror (ret))
 
 #define NC_BF_MAX_ITER 100000
-#define NC_INT_ALG 6
-#define NC_INT_PARTITION 100000
-#define NC_INT_ERROR 1e-13
-#define NC_INT_ABS_ERROR 1e-13
 #define NC_ZERO_LIMIT 1e-13
 #define NC_DEFAULT_PRECISION 1e-7
 

@@ -27,11 +27,20 @@
 #define _NCM_FIT_H_
 
 #include <glib.h>
+#include <glib-object.h>
+#include <numcosmo/math/ncm_vector.h>
+#include <numcosmo/math/ncm_matrix.h>
+#include <numcosmo/math/ncm_model.h>
+#include <numcosmo/math/ncm_mset.h>
+#include <numcosmo/math/ncm_mset_func.h>
+#include <numcosmo/likelihood/likelihood.h>
+
 #ifdef HAVE_NLOPT_2_2
 #include <nlopt.h>
 #endif /* HAVE_NLOPT_2_2 */
 
-#include <glib-object.h>
+#include <gsl/gsl_multifit_nlin.h>
+#include <gsl/gsl_multimin.h>
 
 G_BEGIN_DECLS
 

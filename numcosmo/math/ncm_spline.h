@@ -25,7 +25,10 @@
 #ifndef _NCM_SPLINE_H_
 #define _NCM_SPLINE_H_
 
+#include <glib.h>
 #include <glib-object.h>
+#include <gsl/gsl_spline.h>
+#include <numcosmo/math/ncm_vector.h>
 
 G_BEGIN_DECLS
 

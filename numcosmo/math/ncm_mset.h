@@ -26,7 +26,11 @@
 #ifndef _NCM_MSET_H_
 #define _NCM_MSET_H_
 
+#include <glib.h>
 #include <glib-object.h>
+#include <numcosmo/math/ncm_model.h>
+
+#include <stdio.h>
 
 G_BEGIN_DECLS
 
