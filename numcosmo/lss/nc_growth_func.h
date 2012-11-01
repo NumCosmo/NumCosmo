@@ -85,6 +85,7 @@ nc_growth_func_eval (NcGrowthFunc *gf, NcHICosmo *model, gdouble z)
 {
   if (ncm_model_ctrl_update (gf->ctrl, NCM_MODEL(model)))
     nc_growth_func_prepare (gf, model);
+
   return ncm_spline_eval (gf->s, z);
 }
 

@@ -408,7 +408,7 @@ _nc_data_cluster_abundance_resample (NcmMSet *mset, gpointer model, gpointer dat
   }
 
   dca->np = NCM_MATRIX_NROWS (dca->z_obs);
-  printf ("# Generated %ld | expected % 20.15g\n", dca->np, nc_cluster_abundance_n (cad, NC_HICOSMO (ncm_mset_peek (mset, NC_HICOSMO_ID))));
+  //printf ("# Generated %ld | expected % 20.15g\n", dca->np, nc_cluster_abundance_n (cad, NC_HICOSMO (ncm_mset_peek (mset, NC_HICOSMO_ID))));
 
   g_free (zi_obs);
   g_free (zi_obs_params);
@@ -892,9 +892,9 @@ nc_cluster_abundance_catalog_save (NcData *data, gchar *filename, gboolean overw
 	gchar *z_ser = ncm_cfg_serialize_to_string (G_OBJECT (dca->z), FALSE);
 	gchar *lnM_ser = ncm_cfg_serialize_to_string (G_OBJECT (dca->m), FALSE);
 
-	if (fits_write_key(fptr, TSTRING, "Z_OBJ", z_ser, "Serialized redshift object", &status))
+	if (fits_write_key_longstr (fptr, "Z_OBJ", z_ser, "Serialized redshift object", &status))
 	  NC_FITS_ERROR(status);
-	if (fits_write_key(fptr, TSTRING, "LNM_OBJ", lnM_ser, "Serialized mass object", &status))
+	if (fits_write_key_longstr (fptr, "LNM_OBJ", lnM_ser, "Serialized mass object", &status))
 	  NC_FITS_ERROR(status);
 
 	g_free (z_ser);
@@ -992,16 +992,19 @@ nc_cluster_abundance_catalog_load (NcData *data, gchar *filename)
 	nc_cluster_mass_free (dca->m);
 
   {
-	gchar z_ser[1024 * 10];
-	gchar lnM_ser[1024 * 10];
+	gchar *z_ser = NULL;
+	gchar *lnM_ser = NULL;
 
-	if (fits_read_key_str (fptr, "Z_OBJ", z_ser, comment, &status))
+	if (fits_read_key_longstr (fptr, "Z_OBJ", &z_ser, comment, &status))
 	  NC_FITS_ERROR (status);
-	if (fits_read_key_str (fptr, "LNM_OBJ", lnM_ser, comment, &status))
+	if (fits_read_key_longstr (fptr, "LNM_OBJ", &lnM_ser, comment, &status))
 	  NC_FITS_ERROR (status);
 
     dca->z = nc_cluster_redshift_new_from_name (z_ser);
     dca->m = nc_cluster_mass_new_from_name (lnM_ser);
+
+	g_free (z_ser);
+	g_free (lnM_ser);
   }
 
   {
