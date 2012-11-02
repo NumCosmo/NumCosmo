@@ -65,7 +65,7 @@ nc_mass_function_print (NcData *ca_unbinned, NcHICosmo *model, FILE *out, gchar 
 	gdouble lnM = cad->lnMi + (cad->lnMf - cad->lnMi) / (nbins_M - 1.0) * i;
 	gsl_vector_set (lnM_nodes, i, lnM);
 
-	//printf ("lnM = %5.5g Me = %5.5g M10 = %5.5g\n", gsl_vector_get (lnM_nodes, i), exp(gsl_vector_get (lnM_nodes, i)), pow(10, gsl_vector_get (lnM_nodes, i)));
+	printf ("lnM = %5.5g Me = %5.5g M10 = %5.5g\n", gsl_vector_get (lnM_nodes, i), exp(gsl_vector_get (lnM_nodes, i)), pow(10, gsl_vector_get (lnM_nodes, i)));
   }
 
   for (j = 0; j < nbins_z; j++)
@@ -73,7 +73,7 @@ nc_mass_function_print (NcData *ca_unbinned, NcHICosmo *model, FILE *out, gchar 
 	gdouble z = cad->zi + (cad->zf - cad->zi) / (nbins_z - 1.0) * j;
 	gsl_vector_set (z_nodes, j, z);
 
-	//printf ("z = %5.5g\n", gsl_vector_get (z_nodes, j));
+	printf ("z = %5.5g\n", gsl_vector_get (z_nodes, j));
   }
 
   if (header != NULL)
