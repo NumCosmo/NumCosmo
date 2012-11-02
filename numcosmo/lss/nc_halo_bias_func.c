@@ -51,15 +51,15 @@ G_DEFINE_TYPE (NcHaloBiasFunc, nc_halo_bias_func, G_TYPE_OBJECT);
  * @mfp: a #NcMassFunction.
  * @biasf: (allow-none): a #NcHaloBiasType.
  *
- * This function allocates memory for a new #NcHaloBiasFunc object and sets its properties to the values from 
+ * This function allocates memory for a new #NcHaloBiasFunc object and sets its properties to the values from
  * the input arguments.
  *
- * @Returns: A new #NcHaloBiasFunc.
+ * Returns: A new #NcHaloBiasFunc.
  */
 NcHaloBiasFunc *
 nc_halo_bias_func_new (NcMassFunction *mfp, NcHaloBiasType *biasf)
 {
-  NcHaloBiasFunc *mbiasf = g_object_new (NC_TYPE_HALO_BIAS_FUNC, 
+  NcHaloBiasFunc *mbiasf = g_object_new (NC_TYPE_HALO_BIAS_FUNC,
                                      "mass-function", mfp,
                                      "bias-type", biasf,
                                      NULL);
@@ -81,14 +81,14 @@ nc_halo_bias_func_copy (NcHaloBiasFunc *mbiasf)
 }
 
 /**
- * nc_halo_bias_func_free: 
+ * nc_halo_bias_func_free:
  * @mbiasf: a #NcHaloBiasFunc.
  *
  * Atomically decrements the reference count of @mbiasf by one. If the reference count drops to 0,
  * all memory allocated by @mbiasf is released.
  *
 */
-void 
+void
 nc_halo_bias_func_free (NcHaloBiasFunc *mbiasf)
 {
   g_clear_object (&mbiasf);
@@ -184,7 +184,7 @@ nc_halo_bias_func_class_init (NcHaloBiasFuncClass *klass)
    * NcHaloBiasFunc:bias-type:
    *
    * FIXME
-   */ 
+   */
    g_object_class_install_property (object_class,
                                     PROP_BIAS_TYPE,
                                     g_param_spec_object ("bias-type",
@@ -192,7 +192,7 @@ nc_halo_bias_func_class_init (NcHaloBiasFuncClass *klass)
                                                          "Bias Function Type.",
                                                          NC_TYPE_HALO_BIAS_TYPE,
                                                          G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-														
+
 }
 
 /**

@@ -64,7 +64,11 @@ _nc_hicosmo_de_linder_dweff_dz (NcmModel *model, gdouble z)
 }
 
 /**
+ * nc_hicosmo_de_linder_new:
+ *
  * FIXME
+ *
+ * Returns: FIXME
  */
 NcHICosmoDELinder *
 nc_hicosmo_de_linder_new (void)

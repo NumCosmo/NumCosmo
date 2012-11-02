@@ -95,13 +95,16 @@ _nc_hicosmo_de_Omega_r (NcmModel *model)
 {
   const gdouble h = MACRO_H0 / 100.0;
   const gdouble h2 = h * h;
-  return (1.0 + 0.2271 * NC_C_NEUTRINO_N_EFF) * NC_C_RADIATION_TEMP_TO_h2OMEGA_R (T_GAMMA0) / h2;
+  return (1.0 + 0.2271 * ncm_c_neutrino_n_eff ()) * ncm_c_radiation_temp_to_h2omega_r (T_GAMMA0) / h2;
 }
 static gdouble _nc_hicosmo_de_Omega_b (NcmModel *model) { return OMEGA_B; }
 static gdouble _nc_hicosmo_de_sigma_8 (NcmModel *model) { return SIGMA8; }
 static gdouble _nc_hicosmo_de_powspec (NcmModel *model, gdouble k) { return pow (k, SPECINDEX); }
 
 /**
+ * nc_hicosmo_de_omega_x2omega_k:
+ * @model: FIXME
+ *
  * FIXME
  */
 void
@@ -146,7 +149,12 @@ bbn_prior (NcmMSet *mset, gpointer obj, const gdouble *x, gdouble *f)
 }
 
 /**
+ * nc_hicosmo_de_new_add_bbn:
+ * @lh: FIXME
+ *
  * FIXME
+ *
+ * Returns: FIXME
  */
 gboolean
 nc_hicosmo_de_new_add_bbn (NcLikelihood *lh)

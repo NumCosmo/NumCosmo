@@ -66,7 +66,7 @@ typedef enum _NcHICosmoQSplineVParams
   NC_HICOSMO_QSPLINE_VPARAM_LEN, /*< skip >*/
 } NcHICosmoQSplineVParams;
 
-#define NC_HICOSMO_QSPLINE_DEFAULT_H0      NC_C_HUBBLE_CTE_WMAP
+#define NC_HICOSMO_QSPLINE_DEFAULT_H0      ncm_c_hubble_cte_wmap ()
 #define NC_HICOSMO_QSPLINE_DEFAULT_OMEGA_T ( 1.0)
 #define NC_HICOSMO_QSPLINE_DEFAULT_Q       (-0.5)
 #define NC_HICOSMO_QSPLINE_DEFAULT_Q_LEN      (6)

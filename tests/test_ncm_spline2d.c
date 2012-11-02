@@ -208,8 +208,8 @@ main (gint argc, gchar *argv[])
   g_test_run ();
 }
 
-#define _NCM_SPLINE2D_TEST_NKNOTS_X 100
-#define _NCM_SPLINE2D_TEST_NKNOTS_Y 50
+#define _NCM_SPLINE2D_TEST_NKNOTS_X 50
+#define _NCM_SPLINE2D_TEST_NKNOTS_Y 25
 #define _NCM_SPLINE2D_TEST_XI 10.0
 #define _NCM_SPLINE2D_TEST_DX 0.3
 #define _NCM_SPLINE2D_TEST_YI 7.0

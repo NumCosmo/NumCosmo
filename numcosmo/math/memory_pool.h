@@ -27,6 +27,7 @@
 
 #include <glib.h>
 #include <glib-object.h>
+#include <numcosmo/nc_macros.h>
 
 G_BEGIN_DECLS
 
@@ -36,13 +37,13 @@ typedef struct _NcmMemoryPool NcmMemoryPool;
 
 /**
  * NcmMemoryPool:
- * 
+ *
  * FIXME
  */
 struct _NcmMemoryPool
 {
   /*< private >*/
-  GStaticMutex append;
+  _NCM_MUTEX_TYPE append;
   GPtrArray *slices;
   NcmMemoryPoolAlloc alloc;
   GDestroyNotify free;
@@ -59,7 +60,7 @@ typedef struct _NcmMemoryPoolSlice NcmMemoryPoolSlice;
 struct _NcmMemoryPoolSlice
 {
   gpointer p;
-  GStaticMutex lock;
+  _NCM_MUTEX_TYPE lock;
   NcmMemoryPool *mp;
 };
 

@@ -448,7 +448,7 @@ ncm_model_class_init (NcmModelClass *klass)
 G_LOCK_DEFINE_STATIC (last_model_id);
 
 void
-ncm_model_register_id (NcmModelClass *model_class)
+ncm_model_class_register_id (NcmModelClass *model_class)
 {
   if (model_class->model_id < 0)
   {

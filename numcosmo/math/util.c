@@ -62,24 +62,26 @@ ncm_get_rng ()
 {
   const gsl_rng_type *type;
   static gsl_rng *r = NULL;
-  static GStaticMutex create_lock = G_STATIC_MUTEX_INIT;
+  _NCM_STATIC_MUTEX_DECL (create_lock);
 
-  g_static_mutex_lock (&create_lock);
+  _NCM_MUTEX_LOCK (&create_lock);
   if (r == NULL)
   {
 	gsl_rng_env_setup();
 	type = gsl_rng_default;
 	r = gsl_rng_alloc (type);
-	//    gsl_rng_set(r, seed);
-	//    gsl_rng_set(r, ncm_random_seed());
   }
-  g_static_mutex_unlock (&create_lock);
+  _NCM_MUTEX_UNLOCK (&create_lock);
 
   return r;
 }
 
 /**
+ * ncm_random_seed:
+ *
  * FIXME
+ *
+ * Returns: FIXME
  */
 gulong
 ncm_random_seed ()
@@ -103,7 +105,13 @@ ncm_random_seed ()
 }
 
 /**
+ * ncm_finite_diff_calc_J:
+ * @model: FIXME
+ * @data: FIXME
+ * @jac: FIXME
+ *
  * FIXME
+ *
  */
 void
 ncm_finite_diff_calc_J (NcmModel *model, NcData *data, NcmMatrix *jac)
@@ -112,21 +120,15 @@ ncm_finite_diff_calc_J (NcmModel *model, NcData *data, NcmMatrix *jac)
 }
 
 /**
+ * ncm_smoothd:
+ * @in: FIXME
+ * @N: FIXME
+ * @points: FIXME
+ * @pass: FIXME
+ *
  * FIXME
- */
-gdouble
-ncm_get_bao_Omega_m (NcDistance *dist, NcmModel *model)
-{
-  gdouble transverse = nc_distance_transverse (dist, NC_HICOSMO (model), NC_C_BAO_EISENSTEIN_REDSHIFT);
-  gdouble sqrt_E = pow (nc_hicosmo_E2 (NC_HICOSMO (model), NC_C_BAO_EISENSTEIN_REDSHIFT), 1.0 / 4.0);
-  gdouble A = pow (transverse / (NC_C_BAO_EISENSTEIN_REDSHIFT * sqrt_E), 2.0 / 3.0);
-  if (!gsl_finite (A))
-	return GSL_POSINF;
-  return gsl_pow_2 (NC_C_BAO_EISENSTEIN_A / A);
-}
-
-/**
- * FIXME
+ *
+ * Returns: FIXME
  */
 gdouble *
 ncm_smoothd (gdouble *in, size_t N, size_t points, size_t pass)
@@ -177,7 +179,16 @@ ncm_smoothd (gdouble *in, size_t N, size_t points, size_t pass)
 }
 
 /**
+ * ncm_get_uniform_sample:
+ * @mset: FIXME
+ * @func: FIXME
+ * @x0: FIXME
+ * @x1: FIXME
+ * @sample: FIXME
+ *
  * FIXME
+ *
+ * Returns: FIXME
  */
 gboolean
 ncm_get_uniform_sample (NcmMSet *mset, NcmMSetFunc *func, gdouble x0, gdouble x1, NcmVector *sample)
@@ -195,7 +206,17 @@ ncm_get_uniform_sample (NcmMSet *mset, NcmMSetFunc *func, gdouble x0, gdouble x1
 
 #ifdef NUMCOSMO_HAVE_FFTW3
 /**
+ * ncm_get_smoothed_uniform_sample:
+ * @mset: FIXME
+ * @func: FIXME
+ * @x0: FIXME
+ * @x1: FIXME
+ * @delta: FIXME
+ * @sample: FIXME
+ *
  * FIXME
+ *
+ * Returns: FIXME
  */
 gboolean
 ncm_get_smoothed_uniform_sample (NcmMSet *mset, NcmMSetFunc *func, gdouble x0, gdouble x1, gdouble delta, NcmVector *sample)
@@ -244,7 +265,13 @@ ncm_get_smoothed_uniform_sample (NcmMSet *mset, NcmMSetFunc *func, gdouble x0, g
 #endif /* NUMCOSMO_HAVE_FFTW3 */
 
 /**
+ * ncm_topology_comoving_a0_lss:
+ * @n: FIXME
+ * @alpha: FIXME
+ *
  * FIXME
+ *
+ * Returns: FIXME
  */
 gdouble
 ncm_topology_comoving_a0_lss (guint n, gdouble alpha)
@@ -253,7 +280,14 @@ ncm_topology_comoving_a0_lss (guint n, gdouble alpha)
 }
 
 /**
+ * ncm_topology_sigma_comoving_a0_lss:
+ * @n: FIXME
+ * @alpha: FIXME
+ * @sigma_alpha: FIXME
+ *
  * FIXME
+ *
+ * Returns: FIXME
  */
 gdouble
 ncm_topology_sigma_comoving_a0_lss (guint n, gdouble alpha, gdouble sigma_alpha)
@@ -294,13 +328,13 @@ _besselj_bs_free (gpointer p)
 NcmCoarseDbl **
 _ncm_coarse_dbl_get_bs ()
 {
-  static GStaticMutex create_lock = G_STATIC_MUTEX_INIT;
+  _NCM_STATIC_MUTEX_DECL (create_lock);
   static NcmMemoryPool *mp = NULL;
 
-  g_static_mutex_lock (&create_lock);
+  _NCM_MUTEX_LOCK (&create_lock);
   if (mp == NULL)
     mp = ncm_memory_pool_new (_besselj_bs_alloc, _besselj_bs_free);
-  g_static_mutex_unlock (&create_lock);
+  _NCM_MUTEX_UNLOCK (&create_lock);
 
   return ncm_memory_pool_get (mp);
 }
@@ -413,7 +447,14 @@ ncm_sphPlm_x_f (gdouble x, gpointer p)
 }
 
 /**
+ * ncm_sphPlm_x:
+ * @l: FIXME
+ * @m: FIXME
+ * @order: FIXME
+ *
  * FIXME
+ *
+ * Returns: FIXME
  */
 gdouble
 ncm_sphPlm_x (gint l, gint m, gint order)
@@ -936,15 +977,3 @@ NC_FUNCTION_GRAD (cp->model->userdef##numb, cp, pt, z, grad); \
 return TRUE; \
 }
 
-/*
- NC_USERDEF_F(0)
- NC_USERDEF_DF(0)
- NC_USERDEF_F(1)
- NC_USERDEF_DF(1)
- NC_USERDEF_F(2)
- NC_USERDEF_DF(2)
- NC_USERDEF_F(3)
- NC_USERDEF_DF(3)
- NC_USERDEF_F(4)
- NC_USERDEF_DF(4)
- */

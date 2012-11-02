@@ -40,7 +40,7 @@
 
 #include <gsl/gsl_integration.h>
 #ifdef HAVE_LIBCUBA
-#include <cuba.h>  
+#include <cuba.h>
 #endif /* HAVE_LIBCUBA */
 
 
@@ -70,13 +70,13 @@ _integral_ws_free (gpointer p)
 gsl_integration_workspace **
 nc_integral_get_workspace ()
 {
-  static GStaticMutex create_lock = G_STATIC_MUTEX_INIT;
+  _NCM_STATIC_MUTEX_DECL (create_lock);
   static NcmMemoryPool *mp = NULL;
 
-  g_static_mutex_lock (&create_lock);
+  _NCM_MUTEX_LOCK (&create_lock);
   if (mp == NULL)
     mp = ncm_memory_pool_new (_integral_ws_alloc, _integral_ws_free);
-  g_static_mutex_unlock (&create_lock);
+  _NCM_MUTEX_UNLOCK (&create_lock);
 
   return ncm_memory_pool_get (mp);
 }
@@ -308,7 +308,7 @@ nc_integral_fixed_new (gulong n_nodes, gulong rule_n, gdouble xl, gdouble xu)
 #ifdef HAVE_GSL_GLF
   intf->glt = gsl_integration_glfixed_table_alloc (rule_n);
 #else
-  g_error ("NcIntegralFixed: Need gsl version > 1.4\n");
+  g_error ("NcIntegralFixed: Needs gsl version > 1.4\n");
 #endif /* HAVE_GSL_GLF */
 
   return intf;
@@ -325,7 +325,11 @@ void
 nc_integral_fixed_free (NcIntegralFixed *intf)
 {
   g_slice_free1 (sizeof(gdouble) * intf->n_nodes * intf->rule_n, intf->int_nodes);
+#ifdef HAVE_GSL_GLF
   gsl_integration_glfixed_table_free (intf->glt);
+#else
+  g_error ("nc_integral_fixed_free: Needs gsl version > 1.4\n");
+#endif /* HAVE_GSL_GLF */
   g_slice_free (NcIntegralFixed, intf);
 }
 
@@ -340,6 +344,7 @@ nc_integral_fixed_free (NcIntegralFixed *intf)
 void
 nc_integral_fixed_calc_nodes (NcIntegralFixed *intf, gsl_function *F)
 {
+#ifdef HAVE_GSL_GLF
   const gulong r2 = intf->rule_n / 2;
   const gboolean odd_rule = intf->rule_n & 1;
   const gdouble delta_x = (intf->xu - intf->xl) / (intf->n_nodes - 1.0);
@@ -374,6 +379,9 @@ nc_integral_fixed_calc_nodes (NcIntegralFixed *intf, gsl_function *F)
         intf->int_nodes[k++] = GSL_FN_EVAL (F, x1px0_2 + x1mx0_2 * intf->glt->x[j]) * intf->glt->w[j];
     }
   }
+#else
+  g_error ("nc_integral_fixed_calc_nodes: Needs gsl version > 1.4\n");
+#endif /* HAVE_GSL_GLF */
 }
 
 /**
@@ -409,6 +417,7 @@ nc_integral_fixed_nodes_eval (NcIntegralFixed *intf)
 gdouble
 nc_integral_fixed_integ_mult (NcIntegralFixed *intf, gsl_function *F)
 {
+#ifdef HAVE_GSL_GLF
   const gulong r2 = intf->rule_n / 2;
   const gboolean odd_rule = intf->rule_n & 1;
   const gdouble delta_x = (intf->xu - intf->xl) / (intf->n_nodes - 1.0);
@@ -446,6 +455,10 @@ nc_integral_fixed_integ_mult (NcIntegralFixed *intf, gsl_function *F)
   }
 
   return res * delta_x * 0.5;
+#else
+  g_error ("nc_integral_fixed_integ_mult: Needs gsl version > 1.4\n");
+  return 0.0;
+#endif /* HAVE_GSL_GLF */
 }
 
 /**
@@ -462,6 +475,7 @@ nc_integral_fixed_integ_mult (NcIntegralFixed *intf, gsl_function *F)
 gdouble
 nc_integral_fixed_integ_posdef_mult (NcIntegralFixed *intf, gsl_function *F, gdouble max, gdouble reltol)
 {
+#ifdef HAVE_GSL_GLF
   const gulong r2 = intf->rule_n / 2;
   const gboolean odd_rule = intf->rule_n & 1;
   const gdouble delta_x = (intf->xu - intf->xl) / (intf->n_nodes - 1.0);
@@ -554,4 +568,8 @@ nc_integral_fixed_integ_posdef_mult (NcIntegralFixed *intf, gsl_function *F, gdo
   }
 
   return res * delta_x * 0.5;
+#else
+  g_error ("nc_integral_fixed_integ_posdef_mult: Needs gsl version > 1.4\n");
+  return 0.0;
+#endif /* HAVE_GSL_GLF */
 }

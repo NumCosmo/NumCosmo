@@ -32,12 +32,12 @@
 
 G_BEGIN_DECLS
 
-#define NCM_TYPE_GMSET_FUNC             (ncm_mset_func_get_type ())
-#define NCM_MSET_FUNC(obj)             (G_TYPE_CHECK_INSTANCE_CAST ((obj), NCM_TYPE_GMSET_FUNC, NcmMSetFunc))
-#define NCM_MSET_FUNC_CLASS(klass)     (G_TYPE_CHECK_CLASS_CAST ((klass), NCM_TYPE_GMSET_FUNC, NcmMSetFuncClass))
-#define NCM_IS_GMSET_FUNC(obj)          (G_TYPE_CHECK_INSTANCE_TYPE ((obj), NCM_TYPE_GMSET_FUNC))
-#define NCM_IS_GMSET_FUNC_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE ((klass), NCM_TYPE_GMSET_FUNC))
-#define NCM_MSET_FUNC_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS ((obj), NCM_TYPE_GMSET_FUNC, NcmMSetFuncClass))
+#define NCM_TYPE_MSET_FUNC             (ncm_mset_func_get_type ())
+#define NCM_MSET_FUNC(obj)             (G_TYPE_CHECK_INSTANCE_CAST ((obj), NCM_TYPE_MSET_FUNC, NcmMSetFunc))
+#define NCM_MSET_FUNC_CLASS(klass)     (G_TYPE_CHECK_CLASS_CAST ((klass), NCM_TYPE_MSET_FUNC, NcmMSetFuncClass))
+#define NCM_IS_MSET_FUNC(obj)          (G_TYPE_CHECK_INSTANCE_TYPE ((obj), NCM_TYPE_MSET_FUNC))
+#define NCM_IS_MSET_FUNC_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE ((klass), NCM_TYPE_MSET_FUNC))
+#define NCM_MSET_FUNC_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS ((obj), NCM_TYPE_MSET_FUNC, NcmMSetFuncClass))
 
 typedef struct _NcmMSetFuncClass NcmMSetFuncClass;
 typedef struct _NcmMSetFunc NcmMSetFunc;

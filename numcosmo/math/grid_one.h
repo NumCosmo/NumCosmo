@@ -41,7 +41,7 @@ G_BEGIN_DECLS
  * @NCM_GRID_NODES_END: FIXME
  * @NCM_GRID_NODES_BOTH: FIXME
  * @NCM_GRID_NODES_NONE: FIXME
- * 
+ *
  * FIXME
  */
 typedef enum _NcmGridNodesEndPoints
@@ -55,8 +55,8 @@ typedef enum _NcmGridNodesEndPoints
 typedef struct _NcmGridSection NcmGridSection;
 
 /**
- * NcmGridSection;
- * 
+ * NcmGridSection:
+ *
  * FIXME
  */
 struct _NcmGridSection
@@ -66,14 +66,14 @@ struct _NcmGridSection
   guint32 start;
   guint32 end;
   gdouble start_val;
-  gdouble end_val;  
+  gdouble end_val;
 };
 
 typedef struct _NcmGrid NcmGrid;
 
 /**
  * NcmGrid:
- * 
+ *
  * FIXME
  */
 struct _NcmGrid

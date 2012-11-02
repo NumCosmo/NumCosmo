@@ -36,6 +36,7 @@
 #include "build_cfg.h"
 
 #include "math/binsplit.h"
+#include "nc_macros.h"
 
 static gboolean one_init = FALSE;
 mpz_t NCM_BINSPLIT_ONE;
@@ -67,15 +68,15 @@ ncm_binsplit_alloc (gpointer userdata)
   mpz_set_ui (bs->B, 1);
 
   {
-    static GStaticMutex create_lock = G_STATIC_MUTEX_INIT;
-    g_static_mutex_lock (&create_lock);
+    _NCM_STATIC_MUTEX_DECL (create_lock);
+    _NCM_MUTEX_LOCK (&create_lock);
     if (!one_init)
     {
       mpz_init (NCM_BINSPLIT_ONE);
       mpz_set_ui (NCM_BINSPLIT_ONE, 1L);
       one_init = TRUE;
     }
-    g_static_mutex_unlock (&create_lock);
+    _NCM_MUTEX_UNLOCK (&create_lock);
   }
 
   return bs;

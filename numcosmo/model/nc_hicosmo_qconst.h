@@ -62,7 +62,7 @@ typedef enum _NcHICosmoQConstParams
   NC_HICOSMO_QCONST_SPARAM_LEN, /*< skip >*/
 } NcHICosmoQConstParams;
 
-#define NC_HICOSMO_QCONST_DEFAULT_H0      NC_C_HUBBLE_CTE_WMAP
+#define NC_HICOSMO_QCONST_DEFAULT_H0      ncm_c_hubble_cte_wmap ()
 #define NC_HICOSMO_QCONST_DEFAULT_OMEGA_T ( 1.0)
 #define NC_HICOSMO_QCONST_DEFAULT_CD      ( 0.0)
 #define NC_HICOSMO_QCONST_DEFAULT_E       ( 1.0)

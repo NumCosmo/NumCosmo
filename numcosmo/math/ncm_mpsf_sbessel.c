@@ -271,13 +271,13 @@ _besselj_bs_free (gpointer p)
 NcmBinSplit **
 _ncm_mpsf_sbessel_get_bs ()
 {
-  static GStaticMutex create_lock = G_STATIC_MUTEX_INIT;
+  _NCM_STATIC_MUTEX_DECL (create_lock);
   static NcmMemoryPool *mp = NULL;
 
-  g_static_mutex_lock (&create_lock);
+  _NCM_MUTEX_LOCK (&create_lock);
   if (mp == NULL)
     mp = ncm_memory_pool_new (_besselj_bs_alloc, _besselj_bs_free);
-  g_static_mutex_unlock (&create_lock);
+  _NCM_MUTEX_UNLOCK (&create_lock);
 
   return ncm_memory_pool_get (mp);
 }

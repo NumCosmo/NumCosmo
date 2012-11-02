@@ -36,6 +36,7 @@
 #include "build_cfg.h"
 
 #include "math/ncm_func_eval.h"
+#include "nc_macros.h"
 #include <stdio.h>
 
 typedef struct _NcmFunctionEvalCtrl
@@ -43,6 +44,10 @@ typedef struct _NcmFunctionEvalCtrl
   gint active_threads;
   GMutex *update;
   GCond *finish;
+#if !((GLIB_MAJOR_VERSION == 2) && (GLIB_MINOR_VERSION < 32))
+  GMutex update_m;
+  GCond finish_c;
+#endif
 } NcmFunctionEvalCtrl;
 
 typedef struct _NcmLoopFuncEval
@@ -87,16 +92,16 @@ func (gpointer data, gpointer empty)
 GThreadPool *
 ncm_func_eval_get_pool ()
 {
-  static GStaticMutex create_lock = G_STATIC_MUTEX_INIT;
+  _NCM_STATIC_MUTEX_DECL (create_lock);
   GError *err = NULL;
 
-  g_static_mutex_lock (&create_lock);
+  _NCM_MUTEX_LOCK (&create_lock);
   if (_function_thread_pool == NULL)
   {
 	_function_thread_pool = g_thread_pool_new (func, NULL, NCM_THREAD_POOL_MAX, TRUE, &err);
 	g_clear_error (&err);
   }
-  g_static_mutex_unlock (&create_lock);
+  _NCM_MUTEX_UNLOCK (&create_lock);
 
   return _function_thread_pool;
 }
@@ -134,8 +139,15 @@ ncm_func_eval_threaded_loop (NcmLoopFunc lfunc, glong i, glong f, gpointer data)
   gint nthreads, delta, res;
 
   ncm_func_eval_get_pool ();
+#if (GLIB_MAJOR_VERSION == 2) && (GLIB_MINOR_VERSION < 32)
   ctrl.update = g_mutex_new ();
   ctrl.finish = g_cond_new ();
+#else
+  g_mutex_init (&ctrl.update_m);
+  g_cond_init (&ctrl.finish_c);
+  ctrl.update = &ctrl.update_m;
+  ctrl.finish = &ctrl.finish_c;
+#endif
 
   g_assert (f >= i);
   nthreads = g_thread_pool_get_max_threads (_function_thread_pool);
@@ -180,8 +192,13 @@ ncm_func_eval_threaded_loop (NcmLoopFunc lfunc, glong i, glong f, gpointer data)
 	printf  ("Unused:      %d\n", g_thread_pool_get_max_threads (_function_thread_pool));fflush (stdout);
   }
 
+#if (GLIB_MAJOR_VERSION == 2) && (GLIB_MINOR_VERSION < 32)
   g_mutex_free (ctrl.update);
   g_cond_free (ctrl.finish);
+#else
+  g_mutex_clear (ctrl.update);
+  g_cond_clear (ctrl.finish);
+#endif
 }
 #else
 void

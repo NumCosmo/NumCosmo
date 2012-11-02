@@ -63,7 +63,11 @@ _nc_hicosmo_de_pad_dweff_dz (NcmModel *model, gdouble z)
 }
 
 /**
+ * nc_hicosmo_de_pad_new:
+ *
  * FIXME
+ *
+ * Returns: FIXME
  */
 NcHICosmoDEPad *
 nc_hicosmo_de_pad_new (void)

@@ -27,7 +27,7 @@
 
 #include <glib.h>
 #include <glib-object.h>
-#include <numcosmo/nc_constants.h>
+#include <numcosmo/math/ncm_c.h>
 #include <numcosmo/math/ncm_model.h>
 #include <numcosmo/math/ncm_mset_func.h>
 
@@ -144,13 +144,14 @@ G_INLINE_FUNC gdouble nc_hicosmo_dH_dz (NcHICosmo *model, gdouble z);
 G_INLINE_FUNC gdouble nc_hicosmo_j (NcHICosmo *model, gdouble z);
 G_INLINE_FUNC gdouble nc_hicosmo_qp (NcHICosmo *model, gdouble z);
 G_INLINE_FUNC gdouble nc_hicosmo_q (NcHICosmo *model, gdouble z);
+G_INLINE_FUNC gint32 nc_hicosmo_id (void);
 
 NcHICosmo *nc_hicosmo_new_from_name (GType parent_type, gchar *model_name);
 void nc_hicosmo_log_all_models (GType parent);
 void nc_hicosmo_free (NcHICosmo *hic);
 
-NcmMSetFunc *nc_hicosmo_func0_new (NcHICosmoFunc0 f0);
-NcmMSetFunc *nc_hicosmo_func1_new (NcHICosmoFunc1 f1);
+NcmMSetFunc *ncm_mset_func_new_hicosmo_func0 (NcHICosmoFunc0 f0);
+NcmMSetFunc *ncm_mset_func_new_hicosmo_func1 (NcHICosmoFunc1 f1);
 
 void nc_hicosmo_set_H0_impl (NcHICosmoClass *model_class, NcmModelFunc0 f);
 void nc_hicosmo_set_Omega_b_impl (NcHICosmoClass *model_class, NcmModelFunc0 f);
@@ -197,7 +198,7 @@ NCM_MODEL_FUNC1_IMPL (NC_HICOSMO,NcHICosmo,nc_hicosmo,powspec)
 G_INLINE_FUNC gdouble
 nc_hicosmo_c_H0 (NcHICosmo *model)
 {
-  return (NC_C_c / nc_hicosmo_H0 (model));
+  return (ncm_c_c () / nc_hicosmo_H0 (model));
 }
 
 G_INLINE_FUNC gdouble
@@ -272,6 +273,12 @@ nc_hicosmo_j (NcHICosmo *model, gdouble z)
   d2E2_dz2 = nc_hicosmo_d2E2_dz2 (model, z);
 
   return gsl_pow_2 (1.0 + z) * (d2E2_dz2 - 2.0 * dE2_dz / (1.0 + z)) / (2.0 * E2) + 1.0;
+}
+
+G_INLINE_FUNC gint32
+nc_hicosmo_id (void)
+{
+  return NC_HICOSMO_ID;
 }
 
 G_END_DECLS

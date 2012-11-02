@@ -8,7 +8,7 @@ m4_define([numcosmo_micro_version], [0])
 m4_define([numcosmo_version],
           [numcosmo_major_version.numcosmo_minor_version.numcosmo_micro_version])
           
-AC_INIT([numcosmo],[numcosmo_version])
+AC_INIT([numcosmo],[numcosmo_version], https://savannah.nongnu.org/bugs/?func=additem&group=numcosmo, numcosmo, http://www.nongnu.org/numcosmo/)
 AC_CONFIG_SRCDIR([numcosmo/numcosmo.h])
 AC_CONFIG_MACRO_DIR([m4])
 
@@ -91,7 +91,7 @@ packagesrcdir=`cd $srcdir && pwd`
 AC_DEFINE_UNQUOTED(PACKAGE_SOURCE_DIR, "${packagesrcdir}",[PACKAGE_SOURCE_DIR])
 
 dnl Dependencies
-GLIB_REQUIRED_VERSION=2.30.0
+GLIB_REQUIRED_VERSION=2.24.0
 GSL_REQUIRED_VERSION=1.13
 GSL_GLF_REQUIRED_VERSION=1.15
 GSL_ODEIV2_REQUIRED_VERSION=1.15

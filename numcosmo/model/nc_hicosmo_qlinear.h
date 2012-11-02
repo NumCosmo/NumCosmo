@@ -63,7 +63,7 @@ typedef enum _NcHICosmoQLinearParams
   NC_HICOSMO_QLINEAR_SPARAM_LEN, /*< skip >*/
 } NcHICosmoQLinearParams;
 
-#define NC_HICOSMO_QLINEAR_DEFAULT_H0      NC_C_HUBBLE_CTE_WMAP
+#define NC_HICOSMO_QLINEAR_DEFAULT_H0      ncm_c_hubble_cte_wmap ()
 #define NC_HICOSMO_QLINEAR_DEFAULT_OMEGA_T ( 1.0)
 #define NC_HICOSMO_QLINEAR_DEFAULT_CD      ( 0.0)
 #define NC_HICOSMO_QLINEAR_DEFAULT_E       ( 1.0)

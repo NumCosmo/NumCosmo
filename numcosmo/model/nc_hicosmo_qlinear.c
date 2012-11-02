@@ -97,7 +97,15 @@ _nc_hicosmo_qlinear_cd (NcmModel *model, gdouble z)
 }
 
 /**
+ * nc_hicosmo_qlinear_dE:
+ * @z2: FIXME
+ * @z1: FIXME
+ * @q: FIXME
+ * @qp: FIXME
+ *
  * FIXME
+ *
+ * Returns: FIXME
  */
 gdouble
 nc_hicosmo_qlinear_dE (gdouble z2, gdouble z1, gdouble q, gdouble qp)
@@ -116,8 +124,12 @@ static gdouble _nc_hicosmo_qlinear_H0 (NcmModel *model) { return MACRO_H0; }
 static gdouble _nc_hicosmo_qlinear_Omega_t (NcmModel *model) { return OMEGA_T; }
 
 /**
-   * FIXME
-   */
+ * nc_hicosmo_qlinear_new:
+ *
+ * FIXME
+ *
+ * Returns: FIXME
+ */
 NcHICosmoQLinear *
 nc_hicosmo_qlinear_new (void)
 {

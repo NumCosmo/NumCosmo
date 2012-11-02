@@ -80,7 +80,7 @@ typedef enum _NcHICosmoDEParams
   NC_HICOSMO_DE_SPARAM_LEN, /*< skip >*/
 } NcHICosmoDEParams;
 
-#define NC_HICOSMO_DE_DEFAULT_H0        NC_C_HUBBLE_CTE_WMAP
+#define NC_HICOSMO_DE_DEFAULT_H0        ncm_c_hubble_cte_wmap ()
 #define NC_HICOSMO_DE_DEFAULT_OMEGA_C   (0.2568)
 #define NC_HICOSMO_DE_DEFAULT_OMEGA_X   (0.70)
 #define NC_HICOSMO_DE_DEFAULT_OMEGA_B   (0.0432)

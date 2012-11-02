@@ -64,7 +64,7 @@ nc_function_cache_new (guint n, gdouble abstol, gdouble reltol)
 {
   NcFunctionCache *cache = g_slice_new (NcFunctionCache);
   cache->tree = g_tree_new_full (&gdouble_compare, NULL, &gdouble_free, (GDestroyNotify)&gsl_vector_free);
-  g_static_mutex_init(&cache->lock);
+  _NCM_MUTEX_INIT (&cache->lock);
   cache->clear = FALSE;
   cache->n = n;
   cache->abstol = abstol;
@@ -83,7 +83,7 @@ nc_function_cache_new (guint n, gdouble abstol, gdouble reltol)
 void
 nc_function_cache_free (NcFunctionCache *cache)
 {
-  g_static_mutex_free (&cache->lock);
+  _NCM_MUTEX_CLEAR (&cache->lock);
   g_tree_destroy (cache->tree);
   g_slice_free (NcFunctionCache, cache);
   return;
@@ -105,10 +105,10 @@ nc_function_cache_insert_vector (NcFunctionCache *cache, gdouble x, gsl_vector *
   g_assert (cache->n == p->size);
 
   *x_ptr = x;
-  g_static_mutex_lock (&cache->lock);
+  _NCM_MUTEX_LOCK (&cache->lock);
   cache_clean (cache);
   g_tree_insert (cache->tree, x_ptr, p);
-  g_static_mutex_unlock (&cache->lock);
+  _NCM_MUTEX_UNLOCK (&cache->lock);
 }
 
 void
@@ -118,13 +118,12 @@ nc_function_cache_insert (NcFunctionCache *cache, gdouble x, ...)
   gsl_vector *v;
   gint i;
   va_list ap;
-
-  g_static_mutex_lock (&cache->lock);
+  _NCM_MUTEX_LOCK (&cache->lock);
   cache_clean (cache);
 
   if (g_tree_lookup (cache->tree, &x) != NULL)
   {
-    g_static_mutex_unlock (&cache->lock);
+	_NCM_MUTEX_UNLOCK (&cache->lock);
     return;
   }
 
@@ -138,7 +137,7 @@ nc_function_cache_insert (NcFunctionCache *cache, gdouble x, ...)
   *x_ptr = x;
 
   g_tree_insert (cache->tree, x_ptr, v);
-  g_static_mutex_unlock (&cache->lock);
+  _NCM_MUTEX_UNLOCK (&cache->lock);
 }
 
 typedef struct _NcParamsCacheSearch
@@ -165,17 +164,14 @@ gboolean
 nc_function_cache_get_near (NcFunctionCache *cache, gdouble x, gdouble *x_found_ptr, gsl_vector **v, NcFunctionCacheSearchType type)
 {
   NcParamsCacheSearch search = {FALSE, x, 0.0, GSL_POSINF, 0, NC_FUNCTION_CACHE_SEARCH_BOTH};
-//  gdouble *res = NULL;
   gsl_vector *res = NULL;
-  g_static_mutex_lock (&cache->lock);
 
+  _NCM_MUTEX_LOCK (&cache->lock);
   search.type = type;
 
-//  printf ("--== %g %g %g %d\n", *x_ptr, search.near_x, search.x, search.dir);
-
-  if(cache_clean (cache))
+  if (cache_clean (cache))
   {
-    g_static_mutex_unlock (&cache->lock);
+	_NCM_MUTEX_UNLOCK (&cache->lock);
     return FALSE;
   }
 
@@ -185,18 +181,15 @@ nc_function_cache_get_near (NcFunctionCache *cache, gdouble x, gdouble *x_found_
     res = g_tree_lookup (cache->tree, &search.x);
     *x_found_ptr = search.x;
     *v = res;
-    //printf ("[%p]Found!! %g ... %g [%p] \n", g_thread_self (), search.x, gsl_vector_get (*v, 0), *v);
   }
   if (res == NULL)
   {
-    g_static_mutex_unlock (&cache->lock);
+	_NCM_MUTEX_UNLOCK (&cache->lock);
     return FALSE;
   }
-  //*f_ptr = *res;
   *v = res;
 
-  g_static_mutex_unlock (&cache->lock);
-  //printf ("[%p]Found2! %g ... %g [%p] \n", g_thread_self (), search.x, gsl_vector_get (*v, 0), *v);
+  _NCM_MUTEX_UNLOCK (&cache->lock);
   return TRUE;
 }
 
@@ -214,22 +207,23 @@ gboolean
 nc_function_cache_get (NcFunctionCache *cache, gdouble *x_ptr, gsl_vector **v)
 {
   gsl_vector *res;
-  //gdouble *res;
-  g_static_mutex_lock (&cache->lock);
-  if(cache_clean (cache))
+
+  _NCM_MUTEX_LOCK (&cache->lock);
+
+  if (cache_clean (cache))
   {
-    g_static_mutex_unlock (&cache->lock);
+	_NCM_MUTEX_UNLOCK (&cache->lock);
     return FALSE;
   }
   res = g_tree_lookup (cache->tree, x_ptr);
   if (res == NULL)
   {
-    g_static_mutex_unlock (&cache->lock);
-    return FALSE;
+	_NCM_MUTEX_UNLOCK (&cache->lock);
+	return FALSE;
   }
-  //*val_ptr = *res;
+
   *v = res;
-  g_static_mutex_unlock (&cache->lock);
+  _NCM_MUTEX_UNLOCK (&cache->lock);
   return TRUE;
 }
 

@@ -70,7 +70,7 @@ static gdouble _N (NcClusterAbundance *cad, NcHICosmo *model) {g_error ("Functio
  * This function allocates memory for a new #NcClusterAbundance object and sets its properties to the values from
  * the input arguments.
  *
- * @Returns: A new #NcClusterAbundance.
+ * Returns: A new #NcClusterAbundance.
  */
 NcClusterAbundance *
 nc_cluster_abundance_new (NcMassFunction *mfp, NcHaloBiasFunc *mbiasf, NcClusterRedshift *clusterz, NcClusterMass *clusterm)
@@ -307,7 +307,7 @@ _nc_cluster_abundance_lnm_p_d2n_integrand (gdouble lnM, gpointer params)
   const gdouble d2NdzdlnM = nc_mass_function_d2n_dzdlnm (cad->mfp, obs_data->model, lnM, obs_data->z);
 
   //printf ("pM = % 20.8g d2NdzdlnM = % 20.8g res = % 20.8g\n", p_M_Mobs, d2NdzdlnM, p_M_Mobs * d2NdzdlnM);
-  
+
   return p_M_Mobs * d2NdzdlnM;
 }
 

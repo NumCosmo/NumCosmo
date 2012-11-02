@@ -93,7 +93,7 @@ main (gint argc, gchar *argv[])
   mset_xcdm = ncm_mset_new (NCM_MODEL (xcdm), NULL);
   dist = nc_distance_new (2.0);
 
-  ncm_model_param_set (NCM_MODEL (xcdm), NC_HICOSMO_DE_H0, NC_C_HUBBLE_CTE_HST);
+  ncm_model_param_set (NCM_MODEL (xcdm), NC_HICOSMO_DE_H0, ncm_c_hubble_cte_hst ());
   ncm_model_param_set (NCM_MODEL (xcdm), NC_HICOSMO_DE_OMEGA_C, RESAMPLE_OMEGA_M);
   ncm_model_param_set (NCM_MODEL (xcdm), NC_HICOSMO_DE_OMEGA_X, RESAMPLE_OMEGA_LAMBDA);
   ncm_model_param_set (NCM_MODEL (xcdm), NC_HICOSMO_DE_XCDM_W, RESAMPLE_OMEGA);
@@ -162,11 +162,11 @@ main (gint argc, gchar *argv[])
 	  gdouble err_inf, err_sup;
 	  if (z != 0.0f && FALSE)
 	  {
-		ncm_fit_cr_1dim (fit, NC_HICOSMO_ID, 0, NC_C_STATS_1SIGMA, 1, &err_inf, &err_sup);
-		ncm_fit_cr_1dim (fit, NC_HICOSMO_ID, 1, NC_C_STATS_1SIGMA, 1, &err_inf, &err_sup);
+		ncm_fit_cr_1dim (fit, NC_HICOSMO_ID, 0, ncm_c_stats_1sigma (), 1, &err_inf, &err_sup);
+		ncm_fit_cr_1dim (fit, NC_HICOSMO_ID, 1, ncm_c_stats_1sigma (), 1, &err_inf, &err_sup);
 	  }
 	  printf("%g",z);
-	  ncm_fit_cr_1dim (fit, NC_HICOSMO_ID, 2, NC_C_STATS_1SIGMA, 1, &err_inf, &err_sup);
+	  ncm_fit_cr_1dim (fit, NC_HICOSMO_ID, 2, ncm_c_stats_1sigma (), 1, &err_inf, &err_sup);
 	}
   }
 
@@ -179,7 +179,7 @@ main (gint argc, gchar *argv[])
 	for (i = 0; i < n && dz[i] <= interval; i++)
 	{
 	  gdouble dE = nc_hicosmo_qlinear_dE (dz[i], z, ncm_mset_param_get (fit->mset, NC_HICOSMO_ID, NC_HICOSMO_QCONST_Q), 0.0);
-	  printf ("\t%g\t%g\t%g\n", dz[i], E * dE, E * dE * NC_C_HUBBLE_CTE_WMAP);
+	  printf ("\t%g\t%g\t%g\n", dz[i], E * dE, E * dE * ncm_c_hubble_cte_wmap ());
 	}
   }
 

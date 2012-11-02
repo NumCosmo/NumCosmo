@@ -29,10 +29,10 @@
 #include <numcosmo/build_cfg.h>
 
 /* Macros, Constants and Enums */
-#include <numcosmo/ncm_enum_types.h>
 #include <numcosmo/nc_macros.h>
-#include <numcosmo/nc_constants.h>
 #include <numcosmo/nc_enum_types.h>
+#include <numcosmo/ncm_enum_types.h>
+#include <numcosmo/math/ncm_c.h>
 
 /* Base types and components */
 #include <numcosmo/math/ncm_vector.h>

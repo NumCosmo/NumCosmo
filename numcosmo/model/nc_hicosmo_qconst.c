@@ -70,7 +70,11 @@ static gdouble _nc_hicosmo_qconst_H0 (NcmModel *model) { return MACRO_H0; }
 static gdouble _nc_hicosmo_qconst_Omega_t (NcmModel *model) { return OMEGA_T; }
 
 /**
+ * nc_hicosmo_qconst_new:
+ *
  * FIXME
+ *
+ * Returns: FIXME
  */
 NcHICosmoQConst *
 nc_hicosmo_qconst_new (void)

@@ -165,7 +165,7 @@ ncm_model_ctrl_has_model (NcmModelCtrl *ctrl, NcmModel *model)
 }
 
 /**
- * ncm_model_ctrl_has_model:
+ * ncm_model_ctrl_force_update:
  * @ctrl: FIXME
  *
  * FIXME

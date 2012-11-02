@@ -38,8 +38,8 @@
 
 #include "sphere/map.h"
 #include "sphere/healpix.h"
-#include "nc_constants.h"
 #include "nc_macros.h"
+#include "math/ncm_c.h"
 #include "math/ncm_cfg.h"
 #include "math/util.h"
 
@@ -252,9 +252,9 @@ nc_sphere_mapalm_init (NcSphereMapAlm *mapalm, gint lmax)
   for (m = 1; m <= lmax; m++)
   {
     gdouble y_mm;
-    gsl_vector_set (mapalm->lnpoch_m_1_2, m, 0.5 * last_lnpoch - NC_C_LNPI_4);
+    gsl_vector_set (mapalm->lnpoch_m_1_2, m, 0.5 * last_lnpoch - ncm_c_lnpi_4 ());
 
-    y_mm = NC_C_SQRT_1_4PI *
+    y_mm = ncm_c_sqrt_1_4pi () *
       gsl_vector_get (mapalm->sqrt_int, 2*m + 1) / gsl_vector_get(mapalm->sqrt_int, m) * sgn;
     gsl_vector_set (mapalm->sphPmm, m, y_mm);
 
@@ -487,8 +487,8 @@ nc_sphere_mapsht_map2alm_circle (NcSphereMapSHT *mapsht, gint ring, gint ring_si
 
     if(m == 0)
     {
-      y_mm   = NC_C_SQRT_1_4PI;          /* Y00 = 1/sqrt(4pi) */
-      y_mmp1 = x * NC_C_SQRT_3_4PI;
+      y_mm   = ncm_c_sqrt_1_4pi ();          /* Y00 = 1/sqrt(4pi) */
+      y_mmp1 = x * ncm_c_sqrt_3_4pi ();
     }
     else
     {
@@ -634,8 +634,8 @@ nc_sphere_mapsht_alm2map_circle (NcSphereMapSHT *mapsht, gint ring,  gint ring_s
 
     if(m == 0)
     {
-      y_mm   = NC_C_SQRT_1_4PI;          /* Y00 = 1/sqrt(4pi) */
-      y_mmp1 = x * NC_C_SQRT_3_4PI;
+      y_mm   = ncm_c_sqrt_1_4pi ();          /* Y00 = 1/sqrt(4pi) */
+      y_mmp1 = x * ncm_c_sqrt_3_4pi ();
     }
     else
     {

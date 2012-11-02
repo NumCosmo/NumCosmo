@@ -62,8 +62,6 @@ struct _NcDistance
   NcFunctionCache *lookback_time_cache;
   NcFunctionCache *conformal_time_cache;
   NcFunctionCache *sound_horizon_cache;
-  GStaticMutex cache_lock;
-  GStaticMutex update_lock;
   NcmModelCtrl *ctrl;
   gdouble z_f;
   gboolean use_cache;

@@ -156,7 +156,7 @@ nc_pert_linear_new (NcmModel *model, guint lmax, gdouble tc_reltol, gdouble relt
 
   pert->eta0 = nc_scale_factor_t_z (pert->a, 0.0);
 
-	printf ("# Recomb at %.15g %.15g %.15g %.15g %.15g | Omega_r %.15g\n", pert->recomb->x_rec - 1.0, nc_scale_factor_t_x (pert->a, pert->recomb->x_rec), nc_scale_factor_t_x (pert->a, pert->recomb->x_rec) * NC_C_HUBBLE_RADIUS / 0.7, nc_scale_factor_z_t (pert->a, 313.29 / (NC_C_HUBBLE_RADIUS / 0.70)), pert->eta0 * NC_C_HUBBLE_RADIUS / 0.70,
+	printf ("# Recomb at %.15g %.15g %.15g %.15g %.15g | Omega_r %.15g\n", pert->recomb->x_rec - 1.0, nc_scale_factor_t_x (pert->a, pert->recomb->x_rec), nc_scale_factor_t_x (pert->a, pert->recomb->x_rec) * ncm_c_hubble_radius () / 0.7, nc_scale_factor_z_t (pert->a, 313.29 / (ncm_c_hubble_radius () / 0.70)), pert->eta0 * ncm_c_hubble_radius () / 0.70,
 	        nc_hicosmo_Omega_r (NC_HICOSMO (model)));
 
   pert->lmax = lmax;
@@ -332,8 +332,8 @@ nc_pert_transfer_function_new (NcLinearPert *pert, gdouble k0, gdouble k1, gulon
 	NcmVector *logkv = ncm_vector_new (np);
 	NcmVector *logPhiv = ncm_vector_new (np);
 
-  perttf->logk0 = log (k0 * NC_C_HUBBLE_RADIUS);
-  perttf->logk1 = log (k1 * NC_C_HUBBLE_RADIUS);
+  perttf->logk0 = log (k0 * ncm_c_hubble_radius ());
+  perttf->logk1 = log (k1 * ncm_c_hubble_radius ());
   perttf->np = np;
   perttf->logPhi_logk = ncm_spline_cubic_notaknot_new_full (logkv, logPhiv, FALSE);
   perttf->pert = pert;
@@ -384,7 +384,7 @@ nc_pert_transfer_function_prepare (NcLinearPertTF *perttf)
 gdouble
 nc_pert_transfer_function_get (NcLinearPertTF *perttf, gdouble kh)
 {
-  const gdouble logk = log (kh * NC_C_HUBBLE_RADIUS);
+  const gdouble logk = log (kh * ncm_c_hubble_radius ());
   const gdouble logPhi = ncm_spline_eval (perttf->logPhi_logk, logk);
   return exp (logPhi);
 }

@@ -77,7 +77,7 @@ static gdouble
 ncm_galaxy_acf_psi_kernel_l (gdouble z, gpointer p)
 {
   NcmGalaxyAcfPsiKernel *apk = (NcmGalaxyAcfPsiKernel *) p;
-  const gdouble cd = NC_C_HUBBLE_RADIUS * nc_distance_comoving (apk->acf->dist, apk->model, z);
+  const gdouble cd = ncm_c_hubble_radius () * nc_distance_comoving (apk->acf->dist, apk->model, z);
   const gdouble Dz = nc_growth_func_eval (apk->acf->gf, apk->model, z);
   const gdouble fz = nc_growth_func_eval_deriv (apk->acf->gf, apk->model, z);
   const gdouble x = apk->k * cd;
@@ -91,7 +91,7 @@ static gdouble
 ncm_galaxy_acf_psi_kernel_lp1 (gdouble z, gpointer p)
 {
   NcmGalaxyAcfPsiKernel *apk = (NcmGalaxyAcfPsiKernel *) p;
-  const gdouble cd = NC_C_HUBBLE_RADIUS * nc_distance_comoving (apk->acf->dist, apk->model, z);
+  const gdouble cd = ncm_c_hubble_radius () * nc_distance_comoving (apk->acf->dist, apk->model, z);
   const gdouble Dz = nc_growth_func_eval (apk->acf->gf, apk->model, z);
   const gdouble fz = nc_growth_func_eval_deriv (apk->acf->gf, apk->model, z);
   const gdouble x = apk->k * cd;
@@ -104,7 +104,7 @@ static gdouble
 ncm_galaxy_acf_psi_kernel (gdouble z, gpointer p)
 {
   NcmGalaxyAcfPsiKernel *apk = (NcmGalaxyAcfPsiKernel *) p;
-  const gdouble cd = NC_C_HUBBLE_RADIUS * nc_distance_comoving (apk->acf->dist, apk->model, z);
+  const gdouble cd = ncm_c_hubble_radius () * nc_distance_comoving (apk->acf->dist, apk->model, z);
   const gdouble x = apk->k * cd;
   const gdouble x2 = x * x;
   const gdouble sel_func = 1.0;
@@ -149,7 +149,7 @@ ncm_galaxy_acf_psi (NcGalaxyAcf *acf, NcHICosmo *model, gdouble k, guint l)
 static gdouble
 ncm_galaxy_acf_psi_int (gdouble mu, gpointer p)
 {
-  static glong count = 0;
+//  static glong count = 0;
   NcmGalaxyAcfPsiKernel *apk = (NcmGalaxyAcfPsiKernel *) p;
   const gdouble k = exp (mu);
   const gdouble Pk = nc_transfer_func_matter_powerspectrum (apk->acf->tf, apk->model, k);
@@ -166,8 +166,8 @@ ncm_galaxy_acf_prepare_psi (NcGalaxyAcf *acf, NcHICosmo *model, guint l)
 {
   NcmGalaxyAcfPsiKernel psi_kernel;
   gsl_function F;
-  const gdouble sqrt_norma = nc_matter_var_sigma8_sqrtvar0 (acf->vp, model);
-  const gdouble norma = sqrt_norma * sqrt_norma;
+//  const gdouble sqrt_norma = nc_matter_var_sigma8_sqrtvar0 (acf->vp, model);
+//  const gdouble norma = sqrt_norma * sqrt_norma;
   F.function = &ncm_galaxy_acf_psi_int;
   F.params = &psi_kernel;
 
@@ -192,8 +192,8 @@ ncm_galaxy_acf_prepare_psi (NcGalaxyAcf *acf, NcHICosmo *model, guint l)
 
 /*
   ncm_spline_set_func (acf->s, NCM_SPLINE_FUNCTION_SPLINE, &F,
-                       log (1.0e-12 * NC_C_HUBBLE_RADIUS),
-                       log (1.0e1 * NC_C_HUBBLE_RADIUS),
+                       log (1.0e-12 * ncm_c_hubble_radius ()),
+                       log (1.0e1 * ncm_c_hubble_radius ()),
                        0, 1e-6);
 					   */
 }

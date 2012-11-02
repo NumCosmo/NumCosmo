@@ -353,16 +353,16 @@ main (gint argc, gchar *argv[])
 	  switch (de_fit.nsigma)
 	  {
 		case 1:
-		  prob_sigma = NC_C_STATS_1SIGMA;
+		  prob_sigma = ncm_c_stats_1sigma ();
 		  break;
 		case 2:
-		  prob_sigma = NC_C_STATS_2SIGMA;
+		  prob_sigma = ncm_c_stats_2sigma ();
 		  break;
 		case 3:
-		  prob_sigma = NC_C_STATS_3SIGMA;
+		  prob_sigma = ncm_c_stats_3sigma ();
 		  break;
 		default:
-		  prob_sigma = NC_C_STATS_1SIGMA;
+		  prob_sigma = ncm_c_stats_1sigma ();
 		  break;
 	  }
 	  ncm_fit_cr_1dim (fit, NC_HICOSMO_ID, p_n, prob_sigma, 1, &err_inf, &err_sup);
@@ -393,18 +393,18 @@ main (gint argc, gchar *argv[])
 	switch (de_fit.nsigma)
 	{
 	  case 1:
-		points_1sigma = ncm_fit_cr2 (fit, NC_HICOSMO_ID, de_fit.bidim_cr[0], NC_HICOSMO_ID, de_fit.bidim_cr[1], NC_C_STATS_1SIGMA);
+		points_1sigma = ncm_fit_cr2 (fit, NC_HICOSMO_ID, de_fit.bidim_cr[0], NC_HICOSMO_ID, de_fit.bidim_cr[1], ncm_c_stats_1sigma ());
 		break;
 	  case 2:
-		points_2sigma = ncm_fit_cr2 (fit, NC_HICOSMO_ID, de_fit.bidim_cr[0], NC_HICOSMO_ID, de_fit.bidim_cr[1], NC_C_STATS_2SIGMA);
+		points_2sigma = ncm_fit_cr2 (fit, NC_HICOSMO_ID, de_fit.bidim_cr[0], NC_HICOSMO_ID, de_fit.bidim_cr[1], ncm_c_stats_2sigma ());
 		break;
 	  case 3:
-		points_3sigma = ncm_fit_cr2 (fit, NC_HICOSMO_ID, de_fit.bidim_cr[0], NC_HICOSMO_ID, de_fit.bidim_cr[1], NC_C_STATS_3SIGMA);
+		points_3sigma = ncm_fit_cr2 (fit, NC_HICOSMO_ID, de_fit.bidim_cr[0], NC_HICOSMO_ID, de_fit.bidim_cr[1], ncm_c_stats_3sigma ());
 		break;
 	  default:
-		points_1sigma = ncm_fit_cr2 (fit, NC_HICOSMO_ID, de_fit.bidim_cr[0], NC_HICOSMO_ID, de_fit.bidim_cr[1], NC_C_STATS_1SIGMA);
-		points_2sigma = ncm_fit_cr2 (fit, NC_HICOSMO_ID, de_fit.bidim_cr[0], NC_HICOSMO_ID, de_fit.bidim_cr[1], NC_C_STATS_2SIGMA);
-		points_3sigma = ncm_fit_cr2 (fit, NC_HICOSMO_ID, de_fit.bidim_cr[0], NC_HICOSMO_ID, de_fit.bidim_cr[1], NC_C_STATS_3SIGMA);
+		points_1sigma = ncm_fit_cr2 (fit, NC_HICOSMO_ID, de_fit.bidim_cr[0], NC_HICOSMO_ID, de_fit.bidim_cr[1], ncm_c_stats_1sigma ());
+		points_2sigma = ncm_fit_cr2 (fit, NC_HICOSMO_ID, de_fit.bidim_cr[0], NC_HICOSMO_ID, de_fit.bidim_cr[1], ncm_c_stats_2sigma ());
+		points_3sigma = ncm_fit_cr2 (fit, NC_HICOSMO_ID, de_fit.bidim_cr[0], NC_HICOSMO_ID, de_fit.bidim_cr[1], ncm_c_stats_3sigma ());
 		break;
 	}
 
@@ -453,18 +453,18 @@ main (gint argc, gchar *argv[])
 	switch (de_fit.nsigma_fisher)
 	{
 	  case 1:
-		points_1sigma = ncm_fit_cr2_fisher (fit, NC_HICOSMO_ID, de_fit.bidim_cr[0], NC_HICOSMO_ID, de_fit.bidim_cr[1], NC_C_STATS_1SIGMA);
+		points_1sigma = ncm_fit_cr2_fisher (fit, NC_HICOSMO_ID, de_fit.bidim_cr[0], NC_HICOSMO_ID, de_fit.bidim_cr[1], ncm_c_stats_1sigma ());
 		break;
 	  case 2:
-		points_2sigma = ncm_fit_cr2_fisher (fit, NC_HICOSMO_ID, de_fit.bidim_cr[0], NC_HICOSMO_ID, de_fit.bidim_cr[1], NC_C_STATS_2SIGMA);
+		points_2sigma = ncm_fit_cr2_fisher (fit, NC_HICOSMO_ID, de_fit.bidim_cr[0], NC_HICOSMO_ID, de_fit.bidim_cr[1], ncm_c_stats_2sigma ());
 		break;
 	  case 3:
-		points_3sigma = ncm_fit_cr2_fisher (fit, NC_HICOSMO_ID, de_fit.bidim_cr[0], NC_HICOSMO_ID, de_fit.bidim_cr[1], NC_C_STATS_3SIGMA);
+		points_3sigma = ncm_fit_cr2_fisher (fit, NC_HICOSMO_ID, de_fit.bidim_cr[0], NC_HICOSMO_ID, de_fit.bidim_cr[1], ncm_c_stats_3sigma ());
 		break;
 	  default:
-		points_1sigma = ncm_fit_cr2_fisher (fit, NC_HICOSMO_ID, de_fit.bidim_cr[0], NC_HICOSMO_ID, de_fit.bidim_cr[1], NC_C_STATS_1SIGMA);
-		points_2sigma = ncm_fit_cr2_fisher (fit, NC_HICOSMO_ID, de_fit.bidim_cr[0], NC_HICOSMO_ID, de_fit.bidim_cr[1], NC_C_STATS_2SIGMA);
-		points_3sigma = ncm_fit_cr2_fisher (fit, NC_HICOSMO_ID, de_fit.bidim_cr[0], NC_HICOSMO_ID, de_fit.bidim_cr[1], NC_C_STATS_3SIGMA);
+		points_1sigma = ncm_fit_cr2_fisher (fit, NC_HICOSMO_ID, de_fit.bidim_cr[0], NC_HICOSMO_ID, de_fit.bidim_cr[1], ncm_c_stats_1sigma ());
+		points_2sigma = ncm_fit_cr2_fisher (fit, NC_HICOSMO_ID, de_fit.bidim_cr[0], NC_HICOSMO_ID, de_fit.bidim_cr[1], ncm_c_stats_2sigma ());
+		points_3sigma = ncm_fit_cr2_fisher (fit, NC_HICOSMO_ID, de_fit.bidim_cr[0], NC_HICOSMO_ID, de_fit.bidim_cr[1], ncm_c_stats_3sigma ());
 		break;
 	}
 

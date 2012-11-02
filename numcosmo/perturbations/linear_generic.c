@@ -21,7 +21,7 @@
  * You should have received a copy of the GNU General Public License along
  * with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
- 
+
 static void
 LINEAR_NAME_SUFFIX(init) (NcLinearPert *pert)
 {
@@ -46,10 +46,10 @@ LINEAR_NAME_SUFFIX(init) (NcLinearPert *pert)
   pert->pws->g     = 0.0;
 
   LINEAR_VECTOR_SET_ALL (y, 0.0, pert->sys_size);
-  
+
   pert->pws->tight_coupling = TRUE;
   pert->pws->tight_coupling_end = FALSE;
-  
+
   _NC_PHI = 1.0;
   _NC_C0 = 3.0 * _NC_PHI / 2.0;
 
@@ -57,15 +57,15 @@ LINEAR_NAME_SUFFIX(init) (NcLinearPert *pert)
   {
     _NC_V = keta3 * _NC_C0 / 36.0;
     _NC_U = _NC_V / 3.0;
-    _NC_T = -(4.0 * _NC_V) / (3.0 * taubar * R0 * x); 
-    _NC_dB0 = _NC_dTHETA0 = -keta * _NC_V / 12.0;   
+    _NC_T = -(4.0 * _NC_V) / (3.0 * taubar * R0 * x);
+    _NC_dB0 = _NC_dTHETA0 = -keta * _NC_V / 12.0;
 
     theta1 = -keta / 6.0 * _NC_PHI;
   }
   else
   {
     _NC_THETA0 = _NC_B0 = _NC_C0;
-    _NC_THETA1 = _NC_B1 = _NC_C1 = theta1 = -keta / 6.0 * _NC_PHI;    
+    _NC_THETA1 = _NC_B1 = _NC_C1 = theta1 = -keta / 6.0 * _NC_PHI;
   }
 
   _NC_THETA2 = -8.0 / 15.0 * k_taudot * theta1;
@@ -79,7 +79,7 @@ LINEAR_NAME_SUFFIX(init) (NcLinearPert *pert)
     _NC_THETA(i) = f1 * _NC_THETA(i-1);
     _NC_THETA_P(i) = f1 * _NC_THETA_P(i-1);
   }
-  
+
 #ifdef SIMUL_LOS_INT
   {
     gint last_l = 2;
@@ -108,12 +108,12 @@ LINEAR_NAME_SUFFIX(init) (NcLinearPert *pert)
   }
 #endif
 
-  LINEAR_NAME_SUFFIX(reset) (pert);  
+  LINEAR_NAME_SUFFIX(reset) (pert);
 
   return;
 }
 
-static void 
+static void
 LINEAR_NAME_SUFFIX(end_tight_coupling) (NcLinearPert *pert)
 {
   LINEAR_VECTOR_PREPARE;
@@ -134,7 +134,7 @@ LINEAR_NAME_SUFFIX(end_tight_coupling) (NcLinearPert *pert)
     return;
 
   printf ("# tight coupling ended at %f => %f\n", pert->pws->g, exp(-pert->pws->g));
-  
+
   pert->pws->tight_coupling = FALSE;
   pert->pws->tight_coupling_end = FALSE;
 
@@ -162,11 +162,11 @@ LINEAR_NAME_SUFFIX(end_tight_coupling) (NcLinearPert *pert)
   {
     gint i;
     pert->reltol = 1e-4;
-    LINEAR_VECTOR_SET_ALL (LINEAR_VEC_ABSTOL(pert), 1e-13, pert->sys_size);  
+    LINEAR_VECTOR_SET_ALL (LINEAR_VEC_ABSTOL(pert), 1e-13, pert->sys_size);
     for (i = 0; i <= NC_PERT_THETA_P2; i++)
       LINEAR_VEC_COMP (LINEAR_VEC_ABSTOL(pert), i) = 0.0;
   }
-  
+
   LINEAR_NAME_SUFFIX(reset) (pert);
 
   return;
@@ -177,7 +177,7 @@ LINEAR_NAME_SUFFIX(get_k_H) (NcLinearPert *pert)
 {
   NcmModel *model = pert->model;
   const gdouble k = pert->pws->k;
-  const gdouble c_H0 = NC_C_c / (nc_hicosmo_H0 (NC_HICOSMO (model)) * 1.0e3);
+  const gdouble c_H0 = ncm_c_c () / (nc_hicosmo_H0 (NC_HICOSMO (model)) * 1.0e3);
   return k / c_H0;
 }
 
@@ -258,7 +258,7 @@ gdouble
 LINEAR_NAME_SUFFIX(get_b1) (NcLinearPert *pert)
 {
   LINEAR_VECTOR_PREPARE;
-  if (pert->pws->tight_coupling)  
+  if (pert->pws->tight_coupling)
   {
     NcmModel *model = pert->model;
 
@@ -345,10 +345,10 @@ LINEAR_NAME_SUFFIX(get_sources) (NcLinearPert *pert, gdouble *S0, gdouble *S1, g
   LINEAR_VECTOR_PREPARE;
   NcmModel *model = pert->model;
   const gdouble x = exp (-pert->pws->g + pert->g0);
-  const gdouble taubar = nc_thermodyn_recomb_taubar (pert->recomb, x);  
+  const gdouble taubar = nc_thermodyn_recomb_taubar (pert->recomb, x);
   gdouble opt = nc_thermodyn_recomb_optical_depth (pert->recomb, x);
   gdouble tau_log_abs_taubar = -opt + log(fabs(taubar));
-  
+
   if (tau_log_abs_taubar > GSL_LOG_DBL_MIN + 0.01)
   {
     const gdouble Omega_r = nc_hicosmo_Omega_r (NC_HICOSMO (model));
@@ -378,7 +378,7 @@ LINEAR_NAME_SUFFIX(get_sources) (NcLinearPert *pert, gdouble *S0, gdouble *S1, g
 
     if (pert->pws->tight_coupling)
     {
-      dphi = psi - k2x2_3E2 * _NC_PHI - x / (2.0 * E2) * 
+      dphi = psi - k2x2_3E2 * _NC_PHI - x / (2.0 * E2) *
       (
         dErm2_dx * (_NC_PHI - _NC_C0)
         -(3.0 * Omega_b * _NC_dB0 * x2 + 4.0 * Omega_r * x3 * _NC_dTHETA0)
@@ -388,7 +388,7 @@ LINEAR_NAME_SUFFIX(get_sources) (NcLinearPert *pert, gdouble *S0, gdouble *S1, g
     }
     else
     {
-      dphi = psi - k2x2_3E2 * _NC_PHI - x / (2.0 * E2) * 
+      dphi = psi - k2x2_3E2 * _NC_PHI - x / (2.0 * E2) *
       (
         dErm2_dx * _NC_PHI
         -(3.0 * (Omega_c * _NC_C0 * x2 + Omega_b * _NC_B0 * x2) + 4.0 * Omega_r * x3 * _NC_THETA0)
@@ -437,18 +437,18 @@ LINEAR_NAME_SUFFIX(step) (LINEAR_STEP_PARAMS)
   const gdouble dErm2_dx = (3.0 * Omega_m * x2 + 4.0 * Omega_r * x3);
   const gdouble taubar = nc_thermodyn_recomb_taubar (pert->recomb, x);
   gint i;
- 
+
   if (fabs(_NC_V * _NC_TIGHT_COUPLING_END) > kx_3E * _NC_C0)
     pert->pws->tight_coupling_end = TRUE;
 
   if (pert->pws->tight_coupling)
   {
-    _NC_DPHI = psi - k2x2_3E2 * _NC_PHI - x / (2.0 * E2) * 
+    _NC_DPHI = psi - k2x2_3E2 * _NC_PHI - x / (2.0 * E2) *
       (
         dErm2_dx * (_NC_PHI - _NC_C0)
         -(3.0 * Omega_b * _NC_dB0 * x2 + 4.0 * Omega_r * x3 * _NC_dTHETA0)
         );
-    
+
     _NC_DC0 = -kx_E * _NC_V + k2x2_3E2 * (_NC_C0 - _NC_PHI);
     _NC_DdTHETA0 = -kx_E * (R * _NC_U + _NC_T) / (R + 1.0);
     _NC_DdB0 = -kx_E * R * (_NC_U - _NC_T) / (R + 1.0);
@@ -461,14 +461,14 @@ LINEAR_NAME_SUFFIX(step) (LINEAR_STEP_PARAMS)
   }
   else
   {
-    _NC_DPHI = psi - k2x2_3E2 * _NC_PHI + x / (2.0 * E2) * 
+    _NC_DPHI = psi - k2x2_3E2 * _NC_PHI + x / (2.0 * E2) *
       (
         (3.0 * (Omega_c * _NC_C0 * x2 + Omega_b * _NC_B0 * x2) + 4.0 * Omega_r * x3 * _NC_THETA0)
         -dErm2_dx * _NC_PHI
         );
 
 //printf ("%.15g %.15g %.15g %.15g %.15g %.15g %.15g %.15g (%.15g = %.15g + %.15g)\n", g, x, _NC_C0, _NC_B0, _NC_THETA0, _NC_C1, _NC_B1, _NC_THETA1, Omega_m, Omega_c, Omega_b);
-    
+
     _NC_DC0 = -kx_E * _NC_C1;
     _NC_DB0 = -kx_E * _NC_B1;
     _NC_DTHETA0 = -kx_E * _NC_THETA1;
@@ -480,36 +480,36 @@ LINEAR_NAME_SUFFIX(step) (LINEAR_STEP_PARAMS)
     _NC_DTHETA2 = kx_E * (2.0 * _NC_THETA1 - 3.0 * _NC_THETA(3)) / 5.0 + taubar * (_NC_THETA2 - PI / 10.0);
   }
 /*
-printf ("%.15g %.15g %.15g %.15g %.15g %.15g %.15g %.15g %.15g\n", 
-        g, 
-        kx_3E * _NC_THETA0, 
-        - 2.0 * kx_3E * _NC_THETA2, 
-        - kx_3E * _NC_PHI, 
-        + kx_3E * psi, 
-        taubar * _NC_THETA1, 
-        - taubar * _NC_B1, 
+printf ("%.15g %.15g %.15g %.15g %.15g %.15g %.15g %.15g %.15g\n",
+        g,
+        kx_3E * _NC_THETA0,
+        - 2.0 * kx_3E * _NC_THETA2,
+        - kx_3E * _NC_PHI,
+        + kx_3E * psi,
+        taubar * _NC_THETA1,
+        - taubar * _NC_B1,
         _NC_THETA1, _NC_DTHETA1);
 	*/
 //printf ("% 20.15g % 20.15g % 20.15g\n", g, _NC_PHI, _NC_DPHI);
-  
+
   _NC_DTHETA_P0 = -kx_E * _NC_THETA_P1 + taubar * (_NC_THETA_P0 - PI / 2.0);
-  _NC_DTHETA_P1 = kx_3E * (_NC_THETA_P0 - 2.0 * _NC_THETA_P2) + taubar * (_NC_THETA_P1);  
+  _NC_DTHETA_P1 = kx_3E * (_NC_THETA_P0 - 2.0 * _NC_THETA_P2) + taubar * (_NC_THETA_P1);
   _NC_DTHETA_P2 = kx_E * (2.0 * _NC_THETA_P1 - 3.0 * _NC_THETA_P(3)) / 5.0 + taubar * (_NC_THETA_P2 - PI / 10.0);
-  
+
   for (i = 3; i < lmax; i++)
   {
     const gdouble f1 = kx_E / (2.0 * i + 1.0);
-    _NC_DTHETA(i) = 
+    _NC_DTHETA(i) =
       f1 * (
-            i * _NC_THETA(i-1) - 
+            i * _NC_THETA(i-1) -
             (1.0 + i) * _NC_THETA (i+1)
-            ) + 
+            ) +
       taubar * _NC_THETA(i);
-    _NC_DTHETA_P(i) = 
-      f1 * 
+    _NC_DTHETA_P(i) =
+      f1 *
       (
-       i * _NC_THETA_P(i-1) - 
-       (1.0 + i) * _NC_THETA_P (i+1)) + 
+       i * _NC_THETA_P(i-1) -
+       (1.0 + i) * _NC_THETA_P (i+1)) +
       taubar * _NC_THETA_P(i);
   }
 
@@ -527,10 +527,10 @@ printf ("%.15g %.15g %.15g %.15g %.15g %.15g %.15g %.15g %.15g\n",
 #endif
     {
       _NC_DTHETA(i) =
-        f1 * i * _NC_THETA(i-1) + 
+        f1 * i * _NC_THETA(i-1) +
         taubar * _NC_THETA(i);
       _NC_DTHETA_P(i) =
-        f1 * i * _NC_THETA_P(i-1) + 
+        f1 * i * _NC_THETA_P(i-1) +
         taubar * _NC_THETA_P(i);
     }
   }
@@ -539,38 +539,38 @@ printf ("%.15g %.15g %.15g %.15g %.15g %.15g %.15g %.15g %.15g\n",
   {
     const gdouble eta = nc_scale_factor_t_x (pert->a, x);
     const gdouble keta = pert->pws->k * eta;
-    
+
     guint n = 16;
-    g_message ("%.15g %.15g %.15g %.15g %.15g %.15g %.15g %.15g %.15g %.15g\n", g, k, eta, _NC_THETA(n + 1), (2.0 * n+ 1.0) * _NC_THETA(n) / keta - _NC_THETA(n - 1), (2.0 * n+ 1.0) * _NC_THETA(n) / keta, _NC_THETA(n - 1), 
+    g_message ("%.15g %.15g %.15g %.15g %.15g %.15g %.15g %.15g %.15g %.15g\n", g, k, eta, _NC_THETA(n + 1), (2.0 * n+ 1.0) * _NC_THETA(n) / keta - _NC_THETA(n - 1), (2.0 * n+ 1.0) * _NC_THETA(n) / keta, _NC_THETA(n - 1),
             - (n + 1.0) * kx_E * _NC_THETA(n) / (taubar * (2.0 * n + 3.0)), _NC_THETA(n), taubar);
-    g_debug ("%.15g %.15g %.15g %.15g %.15g %.15g %.15g %.15g %.15g %.15g\n", g, k, eta, _NC_THETA_P(n + 1), (2.0 * n+ 1.0) * _NC_THETA_P(n) / keta - _NC_THETA_P(n - 1), (2.0 * n+ 1.0) * _NC_THETA_P(n) / keta, _NC_THETA_P(n - 1), 
+    g_debug ("%.15g %.15g %.15g %.15g %.15g %.15g %.15g %.15g %.15g %.15g\n", g, k, eta, _NC_THETA_P(n + 1), (2.0 * n+ 1.0) * _NC_THETA_P(n) / keta - _NC_THETA_P(n - 1), (2.0 * n+ 1.0) * _NC_THETA_P(n) / keta, _NC_THETA_P(n - 1),
             - (n + 1.0) * kx_E * _NC_THETA_P(n) / (taubar * (2.0 * n + 3.0)), _NC_THETA_P(n), taubar);
   }
 
   if (FALSE)
   {
-    g_message ("%.15g %.15g %.15g %.15g %.15g %.15g %.15g %.15g %.15g %.15g %.15g %.15g ", 
-               g, 
-               _NC_DPHI / _NC_PHI, 
-               _NC_DC0 / _NC_C0, 
-               _NC_DB0 / _NC_B0, 
-               _NC_DTHETA0 / _NC_THETA0, 
-               _NC_DC1 / _NC_C1, 
-               _NC_DB1 / _NC_B1, 
-               _NC_DTHETA1 / _NC_THETA1, 
-               _NC_DTHETA2 / _NC_THETA2, 
-               _NC_DTHETA_P0 / _NC_THETA_P0, 
-               _NC_DTHETA_P1 / _NC_THETA_P1, 
+    g_message ("%.15g %.15g %.15g %.15g %.15g %.15g %.15g %.15g %.15g %.15g %.15g %.15g ",
+               g,
+               _NC_DPHI / _NC_PHI,
+               _NC_DC0 / _NC_C0,
+               _NC_DB0 / _NC_B0,
+               _NC_DTHETA0 / _NC_THETA0,
+               _NC_DC1 / _NC_C1,
+               _NC_DB1 / _NC_B1,
+               _NC_DTHETA1 / _NC_THETA1,
+               _NC_DTHETA2 / _NC_THETA2,
+               _NC_DTHETA_P0 / _NC_THETA_P0,
+               _NC_DTHETA_P1 / _NC_THETA_P1,
                _NC_DTHETA_P2 / _NC_THETA_P2);
     for (i = 3; i <= 16; i++)
       g_message ("%.15g ", _NC_DTHETA(i) / _NC_THETA(i));
     g_message ("%.15g\n", taubar);
   }
-  
+
   LINEAR_STEP_RET_VAL;
 }
 
-gint 
+gint
 LINEAR_NAME_SUFFIX(band_J) (LINEAR_JAC_PARAMS)
 {
   NcLinearPert *pert = (NcLinearPert *)user_data;
@@ -578,7 +578,7 @@ LINEAR_NAME_SUFFIX(band_J) (LINEAR_JAC_PARAMS)
   const gint lmax = pert->lmax;
   const gdouble Omega_r = nc_hicosmo_Omega_r (NC_HICOSMO (model));
   const gdouble Omega_b = nc_hicosmo_Omega_b (NC_HICOSMO (model));
-  const gdouble Omega_c = nc_hicosmo_Omega_c (NC_HICOSMO (model));  
+  const gdouble Omega_c = nc_hicosmo_Omega_c (NC_HICOSMO (model));
   const gdouble Omega_m = nc_hicosmo_Omega_m (NC_HICOSMO (model));
   const gdouble R0 = 4.0 * Omega_r / (3.0 * Omega_b);
   const gdouble x = exp (-g + pert->g0);
@@ -604,12 +604,12 @@ LINEAR_NAME_SUFFIX(band_J) (LINEAR_JAC_PARAMS)
   {
     /*
      * const gdouble psi = -_NC_PHI - 12.0 * x2 / k2 * Omega_r * _NC_THETA2;
-     * _NC_DPHI = psi - k2x2_3E2 * _NC_PHI - x / (2.0 * E2) * 
+     * _NC_DPHI = psi - k2x2_3E2 * _NC_PHI - x / (2.0 * E2) *
      *  (
        *    dErm2_dx * (_NC_PHI - _NC_C0)
      *   -(3.0 * Omega_b * _NC_dB0 * x2 + 4.0 * Omega_r * x3 * _NC_dTHETA0)
      *   );
-     */  
+     */
     LINEAR_MATRIX_E (J, NC_PERT_PHI, NC_PERT_PHI)      = -1.0 - k2x2_3E2 - x * dErm2_dx / (2.0 * E2);
     LINEAR_MATRIX_E (J, NC_PERT_PHI, NC_PERT_C0)       = +x * dErm2_dx / (2.0 * E2);
     LINEAR_MATRIX_E (J, NC_PERT_PHI, NC_PERT_dB0)      = +3.0 * Omega_b * x3 / (2.0 * E2);
@@ -647,9 +647,9 @@ LINEAR_NAME_SUFFIX(band_J) (LINEAR_JAC_PARAMS)
     LINEAR_MATRIX_E (J, NC_PERT_T, NC_PERT_T)          = -R / (R + 1.0) + (1.0 + R0 * x) * taubar;
     LINEAR_MATRIX_E (J, NC_PERT_T, NC_PERT_THETA2)     = -2.0 * kx_3E;
 
-    /* 
-     * _NC_DTHETA2 = kx_E * (2.0 * ((R * _NC_U + _NC_T) / (R + 1.0) + _NC_V - kx_3E * (_NC_C0 - _NC_PHI)) - 
-     * 3.0 * _NC_THETA(3)) / 5.0 + taubar * (_NC_THETA2 - PI / 10.0); 
+    /*
+     * _NC_DTHETA2 = kx_E * (2.0 * ((R * _NC_U + _NC_T) / (R + 1.0) + _NC_V - kx_3E * (_NC_C0 - _NC_PHI)) -
+     * 3.0 * _NC_THETA(3)) / 5.0 + taubar * (_NC_THETA2 - PI / 10.0);
      */
     LINEAR_MATRIX_E (J, NC_PERT_THETA2, NC_PERT_PHI)   = +2.0 * k2x2_3E2 / 5.0;
     LINEAR_MATRIX_E (J, NC_PERT_THETA2, NC_PERT_C0)    = -2.0 * k2x2_3E2 / 5.0;
@@ -671,7 +671,7 @@ LINEAR_NAME_SUFFIX(band_J) (LINEAR_JAC_PARAMS)
     LINEAR_MATRIX_E (J, NC_PERT_PHI, NC_PERT_THETA2)      = -12.0 * x2 / k2 * Omega_r;
 
     LINEAR_MATRIX_E (J, NC_PERT_C0, NC_PERT_C1)           = -kx_E;
-    
+
     LINEAR_MATRIX_E (J, NC_PERT_B0, NC_PERT_B1)           = -kx_E;
 
     LINEAR_MATRIX_E (J, NC_PERT_THETA0, NC_PERT_THETA1)   = -kx_E;
@@ -698,7 +698,7 @@ LINEAR_NAME_SUFFIX(band_J) (LINEAR_JAC_PARAMS)
     LINEAR_MATRIX_E (J, NC_PERT_THETA2, NC_PERT_THETA_P0) = -taubar / 10.0;
     LINEAR_MATRIX_E (J, NC_PERT_THETA2, NC_PERT_THETA_P2) = -taubar / 10.0;
   }
-  
+
   LINEAR_MATRIX_E (J, NC_PERT_THETA_P0, NC_PERT_THETA2)     = -taubar / 2.0;
   LINEAR_MATRIX_E (J, NC_PERT_THETA_P0, NC_PERT_THETA_P0)   =  taubar / 2.0;
   LINEAR_MATRIX_E (J, NC_PERT_THETA_P0, NC_PERT_THETA_P1)   =  -kx_E;
@@ -707,23 +707,23 @@ LINEAR_NAME_SUFFIX(band_J) (LINEAR_JAC_PARAMS)
   LINEAR_MATRIX_E (J, NC_PERT_THETA_P1, NC_PERT_THETA_P0)   = kx_E / 3.0;
   LINEAR_MATRIX_E (J, NC_PERT_THETA_P1, NC_PERT_THETA_P1)   = taubar;
   LINEAR_MATRIX_E (J, NC_PERT_THETA_P1, NC_PERT_THETA_P2)   = -2.0 * kx_E / 3.0;
-  
+
   LINEAR_MATRIX_E (J, NC_PERT_THETA_P2, NC_PERT_THETA2)     = -taubar / 10.0;
   LINEAR_MATRIX_E (J, NC_PERT_THETA_P2, NC_PERT_THETA_P0)   = -taubar / 10.0;
   LINEAR_MATRIX_E (J, NC_PERT_THETA_P2, NC_PERT_THETA_P1)   = 2.0 * kx_E / 5.0;
   LINEAR_MATRIX_E (J, NC_PERT_THETA_P2, NC_PERT_THETA_P2)   = 9.0 * taubar / 10.0;
   LINEAR_MATRIX_E (J, NC_PERT_THETA_P2, NC_PERT_THETA_P(3)) = -3.0 * kx_E / 5.0;
-  
+
   for (i = 3; i < lmax; i++)
   {
     const gdouble f1 = kx_E / (2.0 * i + 1.0);
     const gdouble f2 = f1 * (1.0 + i);
-    
+
     /* _NC_DTHETA(i) = f1 * i * _NC_THETA(i-1) + taubar * _NC_THETA(i); */
     LINEAR_MATRIX_E (J, NC_PERT_THETA(i), NC_PERT_THETA(i-1)) = f1 * i;
     LINEAR_MATRIX_E (J, NC_PERT_THETA(i), NC_PERT_THETA(i))   = taubar;
     LINEAR_MATRIX_E (J, NC_PERT_THETA(i), NC_PERT_THETA(i+1)) = -f2;
-    
+
     LINEAR_MATRIX_E (J, NC_PERT_THETA_P(i), NC_PERT_THETA_P(i-1)) = f1 * i;
     LINEAR_MATRIX_E (J, NC_PERT_THETA_P(i), NC_PERT_THETA_P(i))   = taubar;
     LINEAR_MATRIX_E (J, NC_PERT_THETA_P(i), NC_PERT_THETA_P(i+1)) = -f2;
@@ -754,6 +754,6 @@ LINEAR_NAME_SUFFIX(band_J) (LINEAR_JAC_PARAMS)
       LINEAR_MATRIX_E (J, NC_PERT_THETA_P(i), NC_PERT_THETA_P(i))   = taubar;
     }
   }
-  
+
   return 0;
 }

@@ -41,8 +41,8 @@
 void test_series();
 
 static gdouble z = 0.0f;
-static gdouble interval = 0.4f;
-static gdouble confidence = NC_C_STATS_1SIGMA;
+static gdouble interval = 0.4;
+static gdouble confidence;
 static gint cr_x = -1;
 static gint cr_y = -1;
 static gint max_iter = 10000;
@@ -56,7 +56,6 @@ static gboolean print_data = FALSE;
 static gboolean print_E = FALSE;
 static gboolean fix_qprime = FALSE;
 static gboolean verbose = FALSE;
-
 
 static GOptionEntry entries[] =
 {
@@ -98,6 +97,8 @@ main (gint argc, gchar *argv[])
 
   ncm_cfg_init ();
 
+  confidence = ncm_c_stats_1sigma ();
+
   context = g_option_context_new ("- test the q linear model");
   g_option_context_add_main_entries (context, entries, NULL);
   g_option_context_parse (context, &argc, &argv, &error);
@@ -118,7 +119,7 @@ main (gint argc, gchar *argv[])
 
   lh = nc_likelihood_new (ds);
 
-  ncm_model_param_set (NCM_MODEL (xcdm), NC_HICOSMO_DE_H0, NC_C_HUBBLE_CTE_HST);
+  ncm_model_param_set (NCM_MODEL (xcdm), NC_HICOSMO_DE_H0, ncm_c_hubble_cte_hst ());
   ncm_model_param_set (NCM_MODEL (xcdm), NC_HICOSMO_DE_OMEGA_C, RESAMPLE_OMEGA_M);
   ncm_model_param_set (NCM_MODEL (xcdm), NC_HICOSMO_DE_OMEGA_X, RESAMPLE_OMEGA_LAMBDA);
   ncm_model_param_set (NCM_MODEL (xcdm), NC_HICOSMO_DE_XCDM_W, RESAMPLE_OMEGA);
@@ -166,7 +167,7 @@ main (gint argc, gchar *argv[])
 	{
 	  gdouble dE = nc_hicosmo_qlinear_dE (dz[i], z, ncm_mset_param_get (fit->mset, NC_HICOSMO_ID, NC_HICOSMO_QLINEAR_Q),
 	                                    ncm_mset_param_get (fit->mset, NC_HICOSMO_ID, NC_HICOSMO_QLINEAR_QP));
-	  printf ("\t%g\t%g\t%g\n", dz[i], E*dE, E*dE * NC_C_HUBBLE_CTE_WMAP);
+	  printf ("\t%g\t%g\t%g\n", dz[i], E*dE, E*dE * ncm_c_hubble_cte_wmap ());
 	}
   }
 

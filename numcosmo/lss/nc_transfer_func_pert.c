@@ -8,17 +8,17 @@
 /*
  * numcosmo
  * Copyright (C) Mariana Penna Lima 2012 <pennalima@gmail.com>
- * 
+ *
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * numcosmo is distributed in the hope that it will be useful, but
  * WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
  * See the GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License along
  * with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
@@ -42,7 +42,7 @@ G_DEFINE_TYPE (NcTransferFuncPert, nc_transfer_func_pert, NC_TYPE_TRANSFER_FUNC)
 
 /**
  * nc_transfer_func_pert_new:
- *   
+ *
  * FIXME
  *
  * Returns: A new #NcTransferFunc.
@@ -61,7 +61,7 @@ _nc_transfer_func_pert_prepare (NcTransferFunc *tf, NcHICosmo *model)
   if (!tf_pert->init)
   {
 	tf_pert->pert = nc_pert_linear_new (NCM_MODEL (model), 1 << 3, 1e-7, 1e-7, 1e-10, 1e-10);
-	tf_pert->pspline = nc_pert_linear_splines_new (tf_pert->pert, NC_LINEAR_PERTURBATIONS_SPLINE_PHI, 60, 220, 1.0e-2, NC_C_HUBBLE_RADIUS * 1000.0);
+	tf_pert->pspline = nc_pert_linear_splines_new (tf_pert->pert, NC_LINEAR_PERTURBATIONS_SPLINE_PHI, 60, 220, 1.0e-2, ncm_c_hubble_radius () * 1000.0);
 	tf_pert->init = TRUE;
   }
   nc_pert_linear_prepare_splines (tf_pert->pspline);
@@ -71,7 +71,7 @@ static gdouble
 _nc_transfer_func_pert_calc (NcTransferFunc *tf, gdouble kh)
 {
   NcTransferFuncPert *tf_pert = NC_TRANSFER_FUNC_PERT (tf);
-  return ncm_spline_eval (NC_LINEAR_PERTURBATIONS_GET_SPLINE (tf_pert->pspline, NC_PERT_PHI), kh * NC_C_HUBBLE_RADIUS);
+  return ncm_spline_eval (NC_LINEAR_PERTURBATIONS_GET_SPLINE (tf_pert->pspline, NC_PERT_PHI), kh * ncm_c_hubble_radius ());
 }
 
 static gdouble
@@ -99,7 +99,7 @@ _nc_transfer_func_pert_dispose (GObject *object)
 	nc_pert_linear_free (tf_pert->pert);
   if (tf_pert->pspline != NULL)
 	nc_pert_linear_splines_free (tf_pert->pspline);
-	
+
   G_OBJECT_CLASS (nc_transfer_func_pert_parent_class)->finalize (object);
 }
 

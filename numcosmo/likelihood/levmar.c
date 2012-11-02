@@ -57,7 +57,14 @@ static void nc_residual_levmar_J (gdouble *p, gdouble *j, gint m, gint n, gpoint
 #define _ALGO_NAME "liblevmar:dlevmar_der"
 
 /**
+ * ncm_fit_run_levmar_der:
+ * @fit: FIXME
+ * @niters: FIXME
+ * @mtype: FIXME
+ *
  * FIXME
+ *
+ * Returns: FIXME
  */
 gboolean
 ncm_fit_run_levmar_der (NcmFit *fit, gint niters, NcmFitRunMsgs mtype)
@@ -113,7 +120,14 @@ ncm_fit_run_levmar_der (NcmFit *fit, gint niters, NcmFitRunMsgs mtype)
 #define _ALGO_NAME "liblevmar:dlevmar_dif"
 
 /**
+ * ncm_fit_run_levmar_dif:
+ * @fit: FIXME
+ * @niters: FIXME
+ * @mtype: FIXME
+ *
  * FIXME
+ *
+ * Returns: FIXME
  */
 gboolean
 ncm_fit_run_levmar_dif (NcmFit *fit, gint niters, NcmFitRunMsgs mtype)

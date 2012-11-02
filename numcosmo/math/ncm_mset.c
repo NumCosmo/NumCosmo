@@ -93,7 +93,7 @@ ncm_mset_pindex_free (NcmMSetPIndex *pi)
 NcmMSet *
 ncm_mset_empty_new (void)
 {
-  return g_object_new (NCM_TYPE_GMSET, NULL);
+  return g_object_new (NCM_TYPE_MSET, NULL);
 }
 
 /**

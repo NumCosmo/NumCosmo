@@ -61,7 +61,7 @@ nc_hicosmo_class_init (NcHICosmoClass *klass)
 {
   GObjectClass* object_class = G_OBJECT_CLASS (klass);
   object_class->finalize = nc_hicosmo_finalize;
-  ncm_model_register_id (NCM_MODEL_CLASS (klass));
+  ncm_model_class_register_id (NCM_MODEL_CLASS (klass));
   NC_HICOSMO_ID = NCM_MODEL_CLASS (klass)->model_id;
 }
 
@@ -442,14 +442,6 @@ NCM_MODEL_SET_IMPL_FUNC(NC_HICOSMO,NcHICosmo,nc_hicosmo,NcmModelFunc1,powspec)
  * Returns: FIXME
  */
 /**
- * nc_hicosmo_Omega_k:
- * @model: a #NcHICosmo.
- *
- * FIXME
- *
- * Returns: FIXME
- */
-/**
  * nc_hicosmo_q:
  * @model: a #NcHICosmo
  * @z: redshift
@@ -492,25 +484,25 @@ _nc_hicosmo_func1 (NcmMSet *mset, gpointer obj, const gdouble *x, gdouble *f)
 }
 
 /**
- * nc_hicosmo_func0_new:
+ * ncm_mset_func_new_hicosmo_func0:
  * @f0: (scope notified): FIXME
  *
  * Returns: (transfer full): FIXME
  */
 NcmMSetFunc *
-nc_hicosmo_func0_new (NcHICosmoFunc0 f0)
+ncm_mset_func_new_hicosmo_func0 (NcHICosmoFunc0 f0)
 {
   return ncm_mset_func_new (&_nc_hicosmo_func0, 0, 1, f0, NULL);
 }
 
 /**
- * nc_hicosmo_func1_new:
+ * ncm_mset_func_new_hicosmo_func1:
  * @f1: (scope notified): FIXME
  *
  * Returns: (transfer full): FIXME
  */
 NcmMSetFunc *
-nc_hicosmo_func1_new (NcHICosmoFunc1 f1)
+ncm_mset_func_new_hicosmo_func1 (NcHICosmoFunc1 f1)
 {
   return ncm_mset_func_new (&_nc_hicosmo_func1, 1, 1, f1, NULL);
 }

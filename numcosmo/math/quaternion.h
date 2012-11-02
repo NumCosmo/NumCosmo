@@ -62,7 +62,7 @@ typedef struct _NcQ NcQ;
 
 /**
  * NcQ:
- * 
+ *
  * FIXME
  */
 struct _NcQ
@@ -73,17 +73,23 @@ struct _NcQ
 };
 
 /**
- * FIXME
+ * NC_QUATERNION_NEW:
+ *
  */
 #define NC_QUATERNION_NEW {0.0, {{0.0, 0.0, 0.0}}}
 
 /**
- * FIXME
+ * NC_QUATERNION_NEW_I:
+ *
  */
 #define NC_QUATERNION_NEW_I {1.0, {{0.0, 0.0, 0.0}}}
 
 /**
+ * NC_QUATERNION_SET_I:
+ * @q: FIXME
+ *
  * FIXME
+ *
  */
 #define NC_QUATERNION_SET_I(q) \
 do { \
@@ -92,7 +98,11 @@ NC_TRIVEC_SET_0(q->x); \
 } while(FALSE)
 
 /**
+ * NC_QUATERNION_SET_0:
+ * @q: FIXME
+ *
  * FIXME
+ *
  */
 #define NC_QUATERNION_SET_0(q) \
 do { \
@@ -101,13 +111,22 @@ NC_TRIVEC_SET_0(q->x); \
 } while(FALSE)
 
 /**
+ * NC_QUATERNION_NORM:
+ * @q: FIXME
+ *
  * FIXME
+ *
  */
 #define NC_QUATERNION_NORM(q) \
 (sqrtf(q->s*q->s + q->x.c[0]*q->x.c[0] + q->x.c[1]*q->x.c[1] + q->x.c[2]*q->x.c[2]))
 
 /**
+ * NC_QUATERNION_MEMCPY:
+ * @a: FIXME
+ * @b: FIXME
+ *
  * FIXME
+ *
  */
 #define NC_QUATERNION_MEMCPY(a,b) memcpy (a, b, sizeof(NcQ))
 

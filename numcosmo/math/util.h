@@ -46,8 +46,6 @@ gsl_rng *ncm_get_rng (void);
 
 void ncm_finite_diff_calc_J (NcmModel *model, NcData *data, NcmMatrix *jac);
 
-gdouble ncm_get_bao_Omega_m (NcDistance *dist, NcmModel *model);
-
 gdouble *ncm_smoothd (gdouble *in, size_t N, size_t points, size_t pass);
 gboolean ncm_get_uniform_sample (NcmMSet *mset, NcmMSetFunc *func, gdouble x0, gdouble x1, NcmVector *sample);
 #ifdef NUMCOSMO_HAVE_FFTW3

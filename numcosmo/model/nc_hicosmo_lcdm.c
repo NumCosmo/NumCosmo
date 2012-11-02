@@ -110,14 +110,18 @@ _nc_hicosmo_lcdm_Omega_r (NcmModel *model)
 {
   const gdouble h = MACRO_H0 / 100.0;
   const gdouble h2 = h * h;
-  return (1.0 + 0.2271 * NC_C_NEUTRINO_N_EFF) * NC_C_RADIATION_TEMP_TO_h2OMEGA_R (T_GAMMA0) / h2;
+  return (1.0 + 0.2271 * ncm_c_neutrino_n_eff ()) * ncm_c_radiation_temp_to_h2omega_r (T_GAMMA0) / h2;
 }
 static gdouble _nc_hicosmo_lcdm_Omega_b (NcmModel *model) { return OMEGA_B; }
 static gdouble _nc_hicosmo_lcdm_sigma_8 (NcmModel *model) { return SIGMA8; }
 static gdouble _nc_hicosmo_lcdm_powspec (NcmModel *model, gdouble k) { return pow (k, SPECINDEX); }
 
 /**
+ * nc_hicosmo_lcdm_new:
+ *
  * FIXME
+ *
+ * Returns: FIXME
  */
 NcHICosmoLCDM *
 nc_hicosmo_lcdm_new (void)

@@ -36,6 +36,7 @@ main (gint argc, gchar *argv[])
   ncm_cfg_init ();
   //ncm_cfg_enable_gsl_err_handler ();
 
+  if (FALSE)
   {
 	NcHICosmo *xcdm = NC_HICOSMO (nc_hicosmo_de_xcdm_new ());
 	NcDistance *dist = nc_distance_new (1.2);
@@ -57,4 +58,6 @@ main (gint argc, gchar *argv[])
 	  ncm_galaxy_acf_prepare_psi (acf, xcdm, i);
 	}
   }
+
+  return 0;
 }

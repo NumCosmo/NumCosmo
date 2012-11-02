@@ -73,7 +73,16 @@ gaussian_prior_func_f (NcmMSet *mset, gpointer obj, const gdouble *x, gdouble *f
 }
 
 /**
+ * nc_prior_add_gaussian_func:
+ * @lh: FIXME
+ * @func: FIXME
+ * @z: FIXME
+ * @mean: FIXME
+ * @sigma: FIXME
+ *
  * FIXME
+ *
+ * Returns: FIXME
  */
 gboolean
 nc_prior_add_gaussian_func (NcLikelihood *lh, NcmMSetFunc *func, gdouble z, gdouble mean, gdouble sigma)
@@ -98,7 +107,15 @@ gaussian_prior_func0_f (NcmMSet *mset, gpointer obj, const gdouble *x, gdouble *
 }
 
 /**
+ * nc_prior_add_gaussian_const_func:
+ * @lh: FIXME
+ * @func: FIXME
+ * @mean: FIXME
+ * @sigma: FIXME
+ *
  * FIXME
+ *
+ * Returns: FIXME
  */
 gboolean
 nc_prior_add_gaussian_const_func (NcLikelihood *lh, NcmMSetFunc *func, gdouble mean, gdouble sigma)
@@ -114,7 +131,13 @@ nc_prior_add_gaussian_const_func (NcLikelihood *lh, NcmMSetFunc *func, gdouble m
 }
 
 /**
+ * nc_prior_add_gaussian:
+ * @lh: FIXME
+ * @gp: FIXME
+ *
  * FIXME
+ *
+ * Returns: FIXME
  */
 gboolean
 nc_prior_add_gaussian (NcLikelihood *lh, NcGaussianPrior *gp)
@@ -134,7 +157,16 @@ gaussian_prior_f (NcmMSet *mset, gpointer obj, const gdouble *x, gdouble *f)
 }
 
 /**
+ * nc_prior_add_gaussian_data:
+ * @lh: FIXME
+ * @gmid: FIXME
+ * @pid: FIXME
+ * @mean: FIXME
+ * @sigma: FIXME
+ *
  * FIXME
+ *
+ * Returns: FIXME
  */
 gboolean
 nc_prior_add_gaussian_data (NcLikelihood *lh, NcmModelID gmid, guint pid, gdouble mean, gdouble sigma)
@@ -158,7 +190,14 @@ positive_prior_f (NcmMSet *mset, gpointer obj, const gdouble *x, gdouble *f)
 }
 
 /**
+ * nc_prior_add_positive:
+ * @lh: FIXME
+ * @gmid: FIXME
+ * @pid: FIXME
+ *
  * FIXME
+ *
+ * Returns: FIXME
  */
 gboolean
 nc_prior_add_positive (NcLikelihood *lh, NcmModelID gmid, guint pid)
@@ -184,7 +223,16 @@ oneside_a_inf_prior_f (NcmMSet *mset, gpointer obj, const gdouble *x, gdouble *f
 }
 
 /**
+ * nc_prior_add_oneside_a_inf_param:
+ * @lh: FIXME
+ * @gmid: FIXME
+ * @pid: FIXME
+ * @a: FIXME
+ * @s: FIXME
+ *
  * FIXME
+ *
+ * Returns: FIXME
  */
 gboolean
 nc_prior_add_oneside_a_inf_param (NcLikelihood *lh, NcmModelID gmid, guint pid, gdouble a, gdouble s)
@@ -211,7 +259,16 @@ oneside_a_inf_prior_func_f (NcmMSet *mset, gpointer obj, const gdouble *x, gdoub
 }
 
 /**
+ * nc_prior_add_oneside_a_inf_func:
+ * @lh: FIXME
+ * @func: FIXME
+ * @z: FIXME
+ * @mean: FIXME
+ * @s: FIXME
+ *
  * FIXME
+ *
+ * Returns: FIXME
  */
 gboolean
 nc_prior_add_oneside_a_inf_func (NcLikelihood *lh, NcmMSetFunc *func, gdouble z, gdouble mean, gdouble s)
@@ -238,7 +295,15 @@ oneside_a_inf_prior_const_func_f (NcmMSet *mset, gpointer obj, const gdouble *x,
 }
 
 /**
+ * nc_prior_add_oneside_a_inf_const_func:
+ * @lh: FIXME
+ * @func: FIXME
+ * @mean: FIXME
+ * @s: FIXME
+ *
  * FIXME
+ *
+ * Returns: FIXME
  */
 gboolean
 nc_prior_add_oneside_a_inf_const_func (NcLikelihood *lh, NcmMSetFunc *func, gdouble mean, gdouble s)
@@ -254,7 +319,13 @@ nc_prior_add_oneside_a_inf_const_func (NcLikelihood *lh, NcmMSetFunc *func, gdou
 }
 
 /**
+ * nc_prior_add_oneside_a_inf:
+ * @lh: FIXME
+ * @gp: FIXME
+ *
  * FIXME
+ *
+ * Returns: FIXME
  */
 gboolean
 nc_prior_add_oneside_a_inf (NcLikelihood *lh, NcGaussianPrior *gp)
@@ -277,7 +348,17 @@ twoside_a_b_prior_f (NcmMSet *mset, gpointer obj, const gdouble *x, gdouble *f)
 }
 
 /**
+ * nc_prior_add_twoside_a_b:
+ * @lh: FIXME
+ * @gmid: FIXME
+ * @pid: FIXME
+ * @a: FIXME
+ * @b: FIXME
+ * @s: FIXME
+ *
  * FIXME
+ *
+ * Returns: FIXME
  */
 gboolean
 nc_prior_add_twoside_a_b (NcLikelihood *lh, NcmModelID gmid, guint pid, gdouble a, gdouble b, gdouble s)
