@@ -101,6 +101,8 @@ growth_f (realtype z, N_Vector y, N_Vector ydot, gpointer f_data)
   NV_Ith_S (ydot, 1) =
     (1.0 / x - dE2dz / (2.0 * E2)) * NV_Ith_S (y, 1) + 3.0 * Omega_m * x * NV_Ith_S (y, 0) / (2.0 * E2);
 
+  //ncm_model_params_log_all (model);
+  //printf ("res = % 20.15g y1 = % 20.15g y0 = % 20.15g E2 = % 20.15g dE2dz = % 20.15g xOm = % 20.15g 1/x = % 20.15g\n", NV_Ith_S (ydot, 1), NV_Ith_S (y, 1), NV_Ith_S (y, 0), E2, dE2dz, x * Omega_m, 1/x);
   return 0;
 }
 
@@ -187,12 +189,21 @@ nc_growth_func_prepare (NcGrowthFunc *gf, NcHICosmo *model)
     CVode (gf->cvode, 0.0, gf->yv, &zf, CV_ONE_STEP);
     g_array_index (y_array, gdouble, i) = NV_Ith_S (gf->yv, 0);
     g_array_index (x_array, gdouble, i) = zf;
+	
     if (zf == 0.0)
       break;
 
     i--;
     if (i < 0)
+	{
+	  i = i + 101;
+	  for (i = 100; i >= 0; i--)
+	  {
+		printf ("zf = %20.16g D = % 20.16g\n", g_array_index (x_array, gdouble, i), g_array_index (y_array, gdouble, i));
+	  }
       g_error ("Error: More than %d points to compute the growth spline.\n", _NC_MAX_SPLINE_POINTS);
+	}
+	
   }
 
   g_array_remove_range (y_array, 0, i);
