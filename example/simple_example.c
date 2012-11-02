@@ -9,22 +9,21 @@ main(int argc, gchar *argv[])
   gint i;
 
   /**************************************************************************** 
-   * Start the library initializating objects, 
-   * must be called before any othe library function 
+   * Initialize the library objects, this must be called before 
+   * any other library function.
    ****************************************************************************/  
   ncm_cfg_init ();
   
   /**************************************************************************** 
-   * New homogeneous and isotropic cosmological model NcHICosmoDEXcdm 
+   * New homogeneous and isotropic cosmological model NcHICosmoDEXcdm.
    ****************************************************************************/  
   cosmo = nc_hicosmo_new_from_name (NC_TYPE_HICOSMO, "NcHICosmoDEXcdm");
 
   /**************************************************************************** 
    * New cosmological distance objects optimizied to perform calculations
-   * up to redshift 2.0 
+   * up to redshift 2.0.
    ****************************************************************************/  
   dist = nc_distance_new (2.0);
- 
  
   /**************************************************************************** 
    * Setting values for the cosmological model, those not set stay in the
