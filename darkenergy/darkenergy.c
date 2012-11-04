@@ -282,7 +282,7 @@ main (gint argc, gchar *argv[])
   de_fit.fisher = (de_fit.fisher || (de_fit.nsigma_fisher != -1) || (de_fit.nsigma != -1) || (de_fit.onedim_cr != NULL));
   de_fit.fit = (de_fit.fit || de_fit.fisher);
   de_fit.save_best_fit = (de_fit.save_best_fit || de_fit.save_fisher || (de_fit.nsigma_fisher != -1) || (de_fit.nsigma != -1));
-
+  
   if (de_fit.fit)
   {
 	fit->params_prec_target = 1e-5;
@@ -334,6 +334,9 @@ main (gint argc, gchar *argv[])
 	else
 	  resample_mset = fit->mset;
 
+	nc_dataset_log_info (fit->lh->ds);
+	ncm_mset_pretty_log (resample_mset);
+		
 	param_matrix = ncm_fit_montecarlo_matrix (fit, resample_mset, de_fit.max_iter, de_fit.mc_ni, de_fit.montecarlo, de_fit.msg_level);
 	ncm_fit_montecarlo_matrix_mean_covar (fit, param_matrix);
 	ncm_fit_log_covar (fit);
@@ -342,7 +345,7 @@ main (gint argc, gchar *argv[])
 
 	ncm_matrix_free (param_matrix);
   }
-
+  
   if (de_fit.onedim_cr != NULL)
   {
 	while (de_fit.onedim_cr[0] != NULL)

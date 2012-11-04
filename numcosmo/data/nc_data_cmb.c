@@ -55,6 +55,24 @@ gdouble nc_cmb_distance_priors_wmap5_distpriors[] =
   1.71,    27.968, 5667.577, -92.263,
   1090.04, -1.103,  -92.263,   2.923 };
 
+/***************************************************************************
+ * WMAP7 Distance priors data (arXiv:1001.4538): tables 9 and 10
+ *
+ ****************************************************************************/
+
+gdouble nc_cmb_distance_priors_wmap7_bestfit[] = { 302.0900,   1.725, 1091.30000 };
+gdouble nc_cmb_distance_priors_wmap7_inv_cov[] =
+{ 2.3050,   29.698,   -1.333,
+  29.698, 6825.270,  -113.18,
+  -1.333,  -113.18,    3.414 };
+
+/*     BF,        COV MATRIX  */
+gdouble nc_cmb_distance_priors_wmap7_distpriors[] =
+{ 302.09,   2.3050,   29.698,   -1.333,
+  1.725,    29.698, 6825.270,  -113.18,
+  1091.30, -1.333,  -113.18,    3.414 };
+
+
 /**
  * nc_data_cmb:
  * @dist: a #NcDistance
@@ -112,6 +130,36 @@ nc_data_cmb (NcDistance *dist, NcDataCMBId cmb_id)
 	  nc_data_gaussian_init_from_matrix (data, cm, NULL);
 	  ncm_matrix_free (cm);
 	  data->name = "WMAP5 distance priors";
+	  break;
+	}
+	case NC_DATA_CMB_SHIFT_PARAMETER_WMAP7:
+	{
+	  gdouble _data[3] = { ncm_c_wmap7_cmb_z (), ncm_c_wmap7_cmb_R (), ncm_c_wmap7_cmb_sigma_R () };
+	  NcmMatrix *cm = ncm_matrix_new_data_static (_data, 1, 3);
+	  NcmMSetFunc *func = nc_distance_func1_new (dist, &nc_distance_shift_parameter);
+	  data = nc_data_gaussian_new (NC_DATA_GAUSSIAN_X_SIGMA);
+	  nc_data_gaussian_set_func (data, func);
+	  ncm_mset_func_free (func);
+	  nc_data_gaussian_init_from_matrix (data, cm, NULL);
+	  ncm_matrix_free (cm);
+	  data->name = "WMAP7 shift parameter";
+	  break;
+	}  
+	case NC_DATA_CMB_DISTANCE_PRIORS_WMAP7:
+	{
+	  NcmMatrix *cm = ncm_matrix_new_data_static (nc_cmb_distance_priors_wmap7_distpriors, 3, 4);
+	  NcmMSetFunc *func[3];
+	  func[0] = nc_distance_func0_new (dist, &nc_distance_acoustic_scale);
+	  func[1] = nc_distance_func0_new (dist, &nc_distance_shift_parameter_lss);
+	  func[2] = nc_distance_func0_new (dist, &nc_distance_decoupling_redshift);
+	  data = nc_data_gaussian_new (NC_DATA_GAUSSIAN_COV);
+	  nc_data_gaussian_set_func_array (data, func, 3);
+	  ncm_mset_func_free (func[0]);
+	  ncm_mset_func_free (func[1]);
+	  ncm_mset_func_free (func[2]);
+	  nc_data_gaussian_init_from_matrix (data, cm, NULL);
+	  ncm_matrix_free (cm);
+	  data->name = "WMAP7 distance priors";
 	  break;
 	}
 	default:
