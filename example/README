@@ -10,7 +10,7 @@ libtool --tag=CC --mode=link gcc simple_example.c -o simple_example \
 
 and if numcosmo is already installed in your system
 
-gcc simple_example.c -o simple_example `pkg-config numcosmo --libs --cflags`
+gcc -Wall simple_example.c -o simple_example `pkg-config numcosmo --libs --cflags`
 
 This line may need modification depending on the system. Just look
 for the missing header and add the corresponding pkg-config lib or -I
