@@ -7,10 +7,11 @@ use XML::LibXML;
 
 my $file = $ARGV[0];
 my $nsURI = "http://docbook.org/ns/docbook";
-my $nsp = "docbook";
+my $nsp = "docbooka";
 
-my $doc = XML::LibXML->load_xml(location => $file);
-$doc->removeInternalSubset();
+my $parser = XML::LibXML->new ();
+my $doc = $parser->load_xml (location => $file);
+$doc->removeInternalSubset ();
 my $dtd = $doc->createInternalSubset (
   "article", 
   "-//OASIS//DTD DocBook XML V4.5//EN", 
@@ -21,12 +22,16 @@ my $newroot = $doc->createElement("chapter");
 #$newroot->setNamespace($nsURI, undef, 0);
 
 my $xpc = XML::LibXML::XPathContext->new ($doc);
-$xpc->registerNs($nsp, $nsURI);
+$xpc->registerNs ($nsp, $nsURI);
 
 foreach my $eq ($xpc->findnodes("//$nsp:equation")) {
   foreach my $note ($xpc->findnodes("following-sibling::$nsp:note[\@role='equation']", $eq)) {
     $note->parentNode->removeChild ($note);
   }
+}
+
+foreach my $note_eq ($xpc->findnodes("//$nsp:note[\@role='equation']")) {
+  $note_eq->parentNode->removeChild ($note_eq);
 }
 
 foreach my $link ($xpc->findnodes("//$nsp:link")) {
@@ -51,7 +56,7 @@ if (@titles == 1) {
 }
 
 foreach my $sec (@secs) {
-  my $newsec = XML::LibXML->load_xml(string => $sec->toString);
+  my $newsec = $parser->load_xml(string => $sec->toString);
   
   foreach my $abbrev ($newsec->findnodes ("//title/abbrev")) {
     $abbrev->parentNode->removeChild ($abbrev);

@@ -120,7 +120,8 @@ nc_pert_linear_workspace_new (NcLinearPert *pert)
 
 /**
  * nc_pert_linear_new: (skip)
- * @model: a #NcmModel
+ * @cosmo: a #NcHICosmo.
+ * @recomb: FIXME
  * @lmax: FIXME
  * @tc_reltol: FIXME
  * @reltol: FIXME
@@ -130,34 +131,38 @@ nc_pert_linear_workspace_new (NcLinearPert *pert)
  * FIXME
  *
  * Returns: FIXME
-*/
+ */
 NcLinearPert *
-nc_pert_linear_new (NcmModel *model, guint lmax, gdouble tc_reltol, gdouble reltol, gdouble tc_abstol, gdouble abstol)
+nc_pert_linear_new (NcHICosmo *cosmo, NcRecomb *recomb, guint lmax, gdouble tc_reltol, gdouble reltol, gdouble tc_abstol, gdouble abstol)
 {
   NcLinearPert *pert = g_slice_new (NcLinearPert);
 
   g_assert (lmax > 2);
 
-  pert->model = model;
-  pert->recomb = nc_thermodyn_recomb_new (NC_HICOSMO (model), NC_THERMODYN_RECOMB_FULL);
+  pert->cosmo = cosmo;
+  pert->recomb = nc_recomb_ref (recomb);
   pert->a = nc_scale_factor_new (NC_TIME_CONFORMAL, NC_PERTURBATION_START_X - 1.0);
 
-  nc_thermodyn_recomb_dtau_dx_init_spline (pert->recomb);
-
-  nc_scale_factor_prepare_if_needed (pert->a, NC_HICOSMO (model));
-
-  nc_thermodyn_recomb_dtau_dx_init_spline (pert->recomb);
+  nc_recomb_prepare_if_needed (pert->recomb, cosmo);
+  nc_scale_factor_prepare_if_needed (pert->a, cosmo);
 
   pert->g0 = log (NC_PERTURBATION_START_X);
-  pert->g_opt_cutoff = NC_PERTURBATIONS_X2G (pert->g0, pert->recomb->x_opt_cutoff);
-  pert->g_rec = NC_PERTURBATIONS_X2G (pert->g0, pert->recomb->x_rec);
-  pert->g_rec_10m2_max[0] = NC_PERTURBATIONS_X2G (pert->g0, pert->recomb->x_rec_10m2_max[0]);
-  pert->g_rec_10m2_max[1] = NC_PERTURBATIONS_X2G (pert->g0, pert->recomb->x_rec_10m2_max[1]);
-
+/*
+	pert->g_opt_cutoff = pert->g0 + pert->recomb->lambda_opt_cutoff;
+  pert->g_rec = pert->g0 + pert->recomb->lambda_rec;
+  pert->g_rec_10m2_max[0] = pert->g0 + pert->recomb->lambda_rec_10m2_max[0];
+  pert->g_rec_10m2_max[1] = pert->g0 + pert->recomb->lambda_rec_10m2_max[1];
+*/
+	{
+		gdouble lambda_max, lambda_l, lambda_u;
+		nc_recomb_v_tau_lambda_features (pert->recomb, cosmo, 2.0 * M_LN10, &lambda_max, &lambda_l, &lambda_u);
+		pert->g_opt_cutoff = pert->g0 + nc_recomb_tau_cutoff (pert->recomb, cosmo);
+		pert->g_rec = pert->g0 + lambda_max;
+		pert->g_rec_10m2_max[0] = pert->g0 + lambda_l;
+		pert->g_rec_10m2_max[1] = pert->g0 + lambda_u;
+	}
+	
   pert->eta0 = nc_scale_factor_t_z (pert->a, 0.0);
-
-	printf ("# Recomb at %.15g %.15g %.15g %.15g %.15g | Omega_r %.15g\n", pert->recomb->x_rec - 1.0, nc_scale_factor_t_x (pert->a, pert->recomb->x_rec), nc_scale_factor_t_x (pert->a, pert->recomb->x_rec) * ncm_c_hubble_radius () / 0.7, nc_scale_factor_z_t (pert->a, 313.29 / (ncm_c_hubble_radius () / 0.70)), pert->eta0 * ncm_c_hubble_radius () / 0.70,
-	        nc_hicosmo_Omega_r (NC_HICOSMO (model)));
 
   pert->lmax = lmax;
 
@@ -392,9 +397,9 @@ nc_pert_transfer_function_get (NcLinearPertTF *perttf, gdouble kh)
 static void
 _nc_pert_linear_prepare_deta_grid (NcLinearPert *pert, gdouble *deta_grid, glong ni, glong nc, glong nt)
 {
-  const gdouble x_opt_cutoff = pert->recomb->x_opt_cutoff;
-  const gdouble x_rec_10m2_max0 = pert->recomb->x_rec_10m2_max[0];
-  const gdouble x_rec_10m2_max1 = pert->recomb->x_rec_10m2_max[1];
+  const gdouble x_opt_cutoff    = exp (pert->g0 - pert->g_opt_cutoff);
+  const gdouble x_rec_10m2_max0 = exp (pert->g0 - pert->g_rec_10m2_max[0]);
+  const gdouble x_rec_10m2_max1 = exp (pert->g0 - pert->g_rec_10m2_max[1]);
   const glong n = nc + nt + ni;
   gdouble last_eta;
   gint i;

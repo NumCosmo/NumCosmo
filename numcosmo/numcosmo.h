@@ -70,6 +70,9 @@
 #include <numcosmo/nc_hicosmo.h>
 #include <numcosmo/nc_distance.h>
 #include <numcosmo/scalefactor.h>
+/* Cosmic thermodynamics */
+#include <numcosmo/nc_recomb.h>
+#include <numcosmo/nc_recomb_seager.h>
 
 /* Dataset object  */
 #include <numcosmo/data/data.h>
@@ -123,8 +126,6 @@
 #include <numcosmo/model/nc_hicosmo_qspline.h>
 #include <numcosmo/model/quantum_gravity.h>
 
-/* Cosmic thermodynamics */
-#include <numcosmo/thermodyn/recomb.h>
 
 /* Spherical maps, HEALPIX implementation */
 #include <numcosmo/sphere/map.h>

@@ -268,44 +268,44 @@ _ncm_spline_gsl_notaknot_init (void *vstate, const gdouble xa[], const gdouble y
   }
 
   {
-	gsize loc_sys_size = sys_size - start_i - pad_i;
-	gsl_vector_view g_vec = gsl_vector_view_array(&g_array_index(state->g, gdouble, start_i), loc_sys_size);
-	gsl_vector_view diag_vec = gsl_vector_view_array(&g_array_index(state->diag, gdouble, start_i), loc_sys_size);
-	gsl_vector_view offdiag_vec = gsl_vector_view_array(&g_array_index(state->offdiag, gdouble, start_i), loc_sys_size - 1);
-	gsl_vector_view solution_vec = gsl_vector_view_array (&g_array_index(state->c, gdouble, start_i + 1), loc_sys_size);
+		gsize loc_sys_size = sys_size - start_i - pad_i;
+		gsl_vector_view g_vec = gsl_vector_view_array(&g_array_index(state->g, gdouble, start_i), loc_sys_size);
+		gsl_vector_view diag_vec = gsl_vector_view_array(&g_array_index(state->diag, gdouble, start_i), loc_sys_size);
+		gsl_vector_view offdiag_vec = gsl_vector_view_array(&g_array_index(state->offdiag, gdouble, start_i), loc_sys_size - 1);
+		gsl_vector_view solution_vec = gsl_vector_view_array (&g_array_index(state->c, gdouble, start_i + 1), loc_sys_size);
 
-	gint status = gsl_linalg_solve_symm_tridiag (&diag_vec.vector,
-	                                             &offdiag_vec.vector,
-	                                             &g_vec.vector,
-	                                             &solution_vec.vector);
+		gint status = gsl_linalg_solve_symm_tridiag (&diag_vec.vector,
+		                                             &offdiag_vec.vector,
+		                                             &g_vec.vector,
+		                                             &solution_vec.vector);
 
-	{
-	  const gdouble h_0 = xa[1] - xa[0];
-	  const gdouble h_1 = xa[2] - xa[1];
-	  const gdouble h_nm1 = xa[n] - xa[nm1];
-	  const gdouble h_nm2 = xa[nm1] - xa[nm2];
-	  const gdouble c1   = g_array_index(state->c, gdouble, 1);
-	  const gdouble c2   = g_array_index(state->c, gdouble, 2);
-	  const gdouble cnm1 = g_array_index(state->c, gdouble, nm1);
-	  const gdouble cnm2 = g_array_index(state->c, gdouble, nm2);
+		{
+			const gdouble h_0 = xa[1] - xa[0];
+			const gdouble h_1 = xa[2] - xa[1];
+			const gdouble h_nm1 = xa[n] - xa[nm1];
+			const gdouble h_nm2 = xa[nm1] - xa[nm2];
+			const gdouble c1   = g_array_index(state->c, gdouble, 1);
+			const gdouble c2   = g_array_index(state->c, gdouble, 2);
+			const gdouble cnm1 = g_array_index(state->c, gdouble, nm1);
+			const gdouble cnm2 = g_array_index(state->c, gdouble, nm2);
 
-	  g_array_index (state->c, gdouble, 0) = c1 + h_0 * (c1 - c2) / h_1;
-	  g_array_index (state->c, gdouble, n) = cnm1 + h_nm1 * (cnm1 - cnm2) / h_nm2;
+			g_array_index (state->c, gdouble, 0) = c1 + h_0 * (c1 - c2) / h_1;
+			g_array_index (state->c, gdouble, n) = cnm1 + h_nm1 * (cnm1 - cnm2) / h_nm2;
+		}
+
+		for (i = 0; i < n; i++)
+		{
+			const gdouble dx = xa[i + 1] - xa[i];
+			const gdouble dy = ya[i + 1] - ya[i];
+			const gdouble c_ip1 = g_array_index (state->c, gdouble, i + 1);
+			const gdouble c_i = g_array_index (state->c, gdouble, i);
+
+			g_array_index (state->b, gdouble, i) = (dy / dx) - dx * (c_ip1 + 2.0 * c_i) / 3.0;
+			g_array_index (state->d, gdouble, i) = (c_ip1 - c_i) / (3.0 * dx);
+		}
+
+		return status;
 	}
-
-	for (i = 0; i < n; i++)
-	{
-	  const gdouble dx = xa[i + 1] - xa[i];
-	  const gdouble dy = ya[i + 1] - ya[i];
-	  const gdouble c_ip1 = g_array_index (state->c, gdouble, i + 1);
-	  const gdouble c_i = g_array_index (state->c, gdouble, i);
-
-	  g_array_index (state->b, gdouble, i) = (dy / dx) - dx * (c_ip1 + 2.0 * c_i) / 3.0;
-	  g_array_index (state->d, gdouble, i) = (c_ip1 - c_i) / (3.0 * dx);
-	}
-
-	return status;
-  }
 }
 
 static void
@@ -404,17 +404,17 @@ _ncm_spline_gsl_notaknot_integ (const void *vstate, const gdouble x_array[], con
 
   size_t i, index_a, index_b;
 
-  if (acc != NULL)
-  {
-	index_a = gsl_interp_accel_find (acc, x_array, size, a);
-	index_b = gsl_interp_accel_find (acc, x_array, size, b);
-  }
-  else
-  {
-	index_a = gsl_interp_bsearch (x_array, a, 0, size - 1);
-	index_b = gsl_interp_bsearch (x_array, b, 0, size - 1);
-  }
-
+	if (acc != NULL)
+	{
+		index_a = gsl_interp_accel_find (acc, x_array, size, a);
+		index_b = gsl_interp_accel_find (acc, x_array, size, b);
+	}
+	else
+	{
+		index_a = gsl_interp_bsearch (x_array, a, 0, size - 1);
+		index_b = gsl_interp_bsearch (x_array, b, 0, size - 1);
+	}
+	
   *result = 0.0;
 
   for(i = index_a; i <= index_b; i++)

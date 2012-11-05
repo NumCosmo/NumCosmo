@@ -143,224 +143,224 @@ static void g_list_free_full (GList *list, GDestroyNotify free_func)
 static void
 ncm_spline_new_function_4 (NcmSpline *s, gsl_function *F, gdouble xi, gdouble xf, gsize max_nodes, gdouble rel_error)
 {
-  gdouble poly3_dd[4];
-  gdouble poly3_x[4];
-  gdouble poly3_y[4];
-  GList *nodes = NULL;
-  GList *wnodes[3] = {NULL, NULL, NULL};
-  gint i;
-  gdouble step = (xf - xi) / 3.0;
-  gdouble sub_step = step / 3.0;
-  GArray *x_array;
-  GArray *y_array;
-  gsize n_elem;
+	gdouble poly3_dd[4];
+	gdouble poly3_x[4];
+	gdouble poly3_y[4];
+	GList *nodes = NULL;
+	GList *wnodes[3] = {NULL, NULL, NULL};
+	gint i;
+	gdouble step = (xf - xi) / 3.0;
+	gdouble sub_step = step / 3.0;
+	GArray *x_array;
+	GArray *y_array;
+	gsize n_elem;
 
-  for (i = 0; i < 4; i++)
-  {
-	poly3_x[i] = xi + i * step;
-	poly3_y[i] = GSL_FN_EVAL (F, poly3_x[i]);
-	BIVEC_LIST_APPEND (nodes, poly3_x[i], poly3_y[i]);
-  }
-  gsl_poly_dd_init (poly3_dd, poly3_x, poly3_y, 4);
+	for (i = 0; i < 4; i++)
+	{
+		poly3_x[i] = xi + i * step;
+		poly3_y[i] = GSL_FN_EVAL (F, poly3_x[i]);
+		BIVEC_LIST_APPEND (nodes, poly3_x[i], poly3_y[i]);
+	}
+	gsl_poly_dd_init (poly3_dd, poly3_x, poly3_y, 4);
 
-  wnodes[0] = nodes;
-  wnodes[1] = wnodes[0]->next;
-  wnodes[2] = wnodes[1]->next;
-  for (i = 0; i < 3; i++)
-  {
-	gdouble yinterp1, yinterp2;
-	yinterp1 = gsl_poly_dd_eval (poly3_dd, poly3_x, 4, poly3_x[i] + sub_step);
-	yinterp2 = gsl_poly_dd_eval (poly3_dd, poly3_x, 4, poly3_x[i] + 2.0 * sub_step);
+	wnodes[0] = nodes;
+	wnodes[1] = wnodes[0]->next;
+	wnodes[2] = wnodes[1]->next;
+	for (i = 0; i < 3; i++)
+	{
+		gdouble yinterp1, yinterp2;
+		yinterp1 = gsl_poly_dd_eval (poly3_dd, poly3_x, 4, poly3_x[i] + sub_step);
+		yinterp2 = gsl_poly_dd_eval (poly3_dd, poly3_x, 4, poly3_x[i] + 2.0 * sub_step);
 
-	_test_and_eval_interior_4 (wnodes[i], F, yinterp1, yinterp2, rel_error, FALSE);
-  }
+		_test_and_eval_interior_4 (wnodes[i], F, yinterp1, yinterp2, rel_error, FALSE);
+	}
 
-  n_elem = g_list_length (nodes);
-  x_array = g_array_sized_new (FALSE, FALSE, sizeof(gdouble), n_elem);
-  y_array = g_array_sized_new (FALSE, FALSE, sizeof(gdouble), n_elem);
+	n_elem = g_list_length (nodes);
+	x_array = g_array_sized_new (FALSE, FALSE, sizeof(gdouble), n_elem);
+	y_array = g_array_sized_new (FALSE, FALSE, sizeof(gdouble), n_elem);
 
-  wnodes[0] = nodes;
+	wnodes[0] = nodes;
 
-  do {
-	g_array_append_val (x_array, BIVEC_LIST_X (nodes));
-	g_array_append_val (y_array, BIVEC_LIST_Y (nodes));
-	nodes = nodes->next;
-  } while (nodes != NULL);
+	do {
+		g_array_append_val (x_array, BIVEC_LIST_X (nodes));
+		g_array_append_val (y_array, BIVEC_LIST_Y (nodes));
+		nodes = nodes->next;
+	} while (nodes != NULL);
 
-  g_list_free_full (wnodes[0], _BIVec_free);
+	g_list_free_full (wnodes[0], _BIVec_free);
 
-  ncm_spline_set_array (s, x_array, y_array, TRUE);
+	ncm_spline_set_array (s, x_array, y_array, TRUE);
 
-  return;
+	return;
 }
 
 static void
 ncm_spline_new_function_2x2 (NcmSpline *s, gsl_function *F, gdouble xi, gdouble xf, gsize max_nodes, gdouble rel_error)
 {
-  gdouble poly3_dd[4];
-  gdouble poly3_x[4];
-  gdouble poly3_y[4];
-  GList *nodes = NULL;
-  GList *wnodes[3] = {NULL, NULL, NULL};
-  gint i;
-  gdouble step = (xf - xi) / 3.0;
-  gdouble sub_step = step / 3.0;
-  GArray *x_array;
-  GArray *y_array;
-  gsize n_elem;
+	gdouble poly3_dd[4];
+	gdouble poly3_x[4];
+	gdouble poly3_y[4];
+	GList *nodes = NULL;
+	GList *wnodes[3] = {NULL, NULL, NULL};
+	gint i;
+	gdouble step = (xf - xi) / 3.0;
+	gdouble sub_step = step / 3.0;
+	GArray *x_array;
+	GArray *y_array;
+	gsize n_elem;
 
-  for (i = 0; i < 4; i++)
-  {
-	poly3_x[i] = xi + i * step;
-	poly3_y[i] = GSL_FN_EVAL (F, poly3_x[i]);
-	BIVEC_LIST_APPEND (nodes, poly3_x[i], poly3_y[i]);
-  }
-  gsl_poly_dd_init (poly3_dd, poly3_x, poly3_y, 4);
+	for (i = 0; i < 4; i++)
+	{
+		poly3_x[i] = xi + i * step;
+		poly3_y[i] = GSL_FN_EVAL (F, poly3_x[i]);
+		BIVEC_LIST_APPEND (nodes, poly3_x[i], poly3_y[i]);
+	}
+	gsl_poly_dd_init (poly3_dd, poly3_x, poly3_y, 4);
 
-  wnodes[0] = nodes;
-  wnodes[1] = wnodes[0]->next;
-  wnodes[2] = wnodes[1]->next;
-  for (i = 0; i < 3; i++)
-  {
-	gdouble yinterp1, yinterp2;
-	yinterp1 = gsl_poly_dd_eval (poly3_dd, poly3_x, 4, poly3_x[i] + sub_step);
-	yinterp2 = gsl_poly_dd_eval (poly3_dd, poly3_x, 4, poly3_x[i] + 2.0 * sub_step);
+	wnodes[0] = nodes;
+	wnodes[1] = wnodes[0]->next;
+	wnodes[2] = wnodes[1]->next;
+	for (i = 0; i < 3; i++)
+	{
+		gdouble yinterp1, yinterp2;
+		yinterp1 = gsl_poly_dd_eval (poly3_dd, poly3_x, 4, poly3_x[i] + sub_step);
+		yinterp2 = gsl_poly_dd_eval (poly3_dd, poly3_x, 4, poly3_x[i] + 2.0 * sub_step);
 
-	_test_and_eval_interior_4 (wnodes[i], F, yinterp1, yinterp2, rel_error, FALSE);
-  }
+		_test_and_eval_interior_4 (wnodes[i], F, yinterp1, yinterp2, rel_error, FALSE);
+	}
 
-  n_elem = g_list_length (nodes);
-  x_array = g_array_sized_new (FALSE, FALSE, sizeof(gdouble), n_elem);
-  y_array = g_array_sized_new (FALSE, FALSE, sizeof(gdouble), n_elem);
+	n_elem = g_list_length (nodes);
+	x_array = g_array_sized_new (FALSE, FALSE, sizeof(gdouble), n_elem);
+	y_array = g_array_sized_new (FALSE, FALSE, sizeof(gdouble), n_elem);
 
-  wnodes[0] = nodes;
+	wnodes[0] = nodes;
 
-  do {
-	g_array_append_val (x_array, BIVEC_LIST_X (nodes));
-	g_array_append_val (y_array, BIVEC_LIST_Y (nodes));
-	nodes = nodes->next;
-  } while (nodes != NULL);
+	do {
+		g_array_append_val (x_array, BIVEC_LIST_X (nodes));
+		g_array_append_val (y_array, BIVEC_LIST_Y (nodes));
+		nodes = nodes->next;
+	} while (nodes != NULL);
 
-  g_list_free_full (wnodes[0], _BIVec_free);
+	g_list_free_full (wnodes[0], _BIVec_free);
 
-  ncm_spline_set_array (s, x_array, y_array, TRUE);
+	ncm_spline_set_array (s, x_array, y_array, TRUE);
 
-  return;
+	return;
 }
 
 static void
 ncm_spline_new_function_spline (NcmSpline *s, gsl_function *F, gdouble xi, gdouble xf, gsize max_nodes, gdouble rel_error)
 {
-  GArray *x_array = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), 1000);
-  GArray *y_array = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), 1000);
-  GArray *xt_array = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), 1000);
-  GArray *yt_array = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), 1000);
-  GList *nodes = NULL, *wnodes = NULL;
-  gsize n = ncm_spline_min_size (s);
-  guint i;
+	GArray *x_array  = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), 1000);
+	GArray *y_array  = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), 1000);
+	GArray *xt_array = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), 1000);
+	GArray *yt_array = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), 1000);
+	GList *nodes = NULL, *wnodes = NULL;
+	gsize n = ncm_spline_min_size (s);
+	guint i;
 
-  if (max_nodes == 0)
-	max_nodes = NCM_SPLINE_FUNC_DEFAULT_MAX_NODES;
-  
-  g_array_set_size (xt_array, n);
-  g_array_set_size (yt_array, n);
+	g_assert (xf > xi);
+	if (max_nodes == 0)
+		max_nodes = NCM_SPLINE_FUNC_DEFAULT_MAX_NODES;
 
-  for (i = 0; i < n; i++)
-  {
-	gdouble x = xi + (xf - xi) / (n - 1.0) * i;
-	gdouble y = GSL_FN_EVAL (F, x);
-	BIVEC_LIST_APPEND (nodes, x, y);
-	BIVEC_LIST_OK (nodes) = 0;
-	g_array_append_val (x_array, x);
-	g_array_append_val (y_array, y);
-	//printf ("%d %g %g\n", i, x, y);
-  }
-  ncm_spline_set_array (s, x_array, y_array, TRUE);
+	g_array_set_size (xt_array, n);
+	g_array_set_size (yt_array, n);
+
+	for (i = 0; i < n; i++)
+	{
+		gdouble x = xi + (xf - xi) / (n - 1.0) * i;
+		gdouble y = GSL_FN_EVAL (F, x);
+		BIVEC_LIST_APPEND (nodes, x, y);
+		BIVEC_LIST_OK (nodes) = 0;
+		g_array_append_val (x_array, x);
+		g_array_append_val (y_array, y);
+	}
+	ncm_spline_set_array (s, x_array, y_array, TRUE);
 
 #define TEST_CMP(a,b) ((a) != 0.0 ? fabs(((b)-(a))/(a)) : fabs((b)-(a)))
 #define SWAP_PTR(a,b) do { const gpointer tmp = (b); (b) = (a); (a) = tmp; } while (FALSE)
 
-  while (TRUE)
-  {
-	gsize improves = 0;
-	wnodes = nodes;
-	g_array_set_size (xt_array, 0);
-	g_array_set_size (yt_array, 0);
-	do
+	while (TRUE)
 	{
-	  g_array_append_val (xt_array, BIVEC_LIST_X(wnodes));
-	  g_array_append_val (yt_array, BIVEC_LIST_Y(wnodes));
-	  //printf ("[% 20.15g % 20.15g]\t", BIVEC_LIST_X(wnodes), BIVEC_LIST_X(wnodes->next));
-	  if (BIVEC_LIST_OK (wnodes) == 1)
-	  {
-		//printf ("\n");
-		continue;
-	  }
-	  else
-	  {
-		const gdouble x0 = BIVEC_LIST_X(wnodes);
-		const gdouble x1 = BIVEC_LIST_X(wnodes->next);
-		const gdouble y0 = BIVEC_LIST_Y(wnodes);
-		const gdouble y1 = BIVEC_LIST_Y(wnodes->next);
-		const gdouble x = (x0 + x1) / 2.0;
-		const gdouble y = GSL_FN_EVAL (F, x);
-		const gdouble ys = ncm_spline_eval (s, x);
-		const gdouble Iyc = (x1 - x0) * (y1 + y0 + 4.0 * y) / 6.0;
-		const gdouble Iys = ncm_spline_eval_integ (s, x0, x1);
-		const gboolean test_p = (TEST_CMP(y, ys) < rel_error);
-		const gboolean test_I = (TEST_CMP(Iyc, Iys) < rel_error);
+		gsize improves = 0;
+		wnodes = nodes;
+		g_array_set_size (xt_array, 0);
+		g_array_set_size (yt_array, 0);
+		do
+		{
+			g_array_append_val (xt_array, BIVEC_LIST_X(wnodes));
+			g_array_append_val (yt_array, BIVEC_LIST_Y(wnodes));
+			//printf ("[% 20.15g % 20.15g]\t", BIVEC_LIST_X(wnodes), BIVEC_LIST_X(wnodes->next));
+			if (BIVEC_LIST_OK (wnodes) == 1)
+			{
+				//printf ("\n");
+				continue;
+			}
+			else
+			{
+				const gdouble x0 = BIVEC_LIST_X(wnodes);
+				const gdouble x1 = BIVEC_LIST_X(wnodes->next);
+				const gdouble y0 = BIVEC_LIST_Y(wnodes);
+				const gdouble y1 = BIVEC_LIST_Y(wnodes->next);
+				const gdouble x = (x0 + x1) / 2.0;
+				const gdouble y = GSL_FN_EVAL (F, x);
+				const gdouble ys = ncm_spline_eval (s, x);
+				const gdouble Iyc = (x1 - x0) * (y1 + y0 + 4.0 * y) / 6.0;
+				const gdouble Iys = ncm_spline_eval_integ (s, x0, x1);
+				const gboolean test_p = (TEST_CMP(y, ys) < rel_error);
+				const gboolean test_I = (TEST_CMP(Iyc, Iys) < rel_error);
 #ifdef _NCM_SPLINE_TEST_DIFF
-		const gdouble dyc = (y1 - y0) / (x1 - x0);
-		const gdouble dys = ncm_spline_eval_deriv (s, x);
-		const gboolean test_d = (TEST_CMP(dyc, dys) < rel_error);
+				const gdouble dyc = (y1 - y0) / (x1 - x0);
+				const gdouble dys = ncm_spline_eval_deriv (s, x);
+				const gboolean test_d = (TEST_CMP(dyc, dys) < rel_error);
 #endif /* _NCM_SPLINE_TEST_DIFF */
 
-        if ((x-x0)/x < NCM_SPLINE_KNOT_DIFF_TOL)
-		  g_error ("Tolerance of the difference between knots was reached. Interpolated function is probably discontinuous at % 20.15g.", x);
-		
-		BIVEC_LIST_INSERT_BEFORE (nodes, wnodes->next, x, y);
-		wnodes = g_list_next (wnodes);
+				if (fabs ((x-x0)/x) < NCM_SPLINE_KNOT_DIFF_TOL)
+					g_error ("Tolerance of the difference between knots was reached. Interpolated function is probably discontinuous at % 20.15g.", x);
+
+				BIVEC_LIST_INSERT_BEFORE (nodes, wnodes->next, x, y);
+				wnodes = g_list_next (wnodes);
+				g_array_append_val(xt_array, BIVEC_LIST_X(wnodes));
+				g_array_append_val(yt_array, BIVEC_LIST_Y(wnodes));
+				BIVEC_LIST_OK(wnodes) = BIVEC_LIST_OK(wnodes->prev);
+
+				//printf ("improves %03zd (% 10.8g) [% 10.8g % 10.8g] [% 10.8g % 10.8g] ", improves, x, y, ys, Iyc, Iys);
+
+#ifdef _NCM_SPLINE_TEST_DIFF
+				if (test_p && test_I && test_d)
+#else
+					if (test_p && test_I)
+#endif /* _NCM_SPLINE_TEST_DIFF */
+				{
+					BIVEC_LIST_OK(wnodes->prev)++;
+					BIVEC_LIST_OK(wnodes)++;
+				}
+				else
+					improves++;
+				//printf ("OK %d %d\n", BIVEC_LIST_OK(wnodes->prev), BIVEC_LIST_OK(wnodes));
+			}
+		} while ((wnodes = g_list_next (wnodes)) && wnodes->next);
 		g_array_append_val(xt_array, BIVEC_LIST_X(wnodes));
 		g_array_append_val(yt_array, BIVEC_LIST_Y(wnodes));
-		BIVEC_LIST_OK(wnodes) = BIVEC_LIST_OK(wnodes->prev);
 
-		//printf ("improves %03zd (% 10.8g) [% 10.8g % 10.8g] [% 10.8g % 10.8g] ", improves, x, y, ys, Iyc, Iys);
+		SWAP_PTR (x_array, xt_array);
+		SWAP_PTR (y_array, yt_array);
 
-#ifdef _NCM_SPLINE_TEST_DIFF
-		if (test_p && test_I && test_d)
-#else
-		  if (test_p && test_I)
-#endif /* _NCM_SPLINE_TEST_DIFF */
-		{
-		  BIVEC_LIST_OK(wnodes->prev)++;
-		  BIVEC_LIST_OK(wnodes)++;
-		}
-		else
-		  improves++;
-		//printf ("OK %d %d\n", BIVEC_LIST_OK(wnodes->prev), BIVEC_LIST_OK(wnodes));
-	  }
-	} while ((wnodes = g_list_next (wnodes)) && wnodes->next);
-	g_array_append_val(xt_array, BIVEC_LIST_X(wnodes));
-	g_array_append_val(yt_array, BIVEC_LIST_Y(wnodes));
+		if (x_array->len > max_nodes)
+			g_error ("ncm_spline_new_function_spline: cannot achive requested precision with at most %zu nodes", max_nodes);
 
-	SWAP_PTR (x_array, xt_array);
-	SWAP_PTR (y_array, yt_array);
+		ncm_spline_set_array (s, x_array, y_array, TRUE);
+		if (improves == 0)
+			break;
+	}
+	g_list_free_full (nodes, _BIVec_free);
 
-	if (x_array->len > max_nodes)
-	  g_error ("ncm_spline_new_function_spline: cannot achive requested precision with at most %zu nodes", max_nodes);
+	g_array_unref (x_array);
+	g_array_unref (xt_array);
+	g_array_unref (y_array);
+	g_array_unref (yt_array);
 
-	ncm_spline_set_array (s, x_array, y_array, TRUE);
-	if (improves == 0)
-	  break;
-  }
-  g_list_free_full (nodes, _BIVec_free);
-
-  g_array_unref (x_array);
-  g_array_unref (xt_array);
-  g_array_unref (y_array);
-  g_array_unref (yt_array);
-
-  return;
+	return;
 }
 
 static void

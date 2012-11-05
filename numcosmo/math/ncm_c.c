@@ -783,25 +783,32 @@ ncm_c_class_init (NcmCClass *klass)
 /**
  * ncm_c_prim_He_Yp:
  *
- * FIXME
+ * The primoridial helium mass fraction 
+ * $$Y_p = \frac{m_\text{He}n_\text{He}}
+ * {m_\text{He}n_\text{He}+m_\text{H}n_\text{H}},$$ where $m_\text{He}$, 
+ * n_\text{He}, m_\text{H} and m_\text{H} are respectively helium mass and 
+ * number density and hydrogen mass and number density.
  *
- * Returns: The primordial helium abundance.
- *
- */
-/**
- * ncm_c_prim_H_frac:
- *
- * FIXME
- *
- * Returns: The primordial hydrogen abundance.
+ * Returns: The primordial helium mass abundance.
  *
  */
 /**
- * ncm_c_prim_He_XHe:
+ * ncm_c_prim_H_Yp:
  *
- * FIXME
+ * The primordial hydrogen mass fraction $$Y_{\text{H}p} = 1 - Y_p,$$
+ * where $Y_p$ is the helium mass fraction, see ncm_c_prim_He_Yp ().
  *
- * Returns: FIXME
+ * Returns: The primordial hydrogen mass abundance.
+ *
+ */
+/**
+ * ncm_c_prim_XHe:
+ * 
+ * The primordial helium to hydrogen ratio $$X_\text{He} = 
+ * \frac{n_\text{He}}{n_\text{H}} = \frac{m_\text{H}}{m_\text{He}}
+ * \frac{Y_p}{Y_{\text{H}p}},$$ see ncm_c_prim_H_Yp () and ncm_c_prim_He_Yp ().
+ * 
+ * Returns: The primordial helium to hydrogen ratio.
  *
  */
 /**

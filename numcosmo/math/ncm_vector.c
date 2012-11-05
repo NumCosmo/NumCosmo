@@ -58,10 +58,10 @@ ncm_vector_new (gsize n)
 /**
  * ncm_vector_new_gsl: (skip)
  * @gv: vector from GNU Scientific Library (GSL) to be converted into a #NcmVector.
-   *
+ * 
  * This function saves @gv internally and frees it when it is no longer necessary.
  * The @gv vector must not be freed.
- *
+ * 
  * Returns: A new #NcmVector.
  */
 NcmVector *
@@ -79,7 +79,7 @@ ncm_vector_new_gsl (gsl_vector *gv)
 
 /**
  * ncm_vector_new_array:
- * @a: array of doubles to be converted into a #NcmVector.
+ * @a: (array) (element-type double) (transfer full): array of doubles to be converted into a #NcmVector.
  *
  * This function saves @a internally and frees it when it is no longer necessary.
  * The @a array must not be freed.
@@ -91,10 +91,10 @@ ncm_vector_new_array (GArray *a)
 {
   NcmVector *cv = g_object_new (NCM_TYPE_VECTOR, NULL);
   cv->vv = gsl_vector_view_array (&g_array_index (a, gdouble, 0), a->len);
-  cv->a = a;
+  cv->a = g_array_ref (a);
   cv->pobj = NULL;
   cv->type = NCM_VECTOR_ARRAY;
-  g_array_ref (a);
+  
   return cv;
 }
 
@@ -262,6 +262,13 @@ ncm_vector_get_subvector (NcmVector *cv, gsize k, gsize size)
  * Returns: The @i-th component of the vector @cv.
  */
 /**
+ * ncm_vector_fast_get:
+ * @cv: a constant #NcmVector.
+ * @i: component index.
+ *
+ * Returns: The @i-th component of the vector @cv assuming stride == 1.
+ */
+/**
  * ncm_vector_ptr:
  * @cv: a #NcmVector.
  * @i: component index.
@@ -275,7 +282,14 @@ ncm_vector_get_subvector (NcmVector *cv, gsize k, gsize size)
  * @val: a constant double.
  *
  * This function sets the value of the @i-th component of the vector @cv to @val.
+ */
+/**
+ * ncm_vector_fast_set:
+ * @cv: a #NcmVector.
+ * @i: component index.
+ * @val: a constant double.
  *
+ * This function sets the value of the @i-th component of the vector @cv to @val assuming stride == 1.
  */
 /**
  * ncm_vector_addto:
@@ -294,6 +308,15 @@ ncm_vector_get_subvector (NcmVector *cv, gsize k, gsize size)
  *
  * This function subtracts @val from the value of the @i-th component of @cv.
  *
+ */
+/**
+ * ncm_vector_fast_subfrom:
+ * @cv: a #NcmVector.
+ * @i: component index.
+ * @val: a cosntant double.
+ * 
+ * This function subtracts @val from the value of the @i-th component of @cv assuming stride == 1.
+ * 
  */
 /**
  * ncm_vector_set_all:
@@ -374,6 +397,14 @@ ncm_vector_get_subvector (NcmVector *cv, gsize k, gsize size)
  * FIXME
  *
  * Returns: (transfer container) (element-type double): FIXME
+ */
+/**
+ * ncm_vector_dup_array:
+ * @cv: a #NcmVector.
+ *
+ * FIXME
+ *
+ * Returns: (transfer full) (element-type double): FIXME
  */
 /**
  * ncm_vector_gsl: (skip)

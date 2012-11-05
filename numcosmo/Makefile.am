@@ -88,31 +88,33 @@ ncm_headers = \
 ncm_headers_internal = 
 
 nc_headers = \
-	nc_macros.h    \
-	nc_hicosmo.h   \
-	nc_distance.h  \
-	model/nc_hicosmo_de.h        \
-	model/nc_hicosmo_de_linder.h \
-	model/nc_hicosmo_de_pad.h    \
-	model/nc_hicosmo_de_qe.h     \
-	model/nc_hicosmo_de_xcdm.h   \
-	model/nc_hicosmo_lcdm.h      \
-	model/nc_hicosmo_qconst.h    \
-	model/nc_hicosmo_qlinear.h   \
-	model/nc_hicosmo_qpw.h       \
-	model/nc_hicosmo_qspline.h   \
-	lss/nc_window.h             \
-	lss/nc_window_tophat.h      \
-	lss/nc_window_gaussian.h    \
-	lss/nc_transfer_func.h      \
-	lss/nc_transfer_func_bbks.h \
-	lss/nc_transfer_func_eh.h   \
-	lss/nc_transfer_func_camb.h \
-	lss/nc_transfer_func_pert.h \
-	lss/nc_growth_func.h        \
-	lss/nc_matter_var.h         \
-	lss/nc_galaxy_acf.h         \
-	lss/nc_multiplicity_func.h  \
+	nc_macros.h                   \
+	nc_hicosmo.h                  \
+	nc_distance.h                 \
+	nc_recomb.h                   \
+	nc_recomb_seager.h            \
+	model/nc_hicosmo_de.h         \
+	model/nc_hicosmo_de_linder.h  \
+	model/nc_hicosmo_de_pad.h     \
+	model/nc_hicosmo_de_qe.h      \
+	model/nc_hicosmo_de_xcdm.h    \
+	model/nc_hicosmo_lcdm.h       \
+	model/nc_hicosmo_qconst.h     \
+	model/nc_hicosmo_qlinear.h    \
+	model/nc_hicosmo_qpw.h        \
+	model/nc_hicosmo_qspline.h    \
+	lss/nc_window.h               \
+	lss/nc_window_tophat.h        \
+	lss/nc_window_gaussian.h      \
+	lss/nc_transfer_func.h        \
+	lss/nc_transfer_func_bbks.h   \
+	lss/nc_transfer_func_eh.h     \
+	lss/nc_transfer_func_camb.h   \
+	lss/nc_transfer_func_pert.h   \
+	lss/nc_growth_func.h          \
+	lss/nc_matter_var.h           \
+	lss/nc_galaxy_acf.h           \
+	lss/nc_multiplicity_func.h    \
 	lss/nc_multiplicity_func_ps.h \
 	lss/nc_multiplicity_func_st.h \
 	lss/nc_multiplicity_func_jenkins.h \
@@ -147,6 +149,8 @@ nc_headers = \
 nc_sources = \
 	nc_hicosmo.c                 \
 	nc_distance.c                \
+	nc_recomb.c                  \
+	nc_recomb_seager.c           \
 	model/nc_hicosmo_de.c        \
 	model/nc_hicosmo_de_linder.c \
 	model/nc_hicosmo_de_pad.c    \
@@ -272,8 +276,6 @@ libnumcosmo_la_SOURCES = \
 	sphere/healpix.c        \
 	sphere/healpix.h        \
 	sphere/map.h            \
-	thermodyn/recomb.c      \
-	thermodyn/recomb.h      \
 	perturbations/linear.c  \
 	perturbations/linear.h  \
 	perturbations/covariance.c      \
@@ -348,7 +350,6 @@ nobase_cosmo_include_HEADERS =  \
 	math/memory_pool.h      \
 	sphere/healpix.h        \
 	sphere/map.h            \
-	thermodyn/recomb.h      \
 	perturbations/linear.h  \
 	perturbations/linear_generic.c     \
 	perturbations/covariance.h         \

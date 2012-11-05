@@ -28,14 +28,14 @@
 #include <glib.h>
 #include <glib-object.h>
 #include <numcosmo/scalefactor.h>
-#include <numcosmo/thermodyn/recomb.h>
+#include <numcosmo/nc_recomb.h>
 
 G_BEGIN_DECLS
 
 /**
  * NcLinearPertVars:
  * @NC_PERT_B0: FIXME
- * @NC_PERT_THETA0: FIXME  
+ * @NC_PERT_THETA0: FIXME
  * @NC_PERT_C0: FIXME
  * @NC_PERT_PHI: FIXME
  * @NC_PERT_B1: FIXME
@@ -47,11 +47,11 @@ G_BEGIN_DECLS
  * @NC_PERT_THETA_P2: FIXME
  *
  * FIXME
- */  
+ */
 typedef enum _NcLinearPertVars
 {
   NC_PERT_B0 = 0,
-  NC_PERT_THETA0,  
+  NC_PERT_THETA0,
   NC_PERT_C0,
   NC_PERT_PHI,
   NC_PERT_B1,
@@ -92,14 +92,14 @@ typedef struct _NcLinearPert NcLinearPert;
 
 /**
  * NcLinearPert:
- * 
+ *
  * FIXME
  */
 struct _NcLinearPert
 {
   /*< private >*/
-  NcmModel *model;
-  NcThermodynRecomb *recomb;
+  NcHICosmo *cosmo;
+  NcRecomb *recomb;
   NcScaleFactor *a;
   struct _NcLinearPertOdeSolver *solver;
   NcLinearPertWorkSpace *pws;
@@ -124,7 +124,7 @@ typedef struct _NcLinearPertOdeSolver NcLinearPertOdeSolver;
 
 /**
  * NcLinearPertOdeSolver:
- * 
+ *
  * FIXME
  */
 struct _NcLinearPertOdeSolver
@@ -165,7 +165,7 @@ struct _NcLinearPertOdeSolver
  * @NC_LINEAR_PERTURBATIONS_SPLINE_C1: FIXME
  * @NC_LINEAR_PERTURBATIONS_SPLINE_B1: FIXME
  * @NC_LINEAR_PERTURBATIONS_SPLINE_THETA2: FIXME
- * 
+ *
  * FIXME
  */
 typedef enum _NcLinearPertSplineTypes
@@ -214,7 +214,7 @@ typedef struct _NcLinearPertTF NcLinearPertTF;
 
 /**
  * NcLinearPertTF:
- * 
+ *
  * FIXME
  */
 struct _NcLinearPertTF
@@ -227,7 +227,7 @@ struct _NcLinearPertTF
   NcmSpline *logPhi_logk;
 };
 
-NcLinearPert *nc_pert_linear_new (NcmModel *model, guint lmax, gdouble tc_reltol, gdouble reltol, gdouble tc_abstol, gdouble abstol);
+NcLinearPert *nc_pert_linear_new (NcHICosmo *cosmo, NcRecomb *recomb, guint lmax, gdouble tc_reltol, gdouble reltol, gdouble tc_abstol, gdouble abstol);
 NcLinearPertSplines *nc_pert_linear_splines_new (NcLinearPert *pert, NcLinearPertSplineTypes types, gulong n_deta, gulong n_evol, gdouble k0, gdouble k1);
 void nc_pert_linear_prepare_splines (NcLinearPertSplines *pspline);
 

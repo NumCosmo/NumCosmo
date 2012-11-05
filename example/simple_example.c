@@ -1,8 +1,8 @@
 #include <glib.h>
 #include <numcosmo/numcosmo.h>
 
-int
-main(int argc, gchar *argv[])
+gint
+main (gint argc, gchar *argv[])
 {
   NcHICosmo *cosmo;
   NcDistance *dist;
