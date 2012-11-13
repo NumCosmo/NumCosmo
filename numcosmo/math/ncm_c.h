@@ -490,7 +490,16 @@ G_INLINE_FUNC gdouble ncm_c_wmap5_cmb_R (void)
 { return 1.71; }
 
 G_INLINE_FUNC gdouble ncm_c_wmap5_cmb_sigma_R (void)
-{ return 0.013; }
+{ return 0.019; }
+
+G_INLINE_FUNC gdouble ncm_c_wmap7_cmb_z (void)
+{ return 1091.3; }
+
+G_INLINE_FUNC gdouble ncm_c_wmap7_cmb_R (void)
+{ return 1.725; }
+
+G_INLINE_FUNC gdouble ncm_c_wmap7_cmb_sigma_R (void)
+{ return 0.018; }
 
 G_INLINE_FUNC gdouble ncm_c_wmap5_coadded_I_K (void)
 { return 1.436; }
