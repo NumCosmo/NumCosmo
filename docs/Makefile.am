@@ -137,6 +137,8 @@ endif
 
 man_MANS = darkenergy.1
 
+EXTRA_DIST += $(man_MANS)
+
 if ENABLE_MAN
 
 .xml.1:

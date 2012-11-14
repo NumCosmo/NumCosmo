@@ -66,6 +66,7 @@ struct _NcRecombSeager
 GType nc_recomb_seager_get_type (void) G_GNUC_CONST;
 
 NcRecomb *nc_recomb_seager_new (void);
+NcRecomb *nc_recomb_seager_new_full (gdouble init_frac, gdouble zi, gdouble prec);
 
 G_END_DECLS
 

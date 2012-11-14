@@ -104,14 +104,15 @@ struct _NcHICosmoDE
 
 GType nc_hicosmo_de_get_type (void) G_GNUC_CONST;
 
-void nc_hicosmo_de_omega_x2omega_k (NcHICosmo *model);
+void nc_hicosmo_de_set_wmap5_params (NcHICosmo *cosmo);
+void nc_hicosmo_de_omega_x2omega_k (NcHICosmo *cosmo);
 gboolean nc_hicosmo_de_new_add_bbn (NcLikelihood *lh);
 
-void nc_hicosmo_de_set_weff_impl (NcHICosmoDEClass *model_de_class, NcmModelFunc1 f);
-void nc_hicosmo_de_set_dweff_dz_impl (NcHICosmoDEClass *model_de_class, NcmModelFunc1 f);
+void nc_hicosmo_de_set_weff_impl (NcHICosmoDEClass *cosmo_de_class, NcmModelFunc1 f);
+void nc_hicosmo_de_set_dweff_dz_impl (NcHICosmoDEClass *cosmo_de_class, NcmModelFunc1 f);
 
-G_INLINE_FUNC gdouble nc_hicosmo_de_weff (NcHICosmoDE *model, gdouble x);
-G_INLINE_FUNC gdouble nc_hicosmo_de_dweff_dz (NcHICosmoDE *model, gdouble x);
+G_INLINE_FUNC gdouble nc_hicosmo_de_weff (NcHICosmoDE *cosmo, gdouble x);
+G_INLINE_FUNC gdouble nc_hicosmo_de_dweff_dz (NcHICosmoDE *cosmo, gdouble x);
 
 G_END_DECLS
 

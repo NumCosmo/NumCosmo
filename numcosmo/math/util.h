@@ -74,6 +74,7 @@ gdouble ncm_numdiff_1 (gsl_function *F, const gdouble x, const gdouble ho, gdoub
 gdouble ncm_numdiff_2 (gsl_function *F, gdouble *ofx, const gdouble x, const gdouble ho, gdouble *err);
 gdouble ncm_numdiff_2_err (gsl_function *F, gdouble *ofx, const gdouble x, const gdouble ho, gdouble err, gdouble *ferr);
 gdouble ncm_sqrt1px_m1 (gdouble x);
+gint ncm_cmp (gdouble x, gdouble y, gdouble reltol);
 
 G_END_DECLS
 

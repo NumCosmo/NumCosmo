@@ -72,16 +72,16 @@ _nc_hicosmo_log_all_models_go (GType model_type, guint n)
   GType *models = g_type_children (model_type, &nc);
   for (i = 0; i < nc; i++)
   {
-	guint ncc;
-	GType *modelsc = g_type_children (models[i], &ncc);
+    guint ncc;
+    GType *modelsc = g_type_children (models[i], &ncc);
 
-	g_message ("#  ");
-	for (j = 0; j < n; j++) g_message (" ");
-	g_message ("%s\n", g_type_name (models[i]));
-	if (ncc)
-	  _nc_hicosmo_log_all_models_go (models[i], n + 2);
+    g_message ("#  ");
+    for (j = 0; j < n; j++) g_message (" ");
+    g_message ("%s\n", g_type_name (models[i]));
+    if (ncc)
+      _nc_hicosmo_log_all_models_go (models[i], n + 2);
 
-	g_free (modelsc);
+    g_free (modelsc);
   }
   g_free (models);
 }
@@ -103,20 +103,20 @@ nc_hicosmo_log_all_models (GType parent)
 /**
  * nc_hicosmo_new_from_name:
  * @parent_type: FIXME
- * @model_name: FIXME
+ * @cosmo_name: FIXME
  *
  * FIXME
  *
  * Returns: FIXME
  */
 NcHICosmo *
-nc_hicosmo_new_from_name (GType parent_type, gchar *model_name)
+nc_hicosmo_new_from_name (GType parent_type, gchar *cosmo_name)
 {
-  GObject *obj = ncm_cfg_create_from_string (model_name);
+  GObject *obj = ncm_cfg_create_from_string (cosmo_name);
   GType model_type = G_OBJECT_TYPE (obj);
 
   if (!g_type_is_a (model_type, parent_type))
-	g_error ("nc_hicosmo_new_from_name: NcHICosmo %s do not descend from %s\n", model_name, g_type_name (parent_type));
+	g_error ("nc_hicosmo_new_from_name: NcHICosmo %s do not descend from %s\n", cosmo_name, g_type_name (parent_type));
   return NC_HICOSMO (obj);
 }
 
@@ -250,7 +250,7 @@ NCM_MODEL_SET_IMPL_FUNC(NC_HICOSMO,NcHICosmo,nc_hicosmo,NcmModelFunc1,powspec)
 
 /**
  * nc_hicosmo_H0:
- * @model: a #NcHICosmo.
+ * @cosmo: a #NcHICosmo.
  *
  * The value of the Hubble constant in unity of $ms^{-1}kpc^{-1}$.
  *
@@ -258,7 +258,7 @@ NCM_MODEL_SET_IMPL_FUNC(NC_HICOSMO,NcHICosmo,nc_hicosmo,NcmModelFunc1,powspec)
  */
 /**
  * nc_hicosmo_Omega_b:
- * @model: a #NcHICosmo.
+ * @cosmo: a #NcHICosmo.
  *
  * FIXME
  *
@@ -266,7 +266,7 @@ NCM_MODEL_SET_IMPL_FUNC(NC_HICOSMO,NcHICosmo,nc_hicosmo,NcmModelFunc1,powspec)
  */
 /**
  * nc_hicosmo_Omega_r:
- * @model: a #NcHICosmo.
+ * @cosmo: a #NcHICosmo.
  *
  * FIXME
  *
@@ -274,7 +274,7 @@ NCM_MODEL_SET_IMPL_FUNC(NC_HICOSMO,NcHICosmo,nc_hicosmo,NcmModelFunc1,powspec)
  */
 /**
  * nc_hicosmo_Omega_c:
- * @model: a #NcHICosmo.
+ * @cosmo: a #NcHICosmo.
  *
  * FIXME
  *
@@ -282,7 +282,7 @@ NCM_MODEL_SET_IMPL_FUNC(NC_HICOSMO,NcHICosmo,nc_hicosmo,NcmModelFunc1,powspec)
  */
 /**
  * nc_hicosmo_Omega_t:
- * @model: a #NcHICosmo.
+ * @cosmo: a #NcHICosmo.
  *
  * FIXME
  *
@@ -290,7 +290,7 @@ NCM_MODEL_SET_IMPL_FUNC(NC_HICOSMO,NcHICosmo,nc_hicosmo,NcmModelFunc1,powspec)
  */
 /**
  * nc_hicosmo_T_gamma0:
- * @model: a #NcHICosmo.
+ * @cosmo: a #NcHICosmo.
  *
  * FIXME
  *
@@ -298,7 +298,7 @@ NCM_MODEL_SET_IMPL_FUNC(NC_HICOSMO,NcHICosmo,nc_hicosmo,NcmModelFunc1,powspec)
  */
 /**
  * nc_hicosmo_sigma_8:
- * @model: a #NcHICosmo.
+ * @cosmo: a #NcHICosmo.
  *
  * FIXME
  *
@@ -306,7 +306,7 @@ NCM_MODEL_SET_IMPL_FUNC(NC_HICOSMO,NcHICosmo,nc_hicosmo,NcmModelFunc1,powspec)
  */
 /**
  * nc_hicosmo_z_lss:
- * @model: a #NcHICosmo.
+ * @cosmo: a #NcHICosmo.
  *
  * FIXME
  *
@@ -314,7 +314,7 @@ NCM_MODEL_SET_IMPL_FUNC(NC_HICOSMO,NcHICosmo,nc_hicosmo,NcmModelFunc1,powspec)
  */
 /**
  * nc_hicosmo_E2:
- * @model: a #NcHICosmo.
+ * @cosmo: a #NcHICosmo.
  * @x: FIXME
  *
  * FIXME
@@ -323,7 +323,7 @@ NCM_MODEL_SET_IMPL_FUNC(NC_HICOSMO,NcHICosmo,nc_hicosmo,NcmModelFunc1,powspec)
  */
 /**
  * nc_hicosmo_dE2_dz:
- * @model: a #NcHICosmo.
+ * @cosmo: a #NcHICosmo.
  * @x: FIXME
  *
  * FIXME
@@ -332,7 +332,7 @@ NCM_MODEL_SET_IMPL_FUNC(NC_HICOSMO,NcHICosmo,nc_hicosmo,NcmModelFunc1,powspec)
  */
 /**
  * nc_hicosmo_d2E2_dz2:
- * @model: a #NcHICosmo.
+ * @cosmo: a #NcHICosmo.
  * @x: FIXME
  *
  * FIXME
@@ -341,7 +341,7 @@ NCM_MODEL_SET_IMPL_FUNC(NC_HICOSMO,NcHICosmo,nc_hicosmo,NcmModelFunc1,powspec)
  */
 /**
  * nc_hicosmo_powspec:
- * @model: a #NcHICosmo.
+ * @cosmo: a #NcHICosmo.
  * @x: FIXME
  *
  * FIXME
@@ -350,7 +350,7 @@ NCM_MODEL_SET_IMPL_FUNC(NC_HICOSMO,NcHICosmo,nc_hicosmo,NcmModelFunc1,powspec)
  */
 /**
  * nc_hicosmo_c_H0:
- * @model: a #NcHICosmo.
+ * @cosmo: a #NcHICosmo.
  *
  * FIXME
  *
@@ -358,7 +358,7 @@ NCM_MODEL_SET_IMPL_FUNC(NC_HICOSMO,NcHICosmo,nc_hicosmo,NcmModelFunc1,powspec)
  */
 /**
  * nc_hicosmo_Omega_k:
- * @model: a #NcHICosmo.
+ * @cosmo: a #NcHICosmo.
  *
  * FIXME
  *
@@ -366,7 +366,7 @@ NCM_MODEL_SET_IMPL_FUNC(NC_HICOSMO,NcHICosmo,nc_hicosmo,NcmModelFunc1,powspec)
  */
 /**
  * nc_hicosmo_Omega_m:
- * @model: a #NcHICosmo.
+ * @cosmo: a #NcHICosmo.
  *
  * The matter density parameter is given by the baryonic plus
  * the cold dark matter density parameters.
@@ -375,7 +375,7 @@ NCM_MODEL_SET_IMPL_FUNC(NC_HICOSMO,NcHICosmo,nc_hicosmo,NcmModelFunc1,powspec)
  */
 /**
  * nc_hicosmo_H:
- * @model: a #NcHICosmo.
+ * @cosmo: a #NcHICosmo.
  * @z: FIXME
  *
  * The value of the Hubble function in unity of $ms^{-1}kpc^{-1}$.
@@ -384,7 +384,7 @@ NCM_MODEL_SET_IMPL_FUNC(NC_HICOSMO,NcHICosmo,nc_hicosmo,NcmModelFunc1,powspec)
  */
 /**
  * nc_hicosmo_h:
- * @model: a #NcHICosmo
+ * @cosmo: a #NcHICosmo
  *
  * FIXME
  *
@@ -392,7 +392,7 @@ NCM_MODEL_SET_IMPL_FUNC(NC_HICOSMO,NcHICosmo,nc_hicosmo,NcmModelFunc1,powspec)
  */
 /**
  * nc_hicosmo_grad_h:
- * @model: a #NcHICosmo
+ * @cosmo: a #NcHICosmo
  * @pt: a #NcmFitParams
  * @grad: a #NcmVector
  *
@@ -400,7 +400,7 @@ NCM_MODEL_SET_IMPL_FUNC(NC_HICOSMO,NcHICosmo,nc_hicosmo,NcmModelFunc1,powspec)
  */
 /**
  * nc_hicosmo_h2:
- * @model: a #NcHICosmo
+ * @cosmo: a #NcHICosmo
  *
  * FIXME
  *
@@ -408,7 +408,7 @@ NCM_MODEL_SET_IMPL_FUNC(NC_HICOSMO,NcHICosmo,nc_hicosmo,NcmModelFunc1,powspec)
  */
 /**
  * nc_hicosmo_grad_h2:
- * @model: a #NcHICosmo
+ * @cosmo: a #NcHICosmo
  * @pt: a #NcmFitParams
  * @grad: a #NcmVector
  *
@@ -416,7 +416,7 @@ NCM_MODEL_SET_IMPL_FUNC(NC_HICOSMO,NcHICosmo,nc_hicosmo,NcmModelFunc1,powspec)
  */
 /**
  * nc_hicosmo_E:
- * @model: a #NcHICosmo
+ * @cosmo: a #NcHICosmo
  * @z: redshift
  *
  * FIXME
@@ -425,7 +425,7 @@ NCM_MODEL_SET_IMPL_FUNC(NC_HICOSMO,NcHICosmo,nc_hicosmo,NcmModelFunc1,powspec)
  */
 /**
  * nc_hicosmo_grad_E:
- * @model: a #NcHICosmo
+ * @cosmo: a #NcHICosmo
  * @pt: a #NcmFitParams
  * @z: redshift
  * @grad: a #NcmVector
@@ -434,7 +434,7 @@ NCM_MODEL_SET_IMPL_FUNC(NC_HICOSMO,NcHICosmo,nc_hicosmo,NcmModelFunc1,powspec)
  */
 /**
  * nc_hicosmo_dH_dz:
- * @model: a #NcHICosmo
+ * @cosmo: a #NcHICosmo
  * @z: redshift
  *
  * FIXME
@@ -443,7 +443,7 @@ NCM_MODEL_SET_IMPL_FUNC(NC_HICOSMO,NcHICosmo,nc_hicosmo,NcmModelFunc1,powspec)
  */
 /**
  * nc_hicosmo_q:
- * @model: a #NcHICosmo
+ * @cosmo: a #NcHICosmo
  * @z: redshift
  *
  * FIXME
@@ -452,7 +452,7 @@ NCM_MODEL_SET_IMPL_FUNC(NC_HICOSMO,NcHICosmo,nc_hicosmo,NcmModelFunc1,powspec)
 */
 /**
  * nc_hicosmo_qp:
- * @model: a #NcHICosmo
+ * @cosmo: a #NcHICosmo
  * @z: redshift
  *
  * FIXME
@@ -461,7 +461,7 @@ NCM_MODEL_SET_IMPL_FUNC(NC_HICOSMO,NcHICosmo,nc_hicosmo,NcmModelFunc1,powspec)
  */
 /**
  * nc_hicosmo_j:
- * @model: a #NcHICosmo
+ * @cosmo: a #NcHICosmo
  * @z: redshift
  *
  * FIXME

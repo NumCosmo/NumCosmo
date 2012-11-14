@@ -509,3 +509,20 @@ nc_recomb_seager_Tm_dx_grad (NcHICosmo *cosmo, gdouble XHII, gdouble Tm, gdouble
 
   return;
 }
+
+NcRecomb *
+nc_recomb_seager_new (void)
+{
+  return g_object_new (NC_TYPE_RECOMB_SEAGER,
+                       NULL);
+}
+
+NcRecomb *
+nc_recomb_seager_new_full (gdouble init_frac, gdouble zi, gdouble prec)
+{
+  return g_object_new (NC_TYPE_RECOMB_SEAGER, 
+                       "init-frac", init_frac, 
+                       "zi", zi,
+                       "prec", prec,
+                       NULL);
+}

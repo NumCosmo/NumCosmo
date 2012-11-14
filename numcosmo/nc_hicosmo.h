@@ -78,8 +78,8 @@ typedef enum _NcHICosmoImpl
 
 typedef struct _NcHICosmoClass NcHICosmoClass;
 typedef struct _NcHICosmo NcHICosmo;
-typedef gdouble (*NcHICosmoFunc0) (NcHICosmo *model);
-typedef gdouble (*NcHICosmoFunc1) (NcHICosmo *model, gdouble x);
+typedef gdouble (*NcHICosmoFunc0) (NcHICosmo *cosmo);
+typedef gdouble (*NcHICosmoFunc1) (NcHICosmo *cosmo, gdouble x);
 
 struct _NcHICosmoClass
 {
@@ -120,33 +120,33 @@ GType nc_hicosmo_get_type (void) G_GNUC_CONST;
 /*
  * Cosmological model constant functions
  */
-G_INLINE_FUNC gdouble nc_hicosmo_H0 (NcHICosmo *model);
-G_INLINE_FUNC gdouble nc_hicosmo_Omega_b (NcHICosmo *model);
-G_INLINE_FUNC gdouble nc_hicosmo_Omega_r (NcHICosmo *model);
-G_INLINE_FUNC gdouble nc_hicosmo_Omega_c (NcHICosmo *model);
-G_INLINE_FUNC gdouble nc_hicosmo_Omega_t (NcHICosmo *model);
-G_INLINE_FUNC gdouble nc_hicosmo_T_gamma0 (NcHICosmo *model);
-G_INLINE_FUNC gdouble nc_hicosmo_sigma_8 (NcHICosmo *model);
-G_INLINE_FUNC gdouble nc_hicosmo_z_lss (NcHICosmo *model);
-G_INLINE_FUNC gdouble nc_hicosmo_E2 (NcHICosmo *model, gdouble x);
-G_INLINE_FUNC gdouble nc_hicosmo_dE2_dz (NcHICosmo *model, gdouble x);
-G_INLINE_FUNC gdouble nc_hicosmo_d2E2_dz2 (NcHICosmo *model, gdouble x);
-G_INLINE_FUNC gdouble nc_hicosmo_cd (NcHICosmo *model, gdouble x);
-G_INLINE_FUNC gdouble nc_hicosmo_powspec (NcHICosmo *model, gdouble x);
-G_INLINE_FUNC gdouble nc_hicosmo_c_H0 (NcHICosmo *model);
-G_INLINE_FUNC gdouble nc_hicosmo_Omega_k (NcHICosmo *model);
-G_INLINE_FUNC gdouble nc_hicosmo_Omega_m (NcHICosmo *model);
-G_INLINE_FUNC gdouble nc_hicosmo_h (NcHICosmo *model);
-G_INLINE_FUNC gdouble nc_hicosmo_h2 (NcHICosmo *model);
-G_INLINE_FUNC gdouble nc_hicosmo_E (NcHICosmo *model, gdouble z);
-G_INLINE_FUNC gdouble nc_hicosmo_H (NcHICosmo *model, gdouble z);
-G_INLINE_FUNC gdouble nc_hicosmo_dH_dz (NcHICosmo *model, gdouble z);
-G_INLINE_FUNC gdouble nc_hicosmo_j (NcHICosmo *model, gdouble z);
-G_INLINE_FUNC gdouble nc_hicosmo_qp (NcHICosmo *model, gdouble z);
-G_INLINE_FUNC gdouble nc_hicosmo_q (NcHICosmo *model, gdouble z);
+G_INLINE_FUNC gdouble nc_hicosmo_H0 (NcHICosmo *cosmo);
+G_INLINE_FUNC gdouble nc_hicosmo_Omega_b (NcHICosmo *cosmo);
+G_INLINE_FUNC gdouble nc_hicosmo_Omega_r (NcHICosmo *cosmo);
+G_INLINE_FUNC gdouble nc_hicosmo_Omega_c (NcHICosmo *cosmo);
+G_INLINE_FUNC gdouble nc_hicosmo_Omega_t (NcHICosmo *cosmo);
+G_INLINE_FUNC gdouble nc_hicosmo_T_gamma0 (NcHICosmo *cosmo);
+G_INLINE_FUNC gdouble nc_hicosmo_sigma_8 (NcHICosmo *cosmo);
+G_INLINE_FUNC gdouble nc_hicosmo_z_lss (NcHICosmo *cosmo);
+G_INLINE_FUNC gdouble nc_hicosmo_E2 (NcHICosmo *cosmo, gdouble x);
+G_INLINE_FUNC gdouble nc_hicosmo_dE2_dz (NcHICosmo *cosmo, gdouble x);
+G_INLINE_FUNC gdouble nc_hicosmo_d2E2_dz2 (NcHICosmo *cosmo, gdouble x);
+G_INLINE_FUNC gdouble nc_hicosmo_cd (NcHICosmo *cosmo, gdouble x);
+G_INLINE_FUNC gdouble nc_hicosmo_powspec (NcHICosmo *cosmo, gdouble x);
+G_INLINE_FUNC gdouble nc_hicosmo_c_H0 (NcHICosmo *cosmo);
+G_INLINE_FUNC gdouble nc_hicosmo_Omega_k (NcHICosmo *cosmo);
+G_INLINE_FUNC gdouble nc_hicosmo_Omega_m (NcHICosmo *cosmo);
+G_INLINE_FUNC gdouble nc_hicosmo_h (NcHICosmo *cosmo);
+G_INLINE_FUNC gdouble nc_hicosmo_h2 (NcHICosmo *cosmo);
+G_INLINE_FUNC gdouble nc_hicosmo_E (NcHICosmo *cosmo, gdouble z);
+G_INLINE_FUNC gdouble nc_hicosmo_H (NcHICosmo *cosmo, gdouble z);
+G_INLINE_FUNC gdouble nc_hicosmo_dH_dz (NcHICosmo *cosmo, gdouble z);
+G_INLINE_FUNC gdouble nc_hicosmo_j (NcHICosmo *cosmo, gdouble z);
+G_INLINE_FUNC gdouble nc_hicosmo_qp (NcHICosmo *cosmo, gdouble z);
+G_INLINE_FUNC gdouble nc_hicosmo_q (NcHICosmo *cosmo, gdouble z);
 G_INLINE_FUNC gint32 nc_hicosmo_id (void);
 
-NcHICosmo *nc_hicosmo_new_from_name (GType parent_type, gchar *model_name);
+NcHICosmo *nc_hicosmo_new_from_name (GType parent_type, gchar *cosmo_name);
 void nc_hicosmo_log_all_models (GType parent);
 void nc_hicosmo_free (NcHICosmo *hic);
 
@@ -196,81 +196,81 @@ NCM_MODEL_FUNC1_IMPL (NC_HICOSMO,NcHICosmo,nc_hicosmo,cd)
 NCM_MODEL_FUNC1_IMPL (NC_HICOSMO,NcHICosmo,nc_hicosmo,powspec)
 
 G_INLINE_FUNC gdouble
-nc_hicosmo_c_H0 (NcHICosmo *model)
+nc_hicosmo_c_H0 (NcHICosmo *cosmo)
 {
-  return (ncm_c_c () / nc_hicosmo_H0 (model));
+  return (ncm_c_c () / nc_hicosmo_H0 (cosmo));
 }
 
 G_INLINE_FUNC gdouble
-nc_hicosmo_Omega_k (NcHICosmo *model)
+nc_hicosmo_Omega_k (NcHICosmo *cosmo)
 {
-  return (1.0 - nc_hicosmo_Omega_t (model));
+  return (1.0 - nc_hicosmo_Omega_t (cosmo));
 }
 
 G_INLINE_FUNC gdouble
-nc_hicosmo_Omega_m (NcHICosmo *model)
+nc_hicosmo_Omega_m (NcHICosmo *cosmo)
 {
-  return (nc_hicosmo_Omega_b (model) + nc_hicosmo_Omega_c (model));
+  return (nc_hicosmo_Omega_b (cosmo) + nc_hicosmo_Omega_c (cosmo));
 }
 
 G_INLINE_FUNC gdouble
-nc_hicosmo_H (NcHICosmo *model, gdouble z)
+nc_hicosmo_H (NcHICosmo *cosmo, gdouble z)
 {
-  return (nc_hicosmo_H0 (model) * sqrt (nc_hicosmo_E2 (model, z)));
+  return (nc_hicosmo_H0 (cosmo) * sqrt (nc_hicosmo_E2 (cosmo, z)));
 }
 
 G_INLINE_FUNC gdouble
-nc_hicosmo_h (NcHICosmo *model)
+nc_hicosmo_h (NcHICosmo *cosmo)
 {
-  return nc_hicosmo_H0 (model) / 100.0;
+  return nc_hicosmo_H0 (cosmo) / 100.0;
 }
 
 G_INLINE_FUNC gdouble
-nc_hicosmo_h2 (NcHICosmo *model)
+nc_hicosmo_h2 (NcHICosmo *cosmo)
 {
-  return gsl_pow_2 (nc_hicosmo_H0 (model) / 100.0);
+  return gsl_pow_2 (nc_hicosmo_H0 (cosmo) / 100.0);
 }
 
 G_INLINE_FUNC gdouble
-nc_hicosmo_E (NcHICosmo *model, gdouble z)
+nc_hicosmo_E (NcHICosmo *cosmo, gdouble z)
 {
-  return sqrt(nc_hicosmo_E2 (model, z));
+  return sqrt(nc_hicosmo_E2 (cosmo, z));
 }
 
 G_INLINE_FUNC gdouble
-nc_hicosmo_dH_dz (NcHICosmo *model, gdouble z)
+nc_hicosmo_dH_dz (NcHICosmo *cosmo, gdouble z)
 {
-  return nc_hicosmo_H0 (model) *
-	nc_hicosmo_dE2_dz (model, z) / (2.0 * sqrt (nc_hicosmo_E2 (model, z)));
+  return nc_hicosmo_H0 (cosmo) *
+	nc_hicosmo_dE2_dz (cosmo, z) / (2.0 * sqrt (nc_hicosmo_E2 (cosmo, z)));
 }
 
 G_INLINE_FUNC gdouble
-nc_hicosmo_q (NcHICosmo *model, gdouble z)
+nc_hicosmo_q (NcHICosmo *cosmo, gdouble z)
 {
   gdouble E2, dE2_dz;
-  E2 = nc_hicosmo_E2 (model, z);
-  dE2_dz = nc_hicosmo_dE2_dz (model, z);
+  E2 = nc_hicosmo_E2 (cosmo, z);
+  dE2_dz = nc_hicosmo_dE2_dz (cosmo, z);
   return (dE2_dz * (1.0 + z) / (2.0 * E2) - 1.0);
 }
 
 G_INLINE_FUNC gdouble
-nc_hicosmo_qp (NcHICosmo *model, gdouble z)
+nc_hicosmo_qp (NcHICosmo *cosmo, gdouble z)
 {
   gdouble E2, dE2_dz, d2E2_dz2;
-  E2 = nc_hicosmo_E2 (model, z);
-  dE2_dz = nc_hicosmo_dE2_dz (model, z);
-  d2E2_dz2 = nc_hicosmo_d2E2_dz2 (model, z);
+  E2 = nc_hicosmo_E2 (cosmo, z);
+  dE2_dz = nc_hicosmo_dE2_dz (cosmo, z);
+  d2E2_dz2 = nc_hicosmo_d2E2_dz2 (cosmo, z);
 
   return (1.0 + z) / (2.0 * E2) * (dE2_dz / (1.0 + z) + d2E2_dz2 - dE2_dz * dE2_dz / E2);
 }
 
 G_INLINE_FUNC gdouble
-nc_hicosmo_j (NcHICosmo *model, gdouble z)
+nc_hicosmo_j (NcHICosmo *cosmo, gdouble z)
 {
   gdouble E2, dE2_dz, d2E2_dz2;
-  E2 = nc_hicosmo_E2 (model, z);
-  dE2_dz = nc_hicosmo_dE2_dz (model, z);
-  d2E2_dz2 = nc_hicosmo_d2E2_dz2 (model, z);
+  E2 = nc_hicosmo_E2 (cosmo, z);
+  dE2_dz = nc_hicosmo_dE2_dz (cosmo, z);
+  d2E2_dz2 = nc_hicosmo_d2E2_dz2 (cosmo, z);
 
   return gsl_pow_2 (1.0 + z) * (d2E2_dz2 - 2.0 * dE2_dz / (1.0 + z)) / (2.0 * E2) + 1.0;
 }

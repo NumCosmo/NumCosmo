@@ -962,6 +962,32 @@ ncm_sqrt1px_m1 (gdouble x)
   return res;
 }
 
+/**
+ * ncm_cmp:
+ * @x: a double.
+ * @y: a double.
+ * @reltol: relative precision.
+ * 
+ * Compare x and y and return -1 if x < y, 0 if x == y and 1 if x > y,
+ * all comparisons are done with precision @prec.
+ * 
+ * Returns: -1, 0, 1.
+ */
+gint 
+ncm_cmp (gdouble x, gdouble y, gdouble reltol)
+{
+  if (G_UNLIKELY (x == 0 && y == 0))
+    return 0;
+  else
+  {
+    const gdouble delta = (x - y);
+    const gdouble mean  = 0.5 * fabs (x + y);
+    if (fabs (delta / mean) < reltol)
+      return 0;
+    else
+      return delta < 0 ? -1 : 1;
+  }
+}
 
 #define NC_USERDEF_F(numb) \
 gdouble \

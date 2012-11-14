@@ -40,12 +40,12 @@
 
 G_DEFINE_ABSTRACT_TYPE (NcHICosmoDE, nc_hicosmo_de, NC_TYPE_HICOSMO);
 
-#define VECTOR    (model->params)
+#define VECTOR    (cosmo->params)
 #define MACRO_H0  (ncm_vector_get (VECTOR, NC_HICOSMO_DE_H0))
 #define OMEGA_C   (ncm_vector_get (VECTOR, NC_HICOSMO_DE_OMEGA_C))
 #define OMEGA_X   (ncm_vector_get (VECTOR, NC_HICOSMO_DE_OMEGA_X))
 #define T_GAMMA0  (ncm_vector_get (VECTOR, NC_HICOSMO_DE_T_GAMMA0))
-#define OMEGA_R   nc_hicosmo_Omega_r (NC_HICOSMO (model))
+#define OMEGA_R   nc_hicosmo_Omega_r (NC_HICOSMO (cosmo))
 #define OMEGA_B   (ncm_vector_get (VECTOR, NC_HICOSMO_DE_OMEGA_B))
 #define SPECINDEX (ncm_vector_get (VECTOR, NC_HICOSMO_DE_SPECINDEX))
 #define SIGMA8    (ncm_vector_get (VECTOR, NC_HICOSMO_DE_SIGMA8))
@@ -58,14 +58,14 @@ G_DEFINE_ABSTRACT_TYPE (NcHICosmoDE, nc_hicosmo_de, NC_TYPE_HICOSMO);
  ****************************************************************************/
 
 static gdouble
-_nc_hicosmo_de_E2 (NcmModel *model, gdouble z)
+_nc_hicosmo_de_E2 (NcmModel *cosmo, gdouble z)
 {
   const gdouble omega_k = OMEGA_K;
   const gdouble x = 1.0 + z;
   const gdouble x2 = x * x;
   const gdouble x3 = x2 * x;
   const gdouble x4 = x3 * x;
-  return (OMEGA_R * x4 + OMEGA_M * x3 + omega_k * x2 + nc_hicosmo_de_weff (NC_HICOSMO_DE (model), z));
+  return (OMEGA_R * x4 + OMEGA_M * x3 + omega_k * x2 + nc_hicosmo_de_weff (NC_HICOSMO_DE (cosmo), z));
 }
 
 /****************************************************************************
@@ -73,44 +73,57 @@ _nc_hicosmo_de_E2 (NcmModel *model, gdouble z)
  ****************************************************************************/
 
 static gdouble
-_nc_hicosmo_de_dE2_dz (NcmModel *model, gdouble z)
+_nc_hicosmo_de_dE2_dz (NcmModel *cosmo, gdouble z)
 {
   const gdouble omega_k = OMEGA_K;
   const gdouble x = 1.0 + z;
   const gdouble x2 = x*x;
   const gdouble x3 = x2*x;
 
-  return (4.0 * OMEGA_R * x3 + 3.0 * OMEGA_M * x2 + 2.0 * omega_k * x + nc_hicosmo_de_dweff_dz (NC_HICOSMO_DE (model), z));
+  return (4.0 * OMEGA_R * x3 + 3.0 * OMEGA_M * x2 + 2.0 * omega_k * x + nc_hicosmo_de_dweff_dz (NC_HICOSMO_DE (cosmo), z));
 }
 
 /****************************************************************************
  * Simple functions
  ****************************************************************************/
-static gdouble _nc_hicosmo_de_H0 (NcmModel *model) { return MACRO_H0; }
-static gdouble _nc_hicosmo_de_Omega_t (NcmModel *model) { return OMEGA_M + OMEGA_X + OMEGA_R; }
-static gdouble _nc_hicosmo_de_Omega_c (NcmModel *model) { return OMEGA_C; }
-static gdouble _nc_hicosmo_de_T_gamma0 (NcmModel *model) { return T_GAMMA0; }
+static gdouble _nc_hicosmo_de_H0 (NcmModel *cosmo) { return MACRO_H0; }
+static gdouble _nc_hicosmo_de_Omega_t (NcmModel *cosmo) { return OMEGA_M + OMEGA_X + OMEGA_R; }
+static gdouble _nc_hicosmo_de_Omega_c (NcmModel *cosmo) { return OMEGA_C; }
+static gdouble _nc_hicosmo_de_T_gamma0 (NcmModel *cosmo) { return T_GAMMA0; }
 static gdouble
-_nc_hicosmo_de_Omega_r (NcmModel *model)
+_nc_hicosmo_de_Omega_r (NcmModel *cosmo)
 {
   const gdouble h = MACRO_H0 / 100.0;
   const gdouble h2 = h * h;
   return (1.0 + 0.2271 * ncm_c_neutrino_n_eff ()) * ncm_c_radiation_temp_to_h2omega_r (T_GAMMA0) / h2;
 }
-static gdouble _nc_hicosmo_de_Omega_b (NcmModel *model) { return OMEGA_B; }
-static gdouble _nc_hicosmo_de_sigma_8 (NcmModel *model) { return SIGMA8; }
-static gdouble _nc_hicosmo_de_powspec (NcmModel *model, gdouble k) { return pow (k, SPECINDEX); }
+static gdouble _nc_hicosmo_de_Omega_b (NcmModel *cosmo) { return OMEGA_B; }
+static gdouble _nc_hicosmo_de_sigma_8 (NcmModel *cosmo) { return SIGMA8; }
+static gdouble _nc_hicosmo_de_powspec (NcmModel *cosmo, gdouble k) { return pow (k, SPECINDEX); }
+
+void 
+nc_hicosmo_de_set_wmap5_params (NcHICosmo *cosmo)
+{
+  g_assert (NC_IS_HICOSMO_DE (cosmo));
+  ncm_model_orig_param_set (NCM_MODEL (cosmo), NC_HICOSMO_DE_H0,       72.4000);
+  ncm_model_orig_param_set (NCM_MODEL (cosmo), NC_HICOSMO_DE_OMEGA_C,   0.2060);
+  ncm_model_orig_param_set (NCM_MODEL (cosmo), NC_HICOSMO_DE_OMEGA_X,   0.7510);
+  ncm_model_orig_param_set (NCM_MODEL (cosmo), NC_HICOSMO_DE_OMEGA_B,   0.0432);
+  ncm_model_orig_param_set (NCM_MODEL (cosmo), NC_HICOSMO_DE_T_GAMMA0,  2.7250);
+  ncm_model_orig_param_set (NCM_MODEL (cosmo), NC_HICOSMO_DE_SPECINDEX, 0.9610);
+  ncm_model_orig_param_set (NCM_MODEL (cosmo), NC_HICOSMO_DE_SIGMA8,    0.7870);
+}
 
 /**
  * nc_hicosmo_de_omega_x2omega_k:
- * @model: FIXME
+ * @cosmo: FIXME
  *
  * FIXME
  */
 void
-nc_hicosmo_de_omega_x2omega_k (NcHICosmo *model)
+nc_hicosmo_de_omega_x2omega_k (NcHICosmo *cosmo)
 {
-  guint size = ncm_model_len (NCM_MODEL (model));
+  guint size = ncm_model_len (NCM_MODEL (cosmo));
   NcmMatrix *T = ncm_matrix_new (size, size);
   NcmVector *v = ncm_vector_new (size);
   NcmReparamLinear *relin;
@@ -124,14 +137,14 @@ nc_hicosmo_de_omega_x2omega_k (NcHICosmo *model)
 
   ncm_vector_set (v, NC_HICOSMO_DE_OMEGA_X, 1.0);
 
-  relin = ncm_reparam_linear_new (ncm_model_len (NCM_MODEL (model)), T, v);
+  relin = ncm_reparam_linear_new (ncm_model_len (NCM_MODEL (cosmo)), T, v);
   {
 	NcmReparam *reparam = NCM_REPARAM (relin);
 	NcmSParam *sp_Omegak = ncm_sparam_new ("Omegak","\\Omega_k", -5.0, 5.0, 1.0e-2, NC_HICOSMO_DEFAULT_PARAMS_ABSTOL, 0.0, NCM_PARAM_TYPE_FIXED);
 	g_ptr_array_index (reparam->sparams, NC_HICOSMO_DE_OMEGA_X) = sp_Omegak;
   }
 
-  ncm_model_set_reparam (NCM_MODEL (model), NCM_REPARAM (relin));
+  ncm_model_set_reparam (NCM_MODEL (cosmo), NCM_REPARAM (relin));
 
   return;
 }
@@ -139,11 +152,11 @@ nc_hicosmo_de_omega_x2omega_k (NcHICosmo *model)
 static void
 bbn_prior (NcmMSet *mset, gpointer obj, const gdouble *x, gdouble *f)
 {
-  NcmModel *model = ncm_mset_peek (mset, NC_HICOSMO_ID);
+  NcmModel *cosmo = ncm_mset_peek (mset, NC_HICOSMO_ID);
   gdouble z_bbn = 1.0e9;
   gdouble bbn, a;
 
-  a = nc_hicosmo_de_weff (NC_HICOSMO_DE (model), z_bbn) / nc_hicosmo_E2 (NC_HICOSMO (model), z_bbn);
+  a = nc_hicosmo_de_weff (NC_HICOSMO_DE (cosmo), z_bbn) / nc_hicosmo_E2 (NC_HICOSMO (cosmo), z_bbn);
   bbn = 1.0 / sqrt(1.0 - a);
   f[0] = (bbn - 0.942) / 0.03;
 }
@@ -245,19 +258,19 @@ nc_hicosmo_de_class_init (NcHICosmoDEClass *klass)
 
 #define NC_HICOSMO_DE_SET_IMPL_FUNC(name) \
 void \
-nc_hicosmo_de_set_##name##_impl (NcHICosmoDEClass *model_de_class, NcmFuncF f, NcmFuncPF pf, NcmFuncDF df) \
+nc_hicosmo_de_set_##name##_impl (NcHICosmoDEClass *cosmo_de_class, NcmFuncF f, NcmFuncPF pf, NcmFuncDF df) \
 { \
-  NCM_MODEL_CLASS (model_de_class)->impl |= NC_HICOSMO_DE_IMPL_##name; \
+  NCM_MODEL_CLASS (cosmo_de_class)->impl |= NC_HICOSMO_DE_IMPL_##name; \
   g_assert (f != NULL); \
-  model_de_class->name = *ncm_func_stub; \
-  model_de_class->name.f = f; \
-  model_de_class->name.pf = pf; \
-  model_de_class->name.df = df; \
+  cosmo_de_class->name = *ncm_func_stub; \
+  cosmo_de_class->name.f = f; \
+  cosmo_de_class->name.pf = pf; \
+  cosmo_de_class->name.df = df; \
 }
 
 /**
  * nc_hicosmo_de_set_weff_impl: (skip)
- * @model_de_class: FIXME
+ * @cosmo_de_class: FIXME
  * @f: FIXME
  *
  * FIXME
@@ -266,7 +279,7 @@ nc_hicosmo_de_set_##name##_impl (NcHICosmoDEClass *model_de_class, NcmFuncF f, N
 NCM_MODEL_SET_IMPL_FUNC(NC_HICOSMO_DE,NcHICosmoDE,nc_hicosmo_de,NcmModelFunc1,weff)
 /**
  * nc_hicosmo_de_set_dweff_dz_impl: (skip)
- * @model_de_class: FIXME
+ * @cosmo_de_class: FIXME
  * @f: FIXME
  *
  * FIXME
@@ -275,7 +288,7 @@ NCM_MODEL_SET_IMPL_FUNC(NC_HICOSMO_DE,NcHICosmoDE,nc_hicosmo_de,NcmModelFunc1,we
 NCM_MODEL_SET_IMPL_FUNC(NC_HICOSMO_DE,NcHICosmoDE,nc_hicosmo_de,NcmModelFunc1,dweff_dz)
 /**
  * nc_hicosmo_weff:
- * @model: FIXME
+ * @cosmo: FIXME
  * @x: FIXME
  *
  * FIXME
@@ -284,7 +297,7 @@ NCM_MODEL_SET_IMPL_FUNC(NC_HICOSMO_DE,NcHICosmoDE,nc_hicosmo_de,NcmModelFunc1,dw
  */
 /**
  * nc_hicosmo_weff_pf:
- * @model: FIXME
+ * @cosmo: FIXME
  * @x: FIXME
  * @n: FIXME
  *
@@ -294,7 +307,7 @@ NCM_MODEL_SET_IMPL_FUNC(NC_HICOSMO_DE,NcHICosmoDE,nc_hicosmo_de,NcmModelFunc1,dw
  */
 /**
  * nc_hicosmo_weff_df:
- * @model: FIXME
+ * @cosmo: FIXME
  * @pt: FIXME
  * @x: FIXME
  * @v: FIXME
@@ -304,7 +317,7 @@ NCM_MODEL_SET_IMPL_FUNC(NC_HICOSMO_DE,NcHICosmoDE,nc_hicosmo_de,NcmModelFunc1,dw
  */
 /**
  * nc_hicosmo_dweff_dz:
- * @model: FIXME
+ * @cosmo: FIXME
  * @x: FIXME
  *
  * FIXME
@@ -313,7 +326,7 @@ NCM_MODEL_SET_IMPL_FUNC(NC_HICOSMO_DE,NcHICosmoDE,nc_hicosmo_de,NcmModelFunc1,dw
  */
 /**
  * nc_hicosmo_dweff_dz_pf:
- * @model: FIXME
+ * @cosmo: FIXME
  * @x: FIXME
  * @n: FIXME
  *
@@ -323,7 +336,7 @@ NCM_MODEL_SET_IMPL_FUNC(NC_HICOSMO_DE,NcHICosmoDE,nc_hicosmo_de,NcmModelFunc1,dw
  */
 /**
  * nc_hicosmo_dweff_dz_df:
- * @model: FIXME
+ * @cosmo: FIXME
  * @pt: FIXME
  * @x: FIXME
  * @v: FIXME

@@ -181,7 +181,7 @@ main (gint argc, gchar *argv[])
 
 	{
 		gdouble x_step = 1.0;
-		gdouble g_step = 0.0;
+		gdouble lambda_step = 0.0;
 		gdouble lambda_max, lambda_l, lambda_u;
 		FILE *nul = fopen ("/dev/null", "a");
 		NcRecomb *recomb = nc_recomb_new_from_name ("NcRecombSeager{'prec' : <1e-9>}");
@@ -207,28 +207,27 @@ main (gint argc, gchar *argv[])
 		        exp (-lambda_l) - 1.0, 
 		        exp (-lambda_u) - 1.0,
             exp (-nc_recomb_tau_cutoff (recomb, cosmo)) - 1.0);
-		//    printf ("\n\n");
+
+    //    printf ("\n\n");
 		//for (z_step = 3.0/T_PHOTON_0-1.0; z_step <= 1800.1; z_step += 1.0 / T_PHOTON_0)
-    
-		exit (0);
-		for (g_step = -log(NC_PERTURBATION_START_X); g_step < 0.0009 && FALSE; g_step += 1.0e-2)
+		for (lambda_step = -log (NC_PERTURBATION_START_X); lambda_step < 0.0009; lambda_step += 1.0e-2)
 			//for (z_step = 1800.0; z_step >= -0.1 ; z_step -= 1.0e0)
 			//while (1)
 		{
-			x_step = exp(-g_step);
+			x_step = exp (-lambda_step);
 			fprintf (nul, "% 10.4f %.15g % .5g % .5g % .5g % 10.4f % 1.15e % 1.15g % 1.15g % 1.15g % 1.15g % 1.15g\n",
-			         exp(-g_step),
+			         x_step,
 			         nc_recomb_Xe (recomb, cosmo, x_step),
 			         nc_recomb_HI_ion_saha (cosmo, x_step),
 			         nc_recomb_HeI_ion_saha (cosmo, x_step),
 			         nc_recomb_HeII_ion_saha (cosmo, x_step),
 			         nc_hicosmo_T_gamma0 (cosmo) * x_step,
-			         nc_recomb_dtau_dlambda (recomb, cosmo, x_step) * sqrt(nc_hicosmo_E2 (cosmo, x_step - 1.0)) / x_step,
-			         nc_recomb_tau (recomb, cosmo, x_step),
-			         nc_recomb_tau_lambda0_lambda1 (recomb, cosmo, x_step, 1.000001 * NC_PERTURBATION_START_X),
-			         nc_recomb_v_tau (recomb, cosmo, x_step),
-			         nc_recomb_dv_tau_dlambda (recomb, cosmo, x_step),
-			         nc_recomb_d2v_tau_dlambda2 (recomb, cosmo, x_step)
+			         nc_recomb_dtau_dlambda (recomb, cosmo, lambda_step),
+			         nc_recomb_tau (recomb, cosmo, lambda_step),
+			         nc_recomb_tau_lambda0_lambda1 (recomb, cosmo, lambda_step, recomb->lambdaf),
+			         nc_recomb_v_tau (recomb, cosmo, lambda_step),
+			         nc_recomb_dv_tau_dlambda (recomb, cosmo, lambda_step),
+			         nc_recomb_d2v_tau_dlambda2 (recomb, cosmo, lambda_step)
 			         );
 			fflush (stdout);
 		}

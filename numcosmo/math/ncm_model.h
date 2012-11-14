@@ -176,12 +176,12 @@ ns_name##_set_##name##_impl (NsName##Class *model_class, type f) \
 }
 
 /*
- * Constant model functions call accesseor
+ * Constant model functions call accessor
  */
 #define NCM_MODEL_FUNC0_IMPL(NS_NAME,NsName,ns_name,name) \
 G_INLINE_FUNC gdouble ns_name##_##name (NsName *m) \
 { \
-return NS_NAME##_GET_CLASS (m)->name (NCM_MODEL (m)); \
+  return NS_NAME##_GET_CLASS (m)->name (NCM_MODEL (m)); \
 }
 
 /*
@@ -190,7 +190,7 @@ return NS_NAME##_GET_CLASS (m)->name (NCM_MODEL (m)); \
 #define NCM_MODEL_FUNC1_IMPL(NS_NAME,NsName,ns_name,name) \
 G_INLINE_FUNC gdouble ns_name##_##name (NsName *m, const gdouble x) \
 { \
-return NS_NAME##_GET_CLASS (m)->name (NCM_MODEL (m), x); \
+  return NS_NAME##_GET_CLASS (m)->name (NCM_MODEL (m), x); \
 }
 
 G_END_DECLS
@@ -219,13 +219,13 @@ G_INLINE_FUNC NcmModelID
 ncm_model_id_by_type (GType model_type)
 {
   if (!g_type_is_a (model_type, NCM_TYPE_MODEL))
-	g_error ("ncm_model_id_by_type: type (%s) is not a %s", g_type_name (model_type), g_type_name (NCM_TYPE_MODEL));
+    g_error ("ncm_model_id_by_type: type (%s) is not a %s", g_type_name (model_type), g_type_name (NCM_TYPE_MODEL));
   else
   {
-	NcmModelClass *model_class = NCM_MODEL_CLASS (g_type_class_ref (model_type));
-	NcmModelID id = model_class->model_id;
-	g_type_class_unref (model_class);
-	return id;
+    NcmModelClass *model_class = NCM_MODEL_CLASS (g_type_class_ref (model_type));
+    NcmModelID id = model_class->model_id;
+    g_type_class_unref (model_class);
+    return id;
   }
 }
 
@@ -284,8 +284,8 @@ ncm_model_params_finite (NcmModel *model)
   guint i;
   for (i = 0; i < ncm_model_len (model); i++)
   {
-	if (!gsl_finite (ncm_vector_get (model->params, i)))
-	  return FALSE;
+    if (!gsl_finite (ncm_vector_get (model->params, i)))
+      return FALSE;
   }
   return TRUE;
 }
@@ -294,7 +294,7 @@ G_INLINE_FUNC void
 ncm_model_params_update (NcmModel *model)
 {
   if (model->reparam)
-	ncm_reparam_new2old (model->reparam, model, model->reparam->new_params, model->params);
+    ncm_reparam_new2old (model->reparam, model, model->reparam->new_params, model->params);
   model->pkey++;
 }
 
@@ -302,7 +302,7 @@ G_INLINE_FUNC void
 ncm_model_orig_params_update (NcmModel *model)
 {
   if (model->reparam)
-	ncm_reparam_old2new (model->reparam, model, model->params, model->reparam->new_params);
+    ncm_reparam_old2new (model->reparam, model, model->params, model->reparam->new_params);
   model->pkey++;
 }
 
