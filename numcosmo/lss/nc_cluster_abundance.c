@@ -882,16 +882,16 @@ _nc_cluster_abundance_set_property (GObject *object, guint prop_id, const GValue
   switch (prop_id)
   {
 	case PROP_MASS_FUNCTION:
-	  cad->mfp = g_value_get_object (value);
+	  cad->mfp = g_value_dup_object (value);
 	  break;
 	case PROP_MEANBIAS:
-	  cad->mbiasf = g_value_get_object (value);
+	  cad->mbiasf = g_value_dup_object (value);
 	  break;
 	case PROP_REDSHIFT:
-	  nc_cluster_abundance_set_redshift (cad, g_value_get_object (value));
+	  nc_cluster_abundance_set_redshift (cad, g_value_dup_object (value));
 	  break;
 	case PROP_MASS:
-	  nc_cluster_abundance_set_mass (cad, g_value_get_object (value));
+	  nc_cluster_abundance_set_mass (cad, g_value_dup_object (value));
 	  break;
 	default:
 	  G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);

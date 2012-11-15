@@ -242,7 +242,7 @@ _nc_hicosmo_qspline_set_property (GObject *object, guint prop_id, const GValue *
   switch (prop_id)
   {
 	case PROP_SPLINE:
-	  qspline->q_z = g_value_get_object (value);
+	  qspline->q_z = g_value_dup_object (value);
 	  break;
 	case PROP_NKNOTS:
 	  qspline->nknots = g_value_get_uint (value);

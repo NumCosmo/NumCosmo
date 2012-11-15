@@ -151,16 +151,16 @@ _nc_mass_function_set_property (GObject *object, guint prop_id, const GValue *va
   switch (prop_id)
   {
 	case PROP_DISTANCE:
-	  mfp->dist = g_value_get_object (value);
+	  mfp->dist = g_value_dup_object (value);
 	  break;
 	case PROP_MATTER_VAR:
-	  mfp->vp = g_value_get_object (value);
+	  mfp->vp = g_value_dup_object (value);
 	  break;
 	case PROP_GROWTH:
-	  mfp->gf = g_value_get_object (value);
+	  mfp->gf = g_value_dup_object (value);
 	  break;
 	case PROP_MULTIPLICITY:
-	  mfp->mulf = g_value_get_object (value);
+	  mfp->mulf = g_value_dup_object (value);
 	  break;
 	default:
 	  G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);

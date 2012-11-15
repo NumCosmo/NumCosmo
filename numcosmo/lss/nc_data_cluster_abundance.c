@@ -978,10 +978,10 @@ nc_cluster_abundance_catalog_load (NcData *data, gchar *filename)
 
   if (fits_movabs_hdu (fptr, 2, &hdutype, &status))
 	NC_FITS_ERROR (status);
-
+  
   if (hdutype != BINARY_TBL)
 	g_error ("%s (%d): Ncuster catalog is not binary!\n", __FILE__, __LINE__);
-
+  
   if (dca->z != NULL)
 	nc_cluster_redshift_free (dca->z);
   if (dca->m != NULL)
@@ -995,6 +995,18 @@ nc_cluster_abundance_catalog_load (NcData *data, gchar *filename)
 	  NC_FITS_ERROR (status);
 	if (fits_read_key_longstr (fptr, "LNM_OBJ", &lnM_ser, comment, &status))
 	  NC_FITS_ERROR (status);
+	
+	{
+      gint z_ser_len = strlen (z_ser);
+	  gint lnM_ser_len = strlen (lnM_ser);
+
+	  if (z_ser[z_ser_len - 1] == '&')
+		z_ser[z_ser_len - 1] = ' ';
+
+	  if (lnM_ser[lnM_ser_len - 1] == '&')
+		lnM_ser[lnM_ser_len - 1] = ' ';
+	  
+	}
 
     dca->z = nc_cluster_redshift_new_from_name (z_ser);
     dca->m = nc_cluster_mass_new_from_name (lnM_ser);
@@ -1002,11 +1014,11 @@ nc_cluster_abundance_catalog_load (NcData *data, gchar *filename)
 	g_free (z_ser);
 	g_free (lnM_ser);
   }
-
+  
   {
 	glong nrows;
 	if (fits_get_num_rows (fptr, &nrows, &status))
-	  NC_FITS_ERROR(status);
+	  NC_FITS_ERROR (status);
 	dca->np = nrows;
   }
 
@@ -1022,7 +1034,7 @@ nc_cluster_abundance_catalog_load (NcData *data, gchar *filename)
 
 	if (fits_get_colnum (fptr, CASESEN, "Z_OBS", &z_obs_i, &status))
 	  g_error ("Column Z_OBS not found, invalid fits file.");
-
+	
 	if (fits_get_colnum (fptr, CASESEN, "LNM_OBS", &lnM_obs_i, &status))
 	  g_error ("Column LNM_OBS not found, invalid fits file.");
 
@@ -1047,35 +1059,36 @@ nc_cluster_abundance_catalog_load (NcData *data, gchar *filename)
 	if (dca->lnM_obs)
 	  ncm_matrix_free (dca->lnM_obs);
 	dca->lnM_obs = ncm_matrix_new (dca->np, lnM_obs_rp);
-
+	
 	if (fits_read_col (fptr, TDOUBLE, z_obs_i, 1, 1, dca->np, NULL, ncm_matrix_ptr (dca->z_obs, 0, 0), NULL, &status))
-	  NC_FITS_ERROR(status);
-
+	  NC_FITS_ERROR (status);
+	
 	if (fits_read_col (fptr, TDOUBLE, lnM_obs_i, 1, 1, dca->np, NULL, ncm_matrix_ptr (dca->lnM_obs, 0, 0), NULL, &status))
-	  NC_FITS_ERROR(status);
+	  NC_FITS_ERROR (status);
   }
-
+  
   {
 	gint z_obs_params_i, lnM_obs_params_i;
 	gint z_obs_params_tc, lnM_obs_params_tc;
 	glong z_obs_params_rp, lnM_obs_params_rp;
 	glong z_obs_params_w, lnM_obs_params_w;
-
+	
 	if (fits_get_colnum (fptr, CASESEN, "Z_OBS_PARAMS", &z_obs_params_i, &status))
 	{
       if (nc_cluster_redshift_obs_params_len (dca->z) > 0)
 		g_error ("NcClusterRedshift object has observable parameters length %d but fits has 0.",
 		         nc_cluster_redshift_obs_params_len (dca->z));
+	  status = 0;
 	}
 	else
 	{
 	  if (fits_get_coltype (fptr, z_obs_params_i, &z_obs_params_tc, &z_obs_params_rp, &z_obs_params_w, &status))
 		g_error ("Column Z_OBS_PARAMS info not found, invalid fits file.");
-
+	  
 	  if (nc_cluster_redshift_obs_params_len (dca->z) != z_obs_params_rp)
 		g_error ("NcClusterRedshift object has observable parameters length %d but fits has %ld.",
 		         nc_cluster_redshift_obs_params_len (dca->z), z_obs_params_rp);
-
+	  
 	  if (dca->z_obs_params)
 		ncm_matrix_free (dca->z_obs_params);
 	  dca->z_obs_params = ncm_matrix_new (dca->np, z_obs_params_rp);
@@ -1083,12 +1096,13 @@ nc_cluster_abundance_catalog_load (NcData *data, gchar *filename)
 	  if (fits_read_col (fptr, TDOUBLE, z_obs_params_i, 1, 1, dca->np, NULL, ncm_matrix_ptr (dca->z_obs_params, 0, 0), NULL, &status))
 		NC_FITS_ERROR(status);
 	}
-
+	
 	if (fits_get_colnum (fptr, CASESEN, "LNM_OBS_PARAMS", &lnM_obs_params_i, &status))
 	{
       if (nc_cluster_mass_obs_params_len (dca->m) > 0)
 		g_error ("NcClusterMass object has observable parameters length %d but fits has 0.",
 		         nc_cluster_mass_obs_params_len (dca->m));
+	  status = 0;
 	}
 	else
 	{
@@ -1122,6 +1136,8 @@ nc_cluster_abundance_catalog_load (NcData *data, gchar *filename)
 	  if (fits_read_col (fptr, TDOUBLE, z_true_i, 1, 1, dca->np, NULL, ncm_vector_ptr (dca->z_true, 0), NULL, &status))
 		NC_FITS_ERROR(status);
 	}
+	else
+	  status = 0;
 
 	if (dca->lnM_true != NULL)
 	{
@@ -1133,12 +1149,13 @@ nc_cluster_abundance_catalog_load (NcData *data, gchar *filename)
 	  dca->lnM_true = ncm_vector_new (dca->np);
 	  if (fits_read_col (fptr, TDOUBLE, lnM_true_i, 1, 1, dca->np, NULL, ncm_vector_ptr (dca->lnM_true, 0), NULL, &status))
 		NC_FITS_ERROR(status);
-
 	}
+	else
+	  status = 0;
   }
 
-  if ( fits_close_file(fptr, &status) )
-	NC_FITS_ERROR(status);
+  if (fits_close_file (fptr, &status) )
+	NC_FITS_ERROR (status);
 
   nc_data_init (data);
 

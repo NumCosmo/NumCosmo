@@ -170,10 +170,10 @@ _nc_matter_var_set_property (GObject * object, guint prop_id, const GValue * val
       vp->vs = g_value_get_enum (value);
       break;
     case PROP_WINDOW:
-      vp->wp = g_value_get_object (value);
+      vp->wp = g_value_dup_object (value);
       break;
     case PROP_TRANSFER:
-      vp->tf = g_value_get_object (value);
+      vp->tf = g_value_dup_object (value);
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
