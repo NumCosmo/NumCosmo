@@ -55,16 +55,18 @@ nc_transfer_func_pert_new ()
 
 
 static void
-_nc_transfer_func_pert_prepare (NcTransferFunc *tf, NcHICosmo *model)
+_nc_transfer_func_pert_prepare (NcTransferFunc *tf, NcHICosmo *cosmo)
 {
-  NcTransferFuncPert *tf_pert = NC_TRANSFER_FUNC_PERT (tf);
-  if (!tf_pert->init)
-  {
-	tf_pert->pert = nc_pert_linear_new (NCM_MODEL (model), 1 << 3, 1e-7, 1e-7, 1e-10, 1e-10);
-	tf_pert->pspline = nc_pert_linear_splines_new (tf_pert->pert, NC_LINEAR_PERTURBATIONS_SPLINE_PHI, 60, 220, 1.0e-2, ncm_c_hubble_radius () * 1000.0);
-	tf_pert->init = TRUE;
-  }
-  nc_pert_linear_prepare_splines (tf_pert->pspline);
+	NcTransferFuncPert *tf_pert = NC_TRANSFER_FUNC_PERT (tf);
+	if (!tf_pert->init)
+	{
+		NcRecomb *recomb = nc_recomb_new_from_name ("NcRecombSeager");
+		tf_pert->pert = nc_pert_linear_new (cosmo, recomb, 1 << 3, 1e-7, 1e-7, 1e-10, 1e-10);
+		tf_pert->pspline = nc_pert_linear_splines_new (tf_pert->pert, NC_LINEAR_PERTURBATIONS_SPLINE_PHI, 60, 220, 1.0e-2, ncm_c_hubble_radius () * 1000.0);
+		tf_pert->init = TRUE;
+		nc_recomb_free (recomb);
+	}
+	nc_pert_linear_prepare_splines (tf_pert->pspline);
 }
 
 static gdouble

@@ -28,8 +28,26 @@
  * @title: Gaussian window function
  * @short_description: Provides a #NcWindow of Gaussian type filter.  
  * 
- * This object implements the #NcWindow abstract class for a Gaussian window function.
- * See also <link linkend="sec_wf_gauss">Gaussian</link> for more details.
+ * This object implements the #NcWindow class for a Gaussian window function.
+ * 
+ * This function returns the gaussian window function in the real space,
+ * \begin{equation}
+ * W_G(r, R) = (2 \pi R^2)^{-3/2}\exp \left( \frac{-r^2}{2 R^2} \right).
+ * \end{equation}
+ * The mass enclosed within the volume selected by this window function is
+ * $M_G(R) = (2\pi)^{3/2}\overline{\rho}(z) R^3$, where $\overline{\rho}(z)$
+ * is the mean density of the universe at redshift $z$.
+ * 
+ * This function returns the gaussian window function in the Fourier space,
+ * \begin{equation}
+ * W_G(k, R) = \exp \left( \frac{-k^2 R^2}{2} \right).
+ * \end{equation}
+ * 
+ * This function returns the derivative with respect to R of the gaussian window function
+ * in the real space,
+ * \begin{equation}
+ * \frac{dW_G(k, R)}{dR} = -k^2 R \exp \left( \frac{-k^2 R^2}{2} \right).
+ * \end{equation}
  * 
  */
 

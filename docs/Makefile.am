@@ -2,10 +2,9 @@
 
 # Local xml files
 XML_FILES=dependencies.xml \
-          compiling.xml \
+          compiling.xml    \
           introduction.xml \
-          references.xml \
-          theory.xml \
+          references.xml   \
           darkenergy.xml
 
 # We require automake 1.6 at least.
@@ -36,8 +35,7 @@ DOC_SOURCE_DIR=$(top_srcdir)/numcosmo \
 	       $(top_srcdir)/numcosmo/math \
 	       $(top_srcdir)/numcosmo/model \
 	       $(top_srcdir)/numcosmo/perturbations \
-	       $(top_srcdir)/numcosmo/sphere \
-	       $(top_srcdir)/numcosmo/thermodyn
+	       $(top_srcdir)/numcosmo/sphere
 
 DOC_BUILD_DIR=$(top_builddir)/numcosmo
 DOC_TARGET_DIR=$(top_builddir)/docs
@@ -51,7 +49,7 @@ SCAN_OPTIONS=--rebuild-types --rebuild-sections
 
 # Extra options to supply to gtkdoc-mkdb.
 # e.g. MKDB_OPTIONS=--xml-mode --output-format=xml
-MKDB_OPTIONS=--sgml-mode --output-format=xml --name-space=nc
+MKDB_OPTIONS=--sgml-mode --output-format=xml --name-space=nc --name-space=ncm
 
 # Extra options to supply to gtkdoc-mktmpl
 # e.g. MKTMPL_OPTIONS=--only-section-tmpl
@@ -74,8 +72,7 @@ HFILE_GLOB=$(top_srcdir)/numcosmo/*.h \
 	   $(top_srcdir)/numcosmo/math/*.h \
 	   $(top_srcdir)/numcosmo/model/*.h \
 	   $(top_srcdir)/numcosmo/perturbations/*.h \
-	   $(top_srcdir)/numcosmo/sphere/*.h \
-	   $(top_srcdir)/numcosmo/thermodyn/*.h
+	   $(top_srcdir)/numcosmo/sphere/*.h
 
 CFILE_GLOB=$(top_srcdir)/numcosmo/*.c \
 	   $(top_srcdir)/numcosmo/data/*.c \
@@ -84,8 +81,7 @@ CFILE_GLOB=$(top_srcdir)/numcosmo/*.c \
 	   $(top_srcdir)/numcosmo/math/*.c \
 	   $(top_srcdir)/numcosmo/model/*.c \
 	   $(top_srcdir)/numcosmo/perturbations/*.c \
-	   $(top_srcdir)/numcosmo/sphere/*.c \
-	   $(top_srcdir)/numcosmo/thermodyn/*.c
+	   $(top_srcdir)/numcosmo/sphere/*.c
 
 # Extra header to include when scanning, which are not under DOC_SOURCE_DIR
 # e.g. EXTRA_HFILES=$(top_srcdir}/contrib/extra.h
@@ -101,7 +97,7 @@ HTML_IMAGES=
 
 # Extra SGML files that are included by $(DOC_MAIN_SGML_FILE).
 # e.g. content_files=running.sgml building.sgml changes-2.0.sgml
-content_files=$(XML_FILES) references.bib
+content_files=$(XML_FILES) references.bib container.css
 
 # SGML files where gtk-doc abbrevations (#GtkWidget) are expanded
 # These files must be listed here *and* in content_files
@@ -121,7 +117,7 @@ include $(top_srcdir)/gtk-doc.make
 
 # Other files to distribute
 # e.g. EXTRA_DIST += version.xml.in
-EXTRA_DIST += $(XML_FILES) references.bib
+EXTRA_DIST += $(XML_FILES) references.bib container.css
 
 # Files not to distribute
 # for --rebuild-types in $(SCAN_OPTIONS), e.g. $(DOC_MODULE).types
@@ -171,12 +167,22 @@ numcosmo-docs-clean: clean
 
 .tex.xml:
 	@echo "  DOC   Building XML from $(@F)"
-	@latex --interaction=nonstopmode $< > $(@F).htlatex.log 2>&1
+	@latex --interaction=nonstopmode $< >  $(@F).htlatex.log 2>&1
 	@bibtex8 $*                         >> $(@F).htlatex.log 2>&1
 	@latex --interaction=nonstopmode $< >> $(@F).htlatex.log 2>&1
 	@latex --interaction=nonstopmode $< >> $(@F).htlatex.log 2>&1
-	@htlatex $< "xhtml,docbook-mml" " -cunihtf" "-cdocbk" "--interaction=nonstopmode" >> $(@F).htlatex.log 2>&1
+	@htlatex $< "xhtml,docbook" " -cunihtf" "-cdocbk" "--interaction=nonstopmode" >> $(@F).htlatex.log 2>&1
 	@$(top_srcdir)/docs/xmltogtk.pl $(DOC_TARGET_DIR)/$(@F) > $(@F).xmltogtk.log 2>&1
 	@if test ! "$(DOC_TARGET_DIR)/$(@F)" -ef "$(<D)/$(@F)"; then cp $(DOC_TARGET_DIR)/$(@F) $(<D)/$(@F); fi
+
+if ENABLE_GTK_DOC
+HTML_BUILD_STAMP += addmathjax.stamp
+endif
+
+addmathjax.stamp: html-build.stamp
+	@echo "  DOC   Adding support to MathJax"
+	@$(top_srcdir)/docs/addmathjax.pl $(DOC_TARGET_DIR)/html/*.html > $(@F).addmathjax.log 2>&1
+	@cp -pu $(top_srcdir)/docs/container.css $(DOC_TARGET_DIR)/html/
+	@touch addmathjax.stamp
 
 -include $(top_srcdir)/git.mk

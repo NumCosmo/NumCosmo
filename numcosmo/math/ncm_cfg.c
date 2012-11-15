@@ -97,6 +97,9 @@
 #include "lss/nc_halo_bias_type_st_spher.h"
 #include "lss/nc_halo_bias_type_tinker.h"
 #include "lss/nc_cluster_abundance.h"
+#include "nc_distance.h"
+#include "nc_recomb.h"
+#include "nc_recomb_seager.h"
 
 #include <gio/gio.h>
 #ifdef NUMCOSMO_HAVE_FFTW3
@@ -223,6 +226,11 @@ ncm_cfg_init (void)
   ncm_cfg_register_obj (NC_TYPE_HALO_BIAS_TYPE_TINKER);
 
   ncm_cfg_register_obj (NC_TYPE_CLUSTER_ABUNDANCE);
+
+	ncm_cfg_register_obj (NC_TYPE_DISTANCE);
+
+	ncm_cfg_register_obj (NC_TYPE_RECOMB);
+	ncm_cfg_register_obj (NC_TYPE_RECOMB_SEAGER);
 
   numcosmo_init = TRUE;
   return;

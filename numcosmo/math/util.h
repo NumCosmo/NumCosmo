@@ -34,6 +34,7 @@
 #include <numcosmo/math/ncm_mset_func.h>
 
 #include <gsl/gsl_rng.h>
+#include <gsl/gsl_min.h>
 #ifndef NUMCOSMO_GIR_SCAN
 #include <gmp.h>
 #include <mpfr.h>

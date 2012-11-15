@@ -29,7 +29,7 @@
  * @short_description: Defines the prototype of the #NcTransferFunc object.
  *
  * This module comprises the set of functions to compute the transfer function and
- * derived quantities. See also <link linkend="sec_transf">Transfer Function</link>.
+ * derived quantities.
  */
 
 #ifdef HAVE_CONFIG_H

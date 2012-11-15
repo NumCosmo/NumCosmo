@@ -14,13 +14,11 @@
     </releaseinfo>
   </bookinfo>
 
-  <xi:include href="theory.xml"/>
-
   <chapter>
     <title>NumCosmo Overview</title>
     <xi:include href="introduction.xml"/>
     <xi:include href="dependencies.xml"/>
-    <xi:include href="references.xml"/>
+    <xi:include href="references.xml" xpointer="xpointer(//section)"/>
     <xi:include href="compiling.xml"/>
   </chapter>
 
@@ -89,7 +87,6 @@
   <chapter>
     <title>Base Objects</title>
     <xi:include href="xml/nc_macros.xml"/>
-    <xi:include href="xml/recomb.xml"/>
     <xi:include href="xml/healpix.xml"/>
     <xi:include href="xml/map.xml"/>
   </chapter>
@@ -119,6 +116,8 @@
   <chapter>
     <title>Cosmological Functions</title>
     <xi:include href="xml/nc_distance.xml"/>
+    <xi:include href="xml/nc_recomb.xml"/>
+    <xi:include href="xml/nc_recomb_seager.xml"/>
     <xi:include href="xml/scalefactor.xml"/>
   </chapter>
   
@@ -215,7 +214,7 @@
     <xi:include href="xml/memory_pool.xml"/>
     <xi:include href="xml/integral.xml"/>
   </chapter>
-  
+
   <chapter id="object-tree">
     <title>Object Hierarchy</title>
      <xi:include href="xml/tree_index.sgml"/>

@@ -806,7 +806,6 @@ nc_distance_prepare (NcDistance *dist, NcHICosmo *model)
  *
  * FIXME
  */
-
 static void
 nc_distance_init (NcDistance *dist)
 {
@@ -828,8 +827,11 @@ nc_distance_init (NcDistance *dist)
 static void
 nc_distance_constructed (GObject *object)
 {
-  /* Chain up : end */
+  /* Chain up : start */
   G_OBJECT_CLASS (nc_distance_parent_class)->constructed (object);
+	{
+
+	}
 }
 
 static void

@@ -250,63 +250,63 @@ NCM_MODEL_SET_IMPL_FUNC(NC_HICOSMO,NcHICosmo,nc_hicosmo,NcmModelFunc1,powspec)
 
 /**
  * nc_hicosmo_H0:
- * @model: FIXME
+ * @model: a #NcHICosmo.
  *
- * FIXME
+ * The value of the Hubble constant in unity of $ms^{-1}kpc^{-1}$.
  *
- * Returns: FIXME
+ * Returns: $H_0$
  */
 /**
  * nc_hicosmo_Omega_b:
- * @model: FIXME
+ * @model: a #NcHICosmo.
  *
  * FIXME
  *
- * Returns: FIXME
+ * Returns: $\Omega_b$
  */
 /**
  * nc_hicosmo_Omega_r:
- * @model: FIXME
+ * @model: a #NcHICosmo.
  *
  * FIXME
  *
- * Returns: FIXME
+ * Returns: $\Omega_r$
  */
 /**
  * nc_hicosmo_Omega_c:
- * @model: FIXME
+ * @model: a #NcHICosmo.
  *
  * FIXME
  *
- * Returns: FIXME
+ * Returns: $\Omega_c$
  */
 /**
  * nc_hicosmo_Omega_t:
- * @model: FIXME
+ * @model: a #NcHICosmo.
  *
  * FIXME
  *
- * Returns: FIXME
+ * Returns: $\Omega_t$
  */
 /**
  * nc_hicosmo_T_gamma0:
- * @model: FIXME
+ * @model: a #NcHICosmo.
  *
  * FIXME
  *
- * Returns: FIXME
+ * Returns: $T_{\gamma0}$
  */
 /**
  * nc_hicosmo_sigma_8:
- * @model: FIXME
+ * @model: a #NcHICosmo.
  *
  * FIXME
  *
- * Returns: FIXME
+ * Returns: $\sigma_8$
  */
 /**
  * nc_hicosmo_z_lss:
- * @model: FIXME
+ * @model: a #NcHICosmo.
  *
  * FIXME
  *
@@ -314,7 +314,7 @@ NCM_MODEL_SET_IMPL_FUNC(NC_HICOSMO,NcHICosmo,nc_hicosmo,NcmModelFunc1,powspec)
  */
 /**
  * nc_hicosmo_E2:
- * @model: FIXME
+ * @model: a #NcHICosmo.
  * @x: FIXME
  *
  * FIXME
@@ -323,7 +323,7 @@ NCM_MODEL_SET_IMPL_FUNC(NC_HICOSMO,NcHICosmo,nc_hicosmo,NcmModelFunc1,powspec)
  */
 /**
  * nc_hicosmo_dE2_dz:
- * @model: FIXME
+ * @model: a #NcHICosmo.
  * @x: FIXME
  *
  * FIXME
@@ -332,7 +332,7 @@ NCM_MODEL_SET_IMPL_FUNC(NC_HICOSMO,NcHICosmo,nc_hicosmo,NcmModelFunc1,powspec)
  */
 /**
  * nc_hicosmo_d2E2_dz2:
- * @model: FIXME
+ * @model: a #NcHICosmo.
  * @x: FIXME
  *
  * FIXME
@@ -341,7 +341,7 @@ NCM_MODEL_SET_IMPL_FUNC(NC_HICOSMO,NcHICosmo,nc_hicosmo,NcmModelFunc1,powspec)
  */
 /**
  * nc_hicosmo_powspec:
- * @model: FIXME
+ * @model: a #NcHICosmo.
  * @x: FIXME
  *
  * FIXME
@@ -350,7 +350,7 @@ NCM_MODEL_SET_IMPL_FUNC(NC_HICOSMO,NcHICosmo,nc_hicosmo,NcmModelFunc1,powspec)
  */
 /**
  * nc_hicosmo_c_H0:
- * @model: FIXME
+ * @model: a #NcHICosmo.
  *
  * FIXME
  *
@@ -375,12 +375,12 @@ NCM_MODEL_SET_IMPL_FUNC(NC_HICOSMO,NcHICosmo,nc_hicosmo,NcmModelFunc1,powspec)
  */
 /**
  * nc_hicosmo_H:
- * @model: FIXME
+ * @model: a #NcHICosmo.
  * @z: FIXME
  *
- * FIXME
+ * The value of the Hubble function in unity of $ms^{-1}kpc^{-1}$.
  *
- * Returns: FIXME
+ * Returns: $H(z)$
  */
 /**
  * nc_hicosmo_h:

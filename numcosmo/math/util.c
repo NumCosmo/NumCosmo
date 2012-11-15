@@ -928,11 +928,12 @@ ncm_numdiff_2 (gsl_function *F, gdouble *ofx, const gdouble x, const gdouble ho,
 
 /**
  * ncm_sqrt1px_m1:
- * @x: FIXME
- *
- * FIXME
- *
- * Returns: FIXME
+ * @x: a real number $&gt;-1$
+ * 
+ * Calculates $\sqrt{1+x}-1$ using the appropriated taylor series when 
+ * $x \approx 1$.
+ * 
+ * Returns: $\sqrt{1+x}-1$.
  */
 gdouble
 ncm_sqrt1px_m1 (gdouble x)
@@ -976,4 +977,3 @@ ncm_userdef##numb##_df (NcmModel *model, NcmFitParams *pt, gdouble z, gsl_vector
 NC_FUNCTION_GRAD (cp->model->userdef##numb, cp, pt, z, grad); \
 return TRUE; \
 }
-

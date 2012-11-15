@@ -148,53 +148,53 @@ ncm_spline_new_data (const NcmSpline *s, gdouble *x, gdouble *y, gsize len, gboo
 NcmSpline *
 ncm_spline_set (NcmSpline *s, NcmVector *xv, NcmVector *yv, gboolean init)
 {
-  g_assert (xv != NULL && yv != NULL);
-  if (ncm_vector_len (xv) != ncm_vector_len (yv))
-	g_error ("ncm_spline_set: knot and function values vector has not the same size");
-  if (ncm_vector_len (xv) < NCM_SPLINE_GET_CLASS (s)->min_size (s))
-	g_error ("ncm_spline_set: min size for [%s] is %zu but vector size is %u", NCM_SPLINE_GET_CLASS (s)->name,
-	         NCM_SPLINE_GET_CLASS (s)->min_size (s), ncm_vector_len (xv));
+	g_assert (xv != NULL && yv != NULL);
+	if (ncm_vector_len (xv) != ncm_vector_len (yv))
+		g_error ("ncm_spline_set: knot and function values vector has not the same size");
+	if (ncm_vector_len (xv) < NCM_SPLINE_GET_CLASS (s)->min_size (s))
+		g_error ("ncm_spline_set: min size for [%s] is %zu but vector size is %u", NCM_SPLINE_GET_CLASS (s)->name,
+		         NCM_SPLINE_GET_CLASS (s)->min_size (s), ncm_vector_len (xv));
 
-  if (s->xv != NULL)
-  {
-	if (s->xv != xv)
+	if (s->xv != NULL)
 	{
-	  ncm_vector_free (s->xv);
-	  s->xv = xv;
-	  ncm_vector_ref (xv);
+		if (s->xv != xv)
+		{
+			ncm_vector_free (s->xv);
+			s->xv = xv;
+			ncm_vector_ref (xv);
+		}
 	}
-  }
-  else
-  {
-	s->xv = xv;
-	ncm_vector_ref (xv);
-  }
-
-  if (s->yv != NULL)
-  {
-	if (s->yv != yv)
+	else
 	{
-	  ncm_vector_free (s->yv);
-	  s->yv = yv;
-	  ncm_vector_ref (yv);
+		s->xv = xv;
+		ncm_vector_ref (xv);
 	}
-  }
-  else
-  {
-	s->yv = yv;
-	ncm_vector_ref (yv);
-  }
 
-  s->len = ncm_vector_len (xv);
+	if (s->yv != NULL)
+	{
+		if (s->yv != yv)
+		{
+			ncm_vector_free (s->yv);
+			s->yv = yv;
+			ncm_vector_ref (yv);
+		}
+	}
+	else
+	{
+		s->yv = yv;
+		ncm_vector_ref (yv);
+	}
 
-  NCM_SPLINE_GET_CLASS (s)->reset (s);
+	s->len = ncm_vector_len (xv);
 
-  s->empty = FALSE;
+	NCM_SPLINE_GET_CLASS (s)->reset (s);
 
-  if (init)
-	ncm_spline_prepare (s);
+	s->empty = FALSE;
 
-  return s;
+	if (init)
+		ncm_spline_prepare (s);
+
+	return s;
 }
 
 /**
@@ -310,11 +310,11 @@ ncm_spline_get_yv (NcmSpline *s)
 /**
  * ncm_spline_prepare:
  * @s: a #NcmSpline.
- *
+ * 
  * This function prepares the spline @s such that one can evaluate it (#ncm_spline_eval), as well as
  * to compute its first and second derivatives (#ncm_spline_eval_deriv, #ncm_spline_eval_deriv2)
  * and integration (#ncm_spline_eval_integ).
- *
+ * 
  */
 /**
  * ncm_spline_prepare_base:
@@ -389,27 +389,27 @@ ncm_spline_free (NcmSpline *s)
 static void
 ncm_spline_init (NcmSpline *s)
 {
-  s->len = 0;
-  s->xv = NULL;
-  s->yv = NULL;
+  s->len   = 0;
+  s->xv    = NULL;
+  s->yv    = NULL;
   s->empty = TRUE;
-  s->acc = NULL;//gsl_interp_accel_alloc ();
+  s->acc   = NULL;//gsl_interp_accel_alloc ();
 }
 
 static void
 ncm_spline_dispose (GObject *object)
 {
-  NcmSpline *s = NCM_SPLINE (object);
-  if (!s->empty)
-  {
-	g_assert (s->xv != NULL);
-	g_assert (s->yv != NULL);
-	ncm_vector_free (s->xv);
-	ncm_vector_free (s->yv);
-	s->xv = NULL;
-	s->yv = NULL;
-	s->empty = TRUE;
-  }
+	NcmSpline *s = NCM_SPLINE (object);
+	if (!s->empty)
+	{
+		g_assert (s->xv != NULL);
+		g_assert (s->yv != NULL);
+		ncm_vector_free (s->xv);
+		ncm_vector_free (s->yv);
+		s->xv = NULL;
+		s->yv = NULL;
+		s->empty = TRUE;
+	}
 
   G_OBJECT_CLASS (ncm_spline_parent_class)->finalize (object);
 }

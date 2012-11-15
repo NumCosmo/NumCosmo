@@ -145,8 +145,8 @@ nc_growth_func_prepare (NcGrowthFunc *gf, NcHICosmo *model)
 
   if (gf->s != NULL)
   {
-    x_array = g_array_ref (gf->s->xv->a);
-    y_array = g_array_ref (gf->s->yv->a);
+    x_array = ncm_vector_get_array (gf->s->xv);
+    y_array = ncm_vector_get_array (gf->s->yv);
   }
   else
   {

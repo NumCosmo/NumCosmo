@@ -1,0 +1,37 @@
+/* Container */
+/* ========================================================================== */
+
+
+
+#container {
+    padding-top: 20px;
+    color: #555;
+    width: 960px;
+    margin: auto;
+    min-height: 240px;
+}
+
+/*
+ * this is basically used to force specific elements not to use
+ * grid_* classes
+ */
+#container .page_title, #container .content, #container .sidebar {
+    display: inline;
+    float: left;
+    margin-left: 10px;
+    margin-right: 10px;
+}
+#container .content, #container .page_title {
+    width: 940px;
+}
+#container.two_columns .content {
+    width: 700px;
+}
+#container.two_columns .content.without_sidebar {
+    width: 940px;
+}
+#container.two_columns .sidebar {
+    width: 220px;
+}
+
+

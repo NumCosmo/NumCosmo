@@ -29,8 +29,12 @@
  * @short_description: Defines the prototype of the #NcWindow object. 
  * 
  * This module comprises the set of functions to compute the window function in both real 
- * and Fourier spaces as well as its derivative with respect to the scale R in Fourier space. 
- * See also <link linkend="sec_wf">Window Function</link>.
+ * and Fourier spaces as well as its derivative with respect to the scale $R$ in Fourier space. 
+ * 
+ * In order to study the statistical properties of the density fluctuation field at a certain
+ * scale $R$, we use the window function. As an example, to compute the variance of the density
+ * contrast at scale $R$, we convolve the window function in the Fourier space with the power spectrum.
+ * 
  */
 
 #ifdef HAVE_CONFIG_H
@@ -86,10 +90,6 @@ nc_window_volume (NcWindow *wf)
  * @R: scale.
  *  
  * This function computes the window function in the Fourier space. 
- * 
- * Top-hat: <link linkend="eq_th_fourier">equation</link>
- *
- * Gaussian: <link linkend="eq_gauss_fourier">equation</link>
  *
  * Returns: The value of the window function in the Fourier space at scale @R.
  */
@@ -108,10 +108,6 @@ nc_window_eval_fourier (const NcWindow *wf, const gdouble k, const gdouble R)
  * This function returns the derivative with respect to R of the window function 
  * in the Fourier space.
  * 
- * Top-hat: <link linkend="eq_th_fourier_der">equation</link>
- *
- * Gaussian: <link linkend="eq_gauss_fourier_der">equation</link>
- * 
  * Returns: The value of the first derivative of the window function in the Fourier space at scale @R.
  */
 gdouble 
@@ -127,10 +123,6 @@ nc_window_deriv_fourier (const NcWindow *wf, const gdouble k, const gdouble R)
  * @R: scale.
  *
  * This function computes the window function in real space. 
- * 
- * Top-hat: <link linkend="eq_th_real">equation</link>
- *
- * Gaussian: <link linkend="eq_gauss_real">equation</link>
  *
  * Returns: The value of the window function in the real space at scale @R.
  */

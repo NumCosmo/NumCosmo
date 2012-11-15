@@ -28,12 +28,12 @@ LINEAR_NAME_SUFFIX(init) (NcLinearPert *pert)
   LINEAR_VECTOR_PREPARE;
   const gdouble x = NC_PERTURBATION_START_X;
   const gdouble z = x - 1.0;
-  const gdouble E2 = nc_hicosmo_E2 (NC_HICOSMO (pert->model), z);
+  const gdouble E2 = nc_hicosmo_E2 (pert->cosmo, z);
   const gdouble E = sqrt (E2);
-  const gdouble Omega_r = nc_hicosmo_Omega_r (NC_HICOSMO (pert->model));
-  const gdouble Omega_b = nc_hicosmo_Omega_b (NC_HICOSMO (pert->model));
+  const gdouble Omega_r = nc_hicosmo_Omega_r (pert->cosmo);
+  const gdouble Omega_b = nc_hicosmo_Omega_b (pert->cosmo);
   const gdouble R0 = 4.0 * Omega_r / (3.0 * Omega_b);
-  const gdouble taubar = nc_thermodyn_recomb_taubar (pert->recomb, x);
+  const gdouble taubar = nc_recomb_dtau_dlambda (pert->recomb, pert->cosmo, x);
   const gdouble taudot = E / x * taubar;
   const gdouble keta = pert->pws->k / (sqrt (Omega_r) * x);
   const gdouble keta3 = gsl_pow_3 (keta);
@@ -117,15 +117,14 @@ static void
 LINEAR_NAME_SUFFIX(end_tight_coupling) (NcLinearPert *pert)
 {
   LINEAR_VECTOR_PREPARE;
-  NcmModel *model = pert->model;
   const gdouble x = exp(-pert->pws->g + pert->g0);
-  const gdouble Omega_r = nc_hicosmo_Omega_r (NC_HICOSMO (pert->model));
-  const gdouble Omega_b = nc_hicosmo_Omega_b (NC_HICOSMO (pert->model));
+  const gdouble Omega_r = nc_hicosmo_Omega_r (pert->cosmo);
+  const gdouble Omega_b = nc_hicosmo_Omega_b (pert->cosmo);
   const gdouble R0 = 4.0 * Omega_r / (3.0 * Omega_b);
   const gdouble R = R0 * x;
-  const gdouble E2 = nc_hicosmo_E2 (NC_HICOSMO (model), x-1.0);
+  const gdouble E2 = nc_hicosmo_E2 (pert->cosmo, x-1.0);
   const gdouble kx_3E = pert->pws->k * x / (3.0 * sqrt (E2));
-//  const gdouble taubar = nc_thermodyn_recomb_taubar (pert->recomb, x);
+//  const gdouble taubar = nc_recomb_taubar (pert->recomb, x);
 
   if (FALSE)
     return;
@@ -175,9 +174,8 @@ LINEAR_NAME_SUFFIX(end_tight_coupling) (NcLinearPert *pert)
 gdouble
 LINEAR_NAME_SUFFIX(get_k_H) (NcLinearPert *pert)
 {
-  NcmModel *model = pert->model;
   const gdouble k = pert->pws->k;
-  const gdouble c_H0 = ncm_c_c () / (nc_hicosmo_H0 (NC_HICOSMO (model)) * 1.0e3);
+  const gdouble c_H0 = ncm_c_c () / (nc_hicosmo_H0 (pert->cosmo) * 1.0e3);
   return k / c_H0;
 }
 
@@ -243,9 +241,8 @@ LINEAR_NAME_SUFFIX(get_c1) (NcLinearPert *pert)
   LINEAR_VECTOR_PREPARE;
   if (pert->pws->tight_coupling)
   {
-    NcmModel *model = pert->model;
     const gdouble x = exp(-pert->pws->g + pert->g0);
-    const gdouble E2 = nc_hicosmo_E2 (NC_HICOSMO (model), x-1.0);
+    const gdouble E2 = nc_hicosmo_E2 (pert->cosmo, x-1.0);
     const gdouble kx_3E = pert->pws->k * x / (3.0 * sqrt (E2));
 
     return _NC_V - kx_3E * (_NC_C0 - _NC_PHI);
@@ -260,14 +257,12 @@ LINEAR_NAME_SUFFIX(get_b1) (NcLinearPert *pert)
   LINEAR_VECTOR_PREPARE;
   if (pert->pws->tight_coupling)
   {
-    NcmModel *model = pert->model;
-
     const gdouble x = exp(-pert->pws->g + pert->g0);
-    const gdouble Omega_r = nc_hicosmo_Omega_r (NC_HICOSMO (pert->model));
-    const gdouble Omega_b = nc_hicosmo_Omega_b (NC_HICOSMO (pert->model));
+    const gdouble Omega_r = nc_hicosmo_Omega_r (pert->cosmo);
+    const gdouble Omega_b = nc_hicosmo_Omega_b (pert->cosmo);
     const gdouble R0 = 4.0 * Omega_r / (3.0 * Omega_b);
     const gdouble R = R0 * x;
-    const gdouble E2 = nc_hicosmo_E2 (NC_HICOSMO (model), x-1.0);
+    const gdouble E2 = nc_hicosmo_E2 (pert->cosmo, x-1.0);
     const gdouble kx_3E = pert->pws->k * x / (3.0 * sqrt (E2));
 
     return (R * (_NC_U - _NC_T)) / (R + 1.0) + _NC_V - kx_3E * (_NC_C0 - _NC_PHI);
@@ -289,13 +284,12 @@ LINEAR_NAME_SUFFIX(get_theta) (NcLinearPert *pert, gint l)
   LINEAR_VECTOR_PREPARE;
   if (pert->pws->tight_coupling && l < 2)
   {
-    NcmModel *model = pert->model;
     const gdouble x = exp(-pert->pws->g + pert->g0);
-    const gdouble Omega_r = nc_hicosmo_Omega_r (NC_HICOSMO (pert->model));
-    const gdouble Omega_b = nc_hicosmo_Omega_b (NC_HICOSMO (pert->model));
+    const gdouble Omega_r = nc_hicosmo_Omega_r (pert->cosmo);
+    const gdouble Omega_b = nc_hicosmo_Omega_b (pert->cosmo);
     const gdouble R0 = 4.0 * Omega_r / (3.0 * Omega_b);
     const gdouble R = R0 * x;
-    const gdouble E2 = nc_hicosmo_E2 (NC_HICOSMO (model), x-1.0);
+    const gdouble E2 = nc_hicosmo_E2 (pert->cosmo, x-1.0);
     const gdouble kx_3E = pert->pws->k * x / (3.0 * sqrt (E2));
 
     if (l == 0)
@@ -343,23 +337,22 @@ static void
 LINEAR_NAME_SUFFIX(get_sources) (NcLinearPert *pert, gdouble *S0, gdouble *S1, gdouble *S2)
 {
   LINEAR_VECTOR_PREPARE;
-  NcmModel *model = pert->model;
   const gdouble x = exp (-pert->pws->g + pert->g0);
-  const gdouble taubar = nc_thermodyn_recomb_taubar (pert->recomb, x);
-  gdouble opt = nc_thermodyn_recomb_optical_depth (pert->recomb, x);
+  const gdouble taubar = nc_recomb_dtau_dlambda (pert->recomb, pert->cosmo, x);
+  gdouble opt = nc_recomb_tau (pert->recomb, pert->cosmo, x);
   gdouble tau_log_abs_taubar = -opt + log(fabs(taubar));
 
   if (tau_log_abs_taubar > GSL_LOG_DBL_MIN + 0.01)
   {
-    const gdouble Omega_r = nc_hicosmo_Omega_r (NC_HICOSMO (model));
-    const gdouble Omega_b = nc_hicosmo_Omega_b (NC_HICOSMO (model));
-    const gdouble Omega_c = nc_hicosmo_Omega_c (NC_HICOSMO (model));
-    const gdouble Omega_m = nc_hicosmo_Omega_m (NC_HICOSMO (model));
+    const gdouble Omega_r = nc_hicosmo_Omega_r (pert->cosmo);
+    const gdouble Omega_b = nc_hicosmo_Omega_b (pert->cosmo);
+    const gdouble Omega_c = nc_hicosmo_Omega_c (pert->cosmo);
+    const gdouble Omega_m = nc_hicosmo_Omega_m (pert->cosmo);
     const gdouble x2 = x*x;
     const gdouble x3 = x2*x;
     const gdouble k = pert->pws->k;
     const gdouble k2 = k*k;
-    const gdouble E2 = nc_hicosmo_E2 (NC_HICOSMO (model), x-1.0);
+    const gdouble E2 = nc_hicosmo_E2 (pert->cosmo, x-1.0);
     const gdouble E = sqrt(E2);
     const gdouble k_E = k / E;
     const gdouble kx_E = x * k_E;
@@ -411,12 +404,11 @@ static LINEAR_STEP_RET
 LINEAR_NAME_SUFFIX(step) (LINEAR_STEP_PARAMS)
 {
   NcLinearPert *pert = NC_LINEAR_PERTURBATIONS (user_data);
-  NcmModel *model = pert->model;
   const gint lmax = pert->lmax;
-  const gdouble Omega_r = nc_hicosmo_Omega_r (NC_HICOSMO (model));
-  const gdouble Omega_b = nc_hicosmo_Omega_b (NC_HICOSMO (model));
-  const gdouble Omega_c = nc_hicosmo_Omega_c (NC_HICOSMO (model));
-  const gdouble Omega_m = nc_hicosmo_Omega_m (NC_HICOSMO (model));
+  const gdouble Omega_r = nc_hicosmo_Omega_r (pert->cosmo);
+  const gdouble Omega_b = nc_hicosmo_Omega_b (pert->cosmo);
+  const gdouble Omega_c = nc_hicosmo_Omega_c (pert->cosmo);
+  const gdouble Omega_m = nc_hicosmo_Omega_m (pert->cosmo);
   const gdouble R0 = 4.0 * Omega_r / (3.0 * Omega_b);
   const gdouble x = exp (-g + pert->g0);
   const gdouble R = R0 * x;
@@ -424,7 +416,7 @@ LINEAR_NAME_SUFFIX(step) (LINEAR_STEP_PARAMS)
   const gdouble x3 = x2*x;
   const gdouble k = pert->pws->k;
   const gdouble k2 = k*k;
-  const gdouble E2 = nc_hicosmo_E2 (NC_HICOSMO (model), x-1.0);
+  const gdouble E2 = nc_hicosmo_E2 (pert->cosmo, x-1.0);
   const gdouble E = sqrt(E2);
   const gdouble k_E = k / E;
   const gdouble kx_E = x * k_E;
@@ -435,7 +427,7 @@ LINEAR_NAME_SUFFIX(step) (LINEAR_STEP_PARAMS)
   const gdouble psi = -_NC_PHI - 12.0 * x2 / k2 * Omega_r * _NC_THETA2;
   const gdouble PI = _NC_THETA2 + _NC_THETA_P0 + _NC_THETA_P2;
   const gdouble dErm2_dx = (3.0 * Omega_m * x2 + 4.0 * Omega_r * x3);
-  const gdouble taubar = nc_thermodyn_recomb_taubar (pert->recomb, x);
+  const gdouble taubar = nc_recomb_dtau_dlambda (pert->recomb, pert->cosmo, x);
   gint i;
 
   if (fabs(_NC_V * _NC_TIGHT_COUPLING_END) > kx_3E * _NC_C0)
@@ -574,12 +566,11 @@ gint
 LINEAR_NAME_SUFFIX(band_J) (LINEAR_JAC_PARAMS)
 {
   NcLinearPert *pert = (NcLinearPert *)user_data;
-  NcmModel *model = pert->model;
   const gint lmax = pert->lmax;
-  const gdouble Omega_r = nc_hicosmo_Omega_r (NC_HICOSMO (model));
-  const gdouble Omega_b = nc_hicosmo_Omega_b (NC_HICOSMO (model));
-  const gdouble Omega_c = nc_hicosmo_Omega_c (NC_HICOSMO (model));
-  const gdouble Omega_m = nc_hicosmo_Omega_m (NC_HICOSMO (model));
+  const gdouble Omega_r = nc_hicosmo_Omega_r (pert->cosmo);
+  const gdouble Omega_b = nc_hicosmo_Omega_b (pert->cosmo);
+  const gdouble Omega_c = nc_hicosmo_Omega_c (pert->cosmo);
+  const gdouble Omega_m = nc_hicosmo_Omega_m (pert->cosmo);
   const gdouble R0 = 4.0 * Omega_r / (3.0 * Omega_b);
   const gdouble x = exp (-g + pert->g0);
   const gdouble R = R0 * x;
@@ -588,7 +579,7 @@ LINEAR_NAME_SUFFIX(band_J) (LINEAR_JAC_PARAMS)
   const gdouble x4 = x3*x;
   const gdouble k = pert->pws->k;
   const gdouble k2 = k*k;
-  const gdouble E2 = nc_hicosmo_E2 (NC_HICOSMO (model), x - 1.0);
+  const gdouble E2 = nc_hicosmo_E2 (pert->cosmo, x - 1.0);
   const gdouble E = sqrt(E2);
   const gdouble k_E = k / E;
   const gdouble kx_E = x * k_E;
@@ -597,7 +588,7 @@ LINEAR_NAME_SUFFIX(band_J) (LINEAR_JAC_PARAMS)
   const gdouble k2x_3E2 = k2x_3E / E;
   const gdouble k2x2_3E2 = x * k2x_3E2;
   const gdouble dErm2_dx = (3.0 * Omega_m * x2 + 4.0 * Omega_r * x3);
-  const gdouble taubar = nc_thermodyn_recomb_taubar (pert->recomb, x);
+  const gdouble taubar = nc_recomb_dtau_dlambda (pert->recomb, pert->cosmo, x);
   gint i;
 
   if (pert->pws->tight_coupling)
