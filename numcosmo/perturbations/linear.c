@@ -146,22 +146,15 @@ nc_pert_linear_new (NcHICosmo *cosmo, NcRecomb *recomb, guint lmax, gdouble tc_r
   nc_recomb_prepare_if_needed (pert->recomb, cosmo);
   nc_scale_factor_prepare_if_needed (pert->a, cosmo);
 
-  pert->g0 = log (NC_PERTURBATION_START_X);
-/*
-	pert->g_opt_cutoff = pert->g0 + pert->recomb->lambda_opt_cutoff;
-  pert->g_rec = pert->g0 + pert->recomb->lambda_rec;
-  pert->g_rec_10m2_max[0] = pert->g0 + pert->recomb->lambda_rec_10m2_max[0];
-  pert->g_rec_10m2_max[1] = pert->g0 + pert->recomb->lambda_rec_10m2_max[1];
-*/
-	{
-		gdouble lambda_max, lambda_l, lambda_u;
-		nc_recomb_v_tau_lambda_features (pert->recomb, cosmo, 2.0 * M_LN10, &lambda_max, &lambda_l, &lambda_u);
-		pert->g_opt_cutoff = pert->g0 + nc_recomb_tau_cutoff (pert->recomb, cosmo);
-		pert->g_rec = pert->g0 + lambda_max;
-		pert->g_rec_10m2_max[0] = pert->g0 + lambda_l;
-		pert->g_rec_10m2_max[1] = pert->g0 + lambda_u;
-	}
-	
+  pert->lambdai = NC_PERTURBATIONS_X2LAMBDA (NC_PERTURBATION_START_X);
+  pert->lambdaf = NC_PERTURBATIONS_X2LAMBDA (1.0);
+
+  nc_recomb_v_tau_lambda_features (pert->recomb, cosmo, 2.0 * M_LN10, 
+                                   &pert->lambda_rec, 
+                                   &pert->lambda_rec_10m2_max[0], 
+                                   &pert->lambda_rec_10m2_max[1]);
+  pert->lambda_opt_cutoff = nc_recomb_tau_cutoff (pert->recomb, cosmo);
+  
   pert->eta0 = nc_scale_factor_t_z (pert->a, 0.0);
 
   pert->lmax = lmax;
@@ -194,9 +187,23 @@ nc_pert_linear_new (NcHICosmo *cosmo, NcRecomb *recomb, guint lmax, gdouble tc_r
  *
 */
 void
-nc_pert_linear_free (NcLinearPert * pert)
+nc_pert_linear_free (NcLinearPert *pert)
 {
   g_assert_not_reached ();
+}
+
+/**
+ * nc_pert_linear_clear:
+ * @pert: a #NcLinearPert.
+ *
+ * FIXME
+ *
+*/
+void
+nc_pert_linear_clear (NcLinearPert **pert)
+{
+  nc_pert_linear_free (*pert);
+  *pert = NULL;
 }
 
 /**
@@ -206,9 +213,24 @@ nc_pert_linear_free (NcLinearPert * pert)
  * FIXME
  *
 */
-void nc_pert_linear_splines_free (NcLinearPertSplines *pspline)
+void 
+nc_pert_linear_splines_free (NcLinearPertSplines *pspline)
 {
   g_assert_not_reached ();
+}
+
+/**
+ * nc_pert_linear_splines_clear:
+ * @pspline: a #NcLinearPertSplines.
+ *
+ * FIXME
+ *
+*/
+void 
+nc_pert_linear_splines_clear (NcLinearPertSplines **pspline)
+{
+  nc_pert_linear_splines_free (*pspline);
+  *pspline = NULL;
 }
 
 typedef struct _local_los_int_data
@@ -364,7 +386,7 @@ nc_pert_transfer_function_prepare (NcLinearPertTF *perttf)
     gdouble logPhi;
     perttf->pert->pws->k = exp (logk);
     perttf->pert->solver->init (perttf->pert);
-    perttf->pert->solver->evol (perttf->pert, perttf->pert->g0);
+    perttf->pert->solver->evol (perttf->pert, perttf->pert->lambdaf);
     //perttf->pert->solver->evol (perttf->pert, perttf->pert->g_opt_cutoff);
 
     logPhi = log (perttf->pert->solver->get (perttf->pert, NC_PERT_PHI));
@@ -397,9 +419,9 @@ nc_pert_transfer_function_get (NcLinearPertTF *perttf, gdouble kh)
 static void
 _nc_pert_linear_prepare_deta_grid (NcLinearPert *pert, gdouble *deta_grid, glong ni, glong nc, glong nt)
 {
-  const gdouble x_opt_cutoff    = exp (pert->g0 - pert->g_opt_cutoff);
-  const gdouble x_rec_10m2_max0 = exp (pert->g0 - pert->g_rec_10m2_max[0]);
-  const gdouble x_rec_10m2_max1 = exp (pert->g0 - pert->g_rec_10m2_max[1]);
+  const gdouble x_opt_cutoff    = NC_PERTURBATIONS_LAMBDA2X (pert->lambda_opt_cutoff);
+  const gdouble x_rec_10m2_max0 = NC_PERTURBATIONS_LAMBDA2X (pert->lambda_rec_10m2_max[0]);
+  const gdouble x_rec_10m2_max1 = NC_PERTURBATIONS_LAMBDA2X (pert->lambda_rec_10m2_max[1]);
   const glong n = nc + nt + ni;
   gdouble last_eta;
   gint i;
@@ -516,7 +538,7 @@ nc_pert_linear_prepare_splines (NcLinearPertSplines *pspline)
     gint j;
     pert->pws->k = ncm_vector_get (pspline->ka, i);
     pert->solver->init (pert);
-    pert->solver->evol (pert, pert->g_opt_cutoff);
+    pert->solver->evol (pert, pert->lambda_opt_cutoff);
 
     if (pspline->types & NC_LINEAR_PERTURBATIONS_SPLINE_SOURCES)
     {
@@ -526,9 +548,9 @@ nc_pert_linear_prepare_splines (NcLinearPertSplines *pspline)
         gint jj = pspline->n_deta - 1 - j;
         gdouble detaj = ncm_vector_get (pspline->ga, jj);
         gdouble xj = nc_scale_factor_z_t (pert->a, pert->eta0 - detaj) + 1.0;
-        gdouble gj = -log(xj) + pert->g0;
+        gdouble lambdaj = -log(xj);
 
-        pert->solver->evol (pert, gj);
+        pert->solver->evol (pert, lambdaj);
         pert->solver->get_sources (pert, &S0, &S1, &S2);
 				ncm_matrix_set (pspline->Sk_data[0], jj, i, S0);
 				ncm_matrix_set (pspline->Sk_data[1], jj, i, S1);
@@ -536,7 +558,7 @@ nc_pert_linear_prepare_splines (NcLinearPertSplines *pspline)
       }
     }
     else
-      pert->solver->evol (pert, pert->gf);
+      pert->solver->evol (pert, pert->lambdaf);
 
     for (j = 0; j < NC_PERTURBATION_BASE_SIZE; j++)
       if (pspline->types & (1 << j))

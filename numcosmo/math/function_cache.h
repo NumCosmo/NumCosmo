@@ -63,6 +63,7 @@ struct _NcFunctionCache
 
 NcFunctionCache *nc_function_cache_new (guint n, gdouble abstol, gdouble reltol);
 void nc_function_cache_free (NcFunctionCache *cache);
+void nc_function_cache_clear (NcFunctionCache **cache);
 void nc_function_cache_insert (NcFunctionCache *cache, gdouble x, ...);
 void nc_function_cache_insert_vector (NcFunctionCache *cache, gdouble x, gsl_vector *p);
 gboolean nc_function_cache_get (NcFunctionCache *cache, gdouble *x_ptr, gsl_vector **v);

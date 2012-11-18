@@ -95,6 +95,20 @@ ncm_model_free (NcmModel *model)
   g_object_unref (model);
 }
 
+/**
+ * ncm_model_clear:
+ * @model: a #NcmModel.
+ *
+ * Atomically decrements the reference count of @model by one. If the reference count drops to 0,
+ * all memory allocated by @model is released. Set pointer to NULL.
+ *
+ */
+void
+ncm_model_clear (NcmModel **model)
+{
+  g_clear_object (model);
+}
+
 static void
 ncm_model_init (NcmModel *model)
 {
@@ -127,31 +141,31 @@ _ncm_model_set_sparams (NcmModel *model)
 
   for (i = 0; i < model_class->sparam_len; i++)
   {
-	NcmSParam *sp = g_ptr_array_index (model_class->sparam, i);
-	g_array_index (model->ptypes, NcmParamType, i) = NCM_PARAM_TYPE_FIXED;
-	g_ptr_array_index (model->sparams, i) = ncm_sparam_copy (sp);
-	g_hash_table_insert (model->sparams_name_id, g_strdup (ncm_sparam_name (sp)), GUINT_TO_POINTER (i));
+    NcmSParam *sp = g_ptr_array_index (model_class->sparam, i);
+    g_array_index (model->ptypes, NcmParamType, i) = NCM_PARAM_TYPE_FIXED;
+    g_ptr_array_index (model->sparams, i) = ncm_sparam_copy (sp);
+    g_hash_table_insert (model->sparams_name_id, g_strdup (ncm_sparam_name (sp)), GUINT_TO_POINTER (i));
   }
 
   for (i = 0; i < model_class->vparam_len; i++)
   {
-	const guint len = g_array_index (model->vparam_len, guint, i);
-	const guint pos = g_array_index (model->vparam_pos, guint, i);
-	NcmVParam *vp = ncm_vparam_copy (g_ptr_array_index (model_class->vparam, i));
-	gint j;
+    const guint len = g_array_index (model->vparam_len, guint, i);
+    const guint pos = g_array_index (model->vparam_pos, guint, i);
+    NcmVParam *vp = ncm_vparam_copy (g_ptr_array_index (model_class->vparam, i));
+    gint j;
 
-	ncm_vparam_set_len (vp, len);
+    ncm_vparam_set_len (vp, len);
 
-	for (j = 0; j < len; j++)
-	{
-	  const guint n = pos + j;
-	  NcmSParam *sp = ncm_vparam_peek_sparam (vp, j);
-	  g_array_index (model->ptypes, NcmParamType, n) = NCM_PARAM_TYPE_FIXED;
-	  g_ptr_array_index (model->sparams, n) = ncm_sparam_ref (sp);
-	  g_hash_table_insert (model->sparams_name_id, g_strdup (ncm_sparam_name (sp)), GUINT_TO_POINTER (n));
-	}
+    for (j = 0; j < len; j++)
+    {
+      const guint n = pos + j;
+      NcmSParam *sp = ncm_vparam_peek_sparam (vp, j);
+      g_array_index (model->ptypes, NcmParamType, n) = NCM_PARAM_TYPE_FIXED;
+      g_ptr_array_index (model->sparams, n) = ncm_sparam_ref (sp);
+      g_hash_table_insert (model->sparams_name_id, g_strdup (ncm_sparam_name (sp)), GUINT_TO_POINTER (n));
+    }
 
-	ncm_vparam_free (vp);
+    ncm_vparam_free (vp);
   }
 }
 
@@ -165,41 +179,41 @@ _ncm_model_sparams_remove_reparam (NcmModel *model)
 
   for (i = 0; i < model_class->sparam_len; i++)
   {
-	NcmSParam *reparam_sp = g_ptr_array_index (model->reparam->sparams, i);
-	if (reparam_sp != NULL)
-	{
-	  NcmSParam *sp = g_ptr_array_index (model_class->sparam, i);
-	  ncm_sparam_free (g_ptr_array_index (model->sparams, i));
-	  g_ptr_array_index (model->sparams, i) = ncm_sparam_copy (sp);
-	  g_array_index (model->ptypes, NcmParamType, i) = NCM_PARAM_TYPE_FIXED;
-	  g_hash_table_replace (model->sparams_name_id, g_strdup (ncm_sparam_name (sp)), GUINT_TO_POINTER (i));
-	}
+    NcmSParam *reparam_sp = g_ptr_array_index (model->reparam->sparams, i);
+    if (reparam_sp != NULL)
+    {
+      NcmSParam *sp = g_ptr_array_index (model_class->sparam, i);
+      ncm_sparam_free (g_ptr_array_index (model->sparams, i));
+      g_ptr_array_index (model->sparams, i) = ncm_sparam_copy (sp);
+      g_array_index (model->ptypes, NcmParamType, i) = NCM_PARAM_TYPE_FIXED;
+      g_hash_table_replace (model->sparams_name_id, g_strdup (ncm_sparam_name (sp)), GUINT_TO_POINTER (i));
+    }
   }
 
   for (i = 0; i < model_class->vparam_len; i++)
   {
-	const guint len = g_array_index (model->vparam_len, guint, i);
-	const guint pos = g_array_index (model->vparam_pos, guint, i);
-	NcmVParam *vp = ncm_vparam_copy (g_ptr_array_index (model_class->vparam, i));
-	gint j;
+    const guint len = g_array_index (model->vparam_len, guint, i);
+    const guint pos = g_array_index (model->vparam_pos, guint, i);
+    NcmVParam *vp = ncm_vparam_copy (g_ptr_array_index (model_class->vparam, i));
+    gint j;
 
-	ncm_vparam_set_len (vp, len);
+    ncm_vparam_set_len (vp, len);
 
-	for (j = 0; j < len; j++)
-	{
-	  const guint n = pos + j;
-	  NcmSParam *reparam_sp = g_ptr_array_index (model->reparam->sparams, n);
-	  if (reparam_sp != NULL)
-	  {
-		NcmSParam *sp = ncm_vparam_peek_sparam (vp, j);
-		ncm_sparam_free (g_ptr_array_index (model->sparams, n));
-		g_ptr_array_index (model->sparams, n) = ncm_sparam_ref (sp);
-		g_array_index (model->ptypes, NcmParamType, n) = NCM_PARAM_TYPE_FIXED;
-		g_hash_table_replace (model->sparams_name_id, g_strdup (ncm_sparam_name (sp)), GUINT_TO_POINTER (n));
-	  }
-	}
+    for (j = 0; j < len; j++)
+    {
+      const guint n = pos + j;
+      NcmSParam *reparam_sp = g_ptr_array_index (model->reparam->sparams, n);
+      if (reparam_sp != NULL)
+      {
+        NcmSParam *sp = ncm_vparam_peek_sparam (vp, j);
+        ncm_sparam_free (g_ptr_array_index (model->sparams, n));
+        g_ptr_array_index (model->sparams, n) = ncm_sparam_ref (sp);
+        g_array_index (model->ptypes, NcmParamType, n) = NCM_PARAM_TYPE_FIXED;
+        g_hash_table_replace (model->sparams_name_id, g_strdup (ncm_sparam_name (sp)), GUINT_TO_POINTER (n));
+      }
+    }
 
-	ncm_vparam_free (vp);
+    ncm_vparam_free (vp);
   }
 }
 
@@ -210,14 +224,14 @@ _ncm_model_reset_sparams_from_reparam (NcmModel *model)
 
   for (i = 0; i < model->total_len; i++)
   {
-	NcmSParam *sp = g_ptr_array_index (model->reparam->sparams, i);
-	if (sp != NULL)
-	{
-	  ncm_sparam_free (g_ptr_array_index (model->sparams, i));
-	  g_ptr_array_index (model->sparams, i) = ncm_sparam_copy (sp);
-	  g_array_index (model->ptypes, NcmParamType, i) = NCM_PARAM_TYPE_FIXED;
-	  g_hash_table_replace (model->sparams_name_id, g_strdup (ncm_sparam_name (sp)), GUINT_TO_POINTER (i));
-	}
+    NcmSParam *sp = g_ptr_array_index (model->reparam->sparams, i);
+    if (sp != NULL)
+    {
+      ncm_sparam_free (g_ptr_array_index (model->sparams, i));
+      g_ptr_array_index (model->sparams, i) = ncm_sparam_copy (sp);
+      g_array_index (model->ptypes, NcmParamType, i) = NCM_PARAM_TYPE_FIXED;
+      g_hash_table_replace (model->sparams_name_id, g_strdup (ncm_sparam_name (sp)), GUINT_TO_POINTER (i));
+    }
   }
 }
 
@@ -227,21 +241,21 @@ _ncm_model_constructed (GObject *object)
   /* Chain up : start */
   G_OBJECT_CLASS (ncm_model_parent_class)->constructed (object);
   {
-	NcmModel *model = NCM_MODEL (object);
-	NcmModelClass *model_class = NCM_MODEL_GET_CLASS (model);
-	gint i;
+    NcmModel *model = NCM_MODEL (object);
+    NcmModelClass *model_class = NCM_MODEL_GET_CLASS (model);
+    gint i;
 
-	model->total_len = model_class->sparam_len;
-	for (i = 0; i < model_class->vparam_len; i++)
-	{
-	  g_array_index (model->vparam_pos, guint, i) = model->total_len;
-	  model->total_len += g_array_index (model->vparam_len, guint, i);
-	}
-	model->params = ncm_vector_ref (ncm_vector_new (model->total_len));
-	model->p = model->params;
-	g_array_set_size (model->ptypes, model->total_len);
-	_ncm_model_set_sparams (model);
-	ncm_model_params_set_default (model);
+    model->total_len = model_class->sparam_len;
+    for (i = 0; i < model_class->vparam_len; i++)
+    {
+      g_array_index (model->vparam_pos, guint, i) = model->total_len;
+      model->total_len += g_array_index (model->vparam_len, guint, i);
+    }
+    model->params = ncm_vector_ref (ncm_vector_new (model->total_len));
+    model->p = model->params;
+    g_array_set_size (model->ptypes, model->total_len);
+    _ncm_model_set_sparams (model);
+    ncm_model_params_set_default (model);
   }
 }
 
@@ -249,20 +263,41 @@ static void
 _ncm_model_dispose (GObject *object)
 {
   NcmModel *model = NCM_MODEL (object);
-  ncm_vector_free (model->params);
-  model->params = NULL;
+
+  ncm_vector_clear (&model->params);
   model->p = NULL;
 
-  if (model->reparam != NULL)
-	ncm_reparam_free (model->reparam);
+  ncm_reparam_clear (&model->reparam);
 
-  g_array_unref (model->vparam_len);
-  g_array_unref (model->vparam_pos);
-  g_array_unref (model->ptypes);
+  if (model->vparam_len != NULL)
+  {
+    g_array_unref (model->vparam_len);
+    model->vparam_len = NULL;
+  }
 
-  g_ptr_array_unref (model->sparams);
+  if (model->vparam_pos != NULL)
+  {
+    g_array_unref (model->vparam_pos);
+    model->vparam_pos = NULL;
+  }
 
-  g_hash_table_unref (model->sparams_name_id);
+  if (model->ptypes != NULL)
+  {
+    g_array_unref (model->ptypes);
+    model->ptypes = NULL;
+  }
+
+  if (model->sparams != NULL)
+  {
+    g_ptr_array_unref (model->sparams);
+    model->sparams = NULL;
+  }
+
+  if (model->sparams_name_id != NULL)
+  {
+    g_hash_table_unref (model->sparams_name_id);
+    model->sparams_name_id = NULL;
+  }
 
   /* Chain up : end */
   G_OBJECT_CLASS (ncm_model_parent_class)->dispose (object);
@@ -283,12 +318,12 @@ _ncm_model_set_property (GObject *object, guint prop_id, const GValue *value, GP
 
   switch (prop_id)
   {
-	case PROP_REPARAM:
-	  ncm_model_set_reparam (model, g_value_get_object (value));
-	  break;
-	default:
-	  G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-	  break;
+    case PROP_REPARAM:
+      ncm_model_set_reparam (model, g_value_get_object (value));
+      break;
+    default:
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
+      break;
   }
 }
 
@@ -302,33 +337,33 @@ _ncm_model_get_property (GObject *object, guint prop_id, GValue *value, GParamSp
 
   switch (prop_id)
   {
-	case PROP_NAME:
-	  g_value_set_string (value, model_class->name);
-	  break;
-	case PROP_NICK:
-	  g_value_set_string (value, model_class->nick);
-	  break;
-	case PROP_PARAMS:
-	  g_value_set_object (value, ncm_vector_copy (model->params));
-	  break;
-	case PROP_SPARAMS_LEN:
-	  g_value_set_uint (value, model_class->sparam_len);
-	  break;
-	case PROP_VPARAMS_LEN:
-	  g_value_set_uint (value, model_class->vparam_len);
-	  break;
-	case PROP_IMPLEMENTATION:
-	  g_value_set_ulong (value, model_class->impl);
-	  break;
-	case PROP_REPARAM:
-	  g_value_set_object (value, model->reparam);
-	  break;
-	case PROP_PTYPES:
-	  g_value_set_boxed (value, model->ptypes);
-	  break;
-	default:
-	  G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-	  break;
+    case PROP_NAME:
+      g_value_set_string (value, model_class->name);
+      break;
+    case PROP_NICK:
+      g_value_set_string (value, model_class->nick);
+      break;
+    case PROP_PARAMS:
+      g_value_take_object (value, ncm_vector_dup (model->params));
+      break;
+    case PROP_SPARAMS_LEN:
+      g_value_set_uint (value, model_class->sparam_len);
+      break;
+    case PROP_VPARAMS_LEN:
+      g_value_set_uint (value, model_class->vparam_len);
+      break;
+    case PROP_IMPLEMENTATION:
+      g_value_set_ulong (value, model_class->impl);
+      break;
+    case PROP_REPARAM:
+      g_value_set_object (value, model->reparam);
+      break;
+    case PROP_PTYPES:
+      g_value_set_boxed (value, model->ptypes);
+      break;
+    default:
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
+      break;
   }
 }
 
@@ -339,9 +374,9 @@ _ncm_model_copy (NcmModel *model)
 
   if (ncm_model_peek_reparam (model))
   {
-	NcmReparam *reparam = ncm_reparam_copy (ncm_model_peek_reparam (model));
+    NcmReparam *reparam = ncm_reparam_copy (ncm_model_peek_reparam (model));
     ncm_model_set_reparam (model_copy, reparam);
-	ncm_reparam_free (reparam);
+    ncm_reparam_free (reparam);
   }
 
   ncm_model_copyto (model, model_copy);
@@ -355,7 +390,7 @@ _ncm_model_copyto (NcmModel *model, NcmModel *model_dest)
   g_assert (ncm_model_is_equal (model, model_dest));
   ncm_vector_memcpy (model_dest->p, model->p);
   for (i = 0; i < model->ptypes->len; i++)
-	g_array_index (model_dest->ptypes, NcmParamType, i) = g_array_index (model->ptypes, NcmParamType, i);
+    g_array_index (model_dest->ptypes, NcmParamType, i) = g_array_index (model->ptypes, NcmParamType, i);
   ncm_model_params_update (model_dest);
 }
 
@@ -364,10 +399,11 @@ ncm_model_class_init (NcmModelClass *klass)
 {
   GObjectClass* object_class = G_OBJECT_CLASS (klass);
   object_class->constructed  = &_ncm_model_constructed;
-  object_class->dispose      = &_ncm_model_dispose;
-  object_class->finalize     = &_ncm_model_finalize;
   object_class->set_property = &_ncm_model_set_property;
   object_class->get_property = &_ncm_model_get_property;
+  object_class->dispose      = &_ncm_model_dispose;
+  object_class->finalize     = &_ncm_model_finalize;
+
   klass->copyto = &_ncm_model_copyto;
   klass->copy   = &_ncm_model_copy;
   klass->set_property = NULL;
@@ -431,10 +467,10 @@ ncm_model_class_init (NcmModelClass *klass)
   g_object_class_install_property (object_class,
                                    PROP_PTYPES,
                                    g_param_spec_boxed  ("params-types",
-                                                         NULL,
-                                                         "Parameters' types",
-                                                         G_TYPE_ARRAY,
-                                                         G_PARAM_READABLE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+                                                        NULL,
+                                                        "Parameters' types",
+                                                        G_TYPE_ARRAY,
+                                                        G_PARAM_READABLE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   g_object_class_install_property (object_class,
                                    PROP_REPARAM,
@@ -452,17 +488,17 @@ ncm_model_class_register_id (NcmModelClass *model_class)
 {
   if (model_class->model_id < 0)
   {
-	static NcmModelID last_model_id = 0;
-	G_LOCK (last_model_id);
-	model_class->model_id = last_model_id++;
-	G_UNLOCK (last_model_id);
+    static NcmModelID last_model_id = 0;
+    G_LOCK (last_model_id);
+    model_class->model_id = last_model_id++;
+    G_UNLOCK (last_model_id);
   }
   else
   {
-	g_error ("This model or its parent is already registred, id = %d. This function must be use once and only in the defining model.", model_class->model_id);
+    g_error ("This model or its parent is already registred, id = %d. This function must be use once and only in the defining model.", model_class->model_id);
   }
   if (model_class->model_id > NCM_MODEL_MAX_ID)
-	g_error ("Max model id was already attained. Increase by altering NCM_MODEL_MAX_ID.");
+    g_error ("Max model id was already attained. Increase by altering NCM_MODEL_MAX_ID.");
 
   return;
 }
@@ -490,47 +526,47 @@ ncm_model_class_get_property (GObject *object, guint prop_id, GValue *value, GPa
 
   if (prop_id < model_class->nonparam_prop_len && model_class->get_property)
   {
-	model_class->get_property (object, prop_id, value, pspec);
+    model_class->get_property (object, prop_id, value, pspec);
   }
   else if (sparam_id < model_class->sparam_len)
   {
-	g_value_set_double (value, ncm_vector_get (model->params, sparam_id));
+    g_value_set_double (value, ncm_vector_get (model->params, sparam_id));
   }
   else if (vparam_id < model_class->vparam_len)
   {
-	const guint len = g_array_index (model->vparam_len, guint, vparam_id);
-	const guint pos = g_array_index (model->vparam_pos, guint, vparam_id);
-	NcmVector *v = ncm_vector_get_subvector (model->params, pos, len);
-	g_value_take_object (value, ncm_vector_ref (v));
+    const guint len = g_array_index (model->vparam_len, guint, vparam_id);
+    const guint pos = g_array_index (model->vparam_pos, guint, vparam_id);
+    NcmVector *v = ncm_vector_get_subvector (model->params, pos, len);
+    g_value_take_object (value, ncm_vector_ref (v));
   }
   else if (vparam_len_id < model_class->vparam_len)
   {
-	g_value_set_uint (value, g_array_index (model->vparam_len, guint, vparam_len_id));
+    g_value_set_uint (value, g_array_index (model->vparam_len, guint, vparam_len_id));
   }
   else if (sparam_fit_id < model_class->sparam_len)
   {
-	g_value_set_boolean (value, ncm_model_param_get_ftype (model, sparam_fit_id) == NCM_PARAM_TYPE_FREE ? TRUE: FALSE);
+    g_value_set_boolean (value, ncm_model_param_get_ftype (model, sparam_fit_id) == NCM_PARAM_TYPE_FREE ? TRUE: FALSE);
   }
   else if (vparam_fit_id < model_class->vparam_len)
   {
-	gsize n = g_array_index (model->vparam_len, guint, vparam_fit_id);
-	GVariantBuilder *builder;
-	GVariant *var;
-	gint i;
+    gsize n = g_array_index (model->vparam_len, guint, vparam_fit_id);
+    GVariantBuilder *builder;
+    GVariant *var;
+    gint i;
 
-	builder = g_variant_builder_new (G_VARIANT_TYPE ("ab"));
-	for (i = 0; i < n; i++)
-	{
-	  guint pid = ncm_model_vparam_index (model, vparam_fit_id, i);
-	  gboolean tofit = ncm_model_param_get_ftype (model, pid) == NCM_PARAM_TYPE_FREE ? TRUE: FALSE;
-	  g_variant_builder_add (builder, "b", tofit);
-	}
-	var = g_variant_new ("ab", builder);
-	g_variant_builder_unref (builder);
-	g_value_take_variant (value, var);
+    builder = g_variant_builder_new (G_VARIANT_TYPE ("ab"));
+    for (i = 0; i < n; i++)
+    {
+      guint pid = ncm_model_vparam_index (model, vparam_fit_id, i);
+      gboolean tofit = ncm_model_param_get_ftype (model, pid) == NCM_PARAM_TYPE_FREE ? TRUE: FALSE;
+      g_variant_builder_add (builder, "b", tofit);
+    }
+    var = g_variant_new ("ab", builder);
+    g_variant_builder_unref (builder);
+    g_value_take_variant (value, var);
   }
   else
-	g_assert_not_reached ();
+    g_assert_not_reached ();
 }
 
 /**
@@ -558,62 +594,62 @@ ncm_model_class_set_property (GObject *object, guint prop_id, const GValue *valu
 
   if (prop_id < model_class->nonparam_prop_len && model_class->set_property)
   {
-	model_class->set_property (object, prop_id, value, pspec);
+    model_class->set_property (object, prop_id, value, pspec);
   }
   else if (sparam_id < model_class->sparam_len)
   {
-	gdouble val = g_value_get_double (value);
-	ncm_model_orig_param_set (model, sparam_id, val);
+    gdouble val = g_value_get_double (value);
+    ncm_model_orig_param_set (model, sparam_id, val);
   }
   else if (vparam_id < model_class->vparam_len)
   {
-	NcmVector *val = g_value_get_object (value);
-	ncm_model_orig_vparam_set_vector (model, vparam_id, val);
+    NcmVector *val = g_value_get_object (value);
+    ncm_model_orig_vparam_set_vector (model, vparam_id, val);
   }
   else if (vparam_len_id < model_class->vparam_len)
   {
-	guint psize = g_value_get_uint (value);
-	g_array_index (model->vparam_len, guint, vparam_len_id) = psize;
+    guint psize = g_value_get_uint (value);
+    g_array_index (model->vparam_len, guint, vparam_len_id) = psize;
   }
   else if (sparam_fit_id < model_class->sparam_len)
   {
-	gboolean tofit = g_value_get_boolean (value);
-	ncm_model_param_set_ftype (model, sparam_fit_id, tofit ? NCM_PARAM_TYPE_FREE : NCM_PARAM_TYPE_FIXED);
+    gboolean tofit = g_value_get_boolean (value);
+    ncm_model_param_set_ftype (model, sparam_fit_id, tofit ? NCM_PARAM_TYPE_FREE : NCM_PARAM_TYPE_FIXED);
   }
   else if (vparam_fit_id < model_class->vparam_len)
   {
-	GVariant *var = g_value_get_variant (value);
-	gsize n = g_variant_n_children (var);
-	gint i;
+    GVariant *var = g_value_get_variant (value);
+    gsize n = g_variant_n_children (var);
+    gint i;
 
-	if (n != g_array_index (model->vparam_len, guint, vparam_fit_id))
-	  g_error ("set_property: cannot set fit type of vector parameter, variant contains %zu childs but vector dimension is %u", n, g_array_index (model->vparam_len, guint, vparam_fit_id));
+    if (n != g_array_index (model->vparam_len, guint, vparam_fit_id))
+      g_error ("set_property: cannot set fit type of vector parameter, variant contains %zu childs but vector dimension is %u", n, g_array_index (model->vparam_len, guint, vparam_fit_id));
 
-	if (g_variant_is_of_type (var, G_VARIANT_TYPE ("ab")))
-	{
-	  for (i = 0; i < n; i++)
-	  {
-		guint pid = ncm_model_vparam_index (model, vparam_fit_id, i);
-		gboolean tofit;
-		g_variant_get_child (var, i, "b", &tofit);
-		ncm_model_param_set_ftype (model, pid, tofit ? NCM_PARAM_TYPE_FREE : NCM_PARAM_TYPE_FIXED);
-	  }
-	}
-	else if (g_variant_is_of_type (var, G_VARIANT_TYPE ("ai")))
-	{
-	  for (i = 0; i < n; i++)
-	  {
-		guint pid = ncm_model_vparam_index (model, vparam_fit_id, i);
-		gint tofit;
-		g_variant_get_child (var, i, "i", &tofit);
-		ncm_model_param_set_ftype (model, pid, tofit ? NCM_PARAM_TYPE_FREE : NCM_PARAM_TYPE_FIXED);
-	  }
-	}
-	else
-	  g_error ("set_property: Cannot convert `%s' variant to an array of booleans", g_variant_get_type_string (var));
+    if (g_variant_is_of_type (var, G_VARIANT_TYPE ("ab")))
+    {
+      for (i = 0; i < n; i++)
+      {
+        guint pid = ncm_model_vparam_index (model, vparam_fit_id, i);
+        gboolean tofit;
+        g_variant_get_child (var, i, "b", &tofit);
+        ncm_model_param_set_ftype (model, pid, tofit ? NCM_PARAM_TYPE_FREE : NCM_PARAM_TYPE_FIXED);
+      }
+    }
+    else if (g_variant_is_of_type (var, G_VARIANT_TYPE ("ai")))
+    {
+      for (i = 0; i < n; i++)
+      {
+        guint pid = ncm_model_vparam_index (model, vparam_fit_id, i);
+        gint tofit;
+        g_variant_get_child (var, i, "i", &tofit);
+        ncm_model_param_set_ftype (model, pid, tofit ? NCM_PARAM_TYPE_FREE : NCM_PARAM_TYPE_FIXED);
+      }
+    }
+    else
+      g_error ("set_property: Cannot convert `%s' variant to an array of booleans", g_variant_get_type_string (var));
   }
   else
-	g_assert_not_reached ();
+    g_assert_not_reached ();
 }
 
 /**
@@ -637,40 +673,40 @@ ncm_model_class_add_params (NcmModelClass *model_class, guint sparam_len, guint 
 
   if (model_class->sparam_len > 0)
   {
-	if (model_class->sparam == NULL)
-	{
-	  model_class->sparam = g_ptr_array_new_with_free_func ((GDestroyNotify) &ncm_sparam_free);
-	  g_ptr_array_set_size (model_class->sparam, model_class->sparam_len);
-	}
-	else
-	{
-	  GPtrArray *sparam = g_ptr_array_new_with_free_func ((GDestroyNotify) &ncm_sparam_free);
-	  guint i;
-	  g_ptr_array_set_size (sparam, model_class->sparam_len);
-	  /* Copy all parent params info */
-	  for (i = 0; i < model_class->parent_sparam_len; i++)
-		g_ptr_array_index (sparam, i) = ncm_sparam_copy (g_ptr_array_index (model_class->sparam, i));
-	  model_class->sparam = sparam;
-	}
+    if (model_class->sparam == NULL)
+    {
+      model_class->sparam = g_ptr_array_new_with_free_func ((GDestroyNotify) &ncm_sparam_free);
+      g_ptr_array_set_size (model_class->sparam, model_class->sparam_len);
+    }
+    else
+    {
+      GPtrArray *sparam = g_ptr_array_new_with_free_func ((GDestroyNotify) &ncm_sparam_free);
+      guint i;
+      g_ptr_array_set_size (sparam, model_class->sparam_len);
+      /* Copy all parent params info */
+      for (i = 0; i < model_class->parent_sparam_len; i++)
+        g_ptr_array_index (sparam, i) = ncm_sparam_copy (g_ptr_array_index (model_class->sparam, i));
+      model_class->sparam = sparam;
+    }
   }
 
   if (model_class->vparam_len > 0)
   {
-	if (model_class->vparam == NULL)
-	{
-	  model_class->vparam = g_ptr_array_new_with_free_func ((GDestroyNotify) &ncm_vparam_free);
-	  g_ptr_array_set_size (model_class->vparam, model_class->vparam_len);
-	}
-	else
-	{
-	  GPtrArray *vparam = g_ptr_array_new_with_free_func ((GDestroyNotify) &ncm_vparam_free);
-	  guint i;
-	  g_ptr_array_set_size (vparam, model_class->vparam_len);
-	  /* Copy all parent params info */
-	  for (i = 0; i < model_class->parent_vparam_len; i++)
-		g_ptr_array_index (vparam, i) = ncm_vparam_copy (g_ptr_array_index (model_class->vparam, i));
-	  model_class->vparam = vparam;
-	}
+    if (model_class->vparam == NULL)
+    {
+      model_class->vparam = g_ptr_array_new_with_free_func ((GDestroyNotify) &ncm_vparam_free);
+      g_ptr_array_set_size (model_class->vparam, model_class->vparam_len);
+    }
+    else
+    {
+      GPtrArray *vparam = g_ptr_array_new_with_free_func ((GDestroyNotify) &ncm_vparam_free);
+      guint i;
+      g_ptr_array_set_size (vparam, model_class->vparam_len);
+      /* Copy all parent params info */
+      for (i = 0; i < model_class->parent_vparam_len; i++)
+        g_ptr_array_index (vparam, i) = ncm_vparam_copy (g_ptr_array_index (model_class->vparam, i));
+      model_class->vparam = vparam;
+    }
   }
 }
 
@@ -721,7 +757,7 @@ ncm_model_class_set_sparam (NcmModelClass *model_class, guint sparam_id, gchar *
   g_assert (prop_id > 0);
 
   if (g_ptr_array_index (model_class->sparam, sparam_id) != NULL)
-	g_error ("Scalar Parameter: %u is already set\n", sparam_id);
+    g_error ("Scalar Parameter: %u is already set\n", sparam_id);
 
   g_ptr_array_index (model_class->sparam, sparam_id) = sparam;
 
@@ -768,7 +804,7 @@ ncm_model_class_set_vparam (NcmModelClass *model_class, guint vparam_id, guint d
   g_assert (prop_len_id > 0);
 
   if (g_ptr_array_index (model_class->vparam, vparam_id) != NULL)
-	g_error ("Vector Parameter: %u is already set\n", vparam_id);
+    g_error ("Vector Parameter: %u is already set\n", vparam_id);
 
   g_ptr_array_index (model_class->vparam, vparam_id) = vparam;
   g_object_class_install_property (object_class, prop_id,
@@ -802,25 +838,25 @@ ncm_model_class_check_params_info (NcmModelClass *model_class)
   guint total_params_len = model_class->sparam_len + model_class->vparam_len;
   if (!total_params_len)
   {
-	g_error ("Class size or params not initialized, call ncm_model_class_add_params.");
+    g_error ("Class size or params not initialized, call ncm_model_class_add_params.");
   }
 
   for (i = 0; i < model_class->sparam_len; i++)
   {
-	if (g_ptr_array_index (model_class->sparam, i) == NULL)
-	{
-	  g_error ("Class (%s) didn't initialized scalar parameter %lu/%u", model_class->name ? model_class->name : "no-name", i + 1, model_class->sparam_len);
-	}
-	/* g_debug ("Model[%s][%s] id %lu\n", model_class->name, ((NcmSParam *)g_ptr_array_index (model_class->params_info, i))->name, i); */
+    if (g_ptr_array_index (model_class->sparam, i) == NULL)
+    {
+      g_error ("Class (%s) didn't initialized scalar parameter %lu/%u", model_class->name ? model_class->name : "no-name", i + 1, model_class->sparam_len);
+    }
+    /* g_debug ("Model[%s][%s] id %lu\n", model_class->name, ((NcmSParam *)g_ptr_array_index (model_class->params_info, i))->name, i); */
   }
 
   for (i = 0; i < model_class->vparam_len; i++)
   {
-	if (g_ptr_array_index (model_class->vparam, i) == NULL)
-	{
-	  g_error ("Class (%s) didn't initialized vector parameter %lu/%u", model_class->name ? model_class->name : "no-name", i + 1, model_class->vparam_len);
-	}
-	/* g_debug ("Model[%s][%s] id %lu\n", model_class->name, ((NcmSParam *)g_ptr_array_index (model_class->params_info, i))->name, i); */
+    if (g_ptr_array_index (model_class->vparam, i) == NULL)
+    {
+      g_error ("Class (%s) didn't initialized vector parameter %lu/%u", model_class->name ? model_class->name : "no-name", i + 1, model_class->vparam_len);
+    }
+    /* g_debug ("Model[%s][%s] id %lu\n", model_class->name, ((NcmSParam *)g_ptr_array_index (model_class->params_info, i))->name, i); */
   }
 }
 
@@ -837,16 +873,16 @@ ncm_model_set_reparam (NcmModel *model, NcmReparam *reparam)
 {
   if (reparam != NULL)
   {
-	model->reparam = ncm_reparam_ref (reparam);
-	model->p = model->reparam->new_params;
-	ncm_reparam_old2new (model->reparam, model, model->params, model->reparam->new_params);
-	_ncm_model_reset_sparams_from_reparam (model);
+    model->reparam = ncm_reparam_ref (reparam);
+    model->p = model->reparam->new_params;
+    ncm_reparam_old2new (model->reparam, model, model->params, model->reparam->new_params);
+    _ncm_model_reset_sparams_from_reparam (model);
   }
   else
   {
-	_ncm_model_sparams_remove_reparam (model);
-	model->reparam = NULL;
-	model->p = model->params;
+    _ncm_model_sparams_remove_reparam (model);
+    model->reparam = NULL;
+    model->p = model->params;
   }
 }
 
@@ -863,15 +899,15 @@ gboolean
 ncm_model_is_equal (NcmModel *model1, NcmModel *model2)
 {
   if (G_OBJECT_TYPE (model1) != G_OBJECT_TYPE (model2))
-	return FALSE;
+    return FALSE;
   if (ncm_vector_len (model1->params) != ncm_vector_len (model2->params))
-	return FALSE;
+    return FALSE;
   if (model1->reparam)
   {
-	if (model2->reparam == NULL)
-	  return FALSE;
-	if (G_OBJECT_TYPE (model1->reparam) != G_OBJECT_TYPE (model2->reparam))
-	  return FALSE;
+    if (model2->reparam == NULL)
+      return FALSE;
+    if (G_OBJECT_TYPE (model1->reparam) != G_OBJECT_TYPE (model2->reparam))
+      return FALSE;
   }
   return TRUE;
 }
@@ -941,8 +977,8 @@ ncm_model_params_set_default (NcmModel *model)
 
   for (i = 0; i < model->total_len; i++)
   {
-	const NcmSParam *p = g_ptr_array_index (model->sparams, i);
-	ncm_vector_set (model->params, i, ncm_sparam_get_default_value (p));
+    const NcmSParam *p = g_ptr_array_index (model->sparams, i);
+    ncm_vector_set (model->params, i, ncm_sparam_get_default_value (p));
   }
 
   ncm_model_orig_params_update (model);
@@ -961,8 +997,8 @@ ncm_model_params_save_as_default (NcmModel *model)
   gint i;
   for (i = 0; i < model->total_len; i++)
   {
-	NcmSParam *p = g_ptr_array_index (model->sparams, i);
-	ncm_sparam_set_default_value (p, ncm_vector_get (model->params, i));
+    NcmSParam *p = g_ptr_array_index (model->sparams, i);
+    ncm_sparam_set_default_value (p, ncm_vector_get (model->params, i));
   }
 }
 
@@ -997,7 +1033,7 @@ ncm_model_params_set_all (NcmModel *model, ...)
   va_start(ap, model);
 
   for (i = 0; i < ncm_vector_len (model->p); i++)
-	ncm_vector_set (model->p, i, va_arg (ap, gdouble));
+    ncm_vector_set (model->p, i, va_arg (ap, gdouble));
 
   va_end(ap);
 
@@ -1020,7 +1056,7 @@ ncm_model_params_set_all_data (NcmModel *model, gdouble *data)
   guint i;
 
   for (i = 0; i < ncm_vector_len (model->p); i++)
-	ncm_vector_set (model->p, i, data[i]);
+    ncm_vector_set (model->p, i, data[i]);
 
   ncm_model_params_update (model);
   return;
@@ -1069,7 +1105,7 @@ ncm_model_params_print_all (NcmModel *model, FILE *out)
 {
   guint i;
   for (i = 0; i < ncm_vector_len (model->p); i++)
-	fprintf (out, "  % 20.16g", ncm_vector_get (model->p, i));
+    fprintf (out, "  % 20.16g", ncm_vector_get (model->p, i));
   fprintf (out, "\n");
   fflush (out);
   return;
@@ -1087,7 +1123,7 @@ ncm_model_params_log_all (NcmModel *model)
 {
   guint i;
   for (i = 0; i < ncm_vector_len (model->p); i++)
-	g_message ("  % 20.16g", ncm_vector_get (model->p, i));
+    g_message ("  % 20.16g", ncm_vector_get (model->p, i));
   g_message ("\n");
   return;
 }
@@ -1099,11 +1135,11 @@ ncm_model_params_log_all (NcmModel *model)
  * FIXME
  *
  * Returns: (transfer full): FIXME
-   */
+ */
 NcmVector *
 ncm_model_params_get_all (NcmModel *model)
 {
-  return ncm_vector_copy (model->p);
+  return ncm_vector_dup (model->p);
 }
 
 /**
@@ -1161,7 +1197,7 @@ ncm_model_params_get_all (NcmModel *model)
  * FIXME
  *
  * Returns: (transfer none): FIXME
- */
+   */
 /**
  * ncm_model_nick:
  * @model: a #NcmModel
@@ -1177,7 +1213,7 @@ ncm_model_params_get_all (NcmModel *model)
  * FIXME
  *
  * Returns: (transfer none): FIXME
- */
+   */
 /**
  * ncm_model_param_finite:
  * @model: a #NcmModel
@@ -1312,7 +1348,6 @@ ncm_model_params_get_all (NcmModel *model)
  *
  * Returns: (transfer full): FIXME
  */
-
 /**
  * ncm_model_param_get_scale:
  * @model: a #NcmModel
@@ -1481,7 +1516,7 @@ ncm_model_param_set_ftype (NcmModel *model, guint n, const NcmParamType ptype)
  * FIXME
  *
  * Returns: (transfer none): FIXME
- */
+   */
 const gchar *
 ncm_model_param_name (NcmModel *model, guint n)
 {

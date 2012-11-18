@@ -671,19 +671,6 @@ nc_distance_acoustic_scale (NcDistance *dist, NcHICosmo *model)
 }
 
 /***************************************************************************
- * Dilation scale ratio Dv(0.35)/Dv(0.2) = 1.858 +/- 0.051 (arXiv:0705.3323)
- *
- ****************************************************************************/
-
-gdouble
-nc_distance_dilation_scale_ratio  (NcDistance *dist, NcHICosmo *model)
-{
-  gdouble Dv_035 = nc_distance_dilation_scale (dist, model, 0.35);
-  gdouble Dv_020 = nc_distance_dilation_scale (dist, model, 0.20);
-  return Dv_035 / Dv_020;
-}
-
-/***************************************************************************
  * Drag redshift (arXiv:astro-ph/9510117)
  *
  ****************************************************************************/
@@ -702,7 +689,7 @@ nc_distance_drag_redshift (NcDistance *dist, NcHICosmo *model)
 }
 
 /***************************************************************************
- * Dilation scaleD_v(z) -- (arXiv:astro-ph/0501171)
+ * Dilation scale D_v(z) -- (arXiv:astro-ph/0501171)
  *
  ****************************************************************************/
 
@@ -768,10 +755,30 @@ nc_distance_ref (NcDistance *dist)
   return g_object_ref (dist);
 }
 
+/**
+ * nc_distance_free:
+ * @dist: a #NcDistance.
+ *
+ * FIXME
+ *
+ */
 void
 nc_distance_free (NcDistance *dist)
 {
   g_object_unref (dist);
+}
+
+/**
+ * nc_distance_clear:
+ * @dist: a #NcDistance.
+ *
+ * FIXME
+ *
+ */
+void
+nc_distance_clear (NcDistance **dist)
+{
+  g_clear_object (dist);
 }
 
 void
@@ -839,15 +846,15 @@ nc_distance_dispose (GObject *object)
 {
   NcDistance *dist = NC_DISTANCE (object);
 
-  nc_function_cache_free (dist->comoving_distance_cache);
-  nc_function_cache_free (dist->time_cache);
-  nc_function_cache_free (dist->lookback_time_cache);
-  nc_function_cache_free (dist->conformal_time_cache);
-  nc_function_cache_free (dist->sound_horizon_cache);
+  nc_function_cache_clear (&dist->comoving_distance_cache);
+  nc_function_cache_clear (&dist->time_cache);
+  nc_function_cache_clear (&dist->lookback_time_cache);
+  nc_function_cache_clear (&dist->conformal_time_cache);
+  nc_function_cache_clear (&dist->sound_horizon_cache);
 
-  ncm_ode_spline_free (dist->comoving_distance_spline);
+  ncm_ode_spline_clear (&dist->comoving_distance_spline);
 
-  ncm_model_ctrl_free (dist->ctrl);
+  ncm_model_ctrl_clear (&dist->ctrl);
 
   /* Chain up : end */
   G_OBJECT_CLASS (nc_distance_parent_class)->dispose (object);

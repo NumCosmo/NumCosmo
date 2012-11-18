@@ -82,9 +82,9 @@ typedef struct _NcLinearPertWorkSpace
   struct _NcLinearPert *pert;
   gboolean tight_coupling;
   gboolean tight_coupling_end;
-  gdouble g_int;
-  gdouble g;
-  gdouble dg;
+  gdouble lambda_int;
+  gdouble lambda;
+  gdouble dlambda;
   gdouble k;
 } NcLinearPertWorkSpace;
 
@@ -104,11 +104,11 @@ struct _NcLinearPert
   struct _NcLinearPertOdeSolver *solver;
   NcLinearPertWorkSpace *pws;
   gdouble eta0;
-  gdouble g0;
-  gdouble gf;
-  gdouble g_opt_cutoff;
-  gdouble g_rec;
-  gdouble g_rec_10m2_max[2];
+  gdouble lambdai;
+  gdouble lambdaf;
+  gdouble lambda_opt_cutoff;
+  gdouble lambda_rec;
+  gdouble lambda_rec_10m2_max[2];
   gdouble abstol;
   gdouble reltol;
   gdouble tc_abstol;
@@ -117,8 +117,8 @@ struct _NcLinearPert
   guint sys_size;
 };
 
-#define NC_PERTURBATIONS_G2X(g0,g) (exp ((g0) - (g)))
-#define NC_PERTURBATIONS_X2G(g0,x) (-log (x) + (g0))
+#define NC_PERTURBATIONS_LAMBDA2X(lambda) (exp (-(lambda)))
+#define NC_PERTURBATIONS_X2LAMBDA(x) (-log (x))
 
 typedef struct _NcLinearPertOdeSolver NcLinearPertOdeSolver;
 
@@ -231,8 +231,10 @@ NcLinearPert *nc_pert_linear_new (NcHICosmo *cosmo, NcRecomb *recomb, guint lmax
 NcLinearPertSplines *nc_pert_linear_splines_new (NcLinearPert *pert, NcLinearPertSplineTypes types, gulong n_deta, gulong n_evol, gdouble k0, gdouble k1);
 void nc_pert_linear_prepare_splines (NcLinearPertSplines *pspline);
 
-void nc_pert_linear_free (NcLinearPert * pert);
+void nc_pert_linear_free (NcLinearPert *pert);
+void nc_pert_linear_clear (NcLinearPert **pert);
 void nc_pert_linear_splines_free (NcLinearPertSplines *pspline);
+void nc_pert_linear_splines_clear (NcLinearPertSplines **pspline);
 
 gboolean nc_pert_linear_spline_set_source_at (NcLinearPertSplines *pspline, gdouble k);
 gboolean nc_pert_linear_calc_Nc_spline (NcLinearPertSplines *pspline, NcmSpline *pw_spline, GArray *los_table, gulong n_interp);

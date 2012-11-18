@@ -22,7 +22,6 @@
  * with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-
 #ifdef HAVE_CONFIG_H
 #  include "config.h"
 #endif /* HAVE_CONFIG_H */
@@ -91,8 +90,8 @@ gint
 main (gint argc, gchar *argv[])
 {
 	NcHICosmo *cosmo;
-	NcDataSet *ds;
-	NcLikelihood *lh;
+	NcmDataset *dset;
+	NcmLikelihood *lh;
 	NcmFit *fit = NULL;
 	NcDistance *dist;
 	NcmMSet *mset;
@@ -107,42 +106,46 @@ main (gint argc, gchar *argv[])
 	g_option_context_parse (context, &argc, &argv, &error);
 
 	dist = nc_distance_new (2.0);
-	ds = nc_dataset_new ();
+	dset = ncm_dataset_new ();
 	cosmo = nc_hicosmo_new_from_name (NC_TYPE_HICOSMO_DE, wmodel);
 	mset = ncm_mset_new (NCM_MODEL (cosmo), NULL);
 
-	lh = nc_likelihood_new (ds);
+	lh = ncm_likelihood_new (dset);
 
 	if (snia_id != -1)
 	{
-		NcData *snia = nc_data_distance_mu_snia (dist, snia_id);
-		nc_dataset_append_data (ds, snia);
+		NcmData *snia = nc_data_dist_mu_new (dist, snia_id);
+		ncm_dataset_append_data (dset, snia);
+    ncm_data_free (snia);
 	}
 
 	if (cmb_id != -1)
 	{
-		NcData *cmb_data = nc_data_cmb (dist, cmb_id);
-		nc_dataset_append_data (ds, cmb_data);
+		NcmData *cmb_data = nc_data_cmb_new (dist, cmb_id);
+		ncm_dataset_append_data (dset, cmb_data);
+    ncm_data_free (cmb_data);
 	}
 
 	if (bao_id != -1)
 	{
-		NcData *bao_data = nc_data_bao (dist, bao_id);
-		nc_dataset_append_data (ds, bao_data);
+		NcmData *bao_data = nc_data_bao_new (dist, bao_id);
+		ncm_dataset_append_data (dset, bao_data);
+    ncm_data_free (bao_data);
 	}
 
 	if (H_id != -1)
 	{
-		NcData *H_data = nc_data_hubble (H_id);
-		nc_dataset_append_data (ds, H_data);
+		NcmData *H_data = nc_data_hubble_new (H_id);
+		ncm_dataset_append_data (dset, H_data);
 		ncm_mset_param_set_ftype (mset, NC_HICOSMO_ID, NC_HICOSMO_DE_H0, NCM_PARAM_TYPE_FREE);
+    ncm_data_free (H_data);
 	}
 
 	if (with_BBN)
 		nc_hicosmo_de_new_add_bbn (lh);
 	if (with_H)
 	{
-		nc_prior_add_gaussian_data (lh, NC_HICOSMO_ID, NC_HICOSMO_DE_H0, 72.0, 8.0);
+		ncm_prior_add_gaussian_data (lh, NC_HICOSMO_ID, NC_HICOSMO_DE_H0, 72.0, 8.0);
 		ncm_mset_param_set_ftype (mset, NC_HICOSMO_ID, NC_HICOSMO_DE_H0, NCM_PARAM_TYPE_FREE);
 	}
 
@@ -153,8 +156,8 @@ main (gint argc, gchar *argv[])
 	}
 
 	if (spherical)
-		nc_prior_add_oneside_a_inf_const_func (lh, ncm_mset_func_new_hicosmo_func0 (&nc_hicosmo_Omega_k),
-		                                       0.0, 1.0e-6);
+		ncm_prior_add_oneside_a_inf_const_func (lh, ncm_mset_func_new_hicosmo_func0 (&nc_hicosmo_Omega_k),
+                                            0.0, 1.0e-6);
 
 	if (flat)
 	{
@@ -210,7 +213,7 @@ main (gint argc, gchar *argv[])
 
     //    printf ("\n\n");
 		//for (z_step = 3.0/T_PHOTON_0-1.0; z_step <= 1800.1; z_step += 1.0 / T_PHOTON_0)
-		for (lambda_step = -log (NC_PERTURBATION_START_X); lambda_step < 0.0009; lambda_step += 1.0e-2)
+		for (lambda_step = -log (NC_PERTURBATION_START_X); lambda_step < 0.0009 && FALSE; lambda_step += 1.0e-2)
 			//for (z_step = 1800.0; z_step >= -0.1 ; z_step -= 1.0e0)
 			//while (1)
 		{
@@ -248,19 +251,12 @@ main (gint argc, gchar *argv[])
 					printf ("% 20.15e % 20.15e\n", k, phi);
 				}
 			}
+      printf ("# Initiating perturbation evolution\n");
 			pert->pws->k = 1.0e0;
 			pert->solver->init (pert);
-			pert->solver->evol (pert, pert->g0);
-			pert->solver->init (pert);
-			pert->solver->evol (pert, pert->g0);
-			pert->solver->init (pert);
-			pert->solver->evol (pert, pert->g0);
-			pert->solver->init (pert);
-			pert->solver->evol (pert, pert->g0);
-			pert->solver->init (pert);
-			pert->solver->evol (pert, pert->g0);
-			pert->solver->init (pert);
-			pert->solver->evol (pert, pert->g0);
+      printf ("# Evolving to % 20.15g\n", pert->lambdaf);
+			pert->solver->evol (pert, pert->lambdaf);
+      exit (0);
 		}
 
 		if (FALSE)
@@ -280,7 +276,7 @@ main (gint argc, gchar *argv[])
 				g_timer_start (total_time);
 				pert->pws->k = 1e-1 * exp ( log (1e4) / 999.0 * i );
 				pert->solver->init (pert);
-				pert->solver->evol (pert, pert->g0);
+				pert->solver->evol (pert, pert->lambdaf);
 				elapsed = g_timer_elapsed (total_time, NULL);
 				elapsed_total += elapsed;
 				mean_time = (i * mean_time + elapsed) / (i + 1.0);
@@ -379,7 +375,7 @@ main (gint argc, gchar *argv[])
 				//      while (1)
 			{
 				GTimer *bench = g_timer_new ();
-				gdouble last_g;
+				gdouble last_lambda;
 				//gdouble timee;
 				gint niter = 0;
 				//pert->pws->k = 1.0e3 + (1000.0 - 0.1) / 100.0 * i;
@@ -394,7 +390,7 @@ main (gint argc, gchar *argv[])
 				//nc_pert_linear_prepare_source_splines (pert, 0.1 + (1000.0 - 0.1) / 100.0 * i, 100);
 				//nc_pert_linear_los_theta (pert, 2000);
 				//pert->solver->evol (pert, pert->gf);
-				while (FALSE && !pert->solver->evol_step (pert, pert->gf))
+				while (FALSE && !pert->solver->evol_step (pert, pert->lambdaf))
 				{
 					gdouble z, x;
 					//gdouble timehere;
@@ -414,13 +410,13 @@ main (gint argc, gchar *argv[])
 					//            printf (" %.15g", NV_Ith_S  (pert->yQ, ii));
 					//          printf ("\n");
 					//          printf ("%.15g\n", pert->g);
-					if (FALSE && (pert->pws->g > last_g * 0.9995))
+					if (FALSE && (pert->pws->lambda > last_lambda * 0.9995))
 					{
 						gint j;
 						printf ("%.15g %.15g %.15g %.15g %.15g %.15g %.15g %.15g %.15g %.15g",
-						        pert->pws->g,                      //1
+						        pert->pws->lambda,            //1
 						        taubar,                       //2
-						        pert->pws->k,                      //3
+						        pert->pws->k,                 //3
 						        E,                            //4
 						        x,                            //5
 						        pert->solver->get_phi (pert), //6
@@ -434,14 +430,14 @@ main (gint argc, gchar *argv[])
 						for (j = 0; j <= pert->lmax && j <= 5; j++)
 							printf (" %.15g", pert->solver->get_theta_p (pert, j));
 						printf ("\n");
-						last_g = pert->pws->g;
+						last_lambda = pert->pws->lambda;
 						fflush (stdout);
 					}
 					if (FALSE)
 					{
 						gint j;
 						for (j = 3; j <= pert->lmax; j++)
-							printf ("%.15g %d %.15g\n", pert->pws->g, j, pert->solver->get_theta (pert, j));
+							printf ("%.15g %d %.15g\n", pert->pws->lambda, j, pert->solver->get_theta (pert, j));
 						printf ("\n");
 					}
 				}
@@ -449,8 +445,8 @@ main (gint argc, gchar *argv[])
 				{
 					gint j;
 					printf ("%.15g %.15g %.15g %.15g %.15g %.15g %.15g",
-					        pert->pws->g,                             //1
-					        pert->pws->k,                             //2
+					        pert->pws->lambda,                   //1
+					        pert->pws->k,                        //2
 					        pert->solver->get_phi (pert),        //3
 					        pert->solver->get_c0 (pert),         //4
 					        pert->solver->get_b0 (pert),         //5
@@ -463,7 +459,7 @@ main (gint argc, gchar *argv[])
 				}
 				if (TRUE)
 				{
-					printf ("# mode (%f) gi (%f) time %fs | total time %fs | niter %d\n", pert->pws->k, pert->pws->g, g_timer_elapsed (bench, NULL), g_timer_elapsed (total_time, NULL), niter);
+					printf ("# mode (%f) lambdai (%f) time %fs | total time %fs | niter %d\n", pert->pws->k, pert->pws->lambda, g_timer_elapsed (bench, NULL), g_timer_elapsed (total_time, NULL), niter);
 					pert->solver->print_stats (pert);
 					fflush (stdout);
 				}
@@ -473,8 +469,8 @@ main (gint argc, gchar *argv[])
 	}
 
 	ncm_model_free (NCM_MODEL (cosmo));
-	nc_likelihood_free (lh);
-	nc_dataset_free0 (ds, TRUE);
+	ncm_likelihood_free (lh);
+	ncm_dataset_free (dset);
 
 	return 0;
 }

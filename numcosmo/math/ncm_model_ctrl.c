@@ -56,14 +56,17 @@ static void
 ncm_model_ctrl_dispose (GObject *object)
 {
   NcmModelCtrl *ctrl = NCM_MODEL_CTRL (object);
-  if (ctrl->model)
-	g_object_unref (ctrl->model);
+
+  ncm_model_clear (&ctrl->model);
+
+  /* Chain up : end */
   G_OBJECT_CLASS (ncm_model_ctrl_parent_class)->dispose (object);
 }
 
 static void
 ncm_model_ctrl_finalize (GObject *object)
 {
+  /* Chain up : end */
   G_OBJECT_CLASS (ncm_model_ctrl_parent_class)->finalize (object);
 }
 
@@ -239,4 +242,10 @@ void
 ncm_model_ctrl_free (NcmModelCtrl *ctrl)
 {
   g_object_unref (ctrl);
+}
+
+void
+ncm_model_ctrl_clear (NcmModelCtrl **ctrl)
+{
+  g_clear_object (ctrl);
 }

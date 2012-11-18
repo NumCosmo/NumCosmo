@@ -66,7 +66,7 @@ ncm_spline_copy_empty (const NcmSpline *s)
 NcmSpline *
 ncm_spline_copy (const NcmSpline *s)
 {
-	return ncm_spline_new (s, ncm_vector_copy (s->xv), ncm_vector_copy (s->yv), TRUE);
+	return ncm_spline_new (s, ncm_vector_dup (s->xv), ncm_vector_dup (s->yv), TRUE);
 }
 
 /**
@@ -386,6 +386,19 @@ ncm_spline_free (NcmSpline *s)
   g_object_unref (s);
 }
 
+/**
+ * ncm_spline_clear:
+ * @s: a #NcmSpline.
+ *
+ * Atomically decrements the reference count of @s by one. If the reference count drops to 0,
+ * all memory allocated by @s is released. The pointer is set to NULL.
+ */
+void
+ncm_spline_clear (NcmSpline **s)
+{
+  g_clear_object (s);
+}
+
 static void
 ncm_spline_init (NcmSpline *s)
 {
@@ -400,16 +413,11 @@ static void
 ncm_spline_dispose (GObject *object)
 {
 	NcmSpline *s = NCM_SPLINE (object);
-	if (!s->empty)
-	{
-		g_assert (s->xv != NULL);
-		g_assert (s->yv != NULL);
-		ncm_vector_free (s->xv);
-		ncm_vector_free (s->yv);
-		s->xv = NULL;
-		s->yv = NULL;
-		s->empty = TRUE;
-	}
+
+  ncm_vector_clear (&s->xv);
+  ncm_vector_clear (&s->yv);
+  
+	s->empty = TRUE;
 
   G_OBJECT_CLASS (ncm_spline_parent_class)->finalize (object);
 }

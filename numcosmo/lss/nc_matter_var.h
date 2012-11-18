@@ -88,6 +88,7 @@ GType nc_matter_var_get_type (void) G_GNUC_CONST;
 NcMatterVar *nc_matter_var_new (NcMatterVarStrategy vs, NcWindow *wp, NcTransferFunc *tf);
 NcMatterVar *nc_matter_var_copy (NcMatterVar *vp);
 void nc_matter_var_free (NcMatterVar *vp);
+void nc_matter_var_clear (NcMatterVar **vp);
 void nc_matter_var_prepare (NcMatterVar *vp, NcHICosmo *model);
 gdouble nc_matter_var_var0 (NcMatterVar *vp, NcHICosmo *model, gdouble lnR);
 gdouble nc_matter_var_dlnvar0_dR (NcMatterVar *vp, NcHICosmo *model, gdouble lnR);

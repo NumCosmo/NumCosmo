@@ -57,7 +57,8 @@ void ncm_cfg_set_logfile (gchar *filename);
 void ncm_cfg_logfile (gboolean on);
 void ncm_cfg_logfile_flush (gboolean on);
 
-void nc_message (gchar *msg, ...);
+void ncm_message (gchar *msg, ...);
+void ncm_cfg_msg_sepa (void);
 
 FILE *ncm_cfg_fopen (gchar *filename, gchar *mode, ...);
 FILE *ncm_cfg_vfopen (gchar *filename, gchar *mode, va_list ap);

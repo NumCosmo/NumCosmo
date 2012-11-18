@@ -161,6 +161,19 @@ ncm_ode_spline_free (NcmOdeSpline *os)
   g_slice_free (NcmOdeSpline, os);
 }
 
+/**
+ * ncm_ode_spline_clear:
+ * @os: a #NcmOdeSpline
+ *
+ * FIXME
+ */
+void
+ncm_ode_spline_clear (NcmOdeSpline **os)
+{
+  ncm_ode_spline_free (*os);
+  *os = NULL;
+}
+
 /* Spline with a not a knot boundary conditions */
 /* Got from gsl 1.15 and then adapted */
 

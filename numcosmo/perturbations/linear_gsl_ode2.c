@@ -96,8 +96,8 @@ static NcLinearPertOdeSolver _ncm_gsl_odeiv2_solver = {
 };
 NcLinearPertOdeSolver *ncm_gsl_odeiv2_solver = &_ncm_gsl_odeiv2_solver;
 
-static gint ncm_gsl_odeiv2_step (gdouble g, const gdouble y[], gdouble ydot[], gpointer params);
-static gint ncm_gsl_odeiv2_band_J (gdouble g, const gdouble y[], gdouble *J, gdouble dfdt[], gpointer user_data);
+static gint ncm_gsl_odeiv2_step (gdouble lambda, const gdouble y[], gdouble ydot[], gpointer params);
+static gint ncm_gsl_odeiv2_band_J (gdouble lambda, const gdouble y[], gdouble *J, gdouble dfdt[], gpointer user_data);
 
 static gpointer
 ncm_gsl_odeiv2_create (NcLinearPert *pert)
@@ -147,7 +147,7 @@ ncm_gsl_odeiv2_reset (NcLinearPert *pert)
 {
   GSLOde2Data *data = GSLODE2_DATA (pert->solver->data);
 
-	pert->pws->dg = 1e-1;
+	pert->pws->dlambda = 1e-1;
 
   gsl_odeiv2_evolve_reset (data->e);
 
@@ -158,7 +158,7 @@ ncm_gsl_odeiv2_reset (NcLinearPert *pert)
 	if (data->d != NULL)
 		gsl_odeiv2_driver_free (data->d);
 
-	data->d = gsl_odeiv2_driver_alloc_scaled_new (&data->sys, data->s_type, pert->pws->dg, 1.0, pert->reltol, 1.0, 0.0, data->abstol->data);
+	data->d = gsl_odeiv2_driver_alloc_scaled_new (&data->sys, data->s_type, pert->pws->dlambda, 1.0, pert->reltol, 1.0, 0.0, data->abstol->data);
 
 	gsl_odeiv2_control_set_driver (data->c, data->d);
 
@@ -178,46 +178,46 @@ change_alg (NcLinearPert *pert)
 }
 
 static gboolean
-ncm_gsl_odeiv2_evol_step (NcLinearPert *pert, gdouble g)
+ncm_gsl_odeiv2_evol_step (NcLinearPert *pert, gdouble lambda)
 {
   GSLOde2Data *data = GSLODE2_DATA (pert->solver->data);
   gint status;
 
-  status = gsl_odeiv2_evolve_apply (data->e, data->c, data->s, &data->sys, &pert->pws->g, g, &pert->pws->dg, data->y->data);
+  status = gsl_odeiv2_evolve_apply (data->e, data->c, data->s, &data->sys, &pert->pws->lambda, lambda, &pert->pws->dlambda, data->y->data);
   if (status != GSL_SUCCESS)
     g_error ("Argg!! %d\n", status);
 
   if (pert->pws->tight_coupling && pert->pws->tight_coupling_end)
     ncm_gsl_odeiv2_end_tight_coupling (pert);
 
-  if (pert->pws->g > -4.5)
+  if (pert->pws->lambda > -4.5)
     change_alg (pert);
 
-  if (pert->pws->g == g)
+  if (pert->pws->lambda == lambda)
     return TRUE;
   else
     return FALSE;
 }
 
 static gboolean
-ncm_gsl_odeiv2_evol (NcLinearPert *pert, gdouble g)
+ncm_gsl_odeiv2_evol (NcLinearPert *pert, gdouble lambda)
 {
   GSLOde2Data *data = GSLODE2_DATA (pert->solver->data);
-	gdouble fg = g;
+	gdouble flambda = lambda;
 
 	//g = 1e-3;
-  while (fg > pert->pws->g)
+  while (flambda > pert->pws->lambda)
   {
 		printf ("# Aqui\n"); fflush (stdout);
-    gint status = gsl_odeiv2_evolve_apply (data->e, data->c, data->s, &data->sys, &pert->pws->g, g, &pert->pws->dg, data->y->data);
+    gint status = gsl_odeiv2_evolve_apply (data->e, data->c, data->s, &data->sys, &pert->pws->lambda, lambda, &pert->pws->dlambda, data->y->data);
 		//gint status = gsl_odeiv2_driver_apply (data->d, &pert->pws->g, g, data->y->data);
 		printf ("# Aqui\n"); fflush (stdout);
 		//g *= 1.1;
-		printf ("%d % 20.15g % 20.15g % 20.15g\n", status, pert->pws->g, g, pert->pws->dg);
+		printf ("%d % 20.15g % 20.15g % 20.15g\n", status, pert->pws->lambda, lambda, pert->pws->dlambda);
     if (pert->pws->tight_coupling && pert->pws->tight_coupling_end)
       ncm_gsl_odeiv2_end_tight_coupling (pert);
   }
-  if (pert->pws->g == g)
+  if (pert->pws->lambda == lambda)
     return TRUE;
   else
     return FALSE;
@@ -251,8 +251,8 @@ ncm_gsl_odeiv2_print_stats (NcLinearPert *pert)
 #define LINEAR_VEC_LOS_THETA(pert) (GSLODE2_DATA(pert->solver->data)->y->data)
 #define LINEAR_STEP_RET gint
 #define LINEAR_NAME_SUFFIX(base) ncm_gsl_odeiv2_##base
-#define LINEAR_STEP_PARAMS gdouble g, const gdouble y[], gdouble ydot[], gpointer user_data
-#define LINEAR_JAC_PARAMS double g, const gdouble y[], gdouble *J, gdouble dfdt[], gpointer user_data
+#define LINEAR_STEP_PARAMS gdouble lambda, const gdouble y[], gdouble ydot[], gpointer user_data
+#define LINEAR_JAC_PARAMS gdouble lambda, const gdouble y[], gdouble *J, gdouble dfdt[], gpointer user_data
 #define LINEAR_STEP_RET_VAL return GSL_SUCCESS
 
 #include "linear_generic.c"

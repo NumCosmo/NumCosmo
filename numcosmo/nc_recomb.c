@@ -201,12 +201,10 @@ static void
 nc_recomb_dispose (GObject *object)
 {
   NcRecomb *recomb = NC_RECOMB (object);
-  if (recomb->Xe_s != NULL)
-    ncm_spline_free (recomb->Xe_s);
-  if (recomb->dtau_dlambda_s != NULL)
-    ncm_spline_free (recomb->dtau_dlambda_s);
-  if (recomb->tau_s != NULL)
-    ncm_spline_free (recomb->tau_s);
+
+  ncm_spline_clear (&recomb->Xe_s);
+  ncm_spline_clear (&recomb->dtau_dlambda_s);
+  ncm_spline_clear (&recomb->tau_s);
 
   /* Chain up : end */
   G_OBJECT_CLASS (nc_recomb_parent_class)->dispose (object);

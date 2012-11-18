@@ -87,7 +87,21 @@ nc_multiplicity_func_eval (NcMultiplicityFunc *mulf, NcHICosmo *model, gdouble s
 void
 nc_multiplicity_func_free (NcMultiplicityFunc *mulf)
 {
-  g_clear_object (&mulf);
+  g_object_unref (mulf);
+}
+
+/**
+ * nc_multiplicity_func_clear:
+ * @mulf: a #NcMultiplicityFunc.
+ *
+ * Atomically decrements the reference count of @mulf by one. If the reference count drops to 0,
+ * all memory allocated by @mulf is released. Set pointer to NULL.
+ *
+*/
+void
+nc_multiplicity_func_clear (NcMultiplicityFunc **mulf)
+{
+  g_clear_object (mulf);
 }
 
 static void

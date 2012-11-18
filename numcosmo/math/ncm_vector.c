@@ -206,7 +206,7 @@ ncm_vector_ref (NcmVector *cv)
 }
 
 /**
- * ncm_vector_copy:
+ * ncm_vector_dup:
  * @cv: a constant #NcmVector.
  *
  * This function copies the elements of the constant vector @cv into a new #NcmVector.
@@ -214,7 +214,7 @@ ncm_vector_ref (NcmVector *cv)
  * Returns: (transfer full): A #NcmVector.
    */
 NcmVector *
-ncm_vector_copy (const NcmVector *cv)
+ncm_vector_dup (const NcmVector *cv)
 {
   NcmVector *cv_cp = ncm_vector_new (ncm_vector_len(cv));
   gsl_vector_memcpy (ncm_vector_gsl(cv_cp), ncm_vector_const_gsl(cv));
@@ -373,7 +373,7 @@ ncm_vector_get_subvector (NcmVector *cv, gsize k, gsize size)
  * @cv1: a #NcmVector.
  * @cv2: a #NcmVector.
  *
- * This function copies the components of the vector @cv1 into the vector @cv2.
+ * This function copies the components of the vector @cv2 into the vector @cv1.
  * The two vectors must have the same length.
  *
  */
@@ -443,17 +443,15 @@ static void
 _ncm_vector_dispose (GObject *object)
 {
   NcmVector *cv = NCM_VECTOR (object);
-  if (cv->a)
+  if (cv->a != NULL)
   {
-	g_array_unref (cv->a);
-	cv->a = NULL;
+    g_array_unref (cv->a);
+    cv->a = NULL;
   }
+  
+  g_clear_object (&cv->pobj);
 
-  if (cv->pobj)
-  {
-	g_object_unref (cv->pobj);
-	cv->pobj = NULL;
-  }
+  /* Chain up : end */
   G_OBJECT_CLASS (ncm_vector_parent_class)->dispose (object);
 }
 
@@ -496,8 +494,24 @@ void
 ncm_vector_free (NcmVector *cv)
 {
   if (g_object_is_floating (cv))
-	g_object_ref_sink (cv);
+    g_object_ref_sink (cv);
   g_object_unref (cv);
+}
+
+/**
+ * ncm_vector_clear:
+ * @cv: a #NcmVector.
+ *
+ * Atomically decrements the reference count of @cv by one. If the reference count drops to 0,
+ * all memory allocated by @cv is released. The pointer is set to NULL.
+ *
+ */
+void 
+ncm_vector_clear (NcmVector **cv)
+{
+  if (*cv != NULL && g_object_is_floating (*cv))
+    g_object_ref_sink (*cv);
+  g_clear_object (cv);  
 }
 
 /**

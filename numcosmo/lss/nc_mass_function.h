@@ -90,6 +90,7 @@ GType nc_mass_function_get_type (void) G_GNUC_CONST;
 NcMassFunction *nc_mass_function_new (NcDistance *dist, NcMatterVar *vp, NcGrowthFunc *gf, NcMultiplicityFunc *mulf);
 NcMassFunction *nc_mass_function_copy (NcMassFunction *mfp);
 void nc_mass_function_free (NcMassFunction *mfp);
+void nc_mass_function_clear (NcMassFunction **mfp);
 
 void nc_mass_function_set_eval_limits (NcMassFunction *mfp, NcHICosmo *model, gdouble lnMi, gdouble lnMf, gdouble zi, gdouble zf);
 void nc_mass_function_prepare (NcMassFunction *mfp, NcHICosmo *model);

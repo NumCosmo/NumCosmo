@@ -66,6 +66,7 @@ GType nc_growth_func_get_type (void) G_GNUC_CONST;
 NcGrowthFunc * nc_growth_func_new (void);
 NcGrowthFunc * nc_growth_func_copy (NcGrowthFunc *gf);
 void nc_growth_func_free (NcGrowthFunc *gf);
+void nc_growth_func_clear (NcGrowthFunc **gf);
 void nc_growth_func_prepare (NcGrowthFunc * gf, NcHICosmo * model);
 G_INLINE_FUNC gdouble nc_growth_func_eval (NcGrowthFunc *gf, NcHICosmo *model, gdouble z);
 G_INLINE_FUNC gdouble nc_growth_func_eval_deriv (NcGrowthFunc *gf, NcHICosmo *model, gdouble z);

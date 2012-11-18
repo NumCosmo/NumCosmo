@@ -162,8 +162,13 @@ static void
 ncm_mset_func_dispose (GObject *object)
 {
   NcmMSetFunc *func = NCM_MSET_FUNC (object);
-  if (func->free)
-	func->free (func->obj);
+
+  if (func->free && func->obj != NULL)
+  {
+    func->free (func->obj);
+    func->obj = NULL;
+  }
+
   /* Chain up : end */
   G_OBJECT_CLASS (ncm_mset_func_parent_class)->dispose (object);
 }

@@ -97,6 +97,7 @@ NcClusterAbundance *nc_cluster_abundance_new (NcMassFunction *mfp, NcHaloBiasFun
 NcClusterAbundance *nc_cluster_abundance_copy (NcClusterAbundance *cad);
 NcClusterAbundance *nc_cluster_abundance_ref (NcClusterAbundance *cad);
 void nc_cluster_abundance_free (NcClusterAbundance *cad);
+void nc_cluster_abundance_clear (NcClusterAbundance **cad);
 
 void nc_cluster_abundance_prepare (NcClusterAbundance *cad, NcHICosmo *model);
 void nc_cluster_abundance_prepare_inv_dNdz (NcClusterAbundance *cad, NcHICosmo *model);

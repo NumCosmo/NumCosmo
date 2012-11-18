@@ -120,7 +120,21 @@ ncm_sparam_copy (NcmSParam *sparam)
 void
 ncm_sparam_free (NcmSParam *sparam)
 {
-  g_clear_object (&sparam);
+  g_object_unref (sparam);
+}
+
+/**
+ * ncm_sparam_clear:
+ * @sparam: a #NcmSParam.
+ *
+ * Atomically decrements the reference count of @sparam by one. If the reference count drops to 0,
+ * all memory allocated by @sparam is released. Set the pointer to NULL.
+ *
+ */
+void
+ncm_sparam_clear (NcmSParam **sparam)
+{
+  g_clear_object (sparam);
 }
 
 /**

@@ -33,7 +33,7 @@
 #include <numcosmo/math/ncm_model.h>
 #include <numcosmo/math/ncm_mset.h>
 #include <numcosmo/math/ncm_mset_func.h>
-#include <numcosmo/likelihood/likelihood.h>
+#include <numcosmo/math/ncm_likelihood.h>
 
 #ifdef HAVE_NLOPT_2_2
 #include <nlopt.h>
@@ -150,7 +150,7 @@ struct _NcmFit
 {
   /*< private >*/
   GObject parent_instance;
-  NcLikelihood *lh;
+  NcmLikelihood *lh;
   NcmMSet *mset;
   NcmFitType type;
   NcmFitGradType gtype;
@@ -199,10 +199,11 @@ struct _NcmFit
 
 GType ncm_fit_get_type (void) G_GNUC_CONST;
 
-NcmFit *ncm_fit_new (NcLikelihood *lh, NcmMSet *mset, NcmFitType type, NcmFitGradType gtype);
+NcmFit *ncm_fit_new (NcmLikelihood *lh, NcmMSet *mset, NcmFitType type, NcmFitGradType gtype);
 NcmFit *ncm_fit_ref (NcmFit *fit);
 NcmFit *ncm_fit_copy (NcmFit *fit);
 void ncm_fit_free (NcmFit *fit);
+void ncm_fit_clear (NcmFit **fit);
 
 void ncm_fit_save (NcmFit *fit, NcmVector *x, NcmVector *f, NcmMatrix *J);
 

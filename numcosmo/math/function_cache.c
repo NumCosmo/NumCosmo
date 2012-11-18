@@ -90,6 +90,21 @@ nc_function_cache_free (NcFunctionCache *cache)
 }
 
 /**
+ * nc_function_cache_clear:
+ * @cache: a #NcFunctionCache
+ *
+ * FIXME
+ *
+*/
+void
+nc_function_cache_clear (NcFunctionCache **cache)
+{
+  nc_function_cache_free (*cache);
+  *cache = NULL;
+  return;
+}
+
+/**
  * nc_function_cache_insert_vector: (skip)
  * @cache: a #NcFunctionCache
  * @x: FIXME

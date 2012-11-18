@@ -36,7 +36,7 @@
 #include "build_cfg.h"
 
 #include "likelihood/confidence_region.h"
-#include "likelihood/priors.h"
+#include "math/ncm_priors.h"
 #include "math/util.h"
 
 #include <gsl/gsl_eigen.h>
@@ -92,7 +92,7 @@ nc_confidence_region_new_1d (NcmFit *fit, NcmModelID gmid, guint pid)
   cr->chi2 = -1.0;
   cr->minimize = TRUE;
 
-  cr->prior = g_slice_alloc (2 * sizeof (NcGaussianPrior));
+  cr->prior = g_slice_alloc (2 * sizeof (NcmPriorGauss));
   cr->points = NULL;
 
   return cr;
@@ -165,7 +165,7 @@ nc_confidence_region_new (NcmFit *fit, NcmModelID gmid1, guint pid1, NcmModelID 
   cr->chi2 = -1.0;
   cr->minimize = TRUE;
 
-  cr->prior = g_slice_alloc (2 * sizeof(NcGaussianPrior));
+  cr->prior = g_slice_alloc (2 * sizeof (NcmPriorGauss));
   cr->points = NULL;
 
   ncm_matrix_free (local_cov);
@@ -193,7 +193,7 @@ nc_confidence_region_free (NcConfidenceRegion *cr)
   if (cr->points != NULL)
 	g_list_free (cr->points);
 
-  g_slice_free1 (2 * sizeof(NcGaussianPrior), cr->prior);
+  g_slice_free1 (2 * sizeof (NcmPriorGauss), cr->prior);
   g_slice_free (NcConfidenceRegion, cr);
   return TRUE;
 }

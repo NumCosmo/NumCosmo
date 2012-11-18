@@ -187,6 +187,18 @@ ncm_reparam_free (NcmReparam *reparam)
   g_object_unref (reparam);
 }
 
+/**
+ * ncm_reparam_clear:
+ * @reparam: a #NcmReparam
+ *
+ * FIXME
+ */
+void
+ncm_reparam_clear (NcmReparam **reparam)
+{
+  g_clear_object (reparam);
+}
+
 static void
 _ncm_reparam_constructed (GObject *object)
 {

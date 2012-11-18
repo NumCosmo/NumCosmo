@@ -30,6 +30,7 @@
 #include <numcosmo/math/ncm_c.h>
 #include <numcosmo/math/ncm_model.h>
 #include <numcosmo/math/ncm_mset_func.h>
+#include <numcosmo/math/ncm_likelihood.h>
 
 G_BEGIN_DECLS
 

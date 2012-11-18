@@ -88,6 +88,19 @@ nc_cluster_mass_free (NcClusterMass *clusterm)
 }
 
 /**
+ * nc_cluster_mass_clear:
+ * @clusterm: FIXME.
+ *
+ * FIXME
+ *
+ */
+void
+nc_cluster_mass_clear (NcClusterMass **clusterm)
+{
+  g_clear_object (clusterm);
+}
+
+/**
  * nc_cluster_mass_impl:
  * @clusterm: FIXME.
  *

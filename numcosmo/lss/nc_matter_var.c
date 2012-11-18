@@ -113,9 +113,23 @@ nc_matter_var_copy (NcMatterVar * vp)
  *
 */
 void
-nc_matter_var_free (NcMatterVar * vp)
+nc_matter_var_free (NcMatterVar *vp)
 {
-  g_clear_object (&vp);
+  g_object_unref (vp);
+}
+
+/**
+ * nc_matter_var_clear:
+ * @vp: a #NcMatterVar.
+ *
+ * Atomically decrements the reference count of @vp by one. If the reference count drops to 0,
+ * all memory allocated by @vp is released. Set pointer to NULL.
+ *
+*/
+void
+nc_matter_var_clear (NcMatterVar **vp)
+{
+  g_clear_object (vp);
 }
 
 static void
@@ -136,15 +150,13 @@ static void
 _nc_matter_var_dispose (GObject * object)
 {
   NcMatterVar *vp = NC_MATTER_VAR (object);
-  nc_window_free (vp->wp);
-  nc_transfer_func_free (vp->tf);
-  ncm_model_ctrl_free (vp->ctrl);
-  if (vp->integrand_overw2_spline != NULL)
-	ncm_spline_free (vp->integrand_overw2_spline);
-  if (vp->sigma2_over_growth != NULL)
-	ncm_spline_free (vp->sigma2_over_growth);
-  if (vp->deriv_sigma2_over_growth != NULL)
-	ncm_spline_free (vp->deriv_sigma2_over_growth);
+  
+  nc_window_clear (&vp->wp);
+  nc_transfer_func_clear (&vp->tf);
+  ncm_model_ctrl_clear (&vp->ctrl);
+	ncm_spline_clear (&vp->integrand_overw2_spline);
+	ncm_spline_clear (&vp->sigma2_over_growth);
+	ncm_spline_clear (&vp->deriv_sigma2_over_growth);
 
   /* Chain up : end */
   G_OBJECT_CLASS (nc_matter_var_parent_class)->dispose (object);

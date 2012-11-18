@@ -66,7 +66,8 @@ NcTransferFunc *nc_transfer_func_new_from_name (gchar *transfer_name);
 void nc_transfer_func_prepare (NcTransferFunc *tf, NcHICosmo *model);
 gdouble nc_transfer_func_eval (NcTransferFunc *tf, NcHICosmo *model, gdouble kh);
 gdouble nc_transfer_func_matter_powerspectrum (NcTransferFunc *tf, NcHICosmo *model, gdouble kh);
-void nc_transfer_func_free (NcTransferFunc * tf);
+void nc_transfer_func_free (NcTransferFunc *tf);
+void nc_transfer_func_clear (NcTransferFunc **tf);
 
 G_END_DECLS
 

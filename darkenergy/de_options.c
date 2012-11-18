@@ -75,7 +75,7 @@ nc_de_opt_get_model_group (NcDEModelEntries *de_model, GOptionEntry **de_model_e
 static gboolean
 _nc_de_print_snia_list (const gchar *option_name, const gchar *value, gpointer data, GError **error)
 {
-  ncm_cfg_enum_print_all (NC_TYPE_DATA_DISTANCE_MU_SN_IA_ID, "Supernovae Type Ia samples");
+  ncm_cfg_enum_print_all (NC_TYPE_DATA_DIST_MU_ID, "Supernovae Type Ia samples");
   return TRUE;
 }
 

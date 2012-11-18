@@ -63,6 +63,7 @@ NcmVParam *ncm_vparam_new (guint len, NcmSParam *default_param);
 NcmVParam *ncm_vparam_full_new (guint len, gchar *name, gchar *symbol, gdouble lower_bound, gdouble upper_bound, gdouble scale, gdouble abstol, gdouble default_val, NcmParamType ftype);
 NcmVParam *ncm_vparam_copy (NcmVParam *vparam);
 void ncm_vparam_free (NcmVParam *vparam);
+void ncm_vparam_clear (NcmVParam **vparam);
 
 void ncm_vparam_set_len (NcmVParam *vparam, guint len);
 guint ncm_vparam_get_len (NcmVParam *vparam);

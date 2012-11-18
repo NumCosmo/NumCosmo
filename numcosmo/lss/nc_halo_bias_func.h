@@ -62,6 +62,8 @@ GType nc_halo_bias_func_get_type (void) G_GNUC_CONST;
 NcHaloBiasFunc *nc_halo_bias_func_new (NcMassFunction *mfp, NcHaloBiasType *biasf);
 NcHaloBiasFunc *nc_halo_bias_func_copy (NcHaloBiasFunc *mbiasf);
 void nc_halo_bias_func_free (NcHaloBiasFunc *mbiasf);
+void nc_halo_bias_func_clear (NcHaloBiasFunc **mbiasf);
+
 gdouble nc_halo_bias_func_integrand (NcHaloBiasFunc *mbiasf, NcHICosmo *model, gdouble lnM, gdouble z);
 
 G_END_DECLS

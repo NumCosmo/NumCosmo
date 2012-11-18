@@ -65,28 +65,29 @@
 #include <numcosmo/math/ncm_mset_func.h>
 #include <numcosmo/math/ncm_ode_spline.h>
 #include <numcosmo/math/ncm_reparam_linear.h>
+#include <numcosmo/math/ncm_data.h>
+#include <numcosmo/math/ncm_data_dist1d.h>
+#include <numcosmo/math/ncm_data_gauss.h>
+#include <numcosmo/math/ncm_data_gauss_cov.h>
+#include <numcosmo/math/ncm_data_gauss_diag.h>
+#include <numcosmo/math/ncm_data_poisson.h>
+#include <numcosmo/math/ncm_dataset.h>
+#include <numcosmo/math/ncm_likelihood.h>
+#include <numcosmo/math/ncm_priors.h>
 #include <numcosmo/math/function_cache.h>
 #include <numcosmo/math/ncm_cfg.h>
 #include <numcosmo/nc_hicosmo.h>
 #include <numcosmo/nc_distance.h>
+#include <numcosmo/nc_hicosmo_priors.h>
 #include <numcosmo/scalefactor.h>
 /* Cosmic thermodynamics */
 #include <numcosmo/nc_recomb.h>
 #include <numcosmo/nc_recomb_seager.h>
 
-/* Dataset object  */
-#include <numcosmo/data/data.h>
-#include <numcosmo/data/dataset.h>
-#include <numcosmo/data/data_gaussian.h>
-#include <numcosmo/data/data_poisson.h>
-#include <numcosmo/data/data_onevardist.h>
-
 /* Utilities */
 #include <numcosmo/math/util.h>
 
 /* Likelihood object */
-#include <numcosmo/likelihood/likelihood.h>
-#include <numcosmo/likelihood/priors.h>
 #include <numcosmo/math/ncm_fit.h>
 #include <numcosmo/likelihood/confidence_region.h>
 #include <numcosmo/likelihood/multimin.h>
@@ -178,11 +179,17 @@
 #include <numcosmo/lss/print_data.h>
 
 /* Observable data */
-#include <numcosmo/lss/nc_data_cluster_abundance.h>
-#include <numcosmo/data/nc_data_distance_mu.h>
-#include <numcosmo/data/nc_data_hubble.h>
-#include <numcosmo/data/nc_data_bao.h>
-#include <numcosmo/data/nc_data_cmb.h>
-
+#include <numcosmo/nc_data_dist_mu.h>
+#include <numcosmo/nc_data_hubble.h>
+#include <numcosmo/nc_data_bao_a.h>
+#include <numcosmo/nc_data_bao_dv.h>
+#include <numcosmo/nc_data_bao_rdv.h>
+#include <numcosmo/nc_data_bao_dvdv.h>
+#include <numcosmo/nc_data_bao.h>
+#include <numcosmo/nc_data_cmb_dist_priors.h>
+#include <numcosmo/nc_data_cmb_shift_param.h>
+#include <numcosmo/nc_data_cmb.h>
+#include <numcosmo/nc_data_cluster_ncount.h>
+#include <numcosmo/nc_data_cluster_poisson.h>
 
 #endif /* _NUMCOSMO_H */

@@ -92,8 +92,8 @@ static NcLinearPertOdeSolver _gsl_ode_solver = {
 };
 NcLinearPertOdeSolver *gsl_ode_solver = &_gsl_ode_solver;
 
-static gint gsl_ode_step (gdouble g, const gdouble y[], gdouble ydot[], gpointer params);
-static gint gsl_ode_band_J (gdouble g, const gdouble y[], gdouble *J, gdouble dfdt[], gpointer user_data);
+static gint gsl_ode_step (gdouble lambda, const gdouble y[], gdouble ydot[], gpointer params);
+static gint gsl_ode_band_J (gdouble lambda, const gdouble y[], gdouble *J, gdouble dfdt[], gpointer user_data);
 
 static gpointer 
 gsl_ode_create (NcLinearPert *pert)
@@ -147,7 +147,7 @@ gsl_ode_reset (NcLinearPert *pert)
     gsl_odeiv_control_free (data->c);
   data->c = gsl_odeiv_control_scaled_new (1.0, pert->reltol, 1.0, 0.0, data->abstol->data, pert->sys_size);
 
-  pert->pws->dg = 1e-10;
+  pert->pws->dlambda = 1e-10;
   
   gsl_ode_set_opts (pert);
 
@@ -155,36 +155,36 @@ gsl_ode_reset (NcLinearPert *pert)
 }
 
 static gboolean
-gsl_ode_evol_step (NcLinearPert *pert, gdouble g)
+gsl_ode_evol_step (NcLinearPert *pert, gdouble lambda)
 {
   GSLOdeData *data = GSLODE_DATA (pert->solver->data);
 
-  gint status = gsl_odeiv_evolve_apply (data->e, data->c, data->s, &data->sys, &pert->pws->g, g, &pert->pws->dg, data->y->data);
+  gint status = gsl_odeiv_evolve_apply (data->e, data->c, data->s, &data->sys, &pert->pws->lambda, lambda, &pert->pws->dlambda, data->y->data);
   if (status != GSL_SUCCESS)
     g_error ("Argg!!\n");
   
   if (pert->pws->tight_coupling && pert->pws->tight_coupling_end)
     gsl_ode_end_tight_coupling (pert); 
 
-  if (pert->pws->g == g)
+  if (pert->pws->lambda == lambda)
     return TRUE;
   else
     return FALSE;
 }
 
 static gboolean
-gsl_ode_evol (NcLinearPert *pert, gdouble g)
+gsl_ode_evol (NcLinearPert *pert, gdouble lambda)
 {
   GSLOdeData *data = GSLODE_DATA (pert->solver->data);
 
-  while (g > pert->pws->g)
+  while (lambda > pert->pws->lambda)
   {
-    gsl_odeiv_evolve_apply (data->e, data->c, data->s, &data->sys, &pert->pws->g, g, &pert->pws->dg, data->y->data);
+    gsl_odeiv_evolve_apply (data->e, data->c, data->s, &data->sys, &pert->pws->lambda, lambda, &pert->pws->dlambda, data->y->data);
     
     if (pert->pws->tight_coupling && pert->pws->tight_coupling_end)
       gsl_ode_end_tight_coupling (pert);
   }
-  if (pert->pws->g == g)
+  if (pert->pws->lambda == lambda)
     return TRUE;
   else
     return FALSE;
@@ -218,8 +218,8 @@ gsl_ode_print_stats (NcLinearPert *pert)
 #define LINEAR_VEC_LOS_THETA(pert) (GSLODE_DATA(pert->solver->data)->y->data)
 #define LINEAR_STEP_RET gint
 #define LINEAR_NAME_SUFFIX(base) gsl_ode_##base
-#define LINEAR_STEP_PARAMS gdouble g, const gdouble y[], gdouble ydot[], gpointer user_data
-#define LINEAR_JAC_PARAMS double g, const gdouble y[], gdouble *J, gdouble dfdt[], gpointer user_data
+#define LINEAR_STEP_PARAMS gdouble lambda, const gdouble y[], gdouble ydot[], gpointer user_data
+#define LINEAR_JAC_PARAMS gdouble lambda, const gdouble y[], gdouble *J, gdouble dfdt[], gpointer user_data
 #define LINEAR_STEP_RET_VAL return 0
 
 #include "linear_generic.c"

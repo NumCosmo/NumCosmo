@@ -104,6 +104,7 @@ void ncm_model_class_check_params_info (NcmModelClass *model_class);
 NcmModel *ncm_model_copy (NcmModel *model);
 void ncm_model_copyto (NcmModel *model, NcmModel *model_dest);
 void ncm_model_free (NcmModel *model);
+void ncm_model_clear (NcmModel **model);
 void ncm_model_set_reparam (NcmModel *model, NcmReparam *reparam);
 gboolean ncm_model_is_equal (NcmModel *model1, NcmModel *model2);
 

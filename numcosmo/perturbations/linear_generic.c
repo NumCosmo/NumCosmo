@@ -23,17 +23,17 @@
  */
 
 static void
-LINEAR_NAME_SUFFIX(init) (NcLinearPert *pert)
+LINEAR_NAME_SUFFIX (init) (NcLinearPert *pert)
 {
   LINEAR_VECTOR_PREPARE;
-  const gdouble x = NC_PERTURBATION_START_X;
+  const gdouble x = NC_PERTURBATIONS_LAMBDA2X (pert->lambdai);
   const gdouble z = x - 1.0;
   const gdouble E2 = nc_hicosmo_E2 (pert->cosmo, z);
   const gdouble E = sqrt (E2);
   const gdouble Omega_r = nc_hicosmo_Omega_r (pert->cosmo);
   const gdouble Omega_b = nc_hicosmo_Omega_b (pert->cosmo);
   const gdouble R0 = 4.0 * Omega_r / (3.0 * Omega_b);
-  const gdouble taubar = nc_recomb_dtau_dlambda (pert->recomb, pert->cosmo, x);
+  const gdouble taubar = nc_recomb_dtau_dlambda (pert->recomb, pert->cosmo, pert->lambdai);
   const gdouble taudot = E / x * taubar;
   const gdouble keta = pert->pws->k / (sqrt (Omega_r) * x);
   const gdouble keta3 = gsl_pow_3 (keta);
@@ -41,13 +41,12 @@ LINEAR_NAME_SUFFIX(init) (NcLinearPert *pert)
   gdouble theta1;
   gint i;
 
-  pert->gf    = pert->g0;
-  pert->pws->g_int = 0.0;
-  pert->pws->g     = 0.0;
+  pert->pws->lambda_int = pert->lambdai;
+  pert->pws->lambda     = pert->lambdai;
 
   LINEAR_VECTOR_SET_ALL (y, 0.0, pert->sys_size);
 
-  pert->pws->tight_coupling = TRUE;
+  pert->pws->tight_coupling = FALSE;
   pert->pws->tight_coupling_end = FALSE;
 
   _NC_PHI = 1.0;
@@ -62,10 +61,17 @@ LINEAR_NAME_SUFFIX(init) (NcLinearPert *pert)
 
     theta1 = -keta / 6.0 * _NC_PHI;
   }
-  else
+  else if (FALSE)
   {
     _NC_THETA0 = _NC_B0 = _NC_C0;
     _NC_THETA1 = _NC_B1 = _NC_C1 = theta1 = -keta / 6.0 * _NC_PHI;
+  }
+  else
+  {
+    _NC_THETA0 = _NC_B0 = _NC_C0;
+    _NC_THETA1 = _NC_C1 = theta1 = -keta / 6.0 * _NC_PHI;
+    _NC_B1 = 1e-80;
+    _NC_THETA0 = 1e-80;
   }
 
   _NC_THETA2 = -8.0 / 15.0 * k_taudot * theta1;
@@ -108,23 +114,23 @@ LINEAR_NAME_SUFFIX(init) (NcLinearPert *pert)
   }
 #endif
 
-  LINEAR_NAME_SUFFIX(reset) (pert);
+  LINEAR_NAME_SUFFIX (reset) (pert);
 
   return;
 }
 
 static void
-LINEAR_NAME_SUFFIX(end_tight_coupling) (NcLinearPert *pert)
+LINEAR_NAME_SUFFIX (end_tight_coupling) (NcLinearPert *pert)
 {
   LINEAR_VECTOR_PREPARE;
-  const gdouble x = exp(-pert->pws->g + pert->g0);
+  const gdouble x = NC_PERTURBATIONS_LAMBDA2X (pert->pws->lambda);
   const gdouble Omega_r = nc_hicosmo_Omega_r (pert->cosmo);
   const gdouble Omega_b = nc_hicosmo_Omega_b (pert->cosmo);
   const gdouble R0 = 4.0 * Omega_r / (3.0 * Omega_b);
   const gdouble R = R0 * x;
   const gdouble E2 = nc_hicosmo_E2 (pert->cosmo, x-1.0);
   const gdouble kx_3E = pert->pws->k * x / (3.0 * sqrt (E2));
-//  const gdouble taubar = nc_recomb_taubar (pert->recomb, x);
+//  const gdouble taubar = nc_recomb_taubar (pert->recomb, lambda);
 
   if (FALSE)
     return;
@@ -132,7 +138,7 @@ LINEAR_NAME_SUFFIX(end_tight_coupling) (NcLinearPert *pert)
   if (!pert->pws->tight_coupling)
     return;
 
-  printf ("# tight coupling ended at %f => %f\n", pert->pws->g, exp(-pert->pws->g));
+  printf ("# tight coupling ended at %f => %f\n", pert->pws->lambda, exp (-pert->pws->lambda));
 
   pert->pws->tight_coupling = FALSE;
   pert->pws->tight_coupling_end = FALSE;
@@ -166,13 +172,13 @@ LINEAR_NAME_SUFFIX(end_tight_coupling) (NcLinearPert *pert)
       LINEAR_VEC_COMP (LINEAR_VEC_ABSTOL(pert), i) = 0.0;
   }
 
-  LINEAR_NAME_SUFFIX(reset) (pert);
+  LINEAR_NAME_SUFFIX (reset) (pert);
 
   return;
 }
 
 gdouble
-LINEAR_NAME_SUFFIX(get_k_H) (NcLinearPert *pert)
+LINEAR_NAME_SUFFIX (get_k_H) (NcLinearPert *pert)
 {
   const gdouble k = pert->pws->k;
   const gdouble c_H0 = ncm_c_c () / (nc_hicosmo_H0 (pert->cosmo) * 1.0e3);
@@ -180,13 +186,13 @@ LINEAR_NAME_SUFFIX(get_k_H) (NcLinearPert *pert)
 }
 
 gdouble
-LINEAR_NAME_SUFFIX(get_z) (NcLinearPert *pert)
+LINEAR_NAME_SUFFIX (get_z) (NcLinearPert *pert)
 {
-  return exp(-pert->pws->g + pert->g0)-1.0;
+  return NC_PERTURBATIONS_LAMBDA2X (pert->pws->lambda) - 1.0;
 }
 
 gdouble
-LINEAR_NAME_SUFFIX(get) (NcLinearPert *pert, guint n)
+LINEAR_NAME_SUFFIX (get) (NcLinearPert *pert, guint n)
 {
   switch (n)
   {
@@ -212,21 +218,21 @@ LINEAR_NAME_SUFFIX(get) (NcLinearPert *pert, guint n)
 }
 
 gdouble
-LINEAR_NAME_SUFFIX(get_phi) (NcLinearPert *pert)
+LINEAR_NAME_SUFFIX (get_phi) (NcLinearPert *pert)
 {
   LINEAR_VECTOR_PREPARE;
   return _NC_PHI;
 }
 
 gdouble
-LINEAR_NAME_SUFFIX(get_c0) (NcLinearPert *pert)
+LINEAR_NAME_SUFFIX (get_c0) (NcLinearPert *pert)
 {
   LINEAR_VECTOR_PREPARE;
   return _NC_C0 - _NC_PHI;
 }
 
 gdouble
-LINEAR_NAME_SUFFIX(get_b0) (NcLinearPert *pert)
+LINEAR_NAME_SUFFIX (get_b0) (NcLinearPert *pert)
 {
   LINEAR_VECTOR_PREPARE;
   if (pert->pws->tight_coupling)
@@ -236,12 +242,12 @@ LINEAR_NAME_SUFFIX(get_b0) (NcLinearPert *pert)
 }
 
 gdouble
-LINEAR_NAME_SUFFIX(get_c1) (NcLinearPert *pert)
+LINEAR_NAME_SUFFIX (get_c1) (NcLinearPert *pert)
 {
   LINEAR_VECTOR_PREPARE;
   if (pert->pws->tight_coupling)
   {
-    const gdouble x = exp(-pert->pws->g + pert->g0);
+    const gdouble x = NC_PERTURBATIONS_LAMBDA2X (pert->pws->lambda);
     const gdouble E2 = nc_hicosmo_E2 (pert->cosmo, x-1.0);
     const gdouble kx_3E = pert->pws->k * x / (3.0 * sqrt (E2));
 
@@ -252,12 +258,12 @@ LINEAR_NAME_SUFFIX(get_c1) (NcLinearPert *pert)
 }
 
 gdouble
-LINEAR_NAME_SUFFIX(get_b1) (NcLinearPert *pert)
+LINEAR_NAME_SUFFIX (get_b1) (NcLinearPert *pert)
 {
   LINEAR_VECTOR_PREPARE;
   if (pert->pws->tight_coupling)
   {
-    const gdouble x = exp(-pert->pws->g + pert->g0);
+    const gdouble x = NC_PERTURBATIONS_LAMBDA2X (pert->pws->lambda);
     const gdouble Omega_r = nc_hicosmo_Omega_r (pert->cosmo);
     const gdouble Omega_b = nc_hicosmo_Omega_b (pert->cosmo);
     const gdouble R0 = 4.0 * Omega_r / (3.0 * Omega_b);
@@ -272,19 +278,19 @@ LINEAR_NAME_SUFFIX(get_b1) (NcLinearPert *pert)
 }
 
 gdouble
-LINEAR_NAME_SUFFIX(get_theta2) (NcLinearPert *pert)
+LINEAR_NAME_SUFFIX (get_theta2) (NcLinearPert *pert)
 {
   LINEAR_VECTOR_PREPARE;
   return _NC_THETA(2);
 }
 
 gdouble
-LINEAR_NAME_SUFFIX(get_theta) (NcLinearPert *pert, gint l)
+LINEAR_NAME_SUFFIX (get_theta) (NcLinearPert *pert, gint l)
 {
   LINEAR_VECTOR_PREPARE;
   if (pert->pws->tight_coupling && l < 2)
   {
-    const gdouble x = exp(-pert->pws->g + pert->g0);
+    const gdouble x = NC_PERTURBATIONS_LAMBDA2X (pert->pws->lambda);
     const gdouble Omega_r = nc_hicosmo_Omega_r (pert->cosmo);
     const gdouble Omega_b = nc_hicosmo_Omega_b (pert->cosmo);
     const gdouble R0 = 4.0 * Omega_r / (3.0 * Omega_b);
@@ -307,20 +313,20 @@ LINEAR_NAME_SUFFIX(get_theta) (NcLinearPert *pert, gint l)
 }
 
 gdouble
-LINEAR_NAME_SUFFIX(get_theta_p) (NcLinearPert *pert, gint l)
+LINEAR_NAME_SUFFIX (get_theta_p) (NcLinearPert *pert, gint l)
 {
   LINEAR_VECTOR_PREPARE;
   return _NC_THETA_P (l);
 }
 
 void
-LINEAR_NAME_SUFFIX(print_all) (NcLinearPert *pert)
+LINEAR_NAME_SUFFIX (print_all) (NcLinearPert *pert)
 {
-	gdouble g = pert->pws->g;
+	gdouble lambda = pert->pws->lambda;
 	guint i;
 	LINEAR_VECTOR_PREPARE;
   {
-    g_message ("%.15g %.15g %.15g %.15g %.15g %.15g %.15g %.15g %.15g %.15g %.15g %.15g ", g, _NC_PHI, _NC_C0, _NC_B0, _NC_THETA0, _NC_THETA_P0, _NC_C1, _NC_B1, _NC_THETA1, _NC_THETA_P1, _NC_THETA2, _NC_THETA_P2);
+    g_message ("%.15g %.15g %.15g %.15g %.15g %.15g %.15g %.15g %.15g %.15g %.15g %.15g ", lambda, _NC_PHI, _NC_C0, _NC_B0, _NC_THETA0, _NC_THETA_P0, _NC_C1, _NC_B1, _NC_THETA1, _NC_THETA_P1, _NC_THETA2, _NC_THETA_P2);
     for (i = 3; i <= 16; i++)
       g_message ("%.15g %.15g ", _NC_THETA (i), _NC_THETA_P (i));
 		g_message ("\n");
@@ -328,18 +334,18 @@ LINEAR_NAME_SUFFIX(print_all) (NcLinearPert *pert)
 }
 
 gdouble
-LINEAR_NAME_SUFFIX(get_los_theta) (NcLinearPert *pert, gint l)
+LINEAR_NAME_SUFFIX (get_los_theta) (NcLinearPert *pert, gint l)
 {
   return LINEAR_VEC_COMP(LINEAR_VEC_LOS_THETA(pert), l);
 }
 
 static void
-LINEAR_NAME_SUFFIX(get_sources) (NcLinearPert *pert, gdouble *S0, gdouble *S1, gdouble *S2)
+LINEAR_NAME_SUFFIX (get_sources) (NcLinearPert *pert, gdouble *S0, gdouble *S1, gdouble *S2)
 {
   LINEAR_VECTOR_PREPARE;
-  const gdouble x = exp (-pert->pws->g + pert->g0);
-  const gdouble taubar = nc_recomb_dtau_dlambda (pert->recomb, pert->cosmo, x);
-  gdouble opt = nc_recomb_tau (pert->recomb, pert->cosmo, x);
+  const gdouble x = NC_PERTURBATIONS_LAMBDA2X (pert->pws->lambda);
+  const gdouble taubar = nc_recomb_dtau_dlambda (pert->recomb, pert->cosmo, pert->pws->lambda);
+  gdouble opt = nc_recomb_tau (pert->recomb, pert->cosmo, pert->pws->lambda);
   gdouble tau_log_abs_taubar = -opt + log(fabs(taubar));
 
   if (tau_log_abs_taubar > GSL_LOG_DBL_MIN + 0.01)
@@ -401,7 +407,7 @@ LINEAR_NAME_SUFFIX(get_sources) (NcLinearPert *pert, gdouble *S0, gdouble *S1, g
 }
 
 static LINEAR_STEP_RET
-LINEAR_NAME_SUFFIX(step) (LINEAR_STEP_PARAMS)
+LINEAR_NAME_SUFFIX (step) (LINEAR_STEP_PARAMS)
 {
   NcLinearPert *pert = NC_LINEAR_PERTURBATIONS (user_data);
   const gint lmax = pert->lmax;
@@ -410,7 +416,7 @@ LINEAR_NAME_SUFFIX(step) (LINEAR_STEP_PARAMS)
   const gdouble Omega_c = nc_hicosmo_Omega_c (pert->cosmo);
   const gdouble Omega_m = nc_hicosmo_Omega_m (pert->cosmo);
   const gdouble R0 = 4.0 * Omega_r / (3.0 * Omega_b);
-  const gdouble x = exp (-g + pert->g0);
+  const gdouble x = NC_PERTURBATIONS_LAMBDA2X (lambda);
   const gdouble R = R0 * x;
   const gdouble x2 = x*x;
   const gdouble x3 = x2*x;
@@ -427,7 +433,7 @@ LINEAR_NAME_SUFFIX(step) (LINEAR_STEP_PARAMS)
   const gdouble psi = -_NC_PHI - 12.0 * x2 / k2 * Omega_r * _NC_THETA2;
   const gdouble PI = _NC_THETA2 + _NC_THETA_P0 + _NC_THETA_P2;
   const gdouble dErm2_dx = (3.0 * Omega_m * x2 + 4.0 * Omega_r * x3);
-  const gdouble taubar = nc_recomb_dtau_dlambda (pert->recomb, pert->cosmo, x);
+  const gdouble taubar = nc_recomb_dtau_dlambda (pert->recomb, pert->cosmo, lambda);
   gint i;
 
   if (fabs(_NC_V * _NC_TIGHT_COUPLING_END) > kx_3E * _NC_C0)
@@ -451,7 +457,7 @@ LINEAR_NAME_SUFFIX(step) (LINEAR_STEP_PARAMS)
 
     _NC_DTHETA2 = kx_E * (2.0 * ((R * _NC_U + _NC_T) / (R + 1.0) + _NC_V - kx_3E * (_NC_C0 - _NC_PHI)) - 3.0 * _NC_THETA(3)) / 5.0 + taubar * (_NC_THETA2 - PI / 10.0);
   }
-  else
+  else if (FALSE)
   {
     _NC_DPHI = psi - k2x2_3E2 * _NC_PHI + x / (2.0 * E2) *
       (
@@ -459,19 +465,49 @@ LINEAR_NAME_SUFFIX(step) (LINEAR_STEP_PARAMS)
         -dErm2_dx * _NC_PHI
         );
 
-//printf ("%.15g %.15g %.15g %.15g %.15g %.15g %.15g %.15g (%.15g = %.15g + %.15g)\n", g, x, _NC_C0, _NC_B0, _NC_THETA0, _NC_C1, _NC_B1, _NC_THETA1, Omega_m, Omega_c, Omega_b);
-
     _NC_DC0 = -kx_E * _NC_C1;
     _NC_DB0 = -kx_E * _NC_B1;
+    
     _NC_DTHETA0 = -kx_E * _NC_THETA1;
 
     _NC_DC1 = -_NC_C1 + kx_3E * psi;
     _NC_DB1 = -_NC_B1 + kx_3E * psi + taubar * R0 * x * (_NC_B1 - _NC_THETA1);
+    
     _NC_DTHETA1 = kx_3E * (_NC_THETA0 - 2.0 * _NC_THETA2 - _NC_PHI + psi) + taubar * (_NC_THETA1 - _NC_B1);
-
     _NC_DTHETA2 = kx_E * (2.0 * _NC_THETA1 - 3.0 * _NC_THETA(3)) / 5.0 + taubar * (_NC_THETA2 - PI / 10.0);
   }
-/*
+  else
+  {
+    const gdouble theta0 = _NC_THETA0 + _NC_PHI - _NC_THETA1 / kx_3E;
+    const gdouble d3E_kx = 1.0 / kx_3E - 3.0 * nc_hicosmo_dE2_dz (pert->cosmo, x) / (2.0 * E * k);
+      
+    _NC_DPHI = psi - k2x2_3E2 * _NC_PHI + x / (2.0 * E2) *
+      (
+        (3.0 * (Omega_c * _NC_C0 * x2 + Omega_b * _NC_B0 * x2) + 4.0 * Omega_r * x3 * theta0)
+        -dErm2_dx * _NC_PHI
+        );
+
+    _NC_DC0 = -kx_E * _NC_C1;
+    _NC_DB0 = -kx_E * (_NC_B1 + _NC_THETA1);
+
+    _NC_DC1 = -_NC_C1 + kx_3E * psi;
+    _NC_DB1 = -_NC_B1 - kx_3E * (_NC_THETA0 - 2.0 * _NC_THETA2) + taubar * (R0 * x + 1.0) * _NC_B1;
+    
+    _NC_DTHETA1 = _NC_THETA1 + kx_3E * (_NC_THETA0 - 2.0 * _NC_THETA2 + psi) - taubar * _NC_B1;
+
+    _NC_DTHETA2 = kx_E * (2.0 * _NC_THETA1 - 3.0 * _NC_THETA(3)) / 5.0 + taubar * (_NC_THETA2 - PI / 10.0);
+
+    _NC_DTHETA0 = -kx_E * _NC_THETA1 - _NC_DPHI + _NC_DTHETA1 / kx_3E + d3E_kx * _NC_THETA1;
+    
+fprintf (stderr, "# % 1.7e % 1.7e % 1.7e % 1.7e % 1.7e % 1.7e % 1.7e % 1.7e\n", 
+         lambda, x, _NC_THETA0, _NC_B1, _NC_THETA1, _NC_DTHETA0, _NC_DB1, _NC_DTHETA1);
+fprintf (stderr, "# % 1.7e % 1.7e % 1.7e\n", 
+         -_NC_B1, - kx_3E * (_NC_THETA0 - 2.0 * _NC_THETA2), + taubar * (R0 * x + 1.0) * _NC_B1);
+
+  }
+
+
+  /*
 printf ("%.15g %.15g %.15g %.15g %.15g %.15g %.15g %.15g %.15g\n",
         g,
         kx_3E * _NC_THETA0,
@@ -482,7 +518,7 @@ printf ("%.15g %.15g %.15g %.15g %.15g %.15g %.15g %.15g %.15g\n",
         - taubar * _NC_B1,
         _NC_THETA1, _NC_DTHETA1);
 	*/
-//printf ("% 20.15g % 20.15g % 20.15g\n", g, _NC_PHI, _NC_DPHI);
+//printf ("% 20.15g % 20.15g % 20.15g % 20.15g % 20.15g\n", lambda, _NC_PHI, _NC_DPHI, _NC_DC0, _NC_C0);
 
   _NC_DTHETA_P0 = -kx_E * _NC_THETA_P1 + taubar * (_NC_THETA_P0 - PI / 2.0);
   _NC_DTHETA_P1 = kx_3E * (_NC_THETA_P0 - 2.0 * _NC_THETA_P2) + taubar * (_NC_THETA_P1);
@@ -533,16 +569,16 @@ printf ("%.15g %.15g %.15g %.15g %.15g %.15g %.15g %.15g %.15g\n",
     const gdouble keta = pert->pws->k * eta;
 
     guint n = 16;
-    g_message ("%.15g %.15g %.15g %.15g %.15g %.15g %.15g %.15g %.15g %.15g\n", g, k, eta, _NC_THETA(n + 1), (2.0 * n+ 1.0) * _NC_THETA(n) / keta - _NC_THETA(n - 1), (2.0 * n+ 1.0) * _NC_THETA(n) / keta, _NC_THETA(n - 1),
+    g_message ("%.15g %.15g %.15g %.15g %.15g %.15g %.15g %.15g %.15g %.15g\n", lambda, k, eta, _NC_THETA(n + 1), (2.0 * n+ 1.0) * _NC_THETA(n) / keta - _NC_THETA(n - 1), (2.0 * n+ 1.0) * _NC_THETA(n) / keta, _NC_THETA(n - 1),
             - (n + 1.0) * kx_E * _NC_THETA(n) / (taubar * (2.0 * n + 3.0)), _NC_THETA(n), taubar);
-    g_debug ("%.15g %.15g %.15g %.15g %.15g %.15g %.15g %.15g %.15g %.15g\n", g, k, eta, _NC_THETA_P(n + 1), (2.0 * n+ 1.0) * _NC_THETA_P(n) / keta - _NC_THETA_P(n - 1), (2.0 * n+ 1.0) * _NC_THETA_P(n) / keta, _NC_THETA_P(n - 1),
+    g_debug ("%.15g %.15g %.15g %.15g %.15g %.15g %.15g %.15g %.15g %.15g\n", lambda, k, eta, _NC_THETA_P(n + 1), (2.0 * n+ 1.0) * _NC_THETA_P(n) / keta - _NC_THETA_P(n - 1), (2.0 * n+ 1.0) * _NC_THETA_P(n) / keta, _NC_THETA_P(n - 1),
             - (n + 1.0) * kx_E * _NC_THETA_P(n) / (taubar * (2.0 * n + 3.0)), _NC_THETA_P(n), taubar);
   }
 
   if (FALSE)
   {
     g_message ("%.15g %.15g %.15g %.15g %.15g %.15g %.15g %.15g %.15g %.15g %.15g %.15g ",
-               g,
+               lambda,
                _NC_DPHI / _NC_PHI,
                _NC_DC0 / _NC_C0,
                _NC_DB0 / _NC_B0,
@@ -563,7 +599,7 @@ printf ("%.15g %.15g %.15g %.15g %.15g %.15g %.15g %.15g %.15g\n",
 }
 
 gint
-LINEAR_NAME_SUFFIX(band_J) (LINEAR_JAC_PARAMS)
+LINEAR_NAME_SUFFIX (band_J) (LINEAR_JAC_PARAMS)
 {
   NcLinearPert *pert = (NcLinearPert *)user_data;
   const gint lmax = pert->lmax;
@@ -572,7 +608,7 @@ LINEAR_NAME_SUFFIX(band_J) (LINEAR_JAC_PARAMS)
   const gdouble Omega_c = nc_hicosmo_Omega_c (pert->cosmo);
   const gdouble Omega_m = nc_hicosmo_Omega_m (pert->cosmo);
   const gdouble R0 = 4.0 * Omega_r / (3.0 * Omega_b);
-  const gdouble x = exp (-g + pert->g0);
+  const gdouble x = NC_PERTURBATIONS_LAMBDA2X (lambda);
   const gdouble R = R0 * x;
   const gdouble x2 = x*x;
   const gdouble x3 = x2*x;
@@ -588,7 +624,7 @@ LINEAR_NAME_SUFFIX(band_J) (LINEAR_JAC_PARAMS)
   const gdouble k2x_3E2 = k2x_3E / E;
   const gdouble k2x2_3E2 = x * k2x_3E2;
   const gdouble dErm2_dx = (3.0 * Omega_m * x2 + 4.0 * Omega_r * x3);
-  const gdouble taubar = nc_recomb_dtau_dlambda (pert->recomb, pert->cosmo, x);
+  const gdouble taubar = nc_recomb_dtau_dlambda (pert->recomb, pert->cosmo, lambda);
   gint i;
 
   if (pert->pws->tight_coupling)

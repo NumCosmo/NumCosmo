@@ -278,26 +278,40 @@ void
 ncm_matrix_free (NcmMatrix *cm)
 {
   if (g_object_is_floating (cm))
-	g_object_ref_sink (cm);
+    g_object_ref_sink (cm);
   g_object_unref (cm);
+}
+
+/**
+ * ncm_matrix_clear:
+ * @cm: a #NcmMatrix.
+ *
+ * Atomically decrements the reference count of @cm by one. If the reference count drops to 0,
+ * all memory allocated by @cm is released. The pointer is set to NULL.
+ *
+ */
+void
+ncm_matrix_clear (NcmMatrix **cm)
+{
+  if (*cm != NULL && g_object_is_floating (*cm))
+    g_object_ref_sink (*cm);
+  g_clear_object (cm);
 }
 
 static void
 _ncm_matrix_dispose (GObject *object)
 {
   NcmMatrix *cm = NCM_MATRIX (object);
-  if (cm->a)
+  
+  if (cm->a != NULL)
   {
-	g_array_unref (cm->a);
-	cm->a = NULL;
+    g_array_unref (cm->a);
+    cm->a = NULL;
   }
 
-  if (cm->pobj)
-  {
-	g_object_unref (cm->pobj);
-	cm->pobj = NULL;
-  }
+  g_clear_object (&cm->pobj);
 
+  /* Chain up : end */
   G_OBJECT_CLASS (ncm_matrix_parent_class)->dispose (object);
 }
 
@@ -325,12 +339,14 @@ _ncm_matrix_finalize (GObject *object)
 	  NCM_MATRIX_DATA (cm) = NULL;
 	  break;
   }
+
+  /* Chain up : end */
   G_OBJECT_CLASS (ncm_matrix_parent_class)->finalize (object);
 }
 
 
 /**
- * ncm_matrix_copy:
+ * ncm_matrix_dup:
  * @cm: a constant #NcmMatrix
  *
  * Duplicates @cm setting the same values of the original propertities.
@@ -338,7 +354,7 @@ _ncm_matrix_finalize (GObject *object)
  * Returns: (transfer full): A #NcmMatrix.
  */
 NcmMatrix *
-ncm_matrix_copy (const NcmMatrix *cm)
+ncm_matrix_dup (const NcmMatrix *cm)
 {
   NcmMatrix *cm_cp = ncm_matrix_new (NCM_MATRIX_COL_LEN (cm), NCM_MATRIX_ROW_LEN (cm));
   ncm_matrix_memcpy (cm_cp, cm);

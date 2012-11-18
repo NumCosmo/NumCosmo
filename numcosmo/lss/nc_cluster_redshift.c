@@ -83,7 +83,21 @@ nc_cluster_redshift_ref (NcClusterRedshift *clusterz)
 void
 nc_cluster_redshift_free (NcClusterRedshift *clusterz)
 {
-  g_clear_object (&clusterz);
+  g_object_unref (clusterz);
+}
+
+/**
+ * nc_cluster_redshift_clear:
+ * @clusterz: a #NcClusterRedshift.
+ *
+ * Atomically decrements the reference count of @clusterz by one. If the reference count drops to 0,
+ * all memory allocated by @clusterz is released. Set pointer to NULL.
+ *
+ */
+void
+nc_cluster_redshift_clear (NcClusterRedshift **clusterz)
+{
+  g_clear_object (clusterz);
 }
 
 /**

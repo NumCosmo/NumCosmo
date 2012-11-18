@@ -74,6 +74,7 @@ NcDistance *nc_distance_ref (NcDistance *dist);
 void nc_distance_prepare (NcDistance *dist, NcHICosmo *model);
 G_INLINE_FUNC void nc_distance_prepare_if_needed (NcDistance *dist, NcHICosmo *model);
 void nc_distance_free (NcDistance *dist);
+void nc_distance_clear (NcDistance **dist);
 
 NcmMSetFunc *nc_distance_func0_new (NcDistance *dist, NcDistanceFunc0 f0);
 NcmMSetFunc *nc_distance_func1_new (NcDistance *dist, NcDistanceFunc1 f1);
@@ -89,7 +90,6 @@ gdouble nc_distance_shift_parameter_lss (NcDistance *dist, NcHICosmo *model);
 gdouble nc_distance_comoving_lss (NcDistance *dist, NcHICosmo *model);
 gdouble nc_distance_comoving_a0_lss (NcDistance *dist, NcHICosmo *model);
 gdouble nc_distance_acoustic_scale (NcDistance *dist, NcHICosmo *model);
-gdouble nc_distance_dilation_scale_ratio (NcDistance *dist, NcHICosmo *model);
 gdouble nc_distance_Omega_k (NcDistance *dist, NcHICosmo *model);
 
 /***************************************************************************

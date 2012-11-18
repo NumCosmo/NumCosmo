@@ -42,8 +42,6 @@ G_BEGIN_DECLS
 typedef struct _NcMultiplicityFuncClass NcMultiplicityFuncClass;
 typedef struct _NcMultiplicityFunc NcMultiplicityFunc;
 
-
-
 struct _NcMultiplicityFuncClass
 {
   /*< private >*/
@@ -62,6 +60,7 @@ GType nc_multiplicity_func_get_type (void) G_GNUC_CONST;
 NcMultiplicityFunc *nc_multiplicity_func_new_from_name (gchar *multiplicity_name);
 gdouble nc_multiplicity_func_eval (NcMultiplicityFunc *mulf, NcHICosmo *model, gdouble sigma, gdouble z);
 void nc_multiplicity_func_free (NcMultiplicityFunc *mulf);
+void nc_multiplicity_func_clear (NcMultiplicityFunc **mulf);
 
 G_END_DECLS
 

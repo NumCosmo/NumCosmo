@@ -169,17 +169,24 @@ static void
 ncm_reparam_linear_dispose (GObject *object)
 {
   NcmReparamLinear *relin = NCM_REPARAM_LINEAR (object);
-  ncm_matrix_free (relin->T_LU);
-  ncm_matrix_free (relin->T);
-  ncm_vector_free (relin->v);
-  ncm_vector_free (relin->vp);
-  gsl_permutation_free (relin->p);
+  
+  ncm_matrix_clear (&relin->T_LU);
+  ncm_matrix_clear (&relin->T);
+  ncm_vector_clear (&relin->v);
+  ncm_vector_clear (&relin->vp);
+
+  /* Chain up : end */
   G_OBJECT_CLASS (ncm_reparam_linear_parent_class)->dispose (object);
 }
 
 static void
 ncm_reparam_linear_finalize (GObject *object)
 {
+  NcmReparamLinear *relin = NCM_REPARAM_LINEAR (object);
+  
+  gsl_permutation_free (relin->p);
+
+  /* Chain up : end */
   G_OBJECT_CLASS (ncm_reparam_linear_parent_class)->finalize (object);
 }
 
@@ -223,7 +230,7 @@ static NcmReparam *
 _ncm_reparam_linear_copy (NcmReparam *reparam)
 {
   NcmReparamLinear *relin = NCM_REPARAM_LINEAR (reparam);
-  NcmReparamLinear *relin_new = ncm_reparam_linear_new (reparam->length, ncm_matrix_copy (relin->T), ncm_vector_copy (relin->v));
+  NcmReparamLinear *relin_new = ncm_reparam_linear_new (reparam->length, ncm_matrix_dup (relin->T), ncm_vector_dup (relin->v));
   NCM_REPARAM_CLASS (ncm_reparam_linear_parent_class)->copyto (reparam, NCM_REPARAM (relin_new));
   return NCM_REPARAM (relin_new);
 }

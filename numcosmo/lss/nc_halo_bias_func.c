@@ -91,7 +91,21 @@ nc_halo_bias_func_copy (NcHaloBiasFunc *mbiasf)
 void
 nc_halo_bias_func_free (NcHaloBiasFunc *mbiasf)
 {
-  g_clear_object (&mbiasf);
+  g_object_unref (mbiasf);
+}
+
+/**
+ * nc_halo_bias_func_clear:
+ * @mbiasf: a #NcHaloBiasFunc.
+ *
+ * Atomically decrements the reference count of @mbiasf by one. If the reference count drops to 0,
+ * all memory allocated by @mbiasf is released. Set pointer to NULL.
+ *
+*/
+void
+nc_halo_bias_func_clear (NcHaloBiasFunc **mbiasf)
+{
+  g_clear_object (mbiasf);
 }
 
 static void
@@ -105,8 +119,11 @@ static void
 _nc_halo_bias_func_dispose (GObject *object)
 {
   NcHaloBiasFunc *mbiasf = NC_HALO_BIAS_FUNC (object);
-  nc_mass_function_free (mbiasf->mfp);
-  nc_halo_bias_type_free (mbiasf->biasf);
+  
+  nc_mass_function_clear (&mbiasf->mfp);
+  nc_halo_bias_type_clear (&mbiasf->biasf);
+
+  /* Chain up : end */
   G_OBJECT_CLASS (nc_halo_bias_func_parent_class)->dispose (object);
 }
 
@@ -114,6 +131,7 @@ static void
 _nc_halo_bias_func_finalize (GObject *object)
 {
 
+  /* Chain up : end */
   G_OBJECT_CLASS (nc_halo_bias_func_parent_class)->finalize (object);
 }
 

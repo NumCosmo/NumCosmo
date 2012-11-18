@@ -139,17 +139,19 @@ nc_transfer_func_camb_init (NcTransferFuncCAMB *tf_camb)
 static void
 _nc_transfer_func_camb_dispose (GObject * object)
 {
-  /* TODO: Add deinitalization code here */
   NcTransferFuncCAMB *tf_camb = NC_TRANSFER_FUNC_CAMB (object);
-  ncm_spline_free (tf_camb->T_spline);
+
+  ncm_spline_clear (&tf_camb->T_spline);
+
+  /* Chain up : end */
   G_OBJECT_CLASS (nc_transfer_func_camb_parent_class)->dispose (object);
 }
 
 static void
 _nc_transfer_func_camb_finalize (GObject *object)
 {
-  /* TODO: Add deinitalization code here */
 
+  /* Chain up : end */
   G_OBJECT_CLASS (nc_transfer_func_camb_parent_class)->finalize (object);
 }
 

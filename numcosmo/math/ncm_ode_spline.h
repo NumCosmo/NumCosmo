@@ -60,6 +60,7 @@ struct _NcmOdeSpline
 NcmOdeSpline *ncm_ode_spline_new (NcmSpline *s, NcmOdeSplineDydx dydx, gpointer userdata, gdouble yi, gdouble xi, gdouble xf);
 void ncm_ode_spline_prepare (NcmOdeSpline *os, gpointer userdata);
 void ncm_ode_spline_free (NcmOdeSpline *os);
+void ncm_ode_spline_clear (NcmOdeSpline **os);
 
 G_END_DECLS
 

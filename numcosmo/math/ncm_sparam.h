@@ -78,6 +78,7 @@ NcmSParam *ncm_sparam_new (gchar *name, gchar *symbol, gdouble lower_bound, gdou
 NcmSParam *ncm_sparam_copy (NcmSParam *sparam);
 NcmSParam *ncm_sparam_ref (NcmSParam *sparam);
 void ncm_sparam_free (NcmSParam *sparam);
+void ncm_sparam_clear (NcmSParam **sparam);
 
 void ncm_sparam_set_lower_bound (NcmSParam *sparam, const gdouble lb);
 void ncm_sparam_set_upper_bound (NcmSParam *sparam, const gdouble ub);

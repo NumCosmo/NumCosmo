@@ -91,6 +91,7 @@ GType nc_cluster_mass_get_type (void) G_GNUC_CONST;
 NcClusterMass *nc_cluster_mass_new_from_name (gchar *mass_name);
 NcClusterMass *nc_cluster_mass_ref (NcClusterMass *clusterm);
 void nc_cluster_mass_free (NcClusterMass *clusterm);
+void nc_cluster_mass_clear (NcClusterMass **clusterm);
 
 NcClusterMassImpl nc_cluster_mass_impl (NcClusterMass *clusterm);
 

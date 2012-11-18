@@ -29,7 +29,6 @@ DOC_MAIN_SGML_FILE=$(DOC_MODULE)-docs.sgml
 # for inline comments documenting functions and macros.
 # e.g. DOC_SOURCE_DIR=../../../gtk ../../../gdk
 DOC_SOURCE_DIR=$(top_srcdir)/numcosmo \
-	       $(top_srcdir)/numcosmo/data \
 	       $(top_srcdir)/numcosmo/likelihood \
 	       $(top_srcdir)/numcosmo/lss \
 	       $(top_srcdir)/numcosmo/math \
@@ -66,7 +65,6 @@ FIXXREF_OPTIONS=--extra-dir=$(GLIB_PREFIX)/share/gtk-doc/html
 # e.g. HFILE_GLOB=$(top_srcdir)/gtk/*.h
 # e.g. CFILE_GLOB=$(top_srcdir)/gtk/*.c
 HFILE_GLOB=$(top_srcdir)/numcosmo/*.h \
-	   $(top_srcdir)/numcosmo/data/*.h \
 	   $(top_srcdir)/numcosmo/likelihood/*.h \
 	   $(top_srcdir)/numcosmo/lss/*.h \
 	   $(top_srcdir)/numcosmo/math/*.h \
@@ -75,7 +73,6 @@ HFILE_GLOB=$(top_srcdir)/numcosmo/*.h \
 	   $(top_srcdir)/numcosmo/sphere/*.h
 
 CFILE_GLOB=$(top_srcdir)/numcosmo/*.c \
-	   $(top_srcdir)/numcosmo/data/*.c \
 	   $(top_srcdir)/numcosmo/likelihood/*.c \
 	   $(top_srcdir)/numcosmo/lss/*.c \
 	   $(top_srcdir)/numcosmo/math/*.c \

@@ -143,20 +143,33 @@ nc_window_eval_realspace (const NcWindow *wf, const gdouble r, const gdouble R)
 void 
 nc_window_free (NcWindow *wf)
 {
-  g_clear_object (&wf);
+  g_object_unref (wf);
+}
+
+/**
+ * nc_window_clear: 
+ * @wf: a #NcWindow.
+ *
+ * Atomically decrements the reference count of @wf by one. If the reference count drops to 0, 
+ * all memory allocated by @wf is released. Set the pointer to NULL;
+ *
+ */
+void 
+nc_window_clear (NcWindow **wf)
+{
+  g_clear_object (wf);
 }
 
 static void
 nc_window_init (NcWindow *wf)
 {
-  /* TODO: Add initialization code here */
 }
 
 static void
 _nc_window_finalize (GObject *object)
 {
-  /* TODO: Add deinitalization code here */
 
+  /* Chain up : end */
   G_OBJECT_CLASS (nc_window_parent_class)->finalize (object);
 }
 

@@ -108,23 +108,30 @@ _ncm_spline2d_gsl_alloc (NcmSpline2dGsl *s2dgsl)
 }
 
 static void
-_ncm_spline2d_gsl_free (NcmSpline2dGsl *s2dgsl)
+_ncm_spline2d_gsl_clear (NcmSpline2dGsl *s2dgsl)
 {
   NcmSpline2d *s2d = NCM_SPLINE2D (s2dgsl);
   guint i;
 
   for (i = 0; i < NCM_MATRIX_COL_LEN (s2d->zm); i++)
-	ncm_spline_free (s2dgsl->s_hor[i]);
-
-  g_slice_free1 (sizeof (NcmSpline *) * NCM_MATRIX_COL_LEN (s2d->zm), s2dgsl->s_hor);
+    ncm_spline_clear (&s2dgsl->s_hor[i]);
 
   for (i = 0; i < NCM_MATRIX_COL_LEN (s2dgsl->zdiff); i++)
-	ncm_spline_free (s2dgsl->s_dzdy[i]);
+    ncm_spline_clear (&s2dgsl->s_dzdy[i]);
 
+  ncm_spline_clear (&s2dgsl->s_ver);
+  ncm_spline_clear (&s2dgsl->s_ver_integ);
+}
+
+static void
+_ncm_spline2d_gsl_free (NcmSpline2dGsl *s2dgsl)
+{
+  NcmSpline2d *s2d = NCM_SPLINE2D (s2dgsl);
+
+  _ncm_spline2d_gsl_clear (s2dgsl);
+
+  g_slice_free1 (sizeof (NcmSpline *) * NCM_MATRIX_COL_LEN (s2d->zm), s2dgsl->s_hor);
   g_slice_free1 (sizeof (NcmSpline *) * NCM_MATRIX_COL_LEN (s2dgsl->zdiff), s2dgsl->s_dzdy);
-
-  ncm_spline_free (s2dgsl->s_ver);
-  ncm_spline_free (s2dgsl->s_ver_integ);
 }
 
 static void
@@ -133,15 +140,15 @@ _ncm_spline2d_gsl_reset (NcmSpline2d *s2d)
   NcmSpline2dGsl *s2dgsl = NCM_SPLINE2D_GSL (s2d);
   if (s2d->init)
   {
-	if ((NCM_MATRIX_NROWS (s2d->zm) != ncm_vector_len (s2dgsl->vertv)) ||
-	    (NCM_MATRIX_NCOLS (s2d->zm) != ncm_vector_len (s2dgsl->s_hor[0]->xv)))
-	{
-	  _ncm_spline2d_gsl_free (s2dgsl);
-	  _ncm_spline2d_gsl_alloc (s2dgsl);
-	}
+    if ((NCM_MATRIX_NROWS (s2d->zm) != ncm_vector_len (s2dgsl->vertv)) ||
+        (NCM_MATRIX_NCOLS (s2d->zm) != ncm_vector_len (s2dgsl->s_hor[0]->xv)))
+    {
+      _ncm_spline2d_gsl_free (s2dgsl);
+      _ncm_spline2d_gsl_alloc (s2dgsl);
+    }
   }
   else
-	_ncm_spline2d_gsl_alloc (s2dgsl);
+    _ncm_spline2d_gsl_alloc (s2dgsl);
 }
 
 
@@ -654,18 +661,24 @@ ncm_spline2d_gsl_dispose (GObject *object)
 {
   NcmSpline2d *s2d = NCM_SPLINE2D (object);
   NcmSpline2dGsl *s2dgsl = NCM_SPLINE2D_GSL (object);
-  if (s2d->init)
-  {
-	_ncm_spline2d_gsl_free (s2dgsl);
-	s2d->init = FALSE;
-  }
 
+  _ncm_spline2d_gsl_clear (s2dgsl);
+  s2d->init = FALSE;
+
+  /* Chain up : end */
   G_OBJECT_CLASS (ncm_spline2d_gsl_parent_class)->dispose (object);
 }
 
 static void
 ncm_spline2d_gsl_finalize (GObject *object)
 {
+  NcmSpline2d *s2d = NCM_SPLINE2D (object);
+  NcmSpline2dGsl *s2dgsl = NCM_SPLINE2D_GSL (object);
+
+  g_slice_free1 (sizeof (NcmSpline *) * NCM_MATRIX_COL_LEN (s2d->zm), s2dgsl->s_hor);
+  g_slice_free1 (sizeof (NcmSpline *) * NCM_MATRIX_COL_LEN (s2dgsl->zdiff), s2dgsl->s_dzdy);  
+  
+  /* Chain up : end */
   G_OBJECT_CLASS (ncm_spline2d_gsl_parent_class)->finalize (object);
 }
 

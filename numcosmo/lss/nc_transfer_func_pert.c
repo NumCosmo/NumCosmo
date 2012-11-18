@@ -95,21 +95,20 @@ nc_transfer_func_pert_init (NcTransferFuncPert *tf_pert)
 static void
 _nc_transfer_func_pert_dispose (GObject *object)
 {
-  /* TODO: Add deinitalization code here */
   NcTransferFuncPert *tf_pert = NC_TRANSFER_FUNC_PERT (object);
-  if (tf_pert->pert != NULL)
-	nc_pert_linear_free (tf_pert->pert);
-  if (tf_pert->pspline != NULL)
-	nc_pert_linear_splines_free (tf_pert->pspline);
+  
+	nc_pert_linear_clear (&tf_pert->pert);
+	nc_pert_linear_splines_clear (&tf_pert->pspline);
 
-  G_OBJECT_CLASS (nc_transfer_func_pert_parent_class)->finalize (object);
+  /* Chain up : end */
+  G_OBJECT_CLASS (nc_transfer_func_pert_parent_class)->dispose (object);
 }
 
 static void
 _nc_transfer_func_pert_finalize (GObject *object)
 {
-  /* TODO: Add deinitalization code here */
 
+  /* Chain up : end */
   G_OBJECT_CLASS (nc_transfer_func_pert_parent_class)->finalize (object);
 }
 

@@ -88,6 +88,8 @@ NcmSpline2d *ncm_spline2d_copy (NcmSpline2d *s2d);
 NcmSpline2d *ncm_spline2d_new (const NcmSpline2d *s2d, NcmVector *xv, NcmVector *yv, NcmMatrix *zm, gboolean init);
 
 void ncm_spline2d_free (NcmSpline2d *s2d);
+void ncm_spline2d_clear (NcmSpline2d **s2d);
+
 G_INLINE_FUNC gdouble ncm_spline2d_eval (NcmSpline2d *s2d, gdouble x, gdouble y);
 gdouble ncm_spline2d_integ_dx (NcmSpline2d *s2d, gdouble xl, gdouble xu, gdouble y);
 gdouble ncm_spline2d_integ_dy (NcmSpline2d *s2d, gdouble x, gdouble yl, gdouble yu);

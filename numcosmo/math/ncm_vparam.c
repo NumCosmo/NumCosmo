@@ -137,7 +137,21 @@ ncm_vparam_copy (NcmVParam *vparam)
 void
 ncm_vparam_free (NcmVParam *vparam)
 {
-  g_clear_object (&vparam);
+  g_object_unref (vparam);
+}
+
+/**
+ * ncm_vparam_clear:
+ * @vparam: a #NcmVParam.
+ *
+ * Atomically decrements the reference count of @vparam by one. If the reference count drops to 0,
+ * all memory allocated by @vparam is released.
+ *
+ */
+void
+ncm_vparam_clear (NcmVParam **vparam)
+{
+  g_clear_object (vparam);
 }
 
 /**
@@ -444,8 +458,12 @@ _ncm_vparam_dispose (GObject *object)
   NcmVParam *vp = NCM_VPARAM (object);
 
   vp->len = 0;
-  ncm_sparam_free (vp->default_sparam);
-  g_ptr_array_unref (vp->sparam);
+  ncm_sparam_clear (&vp->default_sparam);
+  if (vp->sparam != NULL)
+  {
+    g_ptr_array_unref (vp->sparam);
+    vp->sparam = NULL;
+  }
 
   /* Chain up : end */
   G_OBJECT_CLASS (ncm_vparam_parent_class)->dispose (object);

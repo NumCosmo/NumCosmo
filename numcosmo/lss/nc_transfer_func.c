@@ -132,9 +132,23 @@ nc_transfer_func_matter_powerspectrum (NcTransferFunc *tf, NcHICosmo *model, gdo
  *
 */
 void
-nc_transfer_func_free (NcTransferFunc * tf)
+nc_transfer_func_free (NcTransferFunc *tf)
 {
-  g_clear_object (&tf);
+  g_object_unref (tf);
+}
+
+/**
+ * nc_transfer_func_clear:
+ * @tf: a #NcTransferFunc.
+ *
+ * Atomically decrements the reference count of @tf by one. If the reference count drops to 0,
+ * all memory allocated by @tf is released. Set the pointer to NULL.
+ *
+*/
+void
+nc_transfer_func_clear (NcTransferFunc **tf)
+{
+  g_clear_object (tf);
 }
 
 static void
@@ -147,17 +161,19 @@ nc_transfer_func_init (NcTransferFunc *tf)
 static void
 _nc_transfer_func_dispose (GObject * object)
 {
-  /* TODO: Add deinitalization code here */
   NcTransferFunc *tf = NC_TRANSFER_FUNC (object);
-  ncm_model_ctrl_free (tf->ctrl);
+
+  ncm_model_ctrl_clear (&tf->ctrl);
+
+  /* Chain up : end */
   G_OBJECT_CLASS (nc_transfer_func_parent_class)->dispose (object);
 }
 
 static void
 _nc_transfer_func_finalize (GObject *object)
 {
-  /* TODO: Add deinitalization code here */
 
+  /* Chain up : end */
   G_OBJECT_CLASS (nc_transfer_func_parent_class)->finalize (object);
 }
 

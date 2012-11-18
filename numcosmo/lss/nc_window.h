@@ -64,6 +64,7 @@ gdouble nc_window_eval_fourier (const NcWindow *wf, const gdouble k, const gdoub
 gdouble nc_window_deriv_fourier (const NcWindow *wf, const gdouble k, const gdouble R);
 gdouble nc_window_eval_realspace (const NcWindow *wf, const gdouble r, const gdouble R);
 void nc_window_free (NcWindow *wf);
+void nc_window_clear (NcWindow **wf);
 
 G_END_DECLS
 

@@ -28,7 +28,7 @@
 #include <glib.h>
 #include <glib-object.h>
 #include <numcosmo/nc_hicosmo.h>
-#include <numcosmo/likelihood/likelihood.h>
+#include <numcosmo/math/ncm_likelihood.h>
 
 G_BEGIN_DECLS
 
@@ -106,7 +106,7 @@ GType nc_hicosmo_de_get_type (void) G_GNUC_CONST;
 
 void nc_hicosmo_de_set_wmap5_params (NcHICosmo *cosmo);
 void nc_hicosmo_de_omega_x2omega_k (NcHICosmo *cosmo);
-gboolean nc_hicosmo_de_new_add_bbn (NcLikelihood *lh);
+gboolean nc_hicosmo_de_new_add_bbn (NcmLikelihood *lh);
 
 void nc_hicosmo_de_set_weff_impl (NcHICosmoDEClass *cosmo_de_class, NcmModelFunc1 f);
 void nc_hicosmo_de_set_dweff_dz_impl (NcHICosmoDEClass *cosmo_de_class, NcmModelFunc1 f);

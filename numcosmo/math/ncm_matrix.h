@@ -120,9 +120,10 @@ G_INLINE_FUNC void ncm_matrix_scale (NcmMatrix *cm, const gdouble val);
 G_INLINE_FUNC void ncm_matrix_memcpy (NcmMatrix *cm1, const NcmMatrix *cm2);
 G_INLINE_FUNC void ncm_matrix_set_col (NcmMatrix *cm, const guint n, const NcmVector *cv);
 
-NcmMatrix *ncm_matrix_copy (const NcmMatrix *cm);
+NcmMatrix *ncm_matrix_dup (const NcmMatrix *cm);
 
 void ncm_matrix_free (NcmMatrix *cm);
+void ncm_matrix_clear (NcmMatrix **cm);
 
 G_END_DECLS
 

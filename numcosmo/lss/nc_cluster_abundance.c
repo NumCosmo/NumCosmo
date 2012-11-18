@@ -166,7 +166,21 @@ nc_cluster_abundance_ref (NcClusterAbundance *cad)
 void
 nc_cluster_abundance_free (NcClusterAbundance *cad)
 {
-  g_clear_object (&cad);
+  g_object_unref (cad);
+}
+
+/**
+ * nc_cluster_abundance_clear:
+ * @cad: a #NcClusterAbundance.
+ *
+ * Atomically decrements the reference count of @cad by one. If the reference count drops to 0,
+ * all memory allocated by @cad is released.
+ *
+ */
+void
+nc_cluster_abundance_clear (NcClusterAbundance **cad)
+{
+  g_clear_object (cad);
 }
 
 typedef struct _observables_integrand_data
@@ -850,17 +864,18 @@ static void
 _nc_cluster_abundance_dispose (GObject *object)
 {
   NcClusterAbundance *cad = NC_CLUSTER_ABUNDANCE (object);
-  nc_mass_function_free (cad->mfp);
-  nc_cluster_redshift_free (cad->z);
-  nc_cluster_mass_free (cad->m);
-  nc_halo_bias_func_free (cad->mbiasf);
+  
+  nc_mass_function_clear (&cad->mfp);
+  nc_cluster_redshift_clear (&cad->z);
+  nc_cluster_mass_clear (&cad->m);
+  nc_halo_bias_func_clear (&cad->mbiasf);
 
-  ncm_spline_free (cad->inv_z);
-  ncm_spline_free (cad->inv_lnM);
+  ncm_spline_clear (&cad->inv_z);
+  ncm_spline_clear (&cad->inv_lnM);
 
-  ncm_spline2d_free (cad->inv_lnM_z);
+  ncm_spline2d_clear (&cad->inv_lnM_z);
 
-  ncm_model_ctrl_free (cad->ctrl);
+  ncm_model_ctrl_clear (&cad->ctrl);
 
   /* Chain up : end */
   G_OBJECT_CLASS (nc_cluster_abundance_parent_class)->dispose (object);

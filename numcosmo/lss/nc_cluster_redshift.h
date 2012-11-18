@@ -84,6 +84,7 @@ GType nc_cluster_redshift_get_type (void) G_GNUC_CONST;
 NcClusterRedshift *nc_cluster_redshift_new_from_name (gchar *redshift_name);
 NcClusterRedshift *nc_cluster_redshift_ref (NcClusterRedshift *clusterz);
 void nc_cluster_redshift_free (NcClusterRedshift *clusterz);
+void nc_cluster_redshift_clear (NcClusterRedshift **clusterz);
 
 NcClusterRedshiftImpl nc_cluster_redshift_impl (NcClusterRedshift *clusterz);
 

@@ -115,9 +115,9 @@ ncm_spline2d_copy (NcmSpline2d *s2d)
   if (!s2d->empty)
   {
 	ncm_spline2d_set (new_s2d,
-	                  ncm_vector_copy (s2d->xv),
-	                  ncm_vector_copy (s2d->yv),
-	                  ncm_matrix_copy (s2d->zm),
+	                  ncm_vector_dup (s2d->xv),
+	                  ncm_vector_dup (s2d->yv),
+	                  ncm_matrix_dup (s2d->zm),
 	                  s2d->init
 	                  );
   }
@@ -183,6 +183,19 @@ void
 ncm_spline2d_free (NcmSpline2d *s2d)
 {
   g_object_unref (s2d);
+}
+
+/**
+ * ncm_spline2d_clear:
+ * @s2d: a #NcmSpline2d.
+ *
+ * Atomically decrements the reference count of @s2d by one. If the reference count drops to 0,
+ * all memory allocated by @s2d is released. Set pointer to NULL.
+ */
+void
+ncm_spline2d_clear (NcmSpline2d **s2d)
+{
+  g_clear_object (s2d);
 }
 
 /**
@@ -446,25 +459,15 @@ static void
 ncm_spline2d_dispose (GObject *object)
 {
   NcmSpline2d *s2d = NCM_SPLINE2D (object);
-  if (!s2d->empty)
-  {
-	g_assert (s2d->xv != NULL);
-	g_assert (s2d->yv != NULL);
-	g_assert (s2d->zm != NULL);
 
-	ncm_vector_free (s2d->xv);
-	ncm_vector_free (s2d->yv);
-	ncm_matrix_free (s2d->zm);
+  ncm_vector_clear (&s2d->xv);
+  ncm_vector_clear (&s2d->yv);
+  ncm_matrix_clear (&s2d->zm);
+  ncm_spline_clear (&s2d->s);
 
-	s2d->empty = TRUE;
+  s2d->empty = TRUE;
 
-	s2d->xv = NULL;
-	s2d->yv = NULL;
-	s2d->zm = NULL;
-  }
-
-  ncm_spline_free (s2d->s);
-
+  /* Chain up : end */
   G_OBJECT_CLASS (ncm_spline2d_parent_class)->dispose (object);
 }
 

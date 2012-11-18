@@ -28,6 +28,7 @@
 #include <glib.h>
 #include <glib-object.h>
 #include <numcosmo/math/ncm_fit.h>
+#include <numcosmo/math/ncm_priors.h>
 
 G_BEGIN_DECLS
 
@@ -63,7 +64,7 @@ struct _NcConfidenceRegion
   NcConfidenceRegionSearchType search_type;
   NcmFit *bestfit;
   NcmFit *constrained;
-  struct _NcGaussianPrior *prior;
+  NcmPriorGauss *prior;
   NcmMSetPIndex pi[NCM_FIT_CR_MAX_DIM];
   gdouble shift[NCM_FIT_CR_MAX_DIM];
   NcmVector *covar_ev;

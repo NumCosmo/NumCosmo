@@ -58,6 +58,7 @@ GType nc_halo_bias_type_get_type (void) G_GNUC_CONST;
 NcHaloBiasType *nc_halo_bias_type_new_from_name (gchar *bias_name);
 gdouble nc_halo_bias_type_eval (NcHaloBiasType *biasf, gdouble sigma, gdouble z);
 void nc_halo_bias_type_free (NcHaloBiasType *biasf);
+void nc_halo_bias_type_clear (NcHaloBiasType **biasf);
 
 G_END_DECLS
 

@@ -260,8 +260,9 @@ static void
 nc_hicosmo_qspline_dispose (GObject *object)
 {
   NcHICosmoQSpline *qspline = NC_HICOSMO_QSPLINE (object);
-  ncm_spline_free (qspline->q_z);
-  ncm_ode_spline_free (qspline->E2_z);
+  
+  ncm_spline_clear (&qspline->q_z);
+  ncm_ode_spline_clear (&qspline->E2_z);
 
   /* Chain up : end */
   G_OBJECT_CLASS (nc_hicosmo_qspline_parent_class)->dispose (object);

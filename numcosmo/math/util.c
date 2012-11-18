@@ -114,7 +114,7 @@ ncm_random_seed ()
  *
  */
 void
-ncm_finite_diff_calc_J (NcmModel *model, NcData *data, NcmMatrix *jac)
+ncm_finite_diff_calc_J (NcmModel *model, NcmData *data, NcmMatrix *jac)
 {
   g_assert_not_reached ();
 }

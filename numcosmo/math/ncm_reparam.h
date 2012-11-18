@@ -97,8 +97,8 @@ void ncm_reparam_jac (NcmReparam *reparam, struct _NcmModel *model, NcmMatrix *j
 void ncm_reparam_grad_old2new (NcmReparam *reparam, struct _NcmModel *model, NcmMatrix *jac, NcmVector *old_grad, NcmVector *new_grad);
 void ncm_reparam_M_old2new (NcmReparam *reparam, struct _NcmModel *model, NcmMatrix *jac, NcmMatrix *old_M, NcmMatrix *new_M);
 
-
 void ncm_reparam_free (NcmReparam *reparam);
+void ncm_reparam_clear (NcmReparam **reparam);
 
 G_END_DECLS
 

@@ -49,6 +49,15 @@ ncm_sources = \
 	math/ncm_ode_spline.c              \
 	math/ncm_reparam.c                 \
 	math/ncm_reparam_linear.c          \
+	math/ncm_data.c                    \
+	math/ncm_data_dist1d.c             \
+	math/ncm_data_gauss.c              \
+	math/ncm_data_gauss_cov.c          \
+	math/ncm_data_gauss_diag.c         \
+	math/ncm_data_poisson.c            \
+	math/ncm_dataset.c                 \
+	math/ncm_likelihood.c              \
+	math/ncm_priors.c                  \
 	math/ncm_fit.c
 
 ncm_headers = \
@@ -83,6 +92,15 @@ ncm_headers = \
 	math/ncm_ode_spline.h            \
 	math/ncm_reparam.h               \
 	math/ncm_reparam_linear.h        \
+	math/ncm_data.h                  \
+	math/ncm_data_dist1d.h           \
+	math/ncm_data_gauss.h            \
+	math/ncm_data_gauss_cov.h        \
+	math/ncm_data_gauss_diag.h       \
+	math/ncm_data_poisson.h          \
+	math/ncm_dataset.h               \
+	math/ncm_likelihood.h            \
+	math/ncm_priors.h                \
 	math/ncm_fit.h
 
 ncm_headers_internal = 
@@ -91,6 +109,7 @@ nc_headers = \
 	nc_macros.h                   \
 	nc_hicosmo.h                  \
 	nc_distance.h                 \
+	nc_hicosmo_priors.h           \
 	nc_recomb.h                   \
 	nc_recomb_seager.h            \
 	model/nc_hicosmo_de.h         \
@@ -140,15 +159,23 @@ nc_headers = \
         lss/nc_cluster_mass_benson.h         \
         lss/nc_cluster_mass_benson_xray.h    \
         lss/nc_cluster_abundance.h      \
-	lss/nc_data_cluster_abundance.h \
-	data/nc_data_distance_mu.h      \
-	data/nc_data_hubble.h           \
-	data/nc_data_bao.h              \
-	data/nc_data_cmb.h
+	nc_data_dist_mu.h               \
+	nc_data_hubble.h                \
+	nc_data_bao_rdv.h               \
+	nc_data_bao_dvdv.h              \
+	nc_data_bao_a.h                 \
+	nc_data_bao_dv.h                \
+	nc_data_bao.h                   \
+	nc_data_cmb_shift_param.h       \
+	nc_data_cmb_dist_priors.h       \
+	nc_data_cmb.h                   \
+	nc_data_cluster_ncount.h        \
+	nc_data_cluster_poisson.h
 
 nc_sources = \
 	nc_hicosmo.c                 \
 	nc_distance.c                \
+	nc_hicosmo_priors.c          \
 	nc_recomb.c                  \
 	nc_recomb_seager.c           \
 	model/nc_hicosmo_de.c        \
@@ -198,11 +225,18 @@ nc_sources = \
 	lss/nc_cluster_mass_benson.c           \
 	lss/nc_cluster_mass_benson_xray.c      \
 	lss/nc_cluster_abundance.c             \
-	lss/nc_data_cluster_abundance.c        \
-	data/nc_data_distance_mu.c   \
-	data/nc_data_hubble.c        \
-	data/nc_data_bao.c           \
-	data/nc_data_cmb.c
+	nc_data_dist_mu.c            \
+	nc_data_hubble.c             \
+	nc_data_bao_rdv.c            \
+	nc_data_bao_dvdv.c           \
+	nc_data_bao_a.c              \
+	nc_data_bao_dv.c             \
+	nc_data_bao.c                \
+	nc_data_cmb_shift_param.c    \
+	nc_data_cmb_dist_priors.c    \
+	nc_data_cmb.c                \
+	nc_data_cluster_ncount.c     \
+	nc_data_cluster_poisson.c
 
 libnumcosmo_la_SOURCES = \
 	$(ncm_sources)   \
@@ -216,16 +250,6 @@ libnumcosmo_la_SOURCES = \
 	scalefactor.c \
 	scalefactor.h \
 	numcosmo.h    \
-	data/data.c   \
-	data/data.h   \
-	data/data_gaussian.c         \
-	data/data_gaussian.h         \
-	data/data_onevardist.c       \
-	data/data_onevardist.h       \
-	data/data_poisson.c          \
-	data/data_poisson.h          \
-	data/dataset.c               \
-	data/dataset.h               \
 	model/quantum_gravity.c    \
 	model/quantum_gravity.h    \
 	likelihood/confidence_region.c \
@@ -240,10 +264,6 @@ libnumcosmo_la_SOURCES = \
 	likelihood/levmar.h  \
 	likelihood/nc_nlopt.c   \
 	likelihood/nc_nlopt.h   \
-	likelihood/likelihood.c \
-	likelihood/likelihood.h \
-	likelihood/priors.c     \
-	likelihood/priors.h     \
 	math/poly.c               \
 	math/integral.c       \
 	math/function_cache.c \
@@ -319,11 +339,6 @@ nobase_cosmo_include_HEADERS =  \
 	numcosmo.h              \
 	scalefactor.h           \
 	build_cfg.h             \
-	data/data.h             \
-	data/data_gaussian.h         \
-	data/data_onevardist.h       \
-	data/data_poisson.h          \
-	data/dataset.h               \
 	model/quantum_gravity.h    \
 	likelihood/confidence_region.h \
 	likelihood/least_squares.h     \
@@ -331,8 +346,6 @@ nobase_cosmo_include_HEADERS =  \
 	likelihood/multimin_simplex.h  \
 	likelihood/levmar.h            \
 	likelihood/nc_nlopt.h          \
-	likelihood/likelihood.h        \
-	likelihood/priors.h            \
 	math/cvode_util.h         \
 	math/function_cache.h     \
 	math/integral.h           \

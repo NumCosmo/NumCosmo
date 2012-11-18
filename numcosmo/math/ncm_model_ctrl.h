@@ -63,6 +63,7 @@ gboolean ncm_model_ctrl_set_model (NcmModelCtrl *ctrl, NcmModel *model);
 NcmModel *ncm_model_ctrl_get_model (NcmModelCtrl *ctrl);
 void ncm_model_ctrl_force_update (NcmModelCtrl *ctrl);
 void ncm_model_ctrl_free (NcmModelCtrl *ctrl);
+void ncm_model_ctrl_clear (NcmModelCtrl **ctrl);
 
 G_INLINE_FUNC gboolean ncm_model_ctrl_update (NcmModelCtrl *ctrl, NcmModel *model);
 
@@ -81,13 +82,13 @@ ncm_model_ctrl_update (NcmModelCtrl *ctrl, NcmModel *model)
 {
   if (ctrl->model != model)
   {
-	ncm_model_ctrl_set_model (ctrl, model);
-	return TRUE;
+    ncm_model_ctrl_set_model (ctrl, model);
+    return TRUE;
   }
   else if (ctrl->pkey != model->pkey)
   {
-	ctrl->pkey = model->pkey;
-	return TRUE;
+    ctrl->pkey = model->pkey;
+    return TRUE;
   }
   return FALSE;
 }

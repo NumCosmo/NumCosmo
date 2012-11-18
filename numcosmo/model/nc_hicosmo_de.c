@@ -170,10 +170,10 @@ bbn_prior (NcmMSet *mset, gpointer obj, const gdouble *x, gdouble *f)
  * Returns: FIXME
  */
 gboolean
-nc_hicosmo_de_new_add_bbn (NcLikelihood *lh)
+nc_hicosmo_de_new_add_bbn (NcmLikelihood *lh)
 {
   NcmMSetFunc *func = ncm_mset_func_new (bbn_prior, 0, 1, NULL, NULL);
-  nc_likelihood_priors_add (lh, func);
+  ncm_likelihood_priors_add (lh, func);
   return TRUE;
 }
 

@@ -27,7 +27,7 @@
 
 #include <glib.h>
 #include <glib-object.h>
-#include <numcosmo/likelihood/likelihood.h>
+#include <numcosmo/math/ncm_likelihood.h>
 #include <numcosmo/nc_hicosmo.h>
 
 G_BEGIN_DECLS
@@ -111,9 +111,9 @@ struct _NcHICosmoQPWAsymCDMPrior
 GType nc_hicosmo_qpw_get_type (void) G_GNUC_CONST;
 
 NcHICosmoQPW *nc_hicosmo_qpw_new (guint npieces, gdouble z_f, gboolean flat);
-void nc_hicosmo_qpw_add_continuity_prior (NcHICosmoQPW *qpw, NcLikelihood *lh, gint knot, gdouble sigma);
-void nc_hicosmo_qpw_add_continuity_priors (NcHICosmoQPW *qpw, NcLikelihood *lh, gdouble sigma);
-void nc_hicosmo_qpw_add_asymptotic_cdm_prior (NcHICosmoQPW *qpw, NcLikelihood *lh, gdouble z, gdouble q, gdouble sigma);
+void nc_hicosmo_qpw_add_continuity_prior (NcHICosmoQPW *qpw, NcmLikelihood *lh, gint knot, gdouble sigma);
+void nc_hicosmo_qpw_add_continuity_priors (NcHICosmoQPW *qpw, NcmLikelihood *lh, gdouble sigma);
+void nc_hicosmo_qpw_add_asymptotic_cdm_prior (NcHICosmoQPW *qpw, NcmLikelihood *lh, gdouble z, gdouble q, gdouble sigma);
 
 void nc_hicosmo_qpw_change_params (NcHICosmoQPW *qpw, gdouble z);
 void nc_hicosmo_qpw_change_params_qpp (NcHICosmoQPW *qpw);

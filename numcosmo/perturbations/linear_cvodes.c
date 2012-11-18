@@ -114,14 +114,14 @@ static NcLinearPertOdeSolver _cvodes_solver = {
 };
 NcLinearPertOdeSolver *cvodes_solver = &_cvodes_solver;
 
-static gint cvodes_step (realtype g, N_Vector y, N_Vector ydot, gpointer user_data);
-//static gint perturbations_step_S (gint Ns, realtype g, N_Vector y, N_Vector ydot, N_Vector *yS, N_Vector *ySdot, gpointer user_data, N_Vector tmp1, N_Vector tmp2);
-static gint cvodes_band_J (_NCM_SUNDIALS_INT_TYPE N, _NCM_SUNDIALS_INT_TYPE mupper, _NCM_SUNDIALS_INT_TYPE mlower, realtype g, N_Vector y, N_Vector fy, DlsMat J, gpointer user_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3);
-static gint cvodes_Jv (N_Vector v, N_Vector Jv, realtype g, N_Vector y, N_Vector fy, gpointer user_data, N_Vector tmp);
-static gint cvodes_Mz_r (realtype g, N_Vector y, N_Vector fy, N_Vector r, N_Vector z, realtype gamma, realtype delta, gint lr, gpointer user_data, N_Vector tmp);
+static gint cvodes_step (realtype lambda, N_Vector y, N_Vector ydot, gpointer user_data);
+//static gint perturbations_step_S (gint Ns, realtype lambda, N_Vector y, N_Vector ydot, N_Vector *yS, N_Vector *ySdot, gpointer user_data, N_Vector tmp1, N_Vector tmp2);
+static gint cvodes_band_J (_NCM_SUNDIALS_INT_TYPE N, _NCM_SUNDIALS_INT_TYPE mupper, _NCM_SUNDIALS_INT_TYPE mlower, realtype lambda, N_Vector y, N_Vector fy, DlsMat J, gpointer user_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3);
+static gint cvodes_Jv (N_Vector v, N_Vector Jv, realtype lambda, N_Vector y, N_Vector fy, gpointer user_data, N_Vector tmp);
+static gint cvodes_Mz_r (realtype lambda, N_Vector y, N_Vector fy, N_Vector r, N_Vector z, realtype gamma, realtype delta, gint lr, gpointer user_data, N_Vector tmp);
 
 #ifdef SIMUL_LOS_INT
-static gint cvodes_lineofsight (realtype g, N_Vector y, N_Vector yQdot, gpointer user_data);
+static gint cvodes_lineofsight (realtype lambda, N_Vector y, N_Vector yQdot, gpointer user_data);
 #endif
 
 static gpointer
@@ -211,7 +211,7 @@ cvodes_set_opts (NcLinearPert *pert)
     flag = CVDiag (data->cvode);
     CVODE_CHECK(&flag, "CVDiag", 1,);
   }
-  else if (TRUE)
+  else if (FALSE)
   {
     /* Call CVSpgmr to specify the linear solver CVSPGMR
      with left preconditioning and the maximum Krylov dimension maxl */
@@ -245,14 +245,17 @@ cvodes_set_opts (NcLinearPert *pert)
 
 		CVODE_CHECK(&flag, "CVBand", 1,);
 
-    flag = CVDlsSetBandJacFn (data->cvode, cvodes_band_J);
-    CVODE_CHECK(&flag, "CVDlsSetBandJacFn", 1,);
+    if (FALSE)
+    {
+      flag = CVDlsSetBandJacFn (data->cvode, cvodes_band_J);
+      CVODE_CHECK(&flag, "CVDlsSetBandJacFn", 1,);
+    }
   }
 
-  flag = CVodeSetStabLimDet(data->cvode, FALSE);
+  flag = CVodeSetStabLimDet (data->cvode, FALSE);
   CVODE_CHECK(&flag, "CVodeSetStabLimDet", 1,);
 
-  flag = CVodeSetStopTime(data->cvode, pert->gf);
+  flag = CVodeSetStopTime (data->cvode, pert->lambdaf);
   CVODE_CHECK(&flag, "CVodeSetStopTime", 1,);
 
   if (FALSE)
@@ -300,7 +303,7 @@ cvodes_reset (NcLinearPert *pert)
 
   if (((data->cvode == data->cvode_stiff) ? (!data->malloc_stiff) : (!data->malloc_nonstiff)))
   {
-    flag = CVodeInit (data->cvode, &cvodes_step, pert->pws->g, data->y);
+    flag = CVodeInit (data->cvode, &cvodes_step, pert->pws->lambda, data->y);
     CVODE_CHECK(&flag, "CVodeMalloc", 1,);
 #ifdef SIMUL_LOS_INT
     flag = CVodeQuadInit (data->cvode, &cvodes_lineofsight, data->yQ);
@@ -310,7 +313,7 @@ cvodes_reset (NcLinearPert *pert)
   }
   else
   {
-    flag = CVodeReInit (data->cvode, pert->pws->g, data->y);
+    flag = CVodeReInit (data->cvode, pert->pws->lambda, data->y);
     CVODE_CHECK(&flag, "CVodeReInit", 1,);
 #ifdef SIMUL_LOS_INT
     CVodeQuadReInit (data->cvode, data->yQ);
@@ -334,49 +337,49 @@ cvodes_update_los (NcLinearPert *pert)
 }
 
 static gboolean
-cvodes_evol_step (NcLinearPert *pert, gdouble g)
+cvodes_evol_step (NcLinearPert *pert, gdouble lambda)
 {
   gint flag;
-  gdouble gi;
+  gdouble lambdai;
   CVodesData *data = CVODES_DATA (pert->solver->data);
 
-  flag = CVode (data->cvode, g, data->y, &gi, CV_ONE_STEP);
+  flag = CVode (data->cvode, lambda, data->y, &lambdai, CV_ONE_STEP);
   CVODE_CHECK (&flag, "cvodes_evol_step", 1, FALSE);
 
-  pert->pws->dg = gi - pert->pws->g_int;
-  pert->pws->g_int = gi;
-  pert->pws->g = gi;
+  pert->pws->dlambda = lambdai - pert->pws->lambda_int;
+  pert->pws->lambda_int = lambdai;
+  pert->pws->lambda = lambdai;
 
   if (pert->pws->tight_coupling && pert->pws->tight_coupling_end)
     cvodes_end_tight_coupling (pert);
 
-  if (gi == g)
+  if (lambdai == lambda)
     return TRUE;
   else
     return FALSE;
 }
 
 static gboolean
-cvodes_evol (NcLinearPert *pert, gdouble g)
+cvodes_evol (NcLinearPert *pert, gdouble lambda)
 {
   gint flag;
-  gdouble gi = 0.0;
+  gdouble lambdai = 0.0;
 	gdouble last_print = 0.0;
 	//N_Vector ew = N_VNew_Serial (pert->sys_size);
 	//N_Vector ele = N_VNew_Serial (pert->sys_size);
   CVodesData *data = CVODES_DATA (pert->solver->data);
 
-  while (g > pert->pws->g_int)
+  while (lambda > pert->pws->lambda_int)
   {
-    flag = CVode (data->cvode, g, data->y, &gi, CV_ONE_STEP);
+    flag = CVode (data->cvode, lambda, data->y, &lambdai, CV_ONE_STEP);
     CVODE_CHECK (&flag, "cvodes_evol[evol]", 1, FALSE);
-    pert->pws->dg = gi - pert->pws->g_int;
-    pert->pws->g_int = gi;
-    pert->pws->g = gi;
-		if (FALSE || (FALSE && fabs (gi / last_print) > 1.001))
+    pert->pws->dlambda = lambdai - pert->pws->lambda_int;
+    pert->pws->lambda_int = lambdai;
+    pert->pws->lambda = lambdai;
+		if (FALSE || (FALSE && fabs (lambdai / last_print) > 1.001))
 		{
 			cvodes_print_all (pert);
-			last_print = gi;
+			last_print = lambdai;
 		}
 
 		if (FALSE)
@@ -385,7 +388,7 @@ cvodes_evol (NcLinearPert *pert, gdouble g)
 			//CVodeGetErrWeights (data->cvode, ew);
 			//CVodeGetEstLocalErrors (data->cvode, ele);
 			//cvodes_print_stats (pert);
-			printf ("%.15g %d %d ", gi, pert->pws->tight_coupling, pert->pws->tight_coupling_end);
+			printf ("%.15g %d %d ", lambdai, pert->pws->tight_coupling, pert->pws->tight_coupling_end);
 			for (i = 0; i < pert->sys_size; i++)
 				printf ("%.15g ", NV_Ith_S (data->y, i));
 			//for (i = 0; i < pert->sys_size; i++)
@@ -401,25 +404,25 @@ cvodes_evol (NcLinearPert *pert, gdouble g)
       break;
     if (pert->pws->tight_coupling && pert->pws->tight_coupling_end)
     {
-      if (!(g > pert->pws->g_int))
+      if (!(lambda > pert->pws->lambda_int))
       {
-        flag = CVodeGetDky(data->cvode, g, 0, data->y);
+        flag = CVodeGetDky (data->cvode, lambda, 0, data->y);
         CVODE_CHECK (&flag, "cvodes_evol[interp]", 1, FALSE);
-        pert->pws->g = g;
+        pert->pws->lambda = lambda;
       }
       cvodes_end_tight_coupling (pert);
-      if (!(g > pert->pws->g_int))
+      if (!(lambda > pert->pws->lambda_int))
         return TRUE;
     }
   }
 
-  if (g == pert->pws->g)
+  if (lambda == pert->pws->lambda)
     return TRUE;
-  else if ((g <= pert->pws->g_int) && (g > (pert->pws->g_int - pert->pws->dg)))
+  else if ((lambda <= pert->pws->lambda_int) && (lambda > (pert->pws->lambda_int - pert->pws->dlambda)))
   {
-    flag = CVodeGetDky(data->cvode, g, 0, data->y);
+    flag = CVodeGetDky (data->cvode, lambda, 0, data->y);
     CVODE_CHECK (&flag, "cvodes_evol[interp]", 1, FALSE);
-    pert->pws->g = g;
+    pert->pws->lambda = lambda;
   }
   else
     g_error ("# cvodes_evol cannot evolve backwards");
@@ -461,21 +464,21 @@ cvodes_print_stats (NcLinearPert *pert)
 #define LINEAR_VEC_LOS_THETA(pert) (CVODES_DATA(pert->solver->data)->yQ)
 #define LINEAR_STEP_RET gint
 #define LINEAR_NAME_SUFFIX(base) cvodes_##base
-#define LINEAR_STEP_PARAMS realtype g, N_Vector y, N_Vector ydot, gpointer user_data
-#define LINEAR_JAC_PARAMS _NCM_SUNDIALS_INT_TYPE N, _NCM_SUNDIALS_INT_TYPE mupper, _NCM_SUNDIALS_INT_TYPE mlower, realtype g, N_Vector y, N_Vector fy, DlsMat J, gpointer user_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3
+#define LINEAR_STEP_PARAMS realtype lambda, N_Vector y, N_Vector ydot, gpointer user_data
+#define LINEAR_JAC_PARAMS _NCM_SUNDIALS_INT_TYPE N, _NCM_SUNDIALS_INT_TYPE mupper, _NCM_SUNDIALS_INT_TYPE mlower, realtype lambda, N_Vector y, N_Vector fy, DlsMat J, gpointer user_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3
 #define LINEAR_STEP_RET_VAL return 0
 
 #include "linear_generic.c"
 
 static gint
-cvodes_Jv (N_Vector v, N_Vector Jv, realtype g, N_Vector y, N_Vector fy, gpointer user_data, N_Vector tmp)
+cvodes_Jv (N_Vector v, N_Vector Jv, realtype lambda, N_Vector y, N_Vector fy, gpointer user_data, N_Vector tmp)
 {
   NcLinearPert *pert = (NcLinearPert *)user_data;
   gboolean tight_coupling = pert->pws->tight_coupling;
   gboolean tight_coupling_end = pert->pws->tight_coupling_end;
   gint ret;
 
-  ret = cvodes_step (g, v, Jv, user_data);
+  ret = cvodes_step (lambda, v, Jv, user_data);
   pert->pws->tight_coupling = tight_coupling;
   pert->pws->tight_coupling_end = tight_coupling_end;
 
@@ -483,7 +486,7 @@ cvodes_Jv (N_Vector v, N_Vector Jv, realtype g, N_Vector y, N_Vector fy, gpointe
 }
 
 static gint
-cvodes_Mz_r (realtype g, N_Vector yo, N_Vector fy, N_Vector r, N_Vector z, realtype gamma, realtype delta, gint lr, gpointer user_data, N_Vector tmp)
+cvodes_Mz_r (realtype lambda, N_Vector yo, N_Vector fy, N_Vector r, N_Vector z, realtype gamma, realtype delta, gint lr, gpointer user_data, N_Vector tmp)
 {
   NcLinearPert *pert = (NcLinearPert *)user_data;
   gboolean tight_coupling; /* = pert->pws->tight_coupling;*/
@@ -495,9 +498,9 @@ cvodes_Mz_r (realtype g, N_Vector yo, N_Vector fy, N_Vector r, N_Vector z, realt
   b = z;
   N_VAddConst (r, 0.0, b);
 
-  while (1)
+  while (TRUE)
   {
-    cvodes_step (g, b, a, user_data);
+    cvodes_step (lambda, b, a, user_data);
     for (i = 0; i < pert->sys_size; i++)
     {
       NV_Ith_S (b, i) = gamma * NV_Ith_S (a, i) + NV_Ith_S (r, i);
@@ -516,14 +519,14 @@ cvodes_Mz_r (realtype g, N_Vector yo, N_Vector fy, N_Vector r, N_Vector z, realt
 
 #ifdef SIMUL_LOS_INT
 static gint
-cvodes_lineofsight (realtype g, N_Vector y, N_Vector yQdot, gpointer user_data)
+cvodes_lineofsight (realtype lambda, N_Vector y, N_Vector yQdot, gpointer user_data)
 {
   NcLinearPert *pert = (NcLinearPert *)user_data;
   NcParams *cp = pert->params;
   const gdouble x = exp (-g + pert->g0);
-  const gdouble taubar = nc_thermodyn_recomb_taubar (pert->recomb, x);
+  const gdouble taubar = nc_recomb_dtau_dlambda (pert->recomb, lambda);
   gdouble kdeta;
-  gdouble opt = nc_thermodyn_recomb_optical_depth (pert->recomb, x);
+  gdouble opt = nc_recomb_tau (pert->recomb, pert->cosmo, lambda);
   gdouble tau_log_abs_taubar = -opt + log(fabs(taubar));
 
   if (tau_log_abs_taubar > GSL_LOG_DBL_MIN + 0.01)

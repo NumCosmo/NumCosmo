@@ -88,6 +88,7 @@ NcmMSet *ncm_mset_copy_ref (NcmMSet *mset);
 
 void ncm_mset_copyto (NcmMSet *mset_src, NcmMSet *mset_dest);
 void ncm_mset_free (NcmMSet *mset);
+void ncm_mset_clear (NcmMSet **mset);
 
 NcmModel *ncm_mset_peek (NcmMSet *mset, NcmModelID gmid);
 NcmModel *ncm_mset_get (NcmMSet *mset, NcmModelID gmid);

@@ -90,6 +90,7 @@ NcmVector *ncm_spline_get_xv (NcmSpline *s);
 NcmVector *ncm_spline_get_yv (NcmSpline *s);
 
 void ncm_spline_free (NcmSpline *s);
+void ncm_spline_clear (NcmSpline **s);
 
 G_INLINE_FUNC void ncm_spline_prepare (NcmSpline *s);
 G_INLINE_FUNC void ncm_spline_prepare_base (NcmSpline *s);

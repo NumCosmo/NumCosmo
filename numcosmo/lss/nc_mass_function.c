@@ -101,7 +101,21 @@ nc_mass_function_copy (NcMassFunction *mfp)
 void
 nc_mass_function_free (NcMassFunction *mfp)
 {
-  g_clear_object (&mfp);
+  g_object_unref (mfp);
+}
+
+/**
+ * nc_mass_function_clear:
+ * @mfp: a #NcMassFunction.
+ *
+ * Atomically decrements the reference count of @mfp by one. If the reference count drops to 0,
+ * all memory allocated by @mfp is released. Set pointer to NULL.
+ *
+ */
+void
+nc_mass_function_clear (NcMassFunction **mfp)
+{
+  g_clear_object (mfp);
 }
 
 static void
@@ -122,13 +136,13 @@ static void
 _nc_mass_function_dispose (GObject *object)
 {
   NcMassFunction *mfp = NC_MASS_FUNCTION (object);
-  nc_distance_free (mfp->dist);
-  nc_matter_var_free (mfp->vp);
-  nc_growth_func_free (mfp->gf);
-  nc_multiplicity_func_free (mfp->mulf);
-  ncm_model_ctrl_free (mfp->ctrl);
-  if (mfp->d2NdzdlnM != NULL)
-	ncm_spline2d_free (mfp->d2NdzdlnM);
+  
+  nc_distance_clear (&mfp->dist);
+  nc_matter_var_clear (&mfp->vp);
+  nc_growth_func_clear (&mfp->gf);
+  nc_multiplicity_func_clear (&mfp->mulf);
+  ncm_model_ctrl_clear (&mfp->ctrl);
+	ncm_spline2d_clear (&mfp->d2NdzdlnM);
 
   /* Chain up : end */
   G_OBJECT_CLASS (nc_mass_function_parent_class)->dispose (object);

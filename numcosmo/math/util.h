@@ -29,7 +29,7 @@
 #include <glib-object.h>
 
 #include <numcosmo/math/ncm_model.h>
-#include <numcosmo/data/data.h>
+#include <numcosmo/math/ncm_data.h>
 #include <numcosmo/nc_distance.h>
 #include <numcosmo/math/ncm_mset_func.h>
 
@@ -45,7 +45,7 @@ G_BEGIN_DECLS
 gulong ncm_random_seed (void);
 gsl_rng *ncm_get_rng (void);
 
-void ncm_finite_diff_calc_J (NcmModel *model, NcData *data, NcmMatrix *jac);
+void ncm_finite_diff_calc_J (NcmModel *model, NcmData *data, NcmMatrix *jac);
 
 gdouble *ncm_smoothd (gdouble *in, size_t N, size_t points, size_t pass);
 gboolean ncm_get_uniform_sample (NcmMSet *mset, NcmMSetFunc *func, gdouble x0, gdouble x1, NcmVector *sample);

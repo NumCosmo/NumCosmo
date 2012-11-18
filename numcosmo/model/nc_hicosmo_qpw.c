@@ -157,7 +157,7 @@ _nc_hicosmo_qpw_continuity_prior_free (gpointer obj)
  *
  */
 void
-nc_hicosmo_qpw_add_continuity_prior (NcHICosmoQPW *qpw, NcLikelihood *lh, gint knot, gdouble sigma)
+nc_hicosmo_qpw_add_continuity_prior (NcHICosmoQPW *qpw, NcmLikelihood *lh, gint knot, gdouble sigma)
 {
   NcHICosmoQPWContPrior *cp = g_slice_new (NcHICosmoQPWContPrior);
   NcmMSetFunc *func = ncm_mset_func_new (continuity_prior_f, 0, 1, cp, _nc_hicosmo_qpw_continuity_prior_free);
@@ -165,7 +165,7 @@ nc_hicosmo_qpw_add_continuity_prior (NcHICosmoQPW *qpw, NcLikelihood *lh, gint k
   g_assert (sigma > 0.0);
   cp->knot = knot;
   cp->sigma = sigma;
-  nc_likelihood_priors_add (lh, func);
+  ncm_likelihood_priors_add (lh, func);
   return;
 }
 
@@ -179,7 +179,7 @@ nc_hicosmo_qpw_add_continuity_prior (NcHICosmoQPW *qpw, NcLikelihood *lh, gint k
  *
  */
 void
-nc_hicosmo_qpw_add_continuity_priors (NcHICosmoQPW *qpw, NcLikelihood *lh, gdouble sigma)
+nc_hicosmo_qpw_add_continuity_priors (NcHICosmoQPW *qpw, NcmLikelihood *lh, gdouble sigma)
 {
   guint i;
   for (i = 0; i < ncm_model_len (NCM_MODEL (qpw)) - 4; i++)
@@ -205,14 +205,14 @@ _nc_hicosmo_qpw_asymptotic_cdm_free (gpointer obj)
  *
  */
 void
-nc_hicosmo_qpw_add_asymptotic_cdm_prior (NcHICosmoQPW *qpw, NcLikelihood *lh, gdouble z, gdouble q, gdouble sigma)
+nc_hicosmo_qpw_add_asymptotic_cdm_prior (NcHICosmoQPW *qpw, NcmLikelihood *lh, gdouble z, gdouble q, gdouble sigma)
 {
   NcHICosmoQPWAsymCDMPrior *cp = g_slice_new (NcHICosmoQPWAsymCDMPrior);
   NcmMSetFunc *func = ncm_mset_func_new (AsymptoticCDM_prior_f, 0, 1, cp, _nc_hicosmo_qpw_asymptotic_cdm_free);
   cp->z = z;
   cp->q = q;
   cp->sigma = sigma;
-  nc_likelihood_priors_add (lh, func);
+  ncm_likelihood_priors_add (lh, func);
   return;
 }
 

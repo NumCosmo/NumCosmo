@@ -73,7 +73,6 @@ nc_growth_func_copy (NcGrowthFunc *gf)
   return nc_growth_func_new ();
 }
 
-
 /**
  * nc_growth_func_free:
  * @gf: a #NcGrowthFunc.
@@ -85,7 +84,21 @@ nc_growth_func_copy (NcGrowthFunc *gf)
 void
 nc_growth_func_free (NcGrowthFunc *gf)
 {
-  g_clear_object (&gf);
+  g_object_unref (gf);
+}
+
+/**
+ * nc_growth_func_clear:
+ * @gf: a #NcGrowthFunc.
+ *
+ * Atomically decrements the reference count of @gf by one. If the reference count drops to 0,
+ * all memory allocated by @gf is released. Set pointer to NULL.
+ *
+*/
+void
+nc_growth_func_clear (NcGrowthFunc **gf)
+{
+  g_clear_object (gf);
 }
 
 static gint
@@ -273,10 +286,8 @@ _nc_growth_func_dispose (GObject * object)
 {
   NcGrowthFunc *gf = NC_GROWTH_FUNC (object);
 
-  if (gf->s != NULL)
-	ncm_spline_free (gf->s);
-
-  ncm_model_ctrl_free (gf->ctrl);
+	ncm_spline_clear (&gf->s);
+  ncm_model_ctrl_clear (&gf->ctrl);
 
   /* Chain up : end */
   G_OBJECT_CLASS (nc_growth_func_parent_class)->dispose (object);

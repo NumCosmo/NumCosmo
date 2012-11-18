@@ -83,11 +83,25 @@ nc_halo_bias_type_eval (NcHaloBiasType *biasf, gdouble sigma, gdouble z)
  * Atomically decrements the reference count of @biasf by one. If the reference count drops to 0,
  * all memory allocated by @biasf is released.
  *
-*/
+ */
 void
 nc_halo_bias_type_free (NcHaloBiasType *biasf)
 {
-  g_clear_object (&biasf);
+  g_object_unref (biasf);
+}
+
+/**
+ * nc_halo_bias_type_clear:
+ * @biasf: a #NcHaloBiasType.
+ *
+ * Atomically decrements the reference count of @biasf by one. If the reference count drops to 0,
+ * all memory allocated by @biasf is released. Set pointer to NULL.
+ *
+ */
+void
+nc_halo_bias_type_clear (NcHaloBiasType **biasf)
+{
+  g_clear_object (biasf);
 }
 
 static void

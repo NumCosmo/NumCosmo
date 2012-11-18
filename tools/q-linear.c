@@ -87,8 +87,8 @@ main (gint argc, gchar *argv[])
 {
   GError *error = NULL;
   GOptionContext *context;
-  NcDataSet *ds;
-  NcLikelihood *lh;
+  NcmDataset *dset;
+  NcmLikelihood *lh;
   NcmFit *fit = NULL;
   NcHICosmoQLinear *qlin;
   NcHICosmoDEXcdm *xcdm;
@@ -109,15 +109,16 @@ main (gint argc, gchar *argv[])
   mset_xcdm = ncm_mset_new (NCM_MODEL (xcdm), NULL);
 
   dist = nc_distance_new (2.0);
-  ds = nc_dataset_new ();
+  dset = ncm_dataset_new ();
 
   if (snia_id != -1)
   {
-	NcData *snia = nc_data_distance_mu_snia (dist, snia_id);
-	nc_dataset_append_data (ds, snia);
+    NcmData *snia = nc_data_dist_mu_new (dist, snia_id);
+    ncm_dataset_append_data (dset, snia);
+    ncm_data_free (snia);
   }
 
-  lh = nc_likelihood_new (ds);
+  lh = ncm_likelihood_new (dset);
 
   ncm_model_param_set (NCM_MODEL (xcdm), NC_HICOSMO_DE_H0, ncm_c_hubble_cte_hst ());
   ncm_model_param_set (NCM_MODEL (xcdm), NC_HICOSMO_DE_OMEGA_C, RESAMPLE_OMEGA_M);
@@ -125,59 +126,58 @@ main (gint argc, gchar *argv[])
   ncm_model_param_set (NCM_MODEL (xcdm), NC_HICOSMO_DE_XCDM_W, RESAMPLE_OMEGA);
 
   if (resample)
-	nc_dataset_resample (ds, mset_xcdm, TRUE);
+    ncm_dataset_resample (dset, mset_xcdm);
 
   if (least_squares)
   {
-	ncm_model_param_set (NCM_MODEL (qlin), NC_HICOSMO_QLINEAR_OMEGA_T, 1.0);
-	ncm_mset_param_set_ftype (mset, NC_HICOSMO_ID, NC_HICOSMO_QLINEAR_OMEGA_T, NCM_PARAM_TYPE_FIXED);
+    ncm_model_param_set (NCM_MODEL (qlin), NC_HICOSMO_QLINEAR_OMEGA_T, 1.0);
+    ncm_mset_param_set_ftype (mset, NC_HICOSMO_ID, NC_HICOSMO_QLINEAR_OMEGA_T, NCM_PARAM_TYPE_FIXED);
 
-	fit = ncm_fit_new (lh, mset, NCM_FIT_TYPE_LEAST_SQUARES, NCM_FIT_GRAD_ANALYTICAL);
-	ncm_fit_run (fit, NC_BF_MAX_ITER, verbose);
-	ncm_fit_log_info (fit);
-	ncm_fit_numdiff_m2lnL_covar (fit);
-	ncm_fit_log_covar (fit);
+    fit = ncm_fit_new (lh, mset, NCM_FIT_TYPE_LEAST_SQUARES, NCM_FIT_GRAD_ANALYTICAL);
+    ncm_fit_run (fit, NC_BF_MAX_ITER, verbose);
+    ncm_fit_log_info (fit);
+    ncm_fit_numdiff_m2lnL_covar (fit);
+    ncm_fit_log_covar (fit);
   }
 
   if (multimin)
   {
-	if (z == 0.0 || TRUE)
-	{
-	  ncm_model_param_set (NCM_MODEL (qlin), NC_HICOSMO_QLINEAR_OMEGA_T, 1.0);
-	  ncm_mset_param_set_ftype (mset, NC_HICOSMO_ID, NC_HICOSMO_QLINEAR_OMEGA_T, NCM_PARAM_TYPE_FIXED);
-	}
-	fit = ncm_fit_new (lh, mset, NCM_FIT_TYPE_MULTIMIN, NCM_FIT_GRAD_ANALYTICAL);
+    if (z == 0.0 || TRUE)
+    {
+      ncm_model_param_set (NCM_MODEL (qlin), NC_HICOSMO_QLINEAR_OMEGA_T, 1.0);
+      ncm_mset_param_set_ftype (mset, NC_HICOSMO_ID, NC_HICOSMO_QLINEAR_OMEGA_T, NCM_PARAM_TYPE_FIXED);
+    }
+    fit = ncm_fit_new (lh, mset, NCM_FIT_TYPE_MULTIMIN, NCM_FIT_GRAD_ANALYTICAL);
 
-	ncm_fit_run (fit, NC_BF_MAX_ITER, verbose);
-	ncm_fit_log_info (fit);
-	ncm_fit_numdiff_m2lnL_covar (fit);
-	ncm_fit_log_covar (fit);
+    ncm_fit_run (fit, NC_BF_MAX_ITER, verbose);
+    ncm_fit_log_info (fit);
+    ncm_fit_numdiff_m2lnL_covar (fit);
+    ncm_fit_log_covar (fit);
   }
 
   if (cr_x != -1 && cr_y != -1 && fit != NULL)
-	ncm_fit_cr (fit, NC_HICOSMO_ID, cr_x, NC_HICOSMO_ID, cr_y, confidence);
+    ncm_fit_cr (fit, NC_HICOSMO_ID, cr_x, NC_HICOSMO_ID, cr_y, confidence);
 
   if (print_E && fit != NULL)
   {
-	gdouble dz[] = {0.09, 0.17, 0.27, 0.4, 0.88, 1.3, 1.43, 1.53, 1.75};
-	gint i;
-	gint n = sizeof (dz)/sizeof(gdouble);
-	gdouble E = ncm_mset_param_get (fit->mset, NC_HICOSMO_ID, NC_HICOSMO_QLINEAR_E);
-	for (i = 0; i < n && dz[i] <= interval; i++)
-	{
-	  gdouble dE = nc_hicosmo_qlinear_dE (dz[i], z, ncm_mset_param_get (fit->mset, NC_HICOSMO_ID, NC_HICOSMO_QLINEAR_Q),
-	                                    ncm_mset_param_get (fit->mset, NC_HICOSMO_ID, NC_HICOSMO_QLINEAR_QP));
-	  printf ("\t%g\t%g\t%g\n", dz[i], E*dE, E*dE * ncm_c_hubble_cte_wmap ());
-	}
+    gdouble dz[] = {0.09, 0.17, 0.27, 0.4, 0.88, 1.3, 1.43, 1.53, 1.75};
+    gint i;
+    gint n = sizeof (dz)/sizeof(gdouble);
+    gdouble E = ncm_mset_param_get (fit->mset, NC_HICOSMO_ID, NC_HICOSMO_QLINEAR_E);
+    for (i = 0; i < n && dz[i] <= interval; i++)
+    {
+      gdouble dE = nc_hicosmo_qlinear_dE (dz[i], z, ncm_mset_param_get (fit->mset, NC_HICOSMO_ID, NC_HICOSMO_QLINEAR_Q),
+                                          ncm_mset_param_get (fit->mset, NC_HICOSMO_ID, NC_HICOSMO_QLINEAR_QP));
+      printf ("\t%g\t%g\t%g\n", dz[i], E*dE, E*dE * ncm_c_hubble_cte_wmap ());
+    }
   }
 
-  if (fit != NULL)
-	ncm_fit_free (fit);
+  ncm_fit_clear (&fit);
   ncm_model_free (NCM_MODEL (qlin));
   ncm_model_free (NCM_MODEL (xcdm));
   ncm_mset_free (mset);
   ncm_mset_free (mset_xcdm);
-  nc_likelihood_free (lh);
-  nc_dataset_free0 (ds, TRUE);
+  ncm_likelihood_free (lh);
+  ncm_dataset_free (dset);
   return 0;
 }
