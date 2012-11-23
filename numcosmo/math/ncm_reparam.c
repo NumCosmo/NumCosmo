@@ -67,9 +67,9 @@ NcmReparam *
 ncm_reparam_copy (NcmReparam *reparam)
 {
   if (!NCM_REPARAM_GET_CLASS (reparam)->copy)
-	g_error ("NcmReparam[%s] base class do not implement copy.", G_OBJECT_TYPE_NAME (reparam));
+    g_error ("NcmReparam[%s] base class do not implement copy.", G_OBJECT_TYPE_NAME (reparam));
   else
-	return NCM_REPARAM_GET_CLASS (reparam)->copy (reparam);
+    return NCM_REPARAM_GET_CLASS (reparam)->copy (reparam);
 }
 
 /**
@@ -79,7 +79,7 @@ ncm_reparam_copy (NcmReparam *reparam)
  * FIXME
  *
  * Returns: (transfer full): FIXME
- */
+   */
 NcmReparam *
 ncm_reparam_ref (NcmReparam *reparam)
 {
@@ -205,11 +205,11 @@ _ncm_reparam_constructed (GObject *object)
   /* Chain up : start */
   G_OBJECT_CLASS (ncm_reparam_parent_class)->constructed (object);
   {
-	NcmReparam *reparam = NCM_REPARAM (object);
+    NcmReparam *reparam = NCM_REPARAM (object);
 
-	reparam->new_params = ncm_vector_new (reparam->length);
-	reparam->sparams = g_ptr_array_sized_new (reparam->length);
-	g_ptr_array_set_size (reparam->sparams, reparam->length);
+    reparam->new_params = ncm_vector_new_sunk (reparam->length);
+    reparam->sparams = g_ptr_array_sized_new (reparam->length);
+    g_ptr_array_set_size (reparam->sparams, reparam->length);
   }
 }
 
@@ -222,15 +222,15 @@ _ncm_reparam_get_property (GObject *object, guint prop_id, GValue *value, GParam
 
   switch (prop_id)
   {
-	case PROP_LEN:
-	  g_value_set_uint (value, reparam->length);
-	  break;
-	case PROP_MODEL_TYPE:
-	  g_value_set_gtype (value, reparam->model_type);
-	  break;
-	default:
-	  G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-	  break;
+    case PROP_LEN:
+      g_value_set_uint (value, reparam->length);
+      break;
+    case PROP_MODEL_TYPE:
+      g_value_set_gtype (value, reparam->model_type);
+      break;
+    default:
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
+      break;
   }
 }
 
@@ -243,15 +243,15 @@ _ncm_reparam_set_property (GObject *object, guint prop_id, const GValue *value, 
 
   switch (prop_id)
   {
-	case PROP_LEN:
-	  reparam->length = g_value_get_uint (value);
-	  break;
-	case PROP_MODEL_TYPE:
-	  reparam->model_type = g_value_get_gtype (value);
-	  break;
-	default:
-	  G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-	  break;
+    case PROP_LEN:
+      reparam->length = g_value_get_uint (value);
+      break;
+    case PROP_MODEL_TYPE:
+      reparam->model_type = g_value_get_gtype (value);
+      break;
+    default:
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
+      break;
   }
 }
 
@@ -278,21 +278,21 @@ _ncm_reparam_copyto (NcmReparam *reparam, NcmReparam *reparam_dest)
   g_assert (G_OBJECT_TYPE (reparam) == G_OBJECT_TYPE (reparam_dest));
   if (reparam->length != reparam_dest->length)
   {
-	ncm_vector_free (reparam_dest->new_params);
-	reparam_dest->new_params = ncm_vector_new (reparam->length);
-	g_ptr_array_set_size (reparam_dest->sparams, 0);
-	g_ptr_array_set_size (reparam_dest->sparams, reparam->length);
+    ncm_vector_free (reparam_dest->new_params);
+    reparam_dest->new_params = ncm_vector_new_sunk (reparam->length);
+    g_ptr_array_set_size (reparam_dest->sparams, 0);
+    g_ptr_array_set_size (reparam_dest->sparams, reparam->length);
   }
 
   ncm_vector_memcpy (reparam_dest->new_params, reparam->new_params);
   if (reparam->sparams)
   {
-	for (i = 0; i < reparam->length; i++)
-	{
-	  NcmSParam *pinfo = g_ptr_array_index (reparam->sparams, i);
-	  if (pinfo)
-		g_ptr_array_index (reparam_dest->sparams, i) = ncm_sparam_copy (pinfo);
-	}
+    for (i = 0; i < reparam->length; i++)
+    {
+      NcmSParam *pinfo = g_ptr_array_index (reparam->sparams, i);
+      if (pinfo)
+        g_ptr_array_index (reparam_dest->sparams, i) = ncm_sparam_copy (pinfo);
+    }
   }
 }
 
@@ -320,10 +320,10 @@ ncm_reparam_class_init (NcmReparamClass *klass)
   g_object_class_install_property (object_class,
                                    PROP_MODEL_TYPE,
                                    g_param_spec_gtype ("model-type",
-                                                      NULL,
-                                                      "GType of NcmModel parent",
-                                                      NCM_TYPE_MODEL,
-                                                      G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+                                                       NULL,
+                                                       "GType of NcmModel parent",
+                                                       NCM_TYPE_MODEL,
+                                                       G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
 
   object_class->finalize = ncm_reparam_finalize;

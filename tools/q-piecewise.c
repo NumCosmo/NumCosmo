@@ -58,7 +58,7 @@ static gboolean print_E = FALSE;
 static gboolean least_squares = FALSE;
 static gboolean change_params = FALSE;
 static gchar *file_out = NULL;
-static gint min_algo = NCM_FIT_TYPE_NLOPT_LN_NELDERMEAD;
+static gint min_algo = NCM_FIT_TYPE_NLOPT;
 static gint diff_algo = NCM_FIT_GRAD_NUMDIFF_FORWARD;
 
 static GOptionEntry entries[] =
@@ -160,8 +160,8 @@ main(gint argc, gchar *argv[])
     gint wpiece = nc_hicosmo_qpw_index (qpw, z0) + 3;
     //    nc_hicosmo_qpw_add_asymptotic_cdm_prior (lh, 500.0f, 1.0f/2.0f, 0.0001f);
     //    nc_hicosmo_qpw_add_asymptotic_cdm_prior (lh, 600.0f, 1.0f/2.0f, 0.0001f);
-    fit = ncm_fit_new (lh, mset, NCM_FIT_TYPE_LEAST_SQUARES, NCM_FIT_GRAD_ANALYTICAL); /* FIXME:log */
-    ncm_fit_run (fit, max_iter, msg_level);
+    fit = ncm_fit_new (NCM_FIT_TYPE_GSL_LS, NULL, lh, mset, NCM_FIT_GRAD_ANALYTICAL);
+    ncm_fit_run (fit, msg_level);
     ncm_fit_log_info (fit);
     ncm_fit_numdiff_m2lnL_covar (fit);
     ncm_fit_log_covar (fit);
@@ -191,7 +191,7 @@ main(gint argc, gchar *argv[])
         NcHICosmoQPWContPrior *cprior = (NcHICosmoQPWContPrior *)pdata->obj;
         cprior->sigma = s;
       }
-      ncm_fit_run (fit, max_iter, FALSE);
+      ncm_fit_run (fit, FALSE);
     }
 
     if (FALSE)
@@ -319,8 +319,8 @@ main(gint argc, gchar *argv[])
         nc_hicosmo_qpw_change_params (qpw, step);
         ncm_model_param_set (NCM_MODEL (qpw), 0, 0.0);
         ncm_model_param_set (NCM_MODEL (qpw), wpiece, -0.2);
-        fit = ncm_fit_new (lh, mset, NCM_FIT_TYPE_LEAST_SQUARES, NCM_FIT_GRAD_ANALYTICAL);
-        ncm_fit_run (fit, max_iter, msg_level);
+        fit = ncm_fit_new (NCM_FIT_TYPE_GSL_LS, NULL, lh, mset, NCM_FIT_GRAD_ANALYTICAL);
+        ncm_fit_run (fit, msg_level);
         printf ("estimate E(%-8.6f) = % -8.6f, q(%-8.6f) = % -8.6f | err E = % -8.6f, q = % -8.6f\n",
                 step, exp(ncm_model_param_get (NCM_MODEL (qpw), 0)),
                 step, ncm_model_param_get (NCM_MODEL (qpw), wpiece),
@@ -349,7 +349,7 @@ main(gint argc, gchar *argv[])
           ncm_fit_gen_bootstrap (fit);
 
 
-        ncm_fit_run (fit, max_iter, FALSE);
+        ncm_fit_run (fit, FALSE);
         //printf ("# %g\n",fit->m2lnL);
         //nc_params_print_all (cp, stdout);
         printf ("%.16g\n", fit->m2lnL);
@@ -376,7 +376,7 @@ main(gint argc, gchar *argv[])
       for (i = 0 ; i < SIZE ; i++)
       {
         ncm_dataset_resample (lh->dset, mset_lcdm);
-        ncm_fit_run (fit, max_iter, FALSE);
+        ncm_fit_run (fit, FALSE);
         for (j = 0; j < 1000; j++)
         {
           gdouble step = range / 1000.0f * j;
@@ -442,9 +442,9 @@ main(gint argc, gchar *argv[])
   if (TRUE)
   {
     printf ("# Number of knots in the model %u\n", ncm_model_len (NCM_MODEL (qpw)) - 2);
-    fit = ncm_fit_new (lh, mset, min_algo, diff_algo);
+    fit = ncm_fit_new (NCM_FIT_TYPE_GSL_MMS, "NCM_FIT_GSL_MMS_NMSIMPLEX2", lh, mset, diff_algo);
 
-    ncm_fit_run (fit, max_iter, msg_level);
+    ncm_fit_run (fit, msg_level);
     ncm_fit_log_info (fit);
     ncm_fit_numdiff_m2lnL_covar (fit);
     ncm_fit_log_covar (fit);

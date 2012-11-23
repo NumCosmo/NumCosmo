@@ -114,8 +114,10 @@ typedef struct _NcDEFitEntries NcDEFitEntries;
 struct _NcDEFitEntries
 {
   gchar *file_out;
-  gint min_algo;
-  gint diff_algo;
+  gboolean fit;
+  gchar *fit_type;
+  gchar *fit_diff;
+  gchar *fit_algo;
   gint nsigma;
   gint nsigma_fisher;
   gint bidim_cr[2];
@@ -127,16 +129,15 @@ struct _NcDEFitEntries
   gint mc_ni;
   gboolean fiducial;
   gboolean mc_data;
-  gboolean fit;
   gboolean fisher;
   gboolean save_fisher;
   gboolean save_best_fit;
 };
 
 #ifdef NUMCOSMO_HAVE_NLOPT
-#define NC_DE_FIT_ENTRIES { NULL, NCM_FIT_TYPE_NLOPT_LN_NELDERMEAD, NCM_FIT_GRAD_NUMDIFF_FORWARD, -1, -1, {-1, -1}, NULL, NC_BF_MAX_ITER, FALSE, NCM_FIT_RUN_MSGS_SIMPLE, -1, 0, FALSE, FALSE, FALSE, FALSE, FALSE}
+#define NC_DE_FIT_ENTRIES { NULL, FALSE, "nlopt",   "numdiff-forward", NULL, -1, -1, {-1, -1}, NULL, NCM_FIT_MAXEVAL, FALSE, NCM_FIT_RUN_MSGS_SIMPLE, -1, 0, FALSE, FALSE, FALSE, FALSE}
 #else
-#define NC_DE_FIT_ENTRIES { NULL, NCM_FIT_TYPE_SIMPLEX,             NCM_FIT_GRAD_NUMDIFF_FORWARD, -1, -1, {-1, -1}, NULL, NC_BF_MAX_ITER, FALSE, NCM_FIT_RUN_MSGS_SIMPLE, -1, 0, FALSE, FALSE, FALSE, FALSE, FALSE}
+#define NC_DE_FIT_ENTRIES { NULL, FALSE, "gsl-mms", "numdiff-forward", NULL, -1, -1, {-1, -1}, NULL, NCM_FIT_MAXEVAL, FALSE, NCM_FIT_RUN_MSGS_SIMPLE, -1, 0, FALSE, FALSE, FALSE, FALSE}
 #endif
 
 GOptionGroup *nc_de_opt_get_run_group (NcDERunEntries *de_run);

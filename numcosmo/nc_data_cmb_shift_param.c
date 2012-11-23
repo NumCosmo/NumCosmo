@@ -213,7 +213,7 @@ nc_data_cmb_shift_param_set_sample (NcDataCMBShiftParam *cmb_shift_param, NcData
     ncm_vector_clear (&cmb_shift_param->x);
 
   if (cmb_shift_param->x == NULL)
-    cmb_shift_param->x = ncm_vector_new (1);
+    cmb_shift_param->x = ncm_vector_new_sunk (1);
   
   if (data->desc != NULL)
     g_free (data->desc);

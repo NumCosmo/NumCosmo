@@ -45,13 +45,13 @@ _ncm_spline_cubic_alloc (NcmSplineCubic *sc, gsize n)
 {
 	g_assert (!sc->init);
 
-	sc->b = ncm_vector_new (n);
-	sc->c = ncm_vector_new (n);
-	sc->d = ncm_vector_new (n);
+	sc->b = ncm_vector_new_sunk (n);
+	sc->c = ncm_vector_new_sunk (n);
+	sc->d = ncm_vector_new_sunk (n);
 
-	sc->g = ncm_vector_new (n);
-	sc->diag = ncm_vector_new (n);
-	sc->offdiag = ncm_vector_new (n);
+	sc->g = ncm_vector_new_sunk (n);
+	sc->diag = ncm_vector_new_sunk (n);
+	sc->offdiag = ncm_vector_new_sunk (n);
 
 	sc->init = TRUE;
 	sc->len = n;

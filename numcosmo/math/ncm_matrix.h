@@ -96,7 +96,9 @@ GType ncm_matrix_get_type (void) G_GNUC_CONST;
 #define NCM_MATRIX_NCOLS(cm) ((cm)->mv.matrix.size2)
 
 NcmMatrix *ncm_matrix_new (const gsize nrows, const gsize ncols);
+NcmMatrix *ncm_matrix_new_sunk (const gsize nrows, const gsize ncols);
 NcmMatrix *ncm_matrix_new_gsl (gsl_matrix *gm);
+NcmMatrix *ncm_matrix_new_gsl_static (gsl_matrix *gm);
 NcmMatrix *ncm_matrix_new_array (GArray *a, const gsize ncols);
 NcmMatrix *ncm_matrix_new_data_slice (gdouble *d, const gsize nrows, const gsize ncols);
 NcmMatrix *ncm_matrix_new_data_malloc (gdouble *d, const gsize nrows, const gsize ncols);

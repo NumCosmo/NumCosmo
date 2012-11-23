@@ -133,8 +133,8 @@ main (gint argc, gchar *argv[])
     ncm_model_param_set (NCM_MODEL (qlin), NC_HICOSMO_QLINEAR_OMEGA_T, 1.0);
     ncm_mset_param_set_ftype (mset, NC_HICOSMO_ID, NC_HICOSMO_QLINEAR_OMEGA_T, NCM_PARAM_TYPE_FIXED);
 
-    fit = ncm_fit_new (lh, mset, NCM_FIT_TYPE_LEAST_SQUARES, NCM_FIT_GRAD_ANALYTICAL);
-    ncm_fit_run (fit, NC_BF_MAX_ITER, verbose);
+    fit = ncm_fit_new (NCM_FIT_TYPE_GSL_LS, NULL, lh, mset, NCM_FIT_GRAD_ANALYTICAL);
+    ncm_fit_run (fit, verbose);
     ncm_fit_log_info (fit);
     ncm_fit_numdiff_m2lnL_covar (fit);
     ncm_fit_log_covar (fit);
@@ -147,9 +147,9 @@ main (gint argc, gchar *argv[])
       ncm_model_param_set (NCM_MODEL (qlin), NC_HICOSMO_QLINEAR_OMEGA_T, 1.0);
       ncm_mset_param_set_ftype (mset, NC_HICOSMO_ID, NC_HICOSMO_QLINEAR_OMEGA_T, NCM_PARAM_TYPE_FIXED);
     }
-    fit = ncm_fit_new (lh, mset, NCM_FIT_TYPE_MULTIMIN, NCM_FIT_GRAD_ANALYTICAL);
+    fit = ncm_fit_new (NCM_FIT_TYPE_GSL_MMS, "NCM_FIT_GSL_MMS_NMSIMPLEX2", lh, mset, NCM_FIT_GRAD_ANALYTICAL);
 
-    ncm_fit_run (fit, NC_BF_MAX_ITER, verbose);
+    ncm_fit_run (fit, verbose);
     ncm_fit_log_info (fit);
     ncm_fit_numdiff_m2lnL_covar (fit);
     ncm_fit_log_covar (fit);

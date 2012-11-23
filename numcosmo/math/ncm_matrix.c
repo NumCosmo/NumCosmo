@@ -62,6 +62,22 @@ ncm_matrix_new (gsize nrows, gsize ncols)
 }
 
 /**
+ * ncm_matrix_new_sunk:
+ * @nrows: number of rows.
+ * @ncols: number of columns.
+ *
+ * This function allocates memory for a new #NcmMatrix of doubles
+ * with @nrows rows and @ncols columns. Returns a sunk reference.
+ *
+ * Returns: A new #NcmMatrix.
+ */
+NcmMatrix *
+ncm_matrix_new_sunk (gsize nrows, gsize ncols)
+{
+  return ncm_matrix_ref (ncm_matrix_new (nrows, ncols));
+}
+
+/**
  * ncm_matrix_new_gsl: (skip)
  * @gm: matrix from GNU Scientific Library (GSL) to be converted into a #NcmMatrix.
  *
@@ -77,6 +93,23 @@ ncm_matrix_new_gsl (gsl_matrix *gm)
   cm->gm = gm;
   cm->mv = gsl_matrix_submatrix (gm, 0, 0, gm->size1, gm->size2);
   cm->type = NCM_MATRIX_GSL_MATRIX;
+  return cm;
+}
+
+/**
+ * ncm_matrix_new_gsl_static: (skip)
+ * @gm: matrix from GNU Scientific Library (GSL) to be converted into a #NcmMatrix.
+ *
+ * This function saves @gm internally and does not frees it.
+ * The @gm matrix must be valid during the life of the created #NcmMatrix.
+ *
+ * Returns: A new #NcmMatrix.
+ */
+NcmMatrix *
+ncm_matrix_new_gsl_static (gsl_matrix *gm)
+{
+  NcmMatrix *cm = ncm_matrix_new_gsl (gm);
+  cm->type = NCM_MATRIX_DERIVED;
   return cm;
 }
 

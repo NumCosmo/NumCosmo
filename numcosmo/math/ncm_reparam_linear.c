@@ -75,17 +75,17 @@ linear_jac (NcmReparam *reparam, NcmModel *model, NcmMatrix *jac)
 {
   g_assert_not_reached ();
   /*
-  NcmReparamLinear *relin = NCM_REPARAM_LINEAR (reparam);
-  gint i, j = 0;
-  for (i = 0; i < ncm_model_len (model); i++)
-  {
-	if (NCM_FIT_PARAMS_IS_FREE(pt, i))
-	{
-	  NcmVector *col = ncm_matrix_get_col (relin->T, i);
-	  ncm_matrix_set_col (jac, j++, col);
-	  ncm_vector_free (col);
-	}
-  }
+   NcmReparamLinear *relin = NCM_REPARAM_LINEAR (reparam);
+   gint i, j = 0;
+   for (i = 0; i < ncm_model_len (model); i++)
+   {
+     if (NCM_FIT_PARAMS_IS_FREE(pt, i))
+     {
+       NcmVector *col = ncm_matrix_get_col (relin->T, i);
+       ncm_matrix_set_col (jac, j++, col);
+       ncm_vector_free (col);
+}
+}
 */
   return TRUE;
 }
@@ -96,20 +96,20 @@ _ncm_reparam_linear_constructed (GObject *object)
   /* Chain up : start */
   G_OBJECT_CLASS (ncm_reparam_linear_parent_class)->constructed (object);
   {
-	NcmReparamLinear *relin = NCM_REPARAM_LINEAR (object);
-	NcmReparam *reparam = NCM_REPARAM (relin);
+    NcmReparamLinear *relin = NCM_REPARAM_LINEAR (object);
+    NcmReparam *reparam = NCM_REPARAM (relin);
 
-	g_assert ((NCM_MATRIX_NROWS (relin->T) == NCM_MATRIX_NCOLS (relin->T)) &&
-	          (NCM_MATRIX_NROWS(relin->T) == reparam->length) &&
-	          (ncm_vector_len(relin->v) == reparam->length));
+    g_assert ((NCM_MATRIX_NROWS (relin->T) == NCM_MATRIX_NCOLS (relin->T)) &&
+              (NCM_MATRIX_NROWS(relin->T) == reparam->length) &&
+              (ncm_vector_len(relin->v) == reparam->length));
 
-	relin->vp = ncm_vector_new (reparam->length);
-	relin->T_LU = ncm_matrix_new (reparam->length, reparam->length);
-	relin->p = gsl_permutation_alloc (reparam->length);
+    relin->vp = ncm_vector_new_sunk (reparam->length);
+    relin->T_LU = ncm_matrix_new_sunk (reparam->length, reparam->length);
+    relin->p = gsl_permutation_alloc (reparam->length);
 
-	ncm_matrix_memcpy (relin->T_LU, relin->T);
-	gsl_linalg_LU_decomp (NCM_MATRIX_GSL (relin->T_LU), relin->p, &relin->signum);
-	gsl_linalg_LU_solve (NCM_MATRIX_GSL (relin->T_LU), relin->p, ncm_vector_gsl(relin->v), ncm_vector_gsl(relin->vp));
+    ncm_matrix_memcpy (relin->T_LU, relin->T);
+    gsl_linalg_LU_decomp (NCM_MATRIX_GSL (relin->T_LU), relin->p, &relin->signum);
+    gsl_linalg_LU_solve (NCM_MATRIX_GSL (relin->T_LU), relin->p, ncm_vector_gsl(relin->v), ncm_vector_gsl(relin->vp));
   }
 }
 
@@ -122,15 +122,15 @@ _ncm_reparam_linear_get_property (GObject *object, guint prop_id, GValue *value,
 
   switch (prop_id)
   {
-	case PROP_V:
-	  g_value_set_object (value, relin->v);
-	  break;
-	case PROP_T:
-	  g_value_set_object (value, relin->T);
-	  break;
-	default:
-	  G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-	  break;
+    case PROP_V:
+      g_value_set_object (value, relin->v);
+      break;
+    case PROP_T:
+      g_value_set_object (value, relin->T);
+      break;
+    default:
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
+      break;
   }
 }
 
@@ -143,15 +143,15 @@ _ncm_reparam_linear_set_property (GObject *object, guint prop_id, const GValue *
 
   switch (prop_id)
   {
-	case PROP_V:
-	  relin->v = g_value_dup_object (value);
-	  break;
-	case PROP_T:
-	  relin->T = g_value_dup_object (value);
-	  break;
-	default:
-	  G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-	  break;
+    case PROP_V:
+      relin->v = g_value_dup_object (value);
+      break;
+    case PROP_T:
+      relin->T = g_value_dup_object (value);
+      break;
+    default:
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
+      break;
   }
 }
 
@@ -169,7 +169,7 @@ static void
 ncm_reparam_linear_dispose (GObject *object)
 {
   NcmReparamLinear *relin = NCM_REPARAM_LINEAR (object);
-  
+
   ncm_matrix_clear (&relin->T_LU);
   ncm_matrix_clear (&relin->T);
   ncm_vector_clear (&relin->v);
@@ -183,7 +183,7 @@ static void
 ncm_reparam_linear_finalize (GObject *object)
 {
   NcmReparamLinear *relin = NCM_REPARAM_LINEAR (object);
-  
+
   gsl_permutation_free (relin->p);
 
   /* Chain up : end */
@@ -200,29 +200,29 @@ _ncm_reparam_linear_copyto (NcmReparam *reparam, NcmReparam *reparam_dest)
   NCM_REPARAM_CLASS (ncm_reparam_linear_parent_class)->copyto (reparam, reparam_dest);
 
   {
-	NcmReparamLinear *relin = NCM_REPARAM_LINEAR (reparam);
-	NcmReparamLinear *relin_dest = NCM_REPARAM_LINEAR (reparam_dest);
-	if (old_length != reparam->length)
-	{
-	  ncm_matrix_free (relin->T_LU);
-	  ncm_matrix_free (relin->T);
-	  ncm_vector_free (relin->v);
-	  ncm_vector_free (relin->vp);
-	  gsl_permutation_free (relin->p);
+    NcmReparamLinear *relin = NCM_REPARAM_LINEAR (reparam);
+    NcmReparamLinear *relin_dest = NCM_REPARAM_LINEAR (reparam_dest);
+    if (old_length != reparam->length)
+    {
+      ncm_matrix_free (relin->T_LU);
+      ncm_matrix_free (relin->T);
+      ncm_vector_free (relin->v);
+      ncm_vector_free (relin->vp);
+      gsl_permutation_free (relin->p);
 
-	  relin->T_LU = ncm_matrix_new (reparam->length, reparam->length);
-	  relin->T = ncm_matrix_new (reparam->length, reparam->length);
-	  relin->v = ncm_vector_new (reparam->length);
-	  relin->vp = ncm_vector_new (reparam->length);
-	  relin->p = gsl_permutation_alloc (reparam->length);
-	}
+      relin->T_LU = ncm_matrix_new_sunk (reparam->length, reparam->length);
+      relin->T = ncm_matrix_new_sunk (reparam->length, reparam->length);
+      relin->v = ncm_vector_new_sunk (reparam->length);
+      relin->vp = ncm_vector_new_sunk (reparam->length);
+      relin->p = gsl_permutation_alloc (reparam->length);
+    }
 
-	ncm_matrix_memcpy (relin_dest->T, relin->T);
-	ncm_matrix_memcpy (relin_dest->T_LU, relin->T_LU);
-	ncm_vector_memcpy (relin_dest->v, relin->v);
-	ncm_vector_memcpy (relin_dest->vp, relin->vp);
-	gsl_permutation_memcpy (relin_dest->p, relin->p);
-	relin_dest->signum = relin->signum;
+    ncm_matrix_memcpy (relin_dest->T, relin->T);
+    ncm_matrix_memcpy (relin_dest->T_LU, relin->T_LU);
+    ncm_vector_memcpy (relin_dest->v, relin->v);
+    ncm_vector_memcpy (relin_dest->vp, relin->vp);
+    gsl_permutation_memcpy (relin_dest->p, relin->p);
+    relin_dest->signum = relin->signum;
   }
 }
 

@@ -66,13 +66,9 @@ ncm_spline2d_set (NcmSpline2d *s2d, NcmVector *xv, NcmVector *yv, NcmMatrix *zm,
             (ncm_vector_len (xv) >= ncm_spline2d_min_size (s2d)) &&
             (ncm_vector_len (yv) >= ncm_spline2d_min_size (s2d)));
 
-  s2d->xv = xv;
-  ncm_vector_ref (xv);
-  s2d->yv = yv;
-  ncm_vector_ref (yv);
-
-  s2d->zm = zm;
-  ncm_matrix_ref (zm);
+  s2d->xv = ncm_vector_ref (xv);
+  s2d->yv = ncm_vector_ref (yv);
+  s2d->zm = ncm_matrix_ref (zm);
 
   s2d->empty = FALSE;
 

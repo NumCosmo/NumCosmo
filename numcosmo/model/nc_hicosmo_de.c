@@ -139,9 +139,9 @@ nc_hicosmo_de_omega_x2omega_k (NcHICosmo *cosmo)
 
   relin = ncm_reparam_linear_new (ncm_model_len (NCM_MODEL (cosmo)), T, v);
   {
-	NcmReparam *reparam = NCM_REPARAM (relin);
-	NcmSParam *sp_Omegak = ncm_sparam_new ("Omegak","\\Omega_k", -5.0, 5.0, 1.0e-2, NC_HICOSMO_DEFAULT_PARAMS_ABSTOL, 0.0, NCM_PARAM_TYPE_FIXED);
-	g_ptr_array_index (reparam->sparams, NC_HICOSMO_DE_OMEGA_X) = sp_Omegak;
+    NcmReparam *reparam = NCM_REPARAM (relin);
+    NcmSParam *sp_Omegak = ncm_sparam_new ("Omegak","\\Omega_k", -5.0, 5.0, 1.0e-2, NC_HICOSMO_DEFAULT_PARAMS_ABSTOL, 0.0, NCM_PARAM_TYPE_FIXED);
+    g_ptr_array_index (reparam->sparams, NC_HICOSMO_DE_OMEGA_X) = sp_Omegak;
   }
 
   ncm_model_set_reparam (NCM_MODEL (cosmo), NCM_REPARAM (relin));
@@ -208,39 +208,39 @@ nc_hicosmo_de_class_init (NcHICosmoDEClass *klass)
   ncm_model_class_add_params (model_class, 7, 0, PROP_SIZE);
   /* Set H_0 param info */
   ncm_model_class_set_sparam (model_class, NC_HICOSMO_DE_H0, "H_0", "H0",
-                               10.0, 500.0, 1.0,
-                               NC_HICOSMO_DEFAULT_PARAMS_ABSTOL, NC_HICOSMO_DE_DEFAULT_H0,
-                               NCM_PARAM_TYPE_FIXED);
+                              10.0, 500.0, 1.0,
+                              NC_HICOSMO_DEFAULT_PARAMS_ABSTOL, NC_HICOSMO_DE_DEFAULT_H0,
+                              NCM_PARAM_TYPE_FIXED);
   /* Set Omega_c param info */
   ncm_model_class_set_sparam (model_class, NC_HICOSMO_DE_OMEGA_C, "\\Omega_c", "Omegac",
-                               1e-8,  10.0, 1.0e-2,
-                               NC_HICOSMO_DEFAULT_PARAMS_ABSTOL, NC_HICOSMO_DE_DEFAULT_OMEGA_C,
-                               NCM_PARAM_TYPE_FREE);
+                              1e-8,  10.0, 1.0e-2,
+                              NC_HICOSMO_DEFAULT_PARAMS_ABSTOL, NC_HICOSMO_DE_DEFAULT_OMEGA_C,
+                              NCM_PARAM_TYPE_FREE);
   /* Set Omega_x param info */
   ncm_model_class_set_sparam (model_class, NC_HICOSMO_DE_OMEGA_X, "\\Omega_x", "Omegax",
-                               1e-8,  10.0, 1.0e-2,
-                               NC_HICOSMO_DEFAULT_PARAMS_ABSTOL, NC_HICOSMO_DE_DEFAULT_OMEGA_X,
-                               NCM_PARAM_TYPE_FREE);
+                              1e-8,  10.0, 1.0e-2,
+                              NC_HICOSMO_DEFAULT_PARAMS_ABSTOL, NC_HICOSMO_DE_DEFAULT_OMEGA_X,
+                              NCM_PARAM_TYPE_FREE);
   /* Set T_gamma0 param info */
   ncm_model_class_set_sparam (model_class, NC_HICOSMO_DE_T_GAMMA0, "T_{\\gamma0}", "Tgamma0",
-                               1e-8,  10.0, 1.0e-2,
-                               NC_HICOSMO_DEFAULT_PARAMS_ABSTOL, NC_HICOSMO_DE_DEFAULT_T_GAMMA0,
-                               NCM_PARAM_TYPE_FIXED);
+                              1e-8,  10.0, 1.0e-2,
+                              NC_HICOSMO_DEFAULT_PARAMS_ABSTOL, NC_HICOSMO_DE_DEFAULT_T_GAMMA0,
+                              NCM_PARAM_TYPE_FIXED);
   /* Set Omega_b param info */
   ncm_model_class_set_sparam (model_class, NC_HICOSMO_DE_OMEGA_B, "\\Omega_b", "Omegab",
-                               1e-8,  10.0, 1.0e-2,
-                               NC_HICOSMO_DEFAULT_PARAMS_ABSTOL, NC_HICOSMO_DE_DEFAULT_OMEGA_B,
-                               NCM_PARAM_TYPE_FIXED);
+                              1e-8,  10.0, 1.0e-2,
+                              NC_HICOSMO_DEFAULT_PARAMS_ABSTOL, NC_HICOSMO_DE_DEFAULT_OMEGA_B,
+                              NCM_PARAM_TYPE_FIXED);
   /* Set n_s param info */
   ncm_model_class_set_sparam (model_class, NC_HICOSMO_DE_SPECINDEX, "n_s", "ns",
-                               0.5,   1.5, 1.0e-2,
-                               NC_HICOSMO_DEFAULT_PARAMS_ABSTOL, NC_HICOSMO_DE_DEFAULT_SPECINDEX,
-                               NCM_PARAM_TYPE_FIXED);
+                              0.5,   1.5, 1.0e-2,
+                              NC_HICOSMO_DEFAULT_PARAMS_ABSTOL, NC_HICOSMO_DE_DEFAULT_SPECINDEX,
+                              NCM_PARAM_TYPE_FIXED);
   /* Set sigma_8 param info */
   ncm_model_class_set_sparam (model_class, NC_HICOSMO_DE_SIGMA8, "\\sigma_8", "sigma8",
-                               0.2,   1.8, 1.0e-2,
-                               NC_HICOSMO_DEFAULT_PARAMS_ABSTOL, NC_HICOSMO_DE_DEFAULT_SIGMA8,
-                               NCM_PARAM_TYPE_FIXED);
+                              0.2,   1.8, 1.0e-2,
+                              NC_HICOSMO_DEFAULT_PARAMS_ABSTOL, NC_HICOSMO_DE_DEFAULT_SIGMA8,
+                              NCM_PARAM_TYPE_FIXED);
   /* Check for errors in parameters initialization */
   ncm_model_class_check_params_info (model_class);
 
@@ -260,12 +260,12 @@ nc_hicosmo_de_class_init (NcHICosmoDEClass *klass)
 void \
 nc_hicosmo_de_set_##name##_impl (NcHICosmoDEClass *cosmo_de_class, NcmFuncF f, NcmFuncPF pf, NcmFuncDF df) \
 { \
-  NCM_MODEL_CLASS (cosmo_de_class)->impl |= NC_HICOSMO_DE_IMPL_##name; \
-  g_assert (f != NULL); \
-  cosmo_de_class->name = *ncm_func_stub; \
-  cosmo_de_class->name.f = f; \
-  cosmo_de_class->name.pf = pf; \
-  cosmo_de_class->name.df = df; \
+NCM_MODEL_CLASS (cosmo_de_class)->impl |= NC_HICOSMO_DE_IMPL_##name; \
+g_assert (f != NULL); \
+cosmo_de_class->name = *ncm_func_stub; \
+cosmo_de_class->name.f = f; \
+cosmo_de_class->name.pf = pf; \
+cosmo_de_class->name.df = df; \
 }
 
 /**

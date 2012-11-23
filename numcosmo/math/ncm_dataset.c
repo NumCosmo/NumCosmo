@@ -198,6 +198,31 @@ ncm_dataset_get_n (NcmDataset *dset)
 }
 
 /**
+ * ncm_dataset_get_dof:
+ * @dset: pointer to type defined by #NcmDataset
+ *
+ * Calculate the total degrees of freedom associated with all #NcmData
+ * objects.
+ *
+ * Returns: FIXME
+ */
+guint
+ncm_dataset_get_dof (NcmDataset *dset)
+{
+  gint i;
+  guint dof = 0;
+
+  for (i = 0; i < dset->data->len; i++)
+  {
+    NcmData *data = ncm_dataset_peek_data (dset, i);
+    dof += ncm_data_get_dof (data);
+  }
+  
+  return dof;
+}
+
+
+/**
  * ncm_dataset_all_init:
  * @dset: pointer to type defined by #NcmDataset
  *
@@ -220,7 +245,7 @@ ncm_dataset_all_init (NcmDataset *dset)
 }
 
 /**
- * ncm_dataset_get_ndata:
+ * ncm_dataset_get_length:
  * @dset: pointer to type defined by #NcmDataset
  *
  * FIXME
@@ -326,7 +351,11 @@ ncm_dataset_log_info (NcmDataset *dset)
   for (i = 0; i < dset->data->len; i++)
   {
     NcmData *data = ncm_dataset_peek_data (dset, i);
-    g_message ("#   - %s\n", ncm_data_get_desc (data));
+    gchar *desc = ncm_data_get_desc (data);
+    ncm_message_ww (desc, 
+                    "#   - ", 
+                    "#       ", 
+                    80);
   }
 
   return;

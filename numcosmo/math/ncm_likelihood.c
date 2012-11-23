@@ -101,6 +101,8 @@ ncm_likelihood_dispose (GObject *object)
     lh->priors = NULL;
   }
 
+  ncm_dataset_clear (&lh->dset);
+
   /* Chain up : end */
   G_OBJECT_CLASS (ncm_likelihood_parent_class)->dispose (object);
 }
@@ -352,7 +354,7 @@ ncm_likelihood_priors_leastsquares_f (NcmLikelihood *lh, NcmMSet *mset, NcmVecto
 void
 ncm_likelihood_leastsquares_f (NcmLikelihood *lh, NcmMSet *mset, NcmVector *f)
 {
-  guint data_size = ncm_dataset_get_length (lh->dset);
+  guint data_size = ncm_dataset_get_n (lh->dset);
   guint priors_size = ncm_likelihood_priors_length (lh);
   
   if (data_size)
@@ -417,6 +419,8 @@ ncm_likelihood_priors_m2lnL_val (NcmLikelihood *lh, NcmMSet *mset, gdouble *prio
 {
   guint i = 0;
 
+  *priors_m2lnL = 0.0;
+
   for (i = 0; i < lh->priors->len; i++)
   {
     NcmMSetFunc *func = NCM_MSET_FUNC (g_ptr_array_index (lh->priors, i));
@@ -439,8 +443,8 @@ ncm_likelihood_priors_m2lnL_val (NcmLikelihood *lh, NcmMSet *mset, gdouble *prio
 void
 ncm_likelihood_m2lnL_val (NcmLikelihood *lh, NcmMSet *mset, gdouble *m2lnL)
 {
-  gdouble data_m2lnL;
-  gdouble priors_m2lnL;
+  gdouble data_m2lnL = 0.0;
+  gdouble priors_m2lnL = 0.0;
   
   ncm_dataset_m2lnL_val (lh->dset, mset, &data_m2lnL);
   ncm_likelihood_priors_m2lnL_val (lh, mset, &priors_m2lnL);

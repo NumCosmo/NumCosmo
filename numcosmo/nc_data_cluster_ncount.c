@@ -273,7 +273,7 @@ NcmData *
 nc_data_cluster_ncount_new (NcClusterAbundance *cad)
 {
   NcDataClusterNCount *ncount = g_object_new (NC_TYPE_DATA_CLUSTER_NCOUNT,
-                                              "custer-abundance", cad,
+                                              "cluster-abundance", cad,
                                               NULL);
 
   return NCM_DATA (ncount);
@@ -442,8 +442,15 @@ _nc_data_cluster_ncount_resample (NcmData *data, NcmMSet *mset)
   if (lnM_obs_params_len > 0)
     lnM_obs_params_array = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), total_np * lnM_obs_params_len);
 
-  //printf ("# Generating unbinned %u (z,lnM) %g\n", total_np, cad->norma);
-  //printf ("# Resampling in range [% 20.15g, % 20.15g] [% 20.15e, % 20.15e]\n", cad->zi, cad->zf, exp (cad->lnMi), exp (cad->lnMf));
+  if (data->desc != NULL)
+    g_free (data->desc);
+
+  data->desc = g_strdup_printf ("Cluster NCount resample unbinned. Generated %u from mean %10.5g. Resampled in range [%8.4f, %8.4f] [%1.8e, %1.8e] and area %8.4f degrees square", 
+                                total_np, cad->norma, 
+                                cad->zi, cad->zf, 
+                                exp (cad->lnMi), exp (cad->lnMf), 
+                                ncount->area_survey / gsl_pow_2 (M_PI / 180.0));
+  
   nc_cluster_abundance_prepare_inv_dNdz (cad, NC_HICOSMO (ncm_mset_peek (mset, NC_HICOSMO_ID)));
 
   for (i = 0; i < total_np; i++)
@@ -472,29 +479,29 @@ _nc_data_cluster_ncount_resample (NcmData *data, NcmMSet *mset)
 
   if (ncount->lnM_true != NULL)
     ncm_vector_free (ncount->lnM_true);
-  ncount->lnM_true = ncm_vector_new_array (lnM_true_array);
+  ncount->lnM_true = ncm_vector_ref (ncm_vector_new_array (lnM_true_array));
   g_array_unref (lnM_true_array);
 
   if (ncount->z_true != NULL)
     ncm_vector_free (ncount->z_true);
-  ncount->z_true = ncm_vector_new_array (z_true_array);
+  ncount->z_true = ncm_vector_ref (ncm_vector_new_array (z_true_array));
   g_array_unref (z_true_array);
 
   if (ncount->z_obs != NULL)
     ncm_matrix_free (ncount->z_obs);
-  ncount->z_obs = ncm_matrix_new_array (z_obs_array, z_obs_len);
+  ncount->z_obs = ncm_matrix_ref (ncm_matrix_new_array (z_obs_array, z_obs_len));
   g_array_unref (z_obs_array);
 
   if (ncount->lnM_obs != NULL)
     ncm_matrix_free (ncount->lnM_obs);
-  ncount->lnM_obs = ncm_matrix_new_array (lnM_obs_array, lnM_obs_len);
+  ncount->lnM_obs = ncm_matrix_ref (ncm_matrix_new_array (lnM_obs_array, lnM_obs_len));
   g_array_unref (lnM_obs_array);
 
   if (z_obs_params_len > 0)
   {
     if (ncount->z_obs_params != NULL)
       ncm_matrix_free (ncount->z_obs_params);
-    ncount->z_obs_params = ncm_matrix_new_array (z_obs_params_array, z_obs_params_len);
+    ncount->z_obs_params = ncm_matrix_ref (ncm_matrix_new_array (z_obs_params_array, z_obs_params_len));
     g_array_unref (z_obs_params_array);
   }
 
@@ -502,7 +509,7 @@ _nc_data_cluster_ncount_resample (NcmData *data, NcmMSet *mset)
   {
     if (ncount->lnM_obs_params != NULL)
       ncm_matrix_free (ncount->lnM_obs_params);
-    ncount->lnM_obs_params = ncm_matrix_new_array (lnM_obs_params_array, lnM_obs_params_len);
+    ncount->lnM_obs_params = ncm_matrix_ref (ncm_matrix_new_array (lnM_obs_params_array, lnM_obs_params_len));
     g_array_unref (lnM_obs_params_array);
   }
 
@@ -733,9 +740,10 @@ nc_data_cluster_ncount_init_from_sampling (NcmData *data, NcmMSet *mset, NcClust
   ncount->m = nc_cluster_mass_ref (clusterm);
 
   _nc_data_cluster_ncount_model_init (ncount);
-  ncm_data_resample (data, mset);
 
   ncm_data_set_init (data);
+
+  ncm_data_resample (data, mset);
 }
 
 /**
@@ -1089,11 +1097,11 @@ nc_data_cluster_ncount_catalog_load (NcmData *data, gchar *filename)
 
     if (ncount->z_obs)
       ncm_matrix_free (ncount->z_obs);
-    ncount->z_obs = ncm_matrix_new (ncount->np, z_obs_rp);
+    ncount->z_obs = ncm_matrix_new_sunk (ncount->np, z_obs_rp);
 
     if (ncount->lnM_obs)
       ncm_matrix_free (ncount->lnM_obs);
-    ncount->lnM_obs = ncm_matrix_new (ncount->np, lnM_obs_rp);
+    ncount->lnM_obs = ncm_matrix_new_sunk (ncount->np, lnM_obs_rp);
 
     if (fits_read_col (fptr, TDOUBLE, z_obs_i, 1, 1, ncount->np, NULL, ncm_matrix_ptr (ncount->z_obs, 0, 0), NULL, &status))
       NC_FITS_ERROR(status);
@@ -1125,7 +1133,7 @@ nc_data_cluster_ncount_catalog_load (NcmData *data, gchar *filename)
 
       if (ncount->z_obs_params)
         ncm_matrix_free (ncount->z_obs_params);
-      ncount->z_obs_params = ncm_matrix_new (ncount->np, z_obs_params_rp);
+      ncount->z_obs_params = ncm_matrix_new_sunk (ncount->np, z_obs_params_rp);
 
       if (fits_read_col (fptr, TDOUBLE, z_obs_params_i, 1, 1, ncount->np, NULL, ncm_matrix_ptr (ncount->z_obs_params, 0, 0), NULL, &status))
         NC_FITS_ERROR(status);
@@ -1149,7 +1157,7 @@ nc_data_cluster_ncount_catalog_load (NcmData *data, gchar *filename)
 
       if (ncount->lnM_obs_params)
         ncm_matrix_free (ncount->lnM_obs_params);
-      ncount->lnM_obs_params = ncm_matrix_new (ncount->np, lnM_obs_params_rp);
+      ncount->lnM_obs_params = ncm_matrix_new_sunk (ncount->np, lnM_obs_params_rp);
 
 
       if (fits_read_col (fptr, TDOUBLE, lnM_obs_params_i, 1, 1, ncount->np, NULL, ncm_matrix_ptr (ncount->lnM_obs_params, 0, 0), NULL, &status))
@@ -1166,7 +1174,7 @@ nc_data_cluster_ncount_catalog_load (NcmData *data, gchar *filename)
     }
     if (!fits_get_colnum (fptr, CASESEN, "Z_TRUE", &z_true_i, &status))
     {
-      ncount->z_true = ncm_vector_new (ncount->np);
+      ncount->z_true = ncm_vector_new_sunk (ncount->np);
       if (fits_read_col (fptr, TDOUBLE, z_true_i, 1, 1, ncount->np, NULL, ncm_vector_ptr (ncount->z_true, 0), NULL, &status))
         NC_FITS_ERROR(status);
     }
@@ -1181,7 +1189,7 @@ nc_data_cluster_ncount_catalog_load (NcmData *data, gchar *filename)
 
     if (!fits_get_colnum (fptr, CASESEN, "LNM_TRUE", &lnM_true_i, &status))
     {
-      ncount->lnM_true = ncm_vector_new (ncount->np);
+      ncount->lnM_true = ncm_vector_new_sunk (ncount->np);
       if (fits_read_col (fptr, TDOUBLE, lnM_true_i, 1, 1, ncount->np, NULL, ncm_vector_ptr (ncount->lnM_true, 0), NULL, &status))
         NC_FITS_ERROR(status);
     }

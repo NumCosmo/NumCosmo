@@ -139,7 +139,8 @@ ncm_data_gauss_diag_finalize (GObject *object)
   G_OBJECT_CLASS (ncm_data_gauss_diag_parent_class)->finalize (object);
 }
 
-static guint _ncm_data_gauss_diag_get_length (NcmData *data); 
+static guint _ncm_data_gauss_diag_get_length (NcmData *data);
+static guint _ncm_data_gauss_diag_get_dof (NcmData *data);
 static void _ncm_data_gauss_diag_copyto (NcmData *data, NcmData *data_dest);
 /* static void _ncm_data_gauss_diag_begin (NcmData *data); */
 static void _ncm_data_gauss_diag_resample (NcmData *data, NcmMSet *mset);
@@ -176,6 +177,7 @@ ncm_data_gauss_diag_class_init (NcmDataGaussDiagClass *klass)
                                                          G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   data_class->get_length       = &_ncm_data_gauss_diag_get_length;
+  data_class->get_dof          = &_ncm_data_gauss_diag_get_dof;
   data_class->copyto           = &_ncm_data_gauss_diag_copyto;
 
   data_class->resample         = &_ncm_data_gauss_diag_resample;
@@ -190,6 +192,15 @@ static guint
 _ncm_data_gauss_diag_get_length (NcmData *data) 
 { 
   return NCM_DATA_GAUSS_DIAG (data)->np; 
+}
+
+static guint 
+_ncm_data_gauss_diag_get_dof (NcmData *data) 
+{ 
+  guint dof = NCM_DATA_GAUSS_DIAG (data)->np;
+  if (NCM_DATA_GAUSS_DIAG (data)->wmean && dof > 0)
+    dof--;
+  return dof;
 }
 
 static void
@@ -216,7 +227,7 @@ _ncm_data_gauss_prepare_weight (NcmData *data)
   gint i;
 
   if (gauss->weight == NULL)
-    gauss->weight = ncm_vector_new (gauss->np);
+    gauss->weight = ncm_vector_new_sunk (gauss->np);
 
   gauss->wt = 0.0;
   for (i = 0; i < gauss->np; i++)
@@ -367,9 +378,9 @@ ncm_data_gauss_diag_set_size (NcmDataGaussDiag *diag, guint np)
   if ((np != 0) && (np != diag->np))
   {
     diag->np    = np;
-    diag->y     = ncm_vector_new (diag->np);
-    diag->v     = ncm_vector_new (diag->np);
-    diag->sigma = ncm_vector_new (diag->np);    
+    diag->y     = ncm_vector_new_sunk (diag->np);
+    diag->v     = ncm_vector_new_sunk (diag->np);
+    diag->sigma = ncm_vector_new_sunk (diag->np);    
   }
 }
 

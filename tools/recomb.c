@@ -169,8 +169,8 @@ main (gint argc, gchar *argv[])
 
 	if (tofit)
 	{
-		fit = ncm_fit_new (lh, mset, NCM_FIT_TYPE_LEAST_SQUARES, NCM_FIT_GRAD_ANALYTICAL);
-		ncm_fit_run (fit, NC_BF_MAX_ITER, verbose);
+		fit = ncm_fit_new (NCM_FIT_TYPE_GSL_LS, NULL, lh, mset, NCM_FIT_GRAD_ANALYTICAL);
+		ncm_fit_run (fit, verbose);
 		ncm_fit_log_info (fit);
 		ncm_fit_numdiff_m2lnL_covar (fit);
 		ncm_fit_log_covar (fit);

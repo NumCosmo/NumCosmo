@@ -245,7 +245,7 @@ nc_data_dist_mu_set_size (NcDataDistMu *dist_mu, guint np)
     ncm_vector_clear (&dist_mu->x);
 
   if ((np != 0) && (np != diag->np))
-    dist_mu->x = ncm_vector_new (np);
+    dist_mu->x = ncm_vector_new_sunk (np);
 
   ncm_data_gauss_diag_set_size (NCM_DATA_GAUSS_DIAG (dist_mu), np);
 }

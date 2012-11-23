@@ -71,77 +71,81 @@ main (gint argc, gchar *argv[])
   g_option_context_add_group (context, nc_de_opt_get_data_cluster_group (&de_data_cluster, &de_data_cluster_entries));
   g_option_context_add_group (context, nc_de_opt_get_fit_group (&de_fit, &de_fit_entries));
 
-
   {
-	gint i;
-	for (i = 0; i < argc; i++)
-	{
-	  if (strcmp (argv[i], "--runconf") == 0 || strcmp (argv[i], "-c") == 0)
-	  {
-		if (i + 1 == argc || argv[i+1] == NULL)
-		{
-		  fprintf (stderr, "Invalid run options:\n  %s.\n", error->message);
-		  printf ("%s", g_option_context_get_help (context, TRUE, NULL));
-		  g_option_context_free (context);
-		  return 0;
-		}
-		else
-		  de_run.runconf = argv[i + 1];
-	  }
-	}
+    gint i;
+    for (i = 0; i < argc; i++)
+    {
+      if (strcmp (argv[i], "--runconf") == 0 || strcmp (argv[i], "-c") == 0)
+      {
+        if (i + 1 == argc || argv[i + 1] == NULL)
+        {
+          fprintf (stderr, "Invalid run options:\n  %s.\n", error->message);
+          printf ("%s", g_option_context_get_help (context, TRUE, NULL));
+          g_option_context_free (context);
+          return 0;
+        }
+        else
+          de_run.runconf = argv[i + 1];
+      }
+    }
   }
 
   if (de_run.runconf != NULL)
   {
-	gchar **runconf_argv = g_new0 (gchar *, 1000);
-	gint runconf_argc = 0;
-	GKeyFile *runconf = g_key_file_new ();
+    gchar **runconf_argv = g_new0 (gchar *, 1000);
+    gint runconf_argc = 0;
+    GKeyFile *runconf = g_key_file_new ();
 
-	runconf_argv[0] = g_strdup (argv[0]);
-	runconf_argc++;
-	
-	if (!g_key_file_load_from_file (runconf, de_run.runconf, G_KEY_FILE_KEEP_COMMENTS | G_KEY_FILE_KEEP_TRANSLATIONS, &error))
-	{
-	  fprintf (stderr, "Invalid run configuration file: %s\n  %s\n", de_run.runconf, error->message);
-	  printf ("%s", g_option_context_get_help (context, TRUE, NULL));
-	  return 0;
-	}
+    runconf_argv[0] = g_strdup (argv[0]);
+    runconf_argc++;
 
-	ncm_cfg_keyfile_to_arg (runconf, "DarkEnergy Model", de_model_entries,        runconf_argv, &runconf_argc);
-	ncm_cfg_keyfile_to_arg (runconf, "Data Simple",      de_data_simple_entries,  runconf_argv, &runconf_argc);
-	ncm_cfg_keyfile_to_arg (runconf, "Data Cluster",     de_data_cluster_entries, runconf_argv, &runconf_argc);
-	ncm_cfg_keyfile_to_arg (runconf, "Fit",              de_fit_entries,          runconf_argv, &runconf_argc);
-	
-	g_key_file_free (runconf);
+    if (!g_key_file_load_from_file (runconf, de_run.runconf, G_KEY_FILE_KEEP_COMMENTS | G_KEY_FILE_KEEP_TRANSLATIONS, &error))
+    {
+      fprintf (stderr, "Invalid run configuration file: %s\n  %s\n", de_run.runconf, error->message);
+      printf ("%s", g_option_context_get_help (context, TRUE, NULL));
+      return 0;
+    }
 
-	runconf_cmd_line = ncm_cfg_command_line (&runconf_argv[1], runconf_argc - 1);
-	if (!g_option_context_parse (context, &runconf_argc, &runconf_argv, &error))
-	{
-	  fprintf (stderr, "Invalid configuration file options:\n  %s.\n", error->message);
-	  printf ("%s", g_option_context_get_help (context, TRUE, NULL));
-	  g_option_context_free (context);
-	  return 0;
-	}
+    ncm_cfg_keyfile_to_arg (runconf, "DarkEnergy Model", de_model_entries,        runconf_argv, &runconf_argc);
+    ncm_cfg_keyfile_to_arg (runconf, "Data Simple",      de_data_simple_entries,  runconf_argv, &runconf_argc);
+    ncm_cfg_keyfile_to_arg (runconf, "Data Cluster",     de_data_cluster_entries, runconf_argv, &runconf_argc);
+    ncm_cfg_keyfile_to_arg (runconf, "Fit",              de_fit_entries,          runconf_argv, &runconf_argc);
+
+    g_key_file_free (runconf);
+
+    runconf_cmd_line = ncm_cfg_command_line (&runconf_argv[1], runconf_argc - 1);
+    if (!g_option_context_parse (context, &runconf_argc, &runconf_argv, &error))
+    {
+      fprintf (stderr, "Invalid configuration file options:\n  %s.\n", error->message);
+      printf ("%s", g_option_context_get_help (context, TRUE, NULL));
+      g_option_context_free (context);
+      return 0;
+    }
   }
+
+  g_free (de_model_entries); de_model_entries = NULL;
+  g_free (de_data_simple_entries); de_data_simple_entries = NULL;
+  g_free (de_data_cluster_entries); de_data_cluster_entries = NULL;
+  g_free (de_fit_entries); de_fit_entries = NULL;
 
   full_cmd_line = ncm_cfg_command_line (argv, argc);
   if (!g_option_context_parse (context, &argc, &argv, &error))
   {
-	fprintf (stderr, "Invalid configuration file options:\n  %s.\n", error->message);
-	printf ("%s", g_option_context_get_help (context, TRUE, NULL));
-	g_option_context_free (context);
-	return 0;
+    fprintf (stderr, "Invalid configuration file options:\n  %s.\n", error->message);
+    printf ("%s", g_option_context_get_help (context, TRUE, NULL));
+    g_option_context_free (context);
+    return 0;
   }
 
   if (runconf_cmd_line != NULL)
   {
-	gchar *tmp = g_strconcat (full_cmd_line, " ", runconf_cmd_line, NULL);
-	g_free (full_cmd_line);
-	g_free (runconf_cmd_line);
-	runconf_cmd_line = NULL;
-	full_cmd_line = tmp;
+    gchar *tmp = g_strconcat (full_cmd_line, " ", runconf_cmd_line, NULL);
+    g_free (full_cmd_line);
+    g_free (runconf_cmd_line);
+    runconf_cmd_line = NULL;
+    full_cmd_line = tmp;
   }
-  
+
   if (de_run.saverun != NULL)
   {
     GKeyFile *runconf = g_key_file_new ();
@@ -295,16 +299,26 @@ main (gint argc, gchar *argv[])
   }
 
   fiduc = ncm_mset_copy_all (mset);
-  fit = ncm_fit_new (lh, mset, de_fit.min_algo, de_fit.diff_algo);
+
+  {
+    const GEnumValue *fit_type_id = ncm_cfg_get_enum_by_id_name_nick (NCM_TYPE_FIT_TYPE, de_fit.fit_type);
+    const GEnumValue *fit_diff_id = ncm_cfg_get_enum_by_id_name_nick (NCM_TYPE_FIT_GRAD_TYPE, de_fit.fit_diff);
+    if (fit_type_id == NULL)
+      g_error ("Fit type '%s' not found run --fit-list to list the available options", de_fit.fit_type);
+    if (fit_diff_id == NULL)
+      g_error ("Fit type '%s' not found run --fit-list to list the available options", de_fit.fit_diff);
+
+    fit = ncm_fit_new (fit_type_id->value, de_fit.fit_algo, lh, mset, fit_diff_id->value);
+  }
 
   de_fit.fisher = (de_fit.fisher || (de_fit.nsigma_fisher != -1) || (de_fit.nsigma != -1) || (de_fit.onedim_cr != NULL));
   de_fit.fit = (de_fit.fit || de_fit.fisher);
   de_fit.save_best_fit = (de_fit.save_best_fit || de_fit.save_fisher);
-  
+
   if (de_fit.fit)
   {
     fit->params_prec_target = 1e-5;
-    ncm_fit_run (fit, de_fit.max_iter, de_fit.msg_level);
+    ncm_fit_run (fit, de_fit.msg_level);
     ncm_fit_log_info (fit);
   }
 
@@ -317,8 +331,8 @@ main (gint argc, gchar *argv[])
     ncm_mset_params_pretty_print (fit->mset, f_bf, full_cmd_line);
     fclose (f_bf);
 
-	ncm_message ("#---------------------------------------------------------------------------------- \n", bfile);
-	ncm_message ("# Params file: %s \n", bfile);
+    ncm_cfg_msg_sepa ();
+    ncm_message ("# Params file: %s \n", bfile);
 
     g_free (bfile);
   }
@@ -336,8 +350,8 @@ main (gint argc, gchar *argv[])
       ncm_fit_fishermatrix_print (fit, f_MF, full_cmd_line);
       fclose (f_MF);
 
-	  ncm_message ("#---------------------------------------------------------------------------------- \n", mfile);
-	  ncm_message ("# FM file: %s \n", mfile);
+      ncm_message ("#---------------------------------------------------------------------------------- \n", mfile);
+      ncm_message ("# FM file: %s \n", mfile);
 
       g_free (mfile);
 
@@ -399,7 +413,7 @@ main (gint argc, gchar *argv[])
   {
     ncm_message ("# Resample from bestfit values\n");
     ncm_dataset_resample (dset, mset);
-    ncm_fit_run (fit, NC_BF_MAX_ITER, de_fit.msg_level);
+    ncm_fit_run (fit, de_fit.msg_level);
     ncm_fit_log_info (fit);
     ncm_fit_numdiff_m2lnL_covar (fit);
     ncm_fit_log_covar (fit);
@@ -559,6 +573,7 @@ main (gint argc, gchar *argv[])
   ncm_fit_free (fit);
   ncm_likelihood_free (lh);
   ncm_dataset_free (dset);
+  nc_distance_free (dist);
   g_free (full_cmd_line);
 
   return 0;

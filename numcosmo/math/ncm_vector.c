@@ -56,6 +56,21 @@ ncm_vector_new (gsize n)
 }
 
 /**
+ * ncm_vector_new_sunk:
+ * @n: defines the size of the vector.
+ *
+ * This function allocates memory for a new #NcmVector of double
+ * with @n components. Returns a sunk reference.
+ *
+ * Returns: A new #NcmVector.
+ */
+NcmVector *
+ncm_vector_new_sunk (gsize n)
+{
+  return ncm_vector_ref (ncm_vector_new (n));
+}
+
+/**
  * ncm_vector_new_gsl: (skip)
  * @gv: vector from GNU Scientific Library (GSL) to be converted into a #NcmVector.
  * 
@@ -74,6 +89,23 @@ ncm_vector_new_gsl (gsl_vector *gv)
   cv->a = NULL;
   cv->type = NCM_VECTOR_GSL_VECTOR;
 
+  return cv;
+}
+
+/**
+ * ncm_vector_new_gsl_static: (skip)
+ * @gv: vector from GNU Scientific Library (GSL) to be converted into a #NcmVector.
+ * 
+ * This function saves @gv internally and does not frees.
+ * The @gv vector must be valid during the life of the created #NcmVector.
+ * 
+ * Returns: A new #NcmVector.
+ */
+NcmVector *
+ncm_vector_new_gsl_static (gsl_vector *gv)
+{
+  NcmVector *cv = ncm_vector_new_gsl (gv);
+  cv->type = NCM_VECTOR_DERIVED;
   return cv;
 }
 
@@ -232,7 +264,7 @@ ncm_vector_dup (const NcmVector *cv)
  * The new vector has @size elements.
  *
  * Returns: (transfer full): A #NcmVector.
-   */
+ */
 NcmVector *
 ncm_vector_get_subvector (NcmVector *cv, gsize k, gsize size)
 {
@@ -240,7 +272,8 @@ ncm_vector_get_subvector (NcmVector *cv, gsize k, gsize size)
 
   scv->vv = gsl_vector_subvector (ncm_vector_gsl (cv), k, size);
   scv->type = NCM_VECTOR_DERIVED;
-  scv->pobj = G_OBJECT (cv);
+  scv->pobj = g_object_ref_sink (cv);
+  
   ncm_vector_ref (cv);
 
   return scv;
@@ -443,6 +476,7 @@ static void
 _ncm_vector_dispose (GObject *object)
 {
   NcmVector *cv = NCM_VECTOR (object);
+
   if (cv->a != NULL)
   {
     g_array_unref (cv->a);

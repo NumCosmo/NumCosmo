@@ -86,7 +86,9 @@ GType ncm_vector_get_type (void) G_GNUC_CONST;
 #define NCM_VECTOR_DATA(cv) ((cv)->vv.vector.data)
 
 NcmVector *ncm_vector_new (gsize n);
+NcmVector *ncm_vector_new_sunk (gsize n);
 NcmVector *ncm_vector_new_gsl (gsl_vector *gv);
+NcmVector *ncm_vector_new_gsl_static (gsl_vector *gv);
 NcmVector *ncm_vector_new_array (GArray *a);
 NcmVector *ncm_vector_new_data_slice (gdouble *d, const gsize size, const gsize stride);
 NcmVector *ncm_vector_new_data_malloc (gdouble *d, const gsize size, const gsize stride);

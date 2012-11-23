@@ -197,8 +197,28 @@ ncm_data_dup (NcmData *data)
 guint
 ncm_data_get_length (NcmData *data)
 {
-  g_assert (NCM_DATA_GET_CLASS (data)->dup != NULL);
+  g_assert (NCM_DATA_GET_CLASS (data)->get_length != NULL);
   return NCM_DATA_GET_CLASS (data)->get_length (data);
+}
+
+/**
+ * ncm_data_get_dof:
+ * @data: a #NcmData.
+ *
+ * Calculates the degrees of freedom associated with the data.
+ * 
+ * Returns: FIXME
+ */
+guint
+ncm_data_get_dof (NcmData *data)
+{
+  g_assert ((NCM_DATA_GET_CLASS (data)->get_dof != NULL) ||
+            (NCM_DATA_GET_CLASS (data)->get_length != NULL));
+  
+  if (NCM_DATA_GET_CLASS (data)->get_dof != NULL)
+    return NCM_DATA_GET_CLASS (data)->get_dof (data);
+  else
+    return NCM_DATA_GET_CLASS (data)->get_length (data);
 }
 
 /**
@@ -256,6 +276,8 @@ ncm_data_resample (NcmData *data, NcmMSet *mset)
   ncm_data_prepare (data, mset);
   
   NCM_DATA_GET_CLASS (data)->resample (data, mset);
+
+  ncm_data_set_init (data);
 }
 
 /**

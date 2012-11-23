@@ -251,7 +251,7 @@ _ncm_model_constructed (GObject *object)
       g_array_index (model->vparam_pos, guint, i) = model->total_len;
       model->total_len += g_array_index (model->vparam_len, guint, i);
     }
-    model->params = ncm_vector_ref (ncm_vector_new (model->total_len));
+    model->params = ncm_vector_new_sunk (model->total_len);
     model->p = model->params;
     g_array_set_size (model->ptypes, model->total_len);
     _ncm_model_set_sparams (model);
@@ -766,11 +766,17 @@ ncm_model_class_set_sparam (NcmModelClass *model_class, guint sparam_id, gchar *
                                                         lower_bound, upper_bound, default_value,
                                                         G_PARAM_READWRITE));
 
-  g_object_class_install_property (object_class, prop_fit_id,
-                                   g_param_spec_boolean (g_strdup_printf ("%s-fit", name), NULL, g_strdup_printf ("%s:fit", symbol),
-                                                         ppt == NCM_PARAM_TYPE_FREE ? TRUE : FALSE,
-                                                         G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-
+  {
+    gchar *param_fit_name = g_strdup_printf ("%s-fit", name);
+    gchar *param_fit_symbol = g_strdup_printf ("%s:fit", symbol);
+    g_object_class_install_property (object_class, prop_fit_id,
+                                     g_param_spec_boolean (param_fit_name, NULL, param_fit_symbol,
+                                                           ppt == NCM_PARAM_TYPE_FREE ? TRUE : FALSE,
+                                                           G_PARAM_READWRITE));
+    g_free (param_fit_name);
+    g_free (param_fit_symbol);
+  }
+  
 }
 
 /**
@@ -809,19 +815,29 @@ ncm_model_class_set_vparam (NcmModelClass *model_class, guint vparam_id, guint d
   g_ptr_array_index (model_class->vparam, vparam_id) = vparam;
   g_object_class_install_property (object_class, prop_id,
                                    g_param_spec_object (name, NULL, symbol, NCM_TYPE_VECTOR, G_PARAM_READWRITE));
+  {
+    gchar *param_length_name = g_strdup_printf ("%s-length", name);
+    gchar *param_length_symbol = g_strdup_printf ("%s:length", symbol);
+    gchar *param_fit_name = g_strdup_printf ("%s-fit", name);
+    gchar *param_fit_symbol = g_strdup_printf ("%s:fit", symbol);
 
-  g_object_class_install_property (object_class, prop_len_id,
-                                   g_param_spec_uint (g_strdup_printf ("%s-length", name),
-                                                      NULL,
-                                                      g_strdup_printf ("%s:length", symbol),
-                                                      0, G_MAXUINT, default_length,
-                                                      G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+    g_object_class_install_property (object_class, prop_len_id,
+                                     g_param_spec_uint (param_length_name,
+                                                        NULL,
+                                                        param_length_symbol,
+                                                        0, G_MAXUINT, default_length,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY));
 
-  g_object_class_install_property (object_class, prop_fit_id,
-                                   g_param_spec_variant (g_strdup_printf ("%s-fit", name), NULL, g_strdup_printf ("%s:fit", symbol),
-                                                         G_VARIANT_TYPE_ARRAY, NULL,
-                                                         G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
+    g_object_class_install_property (object_class, prop_fit_id,
+                                     g_param_spec_variant (param_fit_name, NULL, param_fit_symbol,
+                                                           G_VARIANT_TYPE_ARRAY, NULL,
+                                                           G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+    g_free (param_length_name);
+    g_free (param_length_symbol);
+    g_free (param_fit_name);
+    g_free (param_fit_symbol);
+  }
 }
 
 /**

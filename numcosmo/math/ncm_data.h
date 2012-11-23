@@ -50,6 +50,7 @@ struct _NcmDataClass
   GObjectClass parent_class;
   gchar *name;
   guint (*get_length) (NcmData *data);
+  guint (*get_dof) (NcmData *data);
   NcmData *(*dup) (NcmData *data);
   void (*copyto) (NcmData *data, NcmData *data_dest);
   void (*begin) (NcmData *data);
@@ -81,6 +82,7 @@ void ncm_data_clear (NcmData **data);
 NcmData *ncm_data_dup (NcmData *data);
 
 guint ncm_data_get_length (NcmData *data);
+guint ncm_data_get_dof (NcmData *data);
 void ncm_data_set_init (NcmData *data);
 
 void ncm_data_prepare (NcmData *data, NcmMSet *mset);

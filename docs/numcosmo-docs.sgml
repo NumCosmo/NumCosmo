@@ -73,12 +73,13 @@
       <xi:include href="xml/ncm_likelihood.xml"/>
       <xi:include href="xml/ncm_priors.xml"/>
       <xi:include href="xml/ncm_fit.xml"/>
+      <xi:include href="xml/ncm_fit_nlopt.xml"/>
+      <xi:include href="xml/ncm_fit_nlopt_enum.xml"/>
+      <xi:include href="xml/ncm_fit_gsl_ls.xml"/>
+      <xi:include href="xml/ncm_fit_gsl_mm.xml"/>
+      <xi:include href="xml/ncm_fit_gsl_mms.xml"/>
+      <xi:include href="xml/ncm_fit_levmar.xml"/>
       <xi:include href="xml/confidence_region.xml"/>
-      <xi:include href="xml/multimin.xml"/>
-      <xi:include href="xml/nc_nlopt.xml"/>
-      <xi:include href="xml/levmar.xml"/>
-      <xi:include href="xml/multimin_simplex.xml"/>
-      <xi:include href="xml/least_squares.xml"/>
     </section>
     <section>
       <title>GObject introspection compatibility</title>

@@ -307,9 +307,9 @@ ncm_data_gauss_set_size (NcmDataGauss *gauss, guint np)
   if ((np != 0) && (np != gauss->np))
   {
     gauss->np      = np;
-    gauss->y       = ncm_vector_new (gauss->np);
-    gauss->v       = ncm_vector_new (gauss->np);
-    gauss->inv_cov = ncm_matrix_new (gauss->np, gauss->np);
+    gauss->y       = ncm_vector_new_sunk (gauss->np);
+    gauss->v       = ncm_vector_new_sunk (gauss->np);
+    gauss->inv_cov = ncm_matrix_new_sunk (gauss->np, gauss->np);
   }
 }
 

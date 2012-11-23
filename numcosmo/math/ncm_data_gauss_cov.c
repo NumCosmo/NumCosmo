@@ -72,10 +72,10 @@ _ncm_data_gauss_cov_constructed (GObject *object)
   G_OBJECT_CLASS (ncm_data_gauss_cov_parent_class)->constructed (object);
   {
     NcmDataGaussCov *gauss = NCM_DATA_GAUSS_COV (object);
-    gauss->y   = ncm_vector_new (gauss->np);
-    gauss->v   = ncm_vector_new (gauss->np);
-    gauss->cov = ncm_matrix_new (gauss->np, gauss->np);
-    gauss->LLT = ncm_matrix_new (gauss->np, gauss->np);
+    gauss->y   = ncm_vector_new_sunk (gauss->np);
+    gauss->v   = ncm_vector_new_sunk (gauss->np);
+    gauss->cov = ncm_matrix_new_sunk (gauss->np, gauss->np);
+    gauss->LLT = ncm_matrix_new_sunk (gauss->np, gauss->np);
   }
 }
 
@@ -318,9 +318,9 @@ ncm_data_gauss_cov_set_size (NcmDataGaussCov *gauss, guint np)
   if ((np != 0) && (np != gauss->np))
   {
     gauss->np  = np;
-    gauss->y   = ncm_vector_new (gauss->np);
-    gauss->v   = ncm_vector_new (gauss->np);
-    gauss->cov = ncm_matrix_new (gauss->np, gauss->np);
+    gauss->y   = ncm_vector_new_sunk (gauss->np);
+    gauss->v   = ncm_vector_new_sunk (gauss->np);
+    gauss->cov = ncm_matrix_new_sunk (gauss->np, gauss->np);
   }
 }
 

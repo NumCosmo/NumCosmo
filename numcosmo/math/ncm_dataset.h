@@ -70,6 +70,8 @@ void ncm_dataset_free (NcmDataset *dset);
 void ncm_dataset_clear (NcmDataset **dset);
 
 guint ncm_dataset_get_length (NcmDataset *dset);
+guint ncm_dataset_get_n (NcmDataset *dset);
+guint ncm_dataset_get_dof (NcmDataset *dset);
 gboolean ncm_dataset_all_init (NcmDataset *dset);
 
 void ncm_dataset_append_data (NcmDataset *dset, NcmData *data);

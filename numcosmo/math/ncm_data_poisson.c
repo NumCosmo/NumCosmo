@@ -68,7 +68,7 @@ _ncm_data_poisson_constructed (GObject *object)
     NcmDataPoisson *poisson = NCM_DATA_POISSON (object);
 
     poisson->h        = gsl_histogram_alloc (poisson->np);
-    poisson->log_Nfac = ncm_vector_new (poisson->np);
+    poisson->log_Nfac = ncm_vector_new_sunk (poisson->np);
   }
 }
 

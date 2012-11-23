@@ -61,11 +61,11 @@ _nc_hicosmo_qpw_E2 (NcmModel *model, gdouble z)
   gdouble x = 1.0 + z;
   for (i = 0; i < n; i++)
   {
-	gdouble qp_i = QPW_QP(i);
-	gdouble x_i = 1.0 + i * qpw->piece;
-	gdouble x_i_1 = x_i + qpw->piece;
-	result += (1.0 + q_i - qp_i * x_i) * LOG (x_i_1 / x_i) + qp_i * qpw->piece;
-	q_i += qpw->piece * qp_i;
+    gdouble qp_i = QPW_QP(i);
+    gdouble x_i = 1.0 + i * qpw->piece;
+    gdouble x_i_1 = x_i + qpw->piece;
+    result += (1.0 + q_i - qp_i * x_i) * LOG (x_i_1 / x_i) + qp_i * qpw->piece;
+    q_i += qpw->piece * qp_i;
   }
   result += (1.0 + q_i - QPW_QP(n) * x_n) * LOG (x / x_n) + QPW_QP(n) * (x - x_n);
   return EXP ( 2.0 * result );
@@ -79,7 +79,7 @@ _nc_hicosmo_qpw_dE2_dz (NcmModel *model, gdouble z)
   gdouble q_i = QPW_Q0;
   gdouble z_n = n * qpw->piece;
   for (i = 0; i < n; i++)
-	q_i += qpw->piece * QPW_QP(i);
+    q_i += qpw->piece * QPW_QP(i);
 
   return 2.0 * (1.0 + q_i + QPW_QP(i) * (z - z_n)) / (1.0 + z) * _nc_hicosmo_qpw_E2 (model, z);
 }
@@ -93,7 +93,7 @@ _nc_hicosmo_qpw_d2E2_dz2 (NcmModel *model, gdouble z)
   gdouble z_n = n * qpw->piece;
   gdouble inte, dinte;
   for (i = 0; i < n; i++)
-	q_i += qpw->piece * QPW_QP(i);
+    q_i += qpw->piece * QPW_QP(i);
   inte = (1.0 + q_i + QPW_QP(i) * (z - z_n)) / (1.0 + z);
   dinte = QPW_QP(i) / (1.0 + z) - inte / (1.0 + z);
 
@@ -114,7 +114,7 @@ nc_hicosmo_qpw_index (NcHICosmoQPW *qpw, gdouble z)
 {
   gint wpiece = floor(z / qpw->piece);
   if (fabs(floor(z / qpw->piece) - (z / qpw->piece)) < NC_ZERO_LIMIT)
-	wpiece = wpiece == 0 ? 0 : wpiece - 1;
+    wpiece = wpiece == 0 ? 0 : wpiece - 1;
   return GSL_MIN(wpiece, qpw->npieces - 1);
 }
 
@@ -183,7 +183,7 @@ nc_hicosmo_qpw_add_continuity_priors (NcHICosmoQPW *qpw, NcmLikelihood *lh, gdou
 {
   guint i;
   for (i = 0; i < ncm_model_len (NCM_MODEL (qpw)) - 4; i++)
-	nc_hicosmo_qpw_add_continuity_prior (qpw, lh, i, sigma);
+    nc_hicosmo_qpw_add_continuity_prior (qpw, lh, i, sigma);
   return;
 }
 
@@ -239,68 +239,68 @@ nc_hicosmo_qpw_change_params (NcHICosmoQPW *qpw, gdouble z)
 
   if (wpiece == 0)
   {
-	gdouble x = 1.0 + z;
-	gdouble ln_x = LOG (x);
-	gdouble denom = x * ln_x - z;
+    gdouble x = 1.0 + z;
+    gdouble ln_x = LOG (x);
+    gdouble denom = x * ln_x - z;
 
-	ncm_matrix_set (T, 0, 0, z / denom);
-	ncm_matrix_set (T, 0, 1, (ln_x - z) / denom);
-	ncm_vector_set (v, 0, -z * ln_x / denom);
+    ncm_matrix_set (T, 0, 0, z / denom);
+    ncm_matrix_set (T, 0, 1, (ln_x - z) / denom);
+    ncm_vector_set (v, 0, -z * ln_x / denom);
 
-	ncm_matrix_set (T, 1, 0, -1.0 / denom);
-	ncm_matrix_set (T, 1, 1, ln_x / denom);
-	ncm_vector_set (v, 1, ln_x / denom);
+    ncm_matrix_set (T, 1, 0, -1.0 / denom);
+    ncm_matrix_set (T, 1, 1, ln_x / denom);
+    ncm_vector_set (v, 1, ln_x / denom);
   }
   else
   {
-	guint i;
-	gdouble x = 1.0 + z;
-	gdouble ln_x = LOG (x);
-	gdouble x_ln_x = x * ln_x;
-	gdouble x_n = 1.0 + wpiece * qpw->piece;
-	gdouble x_n_ln_x_n = x_n * LOG (x_n);
-	gdouble denom = x - x_n - x_ln_x + x_n_ln_x_n;
+    guint i;
+    gdouble x = 1.0 + z;
+    gdouble ln_x = LOG (x);
+    gdouble x_ln_x = x * ln_x;
+    gdouble x_n = 1.0 + wpiece * qpw->piece;
+    gdouble x_n_ln_x_n = x_n * LOG (x_n);
+    gdouble denom = x - x_n - x_ln_x + x_n_ln_x_n;
 
-	ncm_matrix_set (T, 0, 0, (x_n - x) / denom);
+    ncm_matrix_set (T, 0, 0, (x_n - x) / denom);
 
-	for (i = 0; i < wpiece; i++)
-	{
-	  gdouble x_i = 1.0 + qpw->piece * i;
-	  gdouble x_i_1 = x_i + qpw->piece;
-	  ncm_matrix_set (T, 0, i + 1,
-	                  -qpw->piece +
-	                  (x - x_n) *
-	                  (qpw->piece + x_i * LOG (x_i) - x_i_1 * LOG (x_i_1)) / denom
-	                  );
-	}
-	ncm_matrix_set (T, 0, wpiece + 1, 1.0 + (x - x_n) * ln_x / denom);
-	ncm_vector_set (v, 0, (x - x_n) * ln_x / denom);
+    for (i = 0; i < wpiece; i++)
+    {
+      gdouble x_i = 1.0 + qpw->piece * i;
+      gdouble x_i_1 = x_i + qpw->piece;
+      ncm_matrix_set (T, 0, i + 1,
+                      -qpw->piece +
+                      (x - x_n) *
+                      (qpw->piece + x_i * LOG (x_i) - x_i_1 * LOG (x_i_1)) / denom
+                      );
+    }
+    ncm_matrix_set (T, 0, wpiece + 1, 1.0 + (x - x_n) * ln_x / denom);
+    ncm_vector_set (v, 0, (x - x_n) * ln_x / denom);
 
-	ncm_matrix_set (T, wpiece + 1, 0, 1.0 / denom);
-	for (i = 0; i < wpiece; i++)
-	{
-	  gdouble x_i = 1.0 + qpw->piece * i;
-	  gdouble x_i_1 = x_i + qpw->piece;
-	  ncm_matrix_set (T, wpiece + 1, i + 1, -(qpw->piece + x_i * LOG (x_i) - x_i_1 * LOG (x_i_1)) / denom );
-	}
-	ncm_matrix_set (T, wpiece + 1, wpiece + 1, -ln_x / denom);
-	ncm_vector_set (v, wpiece + 1, -ln_x/denom);
+    ncm_matrix_set (T, wpiece + 1, 0, 1.0 / denom);
+    for (i = 0; i < wpiece; i++)
+    {
+      gdouble x_i = 1.0 + qpw->piece * i;
+      gdouble x_i_1 = x_i + qpw->piece;
+      ncm_matrix_set (T, wpiece + 1, i + 1, -(qpw->piece + x_i * LOG (x_i) - x_i_1 * LOG (x_i_1)) / denom );
+    }
+    ncm_matrix_set (T, wpiece + 1, wpiece + 1, -ln_x / denom);
+    ncm_vector_set (v, wpiece + 1, -ln_x/denom);
   }
 
   if (FALSE)
   {
-	gint i,j;
-	printf ("wpiece: %d, npieces: %d\n", wpiece, qpw->npieces);
-	for (i = 0; i < ncm_model_len (NCM_MODEL (qpw)); i++)
-	{
-	  for (j = 0; j < ncm_model_len (NCM_MODEL (qpw)); j++)
-		printf ("% -12.2f ", ncm_matrix_get (full_T, i, j));
-	  printf ("\n");
-	}
-	printf("########################\n");
-	for (i = 0; i < ncm_model_len (NCM_MODEL (qpw)); i++)
-	  printf ("% -12.2f ", ncm_vector_get (full_v, i));
-	printf("\n########################\n");
+    gint i,j;
+    printf ("wpiece: %d, npieces: %d\n", wpiece, qpw->npieces);
+    for (i = 0; i < ncm_model_len (NCM_MODEL (qpw)); i++)
+    {
+      for (j = 0; j < ncm_model_len (NCM_MODEL (qpw)); j++)
+        printf ("% -12.2f ", ncm_matrix_get (full_T, i, j));
+      printf ("\n");
+    }
+    printf("########################\n");
+    for (i = 0; i < ncm_model_len (NCM_MODEL (qpw)); i++)
+      printf ("% -12.2f ", ncm_vector_get (full_v, i));
+    printf("\n########################\n");
   }
 
   relin = ncm_reparam_linear_new (ncm_model_len (NCM_MODEL (qpw)), full_T, full_v);
@@ -309,8 +309,6 @@ nc_hicosmo_qpw_change_params (NcHICosmoQPW *qpw, gdouble z)
 
   ncm_vector_free (v);
   ncm_matrix_free (T);
-  ncm_vector_free (full_v);
-  ncm_matrix_free (full_T);
 
   return;
 }
@@ -336,32 +334,29 @@ nc_hicosmo_qpw_change_params_qpp (NcHICosmoQPW *qpw)
 
   for (i = 0; i < qpw->npieces; i++)
   {
-	ncm_matrix_set (T, 1 + i, 1, 1.0);
-	ncm_matrix_set (T, 1 + i, 2, i*i);
+    ncm_matrix_set (T, 1 + i, 1, 1.0);
+    ncm_matrix_set (T, 1 + i, 2, i*i);
   }
 
   if (FALSE)
   {
-	gint j;
-	printf ("npieces: %d\n", qpw->npieces);
-	for (i = 0; i < ncm_model_len (NCM_MODEL (qpw)); i++)
-	{
-	  for (j = 0; j < ncm_model_len (NCM_MODEL (qpw)); j++)
-		printf ("% -12.2f ",ncm_matrix_get (T, i, j));
-	  printf ("\n");
-	}
-	printf("########################\n");
-	for (i = 0; i < ncm_model_len (NCM_MODEL (qpw)); i++)
-	  printf ("% -12.2f ",ncm_vector_get (v, i));
-	printf("\n########################\n");
+    gint j;
+    printf ("npieces: %d\n", qpw->npieces);
+    for (i = 0; i < ncm_model_len (NCM_MODEL (qpw)); i++)
+    {
+      for (j = 0; j < ncm_model_len (NCM_MODEL (qpw)); j++)
+        printf ("% -12.2f ",ncm_matrix_get (T, i, j));
+      printf ("\n");
+    }
+    printf("########################\n");
+    for (i = 0; i < ncm_model_len (NCM_MODEL (qpw)); i++)
+      printf ("% -12.2f ",ncm_vector_get (v, i));
+    printf("\n########################\n");
   }
 
   relin = ncm_reparam_linear_new (ncm_model_len (NCM_MODEL (qpw)), T, v);
 
   ncm_model_set_reparam (NCM_MODEL (qpw), NCM_REPARAM (relin));
-
-  ncm_vector_free (v);
-  ncm_matrix_free (T);
 
   return;
 }
@@ -394,16 +389,14 @@ _nc_hicosmo_qpw_constructed (GObject *object)
   /* Chain up : start */
   G_OBJECT_CLASS (nc_hicosmo_qpw_parent_class)->constructed (object);
   {
-	NcHICosmoQPW *qpw = NC_HICOSMO_QPW (object);
-	NcmModel *model = NCM_MODEL (qpw);
-	NcmModelClass *model_class = NCM_MODEL_GET_CLASS (model);
+    NcHICosmoQPW *qpw = NC_HICOSMO_QPW (object);
+    NcmModel *model = NCM_MODEL (qpw);
+    NcmModelClass *model_class = NCM_MODEL_GET_CLASS (model);
 
-	qpw->piece = qpw->z_f / qpw->npieces;
-	qpw->size = model_class->sparam_len + qpw->npieces;
+    qpw->piece = qpw->z_f / qpw->npieces;
+    qpw->size = model_class->sparam_len + qpw->npieces;
 
-	model->params = ncm_vector_new (qpw->size);
-	ncm_vector_set_all (model->params, 0.0);
-	return;
+    return;
   }
 }
 
@@ -416,18 +409,18 @@ _nc_hicosmo_qpw_get_property (GObject *object, guint prop_id, GValue *value, GPa
 
   switch (prop_id)
   {
-	case PROP_QP_LENGTH:
-	  g_value_set_uint (value, qpw->npieces);
-	  break;
-	case PROP_Z_F:
-	  g_value_set_double (value, qpw->z_f);
-	  break;
-	case PROP_FLAT:
-	  g_value_set_boolean (value, qpw->flat);
-	  break;
-	default:
-	  G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-	  break;
+    case PROP_QP_LENGTH:
+      g_value_set_uint (value, qpw->npieces);
+      break;
+    case PROP_Z_F:
+      g_value_set_double (value, qpw->z_f);
+      break;
+    case PROP_FLAT:
+      g_value_set_boolean (value, qpw->flat);
+      break;
+    default:
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
+      break;
   }
 }
 
@@ -439,18 +432,18 @@ _nc_hicosmo_qpw_set_property (GObject *object, guint prop_id, const GValue *valu
 
   switch (prop_id)
   {
-	case PROP_QP_LENGTH:
-	  qpw->npieces = g_value_get_double (value);
-	  break;
-	case PROP_Z_F:
-	  qpw->z_f = g_value_get_double (value);
-	  break;
-	case PROP_FLAT:
-	  qpw->flat = g_value_get_boolean (value);
-	  break;
-	default:
-	  G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-	  break;
+    case PROP_QP_LENGTH:
+      qpw->npieces = g_value_get_double (value);
+      break;
+    case PROP_Z_F:
+      qpw->z_f = g_value_get_double (value);
+      break;
+    case PROP_FLAT:
+      qpw->flat = g_value_get_boolean (value);
+      break;
+    default:
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
+      break;
   }
 }
 
@@ -478,28 +471,28 @@ nc_hicosmo_qpw_class_init (NcHICosmoQPWClass *klass)
   model_class->get_property = &_nc_hicosmo_qpw_get_property;
 
   ncm_model_class_add_params (model_class, NC_HICOSMO_QPW_SPARAM_LEN, NC_HICOSMO_QPW_VPARAM_LEN, PROP_SIZE);
-  ncm_model_class_set_name_nick (model_class, g_strdup ("Q piecewise"), g_strdup ("qpw"));
+  ncm_model_class_set_name_nick (model_class, "Q piecewise", "qpw");
 
   ncm_model_class_set_sparam (model_class, NC_HICOSMO_QPW_H0, "H_0", "H0",
-                               10.0, 500.0, 1.0,
-                               NC_HICOSMO_DEFAULT_PARAMS_ABSTOL, NC_HICOSMO_QPW_DEFAULT_H0,
-                               NCM_PARAM_TYPE_FIXED);
+                              10.0, 500.0, 1.0,
+                              NC_HICOSMO_DEFAULT_PARAMS_ABSTOL, NC_HICOSMO_QPW_DEFAULT_H0,
+                              NCM_PARAM_TYPE_FIXED);
 
   ncm_model_class_set_sparam (model_class, NC_HICOSMO_QPW_OMEGA_T, "\\Omega_t", "Omegat",
-                               -5.0, 5.0, 1.0e-1,
-                               NC_HICOSMO_DEFAULT_PARAMS_ABSTOL, NC_HICOSMO_QPW_DEFAULT_OMEGA_T,
-                               NCM_PARAM_TYPE_FIXED);
+                              -5.0, 5.0, 1.0e-1,
+                              NC_HICOSMO_DEFAULT_PARAMS_ABSTOL, NC_HICOSMO_QPW_DEFAULT_OMEGA_T,
+                              NCM_PARAM_TYPE_FIXED);
 
   ncm_model_class_set_sparam (model_class, NC_HICOSMO_QPW_Q0, "q_0", "q0",
-                               -50.0, 50.0, 1.0e-1,
-                               NC_HICOSMO_DEFAULT_PARAMS_ABSTOL, NC_HICOSMO_QPW_DEFAULT_Q0,
-                               NCM_PARAM_TYPE_FREE);
+                              -50.0, 50.0, 1.0e-1,
+                              NC_HICOSMO_DEFAULT_PARAMS_ABSTOL, NC_HICOSMO_QPW_DEFAULT_Q0,
+                              NCM_PARAM_TYPE_FREE);
 
   ncm_model_class_set_vparam (model_class, NC_HICOSMO_QPW_QP, NC_HICOSMO_QPW_DEFAULT_QP_LEN, "q^\\prime", "qp",
-                               -50.0, 50.0, 1.0e-1,
-                               NC_HICOSMO_DEFAULT_PARAMS_ABSTOL,
-                               NC_HICOSMO_QPW_DEFAULT_QP,
-                               NCM_PARAM_TYPE_FREE);
+                              -50.0, 50.0, 1.0e-1,
+                              NC_HICOSMO_DEFAULT_PARAMS_ABSTOL,
+                              NC_HICOSMO_QPW_DEFAULT_QP,
+                              NCM_PARAM_TYPE_FREE);
 
   /* Check for errors in parameters initialization */
   ncm_model_class_check_params_info (model_class);

@@ -217,7 +217,7 @@ nc_data_hubble_set_size (NcDataHubble *hubble, guint np)
     ncm_vector_clear (&hubble->x);
 
   if ((np != 0) && (np != diag->np))
-    hubble->x = ncm_vector_new (np);
+    hubble->x = ncm_vector_new_sunk (np);
 
   ncm_data_gauss_diag_set_size (NCM_DATA_GAUSS_DIAG (hubble), np);
 }

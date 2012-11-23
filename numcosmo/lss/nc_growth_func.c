@@ -52,7 +52,7 @@ G_DEFINE_TYPE (NcGrowthFunc, nc_growth_func, G_TYPE_OBJECT);
  * This function allocates memory for a new #NcGrowthFunc object.
  *
  * Returns: A new #NcGrowthFunc.
-*/
+ */
 NcGrowthFunc *
 nc_growth_func_new (void)
 {
@@ -66,7 +66,7 @@ nc_growth_func_new (void)
  * This function duplicates @gf.
  *
  * Returns: (transfer full): A #NcGrowthFunc.
-*/
+   */
 NcGrowthFunc *
 nc_growth_func_copy (NcGrowthFunc *gf)
 {
@@ -80,7 +80,7 @@ nc_growth_func_copy (NcGrowthFunc *gf)
  * Atomically decrements the reference count of @gf by one. If the reference count drops to 0,
  * all memory allocated by @gf is released.
  *
-*/
+ */
 void
 nc_growth_func_free (NcGrowthFunc *gf)
 {
@@ -94,7 +94,7 @@ nc_growth_func_free (NcGrowthFunc *gf)
  * Atomically decrements the reference count of @gf by one. If the reference count drops to 0,
  * all memory allocated by @gf is released. Set pointer to NULL.
  *
-*/
+ */
 void
 nc_growth_func_clear (NcGrowthFunc **gf)
 {
@@ -121,7 +121,7 @@ growth_f (realtype z, N_Vector y, N_Vector ydot, gpointer f_data)
 
 static gint
 growth_J (_NCM_SUNDIALS_INT_TYPE N, realtype z, N_Vector y, N_Vector fy, DlsMat J, gpointer jac_data, N_Vector tmp1, N_Vector tmp2,
-	  N_Vector tmp3)
+          N_Vector tmp3)
 {
   NcmModel *model = NCM_MODEL (jac_data);
   gdouble E2 = nc_hicosmo_E2 (NC_HICOSMO (model), z);
@@ -148,7 +148,7 @@ growth_J (_NCM_SUNDIALS_INT_TYPE N, realtype z, N_Vector y, N_Vector fy, DlsMat 
  *
  * FIXME
  *
-*/
+ */
 void
 nc_growth_func_prepare (NcGrowthFunc *gf, NcHICosmo *model)
 {
@@ -175,17 +175,17 @@ nc_growth_func_prepare (NcGrowthFunc *gf, NcHICosmo *model)
 
   if (gf->cvode == NULL)
   {
-	gf->cvode = CVodeCreate (CV_ADAMS, CV_FUNCTIONAL);
-	CVodeInit (gf->cvode, &growth_f, _NC_START_Z, gf->yv);
-	if (FALSE)
-	{
-	  CVDense (gf->cvode, 2);
-	  CVDlsSetDenseJacFn (gf->cvode, &growth_J);
-	}
+    gf->cvode = CVodeCreate (CV_ADAMS, CV_FUNCTIONAL);
+    CVodeInit (gf->cvode, &growth_f, _NC_START_Z, gf->yv);
+    if (FALSE)
+    {
+      CVDense (gf->cvode, 2);
+      CVDlsSetDenseJacFn (gf->cvode, &growth_J);
+    }
   }
   else
   {
-	CVodeReInit (gf->cvode, _NC_START_Z, gf->yv);
+    CVodeReInit (gf->cvode, _NC_START_Z, gf->yv);
   }
 
   CVodeSStolerances (gf->cvode, 1e-13, 0.0);
@@ -202,34 +202,34 @@ nc_growth_func_prepare (NcGrowthFunc *gf, NcHICosmo *model)
     CVode (gf->cvode, 0.0, gf->yv, &zf, CV_ONE_STEP);
     g_array_index (y_array, gdouble, i) = NV_Ith_S (gf->yv, 0);
     g_array_index (x_array, gdouble, i) = zf;
-	
+
     if (zf == 0.0)
       break;
 
     i--;
     if (i < 0)
-	{
-	  i = i + 101;
-	  for (i = 100; i >= 0; i--)
-	  {
-		printf ("zf = %20.16g D = % 20.16g\n", g_array_index (x_array, gdouble, i), g_array_index (y_array, gdouble, i));
-	  }
+    {
+      i = i + 101;
+      for (i = 100; i >= 0; i--)
+      {
+        printf ("zf = %20.16g D = % 20.16g\n", g_array_index (x_array, gdouble, i), g_array_index (y_array, gdouble, i));
+      }
       g_error ("Error: More than %d points to compute the growth spline.\n", _NC_MAX_SPLINE_POINTS);
-	}
-	
+    }
+
   }
 
   g_array_remove_range (y_array, 0, i);
   g_array_remove_range (x_array, 0, i);
 
   if (gf->s == NULL)
-	gf->s = ncm_spline_cubic_notaknot_new ();
+    gf->s = ncm_spline_cubic_notaknot_new ();
 
   {
-	NcmVector *xv = ncm_vector_new_array (x_array);
-	NcmVector *yv = ncm_vector_new_array (y_array);
-	ncm_vector_scale (yv, 1.0 / ncm_vector_get (yv, 0));
-	ncm_spline_set (gf->s, xv, yv, TRUE);
+    NcmVector *xv = ncm_vector_new_array (x_array);
+    NcmVector *yv = ncm_vector_new_array (y_array);
+    ncm_vector_scale (yv, 1.0 / ncm_vector_get (yv, 0));
+    ncm_spline_set (gf->s, xv, yv, TRUE);
   }
 
   g_array_unref (x_array);
@@ -247,7 +247,7 @@ nc_growth_func_prepare (NcGrowthFunc *gf, NcHICosmo *model)
  * FIXME
  *
  * Returns: The normalized groth function at @z.
-*/
+ */
 /**
  * nc_growth_func_eval_deriv:
  * @gf: a #NcGrowthFunc.
@@ -286,7 +286,7 @@ _nc_growth_func_dispose (GObject * object)
 {
   NcGrowthFunc *gf = NC_GROWTH_FUNC (object);
 
-	ncm_spline_clear (&gf->s);
+  ncm_spline_clear (&gf->s);
   ncm_model_ctrl_clear (&gf->ctrl);
 
   /* Chain up : end */

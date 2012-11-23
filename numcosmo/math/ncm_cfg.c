@@ -119,9 +119,9 @@ _ncm_cfg_log_message (const gchar *log_domain, GLogLevelFlags log_level, const g
 {
   if (_enable_msg && _log_stream)
   {
-	fprintf (_log_stream, "%s", message);
-	if (_enable_msg_flush)
-	  fflush (_log_stream);
+    fprintf (_log_stream, "%s", message);
+    if (_enable_msg_flush)
+      fflush (_log_stream);
   }
 }
 
@@ -135,11 +135,11 @@ ncm_cfg_init (void)
 {
   const gchar *home;
   if (numcosmo_init)
-	return;
+    return;
   home = g_get_home_dir ();
   numcosmo_path = g_build_filename (home, ".numcosmo", NULL);
   if (!g_file_test (numcosmo_path, G_FILE_TEST_EXISTS))
-	g_mkdir_with_parents (numcosmo_path, 0755);
+    g_mkdir_with_parents (numcosmo_path, 0755);
 
   gsl_err = gsl_set_error_handler_off ();
 #if (GLIB_MAJOR_VERSION == 2) && (GLIB_MINOR_VERSION < 32)
@@ -227,10 +227,10 @@ ncm_cfg_init (void)
 
   ncm_cfg_register_obj (NC_TYPE_CLUSTER_ABUNDANCE);
 
-	ncm_cfg_register_obj (NC_TYPE_DISTANCE);
+  ncm_cfg_register_obj (NC_TYPE_DISTANCE);
 
-	ncm_cfg_register_obj (NC_TYPE_RECOMB);
-	ncm_cfg_register_obj (NC_TYPE_RECOMB_SEAGER);
+  ncm_cfg_register_obj (NC_TYPE_RECOMB);
+  ncm_cfg_register_obj (NC_TYPE_RECOMB_SEAGER);
 
   numcosmo_init = TRUE;
   return;
@@ -275,7 +275,7 @@ ncm_cfg_set_logfile (gchar *filename)
 {
   FILE *out = fopen (filename, "w");
   if (out != NULL)
-	_log_stream = out;
+    _log_stream = out;
   else
     g_error ("ncm_cfg_set_logfile: Can't open logfile (%s)", filename);
 }
@@ -313,6 +313,46 @@ ncm_message (gchar *msg, ...)
   va_start(ap, msg);
   g_logv (G_LOG_DOMAIN, G_LOG_LEVEL_MESSAGE, msg, ap);
   va_end (ap);
+}
+
+void 
+ncm_message_ww (gchar *msg, const gchar *first, const gchar *rest, guint ncols)
+{
+  gchar **msg_split = g_strsplit (msg, " ", 0);
+  guint size_print = strlen (msg_split[0]);
+  guint first_size = strlen (first);
+  guint rest_size = strlen (rest);
+  guint i = 1;
+
+  g_message ("%s%s", first, msg_split[0]);
+  while (msg_split[i] != NULL)
+  {
+    guint lsize = strlen (msg_split[i]);
+    if (size_print + lsize + 1 > (ncols - first_size))
+      break;
+    g_message (" %s", msg_split[i]);
+    size_print += lsize + 1;
+    i++;
+  }
+  g_message ("\n");
+
+  while (msg_split[i] != NULL)
+  {
+    size_print = 0;
+    g_message ("%s", rest);
+    while (msg_split[i] != NULL)
+    {
+      guint lsize = strlen (msg_split[i]);
+      if (size_print + lsize + 1 > (ncols - rest_size))
+        break;
+      g_message (" %s", msg_split[i]);
+      size_print += lsize + 1;
+      i++;
+    }
+    g_message ("\n");
+  }
+
+  g_strfreev (msg_split);
 }
 
 /**
@@ -370,29 +410,29 @@ ncm_cfg_keyfile_to_arg (GKeyFile *kfile, gchar *group_name, GOptionEntry *entrie
 {
   if (g_key_file_has_group (kfile, group_name))
   {
-	GError *error = NULL;
-	gint i;
-	for (i = 0; entries[i].long_name != NULL; i++)
-	{
-	  if (g_key_file_has_key (kfile, group_name, entries[i].long_name, &error))
-	  {
-		gchar *val = g_key_file_get_value (kfile, group_name, entries[i].long_name, &error);
-		if (entries[i].arg == G_OPTION_ARG_NONE)
-		{
-		  if ((g_ascii_strcasecmp (val, "1") == 0) ||
-		      (g_ascii_strcasecmp (val, "true") == 0))
-		  {
-			argv[argc[0]++] = g_strdup_printf ("--%s", entries[i].long_name);
-		  }
-		  g_free (val);
-		}
-		else if (strlen (val) > 0)
-		{
-		  argv[argc[0]++] = g_strdup_printf ("--%s", entries[i].long_name);
-		  argv[argc[0]++] = val;
-		}
-	  }
-	}
+    GError *error = NULL;
+    gint i;
+    for (i = 0; entries[i].long_name != NULL; i++)
+    {
+      if (g_key_file_has_key (kfile, group_name, entries[i].long_name, &error))
+      {
+        gchar *val = g_key_file_get_value (kfile, group_name, entries[i].long_name, &error);
+        if (entries[i].arg == G_OPTION_ARG_NONE)
+        {
+          if ((g_ascii_strcasecmp (val, "1") == 0) ||
+              (g_ascii_strcasecmp (val, "true") == 0))
+          {
+            argv[argc[0]++] = g_strdup_printf ("--%s", entries[i].long_name);
+          }
+          g_free (val);
+        }
+        else if (strlen (val) > 0)
+        {
+          argv[argc[0]++] = g_strdup_printf ("--%s", entries[i].long_name);
+          argv[argc[0]++] = val;
+        }
+      }
+    }
   }
 }
 
@@ -412,65 +452,65 @@ ncm_cfg_entries_to_keyfile (GKeyFile *kfile, gchar *group_name, GOptionEntry *en
   gint i;
   for (i = 0; entries[i].long_name != NULL; i++)
   {
-	gboolean skip_comment = FALSE;
-	switch (entries[i].arg)
-	{
-	  case G_OPTION_ARG_NONE:
-	  {
-		gboolean arg_b = ((gboolean *)entries[i].arg_data)[0];
-		g_key_file_set_boolean (kfile, group_name, entries[i].long_name, arg_b);
-		break;
-	  }
-	  case G_OPTION_ARG_STRING:
-	  case G_OPTION_ARG_FILENAME:
-	  {
-		gchar **arg_s = (gchar **)entries[i].arg_data;
-		g_key_file_set_string (kfile, group_name, entries[i].long_name, *arg_s != NULL ? *arg_s : "");
-		break;
-	  }
-	  case G_OPTION_ARG_STRING_ARRAY:
-	  case G_OPTION_ARG_FILENAME_ARRAY:
-	  {
-		const gchar ***arg_as = (const gchar ***)entries[i].arg_data;
-		gchar ***arg_cas = (gchar ***)entries[i].arg_data;
-		if (*arg_cas != NULL)
-		  g_key_file_set_string_list (kfile, group_name, entries[i].long_name, *arg_as, g_strv_length (*arg_cas));
-		else
-		  g_key_file_set_string_list (kfile, group_name, entries[i].long_name, NULL, 0);
-		break;
-	  }
-	  case G_OPTION_ARG_INT:
-	  {
-		gint arg_i = ((gint *)entries[i].arg_data)[0];
-		g_key_file_set_integer (kfile, group_name, entries[i].long_name, arg_i);
-		break;
-	  }
-	  case G_OPTION_ARG_INT64:
-	  {
+    gboolean skip_comment = FALSE;
+    switch (entries[i].arg)
+    {
+      case G_OPTION_ARG_NONE:
+      {
+        gboolean arg_b = ((gboolean *)entries[i].arg_data)[0];
+        g_key_file_set_boolean (kfile, group_name, entries[i].long_name, arg_b);
+        break;
+      }
+      case G_OPTION_ARG_STRING:
+      case G_OPTION_ARG_FILENAME:
+      {
+        gchar **arg_s = (gchar **)entries[i].arg_data;
+        g_key_file_set_string (kfile, group_name, entries[i].long_name, *arg_s != NULL ? *arg_s : "");
+        break;
+      }
+      case G_OPTION_ARG_STRING_ARRAY:
+      case G_OPTION_ARG_FILENAME_ARRAY:
+      {
+        const gchar ***arg_as = (const gchar ***)entries[i].arg_data;
+        gchar ***arg_cas = (gchar ***)entries[i].arg_data;
+        if (*arg_cas != NULL)
+          g_key_file_set_string_list (kfile, group_name, entries[i].long_name, *arg_as, g_strv_length (*arg_cas));
+        else
+          g_key_file_set_string_list (kfile, group_name, entries[i].long_name, NULL, 0);
+        break;
+      }
+      case G_OPTION_ARG_INT:
+      {
+        gint arg_i = ((gint *)entries[i].arg_data)[0];
+        g_key_file_set_integer (kfile, group_name, entries[i].long_name, arg_i);
+        break;
+      }
+      case G_OPTION_ARG_INT64:
+      {
 #if !((GLIB_MAJOR_VERSION == 2) && (GLIB_MINOR_VERSION < 26))
-		gint64 arg_l = ((gint64 *)entries[i].arg_data)[0];
-		g_key_file_set_int64 (kfile, group_name, entries[i].long_name, arg_l);
+        gint64 arg_l = ((gint64 *)entries[i].arg_data)[0];
+        g_key_file_set_int64 (kfile, group_name, entries[i].long_name, arg_l);
 #else
-		g_error ("ncm_cfg_entries_to_keyfile: gint64 not supported, recompile "PACKAGE_NAME" with glib >= 2.26");
+        g_error ("ncm_cfg_entries_to_keyfile: gint64 not supported, recompile "PACKAGE_NAME" with glib >= 2.26");
 #endif
-		break;
-	  }
-	  case G_OPTION_ARG_DOUBLE:
-	  {
-		gdouble arg_d = ((double *)entries[i].arg_data)[0];
-		g_key_file_set_double (kfile, group_name, entries[i].long_name, arg_d);
-		break;
-	  }
-	  default:
-		skip_comment = TRUE;
-		//g_error ("ncm_cfg_entries_to_keyfile: cannot convert entry type %d to keyfile", entries[i].arg);
-		break;
-	}
-	if (!skip_comment)
-	{
-	  if (!g_key_file_set_comment (kfile, group_name, entries[i].long_name, entries[i].description, &error))
-		g_error ("ncm_cfg_entries_to_keyfile: %s", error->message);
-	}
+        break;
+      }
+      case G_OPTION_ARG_DOUBLE:
+      {
+        gdouble arg_d = ((double *)entries[i].arg_data)[0];
+        g_key_file_set_double (kfile, group_name, entries[i].long_name, arg_d);
+        break;
+      }
+      default:
+        skip_comment = TRUE;
+        //g_error ("ncm_cfg_entries_to_keyfile: cannot convert entry type %d to keyfile", entries[i].arg);
+        break;
+    }
+    if (!skip_comment)
+    {
+      if (!g_key_file_set_comment (kfile, group_name, entries[i].long_name, entries[i].description, &error))
+        g_error ("ncm_cfg_entries_to_keyfile: %s", error->message);
+    }
   }
 }
 
@@ -487,26 +527,29 @@ ncm_cfg_entries_to_keyfile (GKeyFile *kfile, gchar *group_name, GOptionEntry *en
 const GEnumValue *
 ncm_cfg_get_enum_by_id_name_nick (GType enum_type, const gchar *id_name_nick)
 {
-  GEnumValue *res = NULL;
-  gchar *endptr = NULL;
-  gint64 id = g_ascii_strtoll (id_name_nick, &endptr, 10);
-  GEnumClass *enum_class = NULL;
-
-  g_assert (G_TYPE_IS_ENUM (enum_type));
-
-  enum_class = g_type_class_ref (enum_type);
-  if ((endptr == id_name_nick) || (strlen (endptr) > 0))
+  g_assert (id_name_nick != NULL);
   {
-	res = g_enum_get_value_by_name (enum_class, id_name_nick);
-	if (res == NULL)
-	  res = g_enum_get_value_by_nick (enum_class, id_name_nick);
+    GEnumValue *res = NULL;
+    gchar *endptr = NULL;
+    gint64 id = g_ascii_strtoll (id_name_nick, &endptr, 10);
+    GEnumClass *enum_class = NULL;
+
+    g_assert (G_TYPE_IS_ENUM (enum_type));
+
+    enum_class = g_type_class_ref (enum_type);
+    if ((endptr == id_name_nick) || (strlen (endptr) > 0))
+    {
+      res = g_enum_get_value_by_name (enum_class, id_name_nick);
+      if (res == NULL)
+        res = g_enum_get_value_by_nick (enum_class, id_name_nick);
+    }
+    else
+      res = g_enum_get_value (enum_class, id);
+
+    g_type_class_unref (enum_class);
+
+    return res;
   }
-  else
-	res = g_enum_get_value (enum_class, id);
-
-  g_type_class_unref (enum_class);
-
-  return res;
 }
 
 /**
@@ -533,26 +576,26 @@ ncm_cfg_enum_print_all (GType enum_type, gchar *header)
 
   while ((snia = g_enum_get_value (enum_class, i++)) != NULL)
   {
-	name_max_len = GSL_MAX (name_max_len, strlen (snia->value_name));
-	nick_max_len = GSL_MAX (nick_max_len, strlen (snia->value_nick));
+    name_max_len = GSL_MAX (name_max_len, strlen (snia->value_name));
+    nick_max_len = GSL_MAX (nick_max_len, strlen (snia->value_nick));
   }
 
   printf ("# %s:\n", header);
   pad = 10 + name_max_len + nick_max_len;
   printf ("#");
   while (pad-- != 0)
-	printf ("-");
+    printf ("-");
   printf ("#\n");
   printf ("# Id | %-*s | %-*s |\n", name_max_len, "Name", nick_max_len, "Nick");
   i = 0;
   while ((snia = g_enum_get_value (enum_class, i++)) != NULL)
   {
-	printf ("# %02d | %-*s | %-*s |\n", snia->value, name_max_len, snia->value_name, nick_max_len, snia->value_nick);
+    printf ("# %02d | %-*s | %-*s |\n", snia->value, name_max_len, snia->value_name, nick_max_len, snia->value_nick);
   }
   pad = 10 + name_max_len + nick_max_len;
   printf ("#");
   while (pad-- != 0)
-	printf ("-");
+    printf ("-");
   printf ("#\n");
 
   g_type_class_unref (enum_class);
@@ -586,10 +629,10 @@ ncm_cfg_load_fftw_wisdom (gchar *filename, ...)
 
   if (g_file_test (full_filename, G_FILE_TEST_EXISTS))
   {
-	wis = g_fopen (full_filename, "r");
-	fftw_import_wisdom_from_file(wis);
-	fclose (wis);
-	ret = TRUE;
+    wis = g_fopen (full_filename, "r");
+    fftw_import_wisdom_from_file(wis);
+    fclose (wis);
+    ret = TRUE;
   }
   g_free (file);
   g_free (full_filename);
@@ -739,35 +782,35 @@ ncm_cfg_load_spline (gchar *filename, const gsl_interp_type *stype, NcmSpline **
   FILE *F = ncm_cfg_vfopen (filename, "r", ap);
   va_end (ap);
   if (F == NULL)
-	return FALSE;
+    return FALSE;
 
   if (fread (&size, sizeof (guint64), 1, F) != 1)
-	g_error ("ncm_cfg_save_spline: fwrite error");
+    g_error ("ncm_cfg_save_spline: fwrite error");
 
   if (*s == NULL)
   {
-	xv = ncm_vector_new (size);
-	yv = ncm_vector_new (size);
+    xv = ncm_vector_new (size);
+    yv = ncm_vector_new (size);
   }
   else
   {
-	xv = (*s)->xv;
-	yv = (*s)->yv;
-	g_assert (size == ncm_vector_len(xv));
+    xv = (*s)->xv;
+    yv = (*s)->yv;
+    g_assert (size == ncm_vector_len(xv));
   }
 
   if (fread (ncm_vector_ptr (xv, 0), sizeof (gdouble), size, F) != size)
-	g_error ("ncm_cfg_save_spline: fwrite error");
+    g_error ("ncm_cfg_save_spline: fwrite error");
   if (fread (ncm_vector_ptr (yv, 0), sizeof (gdouble), size, F) != size)
-	g_error ("ncm_cfg_save_spline: fwrite error");
+    g_error ("ncm_cfg_save_spline: fwrite error");
 
   if (*s == NULL)
   {
-	*s = ncm_spline_gsl_new (stype);
-	ncm_spline_set (*s, xv, yv, TRUE);
+    *s = ncm_spline_gsl_new (stype);
+    ncm_spline_set (*s, xv, yv, TRUE);
   }
   else
-	ncm_spline_prepare (*s);
+    ncm_spline_prepare (*s);
 
   fclose (F);
   return TRUE;
@@ -794,17 +837,17 @@ ncm_cfg_save_spline (gchar *filename, NcmSpline *s, ...)
   va_end (ap);
 
   if (F == NULL)
-	return FALSE;
+    return FALSE;
 
   size = s->len;
 
   if (fwrite (&size, sizeof (guint64), 1, F) != 1)
-	g_error ("ncm_cfg_save_spline: fwrite error");
+    g_error ("ncm_cfg_save_spline: fwrite error");
 
   if (fwrite (ncm_vector_ptr (s->xv, 0), sizeof (gdouble), size, F) != size)
-	g_error ("ncm_cfg_save_spline: fwrite error");
+    g_error ("ncm_cfg_save_spline: fwrite error");
   if (fwrite (ncm_vector_ptr (s->yv, 0), sizeof (gdouble), size, F) != size)
-	g_error ("ncm_cfg_save_spline: fwrite error");
+    g_error ("ncm_cfg_save_spline: fwrite error");
 
   fclose (F);
   return TRUE;
@@ -830,7 +873,7 @@ ncm_cfg_load_vector (gchar *filename, gsl_vector *v, ...)
   va_end (ap);
 
   if (F == NULL)
-	return FALSE;
+    return FALSE;
   gsl_vector_fread (F, v);
   fclose (F);
   return TRUE;
@@ -856,7 +899,7 @@ ncm_cfg_save_vector (gchar *filename, gsl_vector *v, ...)
   va_end (ap);
 
   if (F == NULL)
-	return FALSE;
+    return FALSE;
   gsl_vector_fwrite (F, v);
   fclose (F);
   return TRUE;
@@ -882,7 +925,7 @@ ncm_cfg_load_matrix (gchar *filename, gsl_matrix *M, ...)
   va_end (ap);
 
   if (F == NULL)
-	return FALSE;
+    return FALSE;
   gsl_matrix_fread (F, M);
   fclose (F);
   return TRUE;
@@ -908,7 +951,7 @@ ncm_cfg_save_matrix (gchar *filename, gsl_matrix *M, ...)
   va_end (ap);
 
   if (F == NULL)
-	return FALSE;
+    return FALSE;
   gsl_matrix_fwrite (F, M);
   fclose (F);
   return TRUE;
@@ -1096,12 +1139,12 @@ load_save_vector_matrix(complex)
 
 #ifdef NUMCOSMO_HAVE_SQLITE3
 /**
- * ncm_cfg_get_default_sqlite3: (skip)
- *
- * FIXME
- *
- * Returns: FIXME
- */
+   * ncm_cfg_get_default_sqlite3: (skip)
+   *
+   * FIXME
+   *
+   * Returns: FIXME
+   */
 sqlite3 *
 ncm_cfg_get_default_sqlite3 (void)
 {
@@ -1181,7 +1224,7 @@ ncm_cfg_command_line (gchar *argv[], gint argc)
  * Parses the serialized and returns the newly created object.
  *
  * Returns: (transfer full): A new #GObject.
- */
+   */
 GObject *
 ncm_cfg_create_from_string (const gchar *obj_ser)
 #if !((GLIB_MAJOR_VERSION == 2) && (GLIB_MINOR_VERSION < 30))
@@ -1257,7 +1300,7 @@ ncm_cfg_create_from_string (const gchar *obj_ser)
  * FIXME
  *
  * Returns: (transfer full): A new #GObject.
- */
+   */
 GObject *
 ncm_cfg_create_from_name_params (const gchar *obj_name, GVariant *params)
 #if !((GLIB_MAJOR_VERSION == 2) && (GLIB_MINOR_VERSION < 30))
@@ -1445,7 +1488,7 @@ _ncm_cfg_gtype_to_gvariant_type (GType t)
  * FIXME
  *
  * Returns: (transfer full): A #GVariant convertion of @val.
- */
+   */
 GVariant *
 ncm_cfg_gvalue_to_gvariant (GValue *val)
 #if !((GLIB_MAJOR_VERSION == 2) && (GLIB_MINOR_VERSION < 30))
@@ -1496,7 +1539,7 @@ ncm_cfg_gvalue_to_gvariant (GValue *val)
  * FIXME
  *
  * Returns: (transfer full): A #GVariant dictionary describing the @obj.
- */
+   */
 GVariant *
 ncm_cfg_serialize_to_variant (GObject *obj)
 #if !((GLIB_MAJOR_VERSION == 2) && (GLIB_MINOR_VERSION < 30))
@@ -1564,7 +1607,7 @@ ncm_cfg_serialize_to_variant (GObject *obj)
  *
  *
  * Returns: (transfer full): A string containing the serialized version of @obj.
- */
+   */
 gchar *
 ncm_cfg_serialize_to_string (GObject *obj, gboolean valid_variant)
 #if !((GLIB_MAJOR_VERSION == 2) && (GLIB_MINOR_VERSION < 30))

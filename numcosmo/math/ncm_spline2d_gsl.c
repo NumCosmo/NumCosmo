@@ -90,9 +90,9 @@ _ncm_spline2d_gsl_alloc (NcmSpline2dGsl *s2dgsl)
   NcmSpline2d *s2d = NCM_SPLINE2D (s2dgsl);
   guint i;
 
-  s2dgsl->zdiff = ncm_matrix_new (NCM_MATRIX_COL_LEN (s2d->zm), NCM_MATRIX_ROW_LEN (s2d->zm));
-  s2dgsl->vertv = ncm_vector_new (NCM_MATRIX_COL_LEN (s2d->zm));
-  s2dgsl->vertintv = ncm_vector_new (NCM_MATRIX_COL_LEN (s2d->zm));
+  s2dgsl->zdiff = ncm_matrix_new_sunk (NCM_MATRIX_COL_LEN (s2d->zm), NCM_MATRIX_ROW_LEN (s2d->zm));
+  s2dgsl->vertv = ncm_vector_new_sunk (NCM_MATRIX_COL_LEN (s2d->zm));
+  s2dgsl->vertintv = ncm_vector_new_sunk (NCM_MATRIX_COL_LEN (s2d->zm));
 
   s2dgsl->s_hor = g_slice_alloc (sizeof (NcmSpline *) * NCM_MATRIX_COL_LEN (s2d->zm));
   for (i = 0; i < NCM_MATRIX_COL_LEN (s2d->zm); i++)
