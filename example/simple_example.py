@@ -21,8 +21,8 @@ dist = Nc.Distance.new (2.0)
 
 #
 #  Setting values for the cosmological model, those not set stay in the
-#  default values. Remeber to use the _orig_ version to set the original
-#  parameters in case when a reparametrization is used.
+#  default values. Remember to use the _orig_ version to set the original
+#  parameters when a reparametrization is used.
 #
 
 #

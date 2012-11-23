@@ -46,6 +46,12 @@ nc_de_data_cluster_new (NcDistance *dist, NcmMSet *mset, NcDEDataClusterEntries 
   NcClusterMass *clusterm = nc_cluster_mass_new_from_name (de_data_cluster->clusterm_ser);
   NcClusterRedshift *clusterz = nc_cluster_redshift_new_from_name (de_data_cluster->clusterz_ser);
 
+  nc_window_free (wp);
+  nc_transfer_func_free (tf);
+  nc_matter_var_free (vp);
+  nc_growth_func_free (gf);
+  nc_multiplicity_func_free (mulf);
+  
   ncm_mset_set (mset, NCM_MODEL (clusterm));
 
   switch (id)
@@ -109,7 +115,7 @@ nc_de_data_cluster_new (NcDistance *dist, NcmMSet *mset, NcDEDataClusterEntries 
 #ifdef NUMCOSMO_HAVE_CFITSIO
         nc_data_cluster_ncount_catalog_save (data, de_data_cluster->save_cata, TRUE);
 #else
-      g_error ("darkenergy: cannot save file numcosmo built without support for fits files");
+        g_error ("darkenergy: cannot save file numcosmo built without support for fits files");
 #endif /* HAVE_CONFIG_H */
       _nc_de_data_cluster_append (de_data_cluster, data, dset);
       g_ptr_array_add (ca_array, data);
@@ -121,6 +127,7 @@ nc_de_data_cluster_new (NcDistance *dist, NcmMSet *mset, NcDEDataClusterEntries 
 
   nc_cluster_mass_free (clusterm);
   nc_cluster_redshift_free (clusterz);
+  nc_mass_function_free (mfp);
 
   return ca_array;
 }

@@ -1031,6 +1031,18 @@ nc_data_cluster_ncount_catalog_load (NcmData *data, gchar *filename)
     if (fits_read_key_longstr (fptr, "LNM_OBJ", &lnM_ser, comment, &status))
       NC_FITS_ERROR (status);
 
+    {
+      gint z_ser_len = strlen (z_ser);
+      gint lnM_ser_len = strlen (lnM_ser);
+
+      if (z_ser[z_ser_len - 1] == '&')
+        z_ser[z_ser_len - 1] = ' ';
+
+      if (lnM_ser[lnM_ser_len - 1] == '&')
+        lnM_ser[lnM_ser_len - 1] = ' ';
+
+    }
+
     ncount->z = nc_cluster_redshift_new_from_name (z_ser);
     ncount->m = nc_cluster_mass_new_from_name (lnM_ser);
 
@@ -1124,6 +1136,7 @@ nc_data_cluster_ncount_catalog_load (NcmData *data, gchar *filename)
       if (nc_cluster_mass_obs_params_len (ncount->m) > 0)
         g_error ("NcClusterMass object has observable parameters length %d but fits has 0.",
                  nc_cluster_mass_obs_params_len (ncount->m));
+      status = 0;
     }
     else
     {
@@ -1157,22 +1170,27 @@ nc_data_cluster_ncount_catalog_load (NcmData *data, gchar *filename)
       if (fits_read_col (fptr, TDOUBLE, z_true_i, 1, 1, ncount->np, NULL, ncm_vector_ptr (ncount->z_true, 0), NULL, &status))
         NC_FITS_ERROR(status);
     }
+    else
+      status = 0;
 
     if (ncount->lnM_true != NULL)
     {
       ncm_vector_free (ncount->lnM_true);
       ncount->lnM_true = NULL;
     }
+
     if (!fits_get_colnum (fptr, CASESEN, "LNM_TRUE", &lnM_true_i, &status))
     {
       ncount->lnM_true = ncm_vector_new (ncount->np);
       if (fits_read_col (fptr, TDOUBLE, lnM_true_i, 1, 1, ncount->np, NULL, ncm_vector_ptr (ncount->lnM_true, 0), NULL, &status))
         NC_FITS_ERROR(status);
-
     }
+    else
+      status = 0;
+
   }
 
-  if ( fits_close_file(fptr, &status) )
+  if (fits_close_file (fptr, &status) )
     NC_FITS_ERROR(status);
 
   _nc_data_cluster_ncount_model_init (ncount);
@@ -1181,4 +1199,5 @@ nc_data_cluster_ncount_catalog_load (NcmData *data, gchar *filename)
 
   return;
 }
+
 #endif /* NUMCOSMO_HAVE_CFITSIO */

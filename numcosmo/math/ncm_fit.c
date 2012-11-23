@@ -82,8 +82,14 @@ ncm_fit_new (NcmLikelihood *lh, NcmMSet *mset, NcmFitType type, NcmFitGradType g
 
   ncm_mset_prepare_fparam_map (fit->mset);
 
-  if (ncm_mset_fparam_len (fit->mset) == 0)
-    g_warning ("ncm_fit_new: mset object has 0 free parameters");
+  /* 
+   * It is no longer an error to fit 0 parameters, it just sets the value
+   * of m2lnL in the fit object.
+   * 
+   * if (ncm_mset_fparam_len (fit->mset) == 0)
+   * g_warning ("ncm_fit_new: mset object has 0 free parameters");
+   * 
+   */
 
   fit->data_len = n + ncm_likelihood_priors_length (lh);
   fit->fparam_len = ncm_mset_fparam_len (fit->mset);
@@ -378,6 +384,24 @@ ncm_fit_covar_cor (NcmFit *fit, NcmModelID gmid1, guint pid1, NcmModelID gmid2, 
   return ncm_fit_covar_fparam_cov (fit, fpi1, fpi2) / (ncm_fit_covar_fparam_sd (fit, fpi1) * ncm_fit_covar_fparam_sd (fit, fpi2));
 }
 
+gboolean
+_ncm_fit_run_empty (NcmFit *fit, gint niters, NcmFitRunMsgs mtype)
+{
+  fit->solver_name = "Empty run, no free parameters";
+  fit->mtype = mtype;
+  ncm_fit_log_start (fit);
+
+  ncm_fit_m2lnL_val (fit, &fit->m2lnL);
+  ncm_fit_log_step (fit, fit->m2lnL);
+  fit->sqrt_m2lnL = sqrt (fit->m2lnL);
+  fit->m2lnL_dof = fit->m2lnL / fit->dof;
+  fit->m2lnL_prec = 0.0;
+
+  ncm_fit_log_end (fit);
+
+  return TRUE;
+}
+
 /**
  * ncm_fit_run:
  * @fit: a #NcmFit
@@ -401,7 +425,7 @@ ncm_fit_run (NcmFit *fit, gint niters, NcmFitRunMsgs mtype)
   fit->n_grad_eval = 0;
 
   if (ncm_mset_fparam_len (fit->mset) == 0)
-    g_error ("ncm_fit_run: mset object has 0 free parameters");
+    _ncm_fit_run_empty (fit, niters, mtype);
 
   switch (fit->type)
   {

@@ -144,7 +144,7 @@ _nc_halo_bias_func_set_property (GObject *object, guint prop_id, const GValue *v
   switch (prop_id)
   {
 	case PROP_MASS_FUNCTION:
-	  mbiasf->mfp = g_value_get_object (value);
+	  mbiasf->mfp = g_value_dup_object (value);
 	  break;
 	case PROP_BIAS_TYPE:
 	  mbiasf->biasf = g_value_get_boxed (value);

@@ -56,7 +56,8 @@ main (gint argc, gchar *argv[])
   GOptionEntry *de_data_cluster_entries = NULL;
   GOptionEntry *de_fit_entries = NULL;
   GPtrArray *ca_array = NULL;
-  gchar *full_cmd_line = ncm_cfg_command_line (argv, argc);
+  gchar *full_cmd_line = NULL;
+  gchar *runconf_cmd_line = NULL;
 
   ncm_cfg_init ();
 
@@ -72,62 +73,75 @@ main (gint argc, gchar *argv[])
 
 
   {
-    gint p_argc = argc;
-    gchar **p_argv = g_strdupv (argv);
-
-    if(!g_option_context_parse (context, &p_argc, &p_argv, &error))
-    {
-      fprintf (stderr, "Invalid run options:\n  %s.\n", error->message);
-      printf ("%s", g_option_context_get_help (context, TRUE, NULL));
-      g_option_context_free (context);
-      return 0;
-    }
-
-    g_strfreev (p_argv);
+	gint i;
+	for (i = 0; i < argc; i++)
+	{
+	  if (strcmp (argv[i], "--runconf") == 0 || strcmp (argv[i], "-c") == 0)
+	  {
+		if (i + 1 == argc || argv[i+1] == NULL)
+		{
+		  fprintf (stderr, "Invalid run options:\n  %s.\n", error->message);
+		  printf ("%s", g_option_context_get_help (context, TRUE, NULL));
+		  g_option_context_free (context);
+		  return 0;
+		}
+		else
+		  de_run.runconf = argv[i + 1];
+	  }
+	}
   }
 
   if (de_run.runconf != NULL)
   {
-    gchar **runconf_argv = g_new0 (gchar *, 1000);
-    gint runconf_argc = 0;
-    GKeyFile *runconf = g_key_file_new ();
+	gchar **runconf_argv = g_new0 (gchar *, 1000);
+	gint runconf_argc = 0;
+	GKeyFile *runconf = g_key_file_new ();
 
-    runconf_argv[0] = g_strdup (argv[0]);
-    runconf_argc++;
+	runconf_argv[0] = g_strdup (argv[0]);
+	runconf_argc++;
+	
+	if (!g_key_file_load_from_file (runconf, de_run.runconf, G_KEY_FILE_KEEP_COMMENTS | G_KEY_FILE_KEEP_TRANSLATIONS, &error))
+	{
+	  fprintf (stderr, "Invalid run configuration file: %s\n  %s\n", de_run.runconf, error->message);
+	  printf ("%s", g_option_context_get_help (context, TRUE, NULL));
+	  return 0;
+	}
 
-    if (!g_key_file_load_from_file (runconf, de_run.runconf, G_KEY_FILE_KEEP_COMMENTS | G_KEY_FILE_KEEP_TRANSLATIONS, &error))
-    {
-      fprintf (stderr, "Invalid run configuration file: %s\n  %s\n", de_run.runconf, error->message);
-      printf ("%s", g_option_context_get_help (context, TRUE, NULL));
-      return 0;
-    }
+	ncm_cfg_keyfile_to_arg (runconf, "DarkEnergy Model", de_model_entries,        runconf_argv, &runconf_argc);
+	ncm_cfg_keyfile_to_arg (runconf, "Data Simple",      de_data_simple_entries,  runconf_argv, &runconf_argc);
+	ncm_cfg_keyfile_to_arg (runconf, "Data Cluster",     de_data_cluster_entries, runconf_argv, &runconf_argc);
+	ncm_cfg_keyfile_to_arg (runconf, "Fit",              de_fit_entries,          runconf_argv, &runconf_argc);
+	
+	g_key_file_free (runconf);
 
-    ncm_cfg_keyfile_to_arg (runconf, "DarkEnergy Model", de_model_entries,        runconf_argv, &runconf_argc);
-    ncm_cfg_keyfile_to_arg (runconf, "Data Simple",      de_data_simple_entries,  runconf_argv, &runconf_argc);
-    ncm_cfg_keyfile_to_arg (runconf, "Data Cluster",     de_data_cluster_entries, runconf_argv, &runconf_argc);
-    ncm_cfg_keyfile_to_arg (runconf, "Fit",              de_fit_entries,          runconf_argv, &runconf_argc);
-
-    g_key_file_free (runconf);
-
-    if(!g_option_context_parse (context, &runconf_argc, &runconf_argv, &error))
-    {
-      fprintf (stderr, "Invalid configuration file options:\n  %s.\n", error->message);
-      printf ("%s", g_option_context_get_help (context, TRUE, NULL));
-      g_option_context_free (context);
-      return 0;
-    }
-
-    if(!g_option_context_parse (context, &argc, &argv, &error))
-    {
-      fprintf (stderr, "Invalid run options:\n  %s.\n", error->message);
-      printf ("%s", g_option_context_get_help (context, TRUE, NULL));
-      g_option_context_free (context);
-      return 0;
-    }
-
-    g_strfreev (runconf_argv);
+	runconf_cmd_line = ncm_cfg_command_line (&runconf_argv[1], runconf_argc - 1);
+	if (!g_option_context_parse (context, &runconf_argc, &runconf_argv, &error))
+	{
+	  fprintf (stderr, "Invalid configuration file options:\n  %s.\n", error->message);
+	  printf ("%s", g_option_context_get_help (context, TRUE, NULL));
+	  g_option_context_free (context);
+	  return 0;
+	}
   }
 
+  full_cmd_line = ncm_cfg_command_line (argv, argc);
+  if (!g_option_context_parse (context, &argc, &argv, &error))
+  {
+	fprintf (stderr, "Invalid configuration file options:\n  %s.\n", error->message);
+	printf ("%s", g_option_context_get_help (context, TRUE, NULL));
+	g_option_context_free (context);
+	return 0;
+  }
+
+  if (runconf_cmd_line != NULL)
+  {
+	gchar *tmp = g_strconcat (full_cmd_line, " ", runconf_cmd_line, NULL);
+	g_free (full_cmd_line);
+	g_free (runconf_cmd_line);
+	runconf_cmd_line = NULL;
+	full_cmd_line = tmp;
+  }
+  
   if (de_run.saverun != NULL)
   {
     GKeyFile *runconf = g_key_file_new ();
@@ -285,8 +299,8 @@ main (gint argc, gchar *argv[])
 
   de_fit.fisher = (de_fit.fisher || (de_fit.nsigma_fisher != -1) || (de_fit.nsigma != -1) || (de_fit.onedim_cr != NULL));
   de_fit.fit = (de_fit.fit || de_fit.fisher);
-  de_fit.save_best_fit = (de_fit.save_best_fit || de_fit.save_fisher || (de_fit.nsigma_fisher != -1) || (de_fit.nsigma != -1));
-
+  de_fit.save_best_fit = (de_fit.save_best_fit || de_fit.save_fisher);
+  
   if (de_fit.fit)
   {
     fit->params_prec_target = 1e-5;
@@ -303,7 +317,8 @@ main (gint argc, gchar *argv[])
     ncm_mset_params_pretty_print (fit->mset, f_bf, full_cmd_line);
     fclose (f_bf);
 
-    ncm_message ("# Params file: %s \n", bfile);
+	ncm_message ("#---------------------------------------------------------------------------------- \n", bfile);
+	ncm_message ("# Params file: %s \n", bfile);
 
     g_free (bfile);
   }
@@ -321,7 +336,8 @@ main (gint argc, gchar *argv[])
       ncm_fit_fishermatrix_print (fit, f_MF, full_cmd_line);
       fclose (f_MF);
 
-      ncm_message ("# FM file: %s \n", mfile);
+	  ncm_message ("#---------------------------------------------------------------------------------- \n", mfile);
+	  ncm_message ("# FM file: %s \n", mfile);
 
       g_free (mfile);
 

@@ -144,10 +144,10 @@ _ncm_reparam_linear_set_property (GObject *object, guint prop_id, const GValue *
   switch (prop_id)
   {
 	case PROP_V:
-	  relin->v = g_value_get_object (value);
+	  relin->v = g_value_dup_object (value);
 	  break;
 	case PROP_T:
-	  relin->T = g_value_get_object (value);
+	  relin->T = g_value_dup_object (value);
 	  break;
 	default:
 	  G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
