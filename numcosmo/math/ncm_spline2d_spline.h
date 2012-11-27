@@ -63,6 +63,7 @@ struct _NcmSpline2dSpline
 	NcmSpline **s_hor;
 	NcmSpline *s_ver;
 	NcmSpline *s_ver_integ;
+  guint s_hor_len;
 };
 
 GType ncm_spline2d_spline_get_type (void) G_GNUC_CONST;

@@ -272,9 +272,7 @@ ncm_vector_get_subvector (NcmVector *cv, gsize k, gsize size)
 
   scv->vv = gsl_vector_subvector (ncm_vector_gsl (cv), k, size);
   scv->type = NCM_VECTOR_DERIVED;
-  scv->pobj = g_object_ref_sink (cv);
-  
-  ncm_vector_ref (cv);
+  scv->pobj = G_OBJECT (ncm_vector_ref (cv));
 
   return scv;
 }

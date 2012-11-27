@@ -99,7 +99,7 @@ test_ncm_matrix_new (void)
 void
 test_ncm_matrix_operations (void)
 {
-  NcmMatrix *cm = ncm_matrix_copy (m);
+  NcmMatrix *cm = ncm_matrix_dup (m);
   guint i;
   test_ncm_matrix_new_sanity (cm);
 
@@ -127,7 +127,7 @@ test_ncm_matrix_operations (void)
 
   {
 	NcmMatrix *subm = ncm_matrix_get_submatrix (m, 3, 0, _NCM_MATRIX_TEST_NROW - 3, _NCM_MATRIX_TEST_NCOL);
-	NcmMatrix *sm_cp = ncm_matrix_copy (subm);
+	NcmMatrix *sm_cp = ncm_matrix_dup (subm);
 	ncm_matrix_transpose (subm);
 	for (i = 0; i < 10 * _NCM_MATRIX_TEST_NROW; i++)
 	{

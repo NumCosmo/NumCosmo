@@ -98,7 +98,7 @@ test_ncm_vector_new (void)
 void
 test_ncm_vector_operations (void)
 {
-  NcmVector *cv = ncm_vector_copy (v);
+  NcmVector *cv = ncm_vector_dup (v);
   guint i;
   test_ncm_vector_new_sanity (cv);
 

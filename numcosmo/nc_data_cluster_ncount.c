@@ -513,7 +513,6 @@ _nc_data_cluster_ncount_resample (NcmData *data, NcmMSet *mset)
                                 cad->zi, cad->zf, 
                                 exp (cad->lnMi), exp (cad->lnMf), 
                                 ncount->area_survey / gsl_pow_2 (M_PI / 180.0));
-  
 
   g_free (zi_obs);
   g_free (zi_obs_params);
