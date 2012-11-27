@@ -54,9 +54,6 @@ static void nc_confidence_region_numdiff_fdf (gdouble x, gpointer p, gdouble *y,
 static gdouble ncm_fit_cr_root_steffenson (NcConfidenceRegion *cr, gdouble x);
 static gdouble ncm_fit_cr_root_brent (NcConfidenceRegion *cr, gdouble x0, gdouble x);
 
-#define OUTPUT NULL
-#define ERR(i) (1.0*sqrt(ncm_matrix_get(fit->covar,i,i)))
-
 /**
  * nc_confidence_region_new_1d: (skip)
  * @fit: a #NcmFit.

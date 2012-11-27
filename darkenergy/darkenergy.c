@@ -123,11 +123,6 @@ main (gint argc, gchar *argv[])
     }
   }
 
-  g_free (de_model_entries); de_model_entries = NULL;
-  g_free (de_data_simple_entries); de_data_simple_entries = NULL;
-  g_free (de_data_cluster_entries); de_data_cluster_entries = NULL;
-  g_free (de_fit_entries); de_fit_entries = NULL;
-
   full_cmd_line = ncm_cfg_command_line (argv, argc);
   if (!g_option_context_parse (context, &argc, &argv, &error))
   {
@@ -567,6 +562,11 @@ main (gint argc, gchar *argv[])
     g_ptr_array_free (ca_array, TRUE);
   }
 
+  g_free (de_model_entries); de_model_entries = NULL;
+  g_free (de_data_simple_entries); de_data_simple_entries = NULL;
+  g_free (de_data_cluster_entries); de_data_cluster_entries = NULL;
+  g_free (de_fit_entries); de_fit_entries = NULL;
+  
   ncm_model_free (NCM_MODEL (model));
   ncm_mset_free (fiduc);
   ncm_mset_free (mset);
