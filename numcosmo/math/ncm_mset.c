@@ -608,6 +608,30 @@ ncm_mset_params_print_vals (NcmMSet *mset, FILE *out)
 }
 
 /**
+ * ncm_mset_params_valid:
+ * @mset: FIXME
+ *
+ * FIXME
+ * 
+ * Returns: FIXME
+ */
+gboolean 
+ncm_mset_params_valid (NcmMSet *mset)
+{
+  NcmModelID gmid;
+
+  for (gmid = 0; gmid < NCM_MODEL_MAX_ID; gmid++)
+  {
+    NcmModel *model = ncm_mset_peek (mset, gmid);
+    if (model == NULL)
+      continue;
+    else if (!ncm_model_params_valid (model))
+      return FALSE;
+  }
+  return TRUE;
+}
+
+/**
  * ncm_mset_param_set:
  * @mset: a #NcmMSet
  * @gmid: FIXME

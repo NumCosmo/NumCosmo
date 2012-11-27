@@ -383,6 +383,12 @@ _ncm_model_copy (NcmModel *model)
   return model_copy;
 }
 
+static gboolean
+_ncm_model_valid (NcmModel *model)
+{
+  return TRUE;
+}
+
 static void
 _ncm_model_copyto (NcmModel *model, NcmModel *model_dest)
 {
@@ -404,8 +410,9 @@ ncm_model_class_init (NcmModelClass *klass)
   object_class->dispose      = &_ncm_model_dispose;
   object_class->finalize     = &_ncm_model_finalize;
 
-  klass->copyto = &_ncm_model_copyto;
-  klass->copy   = &_ncm_model_copy;
+  klass->copyto       = &_ncm_model_copyto;
+  klass->copy         = &_ncm_model_copy;
+  klass->valid        = &_ncm_model_valid;
   klass->set_property = NULL;
   klass->get_property = NULL;
 
@@ -828,11 +835,10 @@ ncm_model_class_set_vparam (NcmModelClass *model_class, guint vparam_id, guint d
                                                         0, G_MAXUINT, default_length,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY));
 
-
     g_object_class_install_property (object_class, prop_fit_id,
                                      g_param_spec_variant (param_fit_name, NULL, param_fit_symbol,
                                                            G_VARIANT_TYPE_ARRAY, NULL,
-                                                           G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+                                                           G_PARAM_READWRITE));
     g_free (param_length_name);
     g_free (param_length_symbol);
     g_free (param_fit_name);
@@ -1156,6 +1162,21 @@ NcmVector *
 ncm_model_params_get_all (NcmModel *model)
 {
   return ncm_vector_dup (model->p);
+}
+
+/**
+ * ncm_model_params_valid:
+ * @model: a #NcmModel
+ *
+ * FIXME
+ *
+ * Returns: FIXME
+ */
+gboolean 
+ncm_model_params_valid (NcmModel *model)
+{
+  NcmModelClass *model_class = NCM_MODEL_GET_CLASS (model);
+  return model_class->valid (model);
 }
 
 /**

@@ -55,14 +55,30 @@ nc_hicosmo_finalize (GObject *object)
 }
 
 gint32 NC_HICOSMO_ID = -1;
+static gboolean _nc_hicosmo_valid (NcmModel *model);
 
 static void
 nc_hicosmo_class_init (NcHICosmoClass *klass)
 {
   GObjectClass* object_class = G_OBJECT_CLASS (klass);
+  NcmModelClass *model_class = NCM_MODEL_CLASS (klass);
+  
   object_class->finalize = nc_hicosmo_finalize;
-  ncm_model_class_register_id (NCM_MODEL_CLASS (klass));
-  NC_HICOSMO_ID = NCM_MODEL_CLASS (klass)->model_id;
+
+  ncm_model_class_register_id (model_class);
+  NC_HICOSMO_ID = model_class->model_id;
+
+  model_class->valid = &_nc_hicosmo_valid;
+}
+
+static gboolean 
+_nc_hicosmo_valid (NcmModel *model)
+{
+  if (!NCM_MODEL_CLASS (nc_hicosmo_parent_class)->valid (model))
+    return FALSE;
+  /* Chain up : start */
+  
+  return (nc_hicosmo_E2 (NC_HICOSMO (model), 0) >= 0.0);
 }
 
 static void

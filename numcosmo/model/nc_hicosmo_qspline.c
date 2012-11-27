@@ -140,7 +140,7 @@ nc_hicosmo_qspline_new (NcmSpline *s, gsize np, gdouble z_f)
   NcHICosmoQSpline *qspline = g_object_new (NC_TYPE_HICOSMO_QSPLINE,
                                             "spline", s,
                                             "zf", z_f,
-                                            "q-length", np,
+                                            "qparam-length", np,
                                             NULL);
 
   return qspline;
@@ -294,16 +294,51 @@ nc_hicosmo_qspline_class_init (NcHICosmoQSplineClass *klass)
   ncm_model_class_add_params (model_class, NC_HICOSMO_QSPLINE_SPARAM_LEN, NC_HICOSMO_QSPLINE_VPARAM_LEN, PROP_SIZE);
   ncm_model_class_set_name_nick (model_class, "Q Spline", "qspline");
 
+  /**
+   * NcHICosmoQSpline:H0:
+   *
+   * FIXME
+   */  
+  /**
+   * NcHICosmoQSpline:H0-fit:
+   *
+   * FIXME
+   */  
   ncm_model_class_set_sparam (model_class, NC_HICOSMO_QSPLINE_H0, "H_0", "H0",
                               10.0, 500.0, 1.0, NC_HICOSMO_DEFAULT_PARAMS_ABSTOL, NC_HICOSMO_QSPLINE_DEFAULT_H0,
                               NCM_PARAM_TYPE_FIXED);
 
-  ncm_model_class_set_sparam (model_class, NC_HICOSMO_QSPLINE_OMEGA_T, "\\Omega_t", "Omegat",
+  /**
+   * NcHICosmoQSpline:Omegat:
+   *
+   * FIXME
+   */  
+  /**
+   * NcHICosmoQSpline:Omegat-fit:
+   *
+   * FIXME
+   */  
+  ncm_model_class_set_sparam (model_class, NC_HICOSMO_QSPLINE_OMEGA_T, "Omega_t", "Omegat",
                               -5.0, 5.0, 1.0e-1,
                               NC_HICOSMO_DEFAULT_PARAMS_ABSTOL, NC_HICOSMO_QSPLINE_DEFAULT_OMEGA_T,
                               NCM_PARAM_TYPE_FIXED);
 
-  ncm_model_class_set_vparam (model_class, NC_HICOSMO_QSPLINE_Q, NC_HICOSMO_QSPLINE_DEFAULT_Q_LEN, "q", "q",
+  /**
+   * NcHICosmoQSpline:qparam:
+   *
+   * FIXME
+   */  
+  /**
+   * NcHICosmoQSpline:qparam-fit:
+   *
+   * FIXME
+   */
+  /**
+   * NcHICosmoQSpline:qparam-length:
+   *
+   * FIXME
+   */
+  ncm_model_class_set_vparam (model_class, NC_HICOSMO_QSPLINE_Q, NC_HICOSMO_QSPLINE_DEFAULT_Q_LEN, "qparam", "qparam",
                               -50.0, 50.0, 1.0e-1, NC_HICOSMO_DEFAULT_PARAMS_ABSTOL, NC_HICOSMO_QSPLINE_DEFAULT_Q,
                               NCM_PARAM_TYPE_FREE);
 

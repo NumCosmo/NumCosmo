@@ -441,15 +441,6 @@ _nc_data_cluster_ncount_resample (NcmData *data, NcmMSet *mset)
   lnM_obs_array = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), total_np * lnM_obs_len);
   if (lnM_obs_params_len > 0)
     lnM_obs_params_array = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), total_np * lnM_obs_params_len);
-
-  if (data->desc != NULL)
-    g_free (data->desc);
-
-  data->desc = g_strdup_printf ("Cluster NCount resample unbinned. Generated %u from mean %10.5g. Resampled in range [%8.4f, %8.4f] [%1.8e, %1.8e] and area %8.4f degrees square", 
-                                total_np, cad->norma, 
-                                cad->zi, cad->zf, 
-                                exp (cad->lnMi), exp (cad->lnMf), 
-                                ncount->area_survey / gsl_pow_2 (M_PI / 180.0));
   
   nc_cluster_abundance_prepare_inv_dNdz (cad, NC_HICOSMO (ncm_mset_peek (mset, NC_HICOSMO_ID)));
 
@@ -476,7 +467,7 @@ _nc_data_cluster_ncount_resample (NcmData *data, NcmMSet *mset)
     }
     //printf ("% 20.15g % 20.15g\n", zi_real, lnMi_real);
   }
-
+  
   if (ncount->lnM_true != NULL)
     ncm_vector_free (ncount->lnM_true);
   ncount->lnM_true = ncm_vector_ref (ncm_vector_new_array (lnM_true_array));
@@ -514,7 +505,15 @@ _nc_data_cluster_ncount_resample (NcmData *data, NcmMSet *mset)
   }
 
   ncount->np = NCM_MATRIX_NROWS (ncount->z_obs);
-  //printf ("# Generated %ld | expected % 20.15g\n", ncount->np, nc_cluster_abundance_n (cad, NC_HICOSMO (ncm_mset_peek (mset, NC_HICOSMO_ID))));
+  if (data->desc != NULL)
+    g_free (data->desc);
+
+  data->desc = g_strdup_printf ("Cluster NCount resample unbinned. Generated %ld from mean %10.5g. Resampled in range [%8.4f, %8.4f] [%1.8e, %1.8e] and area %8.4f degrees square", 
+                                ncount->np, nc_cluster_abundance_n (cad, cosmo), 
+                                cad->zi, cad->zf, 
+                                exp (cad->lnMi), exp (cad->lnMf), 
+                                ncount->area_survey / gsl_pow_2 (M_PI / 180.0));
+  
 
   g_free (zi_obs);
   g_free (zi_obs_params);

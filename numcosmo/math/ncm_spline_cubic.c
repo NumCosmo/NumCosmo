@@ -204,6 +204,7 @@ ncm_spline_cubic_finalize (GObject *object)
 	NcmSplineCubic *sc = NCM_SPLINE_CUBIC (object);
 	_ncm_spline_cubic_free (sc);
 
+  /* Chain up : end */
 	G_OBJECT_CLASS (ncm_spline_cubic_parent_class)->finalize (object);
 }
 

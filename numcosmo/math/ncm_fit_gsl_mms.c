@@ -243,7 +243,11 @@ nc_residual_multimin_f (const gsl_vector *x, gpointer p)
 {
   NcmFit *fit = NCM_FIT (p);
   gdouble result;
+  
   ncm_mset_fparams_set_gsl_vector (fit->mset, x);
+  if (!ncm_mset_params_valid (fit->mset))
+    return GSL_NAN;
+
   ncm_fit_m2lnL_val (fit, &result);
   return result;
 }

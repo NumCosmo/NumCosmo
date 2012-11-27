@@ -107,6 +107,7 @@ void ncm_mset_pretty_log (NcmMSet *mset);
 void ncm_mset_params_pretty_print (NcmMSet *mset, FILE *out, gchar *header);
 void ncm_mset_params_log_vals (NcmMSet *mset);
 void ncm_mset_params_print_vals (NcmMSet *mset, FILE *out);
+gboolean ncm_mset_params_valid (NcmMSet *mset);
 
 void ncm_mset_param_set (NcmMSet *mset, NcmModelID gmid, guint pid, const gdouble x);
 gdouble ncm_mset_param_get (NcmMSet *mset, NcmModelID gmid, guint pid);

@@ -53,6 +53,7 @@ struct _NcmModelClass
   void (*set_property) (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec);
   void (*copyto) (NcmModel *model, NcmModel *model_dest);
   NcmModel *(*copy) (NcmModel *model);
+  gboolean (*valid) (NcmModel *model);
   NcmModelID model_id;
   gchar *name;
   gchar *nick;
@@ -145,6 +146,7 @@ void ncm_model_params_set_model (NcmModel *model, NcmModel *model_src);
 void ncm_model_params_print_all (NcmModel *model, FILE *out);
 void ncm_model_params_log_all (NcmModel *model);
 NcmVector *ncm_model_params_get_all (NcmModel *model);
+gboolean ncm_model_params_valid (NcmModel *model);
 
 guint ncm_model_param_index_from_name (NcmModel *model, gchar *param_name);
 const gchar *ncm_model_param_name (NcmModel *model, guint n);

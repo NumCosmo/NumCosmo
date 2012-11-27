@@ -256,6 +256,8 @@ _ncm_fit_nlopt_func (guint n, const gdouble *x, gdouble *grad, gpointer userdata
 
   fit->niter++;
   ncm_mset_fparams_set_array (fit->mset, x);
+  if (!ncm_mset_params_valid (fit->mset))
+    return GSL_NAN;
   
   if (grad)
   {

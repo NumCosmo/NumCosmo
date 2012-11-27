@@ -276,6 +276,9 @@ nc_residual_levmar_f (gdouble *p, gdouble *hx, gint m, gint n, gpointer adata)
   NcmVector *f = ncm_vector_new_data_static (hx, n, 1);
   
   ncm_mset_fparams_set_array (fit->mset, p);
+  if (!ncm_mset_params_valid (fit->mset))
+    g_warning ("nc_residual_levmar_f: stepping in a invalid parameter point, continuing anyway.");
+  
   ncm_fit_ls_f (fit, f);
 
   ncm_fit_log_step (fit, gsl_pow_2 (gsl_blas_dnrm2 (ncm_vector_gsl (f))));
@@ -289,6 +292,8 @@ nc_residual_levmar_J (gdouble *p, gdouble *j, gint m, gint n, gpointer adata)
   NcmMatrix *J = ncm_matrix_new_data_static (j, n, m);
 
   ncm_mset_fparams_set_array (fit->mset, p);
+  if (!ncm_mset_params_valid (fit->mset))
+    g_warning ("nc_residual_levmar_J: stepping in a invalid parameter point, continuing anyway.");
 
   ncm_fit_ls_J (fit, J);
 

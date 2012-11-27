@@ -83,7 +83,7 @@ nc_mass_function_new (NcDistance *dist, NcMatterVar *vp, NcGrowthFunc *gf, NcMul
  * This function duplicates the #NcMassFunction object setting the same values of the original propertities.
  *
  * Returns: (transfer full): A new #NcMassFunction.
- */
+   */
 NcMassFunction *
 nc_mass_function_copy (NcMassFunction *mfp)
 {
@@ -136,13 +136,13 @@ static void
 _nc_mass_function_dispose (GObject *object)
 {
   NcMassFunction *mfp = NC_MASS_FUNCTION (object);
-  
+
   nc_distance_clear (&mfp->dist);
   nc_matter_var_clear (&mfp->vp);
   nc_growth_func_clear (&mfp->gf);
   nc_multiplicity_func_clear (&mfp->mulf);
   ncm_model_ctrl_clear (&mfp->ctrl);
-	ncm_spline2d_clear (&mfp->d2NdzdlnM);
+  ncm_spline2d_clear (&mfp->d2NdzdlnM);
 
   /* Chain up : end */
   G_OBJECT_CLASS (nc_mass_function_parent_class)->dispose (object);
@@ -164,21 +164,21 @@ _nc_mass_function_set_property (GObject *object, guint prop_id, const GValue *va
 
   switch (prop_id)
   {
-	case PROP_DISTANCE:
-	  mfp->dist = g_value_dup_object (value);
-	  break;
-	case PROP_MATTER_VAR:
-	  mfp->vp = g_value_dup_object (value);
-	  break;
-	case PROP_GROWTH:
-	  mfp->gf = g_value_dup_object (value);
-	  break;
-	case PROP_MULTIPLICITY:
-	  mfp->mulf = g_value_dup_object (value);
-	  break;
-	default:
-	  G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-	  break;
+    case PROP_DISTANCE:
+      mfp->dist = g_value_dup_object (value);
+      break;
+    case PROP_MATTER_VAR:
+      mfp->vp = g_value_dup_object (value);
+      break;
+    case PROP_GROWTH:
+      mfp->gf = g_value_dup_object (value);
+      break;
+    case PROP_MULTIPLICITY:
+      mfp->mulf = g_value_dup_object (value);
+      break;
+    default:
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
+      break;
   }
 }
 
@@ -190,21 +190,21 @@ _nc_mass_function_get_property (GObject *object, guint prop_id, GValue *value, G
 
   switch (prop_id)
   {
-	case PROP_DISTANCE:
-	  g_value_set_object (value, mfp->dist);
-	  break;
-	case PROP_MATTER_VAR:
-	  g_value_set_object (value, mfp->vp);
-	  break;
-	case PROP_GROWTH:
-	  g_value_set_object (value, mfp->gf);
-	  break;
-	case PROP_MULTIPLICITY:
-	  g_value_set_object (value, mfp->mulf);
-	  break;
-	default:
-	  G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-	  break;
+    case PROP_DISTANCE:
+      g_value_set_object (value, mfp->dist);
+      break;
+    case PROP_MATTER_VAR:
+      g_value_set_object (value, mfp->vp);
+      break;
+    case PROP_GROWTH:
+      g_value_set_object (value, mfp->gf);
+      break;
+    case PROP_MULTIPLICITY:
+      g_value_set_object (value, mfp->mulf);
+      break;
+    default:
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
+      break;
   }
 }
 
@@ -384,16 +384,16 @@ nc_mass_function_cluster_abundance_integrand (gdouble R, gpointer params)
   NcMassFunction *mfp = ca_integ->mfp;
   const gdouble lnR = log (R);
   {
-	const gdouble M_rho = nc_window_volume (mfp->vp->wp) * gsl_pow_3 (R);
-	const gdouble var0 = nc_matter_var_var0 (mfp->vp, model, lnR);
-	const gdouble dlnvar0_dR = nc_matter_var_dlnvar0_dR (mfp->vp, model, lnR);
-	gdouble sigma, f, d2cadvdR;
+    const gdouble M_rho = nc_window_volume (mfp->vp->wp) * gsl_pow_3 (R);
+    const gdouble var0 = nc_matter_var_var0 (mfp->vp, model, lnR);
+    const gdouble dlnvar0_dR = nc_matter_var_dlnvar0_dR (mfp->vp, model, lnR);
+    gdouble sigma, f, d2cadvdR;
 
-	sigma = mfp->N_sigma * sqrt (var0) * mfp->growth;
-	f = nc_multiplicity_func_eval (mfp->mulf, model, sigma, ca_integ->z);
-	d2cadvdR = -(1.0 / M_rho) * f * (1.0 / 2.0) * dlnvar0_dR;
+    sigma = mfp->N_sigma * sqrt (var0) * mfp->growth;
+    f = nc_multiplicity_func_eval (mfp->mulf, model, sigma, ca_integ->z);
+    d2cadvdR = -(1.0 / M_rho) * f * (1.0 / 2.0) * dlnvar0_dR;
 
-	return d2cadvdR;
+    return d2cadvdR;
   }
 }
 
@@ -423,7 +423,7 @@ nc_mass_function_dn_m_to_inf_dv (NcMassFunction *mfp, NcHICosmo *model, gdouble 
   F.params = &ca_integ;
 
   if (w == NULL)
-	w = gsl_integration_workspace_alloc (NC_INT_PARTITION);
+    w = gsl_integration_workspace_alloc (NC_INT_PARTITION);
 
   n = 0.0;
   R = nc_matter_var_mass_to_R (mfp->vp, model, M);
@@ -433,12 +433,12 @@ nc_mass_function_dn_m_to_inf_dv (NcMassFunction *mfp, NcHICosmo *model, gdouble 
 
   while (1)
   {
-	gsl_integration_qag (&F, R, R + _NC_STEP, 0.0, NC_DEFAULT_PRECISION, NC_INT_PARTITION, 1, w, &n_part, &error);
-	R += _NC_STEP;
-	n += n_part;
+    gsl_integration_qag (&F, R, R + _NC_STEP, 0.0, NC_DEFAULT_PRECISION, NC_INT_PARTITION, 1, w, &n_part, &error);
+    R += _NC_STEP;
+    n += n_part;
 
-	if (gsl_fcmp (n, n + n_part, NC_DEFAULT_PRECISION * 1e-1) == 0)
-	  break;
+    if (gsl_fcmp (n, n + n_part, NC_DEFAULT_PRECISION * 1e-1) == 0)
+      break;
   }
 
   return n;
@@ -471,7 +471,7 @@ nc_mass_function_dn_m1_to_m2_dv (NcMassFunction *mfp, NcHICosmo *model, gdouble 
   F.params = &ca_integ;
 
   if (w == NULL)
-	w = gsl_integration_workspace_alloc (NC_INT_PARTITION);
+    w = gsl_integration_workspace_alloc (NC_INT_PARTITION);
 
   n = 0.0;
   R1 = nc_matter_var_mass_to_R (mfp->vp, model, M1);
@@ -522,19 +522,15 @@ nc_mass_function_set_eval_limits (NcMassFunction *mfp, NcHICosmo *model, gdouble
 {
   if (lnMi != mfp->lnMi || mfp->lnMf != lnMf || mfp->zi != zi || mfp->zf != zf)
   {
-	mfp->lnMi = lnMi;
-	mfp->lnMf = lnMf;
-	mfp->zi = zi;
-	mfp->zf = zf;
-	if (mfp->d2NdzdlnM != NULL)
-	{
-	  ncm_spline2d_free (mfp->d2NdzdlnM);
-	  mfp->d2NdzdlnM = NULL;
-	}
+    mfp->lnMi = lnMi;
+    mfp->lnMf = lnMf;
+    mfp->zi = zi;
+    mfp->zf = zf;
+    ncm_spline2d_clear (&mfp->d2NdzdlnM);
   }
 
   if (mfp->d2NdzdlnM == NULL)
-	_nc_mass_function_generate_2Dspline_knots (mfp, model, 1e-5);
+    _nc_mass_function_generate_2Dspline_knots (mfp, model, 1e-5);
 }
 
 /**
@@ -551,8 +547,8 @@ nc_mass_function_prepare (NcMassFunction *mfp, NcHICosmo *model)
   gint i, j;
   if (mfp->d2NdzdlnM == NULL)
   {
-	g_error ("nc_mass_function_prepare: called without a previous call of nc_mass_function_set_eval_limits");
-	return;
+    g_error ("nc_mass_function_prepare: called without a previous call of nc_mass_function_set_eval_limits");
+    return;
   }
 #define D2NDZDLNM_Z(cad) ((cad)->d2NdzdlnM->yv)
 #define D2NDZDLNM_LNM(cad) ((cad)->d2NdzdlnM->xv)
@@ -560,15 +556,15 @@ nc_mass_function_prepare (NcMassFunction *mfp, NcHICosmo *model)
 
   for (i = 0; i < ncm_vector_len (D2NDZDLNM_Z (mfp)); i++)
   {
-	const gdouble z = ncm_vector_get (D2NDZDLNM_Z (mfp), i);
-	const gdouble dVdz = mfp->area_survey * nc_mass_function_dv_dzdomega (mfp, model, z);
+    const gdouble z = ncm_vector_get (D2NDZDLNM_Z (mfp), i);
+    const gdouble dVdz = mfp->area_survey * nc_mass_function_dv_dzdomega (mfp, model, z);
 
-	for (j = 0; j < ncm_vector_len (D2NDZDLNM_LNM (mfp)); j++)
-	{
-	  const gdouble lnM = ncm_vector_get (D2NDZDLNM_LNM (mfp), j);
-	  const gdouble d2NdzdlnM_ij = (dVdz * nc_mass_function_dn_dlnm (mfp, model, lnM, z));
-	  ncm_matrix_set (D2NDZDLNM_VAL (mfp), i, j, d2NdzdlnM_ij);
-	}
+    for (j = 0; j < ncm_vector_len (D2NDZDLNM_LNM (mfp)); j++)
+    {
+      const gdouble lnM = ncm_vector_get (D2NDZDLNM_LNM (mfp), j);
+      const gdouble d2NdzdlnM_ij = (dVdz * nc_mass_function_dn_dlnm (mfp, model, lnM, z));
+      ncm_matrix_set (D2NDZDLNM_VAL (mfp), i, j, d2NdzdlnM_ij);
+    }
   }
   ncm_spline2d_prepare (mfp->d2NdzdlnM);
 
@@ -596,9 +592,9 @@ nc_mass_function_dn_dz (NcMassFunction *mfp, NcHICosmo *model, gdouble lnMl, gdo
   nc_mass_function_prepare_if_needed (mfp, model);
 
   if (spline)
-	dN_dz = ncm_spline2d_integ_dx_spline_val (mfp->d2NdzdlnM, lnMl, lnMu, z);
+    dN_dz = ncm_spline2d_integ_dx_spline_val (mfp->d2NdzdlnM, lnMl, lnMu, z);
   else
-	dN_dz = ncm_spline2d_integ_dx (mfp->d2NdzdlnM, lnMl, lnMu, z);
+    dN_dz = ncm_spline2d_integ_dx (mfp->d2NdzdlnM, lnMl, lnMu, z);
   return dN_dz;
 }
 
@@ -625,18 +621,18 @@ nc_mass_function_n (NcMassFunction *mfp, NcHICosmo *model, gdouble lnMl, gdouble
 
   switch (spline)
   {
-	case NC_MASS_FUNCTION_SPLINE_NONE:
-	  N = ncm_spline2d_integ_dxdy (mfp->d2NdzdlnM, lnMl, lnMu, zl, zu);
-	  break;
-	case NC_MASS_FUNCTION_SPLINE_LNM:
-	  N = ncm_spline2d_integ_dxdy_spline_x (mfp->d2NdzdlnM, lnMl, lnMu, zl, zu);
-	  break;
-	case NC_MASS_FUNCTION_SPLINE_Z:
-	  N = ncm_spline2d_integ_dxdy_spline_y (mfp->d2NdzdlnM, lnMl, lnMu, zl, zu);
-	  break;
-	default:
-	  g_assert_not_reached ();
-	  break;
+    case NC_MASS_FUNCTION_SPLINE_NONE:
+      N = ncm_spline2d_integ_dxdy (mfp->d2NdzdlnM, lnMl, lnMu, zl, zu);
+      break;
+    case NC_MASS_FUNCTION_SPLINE_LNM:
+      N = ncm_spline2d_integ_dxdy_spline_x (mfp->d2NdzdlnM, lnMl, lnMu, zl, zu);
+      break;
+    case NC_MASS_FUNCTION_SPLINE_Z:
+      N = ncm_spline2d_integ_dxdy_spline_y (mfp->d2NdzdlnM, lnMl, lnMu, zl, zu);
+      break;
+    default:
+      g_assert_not_reached ();
+      break;
   }
   return N;
 }
@@ -656,8 +652,8 @@ _encapsulated_z (gdouble z, gpointer p)
   _encapsulated_function_args *args = (_encapsulated_function_args *) p;
 
   gdouble A = args->mfp->area_survey *
-	nc_mass_function_dv_dzdomega (args->mfp, args->model, z) *
-	nc_mass_function_dn_dlnm (args->mfp, args->model, args->lnM, z);
+    nc_mass_function_dv_dzdomega (args->mfp, args->model, z) *
+    nc_mass_function_dn_dlnm (args->mfp, args->model, args->lnM, z);
 
   //printf ("z %.5g lnM %.5g d2N % 20.15g mf % 20.15g dV % 20.15g\n", z, args->lnM, A, nc_mass_function_dn_dlnm (args->mfp, args->model, args->lnM, z), nc_mass_function_dv_dzdomega (args->mfp, args->model, z));
   return A;
@@ -723,4 +719,3 @@ _nc_mass_function_generate_2Dspline_knots (NcMassFunction *mfp, NcHICosmo *model
  *
  * Returns: FIXME
  */
-

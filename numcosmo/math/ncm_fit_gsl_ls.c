@@ -179,6 +179,9 @@ ncm_fit_gsl_ls_f (const gsl_vector *x, gpointer p, gsl_vector *f)
   NcmVector *fv = ncm_vector_new_gsl_static (f);
   
   ncm_mset_fparams_set_gsl_vector (fit->mset, x);
+  if (!ncm_mset_params_valid (fit->mset))
+    return GSL_EDOM;
+
   ncm_fit_ls_f (fit, fv);
   
   ncm_vector_free (fv);
@@ -192,6 +195,9 @@ ncm_fit_gsl_ls_df (const gsl_vector *x, gpointer p, gsl_matrix *J)
   NcmMatrix *Jm = ncm_matrix_new_gsl_static (J);
   
   ncm_mset_fparams_set_gsl_vector (fit->mset, x);
+  if (!ncm_mset_params_valid (fit->mset))
+    return GSL_EDOM;
+
   ncm_fit_ls_J (fit, Jm);
 
   ncm_matrix_free (Jm);
@@ -206,6 +212,9 @@ ncm_fit_gsl_ls_fdf (const gsl_vector *x, gpointer p, gsl_vector *f, gsl_matrix *
   NcmMatrix *Jm = ncm_matrix_new_gsl_static (J);
   
   ncm_mset_fparams_set_gsl_vector (fit->mset, x);
+  if (!ncm_mset_params_valid (fit->mset))
+    return GSL_EDOM;
+  
   ncm_fit_ls_f_J (fit, fv, Jm);
   
   ncm_vector_free (fv);

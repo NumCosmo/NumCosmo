@@ -249,6 +249,8 @@ ncm_spline_cubic_notaknot_init (NcmSplineCubicNotaknot *object)
 static void
 ncm_spline_cubic_notaknot_finalize (GObject *object)
 {
+
+  /* Chain up : end */
 	G_OBJECT_CLASS (ncm_spline_cubic_notaknot_parent_class)->finalize (object);
 }
 

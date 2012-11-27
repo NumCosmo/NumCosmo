@@ -8,11 +8,11 @@
 /*
  * numcosmo
  * Copyright (C) Mariana Penna Lima & Sandro Dias Pinto Vitenti 2012 <pennalima@gmail.com>, <sandro@isoftware.com.br>
-   * numcosmo is free software: you can redistribute it and/or modify it
+ * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
-   *
+ *
  * numcosmo is distributed in the hope that it will be useful, but
  * WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
@@ -72,7 +72,9 @@ ncm_spline2d_bicubic_notaknot_new ()
 {
   NcmSpline *s = ncm_spline_cubic_notaknot_new ();
   NcmSpline2d *s2d = ncm_spline2d_bicubic_new (s);
+  
   ncm_spline_free (s);
+
   return s2d;
 }
 
@@ -92,7 +94,7 @@ _ncm_spline2d_bicubic_alloc (NcmSpline2dBicubic *s2dbc)
   s2dbc->z_y = ncm_spline_new (s2d->s, s2d->yv, ncm_matrix_get_col (s2d->zm, 0), s2d->init);
   s2dbc->dzdy_x = ncm_spline_new (s2d->s, s2d->xv, ncm_matrix_get_row (s2d->zm, 0), s2d->init);
 
-  s2dbc->bicoeff = g_slice_alloc (sizeof (NcmSpline2dBicubicCoeffs) * (NCM_MATRIX_COL_LEN (s2d->zm) - 1) * NCM_MATRIX_ROW_LEN (s2d->zm));
+  s2dbc->bicoeff = g_new0 (NcmSpline2dBicubicCoeffs, (NCM_MATRIX_COL_LEN (s2d->zm) - 1) * NCM_MATRIX_ROW_LEN (s2d->zm)) ;
 
   s2dbc->optimize_dx.s = ncm_spline_set (ncm_spline_cubic_notaknot_new (),
                                          s2d->yv, ncm_vector_new (ncm_vector_len (s2d->yv)), FALSE);
@@ -126,13 +128,13 @@ _ncm_spline2d_bicubic_clear (NcmSpline2dBicubic *s2dbc)
 static void
 _ncm_spline2d_bicubic_free (NcmSpline2dBicubic *s2dbc)
 {
-  NcmSpline2d *s2d = NCM_SPLINE2D (s2dbc);
-
   _ncm_spline2d_bicubic_clear (s2dbc);
 
-  g_slice_free1 (sizeof (NcmSpline2dBicubicCoeffs) *
-                 (NCM_MATRIX_COL_LEN (s2d->zm) - 1) * NCM_MATRIX_ROW_LEN (s2d->zm), s2dbc->bicoeff);
-  s2dbc->bicoeff = NULL;
+  if (s2dbc->bicoeff != NULL)
+  {
+    g_free (s2dbc->bicoeff);
+    s2dbc->bicoeff = NULL;
+  }
 }
 
 static void
@@ -923,12 +925,13 @@ _ncm_spline2d_bicubic_dispose (GObject *object)
 static void
 _ncm_spline2d_bicubic_finalize (GObject *object)
 {
-  NcmSpline2d *s2d = NCM_SPLINE2D (object);
   NcmSpline2dBicubic *s2dbc = NCM_SPLINE2D_BICUBIC (object);
 
-  g_slice_free1 (sizeof (NcmSpline2dBicubicCoeffs) *
-                 (NCM_MATRIX_COL_LEN (s2d->zm) - 1) * NCM_MATRIX_ROW_LEN (s2d->zm), s2dbc->bicoeff);
-  s2dbc->bicoeff = NULL;
+  if (s2dbc->bicoeff != NULL)
+  {
+    g_free (s2dbc->bicoeff);
+    s2dbc->bicoeff = NULL;
+  }
   
   /* Chain up : end */
   G_OBJECT_CLASS (ncm_spline2d_bicubic_parent_class)->finalize (object);

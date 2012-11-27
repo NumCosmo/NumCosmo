@@ -75,7 +75,7 @@ ncm_spline2d_set (NcmSpline2d *s2d, NcmVector *xv, NcmVector *yv, NcmMatrix *zm,
   NCM_SPLINE2D_GET_CLASS (s2d)->reset (s2d);
 
   if (init)
-	ncm_spline2d_prepare (s2d);
+    ncm_spline2d_prepare (s2d);
 
   return;
 }
@@ -88,7 +88,7 @@ ncm_spline2d_set (NcmSpline2d *s2d, NcmVector *xv, NcmVector *yv, NcmMatrix *zm,
  * empty #NcmSpline2d of a specific type.
  *
  * Returns: (transfer full): a #NcmSpline2d.
-   */
+ */
 NcmSpline2d *
 ncm_spline2d_copy_empty (const NcmSpline2d *s2d)
 {
@@ -103,19 +103,19 @@ ncm_spline2d_copy_empty (const NcmSpline2d *s2d)
  * spline @s2d into those two #NcmVector and #NcmMatrix of a new #NcmSpline2d.
  *
  * Returns: (transfer full): A #NcmSpline2d.
-   */
+ */
 NcmSpline2d *
 ncm_spline2d_copy (NcmSpline2d *s2d)
 {
   NcmSpline2d *new_s2d = ncm_spline2d_copy_empty (s2d);
   if (!s2d->empty)
   {
-	ncm_spline2d_set (new_s2d,
-	                  ncm_vector_dup (s2d->xv),
-	                  ncm_vector_dup (s2d->yv),
-	                  ncm_matrix_dup (s2d->zm),
-	                  s2d->init
-	                  );
+    ncm_spline2d_set (new_s2d,
+                      ncm_vector_dup (s2d->xv),
+                      ncm_vector_dup (s2d->yv),
+                      ncm_matrix_dup (s2d->zm),
+                      s2d->init
+                      );
   }
 
   return new_s2d;
@@ -135,7 +135,7 @@ ncm_spline2d_copy (NcmSpline2d *s2d)
  * given in the #NcmMatrix @zm.
  *
  * Returns: (transfer full): A new #NcmSpline2d.
-   */
+ */
 NcmSpline2d *
 ncm_spline2d_new (const NcmSpline2d *s2d, NcmVector *xv, NcmVector *yv, NcmMatrix *zm, gboolean init)
 {
@@ -210,7 +210,7 @@ gdouble
 ncm_spline2d_integ_dx (NcmSpline2d *s2d, gdouble xl, gdouble xu, gdouble y)
 {
   if (!s2d->init)
-	ncm_spline2d_prepare (s2d);
+    ncm_spline2d_prepare (s2d);
   return NCM_SPLINE2D_GET_CLASS (s2d)->int_dx (s2d, xl, xu, y);
 }
 
@@ -222,15 +222,15 @@ ncm_spline2d_integ_dx (NcmSpline2d *s2d, gdouble xl, gdouble xu, gdouble y)
  * @yu: upper limit of integration.
  *
  * This function computes the integration in y over the interval [@yl, @yu] and
-   * at @x.
+ * at @x.
  *
  * Returns: The numerical integral in y of an interpolated function over the range [@yl, @yu] and at @x.
-   */
+ */
 gdouble
 ncm_spline2d_integ_dy (NcmSpline2d *s2d, gdouble x, gdouble yl, gdouble yu)
 {
   if (!s2d->init)
-	ncm_spline2d_prepare (s2d);
+    ncm_spline2d_prepare (s2d);
   return NCM_SPLINE2D_GET_CLASS (s2d)->int_dy (s2d, x, yl, yu);
 }
 
@@ -244,14 +244,14 @@ ncm_spline2d_integ_dy (NcmSpline2d *s2d, gdouble x, gdouble yl, gdouble yu)
  *
  * This function computes the integration in both x and y directions over the intervals
  * [@xl, @xu] and [@yl, @yu].
-   *
+ *
  * Returns: The numerical integral in x and y of an interpolated function over the ranges [@xl, @xu] and [@yl, @yu].
-   */
+ */
 gdouble
 ncm_spline2d_integ_dxdy (NcmSpline2d *s2d, gdouble xl, gdouble xu, gdouble yl, gdouble yu)
 {
   if (!s2d->init)
-	ncm_spline2d_prepare (s2d);
+    ncm_spline2d_prepare (s2d);
   return NCM_SPLINE2D_GET_CLASS (s2d)->int_dxdy (s2d, xl, xu, yl, yu);
 }
 
@@ -263,15 +263,15 @@ ncm_spline2d_integ_dxdy (NcmSpline2d *s2d, gdouble xl, gdouble xu, gdouble yl, g
  *
  * This function computes the integral in x of the bidimensional interpolated function
  * over the range [@xl, @xu] resulting in a one dimensional function.
-   *
+ *
  * Returns: (transfer full): A #NcmSpline.
-   */
+ */
 NcmSpline *
 ncm_spline2d_integ_dx_spline (NcmSpline2d *s2d, gdouble xl, gdouble xu)
 {
   g_assert (!s2d->empty);
   if (!s2d->init)
-	ncm_spline2d_prepare (s2d);
+    ncm_spline2d_prepare (s2d);
   return ncm_spline_copy (NCM_SPLINE2D_GET_CLASS (s2d)->int_dx_spline (s2d, xl, xu));
 }
 
@@ -290,7 +290,7 @@ NcmSpline *
 ncm_spline2d_integ_dy_spline (NcmSpline2d *s2d, gdouble yl, gdouble yu)
 {
   if (!s2d->init)
-	ncm_spline2d_prepare (s2d);
+    ncm_spline2d_prepare (s2d);
   return ncm_spline_copy (NCM_SPLINE2D_GET_CLASS (s2d)->int_dy_spline (s2d, yl, yu));
 }
 
@@ -310,7 +310,7 @@ gdouble
 ncm_spline2d_integ_dx_spline_val (NcmSpline2d *s2d, gdouble xl, gdouble xu, gdouble y)
 {
   if (!s2d->init)
-	ncm_spline2d_prepare (s2d);
+    ncm_spline2d_prepare (s2d);
   return ncm_spline_eval (NCM_SPLINE2D_GET_CLASS (s2d)->int_dx_spline (s2d, xl, xu), y);
 }
 
@@ -325,12 +325,12 @@ ncm_spline2d_integ_dx_spline_val (NcmSpline2d *s2d, gdouble xl, gdouble xu, gdou
  * #NcmSpline at @x.
  *
  * Returns: The value of @s2d integrated in y over the range [@yl, @yu] and computed at @x.
-   */
+ */
 gdouble
 ncm_spline2d_integ_dy_spline_val (NcmSpline2d *s2d, gdouble x, gdouble yl, gdouble yu)
 {
   if (!s2d->init)
-	ncm_spline2d_prepare (s2d);
+    ncm_spline2d_prepare (s2d);
   return ncm_spline_eval (NCM_SPLINE2D_GET_CLASS (s2d)->int_dy_spline (s2d, yl, yu), x);
 }
 
@@ -344,14 +344,14 @@ ncm_spline2d_integ_dy_spline_val (NcmSpline2d *s2d, gdouble x, gdouble yl, gdoub
  *
  * This function calls #ncm_spline2d_integ_dx_spline and integrates the resulting
  * #NcmSpline over the interval [@yl, @yu].
-   *
+ *
  * Returns: The value of @s2d integrated in x and y over the ranges [@xl, @xu] and [@yl, @yu], respectively.
-   */
+ */
 gdouble
 ncm_spline2d_integ_dxdy_spline_x (NcmSpline2d *s2d, gdouble xl, gdouble xu, gdouble yl, gdouble yu)
 {
   if (!s2d->init)
-	ncm_spline2d_prepare (s2d);
+    ncm_spline2d_prepare (s2d);
   return ncm_spline_eval_integ (NCM_SPLINE2D_GET_CLASS (s2d)->int_dx_spline (s2d, xl, xu), yl, yu);
 }
 
@@ -365,14 +365,14 @@ ncm_spline2d_integ_dxdy_spline_x (NcmSpline2d *s2d, gdouble xl, gdouble xu, gdou
  *
  * This function calls #ncm_spline2d_integ_dy_spline and integrates the resulting
  * #NcmSpline over the interval [@xl, @xu].
-   *
+ *
  * Returns: The value of @s2d integrated in x and y over the ranges [@xl, @xu] and [@yl, @yu], respectively.
-   */
+ */
 gdouble
 ncm_spline2d_integ_dxdy_spline_y (NcmSpline2d *s2d, gdouble xl, gdouble xu, gdouble yl, gdouble yu)
 {
   if (!s2d->init)
-	ncm_spline2d_prepare (s2d);
+    ncm_spline2d_prepare (s2d);
   return ncm_spline_eval_integ (NCM_SPLINE2D_GET_CLASS (s2d)->int_dy_spline (s2d, yl, yu), xl, xu);
 }
 
@@ -418,11 +418,11 @@ typedef struct __NcFunction2D_args
  * @rel_err: relative error between the function to be interpolated and the spline result.
  *
  * This function automatically determines the knots of @s2d in the intervals [@xl, @xu] and
-   * [@yl, @yu] given a @ftype and @rel_error.
-	 *
+ * [@yl, @yu] given a @ftype and @rel_error.
+ *
  * The functions @Fx and @Fy are the bidimensional function given at specific values of y and x, respectively.
  * These x and y values must be in the the intervals [@xl, @xu] and [@yl, @yu].
-   */
+ */
 void
 ncm_spline2d_set_function (NcmSpline2d *s2d, NcmSplineFuncType ftype, gsl_function *Fx, gsl_function *Fy, gdouble xl, gdouble xu, gdouble yl, gdouble yu, gdouble rel_err)
 {
@@ -483,12 +483,12 @@ _ncm_spline2d_set_property (GObject *object, guint prop_id, const GValue *value,
 
   switch (prop_id)
   {
-	case PROP_SPLINE:
-	  s2d->s = g_value_dup_object (value);
-	  break;
-	default:
-	  G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-	  break;
+    case PROP_SPLINE:
+      s2d->s = g_value_dup_object (value);
+      break;
+    default:
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
+      break;
   }
 }
 
@@ -500,12 +500,12 @@ _ncm_spline2d_get_property (GObject *object, guint prop_id, GValue *value, GPara
 
   switch (prop_id)
   {
-	case PROP_SPLINE:
-	  g_value_set_object (value, s2d->s);
-	  break;
-	default:
-	  G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-	  break;
+    case PROP_SPLINE:
+      g_value_set_object (value, s2d->s);
+      break;
+    default:
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
+      break;
   }
 }
 
@@ -514,10 +514,10 @@ ncm_spline2d_class_init (NcmSpline2dClass *klass)
 {
   GObjectClass* object_class = G_OBJECT_CLASS (klass);
 
-  object_class->dispose = ncm_spline2d_dispose;
-  object_class->finalize = ncm_spline2d_finalize;
-  object_class->set_property = _ncm_spline2d_set_property;
-  object_class->get_property = _ncm_spline2d_get_property;
+  object_class->set_property = &_ncm_spline2d_set_property;
+  object_class->get_property = &_ncm_spline2d_get_property;
+  object_class->dispose      = &ncm_spline2d_dispose;
+  object_class->finalize     = &ncm_spline2d_finalize;
 
   klass->copy_empty = NULL;
   klass->reset = NULL;
