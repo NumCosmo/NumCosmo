@@ -1275,7 +1275,7 @@ ncm_cfg_create_from_string (const gchar *obj_ser)
 
   if (g_once_init_enter (&regex_init))
   {
-    regex = g_regex_new ("^([A-Z][A-Za-z]*)\\s*(.*?)\\s*$", 0, 0, &error);
+    regex = g_regex_new ("^\\s*([A-Z][A-Za-z]*)\\s*(.*?)\\s*$", 0, 0, &error);
     g_once_init_leave (&regex_init, TRUE);
   }
 
