@@ -58,7 +58,8 @@ void ncm_cfg_logfile (gboolean on);
 void ncm_cfg_logfile_flush (gboolean on);
 
 void ncm_message (gchar *msg, ...);
-void ncm_message_ww (gchar *msg, const gchar *first, const gchar *rest, guint ncols);
+gchar *ncm_string_ww (const gchar *msg, const gchar *first, const gchar *rest, guint ncols);
+void ncm_message_ww (const gchar *msg, const gchar *first, const gchar *rest, guint ncols);
 void ncm_cfg_msg_sepa (void);
 
 FILE *ncm_cfg_fopen (gchar *filename, gchar *mode, ...);

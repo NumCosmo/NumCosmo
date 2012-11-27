@@ -315,44 +315,77 @@ ncm_message (gchar *msg, ...)
   va_end (ap);
 }
 
-void 
-ncm_message_ww (gchar *msg, const gchar *first, const gchar *rest, guint ncols)
+/**
+ * ncm_string_ww:
+ * @msg: FIXME
+ * @first: FIXME
+ * @rest: FIXME
+ * @ncols: FIXME
+ *
+ * FIXME
+ * 
+ * Returns: (transfer full): word wraped string @msg.
+ */
+gchar *
+ncm_string_ww (const gchar *msg, const gchar *first, const gchar *rest, guint ncols)
 {
   gchar **msg_split = g_strsplit (msg, " ", 0);
   guint size_print = strlen (msg_split[0]);
   guint first_size = strlen (first);
   guint rest_size = strlen (rest);
+  guint msg_len = strlen (msg);
+  guint msg_final_len = msg_len + first_size + msg_len / ncols * rest_size;
+  GString *msg_ww = g_string_sized_new (msg_final_len);
   guint i = 1;
 
-  g_message ("%s%s", first, msg_split[0]);
+  g_string_append_printf (msg_ww, "%s%s", first, msg_split[0]);
   while (msg_split[i] != NULL)
   {
     guint lsize = strlen (msg_split[i]);
     if (size_print + lsize + 1 > (ncols - first_size))
       break;
-    g_message (" %s", msg_split[i]);
+    g_string_append_printf (msg_ww, " %s", msg_split[i]);
     size_print += lsize + 1;
     i++;
   }
-  g_message ("\n");
+  g_string_append_printf (msg_ww, "\n");
 
   while (msg_split[i] != NULL)
   {
     size_print = 0;
-    g_message ("%s", rest);
+    g_string_append_printf (msg_ww, "%s", rest);
     while (msg_split[i] != NULL)
     {
       guint lsize = strlen (msg_split[i]);
       if (size_print + lsize + 1 > (ncols - rest_size))
         break;
-      g_message (" %s", msg_split[i]);
+      g_string_append_printf (msg_ww, " %s", msg_split[i]);
       size_print += lsize + 1;
       i++;
     }
-    g_message ("\n");
+    g_string_append_printf (msg_ww, "\n");
   }
 
   g_strfreev (msg_split);
+
+  return g_string_free (msg_ww, FALSE);
+}
+
+/**
+ * ncm_message_ww:
+ * @msg: FIXME
+ * @first: FIXME
+ * @rest: FIXME
+ * @ncols: FIXME
+ *
+ * FIXME
+ */
+void 
+ncm_message_ww (const gchar *msg, const gchar *first, const gchar *rest, guint ncols)
+{
+  gchar *msg_ww = ncm_string_ww (msg, first, rest, ncols);
+  g_message ("%s", msg_ww);
+  g_free (msg_ww);
 }
 
 /**
@@ -508,8 +541,12 @@ ncm_cfg_entries_to_keyfile (GKeyFile *kfile, gchar *group_name, GOptionEntry *en
     }
     if (!skip_comment)
     {
-      if (!g_key_file_set_comment (kfile, group_name, entries[i].long_name, entries[i].description, &error))
+      gchar *desc_ww = ncm_string_ww (entries[i].description, "  ", "  ", 80);
+      gchar *desc = g_strdup_printf ("###############################################################################\n\n%s\n", desc_ww);
+      if (!g_key_file_set_comment (kfile, group_name, entries[i].long_name, desc, &error))
         g_error ("ncm_cfg_entries_to_keyfile: %s", error->message);
+      g_free (desc);
+      g_free (desc_ww);
     }
   }
 }
@@ -1645,3 +1682,4 @@ ncm_cfg_serialize_to_string (GObject *obj, gboolean valid_variant)
   return NULL;
 }
 #endif
+ 
