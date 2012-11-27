@@ -8,7 +8,7 @@
   <bookinfo>
     <title>NumCosmo Reference Manual</title>
     <releaseinfo>
-      for NumCosmo 0.8.0.
+      for NumCosmo @NUMCOSMO_VERSION@.
       The latest version of this documentation can be found on-line at
       <ulink role="online-location" url="http://www.nongnu.org/numcosmo/manual/index.html">http://www.nongnu.org/numcosmo/manual/index.html</ulink>.
     </releaseinfo>
@@ -72,6 +72,7 @@
     <title>Statistical Analysis</title>
       <xi:include href="xml/ncm_likelihood.xml"/>
       <xi:include href="xml/ncm_priors.xml"/>
+      <xi:include href="xml/ncm_fit_state.xml"/>
       <xi:include href="xml/ncm_fit.xml"/>
       <xi:include href="xml/ncm_fit_nlopt.xml"/>
       <xi:include href="xml/ncm_fit_nlopt_enum.xml"/>
@@ -79,7 +80,9 @@
       <xi:include href="xml/ncm_fit_gsl_mm.xml"/>
       <xi:include href="xml/ncm_fit_gsl_mms.xml"/>
       <xi:include href="xml/ncm_fit_levmar.xml"/>
-      <xi:include href="xml/confidence_region.xml"/>
+      <xi:include href="xml/ncm_fit_mc.xml"/>
+      <xi:include href="xml/ncm_lh_ratio1d.xml"/>
+      <xi:include href="xml/ncm_lh_ratio2d.xml"/>
     </section>
     <section>
       <title>GObject introspection compatibility</title>

@@ -128,26 +128,39 @@ nc_cvode_util_check_flag (gpointer flagvalue, gchar *funcname, gint opt)
 {
   gint *errflag;
 
-  if (opt == 0 && flagvalue == NULL) 
+  switch (opt)
   {
-    g_message ("\nSUNDIALS_ERROR: %s() failed - returned NULL pointer\n\n", funcname);
-    return FALSE; 
-  }
-  else if (opt == 1) 
-  {   
-    errflag = (int *) flagvalue;
-    if (*errflag < 0) 
+    case 0:
     {
-      g_message ("\nSUNDIALS_ERROR: %s() failed with flag = %d\n\n", funcname, *errflag);
-      return FALSE; 
+      if (flagvalue == NULL) 
+      {
+        g_message ("\nSUNDIALS_ERROR: %s() failed - returned NULL pointer\n\n", funcname);
+        return FALSE; 
+      }
+      break;
     }
-  }
-  else if (opt == 2 && flagvalue == NULL) 
-  {
-    g_message ("\nMEMORY_ERROR: %s() failed - returned NULL pointer\n\n", funcname);
-    return FALSE; 
-  }
-  
+    case 1:
+    {   
+      errflag = (int *) flagvalue;
+      if (*errflag < 0) 
+      {
+        g_message ("\nSUNDIALS_ERROR: %s() failed with flag = %d\n\n", funcname, *errflag);
+        return FALSE; 
+      }
+      break;
+    }
+    case 2:
+    {
+      if (flagvalue == NULL) 
+      {
+        g_message ("\nMEMORY_ERROR: %s() failed - returned NULL pointer\n\n", funcname);
+        return FALSE; 
+      }
+      break;
+    }
+    default:
+      g_assert_not_reached ();
+  }  
   return TRUE;
 }
 

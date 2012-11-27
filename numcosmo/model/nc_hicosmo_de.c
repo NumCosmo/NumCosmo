@@ -65,7 +65,8 @@ _nc_hicosmo_de_E2 (NcmModel *cosmo, gdouble z)
   const gdouble x2 = x * x;
   const gdouble x3 = x2 * x;
   const gdouble x4 = x3 * x;
-  return (OMEGA_R * x4 + OMEGA_M * x3 + omega_k * x2 + nc_hicosmo_de_weff (NC_HICOSMO_DE (cosmo), z));
+  const gdouble E2 = OMEGA_R * x4 + OMEGA_M * x3 + omega_k * x2 + nc_hicosmo_de_weff (NC_HICOSMO_DE (cosmo), z);
+  return E2;
 }
 
 /****************************************************************************

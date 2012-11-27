@@ -156,7 +156,6 @@ main(gint argc, gchar *argv[])
 #define SIZE 10000
   if (least_squares)
   {
-    GList *points = NULL;
     gint wpiece = nc_hicosmo_qpw_index (qpw, z0) + 3;
     //    nc_hicosmo_qpw_add_asymptotic_cdm_prior (lh, 500.0f, 1.0f/2.0f, 0.0001f);
     //    nc_hicosmo_qpw_add_asymptotic_cdm_prior (lh, 600.0f, 1.0f/2.0f, 0.0001f);
@@ -199,7 +198,7 @@ main(gint argc, gchar *argv[])
       gdouble chi2_data, chi2_priors;
       ncm_fit_data_m2lnL_val (fit, &chi2_data);
       ncm_fit_priors_m2lnL_val (fit, &chi2_priors);
-      printf ("%6f %6f %6f %6f %6f\n", j_sigma, fit->m2lnL, chi2_data, chi2_priors, chi2_data + chi2_priors);
+      printf ("%6f %6f %6f %6f %6f\n", j_sigma, fit->fstate->m2lnL, chi2_data, chi2_priors, chi2_data + chi2_priors);
     }
     //printf ("%g %g\n",1000.0f, nc_hicosmo_q (cp, 1000.0f));
     //printf("#===>%g<===\n",ncm_fit_GoF_wmean (fit));
@@ -231,18 +230,6 @@ main(gint argc, gchar *argv[])
 
     if (FALSE)
     {
-      guint nreg = 1;
-      gdouble err_inf, err_sup;
-      printf("%g",z0);
-      ncm_fit_cr_1dim (fit, NC_HICOSMO_ID, wpiece, ncm_c_stats_1sigma (), nreg, &err_inf, &err_sup);
-      ncm_fit_cr_1dim (fit, NC_HICOSMO_ID, wpiece, ncm_c_stats_2sigma (), nreg, &err_inf, &err_sup);
-      ncm_fit_cr_1dim (fit, NC_HICOSMO_ID, wpiece, ncm_c_stats_3sigma (), nreg, &err_inf, &err_sup);
-      printf("\n");
-      //printf("%g",z0);ncm_fit_error (fit, wpiece, ncm_c_stats_3sigma (), 2, ERR(wpiece));
-      //ncm_fit_lr_test_range (fit, wpiece, -4.0f, 4.0f, 0.01f, stdout);
-    }
-    if (FALSE)
-    {
       printf ("%g %g %g %g\n", z0,
               ncm_fit_lr_test (fit, NC_HICOSMO_ID, wpiece, -1.0, 1),
               ncm_fit_lr_test (fit, NC_HICOSMO_ID, wpiece,  0.0, 1),
@@ -253,47 +240,12 @@ main(gint argc, gchar *argv[])
       //              ncm_fit_lr_test (fit, 0,  2.0f));
     }
 
-    if (FALSE)
-    {
-      points = ncm_fit_cr2 (fit, NC_HICOSMO_ID, 0, NC_HICOSMO_ID, 1, ncm_c_stats_1sigma ());
-      ncm_fit_cr_points_print (points, stdout);
-      printf ("\n\n");
-      ncm_fit_cr_points_free (points);
-      points = ncm_fit_cr2 (fit, NC_HICOSMO_ID, 0, NC_HICOSMO_ID, 1, ncm_c_stats_2sigma ());
-      ncm_fit_cr_points_print (points, stdout);
-      printf ("\n\n");
-      ncm_fit_cr_points_free (points);
-      points = ncm_fit_cr2 (fit, NC_HICOSMO_ID, 0, NC_HICOSMO_ID, 1, ncm_c_stats_3sigma ());
-      ncm_fit_cr_points_print (points, stdout);
-    }
-
     //ncm_fit_error (fit, wpiece, ncm_c_stats_1sigma (), ERR(wpiece));
     //ncm_fit_error (fit, 0, ncm_c_stats_1sigma (), ERR(0));
     //ncm_fit_error (fit, 1, ncm_c_stats_1sigma (), ERR(1));
     //ncm_fit_error (fit, 2, ncm_c_stats_1sigma (), ERR(2));
     //ncm_fit_jackknife (fit, stdout, verbose);
     //nc_likelihood_jackknife_print (fit, stdout);
-
-    switch (nsigma)
-    {
-      case 1:
-        points = ncm_fit_cr2 (fit, NC_HICOSMO_ID, 0, NC_HICOSMO_ID, wpiece, ncm_c_stats_1sigma ());
-        break;
-      case 2:
-        points = ncm_fit_cr2 (fit, NC_HICOSMO_ID, 0, NC_HICOSMO_ID, wpiece, ncm_c_stats_2sigma ());
-        break;
-      case 3:
-        points = ncm_fit_cr2 (fit, NC_HICOSMO_ID, 0, NC_HICOSMO_ID, wpiece, ncm_c_stats_3sigma ());
-        break;
-      default:
-        break;
-    }
-
-    if (points != NULL)
-    {
-      ncm_fit_cr_points_print (points, stdout);
-      ncm_fit_cr_points_free (points);
-    }
 
     if (FALSE)
     {
@@ -338,21 +290,19 @@ main(gint argc, gchar *argv[])
     {
       GTimer *timer = g_timer_new ();
       //NcParams *orig_cp = lcdm_cp;
-      NcmMSet *orig_mset = ncm_mset_copy_all (mset);
+      NcmMSet *orig_mset = ncm_mset_dup (mset);
 
       for (i = 0 ; i < SIZE ; i++)
       {
         //        gint j;
         if (FALSE)
           ncm_dataset_resample (lh->dset, orig_mset);
-        else
-          ncm_fit_gen_bootstrap (fit);
-
+ 
 
         ncm_fit_run (fit, FALSE);
         //printf ("# %g\n",fit->m2lnL);
         //nc_params_print_all (cp, stdout);
-        printf ("%.16g\n", fit->m2lnL);
+        printf ("%.16g\n", fit->fstate->m2lnL);
         fflush (stdout);
         if (i % 100 == 99)
         {

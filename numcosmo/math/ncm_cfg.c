@@ -400,6 +400,118 @@ ncm_cfg_msg_sepa (void)
   g_message ("#----------------------------------------------------------------------------------\n");
 }
 
+static gsl_rng *_rng = NULL;
+
+/**
+ * ncm_cfg_rng_get: (skip)
+ *
+ * FIXME
+ *
+ * Returns: FIXME
+ */
+gsl_rng *
+ncm_cfg_rng_get ()
+{
+  const gsl_rng_type *type;
+  _NCM_STATIC_MUTEX_DECL (create_lock);
+
+  _NCM_MUTEX_LOCK (&create_lock);
+  if (_rng == NULL)
+  {
+    gsl_rng_env_setup();
+    type = gsl_rng_default;
+    _rng = gsl_rng_alloc (type);
+  }
+  _NCM_MUTEX_UNLOCK (&create_lock);
+
+  return _rng;
+}
+
+/**
+ * ncm_cfg_rng_get_state:
+ *
+ * FIXME
+ *
+ * Returns: (transfer full): FIXME
+ */
+gchar *
+ncm_cfg_rng_get_state ()
+{
+  gsl_rng *rng = ncm_cfg_rng_get ();
+  const gchar *name = gsl_rng_name (rng);
+  gpointer state = gsl_rng_state (rng);
+  gsize state_len = gsl_rng_size (rng);
+  GString *state_str = g_string_sized_new (strlen (name) + 2 * state_len + 1);
+  gint i;
+
+  g_string_append_printf (state_str, "%s:", name);
+
+  for (i = 0; i < state_len; i++)
+  {
+    guchar u = ((guchar *)state)[i];
+    g_string_append_printf (state_str, "%02hhX", u);
+  }
+  
+  return g_string_free (state_str, FALSE);
+}
+
+/**
+ * ncm_cfg_rng_set_state:
+ * @state: FIXME
+ *
+ * FIXME
+ *
+ */
+void 
+ncm_cfg_rng_set_state (gchar *state)
+{
+  gchar **name_state = g_strsplit (state, ":", 0);
+  const gsl_rng_type **t, **t0;
+  gsl_rng *rng = ncm_cfg_rng_get ();
+  gboolean found = FALSE;
+
+  t0 = gsl_rng_types_setup ();
+
+  for (t = t0; *t != 0; t++)
+  {
+    if (strcmp ((*t)->name, name_state[0]) == 0)
+    {
+      found = TRUE;
+      break;
+    }
+  }
+  if (!found)
+    g_error ("ncm_cfg_rng_set_state: cannot find algorithm %s\n", name_state[0]);
+
+  if (strcmp (gsl_rng_name (rng), name_state[0]) != 0)
+  {
+    gsl_rng_free (rng);
+    _rng = gsl_rng_alloc (*t);
+    rng = _rng;
+  }
+
+  {
+    gchar byte[3];
+    gpointer state = gsl_rng_state (rng);
+    gsize state_len = gsl_rng_size (rng);
+    gint i;
+    
+    g_assert_cmpuint (state_len, ==, strlen (name_state[1]) / 2);
+
+    for (i = 0; i < state_len; i++)
+    {
+      guchar u;
+      byte[0] = name_state[1][2 * i];
+      byte[1] = name_state[1][2 * i + 1];
+      byte[2] = 0;
+      u = g_ascii_strtoull (byte, NULL, 16);
+      ((guchar *)state)[i] = u;
+    }
+  }
+  
+  g_strfreev (name_state);
+}
+
 /**
  * ncm_cfg_get_fullpath:
  * @filename: FIXME

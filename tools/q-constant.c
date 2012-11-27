@@ -158,17 +158,6 @@ main (gint argc, gchar *argv[])
 
     if (!ncm_fit_run (fit, verbose))
       g_error ("Fail to fit, use different initial conditions");
-    if (print_data)
-    {
-      gdouble err_inf, err_sup;
-      if (z != 0.0f && FALSE)
-      {
-        ncm_fit_cr_1dim (fit, NC_HICOSMO_ID, 0, ncm_c_stats_1sigma (), 1, &err_inf, &err_sup);
-        ncm_fit_cr_1dim (fit, NC_HICOSMO_ID, 1, ncm_c_stats_1sigma (), 1, &err_inf, &err_sup);
-      }
-      printf("%g",z);
-      ncm_fit_cr_1dim (fit, NC_HICOSMO_ID, 2, ncm_c_stats_1sigma (), 1, &err_inf, &err_sup);
-    }
   }
 
   if (print_E)

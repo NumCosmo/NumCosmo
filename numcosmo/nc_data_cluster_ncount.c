@@ -39,7 +39,6 @@
 #include "nc_data_cluster_ncount.h"
 #include "nc_data_cluster_poisson.h"
 
-#include "math/util.h"
 #include "math/ncm_func_eval.h"
 #include "math/ncm_cfg.h"
 
@@ -410,7 +409,7 @@ _nc_data_cluster_ncount_resample (NcmData *data, NcmMSet *mset)
   NcDataClusterNCount *ncount = NC_DATA_CLUSTER_NCOUNT (data);
   NcClusterAbundance *cad = ncount->cad;
   NcHICosmo *cosmo = NC_HICOSMO (ncm_mset_peek (mset, NC_HICOSMO_ID));
-  gsl_rng *rng = ncm_get_rng ();
+  gsl_rng *rng = ncm_cfg_rng_get ();
   guint z_obs_len = nc_cluster_redshift_obs_len (cad->z);
   guint z_obs_params_len = nc_cluster_redshift_obs_params_len (cad->z);
   guint lnM_obs_len = nc_cluster_mass_obs_len (cad->m);

@@ -68,6 +68,8 @@ struct _NcmFitLevmar
   NcmFit parent_instance;
   gpointer dif;
   gpointer der;
+  guint fparam_len;
+  guint data_len;
   NcmFitLevmarAlgos algo;
 };
 

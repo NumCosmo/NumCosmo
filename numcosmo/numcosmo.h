@@ -99,7 +99,9 @@
 #ifdef NUMCOSMO_HAVE_LEVMAR
 #include <numcosmo/math/ncm_fit_levmar.h>
 #endif /* NUMCOSMO_HAVE_LEVMAR */
-#include <numcosmo/likelihood/confidence_region.h>
+#include <numcosmo/math/ncm_fit_mc.h>
+#include <numcosmo/math/ncm_lh_ratio1d.h>
+#include <numcosmo/math/ncm_lh_ratio2d.h>
 
 /* Utilities */
 #include <numcosmo/math/memory_pool.h>

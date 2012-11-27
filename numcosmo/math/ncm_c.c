@@ -99,6 +99,35 @@ ncm_c_class_init (NcmCClass *klass)
  *
  */
 
+/**
+ * ncm_c_degree_to_radian:
+ * @d: anle in degrees.
+ *
+ * Returns: d * pi / 180
+ *
+ */
+/**
+ * ncm_c_radian_to_degree:
+ * @r: angle in radians 
+ *
+ * Returns: r * 180 / pi
+ *
+ */
+/**
+ * ncm_c_radian_0_2pi:
+ * @r: angle in radians
+ *
+ * Returns: the angle in the interval [0, 2pi]
+ *
+ */
+/**
+ * ncm_c_sign_sin:
+ * @r: angle in radias
+ *
+ * Returns: the sign of the value of sin(d).
+ *
+ */
+
 /*******************************************************************************
  * START: 2006 CODATA recommended values (see end of file)
  *******************************************************************************/

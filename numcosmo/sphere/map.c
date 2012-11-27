@@ -410,7 +410,7 @@ nc_sphere_mapsht_map2alm (NcSphereMapSHT *mapsht, gdouble cut)
       gdouble theta, phi;
       nc_sphere_healpix_pix2ang_ring (mapsht->map->nside, j, &theta, &phi);
       j += ring_size;
-      if (fabs(theta - M_PI / 2.0) >= NC_DEGREE_TO_RADIAN(cut))
+      if (fabs(theta - M_PI / 2.0) >= ncm_c_degree_to_radian (cut))
         nc_sphere_mapsht_map2alm_circle (mapsht, i, ring_size, four_pi_npix, theta, phi, start_m, end_m);
     }
     start_m = end_m + 1;
@@ -704,7 +704,7 @@ nc_sphere_map_homogenize_noise (NcSphereMap *map, gdouble base_sigma)
   gfloat min;
   gdouble sigma_m;
   glong i;
-  gsl_rng *r = ncm_get_rng ();
+  gsl_rng *r = ncm_cfg_rng_get ();
 
   g_assert (map->nobs != NULL);
   min = gsl_vector_float_min (map->nobs);

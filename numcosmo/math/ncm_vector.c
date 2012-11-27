@@ -561,14 +561,14 @@ ncm_vector_const_free (const NcmVector *cv)
 }
 
 static N_Vector
-_ncm_nvclone(N_Vector nv)
+_ncm_nvclone (N_Vector nv)
 {
-  NcmVector *v = ncm_vector_new (ncm_vector_len(NCM_N2VECTOR(nv)));
+  NcmVector *v = ncm_vector_new (ncm_vector_len (NCM_N2VECTOR (nv)));
   return ncm_vector_nvector (v);
 }
 
 static N_Vector
-_ncm_nvcloneempty(N_Vector nv)
+_ncm_nvcloneempty (N_Vector nv)
 {
   return ncm_vector_nvector (NULL);
 }
@@ -577,32 +577,34 @@ static void
 _ncm_nvspace(N_Vector nv, glong *lrw, glong *liw)
 {
   *lrw = ncm_vector_len(NCM_N2VECTOR(nv));
-  *liw = (sizeof(NcmVector) % 4 == 0) ? sizeof(NcmVector)/4 : sizeof(NcmVector)/4 + 1;
+  *liw = (sizeof (NcmVector) % 4 == 0) ? sizeof (NcmVector) / 4 : sizeof (NcmVector) / 4 + 1;
 }
 
 static realtype *
-_ncm_nvgetarraypointer(N_Vector nv)
+_ncm_nvgetarraypointer (N_Vector nv)
 {
   return NCM_VECTOR_DATA (NCM_N2VECTOR(nv));
 }
 
 static void
-_ncm_nvsetarraypointer(realtype *data, N_Vector nv)
+_ncm_nvsetarraypointer (realtype *data, N_Vector nv)
 {
-  NCM_VECTOR_DATA (NCM_N2VECTOR(nv)) = data;
+  NCM_VECTOR_DATA (NCM_N2VECTOR (nv)) = data;
 }
 
 static void
-_ncm_nvlinearsum(realtype a, N_Vector x, realtype b, N_Vector y, N_Vector z)
+_ncm_nvlinearsum (realtype a, N_Vector x, realtype b, N_Vector y, N_Vector z)
 {
 
 }
 
 static void
-_ncm_nvconst(realtype a, N_Vector nv)
+_ncm_nvconst (realtype a, N_Vector nv)
 {
   gsl_vector_set_all (ncm_vector_gsl(NCM_N2VECTOR(nv)), a);
 }
+
+static struct _generic_N_Vector_Ops _ncm_ops;
 
 /**
  * ncm_vector_nvector: (skip)
@@ -618,18 +620,18 @@ ncm_vector_nvector (NcmVector *cv)
   struct _generic_N_Vector *nv = g_slice_new (struct _generic_N_Vector);
   g_object_ref_sink (cv);
   nv->content = cv;
-  nv->ops = NULL;
+  nv->ops = &_ncm_ops;
   return nv;
 }
 
 static void
 _ncm_vector_nvector_free (N_Vector nv)
 {
-  ncm_vector_free (NCM_N2VECTOR(nv));
+  ncm_vector_free (NCM_N2VECTOR (nv));
   g_slice_free (struct _generic_N_Vector, nv);
 }
 
-static const struct _generic_N_Vector_Ops _ncm_ops =
+static struct _generic_N_Vector_Ops _ncm_ops =
 {
   &_ncm_nvclone,
   &_ncm_nvcloneempty,

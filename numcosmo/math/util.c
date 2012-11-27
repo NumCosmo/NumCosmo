@@ -51,32 +51,6 @@
 #endif /* NUMCOSMO_HAVE_CFITSIO */
 
 /**
- * ncm_get_rng: (skip)
- *
- * FIXME
- *
- * Returns: FIXME
- */
-gsl_rng *
-ncm_get_rng ()
-{
-  const gsl_rng_type *type;
-  static gsl_rng *r = NULL;
-  _NCM_STATIC_MUTEX_DECL (create_lock);
-
-  _NCM_MUTEX_LOCK (&create_lock);
-  if (r == NULL)
-  {
-	gsl_rng_env_setup();
-	type = gsl_rng_default;
-	r = gsl_rng_alloc (type);
-  }
-  _NCM_MUTEX_UNLOCK (&create_lock);
-
-  return r;
-}
-
-/**
  * ncm_random_seed:
  *
  * FIXME
@@ -91,17 +65,17 @@ ncm_random_seed ()
 
   if ( (devrandom = fopen("/dev/random","r")) == NULL )
   {
-	g_warning ("Cannot open /dev/random, setting seed to 0\n");
-	seed = 0;
+    g_warning ("Cannot open /dev/random, setting seed to 0\n");
+    seed = 0;
   }
   else
   {
-	if (fread (&seed, sizeof(seed), 1, devrandom) != 1)
-	  g_error ("ncm_random_seed: io error");
-	fclose (devrandom);
+    if (fread (&seed, sizeof(seed), 1, devrandom) != 1)
+      g_error ("ncm_random_seed: io error");
+    fclose (devrandom);
   }
 
-  return(seed);
+  return seed;
 }
 
 /**
@@ -142,36 +116,36 @@ ncm_smoothd (gdouble *in, size_t N, size_t points, size_t pass)
   g_assert (N > points);
 
   for (j = 0; j < N; j++)
-	temp[j] = out[j] = in[j];
+    temp[j] = out[j] = in[j];
 
   while (pass--)
   {
-	for (i = points; i < N - points - 1; i++)
-	{
-	  gdouble avg = 0.0;
-	  for (j = i - points; j <= points + i; j++)
-		avg += temp[j];
-	  out[i] = avg / (2.0 * points + 1.0);
-	}
-	for (j = 0; j < N; j++)
-	  temp[j] = out[j];
-	/*
-	 for (i = 0; i < N - points; i++)
-	 {
-	   gdouble avg = 0.0;
-	   for (j = i; j < points + i; j++)
-	   avg += temp[j];
-	   out[i] = avg / ((gdouble)points);
+    for (i = points; i < N - points - 1; i++)
+    {
+      gdouble avg = 0.0;
+      for (j = i - points; j <= points + i; j++)
+        avg += temp[j];
+      out[i] = avg / (2.0 * points + 1.0);
+    }
+    for (j = 0; j < N; j++)
+      temp[j] = out[j];
+    /*
+     for (i = 0; i < N - points; i++)
+     {
+       gdouble avg = 0.0;
+       for (j = i; j < points + i; j++)
+       avg += temp[j];
+       out[i] = avg / ((gdouble)points);
   }
   for (j = 0; j < N; j++)
   temp[j] = out[j];
   */
-	/*
-	 for (i = 1; i < N - 1; i++)
-	 out[i] = (temp[i-1] + 2.0 * temp[i] + temp[i+1]) / 4.0;
-	 for (j = 0; j < N; j++)
-	 temp[j] = out[j];
-	 */
+    /*
+     for (i = 1; i < N - 1; i++)
+     out[i] = (temp[i-1] + 2.0 * temp[i] + temp[i+1]) / 4.0;
+     for (j = 0; j < N; j++)
+     temp[j] = out[j];
+     */
   }
 
   g_slice_free1 (sizeof(gdouble) * N, temp);
@@ -198,8 +172,8 @@ ncm_get_uniform_sample (NcmMSet *mset, NcmMSetFunc *func, gdouble x0, gdouble x1
   gdouble step = (x1 - x0) / (n - 1.0);
   for (i = 0; i < ncm_vector_len (sample); i++)
   {
-	gdouble x = x0 + step * i;
-	ncm_vector_set (sample, i, ncm_mset_func_eval1 (func, mset, x));
+    gdouble x = x0 + step * i;
+    ncm_vector_set (sample, i, ncm_mset_func_eval1 (func, mset, x));
   }
   return TRUE;
 }
@@ -238,16 +212,16 @@ ncm_get_smoothed_uniform_sample (NcmMSet *mset, NcmMSetFunc *func, gdouble x0, g
 
   for (i = 0; i < n; i++)
   {
-	gdouble x = step * i - (x1 - x0) / 2.0;
-	gsl_vector_set (window, i, gsl_ran_gaussian_pdf (x, delta));
+    gdouble x = step * i - (x1 - x0) / 2.0;
+    gsl_vector_set (window, i, gsl_ran_gaussian_pdf (x, delta));
   }
   fftw_execute(plan);
 
   for (i = 0; i < n; i++)
   {
-	gsl_vector_complex_set (fft_win, i,
-	                        gsl_complex_mul (gsl_vector_complex_get (fft_win, i),
-	                                         gsl_vector_complex_get (fft_sample, i)));
+    gsl_vector_complex_set (fft_win, i,
+                            gsl_complex_mul (gsl_vector_complex_get (fft_win, i),
+                                             gsl_vector_complex_get (fft_sample, i)));
   }
 
   //  gsl_vector_complex_memcpy (fft_win, fft_sample);
@@ -295,7 +269,7 @@ ncm_topology_sigma_comoving_a0_lss (guint n, gdouble alpha, gdouble sigma_alpha)
   gdouble sigma = sin (alpha) * tan (M_PI/n) / (cos (alpha) * cos (alpha) + tan (M_PI / n) * tan (M_PI / n));
   sigma = sqrt(sigma * sigma * sigma_alpha * sigma_alpha);
   if (n == 2)
-	sigma = sigma_alpha / alpha;
+    sigma = sigma_alpha / alpha;
   return sigma;
 }
 
@@ -359,9 +333,9 @@ ncm_rational_coarce_double (gdouble x, mpq_t q)
 
   if (x == 0)
   {
-	mpq_set_ui (q, 0, 1);
-	ncm_memory_pool_return (cdbl_ptr);
-	return;
+    mpq_set_ui (q, 0, 1);
+    ncm_memory_pool_return (cdbl_ptr);
+    return;
   }
 
 #define him1 cdbl->him1
@@ -383,44 +357,44 @@ ncm_rational_coarce_double (gdouble x, mpq_t q)
   //  mpfr_printf ("# AUTO: %.15g %.15f %d | %Qd\n", x, xo, expo2, q);
   while (TRUE)
   {
-	mpz_set_d (a, xo);
-	xo = 1.0 / (xo - mpz_get_d (a));
-	mpz_mul (hi, him1, a);
-	mpz_add (hi, hi, him2);
-	mpz_mul (ki, kim1, a);
-	mpz_add (ki, ki, kim2);
+    mpz_set_d (a, xo);
+    xo = 1.0 / (xo - mpz_get_d (a));
+    mpz_mul (hi, him1, a);
+    mpz_add (hi, hi, him2);
+    mpz_mul (ki, kim1, a);
+    mpz_add (ki, ki, kim2);
 
-	mpz_swap (him2, him1);
-	mpz_swap (him1, hi);
-	mpz_swap (kim2, kim1);
-	mpz_swap (kim1, ki);
+    mpz_swap (him2, him1);
+    mpz_swap (him1, hi);
+    mpz_swap (kim2, kim1);
+    mpz_swap (kim1, ki);
 
-	mpz_mul (ki, kim1, kim2);
-	//mpfr_printf ("# ---- %.5e %Zu %.15g | %Zd/%Zd %Zd/%Zd\n", fabs(1.0/(xi * mpz_get_d (ki))), a, xo, him1, kim1, him2, kim2);
-	if (fabs(1.0/(xi * mpz_get_d (ki))) < GSL_DBL_EPSILON)
-	{
-	  mpz_set (mpq_numref (q), him2);
-	  mpz_set (mpq_denref (q), kim2);
-	  break;
-	}
-	if (!gsl_finite (xo))
-	{
-	  mpz_set (mpq_numref (q), him1);
-	  mpz_set (mpq_denref (q), kim1);
-	  break;
-	}
+    mpz_mul (ki, kim1, kim2);
+    //mpfr_printf ("# ---- %.5e %Zu %.15g | %Zd/%Zd %Zd/%Zd\n", fabs(1.0/(xi * mpz_get_d (ki))), a, xo, him1, kim1, him2, kim2);
+    if (fabs(1.0/(xi * mpz_get_d (ki))) < GSL_DBL_EPSILON)
+    {
+      mpz_set (mpq_numref (q), him2);
+      mpz_set (mpq_denref (q), kim2);
+      break;
+    }
+    if (!gsl_finite (xo))
+    {
+      mpz_set (mpq_numref (q), him1);
+      mpz_set (mpq_denref (q), kim1);
+      break;
+    }
   }
 
   mpq_canonicalize (q);
   expo2 > 0 ? mpq_mul_2exp (q, q, expo2) : mpq_div_2exp (q, q, -expo2);
   if (GSL_SIGN(x) == -1)
-	mpq_neg (q, q);
+    mpq_neg (q, q);
 
   //  mpfr_printf ("# MINE: %.15g %.15f %d | %Qd\n", x, xo, expo2, q);
   if (fabs(mpq_get_d (q) / x - 1) > 1e-15)
   {
-	mpfr_fprintf (stderr, "# Q = %Qd\n", q);
-	g_error ("Wrong rational approximation for x = %.16g N(q) = %.16g [%.5e] | 2^(%d)\n", x, mpq_get_d (q), fabs(mpq_get_d (q) / x - 1), expo2);
+    mpfr_fprintf (stderr, "# Q = %Qd\n", q);
+    g_error ("Wrong rational approximation for x = %.16g N(q) = %.16g [%.5e] | 2^(%d)\n", x, mpq_get_d (q), fabs(mpq_get_d (q) / x - 1), expo2);
   }
 
   ncm_memory_pool_return (cdbl_ptr);
@@ -480,36 +454,36 @@ ncm_sphPlm_x (gint l, gint m, gint order)
 
   do
   {
-	iter++;
-	status = gsl_root_fsolver_iterate (s);
-	if (status)
-	{
-	  g_warning ("%s", gsl_strerror (status));
-	  gsl_root_fsolver_free (s);
-	  return GSL_NAN;
-	}
-	if (iter > 100)
-	  prec *= 10;
+    iter++;
+    status = gsl_root_fsolver_iterate (s);
+    if (status)
+    {
+      g_warning ("%s", gsl_strerror (status));
+      gsl_root_fsolver_free (s);
+      return GSL_NAN;
+    }
+    if (iter > 100)
+      prec *= 10;
 
-	x = gsl_root_fsolver_root (s);
-	x0 = gsl_root_fsolver_x_lower (s);
-	x1 = gsl_root_fsolver_x_upper (s);
-	status = gsl_root_test_interval (x0, x1, 0, prec);
+    x = gsl_root_fsolver_root (s);
+    x0 = gsl_root_fsolver_x_lower (s);
+    x1 = gsl_root_fsolver_x_upper (s);
+    status = gsl_root_test_interval (x0, x1, 0, prec);
 
-	if (!gsl_finite (ncm_sphPlm_x_f (x, params)))
-	{
-	  g_debug ("Ops");
-	  x = GSL_NAN;
-	  break;
-	}
+    if (!gsl_finite (ncm_sphPlm_x_f (x, params)))
+    {
+      g_debug ("Ops");
+      x = GSL_NAN;
+      break;
+    }
 
-	if ( (status == GSL_SUCCESS) && FALSE)
-	{
-	  printf ("# Converged: %d, with prec = %g\n", iter, prec);
-	  //    }{
-	  printf ("#\t[%d]: (%g, %g):%g %g\n", iter, x0, x1, x, ncm_sphPlm_x_f (x, params));
-	  fflush (stdout);
-	}
+    if ( (status == GSL_SUCCESS) && FALSE)
+    {
+      printf ("# Converged: %d, with prec = %g\n", iter, prec);
+      //    }{
+      printf ("#\t[%d]: (%g, %g):%g %g\n", iter, x0, x1, x, ncm_sphPlm_x_f (x, params));
+      fflush (stdout);
+    }
   }
   while (status == GSL_CONTINUE && iter < max_iter);
   gsl_root_fsolver_free (s);
@@ -538,15 +512,15 @@ ncm_sphPlm_test_theta (gdouble theta, gint lmax, gint *lmin_data)
 
   for (m = 0; m <= lmax; m++)
   {
-	gint last = gsl_sf_legendre_array_size (lmax, m);
-	gint l;
-	gsl_sf_legendre_sphPlm_array (lmax, m, x, Plm_data);
-	for (l = 0; l < last; l++)
-	  if (fabs(Plm_data[l]) > 1e-20)
-	{
-	  lmin_data[m] = l+m;
-	  break;
-	}
+    gint last = gsl_sf_legendre_array_size (lmax, m);
+    gint l;
+    gsl_sf_legendre_sphPlm_array (lmax, m, x, Plm_data);
+    for (l = 0; l < last; l++)
+      if (fabs(Plm_data[l]) > 1e-20)
+    {
+      lmin_data[m] = l+m;
+      break;
+    }
   }
   return 0.0;
 }
@@ -608,7 +582,7 @@ ncm_mpfr_inp_raw (mpfr_t rop, FILE *stream)
   mpfr_set_prec (rop, prec);
   mpfr_set_z (rop, m, GMP_RNDN);
   if (expo != 0)
-	mpfr_mul_2si (rop, rop, expo, GMP_RNDN);
+    mpfr_mul_2si (rop, rop, expo, GMP_RNDN);
 
   return bin;
 }
@@ -666,7 +640,7 @@ ncm_mpz_inits (mpz_t z, ...)
   mpz_init (z);
   va_start(ap, z);
   while ((z1 = va_arg(ap, mpz_ptr)) != NULL)
-	mpz_init (z1);
+    mpz_init (z1);
   va_end(ap);
 }
 
@@ -687,7 +661,7 @@ ncm_mpz_clears (mpz_t z, ...)
   mpz_clear (z);
   va_start(ap, z);
   while ((z1 = va_arg(ap, mpz_ptr)) != NULL)
-	mpz_clear (z1);
+    mpz_clear (z1);
   va_end (ap);
 }
 
@@ -710,23 +684,23 @@ ncm_sum (gdouble *d, gulong n)
 
   for (i = 0; i < n; i++)
   {
-	gint j, k = 0;
-	gdouble x = d[i];
-	for (j = 0; j < part_size; j++)
-	{
-	  const gdouble y = part[j];
-	  const gdouble hi = x + y;
-	  const gdouble lo = (fabs(x) < fabs(y)) ? (x - (hi - y)) : (y - (hi - x));
-	  if (lo != 0.0)
-		part[k++] = lo;
-	  x = hi;
-	}
-	part[k] = x;
-	part_size = k + 1;
+    gint j, k = 0;
+    gdouble x = d[i];
+    for (j = 0; j < part_size; j++)
+    {
+      const gdouble y = part[j];
+      const gdouble hi = x + y;
+      const gdouble lo = (fabs(x) < fabs(y)) ? (x - (hi - y)) : (y - (hi - x));
+      if (lo != 0.0)
+        part[k++] = lo;
+      x = hi;
+    }
+    part[k] = x;
+    part_size = k + 1;
   }
 
   for (i = 0; i < part_size; i++)
-	res += part[i];
+    res += part[i];
 
   g_slice_free1 (sizeof(gdouble) * n, part);
 
@@ -760,7 +734,7 @@ ncm_numdiff_1 (gsl_function *F, const gdouble x, const gdouble ho, gdouble *err)
   //  guint count = 0;
 
   if (h == 0.0)
-	g_error ("ncm_numdiff_1: Step h too small");
+    g_error ("ncm_numdiff_1: Step h too small");
 
   hh = h;
 
@@ -770,24 +744,24 @@ ncm_numdiff_1 (gsl_function *F, const gdouble x, const gdouble ho, gdouble *err)
 
   for (i = 1; i < ntab; i++)
   {
-	hh /= con;
-	a[0 * ntab + i] = (F->function (x + hh, F->params) - F->function (x - hh, F->params)) / (2.0 * hh);
-	//    count += 2;
-	fac = con2;
+    hh /= con;
+    a[0 * ntab + i] = (F->function (x + hh, F->params) - F->function (x - hh, F->params)) / (2.0 * hh);
+    //    count += 2;
+    fac = con2;
 
-	for (j = 1; j <= i; j++)
-	{
-	  a[j * ntab + i] = (a[(j-1) * ntab + i] * fac - a[(j-1) * ntab + i - 1]) / (fac - 1.0);
-	  fac = con2 * fac;
-	  errt = GSL_MAX (fabs (a[j * ntab + i] - a[(j-1) * ntab + i]), fabs (a[j * ntab + i] - a[(j-1) * ntab + i - 1]));
-	  if (errt <= *err)
-	  {
-		*err = errt;
-		ans = a[j * ntab + i];
-	  }
-	}
-	if (fabs (a[i*ntab + i] - a[(i-1) * ntab + i - 1]) >= safe * (*err))
-	  break;
+    for (j = 1; j <= i; j++)
+    {
+      a[j * ntab + i] = (a[(j-1) * ntab + i] * fac - a[(j-1) * ntab + i - 1]) / (fac - 1.0);
+      fac = con2 * fac;
+      errt = GSL_MAX (fabs (a[j * ntab + i] - a[(j-1) * ntab + i]), fabs (a[j * ntab + i] - a[(j-1) * ntab + i - 1]));
+      if (errt <= *err)
+      {
+        *err = errt;
+        ans = a[j * ntab + i];
+      }
+    }
+    if (fabs (a[i*ntab + i] - a[(i-1) * ntab + i - 1]) >= safe * (*err))
+      break;
   }
   //  printf ("# Count %u\n", count);
   return ans;
@@ -822,39 +796,39 @@ ncm_numdiff_2_err (gsl_function *F, gdouble *ofx, const gdouble x, const gdouble
   lans = ncm_numdiff_2 (F, ofx, x, ho, ferr);
   //printf ("#D2 % 20.15g +/- % 20.15g [% 20.15g] | (% 20.15g, % 20.15g)\n", lans, lerr, ho, x, *ofx);
   if (fabs (ferr[0] / lans) < err)
-	return lans;
+    return lans;
   try_h = ho;
 
   do {
-	try_h *= c;
-	hans = ncm_numdiff_2 (F, ofx, x, try_h, &herr);
-	//printf ("#   % 20.15g +/- % 20.15g [% 20.15g]<%d> lerr % 20.15g\n", hans, herr, try_h, deteriorate, lerr);
-	if (fabs(herr) > fabs(ferr[0]))
-	{
-	  if (deteriorate < NCM_NUMDIFF_RETRY_N)
-	  {
-		deteriorate++;
-		try_again = TRUE;
-	  }
-	  else if (c == NCM_NUMDIFF_RETRY_PP)
-	  {
-		try_h = ho;
-		c = 1.0 + NCM_NUMDIFF_RETRY_PP;
-		try_again = TRUE;
-		deteriorate = 0;
-	  }
-	  else
-	  {
-		try_again = FALSE;
-		lans = hans;
-	  }
-	}
-	else
-	{
-	  try_again = (fabs(herr/hans) > fabs(err));
-	  lans = hans;
-	  ferr[0] = herr;
-	}
+    try_h *= c;
+    hans = ncm_numdiff_2 (F, ofx, x, try_h, &herr);
+    //printf ("#   % 20.15g +/- % 20.15g [% 20.15g]<%d> lerr % 20.15g\n", hans, herr, try_h, deteriorate, lerr);
+    if (fabs(herr) > fabs(ferr[0]))
+    {
+      if (deteriorate < NCM_NUMDIFF_RETRY_N)
+      {
+        deteriorate++;
+        try_again = TRUE;
+      }
+      else if (c == NCM_NUMDIFF_RETRY_PP)
+      {
+        try_h = ho;
+        c = 1.0 + NCM_NUMDIFF_RETRY_PP;
+        try_again = TRUE;
+        deteriorate = 0;
+      }
+      else
+      {
+        try_again = FALSE;
+        lans = hans;
+      }
+    }
+    else
+    {
+      try_again = (fabs(herr/hans) > fabs(err));
+      lans = hans;
+      ferr[0] = herr;
+    }
   } while (try_again);
 
   return lans;
@@ -888,12 +862,12 @@ ncm_numdiff_2 (gsl_function *F, gdouble *ofx, const gdouble x, const gdouble ho,
   gdouble fx;
   //  guint count = 0;
   if (ofx == NULL)
-	fx = F->function (x, F->params);
+    fx = F->function (x, F->params);
   else
-	fx = *ofx;
+    fx = *ofx;
 
   if (h == 0.0)
-	g_error ("ncm_numdiff_2: Step h too small");
+    g_error ("ncm_numdiff_2: Step h too small");
 
   hh = h;
 
@@ -903,24 +877,24 @@ ncm_numdiff_2 (gsl_function *F, gdouble *ofx, const gdouble x, const gdouble ho,
 
   for (i = 1; i < ntab; i++)
   {
-	hh /= con;
-	a[0 * ntab + i] = (F->function (x + hh, F->params) - 2.0 * fx + F->function (x - hh, F->params)) / (hh * hh);
-	//    count += 2;
-	fac = con2;
+    hh /= con;
+    a[0 * ntab + i] = (F->function (x + hh, F->params) - 2.0 * fx + F->function (x - hh, F->params)) / (hh * hh);
+    //    count += 2;
+    fac = con2;
 
-	for (j = 1; j <= i; j++)
-	{
-	  a[j * ntab + i] = (a[(j-1) * ntab + i] * fac - a[(j-1) * ntab + i - 1]) / (fac - 1.0);
-	  fac = con2 * fac;
-	  errt = GSL_MAX (fabs (a[j * ntab + i] - a[(j-1) * ntab + i]), fabs (a[j * ntab + i] - a[(j-1) * ntab + i - 1]));
-	  if (errt <= *err)
-	  {
-		*err = errt;
-		ans = a[j * ntab + i];
-	  }
-	}
-	if (fabs (a[i*ntab + i] - a[(i-1) * ntab + i - 1]) >= safe * (*err))
-	  break;
+    for (j = 1; j <= i; j++)
+    {
+      a[j * ntab + i] = (a[(j-1) * ntab + i] * fac - a[(j-1) * ntab + i - 1]) / (fac - 1.0);
+      fac = con2 * fac;
+      errt = GSL_MAX (fabs (a[j * ntab + i] - a[(j-1) * ntab + i]), fabs (a[j * ntab + i] - a[(j-1) * ntab + i - 1]));
+      if (errt <= *err)
+      {
+        *err = errt;
+        ans = a[j * ntab + i];
+      }
+    }
+    if (fabs (a[i*ntab + i] - a[(i-1) * ntab + i - 1]) >= safe * (*err))
+      break;
   }
 
   return ans;
@@ -944,19 +918,19 @@ ncm_sqrt1px_m1 (gdouble x)
   gint n = 0;
 
   if (!gsl_finite (x))
-	return x;
+    return x;
 
   if (fabs(x) > 1e-1)
-	return sqrt (1.0 + x) - 1.0;
+    return sqrt (1.0 + x) - 1.0;
 
   while (TRUE)
   {
-	binfact *= 3.0 / (2.0 * (1.0 + n++)) - 1.0;
-	xn *= x;
-	res += binfact * xn;
+    binfact *= 3.0 / (2.0 * (1.0 + n++)) - 1.0;
+    xn *= x;
+    res += binfact * xn;
 
-	if (fabs(binfact * xn / res) < GSL_DBL_EPSILON)
-	  break;
+    if (fabs(binfact * xn / res) < GSL_DBL_EPSILON)
+      break;
   }
 
   return res;

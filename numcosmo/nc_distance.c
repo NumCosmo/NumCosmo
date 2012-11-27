@@ -243,18 +243,18 @@ nc_distance_comoving (NcDistance *dist, NcHICosmo *model, gdouble z)
   nc_distance_prepare_if_needed (dist, model);
 
   if (ncm_model_impl (NCM_MODEL (model)) & NC_HICOSMO_IMPL_cd)
-	return nc_hicosmo_cd (model, z);
+    return nc_hicosmo_cd (model, z);
 
   if (z <= dist->z_f)
-	return ncm_spline_eval (dist->comoving_distance_spline->s, z);
+    return ncm_spline_eval (dist->comoving_distance_spline->s, z);
 
   F.function = &comoving_distance_integral_argument;
   F.params = model;
 
   if (dist->use_cache)
-	nc_integral_cached_0_x (dist->comoving_distance_cache, &F, z, &result, &error);
+    nc_integral_cached_0_x (dist->comoving_distance_cache, &F, z, &result, &error);
   else
-	nc_integral_locked_a_b (&F, 0.0, z, 0.0, NC_INT_ERROR, &result, &error);
+    nc_integral_locked_a_b (&F, 0.0, z, 0.0, NC_INT_ERROR, &result, &error);
 
   return result;
 }
@@ -372,7 +372,7 @@ nc_distance_dtransverse_dz (NcDistance *dist, NcHICosmo *model, gdouble z)
 	case 1:
 	{
 	  gdouble comoving_dist = nc_distance_comoving (dist, model, z);
-	  return NC_SIGN_SIN(sqrt_Omega_k * comoving_dist) * cos (sqrt_Omega_k * comoving_dist) / E; // LOOK
+	  return ncm_c_sign_sin (sqrt_Omega_k * comoving_dist) * cos (sqrt_Omega_k * comoving_dist) / E; // LOOK
 	}
 	default:
 	  g_assert_not_reached();
@@ -793,10 +793,10 @@ nc_distance_prepare (NcDistance *dist, NcHICosmo *model)
 
   if (dist->comoving_distance_spline == NULL)
   {
-	NcmSpline *s = ncm_spline_cubic_notaknot_new ();
-	dist->comoving_distance_spline =
-	  ncm_ode_spline_new (s, dcddz, model, 0.0, 0.0, dist->z_f);
-	ncm_spline_free (s);
+    NcmSpline *s = ncm_spline_cubic_notaknot_new ();
+    dist->comoving_distance_spline =
+      ncm_ode_spline_new (s, dcddz, model, 0.0, 0.0, dist->z_f);
+    ncm_spline_free (s);
   }
 
   ncm_ode_spline_prepare (dist->comoving_distance_spline, model);

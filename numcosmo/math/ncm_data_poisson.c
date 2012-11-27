@@ -37,7 +37,7 @@
 #include "build_cfg.h"
 
 #include "ncm_data_poisson.h"
-#include "math/util.h"
+#include "math/ncm_cfg.h"
 
 #include <gsl/gsl_randist.h>
 #include <gsl/gsl_sf_gamma.h>
@@ -201,7 +201,7 @@ _ncm_data_poisson_resample (NcmData *data, NcmMSet *mset)
 {
   NcmDataPoisson *poisson = NCM_DATA_POISSON (data);
   NcmDataPoissonClass *poisson_class = NCM_DATA_POISSON_GET_CLASS (data);
-  gsl_rng *rng = ncm_get_rng ();
+  gsl_rng *rng = ncm_cfg_rng_get ();
   gint i;
 
   for (i = 0; i < poisson->h->n; i++)

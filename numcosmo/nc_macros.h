@@ -53,11 +53,6 @@ G_BEGIN_DECLS
 #define _NCM_MUTEX_CLEAR(l) g_mutex_clear (l)
 #endif
 
-#define NC_DEGREE_TO_RADIAN(a) ((a) * M_PI/180.0)
-#define NC_RADIAN_TO_DEGREE(a) ((a) * 180.0/M_PI)
-#define NC_RADIAN_0_2PI(a) ((a)-2.0 * M_PI * floor((a) / (2.0 * M_PI)))
-#define NC_SIGN_SIN(a) ((NC_RADIAN_0_2PI(a) < M_PI) ? 1.0 : -1.0)
-
 #define NC_RETURN_IF_INF(a) if (gsl_isinf(a)) return a
 
 #define NC_FLOOR_TRUNC(a,b) (floor ((b) * (a)) / (b))

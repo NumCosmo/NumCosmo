@@ -37,7 +37,7 @@
 #include "build_cfg.h"
 
 #include "math/ncm_data_dist1d.h"
-#include "math/util.h"
+#include "math/ncm_cfg.h"
 
 enum
 {
@@ -194,7 +194,7 @@ _ncm_data_dist1d_resample (NcmData *data, NcmMSet *mset)
 {
   NcmDataDist1d *dist1d = NCM_DATA_DIST1D (data);
   NcmDataDist1dClass *dist1d_class = NCM_DATA_DIST1D_GET_CLASS (data);
-  gsl_rng *rng = ncm_get_rng ();
+  gsl_rng *rng = ncm_cfg_rng_get ();
   gint i;
 
   if (dist1d_class->inv_pdf == NULL)

@@ -34,6 +34,7 @@
 #include <numcosmo/math/ncm_mset.h>
 #include <numcosmo/math/ncm_mset_func.h>
 #include <numcosmo/math/ncm_likelihood.h>
+#include <numcosmo/math/ncm_fit_state.h>
 
 #ifdef HAVE_NLOPT_2_2
 #include <nlopt.h>
@@ -126,8 +127,10 @@ struct _NcmFitClass
   /*< private >*/
   GObjectClass parent_class;
   NcmFit *(*copy_new) (NcmFit *fit, NcmLikelihood *lh, NcmMSet *mset, NcmFitGradType gtype);
+  void (*reset) (NcmFit *fit);
   gboolean (*run) (NcmFit *fit, NcmFitRunMsgs mtype);
   const gchar *(*get_desc) (NcmFit *fit);
+  gboolean is_least_squares;
 };
 
 struct _NcmFit
@@ -136,35 +139,13 @@ struct _NcmFit
   GObject parent_instance;
   NcmLikelihood *lh;
   NcmMSet *mset;
+  NcmFitState *fstate;
   NcmFitRunMsgs mtype;
   NcmFitGrad grad;
-  guint data_len;
-  guint fparam_len;
-  gint dof;
-  guint niter;
-  guint func_eval;
-  guint grad_eval;
   guint maxeval;
-  gdouble m2lnL_prec;
-  gdouble m2lnL_prec_target;
-  gdouble params_prec;
-  gdouble params_prec_target;
+  gdouble m2lnL_reltol;
+  gdouble params_reltol;
   GTimer *timer;
-  gboolean bootstrap;
-  gboolean jackknife;
-  NcmVector *x;
-  NcmVector *f;
-  NcmVector *df;
-  NcmMatrix *J;
-  NcmVector *full_df;
-  NcmMatrix *full_J;
-  NcmMatrix *covar;
-  NcmMatrix *hessian;
-  NcmVector *jackpv;
-  gsl_vector_uint *bs;
-  gdouble sqrt_m2lnL;
-  gdouble m2lnL;
-  gdouble m2lnL_dof;
 };
 
 GType ncm_fit_get_type (void) G_GNUC_CONST;
@@ -176,7 +157,9 @@ void ncm_fit_free (NcmFit *fit);
 void ncm_fit_clear (NcmFit **fit);
 
 void ncm_fit_set_grad_type (NcmFit *fit, NcmFitGradType gtype);
-void ncm_fit_save (NcmFit *fit, NcmVector *x, NcmVector *f, NcmMatrix *J);
+void ncm_fit_ls_set_state (NcmFit *fit, gdouble prec, NcmVector *x, NcmVector *f, NcmMatrix *J);
+
+gboolean ncm_fit_is_least_squares (NcmFit *fit);
 
 const gchar *ncm_fit_get_desc (NcmFit *fit);
 void ncm_fit_log_info (NcmFit *fit);
@@ -188,8 +171,6 @@ void ncm_fit_log_step_error (NcmFit *fit, const gchar *strerror, ...);
 void ncm_fit_log_end (NcmFit *fit);
 
 void ncm_fit_fishermatrix_print (NcmFit *fit, FILE *out, gchar *header);
-
-void ncm_fit_gen_bootstrap (NcmFit *fit);
 
 void ncm_fit_data_m2lnL_val (NcmFit *fit, gdouble *data_m2lnL);
 void ncm_fit_priors_m2lnL_val (NcmFit *fit, gdouble *priors_m2lnL);
@@ -221,39 +202,30 @@ void ncm_fit_ls_f_J_nd_ce (NcmFit *fit, NcmVector *f, NcmMatrix *J);
 
 void ncm_fit_numdiff_m2lnL_hessian (NcmFit *fit, NcmMatrix *H);
 void ncm_fit_numdiff_m2lnL_covar (NcmFit *fit);
-void ncm_fit_covar_ls_calc (NcmFit *fit);
+void ncm_fit_ls_covar (NcmFit *fit);
 
-gdouble ncm_fit_covar_var (NcmFit *fit, NcmModelID gmid, guint pid);
-gdouble ncm_fit_covar_sd (NcmFit *fit, NcmModelID gmid, guint pid);
-gdouble ncm_fit_covar_cov (NcmFit *fit, NcmModelID gmid1, guint pid1, NcmModelID gmid2, guint pid2);
-gdouble ncm_fit_covar_cor (NcmFit *fit, NcmModelID gmid1, guint pid1, NcmModelID gmid2, guint pid2);
+gdouble ncm_fit_covar_var (NcmFit *fit, NcmModelID mid, guint pid);
+gdouble ncm_fit_covar_sd (NcmFit *fit, NcmModelID mid, guint pid);
+gdouble ncm_fit_covar_cov (NcmFit *fit, NcmModelID mid1, guint pid1, NcmModelID mid2, guint pid2);
+gdouble ncm_fit_covar_cor (NcmFit *fit, NcmModelID mid1, guint pid1, NcmModelID mid2, guint pid2);
 
 gdouble ncm_fit_covar_fparam_var (NcmFit *fit, guint fpi);
 gdouble ncm_fit_covar_fparam_sd (NcmFit *fit, guint fpi);
 gdouble ncm_fit_covar_fparam_cov (NcmFit *fit, guint fpi1, guint fpi2);
 gdouble ncm_fit_covar_fparam_cor (NcmFit *fit, guint fpi1, guint fpi2);
 
-void ncm_fit_lr_test_range (NcmFit *fit, NcmModelID gmid, guint pid, gdouble start, gdouble stop, gdouble step);
-void ncm_fit_dprob (NcmFit *fit, NcmModelID gmid, guint pid, gdouble a, gdouble b, gdouble step, gdouble norm);
-gdouble ncm_fit_lr_test (NcmFit *fit, NcmModelID gmid, guint pid, gdouble val, gint dof);
-gdouble ncm_fit_prob (NcmFit *fit, NcmModelID gmid, guint pid, gdouble a, gdouble b);
+void ncm_fit_lr_test_range (NcmFit *fit, NcmModelID mid, guint pid, gdouble start, gdouble stop, gdouble step);
+void ncm_fit_dprob (NcmFit *fit, NcmModelID mid, guint pid, gdouble a, gdouble b, gdouble step, gdouble norm);
+gdouble ncm_fit_lr_test (NcmFit *fit, NcmModelID mid, guint pid, gdouble val, gint dof);
+gdouble ncm_fit_prob (NcmFit *fit, NcmModelID mid, guint pid, gdouble a, gdouble b);
 gdouble ncm_fit_chisq_test (NcmFit *fit, size_t bins);
 
+void ncm_fit_reset (NcmFit *fit);
 gboolean ncm_fit_run (NcmFit *fit, NcmFitRunMsgs mtype);
-gboolean ncm_fit_cr (NcmFit *fit, NcmModelID gmid1, guint pid1, NcmModelID gmid2, guint pid2, gdouble p);
-GList *ncm_fit_cr2 (NcmFit *fit, NcmModelID gmid1, guint pid1, NcmModelID gmid2, guint pid2, gdouble p);
-GList *ncm_fit_cr2_fisher (NcmFit *fit, NcmModelID gmid1, guint pid1, NcmModelID gmid2, guint pid2, gdouble p);
-gboolean ncm_fit_cr_1dim (NcmFit *fit, NcmModelID gmid, guint pid, gdouble p, gint nu, gdouble *err_inf, gdouble *err_sup);
-gboolean ncm_fit_cr_points_print (GList *points, FILE *out);
-gboolean ncm_fit_cr_points_free (GList *points);
 
 gdouble ncm_fit_type_constrain_error (NcmFit *fit, gdouble p, gint nu, gdouble dir, NcmMSetFunc *func, gdouble z, gboolean walk);
 gdouble ncm_fit_function_error (NcmFit *fit, NcmMSetFunc *func, gdouble z, gboolean pretty_print);
 gdouble ncm_fit_function_cov (NcmFit *fit, NcmMSetFunc *func1, gdouble z1, NcmMSetFunc *func2, gdouble z2, gboolean pretty_print);
-
-NcmMatrix *ncm_fit_montecarlo_matrix (NcmFit *fit, NcmMSet *mset, guint maxiter, guint ni, guint nf, NcmFitRunMsgs mtype);
-void ncm_fit_montecarlo_matrix_print (NcmFit *fit, NcmMatrix *param_matrix);
-void ncm_fit_montecarlo_matrix_mean_covar (NcmFit *fit, NcmMatrix *param_matrix);
 
 #define NCM_FIT_NUMDIFF_SCALE (1.0e-4)
 #define NCM_FIT_NPARAM(fit) ((fit)->pt->nfree)

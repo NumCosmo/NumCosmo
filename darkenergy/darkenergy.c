@@ -31,6 +31,7 @@
 #include "data_cluster.h"
 #include "savedata.h"
 
+#include <unistd.h>
 #include <math.h>
 #include <glib.h>
 #include <gsl/gsl_blas.h>
@@ -293,7 +294,7 @@ main (gint argc, gchar *argv[])
     ncm_prior_add_gaussian_data (lh, NC_HICOSMO_ID, NC_HICOSMO_DE_H0, 73.8, 2.4);
   }
 
-  fiduc = ncm_mset_copy_all (mset);
+  fiduc = ncm_mset_dup (mset);
 
   {
     const GEnumValue *fit_type_id = ncm_cfg_get_enum_by_id_name_nick (NCM_TYPE_FIT_TYPE, de_fit.fit_type);
@@ -312,7 +313,7 @@ main (gint argc, gchar *argv[])
 
   if (de_fit.fit)
   {
-    fit->params_prec_target = 1e-5;
+    fit->params_reltol = 1e-5;
     ncm_fit_run (fit, de_fit.msg_level);
     ncm_fit_log_info (fit);
   }
@@ -356,7 +357,8 @@ main (gint argc, gchar *argv[])
   if (de_fit.montecarlo > 0)
   {
     NcmMSet *resample_mset;
-    NcmMatrix *param_matrix;
+    NcmFitMC *mc = ncm_fit_mc_new (fit);
+    gdouble m2lnL = fit->fstate->m2lnL;
 
     if (de_fit.fiducial)
       resample_mset = fiduc;
@@ -366,13 +368,18 @@ main (gint argc, gchar *argv[])
     ncm_dataset_log_info (fit->lh->dset);
     ncm_mset_pretty_log (resample_mset);
 
-    param_matrix = ncm_fit_montecarlo_matrix (fit, resample_mset, de_fit.max_iter, de_fit.mc_ni, de_fit.montecarlo, de_fit.msg_level);
-    ncm_fit_montecarlo_matrix_mean_covar (fit, param_matrix);
+    ncm_fit_mc_run (mc, resample_mset, de_fit.mc_ni, de_fit.montecarlo, de_fit.msg_level);
+    ncm_fit_mc_mean_covar (mc);
+    ncm_fit_mc_gof_pdf (mc);
     ncm_fit_log_covar (fit);
+    ncm_fit_mc_gof_pdf_print (mc);
+    {
+      gdouble p_value = ncm_fit_mc_gof_pdf_pvalue (mc, m2lnL, FALSE);
+      ncm_message ("#   - pvalue for fitted model [% 20.15g] %04.2f%%.\n#\n", m2lnL, 100.0 * p_value);
+    }
+    
     if (de_fit.mc_data)
-      ncm_fit_montecarlo_matrix_print (fit, param_matrix);
-
-    ncm_matrix_free (param_matrix);
+      ncm_fit_mc_print (mc);
   }
 
   if (de_fit.onedim_cr != NULL)
@@ -397,7 +404,13 @@ main (gint argc, gchar *argv[])
           prob_sigma = ncm_c_stats_1sigma ();
           break;
       }
-      ncm_fit_cr_1dim (fit, NC_HICOSMO_ID, p_n, prob_sigma, 1, &err_inf, &err_sup);
+      {
+        NcmMSetPIndex pi = {NC_HICOSMO_ID, p_n};
+        NcmLHRatio1d *lhr1d = ncm_lh_ratio1d_new (fit, pi);
+        ncm_lh_ratio1d_find_bounds (lhr1d, fit->mtype, prob_sigma, &err_inf, &err_sup);
+        ncm_lh_ratio1d_free (lhr1d);
+      }
+      //ncm_fit_cr_1dim (fit, NC_HICOSMO_ID, p_n, prob_sigma, 1, &err_inf, &err_sup);
       ncm_message ("#  One dimension confidence region for %s[%02d] = % .5g (% .5g, % .5g)\n",
                    ncm_model_param_name (NCM_MODEL (model), p_n), p_n,
                    ncm_model_param_get (NCM_MODEL (model), p_n), err_inf, err_sup);
@@ -416,27 +429,40 @@ main (gint argc, gchar *argv[])
 
   if (de_fit.nsigma >= 0 && (de_fit.bidim_cr[0] != -1) && (de_fit.bidim_cr[1] != -1))
   {
+    NcmLHRatio2d *lhr2d;
+    NcmMSetPIndex pi1;
+    NcmMSetPIndex pi2;
     GList *points_1sigma;
     GList *points_2sigma;
     GList *points_3sigma;
+
+    pi1.mid = NC_HICOSMO_ID;
+    pi2.mid = NC_HICOSMO_ID;
+    pi1.pid = de_fit.bidim_cr[0];
+    pi2.pid = de_fit.bidim_cr[1];
+
+    lhr2d = ncm_lh_ratio2d_new (fit, pi1, pi2);
+    
     points_1sigma = NULL;
     points_2sigma = NULL;
     points_3sigma = NULL;
     switch (de_fit.nsigma)
     {
       case 1:
-        points_1sigma = ncm_fit_cr2 (fit, NC_HICOSMO_ID, de_fit.bidim_cr[0], NC_HICOSMO_ID, de_fit.bidim_cr[1], ncm_c_stats_1sigma ());
+      {
+        points_1sigma = ncm_lh_ratio2d_conf_region (lhr2d, ncm_c_stats_1sigma (), de_fit.msg_level);
         break;
+      }
       case 2:
-        points_2sigma = ncm_fit_cr2 (fit, NC_HICOSMO_ID, de_fit.bidim_cr[0], NC_HICOSMO_ID, de_fit.bidim_cr[1], ncm_c_stats_2sigma ());
+        points_2sigma = ncm_lh_ratio2d_conf_region (lhr2d, ncm_c_stats_2sigma (), de_fit.msg_level);
         break;
       case 3:
-        points_3sigma = ncm_fit_cr2 (fit, NC_HICOSMO_ID, de_fit.bidim_cr[0], NC_HICOSMO_ID, de_fit.bidim_cr[1], ncm_c_stats_3sigma ());
+        points_3sigma = ncm_lh_ratio2d_conf_region (lhr2d, ncm_c_stats_3sigma (), de_fit.msg_level);
         break;
       default:
-        points_1sigma = ncm_fit_cr2 (fit, NC_HICOSMO_ID, de_fit.bidim_cr[0], NC_HICOSMO_ID, de_fit.bidim_cr[1], ncm_c_stats_1sigma ());
-        points_2sigma = ncm_fit_cr2 (fit, NC_HICOSMO_ID, de_fit.bidim_cr[0], NC_HICOSMO_ID, de_fit.bidim_cr[1], ncm_c_stats_2sigma ());
-        points_3sigma = ncm_fit_cr2 (fit, NC_HICOSMO_ID, de_fit.bidim_cr[0], NC_HICOSMO_ID, de_fit.bidim_cr[1], ncm_c_stats_3sigma ());
+        points_1sigma = ncm_lh_ratio2d_conf_region (lhr2d, ncm_c_stats_1sigma (), de_fit.msg_level);
+        points_2sigma = ncm_lh_ratio2d_conf_region (lhr2d, ncm_c_stats_2sigma (), de_fit.msg_level);
+        points_3sigma = ncm_lh_ratio2d_conf_region (lhr2d, ncm_c_stats_3sigma (), de_fit.msg_level);
         break;
     }
 
@@ -449,17 +475,17 @@ main (gint argc, gchar *argv[])
       fprintf (f_PL, "# %s\n", full_cmd_line);
       if (points_1sigma != NULL)
       {
-        ncm_fit_cr_points_print (points_1sigma, f_PL);
+       ncm_lh_ratio2d_points_print (points_1sigma, f_PL);
         fprintf (f_PL, "\n\n");
       }
       if (points_2sigma != NULL)
       {
-        ncm_fit_cr_points_print (points_2sigma, f_PL);
+        ncm_lh_ratio2d_points_print (points_2sigma, f_PL);
         fprintf (f_PL, "\n\n");
       }
       if (points_3sigma != NULL)
       {
-        ncm_fit_cr_points_print (points_3sigma, f_PL);
+        ncm_lh_ratio2d_points_print (points_3sigma, f_PL);
         fprintf (f_PL, "\n\n");
       }
 
@@ -469,34 +495,47 @@ main (gint argc, gchar *argv[])
 
       g_free (pfile);
     }
-    ncm_fit_cr_points_free (points_1sigma);
-    ncm_fit_cr_points_free (points_2sigma);
-    ncm_fit_cr_points_free (points_3sigma);
+    ncm_lh_ratio2d_points_free (points_1sigma);
+    ncm_lh_ratio2d_points_free (points_2sigma);
+    ncm_lh_ratio2d_points_free (points_3sigma);
+    ncm_lh_ratio2d_free (lhr2d);
   }
 
   if (de_fit.nsigma_fisher >= 0 && (de_fit.bidim_cr[0] != -1) && (de_fit.bidim_cr[1] != -1))
   {
+    NcmLHRatio2d *lhr2d;
+    NcmMSetPIndex pi1;
+    NcmMSetPIndex pi2;
     GList *points_1sigma;
     GList *points_2sigma;
     GList *points_3sigma;
+
+    pi1.mid = NC_HICOSMO_ID;
+    pi2.mid = NC_HICOSMO_ID;
+    pi1.pid = de_fit.bidim_cr[0];
+    pi2.pid = de_fit.bidim_cr[1];
+
+    lhr2d = ncm_lh_ratio2d_new (fit, pi1, pi2);
+    
     points_1sigma = NULL;
     points_2sigma = NULL;
     points_3sigma = NULL;
+
     switch (de_fit.nsigma_fisher)
     {
       case 1:
-        points_1sigma = ncm_fit_cr2_fisher (fit, NC_HICOSMO_ID, de_fit.bidim_cr[0], NC_HICOSMO_ID, de_fit.bidim_cr[1], ncm_c_stats_1sigma ());
+        points_1sigma = ncm_lh_ratio2d_fisher_border (lhr2d, ncm_c_stats_1sigma (), de_fit.msg_level);
         break;
       case 2:
-        points_2sigma = ncm_fit_cr2_fisher (fit, NC_HICOSMO_ID, de_fit.bidim_cr[0], NC_HICOSMO_ID, de_fit.bidim_cr[1], ncm_c_stats_2sigma ());
+        points_2sigma = ncm_lh_ratio2d_fisher_border (lhr2d, ncm_c_stats_2sigma (), de_fit.msg_level);
         break;
       case 3:
-        points_3sigma = ncm_fit_cr2_fisher (fit, NC_HICOSMO_ID, de_fit.bidim_cr[0], NC_HICOSMO_ID, de_fit.bidim_cr[1], ncm_c_stats_3sigma ());
+        points_3sigma = ncm_lh_ratio2d_fisher_border (lhr2d, ncm_c_stats_3sigma (), de_fit.msg_level);
         break;
       default:
-        points_1sigma = ncm_fit_cr2_fisher (fit, NC_HICOSMO_ID, de_fit.bidim_cr[0], NC_HICOSMO_ID, de_fit.bidim_cr[1], ncm_c_stats_1sigma ());
-        points_2sigma = ncm_fit_cr2_fisher (fit, NC_HICOSMO_ID, de_fit.bidim_cr[0], NC_HICOSMO_ID, de_fit.bidim_cr[1], ncm_c_stats_2sigma ());
-        points_3sigma = ncm_fit_cr2_fisher (fit, NC_HICOSMO_ID, de_fit.bidim_cr[0], NC_HICOSMO_ID, de_fit.bidim_cr[1], ncm_c_stats_3sigma ());
+        points_1sigma = ncm_lh_ratio2d_fisher_border (lhr2d, ncm_c_stats_1sigma (), de_fit.msg_level);
+        points_2sigma = ncm_lh_ratio2d_fisher_border (lhr2d, ncm_c_stats_2sigma (), de_fit.msg_level);
+        points_3sigma = ncm_lh_ratio2d_fisher_border (lhr2d, ncm_c_stats_3sigma (), de_fit.msg_level);
         break;
     }
 
@@ -509,17 +548,17 @@ main (gint argc, gchar *argv[])
       fprintf (f_MFcr, "# %s\n", full_cmd_line);
       if (points_1sigma != NULL)
       {
-        ncm_fit_cr_points_print (points_1sigma, f_MFcr);
+        ncm_lh_ratio2d_points_print (points_1sigma, f_MFcr);
         fprintf (f_MFcr, "\n\n");
       }
       if (points_2sigma != NULL)
       {
-        ncm_fit_cr_points_print (points_2sigma, f_MFcr);
+        ncm_lh_ratio2d_points_print (points_2sigma, f_MFcr);
         fprintf (f_MFcr, "\n\n");
       }
       if (points_3sigma != NULL)
       {
-        ncm_fit_cr_points_print (points_3sigma, f_MFcr);
+        ncm_lh_ratio2d_points_print (points_3sigma, f_MFcr);
         fprintf (f_MFcr, "\n\n");
       }
 
@@ -530,9 +569,9 @@ main (gint argc, gchar *argv[])
       g_free (mcrfile);
     }
 
-    ncm_fit_cr_points_free (points_1sigma);
-    ncm_fit_cr_points_free (points_2sigma);
-    ncm_fit_cr_points_free (points_3sigma);
+    ncm_lh_ratio2d_points_free (points_1sigma);
+    ncm_lh_ratio2d_points_free (points_2sigma);
+    ncm_lh_ratio2d_points_free (points_3sigma);
   }
 
   if (de_data_cluster.print_mass_function == TRUE && ca_array != NULL)

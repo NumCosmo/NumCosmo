@@ -37,7 +37,7 @@
 #include "build_cfg.h"
 
 #include "lss/nc_cluster_mass_lnnormal.h"
-#include "math/util.h"
+#include "math/ncm_cfg.h"
 
 #include <gsl/gsl_randist.h>
 
@@ -85,7 +85,7 @@ static gboolean
 _nc_cluster_mass_lnnormal_resample (NcClusterMass *clusterm, NcHICosmo *model, gdouble lnM, gdouble z, gdouble *lnM_obs, gdouble *lnM_obs_params)
 {
   NcClusterMassLnnormal *mlnn = NC_CLUSTER_MASS_LNNORMAL (clusterm);
-  gsl_rng *rng = ncm_get_rng ();
+  gsl_rng *rng = ncm_cfg_rng_get ();
   const gdouble sigma = _NC_CLUSTER_MASS_LNNORMAL_SIGMA;
   const gdouble bias = _NC_CLUSTER_MASS_LNNORMAL_BIAS;
 

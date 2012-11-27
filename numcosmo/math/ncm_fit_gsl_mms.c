@@ -74,10 +74,10 @@ _ncm_fit_gsl_mms_constructed (GObject *object)
     gint i;
 
     fit_gsl_mms->f.f      = &nc_residual_multimin_f;
-    fit_gsl_mms->f.n      = fit->fparam_len;
+    fit_gsl_mms->f.n      = fit->fstate->fparam_len;
     fit_gsl_mms->f.params = fit_gsl_mms;
 
-    fit_gsl_mms->ss       = ncm_vector_new (fit->fparam_len); 
+    fit_gsl_mms->ss       = ncm_vector_new (fit->fstate->fparam_len); 
 
     for (i = 0; i < ncm_mset_fparams_len (fit->mset); i++)
     {
@@ -140,6 +140,7 @@ ncm_fit_gsl_mms_finalize (GObject *object)
 }
 
 static NcmFit *_ncm_fit_gsl_mms_copy_new (NcmFit *fit, NcmLikelihood *lh, NcmMSet *mset, NcmFitGradType gtype);
+static void _ncm_fit_gsl_mms_reset (NcmFit *fit);
 static gboolean _ncm_fit_gsl_mms_run (NcmFit *fit, NcmFitRunMsgs mtype);
 static const gchar *_ncm_fit_gsl_mms_get_desc (NcmFit *fit);
 
@@ -163,6 +164,7 @@ ncm_fit_gsl_mms_class_init (NcmFitGSLMMSClass *klass)
                                                       G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
   
   fit_class->copy_new = &_ncm_fit_gsl_mms_copy_new;
+  fit_class->reset    = &_ncm_fit_gsl_mms_reset;
   fit_class->run      = &_ncm_fit_gsl_mms_run;
   fit_class->get_desc = &_ncm_fit_gsl_mms_get_desc;
 }
@@ -174,6 +176,23 @@ _ncm_fit_gsl_mms_copy_new (NcmFit *fit, NcmLikelihood *lh, NcmMSet *mset, NcmFit
   return ncm_fit_gsl_mms_new (lh, mset, gtype, fit_gsl_mms->algo);
 }
 
+static void 
+_ncm_fit_gsl_mms_reset (NcmFit *fit)
+{
+  /* Chain up : start */
+  NCM_FIT_CLASS (ncm_fit_gsl_mms_parent_class)->reset (fit);
+  {
+    NcmFitGSLMMS *fit_gsl_mms = NCM_FIT_GSL_MMS (fit);
+    if (fit_gsl_mms->f.n != fit->fstate->fparam_len)
+    {
+      gsl_multimin_fminimizer_free (fit_gsl_mms->mms);
+      fit_gsl_mms->mms = NULL;
+      fit_gsl_mms->f.n = fit->fstate->fparam_len;
+      ncm_fit_gsl_mms_set_algo (fit_gsl_mms, fit_gsl_mms->algo);
+    }
+  }
+}
+
 static gboolean
 _ncm_fit_gsl_mms_run (NcmFit *fit, NcmFitRunMsgs mtype)
 {
@@ -183,18 +202,18 @@ _ncm_fit_gsl_mms_run (NcmFit *fit, NcmFitRunMsgs mtype)
   gdouble last_size = 1e300;
   gulong still_count = 0;
 
-  ncm_mset_fparams_get_vector (fit->mset, fit->x);
-  gsl_multimin_fminimizer_set (fit_gsl_mms->mms, &fit_gsl_mms->f, ncm_vector_gsl (fit->x), ncm_vector_gsl (fit_gsl_mms->ss));
+  ncm_mset_fparams_get_vector (fit->mset, fit->fstate->fparams);
+  gsl_multimin_fminimizer_set (fit_gsl_mms->mms, &fit_gsl_mms->f, ncm_vector_gsl (fit->fstate->fparams), ncm_vector_gsl (fit_gsl_mms->ss));
 
   do
   {
     gdouble size;
-    fit->niter++;
+    fit->fstate->niter++;
     status = gsl_multimin_fminimizer_iterate (fit_gsl_mms->mms);
 
-    if (fit->niter == 1 && !gsl_finite(fit_gsl_mms->mms->fval))
+    if (fit->fstate->niter == 1 && !gsl_finite(fit_gsl_mms->mms->fval))
     {
-      ncm_mset_fparams_set_vector (fit->mset, fit->x);
+      ncm_mset_fparams_set_vector (fit->mset, fit->fstate->fparams);
       return FALSE;
     }
 
@@ -226,14 +245,12 @@ _ncm_fit_gsl_mms_run (NcmFit *fit, NcmFitRunMsgs mtype)
     }
     ncm_fit_log_step (fit, fit_gsl_mms->mms->fval);
   }
-  while ( (status == GSL_CONTINUE) && (fit->niter < fit->maxeval) );
+  while ( (status == GSL_CONTINUE) && (fit->fstate->niter < fit->maxeval) );
 
   ncm_mset_fparams_set_gsl_vector (fit->mset, fit_gsl_mms->mms->x);
 
-  fit->m2lnL = fit_gsl_mms->mms->fval;
-  fit->sqrt_m2lnL = sqrt (fit_gsl_mms->mms->fval);
-  fit->m2lnL_dof = fit->m2lnL / fit->dof;
-  fit->m2lnL_prec = last_size;
+  fit->fstate->m2lnL = fit_gsl_mms->mms->fval;
+  fit->fstate->m2lnL_prec = last_size;
 
   return TRUE;
 }
@@ -365,5 +382,5 @@ ncm_fit_gsl_mms_set_algo (NcmFitGSLMMS *fit_gsl_mms, NcmFitGSLMMSAlgos algo)
   }
 
   if (fit_gsl_mms->mms == NULL)
-    fit_gsl_mms->mms = gsl_multimin_fminimizer_alloc (ncm_fit_gsl_mms_algos[fit_gsl_mms->algo], fit->fparam_len);
+    fit_gsl_mms->mms = gsl_multimin_fminimizer_alloc (ncm_fit_gsl_mms_algos[fit_gsl_mms->algo], fit->fstate->fparam_len);
 }

@@ -64,18 +64,20 @@ ncm_fit_levmar_init (NcmFitLevmar *fit_levmar)
   fit_levmar->der = NULL;
 }
 
-
 static void
 _ncm_fit_levmar_constructed (GObject *object)
 {
   /* Chain up : start */
   G_OBJECT_CLASS (ncm_fit_levmar_parent_class)->constructed (object);
   {
-    NcmFitLevmar *fit_levmar = NCM_FIT_LEVMAR (object);    
+    NcmFitLevmar *fit_levmar = NCM_FIT_LEVMAR (object);
+    NcmFit *fit = NCM_FIT (object);
+    
+    fit_levmar->fparam_len = fit->fstate->fparam_len;
+    fit_levmar->data_len   = fit->fstate->data_len;
     ncm_fit_levmar_set_algo (fit_levmar, fit_levmar->algo);
   }
 }
-
 
 static void
 _ncm_fit_levmar_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
@@ -87,7 +89,10 @@ _ncm_fit_levmar_set_property (GObject *object, guint prop_id, const GValue *valu
   {
     case PROP_ALGO:
     {
-      ncm_fit_levmar_set_algo (fit_levmar, g_value_get_enum (value));
+      if (fit_levmar->dif == NULL && fit_levmar->der == NULL)
+        fit_levmar->algo = g_value_get_enum (value);
+      else
+        ncm_fit_levmar_set_algo (fit_levmar, g_value_get_enum (value));
       break;
     }
     default:
@@ -116,20 +121,25 @@ static void
 ncm_fit_levmar_finalize (GObject *object)
 {
   NcmFitLevmar *fit_levmar = NCM_FIT_LEVMAR (object);
-  NcmFit *fit = NCM_FIT (object);
-
+  
   if (fit_levmar->dif != NULL)
-    g_slice_free1 (LM_DIF_WORKSZ (fit->fparam_len, fit->data_len) * sizeof(gdouble),
-                   fit_levmar->dif);
+  {
+    g_free (fit_levmar->dif);
+    fit_levmar->dif = NULL;
+  }
 
   if (fit_levmar->der != NULL)
-    g_slice_free1 (LM_DER_WORKSZ (fit->fparam_len, fit->data_len) * sizeof(gdouble),
-                   fit_levmar->der);
+  {
+    g_free (fit_levmar->der);
+    fit_levmar->der = NULL;
+  }
 
+  /* Chain up : end */
   G_OBJECT_CLASS (ncm_fit_levmar_parent_class)->finalize (object);
 }
 
 static NcmFit *_ncm_fit_levmar_copy_new (NcmFit *fit, NcmLikelihood *lh, NcmMSet *mset, NcmFitGradType gtype);
+static void _ncm_fit_levmar_reset (NcmFit *fit);
 static gboolean _ncm_fit_levmar_run (NcmFit *fit, NcmFitRunMsgs mtype);
 static const gchar *_ncm_fit_levmar_get_desc (NcmFit *fit);
 
@@ -153,8 +163,11 @@ ncm_fit_levmar_class_init (NcmFitLevmarClass *klass)
                                                       G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
   
   fit_class->copy_new = &_ncm_fit_levmar_copy_new;
+  fit_class->reset    = &_ncm_fit_levmar_reset;
   fit_class->run      = &_ncm_fit_levmar_run;
   fit_class->get_desc = &_ncm_fit_levmar_get_desc;
+
+  fit_class->is_least_squares = TRUE;
 }
 
 static NcmFit *
@@ -164,6 +177,22 @@ _ncm_fit_levmar_copy_new (NcmFit *fit, NcmLikelihood *lh, NcmMSet *mset, NcmFitG
   return ncm_fit_levmar_new (lh, mset, gtype, fit_levmar->algo);
 }
 
+static void 
+_ncm_fit_levmar_reset (NcmFit *fit)
+{
+  /* Chain up : start */
+  NCM_FIT_CLASS (ncm_fit_levmar_parent_class)->reset (fit);
+  {
+    NcmFitLevmar *fit_levmar = NCM_FIT_LEVMAR (fit);
+    if (fit_levmar->fparam_len != fit->fstate->fparam_len || fit_levmar->data_len != fit->fstate->data_len)
+    {
+      fit_levmar->fparam_len = fit->fstate->fparam_len;
+      fit_levmar->data_len = fit->fstate->data_len;
+      ncm_fit_levmar_set_algo (fit_levmar, fit_levmar->algo);
+    }
+  }
+}
+
 static gboolean ncm_fit_levmar_der_run (NcmFit *fit, NcmFitRunMsgs mtype);
 static gboolean ncm_fit_levmar_dif_run (NcmFit *fit, NcmFitRunMsgs mtype);
 
@@ -171,7 +200,8 @@ static gboolean
 _ncm_fit_levmar_run (NcmFit *fit, NcmFitRunMsgs mtype)
 {
   NcmFitLevmar *fit_levmar = NCM_FIT_LEVMAR (fit);
-  g_assert (fit->fparam_len != 0);
+  g_assert (fit->fstate->fparam_len != 0);
+  
   switch (fit_levmar->algo)
   {
     case NCM_FIT_LEVMAR_DER:
@@ -202,29 +232,27 @@ ncm_fit_levmar_der_run (NcmFit *fit, NcmFitRunMsgs mtype)
   opts[2] = 1.0e-15;
   opts[3] = 1.0e-20;
   
-  ncm_mset_fparams_get_vector (fit->mset, fit->x);
+  ncm_mset_fparams_get_vector (fit->mset, fit->fstate->fparams);
 
-  g_assert (ncm_vector_gsl (fit->f)->stride == 1 &&
-            ncm_vector_gsl (fit->x)->stride == 1 &&
-            NCM_MATRIX_GSL (fit->covar)->tda == NCM_MATRIX_NCOLS (fit->covar));
+  g_assert (ncm_vector_gsl (fit->fstate->ls_f)->stride == 1 &&
+            ncm_vector_gsl (fit->fstate->fparams)->stride == 1 &&
+            NCM_MATRIX_GSL (fit->fstate->covar)->tda == NCM_MATRIX_NCOLS (fit->fstate->covar));
 
   ret = dlevmar_der (
                      &nc_residual_levmar_f, &nc_residual_levmar_J,
-                     ncm_vector_gsl (fit->x)->data, NULL, fit->fparam_len, fit->data_len,
-                     fit->maxeval, opts, info, fit_levmar->der, NCM_MATRIX_GSL (fit->covar)->data, fit
+                     ncm_vector_gsl (fit->fstate->fparams)->data, NULL, fit->fstate->fparam_len, fit->fstate->data_len,
+                     fit->maxeval, opts, info, fit_levmar->der, NCM_MATRIX_GSL (fit->fstate->covar)->data, fit
                      );
 
   if (ret < 0)
     ncm_fit_log_step_error (fit, "(%d)", ret);
 
-  ncm_fit_ls_f (fit, fit->f);
-  fit->sqrt_m2lnL = sqrt (info[1]);
-  fit->m2lnL = info[1];
-  fit->m2lnL_dof = info[1] / fit->dof;
-  fit->m2lnL_prec = info[2] / info[1];
-  fit->niter = info[5];
+  ncm_fit_ls_f (fit, fit->fstate->ls_f);
+  fit->fstate->m2lnL = info[1];
+  fit->fstate->m2lnL_prec = info[2] / info[1];
+  fit->fstate->niter = info[5];
 
-  ncm_mset_fparams_set_vector (fit->mset, fit->x);
+  ncm_mset_fparams_set_vector (fit->mset, fit->fstate->fparams);
 
   return TRUE;
 }
@@ -242,29 +270,27 @@ ncm_fit_levmar_dif_run (NcmFit *fit, NcmFitRunMsgs mtype)
   opts[2] = 1.0e-15;
   opts[3] = 1.0e-20;
   
-  ncm_mset_fparams_get_vector (fit->mset, fit->x);
+  ncm_mset_fparams_get_vector (fit->mset, fit->fstate->fparams);
 
-  g_assert (ncm_vector_gsl (fit->f)->stride == 1 &&
-            ncm_vector_gsl (fit->x)->stride == 1 &&
-            NCM_MATRIX_GSL (fit->covar)->tda == NCM_MATRIX_NCOLS (fit->covar));
+  g_assert (ncm_vector_gsl (fit->fstate->ls_f)->stride == 1 &&
+            ncm_vector_gsl (fit->fstate->fparams)->stride == 1 &&
+            NCM_MATRIX_GSL (fit->fstate->covar)->tda == NCM_MATRIX_NCOLS (fit->fstate->covar));
 
   ret = dlevmar_dif (
                      &nc_residual_levmar_f,
-                     ncm_vector_gsl (fit->x)->data, NULL, fit->fparam_len, fit->data_len,
-                     fit->maxeval, opts, info, fit_levmar->dif, NCM_MATRIX_GSL (fit->covar)->data, fit
+                     ncm_vector_gsl (fit->fstate->fparams)->data, NULL, fit->fstate->fparam_len, fit->fstate->data_len,
+                     fit->maxeval, opts, info, fit_levmar->dif, NCM_MATRIX_GSL (fit->fstate->covar)->data, fit
                      );
 
   if (ret < 0)
     ncm_fit_log_step_error (fit, "(%d)", ret);
 
-  ncm_fit_ls_f (fit, fit->f);
-  fit->sqrt_m2lnL = sqrt (info[1]);
-  fit->m2lnL = info[1];
-  fit->m2lnL_dof = info[1] / fit->dof;
-  fit->m2lnL_prec = info[2] / info[1];
-  fit->niter = info[5];
+  ncm_fit_ls_f (fit, fit->fstate->ls_f);
+  fit->fstate->m2lnL = info[1];
+  fit->fstate->m2lnL_prec = info[2] / info[1];
+  fit->fstate->niter = info[5];
 
-  ncm_mset_fparams_set_vector (fit->mset, fit->x);
+  ncm_mset_fparams_set_vector (fit->mset, fit->fstate->fparams);
 
   return TRUE;
 }
@@ -399,7 +425,29 @@ ncm_fit_levmar_new_by_name (NcmLikelihood *lh, NcmMSet *mset, NcmFitGradType gty
 void
 ncm_fit_levmar_set_algo (NcmFitLevmar *fit_levmar, NcmFitLevmarAlgos algo)
 {
-  fit_levmar->algo = algo;
+  if (fit_levmar->algo != algo)
+  {
+    g_free (fit_levmar->dif);
+    fit_levmar->dif = NULL;
+    g_free (fit_levmar->der);
+    fit_levmar->der = NULL;
+  }
+
+  if (fit_levmar->der == NULL && fit_levmar->dif == NULL)
+  {
+    switch (fit_levmar->algo)
+    {
+      case NCM_FIT_LEVMAR_DER: 
+        fit_levmar->dif = g_new0 (gdouble, LM_DIF_WORKSZ (fit_levmar->fparam_len, fit_levmar->data_len));
+        break;
+      case NCM_FIT_LEVMAR_DIF:
+        fit_levmar->der = g_new0 (gdouble, LM_DER_WORKSZ (fit_levmar->fparam_len, fit_levmar->data_len));
+        break;
+      default:
+        g_assert_not_reached ();
+        break;
+    }
+  }
 }
 
 #endif /* NUMCOSMO_HAVE_LEVMAR */

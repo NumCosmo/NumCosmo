@@ -54,6 +54,7 @@ struct _NcmFitGSLLS
   NcmFit parent_instance;
   gsl_multifit_fdfsolver *ls;
   gsl_multifit_function_fdf f;
+  const gsl_multifit_fdfsolver_type *T;
 };
 
 GType ncm_fit_gsl_ls_get_type (void) G_GNUC_CONST;

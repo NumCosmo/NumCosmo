@@ -32,6 +32,7 @@
 #include <gsl/gsl_vector.h>
 #include <gsl/gsl_matrix.h>
 #include <gsl/gsl_spline.h>
+#include <gsl/gsl_rng.h>
 #ifdef NUMCOSMO_HAVE_SQLITE3
 #include <sqlite3.h>
 #endif
@@ -61,6 +62,10 @@ void ncm_message (gchar *msg, ...);
 gchar *ncm_string_ww (const gchar *msg, const gchar *first, const gchar *rest, guint ncols);
 void ncm_message_ww (const gchar *msg, const gchar *first, const gchar *rest, guint ncols);
 void ncm_cfg_msg_sepa (void);
+
+gsl_rng *ncm_cfg_rng_get (void);
+gchar *ncm_cfg_rng_get_state (void);
+void ncm_cfg_rng_set_state (gchar *state);
 
 FILE *ncm_cfg_fopen (gchar *filename, gchar *mode, ...);
 FILE *ncm_cfg_vfopen (gchar *filename, gchar *mode, va_list ap);

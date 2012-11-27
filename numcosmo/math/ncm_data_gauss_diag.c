@@ -39,7 +39,7 @@
 #include "build_cfg.h"
 
 #include "math/ncm_data_gauss_diag.h"
-#include "math/util.h"
+#include "math/ncm_cfg.h"
 
 #include <gsl/gsl_linalg.h>
 #include <gsl/gsl_blas.h>
@@ -246,7 +246,7 @@ _ncm_data_gauss_diag_resample (NcmData *data, NcmMSet *mset)
 {
   NcmDataGaussDiag *gauss = NCM_DATA_GAUSS_DIAG (data);
   NcmDataGaussDiagClass *gauss_diag_class = NCM_DATA_GAUSS_DIAG_GET_CLASS (gauss);
-  gsl_rng *rng = ncm_get_rng ();
+  gsl_rng *rng = ncm_cfg_rng_get ();
   gint i;
 
   if (gauss_diag_class->sigma_func != NULL)

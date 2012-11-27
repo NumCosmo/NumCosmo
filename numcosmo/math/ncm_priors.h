@@ -49,14 +49,14 @@ struct _NcmPriorGauss
   gdouble sigma;
 };
 
-void ncm_prior_add_oneside_a_inf_param (NcmLikelihood *lh, NcmModelID gmid, guint pid, gdouble a, gdouble s);
+void ncm_prior_add_oneside_a_inf_param (NcmLikelihood *lh, NcmModelID mid, guint pid, gdouble a, gdouble s);
 void ncm_prior_add_oneside_a_inf_const_func (NcmLikelihood *lh, NcmMSetFunc *func, gdouble mean, gdouble s);
 void ncm_prior_add_oneside_a_inf_func (NcmLikelihood *lh, NcmMSetFunc *func, gdouble z, gdouble mean, gdouble s);
 void ncm_prior_add_oneside_a_inf (NcmLikelihood *lh, NcmPriorGauss *gp);
-void ncm_prior_add_twoside_a_b (NcmLikelihood *lh, NcmModelID gmid, guint pid, gdouble a, gdouble b, gdouble s);
-void ncm_prior_add_positive (NcmLikelihood *lh, NcmModelID gmid, guint pid);
+void ncm_prior_add_twoside_a_b (NcmLikelihood *lh, NcmModelID mid, guint pid, gdouble a, gdouble b, gdouble s);
+void ncm_prior_add_positive (NcmLikelihood *lh, NcmModelID mid, guint pid);
 void ncm_prior_add_gaussian (NcmLikelihood *lh, NcmPriorGauss *gp);
-void ncm_prior_add_gaussian_data (NcmLikelihood *lh, NcmModelID gmid, guint pid, gdouble mean, gdouble sigma);
+void ncm_prior_add_gaussian_data (NcmLikelihood *lh, NcmModelID mid, guint pid, gdouble mean, gdouble sigma);
 void ncm_prior_add_gaussian_func (NcmLikelihood *lh, NcmMSetFunc *func, gdouble z, gdouble mean, gdouble sigma);
 void ncm_prior_add_gaussian_const_func (NcmLikelihood *lh, NcmMSetFunc *func, gdouble mean, gdouble sigma);
 

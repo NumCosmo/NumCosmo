@@ -68,6 +68,11 @@ G_INLINE_FUNC long double ncm_c_lnpi_4 (void) G_GNUC_CONST;
 G_INLINE_FUNC long double ncm_c_pi (void) G_GNUC_CONST;
 G_INLINE_FUNC long double ncm_c_tan_1arcsec (void) G_GNUC_CONST;
 
+G_INLINE_FUNC gdouble ncm_c_degree_to_radian (const gdouble d) G_GNUC_CONST;
+G_INLINE_FUNC gdouble ncm_c_radian_to_degree (const gdouble r) G_GNUC_CONST;
+G_INLINE_FUNC gdouble ncm_c_radian_0_2pi (const gdouble r) G_GNUC_CONST;
+G_INLINE_FUNC gdouble ncm_c_sign_sin (const gdouble r) G_GNUC_CONST;
+
 /*******************************************************************************
  * START: 2006 CODATA recommended values (see end of file)
  *******************************************************************************/
@@ -230,6 +235,19 @@ G_INLINE_FUNC long double ncm_c_pi (void)
 
 G_INLINE_FUNC long double ncm_c_tan_1arcsec (void)
 { return 4.8481368111333441675396429478852853e-6L; }
+
+
+G_INLINE_FUNC gdouble ncm_c_degree_to_radian (const gdouble d)
+{ return d * M_PI / 180.0; }
+
+G_INLINE_FUNC gdouble ncm_c_radian_to_degree (const gdouble r)
+{ return r * 180.0 / M_PI; }
+
+G_INLINE_FUNC gdouble ncm_c_radian_0_2pi (const gdouble r)
+{ return r - 2.0 * M_PI * floor (r / (2.0 * M_PI)); }
+
+G_INLINE_FUNC gdouble ncm_c_sign_sin (const gdouble r)
+{ return ncm_c_radian_0_2pi (r) < M_PI ? 1.0 : -1.0; }
 
 /*******************************************************************************
  * START: 2006 CODATA recommended values (see end of file)

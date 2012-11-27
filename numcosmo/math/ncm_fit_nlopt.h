@@ -66,6 +66,7 @@ struct _NcmFitNLOpt
   NcmVector *pabs;
   NcmVector *pscale;
   gchar *desc;
+  guint fparam_len;
 };
 
 GType ncm_fit_nlopt_get_type (void) G_GNUC_CONST;

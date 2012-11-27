@@ -153,7 +153,7 @@ G_INLINE_FUNC void
 nc_distance_prepare_if_needed (NcDistance *dist, NcHICosmo *model)
 {
   if (ncm_model_ctrl_update (dist->ctrl, NCM_MODEL (model)))
-	nc_distance_prepare (dist, model);
+    nc_distance_prepare (dist, model);
 }
 
 G_END_DECLS

@@ -155,9 +155,6 @@ main (gint argc, gchar *argv[])
     ncm_fit_log_covar (fit);
   }
 
-  if (cr_x != -1 && cr_y != -1 && fit != NULL)
-    ncm_fit_cr (fit, NC_HICOSMO_ID, cr_x, NC_HICOSMO_ID, cr_y, confidence);
-
   if (print_E && fit != NULL)
   {
     gdouble dz[] = {0.09, 0.17, 0.27, 0.4, 0.88, 1.3, 1.43, 1.53, 1.75};

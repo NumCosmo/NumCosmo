@@ -38,6 +38,7 @@
 
 #include "lss/nc_growth_func.h"
 #include "math/ncm_spline_cubic_notaknot.h"
+#include "math/cvode_util.h"
 
 #include <cvode/cvode.h>
 #include <cvode/cvode_dense.h>
@@ -152,8 +153,9 @@ growth_J (_NCM_SUNDIALS_INT_TYPE N, realtype z, N_Vector y, N_Vector fy, DlsMat 
 void
 nc_growth_func_prepare (NcGrowthFunc *gf, NcHICosmo *model)
 {
-  gdouble zf;
+  gdouble zf, z;
   gint i = _NC_MAX_SPLINE_POINTS - 1;
+  gint ii = 0;
   GArray *x_array, *y_array;
 
   if (gf->s != NULL)
@@ -197,9 +199,17 @@ nc_growth_func_prepare (NcGrowthFunc *gf, NcHICosmo *model)
   g_array_index (x_array, gdouble, i) = _NC_START_Z;
   i--;
 
-  while (1)
+  zf = _NC_START_Z;
+  while (TRUE)
   {
-    CVode (gf->cvode, 0.0, gf->yv, &zf, CV_ONE_STEP);
+    gint flag = CVode (gf->cvode, 0.0, gf->yv, &z, CV_ONE_STEP);
+    if (!nc_cvode_util_check_flag (&flag, "CVode", 1))
+      g_error ("nc_growth_func_prepare: cannot integrate function.");
+
+    if (zf == z && ii++ > 10)
+      g_error ("nc_growth_func_prepare: cannot integrate function.");
+    zf = z;
+    
     g_array_index (y_array, gdouble, i) = NV_Ith_S (gf->yv, 0);
     g_array_index (x_array, gdouble, i) = zf;
 

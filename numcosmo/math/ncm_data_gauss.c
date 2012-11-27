@@ -39,7 +39,7 @@
 #include "build_cfg.h"
 
 #include "math/ncm_data_gauss.h"
-#include "math/util.h"
+#include "math/ncm_cfg.h"
 
 #include <gsl/gsl_linalg.h>
 #include <gsl/gsl_blas.h>
@@ -214,7 +214,7 @@ _ncm_data_gauss_resample (NcmData *data, NcmMSet *mset)
   NcmDataGauss *gauss = NCM_DATA_GAUSS (data);
   NcmDataGaussClass *gauss_class = NCM_DATA_GAUSS_GET_CLASS (gauss);
   gboolean inv_cov_update = FALSE;
-  gsl_rng *rng = ncm_get_rng ();
+  gsl_rng *rng = ncm_cfg_rng_get ();
   gint ret;
   gint i;
 

@@ -39,7 +39,7 @@
 #include "lss/nc_cluster_mass_vanderlinde.h"
 #include "math/integral.h"
 #include "math/memory_pool.h"
-#include "math/util.h"
+#include "math/ncm_cfg.h"
 
 #include <gsl/gsl_randist.h>
 
@@ -202,7 +202,7 @@ static gboolean
 _nc_cluster_mass_vanderlinde_resample (NcClusterMass *clusterm, NcHICosmo *model, gdouble lnM, gdouble z, gdouble *xi, gdouble *xi_params)
 {
   NcClusterMassVanderlinde *msz = NC_CLUSTER_MASS_VANDERLINDE (clusterm);
-  gsl_rng *rng = ncm_get_rng ();
+  gsl_rng *rng = ncm_cfg_rng_get ();
   gdouble lnzeta, lnzeta_obs, zeta_obs, xi_mean;
 
   lnzeta = B_SZ * (lnM - log (msz->M0)) + C_SZ * log ((1.0 + z) / (1.0 + msz->z0)) + log (A_SZ);

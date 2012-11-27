@@ -36,7 +36,7 @@
 #include "build_cfg.h"
 
 #include "math/quaternion.h"
-#include "math/util.h"
+#include "math/ncm_cfg.h"
 
 #include <string.h>
 #include <math.h>
@@ -302,7 +302,7 @@ nc_quaternion_conjugate_u_mul (NcQ *q, NcQ *u, NcQ *res)
 void
 nc_quaternion_set_random (NcQ *q)
 {
-  gsl_rng *rand = ncm_get_rng();
+  gsl_rng *rand = ncm_cfg_rng_get ();
   nc_quaternion_set_from_data (q,
                                  -1.0 + 2.0 * gsl_rng_uniform_pos (rand),
                                  -1.0 + 2.0 * gsl_rng_uniform_pos (rand),

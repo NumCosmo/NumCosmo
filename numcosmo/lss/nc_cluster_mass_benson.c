@@ -39,7 +39,7 @@
 #include "lss/nc_cluster_mass_benson.h"
 #include "math/integral.h"
 #include "math/memory_pool.h"
-#include "math/util.h"
+#include "math/ncm_cfg.h"
 
 #include <gsl/gsl_randist.h>
 
@@ -204,7 +204,7 @@ static gboolean
 _nc_cluster_mass_benson_resample (NcClusterMass *clusterm, NcHICosmo *model, gdouble lnM, gdouble z, gdouble *xi, gdouble *xi_params)
 {
   NcClusterMassBenson *msz = NC_CLUSTER_MASS_BENSON (clusterm);
-  gsl_rng *rng = ncm_get_rng ();
+  gsl_rng *rng = ncm_cfg_rng_get ();
   gdouble lnzeta, lnzeta_obs, zeta_obs, xi_mean;
   const gdouble E0 = nc_hicosmo_E (model, msz->z0);
   const gdouble E = nc_hicosmo_E (model, z);

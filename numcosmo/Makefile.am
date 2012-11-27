@@ -67,12 +67,16 @@ ncm_sources = \
 	math/ncm_dataset.c                 \
 	math/ncm_likelihood.c              \
 	math/ncm_priors.c                  \
+	math/ncm_fit_state.c               \
 	math/ncm_fit.c                     \
 	math/ncm_fit_nlopt.c               \
 	math/ncm_fit_gsl_ls.c              \
 	math/ncm_fit_gsl_mm.c              \
 	math/ncm_fit_gsl_mms.c             \
-	math/ncm_fit_levmar.c
+	math/ncm_fit_levmar.c              \
+	math/ncm_fit_mc.c                  \
+	math/ncm_lh_ratio1d.c              \
+	math/ncm_lh_ratio2d.c
 
 ncm_headers = \
 	math/ncm_c.h                     \
@@ -115,12 +119,16 @@ ncm_headers = \
 	math/ncm_dataset.h               \
 	math/ncm_likelihood.h            \
 	math/ncm_priors.h                \
+	math/ncm_fit_state.h             \
 	math/ncm_fit.h                   \
 	math/ncm_fit_nlopt.h             \
 	math/ncm_fit_gsl_ls.h            \
 	math/ncm_fit_gsl_mm.h            \
 	math/ncm_fit_gsl_mms.h           \
-	math/ncm_fit_levmar.h
+	math/ncm_fit_levmar.h            \
+	math/ncm_fit_mc.h                \
+	math/ncm_lh_ratio1d.h            \
+	math/ncm_lh_ratio2d.h
 
 ncm_headers_internal = 
 
@@ -327,8 +335,6 @@ libnumcosmo_la_SOURCES =       \
 	numcosmo.h    \
 	model/quantum_gravity.c    \
 	model/quantum_gravity.h    \
-	likelihood/confidence_region.c \
-	likelihood/confidence_region.h \
 	math/poly.c               \
 	math/integral.c       \
 	math/function_cache.c \
@@ -386,7 +392,6 @@ nobase_cosmo_include_HEADERS =  \
 	scalefactor.h           \
 	build_cfg.h             \
 	model/quantum_gravity.h    \
-	likelihood/confidence_region.h \
 	math/cvode_util.h         \
 	math/function_cache.h     \
 	math/integral.h           \

@@ -36,9 +36,10 @@
 #include "build_cfg.h"
 
 #include "lss/nc_cluster_photoz_gauss.h"
-#include "math/util.h"
+#include "math/ncm_cfg.h"
 #include <math.h>
 #include <gsl/gsl_randist.h>
+#include <gsl/gsl_math.h>
 
 G_DEFINE_TYPE (NcClusterPhotozGauss, nc_cluster_photoz_gauss, NC_TYPE_CLUSTER_REDSHIFT);
 
@@ -99,7 +100,7 @@ static gboolean
 _nc_cluster_photoz_gauss_resample (NcClusterRedshift *clusterz, gdouble lnM, gdouble z, gdouble *z_obs, gdouble *z_obs_params)
 {
   NcClusterPhotozGauss *pzg = NC_CLUSTER_PHOTOZ_GAUSS (clusterz);
-  gsl_rng *rng = ncm_get_rng ();
+  gsl_rng *rng = ncm_cfg_rng_get ();
   gdouble sigma_z;
 
   z_obs_params[NC_CLUSTER_PHOTOZ_GAUSS_BIAS] = 0.0;

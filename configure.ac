@@ -3,7 +3,7 @@ dnl Created by Anjuta application wizard.
 dnl testa
 
 m4_define([numcosmo_major_version], [0])
-m4_define([numcosmo_minor_version], [8])
+m4_define([numcosmo_minor_version], [9])
 m4_define([numcosmo_micro_version], [0])
 m4_define([numcosmo_version],
           [numcosmo_major_version.numcosmo_minor_version.numcosmo_micro_version])

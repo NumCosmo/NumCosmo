@@ -43,7 +43,6 @@
 G_BEGIN_DECLS
 
 gulong ncm_random_seed (void);
-gsl_rng *ncm_get_rng (void);
 
 void ncm_finite_diff_calc_J (NcmModel *model, NcmData *data, NcmMatrix *jac);
 

@@ -160,7 +160,7 @@ main (gint argc, gchar *argv[])
     //		NcMatrix *z;
     gint npx = 100;
     gint npy = 500;
-    gsl_rng *rng = ncm_get_rng ();
+    gsl_rng *rng = ncm_cfg_rng_get ();
     GTimer *bench = g_timer_new ();
     gsl_function gFx, gFy;
     gFx.function = &Fx;
@@ -370,7 +370,7 @@ main (gint argc, gchar *argv[])
   {
     GTimer *bench = g_timer_new ();
     gsize tests = 10000;
-    gsl_rng *r = ncm_get_rng ();
+    gsl_rng *r = ncm_cfg_rng_get ();
     gsl_vector *x = gsl_vector_alloc (tests);
     gsl_vector *val = gsl_vector_alloc (tests);
     F.function = &Fjl;

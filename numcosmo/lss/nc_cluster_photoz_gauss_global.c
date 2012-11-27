@@ -36,10 +36,11 @@
 #include "build_cfg.h"
 
 #include "lss/nc_cluster_photoz_gauss_global.h"
-#include "math/util.h"
+#include "math/ncm_cfg.h"
 
 #include <math.h>
 #include <gsl/gsl_randist.h>
+#include <gsl/gsl_math.h>
 
 G_DEFINE_TYPE (NcClusterPhotozGaussGlobal, nc_cluster_photoz_gauss_global, NC_TYPE_CLUSTER_REDSHIFT);
 
@@ -111,7 +112,7 @@ _nc_cluster_photoz_gauss_global_resample (NcClusterRedshift *clusterz, gdouble l
 {
   NcClusterPhotozGaussGlobal *pzg_global = NC_CLUSTER_PHOTOZ_GAUSS_GLOBAL (clusterz);
   const gdouble sigma_z = pzg_global->sigma0 * (1.0 + z);
-  gsl_rng *rng = ncm_get_rng ();
+  gsl_rng *rng = ncm_cfg_rng_get ();
 
   do {
 	z_obs[0] = z + pzg_global->z_bias + gsl_ran_gaussian (rng, sigma_z);
