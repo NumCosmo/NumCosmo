@@ -301,11 +301,11 @@ libnlopt_enum_a_CFLAGS = -E
 
 ncm_fit_nlopt_enum.h: libnlopt_enum.a
 	$(AM_V_GEN) ( $(GLIB_MKENUMS) --symbol-prefix ncm_fit_nlopt --identifier-prefix nlopt_ --template $(srcdir)/ncm_fit_nlopt_enum.h.template libnlopt_enum_a-ncm_fit_nlopt_enum_meta.o ) > \
-	  ncm_fit_nlopt_enum.h.tmp && mv ncm_fit_nlopt_enum.h.tmp ncm_fit_nlopt_enum.h && cp ncm_fit_nlopt_enum.h $(srcdir)
+	  ncm_fit_nlopt_enum.h.tmp && mv ncm_fit_nlopt_enum.h.tmp ncm_fit_nlopt_enum.h
 
 ncm_fit_nlopt_enum.c: libnlopt_enum.a
 	$(AM_V_GEN) ( $(GLIB_MKENUMS) --symbol-prefix ncm_fit_nlopt --identifier-prefix nlopt_ --template $(srcdir)/ncm_fit_nlopt_enum.c.template libnlopt_enum_a-ncm_fit_nlopt_enum_meta.o ) > \
-	  ncm_fit_nlopt_enum.c.tmp && mv ncm_fit_nlopt_enum.c.tmp ncm_fit_nlopt_enum.c && cp ncm_fit_nlopt_enum.c $(srcdir)
+	  ncm_fit_nlopt_enum.c.tmp && mv ncm_fit_nlopt_enum.c.tmp ncm_fit_nlopt_enum.c
 
 BUILT_SOURCES += \
         ncm_fit_nlopt_enum.h \
