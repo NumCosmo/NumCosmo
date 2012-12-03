@@ -231,7 +231,7 @@ ncm_fit_mc_run (NcmFitMC *mc, NcmMSet *fiduc, guint ni, guint nf, NcmFitRunMsgs 
 
     ncm_mset_param_set_vector (mc->fit->mset, bf);
     ncm_dataset_resample (mc->fit->lh->dset, mc->fit->mset);
-    ncm_fit_run (mc->fit, mc->fit->mtype);
+    ncm_fit_run (mc->fit, mtype);
     
     ncm_mset_fparams_get_vector (mc->fit->mset, bf_i);
     ncm_vector_set (mc->m2lnL, i - ni, mc->fit->fstate->m2lnL);
@@ -318,6 +318,7 @@ ncm_fit_mc_mean_covar (NcmFitMC *mc)
     ncm_vector_free (p_i);
   }
   ncm_mset_fparams_set_vector (mc->fit->mset, mc->fit->fstate->fparams);
+  mc->fit->fstate->has_covar = TRUE;
 }
 
 /**
@@ -330,9 +331,9 @@ ncm_fit_mc_mean_covar (NcmFitMC *mc)
 void
 ncm_fit_mc_gof_pdf (NcmFitMC *mc)
 {
-  const guint nbins = mc->n / 10;
+  const guint nbins = mc->n / 10 >= 10 ? mc->n / 10 : 10;
   gint i;
-
+	
   if (mc->h != NULL && mc->h->n != nbins)
   {
     gsl_histogram_free (mc->h);
