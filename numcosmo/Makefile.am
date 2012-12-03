@@ -10,6 +10,7 @@ AM_CFLAGS = \
 	 $(GSL_CFLAGS) \
 	 $(FFTW3_CFLAGS) \
 	 $(CFITSIO_CFLAGS) \
+	 $(NLOPT_CFLAGS) \
 	 -I$(top_srcdir)
 
 SUBDIRS = 
@@ -69,11 +70,9 @@ ncm_sources = \
 	math/ncm_priors.c                  \
 	math/ncm_fit_state.c               \
 	math/ncm_fit.c                     \
-	math/ncm_fit_nlopt.c               \
 	math/ncm_fit_gsl_ls.c              \
 	math/ncm_fit_gsl_mm.c              \
 	math/ncm_fit_gsl_mms.c             \
-	math/ncm_fit_levmar.c              \
 	math/ncm_fit_mc.c                  \
 	math/ncm_lh_ratio1d.c              \
 	math/ncm_lh_ratio2d.c
@@ -121,11 +120,9 @@ ncm_headers = \
 	math/ncm_priors.h                \
 	math/ncm_fit_state.h             \
 	math/ncm_fit.h                   \
-	math/ncm_fit_nlopt.h             \
 	math/ncm_fit_gsl_ls.h            \
 	math/ncm_fit_gsl_mm.h            \
 	math/ncm_fit_gsl_mms.h           \
-	math/ncm_fit_levmar.h            \
 	math/ncm_fit_mc.h                \
 	math/ncm_lh_ratio1d.h            \
 	math/ncm_lh_ratio2d.h
@@ -270,6 +267,53 @@ libnumcosmo_la_LDFLAGS = -version-info $(NUMCOSMO_LT_VERSION)
 cosmo_includedir = \
 	$(pkgincludedir)
 
+# these sources (also mentioned above) are generated.
+BUILT_SOURCES =              \
+        ncm_enum_types.h     \
+        ncm_enum_types.c     \
+        nc_enum_types.h      \
+        nc_enum_types.c
+
+if HAVE_LIBNLOPT
+
+ncm_fit_nlopt_enum_meta.h: ncm_fit_nlopt_enum_meta.c
+	$(CPP) $(AM_CFLAGS) $(srcdir)/ncm_fit_nlopt_enum_meta.c -o ncm_fit_nlopt_enum_meta.h.tmp
+	$(GREP) -v '^#' ncm_fit_nlopt_enum_meta.h.tmp > ncm_fit_nlopt_enum_meta.h.tmp1
+	$(SED) 's/nlopt_algorithm/NcmFitNloptAlgorithm/' ncm_fit_nlopt_enum_meta.h.tmp1 > ncm_fit_nlopt_enum_meta.h.tmp2
+	$(SED) 's/nlopt_result/NcmFitNloptResult/' ncm_fit_nlopt_enum_meta.h.tmp2 > ncm_fit_nlopt_enum_meta.h
+
+ncm_fit_nlopt_enum.h: ncm_fit_nlopt_enum_meta.h
+	$(AM_V_GEN) ( $(GLIB_MKENUMS) --template $(srcdir)/ncm_fit_nlopt_enum.h.template ncm_fit_nlopt_enum_meta.h ) > \
+	  ncm_fit_nlopt_enum.h.tmp && mv ncm_fit_nlopt_enum.h.tmp ncm_fit_nlopt_enum.h
+
+ncm_fit_nlopt_enum.c: ncm_fit_nlopt_enum_meta.h
+	$(AM_V_GEN) ( $(GLIB_MKENUMS) --template $(srcdir)/ncm_fit_nlopt_enum.c.template ncm_fit_nlopt_enum_meta.h ) > \
+	  ncm_fit_nlopt_enum.c.tmp && mv ncm_fit_nlopt_enum.c.tmp ncm_fit_nlopt_enum.c
+
+BUILT_SOURCES += \
+        ncm_fit_nlopt_enum.h \
+        ncm_fit_nlopt_enum.c
+
+ncm_sources +=               \
+	ncm_fit_nlopt_enum.c \
+	math/ncm_fit_nlopt.c
+
+ncm_headers +=               \
+	ncm_fit_nlopt_enum.h \
+	math/ncm_fit_nlopt.h
+
+endif
+
+if HAVE_LIBLEVMAR
+
+ncm_headers +=                \
+	math/ncm_fit_levmar.h
+
+ncm_sources +=                \
+	math/ncm_fit_levmar.c
+
+endif
+
 ncm_enum_types.h: $(ncm_headers) ncm_enum_types.h.template
 	$(AM_V_GEN) ( cd $(srcdir) && $(GLIB_MKENUMS) --template ncm_enum_types.h.template $(ncm_headers) ) > \
 	  ncm_enum_types.h.tmp && mv ncm_enum_types.h.tmp ncm_enum_types.h
@@ -286,50 +330,15 @@ nc_enum_types.c: $(nc_headers) nc_enum_types.c.template
 	$(AM_V_GEN) ( cd $(srcdir) && $(GLIB_MKENUMS) --template nc_enum_types.c.template $(nc_headers) ) > \
 	  nc_enum_types.c.tmp && mv nc_enum_types.c.tmp nc_enum_types.c
 
-# these sources (also mentioned above) are generated.
-BUILT_SOURCES =              \
-        ncm_enum_types.h     \
-        ncm_enum_types.c     \
-        nc_enum_types.h      \
-        nc_enum_types.c
-
-if HAVE_LIBNLOPT
-
-noinst_LIBRARIES = libnlopt_enum.a
-libnlopt_enum_a_SOURCES = ncm_fit_nlopt_enum_meta.c
-libnlopt_enum_a_CFLAGS = -E
-
-ncm_fit_nlopt_enum.h: libnlopt_enum.a
-	$(AM_V_GEN) ( $(GLIB_MKENUMS) --symbol-prefix ncm_fit_nlopt --identifier-prefix nlopt_ --template $(srcdir)/ncm_fit_nlopt_enum.h.template libnlopt_enum_a-ncm_fit_nlopt_enum_meta.o ) > \
-	  ncm_fit_nlopt_enum.h.tmp && mv ncm_fit_nlopt_enum.h.tmp ncm_fit_nlopt_enum.h
-
-ncm_fit_nlopt_enum.c: libnlopt_enum.a
-	$(AM_V_GEN) ( $(GLIB_MKENUMS) --symbol-prefix ncm_fit_nlopt --identifier-prefix nlopt_ --template $(srcdir)/ncm_fit_nlopt_enum.c.template libnlopt_enum_a-ncm_fit_nlopt_enum_meta.o ) > \
-	  ncm_fit_nlopt_enum.c.tmp && mv ncm_fit_nlopt_enum.c.tmp ncm_fit_nlopt_enum.c
-
-BUILT_SOURCES += \
-        ncm_fit_nlopt_enum.h \
-        ncm_fit_nlopt_enum.c
-
-ncm_fit_enum_source = \
-	ncm_fit_nlopt_enum.c
-
-ncm_fit_enum_header = \
-	ncm_fit_nlopt_enum.h
-
-endif
-
-libnumcosmo_la_SOURCES =       \
-	$(ncm_sources)         \
-	$(ncm_headers)         \
-	ncm_enum_types.c       \
-	ncm_enum_types.h       \
-	$(nc_sources)          \
-	$(nc_headers)          \
-	nc_enum_types.c        \
-	nc_enum_types.h        \
-	$(ncm_fit_enum_source) \
-	$(ncm_fit_enum_header) \
+libnumcosmo_la_SOURCES =         \
+	$(ncm_sources)           \
+	$(ncm_headers)           \
+	ncm_enum_types.c         \
+	ncm_enum_types.h         \
+	$(nc_sources)            \
+	$(nc_headers)            \
+	nc_enum_types.c          \
+	nc_enum_types.h          \
 	scalefactor.c \
 	scalefactor.h \
 	numcosmo.h    \
@@ -427,7 +436,8 @@ EXTRA_DIST = \
 	ncm_fit_nlopt_enum.c.template  \
 	nc_enum_types.h.template  \
 	nc_enum_types.c.template  \
-	ncm_gir_scan.h
+	ncm_gir_scan.h            \
+	ncm_fit_nlopt_enum_meta.c
 
 CLEANFILES = $(BUILT_SOURCES)
 

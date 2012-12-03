@@ -267,12 +267,16 @@ ncm_fit_new (NcmFitType ftype, gchar *algo_name, NcmLikelihood *lh, NcmMSet *mse
     case NCM_FIT_TYPE_GSL_MMS:
       return ncm_fit_gsl_mms_new_by_name (lh, mset, gtype, algo_name);
       break;
+#ifdef NUMCOSMO_HAVE_LEVMAR
     case NCM_FIT_TYPE_LEVMAR:
       return ncm_fit_levmar_new_by_name (lh, mset, gtype, algo_name);
       break;
+#endif /* NUMCOSMO_HAVE_LEVMAR */
+#ifdef NUMCOSMO_HAVE_NLOPT
     case NCM_FIT_TYPE_NLOPT:
       return ncm_fit_nlopt_new_by_name (lh, mset, gtype, algo_name);
       break;
+#endif /* NUMCOSMO_HAVE_NLOPT */
     default:
       g_assert_not_reached ();
       break;

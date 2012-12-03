@@ -31,7 +31,6 @@
 #include <numcosmo/math/ncm_fit.h>
 #ifdef NUMCOSMO_HAVE_NLOPT
 #include <nlopt.h>
-#endif /* NUMCOSMO_HAVE_NLOPT */
 
 G_BEGIN_DECLS
 
@@ -80,4 +79,5 @@ NcmFit *ncm_fit_nlopt_new_default (NcmLikelihood *lh, NcmMSet *mset, NcmFitGradT
 
 G_END_DECLS
 
+#endif /* NUMCOSMO_HAVE_NLOPT */
 #endif /* _NCM_FIT_NLOPT_H_ */

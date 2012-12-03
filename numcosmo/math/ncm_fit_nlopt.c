@@ -173,7 +173,7 @@ ncm_fit_nlopt_class_init (NcmFitNLOptClass *klass)
                                    g_param_spec_enum ("algorithm",
                                                       NULL,
                                                       "NLOpt algorithm",
-                                                      NCM_FIT_NLOPT_TYPE_ALGORITHM, NLOPT_LN_NELDERMEAD,
+                                                      NCM_TYPE_FIT_NLOPT_ALGORITHM, NLOPT_LN_NELDERMEAD,
                                                       G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
   
   fit_class->copy_new = &_ncm_fit_nlopt_copy_new;
@@ -326,7 +326,7 @@ _ncm_fit_nlopt_get_desc (NcmFit *fit)
   NcmFitNLOpt *fit_nlopt = NCM_FIT_NLOPT (fit);
   if (fit_nlopt->desc == NULL)
   {
-    GEnumClass *enum_class = g_type_class_ref (NCM_FIT_NLOPT_TYPE_ALGORITHM);
+    GEnumClass *enum_class = g_type_class_ref (NCM_TYPE_FIT_NLOPT_ALGORITHM);
     GEnumValue *res = g_enum_get_value (enum_class, fit_nlopt->nlopt_algo);
     fit_nlopt->desc = g_strdup_printf ("NLOpt:%s", res->value_nick);
     g_type_class_unref (enum_class);
@@ -394,7 +394,7 @@ ncm_fit_nlopt_new_by_name (NcmLikelihood *lh, NcmMSet *mset, NcmFitGradType gtyp
 {
   if (algo_name != NULL)
   {
-    const GEnumValue *algo = ncm_cfg_get_enum_by_id_name_nick (NCM_FIT_NLOPT_TYPE_ALGORITHM,
+    const GEnumValue *algo = ncm_cfg_get_enum_by_id_name_nick (NCM_TYPE_FIT_NLOPT_ALGORITHM,
                                                                algo_name);
     if (algo == NULL)
       g_error ("ncm_fit_nlopt_new_by_name: algorithm %s not found.", algo_name);

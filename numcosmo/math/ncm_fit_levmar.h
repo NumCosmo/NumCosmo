@@ -29,6 +29,7 @@
 #include <glib.h>
 #include <glib-object.h>
 #include <numcosmo/math/ncm_fit.h>
+#ifdef NUMCOSMO_HAVE_LEVMAR
 
 G_BEGIN_DECLS
 
@@ -82,5 +83,6 @@ void ncm_fit_levmar_set_algo (NcmFitLevmar *fit_levmar, NcmFitLevmarAlgos algo);
 
 G_END_DECLS
 
+#endif /* NUMCOSMO_HAVE_LEVMAR */
 #endif /* _NCM_FIT_LEVMAR_H_ */
 

@@ -177,7 +177,7 @@ _nc_de_print_fit_list (const gchar *option_name, const gchar *value, gpointer da
   ncm_cfg_enum_print_all (NCM_TYPE_FIT_LEVMAR_ALGOS, "Minimization algorithims [levmar]");
 #endif
 #ifdef NUMCOSMO_HAVE_NLOPT
-  ncm_cfg_enum_print_all (NCM_FIT_NLOPT_TYPE_ALGORITHM, "Minimization algorithims [nlopt]");
+  ncm_cfg_enum_print_all (NCM_TYPE_FIT_NLOPT_ALGORITHM, "Minimization algorithims [nlopt]");
 #endif
   ncm_cfg_enum_print_all (NCM_TYPE_FIT_GRAD_TYPE, "Differentiation methods");
   return TRUE;

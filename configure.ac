@@ -55,6 +55,8 @@ AC_PROG_CPP
 AC_PROG_INSTALL   
 AC_PROG_LN_S
 AC_PROG_CC_STDC
+AC_PROG_GREP
+AC_PROG_SED
 dnl LT_INIT([disable-shared])
 dnl AC_DISABLE_SHARED
 LT_INIT
@@ -328,6 +330,8 @@ else
 fi
 AC_SUBST(have_levmar_support)
 
+AM_CONDITIONAL([HAVE_LIBLEVMAR], [test "x$have_levmar_support" != x])
+
 if test "x$levmar_need_prefix" = "xyes"; then
   AC_DEFINE([NC_LEVMAR_NEED_PREFIX],[1], [Duh!])
 fi
@@ -385,12 +389,16 @@ AM_CONDITIONAL([HAVE_LIBNLOPT], [test "x$have_nlopt_support" != x])
 TEST_SHARED_LIBS="$TEST_SHARED_LIBS $NLOPT_LIBS"
 TEST_SHARED_CFLAGS="$TEST_SHARED_CFLAGS $NLOPT_CFLAGS"
 
+if test "x$have_nlopt_support" != "x"; then
+
 PKG_CHECK_EXISTS([nlopt >= 2.2], [
 AC_DEFINE([HAVE_NLOPT_2_2],[1], [If nlopt version is bigger than 2.2])
 AC_CHECK_LIB([nlopt],[nlopt_create],,[AC_MSG_ERROR([Can't link to -lnlopt. The nlopt library is probably compiled with c++ support, recompile the C version.])],[$APPEND_LIBS])
 ],[
 AC_CHECK_LIB([nlopt],[nlopt_minimize_constrained],,[AC_MSG_ERROR([Can't link to -lnlopt. The nlopt library is probably compiled with C++ support, recompile the C version.])],[$APPEND_LIBS])
 ])
+
+fi
 
 dnl ***************************************************************************
 dnl Check for sundials

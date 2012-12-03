@@ -81,9 +81,20 @@ CFILE_GLOB=$(top_srcdir)/numcosmo/*.c \
 # e.g. EXTRA_HFILES=$(top_srcdir}/contrib/extra.h
 EXTRA_HFILES=
 
+if ! HAVE_LIBNLOPT
+ignore_nlopt = \
+	ncm_fit_nlopt_enum.h \
+	ncm_fit_nlopt.h
+endif
+
+if ! HAVE_LIBLEVMAR
+ignore_levmar = \
+	ncm_fit_levmar.h
+endif
+
 # Header files or dirs to ignore when scanning. Use base file/dir names
 # e.g. IGNORE_HFILES=gtkdebug.h gtkintl.h private_code
-IGNORE_HFILES=linear_internal.h config.h
+IGNORE_HFILES=linear_internal.h config.h $(ignore_nlopt) $(ignore_levmar)
 
 # Images to copy into HTML directory.
 # e.g. HTML_IMAGES=$(top_srcdir)/gtk/stock-icons/stock_about_24.png
@@ -111,7 +122,7 @@ include $(top_srcdir)/gtk-doc.make
 
 # Other files to distribute
 # e.g. EXTRA_DIST += version.xml.in
-EXTRA_DIST += $(XML_FILES) references.bib container.css
+EXTRA_DIST += $(XML_FILES) references.bib container.css addmathjax.pl xmltogtk.pl
 
 # Files not to distribute
 # for --rebuild-types in $(SCAN_OPTIONS), e.g. $(DOC_MODULE).types
