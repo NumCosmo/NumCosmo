@@ -26,7 +26,7 @@
 /**
  * SECTION:nc_data_bao
  * @title: BAO Data
- * @short_description: Object representing BAO data
+ * @short_description: Helper function for obtaining BAO data
  *
  * FIXME
  * 

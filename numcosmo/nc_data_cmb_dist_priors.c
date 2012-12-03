@@ -25,8 +25,8 @@
 
 /**
  * SECTION:nc_data_cmb_dist_priors
- * @title: Cosmic Microwave Background Data - Distance priors
- * @short_description: CMB Data
+ * @title: Cosmic Microwave Background Data -- Distance priors
+ * @short_description: CMB distance priors implementation
  *
  * FIXME
  */

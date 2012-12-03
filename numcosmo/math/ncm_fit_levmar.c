@@ -25,10 +25,11 @@
 
 /**
  * SECTION:ncm_fit_levmar
- * @title: Least Squares Algorithims -- Levmar
+ * @title: Least Squares -- Levmar
  * @short_description: Interface for Levenberg-Marquardt nonlinear least squares algorithm library
  *
  * FIXME
+ * 
  */
 
 #ifdef HAVE_CONFIG_H

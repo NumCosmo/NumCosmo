@@ -25,8 +25,8 @@
 
 /**
  * SECTION:nc_data_cmb_shift_param
- * @title: Cosmic Microwave Background Data - Distance priors
- * @short_description: CMB Data
+ * @title: Cosmic Microwave Background Data -- Shift Parameter
+ * @short_description: CMB shift parameter implementation
  *
  * FIXME
  */

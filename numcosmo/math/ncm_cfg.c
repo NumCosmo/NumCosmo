@@ -25,15 +25,16 @@
 /**
  * SECTION:ncm_cfg
  * @title: Library Configuration
- * @short_description: FIXME
+ * @short_description: Library configuration and helper functions
  *
  * FIXME
+ * 
  */
 
 /**
  * SECTION:nc_macros
  * @title: Library Utilities Macros
- * @short_description: FIXME
+ * @short_description: General purpose macros
  *
  * FIXME
  */

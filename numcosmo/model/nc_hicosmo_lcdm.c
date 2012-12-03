@@ -24,10 +24,11 @@
 
 /**
  * SECTION:nc_hicosmo_lcdm
- * @title: LCDM model
- * @short_description: FIXME
+ * @title: $\Lambda$CDM
+ * @short_description: Implementation of $\Lambda$CDM model
  *
  * FIXME
+ * 
  */
 
 #ifdef HAVE_CONFIG_H

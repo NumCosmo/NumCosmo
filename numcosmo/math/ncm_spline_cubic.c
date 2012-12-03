@@ -24,11 +24,12 @@
 
 /**
  * SECTION:ncm_spline_cubic
- * @title: Cubic Spline
- * @short_description: Abstract class for cubic splines.
+ * @title: Cubic Spline Abstract Class
+ * @short_description: Base class for implementing cubic splines
  *
  * This class implements the functions which use a polynomial interpolation
- * method of third degree, except that one which prepares the spline.
+ * method of third degree.
+ * 
  */
 
 #ifdef HAVE_CONFIG_H

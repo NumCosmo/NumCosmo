@@ -24,8 +24,8 @@
 
 /**
  * SECTION:nc_hicosmo
- * @title: Cosmological Model Pure Virtual Class
- * @short_description: FIXME
+ * @title: Cosmological Model Abstract Class
+ * @short_description: Class for implementing homogeneous and isotropic cosmological models 
  *
  * FIXME
  *

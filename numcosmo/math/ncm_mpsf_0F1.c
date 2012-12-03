@@ -24,10 +24,11 @@
 
 /**
  * SECTION:ncm_mpsf_0F1
- * @title: Multiple Precision Hypergeometric 0F1
- * @short_description: FIXME
+ * @title: Hypergeometric 0F1
+ * @short_description: Hypergeometric 0F1 multiple precision implementation
  *
  * FIXME
+ * 
  */
 
 #ifdef HAVE_CONFIG_H

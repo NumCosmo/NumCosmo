@@ -25,8 +25,8 @@
 
 /**
  * SECTION:ncm_mset
- * @title: A set of NcmModels
- * @short_description: FIXME
+ * @title: A Set of NcmModels
+ * @short_description: Object representing a set of different NcmModel objects
  *
  * FIXME
  */

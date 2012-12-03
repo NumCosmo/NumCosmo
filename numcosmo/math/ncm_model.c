@@ -24,8 +24,8 @@
 
 /**
  * SECTION:ncm_model
- * @title: Generic Model Pure Virtual Class
- * @short_description: FIXME
+ * @title: Model Abstract Class
+ * @short_description: Base class for implementing models
  *
  * FIXME
  */

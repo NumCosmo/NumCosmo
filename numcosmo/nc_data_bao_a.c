@@ -25,10 +25,11 @@
 
 /**
  * SECTION:nc_data_bao_a
- * @title: Baryonic Oscillation Data
- * @short_description: BAO Data
+ * @title: Baryonic Oscillation Data -- Acoustic Scale
+ * @short_description: BAO acoustic scale estimator
  *
- * FIXME
+ * See <link linkend="XEisenstein2005">Eisenstein et al. (2005)</link>.
+ * 
  */
 
 #ifdef HAVE_CONFIG_H

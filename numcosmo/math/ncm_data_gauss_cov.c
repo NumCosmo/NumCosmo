@@ -25,11 +25,10 @@
 
 /**
  * SECTION:ncm_data_gauss_cov
- * @title: Gaussian Data
- * @short_description: Gaussian abstract class - Covariance
+ * @title: Gaussian Data - Cov
+ * @short_description: Gaussian data object, covariance
  *
- * Generic gaussian distribution which uses the covariance matrix
- * to perform the calculations.
+ * Generic gaussian distribution which uses the covariance matrix as input.
  * 
  */
 

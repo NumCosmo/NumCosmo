@@ -24,8 +24,8 @@
 
 /**
  * SECTION:ncm_sf_sbessel
- * @title: Spherical Bessel j_l
- * @short_description: FIXME
+ * @title: Spherical Bessel -- Double Precision
+ * @short_description: Double precision spherical bessel implementation
  *
  * FIXME
  */

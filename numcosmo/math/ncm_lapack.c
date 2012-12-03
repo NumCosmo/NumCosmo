@@ -24,10 +24,11 @@
 
 /**
  * SECTION:ncm_lapack
- * @title: Helper C functions to call lapack
- * @short_description: FIXME
+ * @title: Lapack Helper C Functions
+ * @short_description: Encapsulated fortran lapack functions
  *
  * FIXME
+ * 
  */
 
 #ifdef HAVE_CONFIG_H

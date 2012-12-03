@@ -26,7 +26,7 @@
 /**
  * SECTION:ncm_fit_gsl_mm
  * @title: Non-linear Minimization -- GSL
- * @short_description: FIXME
+ * @short_description: Interface for non-linear minimization GSL algorithms
  *
  * FIXME
  */

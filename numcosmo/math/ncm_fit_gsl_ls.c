@@ -25,8 +25,8 @@
 
 /**
  * SECTION:ncm_fit_gsl_ls
- * @title: Least Squares Algorithims -- GSL
- * @short_description: FIXME
+ * @title: Least Squares -- GSL
+ * @short_description: Interface for GSL least squares algorithms
  *
  * FIXME
  */

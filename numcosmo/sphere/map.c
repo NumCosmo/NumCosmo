@@ -25,10 +25,11 @@
 
 /**
  * SECTION:map
- * @title: Cosmic Microwave Background Map
- * @short_description: Object representing a CMB data
+ * @title: Spherical Shell Map
+ * @short_description: Object representing a spherical shell map
  *
- * Map manipulation algorithms, Ylm decomposition, ...
+ * Map manipulation algorithms, Ylm decomposition.
+ * 
  */
 
 #ifdef HAVE_CONFIG_H

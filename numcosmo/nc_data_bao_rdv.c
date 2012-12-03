@@ -25,10 +25,11 @@
 
 /**
  * SECTION:nc_data_bao_rdv
- * @title: Baryonic Oscillation Data
- * @short_description: BAO Data
+ * @title: Baryonic Oscillation Data -- rDv
+ * @short_description: BAO $r/D_V$ ratio estimator
  *
- * FIXME
+ * See <link linkend="XPercival2007">Percival et al. (2007)</link>.
+ * 
  */
 
 #ifdef HAVE_CONFIG_H

@@ -25,10 +25,11 @@
 
 /**
  * SECTION:ncm_data
- * @title: Generic Data Object
- * @short_description: Object representing generic data
+ * @title: Data Abstract Class
+ * @short_description: Base class for implementing data objects
  *
  * FIXME
+ * 
  */
 
 #ifdef HAVE_CONFIG_H

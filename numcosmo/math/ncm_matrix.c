@@ -24,10 +24,11 @@
 
 /**
  * SECTION:ncm_matrix
- * @title: Matrix
- * @short_description: Allocation and access.
+ * @title: Matrix Object
+ * @short_description: Matrix object representing an array of doubles.
  *
  * This object defines the functions for allocating and accessing matrices.
+ * Also includes serveral matrix operations.
  *
  */
 

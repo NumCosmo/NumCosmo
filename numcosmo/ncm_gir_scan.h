@@ -24,8 +24,8 @@
 
 /**
  * SECTION:ncm_gir_scan
- * @title: Gir scanning compatibility.
- * @short_description:  Gir scanning types stubs.
+ * @title: Gir Scanning Compatibility.
+ * @short_description: Gir scanning types stubs
  *
  * Stubs to avoid warnings from gir scanning 
  * all functions/structs using these types

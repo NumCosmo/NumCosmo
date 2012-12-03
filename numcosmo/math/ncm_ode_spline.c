@@ -24,10 +24,11 @@
 
 /**
  * SECTION:ncm_ode_spline
- * @title: Spline
- * @short_description: FIXME
+ * @title: ODE Spline Interpolation
+ * @short_description: Automatic generation of splines from ODE solutions
  *
  * FIXME
+ * 
  */
 
 #ifdef HAVE_CONFIG_H

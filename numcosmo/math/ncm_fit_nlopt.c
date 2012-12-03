@@ -25,7 +25,7 @@
 
 /**
  * SECTION:ncm_fit_nlopt
- * @title: NLopt interface
+ * @title: NLopt Interface Object
  * @short_description: Interface for NLopt optmization library
  *
  * FIXME

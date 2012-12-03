@@ -25,11 +25,10 @@
 
 /**
  * SECTION:ncm_data_gauss_diag
- * @title: Gaussian Data
- * @short_description: Gaussian abstract class - Diagonal covariance
+ * @title: Gaussian Data - DiagCov
+ * @short_description: Gaussian data object, diagonal covariance
  *
- * Generic gaussian distribution which uses the covariance matrix
- * to perform the calculations.
+ * Gaussian distribution which uses a diagonal covariance matrix as input.
  * 
  */
 

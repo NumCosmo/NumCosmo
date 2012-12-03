@@ -25,11 +25,10 @@
 
 /**
  * SECTION:ncm_data_gauss
- * @title: Gaussian Data
- * @short_description: Gaussian abstract class - Inverse covariance
+ * @title: Gaussian Data - InvCov
+ * @short_description: Gaussian data object, inverse covariance
  *
- * Generic gaussian distribution which uses the inverse covariance matrix
- * to perform the calculations.
+ * Gaussian distribution which uses the inverse covariance matrix as input.
  * 
  */
 

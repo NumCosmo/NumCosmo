@@ -24,11 +24,12 @@
 
 /**
  * SECTION:ncm_spline_gsl
- * @title: GSL spline 
- * @short_description: Object wrapper.
+ * @title: GSL Spline
+ * @short_description: GSL spline object wrapper
  *
- * This object comprises the proper functions to use 
- * the GNU Scientific Library (GSL) spline functions and interpolation methods.
+ * This object comprises the proper functions to use the GNU Scientific 
+ * Library (GSL) spline functions and interpolation methods.
+ * 
  */
 
 #ifdef HAVE_CONFIG_H

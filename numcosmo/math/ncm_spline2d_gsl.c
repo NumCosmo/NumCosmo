@@ -24,10 +24,12 @@
 
 /**
  * SECTION:ncm_spline2d_gsl
- * @title: Two Dimensional Spline GSL based
- * @short_description: Abstract class for two dimensional splines.
+ * @title: Bimensional Spline from Spline (GSL)
+ * @short_description: Implements spline from spline method using GSL as base splines
  *
- * This object comprises the proper functions to use the GNU Scientific Library (GSL) spline functions and interpolation methods.
+ * This object implements spline from spline methods using GSL splines as
+ * base objects.
+ * 
  */
 
 #ifdef HAVE_CONFIG_H

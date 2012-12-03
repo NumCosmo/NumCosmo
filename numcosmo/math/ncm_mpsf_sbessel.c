@@ -24,7 +24,7 @@
 
 /**
  * SECTION:ncm_mpsf_sbessel
- * @title: Multiple Precision Spherical Bessel j_l
+ * @title: Spherical Bessel
  * @short_description: Spherical bessel implementation with support for multiple precision calculation
  *
  * FIXME

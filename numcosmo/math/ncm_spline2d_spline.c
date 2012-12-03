@@ -24,10 +24,11 @@
 
 /**
  * SECTION:ncm_spline2d_spline
- * @title: Two Dimensional Spline from Spline
- * @short_description: Abstract class for two dimensional splines.
+ * @title: Bidimensional Spline from Spline
+ * @short_description: Implements bidimensional splines from splines method.
  *
  * FIXME
+ * 
  */
 
 #ifdef HAVE_CONFIG_H

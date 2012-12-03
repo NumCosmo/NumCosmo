@@ -25,8 +25,8 @@
 
 /**
  * SECTION:ncm_fit_state
- * @title: Parameters Fiting State
- * @short_description: FIXME
+ * @title: Fitting State
+ * @short_description: Object representing the current state of a NcmFit object
  *
  * FIXME
  */

@@ -24,10 +24,11 @@
 
 /**
  * SECTION:nc_hicosmo_de_xcdm
- * @title: XCDM Darkenergy Model
- * @short_description: FIXME
+ * @title: Dark Energy -- XCDM
+ * @short_description: Constant dark energy equation of state model
  *
  * FIXME
+ * 
  */
 
 #ifdef HAVE_CONFIG_H

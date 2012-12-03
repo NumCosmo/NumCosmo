@@ -24,8 +24,8 @@
 
 /**
  * SECTION:nc_hicosmo_de
- * @title: Darkenergy Virtual Model
- * @short_description: Generic model for darkenergy parametric models
+ * @title: Dark Energy Abstract Class
+ * @short_description: Base class for implementing dark energy models
  *
  * FIXME
  */

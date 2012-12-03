@@ -25,7 +25,7 @@
 /**
  * SECTION:ncm_priors
  * @title: Statistical Priors
- * @short_description: FIXME
+ * @short_description: General statistical priors
  *
  * FIXME
  */

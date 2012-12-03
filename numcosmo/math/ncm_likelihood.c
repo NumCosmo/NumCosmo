@@ -26,9 +26,10 @@
 /**
  * SECTION:ncm_likelihood
  * @title: Likelihood
- * @short_description: FIXME
+ * @short_description: Likelihood object combining data and priors
  *
  * FIXME
+ * 
  */
 
 #ifdef HAVE_CONFIG_H

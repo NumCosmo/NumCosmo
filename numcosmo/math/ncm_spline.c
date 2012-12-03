@@ -24,11 +24,12 @@
 
 /**
  * SECTION:ncm_spline
- * @title: Spline abstract class
- * @short_description: Defines the prototype of a general spline object.
+ * @title: Spline Abstract Class
+ * @short_description: Base class for implementing splines
  *
- * This class comprises all functions to provide a #NcmSpline, get its properties
- * and evaluate it given an interpolation method.
+ * This class comprises all functions to provide a #NcmSpline, together with 
+ * all necessary methods.
+ * 
  */
 
 #ifdef HAVE_CONFIG_H

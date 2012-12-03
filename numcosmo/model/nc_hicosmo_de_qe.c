@@ -24,10 +24,11 @@
 
 /**
  * SECTION:nc_hicosmo_de_qe
- * @title: Quintessence Inspired Darkenergy Model
+ * @title: Dark Energy -- Quintessence (Inspired)
  * @short_description: FIXME
  *
  * FIXME
+ * 
  */
 
 #ifdef HAVE_CONFIG_H

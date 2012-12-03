@@ -25,8 +25,8 @@
 
 /**
  * SECTION:nc_hicosmo_priors
- * @title: Cosmological Model Priors
- * @short_description: FIXME
+ * @title: Homogeneus and Isotropic Models Priors
+ * @short_description: Priors for HICosmo models
  *
  * FIXME
  *

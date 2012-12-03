@@ -24,10 +24,11 @@
 
 /**
  * SECTION:nc_hicosmo_de_linder
- * @title: Linder Darkenergy Model
- * @short_description: FIXME
+ * @title: Dark Energy -- Linder
+ * @short_description: Linder dark energy equation of state parametrization
  *
- * FIXME
+ * See <link linkend="XLinder2003">Linder (2003)</link>.
+ * 
  */
 
 #ifdef HAVE_CONFIG_H

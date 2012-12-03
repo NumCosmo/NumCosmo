@@ -25,8 +25,8 @@
 
 /**
  * SECTION:ncm_fit_mc
- * @title: Montecarlo analysis object
- * @short_description: FIXME
+ * @title: Monte Carlo Analysis
+ * @short_description: Object implementing Monte Carlo analysis
  *
  * FIXME
  * 

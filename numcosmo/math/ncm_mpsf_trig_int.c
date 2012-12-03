@@ -28,6 +28,7 @@
  * @short_description: Sin integral implementation with support for multiple precision calculation
  *
  * FIXME
+ * 
  */
 
 #ifdef HAVE_CONFIG_H

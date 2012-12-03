@@ -24,10 +24,11 @@
 
 /**
  * SECTION:nc_hicosmo_de_pad
- * @title: Padmanabhan parametrization Darkenergy Model
- * @short_description: FIXME
+ * @title: Dark Energy -- Jassal-Bagla-Padmanabhan
+ * @short_description: Jassal-Bagla-Padmanabhan  dark energy equation of state parametrization
  *
- * FIXME
+ * See <link linkend="XJassal2005">Jassal et al. (2005)</link>.
+ * 
  */
 
 #ifdef HAVE_CONFIG_H

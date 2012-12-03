@@ -25,10 +25,11 @@
 
 /**
  * SECTION:ncm_fit
- * @title: Parameters Fiting Object
- * @short_description: FIXME
+ * @title: Model Fitting Abstract Class
+ * @short_description: Class for implementing fitting methods
  *
  * FIXME
+ * 
  */
 
 #ifdef HAVE_CONFIG_H

@@ -25,10 +25,11 @@
 
 /**
  * SECTION:ncm_mset_func
- * @title: A function of NcmMSet
- * @short_description: FIXME
+ * @title: A Function of NcmMSet
+ * @short_description: Object representing a function on NcmMSet
  *
  * FIXME
+ * 
  */
 
 #ifdef HAVE_CONFIG_H

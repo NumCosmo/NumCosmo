@@ -25,8 +25,8 @@
 
 /**
  * SECTION:ncm_lh_ratio1d
- * @title: Likelihood Ratio 1d
- * @short_description: Likelihood ratio object for one dimensional analysis.
+ * @title: Likelihood Ratio 1D
+ * @short_description: Likelihood ratio object for one dimensional analysis
  *
  * FIXME
  * 

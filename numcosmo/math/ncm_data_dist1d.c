@@ -29,6 +29,7 @@
  * @short_description: Object representing a one variable distribution data
  *
  * FIXME
+ * 
  */
 
 #ifdef HAVE_CONFIG_H

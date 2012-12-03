@@ -25,8 +25,8 @@
 
 /**
  * SECTION:ncm_fftlog
- * @title: Logarithm fast fourier transform algorithm
- * @short_description: FIXME
+ * @title: Logarithm Fast Fourier Algorithm
+ * @short_description: Object implementing logarithm fast fourier transform
  *
  * FIXME
  */

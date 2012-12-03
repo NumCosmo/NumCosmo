@@ -24,11 +24,12 @@
 
 /**
  * SECTION:ncm_spline2d
- * @title: Two Dimensional Spline Abstract Class
- * @short_description: Defines the prototype of the #NcmSpline2d object.
+ * @title: Bidimensional Spline Abstract Class
+ * @short_description: Base class for implementing bidimensional splines
  *
  * This class comprises all functions to provide a #NcmSpline2d, get its properties
  * and evaluate it given an interpolation method.
+ * 
  */
 
 #ifdef HAVE_CONFIG_H

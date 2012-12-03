@@ -25,11 +25,12 @@
 /**
  * SECTION:ncm_spline_func
  * @title: Spline Autoknots
- * @short_description: Automatic generation of the knots of a spline.
+ * @short_description: Automatic generation of the knots of a spline
  *
  * This set of functions implements 4 different methods to automatically determine
  * the #NcmVector of knots of a #NcmSpline given a relative error between the function
  * to be interpolated and the spline result.
+ * 
  */
 
 #ifdef HAVE_CONFIG_H

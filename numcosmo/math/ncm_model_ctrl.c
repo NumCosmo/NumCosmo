@@ -24,8 +24,8 @@
 
 /**
  * SECTION:ncm_model_ctrl
- * @title: Model update control object
- * @short_description: FIXME
+ * @title: Model Update Control Object
+ * @short_description: Control object for testing updates on model status
  *
  * FIXME
  */

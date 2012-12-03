@@ -26,7 +26,7 @@
 /**
  * SECTION:nc_data_cmb
  * @title: CMB Data
- * @short_description: Object representing CMB data
+ * @short_description: Helper function for obtaining CMB data
  *
  * FIXME
  * 

@@ -25,10 +25,11 @@
 /**
  * SECTION:ncm_spline_cubic_notaknot
  * @title: Notaknot Cubic Spline
- * @short_description: Notaknot boundary conditions.
+ * @short_description: Cubic spline with 'not a knot' boundary conditions
  *
  * This object implements the necessary functions to compute a cubic spline with
- * boundary conditions obtained with the notaknot method.
+ * boundary conditions obtained with the 'not a knot' method.
+ * 
  */
 
 #ifdef HAVE_CONFIG_H

@@ -28,6 +28,7 @@
  * @short_description: Healpix re-implementation
  *
  * FIXME
+ * 
  */
 
 #ifdef HAVE_CONFIG_H

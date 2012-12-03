@@ -24,7 +24,7 @@
 
 /**
  * SECTION:ncm_mpsf_sbessel_int
- * @title: Multiple Precision Spherical Bessel j_l integral
+ * @title: Spherical Bessel Integral
  * @short_description: Spherical bessel integrals implementation with support for multiple precision calculation
  *
  * FIXME

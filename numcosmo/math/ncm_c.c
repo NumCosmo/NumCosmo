@@ -26,7 +26,7 @@
 /**
  * SECTION:ncm_c
  * @title: Numerical and Physical Constants
- * @short_description: Numerical constants.
+ * @short_description: Numerical constants
  *
  * Mathematical and physical constants and constants manipulation
  * functions.

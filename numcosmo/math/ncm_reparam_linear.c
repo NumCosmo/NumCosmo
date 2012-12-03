@@ -24,8 +24,8 @@
 
 /**
  * SECTION:ncm_reparam_linear
- * @title: Generic Linear Reparametrization Object
- * @short_description: FIXME
+ * @title: Linear Reparametrization
+ * @short_description: Linear reparametrization object
  *
  * FIXME
  */
