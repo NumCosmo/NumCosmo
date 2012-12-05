@@ -165,13 +165,13 @@ main (gint argc, gchar *argv[])
   if (de_fit.file_out != NULL)
     ncm_cfg_set_logfile (de_fit.file_out);
 
-  if (de_data_simple.snia_id == NULL &&
+  if (de_data_simple.snia_type == NULL &&
       de_data_simple.cmb_id == NULL &&
       de_data_simple.bao_id == NULL &&
       de_data_simple.H_id == NULL &&
       de_data_simple.cluster_id == NULL)
   {
-    printf ("No action or data was chosen.\n");
+    printf ("No action or data were chosen.\n");
     printf ("%s", g_option_context_get_help (context, TRUE, NULL));
     g_option_context_free (context);
     return 0;
@@ -214,21 +214,65 @@ main (gint argc, gchar *argv[])
   {
     ncm_prior_add_positive (lh, NC_HICOSMO_ID, NC_HICOSMO_DE_OMEGA_X);
   }
-
-  if (de_data_simple.snia_id != NULL)
+  
+  if (de_data_simple.snia_type != NULL)
   {
-    const GEnumValue *snia_id = ncm_cfg_get_enum_by_id_name_nick (NC_TYPE_DATA_DIST_MU_ID,
-                                                                  de_data_simple.snia_id);
-    if (snia_id != NULL)
+    const GEnumValue *snia_type = 
+      ncm_cfg_get_enum_by_id_name_nick (NC_TYPE_DATA_SNIA_TYPE,
+                                        de_data_simple.snia_type);
+    if (de_data_simple.snia_id == NULL)
+      g_error ("Error no SN Ia sample id choosen. Use --snia-id to choose a"
+               " sample and --snia-list for a list of available samples\n");
+
+    switch (snia_type->value)
     {
-      NcmData *snia = nc_data_dist_mu_new (dist, snia_id->value);
-      ncm_dataset_append_data (dset, snia);
-      ncm_data_free (snia);
-    }
-    else
-      g_error ("Supernovae sample '%s' not found run --snia-list to list the available options", de_data_simple.snia_id);
+      case NC_DATA_SNIA_TYPE_SIMPLE:
+      {
+        const GEnumValue *snia_id = 
+          ncm_cfg_get_enum_by_id_name_nick (NC_TYPE_DATA_DIST_MU_ID,
+                                            de_data_simple.snia_id);
+        if (snia_id != NULL)
+        {
+          NcmData *snia = nc_data_dist_mu_new (dist, snia_id->value);
+          ncm_dataset_append_data (dset, snia);
+          ncm_data_free (snia);
+        }
+        else
+          g_error ("Supernovae sample '%s' not found run --snia-list to list"
+                   " the available options", de_data_simple.snia_id);
+        break;
+      }
+      case NC_DATA_SNIA_TYPE_COV:
+      {
+        const GEnumValue *snia_id = 
+          ncm_cfg_get_enum_by_id_name_nick (NC_TYPE_DATA_SNIA_CAT_ID,
+                                            de_data_simple.snia_id);
+        if (snia_id != NULL)
+        {
+          NcSNIADistCov *dcov = nc_snia_dist_cov_new (dist, 0);
+          NcmData *data;
+
+          if (de_data_simple.snia_prop != NULL)
+            ncm_cfg_object_set_property (G_OBJECT (dcov), de_data_simple.snia_prop);
+          
+          nc_data_snia_load_cat (dcov, snia_id->value);
+          data = nc_data_snia_cov_new (dcov, de_data_simple.snia_use_det);
+          ncm_mset_set (mset, NCM_MODEL (dcov));
+          ncm_dataset_append_data (dset, data);
+          ncm_data_free (data);
+        }
+        else
+          g_error ("Supernovae sample '%s' not found run --snia-list to list"
+                   " the available options", de_data_simple.snia_id);
+        break;
+      }
+      default:
+        g_assert_not_reached ();
+        break;
+    }      
   }
 
+ 
   if (de_data_simple.cmb_id != NULL)
   {
     const GEnumValue *cmb_id = ncm_cfg_get_enum_by_id_name_nick (NC_TYPE_DATA_CMB_ID,

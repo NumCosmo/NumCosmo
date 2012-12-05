@@ -75,9 +75,6 @@ test_ncm_vector_new_sanity (NcmVector *vv)
   guint i;
 
   g_assert (NCM_IS_VECTOR (vv));
-  g_assert (g_object_is_floating (vv));
-  ncm_vector_ref (vv);
-  g_assert (!g_object_is_floating (vv));
 
   for (i = 0; i < 10 * _NCM_VECTOR_TEST_SIZE; i++)
   {
@@ -392,9 +389,6 @@ test_ncm_vector_subvector (void)
   }
 
   g_assert (NCM_IS_VECTOR (sv));
-  g_assert (g_object_is_floating (sv));
-  ncm_vector_ref (sv);
-  g_assert (!g_object_is_floating (sv));
 
   ncm_vector_free (v);
   g_assert (G_IS_OBJECT (v));

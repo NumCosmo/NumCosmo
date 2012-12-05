@@ -309,6 +309,8 @@ nc_hicosmo_qpw_change_params (NcHICosmoQPW *qpw, gdouble z)
 
   ncm_vector_free (v);
   ncm_matrix_free (T);
+  ncm_vector_free (full_v);
+  ncm_matrix_free (full_T);
 
   return;
 }
@@ -357,6 +359,9 @@ nc_hicosmo_qpw_change_params_qpp (NcHICosmoQPW *qpw)
   relin = ncm_reparam_linear_new (ncm_model_len (NCM_MODEL (qpw)), T, v);
 
   ncm_model_set_reparam (NCM_MODEL (qpw), NCM_REPARAM (relin));
+
+  ncm_vector_free (v);
+  ncm_matrix_free (T);
 
   return;
 }

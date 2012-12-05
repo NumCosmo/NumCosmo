@@ -158,14 +158,18 @@ ncm_ode_spline_prepare (NcmOdeSpline *os, gpointer userdata)
 void
 ncm_ode_spline_free (NcmOdeSpline *os)
 {
-  ncm_spline_free (os->s);
-  g_array_unref (os->x_array);
-  g_array_unref (os->y_array);
+  ncm_spline_clear (&os->s);
+  if (os->x_array != NULL)
+    g_array_unref (os->x_array);
+  if (os->y_array != NULL)
+    g_array_unref (os->y_array);
 
-  CVodeFree (&os->cvode);
-  N_VDestroy (os->y);
+  if (os->cvode != NULL)
+    CVodeFree (&os->cvode);
+  if (os->y != NULL)
+    N_VDestroy (os->y);
 
-  ncm_model_ctrl_free (os->ctrl);
+  ncm_model_ctrl_clear (&os->ctrl);
 
   g_slice_free (NcmOdeSpline, os);
 }
@@ -179,6 +183,9 @@ ncm_ode_spline_free (NcmOdeSpline *os)
 void
 ncm_ode_spline_clear (NcmOdeSpline **os)
 {
-  ncm_ode_spline_free (*os);
-  *os = NULL;
+  if (*os != NULL)
+  {
+    ncm_ode_spline_free (*os);
+    *os = NULL;
+  }
 }

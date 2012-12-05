@@ -66,13 +66,13 @@ typedef enum _NcmVectorInternal
 struct _NcmVectorClass
 {
   /*< private >*/
-  GInitiallyUnownedClass parent_class;
+  GObjectClass parent_class;
 };
 
 struct _NcmVector
 {
   /*< private >*/
-  GInitiallyUnowned parent_instance;
+  GObject parent_instance;
   GArray *a;
   gsl_vector *gv;
   gsl_vector_view vv;
@@ -86,7 +86,6 @@ GType ncm_vector_get_type (void) G_GNUC_CONST;
 #define NCM_VECTOR_DATA(cv) ((cv)->vv.vector.data)
 
 NcmVector *ncm_vector_new (gsize n);
-NcmVector *ncm_vector_new_sunk (gsize n);
 NcmVector *ncm_vector_new_gsl (gsl_vector *gv);
 NcmVector *ncm_vector_new_gsl_static (gsl_vector *gv);
 NcmVector *ncm_vector_new_array (GArray *a);
@@ -246,8 +245,7 @@ G_INLINE_FUNC GArray *
 ncm_vector_get_array (NcmVector *cv)
 {
   g_assert (cv->a != NULL);
-  g_array_ref (cv->a);
-  return cv->a;
+  return g_array_ref (cv->a); 
 }
 
 G_INLINE_FUNC GArray *

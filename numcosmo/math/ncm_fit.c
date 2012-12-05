@@ -817,7 +817,10 @@ ncm_fit_log_step (NcmFit *fit, gdouble m2lnL)
   if (fit->mtype == NCM_FIT_RUN_MSGS_FULL)
     ncm_fit_log_state (fit, m2lnL);
   else if (fit->mtype == NCM_FIT_RUN_MSGS_SIMPLE)
-    g_message (".");
+  {
+    if (fit->fstate->niter < 10 || ((fit->fstate->niter % 10) == 0))
+      ncm_message (".");
+  }
   return;
 }
 
@@ -1811,6 +1814,8 @@ ncm_fit_function_error (NcmFit *fit, NcmMSetFunc *func, gdouble z, gboolean pret
    g_message ("# % -12.4g +/- % -12.4g\n", NCM_FUNC_F(func, fit->mset, z), sqrt(result));
 
    ncm_fit_params_return_tmp_vector (fit->pt, tmp1);
+   
+   ncm_vector_free (v);
 
    return sqrt(result);
    */

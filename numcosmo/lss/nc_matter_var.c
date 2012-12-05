@@ -135,13 +135,23 @@ nc_matter_var_clear (NcMatterVar **vp)
 static void
 nc_matter_var_init (NcMatterVar *vp)
 {
+  NcmVector *sigma2_over_growth_xv = ncm_vector_new (NC_MATTER_VAR_SIGMA2_NP);
+  NcmVector *sigma2_over_growth_yv = ncm_vector_new (NC_MATTER_VAR_SIGMA2_NP);
+  NcmVector *dsigma2_over_growth_xv = ncm_vector_new (NC_MATTER_VAR_SIGMA2_NP);
+  NcmVector *dsigma2_over_growth_yv = ncm_vector_new (NC_MATTER_VAR_SIGMA2_NP);
+  
   vp->r = 0.0;
   vp->spline_init = 0;
   vp->n_points_spline = 0;
 
   vp->integrand_overw2_spline = NULL;
-  vp->sigma2_over_growth = ncm_spline_cubic_notaknot_new_full (ncm_vector_new (NC_MATTER_VAR_SIGMA2_NP), ncm_vector_new (NC_MATTER_VAR_SIGMA2_NP), FALSE);
-  vp->deriv_sigma2_over_growth = ncm_spline_cubic_notaknot_new_full (ncm_vector_new (NC_MATTER_VAR_SIGMA2_NP), ncm_vector_new (NC_MATTER_VAR_SIGMA2_NP), FALSE);
+  vp->sigma2_over_growth = ncm_spline_cubic_notaknot_new_full (sigma2_over_growth_xv, sigma2_over_growth_yv, FALSE);
+  vp->deriv_sigma2_over_growth = ncm_spline_cubic_notaknot_new_full (dsigma2_over_growth_xv, dsigma2_over_growth_yv, FALSE);
+
+  ncm_vector_free (sigma2_over_growth_xv);
+  ncm_vector_free (sigma2_over_growth_yv);
+  ncm_vector_free (dsigma2_over_growth_xv);
+  ncm_vector_free (dsigma2_over_growth_yv);
 
   vp->ctrl = ncm_model_ctrl_new (NULL);
 }
@@ -741,10 +751,15 @@ _nc_matter_var_prepare_splineint (NcMatterVar *vp, NcHICosmo *model)
 
 	if (vp->integrand_overw2_spline == NULL)
 	{
+	  NcmVector *integrand_overw2_xv = ncm_vector_new (vp->n_points_spline);
+	  NcmVector *integrand_overw2_yv = ncm_vector_new (vp->n_points_spline);
+	  
 	  vp->integrand_overw2_spline =
-		ncm_spline_cubic_notaknot_new_full (ncm_vector_new (vp->n_points_spline),
-		                                    ncm_vector_new (vp->n_points_spline),
+		ncm_spline_cubic_notaknot_new_full (integrand_overw2_xv,
+		                                    integrand_overw2_yv,
 		                                    FALSE);
+          ncm_vector_free (integrand_overw2_xv);
+          ncm_vector_free (integrand_overw2_yv);
 	}
 
 	vp->spline_init = TRUE;

@@ -200,7 +200,7 @@ _nc_data_dist_mu_mean_func (NcmDataGaussDiag *diag, NcmMSet *mset, NcmVector *vp
   for (i = 0; i < diag->np; i++)
   {
     const gdouble z  = ncm_vector_get (dist_mu->x, i);
-    const gdouble mu = nc_distance_modulo (dist_mu->dist, cosmo, z);
+    const gdouble mu = nc_distance_modulus (dist_mu->dist, cosmo, z);
     ncm_vector_set (vp, i, mu);
   }
 }
@@ -245,7 +245,7 @@ nc_data_dist_mu_set_size (NcDataDistMu *dist_mu, guint np)
     ncm_vector_clear (&dist_mu->x);
 
   if ((np != 0) && (np != diag->np))
-    dist_mu->x = ncm_vector_new_sunk (np);
+    dist_mu->x = ncm_vector_new (np);
 
   ncm_data_gauss_diag_set_size (NCM_DATA_GAUSS_DIAG (dist_mu), np);
 }

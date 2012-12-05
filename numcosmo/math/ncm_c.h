@@ -65,6 +65,7 @@ GType ncm_c_get_type (void) G_GNUC_CONST;
 G_INLINE_FUNC long double ncm_c_sqrt_1_4pi (void) G_GNUC_CONST;
 G_INLINE_FUNC long double ncm_c_sqrt_3_4pi (void) G_GNUC_CONST;
 G_INLINE_FUNC long double ncm_c_lnpi_4 (void) G_GNUC_CONST;
+G_INLINE_FUNC long double ncm_c_ln2pi (void) G_GNUC_CONST;
 G_INLINE_FUNC long double ncm_c_pi (void) G_GNUC_CONST;
 G_INLINE_FUNC long double ncm_c_tan_1arcsec (void) G_GNUC_CONST;
 
@@ -229,6 +230,9 @@ G_INLINE_FUNC long double ncm_c_sqrt_3_4pi (void)
 
 G_INLINE_FUNC long double ncm_c_lnpi_4 (void)
 { return 0.28618247146235004353585683783826468L; }
+
+G_INLINE_FUNC long double ncm_c_ln2pi (void)
+{ return 1.8378770664093454835606594728112353L; }
 
 G_INLINE_FUNC long double ncm_c_pi (void)
 { return 3.1415926535897932384626433832795029L; }

@@ -60,6 +60,7 @@ struct _NcmDataGaussCov
   NcmMatrix *cov;
   NcmMatrix *LLT;
   gboolean prepared_LLT;
+  gboolean use_det;
 };
 
 GType ncm_data_gauss_cov_get_type (void) G_GNUC_CONST;

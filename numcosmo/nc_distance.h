@@ -43,8 +43,8 @@ G_BEGIN_DECLS
 
 typedef struct _NcDistanceClass NcDistanceClass;
 typedef struct _NcDistance NcDistance;
-typedef gdouble (*NcDistanceFunc0) (NcDistance *dist, NcHICosmo *model);
-typedef gdouble (*NcDistanceFunc1) (NcDistance *dist, NcHICosmo *model, gdouble z);
+typedef gdouble (*NcDistanceFunc0) (NcDistance *dist, NcHICosmo *cosmo);
+typedef gdouble (*NcDistanceFunc1) (NcDistance *dist, NcHICosmo *cosmo, gdouble z);
 
 struct _NcDistanceClass
 {
@@ -71,8 +71,8 @@ GType nc_distance_get_type (void) G_GNUC_CONST;
 
 NcDistance *nc_distance_new (gdouble z_f);
 NcDistance *nc_distance_ref (NcDistance *dist);
-void nc_distance_prepare (NcDistance *dist, NcHICosmo *model);
-G_INLINE_FUNC void nc_distance_prepare_if_needed (NcDistance *dist, NcHICosmo *model);
+void nc_distance_prepare (NcDistance *dist, NcHICosmo *cosmo);
+G_INLINE_FUNC void nc_distance_prepare_if_needed (NcDistance *dist, NcHICosmo *cosmo);
 void nc_distance_free (NcDistance *dist);
 void nc_distance_clear (NcDistance **dist);
 
@@ -83,45 +83,32 @@ NcmMSetFunc *nc_distance_func1_new (NcDistance *dist, NcDistanceFunc1 f1);
  * Redshift independent 'distances'
  ****************************************************************************/
 
-gdouble nc_distance_hubble (NcDistance *dist, NcHICosmo *model);
-gdouble nc_distance_decoupling_redshift (NcDistance *dist, NcHICosmo *model);
-gdouble nc_distance_drag_redshift (NcDistance *dist, NcHICosmo *model);
-gdouble nc_distance_shift_parameter_lss (NcDistance *dist, NcHICosmo *model);
-gdouble nc_distance_comoving_lss (NcDistance *dist, NcHICosmo *model);
-gdouble nc_distance_comoving_a0_lss (NcDistance *dist, NcHICosmo *model);
-gdouble nc_distance_acoustic_scale (NcDistance *dist, NcHICosmo *model);
-gdouble nc_distance_Omega_k (NcDistance *dist, NcHICosmo *model);
+gdouble nc_distance_hubble (NcDistance *dist, NcHICosmo *cosmo);
+gdouble nc_distance_decoupling_redshift (NcDistance *dist, NcHICosmo *cosmo);
+gdouble nc_distance_drag_redshift (NcDistance *dist, NcHICosmo *cosmo);
+gdouble nc_distance_shift_parameter_lss (NcDistance *dist, NcHICosmo *cosmo);
+gdouble nc_distance_comoving_lss (NcDistance *dist, NcHICosmo *cosmo);
+gdouble nc_distance_comoving_a0_lss (NcDistance *dist, NcHICosmo *cosmo);
+gdouble nc_distance_acoustic_scale (NcDistance *dist, NcHICosmo *cosmo);
+gdouble nc_distance_Omega_k (NcDistance *dist, NcHICosmo *cosmo);
 
 /***************************************************************************
  * Redshift dependent 'distances'
  ****************************************************************************/
 
-gdouble nc_distance_comoving (NcDistance *dist, NcHICosmo *model, gdouble z);
-gdouble nc_distance_comoving_a0 (NcDistance *dist, NcHICosmo *model, gdouble z);
-gdouble nc_distance_curvature (NcDistance *dist, NcHICosmo *model, gdouble z);
-gdouble nc_distance_transverse (NcDistance *dist, NcHICosmo *model, gdouble z);
-gdouble nc_distance_luminosity (NcDistance *dist, NcHICosmo *model, gdouble z);
-gdouble nc_distance_modulo (NcDistance *dist, NcHICosmo *model, gdouble z);
-gdouble nc_distance_shift_parameter (NcDistance *dist, NcHICosmo *model, gdouble z);
-gdouble nc_distance_dilation_scale (NcDistance *dist, NcHICosmo *model, gdouble z);
-gdouble nc_distance_bao_A_scale (NcDistance *dist, NcHICosmo *model, gdouble z);
-gdouble nc_distance_sound_horizon (NcDistance *dist, NcHICosmo *model, gdouble z);
-gdouble nc_distance_bao_r_Dv (NcDistance *dist, NcHICosmo *model, gdouble z);
-
-/***************************************************************************
- * Distances transformations
- ****************************************************************************/
-
-gdouble nc_distance_comoving2luminosity (gint k, gdouble sqrt_Omega_k, gdouble hubble_dist, gdouble z, gdouble cd);
-gdouble nc_distance_luminosity2modulo (gint k, gdouble sqrt_Omega_k, gdouble hubble_dist, gdouble z, gdouble ld);
-gdouble nc_distance_comoving2modulo (gint k, gdouble sqrt_Omega_k, gdouble hubble_dist, gdouble z, gdouble cd);
-
-gdouble nc_distance_luminosity2comoving (gint k, gdouble sqrt_Omega_k, gdouble hubble_dist, gdouble z, gdouble ld);
-gdouble nc_distance_modulo2luminosity (gint k, gdouble sqrt_Omega_k, gdouble hubble_dist, gdouble z, gdouble dm);
-gdouble nc_distance_modulo2comoving (gint k, gdouble sqrt_Omega_k, gdouble hubble_dist, gdouble z, gdouble dm);
-
-gdouble nc_distance_dmodulo (gint k, gdouble Omega_k, gdouble sqrt_Omega_k, gdouble cd, gdouble dcd, gdouble d_omega_t);
-
+gdouble nc_distance_comoving (NcDistance *dist, NcHICosmo *cosmo, gdouble z);
+gdouble nc_distance_comoving_a0 (NcDistance *dist, NcHICosmo *cosmo, gdouble z);
+gdouble nc_distance_curvature (NcDistance *dist, NcHICosmo *cosmo, gdouble z);
+gdouble nc_distance_transverse (NcDistance *dist, NcHICosmo *cosmo, gdouble z);
+gdouble nc_distance_luminosity (NcDistance *dist, NcHICosmo *cosmo, gdouble z);
+gdouble nc_distance_modulus (NcDistance *dist, NcHICosmo *cosmo, gdouble z);
+gdouble nc_distance_luminosity_hef (NcDistance *dist, NcHICosmo *cosmo, gdouble z_he, gdouble z_cmb);
+gdouble nc_distance_modulus_hef (NcDistance *dist, NcHICosmo *cosmo, gdouble z_he, gdouble z_cmb);
+gdouble nc_distance_shift_parameter (NcDistance *dist, NcHICosmo *cosmo, gdouble z);
+gdouble nc_distance_dilation_scale (NcDistance *dist, NcHICosmo *cosmo, gdouble z);
+gdouble nc_distance_bao_A_scale (NcDistance *dist, NcHICosmo *cosmo, gdouble z);
+gdouble nc_distance_sound_horizon (NcDistance *dist, NcHICosmo *cosmo, gdouble z);
+gdouble nc_distance_bao_r_Dv (NcDistance *dist, NcHICosmo *cosmo, gdouble z);
 
 /***************************************************************************
  *            cosmic_time.h
@@ -131,13 +118,13 @@ gdouble nc_distance_dmodulo (gint k, gdouble Omega_k, gdouble sqrt_Omega_k, gdou
  *  <sandro@isoftware.com.br>
  ****************************************************************************/
 
-gdouble nc_distance_cosmic_time (NcDistance *dist, NcHICosmo *model, gdouble z);
-gdouble nc_distance_lookback_time (NcDistance *dist, NcHICosmo *model, gdouble z);
-gdouble nc_distance_conformal_time (NcDistance *dist, NcHICosmo *model, gdouble z);
-gdouble nc_distance_conformal_lookback_time (NcDistance *dist, NcHICosmo *model, gdouble z);
+gdouble nc_distance_cosmic_time (NcDistance *dist, NcHICosmo *cosmo, gdouble z);
+gdouble nc_distance_lookback_time (NcDistance *dist, NcHICosmo *cosmo, gdouble z);
+gdouble nc_distance_conformal_time (NcDistance *dist, NcHICosmo *cosmo, gdouble z);
+gdouble nc_distance_conformal_lookback_time (NcDistance *dist, NcHICosmo *cosmo, gdouble z);
 
-gdouble nc_distance_cosmic_time_mks_scale (NcDistance *dist, NcHICosmo *model);
-gdouble nc_distance_conformal_time_mks_scale (NcDistance *dist, NcHICosmo *model);
+gdouble nc_distance_cosmic_time_mks_scale (NcDistance *dist, NcHICosmo *cosmo);
+gdouble nc_distance_conformal_time_mks_scale (NcDistance *dist, NcHICosmo *cosmo);
 
 G_END_DECLS
 
@@ -150,10 +137,10 @@ G_END_DECLS
 G_BEGIN_DECLS
 
 G_INLINE_FUNC void
-nc_distance_prepare_if_needed (NcDistance *dist, NcHICosmo *model)
+nc_distance_prepare_if_needed (NcDistance *dist, NcHICosmo *cosmo)
 {
-  if (ncm_model_ctrl_update (dist->ctrl, NCM_MODEL (model)))
-    nc_distance_prepare (dist, model);
+  if (ncm_model_ctrl_update (dist->ctrl, NCM_MODEL (cosmo)))
+    nc_distance_prepare (dist, cosmo);
 }
 
 G_END_DECLS

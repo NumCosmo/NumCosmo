@@ -94,21 +94,29 @@ _ncm_spline2d_gsl_alloc (NcmSpline2dGsl *s2dgsl)
 
   s2dgsl->s_hor_len = NCM_MATRIX_COL_LEN (s2d->zm);
   
-  s2dgsl->zdiff = ncm_matrix_new_sunk (s2dgsl->s_hor_len, NCM_MATRIX_ROW_LEN (s2d->zm));
-  s2dgsl->vertv = ncm_vector_new_sunk (s2dgsl->s_hor_len);
-  s2dgsl->vertintv = ncm_vector_new_sunk (s2dgsl->s_hor_len);
+  s2dgsl->zdiff = ncm_matrix_new (s2dgsl->s_hor_len, NCM_MATRIX_ROW_LEN (s2d->zm));
+  s2dgsl->vertv = ncm_vector_new (s2dgsl->s_hor_len);
+  s2dgsl->vertintv = ncm_vector_new (s2dgsl->s_hor_len);
 
   s2dgsl->s_hor = g_new0 (NcmSpline *, s2dgsl->s_hor_len);
   
   for (i = 0; i < s2dgsl->s_hor_len; i++)
-    s2dgsl->s_hor[i] = ncm_spline_new (s2d->s, s2d->xv, ncm_matrix_get_row (s2d->zm, i), s2d->init);
+  {
+    NcmVector *zm_row_i = ncm_matrix_get_row (s2d->zm, i);
+    s2dgsl->s_hor[i] = ncm_spline_new (s2d->s, s2d->xv, zm_row_i, s2d->init);
+    ncm_vector_free (zm_row_i);
+  }
 
   s2dgsl->s_ver = ncm_spline_new (s2d->s, s2d->yv, s2dgsl->vertv, FALSE);
   s2dgsl->s_ver_integ = ncm_spline_new (s2d->s, s2d->yv, s2dgsl->vertintv, FALSE);
 
   s2dgsl->s_dzdy = g_new0 (NcmSpline *, s2dgsl->s_hor_len);
   for (i = 0; i < s2dgsl->s_hor_len; i++)
-    s2dgsl->s_dzdy[i] = ncm_spline_new (s2d->s, s2d->xv, ncm_matrix_get_row (s2dgsl->zdiff, i), s2d->init);
+  {
+    NcmVector *zdiff_row_i = ncm_matrix_get_row (s2dgsl->zdiff, i);
+    s2dgsl->s_dzdy[i] = ncm_spline_new (s2d->s, s2d->xv, zdiff_row_i, s2d->init);
+    ncm_vector_free (zdiff_row_i);
+  }
 
 }
 

@@ -124,6 +124,13 @@ nc_cluster_abundance_init (NcClusterAbundance *cad)
   cad->inv_lnM_z = ncm_spline2d_bicubic_notaknot_new ();
   ncm_spline2d_set (cad->inv_lnM_z, u3_knots, integ_z_knots, integ_lnM_z_knots, FALSE);
 
+  ncm_vector_free (u1_knots);
+  ncm_vector_free (u2_knots);
+  ncm_vector_free (u3_knots);
+  ncm_vector_free (integ_lnM_knots);
+  ncm_vector_free (integ_z_knots);
+  ncm_matrix_free (integ_lnM_z_knots);
+
   cad->ctrl = ncm_model_ctrl_new (NULL);
 }
 

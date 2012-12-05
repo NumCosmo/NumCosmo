@@ -79,6 +79,7 @@
 #include <numcosmo/nc_hicosmo.h>
 #include <numcosmo/nc_distance.h>
 #include <numcosmo/nc_hicosmo_priors.h>
+#include <numcosmo/nc_snia_dist_cov.h>
 #include <numcosmo/scalefactor.h>
 /* Cosmic thermodynamics */
 #include <numcosmo/nc_recomb.h>
@@ -182,7 +183,9 @@
 #include <numcosmo/lss/print_data.h>
 
 /* Observable data */
+#include <numcosmo/nc_data_snia.h>
 #include <numcosmo/nc_data_dist_mu.h>
+#include <numcosmo/nc_data_snia_cov.h>
 #include <numcosmo/nc_data_hubble.h>
 #include <numcosmo/nc_data_bao_a.h>
 #include <numcosmo/nc_data_bao_dv.h>

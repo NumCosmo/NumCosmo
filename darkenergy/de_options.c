@@ -75,7 +75,9 @@ nc_de_opt_get_model_group (NcDEModelEntries *de_model, GOptionEntry **de_model_e
 static gboolean
 _nc_de_print_snia_list (const gchar *option_name, const gchar *value, gpointer data, GError **error)
 {
-  ncm_cfg_enum_print_all (NC_TYPE_DATA_DIST_MU_ID, "Supernovae Type Ia samples");
+  ncm_cfg_enum_print_all (NC_TYPE_DATA_SNIA_TYPE, "Supernovae Type Ia - Data type");
+  ncm_cfg_enum_print_all (NC_TYPE_DATA_DIST_MU_ID, "Supernovae Type Ia Diagonal Analysis [simple]");
+  ncm_cfg_enum_print_all (NC_TYPE_DATA_SNIA_CAT_ID, "Supernovae Type Ia Covariance Analysis [cov]");
   return TRUE;
 }
 
@@ -112,18 +114,21 @@ nc_de_opt_get_data_simple_group (NcDEDataSimpleEntries *de_data_simple, GOptionE
 {
   GOptionEntry data_simple_entries[] =
   {
-    { "snia-list",       0, G_OPTION_FLAG_NO_ARG, G_OPTION_ARG_CALLBACK, &_nc_de_print_snia_list,     "Print all SNIa data avaliable.", NULL },
-    { "bao-list",        0, G_OPTION_FLAG_NO_ARG, G_OPTION_ARG_CALLBACK, &_nc_de_print_bao_list,      "Print all BAO data avaliable.",   NULL },
-    { "cmb-list",        0, G_OPTION_FLAG_NO_ARG, G_OPTION_ARG_CALLBACK, &_nc_de_print_cmb_list,      "Print all CMB data avaliable.",   NULL },
-    { "H-list",          0, G_OPTION_FLAG_NO_ARG, G_OPTION_ARG_CALLBACK, &_nc_de_print_H_list,        "Print all Hubble data avaliable.",  NULL },
-    { "cluster-list",    0, G_OPTION_FLAG_NO_ARG, G_OPTION_ARG_CALLBACK, &_nc_de_print_cluster_list,  "Print all Cluster data avaliable.",  NULL },
-    { "snia-id",    'S', 0, G_OPTION_ARG_STRING, &de_data_simple->snia_id,    "ID of the SNe Ia sample to use",                      NULL },
-    { "bao-id",     'B', 0, G_OPTION_ARG_STRING, &de_data_simple->bao_id,     "ID of the BAO sample to use",                         NULL },
-    { "cmb-id",     'C', 0, G_OPTION_ARG_STRING, &de_data_simple->cmb_id,     "ID of the CMB sample to use",                         NULL },
-    { "H-id",       'E', 0, G_OPTION_ARG_STRING, &de_data_simple->H_id,       "Use the H(z_i) data sample",                          NULL },
-    { "cluster-id", 'U', 0, G_OPTION_ARG_STRING, &de_data_simple->cluster_id, "Use cluster abundance data",                          NULL },
-    { "H0_Hst",     'H', 0, G_OPTION_ARG_NONE,   &de_data_simple->H0_Hst,     "Use the HST H0 data (single gaussian (H0 - 73.8) / 2.4)", NULL },
-    { "BBN",        'N', 0, G_OPTION_ARG_NONE,   &de_data_simple->BBN,        "Use BBN Prior",                                       NULL },
+    { "snia-list",       0, G_OPTION_FLAG_NO_ARG, G_OPTION_ARG_CALLBACK, &_nc_de_print_snia_list,     "Print all SNIa data avaliable.",        NULL },
+    { "bao-list",        0, G_OPTION_FLAG_NO_ARG, G_OPTION_ARG_CALLBACK, &_nc_de_print_bao_list,      "Print all BAO data avaliable.",         NULL },
+    { "cmb-list",        0, G_OPTION_FLAG_NO_ARG, G_OPTION_ARG_CALLBACK, &_nc_de_print_cmb_list,      "Print all CMB data avaliable.",         NULL },
+    { "H-list",          0, G_OPTION_FLAG_NO_ARG, G_OPTION_ARG_CALLBACK, &_nc_de_print_H_list,        "Print all Hubble data avaliable.",      NULL },
+    { "cluster-list",    0, G_OPTION_FLAG_NO_ARG, G_OPTION_ARG_CALLBACK, &_nc_de_print_cluster_list,  "Print all Cluster data avaliable.",     NULL },
+    { "snia-type",       0,                    0, G_OPTION_ARG_STRING,   &de_data_simple->snia_type,  "The SNe Ia analysis type",              NULL },
+    { "snia-id",    'S', 0, G_OPTION_ARG_STRING, &de_data_simple->snia_id,      "ID of the SNe Ia sample to use",                                NULL },
+    { "snia-prop",       0,                    0, G_OPTION_ARG_STRING,   &de_data_simple->snia_prop,  "The SNe Ia analysis object properties", NULL },
+    { "snia-use-det", 0, 0, G_OPTION_ARG_NONE,   &de_data_simple->snia_use_det, "Whenever to use the normalized Likelihood when fitting SN Ia data", NULL },
+    { "bao-id",     'B', 0, G_OPTION_ARG_STRING, &de_data_simple->bao_id,       "ID of the BAO sample to use",                                   NULL },
+    { "cmb-id",     'C', 0, G_OPTION_ARG_STRING, &de_data_simple->cmb_id,       "ID of the CMB sample to use",                                   NULL },
+    { "H-id",       'E', 0, G_OPTION_ARG_STRING, &de_data_simple->H_id,         "Use the H(z_i) data sample",                                    NULL },
+    { "cluster-id", 'U', 0, G_OPTION_ARG_STRING, &de_data_simple->cluster_id,   "Use cluster abundance data",                                    NULL },
+    { "H0_Hst",     'H', 0, G_OPTION_ARG_NONE,   &de_data_simple->H0_Hst,       "Use the HST H0 data (single gaussian (H0 - 73.8) / 2.4)",       NULL },
+    { "BBN",        'N', 0, G_OPTION_ARG_NONE,   &de_data_simple->BBN,          "Use BBN Prior",                                                 NULL },
     { NULL }
   };
   GOptionGroup *data_simple_group = g_option_group_new ("data", " - Cosmological data options", "Show help options related to the dataset to be used.", NULL, NULL);

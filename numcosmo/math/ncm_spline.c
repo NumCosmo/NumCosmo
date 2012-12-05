@@ -257,7 +257,11 @@ ncm_spline_set_yv (NcmSpline *s, NcmVector *yv, gboolean init)
 void
 ncm_spline_set_array (NcmSpline *s, GArray *x, GArray *y, gboolean init)
 {
-	ncm_spline_set (s, ncm_vector_new_array (x), ncm_vector_new_array (y), init);
+  NcmVector *xv = ncm_vector_new_array (x);
+  NcmVector *yv = ncm_vector_new_array (y);
+  ncm_spline_set (s, xv, yv, init);
+  ncm_vector_free (xv);
+  ncm_vector_free (yv);
 }
 
 /**
@@ -275,7 +279,11 @@ ncm_spline_set_array (NcmSpline *s, GArray *x, GArray *y, gboolean init)
 void
 ncm_spline_set_data_static (NcmSpline *s, gdouble *x, gdouble *y, gsize len, gboolean init)
 {
-	ncm_spline_set (s, ncm_vector_new_data_static (x, len, 1), ncm_vector_new_data_static (y, len, 1), init);
+  NcmVector *xv = ncm_vector_new_data_static (x, len, 1);
+  NcmVector *yv = ncm_vector_new_data_static (y, len, 1);
+  ncm_spline_set (s, xv, yv, init);
+  ncm_vector_free (xv);
+  ncm_vector_free (yv);
 }
 
 /**

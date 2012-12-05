@@ -20,10 +20,12 @@ numcosmodoc_DATA = \
 #DISTCLEANFILES = intltool-extract intltool-merge intltool-update
 
 EXTRA_DIST = \
-	INSTALL                  \
-	$(numcosmodoc_DATA)      \
-	numcosmo.pc.in           \
-	example/simple_example.c \
+	INSTALL                   \
+	$(numcosmodoc_DATA)       \
+	numcosmo.pc.in            \
+	example/simple_example.c  \
+	example/simple_example.py \
+	example/example_recomb.py \
 	example/README
 #       intltool-extract.in	\
 #	intltool-merge.in	\

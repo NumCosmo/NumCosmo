@@ -200,7 +200,7 @@ ncm_fit_mc_run (NcmFitMC *mc, NcmMSet *fiduc, guint ni, guint nf, NcmFitRunMsgs 
   const guint n = nf - ni;
   guint free_params_len = ncm_mset_fparams_len (mc->fit->mset);
   guint param_len = ncm_mset_param_len (mc->fit->mset);
-  NcmVector *bf = ncm_vector_new_sunk (param_len);
+  NcmVector *bf = ncm_vector_new (param_len);
   gint i, j = 0;
   gdouble mean_time = 0.0, total_sec;
   gulong total_min, total_hour, total_day;
@@ -213,9 +213,9 @@ ncm_fit_mc_run (NcmFitMC *mc, NcmMSet *fiduc, guint ni, guint nf, NcmFitRunMsgs 
   mc->m2lnL_max = GSL_NEGINF;
 
   ncm_matrix_clear (&mc->fparam);
-  mc->fparam = ncm_matrix_new_sunk (n, free_params_len);
+  mc->fparam = ncm_matrix_new (n, free_params_len);
   ncm_vector_clear (&mc->m2lnL);
-  mc->m2lnL = ncm_vector_new_sunk (n);
+  mc->m2lnL = ncm_vector_new (n);
 
   ncm_mset_prepare_fparam_map (fiduc);
   ncm_mset_param_get_vector (fiduc, bf);
@@ -231,7 +231,7 @@ ncm_fit_mc_run (NcmFitMC *mc, NcmMSet *fiduc, guint ni, guint nf, NcmFitRunMsgs 
 
     ncm_mset_param_set_vector (mc->fit->mset, bf);
     ncm_dataset_resample (mc->fit->lh->dset, mc->fit->mset);
-    ncm_fit_run (mc->fit, mc->fit->mtype);
+    ncm_fit_run (mc->fit, mtype);
     
     ncm_mset_fparams_get_vector (mc->fit->mset, bf_i);
     ncm_vector_set (mc->m2lnL, i - ni, mc->fit->fstate->m2lnL);

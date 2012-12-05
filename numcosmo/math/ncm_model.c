@@ -251,7 +251,7 @@ _ncm_model_constructed (GObject *object)
       g_array_index (model->vparam_pos, guint, i) = model->total_len;
       model->total_len += g_array_index (model->vparam_len, guint, i);
     }
-    model->params = ncm_vector_new_sunk (model->total_len);
+    model->params = ncm_vector_new (model->total_len);
     model->p = model->params;
     g_array_set_size (model->ptypes, model->total_len);
     _ncm_model_set_sparams (model);
@@ -544,7 +544,7 @@ ncm_model_class_get_property (GObject *object, guint prop_id, GValue *value, GPa
     const guint len = g_array_index (model->vparam_len, guint, vparam_id);
     const guint pos = g_array_index (model->vparam_pos, guint, vparam_id);
     NcmVector *v = ncm_vector_get_subvector (model->params, pos, len);
-    g_value_take_object (value, ncm_vector_ref (v));
+    g_value_take_object (value, v);
   }
   else if (vparam_len_id < model_class->vparam_len)
   {

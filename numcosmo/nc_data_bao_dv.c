@@ -215,7 +215,7 @@ nc_data_bao_dv_set_size (NcDataBaoDV *bao_dv, guint np)
     ncm_vector_clear (&bao_dv->x);
 
   if ((np != 0) && (np != diag->np))
-    bao_dv->x = ncm_vector_new_sunk (np);
+    bao_dv->x = ncm_vector_new (np);
 
   ncm_data_gauss_diag_set_size (NCM_DATA_GAUSS_DIAG (bao_dv), np);
 }

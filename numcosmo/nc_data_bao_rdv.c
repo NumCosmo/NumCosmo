@@ -227,7 +227,7 @@ nc_data_bao_rdv_set_size (NcDataBaoRDV *bao_rdv, guint np)
     ncm_vector_clear (&bao_rdv->x);
 
   if ((np != 0) && (np != gauss->np))
-    bao_rdv->x = ncm_vector_new_sunk (np);
+    bao_rdv->x = ncm_vector_new (np);
 
   ncm_data_gauss_set_size (NCM_DATA_GAUSS (bao_rdv), np);
 }

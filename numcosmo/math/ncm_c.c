@@ -84,7 +84,13 @@ ncm_c_class_init (NcmCClass *klass)
  * ncm_c_lnpi_4:
  *
  * Returns: ln (pi) / 4
+ * 1.8378770664093454835606594728112352797227949472755668256343
+ */
+/**
+ * ncm_c_ln2pi:
  *
+ * Returns: ln (2pi)
+ * 
  */
 /**
  * ncm_c_pi:

@@ -39,7 +39,7 @@
 
 #include "math/ncm_vector.h"
 
-G_DEFINE_TYPE (NcmVector, ncm_vector, G_TYPE_INITIALLY_UNOWNED);
+G_DEFINE_TYPE (NcmVector, ncm_vector, G_TYPE_OBJECT);
 
 /**
  * ncm_vector_new:
@@ -55,21 +55,6 @@ ncm_vector_new (gsize n)
 {
   gdouble *d = g_slice_alloc (sizeof (gdouble) * n);
   return ncm_vector_new_data_slice (d, n, 1);
-}
-
-/**
- * ncm_vector_new_sunk:
- * @n: defines the size of the vector.
- *
- * This function allocates memory for a new #NcmVector of double
- * with @n components. Returns a sunk reference.
- *
- * Returns: A new #NcmVector.
- */
-NcmVector *
-ncm_vector_new_sunk (gsize n)
-{
-  return ncm_vector_ref (ncm_vector_new (n));
 }
 
 /**
@@ -228,15 +213,14 @@ ncm_vector_new_data_const (const gdouble *d, gsize size, gsize stride)
  * ncm_vector_ref:
  * @cv: a NcmVector.
  *
- * This function increses the reference count of @cv or sink
- * the object.
+ * This function increses the reference count of @cv the object.
  *
  * Returns: (transfer full): @cv
  */
 NcmVector *
 ncm_vector_ref (NcmVector *cv)
 {
-  return g_object_ref_sink (cv);
+  return g_object_ref (cv);
 }
 
 /**
@@ -527,8 +511,6 @@ _ncm_vector_finalize (GObject *object)
 void
 ncm_vector_free (NcmVector *cv)
 {
-  if (g_object_is_floating (cv))
-    g_object_ref_sink (cv);
   g_object_unref (cv);
 }
 
@@ -543,8 +525,6 @@ ncm_vector_free (NcmVector *cv)
 void 
 ncm_vector_clear (NcmVector **cv)
 {
-  if (*cv != NULL && g_object_is_floating (*cv))
-    g_object_ref_sink (*cv);
   g_clear_object (cv);  
 }
 
@@ -620,8 +600,7 @@ N_Vector
 ncm_vector_nvector (NcmVector *cv)
 {
   struct _generic_N_Vector *nv = g_slice_new (struct _generic_N_Vector);
-  g_object_ref_sink (cv);
-  nv->content = cv;
+  nv->content = g_object_ref (cv);
   nv->ops = &_ncm_ops;
   return nv;
 }

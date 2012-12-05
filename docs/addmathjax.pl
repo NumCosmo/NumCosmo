@@ -9,6 +9,11 @@ my $parser = XML::LibXML->new (recover => 1);
 while (my $file = shift(@ARGV)) {
 
   my $doc = $parser->load_html (location => $file);
+
+  my $dtd = $doc->createExternalSubset ("html", "-//W3C//DTD XHTML 1.0 Transitional//EN", "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd");
+  
+  $doc->setInternalSubset($dtd);
+
   my $root = $doc->documentElement();
 
   my @heads = $root->getChildrenByTagName("head");
@@ -16,12 +21,14 @@ while (my $file = shift(@ARGV)) {
   my $mathjax_chunk = <<'ENDSCRIPT';
 <link rel="stylesheet" href="container.css" type="text/css"></link>
 <script type="text/x-mathjax-config">
+//<![CDATA[
                 MathJax.Hub.Config({"HTML-CSS": { preferredFont: "TeX", availableFonts: ["STIX","TeX"], linebreaks: { automatic:true }, EqnChunk: (MathJax.Hub.Browser.isMobile ? 10 : 50) },
                                     tex2jax: { inlineMath: [ ["$", "$"], ["\\\\(","\\\\)"] ], displayMath: [ ["$$","$$"], ["\\[", "\\]"] ], processEscapes: true, ignoreClass: "tex2jax_ignore|dno" },
                                     TeX: {  noUndefined: { attributes: { mathcolor: "red", mathbackground: "#FFEEEE", mathsize: "90%" } },
                                             equationNumbers: { autoNumber: "AMS" } },
                                     messageStyle: "none"
                 });
+//]]>
 </script>
 <script type="text/javascript" src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS_HTML"></script> 
 ENDSCRIPT
@@ -46,7 +53,7 @@ ENDSCRIPT
   $bodys[0]->appendChild ($div1);
 
   open ARQ, ">$file";
-  print ARQ $doc->toStringHTML ();
+  print ARQ $doc->toString (2);
   close ARQ;
 }
 

@@ -304,6 +304,14 @@ else
 fi
 AC_SUBST(have_lapack_support)
 
+if test "x$have_lapack_support" != x; then
+  SAVED_LIBS="$LIBS"
+  LIBS="$LIBS $APPEND_LIBS"
+  AC_CHECK_HEADERS([clapack.h])
+  AC_CHECK_FUNCS([clapack_dpotrf])
+  LIBS="$SAVED_LIBS"
+fi
+
 dnl ***************************************************************************
 dnl Check for levmar
 dnl ***************************************************************************
