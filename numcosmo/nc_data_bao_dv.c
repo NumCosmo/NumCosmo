@@ -146,7 +146,7 @@ nc_data_bao_dv_class_init (NcDataBaoDVClass *klass)
                                    g_param_spec_enum ("sample-id",
                                                       NULL,
                                                       "Sample id",
-                                                      NC_TYPE_DATA_BAO_ID, NC_DATA_BAO_DV_EISENSTEIN,
+                                                      NC_TYPE_DATA_BAO_ID, NC_DATA_BAO_DV_EISENSTEIN2005,
                                                       G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));  
 
   data_class->prepare   = &_nc_data_bao_dv_prepare;
@@ -253,7 +253,7 @@ nc_data_bao_dv_set_sample (NcDataBaoDV *bao_dv, NcDataBaoId id)
   NcmData *data = NCM_DATA (bao_dv);
   NcmDataGaussDiag *diag = NCM_DATA_GAUSS_DIAG (bao_dv);
   
-  g_assert (id == NC_DATA_BAO_DV_EISENSTEIN);
+  g_assert (id == NC_DATA_BAO_DV_EISENSTEIN2005);
 
   if (data->desc != NULL)
     g_free (data->desc);

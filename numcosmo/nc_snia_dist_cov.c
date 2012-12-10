@@ -28,7 +28,9 @@
  * @title: Supernovae Distance Covariance
  * @short_description: Calculates the covariance between distance estimates
  *
- * FIXME
+ * This object implements the calculation necessary to make a statistical
+ * analysis using data from <link linkend="XConley2011">Conley et al. (2011)</link>
+ * and <link linkend="XSullivan2011">Sullivan et al. (2011)</link>.
  * 
  */
 
@@ -920,6 +922,7 @@ nc_snia_dist_cov_load (NcSNIADistCov *dcov, const gchar *filename)
  * nc_snia_dist_cov_save:
  * @dcov: FIXME
  * @filename: FIXME
+ * @overwrite: FIXME
  * 
  * FIXME
  * 

@@ -30,6 +30,7 @@
 #include <glib-object.h>
 #include <numcosmo/math/ncm_data_gauss_diag.h>
 #include <numcosmo/nc_distance.h>
+#include <numcosmo/nc_data_snia.h>
 
 G_BEGIN_DECLS
 
@@ -43,32 +44,6 @@ G_BEGIN_DECLS
 typedef struct _NcDataDistMuClass NcDataDistMuClass;
 typedef struct _NcDataDistMu NcDataDistMu;
 
-/**
- * NcDataDistMuId:
- * @NC_DATA_DIST_MU_SNIA_GOLD_157: FIXME
- * @NC_DATA_DIST_MU_SNIA_GOLD_182: FIXME
- * @NC_DATA_DIST_MU_SNIA_GOLD_182_FULL: FIXME
- * @NC_DATA_DIST_MU_SNIA_ESSENCE: FIXME
- * @NC_DATA_DIST_MU_SNIA_LEGACY: FIXME
- * @NC_DATA_DIST_MU_SNIA_UNION: FIXME
- * @NC_DATA_DIST_MU_SNIA_CfA3: FIXME
- * @NC_DATA_DIST_MU_SNIA_UNION2: FIXME
- * @NC_DATA_DIST_MU_SNIA_UNION2_1: FIXME
- */
-typedef enum _NcDataDistMuId
-{
-  NC_DATA_DIST_MU_SNIA_GOLD_157 = 0,
-  NC_DATA_DIST_MU_SNIA_GOLD_182,
-  NC_DATA_DIST_MU_SNIA_GOLD_182_FULL,
-  NC_DATA_DIST_MU_SNIA_ESSENCE,
-  NC_DATA_DIST_MU_SNIA_LEGACY,
-  NC_DATA_DIST_MU_SNIA_UNION,
-  NC_DATA_DIST_MU_SNIA_CfA3,
-  NC_DATA_DIST_MU_SNIA_UNION2,
-  NC_DATA_DIST_MU_SNIA_UNION2_1, /*< private >*/
-  NC_DATA_DIST_MU_NSAMPLES,      /*< skip >*/
-} NcDataDistMuId;
-
 struct _NcDataDistMuClass
 {
   /*< private >*/
@@ -81,18 +56,18 @@ struct _NcDataDistMu
   NcmDataGaussDiag parent_instance;
   NcDistance *dist;
   NcmVector *x;
-  NcDataDistMuId id;
+  NcDataSNIAId id;
 };
 
 GType nc_data_dist_mu_get_type (void) G_GNUC_CONST;
 
-NcmData *nc_data_dist_mu_new (NcDistance *dist, NcDataDistMuId id);
+NcmData *nc_data_dist_mu_new (NcDistance *dist, NcDataSNIAId id);
 
 void nc_data_dist_mu_set_size (NcDataDistMu *dist_mu, guint np);
 guint nc_data_dist_mu_get_size (NcDataDistMu *dist_mu);
 
-void nc_data_dist_mu_set_sample (NcDataDistMu *dist_mu, NcDataDistMuId id);
-NcDataDistMuId nc_data_dist_mu_get_sample (NcDataDistMu *dist_mu);
+void nc_data_dist_mu_set_sample (NcDataDistMu *dist_mu, NcDataSNIAId id);
+NcDataSNIAId nc_data_dist_mu_get_sample (NcDataDistMu *dist_mu);
 
 G_END_DECLS
 

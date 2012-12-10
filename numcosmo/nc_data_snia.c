@@ -51,11 +51,12 @@ static const gchar *_nc_data_snia_cats[] = {
 };
 
 void 
-nc_data_snia_load_cat (NcSNIADistCov *dcov, NcDataSNIACatId id)
+nc_data_snia_load_cat (NcSNIADistCov *dcov, NcDataSNIAId id)
 {
-  g_assert (id < NC_DATA_SNIA_CAT_LEN);
+  g_assert (id <= NC_DATA_SNIA_COV_END && id >= NC_DATA_SNIA_COV_START);
   {
-    gchar *full_filename = nc_data_snia_get_fits (_nc_data_snia_cats[id],
+    gint i = id - NC_DATA_SNIA_COV_START;
+    gchar *full_filename = nc_data_snia_get_fits (_nc_data_snia_cats[i],
                                                   FALSE);
     nc_snia_dist_cov_load (dcov, full_filename);
     g_free (full_filename);

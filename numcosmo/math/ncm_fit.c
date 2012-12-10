@@ -85,6 +85,8 @@ _ncm_fit_constructed (GObject *object)
   {
     NcmFit *fit = NCM_FIT (object);
     gint n = ncm_dataset_get_n (fit->lh->dset);
+    gint n_priors = ncm_likelihood_priors_length (fit->lh);
+    gint data_dof = ncm_dataset_get_dof (fit->lh->dset);
 
     g_assert (ncm_dataset_all_init (fit->lh->dset));
 
@@ -99,9 +101,9 @@ _ncm_fit_constructed (GObject *object)
      * 
      */
     {
-      guint data_len   = n + ncm_likelihood_priors_length (fit->lh);
+      guint data_len   = n + n_priors;
       guint fparam_len = ncm_mset_fparam_len (fit->mset);
-      gint dof         = data_len - fparam_len;
+      gint dof         = data_dof + n_priors - fparam_len;
 
       fit->fstate = ncm_fit_state_new (data_len, fparam_len, dof,
                                        NCM_FIT_GET_CLASS (fit)->is_least_squares);
@@ -229,9 +231,11 @@ _ncm_fit_reset (NcmFit *fit)
   ncm_mset_prepare_fparam_map (fit->mset);
   {
     guint n          = ncm_dataset_get_n (fit->lh->dset);
-    guint data_len   = n + ncm_likelihood_priors_length (fit->lh);
+    gint n_priors    = ncm_likelihood_priors_length (fit->lh);
+    guint data_len   = n + n_priors;
     guint fparam_len = ncm_mset_fparam_len (fit->mset);
-    gint dof         = data_len - fparam_len;
+    gint data_dof    = ncm_dataset_get_dof (fit->lh->dset);
+    gint dof         = data_dof - fparam_len;
 
     g_assert (ncm_dataset_all_init (fit->lh->dset));
     g_assert (data_len > 0);

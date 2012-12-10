@@ -75,9 +75,7 @@ nc_de_opt_get_model_group (NcDEModelEntries *de_model, GOptionEntry **de_model_e
 static gboolean
 _nc_de_print_snia_list (const gchar *option_name, const gchar *value, gpointer data, GError **error)
 {
-  ncm_cfg_enum_print_all (NC_TYPE_DATA_SNIA_TYPE, "Supernovae Type Ia - Data type");
-  ncm_cfg_enum_print_all (NC_TYPE_DATA_DIST_MU_ID, "Supernovae Type Ia Diagonal Analysis [simple]");
-  ncm_cfg_enum_print_all (NC_TYPE_DATA_SNIA_CAT_ID, "Supernovae Type Ia Covariance Analysis [cov]");
+  ncm_cfg_enum_print_all (NC_TYPE_DATA_SNIA_ID, "Supernovae Type Ia - Sample IDs");
   return TRUE;
 }
 
@@ -119,7 +117,6 @@ nc_de_opt_get_data_simple_group (NcDEDataSimpleEntries *de_data_simple, GOptionE
     { "cmb-list",        0, G_OPTION_FLAG_NO_ARG, G_OPTION_ARG_CALLBACK, &_nc_de_print_cmb_list,      "Print all CMB data avaliable.",         NULL },
     { "H-list",          0, G_OPTION_FLAG_NO_ARG, G_OPTION_ARG_CALLBACK, &_nc_de_print_H_list,        "Print all Hubble data avaliable.",      NULL },
     { "cluster-list",    0, G_OPTION_FLAG_NO_ARG, G_OPTION_ARG_CALLBACK, &_nc_de_print_cluster_list,  "Print all Cluster data avaliable.",     NULL },
-    { "snia-type",       0,                    0, G_OPTION_ARG_STRING,   &de_data_simple->snia_type,  "The SNe Ia analysis type",              NULL },
     { "snia-id",    'S', 0, G_OPTION_ARG_STRING, &de_data_simple->snia_id,      "ID of the SNe Ia sample to use",                                NULL },
     { "snia-prop",       0,                    0, G_OPTION_ARG_STRING,   &de_data_simple->snia_prop,  "The SNe Ia analysis object properties", NULL },
     { "snia-use-det", 0, 0, G_OPTION_ARG_NONE,   &de_data_simple->snia_use_det, "Whenever to use the normalized Likelihood when fitting SN Ia data", NULL },

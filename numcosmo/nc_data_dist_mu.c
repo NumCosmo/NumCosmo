@@ -61,7 +61,7 @@ nc_data_dist_mu_init (NcDataDistMu *dist_mu)
 {
   dist_mu->x    = NULL;
   dist_mu->dist = NULL;
-  dist_mu->id   = NC_DATA_DIST_MU_NSAMPLES;
+  dist_mu->id   = 0;
 }
 
 static void
@@ -161,7 +161,7 @@ nc_data_dist_mu_class_init (NcDataDistMuClass *klass)
                                    g_param_spec_enum ("sample-id",
                                                       NULL,
                                                       "Sample id",
-                                                      NC_TYPE_DATA_DIST_MU_ID, NC_DATA_DIST_MU_SNIA_UNION2_1,
+                                                      NC_TYPE_DATA_SNIA_ID, NC_DATA_SNIA_SIMPLE_UNION2_1,
                                                       G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   data_class->prepare   = &_nc_data_dist_mu_prepare;
@@ -215,7 +215,7 @@ _nc_data_dist_mu_mean_func (NcmDataGaussDiag *diag, NcmMSet *mset, NcmVector *vp
  * Returns: FIXME
  */
 NcmData *
-nc_data_dist_mu_new (NcDistance *dist, NcDataDistMuId id)
+nc_data_dist_mu_new (NcDistance *dist, NcDataSNIAId id)
 {
   return g_object_new (NC_TYPE_DATA_DIST_MU,
                        "dist", dist,
@@ -278,12 +278,13 @@ nc_data_dist_mu_get_size (NcDataDistMu *dist_mu)
  *
  */
 void
-nc_data_dist_mu_set_sample (NcDataDistMu *dist_mu, NcDataDistMuId id)
+nc_data_dist_mu_set_sample (NcDataDistMu *dist_mu, NcDataSNIAId id)
 {
   NcmData *data = NCM_DATA (dist_mu);
   NcmDataGaussDiag *diag = NCM_DATA_GAUSS_DIAG (dist_mu);
-  
-  g_assert (id < NC_DATA_DIST_MU_NSAMPLES);
+
+  g_assert (id <= NC_DATA_SNIA_SIMPLE_END && id >= NC_DATA_SNIA_SIMPLE_START);
+  id -= NC_DATA_SNIA_SIMPLE_START;
 
 #ifdef NUMCOSMO_HAVE_SQLITE3
   {
@@ -325,7 +326,7 @@ nc_data_dist_mu_set_sample (NcDataDistMu *dist_mu, NcDataDistMuId id)
 
   }
 #else
-  g_error (PACKAGE_NAME" compiled without support for sqlite3, SN Ia data not avaliable.");
+  g_error (PACKAGE_NAME" compiled without support for sqlite3, SN Ia simple data not avaliable.");
 #endif
 
 }
@@ -338,7 +339,7 @@ nc_data_dist_mu_set_sample (NcDataDistMu *dist_mu, NcDataDistMuId id)
  * 
  * Returns: FIXME
  */
-NcDataDistMuId
+NcDataSNIAId
 nc_data_dist_mu_get_sample (NcDataDistMu *dist_mu)
 {
   return dist_mu->id;
