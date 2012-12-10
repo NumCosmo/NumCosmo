@@ -2,6 +2,38 @@ CHANGELOG
 ----------------------
 
 [Current]
+ * Better organization of SN Ia data. Added BAO data.
+
+     United all SN Ia data in the same enumerator. Added BAO data from Percival
+     2010.
+
+ * Several bugs fixed. New supernovae Ia data with covariance matrix.
+
+     Removed generated files from the distribution. Fixed several segfault in
+     ncm_ode_spline. Added ncm_matrix_add_mul to sum matrices. Fixed name:
+     distance modulo => modulus. Updated ChangeLog. Improved distances
+     documentation. Improved documentation. Code complexity were increasing to
+     maintain the usage of NcmMatrix
+      and NcmVector as floating objects, to avoid such problems they
+      were converted to standard objects (GInitiallyUnowned => GObject).
+      This fixed several bugs related to vector and matrix reference
+      counting. Added cholesky decomposition function for NcmMatrix which use
+     the
+      best algorithm available (lapack/atlas or gsl). New function
+     ncm_cfg_object_set_property: set object properties from
+      a serialized version. New supernovae data with covariance matrices.
+     NcSNIADistCov object
+      represent the covariance model and NcDataSNIACov the NcmData.
+      Create a fits format for these data and load/save_catalog functions.
+      Repacked in fits format two catalogs from Conley 2011, statistical
+      and systematics and statistical only covariance.
+      All functions and connections necessary to make model analysis using
+      this data.
+
+ * Fixed bug: Modified the number of bins to build the histogram of -2lnL (Monte
+     Carlo). Fixed bug: set has_covar fit member equal to TRUE in function
+     ncm_fit_mc_mean_covar.
+
 
 [v0.9.0rc0]
  * Several improvements in documentation.
