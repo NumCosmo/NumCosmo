@@ -318,6 +318,7 @@ ncm_fit_mc_mean_covar (NcmFitMC *mc)
     ncm_vector_free (p_i);
   }
   ncm_mset_fparams_set_vector (mc->fit->mset, mc->fit->fstate->fparams);
+  mc->fit->fstate->has_covar = TRUE;
 }
 
 /**
@@ -330,9 +331,9 @@ ncm_fit_mc_mean_covar (NcmFitMC *mc)
 void
 ncm_fit_mc_gof_pdf (NcmFitMC *mc)
 {
-  const guint nbins = mc->n / 10;
+  const guint nbins = mc->n / 10 >= 10 ? mc->n / 10 : 10;
   gint i;
-
+	
   if (mc->h != NULL && mc->h->n != nbins)
   {
     gsl_histogram_free (mc->h);
