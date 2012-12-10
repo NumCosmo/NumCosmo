@@ -1,7 +1,7 @@
 ## Process this file with automake to produce Makefile.in
 ## Created by Anjuta
 
-SUBDIRS = numcosmo tools darkenergy data docs tests
+SUBDIRS = numcosmo tools darkenergy data docs tests examples
 
 pkgconfigdir = $(libdir)/pkgconfig
 pkgconfig_DATA = numcosmo.pc
@@ -22,14 +22,7 @@ numcosmodoc_DATA = \
 EXTRA_DIST = \
 	INSTALL                   \
 	$(numcosmodoc_DATA)       \
-	numcosmo.pc.in            \
-	example/simple_example.c  \
-	example/simple_example.py \
-	example/example_recomb.py \
-	example/README
-#       intltool-extract.in	\
-#	intltool-merge.in	\
-#	intltool-update.in      
+	numcosmo.pc.in
 
 AM_CFLAGS = 
 

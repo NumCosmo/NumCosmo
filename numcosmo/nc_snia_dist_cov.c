@@ -659,7 +659,7 @@ nc_snia_dist_cov_load_txt (NcSNIADistCov *dcov, const gchar *filename)
     _nc_snia_dist_cov_load_matrix (datafile, dcov->var_width_colour);
   }
 
-  g_key_file_unref (snia_keyfile);
+  g_key_file_free (snia_keyfile);
 }
 
 static void 

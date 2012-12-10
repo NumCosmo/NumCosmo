@@ -58,7 +58,11 @@ nc_data_snia_load_cat (NcSNIADistCov *dcov, NcDataSNIAId id)
     gint i = id - NC_DATA_SNIA_COV_START;
     gchar *full_filename = nc_data_snia_get_fits (_nc_data_snia_cats[i],
                                                   FALSE);
+#ifdef NUMCOSMO_HAVE_CFITSIO
     nc_snia_dist_cov_load (dcov, full_filename);
+#else
+    g_error ("nc_data_snia_load_cat: catalog load not available, recompile "PACKAGE_NAME" with cfitsio support.");
+#endif /* NUMCOSMO_HAVE_CFITSIO */
     g_free (full_filename);
   }
 }

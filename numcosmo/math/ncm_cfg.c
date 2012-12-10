@@ -1295,19 +1295,19 @@ load_save_vector_matrix(complex)
 
 #ifdef NUMCOSMO_HAVE_SQLITE3
 /**
-   * ncm_cfg_get_default_sqlite3: (skip)
-   *
-   * FIXME
-   *
-   * Returns: FIXME
-   */
+ * ncm_cfg_get_default_sqlite3: (skip)
+ *
+ * FIXME
+ *
+ * Returns: FIXME
+ */
 sqlite3 *
 ncm_cfg_get_default_sqlite3 (void)
 {
   static sqlite3 *db = NULL;
   if (db == NULL)
   {
-    gchar *filename = g_build_filename (PACKAGE_DATA_DIR, NC_CFG_DEFAULT_SQLITE3_FILENAME, NULL);
+    gchar *filename = g_build_filename (PACKAGE_DATA_DIR "/data", NC_CFG_DEFAULT_SQLITE3_FILENAME, NULL);
     gint ret;
 
     if (!g_file_test (filename, G_FILE_TEST_EXISTS))
