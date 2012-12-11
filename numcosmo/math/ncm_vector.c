@@ -183,6 +183,25 @@ ncm_vector_new_data_static (gdouble *d, gsize size, gsize stride)
 }
 
 /**
+ * ncm_vector_new_variant:
+ * @var: a #GVariant of the type "ad".
+ *
+ * This function convert a #GVariant array to a #NcmVector.
+ *
+ * Returns: A new #NcmVector.
+ */
+NcmVector *
+ncm_vector_new_variant (GVariant *var)
+{
+  gsize n = g_variant_n_children (var);
+  NcmVector *v = ncm_vector_new (n);
+  gint i;
+  for (i = 0; i < n; i++)
+    g_variant_get_child (var, i, "d", ncm_vector_ptr (v, i));
+  return v;  
+}
+
+/**
  * ncm_vector_new_data_const:
  * @d: pointer to the first double allocated.
  * @size: number of doubles allocated.
@@ -261,6 +280,32 @@ ncm_vector_get_subvector (NcmVector *cv, gsize k, gsize size)
   scv->pobj = G_OBJECT (ncm_vector_ref (cv));
 
   return scv;
+}
+
+/**
+ * ncm_vector_get_variant:
+ * @v: a #NcmVector.
+ *
+ * Convert @v to a GVariant of the type "ad" without destroying the
+ * original vector @v;
+ *
+ * Returns: (transfer full): A #GVariant of the type "ad".
+ */
+GVariant *
+ncm_vector_get_variant (NcmVector *v)
+{
+  guint n = ncm_vector_len (v);
+  GVariantBuilder *builder;
+  GVariant *var;
+  gint i;
+
+  builder = g_variant_builder_new (G_VARIANT_TYPE ("ad"));
+  for (i = 0; i < n; i++)
+    g_variant_builder_add (builder, "d", ncm_vector_get (v, i));
+  var = g_variant_new ("ad", builder);
+  g_variant_builder_unref (builder);
+  g_variant_ref_sink (var);
+  return var;
 }
 
 /**

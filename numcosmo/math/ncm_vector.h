@@ -92,10 +92,12 @@ NcmVector *ncm_vector_new_array (GArray *a);
 NcmVector *ncm_vector_new_data_slice (gdouble *d, const gsize size, const gsize stride);
 NcmVector *ncm_vector_new_data_malloc (gdouble *d, const gsize size, const gsize stride);
 NcmVector *ncm_vector_new_data_static (gdouble *d, const gsize size, const gsize stride);
+NcmVector *ncm_vector_new_variant (GVariant *var);
 NcmVector *ncm_vector_ref (NcmVector *cv);
 const NcmVector *ncm_vector_new_data_const (const gdouble *d, const gsize size, const gsize stride);
 
 NcmVector *ncm_vector_get_subvector (NcmVector *cv, const gsize k, const gsize size);
+GVariant *ncm_vector_get_variant (NcmVector *v);
 
 G_INLINE_FUNC const NcmVector *ncm_vector_new_gsl_const (const gsl_vector *v);
 G_INLINE_FUNC gdouble ncm_vector_get (const NcmVector *cv, const guint i);

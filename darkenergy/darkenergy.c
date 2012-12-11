@@ -335,6 +335,7 @@ main (gint argc, gchar *argv[])
   {
     fit->params_reltol = 1e-5;
     ncm_fit_run (fit, de_fit.msg_level);
+    
     ncm_fit_log_info (fit);
   }
 

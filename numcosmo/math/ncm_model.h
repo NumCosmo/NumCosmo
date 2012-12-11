@@ -375,6 +375,7 @@ ncm_model_orig_vparam_set_vector (NcmModel *model, guint n, NcmVector *val)
   ncm_vector_memcpy2 (model->params, val,
                       ncm_model_vparam_index (model, n, 0), 0,
                       ncm_model_vparam_len (model, n));
+  ncm_model_orig_params_update (model);
 }
 
 G_INLINE_FUNC NcmVector *
