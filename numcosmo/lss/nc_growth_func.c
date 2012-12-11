@@ -115,7 +115,6 @@ growth_f (realtype z, N_Vector y, N_Vector ydot, gpointer f_data)
   NV_Ith_S (ydot, 1) =
     (1.0 / x - dE2dz / (2.0 * E2)) * NV_Ith_S (y, 1) + 3.0 * Omega_m * x * NV_Ith_S (y, 0) / (2.0 * E2);
 
-  //ncm_model_params_log_all (model);
   //printf ("res = % 20.15g y1 = % 20.15g y0 = % 20.15g E2 = % 20.15g dE2dz = % 20.15g xOm = % 20.15g 1/x = % 20.15g\n", NV_Ith_S (ydot, 1), NV_Ith_S (y, 1), NV_Ith_S (y, 0), E2, dE2dz, x * Omega_m, 1/x);
   return 0;
 }

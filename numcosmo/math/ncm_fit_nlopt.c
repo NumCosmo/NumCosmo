@@ -302,6 +302,8 @@ _ncm_fit_nlopt_func (guint n, const gdouble *x, gdouble *grad, gpointer userdata
 
   fit->fstate->niter++;
   ncm_mset_fparams_set_array (fit->mset, x);
+
+  //ncm_mset_params_log_vals (fit->mset);
   
   if (!ncm_mset_params_valid (fit->mset))
     return GSL_NAN;

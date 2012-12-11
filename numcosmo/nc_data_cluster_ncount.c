@@ -504,6 +504,9 @@ _nc_data_cluster_ncount_resample (NcmData *data, NcmMSet *mset)
   }
 
   ncount->np = NCM_MATRIX_NROWS (ncount->z_obs);
+
+  //printf ("Generated %ld, Expected %10.5g\n", ncount->np, nc_cluster_abundance_n (cad, cosmo));
+  
   if (data->desc != NULL)
     g_free (data->desc);
 
