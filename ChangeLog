@@ -2,6 +2,21 @@ CHANGELOG
 ----------------------
 
 [Current]
+ * New example: simple SN Ia model fitting.
+
+ * Fixed g-ir-scanner sources argument.
+
+ * Changed vector parameter in models to GVariant to improve serialization.
+
+     Necessary function and tests to NcmVector were added.
+
+ * Added examples to dist and installation.
+
+     Moved obs data to data/ dir in installation. Added conditional compilation
+     of catalog loading.
+
+ * Updated ChangeLog.
+
  * Better organization of SN Ia data. Added BAO data.
 
      United all SN Ia data in the same enumerator. Added BAO data from Percival
