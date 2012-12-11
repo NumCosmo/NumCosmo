@@ -478,7 +478,7 @@ INTROSPECTION_COMPILER_ARGS = --includedir=$(srcdir)
 
 if HAVE_INTROSPECTION
 
-introspection_sources = ncm_gir_scan.h $(libnumcosmo_la_SOURCES)
+introspection_sources = ncm_gir_scan.h $(libnumcosmo_la_SOURCES) $(nodist_libnumcosmo_la_SOURCES)
 
 Numcosmo-1.0.gir: libnumcosmo.la $(INTROSPECTION_SCANNER)
 Numcosmo_1_0_gir_INCLUDES = GObject-2.0
