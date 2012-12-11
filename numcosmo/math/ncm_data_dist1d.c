@@ -228,7 +228,7 @@ ncm_data_dist1d_set_size (NcmDataDist1d *dist1d, guint np)
   if ((np != 0) && (np != dist1d->np))
   {
     dist1d->np = np;
-    dist1d->x  = ncm_vector_new_sunk (dist1d->np);    
+    dist1d->x  = ncm_vector_new (dist1d->np);    
   }
 }
 

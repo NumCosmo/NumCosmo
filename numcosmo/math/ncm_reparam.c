@@ -207,7 +207,7 @@ _ncm_reparam_constructed (GObject *object)
   {
     NcmReparam *reparam = NCM_REPARAM (object);
 
-    reparam->new_params = ncm_vector_new_sunk (reparam->length);
+    reparam->new_params = ncm_vector_new (reparam->length);
     reparam->sparams = g_ptr_array_sized_new (reparam->length);
     g_ptr_array_set_size (reparam->sparams, reparam->length);
   }
@@ -279,7 +279,7 @@ _ncm_reparam_copyto (NcmReparam *reparam, NcmReparam *reparam_dest)
   if (reparam->length != reparam_dest->length)
   {
     ncm_vector_free (reparam_dest->new_params);
-    reparam_dest->new_params = ncm_vector_new_sunk (reparam->length);
+    reparam_dest->new_params = ncm_vector_new (reparam->length);
     g_ptr_array_set_size (reparam_dest->sparams, 0);
     g_ptr_array_set_size (reparam_dest->sparams, reparam->length);
   }

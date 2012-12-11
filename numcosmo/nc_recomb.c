@@ -1176,6 +1176,7 @@ _nc_recomb_prepare_tau_splines (NcRecomb *recomb, NcHICosmo *cosmo)
       ncm_vector_fast_set (tauv, i, tau);
     }
     ncm_spline_set (recomb->tau_s, recomb->dtau_dlambda_s->xv, tauv, TRUE);
+    ncm_vector_free (tauv);
   }
   else
   {

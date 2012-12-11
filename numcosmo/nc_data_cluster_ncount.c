@@ -467,39 +467,33 @@ _nc_data_cluster_ncount_resample (NcmData *data, NcmMSet *mset)
     //printf ("% 20.15g % 20.15g\n", zi_real, lnMi_real);
   }
   
-  if (ncount->lnM_true != NULL)
-    ncm_vector_free (ncount->lnM_true);
-  ncount->lnM_true = ncm_vector_ref (ncm_vector_new_array (lnM_true_array));
+  ncm_vector_clear (&ncount->lnM_true);
+  ncount->lnM_true = ncm_vector_new_array (lnM_true_array);
   g_array_unref (lnM_true_array);
 
-  if (ncount->z_true != NULL)
-    ncm_vector_free (ncount->z_true);
-  ncount->z_true = ncm_vector_ref (ncm_vector_new_array (z_true_array));
+  ncm_vector_clear (&ncount->z_true);
+  ncount->z_true = ncm_vector_new_array (z_true_array);
   g_array_unref (z_true_array);
 
-  if (ncount->z_obs != NULL)
-    ncm_matrix_free (ncount->z_obs);
-  ncount->z_obs = ncm_matrix_ref (ncm_matrix_new_array (z_obs_array, z_obs_len));
+  ncm_matrix_clear (&ncount->z_obs);
+  ncount->z_obs = ncm_matrix_new_array (z_obs_array, z_obs_len);
   g_array_unref (z_obs_array);
 
-  if (ncount->lnM_obs != NULL)
-    ncm_matrix_free (ncount->lnM_obs);
-  ncount->lnM_obs = ncm_matrix_ref (ncm_matrix_new_array (lnM_obs_array, lnM_obs_len));
+  ncm_matrix_clear (&ncount->lnM_obs);
+  ncount->lnM_obs = ncm_matrix_new_array (lnM_obs_array, lnM_obs_len);
   g_array_unref (lnM_obs_array);
 
   if (z_obs_params_len > 0)
   {
-    if (ncount->z_obs_params != NULL)
-      ncm_matrix_free (ncount->z_obs_params);
-    ncount->z_obs_params = ncm_matrix_ref (ncm_matrix_new_array (z_obs_params_array, z_obs_params_len));
+    ncm_matrix_clear (&ncount->z_obs_params);
+    ncount->z_obs_params = ncm_matrix_new_array (z_obs_params_array, z_obs_params_len);
     g_array_unref (z_obs_params_array);
   }
 
   if (lnM_obs_params_len > 0)
   {
-    if (ncount->lnM_obs_params != NULL)
-      ncm_matrix_free (ncount->lnM_obs_params);
-    ncount->lnM_obs_params = ncm_matrix_ref (ncm_matrix_new_array (lnM_obs_params_array, lnM_obs_params_len));
+    ncm_matrix_clear (&ncount->lnM_obs_params);
+    ncount->lnM_obs_params = ncm_matrix_new_array (lnM_obs_params_array, lnM_obs_params_len);
     g_array_unref (lnM_obs_params_array);
   }
 
@@ -1023,7 +1017,7 @@ nc_data_cluster_ncount_catalog_load (NcmData *data, gchar *filename)
     NC_FITS_ERROR (status);
 
   if (hdutype != BINARY_TBL)
-    g_error ("%s (%d): Ncuster catalog is not binary!\n", __FILE__, __LINE__);
+    g_error ("%s (%d): NcDataClusterNCount catalog is not binary!\n", __FILE__, __LINE__);
 
   if (ncount->z != NULL)
     nc_cluster_redshift_free (ncount->z);
@@ -1095,13 +1089,11 @@ nc_data_cluster_ncount_catalog_load (NcmData *data, gchar *filename)
       g_error ("NcClusterMass object has observables length %d but fits has %ld.",
                nc_cluster_mass_obs_len (ncount->m), lnM_obs_rp);
 
-    if (ncount->z_obs)
-      ncm_matrix_free (ncount->z_obs);
-    ncount->z_obs = ncm_matrix_new_sunk (ncount->np, z_obs_rp);
+    ncm_matrix_clear (&ncount->z_obs);
+    ncount->z_obs = ncm_matrix_new (ncount->np, z_obs_rp);
 
-    if (ncount->lnM_obs)
-      ncm_matrix_free (ncount->lnM_obs);
-    ncount->lnM_obs = ncm_matrix_new_sunk (ncount->np, lnM_obs_rp);
+    ncm_matrix_clear (&ncount->lnM_obs);
+    ncount->lnM_obs = ncm_matrix_new (ncount->np, lnM_obs_rp);
 
     if (fits_read_col (fptr, TDOUBLE, z_obs_i, 1, 1, ncount->np, NULL, ncm_matrix_ptr (ncount->z_obs, 0, 0), NULL, &status))
       NC_FITS_ERROR(status);
@@ -1131,9 +1123,8 @@ nc_data_cluster_ncount_catalog_load (NcmData *data, gchar *filename)
         g_error ("NcClusterRedshift object has observable parameters length %d but fits has %ld.",
                  nc_cluster_redshift_obs_params_len (ncount->z), z_obs_params_rp);
 
-      if (ncount->z_obs_params)
-        ncm_matrix_free (ncount->z_obs_params);
-      ncount->z_obs_params = ncm_matrix_new_sunk (ncount->np, z_obs_params_rp);
+      ncm_matrix_clear (&ncount->z_obs_params);
+      ncount->z_obs_params = ncm_matrix_new (ncount->np, z_obs_params_rp);
 
       if (fits_read_col (fptr, TDOUBLE, z_obs_params_i, 1, 1, ncount->np, NULL, ncm_matrix_ptr (ncount->z_obs_params, 0, 0), NULL, &status))
         NC_FITS_ERROR(status);
@@ -1155,9 +1146,8 @@ nc_data_cluster_ncount_catalog_load (NcmData *data, gchar *filename)
         g_error ("NcClusterMass object has observable parameters length %d but fits has %ld.",
                  nc_cluster_mass_obs_params_len (ncount->m), lnM_obs_params_rp);
 
-      if (ncount->lnM_obs_params)
-        ncm_matrix_free (ncount->lnM_obs_params);
-      ncount->lnM_obs_params = ncm_matrix_new_sunk (ncount->np, lnM_obs_params_rp);
+      ncm_matrix_clear (&ncount->lnM_obs_params);
+      ncount->lnM_obs_params = ncm_matrix_new (ncount->np, lnM_obs_params_rp);
 
 
       if (fits_read_col (fptr, TDOUBLE, lnM_obs_params_i, 1, 1, ncount->np, NULL, ncm_matrix_ptr (ncount->lnM_obs_params, 0, 0), NULL, &status))
@@ -1167,29 +1157,21 @@ nc_data_cluster_ncount_catalog_load (NcmData *data, gchar *filename)
 
   {
     gint z_true_i, lnM_true_i;
-    if (ncount->z_true != NULL)
-    {
-      ncm_vector_free (ncount->z_true);
-      ncount->z_true = NULL;
-    }
+    
+    ncm_vector_clear (&ncount->z_true);
     if (!fits_get_colnum (fptr, CASESEN, "Z_TRUE", &z_true_i, &status))
     {
-      ncount->z_true = ncm_vector_new_sunk (ncount->np);
+      ncount->z_true = ncm_vector_new (ncount->np);
       if (fits_read_col (fptr, TDOUBLE, z_true_i, 1, 1, ncount->np, NULL, ncm_vector_ptr (ncount->z_true, 0), NULL, &status))
         NC_FITS_ERROR(status);
     }
     else
       status = 0;
 
-    if (ncount->lnM_true != NULL)
-    {
-      ncm_vector_free (ncount->lnM_true);
-      ncount->lnM_true = NULL;
-    }
-
+    ncm_vector_clear (&ncount->lnM_true);
     if (!fits_get_colnum (fptr, CASESEN, "LNM_TRUE", &lnM_true_i, &status))
     {
-      ncount->lnM_true = ncm_vector_new_sunk (ncount->np);
+      ncount->lnM_true = ncm_vector_new (ncount->np);
       if (fits_read_col (fptr, TDOUBLE, lnM_true_i, 1, 1, ncount->np, NULL, ncm_vector_ptr (ncount->lnM_true, 0), NULL, &status))
         NC_FITS_ERROR(status);
     }

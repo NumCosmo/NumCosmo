@@ -8,12 +8,12 @@
 /*
  * numcosmo
  * Copyright (C) Mariana Penna Lima 2012 <pennalima@gmail.com>
- * 
+   * 
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
+   * 
  * numcosmo is distributed in the hope that it will be useful, but
  * WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
@@ -87,8 +87,8 @@ _nc_cluster_mass_benson_significance_m_p_integrand (gdouble zeta, gpointer userd
   const gdouble x = lnzeta - data->mu;
 
   const gdouble result = exp (- y * y / 2.0 - x * x / data->D2_2) / 
-	((1.0 + erf (xi_mean / M_SQRT2)) * M_PI * D_SZ * zeta);
-   
+    ((1.0 + erf (xi_mean / M_SQRT2)) * M_PI * D_SZ * zeta);
+
   return result;
 }
 
@@ -101,13 +101,13 @@ _nc_cluster_mass_benson_significance_m_intp_integrand (gdouble zeta, gpointer us
   const gdouble xi_mean = sqrt (zeta * zeta + 3.0);
   const gdouble a = (xi_mean - msz->signif_obs_min);
   const gdouble x = lnzeta - data->mu;
-   
+
   const gdouble plnzeta = exp (-(x * x / (2.0 * D_SZ * D_SZ))) / (zeta * D_SZ * M_SQRT2 * M_SQRTPI);
 
   if (a >= 0.0)
-	return plnzeta * (1.0 + erf (a / M_SQRT2)) / (1.0 + erf (xi_mean / M_SQRT2));
+    return plnzeta * (1.0 + erf (a / M_SQRT2)) / (1.0 + erf (xi_mean / M_SQRT2));
   else
-	return plnzeta * erfc (-a / M_SQRT2) / (1.0 + erf (xi_mean / M_SQRT2));
+    return plnzeta * erfc (-a / M_SQRT2) / (1.0 + erf (xi_mean / M_SQRT2));
 }
 
 static gdouble
@@ -137,22 +137,22 @@ _nc_cluster_mass_benson_significance_m_p (NcClusterMass *clusterm, NcHICosmo *mo
   F.function = &_nc_cluster_mass_benson_significance_m_p_integrand;
   F.params = &data;
 
-   {
-	gdouble Pi, a, b;
-	a = 0.0;
-	b = xi[0];
-	gsl_integration_qag (&F, a, b, 0.0, NC_DEFAULT_PRECISION, NC_INT_PARTITION, 6, *w, &Pi, &err);
-	P = Pi;
-	do {
-	  a = b;
-	  b += xi[0];
-	  gsl_integration_qag (&F, a, b, P * NC_DEFAULT_PRECISION, NC_DEFAULT_PRECISION, NC_INT_PARTITION, 6, *w, &Pi, &err); 
-	  P += Pi;
-	} while (fabs(Pi/P) > NC_DEFAULT_PRECISION);
+  {
+    gdouble Pi, a, b;
+    a = 0.0;
+    b = xi[0];
+    gsl_integration_qag (&F, a, b, 0.0, NC_DEFAULT_PRECISION, NC_INT_PARTITION, 6, *w, &Pi, &err);
+    P = Pi;
+    do {
+      a = b;
+      b += xi[0];
+      gsl_integration_qag (&F, a, b, P * NC_DEFAULT_PRECISION, NC_DEFAULT_PRECISION, NC_INT_PARTITION, 6, *w, &Pi, &err); 
+      P += Pi;
+    } while (fabs(Pi/P) > NC_DEFAULT_PRECISION);
   }
 
   ncm_memory_pool_return (w);
-  
+
   return P;
 }
 
@@ -182,21 +182,21 @@ _nc_cluster_mass_benson_intp (NcClusterMass *clusterm, NcHICosmo *model, gdouble
   F.params = &data;
 
   {
-	gdouble Pi, a, b;
-	a = 0.0;
-	b = msz->signif_obs_max;
-	gsl_integration_qag (&F, a, b, 0.0, NC_DEFAULT_PRECISION, NC_INT_PARTITION, 6, *w, &Pi, &err);
-	P = Pi;
-	do {
-	  a = b;
-	  b += msz->signif_obs_max;
-	  gsl_integration_qag (&F, a, b, P * NC_DEFAULT_PRECISION, NC_DEFAULT_PRECISION, NC_INT_PARTITION, 6, *w, &Pi, &err); 
-	  P += Pi;
-	} while (fabs(Pi/P) > NC_DEFAULT_PRECISION);
+    gdouble Pi, a, b;
+    a = 0.0;
+    b = msz->signif_obs_max;
+    gsl_integration_qag (&F, a, b, 0.0, NC_DEFAULT_PRECISION, NC_INT_PARTITION, 6, *w, &Pi, &err);
+    P = Pi;
+    do {
+      a = b;
+      b += msz->signif_obs_max;
+      gsl_integration_qag (&F, a, b, P * NC_DEFAULT_PRECISION, NC_DEFAULT_PRECISION, NC_INT_PARTITION, 6, *w, &Pi, &err); 
+      P += Pi;
+    } while (fabs(Pi/P) > NC_DEFAULT_PRECISION);
   }
 
   ncm_memory_pool_return (w);
-  
+
   return P;
 }
 
@@ -210,9 +210,9 @@ _nc_cluster_mass_benson_resample (NcClusterMass *clusterm, NcHICosmo *model, gdo
   const gdouble E = nc_hicosmo_E (model, z);
 
   lnzeta = B_SZ * (lnM - log (msz->M0)) + C_SZ * log (E / E0) + log (A_SZ);
-  
+
   lnzeta_obs = lnzeta + gsl_ran_gaussian (rng, D_SZ);
-  
+
   zeta_obs = exp (lnzeta_obs);
 
   xi_mean = sqrt (zeta_obs * zeta_obs + 3.0);
@@ -233,7 +233,7 @@ _significance_to_mass (NcClusterMass *clusterm, NcHICosmo *model, gdouble z, gdo
   const gdouble zeta = sqrt (xi * xi - 3.0);
   const gdouble lnzeta = log(zeta);
   const gdouble lnM = log (msz->M0) + (lnzeta - log (A_SZ) - C_SZ * log(E / E0)) / B_SZ;
-  
+
   return lnM;
 }
 
@@ -278,17 +278,17 @@ _nc_cluster_mass_benson_set_property (GObject * object, guint prop_id, const GVa
     case PROP_SIGNIFICANCE_OBS_MIN:
       msz->signif_obs_min = g_value_get_double (value);
       break;
-	case PROP_SIGNIFICANCE_OBS_MAX:
+    case PROP_SIGNIFICANCE_OBS_MAX:
       msz->signif_obs_max = g_value_get_double (value);
       break;
-	case PROP_Z0:
-	  msz->z0 = g_value_get_double (value);
-	  break;
-	case PROP_M0:
-	  msz->M0 = g_value_get_double (value);
-	  break;
-	default:
-	  G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
+    case PROP_Z0:
+      msz->z0 = g_value_get_double (value);
+      break;
+    case PROP_M0:
+      msz->M0 = g_value_get_double (value);
+      break;
+    default:
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
       break;
   }
 }
@@ -304,13 +304,13 @@ _nc_cluster_mass_benson_get_property (GObject *object, guint prop_id, GValue *va
     case PROP_SIGNIFICANCE_OBS_MIN:
       g_value_set_double (value, msz->signif_obs_min);
       break;
-	case PROP_SIGNIFICANCE_OBS_MAX:
+    case PROP_SIGNIFICANCE_OBS_MAX:
       g_value_set_double (value, msz->signif_obs_max);
       break;
-	case PROP_Z0:
+    case PROP_Z0:
       g_value_set_double (value, msz->z0);
       break;
-	case PROP_M0:
+    case PROP_M0:
       g_value_set_double (value, msz->M0);
       break;
     default:
@@ -331,7 +331,7 @@ nc_cluster_mass_benson_init (NcClusterMassBenson *msz)
 static void
 _nc_cluster_mass_benson_finalize (GObject *object)
 {
-  
+
   /* Chain up : end */
   G_OBJECT_CLASS (nc_cluster_mass_benson_parent_class)->finalize (object);
 }
@@ -342,7 +342,7 @@ nc_cluster_mass_benson_class_init (NcClusterMassBensonClass *klass)
   GObjectClass* object_class = G_OBJECT_CLASS (klass);
   NcClusterMassClass* parent_class = NC_CLUSTER_MASS_CLASS (klass);
   NcmModelClass *model_class = NCM_MODEL_CLASS (klass);
-  
+
   parent_class->P = &_nc_cluster_mass_benson_significance_m_p;
   parent_class->intP = &_nc_cluster_mass_benson_intp;
   parent_class->P_limits = &_nc_cluster_mass_benson_p_limits;
@@ -352,7 +352,7 @@ nc_cluster_mass_benson_class_init (NcClusterMassBensonClass *klass)
   parent_class->obs_params_len = &_nc_cluster_mass_benson_obs_params_len;
 
   parent_class->impl = NC_CLUSTER_MASS_IMPL_ALL;
-  
+
   object_class->finalize = _nc_cluster_mass_benson_finalize;
   object_class->set_property = &ncm_model_class_set_property;
   object_class->get_property = &ncm_model_class_get_property;
@@ -362,7 +362,7 @@ nc_cluster_mass_benson_class_init (NcClusterMassBensonClass *klass)
 
   ncm_model_class_add_params (model_class, 4, 0, PROP_SIZE);
   ncm_model_class_set_name_nick (model_class, "Benson - SZ", "Benson_SZ");
-  
+
   /**
    * NcClusterMassBenson:signif_obs_min:
    *
@@ -387,7 +387,7 @@ nc_cluster_mass_benson_class_init (NcClusterMassBensonClass *klass)
                                                         "Maximum obsevational significance",
                                                         2.0, G_MAXDOUBLE, 40.0,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY |G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
- /**
+  /**
    * NcClusterMassBenson:z0:
    *
    * Reference redshift in the SZ signal-mass scaling relation.
@@ -404,8 +404,8 @@ nc_cluster_mass_benson_class_init (NcClusterMassBensonClass *klass)
    * NcClusterMassBenson:M0:
    *
    * Reference mass (in h^(-1) * M_sun unit) in the SZ signal-mass scaling relation.
-   * FIXME Set correct values (limits)
-   */
+     * FIXME Set correct values (limits)
+     */
   g_object_class_install_property (object_class,
                                    PROP_M0,
                                    g_param_spec_double ("M0",
@@ -418,36 +418,36 @@ nc_cluster_mass_benson_class_init (NcClusterMassBensonClass *klass)
    * FIXME Set correct values (limits)
    */
   ncm_model_class_set_sparam (model_class, NC_CLUSTER_MASS_BENSON_A_SZ, "A_{SZ}", "Asz",
-                               1e-8,  10.0, 1.0e-2,
-                               NC_CLUSTER_MASS_BENSON_DEFAULT_PARAMS_ABSTOL, NC_CLUSTER_MASS_BENSON_DEFAULT_A_SZ,
-                               NCM_PARAM_TYPE_FIXED);
+                              1e-8,  10.0, 1.0e-2,
+                              NC_CLUSTER_MASS_BENSON_DEFAULT_PARAMS_ABSTOL, NC_CLUSTER_MASS_BENSON_DEFAULT_A_SZ,
+                              NCM_PARAM_TYPE_FIXED);
 
   /*
    * SZ signal-mass scaling parameter: Bsz.
    * FIXME Set correct values (limits)
    */
   ncm_model_class_set_sparam (model_class, NC_CLUSTER_MASS_BENSON_B_SZ, "B_{SZ}", "Bsz",
-                               1e-8,  10.0, 1.0e-2,
-                               NC_CLUSTER_MASS_BENSON_DEFAULT_PARAMS_ABSTOL, NC_CLUSTER_MASS_BENSON_DEFAULT_B_SZ,
-                               NCM_PARAM_TYPE_FIXED);
+                              1e-8,  10.0, 1.0e-2,
+                              NC_CLUSTER_MASS_BENSON_DEFAULT_PARAMS_ABSTOL, NC_CLUSTER_MASS_BENSON_DEFAULT_B_SZ,
+                              NCM_PARAM_TYPE_FIXED);
 
   /*
    * SZ signal-mass scaling parameter: Csz.
    * FIXME Set correct values (limits)
    */
   ncm_model_class_set_sparam (model_class, NC_CLUSTER_MASS_BENSON_C_SZ, "C_{SZ}", "Csz",
-                               1e-8,  10.0, 1.0e-2,
-                               NC_CLUSTER_MASS_BENSON_DEFAULT_PARAMS_ABSTOL, NC_CLUSTER_MASS_BENSON_DEFAULT_C_SZ,
-                               NCM_PARAM_TYPE_FIXED);
-  
- /*
+                              1e-8,  10.0, 1.0e-2,
+                              NC_CLUSTER_MASS_BENSON_DEFAULT_PARAMS_ABSTOL, NC_CLUSTER_MASS_BENSON_DEFAULT_C_SZ,
+                              NCM_PARAM_TYPE_FIXED);
+
+  /*
    * SZ signal-mass scaling parameter: Dsz.
    * FIXME Set correct values (limits)
    */
   ncm_model_class_set_sparam (model_class, NC_CLUSTER_MASS_BENSON_D_SZ, "D_{SZ}", "Dsz",
-                               1e-8,  10.0, 1.0e-2,
-                               NC_CLUSTER_MASS_BENSON_DEFAULT_PARAMS_ABSTOL, NC_CLUSTER_MASS_BENSON_DEFAULT_D_SZ,
-                               NCM_PARAM_TYPE_FIXED);
-  
+                              1e-8,  10.0, 1.0e-2,
+                              NC_CLUSTER_MASS_BENSON_DEFAULT_PARAMS_ABSTOL, NC_CLUSTER_MASS_BENSON_DEFAULT_D_SZ,
+                              NCM_PARAM_TYPE_FIXED);
+
 }
 

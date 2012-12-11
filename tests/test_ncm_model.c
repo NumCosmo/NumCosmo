@@ -95,8 +95,8 @@ test_ncm_model_test_type (void)
 {
   test_type = NCM_TYPE_MODEL_TEST;
   {
-	NcmModelTest *tm = g_object_new (test_type, NULL);
-	ncm_model_free (NCM_MODEL (tm));
+    NcmModelTest *tm = g_object_new (test_type, NULL);
+    ncm_model_free (NCM_MODEL (tm));
   }
   sparam_len = SPARAM_LEN1;
   vparam_len = VPARAM_LEN1;
@@ -111,8 +111,8 @@ test_ncm_model_test_child_type (void)
 {
   test_type = NCM_TYPE_MODEL_TEST_CHILD;
   {
-	NcmModelTest *tm = g_object_new (test_type, NULL);
-	ncm_model_free (NCM_MODEL (tm));
+    NcmModelTest *tm = g_object_new (test_type, NULL);
+    ncm_model_free (NCM_MODEL (tm));
   }
   sparam_len += SPARAM_LEN2;
   vparam_len += VPARAM_LEN2;
@@ -127,8 +127,8 @@ test_ncm_model_test_child_child_type (void)
 {
   test_type = NCM_TYPE_MODEL_TEST_CHILD_CHILD;
   {
-	NcmModelTest *tm = g_object_new (test_type, NULL);
-	ncm_model_free (NCM_MODEL (tm));
+    NcmModelTest *tm = g_object_new (test_type, NULL);
+    ncm_model_free (NCM_MODEL (tm));
   }
   sparam_len += SPARAM_LEN3;
   vparam_len += VPARAM_LEN3;
@@ -158,8 +158,8 @@ test_ncm_model_test_new (void)
   g_object_unref (tm);
   if (g_test_trap_fork (0, G_TEST_TRAP_SILENCE_STDOUT | G_TEST_TRAP_SILENCE_STDERR))
   {
-	g_object_unref (tm);
-	exit (0);
+    g_object_unref (tm);
+    exit (0);
   }
   g_test_trap_assert_failed ();
 }
@@ -175,8 +175,8 @@ test_ncm_model_test_length (void)
   model_len = sparam_len;
   for (i = 0; i < vparam_len; i++)
   {
-	g_assert_cmpint (ncm_model_vparam_len (model, i), ==, v_len_tot[i]);
-	model_len += v_len_tot[i];
+    g_assert_cmpint (ncm_model_vparam_len (model, i), ==, v_len_tot[i]);
+    model_len += v_len_tot[i];
   }
 
   g_assert_cmpint (ncm_model_len (model), ==, model_len);
@@ -195,18 +195,18 @@ test_ncm_model_test_defval (void)
 
   for (i = 0; i < sparam_len; i++)
   {
-	gdouble p = ncm_model_orig_param_get (model, i);
-	g_assert_cmpfloat (p, ==, s_defval_tot[i]);
+    gdouble p = ncm_model_orig_param_get (model, i);
+    g_assert_cmpfloat (p, ==, s_defval_tot[i]);
   }
 
   for (i = 0; i < vparam_len; i++)
   {
-	guint j;
-	for (j = 0; j < v_len_tot[i]; j++)
-	{
-	  gdouble p = ncm_model_orig_vparam_get (model, i, j);
-	  g_assert_cmpfloat (p, ==, v_defval_tot[i]);
-	}
+    guint j;
+    for (j = 0; j < v_len_tot[i]; j++)
+    {
+      gdouble p = ncm_model_orig_vparam_get (model, i, j);
+      g_assert_cmpfloat (p, ==, v_defval_tot[i]);
+    }
   }
 
   g_object_unref (tm);
@@ -221,32 +221,32 @@ test_ncm_model_test_name_symbol (void)
 
   for (i = 0; i < sparam_len; i++)
   {
-	const gchar *pname = ncm_model_param_name (model, i);
-	const gchar *psymbol = ncm_model_param_symbol (model, i);
-	g_assert (pname != s_name_tot[i]);
-	g_assert (psymbol != s_symbol_tot[i]);
-	g_assert_cmpstr (pname, ==, s_name_tot[i]);
-	g_assert_cmpstr (psymbol, ==, s_symbol_tot[i]);
+    const gchar *pname = ncm_model_param_name (model, i);
+    const gchar *psymbol = ncm_model_param_symbol (model, i);
+    g_assert (pname != s_name_tot[i]);
+    g_assert (psymbol != s_symbol_tot[i]);
+    g_assert_cmpstr (pname, ==, s_name_tot[i]);
+    g_assert_cmpstr (psymbol, ==, s_symbol_tot[i]);
   }
 
   for (i = 0; i < vparam_len; i++)
   {
-	guint j;
-	for (j = 0; j < v_len_tot[i]; j++)
-	{
-	  gchar *vp_name = g_strdup_printf ("%s_%u", v_name_tot[i], j);
-	  gchar *vp_symbol = g_strdup_printf ("%s_%u", v_symbol_tot[i], j);
-	  const gchar *pname = ncm_model_param_name (model, ncm_model_vparam_index (model, i, j));
-	  const gchar *psymbol = ncm_model_param_symbol (model, ncm_model_vparam_index (model, i, j));
+    guint j;
+    for (j = 0; j < v_len_tot[i]; j++)
+    {
+      gchar *vp_name = g_strdup_printf ("%s_%u", v_name_tot[i], j);
+      gchar *vp_symbol = g_strdup_printf ("%s_%u", v_symbol_tot[i], j);
+      const gchar *pname = ncm_model_param_name (model, ncm_model_vparam_index (model, i, j));
+      const gchar *psymbol = ncm_model_param_symbol (model, ncm_model_vparam_index (model, i, j));
 
-	  g_assert (pname != vp_name);
-	  g_assert (psymbol != vp_symbol);
-	  g_assert_cmpstr (pname, ==, vp_name);
-	  g_assert_cmpstr (psymbol, ==, vp_symbol);
+      g_assert (pname != vp_name);
+      g_assert (psymbol != vp_symbol);
+      g_assert_cmpstr (pname, ==, vp_name);
+      g_assert_cmpstr (psymbol, ==, vp_symbol);
 
-	  g_free (vp_name);
-	  g_free (vp_symbol);
-	}
+      g_free (vp_name);
+      g_free (vp_symbol);
+    }
   }
 
   g_object_unref (tm);
@@ -262,29 +262,29 @@ test_ncm_model_test_finite (void)
 
   for (i = 0; i < model_len; i++)
   {
-	g_assert (ncm_model_param_finite (model, i));
-	g_assert (ncm_model_params_finite (model));
+    g_assert (ncm_model_param_finite (model, i));
+    g_assert (ncm_model_params_finite (model));
 
-	ncm_model_param_set (model, i, GSL_NAN);
-	g_assert (!ncm_model_param_finite (model, i));
-	g_assert (!ncm_model_params_finite (model));
-	ncm_model_param_set_default (model, i);
-	g_assert (ncm_model_param_finite (model, i));
-	g_assert (ncm_model_params_finite (model));
+    ncm_model_param_set (model, i, GSL_NAN);
+    g_assert (!ncm_model_param_finite (model, i));
+    g_assert (!ncm_model_params_finite (model));
+    ncm_model_param_set_default (model, i);
+    g_assert (ncm_model_param_finite (model, i));
+    g_assert (ncm_model_params_finite (model));
 
-	ncm_model_param_set (model, i, GSL_POSINF);
-	g_assert (!ncm_model_param_finite (model, i));
-	g_assert (!ncm_model_params_finite (model));
-	ncm_model_param_set_default (model, i);
-	g_assert (ncm_model_param_finite (model, i));
-	g_assert (ncm_model_params_finite (model));
+    ncm_model_param_set (model, i, GSL_POSINF);
+    g_assert (!ncm_model_param_finite (model, i));
+    g_assert (!ncm_model_params_finite (model));
+    ncm_model_param_set_default (model, i);
+    g_assert (ncm_model_param_finite (model, i));
+    g_assert (ncm_model_params_finite (model));
 
-	ncm_model_param_set (model, i, GSL_NEGINF);
-	g_assert (!ncm_model_param_finite (model, i));
-	g_assert (!ncm_model_params_finite (model));
-	ncm_model_param_set_default (model, i);
-	g_assert (ncm_model_param_finite (model, i));
-	g_assert (ncm_model_params_finite (model));
+    ncm_model_param_set (model, i, GSL_NEGINF);
+    g_assert (!ncm_model_param_finite (model, i));
+    g_assert (!ncm_model_params_finite (model));
+    ncm_model_param_set_default (model, i);
+    g_assert (ncm_model_param_finite (model, i));
+    g_assert (ncm_model_params_finite (model));
   }
 
   g_object_unref (tm);
@@ -303,21 +303,21 @@ test_ncm_model_test_setget (void)
 
   for (i = 0; i < model_len; i++)
   {
-	gdouble lb = ncm_model_param_get_lower_bound (model, i);
-	gdouble ub = ncm_model_param_get_upper_bound (model, i);
-	gdouble val;
-	while ((val = g_test_rand_double_range (lb, ub)))
-	  if (val != ncm_model_param_get (model, i))
-	    break;
+    gdouble lb = ncm_model_param_get_lower_bound (model, i);
+    gdouble ub = ncm_model_param_get_upper_bound (model, i);
+    gdouble val;
+    while ((val = g_test_rand_double_range (lb, ub)))
+      if (val != ncm_model_param_get (model, i))
+      break;
 
-	ncm_model_param_set (model, i, val);
-	g_assert_cmpfloat (ncm_model_param_get (model, i), ==, val);
+    ncm_model_param_set (model, i, val);
+    g_assert_cmpfloat (ncm_model_param_get (model, i), ==, val);
 
-	ncm_model_param_set_default (model, i);
-	g_assert_cmpfloat (ncm_model_param_get (model, i), !=, val);
+    ncm_model_param_set_default (model, i);
+    g_assert_cmpfloat (ncm_model_param_get (model, i), !=, val);
 
-	ncm_model_param_set (model, i, val);
-	ncm_vector_set (tmp, i, val);
+    ncm_model_param_set (model, i, val);
+    ncm_vector_set (tmp, i, val);
   }
 
   /* ncm_model_params_save_as_default */
@@ -325,39 +325,39 @@ test_ncm_model_test_setget (void)
 
   for (i = 0; i < model_len; i++)
   {
-	g_assert_cmpfloat (ncm_model_param_get (model, i), ==, ncm_vector_get (tmp, i));
+    g_assert_cmpfloat (ncm_model_param_get (model, i), ==, ncm_vector_get (tmp, i));
   }
 
   for (i = 0; i < sparam_len; i++)
   {
-	ncm_model_param_set (model, i, s_defval_tot[i]);
+    ncm_model_param_set (model, i, s_defval_tot[i]);
   }
   for (i = 0; i < vparam_len; i++)
   {
-	guint j;
-	for (j = 0; j < v_len_tot[i]; j++)
-	{
-		ncm_model_param_set (model, ncm_model_vparam_index (model, i, j), v_defval_tot[i]);
-	}
+    guint j;
+    for (j = 0; j < v_len_tot[i]; j++)
+    {
+      ncm_model_param_set (model, ncm_model_vparam_index (model, i, j), v_defval_tot[i]);
+    }
   }
 
   ncm_model_params_set_default (model);
   for (i = 0; i < model_len; i++)
   {
-	g_assert_cmpfloat (ncm_model_param_get (model, i), ==, ncm_vector_get (tmp, i));
+    g_assert_cmpfloat (ncm_model_param_get (model, i), ==, ncm_vector_get (tmp, i));
   }
 
   for (i = 0; i < sparam_len; i++)
   {
-	ncm_model_param_set (model, i, s_defval_tot[i]);
+    ncm_model_param_set (model, i, s_defval_tot[i]);
   }
   for (i = 0; i < vparam_len; i++)
   {
-	guint j;
-	for (j = 0; j < v_len_tot[i]; j++)
-	{
-	  ncm_model_param_set (model, ncm_model_vparam_index (model, i, j), v_defval_tot[i]);
-	}
+    guint j;
+    for (j = 0; j < v_len_tot[i]; j++)
+    {
+      ncm_model_param_set (model, ncm_model_vparam_index (model, i, j), v_defval_tot[i]);
+    }
   }
   ncm_model_params_save_as_default (model);
 
@@ -365,7 +365,7 @@ test_ncm_model_test_setget (void)
   ncm_model_params_set_all_data (model, NCM_VECTOR_DATA (tmp));
   for (i = 0; i < model_len; i++)
   {
-	g_assert_cmpfloat (ncm_model_param_get (model, i), ==, ncm_vector_get (tmp, i));
+    g_assert_cmpfloat (ncm_model_param_get (model, i), ==, ncm_vector_get (tmp, i));
   }
 
   ncm_vector_free (tmp);
@@ -384,59 +384,69 @@ test_ncm_model_test_setget_prop (void)
 
   for (i = 0; i < sparam_len; i++)
   {
-	gdouble lb = ncm_model_param_get_lower_bound (model, i);
-	gdouble ub = ncm_model_param_get_upper_bound (model, i);
-	gdouble val, val_out;
-	while ((val = g_test_rand_double_range (lb, ub)))
-	  if (val != ncm_model_param_get (model, i))
-	    break;
+    gdouble lb = ncm_model_param_get_lower_bound (model, i);
+    gdouble ub = ncm_model_param_get_upper_bound (model, i);
+    gdouble val, val_out;
+    while ((val = g_test_rand_double_range (lb, ub)))
+      if (val != ncm_model_param_get (model, i))
+      break;
 
-	g_object_set (model, s_name_tot[i], val, NULL);
-	g_object_get (model, s_name_tot[i], &val_out, NULL);
-	g_assert_cmpfloat (val_out, ==, val);
+    g_object_set (model, s_name_tot[i], val, NULL);
+    g_object_get (model, s_name_tot[i], &val_out, NULL);
+    g_assert_cmpfloat (val_out, ==, val);
   }
 
   for (i = 0; i < vparam_len; i++)
   {
-	NcmVector *tmp = ncm_vector_new (v_len_tot[i]);
-	NcmVector *tmp_out = NULL;
-	guint j;
-	for (j = 0; j < v_len_tot[i]; j++)
-	{
-	  guint n = ncm_model_vparam_index (model, i, j);
-	  gdouble lb = ncm_model_param_get_lower_bound (model, n);
-	  gdouble ub = ncm_model_param_get_upper_bound (model, n);
-	  gdouble val;
+    NcmVector *tmp = ncm_vector_new (v_len_tot[i]);
+    NcmVector *tmp_out = NULL;
+    guint j;
+    for (j = 0; j < v_len_tot[i]; j++)
+    {
+      guint n = ncm_model_vparam_index (model, i, j);
+      gdouble lb = ncm_model_param_get_lower_bound (model, n);
+      gdouble ub = ncm_model_param_get_upper_bound (model, n);
+      gdouble val;
 
-	  while ((val = g_test_rand_double_range (lb, ub)))
-		if (val != ncm_model_param_get (model, n))
-		  break;
-	  ncm_vector_set (tmp, j, val);
-	}
+      while ((val = g_test_rand_double_range (lb, ub)))
+      {
+        if (val != ncm_model_param_get (model, n))
+          break;
+      }
+      ncm_vector_set (tmp, j, val);
+    }
 
-	g_object_set (model, v_name_tot[i], tmp, NULL);
-	g_object_get (model, v_name_tot[i], &tmp_out, NULL);
+    {
+      GVariant *var = ncm_vector_get_variant (tmp);
+      GVariant *var_out = NULL;
+      g_object_set (model, v_name_tot[i], var, NULL);
+      g_object_get (model, v_name_tot[i], &var_out, NULL);
 
-	for (j = 0; j < v_len_tot[i]; j++)
-	{
-	  guint n = ncm_model_vparam_index (model, i, j);
-	  g_assert_cmpfloat (ncm_vector_get (tmp, j), ==, ncm_model_param_get (model, n));
-	  g_assert_cmpfloat (ncm_vector_get (tmp, j), ==, ncm_vector_get (tmp_out, j));
-	}
-	ncm_vector_free (tmp);
-	if (g_test_trap_fork (0, G_TEST_TRAP_SILENCE_STDOUT | G_TEST_TRAP_SILENCE_STDERR))
-	{
-	  ncm_vector_free (tmp);
-	  exit (0);
-	}
-	g_test_trap_assert_failed ();
-	ncm_vector_free (tmp_out);
-	if (g_test_trap_fork (0, G_TEST_TRAP_SILENCE_STDOUT | G_TEST_TRAP_SILENCE_STDERR))
-	{
-	  ncm_vector_free (tmp_out);
-	  exit (0);
-	}
-	g_test_trap_assert_failed ();
+      tmp_out = ncm_vector_new_variant (var_out);
+      g_variant_unref (var);
+      g_variant_unref (var_out);
+    }
+
+    for (j = 0; j < v_len_tot[i]; j++)
+    {
+      guint n = ncm_model_vparam_index (model, i, j);
+      g_assert_cmpfloat (ncm_vector_get (tmp, j), ==, ncm_model_param_get (model, n));
+      g_assert_cmpfloat (ncm_vector_get (tmp, j), ==, ncm_vector_get (tmp_out, j));
+    }
+    ncm_vector_free (tmp);
+    if (g_test_trap_fork (0, G_TEST_TRAP_SILENCE_STDOUT | G_TEST_TRAP_SILENCE_STDERR))
+    {
+      ncm_vector_free (tmp);
+      exit (0);
+    }
+    g_test_trap_assert_failed ();
+    ncm_vector_free (tmp_out);
+    if (g_test_trap_fork (0, G_TEST_TRAP_SILENCE_STDOUT | G_TEST_TRAP_SILENCE_STDERR))
+    {
+      ncm_vector_free (tmp_out);
+      exit (0);
+    }
+    g_test_trap_assert_failed ();
   }
 
   g_object_unref (tm);
@@ -451,10 +461,10 @@ test_ncm_model_test_setget_vector (void)
 
   if (g_test_trap_fork (0, G_TEST_TRAP_SILENCE_STDOUT | G_TEST_TRAP_SILENCE_STDERR))
   {
-	NcmVector *tmp2 = ncm_vector_new (model_len + 1);
-	ncm_model_params_set_vector (model, tmp2);
-	ncm_vector_free (tmp2);
-	exit (0);
+    NcmVector *tmp2 = ncm_vector_new (model_len + 1);
+    ncm_model_params_set_vector (model, tmp2);
+    ncm_vector_free (tmp2);
+    exit (0);
   }
   g_test_trap_assert_failed ();
 
@@ -468,9 +478,9 @@ test_ncm_model_test_setget_model (void)
   NcmModel *model1 = NCM_MODEL (tm1);
   NcmModel *model2 = ncm_model_copy (model1);
   NcmModelTest *tm3 = g_object_new (test_type,
-                                     "VPBase0-length", ncm_model_vparam_len (model1, 0) + 1,
-                                     "VPBase1-length", ncm_model_vparam_len (model1, 1) + 1,
-                                     NULL);
+                                    "VPBase0-length", ncm_model_vparam_len (model1, 0) + 1,
+                                    "VPBase1-length", ncm_model_vparam_len (model1, 1) + 1,
+                                    NULL);
   NcmModel *model3 = NCM_MODEL (tm3);
   guint model_len = ncm_model_len (model1);
   guint i;
@@ -480,58 +490,58 @@ test_ncm_model_test_setget_model (void)
 
   for (i = 0; i < model_len; i++)
   {
-	gdouble lb = ncm_model_param_get_lower_bound (model2, i);
-	gdouble ub = ncm_model_param_get_upper_bound (model2, i);
-	gdouble val;
-	while ((val = g_test_rand_double_range (lb, ub)))
-	  if (val != ncm_model_param_get (model2, i))
-	    break;
+    gdouble lb = ncm_model_param_get_lower_bound (model2, i);
+    gdouble ub = ncm_model_param_get_upper_bound (model2, i);
+    gdouble val;
+    while ((val = g_test_rand_double_range (lb, ub)))
+      if (val != ncm_model_param_get (model2, i))
+      break;
 
-	ncm_model_param_set (model2, i, val);
+    ncm_model_param_set (model2, i, val);
   }
 
   ncm_model_params_set_model (model1, model2);
 
   for (i = 0; i < model_len; i++)
   {
-	g_assert_cmpfloat (ncm_model_param_get (model1, i), ==, ncm_model_param_get (model2, i));
+    g_assert_cmpfloat (ncm_model_param_get (model1, i), ==, ncm_model_param_get (model2, i));
   }
 
   if (g_test_trap_fork (0, G_TEST_TRAP_SILENCE_STDOUT | G_TEST_TRAP_SILENCE_STDERR))
   {
-	ncm_model_params_set_model (model1, model3);
-	exit (0);
+    ncm_model_params_set_model (model1, model3);
+    exit (0);
   }
   g_test_trap_assert_failed ();
 
   if (g_test_trap_fork (0, G_TEST_TRAP_SILENCE_STDOUT | G_TEST_TRAP_SILENCE_STDERR))
   {
-	ncm_model_params_set_model (model3, model1);
-	exit (0);
+    ncm_model_params_set_model (model3, model1);
+    exit (0);
   }
   g_test_trap_assert_failed ();
 
   ncm_model_free (model1);
   if (g_test_trap_fork (0, G_TEST_TRAP_SILENCE_STDOUT | G_TEST_TRAP_SILENCE_STDERR))
   {
-	ncm_model_free (model1);
-	exit (0);
+    ncm_model_free (model1);
+    exit (0);
   }
   g_test_trap_assert_failed ();
 
   ncm_model_free (model2);
   if (g_test_trap_fork (0, G_TEST_TRAP_SILENCE_STDOUT | G_TEST_TRAP_SILENCE_STDERR))
   {
-	ncm_model_free (model2);
-	exit (0);
+    ncm_model_free (model2);
+    exit (0);
   }
   g_test_trap_assert_failed ();
 
   ncm_model_free (model3);
   if (g_test_trap_fork (0, G_TEST_TRAP_SILENCE_STDOUT | G_TEST_TRAP_SILENCE_STDERR))
   {
-	ncm_model_free (model3);
-	exit (0);
+    ncm_model_free (model3);
+    exit (0);
   }
   g_test_trap_assert_failed ();
 }
@@ -545,33 +555,33 @@ test_ncm_model_test_name_index (void)
 
   for (i = 0; i < sparam_len; i++)
   {
-	guint n = ncm_model_param_index_from_name (model, s_name_tot[i]);
-	const gchar *s_name_n = ncm_model_param_name (model, n);
-	const gchar *s_symbol_n = ncm_model_param_symbol (model, n);
+    guint n = ncm_model_param_index_from_name (model, s_name_tot[i]);
+    const gchar *s_name_n = ncm_model_param_name (model, n);
+    const gchar *s_symbol_n = ncm_model_param_symbol (model, n);
 
-	g_assert_cmpuint (n, ==, i);
-	g_assert_cmpstr (s_name_n, ==, s_name_tot[n]);
-	g_assert_cmpstr (s_symbol_n, ==, s_symbol_tot[n]);
+    g_assert_cmpuint (n, ==, i);
+    g_assert_cmpstr (s_name_n, ==, s_name_tot[n]);
+    g_assert_cmpstr (s_symbol_n, ==, s_symbol_tot[n]);
   }
 
   for (i = 0; i < vparam_len; i++)
   {
-	guint j;
+    guint j;
 
-	for (j = 0; j < v_len_tot[i]; j++)
-	{
-	  gchar *v_name_ij = g_strdup_printf ("%s_%u", v_name_tot[i], j);
-	  gchar *v_symbol_ij = g_strdup_printf ("%s_%u", v_symbol_tot[i], j);
-	  guint n = ncm_model_param_index_from_name (model, v_name_ij);
-	  const gchar *v_name_n = ncm_model_param_name (model, n);
-	  const gchar *v_symbol_n = ncm_model_param_symbol (model, n);
+    for (j = 0; j < v_len_tot[i]; j++)
+    {
+      gchar *v_name_ij = g_strdup_printf ("%s_%u", v_name_tot[i], j);
+      gchar *v_symbol_ij = g_strdup_printf ("%s_%u", v_symbol_tot[i], j);
+      guint n = ncm_model_param_index_from_name (model, v_name_ij);
+      const gchar *v_name_n = ncm_model_param_name (model, n);
+      const gchar *v_symbol_n = ncm_model_param_symbol (model, n);
 
-	  g_assert_cmpstr (v_name_n, ==, v_name_ij);
-	  g_assert_cmpstr (v_symbol_n, ==, v_symbol_ij);
+      g_assert_cmpstr (v_name_n, ==, v_name_ij);
+      g_assert_cmpstr (v_symbol_n, ==, v_symbol_ij);
 
-	  g_free (v_name_ij);
-	  g_free (v_symbol_ij);
-	}
+      g_free (v_name_ij);
+      g_free (v_symbol_ij);
+    }
   }
 
   g_object_unref (tm);

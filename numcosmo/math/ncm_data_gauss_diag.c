@@ -226,7 +226,7 @@ _ncm_data_gauss_prepare_weight (NcmData *data)
   gint i;
 
   if (gauss->weight == NULL)
-    gauss->weight = ncm_vector_new_sunk (gauss->np);
+    gauss->weight = ncm_vector_new (gauss->np);
 
   gauss->wt = 0.0;
   for (i = 0; i < gauss->np; i++)
@@ -377,9 +377,9 @@ ncm_data_gauss_diag_set_size (NcmDataGaussDiag *diag, guint np)
   if ((np != 0) && (np != diag->np))
   {
     diag->np    = np;
-    diag->y     = ncm_vector_new_sunk (diag->np);
-    diag->v     = ncm_vector_new_sunk (diag->np);
-    diag->sigma = ncm_vector_new_sunk (diag->np);    
+    diag->y     = ncm_vector_new (diag->np);
+    diag->v     = ncm_vector_new (diag->np);
+    diag->sigma = ncm_vector_new (diag->np);    
   }
 }
 

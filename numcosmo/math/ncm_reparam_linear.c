@@ -103,8 +103,8 @@ _ncm_reparam_linear_constructed (GObject *object)
               (NCM_MATRIX_NROWS(relin->T) == reparam->length) &&
               (ncm_vector_len(relin->v) == reparam->length));
 
-    relin->vp = ncm_vector_new_sunk (reparam->length);
-    relin->T_LU = ncm_matrix_new_sunk (reparam->length, reparam->length);
+    relin->vp = ncm_vector_new (reparam->length);
+    relin->T_LU = ncm_matrix_new (reparam->length, reparam->length);
     relin->p = gsl_permutation_alloc (reparam->length);
 
     ncm_matrix_memcpy (relin->T_LU, relin->T);
@@ -210,10 +210,10 @@ _ncm_reparam_linear_copyto (NcmReparam *reparam, NcmReparam *reparam_dest)
       ncm_vector_free (relin->vp);
       gsl_permutation_free (relin->p);
 
-      relin->T_LU = ncm_matrix_new_sunk (reparam->length, reparam->length);
-      relin->T = ncm_matrix_new_sunk (reparam->length, reparam->length);
-      relin->v = ncm_vector_new_sunk (reparam->length);
-      relin->vp = ncm_vector_new_sunk (reparam->length);
+      relin->T_LU = ncm_matrix_new (reparam->length, reparam->length);
+      relin->T = ncm_matrix_new (reparam->length, reparam->length);
+      relin->v = ncm_vector_new (reparam->length);
+      relin->vp = ncm_vector_new (reparam->length);
       relin->p = gsl_permutation_alloc (reparam->length);
     }
 

@@ -841,7 +841,9 @@ ncm_mset_param_get_abstol (NcmMSet *mset, NcmModelID mid, guint pid)
 void
 ncm_mset_param_set_ftype (NcmMSet *mset, NcmModelID mid, guint pid, NcmParamType ftype)
 {
-  ncm_model_param_set_ftype (ncm_mset_peek (mset, mid), pid, ftype);
+  NcmModel *model = ncm_mset_peek (mset, mid);
+  g_assert (model != NULL);
+  ncm_model_param_set_ftype (model, pid, ftype);
 }
 
 /**

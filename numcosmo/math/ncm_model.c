@@ -251,7 +251,7 @@ _ncm_model_constructed (GObject *object)
       g_array_index (model->vparam_pos, guint, i) = model->total_len;
       model->total_len += g_array_index (model->vparam_len, guint, i);
     }
-    model->params = ncm_vector_new_sunk (model->total_len);
+    model->params = ncm_vector_new (model->total_len);
     model->p = model->params;
     g_array_set_size (model->ptypes, model->total_len);
     _ncm_model_set_sparams (model);
@@ -541,10 +541,21 @@ ncm_model_class_get_property (GObject *object, guint prop_id, GValue *value, GPa
   }
   else if (vparam_id < model_class->vparam_len)
   {
-    const guint len = g_array_index (model->vparam_len, guint, vparam_id);
-    const guint pos = g_array_index (model->vparam_pos, guint, vparam_id);
-    NcmVector *v = ncm_vector_get_subvector (model->params, pos, len);
-    g_value_take_object (value, ncm_vector_ref (v));
+    gsize n = g_array_index (model->vparam_len, guint, vparam_id);
+    GVariantBuilder *builder;
+    GVariant *var;
+    gint i;
+
+    builder = g_variant_builder_new (G_VARIANT_TYPE ("ad"));
+    for (i = 0; i < n; i++)
+    {
+      guint pid = ncm_model_vparam_index (model, vparam_id, i);
+      gdouble val = ncm_model_param_get (model, pid);
+      g_variant_builder_add (builder, "d", val);
+    }
+    var = g_variant_new ("ad", builder);
+    g_variant_builder_unref (builder);
+    g_value_take_variant (value, var);
   }
   else if (vparam_len_id < model_class->vparam_len)
   {
@@ -610,8 +621,19 @@ ncm_model_class_set_property (GObject *object, guint prop_id, const GValue *valu
   }
   else if (vparam_id < model_class->vparam_len)
   {
-    NcmVector *val = g_value_get_object (value);
-    ncm_model_orig_vparam_set_vector (model, vparam_id, val);
+    GVariant *var = g_value_get_variant (value);
+    gsize n = g_variant_n_children (var);
+    NcmVector *vals = ncm_vector_new (n);
+    gint i;
+
+    if (n != g_array_index (model->vparam_len, guint, vparam_id))
+      g_error ("set_property: cannot set value of vector parameter, variant contains %zu childs but vector dimension is %u", n, g_array_index (model->vparam_len, guint, vparam_id));
+
+    for (i = 0; i < n; i++)
+      g_variant_get_child (var, i, "d", ncm_vector_ptr (vals, i));
+
+    ncm_model_orig_vparam_set_vector (model, vparam_id, vals);
+    ncm_vector_free (vals);
   }
   else if (vparam_len_id < model_class->vparam_len)
   {
@@ -821,7 +843,9 @@ ncm_model_class_set_vparam (NcmModelClass *model_class, guint vparam_id, guint d
 
   g_ptr_array_index (model_class->vparam, vparam_id) = vparam;
   g_object_class_install_property (object_class, prop_id,
-                                   g_param_spec_object (name, NULL, symbol, NCM_TYPE_VECTOR, G_PARAM_READWRITE));
+                                   g_param_spec_variant (name, NULL, symbol, 
+                                                         G_VARIANT_TYPE ("ad"), NULL, 
+                                                         G_PARAM_READWRITE));
   {
     gchar *param_length_name = g_strdup_printf ("%s-length", name);
     gchar *param_length_symbol = g_strdup_printf ("%s:length", symbol);

@@ -433,8 +433,12 @@ ncm_spline2d_set_function (NcmSpline2d *s2d, NcmSplineFuncType ftype, gsl_functi
   ncm_spline_set_func (s_x, ftype, Fx, xl, xu, 0, rel_err);
   ncm_spline_set_func (s_y, ftype, Fy, yl, yu, 0, rel_err);
 
-  ncm_spline2d_set (s2d, s_x->xv, s_y->xv, ncm_matrix_new (ncm_vector_len (s_y->xv), ncm_vector_len (s_x->xv)), FALSE);
-
+  {
+    NcmMatrix *s_z = ncm_matrix_new (ncm_vector_len (s_y->xv), ncm_vector_len (s_x->xv));
+    ncm_spline2d_set (s2d, s_x->xv, s_y->xv, s_z, FALSE);
+    ncm_matrix_free (s_z);
+  }
+  
   ncm_spline_free (s_x);
   ncm_spline_free (s_y);
 

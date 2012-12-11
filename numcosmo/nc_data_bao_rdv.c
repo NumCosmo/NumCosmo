@@ -156,7 +156,7 @@ nc_data_bao_rdv_class_init (NcDataBaoRDVClass *klass)
                                    g_param_spec_enum ("sample-id",
                                                       NULL,
                                                       "Sample id",
-                                                      NC_TYPE_DATA_BAO_ID, NC_DATA_BAO_RDV_PERCIVAL,
+                                                      NC_TYPE_DATA_BAO_ID, NC_DATA_BAO_RDV_PERCIVAL2010,
                                                       G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   data_class->prepare    = &_nc_data_bao_rdv_prepare;
@@ -227,7 +227,7 @@ nc_data_bao_rdv_set_size (NcDataBaoRDV *bao_rdv, guint np)
     ncm_vector_clear (&bao_rdv->x);
 
   if ((np != 0) && (np != gauss->np))
-    bao_rdv->x = ncm_vector_new_sunk (np);
+    bao_rdv->x = ncm_vector_new (np);
 
   ncm_data_gauss_set_size (NCM_DATA_GAUSS (bao_rdv), np);
 }
@@ -257,14 +257,22 @@ nc_data_bao_rdv_get_size (NcDataBaoRDV *bao_rdv)
  *
  ****************************************************************************/
 
-static gdouble nc_bao_distance_priors_percival_z[]       = {    0.2,   0.35 };
-static gdouble nc_bao_distance_priors_percival_bestfit[] = { 0.1980, 0.1094 };
-
-static gdouble nc_bao_distance_priors_percival_inv_cov[][2] =
+static gdouble nc_bao_distance_priors_percival2007_z[]       = {    0.2,   0.35 };
+static gdouble nc_bao_distance_priors_percival2007_bestfit[] = { 0.1980, 0.1094 };
+static gdouble nc_bao_distance_priors_percival2007_inv_cov[][2] =
 { 
   { 35059.0, -24031.0},
   {-24031.0, 108300.0} 
 };
+
+static gdouble nc_bao_distance_priors_percival2010_z[]       = {    0.2,   0.35 };
+static gdouble nc_bao_distance_priors_percival2010_bestfit[] = { 0.1905, 0.1097 };
+static gdouble nc_bao_distance_priors_percival2010_inv_cov[][2] =
+{ 
+  { 30124.0, -17227.0},
+  {-17227.0,  86977.0} 
+};
+
 
 /**
  * nc_data_bao_rdv_set_sample:
@@ -281,24 +289,49 @@ nc_data_bao_rdv_set_sample (NcDataBaoRDV *bao_rdv, NcDataBaoId id)
   NcmDataGauss *gauss = NCM_DATA_GAUSS (bao_rdv);
   gint i, j;
   
-  g_assert (id == NC_DATA_BAO_RDV_PERCIVAL);
+  g_assert (id >= NC_DATA_BAO_RDV_START && id <= NC_DATA_BAO_RDV_END);
 
   if (data->desc != NULL)
     g_free (data->desc);
-  data->desc = g_strdup ("Percival 2007, BAO Sample R-Dv");
 
-  nc_data_bao_rdv_set_size (bao_rdv, 2);
-  bao_rdv->id = NC_DATA_BAO_RDV_PERCIVAL;
-
-  for (i = 0; i < 2; i++)
+  switch (id)
   {
-    ncm_vector_set (bao_rdv->x, i, nc_bao_distance_priors_percival_z[i]);
-    ncm_vector_set (gauss->y,   i, nc_bao_distance_priors_percival_bestfit[i]);
-    for (j = 0; j < 2; j++)
-      ncm_matrix_set (gauss->inv_cov, i, j, 
-                      nc_bao_distance_priors_percival_inv_cov[i][j]);
-  }
+    case NC_DATA_BAO_RDV_PERCIVAL2007:
+    {
+      data->desc = g_strdup ("Percival 2007, BAO Sample R-Dv");
+      nc_data_bao_rdv_set_size (bao_rdv, 2);
 
+      for (i = 0; i < 2; i++)
+      {
+        ncm_vector_set (bao_rdv->x, i, nc_bao_distance_priors_percival2007_z[i]);
+        ncm_vector_set (gauss->y,   i, nc_bao_distance_priors_percival2007_bestfit[i]);
+        for (j = 0; j < 2; j++)
+          ncm_matrix_set (gauss->inv_cov, i, j, 
+                          nc_bao_distance_priors_percival2007_inv_cov[i][j]);
+      }
+      break;
+    }
+    case NC_DATA_BAO_RDV_PERCIVAL2010:
+    {
+      data->desc = g_strdup ("Percival 2010, BAO Sample R-Dv");
+      nc_data_bao_rdv_set_size (bao_rdv, 2);
+
+      for (i = 0; i < 2; i++)
+      {
+        ncm_vector_set (bao_rdv->x, i, nc_bao_distance_priors_percival2010_z[i]);
+        ncm_vector_set (gauss->y,   i, nc_bao_distance_priors_percival2010_bestfit[i]);
+        for (j = 0; j < 2; j++)
+          ncm_matrix_set (gauss->inv_cov, i, j, 
+                          nc_bao_distance_priors_percival2010_inv_cov[i][j]);
+      }
+      break;
+    }
+    default:
+      g_assert_not_reached ();
+      break;
+  }
+  
+  bao_rdv->id = id;
   ncm_data_set_init (data);
 }
 

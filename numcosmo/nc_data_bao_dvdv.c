@@ -146,7 +146,7 @@ nc_data_bao_dvdv_class_init (NcDataBaoDVDVClass *klass)
                                    g_param_spec_enum ("sample-id",
                                                       NULL,
                                                       "Sample id",
-                                                      NC_TYPE_DATA_BAO_ID, NC_DATA_BAO_DVDV_PERCIVAL,
+                                                      NC_TYPE_DATA_BAO_ID, NC_DATA_BAO_DVDV_PERCIVAL2007,
                                                       G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));  
 
   data_class->prepare   = &_nc_data_bao_dvdv_prepare;
@@ -209,18 +209,35 @@ nc_data_bao_dvdv_set_sample (NcDataBaoDVDV *bao_dvdv, NcDataBaoId id)
 {
   NcmData *data = NCM_DATA (bao_dvdv);
   NcmDataGaussDiag *diag = NCM_DATA_GAUSS_DIAG (bao_dvdv);
-  
-  g_assert (id == NC_DATA_BAO_DVDV_PERCIVAL);
+
+  g_assert (id >= NC_DATA_BAO_DVDV_START && id <= NC_DATA_BAO_DVDV_START);
 
   if (data->desc != NULL)
     g_free (data->desc);
-  data->desc = g_strdup ("Percival 2007, BAO Sample Dv-Dv");
 
-  ncm_data_gauss_diag_set_size (diag, 1);
-  bao_dvdv->id = NC_DATA_BAO_DVDV_PERCIVAL;
-
-  ncm_vector_set (diag->y,     0, ncm_c_bao_percival_DV_DV ());
-  ncm_vector_set (diag->sigma, 0, ncm_c_bao_percival_sigma_DV_DV ());
+  switch (id)
+  {
+    case NC_DATA_BAO_DVDV_PERCIVAL2007:
+    {
+      data->desc = g_strdup ("Percival 2007, BAO Sample Dv-Dv");
+      ncm_data_gauss_diag_set_size (diag, 1);
+      ncm_vector_set (diag->y,     0, ncm_c_bao_percival2007_DV_DV ());
+      ncm_vector_set (diag->sigma, 0, ncm_c_bao_percival2007_sigma_DV_DV ());
+      break;
+    }
+    case NC_DATA_BAO_DVDV_PERCIVAL2010:
+    {
+      data->desc = g_strdup ("Percival 2010, BAO Sample Dv-Dv");
+      ncm_data_gauss_diag_set_size (diag, 1);
+      ncm_vector_set (diag->y,     0, ncm_c_bao_percival2010_DV_DV ());
+      ncm_vector_set (diag->sigma, 0, ncm_c_bao_percival2010_sigma_DV_DV ());
+      break;
+    }
+    default:
+      g_assert_not_reached ();
+      break;
+  }
+  bao_dvdv->id = id;
 
   ncm_data_set_init (data);
 }

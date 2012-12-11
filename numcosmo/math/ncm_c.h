@@ -65,6 +65,7 @@ GType ncm_c_get_type (void) G_GNUC_CONST;
 G_INLINE_FUNC long double ncm_c_sqrt_1_4pi (void) G_GNUC_CONST;
 G_INLINE_FUNC long double ncm_c_sqrt_3_4pi (void) G_GNUC_CONST;
 G_INLINE_FUNC long double ncm_c_lnpi_4 (void) G_GNUC_CONST;
+G_INLINE_FUNC long double ncm_c_ln2pi (void) G_GNUC_CONST;
 G_INLINE_FUNC long double ncm_c_pi (void) G_GNUC_CONST;
 G_INLINE_FUNC long double ncm_c_tan_1arcsec (void) G_GNUC_CONST;
 
@@ -187,8 +188,10 @@ G_INLINE_FUNC gdouble ncm_c_bao_eisenstein_A (void) G_GNUC_CONST;
 G_INLINE_FUNC gdouble ncm_c_bao_eisenstein_sigma_A (void) G_GNUC_CONST;
 G_INLINE_FUNC gdouble ncm_c_bao_eisenstein_DV (void) G_GNUC_CONST;
 G_INLINE_FUNC gdouble ncm_c_bao_eisenstein_sigma_DV (void) ;
-G_INLINE_FUNC gdouble ncm_c_bao_percival_DV_DV (void) G_GNUC_CONST;
-G_INLINE_FUNC gdouble ncm_c_bao_percival_sigma_DV_DV (void) G_GNUC_CONST;
+G_INLINE_FUNC gdouble ncm_c_bao_percival2007_DV_DV (void) G_GNUC_CONST;
+G_INLINE_FUNC gdouble ncm_c_bao_percival2007_sigma_DV_DV (void) G_GNUC_CONST;
+G_INLINE_FUNC gdouble ncm_c_bao_percival2010_DV_DV (void) G_GNUC_CONST;
+G_INLINE_FUNC gdouble ncm_c_bao_percival2010_sigma_DV_DV (void) G_GNUC_CONST;
 G_INLINE_FUNC gdouble ncm_c_hubble_cte_wmap (void) G_GNUC_CONST;
 G_INLINE_FUNC gdouble ncm_c_hubble_cte_hst (void) G_GNUC_CONST;
 G_INLINE_FUNC gdouble ncm_c_hubble_cte_msa (void) G_GNUC_CONST;
@@ -229,6 +232,9 @@ G_INLINE_FUNC long double ncm_c_sqrt_3_4pi (void)
 
 G_INLINE_FUNC long double ncm_c_lnpi_4 (void)
 { return 0.28618247146235004353585683783826468L; }
+
+G_INLINE_FUNC long double ncm_c_ln2pi (void)
+{ return 1.8378770664093454835606594728112353L; }
 
 G_INLINE_FUNC long double ncm_c_pi (void)
 { return 3.1415926535897932384626433832795029L; }
@@ -552,11 +558,17 @@ G_INLINE_FUNC gdouble ncm_c_bao_eisenstein_DV (void)
 G_INLINE_FUNC gdouble ncm_c_bao_eisenstein_sigma_DV (void)
 { return 88.0; }
 
-G_INLINE_FUNC gdouble ncm_c_bao_percival_DV_DV (void)
+G_INLINE_FUNC gdouble ncm_c_bao_percival2007_DV_DV (void)
 { return 1.812; }
 
-G_INLINE_FUNC gdouble ncm_c_bao_percival_sigma_DV_DV (void)
+G_INLINE_FUNC gdouble ncm_c_bao_percival2007_sigma_DV_DV (void)
 { return 0.060; }
+
+G_INLINE_FUNC gdouble ncm_c_bao_percival2010_DV_DV (void)
+{ return 1.736; }
+
+G_INLINE_FUNC gdouble ncm_c_bao_percival2010_sigma_DV_DV (void)
+{ return 0.065; }
 
 G_INLINE_FUNC gdouble ncm_c_hubble_cte_wmap (void)
 { return 73.0; }

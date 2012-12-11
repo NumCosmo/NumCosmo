@@ -42,6 +42,7 @@ void test_ncm_vector_new_data_const (void);
 void test_ncm_vector_operations (void);
 void test_ncm_vector_free (void);
 void test_ncm_vector_subvector (void);
+void test_ncm_vector_variant (void);
 
 gint
 main (gint argc, gchar *argv[])
@@ -59,6 +60,7 @@ main (gint argc, gchar *argv[])
   g_test_add_func ("/numcosmo/ncm_vector/new_data_const", &test_ncm_vector_new_data_const);
   g_test_add_func ("/numcosmo/ncm_vector/operations", &test_ncm_vector_operations);
   g_test_add_func ("/numcosmo/ncm_vector/subvector", &test_ncm_vector_subvector);
+  g_test_add_func ("/numcosmo/ncm_vector/variant", &test_ncm_vector_variant);
   g_test_add_func ("/numcosmo/ncm_vector/free", &test_ncm_vector_free);
 
   g_test_run ();
@@ -75,9 +77,6 @@ test_ncm_vector_new_sanity (NcmVector *vv)
   guint i;
 
   g_assert (NCM_IS_VECTOR (vv));
-  g_assert (g_object_is_floating (vv));
-  ncm_vector_ref (vv);
-  g_assert (!g_object_is_floating (vv));
 
   for (i = 0; i < 10 * _NCM_VECTOR_TEST_SIZE; i++)
   {
@@ -392,9 +391,6 @@ test_ncm_vector_subvector (void)
   }
 
   g_assert (NCM_IS_VECTOR (sv));
-  g_assert (g_object_is_floating (sv));
-  ncm_vector_ref (sv);
-  g_assert (!g_object_is_floating (sv));
 
   ncm_vector_free (v);
   g_assert (G_IS_OBJECT (v));
@@ -404,6 +400,42 @@ test_ncm_vector_subvector (void)
   if (g_test_trap_fork (0, G_TEST_TRAP_SILENCE_STDOUT | G_TEST_TRAP_SILENCE_STDERR))
   {
     ncm_vector_free (sv);
+    exit (0);
+  }
+  g_test_trap_assert_failed ();
+}
+
+void
+test_ncm_vector_variant (void)
+{
+  GVariant *var = ncm_vector_get_variant (v);
+
+  g_assert (g_variant_is_container (var));
+  g_assert_cmpuint (ncm_vector_len (v), ==, g_variant_n_children (var));
+
+  {
+    NcmVector *nv = ncm_vector_new_variant (var);
+    gint i;
+
+    g_assert_cmpuint (ncm_vector_len (v), ==, ncm_vector_len (nv));
+    for (i = 0; i < ncm_vector_len (v); i++)
+    {
+      g_assert_cmpfloat (ncm_vector_get (v, i), ==, ncm_vector_get (nv, i));
+    }
+    
+    ncm_vector_free (nv);
+    if (g_test_trap_fork (0, G_TEST_TRAP_SILENCE_STDOUT | G_TEST_TRAP_SILENCE_STDERR))
+    {
+      ncm_vector_free (nv);
+      exit (0);
+    }
+    g_test_trap_assert_failed ();
+  }
+
+  g_variant_unref (var);
+  if (g_test_trap_fork (0, G_TEST_TRAP_SILENCE_STDOUT | G_TEST_TRAP_SILENCE_STDERR))
+  {
+    g_variant_unref (var);
     exit (0);
   }
   g_test_trap_assert_failed ();

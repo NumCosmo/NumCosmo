@@ -39,7 +39,7 @@
 
 #include "math/ncm_vector.h"
 
-G_DEFINE_TYPE (NcmVector, ncm_vector, G_TYPE_INITIALLY_UNOWNED);
+G_DEFINE_TYPE (NcmVector, ncm_vector, G_TYPE_OBJECT);
 
 /**
  * ncm_vector_new:
@@ -55,21 +55,6 @@ ncm_vector_new (gsize n)
 {
   gdouble *d = g_slice_alloc (sizeof (gdouble) * n);
   return ncm_vector_new_data_slice (d, n, 1);
-}
-
-/**
- * ncm_vector_new_sunk:
- * @n: defines the size of the vector.
- *
- * This function allocates memory for a new #NcmVector of double
- * with @n components. Returns a sunk reference.
- *
- * Returns: A new #NcmVector.
- */
-NcmVector *
-ncm_vector_new_sunk (gsize n)
-{
-  return ncm_vector_ref (ncm_vector_new (n));
 }
 
 /**
@@ -198,6 +183,25 @@ ncm_vector_new_data_static (gdouble *d, gsize size, gsize stride)
 }
 
 /**
+ * ncm_vector_new_variant:
+ * @var: a #GVariant of the type "ad".
+ *
+ * This function convert a #GVariant array to a #NcmVector.
+ *
+ * Returns: A new #NcmVector.
+ */
+NcmVector *
+ncm_vector_new_variant (GVariant *var)
+{
+  gsize n = g_variant_n_children (var);
+  NcmVector *v = ncm_vector_new (n);
+  gint i;
+  for (i = 0; i < n; i++)
+    g_variant_get_child (var, i, "d", ncm_vector_ptr (v, i));
+  return v;  
+}
+
+/**
  * ncm_vector_new_data_const:
  * @d: pointer to the first double allocated.
  * @size: number of doubles allocated.
@@ -228,15 +232,14 @@ ncm_vector_new_data_const (const gdouble *d, gsize size, gsize stride)
  * ncm_vector_ref:
  * @cv: a NcmVector.
  *
- * This function increses the reference count of @cv or sink
- * the object.
+ * This function increses the reference count of @cv the object.
  *
  * Returns: (transfer full): @cv
  */
 NcmVector *
 ncm_vector_ref (NcmVector *cv)
 {
-  return g_object_ref_sink (cv);
+  return g_object_ref (cv);
 }
 
 /**
@@ -277,6 +280,32 @@ ncm_vector_get_subvector (NcmVector *cv, gsize k, gsize size)
   scv->pobj = G_OBJECT (ncm_vector_ref (cv));
 
   return scv;
+}
+
+/**
+ * ncm_vector_get_variant:
+ * @v: a #NcmVector.
+ *
+ * Convert @v to a GVariant of the type "ad" without destroying the
+ * original vector @v;
+ *
+ * Returns: (transfer full): A #GVariant of the type "ad".
+ */
+GVariant *
+ncm_vector_get_variant (NcmVector *v)
+{
+  guint n = ncm_vector_len (v);
+  GVariantBuilder *builder;
+  GVariant *var;
+  gint i;
+
+  builder = g_variant_builder_new (G_VARIANT_TYPE ("ad"));
+  for (i = 0; i < n; i++)
+    g_variant_builder_add (builder, "d", ncm_vector_get (v, i));
+  var = g_variant_new ("ad", builder);
+  g_variant_builder_unref (builder);
+  g_variant_ref_sink (var);
+  return var;
 }
 
 /**
@@ -527,8 +556,6 @@ _ncm_vector_finalize (GObject *object)
 void
 ncm_vector_free (NcmVector *cv)
 {
-  if (g_object_is_floating (cv))
-    g_object_ref_sink (cv);
   g_object_unref (cv);
 }
 
@@ -543,8 +570,6 @@ ncm_vector_free (NcmVector *cv)
 void 
 ncm_vector_clear (NcmVector **cv)
 {
-  if (*cv != NULL && g_object_is_floating (*cv))
-    g_object_ref_sink (*cv);
   g_clear_object (cv);  
 }
 
@@ -620,8 +645,7 @@ N_Vector
 ncm_vector_nvector (NcmVector *cv)
 {
   struct _generic_N_Vector *nv = g_slice_new (struct _generic_N_Vector);
-  g_object_ref_sink (cv);
-  nv->content = cv;
+  nv->content = g_object_ref (cv);
   nv->ops = &_ncm_ops;
   return nv;
 }

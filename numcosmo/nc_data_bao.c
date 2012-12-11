@@ -56,18 +56,21 @@
 NcmData *
 nc_data_bao_new (NcDistance *dist, NcDataBaoId id)
 {
+  /* FIXME the switch is wrong but works since we have only two options. */
   switch (id)
   {
-    case NC_DATA_BAO_A_EISENSTEIN:
+    case NC_DATA_BAO_A_EISENSTEIN2005:
       return nc_data_bao_a_new (dist, id);
       break;      
-    case NC_DATA_BAO_DV_EISENSTEIN:
+    case NC_DATA_BAO_DV_EISENSTEIN2005:
       return nc_data_bao_dv_new (dist, id);
       break;
-    case NC_DATA_BAO_DVDV_PERCIVAL:
+    case NC_DATA_BAO_DVDV_START:
+    case NC_DATA_BAO_DVDV_END:
       return nc_data_bao_dvdv_new (dist, id);
       break;
-    case NC_DATA_BAO_RDV_PERCIVAL:
+    case NC_DATA_BAO_RDV_START:
+    case NC_DATA_BAO_RDV_END:
       return nc_data_bao_rdv_new (dist, id);
       break;
     default:

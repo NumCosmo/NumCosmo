@@ -27,9 +27,10 @@
 
 #include <glib.h>
 #include <glib-object.h>
-#include <gsl/gsl_matrix.h>
+
 #include <numcosmo/nc_macros.h>
 #include <numcosmo/math/ncm_vector.h>
+#include <gsl/gsl_matrix.h>
 
 G_BEGIN_DECLS
 
@@ -66,7 +67,7 @@ typedef enum _NcmMatrixInternal
 struct _NcmMatrixClass
 {
   /*< private >*/
-  GInitiallyUnownedClass parent_class;
+  GObjectClass parent_class;
 };
 
 /**
@@ -77,7 +78,7 @@ struct _NcmMatrixClass
 struct _NcmMatrix
 {
   /*< private >*/
-  GInitiallyUnowned parent_instance;
+  GObject parent_instance;
   gsl_matrix_view mv;
   gsl_matrix *gm;
   GArray *a;
@@ -96,7 +97,6 @@ GType ncm_matrix_get_type (void) G_GNUC_CONST;
 #define NCM_MATRIX_NCOLS(cm) ((cm)->mv.matrix.size2)
 
 NcmMatrix *ncm_matrix_new (const gsize nrows, const gsize ncols);
-NcmMatrix *ncm_matrix_new_sunk (const gsize nrows, const gsize ncols);
 NcmMatrix *ncm_matrix_new_gsl (gsl_matrix *gm);
 NcmMatrix *ncm_matrix_new_gsl_static (gsl_matrix *gm);
 NcmMatrix *ncm_matrix_new_array (GArray *a, const gsize ncols);
@@ -121,11 +121,16 @@ G_INLINE_FUNC void ncm_matrix_set_zero (NcmMatrix *cm);
 G_INLINE_FUNC void ncm_matrix_scale (NcmMatrix *cm, const gdouble val);
 G_INLINE_FUNC void ncm_matrix_memcpy (NcmMatrix *cm1, const NcmMatrix *cm2);
 G_INLINE_FUNC void ncm_matrix_set_col (NcmMatrix *cm, const guint n, const NcmVector *cv);
+G_INLINE_FUNC gdouble ncm_matrix_fast_get (NcmMatrix *cm, const guint ij);
+G_INLINE_FUNC void ncm_matrix_fast_set (NcmMatrix *cm, const guint ij, const gdouble val);
 
 NcmMatrix *ncm_matrix_dup (const NcmMatrix *cm);
+void ncm_matrix_add_mul (NcmMatrix *cm, const gdouble alpha, NcmMatrix *b);
 
 void ncm_matrix_free (NcmMatrix *cm);
 void ncm_matrix_clear (NcmMatrix **cm);
+
+void ncm_matrix_cholesky_decomp (NcmMatrix *cm);
 
 G_END_DECLS
 
@@ -195,7 +200,7 @@ ncm_matrix_scale (NcmMatrix *cm, gdouble val)
 G_INLINE_FUNC void
 ncm_matrix_memcpy (NcmMatrix *cm1, const NcmMatrix *cm2)
 {
-  gsl_matrix_memcpy (NCM_MATRIX_GSL(cm1), NCM_MATRIX_GSL(cm2));
+  gsl_matrix_memcpy (NCM_MATRIX_GSL (cm1), NCM_MATRIX_GSL (cm2));
 }
 
 G_INLINE_FUNC void
@@ -209,6 +214,18 @@ ncm_matrix_get_array (NcmMatrix *cm)
 {
   g_assert (cm->a != NULL);
   return g_array_ref (cm->a);
+}
+
+G_INLINE_FUNC gdouble 
+ncm_matrix_fast_get (NcmMatrix *cm, const guint ij)
+{
+  return NCM_MATRIX_DATA (cm)[ij];
+}
+
+G_INLINE_FUNC void 
+ncm_matrix_fast_set (NcmMatrix *cm, const guint ij, const gdouble val)
+{
+  NCM_MATRIX_DATA (cm)[ij] = val;
 }
 
 G_END_DECLS

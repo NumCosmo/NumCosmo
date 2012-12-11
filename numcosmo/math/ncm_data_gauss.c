@@ -102,7 +102,7 @@ ncm_data_gauss_set_property (GObject *object, guint prop_id, const GValue *value
   switch (prop_id)
   {
     case PROP_NPOINTS:
-      gauss->np = g_value_get_uint (value);
+      ncm_data_gauss_set_size (gauss, g_value_get_uint (value));
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -194,15 +194,13 @@ static void
 _ncm_data_gauss_prepare_LLT (NcmData *data)
 {
   NcmDataGauss *gauss = NCM_DATA_GAUSS (data);
-  gint ret;
 
   if (gauss->LLT == NULL)
     gauss->LLT = ncm_matrix_dup (gauss->inv_cov);
   else
     ncm_matrix_memcpy (gauss->LLT, gauss->inv_cov);
-  
-  ret = gsl_linalg_cholesky_decomp (NCM_MATRIX_GSL (gauss->LLT));
-  NC_TEST_GSL_RESULT("_ncm_data_gauss_prepare_LLT", ret);
+
+  ncm_matrix_cholesky_decomp (gauss->LLT);
 
   gauss->prepared_LLT = TRUE;
 }
@@ -306,9 +304,9 @@ ncm_data_gauss_set_size (NcmDataGauss *gauss, guint np)
   if ((np != 0) && (np != gauss->np))
   {
     gauss->np      = np;
-    gauss->y       = ncm_vector_new_sunk (gauss->np);
-    gauss->v       = ncm_vector_new_sunk (gauss->np);
-    gauss->inv_cov = ncm_matrix_new_sunk (gauss->np, gauss->np);
+    gauss->y       = ncm_vector_new (gauss->np);
+    gauss->v       = ncm_vector_new (gauss->np);
+    gauss->inv_cov = ncm_matrix_new (gauss->np, gauss->np);
   }
 }
 

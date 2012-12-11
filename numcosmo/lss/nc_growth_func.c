@@ -239,6 +239,8 @@ nc_growth_func_prepare (NcGrowthFunc *gf, NcHICosmo *model)
     NcmVector *yv = ncm_vector_new_array (y_array);
     ncm_vector_scale (yv, 1.0 / ncm_vector_get (yv, 0));
     ncm_spline_set (gf->s, xv, yv, TRUE);
+    ncm_vector_free (xv);
+    ncm_vector_free (yv);
   }
 
   g_array_unref (x_array);

@@ -89,21 +89,30 @@ static void
 _ncm_spline2d_bicubic_alloc (NcmSpline2dBicubic *s2dbc)
 {
   NcmSpline2d *s2d = NCM_SPLINE2D (s2dbc);
+  NcmVector *zm_first_row = ncm_matrix_get_row (s2d->zm, 0);
+  NcmVector *zm_first_col = ncm_matrix_get_col (s2d->zm, 0);
+  NcmVector *dx_yv        = ncm_vector_new (ncm_vector_len (s2d->yv));
+  NcmVector *dy_yv        = ncm_vector_new (ncm_vector_len (s2d->xv));
+  
+  s2dbc->z_x = ncm_spline_new (s2d->s, s2d->xv, zm_first_row, s2d->init);
 
-  s2dbc->z_x = ncm_spline_new (s2d->s, s2d->xv, ncm_matrix_get_row (s2d->zm, 0), s2d->init);
-
-  s2dbc->z_y = ncm_spline_new (s2d->s, s2d->yv, ncm_matrix_get_col (s2d->zm, 0), s2d->init);
-  s2dbc->dzdy_x = ncm_spline_new (s2d->s, s2d->xv, ncm_matrix_get_row (s2d->zm, 0), s2d->init);
+  s2dbc->z_y = ncm_spline_new (s2d->s, s2d->yv, zm_first_col, s2d->init);
+  s2dbc->dzdy_x = ncm_spline_new (s2d->s, s2d->xv, zm_first_row, s2d->init);
 
   s2dbc->bicoeff = g_new0 (NcmSpline2dBicubicCoeffs, (NCM_MATRIX_COL_LEN (s2d->zm) - 1) * NCM_MATRIX_ROW_LEN (s2d->zm)) ;
 
   s2dbc->optimize_dx.s = ncm_spline_set (ncm_spline_cubic_notaknot_new (),
-                                         s2d->yv, ncm_vector_new (ncm_vector_len (s2d->yv)), FALSE);
+                                         s2d->yv, dx_yv, FALSE);
   s2dbc->optimize_dx.init = FALSE;
 
   s2dbc->optimize_dy.s = ncm_spline_set (ncm_spline_cubic_notaknot_new (),
-                                         s2d->xv, ncm_vector_new (ncm_vector_len (s2d->xv)), FALSE);
+                                         s2d->xv, dy_yv, FALSE);
   s2dbc->optimize_dy.init = FALSE;
+
+  ncm_vector_free (zm_first_row);
+  ncm_vector_free (zm_first_col);
+  ncm_vector_free (dx_yv);
+  ncm_vector_free (dy_yv);
 }
 
 static void
@@ -173,8 +182,10 @@ _ncm_spline2d_bicubic_prepare (NcmSpline2d *s2d)
   {
     NcmSplineCubic *sc = NCM_SPLINE_CUBIC (s2dbc->z_y);
     NcmVector *yv = ncm_spline_get_yv (s2dbc->z_y);
-    ncm_spline_set_yv (s2dbc->z_y, ncm_matrix_get_col (s2d->zm, j), FALSE);
+    NcmVector *zm_col_j = ncm_matrix_get_col (s2d->zm, j);
+    ncm_spline_set_yv (s2dbc->z_y, zm_col_j, FALSE);
     ncm_spline_prepare_base (s2dbc->z_y);
+    ncm_vector_free (zm_col_j);
 
     i = 0;
     {
@@ -215,8 +226,10 @@ _ncm_spline2d_bicubic_prepare (NcmSpline2d *s2d)
   for (j = 1; j < NCM_MATRIX_ROW_LEN (s2d->zm); j++)
   {
     NcmSplineCubic *sc = NCM_SPLINE_CUBIC (s2dbc->z_y);
-    ncm_spline_set_yv (s2dbc->z_y, ncm_matrix_get_col (s2d->zm, j), FALSE);
+    NcmVector *zm_col_j = ncm_matrix_get_col (s2d->zm, j);
+    ncm_spline_set_yv (s2dbc->z_y, zm_col_j, FALSE);
     ncm_spline_prepare_base (s2dbc->z_y);
+    ncm_vector_free (zm_col_j);
 
     i = 0;
     {
@@ -276,10 +289,13 @@ _ncm_spline2d_bicubic_prepare (NcmSpline2d *s2d)
     NcmVector *dzdyv = ncm_vector_new_data_static (d, NCM_MATRIX_ROW_LEN (s2d->zm), 16);
     NcmSplineCubic *sc = NCM_SPLINE_CUBIC (s2dbc->z_x);
     NcmSplineCubic *dsc = NCM_SPLINE_CUBIC (s2dbc->dzdy_x);
-    ncm_spline_set_yv (s2dbc->z_x, ncm_matrix_get_row (s2d->zm, i), FALSE);
+    NcmVector *zm_row_i = ncm_matrix_get_row (s2d->zm, i);
+    ncm_spline_set_yv (s2dbc->z_x, zm_row_i, FALSE);
     ncm_spline_set_yv (s2dbc->dzdy_x, dzdyv, FALSE);
     ncm_spline_prepare_base (s2dbc->z_x);
     ncm_spline_prepare_base (s2dbc->dzdy_x);
+    ncm_vector_free (zm_row_i);
+    ncm_vector_free (dzdyv);
 
     j = 0;
     {
@@ -323,10 +339,13 @@ _ncm_spline2d_bicubic_prepare (NcmSpline2d *s2d)
     NcmVector *dzdyv = ncm_vector_new_data_static (d, NCM_MATRIX_ROW_LEN (s2d->zm), 16);
     NcmSplineCubic *sc = NCM_SPLINE_CUBIC (s2dbc->z_x);
     NcmSplineCubic *dsc = NCM_SPLINE_CUBIC (s2dbc->dzdy_x);
-    ncm_spline_set_yv (s2dbc->z_x, ncm_matrix_get_row (s2d->zm, i), FALSE);
+    NcmVector *zm_row_i = ncm_matrix_get_row (s2d->zm, i);
+    ncm_spline_set_yv (s2dbc->z_x, zm_row_i, FALSE);
     ncm_spline_set_yv (s2dbc->dzdy_x, dzdyv, FALSE);
     ncm_spline_prepare_base (s2dbc->z_x);
     ncm_spline_prepare_base (s2dbc->dzdy_x);
+    ncm_vector_free (zm_row_i);
+    ncm_vector_free (dzdyv);
 
     j = 0;
     {
@@ -385,10 +404,13 @@ _ncm_spline2d_bicubic_prepare (NcmSpline2d *s2d)
     NcmVector *dzdyv = ncm_vector_new_data_static (d, NCM_MATRIX_ROW_LEN (s2d->zm), 16);
     NcmSplineCubic *sc = NCM_SPLINE_CUBIC (s2dbc->z_x);
     NcmSplineCubic *dsc = NCM_SPLINE_CUBIC (s2dbc->dzdy_x);
-    ncm_spline_set_yv (s2dbc->z_x, ncm_matrix_get_row (s2d->zm, i), FALSE);
+    NcmVector *zm_row_i = ncm_matrix_get_row (s2d->zm, i);
+    ncm_spline_set_yv (s2dbc->z_x, zm_row_i, FALSE);
     ncm_spline_set_yv (s2dbc->dzdy_x, dzdyv, FALSE);
     ncm_spline_prepare_base (s2dbc->z_x);
     ncm_spline_prepare_base (s2dbc->dzdy_x);
+    ncm_vector_free (zm_row_i);
+    ncm_vector_free (dzdyv);
 
     j = 0;
     {

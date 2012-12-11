@@ -7,7 +7,7 @@
  ****************************************************************************/
 /*
  * numcosmo
- * Copyright (C) Sandro Dias Pinto Vitenti 2012 <sandro@lapsandro>
+ * Copyright (C) Sandro Dias Pinto Vitenti 2012 <sandro@isoftware.com.br>
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
@@ -44,7 +44,7 @@ G_BEGIN_DECLS
 void ncm_cfg_init (void);
 void ncm_cfg_enable_gsl_err_handler (void);
 void ncm_cfg_register_obj (GType obj);
-gchar *ncm_cfg_get_fullpath (gchar *filename, ...);
+gchar *ncm_cfg_get_fullpath (const gchar *filename, ...);
 void ncm_cfg_keyfile_to_arg (GKeyFile *kfile, gchar *group_name, GOptionEntry *entries, gchar **argv, gint *argc);
 void ncm_cfg_entries_to_keyfile (GKeyFile *kfile, gchar *group_name, GOptionEntry *entries);
 const GEnumValue *ncm_cfg_get_enum_by_id_name_nick (GType enum_type, const gchar *id_name_nick);
@@ -118,6 +118,7 @@ typedef union _NcmDoubleInt64
 
 gchar *ncm_cfg_command_line (gchar *argv[], gint argc);
 
+void ncm_cfg_object_set_property (GObject *obj, const gchar *prop_str);
 GObject *ncm_cfg_create_from_name_params (const gchar *obj_name, GVariant *params);
 GObject *ncm_cfg_create_from_string (const gchar *obj_ser);
 GVariant *ncm_cfg_gvalue_to_gvariant (GValue *val);

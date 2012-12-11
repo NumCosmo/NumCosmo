@@ -177,6 +177,7 @@ _nc_hicosmo_qspline_constructed (GObject *object)
     NcmVector *zv, *qv;
     guint i;
 
+    qspline->nknots = ncm_model_vparam_len (model, 0);
     qspline->size = model_class->sparam_len + qspline->nknots;
 
     zv = ncm_vector_new (qspline->nknots);
@@ -203,6 +204,8 @@ _nc_hicosmo_qspline_constructed (GObject *object)
                                           1.0, 0.0, qspline->z_f);
       ncm_spline_free (s);
     }
+    ncm_vector_free (zv);
+    ncm_vector_free (qv);
 
     return;
   }

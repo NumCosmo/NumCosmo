@@ -148,7 +148,7 @@ nc_data_bao_a_class_init (NcDataBaoAClass *klass)
                                    g_param_spec_enum ("sample-id",
                                                       NULL,
                                                       "Sample id",
-                                                      NC_TYPE_DATA_BAO_ID, NC_DATA_BAO_A_EISENSTEIN,
+                                                      NC_TYPE_DATA_BAO_ID, NC_DATA_BAO_A_EISENSTEIN2005,
                                                       G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));  
 
   data_class->prepare   = &_nc_data_bao_a_prepare;
@@ -217,7 +217,7 @@ nc_data_bao_a_set_size (NcDataBaoA *bao_a, guint np)
     ncm_vector_clear (&bao_a->x);
 
   if ((np != 0) && (np != diag->np))
-    bao_a->x = ncm_vector_new_sunk (np);
+    bao_a->x = ncm_vector_new (np);
 
   ncm_data_gauss_diag_set_size (NCM_DATA_GAUSS_DIAG (bao_a), np);
 }
@@ -255,14 +255,14 @@ nc_data_bao_a_set_sample (NcDataBaoA *bao_a, NcDataBaoId id)
   NcmData *data = NCM_DATA (bao_a);
   NcmDataGaussDiag *diag = NCM_DATA_GAUSS_DIAG (bao_a);
   
-  g_assert (id == NC_DATA_BAO_A_EISENSTEIN);
+  g_assert (id == NC_DATA_BAO_A_EISENSTEIN2005);
 
   if (data->desc != NULL)
     g_free (data->desc);
   data->desc = g_strdup ("Eisenstein 2005, BAO Sample A");
 
   nc_data_bao_a_set_size (bao_a, 1);
-  bao_a->id = NC_DATA_BAO_A_EISENSTEIN;
+  bao_a->id = NC_DATA_BAO_A_EISENSTEIN2005;
 
   ncm_vector_set (bao_a->x,    0, ncm_c_bao_eisenstein_z ());
   ncm_vector_set (diag->y,     0, ncm_c_bao_eisenstein_A ());

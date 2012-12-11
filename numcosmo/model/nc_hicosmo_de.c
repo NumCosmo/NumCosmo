@@ -146,6 +146,9 @@ nc_hicosmo_de_omega_x2omega_k (NcHICosmo *cosmo)
   }
 
   ncm_model_set_reparam (NCM_MODEL (cosmo), NCM_REPARAM (relin));
+  
+  ncm_vector_free (v);
+  ncm_matrix_free (T);
 
   return;
 }

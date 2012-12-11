@@ -356,8 +356,8 @@ NcLinearPertTF *
 nc_pert_transfer_function_new (NcLinearPert *pert, gdouble k0, gdouble k1, gulong np)
 {
   NcLinearPertTF *perttf = g_slice_new (NcLinearPertTF);
-	NcmVector *logkv = ncm_vector_new (np);
-	NcmVector *logPhiv = ncm_vector_new (np);
+  NcmVector *logkv = ncm_vector_new (np);
+  NcmVector *logPhiv = ncm_vector_new (np);
 
   perttf->logk0 = log (k0 * ncm_c_hubble_radius ());
   perttf->logk1 = log (k1 * ncm_c_hubble_radius ());
@@ -365,6 +365,9 @@ nc_pert_transfer_function_new (NcLinearPert *pert, gdouble k0, gdouble k1, gulon
   perttf->logPhi_logk = ncm_spline_cubic_notaknot_new_full (logkv, logPhiv, FALSE);
   perttf->pert = pert;
 
+  ncm_vector_free (logkv);
+  ncm_vector_free (logPhiv);
+  
   return perttf;
 }
 
@@ -484,27 +487,31 @@ nc_pert_linear_splines_new (NcLinearPert *pert, NcLinearPertSplineTypes types, g
   pspline->k0 = k0;
   pspline->k1 = k1;
 
-  pspline->ga = ncm_vector_new_sunk (n_deta);
-  pspline->ka = ncm_vector_new_sunk (n_evol);
+  pspline->ga = ncm_vector_new (n_deta);
+  pspline->ka = ncm_vector_new (n_evol);
 
 	for (i = 0; i < 3; i++)
   {
     gint j;
 
-		pspline->Sg_data[i] = ncm_vector_new_sunk (n_deta);
+		pspline->Sg_data[i] = ncm_vector_new (n_deta);
 
     pspline->Sg[i] = ncm_spline_cubic_notaknot_new_full (pspline->ga, pspline->Sg_data[i], FALSE);
 
-    pspline->Sk_data[i] = ncm_matrix_new_sunk (n_deta, n_evol);
+    pspline->Sk_data[i] = ncm_matrix_new (n_deta, n_evol);
 
 		pspline->Sk[i] = g_slice_alloc (sizeof (NcmSpline *) * n_deta);
     for (j = 0; j < n_deta; j++)
-      pspline->Sk[i][j] = ncm_spline_cubic_notaknot_new_full (pspline->ka, ncm_matrix_get_row (pspline->Sk_data[i], j), FALSE);
+    {
+      NcmVector *Sk_row_ij = ncm_matrix_get_row (pspline->Sk_data[i], j);
+      pspline->Sk[i][j] = ncm_spline_cubic_notaknot_new_full (pspline->ka, Sk_row_ij, FALSE);
+      ncm_vector_free (Sk_row_ij);
+    }
   }
 
   for (i = 0; i < NC_PERTURBATION_BASE_SIZE; i++)
   {
-    pspline->sdata[i] = ncm_vector_new_sunk (n_evol);
+    pspline->sdata[i] = ncm_vector_new (n_evol);
     pspline->s[i] = ncm_spline_cubic_notaknot_new_full (pspline->ka, pspline->sdata[i], FALSE);
   }
 
@@ -637,6 +644,8 @@ nc_pert_linear_calc_Nc_spline (NcLinearPertSplines *pspline, NcmSpline *pw_splin
     la = ncm_vector_new (200);
     Nca = ncm_vector_new (200);
     pspline->Nc = ncm_spline_cubic_notaknot_new_full (la, Nca, FALSE);
+    ncm_vector_free (la);
+    ncm_vector_free (Nca);
   }
   else
   {

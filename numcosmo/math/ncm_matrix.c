@@ -39,7 +39,14 @@
 
 #include "math/ncm_matrix.h"
 
-G_DEFINE_TYPE (NcmMatrix, ncm_matrix, G_TYPE_INITIALLY_UNOWNED);
+#if (defined HAVE_CLAPACK_H) && (defined HAVE_CLAPACK_DPOTRF)
+#include <clapack.h>
+#else
+#include <gsl/gsl_cblas.h>
+#include <gsl/gsl_linalg.h>
+#endif
+
+G_DEFINE_TYPE (NcmMatrix, ncm_matrix, G_TYPE_OBJECT);
 
 /**
  * ncm_matrix_new:
@@ -60,22 +67,6 @@ ncm_matrix_new (gsize nrows, gsize ncols)
   cm->type = NCM_MATRIX_SLICE;
 
   return cm;
-}
-
-/**
- * ncm_matrix_new_sunk:
- * @nrows: number of rows.
- * @ncols: number of columns.
- *
- * This function allocates memory for a new #NcmMatrix of doubles
- * with @nrows rows and @ncols columns. Returns a sunk reference.
- *
- * Returns: A new #NcmMatrix.
- */
-NcmMatrix *
-ncm_matrix_new_sunk (gsize nrows, gsize ncols)
-{
-  return ncm_matrix_ref (ncm_matrix_new (nrows, ncols));
 }
 
 /**
@@ -247,8 +238,7 @@ ncm_matrix_get_submatrix (NcmMatrix *cm, gsize k1, gsize k2, gsize nrows, gsize 
 {
   NcmMatrix *scm = g_object_new (NCM_TYPE_MATRIX, NULL);
   scm->mv = gsl_matrix_submatrix (NCM_MATRIX_GSL (cm), k1, k2, nrows, ncols);
-  scm->pobj = G_OBJECT (cm);
-  g_object_ref (cm);
+  scm->pobj = g_object_ref (cm); 
   scm->type = NCM_MATRIX_DERIVED;
 
   return scm;
@@ -271,8 +261,7 @@ ncm_matrix_get_col (NcmMatrix *cm, const gsize col)
   cv->vv = gsl_matrix_column (NCM_MATRIX_GSL (cm), col);
   cv->a = NULL;
   cv->type = NCM_VECTOR_DERIVED;
-  cv->pobj = G_OBJECT (cm);
-  g_object_ref (cm);
+  cv->pobj = g_object_ref (cm);
 
   return cv;
 }
@@ -294,8 +283,7 @@ ncm_matrix_get_row (NcmMatrix *cm, const gsize row)
   cv->vv = gsl_matrix_row (NCM_MATRIX_GSL (cm), row);
   cv->a = NULL;
   cv->type = NCM_VECTOR_DERIVED;
-  cv->pobj = G_OBJECT (cm);
-  g_object_ref (cm);
+  cv->pobj = g_object_ref (cm);
 
   return cv;
 }
@@ -311,8 +299,6 @@ ncm_matrix_get_row (NcmMatrix *cm, const gsize row)
 void
 ncm_matrix_free (NcmMatrix *cm)
 {
-  if (g_object_is_floating (cm))
-    g_object_ref_sink (cm);
   g_object_unref (cm);
 }
 
@@ -327,8 +313,6 @@ ncm_matrix_free (NcmMatrix *cm)
 void
 ncm_matrix_clear (NcmMatrix **cm)
 {
-  if (*cm != NULL && g_object_is_floating (*cm))
-    g_object_ref_sink (*cm);
   g_clear_object (cm);
 }
 
@@ -393,6 +377,71 @@ ncm_matrix_dup (const NcmMatrix *cm)
   NcmMatrix *cm_cp = ncm_matrix_new (NCM_MATRIX_COL_LEN (cm), NCM_MATRIX_ROW_LEN (cm));
   ncm_matrix_memcpy (cm_cp, cm);
   return cm_cp;
+}
+
+/**
+ * ncm_matrix_add_mul:
+ * @cm: FIXME
+ * @alpha: FIXME
+ * @b: FIXME
+ *
+ * FIXME
+ *
+ */
+void 
+ncm_matrix_add_mul (NcmMatrix *cm, const gdouble alpha, NcmMatrix *b)
+{
+  const gboolean no_pad_cm = NCM_MATRIX_GSL (cm)->tda == NCM_MATRIX_NCOLS (cm);
+  const gboolean no_pad_b = NCM_MATRIX_GSL (b)->tda == NCM_MATRIX_NCOLS (b);
+
+  g_assert (NCM_MATRIX_NCOLS (cm) == NCM_MATRIX_NCOLS (b));
+  g_assert (NCM_MATRIX_NROWS (cm) == NCM_MATRIX_NROWS (b));
+  
+  if (no_pad_cm && no_pad_b)
+  {
+    const gint N = NCM_MATRIX_NCOLS (b) * NCM_MATRIX_NROWS (b);
+    cblas_daxpy (N, alpha, 
+                 NCM_MATRIX_DATA (b), 1,
+                 NCM_MATRIX_DATA (cm), 1);
+  }
+  else
+  {
+    const gint N = NCM_MATRIX_ROW_LEN (b);
+    const guint b_tda = NCM_MATRIX_GSL (b)->tda;
+    const guint cm_tda = NCM_MATRIX_GSL (cm)->tda;
+    gint i;
+    for (i = 0; i < NCM_MATRIX_NROWS (b); i++)
+    {
+      cblas_daxpy (N, alpha, 
+                   &NCM_MATRIX_DATA (b)[b_tda * i], 1,
+                   &NCM_MATRIX_DATA (cm)[cm_tda * i], 1);
+    }
+  }
+}
+
+/**
+ * ncm_matrix_cholesky_decomp: (skip)
+ * @cm: a #NcmMatrix.
+ *
+ * Calculates inplace the Cholesky decomposition for a symmetric positive
+ * definite matrix.
+ * 
+ */
+void 
+ncm_matrix_cholesky_decomp (NcmMatrix *cm)
+{
+  gint ret;
+#if (defined HAVE_CLAPACK_H) && (defined HAVE_CLAPACK_DPOTRF)
+  ret = clapack_dpotrf (CblasRowMajor, CblasLower, NCM_MATRIX_NROWS (cm), 
+                        NCM_MATRIX_DATA (cm), NCM_MATRIX_NROWS (cm));
+  if (ret < 0)
+    g_error ("ncm_matrix_cholesky_decomp[clapack_dpotrf]: invalid parameter %d", -ret);
+  else if (ret > 0)
+    g_error ("ncm_matrix_cholesky_decomp[clapack_dpotrf]: the leading minor of order %d is not positive definite", ret);
+#else /* Fall back to gsl cholesky */
+  ret = gsl_linalg_cholesky_decomp (NCM_MATRIX_GSL (cm));
+  NC_TEST_GSL_RESULT("ncm_matrix_cholesky_decomp[gsl_linalg_cholesky_decomp]", ret);
+#endif
 }
 
 /**
@@ -496,6 +545,24 @@ ncm_matrix_dup (const NcmMatrix *cm)
  * FIXME
  *
  * Returns: (transfer container) (element-type double): FIXME
+ */
+/**
+ * ncm_matrix_fast_get:
+ * @cm: a #NcmMatrix.
+ * @ij: FIXME
+ *
+ * FIXME
+ *
+ * Returns: FIXME
+ */
+/**
+ * ncm_matrix_fast_set:
+ * @cm: a #NcmMatrix.
+ * @ij: FIXME
+ * @val: FIXME
+ *
+ * FIXME
+ *
  */
 
 static void

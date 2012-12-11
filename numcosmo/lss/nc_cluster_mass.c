@@ -238,16 +238,16 @@ _nc_cluster_mass_log_all_models_go (GType model_type, guint n)
   GType *models = g_type_children (model_type, &nc);
   for (i = 0; i < nc; i++)
   {
-	guint ncc;
-	GType *modelsc = g_type_children (models[i], &ncc);
+    guint ncc;
+    GType *modelsc = g_type_children (models[i], &ncc);
 
-	g_message ("#  ");
-	for (j = 0; j < n; j++) g_message (" ");
-	g_message ("%s\n", g_type_name (models[i]));
-	if (ncc)
-	  _nc_cluster_mass_log_all_models_go (models[i], n + 2);
+    g_message ("#  ");
+    for (j = 0; j < n; j++) g_message (" ");
+    g_message ("%s\n", g_type_name (models[i]));
+    if (ncc)
+      _nc_cluster_mass_log_all_models_go (models[i], n + 2);
 
-	g_free (modelsc);
+    g_free (modelsc);
   }
   g_free (models);
 }

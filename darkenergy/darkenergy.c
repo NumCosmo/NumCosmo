@@ -171,7 +171,7 @@ main (gint argc, gchar *argv[])
       de_data_simple.H_id == NULL &&
       de_data_simple.cluster_id == NULL)
   {
-    printf ("No action or data was chosen.\n");
+    printf ("No action or data were chosen.\n");
     printf ("%s", g_option_context_get_help (context, TRUE, NULL));
     g_option_context_free (context);
     return 0;
@@ -214,21 +214,41 @@ main (gint argc, gchar *argv[])
   {
     ncm_prior_add_positive (lh, NC_HICOSMO_ID, NC_HICOSMO_DE_OMEGA_X);
   }
-
+  
   if (de_data_simple.snia_id != NULL)
   {
-    const GEnumValue *snia_id = ncm_cfg_get_enum_by_id_name_nick (NC_TYPE_DATA_DIST_MU_ID,
-                                                                  de_data_simple.snia_id);
-    if (snia_id != NULL)
+    const GEnumValue *snia_id = 
+      ncm_cfg_get_enum_by_id_name_nick (NC_TYPE_DATA_SNIA_ID,
+                                        de_data_simple.snia_id);
+    if (snia_id == NULL)
+      g_error ("Supernovae sample '%s' not found run --snia-list to list"
+               " the available options", de_data_simple.snia_id);
+
+    if (snia_id->value >= NC_DATA_SNIA_SIMPLE_START && snia_id->value <= NC_DATA_SNIA_SIMPLE_END)
     {
       NcmData *snia = nc_data_dist_mu_new (dist, snia_id->value);
       ncm_dataset_append_data (dset, snia);
       ncm_data_free (snia);
     }
+    else if (snia_id->value >= NC_DATA_SNIA_COV_START && snia_id->value <= NC_DATA_SNIA_COV_END)
+    {
+      NcSNIADistCov *dcov = nc_snia_dist_cov_new (dist, 0);
+      NcmData *data;
+
+      if (de_data_simple.snia_prop != NULL)
+        ncm_cfg_object_set_property (G_OBJECT (dcov), de_data_simple.snia_prop);
+
+      nc_data_snia_load_cat (dcov, snia_id->value);
+      data = nc_data_snia_cov_new (dcov, de_data_simple.snia_use_det);
+      ncm_mset_set (mset, NCM_MODEL (dcov));
+      ncm_dataset_append_data (dset, data);
+      ncm_data_free (data);
+    }
     else
-      g_error ("Supernovae sample '%s' not found run --snia-list to list the available options", de_data_simple.snia_id);
+      g_assert_not_reached ();
   }
 
+ 
   if (de_data_simple.cmb_id != NULL)
   {
     const GEnumValue *cmb_id = ncm_cfg_get_enum_by_id_name_nick (NC_TYPE_DATA_CMB_ID,
@@ -293,7 +313,7 @@ main (gint argc, gchar *argv[])
 
     ncm_prior_add_gaussian_data (lh, NC_HICOSMO_ID, NC_HICOSMO_DE_H0, 73.8, 2.4);
   }
-
+  
   fiduc = ncm_mset_dup (mset);
 
   {
@@ -315,6 +335,7 @@ main (gint argc, gchar *argv[])
   {
     fit->params_reltol = 1e-5;
     ncm_fit_run (fit, de_fit.msg_level);
+    
     ncm_fit_log_info (fit);
   }
 

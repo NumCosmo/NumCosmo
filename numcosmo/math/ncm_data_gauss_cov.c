@@ -39,6 +39,7 @@
 
 #include "math/ncm_data_gauss_cov.h"
 #include "math/ncm_cfg.h"
+#include "math/ncm_c.h"
 
 #include <gsl/gsl_linalg.h>
 #include <gsl/gsl_blas.h>
@@ -48,6 +49,7 @@ enum
 {
   PROP_0,
   PROP_NPOINTS,
+  PROP_USE_DET,
   PROP_SIZE,
 };
 
@@ -62,6 +64,7 @@ ncm_data_gauss_cov_init (NcmDataGaussCov *gauss)
   gauss->cov          = NULL;
   gauss->LLT          = NULL;
   gauss->prepared_LLT = FALSE;
+  gauss->use_det      = FALSE;
 }
 
 static void
@@ -70,11 +73,6 @@ _ncm_data_gauss_cov_constructed (GObject *object)
   /* Chain up : start */
   G_OBJECT_CLASS (ncm_data_gauss_cov_parent_class)->constructed (object);
   {
-    NcmDataGaussCov *gauss = NCM_DATA_GAUSS_COV (object);
-    gauss->y   = ncm_vector_new_sunk (gauss->np);
-    gauss->v   = ncm_vector_new_sunk (gauss->np);
-    gauss->cov = ncm_matrix_new_sunk (gauss->np, gauss->np);
-    gauss->LLT = ncm_matrix_new_sunk (gauss->np, gauss->np);
   }
 }
 
@@ -87,7 +85,10 @@ ncm_data_gauss_cov_set_property (GObject *object, guint prop_id, const GValue *v
   switch (prop_id)
   {
     case PROP_NPOINTS:
-      gauss->np = g_value_get_uint (value);
+      ncm_data_gauss_cov_set_size (gauss, g_value_get_uint (value));
+      break;
+    case PROP_USE_DET:
+      gauss->use_det = g_value_get_boolean (value);
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -105,6 +106,9 @@ ncm_data_gauss_cov_get_property (GObject *object, guint prop_id, GValue *value, 
   {
     case PROP_NPOINTS:
       g_value_set_uint (value, gauss->np);
+      break;
+    case PROP_USE_DET:
+      g_value_set_boolean (value, gauss->use_det);
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -162,6 +166,14 @@ ncm_data_gauss_cov_class_init (NcmDataGaussCovClass *klass)
                                                       0, G_MAXUINT, 0,
                                                       G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
+  g_object_class_install_property (object_class,
+                                   PROP_USE_DET,
+                                   g_param_spec_boolean ("use-det",
+                                                         NULL,
+                                                         "Use determinant to calculate -2lnL",
+                                                         FALSE,
+                                                         G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  
   data_class->get_length     = &_ncm_data_gauss_cov_get_length;
   data_class->copyto         = &_ncm_data_gauss_cov_copyto;
   data_class->begin          = NULL;
@@ -201,15 +213,13 @@ static void
 _ncm_data_gauss_cov_prepare_LLT (NcmData *data)
 {
   NcmDataGaussCov *gauss = NCM_DATA_GAUSS_COV (data);
-  gint ret;
 
   if (gauss->LLT == NULL)
     gauss->LLT = ncm_matrix_dup (gauss->cov);
   else
     ncm_matrix_memcpy (gauss->LLT, gauss->cov);
 
-  ret = gsl_linalg_cholesky_decomp (NCM_MATRIX_GSL (gauss->LLT));
-  NC_TEST_GSL_RESULT("_ncm_data_gauss_cov_prepare_LLT", ret);
+  ncm_matrix_cholesky_decomp (gauss->LLT);
 
   gauss->prepared_LLT = TRUE;
 }
@@ -256,7 +266,7 @@ _ncm_data_gauss_cov_m2lnL_val (NcmData *data, NcmMSet *mset, gdouble *m2lnL)
 
   gauss_cov_class->mean_func (gauss, mset, gauss->v);
   ncm_vector_sub (gauss->v, gauss->y);
-
+  
   if (gauss_cov_class->cov_func != NULL)
     cov_update = gauss_cov_class->cov_func (gauss, mset, gauss->cov);
 
@@ -271,6 +281,19 @@ _ncm_data_gauss_cov_m2lnL_val (NcmData *data, NcmMSet *mset, gdouble *m2lnL)
                        ncm_vector_gsl (gauss->v), 
                        m2lnL);
   NC_TEST_GSL_RESULT ("_ncm_data_gauss_cov_m2lnL_val", ret);
+
+  if (gauss->use_det)
+  {
+    gint i;
+    gdouble lndetL = 0.0;
+    *m2lnL += gauss->np * ncm_c_ln2pi ();
+    
+    for (i = 0; i < gauss->np; i++)
+    {
+      lndetL += log (ncm_matrix_get (gauss->LLT, i, i));
+    }
+    *m2lnL += 2.0 * lndetL;
+  }
 }
 
 static void
@@ -281,8 +304,8 @@ _ncm_data_gauss_cov_leastsquares_f (NcmData *data, NcmMSet *mset, NcmVector *v)
   gboolean cov_update = FALSE;
   gint ret;
 
-  gauss_cov_class->mean_func (gauss, mset, gauss->v);
-  ncm_vector_sub (gauss->v, gauss->y);
+  gauss_cov_class->mean_func (gauss, mset, v);
+  ncm_vector_sub (v, gauss->y);
   
   if (gauss_cov_class->cov_func != NULL)
     cov_update = gauss_cov_class->cov_func (gauss, mset, gauss->cov);
@@ -317,9 +340,9 @@ ncm_data_gauss_cov_set_size (NcmDataGaussCov *gauss, guint np)
   if ((np != 0) && (np != gauss->np))
   {
     gauss->np  = np;
-    gauss->y   = ncm_vector_new_sunk (gauss->np);
-    gauss->v   = ncm_vector_new_sunk (gauss->np);
-    gauss->cov = ncm_matrix_new_sunk (gauss->np, gauss->np);
+    gauss->y   = ncm_vector_new (gauss->np);
+    gauss->v   = ncm_vector_new (gauss->np);
+    gauss->cov = ncm_matrix_new (gauss->np, gauss->np);
   }
 }
 

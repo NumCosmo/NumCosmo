@@ -77,12 +77,16 @@ _ncm_spline2d_spline_alloc (NcmSpline2d *s2d)
 
   s2ds->s_hor_len = NCM_MATRIX_NROWS (s2d->zm);
 
-  s2ds->vertv = ncm_vector_new_sunk (s2ds->s_hor_len);
-  s2ds->vertintv = ncm_vector_new_sunk (s2ds->s_hor_len);
+  s2ds->vertv = ncm_vector_new (s2ds->s_hor_len);
+  s2ds->vertintv = ncm_vector_new (s2ds->s_hor_len);
 
   s2ds->s_hor = g_new0 (NcmSpline *, s2ds->s_hor_len);
   for (i = 0; i < s2ds->s_hor_len; i++)
-    s2ds->s_hor[i] = ncm_spline_new (s2d->s, s2d->xv, ncm_matrix_get_row (s2d->zm, i), FALSE);
+  {
+    NcmVector *zm_row_i = ncm_matrix_get_row (s2d->zm, i);
+    s2ds->s_hor[i] = ncm_spline_new (s2d->s, s2d->xv, zm_row_i, FALSE);
+    ncm_vector_free (zm_row_i);
+  }
 
   s2ds->s_ver = ncm_spline_new (s2d->s, s2d->yv, s2ds->vertv, FALSE);
   s2ds->s_ver_integ = ncm_spline_new (s2d->s, s2d->yv, s2ds->vertintv, FALSE);

@@ -373,10 +373,10 @@ ncm_fit_state_reset (NcmFitState *fstate)
 
     if (fstate->fparam_len > 0)
     {
-      fstate->covar   = ncm_matrix_new_sunk (fstate->fparam_len, fstate->fparam_len);
-      fstate->hessian = ncm_matrix_new_sunk (fstate->fparam_len, fstate->fparam_len);
-      fstate->fparams = ncm_vector_new_sunk (fstate->fparam_len);
-      fstate->dm2lnL  = ncm_vector_new_sunk (fstate->fparam_len);
+      fstate->covar   = ncm_matrix_new (fstate->fparam_len, fstate->fparam_len);
+      fstate->hessian = ncm_matrix_new (fstate->fparam_len, fstate->fparam_len);
+      fstate->fparams = ncm_vector_new (fstate->fparam_len);
+      fstate->dm2lnL  = ncm_vector_new (fstate->fparam_len);
     }
 
     fstate->alloc_fparam_len = fstate->fparam_len;
@@ -389,13 +389,13 @@ ncm_fit_state_reset (NcmFitState *fstate)
     if (fparam_diff_len || data_diff_len)
     {
       ncm_matrix_clear (&fstate->ls_J);
-      fstate->ls_J = ncm_matrix_new_sunk (fstate->data_len, fstate->fparam_len);
+      fstate->ls_J = ncm_matrix_new (fstate->data_len, fstate->fparam_len);
     }
     
     if (data_diff_len)
     {
       ncm_vector_clear (&fstate->ls_f);
-      fstate->ls_f = ncm_vector_new_sunk (fstate->data_len);
+      fstate->ls_f = ncm_vector_new (fstate->data_len);
     }
   }
 

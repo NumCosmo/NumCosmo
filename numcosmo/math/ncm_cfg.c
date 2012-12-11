@@ -7,7 +7,7 @@
  ****************************************************************************/
 /*
  * numcosmo
- * Copyright (C) Sandro Dias Pinto Vitenti 2012 <sandro@lapsandro>
+ * Copyright (C) Sandro Dias Pinto Vitenti 2012 <sandro@isoftware.com.br>
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
@@ -101,6 +101,7 @@
 #include "nc_distance.h"
 #include "nc_recomb.h"
 #include "nc_recomb_seager.h"
+#include "nc_snia_dist_cov.h"
 
 #include <gio/gio.h>
 #ifdef NUMCOSMO_HAVE_FFTW3
@@ -232,6 +233,8 @@ ncm_cfg_init (void)
 
   ncm_cfg_register_obj (NC_TYPE_RECOMB);
   ncm_cfg_register_obj (NC_TYPE_RECOMB_SEAGER);
+
+  ncm_cfg_register_obj (NC_TYPE_SNIA_DIST_COV);
 
   numcosmo_init = TRUE;
   return;
@@ -523,7 +526,7 @@ ncm_cfg_rng_set_state (gchar *state)
  * Returns: FIXME
  */
 gchar *
-ncm_cfg_get_fullpath (gchar *filename, ...)
+ncm_cfg_get_fullpath (const gchar *filename, ...)
 {
   gchar *file, *full_filename;
 
@@ -944,8 +947,8 @@ ncm_cfg_load_spline (gchar *filename, const gsl_interp_type *stype, NcmSpline **
   }
   else
   {
-    xv = (*s)->xv;
-    yv = (*s)->yv;
+    xv = ncm_spline_get_xv (*s);
+    yv = ncm_spline_get_yv (*s);
     g_assert (size == ncm_vector_len(xv));
   }
 
@@ -961,6 +964,9 @@ ncm_cfg_load_spline (gchar *filename, const gsl_interp_type *stype, NcmSpline **
   }
   else
     ncm_spline_prepare (*s);
+    
+  ncm_vector_free (xv);
+  ncm_vector_free (yv);
 
   fclose (F);
   return TRUE;
@@ -1289,19 +1295,19 @@ load_save_vector_matrix(complex)
 
 #ifdef NUMCOSMO_HAVE_SQLITE3
 /**
-   * ncm_cfg_get_default_sqlite3: (skip)
-   *
-   * FIXME
-   *
-   * Returns: FIXME
-   */
+ * ncm_cfg_get_default_sqlite3: (skip)
+ *
+ * FIXME
+ *
+ * Returns: FIXME
+ */
 sqlite3 *
 ncm_cfg_get_default_sqlite3 (void)
 {
   static sqlite3 *db = NULL;
   if (db == NULL)
   {
-    gchar *filename = g_build_filename (PACKAGE_DATA_DIR, NC_CFG_DEFAULT_SQLITE3_FILENAME, NULL);
+    gchar *filename = g_build_filename (PACKAGE_DATA_DIR "/data", NC_CFG_DEFAULT_SQLITE3_FILENAME, NULL);
     gint ret;
 
     if (!g_file_test (filename, G_FILE_TEST_EXISTS))
@@ -1368,13 +1374,80 @@ ncm_cfg_command_line (gchar *argv[], gint argc)
 }
 
 /**
+ * ncm_cfg_set_params:
+ * @obj: a #GObject.
+ * @params: a string containing the parameters to set. 
+ *
+ * FIXME
+ *
+ */
+void
+ncm_cfg_object_set_property (GObject *obj, const gchar *prop_str)
+#if !((GLIB_MAJOR_VERSION == 2) && (GLIB_MINOR_VERSION < 30))
+{
+  GError *error = NULL;
+  GVariant *params = g_variant_parse (G_VARIANT_TYPE_VARDICT, prop_str, NULL, NULL, &error);
+  if (params == NULL)
+    g_error ("ncm_cfg_object_set_property: cannot parse prop_str %s: %s.", 
+             prop_str, error->message);
+  
+  g_assert (g_variant_is_of_type (params, G_VARIANT_TYPE ("a{sv}")));
+
+  {
+    GVariantIter *p_iter = g_variant_iter_new (params);
+    GVariant *var = NULL;
+    guint i = 0;
+
+    while ((var = g_variant_iter_next_value (p_iter)))
+    {
+      GVariant *var_key = g_variant_get_child_value (var, 0);
+      GVariant *var_val = g_variant_get_child_value (var, 1);
+      GVariant *val = g_variant_get_variant (var_val);
+      const gchar *name = g_variant_get_string (var_key, NULL);
+      GValue value = G_VALUE_INIT;
+
+      if (g_variant_is_of_type (val, G_VARIANT_TYPE ("{sa{sv}}")))
+      {
+        GVariant *nest_obj_key = g_variant_get_child_value (val, 0);
+        GVariant *nest_obj_params = g_variant_get_child_value (val, 1);
+        GObject *nest_obj =
+          ncm_cfg_create_from_name_params (g_variant_get_string (nest_obj_key, NULL),
+                                           nest_obj_params);
+        g_value_init (&value, G_TYPE_OBJECT);
+        g_value_take_object (&value, nest_obj);
+        g_variant_unref (nest_obj_key);
+        g_variant_unref (nest_obj_params);
+      }
+      else
+        g_dbus_gvariant_to_gvalue (val, &value);
+
+      g_object_set_property (obj, name, &value);
+
+      i++;
+      g_variant_unref (var_key);
+      g_variant_unref (val);
+      g_variant_unref (var_val);
+      g_variant_unref (var);
+    }
+
+    g_variant_iter_free (p_iter);
+  }
+}
+#else
+{
+  g_error ("ncm_cfg_object_set_property: serialization not supported, recompile "PACKAGE_NAME" with glib >= 2.30");
+  return NULL;
+}
+#endif
+
+/**
  * ncm_cfg_create_from_string:
  * @obj_ser: String containing the serialized version of the object.
  *
  * Parses the serialized and returns the newly created object.
  *
  * Returns: (transfer full): A new #GObject.
-   */
+ */
 GObject *
 ncm_cfg_create_from_string (const gchar *obj_ser)
 #if !((GLIB_MAJOR_VERSION == 2) && (GLIB_MINOR_VERSION < 30))
@@ -1450,7 +1523,7 @@ ncm_cfg_create_from_string (const gchar *obj_ser)
  * FIXME
  *
  * Returns: (transfer full): A new #GObject.
-   */
+ */
 GObject *
 ncm_cfg_create_from_name_params (const gchar *obj_name, GVariant *params)
 #if !((GLIB_MAJOR_VERSION == 2) && (GLIB_MINOR_VERSION < 30))
