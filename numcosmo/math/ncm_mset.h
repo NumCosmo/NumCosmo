@@ -77,8 +77,8 @@ struct _NcmMSetPIndex
 GType ncm_mset_get_type (void) G_GNUC_CONST;
 GType ncm_mset_pindex_get_type (void) G_GNUC_CONST;
 
-NcmMSetPIndex *ncm_mset_pindex_new (void);
-NcmMSetPIndex *ncm_mset_pindex_copy (NcmMSetPIndex *pi);
+NcmMSetPIndex *ncm_mset_pindex_new (NcmModelID mid, guint pid);
+NcmMSetPIndex *ncm_mset_pindex_dup (NcmMSetPIndex *pi);
 void ncm_mset_pindex_free (NcmMSetPIndex *pi);
 
 NcmMSet *ncm_mset_empty_new (void);

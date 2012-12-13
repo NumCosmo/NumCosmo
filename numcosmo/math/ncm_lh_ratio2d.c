@@ -59,6 +59,7 @@ enum
 };
 
 G_DEFINE_TYPE (NcmLHRatio2d, ncm_lh_ratio2d, G_TYPE_OBJECT);
+G_DEFINE_BOXED_TYPE (NcmLHRatio2dRegion, ncm_lh_ratio2d_region, ncm_lh_ratio2d_region_dup, ncm_lh_ratio2d_region_free);
 
 static void
 ncm_lh_ratio2d_init (NcmLHRatio2d *lhr2d)
@@ -96,7 +97,8 @@ ncm_lh_ratio2d_constructed (GObject *object)
 
     for (i = 0; i < 2; i++)
     {
-      g_assert (lhr2d->pi[i].mid >= 0);
+      g_assert_cmpint (lhr2d->pi[i].mid, >=, 0);
+      g_assert_cmpint (lhr2d->pi[i].mid,  <, NCM_MODEL_MAX_ID);
 
       if (ncm_mset_peek (lhr2d->fit->mset, lhr2d->pi[i].mid) == NULL)
         g_error ("ncm_lh_ratio2d_constructed: cannot use parameter[%d:%u], model not set\n", 
@@ -161,15 +163,13 @@ ncm_lh_ratio2d_get_property (GObject *object, guint prop_id, GValue *value, GPar
   {
     case PROP_PI1:
     {
-      NcmMSetPIndex *pi = ncm_mset_pindex_new ();
-      *pi = lhr2d->pi[0];
+      NcmMSetPIndex *pi = ncm_mset_pindex_new (lhr2d->pi[0].mid, lhr2d->pi[0].pid);
       g_value_take_boxed (value, pi);
       break;
     }
     case PROP_PI2:
     {
-      NcmMSetPIndex *pi = ncm_mset_pindex_new ();
-      *pi = lhr2d->pi[1];
+      NcmMSetPIndex *pi = ncm_mset_pindex_new (lhr2d->pi[1].mid, lhr2d->pi[1].pid);
       g_value_take_boxed (value, pi);
       break;
     }
@@ -249,12 +249,12 @@ ncm_lh_ratio2d_class_init (NcmLHRatio2dClass *klass)
  * Returns: FIXME
  */
 NcmLHRatio2d *
-ncm_lh_ratio2d_new (NcmFit *fit, NcmMSetPIndex pi1, NcmMSetPIndex pi2)
+ncm_lh_ratio2d_new (NcmFit *fit, NcmMSetPIndex *pi1, NcmMSetPIndex *pi2)
 {
   return g_object_new (NCM_TYPE_LH_RATIO2D, 
                        "fit", fit,
-                       "pi1", &pi1,
-                       "pi2", &pi2,
+                       "pi1", pi1,
+                       "pi2", pi2,
                        NULL);
   
 }
@@ -293,7 +293,9 @@ _ncm_lh_ratio2d_prepare_coords (NcmLHRatio2d *lhr2d)
   NcmMatrix *cov = ncm_matrix_new (2, 2);
   gsl_eigen_symmv_workspace *vw = gsl_eigen_symmv_alloc (2);
 
-  g_assert (fpi1 != fpi2);
+  g_assert_cmpint (fpi1, >=, 0);
+  g_assert_cmpint (fpi2, >=, 0);
+  g_assert_cmpint (fpi1, !=, fpi2);
 
   ncm_matrix_set (cov, 0, 0, ncm_fit_covar_fparam_cov (lhr2d->fit, fpi1, fpi1));
   ncm_matrix_set (cov, 0, 1, ncm_fit_covar_fparam_cov (lhr2d->fit, fpi1, fpi2));
@@ -347,10 +349,10 @@ _ncm_lh_ratio2d_prepare_coords (NcmLHRatio2d *lhr2d)
  *
  */
 void 
-ncm_lh_ratio2d_set_pindex (NcmLHRatio2d *lhr2d, NcmMSetPIndex pi1, NcmMSetPIndex pi2)
+ncm_lh_ratio2d_set_pindex (NcmLHRatio2d *lhr2d, NcmMSetPIndex *pi1, NcmMSetPIndex *pi2)
 {
   gint i;
-  NcmMSetPIndex pi[2] = {pi1, pi2};
+  NcmMSetPIndex pi[2] = {*pi1, *pi2};
   for (i = 0; i < 2; i++)
   {
     if (ncm_mset_param_get_ftype (lhr2d->fit->mset, pi[i].mid, pi[i].pid) != NCM_PARAM_TYPE_FREE)
@@ -761,6 +763,48 @@ ncm_lh_ratio2d_points_free (GList *points)
   g_list_free (points);
 }
 
+/**
+ * ncm_lh_ratio2d_points_to_region: (skip)
+ * @points: FIXME
+ * @clevel: FIXME
+ *
+ * FIXME
+ * 
+ * Returns: (transfer full): FIXME
+ */
+NcmLHRatio2dRegion *
+ncm_lh_ratio2d_points_to_region (GList *points, gdouble clevel)
+{
+  GList *spoints = points;
+  NcmLHRatio2dRegion *rg = g_slice_new0 (NcmLHRatio2dRegion);
+  guint i = 0;
+  
+  points = g_list_first (spoints);
+  rg->np = g_list_length (points) + 1;
+  rg->p1 = ncm_vector_new (rg->np);
+  rg->p2 = ncm_vector_new (rg->np);
+  rg->clevel = clevel;
+  
+  while (points)
+  {
+    NcmLHRatio2dPoint *crp = (NcmLHRatio2dPoint *) points->data;
+    ncm_vector_set (rg->p1, i, crp->p1);
+    ncm_vector_set (rg->p2, i, crp->p2);
+    i++;
+    points = g_list_next (points);
+  }
+  points = g_list_first (spoints);
+  {
+    NcmLHRatio2dPoint *crp = (NcmLHRatio2dPoint *) points->data;
+    ncm_vector_set (rg->p1, i, crp->p1);
+    ncm_vector_set (rg->p2, i, crp->p2);
+    i++;
+  }
+  g_assert_cmpint (i, ==, rg->np);
+
+  return rg;
+}
+
 #define TIMEOUT 90.0
 #define RESCALE (0.5)
 #define NMAXTRIES 40
@@ -794,17 +838,18 @@ _ncm_lh_ratio2d_set_angular_interval (NcmLHRatio2d *lhr2d, const gdouble da, gdo
 }
 
 /**
- * ncm_lh_ratio2d_conf_region: (skip)
+ * ncm_lh_ratio2d_conf_region:
  * @lhr2d: a @NcmFit
  * @clevel: FIXME
+ * @expected_np: Expected number of points, if lesser than 1 it uses the default value of 100.
  * @mtype: FIXME
  *
  * FIXME
  *
- * Returns: FIXME
+ * Returns: (transfer full): FIXME
  */
-GList *
-ncm_lh_ratio2d_conf_region (NcmLHRatio2d *lhr2d, gdouble clevel, NcmFitRunMsgs mtype)
+NcmLHRatio2dRegion *
+ncm_lh_ratio2d_conf_region (NcmLHRatio2d *lhr2d, gdouble clevel, gdouble expected_np, NcmFitRunMsgs mtype)
 {
   GTimer *iter_timer = g_timer_new ();
   gdouble total_time = 0.0;
@@ -815,7 +860,9 @@ ncm_lh_ratio2d_conf_region (NcmLHRatio2d *lhr2d, gdouble clevel, NcmFitRunMsgs m
   gboolean completed = FALSE;
   gdouble second_try = FALSE;
   static gdouble (*root) (NcmLHRatio2d *, gdouble, gdouble);
-
+  if (expected_np <= 1.0)
+    expected_np = 100.0;
+  
   lhr2d->mtype = mtype;
   
   ncm_lh_ratio2d_log_start (lhr2d, clevel);
@@ -871,7 +918,7 @@ ncm_lh_ratio2d_conf_region (NcmLHRatio2d *lhr2d, gdouble clevel, NcmFitRunMsgs m
     init_y = lhr2d->shift[1];
 
     lhr2d->angular = TRUE;
-    lhr2d->r = (2.0 * M_PI * sqrt (lhr2d->chisquare) / 100.0);
+    lhr2d->r = (2.0 * M_PI * sqrt (lhr2d->chisquare) / expected_np);
 
     theta0 = lhr2d->theta - M_PI * 0.25;
     theta1 = lhr2d->theta + M_PI * 0.25;
@@ -936,24 +983,34 @@ ncm_lh_ratio2d_conf_region (NcmLHRatio2d *lhr2d, gdouble clevel, NcmFitRunMsgs m
   total_time += g_timer_elapsed (iter_timer, NULL);
   g_timer_destroy (iter_timer);
 
-  return final_points;
+  {
+    NcmLHRatio2dRegion *rg = ncm_lh_ratio2d_points_to_region (final_points, clevel);
+    ncm_lh_ratio2d_points_free (final_points);
+    return rg;
+  }
 }
 
 /**
- * ncm_lh_ratio2d_fisher_border: (skip)
- * @lhr2d: a @NcmFit
+ * ncm_lh_ratio2d_fisher_border:
+ * @lhr2d: a #NcmFit.
  * @clevel: FIXME
+ * @expected_np:  Expected number of points, if lesser than 1 it uses the default value of 600.
  * @mtype: FIXME
  *
  * FIXME
  *
- * Returns: FIXME
+ * Returns: (transfer full): FIXME
  */
-GList *
-ncm_lh_ratio2d_fisher_border (NcmLHRatio2d *lhr2d, gdouble clevel, NcmFitRunMsgs mtype)
+NcmLHRatio2dRegion *
+ncm_lh_ratio2d_fisher_border (NcmLHRatio2d *lhr2d, gdouble clevel, gdouble expected_np, NcmFitRunMsgs mtype)
 {
   GList *points = NULL;
   gdouble theta;
+  gdouble step;
+  if (expected_np <= 1.0)
+    expected_np = 600.0;
+
+  step = 2.0 * M_PI / expected_np;
 
   lhr2d->chisquare = gsl_cdf_chisq_Qinv (1.0 - clevel, 2);
   lhr2d->r = sqrt (lhr2d->chisquare);
@@ -961,11 +1018,86 @@ ncm_lh_ratio2d_fisher_border (NcmLHRatio2d *lhr2d, gdouble clevel, NcmFitRunMsgs
   lhr2d->shift[0] = 0.0;
   lhr2d->shift[1] = 0.0;
 
-  for (theta = 0.0; theta <= 2.0 * M_PI; theta += 0.01)
+  for (theta = 0.0; theta <= 2.0 * M_PI; theta += step)
   {
     lhr2d->theta = theta;
     ncm_lh_ratio2d_points_add (lhr2d, &points);
   }
 
-  return points;
+  {
+    NcmLHRatio2dRegion *rg = ncm_lh_ratio2d_points_to_region (points, clevel);
+    ncm_lh_ratio2d_points_free (points);
+    return rg;
+  }
 }
+
+/**
+ * ncm_lh_ratio2d_region_dup:
+ * @rg: a #NcmLHRatio2dRegion.
+ *
+ * FIXME
+ *
+ * Returns: (transfer full): FIXME
+ */
+NcmLHRatio2dRegion *
+ncm_lh_ratio2d_region_dup (NcmLHRatio2dRegion *rg)
+{
+  NcmLHRatio2dRegion *rg_dup = g_slice_new0 (NcmLHRatio2dRegion);
+  rg_dup->np = rg->np;
+  rg_dup->clevel = rg->clevel;
+  rg_dup->p1 = ncm_vector_dup (rg->p1);
+  rg_dup->p2 = ncm_vector_dup (rg->p2);
+  
+  return rg_dup;
+}
+
+/**
+ * ncm_lh_ratio2d_region_free:
+ * @rg: a #NcmLHRatio2dRegion.
+ *
+ * FIXME
+ *
+ */
+void 
+ncm_lh_ratio2d_region_free (NcmLHRatio2dRegion *rg)
+{
+  ncm_vector_clear (&rg->p1);
+  ncm_vector_clear (&rg->p2);
+  g_slice_free (NcmLHRatio2dRegion, rg);
+}
+
+/**
+ * ncm_lh_ratio2d_region_clear:
+ * @rg: a #NcmLHRatio2dRegion.
+ *
+ * FIXME
+ *
+ */
+void 
+ncm_lh_ratio2d_region_clear (NcmLHRatio2dRegion **rg)
+{
+  if (*rg != NULL)
+    ncm_lh_ratio2d_region_free (*rg);
+  *rg = NULL;
+}
+
+/**
+ * ncm_lh_ratio2d_region_print:
+ * @rg: FIXME
+ * @out: FIXME
+ *
+ * FIXME
+ *
+ */
+void
+ncm_lh_ratio2d_region_print (NcmLHRatio2dRegion *rg, FILE *out)
+{
+  guint i;
+  for (i = 0; i < rg->np; i++)
+  {
+    const gdouble p1 = ncm_vector_get (rg->p1, i);
+    const gdouble p2 = ncm_vector_get (rg->p2, i);
+    fprintf (out, "% -19.15g % -19.15g\n", p1, p2);fflush(out);
+  }
+}
+

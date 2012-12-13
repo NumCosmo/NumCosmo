@@ -427,7 +427,7 @@ main (gint argc, gchar *argv[])
       }
       {
         NcmMSetPIndex pi = {NC_HICOSMO_ID, p_n};
-        NcmLHRatio1d *lhr1d = ncm_lh_ratio1d_new (fit, pi);
+        NcmLHRatio1d *lhr1d = ncm_lh_ratio1d_new (fit, &pi);
         ncm_lh_ratio1d_find_bounds (lhr1d, fit->mtype, prob_sigma, &err_inf, &err_sup);
         ncm_lh_ratio1d_free (lhr1d);
       }
@@ -453,37 +453,34 @@ main (gint argc, gchar *argv[])
     NcmLHRatio2d *lhr2d;
     NcmMSetPIndex pi1;
     NcmMSetPIndex pi2;
-    GList *points_1sigma;
-    GList *points_2sigma;
-    GList *points_3sigma;
+    NcmLHRatio2dRegion *rg_1sigma = NULL;
+    NcmLHRatio2dRegion *rg_2sigma = NULL;
+    NcmLHRatio2dRegion *rg_3sigma = NULL;
 
     pi1.mid = NC_HICOSMO_ID;
     pi2.mid = NC_HICOSMO_ID;
     pi1.pid = de_fit.bidim_cr[0];
     pi2.pid = de_fit.bidim_cr[1];
 
-    lhr2d = ncm_lh_ratio2d_new (fit, pi1, pi2);
+    lhr2d = ncm_lh_ratio2d_new (fit, &pi1, &pi2);
     
-    points_1sigma = NULL;
-    points_2sigma = NULL;
-    points_3sigma = NULL;
     switch (de_fit.nsigma)
     {
       case 1:
       {
-        points_1sigma = ncm_lh_ratio2d_conf_region (lhr2d, ncm_c_stats_1sigma (), de_fit.msg_level);
+        rg_1sigma = ncm_lh_ratio2d_conf_region (lhr2d, ncm_c_stats_1sigma (), 0.0, de_fit.msg_level);
         break;
       }
       case 2:
-        points_2sigma = ncm_lh_ratio2d_conf_region (lhr2d, ncm_c_stats_2sigma (), de_fit.msg_level);
+        rg_2sigma = ncm_lh_ratio2d_conf_region (lhr2d, ncm_c_stats_2sigma (), 0.0, de_fit.msg_level);
         break;
       case 3:
-        points_3sigma = ncm_lh_ratio2d_conf_region (lhr2d, ncm_c_stats_3sigma (), de_fit.msg_level);
+        rg_3sigma = ncm_lh_ratio2d_conf_region (lhr2d, ncm_c_stats_3sigma (), 0.0, de_fit.msg_level);
         break;
       default:
-        points_1sigma = ncm_lh_ratio2d_conf_region (lhr2d, ncm_c_stats_1sigma (), de_fit.msg_level);
-        points_2sigma = ncm_lh_ratio2d_conf_region (lhr2d, ncm_c_stats_2sigma (), de_fit.msg_level);
-        points_3sigma = ncm_lh_ratio2d_conf_region (lhr2d, ncm_c_stats_3sigma (), de_fit.msg_level);
+        rg_1sigma = ncm_lh_ratio2d_conf_region (lhr2d, ncm_c_stats_1sigma (), 0.0, de_fit.msg_level);
+        rg_2sigma = ncm_lh_ratio2d_conf_region (lhr2d, ncm_c_stats_2sigma (), 0.0, de_fit.msg_level);
+        rg_3sigma = ncm_lh_ratio2d_conf_region (lhr2d, ncm_c_stats_3sigma (), 0.0, de_fit.msg_level);
         break;
     }
 
@@ -494,19 +491,19 @@ main (gint argc, gchar *argv[])
       f_PL = nc_de_open_dataout_file (model, "PL", &pfile);
 
       fprintf (f_PL, "# %s\n", full_cmd_line);
-      if (points_1sigma != NULL)
+      if (rg_1sigma != NULL)
       {
-       ncm_lh_ratio2d_points_print (points_1sigma, f_PL);
+       ncm_lh_ratio2d_region_print (rg_1sigma, f_PL);
         fprintf (f_PL, "\n\n");
       }
-      if (points_2sigma != NULL)
+      if (rg_2sigma != NULL)
       {
-        ncm_lh_ratio2d_points_print (points_2sigma, f_PL);
+        ncm_lh_ratio2d_region_print (rg_2sigma, f_PL);
         fprintf (f_PL, "\n\n");
       }
-      if (points_3sigma != NULL)
+      if (rg_3sigma != NULL)
       {
-        ncm_lh_ratio2d_points_print (points_3sigma, f_PL);
+        ncm_lh_ratio2d_region_print (rg_3sigma, f_PL);
         fprintf (f_PL, "\n\n");
       }
 
@@ -516,9 +513,9 @@ main (gint argc, gchar *argv[])
 
       g_free (pfile);
     }
-    ncm_lh_ratio2d_points_free (points_1sigma);
-    ncm_lh_ratio2d_points_free (points_2sigma);
-    ncm_lh_ratio2d_points_free (points_3sigma);
+    ncm_lh_ratio2d_region_clear (&rg_1sigma);
+    ncm_lh_ratio2d_region_clear (&rg_2sigma);
+    ncm_lh_ratio2d_region_clear (&rg_3sigma);
     ncm_lh_ratio2d_free (lhr2d);
   }
 
@@ -527,36 +524,32 @@ main (gint argc, gchar *argv[])
     NcmLHRatio2d *lhr2d;
     NcmMSetPIndex pi1;
     NcmMSetPIndex pi2;
-    GList *points_1sigma;
-    GList *points_2sigma;
-    GList *points_3sigma;
+    NcmLHRatio2dRegion *rg_1sigma = NULL;
+    NcmLHRatio2dRegion *rg_2sigma = NULL;
+    NcmLHRatio2dRegion *rg_3sigma = NULL;
 
     pi1.mid = NC_HICOSMO_ID;
     pi2.mid = NC_HICOSMO_ID;
     pi1.pid = de_fit.bidim_cr[0];
     pi2.pid = de_fit.bidim_cr[1];
 
-    lhr2d = ncm_lh_ratio2d_new (fit, pi1, pi2);
-    
-    points_1sigma = NULL;
-    points_2sigma = NULL;
-    points_3sigma = NULL;
+    lhr2d = ncm_lh_ratio2d_new (fit, &pi1, &pi2);
 
     switch (de_fit.nsigma_fisher)
     {
       case 1:
-        points_1sigma = ncm_lh_ratio2d_fisher_border (lhr2d, ncm_c_stats_1sigma (), de_fit.msg_level);
+        rg_1sigma = ncm_lh_ratio2d_fisher_border (lhr2d, ncm_c_stats_1sigma (), 0.0, de_fit.msg_level);
         break;
       case 2:
-        points_2sigma = ncm_lh_ratio2d_fisher_border (lhr2d, ncm_c_stats_2sigma (), de_fit.msg_level);
+        rg_2sigma = ncm_lh_ratio2d_fisher_border (lhr2d, ncm_c_stats_2sigma (), 0.0, de_fit.msg_level);
         break;
       case 3:
-        points_3sigma = ncm_lh_ratio2d_fisher_border (lhr2d, ncm_c_stats_3sigma (), de_fit.msg_level);
+        rg_3sigma = ncm_lh_ratio2d_fisher_border (lhr2d, ncm_c_stats_3sigma (), 0.0, de_fit.msg_level);
         break;
       default:
-        points_1sigma = ncm_lh_ratio2d_fisher_border (lhr2d, ncm_c_stats_1sigma (), de_fit.msg_level);
-        points_2sigma = ncm_lh_ratio2d_fisher_border (lhr2d, ncm_c_stats_2sigma (), de_fit.msg_level);
-        points_3sigma = ncm_lh_ratio2d_fisher_border (lhr2d, ncm_c_stats_3sigma (), de_fit.msg_level);
+        rg_1sigma = ncm_lh_ratio2d_fisher_border (lhr2d, ncm_c_stats_1sigma (), 0.0, de_fit.msg_level);
+        rg_2sigma = ncm_lh_ratio2d_fisher_border (lhr2d, ncm_c_stats_2sigma (), 0.0, de_fit.msg_level);
+        rg_3sigma = ncm_lh_ratio2d_fisher_border (lhr2d, ncm_c_stats_3sigma (), 0.0, de_fit.msg_level);
         break;
     }
 
@@ -567,19 +560,19 @@ main (gint argc, gchar *argv[])
       f_MFcr = nc_de_open_dataout_file (model, "MF_cr", &mcrfile);
 
       fprintf (f_MFcr, "# %s\n", full_cmd_line);
-      if (points_1sigma != NULL)
+      if (rg_1sigma != NULL)
       {
-        ncm_lh_ratio2d_points_print (points_1sigma, f_MFcr);
+        ncm_lh_ratio2d_region_print (rg_1sigma, f_MFcr);
         fprintf (f_MFcr, "\n\n");
       }
-      if (points_2sigma != NULL)
+      if (rg_2sigma != NULL)
       {
-        ncm_lh_ratio2d_points_print (points_2sigma, f_MFcr);
+        ncm_lh_ratio2d_region_print (rg_2sigma, f_MFcr);
         fprintf (f_MFcr, "\n\n");
       }
-      if (points_3sigma != NULL)
+      if (rg_3sigma != NULL)
       {
-        ncm_lh_ratio2d_points_print (points_3sigma, f_MFcr);
+        ncm_lh_ratio2d_region_print (rg_3sigma, f_MFcr);
         fprintf (f_MFcr, "\n\n");
       }
 
@@ -590,9 +583,9 @@ main (gint argc, gchar *argv[])
       g_free (mcrfile);
     }
 
-    ncm_lh_ratio2d_points_free (points_1sigma);
-    ncm_lh_ratio2d_points_free (points_2sigma);
-    ncm_lh_ratio2d_points_free (points_3sigma);
+    ncm_lh_ratio2d_region_clear (&rg_1sigma);
+    ncm_lh_ratio2d_region_clear (&rg_2sigma);
+    ncm_lh_ratio2d_region_clear (&rg_3sigma);
   }
 
   if (de_data_cluster.print_mass_function == TRUE && ca_array != NULL)
