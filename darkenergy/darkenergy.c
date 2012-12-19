@@ -598,7 +598,7 @@ main (gint argc, gchar *argv[])
     for (i = 0; i < ca_array->len; i++)
     {
       NcmData *dca_unbinned = g_ptr_array_index (ca_array, i);
-      nc_mass_function_print (dca_unbinned, model, f_mf, full_cmd_line);
+      nc_data_cluster_ncount_print (dca_unbinned, model, f_mf, full_cmd_line);
       fprintf (f_mf, "\n\n");
     }
     fclose (f_mf);
