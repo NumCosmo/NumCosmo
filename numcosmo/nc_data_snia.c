@@ -105,7 +105,9 @@ nc_data_snia_get_fits (const gchar *filename, gboolean check_size)
                                        G_FILE_QUERY_INFO_NONE, 
                                        NULL, &error);
       if (remote_info == NULL)
-        g_error ("nc_data_snia_get_fits: cannot get info for %s: %s.", url_str, error->message);
+        g_error ("nc_data_snia_get_fits: cannot get info for %s: %s."
+                 " To use this catalog, download the file from the url and copy "
+                 "to ~/.numcosmo directory.", url_str, error->message);
 
       if (g_file_info_get_size (local_info) != g_file_info_get_size (remote_info))
         download = TRUE;
@@ -119,7 +121,10 @@ nc_data_snia_get_fits (const gchar *filename, gboolean check_size)
     ncm_message ("# Downloading file [%s]...\n", url_str);
     if (!g_file_copy (remote, local, G_FILE_COPY_OVERWRITE, NULL, 
                       &_nc_data_snia_copy_prog, &prog, &error))
-      g_error ("nc_data_snia_get_fits: cannot get fits file from %s: %s.", url_str, error->message);
+      g_error ("nc_data_snia_get_fits: cannot get fits file from %s: %s."
+               " To use this catalog, download the file from the url and copy "
+               "to ~/.numcosmo directory.", 
+               url_str, error->message);
   }
   g_free (url_str);
   

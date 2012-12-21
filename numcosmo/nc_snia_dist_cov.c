@@ -507,13 +507,12 @@ nc_snia_dist_cov_mean (NcSNIADistCov *dcov, NcHICosmo *cosmo, NcmVector *y)
   {
     const gdouble z_cmb    = ncm_vector_get (dcov->z_cmb, i);
     const gdouble z_he     = ncm_vector_get (dcov->z_he, i);
-    const gdouble mag      = ncm_vector_get (dcov->mag, i);
     const gdouble width    = ncm_vector_get (dcov->width, i);
     const gdouble colour   = ncm_vector_get (dcov->colour, i);
     const gdouble thirdpar = ncm_vector_get (dcov->thirdpar, i);
-    const gdouble mu           = nc_distance_modulus_hef (dcov->dist, cosmo, z_he, z_cmb);
-    const gdouble mag_th = mu - alpha * (width - 1.0) + beta * colour + ((thirdpar < 10.0) ? Mcal1 : Mcal2);
-    const gdouble y_i          = mag - mag_th;
+    const gdouble mu       = nc_distance_modulus_hef (dcov->dist, cosmo, z_he, z_cmb);
+    const gdouble mag_th   = mu - alpha * (width - 1.0) + beta * colour + ((thirdpar < 10.0) ? Mcal1 : Mcal2);
+    const gdouble y_i      = mag_th;
 
     ncm_vector_set (y, i, y_i);
   }

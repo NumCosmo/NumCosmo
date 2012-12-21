@@ -405,11 +405,7 @@ libnumcosmo_la_SOURCES =          \
 	perturbations/linear_gsl_ode.c  \
 	perturbations/linear_gsl_ode2.c \
 	perturbations/hydrodyn_adiabatic.c \
-	perturbations/hydrodyn_adiabatic.h \
-	lss/read_matrix.c \
-	lss/read_matrix.h \
-	lss/print_data.c \
-	lss/print_data.h
+	perturbations/hydrodyn_adiabatic.h
 
 nodist_libnumcosmo_la_SOURCES = \
 	build_cfg.h             \
@@ -444,9 +440,7 @@ nobase_cosmo_include_HEADERS =    \
 	perturbations/linear_generic.c     \
 	perturbations/covariance.h         \
 	perturbations/linear_internal.h    \
-	perturbations/hydrodyn_adiabatic.h \
-	lss/read_matrix.h \
-	lss/print_data.h
+	perturbations/hydrodyn_adiabatic.h
 
 nodist_cosmo_include_HEADERS = \
 	build_cfg.h            \

@@ -188,7 +188,7 @@ nc_data_snia_cov_set_dcov (NcDataSNIACov *snia_cov, NcSNIADistCov *dcov)
   ncm_data_gauss_cov_set_size (gauss, dcov->mu_len);
   if (dcov->mu_len > 0)
   {
-    ncm_vector_set_zero (gauss->y);
+    ncm_vector_memcpy (gauss->y, dcov->mag);
     ncm_data_set_init (NCM_DATA (snia_cov));
   }
 }

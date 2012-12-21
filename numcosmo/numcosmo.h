@@ -179,8 +179,6 @@
 #include <numcosmo/lss/nc_cluster_mass_benson.h>
 #include <numcosmo/lss/nc_cluster_mass_benson_xray.h>
 #include <numcosmo/lss/nc_cluster_abundance.h>
-#include <numcosmo/lss/read_matrix.h>
-#include <numcosmo/lss/print_data.h>
 
 /* Observable data */
 #include <numcosmo/nc_data_snia.h>

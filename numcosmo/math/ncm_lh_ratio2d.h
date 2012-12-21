@@ -100,18 +100,41 @@ struct _NcmLHRatio2dPoint
   gdouble p2;
 };
 
-GType ncm_lh_ratio2d_get_type (void) G_GNUC_CONST;
+typedef struct _NcmLHRatio2dRegion NcmLHRatio2dRegion;
 
-NcmLHRatio2d *ncm_lh_ratio2d_new (NcmFit *fit, NcmMSetPIndex pi1, NcmMSetPIndex pi2);
+/**
+ * NcmLHRatio2dRegion:
+ * @np: Number of points.
+ * @p1: a #NcmVector containing points of parameter one.
+ * @p2: a #NcmVector containing points of parameter two.
+ * @clevel: the confidence level represented by the border.
+ *
+ * Object describing a confidence region.
+ * 
+ */
+struct _NcmLHRatio2dRegion
+{
+  guint np;
+  NcmVector *p1;
+  NcmVector *p2;
+  gdouble clevel;
+};
+
+GType ncm_lh_ratio2d_get_type (void) G_GNUC_CONST;
+GType ncm_lh_ratio2d_region_get_type (void) G_GNUC_CONST;
+
+NcmLHRatio2d *ncm_lh_ratio2d_new (NcmFit *fit, NcmMSetPIndex *pi1, NcmMSetPIndex *pi2);
 void ncm_lh_ratio2d_free (NcmLHRatio2d *lhr2d);
 void ncm_lh_ratio2d_clear (NcmLHRatio2d **lhr2d);
 
-void ncm_lh_ratio2d_set_pindex (NcmLHRatio2d *lhr2d, NcmMSetPIndex pi1, NcmMSetPIndex pi2);
+void ncm_lh_ratio2d_set_pindex (NcmLHRatio2d *lhr2d, NcmMSetPIndex *pi1, NcmMSetPIndex *pi2);
 
-GList *ncm_lh_ratio2d_conf_region (NcmLHRatio2d *lhr2d, gdouble clevel, NcmFitRunMsgs mtype);
-GList *ncm_lh_ratio2d_fisher_border (NcmLHRatio2d *lhr2d, gdouble clevel, NcmFitRunMsgs mtype);
-void ncm_lh_ratio2d_points_free (GList *points);
-void ncm_lh_ratio2d_points_print (GList *points, FILE *out);
+NcmLHRatio2dRegion *ncm_lh_ratio2d_conf_region (NcmLHRatio2d *lhr2d, gdouble clevel, gdouble expected_np, NcmFitRunMsgs mtype);
+NcmLHRatio2dRegion *ncm_lh_ratio2d_fisher_border (NcmLHRatio2d *lhr2d, gdouble clevel, gdouble expected_np, NcmFitRunMsgs mtype);
+NcmLHRatio2dRegion *ncm_lh_ratio2d_region_dup (NcmLHRatio2dRegion *rg);
+void ncm_lh_ratio2d_region_free (NcmLHRatio2dRegion *rg);
+void ncm_lh_ratio2d_region_clear (NcmLHRatio2dRegion **rg);
+void ncm_lh_ratio2d_region_print (NcmLHRatio2dRegion *rg, FILE *out);
 
 G_END_DECLS
 

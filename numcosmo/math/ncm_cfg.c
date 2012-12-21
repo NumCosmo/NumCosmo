@@ -1868,4 +1868,5 @@ ncm_cfg_serialize_to_string (GObject *obj, gboolean valid_variant)
   return NULL;
 }
 #endif
+
  

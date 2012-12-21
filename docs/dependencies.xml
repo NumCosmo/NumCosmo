@@ -2,7 +2,7 @@
 <!DOCTYPE refentry PUBLIC "-//OASIS//DTD DocBook XML V4.5//EN" "http://www.oasis-open.org/docbook/xml/4.5/docbookx.dtd">
 <?asciidoc-toc?>
 <?asciidoc-numbered?>
-<refentry lang="en">
+<refentry lang="en" id="dependencies">
 <refentryinfo>
     <title>Library Dependencies(3)</title>
     <author>
@@ -14,7 +14,7 @@
     <authorinitials>SDV</authorinitials>
 </refentryinfo>
 <refmeta>
-<refentrytitle>Library Dependencies</refentrytitle>
+<refentrytitle id="numcosmo-deps">Library Dependencies</refentrytitle>
 <manvolnum>3</manvolnum>
 <refmiscinfo class="source">&#160;</refmiscinfo>
 <refmiscinfo class="manual">&#160;</refmiscinfo>
@@ -28,17 +28,29 @@
 <itemizedlist>
 <listitem>
 <simpara>
-GLib-2.0
+GLib/GObject
 </simpara>
 <itemizedlist>
 <listitem>
 <simpara>
-Portability issues: types, filesystem, threads, etc;
+<ulink role="online-location" url="http://www.gtk.org/">http://www.gtk.org/</ulink>, 
+<ulink role="online-location" url="http://developer.gnome.org/glib/stable/">http://developer.gnome.org/glib/stable/</ulink>
 </simpara>
 </listitem>
 <listitem>
 <simpara>
-Several generic data structures: hash tables, binary trees, etc;
+Object oriented infrastructure, automatic bindings through GObject
+introspection.
+</simpara>
+</listitem>
+<listitem>
+<simpara>
+Portability issues: types, filesystem, threads, etc.
+</simpara>
+</listitem>
+<listitem>
+<simpara>
+Several generic data structures: hash tables, binary trees, etc.
 </simpara>
 </listitem>
 <listitem>
@@ -50,27 +62,27 @@ Utilities: timers for benchmark, logging facilities, etc.
 </listitem>
 <listitem>
 <simpara>
-GSL
+GSL - GNU Scientific Library
 </simpara>
 <itemizedlist>
 <listitem>
 <simpara>
-Special functions;
+<ulink role="online-location" url="http://www.gnu.org/software/gsl/">http://www.gnu.org/software/gsl/</ulink>
 </simpara>
 </listitem>
 <listitem>
 <simpara>
-Multidimensional minimization, including both algorithms with and
+Special functions.
 </simpara>
 </listitem>
 <listitem>
 <simpara>
-without derivatives;
+Multidimensional minimization, including both algorithms with and without derivatives.
 </simpara>
 </listitem>
 <listitem>
 <simpara>
-Interpolation;
+Interpolation.
 </simpara>
 </listitem>
 <listitem>
@@ -82,17 +94,23 @@ Several other mathematical algorithms.
 </listitem>
 <listitem>
 <simpara>
-GMP/MPFR
+GMP/MPFR - GNU Multiple Precision Arithmetic Library / Multiple-precision Floating-point computations with correct Rounding
 </simpara>
 <itemizedlist>
 <listitem>
 <simpara>
-Special function with arbitrary precision;
+<ulink role="online-location" url="http://gmplib.org/">http://gmplib.org/</ulink> / 
+<ulink role="online-location" url="http://www.mpfr.org/">http://www.mpfr.org/</ulink>
 </simpara>
 </listitem>
 <listitem>
 <simpara>
-Binary splitting algorithims;
+Special function with arbitrary precision.
+</simpara>
+</listitem>
+<listitem>
+<simpara>
+Binary splitting algorithms.
 </simpara>
 </listitem>
 <listitem>
@@ -104,12 +122,16 @@ One dimensional grid with rationals.
 </listitem>
 <listitem>
 <simpara>
-FFTW3
+FFTW3 - The Fastest Fourier Transform in the West
 </simpara>
 <itemizedlist>
 <listitem>
 <simpara>
-Self optimized discrete Fourier transform used in spherical harmonics decomposition
+<ulink role="online-location" url="http://www.fftw.org/">http://www.fftw.org/</ulink>
+</simpara>
+</listitem><listitem>
+<simpara>
+Self optimized discrete Fourier transform used in spherical harmonics decomposition.
 </simpara>
 </listitem>
 </itemizedlist>
@@ -121,17 +143,25 @@ CFitsio
 <itemizedlist>
 <listitem>
 <simpara>
-Manipulate cmb data files
+<ulink role="online-location" url="http://heasarc.gsfc.nasa.gov/fitsio/">http://heasarc.gsfc.nasa.gov/fitsio/</ulink>
+</simpara>
+</listitem><listitem>
+<simpara>
+Manipulate several observational data files.
 </simpara>
 </listitem>
 </itemizedlist>
 </listitem>
 <listitem>
 <simpara>
-Sundials
+Sundials - SUite of Nonlinear and DIfferential/ALgebraic equation Solvers
 </simpara>
 <itemizedlist>
 <listitem>
+<simpara>
+<ulink role="online-location" url="https://computation.llnl.gov/casc/sundials/main.html">https://computation.llnl.gov/casc/sundials/main.html</ulink>
+</simpara>
+</listitem><listitem>
 <simpara>
 Ode system solver with support to several algorithms including stiff ode systems.
 </simpara>
@@ -145,12 +175,64 @@ Ode system solver with support to several algorithms including stiff ode systems
 <itemizedlist>
 <listitem>
 <simpara>
-ATLAS
+ATLAS - Automatically Tuned Linear Algebra Software
 </simpara>
 <itemizedlist>
 <listitem>
 <simpara>
-Optimized basic linear algebra package (used transparently by several algorithms in GSL).
+<ulink role="online-location" url="http://math-atlas.sourceforge.net/">http://math-atlas.sourceforge.net/</ulink>
+</simpara>
+</listitem><listitem>
+<simpara>
+Optimized basic linear algebra package (used transparently by several algorithms in NumCosmo).
+</simpara>
+</listitem>
+</itemizedlist>
+</listitem>
+<listitem>
+<simpara>
+Levmar - Levenberg-Marquardt nonlinear least squares algorithms in C/C++
+</simpara>
+<itemizedlist>
+<listitem>
+<simpara>
+<ulink role="online-location" url="http://www.ics.forth.gr/~lourakis/levmar/">http://www.ics.forth.gr/~lourakis/levmar/</ulink>
+</simpara>
+</listitem><listitem>
+<simpara>
+Least-Squares algorithms.
+</simpara>
+</listitem>
+</itemizedlist>
+</listitem>
+<listitem>
+<simpara>
+NLOpt - NonLinear Optimization
+</simpara>
+<itemizedlist>
+<listitem>
+<simpara>
+<ulink role="online-location" url="http://ab-initio.mit.edu/wiki/index.php/NLopt">http://ab-initio.mit.edu/wiki/index.php/NLopt</ulink>
+</simpara>
+</listitem><listitem>
+<simpara>
+Common interface to several optimization (minimization) algorithms including global and local, constrained and unconstrained optimization.
+</simpara>
+</listitem>
+</itemizedlist>
+</listitem>
+<listitem>
+<simpara>
+Cuba Library - library for multidimensional numerical integration
+</simpara>
+<itemizedlist>
+<listitem>
+<simpara>
+<ulink role="online-location" url="http://www.feynarts.de/cuba/">http://www.feynarts.de/cuba/</ulink>
+</simpara>
+</listitem><listitem>
+<simpara>
+Several algorithms (deterministic and non-deterministic) for numerical integration of multidimensional functions.
 </simpara>
 </listitem>
 </itemizedlist>

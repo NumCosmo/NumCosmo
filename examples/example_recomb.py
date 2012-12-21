@@ -5,7 +5,7 @@ from gi.repository import Numcosmo as Nc
 import matplotlib.pyplot as plt
 
 #
-#  Initialize the library objects, this must be called before 
+#  Initializing the library objects, this must be called before 
 #  any other library function.
 #
 Nc.cfg_init ()

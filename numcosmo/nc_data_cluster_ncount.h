@@ -114,6 +114,8 @@ void nc_data_cluster_ncount_init_from_sampling (NcmData *data, NcmMSet *mset, Nc
 NcmData *nc_data_cluster_ncount_bin_data (NcmData *data, gsl_vector *nodes);
 gsl_histogram2d *nc_data_cluster_ncount_hist_lnM_z (NcmData *data, gsl_vector *lnM_nodes, gsl_vector *z_nodes);
 
+void nc_data_cluster_ncount_print (NcmData *data, NcHICosmo *cosmo, FILE *out, gchar *header);
+
 #ifdef NUMCOSMO_HAVE_CFITSIO
 void nc_data_cluster_ncount_catalog_save (NcmData *data, gchar *filename, gboolean overwrite);
 void nc_data_cluster_ncount_catalog_load (NcmData *data, gchar *filename);

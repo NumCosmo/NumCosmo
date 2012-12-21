@@ -5,7 +5,8 @@ XML_FILES=dependencies.xml \
           compiling.xml    \
           introduction.xml \
           references.xml   \
-          darkenergy.xml
+          darkenergy.xml   \
+          refs.xml
 
 # We require automake 1.6 at least.
 AUTOMAKE_OPTIONS = 1.6

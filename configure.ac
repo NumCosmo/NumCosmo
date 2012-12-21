@@ -57,9 +57,11 @@ AC_PROG_LN_S
 AC_PROG_CC_STDC
 AC_PROG_GREP
 AC_PROG_SED
+AC_PROG_FC
 dnl LT_INIT([disable-shared])
 dnl AC_DISABLE_SHARED
 LT_INIT
+
 
 dnl check for gtk-doc
 GTK_DOC_CHECK([1.14],[--flavour no-tmpl])
@@ -177,11 +179,19 @@ if test "x$thread_pool_max" = "xyes"; then
 fi
 
 dnl ***************************************************************************
+dnl Check for fortran lib.
+dnl ***************************************************************************
+AC_FC_LIBRARY_LDFLAGS
+if test "x$FCLIBS" != x; then
+  LIBS="$FCLIBS $LIBS"
+fi
+
+dnl ***************************************************************************
 dnl Check for math.h
 dnl ***************************************************************************
 
 AC_CHECK_HEADERS(math.h,, AC_MSG_ERROR([math.h header files missing]))
-AC_CHECK_LIB([m],[cos])
+AC_CHECK_FUNC([cos],[],[AC_CHECK_LIB([m],[cos])])
 
 dnl ***************************************************************************
 dnl Check for glib.
@@ -214,8 +224,8 @@ dnl ***************************************************************************
 dnl Check for gmp and mpfr
 dnl ***************************************************************************
 
-AC_CHECK_LIB([gmp], [__gmpz_init],,[AC_MSG_ERROR([GMP not found. See README.])],[$GLIB_LIBS $GSL_LIBS])
-AC_CHECK_LIB([mpfr], [mpfr_init],,[AC_MSG_ERROR([MPFR not found. See README.])],[$GLIB_LIBS $GSL_LIBS])
+AC_CHECK_FUNC([__gmpz_init],[],[AC_CHECK_LIB([gmp], [__gmpz_init],,[AC_MSG_ERROR([GMP not found. See README.])])])
+AC_CHECK_FUNC([mpfr_init],[],[AC_CHECK_LIB([mpfr], [mpfr_init],,[AC_MSG_ERROR([MPFR not found. See README.])])])
 
 dnl ***************************************************************************
 dnl Check for sqlite3
@@ -254,7 +264,7 @@ dnl ***************************************************************************
 AC_MSG_CHECKING([--with-atlas-path])
 AC_ARG_WITH(atlas-path,
   [AS_HELP_STRING([--with-atlas-path=PATH],[Full Path to Atlas.])],
-  [ATLAS_PATH="-L$withval"])
+  [LIBS="-L$withval $LIBS"])
 AC_MSG_RESULT($ATLAS_PATH)
 
 AC_MSG_CHECKING([--with-atlas])
@@ -269,6 +279,12 @@ AC_ARG_WITH(atlas-cblas,
   [ATLAS_CBLAS="$withval"], [ATLAS_CBLAS="cblas"])
 AC_MSG_RESULT($ATLAS_CBLAS)
 
+AC_MSG_CHECKING([--with-atlas-blas])
+AC_ARG_WITH(atlas-blas,
+  [AS_HELP_STRING([--with-atlas-blas=blas],[Atlas blas (fortran) library name, default is 'f77blas'])],
+  [ATLAS_BLAS="$withval"], [ATLAS_BLAS="f77blas"])
+AC_MSG_RESULT($ATLAS_BLAS)
+
 AC_MSG_CHECKING([--with-atlas-lapack])
 AC_ARG_WITH(atlas-lapack,
   [AS_HELP_STRING([--with-atlas-lapack=lapack],[Atlas lapack library name, default is 'lapack'])],
@@ -281,35 +297,38 @@ AC_ARG_WITH(atlas-extra-libs,
   [ATLAS_EXTRA_LIBS="$withval"], [ATLAS_EXTRA_LIBS=""])
 AC_MSG_RESULT($ATLAS_EXTRA_LIBS)
 
-AC_CHECK_LIB([$ATLAS_CBLAS], [cblas_dgemv], [have_atlas_cblas='yes'],[],[$ATLAS_PATH -l$ATLAS $ATLAS_EXTRA_LIBS])
-AC_CHECK_LIB([$ATLAS_LAPACK], [sgesv_], [have_lapack='yes'],[],[$ATLAS_PATH -l$ATLAS_CBLAS -l$ATLAS $ATLAS_EXTRA_LIBS])
+AC_CHECK_LIB([$ATLAS], [ATL_dgemv],, [have_atlas='no'])
 
-if test "x$have_atlas_cblas" = "xyes"; then
+AC_CHECK_LIB([$ATLAS_CBLAS], [cblas_dgemv],, [have_atlas_cblas='no'])
+AC_CHECK_FUNC([cblas_dgemm], [], [have_atlas_cblas='no'])
+
+AC_CHECK_LIB([$ATLAS_BLAS], [dgemv_],, [have_atlas_blas='no'])
+AC_CHECK_FUNC([dgemm_], [], [have_atlas_blas='no'])
+
+AC_CHECK_LIB([$ATLAS_LAPACK], [clapack_sgesv],,[have_clapack='no'])
+AC_CHECK_FUNC([sgesv_], [], [have_lapack='no'])
+
+if test "x$have_atlas_cblas" != "xno"; then
   GSL_LIBS=`echo $GSL_LIBS | sed 's/\-lgslcblas//g'`
-  APPEND_LIBS="$APPEND_LIBS $ATLAS_PATH -l$ATLAS_CBLAS -l$ATLAS $ATLAS_EXTRA_LIBS"
   have_atlas_support="#define NUMCOSMO_HAVE_ATLAS 1"
 else
   have_atlas_support=""
 fi
 AC_SUBST(have_atlas_support)
 
-if test "x$have_lapack" = "xyes"; then
+if test "x$have_clapack" != "xno"; then
   GSL_LIBS=`echo $GSL_LIBS | sed 's/\-lgslcblas//g'`
-  APPEND_LIBS="$APPEND_LIBS -l$ATLAS_LAPACK"
-  have_lapack_support="#define NUMCOSMO_HAVE_LAPACK 1"
+  have_clapack_support="#define NUMCOSMO_HAVE_LAPACK 1"
   AC_DEFINE([HAVE_LAPACK], [1], [use lapack functions])
   AC_SUBST(HAVE_LAPACK)  
 else
-  have_lapack_support=""
+  have_clapack_support=""
 fi
-AC_SUBST(have_lapack_support)
+AC_SUBST(have_clapack_support)
 
-if test "x$have_lapack_support" != x; then
-  SAVED_LIBS="$LIBS"
-  LIBS="$LIBS $APPEND_LIBS"
+if test "x$have_clapack_support" != x; then
   AC_CHECK_HEADERS([clapack.h])
   AC_CHECK_FUNCS([clapack_dpotrf])
-  LIBS="$SAVED_LIBS"
 fi
 
 dnl ***************************************************************************
@@ -319,22 +338,26 @@ dnl ***************************************************************************
 AC_MSG_CHECKING([--with-levmar-path])
 AC_ARG_WITH(levmar-path,
   [AS_HELP_STRING([--with-levmar-path=PATH],[Levmar library location])],
-  [LEVMAR_PATH="-L$withval"], [LEVMAR_PATH=""])
+  [LEVMAR_PATH="-L$withval"], [])
 AC_MSG_RESULT($LEVMAR_PATH)
+
+if test "x$LEVMAR_PATH" != x; then
+  LIBS="$LEVMAR_PATH $LIBS"
+fi
 
 AC_MSG_CHECKING([--with-levmar-extra-libs])
 AC_ARG_WITH(levmar-extra-libs,
-  [AS_HELP_STRING([--with-levmar-extra-libs=LIBS],[Levmar extra libraries, default is '-lf77blas -lgfortran'])],
-  [LEVMAR_EXTRA_LIBS="$withval"], [LEVMAR_EXTRA_LIBS="-lf77blas -lgfortran"])
+  [AS_HELP_STRING([--with-levmar-extra-libs=LIBS],[Levmar extra libraries, default is none])],
+  [LEVMAR_EXTRA_LIBS="$withval"], [])
 AC_MSG_RESULT($LEVMAR_EXTRA_LIBS)
 
-AC_CHECK_LIB([levmar], [dlevmar_der],,[levmar_missing="yes"],[$GLIB_LIBS $GSL_LIBS $APPEND_LIBS $LEVMAR_PATH $LEVMAR_EXTRA_LIBS])
+AC_CHECK_LIB([levmar], [dlevmar_der],[LIBS="-llevmar $LEVMAR_EXTRA_LIBS $LIBS"],[levmar_missing="yes"],[$LEVMAR_EXTRA_LIBS])
+
 AC_CHECK_HEADER(levmar.h, , [AC_CHECK_HEADER(levmar/levmar.h, [levmar_need_prefix="yes"], [levmar_missing="yes"])])
 if test "x$levmar_missing" = "xyes"; then
   have_levmar_support=""
 else
   have_levmar_support="#define NUMCOSMO_HAVE_LEVMAR 1"
-  APPEND_LIBS="$APPEND_LIBS $LEVMAR_PATH $LEVMAR_EXTRA_LIBS"
 fi
 AC_SUBST(have_levmar_support)
 
@@ -360,7 +383,7 @@ dnl ***************************************************************************
 dnl Check for chealpix
 dnl ***************************************************************************
 dnl 
-dnl AC_CHECK_LIB([chealpix], [read_healpix_map],,[chealpix_missing="yes"],[$GLIB_LIBS $APPEND_LIBS])
+dnl AC_CHECK_LIB([chealpix], [read_healpix_map],,[chealpix_missing="yes"],[])
 dnl if test "x$chealpix_missing" = "xyes"; then
 dnl   have_chealpix_support=""
 dnl else
@@ -372,7 +395,7 @@ dnl ***************************************************************************
 dnl Check for libcuba
 dnl ***************************************************************************
 
-AC_CHECK_LIB([cuba], [Cuhre],,[cuba_missing="yes"],[$GLIB_LIBS $APPEND_LIBS])
+AC_CHECK_LIB([cuba], [Cuhre],,[cuba_missing="yes"],[])
 if test "x$cuba_missing" = "xyes"; then
   have_cuba_support=""
 else
@@ -401,9 +424,9 @@ if test "x$have_nlopt_support" != "x"; then
 
 PKG_CHECK_EXISTS([nlopt >= 2.2], [
 AC_DEFINE([HAVE_NLOPT_2_2],[1], [If nlopt version is bigger than 2.2])
-AC_CHECK_LIB([nlopt],[nlopt_create],,[AC_MSG_ERROR([Can't link to -lnlopt. The nlopt library is probably compiled with c++ support, recompile the C version.])],[$APPEND_LIBS])
+AC_CHECK_LIB([nlopt],[nlopt_create],,[AC_MSG_ERROR([Can't link to -lnlopt. The nlopt library is probably compiled with c++ support, recompile the C version.])],[])
 ],[
-AC_CHECK_LIB([nlopt],[nlopt_minimize_constrained],,[AC_MSG_ERROR([Can't link to -lnlopt. The nlopt library is probably compiled with C++ support, recompile the C version.])],[$APPEND_LIBS])
+AC_CHECK_LIB([nlopt],[nlopt_minimize_constrained],,[AC_MSG_ERROR([Can't link to -lnlopt. The nlopt library is probably compiled with C++ support, recompile the C version.])],[])
 ])
 
 fi
@@ -435,7 +458,6 @@ dnl ***************************************************************************
 dnl Appending libs and setting up TEST_SHARED
 dnl ***************************************************************************
 
-LIBS="$LIBS $APPEND_LIBS"
 TEST_SHARED_LIBS="$TEST_SHARED_LIBS $LIBS"
 TEST_SHARED_CFLAGS="$TEST_SHARED_CFLAGS"
 
@@ -494,7 +516,7 @@ else
        echo "Building  with Atlas support: ....................................NO"
        echo "        Requires ATLAS - Automatically Tuned Linear Algebra Software"
 fi
-if [ test "x$have_lapack_support" != x ]; then
+if [ test "x$have_clapack_support" != x ]; then
        echo "Building with Lapack support: ...................................YES"
 else
        echo "Building  with Lapack support: ...................................NO"

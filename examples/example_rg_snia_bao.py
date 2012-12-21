@@ -34,34 +34,38 @@ cosmo.props.sigma8  = 0.9
 cosmo.props.w       = -1.0
 
 #
-#  Creating a new Modelset and set cosmo as the HICosmo model to be used.
+#  A new Modelset with cosmo as the HICosmo model to be used.
 #
 mset = Nc.MSet ()
 mset.set (cosmo)
 
 #
-#  Setting parameters Omega_c and w to be fitted and change parameter
-#  Omega_x -> Omega_k.
+#  Setting parameters Omega_c, Omega_x and w to be fitted (and change 
+#  parameter Omega_x -> Omega_k).
 #
-cosmo.de_omega_x2omega_k ()
+#cosmo.de_omega_x2omega_k ()
 cosmo.props.Omegac_fit = True
+cosmo.props.Omegax_fit = True
 cosmo.props.w_fit = True
 
 #
-#  Creating a new Distance object optimized to redshift 2.
+#  A new Distance object optimized to redshift 2.
 #
 dist = Nc.Distance (zf = 2.0)
 
 #
-#  Creating a new Data object from distance modulus catalogs.
+#  A new Data object from distance modulus catalogs.
+#  A new Data object from BAO catalogs.
 #
 snia = Nc.DataDistMu.new (dist, Nc.DataSNIAId.SIMPLE_UNION2_1)
+bao = Nc.Data.bao_new (dist, Nc.DataBaoId.A_EISENSTEIN2005)
 
 #
-#  Creating a new Dataset and add snia to it.
+#  A new Dataset with snia and bao set.
 #
 dset = Nc.Dataset ()
 dset.append_data (snia)
+dset.append_data (bao)
 
 #
 #  Creating a Likelihood from the Dataset.
@@ -94,3 +98,41 @@ fit.numdiff_m2lnL_covar ()
 #  Printing the covariance matrix.
 # 
 fit.log_covar ()
+
+#
+#  Creating a new Likelihood ratio test object.
+#  First we create two PIndex indicating which parameter
+#    we are going to study.
+# 
+p1 = Nc.MSetPIndex.new (cosmo.id (), Nc.HICosmoDEParams.OMEGA_C)
+p2 = Nc.MSetPIndex.new (cosmo.id (), Nc.HICosmoDEXCDMParams.W)
+
+lhr2d = Nc.LHRatio2d.new (fit, p1, p2)
+
+#
+#  Calculating the confidence region using the Likelihood ratio test.
+#  Also calculate using the Fisher matrix approach.
+#
+cr_rg = lhr2d.conf_region (0.6826, 300.0, Nc.FitRunMsgs.SIMPLE)
+fisher_rg = lhr2d.fisher_border (0.6826, 300.0, Nc.FitRunMsgs.SIMPLE)
+
+cr_p1array = cr_rg.p1.dup_array ()
+cr_p2array = cr_rg.p2.dup_array ()
+
+fisher_p1array = fisher_rg.p1.dup_array ()
+fisher_p2array = fisher_rg.p2.dup_array ()
+
+#
+#  Ploting the confidence regions obtained from both methods.
+#
+
+plt.title ("Confidence regions (%f)" % (cr_rg.clevel * 100.0))
+plt.plot (cr_p1array, cr_p2array, 'r', label="Likelihood Ratio")
+plt.plot (fisher_p1array, fisher_p2array, 'b-', label="Fisher Matrix")
+
+plt.xlabel(r'$\Omega_c$')
+plt.ylabel(r'$w$')
+
+plt.legend(loc=4)
+
+plt.savefig ("snia_bao_rg_omegac_w.png")

@@ -2,9 +2,9 @@
 <!DOCTYPE refentry PUBLIC "-//OASIS//DTD DocBook XML V4.5//EN" "http://www.oasis-open.org/docbook/xml/4.5/docbookx.dtd">
 <?asciidoc-toc?>
 <?asciidoc-numbered?>
-<refentry lang="en">
+<refentry lang="en" id="compiling">
 <refentryinfo>
-    <title>Compiling(3)</title>
+    <title>Compiling and Installing(3)</title>
     <author>
         <firstname>Sandro</firstname>
         <othername>Dias Pinto</othername>
@@ -14,17 +14,117 @@
     <authorinitials>SDV</authorinitials>
 </refentryinfo>
 <refmeta>
-<refentrytitle>Compiling</refentrytitle>
+<refentrytitle>Compiling and Installing</refentrytitle>
 <manvolnum>3</manvolnum>
 <refmiscinfo class="source">&#160;</refmiscinfo>
 <refmiscinfo class="manual">&#160;</refmiscinfo>
 </refmeta>
 <refnamediv>
-    <refname>Compiling</refname>
-    <refpurpose>How to compile NumCosmo</refpurpose>
+  <refname>Installation</refname>
+  <refpurpose>Instructions for compilation and installation</refpurpose>
 </refnamediv>
-<refsect1 id="_fixme">
-<title>FIXME</title>
-<simpara>FIXME</simpara>
+<refsect1 id="numcosmo:prereqs">
+<title>Prerequisites</title>
+<simpara>The NumCosmo library depends on several other libraries, most of them are commonly found on most modern linux distributions. Their description are here: <link linkend="numcosmo-deps">Library Dependencies</link>.</simpara>
+<simpara>For Debian like systems (including Ubuntu) it is necessary to install the following prerequisite packages:</simpara>
+<itemizedlist>
+<listitem>
+<simpara>
+For most systems the following packages can be found in the main repositories:
+<emphasis>gobject-introspection, gir1.2-glib-2.0, libgirepository1.0-dev, gcc, pkg-config, libglib2.0-dev, libgmp3-dev, libmpfr-dev, libgsl0-dev, libsqlite3-dev, libfftw3-dev.</emphasis>
+</simpara>
+<simpara>If you want to build from the repository you also need: <emphasis>autotools-dev, libtool, gtk-doc-tools.</emphasis></simpara>
+</listitem>
+<listitem>
+<simpara>The other packages are usually not found on the official repositories.</simpara>
+<itemizedlist>
+<listitem>
+<simpara>
+For atlas support on Debian see: <ulink role="online-location" url="http://wiki.debian.org/DebianScience/LinearAlgebraLibraries">http://wiki.debian.org/DebianScience/LinearAlgebraLibraries</ulink>.
+</simpara>
+</listitem>
+<listitem>
+<simpara>
+For atlas support on Ubuntu you need something similar to: <emphasis>libatlas-base-dev, liblapack-dev</emphasis>.</simpara>
+<simpara>
+They also have versions optimized to some processors, however, ideally you should compile these packages locally to take full advantage of you system.
+</simpara>
+</listitem>
+<listitem>
+<simpara>
+The other packages sometimes can be found with the following package names: <emphasis>libnlopt-dev, libsundials-dev, libcfitsio3-dev, libcuba3-dev.</emphasis>
+<simpara>The packages above also support the usual: configure; make; make install (however, see <link linkend="numcosmo:comp">NumCosmo compilation</link>)</simpara>
+</simpara>
+</listitem>
+</itemizedlist>
+</listitem>
+</itemizedlist>
+<simpara>For RPM based distributions (including Fedora, OpenSuse, etc) it is necessary to install the following prerequisite packages:</simpara>
+<itemizedlist>
+<listitem>
+<simpara>
+For most systems the following packages can be found in the main repositories:
+<emphasis>pkg-config, gobject-introspection-devel, glib2-devel, gsl-devel, gmp-devel, mpfr-devel, fftw3-devel, sqlite3-devel.</emphasis>
+</simpara>
+<simpara>If you want to build from the repository you also need: <emphasis>autoconf, automake, libtool, gtk-doc.</emphasis></simpara>
+</listitem>
+<listitem>
+<simpara>The other packages are usually not found on the official repositories.</simpara>
+<itemizedlist>
+<listitem>
+<simpara>
+The other packages sometimes can be found with the following package names: <emphasis>nlopt-devel, sundials-devel, libcfitsio-devel, lapack-devel, atlas-devel, lapack-devel.</emphasis>
+<simpara>Most of the packages above also support the usual: configure; make; make install (however, see <link linkend="numcosmo:comp">NumCosmo compilation</link>)</simpara>
+</simpara>
+</listitem>
+</itemizedlist>
+</listitem>
+</itemizedlist>
+</refsect1>
+<refsect1 id="numcosmo:comp">
+<title>NumCosmo compilation</title>
+<simpara>The sources can be downloaded from <ulink role="online-location" url="http://download.savannah.gnu.org/releases/numcosmo/">http://download.savannah.gnu.org/releases/numcosmo/</ulink>.</simpara>
+<simpara>You can also obtain the sources directly from the git repository, for example the command:
+<informalexample>
+  <programlisting>git clone git://git.sv.gnu.org/numcosmo.git</programlisting>
+</informalexample> 
+creates a local clone of the project repository. See also <ulink role="online-location" url="http://git.savannah.gnu.org/cgit/numcosmo.git/">http://git.savannah.gnu.org/cgit/numcosmo.git/</ulink>.
+</simpara>
+<simpara>
+For the version cloned from the repository it is necessary to first build the configure script, to do that, execute:
+<informalexample>
+  <programlisting>NOCONFIGURE=yes ./autogen.sh</programlisting>
+</informalexample>
+this command requires additional dependencies cited above. Note that if you don't want to develop the library itself you probably want to get a release from the link above where the configure script is already built and, therefore, there is no need of additional dependencies.
+</simpara>
+<simpara>
+To prepare the project for compilation one can run from the sources directory
+<informalexample>
+  <programlisting>./configure --prefix=/usr --libdir=/usr/lib</programlisting>
+</informalexample>
+in the command above the installation prefix and library directories are explicit set, this is necessary to install the gobject typelibs in the correct path and allow its usage.</simpara>
+<simpara> Note also that for some 64 bits system the library directory is <emphasis>/usr/lib64</emphasis> and, therefore, in this case the command above must be properly modified. In the default directory organization the bindings typelibs stay in <emphasis>/usr/lib/girepository-1.0/</emphasis> and the bindings xml in <emphasis>/usr/share/gir-1.0/</emphasis>. You can look for these directories to check where the system bindings are located to determine the correct directories to pass to the configure script.</simpara>
+<simpara>For additional options run 
+<informalexample>
+  <programlisting>./configure --help</programlisting>
+</informalexample>
+</simpara>
+<simpara>After running successfully the configure script the library can be compile by running
+<informalexample>
+  <programlisting>make -j4</programlisting>
+</informalexample>
+where the <emphasis>-j4</emphasis> tells make to run four parallel compilation. It can be used to take advantage of system with multiple cores.
+</simpara>
+<simpara>To check if everything went ok, run
+<informalexample>
+  <programlisting>make check</programlisting>
+</informalexample>
+and to install in your system
+<informalexample>
+  <programlisting>make install</programlisting>
+</informalexample>
+note that, for the last command, the user must have root privileges to install the library in the system.
+</simpara>
 </refsect1>
 </refentry>
+

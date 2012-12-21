@@ -40,23 +40,29 @@
 #include "math/ncm_cfg.h"
 
 G_DEFINE_TYPE (NcmMSet, ncm_mset, G_TYPE_OBJECT);
-G_DEFINE_BOXED_TYPE (NcmMSetPIndex, ncm_mset_pindex, ncm_mset_pindex_copy, ncm_mset_pindex_free);
+G_DEFINE_BOXED_TYPE (NcmMSetPIndex, ncm_mset_pindex, ncm_mset_pindex_dup, ncm_mset_pindex_free);
 
 /**
  * ncm_mset_pindex_new:
+ * @mid: FIXME
+ * @pid: FIXME
  *
  * FIXME
  *
  * Returns: FIXME
  */
 NcmMSetPIndex *
-ncm_mset_pindex_new (void)
+ncm_mset_pindex_new (NcmModelID mid, guint pid)
 {
-  return g_slice_new0 (NcmMSetPIndex);
+  NcmMSetPIndex *pi = g_slice_new0 (NcmMSetPIndex);
+  pi->mid = mid;
+  pi->pid = pid;
+    
+  return pi;
 }
 
 /**
- * ncm_mset_pindex_copy:
+ * ncm_mset_pindex_dup:
  * @pi: FIXME
  *
  * FIXME
@@ -64,10 +70,9 @@ ncm_mset_pindex_new (void)
  * Returns: FIXME
  */
 NcmMSetPIndex *
-ncm_mset_pindex_copy (NcmMSetPIndex *pi)
+ncm_mset_pindex_dup (NcmMSetPIndex *pi)
 {
-  NcmMSetPIndex *new_pi = ncm_mset_pindex_new ();
-  *new_pi = *pi;
+  NcmMSetPIndex *new_pi = ncm_mset_pindex_new (pi->mid, pi->pid);
   return new_pi;
 }
 

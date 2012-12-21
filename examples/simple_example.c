@@ -9,7 +9,7 @@ main (gint argc, gchar *argv[])
   gint i;
 
   /**************************************************************************** 
-   * Initialize the library objects, this must be called before 
+   * Initializing the library objects, this must be called before 
    * any other library function.
    ****************************************************************************/  
   ncm_cfg_init ();

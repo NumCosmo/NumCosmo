@@ -24,7 +24,7 @@
 
 /**
  * SECTION:ncm_spline2d_gsl
- * @title: Bimensional Spline from Spline (GSL)
+ * @title: Bidimensional Spline from Spline (GSL)
  * @short_description: Implements spline from spline method using GSL as base splines
  *
  * This object implements spline from spline methods using GSL splines as
