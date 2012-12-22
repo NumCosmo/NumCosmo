@@ -1,14 +1,15 @@
 #!/usr/bin/python2
 
 from math import *
-from gi.repository import Numcosmo as Nc
+from gi.repository import NumCosmo as Nc
+from gi.repository import NumCosmoMath as Ncm
 import matplotlib.pyplot as plt
 
 #
 #  Initializing the library objects, this must be called before 
 #  any other library function.
 #
-Nc.cfg_init ()
+Ncm.cfg_init ()
 
 #
 #  New homogeneous and isotropic cosmological model NcHICosmoDEXcdm 
@@ -36,7 +37,7 @@ cosmo.props.w       = -1.0
 #
 #  Creating a new Modelset and set cosmo as the HICosmo model to be used.
 #
-mset = Nc.MSet ()
+mset = Ncm.MSet ()
 mset.set (cosmo)
 
 #
@@ -60,25 +61,25 @@ snia = Nc.DataDistMu.new (dist, Nc.DataSNIAId.SIMPLE_UNION2_1)
 #
 #  Creating a new Dataset and add snia to it.
 #
-dset = Nc.Dataset ()
+dset = Ncm.Dataset ()
 dset.append_data (snia)
 
 #
 #  Creating a Likelihood from the Dataset.
 #
-lh = Nc.Likelihood (dataset = dset)
+lh = Ncm.Likelihood (dataset = dset)
 
 #
 #  Creating a Fit object of type NLOPT using the fitting algorithm ln-neldermead to
 #  fit the Modelset mset using the Likelihood lh and using a numerical differentiation
 #  algorithm (NUMDIFF_FORWARD) to obtain the gradient (if needed).
 #
-fit = Nc.Fit.new (Nc.FitType.NLOPT, "ln-neldermead", lh, mset, Nc.FitGradType.NUMDIFF_FORWARD)
+fit = Ncm.Fit.new (Ncm.FitType.NLOPT, "ln-neldermead", lh, mset, Ncm.FitGradType.NUMDIFF_FORWARD)
 
 #
 #  Running the fitter printing messages.
 #
-fit.run (Nc.FitRunMsgs.SIMPLE)
+fit.run (Ncm.FitRunMsgs.SIMPLE)
 
 #
 #  Printing fitting informations.

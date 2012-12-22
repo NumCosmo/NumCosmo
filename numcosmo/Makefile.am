@@ -75,7 +75,23 @@ ncm_sources = \
 	math/ncm_fit_gsl_mms.c             \
 	math/ncm_fit_mc.c                  \
 	math/ncm_lh_ratio1d.c              \
-	math/ncm_lh_ratio2d.c
+	math/ncm_lh_ratio2d.c              \
+	math/poly.c               \
+	math/integral.c           \
+	math/function_cache.c     \
+	math/quaternion.c         \
+	math/cvode_util.c         \
+	math/quadrature.c         \
+	math/matrix_exp.c         \
+	math/magnus_iserles_ode.c \
+	math/binsplit.c           \
+	math/mpq_tree.c           \
+	math/grid_one.c           \
+	math/dividedifference.c   \
+	math/memory_pool.c        \
+	math/util.c               \
+	sphere/map.c              \
+	sphere/healpix.c
 
 ncm_headers = \
 	math/ncm_c.h                     \
@@ -125,12 +141,27 @@ ncm_headers = \
 	math/ncm_fit_gsl_mms.h           \
 	math/ncm_fit_mc.h                \
 	math/ncm_lh_ratio1d.h            \
-	math/ncm_lh_ratio2d.h
+	math/ncm_lh_ratio2d.h            \
+	math/cvode_util.h         \
+	math/function_cache.h     \
+	math/integral.h           \
+	math/magnus_iserles_ode.h \
+	math/matrix_exp.h         \
+	math/poly.h               \
+	math/quadrature.h         \
+	math/quaternion.h         \
+	math/binsplit.h           \
+	math/mpq_tree.h           \
+	math/grid_one.h           \
+	math/dividedifference.h   \
+	math/util.h               \
+	math/memory_pool.h        \
+	sphere/map.h              \
+	sphere/healpix.h
 
 ncm_headers_internal = 
 
 nc_headers = \
-	nc_macros.h                   \
 	nc_hicosmo.h                  \
 	nc_distance.h                 \
 	nc_hicosmo_priors.h           \
@@ -197,7 +228,13 @@ nc_headers = \
 	nc_data_cmb_dist_priors.h       \
 	nc_data_cmb.h                   \
 	nc_data_cluster_ncount.h        \
-	nc_data_cluster_poisson.h
+	nc_data_cluster_poisson.h       \
+	scalefactor.h                   \
+	model/quantum_gravity.h         \
+	perturbations/linear.h          \
+	perturbations/covariance.h      \
+	perturbations/linear_internal.h \
+	perturbations/hydrodyn_adiabatic.h
 
 nc_sources = \
 	nc_hicosmo.c                 \
@@ -266,26 +303,31 @@ nc_sources = \
 	nc_data_cmb_dist_priors.c    \
 	nc_data_cmb.c                \
 	nc_data_cluster_ncount.c     \
-	nc_data_cluster_poisson.c
+	nc_data_cluster_poisson.c    \
+	scalefactor.c                   \
+	model/quantum_gravity.c         \
+	perturbations/linear.c          \
+	perturbations/covariance.c      \
+	perturbations/linear_cvodes.c   \
+	perturbations/linear_gsl_ode.c  \
+	perturbations/linear_gsl_ode2.c \
+	perturbations/hydrodyn_adiabatic.c
 
 libnumcosmo_la_LDFLAGS = -version-info $(NUMCOSMO_LT_VERSION)
 
 cosmo_includedir = \
 	$(pkgincludedir)
 
-# these sources (also mentioned above) are generated.
-BUILT_SOURCES =              \
-        ncm_enum_types.h     \
-        ncm_enum_types.c     \
-        nc_enum_types.h      \
-        nc_enum_types.c
+ncm_enum_types_headers = \
+	ncm_enum_types.h
 
-enum_types_headers = \
-	ncm_enum_types.h \
+nc_enum_types_headers = \
 	nc_enum_types.h
-	
-enum_types_sources = \
-	ncm_enum_types.c \
+
+ncm_enum_types_sources = \
+	ncm_enum_types.c
+
+nc_enum_types_sources = \
 	nc_enum_types.c 
 
 ncm_cond_sources = 
@@ -308,17 +350,13 @@ ncm_fit_nlopt_enum.c: ncm_fit_nlopt_enum_meta.h
 	$(AM_V_GEN) ( $(GLIB_MKENUMS) --template $(srcdir)/ncm_fit_nlopt_enum.c.template ncm_fit_nlopt_enum_meta.h ) > \
 	  ncm_fit_nlopt_enum.c.tmp && mv ncm_fit_nlopt_enum.c.tmp ncm_fit_nlopt_enum.c
 
-BUILT_SOURCES += \
-        ncm_fit_nlopt_enum.h \
-        ncm_fit_nlopt_enum.c
-
-enum_types_sources += \
+ncm_enum_types_sources += \
 	ncm_fit_nlopt_enum.c
 
 ncm_cond_sources += \
 	math/ncm_fit_nlopt.c
 
-enum_types_headers += \
+ncm_enum_types_headers += \
 	ncm_fit_nlopt_enum.h
 
 ncm_cond_headers += \
@@ -336,6 +374,12 @@ ncm_cond_sources += \
 
 endif
 
+BUILT_SOURCES = \
+	$(ncm_enum_types_headers) \
+	$(ncm_enum_types_sources) \
+	$(nc_enum_types_headers)  \
+	$(nc_enum_types_sources)
+
 ncm_enum_types.h: $(ncm_headers) ncm_enum_types.h.template
 	$(AM_V_GEN) ( cd $(srcdir) && $(GLIB_MKENUMS) --template ncm_enum_types.h.template $(ncm_headers) $(ncm_cond_headers) ) > \
 	  ncm_enum_types.h.tmp && mv ncm_enum_types.h.tmp ncm_enum_types.h
@@ -352,99 +396,37 @@ nc_enum_types.c: $(nc_headers) nc_enum_types.c.template
 	$(AM_V_GEN) ( cd $(srcdir) && $(GLIB_MKENUMS) --template nc_enum_types.c.template $(nc_headers) ) > \
 	  nc_enum_types.c.tmp && mv nc_enum_types.c.tmp nc_enum_types.c
 
-libnumcosmo_la_SOURCES =          \
-	$(ncm_sources)            \
-	$(ncm_headers)            \
-	$(nc_sources)             \
-	$(nc_headers)             \
-	$(ncm_cond_sources)       \
-	$(ncm_cond_headers)       \
-	scalefactor.c             \
-	scalefactor.h             \
-	numcosmo.h                \
-	model/quantum_gravity.c   \
-	model/quantum_gravity.h   \
-	math/poly.c               \
-	math/integral.c           \
-	math/function_cache.c     \
-	math/quaternion.c         \
-	math/cvode_util.c         \
-	math/quadrature.c         \
-	math/matrix_exp.c         \
-	math/magnus_iserles_ode.c \
-	math/cvode_util.h         \
-	math/function_cache.h     \
-	math/integral.h           \
-	math/magnus_iserles_ode.h \
-	math/matrix_exp.h         \
-	math/poly.h               \
-	math/quadrature.h         \
-	math/quaternion.h         \
-	math/binsplit.c           \
-	math/binsplit.h           \
-	math/mpq_tree.c           \
-	math/mpq_tree.h           \
-	math/grid_one.c           \
-	math/grid_one.h           \
-	math/dividedifference.c   \
-	math/dividedifference.h   \
-	math/util.c               \
-	math/util.h               \
-	math/memory_pool.c        \
-	math/memory_pool.h        \
-	sphere/map.c              \
-	sphere/healpix.c          \
-	sphere/healpix.h          \
-	sphere/map.h              \
-	perturbations/linear.c    \
-	perturbations/linear.h    \
-	perturbations/covariance.c      \
-	perturbations/covariance.h      \
-	perturbations/linear_internal.h \
-	perturbations/linear_cvodes.c   \
-	perturbations/linear_gsl_ode.c  \
-	perturbations/linear_gsl_ode2.c \
-	perturbations/hydrodyn_adiabatic.c \
-	perturbations/hydrodyn_adiabatic.h
+libnumcosmo_la_SOURCES = \
+	$(ncm_sources)      \
+	$(ncm_headers)      \
+	$(nc_sources)       \
+	$(nc_headers)       \
+	$(ncm_cond_sources) \
+	$(ncm_cond_headers) \
+	numcosmo-math.h     \
+	numcosmo.h
 
 nodist_libnumcosmo_la_SOURCES = \
-	build_cfg.h             \
-	$(enum_types_headers)   \
-	$(enum_types_sources)
+	build_cfg.h               \
+	$(ncm_enum_types_headers) \
+	$(ncm_enum_types_sources) \
+	$(nc_enum_types_headers)  \
+	$(nc_enum_types_sources)
 
-nobase_cosmo_include_HEADERS =    \
-	$(ncm_headers)            \
-	$(ncm_headers_internal)   \
-	$(nc_headers)             \
-	numcosmo.h                \
-	scalefactor.h             \
-	model/quantum_gravity.h   \
-	math/cvode_util.h         \
-	math/function_cache.h     \
-	math/integral.h           \
-	math/magnus_iserles_ode.h \
-	math/matrix_exp.h         \
-	math/poly.h               \
-	math/quadrature.h         \
-	math/quaternion.h         \
-	math/binsplit.h           \
-	math/binsplit_eval.c      \
-	math/mpq_tree.h           \
-	math/grid_one.h           \
-	math/dividedifference.h   \
-	math/util.h               \
-	math/memory_pool.h        \
-	sphere/healpix.h          \
-	sphere/map.h              \
-	perturbations/linear.h    \
-	perturbations/linear_generic.c     \
-	perturbations/covariance.h         \
-	perturbations/linear_internal.h    \
-	perturbations/hydrodyn_adiabatic.h
+nobase_cosmo_include_HEADERS = \
+	$(ncm_headers)                 \
+	$(ncm_headers_internal)        \
+	$(nc_headers)                  \
+	$(ncm_cond_headers)            \
+	math/binsplit_eval.c           \
+	perturbations/linear_generic.c \
+	numcosmo-math.h                \
+	numcosmo.h
 
 nodist_cosmo_include_HEADERS = \
-	build_cfg.h            \
-	$(enum_types_headers)
+	build_cfg.h               \
+	$(ncm_enum_types_headers) \
+	$(nc_enum_types_headers)
 
 EXTRA_DIST = \
 	$(nobase_cosmo_include_HEADERS) \
@@ -462,24 +444,54 @@ CLEANFILES = $(BUILT_SOURCES)
 
 -include $(INTROSPECTION_MAKEFILE)
 INTROSPECTION_GIRS =
-INTROSPECTION_SCANNER_ARGS = --add-include-path=$(srcdir) -I$(srcdir)/../ -I$(top_builddir)   \
-  --identifier-prefix=Ncm --identifier-prefix=Nc --warn-all --c-include="numcosmo/numcosmo.h" \
-  --accept-unprefixed
+INTROSPECTION_SCANNER_ARGS = --add-include-path=$(srcdir) -I$(srcdir)/../ -I$(top_builddir) --warn-all 
 
 INTROSPECTION_COMPILER_ARGS = --includedir=$(srcdir)
-#Numcosmo_1_0_gir_NAMESPACE=Nc
-#Numcosmo_1_0_gir_VERSION=1.0
 
 if HAVE_INTROSPECTION
+                        
+ncm_introspection_sources = \
+	ncm_gir_scan.h            \
+	$(ncm_sources)            \
+	$(ncm_headers)            \
+	$(ncm_cond_sources)       \
+	$(ncm_cond_headers)       \
+	$(ncm_enum_types_headers) \
+	$(ncm_enum_types_sources) \
+	numcosmo-math.h
 
-introspection_sources = ncm_gir_scan.h $(libnumcosmo_la_SOURCES) $(nodist_libnumcosmo_la_SOURCES)
+nc_introspection_sources = \
+	ncm_gir_scan.h           \
+	$(nc_sources)            \
+	$(nc_headers)            \
+	$(nc_enum_types_headers) \
+	$(nc_enum_types_sources) \
+	numcosmo.h
 
-Numcosmo-1.0.gir: libnumcosmo.la $(INTROSPECTION_SCANNER)
-Numcosmo_1_0_gir_INCLUDES = GObject-2.0
-Numcosmo_1_0_gir_CFLAGS = $(INCLUDES) -DNUMCOSMO_GIR_SCAN
-Numcosmo_1_0_gir_LIBS = libnumcosmo.la
-Numcosmo_1_0_gir_FILES = $(introspection_sources)
-INTROSPECTION_GIRS += Numcosmo-1.0.gir
+NumCosmoMath-1.0.gir: libnumcosmo.la $(INTROSPECTION_SCANNER)
+NumCosmoMath_1_0_gir_VERSION      = 1.0
+NumCosmoMath_1_0_gir_INCLUDES     = GObject-2.0
+NumCosmoMath_1_0_gir_CFLAGS       = $(INCLUDES) -DNUMCOSMO_GIR_SCAN
+NumCosmoMath_1_0_gir_LIBS         = libnumcosmo.la
+NumCosmoMath_1_0_gir_FILES        = $(ncm_introspection_sources)
+NumCosmoMath_1_0_gir_SCANNERFLAGS = \
+	--c-include="numcosmo/numcosmo-math.h"  \
+	-n NumCosmoMath --identifier-prefix=Ncm
+
+INTROSPECTION_GIRS += NumCosmoMath-1.0.gir
+
+NumCosmo-1.0.gir: libnumcosmo.la $(INTROSPECTION_SCANNER) NumCosmoMath-1.0.gir
+NumCosmo_1_0_gir_VERSION      = 1.0
+NumCosmo_1_0_gir_INCLUDES     = GObject-2.0
+NumCosmo_1_0_gir_CFLAGS       = $(INCLUDES) -DNUMCOSMO_GIR_SCAN
+NumCosmo_1_0_gir_LIBS         = libnumcosmo.la
+NumCosmo_1_0_gir_FILES        = $(nc_introspection_sources)
+NumCosmo_1_0_gir_SCANNERFLAGS = \
+	--include-uninstalled $(builddir)/NumCosmoMath-1.0.gir \
+	--c-include="numcosmo/numcosmo.h" \
+	-n NumCosmo --identifier-prefix=Nc
+
+INTROSPECTION_GIRS += NumCosmo-1.0.gir
 
 girdir = $(datadir)/gir-1.0
 gir_DATA = $(INTROSPECTION_GIRS)
@@ -488,5 +500,36 @@ typelibdir = $(libdir)/girepository-1.0
 typelib_DATA = $(INTROSPECTION_GIRS:.gir=.typelib)
       
 CLEANFILES += $(gir_DATA) $(typelib_DATA)
+EXTRA_DIST += $(gir_DATA) $(typelib_DATA)
+
+if HAVE_VAPIGEN
+
+vapidir = $(datadir)/vala/vapi
+vapi_DATA = numcosmo-1.0.vapi numcosmomath-1.0.vapi
+
+numcosmomath_vapiopt = \
+	--vapidir=$(builddir)      \
+	--girdir=$(builddir)       \
+	--pkg GObject-2.0          \
+	--library numcosmomath-1.0
+
+numcosmomath-1.0.vapi: NumCosmoMath-1.0.gir
+	$(AM_V_GEN)$(VAPIGEN) $(numcosmomath_vapiopt) $<
+	@touch $@
+
+numcosmo_vapiopt = \
+	--vapidir=$(builddir)  \
+	--girdir=$(builddir)   \
+	--pkg numcosmomath-1.0 \
+	--library numcosmo-1.0
+
+numcosmo-1.0.vapi: NumCosmo-1.0.gir numcosmomath-1.0.vapi
+	$(AM_V_GEN)$(VAPIGEN) $(numcosmo_vapiopt) $<
+	@touch $@
+
+CLEANFILES += $(vapi_DATA)
+EXTRA_DIST += $(vapi_DATA)
+
+endif
 
 endif

@@ -229,7 +229,7 @@ _ncm_data_gauss_resample (NcmData *data, NcmMSet *mset)
 
   ret = gsl_blas_dtrsv (CblasUpper, CblasNoTrans, CblasNonUnit, 
                         NCM_MATRIX_GSL (gauss->LLT), ncm_vector_gsl (gauss->v));
-  NC_TEST_GSL_RESULT ("_ncm_data_gauss_resample", ret);
+  NCM_TEST_GSL_RESULT ("_ncm_data_gauss_resample", ret);
 
   gauss_class->mean_func (gauss, mset, gauss->y);
   ncm_vector_sub (gauss->y, gauss->v);
@@ -279,7 +279,7 @@ _ncm_data_gauss_leastsquares_f (NcmData *data, NcmMSet *mset, NcmVector *v)
 
   ret = gsl_blas_dtrmv (CblasUpper, CblasNoTrans, CblasNonUnit, 
                         NCM_MATRIX_GSL (gauss->LLT), ncm_vector_gsl (v));
-  NC_TEST_GSL_RESULT("_ncm_data_gauss_leastsquares_f", ret);
+  NCM_TEST_GSL_RESULT("_ncm_data_gauss_leastsquares_f", ret);
 }
 
 /**

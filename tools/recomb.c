@@ -121,14 +121,14 @@ main (gint argc, gchar *argv[])
 
 	if (cmb_id != -1)
 	{
-		NcmData *cmb_data = nc_data_cmb_new (dist, cmb_id);
+		NcmData *cmb_data = nc_data_cmb_create (dist, cmb_id);
 		ncm_dataset_append_data (dset, cmb_data);
     ncm_data_free (cmb_data);
 	}
 
 	if (bao_id != -1)
 	{
-		NcmData *bao_data = nc_data_bao_new (dist, bao_id);
+		NcmData *bao_data = nc_data_bao_create (dist, bao_id);
 		ncm_dataset_append_data (dset, bao_data);
     ncm_data_free (bao_data);
 	}
@@ -156,7 +156,7 @@ main (gint argc, gchar *argv[])
 	}
 
 	if (spherical)
-		ncm_prior_add_oneside_a_inf_const_func (lh, ncm_mset_func_new_hicosmo_func0 (&nc_hicosmo_Omega_k),
+		ncm_prior_add_oneside_a_inf_const_func (lh, nc_hicosmo_create_mset_func0 (&nc_hicosmo_Omega_k),
                                             0.0, 1.0e-6);
 
 	if (flat)

@@ -440,7 +440,7 @@ ncm_matrix_cholesky_decomp (NcmMatrix *cm)
     g_error ("ncm_matrix_cholesky_decomp[clapack_dpotrf]: the leading minor of order %d is not positive definite", ret);
 #else /* Fall back to gsl cholesky */
   ret = gsl_linalg_cholesky_decomp (NCM_MATRIX_GSL (cm));
-  NC_TEST_GSL_RESULT("ncm_matrix_cholesky_decomp[gsl_linalg_cholesky_decomp]", ret);
+  NCM_TEST_GSL_RESULT("ncm_matrix_cholesky_decomp[gsl_linalg_cholesky_decomp]", ret);
 #endif
 }
 

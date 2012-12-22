@@ -8,12 +8,12 @@
 /*
  * numcosmo
  * Copyright (C) Sandro Dias Pinto Vitenti 2012 <sandro@isoftware.com.br>
- *
+   *
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- *
+   *
  * numcosmo is distributed in the hope that it will be useful, but
  * WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
@@ -38,11 +38,11 @@ main (gint argc, gchar *argv[])
 {
   g_test_init (&argc, &argv, NULL);
   ncm_cfg_init ();
-
+#if !((GLIB_MAJOR_VERSION == 2) && (GLIB_MINOR_VERSION < 30))
   g_test_add_func ("/numcosmo/ncm_cfg_create/from_string/plain", &test_ncm_cfg_create_from_string_plain);
   g_test_add_func ("/numcosmo/ncm_cfg_create/from_string/params", &test_ncm_cfg_create_from_string_params);
   g_test_add_func ("/numcosmo/ncm_cfg_create/from_string/nest", &test_ncm_cfg_create_from_string_nest);
-
+#endif /* has glib >= 2.30 */
   g_test_run ();
 }
 
@@ -70,8 +70,8 @@ test_ncm_cfg_create_from_string_plain ()
   nc_hicosmo_free (hic);
   if (g_test_trap_fork (0, G_TEST_TRAP_SILENCE_STDOUT | G_TEST_TRAP_SILENCE_STDERR))
   {
-	nc_hicosmo_free (hic);
-	exit (0);
+    nc_hicosmo_free (hic);
+    exit (0);
   }
   g_test_trap_assert_failed ();
 }
@@ -80,25 +80,25 @@ void
 test_ncm_cfg_create_from_string_params ()
 {
   NcmModel *m = NCM_MODEL (ncm_cfg_create_from_string ("NcHICosmoLCDM{'H0':<12.3>,'Omegac':<0.2>}"));
-  g_assert_cmpfloat (ncm_model_param_get (m, NC_HICOSMO_DE_H0), ==, 12.3);
-  g_assert_cmpfloat (ncm_model_param_get (m, NC_HICOSMO_DE_OMEGA_C), ==, 0.2);
+  ncm_assert_cmpdouble (ncm_model_param_get (m, NC_HICOSMO_DE_H0), ==, 12.3);
+  ncm_assert_cmpdouble (ncm_model_param_get (m, NC_HICOSMO_DE_OMEGA_C), ==, 0.2);
   ncm_model_free (m);
   if (g_test_trap_fork (0, G_TEST_TRAP_SILENCE_STDOUT | G_TEST_TRAP_SILENCE_STDERR))
   {
-	ncm_model_free (m);
-	exit (0);
+    ncm_model_free (m);
+    exit (0);
   }
   g_test_trap_assert_failed ();
 
 
   m = NCM_MODEL (ncm_cfg_create_from_string ("{'NcHICosmoLCDM', {'H0':<12.3>,'Omegac':<0.2>}}"));
-  g_assert_cmpfloat (ncm_model_param_get (m, NC_HICOSMO_DE_H0), ==, 12.3);
-  g_assert_cmpfloat (ncm_model_param_get (m, NC_HICOSMO_DE_OMEGA_C), ==, 0.2);
+  ncm_assert_cmpdouble (ncm_model_param_get (m, NC_HICOSMO_DE_H0), ==, 12.3);
+  ncm_assert_cmpdouble (ncm_model_param_get (m, NC_HICOSMO_DE_OMEGA_C), ==, 0.2);
   ncm_model_free (m);
   if (g_test_trap_fork (0, G_TEST_TRAP_SILENCE_STDOUT | G_TEST_TRAP_SILENCE_STDERR))
   {
-	ncm_model_free (m);
-	exit (0);
+    ncm_model_free (m);
+    exit (0);
   }
   g_test_trap_assert_failed ();
 }
@@ -130,8 +130,8 @@ test_ncm_cfg_create_from_string_nest ()
   nc_matter_var_free (mv);
   if (g_test_trap_fork (0, G_TEST_TRAP_SILENCE_STDOUT | G_TEST_TRAP_SILENCE_STDERR))
   {
-	nc_matter_var_free (mv);
-	exit (0);
+    nc_matter_var_free (mv);
+    exit (0);
   }
   g_test_trap_assert_failed ();
 }

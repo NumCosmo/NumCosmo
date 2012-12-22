@@ -27,7 +27,7 @@
 
 #include <glib.h>
 #include <glib-object.h>
-#include <numcosmo/nc_macros.h>
+#include <numcosmo/math/ncm_cfg.h>
 
 G_BEGIN_DECLS
 

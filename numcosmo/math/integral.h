@@ -32,30 +32,31 @@
 
 G_BEGIN_DECLS
 
-gsl_integration_workspace **nc_integral_get_workspace ();
+gsl_integration_workspace **ncm_integral_get_workspace ();
 
-typedef struct _NcIntegrand2dim NcIntegrand2dim;
+typedef struct _NcmIntegrand2dim NcmIntegrand2dim;
+typedef gdouble (*_NcmIntegrand2dimFunc) (gdouble x, gdouble y, gpointer userdata);
 
 /**
- * NcIntegrand2dim:
+ * NcmIntegrand2dim:
  *
  * FIXME
  */
-struct _NcIntegrand2dim
+struct _NcmIntegrand2dim
 {
   /*< private >*/
   gpointer userdata;
-  gdouble (*f) (gdouble x, gdouble y, gpointer userdata);
+  _NcmIntegrand2dimFunc f;
 };
 
-typedef struct _NcIntegralFixed NcIntegralFixed;
+typedef struct _NcmIntegralFixed NcmIntegralFixed;
 
 /**
- * NcIntegralFixed:
+ * NcmIntegralFixed:
  *
  * FIXME
  */
-struct _NcIntegralFixed
+struct _NcmIntegralFixed
 {
   /*< private >*/
   gdouble xl;
@@ -68,25 +69,25 @@ struct _NcIntegralFixed
 #endif /* HAVE_GSL_GLF */
 };
 
-gint nc_integral_locked_a_b (gsl_function *F, gdouble a, gdouble b, gdouble abstol, gdouble reltol, gdouble *result, gdouble *error);
-gint nc_integral_locked_a_inf (gsl_function *F, gdouble a, gdouble abstol, gdouble reltol, gdouble *result, gdouble *error);
+gint ncm_integral_locked_a_b (gsl_function *F, gdouble a, gdouble b, gdouble abstol, gdouble reltol, gdouble *result, gdouble *error);
+gint ncm_integral_locked_a_inf (gsl_function *F, gdouble a, gdouble abstol, gdouble reltol, gdouble *result, gdouble *error);
 
-gint nc_integral_cached_0_x (NcFunctionCache *cache, gsl_function *F, gdouble x, gdouble *result, gdouble *error);
-gint nc_integral_cached_x_inf (NcFunctionCache *cache, gsl_function *F, gdouble x, gdouble *result, gdouble *error);
+gint ncm_integral_cached_0_x (NcmFunctionCache *cache, gsl_function *F, gdouble x, gdouble *result, gdouble *error);
+gint ncm_integral_cached_x_inf (NcmFunctionCache *cache, gsl_function *F, gdouble x, gdouble *result, gdouble *error);
 
-gboolean ncm_integrate_2dim (NcIntegrand2dim *integ, gdouble xi, gdouble yi, gdouble xf, gdouble yf, gdouble epsrel, gdouble epsabs, gdouble *result, gdouble *error);
+gboolean ncm_integrate_2dim (NcmIntegrand2dim *integ, gdouble xi, gdouble yi, gdouble xf, gdouble yf, gdouble epsrel, gdouble epsabs, gdouble *result, gdouble *error);
 
-NcIntegralFixed *nc_integral_fixed_new (gulong n_nodes, gulong rule_n, gdouble xl, gdouble xu);
-void nc_integral_fixed_free (NcIntegralFixed *intf);
-void nc_integral_fixed_calc_nodes (NcIntegralFixed *intf, gsl_function *F);
-gdouble nc_integral_fixed_nodes_eval (NcIntegralFixed *intf);
-gdouble nc_integral_fixed_integ_mult (NcIntegralFixed *intf, gsl_function *F);
-gdouble nc_integral_fixed_integ_posdef_mult (NcIntegralFixed *intf, gsl_function *F, gdouble max, gdouble reltol);
+NcmIntegralFixed *ncm_integral_fixed_new (gulong n_nodes, gulong rule_n, gdouble xl, gdouble xu);
+void ncm_integral_fixed_free (NcmIntegralFixed *intf);
+void ncm_integral_fixed_calc_nodes (NcmIntegralFixed *intf, gsl_function *F);
+gdouble ncm_integral_fixed_nodes_eval (NcmIntegralFixed *intf);
+gdouble ncm_integral_fixed_integ_mult (NcmIntegralFixed *intf, gsl_function *F);
+gdouble ncm_integral_fixed_integ_posdef_mult (NcmIntegralFixed *intf, gsl_function *F, gdouble max, gdouble reltol);
 
-#define NC_INT_PARTITION 100000
-#define NC_INT_ALG 6
-#define NC_INT_ERROR 1e-13
-#define NC_INT_ABS_ERROR 1e-13
+#define NCM_INTEGRAL_PARTITION 100000
+#define NCM_INTEGRAL_ALG 6
+#define NCM_INTEGRAL_ERROR 1e-13
+#define NCM_INTEGRAL_ABS_ERROR 1e-13
 
 G_END_DECLS
 

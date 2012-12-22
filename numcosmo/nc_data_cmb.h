@@ -53,7 +53,7 @@ typedef enum _NcDataCMBId
   NC_DATA_CMB_NSAMPLES,  /*< skip >*/
 } NcDataCMBId;
 
-NcmData *nc_data_cmb_new (NcDistance *dist, NcDataCMBId id);
+NcmData *nc_data_cmb_create (NcDistance *dist, NcDataCMBId id);
 
 G_END_DECLS
 

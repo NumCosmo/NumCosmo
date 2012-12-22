@@ -78,8 +78,8 @@ cd_th_int (gdouble z2, gdouble z1, gdouble E, gdouble q, gdouble qp)
   F.function = &cd_th_int_integrand;
   F.params = p;
 
-  w = nc_integral_get_workspace ();
-  gsl_integration_qag (&F, z1, z2, NC_INT_ERROR, 0.0, NC_INT_PARTITION, NC_INT_ALG, *w, &res, &err);
+  w = ncm_integral_get_workspace ();
+  gsl_integration_qag (&F, z1, z2, NCM_INTEGRAL_ERROR, 0.0, NCM_INTEGRAL_PARTITION, NCM_INTEGRAL_ALG, *w, &res, &err);
   ncm_memory_pool_return (w);
 
   return res/E;

@@ -83,7 +83,7 @@ test_ncm_vector_new_sanity (NcmVector *vv)
     const guint n = g_test_rand_int_range (0, _NCM_VECTOR_TEST_SIZE - 1);
     const gdouble d = g_test_rand_double ();
     ncm_vector_set (vv, n, d);
-    g_assert_cmpfloat (ncm_vector_get (vv, n), ==, d);
+    ncm_assert_cmpdouble (ncm_vector_get (vv, n), ==, d);
   }
 }
 
@@ -106,7 +106,7 @@ test_ncm_vector_operations (void)
     const guint n = g_test_rand_int_range (0, _NCM_VECTOR_TEST_SIZE - 1);
     const gdouble d = g_test_rand_double ();
     ncm_vector_set (v, n, d);
-    g_assert_cmpfloat (ncm_vector_get (v, n), ==, d);
+    ncm_assert_cmpdouble (ncm_vector_get (v, n), ==, d);
   }
 
   for (i = 0; i < 10 * _NCM_VECTOR_TEST_SIZE; i++)
@@ -118,7 +118,7 @@ test_ncm_vector_operations (void)
     d = ncm_vector_ptr (v, n);
     (*d) *= g_test_rand_double ();
 
-    g_assert_cmpfloat (ncm_vector_get (v, n), ==, *d);
+    ncm_assert_cmpdouble (ncm_vector_get (v, n), ==, *d);
   }
 
   for (i = 0; i < 10 * _NCM_VECTOR_TEST_SIZE; i++)
@@ -131,7 +131,7 @@ test_ncm_vector_operations (void)
     d += d1;
 
     ncm_vector_addto (v, n, d1);
-    g_assert_cmpfloat (ncm_vector_get (v, n), ==, d);
+    ncm_assert_cmpdouble (ncm_vector_get (v, n), ==, d);
   }
 
   for (i = 0; i < 10 * _NCM_VECTOR_TEST_SIZE; i++)
@@ -144,7 +144,7 @@ test_ncm_vector_operations (void)
     d -= d1;
 
     ncm_vector_subfrom (v, n, d1);
-    g_assert_cmpfloat (ncm_vector_get (v, n), ==, d);
+    ncm_assert_cmpdouble (ncm_vector_get (v, n), ==, d);
   }
 
   for (i = 0; i < 10 * _NCM_VECTOR_TEST_SIZE; i++)
@@ -154,7 +154,7 @@ test_ncm_vector_operations (void)
 
     n = g_test_rand_int_range (0, _NCM_VECTOR_TEST_SIZE - 1);
     ncm_vector_set_all (v, d1);
-    g_assert_cmpfloat (ncm_vector_get (v, n), ==, d1);
+    ncm_assert_cmpdouble (ncm_vector_get (v, n), ==, d1);
   }
 
   for (i = 0; i < 10 * _NCM_VECTOR_TEST_SIZE; i++)
@@ -165,7 +165,7 @@ test_ncm_vector_operations (void)
     n = g_test_rand_int_range (0, _NCM_VECTOR_TEST_SIZE - 1);
     d = ncm_vector_get (v, n);
     ncm_vector_scale (v, d1);
-    g_assert_cmpfloat (ncm_vector_get (v, n), ==, d * d1);
+    ncm_assert_cmpdouble (ncm_vector_get (v, n), ==, d * d1);
   }
 
   for (i = 0; i < 10 * _NCM_VECTOR_TEST_SIZE; i++)
@@ -181,7 +181,7 @@ test_ncm_vector_operations (void)
 
     ncm_vector_div (v, cv);
 
-    g_assert_cmpfloat (ncm_vector_get (v, n), ==, d1 / d2);
+    ncm_assert_cmpdouble (ncm_vector_get (v, n), ==, d1 / d2);
   }
 
   for (i = 0; i < 10 * _NCM_VECTOR_TEST_SIZE; i++)
@@ -197,7 +197,7 @@ test_ncm_vector_operations (void)
 
     ncm_vector_add (v, cv);
 
-    g_assert_cmpfloat (ncm_vector_get (v, n), ==, d1 + d2);
+    ncm_assert_cmpdouble (ncm_vector_get (v, n), ==, d1 + d2);
   }
 
   for (i = 0; i < 10 * _NCM_VECTOR_TEST_SIZE; i++)
@@ -213,24 +213,24 @@ test_ncm_vector_operations (void)
 
     ncm_vector_sub (v, cv);
 
-    g_assert_cmpfloat (ncm_vector_get (v, n), ==, d1 - d2);
+    ncm_assert_cmpdouble (ncm_vector_get (v, n), ==, d1 - d2);
   }
 
   ncm_vector_set_zero (v);
   for (i = 0; i < _NCM_VECTOR_TEST_SIZE; i++)
-    g_assert_cmpfloat (ncm_vector_get (v, i), ==, 0.0);
+    ncm_assert_cmpdouble (ncm_vector_get (v, i), ==, 0.0);
 
   ncm_vector_memcpy (v, cv);
   for (i = 0; i < _NCM_VECTOR_TEST_SIZE; i++)
-    g_assert_cmpfloat (ncm_vector_get (v, i), ==, ncm_vector_get (cv, i));
+    ncm_assert_cmpdouble (ncm_vector_get (v, i), ==, ncm_vector_get (cv, i));
 
   ncm_vector_set_zero (v);
   ncm_vector_memcpy2 (v, cv, 2, 0, _NCM_VECTOR_TEST_SIZE - 2);
 
-  g_assert_cmpfloat (ncm_vector_get (v, 0), ==, 0.0);
-  g_assert_cmpfloat (ncm_vector_get (v, 1), ==, 0.0);
+  ncm_assert_cmpdouble (ncm_vector_get (v, 0), ==, 0.0);
+  ncm_assert_cmpdouble (ncm_vector_get (v, 1), ==, 0.0);
   for (i = 0; i < _NCM_VECTOR_TEST_SIZE - 2; i++)
-    g_assert_cmpfloat (ncm_vector_get (v, i + 2), ==, ncm_vector_get (cv, i));
+    ncm_assert_cmpdouble (ncm_vector_get (v, i + 2), ==, ncm_vector_get (cv, i));
 }
 
 void
@@ -239,7 +239,7 @@ test_ncm_vector_new_gsl (void)
   gsl_vector *gv = gsl_vector_alloc (_NCM_VECTOR_TEST_SIZE);
   NcmVector *vv = ncm_vector_new_gsl (gv);
   test_ncm_vector_new_sanity (vv);
-  g_assert_cmpfloat (ncm_vector_len (vv), ==, gv->size);
+  ncm_assert_cmpdouble (ncm_vector_len (vv), ==, gv->size);
 
   ncm_vector_free (vv);
   if (g_test_trap_fork (0, G_TEST_TRAP_SILENCE_STDOUT | G_TEST_TRAP_SILENCE_STDERR))
@@ -387,7 +387,7 @@ test_ncm_vector_subvector (void)
   {
     guint i = g_test_rand_int_range (0, _NCM_VECTOR_TEST_SIZE - 1);
     ncm_vector_set (sv, i, g_test_rand_double ());
-    g_assert_cmpfloat (ncm_vector_get (sv, i), ==, ncm_vector_get (v, i + 1));
+    ncm_assert_cmpdouble (ncm_vector_get (sv, i), ==, ncm_vector_get (v, i + 1));
   }
 
   g_assert (NCM_IS_VECTOR (sv));
@@ -410,6 +410,7 @@ test_ncm_vector_variant (void)
 {
   GVariant *var = ncm_vector_get_variant (v);
 
+  g_assert (!g_variant_is_floating (var));
   g_assert (g_variant_is_container (var));
   g_assert_cmpuint (ncm_vector_len (v), ==, g_variant_n_children (var));
 
@@ -420,7 +421,7 @@ test_ncm_vector_variant (void)
     g_assert_cmpuint (ncm_vector_len (v), ==, ncm_vector_len (nv));
     for (i = 0; i < ncm_vector_len (v); i++)
     {
-      g_assert_cmpfloat (ncm_vector_get (v, i), ==, ncm_vector_get (nv, i));
+      ncm_assert_cmpdouble (ncm_vector_get (v, i), ==, ncm_vector_get (nv, i));
     }
     
     ncm_vector_free (nv);
@@ -435,7 +436,13 @@ test_ncm_vector_variant (void)
   g_variant_unref (var);
   if (g_test_trap_fork (0, G_TEST_TRAP_SILENCE_STDOUT | G_TEST_TRAP_SILENCE_STDERR))
   {
-    g_variant_unref (var);
+    /* 
+     * this command dont fail in older versions, thus, we call 
+     * g_variant_get_type_string afterwards.
+     * 
+     */
+    g_variant_unref (var); 
+    fprintf (stderr,"fail (%s)", g_variant_get_type_string (var));
     exit (0);
   }
   g_test_trap_assert_failed ();

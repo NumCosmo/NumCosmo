@@ -92,25 +92,15 @@ test_ncm_sparam_new (void)
   g_assert (p != NULL);
   g_assert (NCM_IS_SPARAM (p));
 
-
-  if (p->name == name)
-  {
-	g_test_message ("NcmSParam object must dup the name string");
-	g_test_fail ();
-  }
-
-  if (p->symbol == symbol)
-  {
-	g_test_message ("NcmSParam object must dup the symbol string");
-	g_test_fail ();
-  }
+  g_assert (p->name != name);
+  g_assert (p->symbol != symbol);
 
   g_assert_cmpstr (p->name, ==, name);
   g_assert_cmpstr (p->symbol, ==, symbol);
-  g_assert_cmpfloat (p->lower_bound, ==, lower_bound);
-  g_assert_cmpfloat (p->upper_bound, ==, upper_bound);
-  g_assert_cmpfloat (p->scale, ==, scale);
-  g_assert_cmpfloat (p->abstol, ==, abstol);
+  ncm_assert_cmpdouble (p->lower_bound, ==, lower_bound);
+  ncm_assert_cmpdouble (p->upper_bound, ==, upper_bound);
+  ncm_assert_cmpdouble (p->scale, ==, scale);
+  ncm_assert_cmpdouble (p->abstol, ==, abstol);
 }
 
 
@@ -120,8 +110,8 @@ test_ncm_sparam_free (void)
   ncm_sparam_free (p);
   if (g_test_trap_fork (0, G_TEST_TRAP_SILENCE_STDOUT | G_TEST_TRAP_SILENCE_STDERR))
   {
-	ncm_sparam_free (p);
-	exit (0);
+    ncm_sparam_free (p);
+    exit (0);
   }
   g_test_trap_assert_failed ();
 }
@@ -136,20 +126,20 @@ test_ncm_sparam_setget_lower_bound (void)
 
   while (ntests--)
   {
-	const gdouble lb = g_test_rand_double_range (-G_MAXDOUBLE, ncm_sparam_get_upper_bound (p));
-	const gdouble old_lb = ncm_sparam_get_lower_bound (p);
-	gdouble new_lb = 0.0;
+    const gdouble lb = g_test_rand_double_range (-G_MAXDOUBLE, ncm_sparam_get_upper_bound (p));
+    const gdouble old_lb = ncm_sparam_get_lower_bound (p);
+    gdouble new_lb = 0.0;
 
-	g_assert_cmpfloat (ncm_sparam_get_lower_bound (p), ==, old_lb);
+    ncm_assert_cmpdouble (ncm_sparam_get_lower_bound (p), ==, old_lb);
 
-	ncm_sparam_set_lower_bound (p, lb);
-	g_assert_cmpfloat (ncm_sparam_get_lower_bound (p), ==, lb);
+    ncm_sparam_set_lower_bound (p, lb);
+    ncm_assert_cmpdouble (ncm_sparam_get_lower_bound (p), ==, lb);
 
-	g_object_get (p, "lower-bound", &new_lb, NULL);
-	g_assert_cmpfloat (new_lb, ==, lb);
+    g_object_get (p, "lower-bound", &new_lb, NULL);
+    ncm_assert_cmpdouble (new_lb, ==, lb);
 
-	g_object_set (p, "lower-bound", old_lb, NULL);
-	g_assert_cmpfloat (ncm_sparam_get_lower_bound (p), ==, old_lb);
+    g_object_set (p, "lower-bound", old_lb, NULL);
+    ncm_assert_cmpdouble (ncm_sparam_get_lower_bound (p), ==, old_lb);
   }
 }
 
@@ -163,19 +153,19 @@ test_ncm_sparam_setget_upper_bound (void)
 
   while (ntests--)
   {
-	const gdouble ub = g_test_rand_double_range (ncm_sparam_get_lower_bound (p), G_MAXDOUBLE);
-	const gdouble old_ub = ncm_sparam_get_upper_bound (p);
-	gdouble new_ub = 0.0;
+    const gdouble ub = g_test_rand_double_range (ncm_sparam_get_lower_bound (p), G_MAXDOUBLE);
+    const gdouble old_ub = ncm_sparam_get_upper_bound (p);
+    gdouble new_ub = 0.0;
 
-	g_assert_cmpfloat (ncm_sparam_get_upper_bound (p), ==, old_ub);
-	ncm_sparam_set_upper_bound (p, ub);
-	g_assert_cmpfloat (ncm_sparam_get_upper_bound (p), ==, ub);
+    ncm_assert_cmpdouble (ncm_sparam_get_upper_bound (p), ==, old_ub);
+    ncm_sparam_set_upper_bound (p, ub);
+    ncm_assert_cmpdouble (ncm_sparam_get_upper_bound (p), ==, ub);
 
-	g_object_get (p, "upper-bound", &new_ub, NULL);
-	g_assert_cmpfloat (new_ub, ==, ub);
+    g_object_get (p, "upper-bound", &new_ub, NULL);
+    ncm_assert_cmpdouble (new_ub, ==, ub);
 
-	g_object_set (p, "upper-bound", old_ub, NULL);
-	g_assert_cmpfloat (ncm_sparam_get_upper_bound (p), ==, old_ub);
+    g_object_set (p, "upper-bound", old_ub, NULL);
+    ncm_assert_cmpdouble (ncm_sparam_get_upper_bound (p), ==, old_ub);
   }
 }
 
@@ -189,19 +179,19 @@ test_ncm_sparam_setget_scale (void)
 
   while (ntests--)
   {
-	const gdouble scale = fabs (g_test_rand_double ());
-	const gdouble old_scale = ncm_sparam_get_scale (p);
-	gdouble new_scale = 0.0;
+    const gdouble scale = fabs (g_test_rand_double ());
+    const gdouble old_scale = ncm_sparam_get_scale (p);
+    gdouble new_scale = 0.0;
 
-	g_assert_cmpfloat (ncm_sparam_get_scale (p), ==, old_scale);
-	ncm_sparam_set_scale (p, scale);
-	g_assert_cmpfloat (ncm_sparam_get_scale (p), ==, scale);
+    ncm_assert_cmpdouble (ncm_sparam_get_scale (p), ==, old_scale);
+    ncm_sparam_set_scale (p, scale);
+    ncm_assert_cmpdouble (ncm_sparam_get_scale (p), ==, scale);
 
-	g_object_get (p, "scale", &new_scale, NULL);
-	g_assert_cmpfloat (new_scale, ==, scale);
+    g_object_get (p, "scale", &new_scale, NULL);
+    ncm_assert_cmpdouble (new_scale, ==, scale);
 
-	g_object_set (p, "scale", old_scale, NULL);
-	g_assert_cmpfloat (ncm_sparam_get_scale (p), ==, old_scale);
+    g_object_set (p, "scale", old_scale, NULL);
+    ncm_assert_cmpdouble (ncm_sparam_get_scale (p), ==, old_scale);
   }
 }
 
@@ -215,19 +205,19 @@ test_ncm_sparam_setget_abstol (void)
 
   while (ntests--)
   {
-	const gdouble abstol = fabs (g_test_rand_double ());
-	const gdouble old_abstol = ncm_sparam_get_absolute_tolerance (p);
-	gdouble new_abstol = 0.0;
+    const gdouble abstol = fabs (g_test_rand_double ());
+    const gdouble old_abstol = ncm_sparam_get_absolute_tolerance (p);
+    gdouble new_abstol = 0.0;
 
-	g_assert_cmpfloat (ncm_sparam_get_absolute_tolerance (p), ==, old_abstol);
-	ncm_sparam_set_absolute_tolerance (p, abstol);
-	g_assert_cmpfloat (ncm_sparam_get_absolute_tolerance (p), ==, abstol);
+    ncm_assert_cmpdouble (ncm_sparam_get_absolute_tolerance (p), ==, old_abstol);
+    ncm_sparam_set_absolute_tolerance (p, abstol);
+    ncm_assert_cmpdouble (ncm_sparam_get_absolute_tolerance (p), ==, abstol);
 
-	g_object_get (p, "absolute-tolerance", &new_abstol, NULL);
-	g_assert_cmpfloat (new_abstol, ==, abstol);
+    g_object_get (p, "absolute-tolerance", &new_abstol, NULL);
+    ncm_assert_cmpdouble (new_abstol, ==, abstol);
 
-	g_object_set (p, "absolute-tolerance", old_abstol, NULL);
-	g_assert_cmpfloat (ncm_sparam_get_absolute_tolerance (p), ==, old_abstol);
+    g_object_set (p, "absolute-tolerance", old_abstol, NULL);
+    ncm_assert_cmpdouble (ncm_sparam_get_absolute_tolerance (p), ==, old_abstol);
   }
 }
 
@@ -241,19 +231,19 @@ test_ncm_sparam_setget_default_value (void)
 
   while (ntests--)
   {
-	const gdouble default_value = g_test_rand_double ();
-	const gdouble old_default_value = ncm_sparam_get_default_value (p);
-	gdouble new_default_value = 0.0;
+    const gdouble default_value = g_test_rand_double ();
+    const gdouble old_default_value = ncm_sparam_get_default_value (p);
+    gdouble new_default_value = 0.0;
 
-	g_assert_cmpfloat (ncm_sparam_get_default_value (p), ==, old_default_value);
-	ncm_sparam_set_default_value (p, default_value);
-	g_assert_cmpfloat (ncm_sparam_get_default_value (p), ==, default_value);
+    ncm_assert_cmpdouble (ncm_sparam_get_default_value (p), ==, old_default_value);
+    ncm_sparam_set_default_value (p, default_value);
+    ncm_assert_cmpdouble (ncm_sparam_get_default_value (p), ==, default_value);
 
-	g_object_get (p, "default-value", &new_default_value, NULL);
-	g_assert_cmpfloat (new_default_value, ==, default_value);
+    g_object_get (p, "default-value", &new_default_value, NULL);
+    ncm_assert_cmpdouble (new_default_value, ==, default_value);
 
-	g_object_set (p, "default-value", old_default_value, NULL);
-	g_assert_cmpfloat (ncm_sparam_get_default_value (p), ==, old_default_value);
+    g_object_set (p, "default-value", old_default_value, NULL);
+    ncm_assert_cmpdouble (ncm_sparam_get_default_value (p), ==, old_default_value);
   }
 }
 
@@ -263,8 +253,8 @@ test_ncm_sparam_invalid_lower_bound (void)
   const gdouble ub = ncm_sparam_get_upper_bound (p);
   if (g_test_trap_fork (0, G_TEST_TRAP_SILENCE_STDOUT | G_TEST_TRAP_SILENCE_STDERR))
   {
-	ncm_sparam_set_lower_bound (p, (ub > 0) ? (ub * 1.1) : (ub * 0.9));
-	exit (0);
+    ncm_sparam_set_lower_bound (p, (ub > 0) ? (ub * 1.1) : (ub * 0.9));
+    exit (0);
   }
   g_test_trap_assert_failed ();
 }
@@ -275,8 +265,8 @@ test_ncm_sparam_invalid_upper_bound (void)
   const gdouble lb = ncm_sparam_get_lower_bound (p);
   if (g_test_trap_fork (0, G_TEST_TRAP_SILENCE_STDOUT | G_TEST_TRAP_SILENCE_STDERR))
   {
-	ncm_sparam_set_upper_bound (p, (lb > 0) ? (lb * 0.9) : (lb * 1.1));
-	exit (0);
+    ncm_sparam_set_upper_bound (p, (lb > 0) ? (lb * 0.9) : (lb * 1.1));
+    exit (0);
   }
   g_test_trap_assert_failed ();
 }
@@ -286,8 +276,8 @@ test_ncm_sparam_invalid_scale (void)
 {
   if (g_test_trap_fork (0, G_TEST_TRAP_SILENCE_STDOUT | G_TEST_TRAP_SILENCE_STDERR))
   {
-	ncm_sparam_set_scale (p, -fabs (g_test_rand_double ()));
-	exit (0);
+    ncm_sparam_set_scale (p, -fabs (g_test_rand_double ()));
+    exit (0);
   }
   g_test_trap_assert_failed ();
 }
@@ -297,8 +287,8 @@ test_ncm_sparam_invalid_abstol (void)
 {
   if (g_test_trap_fork (0, G_TEST_TRAP_SILENCE_STDOUT | G_TEST_TRAP_SILENCE_STDERR))
   {
-	ncm_sparam_set_absolute_tolerance (p, -fabs (g_test_rand_double ()));
-	exit (0);
+    ncm_sparam_set_absolute_tolerance (p, -fabs (g_test_rand_double ()));
+    exit (0);
   }
   g_test_trap_assert_failed ();
 }

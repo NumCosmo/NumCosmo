@@ -81,7 +81,6 @@
 #include "build_cfg.h"
 
 #include "nc_distance.h"
-#include "nc_macros.h"
 #include "math/integral.h"
 #include "math/ncm_c.h"
 #include "math/ncm_spline_cubic_notaknot.h"
@@ -114,11 +113,11 @@ nc_distance_dispose (GObject *object)
 {
   NcDistance *dist = NC_DISTANCE (object);
 
-  nc_function_cache_clear (&dist->comoving_distance_cache);
-  nc_function_cache_clear (&dist->time_cache);
-  nc_function_cache_clear (&dist->lookback_time_cache);
-  nc_function_cache_clear (&dist->conformal_time_cache);
-  nc_function_cache_clear (&dist->sound_horizon_cache);
+  ncm_function_cache_clear (&dist->comoving_distance_cache);
+  ncm_function_cache_clear (&dist->time_cache);
+  ncm_function_cache_clear (&dist->lookback_time_cache);
+  ncm_function_cache_clear (&dist->conformal_time_cache);
+  ncm_function_cache_clear (&dist->sound_horizon_cache);
 
   ncm_ode_spline_clear (&dist->comoving_distance_spline);
 
@@ -296,13 +295,13 @@ nc_distance_init (NcDistance *dist)
 {
   dist->use_cache = TRUE;
 
-  dist->comoving_distance_cache = nc_function_cache_new (1, NC_INT_ABS_ERROR, NC_INT_ERROR);
+  dist->comoving_distance_cache = ncm_function_cache_new (1, NCM_INTEGRAL_ABS_ERROR, NCM_INTEGRAL_ERROR);
 
-  dist->time_cache = nc_function_cache_new (1, NC_INT_ABS_ERROR, NC_INT_ERROR);
-  dist->lookback_time_cache = nc_function_cache_new (1, NC_INT_ABS_ERROR, NC_INT_ERROR);
-  dist->conformal_time_cache = nc_function_cache_new (1, NC_INT_ABS_ERROR, NC_INT_ERROR);
+  dist->time_cache = ncm_function_cache_new (1, NCM_INTEGRAL_ABS_ERROR, NCM_INTEGRAL_ERROR);
+  dist->lookback_time_cache = ncm_function_cache_new (1, NCM_INTEGRAL_ABS_ERROR, NCM_INTEGRAL_ERROR);
+  dist->conformal_time_cache = ncm_function_cache_new (1, NCM_INTEGRAL_ABS_ERROR, NCM_INTEGRAL_ERROR);
 
-  dist->sound_horizon_cache = nc_function_cache_new (1, NC_INT_ABS_ERROR, NC_INT_ERROR);
+  dist->sound_horizon_cache = ncm_function_cache_new (1, NCM_INTEGRAL_ABS_ERROR, NCM_INTEGRAL_ERROR);
 
   dist->comoving_distance_spline = NULL;
 
@@ -355,9 +354,9 @@ nc_distance_comoving (NcDistance *dist, NcHICosmo *cosmo, gdouble z)
   F.params = cosmo;
 
   if (dist->use_cache)
-    nc_integral_cached_0_x (dist->comoving_distance_cache, &F, z, &result, &error);
+    ncm_integral_cached_0_x (dist->comoving_distance_cache, &F, z, &result, &error);
   else
-    nc_integral_locked_a_b (&F, 0.0, z, 0.0, NC_INT_ERROR, &result, &error);
+    ncm_integral_locked_a_b (&F, 0.0, z, 0.0, NCM_INTEGRAL_ERROR, &result, &error);
 
   return result;
 }
@@ -413,7 +412,7 @@ nc_distance_transverse (NcDistance *dist, NcHICosmo *cosmo, gdouble z)
   const gdouble Omega_k = nc_hicosmo_Omega_k (cosmo);
   const gdouble sqrt_Omega_k = sqrt (fabs (Omega_k));
   const gdouble comoving_dist = nc_distance_comoving (dist, cosmo, z);
-  const gint k = fabs (Omega_k) < NC_ZERO_LIMIT ? 0 : (Omega_k > 0.0 ? -1 : 1);
+  const gint k = fabs (Omega_k) < NCM_ZERO_LIMIT ? 0 : (Omega_k > 0.0 ? -1 : 1);
   gdouble Dt;
 
   if (gsl_isinf (comoving_dist)) 
@@ -458,7 +457,7 @@ nc_distance_dtransverse_dz (NcDistance *dist, NcHICosmo *cosmo, gdouble z)
   gdouble Omega_k = nc_hicosmo_Omega_k (cosmo);
   gdouble sqrt_Omega_k = sqrt (fabs (Omega_k));
   gdouble E = sqrt (nc_hicosmo_E2(cosmo, z));
-  gint k = fabs (Omega_k) < NC_ZERO_LIMIT ? 0 : (Omega_k > 0.0 ? -1 : 1);
+  gint k = fabs (Omega_k) < NCM_ZERO_LIMIT ? 0 : (Omega_k > 0.0 ? -1 : 1);
 
   switch (k)
   {
@@ -737,9 +736,9 @@ nc_distance_sound_horizon (NcDistance *dist, NcHICosmo *cosmo, gdouble z)
   F.params = cosmo;
 
   if (dist->use_cache)
-    nc_integral_cached_x_inf (dist->sound_horizon_cache, &F, z, &result, &error);
+    ncm_integral_cached_x_inf (dist->sound_horizon_cache, &F, z, &result, &error);
   else
-    nc_integral_locked_a_inf (&F, z, NC_INT_ABS_ERROR, NC_INT_ERROR, &result, &error);
+    ncm_integral_locked_a_inf (&F, z, NCM_INTEGRAL_ABS_ERROR, NCM_INTEGRAL_ERROR, &result, &error);
 
   return result;
 }
@@ -904,9 +903,9 @@ nc_distance_cosmic_time (NcDistance *dist, NcHICosmo *cosmo, gdouble z)
   F.params = cosmo;
 
   if (dist->use_cache)
-    nc_integral_cached_x_inf (dist->time_cache, &F, z, &result, &error);
+    ncm_integral_cached_x_inf (dist->time_cache, &F, z, &result, &error);
   else
-    nc_integral_locked_a_inf (&F, z, NC_INT_ABS_ERROR, NC_INT_ERROR, &result, &error);
+    ncm_integral_locked_a_inf (&F, z, NCM_INTEGRAL_ABS_ERROR, NCM_INTEGRAL_ERROR, &result, &error);
 
   return result;
 }
@@ -920,9 +919,9 @@ nc_distance_lookback_time (NcDistance *dist, NcHICosmo *cosmo, gdouble z)
   F.params = cosmo;
 
   if (dist->use_cache)
-    nc_integral_cached_0_x (dist->lookback_time_cache, &F, z, &result, &error);
+    ncm_integral_cached_0_x (dist->lookback_time_cache, &F, z, &result, &error);
   else
-    nc_integral_locked_a_b (&F, 0.0, z, 0.0, NC_INT_ERROR, &result, &error);
+    ncm_integral_locked_a_b (&F, 0.0, z, 0.0, NCM_INTEGRAL_ERROR, &result, &error);
 
   return result;
 }
@@ -962,9 +961,9 @@ nc_distance_conformal_time (NcDistance *dist, NcHICosmo *cosmo, gdouble z)
   F.params = cosmo;
 
   if (dist->use_cache)
-    nc_integral_cached_x_inf (dist->conformal_time_cache, &F, log1p(z), &result, &error);
+    ncm_integral_cached_x_inf (dist->conformal_time_cache, &F, log1p(z), &result, &error);
   else
-    nc_integral_locked_a_inf (&F, log1p(z), NC_INT_ABS_ERROR, NC_INT_ERROR, &result, &error);
+    ncm_integral_locked_a_inf (&F, log1p(z), NCM_INTEGRAL_ABS_ERROR, NCM_INTEGRAL_ERROR, &result, &error);
 
   return result;
 }

@@ -36,7 +36,7 @@
 #include "build_cfg.h"
 
 #include "math/binsplit.h"
-#include "nc_macros.h"
+#include "math/ncm_cfg.h"
 
 static gboolean one_init = FALSE;
 mpz_t NCM_BINSPLIT_ONE;

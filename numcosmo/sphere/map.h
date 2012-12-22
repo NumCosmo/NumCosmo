@@ -41,18 +41,18 @@
 G_BEGIN_DECLS
 
 /**
- * NcSphereMapOrder:
+ * NcmSphereMapOrder:
  * @NC_SPHERE_MAP_ORDER_NEST: FIXME
  * @NC_SPHERE_MAP_ORDER_RING: FIXME
  */
-typedef enum _NcSphereMapOrder
+typedef enum _NcmSphereMapOrder
 {
   NC_SPHERE_MAP_ORDER_NEST,
   NC_SPHERE_MAP_ORDER_RING
-} NcSphereMapOrder;
+} NcmSphereMapOrder;
 
 /**
- * NcSphereMapType:
+ * NcmSphereMapType:
  * @NC_SPHERE_MAP_TYPE_TEMPERATURE: FIXME
  * @NC_SPHERE_MAP_TYPE_Q_POLARIZATION: FIXME
  * @NC_SPHERE_MAP_TYPE_U_POLARISATION: FIXME
@@ -61,25 +61,25 @@ typedef enum _NcSphereMapOrder
  * 
  * FIXME
  */
-typedef enum _NcSphereMapType
+typedef enum _NcmSphereMapType
 {
   NC_SPHERE_MAP_TYPE_TEMPERATURE    = 1 << 0,
   NC_SPHERE_MAP_TYPE_Q_POLARIZATION = 1 << 1,
   NC_SPHERE_MAP_TYPE_U_POLARISATION = 1 << 2,
   NC_SPHERE_MAP_TYPE_SPUR_SIGNAL    = 1 << 3,
   NC_SPHERE_MAP_TYPE_N_OBS          = 1 << 4
-} NcSphereMapType;
+} NcmSphereMapType;
 
 
-typedef struct _NcSphereMap NcSphereMap;
+typedef struct _NcmSphereMap NcmSphereMap;
 
 /**
- * NcSphereMap:
+ * NcmSphereMap:
  * 
  * FIXME
  * 
  */
-struct _NcSphereMap
+struct _NcmSphereMap
 {
   /*< private >*/
   gsl_vector_float *dt;
@@ -87,25 +87,25 @@ struct _NcSphereMap
   gsl_vector_float *upol;
   gsl_vector_float *spur_signal;
   gsl_vector_float *nobs;
-  NcSphereMapType type;
+  NcmSphereMapType type;
   glong npix;
   glong nside;
   glong nrings;
   gboolean loaded;
-  NcSphereMapOrder order;
+  NcmSphereMapOrder order;
   gsl_vector *theta;
   gsl_vector *phi;
   gboolean is_init_coord;
 };
 
-typedef struct _NcSphereMapAlm NcSphereMapAlm;
+typedef struct _NcmSphereMapAlm NcmSphereMapAlm;
 
 /**
- * NcSphereMapAlm:
+ * NcmSphereMapAlm:
  * 
  * FIXME
  */
-struct _NcSphereMapAlm
+struct _NcmSphereMapAlm
 {
   /*< private >*/
   gint lmax;
@@ -122,18 +122,18 @@ struct _NcSphereMapAlm
 
 #ifdef NUMCOSMO_HAVE_FFTW3
 
-typedef struct _NcSphereMapSHT NcSphereMapSHT;
+typedef struct _NcmSphereMapSHT NcmSphereMapSHT;
 
 /**
- * NcSphereMapSHT:
+ * NcmSphereMapSHT:
  * 
  * FIXME
  */
-struct _NcSphereMapSHT
+struct _NcmSphereMapSHT
 {
   /*< private >*/
-  NcSphereMap *map;
-  NcSphereMapAlm *mapalm;
+  NcmSphereMap *map;
+  NcmSphereMapAlm *mapalm;
   gint n_rings;
   gint n_diff_rings;
   gint max_ring_size;
@@ -150,24 +150,24 @@ struct _NcSphereMapSHT
 };
 #endif /* NUMCOSMO_HAVE_FFTW3 */
 
-NcSphereMap *nc_sphere_map_new (gint nside);
-NcSphereMap *nc_sphere_map_clone (NcSphereMap *map);
-gboolean nc_sphere_map_copy (NcSphereMap *dest, NcSphereMap *orig);
-gboolean nc_sphere_map_init_coord (NcSphereMap *map);
-gboolean nc_sphere_map_set_order (NcSphereMap *map, NcSphereMapOrder order, gboolean init_coord);
+NcmSphereMap *ncm_sphere_map_new (gint nside);
+NcmSphereMap *ncm_sphere_map_clone (NcmSphereMap *map);
+gboolean ncm_sphere_map_copy (NcmSphereMap *dest, NcmSphereMap *orig);
+gboolean ncm_sphere_map_init_coord (NcmSphereMap *map);
+gboolean ncm_sphere_map_set_order (NcmSphereMap *map, NcmSphereMapOrder order, gboolean init_coord);
 
-NcSphereMapAlm *nc_sphere_mapalm_new (void);
-gboolean nc_sphere_mapalm_init (NcSphereMapAlm *mapalm, gint lmax);
+NcmSphereMapAlm *ncm_sphere_mapalm_new (void);
+gboolean ncm_sphere_mapalm_init (NcmSphereMapAlm *mapalm, gint lmax);
 
 #ifdef NUMCOSMO_HAVE_FFTW3
-NcSphereMapSHT *nc_sphere_mapsht_new (NcSphereMap *map, NcSphereMapAlm *mapalm, guint fftw_flags);
-gboolean nc_sphere_mapsht_map2alm_circle (NcSphereMapSHT *mapsht, gint ring, gint ring_size, gdouble norma, gdouble theta, gdouble phi, gint start_m, gint end_m);
-gboolean nc_sphere_mapsht_alm2map_circle (NcSphereMapSHT *mapsht, gint ring, gint ring_size, gdouble theta, gdouble phi);
-gboolean nc_sphere_mapsht_map2alm (NcSphereMapSHT *mapsht, gdouble cut);
-gboolean nc_sphere_mapsht_alm2map (NcSphereMapSHT *mapsht);
+NcmSphereMapSHT *ncm_sphere_mapsht_new (NcmSphereMap *map, NcmSphereMapAlm *mapalm, guint fftw_flags);
+gboolean ncm_sphere_mapsht_map2alm_circle (NcmSphereMapSHT *mapsht, gint ring, gint ring_size, gdouble norma, gdouble theta, gdouble phi, gint start_m, gint end_m);
+gboolean ncm_sphere_mapsht_alm2map_circle (NcmSphereMapSHT *mapsht, gint ring, gint ring_size, gdouble theta, gdouble phi);
+gboolean ncm_sphere_mapsht_map2alm (NcmSphereMapSHT *mapsht, gdouble cut);
+gboolean ncm_sphere_mapsht_alm2map (NcmSphereMapSHT *mapsht);
 #endif /* NUMCOSMO_HAVE_FFTW3 */
-gdouble nc_sphere_map_homogenize_noise (NcSphereMap *map, gdouble base_sigma);
-gdouble nc_sphere_map_rotate_avg (NcSphereMap *map, glong n);
+gdouble ncm_sphere_map_homogenize_noise (NcmSphereMap *map, gdouble base_sigma);
+gdouble ncm_sphere_map_rotate_avg (NcmSphereMap *map, glong n);
 
 G_END_DECLS
 

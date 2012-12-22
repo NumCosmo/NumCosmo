@@ -91,6 +91,12 @@ typedef enum _NcmFitGradType
   NCM_FIT_GRAD_NUMDIFF_ACCURATE,
 } NcmFitGradType;
 
+typedef void (*_NcmFitLSJ) (NcmFit *fit, NcmMatrix *J); 
+typedef void (*_NcmFitLSFJ) (NcmFit *fit, NcmVector *f, NcmMatrix *J);
+typedef void (*_NcmFitM2lnLGrad) (NcmFit *fit, NcmVector *grad);
+typedef void (*_NcmFitM2lnLValGrad) (NcmFit *fit, gdouble *m2lnL, NcmVector *grad);
+
+
 /**
  * NcmFitGrad:
  *
@@ -101,10 +107,10 @@ typedef struct _NcmFitGrad
   /*< private >*/
   NcmFitGradType gtype;
   const gchar *diff_name;
-  void (*ls_J) (NcmFit *fit, NcmMatrix *J);
-  void (*ls_f_J) (NcmFit *fit, NcmVector *f, NcmMatrix *J);
-  void (*m2lnL_grad) (NcmFit *fit, NcmVector *grad);
-  void (*m2lnL_val_grad) (NcmFit *fit, gdouble *m2lnL, NcmVector *grad);
+  _NcmFitLSJ ls_J;
+  _NcmFitLSFJ ls_f_J;
+  _NcmFitM2lnLGrad m2lnL_grad;
+  _NcmFitM2lnLValGrad m2lnL_val_grad;
 } NcmFitGrad;
 
 /**

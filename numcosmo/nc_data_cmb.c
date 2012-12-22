@@ -43,16 +43,16 @@
 #include "nc_data_cmb_dist_priors.h"
 
 /**
- * nc_data_cmb_new:
+ * nc_data_cmb_create:
  * @dist: FIXME
  * @id: FIXME
  *
  * FIXME
  *
- * Returns: FIXME
+ * Returns: (transfer full): FIXME
  */
 NcmData *
-nc_data_cmb_new (NcDistance *dist, NcDataCMBId id)
+nc_data_cmb_create (NcDistance *dist, NcDataCMBId id)
 {
   switch (id)
   {

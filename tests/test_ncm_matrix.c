@@ -84,7 +84,8 @@ test_ncm_matrix_new_sanity (NcmMatrix *cm)
     const guint nc = g_test_rand_int_range (0, _NCM_MATRIX_TEST_NCOL - 1);
     const gdouble d = g_test_rand_double ();
     ncm_matrix_set (cm, nr, nc, d);
-    g_assert (ncm_matrix_get (cm, nr, nc) == d);
+    
+    ncm_assert_cmpdouble (ncm_matrix_get (cm, nr, nc), ==, d);
   }
 }
 
@@ -108,7 +109,8 @@ test_ncm_matrix_operations (void)
     const guint nc = g_test_rand_int_range (0, _NCM_MATRIX_TEST_NCOL - 1);
     const gdouble d = g_test_rand_double ();
     ncm_matrix_set (m, nr, nc, d);
-    g_assert (ncm_matrix_get (m, nr, nc) == d);
+
+    ncm_assert_cmpdouble (ncm_matrix_get (m, nr, nc), ==, d);
   }
 
   for (i = 0; i < 10 * _NCM_MATRIX_TEST_NROW; i++)
@@ -121,7 +123,7 @@ test_ncm_matrix_operations (void)
     d = ncm_matrix_ptr (m, nr, nc);
     (*d) *= g_test_rand_double ();
 
-    g_assert (ncm_matrix_get (m, nr, nc) == *d);
+    ncm_assert_cmpdouble (ncm_matrix_get (m, nr, nc), ==, *d);
   }
 
   {
@@ -137,7 +139,7 @@ test_ncm_matrix_operations (void)
       nc = g_test_rand_int_range (0, _NCM_MATRIX_TEST_NCOL - 1);
       d = ncm_matrix_get (sm_cp, nr, nc);
 
-      g_assert (ncm_matrix_get (subm, nc, nr) == d);
+      ncm_assert_cmpdouble (ncm_matrix_get (subm, nc, nr), ==, d);
     }
     ncm_matrix_free (sm_cp);
     ncm_matrix_free (subm);
@@ -150,9 +152,13 @@ test_ncm_matrix_operations (void)
 
     ncm_matrix_set_identity (m);
     if (nr == nc)
-      g_assert (ncm_matrix_get (m, nr, nc) == 1.0);
+    {
+      ncm_assert_cmpdouble (ncm_matrix_get (m, nr, nc), ==, 1.0);
+    }
     else
-      g_assert (ncm_matrix_get (m, nr, nc) == 0.0);
+    {
+      ncm_assert_cmpdouble (ncm_matrix_get (m, nr, nc), ==, 0.0);
+    }
   }
 
   {
@@ -162,7 +168,7 @@ test_ncm_matrix_operations (void)
       guint nr = g_test_rand_int_range (0, _NCM_MATRIX_TEST_NROW - 1);
       guint nc = g_test_rand_int_range (0, _NCM_MATRIX_TEST_NCOL - 1);
 
-      g_assert (ncm_matrix_get (m, nr, nc) == 0.0);
+      ncm_assert_cmpdouble (ncm_matrix_get (m, nr, nc), ==, 0.0);
     }
   }
 
@@ -175,7 +181,8 @@ test_ncm_matrix_operations (void)
     nc = g_test_rand_int_range (0, _NCM_MATRIX_TEST_NCOL - 1);
     d = ncm_matrix_get (m, nr, nc);
     ncm_matrix_scale (m, d1);
-    g_assert (ncm_matrix_get (m, nr, nc) == d * d1);
+
+    ncm_assert_cmpdouble (ncm_matrix_get (m, nr, nc), ==, d * d1);
   }
 
   {
@@ -187,7 +194,9 @@ test_ncm_matrix_operations (void)
     guint nc = g_test_rand_int_range (0, _NCM_MATRIX_TEST_NCOL - 1);
     ncm_matrix_set_col (m, nc, v);
     for (i = 0; i < _NCM_MATRIX_TEST_NROW; i++)
-      g_assert (ncm_matrix_get (m, i, nc) == ncm_vector_get (v, i));
+    {
+      ncm_assert_cmpdouble (ncm_matrix_get (m, i, nc), ==, ncm_vector_get (v, i));
+    }
   }
 
   ncm_matrix_memcpy (m, cm);
@@ -195,7 +204,9 @@ test_ncm_matrix_operations (void)
   {
     guint j;
     for (j = 0; j < _NCM_MATRIX_TEST_NCOL; j++)
-      g_assert (ncm_matrix_get (m, i, j) == ncm_matrix_get (cm, i, j));
+    {
+      ncm_assert_cmpdouble (ncm_matrix_get (m, i, j), ==, ncm_matrix_get (cm, i, j));
+    }
   }
 
 }
@@ -342,14 +353,17 @@ test_ncm_matrix_new_data_static_tda (void)
     const guint nc = g_test_rand_int_range (0, _NCM_MATRIX_TEST_NCOL - 1);
     const gdouble val = g_test_rand_double ();
     ncm_matrix_set (mm, nr, nc, val);
-    g_assert (ncm_matrix_get (mm, nr, nc) == val);
+
+    ncm_assert_cmpdouble (ncm_matrix_get (mm, nr, nc), ==, val);
   }
 
   {
     NcmVector *v = ncm_matrix_get_col (mm, _NCM_MATRIX_TEST_NCOL - 1);
     g_assert (ncm_vector_len (v) == NCM_MATRIX_NROWS (mm));
     for (i = 0; i < _NCM_MATRIX_TEST_NROW; i++)
-      g_assert (ncm_vector_get (v, i) == ncm_matrix_get (mm, i, _NCM_MATRIX_TEST_NCOL - 1));
+    {
+      ncm_assert_cmpdouble (ncm_vector_get (v, i), ==, ncm_matrix_get (mm, i, _NCM_MATRIX_TEST_NCOL - 1));
+    }
     ncm_vector_free (v);
   }
 
@@ -382,7 +396,7 @@ test_ncm_matrix_submatrix (void)
     guint nr = g_test_rand_int_range (0, _NCM_MATRIX_TEST_NROW - 5);
     guint nc = g_test_rand_int_range (0, _NCM_MATRIX_TEST_NCOL - 3);
     ncm_matrix_set (sm, nr, nc, g_test_rand_double ());
-    g_assert_cmpfloat (ncm_matrix_get (sm, nr, nc), ==, ncm_matrix_get (m, nr + 5, nc + 3));
+    ncm_assert_cmpdouble (ncm_matrix_get (sm, nr, nc), ==, ncm_matrix_get (m, nr + 5, nc + 3));
   }
 
   g_assert (NCM_IS_MATRIX (sm));
@@ -415,7 +429,7 @@ test_ncm_matrix_add_mul (void)
     for (j = 0; j < NCM_MATRIX_NCOLS (sm); j++)
     {
       ncm_matrix_set (sm, i, j, g_test_rand_double ());
-      g_assert_cmpfloat (ncm_matrix_get (sm, i, j), ==, ncm_matrix_get (m, i + 5, j + 3));
+      ncm_assert_cmpdouble (ncm_matrix_get (sm, i, j), ==, ncm_matrix_get (m, i + 5, j + 3));
     }
   }
   
@@ -438,7 +452,7 @@ test_ncm_matrix_add_mul (void)
     {
       for (j = 0; j < NCM_MATRIX_NCOLS (osm); j++)
       {
-        g_assert_cmpfloat (ncm_matrix_get (res, i, j), ==, ncm_matrix_get (sm, i, j) + alpha * ncm_matrix_get (osm, i, j));
+        ncm_assert_cmpdouble (ncm_matrix_get (res, i, j), ==, ncm_matrix_get (sm, i, j) + alpha * ncm_matrix_get (osm, i, j));
       }
     }
 
@@ -450,7 +464,7 @@ test_ncm_matrix_add_mul (void)
     {
       for (j = 0; j < NCM_MATRIX_NCOLS (sm); j++)
       {
-        g_assert_cmpfloat (ncm_matrix_get (res, i, j), ==, ncm_matrix_get (osm, i, j) + alpha * ncm_matrix_get (sm, i, j));
+        ncm_assert_cmpdouble (ncm_matrix_get (res, i, j), ==, ncm_matrix_get (osm, i, j) + alpha * ncm_matrix_get (sm, i, j));
       }
     }
 

@@ -119,7 +119,7 @@ _nc_cluster_mass_benson_significance_m_p (NcClusterMass *clusterm, NcHICosmo *mo
   const gdouble E0 = nc_hicosmo_E (model, msz->z0); 
   const gdouble E = nc_hicosmo_E (model, z);
   gsl_function F;
-  gsl_integration_workspace **w = nc_integral_get_workspace ();
+  gsl_integration_workspace **w = ncm_integral_get_workspace ();
 
   data.msz = msz;
   data.model = model;
@@ -141,14 +141,14 @@ _nc_cluster_mass_benson_significance_m_p (NcClusterMass *clusterm, NcHICosmo *mo
     gdouble Pi, a, b;
     a = 0.0;
     b = xi[0];
-    gsl_integration_qag (&F, a, b, 0.0, NC_DEFAULT_PRECISION, NC_INT_PARTITION, 6, *w, &Pi, &err);
+    gsl_integration_qag (&F, a, b, 0.0, NCM_DEFAULT_PRECISION, NCM_INTEGRAL_PARTITION, 6, *w, &Pi, &err);
     P = Pi;
     do {
       a = b;
       b += xi[0];
-      gsl_integration_qag (&F, a, b, P * NC_DEFAULT_PRECISION, NC_DEFAULT_PRECISION, NC_INT_PARTITION, 6, *w, &Pi, &err); 
+      gsl_integration_qag (&F, a, b, P * NCM_DEFAULT_PRECISION, NCM_DEFAULT_PRECISION, NCM_INTEGRAL_PARTITION, 6, *w, &Pi, &err); 
       P += Pi;
-    } while (fabs(Pi/P) > NC_DEFAULT_PRECISION);
+    } while (fabs(Pi/P) > NCM_DEFAULT_PRECISION);
   }
 
   ncm_memory_pool_return (w);
@@ -165,7 +165,7 @@ _nc_cluster_mass_benson_intp (NcClusterMass *clusterm, NcHICosmo *model, gdouble
   const gdouble E0 = nc_hicosmo_E (model, msz->z0); 
   const gdouble E = nc_hicosmo_E (model, z);
   gsl_function F;
-  gsl_integration_workspace **w = nc_integral_get_workspace ();
+  gsl_integration_workspace **w = ncm_integral_get_workspace ();
 
   data.msz = msz;
   data.model = model;
@@ -185,14 +185,14 @@ _nc_cluster_mass_benson_intp (NcClusterMass *clusterm, NcHICosmo *model, gdouble
     gdouble Pi, a, b;
     a = 0.0;
     b = msz->signif_obs_max;
-    gsl_integration_qag (&F, a, b, 0.0, NC_DEFAULT_PRECISION, NC_INT_PARTITION, 6, *w, &Pi, &err);
+    gsl_integration_qag (&F, a, b, 0.0, NCM_DEFAULT_PRECISION, NCM_INTEGRAL_PARTITION, 6, *w, &Pi, &err);
     P = Pi;
     do {
       a = b;
       b += msz->signif_obs_max;
-      gsl_integration_qag (&F, a, b, P * NC_DEFAULT_PRECISION, NC_DEFAULT_PRECISION, NC_INT_PARTITION, 6, *w, &Pi, &err); 
+      gsl_integration_qag (&F, a, b, P * NCM_DEFAULT_PRECISION, NCM_DEFAULT_PRECISION, NCM_INTEGRAL_PARTITION, 6, *w, &Pi, &err); 
       P += Pi;
-    } while (fabs(Pi/P) > NC_DEFAULT_PRECISION);
+    } while (fabs(Pi/P) > NCM_DEFAULT_PRECISION);
   }
 
   ncm_memory_pool_return (w);

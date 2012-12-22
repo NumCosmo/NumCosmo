@@ -65,8 +65,8 @@ static gdouble gsl_ode_get_c1 (NcLinearPert *pert);
 static gdouble gsl_ode_get_b1 (NcLinearPert *pert);
 static gdouble gsl_ode_get_theta2 (NcLinearPert *pert);
 static gdouble gsl_ode_get (NcLinearPert *pert, guint n);
-static gdouble gsl_ode_get_theta (NcLinearPert *pert, gint n);
-static gdouble gsl_ode_get_theta_p (NcLinearPert *pert, gint n);
+static gdouble gsl_ode_get_theta (NcLinearPert *pert, guint n);
+static gdouble gsl_ode_get_theta_p (NcLinearPert *pert, guint n);
 
 static NcLinearPertOdeSolver _gsl_ode_solver = { 
   &gsl_ode_create,

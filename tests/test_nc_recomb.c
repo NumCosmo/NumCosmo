@@ -65,9 +65,9 @@ test_nc_recomb_seager_new ()
   g_assert (NC_IS_RECOMB (recomb));
   g_assert (NC_IS_RECOMB_SEAGER (recomb));
 
-  g_assert (recomb->init_frac == 1e-10);
-  g_assert (recomb->zi == 2.2e9);
-  g_assert (recomb->prec == 1e-5);
+  ncm_assert_cmpdouble (recomb->init_frac, ==, 1e-10);
+  ncm_assert_cmpdouble (recomb->zi, ==, 2.2e9);
+  ncm_assert_cmpdouble (recomb->prec, ==, 1e-5);
   
   nc_recomb_free (recomb);
 
@@ -77,13 +77,18 @@ test_nc_recomb_seager_new ()
     exit (0);
   }
   g_test_trap_assert_failed ();
-  
+
+#if !((GLIB_MAJOR_VERSION == 2) && (GLIB_MINOR_VERSION < 30))
   recomb = nc_recomb_new_from_name ("NcRecombSeager{'prec':<2e-7>}");
+#else
+  recomb = nc_recomb_seager_new_full (1.0e-11, NC_PERTURBATION_START_X, 2e-7);
+#endif
+
   g_assert (NC_IS_RECOMB (recomb));
   g_assert (NC_IS_RECOMB_SEAGER (recomb));
   nc_recomb_free (recomb);
 
-  g_assert (recomb->prec == 2e-7);
+  ncm_assert_cmpdouble (recomb->prec, ==, 2e-7);
   
   if (g_test_trap_fork (0, G_TEST_TRAP_SILENCE_STDOUT | G_TEST_TRAP_SILENCE_STDERR))
   {
@@ -97,21 +102,26 @@ void
 test_nc_recomb_seager_wmap_zstar (void)
 {
   NcRecomb *recomb = nc_recomb_seager_new ();
+#if !((GLIB_MAJOR_VERSION == 2) && (GLIB_MINOR_VERSION < 30))
   NcHICosmo *cosmo = nc_hicosmo_new_from_name (NC_TYPE_HICOSMO, "NcHICosmoDEXcdm");
+#else
+  NcHICosmo *cosmo = nc_hicosmo_de_xcdm_new ();
+#endif
+
   nc_hicosmo_de_set_wmap5_params (cosmo);
   ncm_model_orig_param_set (NCM_MODEL (cosmo), NC_HICOSMO_DE_XCDM_W,  -1.0);
 
   nc_recomb_prepare_if_needed (recomb, cosmo);
   {
     const gdouble zstar = exp (-nc_recomb_tau_zstar (recomb, cosmo)) - 1.0;
-    g_assert (ncm_cmp (zstar, 1088.9, 1e-4) == 0);
+    ncm_assert_cmpdouble_e (zstar, ==, 1088.9, 1e-4);
   }
 
   ncm_model_orig_param_set (NCM_MODEL (cosmo), NC_HICOSMO_DE_T_GAMMA0,  2.2250);
   nc_recomb_prepare_if_needed (recomb, cosmo);
   {
     const gdouble zstar = exp (-nc_recomb_tau_zstar (recomb, cosmo)) - 1.0;
-    g_assert (ncm_cmp (zstar, 1323.2, 1e-4) == 0);
+    ncm_assert_cmpdouble_e (zstar, ==, 1323.2, 1e-4);
   }
 
   nc_recomb_free (recomb);
@@ -121,12 +131,17 @@ void
 test_nc_recomb_seager_Xe_ini (void)
 {
   NcRecomb *recomb = nc_recomb_seager_new ();
+#if !((GLIB_MAJOR_VERSION == 2) && (GLIB_MINOR_VERSION < 30))
   NcHICosmo *cosmo = nc_hicosmo_new_from_name (NC_TYPE_HICOSMO, "NcHICosmoDEXcdm");
+#else
+  NcHICosmo *cosmo = nc_hicosmo_de_xcdm_new ();
+#endif
+
   nc_recomb_prepare_if_needed (recomb, cosmo);
 
   {
     const gdouble Xe_ini = nc_recomb_Xe (recomb, cosmo, recomb->lambdai);
-    g_assert (ncm_cmp (Xe_ini, 1.0 + 2.0 * ncm_c_prim_XHe (), recomb->prec * 1.0e2) == 0);
+    ncm_assert_cmpdouble_e (Xe_ini, == , 1.0 + 2.0 * ncm_c_prim_XHe (), recomb->prec * 1.0e2);
   }
   
   nc_recomb_free (recomb);

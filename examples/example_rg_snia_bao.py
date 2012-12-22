@@ -1,14 +1,15 @@
 #!/usr/bin/python2
 
 from math import *
-from gi.repository import Numcosmo as Nc
+from gi.repository import NumCosmo as Nc
+from gi.repository import NumCosmoMath as Ncm
 import matplotlib.pyplot as plt
 
 #
 #  Initializing the library objects, this must be called before 
 #  any other library function.
 #
-Nc.cfg_init ()
+Ncm.cfg_init ()
 
 #
 #  New homogeneous and isotropic cosmological model NcHICosmoDEXcdm 
@@ -36,7 +37,7 @@ cosmo.props.w       = -1.0
 #
 #  A new Modelset with cosmo as the HICosmo model to be used.
 #
-mset = Nc.MSet ()
+mset = Ncm.MSet ()
 mset.set (cosmo)
 
 #
@@ -58,31 +59,31 @@ dist = Nc.Distance (zf = 2.0)
 #  A new Data object from BAO catalogs.
 #
 snia = Nc.DataDistMu.new (dist, Nc.DataSNIAId.SIMPLE_UNION2_1)
-bao = Nc.Data.bao_new (dist, Nc.DataBaoId.A_EISENSTEIN2005)
+bao = Nc.data_bao_create (dist, Nc.DataBaoId.A_EISENSTEIN2005)
 
 #
 #  A new Dataset with snia and bao set.
 #
-dset = Nc.Dataset ()
+dset = Ncm.Dataset ()
 dset.append_data (snia)
 dset.append_data (bao)
 
 #
 #  Creating a Likelihood from the Dataset.
 #
-lh = Nc.Likelihood (dataset = dset)
+lh = Ncm.Likelihood (dataset = dset)
 
 #
 #  Creating a Fit object of type NLOPT using the fitting algorithm ln-neldermead to
 #  fit the Modelset mset using the Likelihood lh and using a numerical differentiation
 #  algorithm (NUMDIFF_FORWARD) to obtain the gradient (if needed).
 #
-fit = Nc.Fit.new (Nc.FitType.NLOPT, "ln-neldermead", lh, mset, Nc.FitGradType.NUMDIFF_FORWARD)
+fit = Ncm.Fit.new (Ncm.FitType.NLOPT, "ln-neldermead", lh, mset, Ncm.FitGradType.NUMDIFF_FORWARD)
 
 #
 #  Running the fitter printing messages.
 #
-fit.run (Nc.FitRunMsgs.SIMPLE)
+fit.run (Ncm.FitRunMsgs.SIMPLE)
 
 #
 #  Printing fitting informations.
@@ -104,17 +105,17 @@ fit.log_covar ()
 #  First we create two PIndex indicating which parameter
 #    we are going to study.
 # 
-p1 = Nc.MSetPIndex.new (cosmo.id (), Nc.HICosmoDEParams.OMEGA_C)
-p2 = Nc.MSetPIndex.new (cosmo.id (), Nc.HICosmoDEXCDMParams.W)
+p1 = Ncm.MSetPIndex.new (cosmo.id (), Nc.HICosmoDEParams.OMEGA_C)
+p2 = Ncm.MSetPIndex.new (cosmo.id (), Nc.HICosmoDEXCDMParams.W)
 
-lhr2d = Nc.LHRatio2d.new (fit, p1, p2)
+lhr2d = Ncm.LHRatio2d.new (fit, p1, p2)
 
 #
 #  Calculating the confidence region using the Likelihood ratio test.
 #  Also calculate using the Fisher matrix approach.
 #
-cr_rg = lhr2d.conf_region (0.6826, 300.0, Nc.FitRunMsgs.SIMPLE)
-fisher_rg = lhr2d.fisher_border (0.6826, 300.0, Nc.FitRunMsgs.SIMPLE)
+cr_rg = lhr2d.conf_region (0.6826, 300.0, Ncm.FitRunMsgs.SIMPLE)
+fisher_rg = lhr2d.fisher_border (0.6826, 300.0, Ncm.FitRunMsgs.SIMPLE)
 
 cr_p1array = cr_rg.p1.dup_array ()
 cr_p2array = cr_rg.p2.dup_array ()

@@ -1,12 +1,13 @@
 #!/usr/bin/python2
 
-from gi.repository import Numcosmo as Nc
+from gi.repository import NumCosmo as Nc
+from gi.repository import NumCosmoMath as Ncm
 
 #
 #  Initializing the library objects, this must be called before 
 #  any other library function.
 #
-Nc.cfg_init ()
+Ncm.cfg_init ()
 
 #
 #  New homogeneous and isotropic cosmological model NcHICosmoDEXcdm 
@@ -60,6 +61,6 @@ cosmo.params_log_all ()
 #
 for i in range (0, 10):
   z = 1.0 / 9.0 * i
-  cd = Nc.C.hubble_radius () * dist.comoving (cosmo, z)
+  cd = Ncm.C.hubble_radius () * dist.comoving (cosmo, z)
   print "% 10.8f % 20.15g" % (z, cd)
 

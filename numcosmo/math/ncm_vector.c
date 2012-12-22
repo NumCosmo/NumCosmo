@@ -295,16 +295,18 @@ GVariant *
 ncm_vector_get_variant (NcmVector *v)
 {
   guint n = ncm_vector_len (v);
-  GVariantBuilder *builder;
+  GVariantBuilder builder;
   GVariant *var;
   gint i;
 
-  builder = g_variant_builder_new (G_VARIANT_TYPE ("ad"));
+  g_variant_builder_init (&builder, G_VARIANT_TYPE ("ad"));
+
   for (i = 0; i < n; i++)
-    g_variant_builder_add (builder, "d", ncm_vector_get (v, i));
-  var = g_variant_new ("ad", builder);
-  g_variant_builder_unref (builder);
+    g_variant_builder_add (&builder, "d", ncm_vector_get (v, i));
+
+  var = g_variant_builder_end (&builder);
   g_variant_ref_sink (var);
+
   return var;
 }
 

@@ -353,12 +353,12 @@ _nc_matter_var_over_growth2_gaussian (NcMatterVar *vp, NcHICosmo *model, gdouble
   ts.model = model;
 
   if (w == NULL)
-    w = gsl_integration_workspace_alloc (NC_INT_PARTITION);
+    w = gsl_integration_workspace_alloc (NCM_INTEGRAL_PARTITION);
 
   F.function = &_nc_matter_var_integrand_gaussian;
   F.params = &ts;
 
-  gsl_integration_qagiu (&F, 0, 0, NC_DEFAULT_PRECISION, NC_INT_PARTITION, w, &v_over_growth2_gaussian, &error);
+  gsl_integration_qagiu (&F, 0, 0, NCM_DEFAULT_PRECISION, NCM_INTEGRAL_PARTITION, w, &v_over_growth2_gaussian, &error);
 
   return v_over_growth2_gaussian;
 
@@ -446,11 +446,11 @@ _nc_matter_var_over_growth2_tophat_old (NcMatterVar *vp, NcHICosmo *model, gdoub
   ts.model = model;
 
   if (w == NULL)
-	w = gsl_integration_workspace_alloc (NC_INT_PARTITION);
+	w = gsl_integration_workspace_alloc (NCM_INTEGRAL_PARTITION);
   if (wosc_cos == NULL)
-	wosc_cos = gsl_integration_qawo_table_alloc (2.0, _NC_LSTEP2, GSL_INTEG_COSINE, NC_INT_PARTITION);
+	wosc_cos = gsl_integration_qawo_table_alloc (2.0, _NC_LSTEP2, GSL_INTEG_COSINE, NCM_INTEGRAL_PARTITION);
   if (wosc_sin == NULL)
-	wosc_sin = gsl_integration_qawo_table_alloc (2.0, _NC_LSTEP2, GSL_INTEG_SINE, NC_INT_PARTITION);
+	wosc_sin = gsl_integration_qawo_table_alloc (2.0, _NC_LSTEP2, GSL_INTEG_SINE, NCM_INTEGRAL_PARTITION);
 
   F.function = &_nc_matter_var_integrand_tophat_one;
   F_cos.function = &_nc_matter_var_integrand_tophat_cosine;
@@ -469,25 +469,25 @@ _nc_matter_var_over_growth2_tophat_old (NcMatterVar *vp, NcHICosmo *model, gdoub
   //  for (i = 0; i < var_spline->size-1; i++)
   //  {
   //    gsl_integration_qag (&Ft, var_spline->x[i] * vp->wp->R, var_spline->x[i+1] * vp->wp->R, 0, 1e-11, INT_PARTITION, 6, w, &v_over_growth2_ksmall, &error);
-  gsl_integration_qag (&Ft, 0.0, 1.0, 0, NC_DEFAULT_PRECISION, NC_INT_PARTITION, 6, w, &v_over_growth2_ksmall, &error);   /* integral completa de 0 a 1 */
+  gsl_integration_qag (&Ft, 0.0, 1.0, 0, NCM_DEFAULT_PRECISION, NCM_INTEGRAL_PARTITION, 6, w, &v_over_growth2_ksmall, &error);   /* integral completa de 0 a 1 */
 
   result += v_over_growth2_ksmall;
 
   //  }
 
-  gsl_integration_qag (&F, 1.0, 1000.0, 0, NC_DEFAULT_PRECISION, NC_INT_PARTITION, 6, w, &v_over_growth2_one, &error_1);
+  gsl_integration_qag (&F, 1.0, 1000.0, 0, NCM_DEFAULT_PRECISION, NCM_INTEGRAL_PARTITION, 6, w, &v_over_growth2_one, &error_1);
   result += v_over_growth2_one;
 
   for (step = 1.0; 1; step += _NC_LSTEP2)
   {
 	gdouble pres_t = 0.0;
-	gsl_integration_qawo (&F_cos, step, 0.0, NC_DEFAULT_PRECISION, NC_INT_PARTITION, w, wosc_cos, &pres, &error_cos);
+	gsl_integration_qawo (&F_cos, step, 0.0, NCM_DEFAULT_PRECISION, NCM_INTEGRAL_PARTITION, w, wosc_cos, &pres, &error_cos);
 	pres_t = pres;
 
-	gsl_integration_qawo (&F_sin, step, 0.0, NC_DEFAULT_PRECISION, NC_INT_PARTITION, w, wosc_sin, &pres, &error_sin);
+	gsl_integration_qawo (&F_sin, step, 0.0, NCM_DEFAULT_PRECISION, NCM_INTEGRAL_PARTITION, w, wosc_sin, &pres, &error_sin);
 	pres_t += pres;
 
-	if (fabs(pres_t/v_over_growth2_osc) < NC_DEFAULT_PRECISION * 1e-3)
+	if (fabs(pres_t/v_over_growth2_osc) < NCM_DEFAULT_PRECISION * 1e-3)
 	  break;
 	v_over_growth2_osc += pres_t;
 	if (pres_t == 0.0)
@@ -1444,11 +1444,11 @@ nc_matter_var_spectral_moment_over_growth2_gaussian (NcMatterVar *vp, NcHICosmo 
   ts.model = model;
 
   if (w == NULL)
-	w = gsl_integration_workspace_alloc (NC_INT_PARTITION);
+	w = gsl_integration_workspace_alloc (NCM_INTEGRAL_PARTITION);
 
   F.function = &_nc_matter_var_integrand_gaussian;
   F.params = &ts;
-  gsl_integration_qagiu (&F, 0, 0, NC_DEFAULT_PRECISION, NC_INT_PARTITION, w, &sm_over_growth2, &error);
+  gsl_integration_qagiu (&F, 0, 0, NCM_DEFAULT_PRECISION, NCM_INTEGRAL_PARTITION, w, &sm_over_growth2, &error);
 
   // gsl_integration_workspace_free (w);
   return sm_over_growth2;
@@ -1469,7 +1469,7 @@ nc_matter_var_spectral_moment_over_growth2_tophat (NcMatterVar *vp, NcHICosmo *m
 {
   gdouble sm_over_growth2_ksmall = 0.0, sm_over_growth2_one = 0.0, sm_over_growth2_osc = 0.0;
   gdouble error, error_1, error_cos, error_sin, step, pres, result = 0.0;
-  static gsl_integration_workspace *w = NULL; //gsl_integration_workspace_alloc (NC_INT_PARTITION);
+  static gsl_integration_workspace *w = NULL; //gsl_integration_workspace_alloc (NCM_INTEGRAL_PARTITION);
   static gsl_integration_qawo_table *wosc_cos = NULL;
   static gsl_integration_qawo_table *wosc_sin = NULL;
   gsl_function F, F_cos, F_sin, Ft;
@@ -1480,11 +1480,11 @@ nc_matter_var_spectral_moment_over_growth2_tophat (NcMatterVar *vp, NcHICosmo *m
   ts.model = model;
 
   if (w == NULL)
-	w = gsl_integration_workspace_alloc (NC_INT_PARTITION);
+	w = gsl_integration_workspace_alloc (NCM_INTEGRAL_PARTITION);
   if (wosc_cos == NULL)
-	wosc_cos = gsl_integration_qawo_table_alloc (2.0, _NC_LSTEP2, GSL_INTEG_COSINE, NC_INT_PARTITION);
+	wosc_cos = gsl_integration_qawo_table_alloc (2.0, _NC_LSTEP2, GSL_INTEG_COSINE, NCM_INTEGRAL_PARTITION);
   if (wosc_sin == NULL)
-	wosc_sin = gsl_integration_qawo_table_alloc (2.0, _NC_LSTEP2, GSL_INTEG_SINE, NC_INT_PARTITION);
+	wosc_sin = gsl_integration_qawo_table_alloc (2.0, _NC_LSTEP2, GSL_INTEG_SINE, NCM_INTEGRAL_PARTITION);
 
   F.function = &_nc_matter_var_integrand_tophat_one;
   F_cos.function = &_nc_matter_var_integrand_tophat_cosine;
@@ -1497,21 +1497,21 @@ nc_matter_var_spectral_moment_over_growth2_tophat (NcMatterVar *vp, NcHICosmo *m
   Ft.params = &ts;
 
 
-  gsl_integration_qag (&Ft, 0.0, 1.0, 0, NC_DEFAULT_PRECISION, NC_INT_PARTITION, 6, w, &sm_over_growth2_ksmall, &error);   /* integral completa de 0 a 1 */
+  gsl_integration_qag (&Ft, 0.0, 1.0, 0, NCM_DEFAULT_PRECISION, NCM_INTEGRAL_PARTITION, 6, w, &sm_over_growth2_ksmall, &error);   /* integral completa de 0 a 1 */
   result += sm_over_growth2_ksmall;
 
-  gsl_integration_qag (&F, 1.0, 1000.0, 0, NC_DEFAULT_PRECISION, NC_INT_PARTITION, 6, w, &sm_over_growth2_one, &error_1);
+  gsl_integration_qag (&F, 1.0, 1000.0, 0, NCM_DEFAULT_PRECISION, NCM_INTEGRAL_PARTITION, 6, w, &sm_over_growth2_one, &error_1);
   result += sm_over_growth2_one;
 
   for (step = 1.0; 1; step += _NC_LSTEP2)
   {
 	gdouble pres_t = 0.0;
-	gsl_integration_qawo (&F_cos, step, 0.0, NC_DEFAULT_PRECISION, NC_INT_PARTITION, w, wosc_cos, &pres, &error_cos);
+	gsl_integration_qawo (&F_cos, step, 0.0, NCM_DEFAULT_PRECISION, NCM_INTEGRAL_PARTITION, w, wosc_cos, &pres, &error_cos);
 	pres_t = pres;
-	gsl_integration_qawo (&F_sin, step, 0.0, NC_DEFAULT_PRECISION, NC_INT_PARTITION, w, wosc_sin, &pres, &error_sin);
+	gsl_integration_qawo (&F_sin, step, 0.0, NCM_DEFAULT_PRECISION, NCM_INTEGRAL_PARTITION, w, wosc_sin, &pres, &error_sin);
 	pres_t += pres;
 
-	if (fabs(pres_t/sm_over_growth2_osc) < NC_DEFAULT_PRECISION * 1e-3)
+	if (fabs(pres_t/sm_over_growth2_osc) < NCM_DEFAULT_PRECISION * 1e-3)
 	  break;
 	sm_over_growth2_osc += pres_t;
 	if (pres_t == 0.0)
@@ -1558,12 +1558,12 @@ _nc_matter_var_dvariance_over_growth2_dR_gaussian (NcMatterVar *vp, NcHICosmo *m
   ts.model = model;
 
   if (w == NULL)
-	w = gsl_integration_workspace_alloc (NC_INT_PARTITION);
+	w = gsl_integration_workspace_alloc (NCM_INTEGRAL_PARTITION);
 
   F.function = &nc_matter_var_deriv_variance_over_growth2_integrand_gaussian;
   F.params = &ts;
 
-  gsl_integration_qagiu (&F, 0, 0.0, NC_DEFAULT_PRECISION, NC_INT_PARTITION, w, &dv_D2dR, &error);
+  gsl_integration_qagiu (&F, 0, 0.0, NCM_DEFAULT_PRECISION, NCM_INTEGRAL_PARTITION, w, &dv_D2dR, &error);
 
   return dv_D2dR;
 }
@@ -1645,11 +1645,11 @@ _nc_matter_var_dvariance_over_growth2_dR_tophat (NcMatterVar *vp, NcHICosmo *mod
   ts.model = model;
 
   if (w == NULL)
-	w = gsl_integration_workspace_alloc (NC_INT_PARTITION);
+	w = gsl_integration_workspace_alloc (NCM_INTEGRAL_PARTITION);
   if (wosc_cos == NULL)
-	wosc_cos = gsl_integration_qawo_table_alloc (2.0, _NC_LSTEP2, GSL_INTEG_COSINE, NC_INT_PARTITION);
+	wosc_cos = gsl_integration_qawo_table_alloc (2.0, _NC_LSTEP2, GSL_INTEG_COSINE, NCM_INTEGRAL_PARTITION);
   if (wosc_sin == NULL)
-	wosc_sin = gsl_integration_qawo_table_alloc (2.0, _NC_LSTEP2, GSL_INTEG_SINE, NC_INT_PARTITION);
+	wosc_sin = gsl_integration_qawo_table_alloc (2.0, _NC_LSTEP2, GSL_INTEG_SINE, NCM_INTEGRAL_PARTITION);
 
   F.function = &_nc_matter_var_deriv_variance_over_growth2_integrand_tophat_one;
   F_cos.function = &_nc_matter_var_deriv_variance_over_growth2_integrand_tophat_cosine;
@@ -1665,23 +1665,23 @@ _nc_matter_var_dvariance_over_growth2_dR_tophat (NcMatterVar *vp, NcHICosmo *mod
   //  {
   //    gsl_integration_qag (&Ft, var_spline->x[i] * vp->wp->R, var_spline->x[i+1] * vp->wp->R, 0, 1e-9, INT_PARTITION, 6, w, &dv_over_growth2_ksmall, &error);   /* integral completa de 0 a 1 */
 
-  gsl_integration_qag (&Ft, 1.0e-4, 1.0, 0, NC_DEFAULT_PRECISION, NC_INT_PARTITION, 6, w, &dv_over_growth2_ksmall, &error);
+  gsl_integration_qag (&Ft, 1.0e-4, 1.0, 0, NCM_DEFAULT_PRECISION, NCM_INTEGRAL_PARTITION, 6, w, &dv_over_growth2_ksmall, &error);
 
   result += dv_over_growth2_ksmall;
   //  }
 
-  gsl_integration_qag (&F, 1.0, 1000.0, 0, NC_DEFAULT_PRECISION, NC_INT_PARTITION, 6, w, &dv_over_growth2_one, &error_1);
+  gsl_integration_qag (&F, 1.0, 1000.0, 0, NCM_DEFAULT_PRECISION, NCM_INTEGRAL_PARTITION, 6, w, &dv_over_growth2_one, &error_1);
   result += dv_over_growth2_one;
 
   for (step = 1.0; 1; step += _NC_LSTEP2)
 	//  for (step = 1.0; step < 11.0; step++)
   {
 	gdouble pres_t = 0.0;
-	gsl_integration_qawo (&F_cos, step, 0.0, NC_DEFAULT_PRECISION, NC_INT_PARTITION, w, wosc_cos, &pres, &error_cos);
+	gsl_integration_qawo (&F_cos, step, 0.0, NCM_DEFAULT_PRECISION, NCM_INTEGRAL_PARTITION, w, wosc_cos, &pres, &error_cos);
 	pres_t = pres;
-	gsl_integration_qawo (&F_sin, step, 0.0, NC_DEFAULT_PRECISION, NC_INT_PARTITION, w, wosc_sin, &pres, &error_sin);
+	gsl_integration_qawo (&F_sin, step, 0.0, NCM_DEFAULT_PRECISION, NCM_INTEGRAL_PARTITION, w, wosc_sin, &pres, &error_sin);
 	pres_t += pres;
-	if (fabs(pres_t/dv_over_growth2_osc) < NC_DEFAULT_PRECISION * 1e-3)
+	if (fabs(pres_t/dv_over_growth2_osc) < NCM_DEFAULT_PRECISION * 1e-3)
 	  break;
 	dv_over_growth2_osc += pres_t;
 	if (pres_t == 0.0)

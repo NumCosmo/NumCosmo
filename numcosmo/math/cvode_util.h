@@ -56,12 +56,12 @@ typedef struct _NcmCVode
   gsl_spline **splines;
 } NcmCVode;
 
-N_Vector nc_cvode_util_nvector_new (guint n);
-gboolean nc_cvode_util_check_flag (gpointer flagvalue, gchar *funcname, gint opt);
-gboolean nc_cvode_util_print_stats (gpointer cvode);
+N_Vector ncm_cvode_util_nvector_new (guint n);
+gboolean ncm_cvode_util_check_flag (gpointer flagvalue, gchar *funcname, gint opt);
+gboolean ncm_cvode_util_print_stats (gpointer cvode);
 
 #define CVODE_CHECK(chk,name,val,ret) \
-if (!nc_cvode_util_check_flag(chk,name,val)) return ret
+if (!ncm_cvode_util_check_flag(chk,name,val)) return ret
 
 G_END_DECLS
 

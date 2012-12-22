@@ -192,7 +192,7 @@ printf ("I: (% .15Lg, % .15Lg, % .15Lg)\n", Icos, Isin, I1);
 /*  
   gsl_matrix_memcpy (C, mi_ode->exp_A);  
   ret = gsl_blas_dgemm (CblasNoTrans, CblasNoTrans, 1.0, mi_ode->exp_A, expOmega_m1, 1.0, C);
-  NC_TEST_GSL_RESULT("ncm_magnus_iserles_ode_step", ret);
+  NCM_TEST_GSL_RESULT("ncm_magnus_iserles_ode_step", ret);
   {
     gdouble temp_u;
     temp_u     = gsl_matrix_get (C, 0, 0) * mi_ode->u + gsl_matrix_get (C, 0, 1) * mi_ode->up;

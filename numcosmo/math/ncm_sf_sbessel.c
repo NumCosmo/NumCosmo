@@ -51,10 +51,10 @@
  *
  * Returns: FIXME
 */
-NcSFSBesselRecur *
+NcmSFSBesselRecur *
 ncm_sf_sbessel_recur_new (NcmGrid *x_grid)
 {
-  NcSFSBesselRecur *jlrec = g_slice_new (NcSFSBesselRecur);
+  NcmSFSBesselRecur *jlrec = g_slice_new (NcmSFSBesselRecur);
   jlrec->prepared = FALSE;
   jlrec->x_grid = x_grid;
   jlrec->jl = g_slice_alloc (x_grid->nnodes * sizeof(gdouble));
@@ -65,13 +65,13 @@ ncm_sf_sbessel_recur_new (NcmGrid *x_grid)
 
 /**
  * ncm_sf_sbessel_recur_set:
- * @jlrec: a #NcSFSBesselRecur
+ * @jlrec: a #NcmSFSBesselRecur
  * @l: FIXME
  *
  * FIXME
 */
 void
-ncm_sf_sbessel_recur_set (NcSFSBesselRecur *jlrec, glong l)
+ncm_sf_sbessel_recur_set (NcmSFSBesselRecur *jlrec, glong l)
 {
   gint i;
   NcmGrid *x_grid = jlrec->x_grid;
@@ -88,30 +88,30 @@ ncm_sf_sbessel_recur_set (NcSFSBesselRecur *jlrec, glong l)
 
 /**
  * ncm_sf_sbessel_recur_free:
- * @jlrec: a #NcSFSBesselRecur
+ * @jlrec: a #NcmSFSBesselRecur
  * @free_grid: FIXME
  *
  * FIXME
 */
 void
-ncm_sf_sbessel_recur_free (NcSFSBesselRecur *jlrec, gboolean free_grid)
+ncm_sf_sbessel_recur_free (NcmSFSBesselRecur *jlrec, gboolean free_grid)
 {
   NcmGrid *x_grid = jlrec->x_grid;
   g_slice_free1 (x_grid->nnodes * sizeof(gdouble), jlrec->jl);
   g_slice_free1 (x_grid->nnodes * sizeof(gdouble), jlrec->jlp1);
-  g_slice_free (NcSFSBesselRecur, jlrec);
+  g_slice_free (NcmSFSBesselRecur, jlrec);
   if (free_grid)
     ncm_grid_free (x_grid, TRUE);
 }
 
 /**
  * ncm_sf_sbessel_recur_next:
- * @jlrec: a #NcSFSBesselRecur
+ * @jlrec: a #NcmSFSBesselRecur
  *
  * FIXME
 */
 void
-ncm_sf_sbessel_recur_next (NcSFSBesselRecur *jlrec)
+ncm_sf_sbessel_recur_next (NcmSFSBesselRecur *jlrec)
 {
   NcmGrid *x_grid = jlrec->x_grid;
   gint i;
@@ -130,12 +130,12 @@ ncm_sf_sbessel_recur_next (NcSFSBesselRecur *jlrec)
 
 /**
  * ncm_sf_sbessel_recur_previous:
- * @jlrec: a #NcSFSBesselRecur
+ * @jlrec: a #NcmSFSBesselRecur
  *
  * FIXME
 */
 void
-ncm_sf_sbessel_recur_previous (NcSFSBesselRecur *jlrec)
+ncm_sf_sbessel_recur_previous (NcmSFSBesselRecur *jlrec)
 {
   NcmGrid *x_grid = jlrec->x_grid;
   gint i;
@@ -155,13 +155,13 @@ ncm_sf_sbessel_recur_previous (NcSFSBesselRecur *jlrec)
 
 /**
  * ncm_sf_sbessel_recur_goto:
- * @jlrec: a #NcSFSBesselRecur
+ * @jlrec: a #NcmSFSBesselRecur
  * @l: FIXME
  *
  * FIXME
 */
 void
-ncm_sf_sbessel_recur_goto (NcSFSBesselRecur *jlrec, glong l)
+ncm_sf_sbessel_recur_goto (NcmSFSBesselRecur *jlrec, glong l)
 {
   glong sign = GSL_SIGN (l - jlrec->l);
   glong sub = labs(l - jlrec->l);
@@ -191,7 +191,7 @@ _taylor_jl (const glong l, const gdouble x, const gdouble x2, const gdouble x3, 
 
 /**
  * ncm_sf_sbessel_taylor_coeff_jl_jlp1:
- * @jlrec: a #NcSFSBesselRecur
+ * @jlrec: a #NcmSFSBesselRecur
  * @n: FIXME
  * @djl: FIXME
  * @djlp1: FIXME
@@ -199,7 +199,7 @@ _taylor_jl (const glong l, const gdouble x, const gdouble x2, const gdouble x3, 
  * FIXME
 */
 void
-ncm_sf_sbessel_taylor_coeff_jl_jlp1 (NcSFSBesselRecur *jlrec, guint n, gdouble *djl, gdouble *djlp1)
+ncm_sf_sbessel_taylor_coeff_jl_jlp1 (NcmSFSBesselRecur *jlrec, guint n, gdouble *djl, gdouble *djlp1)
 {
   if (jlrec->x_grid->data[n] != 0.0)
   {
@@ -266,13 +266,13 @@ ncm_sf_sbessel_taylor_coeff_jl_jlp1 (NcSFSBesselRecur *jlrec, guint n, gdouble *
 
 /**
  * ncm_sf_sbessel_recur_write: (skip)
- * @jlrec: a #NcSFSBesselRecur
+ * @jlrec: a #NcmSFSBesselRecur
  * @f: FIXME
  *
  * FIXME
 */
 void
-ncm_sf_sbessel_recur_write (NcSFSBesselRecur *jlrec, FILE *f)
+ncm_sf_sbessel_recur_write (NcmSFSBesselRecur *jlrec, FILE *f)
 {
   gint i;
   NCM_WRITE_INT32(f, jlrec->l);
@@ -291,12 +291,12 @@ ncm_sf_sbessel_recur_write (NcSFSBesselRecur *jlrec, FILE *f)
  *
  * Returns: FIXME
 */
-NcSFSBesselRecur *
+NcmSFSBesselRecur *
 ncm_sf_sbessel_recur_read (FILE *f)
 {
   gint i;
   gint32 l;
-  NcSFSBesselRecur *jlrec;
+  NcmSFSBesselRecur *jlrec;
   NcmGrid *x_grid;
 
   NCM_READ_INT32(f, l);

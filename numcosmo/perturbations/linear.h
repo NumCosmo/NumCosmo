@@ -122,6 +122,14 @@ struct _NcLinearPert
 
 typedef struct _NcLinearPertOdeSolver NcLinearPertOdeSolver;
 
+typedef gpointer (*NcLinearPertCreate) (NcLinearPert *pert);
+typedef void (*NcLinearPertConf) (NcLinearPert *pert);
+typedef gboolean (*NcLinearPertEvol) (NcLinearPert *pert, gdouble g);
+typedef gboolean (*NcLinearPertTest) (NcLinearPert *pert);
+typedef void (*NcLinearPertSources) (NcLinearPert *pert, gdouble *S0, gdouble *S1, gdouble *S2);
+typedef gdouble (*NcLinearPertGet) (NcLinearPert *pert);
+typedef gdouble (*NcLinearPertGetN) (NcLinearPert *pert, guint n);
+
 /**
  * NcLinearPertOdeSolver:
  *
@@ -130,27 +138,27 @@ typedef struct _NcLinearPertOdeSolver NcLinearPertOdeSolver;
 struct _NcLinearPertOdeSolver
 {
   /*< private >*/
-  gpointer (*create) (NcLinearPert *pert);
-  void (*init) (NcLinearPert *pert);
-  void (*set_opts) (NcLinearPert *pert);
-  void (*reset) (NcLinearPert *pert);
-  gboolean (*evol_step) (NcLinearPert *pert, gdouble g);
-  gboolean (*evol) (NcLinearPert *pert, gdouble g);
-  gboolean (*update_los) (NcLinearPert *pert);
-  void (*get_sources) (NcLinearPert *pert, gdouble *S0, gdouble *S1, gdouble *S2);
-  void (*free) (NcLinearPert *pert);
-  void (*print_stats) (NcLinearPert *pert);
-  gdouble (*get_z) (NcLinearPert *pert);
-  gdouble (*get_phi) (NcLinearPert *pert);
-  gdouble (*get_c0) (NcLinearPert *pert);
-  gdouble (*get_b0) (NcLinearPert *pert);
-  gdouble (*get_c1) (NcLinearPert *pert);
-  gdouble (*get_b1) (NcLinearPert *pert);
-  gdouble (*get) (NcLinearPert *pert, guint n);
-  gdouble (*get_theta) (NcLinearPert *pert, gint n);
-  gdouble (*get_theta_p) (NcLinearPert *pert, gint n);
-  gdouble (*get_los_theta) (NcLinearPert *pert, gint n);
-	void (*print_all) (NcLinearPert *pert);
+  NcLinearPertCreate create;
+  NcLinearPertConf init;
+  NcLinearPertConf set_opts;
+  NcLinearPertConf reset;
+  NcLinearPertEvol evol_step;
+  NcLinearPertEvol evol;
+  NcLinearPertTest update_los;
+  NcLinearPertSources get_sources;
+  NcLinearPertConf free;
+  NcLinearPertConf print_stats;
+  NcLinearPertGet get_z;
+  NcLinearPertGet get_phi;
+  NcLinearPertGet get_c0;
+  NcLinearPertGet get_b0;
+  NcLinearPertGet get_c1;
+  NcLinearPertGet get_b1;
+  NcLinearPertGetN get;
+  NcLinearPertGetN get_theta;
+  NcLinearPertGetN get_theta_p;
+  NcLinearPertGetN get_los_theta;
+	NcLinearPertConf print_all;
   gpointer data;
 };
 

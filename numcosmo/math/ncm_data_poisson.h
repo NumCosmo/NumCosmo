@@ -78,9 +78,9 @@ struct _NcmDataPoisson
 
 GType ncm_data_poisson_get_type (void) G_GNUC_CONST;
 
-void nc_data_poisson_init_from_vector (NcmData *data, NcmVector *nodes, gsl_vector_ulong *N);
-void nc_data_poisson_init_from_histogram (NcmData *data, gsl_histogram *h);
-void nc_data_poisson_init_zero (NcmData *data, NcmVector *nodes);
+void ncm_data_poisson_init_from_vector (NcmData *data, NcmVector *nodes, gsl_vector_ulong *N);
+void ncm_data_poisson_init_from_histogram (NcmData *data, gsl_histogram *h);
+void ncm_data_poisson_init_zero (NcmData *data, NcmVector *nodes);
 
 G_END_DECLS
 

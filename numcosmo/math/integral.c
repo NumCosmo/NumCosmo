@@ -47,7 +47,7 @@
 static gpointer
 _integral_ws_alloc (void)
 {
-  return gsl_integration_workspace_alloc (NC_INT_PARTITION);
+  return gsl_integration_workspace_alloc (NCM_INTEGRAL_PARTITION);
 }
 
 static void
@@ -57,7 +57,7 @@ _integral_ws_free (gpointer p)
 }
 
 /**
- * nc_integral_get_workspace: (skip)
+ * ncm_integral_get_workspace: (skip)
  *
  * This function provides a workspace to be used by numerical integration
  * functions of GSL. It keeps a internal pool of workspaces and allocate a
@@ -68,7 +68,7 @@ _integral_ws_free (gpointer p)
  * Returns: a pointer to #gsl_integration_workspace structure.
 */
 gsl_integration_workspace **
-nc_integral_get_workspace ()
+ncm_integral_get_workspace ()
 {
   _NCM_STATIC_MUTEX_DECL (create_lock);
   static NcmMemoryPool *mp = NULL;
@@ -82,7 +82,7 @@ nc_integral_get_workspace ()
 }
 
 /**
- * nc_integral_locked_a_b: (skip)
+ * ncm_integral_locked_a_b: (skip)
  * @F: a gsl_function wich is the integrand.
  * @a: lower integration limit.
  * @b: upper integration limit.
@@ -97,10 +97,10 @@ nc_integral_get_workspace ()
  * Returns: the error code returned by gsl_integration_qag.
  */
 gint
-nc_integral_locked_a_b (gsl_function *F, gdouble a, gdouble b, gdouble abstol, gdouble reltol, gdouble *result, gdouble *error)
+ncm_integral_locked_a_b (gsl_function *F, gdouble a, gdouble b, gdouble abstol, gdouble reltol, gdouble *result, gdouble *error)
 {
-  gsl_integration_workspace **w = nc_integral_get_workspace();
-  gint error_code = gsl_integration_qag (F, a, b, abstol, reltol, NC_INT_PARTITION, 6, *w, result, error);
+  gsl_integration_workspace **w = ncm_integral_get_workspace();
+  gint error_code = gsl_integration_qag (F, a, b, abstol, reltol, NCM_INTEGRAL_PARTITION, 6, *w, result, error);
 
   ncm_memory_pool_return (w);
   if (error_code != GSL_SUCCESS && error_code != GSL_EROUND)
@@ -109,7 +109,7 @@ nc_integral_locked_a_b (gsl_function *F, gdouble a, gdouble b, gdouble abstol, g
 }
 
 /**
- * nc_integral_locked_a_inf: (skip)
+ * ncm_integral_locked_a_inf: (skip)
  * @F: a gsl_function wich is the integrand.
  * @a: lower integration limit.
  * @abstol: absolute tolerance.
@@ -123,22 +123,22 @@ nc_integral_locked_a_b (gsl_function *F, gdouble a, gdouble b, gdouble abstol, g
  * Returns: the error code returned by gsl_integration_qagiu.
  */
 gint
-nc_integral_locked_a_inf (gsl_function *F, gdouble a, gdouble abstol, gdouble reltol, gdouble *result, gdouble *error)
+ncm_integral_locked_a_inf (gsl_function *F, gdouble a, gdouble abstol, gdouble reltol, gdouble *result, gdouble *error)
 {
-  gsl_integration_workspace **w = nc_integral_get_workspace ();
-  gint error_code = gsl_integration_qagiu (F, a, abstol, reltol, NC_INT_PARTITION, *w, result, error);
+  gsl_integration_workspace **w = ncm_integral_get_workspace ();
+  gint error_code = gsl_integration_qagiu (F, a, abstol, reltol, NCM_INTEGRAL_PARTITION, *w, result, error);
   ncm_memory_pool_return (w);
   if (error_code != GSL_SUCCESS && error_code != GSL_EROUND)
   {
-    g_warning ("nc_integral_locked_a_inf: %s", gsl_strerror (error_code));
+    g_warning ("ncm_integral_locked_a_inf: %s", gsl_strerror (error_code));
     *result = GSL_POSINF;
   }
   return error_code;
 }
 
 /**
- * nc_integral_cached_0_x: (skip)
- * @cache: a pointer to #NcFunctionCache.
+ * ncm_integral_cached_0_x: (skip)
+ * @cache: a pointer to #NcmFunctionCache.
  * @F: a gsl_function wich is the integrand.
  * @x: upper integration limit.
  * @result: a pointer to a gdouble in which the function stores the result.
@@ -151,7 +151,7 @@ nc_integral_locked_a_inf (gsl_function *F, gdouble a, gdouble abstol, gdouble re
  * Returns: the error code returned by gsl_integration_qag.
  */
 gint
-nc_integral_cached_0_x (NcFunctionCache *cache, gsl_function *F, gdouble x, gdouble *result, gdouble *error)
+ncm_integral_cached_0_x (NcmFunctionCache *cache, gsl_function *F, gdouble x, gdouble *result, gdouble *error)
 {
   gdouble x_found = 0.0;
 //  gdouble p_result = 0.0;
@@ -159,29 +159,29 @@ nc_integral_cached_0_x (NcFunctionCache *cache, gsl_function *F, gdouble x, gdou
   gint error_code = GSL_SUCCESS;
 
 //printf ("[%p]SEARCH! -> %g\n", g_thread_self (), x);
-  if (nc_function_cache_get_near (cache, x, &x_found, &p_result, NC_FUNCTION_CACHE_SEARCH_BOTH))
+  if (ncm_function_cache_get_near (cache, x, &x_found, &p_result, NC_FUNCTION_CACHE_SEARCH_BOTH))
   {
 //printf ("[%p]Found out %g %g [%p]\n", g_thread_self (), x_found, gsl_vector_get (p_result, 0), p_result);
     if (x == x_found)
       *result = gsl_vector_get (p_result, 0);
     else
     {
-      error_code = nc_integral_locked_a_b (F, x_found, x, 0.0, NC_INT_ERROR, result, error);
+      error_code = ncm_integral_locked_a_b (F, x_found, x, 0.0, NCM_INTEGRAL_ERROR, result, error);
       *result += gsl_vector_get (p_result, 0);
-      nc_function_cache_insert (cache, x, *result);
+      ncm_function_cache_insert (cache, x, *result);
     }
   }
   else
   {
-    error_code = nc_integral_locked_a_b (F, 0.0, x, 0.0, NC_INT_ERROR, result, error);
-    nc_function_cache_insert (cache, x, *result);
+    error_code = ncm_integral_locked_a_b (F, 0.0, x, 0.0, NCM_INTEGRAL_ERROR, result, error);
+    ncm_function_cache_insert (cache, x, *result);
   }
   return error_code;
 }
 
 /**
- * nc_integral_cached_x_inf: (skip)
- * @cache: a pointer to #NcFunctionCache.
+ * ncm_integral_cached_x_inf: (skip)
+ * @cache: a pointer to #NcmFunctionCache.
  * @F: a gsl_function wich is the integrand.
  * @x: lower integration limit.
  * @result: a pointer to a gdouble in which the function stores the result.
@@ -194,35 +194,35 @@ nc_integral_cached_0_x (NcFunctionCache *cache, gsl_function *F, gdouble x, gdou
  * Returns: the error code returned by gsl_integration_qagiu.
  */
 gint
-nc_integral_cached_x_inf (NcFunctionCache *cache, gsl_function *F, gdouble x, gdouble *result, gdouble *error)
+ncm_integral_cached_x_inf (NcmFunctionCache *cache, gsl_function *F, gdouble x, gdouble *result, gdouble *error)
 {
   gdouble x_found = 0.0;
 //  gdouble p_result = 0.0;
   gsl_vector *p_result;
   gint error_code = GSL_SUCCESS;
 
-  if (nc_function_cache_get_near (cache, x, &x_found, &p_result, NC_FUNCTION_CACHE_SEARCH_BOTH))
+  if (ncm_function_cache_get_near (cache, x, &x_found, &p_result, NC_FUNCTION_CACHE_SEARCH_BOTH))
   {
     if (x == x_found)
       *result = gsl_vector_get(p_result, 0);
     else
     {
-      error_code = nc_integral_locked_a_b (F, x, x_found, cache->abstol, cache->reltol, result, error);
+      error_code = ncm_integral_locked_a_b (F, x, x_found, cache->abstol, cache->reltol, result, error);
       *result += gsl_vector_get(p_result, 0);
-      nc_function_cache_insert (cache, x, *result);
+      ncm_function_cache_insert (cache, x, *result);
     }
   }
   else
   {
-    error_code = nc_integral_locked_a_inf (F, x, cache->abstol, cache->reltol, result, error);
-    nc_function_cache_insert (cache, x, *result);
+    error_code = ncm_integral_locked_a_inf (F, x, cache->abstol, cache->reltol, result, error);
+    ncm_function_cache_insert (cache, x, *result);
   }
   return error_code;
 }
 
 typedef struct _iCLIntegrand2dim
 {
-	NcIntegrand2dim *integ;
+	NcmIntegrand2dim *integ;
 	gdouble xi;
 	gdouble xf;
 	gdouble yi;
@@ -241,7 +241,7 @@ _integrand_2dim (const gint *ndim, const gdouble x[], const gint *ncomp, gdouble
 
 /**
  * ncm_integrate_2dim:
- * @integ: a pointer to #NcIntegrand2dim.
+ * @integ: a pointer to #NcmIntegrand2dim.
  * @xi: gbouble which is the lower integration limit of variable x.
  * @yi: gbouble which is the lower integration limit of variable y.
  * @xf: gbouble which is the upper integration limit of variable x.
@@ -256,7 +256,7 @@ _integrand_2dim (const gint *ndim, const gdouble x[], const gint *ncomp, gdouble
  * Returns: a gboolean
  */
 gboolean
-ncm_integrate_2dim (NcIntegrand2dim *integ, gdouble xi, gdouble yi, gdouble xf, gdouble yf, gdouble epsrel, gdouble epsabs, gdouble *result, gdouble *error)
+ncm_integrate_2dim (NcmIntegrand2dim *integ, gdouble xi, gdouble yi, gdouble xf, gdouble yf, gdouble epsrel, gdouble epsabs, gdouble *result, gdouble *error)
 {
   gboolean ret = FALSE;
 #ifdef HAVE_LIBCUBA
@@ -282,23 +282,23 @@ ncm_integrate_2dim (NcIntegrand2dim *integ, gdouble xi, gdouble yi, gdouble xf, 
 }
 
 /**
- * nc_integral_fixed_new: (skip)
+ * ncm_integral_fixed_new: (skip)
  * @n_nodes: number of nodes in the full interval.
  * @rule_n: order of the Gauss-Legendre integration rule to be applied in each interval.
  * @xl: the interval lower limit.
  * @xu: the interval upper limit.
  *
- * This function prepares the #NcIntegralFixed with a grid
+ * This function prepares the #NcmIntegralFixed with a grid
  * with n_nodes - 1 intervals beteween xl and xu. In each interval it uses
  * a fixed order (rule_n) Gauss-Legendre integration rule to determine the
  * interval inner points. This results in a grid with (n_nodes - 1) * rule_n points.
  *
- * Returns: a pointer to the newly created #NcIntegralFixed structure.
+ * Returns: a pointer to the newly created #NcmIntegralFixed structure.
 */
-NcIntegralFixed *
-nc_integral_fixed_new (gulong n_nodes, gulong rule_n, gdouble xl, gdouble xu)
+NcmIntegralFixed *
+ncm_integral_fixed_new (gulong n_nodes, gulong rule_n, gdouble xl, gdouble xu)
 {
-  NcIntegralFixed *intf = g_slice_new (NcIntegralFixed);
+  NcmIntegralFixed *intf = g_slice_new (NcmIntegralFixed);
   intf->n_nodes = n_nodes;
   intf->rule_n = rule_n;
   intf->int_nodes = g_slice_alloc (sizeof(gdouble) * n_nodes * rule_n);
@@ -308,41 +308,41 @@ nc_integral_fixed_new (gulong n_nodes, gulong rule_n, gdouble xl, gdouble xu)
 #ifdef HAVE_GSL_GLF
   intf->glt = gsl_integration_glfixed_table_alloc (rule_n);
 #else
-  g_error ("NcIntegralFixed: Needs gsl version > 1.4\n");
+  g_error ("NcmIntegralFixed: Needs gsl version > 1.4\n");
 #endif /* HAVE_GSL_GLF */
 
   return intf;
 }
 
 /**
- * nc_integral_fixed_free:
- * @intf: a pointer to #NcIntegralFixed.
+ * ncm_integral_fixed_free:
+ * @intf: a pointer to #NcmIntegralFixed.
  *
- * This function frees the memory associated to #NcIntegralFixed.
+ * This function frees the memory associated to #NcmIntegralFixed.
  *
 */
 void
-nc_integral_fixed_free (NcIntegralFixed *intf)
+ncm_integral_fixed_free (NcmIntegralFixed *intf)
 {
   g_slice_free1 (sizeof(gdouble) * intf->n_nodes * intf->rule_n, intf->int_nodes);
 #ifdef HAVE_GSL_GLF
   gsl_integration_glfixed_table_free (intf->glt);
 #else
-  g_error ("nc_integral_fixed_free: Needs gsl version > 1.4\n");
+  g_error ("ncm_integral_fixed_free: Needs gsl version > 1.4\n");
 #endif /* HAVE_GSL_GLF */
-  g_slice_free (NcIntegralFixed, intf);
+  g_slice_free (NcmIntegralFixed, intf);
 }
 
 /**
- * nc_integral_fixed_calc_nodes: (skip)
- * @intf: a pointer to #NcIntegralFixed.
+ * ncm_integral_fixed_calc_nodes: (skip)
+ * @intf: a pointer to #NcmIntegralFixed.
  * @F: a pointer to a gsl_function.
  *
  * This function FIXME
  *
 */
 void
-nc_integral_fixed_calc_nodes (NcIntegralFixed *intf, gsl_function *F)
+ncm_integral_fixed_calc_nodes (NcmIntegralFixed *intf, gsl_function *F)
 {
 #ifdef HAVE_GSL_GLF
   const gulong r2 = intf->rule_n / 2;
@@ -380,20 +380,20 @@ nc_integral_fixed_calc_nodes (NcIntegralFixed *intf, gsl_function *F)
     }
   }
 #else
-  g_error ("nc_integral_fixed_calc_nodes: Needs gsl version > 1.4\n");
+  g_error ("ncm_integral_fixed_calc_nodes: Needs gsl version > 1.4\n");
 #endif /* HAVE_GSL_GLF */
 }
 
 /**
- * nc_integral_fixed_nodes_eval:
- * @intf: a pointer to #NcIntegralFixed.
+ * ncm_integral_fixed_nodes_eval:
+ * @intf: a pointer to #NcmIntegralFixed.
  *
  * This function
  *
  * Returns: FIXME
 */
 gdouble
-nc_integral_fixed_nodes_eval (NcIntegralFixed *intf)
+ncm_integral_fixed_nodes_eval (NcmIntegralFixed *intf)
 {
   glong i;
   glong maxi = (intf->n_nodes - 1) * intf->rule_n;
@@ -406,8 +406,8 @@ nc_integral_fixed_nodes_eval (NcIntegralFixed *intf)
 }
 
 /**
- * nc_integral_fixed_integ_mult: (skip)
- * @intf: a pointer to #NcIntegralFixed.
+ * ncm_integral_fixed_integ_mult: (skip)
+ * @intf: a pointer to #NcmIntegralFixed.
  * @F: a pointer to gsl_function.
  *
  * This function
@@ -415,7 +415,7 @@ nc_integral_fixed_nodes_eval (NcIntegralFixed *intf)
  * Returns: FIXME
 */
 gdouble
-nc_integral_fixed_integ_mult (NcIntegralFixed *intf, gsl_function *F)
+ncm_integral_fixed_integ_mult (NcmIntegralFixed *intf, gsl_function *F)
 {
 #ifdef HAVE_GSL_GLF
   const gulong r2 = intf->rule_n / 2;
@@ -456,14 +456,14 @@ nc_integral_fixed_integ_mult (NcIntegralFixed *intf, gsl_function *F)
 
   return res * delta_x * 0.5;
 #else
-  g_error ("nc_integral_fixed_integ_mult: Needs gsl version > 1.4\n");
+  g_error ("ncm_integral_fixed_integ_mult: Needs gsl version > 1.4\n");
   return 0.0;
 #endif /* HAVE_GSL_GLF */
 }
 
 /**
- * nc_integral_fixed_integ_posdef_mult: (skip)
- * @intf: a pointer to #NcIntegralFixed.
+ * ncm_integral_fixed_integ_posdef_mult: (skip)
+ * @intf: a pointer to #NcmIntegralFixed.
  * @F: a pointer to gsl_function.
  * @max: FIXME
  * @reltol: FIXME
@@ -473,7 +473,7 @@ nc_integral_fixed_integ_mult (NcIntegralFixed *intf, gsl_function *F)
  * Returns: FIXME
 */
 gdouble
-nc_integral_fixed_integ_posdef_mult (NcIntegralFixed *intf, gsl_function *F, gdouble max, gdouble reltol)
+ncm_integral_fixed_integ_posdef_mult (NcmIntegralFixed *intf, gsl_function *F, gdouble max, gdouble reltol)
 {
 #ifdef HAVE_GSL_GLF
   const gulong r2 = intf->rule_n / 2;
@@ -569,7 +569,7 @@ nc_integral_fixed_integ_posdef_mult (NcIntegralFixed *intf, gsl_function *F, gdo
 
   return res * delta_x * 0.5;
 #else
-  g_error ("nc_integral_fixed_integ_posdef_mult: Needs gsl version > 1.4\n");
+  g_error ("ncm_integral_fixed_integ_posdef_mult: Needs gsl version > 1.4\n");
   return 0.0;
 #endif /* HAVE_GSL_GLF */
 }

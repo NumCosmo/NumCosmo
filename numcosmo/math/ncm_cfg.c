@@ -31,14 +31,6 @@
  * 
  */
 
-/**
- * SECTION:nc_macros
- * @title: Library Utilities Macros
- * @short_description: General purpose macros
- *
- * FIXME
- */
-
 #ifdef HAVE_CONFIG_H
 #  include "config.h"
 #endif /* HAVE_CONFIG_H */
@@ -1307,7 +1299,7 @@ ncm_cfg_get_default_sqlite3 (void)
   static sqlite3 *db = NULL;
   if (db == NULL)
   {
-    gchar *filename = g_build_filename (PACKAGE_DATA_DIR "/data", NC_CFG_DEFAULT_SQLITE3_FILENAME, NULL);
+    gchar *filename = g_build_filename (PACKAGE_DATA_DIR "/data", NCM_CFG_DEFAULT_SQLITE3_FILENAME, NULL);
     gint ret;
 
     if (!g_file_test (filename, G_FILE_TEST_EXISTS))
@@ -1779,8 +1771,10 @@ ncm_cfg_serialize_to_variant (GObject *obj)
   }
   else
   {
-    GVariantBuilder *b = g_variant_builder_new (G_VARIANT_TYPE ("a{sv}"));
+    GVariantBuilder b;
     GVariant *params, *ser_var;
+
+    g_variant_builder_init (&b, G_VARIANT_TYPE ("a{sv}"));
 
     for (i = 0; i < n_properties; i++)
     {
@@ -1800,14 +1794,14 @@ ncm_cfg_serialize_to_variant (GObject *obj)
         continue;
       }
 
-      g_variant_builder_add (b, "{sv}", prop[i]->name, var);
+      g_variant_builder_add (&b, "{sv}", prop[i]->name, var);
 
       g_variant_unref (var);
       g_value_unset (&val);
     }
 
-    params = g_variant_builder_end (b);
-    g_variant_builder_unref (b);
+    params = g_variant_builder_end (&b);
+
     g_free (prop);
 
     ser_var = g_variant_ref_sink (g_variant_new ("{s@a{sv}}", obj_name, params));

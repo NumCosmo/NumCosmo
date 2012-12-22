@@ -106,7 +106,7 @@ NcmData *nc_data_cluster_ncount_binned_new (NcClusterAbundance *cad);
 void nc_data_cluster_ncount_binned_init_from_text_file_gkey (NcmData *data, gboolean obs, gchar *filename);
 void nc_data_cluster_ncount_binned_init_from_sampling (NcmData *data, NcmMSet *mset, NcmVector *nodes, gboolean obs, gdouble area_survey, gdouble lnMi, gdouble lnMf, gdouble photoz_sigma0, gdouble photoz_bias, gdouble lnM_sigma0, gdouble lnM_bias);
 void nc_data_cluster_ncount_binned_save (NcmData *data, gchar *filename);
-NcmMSetFunc *nc_data_cluster_ncount_binned_new_function (NcClusterAbundance *cad);
+NcmMSetFunc *nc_data_cluster_ncount_binned_create_func (NcClusterAbundance *cad);
 
 NcmData *nc_data_cluster_ncount_binned_lnM_z_new (NcClusterAbundance *cad);
 void nc_data_cluster_ncount_true_data (NcmData *data, gboolean use_true_data);

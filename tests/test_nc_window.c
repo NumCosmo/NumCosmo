@@ -8,11 +8,11 @@
 /*
  * numcosmo
  * Copyright (C) Mariana Penna Lima 2012 <pennalima@gmail.com>
- * numcosmo is free software: you can redistribute it and/or modify it
+   * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- *
+   *
  * numcosmo is distributed in the hope that it will be useful, but
  * WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
@@ -83,7 +83,11 @@ test_nc_window_new_tophat (void)
 
   test_nc_window_free ();
 
+#if !((GLIB_MAJOR_VERSION == 2) && (GLIB_MINOR_VERSION < 30))
   wf = nc_window_new_from_name ("NcWindowTophat");
+#else
+  wf = nc_window_tophat_new ();
+#endif
   g_assert (NC_IS_WINDOW (wf));
   g_assert (NC_IS_WINDOW_TOPHAT (wf));  
 }
@@ -97,7 +101,11 @@ test_nc_window_new_gaussian (void)
 
   test_nc_window_free();
 
+#if !((GLIB_MAJOR_VERSION == 2) && (GLIB_MINOR_VERSION < 30))
   wf = nc_window_new_from_name ("NcWindowGaussian");
+#else
+  wf = nc_window_gaussian_new ();
+#endif
   g_assert (NC_IS_WINDOW (wf));
   g_assert (NC_IS_WINDOW_GAUSSIAN (wf));  
 }
@@ -108,8 +116,8 @@ test_nc_window_free (void)
   nc_window_free (wf);
   if (g_test_trap_fork (0, G_TEST_TRAP_SILENCE_STDOUT | G_TEST_TRAP_SILENCE_STDERR))
   {
-	nc_window_free (wf);
-	exit (0);
+    nc_window_free (wf);
+    exit (0);
   }
   g_test_trap_assert_failed ();
   wf = NULL;
@@ -121,22 +129,22 @@ test_nc_window_eval_fourier_tophat (void)
   guint i, j;
 
   {
-	gdouble w1 = nc_window_eval_fourier (wf, 0.0, 5.0);
-	g_assert (w1 == 1.0);
+    gdouble w1 = nc_window_eval_fourier (wf, 0.0, 5.0);
+    ncm_assert_cmpdouble (w1, ==, 1.0);
   }
 
   for (j = 0; j < 30; j++)
   {
-	gdouble R = 2.0 + 15.0 / 29.0 * j;
-	for (i = 0; i < 50; i++)
-	{
-	  gdouble k = _NC_WINDOW_TEST_KMIN + (_NC_WINDOW_TEST_KMAX - _NC_WINDOW_TEST_KMIN) / (49.0) * i;
-	  gdouble kR = k * R;
-	  gdouble w1 = nc_window_eval_fourier (wf, k, R);
-	  gdouble w2 = 3.0 * gsl_sf_bessel_j1 (kR) / kR;
+    gdouble R = 2.0 + 15.0 / 29.0 * j;
+    for (i = 0; i < 50; i++)
+    {
+      gdouble k = _NC_WINDOW_TEST_KMIN + (_NC_WINDOW_TEST_KMAX - _NC_WINDOW_TEST_KMIN) / (49.0) * i;
+      gdouble kR = k * R;
+      gdouble w1 = nc_window_eval_fourier (wf, k, R);
+      gdouble w2 = 3.0 * gsl_sf_bessel_j1 (kR) / kR;
 
-	  g_assert (w1 == w2);
-	}
+      ncm_assert_cmpdouble_e (w1, ==, w2, 1e-8);
+    }
   }
 }
 
@@ -147,15 +155,15 @@ test_nc_window_deriv_fourier_tophat (void)
 
   for (j = 0; j < 30; j++)
   {
-	gdouble R = 2.0 + 15.0 / 29.0 * j;
-	for (i = 0; i < 50; i++)
-	{
-	  gdouble k = _NC_WINDOW_TEST_KMIN + (_NC_WINDOW_TEST_KMAX - _NC_WINDOW_TEST_KMIN) / (49.0) * i;
-	  gdouble w1 = nc_window_deriv_fourier (wf, k, R);
-	  gdouble w2 = -3.0 * gsl_sf_bessel_j2 (k * R) / R;
-	  
-	  g_assert (w1 == w2);
-	}
+    gdouble R = 2.0 + 15.0 / 29.0 * j;
+    for (i = 0; i < 50; i++)
+    {
+      gdouble k = _NC_WINDOW_TEST_KMIN + (_NC_WINDOW_TEST_KMAX - _NC_WINDOW_TEST_KMIN) / (49.0) * i;
+      gdouble w1 = nc_window_deriv_fourier (wf, k, R);
+      gdouble w2 = -3.0 * gsl_sf_bessel_j2 (k * R) / R;
+
+      ncm_assert_cmpdouble_e (w1, ==, w2, 1e-11);
+    }
   }
 }
 
@@ -166,20 +174,20 @@ test_nc_window_eval_real_tophat (void)
 
   for (j = 0; j < 10; j++)
   {
-	gdouble R = 2.0 + 15.0 / 9.0 * j;
-	gdouble R3 = R * R * R;
-	for (i = 0; i < 10; i++)
-	{
-	  gdouble r = _NC_WINDOW_TEST_XMIN + (_NC_WINDOW_TEST_XMAX - _NC_WINDOW_TEST_XMIN) / (9.0) * i;
-	  gdouble w1 = nc_window_eval_realspace (wf, r, R);
-	  gdouble w2;
-	  if (r <= R)
-		w2 = 3.0 / (4.0 * M_PI * R3);
+    gdouble R = 2.0 + 15.0 / 9.0 * j;
+    gdouble R3 = R * R * R;
+    for (i = 0; i < 10; i++)
+    {
+      gdouble r = _NC_WINDOW_TEST_XMIN + (_NC_WINDOW_TEST_XMAX - _NC_WINDOW_TEST_XMIN) / (9.0) * i;
+      gdouble w1 = nc_window_eval_realspace (wf, r, R);
+      gdouble w2;
+      if (r <= R)
+        w2 = 3.0 / (4.0 * M_PI * R3);
       else
-		w2 = 0.0;
-	  
-	  g_assert (w1 == w2);
-	}
+        w2 = 0.0;
+
+      ncm_assert_cmpdouble_e (w1, ==, w2, 1e-11);
+    }
   }
 }
 
@@ -190,17 +198,17 @@ test_nc_window_eval_fourier_gaussian (void)
 
   for (j = 0; j < 30; j++)
   {
-	gdouble R = 2.0 + 15.0 / 29.0 * j;
-	for (i = 0; i < 50; i++)
-	{
-	  gdouble k = _NC_WINDOW_TEST_KMIN + (_NC_WINDOW_TEST_KMAX - _NC_WINDOW_TEST_KMIN) / (49.0) * i;
-	  gdouble kR = k * R;
-	  gdouble kR2 = kR * kR;
-	  gdouble w1 = nc_window_eval_fourier (wf, k, R);
-	  gdouble w2 = exp (-kR2 / 2.0);
+    gdouble R = 2.0 + 15.0 / 29.0 * j;
+    for (i = 0; i < 50; i++)
+    {
+      gdouble k = _NC_WINDOW_TEST_KMIN + (_NC_WINDOW_TEST_KMAX - _NC_WINDOW_TEST_KMIN) / (49.0) * i;
+      gdouble kR = k * R;
+      gdouble kR2 = kR * kR;
+      gdouble w1 = nc_window_eval_fourier (wf, k, R);
+      gdouble w2 = exp (-kR2 / 2.0);
 
-	  g_assert (w1 == w2);
-	}
+      ncm_assert_cmpdouble_e (w1, ==, w2, 1e-11);
+    }
   }
 }
 
@@ -211,17 +219,17 @@ test_nc_window_deriv_fourier_gaussian (void)
 
   for (j = 0; j < 20; j++)
   {
-	gdouble R = 2.0 + 15.0 / 19.0 * j;
-	for (i = 0; i < 20; i++)
-	{
-	  gdouble k = _NC_WINDOW_TEST_KMIN + (_NC_WINDOW_TEST_KMAX - _NC_WINDOW_TEST_KMIN) / (19.0) * i;
-	  gdouble k2R = k * k * R; 
-	  gdouble kR2 = k2R * R;
-	  gdouble w1 = nc_window_deriv_fourier (wf, k, R);
-	  gdouble w2 = -k2R * exp (-kR2 / 2.0);
+    gdouble R = 2.0 + 15.0 / 19.0 * j;
+    for (i = 0; i < 20; i++)
+    {
+      gdouble k = _NC_WINDOW_TEST_KMIN + (_NC_WINDOW_TEST_KMAX - _NC_WINDOW_TEST_KMIN) / (19.0) * i;
+      gdouble k2R = k * k * R; 
+      gdouble kR2 = k2R * R;
+      gdouble w1 = nc_window_deriv_fourier (wf, k, R);
+      gdouble w2 = -k2R * exp (-kR2 / 2.0);
 
-	  g_assert (1.0e-15 > (w1 != 0.0 ? fabs ((w2 - w1) / w1) : fabs (w2)));
-	}
+      ncm_assert_cmpdouble_e (w1, ==, w2, 1.0e-15);
+    }
   }
 }
 
@@ -232,15 +240,15 @@ test_nc_window_eval_real_gaussian (void)
 
   for (j = 0; j < 30; j++)
   {
-	gdouble R = 2.0 + 15.0 / 29.0 * j;
-	for (i = 0; i < 50; i++)
-	{
-	  gdouble r = _NC_WINDOW_TEST_XMIN + (_NC_WINDOW_TEST_XMAX - _NC_WINDOW_TEST_XMIN) / (49.0) * i;
-	  gdouble r_R2 = r * r / (R * R);
-	  gdouble w1 = nc_window_eval_realspace (wf, r, R);
-	  gdouble w2 = 1.0 / gsl_pow_3 (sqrt (2 * M_PI * R * R)) * exp (-r_R2 / 2.0);
+    gdouble R = 2.0 + 15.0 / 29.0 * j;
+    for (i = 0; i < 50; i++)
+    {
+      gdouble r = _NC_WINDOW_TEST_XMIN + (_NC_WINDOW_TEST_XMAX - _NC_WINDOW_TEST_XMIN) / (49.0) * i;
+      gdouble r_R2 = r * r / (R * R);
+      gdouble w1 = nc_window_eval_realspace (wf, r, R);
+      gdouble w2 = 1.0 / gsl_pow_3 (sqrt (2 * M_PI * R * R)) * exp (-r_R2 / 2.0);
 
-	  g_assert (w1 == w2);
-	}
+      ncm_assert_cmpdouble_e (w1, ==, w2, 1e-11);
+    }
   }
 }

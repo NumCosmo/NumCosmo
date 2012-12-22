@@ -97,7 +97,6 @@
 
   <chapter>
     <title>Other Utilities Objects</title>
-    <xi:include href="xml/nc_macros.xml"/>
     <xi:include href="xml/healpix.xml"/>
     <xi:include href="xml/map.xml"/>
   </chapter>

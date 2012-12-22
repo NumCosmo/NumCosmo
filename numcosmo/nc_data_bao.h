@@ -61,7 +61,7 @@ typedef enum _NcDataBaoId
 #define NC_DATA_BAO_RDV_START NC_DATA_BAO_RDV_PERCIVAL2007
 #define NC_DATA_BAO_RDV_END NC_DATA_BAO_RDV_PERCIVAL2010
 
-NcmData *nc_data_bao_new (NcDistance *dist, NcDataBaoId id);
+NcmData *nc_data_bao_create (NcDistance *dist, NcDataBaoId id);
 
 G_END_DECLS
 

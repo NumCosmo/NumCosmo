@@ -28,7 +28,7 @@
 #include <glib.h>
 #include <glib-object.h>
 
-#include <numcosmo/nc_macros.h>
+#include <numcosmo/math/ncm_cfg.h>
 #include <numcosmo/math/ncm_vector.h>
 #include <gsl/gsl_matrix.h>
 
@@ -176,7 +176,7 @@ G_INLINE_FUNC void
 ncm_matrix_transpose (NcmMatrix *cm)
 {
   const gint ret = gsl_matrix_transpose (NCM_MATRIX_GSL (cm));
-  NC_TEST_GSL_RESULT ("gsl_matrix_transpose", ret);
+  NCM_TEST_GSL_RESULT ("gsl_matrix_transpose", ret);
 }
 
 G_INLINE_FUNC void

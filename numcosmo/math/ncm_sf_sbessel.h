@@ -32,14 +32,14 @@
 
 G_BEGIN_DECLS
 
-typedef struct _NcSFSBesselRecur NcSFSBesselRecur;
+typedef struct _NcmSFSBesselRecur NcmSFSBesselRecur;
 
 /**
- * NcSFSBesselRecur:
+ * NcmSFSBesselRecur:
  *
  * FIXME
  */
-struct _NcSFSBesselRecur
+struct _NcmSFSBesselRecur
 {
   /*< private >*/
   gint32 l;
@@ -49,16 +49,16 @@ struct _NcSFSBesselRecur
   gboolean prepared;
 };
 
-NcSFSBesselRecur *ncm_sf_sbessel_recur_new (NcmGrid *x_grid);
-NcSFSBesselRecur *ncm_sf_sbessel_recur_read (FILE *f);
+NcmSFSBesselRecur *ncm_sf_sbessel_recur_new (NcmGrid *x_grid);
+NcmSFSBesselRecur *ncm_sf_sbessel_recur_read (FILE *f);
 
-void ncm_sf_sbessel_recur_free (NcSFSBesselRecur *jlrec, gboolean free_grid);
-void ncm_sf_sbessel_recur_set (NcSFSBesselRecur *jlrec, glong l);
-void ncm_sf_sbessel_recur_next (NcSFSBesselRecur *jlrec);
-void ncm_sf_sbessel_recur_previous (NcSFSBesselRecur *jlrec);
-void ncm_sf_sbessel_recur_goto (NcSFSBesselRecur *jlrec, glong l);
-void ncm_sf_sbessel_taylor_coeff_jl_jlp1 (NcSFSBesselRecur *jlrec, guint n, gdouble *djl, gdouble *djlp1);
-void ncm_sf_sbessel_recur_write (NcSFSBesselRecur *jlrec, FILE *f);
+void ncm_sf_sbessel_recur_free (NcmSFSBesselRecur *jlrec, gboolean free_grid);
+void ncm_sf_sbessel_recur_set (NcmSFSBesselRecur *jlrec, glong l);
+void ncm_sf_sbessel_recur_next (NcmSFSBesselRecur *jlrec);
+void ncm_sf_sbessel_recur_previous (NcmSFSBesselRecur *jlrec);
+void ncm_sf_sbessel_recur_goto (NcmSFSBesselRecur *jlrec, glong l);
+void ncm_sf_sbessel_taylor_coeff_jl_jlp1 (NcmSFSBesselRecur *jlrec, guint n, gdouble *djl, gdouble *djlp1);
+void ncm_sf_sbessel_recur_write (NcmSFSBesselRecur *jlrec, FILE *f);
 
 gdouble ncm_sf_sbessel (gulong l, gdouble x);
 void ncm_sf_sbessel_taylor (gulong l, gdouble x, gdouble *djl);

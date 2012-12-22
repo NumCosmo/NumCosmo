@@ -250,7 +250,7 @@ _ncm_data_poisson_leastsquares_f (NcmData *data, NcmMSet *mset, NcmVector *v)
 }
 
 /**
- * nc_data_poisson_init_from_vector: (skip)
+ * ncm_data_poisson_init_from_vector: (skip)
  * @data: FIXME
  * @nodes: FIXME
  * @N: FIXME
@@ -278,7 +278,7 @@ ncm_data_poisson_init_from_vector (NcmData *data, NcmVector *nodes, gsl_vector_u
 }
 
 /**
- * nc_data_poisson_init_from_histogram: (skip)
+ * ncm_data_poisson_init_from_histogram: (skip)
  * @data: FIXME
  * @h: FIXME
  *
@@ -287,7 +287,7 @@ ncm_data_poisson_init_from_vector (NcmData *data, NcmVector *nodes, gsl_vector_u
  * Returns: FIXME
  */
 void
-nc_data_poisson_init_from_histogram (NcmData *data, gsl_histogram *h)
+ncm_data_poisson_init_from_histogram (NcmData *data, gsl_histogram *h)
 {
   NcmDataPoisson *poisson = NCM_DATA_POISSON (data);
 
@@ -298,7 +298,7 @@ nc_data_poisson_init_from_histogram (NcmData *data, gsl_histogram *h)
 }
 
 /**
- * nc_data_poisson_init_zero: (skip)
+ * ncm_data_poisson_init_zero: (skip)
  * @data: FIXME
  * @nodes: FIXME
  *
@@ -307,7 +307,7 @@ nc_data_poisson_init_from_histogram (NcmData *data, gsl_histogram *h)
  * Returns: FIXME
  */
 void
-nc_data_poisson_init_zero (NcmData *data, NcmVector *nodes)
+ncm_data_poisson_init_zero (NcmData *data, NcmVector *nodes)
 {
   NcmDataPoisson *poisson = NCM_DATA_POISSON (data);
 	gint i;

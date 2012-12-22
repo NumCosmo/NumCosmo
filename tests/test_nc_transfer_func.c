@@ -78,7 +78,12 @@ test_nc_transfer_func_new_bbks (void)
 
   test_nc_transfer_func_free ();
 
+#if !((GLIB_MAJOR_VERSION == 2) && (GLIB_MINOR_VERSION < 30))
   tf = nc_transfer_func_new_from_name ("NcTransferFuncBBKS");
+#else
+  tf = nc_transfer_func_bbks_new ();
+#endif
+
   model = nc_hicosmo_lcdm_new ();
   g_assert (NC_IS_TRANSFER_FUNC (tf));
   g_assert (NC_IS_TRANSFER_FUNC_BBKS (tf));  
@@ -94,7 +99,12 @@ test_nc_transfer_func_new_eh (void)
 
   test_nc_transfer_func_free ();
 
+#if !((GLIB_MAJOR_VERSION == 2) && (GLIB_MINOR_VERSION < 30))
   tf = nc_transfer_func_new_from_name ("NcTransferFuncEH");
+#else
+  tf = nc_transfer_func_eh_new ();
+#endif
+
   g_assert (NC_IS_TRANSFER_FUNC (tf));
   g_assert (NC_IS_TRANSFER_FUNC_EH (tf));  
 }
