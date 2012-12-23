@@ -215,7 +215,7 @@ static gdouble nc_cmb_dist_priors_wmap5_inv_cov[][3] =
 
 /***************************************************************************
  * WMAP7 Distance priors data (arXiv:1001.4538): tables 9 and 10
-   *
+ *
  ****************************************************************************/
 
 static gdouble nc_cmb_dist_priors_wmap7_bestfit[] = { 302.0900, 1.725, 1091.30000 };
@@ -223,6 +223,18 @@ static gdouble nc_cmb_dist_priors_wmap7_inv_cov[][3] =
 { { 2.3050,   29.698,   -1.333 },
   { 29.698, 6825.270,  -113.18 },
   { -1.333,  -113.18,    3.414 } };
+
+/***************************************************************************
+ * WMAP9 Distance priors data (arXiv:1212.5226): table 11
+ *
+ ****************************************************************************/
+
+static gdouble nc_cmb_dist_priors_wmap9_bestfit[] = { 302.4, 1.7246, 1090.88 };
+static gdouble nc_cmb_dist_priors_wmap9_inv_cov[][3] =
+{ {  3.182,    18.253,   -1.429 },
+  { 18.253, 11887.879, -193.808 },
+  { -1.429,  -193.808,    4.556 } };
+
 
 /**
  * nc_data_cmb_dist_priors_set_sample:
@@ -271,6 +283,18 @@ nc_data_cmb_dist_priors_set_sample (NcDataCMBDistPriors *cmb_dist_priors, NcData
         for (j = 0; j < 3; j++)
           ncm_matrix_set (gauss->inv_cov, i, j, 
                           nc_cmb_dist_priors_wmap7_inv_cov[i][j]);
+      }
+      break;
+    }
+    case NC_DATA_CMB_DIST_PRIORS_WMAP9:
+    {
+      data->desc = g_strdup ("WMAP9 distance priors");
+      for (i = 0; i < 3; i++)
+      {
+        ncm_vector_set (gauss->y, i, nc_cmb_dist_priors_wmap9_bestfit[i]);
+        for (j = 0; j < 3; j++)
+          ncm_matrix_set (gauss->inv_cov, i, j, 
+                          nc_cmb_dist_priors_wmap9_inv_cov[i][j]);
       }
       break;
     }

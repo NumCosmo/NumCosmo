@@ -63,6 +63,7 @@ nc_data_cmb_new (NcDistance *dist, NcDataCMBId id)
       break;
     case NC_DATA_CMB_DIST_PRIORS_WMAP5:
     case NC_DATA_CMB_DIST_PRIORS_WMAP7:
+    case NC_DATA_CMB_DIST_PRIORS_WMAP9:
       return nc_data_cmb_dist_priors_new (dist, id);
       break;
     default:
