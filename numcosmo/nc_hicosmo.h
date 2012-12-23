@@ -151,8 +151,8 @@ NcHICosmo *nc_hicosmo_new_from_name (GType parent_type, gchar *cosmo_name);
 void nc_hicosmo_log_all_models (GType parent);
 void nc_hicosmo_free (NcHICosmo *hic);
 
-NcmMSetFunc *ncm_mset_func_new_hicosmo_func0 (NcHICosmoFunc0 f0);
-NcmMSetFunc *ncm_mset_func_new_hicosmo_func1 (NcHICosmoFunc1 f1);
+NcmMSetFunc *nc_hicosmo_create_mset_func0 (NcHICosmoFunc0 f0);
+NcmMSetFunc *nc_hicosmo_create_mset_func1 (NcHICosmoFunc1 f1);
 
 void nc_hicosmo_set_H0_impl (NcHICosmoClass *model_class, NcmModelFunc0 f);
 void nc_hicosmo_set_Omega_b_impl (NcHICosmoClass *model_class, NcmModelFunc0 f);

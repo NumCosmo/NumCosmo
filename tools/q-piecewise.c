@@ -145,7 +145,7 @@ main(gint argc, gchar *argv[])
 
   if (with_BAO)
   {
-    NcmData *bao_data = nc_data_bao_new (dist, NC_DATA_BAO_DVDV_PERCIVAL2007);
+    NcmData *bao_data = nc_data_bao_create (dist, NC_DATA_BAO_DVDV_PERCIVAL2007);
     ncm_dataset_append_data (dset, bao_data);
     ncm_data_free (bao_data);
   }

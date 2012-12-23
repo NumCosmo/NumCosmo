@@ -53,6 +53,12 @@ struct _NcmFftlogClass
   GObjectClass parent_class;
 };
 
+/**
+ * NcmFftlog:
+ * 
+ * FIXME
+ *
+ */
 struct _NcmFftlog
 {
   /*< private >*/

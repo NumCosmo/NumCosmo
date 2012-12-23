@@ -34,16 +34,16 @@
 G_BEGIN_DECLS
 
 #ifdef NUMCOSMO_HAVE_CFITSIO
-NcSphereMap *nc_sphere_healpix_read_map (gchar *fits_file, NcSphereMap *map);
-gboolean nc_sphere_healpix_write_map (NcSphereMap *map, gchar *filename, gboolean overwrite);
+NcmSphereMap *ncm_sphere_healpix_read_map (gchar *fits_file, NcmSphereMap *map);
+gboolean ncm_sphere_healpix_write_map (NcmSphereMap *map, gchar *filename, gboolean overwrite);
 #endif /* NUMCOSMO_HAVE_CFITSIO */
-glong nc_sphere_healpix_nest2ring (gint nside, glong nest_index);
-glong nc_sphere_healpix_ring2nest (gint nside, glong ring_index);
-void nc_sphere_healpix_pix2ang_nest (gint nside, glong nest_index, gdouble *theta, gdouble *phi);
-void nc_sphere_healpix_pix2ang_ring (gint nside, glong ring_index, gdouble *theta, gdouble *phi);
-void nc_sphere_healpix_pix2vec_nest (gint nside, glong nest_index, NcTriVector vec);
-void nc_sphere_healpix_pix2vec_ring (gint nside, glong ring_index, NcTriVector v);
-void nc_sphere_healpix_vec2pix_ring (gint nside, NcTriVector v, glong *i);
+glong ncm_sphere_healpix_nest2ring (gint nside, glong nest_index);
+glong ncm_sphere_healpix_ring2nest (gint nside, glong ring_index);
+void ncm_sphere_healpix_pix2ang_nest (gint nside, glong nest_index, gdouble *theta, gdouble *phi);
+void ncm_sphere_healpix_pix2ang_ring (gint nside, glong ring_index, gdouble *theta, gdouble *phi);
+void ncm_sphere_healpix_pix2vec_nest (gint nside, glong nest_index, NcmTriVector vec);
+void ncm_sphere_healpix_pix2vec_ring (gint nside, glong ring_index, NcmTriVector v);
+void ncm_sphere_healpix_vec2pix_ring (gint nside, NcmTriVector v, glong *i);
 
 #define HEALPIX_NPIX(nside) (12*(nside)*(nside))
 #define HEALPIX_INT_TO_XY(i,x,y) \
@@ -69,9 +69,9 @@ do { \
   } while (shifted_x || shifted_y); \
 } while(FALSE)
 
-#ifndef NC_HEALPIX_NULLVAL
-#define NC_HEALPIX_NULLVAL (-1.6375e30) /* check if its ok to copy it here FIXME*/
-#endif /* NC_HEALPIX_NULLVAL */
+#ifndef NCM_HEALPIX_NULLVAL
+#define NCM_HEALPIX_NULLVAL (-1.6375e30) /* check if its ok to copy it here FIXME*/
+#endif /* NCM_HEALPIX_NULLVAL */
 
 G_END_DECLS
 

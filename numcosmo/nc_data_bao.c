@@ -45,16 +45,16 @@
 #include "nc_data_bao_dvdv.h"
 
 /**
- * nc_data_bao_new:
+ * nc_data_bao_create:
  * @dist: FIXME
  * @id: FIXME
  *
  * FIXME
  *
- * Returns: FIXME
+ * Returns: (transfer full): FIXME
  */
 NcmData *
-nc_data_bao_new (NcDistance *dist, NcDataBaoId id)
+nc_data_bao_create (NcDistance *dist, NcDataBaoId id)
 {
   /* FIXME the switch is wrong but works since we have only two options. */
   switch (id)

@@ -113,7 +113,7 @@ guint
 nc_hicosmo_qpw_index (NcHICosmoQPW *qpw, gdouble z)
 {
   gint wpiece = floor(z / qpw->piece);
-  if (fabs(floor(z / qpw->piece) - (z / qpw->piece)) < NC_ZERO_LIMIT)
+  if (fabs(floor(z / qpw->piece) - (z / qpw->piece)) < NCM_ZERO_LIMIT)
     wpiece = wpiece == 0 ? 0 : wpiece - 1;
   return GSL_MIN(wpiece, qpw->npieces - 1);
 }

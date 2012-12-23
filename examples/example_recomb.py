@@ -1,14 +1,15 @@
 #!/usr/bin/python2
 
 from math import *
-from gi.repository import Numcosmo as Nc
+from gi.repository import NumCosmo as Nc
+from gi.repository import NumCosmoMath as Ncm
 import matplotlib.pyplot as plt
 
 #
 #  Initializing the library objects, this must be called before 
 #  any other library function.
 #
-Nc.cfg_init ()
+Ncm.cfg_init ()
 
 #
 #  New homogeneous and isotropic cosmological model NcHICosmoDEXcdm 

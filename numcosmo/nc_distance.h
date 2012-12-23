@@ -57,11 +57,11 @@ struct _NcDistance
   /*< private >*/
   GObject parent_instance;
   NcmOdeSpline *comoving_distance_spline;
-  NcFunctionCache *comoving_distance_cache;
-  NcFunctionCache *time_cache;
-  NcFunctionCache *lookback_time_cache;
-  NcFunctionCache *conformal_time_cache;
-  NcFunctionCache *sound_horizon_cache;
+  NcmFunctionCache *comoving_distance_cache;
+  NcmFunctionCache *time_cache;
+  NcmFunctionCache *lookback_time_cache;
+  NcmFunctionCache *conformal_time_cache;
+  NcmFunctionCache *sound_horizon_cache;
   NcmModelCtrl *ctrl;
   gdouble z_f;
   gboolean use_cache;

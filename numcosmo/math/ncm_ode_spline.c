@@ -126,8 +126,8 @@ ncm_ode_spline_prepare (NcmOdeSpline *os, gpointer userdata)
   g_array_append_val (os->x_array, os->xi);
   g_array_append_val (os->y_array, NV_Ith_S (os->y, 0));
 
-  CVodeSStolerances (os->cvode, NC_INT_ERROR, 1e-80); /* FIXME */
-  CVodeSetMaxNumSteps (os->cvode, NC_INT_PARTITION);
+  CVodeSStolerances (os->cvode, NCM_INTEGRAL_ERROR, 1e-80); /* FIXME */
+  CVodeSetMaxNumSteps (os->cvode, NCM_INTEGRAL_PARTITION);
   CVodeSetStopTime (os->cvode, os->xf);
   CVodeSetUserData (os->cvode, &f_data);
 
@@ -135,7 +135,7 @@ ncm_ode_spline_prepare (NcmOdeSpline *os, gpointer userdata)
   while (TRUE)
   {
     gint flag = CVode (os->cvode, os->xf, os->y, &x, CV_ONE_STEP);
-    if (!nc_cvode_util_check_flag (&flag, "CVode", 1))
+    if (!ncm_cvode_util_check_flag (&flag, "CVode", 1))
       g_error ("ncm_ode_spline_prepare: cannot integrate function.");
     if (x0 == x && i++ > 10)
       g_error ("ncm_ode_spline_prepare: cannot integrate function.");

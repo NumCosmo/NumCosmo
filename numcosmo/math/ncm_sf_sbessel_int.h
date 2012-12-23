@@ -31,30 +31,30 @@
 
 G_BEGIN_DECLS
 
-typedef struct _NcSFSphericalBesselIntegRecur NcSFSphericalBesselIntegRecur;
+typedef struct _NcmSFSphericalBesselIntegRecur NcmSFSphericalBesselIntegRecur;
 
 /**
- * NcSFSphericalBesselIntegRecur:
+ * NcmSFSphericalBesselIntegRecur:
  *
  * FIXME
  */
-struct _NcSFSphericalBesselIntegRecur
+struct _NcmSFSphericalBesselIntegRecur
 {
   /*< private >*/
-  NcSFSBesselRecur *jlrec;
+  NcmSFSBesselRecur *jlrec;
   gdouble *int_jl_xn[4];
   gdouble *int_jlp1_xn[4];
   gboolean prepared;
 };
 
-typedef struct _NcSFSphericalBesselIntSpline NcSFSphericalBesselIntSpline;
+typedef struct _NcmSFSphericalBesselIntSpline NcmSFSphericalBesselIntSpline;
 
 /**
- * NcSFSphericalBesselIntSpline:
+ * NcmSFSphericalBesselIntSpline:
  *
  * FIXME
  */
-struct _NcSFSphericalBesselIntSpline
+struct _NcmSFSphericalBesselIntSpline
 {
   /*< private >*/
   NcmGrid *x_grid;
@@ -68,38 +68,38 @@ struct _NcSFSphericalBesselIntSpline
   NcmSpline *jl;
   NcmSpline *jlp1;
   NcmSpline *int_jl_xn[4];
-  NcSFSphericalBesselIntegRecur *xnjlrec;
+  NcmSFSphericalBesselIntegRecur *xnjlrec;
   gboolean prepared;
 };
 
 gdouble ncm_sf_sbessel_jl_xj_integral (gint l, gint j, gdouble x);
 
-NcSFSphericalBesselIntegRecur *ncm_sf_sbessel_jl_xj_integral_recur_new (NcSFSBesselRecur *jlrec, NcmGrid *x_grid);
-NcSFSphericalBesselIntegRecur *ncm_sf_sbessel_jl_xj_integral_recur_new_from_section (NcmGridSection *x_sec);
-NcSFSphericalBesselIntegRecur *ncm_sf_sbessel_jl_xj_integral_recur_load (gchar *filename);
-NcSFSphericalBesselIntegRecur *ncm_sf_sbessel_jl_xj_integral_recur_read (FILE *f);
-NcSFSphericalBesselIntegRecur *ncm_sf_sbessel_jl_xj_integral_recur_cached_new (glong l, NcmGridSection *x_sec);
+NcmSFSphericalBesselIntegRecur *ncm_sf_sbessel_jl_xj_integral_recur_new (NcmSFSBesselRecur *jlrec, NcmGrid *x_grid);
+NcmSFSphericalBesselIntegRecur *ncm_sf_sbessel_jl_xj_integral_recur_new_from_section (NcmGridSection *x_sec);
+NcmSFSphericalBesselIntegRecur *ncm_sf_sbessel_jl_xj_integral_recur_load (gchar *filename);
+NcmSFSphericalBesselIntegRecur *ncm_sf_sbessel_jl_xj_integral_recur_read (FILE *f);
+NcmSFSphericalBesselIntegRecur *ncm_sf_sbessel_jl_xj_integral_recur_cached_new (glong l, NcmGridSection *x_sec);
 
-void ncm_sf_sbessel_jl_xj_integral_recur_free (NcSFSphericalBesselIntegRecur *xnjlrec, gboolean free_grid);
-void ncm_sf_sbessel_jl_xj_integral_recur_set (NcSFSphericalBesselIntegRecur *xnjlrec, glong l);
-glong ncm_sf_sbessel_jl_xj_integral_recur_next (NcSFSphericalBesselIntegRecur *xnjlrec);
-glong ncm_sf_sbessel_jl_xj_integral_recur_previous (NcSFSphericalBesselIntegRecur *xnjlrec);
-glong ncm_sf_sbessel_jl_xj_integral_recur_goto (NcSFSphericalBesselIntegRecur *xnjlrec, glong l);
+void ncm_sf_sbessel_jl_xj_integral_recur_free (NcmSFSphericalBesselIntegRecur *xnjlrec, gboolean free_grid);
+void ncm_sf_sbessel_jl_xj_integral_recur_set (NcmSFSphericalBesselIntegRecur *xnjlrec, glong l);
+glong ncm_sf_sbessel_jl_xj_integral_recur_next (NcmSFSphericalBesselIntegRecur *xnjlrec);
+glong ncm_sf_sbessel_jl_xj_integral_recur_previous (NcmSFSphericalBesselIntegRecur *xnjlrec);
+glong ncm_sf_sbessel_jl_xj_integral_recur_goto (NcmSFSphericalBesselIntegRecur *xnjlrec, glong l);
 
-void ncm_sf_sbessel_jl_xj_integral_recur_save (NcSFSphericalBesselIntegRecur *xnjlrec, gchar *filename);
-void ncm_sf_sbessel_jl_xj_integral_recur_write (NcSFSphericalBesselIntegRecur *xnjlrec, FILE *f);
+void ncm_sf_sbessel_jl_xj_integral_recur_save (NcmSFSphericalBesselIntegRecur *xnjlrec, gchar *filename);
+void ncm_sf_sbessel_jl_xj_integral_recur_write (NcmSFSphericalBesselIntegRecur *xnjlrec, FILE *f);
 
-NcSFSphericalBesselIntSpline *ncm_sf_sbessel_jl_xj_integrate_spline_new (NcSFSphericalBesselIntegRecur *xnjlrec, gboolean init);
-NcSFSphericalBesselIntSpline *ncm_sf_sbessel_jl_xj_integrate_spline_cached_new (glong l, NcmGridSection *x_sec, gboolean init);
+NcmSFSphericalBesselIntSpline *ncm_sf_sbessel_jl_xj_integrate_spline_new (NcmSFSphericalBesselIntegRecur *xnjlrec, gboolean init);
+NcmSFSphericalBesselIntSpline *ncm_sf_sbessel_jl_xj_integrate_spline_cached_new (glong l, NcmGridSection *x_sec, gboolean init);
 
-void ncm_sf_sbessel_jl_xj_integrate_spline_reset (NcSFSphericalBesselIntSpline *int_jlspline);
-void ncm_sf_sbessel_jl_xj_integrate_spline_set (NcSFSphericalBesselIntSpline *int_jlspline, glong l);
-void ncm_sf_sbessel_jl_xj_integrate_spline_next (NcSFSphericalBesselIntSpline *int_jlspline);
-void ncm_sf_sbessel_jl_xj_integrate_spline_previous (NcSFSphericalBesselIntSpline *int_jlspline);
-void ncm_sf_sbessel_jl_xj_integrate_spline_goto (NcSFSphericalBesselIntSpline *int_jlspline, glong l);
-void ncm_sf_sbessel_jl_xj_integral_a_b (NcSFSphericalBesselIntSpline *int_jlspline, gdouble x0, gdouble x1, gdouble w, gdouble *xnjl_rules, gdouble *xndjl_rules, gdouble *xnd2jl_rules);
-gdouble ncm_sf_sbessel_jl_xj_integrate_spline_eval (NcSFSphericalBesselIntSpline *int_jlspline, gint d, gdouble x);
-gdouble ncm_sf_sbessel_jl_xj_integral_spline (NcSFSphericalBesselIntSpline *int_jlspline, NcmSpline *s0, NcmSpline *s1, NcmSpline *s2, gdouble w);
+void ncm_sf_sbessel_jl_xj_integrate_spline_reset (NcmSFSphericalBesselIntSpline *int_jlspline);
+void ncm_sf_sbessel_jl_xj_integrate_spline_set (NcmSFSphericalBesselIntSpline *int_jlspline, glong l);
+void ncm_sf_sbessel_jl_xj_integrate_spline_next (NcmSFSphericalBesselIntSpline *int_jlspline);
+void ncm_sf_sbessel_jl_xj_integrate_spline_previous (NcmSFSphericalBesselIntSpline *int_jlspline);
+void ncm_sf_sbessel_jl_xj_integrate_spline_goto (NcmSFSphericalBesselIntSpline *int_jlspline, glong l);
+void ncm_sf_sbessel_jl_xj_integral_a_b (NcmSFSphericalBesselIntSpline *int_jlspline, gdouble x0, gdouble x1, gdouble w, gdouble *xnjl_rules, gdouble *xndjl_rules, gdouble *xnd2jl_rules);
+gdouble ncm_sf_sbessel_jl_xj_integrate_spline_eval (NcmSFSphericalBesselIntSpline *int_jlspline, gint d, gdouble x);
+gdouble ncm_sf_sbessel_jl_xj_integral_spline (NcmSFSphericalBesselIntSpline *int_jlspline, NcmSpline *s0, NcmSpline *s1, NcmSpline *s2, gdouble w);
 
 G_END_DECLS
 

@@ -142,7 +142,7 @@ gdouble nc_hicosmo_qg_pert_powerspectrum (NcHICosmoQGMode *qgmode, gdouble x, gd
 NcHICosmoQGMode *nc_hicosmo_qg_modefunc (NcmModel *model, long double k, long double x0, long double xf);
 gboolean nc_hicosmo_qg_modefunc_set_opts (NcHICosmoQGMode *qgmode);
 gboolean nc_hicosmo_qg_modefunc_init (NcHICosmoQGMode *qgmode);
-gboolean nc_hicosmo_qg_modefunc_cvode_init (NcHICosmoQGMode *qgmode);
+gboolean nc_hicosmo_qg_modefuncm_cvode_init (NcHICosmoQGMode *qgmode);
 gboolean nc_hicosmo_qg_modefunc_evolve (NcHICosmoQGMode *qgmode);
 void nc_hicosmo_qg_evolfunc (NcmModel *model, long double x, long double *x2d2sqrtxxbarzeta_sqrtxxbarzeta, long double *x2cs2_xxbar2);
 void nc_hicosmo_qg_modefunc_sol (NcHICosmoQGMode *qgmode, long double x, long double x0, long double *Re_u, long double *Im_u, long double *Re_up, long double *Im_up);

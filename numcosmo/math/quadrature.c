@@ -36,7 +36,7 @@
 #include "build_cfg.h"
 
 #include "math/quadrature.h"
-#include "nc_macros.h"
+#include "math/ncm_cfg.h"
 
 #include <string.h>
 #include <gsl/gsl_sf_bessel.h>
@@ -285,10 +285,10 @@ ncm_quadrature_filon_solve_vandermonde (NcmQuadFilon *quadf)
   gint k, ret;
 
   ret = gsl_linalg_LU_solve (quadf->vandermonde_lu, quadf->lu_p, quadf->Re_mu, quadf->Re_b);
-  NC_TEST_GSL_RESULT("ncm_quadrature_filon_solve_vandermonde", ret);
+  NCM_TEST_GSL_RESULT("ncm_quadrature_filon_solve_vandermonde", ret);
   
   ret = gsl_linalg_LU_solve (quadf->vandermonde_lu, quadf->lu_p, quadf->Im_mu, quadf->Im_b);
-  NC_TEST_GSL_RESULT("ncm_quadrature_filon_solve_vandermonde", ret);
+  NCM_TEST_GSL_RESULT("ncm_quadrature_filon_solve_vandermonde", ret);
   
   for (k = 0; k < quadf->order; k++)
   {
@@ -298,9 +298,9 @@ ncm_quadrature_filon_solve_vandermonde (NcmQuadFilon *quadf)
     gsl_vector_view dPn_m1v  = gsl_matrix_row (quadf->dPn_m1,  k);
 
     ret = gsl_linalg_LU_solve (quadf->vandermonde_lu, quadf->lu_p, &dxnm_1v.vector, &dPn_1v.vector);
-    NC_TEST_GSL_RESULT("ncm_quadrature_filon_solve_vandermonde", ret);
+    NCM_TEST_GSL_RESULT("ncm_quadrature_filon_solve_vandermonde", ret);
     ret = gsl_linalg_LU_solve (quadf->vandermonde_lu, quadf->lu_p, &dxnm_m1v.vector, &dPn_m1v.vector);
-    NC_TEST_GSL_RESULT("ncm_quadrature_filon_solve_vandermonde", ret);
+    NCM_TEST_GSL_RESULT("ncm_quadrature_filon_solve_vandermonde", ret);
     if (k < quadf->order - 1)
     {
       gsl_vector_view err_dxnm_1v = gsl_vector_subvector (&dxnm_1v.vector, 0, quadf->n - 2);
@@ -309,9 +309,9 @@ ncm_quadrature_filon_solve_vandermonde (NcmQuadFilon *quadf)
       gsl_vector_view err_dPn_m1v  = gsl_matrix_row (quadf->err.dPn_m1, k);
 
       ret = gsl_linalg_LU_solve (quadf->err.vandermonde, quadf->err.lu_p, &err_dxnm_1v.vector, &err_dPn_1v.vector);
-      NC_TEST_GSL_RESULT("ncm_quadrature_filon_solve_vandermonde", ret);
+      NCM_TEST_GSL_RESULT("ncm_quadrature_filon_solve_vandermonde", ret);
       ret = gsl_linalg_LU_solve (quadf->err.vandermonde, quadf->err.lu_p, &err_dxnm_m1v.vector, &err_dPn_m1v.vector);
-      NC_TEST_GSL_RESULT("ncm_quadrature_filon_solve_vandermonde", ret);
+      NCM_TEST_GSL_RESULT("ncm_quadrature_filon_solve_vandermonde", ret);
     }
   }
   

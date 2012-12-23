@@ -39,44 +39,49 @@
 /**
  * mpq_ptr: (skip)
  */
-typedef int mpq_ptr;
+#define mpq_ptr gint
 
 /**
  * mpq_t: (skip)
  */
-typedef int mpq_t;
+#define mpq_t gint
 
 /**
  * mp_rnd_t: (skip)
  */
-typedef int mp_rnd_t;
+#define mp_rnd_t gint
 
 /**
  * mpz_t: (skip)
  */
-typedef int mpz_t;
+#define mpz_t gint
 
 /**
  * mpfr_ptr: (skip)
  */
-typedef int mpfr_ptr;
+#define mpfr_ptr gint
 
 /**
  * mpfr_t: (skip)
  */
-typedef int mpfr_t;
+#define mpfr_t gint
 
 /**
  * CVRhsFn: (skip)
  */
-typedef int CVRhsFn;
+#define CVRhsFn gint
 
 /**
  * CVDlsDenseJacFn: (skip)
  */
-typedef int CVDlsDenseJacFn;
+#define CVDlsDenseJacFn gint
 
 /**
  * fftw_plan: (skip)
  */
-typedef int fftw_plan;
+#define fftw_plan gint
+
+/**
+ * fftw_complex: (skip)
+ */
+#define fftw_complex gint

@@ -1529,7 +1529,7 @@ ncm_fit_numdiff_m2lnL_covar (NcmFit *fit)
   if (ret == GSL_SUCCESS)
   {
     ret = gsl_linalg_cholesky_invert (NCM_MATRIX_GSL (fit->fstate->covar));
-    NC_TEST_GSL_RESULT ("ncm_fit_numdiff_m2lnL_covar[gsl_linalg_cholesky_invert]", ret);
+    NCM_TEST_GSL_RESULT ("ncm_fit_numdiff_m2lnL_covar[gsl_linalg_cholesky_invert]", ret);
   }
   else if (ret == GSL_EDOM)
   {
@@ -1543,16 +1543,16 @@ ncm_fit_numdiff_m2lnL_covar (NcmFit *fit)
     g_warning ("ncm_fit_numdiff_m2lnL_covar: covariance matrix not positive definite, errors are not trustworthy.");
     
     ret1 = gsl_linalg_LU_decomp (NCM_MATRIX_GSL (LU), p, &signum);
-    NC_TEST_GSL_RESULT ("ncm_fit_numdiff_m2lnL_covar[gsl_linalg_LU_decomp]", ret1);
+    NCM_TEST_GSL_RESULT ("ncm_fit_numdiff_m2lnL_covar[gsl_linalg_LU_decomp]", ret1);
     
     ret1 = gsl_linalg_LU_invert (NCM_MATRIX_GSL (LU), p, NCM_MATRIX_GSL (fit->fstate->covar));
-    NC_TEST_GSL_RESULT ("ncm_fit_numdiff_m2lnL_covar[gsl_linalg_LU_invert]", ret1);
+    NCM_TEST_GSL_RESULT ("ncm_fit_numdiff_m2lnL_covar[gsl_linalg_LU_invert]", ret1);
     
     gsl_permutation_free (p);
     ncm_matrix_free (LU);
   }
   else
-    NC_TEST_GSL_RESULT ("ncm_fit_numdiff_m2lnL_covar[gsl_linalg_cholesky_decomp]", ret);
+    NCM_TEST_GSL_RESULT ("ncm_fit_numdiff_m2lnL_covar[gsl_linalg_cholesky_decomp]", ret);
   fit->fstate->has_covar = TRUE;
 }
 
@@ -1608,13 +1608,13 @@ ncm_fit_prob (NcmFit *fit, NcmModelID mid, guint pid, gdouble a, gdouble b)
   F.function = &fit_dprob;
   F.params = &dprob_arg;
 
-  w = nc_integral_get_workspace();
+  w = ncm_integral_get_workspace();
   if (fit->mtype > NCM_FIT_RUN_MSGS_NONE)
     g_message ("#");
-  error_code = gsl_integration_qags (&F, a, b, 1e-10, NC_INT_ERROR, NC_INT_PARTITION, *w, &result, &error);
+  error_code = gsl_integration_qags (&F, a, b, 1e-10, NCM_INTEGRAL_ERROR, NCM_INTEGRAL_PARTITION, *w, &result, &error);
   if (fit->mtype > NCM_FIT_RUN_MSGS_NONE)
     g_message ("\n");
-  NC_TEST_GSL_RESULT ("ncm_fit_prob", error_code);
+  NCM_TEST_GSL_RESULT ("ncm_fit_prob", error_code);
   ncm_memory_pool_return (w);
 
   ncm_fit_free (fit_val);
@@ -1810,9 +1810,9 @@ ncm_fit_function_error (NcmFit *fit, NcmMSetFunc *func, gdouble z, gboolean pret
    NCM_FUNC_DF (func, fit->mset, fit->pt, z, fit->df);
 
    ret = gsl_blas_dgemv (CblasNoTrans, 1.0, NCM_MATRIX_GSL (fit->fstate->covar), ncm_vector_gsl (fit->df), 0.0, ncm_vector_gsl (tmp1));
-   NC_TEST_GSL_RESULT("ncm_fit_function_error[covar.v]", ret);
+   NCM_TEST_GSL_RESULT("ncm_fit_function_error[covar.v]", ret);
    ret = gsl_blas_ddot (ncm_vector_gsl (fit->df), ncm_vector_gsl (tmp1), &result);
-   NC_TEST_GSL_RESULT("ncm_fit_function_error[v.covar.v]", ret);
+   NCM_TEST_GSL_RESULT("ncm_fit_function_error[v.covar.v]", ret);
 
    if (pretty_print)
    g_message ("# % -12.4g +/- % -12.4g\n", NCM_FUNC_F(func, fit->mset, z), sqrt(result));
@@ -1852,21 +1852,21 @@ ncm_fit_function_cov (NcmFit *fit, NcmMSetFunc *func1, gdouble z1, NcmMSetFunc *
    NCM_FUNC_DF (func2, fit->mset, fit->pt, z2, tmp2);
 
    ret = gsl_blas_dgemv (CblasNoTrans, 1.0, NCM_MATRIX_GSL (fit->fstate->covar), ncm_vector_gsl (tmp1), 0.0, ncm_vector_gsl (fit->df));
-   NC_TEST_GSL_RESULT("ncm_fit_function_error[covar.v]", ret);
+   NCM_TEST_GSL_RESULT("ncm_fit_function_error[covar.v]", ret);
    ret = gsl_blas_ddot (ncm_vector_gsl (fit->df), ncm_vector_gsl (tmp1), &result);
-   NC_TEST_GSL_RESULT("ncm_fit_function_error[v.covar.v]", ret);
+   NCM_TEST_GSL_RESULT("ncm_fit_function_error[v.covar.v]", ret);
    s1 = sqrt(result);
 
    ret = gsl_blas_dgemv (CblasNoTrans, 1.0, NCM_MATRIX_GSL (fit->fstate->covar), ncm_vector_gsl (tmp2), 0.0, ncm_vector_gsl (fit->df));
-   NC_TEST_GSL_RESULT("ncm_fit_function_error[covar.v]", ret);
+   NCM_TEST_GSL_RESULT("ncm_fit_function_error[covar.v]", ret);
    ret = gsl_blas_ddot (ncm_vector_gsl (fit->df), ncm_vector_gsl (tmp2), &result);
-   NC_TEST_GSL_RESULT("ncm_fit_function_error[v.covar.v]", ret);
+   NCM_TEST_GSL_RESULT("ncm_fit_function_error[v.covar.v]", ret);
    s2 = sqrt(result);
 
    ret = gsl_blas_dgemv (CblasNoTrans, 1.0, NCM_MATRIX_GSL (fit->fstate->covar), ncm_vector_gsl (tmp1), 0.0, ncm_vector_gsl (fit->df));
-   NC_TEST_GSL_RESULT("ncm_fit_function_error[covar.v]", ret);
+   NCM_TEST_GSL_RESULT("ncm_fit_function_error[covar.v]", ret);
    ret = gsl_blas_ddot (ncm_vector_gsl (fit->df), ncm_vector_gsl (tmp2), &result);
-   NC_TEST_GSL_RESULT("ncm_fit_function_error[v.covar.v]", ret);
+   NCM_TEST_GSL_RESULT("ncm_fit_function_error[v.covar.v]", ret);
    cor = result / (s1*s2);
 
    if (pretty_print)

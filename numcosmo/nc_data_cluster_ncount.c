@@ -330,7 +330,7 @@ _nc_data_cluster_ncount_binned_f (NcmMSet *mset, gpointer obj, const gdouble *x,
 }
 
 /**
- * nc_data_cluster_ncount_binned_new_function: (skip)
+ * nc_data_cluster_ncount_binned_create_func: (skip)
  * @cad: a #NcClusterAbundance
  *
  * FIXME
@@ -338,7 +338,7 @@ _nc_data_cluster_ncount_binned_f (NcmMSet *mset, gpointer obj, const gdouble *x,
  * Returns: FIXME
  */
 NcmMSetFunc *
-nc_data_cluster_ncount_binned_new_function (NcClusterAbundance *cad)
+nc_data_cluster_ncount_binned_create_func (NcClusterAbundance *cad)
 {
   NcmMSetFunc *func = ncm_mset_func_new (_nc_data_cluster_ncount_binned_f, 1, 1, cad, (GDestroyNotify) nc_cluster_abundance_free);
   return func;
@@ -774,7 +774,7 @@ nc_data_cluster_ncount_bin_data (NcmData *data, gsl_vector *nodes)
     }
   }
 
-  nc_data_poisson_init_from_histogram (data_cpoisson, hist);
+  ncm_data_poisson_init_from_histogram (data_cpoisson, hist);
 
   gsl_histogram_free (hist);
 

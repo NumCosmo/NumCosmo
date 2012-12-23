@@ -29,15 +29,15 @@
 
 G_BEGIN_DECLS
 
-typedef struct _NcTriVector NcTriVector;
+typedef struct _NcmTriVector NcmTriVector;
 
 
 /**
- * NcTriVector:
+ * NcmTriVector:
  *
  * FIXME
  */
-struct _NcTriVector
+struct _NcmTriVector
 {
   /*< private >*/
   gdouble c[3];
@@ -52,24 +52,24 @@ const gdouble __in_value__ = (b); \
 } while (FALSE)
 
 #define NC_TRIVEC_NEW {{0.0, 0.0, 0.0}}
-#define NC_TRIVEC_SET_0(v) memset(&(v), 0, sizeof(NcTriVector))
-#define NC_TRIVEC_MEMCPY(a, b) memcpy (&(a), &(b), sizeof (NcTriVector))
+#define NC_TRIVEC_SET_0(v) memset(&(v), 0, sizeof(NcmTriVector))
+#define NC_TRIVEC_MEMCPY(a, b) memcpy (&(a), &(b), sizeof (NcmTriVector))
 #define NC_TRIVEC_NORM(a) sqrt((a).c[0]*(a).c[0] + (a).c[1]*(a).c[1] + (a).c[2]*(a).c[2])
 #define NC_TRIVEC_NORMALIZE(a) NC_TRIVEC_SCALE(a, 1.0/NC_TRIVEC_NORM(a))
 #define NC_TRIVEC_DOT(a, b) ((a).c[0]*(b).c[0] + (a).c[1]*(b).c[1] + (a).c[2]*(b).c[2])
 
-typedef struct _NcQ NcQ;
+typedef struct _NcmQ NcmQ;
 
 /**
- * NcQ:
+ * NcmQ:
  *
  * FIXME
  */
-struct _NcQ
+struct _NcmQ
 {
   /*< private >*/
   gdouble s;
-  NcTriVector x;
+  NcmTriVector x;
 };
 
 /**
@@ -128,28 +128,28 @@ NC_TRIVEC_SET_0(q->x); \
  * FIXME
  *
  */
-#define NC_QUATERNION_MEMCPY(a,b) memcpy (a, b, sizeof(NcQ))
+#define NC_QUATERNION_MEMCPY(a,b) memcpy (a, b, sizeof(NcmQ))
 
-NcQ *nc_quaternion_new ();
-NcQ *nc_quaternion_new_from_vector (NcTriVector v);
-NcQ *nc_quaternion_new_from_data (gdouble x, gdouble y, gdouble z, gdouble theta);
+NcmQ *ncm_quaternion_new ();
+NcmQ *ncm_quaternion_new_from_vector (NcmTriVector v);
+NcmQ *ncm_quaternion_new_from_data (gdouble x, gdouble y, gdouble z, gdouble theta);
 
-void nc_quaternion_set_from_data (NcQ *q, gdouble x, gdouble y, gdouble z, gdouble theta);
-void nc_quaternion_set_random (NcQ *q);
+void ncm_quaternion_set_from_data (NcmQ *q, gdouble x, gdouble y, gdouble z, gdouble theta);
+void ncm_quaternion_set_random (NcmQ *q);
 
-void nc_quaternion_free (NcQ *q);
-void nc_quaternion_normalize (NcQ *q);
-void nc_quaternion_conjugate (NcQ *q);
+void ncm_quaternion_free (NcmQ *q);
+void ncm_quaternion_normalize (NcmQ *q);
+void ncm_quaternion_conjugate (NcmQ *q);
 
-void nc_quaternion_mul (NcQ *q, NcQ *u, NcQ *res);
-void nc_quaternion_lmul (NcQ *q, NcQ *u);
-void nc_quaternion_rmul (NcQ *q, NcQ *u);
+void ncm_quaternion_mul (NcmQ *q, NcmQ *u, NcmQ *res);
+void ncm_quaternion_lmul (NcmQ *q, NcmQ *u);
+void ncm_quaternion_rmul (NcmQ *q, NcmQ *u);
 
-void nc_quaternion_conjugate_u_mul (NcQ *q, NcQ *u, NcQ *res);
-void nc_quaternion_conjugate_q_mul (NcQ *q, NcQ *u, NcQ *res);
+void ncm_quaternion_conjugate_u_mul (NcmQ *q, NcmQ *u, NcmQ *res);
+void ncm_quaternion_conjugate_q_mul (NcmQ *q, NcmQ *u, NcmQ *res);
 
-void nc_quaternion_rotate (NcQ *q, NcTriVector v);
-void nc_quaternion_inv_rotate (NcQ *q, NcTriVector v);
+void ncm_quaternion_rotate (NcmQ *q, NcmTriVector v);
+void ncm_quaternion_inv_rotate (NcmQ *q, NcmTriVector v);
 
 G_END_DECLS
 

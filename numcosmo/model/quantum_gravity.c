@@ -1649,7 +1649,7 @@ nc_hicosmo_qg_pert_powerspectrum (NcHICosmoQGMode *qgmode, gdouble x, gdouble *R
 }
 
 gboolean
-nc_hicosmo_qg_modefunc_cvode_init (NcHICosmoQGMode *qgmode)
+nc_hicosmo_qg_modefuncm_cvode_init (NcHICosmoQGMode *qgmode)
 {
   gint flag;
   CVRhsFn f;
@@ -1833,7 +1833,7 @@ nc_hicosmo_qg_modefunc_evolve (NcHICosmoQGMode *qgmode)
   }
 
   //qgmode->alphaf = 0.0;
-  nc_hicosmo_qg_modefunc_cvode_init (qgmode);
+  nc_hicosmo_qg_modefuncm_cvode_init (qgmode);
   flag = CVodeSetStopTime(qgmode->cvode, qgmode->alphaf);
   CVODE_CHECK(&flag, "CVodeSetStopTime", 1, FALSE);
   printf ("# Ode solver changed at %.15g.\n", exp(qgmode->alphai));

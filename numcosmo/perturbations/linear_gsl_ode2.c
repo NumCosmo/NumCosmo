@@ -69,8 +69,8 @@ static gdouble ncm_gsl_odeiv2_get_c1 (NcLinearPert *pert);
 static gdouble ncm_gsl_odeiv2_get_b1 (NcLinearPert *pert);
 static gdouble ncm_gsl_odeiv2_get_theta2 (NcLinearPert *pert);
 static gdouble ncm_gsl_odeiv2_get (NcLinearPert *pert, guint n);
-static gdouble ncm_gsl_odeiv2_get_theta (NcLinearPert *pert, gint n);
-static gdouble ncm_gsl_odeiv2_get_theta_p (NcLinearPert *pert, gint n);
+static gdouble ncm_gsl_odeiv2_get_theta (NcLinearPert *pert, guint n);
+static gdouble ncm_gsl_odeiv2_get_theta_p (NcLinearPert *pert, guint n);
 
 static NcLinearPertOdeSolver _ncm_gsl_odeiv2_solver = {
   &ncm_gsl_odeiv2_create,

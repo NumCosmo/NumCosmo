@@ -1,6 +1,6 @@
+dnl ***************************************************************************
 dnl Process this file with autoconf to produce a configure script.
-dnl Created by Anjuta application wizard.
-dnl testa
+dnl ***************************************************************************
 
 m4_define([numcosmo_major_version], [0])
 m4_define([numcosmo_minor_version], [9])
@@ -14,6 +14,7 @@ AC_CONFIG_MACRO_DIR([m4])
 
 AC_PREREQ([2.69])
 AM_INIT_AUTOMAKE([gnu -Wno-portability])
+m4_ifdef([AM_SILENT_RULES],[AM_SILENT_RULES()])
 
 PACKAGE=numcosmo
 NUMCOSMO_MAJOR_VERSION=numcosmo_major_version
@@ -32,23 +33,30 @@ AC_CONFIG_HEADERS([config.h])
 
 AM_MAINTAINER_MODE
 
-dnl
-dnl Gobject Introspection
-dnl
+dnl ***************************************************************************
 dnl add the correct m4 directory location.
+dnl ***************************************************************************
 AC_CONFIG_MACRO_DIR([m4])
   
-dnl any typos here, and you will end up with a message about HAVE_INTROSPECTION not being defined
+dnl ***************************************************************************
+dnl Gobject Introspection
+dnl ***************************************************************************
 GOBJECT_INTROSPECTION_CHECK([0.6.7])
 
+dnl ***************************************************************************
 dnl things required by automake
 dnl AC_ARG_PROGRAM
+dnl ***************************************************************************
 AC_PROG_MAKE_SET
 
+dnl ***************************************************************************
 dnl Check for which system.
+dnl ***************************************************************************
 AC_CANONICAL_HOST
 
+dnl ***************************************************************************
 dnl Checks for programs.
+dnl ***************************************************************************
 AC_LANG(C)
 AC_PROG_CC
 AC_PROG_CPP
@@ -58,12 +66,23 @@ AC_PROG_CC_STDC
 AC_PROG_GREP
 AC_PROG_SED
 AC_PROG_FC
+AM_PROG_VALAC
 dnl LT_INIT([disable-shared])
 dnl AC_DISABLE_SHARED
 LT_INIT
 
+dnl ***************************************************************************
+dnl Check for vapigen
+dnl ***************************************************************************
+AC_PATH_PROG(VAPIGEN, vapigen, [no])
+AC_SUBST(VAPIGEN)
+AM_CONDITIONAL(HAVE_VAPIGEN, [test "x$VAPIGEN" != xno])
+VAPIDIR="${datadir}/vala/vapi"
+AC_SUBST(VAPIDIR)
 
+dnl ***************************************************************************
 dnl check for gtk-doc
+dnl ***************************************************************************
 GTK_DOC_CHECK([1.14],[--flavour no-tmpl])
 
 AC_ARG_ENABLE(man,
@@ -72,9 +91,10 @@ AC_ARG_ENABLE(man,
               enable_man=no)
 
 if test "${enable_man}" != no; then
-dnl
+
+dnl ***************************************************************************
 dnl Check for xsltproc
-dnl
+dnl ***************************************************************************
 AC_PATH_PROG([XSLTPROC], [xsltproc])
   if test -z "$XSLTPROC"; then
     enable_man=no
@@ -83,18 +103,24 @@ fi
 
 AM_CONDITIONAL(ENABLE_MAN, test x$enable_man != xno)
 
+dnl ***************************************************************************
 dnl Set PACKAGE_DATA_DIR in config.h.
+dnl ***************************************************************************
 if test "x${prefix}" = "xNONE"; then
   AC_DEFINE_UNQUOTED(PACKAGE_DATA_DIR, "${ac_default_prefix}/share/${PACKAGE}-${VERSION}", [PACKAGE_DATA_DIR])
 else
   AC_DEFINE_UNQUOTED(PACKAGE_DATA_DIR, "${prefix}/share/${PACKAGE}-${VERSION}", [PACKAGE_DATA_DIR])
 fi
 
+dnl ***************************************************************************
 dnl Set PACKAGE_SOURCE_DIR in config.h.
+dnl ***************************************************************************
 packagesrcdir=`cd $srcdir && pwd`
 AC_DEFINE_UNQUOTED(PACKAGE_SOURCE_DIR, "${packagesrcdir}",[PACKAGE_SOURCE_DIR])
 
+dnl ***************************************************************************
 dnl Dependencies
+dnl ***************************************************************************
 GLIB_REQUIRED_VERSION=2.24.0
 GSL_REQUIRED_VERSION=1.13
 GSL_GLF_REQUIRED_VERSION=1.15

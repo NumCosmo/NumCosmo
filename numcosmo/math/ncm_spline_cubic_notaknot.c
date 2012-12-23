@@ -38,7 +38,7 @@
 #include "build_cfg.h"
 
 #include "math/ncm_spline_cubic_notaknot.h"
-#include "nc_macros.h"
+#include "math/ncm_cfg.h"
 
 #include <math.h>
 #include <gsl/gsl_math.h>
@@ -201,7 +201,7 @@ _ncm_spline_notaknot_prepare_base (NcmSpline *s)
 					printf ("x= % 20.8g y = % 20.8g\n", ncm_vector_get (s->xv, i), ncm_vector_get (s->yv, i));
 			}
 
-			NC_TEST_GSL_RESULT ("_ncm_spline_notaknot_prepare[gsl_linalg_solve_symm_tridiag]", status);
+			NCM_TEST_GSL_RESULT ("_ncm_spline_notaknot_prepare[gsl_linalg_solve_symm_tridiag]", status);
 		}
 #endif
 		{

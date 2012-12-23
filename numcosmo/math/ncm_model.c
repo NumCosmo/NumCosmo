@@ -542,19 +542,20 @@ ncm_model_class_get_property (GObject *object, guint prop_id, GValue *value, GPa
   else if (vparam_id < model_class->vparam_len)
   {
     gsize n = g_array_index (model->vparam_len, guint, vparam_id);
-    GVariantBuilder *builder;
+    GVariantBuilder builder;
     GVariant *var;
     gint i;
 
-    builder = g_variant_builder_new (G_VARIANT_TYPE ("ad"));
+    g_variant_builder_init (&builder, G_VARIANT_TYPE ("ad"));
     for (i = 0; i < n; i++)
     {
       guint pid = ncm_model_vparam_index (model, vparam_id, i);
       gdouble val = ncm_model_param_get (model, pid);
-      g_variant_builder_add (builder, "d", val);
+      g_variant_builder_add (&builder, "d", val);
     }
-    var = g_variant_new ("ad", builder);
-    g_variant_builder_unref (builder);
+    var = g_variant_builder_end (&builder);
+    g_variant_ref_sink (var);
+
     g_value_take_variant (value, var);
   }
   else if (vparam_len_id < model_class->vparam_len)
@@ -568,19 +569,20 @@ ncm_model_class_get_property (GObject *object, guint prop_id, GValue *value, GPa
   else if (vparam_fit_id < model_class->vparam_len)
   {
     gsize n = g_array_index (model->vparam_len, guint, vparam_fit_id);
-    GVariantBuilder *builder;
+    GVariantBuilder builder;
     GVariant *var;
     gint i;
 
-    builder = g_variant_builder_new (G_VARIANT_TYPE ("ab"));
+    g_variant_builder_init (&builder, G_VARIANT_TYPE ("ab"));
     for (i = 0; i < n; i++)
     {
       guint pid = ncm_model_vparam_index (model, vparam_fit_id, i);
       gboolean tofit = ncm_model_param_get_ftype (model, pid) == NCM_PARAM_TYPE_FREE ? TRUE: FALSE;
-      g_variant_builder_add (builder, "b", tofit);
+      g_variant_builder_add (&builder, "b", tofit);
     }
-    var = g_variant_new ("ab", builder);
-    g_variant_builder_unref (builder);
+    var = g_variant_builder_end (&builder);
+    g_variant_ref_sink (var);
+    
     g_value_take_variant (value, var);
   }
   else

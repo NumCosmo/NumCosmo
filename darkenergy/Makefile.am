@@ -8,7 +8,13 @@ AM_CFLAGS = \
 	-I$(top_srcdir) \
 	-I$(top_srcdir)/numcosmo
 
-bin_PROGRAMS = darkenergy
+AM_VALAFLAGS = \
+	--pkg numcosmomath-1.0 \
+	--pkg numcosmo-1.0     \
+	--vapidir=$(abs_top_builddir)/numcosmo
+
+bin_PROGRAMS = darkenergy \
+	gdarkenergy
 
 darkenergy_SOURCES = \
 	darkenergy.c\
@@ -22,3 +28,8 @@ darkenergy_SOURCES = \
 darkenergy_LDADD = \
         $(top_builddir)/numcosmo/libnumcosmo.la
 
+gdarkenergy_SOURCES =  \
+	gdarkenergy.vala
+
+gdarkenergy_LDADD = \
+        $(top_builddir)/numcosmo/libnumcosmo.la

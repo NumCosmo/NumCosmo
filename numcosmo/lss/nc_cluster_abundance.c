@@ -236,7 +236,7 @@ nc_cluster_abundance_z_p_lnm_p_d2n (NcClusterAbundance *cad, NcHICosmo *model, g
 {
   gdouble d2N, zl, zu, lnMl, lnMu, err;
   observables_integrand_data obs_data;
-  NcIntegrand2dim integ;
+  NcmIntegrand2dim integ;
 
   obs_data.cad            = cad;
   obs_data.model          = model;
@@ -251,7 +251,7 @@ nc_cluster_abundance_z_p_lnm_p_d2n (NcClusterAbundance *cad, NcHICosmo *model, g
   nc_cluster_redshift_p_limits (cad->z, z_obs, z_obs_params, &zl, &zu);
   nc_cluster_mass_p_limits (cad->m, model, lnM_obs, lnM_obs_params, &lnMl, &lnMu);
 
-  ncm_integrate_2dim (&integ, lnMl, zl, lnMu, zu, NC_DEFAULT_PRECISION, 0.0, &d2N, &err);
+  ncm_integrate_2dim (&integ, lnMl, zl, lnMu, zu, NCM_DEFAULT_PRECISION, 0.0, &d2N, &err);
 
   return d2N;
 }
@@ -288,7 +288,7 @@ nc_cluster_abundance_z_p_d2n (NcClusterAbundance *cad, NcHICosmo *model, gdouble
   observables_integrand_data obs_data;
   gdouble d2N, zl, zu, err;
   gsl_function F;
-  gsl_integration_workspace **w = nc_integral_get_workspace ();
+  gsl_integration_workspace **w = ncm_integral_get_workspace ();
 
   obs_data.cad            = cad;
   obs_data.model          = model;
@@ -301,7 +301,7 @@ nc_cluster_abundance_z_p_d2n (NcClusterAbundance *cad, NcHICosmo *model, gdouble
 
   nc_cluster_redshift_p_limits (cad->z, z_obs, z_obs_params, &zl, &zu);
 
-  gsl_integration_qag (&F, zl, zu, 0.0, NC_DEFAULT_PRECISION, NC_INT_PARTITION, _NC_CLUSTER_ABUNDANCE_DEFAULT_INT_KEY, *w, &d2N, &err);
+  gsl_integration_qag (&F, zl, zu, 0.0, NCM_DEFAULT_PRECISION, NCM_INTEGRAL_PARTITION, _NC_CLUSTER_ABUNDANCE_DEFAULT_INT_KEY, *w, &d2N, &err);
 
   ncm_memory_pool_return (w);
 
@@ -353,7 +353,7 @@ nc_cluster_abundance_lnm_p_d2n (NcClusterAbundance *cad, NcHICosmo *model, gdoub
   observables_integrand_data obs_data;
   gdouble d2N, lnMl, lnMu, err;
   gsl_function F;
-  gsl_integration_workspace **w = nc_integral_get_workspace ();
+  gsl_integration_workspace **w = ncm_integral_get_workspace ();
 
   obs_data.cad            = cad;
   obs_data.model          = model;
@@ -366,7 +366,7 @@ nc_cluster_abundance_lnm_p_d2n (NcClusterAbundance *cad, NcHICosmo *model, gdoub
 
   nc_cluster_mass_p_limits (cad->m, model, lnM_obs, lnM_obs_params, &lnMl, &lnMu);
 
-  gsl_integration_qag (&F, lnMl, lnMu, 0.0, NC_DEFAULT_PRECISION, NC_INT_PARTITION, _NC_CLUSTER_ABUNDANCE_DEFAULT_INT_KEY, *w, &d2N, &err);
+  gsl_integration_qag (&F, lnMl, lnMu, 0.0, NCM_DEFAULT_PRECISION, NCM_INTEGRAL_PARTITION, _NC_CLUSTER_ABUNDANCE_DEFAULT_INT_KEY, *w, &d2N, &err);
   ncm_memory_pool_return (w);
 
   return d2N;
@@ -413,7 +413,7 @@ _nc_cluster_abundance_z_intp_lnM_intp_N (NcClusterAbundance *cad, NcHICosmo *mod
 {
   gdouble N, zl, zu, lnMl, lnMu, err;
   observables_integrand_data obs_data;
-  NcIntegrand2dim integ;
+  NcmIntegrand2dim integ;
 
   obs_data.cad = cad;
   obs_data.model = model;
@@ -424,7 +424,7 @@ _nc_cluster_abundance_z_intp_lnM_intp_N (NcClusterAbundance *cad, NcHICosmo *mod
   nc_cluster_redshift_n_limits (cad->z, &zl, &zu);
   nc_cluster_mass_n_limits (cad->m, model, &lnMl, &lnMu);
 
-  ncm_integrate_2dim (&integ, lnMl, zl, lnMu, zu, NC_DEFAULT_PRECISION, 0.0, &N, &err);
+  ncm_integrate_2dim (&integ, lnMl, zl, lnMu, zu, NCM_DEFAULT_PRECISION, 0.0, &N, &err);
 
   return N;
 }
@@ -449,7 +449,7 @@ _nc_cluster_abundance_z_intp_N (NcClusterAbundance *cad, NcHICosmo *model)
 {
   gdouble N, zl, zu, lnMl, lnMu, err;
   observables_integrand_data obs_data;
-  NcIntegrand2dim integ;
+  NcmIntegrand2dim integ;
 
   obs_data.cad = cad;
   obs_data.model = model;
@@ -460,7 +460,7 @@ _nc_cluster_abundance_z_intp_N (NcClusterAbundance *cad, NcHICosmo *model)
   nc_cluster_redshift_n_limits (cad->z, &zl, &zu);
   nc_cluster_mass_n_limits (cad->m, model, &lnMl, &lnMu);
 
-  ncm_integrate_2dim (&integ, lnMl, zl, lnMu, zu, NC_DEFAULT_PRECISION, 0.0, &N, &err);
+  ncm_integrate_2dim (&integ, lnMl, zl, lnMu, zu, NCM_DEFAULT_PRECISION, 0.0, &N, &err);
 
   return N;
 }
@@ -486,7 +486,7 @@ _nc_cluster_abundance_lnM_intp_N (NcClusterAbundance *cad, NcHICosmo *model)
 {
   gdouble N, zl, zu, lnMl, lnMu, err;
   observables_integrand_data obs_data;
-  NcIntegrand2dim integ;
+  NcmIntegrand2dim integ;
 
   obs_data.cad = cad;
   obs_data.model = model;
@@ -497,7 +497,7 @@ _nc_cluster_abundance_lnM_intp_N (NcClusterAbundance *cad, NcHICosmo *model)
   nc_cluster_redshift_n_limits (cad->z, &zl, &zu);
   nc_cluster_mass_n_limits (cad->m, model, &lnMl, &lnMu);
 
-  ncm_integrate_2dim (&integ, lnMl, zl, lnMu, zu, NC_DEFAULT_PRECISION, 0.0, &N, &err);
+  ncm_integrate_2dim (&integ, lnMl, zl, lnMu, zu, NCM_DEFAULT_PRECISION, 0.0, &N, &err);
 
   return N;
 }
@@ -1155,8 +1155,8 @@ nc_ca_mean_bias_numerator (NcClusterAbundance *cad, NcHICosmo *model, gdouble ln
 	//printf ("%5.5e, %5.5e\n", exp(lnM), exp(lnMf));
 
 	{
-	  gsl_integration_workspace **w = nc_integral_get_workspace ();
-	  gsl_integration_qag (&F, lnM, lnMf, 0.0, NC_DEFAULT_PRECISION, NC_INT_PARTITION, _NC_CLUSTER_ABUNDANCE_DEFAULT_INT_KEY, *w, &res, &err);
+	  gsl_integration_workspace **w = ncm_integral_get_workspace ();
+	  gsl_integration_qag (&F, lnM, lnMf, 0.0, NCM_DEFAULT_PRECISION, NCM_INTEGRAL_PARTITION, _NC_CLUSTER_ABUNDANCE_DEFAULT_INT_KEY, *w, &res, &err);
 	  ncm_memory_pool_return (w);
 	}
 	mean_bias_numerator = res;
@@ -1197,8 +1197,8 @@ nc_ca_mean_bias_denominator (NcClusterAbundance *cad, NcHICosmo *model, gdouble 
 	//printf ("%5.5e, %5.5e\n", exp(lnM), exp(lnMf));
 
 	{
-	  gsl_integration_workspace **w = nc_integral_get_workspace ();
-	  gsl_integration_qag (&F, lnM, lnMf, 0.0, NC_DEFAULT_PRECISION, NC_INT_PARTITION, _NC_CLUSTER_ABUNDANCE_DEFAULT_INT_KEY, *w, &res, &err);
+	  gsl_integration_workspace **w = ncm_integral_get_workspace ();
+	  gsl_integration_qag (&F, lnM, lnMf, 0.0, NCM_DEFAULT_PRECISION, NCM_INTEGRAL_PARTITION, _NC_CLUSTER_ABUNDANCE_DEFAULT_INT_KEY, *w, &res, &err);
 	  ncm_memory_pool_return (w);
 	}
 	mean_bias_denominator= res;
@@ -1257,9 +1257,9 @@ nc_ca_mean_bias_Mobs_numerator (NcClusterAbundance *cad, NcHICosmo *model, gdoub
 	  //lnMu = lnMobs + 7.0 * obs_data.cad->lnM_sigma0;
 	  g_assert_not_reached ();
 	  {
-		gsl_integration_workspace **w = nc_integral_get_workspace ();
+		gsl_integration_workspace **w = ncm_integral_get_workspace ();
 
-		gsl_integration_qag (&F, lnMl, lnMu, 0.0, NC_DEFAULT_PRECISION, NC_INT_PARTITION, _NC_CLUSTER_ABUNDANCE_DEFAULT_INT_KEY, *w, &res, &err);
+		gsl_integration_qag (&F, lnMl, lnMu, 0.0, NCM_DEFAULT_PRECISION, NCM_INTEGRAL_PARTITION, _NC_CLUSTER_ABUNDANCE_DEFAULT_INT_KEY, *w, &res, &err);
 		ncm_memory_pool_return (w);
 	  }
 	  mean_bias_Mobs_numerator = res;
@@ -1308,9 +1308,9 @@ nc_ca_mean_bias_Mobs_denominator (NcClusterAbundance *cad, NcHICosmo *model, gdo
 	  //lnMu = lnMobs + 7.0 * obs_data.cad->lnM_sigma0;
 	  g_assert_not_reached ();
 	  {
-		gsl_integration_workspace **w = nc_integral_get_workspace ();
+		gsl_integration_workspace **w = ncm_integral_get_workspace ();
 
-		gsl_integration_qag (&F, lnMl, lnMu, 0.0, NC_DEFAULT_PRECISION, NC_INT_PARTITION, _NC_CLUSTER_ABUNDANCE_DEFAULT_INT_KEY, *w, &res, &err);
+		gsl_integration_qag (&F, lnMl, lnMu, 0.0, NCM_DEFAULT_PRECISION, NCM_INTEGRAL_PARTITION, _NC_CLUSTER_ABUNDANCE_DEFAULT_INT_KEY, *w, &res, &err);
 		ncm_memory_pool_return (w);
 	  }
 	  mean_bias_Mobs_denominator = res;

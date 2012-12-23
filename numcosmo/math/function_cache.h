@@ -28,29 +28,29 @@
 #include <glib.h>
 #include <glib-object.h>
 
-#include <numcosmo/nc_macros.h>
+#include <numcosmo/math/ncm_cfg.h>
 #include <gsl/gsl_vector.h>
 
 G_BEGIN_DECLS
 
 /**
- * NcFunctionCacheSearchType:
+ * NcmFunctionCacheSearchType:
  * @NC_FUNCTION_CACHE_SEARCH_BOTH: FIXME
  * @NC_FUNCTION_CACHE_SEARCH_GT: FIXME
  * @NC_FUNCTION_CACHE_SEARCH_LT: FIXME
  *
  * FIXME
  */
-typedef enum _NcFunctionCacheSearchType
+typedef enum _NcmFunctionCacheSearchType
 {
   NC_FUNCTION_CACHE_SEARCH_BOTH = 0,
   NC_FUNCTION_CACHE_SEARCH_GT,
   NC_FUNCTION_CACHE_SEARCH_LT,
-} NcFunctionCacheSearchType;
+} NcmFunctionCacheSearchType;
 
-typedef struct _NcFunctionCache NcFunctionCache;
+typedef struct _NcmFunctionCache NcmFunctionCache;
 
-struct _NcFunctionCache
+struct _NcmFunctionCache
 {
   /*< private >*/
   GTree *tree;
@@ -61,15 +61,15 @@ struct _NcFunctionCache
   gdouble reltol;
 };
 
-NcFunctionCache *nc_function_cache_new (guint n, gdouble abstol, gdouble reltol);
-void nc_function_cache_free (NcFunctionCache *cache);
-void nc_function_cache_clear (NcFunctionCache **cache);
-void nc_function_cache_insert (NcFunctionCache *cache, gdouble x, ...);
-void nc_function_cache_insert_vector (NcFunctionCache *cache, gdouble x, gsl_vector *p);
-gboolean nc_function_cache_get (NcFunctionCache *cache, gdouble *x_ptr, gsl_vector **v);
-gboolean nc_function_cache_get_near (NcFunctionCache *cache, gdouble x, gdouble *x_found_ptr, gsl_vector **v, NcFunctionCacheSearchType type);
+NcmFunctionCache *ncm_function_cache_new (guint n, gdouble abstol, gdouble reltol);
+void ncm_function_cache_free (NcmFunctionCache *cache);
+void ncm_function_cache_clear (NcmFunctionCache **cache);
+void ncm_function_cache_insert (NcmFunctionCache *cache, gdouble x, ...);
+void ncm_function_cache_insert_vector (NcmFunctionCache *cache, gdouble x, gsl_vector *p);
+gboolean ncm_function_cache_get (NcmFunctionCache *cache, gdouble *x_ptr, gsl_vector **v);
+gboolean ncm_function_cache_get_near (NcmFunctionCache *cache, gdouble x, gdouble *x_found_ptr, gsl_vector **v, NcmFunctionCacheSearchType type);
 
-#define NC_FUNCTION_CACHE(p) ((NcFunctionCache *)(p))
+#define NC_FUNCTION_CACHE(p) ((NcmFunctionCache *)(p))
 
 G_END_DECLS
 

@@ -955,12 +955,20 @@ ncm_cmp (gdouble x, gdouble y, gdouble reltol)
   else
   {
     const gdouble delta = (x - y);
-    const gdouble mean  = 0.5 * fabs (x + y);
+    const gdouble mean  = G_UNLIKELY (x == 0 || y == 0) ? 1.0 : 0.5 * fabs (x + y);
     if (fabs (delta / mean) < reltol)
       return 0;
     else
       return delta < 0 ? -1 : 1;
   }
+}
+
+void
+_ncm_assertion_message_cmpdouble (const gchar *domain, const gchar *file, gint line, const gchar *func, const gchar *expr, gdouble arg1, const gchar *cmp, gdouble arg2)
+{
+  gchar *s = g_strdup_printf ("assertion failed (%s): (%.17g %s %.17g)", expr, arg1, cmp, arg2);
+  g_assertion_message (domain, file, line, func, s);
+  g_free (s);
 }
 
 #define NC_USERDEF_F(numb) \

@@ -196,7 +196,7 @@ test_ncm_model_test_defval (void)
   for (i = 0; i < sparam_len; i++)
   {
     gdouble p = ncm_model_orig_param_get (model, i);
-    g_assert_cmpfloat (p, ==, s_defval_tot[i]);
+    ncm_assert_cmpdouble (p, ==, s_defval_tot[i]);
   }
 
   for (i = 0; i < vparam_len; i++)
@@ -205,7 +205,7 @@ test_ncm_model_test_defval (void)
     for (j = 0; j < v_len_tot[i]; j++)
     {
       gdouble p = ncm_model_orig_vparam_get (model, i, j);
-      g_assert_cmpfloat (p, ==, v_defval_tot[i]);
+      ncm_assert_cmpdouble (p, ==, v_defval_tot[i]);
     }
   }
 
@@ -311,10 +311,10 @@ test_ncm_model_test_setget (void)
       break;
 
     ncm_model_param_set (model, i, val);
-    g_assert_cmpfloat (ncm_model_param_get (model, i), ==, val);
+    ncm_assert_cmpdouble (ncm_model_param_get (model, i), ==, val);
 
     ncm_model_param_set_default (model, i);
-    g_assert_cmpfloat (ncm_model_param_get (model, i), !=, val);
+    ncm_assert_cmpdouble (ncm_model_param_get (model, i), !=, val);
 
     ncm_model_param_set (model, i, val);
     ncm_vector_set (tmp, i, val);
@@ -325,7 +325,7 @@ test_ncm_model_test_setget (void)
 
   for (i = 0; i < model_len; i++)
   {
-    g_assert_cmpfloat (ncm_model_param_get (model, i), ==, ncm_vector_get (tmp, i));
+    ncm_assert_cmpdouble (ncm_model_param_get (model, i), ==, ncm_vector_get (tmp, i));
   }
 
   for (i = 0; i < sparam_len; i++)
@@ -344,7 +344,7 @@ test_ncm_model_test_setget (void)
   ncm_model_params_set_default (model);
   for (i = 0; i < model_len; i++)
   {
-    g_assert_cmpfloat (ncm_model_param_get (model, i), ==, ncm_vector_get (tmp, i));
+    ncm_assert_cmpdouble (ncm_model_param_get (model, i), ==, ncm_vector_get (tmp, i));
   }
 
   for (i = 0; i < sparam_len; i++)
@@ -365,13 +365,12 @@ test_ncm_model_test_setget (void)
   ncm_model_params_set_all_data (model, NCM_VECTOR_DATA (tmp));
   for (i = 0; i < model_len; i++)
   {
-    g_assert_cmpfloat (ncm_model_param_get (model, i), ==, ncm_vector_get (tmp, i));
+    ncm_assert_cmpdouble (ncm_model_param_get (model, i), ==, ncm_vector_get (tmp, i));
   }
 
   ncm_vector_free (tmp);
   g_object_unref (tm);
 }
-
 
 void
 test_ncm_model_test_setget_prop (void)
@@ -388,12 +387,14 @@ test_ncm_model_test_setget_prop (void)
     gdouble ub = ncm_model_param_get_upper_bound (model, i);
     gdouble val, val_out;
     while ((val = g_test_rand_double_range (lb, ub)))
+    {
       if (val != ncm_model_param_get (model, i))
-      break;
-
+        break;
+    }
+    
     g_object_set (model, s_name_tot[i], val, NULL);
     g_object_get (model, s_name_tot[i], &val_out, NULL);
-    g_assert_cmpfloat (val_out, ==, val);
+    ncm_assert_cmpdouble (val_out, ==, val);
   }
 
   for (i = 0; i < vparam_len; i++)
@@ -430,8 +431,8 @@ test_ncm_model_test_setget_prop (void)
     for (j = 0; j < v_len_tot[i]; j++)
     {
       guint n = ncm_model_vparam_index (model, i, j);
-      g_assert_cmpfloat (ncm_vector_get (tmp, j), ==, ncm_model_param_get (model, n));
-      g_assert_cmpfloat (ncm_vector_get (tmp, j), ==, ncm_vector_get (tmp_out, j));
+      ncm_assert_cmpdouble (ncm_vector_get (tmp, j), ==, ncm_model_param_get (model, n));
+      ncm_assert_cmpdouble (ncm_vector_get (tmp, j), ==, ncm_vector_get (tmp_out, j));
     }
     ncm_vector_free (tmp);
     if (g_test_trap_fork (0, G_TEST_TRAP_SILENCE_STDOUT | G_TEST_TRAP_SILENCE_STDERR))
@@ -504,7 +505,7 @@ test_ncm_model_test_setget_model (void)
 
   for (i = 0; i < model_len; i++)
   {
-    g_assert_cmpfloat (ncm_model_param_get (model1, i), ==, ncm_model_param_get (model2, i));
+    ncm_assert_cmpdouble (ncm_model_param_get (model1, i), ==, ncm_model_param_get (model2, i));
   }
 
   if (g_test_trap_fork (0, G_TEST_TRAP_SILENCE_STDOUT | G_TEST_TRAP_SILENCE_STDERR))

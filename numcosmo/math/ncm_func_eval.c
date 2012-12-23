@@ -36,7 +36,7 @@
 #include "build_cfg.h"
 
 #include "math/ncm_func_eval.h"
-#include "nc_macros.h"
+#include "math/ncm_cfg.h"
 #include <stdio.h>
 
 typedef struct _NcmFunctionEvalCtrl

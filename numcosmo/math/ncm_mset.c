@@ -131,7 +131,7 @@ ncm_mset_new (NcmModel *model0, ...)
  *
  * FIXME
  *
- * Returns: FIXME
+ * Returns: (transfer full): FIXME
  */
 NcmMSet *
 ncm_mset_newv (NcmModel *model0, va_list ap)

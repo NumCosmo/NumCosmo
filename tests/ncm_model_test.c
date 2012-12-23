@@ -278,11 +278,11 @@ ncm_model_test_base_class_init (NcmModelClass* model_class)
 	g_assert_cmpstr (sp->name,   ==, s_name[i]);
 	g_assert_cmpstr (sp->symbol, ==, s_symbol[i]);
 
-	g_assert_cmpfloat (ncm_sparam_get_lower_bound (sp),        ==, s_lb[i]);
-	g_assert_cmpfloat (ncm_sparam_get_upper_bound (sp),        ==, s_ub[i]);
-	g_assert_cmpfloat (ncm_sparam_get_scale (sp),              ==, s_scale[i]);
-	g_assert_cmpfloat (ncm_sparam_get_absolute_tolerance (sp), ==, s_abstol[i]);
-	g_assert_cmpfloat (ncm_sparam_get_default_value (sp),      ==, s_defval[i]);
+	ncm_assert_cmpdouble (ncm_sparam_get_lower_bound (sp),        ==, s_lb[i]);
+	ncm_assert_cmpdouble (ncm_sparam_get_upper_bound (sp),        ==, s_ub[i]);
+	ncm_assert_cmpdouble (ncm_sparam_get_scale (sp),              ==, s_scale[i]);
+	ncm_assert_cmpdouble (ncm_sparam_get_absolute_tolerance (sp), ==, s_abstol[i]);
+	ncm_assert_cmpdouble (ncm_sparam_get_default_value (sp),      ==, s_defval[i]);
 	g_assert_cmpint   (ncm_sparam_get_fit_type (sp),           ==, s_ftype[i]);
   }
 
@@ -294,11 +294,11 @@ ncm_model_test_base_class_init (NcmModelClass* model_class)
 	g_assert_cmpstr (vp->default_sparam->name,   ==, v_name[i]);
 	g_assert_cmpstr (vp->default_sparam->symbol, ==, v_symbol[i]);
 
-	g_assert_cmpfloat (ncm_vparam_get_lower_bound (vp, 0),        ==, v_lb[i]);
-	g_assert_cmpfloat (ncm_vparam_get_upper_bound (vp, 0),        ==, v_ub[i]);
-	g_assert_cmpfloat (ncm_vparam_get_scale (vp, 0),              ==, v_scale[i]);
-	g_assert_cmpfloat (ncm_vparam_get_absolute_tolerance (vp, 0), ==, v_abstol[i]);
-	g_assert_cmpfloat (ncm_vparam_get_default_value (vp, 0),      ==, v_defval[i]);
+	ncm_assert_cmpdouble (ncm_vparam_get_lower_bound (vp, 0),        ==, v_lb[i]);
+	ncm_assert_cmpdouble (ncm_vparam_get_upper_bound (vp, 0),        ==, v_ub[i]);
+	ncm_assert_cmpdouble (ncm_vparam_get_scale (vp, 0),              ==, v_scale[i]);
+	ncm_assert_cmpdouble (ncm_vparam_get_absolute_tolerance (vp, 0), ==, v_abstol[i]);
+	ncm_assert_cmpdouble (ncm_vparam_get_default_value (vp, 0),      ==, v_defval[i]);
 	g_assert_cmpint   (ncm_vparam_get_fit_type (vp, 0),           ==, v_ftype[i]);
   }
 }

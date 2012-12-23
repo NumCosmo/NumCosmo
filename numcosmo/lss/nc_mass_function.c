@@ -423,7 +423,7 @@ nc_mass_function_dn_m_to_inf_dv (NcMassFunction *mfp, NcHICosmo *model, gdouble 
   F.params = &ca_integ;
 
   if (w == NULL)
-    w = gsl_integration_workspace_alloc (NC_INT_PARTITION);
+    w = gsl_integration_workspace_alloc (NCM_INTEGRAL_PARTITION);
 
   n = 0.0;
   R = nc_matter_var_mass_to_R (mfp->vp, model, M);
@@ -433,11 +433,11 @@ nc_mass_function_dn_m_to_inf_dv (NcMassFunction *mfp, NcHICosmo *model, gdouble 
 
   while (1)
   {
-    gsl_integration_qag (&F, R, R + _NC_STEP, 0.0, NC_DEFAULT_PRECISION, NC_INT_PARTITION, 1, w, &n_part, &error);
+    gsl_integration_qag (&F, R, R + _NC_STEP, 0.0, NCM_DEFAULT_PRECISION, NCM_INTEGRAL_PARTITION, 1, w, &n_part, &error);
     R += _NC_STEP;
     n += n_part;
 
-    if (gsl_fcmp (n, n + n_part, NC_DEFAULT_PRECISION * 1e-1) == 0)
+    if (gsl_fcmp (n, n + n_part, NCM_DEFAULT_PRECISION * 1e-1) == 0)
       break;
   }
 
@@ -471,14 +471,14 @@ nc_mass_function_dn_m1_to_m2_dv (NcMassFunction *mfp, NcHICosmo *model, gdouble 
   F.params = &ca_integ;
 
   if (w == NULL)
-    w = gsl_integration_workspace_alloc (NC_INT_PARTITION);
+    w = gsl_integration_workspace_alloc (NCM_INTEGRAL_PARTITION);
 
   n = 0.0;
   R1 = nc_matter_var_mass_to_R (mfp->vp, model, M1);
   R2 = nc_matter_var_mass_to_R (mfp->vp, model, M2);
   mfp->growth = nc_growth_func_eval (mfp->gf, model, z);
 
-  gsl_integration_qag (&F, R1, R2, 0.0, NC_DEFAULT_PRECISION, NC_INT_PARTITION, 1, w, &n, &error);
+  gsl_integration_qag (&F, R1, R2, 0.0, NCM_DEFAULT_PRECISION, NCM_INTEGRAL_PARTITION, 1, w, &n, &error);
 
   printf ("R1 = %5.5g R2 = %5.5g z = %5.5g n = %5.5g\n", R1, R2, z, n);
   return n;

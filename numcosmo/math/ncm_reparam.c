@@ -153,7 +153,7 @@ ncm_reparam_grad_old2new (NcmReparam *reparam, struct _NcmModel *model, NcmMatri
   gint ret;
   NCM_REPARAM_GET_CLASS (reparam)->jac (reparam, model, jac);
   ret = gsl_blas_dgemv (CblasTrans, 1.0, NCM_MATRIX_GSL (jac), ncm_vector_gsl (old_grad), 0.0, ncm_vector_gsl (new_grad));
-  NC_TEST_GSL_RESULT("ncm_reparam_grad_old2new", ret);
+  NCM_TEST_GSL_RESULT("ncm_reparam_grad_old2new", ret);
 }
 
 /**
@@ -172,7 +172,7 @@ ncm_reparam_M_old2new (NcmReparam *reparam, struct _NcmModel *model, NcmMatrix *
   gint ret;
   NCM_REPARAM_GET_CLASS (reparam)->jac (reparam, model, jac);
   ret = gsl_blas_dgemm (CblasNoTrans, CblasNoTrans, 1.0, NCM_MATRIX_GSL (old_M), NCM_MATRIX_GSL (jac), 0.0, NCM_MATRIX_GSL (new_M));
-  NC_TEST_GSL_RESULT("ncm_reparam_jac_old2new", ret);
+  NCM_TEST_GSL_RESULT("ncm_reparam_jac_old2new", ret);
 }
 
 /**

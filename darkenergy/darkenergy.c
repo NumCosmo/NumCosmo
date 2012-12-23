@@ -255,7 +255,7 @@ main (gint argc, gchar *argv[])
                                                                  de_data_simple.cmb_id);
     if (cmb_id != NULL)
     {
-      NcmData *cmb_data = nc_data_cmb_new (dist, cmb_id->value);
+      NcmData *cmb_data = nc_data_cmb_create (dist, cmb_id->value);
       ncm_dataset_append_data (dset, cmb_data);
       ncm_data_free (cmb_data);
     }
@@ -269,7 +269,7 @@ main (gint argc, gchar *argv[])
                                                                  de_data_simple.bao_id);
     if (bao_id != NULL)
     {
-      NcmData *bao_data = nc_data_bao_new (dist, bao_id->value);
+      NcmData *bao_data = nc_data_bao_create (dist, bao_id->value);
       ncm_dataset_append_data (dset, bao_data);
       ncm_data_free (bao_data);
     }

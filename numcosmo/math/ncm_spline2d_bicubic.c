@@ -550,10 +550,10 @@ _ncm_spline2d_bicubic_int_dx_spline (NcmSpline2d *s2d, gdouble xl, gdouble xu)
   sc = NCM_SPLINE_CUBIC (s2dbc->optimize_dx.s);
 
 #define _NC_AIJ NCM_SPLINE2D_BICUBIC_COEFF (s2dbc, i, j)
-#define _NC_INT_A (s2dbc->optimize_dx.s->yv)
-#define _NC_INT_B (sc->b)
-#define _NC_INT_C (sc->c)
-#define _NC_INT_D (sc->d)
+#define _NCM_INTEGRAL_A (s2dbc->optimize_dx.s->yv)
+#define _NCM_INTEGRAL_B (sc->b)
+#define _NCM_INTEGRAL_C (sc->c)
+#define _NCM_INTEGRAL_D (sc->d)
 
   g_assert (jl <= ju);
 
@@ -568,13 +568,13 @@ _ncm_spline2d_bicubic_int_dx_spline (NcmSpline2d *s2d, gdouble xl, gdouble xu)
 
     for (i = 0; i < y_len_m1; i++)
     {
-      ncm_vector_set (_NC_INT_A, i,
+      ncm_vector_set (_NCM_INTEGRAL_A, i,
                       _ncm_spline_util_integ_eval (_NC_AIJ[0][0], _NC_AIJ[1][0], _NC_AIJ[2][0], _NC_AIJ[3][0], x0, xl, xu));
-      ncm_vector_set (_NC_INT_B, i,
+      ncm_vector_set (_NCM_INTEGRAL_B, i,
                       _ncm_spline_util_integ_eval (_NC_AIJ[0][1], _NC_AIJ[1][1], _NC_AIJ[2][1], _NC_AIJ[3][1], x0, xl, xu));
-      ncm_vector_set (_NC_INT_C, i,
+      ncm_vector_set (_NCM_INTEGRAL_C, i,
                       _ncm_spline_util_integ_eval (_NC_AIJ[0][2], _NC_AIJ[1][2], _NC_AIJ[2][2], _NC_AIJ[3][2], x0, xl, xu));
-      ncm_vector_set (_NC_INT_D, i,
+      ncm_vector_set (_NCM_INTEGRAL_D, i,
                       _ncm_spline_util_integ_eval (_NC_AIJ[0][3], _NC_AIJ[1][3], _NC_AIJ[2][3], _NC_AIJ[3][3], x0, xl, xu));
     }
   }
@@ -586,13 +586,13 @@ _ncm_spline2d_bicubic_int_dx_spline (NcmSpline2d *s2d, gdouble xl, gdouble xu)
       x0 = ncm_vector_get (s2d->xv, jl);
       x1 = ncm_vector_get (s2d->xv, jl + 1);
 
-      ncm_vector_set (_NC_INT_A, i,
+      ncm_vector_set (_NCM_INTEGRAL_A, i,
                       _ncm_spline_util_integ_eval (_NC_AIJ[0][0], _NC_AIJ[1][0], _NC_AIJ[2][0], _NC_AIJ[3][0], x0, xl, x1));
-      ncm_vector_set (_NC_INT_B, i,
+      ncm_vector_set (_NCM_INTEGRAL_B, i,
                       _ncm_spline_util_integ_eval (_NC_AIJ[0][1], _NC_AIJ[1][1], _NC_AIJ[2][1], _NC_AIJ[3][1], x0, xl, x1));
-      ncm_vector_set (_NC_INT_C, i,
+      ncm_vector_set (_NCM_INTEGRAL_C, i,
                       _ncm_spline_util_integ_eval (_NC_AIJ[0][2], _NC_AIJ[1][2], _NC_AIJ[2][2], _NC_AIJ[3][2], x0, xl, x1));
-      ncm_vector_set (_NC_INT_D, i,
+      ncm_vector_set (_NCM_INTEGRAL_D, i,
                       _ncm_spline_util_integ_eval (_NC_AIJ[0][3], _NC_AIJ[1][3], _NC_AIJ[2][3], _NC_AIJ[3][3], x0, xl, x1));
 
       for (j = jl + 1; j < ju; j++)
@@ -602,13 +602,13 @@ _ncm_spline2d_bicubic_int_dx_spline (NcmSpline2d *s2d, gdouble xl, gdouble xu)
         {
           const gdouble dx = x1 - x0;
 
-          ncm_vector_addto (_NC_INT_A, i,
+          ncm_vector_addto (_NCM_INTEGRAL_A, i,
                             dx * (_NC_AIJ[0][0] + dx * (0.5 * _NC_AIJ[1][0] + dx * (_NC_AIJ[2][0] / 3.0 + 0.25 * _NC_AIJ[3][0] * dx))));
-          ncm_vector_addto (_NC_INT_B, i,
+          ncm_vector_addto (_NCM_INTEGRAL_B, i,
                             dx * (_NC_AIJ[0][1] + dx * (0.5 * _NC_AIJ[1][1] + dx * (_NC_AIJ[2][1] / 3.0 + 0.25 * _NC_AIJ[3][1] * dx))));
-          ncm_vector_addto (_NC_INT_C, i,
+          ncm_vector_addto (_NCM_INTEGRAL_C, i,
                             dx * (_NC_AIJ[0][2] + dx * (0.5 * _NC_AIJ[1][2] + dx * (_NC_AIJ[2][2] / 3.0 + 0.25 * _NC_AIJ[3][2] * dx))));
-          ncm_vector_addto (_NC_INT_D, i,
+          ncm_vector_addto (_NCM_INTEGRAL_D, i,
                             dx * (_NC_AIJ[0][3] + dx * (0.5 * _NC_AIJ[1][3] + dx * (_NC_AIJ[2][3] / 3.0 + 0.25 * _NC_AIJ[3][3] * dx))));
         }
       }
@@ -616,13 +616,13 @@ _ncm_spline2d_bicubic_int_dx_spline (NcmSpline2d *s2d, gdouble xl, gdouble xu)
       {
         x0 = ncm_vector_get (s2d->xv, ju);
         x1 = ncm_vector_get (s2d->xv, ju + 1);
-        ncm_vector_addto (_NC_INT_A, i,
+        ncm_vector_addto (_NCM_INTEGRAL_A, i,
                           _ncm_spline_util_integ_eval (_NC_AIJ[0][0], _NC_AIJ[1][0], _NC_AIJ[2][0], _NC_AIJ[3][0], x0, x0, xu));
-        ncm_vector_addto (_NC_INT_B, i,
+        ncm_vector_addto (_NCM_INTEGRAL_B, i,
                           _ncm_spline_util_integ_eval (_NC_AIJ[0][1], _NC_AIJ[1][1], _NC_AIJ[2][1], _NC_AIJ[3][1], x0, x0, xu));
-        ncm_vector_addto (_NC_INT_C, i,
+        ncm_vector_addto (_NCM_INTEGRAL_C, i,
                           _ncm_spline_util_integ_eval (_NC_AIJ[0][2], _NC_AIJ[1][2], _NC_AIJ[2][2], _NC_AIJ[3][2], x0, x0, xu));
-        ncm_vector_addto (_NC_INT_D, i,
+        ncm_vector_addto (_NCM_INTEGRAL_D, i,
                           _ncm_spline_util_integ_eval (_NC_AIJ[0][3], _NC_AIJ[1][3], _NC_AIJ[2][3], _NC_AIJ[3][3], x0, x0, xu));
       }
     }
@@ -630,10 +630,10 @@ _ncm_spline2d_bicubic_int_dx_spline (NcmSpline2d *s2d, gdouble xl, gdouble xu)
 
   s2dbc->optimize_dx.init = TRUE;
 #undef _NC_AIJ
-#undef _NC_INT_A
-#undef _NC_INT_B
-#undef _NC_INT_C
-#undef _NC_INT_D
+#undef _NCM_INTEGRAL_A
+#undef _NCM_INTEGRAL_B
+#undef _NCM_INTEGRAL_C
+#undef _NCM_INTEGRAL_D
   return s2dbc->optimize_dx.s;
 }
 
@@ -707,10 +707,10 @@ _ncm_spline2d_bicubic_int_dy_spline (NcmSpline2d *s2d, gdouble yl, gdouble yu)
   sc = NCM_SPLINE_CUBIC (s2dbc->optimize_dy.s);
 
 #define _NC_AIJ NCM_SPLINE2D_BICUBIC_COEFF (s2dbc, i, j)
-#define _NC_INT_A (s2dbc->optimize_dy.s->yv)
-#define _NC_INT_B (sc->b)
-#define _NC_INT_C (sc->c)
-#define _NC_INT_D (sc->d)
+#define _NCM_INTEGRAL_A (s2dbc->optimize_dy.s->yv)
+#define _NCM_INTEGRAL_B (sc->b)
+#define _NCM_INTEGRAL_C (sc->c)
+#define _NCM_INTEGRAL_D (sc->d)
 
   g_assert (il <= iu);
 
@@ -725,13 +725,13 @@ _ncm_spline2d_bicubic_int_dy_spline (NcmSpline2d *s2d, gdouble yl, gdouble yu)
 
     for (j = 0; j < x_len_m1; j++)
     {
-      ncm_vector_set (_NC_INT_A, j,
+      ncm_vector_set (_NCM_INTEGRAL_A, j,
                       _ncm_spline_util_integ_eval (_NC_AIJ[0][0], _NC_AIJ[0][1], _NC_AIJ[0][2], _NC_AIJ[0][3], y0, yl, yu));
-      ncm_vector_set (_NC_INT_B, j,
+      ncm_vector_set (_NCM_INTEGRAL_B, j,
                       _ncm_spline_util_integ_eval (_NC_AIJ[1][0], _NC_AIJ[1][1], _NC_AIJ[1][2], _NC_AIJ[1][3], y0, yl, yu));
-      ncm_vector_set (_NC_INT_C, j,
+      ncm_vector_set (_NCM_INTEGRAL_C, j,
                       _ncm_spline_util_integ_eval (_NC_AIJ[2][0], _NC_AIJ[2][1], _NC_AIJ[2][2], _NC_AIJ[2][3], y0, yl, yu));
-      ncm_vector_set (_NC_INT_D, j,
+      ncm_vector_set (_NCM_INTEGRAL_D, j,
                       _ncm_spline_util_integ_eval (_NC_AIJ[3][0], _NC_AIJ[3][1], _NC_AIJ[3][2], _NC_AIJ[3][3], y0, yl, yu));
     }
   }
@@ -743,13 +743,13 @@ _ncm_spline2d_bicubic_int_dy_spline (NcmSpline2d *s2d, gdouble yl, gdouble yu)
       y0 = ncm_vector_get (s2d->yv, il);
       y1 = ncm_vector_get (s2d->yv, il + 1);
 
-      ncm_vector_set (_NC_INT_A, j,
+      ncm_vector_set (_NCM_INTEGRAL_A, j,
                       _ncm_spline_util_integ_eval (_NC_AIJ[0][0], _NC_AIJ[0][1], _NC_AIJ[0][2], _NC_AIJ[0][3], y0, yl, y1));
-      ncm_vector_set (_NC_INT_B, j,
+      ncm_vector_set (_NCM_INTEGRAL_B, j,
                       _ncm_spline_util_integ_eval (_NC_AIJ[1][0], _NC_AIJ[1][1], _NC_AIJ[1][2], _NC_AIJ[1][3], y0, yl, y1));
-      ncm_vector_set (_NC_INT_C, j,
+      ncm_vector_set (_NCM_INTEGRAL_C, j,
                       _ncm_spline_util_integ_eval (_NC_AIJ[2][0], _NC_AIJ[2][1], _NC_AIJ[2][2], _NC_AIJ[2][3], y0, yl, y1));
-      ncm_vector_set (_NC_INT_D, j,
+      ncm_vector_set (_NCM_INTEGRAL_D, j,
                       _ncm_spline_util_integ_eval (_NC_AIJ[3][0], _NC_AIJ[3][1], _NC_AIJ[3][2], _NC_AIJ[3][3], y0, yl, y1));
 
       for (i = il + 1; i < iu; i++)
@@ -760,13 +760,13 @@ _ncm_spline2d_bicubic_int_dy_spline (NcmSpline2d *s2d, gdouble yl, gdouble yu)
         {
           const gdouble dy = y1 - y0;
 
-          ncm_vector_addto (_NC_INT_A, j,
+          ncm_vector_addto (_NCM_INTEGRAL_A, j,
                             dy * (_NC_AIJ[0][0] + dy * (0.5 * _NC_AIJ[0][1] + dy * (_NC_AIJ[0][2] / 3.0 + 0.25 * _NC_AIJ[0][3] * dy))));
-          ncm_vector_addto (_NC_INT_B, j,
+          ncm_vector_addto (_NCM_INTEGRAL_B, j,
                             dy * (_NC_AIJ[1][0] + dy * (0.5 * _NC_AIJ[1][1] + dy * (_NC_AIJ[1][2] / 3.0 + 0.25 * _NC_AIJ[1][3] * dy))));
-          ncm_vector_addto (_NC_INT_C, j,
+          ncm_vector_addto (_NCM_INTEGRAL_C, j,
                             dy * (_NC_AIJ[2][0] + dy * (0.5 * _NC_AIJ[2][1] + dy * (_NC_AIJ[2][2] / 3.0 + 0.25 * _NC_AIJ[2][3] * dy))));
-          ncm_vector_addto (_NC_INT_D, j,
+          ncm_vector_addto (_NCM_INTEGRAL_D, j,
                             dy * (_NC_AIJ[3][0] + dy * (0.5 * _NC_AIJ[3][1] + dy * (_NC_AIJ[3][2] / 3.0 + 0.25 * _NC_AIJ[3][3] * dy))));
         }
       }
@@ -774,23 +774,23 @@ _ncm_spline2d_bicubic_int_dy_spline (NcmSpline2d *s2d, gdouble yl, gdouble yu)
       {
         y0 = ncm_vector_get (s2d->yv, iu);
         y1 = ncm_vector_get (s2d->yv, iu + 1);
-        ncm_vector_addto (_NC_INT_A, j,
+        ncm_vector_addto (_NCM_INTEGRAL_A, j,
                           _ncm_spline_util_integ_eval (_NC_AIJ[0][0], _NC_AIJ[0][1], _NC_AIJ[0][2], _NC_AIJ[0][3], y0, y0, yu));
-        ncm_vector_addto (_NC_INT_B, j,
+        ncm_vector_addto (_NCM_INTEGRAL_B, j,
                           _ncm_spline_util_integ_eval (_NC_AIJ[1][0], _NC_AIJ[1][1], _NC_AIJ[1][2], _NC_AIJ[1][3], y0, y0, yu));
-        ncm_vector_addto (_NC_INT_C, j,
+        ncm_vector_addto (_NCM_INTEGRAL_C, j,
                           _ncm_spline_util_integ_eval (_NC_AIJ[2][0], _NC_AIJ[2][1], _NC_AIJ[2][2], _NC_AIJ[2][3], y0, y0, yu));
-        ncm_vector_addto (_NC_INT_D, j,
+        ncm_vector_addto (_NCM_INTEGRAL_D, j,
                           _ncm_spline_util_integ_eval (_NC_AIJ[3][0], _NC_AIJ[3][1], _NC_AIJ[3][2], _NC_AIJ[3][3], y0, y0, yu));
       }
     }
   }
   s2dbc->optimize_dy.init = TRUE;
 #undef _NC_AIJ
-#undef _NC_INT_A
-#undef _NC_INT_B
-#undef _NC_INT_C
-#undef _NC_INT_D
+#undef _NCM_INTEGRAL_A
+#undef _NCM_INTEGRAL_B
+#undef _NCM_INTEGRAL_C
+#undef _NCM_INTEGRAL_D
   return s2dbc->optimize_dy.s;
 }
 

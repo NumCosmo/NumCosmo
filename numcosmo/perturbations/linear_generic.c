@@ -285,7 +285,7 @@ LINEAR_NAME_SUFFIX (get_theta2) (NcLinearPert *pert)
 }
 
 gdouble
-LINEAR_NAME_SUFFIX (get_theta) (NcLinearPert *pert, gint l)
+LINEAR_NAME_SUFFIX (get_theta) (NcLinearPert *pert, guint l)
 {
   LINEAR_VECTOR_PREPARE;
   if (pert->pws->tight_coupling && l < 2)
@@ -313,7 +313,7 @@ LINEAR_NAME_SUFFIX (get_theta) (NcLinearPert *pert, gint l)
 }
 
 gdouble
-LINEAR_NAME_SUFFIX (get_theta_p) (NcLinearPert *pert, gint l)
+LINEAR_NAME_SUFFIX (get_theta_p) (NcLinearPert *pert, guint l)
 {
   LINEAR_VECTOR_PREPARE;
   return _NC_THETA_P (l);
@@ -334,7 +334,7 @@ LINEAR_NAME_SUFFIX (print_all) (NcLinearPert *pert)
 }
 
 gdouble
-LINEAR_NAME_SUFFIX (get_los_theta) (NcLinearPert *pert, gint l)
+LINEAR_NAME_SUFFIX (get_los_theta) (NcLinearPert *pert, guint l)
 {
   return LINEAR_VEC_COMP(LINEAR_VEC_LOS_THETA(pert), l);
 }

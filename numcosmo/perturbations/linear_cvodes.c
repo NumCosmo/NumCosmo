@@ -83,9 +83,9 @@ static gdouble cvodes_get_c1 (NcLinearPert *pert);
 static gdouble cvodes_get_b1 (NcLinearPert *pert);
 static gdouble cvodes_get_theta2 (NcLinearPert *pert);
 static gdouble cvodes_get (NcLinearPert *pert, guint n);
-static gdouble cvodes_get_theta (NcLinearPert *pert, gint n);
-static gdouble cvodes_get_theta_p (NcLinearPert *pert, gint n);
-static gdouble cvodes_get_los_theta (NcLinearPert *pert, gint n);
+static gdouble cvodes_get_theta (NcLinearPert *pert, guint n);
+static gdouble cvodes_get_theta_p (NcLinearPert *pert, guint n);
+static gdouble cvodes_get_los_theta (NcLinearPert *pert, guint n);
 static void cvodes_print_all (NcLinearPert *pert);
 
 static NcLinearPertOdeSolver _cvodes_solver = {
@@ -146,14 +146,14 @@ cvodes_create (NcLinearPert *pert)
   }
   else
   {
-    data->yi = nc_cvode_util_nvector_new (pert->sys_size);
-    data->y = nc_cvode_util_nvector_new (pert->sys_size);
-    data->yS = nc_cvode_util_nvector_new (pert->sys_size);
+    data->yi = ncm_cvode_util_nvector_new (pert->sys_size);
+    data->y = ncm_cvode_util_nvector_new (pert->sys_size);
+    data->yS = ncm_cvode_util_nvector_new (pert->sys_size);
 
 #ifdef SIMUL_LOS_INT
-    data->yQ = nc_cvode_util_nvector_new (pert->los_table->len);
+    data->yQ = ncm_cvode_util_nvector_new (pert->los_table->len);
 #endif
-    data->abstol = nc_cvode_util_nvector_new (pert->sys_size);
+    data->abstol = ncm_cvode_util_nvector_new (pert->sys_size);
   }
 
   data->cvode_nonstiff = CVodeCreate(CV_ADAMS, CV_FUNCTIONAL);
@@ -453,7 +453,7 @@ static void
 cvodes_print_stats (NcLinearPert *pert)
 {
   CVodesData *data = CVODES_DATA (pert->solver->data);
-  nc_cvode_util_print_stats (data->cvode);
+  ncm_cvode_util_print_stats (data->cvode);
 }
 
 #define LINEAR_VECTOR_PREPARE N_Vector y = CVODES_DATA(pert->solver->data)->y

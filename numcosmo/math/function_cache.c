@@ -36,7 +36,6 @@
 #include "build_cfg.h"
 
 #include "math/function_cache.h"
-#include "nc_macros.h"
 
 #include <gsl/gsl_math.h>
 
@@ -47,10 +46,10 @@
 
 static gint gdouble_compare (gconstpointer a, gconstpointer b, gpointer user_data);
 static void gdouble_free (gpointer data);
-static gboolean cache_clean (NcFunctionCache *cache);
+static gboolean cache_clean (NcmFunctionCache *cache);
 
 /**
- * nc_function_cache_new: (skip)
+ * ncm_function_cache_new: (skip)
  * @n: FIXME
  * @abstol: FIXME
  * @reltol: FIXME
@@ -59,10 +58,10 @@ static gboolean cache_clean (NcFunctionCache *cache);
  *
  * Returns: FIXME
 */
-NcFunctionCache *
-nc_function_cache_new (guint n, gdouble abstol, gdouble reltol)
+NcmFunctionCache *
+ncm_function_cache_new (guint n, gdouble abstol, gdouble reltol)
 {
-  NcFunctionCache *cache = g_slice_new (NcFunctionCache);
+  NcmFunctionCache *cache = g_slice_new (NcmFunctionCache);
   cache->tree = g_tree_new_full (&gdouble_compare, NULL, &gdouble_free, (GDestroyNotify)&gsl_vector_free);
   _NCM_MUTEX_INIT (&cache->lock);
   cache->clear = FALSE;
@@ -74,39 +73,39 @@ nc_function_cache_new (guint n, gdouble abstol, gdouble reltol)
 }
 
 /**
- * nc_function_cache_free:
- * @cache: a #NcFunctionCache
+ * ncm_function_cache_free:
+ * @cache: a #NcmFunctionCache
  *
  * FIXME
  *
 */
 void
-nc_function_cache_free (NcFunctionCache *cache)
+ncm_function_cache_free (NcmFunctionCache *cache)
 {
   _NCM_MUTEX_CLEAR (&cache->lock);
   g_tree_destroy (cache->tree);
-  g_slice_free (NcFunctionCache, cache);
+  g_slice_free (NcmFunctionCache, cache);
   return;
 }
 
 /**
- * nc_function_cache_clear:
- * @cache: a #NcFunctionCache
+ * ncm_function_cache_clear:
+ * @cache: a #NcmFunctionCache
  *
  * FIXME
  *
 */
 void
-nc_function_cache_clear (NcFunctionCache **cache)
+ncm_function_cache_clear (NcmFunctionCache **cache)
 {
-  nc_function_cache_free (*cache);
+  ncm_function_cache_free (*cache);
   *cache = NULL;
   return;
 }
 
 /**
- * nc_function_cache_insert_vector: (skip)
- * @cache: a #NcFunctionCache
+ * ncm_function_cache_insert_vector: (skip)
+ * @cache: a #NcmFunctionCache
  * @x: FIXME
  * @p: FIXME
  *
@@ -114,7 +113,7 @@ nc_function_cache_clear (NcFunctionCache **cache)
  *
 */
 void
-nc_function_cache_insert_vector (NcFunctionCache *cache, gdouble x, gsl_vector *p)
+ncm_function_cache_insert_vector (NcmFunctionCache *cache, gdouble x, gsl_vector *p)
 {
   gdouble *x_ptr = g_slice_new (gdouble);
   g_assert (cache->n == p->size);
@@ -127,7 +126,7 @@ nc_function_cache_insert_vector (NcFunctionCache *cache, gdouble x, gsl_vector *
 }
 
 void
-nc_function_cache_insert (NcFunctionCache *cache, gdouble x, ...)
+ncm_function_cache_insert (NcmFunctionCache *cache, gdouble x, ...)
 {
   gdouble *x_ptr;
   gsl_vector *v;
@@ -162,21 +161,21 @@ typedef struct _NcParamsCacheSearch
   gdouble x;
   gdouble diff;
   gint dir;
-  NcFunctionCacheSearchType type;
+  NcmFunctionCacheSearchType type;
 } NcParamsCacheSearch;
 
 static gint gdouble_search_near (gconstpointer a, gconstpointer b);
 
 /**
- * nc_function_cache_get_near: (skip)
- * @cache: a #NcFunctionCache
+ * ncm_function_cache_get_near: (skip)
+ * @cache: a #NcmFunctionCache
  * @x: FIXME
  * @x_found_ptr: FIXME
  * @v: FIXME
- * @type: a #NcFunctionCacheSearchType
+ * @type: a #NcmFunctionCacheSearchType
 */
 gboolean
-nc_function_cache_get_near (NcFunctionCache *cache, gdouble x, gdouble *x_found_ptr, gsl_vector **v, NcFunctionCacheSearchType type)
+ncm_function_cache_get_near (NcmFunctionCache *cache, gdouble x, gdouble *x_found_ptr, gsl_vector **v, NcmFunctionCacheSearchType type)
 {
   NcParamsCacheSearch search = {FALSE, x, 0.0, GSL_POSINF, 0, NC_FUNCTION_CACHE_SEARCH_BOTH};
   gsl_vector *res = NULL;
@@ -209,8 +208,8 @@ nc_function_cache_get_near (NcFunctionCache *cache, gdouble x, gdouble *x_found_
 }
 
 /**
- * nc_function_cache_get: (skip)
- * @cache: a #NcFunctionCache
+ * ncm_function_cache_get: (skip)
+ * @cache: a #NcmFunctionCache
  * @x_ptr: FIXME
  * @v: FIXME
  *
@@ -219,7 +218,7 @@ nc_function_cache_get_near (NcFunctionCache *cache, gdouble x, gdouble *x_found_
  * Returns: FIXME
 */
 gboolean
-nc_function_cache_get (NcFunctionCache *cache, gdouble *x_ptr, gsl_vector **v)
+ncm_function_cache_get (NcmFunctionCache *cache, gdouble *x_ptr, gsl_vector **v)
 {
   gsl_vector *res;
 
@@ -243,7 +242,7 @@ nc_function_cache_get (NcFunctionCache *cache, gdouble *x_ptr, gsl_vector **v)
 }
 
 gboolean
-cache_clean (NcFunctionCache *cache)
+cache_clean (NcmFunctionCache *cache)
 {
   if (cache->clear)
   {
@@ -270,7 +269,7 @@ gdouble_search_near (gconstpointer a, gconstpointer b)
   NcParamsCacheSearch *search = (NcParamsCacheSearch *)b;
   gdouble diff;
   gboolean found = FALSE;
-  search->dir = gsl_fcmp (search->near_x, SX, NC_ZERO_LIMIT);
+  search->dir = gsl_fcmp (search->near_x, SX, NCM_ZERO_LIMIT);
   diff = fabs (SX - search->near_x);
 
   switch (search->type)

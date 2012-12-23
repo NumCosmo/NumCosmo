@@ -500,25 +500,25 @@ _nc_hicosmo_func1 (NcmMSet *mset, gpointer obj, const gdouble *x, gdouble *f)
 }
 
 /**
- * ncm_mset_func_new_hicosmo_func0:
+ * nc_hicosmo_create_mset_func0:
  * @f0: (scope notified): FIXME
  *
  * Returns: (transfer full): FIXME
  */
 NcmMSetFunc *
-ncm_mset_func_new_hicosmo_func0 (NcHICosmoFunc0 f0)
+nc_hicosmo_create_mset_func0 (NcHICosmoFunc0 f0)
 {
   return ncm_mset_func_new (&_nc_hicosmo_func0, 0, 1, f0, NULL);
 }
 
 /**
- * ncm_mset_func_new_hicosmo_func1:
+ * nc_hicosmo_create_mset_func1:
  * @f1: (scope notified): FIXME
  *
  * Returns: (transfer full): FIXME
  */
 NcmMSetFunc *
-ncm_mset_func_new_hicosmo_func1 (NcHICosmoFunc1 f1)
+nc_hicosmo_create_mset_func1 (NcHICosmoFunc1 f1)
 {
   return ncm_mset_func_new (&_nc_hicosmo_func1, 1, 1, f1, NULL);
 }

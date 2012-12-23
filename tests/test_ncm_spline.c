@@ -8,11 +8,11 @@
 /*
  * numcosmo
  * Copyright (C) Mariana Penna Lima 2012 <pennalima@gmail.com>
- * numcosmo is free software: you can redistribute it and/or modify it
+   * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- *
+   *
  * numcosmo is distributed in the hope that it will be useful, but
  * WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
@@ -92,21 +92,21 @@ gdouble
 F_sin_poly (gdouble x, gpointer p)
 {
   return sin (M_PI * x) * exp(x / 5.0) +
-	(x * x / 2.0 + 5.0 * x + 0.1 * x * x * x + 1.0e-3 * gsl_pow_5 (x));
+    (x * x / 2.0 + 5.0 * x + 0.1 * x * x * x + 1.0e-3 * gsl_pow_5 (x));
 }
 
 gdouble
 F_sin_poly_deriv (gdouble x, gpointer p)
 {
   return (M_PI * cos(M_PI * x) + sin (M_PI * x) / 5.0) * exp(x / 5.0) +
-	(5.0 + x + 0.3 * x * x + 5.0e-3 * gsl_pow_4 (x));
+    (5.0 + x + 0.3 * x * x + 5.0e-3 * gsl_pow_4 (x));
 }
 
 gdouble
 F_sin_poly_deriv2 (gdouble x, gpointer p)
 {
   return (2.0 * M_PI * cos(M_PI * x) / 5.0 + (1.0/25.0 - M_PI * M_PI) * sin(M_PI * x)) * exp(x / 5.0) +
-	(1.0 + 0.6 * x + 2.0e-2 * gsl_pow_3 (x));
+    (1.0 + 0.6 * x + 2.0e-2 * gsl_pow_3 (x));
 }
 
 void test_ncm_spline_cubic_notaknot_new_empty (void);
@@ -185,8 +185,8 @@ test_ncm_spline_free_empty (void)
   ncm_spline_free (s_base);
   if (g_test_trap_fork (0, G_TEST_TRAP_SILENCE_STDOUT | G_TEST_TRAP_SILENCE_STDERR))
   {
-	ncm_spline_free (s_base);
-	exit (0);
+    ncm_spline_free (s_base);
+    exit (0);
   }
   g_test_trap_assert_failed ();
   s_base = NULL;
@@ -203,83 +203,83 @@ test_ncm_spline_new (void)
 {
   if (g_test_trap_fork (0, G_TEST_TRAP_SILENCE_STDOUT | G_TEST_TRAP_SILENCE_STDERR))
   {
-	NcmVector *x = ncm_vector_new (_NCM_SPLINE_TEST_NKNOTS);
-	NcmVector *y = ncm_vector_new (_NCM_SPLINE_TEST_NKNOTS + 1);
-	NcmSpline *s = ncm_spline_new (s_base, x, y, FALSE);
-	ncm_spline_free (s);
-	exit (0);
+    NcmVector *x = ncm_vector_new (_NCM_SPLINE_TEST_NKNOTS);
+    NcmVector *y = ncm_vector_new (_NCM_SPLINE_TEST_NKNOTS + 1);
+    NcmSpline *s = ncm_spline_new (s_base, x, y, FALSE);
+    ncm_spline_free (s);
+    exit (0);
   }
   g_test_trap_assert_failed ();
 
   if (g_test_trap_fork (0, G_TEST_TRAP_SILENCE_STDOUT | G_TEST_TRAP_SILENCE_STDERR))
   {
-	NcmVector *x = ncm_vector_new (ncm_spline_min_size (s_base) - 1);
-	NcmVector *y = ncm_vector_new (ncm_spline_min_size (s_base) - 1);
-	NcmSpline *s = ncm_spline_new (s_base, x, y, FALSE);
-	ncm_spline_free (s);
-	exit (0);
+    NcmVector *x = ncm_vector_new (ncm_spline_min_size (s_base) - 1);
+    NcmVector *y = ncm_vector_new (ncm_spline_min_size (s_base) - 1);
+    NcmSpline *s = ncm_spline_new (s_base, x, y, FALSE);
+    ncm_spline_free (s);
+    exit (0);
   }
   g_test_trap_assert_failed ();
 
   if (g_test_trap_fork (0, G_TEST_TRAP_SILENCE_STDOUT | G_TEST_TRAP_SILENCE_STDERR))
   {
-	NcmVector *x = NULL;
-	NcmVector *y = ncm_vector_new (_NCM_SPLINE_TEST_NKNOTS);
-	NcmSpline *s = ncm_spline_new (s_base, x, y, FALSE);
-	ncm_spline_free (s);
-	exit (0);
+    NcmVector *x = NULL;
+    NcmVector *y = ncm_vector_new (_NCM_SPLINE_TEST_NKNOTS);
+    NcmSpline *s = ncm_spline_new (s_base, x, y, FALSE);
+    ncm_spline_free (s);
+    exit (0);
   }
   g_test_trap_assert_failed ();
 
   if (g_test_trap_fork (0, G_TEST_TRAP_SILENCE_STDOUT | G_TEST_TRAP_SILENCE_STDERR))
   {
-	NcmVector *x = ncm_vector_new (_NCM_SPLINE_TEST_NKNOTS);
-	NcmVector *y = NULL;
-	NcmSpline *s = ncm_spline_new (s_base, x, y, FALSE);
-	ncm_spline_free (s);
-	exit (0);
+    NcmVector *x = ncm_vector_new (_NCM_SPLINE_TEST_NKNOTS);
+    NcmVector *y = NULL;
+    NcmSpline *s = ncm_spline_new (s_base, x, y, FALSE);
+    ncm_spline_free (s);
+    exit (0);
   }
   g_test_trap_assert_failed ();
 
   if (g_test_trap_fork (0, G_TEST_TRAP_SILENCE_STDOUT | G_TEST_TRAP_SILENCE_STDERR))
   {
-	NcmVector *x = NULL;
-	NcmVector *y = NULL;
-	NcmSpline *s = ncm_spline_new (s_base, x, y, FALSE);
-	ncm_spline_free (s);
-	exit (0);
+    NcmVector *x = NULL;
+    NcmVector *y = NULL;
+    NcmSpline *s = ncm_spline_new (s_base, x, y, FALSE);
+    ncm_spline_free (s);
+    exit (0);
   }
   g_test_trap_assert_failed ();
 
   {
-	NcmVector *x = ncm_vector_new (_NCM_SPLINE_TEST_NKNOTS);
-	NcmVector *y = ncm_vector_new (_NCM_SPLINE_TEST_NKNOTS);
-	NcmSpline *s = ncm_spline_new (s_base, x, y, FALSE);
+    NcmVector *x = ncm_vector_new (_NCM_SPLINE_TEST_NKNOTS);
+    NcmVector *y = ncm_vector_new (_NCM_SPLINE_TEST_NKNOTS);
+    NcmSpline *s = ncm_spline_new (s_base, x, y, FALSE);
 
-	test_ncm_spline_new_sanity (s);
-	g_assert (s->init == FALSE);
-	ncm_spline_free (s);
+    test_ncm_spline_new_sanity (s);
+    g_assert (s->init == FALSE);
+    ncm_spline_free (s);
   }
 
   {
-	NcmVector *x = ncm_vector_new (_NCM_SPLINE_TEST_NKNOTS);
-	NcmVector *y = ncm_vector_new (_NCM_SPLINE_TEST_NKNOTS);
-	NcmSpline *s;
-	gdouble d[2];
-	gint i;
+    NcmVector *x = ncm_vector_new (_NCM_SPLINE_TEST_NKNOTS);
+    NcmVector *y = ncm_vector_new (_NCM_SPLINE_TEST_NKNOTS);
+    NcmSpline *s;
+    gdouble d[2];
+    gint i;
 
-	d[0] = g_test_rand_double ();
-	d[1] = g_test_rand_double ();
-	for (i = 0; i < _NCM_SPLINE_TEST_NKNOTS; i++)
-	{
-	  ncm_vector_set (x, i, _NCM_SPLINE_TEST_XI + _NCM_SPLINE_TEST_DX * i);
-	  ncm_vector_set (y, i, F_linear (ncm_vector_get (x, i), d));
-	}
+    d[0] = g_test_rand_double ();
+    d[1] = g_test_rand_double ();
+    for (i = 0; i < _NCM_SPLINE_TEST_NKNOTS; i++)
+    {
+      ncm_vector_set (x, i, _NCM_SPLINE_TEST_XI + _NCM_SPLINE_TEST_DX * i);
+      ncm_vector_set (y, i, F_linear (ncm_vector_get (x, i), d));
+    }
 
-	s = ncm_spline_new (s_base, x, y, TRUE);
-	test_ncm_spline_new_sanity (s);
-	g_assert (s->init == TRUE);
-	ncm_spline_free (s);
+    s = ncm_spline_new (s_base, x, y, TRUE);
+    test_ncm_spline_new_sanity (s);
+    g_assert (s->init == TRUE);
+    ncm_spline_free (s);
   }
 }
 
@@ -288,93 +288,93 @@ test_ncm_spline_new_array (void)
 {
   if (g_test_trap_fork (0, G_TEST_TRAP_SILENCE_STDOUT | G_TEST_TRAP_SILENCE_STDERR))
   {
-	GArray *x = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), _NCM_SPLINE_TEST_NKNOTS);
-	GArray *y = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), _NCM_SPLINE_TEST_NKNOTS + 1);
-	g_array_set_size (x, _NCM_SPLINE_TEST_NKNOTS);
-	g_array_set_size (x, _NCM_SPLINE_TEST_NKNOTS + 1);
-	NcmSpline *s = ncm_spline_new_array (s_base, x, y, FALSE);
-	ncm_spline_free (s);
-	exit (0);
+    GArray *x = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), _NCM_SPLINE_TEST_NKNOTS);
+    GArray *y = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), _NCM_SPLINE_TEST_NKNOTS + 1);
+    g_array_set_size (x, _NCM_SPLINE_TEST_NKNOTS);
+    g_array_set_size (x, _NCM_SPLINE_TEST_NKNOTS + 1);
+    NcmSpline *s = ncm_spline_new_array (s_base, x, y, FALSE);
+    ncm_spline_free (s);
+    exit (0);
   }
   g_test_trap_assert_failed ();
 
   if (g_test_trap_fork (0, G_TEST_TRAP_SILENCE_STDOUT | G_TEST_TRAP_SILENCE_STDERR))
   {
-	GArray *x = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), _NCM_SPLINE_TEST_NKNOTS);
-	GArray *y = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), _NCM_SPLINE_TEST_NKNOTS);
-	g_array_set_size (x, ncm_spline_min_size (s_base) - 1);
-	g_array_set_size (y, ncm_spline_min_size (s_base) - 1);
-	NcmSpline *s = ncm_spline_new_array (s_base, x, y, FALSE);
-	ncm_spline_free (s);
-	exit (0);
+    GArray *x = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), _NCM_SPLINE_TEST_NKNOTS);
+    GArray *y = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), _NCM_SPLINE_TEST_NKNOTS);
+    g_array_set_size (x, ncm_spline_min_size (s_base) - 1);
+    g_array_set_size (y, ncm_spline_min_size (s_base) - 1);
+    NcmSpline *s = ncm_spline_new_array (s_base, x, y, FALSE);
+    ncm_spline_free (s);
+    exit (0);
   }
   g_test_trap_assert_failed ();
 
   if (g_test_trap_fork (0, G_TEST_TRAP_SILENCE_STDOUT | G_TEST_TRAP_SILENCE_STDERR))
   {
-	GArray *x = NULL;
-	GArray *y = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), _NCM_SPLINE_TEST_NKNOTS);
-	g_array_set_size (y, _NCM_SPLINE_TEST_NKNOTS);
-	NcmSpline *s = ncm_spline_new_array (s_base, x, y, FALSE);
-	ncm_spline_free (s);
-	exit (0);
+    GArray *x = NULL;
+    GArray *y = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), _NCM_SPLINE_TEST_NKNOTS);
+    g_array_set_size (y, _NCM_SPLINE_TEST_NKNOTS);
+    NcmSpline *s = ncm_spline_new_array (s_base, x, y, FALSE);
+    ncm_spline_free (s);
+    exit (0);
   }
   g_test_trap_assert_failed ();
 
   if (g_test_trap_fork (0, G_TEST_TRAP_SILENCE_STDOUT | G_TEST_TRAP_SILENCE_STDERR))
   {
-	GArray *x = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), _NCM_SPLINE_TEST_NKNOTS);
-	GArray *y = NULL;
-	g_array_set_size (x, _NCM_SPLINE_TEST_NKNOTS);
-	NcmSpline *s = ncm_spline_new_array (s_base, x, y, FALSE);
-	ncm_spline_free (s);
-	exit (0);
+    GArray *x = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), _NCM_SPLINE_TEST_NKNOTS);
+    GArray *y = NULL;
+    g_array_set_size (x, _NCM_SPLINE_TEST_NKNOTS);
+    NcmSpline *s = ncm_spline_new_array (s_base, x, y, FALSE);
+    ncm_spline_free (s);
+    exit (0);
   }
   g_test_trap_assert_failed ();
 
   if (g_test_trap_fork (0, G_TEST_TRAP_SILENCE_STDOUT | G_TEST_TRAP_SILENCE_STDERR))
   {
-	GArray *x = NULL;
-	GArray *y = NULL;
-	NcmSpline *s = ncm_spline_new_array (s_base, x, y, FALSE);
-	ncm_spline_free (s);
-	exit (0);
+    GArray *x = NULL;
+    GArray *y = NULL;
+    NcmSpline *s = ncm_spline_new_array (s_base, x, y, FALSE);
+    ncm_spline_free (s);
+    exit (0);
   }
   g_test_trap_assert_failed ();
 
   {
-	GArray *x = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), _NCM_SPLINE_TEST_NKNOTS);
-	GArray *y = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), _NCM_SPLINE_TEST_NKNOTS);
-	g_array_set_size (x, _NCM_SPLINE_TEST_NKNOTS);
-	g_array_set_size (y, _NCM_SPLINE_TEST_NKNOTS);
-	NcmSpline *s = ncm_spline_new_array (s_base, x, y, FALSE);
+    GArray *x = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), _NCM_SPLINE_TEST_NKNOTS);
+    GArray *y = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), _NCM_SPLINE_TEST_NKNOTS);
+    g_array_set_size (x, _NCM_SPLINE_TEST_NKNOTS);
+    g_array_set_size (y, _NCM_SPLINE_TEST_NKNOTS);
+    NcmSpline *s = ncm_spline_new_array (s_base, x, y, FALSE);
 
-	test_ncm_spline_new_sanity (s);
-	g_assert (s->init == FALSE);
-	ncm_spline_free (s);
+    test_ncm_spline_new_sanity (s);
+    g_assert (s->init == FALSE);
+    ncm_spline_free (s);
   }
 
   {
-	GArray *x = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), _NCM_SPLINE_TEST_NKNOTS);
-	GArray *y = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), _NCM_SPLINE_TEST_NKNOTS);
-	g_array_set_size (x, _NCM_SPLINE_TEST_NKNOTS);
-	g_array_set_size (y, _NCM_SPLINE_TEST_NKNOTS);
-	NcmSpline *s;
-	gdouble d[2];
-	gint i;
+    GArray *x = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), _NCM_SPLINE_TEST_NKNOTS);
+    GArray *y = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), _NCM_SPLINE_TEST_NKNOTS);
+    g_array_set_size (x, _NCM_SPLINE_TEST_NKNOTS);
+    g_array_set_size (y, _NCM_SPLINE_TEST_NKNOTS);
+    NcmSpline *s;
+    gdouble d[2];
+    gint i;
 
-	d[0] = g_test_rand_double ();
-	d[1] = g_test_rand_double ();
-	for (i = 0; i < _NCM_SPLINE_TEST_NKNOTS; i++)
-	{
-	  g_array_index(x, gdouble, i) = _NCM_SPLINE_TEST_XI + _NCM_SPLINE_TEST_DX * i;
-	  g_array_index(y, gdouble, i) = F_linear (g_array_index(x, gdouble, i), d);
-	}
+    d[0] = g_test_rand_double ();
+    d[1] = g_test_rand_double ();
+    for (i = 0; i < _NCM_SPLINE_TEST_NKNOTS; i++)
+    {
+      g_array_index(x, gdouble, i) = _NCM_SPLINE_TEST_XI + _NCM_SPLINE_TEST_DX * i;
+      g_array_index(y, gdouble, i) = F_linear (g_array_index(x, gdouble, i), d);
+    }
 
-	s = ncm_spline_new_array (s_base, x, y, TRUE);
-	test_ncm_spline_new_sanity (s);
-	g_assert (s->init == TRUE);
-	ncm_spline_free (s);
+    s = ncm_spline_new_array (s_base, x, y, TRUE);
+    test_ncm_spline_new_sanity (s);
+    g_assert (s->init == TRUE);
+    ncm_spline_free (s);
   }
 
 }
@@ -384,43 +384,43 @@ test_ncm_spline_new_data (void)
 {
   if (g_test_trap_fork (0, G_TEST_TRAP_SILENCE_STDOUT | G_TEST_TRAP_SILENCE_STDERR))
   {
-	gdouble x[_NCM_SPLINE_TEST_NKNOTS];
-	gdouble y[_NCM_SPLINE_TEST_NKNOTS];
-	NcmSpline *s = ncm_spline_new_data (s_base, x, y, ncm_spline_min_size (s_base) - 1, FALSE);
-	ncm_spline_free (s);
-	exit (0);
+    gdouble x[_NCM_SPLINE_TEST_NKNOTS];
+    gdouble y[_NCM_SPLINE_TEST_NKNOTS];
+    NcmSpline *s = ncm_spline_new_data (s_base, x, y, ncm_spline_min_size (s_base) - 1, FALSE);
+    ncm_spline_free (s);
+    exit (0);
   }
   g_test_trap_assert_failed ();
 
   {
-	gdouble x[_NCM_SPLINE_TEST_NKNOTS];
-	gdouble y[_NCM_SPLINE_TEST_NKNOTS];
-	NcmSpline *s = ncm_spline_new_data (s_base, x, y, _NCM_SPLINE_TEST_NKNOTS, FALSE);
+    gdouble x[_NCM_SPLINE_TEST_NKNOTS];
+    gdouble y[_NCM_SPLINE_TEST_NKNOTS];
+    NcmSpline *s = ncm_spline_new_data (s_base, x, y, _NCM_SPLINE_TEST_NKNOTS, FALSE);
 
-	test_ncm_spline_new_sanity (s);
-	g_assert (s->init == FALSE);
-	ncm_spline_free (s);
+    test_ncm_spline_new_sanity (s);
+    g_assert (s->init == FALSE);
+    ncm_spline_free (s);
   }
 
   {
-	gdouble x[_NCM_SPLINE_TEST_NKNOTS];
-	gdouble y[_NCM_SPLINE_TEST_NKNOTS];
-	NcmSpline *s;
-	gdouble d[2];
-	gint i;
+    gdouble x[_NCM_SPLINE_TEST_NKNOTS];
+    gdouble y[_NCM_SPLINE_TEST_NKNOTS];
+    NcmSpline *s;
+    gdouble d[2];
+    gint i;
 
-	d[0] = g_test_rand_double ();
-	d[1] = g_test_rand_double ();
-	for (i = 0; i < _NCM_SPLINE_TEST_NKNOTS; i++)
-	{
-	  x[i] = _NCM_SPLINE_TEST_XI + _NCM_SPLINE_TEST_DX * i;
-	  y[i] = F_linear (x[i], d);
-	}
+    d[0] = g_test_rand_double ();
+    d[1] = g_test_rand_double ();
+    for (i = 0; i < _NCM_SPLINE_TEST_NKNOTS; i++)
+    {
+      x[i] = _NCM_SPLINE_TEST_XI + _NCM_SPLINE_TEST_DX * i;
+      y[i] = F_linear (x[i], d);
+    }
 
-	s = ncm_spline_new_data (s_base, x, y, _NCM_SPLINE_TEST_NKNOTS, TRUE);
-	test_ncm_spline_new_sanity (s);
-	g_assert (s->init == TRUE);
-	ncm_spline_free (s);
+    s = ncm_spline_new_data (s_base, x, y, _NCM_SPLINE_TEST_NKNOTS, TRUE);
+    test_ncm_spline_new_sanity (s);
+    g_assert (s->init == TRUE);
+    ncm_spline_free (s);
   }
 
 }
@@ -442,20 +442,21 @@ test_ncm_spline_copy (void)
 
   for (i = 0; i < _NCM_SPLINE_TEST_NKNOTS; i++)
   {
-	ncm_vector_set (xv, i, i * M_PI);
-	ncm_vector_set (yv, i, i * M_PI_2);
+    ncm_vector_set (xv, i, i * M_PI);
+    ncm_vector_set (yv, i, i * M_PI_2);
   }
 
   ncm_spline_set (s_base, xv, yv, FALSE);
   {
-	NcmSpline *s = ncm_spline_copy (s_base);
-	g_assert (s->xv != s_base->xv && s->yv != s_base->yv);
-	for (i = 0; i < _NCM_SPLINE_TEST_NKNOTS; i++)
-	{
-	  g_assert (ncm_vector_get (s->xv, i) == ncm_vector_get (s_base->xv, i) && ncm_vector_get (s->yv, i) == ncm_vector_get (s_base->yv, i));
-	}
+    NcmSpline *s = ncm_spline_copy (s_base);
+    g_assert (s->xv != s_base->xv && s->yv != s_base->yv);
+    for (i = 0; i < _NCM_SPLINE_TEST_NKNOTS; i++)
+    {
+      ncm_assert_cmpdouble (ncm_vector_get (s->xv, i), ==, ncm_vector_get (s_base->xv, i));
+      ncm_assert_cmpdouble (ncm_vector_get (s->yv, i), ==, ncm_vector_get (s_base->yv, i));
+    }
 
-	ncm_spline_free (s);
+    ncm_spline_free (s);
   }
 }
 
@@ -471,52 +472,51 @@ test_ncm_spline_eval (void)
   d[3] = g_test_rand_double ();
 
   {
-	NcmSpline *s = ncm_spline_copy (s_base);
-	F.function = &F_linear;
-	F.params = d;
-	ncm_spline_set_func (s, NCM_SPLINE_FUNCTION_SPLINE, &F, _NCM_SPLINE_TEST_XI, _NCM_SPLINE_TEST_XI + _NCM_SPLINE_TEST_DX * (_NCM_SPLINE_TEST_NKNOTS - 1) , _NCM_SPLINE_TEST_NKNOTS, _NCM_SPLINE_TEST_ERROR);
-	for (i = 0; i < 2 * _NCM_SPLINE_TEST_NKNOTS; i++)
-	{
-	  gdouble x = _NCM_SPLINE_TEST_XI + _NCM_SPLINE_TEST_DX * (_NCM_SPLINE_TEST_NKNOTS - 1.0) / (2.0 * _NCM_SPLINE_TEST_NKNOTS - 1.0) * i;
-	  gdouble f = GSL_FN_EVAL (&F, x);
-	  gdouble fs = ncm_spline_eval (s, x);
+    NcmSpline *s = ncm_spline_copy (s_base);
+    F.function = &F_linear;
+    F.params = d;
+    ncm_spline_set_func (s, NCM_SPLINE_FUNCTION_SPLINE, &F, _NCM_SPLINE_TEST_XI, _NCM_SPLINE_TEST_XI + _NCM_SPLINE_TEST_DX * (_NCM_SPLINE_TEST_NKNOTS - 1) , _NCM_SPLINE_TEST_NKNOTS, _NCM_SPLINE_TEST_ERROR);
+    for (i = 0; i < 2 * _NCM_SPLINE_TEST_NKNOTS; i++)
+    {
+      gdouble x = _NCM_SPLINE_TEST_XI + _NCM_SPLINE_TEST_DX * (_NCM_SPLINE_TEST_NKNOTS - 1.0) / (2.0 * _NCM_SPLINE_TEST_NKNOTS - 1.0) * i;
+      gdouble f = GSL_FN_EVAL (&F, x);
+      gdouble fs = ncm_spline_eval (s, x);
 
-	  g_assert (_NCM_SPLINE_TEST_ERROR > (f != 0.0 ? fabs ((fs - f) / f) : fabs (fs)));
-	}
-	ncm_spline_free (s);
+      ncm_assert_cmpdouble_e (fs, ==, f, _NCM_SPLINE_TEST_ERROR);
+    }
+    ncm_spline_free (s);
   }
 
   {
-	NcmSpline *s = ncm_spline_copy (s_base);
-	F.function = &F_cubic;
-	F.params = d;
-	ncm_spline_set_func (s, NCM_SPLINE_FUNCTION_SPLINE, &F, _NCM_SPLINE_TEST_XI, _NCM_SPLINE_TEST_XI + _NCM_SPLINE_TEST_DX * (_NCM_SPLINE_TEST_NKNOTS - 1) , _NCM_SPLINE_TEST_NKNOTS, _NCM_SPLINE_TEST_ERROR);
-	for (i = 0; i < 2 * _NCM_SPLINE_TEST_NKNOTS; i++)
-	{
-	  gdouble x = _NCM_SPLINE_TEST_XI + _NCM_SPLINE_TEST_DX * (_NCM_SPLINE_TEST_NKNOTS - 1.0) / (2.0 * _NCM_SPLINE_TEST_NKNOTS - 1.0) * i;
-	  gdouble f = GSL_FN_EVAL (&F, x);
-	  gdouble fs = ncm_spline_eval (s, x);
+    NcmSpline *s = ncm_spline_copy (s_base);
+    F.function = &F_cubic;
+    F.params = d;
+    ncm_spline_set_func (s, NCM_SPLINE_FUNCTION_SPLINE, &F, _NCM_SPLINE_TEST_XI, _NCM_SPLINE_TEST_XI + _NCM_SPLINE_TEST_DX * (_NCM_SPLINE_TEST_NKNOTS - 1) , _NCM_SPLINE_TEST_NKNOTS, _NCM_SPLINE_TEST_ERROR);
+    for (i = 0; i < 2 * _NCM_SPLINE_TEST_NKNOTS; i++)
+    {
+      gdouble x = _NCM_SPLINE_TEST_XI + _NCM_SPLINE_TEST_DX * (_NCM_SPLINE_TEST_NKNOTS - 1.0) / (2.0 * _NCM_SPLINE_TEST_NKNOTS - 1.0) * i;
+      gdouble f = GSL_FN_EVAL (&F, x);
+      gdouble fs = ncm_spline_eval (s, x);
 
-	  g_assert (_NCM_SPLINE_TEST_ERROR > (f != 0.0 ? fabs ((fs - f) / f) : fabs (fs)));
-	}
-	ncm_spline_free (s);
+      ncm_assert_cmpdouble_e (fs, ==, f, _NCM_SPLINE_TEST_ERROR);
+    }
+    ncm_spline_free (s);
   }
 
   {
-	NcmSpline *s = ncm_spline_copy (s_base);
-	F.function = &F_sin_poly;
-	F.params = d;
-	ncm_spline_set_func (s, NCM_SPLINE_FUNCTION_SPLINE, &F, _NCM_SPLINE_TEST_XI, _NCM_SPLINE_TEST_XI + _NCM_SPLINE_TEST_DX * ((_NCM_SPLINE_TEST_NKNOTS)/100.0 - 1) , _NCM_SPLINE_TEST_NKNOTS, _NCM_SPLINE_TEST_ERROR);
-	for (i = 0; i < 2 * _NCM_SPLINE_TEST_NKNOTS; i++)
-	{
-	  gdouble x = _NCM_SPLINE_TEST_XI + _NCM_SPLINE_TEST_DX * (_NCM_SPLINE_TEST_NKNOTS / 100.0 - 1.0) / (2.0 * _NCM_SPLINE_TEST_NKNOTS - 1.0) * i;
-	  gdouble f = GSL_FN_EVAL (&F, x);
-	  gdouble fs = ncm_spline_eval (s, x);
+    NcmSpline *s = ncm_spline_copy (s_base);
+    F.function = &F_sin_poly;
+    F.params = d;
+    ncm_spline_set_func (s, NCM_SPLINE_FUNCTION_SPLINE, &F, _NCM_SPLINE_TEST_XI, _NCM_SPLINE_TEST_XI + _NCM_SPLINE_TEST_DX * ((_NCM_SPLINE_TEST_NKNOTS)/100.0 - 1) , _NCM_SPLINE_TEST_NKNOTS, _NCM_SPLINE_TEST_ERROR);
+    for (i = 0; i < 2 * _NCM_SPLINE_TEST_NKNOTS; i++)
+    {
+      gdouble x = _NCM_SPLINE_TEST_XI + _NCM_SPLINE_TEST_DX * (_NCM_SPLINE_TEST_NKNOTS / 100.0 - 1.0) / (2.0 * _NCM_SPLINE_TEST_NKNOTS - 1.0) * i;
+      gdouble f = GSL_FN_EVAL (&F, x);
+      gdouble fs = ncm_spline_eval (s, x);
 
-	  //printf ("% 20.15g % 20.15g % 20.15g\n", x, f, fs);
-	  g_assert (_NCM_SPLINE_TEST_ERROR * 50.0 > (f != 0.0 ? fabs ((fs - f) / f) : fabs (fs)));
-	}
-	ncm_spline_free (s);
+      ncm_assert_cmpdouble_e (fs, ==, f, _NCM_SPLINE_TEST_ERROR * 50.0);
+    }
+    ncm_spline_free (s);
   }
 }
 
@@ -533,57 +533,57 @@ test_ncm_spline_eval_deriv (void)
   d[3] = g_test_rand_double ();
 
   {
-	NcmSpline *s = ncm_spline_copy (s_base);
-	F.function = &F_linear;
-	F.params = d;
-	F_deriv.function = &F_linear_deriv;
-	F_deriv.params = d;
-	ncm_spline_set_func (s, NCM_SPLINE_FUNCTION_SPLINE, &F, _NCM_SPLINE_TEST_XI, _NCM_SPLINE_TEST_XI + _NCM_SPLINE_TEST_DX * (_NCM_SPLINE_TEST_NKNOTS - 1) , _NCM_SPLINE_TEST_NKNOTS, _NCM_SPLINE_TEST_ERROR);
-	for (i = 0; i < 2 * _NCM_SPLINE_TEST_NKNOTS; i++)
-	{
-	  gdouble x = _NCM_SPLINE_TEST_XI + _NCM_SPLINE_TEST_DX * (_NCM_SPLINE_TEST_NKNOTS - 1.0) / (2.0 * _NCM_SPLINE_TEST_NKNOTS - 1.0) * i;
-	  gdouble df = GSL_FN_EVAL (&F_deriv, x);
-	  gdouble dfs = ncm_spline_eval_deriv (s, x);
+    NcmSpline *s = ncm_spline_copy (s_base);
+    F.function = &F_linear;
+    F.params = d;
+    F_deriv.function = &F_linear_deriv;
+    F_deriv.params = d;
+    ncm_spline_set_func (s, NCM_SPLINE_FUNCTION_SPLINE, &F, _NCM_SPLINE_TEST_XI, _NCM_SPLINE_TEST_XI + _NCM_SPLINE_TEST_DX * (_NCM_SPLINE_TEST_NKNOTS - 1) , _NCM_SPLINE_TEST_NKNOTS, _NCM_SPLINE_TEST_ERROR);
+    for (i = 0; i < 2 * _NCM_SPLINE_TEST_NKNOTS; i++)
+    {
+      gdouble x = _NCM_SPLINE_TEST_XI + _NCM_SPLINE_TEST_DX * (_NCM_SPLINE_TEST_NKNOTS - 1.0) / (2.0 * _NCM_SPLINE_TEST_NKNOTS - 1.0) * i;
+      gdouble df = GSL_FN_EVAL (&F_deriv, x);
+      gdouble dfs = ncm_spline_eval_deriv (s, x);
 
-	  g_assert (_NCM_SPLINE_TEST_ERROR > (df != 0.0 ? fabs ((dfs - df) / df) : fabs (dfs)));
-	}
-	ncm_spline_free (s);
+      ncm_assert_cmpdouble_e (dfs, ==, df, _NCM_SPLINE_TEST_ERROR);
+    }
+    ncm_spline_free (s);
   }
 
   {
-	NcmSpline *s = ncm_spline_copy (s_base);
-	F.function = &F_cubic;
-	F.params = d;
-	F_deriv.function = &F_cubic_deriv;
-	F_deriv.params = d;
-	ncm_spline_set_func (s, NCM_SPLINE_FUNCTION_SPLINE, &F, _NCM_SPLINE_TEST_XI, _NCM_SPLINE_TEST_XI + _NCM_SPLINE_TEST_DX * (_NCM_SPLINE_TEST_NKNOTS - 1) , _NCM_SPLINE_TEST_NKNOTS, _NCM_SPLINE_TEST_ERROR);
-	for (i = 0; i < 2 * _NCM_SPLINE_TEST_NKNOTS; i++)
-	{
-	  gdouble x = _NCM_SPLINE_TEST_XI + _NCM_SPLINE_TEST_DX * (_NCM_SPLINE_TEST_NKNOTS - 1.0) / (2.0 * _NCM_SPLINE_TEST_NKNOTS - 1.0) * i;
-	  gdouble df = GSL_FN_EVAL (&F_deriv, x);
-	  gdouble dfs = ncm_spline_eval_deriv (s, x);
+    NcmSpline *s = ncm_spline_copy (s_base);
+    F.function = &F_cubic;
+    F.params = d;
+    F_deriv.function = &F_cubic_deriv;
+    F_deriv.params = d;
+    ncm_spline_set_func (s, NCM_SPLINE_FUNCTION_SPLINE, &F, _NCM_SPLINE_TEST_XI, _NCM_SPLINE_TEST_XI + _NCM_SPLINE_TEST_DX * (_NCM_SPLINE_TEST_NKNOTS - 1) , _NCM_SPLINE_TEST_NKNOTS, _NCM_SPLINE_TEST_ERROR);
+    for (i = 0; i < 2 * _NCM_SPLINE_TEST_NKNOTS; i++)
+    {
+      gdouble x = _NCM_SPLINE_TEST_XI + _NCM_SPLINE_TEST_DX * (_NCM_SPLINE_TEST_NKNOTS - 1.0) / (2.0 * _NCM_SPLINE_TEST_NKNOTS - 1.0) * i;
+      gdouble df = GSL_FN_EVAL (&F_deriv, x);
+      gdouble dfs = ncm_spline_eval_deriv (s, x);
 
-	  g_assert ((_NCM_SPLINE_TEST_ERROR * 50.0) > (df != 0.0 ? fabs ((dfs - df) / df) : fabs (dfs)));
-	}
-	ncm_spline_free (s);
+      ncm_assert_cmpdouble_e (dfs, ==, df, _NCM_SPLINE_TEST_ERROR * 50.0);
+    }
+    ncm_spline_free (s);
   }
 
   {
-	NcmSpline *s = ncm_spline_copy (s_base);
-	F.function = &F_sin_poly;
-	F.params = d;
-	F_deriv.function = &F_sin_poly_deriv;
-	F_deriv.params = d;
-	ncm_spline_set_func (s, NCM_SPLINE_FUNCTION_SPLINE, &F, _NCM_SPLINE_TEST_XI, _NCM_SPLINE_TEST_XI + _NCM_SPLINE_TEST_DX * (_NCM_SPLINE_TEST_NKNOTS / 100.0 - 1) , _NCM_SPLINE_TEST_NKNOTS, _NCM_SPLINE_TEST_ERROR);
-	for (i = 0; i < 2 * _NCM_SPLINE_TEST_NKNOTS; i++)
-	{
-	  gdouble x = _NCM_SPLINE_TEST_XI + _NCM_SPLINE_TEST_DX * (_NCM_SPLINE_TEST_NKNOTS / 100.0 - 1.0) / (2.0 * _NCM_SPLINE_TEST_NKNOTS - 1.0) * i;
-	  gdouble df = GSL_FN_EVAL (&F_deriv, x);
-	  gdouble dfs = ncm_spline_eval_deriv (s, x);
+    NcmSpline *s = ncm_spline_copy (s_base);
+    F.function = &F_sin_poly;
+    F.params = d;
+    F_deriv.function = &F_sin_poly_deriv;
+    F_deriv.params = d;
+    ncm_spline_set_func (s, NCM_SPLINE_FUNCTION_SPLINE, &F, _NCM_SPLINE_TEST_XI, _NCM_SPLINE_TEST_XI + _NCM_SPLINE_TEST_DX * (_NCM_SPLINE_TEST_NKNOTS / 100.0 - 1) , _NCM_SPLINE_TEST_NKNOTS, _NCM_SPLINE_TEST_ERROR);
+    for (i = 0; i < 2 * _NCM_SPLINE_TEST_NKNOTS; i++)
+    {
+      gdouble x = _NCM_SPLINE_TEST_XI + _NCM_SPLINE_TEST_DX * (_NCM_SPLINE_TEST_NKNOTS / 100.0 - 1.0) / (2.0 * _NCM_SPLINE_TEST_NKNOTS - 1.0) * i;
+      gdouble df = GSL_FN_EVAL (&F_deriv, x);
+      gdouble dfs = ncm_spline_eval_deriv (s, x);
 
-	  g_assert ((_NCM_SPLINE_TEST_ERROR * 50.0) > (df != 0.0 ? fabs ((dfs - df) / df) : fabs (dfs)));
-	}
-	ncm_spline_free (s);
+      ncm_assert_cmpdouble_e (dfs, ==, df, _NCM_SPLINE_TEST_ERROR * 50.0);
+    }
+    ncm_spline_free (s);
   }
 }
 
@@ -600,63 +600,58 @@ test_ncm_spline_eval_deriv2 (void)
   d[3] = g_test_rand_double ();
 
   {
-	NcmSpline *s = ncm_spline_copy (s_base);
-	F.function = &F_linear;
-	F.params = d;
-	F_deriv2.function = &F_linear_deriv2;
-	F_deriv2.params = d;
-   	ncm_spline_set_func (s, NCM_SPLINE_FUNCTION_SPLINE, &F, _NCM_SPLINE_TEST_XI, _NCM_SPLINE_TEST_XI + _NCM_SPLINE_TEST_DX * (_NCM_SPLINE_TEST_NKNOTS - 1) , _NCM_SPLINE_TEST_NKNOTS, _NCM_SPLINE_TEST_ERROR);
-	for (i = 0; i < 2 * _NCM_SPLINE_TEST_NKNOTS; i++)
-	{
-	  gdouble x = _NCM_SPLINE_TEST_XI + _NCM_SPLINE_TEST_DX * (_NCM_SPLINE_TEST_NKNOTS - 1.0) / (2.0 * _NCM_SPLINE_TEST_NKNOTS - 1.0) * i;
-	  gdouble d2f = GSL_FN_EVAL (&F_deriv2, x);
-	  gdouble d2fs = ncm_spline_eval_deriv2 (s, x);
+    NcmSpline *s = ncm_spline_copy (s_base);
+    F.function = &F_linear;
+    F.params = d;
+    F_deriv2.function = &F_linear_deriv2;
+    F_deriv2.params = d;
+    ncm_spline_set_func (s, NCM_SPLINE_FUNCTION_SPLINE, &F, _NCM_SPLINE_TEST_XI, _NCM_SPLINE_TEST_XI + _NCM_SPLINE_TEST_DX * (_NCM_SPLINE_TEST_NKNOTS - 1) , _NCM_SPLINE_TEST_NKNOTS, _NCM_SPLINE_TEST_ERROR);
+    for (i = 0; i < 2 * _NCM_SPLINE_TEST_NKNOTS; i++)
+    {
+      gdouble x = _NCM_SPLINE_TEST_XI + _NCM_SPLINE_TEST_DX * (_NCM_SPLINE_TEST_NKNOTS - 1.0) / (2.0 * _NCM_SPLINE_TEST_NKNOTS - 1.0) * i;
+      gdouble d2f = GSL_FN_EVAL (&F_deriv2, x);
+      gdouble d2fs = ncm_spline_eval_deriv2 (s, x);
 
-	  g_assert (_NCM_SPLINE_TEST_ERROR > (d2f != 0.0 ? fabs ((d2fs - d2f) / d2f) : fabs (d2fs)));
-	}
-	ncm_spline_free (s);
+      ncm_assert_cmpdouble_e (d2fs, ==, d2f, _NCM_SPLINE_TEST_ERROR);
+    }
+    ncm_spline_free (s);
   }
 
   {
-	NcmSpline *s = ncm_spline_copy (s_base);
-	F.function = &F_cubic;
-	F.params = d;
-	F_deriv2.function = &F_cubic_deriv2;
-	F_deriv2.params = d;
-   	ncm_spline_set_func (s, NCM_SPLINE_FUNCTION_SPLINE, &F, _NCM_SPLINE_TEST_XI, _NCM_SPLINE_TEST_XI + _NCM_SPLINE_TEST_DX * (_NCM_SPLINE_TEST_NKNOTS - 1) , _NCM_SPLINE_TEST_NKNOTS, _NCM_SPLINE_TEST_ERROR);
-	for (i = 0; i < 2 * _NCM_SPLINE_TEST_NKNOTS; i++)
-	{
-	  gdouble x = _NCM_SPLINE_TEST_XI + _NCM_SPLINE_TEST_DX * (_NCM_SPLINE_TEST_NKNOTS - 1.0) / (2.0 * _NCM_SPLINE_TEST_NKNOTS - 1.0) * i;
-	  gdouble d2f = GSL_FN_EVAL (&F_deriv2, x);
-	  gdouble d2fs = ncm_spline_eval_deriv2 (s, x);
+    NcmSpline *s = ncm_spline_copy (s_base);
+    F.function = &F_cubic;
+    F.params = d;
+    F_deriv2.function = &F_cubic_deriv2;
+    F_deriv2.params = d;
+    ncm_spline_set_func (s, NCM_SPLINE_FUNCTION_SPLINE, &F, _NCM_SPLINE_TEST_XI, _NCM_SPLINE_TEST_XI + _NCM_SPLINE_TEST_DX * (_NCM_SPLINE_TEST_NKNOTS - 1) , _NCM_SPLINE_TEST_NKNOTS, _NCM_SPLINE_TEST_ERROR);
+    for (i = 0; i < 2 * _NCM_SPLINE_TEST_NKNOTS; i++)
+    {
+      gdouble x = _NCM_SPLINE_TEST_XI + _NCM_SPLINE_TEST_DX * (_NCM_SPLINE_TEST_NKNOTS - 1.0) / (2.0 * _NCM_SPLINE_TEST_NKNOTS - 1.0) * i;
+      gdouble d2f = GSL_FN_EVAL (&F_deriv2, x);
+      gdouble d2fs = ncm_spline_eval_deriv2 (s, x);
 
-	  //printf ("% 20.15g % 20.15g % 20.15g\n", x, d2f, d2fs);
-	  //printf ("% 20.15g % 20.15g\n", fabs ((d2fs - d2f) / d2f), fabs (d2fs));
-	  g_assert ((_NCM_SPLINE_TEST_ERROR * 50.0) > (d2f != 0.0 ? fabs ((d2fs - d2f) / d2fs) : fabs (d2fs)));
-	}
-	ncm_spline_free (s);
+      ncm_assert_cmpdouble_e (d2fs, ==, d2f, _NCM_SPLINE_TEST_ERROR * 50.0);
+    }
+    ncm_spline_free (s);
   }
 
   if (FALSE)
   {
-	NcmSpline *s = ncm_spline_copy (s_base);
-	F.function = &F_sin_poly;
-	F.params = d;
-	F_deriv2.function = &F_sin_poly_deriv2;
-	F_deriv2.params = d;
-   	ncm_spline_set_func (s, NCM_SPLINE_FUNCTION_SPLINE, &F, _NCM_SPLINE_TEST_XI, _NCM_SPLINE_TEST_XI + _NCM_SPLINE_TEST_DX * (_NCM_SPLINE_TEST_NKNOTS / 500.0 - 1) , _NCM_SPLINE_TEST_NKNOTS, _NCM_SPLINE_TEST_ERROR);
-	for (i = 0; i < 2 * _NCM_SPLINE_TEST_NKNOTS; i++)
-	{
-	  gdouble x = _NCM_SPLINE_TEST_XI + _NCM_SPLINE_TEST_DX * (_NCM_SPLINE_TEST_NKNOTS / 500.0 - 1.0) / (2.0 * _NCM_SPLINE_TEST_NKNOTS - 1.0) * i;
-	  gdouble d2f = GSL_FN_EVAL (&F_deriv2, x);
-	  gdouble d2fs = ncm_spline_eval_deriv2 (s, x);
+    NcmSpline *s = ncm_spline_copy (s_base);
+    F.function = &F_sin_poly;
+    F.params = d;
+    F_deriv2.function = &F_sin_poly_deriv2;
+    F_deriv2.params = d;
+    ncm_spline_set_func (s, NCM_SPLINE_FUNCTION_SPLINE, &F, _NCM_SPLINE_TEST_XI, _NCM_SPLINE_TEST_XI + _NCM_SPLINE_TEST_DX * (_NCM_SPLINE_TEST_NKNOTS / 500.0 - 1) , _NCM_SPLINE_TEST_NKNOTS, _NCM_SPLINE_TEST_ERROR);
+    for (i = 0; i < 2 * _NCM_SPLINE_TEST_NKNOTS; i++)
+    {
+      gdouble x = _NCM_SPLINE_TEST_XI + _NCM_SPLINE_TEST_DX * (_NCM_SPLINE_TEST_NKNOTS / 500.0 - 1.0) / (2.0 * _NCM_SPLINE_TEST_NKNOTS - 1.0) * i;
+      gdouble d2f = GSL_FN_EVAL (&F_deriv2, x);
+      gdouble d2fs = ncm_spline_eval_deriv2 (s, x);
 
-	  //printf ("Pol % 20.15g % 20.15g % 20.15g\n", x, d2f, d2fs);
-	  //printf ("% 20.15g % 20.15g\n", fabs ((d2fs - d2f) / d2f), fabs (d2fs));
-	  g_assert ((_NCM_SPLINE_TEST_ERROR * 100.0) > (d2f != 0.0 ? fabs ((d2fs - d2f) / d2fs) : fabs (d2fs)));
-
-	}
-	ncm_spline_free (s);
+      ncm_assert_cmpdouble_e (d2fs, ==, d2f, _NCM_SPLINE_TEST_ERROR * 100.0);
+    }
+    ncm_spline_free (s);
   }
 }
 
@@ -673,43 +668,40 @@ test_ncm_spline_eval_int (void)
   d[3] = g_test_rand_double ();
 
   {
-	NcmSpline *s = ncm_spline_copy (s_base);
-	F.function = &F_linear;
-	F.params = d;
-	F_int.function = &F_linear_int_0x;
-	F_int.params = d;
-	ncm_spline_set_func (s, NCM_SPLINE_FUNCTION_SPLINE, &F, _NCM_SPLINE_TEST_XI, _NCM_SPLINE_TEST_XI + _NCM_SPLINE_TEST_DX * (_NCM_SPLINE_TEST_NKNOTS - 1) , _NCM_SPLINE_TEST_NKNOTS, _NCM_SPLINE_TEST_ERROR);
-	for (i = 0; i < 2 * _NCM_SPLINE_TEST_NKNOTS; i++)
-	{
-	  gdouble x = _NCM_SPLINE_TEST_XI + _NCM_SPLINE_TEST_DX * (_NCM_SPLINE_TEST_NKNOTS - 1.0) / (2.0 * _NCM_SPLINE_TEST_NKNOTS - 1.0) * i;
-	  gdouble xi = _NCM_SPLINE_TEST_XI;
-	  gdouble If = GSL_FN_EVAL (&F_int, x) - GSL_FN_EVAL (&F_int, xi);
-	  gdouble Ifs = ncm_spline_eval_integ (s, xi, x);
+    NcmSpline *s = ncm_spline_copy (s_base);
+    F.function = &F_linear;
+    F.params = d;
+    F_int.function = &F_linear_int_0x;
+    F_int.params = d;
+    ncm_spline_set_func (s, NCM_SPLINE_FUNCTION_SPLINE, &F, _NCM_SPLINE_TEST_XI, _NCM_SPLINE_TEST_XI + _NCM_SPLINE_TEST_DX * (_NCM_SPLINE_TEST_NKNOTS - 1) , _NCM_SPLINE_TEST_NKNOTS, _NCM_SPLINE_TEST_ERROR);
+    for (i = 0; i < 2 * _NCM_SPLINE_TEST_NKNOTS; i++)
+    {
+      gdouble x = _NCM_SPLINE_TEST_XI + _NCM_SPLINE_TEST_DX * (_NCM_SPLINE_TEST_NKNOTS - 1.0) / (2.0 * _NCM_SPLINE_TEST_NKNOTS - 1.0) * i;
+      gdouble xi = _NCM_SPLINE_TEST_XI;
+      gdouble If = GSL_FN_EVAL (&F_int, x) - GSL_FN_EVAL (&F_int, xi);
+      gdouble Ifs = ncm_spline_eval_integ (s, xi, x);
 
-	  g_assert (_NCM_SPLINE_TEST_ERROR > (If != 0.0 ? fabs ((Ifs - If) / If) : fabs (Ifs)));
-	}
-	ncm_spline_free (s);
+      ncm_assert_cmpdouble_e (Ifs, ==, If, _NCM_SPLINE_TEST_ERROR);
+    }
+    ncm_spline_free (s);
   }
 
   {
-	NcmSpline *s = ncm_spline_copy (s_base);
-	F.function = &F_cubic;
-	F.params = d;
-	F_int.function = &F_cubic_int_0x;
-	F_int.params = d;
-	ncm_spline_set_func (s, NCM_SPLINE_FUNCTION_SPLINE, &F, _NCM_SPLINE_TEST_XI, _NCM_SPLINE_TEST_XI + _NCM_SPLINE_TEST_DX * (_NCM_SPLINE_TEST_NKNOTS - 1) , _NCM_SPLINE_TEST_NKNOTS, _NCM_SPLINE_TEST_ERROR);
-	for (i = 0; i < 2 * _NCM_SPLINE_TEST_NKNOTS; i++)
-	{
-	  gdouble x = _NCM_SPLINE_TEST_XI + _NCM_SPLINE_TEST_DX * (_NCM_SPLINE_TEST_NKNOTS - 1.0) / (2.0 * _NCM_SPLINE_TEST_NKNOTS - 1.0) * i;
-	  gdouble xi = _NCM_SPLINE_TEST_XI;
-	  gdouble If = GSL_FN_EVAL (&F_int, x) - GSL_FN_EVAL (&F_int, xi);
-	  gdouble Ifs = ncm_spline_eval_integ (s, xi, x);
+    NcmSpline *s = ncm_spline_copy (s_base);
+    F.function = &F_cubic;
+    F.params = d;
+    F_int.function = &F_cubic_int_0x;
+    F_int.params = d;
+    ncm_spline_set_func (s, NCM_SPLINE_FUNCTION_SPLINE, &F, _NCM_SPLINE_TEST_XI, _NCM_SPLINE_TEST_XI + _NCM_SPLINE_TEST_DX * (_NCM_SPLINE_TEST_NKNOTS - 1) , _NCM_SPLINE_TEST_NKNOTS, _NCM_SPLINE_TEST_ERROR);
+    for (i = 0; i < 2 * _NCM_SPLINE_TEST_NKNOTS; i++)
+    {
+      gdouble x = _NCM_SPLINE_TEST_XI + _NCM_SPLINE_TEST_DX * (_NCM_SPLINE_TEST_NKNOTS - 1.0) / (2.0 * _NCM_SPLINE_TEST_NKNOTS - 1.0) * i;
+      gdouble xi = _NCM_SPLINE_TEST_XI;
+      gdouble If = GSL_FN_EVAL (&F_int, x) - GSL_FN_EVAL (&F_int, xi);
+      gdouble Ifs = ncm_spline_eval_integ (s, xi, x);
 
-	  //printf ("% 20.15g % 20.15g % 20.15g\n", x, If, Ifs);
-	  g_assert (_NCM_SPLINE_TEST_ERROR > (If != 0.0 ? fabs ((Ifs - If) / If) : fabs (Ifs)));
-	}
-	ncm_spline_free (s);
+      ncm_assert_cmpdouble_e (Ifs, ==, If, _NCM_SPLINE_TEST_ERROR);
+    }
+    ncm_spline_free (s);
   }
 }
-
-

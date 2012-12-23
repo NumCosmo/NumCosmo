@@ -74,6 +74,21 @@ gdouble ncm_numdiff_2 (gsl_function *F, gdouble *ofx, const gdouble x, const gdo
 gdouble ncm_numdiff_2_err (gsl_function *F, gdouble *ofx, const gdouble x, const gdouble ho, gdouble err, gdouble *ferr);
 gdouble ncm_sqrt1px_m1 (gdouble x);
 gint ncm_cmp (gdouble x, gdouble y, gdouble reltol);
+void _ncm_assertion_message_cmpdouble (const gchar *domain, const gchar *file, gint line, const gchar *func, const gchar *expr, gdouble arg1, const gchar *cmp, gdouble arg2);
+
+#define ncm_assert_cmpdouble(n1,cmp,n2) \
+do { \
+  if (ncm_cmp ((n1), (n2), GSL_DBL_EPSILON) cmp 0) ; else \
+    _ncm_assertion_message_cmpdouble (G_LOG_DOMAIN, __FILE__, __LINE__, G_STRFUNC, \
+                                      #n1 " " #cmp " " #n2, (n1), #cmp, (n2)); \
+} while (0)
+
+#define ncm_assert_cmpdouble_e(n1,cmp,n2,epsilon) \
+do { \
+  if (ncm_cmp ((n1), (n2), (epsilon)) cmp 0) ; else \
+    _ncm_assertion_message_cmpdouble (G_LOG_DOMAIN, __FILE__, __LINE__, G_STRFUNC, \
+                                      #n1 " " #cmp " " #n2, (n1), #cmp, (n2)); \
+} while (0)
 
 G_END_DECLS
 

@@ -262,7 +262,7 @@ _Nc_k_integrand (gdouble k, gpointer params)
   gdouble xf = 5250.0;
   glong np = ceil(xf / (2.0 * M_PI) * nppo);
   NcmGridSection x_sec[2] = {{NCM_GRID_NODES_BOTH,  0, np, 0.0, xf}, {0}};
-  NcSFSphericalBesselIntSpline *int_xnjl_spline = ncm_sf_sbessel_jl_xj_integrate_spline_cached_new (l, x_sec, TRUE);
+  NcmSFSphericalBesselIntSpline *int_xnjl_spline = ncm_sf_sbessel_jl_xj_integrate_spline_cached_new (l, x_sec, TRUE);
   gdouble theta_l_k;
 //printf ("# Uhu![%ld] %.15g\n", l, k);
   ncm_sf_sbessel_jl_xj_integrate_spline_goto (int_xnjl_spline, l);
@@ -292,7 +292,7 @@ nc_pert_linear_los_integrate (NcLinearPertSplines *pspline, glong l, gdouble k)
   gdouble res_rules = 0.0;
 //  gint i;
 
-  NcSFSphericalBesselIntSpline *int_xnjl_spline;
+  NcmSFSphericalBesselIntSpline *int_xnjl_spline;
 
   {
     glong nppo = 10;
@@ -308,7 +308,7 @@ nc_pert_linear_los_integrate (NcLinearPertSplines *pspline, glong l, gdouble k)
   return ncm_sf_sbessel_jl_xj_integral_spline (int_xnjl_spline, pspline->Sg[0], pspline->Sg[1], pspline->Sg[2], k);
 
   if (w == NULL)
-    w = nc_integral_get_workspace();
+    w = ncm_integral_get_workspace();
 
   F.params = &ldata;
   F.function = &local_los_int;
@@ -331,7 +331,7 @@ nc_pert_linear_los_integrate (NcLinearPertSplines *pspline, glong l, gdouble k)
   if (FALSE)
   {
     gdouble deta_opt = ncm_vector_get (ldata.S0->xv, ncm_vector_len(ldata.S0->xv) - 1);
-    gsl_integration_qag (&F, 0.0, deta_opt, 0.0, 1e-13, NC_INT_PARTITION, 1, *w, &res_int, &err);fflush (stdout);
+    gsl_integration_qag (&F, 0.0, deta_opt, 0.0, 1e-13, NCM_INTEGRAL_PARTITION, 1, *w, &res_int, &err);fflush (stdout);
     printf ("# RES % .15e % .15e %.4e %.4e %08d\n",
       res_int, res_rules, fabs((res_rules - res_int) / res_int), fabs(err / res_int), ldata.count);fflush (stdout);
   }
@@ -668,11 +668,11 @@ nc_pert_linear_calc_Nc_spline (NcLinearPertSplines *pspline, NcmSpline *pw_splin
 
     if (TRUE)
     {
-      gsl_integration_workspace **w = nc_integral_get_workspace();
+      gsl_integration_workspace **w = ncm_integral_get_workspace();
       gdouble error;
       gsl_integration_qag (&F,
                            pspline->k0,
-                           pspline->k1, 0.0, 1e-11, NC_INT_PARTITION, 6, *w, ncm_vector_ptr (Nca, i), &error);
+                           pspline->k1, 0.0, 1e-11, NCM_INTEGRAL_PARTITION, 6, *w, ncm_vector_ptr (Nca, i), &error);
       ncm_memory_pool_return (w);
       ncm_vector_set (la, i, l);
       printf ("# Integrate with %ld evals\n", Nc_data.count);

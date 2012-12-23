@@ -6,6 +6,7 @@ XML_FILES=dependencies.xml \
           introduction.xml \
           references.xml   \
           darkenergy.xml   \
+          gdarkenergy.xml  \
           refs.xml
 
 # We require automake 1.6 at least.
@@ -141,7 +142,7 @@ endif
 
 ########################################################################
 
-man_MANS = darkenergy.1
+man_MANS = darkenergy.1 gdarkenergy.1
 
 EXTRA_DIST += $(man_MANS)
 

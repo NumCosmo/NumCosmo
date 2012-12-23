@@ -38,25 +38,25 @@ main (gint argc, gchar *argv[])
 
   if (FALSE)
   {
-	NcHICosmo *xcdm = NC_HICOSMO (nc_hicosmo_de_xcdm_new ());
-	NcDistance *dist = nc_distance_new (1.2);
-	NcGrowthFunc *gf = nc_growth_func_new ();
-	NcTransferFunc *tf = nc_transfer_func_eh_new ();
-	NcGalaxyAcf *acf = nc_galaxy_acf_new (gf, dist, tf);
-	//guint l = 1;
-	gint i;
+    NcHICosmo *xcdm = NC_HICOSMO (nc_hicosmo_de_xcdm_new ());
+    NcDistance *dist = nc_distance_new (1.2);
+    NcGrowthFunc *gf = nc_growth_func_new ();
+    NcTransferFunc *tf = nc_transfer_func_eh_new ();
+    NcGalaxyAcf *acf = nc_galaxy_acf_new (gf, dist, tf);
+    //guint l = 1;
+    gint i;
 
-	nc_distance_prepare (dist, xcdm);
-	nc_growth_func_prepare (gf, NC_HICOSMO (xcdm));
-	nc_transfer_func_prepare (tf, NC_HICOSMO (xcdm));
-//ncm_model_params_log_all (NCM_MODEL (xcdm));
+    nc_distance_prepare (dist, xcdm);
+    nc_growth_func_prepare (gf, NC_HICOSMO (xcdm));
+    nc_transfer_func_prepare (tf, NC_HICOSMO (xcdm));
+    //ncm_model_params_log_all (NCM_MODEL (xcdm));
 
-//	printf ("%u\n", ncm_vector_len (acf->s->xv));
+    //	printf ("%u\n", ncm_vector_len (acf->s->xv));
 
-	for (i = 0; i < 100; i++)
-	{
-	  ncm_galaxy_acf_prepare_psi (acf, xcdm, i);
-	}
+    for (i = 0; i < 100; i++)
+    {
+      nc_galaxy_acf_prepare_psi (acf, xcdm, i);
+    }
   }
 
   return 0;

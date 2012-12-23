@@ -57,15 +57,15 @@ do { \
 } while (FALSE);
 
 /**
- * nc_sphere_healpix_str2type: (skip)
+ * ncm_sphere_healpix_str2type: (skip)
  * @str_type: FIXME
  * 
  * FIXME
  *
  * Returns: FIXME
  */
-NcSphereMapType
-nc_sphere_healpix_str2type (gchar *str_type)
+NcmSphereMapType
+ncm_sphere_healpix_str2type (gchar *str_type)
 {
   switch (*str_type)
   {
@@ -92,16 +92,16 @@ nc_sphere_healpix_str2type (gchar *str_type)
 
 #ifdef NUMCOSMO_HAVE_CFITSIO
 /**
- * nc_sphere_healpix_read_map: (skip)
+ * ncm_sphere_healpix_read_map: (skip)
  * @fits_file: FIXME
- * @map: a #NcSphereMap
+ * @map: a #NcmSphereMap
  * 
  * FIXME
  *
  * Returns: FIXME
  */
-NcSphereMap *
-nc_sphere_healpix_read_map (gchar *fits_file, NcSphereMap *map) 
+NcmSphereMap *
+ncm_sphere_healpix_read_map (gchar *fits_file, NcmSphereMap *map) 
 {
   glong nside, naxis;
   gint  status, hdutype, anynul, i;   
@@ -125,7 +125,7 @@ nc_sphere_healpix_read_map (gchar *fits_file, NcSphereMap *map)
     NC_FITS_ERROR(status);
   
   if (map == NULL)
-    map = nc_sphere_map_new (nside);
+    map = ncm_sphere_map_new (nside);
   else
     g_assert (map->nside == nside);
   
@@ -135,36 +135,36 @@ nc_sphere_healpix_read_map (gchar *fits_file, NcSphereMap *map)
   for (i = 0; i < naxis; i++)
   {
     gchar *ttype = g_strdup_printf ("TTYPE%d", i + 1);
-    NcSphereMapType type;
+    NcmSphereMapType type;
     if (fits_read_key_str (fptr, ttype, col_label, comment, &status))
       NC_FITS_ERROR(status);
-    type = nc_sphere_healpix_str2type (col_label);
+    type = ncm_sphere_healpix_str2type (col_label);
     map->type |= type;
     switch (type)
     {
       case NC_SPHERE_MAP_TYPE_TEMPERATURE:
         map->dt = (map->dt == NULL) ? gsl_vector_float_alloc (map->npix) : map->dt;
-        if ( fits_read_col_flt (fptr, i + 1, 1, 1, map->npix, NC_HEALPIX_NULLVAL, map->dt->data, &anynul, &status) ) 
+        if ( fits_read_col_flt (fptr, i + 1, 1, 1, map->npix, NCM_HEALPIX_NULLVAL, map->dt->data, &anynul, &status) ) 
           NC_FITS_ERROR(status);
         break;
       case NC_SPHERE_MAP_TYPE_Q_POLARIZATION:
         map->qpol = (map->qpol == NULL) ? gsl_vector_float_alloc (map->npix) : map->qpol;
-        if ( fits_read_col_flt (fptr, i + 1, 1, 1, map->npix, NC_HEALPIX_NULLVAL, map->qpol->data, &anynul, &status) ) 
+        if ( fits_read_col_flt (fptr, i + 1, 1, 1, map->npix, NCM_HEALPIX_NULLVAL, map->qpol->data, &anynul, &status) ) 
           NC_FITS_ERROR(status);
         break;
       case NC_SPHERE_MAP_TYPE_U_POLARISATION:
         map->upol = (map->upol == NULL) ? gsl_vector_float_alloc (map->npix) : map->upol;
-        if ( fits_read_col_flt (fptr, i + 1, 1, 1, map->npix, NC_HEALPIX_NULLVAL, map->upol->data, &anynul, &status) ) 
+        if ( fits_read_col_flt (fptr, i + 1, 1, 1, map->npix, NCM_HEALPIX_NULLVAL, map->upol->data, &anynul, &status) ) 
           NC_FITS_ERROR(status);
         break;
       case NC_SPHERE_MAP_TYPE_SPUR_SIGNAL:
         map->spur_signal = (map->spur_signal == NULL) ? gsl_vector_float_alloc (map->npix) : map->spur_signal;
-        if ( fits_read_col_flt (fptr, i + 1, 1, 1, map->npix, NC_HEALPIX_NULLVAL, map->spur_signal->data, &anynul, &status) ) 
+        if ( fits_read_col_flt (fptr, i + 1, 1, 1, map->npix, NCM_HEALPIX_NULLVAL, map->spur_signal->data, &anynul, &status) ) 
           NC_FITS_ERROR(status);
         break;
       case NC_SPHERE_MAP_TYPE_N_OBS:
         map->nobs = (map->nobs == NULL) ? gsl_vector_float_alloc (map->npix) : map->nobs;
-        if ( fits_read_col_flt (fptr, i + 1, 1, 1, map->npix, NC_HEALPIX_NULLVAL, map->nobs->data, &anynul, &status) ) 
+        if ( fits_read_col_flt (fptr, i + 1, 1, 1, map->npix, NCM_HEALPIX_NULLVAL, map->nobs->data, &anynul, &status) ) 
           NC_FITS_ERROR(status);
         break;
     }
@@ -200,8 +200,8 @@ nc_sphere_healpix_read_map (gchar *fits_file, NcSphereMap *map)
 }
 
 /**
- * nc_sphere_healpix_write_map: 
- * @map: a #NcSphereMap
+ * ncm_sphere_healpix_write_map: 
+ * @map: a #NcmSphereMap
  * @filename: FIXME 
  * @overwrite: FIXME 
  * 
@@ -210,7 +210,7 @@ nc_sphere_healpix_read_map (gchar *fits_file, NcSphereMap *map)
  * Returns: FIXME
  */
 gboolean
-nc_sphere_healpix_write_map (NcSphereMap *map, gchar *filename, gboolean overwrite)
+ncm_sphere_healpix_write_map (NcmSphereMap *map, gchar *filename, gboolean overwrite)
 {
   /*******************************************************************/
   /* Create a binary table extension                                 */
@@ -289,7 +289,7 @@ nc_sphere_healpix_write_map (NcSphereMap *map, gchar *filename, gboolean overwri
 #endif /* NUMCOSMO_HAVE_CFITSIO */
 
 /**
- * nc_sphere_healpix_nest2ring: 
+ * ncm_sphere_healpix_nest2ring: 
  * @nside: FIXME
  * @nest_index: FIXME
  * 
@@ -298,7 +298,7 @@ nc_sphere_healpix_write_map (NcSphereMap *map, gchar *filename, gboolean overwri
  * Returns: FIXME
  */
 glong
-nc_sphere_healpix_nest2ring (gint nside, glong nest_index)
+ncm_sphere_healpix_nest2ring (gint nside, glong nest_index)
 {
   glong ring_index;
   glong npix = 12 * gsl_pow_2 (nside);
@@ -380,7 +380,7 @@ nc_sphere_healpix_nest2ring (gint nside, glong nest_index)
 }
 
 /**
- * nc_sphere_healpix_ring2nest: 
+ * ncm_sphere_healpix_ring2nest: 
  * @nside: FIXME
  * @ring_index: FIXME
  * 
@@ -389,7 +389,7 @@ nc_sphere_healpix_nest2ring (gint nside, glong nest_index)
  * Returns: FIXME
  */
 glong
-nc_sphere_healpix_ring2nest (gint nside, glong ring_index)
+ncm_sphere_healpix_ring2nest (gint nside, glong ring_index)
 {
   glong nest_index;
   glong npix = 12 * gsl_pow_2 (nside);
@@ -467,7 +467,7 @@ _t_p_w_to_theta_phi (const gint nside, const gint tm1, const gint pm1, const gin
 }
 
 static void
-_t_p_w_to_vector (const gint nside, const gint tm1, const gint pm1, const gint w, NcTriVector v)
+_t_p_w_to_vector (const gint nside, const gint tm1, const gint pm1, const gint w, NcmTriVector v)
 {
   const gint t = tm1 + 1;
   const gint p = pm1 + 1;
@@ -495,7 +495,7 @@ _t_p_w_to_vector (const gint nside, const gint tm1, const gint pm1, const gint w
 }
 
 /**
- * nc_sphere_healpix_pix2ang_nest:
+ * ncm_sphere_healpix_pix2ang_nest:
  * @nside: FIXME
  * @nest_index: FIXME
  * @theta: FIXME
@@ -504,7 +504,7 @@ _t_p_w_to_vector (const gint nside, const gint tm1, const gint pm1, const gint w
  * FIXME 
 */ 
 void 
-nc_sphere_healpix_pix2ang_nest (gint nside, glong nest_index, gdouble *theta, gdouble *phi)
+ncm_sphere_healpix_pix2ang_nest (gint nside, glong nest_index, gdouble *theta, gdouble *phi)
 {
   glong npix = 12 * gsl_pow_2 (nside);
   glong face_size = nside * nside;          /* Face size in pixels                                     */
@@ -575,7 +575,7 @@ nc_sphere_healpix_pix2ang_nest (gint nside, glong nest_index, gdouble *theta, gd
 }
 
 /**
- * nc_sphere_healpix_pix2ang_ring:
+ * ncm_sphere_healpix_pix2ang_ring:
  * @nside: FIXME
  * @ring_index: FIXME
  * @theta: FIXME
@@ -584,7 +584,7 @@ nc_sphere_healpix_pix2ang_nest (gint nside, glong nest_index, gdouble *theta, gd
  * FIXME 
 */ 
 void
-nc_sphere_healpix_pix2ang_ring (gint nside, glong ring_index, gdouble *theta, gdouble *phi)
+ncm_sphere_healpix_pix2ang_ring (gint nside, glong ring_index, gdouble *theta, gdouble *phi)
 {
   glong npix = 12 * gsl_pow_2 (nside);
   gint middle_rings_size = 4 * nside;
@@ -617,15 +617,15 @@ nc_sphere_healpix_pix2ang_ring (gint nside, glong ring_index, gdouble *theta, gd
 }
 
 /**
- * nc_sphere_healpix_pix2vec_ring:
+ * ncm_sphere_healpix_pix2vec_ring:
  * @nside: FIXME
  * @ring_index: FIXME
- * @v: a #NcTriVector
+ * @v: a #NcmTriVector
  *
  * FIXME 
 */
 void 
-nc_sphere_healpix_pix2vec_ring (gint nside, glong ring_index, NcTriVector v)
+ncm_sphere_healpix_pix2vec_ring (gint nside, glong ring_index, NcmTriVector v)
 {
   glong npix = 12 * gsl_pow_2 (nside);
   gint middle_rings_size = 4 * nside;
@@ -658,15 +658,15 @@ nc_sphere_healpix_pix2vec_ring (gint nside, glong ring_index, NcTriVector v)
 }
 
 /**
- * nc_sphere_healpix_pix2vec_nest:
+ * ncm_sphere_healpix_pix2vec_nest:
  * @nside: FIXME
  * @nest_index: FIXME
- * @vec: a #NcTriVector
+ * @vec: a #NcmTriVector
  *
  * FIXME 
 */
 void 
-nc_sphere_healpix_pix2vec_nest (gint nside, glong nest_index, NcTriVector vec)
+ncm_sphere_healpix_pix2vec_nest (gint nside, glong nest_index, NcmTriVector vec)
 {
   glong npix = 12 * gsl_pow_2 (nside);
   glong face_size = nside * nside;          /* Face size in pixels                                     */
@@ -737,15 +737,15 @@ nc_sphere_healpix_pix2vec_nest (gint nside, glong nest_index, NcTriVector vec)
 }
 
 /**
- * nc_sphere_healpix_vec2pix_ring:
+ * ncm_sphere_healpix_vec2pix_ring:
  * @nside: FIXME
- * @v: a #NcTriVector
+ * @v: a #NcmTriVector
  * @i: FIXME 
  *
  * FIXME 
 */
 void 
-nc_sphere_healpix_vec2pix_ring (gint nside, NcTriVector v, glong *i)
+ncm_sphere_healpix_vec2pix_ring (gint nside, NcmTriVector v, glong *i)
 {
   g_assert_not_reached ();
 }

@@ -150,7 +150,7 @@ _interp_dd_2_4 (const gdouble *vx, gdouble *dd)
 /************************************************************************************************************/
 
 void
-nc_interp_dd_init (const gdouble *vx, gdouble *dd, const gint np, const gint nf)
+ncm_interp_dd_init (const gdouble *vx, gdouble *dd, const gint np, const gint nf)
 {
   g_assert (nf >= 1);
   
@@ -165,7 +165,7 @@ nc_interp_dd_init (const gdouble *vx, gdouble *dd, const gint np, const gint nf)
 }
 
 void
-nc_interp_dd_init_2_4 (const gdouble *vx, gdouble *dd)
+ncm_interp_dd_init_2_4 (const gdouble *vx, gdouble *dd)
 {
   _interp_dd_2_4 (vx, dd);
 }
@@ -185,13 +185,13 @@ _interp_dd_eval (const gdouble *vx, const gdouble *dd, const gdouble x, const gi
 }
 
 gdouble 
-nc_interp_dd_eval (const gdouble *vx, const gdouble *dd, const gdouble x, const gint np, const gint nf)
+ncm_interp_dd_eval (const gdouble *vx, const gdouble *dd, const gdouble x, const gint np, const gint nf)
 {
   return _interp_dd_eval (vx, dd, x, np, nf, 0, 0, 0);
 }
 
 gdouble 
-nc_interp_dd_eval_2_4 (const gdouble *vx, const gdouble *dd, const gdouble x)
+ncm_interp_dd_eval_2_4 (const gdouble *vx, const gdouble *dd, const gdouble x)
 {
   gdouble dx0 = (x - vx[0]);
   gdouble dx1 = (x - vx[1]);
