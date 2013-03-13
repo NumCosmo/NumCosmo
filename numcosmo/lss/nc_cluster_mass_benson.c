@@ -234,6 +234,8 @@ _significance_to_mass (NcClusterMass *clusterm, NcHICosmo *model, gdouble z, gdo
   const gdouble lnzeta = log(zeta);
   const gdouble lnM = log (msz->M0) + (lnzeta - log (A_SZ) - C_SZ * log(E / E0)) / B_SZ;
 
+  //printf("z= %.10g xi = %.10g lnM = %.10g\n", z, xi, lnM);
+  
   return lnM;
 }
 

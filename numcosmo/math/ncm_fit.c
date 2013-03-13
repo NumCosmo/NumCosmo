@@ -248,11 +248,11 @@ _ncm_fit_reset (NcmFit *fit)
 
 /**
  * ncm_fit_new:
- * @ftype: a #NcmFitType.
- * @algo_name: FIXME
- * @lh: FIXME
- * @mset: FIXME
- * @gtype: FIXME
+ * @ftype: a #NcmFitType
+ * @algo_name: name of the algorithm to be used
+ * @lh: a #NcmLikelihood
+ * @mset: a #NcmMSet
+ * @gtype: a #NcmFitGradType
  *
  * FIXME
  *
@@ -304,10 +304,10 @@ ncm_fit_ref (NcmFit *fit)
 
 /**
  * ncm_fit_copy_new:
- * @fit: a #NcmFit.
- * @lh: FIXME
- * @mset: FIXME
- * @gtype: FIXME
+ * @fit: a #NcmFit
+ * @lh: a #NcmLikelihood
+ * @mset: a #NcmMSet
+ * @gtype: a #NcmFitGradType
  *
  * Duplicates the #NcmFit object with new references for its contents.
  *
@@ -757,7 +757,7 @@ ncm_fit_log_step_error (NcmFit *fit, const gchar *strerror, ...)
  * ncm_fit_log_end:
  * @fit: a #NcmFit
  *
- * FIXME
+ * This function prints in the log the precision with which the best-fit was found.
  */
 void
 ncm_fit_log_end (NcmFit *fit)
@@ -776,9 +776,10 @@ ncm_fit_log_end (NcmFit *fit)
 /**
  * ncm_fit_log_state:
  * @fit: a #NcmFit
- * @m2lnL: FIXME
+ * @m2lnL: minus two times the logarithm base e of the likelihood.
  *
- * FIXME
+ * This function prints in the log the current state.
+ * 
  */
 void
 ncm_fit_log_state (NcmFit *fit, gdouble m2lnL)
@@ -811,7 +812,7 @@ ncm_fit_log_state (NcmFit *fit, gdouble m2lnL)
 /**
  * ncm_fit_log_step:
  * @fit: a #NcmFit
- * @m2lnL: FIXME
+ * @m2lnL: minus two times the logarithm base e of the likelihood.
  *
  * FIXME
  */
@@ -960,9 +961,12 @@ ncm_fit_fishermatrix_print (NcmFit *fit, FILE *out, gchar *header)
 /**
  * ncm_fit_data_m2lnL_val:
  * @fit: a #NcmFit
- * @data_m2lnL: (out): FIXME
+ * @data_m2lnL: (out): minus two times the logarithm base e of the likelihood.
  *
- * FIXME
+ * This function computes minus two times the logarithm base e of the likelihood 
+ * using only the data set and not considering any prior. The result is set 
+ * on @data_m2lnL.
+ * 
  */
 void
 ncm_fit_data_m2lnL_val (NcmFit *fit, gdouble *data_m2lnL)
@@ -973,9 +977,12 @@ ncm_fit_data_m2lnL_val (NcmFit *fit, gdouble *data_m2lnL)
 /**
  * ncm_fit_priors_m2lnL_val:
  * @fit: a #NcmFit
- * @priors_m2lnL: (out): FIXME
+ * @priors_m2lnL: (out): minus two times the logarithm base e of the likelihood.
  *
- * FIXME
+ * This function computes minus two times the logarithm base e of the likelihood 
+ * using the data set and taking into account the assumed priors. The result is 
+ * set on @priors_m2lnL.
+ * 
  */
 void
 ncm_fit_priors_m2lnL_val (NcmFit *fit, gdouble *priors_m2lnL)
@@ -986,7 +993,7 @@ ncm_fit_priors_m2lnL_val (NcmFit *fit, gdouble *priors_m2lnL)
 /**
  * ncm_fit_m2lnL_val:
  * @fit: a #NcmFit
- * @m2lnL: (out): FIXME
+ * @m2lnL: (out): minus two times the logarithm base e of the likelihood. 
  *
  * FIXME
  */
@@ -1177,7 +1184,7 @@ ncm_fit_m2lnL_val_grad_an (NcmFit *fit, gdouble *result, NcmVector *df)
 /**
  * ncm_fit_m2lnL_val_grad_nd_fo:
  * @fit: a #NcmFit
- * @m2lnL: (out): FIXME
+ * @m2lnL: (out): minus two times the logarithm base e of the likelihood.
  * @grad: a #NcmVector
  *
  * FIXME
@@ -1210,7 +1217,7 @@ ncm_fit_m2lnL_val_grad_nd_fo (NcmFit *fit, gdouble *m2lnL, NcmVector *grad)
 /**
  * ncm_fit_m2lnL_val_grad_nd_ce:
  * @fit: a #NcmFit
- * @m2lnL: FIXME
+ * @m2lnL: minus two times the logarithm base e of the likelihood.
  * @grad: a #NcmVector
  *
  * FIXME
@@ -1225,7 +1232,7 @@ ncm_fit_m2lnL_val_grad_nd_ce (NcmFit *fit, gdouble *m2lnL, NcmVector *grad)
 /**
  * ncm_fit_m2lnL_val_grad_nd_ac:
  * @fit: a #NcmFit
- * @m2lnL: (out): FIXME
+ * @m2lnL: (out): minus two times the logarithm base e of the likelihood.
  * @grad: a #NcmVector
  *
  * FIXME

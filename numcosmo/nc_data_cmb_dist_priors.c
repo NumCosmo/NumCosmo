@@ -185,12 +185,13 @@ _nc_data_cmb_dist_priors_mean_func (NcmDataGauss *gauss, NcmMSet *mset, NcmVecto
 
 /**
  * nc_data_cmb_dist_priors_new:
- * @dist: FIXME
- * @id: FIXME
+ * @dist: a #NcDistance.
+ * @id: a #NcDataCMBId.
  *
- * FIXME
+ * This function allocates memory for a new #NcmData object and sets its properties to the values from
+ * the input arguments.
  *
- * Returns: FIXME
+ * Returns: A #NcmData.
  */
 NcmData *
 nc_data_cmb_dist_priors_new (NcDistance *dist, NcDataCMBId id)
@@ -239,9 +240,10 @@ static gdouble nc_cmb_dist_priors_wmap9_inv_cov[][3] =
 /**
  * nc_data_cmb_dist_priors_set_sample:
  * @cmb_dist_priors: a #NcDataCMBDistPriors.
- * @id: FIXME
+ * @id: a #NcDataCMBId.
  *
- * FIXME
+ * This function sets the elements of both a vector and a matrix to the best-fit and the inverse covariance matrix 
+ * values, respectively, of the CMB distance priors sample specified by @id.    
  *
  */
 void
@@ -309,9 +311,9 @@ nc_data_cmb_dist_priors_set_sample (NcDataCMBDistPriors *cmb_dist_priors, NcData
  * nc_data_cmb_dist_priors_get_sample:
  * @cmb_dist_priors: a #NcDataCMBDistPriors
  *
- * FIXME
+ * This function returns the id of the CMB distance priors sample.
  * 
- * Returns: FIXME
+ * Returns: a #NcDataCMBId.
  */
 NcDataCMBId
 nc_data_cmb_dist_priors_get_sample (NcDataCMBDistPriors *cmb_dist_priors)

@@ -395,9 +395,8 @@ _nc_data_cluster_ncount_prepare (NcmData *data, NcmMSet *mset)
 
 /**
  * _nc_data_cluster_ncount_resample:
- * @mset: a #NcmModel.
- * @model: FIXME
- * @data: FIXME
+ * @data: a #NcmData.
+ * @mset: a #NcmMSet.
  *
  * This function generates random numbers which are used to obtain redshift
  * and mass (logarithm base e) values...

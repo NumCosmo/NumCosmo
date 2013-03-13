@@ -310,12 +310,12 @@ nc_cluster_abundance_z_p_d2n (NcClusterAbundance *cad, NcHICosmo *model, gdouble
 
 /**
  * _nc_cluster_abundance_lnm_p_d2n_integrand:
- * @lnM: a gdouble which is the logarithm base e of the mass.
+ * @lnM: logarithm base e of the mass.
  * @params: a gpointer.
  *
  * This function computes \f$ \frac{d^2N}{dzdlnM} \times P(\ln M^{obs}| \ln M) \f$
- * where \f$ P(M^{obs}| M) \f$ is the log-normal
- * probability distribution of the observable mass \f$ M^{obs} \f$ with a fixed standard deviation.
+ * where \f$ P(M^{obs}| M) \f$ is the
+ * probability distribution of the observable mass \f$ M^{obs} \f$ (mass-observable relation).
  *
  * Returns: a gdouble which is the integrand value at lnM.
  */
@@ -772,9 +772,9 @@ nc_cluster_abundance_prepare_inv_dNdz (NcClusterAbundance *cad, NcHICosmo *model
  * @z: redshift.
  *
  * This function prepares a spline where the x array corresponds to the value
- * of \int_lnM0 ^lnM1 d2N/dzdlnM dM/ \int_lnMi^lnMf dN/dz dM given a redshift z
+ * of $\int_{\ln M_0} ^{\ln M_1} d^2N/dzd\ln M dM/ \int_lnMi^lnMf dN/dz dM$ given a redshift $z$
  * and the y array contains the values of logarithms base e of the mass.
- * It is used to generate a sample of lnM values.
+ * It is used to generate a sample of $\ln M$ values.
  *
  */
 void
@@ -855,7 +855,7 @@ nc_cluster_abundance_n (NcClusterAbundance *cad, NcHICosmo *model)
  * @cad: a #NcClusterAbundance.
  * @model: a #NcHICosmo.
  * @lnM: FIXME
- * @z: FIXME
+ * @z: redshift.
  *
  * FIXME
  *
