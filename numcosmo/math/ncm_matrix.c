@@ -107,7 +107,7 @@ ncm_matrix_new_gsl_static (gsl_matrix *gm)
 
 /**
  * ncm_matrix_new_array:
- * @a: GArray of doubles to be converted into a #NcmMatrix.
+ * @a: (element-type double): GArray of doubles to be converted into a #NcmMatrix.
  * @ncols: number of columns.
  *
  * The number of rows is defined dividing the lenght of @a by @ncols.

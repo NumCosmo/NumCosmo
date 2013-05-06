@@ -100,7 +100,7 @@ ncm_mset_func_free (NcmMSetFunc *func)
  *
  * FIXME
  *
- * Returns: (transfer full): FIXME
+ * Returns: (element-type NcmMSetFunc) (transfer full): FIXME
  */
 GPtrArray *
 ncm_mset_func_array_new (void)

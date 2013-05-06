@@ -139,7 +139,10 @@ ncm_cfg_init (void)
 #if (GLIB_MAJOR_VERSION == 2) && (GLIB_MINOR_VERSION < 32)
   g_thread_init (NULL);
 #endif
+
+#if (GLIB_MAJOR_VERSION == 2) && (GLIB_MINOR_VERSION < 36)
   g_type_init();
+#endif
 
   g_setenv ("CUBACORES", "0", TRUE);
 
