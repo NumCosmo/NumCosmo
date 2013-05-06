@@ -28,7 +28,7 @@
 
 #include <glib.h>
 #include <glib-object.h>
-#include <numcosmo/lss/nc_cluster_mass.h>
+#include <numcosmo/lss/nc_cluster_mass_benson.h>
 
 G_BEGIN_DECLS
 
@@ -44,10 +44,6 @@ typedef struct _NcClusterMassBensonXRay NcClusterMassBensonXRay;
 
 /**
  * NcClusterMassBensonXRayParams:
- * @NC_CLUSTER_MASS_BENSON_XRAY_A_SZ: normalization of the SZ mass-observable relation
- * @NC_CLUSTER_MASS_BENSON_XRAY_B_SZ: FIXME
- * @NC_CLUSTER_MASS_BENSON_XRAY_C_SZ: FIXME
- * @NC_CLUSTER_MASS_BENSON_XRAY_D_SZ: standard deviation of the mass-observable relation 
  * @NC_CLUSTER_MASS_BENSON_XRAY_A_X: normalization of the X-ray mass-observable relation
  * @NC_CLUSTER_MASS_BENSON_XRAY_B_X: FIXME
  * @NC_CLUSTER_MASS_BENSON_XRAY_C_X: FIXME
@@ -57,21 +53,13 @@ typedef struct _NcClusterMassBensonXRay NcClusterMassBensonXRay;
  */
 typedef enum _NcClusterMassBensonXRayParams
 {
-  NC_CLUSTER_MASS_BENSON_XRAY_A_SZ = 0,
-  NC_CLUSTER_MASS_BENSON_XRAY_B_SZ,
-  NC_CLUSTER_MASS_BENSON_XRAY_C_SZ,
-  NC_CLUSTER_MASS_BENSON_XRAY_D_SZ,
-  NC_CLUSTER_MASS_BENSON_XRAY_A_X,
+  NC_CLUSTER_MASS_BENSON_XRAY_A_X = NC_CLUSTER_MASS_BENSON_SPARAM_LEN,
   NC_CLUSTER_MASS_BENSON_XRAY_B_X,
   NC_CLUSTER_MASS_BENSON_XRAY_C_X,
   NC_CLUSTER_MASS_BENSON_XRAY_D_X, /*< private >*/
   NC_CLUSTER_MASS_BENSON_XRAY_SPARAM_LEN, /*< skip >*/
 } NcClusterMassBensonXRayParams;
 
-#define NC_CLUSTER_MASS_BENSON_XRAY_DEFAULT_A_SZ  (5.58)
-#define NC_CLUSTER_MASS_BENSON_XRAY_DEFAULT_B_SZ  (1.32)
-#define NC_CLUSTER_MASS_BENSON_XRAY_DEFAULT_C_SZ  (0.87)
-#define NC_CLUSTER_MASS_BENSON_XRAY_DEFAULT_D_SZ  (0.24)
 #define NC_CLUSTER_MASS_BENSON_XRAY_DEFAULT_A_X  (5.77)
 #define NC_CLUSTER_MASS_BENSON_XRAY_DEFAULT_B_X  (0.57)
 #define NC_CLUSTER_MASS_BENSON_XRAY_DEFAULT_C_X  (-0.4)
@@ -83,17 +71,17 @@ typedef enum _NcClusterMassBensonXRayParams
 struct _NcClusterMassBensonXRayClass
 {
   /*< private >*/
-  NcClusterMassClass parent_class;
+  NcClusterMassBensonClass parent_class;
 };
 
 struct _NcClusterMassBensonXRay
 {
   /*< private >*/
-  NcClusterMass parent_instance;
-  gdouble signif_obs_min;
-  gdouble signif_obs_max;  
-  gdouble z0;
-  gdouble M0; 
+  NcClusterMassBenson parent_instance;
+  gdouble Yx_obs_min;
+  gdouble Yx_obs_max;  
+  gdouble M0x;
+  gdouble Y0; 
 };
 
 GType nc_cluster_mass_benson_xray_get_type (void) G_GNUC_CONST;

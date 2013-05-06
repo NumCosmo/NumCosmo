@@ -306,6 +306,13 @@ main (gint argc, gchar *argv[])
   if (de_data_simple.BBN)
     nc_hicosmo_de_new_add_bbn (lh);
 
+  if (de_data_simple.BBN_Ob)
+  {
+    NcmMSetFunc *Omega_bh2 = nc_hicosmo_create_mset_func0 (&nc_hicosmo_Omega_bh2);
+    ncm_prior_add_gaussian_const_func (lh, Omega_bh2, 0.022, 0.002);
+    ncm_mset_func_free (Omega_bh2);
+  }
+
   if (de_data_simple.H0_Hst)
   {
     if (ncm_mset_param_get_ftype (mset, NC_HICOSMO_ID, NC_HICOSMO_DE_H0) == NCM_PARAM_TYPE_FIXED)

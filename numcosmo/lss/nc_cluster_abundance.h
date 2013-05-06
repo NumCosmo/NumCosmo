@@ -94,6 +94,7 @@ struct _NcClusterAbundance
 GType nc_cluster_abundance_get_type (void) G_GNUC_CONST;
 
 NcClusterAbundance *nc_cluster_abundance_new (NcMassFunction *mfp, NcHaloBiasFunc *mbiasf, NcClusterRedshift *clusterz, NcClusterMass *clusterm);
+NcClusterAbundance *nc_cluster_abundance_nodist_new (NcMassFunction *mfp, NcHaloBiasFunc *mbiasf);
 NcClusterAbundance *nc_cluster_abundance_copy (NcClusterAbundance *cad);
 NcClusterAbundance *nc_cluster_abundance_ref (NcClusterAbundance *cad);
 void nc_cluster_abundance_free (NcClusterAbundance *cad);

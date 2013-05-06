@@ -1,5 +1,5 @@
 /***************************************************************************
- *            priors.c
+ *            ncm_priors.c
  *
  *  Wed Mar 19 12:46:46 2008
  *  Copyright  2008  Sandro Dias Pinto Vitenti
@@ -83,7 +83,7 @@ ncm_prior_add_gaussian_func (NcmLikelihood *lh, NcmMSetFunc *func, gdouble z, gd
   NcmPriorGauss *gp = _ncm_prior_gauss_new ();
   NcmMSetFunc *prior = ncm_mset_func_new (&gaussian_prior_func_f, 0, 1, gp, _ncm_prior_gauss_free);
 
-  gp->func = func;
+  gp->func = ncm_mset_func_ref (func);
   gp->z = z;
   gp->mean = mean;
   gp->sigma = sigma;
@@ -114,7 +114,7 @@ ncm_prior_add_gaussian_const_func (NcmLikelihood *lh, NcmMSetFunc *func, gdouble
 {
   NcmPriorGauss *gp = _ncm_prior_gauss_new ();
   NcmMSetFunc *prior = ncm_mset_func_new (&gaussian_prior_func0_f, 0, 1, gp, _ncm_prior_gauss_free);
-  gp->func = func;
+  gp->func = ncm_mset_func_ref (func);
   gp->mean = mean;
   gp->sigma = sigma;
 
@@ -262,7 +262,7 @@ ncm_prior_add_oneside_a_inf_func (NcmLikelihood *lh, NcmMSetFunc *func, gdouble 
 {
   NcmPriorGauss *gp = _ncm_prior_gauss_new ();
   NcmMSetFunc *prior = ncm_mset_func_new (&oneside_a_inf_prior_func_f, 0, 1, gp, _ncm_prior_gauss_free);
-  gp->func = func;
+  gp->func = ncm_mset_func_ref (func);
   gp->z = z;
   gp->mean = mean;
   gp->sigma = s;
@@ -296,7 +296,7 @@ ncm_prior_add_oneside_a_inf_const_func (NcmLikelihood *lh, NcmMSetFunc *func, gd
 {
   NcmPriorGauss *gp = _ncm_prior_gauss_new ();
   NcmMSetFunc *prior = ncm_mset_func_new (&oneside_a_inf_prior_const_func_f, 0, 1, gp, _ncm_prior_gauss_free);
-  gp->func = func;
+  gp->func = ncm_mset_func_ref (func);
   gp->mean = mean;
   gp->sigma = s;
 

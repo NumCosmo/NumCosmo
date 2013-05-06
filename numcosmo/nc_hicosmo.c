@@ -423,6 +423,30 @@ NCM_MODEL_SET_IMPL_FUNC(NC_HICOSMO,NcHICosmo,nc_hicosmo,NcmModelFunc1,powspec)
  * Returns: FIXME
  */
 /**
+ * nc_hicosmo_Omega_bh2:
+ * @cosmo: a #NcHICosmo
+ *
+ * FIXME
+ *
+ * Returns: FIXME
+ */
+/**
+ * nc_hicosmo_Omega_ch2:
+ * @cosmo: a #NcHICosmo
+ *
+ * FIXME
+ *
+ * Returns: FIXME
+ */
+/**
+ * nc_hicosmo_Omega_rh2:
+ * @cosmo: a #NcHICosmo
+ *
+ * FIXME
+ *
+ * Returns: FIXME
+ */
+/**
  * nc_hicosmo_grad_h2:
  * @cosmo: a #NcHICosmo
  * @pt: a #NcmFitParams

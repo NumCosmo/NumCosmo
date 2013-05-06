@@ -72,10 +72,11 @@ struct _NcDEDataSimpleEntries
   gchar *cluster_id;
   gboolean H0_Hst;
   gboolean BBN;
+  gboolean BBN_Ob;
   gboolean snia_use_det;
 };
 
-#define NC_DE_DATA_SIMPLE_ENTRIES {NULL, NULL, NULL, NULL, NULL, NULL, FALSE, FALSE, FALSE}
+#define NC_DE_DATA_SIMPLE_ENTRIES {NULL, NULL, NULL, NULL, NULL, NULL, FALSE, FALSE, FALSE, FALSE}
 
 typedef struct _NcDEDataClusterEntries NcDEDataClusterEntries;
 

@@ -75,6 +75,12 @@ ncm_c_class_init (NcmCClass *klass)
  *
  */
 /**
+ * ncm_c_sqrt_2pi:
+ *
+ * Returns: sqrt (2 * pi)
+ *
+ */
+/**
  * ncm_c_sqrt_3_4pi:
  *
  * Returns: sqrt (3 / (4 * pi))
