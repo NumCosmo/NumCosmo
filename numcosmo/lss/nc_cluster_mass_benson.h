@@ -67,6 +67,9 @@ typedef enum _NcClusterMassBensonParams
 
 #define NC_CLUSTER_MASS_BENSON_DEFAULT_PARAMS_ABSTOL (0.0)
 
+#define NC_CLUSTER_MASS_BENSON_M_LOWER_BOUND (1.0e13)
+#define NC_CLUSTER_MASS_BENSON_XI_ZETA_DIST_CUT (2.0)
+
 struct _NcClusterMassBensonClass
 {
   /*< private >*/

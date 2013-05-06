@@ -582,6 +582,8 @@ _eval_lnm_p_d2n (glong i, glong f, gpointer data)
     gdouble *lnMn_obs = ncm_matrix_ptr (evald2n->ncount->lnM_obs, n, 0);
     gdouble *lnMn_obs_params = evald2n->ncount->lnM_obs_params != NULL ? ncm_matrix_ptr (evald2n->ncount->lnM_obs_params, n, 0) : NULL;
     const gdouble mlnLn = -log (nc_cluster_abundance_lnm_p_d2n (evald2n->cad, evald2n->cosmo, lnMn_obs, lnMn_obs_params, zn));
+//printf ("% 20.15g % 20.15g % 20.15g : % 20.15g\n", zn, lnMn_obs[0], lnMn_obs[1], 2.0 * mlnLn);
+
     m2lnL += mlnLn;
   }
 
@@ -682,7 +684,11 @@ _nc_data_cluster_ncount_m2lnL_val (NcmData *data, NcmMSet *mset, gdouble *m2lnL)
     }
   }
 
-  *m2lnL += (ncount->log_np_fac + nc_cluster_abundance_n (cad, cosmo));
+  {
+    const gdouble n_th = nc_cluster_abundance_n (cad, cosmo);    
+    //printf ("n_th\t% 20.15g % 20.15g % 20.15g\n", n_th, ncount->log_np_fac, *m2lnL);
+    *m2lnL += (ncount->log_np_fac + n_th);
+  }
 
   *m2lnL *= 2.0;
 
@@ -1171,10 +1177,10 @@ nc_data_cluster_ncount_catalog_load (NcmData *data, gchar *filename)
     ncm_matrix_clear (&ncount->lnM_obs);
     ncount->lnM_obs = ncm_matrix_new (ncount->np, lnM_obs_rp);
 
-    if (fits_read_col (fptr, TDOUBLE, z_obs_i, 1, 1, ncount->np, NULL, ncm_matrix_ptr (ncount->z_obs, 0, 0), NULL, &status))
+    if (fits_read_col (fptr, TDOUBLE, z_obs_i, 1, 1, ncount->np * z_obs_rp, NULL, ncm_matrix_ptr (ncount->z_obs, 0, 0), NULL, &status))
       NC_FITS_ERROR(status);
 
-    if (fits_read_col (fptr, TDOUBLE, lnM_obs_i, 1, 1, ncount->np, NULL, ncm_matrix_ptr (ncount->lnM_obs, 0, 0), NULL, &status))
+    if (fits_read_col (fptr, TDOUBLE, lnM_obs_i, 1, 1, ncount->np * lnM_obs_rp, NULL, ncm_matrix_ptr (ncount->lnM_obs, 0, 0), NULL, &status))
       NC_FITS_ERROR(status);
   }
 
@@ -1202,7 +1208,7 @@ nc_data_cluster_ncount_catalog_load (NcmData *data, gchar *filename)
       ncm_matrix_clear (&ncount->z_obs_params);
       ncount->z_obs_params = ncm_matrix_new (ncount->np, z_obs_params_rp);
 
-      if (fits_read_col (fptr, TDOUBLE, z_obs_params_i, 1, 1, ncount->np, NULL, ncm_matrix_ptr (ncount->z_obs_params, 0, 0), NULL, &status))
+      if (fits_read_col (fptr, TDOUBLE, z_obs_params_i, 1, 1, ncount->np * z_obs_params_rp, NULL, ncm_matrix_ptr (ncount->z_obs_params, 0, 0), NULL, &status))
         NC_FITS_ERROR(status);
     }
 
@@ -1226,7 +1232,7 @@ nc_data_cluster_ncount_catalog_load (NcmData *data, gchar *filename)
       ncount->lnM_obs_params = ncm_matrix_new (ncount->np, lnM_obs_params_rp);
 
 
-      if (fits_read_col (fptr, TDOUBLE, lnM_obs_params_i, 1, 1, ncount->np, NULL, ncm_matrix_ptr (ncount->lnM_obs_params, 0, 0), NULL, &status))
+      if (fits_read_col (fptr, TDOUBLE, lnM_obs_params_i, 1, 1, ncount->np * lnM_obs_params_rp, NULL, ncm_matrix_ptr (ncount->lnM_obs_params, 0, 0), NULL, &status))
         NC_FITS_ERROR(status);
     }
   }
@@ -1262,7 +1268,7 @@ nc_data_cluster_ncount_catalog_load (NcmData *data, gchar *filename)
   _nc_data_cluster_ncount_model_init (ncount);
 
   ncm_data_set_init (data);
-
+  
   return;
 }
 

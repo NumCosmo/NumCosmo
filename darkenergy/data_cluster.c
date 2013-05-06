@@ -43,8 +43,6 @@ nc_de_data_cluster_new (NcDistance *dist, NcmMSet *mset, NcDEDataClusterEntries 
   NcGrowthFunc *gf = nc_growth_func_new ();
   NcMultiplicityFunc *mulf = nc_multiplicity_func_new_from_name (de_data_cluster->multiplicity_name);
   NcMassFunction *mfp = nc_mass_function_new (dist, vp, gf, mulf);
-  NcClusterMass *clusterm = nc_cluster_mass_new_from_name (de_data_cluster->clusterm_ser);
-  NcClusterRedshift *clusterz = nc_cluster_redshift_new_from_name (de_data_cluster->clusterz_ser);
 
   nc_window_free (wp);
   nc_transfer_func_free (tf);
@@ -52,8 +50,6 @@ nc_de_data_cluster_new (NcDistance *dist, NcmMSet *mset, NcDEDataClusterEntries 
   nc_growth_func_free (gf);
   nc_multiplicity_func_free (mulf);
   
-  ncm_mset_set (mset, NCM_MODEL (clusterm));
-
   switch (id)
   {
 #ifdef NUMCOSMO_HAVE_CFITSIO
@@ -64,11 +60,14 @@ nc_de_data_cluster_new (NcDistance *dist, NcmMSet *mset, NcDEDataClusterEntries 
         g_error ("For --cluster-id 0, you must specify a fit catalog via --catalog file.fit");
       while (de_data_cluster->cata_file[i] != NULL)
       {
-        NcClusterAbundance *cad = nc_cluster_abundance_new (mfp, NULL, clusterz, clusterm);
+        NcClusterAbundance *cad = nc_cluster_abundance_nodist_new (mfp, NULL);
         NcmData *data = nc_data_cluster_ncount_new (cad);
         nc_cluster_abundance_free (cad);
 
         nc_data_cluster_ncount_catalog_load (data, de_data_cluster->cata_file[i]);
+
+        ncm_mset_set (mset, NCM_MODEL (NC_DATA_CLUSTER_NCOUNT (data)->m));
+
         nc_data_cluster_ncount_true_data (data, de_data_cluster->use_true_data);
         _nc_de_data_cluster_append (de_data_cluster, data, dset);
         g_ptr_array_add (ca_array, data);
@@ -85,7 +84,7 @@ nc_de_data_cluster_new (NcDistance *dist, NcmMSet *mset, NcDEDataClusterEntries 
         g_error ("For --cluster-id 1, you must specify a fit catalog via --catalog filename");
       while (de_data_cluster->cata_file[i] != NULL)
       {
-        NcClusterAbundance *cad = nc_cluster_abundance_new (mfp, NULL, clusterz, clusterm);
+        NcClusterAbundance *cad = nc_cluster_abundance_nodist_new (mfp, NULL);
         NcmData *data = nc_data_cluster_ncount_new (cad);
         nc_cluster_abundance_free (cad);
 
@@ -104,10 +103,14 @@ nc_de_data_cluster_new (NcDistance *dist, NcmMSet *mset, NcDEDataClusterEntries 
 #endif /* HAVE_CONFIG_H */
     case NC_DATA_CLUSTER_ABUNDANCE_SAMPLING:
     {
+      NcClusterMass *clusterm = nc_cluster_mass_new_from_name (de_data_cluster->clusterm_ser);
+      NcClusterRedshift *clusterz = nc_cluster_redshift_new_from_name (de_data_cluster->clusterz_ser);
       NcClusterAbundance *cad = nc_cluster_abundance_new (mfp, NULL, clusterz, clusterm);
       NcmData *data = nc_data_cluster_ncount_new (cad);
-      nc_cluster_abundance_free (cad);
 
+      ncm_mset_set (mset, NCM_MODEL (clusterm));
+      nc_cluster_abundance_free (cad);
+      
       nc_data_cluster_ncount_init_from_sampling (data, mset, clusterz, clusterm, de_data_cluster->area_survey * gsl_pow_2 (M_PI / 180.0));
       nc_data_cluster_ncount_true_data (data, de_data_cluster->use_true_data);
 
@@ -119,14 +122,14 @@ nc_de_data_cluster_new (NcDistance *dist, NcmMSet *mset, NcDEDataClusterEntries 
 #endif /* HAVE_CONFIG_H */
       _nc_de_data_cluster_append (de_data_cluster, data, dset);
       g_ptr_array_add (ca_array, data);
+      nc_cluster_mass_free (clusterm);
+      nc_cluster_redshift_free (clusterz);
     }
       break;
     default:
       g_error ("The option --catalog-id must be between (0,2).");
   }
 
-  nc_cluster_mass_free (clusterm);
-  nc_cluster_redshift_free (clusterz);
   nc_mass_function_free (mfp);
 
   return ca_array;

@@ -126,6 +126,7 @@ nc_de_opt_get_data_simple_group (NcDEDataSimpleEntries *de_data_simple, GOptionE
     { "cluster-id", 'U', 0, G_OPTION_ARG_STRING, &de_data_simple->cluster_id,   "Use cluster abundance data",                                    NULL },
     { "H0_Hst",     'H', 0, G_OPTION_ARG_NONE,   &de_data_simple->H0_Hst,       "Use the HST H0 data (single gaussian (H0 - 73.8) / 2.4)",       NULL },
     { "BBN",        'N', 0, G_OPTION_ARG_NONE,   &de_data_simple->BBN,          "Use BBN Prior",                                                 NULL },
+    { "BBN-Omega_b",  0, 0, G_OPTION_ARG_NONE,   &de_data_simple->BBN_Ob,       "Use BBN Omega_b * h2 Prior = 0.022 +/- 0.002",                  NULL },
     { NULL }
   };
   GOptionGroup *data_simple_group = g_option_group_new ("data", " - Cosmological data options", "Show help options related to the dataset to be used.", NULL, NULL);

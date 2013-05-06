@@ -251,6 +251,7 @@ _ncm_model_constructed (GObject *object)
       g_array_index (model->vparam_pos, guint, i) = model->total_len;
       model->total_len += g_array_index (model->vparam_len, guint, i);
     }
+ 
     model->params = ncm_vector_new (model->total_len);
     model->p = model->params;
     g_array_set_size (model->ptypes, model->total_len);
@@ -753,8 +754,8 @@ ncm_model_class_add_params (NcmModelClass *model_class, guint sparam_len, guint 
 void
 ncm_model_class_set_name_nick (NcmModelClass *model_class, const gchar *name, const gchar *nick)
 {
-  g_free (model_class->name);
-  g_free (model_class->nick);
+/*  g_free (model_class->name); 
+  g_free (model_class->nick); */
 
   model_class->name = g_strdup (name);
   model_class->nick = g_strdup (nick);

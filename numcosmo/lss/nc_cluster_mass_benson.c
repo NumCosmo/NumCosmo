@@ -77,19 +77,34 @@ typedef struct _integrand_data
 } integrand_data;
 
 static gdouble
+_nc_cluster_mass_benson_int_xi_cut_inf (gdouble xi_mean, gdouble xi_cut)
+{
+  const gdouble a = (xi_mean - xi_cut);
+
+  if (a >= 0.0)
+    return (1.0 + erf (a / M_SQRT2)) * 0.5;
+  else
+    return erfc (-a / M_SQRT2) * 0.5;
+}
+
+static gdouble
 _nc_cluster_mass_benson_significance_m_p_integrand (gdouble zeta, gpointer userdata)
 {
   integrand_data *data = (integrand_data *) userdata;
   NcClusterMassBenson *msz = data->msz;
   const gdouble lnzeta = log (zeta);
-  const gdouble xi_mean = sqrt (zeta * zeta + 3.0);
+  const gdouble xi_mean = (zeta <= 1.000001) ? zeta : sqrt (zeta * zeta + 3.0);
   const gdouble y = data->xi[0] - xi_mean;
   const gdouble x = lnzeta - data->mu;
+  const gdouble exp_arg = - y * y / 2.0 - x * x / data->D2_2;
 
-  const gdouble result = exp (- y * y / 2.0 - x * x / data->D2_2) / 
-    ((1.0 + erf (xi_mean / M_SQRT2)) * M_PI * D_SZ * zeta);
-
-  return result;
+  if (exp_arg < GSL_LOG_DBL_MIN)
+    return 0.0;
+  else
+  {
+    const gdouble result = exp (exp_arg) / (2.0 * M_PI * D_SZ * zeta);
+    return result;
+  }
 }
 
 static gdouble
@@ -98,16 +113,15 @@ _nc_cluster_mass_benson_significance_m_intp_integrand (gdouble zeta, gpointer us
   integrand_data *data = (integrand_data *) userdata;
   NcClusterMassBenson *msz = data->msz;
   const gdouble lnzeta = log (zeta);
-  const gdouble xi_mean = sqrt (zeta * zeta + 3.0);
-  const gdouble a = (xi_mean - msz->signif_obs_min);
   const gdouble x = lnzeta - data->mu;
+  const gdouble exp_arg = -(x * x / (2.0 * D_SZ * D_SZ));
+  const gdouble xi_mean = (zeta <= 1.000001) ? zeta : sqrt (zeta * zeta + 3.0);
+  const gdouble plnzeta = exp (exp_arg) / (zeta * M_SQRT2 * M_SQRTPI * D_SZ);
+  const gdouble xi_zeta_int = _nc_cluster_mass_benson_int_xi_cut_inf (xi_mean, msz->signif_obs_min); 
 
-  const gdouble plnzeta = exp (-(x * x / (2.0 * D_SZ * D_SZ))) / (zeta * D_SZ * M_SQRT2 * M_SQRTPI);
+  //printf ("nhaca % 20.15g % 20.15g % 20.15g % 20.15g % 20.15g\n", zeta, exp_arg, xi_mean, plnzeta, xi_zeta_int);
 
-  if (a >= 0.0)
-    return plnzeta * (1.0 + erf (a / M_SQRT2)) / (1.0 + erf (xi_mean / M_SQRT2));
-  else
-    return plnzeta * erfc (-a / M_SQRT2) / (1.0 + erf (xi_mean / M_SQRT2));
+  return plnzeta * xi_zeta_int;
 }
 
 static gdouble
@@ -139,10 +153,11 @@ _nc_cluster_mass_benson_significance_m_p (NcClusterMass *clusterm, NcHICosmo *mo
 
   {
     gdouble Pi, a, b;
-    a = 0.0;
-    b = xi[0];
+    a = 0.25;
+    b = 1.0;
     gsl_integration_qag (&F, a, b, 0.0, NCM_DEFAULT_PRECISION, NCM_INTEGRAL_PARTITION, 6, *w, &Pi, &err);
     P = Pi;
+    b = 2.0;
     do {
       a = b;
       b += xi[0];
@@ -152,7 +167,7 @@ _nc_cluster_mass_benson_significance_m_p (NcClusterMass *clusterm, NcHICosmo *mo
   }
 
   ncm_memory_pool_return (w);
-
+  
   return P;
 }
 
@@ -183,10 +198,12 @@ _nc_cluster_mass_benson_intp (NcClusterMass *clusterm, NcHICosmo *model, gdouble
 
   {
     gdouble Pi, a, b;
-    a = 0.0;
-    b = msz->signif_obs_max;
+    a = 0.25;
+    b = 1.0;
     gsl_integration_qag (&F, a, b, 0.0, NCM_DEFAULT_PRECISION, NCM_INTEGRAL_PARTITION, 6, *w, &Pi, &err);
     P = Pi;
+    b = 2.0;
+//printf ("int_p[0,1] % 8.5g % 8.5g : % 8.5g % 8.5g\n", exp (lnM), z, P, data.mu);
     do {
       a = b;
       b += msz->signif_obs_max;
@@ -197,6 +214,9 @@ _nc_cluster_mass_benson_intp (NcClusterMass *clusterm, NcHICosmo *model, gdouble
 
   ncm_memory_pool_return (w);
 
+//printf ("int_p[2,-] % 8.5g % 8.5g : % 8.5g % 8.5g\n", exp (lnM), z, P, data.mu);
+
+  
   return P;
 }
 
@@ -225,17 +245,21 @@ _nc_cluster_mass_benson_resample (NcClusterMass *clusterm, NcHICosmo *model, gdo
 }
 
 static gdouble
-_significance_to_mass (NcClusterMass *clusterm, NcHICosmo *model, gdouble z, gdouble xi)
+_significance_to_zeta (NcClusterMass *clusterm, NcHICosmo *model, gdouble z, gdouble xi)
+{
+  return sqrt (xi * xi - 3.0);
+}
+
+static gdouble
+_zeta_to_mass (NcClusterMass *clusterm, NcHICosmo *model, gdouble z, gdouble zeta)
 {
   NcClusterMassBenson *msz = NC_CLUSTER_MASS_BENSON (clusterm);
   const gdouble E0 = nc_hicosmo_E (model, msz->z0); 
   const gdouble E = nc_hicosmo_E (model, z);
-  const gdouble zeta = sqrt (xi * xi - 3.0);
-  const gdouble lnzeta = log(zeta);
-  const gdouble lnM = log (msz->M0) + (lnzeta - log (A_SZ) - C_SZ * log(E / E0)) / B_SZ;
+  const gdouble lnzeta = log (zeta);
+  const gdouble lnM = log (msz->M0) + (lnzeta - log (A_SZ) - C_SZ * log (E / E0)) / B_SZ;
 
   //printf("z= %.10g xi = %.10g lnM = %.10g\n", z, xi, lnM);
-  
   return lnM;
 }
 
@@ -244,8 +268,12 @@ _nc_cluster_mass_benson_p_limits (NcClusterMass *clusterm, NcHICosmo *model, gdo
 {
   NcClusterMassBenson *msz = NC_CLUSTER_MASS_BENSON (clusterm);
   const gdouble xil = GSL_MAX (xi[0] - 7.0, msz->signif_obs_min);
-  const gdouble lnMl = GSL_MAX (_significance_to_mass (clusterm, model, 2.0, xil) - 7.0 * D_SZ, log (2.0e14));
-  const gdouble lnMu = _significance_to_mass (clusterm, model, 0.0, xi[0] + 7.0) + 7.0 * D_SZ;
+  const gdouble zetal = _significance_to_zeta (clusterm, model, 2.0, xil) - 27.0 * D_SZ;
+  const gdouble lnMl = GSL_MAX (_zeta_to_mass (clusterm, model, 2.0, zetal), log (NC_CLUSTER_MASS_BENSON_M_LOWER_BOUND));
+
+  const gdouble xiu = xi[0] + 27.0;
+  const gdouble zetau = _significance_to_zeta (clusterm, model, 0.0, xiu) + 27.0 * D_SZ;
+  const gdouble lnMu = _zeta_to_mass (clusterm, model, 0.0, zetau);
 
   *lnM_lower = lnMl;
   *lnM_upper = lnMu;
@@ -257,8 +285,14 @@ static void
 _nc_cluster_mass_benson_n_limits (NcClusterMass *clusterm, NcHICosmo *model, gdouble *lnM_lower, gdouble *lnM_upper)
 {
   NcClusterMassBenson *msz = NC_CLUSTER_MASS_BENSON (clusterm);
-  const gdouble lnMl = GSL_MAX (_significance_to_mass (clusterm, model, 2.0, msz->signif_obs_min) - 7.0 * D_SZ, log (2.0e14));
-  const gdouble lnMu = _significance_to_mass (clusterm, model, 0.0, msz->signif_obs_max) + 7.0 * D_SZ;
+
+  const gdouble xil = msz->signif_obs_min;
+  const gdouble zetal = _significance_to_zeta (clusterm, model, 2.0, xil) - 27.0 * D_SZ;
+  const gdouble lnMl = GSL_MAX (_zeta_to_mass (clusterm, model, 2.0, zetal), log (NC_CLUSTER_MASS_BENSON_M_LOWER_BOUND));
+
+  const gdouble xiu = msz->signif_obs_max;
+  const gdouble zetau = _significance_to_zeta (clusterm, model, 0.0, xiu) + 27.0 * D_SZ;
+  const gdouble lnMu = _zeta_to_mass (clusterm, model, 0.0, zetau);
 
   *lnM_lower = lnMl;
   *lnM_upper = lnMu;
@@ -451,5 +485,6 @@ nc_cluster_mass_benson_class_init (NcClusterMassBensonClass *klass)
                               NC_CLUSTER_MASS_BENSON_DEFAULT_PARAMS_ABSTOL, NC_CLUSTER_MASS_BENSON_DEFAULT_D_SZ,
                               NCM_PARAM_TYPE_FIXED);
 
+  /* Check for errors in parameters initialization */
+  ncm_model_class_check_params_info (model_class);
 }
-
