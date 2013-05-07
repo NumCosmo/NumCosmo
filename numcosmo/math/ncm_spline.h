@@ -46,7 +46,7 @@ struct _NcmSplineClass
 {
   /*< private >*/
 	GObjectClass parent_class;
-	gchar *name;
+	const gchar *(*name) (NcmSpline *s);
 	void (*reset) (NcmSpline *s);
 	void (*prepare) (NcmSpline *s);
 	void (*prepare_base) (NcmSpline *s);

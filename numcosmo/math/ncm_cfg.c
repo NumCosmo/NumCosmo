@@ -560,20 +560,39 @@ ncm_cfg_keyfile_to_arg (GKeyFile *kfile, gchar *group_name, GOptionEntry *entrie
     {
       if (g_key_file_has_key (kfile, group_name, entries[i].long_name, &error))
       {
-        gchar *val = g_key_file_get_value (kfile, group_name, entries[i].long_name, &error);
-        if (entries[i].arg == G_OPTION_ARG_NONE)
+        if (entries[i].arg == G_OPTION_ARG_STRING_ARRAY || entries[i].arg == G_OPTION_ARG_FILENAME_ARRAY)
         {
-          if ((g_ascii_strcasecmp (val, "1") == 0) ||
-              (g_ascii_strcasecmp (val, "true") == 0))
+          gint j;
+          gsize length;
+          gchar **vals = g_key_file_get_string_list (kfile, group_name, entries[i].long_name, &length, &error);
+          if (error != NULL)
+            g_error ("ncm_cfg_keyfile_to_arg: Cannot parse key file[%s]", error->message);
+          for (j = 0; j < length; j++)
           {
             argv[argc[0]++] = g_strdup_printf ("--%s", entries[i].long_name);
+            argv[argc[0]++] = vals[j];
           }
-          g_free (val);
+          g_free (vals);
         }
-        else if (strlen (val) > 0)
+        else
         {
-          argv[argc[0]++] = g_strdup_printf ("--%s", entries[i].long_name);
-          argv[argc[0]++] = val;
+          gchar *val = g_key_file_get_value (kfile, group_name, entries[i].long_name, &error);
+          if (error != NULL)
+            g_error ("ncm_cfg_keyfile_to_arg: Cannot parse key file[%s]", error->message);
+          if (entries[i].arg == G_OPTION_ARG_NONE)
+          {
+            if ((g_ascii_strcasecmp (val, "1") == 0) ||
+                (g_ascii_strcasecmp (val, "true") == 0))
+            {
+              argv[argc[0]++] = g_strdup_printf ("--%s", entries[i].long_name);
+            }
+            g_free (val);
+          }
+          else if (strlen (val) > 0)
+          {
+            argv[argc[0]++] = g_strdup_printf ("--%s", entries[i].long_name);
+            argv[argc[0]++] = val;
+          }
         }
       }
     }
@@ -1734,7 +1753,7 @@ ncm_cfg_gvalue_to_gvariant (GValue *val)
         var = g_variant_ref_sink (g_variant_new_uint32 (g_value_get_flags (val)));
         break;
       default:
-        g_error ("Cannot covert GValue '%s' to GVariant.", g_type_name (t));
+        g_error ("Cannot convert GValue '%s' to GVariant.", g_type_name (t));
         break;
     }
   }
@@ -1784,7 +1803,7 @@ ncm_cfg_serialize_to_variant (GObject *obj)
       GVariant *var = NULL;
       GValue val = G_VALUE_INIT;
 
-      if (!(prop[i]->flags & G_PARAM_WRITABLE))
+      if ((prop[i]->flags & G_PARAM_READWRITE) != G_PARAM_READWRITE)
         continue;
 
       g_value_init (&val, prop[i]->value_type);

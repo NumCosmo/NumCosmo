@@ -213,6 +213,24 @@ NCM_MODEL_SET_IMPL_FUNC(NC_HICOSMO,NcHICosmo,nc_hicosmo,NcmModelFunc0,sigma_8)
  *
  */
 NCM_MODEL_SET_IMPL_FUNC(NC_HICOSMO,NcHICosmo,nc_hicosmo,NcmModelFunc0,T_gamma0)
+/**
+ * nc_hicosmo_set_z_lss_impl: (skip)
+ * @model_class: FIXME
+ * @f: FIXME
+ *
+ * FIXME
+ *
+ */
+NCM_MODEL_SET_IMPL_FUNC(NC_HICOSMO,NcHICosmo,nc_hicosmo,NcmModelFunc0,z_lss)
+/**
+ * nc_hicosmo_set_as_drag_impl: (skip)
+ * @model_class: FIXME
+ * @f: FIXME
+ *
+ * FIXME
+ *
+ */
+NCM_MODEL_SET_IMPL_FUNC(NC_HICOSMO,NcHICosmo,nc_hicosmo,NcmModelFunc0,as_drag)
 
 /**
  * nc_hicosmo_set_E2_impl: (skip)

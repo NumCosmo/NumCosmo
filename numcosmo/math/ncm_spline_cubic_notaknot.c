@@ -83,10 +83,16 @@ _ncm_spline_cubic_notaknot_copy_empty (const NcmSpline *s)
 	return ncm_spline_cubic_notaknot_new ();
 }
 
-gsize
+static gsize
 _ncm_spline_notaknot_min_size (const NcmSpline *s)
 {
 	return 6;
+}
+
+static const gchar *
+_ncm_spline_notaknot_name (NcmSpline *s)
+{
+  return "NcmSplineCubicNotaknot";
 }
 
 static void
@@ -261,7 +267,7 @@ ncm_spline_cubic_notaknot_class_init (NcmSplineCubicNotaknotClass *klass)
 	GObjectClass* object_class = G_OBJECT_CLASS (klass);
 	NcmSplineClass *s_class = NCM_SPLINE_CLASS (klass);
 
-	s_class->name         = "NcmSplineCubicNotaknot";
+	s_class->name         = &_ncm_spline_notaknot_name;
 	s_class->prepare      = &_ncm_spline_notaknot_prepare;
 	s_class->prepare_base = &_ncm_spline_notaknot_prepare_base;
 	s_class->min_size     = &_ncm_spline_notaknot_min_size;

@@ -59,6 +59,7 @@ main (gint argc, gchar *argv[])
   GPtrArray *ca_array = NULL;
   gchar *full_cmd_line = NULL;
   gchar *runconf_cmd_line = NULL;
+  gboolean is_de = FALSE;
 
   ncm_cfg_init ();
 
@@ -183,9 +184,12 @@ main (gint argc, gchar *argv[])
   ncm_message ("# Command Line: %s\n", full_cmd_line);
 
   dset = ncm_dataset_new ();
-  model = nc_hicosmo_new_from_name (NC_TYPE_HICOSMO_DE, de_model.model_name);
+  model = nc_hicosmo_new_from_name (NC_TYPE_HICOSMO, de_model.model_name);
   mset = ncm_mset_new (NCM_MODEL (model), NULL);
   dist = nc_distance_new (2.0);
+
+  if (g_type_is_a (G_OBJECT_TYPE (model), NC_TYPE_HICOSMO_DE))
+    is_de = TRUE;
 
   if (de_model.help_names)
   {
@@ -200,18 +204,24 @@ main (gint argc, gchar *argv[])
 
   if (de_model.flat)
   {
+    if (!is_de)
+      g_error ("flat option is valid only for darkenergy models");
     nc_hicosmo_de_omega_x2omega_k (model);
     ncm_model_param_set (NCM_MODEL (model), NC_HICOSMO_DE_OMEGA_X, 0.0);
     ncm_mset_param_set_ftype (mset, NC_HICOSMO_ID, NC_HICOSMO_DE_OMEGA_X, NCM_PARAM_TYPE_FIXED);
   }
   else if (de_model.Omega_k)
   {
+    if (!is_de)
+      g_error ("omegak option is valid only for darkenergy models");
     nc_hicosmo_de_omega_x2omega_k (model);
     ncm_mset_param_set_ftype (mset, NC_HICOSMO_ID, NC_HICOSMO_DE_OMEGA_X, NCM_PARAM_TYPE_FREE);
   }
 
   if (de_model.pos_Omega_x)
   {
+    if (!is_de)
+      g_error ("omegak > 0 option is valid only for darkenergy models");
     ncm_prior_add_positive (lh, NC_HICOSMO_ID, NC_HICOSMO_DE_OMEGA_X);
   }
   
@@ -265,16 +275,21 @@ main (gint argc, gchar *argv[])
 
   if (de_data_simple.bao_id != NULL)
   {
-    const GEnumValue *bao_id = ncm_cfg_get_enum_by_id_name_nick (NC_TYPE_DATA_BAO_ID,
-                                                                 de_data_simple.bao_id);
-    if (bao_id != NULL)
+    guint i;
+    guint nbao = g_strv_length (de_data_simple.bao_id);
+    for (i = 0; i < nbao; i++)
     {
-      NcmData *bao_data = nc_data_bao_create (dist, bao_id->value);
-      ncm_dataset_append_data (dset, bao_data);
-      ncm_data_free (bao_data);
+      gchar *bao_id_i = de_data_simple.bao_id[i];
+      const GEnumValue *bao_id = ncm_cfg_get_enum_by_id_name_nick (NC_TYPE_DATA_BAO_ID, bao_id_i);
+      if (bao_id != NULL)
+      {
+        NcmData *bao_data = nc_data_bao_create (dist, bao_id->value);
+        ncm_dataset_append_data (dset, bao_data);
+        ncm_data_free (bao_data);
+      }
+      else
+        g_error ("BAO sample '%s' not found run --bao-list to list the available options", bao_id_i);
     }
-    else
-      g_error ("BAO sample '%s' not found run --bao-list to list the available options", de_data_simple.bao_id);
   }
 
   if (de_data_simple.H_id != NULL)

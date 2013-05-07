@@ -153,7 +153,7 @@ ncm_spline_set (NcmSpline *s, NcmVector *xv, NcmVector *yv, gboolean init)
 	if (ncm_vector_len (xv) != ncm_vector_len (yv))
 		g_error ("ncm_spline_set: knot and function values vector has not the same size");
 	if (ncm_vector_len (xv) < NCM_SPLINE_GET_CLASS (s)->min_size (s))
-		g_error ("ncm_spline_set: min size for [%s] is %zu but vector size is %u", NCM_SPLINE_GET_CLASS (s)->name,
+		g_error ("ncm_spline_set: min size for [%s] is %zu but vector size is %u", NCM_SPLINE_GET_CLASS (s)->name (s),
 		         NCM_SPLINE_GET_CLASS (s)->min_size (s), ncm_vector_len (xv));
 
 	if (s->xv != NULL)

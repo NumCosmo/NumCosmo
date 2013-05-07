@@ -176,8 +176,9 @@ _nc_data_hubble_mean_func (NcmDataGaussDiag *diag, NcmMSet *mset, NcmVector *vp)
 
 static gchar *_nc_data_hubble_function_query[] =
 {
-  "L. Verde sample", "SELECT z,p,s FROM kinematics WHERE param='H' ORDER BY z",
-  "Cabre sample", "SELECT z,p,s FROM kinematics WHERE param='H_CABRE' ORDER BY z"
+  "Simon 2005 H(z) sample", "SELECT z,p,s FROM kinematics WHERE param='Hz_Simon2005' ORDER BY z",
+  "Cabre sample", "SELECT z,p,s FROM kinematics WHERE param='H_CABRE' ORDER BY z",
+  "Stern 2009 H(z) sample", "SELECT z,p,s FROM kinematics WHERE param='Hz_Stern2009' ORDER BY z",
 };
 
 /**

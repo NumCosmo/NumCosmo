@@ -43,6 +43,7 @@ G_DEFINE_TYPE (NcHICosmoQSpline, nc_hicosmo_qspline, NC_TYPE_HICOSMO);
 #define VECTOR     (model->params)
 #define QSPLINE_H0 (ncm_vector_get (VECTOR, NC_HICOSMO_QSPLINE_H0))
 #define OMEGA_T    (ncm_vector_get (VECTOR, NC_HICOSMO_QSPLINE_OMEGA_T))
+#define AS_DRAG    (ncm_vector_get (VECTOR, NC_HICOSMO_QSPLINE_AS_DRAG))
 
 static gdouble
 _nc_hicosmo_qspline_dE2dz (gdouble E2, gdouble z, gpointer userdata)
@@ -123,6 +124,7 @@ _nc_hicosmo_qspline_d2E2_dz2 (NcmModel *model, gdouble z)
  ****************************************************************************/
 static gdouble _nc_hicosmo_qspline_H0 (NcmModel *model) { return QSPLINE_H0; }
 static gdouble _nc_hicosmo_qspline_Omega_t (NcmModel *model) { return OMEGA_T; }
+static gdouble _nc_hicosmo_qspline_as_drag (NcmModel *model) { return AS_DRAG; }
 
 /**
  * nc_hicosmo_qspline_new:
@@ -142,7 +144,6 @@ nc_hicosmo_qspline_new (NcmSpline *s, gsize np, gdouble z_f)
                                             "zf", z_f,
                                             "qparam-length", np,
                                             NULL);
-
   return qspline;
 }
 
@@ -175,14 +176,16 @@ _nc_hicosmo_qspline_constructed (GObject *object)
     NcmModel *model = NCM_MODEL (qspline);
     NcmModelClass *model_class = NCM_MODEL_GET_CLASS (model);
     NcmVector *zv, *qv;
-    guint i;
+    guint i, qvi;
 
-    qspline->nknots = ncm_model_vparam_len (model, 0);
+    qspline->nknots = ncm_model_vparam_len (model, NC_HICOSMO_QSPLINE_Q);
     qspline->size = model_class->sparam_len + qspline->nknots;
 
+    qvi = ncm_model_vparam_index (model, NC_HICOSMO_QSPLINE_Q, 0);
+    
     zv = ncm_vector_new (qspline->nknots);
-    qv = ncm_vector_new (qspline->nknots);
-
+    qv = ncm_vector_get_subvector (model->params, qvi, qspline->nknots);
+    
     for (i = 0; i < qspline->nknots; i++)
     {
       gdouble zi = qspline->z_f / (qspline->nknots - 1.0) * i;
@@ -193,19 +196,23 @@ _nc_hicosmo_qspline_constructed (GObject *object)
       gdouble Ei2 = 1e-5 * xi4 + 0.25 * xi3 + (0.75 - 1e-5);
       gdouble qi = (1e-5 * xi4 + 0.25 * xi3 * 0.5 - (0.75 - 1e-5)) / Ei2;
       ncm_vector_set (zv, i, zi);
-      ncm_vector_set (model->params, NC_HICOSMO_QSPLINE_Q + i, qi);
+      ncm_vector_set (qv, i, qi);
     }
 
-    ncm_spline_set (qspline->q_z, zv, qv, FALSE);
     {
       NcmSpline *s = ncm_spline_cubic_notaknot_new ();
+      if (qspline->q_z == NULL)
+        qspline->q_z = ncm_spline_new (s, zv, qv, FALSE);
+      else
+        ncm_spline_set (qspline->q_z, zv, qv, FALSE);
+      
       qspline->E2_z = ncm_ode_spline_new (s,
                                           _nc_hicosmo_qspline_dE2dz, qspline,
                                           1.0, 0.0, qspline->z_f);
       ncm_spline_free (s);
+      ncm_vector_free (zv);
+      ncm_vector_free (qv);
     }
-    ncm_vector_free (zv);
-    ncm_vector_free (qv);
 
     return;
   }
@@ -327,6 +334,21 @@ nc_hicosmo_qspline_class_init (NcHICosmoQSplineClass *klass)
                               NCM_PARAM_TYPE_FIXED);
 
   /**
+   * NcHICosmoQSpline:asdrag:
+   *
+   * FIXME
+   */  
+  /**
+   * NcHICosmoQSpline:asdrag-fit:
+   *
+   * FIXME
+   */  
+  ncm_model_class_set_sparam (model_class, NC_HICOSMO_QSPLINE_AS_DRAG, "A_s drag", "asdrag",
+                              0.0, 5.0, 1.0e-3,
+                              NC_HICOSMO_DEFAULT_PARAMS_ABSTOL, NC_HICOSMO_QSPLINE_DEFAULT_AS_DRAG,
+                              NCM_PARAM_TYPE_FIXED);
+
+  /**
    * NcHICosmoQSpline:qparam:
    *
    * FIXME
@@ -369,4 +391,5 @@ nc_hicosmo_qspline_class_init (NcHICosmoQSplineClass *klass)
   nc_hicosmo_set_dE2_dz_impl   (parent_class, &_nc_hicosmo_qspline_dE2_dz);
   nc_hicosmo_set_d2E2_dz2_impl (parent_class, &_nc_hicosmo_qspline_d2E2_dz2);
   nc_hicosmo_set_Omega_t_impl  (parent_class, &_nc_hicosmo_qspline_Omega_t);
+  nc_hicosmo_set_as_drag_impl  (parent_class, &_nc_hicosmo_qspline_as_drag);
 }

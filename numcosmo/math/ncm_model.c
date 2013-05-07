@@ -354,7 +354,7 @@ _ncm_model_get_property (GObject *object, guint prop_id, GValue *value, GParamSp
       g_value_set_uint (value, model_class->vparam_len);
       break;
     case PROP_IMPLEMENTATION:
-      g_value_set_ulong (value, model_class->impl);
+      g_value_set_uint64 (value, model_class->impl);
       break;
     case PROP_REPARAM:
       g_value_set_object (value, model->reparam);
@@ -371,7 +371,12 @@ _ncm_model_get_property (GObject *object, guint prop_id, GValue *value, GParamSp
 static NcmModel *
 _ncm_model_copy (NcmModel *model)
 {
-  NcmModel *model_copy = g_object_new (G_OBJECT_TYPE (model), NULL);
+  gchar *obj_ser = ncm_cfg_serialize_to_string (G_OBJECT (model), TRUE);
+  NcmModel *model_copy = NCM_MODEL (ncm_cfg_create_from_string (obj_ser));
+  g_free (obj_ser);
+
+  /* Old method */
+  /* NcmModel *model_copy = g_object_new (G_OBJECT_TYPE (model), NULL); */
 
   if (ncm_model_peek_reparam (model))
   {
@@ -466,12 +471,12 @@ ncm_model_class_init (NcmModelClass *klass)
                                                         G_PARAM_READABLE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
   g_object_class_install_property (object_class,
                                    PROP_IMPLEMENTATION,
-                                   g_param_spec_ulong  ("implementation",
-                                                        NULL,
-                                                        "Bitwise specification of functions implementation",
-                                                        0, G_MAXULONG, 0,
-                                                        G_PARAM_READABLE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-
+                                   g_param_spec_uint64  ("implementation",
+                                                         NULL,
+                                                         "Bitwise specification of functions implementation",
+                                                         0, G_MAXUINT64, 0,
+                                                         G_PARAM_READABLE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  
   g_object_class_install_property (object_class,
                                    PROP_PTYPES,
                                    g_param_spec_boxed  ("params-types",
@@ -883,7 +888,7 @@ ncm_model_class_set_vparam (NcmModelClass *model_class, guint vparam_id, guint d
 void
 ncm_model_class_check_params_info (NcmModelClass *model_class)
 {
-  gulong i;
+  guint64 i;
   guint total_params_len = model_class->sparam_len + model_class->vparam_len;
   if (!total_params_len)
   {

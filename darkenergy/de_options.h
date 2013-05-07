@@ -66,7 +66,7 @@ struct _NcDEDataSimpleEntries
 {
   gchar *snia_id;
   gchar *snia_prop;
-  gchar *bao_id;
+  gchar **bao_id;
   gchar *cmb_id;
   gchar *H_id;
   gchar *cluster_id;
