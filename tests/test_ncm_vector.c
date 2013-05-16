@@ -32,17 +32,36 @@
 #include <glib.h>
 #include <glib-object.h>
 
-void test_ncm_vector_new (void);
-void test_ncm_vector_new_gsl (void);
-void test_ncm_vector_new_array (void);
-void test_ncm_vector_new_data_slice (void);
-void test_ncm_vector_new_data_malloc (void);
-void test_ncm_vector_new_data_static (void);
-void test_ncm_vector_new_data_const (void);
-void test_ncm_vector_operations (void);
-void test_ncm_vector_free (void);
-void test_ncm_vector_subvector (void);
-void test_ncm_vector_variant (void);
+#define _TEST_NCM_VECTOR_STATIC_SIZE 100
+#define _TEST_NCM_VECTOR_MIN_SIZE 5
+
+typedef struct _TestNcmVector
+{
+  NcmVector *v;
+  const NcmVector *cv;
+  guint v_size;
+  guint ntests;
+} TestNcmVector;
+
+void test_ncm_vector_new (TestNcmVector *test, gconstpointer pdata);
+void test_ncm_vector_free (TestNcmVector *test, gconstpointer pdata);
+void test_ncm_vector_gsl_new (TestNcmVector *test, gconstpointer pdata);
+void test_ncm_vector_gsl_free (TestNcmVector *test, gconstpointer pdata);
+void test_ncm_vector_array_new (TestNcmVector *test, gconstpointer pdata);
+void test_ncm_vector_array_free (TestNcmVector *test, gconstpointer pdata);
+void test_ncm_vector_data_slice_new (TestNcmVector *test, gconstpointer pdata);
+void test_ncm_vector_data_slice_free (TestNcmVector *test, gconstpointer pdata);
+void test_ncm_vector_data_malloc_new (TestNcmVector *test, gconstpointer pdata);
+void test_ncm_vector_data_malloc_free (TestNcmVector *test, gconstpointer pdata);
+void test_ncm_vector_data_static_new (TestNcmVector *test, gconstpointer pdata);
+void test_ncm_vector_data_static_free (TestNcmVector *test, gconstpointer pdata);
+void test_ncm_vector_data_const_new (TestNcmVector *test, gconstpointer pdata);
+void test_ncm_vector_data_const_free (TestNcmVector *test, gconstpointer pdata);
+void test_ncm_vector_sanity (TestNcmVector *test, gconstpointer pdata);
+void test_ncm_vector_operations (TestNcmVector *test, gconstpointer pdata);
+void test_ncm_vector_subvector (TestNcmVector *test, gconstpointer pdata);
+void test_ncm_vector_variant (TestNcmVector *test, gconstpointer pdata);
+void test_ncm_vector_data_const_sanity (TestNcmVector *test, gconstpointer pdata);
 
 gint
 main (gint argc, gchar *argv[])
@@ -51,82 +70,398 @@ main (gint argc, gchar *argv[])
   ncm_cfg_init ();
   ncm_cfg_enable_gsl_err_handler ();
 
-  g_test_add_func ("/numcosmo/ncm_vector/new", &test_ncm_vector_new);
-  g_test_add_func ("/numcosmo/ncm_vector/new_gsl", &test_ncm_vector_new_gsl);
-  g_test_add_func ("/numcosmo/ncm_vector/new_array", &test_ncm_vector_new_array);
-  g_test_add_func ("/numcosmo/ncm_vector/new_data_slice", &test_ncm_vector_new_data_slice);
-  g_test_add_func ("/numcosmo/ncm_vector/new_data_malloc", &test_ncm_vector_new_data_malloc);
-  g_test_add_func ("/numcosmo/ncm_vector/new_data_static", &test_ncm_vector_new_data_static);
-  g_test_add_func ("/numcosmo/ncm_vector/new_data_const", &test_ncm_vector_new_data_const);
-  g_test_add_func ("/numcosmo/ncm_vector/operations", &test_ncm_vector_operations);
-  g_test_add_func ("/numcosmo/ncm_vector/subvector", &test_ncm_vector_subvector);
-  g_test_add_func ("/numcosmo/ncm_vector/variant", &test_ncm_vector_variant);
-  g_test_add_func ("/numcosmo/ncm_vector/free", &test_ncm_vector_free);
+  /* Default vector allocation */
+
+  g_test_add ("/numcosmo/ncm_vector/default/sanity", TestNcmVector, NULL, 
+              &test_ncm_vector_new, 
+              &test_ncm_vector_sanity, 
+              &test_ncm_vector_free);
+
+  g_test_add ("/numcosmo/ncm_vector/default/operations", TestNcmVector, NULL, 
+              &test_ncm_vector_new, 
+              &test_ncm_vector_operations, 
+              &test_ncm_vector_free);
+
+  g_test_add ("/numcosmo/ncm_vector/default/subvector", TestNcmVector, NULL, 
+              &test_ncm_vector_new, 
+              &test_ncm_vector_subvector,
+              &test_ncm_vector_free);
+
+  g_test_add ("/numcosmo/ncm_vector/default/variant", TestNcmVector, NULL, 
+              &test_ncm_vector_new, 
+              &test_ncm_vector_variant,
+              &test_ncm_vector_free);
+
+  /* GSL vector allocation */
+
+  g_test_add ("/numcosmo/ncm_vector/gsl/sanity", TestNcmVector, NULL, 
+              &test_ncm_vector_gsl_new, 
+              &test_ncm_vector_sanity, 
+              &test_ncm_vector_gsl_free);
+  
+  g_test_add ("/numcosmo/ncm_vector/gsl/operations", TestNcmVector, NULL, 
+              &test_ncm_vector_gsl_new, 
+              &test_ncm_vector_operations, 
+              &test_ncm_vector_gsl_free);
+
+  g_test_add ("/numcosmo/ncm_vector/gsl/subvector", TestNcmVector, NULL, 
+              &test_ncm_vector_gsl_new, 
+              &test_ncm_vector_subvector,
+              &test_ncm_vector_gsl_free);
+
+  g_test_add ("/numcosmo/ncm_vector/gsl/variant", TestNcmVector, NULL, 
+              &test_ncm_vector_gsl_new, 
+              &test_ncm_vector_variant,
+              &test_ncm_vector_gsl_free);
+
+  /* Array vector allocation */
+
+  g_test_add ("/numcosmo/ncm_vector/array/sanity", TestNcmVector, NULL, 
+              &test_ncm_vector_array_new, 
+              &test_ncm_vector_sanity, 
+              &test_ncm_vector_array_free);
+  
+  g_test_add ("/numcosmo/ncm_vector/array/operations", TestNcmVector, NULL, 
+              &test_ncm_vector_array_new, 
+              &test_ncm_vector_operations, 
+              &test_ncm_vector_array_free);
+
+  g_test_add ("/numcosmo/ncm_vector/array/subvector", TestNcmVector, NULL, 
+              &test_ncm_vector_array_new, 
+              &test_ncm_vector_subvector,
+              &test_ncm_vector_array_free);
+
+  g_test_add ("/numcosmo/ncm_vector/array/variant", TestNcmVector, NULL, 
+              &test_ncm_vector_array_new, 
+              &test_ncm_vector_variant,
+              &test_ncm_vector_array_free);
+  
+  /* Data slice vector allocation */
+
+  g_test_add ("/numcosmo/ncm_vector/data_slice/sanity", TestNcmVector, NULL, 
+              &test_ncm_vector_data_slice_new, 
+              &test_ncm_vector_sanity, 
+              &test_ncm_vector_data_slice_free);
+  
+  g_test_add ("/numcosmo/ncm_vector/data_slice/operations", TestNcmVector, NULL, 
+              &test_ncm_vector_data_slice_new, 
+              &test_ncm_vector_operations, 
+              &test_ncm_vector_data_slice_free);
+
+  g_test_add ("/numcosmo/ncm_vector/data_slice/subvector", TestNcmVector, NULL, 
+              &test_ncm_vector_data_slice_new, 
+              &test_ncm_vector_subvector,
+              &test_ncm_vector_data_slice_free);
+
+  g_test_add ("/numcosmo/ncm_vector/data_slice/variant", TestNcmVector, NULL, 
+              &test_ncm_vector_data_slice_new, 
+              &test_ncm_vector_variant,
+              &test_ncm_vector_data_slice_free);
+  
+  /* Data malloc vector allocation */
+
+  g_test_add ("/numcosmo/ncm_vector/data_malloc/sanity", TestNcmVector, NULL, 
+              &test_ncm_vector_data_malloc_new, 
+              &test_ncm_vector_sanity, 
+              &test_ncm_vector_data_malloc_free);
+  
+  g_test_add ("/numcosmo/ncm_vector/data_malloc/operations", TestNcmVector, NULL, 
+              &test_ncm_vector_data_malloc_new, 
+              &test_ncm_vector_operations, 
+              &test_ncm_vector_data_malloc_free);
+
+  g_test_add ("/numcosmo/ncm_vector/data_malloc/subvector", TestNcmVector, NULL, 
+              &test_ncm_vector_data_malloc_new, 
+              &test_ncm_vector_subvector,
+              &test_ncm_vector_data_malloc_free);
+
+  g_test_add ("/numcosmo/ncm_vector/data_malloc/variant", TestNcmVector, NULL, 
+              &test_ncm_vector_data_malloc_new, 
+              &test_ncm_vector_variant,
+              &test_ncm_vector_data_malloc_free);
+
+  /* Data static vector allocation */
+
+  g_test_add ("/numcosmo/ncm_vector/data_static/sanity", TestNcmVector, NULL, 
+              &test_ncm_vector_data_static_new, 
+              &test_ncm_vector_sanity, 
+              &test_ncm_vector_data_static_free);
+
+  g_test_add ("/numcosmo/ncm_vector/data_static/operations", TestNcmVector, NULL, 
+              &test_ncm_vector_data_static_new, 
+              &test_ncm_vector_operations, 
+              &test_ncm_vector_data_static_free);
+
+  g_test_add ("/numcosmo/ncm_vector/data_static/subvector", TestNcmVector, NULL, 
+              &test_ncm_vector_data_static_new, 
+              &test_ncm_vector_subvector,
+              &test_ncm_vector_data_static_free);
+
+  g_test_add ("/numcosmo/ncm_vector/data_static/variant", TestNcmVector, NULL, 
+              &test_ncm_vector_data_static_new, 
+              &test_ncm_vector_variant,
+              &test_ncm_vector_data_static_free);
+
+  /* Data static vector allocation */
+
+  g_test_add ("/numcosmo/ncm_vector/data_const/sanity", TestNcmVector, NULL, 
+              &test_ncm_vector_data_const_new, 
+              &test_ncm_vector_data_const_sanity, 
+              &test_ncm_vector_data_const_free);
 
   g_test_run ();
 }
 
-static NcmVector *v;
-
-#define _NCM_VECTOR_TEST_SIZE 100
-
+void
+test_ncm_vector_new (TestNcmVector *test, gconstpointer pdata)
+{
+  test->v_size = g_test_rand_int_range (_TEST_NCM_VECTOR_MIN_SIZE, _TEST_NCM_VECTOR_STATIC_SIZE);
+  test->v = ncm_vector_new (test->v_size);
+}
 
 void
-test_ncm_vector_new_sanity (NcmVector *vv)
+test_ncm_vector_free (TestNcmVector *test, gconstpointer pdata)
 {
+  NcmVector *v = test->v;
+  ncm_vector_free (v);
+  if (g_test_trap_fork (0, G_TEST_TRAP_SILENCE_STDOUT | G_TEST_TRAP_SILENCE_STDERR))
+  {
+    ncm_vector_free (v);
+    exit (0);
+  }
+  g_test_trap_assert_failed ();
+}
+
+void
+test_ncm_vector_gsl_new (TestNcmVector *test, gconstpointer pdata)
+{
+  guint v_size = test->v_size = g_test_rand_int_range (_TEST_NCM_VECTOR_MIN_SIZE, _TEST_NCM_VECTOR_STATIC_SIZE);
+  gsl_vector *gv = gsl_vector_alloc (v_size);
+  NcmVector *v = test->v = ncm_vector_new_gsl (gv);
+  ncm_assert_cmpdouble (ncm_vector_len (v), ==, gv->size);
+
+}
+
+void
+test_ncm_vector_gsl_free (TestNcmVector *test, gconstpointer pdata)
+{
+  NcmVector *v = test->v;
+  ncm_vector_free (v);
+  if (g_test_trap_fork (0, G_TEST_TRAP_SILENCE_STDOUT | G_TEST_TRAP_SILENCE_STDERR))
+  {
+    ncm_vector_free (v);
+    exit (0);
+  }
+  g_test_trap_assert_failed ();
+
+  if (g_test_trap_fork (0, G_TEST_TRAP_SILENCE_STDOUT | G_TEST_TRAP_SILENCE_STDERR))
+  {
+    g_assert (v->gv == NULL);
+    exit (0);
+  }
+  g_test_trap_assert_passed ();
+}
+
+void
+test_ncm_vector_array_new (TestNcmVector *test, gconstpointer pdata)
+{
+  guint v_size = test->v_size = g_test_rand_int_range (_TEST_NCM_VECTOR_MIN_SIZE, _TEST_NCM_VECTOR_STATIC_SIZE);
+  GArray *ga = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), v_size);
+  NcmVector *v;
+  g_array_set_size (ga, v_size);
+  v = test->v = ncm_vector_new_array (ga);
+  g_array_unref (ga);
+
+  g_assert_cmpuint (ncm_vector_len (v), ==, ga->len);
+
+  g_assert (ga == ncm_vector_get_array (v));
+  g_array_unref (ga);
+
+}
+
+void
+test_ncm_vector_array_free (TestNcmVector *test, gconstpointer pdata)
+{
+  NcmVector *v = test->v;
+  ncm_vector_free (v);
+  if (g_test_trap_fork (0, G_TEST_TRAP_SILENCE_STDOUT | G_TEST_TRAP_SILENCE_STDERR))
+  {
+    ncm_vector_free (v);
+    exit (0);
+  }
+  g_test_trap_assert_failed ();
+
+  if (g_test_trap_fork (0, G_TEST_TRAP_SILENCE_STDOUT | G_TEST_TRAP_SILENCE_STDERR))
+  {
+    g_array_unref (v->a);
+    exit (0);
+  }
+  g_test_trap_assert_failed ();
+}
+
+void
+test_ncm_vector_data_slice_new (TestNcmVector *test, gconstpointer pdata)
+{
+  guint v_size = test->v_size = g_test_rand_int_range (_TEST_NCM_VECTOR_MIN_SIZE, _TEST_NCM_VECTOR_STATIC_SIZE);
+  gdouble *d = g_slice_alloc (v_size * sizeof (gdouble));
+  NcmVector *v = test->v = ncm_vector_new_data_slice (d, v_size, 1);
+
+  g_assert_cmpuint (ncm_vector_len (v), ==, v_size);
+}
+
+void
+test_ncm_vector_data_slice_free (TestNcmVector *test, gconstpointer pdata)
+{
+  NcmVector *v = test->v;  
+  ncm_vector_free (v);
+  if (g_test_trap_fork (0, G_TEST_TRAP_SILENCE_STDOUT | G_TEST_TRAP_SILENCE_STDERR))
+  {
+    ncm_vector_free (v);
+    exit (0);
+  }
+  g_test_trap_assert_failed ();
+
+  if (g_test_trap_fork (0, G_TEST_TRAP_SILENCE_STDOUT | G_TEST_TRAP_SILENCE_STDERR))
+  {
+    g_assert (NCM_VECTOR_DATA (v) == NULL);
+    exit (0);
+  }
+  g_test_trap_assert_passed ();
+}
+
+void
+test_ncm_vector_data_malloc_new (TestNcmVector *test, gconstpointer pdata)
+{
+  guint v_size = test->v_size = g_test_rand_int_range (_TEST_NCM_VECTOR_MIN_SIZE, _TEST_NCM_VECTOR_STATIC_SIZE);
+  gdouble *d = g_malloc (v_size * sizeof (gdouble));
+  NcmVector *v = test->v = ncm_vector_new_data_malloc (d, v_size, 1);
+
+  g_assert_cmpuint (ncm_vector_len (v), ==, v_size);
+}
+
+void
+test_ncm_vector_data_malloc_free (TestNcmVector *test, gconstpointer pdata)
+{
+  NcmVector *v = test->v;  
+  ncm_vector_free (v);
+  if (g_test_trap_fork (0, G_TEST_TRAP_SILENCE_STDOUT | G_TEST_TRAP_SILENCE_STDERR))
+  {
+    ncm_vector_free (v);
+    exit (0);
+  }
+  g_test_trap_assert_failed ();
+
+  if (g_test_trap_fork (0, G_TEST_TRAP_SILENCE_STDOUT | G_TEST_TRAP_SILENCE_STDERR))
+  {
+    g_assert (NCM_VECTOR_DATA (v) == NULL);
+    exit (0);
+  }
+  g_test_trap_assert_passed ();
+}
+
+void
+test_ncm_vector_data_static_new (TestNcmVector *test, gconstpointer pdata)
+{
+  guint v_size = test->v_size = _TEST_NCM_VECTOR_STATIC_SIZE;
+  static gdouble d[_TEST_NCM_VECTOR_STATIC_SIZE];
+  NcmVector *v = test->v = ncm_vector_new_data_static (d, v_size, 1);
+
+  g_assert_cmpuint (ncm_vector_len (v), ==, v_size);
+}
+
+void
+test_ncm_vector_data_static_free (TestNcmVector *test, gconstpointer pdata)
+{
+  NcmVector *v = test->v;
+
+  if (g_test_trap_fork (0, G_TEST_TRAP_SILENCE_STDOUT | G_TEST_TRAP_SILENCE_STDERR))
+  {
+    ncm_vector_free (v);
+    exit (0);
+  }
+  g_test_trap_assert_passed ();
+}
+
+void
+test_ncm_vector_data_const_new (TestNcmVector *test, gconstpointer pdata)
+{
+  guint v_size = test->v_size = _TEST_NCM_VECTOR_STATIC_SIZE;
+  const gdouble d[_TEST_NCM_VECTOR_STATIC_SIZE] = {0.0, };
+  const NcmVector *v = test->cv = ncm_vector_new_data_const (d, v_size, 1);
+
+  g_assert_cmpuint (ncm_vector_len (v), ==, v_size);
+}
+
+void
+test_ncm_vector_data_const_free (TestNcmVector *test, gconstpointer pdata)
+{
+  const NcmVector *cv = test->cv;
+  if (g_test_trap_fork (0, G_TEST_TRAP_SILENCE_STDOUT | G_TEST_TRAP_SILENCE_STDERR))
+  {
+    ncm_vector_const_free (cv);
+    exit (0);
+  }
+  g_test_trap_assert_passed ();
+}
+
+void
+test_ncm_vector_sanity (TestNcmVector *test, gconstpointer pdata)
+{
+  guint v_size = test->v_size;
+  NcmVector *v = test->v;
   guint i;
 
-  g_assert (NCM_IS_VECTOR (vv));
+  g_assert (NCM_IS_VECTOR (v));
 
-  for (i = 0; i < 10 * _NCM_VECTOR_TEST_SIZE; i++)
+  for (i = 0; i < 10 * v_size; i++)
   {
-    const guint n = g_test_rand_int_range (0, _NCM_VECTOR_TEST_SIZE - 1);
+    const guint n = g_test_rand_int_range (0, v_size - 1);
     const gdouble d = g_test_rand_double ();
-    ncm_vector_set (vv, n, d);
-    ncm_assert_cmpdouble (ncm_vector_get (vv, n), ==, d);
+    ncm_vector_set (v, n, d);
+    ncm_assert_cmpdouble (ncm_vector_get (v, n), ==, d);
   }
 }
 
 void
-test_ncm_vector_new (void)
+test_ncm_vector_data_const_sanity (TestNcmVector *test, gconstpointer pdata)
 {
-  v = ncm_vector_new (_NCM_VECTOR_TEST_SIZE);
-  test_ncm_vector_new_sanity (v);
+  g_assert (NCM_IS_VECTOR (test->cv));
 }
 
 void
-test_ncm_vector_operations (void)
+test_ncm_vector_operations (TestNcmVector *test, gconstpointer pdata)
 {
+  guint v_size = test->v_size;
+  NcmVector *v = test->v;
   NcmVector *cv = ncm_vector_dup (v);
   guint i;
-  test_ncm_vector_new_sanity (cv);
 
-  for (i = 0; i < 10 * _NCM_VECTOR_TEST_SIZE; i++)
+  for (i = 0; i < 10 * v_size; i++)
   {
-    const guint n = g_test_rand_int_range (0, _NCM_VECTOR_TEST_SIZE - 1);
+    const guint n = g_test_rand_int_range (0, v_size - 1);
     const gdouble d = g_test_rand_double ();
     ncm_vector_set (v, n, d);
     ncm_assert_cmpdouble (ncm_vector_get (v, n), ==, d);
   }
 
-  for (i = 0; i < 10 * _NCM_VECTOR_TEST_SIZE; i++)
+  for (i = 0; i < 10 * v_size; i++)
   {
     guint n;
     gdouble *d;
 
-    n = g_test_rand_int_range (0, _NCM_VECTOR_TEST_SIZE - 1);
+    n = g_test_rand_int_range (0, v_size - 1);
     d = ncm_vector_ptr (v, n);
     (*d) *= g_test_rand_double ();
 
     ncm_assert_cmpdouble (ncm_vector_get (v, n), ==, *d);
   }
 
-  for (i = 0; i < 10 * _NCM_VECTOR_TEST_SIZE; i++)
+  for (i = 0; i < 10 * v_size; i++)
   {
     guint n;
     gdouble d, d1 = g_test_rand_double ();
 
-    n = g_test_rand_int_range (0, _NCM_VECTOR_TEST_SIZE - 1);
+    n = g_test_rand_int_range (0, v_size - 1);
     d = ncm_vector_get (v, n);
     d += d1;
 
@@ -134,12 +469,12 @@ test_ncm_vector_operations (void)
     ncm_assert_cmpdouble (ncm_vector_get (v, n), ==, d);
   }
 
-  for (i = 0; i < 10 * _NCM_VECTOR_TEST_SIZE; i++)
+  for (i = 0; i < 10 * v_size; i++)
   {
     guint n;
     gdouble d, d1 = g_test_rand_double ();
 
-    n = g_test_rand_int_range (0, _NCM_VECTOR_TEST_SIZE - 1);
+    n = g_test_rand_int_range (0, v_size - 1);
     d = ncm_vector_get (v, n);
     d -= d1;
 
@@ -147,34 +482,34 @@ test_ncm_vector_operations (void)
     ncm_assert_cmpdouble (ncm_vector_get (v, n), ==, d);
   }
 
-  for (i = 0; i < 10 * _NCM_VECTOR_TEST_SIZE; i++)
+  for (i = 0; i < 10 * v_size; i++)
   {
     guint n;
     gdouble d1 = g_test_rand_double ();
 
-    n = g_test_rand_int_range (0, _NCM_VECTOR_TEST_SIZE - 1);
+    n = g_test_rand_int_range (0, v_size - 1);
     ncm_vector_set_all (v, d1);
     ncm_assert_cmpdouble (ncm_vector_get (v, n), ==, d1);
   }
 
-  for (i = 0; i < 10 * _NCM_VECTOR_TEST_SIZE; i++)
+  for (i = 0; i < 10 * v_size; i++)
   {
     guint n;
     gdouble d, d1 = g_test_rand_double ();
 
-    n = g_test_rand_int_range (0, _NCM_VECTOR_TEST_SIZE - 1);
+    n = g_test_rand_int_range (0, v_size - 1);
     d = ncm_vector_get (v, n);
     ncm_vector_scale (v, d1);
     ncm_assert_cmpdouble (ncm_vector_get (v, n), ==, d * d1);
   }
 
-  for (i = 0; i < 10 * _NCM_VECTOR_TEST_SIZE; i++)
+  for (i = 0; i < 10 * v_size; i++)
   {
     guint n;
     gdouble d1 = g_test_rand_double (),
     d2 = g_test_rand_double ();
 
-    n = g_test_rand_int_range (0, _NCM_VECTOR_TEST_SIZE - 1);
+    n = g_test_rand_int_range (0, v_size - 1);
 
     ncm_vector_set_all (v, d1);
     ncm_vector_set_all (cv, d2);
@@ -184,13 +519,13 @@ test_ncm_vector_operations (void)
     ncm_assert_cmpdouble (ncm_vector_get (v, n), ==, d1 / d2);
   }
 
-  for (i = 0; i < 10 * _NCM_VECTOR_TEST_SIZE; i++)
+  for (i = 0; i < 10 * v_size; i++)
   {
     guint n;
     gdouble d1 = g_test_rand_double (),
     d2 = g_test_rand_double ();
 
-    n = g_test_rand_int_range (0, _NCM_VECTOR_TEST_SIZE - 1);
+    n = g_test_rand_int_range (0, v_size - 1);
 
     ncm_vector_set_all (v, d1);
     ncm_vector_set_all (cv, d2);
@@ -200,13 +535,13 @@ test_ncm_vector_operations (void)
     ncm_assert_cmpdouble (ncm_vector_get (v, n), ==, d1 + d2);
   }
 
-  for (i = 0; i < 10 * _NCM_VECTOR_TEST_SIZE; i++)
+  for (i = 0; i < 10 * v_size; i++)
   {
     guint n;
     gdouble d1 = g_test_rand_double (),
     d2 = g_test_rand_double ();
 
-    n = g_test_rand_int_range (0, _NCM_VECTOR_TEST_SIZE - 1);
+    n = g_test_rand_int_range (0, v_size - 1);
 
     ncm_vector_set_all (v, d1);
     ncm_vector_set_all (cv, d2);
@@ -217,175 +552,35 @@ test_ncm_vector_operations (void)
   }
 
   ncm_vector_set_zero (v);
-  for (i = 0; i < _NCM_VECTOR_TEST_SIZE; i++)
+  for (i = 0; i < v_size; i++)
     ncm_assert_cmpdouble (ncm_vector_get (v, i), ==, 0.0);
 
   ncm_vector_memcpy (v, cv);
-  for (i = 0; i < _NCM_VECTOR_TEST_SIZE; i++)
+  for (i = 0; i < v_size; i++)
     ncm_assert_cmpdouble (ncm_vector_get (v, i), ==, ncm_vector_get (cv, i));
 
   ncm_vector_set_zero (v);
-  ncm_vector_memcpy2 (v, cv, 2, 0, _NCM_VECTOR_TEST_SIZE - 2);
+  ncm_vector_memcpy2 (v, cv, 2, 0, v_size - 2);
 
   ncm_assert_cmpdouble (ncm_vector_get (v, 0), ==, 0.0);
   ncm_assert_cmpdouble (ncm_vector_get (v, 1), ==, 0.0);
-  for (i = 0; i < _NCM_VECTOR_TEST_SIZE - 2; i++)
+  for (i = 0; i < v_size - 2; i++)
     ncm_assert_cmpdouble (ncm_vector_get (v, i + 2), ==, ncm_vector_get (cv, i));
 }
 
 void
-test_ncm_vector_new_gsl (void)
+test_ncm_vector_subvector (TestNcmVector *test, gconstpointer pdata)
 {
-  gsl_vector *gv = gsl_vector_alloc (_NCM_VECTOR_TEST_SIZE);
-  NcmVector *vv = ncm_vector_new_gsl (gv);
-  test_ncm_vector_new_sanity (vv);
-  ncm_assert_cmpdouble (ncm_vector_len (vv), ==, gv->size);
+  guint v_size = test->v_size;
+  NcmVector *v = test->v;
+  NcmVector *sv = ncm_vector_get_subvector (v, 1, v_size - 1);
+  guint ntests = 20 * v_size;
 
-  ncm_vector_free (vv);
-  if (g_test_trap_fork (0, G_TEST_TRAP_SILENCE_STDOUT | G_TEST_TRAP_SILENCE_STDERR))
-  {
-    ncm_vector_free (vv);
-    exit (0);
-  }
-  g_test_trap_assert_failed ();
-
-  if (g_test_trap_fork (0, G_TEST_TRAP_SILENCE_STDOUT | G_TEST_TRAP_SILENCE_STDERR))
-  {
-    g_assert (vv->gv == NULL);
-    exit (0);
-  }
-  g_test_trap_assert_passed ();
-}
-
-void
-test_ncm_vector_new_array (void)
-{
-  GArray *ga = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), _NCM_VECTOR_TEST_SIZE);
-  NcmVector *vv;
-  g_array_set_size (ga, _NCM_VECTOR_TEST_SIZE);
-  vv = ncm_vector_new_array (ga);
-  test_ncm_vector_new_sanity (vv);
-  g_array_unref (ga);
-
-  g_assert_cmpuint (ncm_vector_len (vv), ==, ga->len);
-
-  g_assert (ga == ncm_vector_get_array (vv));
-  g_array_unref (ga);
-
-  ncm_vector_free (vv);
-  if (g_test_trap_fork (0, G_TEST_TRAP_SILENCE_STDOUT | G_TEST_TRAP_SILENCE_STDERR))
-  {
-    ncm_vector_free (vv);
-    exit (0);
-  }
-  g_test_trap_assert_failed ();
-
-  if (g_test_trap_fork (0, G_TEST_TRAP_SILENCE_STDOUT | G_TEST_TRAP_SILENCE_STDERR))
-  {
-    g_array_unref (vv->a);
-    exit (0);
-  }
-  g_test_trap_assert_failed ();
-}
-
-void
-test_ncm_vector_new_data_slice (void)
-{
-  gdouble *d = g_slice_alloc (_NCM_VECTOR_TEST_SIZE * sizeof (gdouble));
-  NcmVector *vv;
-  vv = ncm_vector_new_data_slice (d, _NCM_VECTOR_TEST_SIZE, 1);
-  test_ncm_vector_new_sanity (vv);
-
-  g_assert_cmpuint (ncm_vector_len (vv), ==, _NCM_VECTOR_TEST_SIZE);
-
-  ncm_vector_free (vv);
-  if (g_test_trap_fork (0, G_TEST_TRAP_SILENCE_STDOUT | G_TEST_TRAP_SILENCE_STDERR))
-  {
-    ncm_vector_free (vv);
-    exit (0);
-  }
-  g_test_trap_assert_failed ();
-
-  if (g_test_trap_fork (0, G_TEST_TRAP_SILENCE_STDOUT | G_TEST_TRAP_SILENCE_STDERR))
-  {
-    g_assert (NCM_VECTOR_DATA (vv) == NULL);
-    exit (0);
-  }
-  g_test_trap_assert_passed ();
-}
-
-void
-test_ncm_vector_new_data_malloc (void)
-{
-  gdouble *d = g_malloc (_NCM_VECTOR_TEST_SIZE * sizeof (gdouble));
-  NcmVector *vv;
-  vv = ncm_vector_new_data_malloc (d, _NCM_VECTOR_TEST_SIZE, 1);
-  test_ncm_vector_new_sanity (vv);
-
-  g_assert_cmpuint (ncm_vector_len (vv), ==, _NCM_VECTOR_TEST_SIZE);
-
-  ncm_vector_free (vv);
-  if (g_test_trap_fork (0, G_TEST_TRAP_SILENCE_STDOUT | G_TEST_TRAP_SILENCE_STDERR))
-  {
-    ncm_vector_free (vv);
-    exit (0);
-  }
-  g_test_trap_assert_failed ();
-
-  if (g_test_trap_fork (0, G_TEST_TRAP_SILENCE_STDOUT | G_TEST_TRAP_SILENCE_STDERR))
-  {
-    g_assert (NCM_VECTOR_DATA (vv) == NULL);
-    exit (0);
-  }
-  g_test_trap_assert_passed ();
-}
-
-void
-test_ncm_vector_new_data_static (void)
-{
-  gdouble d[_NCM_VECTOR_TEST_SIZE];
-  NcmVector *vv;
-  vv = ncm_vector_new_data_static (d, _NCM_VECTOR_TEST_SIZE, 1);
-  test_ncm_vector_new_sanity (vv);
-
-  g_assert_cmpuint (ncm_vector_len (vv), ==, _NCM_VECTOR_TEST_SIZE);
-
-  if (g_test_trap_fork (0, G_TEST_TRAP_SILENCE_STDOUT | G_TEST_TRAP_SILENCE_STDERR))
-  {
-    ncm_vector_free (vv);
-    exit (0);
-  }
-  g_test_trap_assert_passed ();
-}
-
-void
-test_ncm_vector_new_data_const (void)
-{
-  const gdouble d[_NCM_VECTOR_TEST_SIZE] = {0.0, };
-  const NcmVector *vv;
-  vv = ncm_vector_new_data_const (d, _NCM_VECTOR_TEST_SIZE, 1);
-
-  g_assert_cmpuint (ncm_vector_len (vv), ==, _NCM_VECTOR_TEST_SIZE);
-
-  if (g_test_trap_fork (0, G_TEST_TRAP_SILENCE_STDOUT | G_TEST_TRAP_SILENCE_STDERR))
-  {
-    ncm_vector_const_free (vv);
-    exit (0);
-  }
-  g_test_trap_assert_passed ();
-}
-
-void
-test_ncm_vector_subvector (void)
-{
-  NcmVector *sv = ncm_vector_get_subvector (v, 1, _NCM_VECTOR_TEST_SIZE - 1);
-  guint ntests = 20 * _NCM_VECTOR_TEST_SIZE;
-
-  g_assert_cmpuint (ncm_vector_len (sv), ==, (_NCM_VECTOR_TEST_SIZE - 1));
+  g_assert_cmpuint (ncm_vector_len (sv), ==, (v_size - 1));
 
   while (ntests--)
   {
-    guint i = g_test_rand_int_range (0, _NCM_VECTOR_TEST_SIZE - 1);
+    guint i = g_test_rand_int_range (0, v_size - 1);
     ncm_vector_set (sv, i, g_test_rand_double ());
     ncm_assert_cmpdouble (ncm_vector_get (sv, i), ==, ncm_vector_get (v, i + 1));
   }
@@ -406,8 +601,9 @@ test_ncm_vector_subvector (void)
 }
 
 void
-test_ncm_vector_variant (void)
+test_ncm_vector_variant (TestNcmVector *test, gconstpointer pdata)
 {
+  NcmVector *v = test->v;
   GVariant *var = ncm_vector_get_variant (v);
 
   g_assert (!g_variant_is_floating (var));
@@ -443,18 +639,6 @@ test_ncm_vector_variant (void)
      */
     g_variant_unref (var); 
     fprintf (stderr,"fail (%s)", g_variant_get_type_string (var));
-    exit (0);
-  }
-  g_test_trap_assert_failed ();
-}
-
-void
-test_ncm_vector_free (void)
-{
-  ncm_vector_free (v);
-  if (g_test_trap_fork (0, G_TEST_TRAP_SILENCE_STDOUT | G_TEST_TRAP_SILENCE_STDERR))
-  {
-    ncm_vector_free (v);
     exit (0);
   }
   g_test_trap_assert_failed ();

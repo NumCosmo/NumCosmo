@@ -2,6 +2,90 @@ CHANGELOG
 ----------------------
 
 [Current]
+ * Improving tests and examples.
+
+     Testing new test (make check) manager. Better scripts for lapack
+     availability. Fixed doc in nc_data_hubble.h. Improved sparam and vector
+     tests. New cluster abundance example. Organized examples file names.
+
+ * Added support for repeated options in darkenergy. New H(z) and BAO data.
+     Support for non darkenergy models in darkenergy application.
+
+     Updated name method in NcmSpline to support more detailed names. Update
+     ncm_cfg_keyfile_to_arg to correctly transform repeated options. Improved
+     model->copy method to work with complex (several properties, including
+     object properties) models. Added new BAO data (as used in WMAP9 cosmology
+     paper). Included the acoustic scale in the drag epoch r_s(z_d) as a model
+     function, with this kinematic models can use some BAO data fitting
+     r_s(z_d).
+
+ * Updated to glib 2.36, g_type_init no longer required. Added macros for testing
+     for older versions.
+
+ * Baryonic density (Omega_b) Gaussian prior from Big Bang Nucleosynthesis (BBN)
+     was implemented.
+
+     Created functions which return bryonic, cold dark matter and radiation
+     densities times h^2 (Omega_b * h^2, Omega_c * h^2 and Omega_r * h^2,
+     respectively).
+
+     Fixed prior_add_function which keeps a reference to NcmMSetFunc.
+
+     Added BBN Omega_b * h2 prior in darkenergy.
+
+     Completed NcClusterMassBensonXRay implementation.
+
+     Bug fixed: 6th argument of fits_read_col and fits_write_col were fixed
+     (multiplied by number of 'repeat') in nc_data_cluster_ncount_catalog_load
+     and nc_data_cluster_ncount_catalog_save functions, respectively.
+
+     Adapted NcClusterMassBenson according to SPT code (Reichardt).
+
+ * Fixed bug: _ncm_data_gauss_resample now correctly uses the lower diagonal of
+     the Cholesky decomposition.
+
+ * File nc_data_cmb_dist_priors.c was documented.
+
+ * Included WMAP 9 year distance priors.
+
+ * Splitting namespace in NumCosmo and NumCosmoMath.
+
+     Bindings divided for each namespace. Updated examples to new namespaces. 
+     Fixed conditional vapi building. Added new gdarkenergy program: gnome
+     interface to
+      darkenergy written in vala. Fixed missing headers in installation. Changed
+     test_ncm_sparam to use g_assert instead of g_test_fail. Added
+     ncm_assert_cmpdouble to compare doubles. Modified in all tests. Added
+     conditional (now it checks for glib >= 2.30) tests for serialization. Fixed
+     wrong usage of g_variant_builder_.
+
+     Changed non-constructors functions with _new in their names
+      to _create. This avoids binding these functions as constructors.
+
+ * Testing.
+
+ * Improving documentation, removed old files and fixed msg in autogen.sh.
+
+ * Improvements to allow better bindings.
+
+     Created a boxed object NcmLHRatio2dRegion to describe a single
+      confidence region.
+
+     Fixed bug in NcmLHRatio2d: now it test to see if the parameter was
+      fitted before proceding.
+
+     New example in python: examples/example_rg_snia_bao.py
+
+     Fixed messages in examples.
+
+ * Better code for prereq finding during configure.
+
+ * Copied the values of the magnitude from NcSNIaDistCovt to NcDataSNIaCov.
+
+     This allows correct generation of mock catalogs.
+
+ * Testing SPT fitting.
+
  * New example: simple SN Ia model fitting.
 
  * Fixed g-ir-scanner sources argument.

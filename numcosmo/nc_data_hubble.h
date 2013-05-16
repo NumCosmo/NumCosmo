@@ -44,8 +44,9 @@ typedef struct _NcDataHubble NcDataHubble;
 
 /**
  * NcDataHubbleId:
- * @NC_DATA_HUBBLE_VERDE: FIXME
+ * @NC_DATA_HUBBLE_SIMON2005: FIXME
  * @NC_DATA_HUBBLE_CABRE: FIXME
+ * @NC_DATA_HUBBLE_STERN2009: FIXME
  *
  * FIXME
  */

@@ -1,9 +1,10 @@
 #!/usr/bin/python2
 
 from math import *
+from gi.repository import GObject
+import matplotlib.pyplot as plt
 from gi.repository import NumCosmo as Nc
 from gi.repository import NumCosmoMath as Ncm
-import matplotlib.pyplot as plt
 
 #
 #  Initializing the library objects, this must be called before 
