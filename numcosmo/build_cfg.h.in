@@ -35,6 +35,7 @@
 @have_sqlite3_support@
 @have_nlopt_support@
 @have_atlas_support@
+@have_lapack_support@
 @have_clapack_support@
 
 @have_inline_support@

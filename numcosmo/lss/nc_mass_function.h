@@ -92,6 +92,8 @@ NcMassFunction *nc_mass_function_copy (NcMassFunction *mfp);
 void nc_mass_function_free (NcMassFunction *mfp);
 void nc_mass_function_clear (NcMassFunction **mfp);
 
+void nc_mass_function_set_area (NcMassFunction *mfp, gdouble area);
+void nc_mass_function_set_area_sd (NcMassFunction *mfp, gdouble area_sd);
 void nc_mass_function_set_eval_limits (NcMassFunction *mfp, NcHICosmo *model, gdouble lnMi, gdouble lnMf, gdouble zi, gdouble zf);
 void nc_mass_function_prepare (NcMassFunction *mfp, NcHICosmo *model);
 G_INLINE_FUNC void nc_mass_function_prepare_if_needed (NcMassFunction *mfp, NcHICosmo *model);

@@ -72,6 +72,11 @@ dnl AC_DISABLE_SHARED
 LT_INIT
 
 dnl ***************************************************************************
+dnl Makefile.decl variable dependency (here glib_native_win32 is null)
+dnl ***************************************************************************
+AM_CONDITIONAL(OS_UNIX, [test "$glib_native_win32" != "yes"])
+
+dnl ***************************************************************************
 dnl Check for vapigen
 dnl ***************************************************************************
 AC_PATH_PROG(VAPIGEN, vapigen, [no])
@@ -331,9 +336,6 @@ AC_CHECK_FUNC([cblas_dgemm], [], [have_atlas_cblas='no'])
 AC_CHECK_LIB([$ATLAS_BLAS], [dgemv_],, [have_atlas_blas='no'])
 AC_CHECK_FUNC([dgemm_], [], [have_atlas_blas='no'])
 
-AC_CHECK_LIB([$ATLAS_LAPACK], [clapack_sgesv],,[have_clapack='no'])
-AC_CHECK_FUNC([sgesv_], [], [have_lapack='no'])
-
 if test "x$have_atlas_cblas" != "xno"; then
   GSL_LIBS=`echo $GSL_LIBS | sed 's/\-lgslcblas//g'`
   have_atlas_support="#define NUMCOSMO_HAVE_ATLAS 1"
@@ -342,11 +344,31 @@ else
 fi
 AC_SUBST(have_atlas_support)
 
-if test "x$have_clapack" != "xno"; then
-  GSL_LIBS=`echo $GSL_LIBS | sed 's/\-lgslcblas//g'`
-  have_clapack_support="#define NUMCOSMO_HAVE_LAPACK 1"
+dnl ***************************************************************************
+dnl Check for clapack
+dnl ***************************************************************************
+
+AC_CHECK_LIB([$ATLAS_LAPACK], [sgesv_],,[have_lapack='no'])
+
+if test "x$have_lapack" != "xno"; then
+  have_lapack_support="#define NUMCOSMO_HAVE_LAPACK 1"
   AC_DEFINE([HAVE_LAPACK], [1], [use lapack functions])
   AC_SUBST(HAVE_LAPACK)  
+else
+  have_lapack_support=""
+fi
+AC_SUBST(have_lapack_support)
+
+dnl ***************************************************************************
+dnl Check for clapack
+dnl ***************************************************************************
+
+AC_CHECK_FUNC([clapack_sgesv], [], [have_clapack='no'])
+
+if test "x$have_clapack" != "xno"; then
+  have_clapack_support="#define NUMCOSMO_HAVE_CLAPACK 1"
+  AC_DEFINE([HAVE_CLAPACK], [1], [use lapack functions])
+  AC_SUBST(HAVE_CLAPACK)  
 else
   have_clapack_support=""
 fi
@@ -542,11 +564,17 @@ else
        echo "Building  with Atlas support: ....................................NO"
        echo "        Requires ATLAS - Automatically Tuned Linear Algebra Software"
 fi
-if [ test "x$have_clapack_support" != x ]; then
+if [ test "x$have_lapack_support" != x ]; then
        echo "Building with Lapack support: ...................................YES"
 else
        echo "Building  with Lapack support: ...................................NO"
        echo "        Requires Lapack Linear Algebra PACKage"
+fi
+if [ test "x$have_clapack_support" != x ]; then
+       echo "Building with C - Lapack support: ...............................YES"
+else
+       echo "Building  with C - Lapack support: ...............................NO"
+       echo "        Requires C - Lapack Linear Algebra PACKage"
 fi
 if [ test "x$have_levmar_support" != x ]; then
        echo "Building with levmar support: ...................................YES"

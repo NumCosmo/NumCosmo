@@ -1,6 +1,5 @@
 ## Process this file with automake to produce Makefile.in
-
-## Created by Anjuta
+include $(top_srcdir)/Makefile.decl
 
 AM_CFLAGS = \
 	 -Wall \

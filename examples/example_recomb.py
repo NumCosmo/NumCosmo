@@ -1,9 +1,10 @@
 #!/usr/bin/python2
 
 from math import *
+from gi.repository import GObject
+import matplotlib.pyplot as plt
 from gi.repository import NumCosmo as Nc
 from gi.repository import NumCosmoMath as Ncm
-import matplotlib.pyplot as plt
 
 #
 #  Initializing the library objects, this must be called before 
@@ -87,7 +88,7 @@ for i in range (10000):
 #  Ploting ionization history.
 #
 
-plt.title ("Ionization history")
+plt.title ("Ionization History")
 plt.xscale('log')
 plt.plot (x_a, Xe_a, 'r', label="Recombination")
 plt.plot (x_a, Xefi_a, 'b--', label="Equilibrium")
@@ -105,7 +106,7 @@ plt.clf ()
 #  Ploting visibility function and derivatives.
 #
 
-plt.title ("Visibility function and derivatives")
+plt.title ("Visibility Function and Derivatives")
 plt.xscale('log')
 plt.plot (x_a, v_tau_a, 'r', label=r'$v_\tau$')
 plt.plot (x_a, dv_tau_dlambda_a, 'b-', label=r'$\frac{1}{10}\frac{dv_\tau}{d\lambda}$')

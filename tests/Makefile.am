@@ -1,4 +1,5 @@
 ## Process this file with automake to produce Makefile.in
+include $(top_srcdir)/Makefile.decl
 
 AM_CFLAGS = -Wall \
 	$(GLIB_CFLAGS) \
@@ -59,6 +60,7 @@ check_PROGRAMS =  \
 	test_nc_galaxy_acf            \
 	test_nc_recomb
 
+# TEST_PROGS += $(check_PROGRAMS)
 
 test_ncm_sparam_LDADD = $(top_builddir)/numcosmo/libnumcosmo.la 
 
@@ -85,5 +87,3 @@ test_nc_galaxy_acf_LDADD = $(top_builddir)/numcosmo/libnumcosmo.la
 test_nc_recomb_LDADD = $(top_builddir)/numcosmo/libnumcosmo.la 
 
 TESTS = $(check_PROGRAMS)
-
-
