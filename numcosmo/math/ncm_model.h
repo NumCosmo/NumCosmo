@@ -57,7 +57,7 @@ struct _NcmModelClass
   NcmModelID model_id;
   gchar *name;
   gchar *nick;
-  gulong impl;
+  guint64 impl;
   guint nonparam_prop_len;
   guint sparam_len;
   guint vparam_len;
@@ -85,7 +85,7 @@ struct _NcmModel
   GArray *ptypes;
   GHashTable *sparams_name_id;
   guint total_len;
-  gulong pkey;
+  guint64 pkey;
 };
 
 typedef gdouble (*NcmModelFunc0) (NcmModel *model);
@@ -112,7 +112,7 @@ gboolean ncm_model_is_equal (NcmModel *model1, NcmModel *model2);
 G_INLINE_FUNC NcmModel *ncm_model_ref (NcmModel *model);
 G_INLINE_FUNC NcmModelID ncm_model_id (NcmModel *model);
 G_INLINE_FUNC NcmModelID ncm_model_id_by_type (GType model_type);
-G_INLINE_FUNC gulong ncm_model_impl (NcmModel *model);
+G_INLINE_FUNC guint64 ncm_model_impl (NcmModel *model);
 G_INLINE_FUNC guint ncm_model_len (NcmModel *model);
 G_INLINE_FUNC guint ncm_model_sparam_len (NcmModel *model);
 G_INLINE_FUNC guint ncm_model_vparam_array_len (NcmModel *model);
@@ -232,7 +232,7 @@ ncm_model_id_by_type (GType model_type)
   }
 }
 
-G_INLINE_FUNC gulong
+G_INLINE_FUNC guint64
 ncm_model_impl (NcmModel *model)
 {
   return NCM_MODEL_GET_CLASS (model)->impl;

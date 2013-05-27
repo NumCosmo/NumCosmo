@@ -65,12 +65,16 @@ nc_data_bao_create (NcDistance *dist, NcDataBaoId id)
     case NC_DATA_BAO_DV_EISENSTEIN2005:
       return nc_data_bao_dv_new (dist, id);
       break;
-    case NC_DATA_BAO_DVDV_START:
-    case NC_DATA_BAO_DVDV_END:
+    case NC_DATA_BAO_DVDV_PERCIVAL2007:
+    case NC_DATA_BAO_DVDV_PERCIVAL2010:
       return nc_data_bao_dvdv_new (dist, id);
       break;
-    case NC_DATA_BAO_RDV_START:
-    case NC_DATA_BAO_RDV_END:
+    case NC_DATA_BAO_RDV_PERCIVAL2007:
+    case NC_DATA_BAO_RDV_PERCIVAL2010:
+    case NC_DATA_BAO_RDV_BEUTLER2011:
+    case NC_DATA_BAO_RDV_PADMANABHAN2012:
+    case NC_DATA_BAO_RDV_ANDERSON2012:
+    case NC_DATA_BAO_RDV_BLAKE2012:
       return nc_data_bao_rdv_new (dist, id);
       break;
     default:

@@ -253,7 +253,7 @@ nc_data_bao_rdv_get_size (NcDataBaoRDV *bao_rdv)
 
 
 /***************************************************************************
- * BAO Percival/Eisenstein priors data (arXiv:0705.3323)
+ * BAO Percival priors data (arXiv:0705.3323)
  *
  ****************************************************************************/
 
@@ -273,6 +273,47 @@ static gdouble nc_bao_distance_priors_percival2010_inv_cov[][2] =
   {-17227.0,  86977.0} 
 };
 
+/***************************************************************************
+ * BAO 6dFGRS Beutler et al. (2011)
+ ****************************************************************************/
+static gdouble nc_bao_distance_priors_beutler2011_z[]       = {   0.1 };
+static gdouble nc_bao_distance_priors_beutler2011_bestfit[] = { 0.336 };
+static gdouble nc_bao_distance_priors_beutler2011_inv_cov[][1] =
+{ 
+  { 1.0 / (0.015 * 0.015) }, 
+};
+
+/***************************************************************************
+ * BAO SDSS-DR7-rec Padmanabhan et al. (2012)
+ ****************************************************************************/
+static gdouble nc_bao_distance_priors_padmanabhan2012_z[]       = {  0.35 };
+static gdouble nc_bao_distance_priors_padmanabhan2012_bestfit[] = { 1.0 / 8.88 };
+static gdouble nc_bao_distance_priors_padmanabhan2012_inv_cov[][1] =
+{ 
+  { (8.88 * 8.88 * 8.88 * 8.88) / (0.17 * 0.17) },
+};
+
+/***************************************************************************
+ * BAO SDSS-DR9-rec Anderson et al. (2012)
+ ****************************************************************************/
+static gdouble nc_bao_distance_priors_anderson2012_z[]       = {  0.57 };
+static gdouble nc_bao_distance_priors_anderson2012_bestfit[] = { 1.0 / 13.67 };
+static gdouble nc_bao_distance_priors_anderson2012_inv_cov[][1] =
+{ 
+  { (13.67 * 13.67 * 13.67 * 13.67) / (0.22 * 0.22) },
+};
+
+/***************************************************************************
+ * BAO WiggleZ Blake et al. (2012)
+ ****************************************************************************/
+static gdouble nc_bao_distance_priors_blake2012_z[]       = {   0.44,   0.60,   0.73 };
+static gdouble nc_bao_distance_priors_blake2012_bestfit[] = { 0.0916, 0.0726, 0.0592 };
+static gdouble nc_bao_distance_priors_blake2012_inv_cov[][3] =
+{ 
+  {  24532.1, -25137.7,  12099.1 },
+  { -25137.7, 134598.4, -64783.9 },
+  {  12099.1, -64783.9, 128837.6 },
+};
 
 /**
  * nc_data_bao_rdv_set_sample:
@@ -289,7 +330,7 @@ nc_data_bao_rdv_set_sample (NcDataBaoRDV *bao_rdv, NcDataBaoId id)
   NcmDataGauss *gauss = NCM_DATA_GAUSS (bao_rdv);
   gint i, j;
   
-  g_assert (id >= NC_DATA_BAO_RDV_START && id <= NC_DATA_BAO_RDV_END);
+  g_assert (id >= NC_DATA_BAO_RDV_PERCIVAL2007 && id <= NC_DATA_BAO_RDV_BLAKE2012);
 
   if (data->desc != NULL)
     g_free (data->desc);
@@ -323,6 +364,66 @@ nc_data_bao_rdv_set_sample (NcDataBaoRDV *bao_rdv, NcDataBaoId id)
         for (j = 0; j < 2; j++)
           ncm_matrix_set (gauss->inv_cov, i, j, 
                           nc_bao_distance_priors_percival2010_inv_cov[i][j]);
+      }
+      break;
+    }
+    case NC_DATA_BAO_RDV_BEUTLER2011:
+    {
+      data->desc = g_strdup ("6dFGRS -- Beutler (2011), BAO Sample R-Dv");
+      nc_data_bao_rdv_set_size (bao_rdv, 1);
+
+      for (i = 0; i < 1; i++)
+      {
+        ncm_vector_set (bao_rdv->x, i, nc_bao_distance_priors_beutler2011_z[i]);
+        ncm_vector_set (gauss->y,   i, nc_bao_distance_priors_beutler2011_bestfit[i]);
+        for (j = 0; j < 1; j++)
+          ncm_matrix_set (gauss->inv_cov, i, j, 
+                          nc_bao_distance_priors_beutler2011_inv_cov[i][j]);
+      }
+      break;
+    }
+    case NC_DATA_BAO_RDV_PADMANABHAN2012:
+    {
+      data->desc = g_strdup ("SDSS-DR7-rec -- Padmanabhan (2012), BAO Sample R-Dv");
+      nc_data_bao_rdv_set_size (bao_rdv, 1);
+
+      for (i = 0; i < 1; i++)
+      {
+        ncm_vector_set (bao_rdv->x, i, nc_bao_distance_priors_padmanabhan2012_z[i]);
+        ncm_vector_set (gauss->y,   i, nc_bao_distance_priors_padmanabhan2012_bestfit[i]);
+        for (j = 0; j < 1; j++)
+          ncm_matrix_set (gauss->inv_cov, i, j, 
+                          nc_bao_distance_priors_padmanabhan2012_inv_cov[i][j]);
+      }
+      break;
+    }
+    case NC_DATA_BAO_RDV_ANDERSON2012:
+    {
+      data->desc = g_strdup ("SDSS-DR9-rec -- Anderson (2012), BAO Sample R-Dv");
+      nc_data_bao_rdv_set_size (bao_rdv, 1);
+
+      for (i = 0; i < 1; i++)
+      {
+        ncm_vector_set (bao_rdv->x, i, nc_bao_distance_priors_anderson2012_z[i]);
+        ncm_vector_set (gauss->y,   i, nc_bao_distance_priors_anderson2012_bestfit[i]);
+        for (j = 0; j < 1; j++)
+          ncm_matrix_set (gauss->inv_cov, i, j, 
+                          nc_bao_distance_priors_anderson2012_inv_cov[i][j]);
+      }
+      break;
+    }
+    case NC_DATA_BAO_RDV_BLAKE2012:
+    {
+      data->desc = g_strdup ("WiggleZ -- Blake (2012), BAO Sample R-Dv");
+      nc_data_bao_rdv_set_size (bao_rdv, 3);
+
+      for (i = 0; i < 3; i++)
+      {
+        ncm_vector_set (bao_rdv->x, i, nc_bao_distance_priors_blake2012_z[i]);
+        ncm_vector_set (gauss->y,   i, nc_bao_distance_priors_blake2012_bestfit[i]);
+        for (j = 0; j < 3; j++)
+          ncm_matrix_set (gauss->inv_cov, i, j, 
+                          nc_bao_distance_priors_blake2012_inv_cov[i][j]);
       }
       break;
     }

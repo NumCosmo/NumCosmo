@@ -44,16 +44,18 @@ typedef struct _NcDataHubble NcDataHubble;
 
 /**
  * NcDataHubbleId:
- * @NC_DATA_HUBBLE_VERDE: FIXME
+ * @NC_DATA_HUBBLE_SIMON2005: FIXME
  * @NC_DATA_HUBBLE_CABRE: FIXME
+ * @NC_DATA_HUBBLE_STERN2009: FIXME
  *
  * FIXME
  */
 typedef enum _NcDataHubbleId
 {
-  NC_DATA_HUBBLE_VERDE = 0,
-  NC_DATA_HUBBLE_CABRE,    /*< private >*/
-  NC_DATA_HUBBLE_NSAMPLES, /*< skip >*/
+  NC_DATA_HUBBLE_SIMON2005 = 0,
+  NC_DATA_HUBBLE_CABRE,
+  NC_DATA_HUBBLE_STERN2009, /*< private >*/
+  NC_DATA_HUBBLE_NSAMPLES,  /*< skip >*/
 } NcDataHubbleId;
 
 struct _NcDataHubbleClass

@@ -840,7 +840,7 @@ nc_distance_dilation_scale (NcDistance *dist, NcHICosmo *cosmo, gdouble z)
  * @cosmo: a #NcHICosmo.
  * @z: the redshift $z$.
  *
- * Bao 'A' scaleD_v(z) sqrt(Omega_m) / z -- (arXiv:astro-ph/0501171)
+ * Bao 'A' scale D_v(z) sqrt(Omega_m) / z -- (arXiv:astro-ph/0501171)
  *
  * Returns: FIXME
  */
@@ -865,14 +865,19 @@ nc_distance_bao_A_scale (NcDistance *dist, NcHICosmo *cosmo, gdouble z)
 gdouble
 nc_distance_bao_r_Dv (NcDistance *dist, NcHICosmo *cosmo, gdouble z)
 {
-  gdouble zd = nc_distance_drag_redshift (dist, cosmo);
   gdouble r_zd;
   gdouble Dv;
 
-  if (!gsl_finite (zd))
-    return GSL_NAN;
+  if (ncm_model_impl (NCM_MODEL (cosmo)) & NC_HICOSMO_IMPL_as_drag)
+    r_zd = nc_hicosmo_as_drag (cosmo);
+  else
+  {
+    gdouble zd = nc_distance_drag_redshift (dist, cosmo);
+    if (!gsl_finite (zd))
+      return GSL_NAN;
+    r_zd = nc_distance_sound_horizon (dist, cosmo, zd);
+  }
 
-  r_zd = nc_distance_sound_horizon (dist, cosmo, zd);
   Dv = nc_distance_dilation_scale (dist, cosmo, z);
   return r_zd / Dv;
 }

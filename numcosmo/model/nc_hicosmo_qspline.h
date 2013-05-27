@@ -46,12 +46,14 @@ typedef struct _NcHICosmoQSpline NcHICosmoQSpline;
  * NcHICosmoQSplineSParams:
  * @NC_HICOSMO_QSPLINE_H0: FIXME
  * @NC_HICOSMO_QSPLINE_OMEGA_T: FIXME
+ * @NC_HICOSMO_QSPLINE_AS_DRAG: FIXME
  *
  */
 typedef enum _NcHICosmoQSplineSParams
 {
   NC_HICOSMO_QSPLINE_H0 = 0,
-  NC_HICOSMO_QSPLINE_OMEGA_T,    /*< private >*/
+  NC_HICOSMO_QSPLINE_OMEGA_T,    
+  NC_HICOSMO_QSPLINE_AS_DRAG,    /*< private >*/
   NC_HICOSMO_QSPLINE_SPARAM_LEN, /*< skip >*/
 } NcHICosmoQSplineSParams;
 
@@ -68,6 +70,7 @@ typedef enum _NcHICosmoQSplineVParams
 
 #define NC_HICOSMO_QSPLINE_DEFAULT_H0      ncm_c_hubble_cte_wmap ()
 #define NC_HICOSMO_QSPLINE_DEFAULT_OMEGA_T ( 1.0)
+#define NC_HICOSMO_QSPLINE_DEFAULT_AS_DRAG ( 0.035)
 #define NC_HICOSMO_QSPLINE_DEFAULT_Q       (-0.5)
 #define NC_HICOSMO_QSPLINE_DEFAULT_Q_LEN      (6)
 

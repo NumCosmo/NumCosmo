@@ -47,7 +47,8 @@ enum
   PROP_DISTANCE,
   PROP_MATTER_VAR,
   PROP_GROWTH,
-  PROP_MULTIPLICITY
+  PROP_MULTIPLICITY,
+  PROP_AREA,
 };
 
 G_DEFINE_TYPE (NcMassFunction, nc_mass_function, G_TYPE_OBJECT);
@@ -176,6 +177,9 @@ _nc_mass_function_set_property (GObject *object, guint prop_id, const GValue *va
     case PROP_MULTIPLICITY:
       mfp->mulf = g_value_dup_object (value);
       break;
+    case PROP_AREA:
+      nc_mass_function_set_area (mfp, g_value_get_double (value));
+      break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
       break;
@@ -201,6 +205,9 @@ _nc_mass_function_get_property (GObject *object, guint prop_id, GValue *value, G
       break;
     case PROP_MULTIPLICITY:
       g_value_set_object (value, mfp->mulf);
+      break;
+    case PROP_AREA:
+      g_value_set_double (value, mfp->area_survey);
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -272,6 +279,21 @@ nc_mass_function_class_init (NcMassFunctionClass *klass)
                                                         NC_TYPE_MULTIPLICITY_FUNC,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME
                                                         | G_PARAM_STATIC_BLURB));
+
+  /**
+   * NcMassFunction:area:
+   *
+   * This property sets the angular area in steradian.
+   */
+  g_object_class_install_property (object_class,
+                                   PROP_AREA,
+                                   g_param_spec_double ("area",
+                                                        NULL,
+                                                        "Angular area in steradian",
+                                                        0.0, 4.0 * M_PI, 200.0 * M_PI * M_PI / (180.0 * 180.0),
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME
+                                                        | G_PARAM_STATIC_BLURB));
+
 
 }
 
@@ -504,6 +526,39 @@ nc_mass_function_dv_dzdomega (NcMassFunction *mfp, NcHICosmo *model, gdouble z)
 }
 
 static void _nc_mass_function_generate_2Dspline_knots (NcMassFunction *mfp, NcHICosmo *model, gdouble rel_error);
+
+/**
+ * nc_mass_function_set_area:
+ * @mfp: a #NcMassFunction.
+ * @area: area in steradian.
+ *
+ * FIXME
+ *
+ */
+void
+nc_mass_function_set_area (NcMassFunction *mfp, gdouble area)
+{
+  if (mfp->area_survey != area)
+  {
+    mfp->area_survey = area;
+    ncm_spline2d_clear (&mfp->d2NdzdlnM);
+  }
+}
+
+/**
+ * nc_mass_function_set_area_sd:
+ * @mfp: a #NcMassFunction.
+ * @area_sd: area in square degree.
+ *
+ * FIXME
+ *
+ */
+void
+nc_mass_function_set_area_sd (NcMassFunction *mfp, gdouble area_sd)
+{
+  const gdouble conversion_factor = M_PI * M_PI / (180.0 * 180.0);
+  nc_mass_function_set_area (mfp, area_sd * conversion_factor);
+}
 
 /**
  * nc_mass_function_set_eval_limits:

@@ -210,7 +210,7 @@ nc_data_bao_dvdv_set_sample (NcDataBaoDVDV *bao_dvdv, NcDataBaoId id)
   NcmData *data = NCM_DATA (bao_dvdv);
   NcmDataGaussDiag *diag = NCM_DATA_GAUSS_DIAG (bao_dvdv);
 
-  g_assert (id >= NC_DATA_BAO_DVDV_START && id <= NC_DATA_BAO_DVDV_START);
+  g_assert (id >= NC_DATA_BAO_DVDV_PERCIVAL2007 && id <= NC_DATA_BAO_DVDV_PERCIVAL2010);
 
   if (data->desc != NULL)
     g_free (data->desc);

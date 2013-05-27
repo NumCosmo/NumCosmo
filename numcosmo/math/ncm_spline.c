@@ -94,8 +94,8 @@ ncm_spline_new (const NcmSpline *s, NcmVector *xv, NcmVector *yv, gboolean init)
 /**
  * ncm_spline_new_array:
  * @s: a constant #NcmSpline.
- * @x: GArray of knots.
- * @y: GArray of the values of the function, to be interpolated, computed at @x.
+ * @x: (element-type double): GArray of knots.
+ * @y: (element-type double): GArray of the values of the function, to be interpolated, computed at @x.
  * @init: TRUE to prepare the new #NcmSpline or FALSE to not prepare it.
  *
  * This function returns a new #NcmSpline, where the knots of this new spline are given
@@ -153,7 +153,7 @@ ncm_spline_set (NcmSpline *s, NcmVector *xv, NcmVector *yv, gboolean init)
 	if (ncm_vector_len (xv) != ncm_vector_len (yv))
 		g_error ("ncm_spline_set: knot and function values vector has not the same size");
 	if (ncm_vector_len (xv) < NCM_SPLINE_GET_CLASS (s)->min_size (s))
-		g_error ("ncm_spline_set: min size for [%s] is %zu but vector size is %u", NCM_SPLINE_GET_CLASS (s)->name,
+		g_error ("ncm_spline_set: min size for [%s] is %zu but vector size is %u", NCM_SPLINE_GET_CLASS (s)->name (s),
 		         NCM_SPLINE_GET_CLASS (s)->min_size (s), ncm_vector_len (xv));
 
 	if (s->xv != NULL)
@@ -246,8 +246,8 @@ ncm_spline_set_yv (NcmSpline *s, NcmVector *yv, gboolean init)
 /**
  * ncm_spline_set_array:
  * @s: a #NcmSpline.
- * @x: GArray of knots.
- * @y: GArray of the values of the function, to be interpolated, computed at @x.
+ * @x: (element-type double): GArray of knots.
+ * @y: (element-type double): GArray of the values of the function, to be interpolated, computed at @x.
  * @init: TRUE to prepare @s or FALSE to not prepare it.
  *
  * This function sets @x as the knot vector and @y as the function values vector

@@ -1,3 +1,6 @@
+## Process this file with automake to produce Makefile.in
+include $(top_srcdir)/Makefile.decl
+
 SUBDIRS =
 
 examplesdir = \
@@ -5,8 +8,10 @@ examplesdir = \
 
 examples_DATA = \
 	README                 \
-	simple_example.c       \
-	simple_example.py      \
+	example_simple.c       \
+	example_ca.c           \
+	example_simple.py      \
+	example_ca.py          \
 	example_recomb.py      \
 	example_fit_snia.py    \
 	example_rg_snia_bao.py
