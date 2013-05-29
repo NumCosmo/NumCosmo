@@ -39,6 +39,12 @@
 
 #include "math/ncm_vector.h"
 
+enum
+{
+  PROP_0,
+  PROP_VALS,
+};
+
 G_DEFINE_TYPE (NcmVector, ncm_vector, G_TYPE_OBJECT);
 
 /**
@@ -682,10 +688,94 @@ ncm_vector_init (NcmVector *v)
 }
 
 static void
+_ncm_vector_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
+{
+  NcmVector *v = NCM_VECTOR (object);
+  g_return_if_fail (NCM_IS_VECTOR (object));
+
+  switch (prop_id)
+  {
+    case PROP_VALS:
+    {
+      gsize n = ncm_vector_len (v);
+      GVariantBuilder builder;
+      GVariant *var;
+      gint i;
+
+      g_variant_builder_init (&builder, G_VARIANT_TYPE ("ad"));
+      for (i = 0; i < n; i++)
+      {
+	const gdouble val = ncm_vector_get (v, i);
+        g_variant_builder_add (&builder, "d", val);
+      }
+      var = g_variant_builder_end (&builder);
+      g_variant_ref_sink (var);
+      g_value_take_variant (value, var);
+      break;
+    }
+    default:
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
+      break;
+  }
+}
+
+static void
+_ncm_vector_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
+{
+  NcmVector *v = NCM_VECTOR (object);
+  g_return_if_fail (NCM_IS_VECTOR (object));
+
+  switch (prop_id)
+  {
+    case PROP_VALS:
+    {
+      GVariant *var = g_value_get_variant (value);
+      gsize n = g_variant_n_children (var);
+      gint i;
+
+      if (ncm_vector_len (v) == 0)
+      {
+        gdouble *d = g_slice_alloc (sizeof (gdouble) * n);
+	v->vv = gsl_vector_view_array (d, n);
+        v->a = NULL;
+        v->pobj = NULL;
+        v->type = NCM_VECTOR_SLICE; 
+      }
+      else if (n != ncm_vector_len (v))
+        g_error ("set_property: cannot set vector values, variant contains %zu childs but vector dimension is %u", n, ncm_vector_len (v));
+
+      if (g_variant_is_of_type (var, G_VARIANT_TYPE ("ad")))
+      {
+        for (i = 0; i < n; i++)
+        {
+          gdouble val = 0.0;
+          g_variant_get_child (var, i, "d", &val);
+          ncm_vector_set (v, i, val);
+        }
+      }
+      else
+        g_error ("set_property: Cannot convert `%s' variant to an array of doubles", g_variant_get_type_string (var));
+      break;
+    }
+    default:
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
+      break;
+  }
+}
+
+
+static void
 ncm_vector_class_init (NcmVectorClass *klass)
 {
   GObjectClass *object_class = G_OBJECT_CLASS (klass);
-
+  object_class->set_property = &_ncm_vector_set_property;
+  object_class->get_property = &_ncm_vector_get_property;
   object_class->dispose = &_ncm_vector_dispose;
   object_class->finalize = &_ncm_vector_finalize;
+
+  g_object_class_install_property (object_class, PROP_VALS,
+                                   g_param_spec_variant ("values", NULL, "values",
+                                                         G_VARIANT_TYPE_ARRAY, NULL,
+                                                         G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
 }

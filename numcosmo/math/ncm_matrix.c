@@ -46,6 +46,12 @@
 #include <gsl/gsl_linalg.h>
 #endif
 
+enum
+{
+  PROP_0,
+  PROP_VALS,
+};
+
 G_DEFINE_TYPE (NcmMatrix, ncm_matrix, G_TYPE_OBJECT);
 
 /**
@@ -576,9 +582,105 @@ ncm_matrix_init (NcmMatrix *m)
 }
 
 static void
+_ncm_matrix_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
+{
+  NcmMatrix *m = NCM_MATRIX (object);
+  g_return_if_fail (NCM_IS_MATRIX (object));
+
+  switch (prop_id)
+  {
+    case PROP_VALS:
+    {
+      gsize nrows = NCM_MATRIX_NROWS (m);
+      gsize ncols = NCM_MATRIX_NCOLS (m);
+      GVariant *var;
+      GVariant **row_i_vals = g_new (GVariant *, ncols);
+      GVariant **rows = g_new (GVariant *, nrows);
+      gint i, j;
+
+      for (i = 0; i < nrows; i++)
+      {
+	for (j = 0; j < ncols; j++)
+	{
+	  row_i_vals[j] = g_variant_new_double (ncm_matrix_get (m, i, j));
+	}
+	rows[i] = g_variant_new_array (G_VARIANT_TYPE ("d"), row_i_vals, ncols);
+      }
+      var = g_variant_new_array (G_VARIANT_TYPE ("ad"), rows, nrows);
+      g_free (row_i_vals);
+      g_free (rows);
+      g_variant_ref_sink (var);
+      g_value_take_variant (value, var);
+      break;
+    }
+    default:
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
+      break;
+  }
+}
+
+static void
+_ncm_matrix_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
+{
+  NcmMatrix *m = NCM_MATRIX (object);
+  g_return_if_fail (NCM_IS_MATRIX (object));
+
+  switch (prop_id)
+  {
+    case PROP_VALS:
+    {
+      GVariant *var = g_value_get_variant (value);
+      GVariant *row = g_variant_get_child_value (var, 0);
+      gsize nrows = g_variant_n_children (var);
+      gsize ncols = g_variant_n_children (row);
+      gint i, j;
+      if (!g_variant_is_of_type (row, G_VARIANT_TYPE ("ad")))
+      {
+        g_error ("set_property: Cannot convert `%s' variant to an array of doubles", g_variant_get_type_string (var));
+        break;
+      }
+      g_variant_unref (row);
+
+      if ((NCM_MATRIX_NROWS (m) == 0) && (NCM_MATRIX_NCOLS (m) == 0))
+      {
+        gdouble *d = g_slice_alloc (sizeof (gdouble) * nrows * ncols);
+        m->mv = gsl_matrix_view_array (d, nrows, ncols);
+        m->type = NCM_MATRIX_SLICE;
+      }
+      else if (nrows != NCM_MATRIX_NROWS (m) || ncols != NCM_MATRIX_NCOLS (m))
+        g_error ("set_property: cannot set matrix values, variant contains (%zu, %zu) childs but matrix dimension is (%zu, %zu)", nrows, ncols, NCM_MATRIX_NROWS (m), NCM_MATRIX_NCOLS (m));
+
+      for (i = 0; i < nrows; i++)
+      {
+	row = g_variant_get_child_value (var, i);
+        for (j = 0; j < ncols; j++)
+        {
+          gdouble val = 0.0;
+          g_variant_get_child (row, j, "d", &val);
+          ncm_matrix_set (m, i, j, val);
+        }
+	g_variant_unref (row);
+      }
+      break;
+    }
+    default:
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
+      break;
+  }
+}
+
+static void
 ncm_matrix_class_init (NcmMatrixClass *klass)
 {
   GObjectClass* object_class = G_OBJECT_CLASS (klass);
-  object_class->dispose = &_ncm_matrix_dispose;
-  object_class->finalize = &_ncm_matrix_finalize;
+
+  object_class->set_property = &_ncm_matrix_set_property;
+  object_class->get_property = &_ncm_matrix_get_property;
+  object_class->dispose      = &_ncm_matrix_dispose;
+  object_class->finalize     = &_ncm_matrix_finalize;
+
+  g_object_class_install_property (object_class, PROP_VALS,
+                                   g_param_spec_variant ("values", NULL, "values",
+                                                         G_VARIANT_TYPE_ARRAY, NULL,
+                                                         G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 }
