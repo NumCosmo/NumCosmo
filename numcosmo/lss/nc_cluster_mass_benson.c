@@ -255,7 +255,7 @@ _nc_cluster_mass_benson_resample (NcClusterMass *clusterm, NcHICosmo *model, gdo
       xi_mean = _nc_cluster_mass_benson_xi_mean (zeta_obs);
       xi[0] = xi_mean + gsl_ran_gaussian (rng, 1.0);
 
-//    printf("M = %e z = %.5g zeta = %.5g xi = %.5g xiobs = %.5g | xiobs_min = %.5g\n", exp(lnM), z, zeta_obs, xi_mean, xi[0], msz->signif_obs_min);
+      //printf("M = %e z = %.5g zeta = %.5g xi = %.5g xiobs = %.5g | xiobs_min = %.5g\n", exp(lnM), z, zeta_obs, xi_mean, xi[0], msz->signif_obs_min);
 
       return (xi[0] >= msz->signif_obs_min);
     }
@@ -286,11 +286,11 @@ _nc_cluster_mass_benson_p_limits (NcClusterMass *clusterm, NcHICosmo *model, gdo
 {
   NcClusterMassBenson *msz = NC_CLUSTER_MASS_BENSON (clusterm);
   const gdouble xil = GSL_MAX (xi[0] - 7.0, msz->signif_obs_min);
-  const gdouble zetal = _significance_to_zeta (clusterm, model, 2.0, xil) - 27.0 * D_SZ;
+  const gdouble zetal = _significance_to_zeta (clusterm, model, 2.0, xil) - 7.0 * D_SZ;
   const gdouble lnMl = GSL_MAX (_zeta_to_mass (clusterm, model, 2.0, zetal), log (NC_CLUSTER_MASS_BENSON_M_LOWER_BOUND));
 
-  const gdouble xiu = xi[0] + 27.0;
-  const gdouble zetau = _significance_to_zeta (clusterm, model, 0.0, xiu) + 27.0 * D_SZ;
+  const gdouble xiu = xi[0] + 7.0;
+  const gdouble zetau = _significance_to_zeta (clusterm, model, 0.0, xiu) + 7.0 * D_SZ;
   const gdouble lnMu = _zeta_to_mass (clusterm, model, 0.0, zetau);
 
   *lnM_lower = lnMl;
@@ -305,11 +305,11 @@ _nc_cluster_mass_benson_n_limits (NcClusterMass *clusterm, NcHICosmo *model, gdo
   NcClusterMassBenson *msz = NC_CLUSTER_MASS_BENSON (clusterm);
 
   const gdouble xil = msz->signif_obs_min;
-  const gdouble zetal = _significance_to_zeta (clusterm, model, 2.0, xil) - 27.0 * D_SZ;
+  const gdouble zetal = _significance_to_zeta (clusterm, model, 2.0, xil) - 7.0 * D_SZ;
   const gdouble lnMl = GSL_MAX (_zeta_to_mass (clusterm, model, 2.0, zetal), log (NC_CLUSTER_MASS_BENSON_M_LOWER_BOUND));
 
   const gdouble xiu = msz->signif_obs_max;
-  const gdouble zetau = _significance_to_zeta (clusterm, model, 0.0, xiu) + 27.0 * D_SZ;
+  const gdouble zetau = _significance_to_zeta (clusterm, model, 0.0, xiu) + 7.0 * D_SZ;
   const gdouble lnMu = _zeta_to_mass (clusterm, model, 0.0, zetau);
 
   *lnM_lower = lnMl;

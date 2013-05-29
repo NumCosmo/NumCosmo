@@ -28,7 +28,9 @@
  * @title: Baryonic Oscillation Data -- Acoustic Scale
  * @short_description: BAO acoustic scale estimator
  *
- * See <link linkend="XEisenstein2005">Eisenstein et al. (2005)</link>.
+ * The acoustic scale is defined as 
+ * $$ A \equiv D_V (z) \frac{\sqrt{\Omega_m H_0^2}}{z c}$$
+ * See Section 4.5 from <link linkend="XEisenstein2005">Eisenstein et al. (2005)</link>.
  * 
  */
 
