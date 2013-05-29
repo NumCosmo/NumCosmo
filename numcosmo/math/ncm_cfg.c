@@ -149,6 +149,9 @@ ncm_cfg_init (void)
   _log_msg_id = g_log_set_handler (G_LOG_DOMAIN, G_LOG_LEVEL_MESSAGE | G_LOG_LEVEL_DEBUG, _ncm_cfg_log_message, NULL);
   _log_stream = stdout;
 
+  ncm_cfg_register_obj (NCM_TYPE_VECTOR);
+  ncm_cfg_register_obj (NCM_TYPE_MATRIX);
+
   ncm_cfg_register_obj (NCM_TYPE_SPLINE);
   ncm_cfg_register_obj (NCM_TYPE_SPLINE_CUBIC);
   ncm_cfg_register_obj (NCM_TYPE_SPLINE_CUBIC_NOTAKNOT);

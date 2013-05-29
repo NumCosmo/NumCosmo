@@ -90,7 +90,6 @@ enum
 {
   PROP_0,
   PROP_LEN,
-  PROP_MODEL_TYPE,
 };
 
 /**
@@ -225,9 +224,6 @@ _ncm_reparam_get_property (GObject *object, guint prop_id, GValue *value, GParam
     case PROP_LEN:
       g_value_set_uint (value, reparam->length);
       break;
-    case PROP_MODEL_TYPE:
-      g_value_set_gtype (value, reparam->model_type);
-      break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
       break;
@@ -246,9 +242,6 @@ _ncm_reparam_set_property (GObject *object, guint prop_id, const GValue *value, 
     case PROP_LEN:
       reparam->length = g_value_get_uint (value);
       break;
-    case PROP_MODEL_TYPE:
-      reparam->model_type = g_value_get_gtype (value);
-      break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
       break;
@@ -258,7 +251,6 @@ _ncm_reparam_set_property (GObject *object, guint prop_id, const GValue *value, 
 static void
 ncm_reparam_init (NcmReparam *reparam)
 {
-  reparam->model_type = G_TYPE_NONE;
   reparam->length = 0;
   reparam->sparams = NULL;
   reparam->new_params = NULL;
@@ -317,14 +309,6 @@ ncm_reparam_class_init (NcmReparamClass *klass)
                                                       "System's length",
                                                       0.0, G_MAXUINT, 0.0,
                                                       G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-  g_object_class_install_property (object_class,
-                                   PROP_MODEL_TYPE,
-                                   g_param_spec_gtype ("model-type",
-                                                       NULL,
-                                                       "GType of NcmModel parent",
-                                                       NCM_TYPE_MODEL,
-                                                       G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-
 
   object_class->finalize = ncm_reparam_finalize;
 }

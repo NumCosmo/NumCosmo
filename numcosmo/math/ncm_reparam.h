@@ -80,7 +80,6 @@ struct _NcmReparam
 {
   /*< private >*/
   GObject parent_instance;
-  GType model_type;
   guint length;
   NcmVector *new_params;
   GPtrArray *sparams;

@@ -61,6 +61,7 @@ void test_ncm_vector_sanity (TestNcmVector *test, gconstpointer pdata);
 void test_ncm_vector_operations (TestNcmVector *test, gconstpointer pdata);
 void test_ncm_vector_subvector (TestNcmVector *test, gconstpointer pdata);
 void test_ncm_vector_variant (TestNcmVector *test, gconstpointer pdata);
+void test_ncm_vector_serialization (TestNcmVector *test, gconstpointer pdata);
 void test_ncm_vector_data_const_sanity (TestNcmVector *test, gconstpointer pdata);
 
 gint
@@ -92,6 +93,11 @@ main (gint argc, gchar *argv[])
               &test_ncm_vector_variant,
               &test_ncm_vector_free);
 
+  g_test_add ("/numcosmo/ncm_vector/default/serialization", TestNcmVector, NULL, 
+              &test_ncm_vector_new, 
+              &test_ncm_vector_serialization,
+              &test_ncm_vector_free);
+
   /* GSL vector allocation */
 
   g_test_add ("/numcosmo/ncm_vector/gsl/sanity", TestNcmVector, NULL, 
@@ -112,6 +118,11 @@ main (gint argc, gchar *argv[])
   g_test_add ("/numcosmo/ncm_vector/gsl/variant", TestNcmVector, NULL, 
               &test_ncm_vector_gsl_new, 
               &test_ncm_vector_variant,
+              &test_ncm_vector_gsl_free);
+
+  g_test_add ("/numcosmo/ncm_vector/gsl/serialization", TestNcmVector, NULL, 
+              &test_ncm_vector_gsl_new, 
+              &test_ncm_vector_serialization,
               &test_ncm_vector_gsl_free);
 
   /* Array vector allocation */
@@ -136,6 +147,11 @@ main (gint argc, gchar *argv[])
               &test_ncm_vector_variant,
               &test_ncm_vector_array_free);
   
+  g_test_add ("/numcosmo/ncm_vector/array/serialization", TestNcmVector, NULL, 
+              &test_ncm_vector_array_new, 
+              &test_ncm_vector_serialization,
+              &test_ncm_vector_array_free);
+
   /* Data slice vector allocation */
 
   g_test_add ("/numcosmo/ncm_vector/data_slice/sanity", TestNcmVector, NULL, 
@@ -158,6 +174,11 @@ main (gint argc, gchar *argv[])
               &test_ncm_vector_variant,
               &test_ncm_vector_data_slice_free);
   
+  g_test_add ("/numcosmo/ncm_vector/data_slice/serialization", TestNcmVector, NULL, 
+              &test_ncm_vector_data_slice_new, 
+              &test_ncm_vector_serialization,
+              &test_ncm_vector_data_slice_free);
+
   /* Data malloc vector allocation */
 
   g_test_add ("/numcosmo/ncm_vector/data_malloc/sanity", TestNcmVector, NULL, 
@@ -202,6 +223,11 @@ main (gint argc, gchar *argv[])
               &test_ncm_vector_variant,
               &test_ncm_vector_data_static_free);
 
+  g_test_add ("/numcosmo/ncm_vector/data_static/serialization", TestNcmVector, NULL, 
+              &test_ncm_vector_data_static_new, 
+              &test_ncm_vector_serialization,
+              &test_ncm_vector_data_static_free);
+
   /* Data static vector allocation */
 
   g_test_add ("/numcosmo/ncm_vector/data_const/sanity", TestNcmVector, NULL, 
@@ -213,10 +239,19 @@ main (gint argc, gchar *argv[])
 }
 
 void
+_random_fill (NcmVector *v)
+{
+  gint i;
+  for (i = 0; i < ncm_vector_len (v); i++)
+    ncm_vector_set (v, i, g_test_rand_double ());
+}
+
+void
 test_ncm_vector_new (TestNcmVector *test, gconstpointer pdata)
 {
   test->v_size = g_test_rand_int_range (_TEST_NCM_VECTOR_MIN_SIZE, _TEST_NCM_VECTOR_STATIC_SIZE);
   test->v = ncm_vector_new (test->v_size);
+  _random_fill (test->v);
 }
 
 void
@@ -239,7 +274,7 @@ test_ncm_vector_gsl_new (TestNcmVector *test, gconstpointer pdata)
   gsl_vector *gv = gsl_vector_alloc (v_size);
   NcmVector *v = test->v = ncm_vector_new_gsl (gv);
   ncm_assert_cmpdouble (ncm_vector_len (v), ==, gv->size);
-
+  _random_fill (test->v);
 }
 
 void
@@ -276,7 +311,7 @@ test_ncm_vector_array_new (TestNcmVector *test, gconstpointer pdata)
 
   g_assert (ga == ncm_vector_get_array (v));
   g_array_unref (ga);
-
+  _random_fill (test->v);
 }
 
 void
@@ -307,6 +342,7 @@ test_ncm_vector_data_slice_new (TestNcmVector *test, gconstpointer pdata)
   NcmVector *v = test->v = ncm_vector_new_data_slice (d, v_size, 1);
 
   g_assert_cmpuint (ncm_vector_len (v), ==, v_size);
+  _random_fill (test->v);
 }
 
 void
@@ -337,6 +373,7 @@ test_ncm_vector_data_malloc_new (TestNcmVector *test, gconstpointer pdata)
   NcmVector *v = test->v = ncm_vector_new_data_malloc (d, v_size, 1);
 
   g_assert_cmpuint (ncm_vector_len (v), ==, v_size);
+  _random_fill (test->v);
 }
 
 void
@@ -367,6 +404,7 @@ test_ncm_vector_data_static_new (TestNcmVector *test, gconstpointer pdata)
   NcmVector *v = test->v = ncm_vector_new_data_static (d, v_size, 1);
 
   g_assert_cmpuint (ncm_vector_len (v), ==, v_size);
+  _random_fill (test->v);
 }
 
 void
@@ -643,3 +681,28 @@ test_ncm_vector_variant (TestNcmVector *test, gconstpointer pdata)
   }
   g_test_trap_assert_failed ();
 }
+
+void
+test_ncm_vector_serialization (TestNcmVector *test, gconstpointer pdata)
+{
+  NcmVector *v = test->v;
+  gchar *vser = ncm_cfg_serialize_to_string (G_OBJECT (v), TRUE);
+  NcmVector *v_dup = NCM_VECTOR (ncm_cfg_create_from_string (vser));
+  gint i;
+  g_free (vser);
+  g_assert_cmpint (ncm_vector_len (v), ==, ncm_vector_len (v_dup));
+
+  for (i = 0; i < ncm_vector_len (v); i++)
+  {
+    ncm_assert_cmpdouble (ncm_vector_get (v, i), ==, ncm_vector_get (v_dup, i));
+  }
+
+  ncm_vector_free (v_dup);
+  if (g_test_trap_fork (0, G_TEST_TRAP_SILENCE_STDOUT | G_TEST_TRAP_SILENCE_STDERR))
+  {
+    ncm_vector_free (v_dup);
+    exit (0);
+  }
+  g_test_trap_assert_failed ();
+}
+

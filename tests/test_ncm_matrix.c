@@ -8,11 +8,11 @@
 /*
  * numcosmo
  * Copyright (C) Mariana Penna Lima 2012 <pennalima@gmail.com>
-   * numcosmo is free software: you can redistribute it and/or modify it
+ * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
-   *
+ *
  * numcosmo is distributed in the hope that it will be useful, but
  * WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
@@ -43,6 +43,7 @@ void test_ncm_matrix_operations (void);
 void test_ncm_matrix_add_mul (void);
 void test_ncm_matrix_free (void);
 void test_ncm_matrix_submatrix (void);
+void test_ncm_matrix_serialization (void);
 
 gint
 main (gint argc, gchar *argv[])
@@ -61,6 +62,7 @@ main (gint argc, gchar *argv[])
   g_test_add_func ("/numcosmo/ncm_matrix/operations", &test_ncm_matrix_operations);
   g_test_add_func ("/numcosmo/ncm_matrix/add_mul", &test_ncm_matrix_add_mul);
   g_test_add_func ("/numcosmo/ncm_matrix/submatrix", &test_ncm_matrix_submatrix);
+  g_test_add_func ("/numcosmo/ncm_matrix/serialization", &test_ncm_matrix_serialization);
   g_test_add_func ("/numcosmo/ncm_matrix/free", &test_ncm_matrix_free);
 
   g_test_run ();
@@ -74,9 +76,19 @@ static NcmMatrix *m;
 void
 test_ncm_matrix_new_sanity (NcmMatrix *cm)
 {
-  guint i;
+  guint i, j;
 
   g_assert (NCM_IS_MATRIX (cm));
+
+  for (i = 0; i < _NCM_MATRIX_TEST_NROW; i++)
+  {
+    for (j = 0; j < _NCM_MATRIX_TEST_NCOL; j++)
+    {
+      const gdouble d = g_test_rand_double ();
+      ncm_matrix_set (cm, i, j, d);
+      ncm_assert_cmpdouble (ncm_matrix_get (cm, i, j), ==, d);
+    }
+  }
 
   for (i = 0; i < 10 * _NCM_MATRIX_TEST_NROW; i++)
   {
@@ -489,6 +501,34 @@ test_ncm_matrix_add_mul (void)
   if (g_test_trap_fork (0, G_TEST_TRAP_SILENCE_STDOUT | G_TEST_TRAP_SILENCE_STDERR))
   {
     ncm_matrix_free (sm);
+    exit (0);
+  }
+  g_test_trap_assert_failed ();
+}
+
+
+void
+test_ncm_matrix_serialization (void)
+{
+  gchar *mser = ncm_cfg_serialize_to_string (G_OBJECT (m), TRUE);
+  NcmMatrix *m_dup = NCM_MATRIX (ncm_cfg_create_from_string (mser));
+  gint i, j;
+  g_free (mser);
+  g_assert_cmpint (NCM_MATRIX_NROWS (m), ==, NCM_MATRIX_NROWS (m_dup));
+  g_assert_cmpint (NCM_MATRIX_NCOLS (m), ==, NCM_MATRIX_NCOLS (m_dup));
+
+  for (i = 0; i < NCM_MATRIX_NROWS (m); i++)
+  {
+    for (j = 0; j < NCM_MATRIX_NCOLS (m); j++)
+    {
+      ncm_assert_cmpdouble (ncm_matrix_get (m, i, j), ==, ncm_matrix_get (m_dup, i, j));
+    }
+  }
+
+  ncm_matrix_free (m_dup);
+  if (g_test_trap_fork (0, G_TEST_TRAP_SILENCE_STDOUT | G_TEST_TRAP_SILENCE_STDERR))
+  {
+    ncm_matrix_free (m_dup);
     exit (0);
   }
   g_test_trap_assert_failed ();
