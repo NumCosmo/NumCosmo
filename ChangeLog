@@ -2,6 +2,35 @@ CHANGELOG
 ----------------------
 
 [Current]
+ * Updated ChangeLog.
+
+ * Removed functions: nc_distance_curvature, nc_distance_comoving_a0 and
+     nc_distance_comoving_a0_lss. nc_distance documentation im progress.
+
+ * New data included. Silent rules by default during make.
+
+     New Hubble function data (Moresco 2012). New Hubble BAO data (Busca 2013). 
+     Added support for Hubble BAO data (H(z)r_s(z_d)/(1+z)). Added support for
+     Hubble BAO data usage in darkenergy.
+
+ * Move back the functions p_limits and n_limits to be computed with 7 * sigma.
+
+     Start documentation of nc_data_bao_a.c.
+
+ * Added support for NcmVector and NcmMatrix serialization and their repective
+     tests.
+
+ * Updated integration on zeta true. The gap (1 < zeta < 2) was removed and the
+     integration is performed in the entire interval. This is different from SPT
+     code (their normalization does not take into account this gap), but it is
+     consistent with the normalization used.
+
+ * Improving tests and examples.
+
+     Testing new test (make check) manager. Better scripts for lapack
+     availability. Fixed doc in nc_data_hubble.h. Improved sparam and vector
+     tests. New cluster abundance example. Organized examples file names.
+
  * Improving tests and examples.
 
      Testing new test (make check) manager. Better scripts for lapack
