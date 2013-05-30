@@ -179,6 +179,9 @@ static gchar *_nc_data_hubble_function_query[] =
   "Simon 2005 H(z) sample", "SELECT z,p,s FROM kinematics WHERE param='Hz_Simon2005' ORDER BY z",
   "Cabre sample", "SELECT z,p,s FROM kinematics WHERE param='H_CABRE' ORDER BY z",
   "Stern 2009 H(z) sample", "SELECT z,p,s FROM kinematics WHERE param='Hz_Stern2009' ORDER BY z",
+  "Moresco 2012 H(z) BC03  sample", "SELECT z,p,s FROM kinematics WHERE param='BC03_Moresco2012' ORDER BY z",
+  "Moresco 2012 H(z) MaStro sample", "SELECT z,p,s FROM kinematics WHERE param='MaStro_Moresco2012' ORDER BY z",
+  "Busca 2013 H(z) BAO+WMAP sample", "SELECT z,p,s FROM kinematics WHERE param='BAO+WMAP_Busca2013' ORDER BY z",
 };
 
 /**

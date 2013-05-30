@@ -101,6 +101,13 @@ _nc_de_print_H_list (const gchar *option_name, const gchar *value, gpointer data
 }
 
 static gboolean
+_nc_de_print_H_BAO_list (const gchar *option_name, const gchar *value, gpointer data, GError **error)
+{
+  ncm_cfg_enum_print_all (NC_TYPE_DATA_HUBBLE_BAO_ID, "Hubble BAO samples");
+  return TRUE;
+}
+
+static gboolean
 _nc_de_print_cluster_list (const gchar *option_name, const gchar *value, gpointer data, GError **error)
 {
   ncm_cfg_enum_print_all (NC_TYPE_DATA_CLUSTER_ABUNDANCE_ID, "Cluster samples");
@@ -116,13 +123,15 @@ nc_de_opt_get_data_simple_group (NcDEDataSimpleEntries *de_data_simple, GOptionE
     { "bao-list",        0, G_OPTION_FLAG_NO_ARG, G_OPTION_ARG_CALLBACK, &_nc_de_print_bao_list,      "Print all BAO data avaliable.",         NULL },
     { "cmb-list",        0, G_OPTION_FLAG_NO_ARG, G_OPTION_ARG_CALLBACK, &_nc_de_print_cmb_list,      "Print all CMB data avaliable.",         NULL },
     { "H-list",          0, G_OPTION_FLAG_NO_ARG, G_OPTION_ARG_CALLBACK, &_nc_de_print_H_list,        "Print all Hubble data avaliable.",      NULL },
+    { "H-BAO-list",      0, G_OPTION_FLAG_NO_ARG, G_OPTION_ARG_CALLBACK, &_nc_de_print_H_BAO_list,    "Print all Hubble BAO data avaliable.",  NULL },
     { "cluster-list",    0, G_OPTION_FLAG_NO_ARG, G_OPTION_ARG_CALLBACK, &_nc_de_print_cluster_list,  "Print all Cluster data avaliable.",     NULL },
     { "snia-id",    'S', 0, G_OPTION_ARG_STRING,       &de_data_simple->snia_id,      "ID of the SNe Ia sample to use",                                NULL },
     { "snia-prop",       0,                    0, G_OPTION_ARG_STRING,   &de_data_simple->snia_prop,  "The SNe Ia analysis object properties", NULL },
     { "snia-use-det", 0, 0, G_OPTION_ARG_NONE,         &de_data_simple->snia_use_det, "Whenever to use the normalized Likelihood when fitting SN Ia data", NULL },
     { "bao-id",     'B', 0, G_OPTION_ARG_STRING_ARRAY, &de_data_simple->bao_id,       "ID of the BAO sample to use",                                   NULL },
     { "cmb-id",     'C', 0, G_OPTION_ARG_STRING,       &de_data_simple->cmb_id,       "ID of the CMB sample to use",                                   NULL },
-    { "H-id",       'E', 0, G_OPTION_ARG_STRING,       &de_data_simple->H_id,         "Use the H(z_i) data sample",                                    NULL },
+    { "H-id",       'E', 0, G_OPTION_ARG_STRING_ARRAY, &de_data_simple->H_id,         "Use the H(z) data sample",                                    NULL },
+    { "H-BAO-id",   'F', 0, G_OPTION_ARG_STRING_ARRAY, &de_data_simple->H_BAO_id,     "Use the H(z)r_s/(1 + z) data sample",                                    NULL },
     { "cluster-id", 'U', 0, G_OPTION_ARG_STRING,       &de_data_simple->cluster_id,   "Use cluster abundance data",                                    NULL },
     { "H0_Hst",     'H', 0, G_OPTION_ARG_NONE,         &de_data_simple->H0_Hst,       "Use the HST H0 data (single gaussian (H0 - 73.8) / 2.4)",       NULL },
     { "BBN",        'N', 0, G_OPTION_ARG_NONE,         &de_data_simple->BBN,          "Use BBN Prior",                                                 NULL },
