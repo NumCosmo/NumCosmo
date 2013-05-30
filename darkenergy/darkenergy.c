@@ -294,16 +294,42 @@ main (gint argc, gchar *argv[])
 
   if (de_data_simple.H_id != NULL)
   {
-    const GEnumValue *H_id = ncm_cfg_get_enum_by_id_name_nick (NC_TYPE_DATA_HUBBLE_ID,
-                                                               de_data_simple.H_id);
-    if (H_id != NULL)
+    guint i;
+    guint nHz = g_strv_length (de_data_simple.H_id);
+    
+    for (i = 0; i < nHz; i++)
     {
-      NcmData *H_data = nc_data_hubble_new (H_id->value);
-      ncm_dataset_append_data (dset, H_data);
-      ncm_data_free (H_data);
+      gchar *H_id_i = de_data_simple.H_id[i];
+      const GEnumValue *H_id = ncm_cfg_get_enum_by_id_name_nick (NC_TYPE_DATA_HUBBLE_ID, H_id_i);
+      if (H_id != NULL)
+      {
+        NcmData *H_data = nc_data_hubble_new (H_id->value);
+        ncm_dataset_append_data (dset, H_data);
+        ncm_data_free (H_data);
+      }
+      else
+        g_error ("Hubble sample '%s' not found run --H-list to list the available options", H_id_i);
     }
-    else
-      g_error ("Hubble sample '%s' not found run --hubble-list to list the available options", de_data_simple.H_id);
+  }
+
+  if (de_data_simple.H_BAO_id != NULL)
+  {
+    guint i;
+    guint nHrs = g_strv_length (de_data_simple.H_BAO_id);
+    
+    for (i = 0; i < nHrs; i++)
+    {
+      gchar *Hrs_id_i = de_data_simple.H_BAO_id[i];
+      const GEnumValue *Hrs_id = ncm_cfg_get_enum_by_id_name_nick (NC_TYPE_DATA_HUBBLE_BAO_ID, Hrs_id_i);
+      if (Hrs_id != NULL)
+      {
+        NcmData *Hrs_data = nc_data_hubble_bao_new (dist, Hrs_id->value);
+        ncm_dataset_append_data (dset, Hrs_data);
+        ncm_data_free (Hrs_data);
+      }
+      else
+        g_error ("Hubble BAO sample '%s' not found run --H-BAO-list to list the available options", Hrs_id_i);
+    }
   }
 
   if (de_data_simple.cluster_id != NULL)

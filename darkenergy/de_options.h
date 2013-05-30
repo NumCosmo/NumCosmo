@@ -68,7 +68,8 @@ struct _NcDEDataSimpleEntries
   gchar *snia_prop;
   gchar **bao_id;
   gchar *cmb_id;
-  gchar *H_id;
+  gchar **H_id;
+  gchar **H_BAO_id;
   gchar *cluster_id;
   gboolean H0_Hst;
   gboolean BBN;
@@ -76,7 +77,7 @@ struct _NcDEDataSimpleEntries
   gboolean snia_use_det;
 };
 
-#define NC_DE_DATA_SIMPLE_ENTRIES {NULL, NULL, NULL, NULL, NULL, NULL, FALSE, FALSE, FALSE, FALSE}
+#define NC_DE_DATA_SIMPLE_ENTRIES {NULL, NULL, NULL, NULL, NULL, NULL, NULL, FALSE, FALSE, FALSE, FALSE}
 
 typedef struct _NcDEDataClusterEntries NcDEDataClusterEntries;
 

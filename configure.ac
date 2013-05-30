@@ -13,8 +13,8 @@ AC_CONFIG_SRCDIR([numcosmo/numcosmo.h])
 AC_CONFIG_MACRO_DIR([m4])
 
 AC_PREREQ([2.69])
-AM_INIT_AUTOMAKE([gnu -Wno-portability])
-m4_ifdef([AM_SILENT_RULES],[AM_SILENT_RULES()])
+AM_INIT_AUTOMAKE([1.11 gnu -Wno-portability])
+m4_ifdef([AM_SILENT_RULES],[AM_SILENT_RULES([yes])])
 
 PACKAGE=numcosmo
 NUMCOSMO_MAJOR_VERSION=numcosmo_major_version

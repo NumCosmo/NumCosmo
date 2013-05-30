@@ -218,6 +218,7 @@ nc_headers = \
 	nc_data_dist_mu.h               \
 	nc_data_snia_cov.h              \
 	nc_data_hubble.h                \
+	nc_data_hubble_bao.h            \
 	nc_data_bao_rdv.h               \
 	nc_data_bao_dvdv.h              \
 	nc_data_bao_a.h                 \
@@ -293,6 +294,7 @@ nc_sources = \
 	nc_data_dist_mu.c            \
 	nc_data_snia_cov.c           \
 	nc_data_hubble.c             \
+	nc_data_hubble_bao.c         \
 	nc_data_bao_rdv.c            \
 	nc_data_bao_dvdv.c           \
 	nc_data_bao_a.c              \
