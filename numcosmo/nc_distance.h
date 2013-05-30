@@ -88,17 +88,15 @@ gdouble nc_distance_decoupling_redshift (NcDistance *dist, NcHICosmo *cosmo);
 gdouble nc_distance_drag_redshift (NcDistance *dist, NcHICosmo *cosmo);
 gdouble nc_distance_shift_parameter_lss (NcDistance *dist, NcHICosmo *cosmo);
 gdouble nc_distance_comoving_lss (NcDistance *dist, NcHICosmo *cosmo);
-gdouble nc_distance_comoving_a0_lss (NcDistance *dist, NcHICosmo *cosmo);
 gdouble nc_distance_acoustic_scale (NcDistance *dist, NcHICosmo *cosmo);
 gdouble nc_distance_Omega_k (NcDistance *dist, NcHICosmo *cosmo);
+gdouble nc_distance_angular_diameter_curvature_scale (NcDistance *dist, NcHICosmo *cosmo);
 
 /***************************************************************************
  * Redshift dependent 'distances'
  ****************************************************************************/
 
 gdouble nc_distance_comoving (NcDistance *dist, NcHICosmo *cosmo, gdouble z);
-gdouble nc_distance_comoving_a0 (NcDistance *dist, NcHICosmo *cosmo, gdouble z);
-gdouble nc_distance_curvature (NcDistance *dist, NcHICosmo *cosmo, gdouble z);
 gdouble nc_distance_transverse (NcDistance *dist, NcHICosmo *cosmo, gdouble z);
 gdouble nc_distance_luminosity (NcDistance *dist, NcHICosmo *cosmo, gdouble z);
 gdouble nc_distance_modulus (NcDistance *dist, NcHICosmo *cosmo, gdouble z);
