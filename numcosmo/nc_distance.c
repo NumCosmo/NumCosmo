@@ -623,9 +623,10 @@ nc_distance_shift_parameter_lss (NcDistance *dist, NcHICosmo *cosmo)
  * @dist: a #NcDistance.
  * @cosmo: a #NcHICosmo.
  *
- * Calculate the d_c (z_lss)
+ * Compute the comoving distance $D_c(z)$ [Eq. \eqref{eq:def:Dc}] at the 
+ * decoupling redshift $z_\star$ [nc_distance_decoupling_redshift()].
  *
- * Returns: FIXME
+ * Returns: $D_c(z_\star)$.
  */
 gdouble
 nc_distance_comoving_lss (NcDistance *dist, NcHICosmo *cosmo)
@@ -642,9 +643,20 @@ nc_distance_comoving_lss (NcDistance *dist, NcHICosmo *cosmo)
  * @dist: a #NcDistance.
  * @cosmo: a #NcHICosmo.
  *
- * Decoupling redshift (arXiv:astro-ph/9510117).
+ * The decoupling redshift $z_\star$ corresponds to the epoch of 
+ * the last scattering surface of the cosmic microwave background photons. 
  *
- * Returns: FIXME
+ * This function computes $z_\star$ using [nc_hicosmo_z_lss()], if @cosmo implements 
+ * it, or using Hu & Sugiyama fitting formula <link linkend="XHu1996">Hu (1996)</link>, 
+ * $$ z_\star = 1048 \left(1 + 1.24 \times 10^{-3}  (\Omega_b h^2)^{-0.738}\right) \left(1 + g_1 (\Omega_m h^2)^{g_2}\right),$$
+ * where $\Omega_b h^2$ [nc_hicosmo_Omega_bh2()] and $\Omega_m h^2$ [nc_hicosmo_Omega_mh2()] 
+ * are, respectively, the baryonic and matter density parameters times the square 
+ * of the dimensionless Hubble parameter $h$,  $H_0 = 100 \, h \, \text{km/s} \, \text{Mpc}^{-1}$. 
+ * The parameters $g_1$ and $g_2$ are given by
+ * $$g_1 = \frac{0.0783 (\Omega_b h^2)^{-0.238}}{(1 + 39.5 (\Omega_b h^2)^{0.763})} 
+ * \; \text{and} \; g_2 = \frac{0.56}{\left(1 + 21.1 (\Omega_b h^2)^{1.81}\right)}.$$
+ * 
+ * Returns: $z_\star$
  */
 gdouble
 nc_distance_decoupling_redshift (NcDistance *dist, NcHICosmo *cosmo)
@@ -653,10 +665,8 @@ nc_distance_decoupling_redshift (NcDistance *dist, NcHICosmo *cosmo)
     return nc_hicosmo_z_lss (cosmo);
   else
   {
-    gdouble h = nc_hicosmo_h (cosmo);
-    gdouble h2 = h * h;
-    gdouble omega_b_h2 = nc_hicosmo_Omega_b (cosmo) * h2;
-    gdouble omega_m_h2 = nc_hicosmo_Omega_m (cosmo) * h2;
+    gdouble omega_b_h2 = nc_hicosmo_Omega_bh2 (cosmo);
+    gdouble omega_m_h2 = nc_hicosmo_Omega_mh2 (cosmo); 
     gdouble g1 = 0.0783 * pow (omega_b_h2, -0.238) / (1.0 + 39.5 * pow (omega_b_h2, 0.763));
     gdouble g2 = 0.560 / (1.0 + 21.1 * pow (omega_b_h2, 1.81));
     return 1048.0 * (1.0 + 1.24e-3 * pow (omega_b_h2, -0.738)) * (1.0 + g1 * pow (omega_m_h2, g2));
@@ -673,11 +683,19 @@ static gdouble sound_horizon_integral_argument(gdouble z, gpointer p);
  *
  * Compute the sound horizon $r_s$, 
  * \begin{equation}
- * r_s (z) = \int_{z_\star}^\infty \frac{c_s(z)}{H(z)} dz,
+ * r_s (z) = \int_{z}^\infty \frac{c_s(z^\prime)}{E(z^\prime)} dz^\prime,
  * \end{equation}
- * where $c_s(z)$ is the speed of sound wave and $H(z)$ is the Hubble function [nc_hicosmo_H ()].  
+ * where $c_s(z)$ is the speed of sound wave and $E(z)$ is the normalized Hubble function [nc_hicosmo_E()].
+ * 
+ * The integrand is given by
+ * \begin{equation}\label{eq:def:rs:integrand}
+ * \frac{c_s(z^\prime)}{H(z^\prime)} = \frac{1}{\sqrt{E(z^\prime)^2 (3 + \frac{9}{4} (1 + 0.2271 n_{eff}) \frac{\Omega_b}{\Omega_r (1 + z^\prime)})}},
+ * \end{equation}
+ * where $n_{eff}$ is the effective number of neutrinos [ncm_c_neutrino_n_eff()], 
+ * $\Omega_b$ [nc_hicosmo_Omega_b()] and $\Omega_r$ [nc_hicosmo_Omega_r()] are the baryonic and radiation density parameter, respectively. 
+ * If $\Omega_r = 0$, the integrand returns 0.0.
  *
- * Returns: FIXME
+ * Returns: $r_s(z)$.
  */
 gdouble
 nc_distance_sound_horizon (NcDistance *dist, NcHICosmo *cosmo, gdouble z)
@@ -715,11 +733,13 @@ sound_horizon_integral_argument (gdouble z, gpointer p)
  * nc_distance_dsound_horizon_dz:
  * @dist: a #NcDistance.
  * @cosmo: a #NcHICosmo.
- * @z: the redshift $z$.
+ * @z: redshift $z$.
  *
- * Calculate the sound horizon derivative.
+ * Calculate the sound horizon [nc_distance_sound_horizon()] derivative with respect to $z$, 
+ * $$\frac{d r_s(z)}{dz} = - \frac{c_s(z)}{E(z)},$$
+ * where $c_s(z) / E(z)$ is given by Eq. \eqref{eq:def:rs:integrand}.
  *
- * Returns: FIXME
+ * Returns: $\frac{d r_s(z)}{dz}$.
  */
 gdouble
 nc_distance_dsound_horizon_dz (NcDistance *dist, NcHICosmo *cosmo, gdouble z)
@@ -732,13 +752,15 @@ nc_distance_dsound_horizon_dz (NcDistance *dist, NcHICosmo *cosmo, gdouble z)
  * @dist: a #NcDistance.
  * @cosmo: a #NcHICosmo.
  *
- * Compute the acoustic scale $l_A$,
+ * Compute the acoustic scale $l_A (z_\star)$ at $z_\star$ [nc_distance_decoupling_redshift()],
  * \begin{equation}
- * l_A = \pi D_T (z_\star) / r (z_\star),
+ * l_A(z_\star) = \pi \frac{D_t (z_\star)}{r_s (z_\star)},
  * \end{equation}
- * where 
+ * where $D_t(z_\star)$ is the comoving transverse distance [nc_distance_transverse()] 
+ * and $r_s(z_\star)$ is the sound horizon [nc_distance_sound_horizon()] both 
+ * both computed at $z_\star$.
  *
- * Returns: $l_A$.
+ * Returns: $l_A(z_\star)$.
  */
 gdouble
 nc_distance_acoustic_scale (NcDistance *dist, NcHICosmo *cosmo)
@@ -755,17 +777,26 @@ nc_distance_acoustic_scale (NcDistance *dist, NcHICosmo *cosmo)
  * @dist: a #NcDistance.
  * @cosmo: a #NcHICosmo.
  *
- * Drag redshift (arXiv:astro-ph/9510117).
- *
- * Returns: FIXME
+ * Drag redshift is the epoch at which baryons were released from photons. 
+ * 
+ * This function computes $z_d$ using the fitting formula given in
+ * <link linkend="XEisenstein1998">Eisenstein & Hu (1998)</link>,
+ * $$z_d = \frac{1291 (\Omega_m h^2)^{0.251}}{(1 + 0.659 (\Omega_m h^2)^{0.828})}
+ * \left(1 + b_1 (\Omega_b h^2)^{b_2}\right),$$
+ * where $\Omega_b h^2$ [nc_hicosmo_Omega_bh2()] and $\Omega_m h^2$ [nc_hicosmo_Omega_mh2()] 
+ * are, respectively, the baryonic and matter density parameters times the square 
+ * of the dimensionless Hubble parameter $h$,  $H_0 = 100 \, h \, \text{km/s} \, \text{Mpc}^{-1}$. 
+ * The parameters $b_1$ and $b_2$ are given by
+ * $$b_1 = 0.313 (\Omega_m h^2)^{-0.419} \left(1 + 0.607 (\Omega_m h^2)^{0.674}\right) \; 
+ * \text{and} \; b_2 = 0.238 (\Omega_m h^2)^{0.223}.$$
+ * 
+ * Returns: $z_d$.
  */
 gdouble
 nc_distance_drag_redshift (NcDistance *dist, NcHICosmo *cosmo)
 {
-  gdouble h = nc_hicosmo_h (cosmo);
-  gdouble h2 = h*h;
-  gdouble omega_m_h2 = nc_hicosmo_Omega_m (cosmo) * h2;
-  gdouble omega_b_h2 = nc_hicosmo_Omega_b (cosmo) * h2;
+  gdouble omega_m_h2 = nc_hicosmo_Omega_mh2 (cosmo);
+  gdouble omega_b_h2 = nc_hicosmo_Omega_bh2 (cosmo);
   gdouble b1 = 0.313 * pow (omega_m_h2, -0.419) * (1.0 + 0.607 * pow (omega_m_h2, 0.674));
   gdouble b2 = 0.238 * pow (omega_m_h2, 0.223);
   return 1291.0 * pow (omega_m_h2, 0.251) / (1.0 + 0.659 * pow (omega_m_h2, 0.828)) *
@@ -776,11 +807,12 @@ nc_distance_drag_redshift (NcDistance *dist, NcHICosmo *cosmo)
  * nc_distance_dilation_scale:
  * @dist: a #NcDistance.
  * @cosmo: a #NcHICosmo.
- * @z: the redshift $z$.
+ * @z: redshift $z$.
  *
- * Dilation scale D_v(z) -- (arXiv:astro-ph/0501171)
+ * The dilation scale is the cube root of the product of the radial dilation
+ * times the square of the transverse dilation -- (arXiv:astro-ph/0501171)
  *
- * Returns: FIXME
+ * Returns: $D_V(z)$.
  */
 gdouble
 nc_distance_dilation_scale (NcDistance *dist, NcHICosmo *cosmo, gdouble z)

@@ -106,6 +106,7 @@ gdouble nc_distance_shift_parameter (NcDistance *dist, NcHICosmo *cosmo, gdouble
 gdouble nc_distance_dilation_scale (NcDistance *dist, NcHICosmo *cosmo, gdouble z);
 gdouble nc_distance_bao_A_scale (NcDistance *dist, NcHICosmo *cosmo, gdouble z);
 gdouble nc_distance_sound_horizon (NcDistance *dist, NcHICosmo *cosmo, gdouble z);
+gdouble nc_distance_dsound_horizon_dz (NcDistance *dist, NcHICosmo *cosmo, gdouble z);
 gdouble nc_distance_bao_r_Dv (NcDistance *dist, NcHICosmo *cosmo, gdouble z);
 
 /***************************************************************************
