@@ -892,63 +892,63 @@ _nc_matter_var_prepare_fft (NcMatterVar *vp, NcHICosmo *model)
   //fprintf (stderr, "# %d % 20.15g [% 20.15g]\n", N, dr, L);
   if (!planned)
   {
-	in             = (fftw_complex *) fftw_malloc (sizeof(fftw_complex) * N);
-	out            = (fftw_complex *) fftw_malloc (sizeof(fftw_complex) * N);
-	fftRdsigma2_dr = (fftw_complex *) fftw_malloc (sizeof(fftw_complex) * N);
-	Rdsigma2_dr    = (fftw_complex *) fftw_malloc (sizeof(fftw_complex) * N);
+    in             = (fftw_complex *) fftw_malloc (sizeof (fftw_complex) * N);
+    out            = (fftw_complex *) fftw_malloc (sizeof (fftw_complex) * N);
+    fftRdsigma2_dr = (fftw_complex *) fftw_malloc (sizeof (fftw_complex) * N);
+    Rdsigma2_dr    = (fftw_complex *) fftw_malloc (sizeof (fftw_complex) * N);
 
-	u  = (fftw_complex *) fftw_malloc (sizeof(fftw_complex) * N);
-	du = (fftw_complex *) fftw_malloc (sizeof(fftw_complex) * N);
+    u  = (fftw_complex *) fftw_malloc (sizeof(fftw_complex) * N);
+    du = (fftw_complex *) fftw_malloc (sizeof(fftw_complex) * N);
 
-	ncm_cfg_load_fftw_wisdom ("nc_matter_var_wisdown.fftw3");
-	p = fftw_plan_dft_1d (N, in, out, FFTW_FORWARD, FFTW_PATIENT | FFTW_DESTROY_INPUT);
-	p_Rsigma2 = fftw_plan_dft_1d (N, out, in, FFTW_FORWARD, FFTW_PATIENT | FFTW_DESTROY_INPUT);
-	p_Rdsigma2_dr = fftw_plan_dft_1d (N, fftRdsigma2_dr, Rdsigma2_dr, FFTW_FORWARD, FFTW_PATIENT | FFTW_DESTROY_INPUT);
-	ncm_cfg_save_fftw_wisdom ("nc_matter_var_wisdown.fftw3");
-	planned = TRUE;
+    ncm_cfg_load_fftw_wisdom ("nc_matter_var_wisdown.fftw3");
+    p = fftw_plan_dft_1d (N, in, out, FFTW_FORWARD, FFTW_PATIENT | FFTW_DESTROY_INPUT);
+    p_Rsigma2 = fftw_plan_dft_1d (N, out, in, FFTW_FORWARD, FFTW_PATIENT | FFTW_DESTROY_INPUT);
+    p_Rdsigma2_dr = fftw_plan_dft_1d (N, fftRdsigma2_dr, Rdsigma2_dr, FFTW_FORWARD, FFTW_PATIENT | FFTW_DESTROY_INPUT);
+    ncm_cfg_save_fftw_wisdom ("nc_matter_var_wisdown.fftw3");
+    planned = TRUE;
   }
 
   for (i = -N_2; i <= N_2; i++)
   {
-	const gint ii = (i < 0) ? i + N : i;
-	const gdouble c1 = 2.0 * M_PI * M_PI;
-	const gdouble mu = dr * i;
-	const gdouble k = exp (lnk0 + mu);
-	const gdouble k2 = k * k;
-	const gdouble matter_P = nc_transfer_func_matter_powerspectrum (vp->tf, model, k);
-	const gdouble f = matter_P * k2 / c1;
-	in[ii] = f;
+    const gint ii = (i < 0) ? i + N : i;
+    const gdouble c1 = 2.0 * M_PI * M_PI;
+    const gdouble mu = dr * i;
+    const gdouble k = exp (lnk0 + mu);
+    const gdouble k2 = k * k;
+    const gdouble matter_P = nc_transfer_func_matter_powerspectrum (vp->tf, model, k);
+    const gdouble f = matter_P * k2 / c1;
+    in[ii] = f;
   }
   fftw_execute (p);
 
   if (!calc_u)
   {
-	for (i = -N_2; i <= N_2; i++)
-	{
-	  const gint ii = (i < 0) ? i + N : i;
-	  const gdouble a = 2.0 * M_PI / L * i;
-	  const gdouble abs_a = fabs (a);
-	  const gdouble sign_a = a < 0 ? -1.0 : 1.0;
-	  complex U = 36.0 * (a + I) / (cexp (M_LN2 * I * a) * (a * I - 5.0));
-	  gsl_sf_result lnr;
-	  gsl_sf_result arg;
-	  gsl_sf_lngamma_complex_e (-3.0, a, &lnr, &arg);
-	  U = (a != 0) ? U * sign_a * cexp (lnr.val + arg.val * I + gsl_sf_lnsinh (M_PI * abs_a * 0.5)) : 3.0 * M_PI / 5.0;
-	  u[ii] = U * cexp (-2.0 * M_PI / L * i * I * (lnk0 + r0));
-	  du[ii] = -(1.0 + I * a) * u[ii];
-	  fftRdsigma2_dr[ii] = out[ii] * du[ii];
-	  out[ii] *= u[ii];
-	}
-	calc_u = TRUE;
+    for (i = -N_2; i <= N_2; i++)
+    {
+      const gint ii = (i < 0) ? i + N : i;
+      const gdouble a = 2.0 * M_PI / L * i;
+      const gdouble abs_a = fabs (a);
+      const gdouble sign_a = a < 0 ? -1.0 : 1.0;
+      complex U = 36.0 * (a + I) / (cexp (M_LN2 * I * a) * (a * I - 5.0));
+      gsl_sf_result lnr;
+      gsl_sf_result arg;
+      gsl_sf_lngamma_complex_e (-3.0, a, &lnr, &arg);
+      U = (a != 0) ? U * sign_a * cexp (lnr.val + arg.val * I + gsl_sf_lnsinh (M_PI * abs_a * 0.5)) : 3.0 * M_PI / 5.0;
+      u[ii] = U * cexp (-2.0 * M_PI / L * i * I * (lnk0 + r0));
+      du[ii] = -(1.0 + I * a) * u[ii];
+      fftRdsigma2_dr[ii] = out[ii] * du[ii];
+      out[ii] *= u[ii];
+    }
+    calc_u = TRUE;
   }
   else
   {
-	gint ii;
-	for (ii = 0; ii < N; ii++)
-	{
-	  fftRdsigma2_dr[ii] = out[ii] * du[ii];
-	  out[ii] *= u[ii];
-	}
+    gint ii;
+    for (ii = 0; ii < N; ii++)
+    {
+      fftRdsigma2_dr[ii] = out[ii] * du[ii];
+      out[ii] *= u[ii];
+    }
   }
   fftw_execute (p_Rsigma2);
   fftw_execute (p_Rdsigma2_dr);
@@ -956,25 +956,25 @@ _nc_matter_var_prepare_fft (NcMatterVar *vp, NcHICosmo *model)
   j = 0;
   for (i = -120; i < 30; i++)
   {
-	const gint ii = (i < 0) ? i + N : i;
-	const gdouble r = r0 + i * dr;
-	const complex Rsigma2 = in[ii] / N;
-	const complex lnsigma2 = log (Rsigma2) - r;
-	const complex dlnsigma2_dr = Rdsigma2_dr[ii] / (Rsigma2 * N);
-	/*
-	 const gdouble R = exp (r);
-	 const gdouble Rsigma2_old = R * nc_matter_var_over_growth2_tophat_old (vp, model, r);
-	 const gdouble Rsigma2_spline = R * exp(ncm_spline_eval (vp->sigma2_over_growth, r));
-	 const gdouble err_spline = fabs((Rsigma2_old - Rsigma2_spline) / Rsigma2_old);
-	 const gdouble err_fft = fabs((Rsigma2_old - creal(Rsigma2)) / Rsigma2_old);
-	 printf ("%d %d % 20.15g % 20.15g % 20.15g % 20.15g % 8.5e % 8.5e\n", i, ii, r / M_LN10, creal(Rsigma2), Rsigma2_spline, Rsigma2_old, err_fft, err_spline);
-	 */
-	//printf ("%d %d % 20.15g % 20.15g % 20.15g\n", i, ii, r / M_LN10, creal(Rsigma2), creal(dlnsigma2_dr));
-	ncm_vector_set (vp->sigma2_over_growth->xv, j, r);
-	ncm_vector_set (vp->sigma2_over_growth->yv, j, lnsigma2);
-	ncm_vector_set (vp->deriv_sigma2_over_growth->xv, j, r);
-	ncm_vector_set (vp->deriv_sigma2_over_growth->yv, j, dlnsigma2_dr);
-	j++;
+    const gint ii = (i < 0) ? i + N : i;
+    const gdouble r = r0 + i * dr;
+    const complex Rsigma2 = in[ii] / N;
+    const complex lnsigma2 = log (Rsigma2) - r;
+    const complex dlnsigma2_dr = Rdsigma2_dr[ii] / (Rsigma2 * N);
+    /*
+     const gdouble R = exp (r);
+     const gdouble Rsigma2_old = R * nc_matter_var_over_growth2_tophat_old (vp, model, r);
+     const gdouble Rsigma2_spline = R * exp(ncm_spline_eval (vp->sigma2_over_growth, r));
+     const gdouble err_spline = fabs((Rsigma2_old - Rsigma2_spline) / Rsigma2_old);
+     const gdouble err_fft = fabs((Rsigma2_old - creal(Rsigma2)) / Rsigma2_old);
+     printf ("%d %d % 20.15g % 20.15g % 20.15g % 20.15g % 8.5e % 8.5e\n", i, ii, r / M_LN10, creal(Rsigma2), Rsigma2_spline, Rsigma2_old, err_fft, err_spline);
+     */
+    //printf ("%d %d % 20.15g % 20.15g % 20.15g\n", i, ii, r / M_LN10, creal(Rsigma2), creal(dlnsigma2_dr));
+    ncm_vector_set (vp->sigma2_over_growth->xv, j, r);
+    ncm_vector_set (vp->sigma2_over_growth->yv, j, lnsigma2);
+    ncm_vector_set (vp->deriv_sigma2_over_growth->xv, j, r);
+    ncm_vector_set (vp->deriv_sigma2_over_growth->yv, j, dlnsigma2_dr);
+    j++;
   }
   ncm_spline_prepare (vp->sigma2_over_growth);
   ncm_spline_prepare (vp->deriv_sigma2_over_growth);

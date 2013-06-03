@@ -361,6 +361,13 @@ main (gint argc, gchar *argv[])
 
     ncm_prior_add_gaussian_data (lh, NC_HICOSMO_ID, NC_HICOSMO_DE_H0, 73.8, 2.4);
   }
+
+  if (de_fit.qspline_cp)
+  {
+    if (!NC_IS_HICOSMO_QSPLINE (model))
+      g_error ("Continuity priors are only valid for NcHICosmoQSPline model");
+    nc_hicosmo_qspline_add_continuity_priors (NC_HICOSMO_QSPLINE (model), lh, de_fit.qspline_cp_sigma);
+  }
   
   fiduc = ncm_mset_dup (mset);
 
@@ -656,6 +663,21 @@ main (gint argc, gchar *argv[])
     ncm_message ("# MassFunction file: %s \n", mfile);
 
     g_free (mfile);
+  }
+
+  if (de_fit.q_sigma)
+  {
+    NcmMSetFunc *des_param_func = nc_hicosmo_create_mset_func1 (nc_hicosmo_q);
+    gint i;
+    for (i = 0; i < de_fit.q_n; i++)
+    {
+      gdouble z = de_fit.q_z / (de_fit.q_n - 1.0) * i;
+      gdouble q_z;
+      gdouble sigma_q_z;
+      ncm_fit_function_error (fit, des_param_func, &z, FALSE, &q_z, &sigma_q_z);
+      printf ("% 20.15g % 20.15g % 20.15g\n", z, q_z, sigma_q_z);
+    }
+    ncm_mset_func_free (des_param_func);
   }
 
   if (ca_array != NULL)

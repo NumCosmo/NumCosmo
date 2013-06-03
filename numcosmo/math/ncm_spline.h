@@ -54,6 +54,7 @@ struct _NcmSplineClass
 	gdouble (*eval) (const NcmSpline *s, const gdouble x);
 	gdouble (*deriv) (const NcmSpline *s, const gdouble x);
 	gdouble (*deriv2) (const NcmSpline *s, const gdouble x);
+  gdouble (*deriv_nmax) (const NcmSpline *s, const gdouble x);
 	gdouble (*integ) (const NcmSpline *s, const gdouble xi, const gdouble xf);
 	NcmSpline *(*copy_empty) (const NcmSpline *s);
 };
@@ -97,6 +98,7 @@ G_INLINE_FUNC void ncm_spline_prepare_base (NcmSpline *s);
 G_INLINE_FUNC gdouble ncm_spline_eval (const NcmSpline *s, const gdouble x);
 G_INLINE_FUNC gdouble ncm_spline_eval_deriv (const NcmSpline *s, const gdouble x);
 G_INLINE_FUNC gdouble ncm_spline_eval_deriv2 (const NcmSpline *s, const gdouble x);
+G_INLINE_FUNC gdouble ncm_spline_eval_deriv_nmax (const NcmSpline *s, const gdouble x);
 G_INLINE_FUNC gdouble ncm_spline_eval_integ (const NcmSpline *s, const gdouble x0, const gdouble x1);
 G_INLINE_FUNC gboolean ncm_spline_is_empty (const NcmSpline *s);
 G_INLINE_FUNC gsize ncm_spline_min_size (const NcmSpline *s);
@@ -146,6 +148,12 @@ G_INLINE_FUNC gdouble
 ncm_spline_eval_deriv2 (const NcmSpline *s, const gdouble x)
 {
   return NCM_SPLINE_GET_CLASS (s)->deriv2 (s, x);
+}
+
+G_INLINE_FUNC gdouble
+ncm_spline_eval_deriv_nmax (const NcmSpline *s, const gdouble x)
+{
+  return NCM_SPLINE_GET_CLASS (s)->deriv_nmax (s, x);
 }
 
 G_INLINE_FUNC gdouble

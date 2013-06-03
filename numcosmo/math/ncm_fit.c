@@ -1796,40 +1796,36 @@ ncm_fit_lr_test (NcmFit *fit, NcmModelID mid, guint pid, gdouble val, gint dof)
  * ncm_fit_function_error:
  * @fit: a #NcmFit
  * @func: a #NcmMSetFunc
- * @z: FIXME
+ * @x: FIXME
  * @pretty_print: FIXME
+ * @f: (out): FIXME
+ * @sigma_f: (out): FIXME
  *
  * FIXME
  *
- * Returns: FIXME
  */
-gdouble
-ncm_fit_function_error (NcmFit *fit, NcmMSetFunc *func, gdouble z, gboolean pretty_print)
+void
+ncm_fit_function_error (NcmFit *fit, NcmMSetFunc *func, gdouble *x, gboolean pretty_print, gdouble *f, gdouble *sigma_f)
 {
-  g_assert_not_reached ();
-  /*
-   gdouble result;
-   gint ret;
-   guint fparam_len = ncm_mset_fparam_len (fit->mset);
-   NcmVector *v = ncm_vector_new (free_params_len);
+  NcmVector *v = ncm_mset_func_numdiff_fparams (func, fit->mset, x, NULL);
+  NcmVector *tmp1 = ncm_vector_dup (v);
+  gdouble result;
+  gint ret;
 
-   ncm_mset_func_numdiff_fparams (func, );
-   NCM_FUNC_DF (func, fit->mset, fit->pt, z, fit->df);
+  ret = gsl_blas_dgemv (CblasNoTrans, 1.0, NCM_MATRIX_GSL (fit->fstate->covar), ncm_vector_gsl (v), 0.0, ncm_vector_gsl (tmp1));
+  NCM_TEST_GSL_RESULT("ncm_fit_function_error[covar.v]", ret);
+  ret = gsl_blas_ddot (ncm_vector_gsl (v), ncm_vector_gsl (tmp1), &result);
+  NCM_TEST_GSL_RESULT("ncm_fit_function_error[v.covar.v]", ret);
 
-   ret = gsl_blas_dgemv (CblasNoTrans, 1.0, NCM_MATRIX_GSL (fit->fstate->covar), ncm_vector_gsl (fit->df), 0.0, ncm_vector_gsl (tmp1));
-   NCM_TEST_GSL_RESULT("ncm_fit_function_error[covar.v]", ret);
-   ret = gsl_blas_ddot (ncm_vector_gsl (fit->df), ncm_vector_gsl (tmp1), &result);
-   NCM_TEST_GSL_RESULT("ncm_fit_function_error[v.covar.v]", ret);
+  *f = ncm_mset_func_eval (func, fit->mset, x);
+  *sigma_f = sqrt(result);
+  if (pretty_print)
+    g_message ("# % -12.4g +/- % -12.4g\n", *f, *sigma_f);
 
-   if (pretty_print)
-   g_message ("# % -12.4g +/- % -12.4g\n", NCM_FUNC_F(func, fit->mset, z), sqrt(result));
+  ncm_vector_free (v);
+  ncm_vector_free (tmp1);
 
-   ncm_fit_params_return_tmp_vector (fit->pt, tmp1);
-   
-   ncm_vector_free (v);
-
-   return sqrt(result);
-   */
+  return;
 }
 
 /**

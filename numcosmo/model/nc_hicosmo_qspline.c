@@ -147,6 +147,78 @@ nc_hicosmo_qspline_new (NcmSpline *s, gsize np, gdouble z_f)
   return qspline;
 }
 
+typedef struct _NcHICosmoSplineContPrior
+{
+  /*< private >*/
+  gint knot;
+  gdouble sigma;
+} NcHICosmoSplineContPrior;
+
+static void
+continuity_prior_f (NcmMSet *mset, gpointer obj, const gdouble *x, gdouble *f)
+{
+  NcHICosmoQSpline *qspline = NC_HICOSMO_QSPLINE (ncm_mset_peek (mset, NC_HICOSMO_ID));
+  NcHICosmoSplineContPrior *acp = (NcHICosmoSplineContPrior *) obj;
+  const gdouble x_i = ncm_vector_get (qspline->q_z->xv, acp->knot);
+  const gdouble x_ip1 = ncm_vector_get (qspline->q_z->xv, acp->knot + 1);
+  const gdouble x_ip2 = ncm_vector_get (qspline->q_z->xv, acp->knot + 2);
+  const gdouble mx1 = (x_ip1 + x_i) * 0.5;
+  const gdouble mx2 = (x_ip2 + x_ip1) * 0.5;
+  const gdouble d1 = ncm_spline_eval_deriv_nmax (qspline->q_z, mx1);
+  const gdouble d2 = ncm_spline_eval_deriv_nmax (qspline->q_z, mx2);
+  const gdouble mean_d12 = 1.0;//(d1 + d2) * 0.5;
+  const gdouble mu = (d2 - d1) / mean_d12;
+  //printf ("# [%u] meio [% 10.7g % 10.7g] derivs [% 10.7g % 10.7g] (% 10.7g)\n", acp->knot, mx1, mx2, d1, d2, mean_d12);
+  f[0] = (mu / acp->sigma);
+}
+
+static void
+_nc_hicosmo_spline_continuity_prior_free (gpointer obj)
+{
+  g_slice_free (NcHICosmoSplineContPrior, obj);
+}
+
+/**
+ * nc_hicosmo_qspline_add_continuity_prior:
+ * @qspline: FIXME
+ * @lh: FIXME
+ * @knot: FIXME
+ * @sigma: FIXME
+ *
+ * FIXME
+ *
+ */
+void
+nc_hicosmo_qspline_add_continuity_prior (NcHICosmoQSpline *qspline, NcmLikelihood *lh, gint knot, gdouble sigma)
+{
+  NcHICosmoSplineContPrior *cp = g_slice_new (NcHICosmoSplineContPrior);
+  NcmMSetFunc *func = ncm_mset_func_new (continuity_prior_f, 0, 1, cp, _nc_hicosmo_spline_continuity_prior_free);
+  g_assert (knot < qspline->nknots - 1);
+  g_assert (sigma > 0.0);
+  cp->knot = knot;
+  cp->sigma = sigma;
+  ncm_likelihood_priors_add (lh, func);
+  return;
+}
+
+/**
+ * nc_hicosmo_qspline_add_continuity_priors:
+ * @qspline: FIXME
+ * @lh: FIXME
+ * @sigma: FIXME
+ *
+ * FIXME
+ *
+ */
+void
+nc_hicosmo_qspline_add_continuity_priors (NcHICosmoQSpline *qspline, NcmLikelihood *lh, gdouble sigma)
+{
+  guint i;
+  for (i = 0; i < qspline->nknots - 2; i++)
+    nc_hicosmo_qspline_add_continuity_prior (qspline, lh, i, sigma);
+  return;
+}
+
 enum {
   PROP_0,
   PROP_SPLINE,

@@ -22,12 +22,69 @@
  * with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-class Nc.GDE : GLib.Object {
-  public static int main(string[] args) {
+using GLib;
+using Gtk;
 
-    var a = new Nc.WindowTophat ();
-    stdout.printf("Hello, World %f\n", a.volume ());
+public class Nc.GDE : GLib.Object {
+  private Gtk.Builder builder;
+  private Gtk.Window main_window;
 
+  [CCode (instance_pos = -1)]
+  public void on_main_window_destroy (Gtk.Window source) {
+    Gtk.main_quit ();
+  }
+  
+  public GDE () {
+      builder = new Builder ();
+  }
+
+  ~GDE () {
+    builder = null;
+    main_window = null;
+  }
+
+  public bool load_ui () {
+    try {
+      builder.add_from_file ("/home/sandro/Projects/numcosmo/darkenergy/gdarkenergy.glade");
+      builder.connect_signals (this);
+      main_window = builder.get_object ("main_window") as Gtk.Window;
+      main_window.show_all ();
+      return true;
+    } catch (Error e) {
+      stderr.printf ("Could not load UI: %s\n", e.message);
+      return false;
+    } 
+  }
+
+  public void add_model_by_type (Gtk.ListStore store, Type pt) {
+    foreach (unowned Type ch in pt.children ()) {
+      if (ch.is_abstract ()) {
+        add_model_by_type (store, ch);
+      }
+      else {
+        Gtk.TreeIter iter;
+        store.append (out iter);
+        store.set (iter, 0, ch.name ());
+      }
+    }    
+  }
+  
+  public void load_models () {
+    Type mt = typeof (Nc.HICosmo);
+    var model_list = builder.get_object ("model_list") as Gtk.ListStore;
+    add_model_by_type (model_list, mt);
+  }
+  
+  static int main (string[] args) {
+    Gtk.init (ref args);
+    Ncm.cfg_init ();
+    var app = new Nc.GDE ();
+    if (!app.load_ui ())
+      return 1;
+
+    app.load_models ();
+    
+    Gtk.main ();
     return 0;
   }
 }

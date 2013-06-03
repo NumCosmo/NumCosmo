@@ -9,13 +9,7 @@ AM_CFLAGS = \
 	-I$(top_srcdir) \
 	-I$(top_srcdir)/numcosmo
 
-AM_VALAFLAGS = \
-	--pkg numcosmomath-1.0 \
-	--pkg numcosmo-1.0     \
-	--vapidir=$(abs_top_builddir)/numcosmo
-
-bin_PROGRAMS = darkenergy \
-	gdarkenergy
+bin_PROGRAMS = darkenergy
 
 darkenergy_SOURCES = \
 	darkenergy.c\
@@ -29,8 +23,29 @@ darkenergy_SOURCES = \
 darkenergy_LDADD = \
         $(top_builddir)/numcosmo/libnumcosmo.la
 
+if HAVE_GTK
+
+AM_CFLAGS += $(GTK_CFLAGS) -Wl,--export-dynamic
+
+AM_VALAFLAGS = \
+	--pkg numcosmomath-1.0 \
+	--pkg numcosmo-1.0     \
+	--pkg gtk+-3.0         \
+	--pkg gmodule-2.0      \
+	--vapidir=$(abs_top_builddir)/numcosmo
+
+bin_PROGRAMS += gdarkenergy
+
 gdarkenergy_SOURCES =  \
 	gdarkenergy.vala
 
+gdarkenergy_DATA =  \
+	gdarkenergy.glade
+
+gdarkenergydir = \
+        $(pkgdatadir)-$(VERSION)/gdarkenergy
+
 gdarkenergy_LDADD = \
-        $(top_builddir)/numcosmo/libnumcosmo.la
+        $(top_builddir)/numcosmo/libnumcosmo.la $(GTK_LIBS)
+
+endif

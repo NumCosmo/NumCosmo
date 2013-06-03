@@ -230,7 +230,7 @@ void ncm_fit_reset (NcmFit *fit);
 gboolean ncm_fit_run (NcmFit *fit, NcmFitRunMsgs mtype);
 
 gdouble ncm_fit_type_constrain_error (NcmFit *fit, gdouble p, gint nu, gdouble dir, NcmMSetFunc *func, gdouble z, gboolean walk);
-gdouble ncm_fit_function_error (NcmFit *fit, NcmMSetFunc *func, gdouble z, gboolean pretty_print);
+void ncm_fit_function_error (NcmFit *fit, NcmMSetFunc *func, gdouble *x, gboolean pretty_print, gdouble *f, gdouble *sigma_f);
 gdouble ncm_fit_function_cov (NcmFit *fit, NcmMSetFunc *func1, gdouble z1, NcmMSetFunc *func2, gdouble z2, gboolean pretty_print);
 
 #define NCM_FIT_NUMDIFF_SCALE (1.0e-4)

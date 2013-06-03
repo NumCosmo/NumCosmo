@@ -69,8 +69,11 @@ void ncm_mset_func_free (NcmMSetFunc *func);
 
 GPtrArray *ncm_mset_func_array_new (void);
 
+gdouble ncm_mset_func_eval (NcmMSetFunc *func, NcmMSet *mset, const gdouble *x);
 gdouble ncm_mset_func_eval0 (NcmMSetFunc *func, NcmMSet *mset);
 gdouble ncm_mset_func_eval1 (NcmMSetFunc *func, NcmMSet *mset, const gdouble x);
+
+NcmVector *ncm_mset_func_numdiff_fparams (NcmMSetFunc *func, NcmMSet *mset, const gdouble *x, NcmVector *out);
 
 G_END_DECLS
 

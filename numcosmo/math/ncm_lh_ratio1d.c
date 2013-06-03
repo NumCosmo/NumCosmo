@@ -52,6 +52,7 @@ enum
   PROP_0,
   PROP_FIT,
   PROP_PI,
+  PROP_CONSTRAINT,
   PROP_SIZE,
 };
 
@@ -64,6 +65,7 @@ ncm_lh_ratio1d_init (NcmLHRatio1d *lhr1d)
   lhr1d->constrained = NULL;
   lhr1d->pi.mid      = -1;
   lhr1d->pi.pid      = 0;
+  lhr1d->constraint  = NULL;
   lhr1d->chisquare   = 0.0;
   lhr1d->mtype       = NCM_FIT_RUN_MSGS_NONE;
   lhr1d->rtype       = NCM_LH_RATIO1D_ROOT_BRACKET;
@@ -195,6 +197,13 @@ ncm_lh_ratio1d_class_init (NcmLHRatio1dClass *klass)
                                                        NCM_TYPE_MSET_PINDEX,
                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
   
+  g_object_class_install_property (object_class,
+                                   PROP_PI,
+                                   g_param_spec_object ("constraint",
+                                                        NULL,
+                                                        "Constraint",
+                                                        NCM_TYPE_MSET_FUNC,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 }
 
 
@@ -534,7 +543,6 @@ ncm_lh_ratio1d_root_steffenson (NcmLHRatio1d *lhr1d, gdouble x0, gdouble x1)
   gsl_root_fdfsolver_free (s);
   return x;
 }
-
 
 #define NCM_LH_RATIO1D_SCALE_INCR (1.1)
 

@@ -358,6 +358,14 @@ ncm_spline_get_yv (NcmSpline *s)
  * Returns: The second derivative of an interpolated function computed at @x.
  */
 /**
+ * ncm_spline_eval_deriv_nmax:
+ * @s: a constant #NcmSpline.
+ * @x: x-coordinate value.
+ *
+ *
+ * Returns: The highest non null derivative of an interpolated function computed at @x.
+ */
+/**
  * ncm_spline_eval_integ:
  * @s: a constant #NcmSpline.
  * @x0: lower integration limit.

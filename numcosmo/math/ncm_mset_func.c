@@ -38,6 +38,7 @@
 #include "build_cfg.h"
 
 #include "math/ncm_mset_func.h"
+#include "math/util.h"
 
 G_DEFINE_TYPE (NcmMSetFunc, ncm_mset_func, G_TYPE_OBJECT);
 
@@ -109,6 +110,24 @@ ncm_mset_func_array_new (void)
 }
 
 /**
+ * ncm_mset_func_eval:
+ * @func: FIXME
+ * @mset: FIXME
+ * @x: FIXME
+ *
+ * FIXME
+ *
+ * Returns: FIXME
+ */
+gdouble
+ncm_mset_func_eval (NcmMSetFunc *func, NcmMSet *mset, const gdouble *x)
+{
+  gdouble res;
+  func->func (mset, func->obj, x, &res);
+  return res;
+}
+
+/**
  * ncm_mset_func_eval0:
  * @func: FIXME
  * @mset: FIXME
@@ -147,6 +166,69 @@ ncm_mset_func_eval1 (NcmMSetFunc *func, NcmMSet *mset, const gdouble x)
 #endif
   func->func (mset, func->obj, &x, &res);
   return res;
+}
+
+typedef struct __ncm_mset_func_numdiff_fparams_1
+{
+  NcmMSetFunc *func;
+  NcmMSet *mset;
+  const gdouble *x;
+  guint n;
+} __ncm_mset_func_numdiff_fparams_1;
+
+static gdouble
+_mset_func_numdiff_fparams_1_val (gdouble x, gpointer userdata)
+{
+  __ncm_mset_func_numdiff_fparams_1 *nd = (__ncm_mset_func_numdiff_fparams_1 *)userdata;
+  ncm_mset_fparam_set (nd->mset, nd->n, x);
+  return ncm_mset_func_eval (nd->func, nd->mset, nd->x);
+}
+
+/**
+ * ncm_mset_func_numdiff_fparams:
+ * @func: FIXME
+ * @mset: FIXME
+ * @x: FIXME
+ * @out: (out) (transfer full): FIXME
+ *
+ * FIXME
+ *
+ * Returns: (transfer full): FIXME
+ */
+NcmVector *
+ncm_mset_func_numdiff_fparams (NcmMSetFunc *func, NcmMSet *mset, const gdouble *x, NcmVector *out)
+{
+  gsl_function F;
+  __ncm_mset_func_numdiff_fparams_1 nd;
+  guint fparam_len = ncm_mset_fparam_len (mset);
+  gint i;
+
+  nd.mset  = mset;
+  nd.func  = func;
+  nd.x     = x;
+  F.params = &nd;
+  F.function = &_mset_func_numdiff_fparams_1_val;
+
+  if (out == NULL)
+    out = ncm_vector_new (fparam_len);
+  else if (ncm_vector_len (out) != fparam_len)
+  {
+    ncm_vector_free (out);
+    out = ncm_vector_new (fparam_len);
+  }
+
+  for (i = 0; i < fparam_len; i++)
+  {
+    const gdouble p = ncm_mset_fparam_get (mset, i);
+    const gdouble p_scale = ncm_mset_fparam_get_scale (mset, i);
+    gdouble err, diff;
+    nd.n = i;
+    diff = ncm_numdiff_1 (&F, p, p_scale, &err);
+    ncm_vector_set (out, i, diff);
+    ncm_mset_fparam_set (mset, i, p);
+  }
+
+  return out;
 }
 
 static void

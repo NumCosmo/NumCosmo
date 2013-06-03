@@ -239,6 +239,17 @@ GLIB_MKENUMS=`$PKG_CONFIG --variable=glib_mkenums glib-2.0`
 AC_SUBST(GLIB_MKENUMS)
 
 dnl ***************************************************************************
+dnl Check for gtk+-3.0.
+dnl ***************************************************************************
+
+PKG_CHECK_MODULES(GTK, [gtk+-3.0 >= 3.6],,[GTK='no'])
+AC_SUBST(GTK_CFLAGS)
+AC_SUBST(GTK_LIBS)
+AM_CONDITIONAL(HAVE_GTK, [test "x$GTK" != xno])
+TEST_SHARED_LIBS="$TEST_SHARED_LIBS $GTK_LIBS"
+TEST_SHARED_CFLAGS="$TEST_SHARED_CFLAGS $GTK_CFLAGS"
+
+dnl ***************************************************************************
 dnl Check for gsl
 dnl ***************************************************************************
 
