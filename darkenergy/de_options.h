@@ -144,9 +144,9 @@ struct _NcDEFitEntries
 };
 
 #ifdef NUMCOSMO_HAVE_NLOPT
-#define NC_DE_FIT_ENTRIES { NULL, FALSE, "nlopt",   "numdiff-forward", NULL, -1, -1, {-1, -1}, NULL, NCM_FIT_MAXEVAL, FALSE, NCM_FIT_RUN_MSGS_SIMPLE, -1, 0, FALSE, FALSE, FALSE, 1.0 , 100, FALSE, 1.0, FALSE, FALSE}
+#define NC_DE_FIT_ENTRIES { NULL, FALSE, "nlopt",   "numdiff-forward", NULL, -1, -1, {-1, -1}, NULL, NCM_FIT_MAXEVAL, FALSE, NCM_FIT_RUN_MSGS_SIMPLE, -1, 0, FALSE, FALSE, FALSE, FALSE, 1.0, 100, FALSE, 1.0, FALSE, FALSE}
 #else
-#define NC_DE_FIT_ENTRIES { NULL, FALSE, "gsl-mms", "numdiff-forward", NULL, -1, -1, {-1, -1}, NULL, NCM_FIT_MAXEVAL, FALSE, NCM_FIT_RUN_MSGS_SIMPLE, -1, 0, FALSE, FALSE, FALSE, 1.0 , 100, FALSE, 1.0, FALSE, FALSE}
+#define NC_DE_FIT_ENTRIES { NULL, FALSE, "gsl-mms", "numdiff-forward", NULL, -1, -1, {-1, -1}, NULL, NCM_FIT_MAXEVAL, FALSE, NCM_FIT_RUN_MSGS_SIMPLE, -1, 0, FALSE, FALSE, FALSE, FALSE, 1.0, 100, FALSE, 1.0, FALSE, FALSE}
 #endif
 
 GOptionGroup *nc_de_opt_get_run_group (NcDERunEntries *de_run);
