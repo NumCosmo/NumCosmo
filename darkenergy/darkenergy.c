@@ -665,19 +665,25 @@ main (gint argc, gchar *argv[])
     g_free (mfile);
   }
 
-  if (de_fit.q_sigma)
+  if (de_fit.kinematics_sigma)
   {
-    NcmMSetFunc *des_param_func = nc_hicosmo_create_mset_func1 (nc_hicosmo_q);
+    NcmMSetFunc *dec_param_func = nc_hicosmo_create_mset_func1 (nc_hicosmo_q);
+    NcmMSetFunc *E2_func = nc_hicosmo_create_mset_func1 (nc_hicosmo_E2);
+    NcmMSetFunc *Em2_func = nc_hicosmo_create_mset_func1 (nc_hicosmo_Em2);
     gint i;
-    for (i = 0; i < de_fit.q_n; i++)
+    for (i = 0; i < de_fit.kinematics_n; i++)
     {
-      gdouble z = de_fit.q_z / (de_fit.q_n - 1.0) * i;
-      gdouble q_z;
-      gdouble sigma_q_z;
-      ncm_fit_function_error (fit, des_param_func, &z, FALSE, &q_z, &sigma_q_z);
-      printf ("% 20.15g % 20.15g % 20.15g\n", z, q_z, sigma_q_z);
+      gdouble z = de_fit.kinematics_z / (de_fit.kinematics_n - 1.0) * i;
+      gdouble q_z, E2_z, Em2_z;
+      gdouble sigma_q_z, sigma_E2_z, sigma_Em2_z;
+      ncm_fit_function_error (fit, dec_param_func, &z, FALSE, &q_z, &sigma_q_z);
+      ncm_fit_function_error (fit, E2_func, &z, FALSE, &E2_z, &sigma_E2_z);
+      ncm_fit_function_error (fit, Em2_func, &z, FALSE, &Em2_z, &sigma_Em2_z);
+      printf ("% 20.15g % 20.15g % 20.15g % 20.15g % 20.15g % 20.15g % 20.15g\n", z, q_z, sigma_q_z, E2_z, sigma_E2_z, Em2_z, sigma_Em2_z);
     }
-    ncm_mset_func_free (des_param_func);
+    ncm_mset_func_free (dec_param_func);
+    ncm_mset_func_free (E2_func);
+    ncm_mset_func_free (Em2_func);
   }
 
   if (ca_array != NULL)
