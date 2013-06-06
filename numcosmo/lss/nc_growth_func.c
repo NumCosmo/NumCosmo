@@ -39,6 +39,7 @@
 #include "lss/nc_growth_func.h"
 #include "math/ncm_spline_cubic_notaknot.h"
 #include "math/cvode_util.h"
+#include "math/ncm_cfg.h"
 
 #include <cvode/cvode.h>
 #include <cvode/cvode_dense.h>

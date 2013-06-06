@@ -1453,7 +1453,7 @@ ncm_cfg_object_set_property (GObject *obj, const gchar *prop_str)
 #else
 {
   g_error ("ncm_cfg_object_set_property: serialization not supported, recompile "PACKAGE_NAME" with glib >= 2.30");
-  return NULL;
+  return;
 }
 #endif
 

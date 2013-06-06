@@ -36,6 +36,7 @@
 #include "build_cfg.h"
 
 #include "math/ncm_model_ctrl.h"
+#include "math/ncm_cfg.h"
 
 enum
 {

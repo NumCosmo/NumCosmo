@@ -38,6 +38,7 @@
 #include "lss/nc_mass_function.h"
 #include "math/integral.h"
 #include "math/ncm_spline2d_bicubic.h"
+#include "math/ncm_cfg.h"
 
 #include <gsl/gsl_integration.h>
 

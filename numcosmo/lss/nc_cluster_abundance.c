@@ -40,6 +40,7 @@
 #include "math/ncm_spline2d_bicubic.h"
 #include "math/integral.h"
 #include "math/memory_pool.h"
+#include "math/ncm_cfg.h"
 #include <gsl/gsl_histogram.h>
 
 #include "lss/nc_cluster_mass_benson.h"

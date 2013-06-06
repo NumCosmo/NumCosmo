@@ -37,7 +37,6 @@
 #include "build_cfg.h"
 
 #include "math/ncm_dataset.h"
-
 #include "math/ncm_cfg.h"
 
 G_DEFINE_TYPE (NcmDataset, ncm_dataset, G_TYPE_OBJECT);

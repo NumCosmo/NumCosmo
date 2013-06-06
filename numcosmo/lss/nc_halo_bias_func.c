@@ -36,6 +36,7 @@
 #include "build_cfg.h"
 
 #include "lss/nc_halo_bias_func.h"
+#include "math/ncm_cfg.h"
 
 enum
 {

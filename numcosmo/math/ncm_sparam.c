@@ -38,6 +38,7 @@
 #include "build_cfg.h"
 
 #include "math/ncm_sparam.h"
+#include "math/ncm_cfg.h"
 #include "nc_hicosmo.h"
 #include "ncm_enum_types.h"
 

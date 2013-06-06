@@ -39,6 +39,7 @@
 #include "build_cfg.h"
 
 #include "math/ncm_vparam.h"
+#include "math/ncm_cfg.h"
 
 enum
 {

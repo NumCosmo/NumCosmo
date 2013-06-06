@@ -37,6 +37,7 @@
 
 #include "math/ncm_reparam.h"
 #include "math/ncm_model.h"
+#include "math/ncm_cfg.h"
 
 #include <gsl/gsl_blas.h>
 

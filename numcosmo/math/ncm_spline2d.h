@@ -30,7 +30,6 @@
 #include <numcosmo/math/ncm_matrix.h>
 #include <numcosmo/math/ncm_spline_func.h>
 
-
 G_BEGIN_DECLS
 
 #define NCM_TYPE_SPLINE2D             (ncm_spline2d_get_type ())

@@ -37,7 +37,7 @@
 #include "build_cfg.h"
 
 #include "math/ncm_fit.h"
-
+#include "math/ncm_cfg.h"
 #include "ncm_fit_state.h"
 
 enum

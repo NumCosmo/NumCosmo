@@ -38,6 +38,7 @@
 #include "build_cfg.h"
 
 #include "math/ncm_spline.h"
+#include "math/ncm_cfg.h"
 
 G_DEFINE_ABSTRACT_TYPE (NcmSpline, ncm_spline, G_TYPE_OBJECT);
 

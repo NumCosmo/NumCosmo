@@ -37,6 +37,7 @@
 
 #include "math/ncm_model.h"
 #include "math/ncm_mset.h"
+#include "math/ncm_cfg.h"
 
 enum
 {

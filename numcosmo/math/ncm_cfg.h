@@ -230,6 +230,11 @@ do { \
 
 #define NCM_READ_DOUBLE(_ff,_ii) do { NcmDoubleInt64 _iii; if (fread (&_iii.i, sizeof(gint64), (1), _ff) != 1) g_error ("NCM_READ_DOUBLE: io error"); _iii.i = GINT64_FROM_BE (_iii.i); _ii = _iii.x; } while (FALSE)
 
+/* Workaround on g_clear_object. */
+#if ((GLIB_MAJOR_VERSION == 2) && (GLIB_MINOR_VERSION < 28))
+#define g_clear_object(obj) G_STMT_START if (*(obj) != NULL) { g_object_unref (*(obj)); *(obj) = NULL; }  G_STMT_END
+#endif /* Glib version < 2.28 */
+
 G_END_DECLS
 
 #endif /* _NCM_CFG_H */

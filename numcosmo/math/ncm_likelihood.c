@@ -38,6 +38,7 @@
 #include "build_cfg.h"
 
 #include "math/ncm_likelihood.h"
+#include "math/ncm_cfg.h"
 
 enum
 {

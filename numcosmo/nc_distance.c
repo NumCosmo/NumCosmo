@@ -81,6 +81,7 @@
 #include "nc_distance.h"
 #include "math/integral.h"
 #include "math/ncm_c.h"
+#include "math/ncm_cfg.h"
 #include "math/ncm_spline_cubic_notaknot.h"
 
 typedef struct _ComovingDistanceArgument{
