@@ -23,11 +23,15 @@ darkenergy_SOURCES = \
 darkenergy_LDADD = \
         $(top_builddir)/numcosmo/libnumcosmo.la
 
+EXTRA_DIST = 
+
+AM_VALAFLAGS = 
+
 if HAVE_GTK
 
 AM_CFLAGS += $(GTK_CFLAGS) -Wl,--export-dynamic
 
-AM_VALAFLAGS = \
+AM_VALAFLAGS += \
 	--pkg numcosmomath-1.0 \
 	--pkg numcosmo-1.0     \
 	--pkg gtk+-3.0         \
@@ -41,6 +45,8 @@ gdarkenergy_SOURCES =  \
 
 gdarkenergy_DATA =  \
 	gdarkenergy.glade
+
+EXTRA_DIST += $(gdarkenergy_DATA)
 
 gdarkenergydir = \
         $(pkgdatadir)-$(VERSION)/gdarkenergy

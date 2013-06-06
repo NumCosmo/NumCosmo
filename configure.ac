@@ -356,7 +356,7 @@ fi
 AC_SUBST(have_atlas_support)
 
 dnl ***************************************************************************
-dnl Check for clapack
+dnl Check for lapack
 dnl ***************************************************************************
 
 AC_CHECK_LIB([$ATLAS_LAPACK], [sgesv_],,[have_lapack='no'])
@@ -503,7 +503,12 @@ if test "x$has_sundials" = "xyes"; then
 else
   AC_MSG_ERROR(Cannot find sundials-config.)
 fi
+
+SAVED_CFLAGS="$CFLAGS"
+CFLAGS="$CFLAGS $SUNDIALS_CFLAGS"
 AC_CHECK_TYPE([CVDlsDenseJacFn],[],[AC_MSG_ERROR([sundials too old, please install version >= 2.4.0])], [#include <cvodes/cvodes_direct.h>])
+CFLAGS="$SAVED_CFLAGS"
+
 AC_MSG_CHECKING([whenever sundials uses long int])
 AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[
 #include <cvodes/cvodes_direct.h>
