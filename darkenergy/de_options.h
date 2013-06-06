@@ -134,9 +134,9 @@ struct _NcDEFitEntries
   gboolean fiducial;
   gboolean mc_data;
   gboolean fisher;
-  gboolean q_sigma;
-  gdouble q_z;
-  gint q_n;
+  gboolean kinematics_sigma;
+  gdouble kinematics_z;
+  gint kinematics_n;
   gboolean qspline_cp;
   gdouble qspline_cp_sigma;
   gboolean save_fisher;

@@ -477,9 +477,18 @@ NCM_MODEL_SET_IMPL_FUNC(NC_HICOSMO,NcHICosmo,nc_hicosmo,NcmModelFunc1,powspec)
  * @cosmo: a #NcHICosmo
  * @z: redshift
  *
- * FIXME
+ * This function computes the normalized Hubble function $E(z)$.
  *
- * Returns: FIXME
+ * Returns: $E(z)$.
+ */
+/**
+ * nc_hicosmo_Em2:
+ * @cosmo: a #NcHICosmo
+ * @z: redshift
+ *
+ * This function computes the inverse of the square normalized Hubble function.
+ *
+ * Returns: $E(z)^{-2}$.
  */
 /**
  * nc_hicosmo_grad_E:
