@@ -174,6 +174,7 @@ _nc_data_hubble_mean_func (NcmDataGaussDiag *diag, NcmMSet *mset, NcmVector *vp)
   }
 }
 
+#ifdef NUMCOSMO_HAVE_SQLITE3
 static gchar *_nc_data_hubble_function_query[] =
 {
   "Simon 2005 H(z) sample", "SELECT z,p,s FROM kinematics WHERE param='Hz_Simon2005' ORDER BY z",
@@ -183,6 +184,7 @@ static gchar *_nc_data_hubble_function_query[] =
   "Moresco 2012 H(z) MaStro sample", "SELECT z,p,s FROM kinematics WHERE param='MaStro_Moresco2012' ORDER BY z",
   "Busca 2013 H(z) BAO+WMAP sample", "SELECT z,p,s FROM kinematics WHERE param='BAO+WMAP_Busca2013' ORDER BY z",
 };
+#endif
 
 /**
  * nc_data_hubble_new:
@@ -256,12 +258,12 @@ nc_data_hubble_get_size (NcDataHubble *hubble)
 void
 nc_data_hubble_set_sample (NcDataHubble *hubble, NcDataHubbleId id)
 {
+#ifdef NUMCOSMO_HAVE_SQLITE3
   NcmData *data = NCM_DATA (hubble);
   NcmDataGaussDiag *diag = NCM_DATA_GAUSS_DIAG (hubble);
   
   g_assert (id < NC_DATA_HUBBLE_NSAMPLES);
 
-#ifdef NUMCOSMO_HAVE_SQLITE3
   {
     const gchar *query = _nc_data_hubble_function_query[id * 2 + 1];
     gint i, nrow, qncol, ret;

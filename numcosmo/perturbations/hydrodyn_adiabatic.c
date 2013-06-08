@@ -36,3 +36,11 @@
 #include "build_cfg.h"
 
 #include "perturbations/hydrodyn_adiabatic.h"
+
+/**
+ * nc_hydrodyn_adiabatic_stub:
+ * 
+ */ 
+void nc_hydrodyn_adiabatic_stub (void) {}
+
+

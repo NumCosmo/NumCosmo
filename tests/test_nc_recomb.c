@@ -102,11 +102,7 @@ void
 test_nc_recomb_seager_wmap_zstar (void)
 {
   NcRecomb *recomb = nc_recomb_seager_new ();
-#if !((GLIB_MAJOR_VERSION == 2) && (GLIB_MINOR_VERSION < 30))
   NcHICosmo *cosmo = nc_hicosmo_new_from_name (NC_TYPE_HICOSMO, "NcHICosmoDEXcdm");
-#else
-  NcHICosmo *cosmo = nc_hicosmo_de_xcdm_new ();
-#endif
 
   nc_hicosmo_de_set_wmap5_params (cosmo);
   ncm_model_orig_param_set (NCM_MODEL (cosmo), NC_HICOSMO_DE_XCDM_W,  -1.0);
@@ -131,11 +127,7 @@ void
 test_nc_recomb_seager_Xe_ini (void)
 {
   NcRecomb *recomb = nc_recomb_seager_new ();
-#if !((GLIB_MAJOR_VERSION == 2) && (GLIB_MINOR_VERSION < 30))
   NcHICosmo *cosmo = nc_hicosmo_new_from_name (NC_TYPE_HICOSMO, "NcHICosmoDEXcdm");
-#else
-  NcHICosmo *cosmo = nc_hicosmo_de_xcdm_new ();
-#endif
 
   nc_recomb_prepare_if_needed (recomb, cosmo);
 

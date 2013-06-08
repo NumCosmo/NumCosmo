@@ -176,6 +176,7 @@ _nc_data_dist_mu_prepare (NcmData *data, NcmMSet *mset)
   nc_distance_prepare_if_needed (dist_mu->dist, cosmo);
 }
 
+#ifdef NUMCOSMO_HAVE_SQLITE3
 static gchar *_nc_data_snia_query[] =
 {
   "Gold sample 157", "SELECT z,mu-0.32 AS muc,s FROM supernovae WHERE quality='Gold-2004' ORDER BY z",
@@ -188,6 +189,7 @@ static gchar *_nc_data_snia_query[] =
   "Union2 sample",   "SELECT z,mu,s FROM supernovae WHERE quality='Union2' ORDER BY z",
   "Union2.1 sample", "SELECT z,mu,s FROM supernovae WHERE quality='Union2.1' ORDER BY z",
 };
+#endif
 
 static void 
 _nc_data_dist_mu_mean_func (NcmDataGaussDiag *diag, NcmMSet *mset, NcmVector *vp)
@@ -280,13 +282,13 @@ nc_data_dist_mu_get_size (NcDataDistMu *dist_mu)
 void
 nc_data_dist_mu_set_sample (NcDataDistMu *dist_mu, NcDataSNIAId id)
 {
+#ifdef NUMCOSMO_HAVE_SQLITE3
   NcmData *data = NCM_DATA (dist_mu);
   NcmDataGaussDiag *diag = NCM_DATA_GAUSS_DIAG (dist_mu);
 
   g_assert (id <= NC_DATA_SNIA_SIMPLE_END && id >= NC_DATA_SNIA_SIMPLE_START);
   id -= NC_DATA_SNIA_SIMPLE_START;
 
-#ifdef NUMCOSMO_HAVE_SQLITE3
   {
     const gchar *query = _nc_data_snia_query[id * 2 + 1];
     gint i, nrow, qncol, ret;

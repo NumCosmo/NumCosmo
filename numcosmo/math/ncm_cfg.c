@@ -100,6 +100,10 @@
 #include <fftw3.h>
 #endif /* NUMCOSMO_HAVE_FFTW3 */
 
+#ifndef G_VALUE_INIT
+#define G_VALUE_INIT {0}
+#endif
+
 static gchar *numcosmo_path = NULL;
 static gboolean numcosmo_init = FALSE;
 static FILE *_log_stream = NULL;
@@ -1390,6 +1394,297 @@ ncm_cfg_command_line (gchar *argv[], gint argc)
   return full_cmd_line;
 }
 
+/* Stole from glib 2.36.1 */
+/* GDBus - GLib D-Bus Library
+ *
+ * Copyright (C) 2008-2010 Red Hat, Inc.
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General
+ * Public License along with this library; if not, write to the
+ * Free Software Foundation, Inc., 59 Temple Place, Suite 330,
+ * Boston, MA 02111-1307, USA.
+ *
+ * Author: David Zeuthen <davidz@redhat.com>
+ */
+#if ((GLIB_MAJOR_VERSION == 2) && (GLIB_MINOR_VERSION < 30))
+
+#define G_VARIANT_TYPE_VARDICT              ((const GVariantType *) "a{sv}")
+
+static void
+g_dbus_gvariant_to_gvalue (GVariant *value, GValue *out_gvalue)
+{
+  const GVariantType *type;
+  gchar **array;
+
+  g_return_if_fail (value != NULL);
+  g_return_if_fail (out_gvalue != NULL);
+
+  memset (out_gvalue, '\0', sizeof (GValue));
+
+  switch (g_variant_classify (value))
+  {
+    case G_VARIANT_CLASS_BOOLEAN:
+      g_value_init (out_gvalue, G_TYPE_BOOLEAN);
+      g_value_set_boolean (out_gvalue, g_variant_get_boolean (value));
+      break;
+
+    case G_VARIANT_CLASS_BYTE:
+      g_value_init (out_gvalue, G_TYPE_UCHAR);
+      g_value_set_uchar (out_gvalue, g_variant_get_byte (value));
+      break;
+
+    case G_VARIANT_CLASS_INT16:
+      g_value_init (out_gvalue, G_TYPE_INT);
+      g_value_set_int (out_gvalue, g_variant_get_int16 (value));
+      break;
+
+    case G_VARIANT_CLASS_UINT16:
+      g_value_init (out_gvalue, G_TYPE_UINT);
+      g_value_set_uint (out_gvalue, g_variant_get_uint16 (value));
+      break;
+
+    case G_VARIANT_CLASS_INT32:
+      g_value_init (out_gvalue, G_TYPE_INT);
+      g_value_set_int (out_gvalue, g_variant_get_int32 (value));
+      break;
+
+    case G_VARIANT_CLASS_UINT32:
+      g_value_init (out_gvalue, G_TYPE_UINT);
+      g_value_set_uint (out_gvalue, g_variant_get_uint32 (value));
+      break;
+
+    case G_VARIANT_CLASS_INT64:
+      g_value_init (out_gvalue, G_TYPE_INT64);
+      g_value_set_int64 (out_gvalue, g_variant_get_int64 (value));
+      break;
+
+    case G_VARIANT_CLASS_UINT64:
+      g_value_init (out_gvalue, G_TYPE_UINT64);
+      g_value_set_uint64 (out_gvalue, g_variant_get_uint64 (value));
+      break;
+
+    case G_VARIANT_CLASS_DOUBLE:
+      g_value_init (out_gvalue, G_TYPE_DOUBLE);
+      g_value_set_double (out_gvalue, g_variant_get_double (value));
+      break;
+
+    case G_VARIANT_CLASS_STRING:
+      g_value_init (out_gvalue, G_TYPE_STRING);
+      g_value_set_string (out_gvalue, g_variant_get_string (value, NULL));
+      break;
+
+    case G_VARIANT_CLASS_OBJECT_PATH:
+      g_value_init (out_gvalue, G_TYPE_STRING);
+      g_value_set_string (out_gvalue, g_variant_get_string (value, NULL));
+      break;
+
+    case G_VARIANT_CLASS_SIGNATURE:
+      g_value_init (out_gvalue, G_TYPE_STRING);
+      g_value_set_string (out_gvalue, g_variant_get_string (value, NULL));
+      break;
+
+    case G_VARIANT_CLASS_ARRAY:
+      type = g_variant_get_type (value);
+      switch (g_variant_type_peek_string (type)[1])
+    {
+      case G_VARIANT_CLASS_BYTE:
+        g_value_init (out_gvalue, G_TYPE_STRING);
+        g_value_set_string (out_gvalue, g_variant_get_bytestring (value));
+        break;
+
+      case G_VARIANT_CLASS_STRING:
+        g_value_init (out_gvalue, G_TYPE_STRV);
+        array = g_variant_dup_strv (value, NULL);
+        g_value_take_boxed (out_gvalue, array);
+        break;
+
+      case G_VARIANT_CLASS_ARRAY:
+        switch (g_variant_type_peek_string (type)[2])
+      {
+        case G_VARIANT_CLASS_BYTE:
+          g_value_init (out_gvalue, G_TYPE_STRV);
+          array = g_variant_dup_bytestring_array (value, NULL);
+          g_value_take_boxed (out_gvalue, array);
+          break;
+
+        default:
+          g_value_init (out_gvalue, G_TYPE_VARIANT);
+          g_value_set_variant (out_gvalue, value);
+          break;
+      }
+        break;
+
+      default:
+        g_value_init (out_gvalue, G_TYPE_VARIANT);
+        g_value_set_variant (out_gvalue, value);
+        break;
+    }
+      break;
+
+    case G_VARIANT_CLASS_HANDLE:
+    case G_VARIANT_CLASS_VARIANT:
+    case G_VARIANT_CLASS_MAYBE:
+    case G_VARIANT_CLASS_TUPLE:
+    case G_VARIANT_CLASS_DICT_ENTRY:
+      g_value_init (out_gvalue, G_TYPE_VARIANT);
+      g_value_set_variant (out_gvalue, value);
+      break;
+  }
+}
+
+static GVariant *
+g_dbus_gvalue_to_gvariant (const GValue *gvalue, const GVariantType *type)
+{
+  GVariant *ret;
+  const gchar *s;
+  const gchar * const *as;
+  const gchar *empty_strv[1] = {NULL};
+
+  g_return_val_if_fail (gvalue != NULL, NULL);
+  g_return_val_if_fail (type != NULL, NULL);
+
+  ret = NULL;
+
+  if (G_VALUE_TYPE (gvalue) == G_TYPE_VARIANT)
+  {
+    ret = g_value_dup_variant (gvalue);
+  }
+  else
+  {
+    switch (g_variant_type_peek_string (type)[0])
+    {
+      case G_VARIANT_CLASS_BOOLEAN:
+        ret = g_variant_ref_sink (g_variant_new_boolean (g_value_get_boolean (gvalue)));
+        break;
+
+      case G_VARIANT_CLASS_BYTE:
+        ret = g_variant_ref_sink (g_variant_new_byte (g_value_get_uchar (gvalue)));
+        break;
+
+      case G_VARIANT_CLASS_INT16:
+        ret = g_variant_ref_sink (g_variant_new_int16 (g_value_get_int (gvalue)));
+        break;
+
+      case G_VARIANT_CLASS_UINT16:
+        ret = g_variant_ref_sink (g_variant_new_uint16 (g_value_get_uint (gvalue)));
+        break;
+
+      case G_VARIANT_CLASS_INT32:
+        ret = g_variant_ref_sink (g_variant_new_int32 (g_value_get_int (gvalue)));
+        break;
+
+      case G_VARIANT_CLASS_UINT32:
+        ret = g_variant_ref_sink (g_variant_new_uint32 (g_value_get_uint (gvalue)));
+        break;
+
+      case G_VARIANT_CLASS_INT64:
+        ret = g_variant_ref_sink (g_variant_new_int64 (g_value_get_int64 (gvalue)));
+        break;
+
+      case G_VARIANT_CLASS_UINT64:
+        ret = g_variant_ref_sink (g_variant_new_uint64 (g_value_get_uint64 (gvalue)));
+        break;
+
+      case G_VARIANT_CLASS_DOUBLE:
+        ret = g_variant_ref_sink (g_variant_new_double (g_value_get_double (gvalue)));
+        break;
+
+      case G_VARIANT_CLASS_STRING:
+        s = g_value_get_string (gvalue);
+        if (s == NULL)
+          s = "";
+        ret = g_variant_ref_sink (g_variant_new_string (s));
+        break;
+
+      case G_VARIANT_CLASS_OBJECT_PATH:
+        s = g_value_get_string (gvalue);
+        if (s == NULL)
+          s = "/";
+        ret = g_variant_ref_sink (g_variant_new_object_path (s));
+        break;
+
+      case G_VARIANT_CLASS_SIGNATURE:
+        s = g_value_get_string (gvalue);
+        if (s == NULL)
+          s = "";
+        ret = g_variant_ref_sink (g_variant_new_signature (s));
+        break;
+
+      case G_VARIANT_CLASS_ARRAY:
+        switch (g_variant_type_peek_string (type)[1])
+      {
+        case G_VARIANT_CLASS_BYTE:
+          s = g_value_get_string (gvalue);
+          if (s == NULL)
+            s = "";
+          ret = g_variant_ref_sink (g_variant_new_bytestring (s));
+          break;
+
+        case G_VARIANT_CLASS_STRING:
+          as = g_value_get_boxed (gvalue);
+          if (as == NULL)
+            as = empty_strv;
+          ret = g_variant_ref_sink (g_variant_new_strv (as, -1));
+          break;
+
+        case G_VARIANT_CLASS_ARRAY:
+          switch (g_variant_type_peek_string (type)[2])
+        {
+          case G_VARIANT_CLASS_BYTE:
+            as = g_value_get_boxed (gvalue);
+            if (as == NULL)
+              as = empty_strv;
+            ret = g_variant_ref_sink (g_variant_new_bytestring_array (as, -1));
+            break;
+
+          default:
+            ret = g_value_dup_variant (gvalue);
+            break;
+        }
+          break;
+
+        default:
+          ret = g_value_dup_variant (gvalue);
+          break;
+      }
+        break;
+
+      case G_VARIANT_CLASS_HANDLE:
+      case G_VARIANT_CLASS_VARIANT:
+      case G_VARIANT_CLASS_MAYBE:
+      case G_VARIANT_CLASS_TUPLE:
+      case G_VARIANT_CLASS_DICT_ENTRY:
+        ret = g_value_dup_variant (gvalue);
+        break;
+    }
+  }
+
+  if (ret == NULL)
+  {
+    GVariant *untrusted_empty;
+    untrusted_empty = g_variant_new_from_data (type, NULL, 0, FALSE, NULL, NULL);
+    ret = g_variant_ref_sink (g_variant_get_normal_form (untrusted_empty));
+    g_variant_unref (untrusted_empty);
+  }
+
+  g_assert (!g_variant_is_floating (ret));
+
+  return ret;
+}
+
+#endif
+/* Stole from glib 2.36.1 */
+
 /**
  * ncm_cfg_set_params:
  * @obj: a #GObject.
@@ -1400,7 +1695,6 @@ ncm_cfg_command_line (gchar *argv[], gint argc)
  */
 void
 ncm_cfg_object_set_property (GObject *obj, const gchar *prop_str)
-#if !((GLIB_MAJOR_VERSION == 2) && (GLIB_MINOR_VERSION < 30))
 {
   GError *error = NULL;
   GVariant *params = g_variant_parse (G_VARIANT_TYPE_VARDICT, prop_str, NULL, NULL, &error);
@@ -1450,12 +1744,6 @@ ncm_cfg_object_set_property (GObject *obj, const gchar *prop_str)
     g_variant_iter_free (p_iter);
   }
 }
-#else
-{
-  g_error ("ncm_cfg_object_set_property: serialization not supported, recompile "PACKAGE_NAME" with glib >= 2.30");
-  return;
-}
-#endif
 
 /**
  * ncm_cfg_create_from_string:
@@ -1467,7 +1755,6 @@ ncm_cfg_object_set_property (GObject *obj, const gchar *prop_str)
  */
 GObject *
 ncm_cfg_create_from_string (const gchar *obj_ser)
-#if !((GLIB_MAJOR_VERSION == 2) && (GLIB_MINOR_VERSION < 30))
 {
   GError *error = NULL;
   static gsize regex_init = FALSE;
@@ -1525,12 +1812,6 @@ ncm_cfg_create_from_string (const gchar *obj_ser)
 
   return obj;
 }
-#else
-{
-  g_error ("ncm_cfg_create_from_string: serialization not supported, recompile "PACKAGE_NAME" with glib >= 2.30");
-  return NULL;
-}
-#endif
 
 /**
  * ncm_cfg_create_from_name_params:
@@ -1543,7 +1824,6 @@ ncm_cfg_create_from_string (const gchar *obj_ser)
  */
 GObject *
 ncm_cfg_create_from_name_params (const gchar *obj_name, GVariant *params)
-#if !((GLIB_MAJOR_VERSION == 2) && (GLIB_MINOR_VERSION < 30))
 {
   GObject *obj = NULL;
   GType gtype = g_type_from_name (obj_name);
@@ -1602,14 +1882,7 @@ ncm_cfg_create_from_name_params (const gchar *obj_name, GVariant *params)
 
   return obj;
 }
-#else
-{
-  g_error ("ncm_cfg_create_from_name_params: serialization not supported, recompile "PACKAGE_NAME" with glib >= 2.30");
-  return NULL;
-}
-#endif
 
-#if !((GLIB_MAJOR_VERSION == 2) && (GLIB_MINOR_VERSION < 30))
 static const GVariantType *
 _ncm_cfg_gtype_to_gvariant_type (GType t)
 {
@@ -1719,7 +1992,6 @@ _ncm_cfg_gtype_to_gvariant_type (GType t)
       break;
   }
 }
-#endif
 
 /**
  * ncm_cfg_gvalue_to_gvariant:
@@ -1731,7 +2003,6 @@ _ncm_cfg_gtype_to_gvariant_type (GType t)
    */
 GVariant *
 ncm_cfg_gvalue_to_gvariant (GValue *val)
-#if !((GLIB_MAJOR_VERSION == 2) && (GLIB_MINOR_VERSION < 30))
 {
   GType t = G_VALUE_TYPE (val);
   GType fund_t = G_TYPE_FUNDAMENTAL (t);
@@ -1765,12 +2036,6 @@ ncm_cfg_gvalue_to_gvariant (GValue *val)
 
   return var;
 }
-#else
-{
-  g_error ("ncm_cfg_gvalue_to_gvariant: serialization not supported, recompile "PACKAGE_NAME" with glib >= 2.30");
-  return NULL;
-}
-#endif
 
 /**
  * ncm_cfg_serialize_to_variant:
@@ -1782,7 +2047,6 @@ ncm_cfg_gvalue_to_gvariant (GValue *val)
    */
 GVariant *
 ncm_cfg_serialize_to_variant (GObject *obj)
-#if !((GLIB_MAJOR_VERSION == 2) && (GLIB_MINOR_VERSION < 30))
 {
   const gchar *obj_name = G_OBJECT_TYPE_NAME (obj);
   GObjectClass *klass = G_OBJECT_GET_CLASS (obj);
@@ -1833,12 +2097,6 @@ ncm_cfg_serialize_to_variant (GObject *obj)
     return ser_var;
   }
 }
-#else
-{
-  g_error ("ncm_cfg_serialize_to_variant: serialization not supported, recompile "PACKAGE_NAME" with glib >= 2.30");
-  return NULL;
-}
-#endif
 
 /**
  * ncm_cfg_serialize_to_string:
@@ -1852,7 +2110,6 @@ ncm_cfg_serialize_to_variant (GObject *obj)
    */
 gchar *
 ncm_cfg_serialize_to_string (GObject *obj, gboolean valid_variant)
-#if !((GLIB_MAJOR_VERSION == 2) && (GLIB_MINOR_VERSION < 30))
 {
   GVariant *ser_var = ncm_cfg_serialize_to_variant (obj);
   gchar *ser = NULL;
@@ -1881,11 +2138,3 @@ ncm_cfg_serialize_to_string (GObject *obj, gboolean valid_variant)
   g_variant_unref (ser_var);
   return ser;
 }
-#else
-{
-  g_error ("ncm_cfg_serialize_to_string: serialization not supported, recompile "PACKAGE_NAME" with glib >= 2.30");
-  return NULL;
-}
-#endif
-
- 

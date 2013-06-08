@@ -49,6 +49,8 @@ typedef struct _NcPertHydrodyn
   NcmSpline *pw_spline;
 } NcPertHydrodyn;
 
+void nc_hydrodyn_adiabatic_stub (void);
+
 G_END_DECLS
 
 #endif /* _NC_HYDRODYN_ADIABATIC_H */
