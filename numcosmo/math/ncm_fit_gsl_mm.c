@@ -229,7 +229,7 @@ _ncm_fit_gsl_mm_run (NcmFit *fit, NcmFitRunMsgs mtype)
       status = gsl_multimin_test_gradient (fit_gsl_mm->mm->gradient, pscale);
     ncm_fit_log_step (fit, fit_gsl_mm->mm->f);
   }
-  while ( (status == GSL_CONTINUE) && (fit->fstate->niter < fit->maxeval) );
+  while ( (status == GSL_CONTINUE) && (fit->fstate->niter < fit->maxiter) );
 
   fit->fstate->m2lnL = fit_gsl_mm->mm->f;
   fit->fstate->m2lnL_prec = gsl_blas_dnrm2 (fit_gsl_mm->mm->gradient) / fit_gsl_mm->mm->f;

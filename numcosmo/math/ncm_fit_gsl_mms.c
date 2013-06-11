@@ -245,7 +245,7 @@ _ncm_fit_gsl_mms_run (NcmFit *fit, NcmFitRunMsgs mtype)
     }
     ncm_fit_log_step (fit, fit_gsl_mms->mms->fval);
   }
-  while ( (status == GSL_CONTINUE) && (fit->fstate->niter < fit->maxeval) );
+  while ( (status == GSL_CONTINUE) && (fit->fstate->niter < fit->maxiter) );
 
   ncm_mset_fparams_set_gsl_vector (fit->mset, fit_gsl_mms->mms->x);
 

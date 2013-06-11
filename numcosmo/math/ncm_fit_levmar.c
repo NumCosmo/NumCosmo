@@ -242,7 +242,7 @@ ncm_fit_levmar_der_run (NcmFit *fit, NcmFitRunMsgs mtype)
   ret = dlevmar_der (
                      &nc_residual_levmar_f, &nc_residual_levmar_J,
                      ncm_vector_gsl (fit->fstate->fparams)->data, NULL, fit->fstate->fparam_len, fit->fstate->data_len,
-                     fit->maxeval, opts, info, fit_levmar->der, NCM_MATRIX_GSL (fit->fstate->covar)->data, fit
+                     fit->maxiter, opts, info, fit_levmar->der, NCM_MATRIX_GSL (fit->fstate->covar)->data, fit
                      );
 
   if (ret < 0)
@@ -280,7 +280,7 @@ ncm_fit_levmar_dif_run (NcmFit *fit, NcmFitRunMsgs mtype)
   ret = dlevmar_dif (
                      &nc_residual_levmar_f,
                      ncm_vector_gsl (fit->fstate->fparams)->data, NULL, fit->fstate->fparam_len, fit->fstate->data_len,
-                     fit->maxeval, opts, info, fit_levmar->dif, NCM_MATRIX_GSL (fit->fstate->covar)->data, fit
+                     fit->maxiter, opts, info, fit_levmar->dif, NCM_MATRIX_GSL (fit->fstate->covar)->data, fit
                      );
 
   if (ret < 0)

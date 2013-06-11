@@ -258,7 +258,7 @@ _ncm_fit_nlopt_run (NcmFit *fit, NcmFitRunMsgs mtype)
       nlopt_set_ftol_abs (fit_nlopt->nlopt, NCM_FIT_DEFAULT_M2LNL_ABSTOL);
     nlopt_set_xtol_rel (fit_nlopt->nlopt, fit->params_reltol);
     nlopt_set_xtol_abs (fit_nlopt->nlopt, ncm_vector_gsl (fit_nlopt->pabs)->data);
-    nlopt_set_maxeval (fit_nlopt->nlopt, fit->maxeval);
+    nlopt_set_maxeval (fit_nlopt->nlopt, fit->maxiter);
     nlopt_set_initial_step (fit_nlopt->nlopt, ncm_vector_gsl (fit_nlopt->pscale)->data);
 
     ret = nlopt_optimize (fit_nlopt->nlopt, ncm_vector_gsl (fit->fstate->fparams)->data, &minf);

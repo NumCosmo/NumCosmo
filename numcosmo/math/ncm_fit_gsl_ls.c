@@ -176,7 +176,7 @@ _ncm_fit_gsl_ls_run (NcmFit *fit, NcmFitRunMsgs mtype)
       ncm_fit_log_step (fit, sqrt_m2lnL * sqrt_m2lnL);
     }
   }
-  while (status == GSL_CONTINUE && fit->fstate->niter < fit->maxeval);
+  while (status == GSL_CONTINUE && fit->fstate->niter < fit->maxiter);
 
   {
     NcmVector *_x = ncm_vector_new_gsl_static (fit_gsl_ls->ls->x);

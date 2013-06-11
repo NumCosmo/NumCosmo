@@ -389,6 +389,7 @@ main (gint argc, gchar *argv[])
   if (de_fit.fit)
   {
     fit->params_reltol = 1e-5;
+    ncm_fit_set_maxiter (fit, de_fit.max_iter);
     ncm_fit_run (fit, de_fit.msg_level);
     
     ncm_fit_log_info (fit);
@@ -671,6 +672,8 @@ main (gint argc, gchar *argv[])
     NcmMSetFunc *E2_func = nc_hicosmo_create_mset_func1 (nc_hicosmo_E2);
     NcmMSetFunc *Em2_func = nc_hicosmo_create_mset_func1 (nc_hicosmo_Em2);
     gint i;
+
+    ncm_message ("# Kinematics data:\n");
     for (i = 0; i < de_fit.kinematics_n; i++)
     {
       gdouble z = de_fit.kinematics_z / (de_fit.kinematics_n - 1.0) * i;
@@ -679,7 +682,7 @@ main (gint argc, gchar *argv[])
       ncm_fit_function_error (fit, dec_param_func, &z, FALSE, &q_z, &sigma_q_z);
       ncm_fit_function_error (fit, E2_func, &z, FALSE, &E2_z, &sigma_E2_z);
       ncm_fit_function_error (fit, Em2_func, &z, FALSE, &Em2_z, &sigma_Em2_z);
-      printf ("% 20.15g % 20.15g % 20.15g % 20.15g % 20.15g % 20.15g % 20.15g\n", z, q_z, sigma_q_z, E2_z, sigma_E2_z, Em2_z, sigma_Em2_z);
+      ncm_message ("% 20.15g % 20.15g % 20.15g % 20.15g % 20.15g % 20.15g % 20.15g\n", z, q_z, sigma_q_z, E2_z, sigma_E2_z, Em2_z, sigma_Em2_z);
     }
     ncm_mset_func_free (dec_param_func);
     ncm_mset_func_free (E2_func);

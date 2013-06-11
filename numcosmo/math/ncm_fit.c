@@ -58,6 +58,7 @@
 enum
 {
   PROP_0,
+  PROP_MAXITER,
   PROP_LIKELIHOOD,
   PROP_MSET,
   PROP_STATE,
@@ -70,7 +71,7 @@ G_DEFINE_ABSTRACT_TYPE (NcmFit, ncm_fit, G_TYPE_OBJECT);
 static void
 ncm_fit_init (NcmFit *fit)
 {
-  fit->maxeval       = NCM_FIT_MAXEVAL;
+  fit->maxiter       = NCM_FIT_MAXITER;
   fit->m2lnL_reltol  = NCM_FIT_DEFAULT_M2LNL_RELTOL * 0.0 + 1e-8;
   fit->params_reltol = NC_HICOSMO_DEFAULT_PARAMS_RELTOL * 0.0 + 1e-8;
   fit->timer = g_timer_new ();
@@ -121,6 +122,9 @@ _ncm_fit_set_property (GObject *object, guint prop_id, const GValue *value, GPar
 
   switch (prop_id)
   {
+    case PROP_MAXITER:
+      ncm_fit_set_maxiter (fit, g_value_get_uint (value));
+      break;
     case PROP_LIKELIHOOD:
       ncm_likelihood_clear (&fit->lh);
       fit->lh = g_value_dup_object (value);
@@ -146,6 +150,9 @@ _ncm_fit_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec
 
   switch (prop_id)
   {
+    case PROP_MAXITER:
+      g_value_set_uint (value, ncm_fit_get_maxiter (fit));
+      break;
     case PROP_LIKELIHOOD:
       g_value_set_object (value, fit->lh);
       break;
@@ -201,6 +208,13 @@ ncm_fit_class_init (NcmFitClass *klass)
   klass->is_least_squares = FALSE;
   klass->reset            = &_ncm_fit_reset;
 
+  g_object_class_install_property (object_class,
+                                   PROP_MAXITER,
+                                   g_param_spec_uint ("maxiter",
+                                                      NULL,
+                                                      "Maximum number of interations",
+                                                      0, G_MAXUINT32, NCM_FIT_MAXITER,
+                                                      G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
   g_object_class_install_property (object_class,
                                    PROP_LIKELIHOOD,
                                    g_param_spec_object ("likelihood",
@@ -444,6 +458,34 @@ ncm_fit_ls_set_state (NcmFit *fit, gdouble prec, NcmVector *x, NcmVector *f, Ncm
 
   ncm_matrix_memcpy (fit->fstate->ls_J, J);
 }
+
+/**
+ * ncm_fit_set_maxiter:
+ * @fit: a #NcmFit.
+ * @maxiter: FIXME.
+ *
+ * FIXME
+ */
+void 
+ncm_fit_set_maxiter (NcmFit *fit, guint maxiter)
+{
+  fit->maxiter = maxiter;
+}
+
+/**
+ * ncm_fit_get_maxiter:
+ * @fit: a #NcmFit.
+ *
+ * FIXME
+ * 
+ * Returns: FIXME
+ */
+guint 
+ncm_fit_get_maxiter (NcmFit *fit)
+{
+  return fit->maxiter;
+}
+
 
 /**
  * ncm_fit_ls_covar:

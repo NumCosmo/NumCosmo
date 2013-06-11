@@ -96,7 +96,6 @@ typedef void (*_NcmFitLSFJ) (NcmFit *fit, NcmVector *f, NcmMatrix *J);
 typedef void (*_NcmFitM2lnLGrad) (NcmFit *fit, NcmVector *grad);
 typedef void (*_NcmFitM2lnLValGrad) (NcmFit *fit, gdouble *m2lnL, NcmVector *grad);
 
-
 /**
  * NcmFitGrad:
  *
@@ -148,7 +147,7 @@ struct _NcmFit
   NcmFitState *fstate;
   NcmFitRunMsgs mtype;
   NcmFitGrad grad;
-  guint maxeval;
+  guint maxiter;
   gdouble m2lnL_reltol;
   gdouble params_reltol;
   GTimer *timer;
@@ -164,6 +163,8 @@ void ncm_fit_clear (NcmFit **fit);
 
 void ncm_fit_set_grad_type (NcmFit *fit, NcmFitGradType gtype);
 void ncm_fit_ls_set_state (NcmFit *fit, gdouble prec, NcmVector *x, NcmVector *f, NcmMatrix *J);
+void ncm_fit_set_maxiter (NcmFit *fit, guint maxiter);
+guint ncm_fit_get_maxiter (NcmFit *fit);
 
 gboolean ncm_fit_is_least_squares (NcmFit *fit);
 
@@ -237,7 +238,7 @@ gdouble ncm_fit_function_cov (NcmFit *fit, NcmMSetFunc *func1, gdouble z1, NcmMS
 #define NCM_FIT_NPARAM(fit) ((fit)->pt->nfree)
 #define NCM_FIT_DEFAULT_M2LNL_ABSTOL (0.0)
 #define NCM_FIT_DEFAULT_M2LNL_RELTOL (1e-13)
-#define NCM_FIT_MAXEVAL 10000
+#define NCM_FIT_MAXITER 10000
 
 G_END_DECLS
 
