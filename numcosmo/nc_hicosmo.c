@@ -516,7 +516,25 @@ NCM_MODEL_SET_IMPL_FUNC(NC_HICOSMO,NcHICosmo,nc_hicosmo,NcmModelFunc1,powspec)
  * FIXME
  *
  * Returns: FIXME
-*/
+ */
+/**
+ * nc_hicosmo_dec:
+ * @cosmo: a #NcHICosmo
+ * @z: redshift
+ *
+ * FIXME
+ *
+ * Returns: FIXME
+ */
+/**
+ * nc_hicosmo_wec:
+ * @cosmo: a #NcHICosmo
+ * @z: redshift
+ *
+ * FIXME
+ *
+ * Returns: FIXME
+ */
 /**
  * nc_hicosmo_qp:
  * @cosmo: a #NcHICosmo

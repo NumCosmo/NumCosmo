@@ -69,6 +69,8 @@ struct _NcmFftlog
   gdouble lnr0;
   gdouble L;
   gdouble dr;
+  gboolean prepared;
+  gchar *name;
 #ifdef NUMCOSMO_HAVE_FFTW3
   fftw_complex *in;
   fftw_complex *out;
@@ -78,6 +80,13 @@ struct _NcmFftlog
 };
 
 GType ncm_fftlog_get_type (void) G_GNUC_CONST;
+
+void ncm_fftlog_set_name (NcmFftlog *fftlog, const gchar *name);
+gchar *ncm_fftlog_peek_name (NcmFftlog *fftlog);
+void ncm_fftlog_set_size (NcmFftlog *fftlog, guint n);
+guint ncm_fftlog_get_size (NcmFftlog *fftlog);
+void ncm_fftlog_set_length (NcmFftlog *fftlog, gdouble L);
+gdouble ncm_fftlog_get_length (NcmFftlog *fftlog);
 
 G_END_DECLS
 

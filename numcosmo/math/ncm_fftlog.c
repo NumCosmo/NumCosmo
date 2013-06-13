@@ -56,6 +56,7 @@ enum
   PROP_K0,
   PROP_L,
   PROP_N,
+  PROP_NAME,
 };
 
 G_DEFINE_TYPE (NcmFftlog, ncm_fftlog, G_TYPE_OBJECT);
@@ -65,10 +66,10 @@ ncm_fftlog_init (NcmFftlog *ncm_fftlog)
 {
   ncm_fftlog->lnr0 = 0.0;
   ncm_fftlog->lnk0 = 0.0;
-  ncm_fftlog->L  = 0.0;
-  ncm_fftlog->N  = 0;
-  ncm_fftlog->dr = 0.0;
-
+  ncm_fftlog->L    = 0.0;
+  ncm_fftlog->N    = 0;
+  ncm_fftlog->dr   = 0.0;
+  ncm_fftlog->name = NULL;
 }
 
 static void
@@ -79,23 +80,24 @@ _ncm_fftlog_set_property (GObject *object, guint prop_id, const GValue *value, G
 
   switch (prop_id)
   {
-	case PROP_R0:
-	  fftlog->lnr0 = log (g_value_get_double (value));
-	  break;
-	case PROP_K0:
-	  fftlog->lnk0 = log (g_value_get_double (value));
-	  break;
-	case PROP_L:
-	  fftlog->L = g_value_get_double (value);
-	  break;
-	case PROP_N:
-	  fftlog->N = g_value_get_uint (value);
-	  if (fftlog->N % 2 == 0)
-		fftlog->N++;
-	  break;
-	default:
-	  G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-	  break;
+    case PROP_R0:
+      fftlog->lnr0 = log (g_value_get_double (value));
+      break;
+    case PROP_K0:
+      fftlog->lnk0 = log (g_value_get_double (value));
+      break;
+    case PROP_L:
+      fftlog->L = g_value_get_double (value);
+      break;
+    case PROP_N:
+      ncm_fftlog_set_size (fftlog, g_value_get_uint (value));
+      break;
+    case PROP_NAME:
+      ncm_fftlog_set_name (fftlog, g_value_get_string (value));
+      break;
+    default:
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
+      break;
   }
 }
 
@@ -108,21 +110,24 @@ _ncm_fftlog_get_property (GObject *object, guint prop_id, GValue *value, GParamS
 
   switch (prop_id)
   {
-	case PROP_R0:
-	  g_value_set_double (value, exp (fftlog->lnr0));
-	  break;
-	case PROP_K0:
-	  g_value_set_double (value, exp (fftlog->lnk0));
-	  break;
-	case PROP_L:
-	  g_value_set_double (value, fftlog->L);
-	  break;
-	case PROP_N:
-	  g_value_set_uint (value, fftlog->N);
-	  break;
-	default:
-	  G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-	  break;
+    case PROP_R0:
+      g_value_set_double (value, exp (fftlog->lnr0));
+      break;
+    case PROP_K0:
+      g_value_set_double (value, exp (fftlog->lnk0));
+      break;
+    case PROP_L:
+      g_value_set_double (value, fftlog->L);
+      break;
+    case PROP_N:
+      g_value_set_uint (value, fftlog->N);
+      break;
+    case PROP_NAME:
+      g_value_set_string (value, fftlog->name);
+      break;
+    default:
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
+      break;
   }
 }
 
@@ -132,17 +137,8 @@ _ncm_fftlog_constructed (GObject *object)
   /* Chain up : start */
   G_OBJECT_CLASS (ncm_fftlog_parent_class)->constructed (object);
   {
-#ifdef NUMCOSMO_HAVE_FFTW3
-	NcmFftlog *fftlog = NCM_FFTLOG (object);
-	fftlog->N_2 = (fftlog->N - 1) / 2;
-	fftlog->dr  = fftlog->L / (1.0 * fftlog->N);
-
-	fftlog->in  = fftw_alloc_complex (fftlog->N);
-	fftlog->out = fftw_alloc_complex (fftlog->N);
-	ncm_cfg_load_fftw_wisdom ("ncm_fftlog_wisdown.fftw3");
-	fftlog->p_in2out = fftw_plan_dft_1d (fftlog->N, fftlog->in, fftlog->out, FFTW_FORWARD, FFTW_PATIENT | FFTW_DESTROY_INPUT);
-	fftlog->p_out2in = fftw_plan_dft_1d (fftlog->N, fftlog->out, fftlog->in, FFTW_FORWARD, FFTW_PATIENT | FFTW_DESTROY_INPUT);
-	ncm_cfg_save_fftw_wisdom ("ncm_fftlog_wisdown.fftw3");
+#ifndef NUMCOSMO_HAVE_FFTW3
+    g_error ("Cannot construct FFTLog object fftw3 library is not present, recompile numcosmo with fftw3 support.");
 #endif /* NUMCOSMO_HAVE_FFTW3 */
   }
 }
@@ -152,12 +148,16 @@ ncm_fftlog_finalize (GObject *object)
 {
 #ifdef NUMCOSMO_HAVE_FFTW3
   NcmFftlog *fftlog = NCM_FFTLOG (object);
-  fftw_destroy_plan (fftlog->p_in2out);
-  fftw_destroy_plan (fftlog->p_out2in);
-  fftw_free (fftlog->in);
-  fftw_free (fftlog->out);
+  if (fftlog->in != NULL)
+    fftw_free (fftlog->in);
+  if (fftlog->out != NULL)
+    fftw_free (fftlog->out); 
+  if (fftlog->p_in2out != NULL)
+    fftw_destroy_plan (fftlog->p_in2out);
+  if (fftlog->p_out2in != NULL)
+    fftw_destroy_plan (fftlog->p_out2in);
 #endif /* NUMCOSMO_HAVE_FFTW3 */
-
+  
   /* Chain up : end */
   G_OBJECT_CLASS (ncm_fftlog_parent_class)->finalize (object);
 }
@@ -204,4 +204,122 @@ ncm_fftlog_class_init (NcmFftlogClass *klass)
                                                       0, G_MAXUINT, 10,
                                                       G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
+  g_object_class_install_property (object_class,
+                                   PROP_NAME,
+                                   g_param_spec_string ("name",
+                                                      NULL,
+                                                      "FFTW Plan wisdown name",
+                                                      "fftlog_default_wisdown",
+                                                      G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
 }
+
+/**
+ * ncm_fftlog_set_name:
+ * @fftlog: FIXME
+ * @name: FIXME
+ * 
+ * FIXME
+ * 
+ */
+void
+ncm_fftlog_set_name (NcmFftlog *fftlog, const gchar *name)
+{
+  g_free (fftlog->name);
+  fftlog->name = g_strdup_printf ("%s.fftw3", name);
+}
+
+/**
+ * ncm_fftlog_peek_name:
+ * @fftlog: FIXME
+ * 
+ * FIXME
+ * 
+ * Returns: (transfer none): FIXME
+ */
+gchar *
+ncm_fftlog_peek_name (NcmFftlog *fftlog)
+{
+  return fftlog->name;
+}
+
+/**
+ * ncm_fftlog_set_size:
+ * @fftlog: FIXME
+ * @n: FIXME
+ * 
+ * FIXME
+ * 
+ */
+void
+ncm_fftlog_set_size (NcmFftlog *fftlog, guint n)
+{
+#ifdef NUMCOSMO_HAVE_FFTW3
+  fftlog->dr  = fftlog->L / (1.0 * fftlog->N);
+  if (n != fftlog->N)
+  {
+    fftlog->N_2 = fftlog->N % 2 == 1 ? (fftlog->N - 1) / 2 : fftlog->N / 2;
+    
+    if (fftlog->in != NULL)
+      fftw_free (fftlog->in);
+    if (fftlog->out != NULL)
+      fftw_free (fftlog->out); 
+    if (fftlog->p_in2out != NULL)
+      fftw_destroy_plan (fftlog->p_in2out);
+    if (fftlog->p_out2in != NULL)
+      fftw_destroy_plan (fftlog->p_out2in);
+      
+    fftlog->in  = fftw_alloc_complex (fftlog->N);
+    fftlog->out = fftw_alloc_complex (fftlog->N);
+
+    ncm_cfg_load_fftw_wisdom (fftlog->name);
+    fftlog->p_in2out = fftw_plan_dft_1d (fftlog->N, fftlog->in, fftlog->out, FFTW_FORWARD, FFTW_PATIENT | FFTW_DESTROY_INPUT);
+    fftlog->p_out2in = fftw_plan_dft_1d (fftlog->N, fftlog->out, fftlog->in, FFTW_FORWARD, FFTW_PATIENT | FFTW_DESTROY_INPUT);
+    ncm_cfg_save_fftw_wisdom (fftlog->name);
+  }
+#endif /* NUMCOSMO_HAVE_FFTW3 */
+}
+
+/**
+ * ncm_fftlog_get_size:
+ * @fftlog: FIXME
+ * 
+ * FIXME
+ * 
+ * Returns: FIXME
+ */
+guint
+ncm_fftlog_get_size (NcmFftlog *fftlog)
+{
+  return fftlog->N;
+}
+
+/**
+ * ncm_fftlog_set_length:
+ * @fftlog: FIXME
+ * @L: FIXME
+ * 
+ * FIXME
+ * 
+ */
+void
+ncm_fftlog_set_length (NcmFftlog *fftlog, gdouble L)
+{
+  fftlog->L = L;
+  fftlog->dr = fftlog->L / (1.0 * fftlog->N);
+}
+
+/**
+ * ncm_fftlog_get_length:
+ * @fftlog: FIXME
+ * 
+ * FIXME
+ * 
+ * Returns: FIXME
+ */
+gdouble
+ncm_fftlog_get_length (NcmFftlog *fftlog)
+{
+  return fftlog->L;
+}
+

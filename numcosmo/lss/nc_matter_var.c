@@ -78,15 +78,15 @@ enum
  * the input arguments.
  *
  * Returns: A new #NcMatterVar.
-*/
+ */
 NcMatterVar *
 nc_matter_var_new (NcMatterVarStrategy vs, NcWindow *wp, NcTransferFunc *tf)
 {
   NcMatterVar *vp = g_object_new (NC_TYPE_MATTER_VAR,
-				      "strategy", vs,
-				      "window", wp,
-				      "transfer", tf,
-				      NULL);
+                                  "strategy", vs,
+                                  "window", wp,
+                                  "transfer", tf,
+                                  NULL);
   return vp;
 }
 
@@ -97,7 +97,7 @@ nc_matter_var_new (NcMatterVarStrategy vs, NcWindow *wp, NcTransferFunc *tf)
  * This function duplicates the #NcMatterVar object setting the same values of the original propertities.
  *
  * Returns: (transfer full): A new #NcMatterVar.
-*/
+   */
 NcMatterVar *
 nc_matter_var_copy (NcMatterVar * vp)
 {
@@ -111,7 +111,7 @@ nc_matter_var_copy (NcMatterVar * vp)
  * Atomically decrements the reference count of @vp by one. If the reference count drops to 0,
  * all memory allocated by @vp is released.
  *
-*/
+ */
 void
 nc_matter_var_free (NcMatterVar *vp)
 {
@@ -125,7 +125,7 @@ nc_matter_var_free (NcMatterVar *vp)
  * Atomically decrements the reference count of @vp by one. If the reference count drops to 0,
  * all memory allocated by @vp is released. Set pointer to NULL.
  *
-*/
+ */
 void
 nc_matter_var_clear (NcMatterVar **vp)
 {
@@ -139,7 +139,7 @@ nc_matter_var_init (NcMatterVar *vp)
   NcmVector *sigma2_over_growth_yv = ncm_vector_new (NC_MATTER_VAR_SIGMA2_NP);
   NcmVector *dsigma2_over_growth_xv = ncm_vector_new (NC_MATTER_VAR_SIGMA2_NP);
   NcmVector *dsigma2_over_growth_yv = ncm_vector_new (NC_MATTER_VAR_SIGMA2_NP);
-  
+
   vp->r = 0.0;
   vp->spline_init = 0;
   vp->n_points_spline = 0;
@@ -160,13 +160,13 @@ static void
 _nc_matter_var_dispose (GObject * object)
 {
   NcMatterVar *vp = NC_MATTER_VAR (object);
-  
+
   nc_window_clear (&vp->wp);
   nc_transfer_func_clear (&vp->tf);
   ncm_model_ctrl_clear (&vp->ctrl);
-	ncm_spline_clear (&vp->integrand_overw2_spline);
-	ncm_spline_clear (&vp->sigma2_over_growth);
-	ncm_spline_clear (&vp->deriv_sigma2_over_growth);
+  ncm_spline_clear (&vp->integrand_overw2_spline);
+  ncm_spline_clear (&vp->sigma2_over_growth);
+  ncm_spline_clear (&vp->deriv_sigma2_over_growth);
 
   /* Chain up : end */
   G_OBJECT_CLASS (nc_matter_var_parent_class)->dispose (object);
@@ -243,13 +243,13 @@ nc_matter_var_class_init (NcMatterVarClass *klass)
    * FIXME
    */
   g_object_class_install_property (object_class,
-				   PROP_STRAT,
-				   g_param_spec_enum ("strategy",
-						       NULL,
-						       "Strategy",
-						       NC_TYPE_MATTER_VAR_STRATEGY, NC_MATTER_VAR_FFT,
-						       G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME
-						       | G_PARAM_STATIC_BLURB));
+                                   PROP_STRAT,
+                                   g_param_spec_enum ("strategy",
+                                                      NULL,
+                                                      "Strategy",
+                                                      NC_TYPE_MATTER_VAR_STRATEGY, NC_MATTER_VAR_FFT,
+                                                      G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME
+                                                      | G_PARAM_STATIC_BLURB));
 
   /**
    * NcMatterVar:window:
@@ -257,13 +257,13 @@ nc_matter_var_class_init (NcMatterVarClass *klass)
    * This property keeps the window object.
    */
   g_object_class_install_property (object_class,
-				   PROP_WINDOW,
-				   g_param_spec_object ("window",
-						       NULL,
-						       "Window Function.",
-						       NC_TYPE_WINDOW,
-						       G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME
-						       | G_PARAM_STATIC_BLURB));
+                                   PROP_WINDOW,
+                                   g_param_spec_object ("window",
+                                                        NULL,
+                                                        "Window Function.",
+                                                        NC_TYPE_WINDOW,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME
+                                                        | G_PARAM_STATIC_BLURB));
 
   /**
    * NcMatterVar:transfer:
@@ -271,13 +271,13 @@ nc_matter_var_class_init (NcMatterVarClass *klass)
    * This property keeps the transferfunc object.
    */
   g_object_class_install_property (object_class,
-				   PROP_TRANSFER,
-				   g_param_spec_object ("transfer",
-						       NULL,
-						       "Transfer Function.",
-						       NC_TYPE_TRANSFER_FUNC,
-						       G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME
-						       | G_PARAM_STATIC_BLURB));
+                                   PROP_TRANSFER,
+                                   g_param_spec_object ("transfer",
+                                                        NULL,
+                                                        "Transfer Function.",
+                                                        NC_TYPE_TRANSFER_FUNC,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME
+                                                        | G_PARAM_STATIC_BLURB));
 }
 
 static void _nc_matter_var_prepare_numint (NcMatterVar *vp, NcHICosmo *model);
@@ -296,19 +296,19 @@ nc_matter_var_prepare (NcMatterVar *vp, NcHICosmo *model)
 {
   switch (vp->vs)
   {
-	case NC_MATTER_VAR_NUMINT:
-	  _nc_matter_var_prepare_numint (vp, model);
-	  break;
-	case NC_MATTER_VAR_SPLINEINT:
-	  _nc_matter_var_prepare_splineint (vp, model);
-	  break;
-	case NC_MATTER_VAR_FFT:
+    case NC_MATTER_VAR_NUMINT:
+      _nc_matter_var_prepare_numint (vp, model);
+      break;
+    case NC_MATTER_VAR_SPLINEINT:
+      _nc_matter_var_prepare_splineint (vp, model);
+      break;
+    case NC_MATTER_VAR_FFT:
 #ifdef NUMCOSMO_HAVE_FFTW3
-	  _nc_matter_var_prepare_fft (vp, model);
+      _nc_matter_var_prepare_fft (vp, model);
 #else
-          g_error ("nc_matter_var_prepare: Cannot use NC_MATTER_VAR_FFT: fftw not installed.");
+      g_error ("nc_matter_var_prepare: Cannot use NC_MATTER_VAR_FFT: fftw not installed.");
 #endif
-	  break;
+      break;
   }
 }
 
@@ -446,11 +446,11 @@ _nc_matter_var_over_growth2_tophat_old (NcMatterVar *vp, NcHICosmo *model, gdoub
   ts.model = model;
 
   if (w == NULL)
-	w = gsl_integration_workspace_alloc (NCM_INTEGRAL_PARTITION);
+    w = gsl_integration_workspace_alloc (NCM_INTEGRAL_PARTITION);
   if (wosc_cos == NULL)
-	wosc_cos = gsl_integration_qawo_table_alloc (2.0, _NC_LSTEP2, GSL_INTEG_COSINE, NCM_INTEGRAL_PARTITION);
+    wosc_cos = gsl_integration_qawo_table_alloc (2.0, _NC_LSTEP2, GSL_INTEG_COSINE, NCM_INTEGRAL_PARTITION);
   if (wosc_sin == NULL)
-	wosc_sin = gsl_integration_qawo_table_alloc (2.0, _NC_LSTEP2, GSL_INTEG_SINE, NCM_INTEGRAL_PARTITION);
+    wosc_sin = gsl_integration_qawo_table_alloc (2.0, _NC_LSTEP2, GSL_INTEG_SINE, NCM_INTEGRAL_PARTITION);
 
   F.function = &_nc_matter_var_integrand_tophat_one;
   F_cos.function = &_nc_matter_var_integrand_tophat_cosine;
@@ -480,18 +480,18 @@ _nc_matter_var_over_growth2_tophat_old (NcMatterVar *vp, NcHICosmo *model, gdoub
 
   for (step = 1.0; 1; step += _NC_LSTEP2)
   {
-	gdouble pres_t = 0.0;
-	gsl_integration_qawo (&F_cos, step, 0.0, NCM_DEFAULT_PRECISION, NCM_INTEGRAL_PARTITION, w, wosc_cos, &pres, &error_cos);
-	pres_t = pres;
+    gdouble pres_t = 0.0;
+    gsl_integration_qawo (&F_cos, step, 0.0, NCM_DEFAULT_PRECISION, NCM_INTEGRAL_PARTITION, w, wosc_cos, &pres, &error_cos);
+    pres_t = pres;
 
-	gsl_integration_qawo (&F_sin, step, 0.0, NCM_DEFAULT_PRECISION, NCM_INTEGRAL_PARTITION, w, wosc_sin, &pres, &error_sin);
-	pres_t += pres;
+    gsl_integration_qawo (&F_sin, step, 0.0, NCM_DEFAULT_PRECISION, NCM_INTEGRAL_PARTITION, w, wosc_sin, &pres, &error_sin);
+    pres_t += pres;
 
-	if (fabs(pres_t/v_over_growth2_osc) < NCM_DEFAULT_PRECISION * 1e-3)
-	  break;
-	v_over_growth2_osc += pres_t;
-	if (pres_t == 0.0)
-	  break;
+    if (fabs(pres_t/v_over_growth2_osc) < NCM_DEFAULT_PRECISION * 1e-3)
+      break;
+    v_over_growth2_osc += pres_t;
+    if (pres_t == 0.0)
+      break;
   }
 
   result += v_over_growth2_osc;
@@ -514,38 +514,38 @@ _nc_matter_var_prepare_numint (NcMatterVar *vp, NcHICosmo *model)
   nc_transfer_func_prepare (vp->tf, model);
 
   {
-	_NcMatterVarVar0 var0 = NULL;
-	_NcMatterVardVar0dR dvar0dR = NULL;
+    _NcMatterVarVar0 var0 = NULL;
+    _NcMatterVardVar0dR dvar0dR = NULL;
 
-	if (NC_IS_WINDOW_TOPHAT (vp->wp))
-	{
-	  var0 = &_nc_matter_var_over_growth2_tophat_old;
-	  dvar0dR = &_nc_matter_var_dvariance_over_growth2_dR_tophat;
-	}
-	else if (NC_IS_WINDOW_GAUSSIAN (vp->wp))
-	{
-	  var0 = &_nc_matter_var_over_growth2_gaussian;
-	  dvar0dR = &_nc_matter_var_dvariance_over_growth2_dR_gaussian;
-	}
-	else
-	  g_assert_not_reached ();
+    if (NC_IS_WINDOW_TOPHAT (vp->wp))
+    {
+      var0 = &_nc_matter_var_over_growth2_tophat_old;
+      dvar0dR = &_nc_matter_var_dvariance_over_growth2_dR_tophat;
+    }
+    else if (NC_IS_WINDOW_GAUSSIAN (vp->wp))
+    {
+      var0 = &_nc_matter_var_over_growth2_gaussian;
+      dvar0dR = &_nc_matter_var_dvariance_over_growth2_dR_gaussian;
+    }
+    else
+      g_assert_not_reached ();
 
 
-	for (i = 0; i < NC_MATTER_VAR_SIGMA2_NP; i++)
-	{
-	  gdouble lnR = log (0.1) + log (10000.0) / (NC_MATTER_VAR_SIGMA2_NP - 1.0) * i;
-	  //gdouble R = exp (lnR);
-	  gdouble sigma2_0, deriv_sigma2_0; /* variance over growth2 */
-	  sigma2_0 = var0 (vp, model, lnR);
-	  deriv_sigma2_0 = dvar0dR (vp, model, lnR);
+    for (i = 0; i < NC_MATTER_VAR_SIGMA2_NP; i++)
+    {
+      gdouble lnR = log (0.1) + log (10000.0) / (NC_MATTER_VAR_SIGMA2_NP - 1.0) * i;
+      //gdouble R = exp (lnR);
+      gdouble sigma2_0, deriv_sigma2_0; /* variance over growth2 */
+      sigma2_0 = var0 (vp, model, lnR);
+      deriv_sigma2_0 = dvar0dR (vp, model, lnR);
 
-	  ncm_vector_set (vp->sigma2_over_growth->xv, i, lnR);
-	  ncm_vector_set (vp->sigma2_over_growth->yv, i, log(sigma2_0));
-	  ncm_vector_set (vp->deriv_sigma2_over_growth->xv, i, lnR);
-	  ncm_vector_set (vp->deriv_sigma2_over_growth->yv, i, (exp(lnR) / sigma2_0) * deriv_sigma2_0);
-	}
-	ncm_spline_prepare (vp->sigma2_over_growth);
-	ncm_spline_prepare (vp->deriv_sigma2_over_growth);
+      ncm_vector_set (vp->sigma2_over_growth->xv, i, lnR);
+      ncm_vector_set (vp->sigma2_over_growth->yv, i, log(sigma2_0));
+      ncm_vector_set (vp->deriv_sigma2_over_growth->xv, i, lnR);
+      ncm_vector_set (vp->deriv_sigma2_over_growth->yv, i, (exp(lnR) / sigma2_0) * deriv_sigma2_0);
+    }
+    ncm_spline_prepare (vp->sigma2_over_growth);
+    ncm_spline_prepare (vp->deriv_sigma2_over_growth);
   }
   return;
 }
@@ -564,13 +564,13 @@ static void _top_hat_cubic_spline_integration_rule_taylor (gdouble xa, gdouble x
  * This function returns the variance of the density contrast at redshift \f$ z = 0 \f$ computed at scale R FIXME
  *
  * Returns: a gdouble which is the variance \f$ \sigma^2 (R, z = 0) \f$.
- */
+   */
 gdouble
 nc_matter_var_var0 (NcMatterVar *vp, NcHICosmo *model, gdouble lnR)
 {
   //const gdouble lnR = log (R);
   if (ncm_model_ctrl_update (vp->ctrl, NCM_MODEL(model)))
-	nc_matter_var_prepare (vp, model);
+    nc_matter_var_prepare (vp, model);
   return exp (ncm_spline_eval (vp->sigma2_over_growth, lnR));
 }
 
@@ -589,7 +589,7 @@ nc_matter_var_dlnvar0_dR (NcMatterVar *vp, NcHICosmo *model, gdouble lnR)
 {
   //const gdouble lnR = log (R);
   if (ncm_model_ctrl_update (vp->ctrl, NCM_MODEL(model)))
-	nc_matter_var_prepare (vp, model);
+    nc_matter_var_prepare (vp, model);
   return ncm_spline_eval (vp->deriv_sigma2_over_growth, lnR) / exp(lnR);
 }
 
@@ -607,7 +607,7 @@ gdouble
 nc_matter_var_dlnvar0_dlnR (NcMatterVar *vp, NcHICosmo *model, gdouble lnR)
 {
   if (ncm_model_ctrl_update (vp->ctrl, NCM_MODEL(model)))
-	nc_matter_var_prepare (vp, model);
+    nc_matter_var_prepare (vp, model);
   return ncm_spline_eval (vp->deriv_sigma2_over_growth, lnR);
 }
 
@@ -728,14 +728,14 @@ _nc_matter_var_integrand_over_window2 (gdouble k, gpointer data)
  * @model: a #NcHICosmo.
  *
  * This function prepares the spline for \f$ k^2 P(k) T^2(k)\f$, where P(k) is the power spectrum and T(k) is the
- * transfer function. Given this spline, we optimize the computation of the variance of the density contrast (comparing
- * to nc_matter_var_over_growth2_tophat, for example). The variance with the gaussian window funtion is given by
- * \f$ \sigma^2(R, z) = A \left(\frac{D(z)}{D(0)}\right)^2 \int_0^\infty \frac{dk}{2\pi^2} k^2 P(k) T^2(k) \exp(-(kR)^2) \f$,
- * where \f$ A \f$ is the power spectrum normalization and \f$ D(z) \f$ is the growth function at redshift \f$ z \f$.
- * The variance for the top hat window function takes the form
+   * transfer function. Given this spline, we optimize the computation of the variance of the density contrast (comparing
+                                                                                                                * to nc_matter_var_over_growth2_tophat, for example). The variance with the gaussian window funtion is given by
+     * \f$ \sigma^2(R, z) = A \left(\frac{D(z)}{D(0)}\right)^2 \int_0^\infty \frac{dk}{2\pi^2} k^2 P(k) T^2(k) \exp(-(kR)^2) \f$,
+     * where \f$ A \f$ is the power spectrum normalization and \f$ D(z) \f$ is the growth function at redshift \f$ z \f$.
+       * The variance for the top hat window function takes the form
  * \f$ \sigma^2(R, z) = A \left(\frac{D(z)}{D(0)}\right)^2 \int_0^\infty dk \frac{9}{2\pi^2(kR)^2} k^2 P(k) T^2(k) (j_1(kR))^2 \f$,
  * where \f$ j_1(kR) \f$ is the spherical Bessel function of the first kind.
- */
+   */
 static void
 _nc_matter_var_prepare_splineint (NcMatterVar *vp, NcHICosmo *model)
 {
@@ -744,123 +744,123 @@ _nc_matter_var_prepare_splineint (NcMatterVar *vp, NcHICosmo *model)
 
   if (TRUE)
   {
-	gint last_i;
-	gdouble first_k[] = {0.0, 1.0e-20, 1.0e-19, 1.0e-18, 1.0e-17, 1.0e-16, 1.0e-15, 1.0e-14, 1.0e-13, 1.0e-12, 1.0e-11,
-	  1.0e-10, 1.0e-9, 1.0e-8, 1.0e-7, 1.0e-6, 1.0e-5};
-	vp->n_points_spline = 230;
+    gint last_i;
+    gdouble first_k[] = {0.0, 1.0e-20, 1.0e-19, 1.0e-18, 1.0e-17, 1.0e-16, 1.0e-15, 1.0e-14, 1.0e-13, 1.0e-12, 1.0e-11,
+      1.0e-10, 1.0e-9, 1.0e-8, 1.0e-7, 1.0e-6, 1.0e-5};
+    vp->n_points_spline = 230;
 
-	if (vp->integrand_overw2_spline == NULL)
-	{
-	  NcmVector *integrand_overw2_xv = ncm_vector_new (vp->n_points_spline);
-	  NcmVector *integrand_overw2_yv = ncm_vector_new (vp->n_points_spline);
-	  
-	  vp->integrand_overw2_spline =
-		ncm_spline_cubic_notaknot_new_full (integrand_overw2_xv,
-		                                    integrand_overw2_yv,
-		                                    FALSE);
-          ncm_vector_free (integrand_overw2_xv);
-          ncm_vector_free (integrand_overw2_yv);
-	}
+    if (vp->integrand_overw2_spline == NULL)
+    {
+      NcmVector *integrand_overw2_xv = ncm_vector_new (vp->n_points_spline);
+      NcmVector *integrand_overw2_yv = ncm_vector_new (vp->n_points_spline);
 
-	vp->spline_init = TRUE;
+      vp->integrand_overw2_spline =
+        ncm_spline_cubic_notaknot_new_full (integrand_overw2_xv,
+                                            integrand_overw2_yv,
+                                            FALSE);
+      ncm_vector_free (integrand_overw2_xv);
+      ncm_vector_free (integrand_overw2_yv);
+    }
 
-	nc_transfer_func_prepare (vp->tf, model);
+    vp->spline_init = TRUE;
 
-	for (i = 0; i < 17; i++)
-	{
-	  const gdouble k = first_k[i];
-	  ncm_vector_set (vp->integrand_overw2_spline->xv, i, k);
-	  ncm_vector_set (vp->integrand_overw2_spline->yv, i, nc_matter_var_integrand_over_window2 (vp, model, k));
-	}
-	last_i = i;
+    nc_transfer_func_prepare (vp->tf, model);
 
-	for (; i < last_i + 66; i++)
-	{
-	  const gdouble k = 4e-2 / (66.0 - 1.0) * (i - last_i) + 2.0e-5;
-	  ncm_vector_set (vp->integrand_overw2_spline->xv, i, k);
-	  ncm_vector_set (vp->integrand_overw2_spline->yv, i, nc_matter_var_integrand_over_window2 (vp, model, k));
-	}
-	last_i = i;
+    for (i = 0; i < 17; i++)
+    {
+      const gdouble k = first_k[i];
+      ncm_vector_set (vp->integrand_overw2_spline->xv, i, k);
+      ncm_vector_set (vp->integrand_overw2_spline->yv, i, nc_matter_var_integrand_over_window2 (vp, model, k));
+    }
+    last_i = i;
 
-	for (; i < last_i + 76; i++)
-	{
-	  const gdouble k = 0.75 / (76.0 - 1.0) * (i - last_i) + 5e-2;
-	  ncm_vector_set (vp->integrand_overw2_spline->xv, i, k);
-	  ncm_vector_set (vp->integrand_overw2_spline->yv, i, nc_matter_var_integrand_over_window2 (vp, model, k));
-	}
-	last_i = i;
+    for (; i < last_i + 66; i++)
+    {
+      const gdouble k = 4e-2 / (66.0 - 1.0) * (i - last_i) + 2.0e-5;
+      ncm_vector_set (vp->integrand_overw2_spline->xv, i, k);
+      ncm_vector_set (vp->integrand_overw2_spline->yv, i, nc_matter_var_integrand_over_window2 (vp, model, k));
+    }
+    last_i = i;
 
-	for (; i < last_i + 51; i++)
-	{
-	  const gdouble k = exp (log(0.85) + (log(400.0) - log(0.85)) * (i - last_i) / 50.0);
-	  ncm_vector_set (vp->integrand_overw2_spline->xv, i, k);
-	  ncm_vector_set (vp->integrand_overw2_spline->yv, i, nc_matter_var_integrand_over_window2 (vp, model, k));
-	}
-	last_i = i;
+    for (; i < last_i + 76; i++)
+    {
+      const gdouble k = 0.75 / (76.0 - 1.0) * (i - last_i) + 5e-2;
+      ncm_vector_set (vp->integrand_overw2_spline->xv, i, k);
+      ncm_vector_set (vp->integrand_overw2_spline->yv, i, nc_matter_var_integrand_over_window2 (vp, model, k));
+    }
+    last_i = i;
 
-	for (; i < last_i + 10; i++)
-	{
-	  const gdouble k = 400.0 / (10.0 - 1.0) * (i - last_i) + 450.0;
-	  ncm_vector_set (vp->integrand_overw2_spline->xv, i, k);
-	  ncm_vector_set (vp->integrand_overw2_spline->yv, i, nc_matter_var_integrand_over_window2 (vp, model, k));
-	}
-	last_i = i;
+    for (; i < last_i + 51; i++)
+    {
+      const gdouble k = exp (log(0.85) + (log(400.0) - log(0.85)) * (i - last_i) / 50.0);
+      ncm_vector_set (vp->integrand_overw2_spline->xv, i, k);
+      ncm_vector_set (vp->integrand_overw2_spline->yv, i, nc_matter_var_integrand_over_window2 (vp, model, k));
+    }
+    last_i = i;
 
-	for (; i < last_i + 10; i++)
-	{
-	  const gdouble k = 100.0 / (10.0 - 1.0) * (i - last_i) + 900.0;
-	  ncm_vector_set (vp->integrand_overw2_spline->xv, i, k);
-	  ncm_vector_set (vp->integrand_overw2_spline->yv, i, nc_matter_var_integrand_over_window2 (vp, model, k));
-	}
-	last_i = i;
-	ncm_spline_prepare (vp->integrand_overw2_spline);
+    for (; i < last_i + 10; i++)
+    {
+      const gdouble k = 400.0 / (10.0 - 1.0) * (i - last_i) + 450.0;
+      ncm_vector_set (vp->integrand_overw2_spline->xv, i, k);
+      ncm_vector_set (vp->integrand_overw2_spline->yv, i, nc_matter_var_integrand_over_window2 (vp, model, k));
+    }
+    last_i = i;
+
+    for (; i < last_i + 10; i++)
+    {
+      const gdouble k = 100.0 / (10.0 - 1.0) * (i - last_i) + 900.0;
+      ncm_vector_set (vp->integrand_overw2_spline->xv, i, k);
+      ncm_vector_set (vp->integrand_overw2_spline->yv, i, nc_matter_var_integrand_over_window2 (vp, model, k));
+    }
+    last_i = i;
+    ncm_spline_prepare (vp->integrand_overw2_spline);
   }
   else if (FALSE)
   {
-	gsl_function F;
-	_NcMatterVarIntegOverW2 vpd = {vp, model};
-	F.function = &_nc_matter_var_integrand_over_window2;
-	F.params = &vpd;
-	vp->integrand_overw2_spline = ncm_spline_cubic_notaknot_new ();
-	ncm_spline_set_func (vp->integrand_overw2_spline, NCM_SPLINE_FUNCTION_SPLINE_LNKNOT, &F, 1e-20, 1000.0, 0, 1e-5);
-	printf ("Ok Spline %zd\n", vp->integrand_overw2_spline->len);fflush (stdout);
+    gsl_function F;
+    _NcMatterVarIntegOverW2 vpd = {vp, model};
+    F.function = &_nc_matter_var_integrand_over_window2;
+    F.params = &vpd;
+    vp->integrand_overw2_spline = ncm_spline_cubic_notaknot_new ();
+    ncm_spline_set_func (vp->integrand_overw2_spline, NCM_SPLINE_FUNCTION_SPLINE_LNKNOT, &F, 1e-20, 1000.0, 0, 1e-5);
+    printf ("Ok Spline %zd\n", vp->integrand_overw2_spline->len);fflush (stdout);
   }
 
   if (FALSE)
   {
-	/* Testing precision */
-	gdouble max_err = 0.0;
-	for (i = 0; i <= 10000; i++)
-	{
-	  gdouble k = pow (10.0, -3.0 + 6.0 / (10000.0) * i);
-	  gdouble f = nc_matter_var_integrand_over_window2 (vp, model, k);
-	  gdouble fs = ncm_spline_eval (vp->integrand_overw2_spline, k);
-	  gdouble err = fabs ((f-fs) / f);
-	  max_err = GSL_MAX (err, max_err);
-	  printf ("% 20.15g % 20.15g % 20.15g % 8.5e % 8.5e\n", k, f, fs, err, max_err);
-	}
+    /* Testing precision */
+    gdouble max_err = 0.0;
+    for (i = 0; i <= 10000; i++)
+    {
+      gdouble k = pow (10.0, -3.0 + 6.0 / (10000.0) * i);
+      gdouble f = nc_matter_var_integrand_over_window2 (vp, model, k);
+      gdouble fs = ncm_spline_eval (vp->integrand_overw2_spline, k);
+      gdouble err = fabs ((f-fs) / f);
+      max_err = GSL_MAX (err, max_err);
+      printf ("% 20.15g % 20.15g % 20.15g % 8.5e % 8.5e\n", k, f, fs, err, max_err);
+    }
   }
 
   for (i = 0; i < NC_MATTER_VAR_SIGMA2_NP; i++)
   {
-	gdouble lnR = log (0.1) + log (1.0e4) / (NC_MATTER_VAR_SIGMA2_NP - 1.0) * i;
-	gdouble R = exp (lnR);
-	gdouble sigma2_0, deriv_sigma2_0; /* variance over growth2 */
+    gdouble lnR = log (0.1) + log (1.0e4) / (NC_MATTER_VAR_SIGMA2_NP - 1.0) * i;
+    gdouble R = exp (lnR);
+    gdouble sigma2_0, deriv_sigma2_0; /* variance over growth2 */
 
-	//gdouble sigma2_0_exact = nc_matter_var_over_growth2_tophat_old (vp, model, lnR);
-	//gdouble deriv_sigma2_0_exact = _nc_matter_var_dvariance_over_growth2_dR_tophat (vp, model, R);
+    //gdouble sigma2_0_exact = nc_matter_var_over_growth2_tophat_old (vp, model, lnR);
+    //gdouble deriv_sigma2_0_exact = _nc_matter_var_dvariance_over_growth2_dR_tophat (vp, model, R);
 
-	sigma2_0 = nc_matter_var_integrate_spline (vp, vp->integrand_overw2_spline, &_top_hat_cubic_spline_integration_rule, nc_matter_var_shift_scale_rule, &_top_hat_cubic_spline_integration_rule_taylor, R);
-	deriv_sigma2_0 = nc_matter_var_integrate_spline (vp, vp->integrand_overw2_spline, &_derivative_top_hat_cubic_spline_integration_rule, &nc_matter_var_deriv_shift_scale_rule, NULL, R);
+    sigma2_0 = nc_matter_var_integrate_spline (vp, vp->integrand_overw2_spline, &_top_hat_cubic_spline_integration_rule, nc_matter_var_shift_scale_rule, &_top_hat_cubic_spline_integration_rule_taylor, R);
+    deriv_sigma2_0 = nc_matter_var_integrate_spline (vp, vp->integrand_overw2_spline, &_derivative_top_hat_cubic_spline_integration_rule, &nc_matter_var_deriv_shift_scale_rule, NULL, R);
 
-	ncm_vector_set (vp->sigma2_over_growth->xv, i, lnR);
-	ncm_vector_set (vp->sigma2_over_growth->yv, i, log(sigma2_0));
-	ncm_vector_set (vp->deriv_sigma2_over_growth->xv, i, lnR);
-	ncm_vector_set (vp->deriv_sigma2_over_growth->yv, i, (R / sigma2_0) * deriv_sigma2_0); /* dln(var0)/dlnR */
+    ncm_vector_set (vp->sigma2_over_growth->xv, i, lnR);
+    ncm_vector_set (vp->sigma2_over_growth->yv, i, log(sigma2_0));
+    ncm_vector_set (vp->deriv_sigma2_over_growth->xv, i, lnR);
+    ncm_vector_set (vp->deriv_sigma2_over_growth->yv, i, (R / sigma2_0) * deriv_sigma2_0); /* dln(var0)/dlnR */
 
-	//printf ("%d % 20.15g % 20.15g % 20.15g\n", i, lnR, exp(lnR) * sigma2_0, 0.0);
-	//printf("% 20.15g % 20.15g % 20.15g\n", sigma2_0_exact, sigma2_0, (sigma2_0_exact - sigma2_0) / sigma2_0_exact);
-	//printf("% 20.5e % 20.15g % 20.15g % 20.15g\n", nc_matter_var_R_to_mass (vp, model, R), deriv_sigma2_0_exact, deriv_sigma2_0, (deriv_sigma2_0_exact - deriv_sigma2_0) / deriv_sigma2_0_exact);
+    //printf ("%d % 20.15g % 20.15g % 20.15g\n", i, lnR, exp(lnR) * sigma2_0, 0.0);
+    //printf("% 20.15g % 20.15g % 20.15g\n", sigma2_0_exact, sigma2_0, (sigma2_0_exact - sigma2_0) / sigma2_0_exact);
+    //printf("% 20.5e % 20.15g % 20.15g % 20.15g\n", nc_matter_var_R_to_mass (vp, model, R), deriv_sigma2_0_exact, deriv_sigma2_0, (deriv_sigma2_0_exact - deriv_sigma2_0) / deriv_sigma2_0_exact);
   }
   ncm_spline_prepare (vp->sigma2_over_growth);
   ncm_spline_prepare (vp->deriv_sigma2_over_growth);
@@ -1001,15 +1001,15 @@ _2f3 (int n, gdouble x, gdouble prec)
 
   while (TRUE)
   {
-	fact *= (2.0 + i) * ((n + 1.0) / 2.0 + i) * mx2;
-	fact /= (5.0 / 2.0 + i) * (4.0 + i) * ((n + 3.0)/2.0 + i) * (i + 1.0);
+    fact *= (2.0 + i) * ((n + 1.0) / 2.0 + i) * mx2;
+    fact /= (5.0 / 2.0 + i) * (4.0 + i) * ((n + 3.0)/2.0 + i) * (i + 1.0);
 
-	if (fabs(fact/sum) < prec)
-	  break;
+    if (fabs(fact/sum) < prec)
+      break;
 
-	sum += fact;
+    sum += fact;
 
-	i++;
+    i++;
   }
 
   return gsl_pow_int (x, n + 1) * sum / (9.0 * (n + 1.0));
@@ -1035,15 +1035,15 @@ _3f4 (int n, gdouble x, gdouble prec)
 
   while (TRUE)
   {
-	fact *= (5.0 / 2.0 + i) * (3.0 + i) * ((n + 3.0) / 2.0 + i) * mx2;
-	fact /= (7.0 / 2.0 + i) * (5.0 / 2.0 + i) * (5.0 + i) * ((n + 5.0)/2.0 + i) * (i + 1.0);
+    fact *= (5.0 / 2.0 + i) * (3.0 + i) * ((n + 3.0) / 2.0 + i) * mx2;
+    fact /= (7.0 / 2.0 + i) * (5.0 / 2.0 + i) * (5.0 + i) * ((n + 5.0)/2.0 + i) * (i + 1.0);
 
-	if (fabs(fact/sum) < prec)
-	  break;
+    if (fabs(fact/sum) < prec)
+      break;
 
-	sum += fact;
+    sum += fact;
 
-	i++;
+    i++;
   }
 
   return gsl_pow_int (x, n + 3) * sum / (45.0 * (n + 3.0));
@@ -1054,32 +1054,31 @@ _top_hat_cubic_spline_integration_rule (gdouble x, gdouble *rules)
 {
   if (x < 1.0)
   {
-	rules[0] = 9.0 * _2f3 (0, x, GSL_DBL_EPSILON); // limit when x-> 0: 0.0;
-	rules[1] = 9.0 * _2f3 (1, x, GSL_DBL_EPSILON); // limit when x-> 0: 9.0*(-0.25);
-	rules[2] = 9.0 * _2f3 (2, x, GSL_DBL_EPSILON); // limit when x-> 0: 0.0;
-	rules[3] = 9.0 * _2f3 (3, x, GSL_DBL_EPSILON); // limit when x-> 0: 9.0*(1.0 - M_LN2 - M_EULER)/2.0;
+    rules[0] = 9.0 * _2f3 (0, x, GSL_DBL_EPSILON); // limit when x-> 0: 0.0;
+    rules[1] = 9.0 * _2f3 (1, x, GSL_DBL_EPSILON); // limit when x-> 0: 9.0*(-0.25);
+    rules[2] = 9.0 * _2f3 (2, x, GSL_DBL_EPSILON); // limit when x-> 0: 0.0;
+    rules[3] = 9.0 * _2f3 (3, x, GSL_DBL_EPSILON); // limit when x-> 0: 9.0*(1.0 - M_LN2 - M_EULER)/2.0;
   }
   else
   {
-	const gdouble x2 = x * x;   /* x = k * R */
-	const gdouble x3 = x2 * x;
-	const gdouble x4 = x3 * x;
-	const gdouble x5 = x4 * x;
-	const gdouble x_2 = 2.0 * x;
-	const gdouble cos_x = cos(x);
-	const gdouble cos_x_2 = cos_x * cos_x;
-	const gdouble sin_x = sin(x);
-	const gdouble sin_x_2 = sin_x * sin_x;
-	const gdouble cos_2x = cos_x_2 - sin_x_2;
-	const gdouble sin_2x = 2.0 * cos_x * sin_x;
-	const gdouble sin_integral_2x = gsl_sf_Si (x_2);
-	const gdouble cos_integral_2x = gsl_sf_Ci (x_2);
-	rules[0] = 9.0 * (-3.0 -5.0 * x2 + (3.0 - x2 + 2.0 * x4) * cos_2x + x * (6.0 + x2) * sin_2x + 4.0 * x5 * sin_integral_2x) / (30.0 * x5);
-	rules[1] = 9.0 * ((-1.0 -2.0 * x2 + cos_2x + 2.0 * x * sin_2x) / (8.0 * x4) + 0.25);
-	rules[2] = 9.0 * (-1.0 -3.0 * x2 + (1.0 + x2) * cos_2x + 2.0 * x * sin_2x + 2.0 * x3 * sin_integral_2x) / (6.0 * x3);
-	rules[3] = 9.0 * ((-sin_x_2 + x2 * log(x) + x * (sin_2x - x * cos_integral_2x))/ (2.0 * x2) - (1.0 - M_LN2 - M_EULER)/2.0);
+    const gdouble x2 = x * x;   /* x = k * R */
+    const gdouble x3 = x2 * x;
+    const gdouble x4 = x3 * x;
+    const gdouble x5 = x4 * x;
+    const gdouble x_2 = 2.0 * x;
+    const gdouble cos_x = cos(x);
+    const gdouble cos_x_2 = cos_x * cos_x;
+    const gdouble sin_x = sin(x);
+    const gdouble sin_x_2 = sin_x * sin_x;
+    const gdouble cos_2x = cos_x_2 - sin_x_2;
+    const gdouble sin_2x = 2.0 * cos_x * sin_x;
+    const gdouble sin_integral_2x = gsl_sf_Si (x_2);
+    const gdouble cos_integral_2x = gsl_sf_Ci (x_2);
+    rules[0] = 9.0 * (-3.0 -5.0 * x2 + (3.0 - x2 + 2.0 * x4) * cos_2x + x * (6.0 + x2) * sin_2x + 4.0 * x5 * sin_integral_2x) / (30.0 * x5);
+    rules[1] = 9.0 * ((-1.0 -2.0 * x2 + cos_2x + 2.0 * x * sin_2x) / (8.0 * x4) + 0.25);
+    rules[2] = 9.0 * (-1.0 -3.0 * x2 + (1.0 + x2) * cos_2x + 2.0 * x * sin_2x + 2.0 * x3 * sin_integral_2x) / (6.0 * x3);
+    rules[3] = 9.0 * ((-sin_x_2 + x2 * log(x) + x * (sin_2x - x * cos_integral_2x))/ (2.0 * x2) - (1.0 - M_LN2 - M_EULER)/2.0);
   }
-
 }
 
 static void
@@ -1087,29 +1086,29 @@ _top_hat_cubic_spline_integration_derivatives_rule (gdouble x, gdouble *dnj12_x2
 {
   if (x == 0.0)
   {
-	dnj12_x2[0] = 1.0;
-	dnj12_x2[1] = 0.0;
-	dnj12_x2[2] = -2.0 / 5.0;
-	dnj12_x2[3] = 0.0;
-	dnj12_x2[4] = 72.0 / 175.0;
+    dnj12_x2[0] = 1.0;
+    dnj12_x2[1] = 0.0;
+    dnj12_x2[2] = -2.0 / 5.0;
+    dnj12_x2[3] = 0.0;
+    dnj12_x2[4] = 72.0 / 175.0;
   }
   else
   {
-	const gdouble x2 = x * x;   /* x = k * R */
-	const gdouble x3 = x2 * x;
-	const gdouble x4 = x2 * x2;
-	const gdouble x5 = x3 * x2;
-	const gdouble j1 = gsl_sf_bessel_j1 (x);
-	const gdouble j12 = j1 * j1;
-	const gdouble j2 = gsl_sf_bessel_j2 (x);
-	const gdouble j22 = j2 * j2;
-	const gdouble j1j2 = j1 * j2;
+    const gdouble x2 = x * x;   /* x = k * R */
+    const gdouble x3 = x2 * x;
+    const gdouble x4 = x2 * x2;
+    const gdouble x5 = x3 * x2;
+    const gdouble j1 = gsl_sf_bessel_j1 (x);
+    const gdouble j12 = j1 * j1;
+    const gdouble j2 = gsl_sf_bessel_j2 (x);
+    const gdouble j22 = j2 * j2;
+    const gdouble j1j2 = j1 * j2;
 
-	dnj12_x2[0] = 9.0 * j12 / x2;
-	dnj12_x2[1] = -18.0 * j1j2 / x2;
-	dnj12_x2[2] = 18.0 * ((- j12 / x2) + (4.0 * j1j2 / x3) + (j22 / x2));
-	dnj12_x2[3] = 72.0 * (x * j12 + (x2 - 5.0) * j1j2 - 3.0 * x * j22) / x4;
-	dnj12_x2[4] = 72.0 * ((x3 - 6.0 * x) * j12 + (30.0 - 12.0 * x2) * j1j2 + (32.0 * x - x3) * j22) / x5;
+    dnj12_x2[0] = 9.0 * j12 / x2;
+    dnj12_x2[1] = -18.0 * j1j2 / x2;
+    dnj12_x2[2] = 18.0 * ((- j12 / x2) + (4.0 * j1j2 / x3) + (j22 / x2));
+    dnj12_x2[3] = 72.0 * (x * j12 + (x2 - 5.0) * j1j2 - 3.0 * x * j22) / x4;
+    dnj12_x2[4] = 72.0 * ((x3 - 6.0 * x) * j12 + (30.0 - 12.0 * x2) * j1j2 + (32.0 * x - x3) * j22) / x5;
   }
 }
 
@@ -1147,31 +1146,31 @@ _derivative_top_hat_cubic_spline_integration_rule (gdouble x, gdouble *rules)
 {
   if (x < 1.0)
   {
-	rules[0] = -18.0 * _3f4 (0, x, GSL_DBL_EPSILON); // limit when x-> 0: 0.0;
-	rules[1] = -18.0 * _3f4 (1, x, GSL_DBL_EPSILON); // limit when x-> 0: -18.0*(-0.25);
-	rules[2] = -18.0 * _3f4 (2, x, GSL_DBL_EPSILON); // limit when x-> 0: 0.0;
-	rules[3] = -18.0 * _3f4 (3, x, GSL_DBL_EPSILON); // limit when x-> 0: -18.0*(1.0 - M_LN2 - M_EULER);
+    rules[0] = -18.0 * _3f4 (0, x, GSL_DBL_EPSILON); // limit when x-> 0: 0.0;
+    rules[1] = -18.0 * _3f4 (1, x, GSL_DBL_EPSILON); // limit when x-> 0: -18.0*(-0.25);
+    rules[2] = -18.0 * _3f4 (2, x, GSL_DBL_EPSILON); // limit when x-> 0: 0.0;
+    rules[3] = -18.0 * _3f4 (3, x, GSL_DBL_EPSILON); // limit when x-> 0: -18.0*(1.0 - M_LN2 - M_EULER);
   }
   else
   {
-	const gdouble x2 = x * x;    /* x = k * R */
-	const gdouble x3 = x2 * x;
-	const gdouble x4 = x3 * x;
-	const gdouble x5 = x4 * x;
-	const gdouble x_2 = 2.0 * x;
-	const gdouble cos_x = cos(x);
-	const gdouble cos_x_2 = cos_x * cos_x;
-	const gdouble sin_x = sin(x);
-	const gdouble sin_x_2 = sin_x * sin_x;
-	const gdouble cos_2x = cos_x_2 - sin_x_2;
-	const gdouble sin_2x = 2.0 * cos_x * sin_x;
-	const gdouble sin_integral_2x = gsl_sf_Si (x_2);
-	const gdouble cos_integral_2x = gsl_sf_Ci (x_2);
+    const gdouble x2 = x * x;    /* x = k * R */
+    const gdouble x3 = x2 * x;
+    const gdouble x4 = x3 * x;
+    const gdouble x5 = x4 * x;
+    const gdouble x_2 = 2.0 * x;
+    const gdouble cos_x = cos(x);
+    const gdouble cos_x_2 = cos_x * cos_x;
+    const gdouble sin_x = sin(x);
+    const gdouble sin_x_2 = sin_x * sin_x;
+    const gdouble cos_2x = cos_x_2 - sin_x_2;
+    const gdouble sin_2x = 2.0 * cos_x * sin_x;
+    const gdouble sin_integral_2x = gsl_sf_Si (x_2);
+    const gdouble cos_integral_2x = gsl_sf_Ci (x_2);
 
-	rules[0] = -18.0 * (-18.0 -20.0 * x2 + 2.0 * (9.0 - 8.0 * x2 + x4) * cos_2x + x * (36.0 + x2) * sin_2x + 4.0 * x5 * sin_integral_2x) / (60.0 * x5);
-	rules[1] = -18.0 * ((-3.0 -4.0 * x2 + (3.0 - 2.0 * x2) * cos_2x + 6.0 * x * sin_2x) / (8.0 * x4) + 0.25);
-	rules[2] = -18.0 * (-1.0 -2.0 * x2 + cos_2x + 2.0 * x * sin_2x + x3 * sin_integral_2x) / (2.0 * x3);
-	rules[3] = -18.0 * (log(x) - cos_integral_2x + (-3.0 * sin_x_2 - x2 * cos_x_2 + 6.0 * x * cos_x * sin_x)/ (2.0 * x2) - (1.0 - M_LN2 - M_EULER));
+    rules[0] = -18.0 * (-18.0 -20.0 * x2 + 2.0 * (9.0 - 8.0 * x2 + x4) * cos_2x + x * (36.0 + x2) * sin_2x + 4.0 * x5 * sin_integral_2x) / (60.0 * x5);
+    rules[1] = -18.0 * ((-3.0 -4.0 * x2 + (3.0 - 2.0 * x2) * cos_2x + 6.0 * x * sin_2x) / (8.0 * x4) + 0.25);
+    rules[2] = -18.0 * (-1.0 -2.0 * x2 + cos_2x + 2.0 * x * sin_2x + x3 * sin_integral_2x) / (2.0 * x3);
+    rules[3] = -18.0 * (log(x) - cos_integral_2x + (-3.0 * sin_x_2 - x2 * cos_x_2 + 6.0 * x * cos_x * sin_x)/ (2.0 * x2) - (1.0 - M_LN2 - M_EULER));
   }
 }
 
@@ -1336,14 +1335,14 @@ nc_matter_var_integrate_node (NcmSpline *s, int n, gdouble *rules)
 
   if (NCM_IS_SPLINE_CUBIC (s))
   {
-	const NcmSplineCubic *sc = NCM_SPLINE_CUBIC (s);
-	const gdouble b_i = ncm_vector_get (sc->b, n);
-	const gdouble c_i = ncm_vector_get (sc->c, n);
-	const gdouble d_i = ncm_vector_get (sc->d, n);
-	res += y_lo * rules[0] + b_i * rules[1] + c_i * rules[2] + d_i * rules[3];
+    const NcmSplineCubic *sc = NCM_SPLINE_CUBIC (s);
+    const gdouble b_i = ncm_vector_get (sc->b, n);
+    const gdouble c_i = ncm_vector_get (sc->c, n);
+    const gdouble d_i = ncm_vector_get (sc->d, n);
+    res += y_lo * rules[0] + b_i * rules[1] + c_i * rules[2] + d_i * rules[3];
   }
   else
-	g_error ("The spline integration algorithm must be used with a cubic spline.");
+    g_error ("The spline integration algorithm must be used with a cubic spline.");
 
   return res;
 }
@@ -1365,27 +1364,27 @@ nc_matter_var_integrate_spline (NcMatterVar *vp, NcmSpline *s, void (*calc_rule)
   calc_rule(ncm_vector_get (s->xv, 0) * R, ra);
   for(i = 0; i < s->len - 1; i++)
   {
-	gdouble delta = (ncm_vector_get (s->xv, i + 1) - ncm_vector_get (s->xv, i)) * R;
-	if (delta < 1e-2 && (calc_rule_taylor != NULL))
-	{
-	  calc_rule_taylor (ncm_vector_get (s->xv, i), ncm_vector_get (s->xv, i + 1), R, rules);
-	  taylor = TRUE;
-	}
-	else
-	{
-	  if (taylor)
-		calc_rule (ncm_vector_get (s->xv, i) * R, ra);
-	  taylor = FALSE;
-	  calc_rule (ncm_vector_get (s->xv, i + 1) * R, rb);
-	  shift_rule (ra, rb, R, ncm_vector_get (s->xv, i), rules);
-	}
+    gdouble delta = (ncm_vector_get (s->xv, i + 1) - ncm_vector_get (s->xv, i)) * R;
+    if (delta < 1e-2 && (calc_rule_taylor != NULL))
+    {
+      calc_rule_taylor (ncm_vector_get (s->xv, i), ncm_vector_get (s->xv, i + 1), R, rules);
+      taylor = TRUE;
+    }
+    else
+    {
+      if (taylor)
+        calc_rule (ncm_vector_get (s->xv, i) * R, ra);
+      taylor = FALSE;
+      calc_rule (ncm_vector_get (s->xv, i + 1) * R, rb);
+      shift_rule (ra, rb, R, ncm_vector_get (s->xv, i), rules);
+    }
 
-	partial = nc_matter_var_integrate_node (s, i, rules);
-	res += partial;
+    partial = nc_matter_var_integrate_node (s, i, rules);
+    res += partial;
 
-	temp = ra;
-	ra = rb;
-	rb = temp;
+    temp = ra;
+    ra = rb;
+    rb = temp;
   }
 
   return res;
@@ -1409,14 +1408,14 @@ nc_matter_var_spectral_moment_over_growth2 (NcMatterVar *vp, NcHICosmo *model, g
 {
   if (NC_IS_WINDOW_TOPHAT (vp->wp))
   {
-	return nc_matter_var_spectral_moment_over_growth2_tophat (vp, model, n);
+    return nc_matter_var_spectral_moment_over_growth2_tophat (vp, model, n);
   }
   else if (NC_IS_WINDOW_GAUSSIAN (vp->wp))
   {
-	return nc_matter_var_spectral_moment_over_growth2_gaussian (vp, model, n);
+    return nc_matter_var_spectral_moment_over_growth2_gaussian (vp, model, n);
   }
   else
-	g_assert_not_reached ();
+    g_assert_not_reached ();
 
   return 0.0;
 }
@@ -1444,7 +1443,7 @@ nc_matter_var_spectral_moment_over_growth2_gaussian (NcMatterVar *vp, NcHICosmo 
   ts.model = model;
 
   if (w == NULL)
-	w = gsl_integration_workspace_alloc (NCM_INTEGRAL_PARTITION);
+    w = gsl_integration_workspace_alloc (NCM_INTEGRAL_PARTITION);
 
   F.function = &_nc_matter_var_integrand_gaussian;
   F.params = &ts;
@@ -1480,11 +1479,11 @@ nc_matter_var_spectral_moment_over_growth2_tophat (NcMatterVar *vp, NcHICosmo *m
   ts.model = model;
 
   if (w == NULL)
-	w = gsl_integration_workspace_alloc (NCM_INTEGRAL_PARTITION);
+    w = gsl_integration_workspace_alloc (NCM_INTEGRAL_PARTITION);
   if (wosc_cos == NULL)
-	wosc_cos = gsl_integration_qawo_table_alloc (2.0, _NC_LSTEP2, GSL_INTEG_COSINE, NCM_INTEGRAL_PARTITION);
+    wosc_cos = gsl_integration_qawo_table_alloc (2.0, _NC_LSTEP2, GSL_INTEG_COSINE, NCM_INTEGRAL_PARTITION);
   if (wosc_sin == NULL)
-	wosc_sin = gsl_integration_qawo_table_alloc (2.0, _NC_LSTEP2, GSL_INTEG_SINE, NCM_INTEGRAL_PARTITION);
+    wosc_sin = gsl_integration_qawo_table_alloc (2.0, _NC_LSTEP2, GSL_INTEG_SINE, NCM_INTEGRAL_PARTITION);
 
   F.function = &_nc_matter_var_integrand_tophat_one;
   F_cos.function = &_nc_matter_var_integrand_tophat_cosine;
@@ -1505,17 +1504,17 @@ nc_matter_var_spectral_moment_over_growth2_tophat (NcMatterVar *vp, NcHICosmo *m
 
   for (step = 1.0; 1; step += _NC_LSTEP2)
   {
-	gdouble pres_t = 0.0;
-	gsl_integration_qawo (&F_cos, step, 0.0, NCM_DEFAULT_PRECISION, NCM_INTEGRAL_PARTITION, w, wosc_cos, &pres, &error_cos);
-	pres_t = pres;
-	gsl_integration_qawo (&F_sin, step, 0.0, NCM_DEFAULT_PRECISION, NCM_INTEGRAL_PARTITION, w, wosc_sin, &pres, &error_sin);
-	pres_t += pres;
+    gdouble pres_t = 0.0;
+    gsl_integration_qawo (&F_cos, step, 0.0, NCM_DEFAULT_PRECISION, NCM_INTEGRAL_PARTITION, w, wosc_cos, &pres, &error_cos);
+    pres_t = pres;
+    gsl_integration_qawo (&F_sin, step, 0.0, NCM_DEFAULT_PRECISION, NCM_INTEGRAL_PARTITION, w, wosc_sin, &pres, &error_sin);
+    pres_t += pres;
 
-	if (fabs(pres_t/sm_over_growth2_osc) < NCM_DEFAULT_PRECISION * 1e-3)
-	  break;
-	sm_over_growth2_osc += pres_t;
-	if (pres_t == 0.0)
-	  break;
+    if (fabs(pres_t/sm_over_growth2_osc) < NCM_DEFAULT_PRECISION * 1e-3)
+      break;
+    sm_over_growth2_osc += pres_t;
+    if (pres_t == 0.0)
+      break;
   }
 
   result += sm_over_growth2_osc;
@@ -1558,7 +1557,7 @@ _nc_matter_var_dvariance_over_growth2_dR_gaussian (NcMatterVar *vp, NcHICosmo *m
   ts.model = model;
 
   if (w == NULL)
-	w = gsl_integration_workspace_alloc (NCM_INTEGRAL_PARTITION);
+    w = gsl_integration_workspace_alloc (NCM_INTEGRAL_PARTITION);
 
   F.function = &nc_matter_var_deriv_variance_over_growth2_integrand_gaussian;
   F.params = &ts;
@@ -1645,11 +1644,11 @@ _nc_matter_var_dvariance_over_growth2_dR_tophat (NcMatterVar *vp, NcHICosmo *mod
   ts.model = model;
 
   if (w == NULL)
-	w = gsl_integration_workspace_alloc (NCM_INTEGRAL_PARTITION);
+    w = gsl_integration_workspace_alloc (NCM_INTEGRAL_PARTITION);
   if (wosc_cos == NULL)
-	wosc_cos = gsl_integration_qawo_table_alloc (2.0, _NC_LSTEP2, GSL_INTEG_COSINE, NCM_INTEGRAL_PARTITION);
+    wosc_cos = gsl_integration_qawo_table_alloc (2.0, _NC_LSTEP2, GSL_INTEG_COSINE, NCM_INTEGRAL_PARTITION);
   if (wosc_sin == NULL)
-	wosc_sin = gsl_integration_qawo_table_alloc (2.0, _NC_LSTEP2, GSL_INTEG_SINE, NCM_INTEGRAL_PARTITION);
+    wosc_sin = gsl_integration_qawo_table_alloc (2.0, _NC_LSTEP2, GSL_INTEG_SINE, NCM_INTEGRAL_PARTITION);
 
   F.function = &_nc_matter_var_deriv_variance_over_growth2_integrand_tophat_one;
   F_cos.function = &_nc_matter_var_deriv_variance_over_growth2_integrand_tophat_cosine;
@@ -1674,18 +1673,18 @@ _nc_matter_var_dvariance_over_growth2_dR_tophat (NcMatterVar *vp, NcHICosmo *mod
   result += dv_over_growth2_one;
 
   for (step = 1.0; 1; step += _NC_LSTEP2)
-	//  for (step = 1.0; step < 11.0; step++)
+    //  for (step = 1.0; step < 11.0; step++)
   {
-	gdouble pres_t = 0.0;
-	gsl_integration_qawo (&F_cos, step, 0.0, NCM_DEFAULT_PRECISION, NCM_INTEGRAL_PARTITION, w, wosc_cos, &pres, &error_cos);
-	pres_t = pres;
-	gsl_integration_qawo (&F_sin, step, 0.0, NCM_DEFAULT_PRECISION, NCM_INTEGRAL_PARTITION, w, wosc_sin, &pres, &error_sin);
-	pres_t += pres;
-	if (fabs(pres_t/dv_over_growth2_osc) < NCM_DEFAULT_PRECISION * 1e-3)
-	  break;
-	dv_over_growth2_osc += pres_t;
-	if (pres_t == 0.0)
-	  break;
+    gdouble pres_t = 0.0;
+    gsl_integration_qawo (&F_cos, step, 0.0, NCM_DEFAULT_PRECISION, NCM_INTEGRAL_PARTITION, w, wosc_cos, &pres, &error_cos);
+    pres_t = pres;
+    gsl_integration_qawo (&F_sin, step, 0.0, NCM_DEFAULT_PRECISION, NCM_INTEGRAL_PARTITION, w, wosc_sin, &pres, &error_sin);
+    pres_t += pres;
+    if (fabs(pres_t/dv_over_growth2_osc) < NCM_DEFAULT_PRECISION * 1e-3)
+      break;
+    dv_over_growth2_osc += pres_t;
+    if (pres_t == 0.0)
+      break;
   }
 
   result += dv_over_growth2_osc;
@@ -1734,16 +1733,16 @@ nc_matter_var_sigma8_sqrtvar0 (NcMatterVar *vp, NcHICosmo *model)    /* eh calcu
 
   if (!NC_IS_WINDOW_TOPHAT (vp->wp))
   {
-	NcWindow *temp = vp->wp;
-	vp->wp = nc_window_tophat_new (); /* Normalizacao sempre com tophat */
-	nc_matter_var_prepare (vp, model);
-	sigma0 = sqrt(nc_matter_var_var0 (vp, model, ln8));
-	nc_window_free (vp->wp);
-	vp->wp = temp;
-	nc_matter_var_prepare (vp, model);
+    NcWindow *temp = vp->wp;
+    vp->wp = nc_window_tophat_new (); /* Normalizacao sempre com tophat */
+    nc_matter_var_prepare (vp, model);
+    sigma0 = sqrt(nc_matter_var_var0 (vp, model, ln8));
+    nc_window_free (vp->wp);
+    vp->wp = temp;
+    nc_matter_var_prepare (vp, model);
   }
   else
-	sigma0 = sqrt(nc_matter_var_var0 (vp, model, ln8));
+    sigma0 = sqrt(nc_matter_var_var0 (vp, model, ln8));
 
   sigma0_norma = nc_hicosmo_sigma_8 (model) / sigma0;
 

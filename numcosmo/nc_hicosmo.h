@@ -154,6 +154,8 @@ G_INLINE_FUNC gdouble nc_hicosmo_dH_dz (NcHICosmo *cosmo, gdouble z);
 G_INLINE_FUNC gdouble nc_hicosmo_j (NcHICosmo *cosmo, gdouble z);
 G_INLINE_FUNC gdouble nc_hicosmo_qp (NcHICosmo *cosmo, gdouble z);
 G_INLINE_FUNC gdouble nc_hicosmo_q (NcHICosmo *cosmo, gdouble z);
+G_INLINE_FUNC gdouble nc_hicosmo_dec (NcHICosmo *cosmo, gdouble z);
+G_INLINE_FUNC gdouble nc_hicosmo_wec (NcHICosmo *cosmo, gdouble z);
 G_INLINE_FUNC gint32 nc_hicosmo_id (void);
 
 NcHICosmo *nc_hicosmo_new_from_name (GType parent_type, gchar *cosmo_name);
@@ -294,6 +296,29 @@ nc_hicosmo_q (NcHICosmo *cosmo, gdouble z)
   E2 = nc_hicosmo_E2 (cosmo, z);
   dE2_dz = nc_hicosmo_dE2_dz (cosmo, z);
   return (dE2_dz * (1.0 + z) / (2.0 * E2) - 1.0);
+}
+
+G_INLINE_FUNC gdouble
+nc_hicosmo_dec (NcHICosmo *cosmo, gdouble z)
+{
+  gdouble q, E2, Ok;
+  gdouble x = 1.0 + z;
+  q = nc_hicosmo_q (cosmo, z);
+  E2 = nc_hicosmo_E2 (cosmo, z);
+  Ok = nc_hicosmo_Omega_k (cosmo);
+  
+  return (2.0 * E2 - q * E2 - 2.0 * Ok * x * x) / 3.0;
+}
+
+G_INLINE_FUNC gdouble
+nc_hicosmo_wec (NcHICosmo *cosmo, gdouble z)
+{
+  gdouble E2, Ok;
+  gdouble x = 1.0 + z;
+  E2 = nc_hicosmo_E2 (cosmo, z);
+  Ok = nc_hicosmo_Omega_k (cosmo);
+  
+  return (E2 - Ok * x * x);
 }
 
 G_INLINE_FUNC gdouble
