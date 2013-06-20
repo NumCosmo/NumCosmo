@@ -34,6 +34,11 @@ test_ncm_model_SOURCES =  \
 test_ncm_object_serialization_SOURCES = \
 	test_ncm_object_serialization.c
 
+test_ncm_data_gauss_cov_SOURCES = \
+	test_ncm_data_gauss_cov.c \
+	ncm_data_gauss_cov_test.c \
+	ncm_data_gauss_cov_test.h
+
 test_nc_window_SOURCES =  \
         test_nc_window.c
         
@@ -55,6 +60,7 @@ check_PROGRAMS =  \
 	test_ncm_sf_sbessel           \
 	test_ncm_model                \
 	test_ncm_object_serialization \
+	test_ncm_data_gauss_cov       \
 	test_nc_window                \
 	test_nc_transfer_func         \
 	test_nc_galaxy_acf            \
@@ -77,6 +83,8 @@ test_ncm_sf_sbessel_LDADD = $(top_builddir)/numcosmo/libnumcosmo.la
 test_ncm_model_LDADD = $(top_builddir)/numcosmo/libnumcosmo.la
 
 test_ncm_object_serialization_LDADD = $(top_builddir)/numcosmo/libnumcosmo.la
+
+test_ncm_data_gauss_cov_LDADD = $(top_builddir)/numcosmo/libnumcosmo.la
 
 test_nc_window_LDADD = $(top_builddir)/numcosmo/libnumcosmo.la
 
