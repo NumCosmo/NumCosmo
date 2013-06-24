@@ -206,7 +206,7 @@ ncm_fit_mc_run (NcmFitMC *mc, NcmMSet *fiduc, guint ni, guint nf, NcmFitRunMsgs 
   gulong total_min, total_hour, total_day;
 
   g_assert (nf > ni);
-  g_assert (ncm_mset_cmp (mc->fit->mset, fiduc, TRUE));
+  g_assert (ncm_mset_cmp (mc->fit->mset, fiduc, FALSE));
 
   mc->n = n;
   mc->m2lnL_min = GSL_POSINF;
@@ -217,20 +217,38 @@ ncm_fit_mc_run (NcmFitMC *mc, NcmMSet *fiduc, guint ni, guint nf, NcmFitRunMsgs 
   ncm_vector_clear (&mc->m2lnL);
   mc->m2lnL = ncm_vector_new (n);
 
-  ncm_mset_prepare_fparam_map (fiduc);
-  ncm_mset_param_get_vector (fiduc, bf);
-  ncm_mset_param_set_vector (mc->fit->mset, bf);
+  ncm_mset_param_get_vector (mc->fit->mset, bf);
 
   if (mtype > NCM_FIT_RUN_MSGS_NONE)
-    g_message ( "#  Calculating [%06d] montecarlo fit\n", n);
+  {
+    ncm_cfg_msg_sepa ();
+    g_message ("#  Fiducial model set [MSet]\n");
+    ncm_mset_pretty_log (fiduc);
+    ncm_cfg_msg_sepa ();
+    g_message ("#  Fitting model set [MSet]\n");
+    ncm_mset_pretty_log (mc->fit->mset);
+    
+    ncm_cfg_msg_sepa ();
+    g_message ("#  Calculating [%06d] montecarlo fits\n", n);
+    if (ni > 0)
+      g_message ("#  Resampling %u-times\n#", ni);
+  }
+  
   for (i = 0; i < ni; i++)
-    ncm_dataset_resample (mc->fit->lh->dset, mc->fit->mset);
+  {
+    ncm_dataset_resample (mc->fit->lh->dset, fiduc);
+    if (mtype > NCM_FIT_RUN_MSGS_NONE)
+      g_message (".");
+  }
+  if (ni > 0 && mtype > NCM_FIT_RUN_MSGS_NONE)
+    g_message ("\n");
+  
   for (; i < nf; i++)
   {
     NcmVector *bf_i = ncm_matrix_get_row (mc->fparam, i - ni);
 
     ncm_mset_param_set_vector (mc->fit->mset, bf);
-    ncm_dataset_resample (mc->fit->lh->dset, mc->fit->mset);
+    ncm_dataset_resample (mc->fit->lh->dset, fiduc);
     ncm_fit_run (mc->fit, mtype);
     
     ncm_mset_fparams_get_vector (mc->fit->mset, bf_i);

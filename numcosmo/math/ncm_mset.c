@@ -1341,6 +1341,7 @@ ncm_mset_fparam_get_fpi (NcmMSet *mset, NcmModelID mid, guint pid)
  * ncm_mset_save:
  * @mset: FIXME
  * @filename: FIXME
+ * @save_comment: FIXME
  * 
  * FIXME
  * 
