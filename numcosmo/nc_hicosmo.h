@@ -117,9 +117,9 @@ struct _NcHICosmo
   gboolean is_eternal;
 };
 
-extern gint32 NC_HICOSMO_ID;
-
 GType nc_hicosmo_get_type (void) G_GNUC_CONST;
+
+NCM_MSET_MODEL_DECLARE_ID (NC_HICOSMO);
 
 /*
  * Cosmological model constant functions

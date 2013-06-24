@@ -53,7 +53,7 @@ struct _NcDEModelEntries
   gboolean help_names;
 };
 
-#define NC_DE_MODEL_ENTRIES {"NcHICosmoDEXcdm", FALSE, FALSE, FALSE, FALSE }
+#define NC_DE_MODEL_ENTRIES {"NcHICosmoDEXcdm", FALSE, FALSE, FALSE, FALSE}
 
 typedef struct _NcDEDataSimpleEntries NcDEDataSimpleEntries;
 
@@ -131,7 +131,7 @@ struct _NcDEFitEntries
   gint msg_level;
   gint montecarlo;
   gint mc_ni;
-  gboolean fiducial;
+  gchar *fiducial;
   gboolean mc_data;
   gboolean fisher;
   gboolean kinematics_sigma;
@@ -141,12 +141,13 @@ struct _NcDEFitEntries
   gdouble qspline_cp_sigma;
   gboolean save_fisher;
   gboolean save_best_fit;
+  gchar *save_mset;
 };
 
 #ifdef NUMCOSMO_HAVE_NLOPT
-#define NC_DE_FIT_ENTRIES { NULL, FALSE, "nlopt",   "numdiff-forward", NULL, -1, -1, {-1, -1}, NULL, NCM_FIT_MAXITER, FALSE, NCM_FIT_RUN_MSGS_SIMPLE, -1, 0, FALSE, FALSE, FALSE, FALSE, 1.0, 100, FALSE, 1.0, FALSE, FALSE}
+#define NC_DE_FIT_ENTRIES { NULL, FALSE, "nlopt",   "numdiff-forward", NULL, -1, -1, {-1, -1}, NULL, NCM_FIT_MAXITER, FALSE, NCM_FIT_RUN_MSGS_SIMPLE, -1, 0, NULL, FALSE, FALSE, FALSE, 1.0, 100, FALSE, 1.0, FALSE, FALSE, NULL}
 #else
-#define NC_DE_FIT_ENTRIES { NULL, FALSE, "gsl-mms", "numdiff-forward", NULL, -1, -1, {-1, -1}, NULL, NCM_FIT_MAXITER, FALSE, NCM_FIT_RUN_MSGS_SIMPLE, -1, 0, FALSE, FALSE, FALSE, FALSE, 1.0, 100, FALSE, 1.0, FALSE, FALSE}
+#define NC_DE_FIT_ENTRIES { NULL, FALSE, "gsl-mms", "numdiff-forward", NULL, -1, -1, {-1, -1}, NULL, NCM_FIT_MAXITER, FALSE, NCM_FIT_RUN_MSGS_SIMPLE, -1, 0, NULL, FALSE, FALSE, FALSE, 1.0, 100, FALSE, 1.0, FALSE, FALSE, NULL}
 #endif
 
 GOptionGroup *nc_de_opt_get_run_group (NcDERunEntries *de_run);

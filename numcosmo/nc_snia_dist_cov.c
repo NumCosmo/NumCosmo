@@ -188,7 +188,7 @@ nc_snia_dist_cov_finalize (GObject *object)
   G_OBJECT_CLASS (nc_snia_dist_cov_parent_class)->finalize (object);
 }
 
-gint32 NC_SNIA_DIST_COV_ID = -1;
+NCM_MSET_MODEL_REGISTER_ID (NC_SNIA_DIST_COV);
 
 static void
 nc_snia_dist_cov_class_init (NcSNIADistCovClass *klass)
@@ -228,9 +228,6 @@ nc_snia_dist_cov_class_init (NcSNIADistCovClass *klass)
                                                       0.0, 1.0e1, 5.0e-4,
                                                       G_PARAM_READWRITE | G_PARAM_CONSTRUCT |G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
-  ncm_model_class_register_id (model_class);
-  NC_SNIA_DIST_COV_ID = model_class->model_id;
-
   ncm_model_class_add_params (model_class, NC_SNIA_DIST_COV_SPARAM_LEN, NC_SNIA_DIST_COV_VPARAM_LEN, PROP_SIZE);
   ncm_model_class_set_name_nick (model_class, "Supernovae Ia Distance Covariance", "SNIaDistCov");
 
@@ -260,6 +257,11 @@ nc_snia_dist_cov_class_init (NcSNIADistCovClass *klass)
                               NC_SNIA_DIST_COV_DEFAULT_PARAMS_ABSTOL, NC_SNIA_DIST_COV_DEFAULT_SIGMA_INT,
                               NCM_PARAM_TYPE_FIXED);
 
+  ncm_mset_model_register_id (model_class, 
+                              NC_SNIA_DIST_COV,
+                              "Supernovae distance models with errors covariance.",
+                              NULL);
+  
 }
 
 /**

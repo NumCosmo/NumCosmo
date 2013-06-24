@@ -111,6 +111,8 @@ static guint _log_msg_id = 0;
 static gboolean _enable_msg = TRUE;
 static gboolean _enable_msg_flush = TRUE;
 static gsl_error_handler_t *gsl_err = NULL;
+static GHashTable *named_instances_name_ptr = NULL;
+static GHashTable *named_instances_ptr_name = NULL;
 
 static void
 _ncm_cfg_log_message (const gchar *log_domain, GLogLevelFlags log_level, const gchar *message, gpointer user_data)
@@ -238,6 +240,12 @@ ncm_cfg_init (void)
 
   ncm_cfg_register_obj (NC_TYPE_SNIA_DIST_COV);
 
+  named_instances_name_ptr = g_hash_table_new_full (g_str_hash, g_str_equal, 
+                                                    &g_free, &g_object_unref);
+
+  named_instances_ptr_name = g_hash_table_new_full (g_direct_hash, g_direct_equal,
+                                                    &g_object_unref, &g_free);
+  
   numcosmo_init = TRUE;
   return;
 }
@@ -519,6 +527,190 @@ ncm_cfg_rng_set_state (gchar *state)
 }
 
 /**
+ * ncm_cfg_is_named_instance:
+ * @obj: FIXME
+ * 
+ * FIXME
+ * 
+ * Returns: FIXME
+ */
+gboolean 
+ncm_cfg_is_named_instance (gpointer obj)
+{
+  g_assert (numcosmo_init);
+  g_assert (G_IS_OBJECT (obj));
+  return g_hash_table_contains (named_instances_ptr_name, obj);
+}
+
+/**
+ * ncm_cfg_exist_named_instance:
+ * @name: FIXME
+ * 
+ * FIXME
+ * 
+ * Returns: FIXME
+ */
+gboolean 
+ncm_cfg_exist_named_instance (gchar *name)
+{
+  g_assert (numcosmo_init);
+  g_assert (name != NULL);
+  return g_hash_table_contains (named_instances_name_ptr, name);
+}
+
+/**
+ * ncm_cfg_get_named_instance:
+ * @name: FIXME
+ * 
+ * FIXME
+ * 
+ * Returns: (transfer full): FIXME
+ */
+gpointer
+ncm_cfg_get_named_instance (gchar *name)
+{
+  g_assert (numcosmo_init);
+  g_assert (name != NULL);
+  {
+    GObject *obj = g_hash_table_lookup (named_instances_name_ptr, name);
+    return g_object_ref (obj);
+  }
+}
+
+/**
+ * ncm_cfg_named_instance_peek_name:
+ * @obj: FIXME
+ * 
+ * FIXME
+ * 
+ * Returns: (transfer none): FIXME
+ */
+gchar *
+ncm_cfg_named_instance_peek_name (gpointer obj)
+{
+  g_assert (numcosmo_init);
+  g_assert (G_IS_OBJECT (obj));
+  if (!ncm_cfg_is_named_instance (obj))
+    g_error ("ncm_cfg_named_instance_peek_name: Cannot peek name of object %p, it is not a named instance.", obj);
+  else
+    return g_hash_table_lookup (named_instances_ptr_name, obj);
+}
+
+/**
+ * ncm_cfg_set_named_instance:
+ * @obj: FIXME
+ * @name: FIXME
+ * @overwrite: FIXME
+ * 
+ * FIXME
+ * 
+ */
+void 
+ncm_cfg_set_named_instance (gpointer obj, gchar *name, gboolean overwrite)
+{
+  g_assert (numcosmo_init);
+  g_assert (G_IS_OBJECT (obj));
+  g_assert (name != NULL);
+  {
+    gboolean ni_has_key = ncm_cfg_exist_named_instance (name);
+    if (!overwrite && ni_has_key)
+    {
+      gpointer ni_obj = ncm_cfg_get_named_instance (name);
+      if (ni_obj != obj)
+        g_error ("ncm_cfg_set_named_instance: named instance already present, set overwrite to true if you want it replaced.");
+      else
+      {
+        g_object_unref (ni_obj);
+        return;
+      }
+    }
+    g_hash_table_insert (named_instances_name_ptr, 
+                         g_strdup (name), g_object_ref (obj));
+    g_hash_table_insert (named_instances_ptr_name, 
+                         g_object_ref (obj), g_strdup (name));
+  }  
+}
+
+/**
+ * ncm_cfg_free_named_instances:
+ * 
+ * FIXME
+ * 
+ */
+void 
+ncm_cfg_free_named_instances (void)
+{
+  g_assert (numcosmo_init);
+  g_hash_table_remove_all (named_instances_name_ptr);
+  g_hash_table_remove_all (named_instances_ptr_name);
+}
+
+/**
+ * ncm_cfg_object_is_named:
+ * @serobj: FIXME
+ * @name: (out) (transfer full): FIXME 
+ * 
+ * FIXME
+ * 
+ * Returns: FIXME
+ */
+gboolean 
+ncm_cfg_object_is_named (const gchar *serobj, gchar **name)
+{
+  GError *error = NULL;
+  static gsize regex_init = FALSE;
+  static GRegex *regex = NULL;
+  GMatchInfo *match_info = NULL;
+  GVariant *var_obj = NULL;
+  GVariant *obj_name = NULL;
+  GVariant *params = NULL;
+
+  if (g_once_init_enter (&regex_init))
+  {
+    regex = g_regex_new ("^\\s*[A-Z][A-Za-z]+\\s*\\[([A-Za-z\\:]+)\\]\\s*$", 0, 0, &error);
+    g_once_init_leave (&regex_init, TRUE);
+  }
+
+  var_obj = g_variant_parse (G_VARIANT_TYPE ("{sa{sv}}"), serobj, NULL, NULL, &error);
+  g_clear_error (&error);
+
+  if (var_obj != NULL)
+  {
+    obj_name = g_variant_get_child_value (var_obj, 0);
+    params = g_variant_get_child_value (var_obj, 1);
+    serobj = g_variant_get_string (obj_name, NULL);
+  }
+
+  if (g_regex_match (regex, serobj, 0, &match_info))
+  {
+    *name = g_match_info_fetch (match_info, 1);
+    g_match_info_free (match_info);
+    if (params != NULL && g_variant_n_children (params) > 0)
+      g_error ("ncm_cfg_object_is_named: Invalid named object ``%s'', named objects cannot have properties ``%s''.", 
+               serobj, g_variant_print (params, TRUE));    
+
+    if (obj_name != NULL)
+      g_variant_unref (obj_name);
+    if (var_obj != NULL)
+      g_variant_unref (var_obj);
+    if (params != NULL)
+      g_variant_unref (params);
+    return TRUE;
+  }
+  else
+  {
+    if (obj_name != NULL)
+      g_variant_unref (obj_name);
+    if (var_obj != NULL)
+      g_variant_unref (var_obj);
+    if (params != NULL)
+      g_variant_unref (params);
+    *name = NULL;
+    return FALSE;
+  }
+}
+
+/**
  * ncm_cfg_get_fullpath:
  * @filename: FIXME
  * @...: FIXME
@@ -607,6 +799,26 @@ ncm_cfg_keyfile_to_arg (GKeyFile *kfile, gchar *group_name, GOptionEntry *entrie
 }
 
 /**
+ * ncm_cfg_string_to_comment:
+ * @str: FIXME
+ * 
+ * FIXME
+ * 
+ * Returns: (transfer full): FIXME
+ */
+gchar *
+ncm_cfg_string_to_comment (const gchar *str)
+{
+  g_assert (str != NULL);
+  {
+    gchar *desc_ww = ncm_string_ww (str, "  ", "  ", 80);
+    gchar *desc = g_strdup_printf ("###############################################################################\n\n%s\n", desc_ww);
+    g_free (desc_ww);
+    return desc;
+  }
+}
+
+/**
  * ncm_cfg_entries_to_keyfile:
  * @kfile: FIXME
  * @group_name: FIXME
@@ -678,16 +890,13 @@ ncm_cfg_entries_to_keyfile (GKeyFile *kfile, gchar *group_name, GOptionEntry *en
     }
     if (!skip_comment)
     {
-      gchar *desc_ww = ncm_string_ww (entries[i].description, "  ", "  ", 80);
-      gchar *desc = g_strdup_printf ("###############################################################################\n\n%s\n", desc_ww);
+      gchar *desc = ncm_cfg_string_to_comment (entries[i].description); 
       if (!g_key_file_set_comment (kfile, group_name, entries[i].long_name, desc, &error))
         g_error ("ncm_cfg_entries_to_keyfile: %s", error->message);
       g_free (desc);
-      g_free (desc_ww);
     }
   }
 }
-
 
 /**
  * ncm_cfg_get_enum_by_id_name_nick:
@@ -1762,11 +1971,22 @@ ncm_cfg_create_from_string (const gchar *obj_ser)
   GMatchInfo *match_info = NULL;
   GObject *obj = NULL;
   GVariant *var_obj = NULL;
+  gchar *ni_name = NULL;
 
   if (g_once_init_enter (&regex_init))
   {
-    regex = g_regex_new ("^\\s*([A-Z][A-Za-z]*)\\s*(.*?)\\s*$", 0, 0, &error);
+    regex = g_regex_new ("^\\s*([A-Z][A-Za-z]+)\\s*([\\{]?.*[\\}]?)\\s*$", 0, 0, &error);
     g_once_init_leave (&regex_init, TRUE);
+  }
+
+  if (ncm_cfg_object_is_named (obj_ser, &ni_name))
+  {
+    if (ncm_cfg_exist_named_instance (ni_name))
+      g_error ("ncm_cfg_create_from_string: Creating object from ``%s'', depending named instance ``%s'' not found.", 
+               obj_ser, ni_name);
+    obj = ncm_cfg_get_named_instance (ni_name);
+    g_free (ni_name);
+    return obj;
   }
 
   var_obj = g_variant_parse (G_VARIANT_TYPE ("{sa{sv}}"), obj_ser, NULL, NULL, &error);
@@ -1776,6 +1996,7 @@ ncm_cfg_create_from_string (const gchar *obj_ser)
     GVariant *obj_name = g_variant_get_child_value (var_obj, 0);
     GVariant *params = g_variant_get_child_value (var_obj, 1);
     obj = ncm_cfg_create_from_name_params (g_variant_get_string (obj_name, NULL), params);
+    
     g_variant_unref (obj_name);
     g_variant_unref (params);
     g_variant_unref (var_obj);
@@ -1827,6 +2048,22 @@ ncm_cfg_create_from_name_params (const gchar *obj_name, GVariant *params)
 {
   GObject *obj = NULL;
   GType gtype = g_type_from_name (obj_name);
+  gchar *ni_name;
+
+  if (ncm_cfg_object_is_named (obj_name, &ni_name))
+  {
+    if (!ncm_cfg_exist_named_instance (ni_name))
+      g_error ("ncm_cfg_create_from_string: Creating object from ``%s'', depending named instance ``%s'' not found.", 
+               obj_name, ni_name);
+    if (params != NULL && g_variant_n_children (params) > 0)
+      g_error ("ncm_cfg_create_from_name_params: Invalid named object parameters ``%s'', named objects cannot have properties.", 
+               g_variant_print (params, TRUE));    
+
+    obj = ncm_cfg_get_named_instance (ni_name);
+
+    g_free (ni_name);
+    return obj;
+  }
 
   if (gtype == 0)
     g_error ("Object '%s' is not registered\n", obj_name);
@@ -2049,52 +2286,63 @@ GVariant *
 ncm_cfg_serialize_to_variant (GObject *obj)
 {
   const gchar *obj_name = G_OBJECT_TYPE_NAME (obj);
-  GObjectClass *klass = G_OBJECT_GET_CLASS (obj);
-  guint n_properties, i;
-  GParamSpec **prop = g_object_class_list_properties (klass, &n_properties);
-
-  if (n_properties == 0)
+  if (ncm_cfg_is_named_instance (obj))
   {
-    g_free (prop);
-    return g_variant_ref_sink (g_variant_new ("{sa{sv}}", obj_name, NULL));
+    gchar *ni_name = ncm_cfg_named_instance_peek_name (obj);
+    gchar *fname = g_strdup_printf ("%s[%s]", obj_name, ni_name);
+    GVariant *objvar = g_variant_ref_sink (g_variant_new ("{sa{sv}}", fname, NULL));
+    g_free (fname);
+    return objvar;
   }
   else
   {
-    GVariantBuilder b;
-    GVariant *params, *ser_var;
+    GObjectClass *klass = G_OBJECT_GET_CLASS (obj);
+    guint n_properties, i;
+    GParamSpec **prop = g_object_class_list_properties (klass, &n_properties);
 
-    g_variant_builder_init (&b, G_VARIANT_TYPE ("a{sv}"));
-
-    for (i = 0; i < n_properties; i++)
+    if (n_properties == 0)
     {
-      GVariant *var = NULL;
-      GValue val = G_VALUE_INIT;
+      g_free (prop);
+      return g_variant_ref_sink (g_variant_new ("{sa{sv}}", obj_name, NULL));
+    }
+    else
+    {
+      GVariantBuilder b;
+      GVariant *params, *ser_var;
 
-      if ((prop[i]->flags & G_PARAM_READWRITE) != G_PARAM_READWRITE)
-        continue;
+      g_variant_builder_init (&b, G_VARIANT_TYPE ("a{sv}"));
 
-      g_value_init (&val, prop[i]->value_type);
-      g_object_get_property (obj, prop[i]->name, &val);
-
-      var = ncm_cfg_gvalue_to_gvariant (&val);
-      if (var == NULL)
+      for (i = 0; i < n_properties; i++)
       {
+        GVariant *var = NULL;
+        GValue val = G_VALUE_INIT;
+
+        if ((prop[i]->flags & G_PARAM_READWRITE) != G_PARAM_READWRITE)
+          continue;
+
+        g_value_init (&val, prop[i]->value_type);
+        g_object_get_property (obj, prop[i]->name, &val);
+
+        var = ncm_cfg_gvalue_to_gvariant (&val);
+        if (var == NULL)
+        {
+          g_value_unset (&val);
+          continue;
+        }
+
+        g_variant_builder_add (&b, "{sv}", prop[i]->name, var);
+
+        g_variant_unref (var);
         g_value_unset (&val);
-        continue;
       }
 
-      g_variant_builder_add (&b, "{sv}", prop[i]->name, var);
+      params = g_variant_builder_end (&b);
 
-      g_variant_unref (var);
-      g_value_unset (&val);
+      g_free (prop);
+
+      ser_var = g_variant_ref_sink (g_variant_new ("{s@a{sv}}", obj_name, params));
+      return ser_var;
     }
-
-    params = g_variant_builder_end (&b);
-
-    g_free (prop);
-
-    ser_var = g_variant_ref_sink (g_variant_new ("{s@a{sv}}", obj_name, params));
-    return ser_var;
   }
 }
 
@@ -2130,9 +2378,9 @@ ncm_cfg_serialize_to_string (GObject *obj, gboolean valid_variant)
     {
       params_str = g_variant_print (params, TRUE);
       ser = g_strdup_printf ("%s%s", obj_name, params_str);
-      g_free (params_str);
-      g_free (obj_name);
+      g_free (params_str);  
     }
+    g_free (obj_name);
     g_variant_unref (params);
   }
   g_variant_unref (ser_var);

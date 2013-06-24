@@ -54,8 +54,8 @@ nc_hicosmo_finalize (GObject *object)
   G_OBJECT_CLASS (nc_hicosmo_parent_class)->finalize (object);
 }
 
-gint32 NC_HICOSMO_ID = -1;
 static gboolean _nc_hicosmo_valid (NcmModel *model);
+NCM_MSET_MODEL_REGISTER_ID (NC_HICOSMO);
 
 static void
 nc_hicosmo_class_init (NcHICosmoClass *klass)
@@ -65,8 +65,10 @@ nc_hicosmo_class_init (NcHICosmoClass *klass)
   
   object_class->finalize = nc_hicosmo_finalize;
 
-  ncm_model_class_register_id (model_class);
-  NC_HICOSMO_ID = model_class->model_id;
+  ncm_mset_model_register_id (model_class, 
+                              NC_HICOSMO,
+                              "Homogeneous and isotropic cosmological models.",
+                              NULL);
 
   model_class->valid = &_nc_hicosmo_valid;
 }

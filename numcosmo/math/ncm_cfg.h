@@ -46,6 +46,7 @@ void ncm_cfg_register_obj (GType obj);
 gchar *ncm_cfg_get_fullpath (const gchar *filename, ...);
 void ncm_cfg_keyfile_to_arg (GKeyFile *kfile, gchar *group_name, GOptionEntry *entries, gchar **argv, gint *argc);
 void ncm_cfg_entries_to_keyfile (GKeyFile *kfile, gchar *group_name, GOptionEntry *entries);
+gchar *ncm_cfg_string_to_comment (const gchar *str);
 const GEnumValue *ncm_cfg_get_enum_by_id_name_nick (GType enum_type, const gchar *id_name_nick);
 void ncm_cfg_enum_print_all (GType enum_type, gchar *header);
 
@@ -65,6 +66,14 @@ void ncm_cfg_msg_sepa (void);
 gsl_rng *ncm_cfg_rng_get (void);
 gchar *ncm_cfg_rng_get_state (void);
 void ncm_cfg_rng_set_state (gchar *state);
+
+gboolean ncm_cfg_is_named_instance (gpointer obj);
+gboolean ncm_cfg_exist_named_instance (gchar *name);
+gpointer ncm_cfg_get_named_instance (gchar *name);
+gchar *ncm_cfg_named_instance_peek_name (gpointer obj);
+void ncm_cfg_set_named_instance (gpointer obj, gchar *name, gboolean overwrite);
+void ncm_cfg_free_named_instances (void);
+gboolean ncm_cfg_object_is_named (const gchar *serobj, gchar **name);
 
 FILE *ncm_cfg_fopen (gchar *filename, gchar *mode, ...);
 FILE *ncm_cfg_vfopen (gchar *filename, gchar *mode, va_list ap);

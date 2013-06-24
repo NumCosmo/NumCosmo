@@ -153,9 +153,9 @@ nc_de_opt_get_data_cluster_group (NcDEDataClusterEntries *de_data_cluster, GOpti
 {
   GOptionEntry entries_cluster[] =
   {
-    { "window",        0, 0, G_OPTION_ARG_STRING,         &de_data_cluster->window_name,           "Which window to use, NcWindowTophat: Top Hat (default), NcWindowGaussian: Gaussian", NULL },
-    { "transfer",      0, 0, G_OPTION_ARG_STRING,         &de_data_cluster->transfer_name,         "Which transfer function to use, NcTransferFuncBBKS: BBKS, NcTransferFuncEH: EH (default)", NULL },
-    { "multiplicity",  0, 0, G_OPTION_ARG_STRING,         &de_data_cluster->multiplicity_name,     "Which multiplicity function to use, NcMultiplicityFuncPS: Press-Schechter, NcMultiplicityFuncST: Sheth-Tormen, NcMultiplicityFuncJenkins: Jenkins et al., NcMultiplicityFuncWarren: Warren et al., NcMultiplicityFuncTinker: Tinker (default), NcMultiplicityFuncTinkerMean: Tinker et al. (mean), NcMultiplicityFuncTinkerCrit: Tinker et al. (critical)", NULL },
+    { "window",        0, 0, G_OPTION_ARG_STRING,         &de_data_cluster->window_name,           "Which window to use", NULL },
+    { "transfer",      0, 0, G_OPTION_ARG_STRING,         &de_data_cluster->transfer_name,         "Which transfer function to use", NULL },
+    { "multiplicity",  0, 0, G_OPTION_ARG_STRING,         &de_data_cluster->multiplicity_name,     "Which multiplicity function to use", NULL },
     { "cluster-m",     0, 0, G_OPTION_ARG_STRING,         &de_data_cluster->clusterm_ser,          "Which NcClusterMass object to use", NULL },
     { "cluster-z",     0, 0, G_OPTION_ARG_STRING,         &de_data_cluster->clusterz_ser,          "Which NcClusterRedshift object to use", NULL },
     { "mf_ds_index",   0, 0, G_OPTION_ARG_INT,            &de_data_cluster->mf_ds_index,           "Determines the coefficients of the multiplicity function.", NULL },
@@ -216,7 +216,7 @@ nc_de_opt_get_fit_group (NcDEFitEntries *de_fit, GOptionEntry **de_fit_entries)
     { "msg-level",        0, 0, G_OPTION_ARG_INT,          &de_fit->msg_level,        "Fit message level (0: no msg, 1: simple, 2: full)", NULL },
     { "montecarlo",       0, 0, G_OPTION_ARG_INT,          &de_fit->montecarlo,       "Resample the original data 'montecarlo' times.", NULL},
     { "mc-ni",            0, 0, G_OPTION_ARG_INT,          &de_fit->mc_ni,            "Start the 'montecarlo' at the ni realization.", NULL},
-    { "fiducial",         0, 0, G_OPTION_ARG_NONE,         &de_fit->fiducial,         "Use the fiducial model to resample.", NULL},
+    { "fiducial",         0, 0, G_OPTION_ARG_STRING,       &de_fit->fiducial,         "Use the fiducial model to resample.", NULL},
     { "mc-data",          0, 0, G_OPTION_ARG_NONE,         &de_fit->mc_data,          "Print all data from monte carlo.", NULL},
     { "fisher",           0, 0, G_OPTION_ARG_NONE,         &de_fit->fisher,           "Calculated the Fisher matrix.", NULL},
     { "kinematics-sigma", 0, 0, G_OPTION_ARG_NONE,         &de_fit->kinematics_sigma, "Compute q(z), E(z)^2 and E(z)^-2 plus 1sigma error bar from the Fisher matrix.", NULL},
@@ -226,6 +226,7 @@ nc_de_opt_get_fit_group (NcDEFitEntries *de_fit, GOptionEntry **de_fit_entries)
     { "qspline-cp-sigma", 0, 0, G_OPTION_ARG_DOUBLE,       &de_fit->qspline_cp_sigma, "Value of sigma for the continuity priors.", NULL},
     { "save-fisher",      0, 0, G_OPTION_ARG_NONE,         &de_fit->save_fisher,      "Create a file and print the Fisher matrix.", NULL},
     { "save-best-fit",    0, 0, G_OPTION_ARG_NONE,         &de_fit->save_best_fit,    "Create a file and print the cosmological parameters (both best-fit and fixed ones).", NULL},
+    { "save-mset",        0, 0, G_OPTION_ARG_STRING,       &de_fit->save_mset,        "Save NcmMSet to a file for future usage.", NULL},
     { NULL }
   };
   GOptionGroup *fit_group = g_option_group_new ("fit", " - Choices of statistical analysis", "Show help options related to model fitting", NULL, NULL);

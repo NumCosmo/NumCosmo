@@ -89,6 +89,62 @@ ncm_mset_pindex_free (NcmMSetPIndex *pi)
   g_slice_free (NcmMSetPIndex, pi);
 }
 
+G_LOCK_DEFINE_STATIC (last_model_id);
+
+/**
+ * _ncm_mset_model_register_id: (skip)
+ * @model_class: FIXME
+ * @ns: Model namespace.
+ * @desc: Short description.
+ * @long_desc: Long description.
+ * 
+ * FIXME
+ * 
+ */ 
+void
+_ncm_mset_model_register_id (NcmModelClass *model_class, gchar *ns, gchar *desc, gchar *long_desc)
+{
+  if (model_class->model_id < 0)
+  {
+    static NcmModelID last_model_id = 0;
+    guint id;
+    NcmMSetClass *mset_class = g_type_class_ref (NCM_TYPE_MSET);
+    G_LOCK (last_model_id);
+    model_class->model_id = last_model_id++;
+    id = model_class->model_id;
+    mset_class->model_desc[id].init = TRUE;
+    if (ns == NULL)
+      g_error ("Cannot register model without a namespace.");
+    if (desc == NULL)
+      g_error ("Cannot register model without a description.");
+
+    mset_class->model_desc[id].ns = g_strdup (ns);
+    mset_class->model_desc[id].desc = g_strdup (desc);
+    if (long_desc != NULL)
+      mset_class->model_desc[id].long_desc = g_strdup (long_desc);
+    else
+      mset_class->model_desc[id].long_desc = NULL;
+
+    if (g_hash_table_contains (mset_class->ns_table, ns))
+      g_error ("Model namespace <%s> already registered.", ns);
+
+    g_hash_table_insert (mset_class->ns_table, 
+                         mset_class->model_desc[id].ns, 
+                         GINT_TO_POINTER (id));
+
+    G_UNLOCK (last_model_id);
+    g_type_class_unref (mset_class);
+  }
+  else
+  {
+    g_error ("This model or its parent is already registred, id = %d. This function must be use once and only in the defining model.", model_class->model_id);
+  }
+  if (model_class->model_id > NCM_MODEL_MAX_ID)
+    g_error ("Max model id was already attained. Increase by altering NCM_MODEL_MAX_ID.");
+
+  return;
+}
+
 /**
  * ncm_mset_empty_new:
  *
@@ -336,6 +392,26 @@ ncm_mset_set (NcmMSet *mset, NcmModel *model)
 }
 
 /**
+ * ncm_mset_exists:
+ * @mset: FIXME
+ * @model: FIXME
+ *
+ * FIXME
+ * 
+ * Returns: FIXME
+ */
+gboolean
+ncm_mset_exists (NcmMSet *mset, NcmModel *model)
+{
+  NcmModelID mid = ncm_model_id (model);
+
+  if (mset->model[mid] != NULL)
+    return TRUE;
+  else
+    return FALSE;
+}
+
+/**
  * ncm_mset_prepare_fparam_map:
  * @mset: FIXME
  *
@@ -518,6 +594,7 @@ ncm_mset_max_model_nick (NcmMSet *mset)
 void
 ncm_mset_pretty_log (NcmMSet *mset)
 {
+  NcmMSetClass *mset_class = NCM_MSET_GET_CLASS (mset);
   NcmModelID mid;
   gint i;
   guint name_size = ncm_mset_max_param_name (mset);
@@ -530,7 +607,7 @@ ncm_mset_pretty_log (NcmMSet *mset)
     {
       gint n_params = ncm_model_len (model);
       ncm_cfg_msg_sepa ();
-      g_message ("# Model[%02d]:\n#   - %s\n", mid, ncm_model_name (model));
+      g_message ("# Model[%02d]:\n#   - %s : %s\n", mid, mset_class->model_desc[mid].ns, ncm_model_name (model));
       ncm_cfg_msg_sepa ();
       g_message ("# Model parameters\n");
       for (i = 0; i < n_params; i++)
@@ -1260,6 +1337,175 @@ ncm_mset_fparam_get_fpi (NcmMSet *mset, NcmModelID mid, guint pid)
   return g_array_index (mset->fpi_array[mid], gint, pid);
 }
 
+/**
+ * ncm_mset_save:
+ * @mset: FIXME
+ * @filename: FIXME
+ * 
+ * FIXME
+ * 
+ */
+void 
+ncm_mset_save (NcmMSet *mset, gchar *filename, gboolean save_comment)
+{
+  NcmMSetClass *mset_class = NCM_MSET_GET_CLASS (mset);
+  GKeyFile *msetfile = g_key_file_new ();
+  guint i;
+
+  for (i = 0; i < NCM_MODEL_MAX_ID; i++)
+  {
+    NcmModel *model = ncm_mset_peek (mset, i);
+    if (model == NULL)
+      continue;
+    else
+    {
+      NcmModelClass *model_class = NCM_MODEL_GET_CLASS (model);
+      GObjectClass *oclass = G_OBJECT_CLASS (model_class);
+      GError *error = NULL;
+      GVariant *params = NULL;
+      gchar *obj_name = NULL;
+      gchar *group = g_strdup_printf ("%s", mset_class->model_desc[i].ns);
+      GVariant *model_var = ncm_cfg_serialize_to_variant (G_OBJECT (model));
+      guint nparams;
+
+      g_variant_get (model_var, "{s@a{sv}}", &obj_name, &params);
+      nparams = g_variant_n_children (params);
+      g_key_file_set_value (msetfile, group, group, obj_name);
+
+      if (save_comment)
+      {
+        gchar *model_desc = ncm_cfg_string_to_comment (mset_class->model_desc[i].desc); 
+        if (!g_key_file_set_comment (msetfile, group, NULL, model_desc, &error))
+          g_error ("ncm_mset_save: %s", error->message);
+        g_free (model_desc);
+      }
+      
+      if (nparams != 0)
+      {
+        GVariantIter iter;
+        GVariant *value;
+        gchar *key;
+        g_variant_iter_init (&iter, params);
+        while (g_variant_iter_next (&iter, "{sv}", &key, &value))
+        {
+          GParamSpec *param_spec = g_object_class_find_property (oclass, key);
+          gchar *param_str = g_variant_print (value, TRUE);
+          if (param_spec == NULL)
+            g_error ("ncm_mset_save: property `%s' not found in object `%s'.", key, obj_name);
+          
+          g_key_file_set_value (msetfile, group, key, param_str);
+          if (save_comment)
+          {
+            gchar *desc = ncm_cfg_string_to_comment (g_param_spec_get_blurb (param_spec));
+            if (!g_key_file_set_comment (msetfile, group, key, desc, &error))
+              g_error ("ncm_mset_save: %s", error->message);
+            g_free (desc);
+          }
+
+          g_variant_unref (value);
+          g_free (key);
+          g_free (param_str);
+        }
+      }
+
+      g_variant_unref (params);
+      g_variant_unref (model_var);
+    }
+  }
+
+  {
+    GError *error = NULL;
+    gsize len = 0;
+    gchar *mset_data = g_key_file_to_data (msetfile, &len, &error);
+    if (error != NULL)
+      g_error ("Error converting NcmMSet to configuration file:\n  %s\n", error->message);
+    if (!g_file_set_contents (filename, mset_data, len, &error))
+      g_error ("Error saving configuration file to disk:\n  %s\n", error->message);
+    g_free (mset_data);
+    g_key_file_free (msetfile);
+  }
+}
+
+/**
+ * ncm_mset_load:
+ * @filename: FIXME
+ * 
+ * FIXME
+ * 
+ * Returns: (transfer full): FIXME
+ */
+NcmMSet * 
+ncm_mset_load (gchar *filename)
+{
+  NcmMSet *mset = ncm_mset_empty_new ();
+  GKeyFile *msetfile = g_key_file_new ();
+  GError *error = NULL;
+  gchar **groups = NULL;
+  gsize ngroups = 0;
+  guint i;
+  
+  if (!g_key_file_load_from_file (msetfile, filename, G_KEY_FILE_KEEP_COMMENTS | G_KEY_FILE_KEEP_TRANSLATIONS, &error))
+  {
+    g_error ("ncm_mset_load: Invalid mset configuration file: %s\n  %s\n", filename, error->message);
+    return NULL;
+  }
+
+  groups = g_key_file_get_groups (msetfile, &ngroups);
+  for (i = 0; i < ngroups; i++)
+  {
+    GString *obj_ser = g_string_sized_new (200);    
+    
+    if (!g_key_file_has_key (msetfile, groups[i], groups[i], &error))
+    {
+      if (error != NULL)
+        g_error ("ncm_mset_load: %s", error->message);
+      g_error ("ncm_mset_load: Every group must contain a key with same name indicating the object type.");
+    }
+
+    {
+      gchar *obj_type = g_key_file_get_value (msetfile, groups[i], groups[i], &error);
+      g_string_append_printf (obj_ser, "{\'%s\', @a{sv} {", obj_type);
+      g_free (obj_type);
+      g_key_file_remove_key (msetfile, groups[i], groups[i], &error);
+      if (error != NULL)
+        g_error ("ncm_mset_load: %s", error->message);
+    }
+
+    {
+      gsize nkeys = 0;
+      gchar **keys = g_key_file_get_keys (msetfile, groups[i], &nkeys, &error);
+      guint j;
+      if (error != NULL)
+        g_error ("ncm_mset_load: %s", error->message);
+      for (j = 0; j < nkeys; j++)
+      {
+        gchar *propval = g_key_file_get_value (msetfile, groups[i], keys[j], &error);
+        if (error != NULL)
+          g_error ("ncm_mset_load: %s", error->message);
+        g_string_append_printf (obj_ser, "\'%s\':<%s>", keys[j], propval);
+        g_free (propval);
+        if (j + 1 != nkeys)
+          g_string_append (obj_ser, ", ");
+      }
+      g_string_append (obj_ser, "}}");
+      g_strfreev (keys);
+    }
+
+    {
+      GObject *obj = ncm_cfg_create_from_string (obj_ser->str);
+      g_assert (NCM_IS_MODEL (obj));
+      if (ncm_mset_exists (mset, NCM_MODEL (obj)))
+        g_error ("ncm_mset_load: a model ``%s'' already exists in NcmMSet.", obj_ser->str);
+      ncm_mset_set (mset, NCM_MODEL (obj));
+      ncm_model_free (NCM_MODEL (obj));
+    }
+    g_string_free (obj_ser, TRUE);
+  }
+  
+  g_strfreev (groups);
+  return mset;
+}
+
 static void
 ncm_mset_init (NcmMSet *mset)
 {
@@ -1307,8 +1553,13 @@ static void
 ncm_mset_class_init (NcmMSetClass *klass)
 {
   GObjectClass* object_class = G_OBJECT_CLASS (klass);
-
+  guint i;
   object_class->dispose = ncm_mset_dispose;
   object_class->finalize = ncm_mset_finalize;
+  klass->ns_table = g_hash_table_new (g_str_hash, g_str_equal);
+  for (i = 0; i < NCM_MODEL_MAX_ID; i++)
+  {
+    klass->model_desc[i].init = FALSE;
+  }
 }
 

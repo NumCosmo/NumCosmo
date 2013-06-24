@@ -187,6 +187,7 @@ main (gint argc, gchar *argv[])
   model = nc_hicosmo_new_from_name (NC_TYPE_HICOSMO, de_model.model_name);
   mset = ncm_mset_new (NCM_MODEL (model), NULL);
   dist = nc_distance_new (2.0);
+  ncm_cfg_set_named_instance (dist, "MainDist", FALSE);
 
   if (g_type_is_a (G_OBJECT_TYPE (model), NC_TYPE_HICOSMO_DE))
     is_de = TRUE;
@@ -368,8 +369,11 @@ main (gint argc, gchar *argv[])
       g_error ("Continuity priors are only valid for NcHICosmoQSPline model");
     nc_hicosmo_qspline_add_continuity_priors (NC_HICOSMO_QSPLINE (model), lh, de_fit.qspline_cp_sigma);
   }
-  
-  fiduc = ncm_mset_dup (mset);
+
+  if (de_fit.save_mset != NULL)
+    ncm_mset_save (mset, de_fit.save_mset, TRUE);
+  if (de_fit.fiducial != NULL)
+    fiduc = ncm_mset_load (de_fit.fiducial); 
 
   {
     const GEnumValue *fit_type_id = ncm_cfg_get_enum_by_id_name_nick (NCM_TYPE_FIT_TYPE, de_fit.fit_type);
@@ -437,7 +441,7 @@ main (gint argc, gchar *argv[])
     NcmFitMC *mc = ncm_fit_mc_new (fit);
     gdouble m2lnL = fit->fstate->m2lnL;
 
-    if (de_fit.fiducial)
+    if (de_fit.fiducial != NULL)
       resample_mset = fiduc;
     else
       resample_mset = fit->mset;
@@ -708,7 +712,8 @@ main (gint argc, gchar *argv[])
   g_free (de_data_simple_entries); de_data_simple_entries = NULL;
   g_free (de_data_cluster_entries); de_data_cluster_entries = NULL;
   g_free (de_fit_entries); de_fit_entries = NULL;
-  
+
+  ncm_cfg_free_named_instances ();
   ncm_model_free (NCM_MODEL (model));
   ncm_mset_free (fiduc);
   ncm_mset_free (mset);

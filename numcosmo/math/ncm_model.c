@@ -495,28 +495,6 @@ ncm_model_class_init (NcmModelClass *klass)
                                                          G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 }
 
-G_LOCK_DEFINE_STATIC (last_model_id);
-
-void
-ncm_model_class_register_id (NcmModelClass *model_class)
-{
-  if (model_class->model_id < 0)
-  {
-    static NcmModelID last_model_id = 0;
-    G_LOCK (last_model_id);
-    model_class->model_id = last_model_id++;
-    G_UNLOCK (last_model_id);
-  }
-  else
-  {
-    g_error ("This model or its parent is already registred, id = %d. This function must be use once and only in the defining model.", model_class->model_id);
-  }
-  if (model_class->model_id > NCM_MODEL_MAX_ID)
-    g_error ("Max model id was already attained. Increase by altering NCM_MODEL_MAX_ID.");
-
-  return;
-}
-
 /**
  * ncm_model_class_get_property: (skip)
  * @object: a #NcmModelClass.

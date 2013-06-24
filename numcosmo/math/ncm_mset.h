@@ -46,13 +46,25 @@ G_BEGIN_DECLS
 typedef struct _NcmMSetClass NcmMSetClass;
 typedef struct _NcmMSet NcmMSet;
 typedef struct _NcmMSetPIndex NcmMSetPIndex;
+typedef struct _NcmMSetModelDesc NcmMSetModelDesc; 
 
 #define NCM_MODEL_MAX_ID 5
+
+struct _NcmMSetModelDesc
+{
+  /*< private >*/
+  gboolean init;
+  gchar *ns;
+  gchar *desc;
+  gchar *long_desc;
+};
 
 struct _NcmMSetClass
 {
   /*< private >*/
   GObjectClass parent_class;
+  GHashTable *ns_table;
+  NcmMSetModelDesc model_desc[NCM_MODEL_MAX_ID];
 };
 
 struct _NcmMSet
@@ -77,6 +89,21 @@ struct _NcmMSetPIndex
 GType ncm_mset_get_type (void) G_GNUC_CONST;
 GType ncm_mset_pindex_get_type (void) G_GNUC_CONST;
 
+void _ncm_mset_model_register_id (NcmModelClass *model_class, gchar *ns, gchar *desc, gchar *long_desc);
+#define NCM_MSET_MODEL_ID(ModelNS) ModelNS##_ID
+#define NCM_MSET_MODEL_ID_STR(ModelNS) #ModelNS
+#define NCM_MSET_MODEL_DECLARE_ID(ModelNS) extern gint32 NCM_MSET_MODEL_ID(ModelNS) 
+#define NCM_MSET_MODEL_REGISTER_ID(ModelNS) gint32 NCM_MSET_MODEL_ID(ModelNS) = -1 
+#define NCM_MSET_MODEL_EXPORT_ID(ModelNS,model_class) NCM_MSET_MODEL_ID(ModelNS) = (model_class)->model_id
+#define NCM_MSET_MODEL_CHECK_ID(ModelNS) if (NCM_MSET_MODEL_ID(ModelNS) < 0) g_error ("Model ID not registered.");
+
+#define ncm_mset_model_register_id(model_class,ns,desc,long_desc) \
+G_STMT_START { \
+  _ncm_mset_model_register_id ((model_class), NCM_MSET_MODEL_ID_STR (ns), (desc), (long_desc)); \
+  NCM_MSET_MODEL_EXPORT_ID (ns, (model_class)); \
+  NCM_MSET_MODEL_CHECK_ID (ns); \
+} G_STMT_END
+
 NcmMSetPIndex *ncm_mset_pindex_new (NcmModelID mid, guint pid);
 NcmMSetPIndex *ncm_mset_pindex_dup (NcmMSetPIndex *pi);
 void ncm_mset_pindex_free (NcmMSetPIndex *pi);
@@ -97,6 +124,7 @@ NcmModel *ncm_mset_peek (NcmMSet *mset, NcmModelID mid);
 NcmModel *ncm_mset_get (NcmMSet *mset, NcmModelID mid);
 void ncm_mset_remove (NcmMSet *mset, NcmModelID mid);
 void ncm_mset_set (NcmMSet *mset, NcmModel *model);
+gboolean ncm_mset_exists (NcmMSet *mset, NcmModel *model);
 
 void ncm_mset_prepare_fparam_map (NcmMSet *mset);
 
@@ -149,6 +177,9 @@ void ncm_mset_fparam_set (NcmMSet *mset, guint n, const gdouble x);
 
 NcmMSetPIndex *ncm_mset_fparam_get_pi (NcmMSet *mset, guint n);
 gint ncm_mset_fparam_get_fpi (NcmMSet *mset, NcmModelID mid, guint pid);
+
+void ncm_mset_save (NcmMSet *mset, gchar *filename, gboolean save_comment);
+NcmMSet *ncm_mset_load (gchar *filename);
 
 G_END_DECLS
 
