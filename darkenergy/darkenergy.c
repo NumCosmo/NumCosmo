@@ -49,7 +49,7 @@ main (gint argc, gchar *argv[])
   NcDEDataClusterEntries de_data_cluster = NC_DE_DATA_CLUSTER_ENTRIES;
   NcDEFitEntries de_fit = NC_DE_FIT_ENTRIES;
   NcDistance *dist;
-  NcmMSet *mset, *fiduc;
+  NcmMSet *mset, *fiduc = NULL;
   GError *error = NULL;
   GOptionContext *context;
   GOptionEntry *de_model_entries = NULL;
@@ -713,9 +713,11 @@ main (gint argc, gchar *argv[])
   g_free (de_data_cluster_entries); de_data_cluster_entries = NULL;
   g_free (de_fit_entries); de_fit_entries = NULL;
 
+  if (fiduc != NULL)
+    ncm_mset_free (fiduc);
+  
   ncm_cfg_free_named_instances ();
   ncm_model_free (NCM_MODEL (model));
-  ncm_mset_free (fiduc);
   ncm_mset_free (mset);
   ncm_fit_free (fit);
   ncm_likelihood_free (lh);
