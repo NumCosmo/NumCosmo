@@ -93,6 +93,7 @@ void ncm_mset_model_register_id (NcmModelClass *model_class, gchar *ns, gchar *d
 
 /**
  * NCM_MSET_MODEL_ID_FUNC: (skip)
+ * @model_ns: FIXME
  * 
  * FIXME
  * 
@@ -100,15 +101,8 @@ void ncm_mset_model_register_id (NcmModelClass *model_class, gchar *ns, gchar *d
 #define NCM_MSET_MODEL_ID_FUNC(model_ns) model_ns##_id
 
 /**
- * NCM_MSET_MODEL_ID_STR: (skip)
- * 
- * FIXME
- * 
- */
-#define NCM_MSET_MODEL_ID_STR(ModelNS) #ModelNS
-
-/**
  * NCM_MSET_MODEL_DECLARE_ID: (skip)
+ * @model_ns: FIXME
  * 
  * FIXME
  * 
@@ -117,6 +111,8 @@ void ncm_mset_model_register_id (NcmModelClass *model_class, gchar *ns, gchar *d
 
 /**
  * NCM_MSET_MODEL_REGISTER_ID: (skip)
+ * @model_ns: FIXME
+ * @typemacro: FIXME
  * 
  * FIXME
  * 
@@ -128,7 +124,6 @@ gint32 NCM_MSET_MODEL_ID_FUNC(model_ns) (void) \
   if (id == -1) \
   { \
     NcmModelClass *model_class = g_type_class_ref (typemacro); \
-    g_error ("Nhca %p", model_class); \
     id = model_class->model_id; \
     g_type_class_unref (model_class); \
   } \
