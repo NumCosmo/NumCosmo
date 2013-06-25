@@ -26,6 +26,7 @@
 #define _NC_HICOSMO_QLINEAR_H_
 
 #include <glib-object.h>
+#include <numcosmo/build_cfg.h>
 #include <numcosmo/nc_hicosmo.h>
 
 G_BEGIN_DECLS

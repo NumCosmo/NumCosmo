@@ -26,6 +26,7 @@
 #define _NC_QUATERNION_H
 
 #include <glib.h>
+#include <numcosmo/build_cfg.h>
 
 G_BEGIN_DECLS
 

@@ -27,6 +27,7 @@
 
 #include <glib.h>
 #include <glib-object.h>
+#include <numcosmo/build_cfg.h>
 #include <numcosmo/lss/nc_cluster_redshift.h>
 
 G_BEGIN_DECLS

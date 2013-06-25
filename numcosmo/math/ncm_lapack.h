@@ -26,6 +26,7 @@
 #define _NCM_LAPACK_H_
 
 #include <glib.h>
+#include <numcosmo/build_cfg.h>
 
 G_BEGIN_DECLS
 

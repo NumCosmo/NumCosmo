@@ -27,7 +27,7 @@
 
 #include <glib.h>
 #include <glib-object.h>
-
+#include <numcosmo/build_cfg.h>
 #include <numcosmo/math/quaternion.h>
 #include <numcosmo/sphere/map.h>
 

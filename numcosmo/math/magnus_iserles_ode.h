@@ -27,6 +27,7 @@
 
 #include <glib.h>
 #include <glib-object.h>
+#include <numcosmo/build_cfg.h>
 #include <gsl/gsl_matrix_long_double.h>
 
 G_BEGIN_DECLS

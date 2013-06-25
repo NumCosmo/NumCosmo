@@ -28,6 +28,7 @@
 
 #include <glib.h>
 #include <glib-object.h>
+#include <numcosmo/build_cfg.h>
 #include <numcosmo/nc_hicosmo.h>
 #include <numcosmo/math/ncm_model_ctrl.h>
 

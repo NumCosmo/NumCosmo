@@ -27,7 +27,7 @@
 
 #include <glib.h>
 #include <glib-object.h>
-
+#include <numcosmo/build_cfg.h>
 #include <gsl/gsl_permutation.h>
 #include <gsl/gsl_math.h>
 #include <gsl/gsl_sum.h>

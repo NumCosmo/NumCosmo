@@ -27,6 +27,7 @@
 
 #include <glib.h>
 #include <glib-object.h>
+#include <numcosmo/build_cfg.h>
 #include <numcosmo/scalefactor.h>
 #include <numcosmo/nc_recomb.h>
 

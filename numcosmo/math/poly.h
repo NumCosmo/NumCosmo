@@ -27,7 +27,7 @@
 
 #include <glib.h>
 #include <glib-object.h>
-
+#include <numcosmo/build_cfg.h>
 #include <gsl/gsl_vector.h>
 
 G_BEGIN_DECLS

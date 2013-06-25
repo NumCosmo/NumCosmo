@@ -26,6 +26,7 @@
 #define _NCM_SPARAM_H_
 
 #include <glib-object.h>
+#include <numcosmo/build_cfg.h>
 
 G_BEGIN_DECLS
 

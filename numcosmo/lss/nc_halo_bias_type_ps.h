@@ -28,6 +28,7 @@
 
 #include <glib.h>
 #include <glib-object.h>
+#include <numcosmo/build_cfg.h>
 #include <numcosmo/lss/nc_halo_bias_type.h>
 
 G_BEGIN_DECLS

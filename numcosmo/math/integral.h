@@ -27,6 +27,7 @@
 
 #include <glib.h>
 #include <glib-object.h>
+#include <numcosmo/build_cfg.h>
 #include <numcosmo/math/function_cache.h>
 #include <gsl/gsl_integration.h>
 

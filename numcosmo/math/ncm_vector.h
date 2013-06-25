@@ -28,6 +28,7 @@
 #include <string.h>
 #include <glib.h>
 #include <glib-object.h>
+#include <numcosmo/build_cfg.h>
 #include <gsl/gsl_vector.h>
 #include <sundials/sundials_nvector.h>
 

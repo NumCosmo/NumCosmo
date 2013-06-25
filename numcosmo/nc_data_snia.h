@@ -26,6 +26,7 @@
 #define _NC_DATA_SNIA_H_
 
 #include <glib.h>
+#include <numcosmo/build_cfg.h>
 #include <numcosmo/math/ncm_data.h>
 #include <numcosmo/nc_distance.h>
 #include <numcosmo/nc_snia_dist_cov.h>

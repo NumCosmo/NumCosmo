@@ -28,6 +28,7 @@
 #include <glib.h>
 #include <glib/gstdio.h>
 #include <glib-object.h>
+#include <numcosmo/build_cfg.h>
 #include <stdio.h>
 #include <gsl/gsl_vector.h>
 #include <gsl/gsl_matrix.h>

@@ -1,5 +1,5 @@
 /***************************************************************************
- *            fit.h
+ *            ncm_fit.h
  *
  *  Fri Aug 15 15:26:31 2008
  *  Copyright  2008  Sandro Dias Pinto Vitenti
@@ -28,6 +28,7 @@
 
 #include <glib.h>
 #include <glib-object.h>
+#include <numcosmo/build_cfg.h>
 #include <numcosmo/math/ncm_vector.h>
 #include <numcosmo/math/ncm_matrix.h>
 #include <numcosmo/math/ncm_model.h>

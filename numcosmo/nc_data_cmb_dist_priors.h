@@ -28,6 +28,7 @@
 
 #include <glib.h>
 #include <glib-object.h>
+#include <numcosmo/build_cfg.h>
 #include <numcosmo/math/ncm_data_gauss.h>
 #include <numcosmo/nc_distance.h>
 #include <numcosmo/nc_data_cmb.h>

@@ -27,6 +27,7 @@
 #define _NC_HALO_BIAS_TYPE_H_
 
 #include <glib-object.h>
+#include <numcosmo/build_cfg.h>
 
 G_BEGIN_DECLS
 

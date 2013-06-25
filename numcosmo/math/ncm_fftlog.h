@@ -28,6 +28,7 @@
 
 #include <glib.h>
 #include <glib-object.h>
+#include <numcosmo/build_cfg.h>
 
 #ifndef NUMCOSMO_GIR_SCAN
 #ifdef NUMCOSMO_HAVE_FFTW3
