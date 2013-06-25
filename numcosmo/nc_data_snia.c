@@ -42,6 +42,7 @@
 #include "nc_data_snia_cov.h"
 #include "nc_snia_dist_cov.h"
 #include "math/ncm_cfg.h"
+#include "nc_enum_types.h"
 
 #include <gio/gio.h>
 
