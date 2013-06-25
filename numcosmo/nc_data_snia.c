@@ -50,21 +50,53 @@ static const gchar *_nc_data_snia_cats[] = {
   "snls3_conley_2011_stat_only.fits",
 };
 
-void 
-nc_data_snia_load_cat (NcSNIADistCov *dcov, NcDataSNIAId id)
+/**
+ * nc_data_snia_get_catalog:
+ * @id: FIXME
+ * 
+ * FIXME
+ * 
+ * Returns: (transfer full): FIXME
+ */
+gchar * 
+nc_data_snia_get_catalog (gchar *id)
+{
+  const GEnumValue *snia_id = 
+    ncm_cfg_get_enum_by_id_name_nick (NC_TYPE_DATA_SNIA_ID, id);
+  if (snia_id == NULL)
+    g_error ("nc_data_snia_get_catalog: Cannot find id ``%s'' in catalogs.", id);
+  return nc_data_snia_get_catalog_by_id (snia_id->value);
+}
+
+/**
+ * nc_data_snia_get_catalog_by_id:
+ * @id: FIXME
+ * 
+ * FIXME
+ * 
+ * Returns: (transfer full): FIXME
+ */
+gchar * 
+nc_data_snia_get_catalog_by_id (NcDataSNIAId id)
 {
   g_assert (id <= NC_DATA_SNIA_COV_END && id >= NC_DATA_SNIA_COV_START);
   {
     gint i = id - NC_DATA_SNIA_COV_START;
-    gchar *full_filename = nc_data_snia_get_fits (_nc_data_snia_cats[i],
-                                                  FALSE);
-#ifdef NUMCOSMO_HAVE_CFITSIO
-    nc_snia_dist_cov_load (dcov, full_filename);
-#else
-    g_error ("nc_data_snia_load_cat: catalog load not available, recompile "PACKAGE_NAME" with cfitsio support.");
-#endif /* NUMCOSMO_HAVE_CFITSIO */
-    g_free (full_filename);
+    gchar *full_filename = nc_data_snia_get_fits (_nc_data_snia_cats[i], FALSE);
+    return full_filename;
   }
+}
+
+void 
+nc_data_snia_load_cat (NcSNIADistCov *dcov, NcDataSNIAId id)
+{
+  gchar *full_filename = nc_data_snia_get_catalog_by_id (id);
+#ifdef NUMCOSMO_HAVE_CFITSIO
+  nc_snia_dist_cov_load (dcov, full_filename);
+#else
+  g_error ("nc_data_snia_load_cat: catalog load not available, recompile "PACKAGE_NAME" with cfitsio support.");
+#endif /* NUMCOSMO_HAVE_CFITSIO */
+  g_free (full_filename);
 }
 
 void 

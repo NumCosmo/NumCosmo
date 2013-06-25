@@ -75,6 +75,8 @@ typedef enum _NcDataSNIAId
 
 void nc_data_snia_load_cat (NcSNIADistCov *dcov, NcDataSNIAId id);
 gchar *nc_data_snia_get_fits (const gchar *filename, gboolean check_size);
+gchar *nc_data_snia_get_catalog (gchar *id);
+gchar *nc_data_snia_get_catalog_by_id (NcDataSNIAId id);
 
 G_END_DECLS
 
