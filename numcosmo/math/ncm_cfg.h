@@ -69,6 +69,7 @@ void ncm_cfg_rng_set_state (gchar *state);
 
 gboolean ncm_cfg_is_named_instance (gpointer obj);
 gboolean ncm_cfg_exist_named_instance (gchar *name);
+guint ncm_cfg_count_named_instance (void);
 gpointer ncm_cfg_get_named_instance (gchar *name);
 gchar *ncm_cfg_named_instance_peek_name (gpointer obj);
 void ncm_cfg_set_named_instance (gpointer obj, gchar *name, gboolean overwrite);

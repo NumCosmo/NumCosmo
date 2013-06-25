@@ -528,7 +528,7 @@ ncm_cfg_rng_set_state (gchar *state)
 
 /**
  * ncm_cfg_is_named_instance:
- * @obj: FIXME
+ * @obj: (type GObject): FIXME
  * 
  * FIXME
  * 
@@ -559,12 +559,26 @@ ncm_cfg_exist_named_instance (gchar *name)
 }
 
 /**
+ * ncm_cfg_count_named_instances:
+ * 
+ * FIXME
+ * 
+ * Returns: FIXME
+ */
+guint
+ncm_cfg_count_named_instance (void)
+{
+  g_assert (numcosmo_init);
+  return g_hash_table_size (named_instances_name_ptr);
+}
+
+/**
  * ncm_cfg_get_named_instance:
  * @name: FIXME
  * 
  * FIXME
  * 
- * Returns: (transfer full): FIXME
+ * Returns: (transfer full) (type GObject): FIXME
  */
 gpointer
 ncm_cfg_get_named_instance (gchar *name)
@@ -579,7 +593,7 @@ ncm_cfg_get_named_instance (gchar *name)
 
 /**
  * ncm_cfg_named_instance_peek_name:
- * @obj: FIXME
+ * @obj: (type GObject): FIXME
  * 
  * FIXME
  * 
@@ -598,7 +612,7 @@ ncm_cfg_named_instance_peek_name (gpointer obj)
 
 /**
  * ncm_cfg_set_named_instance:
- * @obj: FIXME
+ * @obj: (type GObject): FIXME
  * @name: FIXME
  * @overwrite: FIXME
  * 
