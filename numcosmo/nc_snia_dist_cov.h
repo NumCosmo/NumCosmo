@@ -156,7 +156,7 @@ struct _NcSNIADistCov
 
 GType nc_snia_dist_cov_get_type (void) G_GNUC_CONST;
 
-NCM_MSET_MODEL_DECLARE_ID (NC_SNIA_DIST_COV);
+NCM_MSET_MODEL_DECLARE_ID (nc_snia_dist_cov);
 
 NcSNIADistCov *nc_snia_dist_cov_new (NcDistance *dist, guint mu_len);
 NcSNIADistCov *nc_snia_dist_cov_ref (NcSNIADistCov *dcov);

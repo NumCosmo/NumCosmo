@@ -92,7 +92,7 @@ ncm_mset_pindex_free (NcmMSetPIndex *pi)
 G_LOCK_DEFINE_STATIC (last_model_id);
 
 /**
- * _ncm_mset_model_register_id: (skip)
+ * ncm_mset_model_register_id: (skip)
  * @model_class: FIXME
  * @ns: Model namespace.
  * @desc: Short description.
@@ -102,7 +102,7 @@ G_LOCK_DEFINE_STATIC (last_model_id);
  * 
  */ 
 void
-_ncm_mset_model_register_id (NcmModelClass *model_class, gchar *ns, gchar *desc, gchar *long_desc)
+ncm_mset_model_register_id (NcmModelClass *model_class, gchar *ns, gchar *desc, gchar *long_desc)
 {
   if (model_class->model_id < 0)
   {

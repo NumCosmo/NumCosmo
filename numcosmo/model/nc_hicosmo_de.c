@@ -156,7 +156,7 @@ nc_hicosmo_de_omega_x2omega_k (NcHICosmo *cosmo)
 static void
 bbn_prior (NcmMSet *mset, gpointer obj, const gdouble *x, gdouble *f)
 {
-  NcmModel *cosmo = ncm_mset_peek (mset, NC_HICOSMO_ID);
+  NcmModel *cosmo = ncm_mset_peek (mset, nc_hicosmo_id ());
   gdouble z_bbn = 1.0e9;
   gdouble bbn, a;
 

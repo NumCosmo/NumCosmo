@@ -155,7 +155,7 @@ static void
 _nc_data_cmb_shift_param_prepare (NcmData *data, NcmMSet *mset)
 {
   NcDataCMBShiftParam *cmb_shift_param = NC_DATA_CMB_SHIFT_PARAM (data);
-  NcHICosmo *cosmo = NC_HICOSMO (ncm_mset_peek (mset, NC_HICOSMO_ID));
+  NcHICosmo *cosmo = NC_HICOSMO (ncm_mset_peek (mset, nc_hicosmo_id ()));
   nc_distance_prepare_if_needed (cmb_shift_param->dist, cosmo);
 }
 
@@ -168,7 +168,7 @@ static void
 _nc_data_cmb_shift_param_mean_func (NcmDataGaussDiag *diag, NcmMSet *mset, NcmVector *vp)
 {
   NcDataCMBShiftParam *cmb_shift_param = NC_DATA_CMB_SHIFT_PARAM (diag);
-  NcHICosmo *cosmo = NC_HICOSMO (ncm_mset_peek (mset, NC_HICOSMO_ID));
+  NcHICosmo *cosmo = NC_HICOSMO (ncm_mset_peek (mset, nc_hicosmo_id ()));
   const gdouble zrec = ncm_vector_get (cmb_shift_param->x, 0);
   const gdouble R    = nc_distance_shift_parameter (cmb_shift_param->dist, cosmo, zrec);
 

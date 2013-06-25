@@ -157,7 +157,7 @@ typedef struct _NcHICosmoSplineContPrior
 static void
 continuity_prior_f (NcmMSet *mset, gpointer obj, const gdouble *x, gdouble *f)
 {
-  NcHICosmoQSpline *qspline = NC_HICOSMO_QSPLINE (ncm_mset_peek (mset, NC_HICOSMO_ID));
+  NcHICosmoQSpline *qspline = NC_HICOSMO_QSPLINE (ncm_mset_peek (mset, nc_hicosmo_id ()));
   NcHICosmoSplineContPrior *acp = (NcHICosmoSplineContPrior *) obj;
   const gdouble x_i = ncm_vector_get (qspline->q_z->xv, acp->knot);
   const gdouble x_ip1 = ncm_vector_get (qspline->q_z->xv, acp->knot + 1);

@@ -119,7 +119,7 @@ struct _NcHICosmo
 
 GType nc_hicosmo_get_type (void) G_GNUC_CONST;
 
-NCM_MSET_MODEL_DECLARE_ID (NC_HICOSMO);
+NCM_MSET_MODEL_DECLARE_ID (nc_hicosmo);
 
 /*
  * Cosmological model constant functions
@@ -156,7 +156,6 @@ G_INLINE_FUNC gdouble nc_hicosmo_qp (NcHICosmo *cosmo, gdouble z);
 G_INLINE_FUNC gdouble nc_hicosmo_q (NcHICosmo *cosmo, gdouble z);
 G_INLINE_FUNC gdouble nc_hicosmo_dec (NcHICosmo *cosmo, gdouble z);
 G_INLINE_FUNC gdouble nc_hicosmo_wec (NcHICosmo *cosmo, gdouble z);
-G_INLINE_FUNC gint32 nc_hicosmo_id (void);
 
 NcHICosmo *nc_hicosmo_new_from_name (GType parent_type, gchar *cosmo_name);
 void nc_hicosmo_log_all_models (GType parent);
@@ -341,12 +340,6 @@ nc_hicosmo_j (NcHICosmo *cosmo, gdouble z)
   d2E2_dz2 = nc_hicosmo_d2E2_dz2 (cosmo, z);
 
   return gsl_pow_2 (1.0 + z) * (d2E2_dz2 - 2.0 * dE2_dz / (1.0 + z)) / (2.0 * E2) + 1.0;
-}
-
-G_INLINE_FUNC gint32
-nc_hicosmo_id (void)
-{
-  return NC_HICOSMO_ID;
 }
 
 G_END_DECLS

@@ -43,7 +43,7 @@ static void
 _nc_hicosmo_prior_top_f (NcmMSet *mset, gpointer obj, const gdouble *x, gdouble *f)
 {
   NcHICosmoPriorTop *tp = (NcHICosmoPriorTop *)obj;
-  NcHICosmo *model = NC_HICOSMO (ncm_mset_peek (mset, NC_HICOSMO_ID));
+  NcHICosmo *model = NC_HICOSMO (ncm_mset_peek (mset, nc_hicosmo_id ()));
   gdouble Omega_k = nc_hicosmo_Omega_k (model);
   gdouble sqrt_Omega_k = sqrt (fabs (Omega_k));
   gint k = fabs (Omega_k) < NCM_ZERO_LIMIT ? 0 : (Omega_k > 0.0 ? -1 : 1);

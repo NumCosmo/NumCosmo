@@ -127,7 +127,7 @@ static gdouble _nc_hicosmo_qpw_Omega_t (NcmModel *model) { return OMEGA_T; }
 static void
 AsymptoticCDM_prior_f (NcmMSet *mset, gpointer obj, const gdouble *x, gdouble *f)
 {
-  NcmModel *model = ncm_mset_peek (mset, NC_HICOSMO_ID);
+  NcmModel *model = ncm_mset_peek (mset, nc_hicosmo_id ());
   NcHICosmoQPWAsymCDMPrior *acp = (NcHICosmoQPWAsymCDMPrior *) obj;
   f[0] = (nc_hicosmo_q (NC_HICOSMO (model), acp->z) - acp->q) / acp->sigma;
 }
@@ -135,7 +135,7 @@ AsymptoticCDM_prior_f (NcmMSet *mset, gpointer obj, const gdouble *x, gdouble *f
 static void
 continuity_prior_f (NcmMSet *mset, gpointer obj, const gdouble *x, gdouble *f)
 {
-  NcmModel *model = ncm_mset_peek (mset, NC_HICOSMO_ID);
+  NcmModel *model = ncm_mset_peek (mset, nc_hicosmo_id ());
   NcHICosmoQPWContPrior *acp = (NcHICosmoQPWContPrior *) obj;
   f[0] = ((QPW_QP (acp->knot) - QPW_QP (acp->knot + 1)) / acp->sigma);
 }

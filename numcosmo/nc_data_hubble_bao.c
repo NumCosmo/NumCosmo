@@ -174,7 +174,7 @@ static void
 _nc_data_hubble_bao_prepare (NcmData *data, NcmMSet *mset)
 {
   NcDataHubbleBao *hubble_bao = NC_DATA_HUBBLE_BAO (data);
-  NcHICosmo *cosmo = NC_HICOSMO (ncm_mset_peek (mset, NC_HICOSMO_ID));
+  NcHICosmo *cosmo = NC_HICOSMO (ncm_mset_peek (mset, nc_hicosmo_id ()));
   nc_distance_prepare_if_needed (hubble_bao->dist, cosmo);
 }
 
@@ -182,7 +182,7 @@ static void
 _nc_data_hubble_bao_mean_func (NcmDataGaussDiag *diag, NcmMSet *mset, NcmVector *vp)
 {
   NcDataHubbleBao *hubble_bao = NC_DATA_HUBBLE_BAO (diag);
-  NcHICosmo *cosmo = NC_HICOSMO (ncm_mset_peek (mset, NC_HICOSMO_ID));
+  NcHICosmo *cosmo = NC_HICOSMO (ncm_mset_peek (mset, nc_hicosmo_id ()));
   gdouble r_zd;
   gint i;
 

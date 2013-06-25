@@ -168,7 +168,7 @@ static void
 _nc_data_bao_rdv_prepare (NcmData *data, NcmMSet *mset)
 {
   NcDataBaoRDV *bao_rdv = NC_DATA_BAO_RDV (data);
-  NcHICosmo *cosmo = NC_HICOSMO (ncm_mset_peek (mset, NC_HICOSMO_ID));
+  NcHICosmo *cosmo = NC_HICOSMO (ncm_mset_peek (mset, nc_hicosmo_id ()));
   nc_distance_prepare_if_needed (bao_rdv->dist, cosmo);
 }
 
@@ -176,7 +176,7 @@ static void
 _nc_data_bao_rdv_mean_func (NcmDataGauss *gauss, NcmMSet *mset, NcmVector *vp)
 {
   NcDataBaoRDV *bao_rdv = NC_DATA_BAO_RDV (gauss);
-  NcHICosmo *cosmo = NC_HICOSMO (ncm_mset_peek (mset, NC_HICOSMO_ID));
+  NcHICosmo *cosmo = NC_HICOSMO (ncm_mset_peek (mset, nc_hicosmo_id ()));
   
   gint i;
 

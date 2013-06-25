@@ -385,7 +385,7 @@ static void
 _nc_data_cluster_ncount_prepare (NcmData *data, NcmMSet *mset)
 {
   NcDataClusterNCount *ncount = NC_DATA_CLUSTER_NCOUNT (data);
-  NcHICosmo *cosmo = NC_HICOSMO (ncm_mset_peek (mset, NC_HICOSMO_ID));
+  NcHICosmo *cosmo = NC_HICOSMO (ncm_mset_peek (mset, nc_hicosmo_id ()));
 
   if (ncm_model_ctrl_update (ncount->cad->ctrl, NCM_MODEL (cosmo)))
   {
@@ -407,7 +407,7 @@ _nc_data_cluster_ncount_resample (NcmData *data, NcmMSet *mset)
 {
   NcDataClusterNCount *ncount = NC_DATA_CLUSTER_NCOUNT (data);
   NcClusterAbundance *cad = ncount->cad;
-  NcHICosmo *cosmo = NC_HICOSMO (ncm_mset_peek (mset, NC_HICOSMO_ID));
+  NcHICosmo *cosmo = NC_HICOSMO (ncm_mset_peek (mset, nc_hicosmo_id ()));
   gsl_rng *rng = ncm_cfg_rng_get ();
   guint z_obs_len = nc_cluster_redshift_obs_len (cad->z);
   guint z_obs_params_len = nc_cluster_redshift_obs_params_len (cad->z);
@@ -440,7 +440,7 @@ _nc_data_cluster_ncount_resample (NcmData *data, NcmMSet *mset)
   if (lnM_obs_params_len > 0)
     lnM_obs_params_array = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), total_np * lnM_obs_params_len);
   
-  nc_cluster_abundance_prepare_inv_dNdz (cad, NC_HICOSMO (ncm_mset_peek (mset, NC_HICOSMO_ID)));
+  nc_cluster_abundance_prepare_inv_dNdz (cad, NC_HICOSMO (ncm_mset_peek (mset, nc_hicosmo_id ())));
 
   for (i = 0; i < total_np; i++)
   {
@@ -639,7 +639,7 @@ _nc_data_cluster_ncount_m2lnL_val (NcmData *data, NcmMSet *mset, gdouble *m2lnL)
 {
   NcDataClusterNCount *ncount = NC_DATA_CLUSTER_NCOUNT (data);
   NcClusterAbundance *cad = ncount->cad;
-  NcHICosmo *cosmo = NC_HICOSMO (ncm_mset_peek (mset, NC_HICOSMO_ID));
+  NcHICosmo *cosmo = NC_HICOSMO (ncm_mset_peek (mset, nc_hicosmo_id ()));
   GTimer *bench = g_timer_new ();
 
   *m2lnL = 0.0;

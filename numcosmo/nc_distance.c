@@ -974,14 +974,14 @@ static void
 _nc_distance_func0 (NcmMSet *mset, gpointer obj, const gdouble *x, gdouble *f)
 {
   NcDistanceFuncData *dist_data = (NcDistanceFuncData *)obj;
-  f[0] = dist_data->f0 (dist_data->dist, NC_HICOSMO (ncm_mset_peek (mset, NC_HICOSMO_ID)));
+  f[0] = dist_data->f0 (dist_data->dist, NC_HICOSMO (ncm_mset_peek (mset, nc_hicosmo_id ())));
 }
 
 static void
 _nc_distance_func1 (NcmMSet *mset, gpointer obj, const gdouble *x, gdouble *f)
 {
   NcDistanceFuncData *dist_data = (NcDistanceFuncData *)obj;
-  f[0] = dist_data->f1 (dist_data->dist, NC_HICOSMO (ncm_mset_peek (mset, NC_HICOSMO_ID)), x[0]);
+  f[0] = dist_data->f1 (dist_data->dist, NC_HICOSMO (ncm_mset_peek (mset, nc_hicosmo_id ())), x[0]);
 }
 
 static void

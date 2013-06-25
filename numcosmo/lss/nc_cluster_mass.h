@@ -86,7 +86,7 @@ struct _NcClusterMass
 
 GType nc_cluster_mass_get_type (void) G_GNUC_CONST;
 
-NCM_MSET_MODEL_DECLARE_ID (NC_CLUSTER_MASS);
+NCM_MSET_MODEL_DECLARE_ID (nc_cluster_mass);
 
 NcClusterMass *nc_cluster_mass_new_from_name (gchar *mass_name);
 NcClusterMass *nc_cluster_mass_ref (NcClusterMass *clusterm);

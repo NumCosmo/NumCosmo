@@ -128,7 +128,7 @@ main(gint argc, gchar *argv[])
   {
     NcmData *H_data = nc_data_hubble_new (H_id);
     ncm_dataset_append_data (dset, H_data);
-    ncm_mset_param_set_ftype (mset, NC_HICOSMO_ID, NC_HICOSMO_QPW_H0, NCM_PARAM_TYPE_FREE);
+    ncm_mset_param_set_ftype (mset, nc_hicosmo_id (), NC_HICOSMO_QPW_H0, NCM_PARAM_TYPE_FREE);
     ncm_data_free (H_data);
   }
 
@@ -208,7 +208,7 @@ main(gint argc, gchar *argv[])
       gdouble sigma_t = 0.0;
       gdouble chi2d, step;
       for (i = 0; i < ncm_model_len (NCM_MODEL (qpw)); i++)
-        sigma_t += ncm_fit_covar_var (fit, NC_HICOSMO_ID, i);
+        sigma_t += ncm_fit_covar_var (fit, nc_hicosmo_id (), i);
       sigma_t = sqrt(sigma_t);
       ncm_fit_m2lnL_val (fit, &chi2d);
       printf ("#%g %g %g\n", j_sigma, sigma_t, chi2d);
@@ -224,16 +224,16 @@ main(gint argc, gchar *argv[])
 
     if (FALSE)
     {
-      gdouble pprob = 1.0f-ncm_fit_lr_test (fit, NC_HICOSMO_ID, wpiece, 0.0, 2);
+      gdouble pprob = 1.0f-ncm_fit_lr_test (fit, nc_hicosmo_id (), wpiece, 0.0, 2);
       printf ("%g %g %g\n", z0, pprob, sqrt(gsl_cdf_chisq_Qinv (1.0 - pprob, 1)));
     }
 
     if (FALSE)
     {
       printf ("%g %g %g %g\n", z0,
-              ncm_fit_lr_test (fit, NC_HICOSMO_ID, wpiece, -1.0, 1),
-              ncm_fit_lr_test (fit, NC_HICOSMO_ID, wpiece,  0.0, 1),
-              ncm_fit_lr_test (fit, NC_HICOSMO_ID, wpiece,  2.0, 1));
+              ncm_fit_lr_test (fit, nc_hicosmo_id (), wpiece, -1.0, 1),
+              ncm_fit_lr_test (fit, nc_hicosmo_id (), wpiece,  0.0, 1),
+              ncm_fit_lr_test (fit, nc_hicosmo_id (), wpiece,  2.0, 1));
       //      printf ("%g %g %g %g\n", z0,
       //              ncm_fit_lr_test (fit, 0, -1.0f),
       //              ncm_fit_lr_test (fit, 0,  0.0f),
@@ -250,14 +250,14 @@ main(gint argc, gchar *argv[])
     if (FALSE)
     {
       GTimer *prob_time = g_timer_new();
-      gdouble range1 = ncm_fit_prob (fit, NC_HICOSMO_ID, wpiece, -5.0, -1.0);
-      gdouble range2 = ncm_fit_prob (fit, NC_HICOSMO_ID, wpiece, -1.0, 0.0);
-      gdouble range3 = ncm_fit_prob (fit, NC_HICOSMO_ID, wpiece, 0.0, 2.0);
-      gdouble range4 = ncm_fit_prob (fit, NC_HICOSMO_ID, wpiece, 2.0, 5.0);
+      gdouble range1 = ncm_fit_prob (fit, nc_hicosmo_id (), wpiece, -5.0, -1.0);
+      gdouble range2 = ncm_fit_prob (fit, nc_hicosmo_id (), wpiece, -1.0, 0.0);
+      gdouble range3 = ncm_fit_prob (fit, nc_hicosmo_id (), wpiece, 0.0, 2.0);
+      gdouble range4 = ncm_fit_prob (fit, nc_hicosmo_id (), wpiece, 2.0, 5.0);
       gdouble norm = range1 + range2 + range3 + range4;
       range1 /= norm;range2 /= norm;range3 /= norm;range4 /= norm;
       //printf ("%g %g %g %g %g\n", z0, range1, range2, range3, range4);
-      ncm_fit_dprob (fit, NC_HICOSMO_ID, wpiece, -5.0, 5.0, 0.01, norm);
+      ncm_fit_dprob (fit, nc_hicosmo_id (), wpiece, -5.0, 5.0, 0.01, norm);
       printf ("# time %g\n", g_timer_elapsed (prob_time, NULL));
       fflush (stdout);
     }
@@ -276,7 +276,7 @@ main(gint argc, gchar *argv[])
         printf ("estimate E(%-8.6f) = % -8.6f, q(%-8.6f) = % -8.6f | err E = % -8.6f, q = % -8.6f\n",
                 step, exp(ncm_model_param_get (NCM_MODEL (qpw), 0)),
                 step, ncm_model_param_get (NCM_MODEL (qpw), wpiece),
-                ncm_fit_covar_sd (fit, NC_HICOSMO_ID, 0), ncm_fit_covar_sd (fit, NC_HICOSMO_ID, wpiece)
+                ncm_fit_covar_sd (fit, nc_hicosmo_id (), 0), ncm_fit_covar_sd (fit, nc_hicosmo_id (), wpiece)
                 );
         printf ("modelval E(%-8.6f) = % -8.6f, q(%-8.6f) = % -8.6f\n",
                 step, sqrt(0.3f*(1.0f+step)*(1.0f+step)*(1.0f+step) + 0.7f),
@@ -404,20 +404,20 @@ main(gint argc, gchar *argv[])
 
   if (print_data && fit != NULL)
   {
-    gdouble q = ncm_mset_param_get (fit->mset, NC_HICOSMO_ID, 0);
+    gdouble q = ncm_mset_param_get (fit->mset, nc_hicosmo_id (), 0);
     gdouble pos = 0.0f;
-    gdouble sigma_q = ncm_fit_covar_sd (fit, NC_HICOSMO_ID, 0);
+    gdouble sigma_q = ncm_fit_covar_sd (fit, nc_hicosmo_id (), 0);
     //    gdouble E = 1.0f;
 
     for (i = 1; i < ncm_model_len (NCM_MODEL (qpw)); i++)
     {
       gdouble step;
-      gdouble J = ncm_mset_param_get (fit->mset, NC_HICOSMO_ID, i);
-      gdouble sigma_j = ncm_fit_covar_sd (fit, NC_HICOSMO_ID, i);
-      gdouble cov_0_i = ncm_fit_covar_cov (fit, NC_HICOSMO_ID, 0, NC_HICOSMO_ID, i);
+      gdouble J = ncm_mset_param_get (fit->mset, nc_hicosmo_id (), i);
+      gdouble sigma_j = ncm_fit_covar_sd (fit, nc_hicosmo_id (), i);
+      gdouble cov_0_i = ncm_fit_covar_cov (fit, nc_hicosmo_id (), 0, nc_hicosmo_id (), i);
       gboolean end = (i + 1 == ncm_model_len (NCM_MODEL (qpw)) ? TRUE : FALSE);
       for (j = 1; j < i; j++)
-        cov_0_i += ncm_fit_covar_cov (fit, NC_HICOSMO_ID, i, NC_HICOSMO_ID, j) * interval;
+        cov_0_i += ncm_fit_covar_cov (fit, nc_hicosmo_id (), i, nc_hicosmo_id (), j) * interval;
 
       for (step = 0.0f; (step < interval) || (end && (step + pos) <= 1.8); step += 0.01)
       {

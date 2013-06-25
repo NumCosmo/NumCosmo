@@ -277,7 +277,7 @@ nc_cluster_mass_finalize (GObject *object)
   G_OBJECT_CLASS (nc_cluster_mass_parent_class)->finalize (object);
 }
 
-NCM_MSET_MODEL_REGISTER_ID (NC_CLUSTER_MASS);
+NCM_MSET_MODEL_REGISTER_ID (nc_cluster_mass, NC_TYPE_CLUSTER_MASS);
 
 static void
 nc_cluster_mass_class_init (NcClusterMassClass *klass)
@@ -287,7 +287,7 @@ nc_cluster_mass_class_init (NcClusterMassClass *klass)
   object_class->finalize = nc_cluster_mass_finalize;
 
   ncm_mset_model_register_id (NCM_MODEL_CLASS (klass), 
-                              NC_CLUSTER_MASS,
+                              "NcClusterMass",
                               "Cluster mass observable relation models.",
                               NULL);
 }

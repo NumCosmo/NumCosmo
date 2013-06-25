@@ -164,7 +164,7 @@ static void
 _nc_data_cmb_dist_priors_prepare (NcmData *data, NcmMSet *mset)
 {
   NcDataCMBDistPriors *cmb_dist_priors = NC_DATA_CMB_DIST_PRIORS (data);
-  NcHICosmo *cosmo = NC_HICOSMO (ncm_mset_peek (mset, NC_HICOSMO_ID));
+  NcHICosmo *cosmo = NC_HICOSMO (ncm_mset_peek (mset, nc_hicosmo_id ()));
   nc_distance_prepare_if_needed (cmb_dist_priors->dist, cosmo);
 }
 
@@ -172,7 +172,7 @@ static void
 _nc_data_cmb_dist_priors_mean_func (NcmDataGauss *gauss, NcmMSet *mset, NcmVector *vp)
 {
   NcDataCMBDistPriors *cmb_dist_priors = NC_DATA_CMB_DIST_PRIORS (gauss);
-  NcHICosmo *cosmo = NC_HICOSMO (ncm_mset_peek (mset, NC_HICOSMO_ID));
+  NcHICosmo *cosmo = NC_HICOSMO (ncm_mset_peek (mset, nc_hicosmo_id ()));
   
   const gdouble Ascale = nc_distance_acoustic_scale (cmb_dist_priors->dist, cosmo);
   const gdouble Rlss = nc_distance_shift_parameter_lss (cmb_dist_priors->dist, cosmo);

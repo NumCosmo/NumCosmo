@@ -131,7 +131,7 @@ main (gint argc, gchar *argv[])
         ncm_fit_log_info (fit);
         ncm_fit_numdiff_m2lnL_covar (fit);
         ncm_fit_log_covar (fit);
-        gsl_vector_set (gen_q_0, i, ncm_mset_param_get (fit->mset, NC_HICOSMO_ID, NC_HICOSMO_QCONST_Q));
+        gsl_vector_set (gen_q_0, i, ncm_mset_param_get (fit->mset, nc_hicosmo_id (), NC_HICOSMO_QCONST_Q));
         if ( i%10 == 0 )
         {
           printf ("# sample size = %d\n", i+1);
@@ -151,7 +151,7 @@ main (gint argc, gchar *argv[])
     if (z == 0.0 || TRUE)
     {
       ncm_model_param_set (NCM_MODEL (qconst), NC_HICOSMO_QCONST_OMEGA_T, 1.0);
-      ncm_mset_param_set_ftype (mset, NC_HICOSMO_ID, NC_HICOSMO_QCONST_OMEGA_T, NCM_PARAM_TYPE_FIXED);
+      ncm_mset_param_set_ftype (mset, nc_hicosmo_id (), NC_HICOSMO_QCONST_OMEGA_T, NCM_PARAM_TYPE_FIXED);
     }
 
     fit = ncm_fit_new (NCM_FIT_TYPE_GSL_LS, NULL, lh, mset, NCM_FIT_GRAD_ANALYTICAL);
@@ -165,10 +165,10 @@ main (gint argc, gchar *argv[])
     gdouble dz[] = {0.09, 0.17, 0.27, 0.4, 0.88, 1.3, 1.43, 1.53, 1.75};
     gint i;
     gint n = sizeof (dz)/sizeof(gdouble);
-    gdouble E = ncm_mset_param_get (fit->mset, NC_HICOSMO_ID, NC_HICOSMO_QCONST_E);
+    gdouble E = ncm_mset_param_get (fit->mset, nc_hicosmo_id (), NC_HICOSMO_QCONST_E);
     for (i = 0; i < n && dz[i] <= interval; i++)
     {
-      gdouble dE = nc_hicosmo_qlinear_dE (dz[i], z, ncm_mset_param_get (fit->mset, NC_HICOSMO_ID, NC_HICOSMO_QCONST_Q), 0.0);
+      gdouble dE = nc_hicosmo_qlinear_dE (dz[i], z, ncm_mset_param_get (fit->mset, nc_hicosmo_id (), NC_HICOSMO_QCONST_Q), 0.0);
       printf ("\t%g\t%g\t%g\n", dz[i], E * dE, E * dE * ncm_c_hubble_cte_wmap ());
     }
   }

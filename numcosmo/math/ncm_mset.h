@@ -89,20 +89,51 @@ struct _NcmMSetPIndex
 GType ncm_mset_get_type (void) G_GNUC_CONST;
 GType ncm_mset_pindex_get_type (void) G_GNUC_CONST;
 
-void _ncm_mset_model_register_id (NcmModelClass *model_class, gchar *ns, gchar *desc, gchar *long_desc);
-#define NCM_MSET_MODEL_ID(ModelNS) ModelNS##_ID
-#define NCM_MSET_MODEL_ID_STR(ModelNS) #ModelNS
-#define NCM_MSET_MODEL_DECLARE_ID(ModelNS) extern gint32 NCM_MSET_MODEL_ID(ModelNS) 
-#define NCM_MSET_MODEL_REGISTER_ID(ModelNS) gint32 NCM_MSET_MODEL_ID(ModelNS) = -1 
-#define NCM_MSET_MODEL_EXPORT_ID(ModelNS,model_class) NCM_MSET_MODEL_ID(ModelNS) = (model_class)->model_id
-#define NCM_MSET_MODEL_CHECK_ID(ModelNS) if (NCM_MSET_MODEL_ID(ModelNS) < 0) g_error ("Model ID not registered.");
+void ncm_mset_model_register_id (NcmModelClass *model_class, gchar *ns, gchar *desc, gchar *long_desc);
 
-#define ncm_mset_model_register_id(model_class,ns,desc,long_desc) \
-G_STMT_START { \
-  _ncm_mset_model_register_id ((model_class), NCM_MSET_MODEL_ID_STR (ns), (desc), (long_desc)); \
-  NCM_MSET_MODEL_EXPORT_ID (ns, (model_class)); \
-  NCM_MSET_MODEL_CHECK_ID (ns); \
-} G_STMT_END
+/**
+ * NCM_MSET_MODEL_ID_FUNC: (skip)
+ * 
+ * FIXME
+ * 
+ */
+#define NCM_MSET_MODEL_ID_FUNC(model_ns) model_ns##_id
+
+/**
+ * NCM_MSET_MODEL_ID_STR: (skip)
+ * 
+ * FIXME
+ * 
+ */
+#define NCM_MSET_MODEL_ID_STR(ModelNS) #ModelNS
+
+/**
+ * NCM_MSET_MODEL_DECLARE_ID: (skip)
+ * 
+ * FIXME
+ * 
+ */
+#define NCM_MSET_MODEL_DECLARE_ID(model_ns) gint32 NCM_MSET_MODEL_ID_FUNC(model_ns) (void) G_GNUC_CONST
+
+/**
+ * NCM_MSET_MODEL_REGISTER_ID: (skip)
+ * 
+ * FIXME
+ * 
+ */
+#define NCM_MSET_MODEL_REGISTER_ID(model_ns,typemacro) \
+gint32 NCM_MSET_MODEL_ID_FUNC(model_ns) (void) \
+{ \
+  static gint32 id = -1; \
+  if (id == -1) \
+  { \
+    NcmModelClass *model_class = g_type_class_ref (typemacro); \
+    g_error ("Nhca %p", model_class); \
+    id = model_class->model_id; \
+    g_type_class_unref (model_class); \
+  } \
+  return id; \
+}
 
 NcmMSetPIndex *ncm_mset_pindex_new (NcmModelID mid, guint pid);
 NcmMSetPIndex *ncm_mset_pindex_dup (NcmMSetPIndex *pi);

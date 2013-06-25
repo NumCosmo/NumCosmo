@@ -209,21 +209,21 @@ main (gint argc, gchar *argv[])
       g_error ("flat option is valid only for darkenergy models");
     nc_hicosmo_de_omega_x2omega_k (model);
     ncm_model_param_set (NCM_MODEL (model), NC_HICOSMO_DE_OMEGA_X, 0.0);
-    ncm_mset_param_set_ftype (mset, NC_HICOSMO_ID, NC_HICOSMO_DE_OMEGA_X, NCM_PARAM_TYPE_FIXED);
+    ncm_mset_param_set_ftype (mset, nc_hicosmo_id (), NC_HICOSMO_DE_OMEGA_X, NCM_PARAM_TYPE_FIXED);
   }
   else if (de_model.Omega_k)
   {
     if (!is_de)
       g_error ("omegak option is valid only for darkenergy models");
     nc_hicosmo_de_omega_x2omega_k (model);
-    ncm_mset_param_set_ftype (mset, NC_HICOSMO_ID, NC_HICOSMO_DE_OMEGA_X, NCM_PARAM_TYPE_FREE);
+    ncm_mset_param_set_ftype (mset, nc_hicosmo_id (), NC_HICOSMO_DE_OMEGA_X, NCM_PARAM_TYPE_FREE);
   }
 
   if (de_model.pos_Omega_x)
   {
     if (!is_de)
       g_error ("omegak > 0 option is valid only for darkenergy models");
-    ncm_prior_add_positive (lh, NC_HICOSMO_ID, NC_HICOSMO_DE_OMEGA_X);
+    ncm_prior_add_positive (lh, nc_hicosmo_id (), NC_HICOSMO_DE_OMEGA_X);
   }
   
   if (de_data_simple.snia_id != NULL)
@@ -357,10 +357,10 @@ main (gint argc, gchar *argv[])
 
   if (de_data_simple.H0_Hst)
   {
-    if (ncm_mset_param_get_ftype (mset, NC_HICOSMO_ID, NC_HICOSMO_DE_H0) == NCM_PARAM_TYPE_FIXED)
+    if (ncm_mset_param_get_ftype (mset, nc_hicosmo_id (), NC_HICOSMO_DE_H0) == NCM_PARAM_TYPE_FIXED)
       g_warning ("A prior on H0 was required but H0 was kept fixed. This prior will be useless.");
 
-    ncm_prior_add_gaussian_data (lh, NC_HICOSMO_ID, NC_HICOSMO_DE_H0, 73.8, 2.4);
+    ncm_prior_add_gaussian_data (lh, nc_hicosmo_id (), NC_HICOSMO_DE_H0, 73.8, 2.4);
   }
 
   if (de_fit.qspline_cp)
@@ -486,12 +486,12 @@ main (gint argc, gchar *argv[])
           break;
       }
       {
-        NcmMSetPIndex pi = {NC_HICOSMO_ID, p_n};
+        NcmMSetPIndex pi = {nc_hicosmo_id (), p_n};
         NcmLHRatio1d *lhr1d = ncm_lh_ratio1d_new (fit, &pi);
         ncm_lh_ratio1d_find_bounds (lhr1d, fit->mtype, prob_sigma, &err_inf, &err_sup);
         ncm_lh_ratio1d_free (lhr1d);
       }
-      //ncm_fit_cr_1dim (fit, NC_HICOSMO_ID, p_n, prob_sigma, 1, &err_inf, &err_sup);
+      //ncm_fit_cr_1dim (fit, nc_hicosmo_id (), p_n, prob_sigma, 1, &err_inf, &err_sup);
       ncm_message ("#  One dimension confidence region for %s[%02d] = % .5g (% .5g, % .5g)\n",
                    ncm_model_param_name (NCM_MODEL (model), p_n), p_n,
                    ncm_model_param_get (NCM_MODEL (model), p_n), err_inf, err_sup);
@@ -517,8 +517,8 @@ main (gint argc, gchar *argv[])
     NcmLHRatio2dRegion *rg_2sigma = NULL;
     NcmLHRatio2dRegion *rg_3sigma = NULL;
 
-    pi1.mid = NC_HICOSMO_ID;
-    pi2.mid = NC_HICOSMO_ID;
+    pi1.mid = nc_hicosmo_id ();
+    pi2.mid = nc_hicosmo_id ();
     pi1.pid = de_fit.bidim_cr[0];
     pi2.pid = de_fit.bidim_cr[1];
 
@@ -588,8 +588,8 @@ main (gint argc, gchar *argv[])
     NcmLHRatio2dRegion *rg_2sigma = NULL;
     NcmLHRatio2dRegion *rg_3sigma = NULL;
 
-    pi1.mid = NC_HICOSMO_ID;
-    pi2.mid = NC_HICOSMO_ID;
+    pi1.mid = nc_hicosmo_id ();
+    pi2.mid = nc_hicosmo_id ();
     pi1.pid = de_fit.bidim_cr[0];
     pi2.pid = de_fit.bidim_cr[1];
 

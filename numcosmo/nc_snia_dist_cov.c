@@ -188,7 +188,7 @@ nc_snia_dist_cov_finalize (GObject *object)
   G_OBJECT_CLASS (nc_snia_dist_cov_parent_class)->finalize (object);
 }
 
-NCM_MSET_MODEL_REGISTER_ID (NC_SNIA_DIST_COV);
+NCM_MSET_MODEL_REGISTER_ID (nc_snia_dist_cov, NC_TYPE_SNIA_DIST_COV);
 
 static void
 nc_snia_dist_cov_class_init (NcSNIADistCovClass *klass)
@@ -258,7 +258,7 @@ nc_snia_dist_cov_class_init (NcSNIADistCovClass *klass)
                               NCM_PARAM_TYPE_FIXED);
 
   ncm_mset_model_register_id (model_class, 
-                              NC_SNIA_DIST_COV,
+                              "NcSNIADistCov",
                               "Supernovae distance models with errors covariance.",
                               NULL);
   
@@ -325,14 +325,14 @@ nc_snia_dist_cov_clear (NcSNIADistCov **dcov)
 void 
 nc_snia_dist_cov_prepare (NcSNIADistCov *dcov, NcmMSet *mset)
 {
-  NcHICosmo *cosmo = NC_HICOSMO (ncm_mset_peek (mset, NC_HICOSMO_ID));
+  NcHICosmo *cosmo = NC_HICOSMO (ncm_mset_peek (mset, nc_hicosmo_id ()));
   nc_distance_prepare (dcov->dist, cosmo);
 }
 
 void 
 nc_snia_dist_cov_prepare_if_needed (NcSNIADistCov *dcov, NcmMSet *mset)
 {
-  NcHICosmo *cosmo = NC_HICOSMO (ncm_mset_peek (mset, NC_HICOSMO_ID));
+  NcHICosmo *cosmo = NC_HICOSMO (ncm_mset_peek (mset, nc_hicosmo_id ()));
   nc_distance_prepare_if_needed (dcov->dist, cosmo);
 }
 

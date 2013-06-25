@@ -131,7 +131,7 @@ main (gint argc, gchar *argv[])
   if (least_squares)
   {
     ncm_model_param_set (NCM_MODEL (qlin), NC_HICOSMO_QLINEAR_OMEGA_T, 1.0);
-    ncm_mset_param_set_ftype (mset, NC_HICOSMO_ID, NC_HICOSMO_QLINEAR_OMEGA_T, NCM_PARAM_TYPE_FIXED);
+    ncm_mset_param_set_ftype (mset, nc_hicosmo_id (), NC_HICOSMO_QLINEAR_OMEGA_T, NCM_PARAM_TYPE_FIXED);
 
     fit = ncm_fit_new (NCM_FIT_TYPE_GSL_LS, NULL, lh, mset, NCM_FIT_GRAD_ANALYTICAL);
     ncm_fit_run (fit, verbose);
@@ -145,7 +145,7 @@ main (gint argc, gchar *argv[])
     if (z == 0.0 || TRUE)
     {
       ncm_model_param_set (NCM_MODEL (qlin), NC_HICOSMO_QLINEAR_OMEGA_T, 1.0);
-      ncm_mset_param_set_ftype (mset, NC_HICOSMO_ID, NC_HICOSMO_QLINEAR_OMEGA_T, NCM_PARAM_TYPE_FIXED);
+      ncm_mset_param_set_ftype (mset, nc_hicosmo_id (), NC_HICOSMO_QLINEAR_OMEGA_T, NCM_PARAM_TYPE_FIXED);
     }
     fit = ncm_fit_new (NCM_FIT_TYPE_GSL_MMS, "NCM_FIT_GSL_MMS_NMSIMPLEX2", lh, mset, NCM_FIT_GRAD_ANALYTICAL);
 
@@ -160,11 +160,11 @@ main (gint argc, gchar *argv[])
     gdouble dz[] = {0.09, 0.17, 0.27, 0.4, 0.88, 1.3, 1.43, 1.53, 1.75};
     gint i;
     gint n = sizeof (dz)/sizeof(gdouble);
-    gdouble E = ncm_mset_param_get (fit->mset, NC_HICOSMO_ID, NC_HICOSMO_QLINEAR_E);
+    gdouble E = ncm_mset_param_get (fit->mset, nc_hicosmo_id (), NC_HICOSMO_QLINEAR_E);
     for (i = 0; i < n && dz[i] <= interval; i++)
     {
-      gdouble dE = nc_hicosmo_qlinear_dE (dz[i], z, ncm_mset_param_get (fit->mset, NC_HICOSMO_ID, NC_HICOSMO_QLINEAR_Q),
-                                          ncm_mset_param_get (fit->mset, NC_HICOSMO_ID, NC_HICOSMO_QLINEAR_QP));
+      gdouble dE = nc_hicosmo_qlinear_dE (dz[i], z, ncm_mset_param_get (fit->mset, nc_hicosmo_id (), NC_HICOSMO_QLINEAR_Q),
+                                          ncm_mset_param_get (fit->mset, nc_hicosmo_id (), NC_HICOSMO_QLINEAR_QP));
       printf ("\t%g\t%g\t%g\n", dz[i], E*dE, E*dE * ncm_c_hubble_cte_wmap ());
     }
   }

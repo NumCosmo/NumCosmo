@@ -55,7 +55,7 @@ nc_hicosmo_finalize (GObject *object)
 }
 
 static gboolean _nc_hicosmo_valid (NcmModel *model);
-NCM_MSET_MODEL_REGISTER_ID (NC_HICOSMO);
+NCM_MSET_MODEL_REGISTER_ID (nc_hicosmo, NC_TYPE_HICOSMO);
 
 static void
 nc_hicosmo_class_init (NcHICosmoClass *klass)
@@ -66,7 +66,7 @@ nc_hicosmo_class_init (NcHICosmoClass *klass)
   object_class->finalize = nc_hicosmo_finalize;
 
   ncm_mset_model_register_id (model_class, 
-                              NC_HICOSMO,
+                              "NcHICosmo",
                               "Homogeneous and isotropic cosmological models.",
                               NULL);
 
@@ -560,14 +560,14 @@ static void
 _nc_hicosmo_func0 (NcmMSet *mset, gpointer obj, const gdouble *x, gdouble *f)
 {
   NcHICosmoFunc0 f0 = (NcHICosmoFunc0) obj;
-  f[0] = f0 (NC_HICOSMO (ncm_mset_peek (mset, NC_HICOSMO_ID)));
+  f[0] = f0 (NC_HICOSMO (ncm_mset_peek (mset, nc_hicosmo_id ())));
 }
 
 static void
 _nc_hicosmo_func1 (NcmMSet *mset, gpointer obj, const gdouble *x, gdouble *f)
 {
   NcHICosmoFunc1 f1 = (NcHICosmoFunc1) obj;
-  f[0] = f1 (NC_HICOSMO (ncm_mset_peek (mset, NC_HICOSMO_ID)), x[0]);
+  f[0] = f1 (NC_HICOSMO (ncm_mset_peek (mset, nc_hicosmo_id ())), x[0]);
 }
 
 /**

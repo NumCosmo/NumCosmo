@@ -137,7 +137,7 @@ main (gint argc, gchar *argv[])
 	{
 		NcmData *H_data = nc_data_hubble_new (H_id);
 		ncm_dataset_append_data (dset, H_data);
-		ncm_mset_param_set_ftype (mset, NC_HICOSMO_ID, NC_HICOSMO_DE_H0, NCM_PARAM_TYPE_FREE);
+		ncm_mset_param_set_ftype (mset, nc_hicosmo_id (), NC_HICOSMO_DE_H0, NCM_PARAM_TYPE_FREE);
     ncm_data_free (H_data);
 	}
 
@@ -145,8 +145,8 @@ main (gint argc, gchar *argv[])
 		nc_hicosmo_de_new_add_bbn (lh);
 	if (with_H)
 	{
-		ncm_prior_add_gaussian_data (lh, NC_HICOSMO_ID, NC_HICOSMO_DE_H0, 72.0, 8.0);
-		ncm_mset_param_set_ftype (mset, NC_HICOSMO_ID, NC_HICOSMO_DE_H0, NCM_PARAM_TYPE_FREE);
+		ncm_prior_add_gaussian_data (lh, nc_hicosmo_id (), NC_HICOSMO_DE_H0, 72.0, 8.0);
+		ncm_mset_param_set_ftype (mset, nc_hicosmo_id (), NC_HICOSMO_DE_H0, NCM_PARAM_TYPE_FREE);
 	}
 
 	if (snia_id == -1 && cmb_id == -1 && bao_id == -1 && H_id == -1)
@@ -162,7 +162,7 @@ main (gint argc, gchar *argv[])
 	if (flat)
 	{
 		nc_hicosmo_de_omega_x2omega_k (cosmo);
-		ncm_mset_param_set_ftype (mset, NC_HICOSMO_ID, NC_HICOSMO_DE_OMEGA_X, NCM_PARAM_TYPE_FIXED);
+		ncm_mset_param_set_ftype (mset, nc_hicosmo_id (), NC_HICOSMO_DE_OMEGA_X, NCM_PARAM_TYPE_FIXED);
 	}
 	else if (change_params)
 		nc_hicosmo_de_omega_x2omega_k (cosmo);

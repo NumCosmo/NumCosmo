@@ -172,7 +172,7 @@ static void
 _nc_data_dist_mu_prepare (NcmData *data, NcmMSet *mset)
 {
   NcDataDistMu *dist_mu = NC_DATA_DIST_MU (data);
-  NcHICosmo *cosmo = NC_HICOSMO (ncm_mset_peek (mset, NC_HICOSMO_ID));
+  NcHICosmo *cosmo = NC_HICOSMO (ncm_mset_peek (mset, nc_hicosmo_id ()));
   nc_distance_prepare_if_needed (dist_mu->dist, cosmo);
 }
 
@@ -195,7 +195,7 @@ static void
 _nc_data_dist_mu_mean_func (NcmDataGaussDiag *diag, NcmMSet *mset, NcmVector *vp)
 {
   NcDataDistMu *dist_mu = NC_DATA_DIST_MU (diag);
-  NcHICosmo *cosmo = NC_HICOSMO (ncm_mset_peek (mset, NC_HICOSMO_ID));
+  NcHICosmo *cosmo = NC_HICOSMO (ncm_mset_peek (mset, nc_hicosmo_id ()));
   
   gint i;
 

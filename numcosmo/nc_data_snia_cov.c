@@ -136,7 +136,7 @@ static void
 _nc_data_snia_cov_mean_func (NcmDataGaussCov *gauss, NcmMSet *mset, NcmVector *vp)
 {
   NcDataSNIACov *snia_cov = NC_DATA_SNIA_COV (gauss);
-  NcHICosmo *cosmo = NC_HICOSMO (ncm_mset_peek (mset, NC_HICOSMO_ID));
+  NcHICosmo *cosmo = NC_HICOSMO (ncm_mset_peek (mset, nc_hicosmo_id ()));
   
   nc_snia_dist_cov_mean (snia_cov->dcov, cosmo, vp);
 }

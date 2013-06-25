@@ -157,7 +157,7 @@ static void
 _nc_data_bao_dvdv_prepare (NcmData *data, NcmMSet *mset)
 {
   NcDataBaoDVDV *bao_dvdv = NC_DATA_BAO_DVDV (data);
-  NcHICosmo *cosmo = NC_HICOSMO (ncm_mset_peek (mset, NC_HICOSMO_ID));
+  NcHICosmo *cosmo = NC_HICOSMO (ncm_mset_peek (mset, nc_hicosmo_id ()));
   nc_distance_prepare_if_needed (bao_dvdv->dist, cosmo);
 }
 
@@ -170,7 +170,7 @@ static void
 _nc_data_bao_dvdv_mean_func (NcmDataGaussDiag *diag, NcmMSet *mset, NcmVector *vp)
 {
   NcDataBaoDVDV *bao_dvdv = NC_DATA_BAO_DVDV (diag);
-  NcHICosmo *cosmo = NC_HICOSMO (ncm_mset_peek (mset, NC_HICOSMO_ID));
+  NcHICosmo *cosmo = NC_HICOSMO (ncm_mset_peek (mset, nc_hicosmo_id ()));
 
   const gdouble Dv_035 = nc_distance_dilation_scale (bao_dvdv->dist, cosmo, 0.35);
   const gdouble Dv_020 = nc_distance_dilation_scale (bao_dvdv->dist, cosmo, 0.20);
