@@ -252,7 +252,7 @@ nc_sources = \
 	model/nc_hicosmo_qconst.c    \
 	model/nc_hicosmo_qlinear.c   \
 	model/nc_hicosmo_qpw.c       \
-	model/nc_hicosmo_qspline.c   \
+	model/nc_hicosmo_qspline.c    \
 	lss/nc_window.c              \
 	lss/nc_window_tophat.c       \
 	lss/nc_window_gaussian.c     \

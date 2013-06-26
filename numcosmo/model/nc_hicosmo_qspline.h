@@ -42,6 +42,8 @@ G_BEGIN_DECLS
 
 typedef struct _NcHICosmoQSplineClass NcHICosmoQSplineClass;
 typedef struct _NcHICosmoQSpline NcHICosmoQSpline;
+typedef struct _NcHICosmoQSplineContPriorClass NcHICosmoQSplineContPriorClass;
+typedef struct _NcHICosmoQSplineContPrior NcHICosmoQSplineContPrior;
 
 /**
  * NcHICosmoQSplineSParams:
@@ -97,8 +99,40 @@ GType nc_hicosmo_qspline_get_type (void) G_GNUC_CONST;
 
 NcHICosmoQSpline *nc_hicosmo_qspline_new (NcmSpline *s, gsize np, gdouble z_f);
 
-void nc_hicosmo_qspline_add_continuity_prior (NcHICosmoQSpline *qspline, NcmLikelihood *lh, gint knot, gdouble sigma);
-void nc_hicosmo_qspline_add_continuity_priors (NcHICosmoQSpline *qspline, NcmLikelihood *lh, gdouble sigma);
+void nc_hicosmo_qspline_add_continuity_prior (NcHICosmoQSpline *qspline, NcmLikelihood *lh, gint knot, NcHICosmoQSplineContPrior *qspline_cp);
+NcHICosmoQSplineContPrior *nc_hicosmo_qspline_add_continuity_priors (NcHICosmoQSpline *qspline, NcmLikelihood *lh, gdouble sigma);
+
+/****************************** Continuity Prior ******************************/
+
+#define NC_TYPE_HICOSMO_QSPLINE_CONT_PRIOR             (nc_hicosmo_qspline_cont_prior_get_type ())
+#define NC_HICOSMO_QSPLINE_CONT_PRIOR(obj)             (G_TYPE_CHECK_INSTANCE_CAST ((obj), NC_TYPE_HICOSMO_QSPLINE_CONT_PRIOR, NcHICosmoQSplineContPrior))
+#define NC_HICOSMO_QSPLINE_CONT_PRIOR_CLASS(klass)     (G_TYPE_CHECK_CLASS_CAST ((klass), NC_TYPE_HICOSMO_QSPLINE_CONT_PRIOR, NcHICosmoQSplineContPriorClass))
+#define NC_IS_HICOSMO_QSPLINE_CONT_PRIOR(obj)          (G_TYPE_CHECK_INSTANCE_TYPE ((obj), NC_TYPE_HICOSMO_QSPLINE_CONT_PRIOR))
+#define NC_IS_HICOSMO_QSPLINE_CONT_PRIOR_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE ((klass), NC_TYPE_HICOSMO_QSPLINE_CONT_PRIOR))
+#define NC_HICOSMO_QSPLINE_CONT_PRIOR_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS ((obj), NC_TYPE_HICOSMO_QSPLINE_CONT_PRIOR, NcHICosmoQSplineContPriorClass))
+
+struct _NcHICosmoQSplineContPriorClass
+{
+  /*< private >*/
+  GObjectClass parent_class;
+};
+
+struct _NcHICosmoQSplineContPrior
+{
+  /*< private >*/
+  GObject parent_instance;
+  guint nknots;
+  NcmVector *ln_sigma;
+};
+
+GType nc_hicosmo_qspline_cont_prior_get_type (void) G_GNUC_CONST;
+
+NcHICosmoQSplineContPrior *nc_hicosmo_qspline_cont_prior_new (guint nknots);
+NcHICosmoQSplineContPrior *nc_hicosmo_qspline_cont_prior_ref (NcHICosmoQSplineContPrior *qspline_cp);
+void nc_hicosmo_qspline_cont_prior_free (NcHICosmoQSplineContPrior *qspline_cp);
+void nc_hicosmo_qspline_cont_prior_set_lnsigma (NcHICosmoQSplineContPrior *qspline_cp, guint i, gdouble ln_sigma);
+void nc_hicosmo_qspline_cont_prior_set_all_lnsigma (NcHICosmoQSplineContPrior *qspline_cp, gdouble ln_sigma);
+gdouble nc_hicosmo_qspline_cont_prior_get_lnsigma (NcHICosmoQSplineContPrior *qspline_cp, guint i);
 
 G_END_DECLS
 

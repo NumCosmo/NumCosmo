@@ -367,7 +367,12 @@ main (gint argc, gchar *argv[])
   {
     if (!NC_IS_HICOSMO_QSPLINE (model))
       g_error ("Continuity priors are only valid for NcHICosmoQSPline model");
-    nc_hicosmo_qspline_add_continuity_priors (NC_HICOSMO_QSPLINE (model), lh, de_fit.qspline_cp_sigma);
+    else
+    {
+      NcHICosmoQSplineContPrior *qspline_cp = 
+        nc_hicosmo_qspline_add_continuity_priors (NC_HICOSMO_QSPLINE (model), lh, de_fit.qspline_cp_sigma);
+      nc_hicosmo_qspline_cont_prior_free (qspline_cp);
+    }
   }
 
   if (de_fit.save_mset != NULL)
