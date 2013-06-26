@@ -186,7 +186,7 @@ _nc_hicosmo_spline_continuity_prior_free (gpointer obj)
  * @qspline: FIXME
  * @lh: FIXME
  * @knot: FIXME
- * @sigma: FIXME
+ * @qspline_cp: FIXME
  *
  * FIXME
  *
