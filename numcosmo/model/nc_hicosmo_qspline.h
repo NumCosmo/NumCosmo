@@ -90,7 +90,7 @@ struct _NcHICosmoQSpline
   guint nknots;
   guint size;
   gdouble z_f;
-  gsize pkey;
+  NcmModelCtrl *qs_ctrl;
   NcmSpline *q_z;
   NcmOdeSpline *E2_z;
 };

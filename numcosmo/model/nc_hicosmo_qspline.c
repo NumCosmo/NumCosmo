@@ -45,29 +45,29 @@ G_DEFINE_TYPE (NcHICosmoQSpline, nc_hicosmo_qspline, NC_TYPE_HICOSMO);
 #define OMEGA_T    (ncm_vector_get (VECTOR, NC_HICOSMO_QSPLINE_OMEGA_T))
 #define AS_DRAG    (ncm_vector_get (VECTOR, NC_HICOSMO_QSPLINE_AS_DRAG))
 
+static void
+_nc_hicosmo_qspline_prepare (NcHICosmoQSpline *qs)
+{
+  if (ncm_model_ctrl_update (qs->qs_ctrl, NCM_MODEL (qs)))
+  {
+    ncm_spline_prepare (qs->q_z);
+    ncm_ode_spline_prepare (qs->E2_z, qs);
+  }
+  else
+    return;
+}
+
 static gdouble
 _nc_hicosmo_qspline_dE2dz (gdouble E2, gdouble z, gpointer userdata)
 {
   NcHICosmoQSpline *qs = NC_HICOSMO_QSPLINE (userdata);
   gdouble q;
+  _nc_hicosmo_qspline_prepare (qs);
   if (z > qs->z_f)
     q = ncm_spline_eval (qs->q_z, qs->z_f);
   else
     q = ncm_spline_eval (qs->q_z, z);
   return 2.0 * E2 * (q + 1.0) / (1.0 + z);
-}
-
-static void
-_nc_hicosmo_qspline_prepare (NcHICosmoQSpline *qs)
-{
-  if (NCM_MODEL (qs)->pkey > qs->pkey)
-  {
-    ncm_spline_prepare (qs->q_z);
-    ncm_ode_spline_prepare (qs->E2_z, qs);
-    qs->pkey = NCM_MODEL (qs)->pkey;
-  }
-  else
-    return;
 }
 
 static gdouble
@@ -189,6 +189,9 @@ _nc_hicosmo_spline_continuity_prior_free (gpointer obj)
  * @qspline_cp: FIXME
  *
  * FIXME
+ * 00190.00009 01041.742006 26376.772187 6 57610000015607
+ * 00190.00009 01041.742006 26376.772187 6 57610000015607
+ * 00190.00009 01041.742006 26376.772187 6 57610000015607
  *
  */
 void
@@ -243,7 +246,7 @@ nc_hicosmo_qspline_init (NcHICosmoQSpline *qspline)
   qspline->z_f = 0.0;
   qspline->q_z = NULL;
   qspline->E2_z = NULL;
-  qspline->pkey = NCM_MODEL (qspline)->pkey;
+  qspline->qs_ctrl = NULL;
 }
 
 static void
@@ -258,6 +261,8 @@ _nc_hicosmo_qspline_constructed (GObject *object)
     NcmVector *zv, *qv;
     guint i, qvi;
 
+    qspline->qs_ctrl = ncm_model_ctrl_new (model);
+    
     qspline->nknots = ncm_model_vparam_len (model, NC_HICOSMO_QSPLINE_Q);
     qspline->size = model_class->sparam_len + qspline->nknots;
 
@@ -352,6 +357,7 @@ nc_hicosmo_qspline_dispose (GObject *object)
 
   ncm_spline_clear (&qspline->q_z);
   ncm_ode_spline_clear (&qspline->E2_z);
+  ncm_model_ctrl_clear (&qspline->qs_ctrl);
 
   /* Chain up : end */
   G_OBJECT_CLASS (nc_hicosmo_qspline_parent_class)->dispose (object);
