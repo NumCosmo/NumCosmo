@@ -262,11 +262,23 @@ _ncm_fit_nlopt_run (NcmFit *fit, NcmFitRunMsgs mtype)
     nlopt_set_initial_step (fit_nlopt->nlopt, ncm_vector_gsl (fit_nlopt->pscale)->data);
 
     ret = nlopt_optimize (fit_nlopt->nlopt, ncm_vector_gsl (fit->fstate->fparams)->data, &minf);
+
     fit->fstate->m2lnL_prec = nlopt_get_ftol_rel (fit_nlopt->nlopt);
     fit->fstate->params_prec = nlopt_get_xtol_rel (fit_nlopt->nlopt);
 
     if (ret < 0)
-      ncm_fit_log_step_error (fit, "(%d)", ret);
+    {
+      switch (ret)
+      {
+        case -2:
+          ncm_fit_log_step_error (fit, "Algorithm not supported or inconsistent parameters", ret);
+          break;
+        default:
+          ncm_fit_log_step_error (fit, "(%d)", ret);
+          break;
+      }
+      
+    }
   }
 #else
   {
@@ -308,7 +320,7 @@ _ncm_fit_nlopt_func (guint n, const gdouble *x, gdouble *grad, gpointer userdata
   if (!ncm_mset_params_valid (fit->mset))
     return GSL_NAN;
   
-  if (grad)
+  if (grad != NULL)
   {
     NcmVector *gradv = ncm_vector_new_data_static (grad, n, 1);
     ncm_fit_m2lnL_val_grad (fit, &m2lnL, gradv);

@@ -54,6 +54,7 @@
 #include <gsl/gsl_cdf.h>
 #include <gsl/gsl_linalg.h>
 #include <gsl/gsl_randist.h>
+#include <gsl/gsl_machine.h>
 
 enum
 {
@@ -1122,11 +1123,12 @@ ncm_fit_m2lnL_grad_nd_ce (NcmFit *fit, NcmVector *grad)
   for (i = 0; i < fparam_len; i++)
   {
     const gdouble p = ncm_mset_fparam_get (fit->mset, i);
-    const gdouble p_scale = ncm_mset_fparam_get_scale (fit->mset, i);
-    const gdouble h = (p_scale * NCM_FIT_NUMDIFF_SCALE);
+    const gdouble p_scale = GSL_MAX (fabs (p), ncm_mset_fparam_get_scale (fit->mset, i));
+    const gdouble h = p_scale * GSL_ROOT3_DBL_EPSILON;
     const gdouble pph = p + h;
     const gdouble pmh = p - h;
-    const gdouble one_2h = 1.0 / (2.0 * h);
+    const gdouble twoh = pph - pmh;
+    const gdouble one_2h = 1.0 / twoh;
     gdouble m2lnL_pph, m2lnL_pmh;
 
     ncm_mset_fparam_set (fit->mset, i, pph);
@@ -1242,9 +1244,10 @@ ncm_fit_m2lnL_val_grad_nd_fo (NcmFit *fit, gdouble *m2lnL, NcmVector *grad)
   for (i = 0; i < fparam_len; i++)
   {
     const gdouble p = ncm_mset_fparam_get (fit->mset, i);
-    const gdouble p_scale = ncm_mset_fparam_get_scale (fit->mset, i);
-    const gdouble h = (p_scale * NCM_FIT_NUMDIFF_SCALE);
-    const gdouble pph = p + h;
+    const gdouble p_scale = GSL_MAX (fabs (p), ncm_mset_fparam_get_scale (fit->mset, i));
+    const gdouble htilde = GSL_SQRT_DBL_EPSILON * p_scale;
+    const gdouble pph = p + htilde;
+    const gdouble h = pph - p;
     const gdouble one_h = 1.0 / h;
     gdouble m2lnL_pph;
     ncm_mset_fparam_set (fit->mset, i, pph);
@@ -1335,9 +1338,10 @@ ncm_fit_ls_J_nd_fo (NcmFit *fit, NcmMatrix *J)
   {
     NcmVector *J_col_i = ncm_matrix_get_col (J, i);
     const gdouble p = ncm_mset_fparam_get (fit->mset, i);
-    const gdouble p_scale = ncm_mset_fparam_get_scale (fit->mset, i);
-    const gdouble h = (p_scale * NCM_FIT_NUMDIFF_SCALE);
-    const gdouble pph = p + h;
+    const gdouble p_scale = GSL_MAX (fabs (p), ncm_mset_fparam_get_scale (fit->mset, i));
+    const gdouble htilde = p_scale * GSL_SQRT_DBL_EPSILON;
+    const gdouble pph = p + htilde;
+    const gdouble h = pph - p;
     const gdouble one_h = 1.0 / h;
     gint k;
     ncm_mset_fparam_set (fit->mset, i, pph);
@@ -1370,11 +1374,12 @@ ncm_fit_ls_J_nd_ce (NcmFit *fit, NcmMatrix *J)
   {
     NcmVector *J_col_i = ncm_matrix_get_col (J, i);
     const gdouble p = ncm_mset_fparam_get (fit->mset, i);
-    const gdouble p_scale = ncm_mset_fparam_get_scale (fit->mset, i);
-    const gdouble h = (p_scale * NCM_FIT_NUMDIFF_SCALE);
+    const gdouble p_scale = GSL_MAX (fabs (p), ncm_mset_fparam_get_scale (fit->mset, i));
+    const gdouble h = p_scale * GSL_ROOT3_DBL_EPSILON;
     const gdouble pph = p + h;
     const gdouble pmh = p - h;
-    const gdouble one_2h = 1.0 / (2.0 * h);
+    const gdouble twoh = pph - pmh;
+    const gdouble one_2h = 1.0 / twoh;
     gint k;
 
     ncm_mset_fparam_set (fit->mset, i, pph);
