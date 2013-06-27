@@ -83,9 +83,9 @@ NcmModelCtrl *
 ncm_model_ctrl_new (NcmModel *model)
 {
   if (model)
-	return g_object_new (NCM_TYPE_MODEL_CTRL, "model", model, NULL);
+    return g_object_new (NCM_TYPE_MODEL_CTRL, "model", model, NULL);
   else
-	return g_object_new (NCM_TYPE_MODEL_CTRL, NULL);
+    return g_object_new (NCM_TYPE_MODEL_CTRL, NULL);
 }
 
 /**
