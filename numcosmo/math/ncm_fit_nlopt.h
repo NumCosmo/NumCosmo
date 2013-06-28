@@ -58,8 +58,10 @@ struct _NcmFitNLOpt
 #ifdef NUMCOSMO_HAVE_NLOPT
 #ifdef HAVE_NLOPT_2_2
   nlopt_opt nlopt;
+  nlopt_opt local_nlopt;
 #endif /* HAVE_NLOPT_2_2 */  
   nlopt_algorithm nlopt_algo;
+  nlopt_algorithm local_nlopt_algo;
 #endif /* NUMCOSMO_HAVE_NLOPT */
   NcmVector *lb;
   NcmVector *ub;
@@ -73,7 +75,9 @@ GType ncm_fit_nlopt_get_type (void) G_GNUC_CONST;
 
 #ifndef NUMCOSMO_GIR_SCAN
 NcmFit *ncm_fit_nlopt_new (NcmLikelihood *lh, NcmMSet *mset, NcmFitGradType gtype, nlopt_algorithm algo);
+NcmFit *ncm_fit_nlopt_local_new (NcmLikelihood *lh, NcmMSet *mset, NcmFitGradType gtype, nlopt_algorithm algo, nlopt_algorithm local_algo);
 void ncm_fit_nlopt_set_algo (NcmFitNLOpt *fit_nlopt, nlopt_algorithm algo);
+void ncm_fit_nlopt_set_local_algo (NcmFitNLOpt *fit_nlopt, nlopt_algorithm algo);
 #endif /* NUMCOSMO_GIR_SCAN */
 NcmFit *ncm_fit_nlopt_new_by_name (NcmLikelihood *lh, NcmMSet *mset, NcmFitGradType gtype, gchar *algo_name);
 NcmFit *ncm_fit_nlopt_new_default (NcmLikelihood *lh, NcmMSet *mset, NcmFitGradType gtype);

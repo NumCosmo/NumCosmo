@@ -53,8 +53,13 @@ G_BEGIN_DECLS
 #define NCM_IS_FIT_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE ((klass), NCM_TYPE_FIT))
 #define NCM_FIT_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS ((obj), NCM_TYPE_FIT, NcmFitClass))
 
+#define NCM_TYPE_FIT_CONSTRAINT    (ncm_fit_constraint_get_type ())
+#define NCM_FIT_CONSTRAINT(obj)    (G_TYPE_CHECK_INSTANCE_CAST ((obj), NCM_TYPE_FIT_CONSTRAINT, NcmFitConstraint))
+#define NCM_IS_FIT_CONSTRAINT(obj) (G_TYPE_CHECK_INSTANCE_TYPE ((obj), NCM_TYPE_FIT_CONSTRAINT))
+
 typedef struct _NcmFitClass NcmFitClass;
 typedef struct _NcmFit NcmFit;
+typedef struct _NcmFitConstraint NcmFitConstraint;
 
 /**
  * NcmFitType:
@@ -152,9 +157,23 @@ struct _NcmFit
   gdouble m2lnL_reltol;
   gdouble params_reltol;
   GTimer *timer;
+  GPtrArray *equality_constraints;
+  GPtrArray *inequality_constraints;
+};
+
+struct _NcmFitConstraint
+{
+  NcmFit *fit;
+  NcmMSetFunc *func;
+  gdouble tot;
 };
 
 GType ncm_fit_get_type (void) G_GNUC_CONST;
+GType ncm_fit_constraint_get_type (void) G_GNUC_CONST;
+
+NcmFitConstraint *ncm_fit_constraint_new (NcmFit *fit, NcmMSetFunc *func, gdouble tot);
+NcmFitConstraint *ncm_fit_constraint_dup (NcmFitConstraint *fitc);
+void ncm_fit_constraint_free (NcmFitConstraint *fitc);
 
 NcmFit *ncm_fit_new (NcmFitType ftype, gchar *algo_name, NcmLikelihood *lh, NcmMSet *mset, NcmFitGradType gtype);
 NcmFit *ncm_fit_ref (NcmFit *fit);
@@ -166,6 +185,13 @@ void ncm_fit_set_grad_type (NcmFit *fit, NcmFitGradType gtype);
 void ncm_fit_ls_set_state (NcmFit *fit, gdouble prec, NcmVector *x, NcmVector *f, NcmMatrix *J);
 void ncm_fit_set_maxiter (NcmFit *fit, guint maxiter);
 guint ncm_fit_get_maxiter (NcmFit *fit);
+
+void ncm_fit_add_equality_constraint (NcmFit *fit, NcmMSetFunc *func, gdouble tot);
+void ncm_fit_add_inequality_constraint (NcmFit *fit, NcmMSetFunc *func, gdouble tot);
+void ncm_fit_remove_equality_constraints (NcmFit *fit);
+void ncm_fit_remove_inequality_constraints (NcmFit *fit);
+guint ncm_fit_has_equality_constraints (NcmFit *fit);
+guint ncm_fit_has_inequality_constraints (NcmFit *fit);
 
 gboolean ncm_fit_is_least_squares (NcmFit *fit);
 

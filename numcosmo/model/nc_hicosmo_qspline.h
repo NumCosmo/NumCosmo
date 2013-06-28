@@ -29,6 +29,7 @@
 #include <glib-object.h>
 #include <numcosmo/build_cfg.h>
 #include <numcosmo/nc_hicosmo.h>
+#include <numcosmo/math/ncm_fit.h>
 #include <numcosmo/math/ncm_ode_spline.h>
 
 G_BEGIN_DECLS
@@ -101,6 +102,9 @@ NcHICosmoQSpline *nc_hicosmo_qspline_new (NcmSpline *s, gsize np, gdouble z_f);
 
 void nc_hicosmo_qspline_add_continuity_prior (NcHICosmoQSpline *qspline, NcmLikelihood *lh, gint knot, NcHICosmoQSplineContPrior *qspline_cp);
 NcHICosmoQSplineContPrior *nc_hicosmo_qspline_add_continuity_priors (NcHICosmoQSpline *qspline, NcmLikelihood *lh, gdouble sigma);
+
+void nc_hicosmo_qspline_add_continuity_constraint (NcHICosmoQSpline *qspline, NcmFit *fit, gint knot, NcHICosmoQSplineContPrior *qspline_cp);
+NcHICosmoQSplineContPrior *nc_hicosmo_qspline_add_continuity_constraints (NcHICosmoQSpline *qspline, NcmFit *fit, gdouble sigma);
 
 /****************************** Continuity Prior ******************************/
 

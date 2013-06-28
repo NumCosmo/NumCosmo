@@ -68,6 +68,55 @@ enum
 };
 
 G_DEFINE_ABSTRACT_TYPE (NcmFit, ncm_fit, G_TYPE_OBJECT);
+G_DEFINE_BOXED_TYPE (NcmFitConstraint, ncm_fit_constraint, (GBoxedCopyFunc)&ncm_fit_constraint_dup, (GBoxedFreeFunc)&ncm_fit_constraint_free);
+
+/**
+ * ncm_fit_constraint_new:
+ * @func: FIXME
+ * @tot: FIXME
+ * 
+ * FIXME
+ * 
+ * Returns: (transfer full): FIXME
+ */
+NcmFitConstraint *
+ncm_fit_constraint_new (NcmFit *fit, NcmMSetFunc *func, gdouble tot)
+{
+  NcmFitConstraint *fitc = g_new (NcmFitConstraint, 1);
+  g_assert (ncm_mset_func_is_scalar (func) && ncm_mset_func_is_const (func));
+  fitc->fit = ncm_fit_ref (fit);
+  fitc->func = ncm_mset_func_ref (func);
+  fitc->tot = tot;
+  return fitc;
+}
+
+/**
+ * ncm_fit_constraint_dup:
+ * @fitc: FIXME
+ * 
+ * FIXME
+ * 
+ * Returns: (transfer full): FIXME
+ */
+NcmFitConstraint *
+ncm_fit_constraint_dup (NcmFitConstraint *fitc)
+{
+  return ncm_fit_constraint_new (fitc->fit, fitc->func, fitc->tot);
+}
+
+/**
+ * ncm_fit_constraint_free:
+ * @fitc: FIXME
+ * 
+ * FIXME
+ * 
+ */
+void
+ncm_fit_constraint_free (NcmFitConstraint *fitc)
+{
+  ncm_mset_func_free (fitc->func);
+  g_free (fitc);
+}
 
 static void
 ncm_fit_init (NcmFit *fit)
@@ -77,6 +126,12 @@ ncm_fit_init (NcmFit *fit)
   fit->params_reltol = NC_HICOSMO_DEFAULT_PARAMS_RELTOL * 0.0 + 1e-8;
   fit->timer = g_timer_new ();
   fit->mtype = NCM_FIT_RUN_MSGS_NONE;
+
+  fit->equality_constraints = g_ptr_array_sized_new (10);
+  g_ptr_array_set_free_func (fit->equality_constraints, (GDestroyNotify) &ncm_fit_constraint_free);
+
+  fit->inequality_constraints = g_ptr_array_sized_new (10);
+  g_ptr_array_set_free_func (fit->inequality_constraints, (GDestroyNotify) &ncm_fit_constraint_free);
 }
 
 static void
@@ -177,6 +232,18 @@ ncm_fit_dispose (GObject *object)
   ncm_likelihood_clear (&fit->lh);
   ncm_mset_clear (&fit->mset);
   ncm_fit_state_clear (&fit->fstate);
+
+  if (fit->equality_constraints != NULL)
+  {
+    g_ptr_array_unref (fit->equality_constraints);
+    fit->equality_constraints = NULL;
+  }
+  
+  if (fit->inequality_constraints != NULL)
+  {
+    g_ptr_array_unref (fit->inequality_constraints);
+    fit->inequality_constraints = NULL;
+  }
 
   /* Chain up : end */
   G_OBJECT_CLASS (ncm_fit_parent_class)->dispose (object);
@@ -487,6 +554,91 @@ ncm_fit_get_maxiter (NcmFit *fit)
   return fit->maxiter;
 }
 
+/**
+ * ncm_fit_add_equality_constraint:
+ * @fit: a #NcmFit.
+ * @func: FIXME
+ * @tot: FIXME
+ *
+ * FIXME
+ * 
+ */
+void 
+ncm_fit_add_equality_constraint (NcmFit *fit, NcmMSetFunc *func, gdouble tot)
+{
+  NcmFitConstraint *fitc = ncm_fit_constraint_new (fit, func, tot);
+  g_ptr_array_add (fit->equality_constraints, fitc);
+}
+
+/**
+ * ncm_fit_add_inequality_constraint:
+ * @fit: a #NcmFit.
+ * @func: FIXME
+ * @tot: FIXME
+ *
+ * FIXME
+ * 
+ */
+void
+ncm_fit_add_inequality_constraint (NcmFit *fit, NcmMSetFunc *func, gdouble tot)
+{
+  NcmFitConstraint *fitc = ncm_fit_constraint_new (fit, func, tot);
+  g_ptr_array_add (fit->inequality_constraints, fitc);
+}
+
+/**
+ * ncm_fit_remove_equality_constraints:
+ * @fit: a #NcmFit.
+ *
+ * FIXME
+ * 
+ */
+void 
+ncm_fit_remove_equality_constraints (NcmFit *fit)
+{
+  g_ptr_array_set_size (fit->equality_constraints, 0);
+}
+
+/**
+ * ncm_fit_remove_inequality_constraints:
+ * @fit: a #NcmFit.
+ *
+ * FIXME
+ * 
+ */
+void 
+ncm_fit_remove_inequality_constraints (NcmFit *fit)
+{
+  g_ptr_array_set_size (fit->inequality_constraints, 0);
+}
+
+/**
+ * ncm_fit_has_equality_constraints:
+ * @fit: a #NcmFit.
+ *
+ * FIXME
+ * 
+ * Returns: FIXME
+ */
+guint 
+ncm_fit_has_equality_constraints (NcmFit *fit)
+{
+  return fit->equality_constraints->len;
+}
+
+/**
+ * ncm_fit_has_inequality_constraints:
+ * @fit: a #NcmFit.
+ *
+ * FIXME
+ * 
+ * Returns: FIXME
+ */
+guint
+ncm_fit_has_inequality_constraints (NcmFit *fit)
+{
+  return fit->inequality_constraints->len;
+}
 
 /**
  * ncm_fit_ls_covar:

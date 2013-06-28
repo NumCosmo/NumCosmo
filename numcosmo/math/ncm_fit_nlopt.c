@@ -46,6 +46,7 @@ enum
 {
   PROP_0,
   PROP_ALGO,
+  PROP_LOCAL_ALGO,
   PROP_SIZE,
 };
 
@@ -56,8 +57,10 @@ ncm_fit_nlopt_init (NcmFitNLOpt *fit_nlopt)
 {
 #ifdef HAVE_NLOPT_2_2
   fit_nlopt->nlopt = NULL;
+  fit_nlopt->local_nlopt = NULL;
 #endif /* HAVE_NLOPT_2_2 */
   fit_nlopt->nlopt_algo = 0;
+  fit_nlopt->local_nlopt_algo = 0;
   fit_nlopt->desc = NULL;
 }
 
@@ -99,6 +102,9 @@ _ncm_fit_nlopt_set_property (GObject *object, guint prop_id, const GValue *value
       ncm_fit_nlopt_set_algo (fit_nlopt, g_value_get_enum (value));
 #endif /* HAVE_NLOPT_2_2 */
       break;
+    case PROP_LOCAL_ALGO:
+      ncm_fit_nlopt_set_local_algo (fit_nlopt, g_value_get_enum (value));
+      break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
       break;
@@ -114,7 +120,11 @@ _ncm_fit_nlopt_get_property (GObject *object, guint prop_id, GValue *value, GPar
   switch (prop_id)
   {
     case PROP_ALGO:
-    g_value_set_enum (value, fit_nlopt->nlopt_algo);
+      g_value_set_enum (value, fit_nlopt->nlopt_algo);
+      break;
+    case PROP_LOCAL_ALGO:
+      g_value_set_enum (value, fit_nlopt->local_nlopt_algo);
+      break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
       break;
@@ -142,6 +152,8 @@ ncm_fit_nlopt_finalize (GObject *object)
 #ifdef HAVE_NLOPT_2_2
   if (fit_nlopt->nlopt != NULL)
     nlopt_destroy (fit_nlopt->nlopt);
+  if (fit_nlopt->local_nlopt != NULL)
+    nlopt_destroy (fit_nlopt->local_nlopt);
 #endif /* HAVE_NLOPT_2_2 */
 
   if (fit_nlopt->desc != NULL)
@@ -176,6 +188,15 @@ ncm_fit_nlopt_class_init (NcmFitNLOptClass *klass)
                                                       NCM_TYPE_FIT_NLOPT_ALGORITHM, NLOPT_LN_NELDERMEAD,
                                                       G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
   
+  g_object_class_install_property (object_class,
+                                   PROP_LOCAL_ALGO,
+                                   g_param_spec_enum ("local-algorithm",
+                                                      NULL,
+                                                      "NLOpt local algorithm",
+                                                      NCM_TYPE_FIT_NLOPT_ALGORITHM, NLOPT_LN_NELDERMEAD,
+                                                      G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
+
   fit_class->copy_new = &_ncm_fit_nlopt_copy_new;
   fit_class->reset    = &_ncm_fit_nlopt_reset;
   fit_class->run      = &_ncm_fit_nlopt_run;
@@ -186,7 +207,10 @@ static NcmFit *
 _ncm_fit_nlopt_copy_new (NcmFit *fit, NcmLikelihood *lh, NcmMSet *mset, NcmFitGradType gtype)
 {
   NcmFitNLOpt *fit_nlopt = NCM_FIT_NLOPT (fit);
-  return ncm_fit_nlopt_new (lh, mset, gtype, fit_nlopt->nlopt_algo);
+  if (fit_nlopt->local_nlopt_algo == 0)
+    return ncm_fit_nlopt_new (lh, mset, gtype, fit_nlopt->nlopt_algo);
+  else
+    return ncm_fit_nlopt_local_new (lh, mset, gtype, fit_nlopt->nlopt_algo, fit_nlopt->local_nlopt_algo);
 }
 
 static void 
@@ -220,12 +244,15 @@ _ncm_fit_nlopt_reset (NcmFit *fit)
 #endif /* HAVE_NLOPT_2_2 */
       
       ncm_fit_nlopt_set_algo (fit_nlopt, fit_nlopt->nlopt_algo);
+      if (fit_nlopt->local_nlopt_algo != 0)
+        ncm_fit_nlopt_set_algo (fit_nlopt, fit_nlopt->local_nlopt_algo);
     }
   }
 }
 
 typedef gdouble (*_NcmFitNLOptOldFunc) (gint n, const gdouble *x, gdouble *grad, gpointer userdata);
 static gdouble _ncm_fit_nlopt_func (guint n, const gdouble *x, gdouble *grad, gpointer userdata);
+static gdouble _ncm_fit_nlopt_func_constraint (guint n, const gdouble *x, gdouble *grad, gpointer userdata);
 
 static gboolean
 _ncm_fit_nlopt_run (NcmFit *fit, NcmFitRunMsgs mtype)
@@ -248,11 +275,31 @@ _ncm_fit_nlopt_run (NcmFit *fit, NcmFitRunMsgs mtype)
       ncm_vector_set (fit_nlopt->ub,     i, ncm_mset_fparam_get_upper_bound (fit->mset, i));
       ncm_vector_set (fit_nlopt->pabs,   i, ncm_mset_fparam_get_abstol (fit->mset, i));
       ncm_vector_set (fit_nlopt->pscale, i, ncm_mset_fparam_get_scale (fit->mset, i));
-    }    
+    }
 
+    nlopt_remove_inequality_constraints (fit_nlopt->nlopt);
+    nlopt_remove_equality_constraints (fit_nlopt->nlopt);
+
+    for (i = 0; i < ncm_fit_has_inequality_constraints (fit); i++)
+    {
+      NcmFitConstraint *fitc = g_ptr_array_index (fit->inequality_constraints, i);
+      ret = nlopt_add_inequality_constraint (fit_nlopt->nlopt, &_ncm_fit_nlopt_func_constraint, fitc, fitc->tot);
+      if (ret < 0)
+        g_error ("_ncm_fit_nlopt_run: cannot add inequality constrain: (%d)", ret);
+    }
+
+    for (i = 0; i < ncm_fit_has_equality_constraints (fit); i++)
+    {
+      NcmFitConstraint *fitc = g_ptr_array_index (fit->equality_constraints, i);
+      ret = nlopt_add_equality_constraint (fit_nlopt->nlopt, &_ncm_fit_nlopt_func_constraint, fitc, fitc->tot);
+      if (ret < 0)
+        g_error ("_ncm_fit_nlopt_run: cannot add equality constrain: (%d)", ret);
+    }
+    
     nlopt_set_min_objective (fit_nlopt->nlopt, &_ncm_fit_nlopt_func, fit);
     nlopt_set_lower_bounds (fit_nlopt->nlopt, ncm_vector_gsl (fit_nlopt->lb)->data);
     nlopt_set_upper_bounds (fit_nlopt->nlopt, ncm_vector_gsl (fit_nlopt->ub)->data);
+    
     nlopt_set_ftol_rel (fit_nlopt->nlopt, fit->m2lnL_reltol);
     if (NCM_FIT_DEFAULT_M2LNL_ABSTOL != 0)
       nlopt_set_ftol_abs (fit_nlopt->nlopt, NCM_FIT_DEFAULT_M2LNL_ABSTOL);
@@ -260,6 +307,18 @@ _ncm_fit_nlopt_run (NcmFit *fit, NcmFitRunMsgs mtype)
     nlopt_set_xtol_abs (fit_nlopt->nlopt, ncm_vector_gsl (fit_nlopt->pabs)->data);
     nlopt_set_maxeval (fit_nlopt->nlopt, fit->maxiter);
     nlopt_set_initial_step (fit_nlopt->nlopt, ncm_vector_gsl (fit_nlopt->pscale)->data);
+    if (fit_nlopt->local_nlopt != NULL)
+    {
+      nlopt_set_ftol_rel (fit_nlopt->local_nlopt, fit->m2lnL_reltol);
+      if (NCM_FIT_DEFAULT_M2LNL_ABSTOL != 0)
+        nlopt_set_ftol_abs (fit_nlopt->local_nlopt, NCM_FIT_DEFAULT_M2LNL_ABSTOL);
+      nlopt_set_xtol_rel (fit_nlopt->local_nlopt, fit->params_reltol);
+      nlopt_set_xtol_abs (fit_nlopt->local_nlopt, ncm_vector_gsl (fit_nlopt->pabs)->data);
+      nlopt_set_maxeval (fit_nlopt->local_nlopt, fit->maxiter);
+      ret = nlopt_set_local_optimizer (fit_nlopt->nlopt, fit_nlopt->local_nlopt);
+      if (ret < 0)
+        g_error ("_ncm_fit_nlopt_run: (%d)", ret);
+    }
 
     ret = nlopt_optimize (fit_nlopt->nlopt, ncm_vector_gsl (fit->fstate->fparams)->data, &minf);
 
@@ -283,6 +342,8 @@ _ncm_fit_nlopt_run (NcmFit *fit, NcmFitRunMsgs mtype)
 #else
   {
     gint ret;
+    if (ncm_fit_has_equality_constraints (fit) || ncm_fit_has_inequality_constraints (fit))
+      g_error ("_ncm_fit_nlopt_run: Older version of nlopt does not support constraints, update to version >= 2.2");
 
     ret = nlopt_minimize (algo,
                           fit->fstate->fparam_len,
@@ -334,6 +395,32 @@ _ncm_fit_nlopt_func (guint n, const gdouble *x, gdouble *grad, gpointer userdata
   return m2lnL;
 }
 
+static gdouble
+_ncm_fit_nlopt_func_constraint (guint n, const gdouble *x, gdouble *grad, gpointer userdata)
+{
+  NcmFitConstraint *fitc = NCM_FIT_CONSTRAINT (userdata);
+  NcmFit *fit = fitc->fit;
+  gdouble constraint;
+
+  fit->fstate->func_eval++;
+  ncm_mset_fparams_set_array (fit->mset, x);
+  
+  if (!ncm_mset_params_valid (fit->mset))
+    return GSL_NAN;
+
+  constraint = ncm_mset_func_eval0 (fitc->func, fit->mset);
+  
+  if (grad != NULL)
+  {
+    NcmVector *gradv = ncm_vector_new_data_static (grad, n, 1);
+    ncm_mset_func_numdiff_fparams (fitc->func, fit->mset, NULL, gradv);
+    ncm_vector_scale (gradv, 2.0 * constraint);
+    ncm_vector_free (gradv);
+  }
+
+  return constraint * constraint;
+}
+
 static const gchar *
 _ncm_fit_nlopt_get_desc (NcmFit *fit)
 {
@@ -342,7 +429,13 @@ _ncm_fit_nlopt_get_desc (NcmFit *fit)
   {
     GEnumClass *enum_class = g_type_class_ref (NCM_TYPE_FIT_NLOPT_ALGORITHM);
     GEnumValue *res = g_enum_get_value (enum_class, fit_nlopt->nlopt_algo);
-    fit_nlopt->desc = g_strdup_printf ("NLOpt:%s", res->value_nick);
+    if (fit_nlopt->local_nlopt_algo != 0)
+    {
+      GEnumValue *local_res = g_enum_get_value (enum_class, fit_nlopt->local_nlopt_algo);
+      fit_nlopt->desc = g_strdup_printf ("NLOpt:%s:%s", res->value_nick, local_res->value_nick);
+    }
+    else
+      fit_nlopt->desc = g_strdup_printf ("NLOpt:%s", res->value_nick);
     g_type_class_unref (enum_class);
   }
   return fit_nlopt->desc;
@@ -367,6 +460,30 @@ ncm_fit_nlopt_new (NcmLikelihood *lh, NcmMSet *mset, NcmFitGradType gtype, nlopt
                        "mset", mset,
                        "grad-type", gtype,
                        "algorithm", algo,
+                       NULL
+                       );
+}
+
+/**
+ * ncm_fit_nlopt_local_new:
+ * @lh: FIXME
+ * @mset: FIXME
+ * @gtype: FIXME
+ * @algo: FIXME
+ *
+ * FIXME
+ * 
+ * Returns: FIXME
+ */
+NcmFit *
+ncm_fit_nlopt_local_new (NcmLikelihood *lh, NcmMSet *mset, NcmFitGradType gtype, nlopt_algorithm algo, nlopt_algorithm local_algo)
+{
+  return g_object_new (NCM_TYPE_FIT_NLOPT, 
+                       "likelihood", lh,
+                       "mset", mset,
+                       "grad-type", gtype,
+                       "algorithm", algo,
+                       "local-algorithm", local_algo,
                        NULL
                        );
 }
@@ -408,11 +525,34 @@ ncm_fit_nlopt_new_by_name (NcmLikelihood *lh, NcmMSet *mset, NcmFitGradType gtyp
 {
   if (algo_name != NULL)
   {
-    const GEnumValue *algo = ncm_cfg_get_enum_by_id_name_nick (NCM_TYPE_FIT_NLOPT_ALGORITHM,
-                                                               algo_name);
-    if (algo == NULL)
-      g_error ("ncm_fit_nlopt_new_by_name: algorithm %s not found.", algo_name);
-    return ncm_fit_nlopt_new (lh, mset, gtype, algo->value);
+    gchar **algo_names = g_strsplit (algo_name, ":", 2);
+    guint nnames = g_strv_length (algo_names); 
+    if (nnames == 1)
+    {
+      const GEnumValue *algo = ncm_cfg_get_enum_by_id_name_nick (NCM_TYPE_FIT_NLOPT_ALGORITHM,
+                                                                 algo_name);
+      if (algo == NULL)
+        g_error ("ncm_fit_nlopt_new_by_name: algorithm %s not found.", algo_name);
+
+      g_strfreev (algo_names);
+      return ncm_fit_nlopt_new (lh, mset, gtype, algo->value);
+    }
+    else if (nnames == 2)
+    {
+      const GEnumValue *algo = ncm_cfg_get_enum_by_id_name_nick (NCM_TYPE_FIT_NLOPT_ALGORITHM,
+                                                                 algo_names[0]);
+      const GEnumValue *local_algo = ncm_cfg_get_enum_by_id_name_nick (NCM_TYPE_FIT_NLOPT_ALGORITHM,
+                                                                       algo_names[1]);
+      if (algo == NULL)
+        g_error ("ncm_fit_nlopt_new_by_name: algorithm %s not found.", algo_names[0]);
+      if (local_algo == NULL)
+        g_error ("ncm_fit_nlopt_new_by_name: algorithm %s not found.", algo_names[1]);
+
+      g_strfreev (algo_names);
+      return ncm_fit_nlopt_local_new (lh, mset, gtype, algo->value, local_algo->value);
+    }
+    else
+      g_error ("ncm_fit_nlopt_new_by_name: cannot parse algorithm name ``%s''\n", algo_name);
   }
   else
     return ncm_fit_nlopt_new_default (lh, mset, gtype);
@@ -451,6 +591,44 @@ ncm_fit_nlopt_set_algo (NcmFitNLOpt *fit_nlopt, nlopt_algorithm algo)
   if (fit_nlopt->nlopt_algo != algo)
   {
     fit_nlopt->nlopt_algo = algo;
+    if (fit_nlopt->desc != NULL)
+      g_free (fit_nlopt->desc);
+  }
+}
+
+/**
+ * ncm_fit_nlopt_set_local_algo: (skip)
+ * @fit_nlopt: a #NcmFitNLOpt.
+ * @algo: a #nlopt_algorithm.
+ *
+ * FIXME
+ *
+ */
+void
+ncm_fit_nlopt_set_local_algo (NcmFitNLOpt *fit_nlopt, nlopt_algorithm algo)
+{
+#ifdef HAVE_NLOPT_2_2
+  gboolean nlopt_alloc = FALSE;
+  NcmFit *fit = NCM_FIT (fit_nlopt);
+
+  if (fit_nlopt->local_nlopt == NULL)
+    nlopt_alloc = TRUE;
+
+  else if (fit_nlopt->local_nlopt_algo != algo)
+  {
+    nlopt_destroy (fit_nlopt->local_nlopt);
+    nlopt_alloc = TRUE;
+  }
+
+  if (nlopt_alloc)
+  {
+    fit_nlopt->local_nlopt = nlopt_create (algo, fit->fstate->fparam_len);
+    fit_nlopt->local_nlopt_algo = algo;
+  }
+#endif /* HAVE_NLOPT_2_2 */
+  if (fit_nlopt->local_nlopt_algo != algo)
+  {
+    fit_nlopt->local_nlopt_algo = algo;
     if (fit_nlopt->desc != NULL)
       g_free (fit_nlopt->desc);
   }

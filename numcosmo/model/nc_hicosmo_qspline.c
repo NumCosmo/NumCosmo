@@ -169,7 +169,7 @@ continuity_prior_f (NcmMSet *mset, gpointer obj, const gdouble *x, gdouble *f)
   const gdouble d2 = ncm_spline_eval_deriv_nmax (qspline->q_z, mx2);
   const gdouble mean_d12 = 1.0;//(d1 + d2) * 0.5;
   const gdouble mu = (d2 - d1) / mean_d12;
-  //printf ("# [%u] meio [% 10.7g % 10.7g] derivs [% 10.7g % 10.7g] (% 10.7g)\n", acp->knot, mx1, mx2, d1, d2, mean_d12);
+  //printf ("# [%u] meio [% 10.7g % 10.7g] derivs [% 10.7g % 10.7g] (% 10.7g) sigma % 20.7g\n", acp->knot, mx1, mx2, d1, d2, mu, sigma);
   f[0] = (mu / sigma);
 }
 
@@ -223,6 +223,52 @@ nc_hicosmo_qspline_add_continuity_priors (NcHICosmoQSpline *qspline, NcmLikeliho
   nc_hicosmo_qspline_cont_prior_set_all_lnsigma (qspline_cp, log (sigma));
   for (i = 0; i < qspline->nknots - 2; i++)
     nc_hicosmo_qspline_add_continuity_prior (qspline, lh, i, qspline_cp);
+  
+  return qspline_cp;
+}
+
+/**
+ * nc_hicosmo_qspline_add_continuity_constraint:
+ * @qspline: FIXME
+ * @fit: FIXME
+ * @knot: FIXME
+ * @qspline_cp: FIXME
+ *
+ * FIXME
+ *
+ */
+void
+nc_hicosmo_qspline_add_continuity_constraint (NcHICosmoQSpline *qspline, NcmFit *fit, gint knot, NcHICosmoQSplineContPrior *qspline_cp)
+{
+  NcHICosmoQSplineContPriorKnot *cp = g_slice_new (NcHICosmoQSplineContPriorKnot);
+  NcmMSetFunc *func = ncm_mset_func_new (continuity_prior_f, 0, 1, cp, _nc_hicosmo_spline_continuity_prior_free);
+  g_assert (knot < qspline->nknots - 1);
+  cp->knot = knot;
+  cp->qspline_cp = nc_hicosmo_qspline_cont_prior_ref (qspline_cp);
+  ncm_fit_add_inequality_constraint (fit, func, 1.0);
+  return;
+}
+
+/**
+ * nc_hicosmo_qspline_add_continuity_constraints:
+ * @qspline: FIXME
+ * @fit: FIXME
+ * @sigma: FIXME
+ *
+ * FIXME
+ * 
+ * Returns: (transfer full): FIXME
+ */
+NcHICosmoQSplineContPrior *
+nc_hicosmo_qspline_add_continuity_constraints (NcHICosmoQSpline *qspline, NcmFit *fit, gdouble sigma)
+{
+  guint i;
+  NcHICosmoQSplineContPrior *qspline_cp = nc_hicosmo_qspline_cont_prior_new (qspline->nknots);
+  g_assert (sigma > 0);
+  
+  nc_hicosmo_qspline_cont_prior_set_all_lnsigma (qspline_cp, log (sigma));
+  for (i = 0; i < qspline->nknots - 2; i++)
+    nc_hicosmo_qspline_add_continuity_constraint (qspline, fit, i, qspline_cp);
   
   return qspline_cp;
 }

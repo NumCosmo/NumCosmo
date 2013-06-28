@@ -168,6 +168,64 @@ ncm_mset_func_eval1 (NcmMSetFunc *func, NcmMSet *mset, const gdouble x)
   return res;
 }
 
+/**
+ * ncm_mset_func_is_scalar:
+ * @func: FIXME
+ *
+ * FIXME
+ *
+ * Returns: FIXME
+ */
+gboolean 
+ncm_mset_func_is_scalar (NcmMSetFunc *func)
+{
+  return (func->dim == 1);
+}
+
+/**
+ * ncm_mset_func_is_vector:
+ * @func: FIXME
+ * @dim: FIXME
+ *
+ * FIXME
+ *
+ * Returns: FIXME
+ */
+gboolean 
+ncm_mset_func_is_vector (NcmMSetFunc *func, guint dim)
+{
+  return (func->dim == dim);
+}
+
+/**
+ * ncm_mset_func_is_const:
+ * @func: FIXME
+ *
+ * FIXME
+ *
+ * Returns: FIXME
+ */
+gboolean 
+ncm_mset_func_is_const (NcmMSetFunc *func)
+{
+  return (func->np == 0);
+}
+
+/**
+ * ncm_mset_func_has_params:
+ * @func: FIXME
+ * @np: FIXME
+ *
+ * FIXME
+ *
+ * Returns: FIXME
+ */
+gboolean 
+ncm_mset_func_has_params (NcmMSetFunc *func, guint np)
+{
+  return (func->np == np);
+}
+
 typedef struct __ncm_mset_func_numdiff_fparams_1
 {
   NcmMSetFunc *func;

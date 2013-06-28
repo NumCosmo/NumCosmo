@@ -363,7 +363,7 @@ main (gint argc, gchar *argv[])
     ncm_prior_add_gaussian_data (lh, nc_hicosmo_id (), NC_HICOSMO_DE_H0, 73.8, 2.4);
   }
 
-  if (de_fit.qspline_cp)
+  if (de_fit.qspline_cp && TRUE)
   {
     if (!NC_IS_HICOSMO_QSPLINE (model))
       g_error ("Continuity priors are only valid for NcHICosmoQSPline model");
@@ -391,6 +391,19 @@ main (gint argc, gchar *argv[])
     fit = ncm_fit_new (fit_type_id->value, de_fit.fit_algo, lh, mset, fit_diff_id->value);
   }
 
+  if (de_fit.qspline_cp && FALSE)
+  {
+    if (!NC_IS_HICOSMO_QSPLINE (model))
+      g_error ("Continuity priors are only valid for NcHICosmoQSPline model");
+    else
+    {
+      NcHICosmoQSplineContPrior *qspline_cp = 
+        nc_hicosmo_qspline_add_continuity_constraints (NC_HICOSMO_QSPLINE (model), fit, de_fit.qspline_cp_sigma);
+      nc_hicosmo_qspline_cont_prior_free (qspline_cp);
+    }
+  }
+
+  
   de_fit.fisher = (de_fit.fisher || (de_fit.nsigma_fisher != -1) || (de_fit.nsigma != -1) || (de_fit.onedim_cr != NULL));
   de_fit.fit = (de_fit.fit || de_fit.fisher);
   de_fit.save_best_fit = (de_fit.save_best_fit || de_fit.save_fisher);

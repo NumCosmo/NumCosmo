@@ -145,6 +145,9 @@ _ncm_fit_gsl_ls_run (NcmFit *fit, NcmFitRunMsgs mtype)
   gint status;
   gdouble prec = 1e-11;
 
+  if (ncm_fit_has_equality_constraints (fit) || ncm_fit_has_inequality_constraints (fit))
+    g_error ("_ncm_fit_gsl_ls_run: GSL algorithms do not support constraints.");
+  
   ncm_mset_fparams_get_vector (fit->mset, fit->fstate->fparams);
   gsl_multifit_fdfsolver_set (fit_gsl_ls->ls, &fit_gsl_ls->f, ncm_vector_gsl (fit->fstate->fparams));
   
