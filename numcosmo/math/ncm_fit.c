@@ -72,6 +72,7 @@ G_DEFINE_BOXED_TYPE (NcmFitConstraint, ncm_fit_constraint, (GBoxedCopyFunc)&ncm_
 
 /**
  * ncm_fit_constraint_new:
+ * @fit: FIXME
  * @func: FIXME
  * @tot: FIXME
  * 

@@ -163,6 +163,7 @@ struct _NcmFit
 
 struct _NcmFitConstraint
 {
+  /*< private >*/
   NcmFit *fit;
   NcmMSetFunc *func;
   gdouble tot;

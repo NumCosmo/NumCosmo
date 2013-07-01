@@ -470,6 +470,7 @@ ncm_fit_nlopt_new (NcmLikelihood *lh, NcmMSet *mset, NcmFitGradType gtype, nlopt
  * @mset: FIXME
  * @gtype: FIXME
  * @algo: FIXME
+ * @local_algo: FIXME
  *
  * FIXME
  * 
