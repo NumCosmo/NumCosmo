@@ -186,7 +186,8 @@ void
 nc_data_snia_cov_set_dcov (NcDataSNIACov *snia_cov, NcSNIADistCov *dcov)
 {
   NcmDataGaussCov *gauss = NCM_DATA_GAUSS_COV (snia_cov);
-
+  g_assert (nc_snia_dist_cov_is_loaded (dcov));
+  
   ncm_data_gauss_cov_set_size (gauss, dcov->mu_len);
   if (dcov->mu_len > 0)
   {

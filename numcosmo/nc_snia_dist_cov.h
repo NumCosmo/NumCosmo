@@ -153,6 +153,7 @@ struct _NcSNIADistCov
   NcmVector *sigma_int;
   GArray *dataset;
   gdouble sigma_pecz;
+  gboolean is_loaded;
 };
 
 GType nc_snia_dist_cov_get_type (void) G_GNUC_CONST;
@@ -173,6 +174,8 @@ void nc_snia_dist_cov_calc (NcSNIADistCov *dcov, NcmMatrix *cov);
 void nc_snia_dist_cov_mean (NcSNIADistCov *dcov, NcHICosmo *cosmo, NcmVector *y);
 
 void nc_snia_dist_cov_load_txt (NcSNIADistCov *dcov, const gchar *filename);
+
+gboolean nc_snia_dist_cov_is_loaded (NcSNIADistCov *dcov);
 
 #ifdef NUMCOSMO_HAVE_CFITSIO
 void nc_snia_dist_cov_load (NcSNIADistCov *dcov, const gchar *filename);

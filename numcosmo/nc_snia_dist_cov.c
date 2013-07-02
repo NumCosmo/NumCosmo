@@ -97,7 +97,9 @@ nc_snia_dist_cov_init (NcSNIADistCov *dcov)
 
   dcov->sigma_pecz        = 0.0;
   dcov->dataset           = NULL;
-  dcov->sigma_int         = NULL;  
+  dcov->sigma_int         = NULL;
+
+  dcov->is_loaded         = FALSE;
 }
 
 static void
@@ -440,6 +442,8 @@ nc_snia_dist_cov_calc (NcSNIADistCov *dcov, NcmMatrix *cov)
   const guint ij_len = dcov->mu_len * dcov->mu_len;
   register gint i, ij;
 
+  g_assert (nc_snia_dist_cov_is_loaded (dcov));
+
   for (ij = 0; ij < ij_len; ij++)
   {
     const gdouble var_mag          = ncm_matrix_fast_get (dcov->var_mag, ij);
@@ -505,6 +509,8 @@ nc_snia_dist_cov_mean (NcSNIADistCov *dcov, NcHICosmo *cosmo, NcmVector *y)
   const gdouble Mcal2 = ABSMAG2 + 5.0 * log10 (DH);
   gint i;
 
+  g_assert (nc_snia_dist_cov_is_loaded (dcov));
+  
   for (i = 0; i < dcov->mu_len; i++)
   {
     const gdouble z_cmb    = ncm_vector_get (dcov->z_cmb, i);
@@ -660,7 +666,23 @@ nc_snia_dist_cov_load_txt (NcSNIADistCov *dcov, const gchar *filename)
     _nc_snia_dist_cov_load_matrix (datafile, dcov->var_width_colour);
   }
 
+  dcov->is_loaded = TRUE;
+  
   g_key_file_free (snia_keyfile);
+}
+
+/**
+ * nc_snia_dist_cov_is_loaded:
+ * @dcov: FIXME
+ * 
+ * FIXME
+ * 
+ * Returns: FIXME
+ */
+gboolean 
+nc_snia_dist_cov_is_loaded (NcSNIADistCov *dcov)
+{
+  return dcov->is_loaded;
 }
 
 static void 
@@ -917,6 +939,8 @@ nc_snia_dist_cov_load (NcSNIADistCov *dcov, const gchar *filename)
         NC_FITS_ERROR(status);
     }
   }
+
+  dcov->is_loaded = TRUE;
 }
 
 /**
