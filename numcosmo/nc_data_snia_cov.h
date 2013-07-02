@@ -54,12 +54,12 @@ struct _NcDataSNIACov
 {
   /*< private >*/
   NcmDataGaussCov parent_instance;
-  NcSNIADistCov *dcov;
+  NcmModelCtrl *dcov_ctrl;
 };
 
 GType nc_data_snia_cov_get_type (void) G_GNUC_CONST;
 
-NcmData *nc_data_snia_cov_new (NcSNIADistCov *dcov, gboolean use_det);
+NcmData *nc_data_snia_cov_new (gboolean use_det);
 
 void nc_data_snia_cov_set_dcov (NcDataSNIACov *snia_cov, NcSNIADistCov *dcov);
 

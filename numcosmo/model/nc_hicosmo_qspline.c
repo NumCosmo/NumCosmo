@@ -306,7 +306,7 @@ _nc_hicosmo_qspline_constructed (GObject *object)
     NcmVector *zv, *qv;
     guint i, qvi;
 
-    qspline->qs_ctrl = ncm_model_ctrl_new (model);
+    qspline->qs_ctrl = ncm_model_ctrl_new (NULL);
     
     qspline->nknots = ncm_model_vparam_len (model, NC_HICOSMO_QSPLINE_Q);
     qspline->size = model_class->sparam_len + qspline->nknots;

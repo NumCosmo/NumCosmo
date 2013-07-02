@@ -112,7 +112,15 @@ ncm_model_ctrl_copy (NcmModelCtrl *ctrl)
  *
  * Returns: FIXME
  */
-
+/**
+ * ncm_model_ctrl_model_update:
+ * @ctrl: FIXME
+ * @model: FIXME
+ *
+ * FIXME
+ *
+ * Returns: FIXME
+ */
 /**
  * ncm_model_ctrl_get_model:
  * @ctrl: FIXME

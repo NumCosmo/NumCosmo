@@ -265,6 +265,7 @@ _ncm_data_gauss_cov_m2lnL_val (NcmData *data, NcmMSet *mset, gdouble *m2lnL)
   *m2lnL = 0.0;
 
   gauss_cov_class->mean_func (gauss, mset, gauss->v);
+
   ncm_vector_sub (gauss->v, gauss->y);
   
   if (gauss_cov_class->cov_func != NULL)

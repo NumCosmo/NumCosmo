@@ -38,11 +38,11 @@
 #include "build_cfg.h"
 
 #include "nc_data_snia_cov.h"
+#include "math/ncm_model_ctrl.h"
 
 enum
 {
   PROP_0,
-  PROP_DCOV,
   PROP_SIZE,
 };
 
@@ -51,20 +51,17 @@ G_DEFINE_TYPE (NcDataSNIACov, nc_data_snia_cov, NCM_TYPE_DATA_GAUSS_COV);
 static void
 nc_data_snia_cov_init (NcDataSNIACov *snia_cov)
 {
-  snia_cov->dcov = NULL;
+  snia_cov->dcov_ctrl = ncm_model_ctrl_new (NULL);
 }
 
 static void
 nc_data_snia_cov_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
 {
-  NcDataSNIACov *snia_cov = NC_DATA_SNIA_COV (object);
+/*  NcDataSNIACov *snia_cov = NC_DATA_SNIA_COV (object); */
   g_return_if_fail (NC_IS_DATA_SNIA_COV (object));
 
   switch (prop_id)
   {
-    case PROP_DCOV:
-      nc_data_snia_cov_set_dcov (snia_cov, g_value_get_object (value));
-      break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
       break;
@@ -74,18 +71,24 @@ nc_data_snia_cov_set_property (GObject *object, guint prop_id, const GValue *val
 static void
 nc_data_snia_cov_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
 {
-  NcDataSNIACov *snia_cov = NC_DATA_SNIA_COV (object);
+/*  NcDataSNIACov *snia_cov = NC_DATA_SNIA_COV (object); */
   g_return_if_fail (NC_IS_DATA_SNIA_COV (object));
 
   switch (prop_id)
   {
-    case PROP_DCOV:
-      g_value_set_object (value, snia_cov->dcov);
-      break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
       break;
   }
+}
+
+static void
+nc_data_snia_cov_constructed (GObject *object)
+{
+  /* Chain up : start */
+  G_OBJECT_CLASS (nc_data_snia_cov_parent_class)->constructed (object);
+
+  ncm_data_set_init (NCM_DATA (object));
 }
 
 static void
@@ -94,6 +97,14 @@ nc_data_snia_cov_dispose (GObject *object)
 
   /* Chain up : end */
   G_OBJECT_CLASS (nc_data_snia_cov_parent_class)->dispose (object);
+}
+
+static void
+nc_data_snia_cov_finalize (GObject *object)
+{
+
+  /* Chain up : end */
+  G_OBJECT_CLASS (nc_data_snia_cov_parent_class)->finalize (object);
 }
 
 static void _nc_data_snia_cov_prepare (NcmData *data, NcmMSet *mset);
@@ -109,15 +120,9 @@ nc_data_snia_cov_class_init (NcDataSNIACovClass *klass)
 
   object_class->set_property = &nc_data_snia_cov_set_property;
   object_class->get_property = &nc_data_snia_cov_get_property;
-  object_class->finalize     = &nc_data_snia_cov_dispose;
-
-  g_object_class_install_property (object_class,
-                                   PROP_DCOV,
-                                   g_param_spec_object ("dcov",
-                                                        NULL,
-                                                        "SNIa data distance covariance",
-                                                        NC_TYPE_SNIA_DIST_COV,
-                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  object_class->constructed  = &nc_data_snia_cov_constructed;
+  object_class->dispose      = &nc_data_snia_cov_dispose;
+  object_class->finalize     = &nc_data_snia_cov_finalize;
   
   data_class->prepare    = &_nc_data_snia_cov_prepare;
   gauss_class->mean_func = &_nc_data_snia_cov_mean_func;
@@ -129,30 +134,31 @@ static void
 _nc_data_snia_cov_prepare (NcmData *data, NcmMSet *mset)
 {
   NcDataSNIACov *snia_cov = NC_DATA_SNIA_COV (data);
-  nc_snia_dist_cov_prepare_if_needed (snia_cov->dcov, mset);
+  NcSNIADistCov *dcov = NC_SNIA_DIST_COV (ncm_mset_peek (mset, nc_snia_dist_cov_id ()));
+  nc_snia_dist_cov_prepare_if_needed (dcov, mset);
+  if (ncm_model_ctrl_model_update (snia_cov->dcov_ctrl, NCM_MODEL (dcov)))
+    nc_data_snia_cov_set_dcov (snia_cov, dcov);
 }
 
 static void 
 _nc_data_snia_cov_mean_func (NcmDataGaussCov *gauss, NcmMSet *mset, NcmVector *vp)
 {
-  NcDataSNIACov *snia_cov = NC_DATA_SNIA_COV (gauss);
   NcHICosmo *cosmo = NC_HICOSMO (ncm_mset_peek (mset, nc_hicosmo_id ()));
-  
-  nc_snia_dist_cov_mean (snia_cov->dcov, cosmo, vp);
+  NcSNIADistCov *dcov = NC_SNIA_DIST_COV (ncm_mset_peek (mset, nc_snia_dist_cov_id ()));
+  nc_snia_dist_cov_mean (dcov, cosmo, vp);
 }
 
 static gboolean 
 _nc_data_snia_cov_func (NcmDataGaussCov *gauss, NcmMSet *mset, NcmMatrix *cov)
 {
-  NcDataSNIACov *snia_cov = NC_DATA_SNIA_COV (gauss);
-  nc_snia_dist_cov_calc (snia_cov->dcov, cov);
+  NcSNIADistCov *dcov = NC_SNIA_DIST_COV (ncm_mset_peek (mset, nc_snia_dist_cov_id ()));
+  nc_snia_dist_cov_calc (dcov, cov);
   
   return TRUE;
 }
 
 /**
  * nc_data_snia_cov_new:
- * @dcov: FIXME
  * @use_det: FIXME
  *
  * FIXME
@@ -160,10 +166,9 @@ _nc_data_snia_cov_func (NcmDataGaussCov *gauss, NcmMSet *mset, NcmMatrix *cov)
  * Returns: FIXME
  */
 NcmData *
-nc_data_snia_cov_new (NcSNIADistCov *dcov, gboolean use_det)
+nc_data_snia_cov_new (gboolean use_det)
 {
   return g_object_new (NC_TYPE_DATA_SNIA_COV,
-                       "dcov", dcov,
                        "use-det", use_det,
                        NULL);
 }
@@ -181,9 +186,6 @@ void
 nc_data_snia_cov_set_dcov (NcDataSNIACov *snia_cov, NcSNIADistCov *dcov)
 {
   NcmDataGaussCov *gauss = NCM_DATA_GAUSS_COV (snia_cov);
-
-  nc_snia_dist_cov_clear (&snia_cov->dcov);
-  snia_cov->dcov = nc_snia_dist_cov_ref (dcov);
 
   ncm_data_gauss_cov_set_size (gauss, dcov->mu_len);
   if (dcov->mu_len > 0)

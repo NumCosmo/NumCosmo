@@ -250,7 +250,7 @@ main (gint argc, gchar *argv[])
         ncm_cfg_object_set_property (G_OBJECT (dcov), de_data_simple.snia_prop);
 
       nc_data_snia_load_cat (dcov, snia_id->value);
-      data = nc_data_snia_cov_new (dcov, de_data_simple.snia_use_det);
+      data = nc_data_snia_cov_new (de_data_simple.snia_use_det);
       ncm_mset_set (mset, NCM_MODEL (dcov));
       ncm_dataset_append_data (dset, data);
       ncm_data_free (data);
