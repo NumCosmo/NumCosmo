@@ -89,11 +89,11 @@ nc_data_snia_get_catalog_by_id (NcDataSNIAId id)
 }
 
 void 
-nc_data_snia_load_cat (NcSNIADistCov *dcov, NcDataSNIAId id)
+nc_data_snia_load_cat (NcDataSNIACov *snia_cov, NcDataSNIAId id)
 {
   gchar *full_filename = nc_data_snia_get_catalog_by_id (id);
 #ifdef NUMCOSMO_HAVE_CFITSIO
-  nc_snia_dist_cov_load (dcov, full_filename);
+  nc_data_snia_cov_load (snia_cov, full_filename);
 #else
   g_error ("nc_data_snia_load_cat: catalog load not available, recompile "PACKAGE_NAME" with cfitsio support.");
 #endif /* NUMCOSMO_HAVE_CFITSIO */

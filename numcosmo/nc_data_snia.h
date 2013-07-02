@@ -74,7 +74,7 @@ typedef enum _NcDataSNIAId
 #define NC_DATA_SNIA_COV_END NC_DATA_SNIA_COV_SNLS3_STAT_ONLY
 #define NC_DATA_SNIA_COV_LEN ((NC_DATA_SNIA_COV_END) - (NC_DATA_SNIA_COV_START) + 1)
 
-void nc_data_snia_load_cat (NcSNIADistCov *dcov, NcDataSNIAId id);
+void nc_data_snia_load_cat (NcDataSNIACov *snia_cov, NcDataSNIAId id);
 gchar *nc_data_snia_get_fits (const gchar *filename, gboolean check_size);
 gchar *nc_data_snia_get_catalog (gchar *id);
 gchar *nc_data_snia_get_catalog_by_id (NcDataSNIAId id);

@@ -243,14 +243,15 @@ main (gint argc, gchar *argv[])
     }
     else if (snia_id->value >= NC_DATA_SNIA_COV_START && snia_id->value <= NC_DATA_SNIA_COV_END)
     {
-      NcSNIADistCov *dcov = nc_snia_dist_cov_new (dist, 0);
+      NcSNIADistCov *dcov = nc_snia_dist_cov_new (dist);
       NcmData *data;
 
       if (de_data_simple.snia_prop != NULL)
         ncm_cfg_object_set_property (G_OBJECT (dcov), de_data_simple.snia_prop);
 
-      nc_data_snia_load_cat (dcov, snia_id->value);
       data = nc_data_snia_cov_new (de_data_simple.snia_use_det);
+      nc_data_snia_load_cat (NC_DATA_SNIA_COV (data), snia_id->value);
+      
       ncm_mset_set (mset, NCM_MODEL (dcov));
       ncm_dataset_append_data (dset, data);
       ncm_data_free (data);
@@ -463,9 +464,6 @@ main (gint argc, gchar *argv[])
       resample_mset = fiduc;
     else
       resample_mset = fit->mset;
-
-    ncm_dataset_log_info (fit->lh->dset);
-    ncm_mset_pretty_log (resample_mset);
 
     ncm_fit_mc_run (mc, resample_mset, de_fit.mc_ni, de_fit.montecarlo, de_fit.msg_level);
     ncm_fit_mc_mean_covar (mc);

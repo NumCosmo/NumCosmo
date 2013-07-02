@@ -30,6 +30,7 @@
 #include <glib-object.h>
 #include <numcosmo/build_cfg.h>
 #include <numcosmo/math/ncm_model.h>
+#include <numcosmo/nc_data_snia_cov.h>
 #include <numcosmo/nc_distance.h>
 
 G_BEGIN_DECLS
@@ -63,61 +64,6 @@ typedef enum _NcSNIADistCovParams
   NC_SNIA_DIST_COV_SPARAM_LEN, /*< skip >*/
 } NcSNIADistCovParams;
 
-/**
- * NcSNIADistCovData:
- * @NC_SNIA_DIST_COV_ZCMB: FIXME
- * @NC_SNIA_DIST_COV_ZHE: FIXME
- * @NC_SNIA_DIST_COV_SIGMA_Z: FIXME
- * @NC_SNIA_DIST_COV_MAG: FIXME
- * @NC_SNIA_DIST_COV_SIGMA_MAG: FIXME
- * @NC_SNIA_DIST_COV_WIDTH: FIXME
- * @NC_SNIA_DIST_COV_SIGMA_WIDTH: FIXME
- * @NC_SNIA_DIST_COV_COLOUR: FIXME
- * @NC_SNIA_DIST_COV_SIGMA_COLOUR: FIXME
- * @NC_SNIA_DIST_COV_THIRDPAR: FIXME
- * @NC_SNIA_DIST_COV_SIGMA_THIRDPAR: FIXME
- * @NC_SNIA_DIST_COV_DIAG_MAG_WIDTH: FIXME
- * @NC_SNIA_DIST_COV_DIAG_MAG_COLOUR: FIXME
- * @NC_SNIA_DIST_COV_DIAG_WIDTH_COLOUR: FIXME
- * @NC_SNIA_DIST_COV_ABSMAG_SET: FIXME
- * @NC_SNIA_DIST_COV_VAR_MAG: FIXME
- * @NC_SNIA_DIST_COV_VAR_WIDTH: FIXME
- * @NC_SNIA_DIST_COV_VAR_COLOUR: FIXME
- * @NC_SNIA_DIST_COV_VAR_MAG_WIDTH: FIXME
- * @NC_SNIA_DIST_COV_VAR_MAG_COLOUR: FIXME
- * @NC_SNIA_DIST_COV_VAR_WIDTH_COLOUR: FIXME
- * 
- * FIXME
- * 
- */
-typedef enum _NcSNIADistCovData
-{
-  NC_SNIA_DIST_COV_ZCMB = 0,
-  NC_SNIA_DIST_COV_ZHE,
-  NC_SNIA_DIST_COV_SIGMA_Z,
-  NC_SNIA_DIST_COV_MAG,
-  NC_SNIA_DIST_COV_SIGMA_MAG,
-  NC_SNIA_DIST_COV_WIDTH,
-  NC_SNIA_DIST_COV_SIGMA_WIDTH,
-  NC_SNIA_DIST_COV_COLOUR,
-  NC_SNIA_DIST_COV_SIGMA_COLOUR,
-  NC_SNIA_DIST_COV_THIRDPAR,
-  NC_SNIA_DIST_COV_SIGMA_THIRDPAR,
-  NC_SNIA_DIST_COV_DIAG_MAG_WIDTH,
-  NC_SNIA_DIST_COV_DIAG_MAG_COLOUR,
-  NC_SNIA_DIST_COV_DIAG_WIDTH_COLOUR,
-  NC_SNIA_DIST_COV_ABSMAG_SET, 
-  NC_SNIA_DIST_COV_VAR_MAG,
-  NC_SNIA_DIST_COV_VAR_WIDTH,
-  NC_SNIA_DIST_COV_VAR_COLOUR,
-  NC_SNIA_DIST_COV_VAR_MAG_WIDTH,
-  NC_SNIA_DIST_COV_VAR_MAG_COLOUR,
-  NC_SNIA_DIST_COV_VAR_WIDTH_COLOUR, /*< private >*/
-  NC_SNIA_DIST_COV_TOTAL_LENGTH,     /*< skip >*/
-} NcSNIADistCovData;
-
-#define NC_SNIA_DIST_COV_LENGTH NC_SNIA_DIST_COV_ABSMAG_SET
-
 struct _NcSNIADistCovClass
 {
   /*< private >*/
@@ -129,38 +75,13 @@ struct _NcSNIADistCov
   /*< private >*/
   NcmModel parent_instance;
   NcDistance *dist;
-  guint mu_len;
-  NcmVector *z_cmb;
-  NcmVector *z_he;
-  NcmVector *mag;
-  NcmVector *width;
-  NcmVector *colour;
-  NcmVector *thirdpar;
-  NcmVector *sigma_z;
-  NcmVector *sigma_mag;
-  NcmVector *sigma_width;
-  NcmVector *sigma_colour;
-  NcmVector *sigma_thirdpar;
-  NcmVector *diag_mag_width;
-  NcmVector *diag_mag_colour;
-  NcmVector *diag_width_colour;
-  NcmMatrix *var_mag;
-  NcmMatrix *var_width;
-  NcmMatrix *var_colour;
-  NcmMatrix *var_mag_width;
-  NcmMatrix *var_mag_colour;
-  NcmMatrix *var_width_colour;
-  NcmVector *sigma_int;
-  GArray *dataset;
-  gdouble sigma_pecz;
-  gboolean is_loaded;
 };
 
 GType nc_snia_dist_cov_get_type (void) G_GNUC_CONST;
 
 NCM_MSET_MODEL_DECLARE_ID (nc_snia_dist_cov);
 
-NcSNIADistCov *nc_snia_dist_cov_new (NcDistance *dist, guint mu_len);
+NcSNIADistCov *nc_snia_dist_cov_new (NcDistance *dist);
 NcSNIADistCov *nc_snia_dist_cov_ref (NcSNIADistCov *dcov);
 void nc_snia_dist_cov_free (NcSNIADistCov *dcov);
 void nc_snia_dist_cov_clear (NcSNIADistCov **dcov);
@@ -168,19 +89,8 @@ void nc_snia_dist_cov_clear (NcSNIADistCov **dcov);
 void nc_snia_dist_cov_prepare (NcSNIADistCov *dcov, NcmMSet *mset);
 void nc_snia_dist_cov_prepare_if_needed (NcSNIADistCov *dcov, NcmMSet *mset);
 
-void nc_snia_dist_cov_set_size (NcSNIADistCov *dcov, guint mu_len);
-void nc_snia_dist_cov_calc (NcSNIADistCov *dcov, NcmMatrix *cov);
-
-void nc_snia_dist_cov_mean (NcSNIADistCov *dcov, NcHICosmo *cosmo, NcmVector *y);
-
-void nc_snia_dist_cov_load_txt (NcSNIADistCov *dcov, const gchar *filename);
-
-gboolean nc_snia_dist_cov_is_loaded (NcSNIADistCov *dcov);
-
-#ifdef NUMCOSMO_HAVE_CFITSIO
-void nc_snia_dist_cov_load (NcSNIADistCov *dcov, const gchar *filename);
-void nc_snia_dist_cov_save (NcSNIADistCov *dcov, const gchar *filename, gboolean overwrite);
-#endif /* NUMCOSMO_HAVE_CFITSIO */
+void nc_snia_dist_cov_calc (NcSNIADistCov *dcov, NcDataSNIACov *snia_cov, NcmMatrix *cov);
+void nc_snia_dist_cov_mean (NcSNIADistCov *dcov, NcHICosmo *cosmo, NcDataSNIACov *snia_cov, NcmVector *y);
 
 #define NC_SNIA_DIST_COV_DEFAULT_ALPHA (1.45)
 #define NC_SNIA_DIST_COV_DEFAULT_BETA (3.16)
@@ -192,18 +102,6 @@ void nc_snia_dist_cov_save (NcSNIADistCov *dcov, const gchar *filename, gboolean
 #define NC_SNIA_DIST_COV_SIGMA_INT_DEFAULT_LEN (4)
 #define NC_SNIA_DIST_COV_DEFAULT_SIGMA_INT (0.0989)
 #define NC_SNIA_DIST_COV_VPARAM_LEN (1)
-
-#define NC_SNIA_DIST_COV_DATA_GROUP "Supernovae Ia Data"
-#define NC_SNIA_DIST_COV_DATA_LEN_KEY "data-length"
-#define NC_SNIA_DIST_COV_DATA_KEY "snia-data"
-
-#define NC_SNIA_DIST_COV_MAG_KEY "magnitude"
-#define NC_SNIA_DIST_COV_WIDTH_KEY "width"
-#define NC_SNIA_DIST_COV_COLOUR_KEY "colour"
-
-#define NC_SNIA_DIST_COV_MAG_WIDTH_KEY "magnitude-width"
-#define NC_SNIA_DIST_COV_MAG_COLOUR_KEY "magnitude-colour"
-#define NC_SNIA_DIST_COV_WIDTH_COLOUR_KEY "width-colour"
 
 G_END_DECLS
 

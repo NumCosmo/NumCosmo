@@ -222,16 +222,19 @@ ncm_fit_mc_run (NcmFitMC *mc, NcmMSet *fiduc, guint ni, guint nf, NcmFitRunMsgs 
   if (mtype > NCM_FIT_RUN_MSGS_NONE)
   {
     ncm_cfg_msg_sepa ();
-    g_message ("#  Fiducial model set [MSet]\n");
+    g_message ("# Starting Montecarlo...\n");
+    ncm_dataset_log_info (mc->fit->lh->dset);
+    ncm_cfg_msg_sepa ();
+    g_message ("# Fiducial model set:\n");
     ncm_mset_pretty_log (fiduc);
     ncm_cfg_msg_sepa ();
-    g_message ("#  Fitting model set [MSet]\n");
+    g_message ("# Fitting model set:\n");
     ncm_mset_pretty_log (mc->fit->mset);
     
     ncm_cfg_msg_sepa ();
-    g_message ("#  Calculating [%06d] montecarlo fits\n", n);
+    g_message ("# Calculating [%06d] Montecarlo fits\n", n);
     if (ni > 0)
-      g_message ("#  Resampling %u-times\n#", ni);
+      g_message ("# Resampling %u-times\n#", ni);
   }
   
   for (i = 0; i < ni; i++)
@@ -277,9 +280,9 @@ ncm_fit_mc_run (NcmFitMC *mc, NcmMSet *fiduc, guint ni, guint nf, NcmFitRunMsgs 
       total_min = total_min % 60;
       total_hour = total_hour % 24;
 
-      g_message ("#  finish[%d] took: %02lu days, %02lu:%02lu:%010.7f\n", i, elap_day, elap_hour, elap_min, elap_sec);
-      g_message ("#  mean time %010.7fs\n", mean_time);
-      g_message ("#  time left %02lu days, %02lu:%02lu:%010.7f\n",
+      g_message ("# finish[%d] took: %02lu days, %02lu:%02lu:%010.7f\n", i, elap_day, elap_hour, elap_min, elap_sec);
+      g_message ("# mean time %010.7fs\n", mean_time);
+      g_message ("# time left %02lu days, %02lu:%02lu:%010.7f\n",
                  total_day, total_hour, total_min, total_sec);
       j++;
     }
