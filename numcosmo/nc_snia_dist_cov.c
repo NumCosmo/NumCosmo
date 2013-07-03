@@ -271,6 +271,7 @@ nc_snia_dist_cov_prepare_if_needed (NcSNIADistCov *dcov, NcmMSet *mset)
 /**
  * nc_snia_dist_cov_calc:
  * @dcov: FIXME
+ * @snia_cov: FIXME
  * @cov: FIXME
  * 
  * FIXME
@@ -349,6 +350,7 @@ nc_snia_dist_cov_calc (NcSNIADistCov *dcov, NcDataSNIACov *snia_cov, NcmMatrix *
  * nc_snia_dist_cov_mean:
  * @dcov: FIXME
  * @cosmo: FIXME
+ * @snia_cov: FIXME
  * @y: FIXME
  * 
  * FIXME

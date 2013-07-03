@@ -31,7 +31,9 @@
 G_BEGIN_DECLS
 
 #ifdef NUMCOSMO_HAVE_LAPACK
+#ifndef NUMCOSMO_GIR_SCAN
 void dptsv_ (gint *N, gint *NRHS, gdouble *d, gdouble *e, gdouble *b, gint *ldb, gint *info);
+#endif /* NUMCOSMO_GIR_SCAN */
 G_INLINE_FUNC gint ncm_lapack_dptsv (gdouble *d, gdouble *e, gdouble *b, guint size);
 #endif /* NUMCOSMO_HAVE_LAPACK */
 
