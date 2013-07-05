@@ -26,7 +26,6 @@
  * SECTION:ncm_vector
  * @title: Vector Object
  * @short_description: Vector object representing arrays of doubles
- * @section_id: SHHHS
  *
  * This object defines the functions for allocating and accessing vectors.
  * Also includes several vector operations.

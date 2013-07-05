@@ -162,14 +162,15 @@ continuity_prior_f (NcmMSet *mset, gpointer obj, const gdouble *x, gdouble *f)
   const gdouble sigma = exp (nc_hicosmo_qspline_cont_prior_get_lnsigma (acp->qspline_cp, acp->knot));
   const gdouble x_i = ncm_vector_get (qspline->q_z->xv, acp->knot);
   const gdouble x_ip1 = ncm_vector_get (qspline->q_z->xv, acp->knot + 1);
-//  const gdouble x_ip2 = ncm_vector_get (qspline->q_z->xv, acp->knot + 2);
-//  const gdouble mx1 = (x_ip1 + x_i) * 0.5;
-//  const gdouble mx2 = (x_ip2 + x_ip1) * 0.5;
-//  const gdouble d1 = ncm_spline_eval_deriv_nmax (qspline->q_z, mx1);
-//  const gdouble d2 = ncm_spline_eval_deriv_nmax (qspline->q_z, mx2);
-  const gdouble d1 = ncm_spline_eval (qspline->q_z, x_i);
-  const gdouble d2 = ncm_spline_eval (qspline->q_z, x_ip1);
-  const gdouble mean_d12 = 1.0;//(d1 + d2) * 0.5;
+  const gdouble x_ip2 = ncm_vector_get (qspline->q_z->xv, acp->knot + 2);
+  const gdouble mx1 = (x_ip1 + x_i) * 0.5;
+  const gdouble mx2 = (x_ip2 + x_ip1) * 0.5;
+  const gdouble d1 = ncm_spline_eval_deriv_nmax (qspline->q_z, mx1);
+  const gdouble d2 = ncm_spline_eval_deriv_nmax (qspline->q_z, mx2);
+//  const gdouble d1 = ncm_spline_eval (qspline->q_z, x_i);
+//  const gdouble d2 = ncm_spline_eval (qspline->q_z, x_ip1);
+//  const gdouble mean_d12 = 1.0;//(d1 + d2) * 0.5;
+  const gdouble mean_d12 = (d1 + d2) * 0.5;
   const gdouble mu = (d2 - d1) / mean_d12;
   //printf ("# [%u] meio [% 10.7g % 10.7g] derivs [% 10.7g % 10.7g] (% 10.7g) sigma % 20.7g\n", acp->knot, mx1, mx2, d1, d2, mu, sigma);
   f[0] = (mu / sigma);
@@ -198,7 +199,7 @@ nc_hicosmo_qspline_add_continuity_prior (NcHICosmoQSpline *qspline, NcmLikelihoo
 {
   NcHICosmoQSplineContPriorKnot *cp = g_slice_new (NcHICosmoQSplineContPriorKnot);
   NcmMSetFunc *func = ncm_mset_func_new (continuity_prior_f, 0, 1, cp, _nc_hicosmo_spline_continuity_prior_free);
-  g_assert (knot < qspline->nknots - 1);
+  g_assert (knot < qspline->nknots - 2);
   cp->knot = knot;
   cp->qspline_cp = nc_hicosmo_qspline_cont_prior_ref (qspline_cp);
   ncm_likelihood_priors_add (lh, func);
@@ -223,7 +224,7 @@ nc_hicosmo_qspline_add_continuity_priors (NcHICosmoQSpline *qspline, NcmLikeliho
   g_assert (sigma > 0);
   
   nc_hicosmo_qspline_cont_prior_set_all_lnsigma (qspline_cp, log (sigma));
-  for (i = 0; i < qspline->nknots - 1; i++)
+  for (i = 0; i < qspline->nknots - 2; i++)
     nc_hicosmo_qspline_add_continuity_prior (qspline, lh, i, qspline_cp);
   
   return qspline_cp;
@@ -244,7 +245,7 @@ nc_hicosmo_qspline_add_continuity_constraint (NcHICosmoQSpline *qspline, NcmFit 
 {
   NcHICosmoQSplineContPriorKnot *cp = g_slice_new (NcHICosmoQSplineContPriorKnot);
   NcmMSetFunc *func = ncm_mset_func_new (continuity_prior_f, 0, 1, cp, _nc_hicosmo_spline_continuity_prior_free);
-  g_assert (knot < qspline->nknots - 1);
+  g_assert (knot < qspline->nknots - 2);
   cp->knot = knot;
   cp->qspline_cp = nc_hicosmo_qspline_cont_prior_ref (qspline_cp);
   ncm_fit_add_inequality_constraint (fit, func, 1.0);
@@ -269,7 +270,7 @@ nc_hicosmo_qspline_add_continuity_constraints (NcHICosmoQSpline *qspline, NcmFit
   g_assert (sigma > 0);
   
   nc_hicosmo_qspline_cont_prior_set_all_lnsigma (qspline_cp, log (sigma));
-  for (i = 0; i < qspline->nknots - 1; i++)
+  for (i = 0; i < qspline->nknots - 2; i++)
     nc_hicosmo_qspline_add_continuity_constraint (qspline, fit, i, qspline_cp);
   
   return qspline_cp;
@@ -581,7 +582,7 @@ nc_hicosmo_qspline_cont_prior_set_property (GObject *object, guint prop_id, cons
       qspline_cp->nknots = g_value_get_uint (value);
       if (qspline_cp->ln_sigma != NULL)
         g_error ("NcHICosmoQSplineContPrior is a construct only property.");
-      qspline_cp->ln_sigma = ncm_vector_new (qspline_cp->nknots - 1);
+      qspline_cp->ln_sigma = ncm_vector_new (qspline_cp->nknots - 2);
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -683,7 +684,7 @@ nc_hicosmo_qspline_cont_prior_free (NcHICosmoQSplineContPrior *qspline_cp)
 void 
 nc_hicosmo_qspline_cont_prior_set_lnsigma (NcHICosmoQSplineContPrior *qspline_cp, guint i, gdouble ln_sigma)
 {
-  g_assert_cmpint (i, < ,qspline_cp->nknots - 1);
+  g_assert_cmpint (i, < ,qspline_cp->nknots - 2);
   ncm_vector_set (qspline_cp->ln_sigma, i, ln_sigma);
 }
 
@@ -700,7 +701,7 @@ nc_hicosmo_qspline_cont_prior_set_all_lnsigma (NcHICosmoQSplineContPrior *qsplin
 {
   guint i;
 
-  for (i = 0; i < qspline_cp->nknots - 1; i++)
+  for (i = 0; i < qspline_cp->nknots - 2; i++)
   {
     ncm_vector_set (qspline_cp->ln_sigma, i, ln_sigma);
   }
@@ -718,6 +719,6 @@ nc_hicosmo_qspline_cont_prior_set_all_lnsigma (NcHICosmoQSplineContPrior *qsplin
 gdouble 
 nc_hicosmo_qspline_cont_prior_get_lnsigma (NcHICosmoQSplineContPrior *qspline_cp, guint i)
 {
-  g_assert_cmpint (i, < ,qspline_cp->nknots - 1);
+  g_assert_cmpint (i, < ,qspline_cp->nknots - 2);
   return ncm_vector_get (qspline_cp->ln_sigma, i);  
 }
