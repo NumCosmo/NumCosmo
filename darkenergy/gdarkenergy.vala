@@ -53,11 +53,11 @@ public class Nc.GDE : GLib.Object {
     } catch (Error e) {
       stderr.printf ("Could not load UI: %s\n", e.message);
       return false;
-    } 
+    }
   }
 
   public void add_model_by_type (Gtk.ListStore store, Type pt) {
-    foreach (unowned Type ch in pt.children ()) {
+    foreach (unowned GLib.Type ch in pt.children ()) {
       if (ch.is_abstract ()) {
         add_model_by_type (store, ch);
       }

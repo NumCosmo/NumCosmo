@@ -160,19 +160,14 @@ continuity_prior_f (NcmMSet *mset, gpointer obj, const gdouble *x, gdouble *f)
   NcHICosmoQSpline *qspline = NC_HICOSMO_QSPLINE (ncm_mset_peek (mset, nc_hicosmo_id ()));
   NcHICosmoQSplineContPriorKnot *acp = (NcHICosmoQSplineContPriorKnot *) obj;
   const gdouble sigma = exp (nc_hicosmo_qspline_cont_prior_get_lnsigma (acp->qspline_cp, acp->knot));
+
   const gdouble x_i = ncm_vector_get (qspline->q_z->xv, acp->knot);
   const gdouble x_ip1 = ncm_vector_get (qspline->q_z->xv, acp->knot + 1);
   const gdouble x_ip2 = ncm_vector_get (qspline->q_z->xv, acp->knot + 2);
-  const gdouble mx1 = (x_ip1 + x_i) * 0.5;
-  const gdouble mx2 = (x_ip2 + x_ip1) * 0.5;
-  const gdouble d1 = ncm_spline_eval_deriv_nmax (qspline->q_z, mx1);
-  const gdouble d2 = ncm_spline_eval_deriv_nmax (qspline->q_z, mx2);
-//  const gdouble d1 = ncm_spline_eval (qspline->q_z, x_i);
-//  const gdouble d2 = ncm_spline_eval (qspline->q_z, x_ip1);
-  const gdouble mean_d12 = 1.0;
-//  const gdouble mean_d12 = (d1 + d2) * 0.5;
-  const gdouble mu = (d2 - d1) / mean_d12;
-  //printf ("# [%u] meio [% 10.7g % 10.7g] derivs [% 10.7g % 10.7g] (% 10.7g) sigma % 20.7g\n", acp->knot, mx1, mx2, d1, d2, mu, sigma);
+  const gdouble qz_i = ncm_spline_eval (qspline->q_z, x_i);
+  const gdouble qz_ip1 = ncm_spline_eval (qspline->q_z, x_ip1);
+  const gdouble qz_ip2 = ncm_spline_eval (qspline->q_z, x_ip2);
+  const gdouble mu = (qz_i + qz_ip2 - 2.0 * qz_ip1) * 0.5;
   f[0] = (mu / sigma);
 }
 
@@ -287,11 +282,11 @@ enum {
 static void
 nc_hicosmo_qspline_init (NcHICosmoQSpline *qspline)
 {
-  qspline->nknots = 0;
-  qspline->size = 0;
-  qspline->z_f = 0.0;
-  qspline->q_z = NULL;
-  qspline->E2_z = NULL;
+  qspline->nknots  = 0;
+  qspline->size    = 0;
+  qspline->z_f     = 0.0;
+  qspline->q_z     = NULL;
+  qspline->E2_z    = NULL;
   qspline->qs_ctrl = NULL;
 }
 
@@ -509,7 +504,7 @@ nc_hicosmo_qspline_class_init (NcHICosmoQSplineClass *klass)
                                                         "Spline object",
                                                         NCM_TYPE_SPLINE,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-
+  
   g_object_class_install_property (object_class,
                                    PROP_Z_F,
                                    g_param_spec_double ("zf",
@@ -531,7 +526,7 @@ nc_hicosmo_qspline_class_init (NcHICosmoQSplineClass *klass)
 enum
 {
   PROP_CP_0,
-  PROP_CP_NKNOTS
+  PROP_CP_NKNOTS,
 };
 
 G_DEFINE_TYPE (NcHICosmoQSplineContPrior, nc_hicosmo_qspline_cont_prior, G_TYPE_OBJECT);
@@ -539,8 +534,8 @@ G_DEFINE_TYPE (NcHICosmoQSplineContPrior, nc_hicosmo_qspline_cont_prior, G_TYPE_
 static void
 nc_hicosmo_qspline_cont_prior_init (NcHICosmoQSplineContPrior *qspline_cp)
 {
-  qspline_cp->nknots = 0;
-  qspline_cp->ln_sigma = NULL;
+  qspline_cp->nknots      = 0;
+  qspline_cp->ln_sigma    = NULL;
 }
 
 static void
@@ -579,10 +574,7 @@ nc_hicosmo_qspline_cont_prior_set_property (GObject *object, guint prop_id, cons
   switch (prop_id)
   {
     case PROP_CP_NKNOTS:
-      qspline_cp->nknots = g_value_get_uint (value);
-      if (qspline_cp->ln_sigma != NULL)
-        g_error ("NcHICosmoQSplineContPrior is a construct only property.");
-      qspline_cp->ln_sigma = ncm_vector_new (qspline_cp->nknots - 2);
+      nc_hicosmo_qspline_cont_prior_set_nknots (qspline_cp, g_value_get_uint (value));
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -599,7 +591,7 @@ nc_hicosmo_qspline_cont_prior_get_property (GObject *object, guint prop_id, GVal
   switch (prop_id)
   {
     case PROP_CP_NKNOTS:
-      g_value_set_uint (value, qspline_cp->nknots);
+      g_value_set_uint (value, nc_hicosmo_qspline_cont_prior_get_nknots (qspline_cp));
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -670,6 +662,45 @@ void
 nc_hicosmo_qspline_cont_prior_free (NcHICosmoQSplineContPrior *qspline_cp)
 {
   g_object_unref (qspline_cp);
+}
+
+/**
+ * nc_hicosmo_qspline_cont_prior_set_nknots: 
+ * @qspline_cp: FIXME
+ * @nknots: FIXME
+ * 
+ * FIXME
+ * 
+ */
+void
+nc_hicosmo_qspline_cont_prior_set_nknots (NcHICosmoQSplineContPrior *qspline_cp, guint nknots)
+{
+  g_assert (nknots > 2);
+  if (nknots == 0 || (qspline_cp->nknots != nknots))
+  {
+    ncm_vector_clear (&qspline_cp->ln_sigma);
+    qspline_cp->nknots = 0;
+  }
+  
+  if (qspline_cp->nknots == 0 && (nknots > 0))
+  {
+    qspline_cp->nknots   = nknots;
+    qspline_cp->ln_sigma = ncm_vector_new (nknots - 2);
+  }
+}
+
+/**
+ * nc_hicosmo_qspline_cont_prior_get_nknots: 
+ * @qspline_cp: FIXME
+ * 
+ * FIXME
+ * 
+ * Returns: FIXME
+ */
+guint
+nc_hicosmo_qspline_cont_prior_get_nknots (NcHICosmoQSplineContPrior *qspline_cp)
+{
+  return qspline_cp->nknots;
 }
 
 /**

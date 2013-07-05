@@ -137,6 +137,7 @@
     <title>Perturbations</title>
     <xi:include href="xml/linear.xml"/>
     <xi:include href="xml/covariance.xml"/>
+    <xi:include href="xml/hydrodyn_adiabatic.xml"/>
   </chapter>
 
   <chapter>

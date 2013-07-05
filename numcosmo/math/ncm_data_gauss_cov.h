@@ -62,6 +62,11 @@ struct _NcmDataGaussCov
   NcmMatrix *LLT;
   gboolean prepared_LLT;
   gboolean use_det;
+/*  
+  gboolean use_ofit;
+  gdouble ofit_mean;
+  gdouble ofit_sigma;
+ */
 };
 
 GType ncm_data_gauss_cov_get_type (void) G_GNUC_CONST;

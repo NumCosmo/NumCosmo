@@ -50,6 +50,11 @@ enum
   PROP_0,
   PROP_NPOINTS,
   PROP_USE_DET,
+/*  
+  PROP_USE_OFIT,
+  PROP_OFIT_MEAN,
+  PROP_OFIT_SIGMA,
+ */ 
   PROP_SIZE,
 };
 
@@ -65,6 +70,11 @@ ncm_data_gauss_cov_init (NcmDataGaussCov *gauss)
   gauss->LLT          = NULL;
   gauss->prepared_LLT = FALSE;
   gauss->use_det      = FALSE;
+/*
+  gauss->use_ofit     = FALSE;
+  gauss->ofit_mean    = 0.0;
+  gauss->ofit_sigma   = 0.1;
+ */ 
 }
 
 static void
@@ -90,6 +100,17 @@ ncm_data_gauss_cov_set_property (GObject *object, guint prop_id, const GValue *v
     case PROP_USE_DET:
       gauss->use_det = g_value_get_boolean (value);
       break;
+/*
+    case PROP_USE_OFIT:
+      gauss->use_ofit = g_value_get_boolean (value);
+      break;
+    case PROP_OFIT_MEAN:
+      gauss->ofit_mean = g_value_get_double (value);
+      break;
+    case PROP_OFIT_SIGMA:
+      gauss->ofit_sigma = g_value_get_double (value);
+      break;
+ */
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
       break;
@@ -110,6 +131,17 @@ ncm_data_gauss_cov_get_property (GObject *object, guint prop_id, GValue *value, 
     case PROP_USE_DET:
       g_value_set_boolean (value, gauss->use_det);
       break;
+/*
+    case PROP_USE_OFIT:
+      g_value_set_boolean (value, gauss->use_ofit);
+      break;
+    case PROP_OFIT_MEAN:
+      g_value_set_double (value, gauss->ofit_mean);
+      break;
+    case PROP_OFIT_SIGMA:
+      g_value_set_double (value, gauss->ofit_sigma);
+      break;
+ */
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
       break;
@@ -173,7 +205,31 @@ ncm_data_gauss_cov_class_init (NcmDataGaussCovClass *klass)
                                                          "Use determinant to calculate -2lnL",
                                                          FALSE,
                                                          G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-  
+/*  
+  g_object_class_install_property (object_class,
+                                   PROP_USE_OFIT,
+                                   g_param_spec_boolean ("use-ofit",
+                                                         NULL,
+                                                         "Use overfitting penalty function",
+                                                         FALSE,
+                                                         G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
+  g_object_class_install_property (object_class,
+                                   PROP_OFIT_MEAN,
+                                   g_param_spec_double ("ofit-mean",
+                                                        NULL,
+                                                        "Overfitting penalty mean",
+                                                        -1e300, 1e300, 0.0,
+                                                        G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
+  g_object_class_install_property (object_class,
+                                   PROP_OFIT_SIGMA,
+                                   g_param_spec_double ("ofit-sigma",
+                                                        NULL,
+                                                        "Overfitting penalty standard deviation",
+                                                        1e-300, 1e300, 1e-1,
+                                                        G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+*/
   data_class->get_length     = &_ncm_data_gauss_cov_get_length;
   data_class->copyto         = &_ncm_data_gauss_cov_copyto;
   data_class->begin          = NULL;
@@ -295,6 +351,12 @@ _ncm_data_gauss_cov_m2lnL_val (NcmData *data, NcmMSet *mset, gdouble *m2lnL)
     }
     *m2lnL += 2.0 * lndetL;
   }
+/*
+  if (gauss->use_ofit)
+  {
+    *m2lnL += gsl_pow_2 ((*m2lnL - gauss->ofit_mean) / gauss->ofit_sigma);
+  }
+*/
 }
 
 static void

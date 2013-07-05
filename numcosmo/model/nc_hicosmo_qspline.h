@@ -32,6 +32,8 @@
 #include <numcosmo/math/ncm_fit.h>
 #include <numcosmo/math/ncm_ode_spline.h>
 
+#include <gsl/gsl_multifit.h>
+
 G_BEGIN_DECLS
 
 #define NC_TYPE_HICOSMO_QSPLINE             (nc_hicosmo_qspline_get_type ())
@@ -134,6 +136,8 @@ GType nc_hicosmo_qspline_cont_prior_get_type (void) G_GNUC_CONST;
 NcHICosmoQSplineContPrior *nc_hicosmo_qspline_cont_prior_new (guint nknots);
 NcHICosmoQSplineContPrior *nc_hicosmo_qspline_cont_prior_ref (NcHICosmoQSplineContPrior *qspline_cp);
 void nc_hicosmo_qspline_cont_prior_free (NcHICosmoQSplineContPrior *qspline_cp);
+void nc_hicosmo_qspline_cont_prior_set_nknots (NcHICosmoQSplineContPrior *qspline_cp, guint nknots);
+guint nc_hicosmo_qspline_cont_prior_get_nknots (NcHICosmoQSplineContPrior *qspline_cp);
 void nc_hicosmo_qspline_cont_prior_set_lnsigma (NcHICosmoQSplineContPrior *qspline_cp, guint i, gdouble ln_sigma);
 void nc_hicosmo_qspline_cont_prior_set_all_lnsigma (NcHICosmoQSplineContPrior *qspline_cp, gdouble ln_sigma);
 gdouble nc_hicosmo_qspline_cont_prior_get_lnsigma (NcHICosmoQSplineContPrior *qspline_cp, guint i);
