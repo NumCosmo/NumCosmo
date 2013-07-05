@@ -169,8 +169,8 @@ continuity_prior_f (NcmMSet *mset, gpointer obj, const gdouble *x, gdouble *f)
   const gdouble d2 = ncm_spline_eval_deriv_nmax (qspline->q_z, mx2);
 //  const gdouble d1 = ncm_spline_eval (qspline->q_z, x_i);
 //  const gdouble d2 = ncm_spline_eval (qspline->q_z, x_ip1);
-//  const gdouble mean_d12 = 1.0;//(d1 + d2) * 0.5;
-  const gdouble mean_d12 = (d1 + d2) * 0.5;
+  const gdouble mean_d12 = 1.0;
+//  const gdouble mean_d12 = (d1 + d2) * 0.5;
   const gdouble mu = (d2 - d1) / mean_d12;
   //printf ("# [%u] meio [% 10.7g % 10.7g] derivs [% 10.7g % 10.7g] (% 10.7g) sigma % 20.7g\n", acp->knot, mx1, mx2, d1, d2, mu, sigma);
   f[0] = (mu / sigma);
