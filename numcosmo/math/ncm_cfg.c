@@ -539,7 +539,7 @@ ncm_cfg_is_named_instance (gpointer obj)
 {
   g_assert (numcosmo_init);
   g_assert (G_IS_OBJECT (obj));
-  return g_hash_table_contains (named_instances_ptr_name, obj);
+  return (g_hash_table_lookup (named_instances_ptr_name, obj) != NULL);
 }
 
 /**
@@ -555,7 +555,7 @@ ncm_cfg_exist_named_instance (gchar *name)
 {
   g_assert (numcosmo_init);
   g_assert (name != NULL);
-  return g_hash_table_contains (named_instances_name_ptr, name);
+  return (g_hash_table_lookup (named_instances_name_ptr, name) != NULL);
 }
 
 /**

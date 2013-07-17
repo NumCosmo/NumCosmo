@@ -125,7 +125,7 @@ ncm_mset_model_register_id (NcmModelClass *model_class, gchar *ns, gchar *desc, 
     else
       mset_class->model_desc[id].long_desc = NULL;
 
-    if (g_hash_table_contains (mset_class->ns_table, ns))
+    if (g_hash_table_lookup (mset_class->ns_table, ns) != NULL)
       g_error ("Model namespace <%s> already registered.", ns);
 
     g_hash_table_insert (mset_class->ns_table, 
