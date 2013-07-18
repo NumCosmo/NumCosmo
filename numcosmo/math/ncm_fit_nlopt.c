@@ -396,8 +396,9 @@ _ncm_fit_nlopt_func (guint n, const gdouble *x, gdouble *grad, gpointer userdata
   }
   else
     ncm_fit_m2lnL_val (fit, &m2lnL);
-  
-  ncm_fit_log_step (fit, m2lnL);
+
+  fit->fstate->m2lnL = m2lnL;
+  ncm_fit_log_step (fit);
 
   return m2lnL;
 }

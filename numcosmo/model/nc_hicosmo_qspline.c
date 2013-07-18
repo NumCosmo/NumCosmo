@@ -37,6 +37,9 @@
 
 #include "model/nc_hicosmo_qspline.h"
 #include "math/ncm_spline_cubic_notaknot.h"
+#include "math/ncm_spline_gsl.h"
+
+#include <gsl/gsl_fit.h>
 
 G_DEFINE_TYPE (NcHICosmoQSpline, nc_hicosmo_qspline, NC_TYPE_HICOSMO);
 
@@ -49,7 +52,7 @@ static void
 _nc_hicosmo_qspline_prepare (NcHICosmoQSpline *qs)
 {
   if (ncm_model_ctrl_update (qs->qs_ctrl, NCM_MODEL (qs)))
-  {
+  {   
     ncm_spline_prepare (qs->q_z);
     ncm_ode_spline_prepare (qs->E2_z, qs);
   }
@@ -160,7 +163,7 @@ continuity_prior_f (NcmMSet *mset, gpointer obj, const gdouble *x, gdouble *f)
   NcHICosmoQSpline *qspline = NC_HICOSMO_QSPLINE (ncm_mset_peek (mset, nc_hicosmo_id ()));
   NcHICosmoQSplineContPriorKnot *acp = (NcHICosmoQSplineContPriorKnot *) obj;
   const gdouble sigma = exp (nc_hicosmo_qspline_cont_prior_get_lnsigma (acp->qspline_cp, acp->knot));
-
+/*
   const gdouble x_i = ncm_vector_get (qspline->q_z->xv, acp->knot);
   const gdouble x_ip1 = ncm_vector_get (qspline->q_z->xv, acp->knot + 1);
   const gdouble x_ip2 = ncm_vector_get (qspline->q_z->xv, acp->knot + 2);
@@ -168,7 +171,26 @@ continuity_prior_f (NcmMSet *mset, gpointer obj, const gdouble *x, gdouble *f)
   const gdouble qz_ip1 = ncm_spline_eval (qspline->q_z, x_ip1);
   const gdouble qz_ip2 = ncm_spline_eval (qspline->q_z, x_ip2);
   const gdouble mu = (qz_i + qz_ip2 - 2.0 * qz_ip1) * 0.5;
-  f[0] = (mu / sigma);
+*/
+  gdouble *x_ptr = ncm_vector_ptr (qspline->q_z->xv, acp->knot);
+  gdouble *y_ptr = ncm_vector_ptr (qspline->q_z->yv, acp->knot);
+  gdouble c0, c1, cov00, cov01, cov11, chisq;
+  gdouble var = sigma * sigma;
+  gdouble w[] = {
+    1.0 / ((y_ptr[0] * y_ptr[0] + 1.0) * var), 
+    1.0 / ((y_ptr[1] * y_ptr[1] + 1.0) * var),
+    1.0 / ((y_ptr[2] * y_ptr[2] + 1.0) * var)
+  };
+
+  gsl_fit_wlinear (x_ptr, 1, w, 1, y_ptr, 1, 3, &c0, &c1, &cov00, &cov01, &cov11, &chisq);
+  f[0] = sqrt (chisq);
+}
+
+static void
+continuity_constraint_f (NcmMSet *mset, gpointer obj, const gdouble *x, gdouble *f)
+{
+  continuity_prior_f (mset, obj, x, f);
+  f[0] = f[0] * f[0]; 
 }
 
 static void
@@ -239,7 +261,7 @@ void
 nc_hicosmo_qspline_add_continuity_constraint (NcHICosmoQSpline *qspline, NcmFit *fit, gint knot, NcHICosmoQSplineContPrior *qspline_cp)
 {
   NcHICosmoQSplineContPriorKnot *cp = g_slice_new (NcHICosmoQSplineContPriorKnot);
-  NcmMSetFunc *func = ncm_mset_func_new (continuity_prior_f, 0, 1, cp, _nc_hicosmo_spline_continuity_prior_free);
+  NcmMSetFunc *func = ncm_mset_func_new (continuity_constraint_f, 0, 1, cp, _nc_hicosmo_spline_continuity_prior_free);
   g_assert (knot < qspline->nknots - 2);
   cp->knot = knot;
   cp->qspline_cp = nc_hicosmo_qspline_cont_prior_ref (qspline_cp);
@@ -282,12 +304,12 @@ enum {
 static void
 nc_hicosmo_qspline_init (NcHICosmoQSpline *qspline)
 {
-  qspline->nknots  = 0;
-  qspline->size    = 0;
-  qspline->z_f     = 0.0;
-  qspline->q_z     = NULL;
-  qspline->E2_z    = NULL;
-  qspline->qs_ctrl = NULL;
+  qspline->nknots   = 0;
+  qspline->size     = 0;
+  qspline->z_f      = 0.0;
+  qspline->q_z      = NULL;
+  qspline->E2_z     = NULL;
+  qspline->qs_ctrl  = NULL;
 }
 
 static void
@@ -301,20 +323,21 @@ _nc_hicosmo_qspline_constructed (GObject *object)
     NcmModelClass *model_class = NCM_MODEL_GET_CLASS (model);
     NcmVector *zv, *qv;
     guint i, qvi;
-
+    guint qz_size = ncm_model_vparam_len (model, NC_HICOSMO_QSPLINE_Q);
+    
     qspline->qs_ctrl = ncm_model_ctrl_new (NULL);
     
-    qspline->nknots = ncm_model_vparam_len (model, NC_HICOSMO_QSPLINE_Q);
+    qspline->nknots = qz_size;
     qspline->size = model_class->sparam_len + qspline->nknots;
 
     qvi = ncm_model_vparam_index (model, NC_HICOSMO_QSPLINE_Q, 0);
     
-    zv = ncm_vector_new (qspline->nknots);
-    qv = ncm_vector_get_subvector (model->params, qvi, qspline->nknots);
-    
-    for (i = 0; i < qspline->nknots; i++)
+    zv = ncm_vector_new (qz_size);
+    qv = ncm_vector_get_subvector (model->params, qvi, qz_size);
+
+    for (i = 0; i < qz_size; i++)
     {
-      gdouble zi = qspline->z_f / (qspline->nknots - 1.0) * i;
+      gdouble zi = qspline->z_f / (qz_size - 1.0) * i;
       gdouble xi = zi + 1.0;
       gdouble xi2 = xi * xi;
       gdouble xi3 = xi2 * xi;

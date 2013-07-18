@@ -811,7 +811,7 @@ _ncm_fit_run_empty (NcmFit *fit, NcmFitRunMsgs mtype)
   fit->mtype = mtype;
 
   ncm_fit_m2lnL_val (fit, &fit->fstate->m2lnL);
-  ncm_fit_log_step (fit, fit->fstate->m2lnL);
+  ncm_fit_log_step (fit);
 
   fit->fstate->m2lnL_prec   = 0.0;
   fit->fstate->has_covar    = FALSE;
@@ -965,20 +965,19 @@ ncm_fit_log_end (NcmFit *fit)
       g_message ("\n");
     g_message ("#  Minimum found with precision: % 8.5e (|df|/f or |dx|)\n", fit->fstate->m2lnL_prec);
   }
-  ncm_fit_log_state (fit, fit->fstate->m2lnL);
+  ncm_fit_log_state (fit);
   return;
 }
 
 /**
  * ncm_fit_log_state:
  * @fit: a #NcmFit
- * @m2lnL: minus two times the logarithm base e of the likelihood.
  *
  * This function prints in the log the current state.
  * 
  */
 void
-ncm_fit_log_state (NcmFit *fit, gdouble m2lnL)
+ncm_fit_log_state (NcmFit *fit)
 {
   gint i;
   if (fit->mtype > NCM_FIT_RUN_MSGS_NONE)
@@ -996,7 +995,7 @@ ncm_fit_log_state (NcmFit *fit, gdouble m2lnL)
     g_message ("#  function evaluations [%06d]\n", fit->fstate->func_eval);
     g_message ("#  gradient evaluations [%06d]\n", fit->fstate->grad_eval);
     g_message ("#  degrees of freedom   [%06d]\n", fit->fstate->dof);
-    g_message ("#  m2lnL     = %20.15g\n", m2lnL);
+    g_message ("#  m2lnL     = %20.15g\n", fit->fstate->m2lnL);
     g_message ("#  Fit parameters:\n#    ");
     for (i = 0; i < ncm_mset_fparam_len (fit->mset); i++)
       g_message ("[% -20.15g] ", ncm_mset_fparam_get (fit->mset, i));
@@ -1008,15 +1007,14 @@ ncm_fit_log_state (NcmFit *fit, gdouble m2lnL)
 /**
  * ncm_fit_log_step:
  * @fit: a #NcmFit
- * @m2lnL: minus two times the logarithm base e of the likelihood.
  *
  * FIXME
  */
 void
-ncm_fit_log_step (NcmFit *fit, gdouble m2lnL)
+ncm_fit_log_step (NcmFit *fit)
 {
   if (fit->mtype == NCM_FIT_RUN_MSGS_FULL)
-    ncm_fit_log_state (fit, m2lnL);
+    ncm_fit_log_state (fit);
   else if (fit->mtype == NCM_FIT_RUN_MSGS_SIMPLE)
   {
     if (fit->fstate->niter < 10 || ((fit->fstate->niter % 10) == 0))

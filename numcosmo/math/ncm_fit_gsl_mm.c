@@ -230,7 +230,8 @@ _ncm_fit_gsl_mm_run (NcmFit *fit, NcmFitRunMsgs mtype)
     }
     else
       status = gsl_multimin_test_gradient (fit_gsl_mm->mm->gradient, pscale);
-    ncm_fit_log_step (fit, fit_gsl_mm->mm->f);
+    fit->fstate->m2lnL = fit_gsl_mm->mm->f;
+    ncm_fit_log_step (fit);
   }
   while ( (status == GSL_CONTINUE) && (fit->fstate->niter < fit->maxiter) );
 

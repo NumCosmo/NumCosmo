@@ -311,7 +311,8 @@ nc_residual_levmar_f (gdouble *p, gdouble *hx, gint m, gint n, gpointer adata)
   
   ncm_fit_ls_f (fit, f);
 
-  ncm_fit_log_step (fit, gsl_pow_2 (gsl_blas_dnrm2 (ncm_vector_gsl (f))));
+  fit->fstate->m2lnL = gsl_pow_2 (gsl_blas_dnrm2 (ncm_vector_gsl (f)));
+  ncm_fit_log_step (fit);
   ncm_vector_free (f);
 }
 

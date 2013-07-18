@@ -246,7 +246,8 @@ _ncm_fit_gsl_mms_run (NcmFit *fit, NcmFitRunMsgs mtype)
       if (status == GSL_ETOL)
         status = GSL_CONTINUE;
     }
-    ncm_fit_log_step (fit, fit_gsl_mms->mms->fval);
+    fit->fstate->m2lnL = fit_gsl_mms->mms->fval;  
+    ncm_fit_log_step (fit);
   }
   while ( (status == GSL_CONTINUE) && (fit->fstate->niter < fit->maxiter) );
 

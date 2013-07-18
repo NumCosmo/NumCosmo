@@ -200,8 +200,8 @@ const gchar *ncm_fit_get_desc (NcmFit *fit);
 void ncm_fit_log_info (NcmFit *fit);
 void ncm_fit_log_covar (NcmFit *fit);
 void ncm_fit_log_start (NcmFit *fit);
-void ncm_fit_log_state (NcmFit *fit, gdouble m2lnL);
-void ncm_fit_log_step (NcmFit *fit, gdouble m2lnL);
+void ncm_fit_log_state (NcmFit *fit);
+void ncm_fit_log_step (NcmFit *fit);
 void ncm_fit_log_step_error (NcmFit *fit, const gchar *strerror, ...);
 void ncm_fit_log_end (NcmFit *fit);
 
