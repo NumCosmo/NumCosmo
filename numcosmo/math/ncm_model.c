@@ -867,7 +867,7 @@ ncm_model_class_set_vparam (NcmModelClass *model_class, guint vparam_id, guint d
 void
 ncm_model_class_check_params_info (NcmModelClass *model_class)
 {
-  guint64 i;
+  gulong i;
   guint total_params_len = model_class->sparam_len + model_class->vparam_len;
   if (!total_params_len)
   {

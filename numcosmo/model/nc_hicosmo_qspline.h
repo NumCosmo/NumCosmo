@@ -75,10 +75,10 @@ typedef enum _NcHICosmoQSplineVParams
 } NcHICosmoQSplineVParams;
 
 #define NC_HICOSMO_QSPLINE_DEFAULT_H0      ncm_c_hubble_cte_wmap ()
-#define NC_HICOSMO_QSPLINE_DEFAULT_OMEGA_T    ( 1.0)
-#define NC_HICOSMO_QSPLINE_DEFAULT_AS_DRAG    ( 0.035)
-#define NC_HICOSMO_QSPLINE_DEFAULT_Q     (-0.5)
-#define NC_HICOSMO_QSPLINE_DEFAULT_Q_LEN (3)
+#define NC_HICOSMO_QSPLINE_DEFAULT_OMEGA_T ( 1.0)
+#define NC_HICOSMO_QSPLINE_DEFAULT_AS_DRAG ( 0.035)
+#define NC_HICOSMO_QSPLINE_DEFAULT_Q       (-0.5)
+#define NC_HICOSMO_QSPLINE_DEFAULT_Q_LEN   (3)
 
 struct _NcHICosmoQSplineClass
 {
