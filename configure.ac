@@ -2,11 +2,45 @@ dnl ***************************************************************************
 dnl Process this file with autoconf to produce a configure script.
 dnl ***************************************************************************
 
+#
+# The following version number definitions apply to GLib, GModule, GObject,
+# GThread and GIO as a whole, so if changes occurred in any of them, they are
+# all treated with the same interface and binary age.
+#
+# Making releases:
+#   glib_micro_version += 1;
+#   glib_interface_age += 1;
+#   glib_binary_age += 1;
+# if any functions have been added, set glib_interface_age to 0.
+# if backwards compatibility has been broken,
+# set glib_binary_age _and_ glib_interface_age to 0.
+#
+# remember to add a GLIB_VERSION_2_xx macro every time the minor version is
+# bumped, as well as the GLIB_DEPRECATED_IN and GLIB_AVAILABLE_IN macros
+# for that version - see gversion.h for further information.
+#
+# in easier to understand terms:
+#
+# <mclasen> on the stable branch, interface age == micro
+# <mclasen> on the unstable (ie master), interface age = 0
+
 m4_define([numcosmo_major_version], [0])
-m4_define([numcosmo_minor_version], [9])
+m4_define([numcosmo_minor_version], [10])
 m4_define([numcosmo_micro_version], [0])
+m4_define([numcosmo_interface_age], [0])
+m4_define([numcosmo_binary_age],
+          [m4_eval(100 * numcosmo_minor_version + numcosmo_micro_version)])
 m4_define([numcosmo_version],
           [numcosmo_major_version.numcosmo_minor_version.numcosmo_micro_version])
+
+# libtool version related macros
+m4_define([numcosmo_lt_release], [numcosmo_major_version.numcosmo_minor_version])
+m4_define([numcosmo_lt_current],
+          [m4_eval(100 * numcosmo_minor_version + numcosmo_micro_version - numcosmo_interface_age)])
+m4_define([numcosmo_lt_revision], [numcosmo_interface_age])
+m4_define([numcosmo_lt_age], [m4_eval(numcosmo_binary_age - numcosmo_interface_age)])
+m4_define([numcosmo_lt_current_minus_age],
+          [m4_eval(numcosmo_lt_current - numcosmo_lt_age)])                    
           
 AC_INIT([numcosmo],[numcosmo_version], https://savannah.nongnu.org/bugs/?func=additem&group=numcosmo, numcosmo, http://www.nongnu.org/numcosmo/)
 AC_CONFIG_SRCDIR([numcosmo/numcosmo.h])
@@ -20,14 +54,39 @@ PACKAGE=numcosmo
 NUMCOSMO_MAJOR_VERSION=numcosmo_major_version
 NUMCOSMO_MINOR_VERSION=numcosmo_minor_version
 NUMCOSMO_MICRO_VERSION=numcosmo_micro_version
-NUMCOSMO_VERSION=$NUMCOSMO_MAJOR_VERSION.$NUMCOSMO_MINOR_VERSION.$NUMCOSMO_MICRO_VERSION
-NUMCOSMO_LT_VERSION="$NUMCOSMO_MAJOR_VERSION:$NUMCOSMO_MINOR_VERSION:$NUMCOSMO_MICRO_VERSION"
+NUMCOSMO_INTERFACE_AGE=numcosmo_interface_age
+NUMCOSMO_BINARY_AGE=numcosmo_binary_age
+NUMCOSMO_VERSION=numcosmo_version
 
 AC_SUBST(NUMCOSMO_MAJOR_VERSION)
 AC_SUBST(NUMCOSMO_MINOR_VERSION)
 AC_SUBST(NUMCOSMO_MICRO_VERSION)
 AC_SUBST(NUMCOSMO_VERSION)
-AC_SUBST(NUMCOSMO_LT_VERSION)
+AC_SUBST(NUMCOSMO_INTERFACE_AGE)
+AC_SUBST(NUMCOSMO_BINARY_AGE)
+
+AC_DEFINE(NUMCOSMO_MAJOR_VERSION, [numcosmo_major_version],
+          [Define to the NUMCOSMO major version])
+AC_DEFINE(NUMCOSMO_MINOR_VERSION, [numcosmo_minor_version],
+          [Define to the NUMCOSMO minor version])
+AC_DEFINE(NUMCOSMO_MICRO_VERSION, [numcosmo_micro_version],
+          [Define to the NUMCOSMO micro version])
+AC_DEFINE(NUMCOSMO_INTERFACE_AGE, [numcosmo_interface_age],
+          [Define to the NUMCOSMO interface age])
+AC_DEFINE(NUMCOSMO_BINARY_AGE, [numcosmo_binary_age],
+          [Define to the NUMCOSMO binary age])
+
+# libtool versioning
+LT_RELEASE=numcosmo_lt_release
+LT_CURRENT=numcosmo_lt_current
+LT_REVISION=numcosmo_lt_revision
+LT_AGE=numcosmo_lt_age
+LT_CURRENT_MINUS_AGE=numcosmo_lt_current_minus_age
+AC_SUBST(LT_RELEASE)
+AC_SUBST(LT_CURRENT)
+AC_SUBST(LT_REVISION)
+AC_SUBST(LT_AGE)
+AC_SUBST(LT_CURRENT_MINUS_AGE)
 
 AC_CONFIG_HEADERS([config.h])
 

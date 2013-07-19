@@ -314,7 +314,7 @@ nc_sources = \
 	perturbations/linear_gsl_ode2.c \
 	perturbations/hydrodyn_adiabatic.c
 
-libnumcosmo_la_LDFLAGS = -version-info $(NUMCOSMO_LT_VERSION)
+libnumcosmo_la_LDFLAGS = -version-info $(LT_CURRENT):$(LT_REVISION):$(LT_AGE)
 
 cosmo_includedir = \
 	$(pkgincludedir)
