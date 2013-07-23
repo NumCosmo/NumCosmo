@@ -101,8 +101,7 @@ nc_hicosmo_de_pad_class_init (NcHICosmoDEPadClass *klass)
   GObjectClass* object_class = G_OBJECT_CLASS (klass);
   NcHICosmoDEClass* parent_class = NC_HICOSMO_DE_CLASS (klass);
   NcmModelClass *model_class = NCM_MODEL_CLASS (klass);
-  object_class->set_property = &ncm_model_class_set_property;
-  object_class->get_property = &ncm_model_class_get_property;
+
   object_class->finalize     = &nc_hicosmo_de_pad_finalize;
 
   nc_hicosmo_de_set_weff_impl (parent_class, &_nc_hicosmo_de_pad_weff);

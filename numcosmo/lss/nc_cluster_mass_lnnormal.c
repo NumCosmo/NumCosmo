@@ -199,8 +199,6 @@ nc_cluster_mass_lnnormal_class_init (NcClusterMassLnnormalClass *klass)
   parent_class->impl = NC_CLUSTER_MASS_IMPL_ALL;
 
   object_class->finalize     = &_nc_cluster_mass_lnnormal_finalize;
-  object_class->set_property = &ncm_model_class_set_property;
-  object_class->get_property = &ncm_model_class_get_property;
 
   model_class->set_property = &_nc_cluster_mass_lnnormal_set_property;
   model_class->get_property = &_nc_cluster_mass_lnnormal_get_property;

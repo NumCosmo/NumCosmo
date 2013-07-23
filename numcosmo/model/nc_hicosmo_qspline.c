@@ -181,9 +181,9 @@ continuity_prior_f (NcmMSet *mset, gpointer obj, const gdouble *x, gdouble *f)
     1.0 / ((y_ptr[1] * y_ptr[1] + 1.0) * var),
     1.0 / ((y_ptr[2] * y_ptr[2] + 1.0) * var)
   };
-
+  gdouble sqrt_det_var = - log (w[0]) - log (w[1]) - log (w[2]);
   gsl_fit_wlinear (x_ptr, 1, w, 1, y_ptr, 1, 3, &c0, &c1, &cov00, &cov01, &cov11, &chisq);
-  f[0] = sqrt (chisq);
+  f[0] = sqrt (1.0e2 + chisq + sqrt_det_var);
 }
 
 static void
@@ -236,15 +236,17 @@ nc_hicosmo_qspline_add_continuity_prior (NcHICosmoQSpline *qspline, NcmLikelihoo
 NcHICosmoQSplineContPrior *
 nc_hicosmo_qspline_add_continuity_priors (NcHICosmoQSpline *qspline, NcmLikelihood *lh, gdouble sigma)
 {
-  guint i;
-  NcHICosmoQSplineContPrior *qspline_cp = nc_hicosmo_qspline_cont_prior_new (qspline->nknots);
-  g_assert (sigma > 0);
-  
-  nc_hicosmo_qspline_cont_prior_set_all_lnsigma (qspline_cp, log (sigma));
-  for (i = 0; i < qspline->nknots - 2; i++)
-    nc_hicosmo_qspline_add_continuity_prior (qspline, lh, i, qspline_cp);
-  
-  return qspline_cp;
+  g_assert (sigma > 0 && qspline->nknots > 2);
+  {
+    NcHICosmoQSplineContPrior *qspline_cp = nc_hicosmo_qspline_cont_prior_new (qspline->nknots - 2);
+    guint i;
+
+    nc_hicosmo_qspline_cont_prior_set_all_lnsigma (qspline_cp, log (sigma));
+    for (i = 0; i < qspline->nknots - 2; i++)
+      nc_hicosmo_qspline_add_continuity_prior (qspline, lh, i, qspline_cp);
+
+    return qspline_cp;
+  }
 }
 
 /**
@@ -442,8 +444,6 @@ nc_hicosmo_qspline_class_init (NcHICosmoQSplineClass *klass)
   NcHICosmoClass* parent_class = NC_HICOSMO_CLASS (klass);
   NcmModelClass *model_class = NCM_MODEL_CLASS (klass);
 
-  object_class->set_property = &ncm_model_class_set_property;
-  object_class->get_property = &ncm_model_class_get_property;
   object_class->constructed  = &_nc_hicosmo_qspline_constructed;
   object_class->dispose      = &nc_hicosmo_qspline_dispose;
   object_class->finalize     = &nc_hicosmo_qspline_finalize;
@@ -549,16 +549,14 @@ nc_hicosmo_qspline_class_init (NcHICosmoQSplineClass *klass)
 enum
 {
   PROP_CP_0,
-  PROP_CP_NKNOTS,
+  PROP_CP_SIZE,
 };
 
-G_DEFINE_TYPE (NcHICosmoQSplineContPrior, nc_hicosmo_qspline_cont_prior, G_TYPE_OBJECT);
+G_DEFINE_TYPE (NcHICosmoQSplineContPrior, nc_hicosmo_qspline_cont_prior, NCM_TYPE_MODEL);
 
 static void
 nc_hicosmo_qspline_cont_prior_init (NcHICosmoQSplineContPrior *qspline_cp)
 {
-  qspline_cp->nknots      = 0;
-  qspline_cp->ln_sigma    = NULL;
 }
 
 static void
@@ -582,8 +580,7 @@ nc_hicosmo_qspline_cont_prior_dispose (GObject *object)
 static void
 nc_hicosmo_qspline_cont_prior_finalize (GObject *object)
 {
-  NcHICosmoQSplineContPrior *qspline_cp = NC_HICOSMO_QSPLINE_CONT_PRIOR (object);
-  ncm_vector_free (qspline_cp->ln_sigma);
+
   /* Chain up : end */
   G_OBJECT_CLASS (nc_hicosmo_qspline_cont_prior_parent_class)->finalize (object);
 }
@@ -591,14 +588,11 @@ nc_hicosmo_qspline_cont_prior_finalize (GObject *object)
 static void
 nc_hicosmo_qspline_cont_prior_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
 {
-  NcHICosmoQSplineContPrior *qspline_cp = NC_HICOSMO_QSPLINE_CONT_PRIOR (object); 
+/*  NcHICosmoQSplineContPrior *qspline_cp = NC_HICOSMO_QSPLINE_CONT_PRIOR (object); */ 
   g_return_if_fail (NC_IS_HICOSMO_QSPLINE_CONT_PRIOR (object));
 
   switch (prop_id)
   {
-    case PROP_CP_NKNOTS:
-      nc_hicosmo_qspline_cont_prior_set_nknots (qspline_cp, g_value_get_uint (value));
-      break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
       break;
@@ -608,54 +602,89 @@ nc_hicosmo_qspline_cont_prior_set_property (GObject *object, guint prop_id, cons
 static void
 nc_hicosmo_qspline_cont_prior_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
 {
-  NcHICosmoQSplineContPrior *qspline_cp = NC_HICOSMO_QSPLINE_CONT_PRIOR (object);
+/*  NcHICosmoQSplineContPrior *qspline_cp = NC_HICOSMO_QSPLINE_CONT_PRIOR (object); */
   g_return_if_fail (NC_IS_HICOSMO_QSPLINE_CONT_PRIOR (object));
 
   switch (prop_id)
   {
-    case PROP_CP_NKNOTS:
-      g_value_set_uint (value, nc_hicosmo_qspline_cont_prior_get_nknots (qspline_cp));
-      break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
       break;
   }
 }
 
+static gboolean _nc_hicosmo_qspline_cont_prior_valid (NcmModel *model);
+NCM_MSET_MODEL_REGISTER_ID (nc_hicosmo_qspline_cont_prior, NC_TYPE_HICOSMO_QSPLINE_CONT_PRIOR);
+
 static void
 nc_hicosmo_qspline_cont_prior_class_init (NcHICosmoQSplineContPriorClass *klass)
 {
   GObjectClass* object_class = G_OBJECT_CLASS (klass);
+  NcmModelClass *model_class = NCM_MODEL_CLASS (klass);
 
-  object_class->constructed = nc_hicosmo_qspline_cont_prior_constructed;
-  object_class->dispose     = nc_hicosmo_qspline_cont_prior_dispose;
-  object_class->finalize    = nc_hicosmo_qspline_cont_prior_finalize;
-  
-  object_class->set_property = nc_hicosmo_qspline_cont_prior_set_property;
-  object_class->get_property = nc_hicosmo_qspline_cont_prior_get_property;
+  object_class->constructed  = nc_hicosmo_qspline_cont_prior_constructed;
+  object_class->dispose      = nc_hicosmo_qspline_cont_prior_dispose;
+  object_class->finalize     = nc_hicosmo_qspline_cont_prior_finalize;
 
-  g_object_class_install_property (object_class,
-                                   PROP_CP_NKNOTS,
-                                   g_param_spec_uint ("nknots",
-                                                      NULL,
-                                                      "Number of knots",
-                                                      3, G_MAXUINT, 3,
-                                                      G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  model_class->set_property  = nc_hicosmo_qspline_cont_prior_set_property;
+  model_class->get_property  = nc_hicosmo_qspline_cont_prior_get_property;
+
+  ncm_model_class_add_params (model_class, 0, 1, PROP_CP_SIZE);
+  ncm_model_class_set_name_nick (model_class, "Q Spline Cont Prior", "qspline_cp");
+
+  /**
+   * NcHICosmoQSplineContPrior:lnsigma:
+   *
+   * FIXME
+   */  
+  /**
+   * NcHICosmoQSplineContPrior:lnsigma-fit:
+   *
+   * FIXME
+   */
+  /**
+   * NcHICosmoQSplineContPrior:lnsigma-length:
+   *
+   * FIXME
+   */
+  ncm_model_class_set_vparam (model_class, 0, 3, "lnsigma", "lnsigma",
+                              log (1e-10), log (1.0e10), fabs (log (1.0e-1)), 0.0, log (1.0e-1),
+                              NCM_PARAM_TYPE_FREE);
+
+  ncm_model_class_check_params_info (model_class);
+/*
+  ncm_mset_model_register_id (model_class, 
+                              "NcHICosmoQSplineContPrior",
+                              "NcHICosmoQSplineContPrior.",
+                              NULL);
+*/
+  model_class->valid = &_nc_hicosmo_qspline_cont_prior_valid;
+
+}
+
+static gboolean 
+_nc_hicosmo_qspline_cont_prior_valid (NcmModel *model)
+{
+  if (!NCM_MODEL_CLASS (nc_hicosmo_qspline_cont_prior_parent_class)->valid (model))
+    return FALSE;
+  /* Chain up : start */
+
+  return TRUE;
 }
 
 /**
  * nc_hicosmo_qspline_cont_prior_new: 
- * @nknots: FIXME
+ * @npriors: FIXME
  * 
  * FIXME
  * 
  * Returns: (transfer full): FIXME
  */
 NcHICosmoQSplineContPrior *
-nc_hicosmo_qspline_cont_prior_new (guint nknots)
+nc_hicosmo_qspline_cont_prior_new (guint npriors)
 {
   NcHICosmoQSplineContPrior *qspline_cp = g_object_new (NC_TYPE_HICOSMO_QSPLINE_CONT_PRIOR,
-                                                        "nknots", nknots,
+                                                        "lnsigma-length", npriors,
                                                         NULL);
   return qspline_cp;
 }
@@ -688,45 +717,6 @@ nc_hicosmo_qspline_cont_prior_free (NcHICosmoQSplineContPrior *qspline_cp)
 }
 
 /**
- * nc_hicosmo_qspline_cont_prior_set_nknots: 
- * @qspline_cp: FIXME
- * @nknots: FIXME
- * 
- * FIXME
- * 
- */
-void
-nc_hicosmo_qspline_cont_prior_set_nknots (NcHICosmoQSplineContPrior *qspline_cp, guint nknots)
-{
-  g_assert (nknots > 2);
-  if (nknots == 0 || (qspline_cp->nknots != nknots))
-  {
-    ncm_vector_clear (&qspline_cp->ln_sigma);
-    qspline_cp->nknots = 0;
-  }
-  
-  if (qspline_cp->nknots == 0 && (nknots > 0))
-  {
-    qspline_cp->nknots   = nknots;
-    qspline_cp->ln_sigma = ncm_vector_new (nknots - 2);
-  }
-}
-
-/**
- * nc_hicosmo_qspline_cont_prior_get_nknots: 
- * @qspline_cp: FIXME
- * 
- * FIXME
- * 
- * Returns: FIXME
- */
-guint
-nc_hicosmo_qspline_cont_prior_get_nknots (NcHICosmoQSplineContPrior *qspline_cp)
-{
-  return qspline_cp->nknots;
-}
-
-/**
  * nc_hicosmo_qspline_cont_prior_set_lnsigma: 
  * @qspline_cp: FIXME
  * @i: FIXME
@@ -738,8 +728,10 @@ nc_hicosmo_qspline_cont_prior_get_nknots (NcHICosmoQSplineContPrior *qspline_cp)
 void 
 nc_hicosmo_qspline_cont_prior_set_lnsigma (NcHICosmoQSplineContPrior *qspline_cp, guint i, gdouble ln_sigma)
 {
-  g_assert_cmpint (i, < ,qspline_cp->nknots - 2);
-  ncm_vector_set (qspline_cp->ln_sigma, i, ln_sigma);
+  NcmModel *model = NCM_MODEL (qspline_cp);
+  guint npriors = ncm_model_vparam_len (model, 0);
+  g_assert_cmpint (i, <, npriors);
+  ncm_model_orig_vparam_set (model, 0, i, ln_sigma);
 }
 
 /**
@@ -753,12 +745,12 @@ nc_hicosmo_qspline_cont_prior_set_lnsigma (NcHICosmoQSplineContPrior *qspline_cp
 void 
 nc_hicosmo_qspline_cont_prior_set_all_lnsigma (NcHICosmoQSplineContPrior *qspline_cp, gdouble ln_sigma)
 {
+  NcmModel *model = NCM_MODEL (qspline_cp);
+  guint npriors = ncm_model_vparam_len (model, 0);
   guint i;
 
-  for (i = 0; i < qspline_cp->nknots - 2; i++)
-  {
-    ncm_vector_set (qspline_cp->ln_sigma, i, ln_sigma);
-  }
+  for (i = 0; i < npriors; i++)
+    ncm_model_orig_vparam_set (model, 0, i, ln_sigma);
 }
 
 /**
@@ -773,6 +765,8 @@ nc_hicosmo_qspline_cont_prior_set_all_lnsigma (NcHICosmoQSplineContPrior *qsplin
 gdouble 
 nc_hicosmo_qspline_cont_prior_get_lnsigma (NcHICosmoQSplineContPrior *qspline_cp, guint i)
 {
-  g_assert_cmpint (i, < ,qspline_cp->nknots - 2);
-  return ncm_vector_get (qspline_cp->ln_sigma, i);  
+  NcmModel *model = NCM_MODEL (qspline_cp);
+  guint npriors = ncm_model_vparam_len (model, 0);
+  g_assert_cmpint (i, <, npriors);
+  return ncm_model_orig_vparam_get (model, 0, i); 
 }

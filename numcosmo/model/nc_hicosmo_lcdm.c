@@ -155,8 +155,7 @@ nc_hicosmo_lcdm_class_init (NcHICosmoLCDMClass *klass)
   GObjectClass* object_class   = G_OBJECT_CLASS (klass);
   NcHICosmoClass* parent_class   = NC_HICOSMO_CLASS (klass);
   NcmModelClass *model_class = NCM_MODEL_CLASS (klass);
-  object_class->set_property = &ncm_model_class_set_property;
-  object_class->get_property = &ncm_model_class_get_property;
+
   object_class->finalize     = &nc_hicosmo_lcdm_finalize;
 
   ncm_model_class_add_params (model_class, 7, 0, PROP_SIZE);

@@ -467,8 +467,6 @@ nc_hicosmo_qpw_class_init (NcHICosmoQPWClass *klass)
   NcHICosmoClass* parent_class = NC_HICOSMO_CLASS (klass);
   NcmModelClass *model_class = NCM_MODEL_CLASS (klass);
 
-  object_class->set_property = &ncm_model_class_set_property;
-  object_class->get_property = &ncm_model_class_get_property;
   object_class->constructed  = &_nc_hicosmo_qpw_constructed;
   object_class->finalize     = &nc_hicosmo_qpw_finalize;
 

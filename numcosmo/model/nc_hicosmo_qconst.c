@@ -108,8 +108,6 @@ nc_hicosmo_qconst_class_init (NcHICosmoQConstClass *klass)
   NcHICosmoClass* parent_class = NC_HICOSMO_CLASS (klass);
   NcmModelClass *model_class = NCM_MODEL_CLASS (klass);
 
-  object_class->set_property = &ncm_model_class_set_property;
-  object_class->get_property = &ncm_model_class_get_property;
   object_class->finalize     = &nc_hicosmo_qconst_finalize;
 
   ncm_model_class_add_params (model_class, 6, 0, PROP_SIZE);

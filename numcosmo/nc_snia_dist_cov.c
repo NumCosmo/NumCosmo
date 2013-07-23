@@ -146,14 +146,15 @@ nc_snia_dist_cov_class_init (NcSNIADistCovClass *klass)
   NcmModelClass* model_class = NCM_MODEL_CLASS (klass);
 
   object_class->constructed  = &nc_snia_dist_cov_constructed;
-  object_class->set_property = &ncm_model_class_set_property;
-  object_class->get_property = &ncm_model_class_get_property;  
   object_class->dispose      = &nc_snia_dist_cov_dispose;
   object_class->finalize     = &nc_snia_dist_cov_finalize;
 
   model_class->set_property = &_nc_snia_dist_cov_set_property;
   model_class->get_property = &_nc_snia_dist_cov_get_property;
 
+  ncm_model_class_add_params (model_class, NC_SNIA_DIST_COV_SPARAM_LEN, NC_SNIA_DIST_COV_VPARAM_LEN, PROP_SIZE);
+  ncm_model_class_set_name_nick (model_class, "Supernovae Ia Distance Covariance", "SNIaDistCov");
+  
   g_object_class_install_property (object_class,
                                    PROP_DIST,
                                    g_param_spec_object ("dist",
@@ -162,9 +163,6 @@ nc_snia_dist_cov_class_init (NcSNIADistCovClass *klass)
                                                         NC_TYPE_DISTANCE,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
   
-  ncm_model_class_add_params (model_class, NC_SNIA_DIST_COV_SPARAM_LEN, NC_SNIA_DIST_COV_VPARAM_LEN, PROP_SIZE);
-  ncm_model_class_set_name_nick (model_class, "Supernovae Ia Distance Covariance", "SNIaDistCov");
-
   ncm_model_class_set_sparam (model_class, NC_SNIA_DIST_COV_ALPHA, "alpha", "alpha",
                               -10.0, 10.0, 1.0e-1,
                               NC_SNIA_DIST_COV_DEFAULT_PARAMS_ABSTOL, NC_SNIA_DIST_COV_DEFAULT_ALPHA,
@@ -190,6 +188,8 @@ nc_snia_dist_cov_class_init (NcSNIADistCovClass *klass)
                               0.0, 1.0e1, 1.0e-3, 
                               NC_SNIA_DIST_COV_DEFAULT_PARAMS_ABSTOL, NC_SNIA_DIST_COV_DEFAULT_SIGMA_INT,
                               NCM_PARAM_TYPE_FIXED);
+
+  ncm_model_class_check_params_info (model_class);
 
   ncm_mset_model_register_id (model_class, 
                               "NcSNIADistCov",

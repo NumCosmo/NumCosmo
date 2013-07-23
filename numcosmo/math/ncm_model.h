@@ -94,8 +94,6 @@ typedef gdouble (*NcmModelFunc1) (NcmModel *model, const gdouble x);
 
 GType ncm_model_get_type (void) G_GNUC_CONST;
 
-void ncm_model_class_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec);
-void ncm_model_class_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec);
 void ncm_model_class_add_params (NcmModelClass *model_class, guint sparam_len, guint vparam_len, guint nonparam_prop_len);
 void ncm_model_class_set_name_nick (NcmModelClass *model_class, const gchar *name, const gchar *nick);
 void ncm_model_class_set_sparam (NcmModelClass *model_class, guint sparam_id, gchar *symbol, gchar *name, gdouble lower_bound, gdouble upper_bound, gdouble scale, gdouble abstol, gdouble default_value, NcmParamType ppt);

@@ -495,18 +495,8 @@ ncm_model_class_init (NcmModelClass *klass)
                                                          G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 }
 
-/**
- * ncm_model_class_get_property: (skip)
- * @object: a #NcmModelClass.
- * @prop_id: FIXME
- * @value: FIXME
- * @pspec: FIXME
- *
- * FIXME
- *
- */
 void
-ncm_model_class_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
+_ncm_model_class_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
 {
   NcmModel *model = NCM_MODEL (object);
   NcmModelClass *model_class = NCM_MODEL_CLASS (g_type_class_peek_static (pspec->owner_type));
@@ -574,18 +564,8 @@ ncm_model_class_get_property (GObject *object, guint prop_id, GValue *value, GPa
     g_assert_not_reached ();
 }
 
-/**
- * ncm_model_class_set_property: (skip)
- * @object: a #NcmModelClass.
- * @prop_id: FIXME
- * @value: FIXME
- * @pspec: FIXME
- *
- * FIXME
- *
- */
-void
-ncm_model_class_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
+static void
+_ncm_model_class_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
 {
   NcmModel *model = NCM_MODEL (object);
   NcmModelClass *model_class = NCM_MODEL_CLASS (g_type_class_peek_static (pspec->owner_type));
@@ -681,6 +661,10 @@ ncm_model_class_set_property (GObject *object, guint prop_id, const GValue *valu
 void
 ncm_model_class_add_params (NcmModelClass *model_class, guint sparam_len, guint vparam_len, guint nonparam_prop_len)
 {
+  GObjectClass *object_class = G_OBJECT_CLASS (model_class);
+  
+  object_class->set_property = &_ncm_model_class_set_property;
+  object_class->get_property = &_ncm_model_class_get_property;
   model_class->parent_sparam_len = model_class->sparam_len;
   model_class->parent_vparam_len = model_class->vparam_len;
   model_class->sparam_len += sparam_len;
@@ -869,7 +853,7 @@ ncm_model_class_check_params_info (NcmModelClass *model_class)
 {
   gulong i;
   guint total_params_len = model_class->sparam_len + model_class->vparam_len;
-  if (!total_params_len)
+  if (total_params_len == 0 && model_class->nonparam_prop_len == 0)
   {
     g_error ("Class size or params not initialized, call ncm_model_class_add_params.");
   }
@@ -890,6 +874,14 @@ ncm_model_class_check_params_info (NcmModelClass *model_class)
       g_error ("Class (%s) didn't initialized vector parameter %lu/%u", model_class->name ? model_class->name : "no-name", i + 1, model_class->vparam_len);
     }
     /* g_debug ("Model[%s][%s] id %lu\n", model_class->name, ((NcmSParam *)g_ptr_array_index (model_class->params_info, i))->name, i); */
+  }
+
+  {
+    GObjectClass *object_class = G_OBJECT_CLASS (model_class);
+    if (object_class->set_property != &_ncm_model_class_set_property)
+      g_error ("Class (%s) set object_class set_property, use model_class set_property instead.", model_class->name ? model_class->name : "no-name");
+    if (object_class->get_property != &_ncm_model_class_get_property)
+      g_error ("Class (%s) set object_class get_property, use model_class get_property instead.", model_class->name ? model_class->name : "no-name");
   }
 }
 

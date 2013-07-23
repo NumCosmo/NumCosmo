@@ -120,24 +120,22 @@ NcHICosmoQSplineContPrior *nc_hicosmo_qspline_add_continuity_constraints (NcHICo
 struct _NcHICosmoQSplineContPriorClass
 {
   /*< private >*/
-  GObjectClass parent_class;
+  NcmModelClass parent_class;
 };
 
 struct _NcHICosmoQSplineContPrior
 {
   /*< private >*/
-  GObject parent_instance;
-  guint nknots;
-  NcmVector *ln_sigma;
+  NcmModel parent_instance;
 };
 
 GType nc_hicosmo_qspline_cont_prior_get_type (void) G_GNUC_CONST;
 
-NcHICosmoQSplineContPrior *nc_hicosmo_qspline_cont_prior_new (guint nknots);
+NCM_MSET_MODEL_DECLARE_ID (nc_hicosmo_qspline_cont_prior);
+
+NcHICosmoQSplineContPrior *nc_hicosmo_qspline_cont_prior_new (guint npriors);
 NcHICosmoQSplineContPrior *nc_hicosmo_qspline_cont_prior_ref (NcHICosmoQSplineContPrior *qspline_cp);
 void nc_hicosmo_qspline_cont_prior_free (NcHICosmoQSplineContPrior *qspline_cp);
-void nc_hicosmo_qspline_cont_prior_set_nknots (NcHICosmoQSplineContPrior *qspline_cp, guint nknots);
-guint nc_hicosmo_qspline_cont_prior_get_nknots (NcHICosmoQSplineContPrior *qspline_cp);
 void nc_hicosmo_qspline_cont_prior_set_lnsigma (NcHICosmoQSplineContPrior *qspline_cp, guint i, gdouble ln_sigma);
 void nc_hicosmo_qspline_cont_prior_set_all_lnsigma (NcHICosmoQSplineContPrior *qspline_cp, gdouble ln_sigma);
 gdouble nc_hicosmo_qspline_cont_prior_get_lnsigma (NcHICosmoQSplineContPrior *qspline_cp, guint i);

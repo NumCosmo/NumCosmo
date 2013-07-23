@@ -165,8 +165,6 @@ nc_cluster_mass_nodist_class_init (NcClusterMassNodistClass *klass)
   parent_class->impl = NC_CLUSTER_MASS_N_LIMITS | NC_CLUSTER_MASS_RESAMPLE;
 
   object_class->finalize     =  &nc_cluster_mass_nodist_finalize;
-  object_class->set_property = &ncm_model_class_set_property;
-  object_class->get_property = &ncm_model_class_get_property;
 
   model_class->set_property = &_nc_cluster_mass_nodist_set_property;
   model_class->get_property = &_nc_cluster_mass_nodist_get_property;

@@ -284,8 +284,6 @@ nc_cluster_mass_benson_xray_class_init (NcClusterMassBensonXRayClass *klass)
   grand_parent_class->obs_params_len = &_nc_cluster_mass_benson_xray_obs_params_len;
 
   object_class->finalize = _nc_cluster_mass_benson_xray_finalize;
-  object_class->set_property = &ncm_model_class_set_property;
-  object_class->get_property = &ncm_model_class_get_property;
 
   model_class->set_property = &_nc_cluster_mass_benson_xray_set_property;
   model_class->get_property = &_nc_cluster_mass_benson_xray_get_property;

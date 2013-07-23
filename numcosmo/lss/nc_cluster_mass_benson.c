@@ -408,8 +408,6 @@ nc_cluster_mass_benson_class_init (NcClusterMassBensonClass *klass)
   parent_class->impl = NC_CLUSTER_MASS_IMPL_ALL;
 
   object_class->finalize = _nc_cluster_mass_benson_finalize;
-  object_class->set_property = &ncm_model_class_set_property;
-  object_class->get_property = &ncm_model_class_get_property;
 
   model_class->set_property = &_nc_cluster_mass_benson_set_property;
   model_class->get_property = &_nc_cluster_mass_benson_get_property;
