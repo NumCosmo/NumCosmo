@@ -130,6 +130,6 @@ nc_hicosmo_prior_top_add (NcmLikelihood *lh, gdouble z, gdouble alpha, gdouble s
   NcHICosmoPriorTop *tp = g_slice_new (NcHICosmoPriorTop);
   NcmMSetFunc *prior = ncm_mset_func_new (&_nc_hicosmo_prior_top_f, 0, 1, tp, (GDestroyNotify)nc_hicosmo_prior_top_free);
   nc_hicosmo_prior_top_set (tp, z, alpha, sigma_alpha, n);
-  ncm_likelihood_priors_add (lh, prior);
+  ncm_likelihood_priors_add (lh, prior, FALSE);
   ncm_mset_func_free (prior);
 }

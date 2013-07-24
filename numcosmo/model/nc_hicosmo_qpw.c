@@ -165,7 +165,7 @@ nc_hicosmo_qpw_add_continuity_prior (NcHICosmoQPW *qpw, NcmLikelihood *lh, gint 
   g_assert (sigma > 0.0);
   cp->knot = knot;
   cp->sigma = sigma;
-  ncm_likelihood_priors_add (lh, func);
+  ncm_likelihood_priors_add (lh, func, FALSE);
   return;
 }
 
@@ -212,7 +212,7 @@ nc_hicosmo_qpw_add_asymptotic_cdm_prior (NcHICosmoQPW *qpw, NcmLikelihood *lh, g
   cp->z = z;
   cp->q = q;
   cp->sigma = sigma;
-  ncm_likelihood_priors_add (lh, func);
+  ncm_likelihood_priors_add (lh, func, FALSE);
   return;
 }
 

@@ -143,7 +143,8 @@ _ncm_fit_constructed (GObject *object)
   {
     NcmFit *fit = NCM_FIT (object);
     gint n = ncm_dataset_get_n (fit->lh->dset);
-    gint n_priors = ncm_likelihood_priors_length (fit->lh);
+    gint n_priors = ncm_likelihood_priors_length_f (fit->lh) + 
+      ncm_likelihood_priors_length_m2lnL (fit->lh);
     gint data_dof = ncm_dataset_get_dof (fit->lh->dset);
 
     g_assert (ncm_dataset_all_init (fit->lh->dset));
@@ -314,7 +315,8 @@ _ncm_fit_reset (NcmFit *fit)
   ncm_mset_prepare_fparam_map (fit->mset);
   {
     guint n          = ncm_dataset_get_n (fit->lh->dset);
-    gint n_priors    = ncm_likelihood_priors_length (fit->lh);
+    gint n_priors    = ncm_likelihood_priors_length_f (fit->lh) + 
+      ncm_likelihood_priors_length_m2lnL (fit->lh);
     guint data_len   = n + n_priors;
     guint fparam_len = ncm_mset_fparam_len (fit->mset);
     gint data_dof    = ncm_dataset_get_dof (fit->lh->dset);

@@ -88,7 +88,7 @@ ncm_prior_add_gaussian_func (NcmLikelihood *lh, NcmMSetFunc *func, gdouble z, gd
   gp->mean = mean;
   gp->sigma = sigma;
 
-  ncm_likelihood_priors_add (lh, prior);
+  ncm_likelihood_priors_add (lh, prior, FALSE);
   ncm_mset_func_free (prior);
 }
 
@@ -118,7 +118,7 @@ ncm_prior_add_gaussian_const_func (NcmLikelihood *lh, NcmMSetFunc *func, gdouble
   gp->mean = mean;
   gp->sigma = sigma;
 
-  ncm_likelihood_priors_add (lh, prior);
+  ncm_likelihood_priors_add (lh, prior, FALSE);
   ncm_mset_func_free (prior);
 }
 
@@ -134,7 +134,7 @@ void
 ncm_prior_add_gaussian (NcmLikelihood *lh, NcmPriorGauss *gp)
 {
   NcmMSetFunc *prior = ncm_mset_func_new (&gaussian_prior_func_f, 0, 1, gp, _ncm_prior_gauss_free);
-  ncm_likelihood_priors_add (lh, prior);
+  ncm_likelihood_priors_add (lh, prior, FALSE);
   ncm_mset_func_free (prior);
 }
 
@@ -168,7 +168,7 @@ ncm_prior_add_gaussian_data (NcmLikelihood *lh, NcmModelID mid, guint pid, gdoub
   gp->mean = mean;
   gp->sigma = sigma;
 
-  ncm_likelihood_priors_add (lh, prior);
+  ncm_likelihood_priors_add (lh, prior, FALSE);
   ncm_mset_func_free (prior);
 }
 
@@ -195,7 +195,7 @@ ncm_prior_add_positive (NcmLikelihood *lh, NcmModelID mid, guint pid)
   NcmMSetFunc *prior = ncm_mset_func_new (&positive_prior_f, 0, 1, gp, _ncm_prior_gauss_free);
   gp->pi.mid = mid;
   gp->pi.pid = pid;
-  ncm_likelihood_priors_add (lh, prior);
+  ncm_likelihood_priors_add (lh, prior, FALSE);
   ncm_mset_func_free (prior);
 }
 
@@ -232,7 +232,7 @@ ncm_prior_add_oneside_a_inf_param (NcmLikelihood *lh, NcmModelID mid, guint pid,
   gp->mean = a;
   gp->sigma = s;
 
-  ncm_likelihood_priors_add (lh, prior);
+  ncm_likelihood_priors_add (lh, prior, FALSE);
   ncm_mset_func_free (prior);
 }
 
@@ -267,7 +267,7 @@ ncm_prior_add_oneside_a_inf_func (NcmLikelihood *lh, NcmMSetFunc *func, gdouble 
   gp->mean = mean;
   gp->sigma = s;
 
-  ncm_likelihood_priors_add (lh, prior);
+  ncm_likelihood_priors_add (lh, prior, FALSE);
   ncm_mset_func_free (prior);
 }
 
@@ -300,7 +300,7 @@ ncm_prior_add_oneside_a_inf_const_func (NcmLikelihood *lh, NcmMSetFunc *func, gd
   gp->mean = mean;
   gp->sigma = s;
 
-  ncm_likelihood_priors_add (lh, prior);
+  ncm_likelihood_priors_add (lh, prior, FALSE);
   ncm_mset_func_free (prior);
 }
 
@@ -316,7 +316,7 @@ void
 ncm_prior_add_oneside_a_inf (NcmLikelihood *lh, NcmPriorGauss *gp)
 {
   NcmMSetFunc *prior = ncm_mset_func_new (&oneside_a_inf_prior_func_f, 0, 1, gp, _ncm_prior_gauss_free);
-  ncm_likelihood_priors_add (lh, prior);
+  ncm_likelihood_priors_add (lh, prior, FALSE);
   ncm_mset_func_free (prior);
 }
 
@@ -355,6 +355,6 @@ ncm_prior_add_twoside_a_b (NcmLikelihood *lh, NcmModelID mid, guint pid, gdouble
   gp->z = b;
   gp->sigma = s;
 
-  ncm_likelihood_priors_add (lh, prior);
+  ncm_likelihood_priors_add (lh, prior, FALSE);
   ncm_mset_func_free (prior);
 }

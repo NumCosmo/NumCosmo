@@ -183,14 +183,7 @@ continuity_prior_f (NcmMSet *mset, gpointer obj, const gdouble *x, gdouble *f)
   };
   gdouble sqrt_det_var = - log (w[0]) - log (w[1]) - log (w[2]);
   gsl_fit_wlinear (x_ptr, 1, w, 1, y_ptr, 1, 3, &c0, &c1, &cov00, &cov01, &cov11, &chisq);
-  f[0] = sqrt (1.0e2 + chisq + sqrt_det_var);
-}
-
-static void
-continuity_constraint_f (NcmMSet *mset, gpointer obj, const gdouble *x, gdouble *f)
-{
-  continuity_prior_f (mset, obj, x, f);
-  f[0] = f[0] * f[0]; 
+  f[0] = chisq + sqrt_det_var;
 }
 
 static void
@@ -219,7 +212,7 @@ nc_hicosmo_qspline_add_continuity_prior (NcHICosmoQSpline *qspline, NcmLikelihoo
   g_assert (knot < qspline->nknots - 2);
   cp->knot = knot;
   cp->qspline_cp = nc_hicosmo_qspline_cont_prior_ref (qspline_cp);
-  ncm_likelihood_priors_add (lh, func);
+  ncm_likelihood_priors_add (lh, func, TRUE);
   return;
 }
 
@@ -263,7 +256,7 @@ void
 nc_hicosmo_qspline_add_continuity_constraint (NcHICosmoQSpline *qspline, NcmFit *fit, gint knot, NcHICosmoQSplineContPrior *qspline_cp)
 {
   NcHICosmoQSplineContPriorKnot *cp = g_slice_new (NcHICosmoQSplineContPriorKnot);
-  NcmMSetFunc *func = ncm_mset_func_new (continuity_constraint_f, 0, 1, cp, _nc_hicosmo_spline_continuity_prior_free);
+  NcmMSetFunc *func = ncm_mset_func_new (continuity_prior_f, 0, 1, cp, _nc_hicosmo_spline_continuity_prior_free);
   g_assert (knot < qspline->nknots - 2);
   cp->knot = knot;
   cp->qspline_cp = nc_hicosmo_qspline_cont_prior_ref (qspline_cp);
@@ -652,12 +645,12 @@ nc_hicosmo_qspline_cont_prior_class_init (NcHICosmoQSplineContPriorClass *klass)
                               NCM_PARAM_TYPE_FREE);
 
   ncm_model_class_check_params_info (model_class);
-/*
+
   ncm_mset_model_register_id (model_class, 
                               "NcHICosmoQSplineContPrior",
                               "NcHICosmoQSplineContPrior.",
                               NULL);
-*/
+
   model_class->valid = &_nc_hicosmo_qspline_cont_prior_valid;
 
 }

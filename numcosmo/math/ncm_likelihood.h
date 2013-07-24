@@ -55,7 +55,8 @@ struct _NcmLikelihood
   /*< private >*/
   GObject parent_instance;
   NcmDataset *dset;
-  GPtrArray *priors;
+  GPtrArray *priors_f;
+  GPtrArray *priors_m2lnL;
 };
 
 GType ncm_likelihood_get_type (void) G_GNUC_CONST;
@@ -67,9 +68,11 @@ NcmLikelihood *ncm_likelihood_copy (NcmLikelihood *lh);
 void ncm_likelihood_free (NcmLikelihood *lh);
 void ncm_likelihood_clear (NcmLikelihood **lh);
 
-void ncm_likelihood_priors_add (NcmLikelihood *lh, NcmMSetFunc *prior);
-NcmMSetFunc *ncm_likelihood_priors_peek (NcmLikelihood *lh, guint i);
-guint ncm_likelihood_priors_length (NcmLikelihood *lh);
+void ncm_likelihood_priors_add (NcmLikelihood *lh, NcmMSetFunc *prior, gboolean is_m2lnL);
+NcmMSetFunc *ncm_likelihood_priors_peek_f (NcmLikelihood *lh, guint i);
+guint ncm_likelihood_priors_length_f (NcmLikelihood *lh);
+NcmMSetFunc *ncm_likelihood_priors_peek_m2lnL (NcmLikelihood *lh, guint i);
+guint ncm_likelihood_priors_length_m2lnL (NcmLikelihood *lh);
 
 gboolean ncm_likelihood_has_leastsquares_J (NcmLikelihood *lh);
 gboolean ncm_likelihood_has_m2lnL_grad (NcmLikelihood *lh);

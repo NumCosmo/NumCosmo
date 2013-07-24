@@ -334,8 +334,8 @@ _ncm_data_gauss_cov_m2lnL_val (NcmData *data, NcmMSet *mset, gdouble *m2lnL)
                         NCM_MATRIX_GSL (gauss->LLT), ncm_vector_gsl (gauss->v));
   NCM_TEST_GSL_RESULT ("_ncm_data_gauss_cov_m2lnL_val", ret);
 
-  ret = gsl_blas_ddot (ncm_vector_gsl (gauss->v), 
-                       ncm_vector_gsl (gauss->v), 
+  ret = gsl_blas_ddot (ncm_vector_gsl (gauss->v),
+                       ncm_vector_gsl (gauss->v),
                        m2lnL);
   NCM_TEST_GSL_RESULT ("_ncm_data_gauss_cov_m2lnL_val", ret);
 

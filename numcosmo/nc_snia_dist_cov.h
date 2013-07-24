@@ -46,7 +46,7 @@ typedef struct _NcSNIADistCovClass NcSNIADistCovClass;
 typedef struct _NcSNIADistCov NcSNIADistCov;
 
 /**
- * NcSNIADistCovParams:
+ * NcSNIADistCovSParams:
  * @NC_SNIA_DIST_COV_ALPHA: FIXME
  * @NC_SNIA_DIST_COV_BETA: FIXME
  * @NC_SNIA_DIST_COV_M1: FIXME
@@ -55,14 +55,29 @@ typedef struct _NcSNIADistCov NcSNIADistCov;
  * FIXME
  * 
  */
-typedef enum _NcSNIADistCovParams
+typedef enum _NcSNIADistCovSParams
 {
   NC_SNIA_DIST_COV_ALPHA = 0,
   NC_SNIA_DIST_COV_BETA,
   NC_SNIA_DIST_COV_M1,
   NC_SNIA_DIST_COV_M2,         /*< private >*/
   NC_SNIA_DIST_COV_SPARAM_LEN, /*< skip >*/
-} NcSNIADistCovParams;
+} NcSNIADistCovSParams;
+
+/**
+ * NcSNIADistCovVParams:
+ * @NC_SNIA_DIST_COV_SIGMA_INT: FIXME
+ * @NC_SNIA_DIST_COV_MU: FIXME
+ * 
+ * FIXME
+ * 
+ */
+typedef enum _NcSNIADistCovVParams
+{
+  NC_SNIA_DIST_COV_SIGMA_INT = 0,
+  NC_SNIA_DIST_COV_MU,            /*< private >*/
+  NC_SNIA_DIST_COV_VPARAM_LEN,    /*< skip >*/
+} NcSNIADistCovVParams;
 
 struct _NcSNIADistCovClass
 {
@@ -98,10 +113,11 @@ void nc_snia_dist_cov_mean (NcSNIADistCov *dcov, NcHICosmo *cosmo, NcDataSNIACov
 #define NC_SNIA_DIST_COV_DEFAULT_M2 (-19.1856133146)
 #define NC_SNIA_DIST_COV_DEFAULT_PARAMS_ABSTOL (0.0)
 
-#define NC_SNIA_DIST_COV_SIGMA_INT (0)
 #define NC_SNIA_DIST_COV_SIGMA_INT_DEFAULT_LEN (4)
 #define NC_SNIA_DIST_COV_DEFAULT_SIGMA_INT (0.0989)
-#define NC_SNIA_DIST_COV_VPARAM_LEN (1)
+
+#define NC_SNIA_DIST_COV_MU_DEFAULT_LEN (0)
+#define NC_SNIA_DIST_COV_DEFAULT_MU (18.0)
 
 G_END_DECLS
 

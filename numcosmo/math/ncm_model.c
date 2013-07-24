@@ -616,33 +616,55 @@ _ncm_model_class_set_property (GObject *object, guint prop_id, const GValue *val
   {
     GVariant *var = g_value_get_variant (value);
     gsize n = g_variant_n_children (var);
+    gsize nv = g_array_index (model->vparam_len, guint, vparam_fit_id);
     gint i;
 
-    if (n != g_array_index (model->vparam_len, guint, vparam_fit_id))
+    if (n == 1)
+    {
+      gboolean tofit;
+      GVariant *varc = g_variant_get_child_value (var, 0);
+      
+      if (g_variant_is_of_type (varc, G_VARIANT_TYPE ("b")))
+        tofit = g_variant_get_boolean (varc);
+      else if (g_variant_is_of_type (varc, G_VARIANT_TYPE ("i")))
+        tofit = g_variant_get_int32 (varc) != 0;
+      else
+        g_error ("set_property: Cannot convert `%s' variant to an array of booleans", g_variant_get_type_string (varc));
+      g_variant_unref (varc);
+      
+      for (i = 0; i < nv; i++)
+      {
+        guint pid = ncm_model_vparam_index (model, vparam_fit_id, i);
+        ncm_model_param_set_ftype (model, pid, tofit ? NCM_PARAM_TYPE_FREE : NCM_PARAM_TYPE_FIXED);
+      }
+    }
+    else if (n != nv)
       g_error ("set_property: cannot set fit type of vector parameter, variant contains %zu childs but vector dimension is %u", n, g_array_index (model->vparam_len, guint, vparam_fit_id));
-
-    if (g_variant_is_of_type (var, G_VARIANT_TYPE ("ab")))
-    {
-      for (i = 0; i < n; i++)
-      {
-        guint pid = ncm_model_vparam_index (model, vparam_fit_id, i);
-        gboolean tofit;
-        g_variant_get_child (var, i, "b", &tofit);
-        ncm_model_param_set_ftype (model, pid, tofit ? NCM_PARAM_TYPE_FREE : NCM_PARAM_TYPE_FIXED);
-      }
-    }
-    else if (g_variant_is_of_type (var, G_VARIANT_TYPE ("ai")))
-    {
-      for (i = 0; i < n; i++)
-      {
-        guint pid = ncm_model_vparam_index (model, vparam_fit_id, i);
-        gint tofit;
-        g_variant_get_child (var, i, "i", &tofit);
-        ncm_model_param_set_ftype (model, pid, tofit ? NCM_PARAM_TYPE_FREE : NCM_PARAM_TYPE_FIXED);
-      }
-    }
     else
-      g_error ("set_property: Cannot convert `%s' variant to an array of booleans", g_variant_get_type_string (var));
+    {
+      if (g_variant_is_of_type (var, G_VARIANT_TYPE ("ab")))
+      {
+        for (i = 0; i < n; i++)
+        {
+          guint pid = ncm_model_vparam_index (model, vparam_fit_id, i);
+          gboolean tofit;
+          g_variant_get_child (var, i, "b", &tofit);
+          ncm_model_param_set_ftype (model, pid, tofit ? NCM_PARAM_TYPE_FREE : NCM_PARAM_TYPE_FIXED);
+        }
+      }
+      else if (g_variant_is_of_type (var, G_VARIANT_TYPE ("ai")))
+      {
+        for (i = 0; i < n; i++)
+        {
+          guint pid = ncm_model_vparam_index (model, vparam_fit_id, i);
+          gint tofit;
+          g_variant_get_child (var, i, "i", &tofit);
+          ncm_model_param_set_ftype (model, pid, tofit ? NCM_PARAM_TYPE_FREE : NCM_PARAM_TYPE_FIXED);
+        }
+      }
+      else
+        g_error ("set_property: Cannot convert `%s' variant to an array of booleans", g_variant_get_type_string (var));
+    }
   }
   else
     g_assert_not_reached ();

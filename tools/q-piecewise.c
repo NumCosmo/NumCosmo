@@ -168,31 +168,6 @@ main(gint argc, gchar *argv[])
 
     //ncm_fit_error (fit, 2, ncm_c_stats_1sigma (), 1, ERR(0));printf("\n");
 
-    while (FALSE)
-    {
-      gdouble old_s = 0.0;
-      gdouble s = 0.0;
-      guint n;
-      for (n = 0; n < ncm_likelihood_priors_length (lh); n++)
-      {
-        NcmMSetFunc *pdata = NCM_MSET_FUNC (ncm_likelihood_priors_peek (lh, n));
-        NcHICosmoQPWContPrior *cprior = (NcHICosmoQPWContPrior *)pdata->obj;
-        old_s = cprior->sigma;
-        s += gsl_pow_2 (ncm_mset_func_eval0 (pdata, mset));
-        printf ("Bunga[%d] = %g\n", n, gsl_pow_2 (ncm_mset_func_eval0 (pdata, mset)));
-      }
-      s = ((old_s) + s/n) / 2.0;
-      printf ("sigma_qp = %g\n", s);
-
-      for (n = 0; n < ncm_likelihood_priors_length (lh); n++)
-      {
-        NcmMSetFunc *pdata = NCM_MSET_FUNC (ncm_likelihood_priors_peek (lh, n));
-        NcHICosmoQPWContPrior *cprior = (NcHICosmoQPWContPrior *)pdata->obj;
-        cprior->sigma = s;
-      }
-      ncm_fit_run (fit, FALSE);
-    }
-
     if (FALSE)
     {
       gdouble chi2_data, chi2_priors;

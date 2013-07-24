@@ -65,7 +65,7 @@ typedef struct _NcDEDataSimpleEntries NcDEDataSimpleEntries;
 struct _NcDEDataSimpleEntries
 {
   gchar *snia_id;
-  gchar *snia_prop;
+  gchar *snia_objser;
   gchar **bao_id;
   gchar *cmb_id;
   gchar **H_id;

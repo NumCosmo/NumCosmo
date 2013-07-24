@@ -243,11 +243,15 @@ main (gint argc, gchar *argv[])
     }
     else if (snia_id->value >= NC_DATA_SNIA_COV_START && snia_id->value <= NC_DATA_SNIA_COV_END)
     {
-      NcSNIADistCov *dcov = nc_snia_dist_cov_new (dist);
+      NcSNIADistCov *dcov;
       NcmData *data;
 
-      if (de_data_simple.snia_prop != NULL)
-        ncm_cfg_object_set_property (G_OBJECT (dcov), de_data_simple.snia_prop);
+      if (de_data_simple.snia_objser == NULL)
+        dcov = nc_snia_dist_cov_new (dist);
+      else
+        dcov = NC_SNIA_DIST_COV (ncm_cfg_create_from_string (de_data_simple.snia_objser));
+
+      g_assert (NC_IS_SNIA_DIST_COV (dcov));
 
       data = nc_data_snia_cov_new (de_data_simple.snia_use_det);
       nc_data_snia_load_cat (NC_DATA_SNIA_COV (data), snia_id->value);

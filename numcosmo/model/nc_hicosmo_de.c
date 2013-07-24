@@ -177,7 +177,7 @@ gboolean
 nc_hicosmo_de_new_add_bbn (NcmLikelihood *lh)
 {
   NcmMSetFunc *func = ncm_mset_func_new (bbn_prior, 0, 1, NULL, NULL);
-  ncm_likelihood_priors_add (lh, func);
+  ncm_likelihood_priors_add (lh, func, FALSE);
   return TRUE;
 }
 
