@@ -47,12 +47,6 @@ typedef struct _NcDistance NcDistance;
 typedef gdouble (*NcDistanceFunc0) (NcDistance *dist, NcHICosmo *cosmo);
 typedef gdouble (*NcDistanceFunc1) (NcDistance *dist, NcHICosmo *cosmo, gdouble z);
 
-struct _NcDistanceClass
-{
-  /*< private >*/
-  GObjectClass parent_class;
-};
-
 struct _NcDistance
 {
   /*< private >*/
@@ -66,6 +60,12 @@ struct _NcDistance
   NcmModelCtrl *ctrl;
   gdouble z_f;
   gboolean use_cache;
+};
+
+struct _NcDistanceClass
+{
+  /*< private >*/
+  GObjectClass parent_class;
 };
 
 GType nc_distance_get_type (void) G_GNUC_CONST;

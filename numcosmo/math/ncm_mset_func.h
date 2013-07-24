@@ -44,12 +44,6 @@ typedef struct _NcmMSetFuncClass NcmMSetFuncClass;
 typedef struct _NcmMSetFunc NcmMSetFunc;
 typedef void (*NcmMSetFuncN) (NcmMSet *mset, gpointer obj, const gdouble *x, gdouble *f);
 
-struct _NcmMSetFuncClass
-{
-  /*< private >*/
-  GObjectClass parent_class;
-};
-
 struct _NcmMSetFunc
 {
   /*< private >*/
@@ -59,6 +53,12 @@ struct _NcmMSetFunc
   GDestroyNotify free;
   guint np;
   guint dim;
+};
+
+struct _NcmMSetFuncClass
+{
+  /*< private >*/
+  GObjectClass parent_class;
 };
 
 GType ncm_mset_func_get_type (void) G_GNUC_CONST;

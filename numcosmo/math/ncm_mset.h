@@ -60,14 +60,6 @@ struct _NcmMSetModelDesc
   gchar *long_desc;
 };
 
-struct _NcmMSetClass
-{
-  /*< private >*/
-  GObjectClass parent_class;
-  GHashTable *ns_table;
-  NcmMSetModelDesc model_desc[NCM_MODEL_MAX_ID];
-};
-
 struct _NcmMSet
 {
   /*< private >*/
@@ -78,6 +70,14 @@ struct _NcmMSet
   gboolean valid_map;
   guint total_len;
   guint fparam_len;
+};
+
+struct _NcmMSetClass
+{
+  /*< private >*/
+  GObjectClass parent_class;
+  GHashTable *ns_table;
+  NcmMSetModelDesc model_desc[NCM_MODEL_MAX_ID];
 };
 
 struct _NcmMSetPIndex

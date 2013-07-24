@@ -43,14 +43,6 @@ G_BEGIN_DECLS
 typedef struct _NcMultiplicityFuncWarrenClass NcMultiplicityFuncWarrenClass;
 typedef struct _NcMultiplicityFuncWarren NcMultiplicityFuncWarren;
 
-
-
-struct _NcMultiplicityFuncWarrenClass
-{
-  /*< private >*/
-  NcMultiplicityFuncClass parent_class;
-};
-
 struct _NcMultiplicityFuncWarren
 {
   /*< private >*/
@@ -59,6 +51,12 @@ struct _NcMultiplicityFuncWarren
   gdouble a;
   gdouble b;
   gdouble c;
+};
+
+struct _NcMultiplicityFuncWarrenClass
+{
+  /*< private >*/
+  NcMultiplicityFuncClass parent_class;
 };
 
 GType nc_multiplicity_func_warren_get_type (void) G_GNUC_CONST;

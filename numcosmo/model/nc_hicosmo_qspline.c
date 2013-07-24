@@ -172,6 +172,27 @@ continuity_prior_f (NcmMSet *mset, gpointer obj, const gdouble *x, gdouble *f)
   const gdouble qz_ip2 = ncm_spline_eval (qspline->q_z, x_ip2);
   const gdouble mu = (qz_i + qz_ip2 - 2.0 * qz_ip1) * 0.5;
 */
+  if (acp->knot == 0)
+  {
+    gdouble *x_ptr = ncm_vector_ptr (qspline->q_z->xv, acp->knot);
+    gdouble *y_ptr = ncm_vector_ptr (qspline->q_z->yv, acp->knot);
+    gdouble w_ptr[50];
+    guint n = ncm_vector_len (qspline->q_z->xv);
+    const gdouble var = sigma * sigma;
+    gdouble c0, c1, cov00, cov01, cov11, chisq;
+    guint i;
+
+    for (i = 0; i < n; i++)
+    {
+      w_ptr[i] = 1.0 / ((y_ptr[i] * y_ptr[i] + 1.0) * var);
+    }
+    
+    gsl_fit_wlinear (x_ptr, 1, w_ptr, 1, y_ptr, 1, n, &c0, &c1, &cov00, &cov01, &cov11, &chisq);
+    f[0] = chisq / n;
+  }
+  else
+    f[0] = 0.0;
+/*  
   const guint n = 5;
   gdouble x_ptr[n];
   gdouble y_ptr[n];
@@ -195,6 +216,7 @@ continuity_prior_f (NcmMSet *mset, gpointer obj, const gdouble *x, gdouble *f)
 
   gsl_fit_wlinear (x_ptr, 1, w_ptr, 1, y_ptr, 1, n, &c0, &c1, &cov00, &cov01, &cov11, &chisq);
   f[0] = (chisq + sqrt_det_var) / n;
+*/
 }
 
 static void

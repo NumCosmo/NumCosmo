@@ -43,16 +43,10 @@ G_BEGIN_DECLS
 typedef struct _NcRecombSeagerClass NcRecombSeagerClass;
 typedef struct _NcRecombSeager NcRecombSeager;
 
-struct _NcRecombSeagerClass
-{
-	/*< private >*/
-	NcRecombClass parent_class;
-};
-
 struct _NcRecombSeager
 {
-	/*< private >*/
-	NcRecomb parent_instance;
+  /*< private >*/
+  NcRecomb parent_instance;
   gpointer cvode;
   gboolean init;
   CVRhsFn ion;
@@ -61,6 +55,12 @@ struct _NcRecombSeager
   N_Vector y;
   N_Vector abstol;	
   guint n;
+};
+
+struct _NcRecombSeagerClass
+{
+  /*< private >*/
+  NcRecombClass parent_class;
 };
 
 GType nc_recomb_seager_get_type (void) G_GNUC_CONST;

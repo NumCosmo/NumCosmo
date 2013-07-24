@@ -43,18 +43,18 @@ G_BEGIN_DECLS
 typedef struct _NcClusterRedshiftNodistClass NcClusterRedshiftNodistClass;
 typedef struct _NcClusterRedshiftNodist NcClusterRedshiftNodist;
 
-struct _NcClusterRedshiftNodistClass
-{
-  /*< private >*/
-  NcClusterRedshiftClass parent_class;
-};
-
 struct _NcClusterRedshiftNodist
 {
   /*< private >*/
   NcClusterRedshift parent_instance;
   gdouble z_min;
   gdouble z_max;
+};
+
+struct _NcClusterRedshiftNodistClass
+{
+  /*< private >*/
+  NcClusterRedshiftClass parent_class;
 };
 
 GType nc_cluster_redshift_nodist_get_type (void) G_GNUC_CONST;

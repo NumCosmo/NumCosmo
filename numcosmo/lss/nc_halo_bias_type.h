@@ -41,17 +41,17 @@ G_BEGIN_DECLS
 typedef struct _NcHaloBiasTypeClass NcHaloBiasTypeClass;
 typedef struct _NcHaloBiasType NcHaloBiasType;
 
+struct _NcHaloBiasType
+{
+  /*< private >*/
+  GObject parent_instance;
+};
+
 struct _NcHaloBiasTypeClass
 {
   /*< private >*/
   GObjectClass parent_class;
   gdouble (*eval) (NcHaloBiasType *biasf, gdouble sigma, gdouble z); 
-};
-
-struct _NcHaloBiasType
-{
-  /*< private >*/
-  GObject parent_instance;
 };
 
 GType nc_halo_bias_type_get_type (void) G_GNUC_CONST;

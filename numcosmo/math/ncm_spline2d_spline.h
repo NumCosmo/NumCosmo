@@ -42,29 +42,29 @@ G_BEGIN_DECLS
 typedef struct _NcmSpline2dSplineClass NcmSpline2dSplineClass;
 typedef struct _NcmSpline2dSpline NcmSpline2dSpline;
 
-struct _NcmSpline2dSplineClass
-{
-	/*< private >*/
-	NcmSpline2dClass parent_class;
-};
-
 struct _NcmSpline2dSpline
 {
-	/*< private >*/
-	NcmSpline2d parent_instance;
-	gboolean first_prepare;
-	gboolean first_prepare_integ;
-	gdouble last_x;
-	gdouble last_xl;
-	gdouble last_xu;
-	gdouble last_yl;
-	gdouble last_yu;
-	NcmVector *vertv;
-	NcmVector *vertintv;
-	NcmSpline **s_hor;
-	NcmSpline *s_ver;
-	NcmSpline *s_ver_integ;
+  /*< private >*/
+  NcmSpline2d parent_instance;
+  gboolean first_prepare;
+  gboolean first_prepare_integ;
+  gdouble last_x;
+  gdouble last_xl;
+  gdouble last_xu;
+  gdouble last_yl;
+  gdouble last_yu;
+  NcmVector *vertv;
+  NcmVector *vertintv;
+  NcmSpline **s_hor;
+  NcmSpline *s_ver;
+  NcmSpline *s_ver_integ;
   guint s_hor_len;
+};
+
+struct _NcmSpline2dSplineClass
+{
+  /*< private >*/
+  NcmSpline2dClass parent_class;
 };
 
 GType ncm_spline2d_spline_get_type (void) G_GNUC_CONST;

@@ -45,18 +45,18 @@ G_BEGIN_DECLS
 typedef struct _NcDataCMBDistPriorsClass NcDataCMBDistPriorsClass;
 typedef struct _NcDataCMBDistPriors NcDataCMBDistPriors;
 
-struct _NcDataCMBDistPriorsClass
-{
-  /*< private >*/
-  NcmDataGaussClass parent_class;
-};
-
 struct _NcDataCMBDistPriors
 {
   /*< private >*/
   NcmDataGauss parent_instance;
   NcDistance *dist;
   NcDataCMBId id;
+};
+
+struct _NcDataCMBDistPriorsClass
+{
+  /*< private >*/
+  NcmDataGaussClass parent_class;
 };
 
 GType nc_data_cmb_dist_priors_get_type (void) G_GNUC_CONST;

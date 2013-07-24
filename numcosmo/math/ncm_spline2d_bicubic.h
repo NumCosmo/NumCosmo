@@ -66,12 +66,6 @@ struct __NcmSpline2dBicubicOptimizeInt
   NcmSpline *s;
 };
 
-struct _NcmSpline2dBicubicClass
-{
-  /*< private >*/
-  NcmSpline2dClass parent_class;
-};
-
 struct _NcmSpline2dBicubic
 {
   /*< private >*/
@@ -82,6 +76,12 @@ struct _NcmSpline2dBicubic
   NcmSpline2dBicubicCoeffs *bicoeff;
   _NcmSpline2dBicubicOptimizeInt optimize_dx;
   _NcmSpline2dBicubicOptimizeInt optimize_dy;
+};
+
+struct _NcmSpline2dBicubicClass
+{
+  /*< private >*/
+  NcmSpline2dClass parent_class;
 };
 
 GType ncm_spline2d_bicubic_get_type (void) G_GNUC_CONST;

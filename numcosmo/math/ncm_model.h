@@ -46,6 +46,27 @@ typedef struct _NcmModelClass NcmModelClass;
 typedef struct _NcmModel NcmModel;
 typedef gint NcmModelID;
 
+/**
+ * NcmModel:
+ *
+ * Base class for models.
+ */
+struct _NcmModel
+{
+  /*< private >*/
+  GObject parent_instance;
+  NcmReparam *reparam;
+  GPtrArray *sparams;
+  NcmVector *params;
+  NcmVector *p;
+  GArray *vparam_pos;
+  GArray *vparam_len;
+  GArray *ptypes;
+  GHashTable *sparams_name_id;
+  guint total_len;
+  guint64 pkey;
+};
+
 struct _NcmModelClass
 {
   /*< private >*/
@@ -66,27 +87,6 @@ struct _NcmModelClass
   guint parent_vparam_len;
   GPtrArray *sparam;
   GPtrArray *vparam;
-};
-
-/**
- * NcmModel:
- *
- * Base class for models.
- */
-struct _NcmModel
-{
-  /*< private >*/
-  GObject parent_instance;
-  NcmReparam *reparam;
-  GPtrArray *sparams;
-  NcmVector *params;
-  NcmVector *p;
-  GArray *vparam_pos;
-  GArray *vparam_len;
-  GArray *ptypes;
-  GHashTable *sparams_name_id;
-  guint total_len;
-  guint64 pkey;
 };
 
 typedef gdouble (*NcmModelFunc0) (NcmModel *model);

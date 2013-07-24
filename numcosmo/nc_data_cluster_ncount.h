@@ -65,12 +65,6 @@ typedef enum _NcDataClusterAbundanceId
   NC_DATA_CLUSTER_ABUNDANCE_NSAMPLES, /*< skip >*/
 } NcDataClusterAbundanceId;
 
-struct _NcDataClusterNCountClass
-{
-  /*< private >*/
-  NcmDataClass parent_class;
-};
-
 struct _NcDataClusterNCount
 {
   /*< private >*/
@@ -94,6 +88,12 @@ struct _NcDataClusterNCount
   gboolean fiducial;
   gulong seed;
   gchar *rnd_name;
+};
+
+struct _NcDataClusterNCountClass
+{
+  /*< private >*/
+  NcmDataClass parent_class;
 };
 
 GType nc_data_cluster_ncount_get_type (void) G_GNUC_CONST;

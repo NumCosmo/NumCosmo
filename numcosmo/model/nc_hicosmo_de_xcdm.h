@@ -58,16 +58,16 @@ typedef enum _NcHICosmoDEXCDMParams
 
 #define NC_HICOSMO_DE_XCDM_N (NC_HICOSMO_DE_XCDM_W + 1 - NC_HICOSMO_DE_BASE_N)
 
-struct _NcHICosmoDEXcdmClass
-{
-  /*< private >*/
-  NcHICosmoDEClass parent_class;
-};
-
 struct _NcHICosmoDEXcdm
 {
   /*< private >*/
   NcHICosmoDE parent_instance;
+};
+
+struct _NcHICosmoDEXcdmClass
+{
+  /*< private >*/
+  NcHICosmoDEClass parent_class;
 };
 
 GType nc_hicosmo_de_xcdm_get_type (void) G_GNUC_CONST;

@@ -65,6 +65,12 @@ typedef enum _NcClusterMassImpl
 
 #define NC_CLUSTER_MASS_IMPL_ALL (~0)
 
+struct _NcClusterMass
+{
+  /*< private >*/
+  NcmModel parent_instance;
+};
+
 struct _NcClusterMassClass
 {
   /*< private >*/
@@ -77,12 +83,6 @@ struct _NcClusterMassClass
   guint (*obs_len) (NcClusterMass *clusterm);
   guint (*obs_params_len) (NcClusterMass *clusterm);
   NcClusterMassImpl impl;
-};
-
-struct _NcClusterMass
-{
-  /*< private >*/
-  NcmModel parent_instance;
 };
 
 GType nc_cluster_mass_get_type (void) G_GNUC_CONST;

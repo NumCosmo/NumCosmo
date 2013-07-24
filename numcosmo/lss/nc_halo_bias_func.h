@@ -44,18 +44,18 @@ G_BEGIN_DECLS
 typedef struct _NcHaloBiasFuncClass NcHaloBiasFuncClass;
 typedef struct _NcHaloBiasFunc NcHaloBiasFunc;
 
-struct _NcHaloBiasFuncClass
-{
-  /*< private >*/
-  GObjectClass parent_class;
-};
-
 struct _NcHaloBiasFunc
 {
   /*< private >*/
   GObject parent_instance;
   NcMassFunction *mfp;
   NcHaloBiasType *biasf;
+};
+
+struct _NcHaloBiasFuncClass
+{
+  /*< private >*/
+  GObjectClass parent_class;
 };
 
 GType nc_halo_bias_func_get_type (void) G_GNUC_CONST;

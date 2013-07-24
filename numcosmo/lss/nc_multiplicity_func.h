@@ -43,17 +43,17 @@ G_BEGIN_DECLS
 typedef struct _NcMultiplicityFuncClass NcMultiplicityFuncClass;
 typedef struct _NcMultiplicityFunc NcMultiplicityFunc;
 
+struct _NcMultiplicityFunc
+{
+  /*< private >*/
+  GObject parent_instance;
+};
+
 struct _NcMultiplicityFuncClass
 {
   /*< private >*/
   GObjectClass parent_class;
   gdouble (*eval) (NcMultiplicityFunc *mulf, NcHICosmo *model, gdouble sigma, gdouble z);
-};
-
-struct _NcMultiplicityFunc
-{
-  /*< private >*/
-  GObject parent_instance;
 };
 
 GType nc_multiplicity_func_get_type (void) G_GNUC_CONST;

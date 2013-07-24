@@ -74,11 +74,6 @@ typedef enum _NcHICosmoQPWVParams
 #define NC_HICOSMO_QPW_DEFAULT_Q0      (-0.5)
 #define NC_HICOSMO_QPW_DEFAULT_QP      ( 0.0)
 #define NC_HICOSMO_QPW_DEFAULT_QP_LEN     (4)
-struct _NcHICosmoQPWClass
-{
-  /*< private >*/
-  NcHICosmoClass parent_class;
-};
 
 struct _NcHICosmoQPW
 {
@@ -89,6 +84,12 @@ struct _NcHICosmoQPW
   gdouble z_f;
   gdouble piece;
   gboolean flat;
+};
+
+struct _NcHICosmoQPWClass
+{
+  /*< private >*/
+  NcHICosmoClass parent_class;
 };
 
 typedef struct _NcHICosmoQPWContPrior NcHICosmoQPWContPrior;

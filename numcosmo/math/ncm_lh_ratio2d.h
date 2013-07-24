@@ -55,12 +55,6 @@ typedef enum _NcmLHRatio2dRoot
   NCM_LH_RATIO2D_ROOT_NUMDIFF,
 } NcmLHRatio2dRoot;
 
-struct _NcmLHRatio2dClass
-{
-  /*< private >*/
-  GObjectClass parent_class;
-};
-
 struct _NcmLHRatio2d
 {
   /*< private >*/
@@ -82,6 +76,12 @@ struct _NcmLHRatio2d
   guint niter;
   guint func_eval;
   guint grad_eval;
+};
+
+struct _NcmLHRatio2dClass
+{
+  /*< private >*/
+  GObjectClass parent_class;
 };
 
 typedef struct _NcmLHRatio2dPoint NcmLHRatio2dPoint;

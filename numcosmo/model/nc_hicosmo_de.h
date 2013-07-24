@@ -89,18 +89,18 @@ typedef enum _NcHICosmoDEParams
 #define NC_HICOSMO_DE_DEFAULT_SPECINDEX (1.0)
 #define NC_HICOSMO_DE_DEFAULT_SIGMA8    (0.9)
 
+struct _NcHICosmoDE
+{
+  /*< private >*/
+  NcHICosmo parent_instance;
+};
+
 struct _NcHICosmoDEClass
 {
   /*< private >*/
   NcHICosmoClass parent_class;
   NcmModelFunc1 weff;
   NcmModelFunc1 dweff_dz;
-};
-
-struct _NcHICosmoDE
-{
-  /*< private >*/
-  NcHICosmo parent_instance;
 };
 
 GType nc_hicosmo_de_get_type (void) G_GNUC_CONST;

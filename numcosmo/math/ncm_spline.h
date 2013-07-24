@@ -43,23 +43,6 @@ G_BEGIN_DECLS
 typedef struct _NcmSplineClass NcmSplineClass;
 typedef struct _NcmSpline NcmSpline;
 
-struct _NcmSplineClass
-{
-  /*< private >*/
-	GObjectClass parent_class;
-	const gchar *(*name) (NcmSpline *s);
-	void (*reset) (NcmSpline *s);
-	void (*prepare) (NcmSpline *s);
-	void (*prepare_base) (NcmSpline *s);
-	gsize (*min_size) (const NcmSpline *s);
-	gdouble (*eval) (const NcmSpline *s, const gdouble x);
-	gdouble (*deriv) (const NcmSpline *s, const gdouble x);
-	gdouble (*deriv2) (const NcmSpline *s, const gdouble x);
-  gdouble (*deriv_nmax) (const NcmSpline *s, const gdouble x);
-	gdouble (*integ) (const NcmSpline *s, const gdouble xi, const gdouble xf);
-	NcmSpline *(*copy_empty) (const NcmSpline *s);
-};
-
 struct _NcmSpline
 {
   /*< private >*/
@@ -70,6 +53,23 @@ struct _NcmSpline
   gsl_interp_accel *acc;
   gboolean init;
   gboolean empty;
+};
+
+struct _NcmSplineClass
+{
+  /*< private >*/
+  GObjectClass parent_class;
+  const gchar *(*name) (NcmSpline *s);
+  void (*reset) (NcmSpline *s);
+  void (*prepare) (NcmSpline *s);
+  void (*prepare_base) (NcmSpline *s);
+  gsize (*min_size) (const NcmSpline *s);
+  gdouble (*eval) (const NcmSpline *s, const gdouble x);
+  gdouble (*deriv) (const NcmSpline *s, const gdouble x);
+  gdouble (*deriv2) (const NcmSpline *s, const gdouble x);
+  gdouble (*deriv_nmax) (const NcmSpline *s, const gdouble x);
+  gdouble (*integ) (const NcmSpline *s, const gdouble xi, const gdouble xf);
+  NcmSpline *(*copy_empty) (const NcmSpline *s);
 };
 
 GType ncm_spline_get_type (void) G_GNUC_CONST;

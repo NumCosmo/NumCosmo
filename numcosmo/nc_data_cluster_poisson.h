@@ -44,17 +44,17 @@ G_BEGIN_DECLS
 typedef struct _NcDataClusterPoissonClass NcDataClusterPoissonClass;
 typedef struct _NcDataClusterPoisson NcDataClusterPoisson;
 
-struct _NcDataClusterPoissonClass
-{
-  /*< private >*/
-  NcmDataPoissonClass parent_class;
-};
-
 struct _NcDataClusterPoisson
 {
   /*< private >*/
   NcmDataPoisson parent_instance;
   NcDataClusterNCount *ncount;
+};
+
+struct _NcDataClusterPoissonClass
+{
+  /*< private >*/
+  NcmDataPoissonClass parent_class;
 };
 
 GType nc_data_cluster_poisson_get_type (void) G_GNUC_CONST;

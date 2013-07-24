@@ -85,6 +85,19 @@ typedef struct _NcHICosmo NcHICosmo;
 typedef gdouble (*NcHICosmoFunc0) (NcHICosmo *cosmo);
 typedef gdouble (*NcHICosmoFunc1) (NcHICosmo *cosmo, gdouble x);
 
+/**
+ * NcHICosmo:
+ *
+ * FIXME
+ *
+ */
+struct _NcHICosmo
+{
+  /*< private >*/
+  NcmModel parent_instance;
+  gboolean is_eternal;
+};
+
 struct _NcHICosmoClass
 {
   /*< private >*/
@@ -103,19 +116,6 @@ struct _NcHICosmoClass
   NcmModelFunc1 d2E2_dz2;
   NcmModelFunc1 cd;
   NcmModelFunc1 powspec;
-};
-
-/**
- * NcHICosmo:
- *
- * FIXME
- *
- */
-struct _NcHICosmo
-{
-  /*< private >*/
-  NcmModel parent_instance;
-  gboolean is_eternal;
 };
 
 GType nc_hicosmo_get_type (void) G_GNUC_CONST;

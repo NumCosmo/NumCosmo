@@ -45,6 +45,15 @@ G_BEGIN_DECLS
 typedef struct _NcmDataClass NcmDataClass;
 typedef struct _NcmData NcmData;
 
+struct _NcmData
+{
+  /*< private >*/
+  GObject parent_instance;
+  gchar *desc;
+  gboolean init;
+  gboolean begin;
+};
+
 struct _NcmDataClass
 {
   /*< private >*/
@@ -63,15 +72,6 @@ struct _NcmDataClass
   void (*m2lnL_val) (NcmData *data, NcmMSet *mset, gdouble *m2lnL);
   void (*m2lnL_grad) (NcmData *data, NcmMSet *mset, NcmVector *grad);
   void (*m2lnL_val_grad) (NcmData *data, NcmMSet *mset, gdouble *m2lnL, NcmVector *grad);
-};
-
-struct _NcmData
-{
-  /*< private >*/
-  GObject parent_instance;
-  gchar *desc;
-  gboolean init;
-  gboolean begin;
 };
 
 GType ncm_data_get_type (void) G_GNUC_CONST;

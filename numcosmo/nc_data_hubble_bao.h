@@ -56,12 +56,6 @@ typedef enum _NcDataHubbleBaoId
   NC_DATA_HUBBLE_BAO_NSAMPLES,  /*< skip >*/
 } NcDataHubbleBaoId;
 
-struct _NcDataHubbleBaoClass
-{
-  /*< private >*/
-  NcmDataGaussDiagClass parent_class;
-};
-
 struct _NcDataHubbleBao
 {
   /*< private >*/
@@ -69,6 +63,12 @@ struct _NcDataHubbleBao
   NcmVector *x;
   NcDataHubbleBaoId id;
   NcDistance *dist;
+};
+
+struct _NcDataHubbleBaoClass
+{
+  /*< private >*/
+  NcmDataGaussDiagClass parent_class;
 };
 
 GType nc_data_hubble_bao_get_type (void) G_GNUC_CONST;

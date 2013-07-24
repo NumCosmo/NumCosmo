@@ -62,12 +62,6 @@ typedef enum _NcMatterVarStrategy
   NC_MATTER_VAR_FFT,
 } NcMatterVarStrategy;
 
-struct _NcMatterVarClass
-{
-  /*< private >*/
-  GObjectClass parent_class;
-};
-
 struct _NcMatterVar
 {
   /*< private >*/
@@ -82,6 +76,12 @@ struct _NcMatterVar
   NcmSpline *sigma2_over_growth; 
   NcmSpline *deriv_sigma2_over_growth;
   NcmModelCtrl *ctrl;
+};
+
+struct _NcMatterVarClass
+{
+  /*< private >*/
+  GObjectClass parent_class;
 };
 
 GType nc_matter_var_get_type (void) G_GNUC_CONST;

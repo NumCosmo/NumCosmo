@@ -44,12 +44,6 @@ G_BEGIN_DECLS
 typedef struct _NcmFitMCClass NcmFitMCClass;
 typedef struct _NcmFitMC NcmFitMC;
 
-struct _NcmFitMCClass
-{
-  /*< private >*/
-  GObjectClass parent_class;
-};
-
 struct _NcmFitMC
 {
   /*< private >*/
@@ -62,6 +56,12 @@ struct _NcmFitMC
   guint n;
   gsl_histogram *h;
   gsl_histogram_pdf *h_pdf;
+};
+
+struct _NcmFitMCClass
+{
+  /*< private >*/
+  GObjectClass parent_class;
 };
 
 GType ncm_fit_mc_get_type (void) G_GNUC_CONST;

@@ -79,17 +79,17 @@ typedef enum _NcSNIADistCovVParams
   NC_SNIA_DIST_COV_VPARAM_LEN,    /*< skip >*/
 } NcSNIADistCovVParams;
 
-struct _NcSNIADistCovClass
-{
-  /*< private >*/
-  NcmModelClass parent_class;
-};
-
 struct _NcSNIADistCov
 {
   /*< private >*/
   NcmModel parent_instance;
   NcDistance *dist;
+};
+
+struct _NcSNIADistCovClass
+{
+  /*< private >*/
+  NcmModelClass parent_class;
 };
 
 GType nc_snia_dist_cov_get_type (void) G_GNUC_CONST;

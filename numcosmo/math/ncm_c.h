@@ -44,16 +44,16 @@ G_BEGIN_DECLS
 typedef struct _NcmCClass NcmCClass;
 typedef struct _NcmC NcmC;
 
-struct _NcmCClass
-{
-  /*< private >*/
-  GObjectClass parent_class;
-};
-
 struct _NcmC
 {
   /*< private >*/
   GObject parent_instance;
+};
+
+struct _NcmCClass
+{
+  /*< private >*/
+  GObjectClass parent_class;
 };
 
 GType ncm_c_get_type (void) G_GNUC_CONST;

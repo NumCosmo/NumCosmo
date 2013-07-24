@@ -53,25 +53,25 @@ G_BEGIN_DECLS
 typedef struct _NcRecombClass NcRecombClass;
 typedef struct _NcRecomb NcRecomb;
 
-struct _NcRecombClass
-{
-  /*< private >*/
-  GObjectClass parent_class;
-	void (*prepare) (NcRecomb *recomb, NcHICosmo *cosmo);
-};
-
 struct _NcRecomb
 {
   /*< private >*/
   GObject parent_instance;
-	gdouble zi, lambdai, lambdaf, prec;
-	gdouble init_frac;
-	gsl_min_fminimizer *fmin;
-	gsl_root_fsolver *fsol;
-	NcmSpline *Xe_s;
+  gdouble zi, lambdai, lambdaf, prec;
+  gdouble init_frac;
+  gsl_min_fminimizer *fmin;
+  gsl_root_fsolver *fsol;
+  NcmSpline *Xe_s;
   NcmSpline *dtau_dlambda_s;
-	NcmSpline *tau_s;
+  NcmSpline *tau_s;
   NcmModelCtrl *ctrl;
+};
+
+struct _NcRecombClass
+{
+  /*< private >*/
+  GObjectClass parent_class;
+  void (*prepare) (NcRecomb *recomb, NcHICosmo *cosmo);
 };
 
 GType nc_recomb_get_type (void) G_GNUC_CONST;

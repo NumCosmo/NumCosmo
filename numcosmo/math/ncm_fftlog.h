@@ -48,12 +48,6 @@ G_BEGIN_DECLS
 typedef struct _NcmFftlogClass NcmFftlogClass;
 typedef struct _NcmFftlog NcmFftlog;
 
-struct _NcmFftlogClass
-{
-  /*< private >*/
-  GObjectClass parent_class;
-};
-
 /**
  * NcmFftlog:
  * 
@@ -78,6 +72,12 @@ struct _NcmFftlog
   fftw_plan p_in2out;
   fftw_plan p_out2in;
 #endif /* NUMCOSMO_HAVE_FFTW3 */
+};
+
+struct _NcmFftlogClass
+{
+  /*< private >*/
+  GObjectClass parent_class;
 };
 
 GType ncm_fftlog_get_type (void) G_GNUC_CONST;

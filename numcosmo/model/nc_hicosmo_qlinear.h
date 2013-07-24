@@ -8,11 +8,11 @@
 /*
  * numcosmo
  * Copyright (C) Sandro Dias Pinto Vitenti 2012 <sandro@isoftware.com.br>
-   * numcosmo is free software: you can redistribute it and/or modify it
+ * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
-   *
+ *
  * numcosmo is distributed in the hope that it will be useful, but
  * WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
@@ -72,16 +72,16 @@ typedef enum _NcHICosmoQLinearParams
 #define NC_HICOSMO_QLINEAR_DEFAULT_QP      ( 1.0)
 #define NC_HICOSMO_QLINEAR_DEFAULT_Z1      ( 0.0)
 
-struct _NcHICosmoQLinearClass
-{
-  /*< private >*/
-  NcHICosmoClass parent_class;
-};
-
 struct _NcHICosmoQLinear
 {
   /*< private >*/
   NcHICosmo parent_instance;
+};
+
+struct _NcHICosmoQLinearClass
+{
+  /*< private >*/
+  NcHICosmoClass parent_class;
 };
 
 GType nc_hicosmo_qlinear_get_type (void) G_GNUC_CONST;

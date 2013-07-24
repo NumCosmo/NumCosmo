@@ -43,14 +43,6 @@ G_BEGIN_DECLS
 typedef struct _NcmDataGaussCovClass NcmDataGaussCovClass;
 typedef struct _NcmDataGaussCov NcmDataGaussCov;
 
-struct _NcmDataGaussCovClass
-{
-  /*< private >*/
-  NcmDataClass parent_class;
-  void (*mean_func) (NcmDataGaussCov *gauss, NcmMSet *mset, NcmVector *vp);
-  gboolean (*cov_func) (NcmDataGaussCov *gauss, NcmMSet *mset, NcmMatrix *cov);
-};
-
 struct _NcmDataGaussCov
 {
   /*< private >*/
@@ -67,6 +59,14 @@ struct _NcmDataGaussCov
   gdouble ofit_mean;
   gdouble ofit_sigma;
  */
+};
+
+struct _NcmDataGaussCovClass
+{
+  /*< private >*/
+  NcmDataClass parent_class;
+  void (*mean_func) (NcmDataGaussCov *gauss, NcmMSet *mset, NcmVector *vp);
+  gboolean (*cov_func) (NcmDataGaussCov *gauss, NcmMSet *mset, NcmMatrix *cov);
 };
 
 GType ncm_data_gauss_cov_get_type (void) G_GNUC_CONST;

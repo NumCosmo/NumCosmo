@@ -68,13 +68,6 @@ typedef enum _NcClusterMassBensonXRayParams
 
 #define NC_CLUSTER_MASS_BENSON_XRAY_DEFAULT_PARAMS_ABSTOL (0.0)
 
-
-struct _NcClusterMassBensonXRayClass
-{
-  /*< private >*/
-  NcClusterMassBensonClass parent_class;
-};
-
 struct _NcClusterMassBensonXRay
 {
   /*< private >*/
@@ -83,6 +76,12 @@ struct _NcClusterMassBensonXRay
   gdouble Yx_obs_max;  
   gdouble M0x;
   gdouble Y0; 
+};
+
+struct _NcClusterMassBensonXRayClass
+{
+  /*< private >*/
+  NcClusterMassBensonClass parent_class;
 };
 
 GType nc_cluster_mass_benson_xray_get_type (void) G_GNUC_CONST;

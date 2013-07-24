@@ -70,16 +70,16 @@ typedef enum _NcHICosmoQConstParams
 #define NC_HICOSMO_QCONST_DEFAULT_Q       (-0.5)
 #define NC_HICOSMO_QCONST_DEFAULT_Z1      ( 0.0)
 
-struct _NcHICosmoQConstClass
-{
-  /*< private >*/
-  NcHICosmoClass parent_class;
-};
-
 struct _NcHICosmoQConst
 {
   /*< private >*/
   NcHICosmo parent_instance;
+};
+
+struct _NcHICosmoQConstClass
+{
+  /*< private >*/
+  NcHICosmoClass parent_class;
 };
 
 GType nc_hicosmo_qconst_get_type (void) G_GNUC_CONST;

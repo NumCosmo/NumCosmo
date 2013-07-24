@@ -80,12 +80,6 @@ typedef enum _NcHICosmoQSplineVParams
 #define NC_HICOSMO_QSPLINE_DEFAULT_Q       (-0.5)
 #define NC_HICOSMO_QSPLINE_DEFAULT_Q_LEN   (3)
 
-struct _NcHICosmoQSplineClass
-{
-  /*< private >*/
-  NcHICosmoClass parent_class;
-};
-
 struct _NcHICosmoQSpline
 {
   /*< private >*/
@@ -96,6 +90,12 @@ struct _NcHICosmoQSpline
   NcmModelCtrl *qs_ctrl;
   NcmSpline *q_z;
   NcmOdeSpline *E2_z;
+};
+
+struct _NcHICosmoQSplineClass
+{
+  /*< private >*/
+  NcHICosmoClass parent_class;
 };
 
 GType nc_hicosmo_qspline_get_type (void) G_GNUC_CONST;
@@ -117,16 +117,16 @@ NcHICosmoQSplineContPrior *nc_hicosmo_qspline_add_continuity_constraints (NcHICo
 #define NC_IS_HICOSMO_QSPLINE_CONT_PRIOR_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE ((klass), NC_TYPE_HICOSMO_QSPLINE_CONT_PRIOR))
 #define NC_HICOSMO_QSPLINE_CONT_PRIOR_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS ((obj), NC_TYPE_HICOSMO_QSPLINE_CONT_PRIOR, NcHICosmoQSplineContPriorClass))
 
-struct _NcHICosmoQSplineContPriorClass
-{
-  /*< private >*/
-  NcmModelClass parent_class;
-};
-
 struct _NcHICosmoQSplineContPrior
 {
   /*< private >*/
   NcmModel parent_instance;
+};
+
+struct _NcHICosmoQSplineContPriorClass
+{
+  /*< private >*/
+  NcmModelClass parent_class;
 };
 
 GType nc_hicosmo_qspline_cont_prior_get_type (void) G_GNUC_CONST;

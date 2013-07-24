@@ -45,12 +45,6 @@ G_BEGIN_DECLS
 typedef struct _NcMassFunctionClass NcMassFunctionClass;
 typedef struct _NcMassFunction NcMassFunction;
 
-struct _NcMassFunctionClass
-{
-  /*< private > */
-  GObjectClass parent_class;
-};
-
 struct _NcMassFunction
 {
   /*< private > */
@@ -68,6 +62,12 @@ struct _NcMassFunction
   gdouble zi;
   gdouble zf;
   NcmModelCtrl *ctrl;
+};
+
+struct _NcMassFunctionClass
+{
+  /*< private > */
+  GObjectClass parent_class;
 };
 
 /**

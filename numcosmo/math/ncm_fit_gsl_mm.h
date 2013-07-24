@@ -63,12 +63,6 @@ typedef enum _NcmFitGSLMMAlgos
   NCM_FIT_GSL_MM_NUM_ALGOS,         /*< skip >*/
 } NcmFitGSLMMAlgos;
 
-struct _NcmFitGSLMMClass
-{
-  /*< private >*/
-  NcmFitClass parent_class;
-};
-
 struct _NcmFitGSLMM
 {
   /*< private >*/
@@ -79,6 +73,12 @@ struct _NcmFitGSLMM
   gchar *desc;
   gdouble err_a;
   gdouble err_b;
+};
+
+struct _NcmFitGSLMMClass
+{
+  /*< private >*/
+  NcmFitClass parent_class;
 };
 
 GType ncm_fit_gsl_mm_get_type (void) G_GNUC_CONST;

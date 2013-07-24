@@ -43,12 +43,6 @@ G_BEGIN_DECLS
 typedef struct _NcTransferFuncEHClass NcTransferFuncEHClass;
 typedef struct _NcTransferFuncEH NcTransferFuncEH;
 
-struct _NcTransferFuncEHClass
-{
-  /*< private >*/
-  NcTransferFuncClass parent_class;
-};
-
 struct _NcTransferFuncEH
 {
   /*< private >*/
@@ -60,6 +54,12 @@ struct _NcTransferFuncEH
   gdouble b_node3;
   gdouble ab, bc, bb, bb3, ac_142;   /* ac_142 = 14.2/ac */
   gdouble wb_wm, wc_wm;
+};
+
+struct _NcTransferFuncEHClass
+{
+  /*< private >*/
+  NcTransferFuncClass parent_class;
 };
 
 GType nc_transfer_func_eh_get_type (void) G_GNUC_CONST;

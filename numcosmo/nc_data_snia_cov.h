@@ -98,12 +98,6 @@ typedef enum _NcDataSNIACovData
 
 #define NC_DATA_SNIA_COV_LENGTH NC_DATA_SNIA_COV_ABSMAG_SET
 
-struct _NcDataSNIACovClass
-{
-  /*< private >*/
-  NcmDataGaussCovClass parent_class;
-};
-
 struct _NcDataSNIACov
 {
   /*< private >*/
@@ -134,6 +128,12 @@ struct _NcDataSNIACov
   guint dataset_len;
   gdouble sigma_pecz;
   gchar *filename;
+};
+
+struct _NcDataSNIACovClass
+{
+  /*< private >*/
+  NcmDataGaussCovClass parent_class;
 };
 
 GType nc_data_snia_cov_get_type (void) G_GNUC_CONST;

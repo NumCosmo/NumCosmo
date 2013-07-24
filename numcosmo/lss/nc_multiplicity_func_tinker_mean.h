@@ -43,17 +43,17 @@ G_BEGIN_DECLS
 typedef struct _NcMultiplicityFuncTinkerMeanClass NcMultiplicityFuncTinkerMeanClass;
 typedef struct _NcMultiplicityFuncTinkerMean NcMultiplicityFuncTinkerMean;
 
-struct _NcMultiplicityFuncTinkerMeanClass
-{
-  /*< private >*/
-  NcMultiplicityFuncClass parent_class;
-};
-
 struct _NcMultiplicityFuncTinkerMean
 {
   /*< private >*/
   NcMultiplicityFunc parent_instance;
   gdouble Delta;
+};
+
+struct _NcMultiplicityFuncTinkerMeanClass
+{
+  /*< private >*/
+  NcMultiplicityFuncClass parent_class;
 };
 
 GType nc_multiplicity_func_tinker_mean_get_type (void) G_GNUC_CONST;

@@ -43,12 +43,6 @@ G_BEGIN_DECLS
 typedef struct _NcHaloBiasTypeSTEllipClass NcHaloBiasTypeSTEllipClass;
 typedef struct _NcHaloBiasTypeSTEllip NcHaloBiasTypeSTEllip;
 
-struct _NcHaloBiasTypeSTEllipClass
-{
-  /*< private >*/
-  NcHaloBiasTypeClass parent_class;
-};
-
 struct _NcHaloBiasTypeSTEllip
 {
   /*< private >*/
@@ -57,6 +51,12 @@ struct _NcHaloBiasTypeSTEllip
   gdouble a;
   gdouble b;
   gdouble c;
+};
+
+struct _NcHaloBiasTypeSTEllipClass
+{
+  /*< private >*/
+  NcHaloBiasTypeClass parent_class;
 };
 
 GType nc_halo_bias_type_st_ellip_get_type (void) G_GNUC_CONST;

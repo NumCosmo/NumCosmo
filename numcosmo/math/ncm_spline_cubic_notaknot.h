@@ -42,16 +42,16 @@ G_BEGIN_DECLS
 typedef struct _NcmSplineCubicNotaknotClass NcmSplineCubicNotaknotClass;
 typedef struct _NcmSplineCubicNotaknot NcmSplineCubicNotaknot;
 
-struct _NcmSplineCubicNotaknotClass
-{
-	/*< private >*/
-	NcmSplineCubicClass parent_class;
-};
-
 struct _NcmSplineCubicNotaknot
 {
-	/*< private >*/
-	NcmSplineCubic parent_instance;
+  /*< private >*/
+  NcmSplineCubic parent_instance;
+};
+
+struct _NcmSplineCubicNotaknotClass
+{
+  /*< private >*/
+  NcmSplineCubicClass parent_class;
 };
 
 GType ncm_spline_cubic_notaknot_get_type (void) G_GNUC_CONST;

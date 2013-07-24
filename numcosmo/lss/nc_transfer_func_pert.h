@@ -44,14 +44,6 @@ G_BEGIN_DECLS
 typedef struct _NcTransferFuncPertClass NcTransferFuncPertClass;
 typedef struct _NcTransferFuncPert NcTransferFuncPert;
 
-
-
-struct _NcTransferFuncPertClass
-{
-  /*< private >*/
-  NcTransferFuncClass parent_class;
-};
-
 struct _NcTransferFuncPert
 {
   /*< private >*/
@@ -59,6 +51,12 @@ struct _NcTransferFuncPert
   NcLinearPert *pert;
   NcLinearPertSplines *pspline;
   gboolean init;
+};
+
+struct _NcTransferFuncPertClass
+{
+  /*< private >*/
+  NcTransferFuncClass parent_class;
 };
 
 GType nc_transfer_func_pert_get_type (void) G_GNUC_CONST;

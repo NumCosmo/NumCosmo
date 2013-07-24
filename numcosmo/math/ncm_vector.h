@@ -64,12 +64,6 @@ typedef enum _NcmVectorInternal
   NCM_VECTOR_DERIVED,
 } NcmVectorInternal;
 
-struct _NcmVectorClass
-{
-  /*< private >*/
-  GObjectClass parent_class;
-};
-
 struct _NcmVector
 {
   /*< private >*/
@@ -79,6 +73,12 @@ struct _NcmVector
   gsl_vector_view vv;
   GObject *pobj;
   NcmVectorInternal type;
+};
+
+struct _NcmVectorClass
+{
+  /*< private >*/
+  GObjectClass parent_class;
 };
 
 GType ncm_vector_get_type (void) G_GNUC_CONST;

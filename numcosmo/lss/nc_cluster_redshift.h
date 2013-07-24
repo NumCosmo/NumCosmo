@@ -60,6 +60,12 @@ typedef enum _NcClusterRedshiftImpl
 
 #define NC_CLUSTER_REDSHIFT_IMPL_ALL (~0)
 
+struct _NcClusterRedshift
+{
+  /*< private >*/
+  GObject parent_instance;
+};
+
 struct _NcClusterRedshiftClass
 {
   /*< private >*/
@@ -72,12 +78,6 @@ struct _NcClusterRedshiftClass
   guint (*obs_len) (NcClusterRedshift *clusterz);
   guint (*obs_params_len) (NcClusterRedshift *clusterz);
   NcClusterRedshiftImpl impl;
-};
-
-struct _NcClusterRedshift
-{
-  /*< private >*/
-  GObject parent_instance;
 };
 
 GType nc_cluster_redshift_get_type (void) G_GNUC_CONST;

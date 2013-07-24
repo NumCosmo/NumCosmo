@@ -45,12 +45,6 @@ G_BEGIN_DECLS
 typedef struct _NcmFitNLOptClass NcmFitNLOptClass;
 typedef struct _NcmFitNLOpt NcmFitNLOpt;
 
-struct _NcmFitNLOptClass
-{
-  /*< private >*/
-  NcmFitClass parent_class;
-};
-
 struct _NcmFitNLOpt
 {
   /*< private >*/
@@ -69,6 +63,12 @@ struct _NcmFitNLOpt
   NcmVector *pscale;
   gchar *desc;
   guint fparam_len;
+};
+
+struct _NcmFitNLOptClass
+{
+  /*< private >*/
+  NcmFitClass parent_class;
 };
 
 GType ncm_fit_nlopt_get_type (void) G_GNUC_CONST;

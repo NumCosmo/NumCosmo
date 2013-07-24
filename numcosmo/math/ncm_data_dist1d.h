@@ -45,20 +45,20 @@ G_BEGIN_DECLS
 typedef struct _NcmDataDist1dClass NcmDataDist1dClass;
 typedef struct _NcmDataDist1d NcmDataDist1d;
 
-struct _NcmDataDist1dClass
-{
-  /*< private >*/
-  NcmDataClass parent_class;
-  NcmMSetFunc *dist;
-  NcmMSetFunc *inv_pdf;
-};
-
 struct _NcmDataDist1d
 {
   /*< private >*/
   NcmData parent_instance;
   guint np;
   NcmVector *x;
+};
+
+struct _NcmDataDist1dClass
+{
+  /*< private >*/
+  NcmDataClass parent_class;
+  NcmMSetFunc *dist;
+  NcmMSetFunc *inv_pdf;
 };
 
 GType ncm_data_dist1d_get_type (void) G_GNUC_CONST;

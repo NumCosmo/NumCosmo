@@ -46,12 +46,6 @@ G_BEGIN_DECLS
 typedef struct _NcGalaxyAcfClass NcGalaxyAcfClass;
 typedef struct _NcGalaxyAcf NcGalaxyAcf;
 
-struct _NcGalaxyAcfClass
-{
-  /*< private >*/
-  GObjectClass parent_class;
-};
-
 struct _NcGalaxyAcf
 {
   /*< private >*/
@@ -62,6 +56,12 @@ struct _NcGalaxyAcf
   NcmSpline *s;
   NcMatterVar *vp;
   gdouble b;
+};
+
+struct _NcGalaxyAcfClass
+{
+  /*< private >*/
+  GObjectClass parent_class;
 };
 
 GType nc_galaxy_acf_get_type (void) G_GNUC_CONST;

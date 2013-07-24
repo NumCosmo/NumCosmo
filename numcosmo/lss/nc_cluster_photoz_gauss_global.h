@@ -42,12 +42,6 @@ G_BEGIN_DECLS
 typedef struct _NcClusterPhotozGaussGlobalClass NcClusterPhotozGaussGlobalClass;
 typedef struct _NcClusterPhotozGaussGlobal NcClusterPhotozGaussGlobal;
 
-struct _NcClusterPhotozGaussGlobalClass
-{
-  /*< private >*/
-  NcClusterRedshiftClass parent_class;
-};
-
 struct _NcClusterPhotozGaussGlobal
 {
   /*< private >*/
@@ -56,6 +50,12 @@ struct _NcClusterPhotozGaussGlobal
   gdouble pz_max;
   gdouble z_bias;
   gdouble sigma0;
+};
+
+struct _NcClusterPhotozGaussGlobalClass
+{
+  /*< private >*/
+  NcClusterRedshiftClass parent_class;
 };
 
 GType nc_cluster_photoz_gauss_global_get_type (void) G_GNUC_CONST;

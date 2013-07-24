@@ -42,18 +42,18 @@ G_BEGIN_DECLS
 typedef struct _NcmModelCtrlClass NcmModelCtrlClass;
 typedef struct _NcmModelCtrl NcmModelCtrl;
 
-struct _NcmModelCtrlClass
-{
-  /*< private >*/
-  GObjectClass parent_class;
-};
-
 struct _NcmModelCtrl
 {
   /*< private >*/
   GObject parent_instance;
   NcmModel *model;
   gulong pkey;
+};
+
+struct _NcmModelCtrlClass
+{
+  /*< private >*/
+  GObjectClass parent_class;
 };
 
 GType ncm_model_ctrl_get_type (void) G_GNUC_CONST;

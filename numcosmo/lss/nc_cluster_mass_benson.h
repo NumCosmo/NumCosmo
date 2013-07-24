@@ -71,12 +71,6 @@ typedef enum _NcClusterMassBensonParams
 #define NC_CLUSTER_MASS_BENSON_M_LOWER_BOUND (1.0e13)
 #define NC_CLUSTER_MASS_BENSON_XI_ZETA_DIST_CUT (2.0)
 
-struct _NcClusterMassBensonClass
-{
-  /*< private >*/
-  NcClusterMassClass parent_class;
-};
-
 struct _NcClusterMassBenson
 {
   /*< private >*/
@@ -85,6 +79,12 @@ struct _NcClusterMassBenson
   gdouble signif_obs_max;  
   gdouble z0;
   gdouble M0;
+};
+
+struct _NcClusterMassBensonClass
+{
+  /*< private >*/
+  NcClusterMassClass parent_class;
 };
 
 GType nc_cluster_mass_benson_get_type (void) G_GNUC_CONST;

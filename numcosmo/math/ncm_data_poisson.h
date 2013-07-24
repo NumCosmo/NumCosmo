@@ -56,13 +56,6 @@ typedef enum _NcmDataPoissonType
   NCM_DATA_POISSON_INT,
 } NcmDataPoissonType;
 
-struct _NcmDataPoissonClass
-{
-  /* < private > */
-  NcmDataClass parent_class;
-  gdouble (*mean_func) (NcmDataPoisson *poisson, NcmMSet *mset, guint n);
-};
-
 /**
  * NcmDataPoisson:
  *
@@ -75,6 +68,13 @@ struct _NcmDataPoisson
   gsl_histogram *h;
   NcmVector *log_Nfac;
   guint np;
+};
+
+struct _NcmDataPoissonClass
+{
+  /* < private > */
+  NcmDataClass parent_class;
+  gdouble (*mean_func) (NcmDataPoisson *poisson, NcmMSet *mset, guint n);
 };
 
 GType ncm_data_poisson_get_type (void) G_GNUC_CONST;

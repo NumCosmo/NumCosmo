@@ -45,12 +45,6 @@ G_BEGIN_DECLS
 typedef struct _NcDataDistMuClass NcDataDistMuClass;
 typedef struct _NcDataDistMu NcDataDistMu;
 
-struct _NcDataDistMuClass
-{
-  /*< private >*/
-  NcmDataGaussDiagClass parent_class;
-};
-
 struct _NcDataDistMu
 {
   /*< private >*/
@@ -58,6 +52,12 @@ struct _NcDataDistMu
   NcDistance *dist;
   NcmVector *x;
   NcDataSNIAId id;
+};
+
+struct _NcDataDistMuClass
+{
+  /*< private >*/
+  NcmDataGaussDiagClass parent_class;
 };
 
 GType nc_data_dist_mu_get_type (void) G_GNUC_CONST;

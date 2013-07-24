@@ -43,14 +43,6 @@ G_BEGIN_DECLS
 typedef struct _NcHaloBiasTypeTinkerClass NcHaloBiasTypeTinkerClass;
 typedef struct _NcHaloBiasTypeTinker NcHaloBiasTypeTinker;
 
-
-
-struct _NcHaloBiasTypeTinkerClass
-{
-  /*< private >*/
-  NcHaloBiasTypeClass parent_class;
-};
-
 struct _NcHaloBiasTypeTinker
 {
   /*< private >*/
@@ -60,6 +52,12 @@ struct _NcHaloBiasTypeTinker
   gdouble b;
   gdouble c;
   gdouble Delta;   
+};
+
+struct _NcHaloBiasTypeTinkerClass
+{
+  /*< private >*/
+  NcHaloBiasTypeClass parent_class;
 };
 
 GType nc_halo_bias_type_tinker_get_type (void) G_GNUC_CONST;

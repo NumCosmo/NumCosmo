@@ -60,12 +60,6 @@ typedef gdouble (*NcClusterAbundanceIntPd2N) (NcClusterAbundance *cad, NcHICosmo
 #define nc_cluster_abundance_dNdlnM_val(cad,cp,lnM,zl,zu) (cad)->dNdlnM_val(cad,cp,lnM,zl,zu)
 #define nc_cluster_abundance_N_val(cad,cp,lnMl,lnMu,zl,zu) (cad)->N_val(cad,cp,lnMl,lnMu,zl,zu)
 
-struct _NcClusterAbundanceClass
-{
-  /*< private >*/
-  GObjectClass parent_class;
-};
-
 struct _NcClusterAbundance
 {
   /*< private >*/
@@ -90,6 +84,12 @@ struct _NcClusterAbundance
   NcmSpline2d *inv_lnM_z;
   gsl_rng *rng;
   NcmModelCtrl *ctrl;
+};
+
+struct _NcClusterAbundanceClass
+{
+  /*< private >*/
+  GObjectClass parent_class;
 };
 
 GType nc_cluster_abundance_get_type (void) G_GNUC_CONST;

@@ -66,6 +66,15 @@ typedef gboolean (*NcmReparamV) (NcmReparam *reparam, struct _NcmModel *model, N
  */
 typedef gboolean (*NcmReparamJ) (NcmReparam *reparam, struct _NcmModel *model, NcmMatrix *jac);
 
+struct _NcmReparam
+{
+  /*< private >*/
+  GObject parent_instance;
+  guint length;
+  NcmVector *new_params;
+  GPtrArray *sparams;
+};
+
 struct _NcmReparamClass
 {
   /*< private >*/
@@ -75,15 +84,6 @@ struct _NcmReparamClass
   NcmReparamV old2new;
   NcmReparamV new2old;
   NcmReparamJ jac;
-};
-
-struct _NcmReparam
-{
-  /*< private >*/
-  GObject parent_instance;
-  guint length;
-  NcmVector *new_params;
-  GPtrArray *sparams;
 };
 
 GType ncm_reparam_get_type (void) G_GNUC_CONST;

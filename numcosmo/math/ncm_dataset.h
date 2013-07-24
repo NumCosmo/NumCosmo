@@ -43,12 +43,6 @@ G_BEGIN_DECLS
 typedef struct _NcmDatasetClass NcmDatasetClass;
 typedef struct _NcmDataset NcmDataset;
 
-struct _NcmDatasetClass
-{
-  /*< private >*/
-  GObjectClass parent_class;
-};
-
 /**
  * NcmDataSet:
  *
@@ -59,6 +53,12 @@ struct _NcmDataset
   /*< private >*/
   GObject parent_instance;
   GPtrArray *data;
+};
+
+struct _NcmDatasetClass
+{
+  /*< private >*/
+  GObjectClass parent_class;
 };
 
 GType ncm_dataset_get_type (void) G_GNUC_CONST;
