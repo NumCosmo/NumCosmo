@@ -172,18 +172,29 @@ continuity_prior_f (NcmMSet *mset, gpointer obj, const gdouble *x, gdouble *f)
   const gdouble qz_ip2 = ncm_spline_eval (qspline->q_z, x_ip2);
   const gdouble mu = (qz_i + qz_ip2 - 2.0 * qz_ip1) * 0.5;
 */
-  gdouble *x_ptr = ncm_vector_ptr (qspline->q_z->xv, acp->knot);
-  gdouble *y_ptr = ncm_vector_ptr (qspline->q_z->yv, acp->knot);
+  const guint n = 5;
+  gdouble x_ptr[n];
+  gdouble y_ptr[n];
   gdouble c0, c1, cov00, cov01, cov11, chisq;
-  gdouble var = sigma * sigma;
-  gdouble w[] = {
-    1.0 / ((y_ptr[0] * y_ptr[0] + 1.0) * var), 
-    1.0 / ((y_ptr[1] * y_ptr[1] + 1.0) * var),
-    1.0 / ((y_ptr[2] * y_ptr[2] + 1.0) * var)
-  };
-  gdouble sqrt_det_var = - log (w[0]) - log (w[1]) - log (w[2]);
-  gsl_fit_wlinear (x_ptr, 1, w, 1, y_ptr, 1, 3, &c0, &c1, &cov00, &cov01, &cov11, &chisq);
-  f[0] = chisq + sqrt_det_var;
+  const gdouble var = sigma * sigma;
+  gdouble w_ptr[n];
+  gdouble sqrt_det_var = 0.0;
+  const gdouble zi = ncm_vector_get (qspline->q_z->xv, acp->knot);
+  const gdouble zip2 = ncm_vector_get (qspline->q_z->xv, acp->knot + 2);
+  guint i;
+  
+  for (i = 0; i < n; i++)
+  {
+    gdouble z = zi + (zip2 - zi) / (n - 1.0) * i;
+    gdouble qz = ncm_spline_eval (qspline->q_z, z);
+    x_ptr[i] = z;
+    y_ptr[i] = qz;
+    w_ptr[i] = 1.0 / ((qz * qz + 1.0) * var);
+    sqrt_det_var += - log (w_ptr[i]);
+  }
+
+  gsl_fit_wlinear (x_ptr, 1, w_ptr, 1, y_ptr, 1, n, &c0, &c1, &cov00, &cov01, &cov11, &chisq);
+  f[0] = (chisq + sqrt_det_var) / n;
 }
 
 static void
