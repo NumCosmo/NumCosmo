@@ -50,11 +50,6 @@ enum
   PROP_0,
   PROP_NPOINTS,
   PROP_USE_DET,
-/*  
-  PROP_USE_OFIT,
-  PROP_OFIT_MEAN,
-  PROP_OFIT_SIGMA,
- */ 
   PROP_SIZE,
 };
 
@@ -63,18 +58,17 @@ G_DEFINE_ABSTRACT_TYPE (NcmDataGaussCov, ncm_data_gauss_cov, NCM_TYPE_DATA);
 static void
 ncm_data_gauss_cov_init (NcmDataGaussCov *gauss)
 {
-  gauss->np           = 0;
-  gauss->y            = NULL;
-  gauss->v            = NULL;
-  gauss->cov          = NULL;
-  gauss->LLT          = NULL;
-  gauss->prepared_LLT = FALSE;
-  gauss->use_det      = FALSE;
-/*
-  gauss->use_ofit     = FALSE;
-  gauss->ofit_mean    = 0.0;
-  gauss->ofit_sigma   = 0.1;
- */ 
+  gauss->np               = 0;
+  gauss->y                = NULL;
+  gauss->v                = NULL;
+  gauss->cov              = NULL;
+  gauss->LLT              = NULL;
+  gauss->prepared_LLT     = FALSE;
+  gauss->use_det          = FALSE;
+  gauss->bootstrap_enable = FALSE;
+  gauss->bootstrap_init   = FALSE;
+  gauss->bootstrap_index  = NULL;
+  gauss->increasing_index = NULL;
 }
 
 static void
@@ -100,17 +94,6 @@ ncm_data_gauss_cov_set_property (GObject *object, guint prop_id, const GValue *v
     case PROP_USE_DET:
       gauss->use_det = g_value_get_boolean (value);
       break;
-/*
-    case PROP_USE_OFIT:
-      gauss->use_ofit = g_value_get_boolean (value);
-      break;
-    case PROP_OFIT_MEAN:
-      gauss->ofit_mean = g_value_get_double (value);
-      break;
-    case PROP_OFIT_SIGMA:
-      gauss->ofit_sigma = g_value_get_double (value);
-      break;
- */
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
       break;
@@ -131,17 +114,6 @@ ncm_data_gauss_cov_get_property (GObject *object, guint prop_id, GValue *value, 
     case PROP_USE_DET:
       g_value_set_boolean (value, gauss->use_det);
       break;
-/*
-    case PROP_USE_OFIT:
-      g_value_set_boolean (value, gauss->use_ofit);
-      break;
-    case PROP_OFIT_MEAN:
-      g_value_set_double (value, gauss->ofit_mean);
-      break;
-    case PROP_OFIT_SIGMA:
-      g_value_set_double (value, gauss->ofit_sigma);
-      break;
- */
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
       break;
@@ -157,6 +129,18 @@ ncm_data_gauss_cov_dispose (GObject *object)
   ncm_vector_clear (&gauss->v);
   ncm_matrix_clear (&gauss->cov);
   ncm_matrix_clear (&gauss->LLT);
+
+  if (gauss->bootstrap_index != NULL)
+  {
+    g_array_unref (gauss->bootstrap_index);
+    gauss->bootstrap_index = NULL;
+  }
+
+  if (gauss->increasing_index != NULL)
+  {
+    g_array_unref (gauss->increasing_index);
+    gauss->increasing_index = NULL;
+  }
 
   /* Chain up : end */
   G_OBJECT_CLASS (ncm_data_gauss_cov_parent_class)->dispose (object);
@@ -205,31 +189,7 @@ ncm_data_gauss_cov_class_init (NcmDataGaussCovClass *klass)
                                                          "Use determinant to calculate -2lnL",
                                                          FALSE,
                                                          G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-/*  
-  g_object_class_install_property (object_class,
-                                   PROP_USE_OFIT,
-                                   g_param_spec_boolean ("use-ofit",
-                                                         NULL,
-                                                         "Use overfitting penalty function",
-                                                         FALSE,
-                                                         G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
-  g_object_class_install_property (object_class,
-                                   PROP_OFIT_MEAN,
-                                   g_param_spec_double ("ofit-mean",
-                                                        NULL,
-                                                        "Overfitting penalty mean",
-                                                        -1e300, 1e300, 0.0,
-                                                        G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-
-  g_object_class_install_property (object_class,
-                                   PROP_OFIT_SIGMA,
-                                   g_param_spec_double ("ofit-sigma",
-                                                        NULL,
-                                                        "Overfitting penalty standard deviation",
-                                                        1e-300, 1e300, 1e-1,
-                                                        G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-*/
   data_class->get_length     = &_ncm_data_gauss_cov_get_length;
   data_class->copyto         = &_ncm_data_gauss_cov_copyto;
   data_class->begin          = NULL;
@@ -334,29 +294,54 @@ _ncm_data_gauss_cov_m2lnL_val (NcmData *data, NcmMSet *mset, gdouble *m2lnL)
                         NCM_MATRIX_GSL (gauss->LLT), ncm_vector_gsl (gauss->v));
   NCM_TEST_GSL_RESULT ("_ncm_data_gauss_cov_m2lnL_val", ret);
 
-  ret = gsl_blas_ddot (ncm_vector_gsl (gauss->v),
-                       ncm_vector_gsl (gauss->v),
-                       m2lnL);
-  NCM_TEST_GSL_RESULT ("_ncm_data_gauss_cov_m2lnL_val", ret);
+  if (!gauss->bootstrap_enable)
+  {
+    ret = gsl_blas_ddot (ncm_vector_gsl (gauss->v),
+                         ncm_vector_gsl (gauss->v),
+                         m2lnL);
+    NCM_TEST_GSL_RESULT ("_ncm_data_gauss_cov_m2lnL_val", ret);
 
-  if (gauss->use_det)
-  {
-    gint i;
-    gdouble lndetL = 0.0;
-    *m2lnL += gauss->np * ncm_c_ln2pi ();
-    
-    for (i = 0; i < gauss->np; i++)
+    if (gauss->use_det)
     {
-      lndetL += log (ncm_matrix_get (gauss->LLT, i, i));
+      gint i;
+      gdouble lndetL = 0.0;
+      *m2lnL += gauss->np * ncm_c_ln2pi ();
+
+      for (i = 0; i < gauss->np; i++)
+      {
+        lndetL += log (ncm_matrix_get (gauss->LLT, i, i));
+      }
+      *m2lnL += 2.0 * lndetL;
     }
-    *m2lnL += 2.0 * lndetL;
   }
-/*
-  if (gauss->use_ofit)
+  else
   {
-    *m2lnL += gsl_pow_2 ((*m2lnL - gauss->ofit_mean) / gauss->ofit_sigma);
+    guint i;
+    g_assert (gauss->bootstrap_init);
+    
+    if (gauss->use_det)
+    {
+      gdouble lndetL = 0.0;
+      *m2lnL += gauss->np * ncm_c_ln2pi ();
+      for (i = 0; i < gauss->np; i++)
+      {
+        guint k = g_array_index (gauss->bootstrap_index, guint, i);
+        const gdouble u_i = ncm_vector_get (gauss->v, k); 
+        lndetL += log (ncm_matrix_get (gauss->LLT, k, k));
+        *m2lnL += u_i * u_i;
+      }
+      *m2lnL += 2.0 * lndetL;
+    }
+    else
+    {
+      for (i = 0; i < gauss->np; i++)
+      {
+        guint k = g_array_index (gauss->bootstrap_index, guint, i);
+        const gdouble u_i = ncm_vector_get (gauss->v, k); 
+        *m2lnL += u_i * u_i;
+      }
+    }
   }
-*/
 }
 
 static void
@@ -406,6 +391,21 @@ ncm_data_gauss_cov_set_size (NcmDataGaussCov *gauss, guint np)
     gauss->y   = ncm_vector_new (gauss->np);
     gauss->v   = ncm_vector_new (gauss->np);
     gauss->cov = ncm_matrix_new (gauss->np, gauss->np);
+    if (gauss->bootstrap_enable)
+    {
+      guint i;
+
+      g_assert (gauss->bootstrap_index != NULL);
+      g_array_set_size (gauss->bootstrap_index, np);
+
+      g_assert (gauss->increasing_index != NULL);
+      g_array_set_size (gauss->increasing_index, np);
+
+      for (i = 0; i < np; i++)
+        g_array_index (gauss->increasing_index, guint, i) = i;
+
+      gauss->bootstrap_init = FALSE;
+    }
   }
 }
 
@@ -421,4 +421,76 @@ guint
 ncm_data_gauss_cov_get_size (NcmDataGaussCov *gauss)
 {
   return gauss->np;
+}
+
+/**
+ * ncm_data_gauss_cov_enable_bootstrap:
+ * @gauss: a #NcmDataGauss
+ * @enable: whenever to enable or disable bootstrap. 
+ *
+ * FIXME
+ * 
+ */
+void
+ncm_data_gauss_cov_set_bootstrap (NcmDataGaussCov *gauss, gboolean enable)
+{
+  if (gauss->bootstrap_enable)
+  {
+    if (enable)
+      return;
+    else
+    {
+      g_assert (gauss->bootstrap_index != NULL);
+      g_array_unref (gauss->bootstrap_index);
+      gauss->bootstrap_index = NULL;
+      g_array_unref (gauss->increasing_index);
+      gauss->increasing_index = NULL;
+      
+      gauss->bootstrap_enable = FALSE;
+      gauss->bootstrap_init = FALSE;
+    }
+  }
+  else
+  {
+    if (!enable)
+      return;
+    else
+    {
+      guint i;
+      g_assert (gauss->bootstrap_index == NULL);
+      g_assert (gauss->increasing_index == NULL);
+      
+      gauss->bootstrap_index = g_array_sized_new (FALSE, FALSE, sizeof (guint), gauss->np);
+      g_array_set_size (gauss->bootstrap_index, gauss->np);
+
+      gauss->increasing_index = g_array_sized_new (FALSE, FALSE, sizeof (guint), gauss->np);
+      g_array_set_size (gauss->increasing_index, gauss->np);
+
+      gauss->bootstrap_enable = TRUE;
+      gauss->bootstrap_init = FALSE;
+
+      for (i = 0; i < gauss->np; i++)
+        g_array_index (gauss->increasing_index, guint, i) = i;
+    }
+  }
+}
+
+/**
+ * ncm_data_gauss_cov_bootstrap_resample:
+ * @gauss: a #NcmDataGauss
+ *
+ * FIXME
+ * 
+ */
+void
+ncm_data_gauss_cov_bootstrap_resample (NcmDataGaussCov *gauss)
+{
+  gsl_rng *rng = ncm_cfg_rng_get ();
+  gpointer data = gauss->bootstrap_index->data;
+  gpointer idata = gauss->increasing_index->data;;
+  gsize n = gauss->bootstrap_index->len;
+  gsize element_size = g_array_get_element_size (gauss->bootstrap_index);
+  
+  gsl_ran_sample (rng, data, n, idata, n, element_size);
+  gauss->bootstrap_init = TRUE;
 }

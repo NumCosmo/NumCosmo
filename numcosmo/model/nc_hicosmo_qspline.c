@@ -163,43 +163,12 @@ continuity_prior_f (NcmMSet *mset, gpointer obj, const gdouble *x, gdouble *f)
   NcHICosmoQSpline *qspline = NC_HICOSMO_QSPLINE (ncm_mset_peek (mset, nc_hicosmo_id ()));
   NcHICosmoQSplineContPriorKnot *acp = (NcHICosmoQSplineContPriorKnot *) obj;
   const gdouble sigma = exp (nc_hicosmo_qspline_cont_prior_get_lnsigma (acp->qspline_cp, acp->knot));
-/*
-  const gdouble x_i = ncm_vector_get (qspline->q_z->xv, acp->knot);
-  const gdouble x_ip1 = ncm_vector_get (qspline->q_z->xv, acp->knot + 1);
-  const gdouble x_ip2 = ncm_vector_get (qspline->q_z->xv, acp->knot + 2);
-  const gdouble qz_i = ncm_spline_eval (qspline->q_z, x_i);
-  const gdouble qz_ip1 = ncm_spline_eval (qspline->q_z, x_ip1);
-  const gdouble qz_ip2 = ncm_spline_eval (qspline->q_z, x_ip2);
-  const gdouble mu = (qz_i + qz_ip2 - 2.0 * qz_ip1) * 0.5;
-*/
-  if (acp->knot == 0)
-  {
-    gdouble *x_ptr = ncm_vector_ptr (qspline->q_z->xv, acp->knot);
-    gdouble *y_ptr = ncm_vector_ptr (qspline->q_z->yv, acp->knot);
-    gdouble w_ptr[50];
-    guint n = ncm_vector_len (qspline->q_z->xv);
-    const gdouble var = sigma * sigma;
-    gdouble c0, c1, cov00, cov01, cov11, chisq;
-    guint i;
-
-    for (i = 0; i < n; i++)
-    {
-      w_ptr[i] = 1.0 / ((y_ptr[i] * y_ptr[i] + 1.0) * var);
-    }
-    
-    gsl_fit_wlinear (x_ptr, 1, w_ptr, 1, y_ptr, 1, n, &c0, &c1, &cov00, &cov01, &cov11, &chisq);
-    f[0] = chisq / n;
-  }
-  else
-    f[0] = 0.0;
-/*  
   const guint n = 5;
   gdouble x_ptr[n];
   gdouble y_ptr[n];
   gdouble c0, c1, cov00, cov01, cov11, chisq;
   const gdouble var = sigma * sigma;
   gdouble w_ptr[n];
-  gdouble sqrt_det_var = 0.0;
   const gdouble zi = ncm_vector_get (qspline->q_z->xv, acp->knot);
   const gdouble zip2 = ncm_vector_get (qspline->q_z->xv, acp->knot + 2);
   guint i;
@@ -208,15 +177,14 @@ continuity_prior_f (NcmMSet *mset, gpointer obj, const gdouble *x, gdouble *f)
   {
     gdouble z = zi + (zip2 - zi) / (n - 1.0) * i;
     gdouble qz = ncm_spline_eval (qspline->q_z, z);
+    gdouble qz_weight = 1.0 / GSL_MAX (qz * qz, 1.0);
     x_ptr[i] = z;
     y_ptr[i] = qz;
-    w_ptr[i] = 1.0 / ((qz * qz + 1.0) * var);
-    sqrt_det_var += - log (w_ptr[i]);
+    w_ptr[i] = qz_weight / var;
   }
 
   gsl_fit_wlinear (x_ptr, 1, w_ptr, 1, y_ptr, 1, n, &c0, &c1, &cov00, &cov01, &cov11, &chisq);
-  f[0] = (chisq + sqrt_det_var) / n;
-*/
+  f[0] = chisq / n;
 }
 
 static void
