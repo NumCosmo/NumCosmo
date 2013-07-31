@@ -103,7 +103,7 @@ GType nc_hicosmo_qspline_get_type (void) G_GNUC_CONST;
 NcHICosmoQSpline *nc_hicosmo_qspline_new (NcmSpline *s, gsize np, gdouble z_f);
 
 void nc_hicosmo_qspline_add_continuity_prior (NcHICosmoQSpline *qspline, NcmLikelihood *lh, gint knot, NcHICosmoQSplineContPrior *qspline_cp);
-NcHICosmoQSplineContPrior *nc_hicosmo_qspline_add_continuity_priors (NcHICosmoQSpline *qspline, NcmLikelihood *lh, gdouble sigma);
+NcHICosmoQSplineContPrior *nc_hicosmo_qspline_add_continuity_priors (NcHICosmoQSpline *qspline, NcmLikelihood *lh, gdouble sigma, gdouble abstol);
 
 void nc_hicosmo_qspline_add_continuity_constraint (NcHICosmoQSpline *qspline, NcmFit *fit, gint knot, NcHICosmoQSplineContPrior *qspline_cp);
 NcHICosmoQSplineContPrior *nc_hicosmo_qspline_add_continuity_constraints (NcHICosmoQSpline *qspline, NcmFit *fit, gdouble sigma);
@@ -133,12 +133,18 @@ GType nc_hicosmo_qspline_cont_prior_get_type (void) G_GNUC_CONST;
 
 NCM_MSET_MODEL_DECLARE_ID (nc_hicosmo_qspline_cont_prior);
 
+#define NC_HICOSMO_QSPLINE_CONT_PRIOR_ABSTOL (0)
+#define NC_HICOSMO_QSPLINE_CONT_PRIOR_LNSIGMA (0)
+
 NcHICosmoQSplineContPrior *nc_hicosmo_qspline_cont_prior_new (guint npriors);
 NcHICosmoQSplineContPrior *nc_hicosmo_qspline_cont_prior_ref (NcHICosmoQSplineContPrior *qspline_cp);
 void nc_hicosmo_qspline_cont_prior_free (NcHICosmoQSplineContPrior *qspline_cp);
 void nc_hicosmo_qspline_cont_prior_set_lnsigma (NcHICosmoQSplineContPrior *qspline_cp, guint i, gdouble ln_sigma);
 void nc_hicosmo_qspline_cont_prior_set_all_lnsigma (NcHICosmoQSplineContPrior *qspline_cp, gdouble ln_sigma);
 gdouble nc_hicosmo_qspline_cont_prior_get_lnsigma (NcHICosmoQSplineContPrior *qspline_cp, guint i);
+
+void nc_hicosmo_qspline_cont_prior_set_abstol (NcHICosmoQSplineContPrior *qspline_cp, gdouble abstol);
+gdouble nc_hicosmo_qspline_cont_prior_get_abstol (NcHICosmoQSplineContPrior *qspline_cp);
 
 G_END_DECLS
 

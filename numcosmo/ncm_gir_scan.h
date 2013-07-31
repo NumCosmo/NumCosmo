@@ -85,3 +85,15 @@
  * fftw_complex: (skip)
  */
 #define fftw_complex gint
+
+/**
+ * FILE: (skip)
+ *
+ */
+#define FILE gint
+
+/**
+ * NCM_MUTEX_TYPE: (skip)
+ *
+ */
+#define NCM_MUTEX_TYPE _NCM_MUTEX_TYPE

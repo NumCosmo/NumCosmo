@@ -205,18 +205,20 @@ _ncm_data_gauss_diag_get_dof (NcmData *data)
 static void
 _ncm_data_gauss_diag_copyto (NcmData *data, NcmData *data_dest)
 {
-  NcmDataGaussDiag *src  = NCM_DATA_GAUSS_DIAG (data);
-  NcmDataGaussDiag *dest = NCM_DATA_GAUSS_DIAG (data_dest);
-  
-  ncm_vector_memcpy (dest->y, src->y);
-  ncm_vector_memcpy (dest->sigma, src->sigma);
+  /* Chain up : start */
+  NCM_DATA_CLASS (ncm_data_gauss_diag_parent_class)->copyto (data, data_dest);
+  {
+    NcmDataGaussDiag *src  = NCM_DATA_GAUSS_DIAG (data);
+    NcmDataGaussDiag *dest = NCM_DATA_GAUSS_DIAG (data_dest);
 
-  g_assert (dest->weight == NULL);
-  
-  if (src->weight != NULL)
-    dest->weight = ncm_vector_dup (src->weight);
+    ncm_vector_memcpy (dest->y, src->y);
+    ncm_vector_memcpy (dest->sigma, src->sigma);
 
-  ncm_data_set_init (data_dest);
+    g_assert (dest->weight == NULL);
+
+    if (src->weight != NULL)
+      dest->weight = ncm_vector_dup (src->weight);
+  }
 }
 
 static void
@@ -245,20 +247,23 @@ _ncm_data_gauss_diag_resample (NcmData *data, NcmMSet *mset)
 {
   NcmDataGaussDiag *gauss = NCM_DATA_GAUSS_DIAG (data);
   NcmDataGaussDiagClass *gauss_diag_class = NCM_DATA_GAUSS_DIAG_GET_CLASS (gauss);
-  gsl_rng *rng = ncm_cfg_rng_get ();
+  NcmRNG *rng = ncm_rng_pool_get (NCM_DATA_RESAMPLE_RNG_NAME);
   gint i;
 
   if (gauss_diag_class->sigma_func != NULL)
     gauss_diag_class->sigma_func (gauss, mset, gauss->sigma);
 
   gauss_diag_class->mean_func (gauss, mset, gauss->y);
-  
+
+  ncm_rng_lock (rng);
   for (i = 0; i < gauss->np; i++)
   {
     const gdouble sigma_i = ncm_vector_get (gauss->sigma, i);
-    const gdouble u_i = gsl_ran_gaussian_ziggurat (rng, sigma_i);
+    const gdouble u_i = gsl_ran_gaussian_ziggurat (rng->r, sigma_i);
     ncm_vector_subfrom (gauss->y, i, u_i);
   }
+  ncm_rng_unlock (rng);
+  ncm_rng_free (rng);
 }
 
 static void
@@ -278,32 +283,70 @@ _ncm_data_gauss_diag_m2lnL_val (NcmData *data, NcmMSet *mset, gdouble *m2lnL)
 
   if (gauss->wmean)
   {
-    gdouble tmp = 0.0;
     if (sigma_update || !gauss->prepared_w)
       _ncm_data_gauss_prepare_weight (data);
 
-    for (i = 0; i < gauss->np; i++)
+    if (!data->bootstrap)
     {
-      const gdouble y_i = ncm_vector_get (gauss->y, i);
-      const gdouble yt_i = ncm_vector_get (gauss->v, i);
-      const gdouble r_i = (yt_i - y_i);
-      const gdouble w_i = ncm_vector_get (gauss->weight, i);
-      const gdouble r_i2 = r_i * r_i;
-      *m2lnL += r_i2 * w_i;
-      tmp += r_i * w_i;
-    }
+      gdouble tmp = 0.0;
 
-    *m2lnL -= tmp * tmp / gauss->wt;
+      for (i = 0; i < gauss->np; i++)
+      {
+        const gdouble y_i = ncm_vector_get (gauss->y, i);
+        const gdouble yt_i = ncm_vector_get (gauss->v, i);
+        const gdouble r_i = (yt_i - y_i);
+        const gdouble w_i = ncm_vector_get (gauss->weight, i);
+        const gdouble r_i2 = r_i * r_i;
+        *m2lnL += r_i2 * w_i;
+        tmp += r_i * w_i;
+      }
+      *m2lnL -= tmp * tmp / gauss->wt;
+    }
+    else
+    {
+      const guint bsize = ncm_bootstrap_get_bsize (data->bstrap);
+      gdouble tmp = 0.0;
+      gdouble wt = 0.0;
+      for (i = 0; i < bsize; i++)
+      {
+        guint k = ncm_bootstrap_get (data->bstrap, i);
+        const gdouble y_k = ncm_vector_get (gauss->y, k);
+        const gdouble yt_k = ncm_vector_get (gauss->v, k);
+        const gdouble r_k = (yt_k - y_k);
+        const gdouble w_k = ncm_vector_get (gauss->weight, k);
+        const gdouble r_k2 = r_k * r_k;
+        *m2lnL += r_k2 * w_k;
+        tmp += r_k * w_k;
+        wt += w_k;
+      }
+      *m2lnL -= tmp * tmp / wt;
+    }
   }
   else
   {
-    for (i = 0; i < gauss->np; i++)
+    if (!data->bootstrap)
     {
-      const gdouble y_i = ncm_vector_get (gauss->y, i);
-      const gdouble yt_i = ncm_vector_get (gauss->v, i);
-      const gdouble sigma_i = ncm_vector_get (gauss->sigma, i);
-      const gdouble r_i = (yt_i - y_i) / sigma_i;
-      *m2lnL += r_i * r_i;
+      for (i = 0; i < gauss->np; i++)
+      {
+        const gdouble y_i = ncm_vector_get (gauss->y, i);
+        const gdouble yt_i = ncm_vector_get (gauss->v, i);
+        const gdouble sigma_i = ncm_vector_get (gauss->sigma, i);
+        const gdouble r_i = (yt_i - y_i) / sigma_i;
+        *m2lnL += r_i * r_i;
+      }
+    }
+    else
+    {
+      const guint bsize = ncm_bootstrap_get_bsize (data->bstrap);
+      for (i = 0; i < bsize; i++)
+      {
+        guint k = ncm_bootstrap_get (data->bstrap, i);
+        const gdouble y_k = ncm_vector_get (gauss->y, k);
+        const gdouble yt_k = ncm_vector_get (gauss->v, k);
+        const gdouble sigma_k = ncm_vector_get (gauss->sigma, k);
+        const gdouble r_k = (yt_k - y_k) / sigma_k;
+        *m2lnL += r_k * r_k;
+      }      
     }
   }
 }
@@ -316,6 +359,9 @@ _ncm_data_gauss_diag_leastsquares_f (NcmData *data, NcmMSet *mset, NcmVector *v)
   gboolean sigma_update = FALSE;
   gint i;
 
+  if (data->bootstrap)
+    g_error ("NcmDataGaussDiag: does not support bootstrap with least squares");
+  
   if (gauss_diag_class->sigma_func != NULL)
     sigma_update = gauss_diag_class->sigma_func (gauss, mset, gauss->sigma);
 
@@ -366,6 +412,7 @@ _ncm_data_gauss_diag_leastsquares_f (NcmData *data, NcmMSet *mset, NcmVector *v)
 void 
 ncm_data_gauss_diag_set_size (NcmDataGaussDiag *diag, guint np)
 {
+  NcmData *data = NCM_DATA (diag);
   if ((np == 0) || (np != diag->np))
   {
     diag->np = 0;
@@ -373,13 +420,17 @@ ncm_data_gauss_diag_set_size (NcmDataGaussDiag *diag, guint np)
     ncm_vector_clear (&diag->v);
     ncm_vector_clear (&diag->sigma);
     ncm_vector_clear (&diag->weight);
+    data->init = FALSE;
   }
   if ((np != 0) && (np != diag->np))
   {
     diag->np    = np;
     diag->y     = ncm_vector_new (diag->np);
     diag->v     = ncm_vector_new (diag->np);
-    diag->sigma = ncm_vector_new (diag->np);    
+    diag->sigma = ncm_vector_new (diag->np);
+    if (data->bootstrap)
+      ncm_bootstrap_set_fsize (data->bstrap, np);
+    data->init = FALSE;
   }
 }
 

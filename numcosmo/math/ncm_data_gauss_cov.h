@@ -30,6 +30,7 @@
 #include <glib-object.h>
 #include <numcosmo/build_cfg.h>
 #include <numcosmo/math/ncm_data.h>
+#include <numcosmo/math/ncm_bootstrap.h>
 
 G_BEGIN_DECLS
 
@@ -54,10 +55,6 @@ struct _NcmDataGaussCov
   NcmMatrix *LLT;
   gboolean prepared_LLT;
   gboolean use_det;
-  gboolean bootstrap_enable;
-  gboolean bootstrap_init;
-  GArray *bootstrap_index;
-  GArray *increasing_index;
 };
 
 struct _NcmDataGaussCovClass
@@ -72,8 +69,6 @@ GType ncm_data_gauss_cov_get_type (void) G_GNUC_CONST;
 
 void ncm_data_gauss_cov_set_size (NcmDataGaussCov *gauss, guint np);
 guint ncm_data_gauss_cov_get_size (NcmDataGaussCov *gauss);
-void ncm_data_gauss_cov_set_bootstrap (NcmDataGaussCov *gauss, gboolean enable);
-void ncm_data_gauss_cov_bootstrap_resample (NcmDataGaussCov *gauss);
 
 G_END_DECLS
 

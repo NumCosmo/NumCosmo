@@ -122,6 +122,8 @@ nc_data_bao_a_finalize (GObject *object)
   G_OBJECT_CLASS (nc_data_bao_a_parent_class)->finalize (object);
 }
 
+static NcmData *_nc_data_bao_a_dup (NcmData *data);
+static void _nc_data_bao_a_copyto (NcmData *data, NcmData *data_dest);
 static void _nc_data_bao_a_prepare (NcmData *data, NcmMSet *mset);
 static void _nc_data_bao_a_mean_func (NcmDataGaussDiag *diag, NcmMSet *mset, NcmVector *vp);
 
@@ -152,9 +154,40 @@ nc_data_bao_a_class_init (NcDataBaoAClass *klass)
                                                       "Sample id",
                                                       NC_TYPE_DATA_BAO_ID, NC_DATA_BAO_A_EISENSTEIN2005,
                                                       G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));  
-
+  data_class->dup       = &_nc_data_bao_a_dup;
+  data_class->copyto    = &_nc_data_bao_a_copyto;
   data_class->prepare   = &_nc_data_bao_a_prepare;
   diag_class->mean_func = &_nc_data_bao_a_mean_func;
+}
+
+
+static NcmData *
+_nc_data_bao_a_dup (NcmData *data)
+{
+  NcDataBaoA *bao_a = NC_DATA_BAO_A (data);
+  NcDataBaoA *bao_a_dup = g_object_new (NC_TYPE_DATA_BAO_A,
+                                        NULL);
+  NcmData *data_dest = NCM_DATA (bao_a_dup);
+  nc_data_bao_a_set_size (bao_a_dup, nc_data_bao_a_get_size (bao_a));
+
+  ncm_data_copyto (data, data_dest);
+  
+  return data_dest;
+}
+
+static void 
+_nc_data_bao_a_copyto (NcmData *data, NcmData *data_dest)
+{
+  /* Chain up : start */
+  NCM_DATA_CLASS (nc_data_bao_a_parent_class)->copyto (data, data_dest);
+  {
+    NcDataBaoA *bao_a = NC_DATA_BAO_A (data);
+    NcDataBaoA *bao_a_dest = NC_DATA_BAO_A (data_dest);
+
+    g_assert_cmpuint (nc_data_bao_a_get_size (bao_a), ==, nc_data_bao_a_get_size (bao_a_dest));
+    ncm_vector_memcpy (bao_a_dest->x, bao_a->x);
+    bao_a_dest->id = bao_a->id; 
+  }
 }
 
 static void

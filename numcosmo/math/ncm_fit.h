@@ -144,6 +144,7 @@ struct _NcmFit
   NcmFitGrad grad;
   guint maxiter;
   gdouble m2lnL_reltol;
+  gdouble m2lnL_abstol;
   gdouble params_reltol;
   GTimer *timer;
   GPtrArray *equality_constraints;
@@ -183,9 +184,16 @@ void ncm_fit_free (NcmFit *fit);
 void ncm_fit_clear (NcmFit **fit);
 
 void ncm_fit_set_grad_type (NcmFit *fit, NcmFitGradType gtype);
-void ncm_fit_ls_set_state (NcmFit *fit, gdouble prec, NcmVector *x, NcmVector *f, NcmMatrix *J);
+
 void ncm_fit_set_maxiter (NcmFit *fit, guint maxiter);
 guint ncm_fit_get_maxiter (NcmFit *fit);
+void ncm_fit_set_m2lnL_reltol (NcmFit *fit, gdouble tol);
+gdouble ncm_fit_get_m2lnL_reltol (NcmFit *fit);
+void ncm_fit_set_m2lnL_abstol (NcmFit *fit, gdouble tol);
+gdouble ncm_fit_get_m2lnL_abstol (NcmFit *fit);
+void ncm_fit_set_params_reltol (NcmFit *fit, gdouble tol);
+gdouble ncm_fit_get_params_reltol (NcmFit *fit);
+void ncm_fit_set_params (NcmFit *fit, NcmVector *params);
 
 void ncm_fit_add_equality_constraint (NcmFit *fit, NcmMSetFunc *func, gdouble tot);
 void ncm_fit_add_inequality_constraint (NcmFit *fit, NcmMSetFunc *func, gdouble tot);
@@ -262,11 +270,11 @@ gdouble ncm_fit_type_constrain_error (NcmFit *fit, gdouble p, gint nu, gdouble d
 void ncm_fit_function_error (NcmFit *fit, NcmMSetFunc *func, gdouble *x, gboolean pretty_print, gdouble *f, gdouble *sigma_f);
 gdouble ncm_fit_function_cov (NcmFit *fit, NcmMSetFunc *func1, gdouble z1, NcmMSetFunc *func2, gdouble z2, gboolean pretty_print);
 
-#define NCM_FIT_NUMDIFF_SCALE (1.0e-4)
 #define NCM_FIT_NPARAM(fit) ((fit)->pt->nfree)
+#define NCM_FIT_DEFAULT_M2LNL_RELTOL (1e-8)
 #define NCM_FIT_DEFAULT_M2LNL_ABSTOL (0.0)
-#define NCM_FIT_DEFAULT_M2LNL_RELTOL (1e-13)
-#define NCM_FIT_MAXITER 10000
+#define NCM_FIT_DEFAULT_PARAMS_RELTOL (1e-8)
+#define NCM_FIT_DEFAULT_MAXITER 10000
 
 G_END_DECLS
 

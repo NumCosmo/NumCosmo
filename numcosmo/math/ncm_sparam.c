@@ -73,7 +73,7 @@ G_DEFINE_TYPE (NcmSParam, ncm_sparam, G_TYPE_OBJECT);
  * the input arguments.
  *
  * The @name parameter is restricted to the interval [@lower_bound, @upper_bound].
- * @scale is an initial step for the statistical algorithms.
+   * @scale is an initial step for the statistical algorithms.
  * @abstol is the absolute error tolerance of the parameter.
  * @ftype indicates if the parameter will be fitted or not.
  *
@@ -83,15 +83,15 @@ NcmSParam *
 ncm_sparam_new (gchar *name, gchar *symbol, gdouble lower_bound, gdouble upper_bound, gdouble scale, gdouble abstol, gdouble default_val, NcmParamType ftype)
 {
   NcmSParam *sparam = g_object_new (NCM_TYPE_SPARAM,
-                                        "name",               name,
-                                        "symbol",             symbol,
-                                        "lower-bound",        lower_bound,
-                                        "upper-bound",        upper_bound,
-                                        "scale",              scale,
-                                        "absolute-tolerance", abstol,
-                                        "default-value",      default_val,
-                                        "fit-type",           ftype,
-                                        NULL);
+                                    "name",               name,
+                                    "symbol",             symbol,
+                                    "lower-bound",        lower_bound,
+                                    "upper-bound",        upper_bound,
+                                    "scale",              scale,
+                                    "absolute-tolerance", abstol,
+                                    "default-value",      default_val,
+                                    "fit-type",           ftype,
+                                    NULL);
   return sparam;
 }
 
@@ -102,7 +102,7 @@ ncm_sparam_new (gchar *name, gchar *symbol, gdouble lower_bound, gdouble upper_b
  * Duplicates the #NcmSParam object setting the same values of the original propertities.
  *
  * Returns: (transfer full): A new #NcmSParam.
- */
+   */
 NcmSParam *
 ncm_sparam_copy (NcmSParam *sparam)
 {
@@ -146,7 +146,7 @@ ncm_sparam_clear (NcmSParam **sparam)
  * Atomically increase the reference count of @sparam by one.
  *
  * Returns: (transfer full): @sparam
- */
+   */
 NcmSParam *
 ncm_sparam_ref (NcmSParam *sparam)
 {
@@ -388,9 +388,9 @@ _ncm_sparam_finalize (GObject *object)
 {
   NcmSParam *sparam = NCM_SPARAM (object);
   if (sparam->name)
-	g_free (sparam->name);
+    g_free (sparam->name);
   if (sparam->symbol)
-	g_free (sparam->symbol);
+    g_free (sparam->symbol);
 
   G_OBJECT_CLASS (ncm_sparam_parent_class)->finalize (object);
 }
@@ -403,33 +403,33 @@ _ncm_sparam_set_property (GObject *object, guint prop_id, const GValue *value, G
 
   switch (prop_id)
   {
-	case PROP_NAME:
-	  sparam->name = g_value_dup_string (value);
-	  break;
-	case PROP_SYMBOL:
-	  sparam->symbol = g_value_dup_string (value);
-	  break;
-	case PROP_LOWER_BOUND:
-	  ncm_sparam_set_lower_bound (sparam, g_value_get_double (value));
-	  break;
-	case PROP_UPPER_BOUND:
-	  ncm_sparam_set_upper_bound (sparam, g_value_get_double (value));
-	  break;
-	case PROP_SCALE:
-	  ncm_sparam_set_scale (sparam, g_value_get_double (value));
-	  break;
-	case PROP_ABSOLUTE_TOLERANCE:
-	  ncm_sparam_set_absolute_tolerance (sparam, g_value_get_double (value));
-	  break;
-	case PROP_DEFAULT_VALUE:
-	  ncm_sparam_set_default_value (sparam, g_value_get_double (value));
-	  break;
-	case PROP_FIT_TYPE:
-	  ncm_sparam_set_fit_type (sparam, g_value_get_enum (value));
-	  break;
-	default:
-	  G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-	  break;
+    case PROP_NAME:
+      sparam->name = g_value_dup_string (value);
+      break;
+    case PROP_SYMBOL:
+      sparam->symbol = g_value_dup_string (value);
+      break;
+    case PROP_LOWER_BOUND:
+      ncm_sparam_set_lower_bound (sparam, g_value_get_double (value));
+      break;
+    case PROP_UPPER_BOUND:
+      ncm_sparam_set_upper_bound (sparam, g_value_get_double (value));
+      break;
+    case PROP_SCALE:
+      ncm_sparam_set_scale (sparam, g_value_get_double (value));
+      break;
+    case PROP_ABSOLUTE_TOLERANCE:
+      ncm_sparam_set_absolute_tolerance (sparam, g_value_get_double (value));
+      break;
+    case PROP_DEFAULT_VALUE:
+      ncm_sparam_set_default_value (sparam, g_value_get_double (value));
+      break;
+    case PROP_FIT_TYPE:
+      ncm_sparam_set_fit_type (sparam, g_value_get_enum (value));
+      break;
+    default:
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
+      break;
   }
 }
 
@@ -441,33 +441,33 @@ _ncm_sparam_get_property (GObject *object, guint prop_id, GValue *value, GParamS
 
   switch (prop_id)
   {
-	case PROP_NAME:
-	  g_value_set_string (value, sparam->name);
-	  break;
-	case PROP_SYMBOL:
-	  g_value_set_string (value, sparam->symbol);
-	  break;
-	case PROP_LOWER_BOUND:
-	  g_value_set_double (value, ncm_sparam_get_lower_bound (sparam));
-	  break;
-	case PROP_UPPER_BOUND:
-	  g_value_set_double (value, ncm_sparam_get_upper_bound (sparam));
-	  break;
-	case PROP_SCALE:
-	  g_value_set_double (value, ncm_sparam_get_scale (sparam));
-	  break;
-	case PROP_ABSOLUTE_TOLERANCE:
-	  g_value_set_double (value, ncm_sparam_get_absolute_tolerance (sparam));
-	  break;
-	case PROP_DEFAULT_VALUE:
-	  g_value_set_double (value, ncm_sparam_get_default_value (sparam));
-	  break;
-	case PROP_FIT_TYPE:
-	  g_value_set_enum (value, ncm_sparam_get_fit_type (sparam));
-	  break;
-	default:
-	  G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-	  break;
+    case PROP_NAME:
+      g_value_set_string (value, sparam->name);
+      break;
+    case PROP_SYMBOL:
+      g_value_set_string (value, sparam->symbol);
+      break;
+    case PROP_LOWER_BOUND:
+      g_value_set_double (value, ncm_sparam_get_lower_bound (sparam));
+      break;
+    case PROP_UPPER_BOUND:
+      g_value_set_double (value, ncm_sparam_get_upper_bound (sparam));
+      break;
+    case PROP_SCALE:
+      g_value_set_double (value, ncm_sparam_get_scale (sparam));
+      break;
+    case PROP_ABSOLUTE_TOLERANCE:
+      g_value_set_double (value, ncm_sparam_get_absolute_tolerance (sparam));
+      break;
+    case PROP_DEFAULT_VALUE:
+      g_value_set_double (value, ncm_sparam_get_default_value (sparam));
+      break;
+    case PROP_FIT_TYPE:
+      g_value_set_enum (value, ncm_sparam_get_fit_type (sparam));
+      break;
+    default:
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
+      break;
   }
 }
 
@@ -476,9 +476,9 @@ ncm_sparam_class_init (NcmSParamClass *klass)
 {
   GObjectClass* object_class = G_OBJECT_CLASS (klass);
 
-  object_class->finalize = _ncm_sparam_finalize;
   object_class->set_property = _ncm_sparam_set_property;
   object_class->get_property = _ncm_sparam_get_property;
+  object_class->finalize = _ncm_sparam_finalize;
 
   /**
    * NcmSParam:name:
@@ -497,7 +497,7 @@ ncm_sparam_class_init (NcmSParamClass *klass)
    * NcmSParam:symbol:
    *
    * Parameter's name written in a usual form (including latex).
-   */
+     */
   g_object_class_install_property (object_class,
                                    PROP_SYMBOL,
                                    g_param_spec_string ("symbol",
@@ -510,7 +510,7 @@ ncm_sparam_class_init (NcmSParamClass *klass)
    * NcmSParam:lower-bound:
    *
    * Lower parameter threshold whose value is restricted to [-G_MAXDOUBLE, G_MAXDOUBLE].
-	 */
+     */
   g_object_class_install_property (object_class,
                                    PROP_LOWER_BOUND,
                                    g_param_spec_double ("lower-bound",
@@ -523,7 +523,7 @@ ncm_sparam_class_init (NcmSParamClass *klass)
    * NcmSParam:upper-bound:
    *
    * Upper parameter threshold whose value is restricted to [-G_MAXDOUBLE, G_MAXDOUBLE].
-   */
+     */
   g_object_class_install_property (object_class,
                                    PROP_UPPER_BOUND,
                                    g_param_spec_double ("upper-bound",
@@ -536,7 +536,7 @@ ncm_sparam_class_init (NcmSParamClass *klass)
    * NcmSParam:scale:
    *
    * Scale, whose value is restricted to [0, G_MAXDOUBLE], is the step used by #NcmFit to increment the value of the parameter.
-   */
+     */
   g_object_class_install_property (object_class,
                                    PROP_SCALE,
                                    g_param_spec_double ("scale",
@@ -549,7 +549,7 @@ ncm_sparam_class_init (NcmSParamClass *klass)
    * NcmSParam:absolute-tolerance:
    *
    * Absolute tolerance, whose value is restricted to [0, G_MAXDOUBLE], is the size of the error used by #NcmFit.
-   */
+     */
   g_object_class_install_property (object_class,
                                    PROP_ABSOLUTE_TOLERANCE,
                                    g_param_spec_double ("absolute-tolerance",

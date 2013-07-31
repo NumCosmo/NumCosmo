@@ -38,7 +38,7 @@
 #include "build_cfg.h"
 
 #include "math/ncm_data_dist1d.h"
-#include "math/ncm_cfg.h"
+#include "math/ncm_rng.h"
 
 enum
 {
@@ -166,10 +166,13 @@ _ncm_data_dist1d_get_length (NcmData *data)
 static void
 _ncm_data_dist1d_copyto (NcmData *data, NcmData *data_dest)
 {
-  NcmDataDist1d *dist1d = NCM_DATA_DIST1D (data);
-  NcmDataDist1d *dist1_dest = NCM_DATA_DIST1D (data_dest);
-  ncm_vector_memcpy (dist1_dest->x, dist1d->x);
-  ncm_data_set_init (data_dest);
+  /* Chain up : start */
+  NCM_DATA_CLASS (ncm_data_dist1d_parent_class)->copyto (data, data_dest);
+  {
+    NcmDataDist1d *dist1d = NCM_DATA_DIST1D (data);
+    NcmDataDist1d *dist1_dest = NCM_DATA_DIST1D (data_dest);
+    ncm_vector_memcpy (dist1_dest->x, dist1d->x);
+  }
 }
 
 static void
@@ -180,13 +183,24 @@ _ncm_data_dist1d_m2lnL_val (NcmData *data, NcmMSet *mset, gdouble *m2lnL)
   gint i;
   
   *m2lnL = 0.0;
-
-  for (i = 0; i < dist1d->np; i++)
+  if (!data->bootstrap)
   {
-    const gdouble x_i = ncm_vector_get (dist1d->x, i);
-    *m2lnL += ncm_mset_func_eval1 (dist1d_class->dist, mset, x_i);
+    for (i = 0; i < dist1d->np; i++)
+    {
+      const gdouble x_i = ncm_vector_get (dist1d->x, i);
+      *m2lnL += ncm_mset_func_eval1 (dist1d_class->dist, mset, x_i);
+    }
   }
-
+  else
+  {
+    const guint bsize = ncm_bootstrap_get_bsize (data->bstrap);
+    for (i = 0; i < bsize; i++)
+    {
+      guint k = ncm_bootstrap_get (data->bstrap, i);
+      const gdouble x_i = ncm_vector_get (dist1d->x, k);
+      *m2lnL += ncm_mset_func_eval1 (dist1d_class->dist, mset, x_i);
+    }    
+  }
   return;
 }
 
@@ -195,18 +209,21 @@ _ncm_data_dist1d_resample (NcmData *data, NcmMSet *mset)
 {
   NcmDataDist1d *dist1d = NCM_DATA_DIST1D (data);
   NcmDataDist1dClass *dist1d_class = NCM_DATA_DIST1D_GET_CLASS (data);
-  gsl_rng *rng = ncm_cfg_rng_get ();
+  NcmRNG *rng = ncm_rng_pool_get (NCM_DATA_RESAMPLE_RNG_NAME);
   gint i;
 
   if (dist1d_class->inv_pdf == NULL)
     g_error ("_ncm_data_dist1d_resample: This object do not implement the inverse of the pdf.");
 
+  ncm_rng_lock (rng);
   for (i = 0; i < dist1d->np; i++)
   {
-    const gdouble u_i = gsl_rng_uniform (rng);
+    const gdouble u_i = gsl_rng_uniform (rng->r);
     const gdouble x_i = ncm_mset_func_eval1 (dist1d_class->inv_pdf, mset, u_i);
     ncm_vector_set (dist1d->x, i, x_i);
   }
+  ncm_rng_unlock (rng);
+  ncm_rng_free (rng);
 }
 
 /**
@@ -220,15 +237,20 @@ _ncm_data_dist1d_resample (NcmData *data, NcmMSet *mset)
 void 
 ncm_data_dist1d_set_size (NcmDataDist1d *dist1d, guint np)
 {
+  NcmData *data = NCM_DATA (dist1d);
   if ((np == 0) || (np != dist1d->np))
   {
     dist1d->np = 0;
     ncm_vector_clear (&dist1d->x);
+    data->init = FALSE;
   }
   if ((np != 0) && (np != dist1d->np))
   {
     dist1d->np = np;
-    dist1d->x  = ncm_vector_new (dist1d->np);    
+    dist1d->x  = ncm_vector_new (dist1d->np);
+    if (data->bootstrap)
+      ncm_bootstrap_set_fsize (data->bstrap, np);
+    data->init = FALSE;
   }
 }
 

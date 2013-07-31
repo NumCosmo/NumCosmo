@@ -20,12 +20,14 @@
     <xi:include href="dependencies.xml"/>
     <xi:include href="compiling.xml"/>
     <xi:include href="refs.xml"/>
+    <xi:include href="xml/build_cfg.xml"/>
   </chapter>
 
   <chapter>
     <title>Numcosmo Math</title>
     <xi:include href="xml/ncm_vector.xml"/>
     <xi:include href="xml/ncm_matrix.xml"/>
+    <xi:include href="xml/ncm_serialize.xml"/>
     <xi:include href="xml/ncm_lapack.xml"/>
     <xi:include href="xml/ncm_sparam.xml"/>
     <xi:include href="xml/ncm_vparam.xml"/>
@@ -38,7 +40,9 @@
     <xi:include href="xml/ncm_func_eval.xml"/>
     <xi:include href="xml/ncm_fftlog.xml"/>
     <xi:include href="xml/ncm_cfg.xml"/>
+    <xi:include href="xml/ncm_timer.xml"/>
     <xi:include href="xml/ncm_c.xml"/>
+    <xi:include href="xml/ncm_rng.xml"/>
     <section>
       <title>Splines 1D</title>
       <xi:include href="xml/ncm_spline.xml"/>
@@ -76,11 +80,14 @@
     </section>
     <section>
     <title>Statistical Analysis</title>
+      <xi:include href="xml/ncm_stats_vec.xml"/>
+      <xi:include href="xml/ncm_bootstrap.xml"/>
       <xi:include href="xml/ncm_likelihood.xml"/>
       <xi:include href="xml/ncm_priors.xml"/>
       <xi:include href="xml/ncm_fit_state.xml"/>
       <xi:include href="xml/ncm_fit.xml"/>
       <xi:include href="xml/ncm_fit_nlopt.xml"/>
+      <xi:include href="xml/ncm_fit_nlopt_enum.xml"/>
       <xi:include href="xml/ncm_fit_gsl_ls.xml"/>
       <xi:include href="xml/ncm_fit_gsl_mm.xml"/>
       <xi:include href="xml/ncm_fit_gsl_mms.xml"/>

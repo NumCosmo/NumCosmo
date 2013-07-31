@@ -15,7 +15,18 @@ G_BEGIN_DECLS
 /*** BEGIN value-header ***/
 GType @enum_name@_get_type (void) G_GNUC_CONST;
 #define @ENUMPREFIX@_TYPE_@ENUMSHORT@ (@enum_name@_get_type ())
+
+typedef enum
+{
+  /*< private >*/
 /*** END value-header ***/
+/*** BEGIN value-production ***/
+  NCM_FIT_@VALUENAME@ = @valuenum@,
+/*** END value-production ***/
+/*** BEGIN value-tail ***/
+} @EnumName@;
+
+/*** END value-tail ***/
 
 /*** BEGIN file-tail ***/
 G_END_DECLS

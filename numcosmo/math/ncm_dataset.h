@@ -44,6 +44,21 @@ typedef struct _NcmDatasetClass NcmDatasetClass;
 typedef struct _NcmDataset NcmDataset;
 
 /**
+ * NcmDatasetBStrapType:
+ * @NCM_DATASET_BSTRAP_DISABLE: Bootstrap disabled.
+ * @NCM_DATASET_BSTRAP_PARTIAL: Partial bootstrap, each #NcmData is bootstraped individually.
+ * @NCM_DATASET_BSTRAP_TOTAL: Total bootstrap, all data is bootstraped simultaneously.
+ * 
+ */
+typedef enum _NcmDatasetBStrapType
+{
+  NCM_DATASET_BSTRAP_DISABLE = 0,
+  NCM_DATASET_BSTRAP_PARTIAL,
+  NCM_DATASET_BSTRAP_TOTAL, /*< private >*/
+  NCM_DATASET_BSTRAP_LEN,   /*< skip >*/
+} NcmDatasetBStrapType;
+
+/**
  * NcmDataSet:
  *
  * FIXME
@@ -53,6 +68,9 @@ struct _NcmDataset
   /*< private >*/
   GObject parent_instance;
   GPtrArray *data;
+  NcmDatasetBStrapType bstype;
+  GArray *data_prob;
+  GArray *bstrap;
 };
 
 struct _NcmDatasetClass
@@ -81,6 +99,8 @@ NcmData *ncm_dataset_peek_data (NcmDataset *dset, guint n);
 guint ncm_dataset_get_ndata (NcmDataset *dset);
 
 void ncm_dataset_resample (NcmDataset *dset, NcmMSet *mset);
+void ncm_dataset_bootstrap_set (NcmDataset *dset, NcmDatasetBStrapType bstype);
+void ncm_dataset_bootstrap_resample (NcmDataset *dset);
 void ncm_dataset_log_info (NcmDataset *dset);
 
 gboolean ncm_dataset_has_leastsquares_f (NcmDataset *dset);

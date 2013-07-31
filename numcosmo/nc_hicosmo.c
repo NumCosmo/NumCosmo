@@ -37,6 +37,7 @@
 #include "build_cfg.h"
 
 #include "nc_hicosmo.h"
+#include "math/ncm_serialize.h"
 #include "math/ncm_cfg.h"
 
 G_DEFINE_ABSTRACT_TYPE (NcHICosmo, nc_hicosmo, NCM_TYPE_MODEL);
@@ -134,7 +135,7 @@ nc_hicosmo_log_all_models (GType parent)
 NcHICosmo *
 nc_hicosmo_new_from_name (GType parent_type, gchar *cosmo_name)
 {
-  GObject *obj = ncm_cfg_create_from_string (cosmo_name);
+  GObject *obj = ncm_serialize_global_create_from_string (cosmo_name);
   GType model_type = G_OBJECT_TYPE (obj);
 
   if (!g_type_is_a (model_type, parent_type))

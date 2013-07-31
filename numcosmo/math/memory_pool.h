@@ -22,8 +22,8 @@
  * with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef _NC_MEMORY_POOL_H
-#define _NC_MEMORY_POOL_H
+#ifndef _NCM_MEMORY_POOL_H_
+#define _NCM_MEMORY_POOL_H_
 
 #include <glib.h>
 #include <glib-object.h>
@@ -73,4 +73,4 @@ void ncm_memory_pool_return (gpointer p);
 
 G_END_DECLS
 
-#endif /* _NC_MEMORY_POOL_H */
+#endif /* _NCM_MEMORY_POOL_H_ */

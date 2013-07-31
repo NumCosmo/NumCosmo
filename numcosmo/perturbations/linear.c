@@ -202,8 +202,7 @@ nc_pert_linear_free (NcLinearPert *pert)
 void
 nc_pert_linear_clear (NcLinearPert **pert)
 {
-  nc_pert_linear_free (*pert);
-  *pert = NULL;
+  g_clear_object (pert);
 }
 
 /**

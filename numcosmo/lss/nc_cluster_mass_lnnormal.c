@@ -85,15 +85,18 @@ static gboolean
 _nc_cluster_mass_lnnormal_resample (NcClusterMass *clusterm, NcHICosmo *model, gdouble lnM, gdouble z, gdouble *lnM_obs, gdouble *lnM_obs_params)
 {
   NcClusterMassLnnormal *mlnn = NC_CLUSTER_MASS_LNNORMAL (clusterm);
-  gsl_rng *rng = ncm_cfg_rng_get ();
+  NcmRNG *rng = ncm_rng_pool_get (NCM_DATA_RESAMPLE_RNG_NAME);
   const gdouble sigma = _NC_CLUSTER_MASS_LNNORMAL_SIGMA;
   const gdouble bias = _NC_CLUSTER_MASS_LNNORMAL_BIAS;
 
   lnM_obs_params[NC_CLUSTER_MASS_LNNORMAL_BIAS] = bias;
   lnM_obs_params[NC_CLUSTER_MASS_LNNORMAL_SIGMA] = sigma;
 
-  lnM_obs[0] = lnM + bias + gsl_ran_gaussian (rng, sigma);
-
+  ncm_rng_lock (rng);
+  lnM_obs[0] = lnM + bias + gsl_ran_gaussian (rng->r, sigma);
+  ncm_rng_unlock (rng);
+  ncm_rng_free (rng);
+  
   return (lnM_obs[0] <= mlnn->lnMobs_max) && (lnM_obs[0] >= mlnn->lnMobs_min);
 }
 

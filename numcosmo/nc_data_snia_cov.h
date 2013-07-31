@@ -123,7 +123,6 @@ struct _NcDataSNIACov
   NcmMatrix *var_mag_width;
   NcmMatrix *var_mag_colour;
   NcmMatrix *var_width_colour;
-  NcmVector *sigma_int;
   GArray *dataset;
   guint dataset_len;
   gdouble sigma_pecz;

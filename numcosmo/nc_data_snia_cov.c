@@ -89,7 +89,6 @@ nc_data_snia_cov_init (NcDataSNIACov *snia_cov)
   snia_cov->sigma_pecz        = 0.0;
   snia_cov->dataset           = NULL;
   snia_cov->dataset_len       = 0;
-  snia_cov->sigma_int         = NULL;
 
   snia_cov->filename          = NULL;
 }
@@ -145,8 +144,8 @@ nc_data_snia_cov_constructed (GObject *object)
   G_OBJECT_CLASS (nc_data_snia_cov_parent_class)->constructed (object);
   {
 
-  
-  ncm_data_set_init (NCM_DATA (object));
+
+    ncm_data_set_init (NCM_DATA (object));
   }
 }
 
@@ -170,6 +169,8 @@ nc_data_snia_cov_finalize (GObject *object)
   G_OBJECT_CLASS (nc_data_snia_cov_parent_class)->finalize (object);
 }
 
+static NcmData *_nc_data_snia_cov_dup (NcmData *data);
+static void _nc_data_snia_cov_copyto (NcmData *data, NcmData *data_dest);
 static void _nc_data_snia_cov_prepare (NcmData *data, NcmMSet *mset);
 static void _nc_data_snia_cov_mean_func (NcmDataGaussCov *gauss, NcmMSet *mset, NcmVector *vp);
 static gboolean _nc_data_snia_cov_func (NcmDataGaussCov *gauss, NcmMSet *mset, NcmMatrix *cov);
@@ -203,10 +204,72 @@ nc_data_snia_cov_class_init (NcDataSNIACovClass *klass)
                                                         NULL,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
+  data_class->dup        = &_nc_data_snia_cov_dup;
+  data_class->copyto     = &_nc_data_snia_cov_copyto;
   data_class->prepare    = &_nc_data_snia_cov_prepare;
   gauss_class->mean_func = &_nc_data_snia_cov_mean_func;
   gauss_class->cov_func  = &_nc_data_snia_cov_func;
   
+}
+
+static NcmData *
+_nc_data_snia_cov_dup (NcmData *data)
+{
+  NcDataSNIACov *snia_cov = NC_DATA_SNIA_COV (data);
+  NcDataSNIACov *snia_cov_dup = g_object_new (NC_TYPE_DATA_SNIA_COV,
+                                              NULL);
+  NcmData *data_dest = NCM_DATA (snia_cov_dup);
+  nc_data_snia_cov_set_size (snia_cov_dup, snia_cov->mu_len);
+
+  ncm_data_copyto (data, data_dest);
+  
+  return data_dest;
+}
+
+static void 
+_nc_data_snia_cov_copyto (NcmData *data, NcmData *data_dest)
+{
+  /* Chain up : start */
+  NCM_DATA_CLASS (nc_data_snia_cov_parent_class)->copyto (data, data_dest);
+  {
+    NcDataSNIACov *snia_cov = NC_DATA_SNIA_COV (data);
+    NcDataSNIACov *snia_cov_dest = NC_DATA_SNIA_COV (data_dest);
+
+    g_assert_cmpuint (snia_cov->mu_len, ==, snia_cov_dest->mu_len);
+#define _COPY_VEC(vec) ncm_vector_memcpy (snia_cov_dest->vec, snia_cov->vec)
+#define _COPY_MAT(mat) ncm_matrix_memcpy (snia_cov_dest->mat, snia_cov->mat)
+    _COPY_VEC (z_cmb);
+    _COPY_VEC (z_he);
+    _COPY_VEC (mag);
+    _COPY_VEC (width);
+    _COPY_VEC (colour);
+    _COPY_VEC (thirdpar);
+    _COPY_VEC (sigma_z);
+    _COPY_VEC (sigma_mag);
+    _COPY_VEC (sigma_mag);
+    _COPY_VEC (sigma_width);
+    _COPY_VEC (sigma_colour);
+    _COPY_VEC (sigma_thirdpar);
+    _COPY_VEC (diag_mag_width);
+    _COPY_VEC (diag_mag_colour);
+    _COPY_VEC (diag_width_colour);
+    _COPY_MAT (var_mag);
+    _COPY_MAT (var_width);
+    _COPY_MAT (var_colour);
+    _COPY_MAT (var_mag_width);
+    _COPY_MAT (var_mag_colour);
+    _COPY_MAT (var_width_colour);
+    g_assert (snia_cov->dataset != NULL && snia_cov_dest->dataset != NULL);
+    NCM_GARRAY_MEMCPY (snia_cov_dest->dataset, snia_cov->dataset);
+    snia_cov_dest->dataset_len = snia_cov->dataset_len;
+    snia_cov_dest->sigma_pecz  = snia_cov->sigma_pecz;
+    if (snia_cov->filename != NULL)
+      snia_cov_dest->filename = g_strdup (snia_cov->filename);
+    else
+      snia_cov_dest->filename = NULL;
+#undef _COPY_VEC
+#undef _COPY_MAT
+  }
 }
 
 static void

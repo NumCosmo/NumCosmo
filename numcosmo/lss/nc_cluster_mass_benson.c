@@ -238,7 +238,7 @@ static gboolean
 _nc_cluster_mass_benson_resample (NcClusterMass *clusterm, NcHICosmo *model, gdouble lnM, gdouble z, gdouble *xi, gdouble *xi_params)
 {
   NcClusterMassBenson *msz = NC_CLUSTER_MASS_BENSON (clusterm);
-  gsl_rng *rng = ncm_cfg_rng_get ();
+  NcmRNG *rng = ncm_rng_pool_get (NCM_DATA_RESAMPLE_RNG_NAME);
   gdouble lnzeta, lnzeta_obs, zeta_obs, xi_mean;
   const gdouble E0 = nc_hicosmo_E (model, msz->z0);
   const gdouble E = nc_hicosmo_E (model, z);
@@ -246,19 +246,24 @@ _nc_cluster_mass_benson_resample (NcClusterMass *clusterm, NcHICosmo *model, gdo
   lnzeta = B_SZ * (lnM - log (msz->M0)) + C_SZ * log (E / E0) + log (A_SZ);
  
   {
-    lnzeta_obs = lnzeta + gsl_ran_gaussian (rng, D_SZ);
+    gboolean ret;
+    ncm_rng_lock (rng);
+    lnzeta_obs = lnzeta + gsl_ran_gaussian (rng->r, D_SZ);
     zeta_obs = exp (lnzeta_obs);
     if (zeta_obs > 1.0 && zeta_obs < 2.0)
-      return FALSE;
+      ret = FALSE;
     else
     {
       xi_mean = _nc_cluster_mass_benson_xi_mean (zeta_obs);
-      xi[0] = xi_mean + gsl_ran_gaussian (rng, 1.0);
+      xi[0] = xi_mean + gsl_ran_gaussian (rng->r, 1.0);
 
       //printf("M = %e z = %.5g zeta = %.5g xi = %.5g xiobs = %.5g | xiobs_min = %.5g\n", exp(lnM), z, zeta_obs, xi_mean, xi[0], msz->signif_obs_min);
 
-      return (xi[0] >= msz->signif_obs_min);
+      ret = (xi[0] >= msz->signif_obs_min);
     }
+    ncm_rng_unlock (rng);
+    ncm_rng_free (rng);
+    return ret;
   }
 }
 

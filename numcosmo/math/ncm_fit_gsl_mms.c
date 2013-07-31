@@ -246,15 +246,15 @@ _ncm_fit_gsl_mms_run (NcmFit *fit, NcmFitRunMsgs mtype)
       if (status == GSL_ETOL)
         status = GSL_CONTINUE;
     }
-    fit->fstate->m2lnL = fit_gsl_mms->mms->fval;  
+    ncm_fit_state_set_m2lnL_curval (fit->fstate, fit_gsl_mms->mms->fval);
     ncm_fit_log_step (fit);
   }
   while ( (status == GSL_CONTINUE) && (fit->fstate->niter < fit->maxiter) );
 
   ncm_mset_fparams_set_gsl_vector (fit->mset, fit_gsl_mms->mms->x);
 
-  fit->fstate->m2lnL = fit_gsl_mms->mms->fval;
-  fit->fstate->m2lnL_prec = last_size;
+  ncm_fit_state_set_m2lnL_curval (fit->fstate, fit_gsl_mms->mms->fval);
+  ncm_fit_state_set_m2lnL_prec (fit->fstate, last_size);
 
   return TRUE;
 }

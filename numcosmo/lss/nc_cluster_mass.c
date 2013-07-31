@@ -38,6 +38,7 @@
 #include "build_cfg.h"
 
 #include "lss/nc_cluster_mass.h"
+#include "math/ncm_serialize.h"
 #include "math/ncm_cfg.h"
 
 G_DEFINE_ABSTRACT_TYPE (NcClusterMass, nc_cluster_mass, NCM_TYPE_MODEL);
@@ -53,7 +54,7 @@ G_DEFINE_ABSTRACT_TYPE (NcClusterMass, nc_cluster_mass, NCM_TYPE_MODEL);
 NcClusterMass *
 nc_cluster_mass_new_from_name (gchar *mass_name)
 {
-  GObject *obj = ncm_cfg_create_from_string (mass_name);
+  GObject *obj = ncm_serialize_global_create_from_string (mass_name);
   GType mass_type = G_OBJECT_TYPE (obj);
   if (!g_type_is_a (mass_type, NC_TYPE_CLUSTER_MASS))
 	g_error ("nc_cluster_mass_new_from_name: NcClusterMass %s do not descend from %s\n", mass_name, g_type_name (NC_TYPE_CLUSTER_MASS));

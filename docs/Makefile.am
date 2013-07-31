@@ -36,7 +36,8 @@ DOC_SOURCE_DIR=$(top_srcdir)/numcosmo \
 	       $(top_srcdir)/numcosmo/math \
 	       $(top_srcdir)/numcosmo/model \
 	       $(top_srcdir)/numcosmo/perturbations \
-	       $(top_srcdir)/numcosmo/sphere
+	       $(top_srcdir)/numcosmo/sphere \
+	       $(top_builddir)/numcosmo
 
 DOC_BUILD_DIR=$(top_builddir)/numcosmo
 DOC_TARGET_DIR=$(top_builddir)/docs
@@ -97,7 +98,11 @@ endif
 
 # Header files or dirs to ignore when scanning. Use base file/dir names
 # e.g. IGNORE_HFILES=gtkdebug.h gtkintl.h private_code
-IGNORE_HFILES=linear_internal.h config.h $(ignore_nlopt) $(ignore_levmar)
+IGNORE_HFILES=linear_internal.h         \
+              config.h                  \
+              ncm_fit_nlopt_enum_meta.h \
+              $(ignore_nlopt)           \
+              $(ignore_levmar)          
 
 # Images to copy into HTML directory.
 # e.g. HTML_IMAGES=$(top_srcdir)/gtk/stock-icons/stock_about_24.png

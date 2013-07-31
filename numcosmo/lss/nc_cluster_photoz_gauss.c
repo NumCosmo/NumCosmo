@@ -36,7 +36,8 @@
 #include "build_cfg.h"
 
 #include "lss/nc_cluster_photoz_gauss.h"
-#include "math/ncm_cfg.h"
+#include "math/ncm_data.h"
+#include "math/ncm_rng.h"
 #include <math.h>
 #include <gsl/gsl_randist.h>
 #include <gsl/gsl_math.h>
@@ -100,7 +101,7 @@ static gboolean
 _nc_cluster_photoz_gauss_resample (NcClusterRedshift *clusterz, gdouble lnM, gdouble z, gdouble *z_obs, gdouble *z_obs_params)
 {
   NcClusterPhotozGauss *pzg = NC_CLUSTER_PHOTOZ_GAUSS (clusterz);
-  gsl_rng *rng = ncm_cfg_rng_get ();
+  NcmRNG *rng = ncm_rng_pool_get (NCM_DATA_RESAMPLE_RNG_NAME);
   gdouble sigma_z;
 
   z_obs_params[NC_CLUSTER_PHOTOZ_GAUSS_BIAS] = 0.0;
@@ -108,9 +109,12 @@ _nc_cluster_photoz_gauss_resample (NcClusterRedshift *clusterz, gdouble lnM, gdo
 
   sigma_z = z_obs_params[NC_CLUSTER_PHOTOZ_GAUSS_SIGMA];
 
+  ncm_rng_lock (rng);
   do {
-	z_obs[0] = z + z_obs_params[NC_CLUSTER_PHOTOZ_GAUSS_BIAS] + gsl_ran_gaussian (rng, sigma_z);
+    z_obs[0] = z + z_obs_params[NC_CLUSTER_PHOTOZ_GAUSS_BIAS] + gsl_ran_gaussian (rng->r, sigma_z);
   } while (z_obs[0] < 0);
+  ncm_rng_unlock (rng);
+  ncm_rng_free (rng);
 
   return (z_obs[0] <= pzg->pz_max) && (z_obs[0] >= pzg->pz_min);
 }

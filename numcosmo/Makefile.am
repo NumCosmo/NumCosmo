@@ -29,9 +29,14 @@ ncm_sources = \
 	ncm_build_inline.c                 \
 	math/ncm_c.c                       \
 	math/ncm_cfg.c                     \
+	math/ncm_timer.c                   \
 	math/ncm_lapack.c                  \
 	math/ncm_vector.c                  \
 	math/ncm_matrix.c                  \
+	math/ncm_serialize.c               \
+	math/ncm_rng.c                     \
+	math/ncm_stats_vec.c               \
+	math/ncm_bootstrap.c               \
 	math/ncm_spline.c                  \
 	math/ncm_spline_gsl.c              \
 	math/ncm_spline_cubic.c            \
@@ -95,9 +100,14 @@ ncm_sources = \
 ncm_headers = \
 	math/ncm_c.h                     \
 	math/ncm_cfg.h                   \
+	math/ncm_timer.h                 \
 	math/ncm_lapack.h                \
 	math/ncm_vector.h                \
 	math/ncm_matrix.h                \
+	math/ncm_serialize.h             \
+	math/ncm_rng.h                   \
+	math/ncm_stats_vec.h             \
+	math/ncm_bootstrap.h             \
 	math/ncm_spline.h                \
 	math/ncm_spline_gsl.h            \
 	math/ncm_spline_cubic.h          \

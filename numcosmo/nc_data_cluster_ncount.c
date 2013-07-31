@@ -40,6 +40,7 @@
 #include "nc_data_cluster_poisson.h"
 
 #include "math/ncm_func_eval.h"
+#include "math/ncm_serialize.h"
 #include "math/ncm_cfg.h"
 
 #include <glib/gstdio.h>
@@ -408,7 +409,7 @@ _nc_data_cluster_ncount_resample (NcmData *data, NcmMSet *mset)
   NcDataClusterNCount *ncount = NC_DATA_CLUSTER_NCOUNT (data);
   NcClusterAbundance *cad = ncount->cad;
   NcHICosmo *cosmo = NC_HICOSMO (ncm_mset_peek (mset, nc_hicosmo_id ()));
-  gsl_rng *rng = ncm_cfg_rng_get ();
+  NcmRNG *rng = ncm_rng_pool_get (NCM_DATA_RESAMPLE_RNG_NAME);
   guint z_obs_len = nc_cluster_redshift_obs_len (cad->z);
   guint z_obs_params_len = nc_cluster_redshift_obs_params_len (cad->z);
   guint lnM_obs_len = nc_cluster_mass_obs_len (cad->m);
@@ -427,7 +428,9 @@ _nc_data_cluster_ncount_resample (NcmData *data, NcmMSet *mset)
   gdouble *lnMi_obs = g_new (gdouble, lnM_obs_len);
   gdouble *lnMi_obs_params = lnM_obs_params_len > 0 ? g_new (gdouble, lnM_obs_params_len) : NULL;
 
-  total_np = gsl_ran_poisson (rng, cad->norma);
+  ncm_rng_lock (rng);
+
+  total_np = gsl_ran_poisson (rng->r, cad->norma);
 
   lnM_true_array = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), total_np);
   z_true_array = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), total_np);
@@ -444,8 +447,8 @@ _nc_data_cluster_ncount_resample (NcmData *data, NcmMSet *mset)
 
   for (i = 0; i < total_np; i++)
   {
-    const gdouble u1 = _nc_cad_inv_dNdz_convergence_f (gsl_rng_uniform_pos (rng), cad->z_epsilon);
-    const gdouble u2 = _nc_cad_inv_dNdz_convergence_f (gsl_rng_uniform_pos (rng), cad->lnM_epsilon);
+    const gdouble u1 = _nc_cad_inv_dNdz_convergence_f (gsl_rng_uniform_pos (rng->r), cad->z_epsilon);
+    const gdouble u2 = _nc_cad_inv_dNdz_convergence_f (gsl_rng_uniform_pos (rng->r), cad->lnM_epsilon);
     const gdouble z_true = ncm_spline_eval (cad->inv_z, u1);
     const gdouble lnM_true = ncm_spline2d_eval (cad->inv_lnM_z, u2, z_true);
 
@@ -509,6 +512,8 @@ _nc_data_cluster_ncount_resample (NcmData *data, NcmMSet *mset)
                                 exp (cad->lnMi), exp (cad->lnMf), 
                                 ncount->area_survey / gsl_pow_2 (M_PI / 180.0));
 
+  ncm_rng_unlock (rng);
+  ncm_rng_free (rng);
   g_free (zi_obs);
   g_free (zi_obs_params);
   g_free (lnMi_obs);
@@ -1004,8 +1009,8 @@ nc_data_cluster_ncount_catalog_save (NcmData *data, gchar *filename, gboolean ov
     NC_FITS_ERROR (status);
 
   {
-    gchar *z_ser = ncm_cfg_serialize_to_string (G_OBJECT (ncount->z), FALSE);
-    gchar *lnM_ser = ncm_cfg_serialize_to_string (G_OBJECT (ncount->m), FALSE);
+    gchar *z_ser = ncm_serialize_global_to_string (G_OBJECT (ncount->z), FALSE);
+    gchar *lnM_ser = ncm_serialize_global_to_string (G_OBJECT (ncount->m), FALSE);
 
     if (fits_write_key_longstr (fptr, "Z_OBJ", z_ser, "Serialized redshift object", &status))
       NC_FITS_ERROR(status);

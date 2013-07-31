@@ -32,6 +32,7 @@
 #include <numcosmo/math/ncm_vector.h>
 #include <numcosmo/math/ncm_matrix.h>
 #include <numcosmo/math/ncm_mset.h>
+#include <numcosmo/math/ncm_bootstrap.h>
 
 G_BEGIN_DECLS
 
@@ -52,13 +53,44 @@ struct _NcmData
   gchar *desc;
   gboolean init;
   gboolean begin;
+  gboolean bootstrap;
+  gboolean bootstrap_init;
+  NcmBootstrap *bstrap;
 };
 
+/**
+ * NcmDataClass:
+ * @bootstrap: sets whenever the #NcmData implementations supports bootstrap.
+ * @get_length: return the length associated to the #NcmData object.
+ * @get_dof: return the effective degrees of freedom related to the #NcmData
+ * statistics (likelihood or $\chi^2$) this number does not represent 
+ * necessarely the number of data points.
+ * @dup: return a copy of the #NcmData.
+ * @copyto: copy its contents to another #NcmData of the same type.
+ * @begin: perform any model independent precalculation.
+ * @prepare: perform any model dependent precalculation.
+ * @resample: resample data from the models in #NcmMSet.
+ * @leastsquares_f: calculates the least squares $\vec{f}$ vector, i.e., 
+ * $\chi^2 \equiv \vec{f}\cdot\vec{f}$.
+ * @leastsquares_J: calculates the least squares $\vec{f}$ vector derivatives
+ * with respect to the free parameter of @mset.
+ * @leastsquares_f_J: calculates both least squares vector and its derivatives.
+ * @m2lnL_val: evaluate the minus two times the natural logarithim of the 
+ * likelihood, i.e., $-2\ln(L)$.
+ * @m2lnL_grad: evaluate the gradient of $-2\ln(L)$ with respect to the free
+ * parameters in @mset.
+ * @m2lnL_val_grad: evaluate the value and the gradient of $-2\ln(L)$.
+ * 
+ * Virtual table for the #NcmData abstract class.
+ * 
+ */
 struct _NcmDataClass
 {
   /*< private >*/
   GObjectClass parent_class;
   gchar *name;
+  /*< public >*/
+  gboolean bootstrap;
   guint (*get_length) (NcmData *data);
   guint (*get_dof) (NcmData *data);
   NcmData *(*dup) (NcmData *data);
@@ -81,6 +113,7 @@ void ncm_data_free (NcmData *data);
 void ncm_data_clear (NcmData **data);
 
 NcmData *ncm_data_dup (NcmData *data);
+void ncm_data_copyto (NcmData *data, NcmData *data_dest);
 
 guint ncm_data_get_length (NcmData *data);
 guint ncm_data_get_dof (NcmData *data);
@@ -88,12 +121,16 @@ void ncm_data_set_init (NcmData *data);
 
 void ncm_data_prepare (NcmData *data, NcmMSet *mset);
 void ncm_data_resample (NcmData *data, NcmMSet *mset);
+void ncm_data_bootstrap_set (NcmData *data, gboolean enable);
+void ncm_data_bootstrap_resample (NcmData *data);
 void ncm_data_leastsquares_f (NcmData *data, NcmMSet *mset, NcmVector *f);
 void ncm_data_leastsquares_J (NcmData *data, NcmMSet *mset, NcmMatrix *J);
 void ncm_data_leastsquares_f_J (NcmData *data, NcmMSet *mset, NcmVector *f, NcmMatrix *J);
 void ncm_data_m2lnL_val (NcmData *data, NcmMSet *mset, gdouble *m2lnL);
 void ncm_data_m2lnL_grad (NcmData *data, NcmMSet *mset, NcmVector *grad);
 void ncm_data_m2lnL_val_grad (NcmData *data, NcmMSet *mset, gdouble *m2lnL, NcmVector *grad);
+
+#define NCM_DATA_RESAMPLE_RNG_NAME "data_resample"
 
 gchar *ncm_data_get_desc (NcmData *data);
 

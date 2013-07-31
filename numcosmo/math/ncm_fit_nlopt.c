@@ -38,6 +38,13 @@
  * 
  */ 
 
+/**
+ * NcmFitNloptResult:
+ * 
+ * NLOpt results enumerator.
+ * 
+ */ 
+
 #ifdef HAVE_CONFIG_H
 #  include "config.h"
 #endif /* HAVE_CONFIG_H */
@@ -259,7 +266,9 @@ _ncm_fit_nlopt_reset (NcmFit *fit)
 
 typedef gdouble (*_NcmFitNLOptOldFunc) (gint n, const gdouble *x, gdouble *grad, gpointer userdata);
 static gdouble _ncm_fit_nlopt_func (guint n, const gdouble *x, gdouble *grad, gpointer userdata);
+#ifdef HAVE_NLOPT_2_2
 static gdouble _ncm_fit_nlopt_func_constraint (guint n, const gdouble *x, gdouble *grad, gpointer userdata);
+#endif /* HAVE_NLOPT_2_2 */
 
 static gboolean
 _ncm_fit_nlopt_run (NcmFit *fit, NcmFitRunMsgs mtype)
@@ -307,21 +316,19 @@ _ncm_fit_nlopt_run (NcmFit *fit, NcmFitRunMsgs mtype)
     nlopt_set_lower_bounds (fit_nlopt->nlopt, ncm_vector_gsl (fit_nlopt->lb)->data);
     nlopt_set_upper_bounds (fit_nlopt->nlopt, ncm_vector_gsl (fit_nlopt->ub)->data);
     
-    nlopt_set_ftol_rel (fit_nlopt->nlopt, fit->m2lnL_reltol);
-    if (NCM_FIT_DEFAULT_M2LNL_ABSTOL != 0)
-      nlopt_set_ftol_abs (fit_nlopt->nlopt, NCM_FIT_DEFAULT_M2LNL_ABSTOL);
-    nlopt_set_xtol_rel (fit_nlopt->nlopt, fit->params_reltol);
+    nlopt_set_ftol_rel (fit_nlopt->nlopt, ncm_fit_get_m2lnL_reltol (fit));
+    nlopt_set_ftol_abs (fit_nlopt->nlopt, ncm_fit_get_m2lnL_abstol (fit));
+    nlopt_set_xtol_rel (fit_nlopt->nlopt, ncm_fit_get_params_reltol (fit));
     nlopt_set_xtol_abs (fit_nlopt->nlopt, ncm_vector_gsl (fit_nlopt->pabs)->data);
-    nlopt_set_maxeval (fit_nlopt->nlopt, fit->maxiter);
+    nlopt_set_maxeval (fit_nlopt->nlopt, ncm_fit_get_maxiter (fit));
     nlopt_set_initial_step (fit_nlopt->nlopt, ncm_vector_gsl (fit_nlopt->pscale)->data);
     if (fit_nlopt->local_nlopt != NULL)
     {
-      nlopt_set_ftol_rel (fit_nlopt->local_nlopt, fit->m2lnL_reltol);
-      if (NCM_FIT_DEFAULT_M2LNL_ABSTOL != 0)
-        nlopt_set_ftol_abs (fit_nlopt->local_nlopt, NCM_FIT_DEFAULT_M2LNL_ABSTOL);
-      nlopt_set_xtol_rel (fit_nlopt->local_nlopt, fit->params_reltol);
+      nlopt_set_ftol_rel (fit_nlopt->local_nlopt, ncm_fit_get_m2lnL_reltol (fit));
+      nlopt_set_ftol_abs (fit_nlopt->local_nlopt, ncm_fit_get_m2lnL_abstol (fit));
+      nlopt_set_xtol_rel (fit_nlopt->local_nlopt, ncm_fit_get_params_reltol (fit));
       nlopt_set_xtol_abs (fit_nlopt->local_nlopt, ncm_vector_gsl (fit_nlopt->pabs)->data);
-      nlopt_set_maxeval (fit_nlopt->local_nlopt, fit->maxiter);
+      nlopt_set_maxeval (fit_nlopt->local_nlopt, ncm_fit_get_maxiter (fit));
       ret = nlopt_set_local_optimizer (fit_nlopt->nlopt, fit_nlopt->local_nlopt);
       if (ret < 0)
         g_error ("_ncm_fit_nlopt_run: (%d)", ret);
@@ -329,8 +336,11 @@ _ncm_fit_nlopt_run (NcmFit *fit, NcmFitRunMsgs mtype)
 
     ret = nlopt_optimize (fit_nlopt->nlopt, ncm_vector_gsl (fit->fstate->fparams)->data, &minf);
 
-    fit->fstate->m2lnL_prec = nlopt_get_ftol_rel (fit_nlopt->nlopt);
-    fit->fstate->params_prec = nlopt_get_xtol_rel (fit_nlopt->nlopt);
+    ncm_fit_state_set_m2lnL_prec (fit->fstate, 
+                                  GSL_MAX (nlopt_get_ftol_rel (fit_nlopt->nlopt), 
+                                           nlopt_get_ftol_abs (fit_nlopt->nlopt) / minf)
+                                  );
+    ncm_fit_state_set_params_prec (fit->fstate, nlopt_get_xtol_rel (fit_nlopt->nlopt));
 
     if (ret < 0)
     {
@@ -352,24 +362,25 @@ _ncm_fit_nlopt_run (NcmFit *fit, NcmFitRunMsgs mtype)
     if (ncm_fit_has_equality_constraints (fit) || ncm_fit_has_inequality_constraints (fit))
       g_error ("_ncm_fit_nlopt_run: Older version of nlopt does not support constraints, update to version >= 2.2");
 
-    ret = nlopt_minimize (algo,
+    ret = nlopt_minimize (fit_nlopt->nlopt_algo,
                           fit->fstate->fparam_len,
                           (_NcmFitNLOptOldFunc) &_ncm_fit_nlopt_func, fit,
-                          lb, ub,
-                          fit->fstate->fparam->data,
+                          ncm_vector_gsl (fit_nlopt->lb)->data, 
+                          ncm_vector_gsl (fit_nlopt->ub)->data,
+                          ncm_vector_gsl (fit->fstate->fparams)->data,
                           &minf,
-                          -HUGE_VAL,
-                          fit->m2lnL_prec, NCM_FIT_DEFAULT_M2LNL_ABSTOL,
-                          fit->param_prec, pabs,
-                          niters, 0);
+                          -G_MAXDOUBLE,
+                          ncm_fit_get_m2lnL_reltol (fit), ncm_fit_get_m2lnL_abstol (fit),
+                          ncm_fit_get_params_reltol (fit), ncm_vector_gsl (fit_nlopt->pabs)->data,
+                          ncm_fit_get_maxiter (fit), 0);
 
     if (ret < 0)
       ncm_fit_log_step_error (fit, "(%d)", ret);
   }
 #endif
 
-  fit->fstate->m2lnL = minf;
-  ncm_mset_fparams_set_vector (fit->mset, fit->fstate->fparams);
+  ncm_fit_state_set_m2lnL_curval (fit->fstate, minf);
+  ncm_fit_set_params (fit, fit->fstate->fparams);
 
   return TRUE;
 }
@@ -397,12 +408,13 @@ _ncm_fit_nlopt_func (guint n, const gdouble *x, gdouble *grad, gpointer userdata
   else
     ncm_fit_m2lnL_val (fit, &m2lnL);
 
-  fit->fstate->m2lnL = m2lnL;
+  ncm_fit_state_set_m2lnL_curval (fit->fstate, m2lnL);
   ncm_fit_log_step (fit);
 
   return m2lnL;
 }
 
+#ifdef HAVE_NLOPT_2_2
 static gdouble
 _ncm_fit_nlopt_func_constraint (guint n, const gdouble *x, gdouble *grad, gpointer userdata)
 {
@@ -428,6 +440,7 @@ _ncm_fit_nlopt_func_constraint (guint n, const gdouble *x, gdouble *grad, gpoint
 
   return constraint * constraint;
 }
+#endif /* HAVE_NLOPT_2_2 */
 
 static const gchar *
 _ncm_fit_nlopt_get_desc (NcmFit *fit)

@@ -187,7 +187,8 @@ main (gint argc, gchar *argv[])
   model = nc_hicosmo_new_from_name (NC_TYPE_HICOSMO, de_model.model_name);
   mset = ncm_mset_new (NCM_MODEL (model), NULL);
   dist = nc_distance_new (2.0);
-  ncm_cfg_set_named_instance (dist, "MainDist", FALSE);
+  
+  ncm_serialize_global_set (dist, "MainDist", FALSE);
 
   if (g_type_is_a (G_OBJECT_TYPE (model), NC_TYPE_HICOSMO_DE))
     is_de = TRUE;
@@ -249,7 +250,7 @@ main (gint argc, gchar *argv[])
       if (de_data_simple.snia_objser == NULL)
         dcov = nc_snia_dist_cov_new (dist);
       else
-        dcov = NC_SNIA_DIST_COV (ncm_cfg_create_from_string (de_data_simple.snia_objser));
+        dcov = NC_SNIA_DIST_COV (ncm_serialize_global_create_from_string (de_data_simple.snia_objser));
 
       g_assert (NC_IS_SNIA_DIST_COV (dcov));
 
@@ -375,7 +376,7 @@ main (gint argc, gchar *argv[])
     else
     {
       NcHICosmoQSplineContPrior *qspline_cp = 
-        nc_hicosmo_qspline_add_continuity_priors (NC_HICOSMO_QSPLINE (model), lh, de_fit.qspline_cp_sigma);
+        nc_hicosmo_qspline_add_continuity_priors (NC_HICOSMO_QSPLINE (model), lh, 1.0e-10, de_fit.qspline_cp_sigma);
       nc_hicosmo_qspline_cont_prior_free (qspline_cp);
     }
   }
@@ -462,7 +463,7 @@ main (gint argc, gchar *argv[])
   {
     NcmMSet *resample_mset;
     NcmFitMC *mc = ncm_fit_mc_new (fit);
-    gdouble m2lnL = fit->fstate->m2lnL;
+    gdouble m2lnL = ncm_fit_state_get_m2lnL_curval (fit->fstate);
 
     if (de_fit.fiducial != NULL)
       resample_mset = fiduc;
@@ -736,7 +737,7 @@ main (gint argc, gchar *argv[])
   if (fiduc != NULL)
     ncm_mset_free (fiduc);
   
-  ncm_cfg_free_named_instances ();
+  ncm_serialize_global_reset ();
   ncm_model_free (NCM_MODEL (model));
   ncm_mset_free (mset);
   ncm_fit_free (fit);

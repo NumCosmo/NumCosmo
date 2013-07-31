@@ -104,10 +104,14 @@ NcmMatrix *ncm_matrix_new_data_slice (gdouble *d, const gsize nrows, const gsize
 NcmMatrix *ncm_matrix_new_data_malloc (gdouble *d, const gsize nrows, const gsize ncols);
 NcmMatrix *ncm_matrix_new_data_static (gdouble *d, const gsize nrows, const gsize ncols);
 NcmMatrix *ncm_matrix_new_data_static_tda (gdouble *d, const gsize nrows, const gsize ncols, const gsize tda);
+NcmMatrix *ncm_matrix_new_variant (GVariant *var);
 
 NcmMatrix *ncm_matrix_get_submatrix (NcmMatrix *cm, const gsize k1, const gsize k2, const gsize nrows, const gsize ncols);
 NcmVector *ncm_matrix_get_col (NcmMatrix *cm, const gsize col);
 NcmVector *ncm_matrix_get_row (NcmMatrix *cm, const gsize row);
+
+void ncm_matrix_set_from_variant (NcmMatrix *cm, GVariant *var);
+GVariant *ncm_matrix_get_variant (NcmMatrix *cm);
 
 G_INLINE_FUNC const NcmMatrix *ncm_matrix_new_gsl_const (gsl_matrix *m);
 G_INLINE_FUNC gdouble ncm_matrix_get (const NcmMatrix *cm, const guint i, const guint j);

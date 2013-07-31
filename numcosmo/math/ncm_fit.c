@@ -59,11 +59,14 @@
 enum
 {
   PROP_0,
-  PROP_MAXITER,
   PROP_LIKELIHOOD,
   PROP_MSET,
   PROP_STATE,
   PROP_GRAD_TYPE,
+  PROP_MAXITER,
+  PROP_M2LNL_RELTOL,
+  PROP_M2LNL_ABSTOL,
+  PROP_PARAMS_RELTOL,
   PROP_SIZE,
 };
 
@@ -122,11 +125,12 @@ ncm_fit_constraint_free (NcmFitConstraint *fitc)
 static void
 ncm_fit_init (NcmFit *fit)
 {
-  fit->maxiter       = NCM_FIT_MAXITER;
-  fit->m2lnL_reltol  = NCM_FIT_DEFAULT_M2LNL_RELTOL * 0.0 + 1e-8;
-  fit->params_reltol = NC_HICOSMO_DEFAULT_PARAMS_RELTOL * 0.0 + 1e-8;
-  fit->timer = g_timer_new ();
-  fit->mtype = NCM_FIT_RUN_MSGS_NONE;
+  fit->maxiter       = 0;
+  fit->m2lnL_reltol  = 0.0;
+  fit->m2lnL_abstol  = 0.0;
+  fit->params_reltol = 0.0;
+  fit->timer         = g_timer_new ();
+  fit->mtype         = NCM_FIT_RUN_MSGS_NONE;
 
   fit->equality_constraints = g_ptr_array_sized_new (10);
   g_ptr_array_set_free_func (fit->equality_constraints, (GDestroyNotify) &ncm_fit_constraint_free);
@@ -180,9 +184,6 @@ _ncm_fit_set_property (GObject *object, guint prop_id, const GValue *value, GPar
 
   switch (prop_id)
   {
-    case PROP_MAXITER:
-      ncm_fit_set_maxiter (fit, g_value_get_uint (value));
-      break;
     case PROP_LIKELIHOOD:
       ncm_likelihood_clear (&fit->lh);
       fit->lh = g_value_dup_object (value);
@@ -193,6 +194,18 @@ _ncm_fit_set_property (GObject *object, guint prop_id, const GValue *value, GPar
       break;
     case PROP_GRAD_TYPE:
       ncm_fit_set_grad_type (fit, g_value_get_enum (value));
+      break;
+    case PROP_MAXITER:
+      ncm_fit_set_maxiter (fit, g_value_get_uint (value));
+      break;
+    case PROP_M2LNL_RELTOL:
+      ncm_fit_set_m2lnL_reltol (fit, g_value_get_double (value));
+      break;
+    case PROP_M2LNL_ABSTOL:
+      ncm_fit_set_m2lnL_abstol (fit, g_value_get_double (value));
+      break;
+    case PROP_PARAMS_RELTOL:
+      ncm_fit_set_params_reltol (fit, g_value_get_double (value));
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -208,9 +221,6 @@ _ncm_fit_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec
 
   switch (prop_id)
   {
-    case PROP_MAXITER:
-      g_value_set_uint (value, ncm_fit_get_maxiter (fit));
-      break;
     case PROP_LIKELIHOOD:
       g_value_set_object (value, fit->lh);
       break;
@@ -219,6 +229,18 @@ _ncm_fit_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec
       break;
     case PROP_GRAD_TYPE:
       g_value_set_enum (value, fit->grad.gtype);
+      break;
+    case PROP_MAXITER:
+      g_value_set_uint (value, ncm_fit_get_maxiter (fit));
+      break;
+    case PROP_M2LNL_RELTOL:
+      g_value_set_double (value, ncm_fit_get_m2lnL_reltol (fit));
+      break;
+    case PROP_M2LNL_ABSTOL:
+      g_value_set_double (value, ncm_fit_get_m2lnL_abstol (fit));
+      break;
+    case PROP_PARAMS_RELTOL:
+      g_value_set_double (value, ncm_fit_get_params_reltol (fit));
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -279,13 +301,6 @@ ncm_fit_class_init (NcmFitClass *klass)
   klass->reset            = &_ncm_fit_reset;
 
   g_object_class_install_property (object_class,
-                                   PROP_MAXITER,
-                                   g_param_spec_uint ("maxiter",
-                                                      NULL,
-                                                      "Maximum number of interations",
-                                                      0, G_MAXUINT32, NCM_FIT_MAXITER,
-                                                      G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-  g_object_class_install_property (object_class,
                                    PROP_LIKELIHOOD,
                                    g_param_spec_object ("likelihood",
                                                         NULL,
@@ -307,6 +322,35 @@ ncm_fit_class_init (NcmFitClass *klass)
                                                       NCM_TYPE_FIT_GRAD_TYPE, NCM_FIT_GRAD_NUMDIFF_FORWARD,
                                                       G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));  
 
+  g_object_class_install_property (object_class,
+                                   PROP_MAXITER,
+                                   g_param_spec_uint ("maxiter",
+                                                      NULL,
+                                                      "Maximum number of interations",
+                                                      0, G_MAXUINT32, NCM_FIT_DEFAULT_MAXITER,
+                                                      G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
+  g_object_class_install_property (object_class,
+                                   PROP_M2LNL_RELTOL,
+                                   g_param_spec_double ("m2lnL-reltol",
+                                                        NULL,
+                                                        "Relative tolarence in m2lnL",
+                                                        0.0, G_MAXDOUBLE, NCM_FIT_DEFAULT_M2LNL_RELTOL,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  g_object_class_install_property (object_class,
+                                   PROP_M2LNL_ABSTOL,
+                                   g_param_spec_double ("m2lnL-abstol",
+                                                        NULL,
+                                                        "Absolute tolarence in m2lnL",
+                                                        0.0, G_MAXDOUBLE, NCM_FIT_DEFAULT_M2LNL_ABSTOL,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  g_object_class_install_property (object_class,
+                                   PROP_PARAMS_RELTOL,
+                                   g_param_spec_double ("params-reltol",
+                                                        NULL,
+                                                        "Relative tolarence in fitted parameters",
+                                                        0.0, G_MAXDOUBLE, NCM_FIT_DEFAULT_PARAMS_RELTOL,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 }
 
 static void
@@ -503,34 +547,6 @@ ncm_fit_set_grad_type (NcmFit *fit, NcmFitGradType gtype)
 }
 
 /**
- * ncm_fit_ls_set_state:
- * @fit: a #NcmFit.
- * @prec: FIXME
- * @x: a #NcmVector.
- * @f: a #NcmVector.
- * @J: a #NcmMatrix.
- *
- * FIXME
- */
-void
-ncm_fit_ls_set_state (NcmFit *fit, gdouble prec, NcmVector *x, NcmVector *f, NcmMatrix *J)
-{
-  ncm_mset_fparams_set_vector (fit->mset, x);
-  g_assert (fit->fstate->is_least_squares);
-
-  fit->fstate->m2lnL_prec = prec;
-  fit->fstate->m2lnL = gsl_blas_dnrm2 (ncm_vector_gsl (f));
-
-  ncm_vector_memcpy (fit->fstate->ls_f, f);
-  
-  gsl_blas_dgemv (CblasTrans, 2.0, NCM_MATRIX_GSL(fit->fstate->ls_J), 
-                  ncm_vector_gsl (fit->fstate->ls_f), 0.0, 
-                  ncm_vector_gsl (fit->fstate->dm2lnL));
-
-  ncm_matrix_memcpy (fit->fstate->ls_J, J);
-}
-
-/**
  * ncm_fit_set_maxiter:
  * @fit: a #NcmFit.
  * @maxiter: FIXME.
@@ -555,6 +571,101 @@ guint
 ncm_fit_get_maxiter (NcmFit *fit)
 {
   return fit->maxiter;
+}
+
+/**
+ * ncm_fit_set_m2lnL_reltol:
+ * @fit: a #NcmFit.
+ * @tol: FIXME.
+ *
+ * FIXME
+ */
+void 
+ncm_fit_set_m2lnL_reltol (NcmFit *fit, gdouble tol)
+{
+  fit->m2lnL_reltol = tol;
+}
+
+/**
+ * ncm_fit_get_m2lnL_reltol:
+ * @fit: a #NcmFit.
+ *
+ * FIXME
+ * 
+ * Returns: FIXME
+ */
+gdouble 
+ncm_fit_get_m2lnL_reltol (NcmFit *fit)
+{
+  return fit->m2lnL_reltol;
+}
+
+/**
+ * ncm_fit_set_m2lnL_abstol:
+ * @fit: a #NcmFit.
+ * @tol: FIXME.
+ *
+ * FIXME
+ */
+void 
+ncm_fit_set_m2lnL_abstol (NcmFit *fit, gdouble tol)
+{
+  fit->m2lnL_abstol = tol;
+}
+
+/**
+ * ncm_fit_get_m2lnL_abstol:
+ * @fit: a #NcmFit.
+ *
+ * FIXME
+ * 
+ * Returns: FIXME
+ */
+gdouble 
+ncm_fit_get_m2lnL_abstol (NcmFit *fit)
+{
+  return fit->m2lnL_abstol;
+}
+
+/**
+ * ncm_fit_set_params_reltol:
+ * @fit: a #NcmFit.
+ * @tol: FIXME.
+ *
+ * FIXME
+ */
+void 
+ncm_fit_set_params_reltol (NcmFit *fit, gdouble tol)
+{
+  fit->params_reltol = tol;
+}
+
+/**
+ * ncm_fit_get_params_reltol:
+ * @fit: a #NcmFit.
+ *
+ * FIXME
+ * 
+ * Returns: FIXME
+ */
+gdouble 
+ncm_fit_get_params_reltol (NcmFit *fit)
+{
+  return fit->params_reltol;
+}
+
+/**
+ * ncm_fit_set_params:
+ * @fit: a #NcmFit.
+ * @params: FIXME
+ *
+ * FIXME
+ * 
+ */
+void 
+ncm_fit_set_params (NcmFit *fit, NcmVector *params)
+{
+  ncm_mset_fparams_set_vector (fit->mset, params);
 }
 
 /**
@@ -812,16 +923,18 @@ _ncm_fit_run_empty (NcmFit *fit, NcmFitRunMsgs mtype)
 {
   fit->mtype = mtype;
 
-  ncm_fit_m2lnL_val (fit, &fit->fstate->m2lnL);
+  ncm_fit_m2lnL_val (fit, &fit->fstate->m2lnL_curval);
   ncm_fit_log_step (fit);
 
-  fit->fstate->m2lnL_prec   = 0.0;
-  fit->fstate->has_covar    = FALSE;
-  fit->fstate->is_best_fit  = TRUE;
-  fit->fstate->elapsed_time = 0.0;
-  fit->fstate->niter        = 0;
-  fit->fstate->func_eval    = 0;
-  fit->fstate->grad_eval    = 0;
+  fit->fstate->m2lnL_prec  = 0.0;
+  fit->fstate->params_prec = 0.0;
+  
+  fit->fstate->has_covar     = FALSE;
+  fit->fstate->is_best_fit   = TRUE;
+  fit->fstate->elapsed_time  = 0.0;
+  fit->fstate->niter         = 0;
+  fit->fstate->func_eval     = 0;
+  fit->fstate->grad_eval     = 0;
   
   return TRUE;
 }
@@ -965,7 +1078,9 @@ ncm_fit_log_end (NcmFit *fit)
   {
     if (fit->mtype == NCM_FIT_RUN_MSGS_SIMPLE)
       g_message ("\n");
-    g_message ("#  Minimum found with precision: % 8.5e (|df|/f or |dx|)\n", fit->fstate->m2lnL_prec);
+    g_message ("#  Minimum found with precision: |df|/f = % 8.5e and |dx| = % 8.5e\n", 
+               ncm_fit_state_get_m2lnL_prec (fit->fstate), 
+               ncm_fit_state_get_params_prec (fit->fstate));
   }
   ncm_fit_log_state (fit);
   return;
@@ -997,7 +1112,7 @@ ncm_fit_log_state (NcmFit *fit)
     g_message ("#  function evaluations [%06d]\n", fit->fstate->func_eval);
     g_message ("#  gradient evaluations [%06d]\n", fit->fstate->grad_eval);
     g_message ("#  degrees of freedom   [%06d]\n", fit->fstate->dof);
-    g_message ("#  m2lnL     = %20.15g\n", fit->fstate->m2lnL);
+    g_message ("#  m2lnL     = %20.15g\n", ncm_fit_state_get_m2lnL_curval (fit->fstate));
     g_message ("#  Fit parameters:\n#    ");
     for (i = 0; i < ncm_mset_fparam_len (fit->mset); i++)
       g_message ("[% -20.15g] ", ncm_mset_fparam_get (fit->mset, i));
@@ -1036,12 +1151,12 @@ ncm_fit_log_finish (NcmFit *fit)
 {
   if (fit->mtype > NCM_FIT_RUN_MSGS_NONE)
   {
-    const gdouble m2lnL = fit->fstate->m2lnL;
+    const gdouble m2lnL = ncm_fit_state_get_m2lnL_curval (fit->fstate);
     const gint dof = fit->fstate->dof;
     const gdouble m2lnL_dof = m2lnL / dof;
     
     g_message ("#  m2lnL/dof = %20.15g\n", m2lnL_dof);
-    g_message ("#  |m2lnL-dof|/sqrt(2*dof) = %20.15g,\n", fabs(m2lnL_dof) / sqrt(2.0 * dof));
+    g_message ("#  |m2lnL-dof|/sqrt(2*dof) = %20.15g,\n", fabs (m2lnL_dof) / sqrt(2.0 * dof));
     g_message ("#  GoF_tt = %4.2f%% = (%4.2f + %4.2f)%%; GoF = %4.2f%%\n",
                gsl_cdf_chisq_Q (dof + fabs(dof - m2lnL), dof) * 100.0 +
                gsl_cdf_chisq_P (dof - fabs(dof - m2lnL), dof) * 100.0,
@@ -1778,7 +1893,11 @@ fit_dprob(gdouble val, gpointer p)
   ncm_fit_run (dprob_arg->fit_val, NCM_FIT_RUN_MSGS_NONE);
   if (dprob_arg->fit->mtype > NCM_FIT_RUN_MSGS_NONE)
     g_message (".");
-  return exp (-(dprob_arg->fit_val->fstate->m2lnL - dprob_arg->fit->fstate->m2lnL) / 2.0);
+  {
+    const gdouble m2lnL_fv = ncm_fit_state_get_m2lnL_curval (dprob_arg->fit_val->fstate);
+    const gdouble m2lnL = ncm_fit_state_get_m2lnL_curval (dprob_arg->fit->fstate);
+    return exp (-(m2lnL_fv - m2lnL) / 2.0);
+  }
 }
 
 /**
@@ -1895,13 +2014,17 @@ ncm_fit_lr_test_range (NcmFit *fit, NcmModelID mid, guint pid, gdouble start, gd
   {
     ncm_mset_param_set (fit_val->mset, mid, pid, walk);
     ncm_fit_run (fit_val, NCM_FIT_RUN_MSGS_NONE);
-    //g_message ("%g %g %g\n", walk, (fit_val->fstate->m2lnL - fit->fstate->m2lnL), gsl_cdf_chisq_Q (fit_val->fstate->m2lnL - fit->fstate->m2lnL, 1));
-    g_message ("%g %g %g %g %g\n", walk,
-               (fit_val->fstate->m2lnL - fit->fstate->m2lnL),
-               gsl_ran_chisq_pdf (fit_val->fstate->m2lnL - fit->fstate->m2lnL, 1),
-               gsl_cdf_chisq_Q (fit_val->fstate->m2lnL - fit->fstate->m2lnL, 1),
-               gsl_cdf_ugaussian_Q (sqrt(fit_val->fstate->m2lnL - fit->fstate->m2lnL))
-               );
+
+    {
+      const gdouble m2lnL_fv = ncm_fit_state_get_m2lnL_curval (fit_val->fstate);
+      const gdouble m2lnL = ncm_fit_state_get_m2lnL_curval (fit->fstate);
+      g_message ("%g %g %g %g %g\n", walk,
+                 (m2lnL_fv - m2lnL),
+                 gsl_ran_chisq_pdf (m2lnL_fv - m2lnL, 1),
+                 gsl_cdf_chisq_Q (m2lnL_fv - m2lnL, 1),
+                 gsl_cdf_ugaussian_Q (sqrt(m2lnL_fv - m2lnL))
+                 );
+    }
   }
 
   ncm_fit_free (fit_val);
@@ -1933,8 +2056,11 @@ ncm_fit_lr_test (NcmFit *fit, NcmModelID mid, guint pid, gdouble val, gint dof)
 
   ncm_mset_param_set (fit_val->mset, mid, pid, val);
   ncm_fit_run (fit_val, NCM_FIT_RUN_MSGS_NONE);
-  result = gsl_cdf_chisq_Q (fit_val->fstate->m2lnL - fit->fstate->m2lnL, dof);
-
+  {
+    const gdouble m2lnL_fv = ncm_fit_state_get_m2lnL_curval (fit_val->fstate);
+    const gdouble m2lnL = ncm_fit_state_get_m2lnL_curval (fit->fstate);
+    result = gsl_cdf_chisq_Q (m2lnL_fv - m2lnL, dof);
+  } 
   ncm_fit_free (fit_val);
   ncm_mset_free (mset_val);
   return result;

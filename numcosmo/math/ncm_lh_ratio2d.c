@@ -66,6 +66,7 @@ ncm_lh_ratio2d_init (NcmLHRatio2d *lhr2d)
 {
   lhr2d->fit         = NULL;
   lhr2d->constrained = NULL;
+  lhr2d->rng         = ncm_rng_new (NULL);
   lhr2d->pi[0].mid   = -1;
   lhr2d->pi[0].pid   = 0;
   lhr2d->pi[1].mid   = -1;
@@ -188,6 +189,7 @@ ncm_lh_ratio2d_dispose (GObject *object)
   ncm_fit_clear (&lhr2d->constrained);
   ncm_matrix_clear (&lhr2d->e_vec);
   ncm_vector_clear (&lhr2d->e_val);
+  ncm_rng_clear (&lhr2d->rng);
 
   /* Chain up : end */
   G_OBJECT_CLASS (ncm_lh_ratio2d_parent_class)->dispose (object);
@@ -527,8 +529,12 @@ ncm_lh_ratio2d_f (gdouble x, gpointer ptr)
   lhr2d->niter     += lhr2d->constrained->fstate->niter;
   lhr2d->func_eval += lhr2d->constrained->fstate->func_eval;
   lhr2d->grad_eval += lhr2d->constrained->fstate->grad_eval;
-  
-  return lhr2d->constrained->fstate->m2lnL - (lhr2d->fit->fstate->m2lnL + lhr2d->chisquare);
+
+  {
+    const gdouble m2lnL_const = ncm_fit_state_get_m2lnL_curval (lhr2d->constrained->fstate);
+    const gdouble m2lnL = ncm_fit_state_get_m2lnL_curval (lhr2d->fit->fstate);
+    return m2lnL_const - (m2lnL + lhr2d->chisquare);
+  }
 }
 
 static gdouble
@@ -854,7 +860,6 @@ ncm_lh_ratio2d_conf_region (NcmLHRatio2d *lhr2d, gdouble clevel, gdouble expecte
   GTimer *iter_timer = g_timer_new ();
   gdouble total_time = 0.0;
   gdouble init_x, init_y;
-  gsl_rng *rand = ncm_cfg_rng_get ();
   gint i, counter = -1;
   GList *points = NULL, *final_points = NULL;
   gboolean completed = FALSE;
@@ -870,7 +875,7 @@ ncm_lh_ratio2d_conf_region (NcmLHRatio2d *lhr2d, gdouble clevel, gdouble expecte
   lhr2d->chisquare = gsl_cdf_chisq_Qinv (1.0 - clevel, 2);
   lhr2d->shift[0] = 0.0;
   lhr2d->shift[1] = 0.0;
-  lhr2d->theta = gsl_rng_uniform (rand) * 2.0 * M_PI;
+  lhr2d->theta = gsl_rng_uniform (lhr2d->rng->r) * 2.0 * M_PI;
   
   switch (lhr2d->rtype)
   {
@@ -982,7 +987,7 @@ ncm_lh_ratio2d_conf_region (NcmLHRatio2d *lhr2d, gdouble clevel, gdouble expecte
 
   total_time += g_timer_elapsed (iter_timer, NULL);
   g_timer_destroy (iter_timer);
-
+  
   {
     NcmLHRatio2dRegion *rg = ncm_lh_ratio2d_points_to_region (final_points, clevel);
     ncm_lh_ratio2d_points_free (final_points);
@@ -1076,9 +1081,7 @@ ncm_lh_ratio2d_region_free (NcmLHRatio2dRegion *rg)
 void 
 ncm_lh_ratio2d_region_clear (NcmLHRatio2dRegion **rg)
 {
-  if (*rg != NULL)
-    ncm_lh_ratio2d_region_free (*rg);
-  *rg = NULL;
+  g_clear_pointer (rg, &ncm_lh_ratio2d_region_free);
 }
 
 /**

@@ -252,11 +252,11 @@ ncm_fit_levmar_der_run (NcmFit *fit, NcmFitRunMsgs mtype)
     ncm_fit_log_step_error (fit, "(%d)", ret);
 
   ncm_fit_ls_f (fit, fit->fstate->ls_f);
-  fit->fstate->m2lnL = info[1];
-  fit->fstate->m2lnL_prec = info[2] / info[1];
+  ncm_fit_state_set_m2lnL_curval (fit->fstate, info[1]);
+  ncm_fit_state_set_m2lnL_prec (fit->fstate, info[2] / info[1]);
   fit->fstate->niter = info[5];
 
-  ncm_mset_fparams_set_vector (fit->mset, fit->fstate->fparams);
+  ncm_fit_set_params (fit, fit->fstate->fparams);
 
   return TRUE;
 }
@@ -290,11 +290,11 @@ ncm_fit_levmar_dif_run (NcmFit *fit, NcmFitRunMsgs mtype)
     ncm_fit_log_step_error (fit, "(%d)", ret);
 
   ncm_fit_ls_f (fit, fit->fstate->ls_f);
-  fit->fstate->m2lnL = info[1];
-  fit->fstate->m2lnL_prec = info[2] / info[1];
+  ncm_fit_state_set_m2lnL_curval (fit->fstate, info[1]);
+  ncm_fit_state_set_m2lnL_prec (fit->fstate, info[2] / info[1]);
   fit->fstate->niter = info[5];
 
-  ncm_mset_fparams_set_vector (fit->mset, fit->fstate->fparams);
+  ncm_fit_set_params (fit, fit->fstate->fparams);
 
   return TRUE;
 }
@@ -311,7 +311,7 @@ nc_residual_levmar_f (gdouble *p, gdouble *hx, gint m, gint n, gpointer adata)
   
   ncm_fit_ls_f (fit, f);
 
-  fit->fstate->m2lnL = gsl_pow_2 (gsl_blas_dnrm2 (ncm_vector_gsl (f)));
+  ncm_fit_state_set_m2lnL_curval (fit->fstate, gsl_pow_2 (gsl_blas_dnrm2 (ncm_vector_gsl (f))));
   ncm_fit_log_step (fit);
   ncm_vector_free (f);
 }

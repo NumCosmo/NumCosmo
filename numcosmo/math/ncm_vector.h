@@ -100,6 +100,10 @@ const NcmVector *ncm_vector_new_data_const (const gdouble *d, const gsize size, 
 NcmVector *ncm_vector_get_subvector (NcmVector *cv, const gsize k, const gsize size);
 GVariant *ncm_vector_get_variant (NcmVector *v);
 
+void ncm_vector_log_vals (NcmVector *v, const gchar *prestr, const gchar *format);
+
+void ncm_vector_set_from_variant (NcmVector *cv, GVariant *var);
+
 G_INLINE_FUNC const NcmVector *ncm_vector_new_gsl_const (const gsl_vector *v);
 G_INLINE_FUNC gdouble ncm_vector_get (const NcmVector *cv, const guint i);
 G_INLINE_FUNC gdouble ncm_vector_fast_get (const NcmVector *cv, const guint i);
@@ -107,6 +111,7 @@ G_INLINE_FUNC gdouble *ncm_vector_ptr (NcmVector *cv, const guint i);
 G_INLINE_FUNC void ncm_vector_set (NcmVector *cv, const guint i, const gdouble val);
 G_INLINE_FUNC void ncm_vector_fast_set (NcmVector *cv, const guint i, const gdouble val);
 G_INLINE_FUNC void ncm_vector_addto (NcmVector *cv, const guint i, const gdouble val);
+G_INLINE_FUNC void ncm_vector_fast_addto (NcmVector *cv, const guint i, const gdouble val);
 G_INLINE_FUNC void ncm_vector_subfrom (NcmVector *cv, const guint i, const gdouble val);
 G_INLINE_FUNC void ncm_vector_fast_subfrom (NcmVector *cv, const guint i, const gdouble val);
 G_INLINE_FUNC void ncm_vector_set_all (NcmVector *cv, const gdouble val);
@@ -182,6 +187,12 @@ G_INLINE_FUNC void
 ncm_vector_addto (NcmVector *cv, const guint i, const gdouble val)
 {
   gsl_vector_set (ncm_vector_gsl (cv), i, gsl_vector_get (ncm_vector_gsl (cv), i) + val);
+}
+
+G_INLINE_FUNC void
+ncm_vector_fast_addto (NcmVector *cv, const guint i, const gdouble val)
+{
+  ncm_vector_gsl (cv)->data[i] = ncm_vector_gsl (cv)->data[i] + val;
 }
 
 G_INLINE_FUNC void

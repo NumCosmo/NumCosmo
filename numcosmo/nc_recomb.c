@@ -147,6 +147,7 @@
 #include "math/integral.h"
 #include "math/cvode_util.h"
 #include "math/util.h"
+#include "math/ncm_serialize.h"
 #include "math/ncm_cfg.h"
 #include "math/ncm_spline_func.h"
 #include "perturbations/linear.h"
@@ -644,7 +645,7 @@ nc_recomb_equilibrium_Xe (NcRecomb *recomb, NcHICosmo *cosmo, const gdouble x)
 NcRecomb *
 nc_recomb_new_from_name (gchar *recomb_name)
 {
-  GObject *obj = ncm_cfg_create_from_string (recomb_name);
+  GObject *obj = ncm_serialize_global_create_from_string (recomb_name);
   GType multiplicity_type = G_OBJECT_TYPE (obj);
   if (!g_type_is_a (multiplicity_type, NC_TYPE_RECOMB))
     g_error ("nc_recomb_new_from_name: NcRecomb %s do not descend from %s\n", recomb_name, g_type_name (NC_TYPE_RECOMB));

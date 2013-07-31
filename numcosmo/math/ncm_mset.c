@@ -37,6 +37,7 @@
 #include "build_cfg.h"
 
 #include "math/ncm_mset.h"
+#include "math/ncm_serialize.h"
 #include "math/ncm_cfg.h"
 
 G_DEFINE_TYPE (NcmMSet, ncm_mset, G_TYPE_OBJECT);
@@ -1366,7 +1367,7 @@ ncm_mset_save (NcmMSet *mset, gchar *filename, gboolean save_comment)
       GVariant *params = NULL;
       gchar *obj_name = NULL;
       gchar *group = g_strdup_printf ("%s", mset_class->model_desc[i].ns);
-      GVariant *model_var = ncm_cfg_serialize_to_variant (G_OBJECT (model));
+      GVariant *model_var = ncm_serialize_global_to_variant (G_OBJECT (model));
       guint nparams;
 
       g_variant_get (model_var, "{s@a{sv}}", &obj_name, &params);
@@ -1493,7 +1494,7 @@ ncm_mset_load (gchar *filename)
     }
 
     {
-      GObject *obj = ncm_cfg_create_from_string (obj_ser->str);
+      GObject *obj = ncm_serialize_global_create_from_string (obj_ser->str);
       g_assert (NCM_IS_MODEL (obj));
       if (ncm_mset_exists (mset, NCM_MODEL (obj)))
         g_error ("ncm_mset_load: a model ``%s'' already exists in NcmMSet.", obj_ser->str);

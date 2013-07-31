@@ -37,6 +37,7 @@
 #include "build_cfg.h"
 
 #include "lss/nc_multiplicity_func.h"
+#include "math/ncm_serialize.h"
 #include "math/ncm_cfg.h"
 
 G_DEFINE_ABSTRACT_TYPE (NcMultiplicityFunc, nc_multiplicity_func, G_TYPE_OBJECT);
@@ -52,7 +53,7 @@ G_DEFINE_ABSTRACT_TYPE (NcMultiplicityFunc, nc_multiplicity_func, G_TYPE_OBJECT)
 NcMultiplicityFunc *
 nc_multiplicity_func_new_from_name (gchar *multiplicity_name)
 {
-  GObject *obj = ncm_cfg_create_from_string (multiplicity_name);
+  GObject *obj = ncm_serialize_global_create_from_string (multiplicity_name);
   GType multiplicity_type = G_OBJECT_TYPE (obj);
   if (!g_type_is_a (multiplicity_type, NC_TYPE_MULTIPLICITY_FUNC))
 	g_error ("nc_multiplicity_func_new_from_name: NcMultiplicityFunc %s do not descend from %s\n", multiplicity_name, g_type_name (NC_TYPE_MULTIPLICITY_FUNC));

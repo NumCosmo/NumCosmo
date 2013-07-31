@@ -16,6 +16,9 @@ test_ncm_vector_SOURCES =  \
 
 test_ncm_matrix_SOURCES =  \
 	test_ncm_matrix.c
+
+test_ncm_stats_vec_SOURCES =  \
+	test_ncm_stats_vec.c
 	
 test_ncm_spline_SOURCES =  \
         test_ncm_spline.c
@@ -31,8 +34,8 @@ test_ncm_model_SOURCES =  \
 	ncm_model_test.c \
 	ncm_model_test.h
 
-test_ncm_object_serialization_SOURCES = \
-	test_ncm_object_serialization.c
+test_ncm_serialize_SOURCES = \
+	test_ncm_serialize.c
 
 test_ncm_data_gauss_cov_SOURCES = \
 	test_ncm_data_gauss_cov.c \
@@ -55,16 +58,18 @@ check_PROGRAMS =  \
 	test_ncm_sparam               \
 	test_ncm_vector               \
 	test_ncm_matrix               \
+	test_ncm_stats_vec            \
 	test_ncm_spline               \
 	test_ncm_spline2d             \
 	test_ncm_sf_sbessel           \
 	test_ncm_model                \
-	test_ncm_object_serialization \
+	test_ncm_serialize            \
 	test_ncm_data_gauss_cov       \
 	test_nc_window                \
 	test_nc_transfer_func         \
 	test_nc_galaxy_acf            \
 	test_nc_recomb
+
 
 # TEST_PROGS += $(check_PROGRAMS)
 
@@ -74,6 +79,8 @@ test_ncm_vector_LDADD = $(top_builddir)/numcosmo/libnumcosmo.la
 
 test_ncm_matrix_LDADD = $(top_builddir)/numcosmo/libnumcosmo.la 
 
+test_ncm_stats_vec_LDADD = $(top_builddir)/numcosmo/libnumcosmo.la 
+
 test_ncm_spline_LDADD = $(top_builddir)/numcosmo/libnumcosmo.la
 
 test_ncm_spline2d_LDADD = $(top_builddir)/numcosmo/libnumcosmo.la
@@ -82,7 +89,7 @@ test_ncm_sf_sbessel_LDADD = $(top_builddir)/numcosmo/libnumcosmo.la
 
 test_ncm_model_LDADD = $(top_builddir)/numcosmo/libnumcosmo.la
 
-test_ncm_object_serialization_LDADD = $(top_builddir)/numcosmo/libnumcosmo.la
+test_ncm_serialize_LDADD = $(top_builddir)/numcosmo/libnumcosmo.la
 
 test_ncm_data_gauss_cov_LDADD = $(top_builddir)/numcosmo/libnumcosmo.la
 

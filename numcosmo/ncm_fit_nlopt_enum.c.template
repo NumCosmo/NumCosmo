@@ -9,6 +9,12 @@
 
 /*** BEGIN file-production ***/
 /* enumerations from "@filename@" */
+/**
+ * SECTION:ncm_fit_nlopt_enum
+ * @title: NLopt Interface Object Enum
+ * @short_description: Automaticaly imported enum from NLOpt library.
+ *
+ */
 /*** END file-production ***/
 
 /*** BEGIN value-header ***/

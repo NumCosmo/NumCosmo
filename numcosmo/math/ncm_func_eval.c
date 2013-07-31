@@ -74,7 +74,7 @@ func (gpointer data, gpointer empty)
 
   ctrl->active_threads--;
   if (ctrl->active_threads == 0)
-	g_cond_signal (ctrl->finish);
+    g_cond_signal (ctrl->finish);
 
   g_mutex_unlock (ctrl->update);
 
@@ -98,8 +98,8 @@ ncm_func_eval_get_pool ()
   _NCM_MUTEX_LOCK (&create_lock);
   if (_function_thread_pool == NULL)
   {
-	_function_thread_pool = g_thread_pool_new (func, NULL, NCM_THREAD_POOL_MAX, TRUE, &err);
-	g_clear_error (&err);
+    _function_thread_pool = g_thread_pool_new (func, NULL, NCM_THREAD_POOL_MAX, TRUE, &err);
+    g_clear_error (&err);
   }
   _NCM_MUTEX_UNLOCK (&create_lock);
 
@@ -124,7 +124,7 @@ ncm_func_eval_set_max_threads (gint mt)
 /**
  * ncm_func_eval_threaded_loop:
  * @lfunc: (scope notified): #NcmLoopFunc to be evaluated in threads
- * @i: initial index
+   * @i: initial index
  * @f: final index
  * @data: pointer to be passed to @fl
  *
@@ -156,40 +156,40 @@ ncm_func_eval_threaded_loop (NcmLoopFunc lfunc, glong i, glong f, gpointer data)
 
   if (delta == 0)
   {
-	lfunc (i, f, data);
+    lfunc (i, f, data);
   }
   else
   {
-	GError *err = NULL;
-	glong li = i;
-	glong lf = delta + res;
-	ctrl.active_threads = nthreads;
+    GError *err = NULL;
+    glong li = i;
+    glong lf = delta + res;
+    ctrl.active_threads = nthreads;
 
-	do {
-	  NcmLoopFuncEval *arg = g_slice_new (NcmLoopFuncEval);
-	  arg->lfunc = lfunc;
-	  arg->i = li;
-	  arg->f = lf;
-	  arg->data = data;
-	  arg->ctrl = &ctrl;
-	  g_thread_pool_push (_function_thread_pool, arg, &err);
-	  li = lf;
-	  lf += delta;
-	} while (--nthreads);
+    do {
+      NcmLoopFuncEval *arg = g_slice_new (NcmLoopFuncEval);
+      arg->lfunc = lfunc;
+      arg->i = li;
+      arg->f = lf;
+      arg->data = data;
+      arg->ctrl = &ctrl;
+      g_thread_pool_push (_function_thread_pool, arg, &err);
+      li = lf;
+      lf += delta;
+    } while (--nthreads);
   }
 
   g_mutex_lock (ctrl.update);
   while (ctrl.active_threads != 0)
-	g_cond_wait (ctrl.finish, ctrl.update);
+    g_cond_wait (ctrl.finish, ctrl.update);
   g_mutex_unlock (ctrl.update);
 
   if (FALSE)
   {
-	printf  ("Unused:      %d\n", g_thread_pool_get_num_unused_threads ());fflush (stdout);
-	printf  ("Max Unused:  %d\n", g_thread_pool_get_max_unused_threads ());fflush (stdout);
-	printf  ("Running:     %d\n", g_thread_pool_get_num_threads (_function_thread_pool));fflush (stdout);
-	printf  ("Unprocessed: %d\n", g_thread_pool_unprocessed (_function_thread_pool));fflush (stdout);
-	printf  ("Unused:      %d\n", g_thread_pool_get_max_threads (_function_thread_pool));fflush (stdout);
+    printf  ("Unused:      %d\n", g_thread_pool_get_num_unused_threads ());fflush (stdout);
+    printf  ("Max Unused:  %d\n", g_thread_pool_get_max_unused_threads ());fflush (stdout);
+    printf  ("Running:     %d\n", g_thread_pool_get_num_threads (_function_thread_pool));fflush (stdout);
+    printf  ("Unprocessed: %d\n", g_thread_pool_unprocessed (_function_thread_pool));fflush (stdout);
+    printf  ("Unused:      %d\n", g_thread_pool_get_max_threads (_function_thread_pool));fflush (stdout);
   }
 
 #if (GLIB_MAJOR_VERSION == 2) && (GLIB_MINOR_VERSION < 32)

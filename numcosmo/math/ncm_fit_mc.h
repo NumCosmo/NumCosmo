@@ -30,6 +30,7 @@
 #include <glib-object.h>
 #include <numcosmo/build_cfg.h>
 #include <numcosmo/math/ncm_fit.h>
+#include <numcosmo/math/ncm_timer.h>
 #include <gsl/gsl_histogram.h>
 
 G_BEGIN_DECLS
@@ -49,8 +50,9 @@ struct _NcmFitMC
   /*< private >*/
   GObject parent_instance;
   NcmFit *fit;
-  NcmMatrix *fparam;
+  NcmStatsVec *fparam;
   NcmVector *m2lnL;
+  NcmTimer *nt;
   gdouble m2lnL_min;
   gdouble m2lnL_max;
   guint n;

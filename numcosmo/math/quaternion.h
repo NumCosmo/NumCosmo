@@ -152,6 +152,8 @@ void ncm_quaternion_conjugate_q_mul (NcmQ *q, NcmQ *u, NcmQ *res);
 void ncm_quaternion_rotate (NcmQ *q, NcmTriVector v);
 void ncm_quaternion_inv_rotate (NcmQ *q, NcmTriVector v);
 
+#define NCM_QUATERNION_RNG_NAME "quaternion"
+
 G_END_DECLS
 
 #endif /* _NC_QUATERNION_H */

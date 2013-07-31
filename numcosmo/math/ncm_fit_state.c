@@ -58,17 +58,19 @@ G_DEFINE_TYPE (NcmFitState, ncm_fit_state, G_TYPE_OBJECT);
 static void
 ncm_fit_state_init (NcmFitState *fstate)
 {
-  fstate->data_len   = 0;
-  fstate->fparam_len = 0;
-  fstate->covar      = NULL;
-  fstate->hessian    = NULL;
-  fstate->fparams    = NULL;
-  fstate->dm2lnL     = NULL;
-  fstate->ls_J       = NULL;
-  fstate->m2lnL      = 0.0;
-  fstate->niter      = 0;
-  fstate->func_eval  = 0;
-  fstate->grad_eval  = 0;
+  fstate->data_len     = 0;
+  fstate->fparam_len   = 0;
+  fstate->covar        = NULL;
+  fstate->hessian      = NULL;
+  fstate->fparams      = NULL;
+  fstate->dm2lnL       = NULL;
+  fstate->ls_J         = NULL;
+  fstate->m2lnL_curval = 0.0;
+  fstate->niter        = 0;
+  fstate->func_eval    = 0;
+  fstate->grad_eval    = 0;
+  fstate->m2lnL_prec   = 0.0;
+  fstate->params_prec  = 0.0;
 
   fstate->alloc_data_len   = 0;
   fstate->alloc_fparam_len = 0;
@@ -359,7 +361,7 @@ ncm_fit_state_reset (NcmFitState *fstate)
   fstate->elapsed_time = 0.0;
   fstate->m2lnL_prec   = 0.0;
   fstate->params_prec  = 0.0;
-  fstate->m2lnL        = 0.0;
+  fstate->m2lnL_curval = 0.0;
 
   fstate->is_best_fit = FALSE;
   
@@ -401,3 +403,78 @@ ncm_fit_state_reset (NcmFitState *fstate)
 
   fstate->alloc_data_len = fstate->data_len;
 }
+
+/**
+ * ncm_fit_state_set_ls:
+ * @fstate: FIXME
+ * @f: FIXME
+ * @J: FIXME
+ * 
+ * FIXME
+ * 
+ */
+/**
+ * ncm_fit_state_set_niter:
+ * @fstate: FIXME
+ * @niter: FIXME
+ * 
+ * FIXME
+ * 
+ */
+/**
+ * ncm_fit_state_get_niter:
+ * @fstate: FIXME
+ * 
+ * FIXME
+ * 
+ * Returns: FIXME
+ */
+/**
+ * ncm_fit_state_set_m2lnL_prec:
+ * @fstate: FIXME
+ * @prec: FIXME
+ * 
+ * FIXME
+ * 
+ */
+/**
+ * ncm_fit_state_get_m2lnL_prec:
+ * @fstate: FIXME
+ * 
+ * FIXME
+ * 
+ * Returns: FIXME
+ */
+/**
+ * ncm_fit_state_set_m2lnL_curval:
+ * @fstate: FIXME
+ * @m2lnL: FIXME
+ * 
+ * FIXME
+ * 
+ */
+/**
+ * ncm_fit_state_get_m2lnL_curval:
+ * @fstate: FIXME
+ * 
+ * FIXME
+ * 
+ * Returns: FIXME
+ */
+/**
+ * ncm_fit_state_set_params_prec:
+ * @fstate: FIXME
+ * @prec: FIXME
+ * 
+ * FIXME
+ * 
+ */
+/**
+ * ncm_fit_state_get_params_prec:
+ * @fstate: FIXME
+ * 
+ * FIXME
+ * 
+ * Returns: FIXME
+ */
+

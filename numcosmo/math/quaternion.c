@@ -36,7 +36,7 @@
 #include "build_cfg.h"
 
 #include "math/quaternion.h"
-#include "math/ncm_cfg.h"
+#include "math/ncm_rng.h"
 
 #include <string.h>
 #include <math.h>
@@ -51,7 +51,7 @@
 NcmQ *
 ncm_quaternion_new ()
 {
-  NcmQ *q = (NcmQ *)g_slice_new (NcmQ);
+  NcmQ *q = (NcmQ *) g_slice_new (NcmQ);
   NC_QUATERNION_SET_0(q);
   return q;
 }
@@ -79,7 +79,7 @@ ncm_quaternion_free (NcmQ *q)
 NcmQ *
 ncm_quaternion_new_from_vector (NcmTriVector v)
 {
-  NcmQ *q = (NcmQ *)g_slice_new (NcmQ);
+  NcmQ *q = (NcmQ *) g_slice_new (NcmQ);
   NC_TRIVEC_MEMCPY(q->x, v);
   q->s = 0.0;
   return q;
@@ -99,7 +99,7 @@ ncm_quaternion_new_from_vector (NcmTriVector v)
 NcmQ *
 ncm_quaternion_new_from_data (gdouble x, gdouble y, gdouble z, gdouble theta)
 {
-  NcmQ *q = (NcmQ *)g_slice_new (NcmQ);
+  NcmQ *q = (NcmQ *) g_slice_new (NcmQ);
   theta /= 2.0;
   q->x.c[0] = x;
   q->x.c[1] = y;
@@ -302,10 +302,13 @@ ncm_quaternion_conjugate_u_mul (NcmQ *q, NcmQ *u, NcmQ *res)
 void
 ncm_quaternion_set_random (NcmQ *q)
 {
-  gsl_rng *rand = ncm_cfg_rng_get ();
+  NcmRNG *rng = ncm_rng_pool_get (NCM_QUATERNION_RNG_NAME);
+  ncm_rng_lock (rng);
   ncm_quaternion_set_from_data (q,
-                                 -1.0 + 2.0 * gsl_rng_uniform_pos (rand),
-                                 -1.0 + 2.0 * gsl_rng_uniform_pos (rand),
-                                 -1.0 + 2.0 * gsl_rng_uniform_pos (rand),
-                                 2.0 * M_PI * gsl_rng_uniform (rand));
+                                 -1.0 + 2.0 * gsl_rng_uniform_pos (rng->r),
+                                 -1.0 + 2.0 * gsl_rng_uniform_pos (rng->r),
+                                 -1.0 + 2.0 * gsl_rng_uniform_pos (rng->r),
+                                 2.0 * M_PI * gsl_rng_uniform (rng->r));
+  ncm_rng_unlock (rng);
+  ncm_rng_free (rng);   
 }

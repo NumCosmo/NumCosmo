@@ -38,6 +38,7 @@
 #include "build_cfg.h"
 
 #include "lss/nc_transfer_func.h"
+#include "math/ncm_serialize.h"
 #include "math/ncm_cfg.h"
 
 G_DEFINE_ABSTRACT_TYPE (NcTransferFunc, nc_transfer_func, G_TYPE_OBJECT);
@@ -53,7 +54,7 @@ G_DEFINE_ABSTRACT_TYPE (NcTransferFunc, nc_transfer_func, G_TYPE_OBJECT);
 NcTransferFunc *
 nc_transfer_func_new_from_name (gchar *transfer_name)
 {
-  GObject *obj = ncm_cfg_create_from_string (transfer_name);
+  GObject *obj = ncm_serialize_global_create_from_string (transfer_name);
   GType transfer_type = G_OBJECT_TYPE (obj);
 
   if (!g_type_is_a (transfer_type, NC_TYPE_TRANSFER_FUNC))

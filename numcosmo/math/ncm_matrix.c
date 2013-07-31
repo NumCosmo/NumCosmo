@@ -226,6 +226,23 @@ ncm_matrix_new_data_static_tda (gdouble *d, gsize nrows, gsize ncols, gsize tda)
 }
 
 /**
+ * ncm_matrix_new_variant:
+ * @var: a variant of type "aad"
+ * 
+ * Creates a new matrix using the values from @var.
+ * 
+ * Returns: (transfer full) :a #NcmMatrix with the values from @var.
+ */
+NcmMatrix *
+ncm_matrix_new_variant (GVariant *var)
+{
+  NcmMatrix *cm = g_object_new (NCM_TYPE_MATRIX, 
+                                "values", var, 
+                                NULL);
+  return cm;
+}
+
+/**
  * ncm_matrix_get_submatrix:
  * @cm: a #NcmMatrix.
  * @k1: row index of the original matrix @cm.
@@ -292,6 +309,84 @@ ncm_matrix_get_row (NcmMatrix *cm, const gsize row)
   cv->pobj = g_object_ref (cm);
 
   return cv;
+}
+
+/**
+ * ncm_matrix_set_from_variant:
+ * @cm: a #NcmMatrix.
+ * @var: a #GVariant of type "aad"
+ *
+ * This function sets the values of @cm using the variant @var.
+ *
+ */
+void 
+ncm_matrix_set_from_variant (NcmMatrix *cm, GVariant *var)
+{
+  if (!g_variant_is_of_type (var, G_VARIANT_TYPE ("aad")))
+    g_error ("ncm_matrix_set_from_variant: Cannot convert `%s' variant to an array of arrays of doubles", g_variant_get_type_string (var));
+  else
+  {
+    GVariant *row = g_variant_get_child_value (var, 0);
+    gsize nrows = g_variant_n_children (var);
+    gsize ncols = g_variant_n_children (row);
+    gint i, j;
+    g_variant_unref (row);
+
+    /* Sometimes we receive a NcmMatrix in the process of instantiation. */
+    if ((NCM_MATRIX_NROWS (cm) == 0) && (NCM_MATRIX_NCOLS (cm) == 0))
+    {
+      gdouble *d = g_slice_alloc (sizeof (gdouble) * nrows * ncols);
+      cm->mv = gsl_matrix_view_array (d, nrows, ncols);
+      cm->type = NCM_MATRIX_SLICE;
+    }
+    else if (nrows != NCM_MATRIX_NROWS (cm) || ncols != NCM_MATRIX_NCOLS (cm))
+      g_error ("ncm_matrix_set_from_variant: cannot set matrix values, variant contains (%zu, %zu) childs but matrix dimension is (%zu, %zu)", nrows, ncols, NCM_MATRIX_NROWS (cm), NCM_MATRIX_NCOLS (cm));
+
+    for (i = 0; i < nrows; i++)
+    {
+      row = g_variant_get_child_value (var, i);
+      for (j = 0; j < ncols; j++)
+      {
+        gdouble val = 0.0;
+        g_variant_get_child (row, j, "d", &val);
+        ncm_matrix_set (cm, i, j, val);
+      }
+      g_variant_unref (row);
+    }
+  }
+}
+
+/**
+ * ncm_matrix_get_variant:
+ * @cm: a #NcmMatrix.
+ *
+ * This function gets a variant of values taken from @cm.
+ * 
+ * Returns: (transfer full): the newly created #GVariant.
+ */
+GVariant *
+ncm_matrix_get_variant (NcmMatrix *cm)
+{
+  gsize nrows = NCM_MATRIX_NROWS (cm);
+  gsize ncols = NCM_MATRIX_NCOLS (cm);
+  GVariant *var;
+  GVariant **row_i_vals = g_new (GVariant *, ncols);
+  GVariant **rows = g_new (GVariant *, nrows);
+  gint i, j;
+
+  for (i = 0; i < nrows; i++)
+  {
+    for (j = 0; j < ncols; j++)
+    {
+      row_i_vals[j] = g_variant_new_double (ncm_matrix_get (cm, i, j));
+    }
+    rows[i] = g_variant_new_array (G_VARIANT_TYPE ("d"), row_i_vals, ncols);
+  }
+  var = g_variant_new_array (G_VARIANT_TYPE ("ad"), rows, nrows);
+  g_free (row_i_vals);
+  g_free (rows);
+  g_variant_ref_sink (var);
+  return var;
 }
 
 /**
@@ -591,25 +686,7 @@ _ncm_matrix_get_property (GObject *object, guint prop_id, GValue *value, GParamS
   {
     case PROP_VALS:
     {
-      gsize nrows = NCM_MATRIX_NROWS (m);
-      gsize ncols = NCM_MATRIX_NCOLS (m);
-      GVariant *var;
-      GVariant **row_i_vals = g_new (GVariant *, ncols);
-      GVariant **rows = g_new (GVariant *, nrows);
-      gint i, j;
-
-      for (i = 0; i < nrows; i++)
-      {
-	for (j = 0; j < ncols; j++)
-	{
-	  row_i_vals[j] = g_variant_new_double (ncm_matrix_get (m, i, j));
-	}
-	rows[i] = g_variant_new_array (G_VARIANT_TYPE ("d"), row_i_vals, ncols);
-      }
-      var = g_variant_new_array (G_VARIANT_TYPE ("ad"), rows, nrows);
-      g_free (row_i_vals);
-      g_free (rows);
-      g_variant_ref_sink (var);
+      GVariant *var = ncm_matrix_get_variant (m);
       g_value_take_variant (value, var);
       break;
     }
@@ -630,37 +707,7 @@ _ncm_matrix_set_property (GObject *object, guint prop_id, const GValue *value, G
     case PROP_VALS:
     {
       GVariant *var = g_value_get_variant (value);
-      GVariant *row = g_variant_get_child_value (var, 0);
-      gsize nrows = g_variant_n_children (var);
-      gsize ncols = g_variant_n_children (row);
-      gint i, j;
-      if (!g_variant_is_of_type (row, G_VARIANT_TYPE ("ad")))
-      {
-        g_error ("set_property: Cannot convert `%s' variant to an array of doubles", g_variant_get_type_string (var));
-        break;
-      }
-      g_variant_unref (row);
-
-      if ((NCM_MATRIX_NROWS (m) == 0) && (NCM_MATRIX_NCOLS (m) == 0))
-      {
-        gdouble *d = g_slice_alloc (sizeof (gdouble) * nrows * ncols);
-        m->mv = gsl_matrix_view_array (d, nrows, ncols);
-        m->type = NCM_MATRIX_SLICE;
-      }
-      else if (nrows != NCM_MATRIX_NROWS (m) || ncols != NCM_MATRIX_NCOLS (m))
-        g_error ("set_property: cannot set matrix values, variant contains (%zu, %zu) childs but matrix dimension is (%zu, %zu)", nrows, ncols, NCM_MATRIX_NROWS (m), NCM_MATRIX_NCOLS (m));
-
-      for (i = 0; i < nrows; i++)
-      {
-	row = g_variant_get_child_value (var, i);
-        for (j = 0; j < ncols; j++)
-        {
-          gdouble val = 0.0;
-          g_variant_get_child (row, j, "d", &val);
-          ncm_matrix_set (m, i, j, val);
-        }
-	g_variant_unref (row);
-      }
+      ncm_matrix_set_from_variant (m, var);
       break;
     }
     default:

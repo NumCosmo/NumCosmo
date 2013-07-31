@@ -297,7 +297,7 @@ CHANGELOG
      in NcmFitMC including gof tests. Added new functions on NcmMSet to set/get
      all models parameters.
 
- * Fixed bug in ncm_cfg_create_from_string which didnt indentify object strings
+ * Fixed bug in ncm_serialize_global_create_from_string which didnt indentify object strings
      with leading whitespaces.
 
  * Improved comment organization in keyfile generation.
@@ -771,7 +771,7 @@ CHANGELOG
      integration problems. Bumped to version 0.9.0. Organized Monte Carlo code
      in NcmFitMC including gof tests. Added new functions on NcmMSet to set/get
      all models parameters.
- * Fixed bug in ncm_cfg_create_from_string which didnt indentify object strings
+ * Fixed bug in ncm_serialize_global_create_from_string which didnt indentify object strings
      with leading whitespaces.
  * Improved comment organization in keyfile generation.
  * Fixed segfault in darkenergy.

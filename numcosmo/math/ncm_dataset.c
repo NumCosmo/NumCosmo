@@ -29,6 +29,7 @@
  * @short_description: Object representing a set of NcmData objects
  *
  * FIXME
+ * 
  */
 
 #ifdef HAVE_CONFIG_H
@@ -41,10 +42,15 @@
 
 G_DEFINE_TYPE (NcmDataset, ncm_dataset, G_TYPE_OBJECT);
 
+#define _NCM_DATASET_INITIAL_ALLOC 10
+
 static void
 ncm_dataset_init (NcmDataset *dset)
 {
-  dset->data = g_ptr_array_sized_new (10);
+  dset->bstype    = NCM_DATASET_BSTRAP_DISABLE;
+  dset->data      = g_ptr_array_sized_new (_NCM_DATASET_INITIAL_ALLOC);
+  dset->data_prob = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), _NCM_DATASET_INITIAL_ALLOC);
+  dset->bstrap    = g_array_sized_new (FALSE, FALSE, sizeof (guint), _NCM_DATASET_INITIAL_ALLOC);
   g_ptr_array_set_free_func (dset->data, (GDestroyNotify) &ncm_data_free);
 }
 
@@ -57,6 +63,16 @@ ncm_dataset_dispose (GObject *object)
   {
     g_ptr_array_unref (dset->data);
     dset->data = NULL;
+  }
+  if (dset->data_prob != NULL)
+  {
+    g_array_unref (dset->data_prob);
+    dset->data_prob = NULL;
+  }
+  if (dset->bstrap != NULL)
+  {
+    g_array_unref (dset->bstrap);
+    dset->bstrap = NULL;
   }
 
   /* Chain up : end */
@@ -83,9 +99,9 @@ ncm_dataset_class_init (NcmDatasetClass *klass)
 /**
  * ncm_dataset_new:
  *
- * FIXME
+ * Creates a new empty #NcmDataset object. 
  *
- * Returns: FIXME
+ * Returns: a new #NcmDataset.
  */
 NcmDataset *
 ncm_dataset_new (void)
@@ -98,9 +114,9 @@ ncm_dataset_new (void)
  * ncm_dataset_ref:
  * @dset: pointer to type defined by #NcmDataset
  *
- * FIXME
+ * Increases the reference count of @dset by one.
  *
- * Returns: (transfer full): FIXME
+ * Returns: (transfer full): @dset.
  */
 NcmDataset *
 ncm_dataset_ref (NcmDataset *dset)
@@ -114,7 +130,7 @@ ncm_dataset_ref (NcmDataset *dset)
  *
  * Duplicates the object and all of its content.
  *
- * Returns: (transfer full): FIXME
+ * Returns: (transfer full): the duplicate of @dset.
  */
 NcmDataset *
 ncm_dataset_dup (NcmDataset *dset)
@@ -138,7 +154,7 @@ ncm_dataset_dup (NcmDataset *dset)
  *
  * Duplicates the object getting a reference of its content.
  *
- * Returns: (transfer full): FIXME
+ * Returns: (transfer full): the duplicate of @dset, new container.
  */
 NcmDataset *
 ncm_dataset_copy (NcmDataset *dset)
@@ -156,30 +172,54 @@ ncm_dataset_copy (NcmDataset *dset)
   return dset_dup;
 }
 
+static void
+_ncm_dataset_update_bstrap (NcmDataset *dset)
+{
+  if (dset->bstype == NCM_DATASET_BSTRAP_TOTAL)
+  {
+    guint n = ncm_dataset_get_n (dset);
+    guint i;
+    
+    g_array_set_size (dset->data_prob, dset->data->len);
+    g_array_set_size (dset->bstrap, dset->data->len);
+
+    for (i = 0; i < dset->data->len; i++)
+    {
+      NcmData *data = ncm_dataset_peek_data (dset, i);
+      gdouble p_i = ncm_data_get_length (data) * 1.0 / n;
+      g_array_index (dset->data_prob, gdouble, i) = p_i;
+    }
+  }
+}
 
 /**
  * ncm_dataset_append_data:
  * @dset: pointer to type defined by #NcmDataset
  * @data: #NcmData object to be appended to #NcmDataset
  *
- * FIXME
+ * Appends @data to @dset.
  *
- * Returns: FIXME
  */
 void
 ncm_dataset_append_data (NcmDataset *dset, NcmData *data)
 {
+  gboolean enable = (dset->bstype != NCM_DATASET_BSTRAP_DISABLE) ? TRUE : FALSE;
+
   data = ncm_data_ref (data);
   g_ptr_array_add (dset->data, data);
+
+  ncm_data_bootstrap_set (data, enable);
+
+  _ncm_dataset_update_bstrap (dset);
 }
 
 /**
  * ncm_dataset_get_n:
  * @dset: pointer to type defined by #NcmDataset
  *
- * Calculate the total number of data set points
+ * Calculates the total number of data set points.
  *
- * Returns: FIXME
+ * Returns: total number of data set points.
  */
 guint
 ncm_dataset_get_n (NcmDataset *dset)
@@ -203,7 +243,7 @@ ncm_dataset_get_n (NcmDataset *dset)
  * Calculate the total degrees of freedom associated with all #NcmData
  * objects.
  *
- * Returns: FIXME
+ * Returns: summed degrees of freedom of all #NcmData in @dset. 
  */
 guint
 ncm_dataset_get_dof (NcmDataset *dset)
@@ -225,9 +265,9 @@ ncm_dataset_get_dof (NcmDataset *dset)
  * ncm_dataset_all_init:
  * @dset: pointer to type defined by #NcmDataset
  *
- * FIXME
+ * Checks whenever all #NcmData in @dset are initiated.
  *
- * Returns: FIXME
+ * Returns: whenever @dset is initiated.
  */
 gboolean
 ncm_dataset_all_init (NcmDataset *dset)
@@ -247,9 +287,9 @@ ncm_dataset_all_init (NcmDataset *dset)
  * ncm_dataset_get_length:
  * @dset: pointer to type defined by #NcmDataset
  *
- * FIXME
+ * Number of diferent #NcmData in @dset.
  *
- * Returns: number of NcmData objects in the set
+ * Returns: number of #NcmData objects in the set
  */
 guint
 ncm_dataset_get_length (NcmDataset *dset)
@@ -260,11 +300,11 @@ ncm_dataset_get_length (NcmDataset *dset)
 /**
  * ncm_dataset_get_data:
  * @dset: pointer to type defined by #NcmDataset
- * @n: FIXME
+ * @n: the #NcmData index.
  *
- * FIXME
+ * Gets the @n-th #NcmData in @dset and increses its reference count by one.
  *
- * Returns: (transfer full): FIXME
+ * Returns: (transfer full): the #NcmData associated with @n.
  */
 NcmData *
 ncm_dataset_get_data (NcmDataset *dset, guint n)
@@ -275,11 +315,11 @@ ncm_dataset_get_data (NcmDataset *dset, guint n)
 /**
  * ncm_dataset_peek_data:
  * @dset: pointer to type defined by #NcmDataset
- * @n: FIXME
+ * @n: the #NcmData index.
  *
- * FIXME
+ * Gets the @n-th #NcmData in @dset.
  *
- * Returns: (transfer none): FIXME
+ * Returns: (transfer none): the #NcmData associated with @n.
  */
 NcmData *
 ncm_dataset_peek_data (NcmDataset *dset, guint n)
@@ -292,7 +332,7 @@ ncm_dataset_peek_data (NcmDataset *dset, guint n)
  * ncm_dataset_free:
  * @dset: pointer to type defined by #NcmDataset
  *
- * FIXME
+ * Decreses the reference count of @dset by one.
  */
 void
 ncm_dataset_free (NcmDataset *dset)
@@ -304,7 +344,7 @@ ncm_dataset_free (NcmDataset *dset)
  * ncm_dataset_clear:
  * @dset: pointer to type defined by #NcmDataset
  *
- * FIXME
+ * Decreses the reference count of *@dset by one, and sets *@dset to NULL.
  */
 void
 ncm_dataset_clear (NcmDataset **dset)
@@ -317,7 +357,7 @@ ncm_dataset_clear (NcmDataset **dset)
  * @dset: a #NcmDataset.
  * @mset: a #NcmMSet.
  *
- * FIXME
+ * Resamples every #NcmData in @dset with the models contained in @mset.
  *
  */
 void
@@ -332,12 +372,85 @@ ncm_dataset_resample (NcmDataset *dset, NcmMSet *mset)
   }
 }
 
+/**
+ * ncm_dataset_bootstrap_set:
+ * @dset: a #NcmDataset.
+ * @bstype: a #NcmDatasetBStrapType.
+ *
+ * Disable or sets bootstrap method for @dset.
+ *
+ */
+void
+ncm_dataset_bootstrap_set (NcmDataset *dset, NcmDatasetBStrapType bstype)
+{
+  gint i;
+  gboolean enable = (bstype != NCM_DATASET_BSTRAP_DISABLE) ? TRUE : FALSE;
+  
+  for (i = 0; i < dset->data->len; i++)
+  {
+    NcmData *data = ncm_dataset_peek_data (dset, i);
+    ncm_data_bootstrap_set (data, enable);
+  }
+
+  _ncm_dataset_update_bstrap (dset);
+}
+
+/**
+ * ncm_dataset_bootstrap_resample:
+ * @dset: a #NcmDataset.
+ *
+ * Perform one bootstrap as in ncm_data_bootstrap_resample() in every #NcmData 
+ * in @dset.
+ *
+ */
+void
+ncm_dataset_bootstrap_resample (NcmDataset *dset)
+{
+  gint i;
+  switch (dset->bstype)
+  {
+    case NCM_DATASET_BSTRAP_PARTIAL:
+    {
+      for (i = 0; i < dset->data->len; i++)
+      {
+        NcmData *data = ncm_dataset_peek_data (dset, i);
+        ncm_bootstrap_set_bsize (data->bstrap, data->bstrap->fsize);
+        ncm_data_bootstrap_resample (data);
+      }
+      break;
+    }
+    case NCM_DATASET_BSTRAP_TOTAL:
+    {
+      NcmRNG *rng = ncm_rng_pool_get (NCM_BOOTSTRAP_RNG_NAME);
+      guint n = ncm_dataset_get_n (dset);
+      ncm_rng_lock (rng);
+      gsl_ran_multinomial (rng->r, dset->data->len, n, 
+                           (gdouble *)dset->data_prob->data, 
+                           (guint *)dset->bstrap->data);
+      ncm_rng_unlock (rng);
+      ncm_rng_free (rng);
+      
+      for (i = 0; i < dset->data->len; i++)
+      {
+        NcmData *data = ncm_dataset_peek_data (dset, i);
+        guint bsize = g_array_index (dset->bstrap, guint, i);
+        ncm_bootstrap_set_bsize (data->bstrap, bsize);
+        if (bsize > 0)
+          ncm_data_bootstrap_resample (data);
+      }
+      break;
+    }
+    default:
+      g_error ("ncm_dataset_bootstrap_resample: bootstrap is disabled.");
+      break;
+  }
+}
 
 /**
  * ncm_dataset_log_info:
  * @dset: a #NcmDataset
  *
- * FIXME
+ * Prints in the log the informations associated with every #NcmData in @dset.
  * 
  */
 void

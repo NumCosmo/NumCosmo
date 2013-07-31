@@ -412,8 +412,12 @@ ncm_lh_ratio1d_f (gdouble x, gpointer ptr)
     g_warning ("reached upper bound stoping...");
     return 0.0;
   }
-  
-  return lhr1d->constrained->fstate->m2lnL - (lhr1d->fit->fstate->m2lnL + lhr1d->chisquare);
+
+  {
+    const gdouble m2lnL_const = ncm_fit_state_get_m2lnL_curval (lhr1d->constrained->fstate);
+    const gdouble m2lnL = ncm_fit_state_get_m2lnL_curval (lhr1d->fit->fstate);
+    return m2lnL_const - (m2lnL + lhr1d->chisquare);
+  }
 }
 
 static gdouble

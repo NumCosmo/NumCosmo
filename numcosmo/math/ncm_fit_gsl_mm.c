@@ -230,13 +230,13 @@ _ncm_fit_gsl_mm_run (NcmFit *fit, NcmFitRunMsgs mtype)
     }
     else
       status = gsl_multimin_test_gradient (fit_gsl_mm->mm->gradient, pscale);
-    fit->fstate->m2lnL = fit_gsl_mm->mm->f;
+    ncm_fit_state_set_m2lnL_curval (fit->fstate, fit_gsl_mm->mm->f);
     ncm_fit_log_step (fit);
   }
   while ( (status == GSL_CONTINUE) && (fit->fstate->niter < fit->maxiter) );
 
-  fit->fstate->m2lnL = fit_gsl_mm->mm->f;
-  fit->fstate->m2lnL_prec = gsl_blas_dnrm2 (fit_gsl_mm->mm->gradient) / fit_gsl_mm->mm->f;
+  ncm_fit_state_set_m2lnL_curval (fit->fstate, fit_gsl_mm->mm->f);
+  ncm_fit_state_set_m2lnL_prec (fit->fstate, gsl_blas_dnrm2 (fit_gsl_mm->mm->gradient) / fit_gsl_mm->mm->f);
 
   ncm_mset_fparams_set_gsl_vector (fit->mset, fit_gsl_mm->mm->x);
 

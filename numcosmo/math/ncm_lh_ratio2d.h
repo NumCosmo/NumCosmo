@@ -64,6 +64,7 @@ struct _NcmLHRatio2d
   NcmFitRunMsgs mtype;
   NcmLHRatio2dRoot rtype;
   NcmMSetPIndex pi[2];
+  NcmRNG *rng;
   gdouble chisquare;
   gdouble lb[2];
   gdouble ub[2];

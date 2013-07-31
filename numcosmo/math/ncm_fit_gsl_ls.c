@@ -37,6 +37,7 @@
 #include "build_cfg.h"
 
 #include "math/ncm_fit_gsl_ls.h"
+#include "math/ncm_fit_state.h"
 
 #include <gsl/gsl_blas.h>
 
@@ -162,6 +163,7 @@ _ncm_fit_gsl_ls_run (NcmFit *fit, NcmFitRunMsgs mtype)
       return FALSE;
     }
     prec = ncm_fit_gsl_ls_test_grad (fit);
+    ncm_fit_state_set_params_prec (fit->fstate, prec);
 
     if (status)
     {
@@ -176,7 +178,7 @@ _ncm_fit_gsl_ls_run (NcmFit *fit, NcmFitRunMsgs mtype)
 
     {
       gdouble sqrt_m2lnL = gsl_blas_dnrm2 (fit_gsl_ls->ls->f);
-      fit->fstate->m2lnL = sqrt_m2lnL * sqrt_m2lnL;
+      ncm_fit_state_set_m2lnL_curval (fit->fstate, sqrt_m2lnL * sqrt_m2lnL);
       ncm_fit_log_step (fit);
     }
   }
@@ -186,7 +188,9 @@ _ncm_fit_gsl_ls_run (NcmFit *fit, NcmFitRunMsgs mtype)
     NcmVector *_x = ncm_vector_new_gsl_static (fit_gsl_ls->ls->x);
     NcmVector *_f = ncm_vector_new_gsl_static (fit_gsl_ls->ls->f);
     NcmMatrix *_J = ncm_matrix_new_gsl_static (fit_gsl_ls->ls->J);
-    ncm_fit_ls_set_state (fit, prec, _x, _f, _J);
+    ncm_fit_set_params (fit, _x);
+    ncm_fit_state_set_ls (fit->fstate, _f, _J);
+    ncm_fit_state_set_params_prec (fit->fstate, prec);
     ncm_vector_free (_x);
     ncm_vector_free (_f);
     ncm_matrix_free (_J);

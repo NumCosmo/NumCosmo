@@ -173,7 +173,7 @@ main(gint argc, gchar *argv[])
       gdouble chi2_data, chi2_priors;
       ncm_fit_data_m2lnL_val (fit, &chi2_data);
       ncm_fit_priors_m2lnL_val (fit, &chi2_priors);
-      printf ("%6f %6f %6f %6f %6f\n", j_sigma, fit->fstate->m2lnL, chi2_data, chi2_priors, chi2_data + chi2_priors);
+      printf ("%6f %6f %6f %6f %6f\n", j_sigma, ncm_fit_state_get_m2lnL_curval (fit->fstate), chi2_data, chi2_priors, chi2_data + chi2_priors);
     }
     //printf ("%g %g\n",1000.0f, nc_hicosmo_q (cp, 1000.0f));
     //printf("#===>%g<===\n",ncm_fit_GoF_wmean (fit));
@@ -277,7 +277,7 @@ main(gint argc, gchar *argv[])
         ncm_fit_run (fit, FALSE);
         //printf ("# %g\n",fit->m2lnL);
         //nc_params_print_all (cp, stdout);
-        printf ("%.16g\n", fit->fstate->m2lnL);
+        printf ("%.16g\n", ncm_fit_state_get_m2lnL_curval (fit->fstate));
         fflush (stdout);
         if (i % 100 == 99)
         {

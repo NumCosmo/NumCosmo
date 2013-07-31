@@ -510,8 +510,8 @@ test_ncm_matrix_add_mul (void)
 void
 test_ncm_matrix_serialization (void)
 {
-  gchar *mser = ncm_cfg_serialize_to_string (G_OBJECT (m), TRUE);
-  NcmMatrix *m_dup = NCM_MATRIX (ncm_cfg_create_from_string (mser));
+  gchar *mser = ncm_serialize_global_to_string (G_OBJECT (m), TRUE);
+  NcmMatrix *m_dup = NCM_MATRIX (ncm_serialize_global_create_from_string (mser));
   gint i, j;
   g_free (mser);
   g_assert_cmpint (NCM_MATRIX_NROWS (m), ==, NCM_MATRIX_NROWS (m_dup));

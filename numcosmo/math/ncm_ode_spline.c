@@ -183,9 +183,5 @@ ncm_ode_spline_free (NcmOdeSpline *os)
 void
 ncm_ode_spline_clear (NcmOdeSpline **os)
 {
-  if (*os != NULL)
-  {
-    ncm_ode_spline_free (*os);
-    *os = NULL;
-  }
+  g_clear_pointer (os, &ncm_ode_spline_free);
 }

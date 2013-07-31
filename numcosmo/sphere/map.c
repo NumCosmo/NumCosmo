@@ -704,8 +704,9 @@ ncm_sphere_map_homogenize_noise (NcmSphereMap *map, gdouble base_sigma)
   gfloat min;
   gdouble sigma_m;
   glong i;
-  gsl_rng *r = ncm_cfg_rng_get ();
-
+  NcmRNG *rng = ncm_rng_pool_get (NCM_SPHERE_MAP_RNG_NAME);
+  ncm_rng_lock (rng);
+  
   g_assert (map->nobs != NULL);
   min = gsl_vector_float_min (map->nobs);
   sigma_m = base_sigma / sqrt (min);
@@ -717,8 +718,11 @@ ncm_sphere_map_homogenize_noise (NcmSphereMap *map, gdouble base_sigma)
     gdouble sigma_c = sqrt (fabs(sigma_m * sigma_m - sigma * sigma));
     gfloat *pix = gsl_vector_float_ptr (map->dt, i);
     /* printf ("%f %f %f\n", sigma_m, sigma, sigma_c); */
-    (*pix) += gsl_ran_gaussian_ziggurat (r, sigma_c);
+    (*pix) += gsl_ran_gaussian_ziggurat (rng->r, sigma_c);
   }
+
+  ncm_rng_unlock (rng);
+  ncm_rng_free (rng);  
   return sigma_m;
 }
 

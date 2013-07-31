@@ -160,7 +160,7 @@ main (gint argc, gchar *argv[])
     //		NcMatrix *z;
     gint npx = 100;
     gint npy = 500;
-    gsl_rng *rng = ncm_cfg_rng_get ();
+    NcmRNG *rng = ncm_rng_new (NULL);
     GTimer *bench = g_timer_new ();
     gsl_function gFx, gFy;
     gFx.function = &Fx;
@@ -252,18 +252,18 @@ main (gint argc, gchar *argv[])
 
     //for (i = 0; i < 10000; i++)
     {
-      gdouble xp = (max_x - min_x) * gsl_rng_uniform (rng) + min_x;
-      gdouble yp = (max_y - min_y) * gsl_rng_uniform (rng) + min_y;
+      gdouble xp = (max_x - min_x) * gsl_rng_uniform (rng->r) + min_x;
+      gdouble yp = (max_y - min_y) * gsl_rng_uniform (rng->r) + min_y;
       //			gdouble g = Fxy (xp, yp, NULL);
       gdouble gs1, gs2;
 
       gs1 = 0.0; gs2 = 0.0;
-      gsl_rng_set (rng, 123);
+      gsl_rng_set (rng->r, 123);
       g_timer_start (bench);
       for (i = 0; i < 10000; i++)
       {
-        gdouble x1 = (max_x - min_x) * gsl_rng_uniform (rng) + min_x;
-        gdouble y1 = (max_y - min_y) * gsl_rng_uniform (rng) + min_y;
+        gdouble x1 = (max_x - min_x) * gsl_rng_uniform (rng->r) + min_x;
+        gdouble y1 = (max_y - min_y) * gsl_rng_uniform (rng->r) + min_y;
 
         gs1 += ncm_spline2d_integ_dx (s2d, min_x, max_x, y1);
         gs2 += ncm_spline2d_integ_dy (s2d, x1, min_y, max_y);
@@ -272,12 +272,12 @@ main (gint argc, gchar *argv[])
       printf ("#[ABC] % 20.15g % 20.15g % 20.15g int = % 20.15g % 20.15g\n", xp, yp, g_timer_elapsed (bench, NULL), gs1, gs2);
 
       gs1 = 0.0; gs2 = 0.0;
-      gsl_rng_set (rng, 123);
+      gsl_rng_set (rng->r, 123);
       g_timer_start (bench);
       for (i = 0; i < 10000; i++)
       {
-        gdouble x1 = (max_x - min_x) * gsl_rng_uniform (rng) + min_x;
-        gdouble y1 = (max_y - min_y) * gsl_rng_uniform (rng) + min_y;
+        gdouble x1 = (max_x - min_x) * gsl_rng_uniform (rng->r) + min_x;
+        gdouble y1 = (max_y - min_y) * gsl_rng_uniform (rng->r) + min_y;
 
         gs1 += ncm_spline2d_integ_dx_spline_val (s2d, min_x, max_x, y1);
         gs2 += ncm_spline2d_integ_dy_spline_val (s2d, x1, min_y, max_y);
@@ -290,6 +290,7 @@ main (gint argc, gchar *argv[])
     g_timer_destroy (bench);
     ncm_vector_free (x);
     ncm_vector_free (y);
+    ncm_rng_free (rng);
   }
 
   if (FALSE)
@@ -370,12 +371,13 @@ main (gint argc, gchar *argv[])
   {
     GTimer *bench = g_timer_new ();
     gsize tests = 10000;
-    gsl_rng *r = ncm_cfg_rng_get ();
+    NcmRNG *rng = ncm_rng_new (NULL);
+
     gsl_vector *x = gsl_vector_alloc (tests);
     gsl_vector *val = gsl_vector_alloc (tests);
     F.function = &Fjl;
     for (i = 0; i < tests; i++)
-      gsl_vector_set (x, i, gsl_rng_uniform (r) * pow (10.0, 4.0 * gsl_rng_uniform (r)));
+      gsl_vector_set (x, i, gsl_rng_uniform (rng->r) * pow (10.0, 4.0 * gsl_rng_uniform (rng->r)));
     printf ("# Go threads %d\n", NCM_THREAD_POOL_MAX);
     fflush (stdout);
     g_timer_reset (bench);
@@ -384,6 +386,7 @@ main (gint argc, gchar *argv[])
     printf ("# Direct took %fs\n", g_timer_elapsed (bench, NULL));
     for (i = 0; i < x->size; i++)
       printf ("% 20.15g % 20.15g\n", x->data[i], val->data[i]);
+    ncm_rng_free (rng);
   }
 
   return 0;

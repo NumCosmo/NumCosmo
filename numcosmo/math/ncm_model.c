@@ -37,6 +37,7 @@
 
 #include "math/ncm_model.h"
 #include "math/ncm_mset.h"
+#include "math/ncm_serialize.h"
 #include "math/ncm_cfg.h"
 
 enum
@@ -372,8 +373,8 @@ _ncm_model_get_property (GObject *object, guint prop_id, GValue *value, GParamSp
 static NcmModel *
 _ncm_model_copy (NcmModel *model)
 {
-  gchar *obj_ser = ncm_cfg_serialize_to_string (G_OBJECT (model), TRUE);
-  NcmModel *model_copy = NCM_MODEL (ncm_cfg_create_from_string (obj_ser));
+  gchar *obj_ser = ncm_serialize_global_to_string (G_OBJECT (model), TRUE);
+  NcmModel *model_copy = NCM_MODEL (ncm_serialize_global_create_from_string (obj_ser));
   g_free (obj_ser);
 
   /* Old method */

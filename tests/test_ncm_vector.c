@@ -686,8 +686,8 @@ void
 test_ncm_vector_serialization (TestNcmVector *test, gconstpointer pdata)
 {
   NcmVector *v = test->v;
-  gchar *vser = ncm_cfg_serialize_to_string (G_OBJECT (v), TRUE);
-  NcmVector *v_dup = NCM_VECTOR (ncm_cfg_create_from_string (vser));
+  gchar *vser = ncm_serialize_global_to_string (G_OBJECT (v), TRUE);
+  NcmVector *v_dup = NCM_VECTOR (ncm_serialize_global_create_from_string (vser));
   gint i;
   g_free (vser);
   g_assert_cmpint (ncm_vector_len (v), ==, ncm_vector_len (v_dup));

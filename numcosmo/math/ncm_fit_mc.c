@@ -56,6 +56,7 @@ ncm_fit_mc_init (NcmFitMC *mc)
   mc->fit    = NULL;
   mc->fparam = NULL;
   mc->m2lnL  = NULL;
+  mc->nt     = ncm_timer_new ();
   mc->n      = 0;
   mc->h      = NULL;
   mc->h_pdf  = NULL;
@@ -101,8 +102,9 @@ ncm_fit_mc_dispose (GObject *object)
   NcmFitMC *mc = NCM_FIT_MC (object);
 
   ncm_fit_clear (&mc->fit);
-  ncm_matrix_clear (&mc->fparam);
+  ncm_stats_vec_clear (&mc->fparam);
   ncm_vector_clear (&mc->m2lnL);
+  ncm_timer_clear (&mc->nt);
 
   /* Chain up : end */
   G_OBJECT_CLASS (ncm_fit_mc_parent_class)->dispose (object);
@@ -201,9 +203,7 @@ ncm_fit_mc_run (NcmFitMC *mc, NcmMSet *fiduc, guint ni, guint nf, NcmFitRunMsgs 
   guint free_params_len = ncm_mset_fparams_len (mc->fit->mset);
   guint param_len = ncm_mset_param_len (mc->fit->mset);
   NcmVector *bf = ncm_vector_new (param_len);
-  gint i, j = 0;
-  gdouble mean_time = 0.0, total_sec;
-  gulong total_min, total_hour, total_day;
+  gint i;
 
   g_assert (nf > ni);
   g_assert (ncm_mset_cmp (mc->fit->mset, fiduc, FALSE));
@@ -212,13 +212,13 @@ ncm_fit_mc_run (NcmFitMC *mc, NcmMSet *fiduc, guint ni, guint nf, NcmFitRunMsgs 
   mc->m2lnL_min = GSL_POSINF;
   mc->m2lnL_max = GSL_NEGINF;
 
-  ncm_matrix_clear (&mc->fparam);
-  mc->fparam = ncm_matrix_new (n, free_params_len);
+  ncm_stats_vec_clear (&mc->fparam);
+  mc->fparam = ncm_stats_vec_new (free_params_len, NCM_STATS_VEC_COV, TRUE);
   ncm_vector_clear (&mc->m2lnL);
   mc->m2lnL = ncm_vector_new (n);
 
   ncm_mset_param_get_vector (mc->fit->mset, bf);
-
+  
   if (mtype > NCM_FIT_RUN_MSGS_NONE)
   {
     ncm_cfg_msg_sepa ();
@@ -230,7 +230,7 @@ ncm_fit_mc_run (NcmFitMC *mc, NcmMSet *fiduc, guint ni, guint nf, NcmFitRunMsgs 
     ncm_cfg_msg_sepa ();
     g_message ("# Fitting model set:\n");
     ncm_mset_pretty_log (mc->fit->mset);
-    
+
     ncm_cfg_msg_sepa ();
     g_message ("# Calculating [%06d] Montecarlo fits\n", n);
     if (ni > 0)
@@ -245,49 +245,46 @@ ncm_fit_mc_run (NcmFitMC *mc, NcmMSet *fiduc, guint ni, guint nf, NcmFitRunMsgs 
   }
   if (ni > 0 && mtype > NCM_FIT_RUN_MSGS_NONE)
     g_message ("\n");
+
+  ncm_timer_task_start (mc->nt, nf - ni);
+  ncm_timer_set_name (mc->nt, "Montecarlo");
+  if (mtype > NCM_FIT_RUN_MSGS_NONE)
+    ncm_timer_task_log_start_datetime (mc->nt);
   
   for (; i < nf; i++)
   {
-    NcmVector *bf_i = ncm_matrix_get_row (mc->fparam, i - ni);
+    NcmVector *bf_i = ncm_stats_vec_peek_x (mc->fparam);
+    NcmFitRunMsgs mcrun_msg = (mtype == NCM_FIT_RUN_MSGS_FULL) ? NCM_FIT_RUN_MSGS_SIMPLE : NCM_FIT_RUN_MSGS_NONE;
+    gdouble m2lnL;
 
     ncm_mset_param_set_vector (mc->fit->mset, bf);
     ncm_dataset_resample (mc->fit->lh->dset, fiduc);
-    ncm_fit_run (mc->fit, mtype);
+    
+    ncm_fit_run (mc->fit, mcrun_msg);
     
     ncm_mset_fparams_get_vector (mc->fit->mset, bf_i);
-    ncm_vector_set (mc->m2lnL, i - ni, mc->fit->fstate->m2lnL);
+    m2lnL = ncm_fit_state_get_m2lnL_curval (mc->fit->fstate);
+    ncm_vector_set (mc->m2lnL, i - ni, m2lnL);
 
-    mc->m2lnL_min = GSL_MIN (mc->m2lnL_min, mc->fit->fstate->m2lnL);
-    mc->m2lnL_max = GSL_MAX (mc->m2lnL_max, mc->fit->fstate->m2lnL);
+    //ncm_vector_log_vals (bf_i, "# Last bestfit: ", "% 12.5g");
+    ncm_stats_vec_update (mc->fparam);
+    g_message ("# Improvements: mean = % 8.7f, var = % 8.7f, cov = % 8.7f\n", mc->fparam->mean_inc, mc->fparam->var_inc, mc->fparam->cov_inc);
+    ncm_vector_log_vals (mc->fparam->mean, "# Current mean: ", "% 12.5g");
+    ncm_vector_log_vals (mc->fparam->var, "# Current var:  ", "% 12.5g");
+
+    mc->m2lnL_min = GSL_MIN (mc->m2lnL_min, m2lnL);
+    mc->m2lnL_max = GSL_MAX (mc->m2lnL_max, m2lnL);
 
     if (mtype > NCM_FIT_RUN_MSGS_NONE)
     {
-      gdouble elap_sec = g_timer_elapsed (mc->fit->timer, NULL);
-      gulong elap_min = elap_sec / 60;
-      gulong elap_hour = elap_min / 60;
-      gulong elap_day = elap_hour / 24;
-
-      mean_time = (j * mean_time + elap_sec) / (j + 1.0);
-      elap_sec = fmod (elap_sec, 60);
-      elap_min = elap_min % 60;
-      elap_hour = elap_hour % 24;
-
-      total_sec = mean_time * (n - 1 - j);
-      total_min = total_sec / 60;
-      total_hour = total_min / 60;
-      total_day = total_hour / 24;
-      total_sec = fmod (total_sec, 60);
-      total_min = total_min % 60;
-      total_hour = total_hour % 24;
-
-      g_message ("# finish[%d] took: %02lu days, %02lu:%02lu:%010.7f\n", i, elap_day, elap_hour, elap_min, elap_sec);
-      g_message ("# mean time %010.7fs\n", mean_time);
-      g_message ("# time left %02lu days, %02lu:%02lu:%010.7f\n",
-                 total_day, total_hour, total_min, total_sec);
-      j++;
+      ncm_timer_task_increment (mc->nt);
+      ncm_timer_task_log_elapsed (mc->nt);
+      ncm_timer_task_log_mean_time (mc->nt);
+      ncm_timer_task_log_time_left (mc->nt);
+      ncm_timer_task_log_end_datetime (mc->nt);
     }
-    ncm_vector_free (bf_i);
   }
+  ncm_timer_task_end (mc->nt);
   ncm_vector_free (bf);
 }
 
@@ -300,13 +297,15 @@ ncm_fit_mc_run (NcmFitMC *mc, NcmMSet *fiduc, guint ni, guint nf, NcmFitRunMsgs 
 void 
 ncm_fit_mc_print (NcmFitMC *mc)
 {
-  gint i;
+  guint i;
+  guint len = mc->fparam->saved_x->len;
 
-  for (i = 0; i < NCM_MATRIX_NROWS (mc->fparam); i++)
+  for (i = 0; i < len; i++)
   {
     gint j;
-    for (j = 0; j < NCM_MATRIX_NCOLS (mc->fparam); j++)
-      g_message ("% -20.15g ", ncm_matrix_get (mc->fparam, i, j));
+    NcmVector *x_i = g_ptr_array_index (mc->fparam->saved_x, i);
+    for (j = 0; j < ncm_vector_len (x_i); j++)
+      g_message ("% -20.15g ", ncm_vector_get (x_i, j));
     g_message ("\n");
   }
 }
@@ -320,24 +319,8 @@ ncm_fit_mc_print (NcmFitMC *mc)
 void
 ncm_fit_mc_mean_covar (NcmFitMC *mc)
 {
-  gint i;
-  for (i = 0; i < mc->fit->fstate->fparam_len; i++)
-  {
-    gint j;
-    NcmVector *p_i = ncm_matrix_get_col (mc->fparam, i);
-    ncm_vector_set (mc->fit->fstate->fparams, i, gsl_stats_mean (ncm_vector_gsl (p_i)->data, ncm_vector_gsl (p_i)->stride, ncm_vector_gsl (p_i)->size));
-    ncm_matrix_set (mc->fit->fstate->covar, i, i, gsl_stats_variance (ncm_vector_gsl (p_i)->data, ncm_vector_gsl (p_i)->stride, ncm_vector_gsl (p_i)->size));
-    for (j = i + 1; j < mc->fit->fstate->fparam_len; j++)
-    {
-      NcmVector *p_j = ncm_matrix_get_col (mc->fparam, j);
-      ncm_matrix_set (mc->fit->fstate->covar, i, j,
-                      gsl_stats_covariance (ncm_vector_gsl (p_i)->data, ncm_vector_gsl (p_i)->stride, ncm_vector_gsl (p_j)->data, ncm_vector_gsl (p_j)->stride, ncm_vector_gsl (p_i)->size)
-                      );
-      ncm_matrix_set (mc->fit->fstate->covar, j, i, ncm_matrix_get (mc->fit->fstate->covar, i, j));
-      ncm_vector_free (p_j);
-    }
-    ncm_vector_free (p_i);
-  }
+  ncm_stats_vec_get_cov_matrix (mc->fparam, mc->fit->fstate->covar);
+  ncm_stats_vec_get_mean_vector (mc->fparam, mc->fit->fstate->fparams);
   ncm_mset_fparams_set_vector (mc->fit->mset, mc->fit->fstate->fparams);
   mc->fit->fstate->has_covar = TRUE;
 }
