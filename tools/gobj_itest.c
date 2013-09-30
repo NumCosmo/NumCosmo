@@ -227,10 +227,10 @@ main (gint argc, gchar *argv[])
     if (TRUE)
     {
       max_err = 0.0;
-      for (i = 0; i < NCM_MATRIX_ROW_LEN (s2d->zm) - 1; i++)
+      for (i = 0; i < ncm_matrix_row_len (s2d->zm) - 1; i++)
       {
         const gdouble xp = (ncm_vector_get (s2d->xv, i + 1) + ncm_vector_get (s2d->xv, i)) * 0.5;
-        for (j = 0; j < NCM_MATRIX_COL_LEN (s2d->zm) - 1; j++)
+        for (j = 0; j < ncm_matrix_col_len (s2d->zm) - 1; j++)
         {
           const gdouble yp = (ncm_vector_get (s2d->yv, j + 1) + ncm_vector_get (s2d->yv, j)) * 0.5;
           gdouble g = Fxy (xp, yp, NULL);

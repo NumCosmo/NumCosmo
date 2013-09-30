@@ -382,6 +382,9 @@ dz_dt_f (realtype t, N_Vector y, N_Vector ydot, gpointer f_data)
   const gdouble x = 1.0 + z;
   const gdouble E2 = nc_hicosmo_E2 (model, z);
   const gdouble E = sqrt(E2);
+
+  NCM_UNUSED (t);
+  
   NV_Ith_S (ydot, 0) = -x * E;
   return 0;
 }
@@ -396,6 +399,14 @@ dz_dt_J (_NCM_SUNDIALS_INT_TYPE N, realtype t, N_Vector y, N_Vector fy, DlsMat J
   const gdouble E = sqrt(E2);
   const gdouble dE2_dz = nc_hicosmo_dE2_dz (model, z);
 
+  NCM_UNUSED (N);
+  NCM_UNUSED (t);
+  NCM_UNUSED (fy);
+  NCM_UNUSED (tmp1);
+  NCM_UNUSED (tmp2);
+  NCM_UNUSED (tmp3);
+
+  
   DENSE_ELEM (J, 0, 0) = - x * dE2_dz / (2.0 * E);
 
   return 0;
@@ -408,6 +419,9 @@ dz_dt_conformal_f (realtype t, N_Vector y, N_Vector ydot, gpointer f_data)
   const gdouble z = NV_Ith_S (y, 0);
   const gdouble E2 = nc_hicosmo_E2 (model, z);
   const gdouble E = sqrt(E2);
+
+  NCM_UNUSED (t);
+  
   NV_Ith_S(ydot, 0) = -E;
   return 0;
 }
@@ -421,6 +435,13 @@ dz_dt_conformal_J (_NCM_SUNDIALS_INT_TYPE N, realtype t, N_Vector y, N_Vector fy
   const gdouble E = sqrt(E2);
   const gdouble dE2_dz = nc_hicosmo_dE2_dz (model, z);
 
+  NCM_UNUSED (N);
+  NCM_UNUSED (t);
+  NCM_UNUSED (fy);
+  NCM_UNUSED (tmp1);
+  NCM_UNUSED (tmp2);
+  NCM_UNUSED (tmp3);
+  
   DENSE_ELEM (J,0,0) = - dE2_dz / (2.0 * E);
 
   return 0;

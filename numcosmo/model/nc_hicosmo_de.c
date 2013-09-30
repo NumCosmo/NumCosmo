@@ -139,16 +139,15 @@ nc_hicosmo_de_omega_x2omega_k (NcHICosmo *cosmo)
   ncm_vector_set (v, NC_HICOSMO_DE_OMEGA_X, 1.0);
 
   relin = ncm_reparam_linear_new (ncm_model_len (NCM_MODEL (cosmo)), T, v);
-  {
-    NcmReparam *reparam = NCM_REPARAM (relin);
-    NcmSParam *sp_Omegak = ncm_sparam_new ("Omegak","\\Omega_k", -5.0, 5.0, 1.0e-2, NC_HICOSMO_DEFAULT_PARAMS_ABSTOL, 0.0, NCM_PARAM_TYPE_FIXED);
-    g_ptr_array_index (reparam->sparams, NC_HICOSMO_DE_OMEGA_X) = sp_Omegak;
-  }
+  ncm_reparam_set_param_desc_full (NCM_REPARAM (relin), NC_HICOSMO_DE_OMEGA_X, 
+                                   "Omegak","\\Omega_k", -5.0, 5.0, 1.0e-2, 
+                                   NC_HICOSMO_DEFAULT_PARAMS_ABSTOL, 0.0, NCM_PARAM_TYPE_FIXED);
 
   ncm_model_set_reparam (NCM_MODEL (cosmo), NCM_REPARAM (relin));
   
   ncm_vector_free (v);
   ncm_matrix_free (T);
+  ncm_reparam_free (NCM_REPARAM (relin));
 
   return;
 }
@@ -160,6 +159,9 @@ bbn_prior (NcmMSet *mset, gpointer obj, const gdouble *x, gdouble *f)
   gdouble z_bbn = 1.0e9;
   gdouble bbn, a;
 
+  NCM_UNUSED (obj);
+  NCM_UNUSED (x);
+  
   a = nc_hicosmo_de_weff (NC_HICOSMO_DE (cosmo), z_bbn) / nc_hicosmo_E2 (NC_HICOSMO (cosmo), z_bbn);
   bbn = 1.0 / sqrt(1.0 - a);
   f[0] = (bbn - 0.942) / 0.03;
@@ -189,6 +191,7 @@ enum {
 static void
 nc_hicosmo_de_init (NcHICosmoDE *object)
 {
+  NCM_UNUSED (object);
 }
 
 static void

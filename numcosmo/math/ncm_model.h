@@ -73,8 +73,6 @@ struct _NcmModelClass
   GObjectClass parent_class;
   void (*get_property) (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec);
   void (*set_property) (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec);
-  void (*copyto) (NcmModel *model, NcmModel *model_dest);
-  NcmModel *(*copy) (NcmModel *model);
   gboolean (*valid) (NcmModel *model);
   NcmModelID model_id;
   gchar *name;
@@ -100,8 +98,7 @@ void ncm_model_class_set_sparam (NcmModelClass *model_class, guint sparam_id, gc
 void ncm_model_class_set_vparam (NcmModelClass *model_class, guint vparam_id, guint default_length, gchar *symbol, gchar *name, gdouble lower_bound, gdouble upper_bound, gdouble scale, gdouble abstol, gdouble default_value, NcmParamType ppt);
 void ncm_model_class_check_params_info (NcmModelClass *model_class);
 
-NcmModel *ncm_model_copy (NcmModel *model);
-void ncm_model_copyto (NcmModel *model, NcmModel *model_dest);
+NcmModel *ncm_model_dup (NcmModel *model, NcmSerialize *ser);
 void ncm_model_free (NcmModel *model);
 void ncm_model_clear (NcmModel **model);
 void ncm_model_set_reparam (NcmModel *model, NcmReparam *reparam);
@@ -129,6 +126,7 @@ G_INLINE_FUNC void ncm_model_param_set_default (NcmModel *model, guint n);
 G_INLINE_FUNC void ncm_model_orig_param_set (NcmModel *model, guint n, gdouble val);
 G_INLINE_FUNC void ncm_model_orig_vparam_set (NcmModel *model, guint n, guint i, gdouble val);
 G_INLINE_FUNC void ncm_model_orig_vparam_set_vector (NcmModel *model, guint n, NcmVector *val);
+G_INLINE_FUNC NcmSParam *ncm_model_param_peek_desc (NcmModel *model, guint n);
 G_INLINE_FUNC gdouble ncm_model_param_get (NcmModel *model, guint n);
 G_INLINE_FUNC gdouble ncm_model_orig_param_get (NcmModel *model, guint n);
 G_INLINE_FUNC gdouble ncm_model_orig_vparam_get (NcmModel *model, guint n, guint i);
@@ -146,14 +144,23 @@ void ncm_model_params_log_all (NcmModel *model);
 NcmVector *ncm_model_params_get_all (NcmModel *model);
 gboolean ncm_model_params_valid (NcmModel *model);
 
-guint ncm_model_param_index_from_name (NcmModel *model, gchar *param_name);
+gboolean ncm_model_orig_param_index_from_name (NcmModel *model, gchar *param_name, guint *i);
+gboolean ncm_model_param_index_from_name (NcmModel *model, gchar *param_name, guint *i);
+const gchar *ncm_model_orig_param_name (NcmModel *model, guint n);
 const gchar *ncm_model_param_name (NcmModel *model, guint n);
+const gchar *ncm_model_orig_param_symbol (NcmModel *model, guint n);
 const gchar *ncm_model_param_symbol (NcmModel *model, guint n);
+
+gdouble ncm_model_orig_param_get_scale (NcmModel *model, guint n);
+gdouble ncm_model_orig_param_get_lower_bound (NcmModel *model, guint n);
+gdouble ncm_model_orig_param_get_upper_bound (NcmModel *model, guint n);
+gdouble ncm_model_orig_param_get_abstol (NcmModel *model, guint n);
 
 gdouble ncm_model_param_get_scale (NcmModel *model, guint n);
 gdouble ncm_model_param_get_lower_bound (NcmModel *model, guint n);
 gdouble ncm_model_param_get_upper_bound (NcmModel *model, guint n);
 gdouble ncm_model_param_get_abstol (NcmModel *model, guint n);
+
 NcmParamType ncm_model_param_get_ftype (NcmModel *model, guint n);
 
 void ncm_model_param_set_scale (NcmModel *model, guint n, const gdouble scale);
@@ -330,7 +337,28 @@ ncm_model_param_set (NcmModel *model, guint n, gdouble val)
 G_INLINE_FUNC void
 ncm_model_param_set_default (NcmModel *model, guint n)
 {
-  ncm_model_param_set (model, n, ncm_sparam_get_default_value (g_ptr_array_index (model->sparams, n)));
+  ncm_model_param_set (model, n, ncm_sparam_get_default_value (ncm_model_param_peek_desc (model, n)));
+}
+
+G_INLINE_FUNC NcmSParam *
+ncm_model_orig_param_peek_desc (NcmModel *model, guint n)
+{
+  g_assert (n < model->total_len);
+  return g_ptr_array_index (model->sparams, n);
+}
+
+G_INLINE_FUNC NcmSParam *
+ncm_model_param_peek_desc (NcmModel *model, guint n)
+{
+  NcmReparam *reparam = ncm_model_peek_reparam (model); 
+  g_assert (n < model->total_len);
+  if (reparam != NULL)
+  {
+    NcmSParam *sp = ncm_reparam_peek_param_desc (reparam, n); 
+    if (sp != NULL)
+      return sp;
+  }
+  return ncm_model_orig_param_peek_desc (model, n);
 }
 
 G_INLINE_FUNC gdouble

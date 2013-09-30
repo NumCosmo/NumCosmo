@@ -180,6 +180,7 @@ void ncm_fit_constraint_free (NcmFitConstraint *fitc);
 NcmFit *ncm_fit_new (NcmFitType ftype, gchar *algo_name, NcmLikelihood *lh, NcmMSet *mset, NcmFitGradType gtype);
 NcmFit *ncm_fit_ref (NcmFit *fit);
 NcmFit *ncm_fit_copy_new (NcmFit *fit, NcmLikelihood *lh, NcmMSet *mset, NcmFitGradType gtype);
+NcmFit *ncm_fit_dup (NcmFit *fit, NcmSerialize *ser);
 void ncm_fit_free (NcmFit *fit);
 void ncm_fit_clear (NcmFit **fit);
 

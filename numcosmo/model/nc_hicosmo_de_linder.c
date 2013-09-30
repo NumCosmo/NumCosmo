@@ -86,6 +86,7 @@ enum {
 static void
 nc_hicosmo_de_linder_init (NcHICosmoDELinder *linder)
 {
+  NCM_UNUSED (linder);
 }
 
 static void

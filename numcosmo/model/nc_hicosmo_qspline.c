@@ -172,6 +172,8 @@ continuity_prior_f (NcmMSet *mset, gpointer obj, const gdouble *x, gdouble *f)
   gdouble w_ptr[n];
   gdouble c0, c1, cov00, cov01, cov11, chisq;
   guint i;
+
+  NCM_UNUSED (x);
   
   for (i = 0; i < n; i++)
   {
@@ -207,7 +209,7 @@ _nc_hicosmo_spline_continuity_prior_free (gpointer obj)
  *
  */
 void
-nc_hicosmo_qspline_add_continuity_prior (NcHICosmoQSpline *qspline, NcmLikelihood *lh, gint knot, NcHICosmoQSplineContPrior *qspline_cp)
+nc_hicosmo_qspline_add_continuity_prior (NcHICosmoQSpline *qspline, NcmLikelihood *lh, guint knot, NcHICosmoQSplineContPrior *qspline_cp)
 {
   NcHICosmoQSplineContPriorKnot *cp = g_slice_new (NcHICosmoQSplineContPriorKnot);
   NcmMSetFunc *func = ncm_mset_func_new (continuity_prior_f, 0, 1, cp, _nc_hicosmo_spline_continuity_prior_free);
@@ -258,7 +260,7 @@ nc_hicosmo_qspline_add_continuity_priors (NcHICosmoQSpline *qspline, NcmLikeliho
  *
  */
 void
-nc_hicosmo_qspline_add_continuity_constraint (NcHICosmoQSpline *qspline, NcmFit *fit, gint knot, NcHICosmoQSplineContPrior *qspline_cp)
+nc_hicosmo_qspline_add_continuity_constraint (NcHICosmoQSpline *qspline, NcmFit *fit, guint knot, NcHICosmoQSplineContPrior *qspline_cp)
 {
   NcHICosmoQSplineContPriorKnot *cp = g_slice_new (NcHICosmoQSplineContPriorKnot);
   NcmMSetFunc *func = ncm_mset_func_new (continuity_prior_f, 0, 1, cp, _nc_hicosmo_spline_continuity_prior_free);
@@ -554,6 +556,7 @@ G_DEFINE_TYPE (NcHICosmoQSplineContPrior, nc_hicosmo_qspline_cont_prior, NCM_TYP
 static void
 nc_hicosmo_qspline_cont_prior_init (NcHICosmoQSplineContPrior *qspline_cp)
 {
+  NCM_UNUSED (qspline_cp);
 }
 
 static void
@@ -587,6 +590,7 @@ nc_hicosmo_qspline_cont_prior_set_property (GObject *object, guint prop_id, cons
 {
 /*  NcHICosmoQSplineContPrior *qspline_cp = NC_HICOSMO_QSPLINE_CONT_PRIOR (object); */ 
   g_return_if_fail (NC_IS_HICOSMO_QSPLINE_CONT_PRIOR (object));
+  NCM_UNUSED (value);
 
   switch (prop_id)
   {
@@ -602,6 +606,7 @@ nc_hicosmo_qspline_cont_prior_get_property (GObject *object, guint prop_id, GVal
 /*  NcHICosmoQSplineContPrior *qspline_cp = NC_HICOSMO_QSPLINE_CONT_PRIOR (object); */
   g_return_if_fail (NC_IS_HICOSMO_QSPLINE_CONT_PRIOR (object));
 
+  NCM_UNUSED (value);
   switch (prop_id)
   {
     default:

@@ -83,8 +83,8 @@ struct _NcmMpsfSBesselIntSpline
 #define NCM_MPSF_SBESSEL_INT_MAP(int_jlspline,xi,kj) ((int_jlspline)->map_ij2r[((int_jlspline)->row * kj + xi)])
 
 void ncm_mpsf_sbessel_jl_xj_integral (gint l, gint j, gdouble x, mpfr_t res, mp_rnd_t rnd);
-void ncm_mpsf_sbessel_jl_xj_integral_q (gint l, gint j, mpq_t q, mpfr_t res, mp_rnd_t rnd);
-gdouble ncm_mpsf_sbessel_integrate (NcmMpsfSBesselIntSpline *int_jlspline, NcmSpline *s, gint l, guint ki, guint xi, gint diff);
+void ncm_mpsf_sbessel_jl_xj_integral_q (guint l, guint j, mpq_t q, mpfr_t res, mp_rnd_t rnd);
+gdouble ncm_mpsf_sbessel_integrate (NcmMpsfSBesselIntSpline *int_jlspline, NcmSpline *s, guint l, guint ki, guint xi, gint diff);
 
 NcmMpsfSBesselIntegRecur *ncm_mpsf_sbessel_jl_xj_integral_recur_new (gulong prec, NcmMpsfSBesselRecur *jlrec);
 NcmMpsfSBesselIntegRecur *ncm_mpsf_sbessel_jl_xj_integral_recur_read (FILE *f);

@@ -25,11 +25,11 @@
 #ifndef _NCM_CFG_H
 #define _NCM_CFG_H
 
+#include <stdio.h>
 #include <glib.h>
 #include <glib/gstdio.h>
 #include <glib-object.h>
 #include <numcosmo/build_cfg.h>
-#include <stdio.h>
 #include <gsl/gsl_vector.h>
 #include <gsl/gsl_matrix.h>
 #include <gsl/gsl_spline.h>
@@ -101,21 +101,11 @@ typedef union _NcmDoubleInt64
 
 gchar *ncm_cfg_command_line (gchar *argv[], gint argc);
 
+GArray *ncm_cfg_variant_to_array (GVariant *var, gsize esize);
+void ncm_cfg_array_set_variant (GArray *a, GVariant *var);
+GVariant *ncm_cfg_array_to_variant (GArray *a, const GVariantType *etype);
+
 /* Macros */
-
-#define NCM_GARRAY_MEMCPY(dest,src) \
-G_STMT_START { \
-g_assert_cmpuint ((src)->len, ==, (dest)->len); \
-g_assert_cmpuint (g_array_get_element_size (src), ==, g_array_get_element_size (dest)); \
-memcpy ((dest)->data, (src)->data, (src)->len * g_array_get_element_size (src)); \
-} G_STMT_END
-
-#define NCM_GARRAY_DUP(dest,src) \
-G_STMT_START { \
-dest = g_array_sized_new (FALSE, FALSE, g_array_get_element_size (src), (src)->len); \
-g_array_set_size ((dest), (src)->len); \
-memcpy ((dest)->data, (src)->data, (src)->len * g_array_get_element_size (src)); \
-} G_STMT_END
 
 #ifdef SUNDIALS_USES_LONG_INT
 #define _NCM_SUNDIALS_INT_TYPE glong
@@ -141,14 +131,6 @@ memcpy ((dest)->data, (src)->data, (src)->len * g_array_get_element_size (src));
 #define _NCM_MUTEX_CLEAR(l) g_mutex_clear (l)
 #endif
 
-#define NCM_RETURN_IF_INF(a) if (gsl_isinf(a)) return a
-
-#define NCM_FLOOR_TRUNC(a,b) (floor ((b) * (a)) / (b))
-#define NCM_CEIL_TRUNC(a,b) (ceil ((b) * (a)) / (b))
-#define NCM_ROUND_TRUNC(a,b) (round ((b) * (a)) / (b))
-
-#define NCM_TEST_GSL_RESULT(func,ret) if (ret != GSL_SUCCESS) g_error ("%s: %s", func, gsl_strerror (ret))
-
 #define NCM_ZERO_LIMIT 1e-13
 #define NCM_DEFAULT_PRECISION 1e-7
 
@@ -164,70 +146,7 @@ memcpy ((dest)->data, (src)->data, (src)->len * g_array_get_element_size (src));
 #define mpz_clears ncm_mpz_clears
 #endif /* mpz_inits */
 
-#define NCM_COMPLEX_INC_MUL_REAL_TEST(a,b,c) \
-((fabs(GSL_REAL((b))*(c)/GSL_REAL((a))) < 1e-16) && (fabs(GSL_IMAG((b))*(c)/GSL_IMAG((a))) < 1e-16))
-
-#define NCM_COMPLEX_INC_MUL_REAL(a,b,c) \
-G_STMT_START { \
-  GSL_REAL((a)) += GSL_REAL((b))*(c); \
-  GSL_IMAG((a)) += GSL_IMAG((b))*(c); \
-} G_STMT_END
-
-#define NCM_COMPLEX_INC_MUL(a,b,c) \
-G_STMT_START { \
-  GSL_REAL((a)) += GSL_REAL((b)) * GSL_REAL((c)) - GSL_IMAG((b)) * GSL_IMAG((c)); \
-  GSL_IMAG((a)) += GSL_REAL((b)) * GSL_IMAG((c)) + GSL_IMAG((b)) * GSL_REAL((c)); \
-} G_STMT_END
-
-#define NCM_COMPLEX_INC_MUL_MUL_REAL(a,b,c,d) \
-G_STMT_START { \
-  GSL_REAL((a)) += (GSL_REAL((b)) * GSL_REAL((c)) - GSL_IMAG((b)) * GSL_IMAG((c))) * (d); \
-  GSL_IMAG((a)) += (GSL_REAL((b)) * GSL_IMAG((c)) + GSL_IMAG((b)) * GSL_REAL((c))) * (d); \
-} G_STMT_END
-
-#define NCM_COMPLEX_MUL_REAL(a,b,c) \
-G_STMT_START { \
-  GSL_REAL((a)) = GSL_REAL((b)) * (c); \
-  GSL_IMAG((a)) = GSL_IMAG((b)) * (c); \
-} G_STMT_END
-
-#define NCM_COMPLEX_MUL(a,b) \
-G_STMT_START { \
-  gdouble temp = GSL_REAL((a)) * GSL_REAL((b)) - GSL_IMAG((a)) * GSL_IMAG((b)); \
-  GSL_IMAG(a) = GSL_REAL((a)) * GSL_IMAG((b)) + GSL_IMAG((a)) * GSL_REAL((b)); \
-  GSL_REAL(a) = temp; \
-} G_STMT_END
-
-#define NCM_COMPLEX_ADD(a,b) \
-G_STMT_START { \
-  GSL_REAL(a) += GSL_REAL((b)); \
-  GSL_IMAG(a) += GSL_IMAG((b)); \
-} G_STMT_END
-
-#define NCM_COMPLEX_MUL_CONJUGATE(a,b) \
-G_STMT_START { \
-  gdouble temp = GSL_REAL((a)) * GSL_REAL((b)) + GSL_IMAG((a)) * GSL_IMAG((b)); \
-  GSL_IMAG(a) = - GSL_REAL((a)) * GSL_IMAG((b)) + GSL_IMAG((a)) * GSL_REAL((b)); \
-  GSL_REAL(a) = temp; \
-} G_STMT_END
-
 #define NCM_CFG_DEFAULT_SQLITE3_FILENAME "data_observation.sqlite3"
-
-#define NCM_WRITE_INT32(_ff,_ii) G_STMT_START { gint32 _temp_i = GINT32_TO_BE ((_ii)); if (fwrite (&_temp_i, sizeof(gint32), (1), _ff) != 1) g_error ("NCM_WRITE_INT32: io error"); } G_STMT_END
-#define NCM_WRITE_UINT32(_ff,_ii) G_STMT_START { guint32 _temp_i = GUINT32_TO_BE ((_ii)); if (fwrite (&_temp_i, sizeof(guint32), (1), _ff) != 1) g_error ("NCM_WRITE_UINT32: io error"); } G_STMT_END
-
-#define NCM_WRITE_INT64(_ff,_ii) G_STMT_START { gint64 _temp_i = GINT64_TO_BE ((_ii)); if (fwrite (&_temp_i, sizeof(gint64), (1), _ff) != 1) g_error ("NCM_WRITE_INT64: io error"); } G_STMT_END
-#define NCM_WRITE_UINT64(_ff,_ii) G_STMT_START { guint64 _temp_i = GUINT64_TO_BE ((_ii)); if (fwrite (&_temp_i, sizeof(guint64), (1), _ff) != 1) g_error ("NCM_WRITE_INT64: io error"); } G_STMT_END
-
-#define NCM_WRITE_DOUBLE(_ff,_ii) G_STMT_START { NcmDoubleInt64 _iii; _iii.x = _ii; _iii.i = GINT64_TO_BE ((_iii.i)); if (fwrite (&_iii.i, sizeof(gint64), (1), _ff) != 1) g_error ("NCM_WRITE_DOUBLE: io error"); } G_STMT_END
-
-#define NCM_READ_INT32(_ff,_ii) G_STMT_START { gint32 _temp_i; if (fread (&_temp_i, sizeof(gint32), (1), _ff) != 1) g_error ("NCM_READ_INT32: io error"); _ii = GINT32_FROM_BE (_temp_i); } G_STMT_END
-#define NCM_READ_UINT32(_ff,_ii) G_STMT_START { guint32 _temp_i; if (fread (&_temp_i, sizeof(guint32), (1), _ff) != 1) g_error ("NCM_READ_UINT32: io error"); _ii = GUINT32_FROM_BE (_temp_i); } G_STMT_END
-
-#define NCM_READ_INT64(_ff,_ii) G_STMT_START { gint64 _temp_i; if (fread (&_temp_i, sizeof(gint64), (1), _ff) != 1) g_error ("NCM_READ_INT64: io error"); _ii = GINT64_FROM_BE (_temp_i); } G_STMT_END
-#define NCM_READ_UINT64(_ff,_ii) G_STMT_START { guint64 _temp_i; if (fread (&_temp_i, sizeof(guint64), (1), _ff) != 1) g_error ("NCM_READ_UINT64: io error"); _ii = GUINT64_FROM_BE (_temp_i); } G_STMT_END
-
-#define NCM_READ_DOUBLE(_ff,_ii) G_STMT_START { NcmDoubleInt64 _iii; if (fread (&_iii.i, sizeof(gint64), (1), _ff) != 1) g_error ("NCM_READ_DOUBLE: io error"); _iii.i = GINT64_FROM_BE (_iii.i); _ii = _iii.x; } G_STMT_END
 
 /* Workaround on g_clear_pointer */
 #if ((GLIB_MAJOR_VERSION == 2) && (GLIB_MINOR_VERSION < 34))
@@ -238,8 +157,6 @@ G_STMT_START { \
 #if ((GLIB_MAJOR_VERSION == 2) && (GLIB_MINOR_VERSION < 28))
 #define g_clear_object(obj) g_clear_pointer(ptr,g_object_unref)
 #endif /* Glib version < 2.28 */
-
-#define ncm_g_string_clear(s) G_STMT_START if (*(s) != NULL) { g_string_free (*(s), TRUE); *(s) = NULL; } G_STMT_END
 
 G_END_DECLS
 

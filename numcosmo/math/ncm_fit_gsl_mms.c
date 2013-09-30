@@ -71,7 +71,7 @@ _ncm_fit_gsl_mms_constructed (GObject *object)
   {
     NcmFitGSLMMS *fit_gsl_mms = NCM_FIT_GSL_MMS (object);
     NcmFit *fit = NCM_FIT (fit_gsl_mms);
-    gint i;
+    guint i;
 
     fit_gsl_mms->f.f      = &nc_residual_multimin_f;
     fit_gsl_mms->f.n      = fit->fstate->fparam_len;

@@ -112,6 +112,7 @@ ncm_fit_gsl_ls_class_init (NcmFitGSLLSClass *klass)
 static NcmFit *
 _ncm_fit_gsl_ls_copy_new (NcmFit *fit, NcmLikelihood *lh, NcmMSet *mset, NcmFitGradType gtype)
 {
+  NCM_UNUSED (fit);
   return ncm_fit_gsl_ls_new (lh, mset, gtype);
 }
 

@@ -39,7 +39,7 @@
 #include "math/ncm_mpsf_0F1.h"
 #include "math/binsplit.h"
 #include "math/memory_pool.h"
-#include "math/util.h"
+#include "math/ncm_util.h"
 
 typedef struct __binsplit_0F1
 {
@@ -50,9 +50,12 @@ typedef struct __binsplit_0F1
 } _binsplit_0F1;
 
 static gpointer
-_besselj_bs_alloc (void)
+_besselj_bs_alloc (gpointer userdata)
 {
   _binsplit_0F1 *bs_data = g_slice_new (_binsplit_0F1);
+
+  NCM_UNUSED (userdata);
+  
   mpq_init (bs_data->b);
   mpz_init (bs_data->xn_bd);
   mpz_init (bs_data->xd);
@@ -88,7 +91,7 @@ _ncm_mpsf_0F1_get_bs ()
 
   _NCM_MUTEX_LOCK (&create_lock);
   if (mp == NULL)
-	mp = ncm_memory_pool_new (_besselj_bs_alloc, _besselj_bs_free);
+	mp = ncm_memory_pool_new (_besselj_bs_alloc, NULL, _besselj_bs_free);
   _NCM_MUTEX_UNLOCK (&create_lock);
 
   return ncm_memory_pool_get (mp);

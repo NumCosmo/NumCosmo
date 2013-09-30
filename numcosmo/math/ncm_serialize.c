@@ -39,6 +39,7 @@
 
 #include "math/ncm_serialize.h"
 #include "math/ncm_cfg.h"
+#include "math/ncm_obj_array.h"
 #include "ncm_enum_types.h"
 #include <gio/gio.h>
 
@@ -738,7 +739,7 @@ ncm_serialize_set_property (NcmSerialize *ser, GObject *obj, const gchar *prop_s
         GVariant *nest_obj_key = g_variant_get_child_value (val, 0);
         GVariant *nest_obj_params = g_variant_get_child_value (val, 1);
         GObject *nest_obj =
-          ncm_serialize_create_from_name_params (ser,
+          ncm_serialize_from_name_params (ser,
                                                  g_variant_get_string (nest_obj_key, NULL),
                                                  nest_obj_params);
         g_value_init (&value, G_TYPE_OBJECT);
@@ -763,7 +764,33 @@ ncm_serialize_set_property (NcmSerialize *ser, GObject *obj, const gchar *prop_s
 }
 
 /**
- * ncm_serialize_create_from_string:
+ * ncm_serialize_from_variant:
+ * @ser: a #NcmSerialize.
+ * @var_obj: A #GVariant containing the serialized version of the object.
+ *
+ * Deserialize and returns the newly created object.
+ *
+ * Returns: (transfer full): A new #GObject.
+ */
+GObject *
+ncm_serialize_from_variant (NcmSerialize *ser, GVariant *var_obj)
+{
+  g_assert (var_obj != NULL);
+  g_assert (g_variant_is_of_type (var_obj, G_VARIANT_TYPE (NCM_SERIALIZE_OBJECT_TYPE)));
+
+  {
+    GVariant *obj_name = g_variant_get_child_value (var_obj, 0);
+    GVariant *params = g_variant_get_child_value (var_obj, 1);
+    GObject *obj = ncm_serialize_from_name_params (ser, g_variant_get_string (obj_name, NULL), params);
+
+    g_variant_unref (obj_name);
+    g_variant_unref (params);
+    return obj;
+  }
+}
+
+/**
+ * ncm_serialize_from_string:
  * @ser: a #NcmSerialize.
  * @obj_ser: String containing the serialized version of the object.
  *
@@ -772,7 +799,7 @@ ncm_serialize_set_property (NcmSerialize *ser, GObject *obj, const gchar *prop_s
  * Returns: (transfer full): A new #GObject.
  */
 GObject *
-ncm_serialize_create_from_string (NcmSerialize *ser, const gchar *obj_ser)
+ncm_serialize_from_string (NcmSerialize *ser, const gchar *obj_ser)
 {
   GError *error = NULL;
   GMatchInfo *match_info = NULL;
@@ -783,7 +810,7 @@ ncm_serialize_create_from_string (NcmSerialize *ser, const gchar *obj_ser)
   if (ncm_serialize_is_named (ser, obj_ser, &ni_name))
   {
     if (ncm_serialize_contain_name (ser, ni_name))
-      g_error ("ncm_serialize_create_from_string: Creating object from ``%s'', depending named instance ``%s'' not found.", 
+      g_error ("ncm_serialize_from_string: Creating object from ``%s'', depending named instance ``%s'' not found.", 
                obj_ser, ni_name);
     obj = ncm_serialize_get_by_name (ser, ni_name);
     g_free (ni_name);
@@ -794,12 +821,7 @@ ncm_serialize_create_from_string (NcmSerialize *ser, const gchar *obj_ser)
   g_clear_error (&error);
   if (var_obj != NULL)
   {
-    GVariant *obj_name = g_variant_get_child_value (var_obj, 0);
-    GVariant *params = g_variant_get_child_value (var_obj, 1);
-    obj = ncm_serialize_create_from_name_params (ser, g_variant_get_string (obj_name, NULL), params);
-    
-    g_variant_unref (obj_name);
-    g_variant_unref (params);
+    obj = ncm_serialize_from_variant (ser, var_obj);
     g_variant_unref (var_obj);
   }
   else if (g_regex_match (ser->parse_obj_regex, obj_ser, 0, &match_info))
@@ -814,12 +836,12 @@ ncm_serialize_create_from_string (NcmSerialize *ser, const gchar *obj_ser)
                                 obj_prop, NULL, NULL, &error);
       if (error != NULL)
       {
-        g_error ("ncm_serialize_create_from_string: cannot parse object '%s' parameters '%s', error %s\n", obj_name, obj_prop, error->message);
+        g_error ("ncm_serialize_from_string: cannot parse object '%s' parameters '%s', error %s\n", obj_name, obj_prop, error->message);
         g_error_free (error);
       }
     }
 
-    obj = ncm_serialize_create_from_name_params (ser, obj_name, params);
+    obj = ncm_serialize_from_name_params (ser, obj_name, params);
 
     if (params != NULL)
       g_variant_unref (params);
@@ -830,14 +852,14 @@ ncm_serialize_create_from_string (NcmSerialize *ser, const gchar *obj_ser)
   else
   {
     g_match_info_free (match_info);
-    g_error ("ncm_serialize_create_from_string: cannot indentify object (%s) in string '%s'\n", NCM_SERIALIZE_OBJECT_TYPE, obj_ser);
+    g_error ("ncm_serialize_from_string: cannot indentify object (%s) in string '%s'\n", NCM_SERIALIZE_OBJECT_TYPE, obj_ser);
   }
 
   return obj;
 }
 
 /**
- * ncm_serialize_create_from_name_params:
+ * ncm_serialize_from_name_params:
  * @ser: a #NcmSerialize.
  * @obj_name: string containing the object name.
  * @params: a #GVariant containing the object parameters.
@@ -847,7 +869,7 @@ ncm_serialize_create_from_string (NcmSerialize *ser, const gchar *obj_ser)
  * Returns: (transfer full): A new #GObject.
  */
 GObject *
-ncm_serialize_create_from_name_params (NcmSerialize *ser, const gchar *obj_name, GVariant *params)
+ncm_serialize_from_name_params (NcmSerialize *ser, const gchar *obj_name, GVariant *params)
 {
   GObject *obj = NULL;
   GType gtype = g_type_from_name (obj_name);
@@ -856,10 +878,10 @@ ncm_serialize_create_from_name_params (NcmSerialize *ser, const gchar *obj_name,
   if (ncm_serialize_is_named (ser, obj_name, &ni_name))
   {
     if (!ncm_serialize_contain_name (ser, ni_name))
-      g_error ("ncm_serialize_create_from_name_params: Creating object from ``%s'', depending named instance ``%s'' not found.", 
+      g_error ("ncm_serialize_from_name_params: Creating object from ``%s'', depending named instance ``%s'' not found.", 
                obj_name, ni_name);
     if (params != NULL && g_variant_n_children (params) > 0)
-      g_error ("ncm_cfg_create_from_name_params: Invalid named object parameters ``%s'', named objects cannot have properties.", 
+      g_error ("ncm_serialize_from_name_params: Invalid named object parameters ``%s'', named objects cannot have properties.", 
                g_variant_print (params, TRUE));    
 
     obj = ncm_serialize_get_by_name (ser, ni_name);
@@ -869,7 +891,7 @@ ncm_serialize_create_from_name_params (NcmSerialize *ser, const gchar *obj_name,
   }
 
   if (gtype == 0)
-    g_error ("ncm_serialize_create_from_name_params: object '%s' is not registered\n", obj_name);
+    g_error ("ncm_serialize_from_name_params: object '%s' is not registered\n", obj_name);
 
   g_assert (params == NULL || g_variant_is_of_type (params, G_VARIANT_TYPE (NCM_SERIALIZE_PROPERTIES_TYPE)));
 
@@ -906,16 +928,24 @@ ncm_serialize_create_from_name_params (NcmSerialize *ser, const gchar *obj_name,
         g_value_take_object (&gprop[i].value, mat);
         ncm_matrix_free (mat);        
       }
-      else */ 
-      if (g_variant_is_of_type (val, G_VARIANT_TYPE (NCM_SERIALIZE_OBJECT_TYPE)))
+      else */
+      if (g_variant_is_of_type (val, G_VARIANT_TYPE (NCM_OBJ_ARRAY_TYPE)))
+      {
+        NcmObjArray *oa = ncm_obj_array_new_from_variant (ser, val);
+        GValue lval = G_VALUE_INIT;
+        g_value_init (&lval, NCM_TYPE_OBJ_ARRAY);
+        gprop[i].value = lval;
+        g_value_take_boxed (&gprop[i].value, oa);
+      }
+      else if (g_variant_is_of_type (val, G_VARIANT_TYPE (NCM_SERIALIZE_OBJECT_TYPE)))
       {
         GVariant *nest_obj_key = g_variant_get_child_value (val, 0);
         GVariant *nest_obj_params = g_variant_get_child_value (val, 1);
         GValue lval = G_VALUE_INIT;
         GObject *nest_obj =
-          ncm_serialize_create_from_name_params (ser,
-                                                 g_variant_get_string (nest_obj_key, NULL),
-                                                 nest_obj_params);
+          ncm_serialize_from_name_params (ser,
+                                          g_variant_get_string (nest_obj_key, NULL),
+                                          nest_obj_params);
         g_value_init (&lval, G_TYPE_OBJECT);
         gprop[i].value = lval;
         g_value_take_object (&gprop[i].value, nest_obj);
@@ -1087,6 +1117,18 @@ ncm_serialize_gvalue_to_gvariant (NcmSerialize *ser, GValue *val)
       case G_TYPE_FLAGS:
         var = g_variant_ref_sink (g_variant_new_uint32 (g_value_get_flags (val)));
         break;
+      case G_TYPE_BOXED:
+      {
+        if (g_type_is_a (t, NCM_TYPE_OBJ_ARRAY))
+        {
+          NcmObjArray *oa = g_value_get_boxed (val);
+          if (oa != NULL)
+            var = ncm_obj_array_ser (oa, ser);
+        }
+        else
+          g_error ("Cannot convert GValue '%s' to GVariant.", g_type_name (t));  
+        break;
+      }
       default:
         g_error ("Cannot convert GValue '%s' to GVariant.", g_type_name (t));
         break;
@@ -1210,6 +1252,24 @@ ncm_serialize_to_string (NcmSerialize *ser, GObject *obj, gboolean valid_variant
   }
   g_variant_unref (ser_var);
   return serstr;
+}
+
+/**
+ * ncm_serialize_dup_obj:
+ * @ser: a #NcmSerialize.
+ * @obj: a #GObject.
+ *
+ * Duplicates @obj by serializing and deserializing a new object.
+ *
+ * Returns: (transfer full): A duplicate of @obj.
+ */
+GObject *
+ncm_serialize_dup_obj (NcmSerialize *ser, GObject *obj)
+{
+  GVariant *var = ncm_serialize_to_variant (ser, obj);
+  GObject *dup = ncm_serialize_from_variant (ser, var);
+  g_variant_unref (var);
+  return dup;
 }
 
 static gsize _global_init = FALSE;
@@ -1383,36 +1443,54 @@ ncm_serialize_global_set_property (GObject *obj, const gchar *prop_str)
 }
 
 /**
- * ncm_serialize_global_create_from_string:
+ * ncm_serialize_global_from_variant:
+ * @var_obj: A #GVariant containing the serialized version of the object. 
+ *
+ * Global version of ncm_serialize_from_variant().
+ *
+ * Returns: (transfer full): a new #GObject deserialized from @var_obj.
+ */
+GObject *
+ncm_serialize_global_from_variant (GVariant *var_obj)
+{
+  GObject *obj;
+  NcmSerialize *ser = ncm_serialize_global ();
+  obj = ncm_serialize_from_variant (ser, var_obj);
+  ncm_serialize_unref (ser);
+  return obj;
+}
+
+/**
+ * ncm_serialize_global_from_string:
  * @obj_ser: String containing the serialized version of the object.
  *
- * Global version of ncm_serialize_create_from_string().
+ * Global version of ncm_serialize_from_string().
  *
  * Returns: (transfer full): A new #GObject.
  */
 GObject *
-ncm_serialize_global_create_from_string (const gchar *obj_ser)
+ncm_serialize_global_from_string (const gchar *obj_ser)
 {
   NcmSerialize *ser = ncm_serialize_global ();
-  GObject *ret = ncm_serialize_create_from_string (ser, obj_ser);
+  GObject *ret = ncm_serialize_from_string (ser, obj_ser);
   ncm_serialize_unref (ser);
   return ret;
 }
 
 /**
- * ncm_serialize_global_create_from_name_params:
+ * ncm_serialize_global_from_name_params:
  * @obj_name: string containing the object name.
  * @params: a #GVariant containing the object parameters.
  * 
- * Global version of ncm_serialize_create_from_name_params().
+ * Global version of ncm_serialize_from_name_params().
  * 
  * Returns: (transfer full): A new #GObject.
  */
 GObject *
-ncm_serialize_global_create_from_name_params (const gchar *obj_name, GVariant *params)
+ncm_serialize_global_from_name_params (const gchar *obj_name, GVariant *params)
 {
   NcmSerialize *ser = ncm_serialize_global ();
-  GObject *ret = ncm_serialize_create_from_name_params (ser, obj_name, params);
+  GObject *ret = ncm_serialize_from_name_params (ser, obj_name, params);
   ncm_serialize_unref (ser);
   return ret;
 }
@@ -1467,4 +1545,23 @@ ncm_serialize_global_to_string (GObject *obj, gboolean valid_variant)
   gchar *ret = ncm_serialize_to_string (ser, obj, valid_variant);
   ncm_serialize_unref (ser);
   return ret;
+}
+
+/**
+ * ncm_serialize_global_dup_obj:
+ * @obj: a #GObject.
+ *
+ * Global version of ncm_serialize_dup_obj().
+ *
+ * Returns: (transfer full): A duplicate of @obj.
+ */
+GObject *
+ncm_serialize_global_dup_obj (GObject *obj)
+{
+  NcmSerialize *ser = ncm_serialize_global ();
+  GVariant *var = ncm_serialize_to_variant (ser, obj);
+  GObject *dup = ncm_serialize_from_variant (ser, var);
+  g_variant_unref (var);
+  ncm_serialize_unref (ser);
+  return dup;
 }

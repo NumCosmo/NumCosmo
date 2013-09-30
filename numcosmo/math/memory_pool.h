@@ -32,7 +32,7 @@
 
 G_BEGIN_DECLS
 
-typedef gpointer (*NcmMemoryPoolAlloc) (void);
+typedef gpointer (*NcmMemoryPoolAlloc) (gpointer userdata);
 
 typedef struct _NcmMemoryPool NcmMemoryPool;
 
@@ -48,6 +48,7 @@ struct _NcmMemoryPool
   GPtrArray *slices;
   NcmMemoryPoolAlloc alloc;
   GDestroyNotify free;
+  gpointer userdata;
 };
 
 typedef struct _NcmMemoryPoolSlice NcmMemoryPoolSlice;
@@ -65,9 +66,10 @@ struct _NcmMemoryPoolSlice
   NcmMemoryPool *mp;
 };
 
-NcmMemoryPool *ncm_memory_pool_new (NcmMemoryPoolAlloc mp_alloc, GDestroyNotify mp_free);
+NcmMemoryPool *ncm_memory_pool_new (NcmMemoryPoolAlloc mp_alloc, gpointer userdata, GDestroyNotify mp_free);
 void ncm_memory_pool_free (NcmMemoryPool *mp, gboolean free_slices);
 void ncm_memory_pool_set_min_size (NcmMemoryPool *mp, gsize n);
+void ncm_memory_pool_add (NcmMemoryPool *mp, gpointer p);
 gpointer ncm_memory_pool_get (NcmMemoryPool *mp);
 void ncm_memory_pool_return (gpointer p);
 

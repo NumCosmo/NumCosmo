@@ -38,6 +38,7 @@
 #include "build_cfg.h"
 
 #include "lss/nc_cluster_mass_nodist.h"
+#include "math/ncm_cfg.h"
 
 G_DEFINE_TYPE (NcClusterMassNodist, nc_cluster_mass_nodist, NC_TYPE_CLUSTER_MASS);
 
@@ -53,6 +54,12 @@ static gdouble
 _nc_cluster_mass_nodist_p (NcClusterMass *clusterm, NcHICosmo *model, gdouble lnM, gdouble z, gdouble *lnM_obs, gdouble *lnM_obs_params)
 {
   g_error ("This object don't implement p.");
+  NCM_UNUSED (clusterm);
+  NCM_UNUSED (model);
+  NCM_UNUSED (lnM);
+  NCM_UNUSED (z);
+  NCM_UNUSED (lnM_obs);
+  NCM_UNUSED (lnM_obs_params);
   return GSL_NAN;
 }
 
@@ -60,6 +67,10 @@ static gdouble
 _nc_cluster_mass_nodist_intp (NcClusterMass *clusterm, NcHICosmo *model, gdouble lnM, gdouble z)
 {
   g_error ("This object don't implement intp.");
+  NCM_UNUSED (clusterm);
+  NCM_UNUSED (model);
+  NCM_UNUSED (lnM);
+  NCM_UNUSED (z);
   return GSL_NAN;
 }
 
@@ -68,6 +79,11 @@ _nc_cluster_mass_nodist_resample (NcClusterMass *clusterm, NcHICosmo *model, gdo
 {
   NcClusterMassNodist *mnodist = NC_CLUSTER_MASS_NODIST (clusterm);
   lnM_obs[0] = lnM;
+
+  NCM_UNUSED (model);
+  NCM_UNUSED (z);
+  NCM_UNUSED (lnM_obs_params);
+
   return (lnM_obs[0] <= mnodist->lnM_max) && (lnM_obs[0] >= mnodist->lnM_min);
 }
 
@@ -75,6 +91,14 @@ static void
 _nc_cluster_mass_nodist_p_limits (NcClusterMass *clusterm, NcHICosmo *model, gdouble *lnM_obs, gdouble *lnM_obs_params, gdouble *lnM_lower, gdouble *lnM_upper)
 {
   g_error ("This object don't implement integ_limits.");
+
+  NCM_UNUSED (clusterm);
+  NCM_UNUSED (model);
+  NCM_UNUSED (lnM_obs);
+  NCM_UNUSED (lnM_obs_params);
+  NCM_UNUSED (lnM_lower);
+  NCM_UNUSED (lnM_upper);
+
   return;
 }
 
@@ -83,14 +107,16 @@ _nc_cluster_mass_nodist_n_limits (NcClusterMass *clusterm, NcHICosmo *model, gdo
 {
   NcClusterMassNodist *mn = NC_CLUSTER_MASS_NODIST (clusterm);
 
+  NCM_UNUSED (model);
+
   *lnm_lower = mn->lnM_min;
   *lnm_upper = mn->lnM_max;
 
   return;
 }
 
-guint _nc_cluster_mass_nodist_obs_len (NcClusterMass *clusterm) { return 1; }
-guint _nc_cluster_mass_nodist_obs_params_len (NcClusterMass *clusterm) { return 0; }
+guint _nc_cluster_mass_nodist_obs_len (NcClusterMass *clusterm) { NCM_UNUSED (clusterm); return 1; }
+guint _nc_cluster_mass_nodist_obs_params_len (NcClusterMass *clusterm) { NCM_UNUSED (clusterm); return 0; }
 
 static void
 _nc_cluster_mass_nodist_set_property (GObject * object, guint prop_id, const GValue * value, GParamSpec * pspec)
@@ -103,7 +129,7 @@ _nc_cluster_mass_nodist_set_property (GObject * object, guint prop_id, const GVa
     case PROP_LNM_MIN:
       mnodist->lnM_min = g_value_get_double (value);
       break;
-	case PROP_LNM_MAX:
+    case PROP_LNM_MAX:
       mnodist->lnM_max = g_value_get_double (value);
       break;
     default:
@@ -123,7 +149,7 @@ _nc_cluster_mass_nodist_get_property (GObject *object, guint prop_id, GValue *va
     case PROP_LNM_MIN:
       g_value_set_double (value, mnodist->lnM_min);
       break;
-	case PROP_LNM_MAX:
+    case PROP_LNM_MAX:
       g_value_set_double (value, mnodist->lnM_max);
       break;
     default:
@@ -200,4 +226,3 @@ nc_cluster_mass_nodist_class_init (NcClusterMassNodistClass *klass)
 
 
 }
-

@@ -83,6 +83,7 @@ enum {
 static void
 nc_hicosmo_de_xcdm_init (NcHICosmoDEXcdm *xcdm)
 {
+  NCM_UNUSED (xcdm);
 }
 
 static void

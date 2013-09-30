@@ -100,7 +100,7 @@ main(gint argc, gchar *argv[])
   NcmFit *fit = NULL;
   NcDistance *dist = nc_distance_new (2.0);
   NcmMSet *mset, *mset_lcdm;
-  gint i, j;
+  guint i, j;
 
   ncm_cfg_init ();
 
@@ -265,8 +265,10 @@ main(gint argc, gchar *argv[])
     {
       GTimer *timer = g_timer_new ();
       //NcParams *orig_cp = lcdm_cp;
-      NcmMSet *orig_mset = ncm_mset_dup (mset);
+      NcmSerialize *ser = ncm_serialize_global ();
+      NcmMSet *orig_mset = ncm_mset_dup (mset, ser);
 
+      ncm_serialize_free (ser);
       for (i = 0 ; i < SIZE ; i++)
       {
         //        gint j;

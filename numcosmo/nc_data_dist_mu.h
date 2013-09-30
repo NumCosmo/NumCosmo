@@ -51,7 +51,6 @@ struct _NcDataDistMu
   NcmDataGaussDiag parent_instance;
   NcDistance *dist;
   NcmVector *x;
-  NcDataSNIAId id;
 };
 
 struct _NcDataDistMuClass
@@ -64,11 +63,7 @@ GType nc_data_dist_mu_get_type (void) G_GNUC_CONST;
 
 NcmData *nc_data_dist_mu_new (NcDistance *dist, NcDataSNIAId id);
 
-void nc_data_dist_mu_set_size (NcDataDistMu *dist_mu, guint np);
-guint nc_data_dist_mu_get_size (NcDataDistMu *dist_mu);
-
 void nc_data_dist_mu_set_sample (NcDataDistMu *dist_mu, NcDataSNIAId id);
-NcDataSNIAId nc_data_dist_mu_get_sample (NcDataDistMu *dist_mu);
 
 G_END_DECLS
 

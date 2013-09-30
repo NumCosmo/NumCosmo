@@ -57,6 +57,9 @@
 #include "build_cfg.h"
 
 #include "lss/nc_window_gaussian.h"
+#include "math/ncm_cfg.h"
+#include "math/ncm_util.h"
+
 #include <math.h>
 #include <gsl/gsl_math.h>
 
@@ -81,7 +84,7 @@ _nc_window_gaussian_eval_fourier (const NcWindow * wp, const gdouble k, const gd
   gdouble kR = k * R;
   gdouble kR2 = kR * kR;
   gdouble WG = exp (-kR2 / 2.0);
-
+  NCM_UNUSED (wp);
   return WG;
 }
 
@@ -92,7 +95,7 @@ _nc_window_gaussian_deriv_fourier (const NcWindow * wp, const gdouble k, const g
   gdouble kR2 = kR * kR;
   gdouble k2R = kR2 / R;
   gdouble dWG = -k2R * exp (-kR2 / 2.0);
-
+  NCM_UNUSED (wp);
   return dWG;
 }
 
@@ -101,21 +104,21 @@ _nc_window_gaussian_eval_realspace (const NcWindow * wp, const gdouble r, const 
 {
   gdouble r_R2 = r * r / (R * R);
   gdouble WG_realspace = 1.0 / gsl_pow_3 (sqrt (2 * M_PI * R * R)) * exp (-r_R2 / 2.0);
-
+  NCM_UNUSED (wp);
   return WG_realspace;
 }
 
 static void
 nc_window_gaussian_init (NcWindowGaussian *nc_window_gaussian)
 {
-  /* TODO: Add initialization code here */
+  NCM_UNUSED (nc_window_gaussian);
 }
 
 static void
 nc_window_gaussian_finalize (GObject *object)
 {
-  /* TODO: Add deinitalization code here */
-
+  
+  /* Chain up : end */
   G_OBJECT_CLASS (nc_window_gaussian_parent_class)->finalize (object);
 }
 
@@ -132,4 +135,3 @@ nc_window_gaussian_class_init (NcWindowGaussianClass *klass)
 
   object_class->finalize = nc_window_gaussian_finalize;
 }
-

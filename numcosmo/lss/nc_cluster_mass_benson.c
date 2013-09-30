@@ -243,6 +243,8 @@ _nc_cluster_mass_benson_resample (NcClusterMass *clusterm, NcHICosmo *model, gdo
   const gdouble E0 = nc_hicosmo_E (model, msz->z0);
   const gdouble E = nc_hicosmo_E (model, z);
 
+  NCM_UNUSED (xi_params);
+  
   lnzeta = B_SZ * (lnM - log (msz->M0)) + C_SZ * log (E / E0) + log (A_SZ);
  
   {
@@ -270,6 +272,10 @@ _nc_cluster_mass_benson_resample (NcClusterMass *clusterm, NcHICosmo *model, gdo
 static gdouble
 _significance_to_zeta (NcClusterMass *clusterm, NcHICosmo *model, gdouble z, gdouble xi)
 {
+  NCM_UNUSED (clusterm);
+  NCM_UNUSED (model);
+  NCM_UNUSED (z);
+  
   return sqrt (xi * xi - 3.0);
 }
 
@@ -298,6 +304,8 @@ _nc_cluster_mass_benson_p_limits (NcClusterMass *clusterm, NcHICosmo *model, gdo
   const gdouble zetau = _significance_to_zeta (clusterm, model, 0.0, xiu) + 7.0 * D_SZ;
   const gdouble lnMu = _zeta_to_mass (clusterm, model, 0.0, zetau);
 
+  NCM_UNUSED (xi_params);
+  
   *lnM_lower = lnMl;
   *lnM_upper = lnMu;
 
@@ -323,8 +331,8 @@ _nc_cluster_mass_benson_n_limits (NcClusterMass *clusterm, NcHICosmo *model, gdo
   return;  
 }
 
-guint _nc_cluster_mass_benson_obs_len (NcClusterMass *clusterm) { return 1; }
-guint _nc_cluster_mass_benson_obs_params_len (NcClusterMass *clusterm) { return 0; }
+guint _nc_cluster_mass_benson_obs_len (NcClusterMass *clusterm) { NCM_UNUSED (clusterm); return 1; }
+guint _nc_cluster_mass_benson_obs_params_len (NcClusterMass *clusterm) { NCM_UNUSED (clusterm); return 0; }
 
 static void
 _nc_cluster_mass_benson_set_property (GObject * object, guint prop_id, const GValue * value, GParamSpec * pspec)

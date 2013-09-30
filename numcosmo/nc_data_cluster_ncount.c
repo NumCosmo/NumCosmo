@@ -53,6 +53,19 @@ enum
 {
   PROP_0,
   PROP_CAD,
+  PROP_CLUSTERZ,
+  PROP_CLUSTERM,
+  PROP_LNM_TRUE,
+  PROP_Z_TRUE,
+  PROP_Z_OBS,
+  PROP_Z_OBS_PARAMS,
+  PROP_LNM_OBS,
+  PROP_LNM_OBS_PARAMS,
+  PROP_SURVEY_AREA,
+  PROP_USE_TRUE,
+  PROP_FIDUCIAL,
+  PROP_SEED,
+  PROP_RNG_NAME,
   PROP_SIZE,
 };
 
@@ -92,7 +105,78 @@ nc_data_cluster_ncount_set_property (GObject *object, guint prop_id, const GValu
   switch (prop_id)
   {
     case PROP_CAD:
+      nc_cluster_abundance_clear (&ncount->cad);
       ncount->cad = g_value_dup_object (value);
+      break;
+    case PROP_CLUSTERZ:
+      nc_data_cluster_ncount_set_redshift (ncount, g_value_get_object (value));
+      break;
+    case PROP_CLUSTERM:
+      nc_data_cluster_ncount_set_mass (ncount, g_value_get_object (value));
+      break;
+    case PROP_LNM_TRUE:
+    {
+      GVariant *var = g_value_get_variant (value);
+      const NcmVector *v = ncm_vector_const_new_variant (var);
+      nc_data_cluster_ncount_set_lnM_true (ncount, v);
+      ncm_vector_const_free (v);
+      break;
+    }
+    case PROP_Z_TRUE:
+    {
+      GVariant *var = g_value_get_variant (value);
+      const NcmVector *v = ncm_vector_const_new_variant (var);
+      nc_data_cluster_ncount_set_z_true (ncount, v);
+      ncm_vector_const_free (v);
+      break;
+    }
+    case PROP_Z_OBS:
+    {
+      GVariant *var = g_value_get_variant (value);
+      const NcmMatrix *m = ncm_matrix_const_new_variant (var);
+      nc_data_cluster_ncount_set_z_obs (ncount, m);
+      ncm_matrix_const_free (m);
+      break;
+    }
+    case PROP_Z_OBS_PARAMS:
+    {
+      GVariant *var = g_value_get_variant (value);
+      const NcmMatrix *m = ncm_matrix_const_new_variant (var);
+      nc_data_cluster_ncount_set_z_obs_params (ncount, m);
+      ncm_matrix_const_free (m);
+      break;
+    }
+    case PROP_LNM_OBS:
+    {
+      GVariant *var = g_value_get_variant (value);
+      const NcmMatrix *m = ncm_matrix_const_new_variant (var);
+      nc_data_cluster_ncount_set_lnM_obs (ncount, m);
+      ncm_matrix_const_free (m);
+      break;
+    }
+    case PROP_LNM_OBS_PARAMS:
+    {
+      GVariant *var = g_value_get_variant (value);
+      const NcmMatrix *m = ncm_matrix_const_new_variant (var);
+      nc_data_cluster_ncount_set_lnM_obs_params (ncount, m);
+      ncm_matrix_const_free (m);
+      break;
+    }
+    case PROP_SURVEY_AREA:
+      ncount->area_survey = g_value_get_double (value);
+      break;
+    case PROP_USE_TRUE:
+      ncount->use_true_data = g_value_get_boolean (value);
+      break;
+    case PROP_FIDUCIAL:
+      ncount->fiducial = g_value_get_boolean (value);
+      break;
+    case PROP_SEED:
+      ncount->seed = g_value_get_ulong (value);
+      break;
+    case PROP_RNG_NAME:
+      g_clear_pointer (&ncount->rnd_name, &g_free);
+      ncount->rnd_name = g_value_dup_string (value);
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -111,6 +195,63 @@ nc_data_cluster_ncount_get_property (GObject *object, guint prop_id, GValue *val
   {
     case PROP_CAD:
       g_value_set_object (value, ncount->cad);
+      break;
+    case PROP_CLUSTERZ:
+      g_value_set_object (value, ncount->z);
+      break;
+    case PROP_CLUSTERM:
+      g_value_set_object (value, ncount->m);
+      break;
+    case PROP_LNM_TRUE:
+    {
+      GVariant *var = ncm_vector_peek_variant (ncount->lnM_true); 
+      g_value_take_variant (value, var);
+      break;
+    }
+    case PROP_Z_TRUE:
+    {
+      GVariant *var = ncm_vector_peek_variant (ncount->z_true); 
+      g_value_take_variant (value, var);
+      break;
+    }
+    case PROP_Z_OBS:
+    {
+      GVariant *var = ncm_matrix_peek_variant (ncount->z_obs); 
+      g_value_take_variant (value, var);
+      break;
+    }
+    case PROP_Z_OBS_PARAMS:
+    {
+      GVariant *var = ncm_matrix_peek_variant (ncount->z_obs_params); 
+      g_value_take_variant (value, var);
+      break;
+    }
+    case PROP_LNM_OBS:
+    {
+      GVariant *var = ncm_matrix_peek_variant (ncount->lnM_obs); 
+      g_value_take_variant (value, var);
+      break;
+    }
+    case PROP_LNM_OBS_PARAMS:
+    {
+      GVariant *var = ncm_matrix_peek_variant (ncount->lnM_obs_params); 
+      g_value_take_variant (value, var);
+      break;
+    }
+    case PROP_SURVEY_AREA:
+      g_value_set_double (value, ncount->area_survey);
+      break;
+    case PROP_USE_TRUE:
+      g_value_set_boolean (value, ncount->use_true_data);
+      break;
+    case PROP_FIDUCIAL:
+      g_value_set_boolean (value, ncount->fiducial);
+      break;
+    case PROP_SEED:
+      g_value_set_ulong (value, ncount->seed);
+      break;
+    case PROP_RNG_NAME:
+      g_value_set_string (value, ncount->rnd_name);
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -146,7 +287,6 @@ nc_data_cluster_ncount_finalize (GObject *object)
 }
 
 static guint _nc_data_cluster_ncount_get_length (NcmData *data);
-static NcmData *_nc_data_cluster_ncount_dup (NcmData *data);
 static void _nc_data_cluster_ncount_begin (NcmData *data);
 static void _nc_data_cluster_ncount_prepare (NcmData *data, NcmMSet *mset);
 static void _nc_data_cluster_ncount_resample (NcmData *data, NcmMSet *mset);
@@ -167,85 +307,109 @@ nc_data_cluster_ncount_class_init (NcDataClusterNCountClass *klass)
                                    PROP_CAD,
                                    g_param_spec_object ("cluster-abundance",
                                                         NULL,
-                                                        "Cluster Abundance",
+                                                        "Cluster abundance",
                                                         NC_TYPE_CLUSTER_ABUNDANCE,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
   
+  g_object_class_install_property (object_class,
+                                   PROP_CLUSTERM,
+                                   g_param_spec_object ("mass",
+                                                        NULL,
+                                                        "Cluster mass observable",
+                                                        NC_TYPE_CLUSTER_MASS,
+                                                        G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
+  g_object_class_install_property (object_class,
+                                   PROP_CLUSTERZ,
+                                   g_param_spec_object ("redshift",
+                                                        NULL,
+                                                        "Cluster redshift observable",
+                                                        NC_TYPE_CLUSTER_REDSHIFT,
+                                                        G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  g_object_class_install_property (object_class,
+                                   PROP_LNM_TRUE,
+                                   g_param_spec_variant ("lnM-true",
+                                                         NULL,
+                                                         "Clusters true masses",
+                                                         G_VARIANT_TYPE ("ad"), NULL,
+                                                         G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));  
+  g_object_class_install_property (object_class,
+                                   PROP_Z_TRUE,
+                                   g_param_spec_variant ("z-true",
+                                                         NULL,
+                                                         "Clusters true redshifts",
+                                                         G_VARIANT_TYPE ("ad"), NULL,
+                                                         G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  g_object_class_install_property (object_class,
+                                   PROP_LNM_OBS,
+                                   g_param_spec_variant ("lnM-obs",
+                                                         NULL,
+                                                         "Clusters mass observables",
+                                                         G_VARIANT_TYPE ("aad"), NULL,
+                                                         G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  g_object_class_install_property (object_class,
+                                   PROP_LNM_OBS_PARAMS,
+                                   g_param_spec_variant ("lnM-obs-params",
+                                                         NULL,
+                                                         "Clusters mass observables parameters",
+                                                         G_VARIANT_TYPE ("aad"), NULL,
+                                                         G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  g_object_class_install_property (object_class,
+                                   PROP_Z_OBS,
+                                   g_param_spec_variant ("z-obs",
+                                                         NULL,
+                                                         "Clusters redshift observables",
+                                                         G_VARIANT_TYPE ("aad"), NULL,
+                                                         G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  g_object_class_install_property (object_class,
+                                   PROP_Z_OBS_PARAMS,
+                                   g_param_spec_variant ("z-obs-params",
+                                                         NULL,
+                                                         "Clusters redshift observables parameters",
+                                                         G_VARIANT_TYPE ("aad"), NULL,
+                                                         G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  g_object_class_install_property (object_class,
+                                   PROP_SURVEY_AREA,
+                                   g_param_spec_double ("area",
+                                                        NULL,
+                                                        "Cluster observation area",
+                                                        0, G_MAXDOUBLE, 0,
+                                                        G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  g_object_class_install_property (object_class,
+                                   PROP_USE_TRUE,
+                                   g_param_spec_boolean ("use-true",
+                                                         NULL,
+                                                         "If the true data must be used",
+                                                         FALSE,
+                                                         G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  g_object_class_install_property (object_class,
+                                   PROP_FIDUCIAL,
+                                   g_param_spec_boolean ("fiducial",
+                                                         NULL,
+                                                         "If it is fiducial data",
+                                                         FALSE,
+                                                         G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  g_object_class_install_property (object_class,
+                                   PROP_RNG_NAME,
+                                   g_param_spec_string ("rng-name",
+                                                        NULL,
+                                                        "Random number generator name",
+                                                        NULL,
+                                                        G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  g_object_class_install_property (object_class,
+                                   PROP_SEED,
+                                   g_param_spec_ulong ("rng-seed",
+                                                        NULL,
+                                                        "Random number generator seed",
+                                                        0, G_MAXULONG, 0,
+                                                        G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
   data_class->name = "Cluster abundance unbinned";
 
   data_class->get_length = &_nc_data_cluster_ncount_get_length;
-  data_class->dup        = &_nc_data_cluster_ncount_dup;
   data_class->begin      = &_nc_data_cluster_ncount_begin;
   data_class->prepare    = &_nc_data_cluster_ncount_prepare;
   data_class->resample   = &_nc_data_cluster_ncount_resample;
   data_class->m2lnL_val  = &_nc_data_cluster_ncount_m2lnL_val;
-}
-
-static void
-_ca_data_copy (NcDataClusterNCount *dest, NcDataClusterNCount *src)
-{
-  dest->area_survey = src->area_survey;
-  dest->np          = src->np;
-
-  if (dest->z != NULL)
-  {
-    nc_cluster_redshift_free (dest->z);
-    dest->z = NULL;
-  }
-  if (dest->m != NULL)
-  {
-    nc_cluster_mass_free (dest->m);
-    dest->m = NULL;
-  }
-
-  if (src->z != NULL)
-    dest->z = nc_cluster_redshift_ref (src->z);
-  if (src->m != NULL)
-    dest->m = nc_cluster_mass_ref (src->m);
-
-#define _VECTOR_COPY(name) \
-do { if (src->name != NULL) \
-{ \
-if (dest->name == NULL) \
-dest->name = ncm_vector_dup (src->name); \
-if (ncm_vector_len (dest->name) != ncm_vector_len (src->name)) \
-{ \
-ncm_vector_free (dest->name); \
-dest->name = ncm_vector_dup (src->name); \
-} \
-ncm_vector_memcpy (dest->name, src->name); \
-} } while (FALSE)
-
-#define _MATRIX_COPY(name) \
-do { if (src->name != NULL) \
-{ \
-if (dest->name == NULL) \
-dest->name = ncm_matrix_dup (src->name); \
-if ((NCM_MATRIX_NROWS (dest->name) != NCM_MATRIX_NROWS (src->name)) || (NCM_MATRIX_NCOLS (dest->name) != NCM_MATRIX_NCOLS (src->name))) \
-{ \
-ncm_matrix_free (dest->name); \
-dest->name = ncm_matrix_dup (src->name); \
-} \
-ncm_matrix_memcpy (dest->name, src->name); \
-} } while (FALSE)
-
-  _VECTOR_COPY (lnM_true);
-  _VECTOR_COPY (z_true);
-
-  _MATRIX_COPY (z_obs);
-  _MATRIX_COPY (z_obs_params);
-  _MATRIX_COPY (lnM_obs);
-  _MATRIX_COPY (lnM_obs_params);
-}
-
-static NcmData *
-_nc_data_cluster_ncount_dup (NcmData *data)
-{
-  NcDataClusterNCount *ncount = NC_DATA_CLUSTER_NCOUNT (data);
-  NcDataClusterNCount *ncount_dup = NC_DATA_CLUSTER_NCOUNT (nc_data_cluster_ncount_new (ncount->cad));
-  _ca_data_copy (ncount_dup, ncount);
-
-  return NCM_DATA (ncount_dup);
 }
 
 static guint 
@@ -307,6 +471,249 @@ nc_data_cluster_ncount_free (NcDataClusterNCount *ncount)
 }
 
 /**
+ * nc_data_cluster_ncount_clear:
+ * @ncount: FIXME
+ *
+ * FIXME
+ * 
+ */
+void
+nc_data_cluster_ncount_clear (NcDataClusterNCount **ncount)
+{
+  g_clear_object (ncount);
+}
+
+/**
+ * nc_data_cluster_ncount_set_mass:
+ * @ncount: a #NcDataClusterNCount.
+ * @m: the #NcClusterMass object.
+ *
+ * Sets the mass observable object.
+ * 
+ */
+void 
+nc_data_cluster_ncount_set_mass (NcDataClusterNCount *ncount, NcClusterMass *m)
+{
+  if (ncount->lnM_obs != NULL)
+    g_assert_cmpuint (ncm_matrix_ncols (ncount->lnM_obs), ==, nc_cluster_mass_obs_len (m));
+  if (ncount->lnM_obs_params != NULL)
+    g_assert_cmpuint (ncm_matrix_ncols (ncount->lnM_obs_params), ==, nc_cluster_mass_obs_params_len (m));
+  
+  if (ncount->m == NULL)
+    ncount->m = nc_cluster_mass_ref (m);
+  else
+  {
+    nc_cluster_mass_clear (&ncount->m);
+    ncount->m = nc_cluster_mass_ref (m);
+  }
+}
+
+/**
+ * nc_data_cluster_ncount_set_redshift:
+ * @ncount: a #NcDataClusterNCount.
+ * @z: the #NcClusterRedshift object.
+ *
+ * Sets the redshift observable object.
+ * 
+ */
+void 
+nc_data_cluster_ncount_set_redshift (NcDataClusterNCount *ncount, NcClusterRedshift *z)
+{
+  if (ncount->lnM_obs != NULL)
+    g_assert_cmpuint (ncm_matrix_ncols (ncount->z_obs), ==, nc_cluster_redshift_obs_len (z));
+  if (ncount->lnM_obs_params != NULL)
+    g_assert_cmpuint (ncm_matrix_ncols (ncount->z_obs_params), ==, nc_cluster_redshift_obs_params_len (z));
+
+  if (ncount->z == NULL)
+    ncount->z = nc_cluster_redshift_ref (z);
+  else
+  {
+    nc_cluster_redshift_clear (&ncount->z);
+    ncount->z = nc_cluster_redshift_ref (z);
+  }
+}
+
+/**
+ * nc_data_cluster_ncount_set_lnM_true:
+ * @ncount: a #NcDataClusterNCount.
+ * @v: the value of the masses.
+ *
+ * Sets the vector representing the clusters true masses.
+ * 
+ */
+void 
+nc_data_cluster_ncount_set_lnM_true (NcDataClusterNCount *ncount, const NcmVector *v)
+{
+  if (ncount->np > 0)
+  {
+    if (ncm_vector_len (v) != ncount->np)
+      g_error ("nc_data_cluster_ncount_set_lnM_true: incompatible vector, the data has %u clusters and the vector length is %u.",
+               ncount->np, ncm_vector_len (v));
+    if (ncount->lnM_true != NULL)
+      ncm_vector_memcpy (ncount->lnM_true, v);
+    else
+      ncount->lnM_true = ncm_vector_dup (v);
+  }
+  else
+  {
+    ncount->np = ncm_vector_len (v);
+    ncount->lnM_true = ncm_vector_dup (v);
+  }
+}
+
+/**
+ * nc_data_cluster_ncount_set_z_true:
+ * @ncount: a #NcDataClusterNCount.
+ * @v: the value of the redshifts.
+ *
+ * Sets the vector representing the clusters true redshifts.
+ * 
+ */
+void 
+nc_data_cluster_ncount_set_z_true (NcDataClusterNCount *ncount, const NcmVector *v)
+{
+  if (ncount->np > 0)
+  {
+    if (ncm_vector_len (v) != ncount->np)
+      g_error ("nc_data_cluster_ncount_set_z_true: incompatible vector, the data has %u clusters and the vector length is %u.",
+               ncount->np, ncm_vector_len (v));
+    if (ncount->z_true != NULL)
+      ncm_vector_memcpy (ncount->z_true, v);
+    else
+      ncount->z_true = ncm_vector_dup (v);
+  }
+  else
+  {
+    ncount->np = ncm_vector_len (v);
+    ncount->z_true = ncm_vector_dup (v);
+  }
+}
+
+/**
+ * nc_data_cluster_ncount_set_lnM_obs:
+ * @ncount: a #NcDataClusterNCount.
+ * @m: the value of the mass observables.
+ *
+ * Sets the matrix representing the clusters mass observables.
+ * 
+ */
+void 
+nc_data_cluster_ncount_set_lnM_obs (NcDataClusterNCount *ncount, const NcmMatrix *m)
+{
+  if (ncount->np > 0)
+  {
+    if (ncm_matrix_nrows (m) != ncount->np)
+      g_error ("nc_data_cluster_ncount_set_lnM_obs: incompatible matrix, the data has %u clusters and the matrix has %u rows.",
+               ncount->np, ncm_matrix_nrows (m));
+    if (ncount->lnM_obs != NULL)
+    {
+      ncm_matrix_memcpy (ncount->lnM_obs, m);
+      return;
+    }
+  }
+  else
+    ncount->np = ncm_matrix_nrows (m);
+
+  if (ncount->m != NULL && nc_cluster_mass_obs_len (ncount->m) != ncm_matrix_ncols (m))
+    g_error ("nc_data_cluster_ncount_set_lnM_obs: incompatible matrix, NcmClusterMass object has %u points per observation and the matrix has %u cols.",
+             nc_cluster_mass_obs_len (ncount->m), ncm_matrix_ncols (m));
+  ncount->lnM_obs = ncm_matrix_dup (m);
+}
+
+/**
+ * nc_data_cluster_ncount_set_lnM_obs_params:
+ * @ncount: a #NcDataClusterNCount.
+ * @m: the mass observables parameters.
+ *
+ * Sets the matrix representing the clusters mass observables parameters.
+ * 
+ */
+void 
+nc_data_cluster_ncount_set_lnM_obs_params (NcDataClusterNCount *ncount, const NcmMatrix *m)
+{
+  if (ncount->np > 0)
+  {
+    if (ncm_matrix_nrows (m) != ncount->np)
+      g_error ("nc_data_cluster_ncount_set_lnM_obs_params: incompatible matrix, the data has %u clusters and the matrix has %u rows.",
+               ncount->np, ncm_matrix_nrows (m));
+    if (ncount->lnM_obs_params != NULL)
+    {
+      ncm_matrix_memcpy (ncount->lnM_obs_params, m);
+      return;
+    }
+  }
+  else
+    ncount->np = ncm_matrix_nrows (m);
+
+  if (ncount->m != NULL && nc_cluster_mass_obs_params_len (ncount->m) != ncm_matrix_ncols (m))
+    g_error ("nc_data_cluster_ncount_set_lnM_obs_params: incompatible matrix, NcmClusterMass object has %u parameters per observation and the matrix has %u cols.",
+             nc_cluster_mass_obs_params_len (ncount->m), ncm_matrix_ncols (m));
+  ncount->lnM_obs_params = ncm_matrix_dup (m);
+}
+
+/**
+ * nc_data_cluster_ncount_set_z_obs:
+ * @ncount: a #NcDataClusterNCount.
+ * @m: the value of the redshift observables.
+ *
+ * Sets the matrix representing the clusters redshift observables.
+ * 
+ */
+void 
+nc_data_cluster_ncount_set_z_obs (NcDataClusterNCount *ncount, const NcmMatrix *m)
+{
+  if (ncount->np > 0)
+  {
+    if (ncm_matrix_nrows (m) != ncount->np)
+      g_error ("nc_data_cluster_ncount_set_z_obs: incompatible matrix, the data has %u clusters and the matrix has %u rows.",
+               ncount->np, ncm_matrix_nrows (m));
+    if (ncount->z_obs != NULL)
+    {
+      ncm_matrix_memcpy (ncount->z_obs, m);
+      return;
+    }
+  }
+  else
+    ncount->np = ncm_matrix_nrows (m);
+
+  if (ncount->m != NULL && nc_cluster_redshift_obs_len (ncount->z) != ncm_matrix_ncols (m))
+    g_error ("nc_data_cluster_ncount_set_z_obs: incompatible matrix, NcmClusterRedshift object has %u points per observation and the matrix has %u cols.",
+             nc_cluster_redshift_obs_len (ncount->z), ncm_matrix_ncols (m));
+  ncount->z_obs = ncm_matrix_dup (m);
+}
+
+/**
+ * nc_data_cluster_ncount_set_z_obs_params:
+ * @ncount: a #NcDataClusterNCount.
+ * @m: the redshift observables parameters.
+ *
+ * Sets the matrix representing the clusters redshift observables parameters.
+ * 
+ */
+void 
+nc_data_cluster_ncount_set_z_obs_params (NcDataClusterNCount *ncount, const NcmMatrix *m)
+{
+  if (ncount->np > 0)
+  {
+    if (ncm_matrix_nrows (m) != ncount->np)
+      g_error ("nc_data_cluster_ncount_set_z_obs_params: incompatible matrix, the data has %u clusters and the matrix has %u rows.",
+               ncount->np, ncm_matrix_nrows (m));
+    if (ncount->z_obs_params != NULL)
+    {
+      ncm_matrix_memcpy (ncount->z_obs_params, m);
+      return;
+    }
+  }
+  else
+    ncount->np = ncm_matrix_nrows (m);
+
+  if (ncount->m != NULL && nc_cluster_redshift_obs_params_len (ncount->z) != ncm_matrix_ncols (m))
+    g_error ("nc_data_cluster_ncount_set_lnM_obs: incompatible matrix, NcmClusterRedshift object has %u parameters per observation and the matrix has %u cols.",
+             nc_cluster_redshift_obs_params_len (ncount->z), ncm_matrix_ncols (m));
+  ncount->z_obs_params = ncm_matrix_dup (m);
+}
+
+/**
  * nc_data_cluster_ncount_init_from_fits_file:
  * @data: a #NcmData
  * @filename: name of the file
@@ -317,6 +724,8 @@ nc_data_cluster_ncount_free (NcDataClusterNCount *ncount)
 void
 nc_data_cluster_ncount_init_from_fits_file (NcmData *data, gchar *filename)
 {
+  NCM_UNUSED (data);
+  NCM_UNUSED (filename);
   g_assert_not_reached ();
 }
 
@@ -326,6 +735,10 @@ _nc_data_cluster_ncount_binned_f (NcmMSet *mset, gpointer obj, const gdouble *x,
   //NcHICosmo *cosmo = NC_HICOSMO (ncm_mset_peek (mset, NC_HICOSMO_ID));
   //NcClusterAbundance *cad = NC_CLUSTER_ABUNDANCE (obj);
   //f[0] = nc_cluster_abundance_N_val (cad, model, cad->lnMi, cad->lnMf, cad->zi, x[0]);
+  NCM_UNUSED (mset);
+  NCM_UNUSED (obj);
+  NCM_UNUSED (x);
+  NCM_UNUSED (f);
   g_assert_not_reached ();
   return;
 }
@@ -356,6 +769,7 @@ nc_data_cluster_ncount_binned_create_func (NcClusterAbundance *cad)
 NcmData *
 nc_data_cluster_ncount_binned_lnM_z_new (NcClusterAbundance *cad)
 {
+  NCM_UNUSED (cad);
   g_assert_not_reached ();
   return NULL;
 }
@@ -421,7 +835,7 @@ _nc_data_cluster_ncount_resample (NcmData *data, NcmMSet *mset)
   GArray *lnM_obs_array = NULL;
   GArray *lnM_obs_params_array = NULL;
   guint total_np;
-  gint i;
+  guint i;
 
   gdouble *zi_obs = g_new (gdouble, z_obs_len);
   gdouble *zi_obs_params = z_obs_params_len > 0 ? g_new (gdouble, z_obs_params_len) : NULL;
@@ -499,19 +913,16 @@ _nc_data_cluster_ncount_resample (NcmData *data, NcmMSet *mset)
     g_array_unref (lnM_obs_params_array);
   }
 
-  ncount->np = NCM_MATRIX_NROWS (ncount->z_obs);
+  ncount->np = ncm_matrix_nrows (ncount->z_obs);
 
-  printf ("Generated %ld, Expected %10.5g\n", ncount->np, nc_cluster_abundance_n (cad, cosmo));
-  
-  if (data->desc != NULL)
-    g_free (data->desc);
+  /* printf ("Generated %u, Expected %10.5g\n", ncount->np, nc_cluster_abundance_n (cad, cosmo)); */
 
-  data->desc = g_strdup_printf ("Cluster NCount resample unbinned. Generated %ld from mean %10.5g. Resampled in range [%8.4f, %8.4f] [%1.8e, %1.8e] and area %8.4f degrees square", 
-                                ncount->np, nc_cluster_abundance_n (cad, cosmo), 
-                                cad->zi, cad->zf, 
-                                exp (cad->lnMi), exp (cad->lnMf), 
-                                ncount->area_survey / gsl_pow_2 (M_PI / 180.0));
-
+  ncm_data_take_desc (data, 
+                      g_strdup_printf ("Cluster NCount resample unbinned. Generated %u from mean %10.5g. Resampled in range [%8.4f, %8.4f] [%1.8e, %1.8e] and area %8.4f degrees square", 
+                                       ncount->np, nc_cluster_abundance_n (cad, cosmo), 
+                                       cad->zi, cad->zf, 
+                                       exp (cad->lnMi), exp (cad->lnMf), 
+                                       ncount->area_survey / gsl_pow_2 (M_PI / 180.0)));
   ncm_rng_unlock (rng);
   ncm_rng_free (rng);
   g_free (zi_obs);
@@ -745,7 +1156,7 @@ nc_data_cluster_ncount_init_from_sampling (NcmData *data, NcmMSet *mset, NcClust
 
   _nc_data_cluster_ncount_model_init (ncount);
 
-  ncm_data_set_init (data);
+  ncm_data_set_init (data, TRUE);
 
   ncm_data_resample (data, mset);
 }
@@ -765,7 +1176,7 @@ nc_data_cluster_ncount_bin_data (NcmData *data, gsl_vector *nodes)
   NcDataClusterNCount *ncount = NC_DATA_CLUSTER_NCOUNT (data);
   NcmData *data_cpoisson;
   gsl_histogram *hist;
-  gint i;
+  guint i;
 
   g_assert (nodes->size > 1);
   g_assert (nodes->stride == 1);
@@ -806,7 +1217,7 @@ nc_data_cluster_ncount_hist_lnM_z (NcmData *data, gsl_vector *lnM_nodes, gsl_vec
 {
   NcDataClusterNCount *ncount = NC_DATA_CLUSTER_NCOUNT (data);
   gsl_histogram2d *hist;
-  gint i;
+  guint i;
 
   g_assert (data->init);
   g_assert (lnM_nodes->size > 1);
@@ -1272,7 +1683,7 @@ nc_data_cluster_ncount_catalog_load (NcmData *data, gchar *filename)
 
   _nc_data_cluster_ncount_model_init (ncount);
 
-  ncm_data_set_init (data);
+  ncm_data_set_init (data, TRUE);
   
   return;
 }

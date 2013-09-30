@@ -51,7 +51,6 @@ struct _NcDataBaoDV
   NcmDataGaussDiag parent_instance;
   NcDistance *dist;
   NcmVector *x;
-  NcDataBaoId id;
 };
 
 struct _NcDataBaoDVClass
@@ -64,11 +63,7 @@ GType nc_data_bao_dv_get_type (void) G_GNUC_CONST;
 
 NcmData *nc_data_bao_dv_new (NcDistance *dist, NcDataBaoId id);
 
-void nc_data_bao_dv_set_size (NcDataBaoDV *bao_dv, guint np);
-guint nc_data_bao_dv_get_size (NcDataBaoDV *bao_dv);
-
 void nc_data_bao_dv_set_sample (NcDataBaoDV *bao_dv, NcDataBaoId id);
-NcDataBaoId nc_data_bao_dv_get_sample (NcDataBaoDV *bao_dv);
 
 G_END_DECLS
 

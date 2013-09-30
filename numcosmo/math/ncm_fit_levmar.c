@@ -231,6 +231,8 @@ ncm_fit_levmar_der_run (NcmFit *fit, NcmFitRunMsgs mtype)
   gdouble opts[LM_OPTS_SZ];
   gint ret;
 
+  NCM_UNUSED (mtype);
+
   opts[0] = LM_INIT_MU; 
   opts[1] = 1.0e-15; 
   opts[2] = 1.0e-15;
@@ -240,12 +242,12 @@ ncm_fit_levmar_der_run (NcmFit *fit, NcmFitRunMsgs mtype)
 
   g_assert (ncm_vector_gsl (fit->fstate->ls_f)->stride == 1 &&
             ncm_vector_gsl (fit->fstate->fparams)->stride == 1 &&
-            NCM_MATRIX_GSL (fit->fstate->covar)->tda == NCM_MATRIX_NCOLS (fit->fstate->covar));
+            ncm_matrix_gsl (fit->fstate->covar)->tda == ncm_matrix_ncols (fit->fstate->covar));
 
   ret = dlevmar_der (
                      &nc_residual_levmar_f, &nc_residual_levmar_J,
                      ncm_vector_gsl (fit->fstate->fparams)->data, NULL, fit->fstate->fparam_len, fit->fstate->data_len,
-                     fit->maxiter, opts, info, fit_levmar->der, NCM_MATRIX_GSL (fit->fstate->covar)->data, fit
+                     fit->maxiter, opts, info, fit_levmar->der, ncm_matrix_gsl (fit->fstate->covar)->data, fit
                      );
 
   if (ret < 0)
@@ -269,6 +271,8 @@ ncm_fit_levmar_dif_run (NcmFit *fit, NcmFitRunMsgs mtype)
   gdouble opts[LM_OPTS_SZ];
   gint ret;
 
+  NCM_UNUSED (mtype);
+
   opts[0] = LM_INIT_MU; 
   opts[1] = 1.0e-15; 
   opts[2] = 1.0e-15;
@@ -278,12 +282,12 @@ ncm_fit_levmar_dif_run (NcmFit *fit, NcmFitRunMsgs mtype)
 
   g_assert (ncm_vector_gsl (fit->fstate->ls_f)->stride == 1 &&
             ncm_vector_gsl (fit->fstate->fparams)->stride == 1 &&
-            NCM_MATRIX_GSL (fit->fstate->covar)->tda == NCM_MATRIX_NCOLS (fit->fstate->covar));
+            ncm_matrix_gsl (fit->fstate->covar)->tda == ncm_matrix_ncols (fit->fstate->covar));
 
   ret = dlevmar_dif (
                      &nc_residual_levmar_f,
                      ncm_vector_gsl (fit->fstate->fparams)->data, NULL, fit->fstate->fparam_len, fit->fstate->data_len,
-                     fit->maxiter, opts, info, fit_levmar->dif, NCM_MATRIX_GSL (fit->fstate->covar)->data, fit
+                     fit->maxiter, opts, info, fit_levmar->dif, ncm_matrix_gsl (fit->fstate->covar)->data, fit
                      );
 
   if (ret < 0)
@@ -304,6 +308,8 @@ nc_residual_levmar_f (gdouble *p, gdouble *hx, gint m, gint n, gpointer adata)
 {
   NcmFit *fit = NCM_FIT (adata);
   NcmVector *f = ncm_vector_new_data_static (hx, n, 1);
+
+  NCM_UNUSED (m);
   
   ncm_mset_fparams_set_array (fit->mset, p);
   if (!ncm_mset_params_valid (fit->mset))

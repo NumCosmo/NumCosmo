@@ -37,7 +37,7 @@
 #include "build_cfg.h"
 
 #include "math/ncm_mpsf_sbessel.h"
-#include "math/util.h"
+#include "math/ncm_util.h"
 #include "math/ncm_cfg.h"
 #include "math/binsplit.h"
 #include "math/memory_pool.h"
@@ -247,9 +247,12 @@ typedef struct __binsplit_spherical_bessel
 } _binsplit_spherical_bessel;
 
 static gpointer
-_besselj_bs_alloc (void)
+_besselj_bs_alloc (gpointer userdata)
 {
   _binsplit_spherical_bessel *bs_data = g_slice_new (_binsplit_spherical_bessel);
+
+  NCM_UNUSED (userdata);
+  
   mpq_init (bs_data->mq2_2);
   mpfr_init (bs_data->sin);
   mpfr_init (bs_data->cos);
@@ -276,7 +279,7 @@ _ncm_mpsf_sbessel_get_bs ()
 
   _NCM_MUTEX_LOCK (&create_lock);
   if (mp == NULL)
-    mp = ncm_memory_pool_new (_besselj_bs_alloc, _besselj_bs_free);
+    mp = ncm_memory_pool_new (_besselj_bs_alloc, NULL, _besselj_bs_free);
   _NCM_MUTEX_UNLOCK (&create_lock);
 
   return ncm_memory_pool_get (mp);

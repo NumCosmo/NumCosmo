@@ -36,6 +36,7 @@
 #include <numcosmo/math/ncm_vector.h>
 #include <numcosmo/math/ncm_matrix.h>
 #include <numcosmo/math/ncm_serialize.h>
+#include <numcosmo/math/ncm_obj_array.h>
 #include <numcosmo/math/ncm_rng.h>
 #include <numcosmo/math/ncm_stats_vec.h>
 #include <numcosmo/math/ncm_bootstrap.h>
@@ -78,9 +79,8 @@
 #include <numcosmo/math/ncm_priors.h>
 #include <numcosmo/math/function_cache.h>
 #include <numcosmo/math/ncm_cfg.h>
+#include <numcosmo/math/ncm_util.h>
 #include <numcosmo/math/ncm_timer.h>
-/* Utilities */
-#include <numcosmo/math/util.h>
 
 /* Likelihood object */
 #include <numcosmo/math/ncm_fit.h>

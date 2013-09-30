@@ -39,6 +39,8 @@
 #include "build_cfg.h"
 
 #include "math/ncm_spline_func.h"
+#include "math/ncm_cfg.h"
+#include "math/ncm_util.h"
 
 #include <gsl/gsl_poly.h>
 
@@ -156,6 +158,8 @@ ncm_spline_new_function_4 (NcmSpline *s, gsl_function *F, gdouble xi, gdouble xf
 	GArray *y_array;
 	gsize n_elem;
 
+  NCM_UNUSED (max_nodes);
+  
 	for (i = 0; i < 4; i++)
 	{
 		poly3_x[i] = xi + i * step;
@@ -210,6 +214,8 @@ ncm_spline_new_function_2x2 (NcmSpline *s, gsl_function *F, gdouble xi, gdouble 
 	GArray *y_array;
 	gsize n_elem;
 
+  NCM_UNUSED (max_nodes);
+  
 	for (i = 0; i < 4; i++)
 	{
 		poly3_x[i] = xi + i * step;
@@ -377,6 +383,8 @@ ncm_spline_new_function_spline_lnknot (NcmSpline *s, gsl_function *F, gdouble xi
   const gdouble lnxi = log (xi);
   const gdouble lnxf = log (xf);
 
+  NCM_UNUSED (max_nodes);
+  
   g_assert (xi > 0.0 && xf > xi);
 
   g_array_set_size (xt_array, n);

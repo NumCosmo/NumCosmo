@@ -50,7 +50,6 @@ struct _NcDataCMBDistPriors
   /*< private >*/
   NcmDataGauss parent_instance;
   NcDistance *dist;
-  NcDataCMBId id;
 };
 
 struct _NcDataCMBDistPriorsClass
@@ -64,7 +63,6 @@ GType nc_data_cmb_dist_priors_get_type (void) G_GNUC_CONST;
 NcmData *nc_data_cmb_dist_priors_new (NcDistance *dist, NcDataCMBId id);
 
 void nc_data_cmb_dist_priors_set_sample (NcDataCMBDistPriors *cmb_dist_priors, NcDataCMBId id);
-NcDataCMBId nc_data_cmb_dist_priors_get_sample (NcDataCMBDistPriors *cmb_dist_priors);
 
 G_END_DECLS
 

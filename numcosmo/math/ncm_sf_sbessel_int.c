@@ -40,6 +40,7 @@
 #include "math/ncm_spline_gsl.h"
 #include "math/dividedifference.h"
 #include "math/ncm_cfg.h"
+#include "math/ncm_util.h"
 
 #include <gsl/gsl_math.h>
 #include <mpfr.h>
@@ -136,14 +137,14 @@ ncm_sf_sbessel_jl_xj_integral_recur_cached_new (glong l, NcmGridSection *x_sec)
 void
 ncm_sf_sbessel_jl_xj_integral_recur_set (NcmSFSphericalBesselIntegRecur *xnjlrec, glong l)
 {
-  gint i;
+  guint i;
   NcmGrid *x_grid = xnjlrec->jlrec->x_grid;
 
   ncm_sf_sbessel_recur_set (xnjlrec->jlrec, l);
 
   for (i = 0; i < 4; i++)
   {
-    gint j;
+    guint j;
     for (j = 0; j < x_grid->nnodes; j++)
     {
       gdouble x = ncm_grid_get_node_d (x_grid, j);
@@ -174,7 +175,7 @@ ncm_sf_sbessel_jl_xj_integral_recur_free (NcmSFSphericalBesselIntegRecur *xnjlre
 glong
 ncm_sf_sbessel_jl_xj_integral_recur_next (NcmSFSphericalBesselIntegRecur *xnjlrec)
 {
-  gint i, j;
+  guint i, j;
   NcmSFSBesselRecur *jlrec = xnjlrec->jlrec;
   NcmGrid *x_grid = jlrec->x_grid;
   const glong l = jlrec->l;
@@ -218,7 +219,7 @@ ncm_sf_sbessel_jl_xj_integral_recur_next (NcmSFSphericalBesselIntegRecur *xnjlre
 glong
 ncm_sf_sbessel_jl_xj_integral_recur_previous (NcmSFSphericalBesselIntegRecur *xnjlrec)
 {
-  gint i, j;
+  guint i, j;
   NcmSFSBesselRecur *jlrec = xnjlrec->jlrec;
   NcmGrid *x_grid = jlrec->x_grid;
   const glong l = jlrec->l;
@@ -291,7 +292,7 @@ ncm_sf_sbessel_jl_xj_integral_recur_goto (NcmSFSphericalBesselIntegRecur *xnjlre
 void
 ncm_sf_sbessel_jl_xj_integral_recur_write (NcmSFSphericalBesselIntegRecur *xnjlrec, FILE *f)
 {
-  gint i, j;
+  guint i, j;
   NcmGrid *x_grid = xnjlrec->jlrec->x_grid;
 
   ncm_sf_sbessel_recur_write (xnjlrec->jlrec, f);
@@ -332,7 +333,7 @@ ncm_sf_sbessel_jl_xj_integral_recur_save (NcmSFSphericalBesselIntegRecur *xnjlre
 NcmSFSphericalBesselIntegRecur *
 ncm_sf_sbessel_jl_xj_integral_recur_read (FILE *f)
 {
-  gint i, j;
+  guint i, j;
   NcmSFSBesselRecur *jlrec = ncm_sf_sbessel_recur_read (f);
   NcmSFSphericalBesselIntegRecur *xnjlrec = ncm_sf_sbessel_jl_xj_integral_recur_new (jlrec, NULL);
   NcmGrid *x_grid = xnjlrec->jlrec->x_grid;
@@ -510,7 +511,7 @@ ncm_sf_sbessel_jl_xj_integral_recur_taylor_coeff (NcmSFSphericalBesselIntegRecur
 void
 ncm_sf_sbessel_jl_xj_integrate_spline_reset (NcmSFSphericalBesselIntSpline *int_jlspline)
 {
-  gint i;
+  guint i;
   gulong n_dd = int_jlspline->x_grid->nnodes - 1;
 	NcmSpline *s = ncm_spline_gsl_new (gsl_interp_cspline);
 

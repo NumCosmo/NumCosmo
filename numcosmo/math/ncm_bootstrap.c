@@ -23,7 +23,6 @@
  * with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-
 /**
  * SECTION:ncm_bootstrap
  * @title: Bootstrap object
@@ -48,6 +47,8 @@ enum
   PROP_0,
   PROP_FSIZE,
   PROP_BSIZE,
+  PROP_INIT,
+  PROP_REAL,
   PROP_SIZE,
 };
 
@@ -60,8 +61,8 @@ ncm_bootstrap_init (NcmBootstrap *bstrap)
   bstrap->bsize            = 0;
   bstrap->bootstrap_index  = g_array_new (FALSE, FALSE, sizeof (guint));
   bstrap->increasing_index = g_array_new (FALSE, FALSE, sizeof (guint));
+  bstrap->init             = FALSE;
 }
-
 
 static void
 _ncm_bootstrap_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
@@ -77,6 +78,26 @@ _ncm_bootstrap_set_property (GObject *object, guint prop_id, const GValue *value
     case PROP_BSIZE:
       ncm_bootstrap_set_bsize (bstrap, g_value_get_uint (value));
       break;
+    case PROP_REAL:
+    {
+      GVariant *var = g_value_get_variant (value);
+      guint bsize;
+      guint i;
+      
+      g_assert (g_variant_is_of_type (var, G_VARIANT_TYPE ("au")));
+      bsize = g_variant_n_children (var);
+      g_assert_cmpuint (bsize, ==, bstrap->bsize);
+
+      for (i = 0; i < bsize; i++)
+      {
+        guint j = 0;
+        g_variant_get_child (var, i, "u", j);
+        g_array_index (bstrap->bootstrap_index, guint, i) = j;
+      }
+
+      bstrap->init = TRUE;
+      break;
+    }
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
       break;
@@ -97,6 +118,25 @@ _ncm_bootstrap_get_property (GObject *object, guint prop_id, GValue *value, GPar
     case PROP_BSIZE:
       g_value_set_uint (value, bstrap->bsize);
       break;
+    case PROP_INIT:
+      g_value_set_boolean (value, bstrap->init);
+      break;
+    case PROP_REAL:
+    {
+      GVariant *var;
+      if (bstrap->init)
+      {
+        gsize msize = sizeof (guint) * bstrap->bootstrap_index->len;
+        gpointer mem = g_memdup (bstrap->bootstrap_index->data, msize);
+        var = g_variant_new_from_data (G_VARIANT_TYPE ("au"),
+                                       mem, msize, TRUE, &g_free, mem);
+      }
+      else
+        var = g_variant_new ("au", NULL);
+      
+      g_value_take_variant (value, var);
+      break;
+    }
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
       break;
@@ -148,9 +188,24 @@ ncm_bootstrap_class_init (NcmBootstrapClass *klass)
                                                       NULL,
                                                       "Bootstrap size",
                                                       0, G_MAXUINT, 0,
-                                                      G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-  
+                                                      G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
+  g_object_class_install_property (object_class,
+                                   PROP_INIT,
+                                   g_param_spec_boolean ("init",
+                                                         NULL,
+                                                         "Bootstrap initialization status",
+                                                         FALSE,
+                                                         G_PARAM_READABLE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  g_object_class_install_property (object_class,
+                                   PROP_REAL,
+                                   g_param_spec_variant ("realization",
+                                                         NULL,
+                                                         "Bootstrap current realization",
+                                                         G_VARIANT_TYPE ("au"), NULL,
+                                                         G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 }
+
 /**
  * ncm_bootstrap_new:
  * 
@@ -179,6 +234,7 @@ ncm_bootstrap_sized_new (guint fsize)
 {
   NcmBootstrap *bstrap = g_object_new (NCM_TYPE_BOOTSTRAP, 
                                        "full-size", fsize, 
+                                       "bootstrap-size", fsize,
                                        NULL);
   return bstrap;
 }
@@ -254,11 +310,9 @@ ncm_bootstrap_clear (NcmBootstrap **bstrap)
 void 
 ncm_bootstrap_set_fsize (NcmBootstrap *bstrap, guint fsize)
 {
-  g_array_set_size (bstrap->bootstrap_index, fsize);
   g_array_set_size (bstrap->increasing_index, fsize);
 
   bstrap->fsize = fsize;
-  bstrap->bsize = fsize;
   
   if (fsize > 0)
   {
@@ -320,6 +374,16 @@ ncm_bootstrap_get_bsize (NcmBootstrap *bstrap)
  * 
  */
 /**
+ * ncm_bootstrap_remix:
+ * @bstrap: a #NcmBootstrap.
+ * 
+ * Sample without replacement #NcmBootstrap:bootstrap-size from the 
+ * #NcmBootstrap:full-size indexes. Note that in this case
+ * #NcmBootstrap:bootstrap-size must be equal or smaller than 
+ * #NcmBootstrap:full-size.
+ * 
+ */
+/**
  * ncm_bootstrap_get:
  * @bstrap: a #NcmBootstrap.
  * @i: index in [0, #NcmBootstrap:bootstrap-size - 1].
@@ -327,4 +391,12 @@ ncm_bootstrap_get_bsize (NcmBootstrap *bstrap)
  * Gets the index associated with the @i-th resampled index.
  * 
  * Returns: the @i-th resampled index.
+ */
+/**
+ * ncm_bootstrap_is_init:
+ * @bstrap: a #NcmBootstrap.
+ * 
+ * Checks if the bootstrap object was initialized (remix or resample).
+ * 
+ * Returns: whether @bstrap is initialized.
  */

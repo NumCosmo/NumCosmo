@@ -39,6 +39,7 @@
 #include "lss/nc_halo_bias_type.h"
 #include "math/ncm_serialize.h"
 #include "math/ncm_cfg.h"
+#include "math/ncm_util.h"
 
 G_DEFINE_ABSTRACT_TYPE (NcHaloBiasType, nc_halo_bias_type, G_TYPE_OBJECT);
 
@@ -53,7 +54,7 @@ G_DEFINE_ABSTRACT_TYPE (NcHaloBiasType, nc_halo_bias_type, G_TYPE_OBJECT);
 NcHaloBiasType *
 nc_halo_bias_type_new_from_name (gchar *bias_name)
 {
-  GObject *obj = ncm_serialize_global_create_from_string (bias_name);
+  GObject *obj = ncm_serialize_global_from_string (bias_name);
   GType bias_type = G_OBJECT_TYPE (obj);
 
   if (!g_type_is_a (bias_type, NC_TYPE_HALO_BIAS_TYPE))
@@ -108,14 +109,14 @@ nc_halo_bias_type_clear (NcHaloBiasType **biasf)
 static void
 nc_halo_bias_type_init (NcHaloBiasType *nc_halo_bias_type)
 {
-  /* TODO: Add initialization code here */
+  NCM_UNUSED (nc_halo_bias_type);
 }
 
 static void
 _nc_halo_bias_type_finalize (GObject *object)
 {
-  /* TODO: Add deinitalization code here */
-
+  
+  /* Chain up : end */
   G_OBJECT_CLASS (nc_halo_bias_type_parent_class)->finalize (object);
 }
 

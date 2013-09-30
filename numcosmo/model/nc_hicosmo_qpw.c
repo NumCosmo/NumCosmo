@@ -129,6 +129,7 @@ AsymptoticCDM_prior_f (NcmMSet *mset, gpointer obj, const gdouble *x, gdouble *f
 {
   NcmModel *model = ncm_mset_peek (mset, nc_hicosmo_id ());
   NcHICosmoQPWAsymCDMPrior *acp = (NcHICosmoQPWAsymCDMPrior *) obj;
+  NCM_UNUSED (x);
   f[0] = (nc_hicosmo_q (NC_HICOSMO (model), acp->z) - acp->q) / acp->sigma;
 }
 
@@ -137,6 +138,7 @@ continuity_prior_f (NcmMSet *mset, gpointer obj, const gdouble *x, gdouble *f)
 {
   NcmModel *model = ncm_mset_peek (mset, nc_hicosmo_id ());
   NcHICosmoQPWContPrior *acp = (NcHICosmoQPWContPrior *) obj;
+  NCM_UNUSED (x);
   f[0] = ((QPW_QP (acp->knot) - QPW_QP (acp->knot + 1)) / acp->sigma);
 }
 
@@ -157,7 +159,7 @@ _nc_hicosmo_qpw_continuity_prior_free (gpointer obj)
  *
  */
 void
-nc_hicosmo_qpw_add_continuity_prior (NcHICosmoQPW *qpw, NcmLikelihood *lh, gint knot, gdouble sigma)
+nc_hicosmo_qpw_add_continuity_prior (NcHICosmoQPW *qpw, NcmLikelihood *lh, guint knot, gdouble sigma)
 {
   NcHICosmoQPWContPrior *cp = g_slice_new (NcHICosmoQPWContPrior);
   NcmMSetFunc *func = ncm_mset_func_new (continuity_prior_f, 0, 1, cp, _nc_hicosmo_qpw_continuity_prior_free);
@@ -209,6 +211,7 @@ nc_hicosmo_qpw_add_asymptotic_cdm_prior (NcHICosmoQPW *qpw, NcmLikelihood *lh, g
 {
   NcHICosmoQPWAsymCDMPrior *cp = g_slice_new (NcHICosmoQPWAsymCDMPrior);
   NcmMSetFunc *func = ncm_mset_func_new (AsymptoticCDM_prior_f, 0, 1, cp, _nc_hicosmo_qpw_asymptotic_cdm_free);
+  NCM_UNUSED (qpw);
   cp->z = z;
   cp->q = q;
   cp->sigma = sigma;
@@ -289,7 +292,7 @@ nc_hicosmo_qpw_change_params (NcHICosmoQPW *qpw, gdouble z)
 
   if (FALSE)
   {
-    gint i,j;
+    guint i,j;
     printf ("wpiece: %d, npieces: %d\n", wpiece, qpw->npieces);
     for (i = 0; i < ncm_model_len (NCM_MODEL (qpw)); i++)
     {
@@ -328,7 +331,7 @@ nc_hicosmo_qpw_change_params_qpp (NcHICosmoQPW *qpw)
   NcmMatrix *T = ncm_matrix_new (ncm_model_len (NCM_MODEL (qpw)), ncm_model_len (NCM_MODEL (qpw)));
   NcmVector *v = ncm_vector_new (ncm_model_len (NCM_MODEL (qpw)));
   NcmReparamLinear *relin;
-  gint i;
+  guint i;
   ncm_matrix_set_zero (T);
   ncm_vector_set_zero (v);
 
@@ -342,7 +345,7 @@ nc_hicosmo_qpw_change_params_qpp (NcHICosmoQPW *qpw)
 
   if (FALSE)
   {
-    gint j;
+    guint j;
     printf ("npieces: %d\n", qpw->npieces);
     for (i = 0; i < ncm_model_len (NCM_MODEL (qpw)); i++)
     {

@@ -27,7 +27,12 @@
  * @title: Linear Reparametrization
  * @short_description: Linear reparametrization object
  *
- * FIXME
+ * Object implementing a linear reparametrization of the model's parameters.
+ * It uses as imput a matrix $M$ (#NcmReparamLinear:matrix) and a vector $v$ 
+ * (#NcmReparamLinear:vector), such that the new parameters
+ * $\vec{w}$ are given by $$\vec{w} = M\cdot\vec{y} + \vec{v},$$ where $\vec{y}$
+ * represents the original model's parameters.
+ * 
  */
 
 #ifdef HAVE_CONFIG_H
@@ -42,7 +47,18 @@ G_DEFINE_TYPE (NcmReparamLinear, ncm_reparam_linear, NCM_TYPE_REPARAM);
 NcmReparamLinear *
 ncm_reparam_linear_new (guint size, NcmMatrix *T, NcmVector *v)
 {
-  return g_object_new (NCM_TYPE_REPARAM_LINEAR, "length", size, "matrix", T, "vector", v, NULL);
+  GVariant *vvar = ncm_vector_peek_variant (v);
+  GVariant *Tvar = ncm_matrix_peek_variant (T);
+  
+  NcmReparamLinear *relin = g_object_new (NCM_TYPE_REPARAM_LINEAR, 
+                                          "length", size, 
+                                          "matrix", Tvar, 
+                                          "vector", vvar, 
+                                          NULL);
+  g_variant_unref (vvar);
+  g_variant_unref (Tvar);
+
+  return relin;
 }
 
 enum
@@ -56,8 +72,9 @@ static gboolean
 linear_old2new (NcmReparam *reparam, NcmModel *model, NcmVector *src, NcmVector *dest)
 {
   NcmReparamLinear *relin = NCM_REPARAM_LINEAR (reparam);
+  NCM_UNUSED (model);
   ncm_vector_memcpy (dest, relin->v);
-  gsl_blas_dgemv (CblasNoTrans, 1.0, NCM_MATRIX_GSL (relin->T), ncm_vector_gsl(src), 1.0, ncm_vector_gsl (dest));
+  gsl_blas_dgemv (CblasNoTrans, 1.0, ncm_matrix_gsl (relin->T), ncm_vector_gsl(src), 1.0, ncm_vector_gsl (dest));
   return TRUE;
 }
 
@@ -65,7 +82,8 @@ static gboolean
 linear_new2old (NcmReparam *reparam, NcmModel *model, NcmVector *src, NcmVector *dest)
 {
   NcmReparamLinear *relin = NCM_REPARAM_LINEAR (reparam);
-  gsl_linalg_LU_solve (NCM_MATRIX_GSL (relin->T_LU), relin->p, ncm_vector_gsl(src), ncm_vector_gsl (dest));
+  NCM_UNUSED (model);
+  gsl_linalg_LU_solve (ncm_matrix_gsl (relin->T_LU), relin->p, ncm_vector_gsl(src), ncm_vector_gsl (dest));
   ncm_vector_sub (dest, relin->vp);
   return TRUE;
 }
@@ -73,6 +91,9 @@ linear_new2old (NcmReparam *reparam, NcmModel *model, NcmVector *src, NcmVector 
 static gboolean
 linear_jac (NcmReparam *reparam, NcmModel *model, NcmMatrix *jac)
 {
+  NCM_UNUSED (reparam);
+  NCM_UNUSED (model);
+  NCM_UNUSED (jac);
   g_assert_not_reached ();
   /*
    NcmReparamLinear *relin = NCM_REPARAM_LINEAR (reparam);
@@ -99,8 +120,8 @@ _ncm_reparam_linear_constructed (GObject *object)
     NcmReparamLinear *relin = NCM_REPARAM_LINEAR (object);
     NcmReparam *reparam = NCM_REPARAM (relin);
 
-    g_assert ((NCM_MATRIX_NROWS (relin->T) == NCM_MATRIX_NCOLS (relin->T)) &&
-              (NCM_MATRIX_NROWS(relin->T) == reparam->length) &&
+    g_assert ((ncm_matrix_nrows (relin->T) == ncm_matrix_ncols (relin->T)) &&
+              (ncm_matrix_nrows(relin->T) == reparam->length) &&
               (ncm_vector_len(relin->v) == reparam->length));
 
     relin->vp = ncm_vector_new (reparam->length);
@@ -108,8 +129,8 @@ _ncm_reparam_linear_constructed (GObject *object)
     relin->p = gsl_permutation_alloc (reparam->length);
 
     ncm_matrix_memcpy (relin->T_LU, relin->T);
-    gsl_linalg_LU_decomp (NCM_MATRIX_GSL (relin->T_LU), relin->p, &relin->signum);
-    gsl_linalg_LU_solve (NCM_MATRIX_GSL (relin->T_LU), relin->p, ncm_vector_gsl(relin->v), ncm_vector_gsl(relin->vp));
+    gsl_linalg_LU_decomp (ncm_matrix_gsl (relin->T_LU), relin->p, &relin->signum);
+    gsl_linalg_LU_solve (ncm_matrix_gsl (relin->T_LU), relin->p, ncm_vector_gsl(relin->v), ncm_vector_gsl(relin->vp));
   }
 }
 
@@ -123,10 +144,10 @@ _ncm_reparam_linear_get_property (GObject *object, guint prop_id, GValue *value,
   switch (prop_id)
   {
     case PROP_V:
-      g_value_set_object (value, relin->v);
+      g_value_take_variant (value, ncm_vector_get_variant (relin->v));
       break;
     case PROP_T:
-      g_value_set_object (value, relin->T);
+      g_value_take_variant (value, ncm_matrix_get_variant (relin->T));
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -144,10 +165,10 @@ _ncm_reparam_linear_set_property (GObject *object, guint prop_id, const GValue *
   switch (prop_id)
   {
     case PROP_V:
-      relin->v = g_value_dup_object (value);
+      relin->v = ncm_vector_new_variant (g_value_get_variant (value));
       break;
     case PROP_T:
-      relin->T = g_value_dup_object (value);
+      relin->T = ncm_matrix_new_variant (g_value_get_variant (value));
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -158,10 +179,10 @@ _ncm_reparam_linear_set_property (GObject *object, guint prop_id, const GValue *
 static void
 ncm_reparam_linear_init (NcmReparamLinear *relin)
 {
-  relin->T = NULL;
-  relin->v = NULL;
-  relin->T_LU = NULL;
-  relin->p = NULL;
+  relin->T      = NULL;
+  relin->v      = NULL;
+  relin->T_LU   = NULL;
+  relin->p      = NULL;
   relin->signum = 0;
 }
 
@@ -250,22 +271,33 @@ ncm_reparam_linear_class_init (NcmReparamLinearClass *klass)
   object_class->set_property = &_ncm_reparam_linear_set_property;
   object_class->get_property = &_ncm_reparam_linear_get_property;
 
+  /**
+   * NcmReparamLinear:vector:
+   *
+   * The vector $\vec{v}$.
+   * 
+   */
   g_object_class_install_property (object_class,
                                    PROP_V,
-                                   g_param_spec_object ("vector",
+                                   g_param_spec_variant ("vector",
                                                         NULL,
-                                                        "Vector of parameters shift",
-                                                        NCM_TYPE_VECTOR,
-                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+                                                        "Vector of parameters shift", 
+                                                         G_VARIANT_TYPE ("ad"), NULL,
+                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
+  /**
+   * NcmReparamLinear:matrix:
+   *
+   * The matrix $M$.
+   * 
+   */
   g_object_class_install_property (object_class,
                                    PROP_T,
-                                   g_param_spec_object ("matrix",
-                                                        NULL,
-                                                        "Matrix of parameters mixing",
-                                                        NCM_TYPE_MATRIX,
-                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-
+                                   g_param_spec_variant ("matrix",
+                                                         NULL,
+                                                         "Matrix of parameters mixing",
+                                                         G_VARIANT_TYPE ("aad"), NULL,
+                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
 
   object_class->dispose = ncm_reparam_linear_dispose;

@@ -63,7 +63,7 @@ GType ncm_likelihood_get_type (void) G_GNUC_CONST;
 
 NcmLikelihood *ncm_likelihood_new (NcmDataset *dset);
 NcmLikelihood *ncm_likelihood_ref (NcmLikelihood *lh);
-NcmLikelihood *ncm_likelihood_dup (NcmLikelihood *lh);
+NcmLikelihood *ncm_likelihood_dup (NcmLikelihood *lh, NcmSerialize *ser);
 NcmLikelihood *ncm_likelihood_copy (NcmLikelihood *lh);
 void ncm_likelihood_free (NcmLikelihood *lh);
 void ncm_likelihood_clear (NcmLikelihood **lh);

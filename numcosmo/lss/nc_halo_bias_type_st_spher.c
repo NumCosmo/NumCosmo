@@ -37,6 +37,8 @@
 #include "build_cfg.h"
 
 #include "lss/nc_halo_bias_type_st_spher.h"
+#include "math/ncm_cfg.h"
+#include "math/ncm_util.h"
 
 #include <math.h>
 
@@ -80,6 +82,7 @@ _nc_halo_bias_type_st_spher_eval (NcHaloBiasType *biasf, gdouble sigma, gdouble 
   gdouble x2 = x * x;
   gdouble b_ST_spher = 1.0  + ((a * x2 - 1.0) + (2.0 * p) / (1.0 + pow (a * x2, p))) / bias_st_spher->delta_c;
 
+  NCM_UNUSED (z);
 //  printf ("a = %.5g, p=%.5g, delta_c= %.5g\n", a, p, bias_st_spher->delta_c);
 
   return b_ST_spher;

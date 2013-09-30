@@ -31,6 +31,7 @@
 #include <numcosmo/build_cfg.h>
 #include <numcosmo/math/ncm_fit.h>
 #include <numcosmo/math/ncm_timer.h>
+#include <numcosmo/math/memory_pool.h>
 #include <gsl/gsl_histogram.h>
 
 G_BEGIN_DECLS
@@ -50,12 +51,18 @@ struct _NcmFitMC
   /*< private >*/
   GObject parent_instance;
   NcmFit *fit;
+  NcmMSet *fiduc;
   NcmStatsVec *fparam;
+  NcmFitRunMsgs mtype;
   NcmVector *m2lnL;
+  NcmVector *bf;
   NcmTimer *nt;
+  NcmSerialize *ser;
   gdouble m2lnL_min;
   gdouble m2lnL_max;
   guint n;
+  guint ni;
+  NcmMemoryPool *mp;
   gsl_histogram *h;
   gsl_histogram_pdf *h_pdf;
 };
@@ -73,6 +80,7 @@ void ncm_fit_mc_free (NcmFitMC *mc);
 void ncm_fit_mc_clear (NcmFitMC **mc);
 
 void ncm_fit_mc_run (NcmFitMC *mc, NcmMSet *fiduc, guint ni, guint nf, NcmFitRunMsgs mtype);
+void ncm_fit_mc_run_mt (NcmFitMC *mc, NcmMSet *fiduc, guint ni, guint nf, NcmFitRunMsgs mtype, guint nthreads);
 void ncm_fit_mc_print (NcmFitMC *mc);
 void ncm_fit_mc_mean_covar (NcmFitMC *mc);
 

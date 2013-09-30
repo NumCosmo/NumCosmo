@@ -51,6 +51,9 @@ _nc_hicosmo_prior_top_f (NcmMSet *mset, gpointer obj, const gdouble *x, gdouble 
   gdouble mean = tp->mean;
   gdouble sigma = tp->sigma;
   gdouble cd = nc_distance_comoving (tp->dist, model, z);
+
+  NCM_UNUSED (x);
+  
   if (!gsl_finite (cd))
     f[0] = GSL_POSINF;
   else if (k <= 0)

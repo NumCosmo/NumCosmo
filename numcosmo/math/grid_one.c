@@ -36,7 +36,7 @@
 #include "build_cfg.h"
 
 #include "math/grid_one.h"
-#include "math/util.h"
+#include "math/ncm_util.h"
 #include "math/ncm_cfg.h"
 
 /**
@@ -50,7 +50,7 @@
 NcmGrid *
 ncm_grid_new (gulong nnodes)
 {
-  glong i;
+  gulong i;
   NcmGrid *grid = g_slice_new (NcmGrid);
 
   grid->nodes = g_slice_alloc (nnodes * sizeof(mpq_t));
@@ -320,7 +320,7 @@ ncm_grid_get_double_array (NcmGrid *grid)
 {
   if (grid->data == NULL)
   {
-    gint i;
+    guint i;
     grid->data = g_slice_alloc (sizeof (gdouble) * grid->nnodes);
     for (i = 0; i < grid->nnodes; i++)
       grid->data[i] = mpq_get_d (grid->nodes[i]);

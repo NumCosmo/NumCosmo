@@ -117,6 +117,9 @@ static gsl_error_handler_t *gsl_err = NULL;
 static void
 _ncm_cfg_log_message (const gchar *log_domain, GLogLevelFlags log_level, const gchar *message, gpointer user_data)
 {
+  NCM_UNUSED (log_domain);
+  NCM_UNUSED (log_level);
+  NCM_UNUSED (user_data);
   if (_enable_msg && _log_stream)
   {
     fprintf (_log_stream, "%s", message);
@@ -464,7 +467,7 @@ ncm_cfg_keyfile_to_arg (GKeyFile *kfile, gchar *group_name, GOptionEntry *entrie
       {
         if (entries[i].arg == G_OPTION_ARG_STRING_ARRAY || entries[i].arg == G_OPTION_ARG_FILENAME_ARRAY)
         {
-          gint j;
+          guint j;
           gsize length;
           gchar **vals = g_key_file_get_string_list (kfile, group_name, entries[i].long_name, &length, &error);
           if (error != NULL)
@@ -1304,4 +1307,67 @@ ncm_cfg_command_line (gchar *argv[], gint argc)
   full_cmd_line_ptr[0] = '\0';
 
   return full_cmd_line;
+}
+
+/**
+ * ncm_cfg_variant_to_array: (skip)
+ * @var: a variant of array type.
+ * @esize: element size.
+ *
+ * FIXME
+ *
+ * Returns: (transfer full): FIXME
+ */
+GArray *
+ncm_cfg_variant_to_array (GVariant *var, gsize esize)
+{
+  g_assert (g_variant_is_of_type (var, G_VARIANT_TYPE_ARRAY));
+  {
+    GArray *a = g_array_new (FALSE, FALSE, esize);
+    ncm_cfg_array_set_variant (a, var);
+    return a;
+  }
+}
+
+/**
+ * ncm_cfg_array_set_variant: (skip)
+ * @a: a #GArray.
+ * @var: a variant of array type.
+ *
+ * FIXME
+ *
+ */
+void 
+ncm_cfg_array_set_variant (GArray *a, GVariant *var)
+{
+  gsize esize = g_array_get_element_size (a);
+  gsize n_elements = 0;
+  gconstpointer data = g_variant_get_fixed_array (var, &n_elements, esize);
+  g_array_set_size (a, n_elements);
+  memcpy (a->data, data, n_elements * esize);
+}
+
+/**
+ * ncm_cfg_array_to_variant: (skip)
+ * @a: a #GArray.
+ * @etype: element type.
+ *
+ * FIXME
+ *
+ * Returns: (transfer full): FIXME
+ */
+GVariant *
+ncm_cfg_array_to_variant (GArray *a, const GVariantType *etype)
+{
+  gconstpointer data = a->data;
+  gsize esize = g_array_get_element_size (a);
+  GVariantType *atype = g_variant_type_new_array (etype);
+  GVariant *vvar = g_variant_new_from_data (atype,
+                                            data,
+                                            esize * a->len,
+                                            TRUE,
+                                            (GDestroyNotify) &g_array_unref,
+                                            g_array_ref (a));
+  g_variant_type_free (atype);
+  return g_variant_ref_sink (vvar);
 }

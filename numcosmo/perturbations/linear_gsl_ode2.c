@@ -92,7 +92,9 @@ static NcLinearPertOdeSolver _ncm_gsl_odeiv2_solver = {
   &ncm_gsl_odeiv2_get,
   &ncm_gsl_odeiv2_get_theta,
   &ncm_gsl_odeiv2_get_theta_p,
-  NULL
+  NULL,
+  NULL,
+  NULL,
 };
 NcLinearPertOdeSolver *ncm_gsl_odeiv2_solver = &_ncm_gsl_odeiv2_solver;
 
@@ -226,27 +228,29 @@ ncm_gsl_odeiv2_evol (NcLinearPert *pert, gdouble lambda)
 static gboolean
 ncm_gsl_odeiv2_update_los (NcLinearPert *pert)
 {
+  NCM_UNUSED (pert);
   g_assert_not_reached ();
   return TRUE;
 }
 
-
 static void
 ncm_gsl_odeiv2_free (NcLinearPert *pert)
 {
+  NCM_UNUSED (pert);
 //  GSLOde2Data *data = GSLODE2_DATA (pert->solver->data);
 }
 
 static void
 ncm_gsl_odeiv2_print_stats (NcLinearPert *pert)
 {
+  NCM_UNUSED (pert);
 //  GSLOde2Data *data = GSLODE2_DATA (pert->solver->data);
 }
 
 #define LINEAR_VECTOR_PREPARE gdouble *y = GSLODE2_DATA(pert->solver->data)->y->data
 #define LINEAR_VEC_COMP(v,i) ((v)[(i)])
 #define LINEAR_MATRIX_E(M,i,j) ((M)[i * pert->sys_size + j])
-#define LINEAR_VECTOR_SET_ALL(v,c,n) do {gint _i_i; for (_i_i = 0; _i_i < (n); _i_i++) (v)[_i_i] = (c); } while (FALSE)
+#define LINEAR_VECTOR_SET_ALL(v,c,n) do {guint _i_i; for (_i_i = 0; _i_i < (n); _i_i++) (v)[_i_i] = (c); } while (FALSE)
 #define LINEAR_VEC_ABSTOL(pert) (GSLODE2_DATA(pert->solver->data)->abstol->data)
 #define LINEAR_VEC_LOS_THETA(pert) (GSLODE2_DATA(pert->solver->data)->y->data)
 #define LINEAR_STEP_RET gint
@@ -254,6 +258,7 @@ ncm_gsl_odeiv2_print_stats (NcLinearPert *pert)
 #define LINEAR_STEP_PARAMS gdouble lambda, const gdouble y[], gdouble ydot[], gpointer user_data
 #define LINEAR_JAC_PARAMS gdouble lambda, const gdouble y[], gdouble *J, gdouble dfdt[], gpointer user_data
 #define LINEAR_STEP_RET_VAL return GSL_SUCCESS
+#define LINEAR_JAC_UNUSED G_STMT_START { NCM_UNUSED (y); NCM_UNUSED (dfdt); } G_STMT_END
 
 #include "linear_generic.c"
 

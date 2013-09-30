@@ -112,18 +112,19 @@ nc_hicosmo_qg_new (void)
   g_assert_not_reached ();
 }
 
-
 gdouble
 nc_hicosmo_qg_cs2 (NcmModel *model, gdouble x, gpointer userdata)
 {
-  gdouble R = 3.0 * (1.0 + W) * OMEGA_M / (4.0 * OMEGA_R * x * pow(x, -3.0*W));
+  gdouble R = 3.0 * (1.0 + W) * OMEGA_M / (4.0 * OMEGA_R * x * pow(x, -3.0 * W));
+  NCM_UNUSED (userdata);
   return (1.0 + 3.0 * W * R) / (3.0 * (1.0 + R));
 }
 
 gdouble
 nc_hicosmo_qg_dcs2 (NcmModel *model, gdouble x, gpointer userdata)
 {
-  gdouble R = 3.0 * (1.0 + W) * OMEGA_M / (4.0 * OMEGA_R * x * pow(x, -3.0*W));
+  gdouble R = 3.0 * (1.0 + W) * OMEGA_M / (4.0 * OMEGA_R * x * pow(x, -3.0 * W));
+  NCM_UNUSED (userdata);
   return (1.0 - 3.0 * W) / (3.0 * x) * ((1.0 - 3.0 * W)*R+3.0*W*R*R) / gsl_pow_2 (1.0 + R);
 }
 
@@ -132,7 +133,7 @@ nc_hicosmo_qg_beta (NcmModel *model, gdouble x, gpointer userdata)
 {
   gdouble OM = 3.0 * (1.0 + W) * OMEGA_M * pow (x, 1.0 + 3.0 * W);
   gdouble OR = 4.0 * OMEGA_R * x * x;
-
+  NCM_UNUSED (userdata);
   return (OM + OR) / 2.0;
 }
 
@@ -140,6 +141,7 @@ gdouble
 nc_hicosmo_qg_Omega_x2 (NcmModel *model, gdouble x, gpointer userdata)
 {
   gdouble x3w = pow (x, 3.0 * W);
+  NCM_UNUSED (userdata);
   return x * (x3w * OMEGA_M + x * OMEGA_R);
 }
 
@@ -147,6 +149,7 @@ gdouble
 nc_hicosmo_qg_dOmega_x2 (NcmModel *model, gdouble x, gpointer userdata)
 {
   gdouble x3w = pow (x, 3.0 * W);
+  NCM_UNUSED (userdata);
   return ((1.0 + 3.0 * W) * x3w * OMEGA_M + 2.0 * x * OMEGA_R);
 }
 
@@ -154,6 +157,7 @@ gdouble
 nc_hicosmo_qg_xbar (NcmModel *model, gdouble x, gpointer userdata)
 {
   gdouble x3w = pow (x, 3.0 * W);
+  NCM_UNUSED (userdata);
   return sqrt (x * (x3w * OMEGA_M + x * OMEGA_R));
 }
 
@@ -174,6 +178,8 @@ nc_hicosmo_qg_d2sqrtxxbarzeta_sqrtxxbarzeta (NcmModel *model, gdouble x, gpointe
   gdouble Or2 = Or * Or;
   gdouble Or3 = Or2 * Or;
 
+  NCM_UNUSED (userdata);
+  
   return ( x3w / x2 * OMEGA_M *
           (81.0 * x9w * w2 * one_pw2 * (5.0 + 9.0 * (-2.0 + W) * W ) * Om3 +
            36.0 * x * x6w * W * one_pw * (-2.0 + 3.0 * W) * (-1.0 + 3.0 * W) * (7.0 + 15.0 * W) * Om2 * Or +
@@ -194,6 +200,9 @@ nc_hicosmo_qg_cs2_xxbar2 (NcmModel *model, gdouble x, gpointer userdata)
   gdouble x3w = pow (x, 3.0 * W);
   gdouble R = 3.0 * (1.0 + W) * OMEGA_M / (4.0 * OMEGA_R * x / x3w);
   gdouble cs2 = (1.0 + 3.0 * W * R) / (3.0 * (1.0 + R));
+
+  NCM_UNUSED (userdata);
+  
   return cs2 / (x3 * x3w * OMEGA_M + x4 * OMEGA_R);
 }
 
@@ -240,6 +249,8 @@ gdouble
 nc_hicosmo_qg_xxbarzeta2 (NcmModel *model, gdouble x, gpointer userdata)
 {
   gdouble x3w = pow (x, 3.0 * W);
+  
+  NCM_UNUSED (userdata);
 
   return (3.0 * gsl_pow_2 (3.0 * x3w * (1.0 + W) * OMEGA_M + 4.0 * x * OMEGA_R)) /
    (2.0 * sqrt (x * (x3w * OMEGA_M + x * OMEGA_R)) *
@@ -251,6 +262,8 @@ nc_hicosmo_qg_dxxbarzeta2_xxbarzeta2 (NcmModel *model, gdouble x, gpointer userd
 {
   gdouble x3w = pow (x, 3.0 * W);
 
+  NCM_UNUSED (userdata);
+  
   return ((-1.0 + 3.0 * W) *
           ( 1.0 / x + OMEGA_R * ( 1.0 / (x3w * OMEGA_M + x * OMEGA_R) -
                                  16.0 / ( 3.0 * x3w * (1.0 + W) * OMEGA_M + 4.0 * x * OMEGA_R) +
@@ -266,6 +279,8 @@ nc_hicosmo_qg_zeta (NcmModel *model, gdouble x, gpointer userdata)
   gdouble R = 3.0 * (1.0 + W) * OMEGA_M / (4.0 * OMEGA_R * x * pow(x, -3.0 * W));
   gdouble F = OMEGA_X / (OMEGA_R * gsl_pow_4 (x));
 
+  NCM_UNUSED (userdata);
+  
   return sqrt(6.0) / x * (1.0 + R) / sqrt ((1.0 + 4.0 * R / (3.0 * (1.0 + W)) + F) * (1.0 + 3.0 * W * R));
 }
 
@@ -278,6 +293,8 @@ nc_hicosmo_qg_dzeta_zeta (NcmModel *model, gdouble x, gpointer userdata)
   const gdouble G2 = 3.0 * W * (1.0 - 3.0 * W) * R / (2.0 * (1.0 + 3.0 * W * R));
   const gdouble cs2 = (1.0 + 3.0 * W * R) / (3.0 * (1.0 + R));
 
+  NCM_UNUSED (userdata);
+  
   return (3.0 * cs2 + G1 + G2 - 2.0) / x;
 }
 
@@ -285,6 +302,9 @@ gdouble
 nc_hicosmo_qg_dcs2zeta2_cs2zeta2 (NcmModel *model, gdouble x, gpointer userdata)
 {
   const gdouble R = 3.0 * (1.0 + W) * OMEGA_M / (4.0 * OMEGA_R * x * pow(x, -3.0 * W));
+
+  NCM_UNUSED (userdata);
+  
   return -((6.0 * (1.0 + W) + R * (13.0 + 8.0 * R + 3.0 * (4.0 - 3.0 * W) * W) ) / ((1.0 + R) * x  * (3.0 + 4.0 * R + 3.0 * W)));
 }
 
@@ -296,6 +316,9 @@ nc_hicosmo_qg_dx2dcs2zeta2_cs2zeta2 (NcmModel *model, gdouble x, gpointer userda
   const gdouble R3 = R2 * R;
   const gdouble R4 = R2 * R2;
   const gdouble onepw2 = (1.0 + W) * (1.0 + W);
+
+  NCM_UNUSED (userdata);
+  
   return (-32.0 * R4 - 18.0 * onepw2 + 3.0 * R * (1.0 + W) * (-28.0 + 9.0 * (-1.0 + W) * W * (1.0 + 3.0 * W)) + R2 * (-139.0 + 9.0 * W * (-19.0 + 3.0 * W * (1.0 + W))) - 4.0 * R3 * (26.0 + 9.0 * W * (3.0 + W * (-4.0 + 3.0 * W)))) / (gsl_pow_2 (1.0 + R) * gsl_pow_2 (3.0 + 4.0 * R + 3.0 * W));
 }
 
@@ -314,6 +337,8 @@ nc_hicosmo_qg_ddzeta_zeta (NcmModel *model, gdouble x, gpointer userdata)
 
   gdouble dzeta_zeta = (3.0 * cs2 + G1 + G2 - 2.0) / x;
 
+  NCM_UNUSED (userdata);
+  
   return ((3.0 * dcs2 + dG1 + dG2)  - dzeta_zeta) / x + dzeta_zeta * dzeta_zeta;
 }
 
@@ -329,6 +354,8 @@ nc_hicosmo_qg_xddzeta_zeta_mxdzeta_zeta2_dzeta_zeta (NcmModel *model, gdouble x,
   gdouble dG1 = (2.0 * G1*G1 - (24.0 * (1.0 + W) * F + 2.0 * gsl_pow_2 (1.0 - 3.0 * W) * R) / (3.0 * (1.0 + W)*(1.0 + F) + 4.0 * R)) / x;
   gdouble dG2 = (2.0 * G2*G2 - (1.0 - 3.0 * W) * G2) / x;
 
+  NCM_UNUSED (userdata);
+  
   return 3.0 * dcs2 + dG1 + dG2;
 }
 
@@ -484,6 +511,8 @@ nc_hicosmo_qg_V (NcmModel *model, gdouble x, gpointer userdata)
   gdouble V3 = -(OMEGA_R * x2/xb2 + OMEGA_M * ((1.0 - 3.0 * W) * x3w / (x * 2.0) + x2  * xb3w / xb3) +OMEGA_X * (2.0 / x4 + x2 / xb6)) *
     x3 * nc_hicosmo_qg_dzeta_zeta (model, x, NULL);
 
+  NCM_UNUSED (userdata);
+  
   if (gsl_finite (V1) && gsl_finite(V2))
     return V1 + V2 + V3;
   else
@@ -497,6 +526,8 @@ nc_hicosmo_qg_lambda_x (NcmModel *model, gdouble x, gpointer userdata)
   gdouble sqrt_Omega_m = sqrt(OMEGA_M);
   gdouble one_m3omega = (1.0 - 3.0 * W);
 
+  NCM_UNUSED (userdata);
+  
   return 2.0 * asinh (pow(x, one_m3omega / 2.0) * sqrt_Omega_r / sqrt_Omega_m) / (one_m3omega * sqrt_Omega_r);
 }
 
@@ -563,6 +594,8 @@ nc_hicosmo_qg_alphaprime2 (NcmModel *model, gdouble alpha, gpointer data)
      OMEGA_X / x2 * 3.0 * gsl_sf_exprel (-3.0 * alpha2)
      );
 
+  NCM_UNUSED (data);
+  
   return alphaprime2;
 }
 
@@ -578,6 +611,9 @@ nc_hicosmo_qg_dalphaprime2_dalpha (NcmModel *model, gdouble alpha, gpointer data
   const gdouble onep3W = 1.0 + 3.0 * W;
   const gdouble three_1mW_2alpha2 = three_1mW_2 * alpha2;
   gdouble er, em, ex, dalphaprime2_dalpha;
+
+  NCM_UNUSED (data);
+  
   if (alpha2 > -GSL_LOG_DBL_EPSILON + 3.0 * M_LN10)
   {
     er = (2.0 / alpha2 + 2.0 / alpha4);
@@ -738,6 +774,9 @@ nc_hicosmo_qg_get_lambda_f (NcmModel *model, gpointer userdata)
 {
   NcHICosmoQG *qgint = (NcHICosmoQG *)model;
   nc_hicosmo_qg_init_spline (qgint, model);
+
+  NCM_UNUSED (userdata);
+  
   return qgint->last_lambda;
 }
 
@@ -746,6 +785,9 @@ nc_hicosmo_qg_get_lambda_i (NcmModel *model, gpointer userdata)
 {
   NcHICosmoQG *qgint = (NcHICosmoQG *) model;
   nc_hicosmo_qg_init_spline (qgint, model);
+
+  NCM_UNUSED (userdata);
+  
   return qgint->lambda_i;
 }
 
@@ -754,6 +796,9 @@ nc_hicosmo_qg_get_lambda_d (NcmModel *model, gpointer userdata)
 {
   NcHICosmoQG *qgint = (NcHICosmoQG *) model;
   nc_hicosmo_qg_init_spline (qgint, model);
+
+  NCM_UNUSED (userdata);
+  
   return qgint->lambda_d;
 }
 
@@ -820,8 +865,8 @@ scalefactor_step (realtype t, N_Vector y, N_Vector ydot, gpointer f_data)
   const gdouble exp31mwgb_2g = exp (3.0 * (1.0 - W) * G_B - 2.0 * g);
   const gdouble exp6gb_2g = exp (6.0 * G_B - 2.0 * g);
 
-//  printf ("%.15g %.15g %.15g\n", t, g, 1.0 / expg);
-
+  NCM_UNUSED (t);
+  
   if (qgscale->first_order)
   {
     NV_Ith_S(ydot, 0) = qgscale->sign * sqrt(nc_hicosmo_qg_gbar2 (model, 1.0 / expg));
@@ -850,6 +895,13 @@ scalefactor_step_J (_NCM_SUNDIALS_INT_TYPE N, realtype t, N_Vector y, N_Vector f
   gdouble exp31mwgb_2g = exp (3.0 * (1.0 - W) * G_B - 2.0 * g);
   gdouble exp6gb_2g = exp (6.0 * G_B-2.0 * g);
 
+  NCM_UNUSED (N);
+  NCM_UNUSED (t);
+  NCM_UNUSED (fy);
+  NCM_UNUSED (tmp1);
+  NCM_UNUSED (tmp2);
+  NCM_UNUSED (tmp3);
+  
   if (qgscale->first_order)
   {
     gdouble x = 1.0 / expg;
@@ -877,6 +929,9 @@ scale_factor_root (gdouble t, N_Vector y, gdouble *gout, gpointer g_data)
   gout[0] = NV_Ith_S(y, 0) - qgscale->x_root_scale;
   gout[1] = NV_Ith_S(y, 1);
   gout[2] = NV_Ith_S(y, 0) - 10.0 * M_LN10;
+
+  NCM_UNUSED (t);
+  
   return 0;
 }
 
@@ -889,8 +944,11 @@ scale_factor_time (gdouble t, N_Vector y, N_Vector yQdot, gpointer fQ_data)
   gdouble x = exp(-NV_Ith_S(y, 0));
   gdouble zeta = nc_hicosmo_qg_zeta (model, x, NULL);
 
+  NCM_UNUSED (t);
+  
   NV_Ith_S(yQdot, 0) = 1.0 / x;
   NV_Ith_S(yQdot, 1) = 1.0 / (x * zeta * zeta);
+
   return 0;
 }
 
@@ -977,7 +1035,7 @@ nc_hicosmo_qg_init_spline (NcHICosmoQG *qgint, NcmModel *model)
     gdouble gbar = -sqrt(gbar2);
     gdouble gbarbar = nc_hicosmo_qg_gbarbar (model, x_i);
     gdouble cs2, V, k_cross;
-    NcHICosmoQGScaleFactor qgscale = {model, TRUE, -1.0};
+    NcHICosmoQGScaleFactor qgscale = {model, TRUE, -1.0, 0.0};
     gboolean end_dust = FALSE;
     gdouble lambda_iQ;
 
@@ -1219,6 +1277,8 @@ nc_hicosmo_qg_max_z (NcmModel *model, gdouble *max, gdouble *trans)
 gdouble
 nc_hicosmo_qg_get_eta_b (NcmModel *model, gpointer userdata)
 {
+  NCM_UNUSED (userdata);
+
   return ncm_c_c ()  * ncm_c_Mpc () / (sqrt(OMEGA_R) * exp(-G_B) * MACRO_H0 * 1.0e3);
 }
 
@@ -1963,6 +2023,13 @@ hk_step_J (_NCM_SUNDIALS_INT_TYPE N, realtype alpha, N_Vector y, N_Vector fy, Dl
   long double x2cs2_xxbar2;// = nc_hicosmo_qg_cs2_xxbar2 (data, x);
   gdouble k2 = gsl_pow_2 (qgmode->k);
 
+  NCM_UNUSED (N);
+  NCM_UNUSED (y);
+  NCM_UNUSED (fy);
+  NCM_UNUSED (tmp1);
+  NCM_UNUSED (tmp2);
+  NCM_UNUSED (tmp3);
+
   nc_hicosmo_qg_evolfunc (model, x, &x2d2sqrtxxbarzeta_sqrtxxbarzeta, &x2cs2_xxbar2);
 
   DENSE_ELEM (J, 0, 0) = 0.0;
@@ -2028,6 +2095,13 @@ Rk_step_J (_NCM_SUNDIALS_INT_TYPE N, realtype lambda, N_Vector y, N_Vector fy, D
   gdouble cs2k2_x2 =  cs2k2 / x2;
   gdouble x2dzeta_zeta_p1gbar = (2.0 * x * dzeta_zeta + 1.0) * gbar;
 
+  NCM_UNUSED (N);
+  NCM_UNUSED (y);
+  NCM_UNUSED (fy);
+  NCM_UNUSED (tmp1);
+  NCM_UNUSED (tmp2);
+  NCM_UNUSED (tmp3);
+  
   DENSE_ELEM (J, 0, 0) = 0.0;
   DENSE_ELEM (J, 0, 1) = 1.0;
   DENSE_ELEM (J, 0, 2) = 0.0;
@@ -2089,6 +2163,13 @@ Rak_step_J (_NCM_SUNDIALS_INT_TYPE N, realtype alpha, N_Vector y, N_Vector fy, D
   gdouble cs2 = nc_hicosmo_qg_cs2 (model, x, NULL);
   gdouble k2 = qgmode->k * qgmode->k;
 
+  NCM_UNUSED (N);
+  NCM_UNUSED (y);
+  NCM_UNUSED (fy);
+  NCM_UNUSED (tmp1);
+  NCM_UNUSED (tmp2);
+  NCM_UNUSED (tmp3);
+  
   DENSE_ELEM (J, 0, 0) = 0.0;
   DENSE_ELEM (J, 0, 1) = 1.0;
   DENSE_ELEM (J, 0, 2) = 0.0;

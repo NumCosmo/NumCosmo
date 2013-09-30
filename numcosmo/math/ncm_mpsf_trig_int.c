@@ -38,6 +38,8 @@
 
 #include "math/ncm_mpsf_trig_int.h"
 #include "math/binsplit.h"
+#include "math/ncm_cfg.h"
+#include "math/ncm_util.h"
 
 #include <math.h>
 
@@ -67,6 +69,7 @@ NCM_BINSPLIT_DECL(binsplit_sin_integral_taylor_q,v,u,n,data)
 
 NCM_BINSPLIT_DECL(binsplit_sin_integral_taylor_b,v,u,n,data)
 {
+  NCM_UNUSED (data);
   mpz_mul_ui (v, u, (2L * n + 1L));
 }
 #define _BINSPLIT_FUNC_B binsplit_sin_integral_taylor_b

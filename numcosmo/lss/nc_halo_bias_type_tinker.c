@@ -37,6 +37,8 @@
 #include "build_cfg.h"
 
 #include "lss/nc_halo_bias_type_tinker.h"
+#include "math/ncm_cfg.h"
+#include "math/ncm_util.h"
 
 #include <math.h>
 
@@ -91,6 +93,7 @@ _nc_halo_bias_type_tinker_eval (NcHaloBiasType *biasf, gdouble sigma, gdouble z)
   gdouble x = bias_tinker->delta_c / sigma;
   gdouble b_Tinker = 1.0  - A * pow(x, a) / (pow(x, a) + pow(bias_tinker->delta_c, a)) + B * pow(x, b) + C * pow(x, c);
 
+  NCM_UNUSED (z);
 //  printf ("A = %.5g, a=%.5g, B=%.5g, b=%.5g, C=%.5g, c=%.5g, delta_c= %.5g Delta=%.5g\n", A, a, B, b, C, c, bias_tinker->delta_c, log10(x));
 
   return b_Tinker;

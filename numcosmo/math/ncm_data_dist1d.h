@@ -59,6 +59,8 @@ struct _NcmDataDist1dClass
   NcmDataClass parent_class;
   NcmMSetFunc *dist;
   NcmMSetFunc *inv_pdf;
+  void (*set_size) (NcmDataDist1d *dist1d, guint np);
+  guint (*get_size) (NcmDataDist1d *dist1d);
 };
 
 GType ncm_data_dist1d_get_type (void) G_GNUC_CONST;

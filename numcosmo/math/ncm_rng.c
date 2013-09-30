@@ -260,7 +260,7 @@ ncm_rng_get_state (NcmRNG *rng)
   gpointer state = gsl_rng_state (rng->r);
   gsize state_len = gsl_rng_size (rng->r);
   GString *state_str = g_string_sized_new (2 * state_len);
-  gint i;
+  guint i;
 
   for (i = 0; i < state_len; i++)
   {
@@ -328,7 +328,7 @@ ncm_rng_set_state (NcmRNG *rng, const gchar *state)
   gchar byte[3];
   gpointer state_ptr = gsl_rng_state (rng->r);
   gsize state_len = gsl_rng_size (rng->r);
-  gint i;
+  guint i;
 
   g_assert (state != NULL);  
 

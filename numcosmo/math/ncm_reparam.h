@@ -28,8 +28,10 @@
 #include <glib.h>
 #include <glib-object.h>
 #include <numcosmo/build_cfg.h>
+#include <numcosmo/math/ncm_sparam.h>
 #include <numcosmo/math/ncm_vector.h>
 #include <numcosmo/math/ncm_matrix.h>
+#include <numcosmo/math/ncm_serialize.h>
 
 G_BEGIN_DECLS
 
@@ -73,6 +75,7 @@ struct _NcmReparam
   guint length;
   NcmVector *new_params;
   GPtrArray *sparams;
+  GHashTable *sparams_name_id;
 };
 
 struct _NcmReparamClass
@@ -90,6 +93,9 @@ GType ncm_reparam_get_type (void) G_GNUC_CONST;
 
 NcmReparam *ncm_reparam_copy (NcmReparam *reparam);
 NcmReparam *ncm_reparam_ref (NcmReparam *reparam);
+void ncm_reparam_free (NcmReparam *reparam);
+void ncm_reparam_clear (NcmReparam **reparam);
+
 void ncm_reparam_copyto (NcmReparam *reparam, NcmReparam *reparam_dest);
 void ncm_reparam_old2new (NcmReparam *reparam, struct _NcmModel *model, NcmVector *src, NcmVector *dest);
 void ncm_reparam_new2old (NcmReparam *reparam, struct _NcmModel *model, NcmVector *src, NcmVector *dest);
@@ -97,8 +103,16 @@ void ncm_reparam_jac (NcmReparam *reparam, struct _NcmModel *model, NcmMatrix *j
 void ncm_reparam_grad_old2new (NcmReparam *reparam, struct _NcmModel *model, NcmMatrix *jac, NcmVector *old_grad, NcmVector *new_grad);
 void ncm_reparam_M_old2new (NcmReparam *reparam, struct _NcmModel *model, NcmMatrix *jac, NcmMatrix *old_M, NcmMatrix *new_M);
 
-void ncm_reparam_free (NcmReparam *reparam);
-void ncm_reparam_clear (NcmReparam **reparam);
+GVariant *ncm_reparam_get_params_desc_dict (NcmReparam *reparam);
+void ncm_reparam_set_params_desc_dict (NcmReparam *reparam, GVariant *pdesc_dict);
+void ncm_reparam_set_param_desc (NcmReparam *reparam, guint i, NcmSParam *sp);
+NcmSParam *ncm_reparam_peek_param_desc (NcmReparam *reparam, guint i);
+NcmSParam *ncm_reparam_get_param_desc (NcmReparam *reparam, guint i);
+void ncm_reparam_set_param_desc_full (NcmReparam *reparam, guint i, gchar *name, gchar *symbol, gdouble lower_bound, gdouble upper_bound, gdouble scale, gdouble abstol, gdouble default_val, NcmParamType ftype);
+gboolean ncm_reparam_index_from_name (NcmReparam *reparam, gchar *param_name, guint *i);
+
+
+#define NCM_REPARAM_PARAMS_DESC_DICT_TYPE "a{u"NCM_SERIALIZE_OBJECT_TYPE"}" 
 
 G_END_DECLS
 

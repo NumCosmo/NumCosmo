@@ -45,6 +45,7 @@ G_DEFINE_ABSTRACT_TYPE (NcHICosmo, nc_hicosmo, NCM_TYPE_MODEL);
 static void
 nc_hicosmo_init (NcHICosmo *object)
 {
+  NCM_UNUSED (object);
 }
 
 static void
@@ -135,7 +136,7 @@ nc_hicosmo_log_all_models (GType parent)
 NcHICosmo *
 nc_hicosmo_new_from_name (GType parent_type, gchar *cosmo_name)
 {
-  GObject *obj = ncm_serialize_global_create_from_string (cosmo_name);
+  GObject *obj = ncm_serialize_global_from_string (cosmo_name);
   GType model_type = G_OBJECT_TYPE (obj);
 
   if (!g_type_is_a (model_type, parent_type))
@@ -565,6 +566,7 @@ static void
 _nc_hicosmo_func0 (NcmMSet *mset, gpointer obj, const gdouble *x, gdouble *f)
 {
   NcHICosmoFunc0 f0 = (NcHICosmoFunc0) obj;
+  NCM_UNUSED (x);
   f[0] = f0 (NC_HICOSMO (ncm_mset_peek (mset, nc_hicosmo_id ())));
 }
 

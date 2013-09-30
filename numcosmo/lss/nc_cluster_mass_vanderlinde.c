@@ -68,7 +68,7 @@ typedef struct _integrand_data
   gdouble z;
   gdouble lnM;
   gdouble *xi;
-/* new: optimizing */
+  /* new: optimizing */
   gdouble lnA;
   gdouble lnM0;
   gdouble ln1pz_1pz0;  /* ln ((1 + z)/(1 + z0))  */
@@ -88,8 +88,8 @@ _nc_cluster_mass_vanderlinde_significance_m_p_integrand (gdouble zeta, gpointer 
   const gdouble x = lnzeta - data->mu;
 
   const gdouble result = exp (- y * y / 2.0 - x * x / data->D2_2) / 
-	((1.0 + erf (xi_mean / M_SQRT2)) * M_PI * D_SZ * zeta);
-   
+    ((1.0 + erf (xi_mean / M_SQRT2)) * M_PI * D_SZ * zeta);
+
   return result;
 }
 
@@ -102,14 +102,14 @@ _nc_cluster_mass_vanderlinde_significance_m_intp_integrand (gdouble zeta, gpoint
   const gdouble xi_mean = sqrt (zeta * zeta + 3.0);
   const gdouble a = (xi_mean - msz->signif_obs_min);
   const gdouble x = lnzeta - data->mu;
-   
+
   const gdouble plnzeta = exp (-(x * x / (2.0 * D_SZ * D_SZ))) / (zeta * D_SZ * M_SQRT2 * M_SQRTPI);
 
   if (a >= 0.0)
-	return plnzeta * (1.0 + erf (a / M_SQRT2)) / (1.0 + erf (xi_mean / M_SQRT2));
+    return plnzeta * (1.0 + erf (a / M_SQRT2)) / (1.0 + erf (xi_mean / M_SQRT2));
   else
-	return plnzeta * erfc (-a / M_SQRT2) / (1.0 + erf (xi_mean / M_SQRT2));
-  
+    return plnzeta * erfc (-a / M_SQRT2) / (1.0 + erf (xi_mean / M_SQRT2));
+
 }
 
 static gdouble
@@ -120,6 +120,8 @@ _nc_cluster_mass_vanderlinde_significance_m_p (NcClusterMass *clusterm, NcHICosm
   gdouble P, err;
   gsl_function F;
   gsl_integration_workspace **w = ncm_integral_get_workspace ();
+
+  NCM_UNUSED (model);
 
   data.msz = msz;
   data.lnM = lnM;
@@ -136,23 +138,23 @@ _nc_cluster_mass_vanderlinde_significance_m_p (NcClusterMass *clusterm, NcHICosm
 
   F.function = &_nc_cluster_mass_vanderlinde_significance_m_p_integrand;
   F.params = &data;
- 
+
   {
-	gdouble Pi, a, b;
-	a = 0.0;
-	b = xi[0];
-	gsl_integration_qag (&F, a, b, 0.0, NCM_DEFAULT_PRECISION, NCM_INTEGRAL_PARTITION, 6, *w, &Pi, &err);
-	P = Pi;
-	do {
-	  a = b;
-	  b += xi[0];
-	  gsl_integration_qag (&F, a, b, P * NCM_DEFAULT_PRECISION, NCM_DEFAULT_PRECISION, NCM_INTEGRAL_PARTITION, 6, *w, &Pi, &err); 
-	  P += Pi;
-	} while (fabs(Pi/P) > NCM_DEFAULT_PRECISION);
+    gdouble Pi, a, b;
+    a = 0.0;
+    b = xi[0];
+    gsl_integration_qag (&F, a, b, 0.0, NCM_DEFAULT_PRECISION, NCM_INTEGRAL_PARTITION, 6, *w, &Pi, &err);
+    P = Pi;
+    do {
+      a = b;
+      b += xi[0];
+      gsl_integration_qag (&F, a, b, P * NCM_DEFAULT_PRECISION, NCM_DEFAULT_PRECISION, NCM_INTEGRAL_PARTITION, 6, *w, &Pi, &err); 
+      P += Pi;
+    } while (fabs(Pi/P) > NCM_DEFAULT_PRECISION);
   }
 
   ncm_memory_pool_return (w);
-  
+
   return P;
 }
 
@@ -165,6 +167,8 @@ _nc_cluster_mass_vanderlinde_intp (NcClusterMass *clusterm, NcHICosmo *model, gd
   gsl_function F;
   gsl_integration_workspace **w = ncm_integral_get_workspace ();
 
+  NCM_UNUSED (model);
+  
   data.msz = msz;
   data.lnM = lnM;
   data.z = z;
@@ -180,19 +184,19 @@ _nc_cluster_mass_vanderlinde_intp (NcClusterMass *clusterm, NcHICosmo *model, gd
   F.params = &data;
 
   {
-	gdouble Pi, a, b;
-	a = 0.0;
-	b = msz->signif_obs_max;
-	gsl_integration_qag (&F, a, b, 0.0, NCM_DEFAULT_PRECISION, NCM_INTEGRAL_PARTITION, 6, *w, &Pi, &err);
-	P = Pi;
-	do {
-	  a = b;
-	  b += msz->signif_obs_max;
-	  gsl_integration_qag (&F, a, b, P * NCM_DEFAULT_PRECISION, NCM_DEFAULT_PRECISION, NCM_INTEGRAL_PARTITION, 6, *w, &Pi, &err); 
-	  P += Pi;
-	} while (fabs(Pi/P) > NCM_DEFAULT_PRECISION);
+    gdouble Pi, a, b;
+    a = 0.0;
+    b = msz->signif_obs_max;
+    gsl_integration_qag (&F, a, b, 0.0, NCM_DEFAULT_PRECISION, NCM_INTEGRAL_PARTITION, 6, *w, &Pi, &err);
+    P = Pi;
+    do {
+      a = b;
+      b += msz->signif_obs_max;
+      gsl_integration_qag (&F, a, b, P * NCM_DEFAULT_PRECISION, NCM_DEFAULT_PRECISION, NCM_INTEGRAL_PARTITION, 6, *w, &Pi, &err); 
+      P += Pi;
+    } while (fabs(Pi/P) > NCM_DEFAULT_PRECISION);
   }
-  
+
   ncm_memory_pool_return (w);
 
   return P;
@@ -205,11 +209,14 @@ _nc_cluster_mass_vanderlinde_resample (NcClusterMass *clusterm, NcHICosmo *model
   NcmRNG *rng = ncm_rng_pool_get (NCM_DATA_RESAMPLE_RNG_NAME);
   gdouble lnzeta, lnzeta_obs, zeta_obs, xi_mean;
 
+  NCM_UNUSED (model);
+  NCM_UNUSED (xi_params);
+  
   lnzeta = B_SZ * (lnM - log (msz->M0)) + C_SZ * log ((1.0 + z) / (1.0 + msz->z0)) + log (A_SZ);
 
   ncm_rng_lock (rng);
   lnzeta_obs = lnzeta + gsl_ran_gaussian (rng->r, D_SZ);
-  
+
   zeta_obs = exp (lnzeta_obs);
 
   xi_mean = sqrt (zeta_obs * zeta_obs + 3.0);
@@ -227,11 +234,10 @@ static gdouble
 _significance_to_mass (NcClusterMass *clusterm, gdouble z, gdouble xi)
 {
   NcClusterMassVanderlinde *msz = NC_CLUSTER_MASS_VANDERLINDE (clusterm);
-  
   const gdouble zeta = sqrt (xi * xi - 3.0);
   const gdouble lnzeta = log(zeta);
   const gdouble lnM = log (msz->M0) + (lnzeta - log(A_SZ) - C_SZ * (log(1.0 + z) - log(1.0 + msz->z0))) / B_SZ;
-  
+
   return lnM;
 }
 
@@ -243,6 +249,9 @@ _nc_cluster_mass_vanderlinde_p_limits (NcClusterMass *clusterm, NcHICosmo *model
   const gdouble lnMl = GSL_MAX (_significance_to_mass (clusterm, 2.0, xil) - 7.0 * D_SZ, log (2.0e14));
   const gdouble lnMu = _significance_to_mass (clusterm, 0.0, xi[0] + 7.0) + 7.0 * D_SZ;
 
+  NCM_UNUSED (model);
+  NCM_UNUSED (xi_params);
+  
   *lnM_lower = lnMl;
   *lnM_upper = lnMu;
 
@@ -256,14 +265,16 @@ _nc_cluster_mass_vanderlinde_n_limits (NcClusterMass *clusterm, NcHICosmo *model
   const gdouble lnMl = GSL_MAX (_significance_to_mass (clusterm, 2.0, msz->signif_obs_min) - 7.0 * D_SZ, log (2.0e14));
   const gdouble lnMu = _significance_to_mass (clusterm, 0.0, msz->signif_obs_max) + 7.0 * D_SZ;
 
+  NCM_UNUSED (model);
+  
   *lnM_lower = lnMl;
   *lnM_upper = lnMu;
 
   return;  
 }
 
-guint _nc_cluster_mass_vanderlinde_obs_len (NcClusterMass *clusterm) { return 1; }
-guint _nc_cluster_mass_vanderlinde_obs_params_len (NcClusterMass *clusterm) { return 0; }
+guint _nc_cluster_mass_vanderlinde_obs_len (NcClusterMass *clusterm) { NCM_UNUSED (clusterm); return 1; }
+guint _nc_cluster_mass_vanderlinde_obs_params_len (NcClusterMass *clusterm) { NCM_UNUSED (clusterm); return 0; }
 
 static void
 _nc_cluster_mass_vanderlinde_set_property (GObject * object, guint prop_id, const GValue * value, GParamSpec * pspec)
@@ -276,17 +287,17 @@ _nc_cluster_mass_vanderlinde_set_property (GObject * object, guint prop_id, cons
     case PROP_SIGNIFICANCE_OBS_MIN:
       msz->signif_obs_min = g_value_get_double (value);
       break;
-	case PROP_SIGNIFICANCE_OBS_MAX:
+    case PROP_SIGNIFICANCE_OBS_MAX:
       msz->signif_obs_max = g_value_get_double (value);
       break;
-	case PROP_Z0:
-	  msz->z0 = g_value_get_double (value);
-	  break;
-	case PROP_M0:
-	  msz->M0 = g_value_get_double (value);
-	  break;
-	default:
-	  G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
+    case PROP_Z0:
+      msz->z0 = g_value_get_double (value);
+      break;
+    case PROP_M0:
+      msz->M0 = g_value_get_double (value);
+      break;
+    default:
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
       break;
   }
 }
@@ -302,13 +313,13 @@ _nc_cluster_mass_vanderlinde_get_property (GObject *object, guint prop_id, GValu
     case PROP_SIGNIFICANCE_OBS_MIN:
       g_value_set_double (value, msz->signif_obs_min);
       break;
-	case PROP_SIGNIFICANCE_OBS_MAX:
+    case PROP_SIGNIFICANCE_OBS_MAX:
       g_value_set_double (value, msz->signif_obs_max);
       break;
-	case PROP_Z0:
+    case PROP_Z0:
       g_value_set_double (value, msz->z0);
       break;
-	case PROP_M0:
+    case PROP_M0:
       g_value_set_double (value, msz->M0);
       break;
     default:
@@ -350,7 +361,7 @@ nc_cluster_mass_vanderlinde_class_init (NcClusterMassVanderlindeClass *klass)
   parent_class->obs_params_len = &_nc_cluster_mass_vanderlinde_obs_params_len;
 
   parent_class->impl = NC_CLUSTER_MASS_IMPL_ALL;
-  
+
   object_class->finalize = _nc_cluster_mass_vanderlinde_finalize;
 
   model_class->set_property = &_nc_cluster_mass_vanderlinde_set_property;
@@ -383,7 +394,7 @@ nc_cluster_mass_vanderlinde_class_init (NcClusterMassVanderlindeClass *klass)
                                                         "Maximum obsevational significance",
                                                         2.0, G_MAXDOUBLE, 40.0,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY |G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
- /**
+  /**
    * NcClusterMassVanderlinde:z0:
    *
    * Reference redshift in the SZ signal-mass scaling relation.
@@ -400,8 +411,8 @@ nc_cluster_mass_vanderlinde_class_init (NcClusterMassVanderlindeClass *klass)
    * NcClusterMassVanderlinde:M0:
    *
    * Reference mass (in h^(-1) * M_sun unit) in the SZ signal-mass scaling relation.
-   * FIXME Set correct values (limits)
-   */
+     * FIXME Set correct values (limits)
+     */
   g_object_class_install_property (object_class,
                                    PROP_M0,
                                    g_param_spec_double ("M0",
@@ -415,35 +426,34 @@ nc_cluster_mass_vanderlinde_class_init (NcClusterMassVanderlindeClass *klass)
    * FIXME Set correct values (limits)
    */
   ncm_model_class_set_sparam (model_class, NC_CLUSTER_MASS_VANDERLINDE_A_SZ, "A_{SZ}", "Asz",
-                               1e-8,  10.0, 1.0e-2,
-                               NC_CLUSTER_MASS_VANDERLINDE_DEFAULT_PARAMS_ABSTOL, NC_CLUSTER_MASS_VANDERLINDE_DEFAULT_A_SZ,
-                               NCM_PARAM_TYPE_FIXED);
+                              1e-8,  10.0, 1.0e-2,
+                              NC_CLUSTER_MASS_VANDERLINDE_DEFAULT_PARAMS_ABSTOL, NC_CLUSTER_MASS_VANDERLINDE_DEFAULT_A_SZ,
+                              NCM_PARAM_TYPE_FIXED);
 
   /*
    * SZ signal-mass scaling parameter: Bsz.
    * FIXME Set correct values (limits)
    */
   ncm_model_class_set_sparam (model_class, NC_CLUSTER_MASS_VANDERLINDE_B_SZ, "B_{SZ}", "Bsz",
-                               1e-8,  10.0, 1.0e-2,
-                               NC_CLUSTER_MASS_VANDERLINDE_DEFAULT_PARAMS_ABSTOL, NC_CLUSTER_MASS_VANDERLINDE_DEFAULT_B_SZ,
-                               NCM_PARAM_TYPE_FIXED);
+                              1e-8,  10.0, 1.0e-2,
+                              NC_CLUSTER_MASS_VANDERLINDE_DEFAULT_PARAMS_ABSTOL, NC_CLUSTER_MASS_VANDERLINDE_DEFAULT_B_SZ,
+                              NCM_PARAM_TYPE_FIXED);
 
   /*
    * SZ signal-mass scaling parameter: Csz.
    * FIXME Set correct values (limits)
    */
   ncm_model_class_set_sparam (model_class, NC_CLUSTER_MASS_VANDERLINDE_C_SZ, "C_{SZ}", "Csz",
-                               1e-8,  10.0, 1.0e-2,
-                               NC_CLUSTER_MASS_VANDERLINDE_DEFAULT_PARAMS_ABSTOL, NC_CLUSTER_MASS_VANDERLINDE_DEFAULT_C_SZ,
-                               NCM_PARAM_TYPE_FIXED);
-  
- /*
+                              1e-8,  10.0, 1.0e-2,
+                              NC_CLUSTER_MASS_VANDERLINDE_DEFAULT_PARAMS_ABSTOL, NC_CLUSTER_MASS_VANDERLINDE_DEFAULT_C_SZ,
+                              NCM_PARAM_TYPE_FIXED);
+
+  /*
    * SZ signal-mass scaling parameter: Dsz.
    * FIXME Set correct values (limits)
    */
   ncm_model_class_set_sparam (model_class, NC_CLUSTER_MASS_VANDERLINDE_D_SZ, "D_{SZ}", "Dsz",
-                               1e-8,  10.0, 1.0e-2,
-                               NC_CLUSTER_MASS_VANDERLINDE_DEFAULT_PARAMS_ABSTOL, NC_CLUSTER_MASS_VANDERLINDE_DEFAULT_D_SZ,
-                               NCM_PARAM_TYPE_FIXED);
+                              1e-8,  10.0, 1.0e-2,
+                              NC_CLUSTER_MASS_VANDERLINDE_DEFAULT_PARAMS_ABSTOL, NC_CLUSTER_MASS_VANDERLINDE_DEFAULT_D_SZ,
+                              NCM_PARAM_TYPE_FIXED);
 }
-

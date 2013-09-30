@@ -61,7 +61,9 @@ nc_pert_cov_direct (NcLinearPert *pert)
 //  gsl_vector *vintegral = gsl_vector_alloc (pert->lmax + 1);
 //  gsl_vector *verror = gsl_vector_alloc (pert->lmax + 1);
 //  gsl_vector *vprob = gsl_vector_alloc (pert->lmax + 1);
-/*  
+
+  NCM_UNUSED (pert);
+  /*  
   gint i;
   
   gpert = pert;

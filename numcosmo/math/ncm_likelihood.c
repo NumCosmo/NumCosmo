@@ -44,6 +44,8 @@ enum
 {
   PROP_0,
   PROP_DATASET,
+  PROP_PRIORS_M2LNL,
+  PROP_PRIORS_F,
   PROP_SIZE,
 };
 
@@ -71,6 +73,22 @@ ncm_likelihood_set_property (GObject *object, guint prop_id, const GValue *value
       ncm_dataset_clear (&lh->dset);
       lh->dset = g_value_dup_object (value);
       break;
+    case PROP_PRIORS_M2LNL:
+    {
+      guint p = g_value_get_int (value);
+      GPtrArray *priors_m2lnL = GINT_TO_POINTER (p);
+      g_ptr_array_unref (lh->priors_m2lnL);
+      lh->priors_m2lnL = priors_m2lnL;
+      break;
+    }
+    case PROP_PRIORS_F:
+    {
+      guint p = g_value_get_int (value);
+      GPtrArray *priors_f = GINT_TO_POINTER (p);
+      g_ptr_array_unref (lh->priors_f);
+      lh->priors_f = priors_f;
+      break;
+    }
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
       break;
@@ -87,6 +105,12 @@ ncm_likelihood_get_property (GObject *object, guint prop_id, GValue *value, GPar
   {
     case PROP_DATASET:
       g_value_set_object (value, lh->dset);
+      break;
+    case PROP_PRIORS_M2LNL:
+      g_value_set_int (value, GPOINTER_TO_INT (g_ptr_array_ref (lh->priors_m2lnL)));
+      break;
+    case PROP_PRIORS_F:
+      g_value_set_int (value, GPOINTER_TO_INT (g_ptr_array_ref (lh->priors_f)));
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -141,7 +165,20 @@ ncm_likelihood_class_init (NcmLikelihoodClass *klass)
                                                         "Dataset object",
                                                         NCM_TYPE_DATASET,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-  
+  g_object_class_install_property (object_class,
+                                   PROP_PRIORS_M2LNL,
+                                   g_param_spec_int ("priors-m2lnL-ptr",
+                                                     NULL,
+                                                     "Priors m2lnL pointer",
+                                                     G_MININT, G_MAXINT, 0,
+                                                     G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  g_object_class_install_property (object_class,
+                                   PROP_PRIORS_F,
+                                   g_param_spec_int ("priors-f-ptr",
+                                                     NULL,
+                                                     "Priors f pointer",
+                                                     G_MININT, G_MAXINT, 0,
+                                                     G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 }
 
 /**
@@ -178,38 +215,17 @@ ncm_likelihood_ref (NcmLikelihood *lh)
 /**
  * ncm_likelihood_dup:
  * @lh: a #NcmLikelihood.
+ * @ser: a #NcmSerialize.
  *
  * Duplicates the object and all of its content.
  *
  * Returns: (transfer full): A duplicate of @lh.
  */
 NcmLikelihood *
-ncm_likelihood_dup (NcmLikelihood *lh)
+ncm_likelihood_dup (NcmLikelihood *lh, NcmSerialize *ser)
 {
-  NcmDataset *dset = ncm_dataset_dup (lh->dset);
-  NcmLikelihood *lh_dup = ncm_likelihood_new (dset);
-  gint i;
-  
-  ncm_dataset_free (dset);
-
-  g_ptr_array_set_size (lh_dup->priors_f, 0);
-  g_ptr_array_set_size (lh_dup->priors_m2lnL, 0);
-
-  for (i = 0; i < lh->priors_f->len; i++)
-  {
-    NcmMSetFunc *func = NCM_MSET_FUNC (g_ptr_array_index (lh->priors_f, i));
-    ncm_likelihood_priors_add (lh_dup, ncm_mset_func_ref (func), FALSE);
-  }
-
-  for (i = 0; i < lh->priors_m2lnL->len; i++)
-  {
-    NcmMSetFunc *func = NCM_MSET_FUNC (g_ptr_array_index (lh->priors_m2lnL, i));
-    ncm_likelihood_priors_add (lh_dup, ncm_mset_func_ref (func), TRUE);
-  }
-
-  return lh_dup;
+  return NCM_LIKELIHOOD (ncm_serialize_dup_obj (ser, G_OBJECT (lh)));
 }
-
 
 /**
  * ncm_likelihood_copy:
@@ -224,7 +240,7 @@ ncm_likelihood_copy (NcmLikelihood *lh)
 {
   NcmDataset *dset = ncm_dataset_copy (lh->dset);
   NcmLikelihood *lh_ref = ncm_likelihood_new (dset);
-  gint i;
+  guint i;
   
   ncm_dataset_free (dset);
 

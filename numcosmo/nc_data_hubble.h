@@ -70,7 +70,6 @@ struct _NcDataHubble
   /*< private >*/
   NcmDataGaussDiag parent_instance;
   NcmVector *x;
-  NcDataHubbleId id;
 };
 
 struct _NcDataHubbleClass
@@ -82,12 +81,7 @@ struct _NcDataHubbleClass
 GType nc_data_hubble_get_type (void) G_GNUC_CONST;
 
 NcmData *nc_data_hubble_new (NcDataHubbleId id);
-
-void nc_data_hubble_set_size (NcDataHubble *hubble, guint np);
-guint nc_data_hubble_get_size (NcDataHubble *hubble);
-
 void nc_data_hubble_set_sample (NcDataHubble *hubble, NcDataHubbleId id);
-NcDataHubbleId nc_data_hubble_get_sample (NcDataHubble *hubble);
 
 G_END_DECLS
 

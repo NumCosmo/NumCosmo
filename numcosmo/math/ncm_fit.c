@@ -39,7 +39,7 @@
 
 #include "math/ncm_fit.h"
 #include "math/ncm_cfg.h"
-#include "math/util.h"
+#include "math/ncm_util.h"
 #include "math/integral.h"
 #include "math/memory_pool.h"
 #include "math/ncm_fit_gsl_ls.h"
@@ -67,6 +67,8 @@ enum
   PROP_M2LNL_RELTOL,
   PROP_M2LNL_ABSTOL,
   PROP_PARAMS_RELTOL,
+  PROP_EQC,
+  PROP_INEQC,
   PROP_SIZE,
 };
 
@@ -163,14 +165,19 @@ _ncm_fit_constructed (GObject *object)
      * g_warning ("ncm_fit_new: mset object has 0 free parameters");
      * 
      */
+    
     {
       guint data_len   = n + n_priors;
       guint fparam_len = ncm_mset_fparam_len (fit->mset);
       gint dof         = data_dof + n_priors - fparam_len;
 
-      fit->fstate = ncm_fit_state_new (data_len, fparam_len, dof,
-                                       NCM_FIT_GET_CLASS (fit)->is_least_squares);
-
+      if (fit->fstate == NULL)
+        fit->fstate = ncm_fit_state_new (data_len, fparam_len, dof,
+                                         NCM_FIT_GET_CLASS (fit)->is_least_squares);
+      else
+        ncm_fit_state_set_all (fit->fstate, data_len, fparam_len, dof, 
+                               NCM_FIT_GET_CLASS (fit)->is_least_squares);
+      
       g_assert (data_len > 0);
     }
   }
@@ -192,6 +199,10 @@ _ncm_fit_set_property (GObject *object, guint prop_id, const GValue *value, GPar
       ncm_mset_clear (&fit->mset);
       fit->mset = g_value_dup_object (value);
       break;
+    case PROP_STATE:
+      ncm_fit_state_clear (&fit->fstate);
+      fit->fstate = g_value_dup_object (value);
+      break;
     case PROP_GRAD_TYPE:
       ncm_fit_set_grad_type (fit, g_value_get_enum (value));
       break;
@@ -207,6 +218,22 @@ _ncm_fit_set_property (GObject *object, guint prop_id, const GValue *value, GPar
     case PROP_PARAMS_RELTOL:
       ncm_fit_set_params_reltol (fit, g_value_get_double (value));
       break;
+    case PROP_EQC:
+    {
+      guint p = g_value_get_int (value);
+      GPtrArray *eqc = GINT_TO_POINTER (p);
+      g_ptr_array_unref (fit->equality_constraints);
+      fit->equality_constraints = eqc;
+      break;
+    }
+    case PROP_INEQC:
+    {
+      guint p = g_value_get_int (value);
+      GPtrArray *ineqc = GINT_TO_POINTER (p);
+      g_ptr_array_unref (fit->inequality_constraints);
+      fit->inequality_constraints = ineqc;
+      break;
+    }
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
       break;
@@ -227,6 +254,9 @@ _ncm_fit_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec
     case PROP_MSET:
       g_value_set_object (value, fit->mset);
       break;
+    case PROP_STATE:
+      g_value_set_object (value, fit->fstate);
+      break;
     case PROP_GRAD_TYPE:
       g_value_set_enum (value, fit->grad.gtype);
       break;
@@ -241,6 +271,12 @@ _ncm_fit_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec
       break;
     case PROP_PARAMS_RELTOL:
       g_value_set_double (value, ncm_fit_get_params_reltol (fit));
+      break;
+    case PROP_EQC:
+      g_value_set_int (value, GPOINTER_TO_INT (g_ptr_array_ref (fit->equality_constraints)));
+      break;
+    case PROP_INEQC:
+      g_value_set_int (value, GPOINTER_TO_INT (g_ptr_array_ref (fit->inequality_constraints)));
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -306,14 +342,21 @@ ncm_fit_class_init (NcmFitClass *klass)
                                                         NULL,
                                                         "Likelihood object",
                                                         NCM_TYPE_LIKELIHOOD,
-                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
   g_object_class_install_property (object_class,
                                    PROP_MSET,
                                    g_param_spec_object ("mset",
                                                         NULL,
                                                         "Model set object",
                                                         NCM_TYPE_MSET,
-                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  g_object_class_install_property (object_class,
+                                   PROP_STATE,
+                                   g_param_spec_object ("state",
+                                                        NULL,
+                                                        "Fit state object",
+                                                        NCM_TYPE_FIT_STATE,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
   g_object_class_install_property (object_class,
                                    PROP_GRAD_TYPE,
                                    g_param_spec_enum ("grad-type",
@@ -351,6 +394,21 @@ ncm_fit_class_init (NcmFitClass *klass)
                                                         "Relative tolarence in fitted parameters",
                                                         0.0, G_MAXDOUBLE, NCM_FIT_DEFAULT_PARAMS_RELTOL,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  g_object_class_install_property (object_class,
+                                   PROP_EQC,
+                                   g_param_spec_int ("equality-constraints",
+                                                     NULL,
+                                                     "Equality constraints pointer",
+                                                     G_MININT, G_MAXINT, 0,
+                                                     G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  g_object_class_install_property (object_class,
+                                   PROP_INEQC,
+                                   g_param_spec_int ("inequality-constraints",
+                                                     NULL,
+                                                     "Inequality constraints pointer",
+                                                     G_MININT, G_MAXINT, 0,
+                                                     G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
 }
 
 static void
@@ -446,6 +504,21 @@ NcmFit *
 ncm_fit_copy_new (NcmFit *fit, NcmLikelihood *lh, NcmMSet *mset, NcmFitGradType gtype)
 {
   return NCM_FIT_GET_CLASS (fit)->copy_new (fit, lh, mset, gtype);
+}
+
+/**
+ * ncm_fit_dup:
+ * @fit: a #NcmFit
+ * @ser: a #NcmSerialize
+ *
+ * Duplicates the #NcmFit object duplicating all its contents.
+ *
+ * Returns: (transfer full): FIXME
+ */
+NcmFit *
+ncm_fit_dup (NcmFit *fit, NcmSerialize *ser)
+{
+  return NCM_FIT (ncm_serialize_dup_obj (ser, G_OBJECT (fit)));
 }
 
 /**
@@ -766,8 +839,8 @@ ncm_fit_ls_covar (NcmFit *fit)
 {
   g_assert (fit->fstate->is_least_squares);
   ncm_fit_ls_J (fit, fit->fstate->ls_J);
-  gsl_multifit_covar (NCM_MATRIX_GSL (fit->fstate->ls_J), 0.0, 
-                      NCM_MATRIX_GSL (fit->fstate->covar));
+  gsl_multifit_covar (ncm_matrix_gsl (fit->fstate->ls_J), 0.0, 
+                      ncm_matrix_gsl (fit->fstate->covar));
   fit->fstate->has_covar = TRUE;
 }
 
@@ -1096,7 +1169,7 @@ ncm_fit_log_end (NcmFit *fit)
 void
 ncm_fit_log_state (NcmFit *fit)
 {
-  gint i;
+  guint i;
   if (fit->mtype > NCM_FIT_RUN_MSGS_NONE)
   {
     gdouble elap_sec = g_timer_elapsed (fit->timer, NULL);
@@ -1190,7 +1263,7 @@ ncm_fit_log_info (NcmFit *fit)
 void
 ncm_fit_log_covar (NcmFit *fit)
 {
-  gint i, j;
+  guint i, j;
   guint name_size = ncm_mset_max_fparam_name (fit->mset);
   guint free_params_len = ncm_mset_fparam_len (fit->mset);
   gchar *box = "---------------";
@@ -1243,7 +1316,7 @@ ncm_fit_log_covar (NcmFit *fit)
 void
 ncm_fit_fishermatrix_print (NcmFit *fit, FILE *out, gchar *header)
 {
-  gint i, j;
+  guint i, j;
   guint name_size = ncm_mset_max_param_name (fit->mset);
   guint free_params_len = ncm_mset_fparam_len (fit->mset);
 
@@ -1385,7 +1458,7 @@ ncm_fit_m2lnL_grad_nd_fo (NcmFit *fit, NcmVector *grad)
 void
 ncm_fit_m2lnL_grad_nd_ce (NcmFit *fit, NcmVector *grad)
 {
-  gint i;
+  guint i;
   guint fparam_len = ncm_mset_fparam_len (fit->mset);
 
   for (i = 0; i < fparam_len; i++)
@@ -1442,7 +1515,7 @@ ncm_fit_m2lnL_grad_nd_ac (NcmFit *fit, NcmVector *grad)
   gsl_function F;
   __ncm_fit_numdiff_1 nd;
   guint fparam_len = ncm_mset_fparam_len (fit->mset);
-  gint i;
+  guint i;
 
   nd.fit = fit;
   F.params = &nd;
@@ -1504,7 +1577,7 @@ ncm_fit_m2lnL_val_grad_an (NcmFit *fit, gdouble *result, NcmVector *df)
 void
 ncm_fit_m2lnL_val_grad_nd_fo (NcmFit *fit, gdouble *m2lnL, NcmVector *grad)
 {
-  gint i;
+  guint i;
   guint fparam_len = ncm_mset_fparam_len (fit->mset);
 
   ncm_fit_m2lnL_val (fit, m2lnL);
@@ -1597,7 +1670,7 @@ ncm_fit_ls_J_an (NcmFit *fit, NcmMatrix *J)
 void
 ncm_fit_ls_J_nd_fo (NcmFit *fit, NcmMatrix *J)
 {
-  gint i;
+  guint i;
   guint fparam_len = ncm_mset_fparam_len (fit->mset);
 
   ncm_fit_ls_f (fit, fit->fstate->ls_f);
@@ -1611,7 +1684,8 @@ ncm_fit_ls_J_nd_fo (NcmFit *fit, NcmMatrix *J)
     const gdouble pph = p + htilde;
     const gdouble h = pph - p;
     const gdouble one_h = 1.0 / h;
-    gint k;
+    guint k;
+    
     ncm_mset_fparam_set (fit->mset, i, pph);
     ncm_fit_ls_f (fit, J_col_i);
     for (k = 0; k < ncm_vector_len (fit->fstate->ls_f); k++)
@@ -1635,7 +1709,7 @@ ncm_fit_ls_J_nd_fo (NcmFit *fit, NcmMatrix *J)
 void
 ncm_fit_ls_J_nd_ce (NcmFit *fit, NcmMatrix *J)
 {
-  gint i;
+  guint i;
   guint fparam_len = ncm_mset_fparam_len (fit->mset);
 
   for (i = 0; i < fparam_len; i++)
@@ -1648,7 +1722,7 @@ ncm_fit_ls_J_nd_ce (NcmFit *fit, NcmMatrix *J)
     const gdouble pmh = p - h;
     const gdouble twoh = pph - pmh;
     const gdouble one_2h = 1.0 / twoh;
-    gint k;
+    guint k;
 
     ncm_mset_fparam_set (fit->mset, i, pph);
     ncm_fit_ls_f (fit, J_col_i);
@@ -1769,7 +1843,7 @@ ncm_fit_numdiff_m2lnL_hessian (NcmFit *fit, NcmMatrix *H)
 {
   gsl_function F;
   _ncm_fit_numdiff_2 nd;
-  gint i, j;
+  guint i, j;
   gdouble fx;
   const gdouble target_err = 1e-5;
   guint free_params_len = ncm_mset_fparams_len (fit->mset);
@@ -1847,10 +1921,10 @@ ncm_fit_numdiff_m2lnL_covar (NcmFit *fit)
   ncm_matrix_memcpy (fit->fstate->covar, fit->fstate->hessian);
   ncm_matrix_scale (fit->fstate->covar, 0.5);
 
-  ret = gsl_linalg_cholesky_decomp (NCM_MATRIX_GSL (fit->fstate->covar));
+  ret = gsl_linalg_cholesky_decomp (ncm_matrix_gsl (fit->fstate->covar));
   if (ret == GSL_SUCCESS)
   {
-    ret = gsl_linalg_cholesky_invert (NCM_MATRIX_GSL (fit->fstate->covar));
+    ret = gsl_linalg_cholesky_invert (ncm_matrix_gsl (fit->fstate->covar));
     NCM_TEST_GSL_RESULT ("ncm_fit_numdiff_m2lnL_covar[gsl_linalg_cholesky_invert]", ret);
   }
   else if (ret == GSL_EDOM)
@@ -1864,10 +1938,10 @@ ncm_fit_numdiff_m2lnL_covar (NcmFit *fit)
     
     g_warning ("ncm_fit_numdiff_m2lnL_covar: covariance matrix not positive definite, errors are not trustworthy.");
     
-    ret1 = gsl_linalg_LU_decomp (NCM_MATRIX_GSL (LU), p, &signum);
+    ret1 = gsl_linalg_LU_decomp (ncm_matrix_gsl (LU), p, &signum);
     NCM_TEST_GSL_RESULT ("ncm_fit_numdiff_m2lnL_covar[gsl_linalg_LU_decomp]", ret1);
     
-    ret1 = gsl_linalg_LU_invert (NCM_MATRIX_GSL (LU), p, NCM_MATRIX_GSL (fit->fstate->covar));
+    ret1 = gsl_linalg_LU_invert (ncm_matrix_gsl (LU), p, ncm_matrix_gsl (fit->fstate->covar));
     NCM_TEST_GSL_RESULT ("ncm_fit_numdiff_m2lnL_covar[gsl_linalg_LU_invert]", ret1);
     
     gsl_permutation_free (p);
@@ -1916,13 +1990,15 @@ gdouble
 ncm_fit_prob (NcmFit *fit, NcmModelID mid, guint pid, gdouble a, gdouble b)
 {
   NcmFit *fit_val;
-  NcmMSet *mset_val = ncm_mset_dup (fit->mset);
+  NcmSerialize *ser = ncm_serialize_global ();
+  NcmMSet *mset_val = ncm_mset_dup (fit->mset, ser);
   gsl_integration_workspace **w;
   FitDProb dprob_arg;
   gdouble result, error;
   gint error_code;
   gsl_function F;
 
+  ncm_serialize_free (ser);
   ncm_mset_param_set_ftype (mset_val, mid, pid, NCM_PARAM_TYPE_FIXED);
   fit_val = ncm_fit_copy_new (fit, fit->lh, mset_val, fit->grad.gtype);
 
@@ -1966,10 +2042,12 @@ void
 ncm_fit_dprob (NcmFit *fit, NcmModelID mid, guint pid, gdouble a, gdouble b, gdouble step, gdouble norm)
 {
   NcmFit *fit_val;
-  NcmMSet *mset_val = ncm_mset_dup (fit->mset);
+  NcmSerialize *ser = ncm_serialize_global ();
+  NcmMSet *mset_val = ncm_mset_dup (fit->mset, ser);
   FitDProb dprob_arg;
   gdouble point;
 
+  ncm_serialize_free (ser);
   ncm_mset_param_set_ftype (mset_val, mid, pid, NCM_PARAM_TYPE_FIXED);
   fit_val = ncm_fit_copy_new (fit, fit->lh, mset_val, fit->grad.gtype);
 
@@ -2004,9 +2082,11 @@ void
 ncm_fit_lr_test_range (NcmFit *fit, NcmModelID mid, guint pid, gdouble start, gdouble stop, gdouble step)
 {
   NcmFit *fit_val;
-  NcmMSet *mset_val = ncm_mset_dup (fit->mset);
+  NcmSerialize *ser = ncm_serialize_global ();
+  NcmMSet *mset_val = ncm_mset_dup (fit->mset, ser);
   gdouble walk;
 
+  ncm_serialize_free (ser);
   ncm_mset_param_set_ftype (mset_val, mid, pid, NCM_PARAM_TYPE_FIXED);
   fit_val = ncm_fit_copy_new (fit, fit->lh, mset_val, fit->grad.gtype);
 
@@ -2048,9 +2128,11 @@ gdouble
 ncm_fit_lr_test (NcmFit *fit, NcmModelID mid, guint pid, gdouble val, gint dof)
 {
   NcmFit *fit_val;
-  NcmMSet *mset_val = ncm_mset_dup (fit->mset);
+  NcmSerialize *ser = ncm_serialize_global ();
+  NcmMSet *mset_val = ncm_mset_dup (fit->mset, ser);
   gdouble result;
 
+  ncm_serialize_free (ser);
   ncm_mset_param_set_ftype (mset_val, mid, pid, NCM_PARAM_TYPE_FIXED);
   fit_val = ncm_fit_copy_new (fit, fit->lh, mset_val, fit->grad.gtype);
 
@@ -2138,7 +2220,7 @@ ncm_fit_function_error (NcmFit *fit, NcmMSetFunc *func, gdouble *x, gboolean pre
   gdouble result;
   gint ret;
 
-  ret = gsl_blas_dgemv (CblasNoTrans, 1.0, NCM_MATRIX_GSL (fit->fstate->covar), ncm_vector_gsl (v), 0.0, ncm_vector_gsl (tmp1));
+  ret = gsl_blas_dgemv (CblasNoTrans, 1.0, ncm_matrix_gsl (fit->fstate->covar), ncm_vector_gsl (v), 0.0, ncm_vector_gsl (tmp1));
   NCM_TEST_GSL_RESULT("ncm_fit_function_error[covar.v]", ret);
   ret = gsl_blas_ddot (ncm_vector_gsl (v), ncm_vector_gsl (tmp1), &result);
   NCM_TEST_GSL_RESULT("ncm_fit_function_error[v.covar.v]", ret);
@@ -2170,6 +2252,12 @@ ncm_fit_function_error (NcmFit *fit, NcmMSetFunc *func, gdouble *x, gboolean pre
 gdouble
 ncm_fit_function_cov (NcmFit *fit, NcmMSetFunc *func1, gdouble z1, NcmMSetFunc *func2, gdouble z2, gboolean pretty_print)
 {
+  NCM_UNUSED (fit);
+  NCM_UNUSED (func1);
+  NCM_UNUSED (z1);
+  NCM_UNUSED (func2);
+  NCM_UNUSED (z2);
+  NCM_UNUSED (pretty_print);
   g_assert_not_reached ();
   /*
    gdouble result, cor, s1, s2;
@@ -2180,19 +2268,19 @@ ncm_fit_function_cov (NcmFit *fit, NcmMSetFunc *func1, gdouble z1, NcmMSetFunc *
    NCM_FUNC_DF (func1, fit->mset, fit->pt, z1, tmp1);
    NCM_FUNC_DF (func2, fit->mset, fit->pt, z2, tmp2);
 
-   ret = gsl_blas_dgemv (CblasNoTrans, 1.0, NCM_MATRIX_GSL (fit->fstate->covar), ncm_vector_gsl (tmp1), 0.0, ncm_vector_gsl (fit->df));
+   ret = gsl_blas_dgemv (CblasNoTrans, 1.0, ncm_matrix_gsl (fit->fstate->covar), ncm_vector_gsl (tmp1), 0.0, ncm_vector_gsl (fit->df));
    NCM_TEST_GSL_RESULT("ncm_fit_function_error[covar.v]", ret);
    ret = gsl_blas_ddot (ncm_vector_gsl (fit->df), ncm_vector_gsl (tmp1), &result);
    NCM_TEST_GSL_RESULT("ncm_fit_function_error[v.covar.v]", ret);
    s1 = sqrt(result);
 
-   ret = gsl_blas_dgemv (CblasNoTrans, 1.0, NCM_MATRIX_GSL (fit->fstate->covar), ncm_vector_gsl (tmp2), 0.0, ncm_vector_gsl (fit->df));
+   ret = gsl_blas_dgemv (CblasNoTrans, 1.0, ncm_matrix_gsl (fit->fstate->covar), ncm_vector_gsl (tmp2), 0.0, ncm_vector_gsl (fit->df));
    NCM_TEST_GSL_RESULT("ncm_fit_function_error[covar.v]", ret);
    ret = gsl_blas_ddot (ncm_vector_gsl (fit->df), ncm_vector_gsl (tmp2), &result);
    NCM_TEST_GSL_RESULT("ncm_fit_function_error[v.covar.v]", ret);
    s2 = sqrt(result);
 
-   ret = gsl_blas_dgemv (CblasNoTrans, 1.0, NCM_MATRIX_GSL (fit->fstate->covar), ncm_vector_gsl (tmp1), 0.0, ncm_vector_gsl (fit->df));
+   ret = gsl_blas_dgemv (CblasNoTrans, 1.0, ncm_matrix_gsl (fit->fstate->covar), ncm_vector_gsl (tmp1), 0.0, ncm_vector_gsl (fit->df));
    NCM_TEST_GSL_RESULT("ncm_fit_function_error[covar.v]", ret);
    ret = gsl_blas_ddot (ncm_vector_gsl (fit->df), ncm_vector_gsl (tmp2), &result);
    NCM_TEST_GSL_RESULT("ncm_fit_function_error[v.covar.v]", ret);

@@ -384,7 +384,7 @@ cvodes_evol (NcLinearPert *pert, gdouble lambda)
 
 		if (FALSE)
 		{
-			gint i;
+			guint i;
 			//CVodeGetErrWeights (data->cvode, ew);
 			//CVodeGetEstLocalErrors (data->cvode, ele);
 			//cvodes_print_stats (pert);
@@ -467,6 +467,7 @@ cvodes_print_stats (NcLinearPert *pert)
 #define LINEAR_STEP_PARAMS realtype lambda, N_Vector y, N_Vector ydot, gpointer user_data
 #define LINEAR_JAC_PARAMS _NCM_SUNDIALS_INT_TYPE N, _NCM_SUNDIALS_INT_TYPE mupper, _NCM_SUNDIALS_INT_TYPE mlower, realtype lambda, N_Vector y, N_Vector fy, DlsMat J, gpointer user_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3
 #define LINEAR_STEP_RET_VAL return 0
+#define LINEAR_JAC_UNUSED G_STMT_START { NCM_UNUSED (N); NCM_UNUSED (mupper); NCM_UNUSED (mlower); NCM_UNUSED (y); NCM_UNUSED (fy); NCM_UNUSED (tmp1); NCM_UNUSED (tmp2); NCM_UNUSED (tmp3); } G_STMT_END 
 
 #include "linear_generic.c"
 
@@ -477,6 +478,10 @@ cvodes_Jv (N_Vector v, N_Vector Jv, realtype lambda, N_Vector y, N_Vector fy, gp
   gboolean tight_coupling = pert->pws->tight_coupling;
   gboolean tight_coupling_end = pert->pws->tight_coupling_end;
   gint ret;
+
+  NCM_UNUSED (y);
+  NCM_UNUSED (fy);
+  NCM_UNUSED (tmp);
 
   ret = cvodes_step (lambda, v, Jv, user_data);
   pert->pws->tight_coupling = tight_coupling;
@@ -492,8 +497,13 @@ cvodes_Mz_r (realtype lambda, N_Vector yo, N_Vector fy, N_Vector r, N_Vector z, 
   gboolean tight_coupling; /* = pert->pws->tight_coupling;*/
   gboolean tight_coupling_end; /* = pert->pws->tight_coupling_end; */
   N_Vector a, b, c;
-  gint i;
+  guint i;
 
+  NCM_UNUSED (yo);
+  NCM_UNUSED (fy);
+  NCM_UNUSED (delta);
+  NCM_UNUSED (lr);
+  
   a = tmp;
   b = z;
   N_VAddConst (r, 0.0, b);
@@ -581,7 +591,7 @@ cvodes_lineofsight (realtype lambda, N_Vector y, N_Vector yQdot, gpointer user_d
     kdeta = pert->pws->k * (pert->eta0 - nc_scale_factor_t_x (pert->a, x));
     for (i = 0; i < pert->los_table->len; i++)
     {
-      gint l = g_array_index(pert->los_table, gint, i);
+      guint l = g_array_index(pert->los_table, guint, i);
       gdouble jl, jlp1, djl, d2jl;
       gdouble kdeta2 = kdeta * kdeta;
       NcmSpline *jl_spline = ncm_calc_spherical_bessel_spline (l, 4000.0);

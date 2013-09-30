@@ -99,6 +99,7 @@ gdouble nc_distance_angular_diameter_curvature_scale (NcDistance *dist, NcHICosm
 
 gdouble nc_distance_comoving (NcDistance *dist, NcHICosmo *cosmo, gdouble z);
 gdouble nc_distance_transverse (NcDistance *dist, NcHICosmo *cosmo, gdouble z);
+gdouble nc_distance_dtransverse_dz (NcDistance *dist, NcHICosmo *cosmo, gdouble z);
 gdouble nc_distance_luminosity (NcDistance *dist, NcHICosmo *cosmo, gdouble z);
 gdouble nc_distance_modulus (NcDistance *dist, NcHICosmo *cosmo, gdouble z);
 gdouble nc_distance_luminosity_hef (NcDistance *dist, NcHICosmo *cosmo, gdouble z_he, gdouble z_cmb);

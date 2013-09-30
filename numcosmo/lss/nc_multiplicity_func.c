@@ -53,7 +53,7 @@ G_DEFINE_ABSTRACT_TYPE (NcMultiplicityFunc, nc_multiplicity_func, G_TYPE_OBJECT)
 NcMultiplicityFunc *
 nc_multiplicity_func_new_from_name (gchar *multiplicity_name)
 {
-  GObject *obj = ncm_serialize_global_create_from_string (multiplicity_name);
+  GObject *obj = ncm_serialize_global_from_string (multiplicity_name);
   GType multiplicity_type = G_OBJECT_TYPE (obj);
   if (!g_type_is_a (multiplicity_type, NC_TYPE_MULTIPLICITY_FUNC))
 	g_error ("nc_multiplicity_func_new_from_name: NcMultiplicityFunc %s do not descend from %s\n", multiplicity_name, g_type_name (NC_TYPE_MULTIPLICITY_FUNC));
@@ -108,14 +108,14 @@ nc_multiplicity_func_clear (NcMultiplicityFunc **mulf)
 static void
 nc_multiplicity_func_init (NcMultiplicityFunc *mulf)
 {
-  /* TODO: Add initialization code here */
+  NCM_UNUSED (mulf);
 }
 
 static void
 _nc_multiplicity_func_finalize (GObject *object)
 {
-  /* TODO: Add deinitalization code here */
-
+  
+  /* Chain up : end */
   G_OBJECT_CLASS (nc_multiplicity_func_parent_class)->finalize (object);
 }
 

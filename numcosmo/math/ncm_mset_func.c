@@ -38,7 +38,7 @@
 #include "build_cfg.h"
 
 #include "math/ncm_mset_func.h"
-#include "math/util.h"
+#include "math/ncm_util.h"
 
 G_DEFINE_TYPE (NcmMSetFunc, ncm_mset_func, G_TYPE_OBJECT);
 
@@ -64,7 +64,7 @@ ncm_mset_func_new (NcmMSetFuncN func, guint np, guint dim, gpointer obj, GDestro
   gfunc->obj = obj;
   gfunc->free = free;
   if (free)
-	g_assert (obj != NULL);
+    g_assert (obj != NULL);
 
   return gfunc;
 }
@@ -259,7 +259,7 @@ ncm_mset_func_numdiff_fparams (NcmMSetFunc *func, NcmMSet *mset, const gdouble *
   gsl_function F;
   __ncm_mset_func_numdiff_fparams_1 nd;
   guint fparam_len = ncm_mset_fparam_len (mset);
-  gint i;
+  guint i;
 
   nd.mset  = mset;
   nd.func  = func;

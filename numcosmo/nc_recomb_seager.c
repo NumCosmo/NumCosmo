@@ -44,7 +44,7 @@
 #include "nc_recomb.h"
 #include "math/ncm_spline_func.h"
 #include "math/cvode_util.h"
-#include "math/util.h"
+#include "math/ncm_util.h"
 #include "math/ncm_spline_cubic_notaknot.h"
 
 #include <nvector/nvector_serial.h>
@@ -85,7 +85,13 @@ H_ion_full_J (_NCM_SUNDIALS_INT_TYPE N, realtype lambda, N_Vector y, N_Vector fy
   gdouble Tm    = NV_Ith_S (y, 1);
   gdouble XHeII = NV_Ith_S (y, 2);
   gdouble grad[3];
-
+  
+  NCM_UNUSED (N);
+  NCM_UNUSED (fy);
+  NCM_UNUSED (tmp1);
+  NCM_UNUSED (tmp2);
+  NCM_UNUSED (tmp3);
+  
   nc_recomb_seager_HII_ion_rate_grad (cosmo, XHII, Tm, XHeII, x, grad);
   DENSE_ELEM (J, 0, 0) = -x * grad[0];
   DENSE_ELEM (J, 0, 1) = -x * grad[1];
@@ -228,7 +234,7 @@ nc_recomb_seager_prepare (NcRecomb *recomb, NcHICosmo *cosmo)
 
 	if (FALSE)
 	{
-		gint i;
+		guint i;
 		printf ("# Xe spline len %u\n", ncm_vector_len (recomb->Xe_s->xv));
 
 		for (i = 0; i < ncm_vector_len (recomb->Xe_s->xv); i++)

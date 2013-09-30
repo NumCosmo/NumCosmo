@@ -250,7 +250,7 @@ main (gint argc, gchar *argv[])
       if (de_data_simple.snia_objser == NULL)
         dcov = nc_snia_dist_cov_new (dist);
       else
-        dcov = NC_SNIA_DIST_COV (ncm_serialize_global_create_from_string (de_data_simple.snia_objser));
+        dcov = NC_SNIA_DIST_COV (ncm_serialize_global_from_string (de_data_simple.snia_objser));
 
       g_assert (NC_IS_SNIA_DIST_COV (dcov));
 
@@ -470,7 +470,10 @@ main (gint argc, gchar *argv[])
     else
       resample_mset = fit->mset;
 
-    ncm_fit_mc_run (mc, resample_mset, de_fit.mc_ni, de_fit.montecarlo, de_fit.msg_level);
+    if (de_fit.mc_nthreads > 0)
+      ncm_fit_mc_run_mt (mc, resample_mset, de_fit.mc_ni, de_fit.montecarlo, de_fit.msg_level, de_fit.mc_nthreads);
+    else
+      ncm_fit_mc_run (mc, resample_mset, de_fit.mc_ni, de_fit.montecarlo, de_fit.msg_level);
     ncm_fit_mc_mean_covar (mc);
     ncm_fit_mc_gof_pdf (mc);
     ncm_fit_log_covar (fit);

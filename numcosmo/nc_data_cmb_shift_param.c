@@ -43,7 +43,7 @@ enum
 {
   PROP_0,
   PROP_DIST,
-  PROP_ID,
+  PROP_Z,
   PROP_SIZE,
 };
 
@@ -53,7 +53,7 @@ static void
 nc_data_cmb_shift_param_init (NcDataCMBShiftParam *cmb_shift_param)
 {
   cmb_shift_param->dist = NULL;
-  cmb_shift_param->id   = NC_DATA_CMB_NSAMPLES;
+  cmb_shift_param->x    = NULL;
 }
 
 static void
@@ -68,8 +68,8 @@ nc_data_cmb_shift_param_set_property (GObject *object, guint prop_id, const GVal
       nc_distance_clear (&cmb_shift_param->dist);
       cmb_shift_param->dist = g_value_dup_object (value);
       break;
-    case PROP_ID:
-      nc_data_cmb_shift_param_set_sample (cmb_shift_param, g_value_get_enum (value));
+    case PROP_Z:
+      ncm_vector_set_from_variant (cmb_shift_param->x, g_value_get_variant (value));
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -88,8 +88,8 @@ nc_data_cmb_shift_param_get_property (GObject *object, guint prop_id, GValue *va
     case PROP_DIST:
       g_value_set_object (value, cmb_shift_param->dist);
       break;
-    case PROP_ID:
-      g_value_set_enum (value, nc_data_cmb_shift_param_get_sample (cmb_shift_param));
+    case PROP_Z:
+      g_value_take_variant (value, ncm_vector_get_variant (cmb_shift_param->x));
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -118,6 +118,7 @@ nc_data_cmb_shift_param_finalize (GObject *object)
 
 static void _nc_data_cmb_shift_param_prepare (NcmData *data, NcmMSet *mset);
 static void _nc_data_cmb_shift_param_mean_func (NcmDataGaussDiag *diag, NcmMSet *mset, NcmVector *vp);
+static void _nc_data_cmb_shift_param_set_size (NcmDataGaussDiag *diag, guint np);
 
 static void
 nc_data_cmb_shift_param_class_init (NcDataCMBShiftParamClass *klass)
@@ -138,17 +139,17 @@ nc_data_cmb_shift_param_class_init (NcDataCMBShiftParamClass *klass)
                                                         "Distance object",
                                                         NC_TYPE_DISTANCE,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-
   g_object_class_install_property (object_class,
-                                   PROP_ID,
-                                   g_param_spec_enum ("sample-id",
-                                                      NULL,
-                                                      "Sample id",
-                                                      NC_TYPE_DATA_CMB_ID, NC_DATA_CMB_SHIFT_PARAM_WMAP7,
-                                                      G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));  
+                                   PROP_Z,
+                                   g_param_spec_variant ("z",
+                                                         NULL,
+                                                         "Data redshift",
+                                                         G_VARIANT_TYPE ("ad"), NULL,
+                                                         G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   data_class->prepare   = &_nc_data_cmb_shift_param_prepare;
   diag_class->mean_func = &_nc_data_cmb_shift_param_mean_func;
+  diag_class->set_size  = &_nc_data_cmb_shift_param_set_size;
 }
 
 static void
@@ -187,10 +188,26 @@ _nc_data_cmb_shift_param_mean_func (NcmDataGaussDiag *diag, NcmMSet *mset, NcmVe
 NcmData *
 nc_data_cmb_shift_param_new (NcDistance *dist, NcDataCMBId id)
 {
-  return g_object_new (NC_TYPE_DATA_CMB_SHIFT_PARAM,
-                       "sample-id", id,
-                       "dist", dist,
-                       NULL);
+  NcmData *data = g_object_new (NC_TYPE_DATA_CMB_SHIFT_PARAM,
+                                "dist", dist,
+                                NULL);
+  nc_data_cmb_shift_param_set_sample (NC_DATA_CMB_SHIFT_PARAM (data), id);
+  return data;
+}
+
+static void 
+_nc_data_cmb_shift_param_set_size (NcmDataGaussDiag *diag, guint np)
+{
+  NcDataCMBShiftParam *cmb_shift_param = NC_DATA_CMB_SHIFT_PARAM (diag);
+
+  if ((np == 0) || (np != diag->np))
+    ncm_vector_clear (&cmb_shift_param->x);
+
+  if ((np != 0) && (np != diag->np))
+    cmb_shift_param->x = ncm_vector_new (np);
+  
+  /* Chain up : start */
+  NCM_DATA_GAUSS_DIAG_CLASS (nc_data_cmb_shift_param_parent_class)->set_size (diag, np);
 }
 
 /**
@@ -209,34 +226,24 @@ nc_data_cmb_shift_param_set_sample (NcDataCMBShiftParam *cmb_shift_param, NcData
   
   g_assert (id < NC_DATA_CMB_NSAMPLES);
 
-  if (cmb_shift_param->x != NULL && ncm_vector_len (cmb_shift_param->x) != 1)
-    ncm_vector_clear (&cmb_shift_param->x);
-
-  if (cmb_shift_param->x == NULL)
-    cmb_shift_param->x = ncm_vector_new (1);
-  
-  if (data->desc != NULL)
-    g_free (data->desc);
-
   ncm_data_gauss_diag_set_size (diag, 1);
-  cmb_shift_param->id = id;
 
   switch (id)
   {
     case NC_DATA_CMB_SHIFT_PARAM_WMAP3:
-      data->desc = g_strdup ("WMAP3 shift parameter");
+      ncm_data_set_desc (data, "WMAP3 shift parameter");
       ncm_vector_set (cmb_shift_param->x, 0, ncm_c_wmap3_cmb_z ());
       ncm_vector_set (diag->y,            0, ncm_c_wmap3_cmb_R ());
       ncm_vector_set (diag->sigma,        0, ncm_c_wmap3_cmb_sigma_R ());
       break;
     case NC_DATA_CMB_SHIFT_PARAM_WMAP5:
-      data->desc = g_strdup ("WMAP5 shift parameter");
+      ncm_data_set_desc (data, "WMAP5 shift parameter");
       ncm_vector_set (cmb_shift_param->x, 0, ncm_c_wmap5_cmb_z ());
       ncm_vector_set (diag->y,            0, ncm_c_wmap5_cmb_R ());
       ncm_vector_set (diag->sigma,        0, ncm_c_wmap5_cmb_sigma_R ());
       break;
     case NC_DATA_CMB_SHIFT_PARAM_WMAP7:
-      data->desc = g_strdup ("WMAP7 shift parameter");
+      ncm_data_set_desc (data, "WMAP7 shift parameter");
       ncm_vector_set (cmb_shift_param->x, 0, ncm_c_wmap7_cmb_z ());
       ncm_vector_set (diag->y,            0, ncm_c_wmap7_cmb_R ());
       ncm_vector_set (diag->sigma,        0, ncm_c_wmap7_cmb_sigma_R ());
@@ -246,19 +253,5 @@ nc_data_cmb_shift_param_set_sample (NcDataCMBShiftParam *cmb_shift_param, NcData
       break;
   }
 
-  ncm_data_set_init (data);
-}
-
-/**
- * nc_data_cmb_shift_param_get_sample:
- * @cmb_shift_param: a #NcDataCMBShiftParam
- *
- * FIXME
- * 
- * Returns: FIXME
- */
-NcDataCMBId 
-nc_data_cmb_shift_param_get_sample (NcDataCMBShiftParam *cmb_shift_param)
-{
-  return cmb_shift_param->id;
+  ncm_data_set_init (data, TRUE);
 }

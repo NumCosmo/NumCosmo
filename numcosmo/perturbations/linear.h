@@ -72,8 +72,8 @@ typedef enum _NcLinearPertVars
 #define NC_PERT_dTHETA0 NC_PERT_THETA0
 #define NC_PERT_U       NC_PERT_THETA1
 
-extern gint _itheta_table[3];
-extern gint _itheta_p_table[3];
+extern guint _itheta_table[3];
+extern guint _itheta_p_table[3];
 
 #define NC_PERT_THETA(n)   ((n <= 2) ? (_itheta_table[n])   : (NC_PERT_THETA_P2 + 1) + (2*(n-3)))
 #define NC_PERT_THETA_P(n) ((n <= 2) ? (_itheta_p_table[n]) : (NC_PERT_THETA_P2 + 1) + (2*(n-3)+1))
@@ -248,10 +248,10 @@ void nc_pert_linear_splines_clear (NcLinearPertSplines **pspline);
 gboolean nc_pert_linear_spline_set_source_at (NcLinearPertSplines *pspline, gdouble k);
 gboolean nc_pert_linear_calc_Nc_spline (NcLinearPertSplines *pspline, NcmSpline *pw_spline, GArray *los_table, gulong n_interp);
 gdouble nc_pert_linear_los_integrate (NcLinearPertSplines *pspline, glong l, gdouble k);
-GArray *nc_pert_linear_create_los_table (gint lmax_los, gint *los_ini, gint *los_step);
+GArray *nc_pert_linear_create_los_table (guint lmax_los, guint *los_ini, guint *los_step);
 
-extern gint _nc_default_los_init[];
-extern gint _nc_default_los_step[];
+extern guint _nc_default_los_init[];
+extern guint _nc_default_los_step[];
 
 #define nc_pert_get_default_los_table(lmax) (nc_pert_linear_create_los_table (lmax, _nc_default_los_init, _nc_default_los_step))
 

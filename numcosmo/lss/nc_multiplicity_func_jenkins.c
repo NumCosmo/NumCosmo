@@ -106,7 +106,10 @@ _nc_multiplicity_func_jenkins_eval (NcMultiplicityFunc *mulf, NcHICosmo *model, 
   mulf_jenkins->epsilon = 3.8;
 
   gdouble f_Jenkins = mulf_jenkins->A * exp(-pow(fabs(-log(sigma) + mulf_jenkins->B), mulf_jenkins->epsilon));
-    
+
+  NCM_UNUSED (model);
+  NCM_UNUSED (z);
+  
   return f_Jenkins;
 }
 

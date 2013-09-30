@@ -50,7 +50,6 @@ G_BEGIN_DECLS
 typedef struct _NcDataClusterNCountClass NcDataClusterNCountClass;
 typedef struct _NcDataClusterNCount NcDataClusterNCount;
 
-
 /**
  * NcDataClusterAbundanceId:
  * @NC_DATA_CLUSTER_ABUNDANCE_FIT: FIXME
@@ -79,7 +78,7 @@ struct _NcDataClusterNCount
   NcmMatrix *lnM_obs;
   NcmMatrix *lnM_obs_params;
   gdouble area_survey;
-  glong np;
+  guint np;
   gdouble log_np_fac;
   gboolean use_true_data;
   gsl_histogram2d *completeness;
@@ -102,6 +101,16 @@ NcmData *nc_data_cluster_ncount_new (NcClusterAbundance *cad);
 
 NcDataClusterNCount *nc_data_cluster_ncount_ref (NcDataClusterNCount *ncount);
 void nc_data_cluster_ncount_free (NcDataClusterNCount *ncount);
+void nc_data_cluster_ncount_clear (NcDataClusterNCount **ncount);
+
+void nc_data_cluster_ncount_set_mass (NcDataClusterNCount *ncount, NcClusterMass *m);
+void nc_data_cluster_ncount_set_redshift (NcDataClusterNCount *ncount, NcClusterRedshift *z);
+void nc_data_cluster_ncount_set_lnM_true (NcDataClusterNCount *ncount, const NcmVector *v);
+void nc_data_cluster_ncount_set_z_true (NcDataClusterNCount *ncount, const NcmVector *v);
+void nc_data_cluster_ncount_set_lnM_obs (NcDataClusterNCount *ncount, const NcmMatrix *m);
+void nc_data_cluster_ncount_set_lnM_obs_params (NcDataClusterNCount *ncount, const NcmMatrix *m);
+void nc_data_cluster_ncount_set_z_obs (NcDataClusterNCount *ncount, const NcmMatrix *m);
+void nc_data_cluster_ncount_set_z_obs_params (NcDataClusterNCount *ncount, const NcmMatrix *m);
 
 NcmData *nc_data_cluster_ncount_binned_new (NcClusterAbundance *cad);
 void nc_data_cluster_ncount_binned_init_from_text_file_gkey (NcmData *data, gboolean obs, gchar *filename);

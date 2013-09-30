@@ -37,6 +37,8 @@
 #include "build_cfg.h"
 
 #include "lss/nc_halo_bias_type_ps.h"
+#include "math/ncm_cfg.h"
+#include "math/ncm_util.h"
 
 G_DEFINE_TYPE (NcHaloBiasTypePS, nc_halo_bias_type_ps, NC_TYPE_HALO_BIAS_TYPE);
 
@@ -70,6 +72,8 @@ _nc_halo_bias_type_ps_eval (NcHaloBiasType*biasf, gdouble sigma, gdouble z)
   gdouble x2 = x * x;
   gdouble b_PS = 1.0 + (x2 - 1.0) / bias_ps->delta_c;
 
+  NCM_UNUSED (z);
+  
   return b_PS;
 }
 

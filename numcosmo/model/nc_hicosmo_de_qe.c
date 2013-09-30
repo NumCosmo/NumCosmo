@@ -86,6 +86,7 @@ enum {
 static void
 nc_hicosmo_de_qe_init (NcHICosmoDEQe *qe)
 {
+  NCM_UNUSED (qe);
 }
 
 static void

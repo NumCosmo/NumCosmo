@@ -42,7 +42,7 @@
 #include "math/ncm_c.h"
 #include "math/ncm_cfg.h"
 #include "math/ncm_matrix.h"
-#include "math/util.h"
+#include "math/ncm_util.h"
 
 #include <gsl/gsl_cdf.h>
 #include <gsl/gsl_roots.h>
@@ -92,8 +92,11 @@ ncm_lh_ratio2d_constructed (GObject *object)
   G_OBJECT_CLASS (ncm_lh_ratio2d_parent_class)->constructed (object);
   {
     NcmLHRatio2d *lhr2d = NCM_LH_RATIO2D (object);
-    NcmMSet *mset = ncm_mset_dup (lhr2d->fit->mset);
+    NcmSerialize *ser = ncm_serialize_global ();
+    NcmMSet *mset = ncm_mset_dup (lhr2d->fit->mset, ser);
     gint i;
+
+    ncm_serialize_free (ser);
     g_assert (lhr2d->fit->fstate->is_best_fit);
 
     for (i = 0; i < 2; i++)
@@ -304,9 +307,9 @@ _ncm_lh_ratio2d_prepare_coords (NcmLHRatio2d *lhr2d)
   ncm_matrix_set (cov, 1, 0, ncm_fit_covar_fparam_cov (lhr2d->fit, fpi2, fpi1));
   ncm_matrix_set (cov, 1, 1, ncm_fit_covar_fparam_cov (lhr2d->fit, fpi2, fpi2));
 
-  gsl_eigen_symmv (NCM_MATRIX_GSL (cov), 
+  gsl_eigen_symmv (ncm_matrix_gsl (cov), 
                    ncm_vector_gsl (lhr2d->e_val), 
-                   NCM_MATRIX_GSL (lhr2d->e_vec), 
+                   ncm_matrix_gsl (lhr2d->e_vec), 
                    vw);
   gsl_eigen_symmv_free (vw);
 
@@ -475,6 +478,7 @@ ncm_lh_ratio2d_log_border_found (NcmLHRatio2d *lhr2d, gdouble r)
 static gboolean 
 _ncm_lh_ratio2d_inside_interval (gdouble *p, const gdouble lb, const gdouble ub, const gdouble prec)
 {
+  NCM_UNUSED (prec);
   if (p[0] < lb)
   {
     if (ncm_cmp (p[0], lb, 1e-4) == 0)
@@ -1012,6 +1016,9 @@ ncm_lh_ratio2d_fisher_border (NcmLHRatio2d *lhr2d, gdouble clevel, gdouble expec
   GList *points = NULL;
   gdouble theta;
   gdouble step;
+
+  NCM_UNUSED (mtype);
+  
   if (expected_np <= 1.0)
     expected_np = 600.0;
 

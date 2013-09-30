@@ -45,7 +45,6 @@ enum
 {
   PROP_0,
   PROP_DIST,
-  PROP_ID,
   PROP_SIZE,
 };
 
@@ -55,7 +54,6 @@ static void
 nc_data_bao_dvdv_init (NcDataBaoDVDV *bao_dvdv)
 {
   bao_dvdv->dist = NULL;
-  bao_dvdv->id   = NC_DATA_BAO_NSAMPLES;
 }
 
 static void
@@ -69,9 +67,6 @@ nc_data_bao_dvdv_set_property (GObject *object, guint prop_id, const GValue *val
     case PROP_DIST:
       nc_distance_clear (&bao_dvdv->dist);
       bao_dvdv->dist = g_value_dup_object (value);
-      break;
-    case PROP_ID:
-      nc_data_bao_dvdv_set_sample (bao_dvdv, g_value_get_enum (value));
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -89,9 +84,6 @@ nc_data_bao_dvdv_get_property (GObject *object, guint prop_id, GValue *value, GP
   {
     case PROP_DIST:
       g_value_set_object (value, bao_dvdv->dist);
-      break;
-    case PROP_ID:
-      g_value_set_enum (value, nc_data_bao_dvdv_get_sample (bao_dvdv));
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -141,14 +133,6 @@ nc_data_bao_dvdv_class_init (NcDataBaoDVDVClass *klass)
                                                         NC_TYPE_DISTANCE,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
-  g_object_class_install_property (object_class,
-                                   PROP_ID,
-                                   g_param_spec_enum ("sample-id",
-                                                      NULL,
-                                                      "Sample id",
-                                                      NC_TYPE_DATA_BAO_ID, NC_DATA_BAO_DVDV_PERCIVAL2007,
-                                                      G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));  
-
   data_class->prepare   = &_nc_data_bao_dvdv_prepare;
   diag_class->mean_func = &_nc_data_bao_dvdv_mean_func;
 }
@@ -190,10 +174,11 @@ _nc_data_bao_dvdv_mean_func (NcmDataGaussDiag *diag, NcmMSet *mset, NcmVector *v
 NcmData *
 nc_data_bao_dvdv_new (NcDistance *dist, NcDataBaoId id)
 {
-  return g_object_new (NC_TYPE_DATA_BAO_DVDV,
-                       "sample-id", id,
-                       "dist", dist,
-                       NULL);
+  NcmData *data = g_object_new (NC_TYPE_DATA_BAO_DVDV,
+                                "dist", dist,
+                                NULL);
+  nc_data_bao_dvdv_set_sample (NC_DATA_BAO_DVDV (data), id);
+  return data;
 }
 
 /**
@@ -237,21 +222,6 @@ nc_data_bao_dvdv_set_sample (NcDataBaoDVDV *bao_dvdv, NcDataBaoId id)
       g_assert_not_reached ();
       break;
   }
-  bao_dvdv->id = id;
 
-  ncm_data_set_init (data);
-}
-
-/**
- * nc_data_bao_dvdv_get_sample:
- * @bao_dvdv: a #NcDataBaoDVDV
- *
- * FIXME
- * 
- * Returns: FIXME
- */
-NcDataBaoId 
-nc_data_bao_dvdv_get_sample (NcDataBaoDVDV *bao_dvdv)
-{
-  return bao_dvdv->id;
+  ncm_data_set_init (data, TRUE);
 }

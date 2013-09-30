@@ -75,14 +75,18 @@ struct _NcmDataPoissonClass
   /* < private > */
   NcmDataClass parent_class;
   gdouble (*mean_func) (NcmDataPoisson *poisson, NcmMSet *mset, guint n);
+  void (*set_size) (NcmDataPoisson *poisson, guint np);
+  guint (*get_size) (NcmDataPoisson *poisson);
 };
 
 GType ncm_data_poisson_get_type (void) G_GNUC_CONST;
 
-void ncm_data_poisson_set_size (NcmDataPoisson *poisson, guint np);
 void ncm_data_poisson_init_from_vector (NcmData *data, NcmVector *nodes, gsl_vector_ulong *N);
 void ncm_data_poisson_init_from_histogram (NcmData *data, gsl_histogram *h);
 void ncm_data_poisson_init_zero (NcmData *data, NcmVector *nodes);
+
+void ncm_data_poisson_set_size (NcmDataPoisson *poisson, guint np);
+guint ncm_data_poisson_get_size (NcmDataPoisson *poisson);
 
 G_END_DECLS
 

@@ -36,6 +36,7 @@
 #include "build_cfg.h"
 
 #include "math/function_cache.h"
+#include "math/ncm_util.h"
 
 #include <gsl/gsl_math.h>
 
@@ -128,7 +129,7 @@ ncm_function_cache_insert (NcmFunctionCache *cache, gdouble x, ...)
 {
   gdouble *x_ptr;
   gsl_vector *v;
-  gint i;
+  guint i;
   va_list ap;
   _NCM_MUTEX_LOCK (&cache->lock);
   cache_clean (cache);
@@ -256,6 +257,7 @@ static gint
 gdouble_compare (gconstpointer a, gconstpointer b, gpointer user_data)
 {
 //  printf ("BLOB %g %g\n", *((gdouble *)a), *((gdouble *)b));
+  NCM_UNUSED (user_data);
   return gsl_fcmp ( *((gdouble *)a), *((gdouble *)b), 1e-15);
 }
 

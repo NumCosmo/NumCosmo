@@ -63,6 +63,8 @@ struct _NcmDataGaussCovClass
   NcmDataClass parent_class;
   void (*mean_func) (NcmDataGaussCov *gauss, NcmMSet *mset, NcmVector *vp);
   gboolean (*cov_func) (NcmDataGaussCov *gauss, NcmMSet *mset, NcmMatrix *cov);
+  void (*set_size) (NcmDataGaussCov *gauss, guint np);
+  guint (*get_size) (NcmDataGaussCov *gauss);
 };
 
 GType ncm_data_gauss_cov_get_type (void) G_GNUC_CONST;

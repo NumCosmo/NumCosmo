@@ -40,12 +40,15 @@
 #include "build_cfg.h"
 
 #include "math/ncm_c.h"
+#include "math/ncm_cfg.h"
+#include "math/ncm_util.h"
 
 G_DEFINE_TYPE (NcmC, ncm_c, G_TYPE_OBJECT);
 
 static void
 ncm_c_init (NcmC *ncm_c)
 {
+  NCM_UNUSED (ncm_c);
 }
 
 static void

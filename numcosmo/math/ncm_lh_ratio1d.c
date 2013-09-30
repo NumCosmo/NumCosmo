@@ -41,7 +41,7 @@
 
 #include "math/ncm_c.h"
 #include "math/ncm_cfg.h"
-#include "math/util.h"
+#include "math/ncm_util.h"
 
 #include <gsl/gsl_cdf.h>
 #include <gsl/gsl_roots.h>
@@ -78,8 +78,10 @@ ncm_lh_ratio1d_constructed (GObject *object)
   G_OBJECT_CLASS (ncm_lh_ratio1d_parent_class)->constructed (object);
   {
     NcmLHRatio1d *lhr1d = NCM_LH_RATIO1D (object);
-    NcmMSet *mset = ncm_mset_dup (lhr1d->fit->mset);
+    NcmSerialize *ser = ncm_serialize_global ();
+    NcmMSet *mset = ncm_mset_dup (lhr1d->fit->mset, ser);
 
+    ncm_serialize_free (ser);
     g_assert_cmpint (lhr1d->pi.mid, >=, 0);
     g_assert_cmpint (lhr1d->pi.mid,  <, NCM_MODEL_MAX_ID);
     

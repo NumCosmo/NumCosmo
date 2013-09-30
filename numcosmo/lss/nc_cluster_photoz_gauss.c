@@ -38,6 +38,8 @@
 #include "lss/nc_cluster_photoz_gauss.h"
 #include "math/ncm_data.h"
 #include "math/ncm_rng.h"
+#include "math/ncm_cfg.h"
+
 #include <math.h>
 #include <gsl/gsl_randist.h>
 #include <gsl/gsl_math.h>
@@ -73,6 +75,9 @@ _nc_cluster_photoz_gauss_p (NcClusterRedshift *clusterz, gdouble lnM, gdouble z,
   const gdouble sqrt2_sigma = M_SQRT2 * sigma;
   const gdouble y1 = (z_obs[0] - z_eff) / sqrt2_sigma;
 
+  NCM_UNUSED (clusterz);
+  NCM_UNUSED (lnM);
+
   return M_2_SQRTPI / M_SQRT2 * exp (- y1 * y1) / (sigma * (1.0 + erf ( z_eff / sqrt2_sigma )));
 }
 
@@ -85,15 +90,17 @@ _nc_cluster_photoz_gauss_intp (NcClusterRedshift *clusterz, gdouble lnM, gdouble
   const gdouble x_min = (z - pzg->pz_min) / sqrt2_sigma;
   const gdouble x_max = (z - pzg->pz_max) / sqrt2_sigma;
 
+  NCM_UNUSED (lnM);
+
   if (x_max > 4.0)
   {
-	return -(erfc (x_min) - erfc (x_max)) / 
-	  (1.0 + erf ( z / sqrt2_sigma ));
+    return -(erfc (x_min) - erfc (x_max)) / 
+      (1.0 + erf ( z / sqrt2_sigma ));
   }
   else
   {
-	return (erf (x_min) - erf (x_max)) / 
-	  (1.0 + erf ( z / sqrt2_sigma ));
+    return (erf (x_min) - erf (x_max)) / 
+      (1.0 + erf ( z / sqrt2_sigma ));
   }
 }
 
@@ -104,6 +111,8 @@ _nc_cluster_photoz_gauss_resample (NcClusterRedshift *clusterz, gdouble lnM, gdo
   NcmRNG *rng = ncm_rng_pool_get (NCM_DATA_RESAMPLE_RNG_NAME);
   gdouble sigma_z;
 
+  NCM_UNUSED (lnM);
+  
   z_obs_params[NC_CLUSTER_PHOTOZ_GAUSS_BIAS] = 0.0;
   z_obs_params[NC_CLUSTER_PHOTOZ_GAUSS_SIGMA] = 0.03 * (1.0 + z);
 
@@ -126,6 +135,8 @@ _nc_cluster_photoz_gauss_p_limits (NcClusterRedshift *clusterz, gdouble *z_obs, 
   const gdouble zl = GSL_MAX (mean - 10.0 * z_obs_params[NC_CLUSTER_PHOTOZ_GAUSS_SIGMA], 0.0);
   const gdouble zu = mean + 10.0 * z_obs_params[NC_CLUSTER_PHOTOZ_GAUSS_SIGMA];
 
+  NCM_UNUSED (clusterz);
+  
   *z_lower = zl;
   *z_upper = zu;
 
@@ -145,8 +156,8 @@ _nc_cluster_photoz_gauss_n_limits (NcClusterRedshift *clusterz, gdouble *z_lower
   return;
 }
 
-guint _nc_cluster_photoz_gauss_obs_len (NcClusterRedshift *clusterz) { return 1; }
-guint _nc_cluster_photoz_gauss_obs_params_len (NcClusterRedshift *clusterz) { return 2; }
+guint _nc_cluster_photoz_gauss_obs_len (NcClusterRedshift *clusterz) { NCM_UNUSED (clusterz); return 1; }
+guint _nc_cluster_photoz_gauss_obs_params_len (NcClusterRedshift *clusterz) { NCM_UNUSED (clusterz); return 2; }
 
 static void
 nc_cluster_photoz_gauss_init (NcClusterPhotozGauss *pzg)
@@ -174,7 +185,7 @@ _nc_cluster_photoz_gauss_set_property (GObject * object, guint prop_id, const GV
     case PROP_PZ_MIN:
       pzg->pz_min = g_value_get_double (value);
       break;
-	case PROP_PZ_MAX:
+    case PROP_PZ_MAX:
       pzg->pz_max = g_value_get_double (value);
       break;
     default:
@@ -194,7 +205,7 @@ _nc_cluster_photoz_gauss_get_property (GObject *object, guint prop_id, GValue *v
     case PROP_PZ_MIN:
       g_value_set_double (value, pzg->pz_min);
       break;
-	case PROP_PZ_MAX:
+    case PROP_PZ_MAX:
       g_value_set_double (value, pzg->pz_max);
       break;
     default:

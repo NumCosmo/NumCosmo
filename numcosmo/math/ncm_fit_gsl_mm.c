@@ -71,7 +71,7 @@ _ncm_fit_gsl_mm_constructed (GObject *object)
   {
     NcmFitGSLMM *fit_gsl_mm = NCM_FIT_GSL_MM (object);
     NcmFit *fit = NCM_FIT (fit_gsl_mm);
-    gint i;
+    guint i;
 
     fit_gsl_mm->err_a = GSL_POSINF;
     fit_gsl_mm->err_b = 1.0e-1;

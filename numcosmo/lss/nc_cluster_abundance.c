@@ -8,11 +8,11 @@
 /*
  * numcosmo
  * Copyright (C) Mariana Penna Lima 2012 <pennalima@gmail.com>
-   * numcosmo is free software: you can redistribute it and/or modify it
+ * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
-   *
+ *
  * numcosmo is distributed in the hope that it will be useful, but
  * WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
@@ -36,14 +36,14 @@
 #include "build_cfg.h"
 
 #include "lss/nc_cluster_abundance.h"
+#include "lss/nc_cluster_mass_benson.h"
 #include "math/ncm_spline_cubic_notaknot.h"
 #include "math/ncm_spline2d_bicubic.h"
 #include "math/integral.h"
 #include "math/memory_pool.h"
 #include "math/ncm_cfg.h"
-#include <gsl/gsl_histogram.h>
 
-#include "lss/nc_cluster_mass_benson.h"
+#include <gsl/gsl_histogram.h>
 
 enum
 {
@@ -60,8 +60,8 @@ G_DEFINE_TYPE (NcClusterAbundance, nc_cluster_abundance, G_TYPE_OBJECT);
 #define LNM_MIN (10.0 * M_LN10)
 #define _NC_CLUSTER_ABUNDANCE_DEFAULT_INT_KEY 6
 
-static gdouble _intp_d2N (NcClusterAbundance *cad, NcHICosmo *model, gdouble lnM, gdouble z) {g_error ("Function d2NdzdlnM_val not implemented or cad not prepared."); return 0.0;};
-static gdouble _N (NcClusterAbundance *cad, NcHICosmo *model) {g_error ("Function N_val not implemented or cad not prepared."); return 0.0;};
+static gdouble _intp_d2N (NcClusterAbundance *cad, NcHICosmo *model, gdouble lnM, gdouble z) { NCM_UNUSED (cad); NCM_UNUSED (model); NCM_UNUSED (lnM); NCM_UNUSED (z); g_error ("Function d2NdzdlnM_val not implemented or cad not prepared."); return 0.0;};
+static gdouble _N (NcClusterAbundance *cad, NcHICosmo *model) { NCM_UNUSED (cad); NCM_UNUSED (model); g_error ("Function N_val not implemented or cad not prepared."); return 0.0;};
 
 /**
  * nc_cluster_abundance_new:
@@ -709,9 +709,9 @@ _nc_cad_inv_dNdz_convergence_f_onemn (gdouble onemn, gdouble epsilon)
 void
 nc_cluster_abundance_prepare_inv_dNdz (NcClusterAbundance *cad, NcHICosmo *model)
 {
-  gint i, j;
+  guint i, j;
   gdouble z0 = cad->zi;
-  gint middle = cad->inv_z->len / 2;
+  guint middle = cad->inv_z->len / 2;
   gboolean use_spline = FALSE;
   NcMassFunctionSplineOptimize sp_optimize = NC_MASS_FUNCTION_SPLINE_Z;
   g_assert (cad->zi != 0);
@@ -830,7 +830,7 @@ nc_cluster_abundance_prepare_inv_dNdlnM_z (NcClusterAbundance *cad, NcHICosmo *m
   gdouble ntot = 0.0;
   gdouble f = _nc_cad_inv_dNdz_convergence_f (0.0, cad->lnM_epsilon);
   gdouble Delta;
-  gint i;
+  guint i;
   g_assert (z > 0.0);
 
   ncm_vector_set (cad->inv_lnM->xv, 0, f); //dNdz_u2 / dNdz;
@@ -1073,7 +1073,7 @@ nc_cluster_abundance_class_init (NcClusterAbundanceClass *klass)
 void
 nc_cluster_abundance_bin_realization (GArray *zr, gsl_histogram **h)
 {
-  int i;
+  guint i;
   for (i = 0; i < zr->len; i++)
   {
     int j;
@@ -1087,7 +1087,7 @@ void
 nc_cluster_abundance_realizations_save_to_file (GPtrArray *realizations, gchar *filename)
 {
   FILE *out;
-  gint i, j;
+  guint i, j;
   out = fopen (filename,"w");
 
   for (j = 0; j < realizations->len; j++)
@@ -1112,14 +1112,14 @@ nc_cluster_abundance_realizations_save_to_file (GPtrArray *realizations, gchar *
  * GPtrArray *realizations is an array of array with the z values of all realizations. To complete...
  *
  * Returns: (transfer full): FIXME
-   */
+ */
 GPtrArray *
-nc_cluster_abundance_realizations_read_from_file (gchar *file_realization, gint n_realizations)
+nc_cluster_abundance_realizations_read_from_file (gchar *file_realization, guint n_realizations)
 {
   FILE *frealization = fopen (file_realization, "r");
   GPtrArray *realizations = g_ptr_array_sized_new (n_realizations);
-  int i, j;
-  long int file_position, goby;
+  guint i, j;
+  glong file_position, goby;
 
   if (frealization == NULL)
     g_error ("abundance_random_generator_read_from_file: file %s, do not exist.", file_realization);

@@ -68,10 +68,9 @@ struct _NcmVector
 {
   /*< private >*/
   GObject parent_instance;
-  GArray *a;
-  gsl_vector *gv;
   gsl_vector_view vv;
-  GObject *pobj;
+  gpointer pdata;
+  GDestroyNotify pfree;
   NcmVectorInternal type;
 };
 
@@ -81,12 +80,14 @@ struct _NcmVectorClass
   GObjectClass parent_class;
 };
 
+typedef gdouble (*NcmVectorCompFunc) (gdouble v_i, gpointer user_data);
+
 GType ncm_vector_get_type (void) G_GNUC_CONST;
 
 #define NCM_N2VECTOR(v) ((NcmVector *)((v)->content))
-#define NCM_VECTOR_DATA(cv) ((cv)->vv.vector.data)
 
 NcmVector *ncm_vector_new (gsize n);
+NcmVector *ncm_vector_new_full (gdouble *d, gsize size, gsize stride, gpointer pdata, GDestroyNotify pfree);
 NcmVector *ncm_vector_new_gsl (gsl_vector *gv);
 NcmVector *ncm_vector_new_gsl_static (gsl_vector *gv);
 NcmVector *ncm_vector_new_array (GArray *a);
@@ -95,19 +96,25 @@ NcmVector *ncm_vector_new_data_malloc (gdouble *d, const gsize size, const gsize
 NcmVector *ncm_vector_new_data_static (gdouble *d, const gsize size, const gsize stride);
 NcmVector *ncm_vector_new_variant (GVariant *var);
 NcmVector *ncm_vector_ref (NcmVector *cv);
-const NcmVector *ncm_vector_new_data_const (const gdouble *d, const gsize size, const gsize stride);
+const NcmVector *ncm_vector_const_ref (const NcmVector *cv);
+const NcmVector *ncm_vector_const_new_variant (GVariant *var);
+const NcmVector *ncm_vector_const_new_data (const gdouble *d, const gsize size, const gsize stride);
 
 NcmVector *ncm_vector_get_subvector (NcmVector *cv, const gsize k, const gsize size);
-GVariant *ncm_vector_get_variant (NcmVector *v);
+GVariant *ncm_vector_get_variant (const NcmVector *v);
+GVariant *ncm_vector_peek_variant (const NcmVector *v);
 
-void ncm_vector_log_vals (NcmVector *v, const gchar *prestr, const gchar *format);
+void ncm_vector_log_vals (const NcmVector *v, const gchar *prestr, const gchar *format);
+void ncm_vector_log_vals_avpb (const NcmVector *v, const gchar *prestr, const gchar *format, const gdouble a, const gdouble b);
+void ncm_vector_log_vals_func (const NcmVector *v, const gchar *prestr, const gchar *format, NcmVectorCompFunc f, gpointer user_data);
 
 void ncm_vector_set_from_variant (NcmVector *cv, GVariant *var);
 
-G_INLINE_FUNC const NcmVector *ncm_vector_new_gsl_const (const gsl_vector *v);
+G_INLINE_FUNC const NcmVector *ncm_vector_const_new_gsl (const gsl_vector *v);
 G_INLINE_FUNC gdouble ncm_vector_get (const NcmVector *cv, const guint i);
 G_INLINE_FUNC gdouble ncm_vector_fast_get (const NcmVector *cv, const guint i);
 G_INLINE_FUNC gdouble *ncm_vector_ptr (NcmVector *cv, const guint i);
+G_INLINE_FUNC const gdouble *ncm_vector_const_ptr (const NcmVector *cv, const guint i);
 G_INLINE_FUNC void ncm_vector_set (NcmVector *cv, const guint i, const gdouble val);
 G_INLINE_FUNC void ncm_vector_fast_set (NcmVector *cv, const guint i, const gdouble val);
 G_INLINE_FUNC void ncm_vector_addto (NcmVector *cv, const guint i, const gdouble val);
@@ -124,6 +131,8 @@ G_INLINE_FUNC void ncm_vector_memcpy (NcmVector *cv1, const NcmVector *cv2);
 G_INLINE_FUNC void ncm_vector_memcpy2 (NcmVector *cv1, const NcmVector *cv2, const guint cv1_start, const guint cv2_start, const guint size);
 G_INLINE_FUNC GArray *ncm_vector_get_array (NcmVector *cv);
 G_INLINE_FUNC GArray *ncm_vector_dup_array (NcmVector *cv);
+G_INLINE_FUNC gdouble *ncm_vector_data (NcmVector *cv);
+G_INLINE_FUNC const gdouble *ncm_vector_const_data (const NcmVector *cv);
 
 G_INLINE_FUNC gsl_vector *ncm_vector_gsl (NcmVector *cv);
 G_INLINE_FUNC const gsl_vector *ncm_vector_const_gsl (const NcmVector *cv);
@@ -148,7 +157,7 @@ G_END_DECLS
 G_BEGIN_DECLS
 
 G_INLINE_FUNC const NcmVector *
-ncm_vector_new_gsl_const (const gsl_vector *v)
+ncm_vector_const_new_gsl (const gsl_vector *v)
 {
   return ncm_vector_new_data_static ((v)->data, (v)->size, (v)->stride);
 }
@@ -169,6 +178,12 @@ G_INLINE_FUNC gdouble *
 ncm_vector_ptr (NcmVector *cv, const guint i)
 {
   return gsl_vector_ptr (ncm_vector_gsl (cv), i);
+}
+
+G_INLINE_FUNC const gdouble *
+ncm_vector_const_ptr (const NcmVector *cv, const guint i)
+{
+  return gsl_vector_const_ptr (ncm_vector_const_gsl (cv), i);
 }
 
 G_INLINE_FUNC void
@@ -252,14 +267,14 @@ ncm_vector_memcpy (NcmVector *cv1, const NcmVector *cv2)
 G_INLINE_FUNC void
 ncm_vector_memcpy2 (NcmVector *cv1, const NcmVector *cv2, const guint cv1_start, const guint cv2_start, const guint size)
 {
-  memcpy (&NCM_VECTOR_DATA (cv1)[cv1_start], &NCM_VECTOR_DATA (cv2)[cv2_start], sizeof (gdouble) * size);
+  memcpy (ncm_vector_ptr (cv1, cv1_start), ncm_vector_const_ptr (cv2, cv2_start), sizeof (gdouble) * size);
 }
 
 G_INLINE_FUNC GArray *
 ncm_vector_get_array (NcmVector *cv)
 {
-  g_assert (cv->a != NULL);
-  return g_array_ref (cv->a); 
+  g_assert (cv->type == NCM_VECTOR_ARRAY);
+  return g_array_ref (cv->pdata); 
 }
 
 G_INLINE_FUNC GArray *
@@ -267,8 +282,20 @@ ncm_vector_dup_array (NcmVector *cv)
 {
   const guint len = ncm_vector_len (cv);
   GArray *a = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), len);
-  g_array_append_vals (a, &ncm_vector_gsl (cv)->data[0], len);
+  g_array_append_vals (a, ncm_vector_data (cv), len);
   return a;
+}
+
+G_INLINE_FUNC gdouble *
+ncm_vector_data (NcmVector *cv)
+{
+  return (cv)->vv.vector.data;
+}
+
+G_INLINE_FUNC const gdouble *
+ncm_vector_const_data (const NcmVector *cv)
+{
+  return (cv)->vv.vector.data;
 }
 
 G_INLINE_FUNC gsl_vector *

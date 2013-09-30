@@ -131,6 +131,7 @@ struct _NcDEFitEntries
   gint msg_level;
   gint montecarlo;
   gint mc_ni;
+  gint mc_nthreads;
   gchar *fiducial;
   gboolean mc_data;
   gboolean fisher;
@@ -145,9 +146,9 @@ struct _NcDEFitEntries
 };
 
 #ifdef NUMCOSMO_HAVE_NLOPT
-#define NC_DE_FIT_ENTRIES { NULL, FALSE, "nlopt",   "numdiff-forward", NULL, -1, -1, {-1, -1}, NULL, NCM_FIT_DEFAULT_MAXITER, FALSE, NCM_FIT_RUN_MSGS_SIMPLE, -1, 0, NULL, FALSE, FALSE, FALSE, 1.0, 100, FALSE, 1.0, FALSE, FALSE, NULL}
+#define NC_DE_FIT_ENTRIES { NULL, FALSE, "nlopt",   "numdiff-forward", NULL, -1, -1, {-1, -1}, NULL, NCM_FIT_DEFAULT_MAXITER, FALSE, NCM_FIT_RUN_MSGS_SIMPLE, -1, 0, 0, NULL, FALSE, FALSE, FALSE, 1.0, 100, FALSE, 1.0, FALSE, FALSE, NULL}
 #else
-#define NC_DE_FIT_ENTRIES { NULL, FALSE, "gsl-mms", "numdiff-forward", NULL, -1, -1, {-1, -1}, NULL, NCM_FIT_DEFAULT_MAXITER, FALSE, NCM_FIT_RUN_MSGS_SIMPLE, -1, 0, NULL, FALSE, FALSE, FALSE, 1.0, 100, FALSE, 1.0, FALSE, FALSE, NULL}
+#define NC_DE_FIT_ENTRIES { NULL, FALSE, "gsl-mms", "numdiff-forward", NULL, -1, -1, {-1, -1}, NULL, NCM_FIT_DEFAULT_MAXITER, FALSE, NCM_FIT_RUN_MSGS_SIMPLE, -1, 0, 0, NULL, FALSE, FALSE, FALSE, 1.0, 100, FALSE, 1.0, FALSE, FALSE, NULL}
 #endif
 
 GOptionGroup *nc_de_opt_get_run_group (NcDERunEntries *de_run);

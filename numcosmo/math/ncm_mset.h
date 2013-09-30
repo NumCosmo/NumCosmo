@@ -140,10 +140,8 @@ NcmMSet *ncm_mset_new (NcmModel *model0, ...);
 NcmMSet *ncm_mset_newv (NcmModel *model0, va_list ap);
 NcmMSet *ncm_mset_new_array (NcmModel **model);
 NcmMSet *ncm_mset_ref (NcmMSet *mset);
-NcmMSet *ncm_mset_dup (NcmMSet *mset);
-NcmMSet *ncm_mset_copy (NcmMSet *mset);
+NcmMSet *ncm_mset_dup (NcmMSet *mset, NcmSerialize *ser);
 
-void ncm_mset_copyto (NcmMSet *mset_src, NcmMSet *mset_dest);
 void ncm_mset_free (NcmMSet *mset);
 void ncm_mset_clear (NcmMSet **mset);
 

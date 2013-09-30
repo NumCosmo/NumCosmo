@@ -63,8 +63,8 @@ void
 ncm_spline2d_set (NcmSpline2d *s2d, NcmVector *xv, NcmVector *yv, NcmMatrix *zm, gboolean init)
 {
   g_assert ((xv != NULL) && (yv != NULL) && (zm != NULL) &&
-            (ncm_vector_len (xv) == NCM_MATRIX_ROW_LEN (zm)) &&
-            (ncm_vector_len (yv) == NCM_MATRIX_COL_LEN (zm)) &&
+            (ncm_vector_len (xv) == ncm_matrix_row_len (zm)) &&
+            (ncm_vector_len (yv) == ncm_matrix_col_len (zm)) &&
             (ncm_vector_len (xv) >= ncm_spline2d_min_size (s2d)) &&
             (ncm_vector_len (yv) >= ncm_spline2d_min_size (s2d)));
 

@@ -85,6 +85,7 @@ enum {
 static void
 nc_hicosmo_de_pad_init (NcHICosmoDEPad *pad)
 {
+  NCM_UNUSED (pad);
 }
 
 static void

@@ -38,6 +38,7 @@
 
 #include "math/ncm_spline2d_bicubic.h"
 #include "math/ncm_spline_cubic_notaknot.h"
+#include "math/ncm_util.h"
 
 G_DEFINE_TYPE (NcmSpline2dBicubic, ncm_spline2d_bicubic, NCM_TYPE_SPLINE2D);
 
@@ -99,7 +100,7 @@ _ncm_spline2d_bicubic_alloc (NcmSpline2dBicubic *s2dbc)
   s2dbc->z_y = ncm_spline_new (s2d->s, s2d->yv, zm_first_col, s2d->init);
   s2dbc->dzdy_x = ncm_spline_new (s2d->s, s2d->xv, zm_first_row, s2d->init);
 
-  s2dbc->bicoeff = g_new0 (NcmSpline2dBicubicCoeffs, (NCM_MATRIX_COL_LEN (s2d->zm) - 1) * NCM_MATRIX_ROW_LEN (s2d->zm)) ;
+  s2dbc->bicoeff = g_new0 (NcmSpline2dBicubicCoeffs, (ncm_matrix_col_len (s2d->zm) - 1) * ncm_matrix_row_len (s2d->zm)) ;
 
   s2dbc->optimize_dx.s = ncm_spline_set (ncm_spline_cubic_notaknot_new (),
                                          s2d->yv, dx_yv, FALSE);
@@ -154,8 +155,8 @@ _ncm_spline2d_bicubic_reset (NcmSpline2d *s2d)
 
   if (s2d->init)
   {
-    if ((NCM_MATRIX_NROWS (s2d->zm) != ncm_vector_len (s2dbc->z_y->xv)) ||
-        (NCM_MATRIX_NCOLS (s2d->zm) != ncm_vector_len (s2dbc->z_x->xv)))
+    if ((ncm_matrix_nrows (s2d->zm) != ncm_vector_len (s2dbc->z_y->xv)) ||
+        (ncm_matrix_ncols (s2d->zm) != ncm_vector_len (s2dbc->z_x->xv)))
     {
       _ncm_spline2d_bicubic_free (s2dbc);
       _ncm_spline2d_bicubic_alloc (s2dbc);
@@ -194,7 +195,7 @@ _ncm_spline2d_bicubic_prepare (NcmSpline2d *s2d)
       NCM_SPLINE2D_BICUBIC_COEFF (s2dbc, i, j)[NCM_SPLINE2D_BICUBIC_00][NCM_SPLINE2D_BICUBIC_FY] = b_i;
     }
 
-    for (i = 1; i < NCM_MATRIX_COL_LEN (s2d->zm) - 2; i++)
+    for (i = 1; i < ncm_matrix_col_len (s2d->zm) - 2; i++)
     {
       const gdouble b_i =	ncm_spline2d_bicubic_bi (sc, s2dbc->z_y->xv, s2dbc->z_y->yv, i);
       NCM_SPLINE2D_BICUBIC_COEFF (s2dbc, i,     j)[NCM_SPLINE2D_BICUBIC_00][NCM_SPLINE2D_BICUBIC_F] = ncm_vector_get (s2dbc->z_y->yv, i);
@@ -204,7 +205,7 @@ _ncm_spline2d_bicubic_prepare (NcmSpline2d *s2d)
       NCM_SPLINE2D_BICUBIC_COEFF (s2dbc, i - 1, j)[NCM_SPLINE2D_BICUBIC_01][NCM_SPLINE2D_BICUBIC_FY] = b_i;
     }
 
-    i = NCM_MATRIX_COL_LEN (s2d->zm) - 2;
+    i = ncm_matrix_col_len (s2d->zm) - 2;
     {
       gdouble b_i, b_ip1;
       ncm_spline2d_bicubic_bi_bip1 (sc, s2dbc->z_y->xv, s2dbc->z_y->yv, i, &b_i, &b_ip1);
@@ -223,7 +224,7 @@ _ncm_spline2d_bicubic_prepare (NcmSpline2d *s2d)
     ncm_vector_free (yv);
   }
   /* Second to the one before the one before last */
-  for (j = 1; j < NCM_MATRIX_ROW_LEN (s2d->zm); j++)
+  for (j = 1; j < ncm_matrix_row_len (s2d->zm); j++)
   {
     NcmSplineCubic *sc = NCM_SPLINE_CUBIC (s2dbc->z_y);
     NcmVector *zm_col_j = ncm_matrix_get_col (s2d->zm, j);
@@ -241,7 +242,7 @@ _ncm_spline2d_bicubic_prepare (NcmSpline2d *s2d)
       NCM_SPLINE2D_BICUBIC_COEFF (s2dbc, i, j - 1)[NCM_SPLINE2D_BICUBIC_10][NCM_SPLINE2D_BICUBIC_FY] = b_i;
     }
 
-    for (i = 1; i < NCM_MATRIX_COL_LEN (s2d->zm) - 2; i++)
+    for (i = 1; i < ncm_matrix_col_len (s2d->zm) - 2; i++)
     {
       const gdouble b_i =	ncm_spline2d_bicubic_bi (sc, s2dbc->z_y->xv, s2dbc->z_y->yv, i);
       NCM_SPLINE2D_BICUBIC_COEFF (s2dbc, i,     j    )[NCM_SPLINE2D_BICUBIC_00][NCM_SPLINE2D_BICUBIC_F] = ncm_vector_get (s2dbc->z_y->yv, i);
@@ -257,7 +258,7 @@ _ncm_spline2d_bicubic_prepare (NcmSpline2d *s2d)
       NCM_SPLINE2D_BICUBIC_COEFF (s2dbc, i - 1, j - 1)[NCM_SPLINE2D_BICUBIC_11][NCM_SPLINE2D_BICUBIC_FY] = b_i;
     }
 
-    i = NCM_MATRIX_COL_LEN (s2d->zm) - 2;
+    i = ncm_matrix_col_len (s2d->zm) - 2;
     {
       gdouble b_i, b_ip1;
       ncm_spline2d_bicubic_bi_bip1 (sc, s2dbc->z_y->xv, s2dbc->z_y->yv, i, &b_i, &b_ip1);
@@ -286,7 +287,7 @@ _ncm_spline2d_bicubic_prepare (NcmSpline2d *s2d)
   i = 0;
   {
     gdouble *d = &NCM_SPLINE2D_BICUBIC_COEFF (s2dbc, i, 0)[NCM_SPLINE2D_BICUBIC_00][NCM_SPLINE2D_BICUBIC_FY];
-    NcmVector *dzdyv = ncm_vector_new_data_static (d, NCM_MATRIX_ROW_LEN (s2d->zm), 16);
+    NcmVector *dzdyv = ncm_vector_new_data_static (d, ncm_matrix_row_len (s2d->zm), 16);
     NcmSplineCubic *sc = NCM_SPLINE_CUBIC (s2dbc->z_x);
     NcmSplineCubic *dsc = NCM_SPLINE_CUBIC (s2dbc->dzdy_x);
     NcmVector *zm_row_i = ncm_matrix_get_row (s2d->zm, i);
@@ -306,7 +307,7 @@ _ncm_spline2d_bicubic_prepare (NcmSpline2d *s2d)
       NCM_SPLINE2D_BICUBIC_COEFF (s2dbc, i, j)[NCM_SPLINE2D_BICUBIC_00][NCM_SPLINE2D_BICUBIC_FXY] = db_j;
     }
 
-    for (j = 1; j < NCM_MATRIX_ROW_LEN (s2d->zm) - 1; j++)
+    for (j = 1; j < ncm_matrix_row_len (s2d->zm) - 1; j++)
     {
       const gdouble b_j = ncm_spline2d_bicubic_bi (sc, s2dbc->z_x->xv, s2dbc->z_x->yv, j);
       const gdouble db_j = ncm_spline2d_bicubic_bi (dsc, s2dbc->dzdy_x->xv, s2dbc->dzdy_x->yv, j);
@@ -318,7 +319,7 @@ _ncm_spline2d_bicubic_prepare (NcmSpline2d *s2d)
       NCM_SPLINE2D_BICUBIC_COEFF (s2dbc, i, j - 1)[NCM_SPLINE2D_BICUBIC_10][NCM_SPLINE2D_BICUBIC_FXY] = db_j;
     }
 
-    j = NCM_MATRIX_ROW_LEN (s2d->zm) - 1;
+    j = ncm_matrix_row_len (s2d->zm) - 1;
     {
       gdouble b_jm1, b_j;
       gdouble db_jm1, db_j;
@@ -333,10 +334,10 @@ _ncm_spline2d_bicubic_prepare (NcmSpline2d *s2d)
     }
   }
   /* Second row to the one before last */
-  for (i = 1; i < NCM_MATRIX_COL_LEN (s2d->zm) - 1; i++)
+  for (i = 1; i < ncm_matrix_col_len (s2d->zm) - 1; i++)
   {
     gdouble *d = &NCM_SPLINE2D_BICUBIC_COEFF (s2dbc, i, 0)[NCM_SPLINE2D_BICUBIC_00][NCM_SPLINE2D_BICUBIC_FY];
-    NcmVector *dzdyv = ncm_vector_new_data_static (d, NCM_MATRIX_ROW_LEN (s2d->zm), 16);
+    NcmVector *dzdyv = ncm_vector_new_data_static (d, ncm_matrix_row_len (s2d->zm), 16);
     NcmSplineCubic *sc = NCM_SPLINE_CUBIC (s2dbc->z_x);
     NcmSplineCubic *dsc = NCM_SPLINE_CUBIC (s2dbc->dzdy_x);
     NcmVector *zm_row_i = ncm_matrix_get_row (s2d->zm, i);
@@ -359,7 +360,7 @@ _ncm_spline2d_bicubic_prepare (NcmSpline2d *s2d)
       NCM_SPLINE2D_BICUBIC_COEFF (s2dbc, i - 1, j)[NCM_SPLINE2D_BICUBIC_01][NCM_SPLINE2D_BICUBIC_FXY] = db_j;
     }
 
-    for (j = 1; j < NCM_MATRIX_ROW_LEN (s2d->zm) - 1; j++)
+    for (j = 1; j < ncm_matrix_row_len (s2d->zm) - 1; j++)
     {
       const gdouble b_j = ncm_spline2d_bicubic_bi (sc, s2dbc->z_x->xv, s2dbc->z_x->yv, j);
       const gdouble db_j = ncm_spline2d_bicubic_bi (dsc, s2dbc->dzdy_x->xv, s2dbc->dzdy_x->yv, j);
@@ -377,7 +378,7 @@ _ncm_spline2d_bicubic_prepare (NcmSpline2d *s2d)
       NCM_SPLINE2D_BICUBIC_COEFF (s2dbc, i - 1, j - 1)[NCM_SPLINE2D_BICUBIC_11][NCM_SPLINE2D_BICUBIC_FXY] = db_j;
     }
 
-    j = NCM_MATRIX_ROW_LEN (s2d->zm) - 1;
+    j = ncm_matrix_row_len (s2d->zm) - 1;
     {
       gdouble b_jm1, b_j;
       gdouble db_jm1, db_j;
@@ -398,10 +399,10 @@ _ncm_spline2d_bicubic_prepare (NcmSpline2d *s2d)
     }
   }
   /* The last row */
-  i = NCM_MATRIX_COL_LEN (s2d->zm) - 1;
+  i = ncm_matrix_col_len (s2d->zm) - 1;
   {
     gdouble *d = &NCM_SPLINE2D_BICUBIC_COEFF (s2dbc, i - 1, 0)[NCM_SPLINE2D_BICUBIC_01][NCM_SPLINE2D_BICUBIC_FY];
-    NcmVector *dzdyv = ncm_vector_new_data_static (d, NCM_MATRIX_ROW_LEN (s2d->zm), 16);
+    NcmVector *dzdyv = ncm_vector_new_data_static (d, ncm_matrix_row_len (s2d->zm), 16);
     NcmSplineCubic *sc = NCM_SPLINE_CUBIC (s2dbc->z_x);
     NcmSplineCubic *dsc = NCM_SPLINE_CUBIC (s2dbc->dzdy_x);
     NcmVector *zm_row_i = ncm_matrix_get_row (s2d->zm, i);
@@ -421,7 +422,7 @@ _ncm_spline2d_bicubic_prepare (NcmSpline2d *s2d)
       NCM_SPLINE2D_BICUBIC_COEFF (s2dbc, i - 1, j)[NCM_SPLINE2D_BICUBIC_01][NCM_SPLINE2D_BICUBIC_FXY] = db_j;
     }
 
-    for (j = 1; j < NCM_MATRIX_ROW_LEN (s2d->zm) - 1; j++)
+    for (j = 1; j < ncm_matrix_row_len (s2d->zm) - 1; j++)
     {
       const gdouble b_j = ncm_spline2d_bicubic_bi (sc, s2dbc->z_x->xv, s2dbc->z_x->yv, j);
       const gdouble db_j = ncm_spline2d_bicubic_bi (dsc, s2dbc->dzdy_x->xv, s2dbc->dzdy_x->yv, j);
@@ -433,7 +434,7 @@ _ncm_spline2d_bicubic_prepare (NcmSpline2d *s2d)
       NCM_SPLINE2D_BICUBIC_COEFF (s2dbc, i - 1, j - 1)[NCM_SPLINE2D_BICUBIC_11][NCM_SPLINE2D_BICUBIC_FXY] = db_j;
     }
 
-    j = NCM_MATRIX_ROW_LEN (s2d->zm) - 1;
+    j = ncm_matrix_row_len (s2d->zm) - 1;
     {
       gdouble b_jm1, b_j;
       gdouble db_jm1, db_j;
@@ -448,10 +449,10 @@ _ncm_spline2d_bicubic_prepare (NcmSpline2d *s2d)
     }
   }
 
-  for (j = 0; j < NCM_MATRIX_ROW_LEN (s2d->zm) - 1; j++)
+  for (j = 0; j < ncm_matrix_row_len (s2d->zm) - 1; j++)
   {
     const gdouble dx = ncm_vector_get (s2d->xv, j + 1) - ncm_vector_get (s2d->xv, j);
-    for (i = 0; i < NCM_MATRIX_COL_LEN (s2d->zm) - 1; i++)
+    for (i = 0; i < ncm_matrix_col_len (s2d->zm) - 1; i++)
     {
       const gdouble dy = ncm_vector_get (s2d->yv, i + 1) - ncm_vector_get (s2d->yv, i);
       //printf ("Coeffs of % 20.15g %20.15g | [%zd %zd]\n", ncm_vector_get (s2d->xv, j), ncm_vector_get (s2d->yv, i), i, j);
@@ -474,11 +475,11 @@ _ncm_spline2d_bicubic_eval (NcmSpline2d *s2d, gdouble x, gdouble y)
   return ncm_spline2d_bicubic_eval_poly (&NCM_SPLINE2D_BICUBIC_STRUCT (s2dbc, i, j), x-x0, y-y0);
 }
 
-static gdouble _ncm_spline2d_bicubic_dzdx (NcmSpline2d *s2d, gdouble x, gdouble y) { g_error ("bicubic does not implement dzdx"); return 0.0; }
-static gdouble _ncm_spline2d_bicubic_dzdy (NcmSpline2d *s2d, gdouble x, gdouble y) { g_error ("bicubic does not implement dzdy"); return 0.0; }
-static gdouble _ncm_spline2d_bicubic_d2zdx2 (NcmSpline2d *s2d, gdouble x, gdouble y) { g_error ("bicubic does not implement d2zdx2"); return 0.0; }
-static gdouble _ncm_spline2d_bicubic_d2zdy2 (NcmSpline2d *s2d, gdouble x, gdouble y) { g_error ("bicubic does not implement d2zdy2"); return 0.0; }
-static gdouble _ncm_spline2d_bicubic_d2zdxy (NcmSpline2d *s2d, gdouble x, gdouble y) { g_error ("bicubic does not implement d2zdxy"); return 0.0; }
+static gdouble _ncm_spline2d_bicubic_dzdx (NcmSpline2d *s2d, gdouble x, gdouble y) { NCM_UNUSED (s2d); NCM_UNUSED (x); NCM_UNUSED (y); g_error ("bicubic does not implement dzdx"); return 0.0; }
+static gdouble _ncm_spline2d_bicubic_dzdy (NcmSpline2d *s2d, gdouble x, gdouble y) { NCM_UNUSED (s2d); NCM_UNUSED (x); NCM_UNUSED (y); g_error ("bicubic does not implement dzdy"); return 0.0; }
+static gdouble _ncm_spline2d_bicubic_d2zdx2 (NcmSpline2d *s2d, gdouble x, gdouble y) { NCM_UNUSED (s2d); NCM_UNUSED (x); NCM_UNUSED (y); g_error ("bicubic does not implement d2zdx2"); return 0.0; }
+static gdouble _ncm_spline2d_bicubic_d2zdy2 (NcmSpline2d *s2d, gdouble x, gdouble y) { NCM_UNUSED (s2d); NCM_UNUSED (x); NCM_UNUSED (y); g_error ("bicubic does not implement d2zdy2"); return 0.0; }
+static gdouble _ncm_spline2d_bicubic_d2zdxy (NcmSpline2d *s2d, gdouble x, gdouble y) { NCM_UNUSED (s2d); NCM_UNUSED (x); NCM_UNUSED (y); g_error ("bicubic does not implement d2zdxy"); return 0.0; }
 
 static gdouble
 _ncm_spline2d_bicubic_int_dx (NcmSpline2d *s2d, gdouble xl, gdouble xu, gdouble y)
@@ -490,7 +491,7 @@ _ncm_spline2d_bicubic_int_dx (NcmSpline2d *s2d, gdouble xl, gdouble xu, gdouble 
   gsize i = gsl_interp_bsearch (ncm_vector_ptr (s2d->yv, 0), y, 0, ncm_vector_len (s2d->yv) - 1);
   gdouble x0, x1, result;
   const gdouble y0 = ncm_vector_get (s2d->yv, i);
-  gint k;
+  guint k;
   gdouble coeffs[4];
 
   g_assert (jl <= ju);
@@ -647,7 +648,7 @@ _ncm_spline2d_bicubic_int_dy (NcmSpline2d *s2d, gdouble x, gdouble yl, gdouble y
   gsize iu = gsl_interp_bsearch (ncm_vector_ptr (s2d->yv, 0), yu, 0, ncm_vector_len (s2d->yv) - 1);
   gdouble y0, y1, result;
   const gdouble x0 = ncm_vector_get (s2d->xv, j);
-  gint k;
+  guint k;
   gdouble coeffs[4];
 
   g_assert (il <= iu);
@@ -803,7 +804,7 @@ static gdouble _ncm_spline2d_bicubic_int_dxdy (NcmSpline2d *s2d, gdouble xl, gdo
   gsize il = gsl_interp_bsearch (ncm_vector_ptr (s2d->yv, 0), yl, 0, ncm_vector_len (s2d->yv) - 1);
   gsize iu = gsl_interp_bsearch (ncm_vector_ptr (s2d->yv, 0), yu, 0, ncm_vector_len (s2d->yv) - 1);
   gdouble x0, x1, y0, y1, result;
-  gint k, m;
+  guint k, m;
 
   g_assert (jl <= ju || il <= iu);
 

@@ -276,6 +276,8 @@ _ncm_fit_nlopt_run (NcmFit *fit, NcmFitRunMsgs mtype)
   NcmFitNLOpt *fit_nlopt = NCM_FIT_NLOPT (fit);
   gdouble minf = 0.0;
 
+  NCM_UNUSED (mtype);
+  
   g_assert (fit->fstate->fparam_len != 0);
 
   ncm_mset_fparams_get_vector (fit->mset, fit->fstate->fparams);
@@ -283,7 +285,7 @@ _ncm_fit_nlopt_run (NcmFit *fit, NcmFitRunMsgs mtype)
 #ifdef HAVE_NLOPT_2_2
   {
     nlopt_result ret;
-    gint i;
+    guint i;
 
     for (i = 0; i < fit_nlopt->fparam_len; i++)
     {

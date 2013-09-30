@@ -29,9 +29,9 @@
 #endif /* HAVE_CONFIG_H */
 #include <numcosmo/numcosmo.h>
 
-void test_ncm_serialize_global_create_from_string_plain (void);
-void test_ncm_serialize_global_create_from_string_params (void);
-void test_ncm_serialize_global_create_from_string_nest (void);
+void test_ncm_serialize_global_from_string_plain (void);
+void test_ncm_serialize_global_from_string_params (void);
+void test_ncm_serialize_global_from_string_nest (void);
 
 gint
 main (gint argc, gchar *argv[])
@@ -39,20 +39,20 @@ main (gint argc, gchar *argv[])
   g_test_init (&argc, &argv, NULL);
   ncm_cfg_init ();
 #if !((GLIB_MAJOR_VERSION == 2) && (GLIB_MINOR_VERSION < 30))
-  g_test_add_func ("/numcosmo/ncm_cfg_create/from_string/plain", &test_ncm_serialize_global_create_from_string_plain);
-  g_test_add_func ("/numcosmo/ncm_cfg_create/from_string/params", &test_ncm_serialize_global_create_from_string_params);
-  g_test_add_func ("/numcosmo/ncm_cfg_create/from_string/nest", &test_ncm_serialize_global_create_from_string_nest);
+  g_test_add_func ("/numcosmo/ncm_serialize/from_string/plain", &test_ncm_serialize_global_from_string_plain);
+  g_test_add_func ("/numcosmo/ncm_serialize/from_string/params", &test_ncm_serialize_global_from_string_params);
+  g_test_add_func ("/numcosmo/ncm_serialize/from_string/nest", &test_ncm_serialize_global_from_string_nest);
 #endif /* has glib >= 2.30 */
   g_test_run ();
 }
 
 void
-test_ncm_serialize_global_create_from_string_plain ()
+test_ncm_serialize_global_from_string_plain ()
 {
-  GObject *obj = ncm_serialize_global_create_from_string ("NcHICosmoLCDM");
+  GObject *obj = ncm_serialize_global_from_string ("NcHICosmoLCDM");
   NcHICosmo *hic = NC_HICOSMO (obj);
   gchar *obj_ser = ncm_serialize_global_to_string (obj, TRUE);
-  GObject *obj_new = ncm_serialize_global_create_from_string (obj_ser);
+  GObject *obj_new = ncm_serialize_global_from_string (obj_ser);
   gchar *obj_new_ser = ncm_serialize_global_to_string (obj_new, TRUE);
 
   g_assert (G_OBJECT_TYPE (obj) == G_OBJECT_TYPE (obj_new));
@@ -77,9 +77,9 @@ test_ncm_serialize_global_create_from_string_plain ()
 }
 
 void
-test_ncm_serialize_global_create_from_string_params ()
+test_ncm_serialize_global_from_string_params ()
 {
-  NcmModel *m = NCM_MODEL (ncm_serialize_global_create_from_string ("NcHICosmoLCDM{'H0':<12.3>,'Omegac':<0.2>}"));
+  NcmModel *m = NCM_MODEL (ncm_serialize_global_from_string ("NcHICosmoLCDM{'H0':<12.3>,'Omegac':<0.2>}"));
   ncm_assert_cmpdouble (ncm_model_param_get (m, NC_HICOSMO_DE_H0), ==, 12.3);
   ncm_assert_cmpdouble (ncm_model_param_get (m, NC_HICOSMO_DE_OMEGA_C), ==, 0.2);
   ncm_model_free (m);
@@ -91,7 +91,7 @@ test_ncm_serialize_global_create_from_string_params ()
   g_test_trap_assert_failed ();
 
 
-  m = NCM_MODEL (ncm_serialize_global_create_from_string ("{'NcHICosmoLCDM', {'H0':<12.3>,'Omegac':<0.2>}}"));
+  m = NCM_MODEL (ncm_serialize_global_from_string ("{'NcHICosmoLCDM', {'H0':<12.3>,'Omegac':<0.2>}}"));
   ncm_assert_cmpdouble (ncm_model_param_get (m, NC_HICOSMO_DE_H0), ==, 12.3);
   ncm_assert_cmpdouble (ncm_model_param_get (m, NC_HICOSMO_DE_OMEGA_C), ==, 0.2);
   ncm_model_free (m);
@@ -104,12 +104,12 @@ test_ncm_serialize_global_create_from_string_params ()
 }
 
 void
-test_ncm_serialize_global_create_from_string_nest ()
+test_ncm_serialize_global_from_string_nest ()
 {
-  GObject *obj = ncm_serialize_global_create_from_string ("NcMatterVar{'strategy':<2>,'window':<{'NcWindowTophat',@a{sv} {}}>,'transfer':<{'NcTransferFuncEH',@a{sv} {}}>}");
+  GObject *obj = ncm_serialize_global_from_string ("NcMatterVar{'strategy':<2>,'window':<{'NcWindowTophat',@a{sv} {}}>,'transfer':<{'NcTransferFuncEH',@a{sv} {}}>}");
   NcMatterVar *mv = NC_MATTER_VAR (obj);
   gchar *obj_ser = ncm_serialize_global_to_string (obj, TRUE);
-  GObject *obj_new = ncm_serialize_global_create_from_string (obj_ser);
+  GObject *obj_new = ncm_serialize_global_from_string (obj_ser);
   gchar *obj_new_ser = ncm_serialize_global_to_string (obj_new, TRUE);
 
   g_assert (G_OBJECT_TYPE (obj) == G_OBJECT_TYPE (obj_new));

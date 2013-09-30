@@ -50,6 +50,9 @@ enum
 {
   PROP_0,
   PROP_NAME,
+  PROP_DESC,
+  PROP_INIT,
+  PROP_BSTRAP,
   PROP_SIZE,
 };
 
@@ -66,10 +69,23 @@ ncm_data_init (NcmData *data)
 static void
 ncm_data_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
 {
+  NcmData *data = NCM_DATA (object);
   g_return_if_fail (NCM_IS_DATA (object));
 
   switch (prop_id)
   {
+    case PROP_DESC:
+      ncm_data_set_desc (data, g_value_get_string (value));
+      break;
+    case PROP_INIT:
+      ncm_data_set_init (data, g_value_get_boolean (value));
+      break;
+    case PROP_BSTRAP:
+    {
+      NcmBootstrap *bstrap = g_value_get_object (value);
+      ncm_data_bootstrap_set (data, bstrap);
+      break;
+    }
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
       break;
@@ -79,6 +95,7 @@ ncm_data_set_property (GObject *object, guint prop_id, const GValue *value, GPar
 static void
 ncm_data_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
 {
+  NcmData *data = NCM_DATA (object);
   NcmDataClass *data_class = NCM_DATA_GET_CLASS (object);
 
   g_return_if_fail (NCM_IS_DATA (object));
@@ -88,6 +105,17 @@ ncm_data_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec
     case PROP_NAME:
       g_value_set_string (value, data_class->name);
       break;
+    case PROP_DESC:
+      g_value_set_string (value, ncm_data_peek_desc (data));
+      break;
+    case PROP_INIT:
+      g_value_set_boolean (value, data->init);
+      break;
+    case PROP_BSTRAP:
+    {
+      g_value_set_object (value, data->bstrap);
+      break;
+    }
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
       break;
@@ -107,22 +135,20 @@ ncm_data_finalize (GObject *object)
   G_OBJECT_CLASS (ncm_data_parent_class)->finalize (object);
 }
 
-static void _ncm_data_copyto (NcmData *data, NcmData *data_dest);
-
 static void
 ncm_data_class_init (NcmDataClass *klass)
 {
   GObjectClass* object_class = G_OBJECT_CLASS (klass);
   NcmDataClass* data_class = NCM_DATA_CLASS (klass);
 
-  object_class->finalize = ncm_data_finalize;
-  object_class->set_property = ncm_data_set_property;
-  object_class->get_property = ncm_data_get_property;
+  object_class->set_property = &ncm_data_set_property;
+  object_class->get_property = &ncm_data_get_property;
+  object_class->finalize     = &ncm_data_finalize;
 
   /**
    * NcmData:name:
    *
-   * Description of the data object.
+   * Name of the data object.
    * 
    */  
   g_object_class_install_property (object_class,
@@ -133,10 +159,49 @@ ncm_data_class_init (NcmDataClass *klass)
                                                         NULL,
                                                         G_PARAM_READABLE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
   
+  /**
+   * NcmData:description:
+   *
+   * Description of the data object.
+   * 
+   */  
+  g_object_class_install_property (object_class,
+                                   PROP_DESC,
+                                   g_param_spec_string ("desc",
+                                                        NULL,
+                                                        "Data description",
+                                                        NULL,
+                                                        G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
+  /**
+   * NcmData:initialized:
+   *
+   * Whether the #NcmData is initialized.
+   * 
+   */  
+  g_object_class_install_property (object_class,
+                                   PROP_INIT,
+                                   g_param_spec_boolean ("init",
+                                                         NULL,
+                                                         "Data initialized state",
+                                                         FALSE,
+                                                         G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
+  /**
+   * NcmData:bootstrap:
+   *
+   * The #NcmData bootstrap object if any.
+   * 
+   */  
+  g_object_class_install_property (object_class,
+                                   PROP_BSTRAP,
+                                   g_param_spec_object ("bootstrap",
+                                                        NULL,
+                                                        "Data bootstrap object",
+                                                        NCM_TYPE_BOOTSTRAP,
+                                                        G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
   data_class->name               = NULL;
   data_class->get_length         = NULL;
-  data_class->copyto             = &_ncm_data_copyto;
-  data_class->dup                = NULL;
   data_class->begin              = NULL;
   data_class->prepare            = NULL;
   data_class->resample           = NULL;
@@ -146,40 +211,6 @@ ncm_data_class_init (NcmDataClass *klass)
   data_class->m2lnL_val          = NULL;
   data_class->m2lnL_grad         = NULL;
   data_class->m2lnL_val_grad     = NULL;
-}
-
-static void
-_ncm_data_copyto (NcmData *data, NcmData *data_dest)
-{
-  if (data->desc != NULL)
-    data_dest->desc         = g_strdup (data->desc);
-  else
-    data_dest->desc         = NULL;
-
-  data_dest->init           = data->init;
-  data_dest->begin          = data->begin;
-  data_dest->bootstrap      = data->bootstrap;
-  data_dest->bootstrap_init = data->bootstrap_init;
-
-  if (data->bootstrap)
-  {
-    if (data_dest->bstrap == NULL)
-      data_dest->bstrap = ncm_bootstrap_full_new (ncm_bootstrap_get_fsize (data->bstrap),
-                                                  ncm_bootstrap_get_bsize (data->bstrap));
-    else
-    {
-      ncm_bootstrap_set_fsize (data_dest->bstrap, ncm_bootstrap_get_fsize (data->bstrap));
-      ncm_bootstrap_set_bsize (data_dest->bstrap, ncm_bootstrap_get_bsize (data->bstrap));
-    }
-
-    if (data->bootstrap_init)
-    {
-      NCM_GARRAY_MEMCPY (data_dest->bstrap->increasing_index, 
-                         data->bstrap->increasing_index);
-    }
-  }
-  else
-    ncm_bootstrap_clear (&data_dest->bstrap);
 }
 
 /**
@@ -225,39 +256,16 @@ ncm_data_clear (NcmData **data)
 /**
  * ncm_data_dup:
  * @data: a #NcmData.
+ * @ser_obj: a #NcmSerialize.
  *
  * Duplicate the @data object.
  * 
  * Returns: (transfer full): a duplicate of @data.
- * 
- * Virtual: dup
  */
 NcmData *
-ncm_data_dup (NcmData *data)
+ncm_data_dup (NcmData *data, NcmSerialize *ser_obj)
 {
-  g_assert (NCM_DATA_GET_CLASS (data)->dup != NULL);
-  return NCM_DATA_GET_CLASS (data)->dup (data);
-}
-
-/**
- * ncm_data_copyto:
- * @data: a #NcmData.
- * @data_dest: a #NcmData.
- * 
- * Copy the contents of @data to @dest_data. The objects must be compatibles.
- * 
- * Virtual: copyto
- */
-void
-ncm_data_copyto (NcmData *data, NcmData *data_dest)
-{
-  g_assert (NCM_DATA_GET_CLASS (data)->copyto != NULL);
-  g_assert_cmpuint (G_OBJECT_TYPE (data), ==, G_OBJECT_TYPE (data_dest));
-
-  if (&_ncm_data_copyto == NCM_DATA_GET_CLASS (data)->copyto)
-    g_error ("ncm_data_copyto: object %s does not implement copyto.", G_OBJECT_TYPE_NAME (data));
-  
-  NCM_DATA_GET_CLASS (data)->copyto (data, data_dest);
+  return NCM_DATA (ncm_serialize_dup_obj (ser_obj, G_OBJECT (data)));
 }
 
 /**
@@ -302,17 +310,97 @@ ncm_data_get_dof (NcmData *data)
 /**
  * ncm_data_set_init:
  * @data: a #NcmData.
+ * @state: a boolean.
  *
- * Sets the @data to an initiated state. 
+ * Sets the @data to initialized or not @state. 
  * 
  */
 void
-ncm_data_set_init (NcmData *data)
+ncm_data_set_init (NcmData *data, gboolean state)
 {
-  data->init           = TRUE;
-  data->begin          = FALSE;
-  data->bootstrap      = FALSE;
-  data->bootstrap_init = FALSE;
+  if (data->init)
+  {
+    if (!state)
+    {
+      data->init           = FALSE;
+      data->begin          = FALSE;
+    }
+  }
+  else
+  {
+    if (state)
+    {
+      data->init           = TRUE;
+      data->begin          = FALSE;
+    }
+  }
+}
+
+/**
+ * ncm_data_set_desc:
+ * @data: a #NcmData.
+ * @desc: description.
+ *
+ * Sets the @data description. It gets a copy of desc.
+ * 
+ */
+void 
+ncm_data_set_desc (NcmData *data, const gchar *desc)
+{
+  g_clear_pointer (&data->desc, g_free);
+  data->desc = g_strdup (desc);
+}
+
+/**
+ * ncm_data_take_desc:
+ * @data: a #NcmData.
+ * @desc: description.
+ *
+ * Sets the @data description @desc without copying it, the @desc memory will
+ * be freed (g_free()) when the object is freed.
+ * 
+ */
+void 
+ncm_data_take_desc (NcmData *data, gchar *desc)
+{
+  g_clear_pointer (&data->desc, g_free);
+  data->desc = desc;
+}
+
+/**
+ * ncm_data_peek_desc:
+ * @data: a #NcmData.
+ *
+ * Gets @data description. 
+ * 
+ * Returns: (transfer none): internal @data description. 
+ */
+const gchar *
+ncm_data_peek_desc (NcmData *data)
+{
+  if (data->desc == NULL)
+  {
+    NcmDataClass *data_class = NCM_DATA_GET_CLASS (data);
+    if (data_class->name == NULL)
+      data->desc = g_strdup (G_OBJECT_TYPE_NAME (data));
+    else
+      data->desc = g_strdup (data_class->name);
+  }
+  return data->desc;
+}
+
+/**
+ * ncm_data_get_desc:
+ * @data: a #NcmData.
+ *
+ * Gets @data description.  
+ * 
+ * Returns: (transfer full): copy of the @data description. 
+ */
+gchar *
+ncm_data_get_desc (NcmData *data)
+{
+  return g_strdup (ncm_data_peek_desc (data));
 }
 
 /**
@@ -359,35 +447,67 @@ ncm_data_resample (NcmData *data, NcmMSet *mset)
   
   NCM_DATA_GET_CLASS (data)->resample (data, mset);
 
-  ncm_data_set_init (data);
+  ncm_data_set_init (data, TRUE);
+}
+
+/**
+ * ncm_data_bootstrap_create:
+ * @data: a #NcmData.
+ *
+ * Creates a bootstrap object inside of @data. Uses the default bsize == fsize.
+ * 
+ */
+void
+ncm_data_bootstrap_create (NcmData *data)
+{
+  if (!NCM_DATA_GET_CLASS (data)->bootstrap)
+    g_error ("ncm_data_bootstrap_create: The data (%s) does not implement bootstrap.\n", 
+             NCM_DATA_GET_CLASS (data)->name);
+  g_assert (data->init);
+
+  if (data->bstrap == NULL)
+    data->bstrap = ncm_bootstrap_sized_new (ncm_data_get_length (data));
+  else
+  {
+    ncm_bootstrap_set_fsize (data->bstrap, ncm_data_get_length (data));
+    ncm_bootstrap_set_bsize (data->bstrap, ncm_data_get_length (data));
+  }
+}
+
+/**
+ * ncm_data_bootstrap_remove:
+ * @data: a #NcmData.
+ *
+ * Removes a bootstrap object inside of @data if any.
+ * 
+ */
+void
+ncm_data_bootstrap_remove (NcmData *data)
+{
+  ncm_bootstrap_clear (&data->bstrap);
 }
 
 /**
  * ncm_data_bootstrap_set:
  * @data: a #NcmData.
- * @enable: Whenever to enable or disable bootstrap.
+ * @bstrap: a #NcmBootstrap.
  *
- * Enables or disable bootstrap analysis for the NcmData.
+ * Sets the @bstrap object in @data checking if they are compatible.
  * 
  */
 void
-ncm_data_bootstrap_set (NcmData *data, gboolean enable)
+ncm_data_bootstrap_set (NcmData *data, NcmBootstrap *bstrap)
 {
-  if (!NCM_DATA_GET_CLASS (data)->bootstrap && enable)
+  if (!NCM_DATA_GET_CLASS (data)->bootstrap)
     g_error ("ncm_data_bootstrap_set: The data (%s) does not implement bootstrap.\n", 
              NCM_DATA_GET_CLASS (data)->name);
   g_assert (data->init);
-  data->bootstrap      = enable;
-  data->bootstrap_init = FALSE;
-  if (enable)
-  {
-    if (data->bstrap == NULL)
-      data->bstrap = ncm_bootstrap_sized_new (ncm_data_get_length (data));
-    else
-      ncm_bootstrap_set_fsize (data->bstrap, ncm_data_get_length (data));
-  }
-  else
-    ncm_bootstrap_clear (&data->bstrap);
+  g_assert (bstrap != NULL);
+
+  g_assert_cmpuint (ncm_bootstrap_get_fsize (bstrap), ==, ncm_data_get_length (data));
+  ncm_bootstrap_ref (bstrap);
+  ncm_bootstrap_clear (&data->bstrap);
+  data->bstrap = bstrap;
 }
 
 /**
@@ -403,12 +523,28 @@ ncm_data_bootstrap_resample (NcmData *data)
   if (!NCM_DATA_GET_CLASS (data)->bootstrap)
     g_error ("ncm_data_bootstrap_resample: The data (%s) does not implement bootstrap.\n", 
              NCM_DATA_GET_CLASS (data)->name);
-  if (!data->bootstrap)
+  if (data->bstrap == NULL)
     g_error ("ncm_data_bootstrap_resample: Bootstrap of %s is not enabled.\n", 
              NCM_DATA_GET_CLASS (data)->name);
 
-  data->bootstrap_init = TRUE;
   ncm_bootstrap_resample (data->bstrap);
+}
+
+/**
+ * ncm_data_bootstrap_enabled:
+ * @data: a #NcmData.
+ *
+ * Checks whether bootstrap is enabled in @data.
+ * 
+ * Returns: if bootstrap is enabled in @data.
+ */
+gboolean
+ncm_data_bootstrap_enabled (NcmData *data)
+{
+  if (NCM_DATA_GET_CLASS (data)->bootstrap && data->bstrap != NULL)
+    return TRUE;
+  else
+    return FALSE;
 }
 
 /**
@@ -551,26 +687,3 @@ void ncm_data_m2lnL_val_grad (NcmData *data, NcmMSet *mset, gdouble *m2lnL, NcmV
 
   NCM_DATA_GET_CLASS (data)->m2lnL_val_grad (data, mset, m2lnL, grad);
 }
-
-/**
- * ncm_data_get_desc:
- * @data: a #NcmData.
- *
- * Returns the description of the data in @data.
- * 
- * Returns: (transfer none): A short description of @data.
- */
-gchar *
-ncm_data_get_desc (NcmData *data)
-{
-  if (data->desc == NULL)
-  {
-    NcmDataClass *data_class = NCM_DATA_GET_CLASS (data);
-    if (data_class->name == NULL)
-      data->desc = g_strdup (G_OBJECT_TYPE_NAME (data));
-    else
-      data->desc = g_strdup (data_class->name);
-  }
-  return data->desc;
-}
-

@@ -263,7 +263,7 @@ _ncm_nvector_gsl_setarraypointer (realtype *data, N_Vector v)
 static void
 _ncm_nvector_gsl_linearsum (realtype a, N_Vector x, realtype b, N_Vector y, N_Vector z)
 {
-  register gint i;
+  register guint i;
 //g_message ("%.15g %.15g %p %p %p\n", a, b, x, y ,z);
   if (b == 1 && y == z)
     gsl_blas_daxpy (a, NV2GSLV(x), NV2GSLV(z));
@@ -283,7 +283,7 @@ _ncm_nvector_gsl_const (realtype a, N_Vector v)
 static void
 _ncm_nvector_gsl_prod (N_Vector x, N_Vector y, N_Vector z)
 {
-  register gint i;
+  register guint i;
   for (i = 0; i < NV2GSLV(z)->size; i++)
     NV2GSLV(z)->data[i] = NV2GSLV(x)->data[i] * NV2GSLV(y)->data[i];    
 }
@@ -291,7 +291,7 @@ _ncm_nvector_gsl_prod (N_Vector x, N_Vector y, N_Vector z)
 static void
 _ncm_nvector_gsl_div (N_Vector x, N_Vector y, N_Vector z)
 {
-  register gint i;
+  register guint i;
   for (i = 0; i < NV2GSLV(z)->size; i++)
     NV2GSLV(z)->data[i] = NV2GSLV(x)->data[i] / NV2GSLV(y)->data[i];      
 }
@@ -299,7 +299,7 @@ _ncm_nvector_gsl_div (N_Vector x, N_Vector y, N_Vector z)
 static void
 _ncm_nvector_gsl_scale (realtype a, N_Vector x, N_Vector z)
 {
-  register gint i;
+  register guint i;
   if (x == z)
     gsl_blas_dscal (a, NV2GSLV(x));
   else
@@ -310,7 +310,7 @@ _ncm_nvector_gsl_scale (realtype a, N_Vector x, N_Vector z)
 static void
 _ncm_nvector_gsl_abs (N_Vector x, N_Vector z)
 {
-  register gint i;
+  register guint i;
   for (i = 0; i < NV2GSLV(z)->size; i++)
     NV2GSLV(z)->data[i] = fabs(NV2GSLV(x)->data[i]);
 }
@@ -318,7 +318,7 @@ _ncm_nvector_gsl_abs (N_Vector x, N_Vector z)
 static void
 _ncm_nvector_gsl_inv (N_Vector x, N_Vector z)
 {
-  register gint i;
+  register guint i;
   for (i = 0; i < NV2GSLV(z)->size; i++)
     NV2GSLV(z)->data[i] = 1.0 / (NV2GSLV(x)->data[i]);
 }
@@ -326,7 +326,7 @@ _ncm_nvector_gsl_inv (N_Vector x, N_Vector z)
 static void
 _ncm_nvector_gsl_addconst (N_Vector x, realtype a, N_Vector z)
 {
-  register gint i;
+  register guint i;
   for (i = 0; i < NV2GSLV(z)->size; i++)
     NV2GSLV(z)->data[i] = a + (NV2GSLV(x)->data[i]);  
 }
@@ -349,7 +349,7 @@ static realtype
 _ncm_nvector_gsl_wrmsnorm (N_Vector x, N_Vector w)
 {
   gdouble result = 0.0;
-  register gint i;
+  register guint i;
   for (i = 0; i < NV2GSLV(x)->size; i++)
   {
     const gdouble xw = (NV2GSLV(x)->data[i] * NV2GSLV(w)->data[i]);
@@ -362,7 +362,7 @@ static realtype
 _ncm_nvector_gsl_wrmsnormmask (N_Vector x, N_Vector w, N_Vector id)
 {
   gdouble result = 0.0;
-  register gint i;
+  register guint i;
   for (i = 0; i < NV2GSLV(x)->size; i++)
   {
     const gdouble xw = (NV2GSLV(x)->data[i] * NV2GSLV(w)->data[i]);
@@ -382,7 +382,7 @@ static realtype
 _ncm_nvector_gsl_wl2norm (N_Vector x, N_Vector w)
 {
   gdouble result = 0.0;
-  register gint i;
+  register guint i;
   for (i = 0; i < NV2GSLV(x)->size; i++)
   {
     const gdouble xw = (NV2GSLV(x)->data[i] * NV2GSLV(w)->data[i]);
@@ -400,7 +400,7 @@ _ncm_nvector_gsl_l1norm (N_Vector x)
 static void
 _ncm_nvector_gsl_compare (realtype c, N_Vector x, N_Vector z)
 {
-  register gint i;
+  register guint i;
   for (i = 0; i < NV2GSLV(z)->size; i++)
     NV2GSLV(z)->data[i] = fabs(NV2GSLV(x)->data[i]) > c ? 1.0 : 0.0;
 }
@@ -408,7 +408,7 @@ _ncm_nvector_gsl_compare (realtype c, N_Vector x, N_Vector z)
 static booleantype
 _ncm_nvector_gsl_invtest (N_Vector x, N_Vector z)
 {
-  register gint i;
+  register guint i;
   for (i = 0; i < NV2GSLV(z)->size; i++)
   {
     NV2GSLV(z)->data[i] = 1.0 / (NV2GSLV(x)->data[i]);
@@ -420,7 +420,7 @@ _ncm_nvector_gsl_invtest (N_Vector x, N_Vector z)
 static booleantype
 _ncm_nvector_gsl_constrmask (N_Vector c, N_Vector x, N_Vector m)
 {
-  register gint i;
+  register guint i;
   gboolean ok = TRUE;
   for (i = 0; i < NV2GSLV(x)->size; i++)
   {
@@ -451,7 +451,7 @@ _ncm_nvector_gsl_constrmask (N_Vector c, N_Vector x, N_Vector m)
 static realtype
 _ncm_nvector_gsl_minquotient (N_Vector x, N_Vector y)
 {
-  register gint i;
+  register guint i;
   gdouble min = BIG_REAL;
   for (i = 0; i < NV2GSLV(x)->size; i++)
   {

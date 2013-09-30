@@ -38,14 +38,14 @@
 #include "build_cfg.h"
 
 #include "nc_data_bao_rdv.h"
-
 #include "nc_enum_types.h"
+#include "math/ncm_cfg.h"
 
 enum
 {
   PROP_0,
   PROP_DIST,
-  PROP_ID,
+  PROP_Z,
   PROP_SIZE,
 };
 
@@ -56,7 +56,6 @@ nc_data_bao_rdv_init (NcDataBaoRDV *bao_rdv)
 {
   bao_rdv->x    = NULL;
   bao_rdv->dist = NULL;
-  bao_rdv->id   = NC_DATA_BAO_NSAMPLES;
 }
 
 static void
@@ -78,8 +77,8 @@ nc_data_bao_rdv_set_property (GObject *object, guint prop_id, const GValue *valu
       nc_distance_clear (&bao_rdv->dist);
       bao_rdv->dist = g_value_dup_object (value);
       break;
-    case PROP_ID:
-      nc_data_bao_rdv_set_sample (bao_rdv, g_value_get_enum (value));
+    case PROP_Z:
+      ncm_vector_set_from_variant (bao_rdv->x, g_value_get_variant (value));
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -98,8 +97,8 @@ nc_data_bao_rdv_get_property (GObject *object, guint prop_id, GValue *value, GPa
     case PROP_DIST:
       g_value_set_object (value, bao_rdv->dist);
       break;
-    case PROP_ID:
-      g_value_set_enum (value, nc_data_bao_rdv_get_sample (bao_rdv));
+    case PROP_Z:
+      g_value_take_variant (value, ncm_vector_get_variant (bao_rdv->x));
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -129,6 +128,7 @@ nc_data_bao_rdv_finalize (GObject *object)
 
 static void _nc_data_bao_rdv_prepare (NcmData *data, NcmMSet *mset);
 static void _nc_data_bao_rdv_mean_func (NcmDataGauss *gauss, NcmMSet *mset, NcmVector *vp);
+static void _nc_data_bao_rdv_set_size (NcmDataGauss *gauss, guint np);
 
 static void
 nc_data_bao_rdv_class_init (NcDataBaoRDVClass *klass)
@@ -150,18 +150,17 @@ nc_data_bao_rdv_class_init (NcDataBaoRDVClass *klass)
                                                         "Distance object",
                                                         NC_TYPE_DISTANCE,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-
   g_object_class_install_property (object_class,
-                                   PROP_ID,
-                                   g_param_spec_enum ("sample-id",
-                                                      NULL,
-                                                      "Sample id",
-                                                      NC_TYPE_DATA_BAO_ID, NC_DATA_BAO_RDV_PERCIVAL2010,
-                                                      G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+                                   PROP_Z,
+                                   g_param_spec_variant ("z",
+                                                         NULL,
+                                                         "Data redshift",
+                                                         G_VARIANT_TYPE ("ad"), NULL,
+                                                         G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   data_class->prepare    = &_nc_data_bao_rdv_prepare;
   gauss_class->mean_func = &_nc_data_bao_rdv_mean_func;
-
+  gauss_class->set_size  = &_nc_data_bao_rdv_set_size;
 }
 
 static void
@@ -177,8 +176,7 @@ _nc_data_bao_rdv_mean_func (NcmDataGauss *gauss, NcmMSet *mset, NcmVector *vp)
 {
   NcDataBaoRDV *bao_rdv = NC_DATA_BAO_RDV (gauss);
   NcHICosmo *cosmo = NC_HICOSMO (ncm_mset_peek (mset, nc_hicosmo_id ()));
-  
-  gint i;
+  guint i;
 
   for (i = 0; i < gauss->np; i++)
   {
@@ -200,57 +198,27 @@ _nc_data_bao_rdv_mean_func (NcmDataGauss *gauss, NcmMSet *mset, NcmVector *vp)
 NcmData *
 nc_data_bao_rdv_new (NcDistance *dist, NcDataBaoId id)
 {
-  return g_object_new (NC_TYPE_DATA_BAO_RDV,
-                       "sample-id", id,
-                       "dist", dist,
-                       NULL);
+  NcmData *data = g_object_new (NC_TYPE_DATA_BAO_RDV,
+                                "dist", dist,
+                                NULL);
+  nc_data_bao_rdv_set_sample (NC_DATA_BAO_RDV (data), id);
+  return data;
 }
 
-/**
- * nc_data_bao_rdv_set_size:
- * @bao_rdv: a #NcDataBaoRDV
- * @np: FIXME
- *
- * FIXME
- *
- * Returns: FIXME
- */
-void 
-nc_data_bao_rdv_set_size (NcDataBaoRDV *bao_rdv, guint np)
+static void 
+_nc_data_bao_rdv_set_size (NcmDataGauss *gauss, guint np)
 {
-  NcmDataGauss *gauss = NCM_DATA_GAUSS (bao_rdv);
+  NcDataBaoRDV *bao_rdv = NC_DATA_BAO_RDV (gauss);
 
-  if (gauss->np != 0)
-    g_assert (bao_rdv->x != NULL && ncm_vector_len (bao_rdv->x) == gauss->np);
-  
   if ((np == 0) || (np != gauss->np))
     ncm_vector_clear (&bao_rdv->x);
 
   if ((np != 0) && (np != gauss->np))
     bao_rdv->x = ncm_vector_new (np);
-
-  ncm_data_gauss_set_size (NCM_DATA_GAUSS (bao_rdv), np);
+  
+  /* Chain up : end */
+  NCM_DATA_GAUSS_CLASS (nc_data_bao_rdv_parent_class)->set_size (gauss, np);
 }
-
-/**
- * nc_data_bao_rdv_get_size:
- * @bao_rdv: a #NcDataBaoRDV
- *
- * FIXME
- *
- * Returns: FIXME
- */
-guint 
-nc_data_bao_rdv_get_size (NcDataBaoRDV *bao_rdv)
-{
-  NcmDataGauss *gauss = NCM_DATA_GAUSS (bao_rdv);
-
-  if (gauss->np != 0)
-    g_assert (bao_rdv->x != NULL && ncm_vector_len (bao_rdv->x) == gauss->np);
-
-  return ncm_data_gauss_get_size (NCM_DATA_GAUSS (bao_rdv));
-}
-
 
 /***************************************************************************
  * BAO Percival priors data (arXiv:0705.3323)
@@ -340,7 +308,7 @@ nc_data_bao_rdv_set_sample (NcDataBaoRDV *bao_rdv, NcDataBaoId id)
     case NC_DATA_BAO_RDV_PERCIVAL2007:
     {
       data->desc = g_strdup ("Percival 2007, BAO Sample R-Dv");
-      nc_data_bao_rdv_set_size (bao_rdv, 2);
+      ncm_data_gauss_set_size (gauss, 2);
 
       for (i = 0; i < 2; i++)
       {
@@ -355,7 +323,7 @@ nc_data_bao_rdv_set_sample (NcDataBaoRDV *bao_rdv, NcDataBaoId id)
     case NC_DATA_BAO_RDV_PERCIVAL2010:
     {
       data->desc = g_strdup ("Percival 2010, BAO Sample R-Dv");
-      nc_data_bao_rdv_set_size (bao_rdv, 2);
+      ncm_data_gauss_set_size (gauss, 2);
 
       for (i = 0; i < 2; i++)
       {
@@ -370,7 +338,7 @@ nc_data_bao_rdv_set_sample (NcDataBaoRDV *bao_rdv, NcDataBaoId id)
     case NC_DATA_BAO_RDV_BEUTLER2011:
     {
       data->desc = g_strdup ("6dFGRS -- Beutler (2011), BAO Sample R-Dv");
-      nc_data_bao_rdv_set_size (bao_rdv, 1);
+      ncm_data_gauss_set_size (gauss, 1);
 
       for (i = 0; i < 1; i++)
       {
@@ -385,7 +353,7 @@ nc_data_bao_rdv_set_sample (NcDataBaoRDV *bao_rdv, NcDataBaoId id)
     case NC_DATA_BAO_RDV_PADMANABHAN2012:
     {
       data->desc = g_strdup ("SDSS-DR7-rec -- Padmanabhan (2012), BAO Sample R-Dv");
-      nc_data_bao_rdv_set_size (bao_rdv, 1);
+      ncm_data_gauss_set_size (gauss, 1);
 
       for (i = 0; i < 1; i++)
       {
@@ -400,7 +368,7 @@ nc_data_bao_rdv_set_sample (NcDataBaoRDV *bao_rdv, NcDataBaoId id)
     case NC_DATA_BAO_RDV_ANDERSON2012:
     {
       data->desc = g_strdup ("SDSS-DR9-rec -- Anderson (2012), BAO Sample R-Dv");
-      nc_data_bao_rdv_set_size (bao_rdv, 1);
+      ncm_data_gauss_set_size (gauss, 1);
 
       for (i = 0; i < 1; i++)
       {
@@ -415,7 +383,7 @@ nc_data_bao_rdv_set_sample (NcDataBaoRDV *bao_rdv, NcDataBaoId id)
     case NC_DATA_BAO_RDV_BLAKE2012:
     {
       data->desc = g_strdup ("WiggleZ -- Blake (2012), BAO Sample R-Dv");
-      nc_data_bao_rdv_set_size (bao_rdv, 3);
+      ncm_data_gauss_set_size (gauss, 3);
 
       for (i = 0; i < 3; i++)
       {
@@ -432,20 +400,5 @@ nc_data_bao_rdv_set_sample (NcDataBaoRDV *bao_rdv, NcDataBaoId id)
       break;
   }
   
-  bao_rdv->id = id;
-  ncm_data_set_init (data);
-}
-
-/**
- * nc_data_bao_rdv_get_sample:
- * @bao_rdv: a #NcDataBaoRDV
- *
- * FIXME
- * 
- * Returns: FIXME
- */
-NcDataBaoId
-nc_data_bao_rdv_get_sample (NcDataBaoRDV *bao_rdv)
-{
-  return bao_rdv->id;
+  ncm_data_set_init (data, TRUE);
 }

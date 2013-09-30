@@ -39,6 +39,7 @@
 
 #include "math/ncm_timer.h"
 #include "math/ncm_cfg.h"
+#include "math/ncm_util.h"
 
 #include <math.h>
 
@@ -297,13 +298,13 @@ _ncm_timer_dhms_to_string (GString *s, guint elap_day, guint elap_hour, guint el
   switch (elap_day)
   {
     case 0:
-      g_string_printf (s, "%02u:%02u:%04.1f", elap_hour, elap_min, elap_sec);
+      g_string_printf (s, "%02u:%02u:%05.2f", elap_hour, elap_min, elap_sec);
       break;
     case 1:
-      g_string_printf (s, "1 day, %02u:%02u:%04.1f", elap_hour, elap_min, elap_sec);
+      g_string_printf (s, "1 day, %02u:%02u:%05.2f", elap_hour, elap_min, elap_sec);
       break;
     default:
-      g_string_printf (s, "%02u days, %02u:%02u:%04.1f", elap_day, elap_hour, elap_min, elap_sec);
+      g_string_printf (s, "%02u days, %02u:%02u:%05.2f", elap_day, elap_hour, elap_min, elap_sec);
       break;
   }
 }
@@ -525,7 +526,7 @@ ncm_timer_task_mean_time_str (NcmTimer *nt)
     guint day, hour, min;
     gdouble sec;
     gdouble mean_time = ncm_stats_vec_get_mean (nt->time_stats, 0);
-    gdouble sigma_time = ncm_stats_vec_get_sd (nt->time_stats, 0);
+    gdouble sigma_time = ncm_stats_vec_get_sd (nt->time_stats, 0) / sqrt (nt->task_pos);
 
     _ncm_timer_sec_to_dhms (mean_time, &day, &hour, &min, &sec);
     _ncm_timer_dhms_to_string (nt->msg_tmp1, day, hour, min, sec);
@@ -557,7 +558,7 @@ ncm_timer_task_time_left_str (NcmTimer *nt)
     guint day, hour, min;
     gdouble sec;
     const gdouble mean_time = ncm_stats_vec_get_mean (nt->time_stats, 0);
-    const gdouble sigma_time = ncm_stats_vec_get_sd (nt->time_stats, 0);
+    const gdouble sigma_time = ncm_stats_vec_get_sd (nt->time_stats, 0) / sqrt (nt->task_pos);
     const guint task_left = nt->task_len - nt->task_pos;
     const gdouble mean_time_left = mean_time * task_left;
     const gdouble sigma_time_left = sigma_time * task_left;
@@ -620,7 +621,7 @@ ncm_timer_task_end_datetime_str (NcmTimer *nt)
 #if !((GLIB_MAJOR_VERSION == 2) && (GLIB_MINOR_VERSION < 26))
   GDateTime *dt_now = g_date_time_new_now_local ();
   const gdouble mean_time = ncm_stats_vec_get_mean (nt->time_stats, 0);
-  const gdouble sigma_time = ncm_stats_vec_get_sd (nt->time_stats, 0);
+  const gdouble sigma_time = ncm_stats_vec_get_sd (nt->time_stats, 0) / sqrt (nt->task_pos);
   const guint task_left = nt->task_len - nt->task_pos;
   const gdouble mean_time_left = mean_time * task_left;
   const gdouble sigma_time_left = sigma_time * task_left;

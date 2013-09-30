@@ -40,6 +40,13 @@
 #include "math/ncm_serialize.h"
 #include "math/ncm_cfg.h"
 
+enum
+{
+  PROP_0,
+  PROP_VALID_MAP,
+  PROP_SIZE,
+};
+
 G_DEFINE_TYPE (NcmMSet, ncm_mset, G_TYPE_OBJECT);
 G_DEFINE_BOXED_TYPE (NcmMSetPIndex, ncm_mset_pindex, ncm_mset_pindex_dup, ncm_mset_pindex_free);
 
@@ -221,69 +228,16 @@ ncm_mset_ref (NcmMSet *mset)
 /**
  * ncm_mset_dup:
  * @mset: a #NcmMSet.
+ * @ser: a #NcmSerialize.
  *
  * FIXME
  *
  * Returns: (transfer full): a new #NcmMSet.
  */
 NcmMSet *
-ncm_mset_dup (NcmMSet *mset)
+ncm_mset_dup (NcmMSet *mset, NcmSerialize *ser)
 {
-  NcmMSet *mset_copy = ncm_mset_empty_new ();
-  NcmModelID mid;
-  for (mid = 0; mid < NCM_MODEL_MAX_ID; mid++)
-  {
-    if (mset->model[mid] != NULL)
-    {
-      NcmModel *m_copy = ncm_model_copy (ncm_mset_peek (mset, mid));
-      ncm_mset_set (mset_copy, m_copy);
-      ncm_model_free (m_copy);
-    }
-  }
-  return mset_copy;
-}
-
-/**
- * ncm_mset_copy:
- * @mset: a #NcmMSet.
- *
- * FIXME
- *
- * Returns: (transfer full): a new #NcmMSet.
- */
-NcmMSet *
-ncm_mset_copy (NcmMSet *mset)
-{
-  NcmMSet *mset_copy = ncm_mset_empty_new ();
-  NcmModelID mid;
-  for (mid = 0; mid < NCM_MODEL_MAX_ID; mid++)
-  {
-    if (mset->model[mid] != NULL)
-      ncm_mset_set (mset_copy, ncm_mset_peek (mset, mid));
-  }
-  return mset_copy;
-}
-
-/**
- * ncm_mset_copyto:
- * @mset_src: a #NcmMSet.
- * @mset_dest: a #NcmMSet.
- *
- * FIXME
- *
- */
-void
-ncm_mset_copyto (NcmMSet *mset_src, NcmMSet *mset_dest)
-{
-  guint i;
-  for (i = 0; i < NCM_MODEL_MAX_ID; i++)
-  {
-    if (mset_src->model[i] != NULL)
-    {
-      g_assert (mset_dest->model[i] != NULL);
-      ncm_model_copyto (mset_src->model[i], mset_dest->model[i]);
-    }
-  }
+  return NCM_MSET (ncm_serialize_dup_obj (ser, G_OBJECT (mset)));
 }
 
 /**
@@ -374,22 +328,26 @@ ncm_mset_remove (NcmMSet *mset, NcmModelID mid)
 void
 ncm_mset_set (NcmMSet *mset, NcmModel *model)
 {
-  NcmModelID mid = ncm_model_id (model);
-  guint model_len = ncm_model_len (model);
-  guint i;
+  g_assert (model != NULL);
+  {
+    NcmModelID mid = ncm_model_id (model);
+    guint model_len = ncm_model_len (model);
+    guint i;
 
-  if (mset->model[mid] != NULL)
-    ncm_mset_remove (mset, mid);
+    if (mset->model[mid] != NULL)
+      ncm_mset_remove (mset, mid);
 
-  mset->model[mid] = ncm_model_ref (model);
+    mset->model[mid] = ncm_model_ref (model);
 
-  g_array_set_size (mset->fpi_array[mid], model_len);
-  for (i = 0; i < model_len; i++)
-    g_array_index (mset->fpi_array[mid], gint, i) = -1;
+    g_array_set_size (mset->fpi_array[mid], model_len);
+    for (i = 0; i < model_len; i++)
+      g_array_index (mset->fpi_array[mid], gint, i) = -1;
 
-  mset->total_len += model_len;
+    mset->total_len += model_len;
 
-  mset->valid_map = FALSE;
+    if (mset->valid_map)
+      ncm_mset_prepare_fparam_map (mset);
+  }
 }
 
 /**
@@ -435,7 +393,7 @@ ncm_mset_prepare_fparam_map (NcmMSet *mset)
       continue;
     else
     {
-      gint n_params = ncm_model_len (model);
+      guint n_params = ncm_model_len (model);
       for (pid = 0; pid < n_params; pid++)
       {
         if (ncm_model_param_get_ftype (model, pid) == NCM_PARAM_TYPE_FREE)
@@ -1494,7 +1452,7 @@ ncm_mset_load (gchar *filename)
     }
 
     {
-      GObject *obj = ncm_serialize_global_create_from_string (obj_ser->str);
+      GObject *obj = ncm_serialize_global_from_string (obj_ser->str);
       g_assert (NCM_IS_MODEL (obj));
       if (ncm_mset_exists (mset, NCM_MODEL (obj)))
         g_error ("ncm_mset_load: a model ``%s'' already exists in NcmMSet.", obj_ser->str);
@@ -1521,7 +1479,71 @@ ncm_mset_init (NcmMSet *mset)
 }
 
 static void
-ncm_mset_dispose (GObject *object)
+_ncm_mset_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
+{
+  NcmMSet *mset = NCM_MSET (object);
+  g_return_if_fail (NCM_IS_MSET (object));
+
+  switch (prop_id)
+  {
+    case PROP_VALID_MAP:
+      g_value_set_boolean (value, mset->valid_map);
+      break;
+    default:
+    {
+      g_assert (prop_id >= PROP_SIZE);
+      if (prop_id >= PROP_SIZE + NCM_MODEL_MAX_ID)
+        G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
+      else
+      {
+        guint mid = prop_id - PROP_SIZE;
+        g_value_set_object (value, ncm_mset_peek (mset, mid));
+      }
+      break;
+    }
+  }
+}
+
+static void
+_ncm_mset_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
+{
+  NcmMSet *mset = NCM_MSET (object);
+  g_return_if_fail (NCM_IS_MSET (object));
+
+  switch (prop_id)
+  {
+    case PROP_VALID_MAP:
+    {
+      if (g_value_get_boolean (value))
+      {
+        if (!mset->valid_map)
+          ncm_mset_prepare_fparam_map (mset);
+      }
+      else
+        mset->valid_map = FALSE;
+      break;
+    }
+    default:
+    {
+      g_assert (prop_id >= PROP_SIZE);
+      if (prop_id >= PROP_SIZE + NCM_MODEL_MAX_ID)
+        G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
+      else
+      {
+        guint mid = prop_id - PROP_SIZE;
+        NcmModel *model = g_value_get_object (value);
+        if (model != NULL)
+          ncm_mset_set (mset, model);
+        else
+          ncm_mset_remove (mset, mid);
+      }
+      break;
+    }
+  }
+}
+
+static void
+_ncm_mset_dispose (GObject *object)
 {
   NcmMSet *mset = NCM_MSET (object);
   NcmModelID mid;
@@ -1537,7 +1559,7 @@ ncm_mset_dispose (GObject *object)
 }
 
 static void
-ncm_mset_finalize (GObject *object)
+_ncm_mset_finalize (GObject *object)
 {
   NcmMSet *mset = NCM_MSET (object);
   gint i;
@@ -1556,12 +1578,27 @@ ncm_mset_class_init (NcmMSetClass *klass)
 {
   GObjectClass* object_class = G_OBJECT_CLASS (klass);
   guint i;
-  object_class->dispose = ncm_mset_dispose;
-  object_class->finalize = ncm_mset_finalize;
+
+  object_class->set_property = &_ncm_mset_set_property;
+  object_class->get_property = &_ncm_mset_get_property;
+  object_class->dispose      = &_ncm_mset_dispose;
+  object_class->finalize     = &_ncm_mset_finalize;
+
   klass->ns_table = g_hash_table_new (g_str_hash, g_str_equal);
+
+  g_object_class_install_property (object_class, PROP_VALID_MAP,
+                                   g_param_spec_boolean ("valid-map", NULL, "Valid properties map",
+                                                        FALSE, 
+                                                        G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
   for (i = 0; i < NCM_MODEL_MAX_ID; i++)
   {
+    gchar *name = g_strdup_printf ("model-type-%u", i);
+    gchar *desc = g_strdup_printf ("Model type %u", i);
     klass->model_desc[i].init = FALSE;
+    g_object_class_install_property (object_class, PROP_SIZE + i,
+                                     g_param_spec_object (name, NULL, desc,
+                                                          NCM_TYPE_MODEL,
+                                                          G_PARAM_READWRITE | G_PARAM_CONSTRUCT));    
   }
 }
-

@@ -54,7 +54,7 @@ G_DEFINE_ABSTRACT_TYPE (NcClusterMass, nc_cluster_mass, NCM_TYPE_MODEL);
 NcClusterMass *
 nc_cluster_mass_new_from_name (gchar *mass_name)
 {
-  GObject *obj = ncm_serialize_global_create_from_string (mass_name);
+  GObject *obj = ncm_serialize_global_from_string (mass_name);
   GType mass_type = G_OBJECT_TYPE (obj);
   if (!g_type_is_a (mass_type, NC_TYPE_CLUSTER_MASS))
 	g_error ("nc_cluster_mass_new_from_name: NcClusterMass %s do not descend from %s\n", mass_name, g_type_name (NC_TYPE_CLUSTER_MASS));
@@ -269,11 +269,13 @@ nc_cluster_mass_log_all_models ()
 static void
 nc_cluster_mass_init (NcClusterMass *nc_cluster_mass)
 {
+  NCM_UNUSED (nc_cluster_mass);
 }
 
 static void
 nc_cluster_mass_finalize (GObject *object)
 {
+  
   /* Chain up : end */
   G_OBJECT_CLASS (nc_cluster_mass_parent_class)->finalize (object);
 }

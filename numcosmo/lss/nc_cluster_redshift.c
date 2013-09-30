@@ -38,6 +38,7 @@
 #include "lss/nc_cluster_redshift.h"
 #include "math/ncm_serialize.h"
 #include "math/ncm_cfg.h"
+#include "math/ncm_util.h"
 
 G_DEFINE_ABSTRACT_TYPE (NcClusterRedshift, nc_cluster_redshift, G_TYPE_OBJECT);
 
@@ -52,7 +53,7 @@ G_DEFINE_ABSTRACT_TYPE (NcClusterRedshift, nc_cluster_redshift, G_TYPE_OBJECT);
 NcClusterRedshift *
 nc_cluster_redshift_new_from_name (gchar *redshift_name)
 {
-  GObject *obj = ncm_serialize_global_create_from_string (redshift_name);
+  GObject *obj = ncm_serialize_global_from_string (redshift_name);
   GType redshift_type = G_OBJECT_TYPE (obj);
   if (!g_type_is_a (redshift_type, NC_TYPE_CLUSTER_REDSHIFT))
 	g_error ("nc_cluster_redshift_new_from_name: NcClusterRedshift %s do not descend from %s\n", redshift_name, g_type_name (NC_TYPE_CLUSTER_REDSHIFT));
@@ -231,6 +232,7 @@ nc_cluster_redshift_n_limits (NcClusterRedshift *clusterz, gdouble *z_lower, gdo
 static void
 nc_cluster_redshift_init (NcClusterRedshift *nc_cluster_redshift)
 {
+  NCM_UNUSED (nc_cluster_redshift);
 }
 
 static void

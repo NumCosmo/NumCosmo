@@ -37,6 +37,8 @@
 #include "build_cfg.h"
 
 #include "lss/nc_halo_bias_type_st_ellip.h"
+#include "math/ncm_cfg.h"
+#include "math/ncm_util.h"
 
 #include <math.h>
 
@@ -85,6 +87,8 @@ _nc_halo_bias_type_st_ellip_eval (NcHaloBiasType *biasf, gdouble sigma, gdouble 
   gdouble ax2_c = pow(a * x2, c);
   gdouble b_ST_ellip = 1.0  + (a * x2 + b * pow(a * x2, (1.0 - c)) - ax2_c / (sqrt(a) * (ax2_c + b * (1.0 - c) * (1.0 - c/2.0)))) / bias_st_ellip->delta_c;
 
+  NCM_UNUSED (z);
+  
   return b_ST_ellip;
 }
 

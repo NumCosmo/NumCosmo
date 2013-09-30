@@ -124,7 +124,7 @@ G_INLINE_FUNC NcClusterMass *nc_cluster_abundance_peek_mass (NcClusterAbundance 
 /*
 void nc_cluster_abundance_bin_realization (GArray *zr, gsl_histogram **h);
 void nc_cluster_abundance_realizations_save_to_file (GPtrArray *realizations, gchar *filename);
-GPtrArray *nc_cluster_abundance_realizations_read_from_file (gchar *file_realization, gint n_realizations);
+GPtrArray *nc_cluster_abundance_realizations_read_from_file (gchar *file_realization, guint n_realizations);
 gdouble nc_cluster_abundance_d2NdzdlnM_photoz (NcClusterAbundance *cad, NcHICosmo *model, gdouble lnM, gdouble *z_obs, gdouble *z_obs_params);
 gdouble nc_cluster_abundance_d2NdzdlnM_Mobs (NcClusterAbundance *cad, NcHICosmo *model, gdouble *lnM_obs, gdouble *lnM_obs_params, gdouble z);
 gdouble nc_cluster_abundance_d2NdzdlnM_photoz_Mobs (NcClusterAbundance *cad, NcHICosmo *model, gdouble *lnM_obs, gdouble *lnM_obs_params, gdouble *z_obs, gdouble *z_obs_params);

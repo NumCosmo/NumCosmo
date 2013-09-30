@@ -50,7 +50,7 @@ enum
 {
   PROP_0,
   PROP_DIST,
-  PROP_ID,
+  PROP_Z,
   PROP_SIZE,
 };
 
@@ -61,7 +61,6 @@ nc_data_dist_mu_init (NcDataDistMu *dist_mu)
 {
   dist_mu->x    = NULL;
   dist_mu->dist = NULL;
-  dist_mu->id   = 0;
 }
 
 static void
@@ -83,8 +82,8 @@ nc_data_dist_mu_set_property (GObject *object, guint prop_id, const GValue *valu
       nc_distance_clear (&dist_mu->dist);
       dist_mu->dist = g_value_dup_object (value);
       break;
-    case PROP_ID:
-      nc_data_dist_mu_set_sample (dist_mu, g_value_get_enum (value));
+    case PROP_Z:
+      ncm_vector_set_from_variant (dist_mu->x, g_value_get_variant (value));
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -103,8 +102,8 @@ nc_data_dist_mu_get_property (GObject *object, guint prop_id, GValue *value, GPa
     case PROP_DIST:
       g_value_set_object (value, dist_mu->dist);
       break;
-    case PROP_ID:
-      g_value_set_enum (value, nc_data_dist_mu_get_sample (dist_mu));
+    case PROP_Z:
+      g_value_take_variant (value, ncm_vector_get_variant (dist_mu->x));
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -134,6 +133,7 @@ nc_data_dist_mu_finalize (GObject *object)
 
 static void _nc_data_dist_mu_prepare (NcmData *data, NcmMSet *mset);
 static void _nc_data_dist_mu_mean_func (NcmDataGaussDiag *diag, NcmMSet *mset, NcmVector *vp);
+static void _nc_data_dist_mu_set_size (NcmDataGaussDiag *diag, guint np);
 
 static void
 nc_data_dist_mu_class_init (NcDataDistMuClass *klass)
@@ -155,17 +155,18 @@ nc_data_dist_mu_class_init (NcDataDistMuClass *klass)
                                                         "Distance object",
                                                         NC_TYPE_DISTANCE,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-
   g_object_class_install_property (object_class,
-                                   PROP_ID,
-                                   g_param_spec_enum ("sample-id",
-                                                      NULL,
-                                                      "Sample id",
-                                                      NC_TYPE_DATA_SNIA_ID, NC_DATA_SNIA_SIMPLE_UNION2_1,
-                                                      G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+                                   PROP_Z,
+                                   g_param_spec_variant ("z",
+                                                         NULL,
+                                                         "Data redshift",
+                                                         G_VARIANT_TYPE ("ad"), NULL,
+                                                         G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
 
   data_class->prepare   = &_nc_data_dist_mu_prepare;
   diag_class->mean_func = &_nc_data_dist_mu_mean_func;
+  diag_class->set_size  = &_nc_data_dist_mu_set_size;
 }
 
 static void
@@ -196,8 +197,7 @@ _nc_data_dist_mu_mean_func (NcmDataGaussDiag *diag, NcmMSet *mset, NcmVector *vp
 {
   NcDataDistMu *dist_mu = NC_DATA_DIST_MU (diag);
   NcHICosmo *cosmo = NC_HICOSMO (ncm_mset_peek (mset, nc_hicosmo_id ()));
-  
-  gint i;
+  guint i;
 
   for (i = 0; i < diag->np; i++)
   {
@@ -219,56 +219,27 @@ _nc_data_dist_mu_mean_func (NcmDataGaussDiag *diag, NcmMSet *mset, NcmVector *vp
 NcmData *
 nc_data_dist_mu_new (NcDistance *dist, NcDataSNIAId id)
 {
-  return g_object_new (NC_TYPE_DATA_DIST_MU,
-                       "dist", dist,
-                       "sample-id", id,
-                       "w-mean", TRUE,
-                       NULL);
+  NcmData *data = g_object_new (NC_TYPE_DATA_DIST_MU,
+                                "dist", dist,
+                                "w-mean", TRUE,
+                                NULL);
+  nc_data_dist_mu_set_sample (NC_DATA_DIST_MU (data), id);
+  return data;
 }
 
-/**
- * nc_data_dist_mu_set_size:
- * @dist_mu: a #NcDataDistMu
- * @np: FIXME
- *
- * FIXME
- *
- * Returns: FIXME
- */
-void 
-nc_data_dist_mu_set_size (NcDataDistMu *dist_mu, guint np)
+static void 
+_nc_data_dist_mu_set_size (NcmDataGaussDiag *diag, guint np)
 {
-  NcmDataGaussDiag *diag = NCM_DATA_GAUSS_DIAG (dist_mu);
+  NcDataDistMu *dist_mu = NC_DATA_DIST_MU (diag);
 
-  if (diag->np != 0)
-    g_assert (dist_mu->x != NULL && ncm_vector_len (dist_mu->x) == diag->np);
-  
   if ((np == 0) || (np != diag->np))
     ncm_vector_clear (&dist_mu->x);
 
   if ((np != 0) && (np != diag->np))
     dist_mu->x = ncm_vector_new (np);
-
-  ncm_data_gauss_diag_set_size (NCM_DATA_GAUSS_DIAG (dist_mu), np);
-}
-
-/**
- * nc_data_dist_mu_get_size:
- * @dist_mu: a #NcDataDistMu
- *
- * FIXME
- *
- * Returns: FIXME
- */
-guint 
-nc_data_dist_mu_get_size (NcDataDistMu *dist_mu)
-{
-  NcmDataGaussDiag *diag = NCM_DATA_GAUSS_DIAG (dist_mu);
-
-  if (diag->np != 0)
-    g_assert (dist_mu->x != NULL && ncm_vector_len (dist_mu->x) == diag->np);
-
-  return ncm_data_gauss_diag_get_size (NCM_DATA_GAUSS_DIAG (dist_mu));
+  
+  /* Chain up : end */
+  NCM_DATA_GAUSS_DIAG_CLASS (nc_data_dist_mu_parent_class)->set_size (diag, np);
 }
 
 /**
@@ -297,10 +268,7 @@ nc_data_dist_mu_set_sample (NcDataDistMu *dist_mu, NcDataSNIAId id)
 
     sqlite3 *db = ncm_cfg_get_default_sqlite3 ();
 
-    if (data->desc != NULL)
-      g_free (data->desc);
-    
-    data->desc = g_strdup (_nc_data_snia_query[id * 2]);
+    ncm_data_set_desc (data, _nc_data_snia_query[id * 2]);
 
     g_assert (db != NULL);  
 
@@ -311,7 +279,7 @@ nc_data_dist_mu_set_sample (NcDataDistMu *dist_mu, NcDataSNIAId id)
       g_error ("nc_data_dist_mu_set_sample: Query error: %s", err_str);
     }
 
-    nc_data_dist_mu_set_size (dist_mu, nrow);
+    ncm_data_gauss_diag_set_size (diag, nrow);
 
     for (i = 0; i < nrow; i++)
     {
@@ -323,26 +291,10 @@ nc_data_dist_mu_set_sample (NcDataDistMu *dist_mu, NcDataSNIAId id)
 
     sqlite3_free_table (res);
 
-    dist_mu->id = id;
-    ncm_data_set_init (data);
-
+    ncm_data_set_init (data, TRUE);
   }
 #else
-  g_error (PACKAGE_NAME" compiled without support for sqlite3, SN Ia simple data not avaliable.");
+  g_error (PACKAGE_NAME" compiled without support for sqlite3, SN Ia data not avaliable.");
 #endif
 
-}
-
-/**
- * nc_data_dist_mu_get_sample:
- * @dist_mu: a #NcDataDistMu
- *
- * FIXME
- * 
- * Returns: FIXME
- */
-NcDataSNIAId
-nc_data_dist_mu_get_sample (NcDataDistMu *dist_mu)
-{
-  return dist_mu->id;
 }

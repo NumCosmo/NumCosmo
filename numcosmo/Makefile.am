@@ -29,11 +29,13 @@ ncm_sources = \
 	ncm_build_inline.c                 \
 	math/ncm_c.c                       \
 	math/ncm_cfg.c                     \
+	math/ncm_util.c                    \
 	math/ncm_timer.c                   \
 	math/ncm_lapack.c                  \
 	math/ncm_vector.c                  \
 	math/ncm_matrix.c                  \
 	math/ncm_serialize.c               \
+	math/ncm_obj_array.c               \
 	math/ncm_rng.c                     \
 	math/ncm_stats_vec.c               \
 	math/ncm_bootstrap.c               \
@@ -93,18 +95,19 @@ ncm_sources = \
 	math/grid_one.c           \
 	math/dividedifference.c   \
 	math/memory_pool.c        \
-	math/util.c               \
 	sphere/map.c              \
 	sphere/healpix.c
 
 ncm_headers = \
 	math/ncm_c.h                     \
 	math/ncm_cfg.h                   \
+	math/ncm_util.h                  \
 	math/ncm_timer.h                 \
 	math/ncm_lapack.h                \
 	math/ncm_vector.h                \
 	math/ncm_matrix.h                \
 	math/ncm_serialize.h             \
+	math/ncm_obj_array.h             \
 	math/ncm_rng.h                   \
 	math/ncm_stats_vec.h             \
 	math/ncm_bootstrap.h             \
@@ -163,7 +166,6 @@ ncm_headers = \
 	math/mpq_tree.h           \
 	math/grid_one.h           \
 	math/dividedifference.h   \
-	math/util.h               \
 	math/memory_pool.h        \
 	sphere/map.h              \
 	sphere/healpix.h

@@ -320,6 +320,7 @@ nc_distance_init (NcDistance *dist)
 gdouble
 nc_distance_hubble (NcDistance *dist, NcHICosmo *cosmo)
 {
+  NCM_UNUSED (dist);
   return ncm_c_c () / (nc_hicosmo_H0 (cosmo) * 1.0e3);
 }
 
@@ -375,6 +376,7 @@ dcddz (gdouble cd, gdouble z, gpointer userdata)
 {
   NcHICosmo *cosmo = NC_HICOSMO (userdata);
   const gdouble E2 = nc_hicosmo_E2 (cosmo, z);
+  NCM_UNUSED (cd);
   return 1.0 / sqrt (E2);
 }
 
@@ -662,6 +664,7 @@ nc_distance_comoving_lss (NcDistance *dist, NcHICosmo *cosmo)
 gdouble
 nc_distance_decoupling_redshift (NcDistance *dist, NcHICosmo *cosmo)
 {
+  NCM_UNUSED (dist);
   if (ncm_model_impl (NCM_MODEL (cosmo)) & NC_HICOSMO_IMPL_z_lss)
     return nc_hicosmo_z_lss (cosmo);
   else
@@ -745,6 +748,7 @@ sound_horizon_integral_argument (gdouble z, gpointer p)
 gdouble
 nc_distance_dsound_horizon_dz (NcDistance *dist, NcHICosmo *cosmo, gdouble z)
 {
+  NCM_UNUSED (dist);
   return -sound_horizon_integral_argument (z, cosmo);
 }
 
@@ -800,6 +804,9 @@ nc_distance_drag_redshift (NcDistance *dist, NcHICosmo *cosmo)
   gdouble omega_b_h2 = nc_hicosmo_Omega_bh2 (cosmo);
   gdouble b1 = 0.313 * pow (omega_m_h2, -0.419) * (1.0 + 0.607 * pow (omega_m_h2, 0.674));
   gdouble b2 = 0.238 * pow (omega_m_h2, 0.223);
+
+  NCM_UNUSED (dist);
+  
   return 1291.0 * pow (omega_m_h2, 0.251) / (1.0 + 0.659 * pow (omega_m_h2, 0.828)) *
     (1.0 + b1 * pow (omega_b_h2, b2));
 }
@@ -974,6 +981,7 @@ static void
 _nc_distance_func0 (NcmMSet *mset, gpointer obj, const gdouble *x, gdouble *f)
 {
   NcDistanceFuncData *dist_data = (NcDistanceFuncData *)obj;
+  NCM_UNUSED (x);
   f[0] = dist_data->f0 (dist_data->dist, NC_HICOSMO (ncm_mset_peek (mset, nc_hicosmo_id ())));
 }
 

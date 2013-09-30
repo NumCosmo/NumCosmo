@@ -47,9 +47,8 @@
 #include <chealpix.h>
 #endif /* defined NUMCOSMO_HAVE_CHEALPIX && defined NUMCOSMO_HAVE_CFITSIO */
 
-
 gint 
-main(gint argc, gchar *argv[])
+main (void)
 {
 #if defined NUMCOSMO_HAVE_CHEALPIX && defined NUMCOSMO_HAVE_CFITSIO  
   GTimer *bench = g_timer_new ();

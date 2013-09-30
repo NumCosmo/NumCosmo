@@ -39,6 +39,7 @@
 
 #include "math/ncm_fit_mc.h"
 #include "math/ncm_cfg.h"
+#include "math/ncm_func_eval.h"
 
 #include <gsl/gsl_statistics_double.h>
 
@@ -55,9 +56,14 @@ ncm_fit_mc_init (NcmFitMC *mc)
 {
   mc->fit    = NULL;
   mc->fparam = NULL;
+  mc->mtype  = NCM_FIT_RUN_MSGS_NONE;
   mc->m2lnL  = NULL;
+  mc->bf     = NULL;
   mc->nt     = ncm_timer_new ();
+  mc->ser    = ncm_serialize_new ();
   mc->n      = 0;
+  mc->ni     = 0;
+  mc->mp     = NULL;
   mc->h      = NULL;
   mc->h_pdf  = NULL;
 }
@@ -104,7 +110,9 @@ ncm_fit_mc_dispose (GObject *object)
   ncm_fit_clear (&mc->fit);
   ncm_stats_vec_clear (&mc->fparam);
   ncm_vector_clear (&mc->m2lnL);
+  ncm_vector_clear (&mc->bf);
   ncm_timer_clear (&mc->nt);
+  ncm_serialize_clear (&mc->ser);
 
   /* Chain up : end */
   G_OBJECT_CLASS (ncm_fit_mc_parent_class)->dispose (object);
@@ -185,25 +193,58 @@ ncm_fit_mc_clear (NcmFitMC **mc)
   g_clear_object (mc);
 }
 
-/**
- * ncm_fit_mc_run:
- * @mc: FIXME
- * @fiduc: FIXME
- * @ni: FIXME
- * @nf: FIXME
- * @mtype: FIXME
- *
- * FIXME
- *
- */
-void 
-ncm_fit_mc_run (NcmFitMC *mc, NcmMSet *fiduc, guint ni, guint nf, NcmFitRunMsgs mtype)
+static gdouble 
+_fvar (gdouble v_i, gpointer user_data)
+{
+  NcmStatsVec *fparam = NCM_STATS_VEC (user_data);
+  return sqrt (v_i * fparam->bias_wt);
+}
+
+static gdouble 
+_fmeanvar (gdouble v_i, gpointer user_data)
+{
+  NcmStatsVec *fparam = NCM_STATS_VEC (user_data);
+  return sqrt (v_i * fparam->bias_wt / fparam->nitens);
+}
+
+static void
+_ncm_fit_mc_update (NcmFitMC *mc, NcmFit *fit, guint i)
+{
+  NcmVector *bf_i = ncm_stats_vec_peek_x (mc->fparam);
+  gdouble m2lnL = ncm_fit_state_get_m2lnL_curval (fit->fstate);
+  ncm_mset_fparams_get_vector (fit->mset, bf_i);
+  ncm_vector_set (mc->m2lnL, i, m2lnL);
+  ncm_stats_vec_update (mc->fparam);  
+  mc->m2lnL_min = GSL_MIN (mc->m2lnL_min, m2lnL);
+  mc->m2lnL_max = GSL_MAX (mc->m2lnL_max, m2lnL);
+}
+
+static void
+_ncm_fit_mc_log (NcmFitMC *mc, NcmFitRunMsgs mtype)
+{
+  g_message ("# Improvements: mean = % 8.7f, var = % 8.7f, cov = % 8.7f\n", mc->fparam->mean_inc, mc->fparam->var_inc, mc->fparam->cov_inc);
+  ncm_vector_log_vals (mc->fparam->mean, "# Current mean: ", "% 12.5g");
+  ncm_vector_log_vals_func (mc->fparam->var, "# Current msd :  ", "% 12.5g", &_fmeanvar, mc->fparam);
+  ncm_vector_log_vals_func (mc->fparam->var, "# Current sd  :  ", "% 12.5g", &_fvar, mc->fparam);
+  ncm_vector_log_vals_avpb (mc->fparam->var, "# Current var :  ", "% 12.5g", mc->fparam->bias_wt, 0.0);
+
+  if (mtype > NCM_FIT_RUN_MSGS_NONE)
+  {
+    ncm_timer_task_increment (mc->nt);
+    ncm_timer_task_log_elapsed (mc->nt);
+    ncm_timer_task_log_mean_time (mc->nt);
+    ncm_timer_task_log_time_left (mc->nt);
+    ncm_timer_task_log_end_datetime (mc->nt);
+  }
+}
+
+static void 
+ncm_fit_mc_run_base_start (NcmFitMC *mc, NcmMSet *fiduc, guint ni, guint nf, NcmFitRunMsgs mtype)
 {
   const guint n = nf - ni;
   guint free_params_len = ncm_mset_fparams_len (mc->fit->mset);
   guint param_len = ncm_mset_param_len (mc->fit->mset);
-  NcmVector *bf = ncm_vector_new (param_len);
-  gint i;
+  guint i;
 
   g_assert (nf > ni);
   g_assert (ncm_mset_cmp (mc->fit->mset, fiduc, FALSE));
@@ -212,12 +253,22 @@ ncm_fit_mc_run (NcmFitMC *mc, NcmMSet *fiduc, guint ni, guint nf, NcmFitRunMsgs 
   mc->m2lnL_min = GSL_POSINF;
   mc->m2lnL_max = GSL_NEGINF;
 
-  ncm_stats_vec_clear (&mc->fparam);
-  mc->fparam = ncm_stats_vec_new (free_params_len, NCM_STATS_VEC_COV, TRUE);
+  ncm_vector_clear (&mc->bf);
   ncm_vector_clear (&mc->m2lnL);
+  ncm_stats_vec_clear (&mc->fparam);
+  
+  mc->fparam = ncm_stats_vec_new (free_params_len, NCM_STATS_VEC_COV, TRUE);
   mc->m2lnL = ncm_vector_new (n);
+  mc->bf = ncm_vector_new (param_len);
 
-  ncm_mset_param_get_vector (mc->fit->mset, bf);
+  if (fiduc == mc->fit->mset)
+    mc->fiduc = ncm_mset_dup (fiduc, mc->ser);
+  else
+    mc->fiduc = ncm_mset_ref (fiduc);
+  
+  mc->mtype = mtype;
+
+  ncm_mset_param_get_vector (mc->fit->mset, mc->bf);
   
   if (mtype > NCM_FIT_RUN_MSGS_NONE)
   {
@@ -250,43 +301,119 @@ ncm_fit_mc_run (NcmFitMC *mc, NcmMSet *fiduc, guint ni, guint nf, NcmFitRunMsgs 
   ncm_timer_set_name (mc->nt, "Montecarlo");
   if (mtype > NCM_FIT_RUN_MSGS_NONE)
     ncm_timer_task_log_start_datetime (mc->nt);
-  
-  for (; i < nf; i++)
-  {
-    NcmVector *bf_i = ncm_stats_vec_peek_x (mc->fparam);
-    NcmFitRunMsgs mcrun_msg = (mtype == NCM_FIT_RUN_MSGS_FULL) ? NCM_FIT_RUN_MSGS_SIMPLE : NCM_FIT_RUN_MSGS_NONE;
-    gdouble m2lnL;
-
-    ncm_mset_param_set_vector (mc->fit->mset, bf);
-    ncm_dataset_resample (mc->fit->lh->dset, fiduc);
-    
-    ncm_fit_run (mc->fit, mcrun_msg);
-    
-    ncm_mset_fparams_get_vector (mc->fit->mset, bf_i);
-    m2lnL = ncm_fit_state_get_m2lnL_curval (mc->fit->fstate);
-    ncm_vector_set (mc->m2lnL, i - ni, m2lnL);
-
-    //ncm_vector_log_vals (bf_i, "# Last bestfit: ", "% 12.5g");
-    ncm_stats_vec_update (mc->fparam);
-    g_message ("# Improvements: mean = % 8.7f, var = % 8.7f, cov = % 8.7f\n", mc->fparam->mean_inc, mc->fparam->var_inc, mc->fparam->cov_inc);
-    ncm_vector_log_vals (mc->fparam->mean, "# Current mean: ", "% 12.5g");
-    ncm_vector_log_vals (mc->fparam->var, "# Current var:  ", "% 12.5g");
-
-    mc->m2lnL_min = GSL_MIN (mc->m2lnL_min, m2lnL);
-    mc->m2lnL_max = GSL_MAX (mc->m2lnL_max, m2lnL);
-
-    if (mtype > NCM_FIT_RUN_MSGS_NONE)
-    {
-      ncm_timer_task_increment (mc->nt);
-      ncm_timer_task_log_elapsed (mc->nt);
-      ncm_timer_task_log_mean_time (mc->nt);
-      ncm_timer_task_log_time_left (mc->nt);
-      ncm_timer_task_log_end_datetime (mc->nt);
-    }
-  }
-  ncm_timer_task_end (mc->nt);
-  ncm_vector_free (bf);
 }
+
+static void 
+ncm_fit_mc_run_base_end (NcmFitMC *mc, NcmMSet *fiduc, guint ni, guint nf, NcmFitRunMsgs mtype)
+{
+  ncm_timer_task_end (mc->nt);
+  ncm_mset_clear (&mc->fiduc);
+  mc->mtype = NCM_FIT_RUN_MSGS_NONE;
+
+  if (mc->mp != NULL)
+  {
+    ncm_memory_pool_free (mc->mp, TRUE);
+    mc->mp = NULL;
+  }
+}
+
+/**
+ * ncm_fit_mc_run:
+ * @mc: FIXME
+ * @fiduc: FIXME
+ * @ni: FIXME
+ * @nf: FIXME
+ * @mtype: FIXME
+ * 
+ * FIXME
+ *
+ */
+void 
+ncm_fit_mc_run (NcmFitMC *mc, NcmMSet *fiduc, guint ni, guint nf, NcmFitRunMsgs mtype)
+{
+  guint i;
+  ncm_fit_mc_run_base_start (mc, fiduc, ni, nf, mtype);
+
+  for (i = ni; i < nf; i++)
+  {
+    NcmFitRunMsgs mcrun_msg = (mtype == NCM_FIT_RUN_MSGS_FULL) ? NCM_FIT_RUN_MSGS_SIMPLE : NCM_FIT_RUN_MSGS_NONE;
+
+    ncm_mset_param_set_vector (mc->fit->mset, mc->bf);
+    ncm_dataset_resample (mc->fit->lh->dset, fiduc);
+    ncm_fit_run (mc->fit, mcrun_msg);
+
+    _ncm_fit_mc_update (mc, mc->fit, i - ni);
+    _ncm_fit_mc_log (mc, mtype);
+  }
+
+  ncm_fit_mc_run_base_end (mc, fiduc, ni, nf, mtype);
+}
+
+static gpointer
+_ncm_fit_mc_dup_fit (gpointer userdata)
+{
+  NcmFitMC *mc = NCM_FIT_MC (userdata);
+  NcmFit *fit = ncm_fit_dup (mc->fit, mc->ser);
+  return fit;
+}
+
+static void 
+_ncm_fit_mc_mt_eval (glong i, glong f, gpointer data)
+{
+  _NCM_STATIC_MUTEX_DECL (update_lock);
+  NcmFitMC *mc = NCM_FIT_MC (data);
+  NcmFit **fit_ptr = ncm_memory_pool_get (mc->mp);
+  NcmFit *fit = *fit_ptr;
+  guint j;
+
+  for (j = i; j < f; j++)
+  {
+    NcmFitRunMsgs mcrun_msg = NCM_FIT_RUN_MSGS_NONE;
+
+    ncm_mset_param_set_vector (fit->mset, mc->bf);
+    ncm_dataset_resample (fit->lh->dset, mc->fiduc);
+    ncm_fit_run (fit, mcrun_msg);
+    
+    _NCM_MUTEX_LOCK (&update_lock);
+    _ncm_fit_mc_update (mc, fit, j - mc->ni);
+    _ncm_fit_mc_log (mc, mc->mtype);
+    _NCM_MUTEX_UNLOCK (&update_lock);
+  }
+
+  ncm_memory_pool_return (fit_ptr);
+}
+
+/**
+ * ncm_fit_mc_run_mt:
+ * @mc: FIXME
+ * @fiduc: FIXME
+ * @ni: FIXME
+ * @nf: FIXME
+ * @mtype: FIXME
+ * @nthreads: FIXME
+ * 
+ * FIXME
+ *
+ */
+void 
+ncm_fit_mc_run_mt (NcmFitMC *mc, NcmMSet *fiduc, guint ni, guint nf, NcmFitRunMsgs mtype, guint nthreads)
+{
+  ncm_fit_mc_run_base_start (mc, fiduc, ni, nf, mtype);
+
+  if (mc->mp != NULL)
+    ncm_memory_pool_free (mc->mp, TRUE);
+  mc->mp = ncm_memory_pool_new (&_ncm_fit_mc_dup_fit, mc, 
+                                (GDestroyNotify) &ncm_fit_free);
+  mc->ni = ni;
+  
+  ncm_memory_pool_add (mc->mp, mc->fit);
+  ncm_func_eval_set_max_threads (nthreads);
+
+  ncm_func_eval_threaded_loop (&_ncm_fit_mc_mt_eval, ni, nf, mc);
+
+  ncm_fit_mc_run_base_end (mc, fiduc, ni, nf, mtype);
+}
+
 
 /**
  * ncm_fit_mc_print:
@@ -302,7 +429,7 @@ ncm_fit_mc_print (NcmFitMC *mc)
 
   for (i = 0; i < len; i++)
   {
-    gint j;
+    guint j;
     NcmVector *x_i = g_ptr_array_index (mc->fparam->saved_x, i);
     for (j = 0; j < ncm_vector_len (x_i); j++)
       g_message ("% -20.15g ", ncm_vector_get (x_i, j));
@@ -336,7 +463,7 @@ void
 ncm_fit_mc_gof_pdf (NcmFitMC *mc)
 {
   const guint nbins = mc->n / 10 >= 10 ? mc->n / 10 : 10;
-  gint i;
+  guint i;
 	
   if (mc->h != NULL && mc->h->n != nbins)
   {
@@ -398,7 +525,8 @@ ncm_fit_mc_gof_pdf_pvalue (NcmFitMC *mc, gdouble m2lnL, gboolean both)
 {
   gsize i;
   g_assert (mc->h_pdf != NULL);
-
+  NCM_UNUSED (both);
+  
   if (m2lnL < mc->m2lnL_min || m2lnL > mc->m2lnL_max)
   {
     g_warning ("ncm_fit_mc_gof_pdf_pvalue: value % 20.15g outside mc obtained interval [% 20.15g % 20.15g]. Assuming 0 pvalue.",

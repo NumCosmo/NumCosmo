@@ -51,7 +51,6 @@ struct _NcDataBaoRDV
   NcmDataGauss parent_instance;
   NcDistance *dist;
   NcmVector *x;
-  NcDataBaoId id;
 };
 
 struct _NcDataBaoRDVClass
@@ -64,11 +63,7 @@ GType nc_data_bao_rdv_get_type (void) G_GNUC_CONST;
 
 NcmData *nc_data_bao_rdv_new (NcDistance *dist, NcDataBaoId id);
 
-void nc_data_bao_rdv_set_size (NcDataBaoRDV *bao_rdv, guint np);
-guint nc_data_bao_rdv_get_size (NcDataBaoRDV *bao_rdv);
-
 void nc_data_bao_rdv_set_sample (NcDataBaoRDV *bao_rdv, NcDataBaoId id);
-NcDataBaoId nc_data_bao_rdv_get_sample (NcDataBaoRDV *bao_rdv);
 
 G_END_DECLS
 

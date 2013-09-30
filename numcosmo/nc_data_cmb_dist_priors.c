@@ -43,7 +43,6 @@ enum
 {
   PROP_0,
   PROP_DIST,
-  PROP_ID,
   PROP_SIZE,
 };
 
@@ -53,7 +52,6 @@ static void
 nc_data_cmb_dist_priors_init (NcDataCMBDistPriors *cmb_dist_priors)
 {
   cmb_dist_priors->dist = NULL;
-  cmb_dist_priors->id   = NC_DATA_CMB_NSAMPLES;
 }
 
 static void
@@ -75,9 +73,6 @@ nc_data_cmb_dist_priors_set_property (GObject *object, guint prop_id, const GVal
       nc_distance_clear (&cmb_dist_priors->dist);
       cmb_dist_priors->dist = g_value_dup_object (value);
       break;
-    case PROP_ID:
-      nc_data_cmb_dist_priors_set_sample (cmb_dist_priors, g_value_get_enum (value));
-      break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
       break;
@@ -94,9 +89,6 @@ nc_data_cmb_dist_priors_get_property (GObject *object, guint prop_id, GValue *va
   {
     case PROP_DIST:
       g_value_set_object (value, cmb_dist_priors->dist);
-      break;
-    case PROP_ID:
-      g_value_set_enum (value, nc_data_cmb_dist_priors_get_sample (cmb_dist_priors));
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -147,17 +139,8 @@ nc_data_cmb_dist_priors_class_init (NcDataCMBDistPriorsClass *klass)
                                                         NC_TYPE_DISTANCE,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
-  g_object_class_install_property (object_class,
-                                   PROP_ID,
-                                   g_param_spec_enum ("sample-id",
-                                                      NULL,
-                                                      "Sample id",
-                                                      NC_TYPE_DATA_CMB_ID, NC_DATA_CMB_DIST_PRIORS_WMAP7,
-                                                      G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-
   data_class->prepare    = &_nc_data_cmb_dist_priors_prepare;
   gauss_class->mean_func = &_nc_data_cmb_dist_priors_mean_func;
-
 }
 
 static void
@@ -196,10 +179,13 @@ _nc_data_cmb_dist_priors_mean_func (NcmDataGauss *gauss, NcmMSet *mset, NcmVecto
 NcmData *
 nc_data_cmb_dist_priors_new (NcDistance *dist, NcDataCMBId id)
 {
-  return g_object_new (NC_TYPE_DATA_CMB_DIST_PRIORS,
-                       "sample-id", id,
-                       "dist", dist,
-                       NULL);
+  NcmData *data = g_object_new (NC_TYPE_DATA_CMB_DIST_PRIORS,
+                                "dist", dist,
+                                NULL);
+
+  nc_data_cmb_dist_priors_set_sample (NC_DATA_CMB_DIST_PRIORS (data), id);
+  
+  return data;
 }
 
 /***************************************************************************
@@ -255,18 +241,13 @@ nc_data_cmb_dist_priors_set_sample (NcDataCMBDistPriors *cmb_dist_priors, NcData
   
   g_assert (id < NC_DATA_CMB_NSAMPLES);
 
-  if (data->desc != NULL)
-    g_free (data->desc);
-  
-
   ncm_data_gauss_set_size (gauss, 3);
-  cmb_dist_priors->id = id;
 
   switch (id)
   {
     case NC_DATA_CMB_DIST_PRIORS_WMAP5:
     {
-      data->desc = g_strdup ("WMAP5 distance priors");
+      ncm_data_set_desc (data, "WMAP5 distance priors");
       for (i = 0; i < 3; i++)
       {
         ncm_vector_set (gauss->y, i, nc_cmb_dist_priors_wmap5_bestfit[i]);
@@ -278,7 +259,7 @@ nc_data_cmb_dist_priors_set_sample (NcDataCMBDistPriors *cmb_dist_priors, NcData
     }
     case NC_DATA_CMB_DIST_PRIORS_WMAP7:
     {
-      data->desc = g_strdup ("WMAP7 distance priors");
+      ncm_data_set_desc (data, "WMAP7 distance priors");
       for (i = 0; i < 3; i++)
       {
         ncm_vector_set (gauss->y, i, nc_cmb_dist_priors_wmap7_bestfit[i]);
@@ -290,7 +271,7 @@ nc_data_cmb_dist_priors_set_sample (NcDataCMBDistPriors *cmb_dist_priors, NcData
     }
     case NC_DATA_CMB_DIST_PRIORS_WMAP9:
     {
-      data->desc = g_strdup ("WMAP9 distance priors");
+      ncm_data_set_desc (data, "WMAP9 distance priors");
       for (i = 0; i < 3; i++)
       {
         ncm_vector_set (gauss->y, i, nc_cmb_dist_priors_wmap9_bestfit[i]);
@@ -304,19 +285,5 @@ nc_data_cmb_dist_priors_set_sample (NcDataCMBDistPriors *cmb_dist_priors, NcData
       g_assert_not_reached ();
   }
 
-  ncm_data_set_init (data);
-}
-
-/**
- * nc_data_cmb_dist_priors_get_sample:
- * @cmb_dist_priors: a #NcDataCMBDistPriors
- *
- * This function returns the id of the CMB distance priors sample.
- * 
- * Returns: a #NcDataCMBId.
- */
-NcDataCMBId
-nc_data_cmb_dist_priors_get_sample (NcDataCMBDistPriors *cmb_dist_priors)
-{
-  return cmb_dist_priors->id;
+  ncm_data_set_init (data, TRUE);
 }

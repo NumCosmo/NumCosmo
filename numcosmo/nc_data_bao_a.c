@@ -40,14 +40,14 @@
 #include "build_cfg.h"
 
 #include "nc_data_bao_a.h"
-
 #include "nc_enum_types.h"
+#include "math/ncm_cfg.h"
 
 enum
 {
   PROP_0,
   PROP_DIST,
-  PROP_ID,
+  PROP_Z,
   PROP_SIZE,
 };
 
@@ -58,7 +58,6 @@ nc_data_bao_a_init (NcDataBaoA *bao_a)
 {
   bao_a->dist = NULL;
   bao_a->x    = NULL;
-  bao_a->id   = NC_DATA_BAO_NSAMPLES;
 }
 
 static void
@@ -73,8 +72,8 @@ nc_data_bao_a_set_property (GObject *object, guint prop_id, const GValue *value,
       nc_distance_clear (&bao_a->dist);
       bao_a->dist = g_value_dup_object (value);
       break;
-    case PROP_ID:
-      nc_data_bao_a_set_sample (bao_a, g_value_get_enum (value));
+    case PROP_Z:
+      ncm_vector_set_from_variant (bao_a->x, g_value_get_variant (value));
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -93,8 +92,8 @@ nc_data_bao_a_get_property (GObject *object, guint prop_id, GValue *value, GPara
     case PROP_DIST:
       g_value_set_object (value, bao_a->dist);
       break;
-    case PROP_ID:
-      g_value_set_enum (value, nc_data_bao_a_get_sample (bao_a));
+    case PROP_Z:
+      g_value_take_variant (value, ncm_vector_get_variant (bao_a->x));
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -122,10 +121,9 @@ nc_data_bao_a_finalize (GObject *object)
   G_OBJECT_CLASS (nc_data_bao_a_parent_class)->finalize (object);
 }
 
-static NcmData *_nc_data_bao_a_dup (NcmData *data);
-static void _nc_data_bao_a_copyto (NcmData *data, NcmData *data_dest);
 static void _nc_data_bao_a_prepare (NcmData *data, NcmMSet *mset);
 static void _nc_data_bao_a_mean_func (NcmDataGaussDiag *diag, NcmMSet *mset, NcmVector *vp);
+static void _nc_data_bao_a_set_size (NcmDataGaussDiag *diag, guint np);
 
 static void
 nc_data_bao_a_class_init (NcDataBaoAClass *klass)
@@ -148,46 +146,16 @@ nc_data_bao_a_class_init (NcDataBaoAClass *klass)
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   g_object_class_install_property (object_class,
-                                   PROP_ID,
-                                   g_param_spec_enum ("sample-id",
-                                                      NULL,
-                                                      "Sample id",
-                                                      NC_TYPE_DATA_BAO_ID, NC_DATA_BAO_A_EISENSTEIN2005,
-                                                      G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));  
-  data_class->dup       = &_nc_data_bao_a_dup;
-  data_class->copyto    = &_nc_data_bao_a_copyto;
+                                   PROP_Z,
+                                   g_param_spec_variant ("z",
+                                                         NULL,
+                                                         "Data redshift",
+                                                         G_VARIANT_TYPE ("ad"), NULL,
+                                                         G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
   data_class->prepare   = &_nc_data_bao_a_prepare;
   diag_class->mean_func = &_nc_data_bao_a_mean_func;
-}
-
-
-static NcmData *
-_nc_data_bao_a_dup (NcmData *data)
-{
-  NcDataBaoA *bao_a = NC_DATA_BAO_A (data);
-  NcDataBaoA *bao_a_dup = g_object_new (NC_TYPE_DATA_BAO_A,
-                                        NULL);
-  NcmData *data_dest = NCM_DATA (bao_a_dup);
-  nc_data_bao_a_set_size (bao_a_dup, nc_data_bao_a_get_size (bao_a));
-
-  ncm_data_copyto (data, data_dest);
-  
-  return data_dest;
-}
-
-static void 
-_nc_data_bao_a_copyto (NcmData *data, NcmData *data_dest)
-{
-  /* Chain up : start */
-  NCM_DATA_CLASS (nc_data_bao_a_parent_class)->copyto (data, data_dest);
-  {
-    NcDataBaoA *bao_a = NC_DATA_BAO_A (data);
-    NcDataBaoA *bao_a_dest = NC_DATA_BAO_A (data_dest);
-
-    g_assert_cmpuint (nc_data_bao_a_get_size (bao_a), ==, nc_data_bao_a_get_size (bao_a_dest));
-    ncm_vector_memcpy (bao_a_dest->x, bao_a->x);
-    bao_a_dest->id = bao_a->id; 
-  }
+  diag_class->set_size  = &_nc_data_bao_a_set_size;
 }
 
 static void
@@ -203,7 +171,7 @@ _nc_data_bao_a_mean_func (NcmDataGaussDiag *diag, NcmMSet *mset, NcmVector *vp)
 {
   NcDataBaoA *bao_a = NC_DATA_BAO_A (diag);
   NcHICosmo *cosmo = NC_HICOSMO (ncm_mset_peek (mset, nc_hicosmo_id ()));
-  gint i;
+  guint i;
   
   for (i = 0; i < diag->np; i++)
   {
@@ -225,55 +193,26 @@ _nc_data_bao_a_mean_func (NcmDataGaussDiag *diag, NcmMSet *mset, NcmVector *vp)
 NcmData *
 nc_data_bao_a_new (NcDistance *dist, NcDataBaoId id)
 {
-  return g_object_new (NC_TYPE_DATA_BAO_A,
-                       "sample-id", id,
-                       "dist", dist,
-                       NULL);
+  NcmData *data = g_object_new (NC_TYPE_DATA_BAO_A,
+                                "dist", dist,
+                                NULL);
+  nc_data_bao_a_set_sample (NC_DATA_BAO_A (data), id);
+  return data;
 }
 
-/**
- * nc_data_bao_a_set_size:
- * @bao_a: a #NcDataBaoA
- * @np: FIXME
- *
- * FIXME
- *
- * Returns: FIXME
- */
-void 
-nc_data_bao_a_set_size (NcDataBaoA *bao_a, guint np)
+static void 
+_nc_data_bao_a_set_size (NcmDataGaussDiag *diag, guint np)
 {
-  NcmDataGaussDiag *diag = NCM_DATA_GAUSS_DIAG (bao_a);
+  NcDataBaoA *bao_a = NC_DATA_BAO_A (diag);
 
-  if (diag->np != 0)
-    g_assert (bao_a->x != NULL && ncm_vector_len (bao_a->x) == diag->np);
-  
   if ((np == 0) || (np != diag->np))
     ncm_vector_clear (&bao_a->x);
 
   if ((np != 0) && (np != diag->np))
     bao_a->x = ncm_vector_new (np);
-
-  ncm_data_gauss_diag_set_size (NCM_DATA_GAUSS_DIAG (bao_a), np);
-}
-
-/**
- * nc_data_bao_a_get_size:
- * @bao_a: a #NcDataBaoA
- *
- * FIXME
- *
- * Returns: FIXME
- */
-guint 
-nc_data_bao_a_get_size (NcDataBaoA *bao_a)
-{
-  NcmDataGaussDiag *diag = NCM_DATA_GAUSS_DIAG (bao_a);
-
-  if (diag->np != 0)
-    g_assert (bao_a->x != NULL && ncm_vector_len (bao_a->x) == diag->np);
-
-  return ncm_data_gauss_diag_get_size (NCM_DATA_GAUSS_DIAG (bao_a));
+  
+  /* Chain up : end */
+  NCM_DATA_GAUSS_DIAG_CLASS (nc_data_bao_a_parent_class)->set_size (diag, np);
 }
 
 /**
@@ -292,30 +231,13 @@ nc_data_bao_a_set_sample (NcDataBaoA *bao_a, NcDataBaoId id)
   
   g_assert (id == NC_DATA_BAO_A_EISENSTEIN2005);
 
-  if (data->desc != NULL)
-    g_free (data->desc);
-  data->desc = g_strdup ("Eisenstein 2005, BAO Sample A");
+  ncm_data_set_desc (data, "Eisenstein 2005, BAO Sample A");
 
-  nc_data_bao_a_set_size (bao_a, 1);
-  bao_a->id = NC_DATA_BAO_A_EISENSTEIN2005;
+  ncm_data_gauss_diag_set_size (diag, 1);
 
   ncm_vector_set (bao_a->x,    0, ncm_c_bao_eisenstein_z ());
   ncm_vector_set (diag->y,     0, ncm_c_bao_eisenstein_A ());
   ncm_vector_set (diag->sigma, 0, ncm_c_bao_eisenstein_sigma_A ());
 
-  ncm_data_set_init (data);
-}
-
-/**
- * nc_data_bao_a_get_sample:
- * @bao_a: a #NcDataBaoA
- *
- * FIXME
- * 
- * Returns: FIXME
- */
-NcDataBaoId 
-nc_data_bao_a_get_sample (NcDataBaoA *bao_a)
-{
-  return bao_a->id;
+  ncm_data_set_init (data, TRUE);
 }

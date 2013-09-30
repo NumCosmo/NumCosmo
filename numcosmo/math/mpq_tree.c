@@ -36,6 +36,8 @@
 #include "build_cfg.h"
 
 #include "math/mpq_tree.h"
+#include "math/ncm_cfg.h"
+#include "math/ncm_util.h"
 
 #include <gmp.h>
 
@@ -49,6 +51,7 @@ _slice_mpq_free (gpointer q)
 static gint
 _slice_mpq_cmp (gconstpointer a, gconstpointer b, gpointer user_data)
 {
+  NCM_UNUSED (user_data);
   return mpq_cmp ((mpq_ptr)a, (mpq_ptr)b);
 }
 

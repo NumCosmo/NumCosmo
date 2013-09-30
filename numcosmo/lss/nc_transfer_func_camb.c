@@ -38,6 +38,7 @@
 
 #include "lss/nc_transfer_func_camb.h"
 #include "math/ncm_spline_cubic_notaknot.h"
+#include "math/ncm_cfg.h"
 
 G_DEFINE_TYPE (NcTransferFuncCAMB, nc_transfer_func_camb, NC_TYPE_TRANSFER_FUNC);
 
@@ -65,25 +66,26 @@ _nc_transfer_func_camb_prepare (NcTransferFunc *tf, NcHICosmo *model)
   GArray *x;
   GArray *y;
 
+  NCM_UNUSED (model);
+
   if (tf_CAMB->init)
   {
-	x = tf_CAMB->T_spline->xv->a;
-	y = tf_CAMB->T_spline->yv->a;
-	/* FIXME LEAK !!!*/
-	ncm_spline_free (tf_CAMB->T_spline);
+    x = ncm_vector_get_array (tf_CAMB->T_spline->xv);
+    y = ncm_vector_get_array (tf_CAMB->T_spline->yv);
+    ncm_spline_free (tf_CAMB->T_spline);
   }
   else
   {
-	x = g_array_new (FALSE, FALSE, sizeof(gdouble));
-	y = g_array_new (FALSE, FALSE, sizeof(gdouble));
+    x = g_array_new (FALSE, FALSE, sizeof(gdouble));
+    y = g_array_new (FALSE, FALSE, sizeof(gdouble));
   }
 
   if (camb_filename == NULL)
-	g_error ("To use camb transfer function first set the camb_filename extern variable.");
+    g_error ("To use camb transfer function first set the camb_filename extern variable.");
   camb_tf = fopen (camb_filename, "r");
 
   while ((c = fgetc(camb_tf)) != EOF)
-	if (c == '\n') nlines++;
+    if (c == '\n') nlines++;
   rewind (camb_tf);
 
   g_array_set_size (x, nlines);
@@ -92,22 +94,27 @@ _nc_transfer_func_camb_prepare (NcTransferFunc *tf, NcHICosmo *model)
   i = 0;
   while ((ret = fscanf (camb_tf, " %lg %lg \n", &g_array_index (x, gdouble, i), &g_array_index (y, gdouble, i)) != EOF))
   {
-	//printf ("AQUI %d %d % 20.15g % 20.15g\n", ret, i, g_array_index (x, gdouble, i), g_array_index (y, gdouble, i));
-	g_array_index (x, gdouble, i) = log (g_array_index (x, gdouble, i));
-	g_array_index (y, gdouble, i) = log (g_array_index (y, gdouble, i));
-	//printf ("AQU1 %d %d % 20.15g % 20.15g\n", ret, i, g_array_index (x, gdouble, i), g_array_index (y, gdouble, i));
-	i++;
+    //printf ("AQUI %d %d % 20.15g % 20.15g\n", ret, i, g_array_index (x, gdouble, i), g_array_index (y, gdouble, i));
+    g_array_index (x, gdouble, i) = log (g_array_index (x, gdouble, i));
+    g_array_index (y, gdouble, i) = log (g_array_index (y, gdouble, i));
+    //printf ("AQU1 %d %d % 20.15g % 20.15g\n", ret, i, g_array_index (x, gdouble, i), g_array_index (y, gdouble, i));
+    i++;
   }
 
   tf_CAMB->T_spline = ncm_spline_cubic_notaknot_new ();
   ncm_spline_new_array (tf_CAMB->T_spline, x, y, TRUE);
 
+  g_array_unref (x);
+  g_array_unref (y);
+  
   tf_CAMB->init = TRUE;
 }
 
 static gdouble
 _nc_transfer_func_camb_calc (NcTransferFunc *tf, gdouble kh)
 {
+  NCM_UNUSED (tf);
+  NCM_UNUSED (kh);
   g_assert_not_reached ();
 }
 
@@ -116,15 +123,18 @@ _nc_transfer_func_camb_calc_matter_P (NcTransferFunc *tf, NcHICosmo *model, gdou
 {
   NcTransferFuncCAMB *tf_camb = NC_TRANSFER_FUNC_CAMB (tf);
   gdouble result;
+
+  NCM_UNUSED (model);
+  
   if (kh == 0)
-	return 0.0;
+    return 0.0;
   else
   {
-	gdouble log_kh = log(kh);
-	if (log_kh < ncm_vector_get (tf_camb->T_spline->xv, 0))
-	  log_kh = ncm_vector_get (tf_camb->T_spline->xv, 0);
-	result = ncm_spline_eval (tf_camb->T_spline, log_kh);
-	return exp (result);
+    gdouble log_kh = log(kh);
+    if (log_kh < ncm_vector_get (tf_camb->T_spline->xv, 0))
+      log_kh = ncm_vector_get (tf_camb->T_spline->xv, 0);
+    result = ncm_spline_eval (tf_camb->T_spline, log_kh);
+    return exp (result);
   }
 }
 

@@ -37,6 +37,7 @@
 
 #include "math/integral.h"
 #include "math/memory_pool.h"
+#include "math/ncm_util.h"
 
 #include <gsl/gsl_integration.h>
 #ifdef HAVE_LIBCUBA
@@ -45,8 +46,9 @@
 
 
 static gpointer
-_integral_ws_alloc (void)
+_integral_ws_alloc (gpointer userdata)
 {
+  NCM_UNUSED (userdata);
   return gsl_integration_workspace_alloc (NCM_INTEGRAL_PARTITION);
 }
 
@@ -75,7 +77,7 @@ ncm_integral_get_workspace ()
 
   _NCM_MUTEX_LOCK (&create_lock);
   if (mp == NULL)
-    mp = ncm_memory_pool_new (_integral_ws_alloc, _integral_ws_free);
+    mp = ncm_memory_pool_new (_integral_ws_alloc, NULL, _integral_ws_free);
   _NCM_MUTEX_UNLOCK (&create_lock);
 
   return ncm_memory_pool_get (mp);
@@ -234,7 +236,9 @@ static gint
 _integrand_2dim (const gint *ndim, const gdouble x[], const gint *ncomp, gdouble f[], gpointer userdata)
 {
 	iCLIntegrand2dim *iinteg = (iCLIntegrand2dim *) userdata;
-	f[0] = iinteg->integ->f ((iinteg->xf - iinteg->xi) * x[0] + iinteg->xi, (iinteg->yf - iinteg->yi) * x[1] + iinteg->yi, iinteg->integ->userdata);
+  NCM_UNUSED (ndim);
+  NCM_UNUSED (ncomp);
+  f[0] = iinteg->integ->f ((iinteg->xf - iinteg->xi) * x[0] + iinteg->xi, (iinteg->yf - iinteg->yi) * x[1] + iinteg->yi, iinteg->integ->userdata);
 	return 0;
 }
 #endif /* HAVE_LIBCUBA */
@@ -485,11 +489,11 @@ ncm_integral_fixed_integ_posdef_mult (NcmIntegralFixed *intf, gsl_function *F, g
   gdouble res = 0.0;
   glong i, j, k = 0;
 
-  g_assert (mnode < intf->n_nodes);
+  g_assert (mnode < (glong) intf->n_nodes);
 
   if (odd_rule)
   {
-    for (i = mnode; i < intf->n_nodes - 1; i++)
+    for (i = mnode; i < (glong) (intf->n_nodes - 1); i++)
     {
       const gdouble x0 = intf->xl + delta_x * i;
       const gdouble x1 = x0 + delta_x;
@@ -498,10 +502,10 @@ ncm_integral_fixed_integ_posdef_mult (NcmIntegralFixed *intf, gsl_function *F, g
       gdouble part = 0.0;
       k = i * intf->rule_n;
 
-      for (j = 1; j < r2 + 1; j++)
+      for (j = 1; j < (glong) (r2 + 1); j++)
         part += GSL_FN_EVAL (F, x1px0_2 - x1mx0_2 * intf->glt->x[j]) * intf->int_nodes[k++];
       part += GSL_FN_EVAL (F, x1px0_2) * intf->int_nodes[k++];
-      for (j = 1; j < r2 + 1; j++)
+      for (j = 1; j < (glong) (r2 + 1); j++)
         part += GSL_FN_EVAL (F, x1px0_2 + x1mx0_2 * intf->glt->x[j]) * intf->int_nodes[k++];
       res += part;
 
@@ -518,10 +522,10 @@ ncm_integral_fixed_integ_posdef_mult (NcmIntegralFixed *intf, gsl_function *F, g
       gdouble part = 0.0;
       k = i * intf->rule_n;
 
-      for (j = 1; j < r2 + 1; j++)
+      for (j = 1; j < (glong)(r2 + 1); j++)
         part += GSL_FN_EVAL (F, x1px0_2 - x1mx0_2 * intf->glt->x[j]) * intf->int_nodes[k++];
       part += GSL_FN_EVAL (F, x1px0_2) * intf->int_nodes[k++];
-      for (j = 1; j < r2 + 1; j++)
+      for (j = 1; j < (glong)(r2 + 1); j++)
         part += GSL_FN_EVAL (F, x1px0_2 + x1mx0_2 * intf->glt->x[j]) * intf->int_nodes[k++];
       res += part;
       if (fabs(part / res) < reltol)
@@ -530,7 +534,7 @@ ncm_integral_fixed_integ_posdef_mult (NcmIntegralFixed *intf, gsl_function *F, g
   }
   else
   {
-    for (i = mnode; i < intf->n_nodes - 1; i++)
+    for (i = mnode; i < (glong) (intf->n_nodes - 1); i++)
     {
       const gdouble x0 = intf->xl + delta_x * i;
       const gdouble x1 = x0 + delta_x;
@@ -539,9 +543,9 @@ ncm_integral_fixed_integ_posdef_mult (NcmIntegralFixed *intf, gsl_function *F, g
       gdouble part = 0.0;
       k = i * intf->rule_n;
 
-      for (j = 0; j < r2; j++)
+      for (j = 0; j < (glong)r2; j++)
         part += GSL_FN_EVAL (F, x1px0_2 - x1mx0_2 * intf->glt->x[j]) * intf->int_nodes[k++];
-      for (j = 0; j < r2; j++)
+      for (j = 0; j < (glong)r2; j++)
         part += GSL_FN_EVAL (F, x1px0_2 + x1mx0_2 * intf->glt->x[j]) * intf->int_nodes[k++];
       res += part;
 
@@ -558,9 +562,9 @@ ncm_integral_fixed_integ_posdef_mult (NcmIntegralFixed *intf, gsl_function *F, g
       gdouble part = 0.0;
       k = i * intf->rule_n;
 
-      for (j = 0; j < r2; j++)
+      for (j = 0; j < (glong)r2; j++)
         part += GSL_FN_EVAL (F, x1px0_2 - x1mx0_2 * intf->glt->x[j]) * intf->int_nodes[k++];
-      for (j = 0; j < r2; j++)
+      for (j = 0; j < (glong)r2; j++)
         part += GSL_FN_EVAL (F, x1px0_2 + x1mx0_2 * intf->glt->x[j]) * intf->int_nodes[k++];
       res += part;
 

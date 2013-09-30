@@ -50,7 +50,6 @@ struct _NcDataBaoDVDV
   /*< private >*/
   NcmDataGaussDiag parent_instance;
   NcDistance *dist;
-  NcDataBaoId id;
 };
 
 struct _NcDataBaoDVDVClass

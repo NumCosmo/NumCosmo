@@ -37,6 +37,9 @@
 #include "build_cfg.h"
 
 #include "lss/nc_cluster_redshift_nodist.h"
+#include "math/ncm_cfg.h"
+#include "math/ncm_util.h"
+
 #include <gsl/gsl_math.h>
 
 G_DEFINE_TYPE (NcClusterRedshiftNodist, nc_cluster_redshift_nodist, NC_TYPE_CLUSTER_REDSHIFT);
@@ -52,6 +55,11 @@ static gdouble
 _nc_cluster_redshift_nodist_p (NcClusterRedshift *clusterz, gdouble lnM, gdouble z, gdouble *z_obs, gdouble *z_obs_params)
 {
   g_error ("This object don't implement p.");
+  NCM_UNUSED (clusterz);
+  NCM_UNUSED (lnM);
+  NCM_UNUSED (z);
+  NCM_UNUSED (z_obs);
+  NCM_UNUSED (z_obs_params);
   return GSL_NAN;
 }
 
@@ -59,6 +67,9 @@ static gdouble
 _nc_cluster_redshift_nodist_intp (NcClusterRedshift *clusterz, gdouble lnM, gdouble z)
 {
   g_error ("This object don't implement n_z_lnm.");
+  NCM_UNUSED (clusterz);
+  NCM_UNUSED (lnM);
+  NCM_UNUSED (z);
   return GSL_NAN;
 }
 
@@ -66,6 +77,11 @@ static gboolean
 _nc_cluster_redshift_nodist_resample (NcClusterRedshift *clusterz, gdouble lnM, gdouble z, gdouble *z_obs, gdouble *z_obs_params)
 {
   NcClusterRedshiftNodist *zn = NC_CLUSTER_REDSHIFT_NODIST (clusterz);
+
+  NCM_UNUSED (lnM);
+  NCM_UNUSED (z);
+  NCM_UNUSED (z_obs_params);
+
   z_obs[0] = z;
   return (z_obs[0] <= zn->z_max) && (z_obs[0] >= zn->z_min);
 }
@@ -74,6 +90,13 @@ static void
 _nc_cluster_redshift_nodist_p_limits (NcClusterRedshift *clusterz, gdouble *z_obs, gdouble *z_obs_params, gdouble *z_lower, gdouble *z_upper)
 {
   g_error ("This object don't implement p_limits.");
+
+  NCM_UNUSED (clusterz);
+  NCM_UNUSED (z_obs);
+  NCM_UNUSED (z_obs_params);
+  NCM_UNUSED (z_lower);
+  NCM_UNUSED (z_upper);
+  
   return;
 }
 
@@ -88,8 +111,8 @@ _nc_cluster_redshift_nodist_n_limits (NcClusterRedshift *clusterz, gdouble *z_lo
   return;
 }
 
-guint _nc_cluster_redshift_nodist_obs_len (NcClusterRedshift *clusterz) { return 1; }
-guint _nc_cluster_redshift_nodist_obs_params_len (NcClusterRedshift *clusterz) { return 0; }
+guint _nc_cluster_redshift_nodist_obs_len (NcClusterRedshift *clusterz) { NCM_UNUSED (clusterz); return 1; }
+guint _nc_cluster_redshift_nodist_obs_params_len (NcClusterRedshift *clusterz) { NCM_UNUSED (clusterz); return 0; }
 
 static void
 _nc_cluster_redshift_nodist_set_property (GObject * object, guint prop_id, const GValue * value, GParamSpec * pspec)

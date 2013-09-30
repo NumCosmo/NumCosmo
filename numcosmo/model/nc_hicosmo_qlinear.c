@@ -145,6 +145,7 @@ enum {
 static void
 nc_hicosmo_qlinear_init (NcHICosmoQLinear *qlinear)
 {
+  NCM_UNUSED (qlinear);
 }
 
 static void

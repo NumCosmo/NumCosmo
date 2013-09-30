@@ -77,6 +77,9 @@ _nc_multiplicity_func_warren_eval (NcMultiplicityFunc *mulf, NcHICosmo *model, g
   NcMultiplicityFuncWarren *mulf_warren = NC_MULTIPLICITY_FUNC_WARREN (mulf);
   gdouble f_Warren = mulf_warren->A * (pow(sigma, - mulf_warren->a) + mulf_warren->b) * exp(-(mulf_warren->c)/ (sigma * sigma) );
 
+  NCM_UNUSED (model);
+  NCM_UNUSED (z);
+  
   return f_Warren;
 }
 

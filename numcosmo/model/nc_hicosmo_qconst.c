@@ -91,6 +91,7 @@ enum {
 static void
 nc_hicosmo_qconst_init (NcHICosmoQConst *qconst)
 {
+  NCM_UNUSED (qconst);
 }
 
 static void

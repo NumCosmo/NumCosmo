@@ -63,6 +63,8 @@ struct _NcmDataGaussDiagClass
   NcmDataClass parent_class;
   void (*mean_func) (NcmDataGaussDiag *diag, NcmMSet *mset, NcmVector *vp);
   gboolean (*sigma_func) (NcmDataGaussDiag *diag, NcmMSet *mset, NcmVector *var);
+  void (*set_size) (NcmDataGaussDiag *diag, guint np);
+  guint (*get_size) (NcmDataGaussDiag *diag);
 };
 
 GType ncm_data_gauss_diag_get_type (void) G_GNUC_CONST;

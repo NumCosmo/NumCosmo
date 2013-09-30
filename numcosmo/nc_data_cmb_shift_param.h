@@ -51,7 +51,6 @@ struct _NcDataCMBShiftParam
   NcmDataGaussDiag parent_instance;
   NcDistance *dist;
   NcmVector *x;
-  NcDataCMBId id;
 };
 
 struct _NcDataCMBShiftParamClass
@@ -65,7 +64,6 @@ GType nc_data_cmb_shift_param_get_type (void) G_GNUC_CONST;
 NcmData *nc_data_cmb_shift_param_new (NcDistance *dist, NcDataCMBId id);
 
 void nc_data_cmb_shift_param_set_sample (NcDataCMBShiftParam *cmb_shift_param, NcDataCMBId id);
-NcDataCMBId nc_data_cmb_shift_param_get_sample (NcDataCMBShiftParam *cmb_shift_param);
 
 G_END_DECLS
 

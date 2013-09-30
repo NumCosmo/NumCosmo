@@ -146,7 +146,7 @@
 #include "nc_recomb.h"
 #include "math/integral.h"
 #include "math/cvode_util.h"
-#include "math/util.h"
+#include "math/ncm_util.h"
 #include "math/ncm_serialize.h"
 #include "math/ncm_cfg.h"
 #include "math/ncm_spline_func.h"
@@ -645,7 +645,7 @@ nc_recomb_equilibrium_Xe (NcRecomb *recomb, NcHICosmo *cosmo, const gdouble x)
 NcRecomb *
 nc_recomb_new_from_name (gchar *recomb_name)
 {
-  GObject *obj = ncm_serialize_global_create_from_string (recomb_name);
+  GObject *obj = ncm_serialize_global_from_string (recomb_name);
   GType multiplicity_type = G_OBJECT_TYPE (obj);
   if (!g_type_is_a (multiplicity_type, NC_TYPE_RECOMB))
     g_error ("nc_recomb_new_from_name: NcRecomb %s do not descend from %s\n", recomb_name, g_type_name (NC_TYPE_RECOMB));
@@ -707,6 +707,7 @@ nc_recomb_prepare (NcRecomb *recomb, NcHICosmo *cosmo)
 gdouble 
 nc_recomb_Xe (NcRecomb *recomb, NcHICosmo *cosmo, const const gdouble lambda)
 { 
+  NCM_UNUSED (cosmo);
   return ncm_spline_eval (recomb->Xe_s, lambda);
 }
 
@@ -723,6 +724,7 @@ nc_recomb_Xe (NcRecomb *recomb, NcHICosmo *cosmo, const const gdouble lambda)
 gdouble
 nc_recomb_dtau_dx (NcRecomb *recomb, NcHICosmo *cosmo, const gdouble lambda)
 {
+  NCM_UNUSED (cosmo);
   return gsl_sf_exp_mult (lambda, - ncm_spline_eval (recomb->dtau_dlambda_s, lambda));
 }
 
@@ -739,6 +741,7 @@ nc_recomb_dtau_dx (NcRecomb *recomb, NcHICosmo *cosmo, const gdouble lambda)
 gdouble
 nc_recomb_dtau_dlambda (NcRecomb *recomb, NcHICosmo *cosmo, const gdouble lambda)
 {
+  NCM_UNUSED (cosmo);
   return ncm_spline_eval (recomb->dtau_dlambda_s, lambda);
 }
 
@@ -755,6 +758,7 @@ nc_recomb_dtau_dlambda (NcRecomb *recomb, NcHICosmo *cosmo, const gdouble lambda
 gdouble
 nc_recomb_d2tau_dlambda2 (NcRecomb *recomb, NcHICosmo *cosmo, const gdouble lambda)
 {
+  NCM_UNUSED (cosmo);
   return ncm_spline_eval_deriv (recomb->dtau_dlambda_s, lambda);
 }
 
@@ -771,6 +775,7 @@ nc_recomb_d2tau_dlambda2 (NcRecomb *recomb, NcHICosmo *cosmo, const gdouble lamb
 gdouble
 nc_recomb_d3tau_dlambda3 (NcRecomb *recomb, NcHICosmo *cosmo, const gdouble lambda)
 {
+  NCM_UNUSED (cosmo);
   return ncm_spline_eval_deriv2 (recomb->dtau_dlambda_s, lambda);
 }
 
@@ -787,6 +792,7 @@ nc_recomb_d3tau_dlambda3 (NcRecomb *recomb, NcHICosmo *cosmo, const gdouble lamb
 gdouble
 nc_recomb_tau (NcRecomb *recomb, NcHICosmo *cosmo, const gdouble lambda)
 {
+  NCM_UNUSED (cosmo);
   return ncm_spline_eval (recomb->tau_s, lambda);
 }
 
@@ -804,6 +810,7 @@ nc_recomb_tau (NcRecomb *recomb, NcHICosmo *cosmo, const gdouble lambda)
 gdouble
 nc_recomb_tau_lambda0_lambda1 (NcRecomb *recomb, NcHICosmo *cosmo, const gdouble lambda0, const gdouble lambda1)
 {
+  NCM_UNUSED (cosmo);
   return ncm_spline_eval (recomb->tau_s, lambda1) - 
     ncm_spline_eval (recomb->tau_s, lambda0);
 }
@@ -1120,6 +1127,8 @@ nc_recomb_tau_cutoff (NcRecomb *recomb, NcHICosmo *cosmo)
 gdouble 
 nc_recomb_tau_zdrag (NcRecomb *recomb, NcHICosmo *cosmo)
 {
+  NCM_UNUSED (recomb);
+  NCM_UNUSED (cosmo);
   g_assert_not_reached ();
 }
 

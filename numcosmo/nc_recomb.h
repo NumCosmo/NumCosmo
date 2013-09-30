@@ -30,6 +30,7 @@
 #include <glib-object.h>
 #include <numcosmo/build_cfg.h>
 #include <numcosmo/nc_hicosmo.h>
+#include <numcosmo/math/ncm_util.h>
 #include <numcosmo/math/ncm_model_ctrl.h>
 #include <numcosmo/math/ncm_spline.h>
 #include <numcosmo/math/function_cache.h>
@@ -178,6 +179,7 @@ nc_recomb_pequignot_HI_case_B (NcHICosmo *cosmo, gdouble Tm)
   const gdouble d =  0.5300;
   const gdouble t = Tm * 1.0e-4;
   const gdouble res = F * G * a * pow (t, b) / (1.0 + c * pow (t, d));
+  NCM_UNUSED (cosmo);
   return res;
 }
 
@@ -194,6 +196,7 @@ nc_recomb_pequignot_HI_case_B_dTm (NcHICosmo *cosmo, gdouble Tm)
   const gdouble t_b = pow (t, b);
   const gdouble t_d = pow (t, d);
   const gdouble res = a * F * G * (b + c * (b - d) * t_d) * t_b / (Tm * gsl_pow_2 (1.0 + c * t_d));
+  NCM_UNUSED (cosmo);
   return res;
 }
 
@@ -208,6 +211,7 @@ nc_recomb_hummer_HeI_case_B (NcHICosmo *cosmo, gdouble Tm)
   const gdouble sqrt_Tm_T2 = sqrt_Tm / sqrt_T2;
   const gdouble sqrt_Tm_T1 = sqrt_Tm / sqrt_T1;
   const gdouble res = q / (sqrt_Tm_T2 * pow (1.0 + sqrt_Tm_T2, 1.0 - p) * pow (1.0 + sqrt_Tm_T1, 1.0 + p));
+  NCM_UNUSED (cosmo);
   return res;
 }
 
@@ -234,6 +238,7 @@ nc_recomb_hummer_HeI_case_B_dTm (NcHICosmo *cosmo, gdouble Tm)
       pow (1.0 + sqrt_Tm_T2, 2.0 - p) *
       pow (1.0 + sqrt_Tm_T1, 2.0 + p)
       );
+  NCM_UNUSED (cosmo);
   return res;
 }
 

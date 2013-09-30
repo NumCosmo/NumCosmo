@@ -44,6 +44,7 @@ enum
 {
   PROP_0,
   PROP_NPOINTS,
+  PROP_VECTOR,
   PROP_SIZE,
 };
 
@@ -74,6 +75,9 @@ _ncm_data_dist1d_set_property (GObject *object, guint prop_id, const GValue *val
     case PROP_NPOINTS:
       ncm_data_dist1d_set_size (dist1d, g_value_get_uint (value));
       break;
+    case PROP_VECTOR:
+      ncm_vector_set_from_variant (dist1d->x, g_value_get_variant (value));
+      break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
       break;
@@ -91,6 +95,9 @@ _ncm_data_dist1d_get_property (GObject *object, guint prop_id, GValue *value, GP
   {
     case PROP_NPOINTS:
       g_value_set_uint (value, ncm_data_dist1d_get_size (dist1d));
+      break;
+    case PROP_VECTOR:
+      g_value_take_variant (value, ncm_vector_get_variant (dist1d->x));
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -118,9 +125,10 @@ ncm_data_dist1d_finalize (GObject *object)
 }
 
 static guint _ncm_data_dist1d_get_length (NcmData *data);
-static void _ncm_data_dist1d_copyto (NcmData *data, NcmData *data_dest);
 static void _ncm_data_dist1d_m2lnL_val (NcmData *data, NcmMSet *mset, gdouble *m2lnL);
 static void _ncm_data_dist1d_resample (NcmData *data, NcmMSet *mset);
+static void _ncm_data_dist1d_set_size (NcmDataDist1d *dist1d, guint np);
+static guint _ncm_data_dist1d_get_size (NcmDataDist1d *dist1d);
 
 static void
 ncm_data_dist1d_class_init (NcmDataDist1dClass *klass)
@@ -142,10 +150,17 @@ ncm_data_dist1d_class_init (NcmDataDist1dClass *klass)
                                                       NULL,
                                                       "Data sample size",
                                                       0, G_MAXUINT, 0,
-                                                      G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+                                                      G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
+  g_object_class_install_property (object_class,
+                                   PROP_VECTOR,
+                                   g_param_spec_variant ("vector",
+                                                         NULL,
+                                                         "Data vector",
+                                                         G_VARIANT_TYPE ("ad"), NULL,
+                                                         G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  
   data_class->get_length = &_ncm_data_dist1d_get_length;
-  data_class->copyto     = &_ncm_data_dist1d_copyto;
   data_class->begin      = NULL;
 
   data_class->resample   = &_ncm_data_dist1d_resample;
@@ -153,7 +168,8 @@ ncm_data_dist1d_class_init (NcmDataDist1dClass *klass)
 
   dist1d_class->dist    = NULL;
   dist1d_class->inv_pdf = NULL;
-
+  dist1d_class->set_size = &_ncm_data_dist1d_set_size;
+  dist1d_class->get_size = &_ncm_data_dist1d_get_size;
 }
 
 static guint 
@@ -164,26 +180,14 @@ _ncm_data_dist1d_get_length (NcmData *data)
 }
 
 static void
-_ncm_data_dist1d_copyto (NcmData *data, NcmData *data_dest)
-{
-  /* Chain up : start */
-  NCM_DATA_CLASS (ncm_data_dist1d_parent_class)->copyto (data, data_dest);
-  {
-    NcmDataDist1d *dist1d = NCM_DATA_DIST1D (data);
-    NcmDataDist1d *dist1_dest = NCM_DATA_DIST1D (data_dest);
-    ncm_vector_memcpy (dist1_dest->x, dist1d->x);
-  }
-}
-
-static void
 _ncm_data_dist1d_m2lnL_val (NcmData *data, NcmMSet *mset, gdouble *m2lnL)
 {
   NcmDataDist1d *dist1d = NCM_DATA_DIST1D (data);
   NcmDataDist1dClass *dist1d_class = NCM_DATA_DIST1D_GET_CLASS (data);
-  gint i;
+  guint i;
   
   *m2lnL = 0.0;
-  if (!data->bootstrap)
+  if (!ncm_data_bootstrap_enabled (data))
   {
     for (i = 0; i < dist1d->np; i++)
     {
@@ -210,7 +214,7 @@ _ncm_data_dist1d_resample (NcmData *data, NcmMSet *mset)
   NcmDataDist1d *dist1d = NCM_DATA_DIST1D (data);
   NcmDataDist1dClass *dist1d_class = NCM_DATA_DIST1D_GET_CLASS (data);
   NcmRNG *rng = ncm_rng_pool_get (NCM_DATA_RESAMPLE_RNG_NAME);
-  gint i;
+  guint i;
 
   if (dist1d_class->inv_pdf == NULL)
     g_error ("_ncm_data_dist1d_resample: This object do not implement the inverse of the pdf.");
@@ -226,16 +230,8 @@ _ncm_data_dist1d_resample (NcmData *data, NcmMSet *mset)
   ncm_rng_free (rng);
 }
 
-/**
- * ncm_data_dist1d_set_size:
- * @dist1d: a #NcmDataDist1d
- * @np: FIXME
- *
- * FIXME
- * 
- */
-void 
-ncm_data_dist1d_set_size (NcmDataDist1d *dist1d, guint np)
+static void 
+_ncm_data_dist1d_set_size (NcmDataDist1d *dist1d, guint np)
 {
   NcmData *data = NCM_DATA (dist1d);
   if ((np == 0) || (np != dist1d->np))
@@ -248,23 +244,48 @@ ncm_data_dist1d_set_size (NcmDataDist1d *dist1d, guint np)
   {
     dist1d->np = np;
     dist1d->x  = ncm_vector_new (dist1d->np);
-    if (data->bootstrap)
+    if (ncm_data_bootstrap_enabled (data))
+    {
       ncm_bootstrap_set_fsize (data->bstrap, np);
+      ncm_bootstrap_set_bsize (data->bstrap, np);
+    }
     data->init = FALSE;
   }
+}
+
+static guint 
+_ncm_data_dist1d_get_size (NcmDataDist1d *dist1d)
+{
+  return dist1d->np;
+}
+
+/**
+ * ncm_data_dist1d_set_size:
+ * @dist1d: a #NcmDataDist1d
+ * @np: data size.
+ *
+ * Sets the data size to @np.
+ * 
+ * Virtual: set_size
+ */
+void 
+ncm_data_dist1d_set_size (NcmDataDist1d *dist1d, guint np)
+{
+  NCM_DATA_DIST1D_GET_CLASS (dist1d)->set_size (dist1d, np);
 }
 
 /**
  * ncm_data_dist1d_get_size:
  * @dist1d: a #NcmDataDist1d
  *
- * FIXME
+ * Gets the data size.
  * 
- * Returns: FIXME
+ * Returns: Data size.
+ * 
+ * Virtual: get_size
  */
 guint 
 ncm_data_dist1d_get_size (NcmDataDist1d *dist1d)
 {
-  return dist1d->np;
+  return NCM_DATA_DIST1D_GET_CLASS (dist1d)->get_size (dist1d);
 }
-

@@ -126,7 +126,6 @@ struct _NcDataSNIACov
   GArray *dataset;
   guint dataset_len;
   gdouble sigma_pecz;
-  gchar *filename;
 };
 
 struct _NcDataSNIACovClass
@@ -139,8 +138,6 @@ GType nc_data_snia_cov_get_type (void) G_GNUC_CONST;
 
 NcmData *nc_data_snia_cov_new (gboolean use_det);
 NcmData *nc_data_snia_cov_new_full (gchar *filename, gboolean use_det);
-
-void nc_data_snia_cov_set_size (NcDataSNIACov *snia_cov, guint mu_len);
 
 void nc_data_snia_cov_load_txt (NcDataSNIACov *snia_cov, const gchar *filename);
 

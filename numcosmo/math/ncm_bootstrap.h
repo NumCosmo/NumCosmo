@@ -53,6 +53,7 @@ struct _NcmBootstrap
   guint bsize;
   GArray *bootstrap_index;
   GArray *increasing_index;
+  gboolean init;
 };
 
 struct _NcmBootstrapClass
@@ -76,7 +77,9 @@ void ncm_bootstrap_set_bsize (NcmBootstrap *bstrap, guint bsize);
 guint ncm_bootstrap_get_bsize (NcmBootstrap *bstrap);
 
 G_INLINE_FUNC void ncm_bootstrap_resample (NcmBootstrap *bstrap);
+G_INLINE_FUNC void ncm_bootstrap_remix (NcmBootstrap *bstrap);
 G_INLINE_FUNC guint ncm_bootstrap_get (NcmBootstrap *bstrap, guint i);
+G_INLINE_FUNC gboolean ncm_bootstrap_is_init (NcmBootstrap *bstrap);
 
 G_END_DECLS
 
@@ -95,7 +98,7 @@ ncm_bootstrap_resample (NcmBootstrap *bstrap)
 {
   NcmRNG *rng = ncm_rng_pool_get (NCM_BOOTSTRAP_RNG_NAME);
   gpointer bdata = bstrap->bootstrap_index->data;
-  gpointer idata = bstrap->increasing_index->data;;
+  gpointer idata = bstrap->increasing_index->data;
   const gsize fsize = bstrap->fsize;
   const gsize bsize = bstrap->bsize;
   const gsize element_size = g_array_get_element_size (bstrap->bootstrap_index);
@@ -103,12 +106,35 @@ ncm_bootstrap_resample (NcmBootstrap *bstrap)
   gsl_ran_sample (rng->r, bdata, bsize, idata, fsize, element_size);
   ncm_rng_unlock (rng);
   ncm_rng_free (rng);
+  bstrap->init = TRUE;
+}
+
+G_INLINE_FUNC void 
+ncm_bootstrap_remix (NcmBootstrap *bstrap)
+{
+  NcmRNG *rng = ncm_rng_pool_get (NCM_BOOTSTRAP_RNG_NAME);
+  gpointer bdata = bstrap->bootstrap_index->data;
+  gpointer idata = bstrap->increasing_index->data;
+  const gsize fsize = bstrap->fsize;
+  const gsize bsize = bstrap->bsize;
+  const gsize element_size = g_array_get_element_size (bstrap->bootstrap_index);
+  ncm_rng_lock (rng);
+  gsl_ran_choose (rng->r, bdata, bsize, idata, fsize, element_size);
+  ncm_rng_unlock (rng);
+  ncm_rng_free (rng);
+  bstrap->init = TRUE;
 }
 
 G_INLINE_FUNC guint 
 ncm_bootstrap_get (NcmBootstrap *bstrap, guint i)
 {
   return g_array_index (bstrap->bootstrap_index, guint, i);
+}
+
+G_INLINE_FUNC gboolean 
+ncm_bootstrap_is_init (NcmBootstrap *bstrap)
+{
+  return bstrap->init;
 }
 
 G_END_DECLS

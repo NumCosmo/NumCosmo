@@ -52,7 +52,7 @@ enum
 {
   PROP_0,
   PROP_DIST,
-  PROP_ID,
+  PROP_Z,
   PROP_SIZE,
 };
 
@@ -63,7 +63,6 @@ nc_data_hubble_bao_init (NcDataHubbleBao *hubble_bao)
 {
   hubble_bao->dist = NULL;
   hubble_bao->x    = NULL;
-  hubble_bao->id   = NC_DATA_HUBBLE_BAO_NSAMPLES;
 }
 
 static void
@@ -85,8 +84,8 @@ nc_data_hubble_bao_set_property (GObject *object, guint prop_id, const GValue *v
       nc_distance_clear (&hubble_bao->dist);
       hubble_bao->dist = g_value_dup_object (value);
       break;
-    case PROP_ID:
-      nc_data_hubble_bao_set_sample (hubble_bao, g_value_get_enum (value));
+    case PROP_Z:
+      ncm_vector_set_from_variant (hubble_bao->x, g_value_get_variant (value));
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -105,8 +104,8 @@ nc_data_hubble_bao_get_property (GObject *object, guint prop_id, GValue *value, 
     case PROP_DIST:
       g_value_set_object (value, hubble_bao->dist);
       break;
-    case PROP_ID:
-      g_value_set_enum (value, nc_data_hubble_bao_get_sample (hubble_bao));
+    case PROP_Z:
+      g_value_take_variant (value, ncm_vector_get_variant (hubble_bao->x));
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -136,6 +135,7 @@ nc_data_hubble_bao_finalize (GObject *object)
 
 static void _nc_data_hubble_bao_prepare (NcmData *data, NcmMSet *mset);
 static void _nc_data_hubble_bao_mean_func (NcmDataGaussDiag *diag, NcmMSet *mset, NcmVector *vp);
+static void _nc_data_hubble_bao_set_size (NcmDataGaussDiag *diag, guint np);
 
 static void
 nc_data_hubble_bao_class_init (NcDataHubbleBaoClass *klass)
@@ -159,15 +159,16 @@ nc_data_hubble_bao_class_init (NcDataHubbleBaoClass *klass)
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   g_object_class_install_property (object_class,
-                                   PROP_ID,
-                                   g_param_spec_enum ("sample-id",
-                                                      NULL,
-                                                      "Sample id",
-                                                      NC_TYPE_DATA_HUBBLE_BAO_ID, NC_DATA_HUBBLE_BAO_BUSCA2013,
-                                                      G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+                                   PROP_Z,
+                                   g_param_spec_variant ("z",
+                                                         NULL,
+                                                         "Data redshifts",
+                                                         G_VARIANT_TYPE ("ad"), NULL,
+                                                         G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   data_class->prepare   = &_nc_data_hubble_bao_prepare;
   diag_class->mean_func = &_nc_data_hubble_bao_mean_func;
+  diag_class->set_size  = &_nc_data_hubble_bao_set_size;
 }
 
 static void
@@ -184,7 +185,7 @@ _nc_data_hubble_bao_mean_func (NcmDataGaussDiag *diag, NcmMSet *mset, NcmVector 
   NcDataHubbleBao *hubble_bao = NC_DATA_HUBBLE_BAO (diag);
   NcHICosmo *cosmo = NC_HICOSMO (ncm_mset_peek (mset, nc_hicosmo_id ()));
   gdouble r_zd;
-  gint i;
+  guint i;
 
   if (ncm_model_impl (NCM_MODEL (cosmo)) & NC_HICOSMO_IMPL_as_drag)
     r_zd = nc_hicosmo_as_drag (cosmo);
@@ -215,25 +216,17 @@ _nc_data_hubble_bao_mean_func (NcmDataGaussDiag *diag, NcmMSet *mset, NcmVector 
 NcmData *
 nc_data_hubble_bao_new (NcDistance *dist, NcDataHubbleBaoId id)
 {
-  return g_object_new (NC_TYPE_DATA_HUBBLE_BAO,
-                       "sample-id", id,
-                       "dist", dist,
-                       NULL);
+  NcmData *data = g_object_new (NC_TYPE_DATA_HUBBLE_BAO,
+                                "dist", dist,
+                                NULL);
+  nc_data_hubble_bao_set_sample (NC_DATA_HUBBLE_BAO (data), id);
+  return data;
 }
 
-/**
- * nc_data_hubble_bao_set_size:
- * @hubble_bao: a #NcDataHubbleBao
- * @np: FIXME
- *
- * FIXME
- *
- * Returns: FIXME
- */
-void 
-nc_data_hubble_bao_set_size (NcDataHubbleBao *hubble_bao, guint np)
+static void 
+_nc_data_hubble_bao_set_size (NcmDataGaussDiag *diag, guint np)
 {
-  NcmDataGaussDiag *diag = NCM_DATA_GAUSS_DIAG (hubble_bao);
+  NcDataHubbleBao *hubble_bao = NC_DATA_HUBBLE_BAO (diag);
 
   if (diag->np != 0)
     g_assert (hubble_bao->x != NULL && ncm_vector_len (hubble_bao->x) == diag->np);
@@ -244,26 +237,8 @@ nc_data_hubble_bao_set_size (NcDataHubbleBao *hubble_bao, guint np)
   if ((np != 0) && (np != diag->np))
     hubble_bao->x = ncm_vector_new (np);
 
-  ncm_data_gauss_diag_set_size (NCM_DATA_GAUSS_DIAG (hubble_bao), np);
-}
-
-/**
- * nc_data_hubble_bao_get_size:
- * @hubble_bao: a #NcDataHubbleBao
- *
- * FIXME
- *
- * Returns: FIXME
- */
-guint 
-nc_data_hubble_bao_get_size (NcDataHubbleBao *hubble_bao)
-{
-  NcmDataGaussDiag *diag = NCM_DATA_GAUSS_DIAG (hubble_bao);
-
-  if (diag->np != 0)
-    g_assert (hubble_bao->x != NULL && ncm_vector_len (hubble_bao->x) == diag->np);
-
-  return ncm_data_gauss_diag_get_size (NCM_DATA_GAUSS_DIAG (hubble_bao));
+  /* Chain up : end */
+  NCM_DATA_GAUSS_DIAG_CLASS (nc_data_hubble_bao_parent_class)->set_size (diag, np);  
 }
 
 /**
@@ -282,29 +257,12 @@ nc_data_hubble_bao_set_sample (NcDataHubbleBao *hubble_bao, NcDataHubbleBaoId id
   
   g_assert (id < NC_DATA_HUBBLE_BAO_NSAMPLES);
 
-  if (data->desc != NULL)
-    g_free (data->desc);    
-
-  data->desc = g_strdup ("Busca 2013 H(z)r_s(z_d)/(1+z) from BAO"); /* Busca 2013 Eq. (27) */
-  nc_data_hubble_bao_set_size (hubble_bao, 1);
+  ncm_data_set_desc (data, "Busca 2013 H(z)r_s(z_d)/(1+z) from BAO"); /* Busca 2013 Eq. (27) */
+  ncm_data_gauss_diag_set_size (diag, 1);
+  
   ncm_vector_set (hubble_bao->x,  0, 2.3);
   ncm_vector_set (diag->y,        0, 3.455724026e-2); /* (1.036 * 10^4 km / s) / c */
   ncm_vector_set (diag->sigma,    0, 0.120083074e-2); /* (0.036 * 10^4 km / s) / c */
 
-  hubble_bao->id = id;
-  ncm_data_set_init (data);
-}
-
-/**
- * nc_data_hubble_bao_get_sample:
- * @hubble_bao: a #NcDataHubbleBao
- *
- * FIXME
- * 
- * Returns: FIXME
- */
-NcDataHubbleBaoId
-nc_data_hubble_bao_get_sample (NcDataHubbleBao *hubble_bao)
-{
-  return hubble_bao->id;
+  ncm_data_set_init (data, TRUE);
 }

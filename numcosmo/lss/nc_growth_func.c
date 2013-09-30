@@ -72,6 +72,7 @@ nc_growth_func_new (void)
 NcGrowthFunc *
 nc_growth_func_copy (NcGrowthFunc *gf)
 {
+  NCM_UNUSED (gf);
   return nc_growth_func_new ();
 }
 
@@ -130,6 +131,13 @@ growth_J (_NCM_SUNDIALS_INT_TYPE N, realtype z, N_Vector y, N_Vector fy, DlsMat 
   gdouble x = 1.0 + z;
   gdouble Omega_m = nc_hicosmo_Omega_m (NC_HICOSMO (model));
 
+  NCM_UNUSED (N);
+  NCM_UNUSED (y);
+  NCM_UNUSED (fy);
+  NCM_UNUSED (tmp1);
+  NCM_UNUSED (tmp2);
+  NCM_UNUSED (tmp3);
+  
   DENSE_ELEM (J, 0, 0) = 0.0;
   DENSE_ELEM (J, 0, 1) = 1.0;
 

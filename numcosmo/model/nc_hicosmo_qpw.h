@@ -113,7 +113,7 @@ struct _NcHICosmoQPWAsymCDMPrior
 GType nc_hicosmo_qpw_get_type (void) G_GNUC_CONST;
 
 NcHICosmoQPW *nc_hicosmo_qpw_new (guint npieces, gdouble z_f, gboolean flat);
-void nc_hicosmo_qpw_add_continuity_prior (NcHICosmoQPW *qpw, NcmLikelihood *lh, gint knot, gdouble sigma);
+void nc_hicosmo_qpw_add_continuity_prior (NcHICosmoQPW *qpw, NcmLikelihood *lh, guint knot, gdouble sigma);
 void nc_hicosmo_qpw_add_continuity_priors (NcHICosmoQPW *qpw, NcmLikelihood *lh, gdouble sigma);
 void nc_hicosmo_qpw_add_asymptotic_cdm_prior (NcHICosmoQPW *qpw, NcmLikelihood *lh, gdouble z, gdouble q, gdouble sigma);
 

@@ -71,6 +71,9 @@ _nc_multiplicity_func_ps_eval (NcMultiplicityFunc *mulf, NcHICosmo *model, gdoub
   gdouble x2 = x * x;
   gdouble f_PS = c1 * x * exp(-x2 / 2.0);
 
+  NCM_UNUSED (model);
+  NCM_UNUSED (z);
+  
   return f_PS;
 }
 

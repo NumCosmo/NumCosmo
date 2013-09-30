@@ -53,8 +53,6 @@ struct _NcmData
   gchar *desc;
   gboolean init;
   gboolean begin;
-  gboolean bootstrap;
-  gboolean bootstrap_init;
   NcmBootstrap *bstrap;
 };
 
@@ -65,8 +63,6 @@ struct _NcmData
  * @get_dof: return the effective degrees of freedom related to the #NcmData
  * statistics (likelihood or $\chi^2$) this number does not represent 
  * necessarely the number of data points.
- * @dup: return a copy of the #NcmData.
- * @copyto: copy its contents to another #NcmData of the same type.
  * @begin: perform any model independent precalculation.
  * @prepare: perform any model dependent precalculation.
  * @resample: resample data from the models in #NcmMSet.
@@ -93,8 +89,6 @@ struct _NcmDataClass
   gboolean bootstrap;
   guint (*get_length) (NcmData *data);
   guint (*get_dof) (NcmData *data);
-  NcmData *(*dup) (NcmData *data);
-  void (*copyto) (NcmData *data, NcmData *data_dest);
   void (*begin) (NcmData *data);
   void (*prepare) (NcmData *data, NcmMSet *mset);
   void (*resample) (NcmData *data, NcmMSet *mset);
@@ -112,17 +106,26 @@ NcmData *ncm_data_ref (NcmData *data);
 void ncm_data_free (NcmData *data);
 void ncm_data_clear (NcmData **data);
 
-NcmData *ncm_data_dup (NcmData *data);
-void ncm_data_copyto (NcmData *data, NcmData *data_dest);
+NcmData *ncm_data_dup (NcmData *data, NcmSerialize *ser_obj);
 
 guint ncm_data_get_length (NcmData *data);
 guint ncm_data_get_dof (NcmData *data);
-void ncm_data_set_init (NcmData *data);
+void ncm_data_set_init (NcmData *data, gboolean state);
+
+void ncm_data_set_desc (NcmData *data, const gchar *desc);
+void ncm_data_take_desc (NcmData *data, gchar *desc);
+const gchar *ncm_data_peek_desc (NcmData *data);
+gchar *ncm_data_get_desc (NcmData *data);
 
 void ncm_data_prepare (NcmData *data, NcmMSet *mset);
 void ncm_data_resample (NcmData *data, NcmMSet *mset);
-void ncm_data_bootstrap_set (NcmData *data, gboolean enable);
+
+void ncm_data_bootstrap_create (NcmData *data);
+void ncm_data_bootstrap_remove (NcmData *data);
+void ncm_data_bootstrap_set (NcmData *data, NcmBootstrap *bstrap);
 void ncm_data_bootstrap_resample (NcmData *data);
+gboolean ncm_data_bootstrap_enabled (NcmData *data);
+
 void ncm_data_leastsquares_f (NcmData *data, NcmMSet *mset, NcmVector *f);
 void ncm_data_leastsquares_J (NcmData *data, NcmMSet *mset, NcmMatrix *J);
 void ncm_data_leastsquares_f_J (NcmData *data, NcmMSet *mset, NcmVector *f, NcmMatrix *J);
@@ -131,8 +134,6 @@ void ncm_data_m2lnL_grad (NcmData *data, NcmMSet *mset, NcmVector *grad);
 void ncm_data_m2lnL_val_grad (NcmData *data, NcmMSet *mset, gdouble *m2lnL, NcmVector *grad);
 
 #define NCM_DATA_RESAMPLE_RNG_NAME "data_resample"
-
-gchar *ncm_data_get_desc (NcmData *data);
 
 G_END_DECLS
 

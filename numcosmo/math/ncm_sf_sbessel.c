@@ -40,6 +40,7 @@
 #include "math/ncm_spline_cubic_notaknot.h"
 #include "math/ncm_spline_func.h"
 #include "math/ncm_cfg.h"
+#include "math/ncm_util.h"
 #include <gsl/gsl_math.h>
 #include <mpfr.h>
 
@@ -73,7 +74,7 @@ ncm_sf_sbessel_recur_new (NcmGrid *x_grid)
 void
 ncm_sf_sbessel_recur_set (NcmSFSBesselRecur *jlrec, glong l)
 {
-  gint i;
+  guint i;
   NcmGrid *x_grid = jlrec->x_grid;
   jlrec->l = l;
 
@@ -114,7 +115,8 @@ void
 ncm_sf_sbessel_recur_next (NcmSFSBesselRecur *jlrec)
 {
   NcmGrid *x_grid = jlrec->x_grid;
-  gint i;
+  guint i;
+  
   for (i = 0; i < x_grid->nnodes; i++)
   {
     gdouble x = ncm_grid_get_node_d (x_grid, i);
@@ -138,7 +140,7 @@ void
 ncm_sf_sbessel_recur_previous (NcmSFSBesselRecur *jlrec)
 {
   NcmGrid *x_grid = jlrec->x_grid;
-  gint i;
+  guint i;
 
   for (i = 0; i < x_grid->nnodes; i++)
   {
@@ -274,7 +276,7 @@ ncm_sf_sbessel_taylor_coeff_jl_jlp1 (NcmSFSBesselRecur *jlrec, guint n, gdouble 
 void
 ncm_sf_sbessel_recur_write (NcmSFSBesselRecur *jlrec, FILE *f)
 {
-  gint i;
+  guint i;
   NCM_WRITE_INT32(f, jlrec->l);
   ncm_grid_write (jlrec->x_grid, f);
   for (i = 0; i < jlrec->x_grid->nnodes; i++)
@@ -294,7 +296,7 @@ ncm_sf_sbessel_recur_write (NcmSFSBesselRecur *jlrec, FILE *f)
 NcmSFSBesselRecur *
 ncm_sf_sbessel_recur_read (FILE *f)
 {
-  gint i;
+  guint i;
   gint32 l;
   NcmSFSBesselRecur *jlrec;
   NcmGrid *x_grid;

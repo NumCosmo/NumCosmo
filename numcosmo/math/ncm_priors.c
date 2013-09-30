@@ -55,7 +55,7 @@ _ncm_prior_gauss_free (gpointer p)
 {
   NcmPriorGauss *gauss = (NcmPriorGauss *)p;
   if (gauss->func)
-	ncm_mset_func_free (gauss->func);
+    ncm_mset_func_free (gauss->func);
   g_slice_free (NcmPriorGauss, gauss);
 }
 
@@ -63,6 +63,7 @@ static void
 gaussian_prior_func_f (NcmMSet *mset, gpointer obj, const gdouble *x, gdouble *f)
 {
   NcmPriorGauss *gp = (NcmPriorGauss *)obj;
+  NCM_UNUSED (x);
   f[0] = (ncm_mset_func_eval1 (gp->func, mset, gp->z) - gp->mean) / gp->sigma;
 }
 
@@ -96,6 +97,7 @@ static void
 gaussian_prior_func0_f (NcmMSet *mset, gpointer obj, const gdouble *x, gdouble *f)
 {
   NcmPriorGauss *gp = (NcmPriorGauss *)obj;
+  NCM_UNUSED (x);
   f[0] = (ncm_mset_func_eval0 (gp->func, mset) - gp->mean) / gp->sigma;
 }
 
@@ -144,6 +146,7 @@ gaussian_prior_f (NcmMSet *mset, gpointer obj, const gdouble *x, gdouble *f)
   NcmPriorGauss *gp = (NcmPriorGauss *)obj;
   gdouble mean = gp->mean;
   gdouble sigma = gp->sigma;
+  NCM_UNUSED (x);
   f[0] = (ncm_mset_param_get (mset, gp->pi.mid, gp->pi.pid) - mean) / sigma;
 }
 
@@ -176,6 +179,7 @@ static void
 positive_prior_f (NcmMSet *mset, gpointer obj, const gdouble *x, gdouble *f)
 {
   NcmPriorGauss *gp = (NcmPriorGauss *)obj;
+  NCM_UNUSED (x);
   f[0] = ncm_mset_orig_param_get (mset, gp->pi.mid, gp->pi.pid) > 0.0 ? 0.0 : GSL_POSINF;
 }
 
@@ -208,6 +212,7 @@ oneside_a_inf_prior_f (NcmMSet *mset, gpointer obj, const gdouble *x, gdouble *f
   gdouble a = gp->mean;
   gdouble s = gp->sigma;
   gdouble p = ncm_mset_param_get (mset, gp->pi.mid, gp->pi.pid);
+  NCM_UNUSED (x);
   f[0] = exp (2.0 * HUGE_EXPONENT_NUMBER / s * ((a - p) + s / 2.0));
 }
 
@@ -243,6 +248,7 @@ oneside_a_inf_prior_func_f (NcmMSet *mset, gpointer obj, const gdouble *x, gdoub
   gdouble a = gp->mean;
   gdouble s = gp->sigma;
   gdouble p = ncm_mset_func_eval1 (gp->func, mset, gp->z);
+  NCM_UNUSED (x);
   f[0] = exp (2.0 * HUGE_EXPONENT_NUMBER / s * ((a - p) + s / 2.0));
 }
 
@@ -278,6 +284,7 @@ oneside_a_inf_prior_const_func_f (NcmMSet *mset, gpointer obj, const gdouble *x,
   gdouble a = gp->mean;
   gdouble s = gp->sigma;
   gdouble p = ncm_mset_func_eval0 (gp->func, mset);
+  NCM_UNUSED (x);
   f[0] = exp (2.0 * HUGE_EXPONENT_NUMBER / s * ((a - p) + s / 2.0));
 }
 
@@ -328,6 +335,7 @@ twoside_a_b_prior_f (NcmMSet *mset, gpointer obj, const gdouble *x, gdouble *f)
   gdouble b = gp->z;
   gdouble s = gp->sigma;
   gdouble p = ncm_mset_param_get (mset, gp->pi.mid, gp->pi.pid);
+  NCM_UNUSED (x);
   f[0] = exp( 2.0 * HUGE_EXPONENT_NUMBER / s * ((a - p) + s / 2.0) )+
 	exp( 2.0 * HUGE_EXPONENT_NUMBER / s * ((p - b) + s / 2.0) );
 }

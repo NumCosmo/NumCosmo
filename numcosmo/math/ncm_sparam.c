@@ -73,7 +73,7 @@ G_DEFINE_TYPE (NcmSParam, ncm_sparam, G_TYPE_OBJECT);
  * the input arguments.
  *
  * The @name parameter is restricted to the interval [@lower_bound, @upper_bound].
-   * @scale is an initial step for the statistical algorithms.
+ * @scale is an initial step for the statistical algorithms.
  * @abstol is the absolute error tolerance of the parameter.
  * @ftype indicates if the parameter will be fitted or not.
  *

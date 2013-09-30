@@ -62,6 +62,9 @@
 #include "build_cfg.h"
 
 #include "lss/nc_window_tophat.h"
+#include "math/ncm_cfg.h"
+#include "math/ncm_util.h"
+
 #include <math.h>
 #include <gsl/gsl_sf_bessel.h>
 
@@ -84,6 +87,7 @@ static gdouble
 _nc_window_tophat_eval_fourier (const NcWindow * wp, const gdouble k, const gdouble R)
 {
   gdouble kR = k * R;
+  NCM_UNUSED (wp);
   if (kR == 0.0)
     return 1.0;
   return 3.0 * gsl_sf_bessel_j1 (kR) / kR;
@@ -93,7 +97,7 @@ static gdouble
 _nc_window_tophat_deriv_fourier (const NcWindow * wp, const gdouble k, const gdouble R)
 {
   gdouble dWT = -3.0 * gsl_sf_bessel_j2 (k * R) / R;
-
+  NCM_UNUSED (wp);
   return dWT;
 }
 
@@ -102,7 +106,7 @@ _nc_window_tophat_eval_realspace (const NcWindow * wp, const gdouble r, const gd
 {
   gdouble WT_realspace;  
   gdouble R3 = R * R * R;
-
+  NCM_UNUSED (wp);
   if (r <= R)
     WT_realspace = 3.0 / (4.0 * M_PI * R3);
   else
@@ -114,14 +118,14 @@ _nc_window_tophat_eval_realspace (const NcWindow * wp, const gdouble r, const gd
 static void
 nc_window_tophat_init (NcWindowTophat *nc_window_tophat)
 {
-  /* TODO: Add initialization code here */ 
+  NCM_UNUSED (nc_window_tophat); 
 }
 
 static void
 nc_window_tophat_finalize (GObject *object)
 {
-  /* TODO: Add deinitalization code here */
-
+  
+  /* Chain up : end */
   G_OBJECT_CLASS (nc_window_tophat_parent_class)->finalize (object);
 }
 
@@ -138,4 +142,3 @@ nc_window_tophat_class_init (NcWindowTophatClass *klass)
 
   object_class->finalize = nc_window_tophat_finalize;
 }
-

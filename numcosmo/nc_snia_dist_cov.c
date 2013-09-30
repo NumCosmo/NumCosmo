@@ -295,7 +295,7 @@ nc_snia_dist_cov_calc (NcSNIADistCov *dcov, NcDataSNIACov *snia_cov, NcmMatrix *
   const gdouble two_alpha      = 2.0 * alpha;
   const gdouble two_beta       = 2.0 * beta;
   const guint ij_len = snia_cov->mu_len * snia_cov->mu_len;
-  register gint i, ij;
+  register guint i, ij;
 
   g_assert (NCM_DATA (snia_cov)->init);
 
@@ -398,7 +398,7 @@ nc_snia_dist_cov_mean (NcSNIADistCov *dcov, NcHICosmo *cosmo, NcDataSNIACov *sni
     const gdouble DH    = nc_distance_hubble (dcov->dist, cosmo);
     const gdouble Mcal1 = ABSMAG1 + 5.0 * log10 (DH);
     const gdouble Mcal2 = ABSMAG2 + 5.0 * log10 (DH);
-    gint i;
+    guint i;
 
     g_assert (NCM_DATA (snia_cov)->init);
 

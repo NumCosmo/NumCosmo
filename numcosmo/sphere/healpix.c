@@ -37,6 +37,8 @@
 #include "build_cfg.h"
 
 #include "sphere/healpix.h"
+#include "math/ncm_cfg.h"
+#include "math/ncm_util.h"
 
 #include <glib/gstdio.h>
 #include <gsl/gsl_math.h>
@@ -472,6 +474,9 @@ _t_p_w_to_vector (const gint nside, const gint tm1, const gint pm1, const gint w
   const gint t = tm1 + 1;
   const gint p = pm1 + 1;
   gdouble phi, z, sin_theta;
+
+  NCM_UNUSED (v);
+  
   if (t < nside)
   {
     phi = (p - 0.5) * M_PI_2 / (1.0 * w);
@@ -747,5 +752,8 @@ ncm_sphere_healpix_pix2vec_nest (gint nside, glong nest_index, NcmTriVector vec)
 void 
 ncm_sphere_healpix_vec2pix_ring (gint nside, NcmTriVector v, glong *i)
 {
+  NCM_UNUSED (nside);
+  NCM_UNUSED (v);
+  NCM_UNUSED (i);
   g_assert_not_reached ();
 }

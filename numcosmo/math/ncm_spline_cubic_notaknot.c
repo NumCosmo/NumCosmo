@@ -39,6 +39,7 @@
 
 #include "math/ncm_spline_cubic_notaknot.h"
 #include "math/ncm_cfg.h"
+#include "math/ncm_util.h"
 
 #include <math.h>
 #include <gsl/gsl_math.h>
@@ -80,18 +81,21 @@ ncm_spline_cubic_notaknot_new_full (NcmVector *xv, NcmVector *yv, gboolean init)
 static NcmSpline *
 _ncm_spline_cubic_notaknot_copy_empty (const NcmSpline *s)
 {
+  NCM_UNUSED (s);
 	return ncm_spline_cubic_notaknot_new ();
 }
 
 static gsize
 _ncm_spline_notaknot_min_size (const NcmSpline *s)
 {
+  NCM_UNUSED (s);
 	return 6;
 }
 
 static const gchar *
 _ncm_spline_notaknot_name (NcmSpline *s)
 {
+  NCM_UNUSED (s);
   return "NcmSplineCubicNotaknot";
 }
 
@@ -202,7 +206,7 @@ _ncm_spline_notaknot_prepare_base (NcmSpline *s)
 			                                             &solution_vec.vector);
 			if (status != GSL_SUCCESS)
 			{
-				gint i;
+				guint i;
 				for (i = 0; i < s->len; i++)
 					printf ("x= % 20.8g y = % 20.8g\n", ncm_vector_get (s->xv, i), ncm_vector_get (s->yv, i));
 			}
@@ -251,6 +255,7 @@ _ncm_spline_notaknot_prepare (NcmSpline *s)
 static void
 ncm_spline_cubic_notaknot_init (NcmSplineCubicNotaknot *object)
 {
+  NCM_UNUSED (object);
 }
 
 static void

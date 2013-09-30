@@ -25,24 +25,21 @@
 
   <chapter>
     <title>Numcosmo Math</title>
-    <xi:include href="xml/ncm_vector.xml"/>
-    <xi:include href="xml/ncm_matrix.xml"/>
-    <xi:include href="xml/ncm_serialize.xml"/>
-    <xi:include href="xml/ncm_lapack.xml"/>
-    <xi:include href="xml/ncm_sparam.xml"/>
-    <xi:include href="xml/ncm_vparam.xml"/>
-    <xi:include href="xml/ncm_reparam.xml"/>
-    <xi:include href="xml/ncm_reparam_linear.xml"/>
-    <xi:include href="xml/ncm_model.xml"/>
-    <xi:include href="xml/ncm_model_ctrl.xml"/>
-    <xi:include href="xml/ncm_mset.xml"/>
-    <xi:include href="xml/ncm_mset_func.xml"/>
-    <xi:include href="xml/ncm_func_eval.xml"/>
-    <xi:include href="xml/ncm_fftlog.xml"/>
-    <xi:include href="xml/ncm_cfg.xml"/>
-    <xi:include href="xml/ncm_timer.xml"/>
-    <xi:include href="xml/ncm_c.xml"/>
-    <xi:include href="xml/ncm_rng.xml"/>
+    <section>
+      <title>Miscellaneous Objects</title>
+      <xi:include href="xml/ncm_c.xml"/>
+      <xi:include href="xml/ncm_cfg.xml"/>
+      <xi:include href="xml/ncm_util.xml"/>
+      <xi:include href="xml/ncm_vector.xml"/>
+      <xi:include href="xml/ncm_matrix.xml"/>
+      <xi:include href="xml/ncm_serialize.xml"/>
+      <xi:include href="xml/ncm_obj_array.xml"/>
+      <xi:include href="xml/ncm_lapack.xml"/>
+      <xi:include href="xml/ncm_func_eval.xml"/>
+      <xi:include href="xml/ncm_fftlog.xml"/>
+      <xi:include href="xml/ncm_timer.xml"/>
+      <xi:include href="xml/ncm_rng.xml"/>
+    </section>
     <section>
       <title>Splines 1D</title>
       <xi:include href="xml/ncm_spline.xml"/>
@@ -67,6 +64,20 @@
       <xi:include href="xml/ncm_mpsf_sbessel_int.xml"/>
       <xi:include href="xml/ncm_sf_sbessel.xml"/>
       <xi:include href="xml/ncm_sf_sbessel_int.xml"/>
+    </section>
+    <section>
+      <title>Models and Parameters</title>
+      <xi:include href="xml/ncm_model.xml"/>
+      <xi:include href="xml/ncm_sparam.xml"/>
+      <xi:include href="xml/ncm_vparam.xml"/>
+      <xi:include href="xml/ncm_model_ctrl.xml"/>
+      <xi:include href="xml/ncm_mset.xml"/>
+      <xi:include href="xml/ncm_mset_func.xml"/>
+    </section>
+    <section>
+      <title>Reparametrization</title>
+      <xi:include href="xml/ncm_reparam.xml"/>
+      <xi:include href="xml/ncm_reparam_linear.xml"/>
     </section>
     <section>
       <title>Data Objects</title>
@@ -231,7 +242,6 @@
     <xi:include href="xml/binsplit.xml"/>
     <xi:include href="xml/poly.xml"/>
     <xi:include href="xml/quaternion.xml"/>
-    <xi:include href="xml/util.xml"/>
     <xi:include href="xml/matrix_exp.xml"/>
     <xi:include href="xml/mpq_tree.xml"/>
     <xi:include href="xml/cvode_util.xml"/>

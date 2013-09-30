@@ -84,6 +84,7 @@ void ncm_fit_state_clear (NcmFitState **fstate);
 
 void ncm_fit_state_set_all (NcmFitState *fstate, guint data_len, guint fparam_len, gint dof, gboolean is_least_squares);
 void ncm_fit_state_reset (NcmFitState *fstate);
+void ncm_fit_state_realloc (NcmFitState *fstate);
 
 G_INLINE_FUNC void ncm_fit_state_set_ls (NcmFitState *fstate, NcmVector *f, NcmMatrix *J);
 G_INLINE_FUNC void ncm_fit_state_set_niter (NcmFitState *fstate, guint niter);
@@ -112,7 +113,7 @@ ncm_fit_state_set_ls (NcmFitState *fstate, NcmVector *f, NcmMatrix *J)
 
   ncm_vector_memcpy (fstate->ls_f, f);
   
-  gsl_blas_dgemv (CblasTrans, 2.0, NCM_MATRIX_GSL(fstate->ls_J), 
+  gsl_blas_dgemv (CblasTrans, 2.0, ncm_matrix_gsl (fstate->ls_J), 
                   ncm_vector_gsl (fstate->ls_f), 0.0, 
                   ncm_vector_gsl (fstate->dm2lnL));
 

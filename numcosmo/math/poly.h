@@ -34,7 +34,7 @@ G_BEGIN_DECLS
 
 gsl_vector *ncm_poly_new (gint degree);
 gdouble ncm_poly_eval (gsl_vector *poly, gdouble x);
-gdouble ncm_poly_eval_diff (gsl_vector *poly, gint n, gdouble x);
+gdouble ncm_poly_eval_diff (gsl_vector *poly, guint n, gdouble x);
 gdouble ncm_poly_eval_int (gsl_vector *poly, gdouble x);
 gdouble ncm_poly_eval_int_P_over_x (gsl_vector *poly, gdouble x);
 

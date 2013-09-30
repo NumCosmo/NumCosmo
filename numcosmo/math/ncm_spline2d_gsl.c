@@ -40,7 +40,7 @@
 #include "math/ncm_spline2d_gsl.h"
 #include "math/ncm_spline_gsl.h"
 #include "math/ncm_spline2d_bicubic.h"
-
+#include "math/ncm_util.h"
 
 G_DEFINE_TYPE (NcmSpline2dGsl, ncm_spline2d_gsl, NCM_TYPE_SPLINE2D);
 
@@ -92,9 +92,9 @@ _ncm_spline2d_gsl_alloc (NcmSpline2dGsl *s2dgsl)
   NcmSpline2d *s2d = NCM_SPLINE2D (s2dgsl);
   guint i;
 
-  s2dgsl->s_hor_len = NCM_MATRIX_COL_LEN (s2d->zm);
+  s2dgsl->s_hor_len = ncm_matrix_col_len (s2d->zm);
   
-  s2dgsl->zdiff = ncm_matrix_new (s2dgsl->s_hor_len, NCM_MATRIX_ROW_LEN (s2d->zm));
+  s2dgsl->zdiff = ncm_matrix_new (s2dgsl->s_hor_len, ncm_matrix_row_len (s2d->zm));
   s2dgsl->vertv = ncm_vector_new (s2dgsl->s_hor_len);
   s2dgsl->vertintv = ncm_vector_new (s2dgsl->s_hor_len);
 
@@ -152,8 +152,8 @@ _ncm_spline2d_gsl_reset (NcmSpline2d *s2d)
   NcmSpline2dGsl *s2dgsl = NCM_SPLINE2D_GSL (s2d);
   if (s2d->init)
   {
-    if ((NCM_MATRIX_NROWS (s2d->zm) != ncm_vector_len (s2dgsl->vertv)) ||
-        (NCM_MATRIX_NCOLS (s2d->zm) != ncm_vector_len (s2dgsl->s_hor[0]->xv)))
+    if ((ncm_matrix_nrows (s2d->zm) != ncm_vector_len (s2dgsl->vertv)) ||
+        (ncm_matrix_ncols (s2d->zm) != ncm_vector_len (s2dgsl->s_hor[0]->xv)))
     {
       _ncm_spline2d_gsl_free (s2dgsl);
       _ncm_spline2d_gsl_alloc (s2dgsl);
@@ -173,7 +173,7 @@ _ncm_spline2d_gsl_prepare (NcmSpline2d *s2d)
   for (i = 0; i < s2dgsl->s_hor_len; i++)
     ncm_spline_prepare (s2dgsl->s_hor[i]);
 
-  for (j = 0; j < NCM_MATRIX_ROW_LEN (s2d->zm); j++)
+  for (j = 0; j < ncm_matrix_row_len (s2d->zm); j++)
   {
     for (i = 0; i < s2dgsl->s_hor_len; i++)
       ncm_vector_set (s2dgsl->vertv, i, ncm_matrix_get (s2d->zm, i, j));
@@ -199,6 +199,7 @@ _ncm_bicubic_calc_aij (NcmSpline2dGsl *s2dgsl, gsize i, gsize j, const gdouble x
   const gdouble dx = x1 - x0;
   const gdouble dy = y1 - y0;
   NcmSpline2dBicubicCoeffs f;
+  NCM_UNUSED (j);
 
   f.ij[NCM_SPLINE2D_BICUBIC_00][NCM_SPLINE2D_BICUBIC_F] = ncm_spline_eval (s2dgsl->s_hor[i], x0);
   f.ij[NCM_SPLINE2D_BICUBIC_10][NCM_SPLINE2D_BICUBIC_F] = ncm_spline_eval (s2dgsl->s_hor[i], x1);
@@ -394,7 +395,7 @@ _ncm_spline2d_gsl_int_dx (NcmSpline2d *s2d, gdouble xl, gdouble xu, gdouble y)
   const gdouble y0 = ncm_vector_get (s2d->yv, i);
   const gdouble y1 = ncm_vector_get (s2d->yv, i + 1);
   NcmSpline2dBicubicCoeffs aij;
-  gint k;
+  guint k;
   gdouble coeffs[4];
 
   g_assert (jl <= ju);
@@ -452,7 +453,7 @@ _ncm_spline2d_gsl_int_dy (NcmSpline2d *s2d, gdouble x, gdouble yl, gdouble yu)
   const gdouble x0 = ncm_vector_get (s2d->xv, j);
   const gdouble x1 = ncm_vector_get (s2d->xv, j + 1);
   NcmSpline2dBicubicCoeffs aij;
-  gint k;
+  guint k;
   gdouble coeffs[4];
 
   g_assert (il <= iu);
@@ -509,7 +510,7 @@ _ncm_spline2d_gsl_int_dxdy (NcmSpline2d *s2d, gdouble xl, gdouble xu, gdouble yl
   gsize iu = gsl_interp_bsearch (ncm_vector_ptr (s2d->yv, 0), yu, 0, ncm_vector_len (s2d->yv) - 1);
   gdouble x0, x1, y0, y1, result;
   NcmSpline2dBicubicCoeffs aij;
-  gint k, m;
+  guint k, m;
 
   g_assert (jl <= ju || il <= iu);
 
@@ -647,12 +648,14 @@ _ncm_spline2d_gsl_int_dxdy (NcmSpline2d *s2d, gdouble xl, gdouble xu, gdouble yl
 static NcmSpline *
 _ncm_spline2d_gsl_int_dx_spline (NcmSpline2d *s2d, gdouble xl, gdouble xu)
 {
+  NCM_UNUSED (s2d); NCM_UNUSED (xl); NCM_UNUSED (xu); 
   g_assert_not_reached ();
 }
 
 static NcmSpline *
 _ncm_spline2d_gsl_int_dy_spline (NcmSpline2d *s2d, gdouble yl, gdouble yu)
 {
+  NCM_UNUSED (s2d); NCM_UNUSED (yl); NCM_UNUSED (yu); 
   g_assert_not_reached ();
 }
 

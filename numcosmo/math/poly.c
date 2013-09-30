@@ -84,10 +84,11 @@ ncm_poly_eval (gsl_vector *poly, gdouble x)
  * Returns: FIXME
 */
 gdouble
-ncm_poly_eval_diff (gsl_vector *poly, gint n, gdouble x)
+ncm_poly_eval_diff (gsl_vector *poly, guint n, gdouble x)
 {
-  gint i;
+  guint i;
   gdouble res;
+  
   if (n >= poly->size)
     return 0.0;
   res = gsl_vector_get (poly, poly->size - 1);

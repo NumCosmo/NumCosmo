@@ -51,7 +51,7 @@
 enum
 {
   PROP_0,
-  PROP_ID,
+  PROP_Z,
   PROP_SIZE,
 };
 
@@ -61,7 +61,6 @@ static void
 nc_data_hubble_init (NcDataHubble *hubble)
 {
   hubble->x = NULL;
-  hubble->id = NC_DATA_HUBBLE_NSAMPLES;
 }
 
 static void
@@ -79,8 +78,8 @@ nc_data_hubble_set_property (GObject *object, guint prop_id, const GValue *value
 
   switch (prop_id)
   {
-    case PROP_ID:
-      nc_data_hubble_set_sample (hubble, g_value_get_enum (value));
+    case PROP_Z:
+      ncm_vector_set_from_variant (hubble->x, g_value_get_variant (value));
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -96,8 +95,8 @@ nc_data_hubble_get_property (GObject *object, guint prop_id, GValue *value, GPar
 
   switch (prop_id)
   {
-    case PROP_ID:
-      g_value_set_enum (value, nc_data_hubble_get_sample (hubble));
+    case PROP_Z:
+      g_value_take_variant (value, ncm_vector_get_variant (hubble->x));
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -126,6 +125,7 @@ nc_data_hubble_finalize (GObject *object)
 
 static void _nc_data_hubble_prepare (NcmData *data, NcmMSet *mset);
 static void _nc_data_hubble_mean_func (NcmDataGaussDiag *diag, NcmMSet *mset, NcmVector *vp);
+static void _nc_data_hubble_set_size (NcmDataGaussDiag *diag, guint np);
 
 static void
 nc_data_hubble_class_init (NcDataHubbleClass *klass)
@@ -141,20 +141,23 @@ nc_data_hubble_class_init (NcDataHubbleClass *klass)
   object_class->finalize     = &nc_data_hubble_finalize;
 
   g_object_class_install_property (object_class,
-                                   PROP_ID,
-                                   g_param_spec_enum ("sample-id",
-                                                      NULL,
-                                                      "Sample id",
-                                                      NC_TYPE_DATA_HUBBLE_ID, NC_DATA_HUBBLE_CABRE,
-                                                      G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+                                   PROP_Z,
+                                   g_param_spec_variant ("z",
+                                                         NULL,
+                                                         "Data redshifts",
+                                                         G_VARIANT_TYPE ("ad"), NULL,
+                                                         G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   data_class->prepare   = &_nc_data_hubble_prepare;
   diag_class->mean_func = &_nc_data_hubble_mean_func;
+  diag_class->set_size  = &_nc_data_hubble_set_size;
 }
 
 static void
 _nc_data_hubble_prepare (NcmData *data, NcmMSet *mset)
 {
+  NCM_UNUSED (data);
+  NCM_UNUSED (mset);
   /* Nothing to do... */
 }
 
@@ -163,8 +166,7 @@ _nc_data_hubble_mean_func (NcmDataGaussDiag *diag, NcmMSet *mset, NcmVector *vp)
 {
   NcDataHubble *hubble = NC_DATA_HUBBLE (diag);
   NcHICosmo *cosmo = NC_HICOSMO (ncm_mset_peek (mset, nc_hicosmo_id ()));
-  
-  gint i;
+  guint i;
 
   for (i = 0; i < diag->np; i++)
   {
@@ -197,54 +199,25 @@ static gchar *_nc_data_hubble_function_query[] =
 NcmData *
 nc_data_hubble_new (NcDataHubbleId id)
 {
-  return g_object_new (NC_TYPE_DATA_HUBBLE,
-                       "sample-id", id,
-                       NULL);
+  NcmData *data = g_object_new (NC_TYPE_DATA_HUBBLE,
+                                NULL);
+  nc_data_hubble_set_sample (NC_DATA_HUBBLE (data), id);
+  return data;
 }
 
-/**
- * nc_data_hubble_set_size:
- * @hubble: a #NcDataHubble
- * @np: FIXME
- *
- * FIXME
- *
- * Returns: FIXME
- */
 void 
-nc_data_hubble_set_size (NcDataHubble *hubble, guint np)
+_nc_data_hubble_set_size (NcmDataGaussDiag *diag, guint np)
 {
-  NcmDataGaussDiag *diag = NCM_DATA_GAUSS_DIAG (hubble);
-
-  if (diag->np != 0)
-    g_assert (hubble->x != NULL && ncm_vector_len (hubble->x) == diag->np);
+  NcDataHubble *hubble = NC_DATA_HUBBLE (diag);
   
   if ((np == 0) || (np != diag->np))
     ncm_vector_clear (&hubble->x);
 
   if ((np != 0) && (np != diag->np))
     hubble->x = ncm_vector_new (np);
-
-  ncm_data_gauss_diag_set_size (NCM_DATA_GAUSS_DIAG (hubble), np);
-}
-
-/**
- * nc_data_hubble_get_size:
- * @hubble: a #NcDataHubble
- *
- * FIXME
- *
- * Returns: FIXME
- */
-guint 
-nc_data_hubble_get_size (NcDataHubble *hubble)
-{
-  NcmDataGaussDiag *diag = NCM_DATA_GAUSS_DIAG (hubble);
-
-  if (diag->np != 0)
-    g_assert (hubble->x != NULL && ncm_vector_len (hubble->x) == diag->np);
-
-  return ncm_data_gauss_diag_get_size (NCM_DATA_GAUSS_DIAG (hubble));
+  
+  /* Chain up : end */
+  NCM_DATA_GAUSS_DIAG_CLASS (nc_data_hubble_parent_class)->set_size (diag, np);  
 }
 
 /**
@@ -272,10 +245,7 @@ nc_data_hubble_set_sample (NcDataHubble *hubble, NcDataHubbleId id)
 
     sqlite3 *db = ncm_cfg_get_default_sqlite3 ();
 
-    if (data->desc != NULL)
-      g_free (data->desc);
-    
-    data->desc = g_strdup (_nc_data_hubble_function_query[id * 2]);
+    ncm_data_set_desc (data, _nc_data_hubble_function_query[id * 2]);    
 
     g_assert (db != NULL);  
 
@@ -286,7 +256,7 @@ nc_data_hubble_set_sample (NcDataHubble *hubble, NcDataHubbleId id)
       g_error ("nc_data_hubble_set_sample: Query error: %s", err_str);
     }
 
-    nc_data_hubble_set_size (hubble, nrow);
+    ncm_data_gauss_diag_set_size (diag, nrow);
 
     for (i = 0; i < nrow; i++)
     {
@@ -298,26 +268,10 @@ nc_data_hubble_set_sample (NcDataHubble *hubble, NcDataHubbleId id)
 
     sqlite3_free_table (res);
 
-    hubble->id = id;
-    ncm_data_set_init (data);
+    ncm_data_set_init (data, TRUE);
 
   }
 #else
   g_error (PACKAGE_NAME" compiled without support for sqlite3, Hubble data not avaliable.");
 #endif
-
-}
-
-/**
- * nc_data_hubble_get_sample:
- * @hubble: a #NcDataHubble
- *
- * FIXME
- * 
- * Returns: FIXME
- */
-NcDataHubbleId
-nc_data_hubble_get_sample (NcDataHubble *hubble)
-{
-  return hubble->id;
 }

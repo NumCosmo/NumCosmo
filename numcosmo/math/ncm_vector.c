@@ -39,6 +39,7 @@
 
 #include "math/ncm_vector.h"
 #include "math/ncm_cfg.h"
+#include "math/ncm_util.h"
 
 enum
 {
@@ -65,6 +66,35 @@ ncm_vector_new (gsize n)
 }
 
 /**
+ * ncm_vector_new_full:
+ * @d: pointer to the first double allocated.
+ * @size: number of doubles allocated.
+ * @stride: the step-size from one element to the next in physical memory, measured in units of double.
+ * @pdata: (allow-none): descending data pointer.
+ * @pfree: (scope notified) (allow-none): free function to be called when destroying the vector.
+ *
+ * This function returns a #NcmVector of the array @d.
+ * This function saves @userdata internally and frees it using @free 
+ * when it is no longer necessary.
+ *
+ * Returns: A new #NcmVector.
+ */
+NcmVector *
+ncm_vector_new_full (gdouble *d, gsize size, gsize stride, gpointer pdata, GDestroyNotify pfree)
+{
+  NcmVector *cv = g_object_new (NCM_TYPE_VECTOR, NULL);
+  if (stride != 1)
+    cv->vv = gsl_vector_view_array_with_stride (d, stride, size);
+  else
+    cv->vv = gsl_vector_view_array (d, size);
+  cv->type = NCM_VECTOR_DERIVED;
+  g_assert ((pdata == NULL) || (pdata != NULL && pfree != NULL));
+  cv->pdata = pdata;
+  cv->pfree = pfree;
+  return cv;
+}
+
+/**
  * ncm_vector_new_gsl: (skip)
  * @gv: vector from GNU Scientific Library (GSL) to be converted into a #NcmVector.
  * 
@@ -76,13 +106,8 @@ ncm_vector_new (gsize n)
 NcmVector *
 ncm_vector_new_gsl (gsl_vector *gv)
 {
-  NcmVector *cv = g_object_new (NCM_TYPE_VECTOR, NULL);
-  cv->gv = gv;
-  cv->vv = gsl_vector_subvector (gv, 0, gv->size);
-  cv->pobj = NULL;
-  cv->a = NULL;
+  NcmVector *cv = ncm_vector_new_full (gv->data, gv->size, gv->stride, gv, (GDestroyNotify)gsl_vector_free); 
   cv->type = NCM_VECTOR_GSL_VECTOR;
-
   return cv;
 }
 
@@ -98,8 +123,8 @@ ncm_vector_new_gsl (gsl_vector *gv)
 NcmVector *
 ncm_vector_new_gsl_static (gsl_vector *gv)
 {
-  NcmVector *cv = ncm_vector_new_gsl (gv);
-  cv->type = NCM_VECTOR_DERIVED;
+  NcmVector *cv = ncm_vector_new_full (gv->data, gv->size, gv->stride, NULL, NULL); 
+  cv->type = NCM_VECTOR_GSL_VECTOR;
   return cv;
 }
 
@@ -115,12 +140,9 @@ ncm_vector_new_gsl_static (gsl_vector *gv)
 NcmVector *
 ncm_vector_new_array (GArray *a)
 {
-  NcmVector *cv = g_object_new (NCM_TYPE_VECTOR, NULL);
-  cv->vv = gsl_vector_view_array (&g_array_index (a, gdouble, 0), a->len);
-  cv->a = g_array_ref (a);
-  cv->pobj = NULL;
+  NcmVector *cv = ncm_vector_new_full (&g_array_index (a, gdouble, 0), a->len, 1, 
+                                       g_array_ref (a), (GDestroyNotify) &g_array_unref); 
   cv->type = NCM_VECTOR_ARRAY;
-  
   return cv;
 }
 
@@ -139,14 +161,9 @@ ncm_vector_new_array (GArray *a)
 NcmVector *
 ncm_vector_new_data_slice (gdouble *d, gsize size, gsize stride)
 {
-  NcmVector *cv = g_object_new (NCM_TYPE_VECTOR, NULL);
-  if (stride != 1)
-	cv->vv = gsl_vector_view_array_with_stride (d, stride, size);
-  else
-	cv->vv = gsl_vector_view_array (d, size);
-  cv->a = NULL;
-  cv->pobj = NULL;
-  cv->type = NCM_VECTOR_SLICE;
+  NcmVector *cv = ncm_vector_new_full (d, size, stride, 
+                                       NULL, NULL); 
+  cv->type  = NCM_VECTOR_SLICE;
   return cv;
 }
 
@@ -164,8 +181,9 @@ ncm_vector_new_data_slice (gdouble *d, gsize size, gsize stride)
 NcmVector *
 ncm_vector_new_data_malloc (gdouble *d, gsize size, gsize stride)
 {
-  NcmVector *cv = ncm_vector_new_data_slice (d, size, stride);
-  cv->type = NCM_VECTOR_MALLOC;
+  NcmVector *cv = ncm_vector_new_full (d, size, stride, 
+                                       d, &g_free); 
+  cv->type  = NCM_VECTOR_MALLOC;
   return cv;
 }
 
@@ -184,8 +202,9 @@ ncm_vector_new_data_malloc (gdouble *d, gsize size, gsize stride)
 NcmVector *
 ncm_vector_new_data_static (gdouble *d, gsize size, gsize stride)
 {
-  NcmVector *cv = ncm_vector_new_data_slice (d, size, stride);
-  cv->type = NCM_VECTOR_DERIVED;
+  NcmVector *cv = ncm_vector_new_full (d, size, stride, 
+                                       NULL, NULL); 
+  cv->type  = NCM_VECTOR_DERIVED;
   return cv;
 }
 
@@ -193,23 +212,22 @@ ncm_vector_new_data_static (gdouble *d, gsize size, gsize stride)
  * ncm_vector_new_variant:
  * @var: a #GVariant of the type "ad".
  *
- * This function convert a #GVariant array to a #NcmVector.
+ * This function convert a #GVariant array to a #NcmVector allocating new 
+ * memory for the vector.
  *
  * Returns: A new #NcmVector.
  */
 NcmVector *
 ncm_vector_new_variant (GVariant *var)
 {
-  gsize n = g_variant_n_children (var);
-  NcmVector *v = ncm_vector_new (n);
-  gint i;
-  for (i = 0; i < n; i++)
-    g_variant_get_child (var, i, "d", ncm_vector_ptr (v, i));
-  return v;  
+  NcmVector *cv = g_object_new (NCM_TYPE_VECTOR, 
+                                "values", var, 
+                                NULL);
+  return cv;
 }
 
 /**
- * ncm_vector_new_data_const:
+ * ncm_vector_const_new_data:
  * @d: pointer to the first double allocated.
  * @size: number of doubles allocated.
  * @stride: the step-size from one element to the next in physical memory, measured in units of double.
@@ -221,15 +239,15 @@ ncm_vector_new_variant (GVariant *var)
  * Returns: A new constant #NcmVector.
  */
 const NcmVector *
-ncm_vector_new_data_const (const gdouble *d, gsize size, gsize stride)
+ncm_vector_const_new_data (const gdouble *d, gsize size, gsize stride)
 {
   NcmVector *cv = g_object_new (NCM_TYPE_VECTOR, NULL);
   if (stride != 1)
-	cv->vv = gsl_vector_view_array_with_stride ((gdouble *)d, stride, size);
+    cv->vv = gsl_vector_view_array_with_stride ((gdouble *)d, stride, size);
   else
-	cv->vv = gsl_vector_view_array ((gdouble *)d, size);
-  cv->a = NULL;
-  cv->pobj = NULL;
+    cv->vv = gsl_vector_view_array ((gdouble *)d, size);
+  cv->pdata = NULL;
+  cv->pfree = NULL;
 
   cv->type = NCM_VECTOR_DERIVED;
   return cv;
@@ -239,7 +257,7 @@ ncm_vector_new_data_const (const gdouble *d, gsize size, gsize stride)
  * ncm_vector_ref:
  * @cv: a NcmVector.
  *
- * This function increses the reference count of @cv the object.
+ * This function increses the reference count of the vector @cv.
  *
  * Returns: (transfer full): @cv
  */
@@ -250,13 +268,49 @@ ncm_vector_ref (NcmVector *cv)
 }
 
 /**
+ * ncm_vector_const_ref:
+ * @cv: a NcmVector.
+ *
+ * This function increses the reference count of the constant vector @cv.
+ *
+ * Returns: (transfer full): @cv
+ */
+const NcmVector *
+ncm_vector_const_ref (const NcmVector *cv)
+{
+  return g_object_ref (NCM_VECTOR (cv));
+}
+
+/**
+ * ncm_vector_const_new_variant:
+ * @var: a #GVariant of the type "ad".
+ *
+ * This function convert a #GVariant array to a #NcmVector. Since it returns 
+ * a constant #NcmVector it uses the same memory of @var.
+ *
+ * Returns: (transfer full): A new #NcmVector. 
+ */
+const NcmVector *
+ncm_vector_const_new_variant (GVariant *var)
+{
+  gsize n = g_variant_n_children (var);
+  gconstpointer data = g_variant_get_data (var);
+  const NcmVector *v = ncm_vector_const_new_data (data, n, 1);
+
+  NCM_VECTOR (v)->pdata = g_variant_ref_sink (var);
+  NCM_VECTOR (v)->pfree = (GDestroyNotify) &g_variant_unref;
+
+  return v;
+}
+
+/**
  * ncm_vector_dup:
  * @cv: a constant #NcmVector.
  *
  * This function copies the elements of the constant vector @cv into a new #NcmVector.
  *
  * Returns: (transfer full): A #NcmVector.
-   */
+ */
 NcmVector *
 ncm_vector_dup (const NcmVector *cv)
 {
@@ -284,7 +338,8 @@ ncm_vector_get_subvector (NcmVector *cv, gsize k, gsize size)
 
   scv->vv = gsl_vector_subvector (ncm_vector_gsl (cv), k, size);
   scv->type = NCM_VECTOR_DERIVED;
-  scv->pobj = G_OBJECT (ncm_vector_ref (cv));
+  scv->pdata = ncm_vector_ref (cv);
+  scv->pfree = (GDestroyNotify) &ncm_vector_free;
 
   return scv;
 }
@@ -299,12 +354,12 @@ ncm_vector_get_subvector (NcmVector *cv, gsize k, gsize size)
  * Returns: (transfer full): A #GVariant of the type "ad".
  */
 GVariant *
-ncm_vector_get_variant (NcmVector *v)
+ncm_vector_get_variant (const NcmVector *v)
 {
   guint n = ncm_vector_len (v);
   GVariantBuilder builder;
   GVariant *var;
-  gint i;
+  guint i;
 
   g_variant_builder_init (&builder, G_VARIANT_TYPE ("ad"));
 
@@ -318,6 +373,35 @@ ncm_vector_get_variant (NcmVector *v)
 }
 
 /**
+ * ncm_vector_peek_variant:
+ * @v: a #NcmVector.
+ *
+ * Convert @v to a GVariant of the type "ad" using the same memory space.
+ * The vector @v should not be modified during the variant existance.
+ * If the vector has stride != 1 then ncm_vector_get_variant() is called.
+ *
+ * Returns: (transfer full): A #GVariant of the type "ad".
+ */
+GVariant *
+ncm_vector_peek_variant (const NcmVector *v)
+{
+  if (ncm_vector_stride (v) != 1)
+    return ncm_vector_get_variant (v);
+  else
+  {
+    guint n = ncm_vector_len (v);
+    gconstpointer data = ncm_vector_const_ptr (v, 0);
+    GVariant *vvar = g_variant_new_from_data (G_VARIANT_TYPE ("ad"),
+                                              data,
+                                              sizeof (gdouble) * n,
+                                              TRUE,
+                                              (GDestroyNotify) &ncm_vector_const_free,
+                                              NCM_VECTOR (ncm_vector_const_ref (v)));
+    return g_variant_ref_sink (vvar);
+  }
+}
+
+/**
  * ncm_vector_log_vals:
  * @v: a #NcmVector.
  * @prestr: initial string.
@@ -327,7 +411,7 @@ ncm_vector_get_variant (NcmVector *v)
  *
  */
 void 
-ncm_vector_log_vals (NcmVector *v, const gchar *prestr, const gchar *format)
+ncm_vector_log_vals (const NcmVector *v, const gchar *prestr, const gchar *format)
 {
   guint i = 0;
   const guint len = ncm_vector_len (v);
@@ -343,7 +427,61 @@ ncm_vector_log_vals (NcmVector *v, const gchar *prestr, const gchar *format)
 }
 
 /**
- * ncm_vector_new_gsl_const: (skip)
+ * ncm_vector_log_vals_avpb:
+ * @v: a #NcmVector.
+ * @prestr: initial string.
+ * @format: float format.
+ * @a: a double.
+ * @b: a double.
+ *
+ * Log the vector values ($a\vec{v}+b$) using @prestr and @format.
+ *
+ */
+void 
+ncm_vector_log_vals_avpb (const NcmVector *v, const gchar *prestr, const gchar *format, const gdouble a, const gdouble b)
+{
+  guint i = 0;
+  const guint len = ncm_vector_len (v);
+  g_message ("%s", prestr);
+
+  g_message (format, a * ncm_vector_get (v, i) + b);
+  for (i = 1; i < len; i++)
+  {
+    g_message (" ");
+    g_message (format, a * ncm_vector_get (v, i) + b);
+  }
+  g_message ("\n");
+}
+
+/**
+ * ncm_vector_log_vals_func:
+ * @v: a #NcmVector.
+ * @prestr: initial string.
+ * @format: float format.
+ * @f: (scope notified): a #NcmVectorCompFunc.
+ * @user_data: user data used in @f.
+ *
+ * Log the vector values (f(\vec{v}_i)$) using @prestr and @format.
+ *
+ */
+void 
+ncm_vector_log_vals_func (const NcmVector *v, const gchar *prestr, const gchar *format, NcmVectorCompFunc f, gpointer user_data)
+{
+  guint i = 0;
+  const guint len = ncm_vector_len (v);
+  g_message ("%s", prestr);
+
+  g_message (format, f (ncm_vector_get (v, i), user_data));
+  for (i = 1; i < len; i++)
+  {
+    g_message (" ");
+    g_message (format, f (ncm_vector_get (v, i), user_data));
+  }
+  g_message ("\n");
+}
+
+/**
+ * ncm_vector_const_new_gsl: (skip)
  * @v: vector from GNU Scientific Library (GSL).
  *
  * This function converts @v into a constant #NcmVector.
@@ -503,6 +641,22 @@ ncm_vector_log_vals (NcmVector *v, const gchar *prestr, const gchar *format)
  * Returns: (transfer full) (element-type double): FIXME
  */
 /**
+ * ncm_vector_data:
+ * @cv: a #NcmVector.
+ *
+ * FIXME
+ *
+ * Returns: (transfer none): FIXME
+ */
+/**
+ * ncm_vector_const_data:
+ * @cv: a #NcmVector.
+ *
+ * FIXME
+ *
+ * Returns: (transfer none): FIXME
+ */
+/**
  * ncm_vector_gsl: (skip)
  * @cv: a #NcmVector.
  *
@@ -548,19 +702,19 @@ void
 ncm_vector_set_from_variant (NcmVector *cv, GVariant *var)
 {
   gsize n;
-  gint i;
+  guint i;
 
   if (!g_variant_is_of_type (var, G_VARIANT_TYPE ("ad")))
     g_error ("ncm_vector_set_from_variant: Cannot convert `%s' variant to an array of doubles", g_variant_get_type_string (var));
-  
+
   n = g_variant_n_children (var);
 
   if (ncm_vector_len (cv) == 0)
   {
     gdouble *d = g_slice_alloc (sizeof (gdouble) * n);
     cv->vv = gsl_vector_view_array (d, n);
-    cv->a = NULL;
-    cv->pobj = NULL;
+    cv->pdata = NULL;
+    cv->pfree = NULL;
     cv->type = NCM_VECTOR_SLICE; 
   }
   else if (n != ncm_vector_len (cv))
@@ -579,13 +733,13 @@ _ncm_vector_dispose (GObject *object)
 {
   NcmVector *cv = NCM_VECTOR (object);
 
-  if (cv->a != NULL)
+  if (cv->pdata != NULL)
   {
-    g_array_unref (cv->a);
-    cv->a = NULL;
+    g_assert (cv->pfree != NULL);
+    cv->pfree (cv->pdata);
+    cv->pdata = NULL;
+    cv->pfree = NULL;
   }
-  
-  g_clear_object (&cv->pobj);
 
   /* Chain up : end */
   G_OBJECT_CLASS (ncm_vector_parent_class)->dispose (object);
@@ -597,24 +751,18 @@ _ncm_vector_finalize (GObject *object)
   NcmVector *cv = NCM_VECTOR (object);
   switch (cv->type)
   {
-	case NCM_VECTOR_SLICE:
-	  g_slice_free1 (sizeof(gdouble) * ncm_vector_len (cv) * ncm_vector_stride (cv), NCM_VECTOR_DATA (cv));
-	  NCM_VECTOR_DATA (cv) = NULL;
-	  break;
-	case NCM_VECTOR_ARRAY:
-	  break;
-	case NCM_VECTOR_MALLOC:
-	  g_free (ncm_vector_gsl (cv)->data);
-	  NCM_VECTOR_DATA (cv) = NULL;
-	  break;
-	case NCM_VECTOR_GSL_VECTOR:
-	  gsl_vector_free (cv->gv);
-	  cv->gv = NULL;
-	  break;
-	case NCM_VECTOR_DERIVED:
-	  NCM_VECTOR_DATA (cv) = NULL;
-	  break;
+    case NCM_VECTOR_SLICE:
+      g_slice_free1 (sizeof(gdouble) * ncm_vector_len (cv) * ncm_vector_stride (cv), ncm_vector_data (cv));
+      break;
+    case NCM_VECTOR_ARRAY:
+    case NCM_VECTOR_MALLOC:
+    case NCM_VECTOR_GSL_VECTOR:
+    case NCM_VECTOR_DERIVED:
+      break;
   }
+  cv->vv.vector.data = NULL;
+  
+  /* Chain up : end */
   G_OBJECT_CLASS (ncm_vector_parent_class)->finalize (object);
 }
 
@@ -670,6 +818,7 @@ _ncm_nvclone (N_Vector nv)
 static N_Vector
 _ncm_nvcloneempty (N_Vector nv)
 {
+  NCM_UNUSED (nv);
   return ncm_vector_nvector (NULL);
 }
 
@@ -683,19 +832,23 @@ _ncm_nvspace(N_Vector nv, glong *lrw, glong *liw)
 static realtype *
 _ncm_nvgetarraypointer (N_Vector nv)
 {
-  return NCM_VECTOR_DATA (NCM_N2VECTOR(nv));
+  return ncm_vector_data (NCM_N2VECTOR (nv));
 }
 
 static void
 _ncm_nvsetarraypointer (realtype *data, N_Vector nv)
 {
-  NCM_VECTOR_DATA (NCM_N2VECTOR (nv)) = data;
+  ncm_vector_gsl (NCM_N2VECTOR (nv))->data = data;
 }
 
 static void
 _ncm_nvlinearsum (realtype a, N_Vector x, realtype b, N_Vector y, N_Vector z)
 {
-
+  NCM_UNUSED (a);
+  NCM_UNUSED (x);
+  NCM_UNUSED (b);
+  NCM_UNUSED (y);
+  NCM_UNUSED (z);
 }
 
 static void
@@ -739,15 +892,31 @@ static struct _generic_N_Vector_Ops _ncm_ops =
   &_ncm_nvgetarraypointer,
   &_ncm_nvsetarraypointer,
   &_ncm_nvlinearsum,
-  &_ncm_nvconst
+  &_ncm_nvconst,
+  NULL,
+  NULL,
+  NULL,
+  NULL,
+  NULL,
+  NULL,
+  NULL,
+  NULL,
+  NULL,
+  NULL,
+  NULL,
+  NULL,
+  NULL,
+  NULL,
+  NULL,
+  NULL,
+  NULL,
 };
 
 static void
 ncm_vector_init (NcmVector *v)
 {
-  v->gv = NULL;
-  v->a = NULL;
-  v->pobj = NULL;
+  v->pdata = NULL;
+  v->pfree = NULL;
   v->type = 0;
   memset (&v->vv, 0, sizeof (gsl_vector_view));
 }

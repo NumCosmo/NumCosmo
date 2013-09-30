@@ -60,9 +60,8 @@ struct _NcDataHubbleBao
 {
   /*< private >*/
   NcmDataGaussDiag parent_instance;
-  NcmVector *x;
-  NcDataHubbleBaoId id;
   NcDistance *dist;
+  NcmVector *x;
 };
 
 struct _NcDataHubbleBaoClass
@@ -74,12 +73,7 @@ struct _NcDataHubbleBaoClass
 GType nc_data_hubble_bao_get_type (void) G_GNUC_CONST;
 
 NcmData *nc_data_hubble_bao_new (NcDistance *dist, NcDataHubbleBaoId id);
-
-void nc_data_hubble_bao_set_size (NcDataHubbleBao *hubble_bao, guint np);
-guint nc_data_hubble_bao_get_size (NcDataHubbleBao *hubble_bao);
-
 void nc_data_hubble_bao_set_sample (NcDataHubbleBao *hubble_bao, NcDataHubbleBaoId id);
-NcDataHubbleBaoId nc_data_hubble_bao_get_sample (NcDataHubbleBao *hubble_bao);
 
 G_END_DECLS
 

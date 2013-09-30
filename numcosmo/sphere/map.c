@@ -41,7 +41,8 @@
 #include "sphere/healpix.h"
 #include "math/ncm_c.h"
 #include "math/ncm_cfg.h"
-#include "math/util.h"
+#include "math/ncm_util.h"
+#include "math/ncm_rng.h"
 
 #include <string.h>
 #include <gsl/gsl_randist.h>

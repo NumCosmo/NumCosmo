@@ -38,14 +38,14 @@
 #include "build_cfg.h"
 
 #include "nc_data_bao_dv.h"
-
 #include "nc_enum_types.h"
+#include "math/ncm_cfg.h"
 
 enum
 {
   PROP_0,
   PROP_DIST,
-  PROP_ID,
+  PROP_Z,
   PROP_SIZE,
 };
 
@@ -55,7 +55,7 @@ static void
 nc_data_bao_dv_init (NcDataBaoDV *bao_dv)
 {
   bao_dv->dist = NULL;
-  bao_dv->id   = NC_DATA_BAO_NSAMPLES;
+  bao_dv->x    = NULL;
 }
 
 static void
@@ -70,8 +70,8 @@ nc_data_bao_dv_set_property (GObject *object, guint prop_id, const GValue *value
       nc_distance_clear (&bao_dv->dist);
       bao_dv->dist = g_value_dup_object (value);
       break;
-    case PROP_ID:
-      nc_data_bao_dv_set_sample (bao_dv, g_value_get_enum (value));
+    case PROP_Z:
+      ncm_vector_set_from_variant (bao_dv->x, g_value_get_variant (value));
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -90,8 +90,8 @@ nc_data_bao_dv_get_property (GObject *object, guint prop_id, GValue *value, GPar
     case PROP_DIST:
       g_value_set_object (value, bao_dv->dist);
       break;
-    case PROP_ID:
-      g_value_set_enum (value, nc_data_bao_dv_get_sample (bao_dv));
+    case PROP_Z:
+      g_value_take_variant (value, ncm_vector_get_variant (bao_dv->x));
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -105,6 +105,7 @@ nc_data_bao_dv_dispose (GObject *object)
   NcDataBaoDV *bao_dv = NC_DATA_BAO_DV (object);
 
   nc_distance_clear (&bao_dv->dist);
+  ncm_vector_clear (&bao_dv->x);
   
   /* Chain up : end */
   G_OBJECT_CLASS (nc_data_bao_dv_parent_class)->dispose (object);
@@ -120,6 +121,7 @@ nc_data_bao_dv_finalize (GObject *object)
 
 static void _nc_data_bao_dv_prepare (NcmData *data, NcmMSet *mset);
 static void _nc_data_bao_dv_mean_func (NcmDataGaussDiag *diag, NcmMSet *mset, NcmVector *vp);
+static void _nc_data_bao_dv_set_size (NcmDataGaussDiag *diag, guint np);
 
 static void
 nc_data_bao_dv_class_init (NcDataBaoDVClass *klass)
@@ -142,15 +144,16 @@ nc_data_bao_dv_class_init (NcDataBaoDVClass *klass)
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   g_object_class_install_property (object_class,
-                                   PROP_ID,
-                                   g_param_spec_enum ("sample-id",
-                                                      NULL,
-                                                      "Sample id",
-                                                      NC_TYPE_DATA_BAO_ID, NC_DATA_BAO_DV_EISENSTEIN2005,
-                                                      G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));  
+                                   PROP_Z,
+                                   g_param_spec_variant ("z",
+                                                         NULL,
+                                                         "Data redshift",
+                                                         G_VARIANT_TYPE ("ad"), NULL,
+                                                         G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   data_class->prepare   = &_nc_data_bao_dv_prepare;
   diag_class->mean_func = &_nc_data_bao_dv_mean_func;
+  diag_class->set_size  = &_nc_data_bao_dv_set_size;
 }
 
 static void
@@ -166,7 +169,7 @@ _nc_data_bao_dv_mean_func (NcmDataGaussDiag *diag, NcmMSet *mset, NcmVector *vp)
 {
   NcDataBaoDV *bao_dv = NC_DATA_BAO_DV (diag);
   NcHICosmo *cosmo = NC_HICOSMO (ncm_mset_peek (mset, nc_hicosmo_id ()));
-  gint i;
+  guint i;
 
   for (i = 0; i < diag->np; i++)
   {
@@ -174,6 +177,21 @@ _nc_data_bao_dv_mean_func (NcmDataGaussDiag *diag, NcmMSet *mset, NcmVector *vp)
     const gdouble DV = nc_distance_dilation_scale (bao_dv->dist, cosmo, z);
     ncm_vector_set (vp, i, DV);
   }
+}
+
+static void
+_nc_data_bao_dv_set_size (NcmDataGaussDiag *diag, guint np)
+{
+  NcDataBaoDV *bao_dv = NC_DATA_BAO_DV (diag);
+
+  if ((np == 0) || (np != diag->np))
+    ncm_vector_clear (&bao_dv->x);
+
+  if ((np != 0) && (np != diag->np))
+    bao_dv->x = ncm_vector_new (np);
+
+  /* Chain up : end */
+  NCM_DATA_GAUSS_DIAG_CLASS (nc_data_bao_dv_parent_class)->set_size (diag, np);
 }
 
 /**
@@ -188,55 +206,11 @@ _nc_data_bao_dv_mean_func (NcmDataGaussDiag *diag, NcmMSet *mset, NcmVector *vp)
 NcmData *
 nc_data_bao_dv_new (NcDistance *dist, NcDataBaoId id)
 {
-  return g_object_new (NC_TYPE_DATA_BAO_DV,
-                       "sample-id", id,
-                       "dist", dist,
-                       NULL);
-}
-
-/**
- * nc_data_bao_dv_set_size:
- * @bao_dv: a #NcDataBaoDV
- * @np: FIXME
- *
- * FIXME
- *
- * Returns: FIXME
- */
-void 
-nc_data_bao_dv_set_size (NcDataBaoDV *bao_dv, guint np)
-{
-  NcmDataGaussDiag *diag = NCM_DATA_GAUSS_DIAG (bao_dv);
-
-  if (diag->np != 0)
-    g_assert (bao_dv->x != NULL && ncm_vector_len (bao_dv->x) == diag->np);
-  
-  if ((np == 0) || (np != diag->np))
-    ncm_vector_clear (&bao_dv->x);
-
-  if ((np != 0) && (np != diag->np))
-    bao_dv->x = ncm_vector_new (np);
-
-  ncm_data_gauss_diag_set_size (NCM_DATA_GAUSS_DIAG (bao_dv), np);
-}
-
-/**
- * nc_data_bao_dv_get_size:
- * @bao_dv: a #NcDataBaoDV
- *
- * FIXME
- *
- * Returns: FIXME
- */
-guint 
-nc_data_bao_dv_get_size (NcDataBaoDV *bao_dv)
-{
-  NcmDataGaussDiag *diag = NCM_DATA_GAUSS_DIAG (bao_dv);
-
-  if (diag->np != 0)
-    g_assert (bao_dv->x != NULL && ncm_vector_len (bao_dv->x) == diag->np);
-
-  return ncm_data_gauss_diag_get_size (NCM_DATA_GAUSS_DIAG (bao_dv));
+  NcmData *data = g_object_new (NC_TYPE_DATA_BAO_DV,
+                                "dist", dist,
+                                NULL);
+  nc_data_bao_dv_set_sample (NC_DATA_BAO_DV (data), id);
+  return data;
 }
 
 /**
@@ -255,30 +229,13 @@ nc_data_bao_dv_set_sample (NcDataBaoDV *bao_dv, NcDataBaoId id)
   
   g_assert (id == NC_DATA_BAO_DV_EISENSTEIN2005);
 
-  if (data->desc != NULL)
-    g_free (data->desc);
-  data->desc = g_strdup ("Eisenstein 2005, BAO Sample Dv");
+  ncm_data_set_desc (data, "Eisenstein 2005, BAO Sample Dv");
 
-  nc_data_bao_dv_set_size (bao_dv, 1);
-  bao_dv->id = id;
+  ncm_data_gauss_diag_set_size (diag, 1);
 
   ncm_vector_set (bao_dv->x,   0, ncm_c_bao_eisenstein_z ());
   ncm_vector_set (diag->y,     0, ncm_c_bao_eisenstein_DV ());
   ncm_vector_set (diag->sigma, 0, ncm_c_bao_eisenstein_sigma_DV ());
 
-  ncm_data_set_init (data);
-}
-
-/**
- * nc_data_bao_dv_get_sample:
- * @bao_dv: a #NcDataBaoDV
- *
- * FIXME
- * 
- * Returns: FIXME
- */
-NcDataBaoId 
-nc_data_bao_dv_get_sample (NcDataBaoDV *bao_dv)
-{
-  return bao_dv->id;
+  ncm_data_set_init (data, TRUE);
 }

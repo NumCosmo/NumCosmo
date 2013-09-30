@@ -40,6 +40,7 @@
 
 #include "math/ncm_vparam.h"
 #include "math/ncm_cfg.h"
+#include "math/ncm_util.h"
 
 enum
 {
@@ -483,7 +484,7 @@ _ncm_vparam_set_property (GObject *object, guint prop_id, const GValue *value, G
 {
   NcmVParam *vparam = NCM_VPARAM (object);
   g_return_if_fail (NCM_IS_VPARAM (object));
-
+  
   switch (prop_id)
   {
 	case PROP_DEFAULT_SPARAM:
@@ -501,11 +502,13 @@ _ncm_vparam_get_property (GObject *object, guint prop_id, GValue *value, GParamS
   NcmVParam *vparam = NCM_VPARAM (object);
   g_return_if_fail (NCM_IS_VPARAM (vparam));
 
+  NCM_UNUSED (value);
+
   switch (prop_id)
   {
-	default:
-	  G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-	  break;
+    default:
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
+      break;
   }
 }
 

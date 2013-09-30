@@ -259,12 +259,7 @@ test_ncm_vector_free (TestNcmVector *test, gconstpointer pdata)
 {
   NcmVector *v = test->v;
   ncm_vector_free (v);
-  if (g_test_trap_fork (0, G_TEST_TRAP_SILENCE_STDOUT | G_TEST_TRAP_SILENCE_STDERR))
-  {
-    ncm_vector_free (v);
-    exit (0);
-  }
-  g_test_trap_assert_failed ();
+  NCM_TEST_FAIL (ncm_vector_free (v));
 }
 
 void
@@ -282,19 +277,8 @@ test_ncm_vector_gsl_free (TestNcmVector *test, gconstpointer pdata)
 {
   NcmVector *v = test->v;
   ncm_vector_free (v);
-  if (g_test_trap_fork (0, G_TEST_TRAP_SILENCE_STDOUT | G_TEST_TRAP_SILENCE_STDERR))
-  {
-    ncm_vector_free (v);
-    exit (0);
-  }
-  g_test_trap_assert_failed ();
-
-  if (g_test_trap_fork (0, G_TEST_TRAP_SILENCE_STDOUT | G_TEST_TRAP_SILENCE_STDERR))
-  {
-    g_assert (v->gv == NULL);
-    exit (0);
-  }
-  g_test_trap_assert_passed ();
+  NCM_TEST_FAIL (ncm_vector_free (v));
+  NCM_TEST_PASS (g_assert (v->pdata == NULL));
 }
 
 void
@@ -319,19 +303,8 @@ test_ncm_vector_array_free (TestNcmVector *test, gconstpointer pdata)
 {
   NcmVector *v = test->v;
   ncm_vector_free (v);
-  if (g_test_trap_fork (0, G_TEST_TRAP_SILENCE_STDOUT | G_TEST_TRAP_SILENCE_STDERR))
-  {
-    ncm_vector_free (v);
-    exit (0);
-  }
-  g_test_trap_assert_failed ();
-
-  if (g_test_trap_fork (0, G_TEST_TRAP_SILENCE_STDOUT | G_TEST_TRAP_SILENCE_STDERR))
-  {
-    g_array_unref (v->a);
-    exit (0);
-  }
-  g_test_trap_assert_failed ();
+  NCM_TEST_FAIL (ncm_vector_free (v));
+  NCM_TEST_FAIL (g_array_unref (v->pdata));
 }
 
 void
@@ -350,19 +323,8 @@ test_ncm_vector_data_slice_free (TestNcmVector *test, gconstpointer pdata)
 {
   NcmVector *v = test->v;  
   ncm_vector_free (v);
-  if (g_test_trap_fork (0, G_TEST_TRAP_SILENCE_STDOUT | G_TEST_TRAP_SILENCE_STDERR))
-  {
-    ncm_vector_free (v);
-    exit (0);
-  }
-  g_test_trap_assert_failed ();
-
-  if (g_test_trap_fork (0, G_TEST_TRAP_SILENCE_STDOUT | G_TEST_TRAP_SILENCE_STDERR))
-  {
-    g_assert (NCM_VECTOR_DATA (v) == NULL);
-    exit (0);
-  }
-  g_test_trap_assert_passed ();
+  NCM_TEST_FAIL (ncm_vector_free (v));
+  NCM_TEST_PASS (g_assert (ncm_vector_data (v) == NULL));
 }
 
 void
@@ -381,19 +343,8 @@ test_ncm_vector_data_malloc_free (TestNcmVector *test, gconstpointer pdata)
 {
   NcmVector *v = test->v;  
   ncm_vector_free (v);
-  if (g_test_trap_fork (0, G_TEST_TRAP_SILENCE_STDOUT | G_TEST_TRAP_SILENCE_STDERR))
-  {
-    ncm_vector_free (v);
-    exit (0);
-  }
-  g_test_trap_assert_failed ();
-
-  if (g_test_trap_fork (0, G_TEST_TRAP_SILENCE_STDOUT | G_TEST_TRAP_SILENCE_STDERR))
-  {
-    g_assert (NCM_VECTOR_DATA (v) == NULL);
-    exit (0);
-  }
-  g_test_trap_assert_passed ();
+  NCM_TEST_FAIL (ncm_vector_free (v));
+  NCM_TEST_PASS (g_assert (ncm_vector_data (v) == NULL));
 }
 
 void
@@ -412,12 +363,7 @@ test_ncm_vector_data_static_free (TestNcmVector *test, gconstpointer pdata)
 {
   NcmVector *v = test->v;
 
-  if (g_test_trap_fork (0, G_TEST_TRAP_SILENCE_STDOUT | G_TEST_TRAP_SILENCE_STDERR))
-  {
-    ncm_vector_free (v);
-    exit (0);
-  }
-  g_test_trap_assert_passed ();
+  NCM_TEST_PASS (ncm_vector_free (v));
 }
 
 void
@@ -425,7 +371,7 @@ test_ncm_vector_data_const_new (TestNcmVector *test, gconstpointer pdata)
 {
   guint v_size = test->v_size = _TEST_NCM_VECTOR_STATIC_SIZE;
   const gdouble d[_TEST_NCM_VECTOR_STATIC_SIZE] = {0.0, };
-  const NcmVector *v = test->cv = ncm_vector_new_data_const (d, v_size, 1);
+  const NcmVector *v = test->cv = ncm_vector_const_new_data (d, v_size, 1);
 
   g_assert_cmpuint (ncm_vector_len (v), ==, v_size);
 }
@@ -434,12 +380,7 @@ void
 test_ncm_vector_data_const_free (TestNcmVector *test, gconstpointer pdata)
 {
   const NcmVector *cv = test->cv;
-  if (g_test_trap_fork (0, G_TEST_TRAP_SILENCE_STDOUT | G_TEST_TRAP_SILENCE_STDERR))
-  {
-    ncm_vector_const_free (cv);
-    exit (0);
-  }
-  g_test_trap_assert_passed ();
+  NCM_TEST_PASS (ncm_vector_const_free (cv));
 }
 
 void
@@ -630,12 +571,7 @@ test_ncm_vector_subvector (TestNcmVector *test, gconstpointer pdata)
   ncm_vector_ref (v);
 
   ncm_vector_free (sv);
-  if (g_test_trap_fork (0, G_TEST_TRAP_SILENCE_STDOUT | G_TEST_TRAP_SILENCE_STDERR))
-  {
-    ncm_vector_free (sv);
-    exit (0);
-  }
-  g_test_trap_assert_failed ();
+  NCM_TEST_FAIL (ncm_vector_free (sv));
 }
 
 void
@@ -659,27 +595,11 @@ test_ncm_vector_variant (TestNcmVector *test, gconstpointer pdata)
     }
     
     ncm_vector_free (nv);
-    if (g_test_trap_fork (0, G_TEST_TRAP_SILENCE_STDOUT | G_TEST_TRAP_SILENCE_STDERR))
-    {
-      ncm_vector_free (nv);
-      exit (0);
-    }
-    g_test_trap_assert_failed ();
+    NCM_TEST_FAIL (ncm_vector_free (nv));
   }
 
   g_variant_unref (var);
-  if (g_test_trap_fork (0, G_TEST_TRAP_SILENCE_STDOUT | G_TEST_TRAP_SILENCE_STDERR))
-  {
-    /* 
-     * this command dont fail in older versions, thus, we call 
-     * g_variant_get_type_string afterwards.
-     * 
-     */
-    g_variant_unref (var); 
-    fprintf (stderr,"fail (%s)", g_variant_get_type_string (var));
-    exit (0);
-  }
-  g_test_trap_assert_failed ();
+  NCM_TEST_FAIL (g_variant_unref (var); fprintf (stderr,"fail (%s)", g_variant_get_type_string (var)));
 }
 
 void
@@ -687,7 +607,7 @@ test_ncm_vector_serialization (TestNcmVector *test, gconstpointer pdata)
 {
   NcmVector *v = test->v;
   gchar *vser = ncm_serialize_global_to_string (G_OBJECT (v), TRUE);
-  NcmVector *v_dup = NCM_VECTOR (ncm_serialize_global_create_from_string (vser));
+  NcmVector *v_dup = NCM_VECTOR (ncm_serialize_global_from_string (vser));
   gint i;
   g_free (vser);
   g_assert_cmpint (ncm_vector_len (v), ==, ncm_vector_len (v_dup));
@@ -698,11 +618,6 @@ test_ncm_vector_serialization (TestNcmVector *test, gconstpointer pdata)
   }
 
   ncm_vector_free (v_dup);
-  if (g_test_trap_fork (0, G_TEST_TRAP_SILENCE_STDOUT | G_TEST_TRAP_SILENCE_STDERR))
-  {
-    ncm_vector_free (v_dup);
-    exit (0);
-  }
-  g_test_trap_assert_failed ();
+  NCM_TEST_FAIL (ncm_vector_free (v_dup));
 }
 

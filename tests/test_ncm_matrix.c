@@ -229,7 +229,7 @@ test_ncm_matrix_new_gsl (void)
   gsl_matrix *gm = gsl_matrix_alloc (_NCM_MATRIX_TEST_NROW, _NCM_MATRIX_TEST_NCOL);
   NcmMatrix *mm = ncm_matrix_new_gsl (gm);
   test_ncm_matrix_new_sanity (mm);
-  g_assert (NCM_MATRIX_NROWS (mm) == gm->size1 && NCM_MATRIX_NCOLS (mm) == gm->size2);
+  g_assert (ncm_matrix_nrows (mm) == gm->size1 && ncm_matrix_ncols (mm) == gm->size2);
 
   ncm_matrix_free (mm);
   if (g_test_trap_fork (0, G_TEST_TRAP_SILENCE_STDOUT | G_TEST_TRAP_SILENCE_STDERR))
@@ -241,7 +241,7 @@ test_ncm_matrix_new_gsl (void)
 
   if (g_test_trap_fork (0, G_TEST_TRAP_SILENCE_STDOUT | G_TEST_TRAP_SILENCE_STDERR))
   {
-    g_assert (mm->gm == NULL);
+    g_assert (mm->pdata == NULL);
     exit (0);
   }
   g_test_trap_assert_passed ();
@@ -257,7 +257,7 @@ test_ncm_matrix_new_array (void)
   test_ncm_matrix_new_sanity (mm);
   g_array_unref (ga);
 
-  g_assert (NCM_MATRIX_NROWS (mm) == ga->len / _NCM_MATRIX_TEST_NCOL);
+  g_assert_cmpuint (ncm_matrix_nrows (mm), ==, ga->len / _NCM_MATRIX_TEST_NCOL);
 
   g_assert (ga == ncm_matrix_get_array (mm));
   g_array_unref (ga);
@@ -272,7 +272,7 @@ test_ncm_matrix_new_array (void)
 
   if (g_test_trap_fork (0, G_TEST_TRAP_SILENCE_STDOUT | G_TEST_TRAP_SILENCE_STDERR))
   {
-    g_array_unref (mm->a);
+    g_array_unref (mm->pdata);
     exit (0);
   }
   g_test_trap_assert_failed ();
@@ -286,7 +286,7 @@ test_ncm_matrix_new_data_slice (void)
   mm = ncm_matrix_new_data_slice (d, _NCM_MATRIX_TEST_NROW, _NCM_MATRIX_TEST_NCOL);
   test_ncm_matrix_new_sanity (mm);
 
-  g_assert ((NCM_MATRIX_NROWS (mm) * NCM_MATRIX_NCOLS (mm)) == (_NCM_MATRIX_TEST_NROW * _NCM_MATRIX_TEST_NCOL));
+  g_assert ((ncm_matrix_nrows (mm) * ncm_matrix_ncols (mm)) == (_NCM_MATRIX_TEST_NROW * _NCM_MATRIX_TEST_NCOL));
 
   ncm_matrix_free (mm);
   if (g_test_trap_fork (0, G_TEST_TRAP_SILENCE_STDOUT | G_TEST_TRAP_SILENCE_STDERR))
@@ -298,7 +298,7 @@ test_ncm_matrix_new_data_slice (void)
 
   if (g_test_trap_fork (0, G_TEST_TRAP_SILENCE_STDOUT | G_TEST_TRAP_SILENCE_STDERR))
   {
-    g_assert (NCM_MATRIX_DATA (mm) == NULL);
+    g_assert (ncm_matrix_data (mm) == NULL);
     exit (0);
   }
   g_test_trap_assert_passed ();
@@ -312,7 +312,7 @@ test_ncm_matrix_new_data_malloc (void)
   mm = ncm_matrix_new_data_malloc (d, _NCM_MATRIX_TEST_NROW, _NCM_MATRIX_TEST_NCOL);
   test_ncm_matrix_new_sanity (mm);
 
-  g_assert ((NCM_MATRIX_NROWS (mm) * NCM_MATRIX_NCOLS (mm)) == (_NCM_MATRIX_TEST_NROW * _NCM_MATRIX_TEST_NCOL));
+  g_assert_cmpuint ((ncm_matrix_nrows (mm) * ncm_matrix_ncols (mm)), ==, (_NCM_MATRIX_TEST_NROW * _NCM_MATRIX_TEST_NCOL));
 
   ncm_matrix_free (mm);
   if (g_test_trap_fork (0, G_TEST_TRAP_SILENCE_STDOUT | G_TEST_TRAP_SILENCE_STDERR))
@@ -324,7 +324,7 @@ test_ncm_matrix_new_data_malloc (void)
 
   if (g_test_trap_fork (0, G_TEST_TRAP_SILENCE_STDOUT | G_TEST_TRAP_SILENCE_STDERR))
   {
-    g_assert (NCM_MATRIX_DATA (mm) == NULL);
+    g_assert (ncm_matrix_data (mm) == NULL);
     exit (0);
   }
   g_test_trap_assert_passed ();
@@ -338,7 +338,7 @@ test_ncm_matrix_new_data_static (void)
   mm = ncm_matrix_new_data_static (d, _NCM_MATRIX_TEST_NROW, _NCM_MATRIX_TEST_NCOL);
   test_ncm_matrix_new_sanity (mm);
 
-  g_assert ((NCM_MATRIX_NROWS (mm) * NCM_MATRIX_NCOLS (mm)) == (_NCM_MATRIX_TEST_NROW * _NCM_MATRIX_TEST_NCOL));
+  g_assert ((ncm_matrix_nrows (mm) * ncm_matrix_ncols (mm)) == (_NCM_MATRIX_TEST_NROW * _NCM_MATRIX_TEST_NCOL));
 
   if (g_test_trap_fork (0, G_TEST_TRAP_SILENCE_STDOUT | G_TEST_TRAP_SILENCE_STDERR))
   {
@@ -357,7 +357,7 @@ test_ncm_matrix_new_data_static_tda (void)
   mm = ncm_matrix_new_data_static_tda (d, _NCM_MATRIX_TEST_NROW, _NCM_MATRIX_TEST_NCOL, _NCM_MATRIX_TEST_NCOL * 2);
   test_ncm_matrix_new_sanity (mm);
 
-  g_assert ((NCM_MATRIX_NROWS (mm) * NCM_MATRIX_NCOLS (mm)) == (_NCM_MATRIX_TEST_NROW * _NCM_MATRIX_TEST_NCOL));
+  g_assert ((ncm_matrix_nrows (mm) * ncm_matrix_ncols (mm)) == (_NCM_MATRIX_TEST_NROW * _NCM_MATRIX_TEST_NCOL));
 
   for (i = 0; i < 10 * _NCM_MATRIX_TEST_NROW; i++)
   {
@@ -371,7 +371,7 @@ test_ncm_matrix_new_data_static_tda (void)
 
   {
     NcmVector *v = ncm_matrix_get_col (mm, _NCM_MATRIX_TEST_NCOL - 1);
-    g_assert (ncm_vector_len (v) == NCM_MATRIX_NROWS (mm));
+    g_assert (ncm_vector_len (v) == ncm_matrix_nrows (mm));
     for (i = 0; i < _NCM_MATRIX_TEST_NROW; i++)
     {
       ncm_assert_cmpdouble (ncm_vector_get (v, i), ==, ncm_matrix_get (mm, i, _NCM_MATRIX_TEST_NCOL - 1));
@@ -381,7 +381,7 @@ test_ncm_matrix_new_data_static_tda (void)
 
   {
     NcmVector *v = ncm_matrix_get_row (mm, _NCM_MATRIX_TEST_NROW - 1);
-    g_assert (ncm_vector_len (v) == NCM_MATRIX_NCOLS (mm));
+    g_assert (ncm_vector_len (v) == ncm_matrix_ncols (mm));
     for (i = 0; i < _NCM_MATRIX_TEST_NCOL; i++)
       g_assert (ncm_vector_get (v, i) == ncm_matrix_get (mm, _NCM_MATRIX_TEST_NROW - 1, i));
     ncm_vector_free (v);
@@ -401,7 +401,7 @@ test_ncm_matrix_submatrix (void)
   NcmMatrix *sm = ncm_matrix_get_submatrix (m, 5, 3, _NCM_MATRIX_TEST_NROW - 5, _NCM_MATRIX_TEST_NCOL - 3);
   guint ntests = 20 * _NCM_MATRIX_TEST_NROW;
 
-  g_assert (NCM_MATRIX_NROWS (sm) == (_NCM_MATRIX_TEST_NROW - 5) && NCM_MATRIX_NCOLS (sm) == (_NCM_MATRIX_TEST_NCOL - 3));
+  g_assert (ncm_matrix_nrows (sm) == (_NCM_MATRIX_TEST_NROW - 5) && ncm_matrix_ncols (sm) == (_NCM_MATRIX_TEST_NCOL - 3));
 
   while (ntests--)
   {
@@ -432,13 +432,13 @@ test_ncm_matrix_add_mul (void)
   NcmMatrix *sm = ncm_matrix_get_submatrix (m, 5, 3, _NCM_MATRIX_TEST_NROW - 5, _NCM_MATRIX_TEST_NCOL - 3);
   guint i, j;
 
-  g_assert (NCM_MATRIX_NROWS (sm) == (_NCM_MATRIX_TEST_NROW - 5) && NCM_MATRIX_NCOLS (sm) == (_NCM_MATRIX_TEST_NCOL - 3));
+  g_assert (ncm_matrix_nrows (sm) == (_NCM_MATRIX_TEST_NROW - 5) && ncm_matrix_ncols (sm) == (_NCM_MATRIX_TEST_NCOL - 3));
 
   ncm_matrix_set_zero (sm);
 
-  for (i = 0; i < NCM_MATRIX_NROWS (sm); i++)
+  for (i = 0; i < ncm_matrix_nrows (sm); i++)
   {
-    for (j = 0; j < NCM_MATRIX_NCOLS (sm); j++)
+    for (j = 0; j < ncm_matrix_ncols (sm); j++)
     {
       ncm_matrix_set (sm, i, j, g_test_rand_double ());
       ncm_assert_cmpdouble (ncm_matrix_get (sm, i, j), ==, ncm_matrix_get (m, i + 5, j + 3));
@@ -450,9 +450,9 @@ test_ncm_matrix_add_mul (void)
     NcmMatrix *res = ncm_matrix_dup (sm);
     const gdouble alpha = g_test_rand_double ();
 
-    for (i = 0; i < NCM_MATRIX_NROWS (osm); i++)
+    for (i = 0; i < ncm_matrix_nrows (osm); i++)
     {
-      for (j = 0; j < NCM_MATRIX_NCOLS (osm); j++)
+      for (j = 0; j < ncm_matrix_ncols (osm); j++)
       {
         ncm_matrix_set (osm, i, j, g_test_rand_double ());
       }
@@ -460,9 +460,9 @@ test_ncm_matrix_add_mul (void)
     
     ncm_matrix_add_mul (res, alpha, osm);
 
-    for (i = 0; i < NCM_MATRIX_NROWS (osm); i++)
+    for (i = 0; i < ncm_matrix_nrows (osm); i++)
     {
-      for (j = 0; j < NCM_MATRIX_NCOLS (osm); j++)
+      for (j = 0; j < ncm_matrix_ncols (osm); j++)
       {
         ncm_assert_cmpdouble (ncm_matrix_get (res, i, j), ==, ncm_matrix_get (sm, i, j) + alpha * ncm_matrix_get (osm, i, j));
       }
@@ -472,9 +472,9 @@ test_ncm_matrix_add_mul (void)
     
     ncm_matrix_add_mul (res, alpha, sm);
 
-    for (i = 0; i < NCM_MATRIX_NROWS (sm); i++)
+    for (i = 0; i < ncm_matrix_nrows (sm); i++)
     {
-      for (j = 0; j < NCM_MATRIX_NCOLS (sm); j++)
+      for (j = 0; j < ncm_matrix_ncols (sm); j++)
       {
         ncm_assert_cmpdouble (ncm_matrix_get (res, i, j), ==, ncm_matrix_get (osm, i, j) + alpha * ncm_matrix_get (sm, i, j));
       }
@@ -511,15 +511,15 @@ void
 test_ncm_matrix_serialization (void)
 {
   gchar *mser = ncm_serialize_global_to_string (G_OBJECT (m), TRUE);
-  NcmMatrix *m_dup = NCM_MATRIX (ncm_serialize_global_create_from_string (mser));
+  NcmMatrix *m_dup = NCM_MATRIX (ncm_serialize_global_from_string (mser));
   gint i, j;
   g_free (mser);
-  g_assert_cmpint (NCM_MATRIX_NROWS (m), ==, NCM_MATRIX_NROWS (m_dup));
-  g_assert_cmpint (NCM_MATRIX_NCOLS (m), ==, NCM_MATRIX_NCOLS (m_dup));
+  g_assert_cmpint (ncm_matrix_nrows (m), ==, ncm_matrix_nrows (m_dup));
+  g_assert_cmpint (ncm_matrix_ncols (m), ==, ncm_matrix_ncols (m_dup));
 
-  for (i = 0; i < NCM_MATRIX_NROWS (m); i++)
+  for (i = 0; i < ncm_matrix_nrows (m); i++)
   {
-    for (j = 0; j < NCM_MATRIX_NCOLS (m); j++)
+    for (j = 0; j < ncm_matrix_ncols (m); j++)
     {
       ncm_assert_cmpdouble (ncm_matrix_get (m, i, j), ==, ncm_matrix_get (m_dup, i, j));
     }

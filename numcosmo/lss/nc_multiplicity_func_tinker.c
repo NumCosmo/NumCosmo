@@ -85,6 +85,8 @@ _nc_multiplicity_func_tinker_eval (NcMultiplicityFunc *mulf, NcHICosmo *model, g
   const gdouble b = mulf_tinker->b0 * pow(1.0 + z, -alpha);
   const gdouble f_Tinker = A * (pow(sigma/b, -a) + 1.0) * exp(-(mulf_tinker->c) / (sigma * sigma));
 
+  NCM_UNUSED (model);
+  
   //	printf ("%.15g %.15g %.15g %.15g | %.15g %.15g %.15g %.15g\n", mulf_tinker->A0, mulf_tinker->a0, mulf_tinker->b0, mulf_tinker->c,
   //	        A, a, b, mulf_tinker->c);
   return f_Tinker;

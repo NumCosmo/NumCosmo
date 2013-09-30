@@ -32,6 +32,13 @@
  * 
  */
 
+enum
+{
+  PROP_0,
+  PROP_NCOUNT,
+  PROP_SIZE,
+};
+
 #ifdef HAVE_CONFIG_H
 #  include "config.h"
 #endif /* HAVE_CONFIG_H */
@@ -39,7 +46,7 @@
 
 #include "nc_data_cluster_poisson.h"
 #include "nc_data_cluster_ncount.h"
-#include "math/util.h"
+#include "math/ncm_util.h"
 
 #include <gsl/gsl_randist.h>
 
@@ -52,13 +59,47 @@ nc_data_cluster_poisson_init (NcDataClusterPoisson *cluster_poisson)
 }
 
 static void
+nc_data_cluster_poisson_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
+{
+  NcDataClusterPoisson *poisson = NC_DATA_CLUSTER_POISSON (object);
+  g_return_if_fail (NC_IS_DATA_CLUSTER_POISSON (object));
+
+  switch (prop_id)
+  {
+    case PROP_NCOUNT:
+      nc_data_cluster_ncount_clear (&poisson->ncount);
+      poisson->ncount = g_value_dup_object (value);
+      break;
+    default:
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
+      break;
+  }
+}
+
+static void
+nc_data_cluster_poisson_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
+{
+  NcDataClusterPoisson *poisson = NC_DATA_CLUSTER_POISSON (object);
+
+  g_return_if_fail (NC_IS_DATA_CLUSTER_POISSON (object));
+
+  switch (prop_id)
+  {
+    case PROP_NCOUNT:
+      g_value_set_object (value, poisson->ncount);
+      break;
+    default:
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
+      break;
+  }
+}
+
+static void
 nc_data_cluster_poisson_dispose (GObject *object)
 {
   NcDataClusterPoisson *cluster_poisson = NC_DATA_CLUSTER_POISSON (object);
-  NcmData *data = NCM_DATA (cluster_poisson->ncount);
   
-  ncm_data_clear (&data);
-  cluster_poisson->ncount = NULL;
+  nc_data_cluster_ncount_clear (&cluster_poisson->ncount);
   
   /* Chain up : end */
   G_OBJECT_CLASS (nc_data_cluster_poisson_parent_class)->dispose (object);
@@ -81,9 +122,19 @@ nc_data_cluster_poisson_class_init (NcDataClusterPoissonClass *klass)
   GObjectClass* object_class = G_OBJECT_CLASS (klass);
   NcmDataClass *data_class   = NCM_DATA_CLASS (klass);
 
-  object_class->dispose  = nc_data_cluster_poisson_dispose;
-  object_class->finalize = nc_data_cluster_poisson_finalize;
+  object_class->set_property = &nc_data_cluster_poisson_set_property;
+  object_class->get_property = &nc_data_cluster_poisson_get_property;
+  object_class->dispose      = &nc_data_cluster_poisson_dispose;
+  object_class->finalize     = &nc_data_cluster_poisson_finalize;
 
+  g_object_class_install_property (object_class,
+                                   PROP_NCOUNT,
+                                   g_param_spec_object ("cluster-ncount",
+                                                        NULL,
+                                                        "Cluster number count",
+                                                        NC_TYPE_DATA_CLUSTER_NCOUNT,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  
   data_class->prepare    = &_nc_data_cluster_poisson_prepare;
   data_class->resample   = &_nc_data_cluster_poisson_resample;
 }
@@ -102,7 +153,7 @@ _nc_data_cluster_poisson_resample (NcmData *data, NcmMSet *mset)
   NcDataClusterNCount *ncount = cpoisson->ncount;
   NcClusterAbundance *cad = ncount->cad;
   NcmDataPoisson *poisson = NCM_DATA_POISSON (cpoisson);
-  gint i;
+  guint i;
 
   ncm_data_resample (NCM_DATA (cpoisson->ncount), mset);
   

@@ -39,7 +39,7 @@ LINEAR_NAME_SUFFIX (init) (NcLinearPert *pert)
   const gdouble keta3 = gsl_pow_3 (keta);
   const gdouble k_taudot = pert->pws->k / taudot;
   gdouble theta1;
-  gint i;
+  guint i;
 
   pert->pws->lambda_int = pert->lambdai;
   pert->pws->lambda     = pert->lambdai;
@@ -88,11 +88,11 @@ LINEAR_NAME_SUFFIX (init) (NcLinearPert *pert)
 
 #ifdef SIMUL_LOS_INT
   {
-    gint last_l = 2;
+    guint last_l = 2;
     gdouble thetal = _NC_THETA2;
     for (i = 0; i < pert->los_table->len; i++)
     {
-      gint l = g_array_index(pert->los_table, gint, i);
+      guint l = g_array_index(pert->los_table, guint, i);
       if (l == 0)
         LINEAR_VEC_COMP(LINEAR_VEC_LOS_THETA(pert), i) = _NC_THETA0;
       else if (l == 1)
@@ -101,7 +101,7 @@ LINEAR_NAME_SUFFIX (init) (NcLinearPert *pert)
         LINEAR_VEC_COMP(LINEAR_VEC_LOS_THETA(pert), i) = _NC_THETA2;
       else
       {
-        gint j;
+        guint j;
         for (j = last_l + 1; j <= l; j++)
         {
           const gdouble f1 = j * 1.0 / (2.0 * j + 1.0);
@@ -165,7 +165,7 @@ LINEAR_NAME_SUFFIX (end_tight_coupling) (NcLinearPert *pert)
 #endif
 
   {
-    gint i;
+    guint i;
     pert->reltol = 1e-4;
     LINEAR_VECTOR_SET_ALL (LINEAR_VEC_ABSTOL(pert), 1e-13, pert->sys_size);
     for (i = 0; i <= NC_PERT_THETA_P2; i++)
@@ -410,7 +410,7 @@ static LINEAR_STEP_RET
 LINEAR_NAME_SUFFIX (step) (LINEAR_STEP_PARAMS)
 {
   NcLinearPert *pert = NC_LINEAR_PERTURBATIONS (user_data);
-  const gint lmax = pert->lmax;
+  const guint lmax = pert->lmax;
   const gdouble Omega_r = nc_hicosmo_Omega_r (pert->cosmo);
   const gdouble Omega_b = nc_hicosmo_Omega_b (pert->cosmo);
   const gdouble Omega_c = nc_hicosmo_Omega_c (pert->cosmo);
@@ -434,7 +434,7 @@ LINEAR_NAME_SUFFIX (step) (LINEAR_STEP_PARAMS)
   const gdouble PI = _NC_THETA2 + _NC_THETA_P0 + _NC_THETA_P2;
   const gdouble dErm2_dx = (3.0 * Omega_m * x2 + 4.0 * Omega_r * x3);
   const gdouble taubar = nc_recomb_dtau_dlambda (pert->recomb, pert->cosmo, lambda);
-  gint i;
+  guint i;
 
   if (fabs(_NC_V * _NC_TIGHT_COUPLING_END) > kx_3E * _NC_C0)
     pert->pws->tight_coupling_end = TRUE;
@@ -602,7 +602,7 @@ gint
 LINEAR_NAME_SUFFIX (band_J) (LINEAR_JAC_PARAMS)
 {
   NcLinearPert *pert = (NcLinearPert *)user_data;
-  const gint lmax = pert->lmax;
+  const guint lmax = pert->lmax;
   const gdouble Omega_r = nc_hicosmo_Omega_r (pert->cosmo);
   const gdouble Omega_b = nc_hicosmo_Omega_b (pert->cosmo);
   const gdouble Omega_c = nc_hicosmo_Omega_c (pert->cosmo);
@@ -625,7 +625,9 @@ LINEAR_NAME_SUFFIX (band_J) (LINEAR_JAC_PARAMS)
   const gdouble k2x2_3E2 = x * k2x_3E2;
   const gdouble dErm2_dx = (3.0 * Omega_m * x2 + 4.0 * Omega_r * x3);
   const gdouble taubar = nc_recomb_dtau_dlambda (pert->recomb, pert->cosmo, lambda);
-  gint i;
+  guint i;
+
+  LINEAR_JAC_UNUSED;
 
   if (pert->pws->tight_coupling)
   {

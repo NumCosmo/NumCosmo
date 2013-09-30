@@ -85,6 +85,8 @@ ncm_ode_spline_new (NcmSpline *s, NcmOdeSplineDydx dydx, gpointer userdata, gdou
 {
   NcmOdeSpline *os = g_slice_new (NcmOdeSpline);
   N_Vector y = N_VNew_Serial (1);
+
+  NCM_UNUSED (userdata);
   os->y = y;
   os->dydx = dydx;
   os->cvode = CVodeCreate(CV_ADAMS, CV_FUNCTIONAL);

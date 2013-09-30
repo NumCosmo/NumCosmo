@@ -600,7 +600,7 @@ nc_mass_function_set_eval_limits (NcMassFunction *mfp, NcHICosmo *model, gdouble
 void
 nc_mass_function_prepare (NcMassFunction *mfp, NcHICosmo *model)
 {
-  gint i, j;
+  guint i, j;
   if (mfp->d2NdzdlnM == NULL)
   {
     g_error ("nc_mass_function_prepare: called without a previous call of nc_mass_function_set_eval_limits");

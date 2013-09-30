@@ -37,6 +37,7 @@
 
 #include "math/ncm_func_eval.h"
 #include "math/ncm_cfg.h"
+#include "math/ncm_util.h"
 #include <stdio.h>
 
 typedef struct _NcmFunctionEvalCtrl
@@ -66,7 +67,7 @@ func (gpointer data, gpointer empty)
 {
   NcmLoopFuncEval *arg = (NcmLoopFuncEval *)data;
   NcmFunctionEvalCtrl *ctrl = arg->ctrl;
-
+  NCM_UNUSED (empty);
   arg->lfunc (arg->i, arg->f, arg->data);
   g_slice_free (NcmLoopFuncEval, arg);
 
@@ -110,7 +111,9 @@ ncm_func_eval_get_pool ()
  * ncm_func_eval_set_max_threads:
  * @mt: new max threads to be used in the pool, -1 means unlimited
  *
- * Set the new maximun number of threads to be used by the pool
+ * Set the new maximun number of threads to be used by the pool. Note that this
+ * function is global changing this will affect every place which uses these
+ * functions.
  *
  */
 void
@@ -124,7 +127,7 @@ ncm_func_eval_set_max_threads (gint mt)
 /**
  * ncm_func_eval_threaded_loop:
  * @lfunc: (scope notified): #NcmLoopFunc to be evaluated in threads
-   * @i: initial index
+ * @i: initial index
  * @f: final index
  * @data: pointer to be passed to @fl
  *
@@ -135,7 +138,12 @@ ncm_func_eval_set_max_threads (gint mt)
 void
 ncm_func_eval_threaded_loop (NcmLoopFunc lfunc, glong i, glong f, gpointer data)
 {
-  NcmFunctionEvalCtrl ctrl = {0, NULL, NULL};
+  NcmFunctionEvalCtrl ctrl = {0, NULL, NULL, 
+#if !((GLIB_MAJOR_VERSION == 2) && (GLIB_MINOR_VERSION < 32))
+    {NULL},
+    {NULL},
+#endif
+  };
   gint nthreads, delta, res;
 
   ncm_func_eval_get_pool ();

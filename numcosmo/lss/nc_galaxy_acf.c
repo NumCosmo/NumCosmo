@@ -201,7 +201,7 @@ nc_galaxy_acf_prepare_psi (NcGalaxyAcf *acf, NcHICosmo *model, guint l)
 static void
 nc_galaxy_acf_init (NcGalaxyAcf *nc_galaxy_acf)
 {
-
+  NCM_UNUSED (nc_galaxy_acf);
 }
 
 static void

@@ -1,5 +1,5 @@
 /***************************************************************************
- *            util.c
+ *            ncm_util.c
  *
  *  Tue Jun  5 00:21:11 2007
  *  Copyright  2007  Sandro Dias Pinto Vitenti
@@ -23,11 +23,12 @@
  */
 
 /**
- * SECTION:util
+ * SECTION:ncm_util
  * @title: Miscellaneous Utilities
- * @short_description: FIXME
+ * @short_description: Miscellaneous Utilities
  *
- * FIXME
+ * Miscellaneous utility functions, macros and objects.
+ * 
  */
 
 #ifdef HAVE_CONFIG_H
@@ -35,7 +36,7 @@
 #endif /* HAVE_CONFIG_H */
 #include "build_cfg.h"
 
-#include "math/util.h"
+#include "math/ncm_util.h"
 #include "math/memory_pool.h"
 
 #include <gsl/gsl_sf_legendre.h>
@@ -76,21 +77,6 @@ ncm_random_seed ()
   }
 
   return seed;
-}
-
-/**
- * ncm_finite_diff_calc_J:
- * @model: FIXME
- * @data: FIXME
- * @jac: FIXME
- *
- * FIXME
- *
- */
-void
-ncm_finite_diff_calc_J (NcmModel *model, NcmData *data, NcmMatrix *jac)
-{
-  g_assert_not_reached ();
 }
 
 /**
@@ -153,92 +139,6 @@ ncm_smoothd (gdouble *in, size_t N, size_t points, size_t pass)
 }
 
 /**
- * ncm_get_uniform_sample:
- * @mset: FIXME
- * @func: FIXME
- * @x0: FIXME
- * @x1: FIXME
- * @sample: FIXME
- *
- * FIXME
- *
- * Returns: FIXME
- */
-gboolean
-ncm_get_uniform_sample (NcmMSet *mset, NcmMSetFunc *func, gdouble x0, gdouble x1, NcmVector *sample)
-{
-  guint i;
-  gdouble n = ncm_vector_len (sample);
-  gdouble step = (x1 - x0) / (n - 1.0);
-  for (i = 0; i < ncm_vector_len (sample); i++)
-  {
-    gdouble x = x0 + step * i;
-    ncm_vector_set (sample, i, ncm_mset_func_eval1 (func, mset, x));
-  }
-  return TRUE;
-}
-
-#ifdef NUMCOSMO_HAVE_FFTW3
-/**
- * ncm_get_smoothed_uniform_sample:
- * @mset: FIXME
- * @func: FIXME
- * @x0: FIXME
- * @x1: FIXME
- * @delta: FIXME
- * @sample: FIXME
- *
- * FIXME
- *
- * Returns: FIXME
- */
-gboolean
-ncm_get_smoothed_uniform_sample (NcmMSet *mset, NcmMSetFunc *func, gdouble x0, gdouble x1, gdouble delta, NcmVector *sample)
-{
-  guint n = ncm_vector_len (sample);
-  guint i;
-  gdouble step = (x1 - x0) / (n - 1.0);
-  gsl_vector *window = gsl_vector_alloc (n);
-  gsl_vector_complex *fft_win = gsl_vector_complex_alloc (n);
-  gsl_vector_complex *fft_sample = gsl_vector_complex_alloc (n);
-  fftw_plan plan = fftw_plan_dft_r2c_1d (n, window->data, (fftw_complex *)fft_win->data, FFTW_MEASURE);
-  fftw_plan bplan = fftw_plan_dft_c2r_1d (n, (fftw_complex *)fft_win->data, window->data, FFTW_MEASURE);
-
-  ncm_get_uniform_sample (mset, func, x0, x1, sample);
-
-  gsl_vector_memcpy (window, ncm_vector_gsl (sample));
-  fftw_execute(plan);
-  gsl_vector_complex_memcpy (fft_sample, fft_win);
-
-  for (i = 0; i < n; i++)
-  {
-    gdouble x = step * i - (x1 - x0) / 2.0;
-    gsl_vector_set (window, i, gsl_ran_gaussian_pdf (x, delta));
-  }
-  fftw_execute(plan);
-
-  for (i = 0; i < n; i++)
-  {
-    gsl_vector_complex_set (fft_win, i,
-                            gsl_complex_mul (gsl_vector_complex_get (fft_win, i),
-                                             gsl_vector_complex_get (fft_sample, i)));
-  }
-
-  //  gsl_vector_complex_memcpy (fft_win, fft_sample);
-
-  fftw_execute(bplan);
-
-  gsl_vector_scale (window, 1.0 / gsl_pow_2 (n));
-
-  memcpy (ncm_vector_gsl (sample)->data, &window->data[n/2], n/2*sizeof(gdouble));
-  memcpy (&ncm_vector_gsl (sample)->data[n/2], window->data, n/2*sizeof(gdouble));
-  //  gsl_vector_memcpy (sample, window);
-
-  return TRUE;
-}
-#endif /* NUMCOSMO_HAVE_FFTW3 */
-
-/**
  * ncm_topology_comoving_a0_lss:
  * @n: FIXME
  * @alpha: FIXME
@@ -279,10 +179,11 @@ typedef struct
 } NcmCoarseDbl;
 
 static gpointer
-_besselj_bs_alloc (void)
+_besselj_bs_alloc (gpointer userdata)
 {
   NcmCoarseDbl *cdbl = g_slice_new (NcmCoarseDbl);
 
+  NCM_UNUSED (userdata);
   mpz_inits (cdbl->him1, cdbl->him2, cdbl->kim1, cdbl->kim2, cdbl->hi, cdbl->ki, cdbl->a, NULL);
 
   return cdbl;
@@ -298,7 +199,6 @@ _besselj_bs_free (gpointer p)
   g_slice_free (NcmCoarseDbl, cdbl);
 }
 
-
 NcmCoarseDbl **
 _ncm_coarse_dbl_get_bs ()
 {
@@ -307,7 +207,7 @@ _ncm_coarse_dbl_get_bs ()
 
   _NCM_MUTEX_LOCK (&create_lock);
   if (mp == NULL)
-    mp = ncm_memory_pool_new (_besselj_bs_alloc, _besselj_bs_free);
+    mp = ncm_memory_pool_new (_besselj_bs_alloc, NULL, _besselj_bs_free);
   _NCM_MUTEX_UNLOCK (&create_lock);
 
   return ncm_memory_pool_get (mp);
@@ -680,11 +580,11 @@ ncm_sum (gdouble *d, gulong n)
   gdouble *part = g_slice_alloc (sizeof(gdouble) * n);
   gdouble res = 0.0;
   guint part_size = 0;
-  gint i = 0;
+  guint i = 0;
 
   for (i = 0; i < n; i++)
   {
-    gint j, k = 0;
+    guint j, k = 0;
     gdouble x = d[i];
     for (j = 0; j < part_size; j++)
     {
@@ -969,19 +869,4 @@ _ncm_assertion_message_cmpdouble (const gchar *domain, const gchar *file, gint l
   gchar *s = g_strdup_printf ("assertion failed (%s): (%.17g %s %.17g)", expr, arg1, cmp, arg2);
   g_assertion_message (domain, file, line, func, s);
   g_free (s);
-}
-
-#define NC_USERDEF_F(numb) \
-gdouble \
-ncm_userdef##numb##_f (NcmModel *model, gdouble z) \
-{ \
-return NC_FUNCTION_VAL (cp->model->userdef##numb, cp, z); \
-}
-
-#define NC_USERDEF_DF(numb) \
-gboolean \
-ncm_userdef##numb##_df (NcmModel *model, NcmFitParams *pt, gdouble z, gsl_vector *grad) \
-{ \
-NC_FUNCTION_GRAD (cp->model->userdef##numb, cp, pt, z, grad); \
-return TRUE; \
 }

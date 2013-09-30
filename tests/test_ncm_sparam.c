@@ -141,18 +141,12 @@ test_ncm_sparam_new (TestNcmSparam *test, gconstpointer pdata)
   ncm_assert_cmpdouble (p->abstol, ==, abstol);
 }
 
-
 void
 test_ncm_sparam_free (TestNcmSparam *test, gconstpointer pdata)
 {
   NcmSParam *p = test->p;
   ncm_sparam_free (p);
-  if (g_test_trap_fork (0, G_TEST_TRAP_SILENCE_STDOUT | G_TEST_TRAP_SILENCE_STDERR))
-  {
-    ncm_sparam_free (p);
-    exit (0);
-  }
-  g_test_trap_assert_failed ();
+  NCM_TEST_FAIL (ncm_sparam_free (p));
 }
 
 void
@@ -295,28 +289,16 @@ void
 test_ncm_sparam_invalid_lower_bound (TestNcmSparam *test, gconstpointer pdata)
 {
   NcmSParam *p = test->p;
-
   const gdouble ub = ncm_sparam_get_upper_bound (p);
-  if (g_test_trap_fork (0, G_TEST_TRAP_SILENCE_STDOUT | G_TEST_TRAP_SILENCE_STDERR))
-  {
-    ncm_sparam_set_lower_bound (p, (ub > 0) ? (ub * 1.1) : (ub * 0.9));
-    exit (0);
-  }
-  g_test_trap_assert_failed ();
+  NCM_TEST_FAIL (ncm_sparam_set_lower_bound (p, (ub > 0) ? (ub * 1.1) : (ub * 0.9)));
 }
 
 void
 test_ncm_sparam_invalid_upper_bound (TestNcmSparam *test, gconstpointer pdata)
 {
   NcmSParam *p = test->p;
-
   const gdouble lb = ncm_sparam_get_lower_bound (p);
-  if (g_test_trap_fork (0, G_TEST_TRAP_SILENCE_STDOUT | G_TEST_TRAP_SILENCE_STDERR))
-  {
-    ncm_sparam_set_upper_bound (p, (lb > 0) ? (lb * 0.9) : (lb * 1.1));
-    exit (0);
-  }
-  g_test_trap_assert_failed ();
+  NCM_TEST_FAIL (ncm_sparam_set_upper_bound (p, (lb > 0) ? (lb * 0.9) : (lb * 1.1)));
 }
 
 void

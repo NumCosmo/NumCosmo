@@ -42,10 +42,10 @@
 #include "math/ncm_spline_cubic_notaknot.h"
 #include "math/memory_pool.h"
 
-gint _itheta_table[3]   = {NC_PERT_THETA0, NC_PERT_THETA1, NC_PERT_THETA2};
-gint _itheta_p_table[3] = {NC_PERT_THETA_P0, NC_PERT_THETA_P1, NC_PERT_THETA_P2};
-gint _nc_default_los_init[] = {2, 3, 4, 5, 6, 7, 8, 9, 10, 12, 14, 16, 18, 20, 0};
-gint _nc_default_los_step[] = {5, 50, 10, 100, 20, 200, 25, 300, 50, 0};
+guint _itheta_table[3]   = {NC_PERT_THETA0, NC_PERT_THETA1, NC_PERT_THETA2};
+guint _itheta_p_table[3] = {NC_PERT_THETA_P0, NC_PERT_THETA_P1, NC_PERT_THETA_P2};
+guint _nc_default_los_init[] = {2, 3, 4, 5, 6, 7, 8, 9, 10, 12, 14, 16, 18, 20, 0};
+guint _nc_default_los_step[] = {5, 50, 10, 100, 20, 200, 25, 300, 50, 0};
 
 /**
  * nc_pert_linear_create_los_table: (skip)
@@ -58,10 +58,10 @@ gint _nc_default_los_step[] = {5, 50, 10, 100, 20, 200, 25, 300, 50, 0};
  * Returns: FIXME
 */
 GArray *
-nc_pert_linear_create_los_table (gint lmax_los, gint *los_ini, gint *los_step)
+nc_pert_linear_create_los_table (guint lmax_los, guint *los_ini, guint *los_step)
 {
-  GArray *los_table = g_array_sized_new (FALSE, FALSE, sizeof(gint), 1000);
-  gint last_i, i = 0;
+  GArray *los_table = g_array_sized_new (FALSE, FALSE, sizeof (guint), 1000);
+  guint last_i, i = 0;
   while (los_ini[i] != 0) i++;
   last_i = los_ini[i - 1];
   /* lmax_los_size = i; */
@@ -72,8 +72,8 @@ nc_pert_linear_create_los_table (gint lmax_los, gint *los_ini, gint *los_step)
 
   if (last_i < lmax_los)
   {
-    gint j;
-	i = 0;
+    guint j;
+    i = 0;
     while (last_i < lmax_los)
     {
       if (los_step[i + 1] == 0)
@@ -85,7 +85,7 @@ nc_pert_linear_create_los_table (gint lmax_los, gint *los_ini, gint *los_step)
       }
       else
       {
-        gint stest = GSL_MIN(los_step[i + 1], lmax_los);
+        guint stest = GSL_MIN(los_step[i + 1], lmax_los);
         /* lmax_los_size += (stest - last_i) / los_step[i]; */
         for (j = last_i + los_step[i]; j <= stest; j += los_step[i])
           g_array_append_val (los_table, j);
@@ -189,6 +189,7 @@ nc_pert_linear_new (NcHICosmo *cosmo, NcRecomb *recomb, guint lmax, gdouble tc_r
 void
 nc_pert_linear_free (NcLinearPert *pert)
 {
+  NCM_UNUSED (pert);
   g_assert_not_reached ();
 }
 
@@ -215,6 +216,7 @@ nc_pert_linear_clear (NcLinearPert **pert)
 void 
 nc_pert_linear_splines_free (NcLinearPertSplines *pspline)
 {
+  NCM_UNUSED (pspline);
   g_assert_not_reached ();
 }
 
@@ -380,7 +382,7 @@ nc_pert_transfer_function_new (NcLinearPert *pert, gdouble k0, gdouble k1, gulon
 void
 nc_pert_transfer_function_prepare (NcLinearPertTF *perttf)
 {
-  gint i;
+  guint i;
 
   for (i = 0; i < perttf->np; i++)
   {
@@ -455,6 +457,9 @@ _nc_pert_linear_prepare_k_grid (NcLinearPert *pert, gdouble *k_grid, glong ni, g
 {
   const gdouble log_k0 = log(k0);
   gint i;
+
+  NCM_UNUSED (pert);
+  
   for (i = 0; i < ni; i++)
     k_grid[i] = k0 * exp ((M_LN10 - log_k0) / (ni - 1.0) * i);
   for (i = 0; i < nt; i++)
@@ -491,7 +496,7 @@ nc_pert_linear_splines_new (NcLinearPert *pert, NcLinearPertSplineTypes types, g
 
 	for (i = 0; i < 3; i++)
   {
-    gint j;
+    guint j;
 
 		pspline->Sg_data[i] = ncm_vector_new (n_deta);
 
@@ -536,12 +541,12 @@ void
 nc_pert_linear_prepare_splines (NcLinearPertSplines *pspline)
 {
   NcLinearPert *pert = pspline->pert;
-  gint i;
+  guint i;
   printf ("# Evoling [%lu] modes in: [%.5e %.5e]\n#\n", pspline->n_evol, pspline->k0, pspline->k1);
 
   for (i = 0; i < pspline->n_evol; i++)
   {
-    gint j;
+    guint j;
     pert->pws->k = ncm_vector_get (pspline->ka, i);
     pert->solver->init (pert);
     pert->solver->evol (pert, pert->lambda_opt_cutoff);
@@ -601,7 +606,7 @@ nc_pert_linear_prepare_splines (NcLinearPertSplines *pspline)
 gboolean
 nc_pert_linear_spline_set_source_at (NcLinearPertSplines *pspline, gdouble k)
 {
-  gint i;
+  guint i;
   //printf ("# Setting source at %.15g [%.15g %.15g]\n", k, pspline->k0, pspline->k1);fflush(stdout);
   g_assert (pspline->types & NC_LINEAR_PERTURBATIONS_SPLINE_SOURCES);
   g_assert ((k/pspline->k0 - 1.0 >= -1e-13) && (k/pspline->k1 - 1.0 <= 1e-13));
@@ -634,10 +639,12 @@ nc_pert_linear_spline_set_source_at (NcLinearPertSplines *pspline, gdouble k)
 gboolean
 nc_pert_linear_calc_Nc_spline (NcLinearPertSplines *pspline, NcmSpline *pw_spline, GArray *los_table, gulong n_interp)
 {
-  gint i;
+  guint i;
   g_assert (pspline->types & NC_LINEAR_PERTURBATIONS_SPLINE_SOURCES);
   NcmVector *la, *Nca;
 
+  NCM_UNUSED (pw_spline);
+  
   if (pspline->Nc == NULL)
   {
     la = ncm_vector_new (200);
@@ -656,9 +663,9 @@ nc_pert_linear_calc_Nc_spline (NcLinearPertSplines *pspline, NcmSpline *pw_splin
 
   for (i = 0; i < los_table->len; i++)
   {
-    gint j;
-    //gint l = g_array_index (los_table, gint, los_table->len - 1 - i);
-    gint l = g_array_index (los_table, gint, i);
+    guint j;
+    //gint l = g_array_index (los_table, guint, los_table->len - 1 - i);
+    gint l = g_array_index (los_table, guint, i);
     gdouble tot_res;
     Nc_k_integrand_data Nc_data = {l, pspline, 0};
     gsl_function F = {&_Nc_k_integrand, &Nc_data};

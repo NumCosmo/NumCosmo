@@ -30,6 +30,7 @@
 #include <glib-object.h>
 #include <numcosmo/build_cfg.h>
 #include <numcosmo/math/ncm_data.h>
+#include <numcosmo/math/ncm_obj_array.h>
 
 G_BEGIN_DECLS
 
@@ -67,7 +68,7 @@ struct _NcmDataset
 {
   /*< private >*/
   GObject parent_instance;
-  GPtrArray *data;
+  NcmObjArray *oa;
   NcmDatasetBStrapType bstype;
   GArray *data_prob;
   GArray *bstrap;
@@ -82,7 +83,7 @@ struct _NcmDatasetClass
 GType ncm_dataset_get_type (void) G_GNUC_CONST;
 
 NcmDataset *ncm_dataset_new (void);
-NcmDataset *ncm_dataset_dup (NcmDataset *dset);
+NcmDataset *ncm_dataset_dup (NcmDataset *dset, NcmSerialize *ser);
 NcmDataset *ncm_dataset_ref (NcmDataset *dset);
 NcmDataset *ncm_dataset_copy (NcmDataset *dset);
 void ncm_dataset_free (NcmDataset *dset);
@@ -97,6 +98,9 @@ void ncm_dataset_append_data (NcmDataset *dset, NcmData *data);
 NcmData *ncm_dataset_get_data (NcmDataset *dset, guint n);
 NcmData *ncm_dataset_peek_data (NcmDataset *dset, guint n);
 guint ncm_dataset_get_ndata (NcmDataset *dset);
+void ncm_dataset_set_data_array (NcmDataset *dset, NcmObjArray *oa);
+NcmObjArray *ncm_dataset_get_data_array (NcmDataset *dset);
+NcmObjArray *ncm_dataset_peek_data_array (NcmDataset *dset);
 
 void ncm_dataset_resample (NcmDataset *dset, NcmMSet *mset);
 void ncm_dataset_bootstrap_set (NcmDataset *dset, NcmDatasetBStrapType bstype);

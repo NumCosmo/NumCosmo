@@ -88,7 +88,7 @@ ncm_fit_state_constructed (GObject *object)
   G_OBJECT_CLASS (ncm_fit_state_parent_class)->constructed (object);
   {
     NcmFitState *fstate = NCM_FIT_STATE (object);
-    ncm_fit_state_reset (fstate);
+    ncm_fit_state_realloc (fstate);
   }
 }
 
@@ -102,15 +102,18 @@ ncm_fit_state_set_property (GObject *object, guint prop_id, const GValue *value,
   {
     case PROP_DATA_LEN:
       fstate->data_len = g_value_get_uint (value);
+      ncm_fit_state_realloc (fstate);
       break;
     case PROP_FPARAM_LEN:
       fstate->fparam_len = g_value_get_uint (value);
+      ncm_fit_state_realloc (fstate);
       break;
     case PROP_DOF:
       fstate->dof = g_value_get_int (value);
       break;
     case PROP_IS_LEAST_SQUARES:
       fstate->is_least_squares = g_value_get_boolean (value);
+      ncm_fit_state_realloc (fstate);
       break;
     case PROP_NITERS:
       fstate->niter = g_value_get_uint (value);
@@ -331,7 +334,6 @@ ncm_fit_state_clear (NcmFitState **fstate)
  * 
  * FIXME
  * 
- * Returns: FIXME
  */
 void 
 ncm_fit_state_set_all (NcmFitState *fstate, guint data_len, guint fparam_len, gint dof, gboolean is_least_squares)
@@ -340,6 +342,8 @@ ncm_fit_state_set_all (NcmFitState *fstate, guint data_len, guint fparam_len, gi
   fstate->fparam_len       = fparam_len;
   fstate->dof              = dof;
   fstate->is_least_squares = is_least_squares;
+  
+  ncm_fit_state_realloc (fstate);
 }
 
 /**
@@ -348,13 +352,10 @@ ncm_fit_state_set_all (NcmFitState *fstate, guint data_len, guint fparam_len, gi
  * 
  * FIXME
  * 
- * Returns: FIXME
  */
 void 
 ncm_fit_state_reset (NcmFitState *fstate)
 {
-  gboolean fparam_diff_len = FALSE;
-
   fstate->niter        = 0;
   fstate->func_eval    = 0;
   fstate->grad_eval    = 0;
@@ -364,6 +365,22 @@ ncm_fit_state_reset (NcmFitState *fstate)
   fstate->m2lnL_curval = 0.0;
 
   fstate->is_best_fit = FALSE;
+}
+
+/**
+ * ncm_fit_state_realloc:
+ * @fstate: FIXME
+ * 
+ * FIXME
+ * 
+ */
+void 
+ncm_fit_state_realloc (NcmFitState *fstate)
+{
+  gboolean fparam_diff_len = FALSE;
+
+  if (fstate->data_len == 0)
+    return;
   
   if (fstate->alloc_fparam_len != fstate->fparam_len)
   {
@@ -388,19 +405,24 @@ ncm_fit_state_reset (NcmFitState *fstate)
   {
     gboolean data_diff_len = fstate->alloc_data_len != fstate->data_len;
     
-    if (fparam_diff_len || data_diff_len)
+    if ((fparam_diff_len || data_diff_len || fstate->ls_J == NULL) && fstate->fparam_len > 0)
     {
       ncm_matrix_clear (&fstate->ls_J);
       fstate->ls_J = ncm_matrix_new (fstate->data_len, fstate->fparam_len);
     }
     
-    if (data_diff_len)
+    if (data_diff_len || fstate->ls_f == NULL)
     {
       ncm_vector_clear (&fstate->ls_f);
       fstate->ls_f = ncm_vector_new (fstate->data_len);
     }
   }
-
+  else
+  {
+    ncm_matrix_clear (&fstate->ls_J);
+    ncm_vector_clear (&fstate->ls_f);
+  }
+  
   fstate->alloc_data_len = fstate->data_len;
 }
 

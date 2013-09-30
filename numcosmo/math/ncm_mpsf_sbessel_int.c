@@ -37,7 +37,7 @@
 
 #include "math/ncm_mpsf_sbessel_int.h"
 #include "math/mpq_tree.h"
-#include "math/util.h"
+#include "math/ncm_util.h"
 #include "math/ncm_cfg.h"
 #include "math/binsplit.h"
 #include "math/ncm_spline_gsl.h"
@@ -797,7 +797,7 @@ _xn_jl_taylor (gint l, gint j, mpq_t q, mpfr_t res, mp_rnd_t rnd)
  *************************************************************************************/
 
 static void
-_xn_jl_finite_x (gint l, gint j, mpq_t q, mpz_t sum_sin, mpz_t sum_cos, mpz_t cor)
+_xn_jl_finite_x (gint l, guint j, mpq_t q, mpz_t sum_sin, mpz_t sum_cos, mpz_t cor)
 {
   static mpz_t term, qn2;
   static gboolean init_mpz = TRUE;
@@ -831,7 +831,7 @@ _xn_jl_finite_x (gint l, gint j, mpq_t q, mpz_t sum_sin, mpz_t sum_cos, mpz_t co
 
   mpz_mul (qn2, mpq_numref (q), mpq_numref (q));
 
-  for (n = 0; n < j - 1; n++)
+  for (n = 0; n + 1 < j; n++)
   {
     glong wsum = abs (l - (n + 1) - 1) % 2;
     mpz_ptr lsum = (wsum == 0) ? sum_sin : sum_cos;
@@ -855,7 +855,7 @@ _xn_jl_finite_x (gint l, gint j, mpq_t q, mpz_t sum_sin, mpz_t sum_cos, mpz_t co
 }
 
 static void
-_xn_jl_finite_inverse_x (gint l, gint j, mpq_t q, mpz_t sum_sin, mpz_t sum_cos, mpz_t sum_sinint, mpz_t cor, gulong prec, gulong *lk)
+_xn_jl_finite_inverse_x (gint l, guint j, mpq_t q, mpz_t sum_sin, mpz_t sum_cos, mpz_t sum_sinint, mpz_t cor, gulong prec, gulong *lk)
 {
   static mpz_t term, termc, sumc, sum, term_const, four_xn2, qd_jm1;
   static gboolean init_mpz = TRUE;
@@ -1024,7 +1024,7 @@ _xn_jl_finite_inverse_x (gint l, gint j, mpq_t q, mpz_t sum_sin, mpz_t sum_cos, 
 
 
 static void
-_xn_jl_finite (gint l, gint j, mpq_t q, mpfr_t res, mp_rnd_t rnd)
+_xn_jl_finite (guint l, guint j, mpq_t q, mpfr_t res, mp_rnd_t rnd)
 {
   static mpz_t sum_sin, sum_cos, sum_sinint, cor, qd_jm1;
   static gboolean init_mpz = TRUE;
@@ -1138,7 +1138,7 @@ _xn_jl_finite (gint l, gint j, mpq_t q, mpfr_t res, mp_rnd_t rnd)
  * FIXME
 */
 void
-ncm_mpsf_sbessel_jl_xj_integral_q (gint l, gint j, mpq_t q, mpfr_t res, mp_rnd_t rnd)
+ncm_mpsf_sbessel_jl_xj_integral_q (guint l, guint j, mpq_t q, mpfr_t res, mp_rnd_t rnd)
 {
   gboolean taylor;
   gint sign = mpz_sgn (mpq_numref (q));
@@ -1300,8 +1300,9 @@ ncm_mpsf_sbessel_jl_xj_integral_a_b_center (NcmMpsfSBesselIntSpline *int_jlsplin
   mpfr_t *rules = int_jlspline->rules;
   mpfr_t *crules = int_jlspline->crules;
 
+  NCM_UNUSED (ki);
+  
   mpfr_set_q (d, int_jlspline->x->nodes[xi], rnd);
-
 
   mpfr_set (crules[0], rules[0], rnd);
 
@@ -1351,13 +1352,15 @@ coeff_calc (const double c_array[], double dy, double dx, size_t index, double *
  * Returns: FIXME
 */
 gdouble
-ncm_mpsf_sbessel_integrate (NcmMpsfSBesselIntSpline *int_jlspline, NcmSpline *s, gint l, guint ki, guint xi, gint diff)
+ncm_mpsf_sbessel_integrate (NcmMpsfSBesselIntSpline *int_jlspline, NcmSpline *s, guint l, guint ki, guint xi, gint diff)
 {
   gdouble res = 0.0;
   gdouble a, b;
   gdouble y_lo, y_hi;
   gdouble dx, dy;
 
+  NCM_UNUSED (l);
+  
   y_lo = ncm_vector_get (s->yv, xi);
   y_hi = ncm_vector_get (s->yv, xi + 1);
   a = ncm_vector_get (s->xv, xi);

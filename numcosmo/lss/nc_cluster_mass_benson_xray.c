@@ -198,8 +198,8 @@ _nc_cluster_mass_benson_xray_resample (NcClusterMass *clusterm, NcHICosmo *model
   
 }
 
-guint _nc_cluster_mass_benson_xray_obs_len (NcClusterMass *clusterm) { return 2; }
-guint _nc_cluster_mass_benson_xray_obs_params_len (NcClusterMass *clusterm) { return 0; }
+guint _nc_cluster_mass_benson_xray_obs_len (NcClusterMass *clusterm) { NCM_UNUSED (clusterm); return 2; }
+guint _nc_cluster_mass_benson_xray_obs_params_len (NcClusterMass *clusterm) { NCM_UNUSED (clusterm); return 0; }
 
 static void
 _nc_cluster_mass_benson_xray_set_property (GObject * object, guint prop_id, const GValue * value, GParamSpec * pspec)

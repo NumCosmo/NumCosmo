@@ -37,6 +37,7 @@
 
 #include "math/quadrature.h"
 #include "math/ncm_cfg.h"
+#include "math/ncm_util.h"
 
 #include <string.h>
 #include <gsl/gsl_sf_bessel.h>

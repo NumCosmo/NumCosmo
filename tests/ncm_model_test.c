@@ -8,11 +8,11 @@
 /*
  * numcosmo
  * Copyright (C) Sandro Dias Pinto Vitenti 2012 <sandro@isoftware.com.br>
-   * numcosmo is free software: you can redistribute it and/or modify it
+ * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
-   *
+ *
  * numcosmo is distributed in the hope that it will be useful, but
  * WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
@@ -283,7 +283,7 @@ ncm_model_test_base_class_init (NcmModelClass* model_class)
     ncm_assert_cmpdouble (ncm_sparam_get_scale (sp),              ==, s_scale[i]);
     ncm_assert_cmpdouble (ncm_sparam_get_absolute_tolerance (sp), ==, s_abstol[i]);
     ncm_assert_cmpdouble (ncm_sparam_get_default_value (sp),      ==, s_defval[i]);
-    g_assert_cmpint   (ncm_sparam_get_fit_type (sp),           ==, s_ftype[i]);
+    g_assert_cmpint      (ncm_sparam_get_fit_type (sp),           ==, s_ftype[i]);
   }
 
   for (i = 0; i < ci_vparam_len; i++)
@@ -299,7 +299,7 @@ ncm_model_test_base_class_init (NcmModelClass* model_class)
     ncm_assert_cmpdouble (ncm_vparam_get_scale (vp, 0),              ==, v_scale[i]);
     ncm_assert_cmpdouble (ncm_vparam_get_absolute_tolerance (vp, 0), ==, v_abstol[i]);
     ncm_assert_cmpdouble (ncm_vparam_get_default_value (vp, 0),      ==, v_defval[i]);
-    g_assert_cmpint   (ncm_vparam_get_fit_type (vp, 0),           ==, v_ftype[i]);
+    g_assert_cmpint      (ncm_vparam_get_fit_type (vp, 0),           ==, v_ftype[i]);
   }
 }
 

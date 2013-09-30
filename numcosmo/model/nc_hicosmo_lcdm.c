@@ -139,6 +139,7 @@ enum {
 static void
 nc_hicosmo_lcdm_init (NcHICosmoLCDM *lcdm)
 {
+  NCM_UNUSED (lcdm);
 }
 
 static void
