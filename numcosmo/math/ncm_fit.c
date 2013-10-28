@@ -222,16 +222,22 @@ _ncm_fit_set_property (GObject *object, guint prop_id, const GValue *value, GPar
     {
       guint p = g_value_get_int (value);
       GPtrArray *eqc = GINT_TO_POINTER (p);
-      g_ptr_array_unref (fit->equality_constraints);
-      fit->equality_constraints = eqc;
+      if (eqc != fit->equality_constraints)
+      {
+        g_ptr_array_unref (fit->equality_constraints);
+        fit->equality_constraints = g_ptr_array_ref (eqc);
+      }
       break;
     }
     case PROP_INEQC:
     {
       guint p = g_value_get_int (value);
       GPtrArray *ineqc = GINT_TO_POINTER (p);
-      g_ptr_array_unref (fit->inequality_constraints);
-      fit->inequality_constraints = ineqc;
+      if (ineqc != fit->inequality_constraints)
+      {
+        g_ptr_array_unref (fit->inequality_constraints);
+        fit->inequality_constraints = g_ptr_array_ref (ineqc);
+      }
       break;
     }
     default:
@@ -273,10 +279,10 @@ _ncm_fit_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec
       g_value_set_double (value, ncm_fit_get_params_reltol (fit));
       break;
     case PROP_EQC:
-      g_value_set_int (value, GPOINTER_TO_INT (g_ptr_array_ref (fit->equality_constraints)));
+      g_value_set_int (value, GPOINTER_TO_INT (fit->equality_constraints));
       break;
     case PROP_INEQC:
-      g_value_set_int (value, GPOINTER_TO_INT (g_ptr_array_ref (fit->inequality_constraints)));
+      g_value_set_int (value, GPOINTER_TO_INT (fit->inequality_constraints));
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);

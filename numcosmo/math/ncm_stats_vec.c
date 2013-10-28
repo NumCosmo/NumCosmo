@@ -176,6 +176,7 @@ _ncm_stats_vec_constructed (GObject *object)
         svec->x = ncm_vector_new (svec->len);
         svec->mean = ncm_vector_new (svec->len);
         ncm_vector_set_zero (svec->x);
+        ncm_vector_set_zero (svec->mean);
         break;
       default:
         g_assert_not_reached ();

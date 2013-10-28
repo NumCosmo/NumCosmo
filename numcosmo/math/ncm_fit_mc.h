@@ -84,6 +84,10 @@ struct _NcmFitMC
   NcmMemoryPool *mp;
   gsl_histogram *h;
   gsl_histogram_pdf *h_pdf;
+  GMutex *dup_fit;
+#if !((GLIB_MAJOR_VERSION == 2) && (GLIB_MINOR_VERSION < 32))
+  GMutex dup_fit_m;
+#endif
 };
 
 struct _NcmFitMCClass

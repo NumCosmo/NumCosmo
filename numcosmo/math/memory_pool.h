@@ -44,7 +44,13 @@ typedef struct _NcmMemoryPool NcmMemoryPool;
 struct _NcmMemoryPool
 {
   /*< private >*/
-  _NCM_MUTEX_TYPE append;
+  GMutex *update;
+  GCond *finish;
+#if !((GLIB_MAJOR_VERSION == 2) && (GLIB_MINOR_VERSION < 32))
+  GMutex update_m;
+  GCond finish_c;
+#endif
+  gint slices_in_use;
   GPtrArray *slices;
   NcmMemoryPoolAlloc alloc;
   GDestroyNotify free;
@@ -55,14 +61,14 @@ typedef struct _NcmMemoryPoolSlice NcmMemoryPoolSlice;
 
 /**
  * NcmMemoryPoolSlice:
- * @p: Pointer to the actual slice
- * @lock: Mutex lock used by the pool
- * @mp: A back pointer to the pool
+ * @p: Pointer to the actual slice.
+ * @in_use: Boolean determining if the slice is in use.
+ * @mp: A back pointer to the pool.
  */
 struct _NcmMemoryPoolSlice
 {
   gpointer p;
-  _NCM_MUTEX_TYPE lock;
+  gboolean in_use;
   NcmMemoryPool *mp;
 };
 

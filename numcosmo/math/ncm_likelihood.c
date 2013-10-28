@@ -77,16 +77,22 @@ ncm_likelihood_set_property (GObject *object, guint prop_id, const GValue *value
     {
       guint p = g_value_get_int (value);
       GPtrArray *priors_m2lnL = GINT_TO_POINTER (p);
-      g_ptr_array_unref (lh->priors_m2lnL);
-      lh->priors_m2lnL = priors_m2lnL;
+      if (priors_m2lnL != lh->priors_m2lnL)
+      {
+        g_ptr_array_unref (lh->priors_m2lnL);
+        lh->priors_m2lnL = g_ptr_array_ref (priors_m2lnL);
+      }
       break;
     }
     case PROP_PRIORS_F:
     {
       guint p = g_value_get_int (value);
       GPtrArray *priors_f = GINT_TO_POINTER (p);
-      g_ptr_array_unref (lh->priors_f);
-      lh->priors_f = priors_f;
+      if (priors_f != lh->priors_f)
+      {
+        g_ptr_array_unref (lh->priors_f);
+        lh->priors_f = g_ptr_array_ref (priors_f);
+      }
       break;
     }
     default:
@@ -107,10 +113,10 @@ ncm_likelihood_get_property (GObject *object, guint prop_id, GValue *value, GPar
       g_value_set_object (value, lh->dset);
       break;
     case PROP_PRIORS_M2LNL:
-      g_value_set_int (value, GPOINTER_TO_INT (g_ptr_array_ref (lh->priors_m2lnL)));
+      g_value_set_int (value, GPOINTER_TO_INT (lh->priors_m2lnL));
       break;
     case PROP_PRIORS_F:
-      g_value_set_int (value, GPOINTER_TO_INT (g_ptr_array_ref (lh->priors_f)));
+      g_value_set_int (value, GPOINTER_TO_INT (lh->priors_f));
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
