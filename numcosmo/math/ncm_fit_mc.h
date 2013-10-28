@@ -46,10 +46,29 @@ G_BEGIN_DECLS
 typedef struct _NcmFitMCClass NcmFitMCClass;
 typedef struct _NcmFitMC NcmFitMC;
 
+/**
+ * NcmFitMCResampleType:
+ * @NCM_FIT_MC_RESAMPLE_FROM_MODEL: Montecarlo resampling from models
+ * @NCM_FIT_MC_RESAMPLE_BOOTSTRAP_NOMIX: Montecarlo bootstraping each #NcmData separately.
+ * @NCM_FIT_MC_RESAMPLE_BOOTSTRAP_MIX: Montecarlo bootstraping mixing all #NcmData in the bootstrap process.
+ * 
+ * Montecarlo resample options
+ * 
+ */
+typedef enum _NcmFitMCResampleType
+{
+  NCM_FIT_MC_RESAMPLE_FROM_MODEL = 0,
+  NCM_FIT_MC_RESAMPLE_BOOTSTRAP_NOMIX,
+  NCM_FIT_MC_RESAMPLE_BOOTSTRAP_MIX,
+} NcmFitMCResampleType;
+
+typedef void (*NcmFitMCResample) (NcmDataset *dset, NcmMSet *mset);
+
 struct _NcmFitMC
 {
   /*< private >*/
   GObject parent_instance;
+  NcmFitMCResample resample;
   NcmFit *fit;
   NcmMSet *fiduc;
   NcmStatsVec *fparam;
@@ -79,8 +98,8 @@ NcmFitMC *ncm_fit_mc_new (NcmFit *fit);
 void ncm_fit_mc_free (NcmFitMC *mc);
 void ncm_fit_mc_clear (NcmFitMC **mc);
 
-void ncm_fit_mc_run (NcmFitMC *mc, NcmMSet *fiduc, guint ni, guint nf, NcmFitRunMsgs mtype);
-void ncm_fit_mc_run_mt (NcmFitMC *mc, NcmMSet *fiduc, guint ni, guint nf, NcmFitRunMsgs mtype, guint nthreads);
+void ncm_fit_mc_run (NcmFitMC *mc, NcmMSet *fiduc, guint ni, guint nf, NcmFitMCResampleType rtype, NcmFitRunMsgs mtype);
+void ncm_fit_mc_run_mt (NcmFitMC *mc, NcmMSet *fiduc, guint ni, guint nf, NcmFitMCResampleType rtype, NcmFitRunMsgs mtype, guint nthreads);
 void ncm_fit_mc_print (NcmFitMC *mc);
 void ncm_fit_mc_mean_covar (NcmFitMC *mc);
 

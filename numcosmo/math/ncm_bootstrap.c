@@ -82,20 +82,21 @@ _ncm_bootstrap_set_property (GObject *object, guint prop_id, const GValue *value
     {
       GVariant *var = g_value_get_variant (value);
       guint bsize;
-      guint i;
-      
       g_assert (g_variant_is_of_type (var, G_VARIANT_TYPE ("au")));
       bsize = g_variant_n_children (var);
-      g_assert_cmpuint (bsize, ==, bstrap->bsize);
 
-      for (i = 0; i < bsize; i++)
+      if (bsize != 0)
       {
-        guint j = 0;
-        g_variant_get_child (var, i, "u", j);
-        g_array_index (bstrap->bootstrap_index, guint, i) = j;
+        guint i;
+        g_assert_cmpuint (bsize, ==, bstrap->bsize);
+        for (i = 0; i < bsize; i++)
+        {
+          guint j = 0;
+          g_variant_get_child (var, i, "u", j);
+          g_array_index (bstrap->bootstrap_index, guint, i) = j;
+        }
+        bstrap->init = TRUE;
       }
-
-      bstrap->init = TRUE;
       break;
     }
     default:

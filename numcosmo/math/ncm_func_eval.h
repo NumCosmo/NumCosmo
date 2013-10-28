@@ -33,6 +33,7 @@ G_BEGIN_DECLS
 typedef void (*NcmLoopFunc) (glong i, glong f, gpointer data);
 
 void ncm_func_eval_set_max_threads (gint mt);
+void ncm_func_eval_threaded_loop_nw (NcmLoopFunc lfunc, glong i, glong f, gpointer data, guint nworkers);
 void ncm_func_eval_threaded_loop (NcmLoopFunc lfunc, glong i, glong f, gpointer data);
 
 G_END_DECLS

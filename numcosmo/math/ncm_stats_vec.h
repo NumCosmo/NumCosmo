@@ -200,6 +200,8 @@ ncm_stats_vec_get_cov_matrix (NcmStatsVec *svec, NcmMatrix *m)
   ncm_matrix_memcpy (m, svec->cov);
   for (i = 0; i < svec->len; i++)
     ncm_matrix_set (m, i, i, ncm_vector_fast_get (svec->var, i));
+
+  ncm_matrix_scale (m, svec->bias_wt);
 }
 
 G_END_DECLS

@@ -471,9 +471,9 @@ main (gint argc, gchar *argv[])
       resample_mset = fit->mset;
 
     if (de_fit.mc_nthreads > 0)
-      ncm_fit_mc_run_mt (mc, resample_mset, de_fit.mc_ni, de_fit.montecarlo, de_fit.msg_level, de_fit.mc_nthreads);
+      ncm_fit_mc_run_mt (mc, resample_mset, de_fit.mc_ni, de_fit.montecarlo, de_fit.mc_rtype, de_fit.msg_level, de_fit.mc_nthreads);
     else
-      ncm_fit_mc_run (mc, resample_mset, de_fit.mc_ni, de_fit.montecarlo, de_fit.msg_level);
+      ncm_fit_mc_run (mc, resample_mset, de_fit.mc_ni, de_fit.montecarlo, de_fit.mc_rtype, de_fit.msg_level);
     ncm_fit_mc_mean_covar (mc);
     ncm_fit_mc_gof_pdf (mc);
     ncm_fit_log_covar (fit);

@@ -45,19 +45,21 @@ typedef struct _NcmSerializePrivate NcmSerializePrivate;
 
 /**
  * NcmSerializeOpt:
- * @NCM_SERIALIZE_NONE: Use default serialization.
- * @NCM_SERIALIZE_EXPAND_ALL: Whether to exand all objects during serialization.
- * @NCM_SERIALIZE_EXPLICIT_VM: Whether to use explicit vectors and matrices instead of array (or array of array) of doubles.
+ * @NCM_SERIALIZE_OPT_NONE: Use default serialization.
+ * @NCM_SERIALIZE_OPT_AUTOSAVE_SER: Whether to automatically save objects serializations.
+ * @NCM_SERIALIZE_OPT_AUTONAME_SER: Whether to automatically include objects created from saved serialization in the named instances.
  * 
  * Options for serialization.
  * 
  */
 typedef enum _NcmSerializeOpt
 {
-  NCM_SERIALIZE_NONE        = 0,
-  NCM_SERIALIZE_EXPAND_ALL  = 1 << 0,
-  NCM_SERIALIZE_EXPLICIT_VM = 1 << 1,
+  NCM_SERIALIZE_OPT_NONE         = 0,
+  NCM_SERIALIZE_OPT_AUTOSAVE_SER = 1 << 0,
+  NCM_SERIALIZE_OPT_AUTONAME_SER = 1 << 1,
 } NcmSerializeOpt;
+
+#define NCM_SERIALIZE_OPT_CLEAN_DUP (NCM_SERIALIZE_OPT_AUTOSAVE_SER | NCM_SERIALIZE_OPT_AUTONAME_SER)
 
 struct _NcmSerialize
 {
@@ -65,9 +67,12 @@ struct _NcmSerialize
   GObject parent_instance;
   GHashTable *name_ptr;
   GHashTable *ptr_name;
+  GHashTable *saved_ptr_name;
+  GHashTable *saved_name_ser;
   GRegex *is_named_regex;
   GRegex *parse_obj_regex;
   NcmSerializeOpt opts;
+  guint autosave_count;
 };
 
 struct _NcmSerializeClass
@@ -78,7 +83,7 @@ struct _NcmSerializeClass
 
 GType ncm_serialize_get_type (void) G_GNUC_CONST;
 
-NcmSerialize *ncm_serialize_new (void);
+NcmSerialize *ncm_serialize_new (NcmSerializeOpt sopt);
 NcmSerialize *ncm_serialize_ref (NcmSerialize *ser);
 void ncm_serialize_free (NcmSerialize *ser);
 void ncm_serialize_unref (NcmSerialize *ser);
@@ -129,6 +134,8 @@ GObject *ncm_serialize_global_dup_obj (GObject *obj);
 #define NCM_SERIALIZE_OBJECT_FORMAT "{s@"NCM_SERIALIZE_PROPERTIES_TYPE"}"
 #define NCM_SERIALIZE_VECTOR_TYPE "ad"
 #define NCM_SERIALIZE_MATRIX_TYPE "aad"
+#define NCM_SERIALIZE_AUTOSAVE_NAME "auto:saved:"
+#define NCM_SERIALIZE_AUTOSAVE_NFORMAT "%04u" 
 
 G_END_DECLS
 

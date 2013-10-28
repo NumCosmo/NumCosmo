@@ -206,6 +206,7 @@ ncm_data_gauss_diag_class_init (NcmDataGaussDiagClass *klass)
                                                          G_VARIANT_TYPE ("ad"), NULL,
                                                          G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
+  data_class->bootstrap        = TRUE;
   data_class->get_length       = &_ncm_data_gauss_diag_get_length;
   data_class->get_dof          = &_ncm_data_gauss_diag_get_dof;
   data_class->resample         = &_ncm_data_gauss_diag_resample;
@@ -214,8 +215,8 @@ ncm_data_gauss_diag_class_init (NcmDataGaussDiagClass *klass)
 
   gauss_diag_class->mean_func  = NULL;
   gauss_diag_class->sigma_func = NULL;
-  gauss_diag_class->set_size  = &_ncm_data_gauss_diag_set_size;
-  gauss_diag_class->get_size  = &_ncm_data_gauss_diag_get_size;
+  gauss_diag_class->set_size   = &_ncm_data_gauss_diag_set_size;
+  gauss_diag_class->get_size   = &_ncm_data_gauss_diag_get_size;
 }
 
 static guint 

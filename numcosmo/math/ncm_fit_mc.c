@@ -60,7 +60,7 @@ ncm_fit_mc_init (NcmFitMC *mc)
   mc->m2lnL  = NULL;
   mc->bf     = NULL;
   mc->nt     = ncm_timer_new ();
-  mc->ser    = ncm_serialize_new ();
+  mc->ser    = ncm_serialize_new (NCM_SERIALIZE_OPT_CLEAN_DUP);
   mc->n      = 0;
   mc->ni     = 0;
   mc->mp     = NULL;
@@ -238,8 +238,14 @@ _ncm_fit_mc_log (NcmFitMC *mc, NcmFitRunMsgs mtype)
   }
 }
 
+void
+_ncm_fit_mc_resample_bstrap (NcmDataset *dset, NcmMSet *mset)
+{
+  ncm_dataset_bootstrap_resample (dset);
+}
+
 static void 
-ncm_fit_mc_run_base_start (NcmFitMC *mc, NcmMSet *fiduc, guint ni, guint nf, NcmFitRunMsgs mtype)
+ncm_fit_mc_run_base_start (NcmFitMC *mc, NcmMSet *fiduc, guint ni, guint nf, NcmFitMCResampleType rtype, NcmFitRunMsgs mtype)
 {
   const guint n = nf - ni;
   guint free_params_len = ncm_mset_fparams_len (mc->fit->mset);
@@ -248,6 +254,21 @@ ncm_fit_mc_run_base_start (NcmFitMC *mc, NcmMSet *fiduc, guint ni, guint nf, Ncm
 
   g_assert (nf > ni);
   g_assert (ncm_mset_cmp (mc->fit->mset, fiduc, FALSE));
+
+  switch (rtype)
+  {
+    case NCM_FIT_MC_RESAMPLE_FROM_MODEL:
+      mc->resample = &ncm_dataset_resample;
+      break;
+    case NCM_FIT_MC_RESAMPLE_BOOTSTRAP_NOMIX:
+      mc->resample = &_ncm_fit_mc_resample_bstrap;
+      ncm_dataset_bootstrap_set (mc->fit->lh->dset, NCM_DATASET_BSTRAP_PARTIAL);
+      break;
+    case NCM_FIT_MC_RESAMPLE_BOOTSTRAP_MIX:
+      mc->resample = &_ncm_fit_mc_resample_bstrap;
+      ncm_dataset_bootstrap_set (mc->fit->lh->dset, NCM_DATASET_BSTRAP_TOTAL);
+      break;      
+  }
 
   mc->n = n;
   mc->m2lnL_min = GSL_POSINF;
@@ -262,7 +283,10 @@ ncm_fit_mc_run_base_start (NcmFitMC *mc, NcmMSet *fiduc, guint ni, guint nf, Ncm
   mc->bf = ncm_vector_new (param_len);
 
   if (fiduc == mc->fit->mset)
+  {
     mc->fiduc = ncm_mset_dup (fiduc, mc->ser);
+    ncm_serialize_reset (mc->ser);
+  }
   else
     mc->fiduc = ncm_mset_ref (fiduc);
   
@@ -329,17 +353,17 @@ ncm_fit_mc_run_base_end (NcmFitMC *mc, NcmMSet *fiduc, guint ni, guint nf, NcmFi
  *
  */
 void 
-ncm_fit_mc_run (NcmFitMC *mc, NcmMSet *fiduc, guint ni, guint nf, NcmFitRunMsgs mtype)
+ncm_fit_mc_run (NcmFitMC *mc, NcmMSet *fiduc, guint ni, guint nf, NcmFitMCResampleType rtype, NcmFitRunMsgs mtype)
 {
   guint i;
-  ncm_fit_mc_run_base_start (mc, fiduc, ni, nf, mtype);
+  ncm_fit_mc_run_base_start (mc, fiduc, ni, nf, rtype, mtype);
 
   for (i = ni; i < nf; i++)
   {
     NcmFitRunMsgs mcrun_msg = (mtype == NCM_FIT_RUN_MSGS_FULL) ? NCM_FIT_RUN_MSGS_SIMPLE : NCM_FIT_RUN_MSGS_NONE;
 
     ncm_mset_param_set_vector (mc->fit->mset, mc->bf);
-    ncm_dataset_resample (mc->fit->lh->dset, fiduc);
+    mc->resample (mc->fit->lh->dset, fiduc);
     ncm_fit_run (mc->fit, mcrun_msg);
 
     _ncm_fit_mc_update (mc, mc->fit, i - ni);
@@ -354,6 +378,7 @@ _ncm_fit_mc_dup_fit (gpointer userdata)
 {
   NcmFitMC *mc = NCM_FIT_MC (userdata);
   NcmFit *fit = ncm_fit_dup (mc->fit, mc->ser);
+  ncm_serialize_reset (mc->ser);
   return fit;
 }
 
@@ -371,7 +396,7 @@ _ncm_fit_mc_mt_eval (glong i, glong f, gpointer data)
     NcmFitRunMsgs mcrun_msg = NCM_FIT_RUN_MSGS_NONE;
 
     ncm_mset_param_set_vector (fit->mset, mc->bf);
-    ncm_dataset_resample (fit->lh->dset, mc->fiduc);
+    mc->resample (fit->lh->dset, mc->fiduc);
     ncm_fit_run (fit, mcrun_msg);
     
     _NCM_MUTEX_LOCK (&update_lock);
@@ -395,10 +420,10 @@ _ncm_fit_mc_mt_eval (glong i, glong f, gpointer data)
  * FIXME
  *
  */
-void 
-ncm_fit_mc_run_mt (NcmFitMC *mc, NcmMSet *fiduc, guint ni, guint nf, NcmFitRunMsgs mtype, guint nthreads)
+void
+ncm_fit_mc_run_mt (NcmFitMC *mc, NcmMSet *fiduc, guint ni, guint nf, NcmFitMCResampleType rtype, NcmFitRunMsgs mtype, guint nthreads)
 {
-  ncm_fit_mc_run_base_start (mc, fiduc, ni, nf, mtype);
+  ncm_fit_mc_run_base_start (mc, fiduc, ni, nf, rtype, mtype);
 
   if (mc->mp != NULL)
     ncm_memory_pool_free (mc->mp, TRUE);
@@ -407,9 +432,8 @@ ncm_fit_mc_run_mt (NcmFitMC *mc, NcmMSet *fiduc, guint ni, guint nf, NcmFitRunMs
   mc->ni = ni;
   
   ncm_memory_pool_add (mc->mp, mc->fit);
-  ncm_func_eval_set_max_threads (nthreads);
 
-  ncm_func_eval_threaded_loop (&_ncm_fit_mc_mt_eval, ni, nf, mc);
+  ncm_func_eval_threaded_loop_nw (&_ncm_fit_mc_mt_eval, ni, nf, mc, nthreads);
 
   ncm_fit_mc_run_base_end (mc, fiduc, ni, nf, mtype);
 }

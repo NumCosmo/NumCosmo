@@ -185,7 +185,8 @@ ncm_data_gauss_class_init (NcmDataGaussClass *klass)
                                                          "Data covariance inverse",
                                                          G_VARIANT_TYPE ("aad"), NULL,
                                                          G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-  
+
+  data_class->bootstrap      = TRUE;
   data_class->get_length     = &_ncm_data_gauss_get_length;
   data_class->begin          = NULL;
 

@@ -125,18 +125,19 @@ ncm_func_eval_set_max_threads (gint mt)
 }
 
 /**
- * ncm_func_eval_threaded_loop:
+ * ncm_func_eval_threaded_loop_nw:
  * @lfunc: (scope notified): #NcmLoopFunc to be evaluated in threads
  * @i: initial index
  * @f: final index
  * @data: pointer to be passed to @fl
+ * @nworkers: number of workers.
  *
- * Using the thread pool, evaluate @fl in each value of (@f-@i)/nthreads
+ * Using the thread pool, evaluate @fl in each value of (@f-@i)/@nwork.
  *
  */
 #if NCM_THREAD_POOL_MAX > 1
 void
-ncm_func_eval_threaded_loop (NcmLoopFunc lfunc, glong i, glong f, gpointer data)
+ncm_func_eval_threaded_loop_nw (NcmLoopFunc lfunc, glong i, glong f, gpointer data, guint nworkers)
 {
   NcmFunctionEvalCtrl ctrl = {0, NULL, NULL, 
 #if !((GLIB_MAJOR_VERSION == 2) && (GLIB_MINOR_VERSION < 32))
@@ -144,7 +145,7 @@ ncm_func_eval_threaded_loop (NcmLoopFunc lfunc, glong i, glong f, gpointer data)
     {NULL},
 #endif
   };
-  gint nthreads, delta, res;
+  guint delta, res;
 
   ncm_func_eval_get_pool ();
 #if (GLIB_MAJOR_VERSION == 2) && (GLIB_MINOR_VERSION < 32)
@@ -157,10 +158,11 @@ ncm_func_eval_threaded_loop (NcmLoopFunc lfunc, glong i, glong f, gpointer data)
   ctrl.finish = &ctrl.finish_c;
 #endif
 
-  g_assert (f >= i);
-  nthreads = g_thread_pool_get_max_threads (_function_thread_pool);
-  delta = (f-i) / nthreads;
-  res = (f-i) % nthreads;
+  g_assert_cmpuint (f, >=, i);
+  g_assert_cmpuint (f - i, >, nworkers);
+
+  delta = (f-i) / nworkers;
+  res = (f-i) % nworkers;
 
   if (delta == 0)
   {
@@ -171,7 +173,7 @@ ncm_func_eval_threaded_loop (NcmLoopFunc lfunc, glong i, glong f, gpointer data)
     GError *err = NULL;
     glong li = i;
     glong lf = delta + res;
-    ctrl.active_threads = nthreads;
+    ctrl.active_threads = nworkers;
 
     do {
       NcmLoopFuncEval *arg = g_slice_new (NcmLoopFuncEval);
@@ -183,7 +185,7 @@ ncm_func_eval_threaded_loop (NcmLoopFunc lfunc, glong i, glong f, gpointer data)
       g_thread_pool_push (_function_thread_pool, arg, &err);
       li = lf;
       lf += delta;
-    } while (--nthreads);
+    } while (--nworkers);
   }
 
   g_mutex_lock (ctrl.update);
@@ -210,8 +212,25 @@ ncm_func_eval_threaded_loop (NcmLoopFunc lfunc, glong i, glong f, gpointer data)
 }
 #else
 void
-ncm_func_eval_threaded_loop (NcmLoopFunc lfunc, glong i, glong f, gpointer data)
+ncm_func_eval_threaded_loop_nw (NcmLoopFunc lfunc, glong i, glong f, gpointer data, guint nworkers)
 {
   lfunc (i, f, data);
 }
 #endif
+
+/**
+ * ncm_func_eval_threaded_loop:
+ * @lfunc: (scope notified): #NcmLoopFunc to be evaluated in threads
+ * @i: initial index
+ * @f: final index
+ * @data: pointer to be passed to @fl
+ *
+ * Using the thread pool, evaluate @fl in each value of (@f-@i)/nthreads
+ *
+ */
+void
+ncm_func_eval_threaded_loop (NcmLoopFunc lfunc, glong i, glong f, gpointer data)
+{
+  guint nthreads = g_thread_pool_get_max_threads (_function_thread_pool);
+  ncm_func_eval_threaded_loop_nw (lfunc, i, f, data, nthreads);
+}

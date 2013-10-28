@@ -215,6 +215,7 @@ nc_de_opt_get_fit_group (NcDEFitEntries *de_fit, GOptionEntry **de_fit_entries)
     { "resample",         0, 0, G_OPTION_ARG_NONE,         &de_fit->resample,         "Resample model using default params", NULL },
     { "msg-level",        0, 0, G_OPTION_ARG_INT,          &de_fit->msg_level,        "Fit message level (0: no msg, 1: simple, 2: full)", NULL },
     { "montecarlo",       0, 0, G_OPTION_ARG_INT,          &de_fit->montecarlo,       "Resample the original data 'montecarlo' times.", NULL},
+    { "mc-rtype",         0, 0, G_OPTION_ARG_INT,          &de_fit->mc_rtype,         "Resample using rtype method.", NULL},
     { "mc-ni",            0, 0, G_OPTION_ARG_INT,          &de_fit->mc_ni,            "Start the 'montecarlo' at the ni realization.", NULL},
     { "mc-nthreads",      0, 0, G_OPTION_ARG_INT,          &de_fit->mc_nthreads,      "If larger than one it will run in mc-nthreads threads.", NULL},
     { "fiducial",         0, 0, G_OPTION_ARG_STRING,       &de_fit->fiducial,         "Use the fiducial model to resample.", NULL},

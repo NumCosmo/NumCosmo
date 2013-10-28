@@ -441,7 +441,7 @@ ncm_data_resample (NcmData *data, NcmMSet *mset)
 {
   if (NCM_DATA_GET_CLASS (data)->resample == NULL)
     g_error ("ncm_data_resample: The data (%s) does not implement resample.\n", 
-             NCM_DATA_GET_CLASS (data)->name);
+             ncm_data_get_desc (data));
 
   ncm_data_prepare (data, mset);
   
@@ -461,8 +461,8 @@ void
 ncm_data_bootstrap_create (NcmData *data)
 {
   if (!NCM_DATA_GET_CLASS (data)->bootstrap)
-    g_error ("ncm_data_bootstrap_create: The data (%s) does not implement bootstrap.\n", 
-             NCM_DATA_GET_CLASS (data)->name);
+    g_error ("ncm_data_bootstrap_create: The data (%s) does not implement bootstrap.\n",
+             ncm_data_get_desc (data));
   g_assert (data->init);
 
   if (data->bstrap == NULL)
@@ -500,7 +500,7 @@ ncm_data_bootstrap_set (NcmData *data, NcmBootstrap *bstrap)
 {
   if (!NCM_DATA_GET_CLASS (data)->bootstrap)
     g_error ("ncm_data_bootstrap_set: The data (%s) does not implement bootstrap.\n", 
-             NCM_DATA_GET_CLASS (data)->name);
+             ncm_data_get_desc (data));
   g_assert (data->init);
   g_assert (bstrap != NULL);
 
@@ -522,10 +522,10 @@ ncm_data_bootstrap_resample (NcmData *data)
 {
   if (!NCM_DATA_GET_CLASS (data)->bootstrap)
     g_error ("ncm_data_bootstrap_resample: The data (%s) does not implement bootstrap.\n", 
-             NCM_DATA_GET_CLASS (data)->name);
+             ncm_data_get_desc (data));
   if (data->bstrap == NULL)
     g_error ("ncm_data_bootstrap_resample: Bootstrap of %s is not enabled.\n", 
-             NCM_DATA_GET_CLASS (data)->name);
+             ncm_data_get_desc (data));
 
   ncm_bootstrap_resample (data->bstrap);
 }
@@ -565,7 +565,7 @@ ncm_data_leastsquares_f (NcmData *data, NcmMSet *mset, NcmVector *f)
 
   if (NCM_DATA_GET_CLASS (data)->leastsquares_f == NULL)
     g_error ("ncm_data_leastsquares_f: The data (%s) does not implement leastsquares_f.\n", 
-             NCM_DATA_GET_CLASS (data)->name);
+             ncm_data_get_desc (data));
 
   NCM_DATA_GET_CLASS (data)->leastsquares_f (data, mset, f);
 }
@@ -589,7 +589,7 @@ ncm_data_leastsquares_J (NcmData *data, NcmMSet *mset, NcmMatrix *J)
 
   if (NCM_DATA_GET_CLASS (data)->leastsquares_J == NULL)
     g_error ("ncm_data_leastsquares_J: The data (%s) does not implement leastsquares_J.\n", 
-             NCM_DATA_GET_CLASS (data)->name);
+             ncm_data_get_desc (data));
 
   NCM_DATA_GET_CLASS (data)->leastsquares_J (data, mset, J);
 }
@@ -613,7 +613,7 @@ ncm_data_leastsquares_f_J (NcmData *data, NcmMSet *mset, NcmVector *f, NcmMatrix
 
   if (NCM_DATA_GET_CLASS (data)->leastsquares_f_J == NULL)
     g_error ("ncm_data_leastsquares_f_J: The data (%s) does not implement leastsquares_f_J.\n", 
-             NCM_DATA_GET_CLASS (data)->name);
+             ncm_data_get_desc (data));
 
   NCM_DATA_GET_CLASS (data)->leastsquares_f_J (data, mset, f, J);
 }
@@ -636,7 +636,7 @@ ncm_data_m2lnL_val (NcmData *data, NcmMSet *mset, gdouble *m2lnL)
 
   if (NCM_DATA_GET_CLASS (data)->m2lnL_val == NULL)
     g_error ("ncm_data_m2lnL_val: The data (%s) does not implement m2lnL_val.\n", 
-             NCM_DATA_GET_CLASS (data)->name);
+             ncm_data_get_desc (data));
 
   NCM_DATA_GET_CLASS (data)->m2lnL_val (data, mset, m2lnL);
 }
@@ -660,7 +660,7 @@ ncm_data_m2lnL_grad (NcmData *data, NcmMSet *mset, NcmVector *grad)
 
   if (NCM_DATA_GET_CLASS (data)->m2lnL_grad == NULL)
     g_error ("ncm_data_m2lnL_grad: The data (%s) does not implement m2lnL_grad.\n", 
-             NCM_DATA_GET_CLASS (data)->name);
+             ncm_data_get_desc (data));
 
   NCM_DATA_GET_CLASS (data)->m2lnL_grad (data, mset, grad);
 }
@@ -683,7 +683,7 @@ void ncm_data_m2lnL_val_grad (NcmData *data, NcmMSet *mset, gdouble *m2lnL, NcmV
 
   if (NCM_DATA_GET_CLASS (data)->m2lnL_val_grad == NULL)
     g_error ("ncm_data_m2lnL_val_grad: The data (%s) does not implement m2lnL_val_grad.\n", 
-             NCM_DATA_GET_CLASS (data)->name);
+             ncm_data_get_desc (data));
 
   NCM_DATA_GET_CLASS (data)->m2lnL_val_grad (data, mset, m2lnL, grad);
 }

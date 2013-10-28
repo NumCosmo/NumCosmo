@@ -51,18 +51,26 @@ enum
 
 G_DEFINE_TYPE (NcmSerialize, ncm_serialize, G_TYPE_OBJECT);
 
+GVariant *_ncm_serialize_to_variant (NcmSerialize *ser, GObject *obj);
+
 static void
 ncm_serialize_init (NcmSerialize *ser)
 {
   GError *error = NULL;
   
-  ser->name_ptr = g_hash_table_new_full (g_str_hash, g_str_equal, 
-                                         &g_free, &g_object_unref);
-  ser->ptr_name = g_hash_table_new_full (g_direct_hash, g_direct_equal,
-                                         &g_object_unref, &g_free);
+  ser->name_ptr = g_hash_table_new_full (&g_str_hash, &g_str_equal, &g_free, 
+                                         &g_object_unref);
+  ser->ptr_name = g_hash_table_new_full (&g_direct_hash, &g_direct_equal, &g_object_unref, 
+                                         &g_free);
 
-  ser->is_named_regex  = g_regex_new ("^\\s*[A-Z][A-Za-z]+\\s*\\[([A-Za-z\\:]+)\\]\\s*$", 0, 0, &error);
-  ser->parse_obj_regex = g_regex_new ("^\\s*([A-Z][A-Za-z]+)\\s*([\\{]?.*[\\}]?)\\s*$", 0, 0, &error);
+  ser->saved_ptr_name = g_hash_table_new_full (&g_direct_hash, &g_direct_equal, &g_object_unref, 
+                                               &g_free);
+  ser->saved_name_ser = g_hash_table_new_full (&g_str_hash, &g_str_equal, &g_free, 
+                                               (GDestroyNotify)&g_variant_unref);
+  
+  ser->is_named_regex  = g_regex_new ("^\\s*[A-Z][A-Za-z0-9]+\\s*\\[([A-Za-z0-9\\:]+)\\]\\s*$", 0, 0, &error);
+  ser->parse_obj_regex = g_regex_new ("^\\s*([A-Z][A-Za-z0-9]+)\\s*([\\{]?.*[\\}]?)\\s*$", 0, 0, &error);
+  ser->autosave_count = 0;
 }
 
 static void
@@ -107,8 +115,14 @@ _ncm_serialize_finalize (GObject *object)
   g_hash_table_remove_all (ser->name_ptr);
   g_hash_table_remove_all (ser->ptr_name);
 
+  g_hash_table_remove_all (ser->saved_ptr_name);
+  g_hash_table_remove_all (ser->saved_name_ser);
+
   g_hash_table_unref (ser->name_ptr);
   g_hash_table_unref (ser->ptr_name);
+
+  g_hash_table_unref (ser->saved_ptr_name);
+  g_hash_table_unref (ser->saved_name_ser);  
   
   g_regex_unref (ser->is_named_regex);
   g_regex_unref (ser->parse_obj_regex);
@@ -137,22 +151,23 @@ ncm_serialize_class_init (NcmSerializeClass *klass)
                                    g_param_spec_flags ("options",
                                                        NULL,
                                                        "Serialization options",
-                                                       NCM_TYPE_SERIALIZE_OPT, NCM_SERIALIZE_NONE,
-                                                       G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-
+                                                       NCM_TYPE_SERIALIZE_OPT, NCM_SERIALIZE_OPT_NONE,
+                                                       G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 }
 
 /**
  * ncm_serialize_new:
+ * @sopt: a set of options from #NcmSerializeOpt.
  * 
  * Creates a new #NcmSerialize object.
  * 
  * Returns: a new #NcmSerialize.
  */
 NcmSerialize *
-ncm_serialize_new (void)
+ncm_serialize_new (NcmSerializeOpt sopt)
 {
   NcmSerialize *ser = g_object_new (NCM_TYPE_SERIALIZE, 
+                                    "options", sopt,
                                     NULL);
   return ser;
 }
@@ -222,6 +237,11 @@ ncm_serialize_reset (NcmSerialize *ser)
 {
   g_hash_table_remove_all (ser->name_ptr);
   g_hash_table_remove_all (ser->ptr_name);
+/*
+  g_hash_table_remove_all (ser->saved_ptr_name);
+  g_hash_table_remove_all (ser->saved_name_ser);
+  ser->autosave_count = 0;
+*/
 }
 
 /**
@@ -347,11 +367,33 @@ ncm_serialize_set (NcmSerialize *ser, gpointer obj, gchar *name, gboolean overwr
   }  
 }
 
+static void 
+_ncm_serialize_save_ser (NcmSerialize *ser, gchar *name, gpointer obj, GVariant *ser_var)
+{
+  g_assert (G_IS_OBJECT (obj));
+  g_assert (name != NULL);
+  g_assert (ser != NULL);
+
+  if (g_hash_table_lookup (ser->saved_name_ser, name) != NULL)
+    g_error ("_ncm_serialize_save_ser: instance already saved.");
+  if (g_hash_table_lookup (ser->saved_ptr_name, obj) != NULL)
+    g_error ("_ncm_serialize_save_ser: instance already saved.");
+
+  /* printf ("\n``%s'' <=> %s\n", name, g_variant_print (ser_var, TRUE)); */
+  
+  g_hash_table_insert (ser->saved_ptr_name, 
+                       g_object_ref (obj), g_strdup (name));
+  g_hash_table_insert (ser->saved_name_ser, 
+                       g_strdup (name), g_variant_ref_sink (ser_var));
+  
+  ser->autosave_count++;
+}
+
 /**
  * ncm_serialize_is_named:
  * @ser: a #NcmSerialize.
  * @serobj: serialized object.
- * @name: (out) (transfer full): object name. 
+ * @name: (allow-none) (out) (transfer full): object name. 
  * 
  * Checks if @serobj is a named serialized object, if so sets its name in @name
  * and returns TRUE.
@@ -366,7 +408,7 @@ ncm_serialize_is_named (NcmSerialize *ser, const gchar *serobj, gchar **name)
   GVariant *var_obj = NULL;
   GVariant *obj_name = NULL;
   GVariant *params = NULL;
-
+  
   var_obj = g_variant_parse (G_VARIANT_TYPE (NCM_SERIALIZE_OBJECT_TYPE), serobj, NULL, NULL, &error);
   g_clear_error (&error);
 
@@ -379,11 +421,13 @@ ncm_serialize_is_named (NcmSerialize *ser, const gchar *serobj, gchar **name)
 
   if (g_regex_match (ser->is_named_regex, serobj, 0, &match_info))
   {
-    *name = g_match_info_fetch (match_info, 1);
+    if (name != NULL)
+      *name = g_match_info_fetch (match_info, 1);
     g_match_info_free (match_info);
+
     if (params != NULL && g_variant_n_children (params) > 0)
       g_error ("ncm_serialize_is_named: Invalid named object ``%s'', named objects cannot have properties ``%s''.", 
-               serobj, g_variant_print (params, TRUE));    
+               serobj, g_variant_print (params, TRUE));
 
     if (obj_name != NULL)
       g_variant_unref (obj_name);
@@ -401,7 +445,8 @@ ncm_serialize_is_named (NcmSerialize *ser, const gchar *serobj, gchar **name)
       g_variant_unref (var_obj);
     if (params != NULL)
       g_variant_unref (params);
-    *name = NULL;
+    if (name != NULL)
+      *name = NULL;
     return FALSE;
   }
 }
@@ -789,6 +834,43 @@ ncm_serialize_from_variant (NcmSerialize *ser, GVariant *var_obj)
   }
 }
 
+static GObject *
+_ncm_serialize_from_saved_or_named (NcmSerialize *ser, const gchar *obj_ser, GVariant *params)
+{
+  GObject *obj = NULL;
+  gchar *ni_name = NULL;
+
+  if (ncm_serialize_is_named (ser, obj_ser, &ni_name))
+  {
+    GVariant *var_obj;
+    if (params != NULL && g_variant_n_children (params) > 0)
+      g_error ("_ncm_serialize_from_saved_or_named: Invalid named object parameters ``%s'', named objects cannot have properties.", 
+               g_variant_print (params, TRUE));
+    
+    if (ncm_serialize_contain_name (ser, ni_name))
+    {
+      obj = ncm_serialize_get_by_name (ser, ni_name);
+      /* printf ("found ni: ``%s'' <=> %s\n", ni_name, obj_ser); */
+      g_free (ni_name);
+      return obj;
+    }
+    else if ((var_obj = g_hash_table_lookup (ser->saved_name_ser, ni_name)) != NULL)
+    {
+      obj = ncm_serialize_from_variant (ser, var_obj);
+      if (ser->opts & NCM_SERIALIZE_OPT_AUTONAME_SER)
+        ncm_serialize_set (ser, obj, ni_name, FALSE);
+      /* printf ("found saved: ``%s'' <=> %s\n", ni_name, obj_ser); */
+      g_free (ni_name);
+      return obj;
+    }
+    else
+      g_error ("_ncm_serialize_from_saved_or_named: Creating object from ``%s'', depending object ``%s'' not found.", 
+               obj_ser, ni_name);    
+  }
+  
+  return obj;
+}
+
 /**
  * ncm_serialize_from_string:
  * @ser: a #NcmSerialize.
@@ -803,19 +885,11 @@ ncm_serialize_from_string (NcmSerialize *ser, const gchar *obj_ser)
 {
   GError *error = NULL;
   GMatchInfo *match_info = NULL;
-  GObject *obj = NULL;
   GVariant *var_obj = NULL;
-  gchar *ni_name = NULL;
+  GObject *obj = _ncm_serialize_from_saved_or_named (ser, obj_ser, NULL);
 
-  if (ncm_serialize_is_named (ser, obj_ser, &ni_name))
-  {
-    if (ncm_serialize_contain_name (ser, ni_name))
-      g_error ("ncm_serialize_from_string: Creating object from ``%s'', depending named instance ``%s'' not found.", 
-               obj_ser, ni_name);
-    obj = ncm_serialize_get_by_name (ser, ni_name);
-    g_free (ni_name);
+  if (obj != NULL)
     return obj;
-  }
 
   var_obj = g_variant_parse (G_VARIANT_TYPE (NCM_SERIALIZE_OBJECT_TYPE), obj_ser, NULL, NULL, &error);
   g_clear_error (&error);
@@ -871,24 +945,11 @@ ncm_serialize_from_string (NcmSerialize *ser, const gchar *obj_ser)
 GObject *
 ncm_serialize_from_name_params (NcmSerialize *ser, const gchar *obj_name, GVariant *params)
 {
-  GObject *obj = NULL;
   GType gtype = g_type_from_name (obj_name);
-  gchar *ni_name;
+  GObject *obj = _ncm_serialize_from_saved_or_named (ser, obj_name, params);
 
-  if (ncm_serialize_is_named (ser, obj_name, &ni_name))
-  {
-    if (!ncm_serialize_contain_name (ser, ni_name))
-      g_error ("ncm_serialize_from_name_params: Creating object from ``%s'', depending named instance ``%s'' not found.", 
-               obj_name, ni_name);
-    if (params != NULL && g_variant_n_children (params) > 0)
-      g_error ("ncm_serialize_from_name_params: Invalid named object parameters ``%s'', named objects cannot have properties.", 
-               g_variant_print (params, TRUE));    
-
-    obj = ncm_serialize_get_by_name (ser, ni_name);
-
-    g_free (ni_name);
+  if (obj != NULL)
     return obj;
-  }
 
   if (gtype == 0)
     g_error ("ncm_serialize_from_name_params: object '%s' is not registered\n", obj_name);
@@ -1083,6 +1144,9 @@ _ncm_serialize_gtype_to_gvariant_type (GType t)
   }
 }
 
+GVariant *_ncm_obj_array_ser (NcmObjArray *oa, NcmSerialize *ser);
+
+
 /**
  * ncm_serialize_gvalue_to_gvariant:
  * @ser: a #NcmSerialize.
@@ -1108,7 +1172,7 @@ ncm_serialize_gvalue_to_gvariant (NcmSerialize *ser, GValue *val)
       {
         GObject *nest_obj = g_value_get_object (val);
         if (nest_obj != NULL)
-          var = ncm_serialize_to_variant (ser, nest_obj);
+          var = _ncm_serialize_to_variant (ser, nest_obj);
         break;
       }
       case G_TYPE_ENUM:
@@ -1123,7 +1187,7 @@ ncm_serialize_gvalue_to_gvariant (NcmSerialize *ser, GValue *val)
         {
           NcmObjArray *oa = g_value_get_boxed (val);
           if (oa != NULL)
-            var = ncm_obj_array_ser (oa, ser);
+            var = _ncm_obj_array_ser (oa, ser);
         }
         else
           g_error ("Cannot convert GValue '%s' to GVariant.", g_type_name (t));  
@@ -1140,26 +1204,26 @@ ncm_serialize_gvalue_to_gvariant (NcmSerialize *ser, GValue *val)
   return var;
 }
 
-/**
- * ncm_serialize_to_variant:
- * @ser: a #NcmSerialize.
- * @obj: a #GObject.
- *
- * Serialize the @obj to a @GVariant representation.
- *
- * Returns: (transfer full): A #GVariant dictionary describing the @obj.
- */
 GVariant *
-ncm_serialize_to_variant (NcmSerialize *ser, GObject *obj)
+_ncm_serialize_to_variant (NcmSerialize *ser, GObject *obj)
 {
+  GVariant *ser_var;
   const gchar *obj_name = G_OBJECT_TYPE_NAME (obj);
+  gchar *saved_name = NULL;
+  
   if (ncm_serialize_contain_instance (ser, obj))
   {
     gchar *ni_name = ncm_serialize_peek_name (ser, obj);
     gchar *fname = g_strdup_printf ("%s[%s]", obj_name, ni_name);
-    GVariant *objvar = g_variant_ref_sink (g_variant_new (NCM_SERIALIZE_OBJECT_TYPE, fname, NULL));
+
+    ser_var = g_variant_ref_sink (g_variant_new (NCM_SERIALIZE_OBJECT_TYPE, fname, NULL));
     g_free (fname);
-    return objvar;
+  }
+  else if ((saved_name = g_hash_table_lookup (ser->saved_ptr_name, obj)) != NULL)
+  {
+    gchar *fname = g_strdup_printf ("%s[%s]", obj_name, saved_name);
+    ser_var = g_variant_ref_sink (g_variant_new (NCM_SERIALIZE_OBJECT_TYPE, fname, NULL));
+    g_free (fname);
   }
   else
   {
@@ -1170,12 +1234,12 @@ ncm_serialize_to_variant (NcmSerialize *ser, GObject *obj)
     if (n_properties == 0)
     {
       g_free (prop);
-      return g_variant_ref_sink (g_variant_new (NCM_SERIALIZE_OBJECT_TYPE, obj_name, NULL));
+      ser_var = g_variant_ref_sink (g_variant_new (NCM_SERIALIZE_OBJECT_TYPE, obj_name, NULL));
     }
     else
     {
       GVariantBuilder b;
-      GVariant *params, *ser_var;
+      GVariant *params;
 
       g_variant_builder_init (&b, G_VARIANT_TYPE (NCM_SERIALIZE_PROPERTIES_TYPE));
 
@@ -1208,9 +1272,47 @@ ncm_serialize_to_variant (NcmSerialize *ser, GObject *obj)
       g_free (prop);
 
       ser_var = g_variant_ref_sink (g_variant_new (NCM_SERIALIZE_OBJECT_FORMAT, obj_name, params));
-      return ser_var;
+    }
+
+    if (ser->opts & NCM_SERIALIZE_OPT_AUTOSAVE_SER)
+    {
+      gchar *name = g_strdup_printf (NCM_SERIALIZE_AUTOSAVE_NAME NCM_SERIALIZE_AUTOSAVE_NFORMAT, ser->autosave_count);
+      _ncm_serialize_save_ser (ser, name, obj, ser_var);      
+      g_free (name);
+      g_variant_unref (ser_var);
+      ser_var = _ncm_serialize_to_variant (ser, obj);
     }
   }
+  return ser_var;
+}
+
+/**
+ * ncm_serialize_to_variant:
+ * @ser: a #NcmSerialize.
+ * @obj: a #GObject.
+ *
+ * Serialize the @obj to a @GVariant representation.
+ *
+ * Returns: (transfer full): A #GVariant dictionary describing the @obj.
+ */
+GVariant *
+ncm_serialize_to_variant (NcmSerialize *ser, GObject *obj)
+{
+  if (ser->opts & NCM_SERIALIZE_OPT_AUTOSAVE_SER)
+  {
+    GVariant *cser_var = _ncm_serialize_to_variant (ser, obj);
+    gchar *name = g_hash_table_lookup (ser->saved_ptr_name, obj);
+    GVariant *ser_var = g_hash_table_lookup (ser->saved_name_ser, name);
+  
+    g_assert (name != NULL);
+    g_assert (ser_var != NULL);
+
+    g_variant_unref (cser_var);
+    
+    return g_variant_ref_sink (ser_var);
+  }
+  else
+    return _ncm_serialize_to_variant (ser, obj);
 }
 
 /**
@@ -1287,7 +1389,7 @@ ncm_serialize_global (void)
 {
   if (g_once_init_enter (&_global_init))
   {
-    _global_ser = ncm_serialize_new ();
+    _global_ser = ncm_serialize_new (NCM_SERIALIZE_OPT_NONE);
     g_once_init_leave (&_global_init, TRUE);
   }
   return ncm_serialize_ref (_global_ser);

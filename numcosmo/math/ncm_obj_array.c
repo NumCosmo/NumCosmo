@@ -141,6 +141,26 @@ ncm_obj_array_clear (NcmObjArray **oa)
   g_clear_pointer (oa, &ncm_obj_array_unref);
 }
 
+GVariant *_ncm_serialize_to_variant (NcmSerialize *ser, GObject *obj);
+
+GVariant *
+_ncm_obj_array_ser (NcmObjArray *oa, NcmSerialize *ser)
+{
+  GVariantBuilder *builder;
+  guint i;
+
+  builder = g_variant_builder_new (G_VARIANT_TYPE (NCM_OBJ_ARRAY_TYPE));
+
+  for (i = 0; i < oa->len; i++)
+  {
+    GVariant *cvar = _ncm_serialize_to_variant (ser, ncm_obj_array_peek (oa, i));
+    g_variant_builder_add_value (builder, cvar);
+  }
+
+  return g_variant_ref_sink (g_variant_builder_end (builder));
+}
+
+
 /**
  * ncm_obj_array_ser:
  * @oa: a #NcmObjArray.

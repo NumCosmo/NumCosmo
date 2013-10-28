@@ -506,19 +506,24 @@ ncm_dataset_resample (NcmDataset *dset, NcmMSet *mset)
 void
 ncm_dataset_bootstrap_set (NcmDataset *dset, NcmDatasetBStrapType bstype)
 {
-  guint i;
-  gboolean enable = (bstype != NCM_DATASET_BSTRAP_DISABLE) ? TRUE : FALSE;
-  
-  for (i = 0; i < dset->oa->len; i++)
+  if (dset->bstype != bstype)
   {
-    NcmData *data = ncm_dataset_peek_data (dset, i);
-    if (enable)
-      ncm_data_bootstrap_create (data);
-    else
-      ncm_data_bootstrap_remove (data);
-  }
+    guint i;
+    gboolean enable = (bstype != NCM_DATASET_BSTRAP_DISABLE) ? TRUE : FALSE;
 
-  _ncm_dataset_update_bstrap (dset);
+    dset->bstype = bstype;
+
+    for (i = 0; i < dset->oa->len; i++)
+    {
+      NcmData *data = ncm_dataset_peek_data (dset, i);
+      if (enable)
+        ncm_data_bootstrap_create (data);
+      else
+        ncm_data_bootstrap_remove (data);
+    }
+    
+    _ncm_dataset_update_bstrap (dset);
+  }
 }
 
 /**
