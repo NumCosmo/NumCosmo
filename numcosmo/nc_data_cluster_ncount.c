@@ -1001,7 +1001,6 @@ _eval_lnm_p_d2n (glong i, glong f, gpointer data)
     gdouble *lnMn_obs = ncm_matrix_ptr (evald2n->ncount->lnM_obs, n, 0);
     gdouble *lnMn_obs_params = evald2n->ncount->lnM_obs_params != NULL ? ncm_matrix_ptr (evald2n->ncount->lnM_obs_params, n, 0) : NULL;
     const gdouble mlnLn = -log (nc_cluster_abundance_lnm_p_d2n (evald2n->cad, evald2n->cosmo, lnMn_obs, lnMn_obs_params, zn));
-//printf ("% 20.15g % 20.15g % 20.15g : % 20.15g\n", zn, lnMn_obs[0], lnMn_obs[1], 2.0 * mlnLn);
 
     m2lnL += mlnLn;
   }
@@ -1105,7 +1104,6 @@ _nc_data_cluster_ncount_m2lnL_val (NcmData *data, NcmMSet *mset, gdouble *m2lnL)
 
   {
     const gdouble n_th = nc_cluster_abundance_n (cad, cosmo);    
-    //printf ("n_th\t% 20.15g % 20.15g % 20.15g\n", n_th, ncount->log_np_fac, *m2lnL);
     *m2lnL += (ncount->log_np_fac + n_th);
   }
 

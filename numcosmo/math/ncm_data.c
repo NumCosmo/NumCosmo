@@ -416,7 +416,7 @@ void
 ncm_data_prepare (NcmData *data, NcmMSet *mset)
 {
   g_assert (data->init);
-  
+
   if (NCM_DATA_GET_CLASS (data)->begin != NULL && !data->begin)
   {
     NCM_DATA_GET_CLASS (data)->begin (data);
@@ -446,6 +446,7 @@ ncm_data_resample (NcmData *data, NcmMSet *mset)
   ncm_data_prepare (data, mset);
   
   NCM_DATA_GET_CLASS (data)->resample (data, mset);
+  data->begin = FALSE;
 
   ncm_data_set_init (data, TRUE);
 }
