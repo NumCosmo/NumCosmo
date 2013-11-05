@@ -418,7 +418,6 @@ main (gint argc, gchar *argv[])
 
   if (de_fit.fit)
   {
-    fit->params_reltol = 1e-5;
     ncm_fit_set_maxiter (fit, de_fit.max_iter);
     ncm_fit_run (fit, de_fit.msg_level);
     
