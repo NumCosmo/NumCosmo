@@ -146,6 +146,9 @@ ncm_rng_class_init (NcmRNGClass *klass)
                                                         "Algorithm state",
                                                         NULL,
                                                         G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  /* Init the global gsl_rng variables */
+  gsl_rng_env_setup ();
+
 }
 
 /**
@@ -284,6 +287,7 @@ ncm_rng_set_algo (NcmRNG *rng, const gchar *algo)
 {
   const gsl_rng_type *type;
   gboolean found = FALSE;
+  
   if (algo != NULL)
   {
     const gsl_rng_type **t;
