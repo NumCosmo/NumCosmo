@@ -160,6 +160,7 @@ ncm_func_eval_threaded_loop_nw (NcmLoopFunc lfunc, glong i, glong f, gpointer da
 
   g_assert_cmpuint (f, >=, i);
   g_assert_cmpuint (f - i, >, nworkers);
+  g_assert_cmpuint (nworkers, >, 0);
 
   delta = (f-i) / nworkers;
   res = (f-i) % nworkers;
@@ -231,6 +232,9 @@ ncm_func_eval_threaded_loop_nw (NcmLoopFunc lfunc, glong i, glong f, gpointer da
 void
 ncm_func_eval_threaded_loop (NcmLoopFunc lfunc, glong i, glong f, gpointer data)
 {
-  guint nthreads = g_thread_pool_get_max_threads (_function_thread_pool);
-  ncm_func_eval_threaded_loop_nw (lfunc, i, f, data, nthreads);
+  ncm_func_eval_get_pool ();
+  {
+    guint nthreads = g_thread_pool_get_max_threads (_function_thread_pool);
+    ncm_func_eval_threaded_loop_nw (lfunc, i, f, data, nthreads);
+  }
 }
