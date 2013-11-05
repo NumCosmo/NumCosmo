@@ -843,8 +843,8 @@ _nc_data_cluster_ncount_resample (NcmData *data, NcmMSet *mset)
   gdouble *lnMi_obs_params = lnM_obs_params_len > 0 ? g_new (gdouble, lnM_obs_params_len) : NULL;
 
   ncm_rng_lock (rng);
-
   total_np = gsl_ran_poisson (rng->r, cad->norma);
+  ncm_rng_unlock (rng);
 
   lnM_true_array = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), total_np);
   z_true_array = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), total_np);
@@ -861,26 +861,29 @@ _nc_data_cluster_ncount_resample (NcmData *data, NcmMSet *mset)
 
   for (i = 0; i < total_np; i++)
   {
-    const gdouble u1 = _nc_cad_inv_dNdz_convergence_f (gsl_rng_uniform_pos (rng->r), cad->z_epsilon);
-    const gdouble u2 = _nc_cad_inv_dNdz_convergence_f (gsl_rng_uniform_pos (rng->r), cad->lnM_epsilon);
-    const gdouble z_true = ncm_spline_eval (cad->inv_z, u1);
-    const gdouble lnM_true = ncm_spline2d_eval (cad->inv_lnM_z, u2, z_true);
-
-    if ( nc_cluster_redshift_resample (cad->z, lnM_true, z_true, zi_obs, zi_obs_params) &&
-        nc_cluster_mass_resample (cad->m, cosmo, lnM_true, z_true, lnMi_obs, lnMi_obs_params) )
+    ncm_rng_lock (rng);
     {
-      g_array_append_val (lnM_true_array, lnM_true);
-      g_array_append_val (z_true_array, z_true);
+      const gdouble u1 = _nc_cad_inv_dNdz_convergence_f (gsl_rng_uniform_pos (rng->r), cad->z_epsilon);
+      const gdouble u2 = _nc_cad_inv_dNdz_convergence_f (gsl_rng_uniform_pos (rng->r), cad->lnM_epsilon);
+      const gdouble z_true = ncm_spline_eval (cad->inv_z, u1);
+      const gdouble lnM_true = ncm_spline2d_eval (cad->inv_lnM_z, u2, z_true);
+      ncm_rng_unlock (rng);
 
-      g_array_append_vals (z_obs_array, zi_obs, z_obs_len);
-      g_array_append_vals (lnM_obs_array, lnMi_obs, lnM_obs_len);
+      if ( nc_cluster_redshift_resample (cad->z, lnM_true, z_true, zi_obs, zi_obs_params) &&
+          nc_cluster_mass_resample (cad->m, cosmo, lnM_true, z_true, lnMi_obs, lnMi_obs_params) )
+      {
+        g_array_append_val (lnM_true_array, lnM_true);
+        g_array_append_val (z_true_array, z_true);
 
-      if (z_obs_params_len > 0)
-        g_array_append_vals (z_obs_params_array, zi_obs_params, z_obs_params_len);
-      if (lnM_obs_params_len > 0)
-        g_array_append_vals (lnM_obs_params_array, lnMi_obs_params, lnM_obs_params_len);
+        g_array_append_vals (z_obs_array, zi_obs, z_obs_len);
+        g_array_append_vals (lnM_obs_array, lnMi_obs, lnM_obs_len);
+
+        if (z_obs_params_len > 0)
+          g_array_append_vals (z_obs_params_array, zi_obs_params, z_obs_params_len);
+        if (lnM_obs_params_len > 0)
+          g_array_append_vals (lnM_obs_params_array, lnMi_obs_params, lnM_obs_params_len);
+      }
     }
-    //printf ("% 20.15g % 20.15g\n", zi_real, lnMi_real);
   }
   
   ncm_vector_clear (&ncount->lnM_true);

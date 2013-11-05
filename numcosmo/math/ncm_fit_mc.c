@@ -360,6 +360,7 @@ ncm_fit_mc_run_base_end (NcmFitMC *mc, NcmMSet *fiduc, guint ni, guint nf, NcmFi
  * @fiduc: FIXME
  * @ni: FIXME
  * @nf: FIXME
+ * @rtype: FIXME
  * @mtype: FIXME
  * 
  * FIXME
@@ -435,6 +436,7 @@ _ncm_fit_mc_mt_eval (glong i, glong f, gpointer data)
  * @fiduc: FIXME
  * @ni: FIXME
  * @nf: FIXME
+ * @rtype: FIXME
  * @mtype: FIXME
  * @nthreads: FIXME
  * 
