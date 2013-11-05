@@ -1152,10 +1152,9 @@ nc_data_cluster_ncount_init_from_sampling (NcmData *data, NcmMSet *mset, NcClust
 {
   NcDataClusterNCount *ncount = NC_DATA_CLUSTER_NCOUNT (data);
 
+  nc_data_cluster_ncount_set_redshift (ncount, clusterz);
+  nc_data_cluster_ncount_set_mass (ncount, clusterm);
   ncount->area_survey = area_survey;
-
-  ncount->z = nc_cluster_redshift_ref (clusterz);
-  ncount->m = nc_cluster_mass_ref (clusterm);
 
   _nc_data_cluster_ncount_model_init (ncount);
 
