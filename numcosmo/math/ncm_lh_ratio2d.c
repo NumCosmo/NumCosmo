@@ -824,6 +824,7 @@ _ncm_lh_ratio2d_set_angular_interval (NcmLHRatio2d *lhr2d, const gdouble da, gdo
 {
   gdouble val0 = ncm_lh_ratio2d_f (*theta0, lhr2d);
   gdouble val1 = ncm_lh_ratio2d_f (*theta1, lhr2d);
+  guint n = 1;
   g_assert (*theta1 > *theta0);
   g_assert (da > 0.0);
 
@@ -834,6 +835,9 @@ _ncm_lh_ratio2d_set_angular_interval (NcmLHRatio2d *lhr2d, const gdouble da, gdo
       ncm_lh_ratio2d_log_param_val (lhr2d, ncm_c_radian_to_degree (ncm_c_radian_0_2pi (*theta0)), val0);
       *theta1 = *theta0;
       *theta0 -= da;
+      if (n % 10 == 0)
+        da *= 0.95;
+      n++;
     } while ((val0 = ncm_lh_ratio2d_f (*theta0, lhr2d)) < 0);
   }
   else if (val1 > 0.0)
@@ -843,6 +847,9 @@ _ncm_lh_ratio2d_set_angular_interval (NcmLHRatio2d *lhr2d, const gdouble da, gdo
       ncm_lh_ratio2d_log_param_val (lhr2d, ncm_c_radian_to_degree (ncm_c_radian_0_2pi (*theta1)), val1);
       *theta0 = *theta1;
       *theta1 += da;
+      if (n % 10 == 0)
+        da *= 0.95;
+      n++;
     } while ((val1 = ncm_lh_ratio2d_f (*theta1, lhr2d)) > 0);
   }
 }
