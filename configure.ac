@@ -527,7 +527,15 @@ AC_COMPILE_IFELSE(
                [[Cuhre (0, 0, (void *)0, (void *)0, 0.0, 0.0, 0, 0, 0, 0, (void *)0 /*AQUI*/,  (void *)0, (void *)0, (void *)0, (void *)0, (void *)0, (void *)0);]])],
             [AC_DEFINE([HAVE_LIBCUBA_3_1],[1], [Have the libcuba >= 3.1])
              cuba_3_1="yes"],
-            [cuba_3_1="no"])
+            [cuba_3_1="no"
+AC_COMPILE_IFELSE(
+            [AC_LANG_PROGRAM([[#include <cuba.h>]],
+               [[Cuhre (0, 0, (void *)0, (void *)0, 0, 0.0, 0.0, 0, 0, 0, 0, (void *)0 /*AQUI*/,  (void *)0, (void *)0, (void *)0, (void *)0, (void *)0, (void *)0);]])],
+            [AC_DEFINE([HAVE_LIBCUBA_3_3],[1], [Have the libcuba >= 3.3])
+             cuba_3_1="yes"],
+            [cuba_3_1="no"
+            ])
+            ])
 AC_MSG_RESULT([$cuba_3_1])
 
 dnl ***************************************************************************
