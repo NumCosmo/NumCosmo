@@ -271,11 +271,13 @@ ncm_integrate_2dim (NcmIntegrand2dim *integ, gdouble xi, gdouble yi, gdouble xf,
 	gint nregions, neval, fail;
 	gdouble prob;
 
-	Cuhre (2, 1, &_integrand_2dim, &iinteg, epsrel, epsabs, 0, mineval, maxeval, key, 
 #ifdef HAVE_LIBCUBA_3_1
-         NULL,
-#endif /* HAVE_LIBCUBA_3_1 */
-         &nregions, &neval, &fail, result, error, &prob);
+	Cuhre (2, 1, &_integrand_2dim, &iinteg, epsrel, epsabs, 0, mineval, maxeval, key, NULL, &nregions, &neval, &fail, result, error, &prob);
+#elif HAVE_LIBCUBA_3_3
+	Cuhre (2, 1, &_integrand_2dim, &iinteg, 1, epsrel, epsabs, 0, mineval, maxeval, key, NULL, &nregions, &neval, &fail, result, error, &prob);
+#else
+  Cuhre (2, 1, &_integrand_2dim, &iinteg, epsrel, epsabs, 0, mineval, maxeval, key, &nregions, &neval, &fail, result, error, &prob);
+#endif /* HAVE_LIBCUBA_3_1 */         
 
 	*result *= (xf - xi) * (yf - yi);
 	*error *= (xf - xi) * (yf - yi);
