@@ -62,10 +62,6 @@ typedef enum _NcClusterMassLnnormalParams
 
 #define NC_CLUSTER_MASS_LNNORMAL_DEFAULT_PARAMS_ABSTOL (0.0)
 
-//reitrar os dois abaixo
-//#define NC_CLUSTER_MASS_LNNORMAL_BIAS (0)
-//#define NC_CLUSTER_MASS_LNNORMAL_SIGMA (1)
-
 struct _NcClusterMassLnnormal
 {
   /*< private >*/

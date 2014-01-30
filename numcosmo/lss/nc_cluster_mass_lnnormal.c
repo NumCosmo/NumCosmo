@@ -43,10 +43,6 @@
 
 G_DEFINE_TYPE (NcClusterMassLnnormal, nc_cluster_mass_lnnormal, NC_TYPE_CLUSTER_MASS);
 
-//retirar os dois abaixo
-//#define _NC_CLUSTER_MASS_LNNORMAL_BIAS 0.0
-//#define _NC_CLUSTER_MASS_LNNORMAL_SIGMA 0.04
-
 #define VECTOR (NCM_MODEL (mlnn)->params)
 #define BIAS   (ncm_vector_get (VECTOR, NC_CLUSTER_MASS_LNNORMAL_BIAS))
 #define SIGMA  (ncm_vector_get (VECTOR, NC_CLUSTER_MASS_LNNORMAL_SIGMA))
@@ -64,10 +60,6 @@ _nc_cluster_mass_lnnormal_p (NcClusterMass *clusterm, NcHICosmo *model, gdouble 
 {
   NcClusterMassLnnormal *mlnn = NC_CLUSTER_MASS_LNNORMAL (clusterm);
   const gdouble lnMobs = lnM_obs[0];
-  //const gdouble lnM_bias = lnM_obs_params[NC_CLUSTER_MASS_LNNORMAL_BIAS];
-  //const gdouble sigma = lnM_obs_params[NC_CLUSTER_MASS_LNNORMAL_SIGMA];
-  //const gdouble sqrt2_sigma = M_SQRT2 * sigma;
-  //const gdouble x = (lnMobs - lnM - lnM_bias) / sqrt2_sigma;
   const gdouble sqrt2_sigma = M_SQRT2 * SIGMA;
   const gdouble x = (lnMobs - lnM - BIAS) / sqrt2_sigma;
 
@@ -81,7 +73,6 @@ static gdouble
 _nc_cluster_mass_lnnormal_intp (NcClusterMass *clusterm, NcHICosmo *model, gdouble lnM, gdouble z)
 {
   NcClusterMassLnnormal *mlnn = NC_CLUSTER_MASS_LNNORMAL (clusterm);
-  //const gdouble sigma = _NC_CLUSTER_MASS_LNNORMAL_SIGMA;
   const gdouble sqrt2_sigma = M_SQRT2 * SIGMA;
   const gdouble x_min = (lnM - mlnn->lnMobs_min) / sqrt2_sigma;
   const gdouble x_max = (lnM - mlnn->lnMobs_max) / sqrt2_sigma;
@@ -100,17 +91,11 @@ _nc_cluster_mass_lnnormal_resample (NcClusterMass *clusterm, NcHICosmo *model, g
 {
   NcClusterMassLnnormal *mlnn = NC_CLUSTER_MASS_LNNORMAL (clusterm);
   NcmRNG *rng = ncm_rng_pool_get (NCM_DATA_RESAMPLE_RNG_NAME);
-  //const gdouble sigma = _NC_CLUSTER_MASS_LNNORMAL_SIGMA;
-  //const gdouble bias = _NC_CLUSTER_MASS_LNNORMAL_BIAS;
-
+  
   NCM_UNUSED (model);
   NCM_UNUSED (z);
   
-  //lnM_obs_params[NC_CLUSTER_MASS_LNNORMAL_BIAS] = bias;
-  //lnM_obs_params[NC_CLUSTER_MASS_LNNORMAL_SIGMA] = sigma;
-
   ncm_rng_lock (rng);
-  //lnM_obs[0] = lnM + bias + gsl_ran_gaussian (rng->r, sigma);
   lnM_obs[0] = lnM + BIAS + gsl_ran_gaussian (rng->r, SIGMA);
   ncm_rng_unlock (rng);
   ncm_rng_free (rng);
@@ -123,8 +108,6 @@ _nc_cluster_mass_lnnormal_p_limits (NcClusterMass *clusterm, NcHICosmo *model, g
 {
   NcClusterMassLnnormal *mlnn = NC_CLUSTER_MASS_LNNORMAL (clusterm);
   const gdouble mean = lnM_obs[0] - BIAS;
-  //const gdouble lnMl = mean - 7.0 * lnM_obs_params[NC_CLUSTER_MASS_LNNORMAL_SIGMA];
-  //const gdouble lnMu = mean + 7.0 * lnM_obs_params[NC_CLUSTER_MASS_LNNORMAL_SIGMA];
   const gdouble lnMl = mean - 7.0 * SIGMA;
   const gdouble lnMu = mean + 7.0 * SIGMA;
 
@@ -140,8 +123,6 @@ static void
 _nc_cluster_mass_lnnormal_n_limits (NcClusterMass *clusterm, NcHICosmo *model, gdouble *lnM_lower, gdouble *lnM_upper)
 {
   NcClusterMassLnnormal *mlnn = NC_CLUSTER_MASS_LNNORMAL (clusterm);
-  //const gdouble lnMl = mlnn->lnMobs_min - 7.0 * _NC_CLUSTER_MASS_LNNORMAL_SIGMA;
-  //const gdouble lnMu = mlnn->lnMobs_max + 7.0 * _NC_CLUSTER_MASS_LNNORMAL_SIGMA;
   const gdouble lnMl = mlnn->lnMobs_min - 7.0 * SIGMA;
   const gdouble lnMu = mlnn->lnMobs_max + 7.0 * SIGMA;
 
