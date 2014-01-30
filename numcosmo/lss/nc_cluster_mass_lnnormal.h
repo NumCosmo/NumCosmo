@@ -43,6 +43,29 @@ G_BEGIN_DECLS
 typedef struct _NcClusterMassLnnormalClass NcClusterMassLnnormalClass;
 typedef struct _NcClusterMassLnnormal NcClusterMassLnnormal;
 
+/**
+ * NcClusterMassLnnormalParams:
+ * @NC_CLUSTER_MASS_LNNORMAL_BIAS: FIXME
+ * @NC_CLUSTER_MASS_LNNORMAL_SIGMA: standard deviation of the log-normal distribution
+ *
+ * FIXME
+ */
+typedef enum _NcClusterMassLnnormalParams
+{
+  NC_CLUSTER_MASS_LNNORMAL_BIAS = 0,
+  NC_CLUSTER_MASS_LNNORMAL_SIGMA,  /*< private >*/
+  NC_CLUSTER_MASS_LNNORMAL_SPARAM_LEN, /*< skip >*/
+} NcClusterMassLnnormalParams;
+
+#define NC_CLUSTER_MASS_LNNORMAL_DEFAULT_BIAS  (0.0)
+#define NC_CLUSTER_MASS_LNNORMAL_DEFAULT_SIGMA  (0.04)
+
+#define NC_CLUSTER_MASS_LNNORMAL_DEFAULT_PARAMS_ABSTOL (0.0)
+
+//reitrar os dois abaixo
+//#define NC_CLUSTER_MASS_LNNORMAL_BIAS (0)
+//#define NC_CLUSTER_MASS_LNNORMAL_SIGMA (1)
+
 struct _NcClusterMassLnnormal
 {
   /*< private >*/
@@ -58,9 +81,6 @@ struct _NcClusterMassLnnormalClass
 };
 
 GType nc_cluster_mass_lnnormal_get_type (void) G_GNUC_CONST;
-
-#define NC_CLUSTER_MASS_LNNORMAL_BIAS (0)
-#define NC_CLUSTER_MASS_LNNORMAL_SIGMA (1)
 
 G_END_DECLS
 
