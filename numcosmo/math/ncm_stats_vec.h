@@ -73,9 +73,11 @@ struct _NcmStatsVec
   gdouble weight;
   gdouble weight2;
   gdouble bias_wt;
+#ifdef NCM_STATS_VEC_INC
   gdouble mean_inc;
   gdouble var_inc;
   gdouble cov_inc;
+#endif /* NCM_STATS_VEC_INC */
   guint nitens;
   NcmVector *x;
   NcmVector *mean;
@@ -100,6 +102,9 @@ void ncm_stats_vec_clear (NcmStatsVec **svec);
 void ncm_stats_vec_reset (NcmStatsVec *svec);
 void ncm_stats_vec_update_weight (NcmStatsVec *svec, gdouble w);
 
+void ncm_stats_vec_append_data (NcmStatsVec *svec, GPtrArray *data, gboolean dup);
+void ncm_stats_vec_prepend_data (NcmStatsVec *svec, GPtrArray *data, gboolean dup);
+
 G_INLINE_FUNC NcmVector *ncm_stats_vec_peek_x (NcmStatsVec *svec);
 G_INLINE_FUNC void ncm_stats_vec_set (NcmStatsVec *svec, guint i, gdouble x_i);
 G_INLINE_FUNC gdouble ncm_stats_vec_get (NcmStatsVec *svec, guint i);
@@ -109,8 +114,10 @@ G_INLINE_FUNC gdouble ncm_stats_vec_get_var (NcmStatsVec *svec, guint i);
 G_INLINE_FUNC gdouble ncm_stats_vec_get_sd (NcmStatsVec *svec, guint i);
 G_INLINE_FUNC gdouble ncm_stats_vec_get_cov (NcmStatsVec *svec, guint i, guint j);
 G_INLINE_FUNC gdouble ncm_stats_vec_get_cor (NcmStatsVec *svec, guint i, guint j);
-G_INLINE_FUNC void ncm_stats_vec_get_mean_vector (NcmStatsVec *svec, NcmVector *mean);
-G_INLINE_FUNC void ncm_stats_vec_get_cov_matrix (NcmStatsVec *svec, NcmMatrix *m);
+G_INLINE_FUNC gdouble ncm_stats_vec_get_weight (NcmStatsVec *svec);
+G_INLINE_FUNC void ncm_stats_vec_get_mean_vector (NcmStatsVec *svec, NcmVector *mean, guint offset);
+G_INLINE_FUNC void ncm_stats_vec_get_cov_matrix (NcmStatsVec *svec, NcmMatrix *m, guint offset);
+G_INLINE_FUNC NcmVector *ncm_stats_vec_peek_row (NcmStatsVec *svec, guint i);
 
 G_END_DECLS
 
@@ -184,24 +191,48 @@ ncm_stats_vec_get_cor (NcmStatsVec *svec, guint i, guint j)
     return ncm_stats_vec_get_cov (svec, i, j) / (ncm_stats_vec_get_sd (svec, i) * ncm_stats_vec_get_sd (svec, j));
 }
 
-G_INLINE_FUNC void 
-ncm_stats_vec_get_mean_vector (NcmStatsVec *svec, NcmVector *x)
+G_INLINE_FUNC gdouble 
+ncm_stats_vec_get_weight (NcmStatsVec *svec)
 {
-  g_assert (x != NULL);
-  ncm_vector_memcpy (x, svec->mean);
+  return svec->weight;
 }
 
 G_INLINE_FUNC void 
-ncm_stats_vec_get_cov_matrix (NcmStatsVec *svec, NcmMatrix *m)
+ncm_stats_vec_get_mean_vector (NcmStatsVec *svec, NcmVector *x, guint offset)
+{
+  g_assert (x != NULL);
+  g_assert_cmpint (offset, <, svec->len);
+  ncm_vector_memcpy2 (x, svec->mean, 0, offset, svec->len - offset);
+}
+
+G_INLINE_FUNC void 
+ncm_stats_vec_get_cov_matrix (NcmStatsVec *svec, NcmMatrix *m, guint offset)
 {
   guint i;
   g_assert (m != NULL);
+  g_assert_cmpint (offset + 1, <, svec->len);
+
+  if (offset > 0)
+  {
+    NcmMatrix *m_src = ncm_matrix_get_submatrix (svec->cov, offset, offset, svec->len - offset, svec->len - offset);
+    ncm_matrix_memcpy (m, m_src);
+    ncm_matrix_free (m_src);
+  }
+  else
+    ncm_matrix_memcpy (m, svec->cov);
   
-  ncm_matrix_memcpy (m, svec->cov);
-  for (i = 0; i < svec->len; i++)
-    ncm_matrix_set (m, i, i, ncm_vector_fast_get (svec->var, i));
+  for (i = 0; i < svec->len - offset; i++)
+    ncm_matrix_set (m, i, i, ncm_vector_fast_get (svec->var, i + offset));
 
   ncm_matrix_scale (m, svec->bias_wt);
+}
+
+G_INLINE_FUNC NcmVector *
+ncm_stats_vec_peek_row (NcmStatsVec *svec, guint i)
+{
+  g_assert (svec->save_x);
+  g_assert (i < svec->nitens);
+  return g_ptr_array_index (svec->saved_x, i);
 }
 
 G_END_DECLS

@@ -437,7 +437,7 @@ ncm_data_prepare (NcmData *data, NcmMSet *mset)
  * Virtual: resample
  */
 void
-ncm_data_resample (NcmData *data, NcmMSet *mset)
+ncm_data_resample (NcmData *data, NcmMSet *mset, NcmRNG *rng)
 {
   if (NCM_DATA_GET_CLASS (data)->resample == NULL)
     g_error ("ncm_data_resample: The data (%s) does not implement resample.\n", 
@@ -445,7 +445,7 @@ ncm_data_resample (NcmData *data, NcmMSet *mset)
 
   ncm_data_prepare (data, mset);
   
-  NCM_DATA_GET_CLASS (data)->resample (data, mset);
+  NCM_DATA_GET_CLASS (data)->resample (data, mset, rng);
   data->begin = FALSE;
 
   ncm_data_set_init (data, TRUE);
@@ -519,7 +519,7 @@ ncm_data_bootstrap_set (NcmData *data, NcmBootstrap *bstrap)
  * 
  */
 void
-ncm_data_bootstrap_resample (NcmData *data)
+ncm_data_bootstrap_resample (NcmData *data, NcmRNG *rng)
 {
   if (!NCM_DATA_GET_CLASS (data)->bootstrap)
     g_error ("ncm_data_bootstrap_resample: The data (%s) does not implement bootstrap.\n", 
@@ -528,7 +528,7 @@ ncm_data_bootstrap_resample (NcmData *data)
     g_error ("ncm_data_bootstrap_resample: Bootstrap of %s is not enabled.\n", 
              ncm_data_get_desc (data));
 
-  ncm_bootstrap_resample (data->bstrap);
+  ncm_bootstrap_resample (data->bstrap, rng);
 }
 
 /**

@@ -27,6 +27,7 @@
 
 #include <glib-object.h>
 #include <numcosmo/build_cfg.h>
+#include <numcosmo/math/ncm_rng.h>
 
 G_BEGIN_DECLS
 
@@ -72,7 +73,7 @@ struct _NcClusterRedshiftClass
   GObjectClass parent_class;
   gdouble (*P) (NcClusterRedshift *clusterz, gdouble lnM, gdouble z, gdouble *z_obs, gdouble *z_obs_params);
   gdouble (*intP) (NcClusterRedshift *clusterz, gdouble lnM, gdouble z);
-  gboolean (*resample) (NcClusterRedshift *clusterz, gdouble lnM, gdouble z, gdouble *z_obs, gdouble *z_obs_params);
+  gboolean (*resample) (NcClusterRedshift *clusterz, gdouble lnM, gdouble z, gdouble *z_obs, gdouble *z_obs_params, NcmRNG *rng);
   void (*P_limits) (NcClusterRedshift *clusterz, gdouble *z_obs, gdouble *z_obs_params, gdouble *z_lower, gdouble *z_upper);
   void (*N_limits) (NcClusterRedshift *clusterz, gdouble *z_lower, gdouble *z_upper);
   guint (*obs_len) (NcClusterRedshift *clusterz);
@@ -94,7 +95,7 @@ guint nc_cluster_redshift_obs_params_len (NcClusterRedshift *clusterz);
 
 gdouble nc_cluster_redshift_p (NcClusterRedshift *clusterz, gdouble lnM, gdouble z, gdouble *z_obs, gdouble *z_obs_params);
 gdouble nc_cluster_redshift_intp (NcClusterRedshift *clusterz, gdouble lnM, gdouble z);
-gboolean nc_cluster_redshift_resample (NcClusterRedshift *clusterz, gdouble lnM, gdouble z, gdouble *z_obs, gdouble *z_obs_params);
+gboolean nc_cluster_redshift_resample (NcClusterRedshift *clusterz, gdouble lnM, gdouble z, gdouble *z_obs, gdouble *z_obs_params, NcmRNG *rng);
 void nc_cluster_redshift_p_limits (NcClusterRedshift *clusterz, gdouble *z_obs, gdouble *z_obs_params, gdouble *z_lower, gdouble *z_upper);
 void nc_cluster_redshift_n_limits (NcClusterRedshift *clusterz, gdouble *z_lower, gdouble *z_upper);
 

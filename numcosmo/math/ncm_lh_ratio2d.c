@@ -997,7 +997,7 @@ ncm_lh_ratio2d_conf_region (NcmLHRatio2d *lhr2d, gdouble clevel, gdouble expecte
     }
   }
 
-  total_time += g_timer_elapsed (iter_timer, NULL);
+  /* total_time += g_timer_elapsed (iter_timer, NULL); */
   g_timer_destroy (iter_timer);
   
   {

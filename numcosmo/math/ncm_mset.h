@@ -67,6 +67,7 @@ struct _NcmMSet
   NcmModel *model[NCM_MODEL_MAX_ID];
   GArray *pi_array;
   GArray *fpi_array[NCM_MODEL_MAX_ID];
+  GPtrArray *fullname_parray;
   gboolean valid_map;
   guint total_len;
   guint fparam_len;
@@ -186,12 +187,14 @@ void ncm_mset_param_set_pi (NcmMSet *mset, NcmMSetPIndex *pi, const gdouble *x, 
 void ncm_mset_param_get_pi (NcmMSet *mset, NcmMSetPIndex *pi, gdouble *x, guint n);
 
 void ncm_mset_fparams_get_vector (NcmMSet *mset, NcmVector *x);
+void ncm_mset_fparams_get_vector_offset (NcmMSet *mset, NcmVector *x, guint offset);
 void ncm_mset_fparams_set_vector (NcmMSet *mset, const NcmVector *x);
 void ncm_mset_fparams_set_array (NcmMSet *mset, const gdouble *x);
 void ncm_mset_fparams_set_gsl_vector (NcmMSet *mset, const gsl_vector *x);
 
 guint ncm_mset_fparams_len (NcmMSet *mset);
 const gchar *ncm_mset_fparam_name (NcmMSet *mset, guint n);
+const gchar *ncm_mset_fparam_full_name (NcmMSet *mset, guint n);
 gdouble ncm_mset_fparam_get_scale (NcmMSet *mset, guint n);
 gdouble ncm_mset_fparam_get_lower_bound (NcmMSet *mset, guint n);
 gdouble ncm_mset_fparam_get_upper_bound (NcmMSet *mset, guint n);

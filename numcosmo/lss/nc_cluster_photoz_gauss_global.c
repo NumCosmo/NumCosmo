@@ -115,11 +115,10 @@ _nc_cluster_photoz_gauss_global_intp (NcClusterRedshift *clusterz, gdouble lnM, 
 }
 
 static gboolean
-_nc_cluster_photoz_gauss_global_resample (NcClusterRedshift *clusterz, gdouble lnM, gdouble z, gdouble *z_obs, gdouble *z_obs_params)
+_nc_cluster_photoz_gauss_global_resample (NcClusterRedshift *clusterz, gdouble lnM, gdouble z, gdouble *z_obs, gdouble *z_obs_params, NcmRNG *rng)
 {
   NcClusterPhotozGaussGlobal *pzg_global = NC_CLUSTER_PHOTOZ_GAUSS_GLOBAL (clusterz);
   const gdouble sigma_z = pzg_global->sigma0 * (1.0 + z);
-  NcmRNG *rng = ncm_rng_pool_get (NCM_DATA_RESAMPLE_RNG_NAME);
 
   NCM_UNUSED (z_obs_params);
   NCM_UNUSED (lnM);
@@ -129,7 +128,6 @@ _nc_cluster_photoz_gauss_global_resample (NcClusterRedshift *clusterz, gdouble l
     z_obs[0] = z + pzg_global->z_bias + gsl_ran_gaussian (rng->r, sigma_z);
   } while (z_obs[0] < 0.0);
   ncm_rng_unlock (rng);
-  ncm_rng_free (rng);
 
   return (z_obs[0] <= pzg_global->pz_max) && (z_obs[0] >= pzg_global->pz_min);
 }

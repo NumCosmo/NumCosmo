@@ -216,7 +216,10 @@ NcmReparam *
 ncm_reparam_copy (NcmReparam *reparam)
 {
   if (!NCM_REPARAM_GET_CLASS (reparam)->copy)
+  {
     g_error ("NcmReparam[%s] base class do not implement copy.", G_OBJECT_TYPE_NAME (reparam));
+    return NULL;
+  }
   else
     return NCM_REPARAM_GET_CLASS (reparam)->copy (reparam);
 }

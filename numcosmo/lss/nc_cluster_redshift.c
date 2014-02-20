@@ -192,9 +192,9 @@ nc_cluster_redshift_intp (NcClusterRedshift *clusterz, gdouble lnM, gdouble z)
  * Returns: FIXME
  */
 gboolean
-nc_cluster_redshift_resample (NcClusterRedshift *clusterz, gdouble lnM, gdouble z, gdouble *z_obs, gdouble *z_obs_params)
+nc_cluster_redshift_resample (NcClusterRedshift *clusterz, gdouble lnM, gdouble z, gdouble *z_obs, gdouble *z_obs_params, NcmRNG *rng)
 {
-  return NC_CLUSTER_REDSHIFT_GET_CLASS (clusterz)->resample (clusterz, lnM, z, z_obs, z_obs_params);
+  return NC_CLUSTER_REDSHIFT_GET_CLASS (clusterz)->resample (clusterz, lnM, z, z_obs, z_obs_params, rng);
 }
 
 /**

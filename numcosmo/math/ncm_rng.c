@@ -28,7 +28,7 @@
  * @title: Encapsulated GSL random number generator. 
  * @short_description: GSL random number generator with support for multhreading.
  *
- * This object encapsulates the GSL random number generator. The purpose is to
+ * This object encapsulates the GSL pseudo random number generator (PRNG). The purpose is to
  * add support for saving and loading state and multhreading.
  * 
  */
@@ -45,7 +45,8 @@ enum
 {
   PROP_0,
   PROP_ALGO,
-  PROP_STATE
+  PROP_STATE,
+  PROP_SEED,
 };
 
 G_DEFINE_TYPE (NcmRNG, ncm_rng, G_TYPE_OBJECT);
@@ -53,13 +54,73 @@ G_DEFINE_TYPE (NcmRNG, ncm_rng, G_TYPE_OBJECT);
 static void
 ncm_rng_init (NcmRNG *rng)
 {
-  rng->r    = NULL;
+  rng->r        = NULL;
+  rng->seed_val = 0;
+  rng->seed_set = FALSE;
 #if (GLIB_MAJOR_VERSION == 2) && (GLIB_MINOR_VERSION < 32)
-  rng->lock = g_mutex_new ();
+  rng->lock     = g_mutex_new ();
 #else
   g_mutex_init (&rng->lock_m);
-  rng->lock = &rng->lock_m;
+  rng->lock     = &rng->lock_m;
 #endif
+}
+
+static void
+_ncm_rng_constructed (GObject *object)
+{
+  /* Chain up : start */
+  G_OBJECT_CLASS (ncm_rng_parent_class)->constructed (object);
+  {
+    NcmRNG *rng = NCM_RNG (object);
+    if (!rng->seed_set)
+      ncm_rng_set_seed (rng, gsl_rng_default_seed);
+  }
+}
+
+static void
+_ncm_rng_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
+{
+  NcmRNG *rng = NCM_RNG (object);
+  g_return_if_fail (NCM_IS_RNG (object));
+
+  switch (prop_id)
+  {
+    case PROP_ALGO:
+      ncm_rng_set_algo (rng, g_value_get_string (value));
+      break;
+    case PROP_STATE:
+      ncm_rng_set_state (rng, g_value_get_string (value));
+      break;
+    case PROP_SEED:
+      ncm_rng_set_seed (rng, g_value_get_ulong (value));
+      break;
+    default:
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
+      break;
+  }
+}
+
+static void
+_ncm_rng_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
+{
+  NcmRNG *rng = NCM_RNG (object);
+  g_return_if_fail (NCM_IS_RNG (object));
+
+  switch (prop_id)
+  {
+    case PROP_ALGO:
+      g_value_set_string (value, ncm_rng_get_algo (rng));
+      break;
+    case PROP_STATE:
+      g_value_take_string (value, ncm_rng_get_state (rng));
+      break;
+    case PROP_SEED:
+      g_value_set_ulong (value, rng->seed_val);
+      break;
+    default:
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
+      break;
+  }
 }
 
 static void
@@ -83,50 +144,11 @@ _ncm_rng_finalize (GObject *object)
 }
 
 static void
-_ncm_rng_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
-{
-  NcmRNG *rng = NCM_RNG (object);
-  g_return_if_fail (NCM_IS_RNG (object));
-
-  switch (prop_id)
-  {
-    case PROP_ALGO:
-      ncm_rng_set_algo (rng, g_value_get_string (value));
-      break;
-    case PROP_STATE:
-      ncm_rng_set_state (rng, g_value_get_string (value));
-      break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
-  }
-}
-
-static void
-_ncm_rng_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
-{
-  NcmRNG *rng = NCM_RNG (object);
-  g_return_if_fail (NCM_IS_RNG (object));
-
-  switch (prop_id)
-  {
-    case PROP_ALGO:
-      g_value_set_string (value, ncm_rng_get_algo (rng));
-      break;
-    case PROP_STATE:
-      g_value_take_string (value, ncm_rng_get_state (rng));
-      break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
-  }
-}
-
-static void
 ncm_rng_class_init (NcmRNGClass *klass)
 {
   GObjectClass* object_class = G_OBJECT_CLASS (klass);
 
+  object_class->constructed  = &_ncm_rng_constructed;
   object_class->finalize     = &_ncm_rng_finalize;
   object_class->set_property = &_ncm_rng_set_property;
   object_class->get_property = &_ncm_rng_get_property;
@@ -137,6 +159,13 @@ ncm_rng_class_init (NcmRNGClass *klass)
                                                         NULL,
                                                         "Algorithm name",
                                                         gsl_rng_default->name,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  g_object_class_install_property (object_class,
+                                   PROP_SEED,
+                                   g_param_spec_ulong ("seed",
+                                                        NULL,
+                                                        "Algorithm seed",
+                                                        0, G_MAXUINT32, 0,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   g_object_class_install_property (object_class,
@@ -149,14 +178,19 @@ ncm_rng_class_init (NcmRNGClass *klass)
   /* Init the global gsl_rng variables */
   gsl_rng_env_setup ();
 
+  klass->seed_gen  = g_rand_new ();
+  klass->seed_hash = g_hash_table_new (g_direct_hash, g_direct_equal);
 }
 
 /**
  * ncm_rng_new:
- * @algo: algorithm name. 
+ * @algo: (allow-none): algorithm name. 
  * 
  * Creates a new #NcmRNG using the algorithm @algo see the list of algorithms
  * here ( http://www.gnu.org/software/gsl/manual/html_node/Random-number-generator-algorithms.html ).
+ * If @algo is NULL the default algorithm and seed are used, see 
+ * ( http://www.gnu.org/software/gsl/manual/html_node/Random-number-environment-variables.html#Random-number-environment-variables )
+ * for more details.
  * 
  * Returns: (transfer full): a new #NcmRNG.
  */
@@ -165,6 +199,29 @@ ncm_rng_new (const gchar *algo)
 {
   NcmRNG *rng = g_object_new (NCM_TYPE_RNG, 
                               "algorithm", algo, 
+                              NULL);
+  return rng;
+}
+
+/**
+ * ncm_rng_seeded_new:
+ * @algo: (allow-none): algorithm name. 
+ * @seed: seed used to initialize the PRNG.
+ * 
+ * Creates a new #NcmRNG using the algorithm @algo see the list of algorithms
+ * here ( http://www.gnu.org/software/gsl/manual/html_node/Random-number-generator-algorithms.html ).
+ * If @algo is NULL the default algorithm is used, see 
+ * ( http://www.gnu.org/software/gsl/manual/html_node/Random-number-environment-variables.html#Random-number-environment-variables )
+ * for more details.
+ * 
+ * Returns: (transfer full): a new #NcmRNG.
+ */
+NcmRNG *
+ncm_rng_seeded_new (const gchar *algo, gulong seed)
+{
+  NcmRNG *rng = g_object_new (NCM_TYPE_RNG, 
+                              "algorithm", algo, 
+                              "seed", seed,
                               NULL);
   return rng;
 }
@@ -253,7 +310,8 @@ ncm_rng_get_algo (NcmRNG *rng)
  * ncm_rng_get_state:
  * @rng: a #NcmRNG. 
  * 
- * Gets the state of the algorithm.
+ * Gets the state of the algorithm in Base64. It can be a very large string
+ * depending on the underlining 
  * 
  * Returns: (transfer full): algorithm state.
  */
@@ -262,16 +320,7 @@ ncm_rng_get_state (NcmRNG *rng)
 {
   gpointer state = gsl_rng_state (rng->r);
   gsize state_len = gsl_rng_size (rng->r);
-  GString *state_str = g_string_sized_new (2 * state_len);
-  guint i;
-
-  for (i = 0; i < state_len; i++)
-  {
-    guchar u = ((guchar *)state)[i];
-    g_string_append_printf (state_str, "%02hhX", u);
-  }
-  
-  return g_string_free (state_str, FALSE);
+  return g_base64_encode (state, state_len);
 }
 
 /**
@@ -329,24 +378,89 @@ ncm_rng_set_algo (NcmRNG *rng, const gchar *algo)
 void 
 ncm_rng_set_state (NcmRNG *rng, const gchar *state)
 {
-  gchar byte[3];
   gpointer state_ptr = gsl_rng_state (rng->r);
   gsize state_len = gsl_rng_size (rng->r);
-  guint i;
+  gsize state_dec_len = 0;
+  guchar *decoded_state = g_base64_decode (state, &state_dec_len);
+  g_assert_cmpuint (state_len, ==, state_dec_len);
 
-  g_assert (state != NULL);  
+  memcpy (state_ptr, decoded_state, state_len);
 
-  g_assert_cmpuint (2 * state_len, ==, strlen (state));
+  g_free (decoded_state);
+}
 
-  for (i = 0; i < state_len; i++)
+/**
+ * ncm_rng_check_seed:
+ * @rng: a #NcmRNG. 
+ * @seed: seed for the PRNG.
+ * 
+ * Check if the seed was already used by any #NcmRNG. 
+ * 
+ * Returns: TRUE is @seed was never used.
+ */
+gboolean
+ncm_rng_check_seed (NcmRNG *rng, gulong seed)
+{
+  NcmRNGClass *rng_class = NCM_RNG_GET_CLASS (rng);
+  gint seed_int = seed;
+  gpointer b = g_hash_table_lookup (rng_class->seed_hash, GINT_TO_POINTER (seed_int));
+  return GPOINTER_TO_INT (b) == 0;
+}
+
+/**
+ * ncm_rng_set_seed:
+ * @rng: a #NcmRNG. 
+ * @seed: seed for the PRNG.
+ * 
+ * Sets the algorithm seed. 
+ * 
+ */
+void 
+ncm_rng_set_seed (NcmRNG *rng, gulong seed)
+{
+  rng->seed_val = seed;
+  if (rng->r != NULL)
   {
-    guchar u;
-    byte[0] = state[2 * i];
-    byte[1] = state[2 * i + 1];
-    byte[2] = 0;
-    u = g_ascii_strtoull (byte, NULL, 16);
-    ((guchar *)state_ptr)[i] = u;
+    NcmRNGClass *rng_class = NCM_RNG_GET_CLASS (rng);    
+    gint seed_int = seed;
+    gsl_rng_set (rng->r, seed);
+    g_hash_table_insert (rng_class->seed_hash, GINT_TO_POINTER (seed_int), GINT_TO_POINTER (1));
+    rng->seed_set = TRUE;
   }
+}
+
+/**
+ * ncm_rng_get_seed:
+ * @rng: a #NcmRNG. 
+ * 
+ * Returns: the seed used to initialize the PRNG.
+ * 
+ */
+gulong 
+ncm_rng_get_seed (NcmRNG *rng)
+{
+  return rng->seed_val;
+}
+
+/**
+ * ncm_rng_set_random_seed:
+ * @rng: a #NcmRNG.
+ * @allow_colisions: a gboolean.
+ * 
+ * Sets the algorithm seed using a PRNG seeded by /dev/urandom (Unix/Linux)
+ * or current time  when the first is not available (see #g_rand_new()). If
+ * @allow_colisions is FALSE this function will set the first unused seed
+ * generated.
+ * 
+ */
+void 
+ncm_rng_set_random_seed (NcmRNG *rng, gboolean allow_colisions)
+{
+  NcmRNGClass *rng_class = NCM_RNG_GET_CLASS (rng);        
+  gulong seed = g_rand_int (rng_class->seed_gen) + 1;
+  while (!ncm_rng_check_seed (rng, seed))
+    seed = g_rand_int (rng_class->seed_gen) + 1;
+  ncm_rng_set_seed (rng, seed);
 }
 
 static GHashTable *rng_table = NULL;

@@ -22,4 +22,4 @@
  * with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-GPtrArray *nc_de_data_cluster_new (NcDistance *dist, NcmMSet *mset, NcDEDataClusterEntries *de_data_cluster, NcmDataset *dset, NcDataClusterAbundanceId id);
+GPtrArray *nc_de_data_cluster_new (NcDistance *dist, NcmMSet *mset, NcDEDataClusterEntries *de_data_cluster, NcmDataset *dset, NcDataClusterAbundanceId id, NcmRNG *rng);

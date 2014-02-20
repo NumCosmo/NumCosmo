@@ -642,6 +642,30 @@ ncm_cfg_get_enum_by_id_name_nick (GType enum_type, const gchar *id_name_nick)
 }
 
 /**
+ * ncm_cfg_enum_get_value:
+ * @enum_type: FIXME
+ * @n: FIXME
+ *
+ * FIXME
+ * 
+ * Returns: (transfer none)
+ */
+const GEnumValue *
+ncm_cfg_enum_get_value (GType enum_type, guint n)
+{
+  GEnumClass *enum_class;
+  GEnumValue *val;
+  g_assert (G_TYPE_IS_ENUM (enum_type));
+  enum_class = g_type_class_ref (enum_type);
+
+  val = g_enum_get_value (enum_class, n);
+
+  g_type_class_unref (enum_class);
+
+  return val;
+}
+
+/**
  * ncm_cfg_enum_print_all:
  * @enum_type: FIXME
  * @header: FIXME

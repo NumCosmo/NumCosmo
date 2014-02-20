@@ -60,6 +60,7 @@ main (gint argc, gchar *argv[])
   gchar *full_cmd_line = NULL;
   gchar *runconf_cmd_line = NULL;
   gboolean is_de = FALSE;
+  NcmRNG *rng = ncm_rng_pool_get ("darkenergy");
 
   ncm_cfg_init ();
 
@@ -345,7 +346,7 @@ main (gint argc, gchar *argv[])
                                                                      de_data_simple.cluster_id);
     if (cluster_id != NULL)
     {
-      ca_array = nc_de_data_cluster_new (dist, mset, &de_data_cluster, dset, cluster_id->value);
+      ca_array = nc_de_data_cluster_new (dist, mset, &de_data_cluster, dset, cluster_id->value, rng);
     }
     else
       g_error ("Cluster sample '%s' not found run --cluster-list to list the available options", de_data_simple.cluster_id);
@@ -359,14 +360,6 @@ main (gint argc, gchar *argv[])
     NcmMSetFunc *Omega_bh2 = nc_hicosmo_create_mset_func0 (&nc_hicosmo_Omega_bh2);
     ncm_prior_add_gaussian_const_func (lh, Omega_bh2, 0.022, 0.002);
     ncm_mset_func_free (Omega_bh2);
-  }
-
-  if (de_data_simple.H0_Hst)
-  {
-    if (ncm_mset_param_get_ftype (mset, nc_hicosmo_id (), NC_HICOSMO_DE_H0) == NCM_PARAM_TYPE_FIXED)
-      g_warning ("A prior on H0 was required but H0 was kept fixed. This prior will be useless.");
-
-    ncm_prior_add_gaussian_data (lh, nc_hicosmo_id (), NC_HICOSMO_DE_H0, 73.8, 2.4);
   }
 
   if (de_fit.qspline_cp && TRUE)
@@ -462,30 +455,76 @@ main (gint argc, gchar *argv[])
 
   if (de_fit.montecarlo > 0)
   {
-    NcmMSet *resample_mset;
-    NcmFitMC *mc = ncm_fit_mc_new (fit);
-    gdouble m2lnL = ncm_fit_state_get_m2lnL_curval (fit->fstate);
-
-    if (de_fit.fiducial != NULL)
-      resample_mset = fiduc;
-    else
-      resample_mset = fit->mset;
-
-    if (de_fit.mc_nthreads > 0)
-      ncm_fit_mc_run_mt (mc, resample_mset, de_fit.mc_ni, de_fit.montecarlo, de_fit.mc_rtype, de_fit.msg_level, de_fit.mc_nthreads);
-    else
-      ncm_fit_mc_run (mc, resample_mset, de_fit.mc_ni, de_fit.montecarlo, de_fit.mc_rtype, de_fit.msg_level);
-    ncm_fit_mc_mean_covar (mc);
-    ncm_fit_mc_gof_pdf (mc);
-    ncm_fit_log_covar (fit);
-    ncm_fit_mc_gof_pdf_print (mc);
+    if (de_fit.mcbs <= 0)
     {
-      gdouble p_value = ncm_fit_mc_gof_pdf_pvalue (mc, m2lnL, FALSE);
-      ncm_message ("#   - pvalue for fitted model [% 20.15g] %04.2f%%.\n#\n", m2lnL, 100.0 * p_value);
+      NcmFitMC *mc = ncm_fit_mc_new (fit, de_fit.mc_rtype, de_fit.msg_level);
+      gdouble m2lnL = ncm_fit_state_get_m2lnL_curval (fit->fstate);
+
+      if (de_fit.fiducial != NULL)
+        ncm_fit_mc_set_fiducial (mc, fiduc);
+
+      if (de_fit.mc_nthreads > 1)
+        ncm_fit_mc_set_nthreads (mc, de_fit.mc_nthreads);
+
+      if (de_fit.mc_seed > -1)
+      {
+        NcmRNG *mc_rng = ncm_rng_seeded_new (NULL, de_fit.mc_seed);
+        ncm_fit_mc_set_rng (mc, mc_rng);
+        ncm_rng_free (mc_rng);
+      }
+      
+      if (de_fit.mc_data != NULL)
+        ncm_fit_mc_set_data_file (mc, de_fit.mc_data);
+      
+      ncm_fit_mc_start_run (mc);
+      
+      if (de_fit.mc_ni >= 0)
+        ncm_fit_mc_set_first_sample_id (mc, de_fit.mc_ni);
+
+      ncm_fit_mc_run_lre (mc, de_fit.montecarlo, de_fit.mc_lre);
+      ncm_fit_mc_end_run (mc);
+      
+      ncm_fit_mc_mean_covar (mc);
+      ncm_fit_catalog_param_pdf (mc->fcat, 0);
+      ncm_fit_log_covar (fit);
+      {
+        gdouble p_value = ncm_fit_catalog_param_pdf_pvalue (mc->fcat, m2lnL, FALSE);
+        ncm_message ("#   - pvalue for fitted model [% 20.15g] %04.2f%%.\n#\n", m2lnL, 100.0 * p_value);
+      }
+
+      ncm_fit_mc_clear (&mc);
     }
-    
-    if (de_fit.mc_data)
-      ncm_fit_mc_print (mc);
+    else
+    {
+      NcmMSet *resample_mset;
+      NcmFitMCBS *mcbs = ncm_fit_mcbs_new (fit);
+      gdouble m2lnL = ncm_fit_state_get_m2lnL_curval (fit->fstate);
+
+      if (de_fit.fiducial != NULL)
+        resample_mset = fiduc;
+      else
+        resample_mset = fit->mset;
+
+      if (de_fit.mc_seed > -1)
+      {
+        NcmRNG *mc_rng = ncm_rng_seeded_new (NULL, de_fit.mc_seed);
+        ncm_fit_mcbs_set_rng (mcbs, mc_rng);
+        ncm_rng_free (mc_rng);
+      }
+      
+      if (de_fit.mc_data != NULL)
+        ncm_fit_mcbs_set_filename (mcbs, de_fit.mc_data);
+
+      ncm_fit_mcbs_run (mcbs, resample_mset, de_fit.mc_ni, de_fit.montecarlo, de_fit.mcbs, de_fit.mc_rtype, de_fit.msg_level, de_fit.mc_nthreads);
+
+      ncm_fit_catalog_param_pdf (mcbs->fcat, 0);
+      ncm_fit_log_covar (fit);
+      {
+        gdouble p_value = ncm_fit_catalog_param_pdf_pvalue (mcbs->fcat, m2lnL, FALSE);
+        ncm_message ("#   - pvalue for fitted model [% 20.15g] %04.2f%%.\n#\n", m2lnL, 100.0 * p_value);
+      }
+      ncm_fit_mcbs_clear (&mcbs);
+    }
   }
 
   if (de_fit.onedim_cr != NULL)
@@ -526,7 +565,7 @@ main (gint argc, gchar *argv[])
   if (de_fit.resample)
   {
     ncm_message ("# Resample from bestfit values\n");
-    ncm_dataset_resample (dset, mset);
+    ncm_dataset_resample (dset, mset, rng);
     ncm_fit_run (fit, de_fit.msg_level);
     ncm_fit_log_info (fit);
     ncm_fit_numdiff_m2lnL_covar (fit);
@@ -747,6 +786,7 @@ main (gint argc, gchar *argv[])
   ncm_fit_free (fit);
   ncm_likelihood_free (lh);
   ncm_dataset_free (dset);
+  ncm_rng_free (rng);
   nc_distance_free (dist);
   g_free (full_cmd_line);
 

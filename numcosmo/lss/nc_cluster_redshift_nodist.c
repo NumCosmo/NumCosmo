@@ -74,7 +74,7 @@ _nc_cluster_redshift_nodist_intp (NcClusterRedshift *clusterz, gdouble lnM, gdou
 }
 
 static gboolean
-_nc_cluster_redshift_nodist_resample (NcClusterRedshift *clusterz, gdouble lnM, gdouble z, gdouble *z_obs, gdouble *z_obs_params)
+_nc_cluster_redshift_nodist_resample (NcClusterRedshift *clusterz, gdouble lnM, gdouble z, gdouble *z_obs, gdouble *z_obs_params, NcmRNG *rng)
 {
   NcClusterRedshiftNodist *zn = NC_CLUSTER_REDSHIFT_NODIST (clusterz);
 

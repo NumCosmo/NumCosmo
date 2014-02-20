@@ -227,7 +227,7 @@ nc_growth_func_prepare (NcGrowthFunc *gf, NcHICosmo *model)
     i--;
     if (i < 0)
     {
-      i = i + 101;
+      /* i = i + 101; */
       for (i = 100; i >= 0; i--)
       {
         printf ("zf = %20.16g D = % 20.16g\n", g_array_index (x_array, gdouble, i), g_array_index (y_array, gdouble, i));

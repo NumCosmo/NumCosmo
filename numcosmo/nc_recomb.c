@@ -705,7 +705,7 @@ nc_recomb_prepare (NcRecomb *recomb, NcHICosmo *cosmo)
  * Returns: $X_\e$.
  */
 gdouble 
-nc_recomb_Xe (NcRecomb *recomb, NcHICosmo *cosmo, const const gdouble lambda)
+nc_recomb_Xe (NcRecomb *recomb, NcHICosmo *cosmo, const gdouble lambda)
 { 
   NCM_UNUSED (cosmo);
   return ncm_spline_eval (recomb->Xe_s, lambda);

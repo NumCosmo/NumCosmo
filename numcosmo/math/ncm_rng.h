@@ -49,6 +49,8 @@ struct _NcmRNG
   /*< private >*/
   GObject parent_instance;
   gsl_rng *r;
+  gulong seed_val;
+  gboolean seed_set;
   GMutex *lock;
 #if !((GLIB_MAJOR_VERSION == 2) && (GLIB_MINOR_VERSION < 32))
   GMutex lock_m;
@@ -59,11 +61,14 @@ struct _NcmRNGClass
 {
   /*< private >*/
   GObjectClass parent_class;
+  GRand *seed_gen;
+  GHashTable *seed_hash;
 };
 
 GType ncm_rng_get_type (void) G_GNUC_CONST;
 
 NcmRNG *ncm_rng_new (const gchar *algo);
+NcmRNG *ncm_rng_seeded_new (const gchar *algo, gulong seed);
 NcmRNG *ncm_rng_ref (NcmRNG *rng);
 void ncm_rng_free (NcmRNG *rng);
 void ncm_rng_clear (NcmRNG **rng);
@@ -75,6 +80,10 @@ const gchar *ncm_rng_get_algo (NcmRNG *rng);
 gchar *ncm_rng_get_state (NcmRNG *rng);
 void ncm_rng_set_algo (NcmRNG *rng, const gchar *algo);
 void ncm_rng_set_state (NcmRNG *rng, const gchar *state);
+gboolean ncm_rng_check_seed (NcmRNG *rng, gulong seed);
+void ncm_rng_set_seed (NcmRNG *rng, gulong seed);
+gulong ncm_rng_get_seed (NcmRNG *rng);
+void ncm_rng_set_random_seed (NcmRNG *rng, gboolean allow_colisions);
 
 NcmRNG *ncm_rng_pool_get (const gchar *name);
 

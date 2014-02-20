@@ -100,6 +100,7 @@ main(gint argc, gchar *argv[])
   NcmFit *fit = NULL;
   NcDistance *dist = nc_distance_new (2.0);
   NcmMSet *mset, *mset_lcdm;
+  NcmRNG *rng = ncm_rng_pool_get ("q-piecewise");
   guint i, j;
 
   ncm_cfg_init ();
@@ -133,7 +134,7 @@ main(gint argc, gchar *argv[])
   }
 
   if (resample)
-    ncm_dataset_resample (dset, mset_lcdm);
+    ncm_dataset_resample (dset, mset_lcdm, rng);
 
   if (change_params)
   {
@@ -273,7 +274,7 @@ main(gint argc, gchar *argv[])
       {
         //        gint j;
         if (FALSE)
-          ncm_dataset_resample (lh->dset, orig_mset);
+          ncm_dataset_resample (lh->dset, orig_mset, rng);
  
 
         ncm_fit_run (fit, FALSE);
@@ -302,7 +303,7 @@ main(gint argc, gchar *argv[])
       GTimer *timer = g_timer_new ();
       for (i = 0 ; i < SIZE ; i++)
       {
-        ncm_dataset_resample (lh->dset, mset_lcdm);
+        ncm_dataset_resample (lh->dset, mset_lcdm, rng);
         ncm_fit_run (fit, FALSE);
         for (j = 0; j < 1000; j++)
         {
@@ -417,5 +418,6 @@ main(gint argc, gchar *argv[])
   ncm_mset_free (mset_lcdm);
   ncm_likelihood_free (lh);
   ncm_dataset_free (dset);
+  ncm_rng_free (rng);
   return 0;
 }

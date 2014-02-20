@@ -214,6 +214,7 @@ LINEAR_NAME_SUFFIX (get) (NcLinearPert *pert, guint n)
       return LINEAR_NAME_SUFFIX(get_theta2) (pert);
     default:
       g_error ("get n = %u not implemented", n);
+      return 0.0;
   }
 }
 

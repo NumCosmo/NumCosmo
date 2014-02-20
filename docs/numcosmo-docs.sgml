@@ -103,7 +103,9 @@
       <xi:include href="xml/ncm_fit_gsl_mm.xml"/>
       <xi:include href="xml/ncm_fit_gsl_mms.xml"/>
       <xi:include href="xml/ncm_fit_levmar.xml"/>
+      <xi:include href="xml/ncm_fit_catalog.xml"/>
       <xi:include href="xml/ncm_fit_mc.xml"/>
+      <xi:include href="xml/ncm_fit_mcbs.xml"/>
       <xi:include href="xml/ncm_lh_ratio1d.xml"/>
       <xi:include href="xml/ncm_lh_ratio2d.xml"/>
     </section>

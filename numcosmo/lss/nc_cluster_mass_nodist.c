@@ -75,7 +75,7 @@ _nc_cluster_mass_nodist_intp (NcClusterMass *clusterm, NcHICosmo *model, gdouble
 }
 
 static gboolean
-_nc_cluster_mass_nodist_resample (NcClusterMass *clusterm, NcHICosmo *model, gdouble lnM, gdouble z, gdouble *lnM_obs, gdouble *lnM_obs_params)
+_nc_cluster_mass_nodist_resample (NcClusterMass *clusterm, NcHICosmo *model, gdouble lnM, gdouble z, gdouble *lnM_obs, gdouble *lnM_obs_params, NcmRNG *rng)
 {
   NcClusterMassNodist *mnodist = NC_CLUSTER_MASS_NODIST (clusterm);
   lnM_obs[0] = lnM;

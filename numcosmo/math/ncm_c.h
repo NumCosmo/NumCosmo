@@ -132,14 +132,14 @@ G_INLINE_FUNC gdouble ncm_c_HeI_Lyman_2s_wl3_8pi (void) G_GNUC_CONST;
 G_INLINE_FUNC gdouble ncm_c_HeI_Lyman_2p_wl3_8pi (void) G_GNUC_CONST;
 G_INLINE_FUNC gdouble ncm_c_H_reduced_mass (void) G_GNUC_CONST;
 G_INLINE_FUNC gdouble ncm_c_H_reduced_energy (void) G_GNUC_CONST;
-G_INLINE_FUNC gdouble ncm_c_H_bind (const gint n, const gint j) G_GNUC_CONST;
+G_INLINE_FUNC gdouble ncm_c_H_bind (const gdouble n, const gdouble j) G_GNUC_CONST;
 G_INLINE_FUNC gdouble ncm_c_H_bind_1s (void) G_GNUC_CONST;
 G_INLINE_FUNC gdouble ncm_c_H_bind_2s (void) G_GNUC_CONST;
 G_INLINE_FUNC gdouble ncm_c_H_bind_2p (void) G_GNUC_CONST;
-G_INLINE_FUNC gdouble ncm_c_H_Lyman_series (const gint n, const gint j) G_GNUC_CONST;
+G_INLINE_FUNC gdouble ncm_c_H_Lyman_series (const gdouble n, const gdouble j) G_GNUC_CONST;
 G_INLINE_FUNC gdouble ncm_c_H_Lyman_2s (void) G_GNUC_CONST;
 G_INLINE_FUNC gdouble ncm_c_H_Lyman_2p (void) G_GNUC_CONST;
-G_INLINE_FUNC gdouble ncm_c_H_Lyman_series_wl (const gint n, const gint j) G_GNUC_CONST;
+G_INLINE_FUNC gdouble ncm_c_H_Lyman_series_wl (const gdouble n, const gdouble j) G_GNUC_CONST;
 G_INLINE_FUNC gdouble ncm_c_H_Lyman_2s_wl (void) G_GNUC_CONST;
 G_INLINE_FUNC gdouble ncm_c_H_Lyman_2p_wl (void) G_GNUC_CONST;
 G_INLINE_FUNC gdouble ncm_c_H_Lyman_2s_wl3_8pi (void) G_GNUC_CONST;
@@ -394,7 +394,7 @@ G_INLINE_FUNC gdouble ncm_c_H_reduced_mass (void)
 G_INLINE_FUNC gdouble ncm_c_H_reduced_energy (void)
 { return ncm_c_H_reduced_mass () * ncm_c_c2 (); }
 
-G_INLINE_FUNC gdouble ncm_c_H_bind (const gint n, const gint j)
+G_INLINE_FUNC gdouble ncm_c_H_bind (const gdouble n, const gdouble j)
 { return ncm_c_H_reduced_energy () *
 	(1.0 - 1.0 / sqrt (1.0 + ncm_c_fine_struct_square () /
 	                   pow (n - j - 0.5 + sqrt(pow(j + 0.5, 2.0) -
@@ -410,7 +410,7 @@ G_INLINE_FUNC gdouble ncm_c_H_bind_2s (void)
 G_INLINE_FUNC gdouble ncm_c_H_bind_2p (void)
 { return ncm_c_H_bind (2.0, 1.5); }
 
-G_INLINE_FUNC gdouble ncm_c_H_Lyman_series (const gint n, const gint j)
+G_INLINE_FUNC gdouble ncm_c_H_Lyman_series (const gdouble n, const gdouble j)
 { return ncm_c_H_bind_1s () - ncm_c_H_bind (n,j); }
 
 G_INLINE_FUNC gdouble ncm_c_H_Lyman_2s (void)
@@ -419,7 +419,7 @@ G_INLINE_FUNC gdouble ncm_c_H_Lyman_2s (void)
 G_INLINE_FUNC gdouble ncm_c_H_Lyman_2p (void)
 { return ncm_c_H_Lyman_series (2, 1.5); }
 
-G_INLINE_FUNC gdouble ncm_c_H_Lyman_series_wl (const gint n, const gint j)
+G_INLINE_FUNC gdouble ncm_c_H_Lyman_series_wl (const gdouble n, const gdouble j)
 { return ncm_c_hc () / ncm_c_H_Lyman_series (n,j); }
 
 G_INLINE_FUNC gdouble ncm_c_H_Lyman_2s_wl (void)

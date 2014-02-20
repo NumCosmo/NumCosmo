@@ -80,6 +80,7 @@ main (gint argc, gchar *argv[])
   NcHICosmoDEXcdm *xcdm;
   NcDistance *dist;
   NcmMSet *mset, *mset_xcdm;
+  NcmRNG *rng = ncm_rng_pool_get ("q-constant");
 
   ncm_cfg_init ();
 
@@ -107,7 +108,7 @@ main (gint argc, gchar *argv[])
   }
 
   if (resample)
-    ncm_dataset_resample (dset, mset_xcdm);
+    ncm_dataset_resample (dset, mset_xcdm, rng);
 
   lh = ncm_likelihood_new (dset);
 
@@ -127,7 +128,7 @@ main (gint argc, gchar *argv[])
     {
       for (i = 0; i < SIM_NUM; i++)
       {
-        ncm_dataset_resample (lh->dset, mset_xcdm);
+        ncm_dataset_resample (lh->dset, mset_xcdm, rng);
         ncm_fit_log_info (fit);
         ncm_fit_numdiff_m2lnL_covar (fit);
         ncm_fit_log_covar (fit);
@@ -179,5 +180,6 @@ main (gint argc, gchar *argv[])
   ncm_mset_free (mset_xcdm);
   ncm_likelihood_free (lh);
   ncm_dataset_free (dset);
+  ncm_rng_free (rng);
   return 0;
 }

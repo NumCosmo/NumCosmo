@@ -221,7 +221,7 @@ nc_data_dist_mu_new (NcDistance *dist, NcDataSNIAId id)
 {
   NcmData *data = g_object_new (NC_TYPE_DATA_DIST_MU,
                                 "dist", dist,
-                                "w-mean", TRUE,
+                                "w-mean", FALSE,
                                 NULL);
   nc_data_dist_mu_set_sample (NC_DATA_DIST_MU (data), id);
   return data;

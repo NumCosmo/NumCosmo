@@ -604,7 +604,6 @@ ncm_lh_ratio1d_find_bounds (NcmLHRatio1d *lhr1d, gdouble clevel, NcmFitRunMsgs m
   r_min = root (lhr1d, r_min, r);
 
   r = 0.0;
-  r_max = scale;
   while ((val = ncm_lh_ratio1d_f (r_max, lhr1d)) < 0.0)
   {
     ncm_lh_ratio1d_log_param_val (lhr1d, r_max, val);

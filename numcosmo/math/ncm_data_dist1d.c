@@ -126,7 +126,7 @@ ncm_data_dist1d_finalize (GObject *object)
 
 static guint _ncm_data_dist1d_get_length (NcmData *data);
 static void _ncm_data_dist1d_m2lnL_val (NcmData *data, NcmMSet *mset, gdouble *m2lnL);
-static void _ncm_data_dist1d_resample (NcmData *data, NcmMSet *mset);
+static void _ncm_data_dist1d_resample (NcmData *data, NcmMSet *mset, NcmRNG *rng);
 static void _ncm_data_dist1d_set_size (NcmDataDist1d *dist1d, guint np);
 static guint _ncm_data_dist1d_get_size (NcmDataDist1d *dist1d);
 
@@ -209,11 +209,10 @@ _ncm_data_dist1d_m2lnL_val (NcmData *data, NcmMSet *mset, gdouble *m2lnL)
 }
 
 static void
-_ncm_data_dist1d_resample (NcmData *data, NcmMSet *mset)
+_ncm_data_dist1d_resample (NcmData *data, NcmMSet *mset, NcmRNG *rng)
 {
   NcmDataDist1d *dist1d = NCM_DATA_DIST1D (data);
   NcmDataDist1dClass *dist1d_class = NCM_DATA_DIST1D_GET_CLASS (data);
-  NcmRNG *rng = ncm_rng_pool_get (NCM_DATA_RESAMPLE_RNG_NAME);
   guint i;
 
   if (dist1d_class->inv_pdf == NULL)
@@ -227,7 +226,6 @@ _ncm_data_dist1d_resample (NcmData *data, NcmMSet *mset)
     ncm_vector_set (dist1d->x, i, x_i);
   }
   ncm_rng_unlock (rng);
-  ncm_rng_free (rng);
 }
 
 static void 

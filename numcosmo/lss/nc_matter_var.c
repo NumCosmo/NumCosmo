@@ -812,7 +812,8 @@ _nc_matter_var_prepare_splineint (NcMatterVar *vp, NcHICosmo *model)
       ncm_vector_set (vp->integrand_overw2_spline->xv, i, k);
       ncm_vector_set (vp->integrand_overw2_spline->yv, i, nc_matter_var_integrand_over_window2 (vp, model, k));
     }
-    last_i = i;
+
+    /* last_i = i; */
     ncm_spline_prepare (vp->integrand_overw2_spline);
   }
   else if (FALSE)
@@ -905,6 +906,7 @@ _nc_matter_var_prepare_fft (NcMatterVar *vp, NcHICosmo *model)
     p_Rsigma2 = fftw_plan_dft_1d (N, out, in, FFTW_FORWARD, FFTW_PATIENT | FFTW_DESTROY_INPUT);
     p_Rdsigma2_dr = fftw_plan_dft_1d (N, fftRdsigma2_dr, Rdsigma2_dr, FFTW_FORWARD, FFTW_PATIENT | FFTW_DESTROY_INPUT);
     ncm_cfg_save_fftw_wisdom ("nc_matter_var_wisdown.fftw3");
+    
     planned = TRUE;
   }
 
@@ -929,7 +931,7 @@ _nc_matter_var_prepare_fft (NcMatterVar *vp, NcHICosmo *model)
       const gdouble a = 2.0 * M_PI / L * i;
       const gdouble abs_a = fabs (a);
       const gdouble sign_a = a < 0 ? -1.0 : 1.0;
-      complex U = 36.0 * (a + I) / (cexp (M_LN2 * I * a) * (a * I - 5.0));
+      complex double U = 36.0 * (a + I) / (cexp (M_LN2 * I * a) * (a * I - 5.0));
       gsl_sf_result lnr;
       gsl_sf_result arg;
       gsl_sf_lngamma_complex_e (-3.0, a, &lnr, &arg);
@@ -958,9 +960,9 @@ _nc_matter_var_prepare_fft (NcMatterVar *vp, NcHICosmo *model)
   {
     const gint ii = (i < 0) ? i + N : i;
     const gdouble r = r0 + i * dr;
-    const complex Rsigma2 = in[ii] / N;
-    const complex lnsigma2 = log (Rsigma2) - r;
-    const complex dlnsigma2_dr = Rdsigma2_dr[ii] / (Rsigma2 * N);
+    const complex double Rsigma2 = in[ii] / N;
+    const complex double lnsigma2 = log (Rsigma2) - r;
+    const complex double dlnsigma2_dr = Rdsigma2_dr[ii] / (Rsigma2 * N);
     /*
      const gdouble R = exp (r);
      const gdouble Rsigma2_old = R * nc_matter_var_over_growth2_tophat_old (vp, model, r);

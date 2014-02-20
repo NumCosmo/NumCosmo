@@ -235,10 +235,9 @@ _nc_cluster_mass_benson_intp (NcClusterMass *clusterm, NcHICosmo *model, gdouble
 }
 
 static gboolean
-_nc_cluster_mass_benson_resample (NcClusterMass *clusterm, NcHICosmo *model, gdouble lnM, gdouble z, gdouble *xi, gdouble *xi_params)
+_nc_cluster_mass_benson_resample (NcClusterMass *clusterm, NcHICosmo *model, gdouble lnM, gdouble z, gdouble *xi, gdouble *xi_params, NcmRNG *rng)
 {
   NcClusterMassBenson *msz = NC_CLUSTER_MASS_BENSON (clusterm);
-  NcmRNG *rng = ncm_rng_pool_get (NCM_DATA_RESAMPLE_RNG_NAME);
   gdouble lnzeta, lnzeta_obs, zeta_obs, xi_mean;
   const gdouble E0 = nc_hicosmo_E (model, msz->z0);
   const gdouble E = nc_hicosmo_E (model, z);
@@ -264,7 +263,6 @@ _nc_cluster_mass_benson_resample (NcClusterMass *clusterm, NcHICosmo *model, gdo
       ret = (xi[0] >= msz->signif_obs_min);
     }
     ncm_rng_unlock (rng);
-    ncm_rng_free (rng);
     return ret;
   }
 }

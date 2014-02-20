@@ -168,10 +168,9 @@ _nc_cluster_mass_benson_xray_n_limits (NcClusterMass *clusterm, NcHICosmo *model
 }
 
 static gboolean
-_nc_cluster_mass_benson_xray_resample (NcClusterMass *clusterm, NcHICosmo *model, gdouble lnM, gdouble z, gdouble *xi, gdouble *xi_params)
+_nc_cluster_mass_benson_xray_resample (NcClusterMass *clusterm, NcHICosmo *model, gdouble lnM, gdouble z, gdouble *xi, gdouble *xi_params, NcmRNG *rng)
 {
   NcClusterMassBensonXRay *mx = NC_CLUSTER_MASS_BENSON_XRAY (clusterm);
-  NcmRNG *rng = ncm_rng_pool_get (NCM_DATA_RESAMPLE_RNG_NAME);
   gboolean xi_obs_return;
   gdouble lnYx, lnYx_obs, mu3;
   const gdouble E = nc_hicosmo_E (model, z);
@@ -186,13 +185,12 @@ _nc_cluster_mass_benson_xray_resample (NcClusterMass *clusterm, NcHICosmo *model
   ncm_rng_lock (rng);
   lnYx_obs = lnYx + gsl_ran_gaussian (rng->r, D_X);
   ncm_rng_unlock (rng);
-  ncm_rng_free (rng);
   
   xi[1] = exp (lnYx_obs);
 
   //printf("M = %e z = %.5g xi = %.5g xiobs = %.5g\n", exp(lnM), z, xi_mean, xi[0]);
 
-  xi_obs_return = NC_CLUSTER_MASS_CLASS (nc_cluster_mass_benson_xray_parent_class)->resample (clusterm, model, lnM, z, xi, xi_params);
+  xi_obs_return = NC_CLUSTER_MASS_CLASS (nc_cluster_mass_benson_xray_parent_class)->resample (clusterm, model, lnM, z, xi, xi_params, rng);
   
   return (xi_obs_return && xi[1] >= mx->Yx_obs_min);
   
