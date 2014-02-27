@@ -90,8 +90,6 @@ static gboolean
 _nc_cluster_mass_lnnormal_resample (NcClusterMass *clusterm, NcHICosmo *model, gdouble lnM, gdouble z, gdouble *lnM_obs, gdouble *lnM_obs_params, NcmRNG *rng)
 {
   NcClusterMassLnnormal *mlnn = NC_CLUSTER_MASS_LNNORMAL (clusterm);
-  const gdouble sigma = _NC_CLUSTER_MASS_LNNORMAL_SIGMA;
-  const gdouble bias = _NC_CLUSTER_MASS_LNNORMAL_BIAS;
 
   NCM_UNUSED (model);
   NCM_UNUSED (z);

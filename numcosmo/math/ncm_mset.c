@@ -732,6 +732,7 @@ ncm_mset_cmp (NcmMSet *mset0, NcmMSet *mset1, gboolean cmp_model)
   {
     NcmModel *model0 = ncm_mset_peek (mset0, mid);
     NcmModel *model1 = ncm_mset_peek (mset1, mid);
+
     if (model0 == NULL && model1 == NULL)
       continue;
     else if (model0 == NULL && model1 != NULL)
