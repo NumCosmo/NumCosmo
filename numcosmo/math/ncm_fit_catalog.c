@@ -241,8 +241,10 @@ _ncm_fit_catalog_set_fit_obj (NcmFitCatalog *fcat, NcmFit *fit)
 {
   guint free_params_len = ncm_mset_fparams_len (fit->mset);
   
-  fcat->fit    = ncm_fit_ref (fit);
-  fcat->pstats = ncm_stats_vec_new (free_params_len + 1, NCM_STATS_VEC_COV, TRUE);
+  fcat->fit        = ncm_fit_ref (fit);
+  fcat->pstats     = ncm_stats_vec_new (free_params_len + 1, NCM_STATS_VEC_COV, TRUE);
+  fcat->params_max = ncm_vector_new (free_params_len + 1);
+  fcat->params_min = ncm_vector_new (free_params_len + 1);
   g_array_set_size (fcat->porder, free_params_len + 1);
 }
 
@@ -945,7 +947,7 @@ _ncm_fit_catalog_post_update (NcmFitCatalog *fcat)
   guint i;
   guint len = fcat->pstats->len;
   NcmVector *x = ncm_stats_vec_peek_x (fcat->pstats);
-  
+
   for (i = 0; i < len; i++)
   {
     gdouble p_i = ncm_vector_get (x, i);
