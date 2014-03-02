@@ -135,6 +135,7 @@ nc_de_opt_get_data_simple_group (NcDEDataSimpleEntries *de_data_simple, GOptionE
     { "cluster-id",   'U',                    0, G_OPTION_ARG_STRING,       &de_data_simple->cluster_id,   "Use cluster abundance data",                              NULL },
     { "BBN",          'N',                    0, G_OPTION_ARG_NONE,         &de_data_simple->BBN,          "Use BBN Prior",                                           NULL },
     { "BBN-Omega_b",    0,                    0, G_OPTION_ARG_NONE,         &de_data_simple->BBN_Ob,       "Use BBN Omega_b * h2 Prior = 0.022 +/- 0.002",            NULL },
+    { "priors-gauss",   0,                    0, G_OPTION_ARG_STRING_ARRAY, &de_data_simple->priors_gauss, "Add a gaussian prior to a model",       NULL },
     { NULL }
   };
   GOptionGroup *data_simple_group = g_option_group_new ("data", " - Cosmological data options", "Show help options related to the dataset to be used.", NULL, NULL);
@@ -213,7 +214,7 @@ nc_de_opt_get_fit_group (NcDEFitEntries *de_fit, GOptionEntry **de_fit_entries)
     { "cr-y",             0, 0, G_OPTION_ARG_INT,          &de_fit->bidim_cr[1],      "Confidence region y parameter", NULL },
     { "max-iter",         0, 0, G_OPTION_ARG_INT,          &de_fit->max_iter,         "Max number of iterations used by the minimization algorithms", NULL },
     { "err-param",        0, 0, G_OPTION_ARG_STRING_ARRAY, &de_fit->onedim_cr,        "Calculate the one dimensional confidence region", NULL },
-    { "resample",         0, 0, G_OPTION_ARG_NONE,         &de_fit->resample,         "Resample model using default params", NULL },
+    { "resample",         0, 0, G_OPTION_ARG_NONE,         &de_fit->resample,         "Resample model using fiducial model before any statistical analyzes.", NULL },
     { "msg-level",        0, 0, G_OPTION_ARG_INT,          &de_fit->msg_level,        "Fit message level (0: no msg, 1: simple, 2: full)", NULL },
     { "montecarlo",       0, 0, G_OPTION_ARG_INT,          &de_fit->montecarlo,       "Resample the original data 'montecarlo' times.", NULL},
     { "mcbs",             0, 0, G_OPTION_ARG_INT,          &de_fit->mcbs,             "Resample the original data 'montecarlo' times intercalating with mcbs bootstraps.", NULL},

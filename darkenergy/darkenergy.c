@@ -374,10 +374,10 @@ main (gint argc, gchar *argv[])
     }
   }
 
-  if (de_fit.save_mset != NULL)
-    ncm_mset_save (mset, de_fit.save_mset, TRUE);
   if (de_fit.fiducial != NULL)
-    fiduc = ncm_mset_load (de_fit.fiducial); 
+    fiduc = ncm_mset_load (de_fit.fiducial);
+  else
+    fiduc = ncm_mset_ref (mset);
 
   {
     const GEnumValue *fit_type_id = ncm_cfg_get_enum_by_id_name_nick (NCM_TYPE_FIT_TYPE, de_fit.fit_type);
@@ -404,7 +404,75 @@ main (gint argc, gchar *argv[])
     }
   }
 
+  if (de_data_simple.priors_gauss != NULL)
+  {
+    guint i;
+    guint npriors = g_strv_length (de_data_simple.priors_gauss);
+    
+    for (i = 0; i < npriors; i++)
+    {
+      GError *error = NULL;
+      gchar *priors_str = de_data_simple.priors_gauss[i];
+      GVariant *prior_hash = g_variant_parse (G_VARIANT_TYPE ("a{sv}"), priors_str, NULL, NULL, &error);
+      if (prior_hash == NULL)
+        g_error ("Invalid prior string: %s.", error->message);
+
+      {
+        NcmMSetPIndex p_i;
+        gchar *model_ns = NULL;
+        gchar *p_name = NULL;
+        gdouble mu, sigma;
+        
+        if (!g_variant_lookup (prior_hash, "model", "s", &model_ns))
+          g_error ("Prior must contain `model' key.");
+        
+        p_i.mid = ncm_mset_get_id_by_ns (model_ns);
+        if (p_i.mid < 0)
+          g_error ("Model %s not found.", model_ns);
+
+        if (ncm_mset_peek (mset, p_i.mid) == NULL)
+          g_error ("Model `%s' not present in NcmMSet.", model_ns);
+
+        if (!g_variant_lookup (prior_hash, "param", "s", &p_name))
+          g_error ("Prior must contain `param' key.");
+
+        if (!ncm_model_param_index_from_name (ncm_mset_peek (mset, p_i.mid), p_name, &p_i.pid))
+          g_error ("Parameter `%s' not found in model `%s'.", p_name, model_ns);
+        
+        if (!g_variant_lookup (prior_hash, "mean", "d", &mu))
+          g_error ("Prior must contain `mean' key.");
+        
+        if (!g_variant_lookup (prior_hash, "sigma", "d", &sigma))
+          g_error ("Prior must contain `sigma' key.");
+
+        g_assert_cmpfloat (sigma, >, 0.0);
+
+        ncm_prior_add_gaussian_data (lh, p_i.mid, p_i.pid, mu, sigma);
+        g_variant_unref (prior_hash);
+        g_free (model_ns);
+        g_free (p_name);
+      }
+    }
+  }
+
+
   
+  /* All initializations done! */
+
+  if (de_fit.resample)
+  {
+    NcmRNG *resample_rng;
+    if (de_fit.mc_seed > -1)
+      resample_rng = ncm_rng_seeded_new (NULL, de_fit.mc_seed);
+    else
+      resample_rng = ncm_rng_new (NULL);
+
+    ncm_cfg_msg_sepa ();
+    ncm_message ("# Resampling from fiducial model.\n");
+    ncm_dataset_resample (dset, fiduc, resample_rng);
+    ncm_rng_free (resample_rng);
+  }
+
   de_fit.fisher = (de_fit.fisher || (de_fit.nsigma_fisher != -1) || (de_fit.nsigma != -1) || (de_fit.onedim_cr != NULL));
   de_fit.fit = (de_fit.fit || de_fit.fisher);
   de_fit.save_best_fit = (de_fit.save_best_fit || de_fit.save_fisher);
@@ -560,16 +628,6 @@ main (gint argc, gchar *argv[])
                    ncm_model_param_name (NCM_MODEL (model), p_n), p_n,
                    ncm_model_param_get (NCM_MODEL (model), p_n), err_inf, err_sup);
     }
-  }
-
-  if (de_fit.resample)
-  {
-    ncm_message ("# Resample from bestfit values\n");
-    ncm_dataset_resample (dset, mset, rng);
-    ncm_fit_run (fit, de_fit.msg_level);
-    ncm_fit_log_info (fit);
-    ncm_fit_numdiff_m2lnL_covar (fit);
-    ncm_fit_log_covar (fit);
   }
 
   if (de_fit.nsigma >= 0 && (de_fit.bidim_cr[0] != -1) && (de_fit.bidim_cr[1] != -1))
@@ -771,6 +829,9 @@ main (gint argc, gchar *argv[])
   {
     g_ptr_array_free (ca_array, TRUE);
   }
+
+  if (de_fit.save_mset != NULL)
+    ncm_mset_save (mset, de_fit.save_mset, TRUE);
 
   g_free (de_model_entries); de_model_entries = NULL;
   g_free (de_data_simple_entries); de_data_simple_entries = NULL;

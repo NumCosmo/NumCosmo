@@ -307,6 +307,8 @@ ncm_fit_mcbs_set_rng (NcmFitMCBS *mcbs, NcmRNG *rng)
  * @bsmt: FIXME
  * 
  * FIXME
+ * 
+ * WARNING not working correctly with bsmt > 0 FIXME
  *
  */
 void 

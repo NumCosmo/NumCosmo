@@ -152,6 +152,8 @@ void ncm_mset_remove (NcmMSet *mset, NcmModelID mid);
 void ncm_mset_set (NcmMSet *mset, NcmModel *model);
 gboolean ncm_mset_exists (NcmMSet *mset, NcmModel *model);
 
+gint ncm_mset_get_id_by_ns (const gchar *ns);
+
 void ncm_mset_prepare_fparam_map (NcmMSet *mset);
 
 guint ncm_mset_total_len (NcmMSet *mset);

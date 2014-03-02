@@ -371,6 +371,28 @@ ncm_mset_exists (NcmMSet *mset, NcmModel *model)
 }
 
 /**
+ * ncm_mset_get_id_by_ns:
+ * @ns: FIXME
+ *
+ * FIXME
+ * 
+ * Returns: FIXME
+ */
+gint 
+ncm_mset_get_id_by_ns (const gchar *ns)
+{
+  NcmMSetClass *mset_class = g_type_class_ref (NCM_TYPE_MSET);
+  gpointer model_id;
+  gboolean has = g_hash_table_lookup_extended (mset_class->ns_table, ns, NULL, &model_id);
+
+  g_type_class_unref (mset_class);
+  if (has)
+    return GPOINTER_TO_INT (model_id);
+  else
+    return -1;
+}
+
+/**
  * ncm_mset_prepare_fparam_map:
  * @mset: FIXME
  *

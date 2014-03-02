@@ -1866,7 +1866,7 @@ ncm_model_orig_param_index_from_name (NcmModel *model, gchar *param_name, guint 
   if (found)
     *i = GPOINTER_TO_UINT (param_id);
   else
-    *i = -1; /* Yup, I known. */
+    *i = -1; /* Yup, I know. */
   return found;
 }
 
