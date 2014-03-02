@@ -114,7 +114,7 @@ nc_data_cluster_poisson_finalize (GObject *object)
 }
 
 static void _nc_data_cluster_poisson_prepare (NcmData *data, NcmMSet *mset);
-static void _nc_data_cluster_poisson_resample (NcmData *data, NcmMSet *mset);
+static void _nc_data_cluster_poisson_resample (NcmData *data, NcmMSet *mset, NcmRNG *rng);
 
 static void
 nc_data_cluster_poisson_class_init (NcDataClusterPoissonClass *klass)
@@ -147,7 +147,7 @@ _nc_data_cluster_poisson_prepare (NcmData *data, NcmMSet *mset)
 }
 
 static void
-_nc_data_cluster_poisson_resample (NcmData *data, NcmMSet *mset)
+_nc_data_cluster_poisson_resample (NcmData *data, NcmMSet *mset, NcmRNG *rng)
 {
   NcDataClusterPoisson *cpoisson = NC_DATA_CLUSTER_POISSON (data);
   NcDataClusterNCount *ncount = cpoisson->ncount;
@@ -155,7 +155,7 @@ _nc_data_cluster_poisson_resample (NcmData *data, NcmMSet *mset)
   NcmDataPoisson *poisson = NCM_DATA_POISSON (cpoisson);
   guint i;
 
-  ncm_data_resample (NCM_DATA (cpoisson->ncount), mset);
+  ncm_data_resample (NCM_DATA (cpoisson->ncount), mset, rng);
   
   nc_cluster_abundance_prepare_inv_dNdz (cad, NC_HICOSMO (ncm_mset_peek (mset, nc_hicosmo_id ())));
   gsl_histogram_reset (poisson->h);

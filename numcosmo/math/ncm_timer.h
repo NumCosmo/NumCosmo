@@ -78,9 +78,16 @@ void ncm_timer_start (NcmTimer *nt);
 void ncm_timer_stop (NcmTimer *nt);
 void ncm_timer_continue (NcmTimer *nt);
 void ncm_timer_task_start (NcmTimer *nt, guint task_len);
+void ncm_timer_task_pause (NcmTimer *nt);
+void ncm_timer_task_continue (NcmTimer *nt);
+void ncm_timer_task_add_tasks (NcmTimer *nt, guint ptasks);
 void ncm_timer_task_increment (NcmTimer *nt);
 void ncm_timer_task_accumulate (NcmTimer *nt, guint nitens);
+gboolean ncm_timer_task_is_running (NcmTimer *nt);
 gboolean ncm_timer_task_end (NcmTimer *nt);
+
+gdouble ncm_timer_task_mean_time (NcmTimer *nt);
+gdouble ncm_timer_task_time_left (NcmTimer *nt);
 
 gchar *ncm_timer_task_elapsed_str (NcmTimer *nt);
 gchar *ncm_timer_task_mean_time_str (NcmTimer *nt);
@@ -93,6 +100,8 @@ void ncm_timer_task_log_mean_time (NcmTimer *nt);
 void ncm_timer_task_log_time_left (NcmTimer *nt);
 void ncm_timer_task_log_start_datetime (NcmTimer *nt);
 void ncm_timer_task_log_end_datetime (NcmTimer *nt);
+
+#define NCM_TIMER_SEC_FORMAT "%07.4f"
 
 G_END_DECLS
 

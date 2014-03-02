@@ -143,7 +143,7 @@ ncm_data_gauss_get_property (GObject *object, guint prop_id, GValue *value, GPar
 
 static guint _ncm_data_gauss_get_length (NcmData *data); 
 /* static void _ncm_data_gauss_begin (NcmData *data); */
-static void _ncm_data_gauss_resample (NcmData *data, NcmMSet *mset);
+static void _ncm_data_gauss_resample (NcmData *data, NcmMSet *mset, NcmRNG *rng);
 static void _ncm_data_gauss_m2lnL_val (NcmData *data, NcmMSet *mset, gdouble *m2lnL);
 static void _ncm_data_gauss_leastsquares_f (NcmData *data, NcmMSet *mset, NcmVector *v);
 static void _ncm_data_gauss_set_size (NcmDataGauss *gauss, guint np);
@@ -222,12 +222,11 @@ _ncm_data_gauss_prepare_LLT (NcmData *data)
 }
 
 static void
-_ncm_data_gauss_resample (NcmData *data, NcmMSet *mset)
+_ncm_data_gauss_resample (NcmData *data, NcmMSet *mset, NcmRNG *rng)
 {
   NcmDataGauss *gauss = NCM_DATA_GAUSS (data);
   NcmDataGaussClass *gauss_class = NCM_DATA_GAUSS_GET_CLASS (gauss);
   gboolean inv_cov_update = FALSE;
-  NcmRNG *rng = ncm_rng_pool_get (NCM_DATA_RESAMPLE_RNG_NAME);
   gint ret;
   guint i;
 
@@ -244,7 +243,6 @@ _ncm_data_gauss_resample (NcmData *data, NcmMSet *mset)
     ncm_vector_set (gauss->v, i, u_i);
   }
   ncm_rng_unlock (rng);
-  ncm_rng_free (rng);
   
   ret = gsl_blas_dtrsv (CblasLower, CblasTrans, CblasNonUnit, 
                         ncm_matrix_gsl (gauss->LLT), ncm_vector_gsl (gauss->v));

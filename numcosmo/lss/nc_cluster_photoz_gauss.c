@@ -105,10 +105,9 @@ _nc_cluster_photoz_gauss_intp (NcClusterRedshift *clusterz, gdouble lnM, gdouble
 }
 
 static gboolean
-_nc_cluster_photoz_gauss_resample (NcClusterRedshift *clusterz, gdouble lnM, gdouble z, gdouble *z_obs, gdouble *z_obs_params)
+_nc_cluster_photoz_gauss_resample (NcClusterRedshift *clusterz, gdouble lnM, gdouble z, gdouble *z_obs, gdouble *z_obs_params, NcmRNG *rng)
 {
   NcClusterPhotozGauss *pzg = NC_CLUSTER_PHOTOZ_GAUSS (clusterz);
-  NcmRNG *rng = ncm_rng_pool_get (NCM_DATA_RESAMPLE_RNG_NAME);
   gdouble sigma_z;
 
   NCM_UNUSED (lnM);
@@ -123,7 +122,6 @@ _nc_cluster_photoz_gauss_resample (NcClusterRedshift *clusterz, gdouble lnM, gdo
     z_obs[0] = z + z_obs_params[NC_CLUSTER_PHOTOZ_GAUSS_BIAS] + gsl_ran_gaussian (rng->r, sigma_z);
   } while (z_obs[0] < 0);
   ncm_rng_unlock (rng);
-  ncm_rng_free (rng);
 
   return (z_obs[0] <= pzg->pz_max) && (z_obs[0] >= pzg->pz_min);
 }

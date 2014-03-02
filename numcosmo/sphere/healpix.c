@@ -51,13 +51,6 @@
  *
  ****************************************************************************/
 
-#define NC_FITS_ERROR(status) \
-do { \
-  gchar errormsg[30]; \
-  fits_get_errstatus (status, errormsg); \
-  g_error ("FITS: %s", errormsg); \
-} while (FALSE);
-
 /**
  * ncm_sphere_healpix_str2type: (skip)
  * @str_type: FIXME
@@ -114,60 +107,62 @@ ncm_sphere_healpix_read_map (gchar *fits_file, NcmSphereMap *map)
 
   status = 0;
 
-  if ( fits_open_file(&fptr, fits_file, READONLY, &status) ) 
-    NC_FITS_ERROR(status);
+  fits_open_file(&fptr, fits_file, READONLY, &status); 
+  NCM_FITS_ERROR (status);
    
-  if ( fits_movabs_hdu(fptr, 2, &hdutype, &status) ) 
-    NC_FITS_ERROR(status);
+  fits_movabs_hdu(fptr, 2, &hdutype, &status); 
+  NCM_FITS_ERROR (status);
 
   if (hdutype != BINARY_TBL) 
     g_error ("%s (%d): Extension is not binary!\n", __FILE__, __LINE__);
    
-  if ( fits_read_key_lng (fptr, "NSIDE", &nside, comment, &status) ) 
-    NC_FITS_ERROR(status);
+  fits_read_key_lng (fptr, "NSIDE", &nside, comment, &status); 
+  NCM_FITS_ERROR(status);
   
   if (map == NULL)
     map = ncm_sphere_map_new (nside);
   else
     g_assert (map->nside == nside);
   
-  if ( fits_read_key_lng (fptr, "TFIELDS", &naxis, comment, &status) ) 
-    NC_FITS_ERROR(status);
+  fits_read_key_lng (fptr, "TFIELDS", &naxis, comment, &status); 
+  NCM_FITS_ERROR(status);
   
   for (i = 0; i < naxis; i++)
   {
     gchar *ttype = g_strdup_printf ("TTYPE%d", i + 1);
     NcmSphereMapType type;
-    if (fits_read_key_str (fptr, ttype, col_label, comment, &status))
-      NC_FITS_ERROR(status);
+
+    fits_read_key_str (fptr, ttype, col_label, comment, &status);
+    NCM_FITS_ERROR (status);
+    
     type = ncm_sphere_healpix_str2type (col_label);
     map->type |= type;
     switch (type)
     {
       case NC_SPHERE_MAP_TYPE_TEMPERATURE:
         map->dt = (map->dt == NULL) ? gsl_vector_float_alloc (map->npix) : map->dt;
-        if ( fits_read_col_flt (fptr, i + 1, 1, 1, map->npix, NCM_HEALPIX_NULLVAL, map->dt->data, &anynul, &status) ) 
-          NC_FITS_ERROR(status);
+        fits_read_col_flt (fptr, i + 1, 1, 1, map->npix, NCM_HEALPIX_NULLVAL, map->dt->data, &anynul, &status); 
+        NCM_FITS_ERROR (status);
         break;
       case NC_SPHERE_MAP_TYPE_Q_POLARIZATION:
         map->qpol = (map->qpol == NULL) ? gsl_vector_float_alloc (map->npix) : map->qpol;
-        if ( fits_read_col_flt (fptr, i + 1, 1, 1, map->npix, NCM_HEALPIX_NULLVAL, map->qpol->data, &anynul, &status) ) 
-          NC_FITS_ERROR(status);
+        fits_read_col_flt (fptr, i + 1, 1, 1, map->npix, NCM_HEALPIX_NULLVAL, map->qpol->data, &anynul, &status); 
+        NCM_FITS_ERROR (status);
         break;
       case NC_SPHERE_MAP_TYPE_U_POLARISATION:
         map->upol = (map->upol == NULL) ? gsl_vector_float_alloc (map->npix) : map->upol;
-        if ( fits_read_col_flt (fptr, i + 1, 1, 1, map->npix, NCM_HEALPIX_NULLVAL, map->upol->data, &anynul, &status) ) 
-          NC_FITS_ERROR(status);
+        fits_read_col_flt (fptr, i + 1, 1, 1, map->npix, NCM_HEALPIX_NULLVAL, map->upol->data, &anynul, &status); 
+        NCM_FITS_ERROR (status);
         break;
       case NC_SPHERE_MAP_TYPE_SPUR_SIGNAL:
         map->spur_signal = (map->spur_signal == NULL) ? gsl_vector_float_alloc (map->npix) : map->spur_signal;
-        if ( fits_read_col_flt (fptr, i + 1, 1, 1, map->npix, NCM_HEALPIX_NULLVAL, map->spur_signal->data, &anynul, &status) ) 
-          NC_FITS_ERROR(status);
+        fits_read_col_flt (fptr, i + 1, 1, 1, map->npix, NCM_HEALPIX_NULLVAL, map->spur_signal->data, &anynul, &status); 
+        NCM_FITS_ERROR (status);
         break;
       case NC_SPHERE_MAP_TYPE_N_OBS:
         map->nobs = (map->nobs == NULL) ? gsl_vector_float_alloc (map->npix) : map->nobs;
-        if ( fits_read_col_flt (fptr, i + 1, 1, 1, map->npix, NCM_HEALPIX_NULLVAL, map->nobs->data, &anynul, &status) ) 
-          NC_FITS_ERROR(status);
+        fits_read_col_flt (fptr, i + 1, 1, 1, map->npix, NCM_HEALPIX_NULLVAL, map->nobs->data, &anynul, &status); 
+        NCM_FITS_ERROR (status);
         break;
     }
     g_free (ttype);
@@ -179,8 +174,8 @@ ncm_sphere_healpix_read_map (gchar *fits_file, NcmSphereMap *map)
     status = 0;
   }
      
-  if ( fits_close_file(fptr, &status) ) 
-    NC_FITS_ERROR(status);
+  fits_close_file(fptr, &status);
+  NCM_FITS_ERROR (status);
    
   map->nrings = map->nside * 4 - 1;
 
@@ -240,50 +235,50 @@ ncm_sphere_healpix_write_map (NcmSphereMap *map, gchar *filename, gboolean overw
     g_unlink (filename);
   
   /* create new FITS file */
-  if (fits_create_file (&fptr, filename, &status))
-    NC_FITS_ERROR(status);
+  fits_create_file (&fptr, filename, &status);
+  NCM_FITS_ERROR (status);
 
-  if (fits_create_img (fptr,  bitpix, naxis, naxes, &status) )
-    NC_FITS_ERROR(status);
+  fits_create_img (fptr,  bitpix, naxis, naxes, &status);
+  NCM_FITS_ERROR (status);
 
-  if (fits_write_date (fptr, &status) )
-    NC_FITS_ERROR(status);
+  fits_write_date (fptr, &status);
+  NCM_FITS_ERROR (status);
   
   /* move to 1nd HDU  */
-  if ( fits_movabs_hdu(fptr, 1, &hdutype, &status) )
-    NC_FITS_ERROR(status);
+  fits_movabs_hdu(fptr, 1, &hdutype, &status);
+  NCM_FITS_ERROR (status);
   
   /* append a new empty binary table onto the FITS file */
-  if ( fits_create_tbl( fptr, BINARY_TBL, map->npix, tfields, ttype, tform,
-                        tunit, extname, &status) )
-    NC_FITS_ERROR(status);  
+  fits_create_tbl (fptr, BINARY_TBL, map->npix, tfields, ttype, tform,
+                   tunit, extname, &status);
+  NCM_FITS_ERROR (status);
   
-  if (fits_write_key(fptr, TSTRING, "PIXTYPE", "HEALPIX", "HEALPIX Pixelisation", &status))   
-    NC_FITS_ERROR(status);  
+  fits_write_key (fptr, TSTRING, "PIXTYPE", "HEALPIX", "HEALPIX Pixelisation", &status);   
+  NCM_FITS_ERROR (status);
   
   order = map->order == NC_SPHERE_MAP_ORDER_NEST ? "NESTED  " : "RING    ";
 
-  if (fits_write_key( fptr, TSTRING, "ORDERING", order,
-                      "Pixel ordering scheme, either RING or NESTED", &status))
-    NC_FITS_ERROR(status);
+  fits_write_key (fptr, TSTRING, "ORDERING", order,
+                  "Pixel ordering scheme, either RING or NESTED", &status);
+  NCM_FITS_ERROR (status);
   
-  if (fits_write_key (fptr, TLONG, "NSIDE", &map->nside, "Resolution parameter for HEALPIX", &status))
-    NC_FITS_ERROR(status);
+  fits_write_key (fptr, TLONG, "NSIDE", &map->nside, "Resolution parameter for HEALPIX", &status);
+  NCM_FITS_ERROR (status);
   
-  if (fits_write_key (fptr, TSTRING, "COORDSYS", "G", "Pixelisation coordinate system", &status))
-    NC_FITS_ERROR(status);
+  fits_write_key (fptr, TSTRING, "COORDSYS", "G", "Pixelisation coordinate system", &status);
+  NCM_FITS_ERROR (status);
 
-  if (fits_write_comment(fptr,"           G = Galactic, E = ecliptic, C = celestial = equatorial  ", &status))
-    NC_FITS_ERROR(status);
+  fits_write_comment (fptr, "           G = Galactic, E = ecliptic, C = celestial = equatorial  ", &status);
+  NCM_FITS_ERROR (status);
 
   firstrow  = 1;  /* first row in table to write   */
   firstelem = 1;  /* first element in row  (ignored in ASCII tables)  */
 
-  if (fits_write_col (fptr, TFLOAT, 1, firstrow, firstelem, map->npix, map->dt->data, &status))
-    NC_FITS_ERROR(status);
+  fits_write_col (fptr, TFLOAT, 1, firstrow, firstelem, map->npix, map->dt->data, &status);
+  NCM_FITS_ERROR (status);
 
-  if ( fits_close_file(fptr, &status) )      
-    NC_FITS_ERROR(status);
+  fits_close_file (fptr, &status);      
+  NCM_FITS_ERROR (status);
   
   return TRUE;
 }

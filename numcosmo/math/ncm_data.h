@@ -32,6 +32,7 @@
 #include <numcosmo/math/ncm_vector.h>
 #include <numcosmo/math/ncm_matrix.h>
 #include <numcosmo/math/ncm_mset.h>
+#include <numcosmo/math/ncm_rng.h>
 #include <numcosmo/math/ncm_bootstrap.h>
 
 G_BEGIN_DECLS
@@ -91,7 +92,7 @@ struct _NcmDataClass
   guint (*get_dof) (NcmData *data);
   void (*begin) (NcmData *data);
   void (*prepare) (NcmData *data, NcmMSet *mset);
-  void (*resample) (NcmData *data, NcmMSet *mset);
+  void (*resample) (NcmData *data, NcmMSet *mset, NcmRNG *rng);
   void (*leastsquares_f) (NcmData *data, NcmMSet *mset, NcmVector *f);
   void (*leastsquares_J) (NcmData *data, NcmMSet *mset, NcmMatrix *J);
   void (*leastsquares_f_J) (NcmData *data, NcmMSet *mset, NcmVector *f, NcmMatrix *J);
@@ -118,12 +119,12 @@ const gchar *ncm_data_peek_desc (NcmData *data);
 gchar *ncm_data_get_desc (NcmData *data);
 
 void ncm_data_prepare (NcmData *data, NcmMSet *mset);
-void ncm_data_resample (NcmData *data, NcmMSet *mset);
+void ncm_data_resample (NcmData *data, NcmMSet *mset, NcmRNG *rng);
 
 void ncm_data_bootstrap_create (NcmData *data);
 void ncm_data_bootstrap_remove (NcmData *data);
 void ncm_data_bootstrap_set (NcmData *data, NcmBootstrap *bstrap);
-void ncm_data_bootstrap_resample (NcmData *data);
+void ncm_data_bootstrap_resample (NcmData *data, NcmRNG *rng);
 gboolean ncm_data_bootstrap_enabled (NcmData *data);
 
 void ncm_data_leastsquares_f (NcmData *data, NcmMSet *mset, NcmVector *f);

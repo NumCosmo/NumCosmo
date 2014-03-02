@@ -94,6 +94,7 @@ main (gint argc, gchar *argv[])
   NcHICosmoDEXcdm *xcdm;
   NcDistance *dist;
   NcmMSet *mset, *mset_xcdm;
+  NcmRNG *rng = ncm_rng_pool_get ("q-linear");
 
   ncm_cfg_init ();
 
@@ -126,7 +127,7 @@ main (gint argc, gchar *argv[])
   ncm_model_param_set (NCM_MODEL (xcdm), NC_HICOSMO_DE_XCDM_W, RESAMPLE_OMEGA);
 
   if (resample)
-    ncm_dataset_resample (dset, mset_xcdm);
+    ncm_dataset_resample (dset, mset_xcdm, rng);
 
   if (least_squares)
   {
@@ -176,5 +177,6 @@ main (gint argc, gchar *argv[])
   ncm_mset_free (mset_xcdm);
   ncm_likelihood_free (lh);
   ncm_dataset_free (dset);
+  ncm_rng_free (rng);
   return 0;
 }

@@ -104,9 +104,12 @@ ncm_stats_vec_init (NcmStatsVec *svec)
   svec->weight   = 0.0;
   svec->weight2  = 0.0;
   svec->bias_wt  = 0.0;
+/*
+ * Increment calculation
   svec->mean_inc = 0.0;
   svec->var_inc  = 0.0;
   svec->cov_inc  = 0.0;
+ */
   svec->nitens   = 0;
   svec->x        = NULL;
   svec->mean     = NULL;
@@ -364,9 +367,11 @@ ncm_stats_vec_reset (NcmStatsVec *svec)
   svec->weight   = 0.0;
   svec->weight2  = 0.0;
   svec->bias_wt  = 0.0;
-  svec->mean_inc = 0.0;
-  svec->var_inc  = 0.0;
-  svec->cov_inc  = 0.0;
+#ifdef NCM_STATS_VEC_INC
+   svec->mean_inc = 0.0;
+   svec->var_inc  = 0.0;
+   svec->cov_inc  = 0.0;
+#endif /* NCM_STATS_VEC_INC */
   svec->nitens   = 0;
   
   switch (svec->t)
@@ -387,25 +392,17 @@ ncm_stats_vec_reset (NcmStatsVec *svec)
   }
 }
 
-/**
- * ncm_stats_vec_update_weight:
- * @svec: a #NcmStatsVec.
- * @w: The statistical weight.
- * 
- * Updates the statistics using @svec->x set in @svec and @weight, then reset 
- * @svec->x to zero.
- * 
- */
-void 
-ncm_stats_vec_update_weight (NcmStatsVec *svec, const gdouble w)
+static void
+_ncm_stats_vec_update_from_vec_weight (NcmStatsVec *svec, const gdouble w, NcmVector *x)
 {
   const gdouble curweight = svec->weight + w;
-  gdouble inc = 0.0;
   guint i;
-
+#ifdef NCM_STATS_VEC_INC
+  gdouble inc = 0.0;
   svec->mean_inc = 0.0;
   svec->var_inc  = 0.0;
   svec->cov_inc  = 0.0;
+#endif /* NCM_STATS_VEC_INC */
 
   switch (svec->t)
   {
@@ -414,13 +411,15 @@ ncm_stats_vec_update_weight (NcmStatsVec *svec, const gdouble w)
       for (i = 0; i < svec->len; i++)
       {
         const gdouble mean_i = ncm_vector_fast_get (svec->mean, i);
-        const gdouble x_i = ncm_vector_fast_get (svec->x, i);
+        const gdouble x_i = ncm_vector_fast_get (x, i);
         const gdouble delta_i = x_i - mean_i;
         const gdouble R_i = delta_i * w / curweight;
         ncm_vector_fast_set (svec->mean, i, mean_i + R_i);
 
-        inc = 1.0 / (fabs (mean_i / R_i) + 1.0);
+#ifdef NCM_STATS_VEC_INC
+        inc = sqrt (curweight) / (fabs (mean_i / R_i) + 1.0);
         svec->mean_inc = GSL_MAX (svec->mean_inc, inc);
+#endif /* NCM_STATS_VEC_INC */
       }
       break;
     }
@@ -429,7 +428,7 @@ ncm_stats_vec_update_weight (NcmStatsVec *svec, const gdouble w)
       for (i = 0; i < svec->len; i++)
       {
         const gdouble mean_i  = ncm_vector_fast_get (svec->mean, i);
-        const gdouble x_i     = ncm_vector_fast_get (svec->x, i);
+        const gdouble x_i     = ncm_vector_fast_get (x, i);
         const gdouble delta_i = x_i - mean_i;
         const gdouble R_i     = delta_i * w / curweight;
         const gdouble var     = ncm_vector_fast_get (svec->var, i);
@@ -438,11 +437,13 @@ ncm_stats_vec_update_weight (NcmStatsVec *svec, const gdouble w)
         ncm_vector_fast_set (svec->mean, i, mean_i + R_i);
         ncm_vector_fast_set (svec->var, i, var + dvar);
 
-        inc = 1.0 / (fabs (mean_i / R_i) + 1.0);
+#ifdef NCM_STATS_VEC_INC
+        inc = sqrt (curweight) / (fabs (mean_i / R_i) + 1.0);
         svec->mean_inc = GSL_MAX (svec->mean_inc, inc);
-
+        
         inc = 1.0 / (fabs (var / dvar) + 1.0);
         svec->var_inc = GSL_MAX (svec->var_inc, inc);
+#endif /* NCM_STATS_VEC_INC */
       }
       break;
     }
@@ -452,24 +453,26 @@ ncm_stats_vec_update_weight (NcmStatsVec *svec, const gdouble w)
       {
         guint j;
         gdouble mean_i = ncm_vector_fast_get (svec->mean, i);
-        const gdouble x_i     = ncm_vector_fast_get (svec->x, i);
+        const gdouble x_i     = ncm_vector_fast_get (x, i);
         const gdouble delta_i = x_i - mean_i;
         const gdouble R_i     = delta_i * w / curweight;
         const gdouble var     = ncm_vector_fast_get (svec->var, i);
         const gdouble dvar    = svec->weight * delta_i * R_i;
 
-        inc = 1.0 / (fabs (mean_i / R_i) + 1.0);
-        svec->mean_inc = GSL_MAX (svec->mean_inc, inc);
 
+#ifdef NCM_STATS_VEC_INC
+        inc = sqrt (curweight) / (fabs (mean_i / R_i) + 1.0);
+        svec->mean_inc = GSL_MAX (svec->mean_inc, inc);
         inc = 1.0 / (fabs (var / dvar) + 1.0);
         svec->var_inc = GSL_MAX (svec->var_inc, inc);
+#endif /* NCM_STATS_VEC_INC */
         
         mean_i += R_i;
         ncm_vector_fast_set (svec->mean, i, mean_i);
         ncm_vector_fast_set (svec->var, i, var + dvar);
         for (j = i + 1; j < svec->len; j++)
         {
-          const gdouble x_j = ncm_vector_fast_get (svec->x, j);
+          const gdouble x_j = ncm_vector_fast_get (x, j);
           const gdouble mean_j = ncm_vector_fast_get (svec->mean, j);
           const gdouble dC_ij = (x_i - mean_i) * (x_j - mean_j);
           const gdouble oC_ij = ncm_matrix_get (svec->cov, i, j);
@@ -477,8 +480,10 @@ ncm_stats_vec_update_weight (NcmStatsVec *svec, const gdouble w)
           ncm_matrix_set (svec->cov, i, j, C_ij);
           ncm_matrix_set (svec->cov, j, i, C_ij);
 
+#ifdef NCM_STATS_VEC_INC
           inc = 1.0 / (fabs (oC_ij / dC_ij) + 1.0);
           svec->cov_inc = GSL_MAX (svec->cov_inc, inc);
+#endif /* NCM_STATS_VEC_INC */
         }
       }
       break;
@@ -487,16 +492,99 @@ ncm_stats_vec_update_weight (NcmStatsVec *svec, const gdouble w)
       g_assert_not_reached ();
       break;
   }
-
-  if (svec->save_x)
-    g_ptr_array_add (svec->saved_x, ncm_vector_dup (svec->x));
-
-  ncm_vector_set_zero (svec->x);
   
   svec->nitens++;
   svec->weight = curweight;
   svec->weight2 += w * w;
   svec->bias_wt = 1.0 / (svec->weight - svec->weight2 / svec->weight);
+}
+
+/**
+ * ncm_stats_vec_update_weight:
+ * @svec: a #NcmStatsVec.
+ * @w: The statistical weight.
+ * 
+ * Updates the statistics using @svec->x set in @svec and @weight, then reset 
+ * @svec->x to zero.
+ * 
+ */
+void
+ncm_stats_vec_update_weight (NcmStatsVec *svec, const gdouble w)
+{
+  _ncm_stats_vec_update_from_vec_weight (svec, w, svec->x);
+  if (svec->save_x)
+    g_ptr_array_add (svec->saved_x, ncm_vector_dup (svec->x));
+  ncm_vector_set_zero (svec->x);
+}
+
+/**
+ * ncm_stats_vec_append_data:
+ * @svec: a #NcmStatsVec.
+ * @data: (element-type NcmVector): a #GPtrArray containing #NcmVector s to be added.
+ * @dup: a #gboolean.
+ * 
+ * Appends and updates the statistics using the data contained in @data and weight == 1.0. 
+ * It assumes that each element of @data is a #NcmVector of same size #NcmStatsVec:length and
+ * with continuous allocation. i.e., NcmVector:stride == 1.
+ * 
+ * If @svec was created with save_x TRUE, the paramenter @dup determines if the vectors
+ * from @data will be duplicated or if just a reference for the current vectors in @data
+ * will be saved.
+ * 
+ */
+void 
+ncm_stats_vec_append_data (NcmStatsVec *svec, GPtrArray *data, gboolean dup)
+{
+  guint i;
+  g_assert (svec->save_x);
+
+  for (i = 0; i < data->len; i++)
+  {
+    NcmVector *x = g_ptr_array_index (data, i);
+    _ncm_stats_vec_update_from_vec_weight (svec, 1.0, x);
+    if (dup)
+      g_ptr_array_add (svec->saved_x, ncm_vector_dup (x));
+    else
+      g_ptr_array_add (svec->saved_x, ncm_vector_ref (x));
+  }
+}
+
+/**
+ * ncm_stats_vec_prepend_data:
+ * @svec: a #NcmStatsVec.
+ * @data: (element-type NcmVector): a #GPtrArray containing #NcmVector s to be added.
+ * @dup: a boolean.
+ * 
+ * Prepends and updates the statistics using the data contained in @data and weight == 1.0. 
+ * It assumes that each element of @data is a #NcmVector of same size #NcmStatsVec:length and
+ * with continuous allocation. i.e., NcmVector:stride == 1.
+ * 
+ * If @svec was created with save_x TRUE, the paramenter @dup determines if the vectors
+ * from @data will be duplicated or if just a reference for the current vectors in @data
+ * will be saved.
+ * 
+ */
+void 
+ncm_stats_vec_prepend_data (NcmStatsVec *svec, GPtrArray *data, gboolean dup)
+{
+  guint i;
+  const guint cp_len = data->len;
+  const guint old_len = svec->saved_x->len;
+  const guint new_len = old_len + cp_len;
+  g_assert (svec->save_x);
+
+  g_ptr_array_set_size (svec->saved_x, new_len);
+  memmove (&svec->saved_x->pdata[cp_len], svec->saved_x->pdata, sizeof (gpointer) * old_len);
+
+  for (i = 0; i < data->len; i++)
+  {
+    NcmVector *x = g_ptr_array_index (data, i);
+    _ncm_stats_vec_update_from_vec_weight (svec, 1.0, x);
+    if (dup)
+      g_ptr_array_index (svec->saved_x, i) = ncm_vector_dup (x);
+    else
+      g_ptr_array_index (svec->saved_x, i) = ncm_vector_ref (x);
+  }
 }
 
 /**
@@ -583,19 +671,40 @@ ncm_stats_vec_update_weight (NcmStatsVec *svec, const gdouble w)
  * Returns: $Cor_{ij}$.
  */
 /**
+ * ncm_stats_vec_get_weight:
+ * @svec: a #NcmStatsVec.
+ * 
+ * Return the current value of the weight, for non-weighted means this is simply 
+ * the number of elements.
+ * 
+ * Returns: $W_n$.
+ */
+/**
  * ncm_stats_vec_get_mean_vector:
  * @svec: a #NcmStatsVec.
  * @mean: a #NcmVector.
+ * @offset: first parameter index.
  * 
- * Copy the current value of the means to the vector @mean. 
+ * Copy the current value of the means to the vector @mean starting from parameter @offset. 
  * 
  */
 /**
  * ncm_stats_vec_get_cov_matrix:
  * @svec: a #NcmStatsVec.
  * @m: a #NcmMatrix.
+ * @offset: first parameter index.
  * 
  * Copy the current value of the correlation between the variables to the 
- * matrix @m. 
+ * matrix @m starting from paramenter @offset. 
  * 
+ */
+/**
+ * ncm_stats_vec_peek_row:
+ * @svec: a #NcmStatsVec.
+ * @i: the row's index.
+ * 
+ * The i-th data row used in the statistics, this function fails if the object 
+ * was not created with save_x == TRUE;  
+ * 
+ * Returns: (transfer none): the i-th data row.
  */

@@ -139,7 +139,7 @@ ncm_data_poisson_finalize (GObject *object)
 
 static guint _ncm_data_poisson_get_length (NcmData *data);
 static void _ncm_data_poisson_begin (NcmData *data);
-static void _ncm_data_poisson_resample (NcmData *data, NcmMSet *mset);
+static void _ncm_data_poisson_resample (NcmData *data, NcmMSet *mset, NcmRNG *rng);
 static void _ncm_data_poisson_m2lnL_val (NcmData *data, NcmMSet *mset, gdouble *m2lnL);
 static void _ncm_data_poisson_leastsquares_f (NcmData *data, NcmMSet *mset, NcmVector *v);
 static void _ncm_data_poisson_set_size (NcmDataPoisson *poisson, guint np);
@@ -208,11 +208,10 @@ _ncm_data_poisson_begin (NcmData *data)
 }
 
 static void
-_ncm_data_poisson_resample (NcmData *data, NcmMSet *mset)
+_ncm_data_poisson_resample (NcmData *data, NcmMSet *mset, NcmRNG *rng)
 {
   NcmDataPoisson *poisson = NCM_DATA_POISSON (data);
   NcmDataPoissonClass *poisson_class = NCM_DATA_POISSON_GET_CLASS (data);
-  NcmRNG *rng = ncm_rng_pool_get (NCM_DATA_RESAMPLE_RNG_NAME);
   guint i;
 
   ncm_rng_lock (rng);
@@ -224,7 +223,6 @@ _ncm_data_poisson_resample (NcmData *data, NcmMSet *mset)
 		poisson->h->bin[i] = N_i;
   }
   ncm_rng_unlock (rng);
-  ncm_rng_free (rng);
 }
 
 static void

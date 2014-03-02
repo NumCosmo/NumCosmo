@@ -87,19 +87,16 @@ _nc_cluster_mass_lnnormal_intp (NcClusterMass *clusterm, NcHICosmo *model, gdoub
 }
 
 static gboolean
-_nc_cluster_mass_lnnormal_resample (NcClusterMass *clusterm, NcHICosmo *model, gdouble lnM, gdouble z, gdouble *lnM_obs, gdouble *lnM_obs_params)
+_nc_cluster_mass_lnnormal_resample (NcClusterMass *clusterm, NcHICosmo *model, gdouble lnM, gdouble z, gdouble *lnM_obs, gdouble *lnM_obs_params, NcmRNG *rng)
 {
   NcClusterMassLnnormal *mlnn = NC_CLUSTER_MASS_LNNORMAL (clusterm);
-  NcmRNG *rng = ncm_rng_pool_get (NCM_DATA_RESAMPLE_RNG_NAME);
-  
+
   NCM_UNUSED (model);
   NCM_UNUSED (z);
   
   ncm_rng_lock (rng);
   lnM_obs[0] = lnM + BIAS + gsl_ran_gaussian (rng->r, SIGMA);
   ncm_rng_unlock (rng);
-  ncm_rng_free (rng);
-  
   return (lnM_obs[0] <= mlnn->lnMobs_max) && (lnM_obs[0] >= mlnn->lnMobs_min);
 }
 

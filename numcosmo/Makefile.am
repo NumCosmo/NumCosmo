@@ -79,7 +79,9 @@ ncm_sources = \
 	math/ncm_fit_gsl_ls.c              \
 	math/ncm_fit_gsl_mm.c              \
 	math/ncm_fit_gsl_mms.c             \
+	math/ncm_fit_catalog.c             \
 	math/ncm_fit_mc.c                  \
+	math/ncm_fit_mcbs.c                \
 	math/ncm_lh_ratio1d.c              \
 	math/ncm_lh_ratio2d.c              \
 	math/poly.c               \
@@ -151,7 +153,9 @@ ncm_headers = \
 	math/ncm_fit_gsl_ls.h            \
 	math/ncm_fit_gsl_mm.h            \
 	math/ncm_fit_gsl_mms.h           \
+	math/ncm_fit_catalog.h           \
 	math/ncm_fit_mc.h                \
+	math/ncm_fit_mcbs.h              \
 	math/ncm_lh_ratio1d.h            \
 	math/ncm_lh_ratio2d.h            \
 	math/cvode_util.h         \

@@ -34,7 +34,7 @@
 static void _nc_de_data_cluster_append (NcDEDataClusterEntries *de_data_cluster, NcmData *dca_unbinned, NcmDataset *dset);
 
 GPtrArray *
-nc_de_data_cluster_new (NcDistance *dist, NcmMSet *mset, NcDEDataClusterEntries *de_data_cluster, NcmDataset *dset, NcDataClusterAbundanceId id)
+nc_de_data_cluster_new (NcDistance *dist, NcmMSet *mset, NcDEDataClusterEntries *de_data_cluster, NcmDataset *dset, NcDataClusterAbundanceId id, NcmRNG *rng)
 {
   GPtrArray *ca_array = g_ptr_array_new ();
   NcWindow *wp = nc_window_new_from_name (de_data_cluster->window_name);
@@ -111,7 +111,7 @@ nc_de_data_cluster_new (NcDistance *dist, NcmMSet *mset, NcDEDataClusterEntries 
       ncm_mset_set (mset, NCM_MODEL (clusterm));
       nc_cluster_abundance_free (cad);
       
-      nc_data_cluster_ncount_init_from_sampling (data, mset, clusterz, clusterm, de_data_cluster->area_survey * gsl_pow_2 (M_PI / 180.0));
+      nc_data_cluster_ncount_init_from_sampling (data, mset, clusterz, clusterm, de_data_cluster->area_survey * gsl_pow_2 (M_PI / 180.0), rng);
       nc_data_cluster_ncount_true_data (data, de_data_cluster->use_true_data);
 
       if (de_data_cluster->save_cata != NULL)

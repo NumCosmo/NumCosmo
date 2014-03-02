@@ -53,6 +53,7 @@ void ncm_cfg_keyfile_to_arg (GKeyFile *kfile, gchar *group_name, GOptionEntry *e
 void ncm_cfg_entries_to_keyfile (GKeyFile *kfile, gchar *group_name, GOptionEntry *entries);
 gchar *ncm_cfg_string_to_comment (const gchar *str);
 const GEnumValue *ncm_cfg_get_enum_by_id_name_nick (GType enum_type, const gchar *id_name_nick);
+const GEnumValue *ncm_cfg_enum_get_value (GType enum_type, guint n);
 void ncm_cfg_enum_print_all (GType enum_type, gchar *header);
 
 gboolean ncm_cfg_load_fftw_wisdom (gchar *filename, ...);
@@ -157,6 +158,16 @@ GVariant *ncm_cfg_array_to_variant (GArray *a, const GVariantType *etype);
 #if ((GLIB_MAJOR_VERSION == 2) && (GLIB_MINOR_VERSION < 28))
 #define g_clear_object(obj) g_clear_pointer(ptr,g_object_unref)
 #endif /* Glib version < 2.28 */
+
+#define NCM_FITS_ERROR(status) \
+G_STMT_START { \
+  if (status) \
+  { \
+    gchar errormsg[30]; \
+    fits_get_errstatus (status, errormsg); \
+    g_error ("FITS: %s", errormsg); \
+  } \
+} G_STMT_END
 
 G_END_DECLS
 

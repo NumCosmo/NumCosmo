@@ -193,9 +193,9 @@ nc_cluster_mass_intp (NcClusterMass *clusterm, NcHICosmo *model, gdouble lnM, gd
  * Returns: FIXME
  */
 gboolean
-nc_cluster_mass_resample (NcClusterMass *clusterm, NcHICosmo *model, gdouble lnM, gdouble z, gdouble *lnM_obs, gdouble *lnM_obs_params)
+nc_cluster_mass_resample (NcClusterMass *clusterm, NcHICosmo *model, gdouble lnM, gdouble z, gdouble *lnM_obs, gdouble *lnM_obs_params, NcmRNG *rng)
 {
-  return NC_CLUSTER_MASS_GET_CLASS (clusterm)->resample (clusterm,model, lnM, z, lnM_obs, lnM_obs_params);
+  return NC_CLUSTER_MASS_GET_CLASS (clusterm)->resample (clusterm,model, lnM, z, lnM_obs, lnM_obs_params, rng);
 }
 
 /**

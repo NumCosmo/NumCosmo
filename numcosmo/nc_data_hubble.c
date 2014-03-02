@@ -185,6 +185,7 @@ static gchar *_nc_data_hubble_function_query[] =
   "Moresco 2012 H(z) BC03  sample", "SELECT z,p,s FROM kinematics WHERE param='BC03_Moresco2012' ORDER BY z",
   "Moresco 2012 H(z) MaStro sample", "SELECT z,p,s FROM kinematics WHERE param='MaStro_Moresco2012' ORDER BY z",
   "Busca 2013 H(z) BAO+WMAP sample", "SELECT z,p,s FROM kinematics WHERE param='BAO+WMAP_Busca2013' ORDER BY z",
+  "Riess 2008 HST Project sample", "SELECT z,p,s FROM kinematics WHERE param='HST_Riess2008' ORDER BY z",
 };
 #endif
 
@@ -256,12 +257,14 @@ nc_data_hubble_set_sample (NcDataHubble *hubble, NcDataHubbleId id)
       g_error ("nc_data_hubble_set_sample: Query error: %s", err_str);
     }
 
+    g_assert_cmpint (nrow, >, 0);
+
     ncm_data_gauss_diag_set_size (diag, nrow);
 
     for (i = 0; i < nrow; i++)
     {
       gint j = 0;
-      ncm_vector_set (hubble->x,  i, atof (res[(i + 1) * qncol + j++]));
+      ncm_vector_set (hubble->x,   i, atof (res[(i + 1) * qncol + j++]));
       ncm_vector_set (diag->y,     i, atof (res[(i + 1) * qncol + j++]));  
       ncm_vector_set (diag->sigma, i, atof (res[(i + 1) * qncol + j++]));
     }
@@ -269,7 +272,6 @@ nc_data_hubble_set_sample (NcDataHubble *hubble, NcDataHubbleId id)
     sqlite3_free_table (res);
 
     ncm_data_set_init (data, TRUE);
-
   }
 #else
   g_error (PACKAGE_NAME" compiled without support for sqlite3, Hubble data not avaliable.");

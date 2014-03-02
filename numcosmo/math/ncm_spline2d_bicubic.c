@@ -499,7 +499,7 @@ _ncm_spline2d_bicubic_int_dx (NcmSpline2d *s2d, gdouble xl, gdouble xu, gdouble 
   if (jl == ju)
   {
     x0 = ncm_vector_get (s2d->xv, jl);
-    x1 = ncm_vector_get (s2d->xv, jl + 1);
+    /* x1 = ncm_vector_get (s2d->xv, jl + 1); */
     ncm_spline2d_bicubic_integ_dx_coeffs (&NCM_SPLINE2D_BICUBIC_STRUCT (s2dbc, i, jl), y - y0, coeffs);
     result = _ncm_spline_util_integ_eval (coeffs[0], coeffs[1], coeffs[2], coeffs[3], x0, xl, xu);
   }
@@ -524,7 +524,7 @@ _ncm_spline2d_bicubic_int_dx (NcmSpline2d *s2d, gdouble xl, gdouble xu, gdouble 
     k = ju;
     {
       x0 = ncm_vector_get (s2d->xv, ju);
-      x1 = ncm_vector_get (s2d->xv, ju + 1);
+      /* x1 = ncm_vector_get (s2d->xv, ju + 1); */
       ncm_spline2d_bicubic_integ_dx_coeffs (&NCM_SPLINE2D_BICUBIC_STRUCT (s2dbc, i, k), y - y0, coeffs);
       result += _ncm_spline_util_integ_eval (coeffs[0], coeffs[1], coeffs[2], coeffs[3], x0, x0, xu);
     }
@@ -565,7 +565,7 @@ _ncm_spline2d_bicubic_int_dx_spline (NcmSpline2d *s2d, gdouble xl, gdouble xu)
   {
     j = jl;
     x0 = ncm_vector_get (s2d->xv, jl);
-    x1 = ncm_vector_get (s2d->xv, jl + 1);
+    /* x1 = ncm_vector_get (s2d->xv, jl + 1); */
 
     for (i = 0; i < y_len_m1; i++)
     {
@@ -616,7 +616,7 @@ _ncm_spline2d_bicubic_int_dx_spline (NcmSpline2d *s2d, gdouble xl, gdouble xu)
       j = ju;
       {
         x0 = ncm_vector_get (s2d->xv, ju);
-        x1 = ncm_vector_get (s2d->xv, ju + 1);
+        /* x1 = ncm_vector_get (s2d->xv, ju + 1); */
         ncm_vector_addto (_NCM_INTEGRAL_A, i,
                           _ncm_spline_util_integ_eval (_NC_AIJ[0][0], _NC_AIJ[1][0], _NC_AIJ[2][0], _NC_AIJ[3][0], x0, x0, xu));
         ncm_vector_addto (_NCM_INTEGRAL_B, i,
@@ -656,7 +656,7 @@ _ncm_spline2d_bicubic_int_dy (NcmSpline2d *s2d, gdouble x, gdouble yl, gdouble y
   if (il == iu)
   {
     y0 = ncm_vector_get (s2d->yv, il);
-    y1 = ncm_vector_get (s2d->yv, il + 1);
+    /* y1 = ncm_vector_get (s2d->yv, il + 1); */
     ncm_spline2d_bicubic_integ_dy_coeffs (&NCM_SPLINE2D_BICUBIC_STRUCT (s2dbc, il, j), x - x0, coeffs);
     result = _ncm_spline_util_integ_eval (coeffs[0], coeffs[1], coeffs[2], coeffs[3], y0, yl, yu);
   }
@@ -681,7 +681,7 @@ _ncm_spline2d_bicubic_int_dy (NcmSpline2d *s2d, gdouble x, gdouble yl, gdouble y
     k = iu;
     {
       y0 = ncm_vector_get (s2d->yv, k);
-      y1 = ncm_vector_get (s2d->yv, k + 1);
+      /* y1 = ncm_vector_get (s2d->yv, k + 1); */
       ncm_spline2d_bicubic_integ_dy_coeffs (&NCM_SPLINE2D_BICUBIC_STRUCT (s2dbc, k, j), x - x0, coeffs);
       result += _ncm_spline_util_integ_eval (coeffs[0], coeffs[1], coeffs[2], coeffs[3], y0, y0, yu);
     }
@@ -722,7 +722,7 @@ _ncm_spline2d_bicubic_int_dy_spline (NcmSpline2d *s2d, gdouble yl, gdouble yu)
   {
     i = il;
     y0 = ncm_vector_get (s2d->yv, il);
-    y1 = ncm_vector_get (s2d->yv, il + 1);
+    /* y1 = ncm_vector_get (s2d->yv, il + 1); */
 
     for (j = 0; j < x_len_m1; j++)
     {
@@ -774,7 +774,7 @@ _ncm_spline2d_bicubic_int_dy_spline (NcmSpline2d *s2d, gdouble yl, gdouble yu)
       i = iu;
       {
         y0 = ncm_vector_get (s2d->yv, iu);
-        y1 = ncm_vector_get (s2d->yv, iu + 1);
+        /* y1 = ncm_vector_get (s2d->yv, iu + 1); */
         ncm_vector_addto (_NCM_INTEGRAL_A, j,
                           _ncm_spline_util_integ_eval (_NC_AIJ[0][0], _NC_AIJ[0][1], _NC_AIJ[0][2], _NC_AIJ[0][3], y0, y0, yu));
         ncm_vector_addto (_NCM_INTEGRAL_B, j,

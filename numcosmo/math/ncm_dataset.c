@@ -484,14 +484,14 @@ ncm_dataset_clear (NcmDataset **dset)
  *
  */
 void
-ncm_dataset_resample (NcmDataset *dset, NcmMSet *mset)
+ncm_dataset_resample (NcmDataset *dset, NcmMSet *mset, NcmRNG *rng)
 {
   guint i;
 
   for (i = 0; i < dset->oa->len; i++)
   {
     NcmData *data = ncm_dataset_peek_data (dset, i);
-    ncm_data_resample (data, mset);
+    ncm_data_resample (data, mset, rng);
   }
 }
 
@@ -535,7 +535,7 @@ ncm_dataset_bootstrap_set (NcmDataset *dset, NcmDatasetBStrapType bstype)
  *
  */
 void
-ncm_dataset_bootstrap_resample (NcmDataset *dset)
+ncm_dataset_bootstrap_resample (NcmDataset *dset, NcmRNG *rng)
 {
   guint i;
   switch (dset->bstype)
@@ -546,20 +546,18 @@ ncm_dataset_bootstrap_resample (NcmDataset *dset)
       {
         NcmData *data = ncm_dataset_peek_data (dset, i);
         ncm_bootstrap_set_bsize (data->bstrap, data->bstrap->fsize);
-        ncm_data_bootstrap_resample (data);
+        ncm_data_bootstrap_resample (data, rng);
       }
       break;
     }
     case NCM_DATASET_BSTRAP_TOTAL:
     {
-      NcmRNG *rng = ncm_rng_pool_get (NCM_BOOTSTRAP_RNG_NAME);
       guint n = ncm_dataset_get_n (dset);
       ncm_rng_lock (rng);
       gsl_ran_multinomial (rng->r, dset->oa->len, n, 
                            (gdouble *)dset->data_prob->data, 
                            (guint *)dset->bstrap->data);
       ncm_rng_unlock (rng);
-      ncm_rng_free (rng);
       
       for (i = 0; i < dset->oa->len; i++)
       {
@@ -567,7 +565,7 @@ ncm_dataset_bootstrap_resample (NcmDataset *dset)
         guint bsize = g_array_index (dset->bstrap, guint, i);
         ncm_bootstrap_set_bsize (data->bstrap, bsize);
         if (bsize > 0)
-          ncm_data_bootstrap_resample (data);
+          ncm_data_bootstrap_resample (data, rng);
       }
       break;
     }

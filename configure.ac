@@ -260,12 +260,17 @@ dnl ***************************************************************************
 dnl Check for multi-thread.
 dnl ***************************************************************************
 
+AX_COUNT_CPUS()
+AC_DEFINE_UNQUOTED([NCM_NCORES],[$CPU_COUNT], [Number of cores of the current machine])
+
 AC_ARG_WITH([thread-pool-max],
             AS_HELP_STRING([--with-thread-pool-max=N],[Number of threads in the pool]), 
             [thread_pool_max='yes'], [thread_pool_max='no'])
 
 if test "x$thread_pool_max" = "xyes"; then
   AC_DEFINE_UNQUOTED([NCM_THREAD_POOL_MAX],[$with_thread_pool_max], [Number of threads in the pool])
+else
+  AC_DEFINE_UNQUOTED([NCM_THREAD_POOL_MAX],[$CPU_COUNT], [Number of threads in the pool])  
 fi
 
 dnl ***************************************************************************

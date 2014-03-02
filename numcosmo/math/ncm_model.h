@@ -227,7 +227,10 @@ G_INLINE_FUNC NcmModelID
 ncm_model_id_by_type (GType model_type)
 {
   if (!g_type_is_a (model_type, NCM_TYPE_MODEL))
+  {
     g_error ("ncm_model_id_by_type: type (%s) is not a %s", g_type_name (model_type), g_type_name (NCM_TYPE_MODEL));
+    return 0;
+  }
   else
   {
     NcmModelClass *model_class = NCM_MODEL_CLASS (g_type_class_ref (model_type));

@@ -428,11 +428,12 @@ _ncm_spline2d_gsl_int_dx (NcmSpline2d *s2d, gdouble xl, gdouble xu, gdouble y)
         result += dx * (coeffs[0] + dx * (0.5 * coeffs[1] + dx * (coeffs[2] / 3.0 + 0.25 * coeffs[3] * dx)));
       }
     }
+    
     k = ju;
     {
-      x0 = ncm_vector_get (s2d->xv, ju);
-      x1 = ncm_vector_get (s2d->xv, ju + 1);
-      _ncm_bicubic_calc_aij (s2dgsl, i, ju, x0, x1, y0, y1, &aij);
+      x0 = ncm_vector_get (s2d->xv, k);
+      x1 = ncm_vector_get (s2d->xv, k + 1);
+      _ncm_bicubic_calc_aij (s2dgsl, i, k, x0, x1, y0, y1, &aij);
       ncm_spline2d_bicubic_integ_dx_coeffs (&aij, y - y0, coeffs);
       result += _ncm_spline_util_integ_eval (coeffs[0], coeffs[1], coeffs[2], coeffs[3], x0, x0, xu);
     }

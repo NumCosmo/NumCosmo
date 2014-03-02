@@ -155,7 +155,7 @@ ncm_data_gauss_diag_finalize (GObject *object)
 static guint _ncm_data_gauss_diag_get_length (NcmData *data);
 static guint _ncm_data_gauss_diag_get_dof (NcmData *data);
 /* static void _ncm_data_gauss_diag_begin (NcmData *data); */
-static void _ncm_data_gauss_diag_resample (NcmData *data, NcmMSet *mset);
+static void _ncm_data_gauss_diag_resample (NcmData *data, NcmMSet *mset, NcmRNG *rng);
 static void _ncm_data_gauss_diag_m2lnL_val (NcmData *data, NcmMSet *mset, gdouble *m2lnL);
 static void _ncm_data_gauss_diag_leastsquares_f (NcmData *data, NcmMSet *mset, NcmVector *v);
 static void _ncm_data_gauss_diag_set_size (NcmDataGaussDiag *diag, guint np);
@@ -255,19 +255,21 @@ _ncm_data_gauss_prepare_weight (NcmData *data)
   diag->prepared_w = TRUE;
 }
 
+#include "numcosmo/nc_hicosmo.h"
+#include "numcosmo/nc_data_dist_mu.h"
+
 static void
-_ncm_data_gauss_diag_resample (NcmData *data, NcmMSet *mset)
+_ncm_data_gauss_diag_resample (NcmData *data, NcmMSet *mset, NcmRNG *rng)
 {
   NcmDataGaussDiag *diag = NCM_DATA_GAUSS_DIAG (data);
   NcmDataGaussDiagClass *gauss_diag_class = NCM_DATA_GAUSS_DIAG_GET_CLASS (diag);
-  NcmRNG *rng = ncm_rng_pool_get (NCM_DATA_RESAMPLE_RNG_NAME);
   guint i;
 
   if (gauss_diag_class->sigma_func != NULL)
     gauss_diag_class->sigma_func (diag, mset, diag->sigma);
 
-  gauss_diag_class->mean_func (diag, mset, diag->y);
-
+  gauss_diag_class->mean_func (diag, mset, diag->y); 
+  
   ncm_rng_lock (rng);
   for (i = 0; i < diag->np; i++)
   {
@@ -276,7 +278,6 @@ _ncm_data_gauss_diag_resample (NcmData *data, NcmMSet *mset)
     ncm_vector_subfrom (diag->y, i, u_i);
   }
   ncm_rng_unlock (rng);
-  ncm_rng_free (rng);
 }
 
 static void
@@ -320,6 +321,7 @@ _ncm_data_gauss_diag_m2lnL_val (NcmData *data, NcmMSet *mset, gdouble *m2lnL)
       const guint bsize = ncm_bootstrap_get_bsize (data->bstrap);
       gdouble tmp = 0.0;
       gdouble wt = 0.0;
+      
       for (i = 0; i < bsize; i++)
       {
         guint k = ncm_bootstrap_get (data->bstrap, i);
@@ -359,7 +361,7 @@ _ncm_data_gauss_diag_m2lnL_val (NcmData *data, NcmMSet *mset, gdouble *m2lnL)
         const gdouble sigma_k = ncm_vector_get (diag->sigma, k);
         const gdouble r_k = (yt_k - y_k) / sigma_k;
         *m2lnL += r_k * r_k;
-      }      
+      }
     }
   }
 }

@@ -203,10 +203,9 @@ _nc_cluster_mass_vanderlinde_intp (NcClusterMass *clusterm, NcHICosmo *model, gd
 }
 
 static gboolean
-_nc_cluster_mass_vanderlinde_resample (NcClusterMass *clusterm, NcHICosmo *model, gdouble lnM, gdouble z, gdouble *xi, gdouble *xi_params)
+_nc_cluster_mass_vanderlinde_resample (NcClusterMass *clusterm, NcHICosmo *model, gdouble lnM, gdouble z, gdouble *xi, gdouble *xi_params, NcmRNG *rng)
 {
   NcClusterMassVanderlinde *msz = NC_CLUSTER_MASS_VANDERLINDE (clusterm);
-  NcmRNG *rng = ncm_rng_pool_get (NCM_DATA_RESAMPLE_RNG_NAME);
   gdouble lnzeta, lnzeta_obs, zeta_obs, xi_mean;
 
   NCM_UNUSED (model);
@@ -223,7 +222,6 @@ _nc_cluster_mass_vanderlinde_resample (NcClusterMass *clusterm, NcHICosmo *model
 
   xi[0] = xi_mean + gsl_ran_gaussian (rng->r, 1.0);
   ncm_rng_unlock (rng);
-  ncm_rng_free (rng);
 
   //printf ("M = %e z = %.5g zeta = %.5g xi = %.5g xiobs = %.5g\n", exp(lnM), z, zeta_obs, xi_mean, xi[0]);
 

@@ -298,13 +298,13 @@ _ncm_timer_dhms_to_string (GString *s, guint elap_day, guint elap_hour, guint el
   switch (elap_day)
   {
     case 0:
-      g_string_printf (s, "%02u:%02u:%05.2f", elap_hour, elap_min, elap_sec);
+      g_string_printf (s, "%02u:%02u:"NCM_TIMER_SEC_FORMAT, elap_hour, elap_min, elap_sec);
       break;
     case 1:
-      g_string_printf (s, "1 day, %02u:%02u:%05.2f", elap_hour, elap_min, elap_sec);
+      g_string_printf (s, "1 day, %02u:%02u:"NCM_TIMER_SEC_FORMAT, elap_hour, elap_min, elap_sec);
       break;
     default:
-      g_string_printf (s, "%02u days, %02u:%02u:%05.2f", elap_day, elap_hour, elap_min, elap_sec);
+      g_string_printf (s, "%02u days, %02u:%02u:"NCM_TIMER_SEC_FORMAT, elap_day, elap_hour, elap_min, elap_sec);
       break;
   }
 }
@@ -402,7 +402,7 @@ void
 ncm_timer_task_start (NcmTimer *nt, guint task_len)
 {
   if (nt->task_len != 0)
-    g_error ("ncm_tncm_timer_task_start: cannot start a new task during a task, call task_end first.");
+    g_error ("ncm_timer_task_start: cannot start a new task during a task, call task_end first.");
   if (task_len == 0)
     g_error ("ncm_timer_task_start: cannot start task with 0 itens.");
 
@@ -456,13 +456,69 @@ ncm_timer_task_accumulate (NcmTimer *nt, guint nitens)
 
     nt->pos_time  = tot_elapsed;
     nt->task_pos += nitens;
-    
-    ncm_stats_vec_set (nt->time_stats, 0, elap_sec);
+
+    ncm_stats_vec_set (nt->time_stats, 0, elap_sec / nitens);
     ncm_stats_vec_update_weight (nt->time_stats, nitens);
     
     if (nt->task_pos > nt->task_len)
       g_error ("ncm_timer_task_accumulate: incrementing past the end of the task.");
   }
+}
+
+/**
+ * ncm_timer_task_pause:
+ * @nt: FIXME
+ * 
+ * FIXME
+ * 
+ */
+void
+ncm_timer_task_pause (NcmTimer *nt)
+{
+  g_assert (nt->task_len != 0);
+  g_timer_stop (nt->gt);    
+}
+
+/**
+ * ncm_timer_task_continue:
+ * @nt: FIXME
+ * 
+ * FIXME
+ * 
+ */
+void
+ncm_timer_task_continue (NcmTimer *nt)
+{
+  g_assert (nt->task_len != 0);
+  g_timer_continue (nt->gt);    
+}
+
+/**
+ * ncm_timer_task_add_tasks:
+ * @nt: FIXME
+ * @ptasks: FIXME
+ * 
+ * FIXME
+ * 
+ */
+void
+ncm_timer_task_add_tasks (NcmTimer *nt, guint ptasks)
+{
+  g_assert (nt->task_len != 0);
+  nt->task_len += ptasks;
+}
+
+/**
+ * ncm_timer_task_is_running:
+ * @nt: FIXME
+ * 
+ * FIXME
+ * 
+ */
+gboolean
+ncm_timer_task_is_running (NcmTimer *nt)
+{
+  return (nt->task_len != 0);
 }
 
 /**
@@ -477,12 +533,40 @@ ncm_timer_task_end (NcmTimer *nt)
 {
   g_assert (nt->task_len != 0);
   {
+    gboolean ok = nt->task_len == nt->task_pos; 
     nt->task_len = 0;
-    if (nt->task_len == nt->task_pos)
-      return TRUE;
-    else
-      return FALSE;
+    return ok;
   }
+}
+
+/**
+ * ncm_timer_task_mean_time:
+ * @nt: FIXME
+ * 
+ * FIXME
+ * 
+ * Returns: FIXME
+ */
+gdouble 
+ncm_timer_task_mean_time (NcmTimer *nt)
+{
+  return ncm_stats_vec_get_mean (nt->time_stats, 0);
+}
+
+/**
+ * ncm_timer_task_time_left:
+ * @nt: FIXME
+ * 
+ * FIXME
+ * 
+ * Returns: FIXME
+ */
+gdouble 
+ncm_timer_task_time_left (NcmTimer *nt)
+{
+  const gdouble mean_time = ncm_timer_task_mean_time (nt);
+  const guint task_left = nt->task_len - nt->task_pos;
+  return mean_time * task_left;
 }
 
 /**
@@ -525,7 +609,7 @@ ncm_timer_task_mean_time_str (NcmTimer *nt)
   {
     guint day, hour, min;
     gdouble sec;
-    gdouble mean_time = ncm_stats_vec_get_mean (nt->time_stats, 0);
+    gdouble mean_time = ncm_timer_task_mean_time (nt);
     gdouble sigma_time = ncm_stats_vec_get_sd (nt->time_stats, 0) / sqrt (nt->task_pos);
 
     _ncm_timer_sec_to_dhms (mean_time, &day, &hour, &min, &sec);

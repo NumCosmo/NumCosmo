@@ -76,8 +76,8 @@ guint ncm_bootstrap_get_fsize (NcmBootstrap *bstrap);
 void ncm_bootstrap_set_bsize (NcmBootstrap *bstrap, guint bsize);
 guint ncm_bootstrap_get_bsize (NcmBootstrap *bstrap);
 
-G_INLINE_FUNC void ncm_bootstrap_resample (NcmBootstrap *bstrap);
-G_INLINE_FUNC void ncm_bootstrap_remix (NcmBootstrap *bstrap);
+G_INLINE_FUNC void ncm_bootstrap_resample (NcmBootstrap *bstrap, NcmRNG *rng);
+G_INLINE_FUNC void ncm_bootstrap_remix (NcmBootstrap *bstrap, NcmRNG *rng);
 G_INLINE_FUNC guint ncm_bootstrap_get (NcmBootstrap *bstrap, guint i);
 G_INLINE_FUNC gboolean ncm_bootstrap_is_init (NcmBootstrap *bstrap);
 
@@ -94,9 +94,8 @@ G_BEGIN_DECLS
 #define NCM_BOOTSTRAP_RNG_NAME "bootstrap"
 
 G_INLINE_FUNC void 
-ncm_bootstrap_resample (NcmBootstrap *bstrap)
+ncm_bootstrap_resample (NcmBootstrap *bstrap, NcmRNG *rng)
 {
-  NcmRNG *rng = ncm_rng_pool_get (NCM_BOOTSTRAP_RNG_NAME);
   gpointer bdata = bstrap->bootstrap_index->data;
   gpointer idata = bstrap->increasing_index->data;
   const gsize fsize = bstrap->fsize;
@@ -105,14 +104,12 @@ ncm_bootstrap_resample (NcmBootstrap *bstrap)
   ncm_rng_lock (rng);
   gsl_ran_sample (rng->r, bdata, bsize, idata, fsize, element_size);
   ncm_rng_unlock (rng);
-  ncm_rng_free (rng);
   bstrap->init = TRUE;
 }
 
 G_INLINE_FUNC void 
-ncm_bootstrap_remix (NcmBootstrap *bstrap)
+ncm_bootstrap_remix (NcmBootstrap *bstrap, NcmRNG *rng)
 {
-  NcmRNG *rng = ncm_rng_pool_get (NCM_BOOTSTRAP_RNG_NAME);
   gpointer bdata = bstrap->bootstrap_index->data;
   gpointer idata = bstrap->increasing_index->data;
   const gsize fsize = bstrap->fsize;
@@ -121,7 +118,6 @@ ncm_bootstrap_remix (NcmBootstrap *bstrap)
   ncm_rng_lock (rng);
   gsl_ran_choose (rng->r, bdata, bsize, idata, fsize, element_size);
   ncm_rng_unlock (rng);
-  ncm_rng_free (rng);
   bstrap->init = TRUE;
 }
 
