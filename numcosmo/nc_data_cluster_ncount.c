@@ -868,7 +868,7 @@ _nc_data_cluster_ncount_resample (NcmData *data, NcmMSet *mset)
       const gdouble z_true = ncm_spline_eval (cad->inv_z, u1);
       const gdouble lnM_true = ncm_spline2d_eval (cad->inv_lnM_z, u2, z_true);
       ncm_rng_unlock (rng);
-
+      
       if ( nc_cluster_redshift_resample (cad->z, lnM_true, z_true, zi_obs, zi_obs_params) &&
           nc_cluster_mass_resample (cad->m, cosmo, lnM_true, z_true, lnMi_obs, lnMi_obs_params) )
       {
@@ -893,6 +893,9 @@ _nc_data_cluster_ncount_resample (NcmData *data, NcmMSet *mset)
   ncm_vector_clear (&ncount->z_true);
   ncount->z_true = ncm_vector_new_array (z_true_array);
   g_array_unref (z_true_array);
+
+  if (z_obs_array->len == 0 || lnM_obs_array->len == 0)
+    g_error ("_nc_data_cluster_ncount_resample: error generating sample zero objects generated (%u, %u)", z_obs_array->len, lnM_obs_array->len);
 
   ncm_matrix_clear (&ncount->z_obs);
   ncount->z_obs = ncm_matrix_new_array (z_obs_array, z_obs_len);

@@ -509,7 +509,7 @@ _ncm_spline2d_bicubic_int_dx (NcmSpline2d *s2d, gdouble xl, gdouble xu, gdouble 
     x1 = ncm_vector_get (s2d->xv, jl + 1);
     ncm_spline2d_bicubic_integ_dx_coeffs (&NCM_SPLINE2D_BICUBIC_STRUCT (s2dbc, i, jl), y - y0, coeffs);
     result = _ncm_spline_util_integ_eval (coeffs[0], coeffs[1], coeffs[2], coeffs[3], x0, xl, x1);
-
+    
     for (k = jl + 1; k < ju; k++)
     {
       x0 = ncm_vector_get (s2d->xv, k);

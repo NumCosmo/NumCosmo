@@ -99,7 +99,7 @@ _nc_cluster_mass_lnnormal_resample (NcClusterMass *clusterm, NcHICosmo *model, g
   lnM_obs[0] = lnM + BIAS + gsl_ran_gaussian (rng->r, SIGMA);
   ncm_rng_unlock (rng);
   ncm_rng_free (rng);
-
+  
   return (lnM_obs[0] <= mlnn->lnMobs_max) && (lnM_obs[0] >= mlnn->lnMobs_min);
 }
 
@@ -147,9 +147,11 @@ _nc_cluster_mass_lnnormal_set_property (GObject * object, guint prop_id, const G
   {
     case PROP_LNMOBS_MIN:
       mlnm->lnMobs_min = g_value_get_double (value);
+      g_assert (mlnm->lnMobs_min < mlnm->lnMobs_max);
       break;
     case PROP_LNMOBS_MAX:
       mlnm->lnMobs_max = g_value_get_double (value);
+      g_assert (mlnm->lnMobs_min < mlnm->lnMobs_max);
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -180,8 +182,8 @@ _nc_cluster_mass_lnnormal_get_property (GObject *object, guint prop_id, GValue *
 static void
 nc_cluster_mass_lnnormal_init (NcClusterMassLnnormal *mlnm)
 {
-  mlnm->lnMobs_min = 0.0;
-  mlnm->lnMobs_max = 0.0;
+  mlnm->lnMobs_min = GSL_NEGINF;
+  mlnm->lnMobs_max = GSL_POSINF;
 }
 
 static void

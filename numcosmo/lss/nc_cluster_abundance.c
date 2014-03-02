@@ -716,12 +716,18 @@ nc_cluster_abundance_prepare_inv_dNdz (NcClusterAbundance *cad, NcHICosmo *model
   NcMassFunctionSplineOptimize sp_optimize = NC_MASS_FUNCTION_SPLINE_Z;
   g_assert (cad->zi != 0);
 
-  cad->z_epsilon = nc_mass_function_n (cad->mfp, model, cad->lnMi, cad->lnMf, cad->zi + (cad->zf - cad->zi) / (cad->inv_z->len - 1.0) *
-                                       (cad->inv_z->len - 2.0), cad->zf, sp_optimize) / cad->norma;
+  {
+    const gdouble delta_z = (cad->zf - cad->zi) / (cad->inv_z->len - 1.0);
+    const gdouble zfm1 = cad->zf - delta_z;
+    cad->z_epsilon = nc_mass_function_n (cad->mfp, model, cad->lnMi, cad->lnMf, zfm1, cad->zf, sp_optimize) / cad->norma;  
+  }
 
-  cad->lnM_epsilon = nc_mass_function_dn_dz (cad->mfp, model, cad->lnMi + (cad->lnMf - cad->lnMi) / (cad->inv_lnM->len - 1.0) *
-                                             (cad->inv_lnM->len - 2.0), cad->lnMf, cad->zf, use_spline) /
-    nc_mass_function_dn_dz (cad->mfp, model, cad->lnMi, cad->lnMf, cad->zf, use_spline);
+  {
+    const gdouble delta_lnM = (cad->lnMf - cad->lnMi) / (cad->inv_lnM->len - 1.0); 
+    const gdouble lnMfm1 = cad->lnMf - delta_lnM;
+    cad->lnM_epsilon = nc_mass_function_dn_dz (cad->mfp, model, lnMfm1, cad->lnMf, cad->zf, use_spline) /
+      nc_mass_function_dn_dz (cad->mfp, model, cad->lnMi, cad->lnMf, cad->zf, use_spline);
+  }
 
   //printf ("Aqui!!!\n");
   //printf ("z epsilon % 20.15g lnM epsilon % 20.15g\n", cad->z_epsilon, cad->lnM_epsilon);
@@ -731,7 +737,7 @@ nc_cluster_abundance_prepare_inv_dNdz (NcClusterAbundance *cad, NcHICosmo *model
 
     ncm_vector_set (cad->inv_lnM_z->xv, 0, _nc_cad_inv_dNdz_convergence_f (0.0, cad->lnM_epsilon)); // 0.0;
     ncm_matrix_set (cad->inv_lnM_z->zm, middle, 0, cad->lnMi);
-
+    
     //printf ("%zu % 20.15g  %u % 20.15g\n", cad->inv_z->len, zm, ncm_vector_len (cad->inv_lnM_z->xv), cad->lnMi);
     //printf ("# eval[%d] u2 lnM % 20.15g % 20.15g\n", 0, ncm_vector_get (cad->inv_lnM->xv, 0), ncm_spline_eval (cad->inv_lnM, ncm_vector_get (cad->inv_lnM->xv, 0)));
     for (j = 1; j < ncm_vector_len (cad->inv_lnM_z->xv) - 1; j++)
@@ -836,6 +842,8 @@ nc_cluster_abundance_prepare_inv_dNdlnM_z (NcClusterAbundance *cad, NcHICosmo *m
   ncm_vector_set (cad->inv_lnM->xv, 0, f); //dNdz_u2 / dNdz;
   ncm_vector_set (cad->inv_lnM->yv, 0, lnM0);
 
+  //printf ("prep[%d] % 20.15g % 20.15g % 20.15g % 20.15g\n", 0, ntot, f, lnM0, z);
+  
   for (i = 1; i < cad->inv_lnM->len; i++)
   {
     gdouble lnM1 = cad->lnMi + (cad->lnMf - cad->lnMi) / (cad->inv_lnM->len - 1.0) * i;
@@ -847,7 +855,7 @@ nc_cluster_abundance_prepare_inv_dNdlnM_z (NcClusterAbundance *cad, NcHICosmo *m
       f = _nc_cad_inv_dNdz_convergence_f (ntot, cad->lnM_epsilon);
     ncm_vector_set (cad->inv_lnM->xv, i, f); //dNdz_u2 / dNdz;
     ncm_vector_set (cad->inv_lnM->yv, i, lnM1);
-    //printf ("prep[%d] % 20.15g % 20.15g % 20.15g % 20.15g\n", i, ntot, f, lnM1, z);
+    //printf ("prep[%d] % 20.15g % 20.15g % 20.15g % 20.15g\n", i, 1.0 - ntot, f, lnM1, z);
     lnM0 = lnM1;
   }
 
@@ -855,10 +863,10 @@ nc_cluster_abundance_prepare_inv_dNdlnM_z (NcClusterAbundance *cad, NcHICosmo *m
   {
     gdouble lnM1 = cad->lnMi + (cad->lnMf - cad->lnMi) / (cad->inv_lnM->len - 1.0) * i;
     gdouble onemn = nc_mass_function_dn_dz (cad->mfp, model, lnM1, cad->lnMf, z, use_spline) / dNdz;
-    f = _nc_cad_inv_dNdz_convergence_f_onemn (onemn, cad->lnM_epsilon);
+    f = _nc_cad_inv_dNdz_convergence_f_onemn (fabs (onemn), cad->lnM_epsilon);
     ncm_vector_set (cad->inv_lnM->xv, i, f); //dNdz_u2 / dNdz;
     ncm_vector_set (cad->inv_lnM->yv, i, lnM1);
-    //printf ("prep[%d] % 20.15g % 20.15g % 20.15g % 20.15g\n", i, onemn, f, lnM1, z);
+    //printf ("prep[%d] % 20.15g % 20.15g % 20.15g % 20.15g % 20.15g\n", i, onemn, f, lnM1, cad->lnMf, z);
   }
 
   ncm_spline_prepare (cad->inv_lnM);

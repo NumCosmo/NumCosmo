@@ -349,6 +349,7 @@ main (gint argc, gchar *argv[])
     }
     else
       g_error ("Cluster sample '%s' not found run --cluster-list to list the available options", de_data_simple.cluster_id);
+
   }
 
   if (de_data_simple.BBN)
