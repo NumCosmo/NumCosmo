@@ -508,7 +508,7 @@ nc_cluster_mass_benson_class_init (NcClusterMassBensonClass *klass)
    * FIXME Set correct values (limits)
    */
   ncm_model_class_set_sparam (model_class, NC_CLUSTER_MASS_BENSON_D_SZ, "D_{SZ}", "Dsz",
-                              1e-8,  1.0, 1.0e-2,
+                              1e-2,  1.0, 1.0e-2,
                               NC_CLUSTER_MASS_BENSON_DEFAULT_PARAMS_ABSTOL, NC_CLUSTER_MASS_BENSON_DEFAULT_D_SZ,
                               NCM_PARAM_TYPE_FIXED);
 
