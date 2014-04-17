@@ -761,7 +761,7 @@ _ncm_vector_finalize (GObject *object)
       break;
   }
   cv->vv.vector.data = NULL;
-  
+
   /* Chain up : end */
   G_OBJECT_CLASS (ncm_vector_parent_class)->finalize (object);
 }

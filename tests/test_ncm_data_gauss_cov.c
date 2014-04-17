@@ -126,6 +126,7 @@ test_ncm_data_gauss_cov_test_resample (TestNcmDataGaussCovTest *test, gconstpoin
   NcmMatrix *resamples = ncm_matrix_new (resample_size, gauss->np);
   NcmVector *est_mean = ncm_vector_new (gauss->np);
   NcmVector *mean = ncm_vector_new (gauss->np);
+  NcmRNG *rng = ncm_rng_new (NULL);
   guint i;
   
   ncm_data_gauss_cov_test_mean_func (gauss, NULL, mean);
@@ -135,7 +136,7 @@ test_ncm_data_gauss_cov_test_resample (TestNcmDataGaussCovTest *test, gconstpoin
   {
     NcmVector *row_i = ncm_matrix_get_row (resamples, i);
     guint j;
-    ncm_data_resample (test->data, NULL);
+    ncm_data_resample (test->data, NULL, rng);
     ncm_vector_memcpy (row_i, gauss->y);
     ncm_vector_free (row_i);
     for (j = 0; j < gauss->np; j++)
