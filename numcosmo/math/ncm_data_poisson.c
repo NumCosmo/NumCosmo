@@ -386,13 +386,12 @@ ncm_data_poisson_init_zero (NcmData *data, NcmVector *nodes)
 }
 
 /**
- * ncm_data_poisson_set_size:
+ * ncm_data_poisson_set_size: (virtual set_size)
  * @poisson: a #NcmDataPoisson
  * @np: data size.
  *
  * Sets the data size to @np.
  * 
- * Virtual: set_size
  */
 void 
 ncm_data_poisson_set_size (NcmDataPoisson *poisson, guint np)
@@ -401,14 +400,13 @@ ncm_data_poisson_set_size (NcmDataPoisson *poisson, guint np)
 }
 
 /**
- * ncm_data_poisson_get_size:
+ * ncm_data_poisson_get_size: (virtual get_size)
  * @poisson: a #NcmDataPoisson
  *
  * Gets the data size.
  * 
  * Returns: Data size.
  * 
- * Virtual: get_size
  */
 guint 
 ncm_data_poisson_get_size (NcmDataPoisson *poisson)

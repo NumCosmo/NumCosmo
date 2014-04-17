@@ -451,13 +451,12 @@ _ncm_data_gauss_diag_get_size (NcmDataGaussDiag *diag)
 }
 
 /**
- * ncm_data_gauss_diag_set_size:
+ * ncm_data_gauss_diag_set_size: (virtual set_size)
  * @diag: a #NcmDataGaussDiag
  * @np: data size.
  *
  * Sets the data size to @np.
  * 
- * Virtual: set_size
  */
 void 
 ncm_data_gauss_diag_set_size (NcmDataGaussDiag *diag, guint np)
@@ -466,14 +465,13 @@ ncm_data_gauss_diag_set_size (NcmDataGaussDiag *diag, guint np)
 }
 
 /**
- * ncm_data_gauss_diag_get_size:
+ * ncm_data_gauss_diag_get_size: (virtual get_size)
  * @diag: a #NcmDataGaussDiag
  *
  * Gets the data size.
  * 
  * Returns: Data size.
  * 
- * Virtual: get_size
  */
 guint 
 ncm_data_gauss_diag_get_size (NcmDataGaussDiag *diag)

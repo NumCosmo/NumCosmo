@@ -187,6 +187,7 @@ nc_cluster_mass_intp (NcClusterMass *clusterm, NcHICosmo *model, gdouble lnM, gd
  * @lnM: logarithm base e of the true mass.
  * @lnM_obs: (out): logarithm base e of the observed mass.
  * @lnM_obs_params: (out): observed mass params.
+ * @rng: a #NcmRNG.
  *
  * FIXME
  * 

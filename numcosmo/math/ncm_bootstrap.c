@@ -369,6 +369,7 @@ ncm_bootstrap_get_bsize (NcmBootstrap *bstrap)
 /**
  * ncm_bootstrap_resample:
  * @bstrap: a #NcmBootstrap.
+ * @rng: a #NcmRNG.
  * 
  * Sample with replacement #NcmBootstrap:bootstrap-size from the 
  * #NcmBootstrap:full-size indexes.
@@ -377,6 +378,7 @@ ncm_bootstrap_get_bsize (NcmBootstrap *bstrap)
 /**
  * ncm_bootstrap_remix:
  * @bstrap: a #NcmBootstrap.
+ * @rng: a #NcmRNG.
  * 
  * Sample without replacement #NcmBootstrap:bootstrap-size from the 
  * #NcmBootstrap:full-size indexes. Note that in this case

@@ -408,13 +408,12 @@ _ncm_data_gauss_cov_get_size (NcmDataGaussCov *gauss)
 }
 
 /**
- * ncm_data_gauss_cov_set_size:
+ * ncm_data_gauss_cov_set_size: (virtual set_size)
  * @gauss: a #NcmDataGaussCov
  * @np: data size.
  *
  * Sets the data size to @np.
  * 
- * Virtual: set_size
  */
 void 
 ncm_data_gauss_cov_set_size (NcmDataGaussCov *gauss, guint np)
@@ -423,14 +422,13 @@ ncm_data_gauss_cov_set_size (NcmDataGaussCov *gauss, guint np)
 }
 
 /**
- * ncm_data_gauss_cov_get_size:
+ * ncm_data_gauss_cov_get_size: (virtual get_size)
  * @gauss: a #NcmDataGaussCov
  *
  * Gets the data size.
  * 
  * Returns: Data size.
  * 
- * Virtual: get_size
  */
 guint 
 ncm_data_gauss_cov_get_size (NcmDataGaussCov *gauss)

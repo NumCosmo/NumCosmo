@@ -1142,6 +1142,7 @@ static void _nc_data_cluster_ncount_model_init (NcDataClusterNCount *ncount);
  * @clusterz: a #NcClusterRedshift.
  * @clusterm: a #NcClusterMass.
  * @area_survey: area in units of square degrees.
+ * @rng: a #NcmRNG.
  *
  * FIXME
  *
