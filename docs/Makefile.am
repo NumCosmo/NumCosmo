@@ -1,5 +1,4 @@
 ## Process this file with automake to produce Makefile.in
-include $(top_srcdir)/Makefile.decl
 
 # Local xml files
 XML_FILES=dependencies.xml \
