@@ -41,9 +41,9 @@
 #include "math/cvode_util.h"
 #include "math/ncm_cfg.h"
 
-#include <cvode/cvode.h>
-#include <cvode/cvode_dense.h>
-#include <cvode/cvode_band.h>
+#include <cvodes/cvodes.h>
+#include <cvodes/cvodes_dense.h>
+#include <cvodes/cvodes_band.h>
 #include <nvector/nvector_serial.h>
 
 G_DEFINE_TYPE (NcGrowthFunc, nc_growth_func, G_TYPE_OBJECT);

@@ -31,8 +31,8 @@
 #include <numcosmo/nc_distance.h>
 
 #ifndef NUMCOSMO_GIR_SCAN
-#include <cvode/cvode.h>
-#include <cvode/cvode_dense.h>
+#include <cvodes/cvodes.h>
+#include <cvodes/cvodes_dense.h>
 #endif
 
 G_BEGIN_DECLS

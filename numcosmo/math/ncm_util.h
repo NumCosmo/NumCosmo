@@ -170,22 +170,30 @@ G_STMT_START { \
 
 #define NCM_TEST_FAIL(cmd) \
 G_STMT_START { \
-  if (g_test_trap_fork (0, G_TEST_TRAP_SILENCE_STDOUT | G_TEST_TRAP_SILENCE_STDERR)) \
+  if (g_test_subprocess ()) \
   { \
     cmd; \
     exit (0); \
   } \
-  g_test_trap_assert_failed (); \
+  else \
+  { \
+    g_test_trap_subprocess (NULL, 0, 0); \
+    g_test_trap_assert_failed (); \
+  } \
 } G_STMT_END
 
 #define NCM_TEST_PASS(cmd) \
 G_STMT_START { \
-  if (g_test_trap_fork (0, G_TEST_TRAP_SILENCE_STDOUT | G_TEST_TRAP_SILENCE_STDERR)) \
+  if (g_test_subprocess ()) \
   { \
     cmd; \
     exit (0); \
   } \
-  g_test_trap_assert_passed (); \
+  else \
+  { \
+    g_test_trap_subprocess (NULL, 0, 0); \
+    g_test_trap_assert_passed (); \
+  } \
 } G_STMT_END
 
 G_END_DECLS

@@ -277,8 +277,8 @@ test_ncm_vector_gsl_free (TestNcmVector *test, gconstpointer pdata)
 {
   NcmVector *v = test->v;
   ncm_vector_free (v);
+  g_assert (v->pdata == NULL);
   NCM_TEST_FAIL (ncm_vector_free (v));
-  NCM_TEST_PASS (g_assert (v->pdata == NULL));
 }
 
 void
@@ -287,6 +287,7 @@ test_ncm_vector_array_new (TestNcmVector *test, gconstpointer pdata)
   guint v_size = test->v_size = g_test_rand_int_range (_TEST_NCM_VECTOR_MIN_SIZE, _TEST_NCM_VECTOR_STATIC_SIZE);
   GArray *ga = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), v_size);
   NcmVector *v;
+  
   g_array_set_size (ga, v_size);
   v = test->v = ncm_vector_new_array (ga);
   g_array_unref (ga);
@@ -302,7 +303,9 @@ void
 test_ncm_vector_array_free (TestNcmVector *test, gconstpointer pdata)
 {
   NcmVector *v = test->v;
+  
   ncm_vector_free (v);
+
   NCM_TEST_FAIL (ncm_vector_free (v));
   NCM_TEST_FAIL (g_array_unref (v->pdata));
 }
@@ -322,8 +325,10 @@ void
 test_ncm_vector_data_slice_free (TestNcmVector *test, gconstpointer pdata)
 {
   NcmVector *v = test->v;
+
   ncm_vector_free (v);
-  NCM_TEST_PASS (g_assert (ncm_vector_data (v) == NULL));
+  g_assert (ncm_vector_data (v) == NULL);
+  
   NCM_TEST_FAIL (ncm_vector_free (v));  
 }
 
@@ -343,8 +348,8 @@ test_ncm_vector_data_malloc_free (TestNcmVector *test, gconstpointer pdata)
 {
   NcmVector *v = test->v;  
   ncm_vector_free (v);
+  g_assert (ncm_vector_data (v) == NULL);
   NCM_TEST_FAIL (ncm_vector_free (v));
-  NCM_TEST_PASS (g_assert (ncm_vector_data (v) == NULL));
 }
 
 void
@@ -362,8 +367,7 @@ void
 test_ncm_vector_data_static_free (TestNcmVector *test, gconstpointer pdata)
 {
   NcmVector *v = test->v;
-
-  NCM_TEST_PASS (ncm_vector_free (v));
+  ncm_vector_free (v);
 }
 
 void
@@ -380,7 +384,7 @@ void
 test_ncm_vector_data_const_free (TestNcmVector *test, gconstpointer pdata)
 {
   const NcmVector *cv = test->cv;
-  NCM_TEST_PASS (ncm_vector_const_free (cv));
+  ncm_vector_const_free (cv);
 }
 
 void
@@ -599,7 +603,7 @@ test_ncm_vector_variant (TestNcmVector *test, gconstpointer pdata)
   }
 
   g_variant_unref (var);
-  NCM_TEST_FAIL (g_variant_unref (var); fprintf (stderr,"fail (%s)", g_variant_get_type_string (var)));
+  NCM_TEST_FAIL (g_variant_unref (var); fprintf (stderr, "fail (%s)", g_variant_get_type_string (var)));
 }
 
 void
@@ -620,4 +624,3 @@ test_ncm_vector_serialization (TestNcmVector *test, gconstpointer pdata)
   ncm_vector_free (v_dup);
   NCM_TEST_FAIL (ncm_vector_free (v_dup));
 }
-

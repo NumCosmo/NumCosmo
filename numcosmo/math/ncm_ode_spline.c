@@ -40,9 +40,9 @@
 #include "math/cvode_util.h"
 #include "math/integral.h"
 
-#include <cvode/cvode.h>
-#include <cvode/cvode_dense.h>
-#include <cvode/cvode_band.h>
+#include <cvodes/cvodes.h>
+#include <cvodes/cvodes_dense.h>
+#include <cvodes/cvodes_band.h>
 #include <nvector/nvector_serial.h> 
 #include <gsl/gsl_linalg.h>
 

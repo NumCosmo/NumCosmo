@@ -30,8 +30,8 @@
 #include <numcosmo/build_cfg.h>
 #include <gsl/gsl_spline.h>
 #ifndef NUMCOSMO_GIR_SCAN
-#include <cvode/cvode.h>
-#include <cvode/cvode_dense.h>
+#include <cvodes/cvodes.h>
+#include <cvodes/cvodes_dense.h>
 #include <nvector/nvector_serial.h>
 #endif
 

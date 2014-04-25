@@ -30,10 +30,10 @@
 #include "perturbations/linear.h"
 #include "math/cvode_util.h"
 
-#include <cvode/cvode_diag.h>
-#include <cvode/cvode_band.h>
-#include <cvode/cvode_bandpre.h>
-#include <cvode/cvode_spbcgs.h>
+#include <cvodes/cvodes_diag.h>
+#include <cvodes/cvodes_band.h>
+#include <cvodes/cvodes_bandpre.h>
+#include <cvodes/cvodes_spbcgs.h>
 #include <nvector/nvector_serial.h>
 
 #if SUNDIALS_BLAS_LAPACK == 1

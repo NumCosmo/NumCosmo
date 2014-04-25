@@ -232,19 +232,8 @@ test_ncm_matrix_new_gsl (void)
   g_assert (ncm_matrix_nrows (mm) == gm->size1 && ncm_matrix_ncols (mm) == gm->size2);
 
   ncm_matrix_free (mm);
-  if (g_test_trap_fork (0, G_TEST_TRAP_SILENCE_STDOUT | G_TEST_TRAP_SILENCE_STDERR))
-  {
-    ncm_matrix_free (mm);
-    exit (0);
-  }
-  g_test_trap_assert_failed ();
-
-  if (g_test_trap_fork (0, G_TEST_TRAP_SILENCE_STDOUT | G_TEST_TRAP_SILENCE_STDERR))
-  {
-    g_assert (mm->pdata == NULL);
-    exit (0);
-  }
-  g_test_trap_assert_passed ();
+  NCM_TEST_FAIL (ncm_matrix_free (mm));
+  NCM_TEST_PASS (g_assert (mm->pdata == NULL));
 }
 
 void
@@ -263,19 +252,8 @@ test_ncm_matrix_new_array (void)
   g_array_unref (ga);
 
   ncm_matrix_free (mm);
-  if (g_test_trap_fork (0, G_TEST_TRAP_SILENCE_STDOUT | G_TEST_TRAP_SILENCE_STDERR))
-  {
-    ncm_matrix_free (mm);
-    exit (0);
-  }
-  g_test_trap_assert_failed ();
-
-  if (g_test_trap_fork (0, G_TEST_TRAP_SILENCE_STDOUT | G_TEST_TRAP_SILENCE_STDERR))
-  {
-    g_array_unref (mm->pdata);
-    exit (0);
-  }
-  g_test_trap_assert_failed ();
+  NCM_TEST_FAIL (ncm_matrix_free (mm));
+  NCM_TEST_FAIL (g_array_unref (mm->pdata));
 }
 
 void
@@ -289,19 +267,8 @@ test_ncm_matrix_new_data_slice (void)
   g_assert ((ncm_matrix_nrows (mm) * ncm_matrix_ncols (mm)) == (_NCM_MATRIX_TEST_NROW * _NCM_MATRIX_TEST_NCOL));
 
   ncm_matrix_free (mm);
-  if (g_test_trap_fork (0, G_TEST_TRAP_SILENCE_STDOUT | G_TEST_TRAP_SILENCE_STDERR))
-  {
-    ncm_matrix_free (mm);
-    exit (0);
-  }
-  g_test_trap_assert_failed ();
-
-  if (g_test_trap_fork (0, G_TEST_TRAP_SILENCE_STDOUT | G_TEST_TRAP_SILENCE_STDERR))
-  {
-    g_assert (ncm_matrix_data (mm) == NULL);
-    exit (0);
-  }
-  g_test_trap_assert_passed ();
+  NCM_TEST_FAIL (ncm_matrix_free (mm));
+  NCM_TEST_PASS (g_assert (ncm_matrix_data (mm) == NULL));
 }
 
 void

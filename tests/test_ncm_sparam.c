@@ -58,7 +58,7 @@ main (gint argc, gchar *argv[])
   g_test_init (&argc, &argv, NULL);
   ncm_cfg_init ();
   ncm_cfg_enable_gsl_err_handler ();
-
+  
   g_test_add ("/numcosmo/ncm_sparam/setget/lower_bound", TestNcmSparam, NULL, 
               &test_ncm_sparam_new, 
               &test_ncm_sparam_setget_lower_bound, 
@@ -141,12 +141,16 @@ test_ncm_sparam_new (TestNcmSparam *test, gconstpointer pdata)
   ncm_assert_cmpdouble (p->abstol, ==, abstol);
 }
 
+void _set_destroyed (gpointer b) { gboolean *destroyed = b; *destroyed = TRUE; }
+
 void
 test_ncm_sparam_free (TestNcmSparam *test, gconstpointer pdata)
 {
   NcmSParam *p = test->p;
+  gboolean destroyed = FALSE;
+  g_object_set_data_full (G_OBJECT (p), "test-destroy", &destroyed, _set_destroyed);
   ncm_sparam_free (p);
-  NCM_TEST_FAIL (ncm_sparam_free (p));
+  g_assert (destroyed);
 }
 
 void
@@ -305,29 +309,18 @@ void
 test_ncm_sparam_invalid_scale (TestNcmSparam *test, gconstpointer pdata)
 {
   NcmSParam *p = test->p;
-
-  if (g_test_trap_fork (0, G_TEST_TRAP_SILENCE_STDOUT | G_TEST_TRAP_SILENCE_STDERR))
-  {
-    ncm_sparam_set_scale (p, -fabs (g_test_rand_double ()));
-    exit (0);
-  }
-  g_test_trap_assert_failed ();
+  NCM_TEST_FAIL (ncm_sparam_set_scale (p, -fabs (g_test_rand_double ())));
 }
 
 void
 test_ncm_sparam_invalid_abstol (TestNcmSparam *test, gconstpointer pdata)
 {
   NcmSParam *p = test->p;
-
-  if (g_test_trap_fork (0, G_TEST_TRAP_SILENCE_STDOUT | G_TEST_TRAP_SILENCE_STDERR))
-  {
-    ncm_sparam_set_absolute_tolerance (p, -fabs (g_test_rand_double ()));
-    exit (0);
-  }
-  g_test_trap_assert_failed ();
+  NCM_TEST_FAIL (ncm_sparam_set_absolute_tolerance (p, -fabs (g_test_rand_double ())));
 }
 
 void
 test_ncm_sparam_invalid_default_value (TestNcmSparam *test, gconstpointer pdata)
 {
+  NCM_TEST_FAIL (g_assert_not_reached ());
 }
