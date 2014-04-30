@@ -321,10 +321,10 @@ test_ncm_vector_data_slice_new (TestNcmVector *test, gconstpointer pdata)
 void
 test_ncm_vector_data_slice_free (TestNcmVector *test, gconstpointer pdata)
 {
-  NcmVector *v = test->v;  
+  NcmVector *v = test->v;
   ncm_vector_free (v);
-  NCM_TEST_FAIL (ncm_vector_free (v));
   NCM_TEST_PASS (g_assert (ncm_vector_data (v) == NULL));
+  NCM_TEST_FAIL (ncm_vector_free (v));  
 }
 
 void

@@ -362,13 +362,12 @@ _ncm_data_gauss_get_size (NcmDataGauss *gauss)
 }
 
 /**
- * ncm_data_gauss_set_size:
+ * ncm_data_gauss_set_size: (virtual set_size)
  * @gauss: a #NcmDataGauss
  * @np: data size.
  *
  * Sets the data size to @np.
  * 
- * Virtual: set_size
  */
 void 
 ncm_data_gauss_set_size (NcmDataGauss *gauss, guint np)
@@ -377,14 +376,13 @@ ncm_data_gauss_set_size (NcmDataGauss *gauss, guint np)
 }
 
 /**
- * ncm_data_gauss_get_size:
+ * ncm_data_gauss_get_size: (virtual get_size)
  * @gauss: a #NcmDataGauss
  *
  * Gets the data size.
  * 
  * Returns: Data size.
  * 
- * Virtual: get_size
  */
 guint 
 ncm_data_gauss_get_size (NcmDataGauss *gauss)

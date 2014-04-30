@@ -269,14 +269,12 @@ ncm_data_dup (NcmData *data, NcmSerialize *ser_obj)
 }
 
 /**
- * ncm_data_get_length:
+ * ncm_data_get_length: (virtual get_length)
  * @data: a #NcmData.
  *
  * Return a integer representing the number of data points.
  * 
  * Returns: number of data points.
- * 
- * Virtual: get_length
  */
 guint
 ncm_data_get_length (NcmData *data)
@@ -286,14 +284,12 @@ ncm_data_get_length (NcmData *data)
 }
 
 /**
- * ncm_data_get_dof:
+ * ncm_data_get_dof: (virtual get_dof)
  * @data: a #NcmData.
  *
  * Calculates the degrees of freedom associated with the data.
  * 
  * Returns: degrees of freedom of the data.
- * 
- * Virtual: get_dof
  */
 guint
 ncm_data_get_dof (NcmData *data)
@@ -404,13 +400,12 @@ ncm_data_get_desc (NcmData *data)
 }
 
 /**
- * ncm_data_prepare:
+ * ncm_data_prepare: (virtual prepare)
  * @data: a #NcmData.
  * @mset: a #NcmMSet.
  *
  * Prepare all models in @data necessary for the statistical calculations.
  * 
- * Virtual: prepare
  */
 void
 ncm_data_prepare (NcmData *data, NcmMSet *mset)
@@ -428,13 +423,13 @@ ncm_data_prepare (NcmData *data, NcmMSet *mset)
 }
 
 /**
- * ncm_data_resample:
+ * ncm_data_resample: (virtual resample)
  * @data: a #NcmData.
  * @mset: a #NcmMSet.
+ * @rng: a #NcmRNG.
  *
  * Resample data in @data from the models contained in @mset.
  * 
- * Virtual: resample
  */
 void
 ncm_data_resample (NcmData *data, NcmMSet *mset, NcmRNG *rng)
@@ -514,6 +509,7 @@ ncm_data_bootstrap_set (NcmData *data, NcmBootstrap *bstrap)
 /**
  * ncm_data_bootstrap_resample:
  * @data: a #NcmData.
+ * @rng: a #NcmRNG.
  *
  * Perform one bootstrap, i.e., resample the data with replacement.
  * 
@@ -549,7 +545,7 @@ ncm_data_bootstrap_enabled (NcmData *data)
 }
 
 /**
- * ncm_data_leastsquares_f:
+ * ncm_data_leastsquares_f: (virtual leastsquares_f)
  * @data: a #NcmData.
  * @mset: a #NcmMSet.
  * @f: a #NcmVector
@@ -557,7 +553,6 @@ ncm_data_bootstrap_enabled (NcmData *data)
  * Calculates the least squares vector $\vec{f}$ using the models contained in
  * @mset and set the results in @f.
  * 
- * Virtual: leastsquares_f
  */
 void 
 ncm_data_leastsquares_f (NcmData *data, NcmMSet *mset, NcmVector *f)
@@ -572,7 +567,7 @@ ncm_data_leastsquares_f (NcmData *data, NcmMSet *mset, NcmVector *f)
 }
 
 /**
- * ncm_data_leastsquares_J:
+ * ncm_data_leastsquares_J: (virtual leastsquares_J)
  * @data: a #NcmData.
  * @mset: a #NcmMSet.
  * @J: a #NcmMatrix.
@@ -581,7 +576,6 @@ ncm_data_leastsquares_f (NcmData *data, NcmMSet *mset, NcmVector *f)
  * where $f_i$ is the component of the least squares vector $\vec{f}$ and $x_j$
  * is the j-th parameter.  
  * 
- * Virtual: leastsquares_J
  */
 void 
 ncm_data_leastsquares_J (NcmData *data, NcmMSet *mset, NcmMatrix *J)
@@ -596,7 +590,7 @@ ncm_data_leastsquares_J (NcmData *data, NcmMSet *mset, NcmMatrix *J)
 }
 
 /**
- * ncm_data_leastsquares_f_J:
+ * ncm_data_leastsquares_f_J: (virtual leastsquares_f_J)
  * @data: a #NcmData.
  * @mset: a #NcmMSet.
  * @f: a #NcmVector.
@@ -605,7 +599,6 @@ ncm_data_leastsquares_J (NcmData *data, NcmMSet *mset, NcmMatrix *J)
  * Calculates both least squares vector and matrix as in ncm_data_leastsquares_f()
  * and ncm_data_leastsquares_J().
  * 
- * Virtual: leastsquares_f_J
  */
 void 
 ncm_data_leastsquares_f_J (NcmData *data, NcmMSet *mset, NcmVector *f, NcmMatrix *J)
@@ -620,7 +613,7 @@ ncm_data_leastsquares_f_J (NcmData *data, NcmMSet *mset, NcmVector *f, NcmMatrix
 }
 
 /**
- * ncm_data_m2lnL_val:
+ * ncm_data_m2lnL_val: (virtual m2lnL_val)
  * @data: a #NcmData.
  * @mset: a #NcmMSet.
  * @m2lnL: (out): a #double
@@ -628,7 +621,6 @@ ncm_data_leastsquares_f_J (NcmData *data, NcmMSet *mset, NcmVector *f, NcmMatrix
  * Calculates the value of $-2\ln(L)$, where $L$ represents the likelihood of
  * the data given the models in @mset. The result is stored in @m2lnL.
  * 
- * Virtual: m2lnL_val
  */
 void 
 ncm_data_m2lnL_val (NcmData *data, NcmMSet *mset, gdouble *m2lnL)
@@ -643,7 +635,7 @@ ncm_data_m2lnL_val (NcmData *data, NcmMSet *mset, gdouble *m2lnL)
 }
 
 /**
- * ncm_data_m2lnL_grad:
+ * ncm_data_m2lnL_grad: (virtual m2lnL_grad)
  * @data: a #NcmData.
  * @mset: a #NcmMSet.
  * @grad: a #NcmVector.
@@ -652,7 +644,6 @@ ncm_data_m2lnL_val (NcmData *data, NcmMSet *mset, gdouble *m2lnL)
  * where $L$ represents the likelihood of the data given the models in @mset. 
  * The result is stored in @grad.
  * 
- * Virtual: m2lnL_grad
  */
 void 
 ncm_data_m2lnL_grad (NcmData *data, NcmMSet *mset, NcmVector *grad)
@@ -667,7 +658,7 @@ ncm_data_m2lnL_grad (NcmData *data, NcmMSet *mset, NcmVector *grad)
 }
 
 /**
- * ncm_data_m2lnL_val_grad:
+ * ncm_data_m2lnL_val_grad: (virtual m2lnL_val_grad)
  * @data: a #NcmData.
  * @mset: a #NcmMSet.
  * @m2lnL: (out): a #double.
@@ -676,7 +667,6 @@ ncm_data_m2lnL_grad (NcmData *data, NcmMSet *mset, NcmVector *grad)
  * Calculates both the value and the gradient of $-2\ln(L)$ as in ncm_data_m2lnL_val() and
  * ncm_data_m2lnL_grad().
  * 
- * Virtual: m2lnL_val_grad
  */
 void ncm_data_m2lnL_val_grad (NcmData *data, NcmMSet *mset, gdouble *m2lnL, NcmVector *grad)
 {

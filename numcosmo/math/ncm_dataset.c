@@ -479,6 +479,7 @@ ncm_dataset_clear (NcmDataset **dset)
  * ncm_dataset_resample:
  * @dset: a #NcmDataset.
  * @mset: a #NcmMSet.
+ * @rng: a #NcmRNG.
  *
  * Resamples every #NcmData in @dset with the models contained in @mset.
  *
@@ -529,6 +530,7 @@ ncm_dataset_bootstrap_set (NcmDataset *dset, NcmDatasetBStrapType bstype)
 /**
  * ncm_dataset_bootstrap_resample:
  * @dset: a #NcmDataset.
+ * @rng: a #NcmRNG.
  *
  * Perform one bootstrap as in ncm_data_bootstrap_resample() in every #NcmData 
  * in @dset.

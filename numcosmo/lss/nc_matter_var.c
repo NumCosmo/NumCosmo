@@ -1198,7 +1198,7 @@ _top_hat_cubic_spline_integration_rule_taylor (gdouble xa, gdouble xb, gdouble R
   rules[3] = delta4 * (dnj12_x2[0] / 4.0 + dnj12_x2[1] * Rdelta / 5.0 + dnj12_x2[2] * Rdelta2 / 12.0 + dnj12_x2[3] * Rdelta3 / 42.0 + dnj12_x2[4] * Rdelta4 / 192.0);
 }
 
-/**
+/*
  * nc_matter_var_gaussian_cubic_spline_integration_rule:
  * @x: x = k * R FIXME
  * @rules: FIXME
@@ -1222,7 +1222,7 @@ _top_hat_cubic_spline_integration_rule_taylor (gdouble xa, gdouble xb, gdouble R
    }
    */
 
-/**
+/*
  * nc_matter_var_derivative_gaussian_cubic_spline_integration_rule:
  * @x: x = k * R FIXME
  * @rules: FIXME
@@ -1262,10 +1262,11 @@ typedef struct
  * @rules_b: are the rules computed at the point k*R = b.
  * @R: is the radius of the cluster which is related to its mass.
  * @a: is the lower point (k*R) of the spline.
-   * @rule: is the vector with the four components whose sum gives the integration of the
+ * @rule: is the vector with the four components whose sum gives the integration of the
  * spline with nodes a (lower) and b (upper).
-   *
+ *
  * FIXME
+ * 
  */
 static void
 nc_matter_var_shift_scale_rule (gdouble *rules_a, gdouble *rules_b, gdouble R, gdouble a, gdouble *rule)

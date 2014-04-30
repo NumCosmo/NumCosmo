@@ -185,6 +185,7 @@ nc_cluster_redshift_intp (NcClusterRedshift *clusterz, gdouble lnM, gdouble z)
  * @lnM: true mass.
  * @z_obs: (out): observed redshift.
  * @z_obs_params: (out): observed redshift params.
+   @rng: a #NcmRNG.
  *
  * FIXME
  * The function which will call this one is responsible to allocate enough memory for @z_lower and @z_upper.

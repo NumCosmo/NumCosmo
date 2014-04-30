@@ -170,11 +170,12 @@ _test_ncm_model_create_reparam (TestNcmModel *test)
   NcmVector *v = ncm_vector_new (size);
   NcmReparamLinear *relin;
   NcmBootstrap *bstrap = ncm_bootstrap_sized_new (size);
+  NcmRNG *rng = ncm_rng_new (NULL);
   guint i;
   guint cdesc_n = size / 10;
   if (cdesc_n == 0) cdesc_n = 1;
 
-  ncm_bootstrap_remix (bstrap);
+  ncm_bootstrap_remix (bstrap, rng);
 
   ncm_matrix_set_zero (T);
   ncm_vector_set_zero (v);
@@ -211,6 +212,7 @@ _test_ncm_model_create_reparam (TestNcmModel *test)
 
   ncm_vector_free (v);
   ncm_matrix_free (T);
+  ncm_rng_free (rng);
 
   return NCM_REPARAM (relin);
 }

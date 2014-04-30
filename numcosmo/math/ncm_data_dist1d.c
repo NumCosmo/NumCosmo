@@ -258,13 +258,12 @@ _ncm_data_dist1d_get_size (NcmDataDist1d *dist1d)
 }
 
 /**
- * ncm_data_dist1d_set_size:
+ * ncm_data_dist1d_set_size: (virtual set_size)
  * @dist1d: a #NcmDataDist1d
  * @np: data size.
  *
  * Sets the data size to @np.
  * 
- * Virtual: set_size
  */
 void 
 ncm_data_dist1d_set_size (NcmDataDist1d *dist1d, guint np)
@@ -273,14 +272,13 @@ ncm_data_dist1d_set_size (NcmDataDist1d *dist1d, guint np)
 }
 
 /**
- * ncm_data_dist1d_get_size:
+ * ncm_data_dist1d_get_size: (virtual get_size)
  * @dist1d: a #NcmDataDist1d
  *
  * Gets the data size.
  * 
  * Returns: Data size.
  * 
- * Virtual: get_size
  */
 guint 
 ncm_data_dist1d_get_size (NcmDataDist1d *dist1d)

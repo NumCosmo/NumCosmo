@@ -263,7 +263,7 @@ ncm_reparam_clear (NcmReparam **reparam)
 }
 
 /**
- * ncm_reparam_old2new:
+ * ncm_reparam_old2new: (virtual old2new)
  * @reparam: a #NcmReparam
  * @model: a #NcmModel
  * @src: a #NcmVector
@@ -278,7 +278,7 @@ ncm_reparam_old2new (NcmReparam *reparam, NcmModel *model, NcmVector *src, NcmVe
 }
 
 /**
- * ncm_reparam_new2old:
+ * ncm_reparam_new2old: (virtual new2old)
  * @reparam: a #NcmReparam
  * @model: a #NcmModel
  * @src: a #NcmVector
@@ -293,7 +293,7 @@ ncm_reparam_new2old (NcmReparam *reparam, NcmModel *model, NcmVector *src, NcmVe
 }
 
 /**
- * ncm_reparam_jac:
+ * ncm_reparam_jac: (virtual jac)
  * @reparam: a #NcmReparam
  * @model: a #NcmModel
  * @jac: a #NcmMatrix
