@@ -222,7 +222,7 @@ _nc_data_bao_rdv_set_size (NcmDataGauss *gauss, guint np)
 
 /***************************************************************************
  * BAO Percival priors data (arXiv:0705.3323)
- *
+ * Idem (arXiv:0907.1660)
  ****************************************************************************/
 
 static gdouble nc_bao_distance_priors_percival2007_z[]       = {    0.2,   0.35 };
@@ -242,9 +242,9 @@ static gdouble nc_bao_distance_priors_percival2010_inv_cov[][2] =
 };
 
 /***************************************************************************
- * BAO 6dFGRS Beutler et al. (2011)
+ * BAO 6dFGRS Beutler et al. (2011) (arXiv:1106.3366)
  ****************************************************************************/
-static gdouble nc_bao_distance_priors_beutler2011_z[]       = {   0.1 };
+static gdouble nc_bao_distance_priors_beutler2011_z[]       = { 0.106 };
 static gdouble nc_bao_distance_priors_beutler2011_bestfit[] = { 0.336 };
 static gdouble nc_bao_distance_priors_beutler2011_inv_cov[][1] =
 { 
@@ -252,7 +252,7 @@ static gdouble nc_bao_distance_priors_beutler2011_inv_cov[][1] =
 };
 
 /***************************************************************************
- * BAO SDSS-DR7-rec Padmanabhan et al. (2012)
+ * BAO SDSS-DR7-rec Padmanabhan et al. (2012) (arXiv:1202.0090)
  ****************************************************************************/
 static gdouble nc_bao_distance_priors_padmanabhan2012_z[]       = {  0.35 };
 static gdouble nc_bao_distance_priors_padmanabhan2012_bestfit[] = { 1.0 / 8.88 };
@@ -262,7 +262,7 @@ static gdouble nc_bao_distance_priors_padmanabhan2012_inv_cov[][1] =
 };
 
 /***************************************************************************
- * BAO SDSS-DR9-rec Anderson et al. (2012)
+ * BAO SDSS-DR9-rec Anderson et al. (2012) 
  ****************************************************************************/
 static gdouble nc_bao_distance_priors_anderson2012_z[]       = {  0.57 };
 static gdouble nc_bao_distance_priors_anderson2012_bestfit[] = { 1.0 / 13.67 };
