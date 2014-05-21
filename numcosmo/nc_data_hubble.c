@@ -186,6 +186,7 @@ static gchar *_nc_data_hubble_function_query[] =
   "Moresco 2012 H(z) MaStro sample", "SELECT z,p,s FROM kinematics WHERE param='MaStro_Moresco2012' ORDER BY z",
   "Busca 2013 H(z) BAO+WMAP sample", "SELECT z,p,s FROM kinematics WHERE param='BAO+WMAP_Busca2013' ORDER BY z",
   "Riess 2008 HST Project sample", "SELECT z,p,s FROM kinematics WHERE param='HST_Riess2008' ORDER BY z",
+  "Zhang 2012 Sloan sample", "SELECT z,p,s FROM kinematics WHERE param='SloanDR7_Zhang2012' ORDER BY z",
 };
 #endif
 

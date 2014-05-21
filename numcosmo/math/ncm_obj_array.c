@@ -155,6 +155,7 @@ _ncm_obj_array_ser (NcmObjArray *oa, NcmSerialize *ser)
   {
     GVariant *cvar = _ncm_serialize_to_variant (ser, ncm_obj_array_peek (oa, i));
     g_variant_builder_add_value (builder, cvar);
+    g_variant_unref (cvar);
   }
 
   return g_variant_ref_sink (g_variant_builder_end (builder));

@@ -527,7 +527,9 @@ main (gint argc, gchar *argv[])
     if (de_fit.mcbs <= 0)
     {
       NcmFitMC *mc = ncm_fit_mc_new (fit, de_fit.mc_rtype, de_fit.msg_level);
-      gdouble m2lnL = ncm_fit_state_get_m2lnL_curval (fit->fstate);
+      gdouble m2lnL = 0.0;
+      if (fit->fstate->is_best_fit)
+        m2lnL = ncm_fit_state_get_m2lnL_curval (fit->fstate);
 
       if (de_fit.fiducial != NULL)
         ncm_fit_mc_set_fiducial (mc, fiduc);
@@ -560,7 +562,6 @@ main (gint argc, gchar *argv[])
         gdouble p_value = ncm_fit_catalog_param_pdf_pvalue (mc->fcat, m2lnL, FALSE);
         ncm_message ("#   - pvalue for fitted model [% 20.15g] %04.2f%%.\n#\n", m2lnL, 100.0 * p_value);
       }
-
       ncm_fit_mc_clear (&mc);
     }
     else

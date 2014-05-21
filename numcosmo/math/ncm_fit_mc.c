@@ -266,11 +266,12 @@ _ncm_fit_mc_set_fit_obj (NcmFitMC *mc, NcmFit *fit)
 NcmFitMC *
 ncm_fit_mc_new (NcmFit *fit, NcmFitMCResampleType rtype, NcmFitRunMsgs mtype)
 {
-  return g_object_new (NCM_TYPE_FIT_MC, 
-                       "fit", fit,
-                       "rtype", rtype,
-                       "mtype", mtype,
-                       NULL);
+  NcmFitMC * mc = g_object_new (NCM_TYPE_FIT_MC, 
+                                "fit", fit,
+                                "rtype", rtype,
+                                "mtype", mtype,
+                                NULL);
+  return mc;
 }
 
 /**

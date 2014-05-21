@@ -157,8 +157,9 @@ typedef struct _NcHICosmoQSplineContPriorKnot
   NcHICosmoQSplineContPrior *qspline_cp;
 } NcHICosmoQSplineContPriorKnot;
 
+/*
 static void
-continuity_prior_f (NcmMSet *mset, gpointer obj, const gdouble *x, gdouble *f)
+continuity_prior_wlinear_5knots_f (NcmMSet *mset, gpointer obj, const gdouble *x, gdouble *f)
 {
   NcHICosmoQSpline *qspline = NC_HICOSMO_QSPLINE (ncm_mset_peek (mset, nc_hicosmo_id ()));
   NcHICosmoQSplineContPriorKnot *acp = (NcHICosmoQSplineContPriorKnot *) obj;
@@ -189,6 +190,46 @@ continuity_prior_f (NcmMSet *mset, gpointer obj, const gdouble *x, gdouble *f)
   gsl_fit_wlinear (x_ptr, 1, w_ptr, 1, y_ptr, 1, n, &c0, &c1, &cov00, &cov01, &cov11, &chisq);
   f[0] = chisq / n;
 }
+*/
+/*
+static void
+continuity_prior_qppp_f (NcmMSet *mset, gpointer obj, const gdouble *x, gdouble *f)
+{
+  NcHICosmoQSpline *qspline = NC_HICOSMO_QSPLINE (ncm_mset_peek (mset, nc_hicosmo_id ()));
+  NcHICosmoQSplineContPriorKnot *acp = (NcHICosmoQSplineContPriorKnot *) obj;
+  const gdouble sigma = exp (nc_hicosmo_qspline_cont_prior_get_lnsigma (acp->qspline_cp, acp->knot));
+  const gdouble abstol = nc_hicosmo_qspline_cont_prior_get_abstol (acp->qspline_cp);
+  const gdouble zi = ncm_vector_get (qspline->q_z->xv, acp->knot);
+  const gdouble zip1 = ncm_vector_get (qspline->q_z->xv, acp->knot + 1);
+  const gdouble zip2 = ncm_vector_get (qspline->q_z->xv, acp->knot + 2);
+  const gdouble qppp1 = ncm_spline_eval_deriv_nmax (qspline->q_z, (zi + zip1) * 0.5);
+  const gdouble qppp2 = ncm_spline_eval_deriv_nmax (qspline->q_z, (zip1 + zip2) * 0.5);
+
+  NCM_UNUSED (x);
+  
+  f[0] = gsl_pow_2 ((qppp1 - qppp2) / (abstol + (fabs (qppp1) + fabs (qppp2)) * 0.5 * sigma)); 
+}
+*/
+
+static void
+continuity_prior_q_f (NcmMSet *mset, gpointer obj, const gdouble *x, gdouble *f)
+{
+  NcHICosmoQSpline *qspline = NC_HICOSMO_QSPLINE (ncm_mset_peek (mset, nc_hicosmo_id ()));
+  NcHICosmoQSplineContPriorKnot *acp = (NcHICosmoQSplineContPriorKnot *) obj;
+  const gdouble sigma = exp (nc_hicosmo_qspline_cont_prior_get_lnsigma (acp->qspline_cp, acp->knot));
+  const gdouble abstol = nc_hicosmo_qspline_cont_prior_get_abstol (acp->qspline_cp);
+  const gdouble zi = ncm_vector_get (qspline->q_z->xv, acp->knot);
+  const gdouble zip1 = ncm_vector_get (qspline->q_z->xv, acp->knot + 1);
+  const gdouble zip2 = ncm_vector_get (qspline->q_z->xv, acp->knot + 2);
+  const gdouble q1 = ncm_spline_eval (qspline->q_z, zi);
+  const gdouble q2 = ncm_spline_eval (qspline->q_z, zip1);
+  const gdouble q3 = ncm_spline_eval (qspline->q_z, zip2);
+  const gdouble qmean = q1 + (q3 - q1) * (zip1 - zi) / (zip2 - zi);
+
+  NCM_UNUSED (x);
+  
+  f[0] = gsl_pow_2 ((q2 - qmean) / (abstol + (fabs (q2) + fabs (qmean)) * 0.5 * sigma)); 
+}
 
 static void
 _nc_hicosmo_spline_continuity_prior_free (gpointer obj)
@@ -212,7 +253,7 @@ void
 nc_hicosmo_qspline_add_continuity_prior (NcHICosmoQSpline *qspline, NcmLikelihood *lh, guint knot, NcHICosmoQSplineContPrior *qspline_cp)
 {
   NcHICosmoQSplineContPriorKnot *cp = g_slice_new (NcHICosmoQSplineContPriorKnot);
-  NcmMSetFunc *func = ncm_mset_func_new (continuity_prior_f, 0, 1, cp, _nc_hicosmo_spline_continuity_prior_free);
+  NcmMSetFunc *func = ncm_mset_func_new (continuity_prior_q_f, 0, 1, cp, _nc_hicosmo_spline_continuity_prior_free);
   g_assert (knot < qspline->nknots - 2);
   cp->knot = knot;
   cp->qspline_cp = nc_hicosmo_qspline_cont_prior_ref (qspline_cp);
@@ -263,7 +304,7 @@ void
 nc_hicosmo_qspline_add_continuity_constraint (NcHICosmoQSpline *qspline, NcmFit *fit, guint knot, NcHICosmoQSplineContPrior *qspline_cp)
 {
   NcHICosmoQSplineContPriorKnot *cp = g_slice_new (NcHICosmoQSplineContPriorKnot);
-  NcmMSetFunc *func = ncm_mset_func_new (continuity_prior_f, 0, 1, cp, _nc_hicosmo_spline_continuity_prior_free);
+  NcmMSetFunc *func = ncm_mset_func_new (continuity_prior_q_f, 0, 1, cp, _nc_hicosmo_spline_continuity_prior_free);
   g_assert (knot < qspline->nknots - 2);
   cp->knot = knot;
   cp->qspline_cp = nc_hicosmo_qspline_cont_prior_ref (qspline_cp);

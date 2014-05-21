@@ -245,6 +245,10 @@ _ncm_fit_catalog_set_fit_obj (NcmFitCatalog *fcat, NcmFit *fit)
   fcat->pstats     = ncm_stats_vec_new (free_params_len + 1, NCM_STATS_VEC_COV, TRUE);
   fcat->params_max = ncm_vector_new (free_params_len + 1);
   fcat->params_min = ncm_vector_new (free_params_len + 1);
+
+  ncm_vector_set_all (fcat->params_max, GSL_NEGINF);
+  ncm_vector_set_all (fcat->params_min, GSL_POSINF);
+
   g_array_set_size (fcat->porder, free_params_len + 1);
 }
 
@@ -1112,13 +1116,13 @@ ncm_fit_catalog_param_pdf_pvalue (NcmFitCatalog *fcat, gdouble pval, gboolean bo
 {
   g_assert_cmpint (fcat->pdf_i, >=, 0);
   g_assert (fcat->h_pdf != NULL);
+
   {
     const gdouble p_max = ncm_vector_get (fcat->params_max, fcat->pdf_i);
     const gdouble p_min = ncm_vector_get (fcat->params_min, fcat->pdf_i);
-    gsize i;
+    gsize i = 0;
 
     NCM_UNUSED (both);
-
     if (pval < p_min || pval > p_max)
     {
       /*
@@ -1127,10 +1131,8 @@ ncm_fit_catalog_param_pdf_pvalue (NcmFitCatalog *fcat, gdouble pval, gboolean bo
        */
       return 0.0;
     }
-
     gsl_histogram_find (fcat->h, pval, &i);
     g_assert_cmpint (i, <=, fcat->h_pdf->n);
-
     if (i == 0)
       return 1.0;
     else

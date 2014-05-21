@@ -2221,25 +2221,37 @@ ncm_fit_lr_test (NcmFit *fit, NcmModelID mid, guint pid, gdouble val, gint dof)
 void
 ncm_fit_function_error (NcmFit *fit, NcmMSetFunc *func, gdouble *x, gboolean pretty_print, gdouble *f, gdouble *sigma_f)
 {
-  NcmVector *v = ncm_mset_func_numdiff_fparams (func, fit->mset, x, NULL);
-  NcmVector *tmp1 = ncm_vector_dup (v);
-  gdouble result;
-  gint ret;
+  if (ncm_mset_fparam_len (fit->mset) < 1)
+  {
+    g_warning ("ncm_fit_function_error: called but no free parameters were set in #NcmMSet.");
+    *f = ncm_mset_func_eval (func, fit->mset, x);
+    *sigma_f = 0.0;
+  }
+  else
+  {
+    NcmVector *v = ncm_mset_func_numdiff_fparams (func, fit->mset, x, NULL);
+    NcmVector *tmp1 = ncm_vector_dup (v);
+    gdouble result;
+    gint ret;
 
-  ret = gsl_blas_dgemv (CblasNoTrans, 1.0, ncm_matrix_gsl (fit->fstate->covar), ncm_vector_gsl (v), 0.0, ncm_vector_gsl (tmp1));
-  NCM_TEST_GSL_RESULT("ncm_fit_function_error[covar.v]", ret);
-  ret = gsl_blas_ddot (ncm_vector_gsl (v), ncm_vector_gsl (tmp1), &result);
-  NCM_TEST_GSL_RESULT("ncm_fit_function_error[v.covar.v]", ret);
+    if (fit->fstate->covar == NULL)
+      g_error ("ncm_fit_function_error: called without any covariance matrix calculated.");
 
-  *f = ncm_mset_func_eval (func, fit->mset, x);
-  *sigma_f = sqrt(result);
-  if (pretty_print)
-    g_message ("# % -12.4g +/- % -12.4g\n", *f, *sigma_f);
+    ret = gsl_blas_dgemv (CblasNoTrans, 1.0, ncm_matrix_gsl (fit->fstate->covar), ncm_vector_gsl (v), 0.0, ncm_vector_gsl (tmp1));
+    NCM_TEST_GSL_RESULT("ncm_fit_function_error[covar.v]", ret);
+    ret = gsl_blas_ddot (ncm_vector_gsl (v), ncm_vector_gsl (tmp1), &result);
+    NCM_TEST_GSL_RESULT("ncm_fit_function_error[v.covar.v]", ret);
 
-  ncm_vector_free (v);
-  ncm_vector_free (tmp1);
+    *f = ncm_mset_func_eval (func, fit->mset, x);
+    *sigma_f = sqrt(result);
+    if (pretty_print)
+      g_message ("# % -12.4g +/- % -12.4g\n", *f, *sigma_f);
 
-  return;
+    ncm_vector_free (v);
+    ncm_vector_free (tmp1);
+
+    return;
+  }
 }
 
 /**

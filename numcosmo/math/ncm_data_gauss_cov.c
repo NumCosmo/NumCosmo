@@ -139,7 +139,6 @@ _ncm_data_gauss_cov_dispose (GObject *object)
   ncm_vector_clear (&gauss->v);
   ncm_matrix_clear (&gauss->cov);
   ncm_matrix_clear (&gauss->LLT);
-
   /* Chain up : end */
   G_OBJECT_CLASS (ncm_data_gauss_cov_parent_class)->dispose (object);
 }

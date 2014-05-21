@@ -1024,6 +1024,8 @@ ncm_serialize_from_name_params (NcmSerialize *ser, const gchar *obj_name, GVaria
     }
 
     obj = g_object_newv (gtype, nprop, gprop);
+    for (i = 0; i < nprop; i++)
+      g_value_unset (&gprop[i].value);
 
     g_free (gprop);
     g_variant_iter_free (p_iter);
