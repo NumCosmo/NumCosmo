@@ -886,7 +886,8 @@ _ncm_fit_mc_run_mt (NcmFitMC *mc)
 
   g_assert_cmpuint (mc->nthreads, >, 1);
 
-  ncm_func_eval_threaded_loop_nw (&_ncm_fit_mc_mt_eval, 0, mc->n, mc, nthreads);
+  ncm_func_eval_threaded_loop_full (&_ncm_fit_mc_mt_eval, 0, mc->n, mc);
+  //ncm_func_eval_threaded_loop_nw (&_ncm_fit_mc_mt_eval, 0, mc->n, mc, nthreads);  
 }
 
 /**

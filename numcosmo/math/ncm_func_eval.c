@@ -158,12 +158,12 @@ ncm_func_eval_threaded_loop_nw (NcmLoopFunc lfunc, glong i, glong f, gpointer da
   ctrl.finish = &ctrl.finish_c;
 #endif
 
-  g_assert_cmpuint (f, >=, i);
+  g_assert_cmpuint (f, >, i);
   g_assert_cmpuint (f - i, >, nworkers);
   g_assert_cmpuint (nworkers, >, 0);
 
-  delta = (f-i) / nworkers;
-  res = (f-i) % nworkers;
+  delta = (f - i) / nworkers;
+  res = (f - i) % nworkers;
 
   if (delta == 0)
   {
@@ -173,7 +173,7 @@ ncm_func_eval_threaded_loop_nw (NcmLoopFunc lfunc, glong i, glong f, gpointer da
   {
     GError *err = NULL;
     glong li = i;
-    glong lf = delta + res;
+    glong lf = i + delta + res;
     ctrl.active_threads = nworkers;
 
     do {
@@ -238,3 +238,85 @@ ncm_func_eval_threaded_loop (NcmLoopFunc lfunc, glong i, glong f, gpointer data)
     ncm_func_eval_threaded_loop_nw (lfunc, i, f, data, nthreads);
   }
 }
+
+/**
+ * ncm_func_eval_threaded_loop_full:
+ * @lfunc: (scope notified): #NcmLoopFunc to be evaluated in threads
+ * @i: initial index
+ * @f: final index
+ * @data: pointer to be passed to @fl
+ *
+ * Using the thread pool, evaluate @fl sending one worker per index.
+ *
+ */
+#if NCM_THREAD_POOL_MAX > 1
+void
+ncm_func_eval_threaded_loop_full (NcmLoopFunc lfunc, glong i, glong f, gpointer data)
+{
+  NcmFunctionEvalCtrl ctrl = {0, NULL, NULL, 
+#if !((GLIB_MAJOR_VERSION == 2) && (GLIB_MINOR_VERSION < 32))
+    {NULL},
+    {NULL},
+#endif
+  };
+
+  ncm_func_eval_get_pool ();
+#if (GLIB_MAJOR_VERSION == 2) && (GLIB_MINOR_VERSION < 32)
+  ctrl.update = g_mutex_new ();
+  ctrl.finish = g_cond_new ();
+#else
+  g_mutex_init (&ctrl.update_m);
+  g_cond_init (&ctrl.finish_c);
+  ctrl.update = &ctrl.update_m;
+  ctrl.finish = &ctrl.finish_c;
+#endif
+
+  g_assert_cmpuint (f, >, i);
+
+  {
+    GError *err = NULL;
+    glong l;
+    ctrl.active_threads = f - i;
+
+    for (l = i; l < f; l++)
+    {
+      NcmLoopFuncEval *arg = g_slice_new (NcmLoopFuncEval);
+      arg->lfunc = lfunc;
+      arg->i = l;
+      arg->f = l + 1;
+      arg->data = data;
+      arg->ctrl = &ctrl;
+      g_thread_pool_push (_function_thread_pool, arg, &err);
+    }
+  }
+
+  g_mutex_lock (ctrl.update);
+  while (ctrl.active_threads != 0)
+    g_cond_wait (ctrl.finish, ctrl.update);
+  g_mutex_unlock (ctrl.update);
+
+  if (FALSE)
+  {
+    printf  ("Unused:      %d\n", g_thread_pool_get_num_unused_threads ());fflush (stdout);
+    printf  ("Max Unused:  %d\n", g_thread_pool_get_max_unused_threads ());fflush (stdout);
+    printf  ("Running:     %d\n", g_thread_pool_get_num_threads (_function_thread_pool));fflush (stdout);
+    printf  ("Unprocessed: %d\n", g_thread_pool_unprocessed (_function_thread_pool));fflush (stdout);
+    printf  ("Unused:      %d\n", g_thread_pool_get_max_threads (_function_thread_pool));fflush (stdout);
+  }
+
+#if (GLIB_MAJOR_VERSION == 2) && (GLIB_MINOR_VERSION < 32)
+  g_mutex_free (ctrl.update);
+  g_cond_free (ctrl.finish);
+#else
+  g_mutex_clear (ctrl.update);
+  g_cond_clear (ctrl.finish);
+#endif
+}
+#else
+void
+ncm_func_eval_threaded_loop_full (NcmLoopFunc lfunc, glong i, glong f, gpointer data)
+{
+  lfunc (i, f, data);
+}
+#endif
+
