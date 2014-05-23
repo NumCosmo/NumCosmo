@@ -484,6 +484,7 @@ ncm_cfg_keyfile_to_arg (GKeyFile *kfile, gchar *group_name, GOptionEntry *entrie
           gchar *val = g_key_file_get_value (kfile, group_name, entries[i].long_name, &error);
           if (error != NULL)
             g_error ("ncm_cfg_keyfile_to_arg: Cannot parse key file[%s]", error->message);
+          
           if (entries[i].arg == G_OPTION_ARG_NONE)
           {
             if ((g_ascii_strcasecmp (val, "1") == 0) ||

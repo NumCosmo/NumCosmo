@@ -96,8 +96,10 @@ main (gint argc, gchar *argv[])
   if (de_run.runconf != NULL)
   {
     gchar **runconf_argv = g_new0 (gchar *, 1000);
+    gchar **runconf_argv_m = g_new0 (gchar *, 1000);
     gint runconf_argc = 0;
     GKeyFile *runconf = g_key_file_new ();
+    guint i;
 
     runconf_argv[0] = g_strdup (argv[0]);
     runconf_argc++;
@@ -116,6 +118,12 @@ main (gint argc, gchar *argv[])
 
     g_key_file_free (runconf);
 
+    for (i = 0; i < runconf_argc; i++)
+    {
+      runconf_argv_m[i] = runconf_argv[i]; 
+    }
+    runconf_argv_m[i] = NULL;
+    
     runconf_cmd_line = ncm_cfg_command_line (&runconf_argv[1], runconf_argc - 1);
     if (!g_option_context_parse (context, &runconf_argc, &runconf_argv, &error))
     {
@@ -124,6 +132,9 @@ main (gint argc, gchar *argv[])
       g_option_context_free (context);
       return 0;
     }
+
+    g_strfreev (runconf_argv_m);
+    g_free (runconf_argv);
   }
 
   full_cmd_line = ncm_cfg_command_line (argv, argc);
@@ -261,6 +272,7 @@ main (gint argc, gchar *argv[])
       ncm_mset_set (mset, NCM_MODEL (dcov));
       ncm_dataset_append_data (dset, data);
       ncm_data_free (data);
+      nc_snia_dist_cov_free (dcov);
     }
     else
       g_assert_not_reached ();

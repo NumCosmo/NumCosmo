@@ -147,6 +147,7 @@ GVariant *
 _ncm_obj_array_ser (NcmObjArray *oa, NcmSerialize *ser)
 {
   GVariantBuilder *builder;
+  GVariant *var;
   guint i;
 
   builder = g_variant_builder_new (G_VARIANT_TYPE (NCM_OBJ_ARRAY_TYPE));
@@ -157,8 +158,12 @@ _ncm_obj_array_ser (NcmObjArray *oa, NcmSerialize *ser)
     g_variant_builder_add_value (builder, cvar);
     g_variant_unref (cvar);
   }
+  
+  var = g_variant_ref_sink (g_variant_builder_end (builder));
 
-  return g_variant_ref_sink (g_variant_builder_end (builder));
+  g_variant_builder_unref (builder);
+
+  return var;
 }
 
 
@@ -175,6 +180,7 @@ GVariant *
 ncm_obj_array_ser (NcmObjArray *oa, NcmSerialize *ser)
 {
   GVariantBuilder *builder;
+  GVariant *var;
   guint i;
 
   builder = g_variant_builder_new (G_VARIANT_TYPE (NCM_OBJ_ARRAY_TYPE));
@@ -185,7 +191,11 @@ ncm_obj_array_ser (NcmObjArray *oa, NcmSerialize *ser)
     g_variant_builder_add_value (builder, cvar);
   }
 
-  return g_variant_ref_sink (g_variant_builder_end (builder));
+  var = g_variant_ref_sink (g_variant_builder_end (builder));
+
+  g_variant_builder_unref (builder);
+
+  return var;
 }
 
 /**

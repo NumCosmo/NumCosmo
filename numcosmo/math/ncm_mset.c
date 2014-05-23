@@ -1535,7 +1535,8 @@ ncm_mset_load (gchar *filename)
     }
     g_string_free (obj_ser, TRUE);
   }
-  
+
+  g_key_file_unref (msetfile);
   g_strfreev (groups);
   return mset;
 }
@@ -1679,6 +1680,8 @@ ncm_mset_class_init (NcmMSetClass *klass)
     g_object_class_install_property (object_class, PROP_SIZE + i,
                                      g_param_spec_object (name, NULL, desc,
                                                           NCM_TYPE_MODEL,
-                                                          G_PARAM_READWRITE | G_PARAM_CONSTRUCT));    
+                                                          G_PARAM_READWRITE | G_PARAM_CONSTRUCT));
+    g_free (name);
+    g_free (desc);
   }
 }

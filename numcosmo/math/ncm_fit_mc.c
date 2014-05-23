@@ -167,6 +167,7 @@ ncm_fit_mc_dispose (GObject *object)
   ncm_timer_clear (&mc->nt);
   ncm_serialize_clear (&mc->ser);
   ncm_fit_catalog_clear (&mc->fcat);
+  ncm_rng_clear (&mc->rng);
 
   if (mc->mp != NULL)
   {

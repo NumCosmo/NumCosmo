@@ -942,16 +942,6 @@ _nc_data_snia_cov_load_matrix (const gchar *filename, NcmMatrix *data)
 
 #ifdef NUMCOSMO_HAVE_CFITSIO
 
-#define NC_FITS_ERROR(status) \
-do { \
-if (status) \
-{ \
-gchar errormsg[30]; \
-fits_get_errstatus (status, errormsg); \
-g_error ("FITS: %s", errormsg); \
-} \
-} while (FALSE);
-
 /**
  * nc_data_snia_cov_load:
  * @snia_cov: FIXME
@@ -963,30 +953,27 @@ g_error ("FITS: %s", errormsg); \
 void 
 nc_data_snia_cov_load (NcDataSNIACov *snia_cov, const gchar *filename)
 {
-  gint status, hdutype;
+  gint hdutype;
   fitsfile *fptr;
-
-  status = 0;
-
+  glong nrows;
+  gint status = 0;
+  
   if (filename == NULL)
     g_error ("nc_data_snia_cov_load: null filename");
 
-  if (fits_open_file (&fptr, filename, READONLY, &status))
-    NC_FITS_ERROR (status);
+  fits_open_file (&fptr, filename, READONLY, &status);
+  NCM_FITS_ERROR (status);
 
-  if (fits_movabs_hdu (fptr, 2, &hdutype, &status))
-    NC_FITS_ERROR (status);
+  fits_movabs_hdu (fptr, 2, &hdutype, &status);
+  NCM_FITS_ERROR (status);
 
   if (hdutype != BINARY_TBL)
     g_error ("nc_data_snia_cov_load: NcSNIADistCov catalog is not binary.");
 
-  {
-    glong nrows;
-    if (fits_get_num_rows (fptr, &nrows, &status))
-      NC_FITS_ERROR (status);
-    ncm_data_gauss_cov_set_size (NCM_DATA_GAUSS_COV (snia_cov), nrows);
-  }
-
+  fits_get_num_rows (fptr, &nrows, &status);
+  NCM_FITS_ERROR (status);
+  ncm_data_gauss_cov_set_size (NCM_DATA_GAUSS_COV (snia_cov), nrows);
+  
   {
     NcmVector *data[NC_DATA_SNIA_COV_LENGTH];
     gint i;
@@ -1008,18 +995,19 @@ nc_data_snia_cov_load (NcDataSNIACov *snia_cov, const gchar *filename)
 
     for (i = 0; i < NC_DATA_SNIA_COV_LENGTH; i++)
     {
-      if (fits_read_col_dbl (fptr, i + 1, 1, 1, snia_cov->mu_len, GSL_NAN,
-                             ncm_vector_ptr (data[i], 0), NULL, 
-                             &status))
-        NC_FITS_ERROR(status);
+      fits_read_col_dbl (fptr, i + 1, 1, 1, snia_cov->mu_len, GSL_NAN,
+                         ncm_vector_ptr (data[i], 0), NULL, 
+                         &status);
+      NCM_FITS_ERROR(status);
     }
   }
 
-  if (fits_read_col_uint (fptr, NC_DATA_SNIA_COV_ABSMAG_SET + 1, 1, 1, 
+  fits_read_col_uint (fptr, NC_DATA_SNIA_COV_ABSMAG_SET + 1, 1, 1, 
                           snia_cov->mu_len, 
                           0, &g_array_index (snia_cov->dataset, guint32, 0), 
-                          NULL, &status))
-    NC_FITS_ERROR (status);
+                          NULL, &status);
+  NCM_FITS_ERROR (status);
+  
   {
     guint i;
     for (i = 0; i < snia_cov->mu_len; i++)
@@ -1040,12 +1028,15 @@ nc_data_snia_cov_load (NcDataSNIACov *snia_cov, const gchar *filename)
     gint i;
     for (i = NC_DATA_SNIA_COV_VAR_MAG; i < NC_DATA_SNIA_COV_TOTAL_LENGTH; i++)
     {
-      if (fits_read_col_dbl (fptr, i + 1, 1, 1, snia_cov->mu_len * snia_cov->mu_len, 
-                             GSL_NAN, ncm_matrix_ptr (data[i], 0, 0), 
-                             NULL, &status))
-        NC_FITS_ERROR(status);
+      fits_read_col_dbl (fptr, i + 1, 1, 1, snia_cov->mu_len * snia_cov->mu_len, 
+                         GSL_NAN, ncm_matrix_ptr (data[i], 0, 0), 
+                         NULL, &status);
+      NCM_FITS_ERROR (status);
     }
   }
+
+  fits_close_file (fptr, &status);
+  NCM_FITS_ERROR (status);
 
   ncm_data_set_init (NCM_DATA (snia_cov), TRUE);
 }
@@ -1173,14 +1164,14 @@ nc_data_snia_cov_save (NcDataSNIACov *snia_cov, const gchar *filename, gboolean 
     g_unlink (filename);
 
   /* create new FITS file */
-  if (fits_create_file (&fptr, filename, &status))
-    NC_FITS_ERROR (status);
+  fits_create_file (&fptr, filename, &status);
+  NCM_FITS_ERROR (status);
 
   /* append a new empty binary table onto the FITS file */
-  if (fits_create_tbl (fptr, BINARY_TBL, snia_cov->mu_len, tfields, (gchar **)ttype_array->pdata, (gchar **)tform_array->pdata,
-                       (gchar **)tunit_array->pdata, extname, &status) )
-    NC_FITS_ERROR (status);
-
+  fits_create_tbl (fptr, BINARY_TBL, snia_cov->mu_len, tfields, (gchar **)ttype_array->pdata, (gchar **)tform_array->pdata,
+                   (gchar **)tunit_array->pdata, extname, &status);
+  NCM_FITS_ERROR (status);
+  
   {
     NcmVector *data[NC_DATA_SNIA_COV_LENGTH];
     gint i;
@@ -1202,14 +1193,14 @@ nc_data_snia_cov_save (NcDataSNIACov *snia_cov, const gchar *filename, gboolean 
 
     for (i = 0; i < NC_DATA_SNIA_COV_LENGTH; i++)
     {
-      if (fits_write_col_dbl (fptr, i + 1, 1, 1, snia_cov->mu_len, ncm_vector_ptr (data[i], 0), &status))
-        NC_FITS_ERROR(status);
+      fits_write_col_dbl (fptr, i + 1, 1, 1, snia_cov->mu_len, ncm_vector_ptr (data[i], 0), &status);
+      NCM_FITS_ERROR(status);
     }
   }
 
-  if (fits_write_col_uint (fptr, NC_DATA_SNIA_COV_ABSMAG_SET + 1, 1, 1, 
-                           snia_cov->mu_len, &g_array_index (snia_cov->dataset, guint32, 0), &status))
-    NC_FITS_ERROR(status);
+  fits_write_col_uint (fptr, NC_DATA_SNIA_COV_ABSMAG_SET + 1, 1, 1, 
+                       snia_cov->mu_len, &g_array_index (snia_cov->dataset, guint32, 0), &status);
+  NCM_FITS_ERROR (status);
 
   {
     NcmMatrix *data[NC_DATA_SNIA_COV_TOTAL_LENGTH];
@@ -1223,14 +1214,14 @@ nc_data_snia_cov_save (NcDataSNIACov *snia_cov, const gchar *filename, gboolean 
     gint i;
     for (i = NC_DATA_SNIA_COV_VAR_MAG; i < NC_DATA_SNIA_COV_TOTAL_LENGTH; i++)
     {
-      if (fits_write_col_dbl (fptr, i + 1, 1, 1, snia_cov->mu_len * snia_cov->mu_len, 
-                          ncm_matrix_ptr (data[i], 0, 0), &status))
-        NC_FITS_ERROR(status);
+      fits_write_col_dbl (fptr, i + 1, 1, 1, snia_cov->mu_len * snia_cov->mu_len, 
+                          ncm_matrix_ptr (data[i], 0, 0), &status);
+      NCM_FITS_ERROR(status);
     }
   }
 
-  if ( fits_close_file(fptr, &status) )
-    NC_FITS_ERROR(status);
+  fits_close_file (fptr, &status);
+  NCM_FITS_ERROR(status);
 
   g_ptr_array_unref (ttype_array);
   g_ptr_array_unref (tform_array);

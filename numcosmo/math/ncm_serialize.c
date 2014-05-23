@@ -439,6 +439,7 @@ ncm_serialize_is_named (NcmSerialize *ser, const gchar *serobj, gchar **name)
   }
   else
   {
+    g_match_info_free (match_info);
     if (obj_name != NULL)
       g_variant_unref (obj_name);
     if (var_obj != NULL)
