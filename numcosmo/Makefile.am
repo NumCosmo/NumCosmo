@@ -81,6 +81,7 @@ ncm_sources = \
 	math/ncm_fit_catalog.c             \
 	math/ncm_fit_mc.c                  \
 	math/ncm_fit_mcbs.c                \
+	math/ncm_fit_mcmc.c                \
 	math/ncm_lh_ratio1d.c              \
 	math/ncm_lh_ratio2d.c              \
 	math/poly.c               \
@@ -155,6 +156,7 @@ ncm_headers = \
 	math/ncm_fit_catalog.h           \
 	math/ncm_fit_mc.h                \
 	math/ncm_fit_mcbs.h              \
+	math/ncm_fit_mcmc.h              \
 	math/ncm_lh_ratio1d.h            \
 	math/ncm_lh_ratio2d.h            \
 	math/cvode_util.h         \
@@ -192,6 +194,7 @@ nc_headers = \
 	model/nc_hicosmo_qlinear.h    \
 	model/nc_hicosmo_qpw.h        \
 	model/nc_hicosmo_qspline.h    \
+	model/nc_hicosmo_qgrw.h       \
 	lss/nc_window.h               \
 	lss/nc_window_tophat.h        \
 	lss/nc_window_gaussian.h      \
@@ -246,6 +249,8 @@ nc_headers = \
 	nc_data_cluster_poisson.h       \
 	scalefactor.h                   \
 	model/quantum_gravity.h         \
+	nc_hipert.h                     \
+	nc_hipert_adiabatic.h           \
 	perturbations/linear.h          \
 	perturbations/covariance.h      \
 	perturbations/linear_internal.h \
@@ -267,7 +272,8 @@ nc_sources = \
 	model/nc_hicosmo_qconst.c    \
 	model/nc_hicosmo_qlinear.c   \
 	model/nc_hicosmo_qpw.c       \
-	model/nc_hicosmo_qspline.c    \
+	model/nc_hicosmo_qspline.c   \
+	model/nc_hicosmo_qgrw.c      \
 	lss/nc_window.c              \
 	lss/nc_window_tophat.c       \
 	lss/nc_window_gaussian.c     \
@@ -322,6 +328,8 @@ nc_sources = \
 	nc_data_cluster_poisson.c    \
 	scalefactor.c                   \
 	model/quantum_gravity.c         \
+	nc_hipert.c                     \
+	nc_hipert_adiabatic.c           \
 	perturbations/linear.c          \
 	perturbations/covariance.c      \
 	perturbations/linear_cvodes.c   \

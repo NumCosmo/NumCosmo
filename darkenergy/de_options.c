@@ -226,6 +226,7 @@ nc_de_opt_get_fit_group (NcDEFitEntries *de_fit, GOptionEntry **de_fit_entries)
     { "fiducial",         0, 0, G_OPTION_ARG_STRING,       &de_fit->fiducial,         "Use the fiducial model to resample.", NULL},
     { "mc-data",          0, 0, G_OPTION_ARG_FILENAME,     &de_fit->mc_data,          "Use file to keep montecarlo run data.", NULL},
     { "fisher",           0, 0, G_OPTION_ARG_NONE,         &de_fit->fisher,           "Calculated the Fisher matrix.", NULL},
+    { "mcmc",             0, 0, G_OPTION_ARG_NONE,         &de_fit->mcmc,             "Run a Markov Chain Montecarlo analysis.", NULL},
     { "kinematics-sigma", 0, 0, G_OPTION_ARG_NONE,         &de_fit->kinematics_sigma, "Compute q(z), E(z)^2 and E(z)^-2 plus 1sigma error bar from the Fisher matrix.", NULL},
     { "kinematics-z-max", 0, 0, G_OPTION_ARG_DOUBLE,       &de_fit->kinematics_z,     "Max redshift to calculate q(z), E(z)^2 and E(z)^-2.", NULL},
     { "kinematics-n",     0, 0, G_OPTION_ARG_INT,          &de_fit->kinematics_n,     "Number of points in the redshift interval to calculate q(z), E(z)^2 and E(z)^-2.", NULL},

@@ -97,6 +97,7 @@
 #include <numcosmo/math/ncm_fit_catalog.h>
 #include <numcosmo/math/ncm_fit_mc.h>
 #include <numcosmo/math/ncm_fit_mcbs.h>
+#include <numcosmo/math/ncm_fit_mcmc.h>
 #include <numcosmo/math/ncm_lh_ratio1d.h>
 #include <numcosmo/math/ncm_lh_ratio2d.h>
 

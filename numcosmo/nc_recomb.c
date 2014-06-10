@@ -68,8 +68,8 @@
  * 
  * These fractions have the following properties:
  * \begin{align}\label{eq:Hy:add}
- * X_\HyI + X_{\HyII} &= 1, \\ \label{eq:He:add}
- * X_{\HeI} + X_{\HeII} + X_{\HeIII} &= X_{\He}, \\
+ * X_\HyI + X_{\HyII} &= 1, \\\\ \label{eq:He:add}
+ * X_{\HeI} + X_{\HeII} + X_{\HeIII} &= X_{\He}, \\\\
  * X_{\He} &\equiv \frac{m_p}{m_{\He}}\frac{Y_p}{1-Y_p}.
  * \end{align}
  * We also define the number of free electrons as $n_\e$. Assuming a neutral

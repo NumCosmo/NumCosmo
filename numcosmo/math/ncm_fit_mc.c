@@ -523,7 +523,10 @@ _ncm_fit_mc_update (NcmFitMC *mc, NcmFit *fit)
     case NCM_FIT_RUN_MSGS_SIMPLE:
     {
       guint stepi = mc->nt->task_pos % step;
-      if ((stepi == 0) || (mc->nt->task_pos == mc->nt->task_len))
+      gboolean log_timeout = FALSE;
+      if ((mc->nt->pos_time - mc->nt->last_log_time) > 60.0)
+        log_timeout = TRUE;
+      if (log_timeout || (stepi == 0) || (mc->nt->task_pos == mc->nt->task_len))
       {
         /* guint acc = stepi == 0 ? step : stepi; */
         ncm_fit_catalog_log_current_stats (mc->fcat);

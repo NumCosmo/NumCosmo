@@ -53,37 +53,53 @@ G_BEGIN_DECLS
  * @NC_HICOSMO_IMPL_T_gamma0: Radiation temperature today
  * @NC_HICOSMO_IMPL_z_lss: Redshift of the last scatering surface
  * @NC_HICOSMO_IMPL_as_drag: Acoustic Scale at drag redshift 
- * @NC_HICOSMO_IMPL_E2: Adimensinal Hubble function squared 
- * @NC_HICOSMO_IMPL_dE2_dz: FIXME
- * @NC_HICOSMO_IMPL_d2E2_dz2: FIXME
+ * @NC_HICOSMO_IMPL_xb: Maximum redshift 
+ * @NC_HICOSMO_IMPL_E2: Adimensional Hubble function squared 
+ * @NC_HICOSMO_IMPL_dE2_dz: Derivative of the adimensional Hubble function squared.
+ * @NC_HICOSMO_IMPL_d2E2_dz2: Second derivative of the adimensional Hubble function squared.
+ * @NC_HICOSMO_IMPL_cs2: Speed of sound squared.
+ * @NC_HICOSMO_IMPL_rhopp: energy density plus pressure.
  * @NC_HICOSMO_IMPL_cd: Comoving distance
  * @NC_HICOSMO_IMPL_powspec: Perturbations power spectrum
- *
+ * @NC_HICOSMO_IMPL_wkb_adiab_theta: Phase of the WKB solution for the adiabatic mode.
+ * @NC_HICOSMO_IMPL_wkb_adiab_dmtheta: Derivative of m\theta of the WKB solution for the adiabatic mode.
+ * @NC_HICOSMO_IMPL_eom_adiab_zeta: Equation of motion for the adiabatic mode.
+ * 
  * FIXME
  */
 typedef enum _NcHICosmoImpl
 {
-  NC_HICOSMO_IMPL_H0        = 1 << 0,
-  NC_HICOSMO_IMPL_Omega_b   = 1 << 1,
-  NC_HICOSMO_IMPL_Omega_r   = 1 << 2,
-  NC_HICOSMO_IMPL_Omega_c   = 1 << 3,
-  NC_HICOSMO_IMPL_Omega_t   = 1 << 4,
-  NC_HICOSMO_IMPL_sigma_8   = 1 << 5,
-  NC_HICOSMO_IMPL_T_gamma0  = 1 << 6,
-  NC_HICOSMO_IMPL_z_lss     = 1 << 7,
-  NC_HICOSMO_IMPL_as_drag   = 1 << 8,
-  NC_HICOSMO_IMPL_E2        = 1 << 9,
-  NC_HICOSMO_IMPL_dE2_dz    = 1 << 10,
-  NC_HICOSMO_IMPL_d2E2_dz2  = 1 << 11,
-  NC_HICOSMO_IMPL_cd        = 1 << 12,
-  NC_HICOSMO_IMPL_powspec   = 1 << 13, /*< private >*/
-  NC_HICOSMO_IMPL_LAST      = 1 << 14, /*< skip >*/
+  NC_HICOSMO_IMPL_H0              = 1 << 0,
+  NC_HICOSMO_IMPL_Omega_b         = 1 << 1,
+  NC_HICOSMO_IMPL_Omega_r         = 1 << 2,
+  NC_HICOSMO_IMPL_Omega_c         = 1 << 3,
+  NC_HICOSMO_IMPL_Omega_t         = 1 << 4,
+  NC_HICOSMO_IMPL_sigma_8         = 1 << 5,
+  NC_HICOSMO_IMPL_T_gamma0        = 1 << 6,
+  NC_HICOSMO_IMPL_z_lss           = 1 << 7,
+  NC_HICOSMO_IMPL_as_drag         = 1 << 8,
+  NC_HICOSMO_IMPL_xb              = 1 << 9,
+  NC_HICOSMO_IMPL_E2              = 1 << 10,
+  NC_HICOSMO_IMPL_dE2_dz          = 1 << 11,
+  NC_HICOSMO_IMPL_d2E2_dz2        = 1 << 12,
+  NC_HICOSMO_IMPL_cs2             = 1 << 13,
+  NC_HICOSMO_IMPL_rhopp           = 1 << 14,
+  NC_HICOSMO_IMPL_cd              = 1 << 15,
+  NC_HICOSMO_IMPL_powspec         = 1 << 16, 
+  NC_HICOSMO_IMPL_wkb_adiab_theta   = 1 << 17, 
+  NC_HICOSMO_IMPL_wkb_adiab_dmtheta = 1 << 18, 
+  NC_HICOSMO_IMPL_eom_adiab_zeta    = 1 << 19, /*< private >*/
+  NC_HICOSMO_IMPL_LAST              = 1 << 20, /*< skip >*/
 } NcHICosmoImpl;
 
 typedef struct _NcHICosmoClass NcHICosmoClass;
 typedef struct _NcHICosmo NcHICosmo;
 typedef gdouble (*NcHICosmoFunc0) (NcHICosmo *cosmo);
 typedef gdouble (*NcHICosmoFunc1) (NcHICosmo *cosmo, gdouble x);
+
+/* Equations of motion */
+typedef struct _NcHICosmoEOMAdiabZeta NcHICosmoEOMAdiabZeta; 
+typedef NcHICosmoEOMAdiabZeta *(*NcHICosmoFuncEOMAdiabZeta) (NcHICosmo *cosmo, gdouble alpha, gdouble k);
 
 /**
  * NcHICosmo:
@@ -96,6 +112,22 @@ struct _NcHICosmo
   /*< private >*/
   NcmModel parent_instance;
   gboolean is_eternal;
+};
+
+/**
+ * NcHICosmoEOMAdiabZeta:
+ * 
+ * FIXME
+ * 
+ */
+struct _NcHICosmoEOMAdiabZeta
+{
+  /*< private >*/
+  guint64 skey;
+  gdouble alpha;
+  gdouble k;
+  gdouble m;
+  gdouble mu2;
 };
 
 struct _NcHICosmoClass
@@ -111,14 +143,21 @@ struct _NcHICosmoClass
   NcmModelFunc0 T_gamma0;
   NcmModelFunc0 z_lss;
   NcmModelFunc0 as_drag;
+  NcmModelFunc0 xb;
   NcmModelFunc1 E2;
   NcmModelFunc1 dE2_dz;
   NcmModelFunc1 d2E2_dz2;
+  NcmModelFunc1 cs2;
+  NcmModelFunc1 rhopp;
   NcmModelFunc1 cd;
   NcmModelFunc1 powspec;
+  NcmModelFunc2 wkb_adiab_theta;
+  NcmModelFunc2 wkb_adiab_dmtheta;
+  NcHICosmoFuncEOMAdiabZeta eom_adiab_zeta;
 };
 
 GType nc_hicosmo_get_type (void) G_GNUC_CONST;
+GType nc_hicosmo_eom_adiab_zeta_get_type (void) G_GNUC_CONST;
 
 NCM_MSET_MODEL_DECLARE_ID (nc_hicosmo);
 
@@ -134,9 +173,12 @@ G_INLINE_FUNC gdouble nc_hicosmo_T_gamma0 (NcHICosmo *cosmo);
 G_INLINE_FUNC gdouble nc_hicosmo_sigma_8 (NcHICosmo *cosmo);
 G_INLINE_FUNC gdouble nc_hicosmo_z_lss (NcHICosmo *cosmo);
 G_INLINE_FUNC gdouble nc_hicosmo_as_drag (NcHICosmo *cosmo);
+G_INLINE_FUNC gdouble nc_hicosmo_xb (NcHICosmo *cosmo);
 G_INLINE_FUNC gdouble nc_hicosmo_E2 (NcHICosmo *cosmo, gdouble x);
 G_INLINE_FUNC gdouble nc_hicosmo_dE2_dz (NcHICosmo *cosmo, gdouble x);
 G_INLINE_FUNC gdouble nc_hicosmo_d2E2_dz2 (NcHICosmo *cosmo, gdouble x);
+G_INLINE_FUNC gdouble nc_hicosmo_cs2 (NcHICosmo *cosmo, gdouble x);
+G_INLINE_FUNC gdouble nc_hicosmo_rhopp (NcHICosmo *cosmo, gdouble x);
 G_INLINE_FUNC gdouble nc_hicosmo_cd (NcHICosmo *cosmo, gdouble x);
 G_INLINE_FUNC gdouble nc_hicosmo_powspec (NcHICosmo *cosmo, gdouble x);
 G_INLINE_FUNC gdouble nc_hicosmo_c_H0 (NcHICosmo *cosmo);
@@ -157,6 +199,15 @@ G_INLINE_FUNC gdouble nc_hicosmo_qp (NcHICosmo *cosmo, gdouble z);
 G_INLINE_FUNC gdouble nc_hicosmo_q (NcHICosmo *cosmo, gdouble z);
 G_INLINE_FUNC gdouble nc_hicosmo_dec (NcHICosmo *cosmo, gdouble z);
 G_INLINE_FUNC gdouble nc_hicosmo_wec (NcHICosmo *cosmo, gdouble z);
+G_INLINE_FUNC gdouble nc_hicosmo_abs_alpha (NcHICosmo *cosmo, gdouble x);
+G_INLINE_FUNC gdouble nc_hicosmo_x_alpha (NcHICosmo *cosmo, gdouble alpha);
+
+/* WKB */
+G_INLINE_FUNC gdouble nc_hicosmo_wkb_adiab_theta (NcHICosmo *cosmo, gdouble alpha, gdouble k);
+G_INLINE_FUNC gdouble nc_hicosmo_wkb_adiab_dmtheta (NcHICosmo *cosmo, gdouble alpha, gdouble k);
+
+/* Equations of motion */
+G_INLINE_FUNC NcHICosmoEOMAdiabZeta *nc_hicosmo_adiabatic_zeta (NcHICosmo *cosmo, gdouble alpha, gdouble k);
 
 NcHICosmo *nc_hicosmo_new_from_name (GType parent_type, gchar *cosmo_name);
 void nc_hicosmo_log_all_models (GType parent);
@@ -174,12 +225,25 @@ void nc_hicosmo_set_sigma_8_impl (NcHICosmoClass *model_class, NcmModelFunc0 f);
 void nc_hicosmo_set_T_gamma0_impl (NcHICosmoClass *model_class, NcmModelFunc0 f);
 void nc_hicosmo_set_z_lss_impl (NcHICosmoClass *model_class, NcmModelFunc0 f);
 void nc_hicosmo_set_as_drag_impl (NcHICosmoClass *model_class, NcmModelFunc0 f);
+void nc_hicosmo_set_xb_impl (NcHICosmoClass *model_class, NcmModelFunc0 f);
 
 void nc_hicosmo_set_E2_impl (NcHICosmoClass *model_class, NcmModelFunc1 f);
 void nc_hicosmo_set_dE2_dz_impl (NcHICosmoClass *model_class, NcmModelFunc1 f);
 void nc_hicosmo_set_d2E2_dz2_impl (NcHICosmoClass *model_class, NcmModelFunc1 f);
+void nc_hicosmo_set_cs2_impl (NcHICosmoClass *model_class, NcmModelFunc1 f);
+void nc_hicosmo_set_rhopp_impl (NcHICosmoClass *model_class, NcmModelFunc1 f);
 void nc_hicosmo_set_cd_impl (NcHICosmoClass *model_class, NcmModelFunc1 f);
 void nc_hicosmo_set_powspec_impl (NcHICosmoClass *model_class, NcmModelFunc1 f);
+
+/* WKB */
+void nc_hicosmo_set_wkb_adiab_theta_impl (NcHICosmoClass *model_class, NcmModelFunc2 f);
+void nc_hicosmo_set_wkb_adiab_dmtheta_impl (NcHICosmoClass *model_class, NcmModelFunc2 f);
+
+/* Equations of motion */
+void nc_hicosmo_set_eom_adiab_zeta_impl (NcHICosmoClass *model_class, NcHICosmoFuncEOMAdiabZeta f);
+
+NcHICosmoEOMAdiabZeta *nc_hicosmo_eom_adiab_zeta_dup (NcHICosmoEOMAdiabZeta *adiab_zeta);
+void nc_hicosmo_eom_adiab_zeta_free (NcHICosmoEOMAdiabZeta *adiab_zeta);
 
 #define NC_HICOSMO_DEFAULT_PARAMS_RELTOL (1e-7)
 #define NC_HICOSMO_DEFAULT_PARAMS_ABSTOL (0.0)
@@ -203,12 +267,26 @@ NCM_MODEL_FUNC0_IMPL (NC_HICOSMO,NcHICosmo,nc_hicosmo,T_gamma0)
 NCM_MODEL_FUNC0_IMPL (NC_HICOSMO,NcHICosmo,nc_hicosmo,sigma_8)
 NCM_MODEL_FUNC0_IMPL (NC_HICOSMO,NcHICosmo,nc_hicosmo,z_lss)
 NCM_MODEL_FUNC0_IMPL (NC_HICOSMO,NcHICosmo,nc_hicosmo,as_drag)
+NCM_MODEL_FUNC0_IMPL (NC_HICOSMO,NcHICosmo,nc_hicosmo,xb)
 
 NCM_MODEL_FUNC1_IMPL (NC_HICOSMO,NcHICosmo,nc_hicosmo,E2)
 NCM_MODEL_FUNC1_IMPL (NC_HICOSMO,NcHICosmo,nc_hicosmo,dE2_dz)
 NCM_MODEL_FUNC1_IMPL (NC_HICOSMO,NcHICosmo,nc_hicosmo,d2E2_dz2)
+NCM_MODEL_FUNC1_IMPL (NC_HICOSMO,NcHICosmo,nc_hicosmo,cs2)
+NCM_MODEL_FUNC1_IMPL (NC_HICOSMO,NcHICosmo,nc_hicosmo,rhopp)
 NCM_MODEL_FUNC1_IMPL (NC_HICOSMO,NcHICosmo,nc_hicosmo,cd)
 NCM_MODEL_FUNC1_IMPL (NC_HICOSMO,NcHICosmo,nc_hicosmo,powspec)
+
+/* WKB */
+NCM_MODEL_FUNC2_IMPL (NC_HICOSMO,NcHICosmo,nc_hicosmo,wkb_adiab_theta)
+NCM_MODEL_FUNC2_IMPL (NC_HICOSMO,NcHICosmo,nc_hicosmo,wkb_adiab_dmtheta)
+
+/* Equations of motion */
+G_INLINE_FUNC NcHICosmoEOMAdiabZeta *
+nc_hicosmo_adiabatic_zeta (NcHICosmo *cosmo, gdouble alpha, gdouble k)
+{
+  return NC_HICOSMO_GET_CLASS (cosmo)->eom_adiab_zeta (cosmo, alpha, k);
+}
 
 G_INLINE_FUNC gdouble
 nc_hicosmo_c_H0 (NcHICosmo *cosmo)
@@ -341,6 +419,20 @@ nc_hicosmo_j (NcHICosmo *cosmo, gdouble z)
   d2E2_dz2 = nc_hicosmo_d2E2_dz2 (cosmo, z);
 
   return gsl_pow_2 (1.0 + z) * (d2E2_dz2 - 2.0 * dE2_dz / (1.0 + z)) / (2.0 * E2) + 1.0;
+}
+
+G_INLINE_FUNC gdouble
+nc_hicosmo_x_alpha (NcHICosmo *cosmo, gdouble alpha)
+{
+  const gdouble xb = nc_hicosmo_xb (cosmo);
+  return xb * exp (-fabs (alpha));
+}
+
+G_INLINE_FUNC gdouble
+nc_hicosmo_abs_alpha (NcHICosmo *cosmo, gdouble x)
+{
+  const gdouble xb = nc_hicosmo_xb (cosmo);
+  return log (xb / x);
 }
 
 G_END_DECLS

@@ -410,6 +410,7 @@ ncm_timer_task_start (NcmTimer *nt, guint task_len)
   nt->task_len   = task_len;
   nt->task_pos   = 0;
   nt->pos_time   = g_timer_elapsed (nt->gt, NULL);
+  nt->last_log_time = 0.0;
   ncm_stats_vec_reset (nt->time_stats);
 }
 
@@ -742,6 +743,7 @@ void
 ncm_timer_task_log_elapsed (NcmTimer *nt)
 {
   g_message ("%s\n", ncm_timer_task_elapsed_str (nt));
+  nt->last_log_time = nt->pos_time;
 }
 
 /**
@@ -755,6 +757,7 @@ void
 ncm_timer_task_log_mean_time (NcmTimer *nt)
 {
   g_message ("%s\n", ncm_timer_task_mean_time_str (nt));
+  nt->last_log_time = nt->pos_time;
 }
 
 /**
@@ -768,6 +771,7 @@ void
 ncm_timer_task_log_time_left (NcmTimer *nt)
 {
   g_message ("%s\n", ncm_timer_task_time_left_str (nt));
+  nt->last_log_time = nt->pos_time;
 }
 
 /**
@@ -781,6 +785,7 @@ void
 ncm_timer_task_log_start_datetime (NcmTimer *nt)
 {
   g_message ("%s\n", ncm_timer_task_start_datetime_str (nt));
+  nt->last_log_time = nt->pos_time;
 }
 
 /**
@@ -794,5 +799,6 @@ void
 ncm_timer_task_log_end_datetime (NcmTimer *nt)
 {
   g_message ("%s\n", ncm_timer_task_end_datetime_str (nt));
+  nt->last_log_time = nt->pos_time;
 }
 

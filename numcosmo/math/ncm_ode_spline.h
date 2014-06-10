@@ -22,8 +22,8 @@
  * with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef _NCM_ODE_SPLINE_H
-#define _NCM_ODE_SPLINE_H
+#ifndef _NCM_ODE_SPLINE_H_
+#define _NCM_ODE_SPLINE_H_
 
 #include <glib.h>
 #include <glib-object.h>
@@ -33,18 +33,28 @@
 
 G_BEGIN_DECLS
 
-typedef gdouble (*NcmOdeSplineDydx) (gdouble y, gdouble x, gpointer userdata);
+#define NCM_TYPE_ODE_SPLINE             (ncm_ode_spline_get_type ())
+#define NCM_ODE_SPLINE(obj)             (G_TYPE_CHECK_INSTANCE_CAST ((obj), NCM_TYPE_ODE_SPLINE, NcmOdeSpline))
+#define NCM_ODE_SPLINE_CLASS(klass)     (G_TYPE_CHECK_CLASS_CAST ((klass), NCM_TYPE_ODE_SPLINE, NcmOdeSplineClass))
+#define NCM_IS_ODE_SPLINE(obj)          (G_TYPE_CHECK_INSTANCE_TYPE ((obj), NCM_TYPE_ODE_SPLINE))
+#define NCM_IS_ODE_SPLINE_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE ((klass), NCM_TYPE_ODE_SPLINE))
+#define NCM_ODE_SPLINE_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS ((obj), NCM_TYPE_ODE_SPLINE, NcmOdeSplineClass))
 
+typedef struct _NcmOdeSplineClass NcmOdeSplineClass;
 typedef struct _NcmOdeSpline NcmOdeSpline;
 
-/**
- * NcmOdeSpline:
- *
- * FIXME
- */
+typedef gdouble (*NcmOdeSplineDydx) (gdouble y, gdouble x, gpointer userdata);
+
+struct _NcmOdeSplineClass
+{
+  /*< private >*/
+  GObjectClass parent_class;
+};
+
 struct _NcmOdeSpline
 {
   /*< private >*/
+  GObject parent_instance;
   gpointer cvode;
   N_Vector y;
   GArray *y_array;
@@ -52,17 +62,33 @@ struct _NcmOdeSpline
   gdouble xi;
   gdouble xf;
   gdouble yi;
+  gdouble reltol;
+  gdouble abstol;
   NcmOdeSplineDydx dydx;
   NcmSpline *s;
   gboolean s_init;
+  gboolean cvode_init;
   NcmModelCtrl *ctrl;
 };
 
-NcmOdeSpline *ncm_ode_spline_new (NcmSpline *s, NcmOdeSplineDydx dydx, gpointer userdata, gdouble yi, gdouble xi, gdouble xf);
+GType ncm_ode_spline_get_type (void) G_GNUC_CONST;
+
+NcmOdeSpline *ncm_ode_spline_new (NcmSpline *s, NcmOdeSplineDydx dydx);
+NcmOdeSpline *ncm_ode_spline_new_full (NcmSpline *s, NcmOdeSplineDydx dydx, gdouble yi, gdouble xi, gdouble xf);
 void ncm_ode_spline_prepare (NcmOdeSpline *os, gpointer userdata);
 void ncm_ode_spline_free (NcmOdeSpline *os);
 void ncm_ode_spline_clear (NcmOdeSpline **os);
 
+void ncm_ode_spline_set_interval (NcmOdeSpline *os, gdouble yi, gdouble xi, gdouble xf);
+void ncm_ode_spline_set_reltol (NcmOdeSpline *os, gdouble reltol);
+void ncm_ode_spline_set_abstol (NcmOdeSpline *os, gdouble abstol);
+void ncm_ode_spline_set_xi (NcmOdeSpline *os, gdouble xi);
+void ncm_ode_spline_set_xf (NcmOdeSpline *os, gdouble xf);
+void ncm_ode_spline_set_yi (NcmOdeSpline *os, gdouble yi);
+
+#define NCM_ODE_SPLINE_DEFAULT_RELTOL (1.0e-13)
+#define NCM_ODE_SPLINE_DEFAULT_ABSTOL (1.0e-80)
+
 G_END_DECLS
 
-#endif /* _NCM_ODE_SPLINE_H */
+#endif /* _NCM_ODE_SPLINE_H_ */

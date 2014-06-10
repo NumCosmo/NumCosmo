@@ -52,12 +52,15 @@
 #include <numcosmo/model/nc_hicosmo_qlinear.h>
 #include <numcosmo/model/nc_hicosmo_qpw.h>
 #include <numcosmo/model/nc_hicosmo_qspline.h>
+#include <numcosmo/model/nc_hicosmo_qgrw.h>
 #include <numcosmo/model/quantum_gravity.h>
 
 /* Perturbations */
 #include <numcosmo/perturbations/linear.h>
 #include <numcosmo/perturbations/covariance.h>
 #include <numcosmo/perturbations/hydrodyn_adiabatic.h>
+#include <numcosmo/nc_hipert.h>
+#include <numcosmo/nc_hipert_adiabatic.h>
 
 /* Large Scale Structure / Structure Formation */
 #include <numcosmo/lss/nc_window.h>

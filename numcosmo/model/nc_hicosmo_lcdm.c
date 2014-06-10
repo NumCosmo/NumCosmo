@@ -154,8 +154,8 @@ static void
 nc_hicosmo_lcdm_class_init (NcHICosmoLCDMClass *klass)
 {
   GObjectClass* object_class   = G_OBJECT_CLASS (klass);
-  NcHICosmoClass* parent_class   = NC_HICOSMO_CLASS (klass);
-  NcmModelClass *model_class = NCM_MODEL_CLASS (klass);
+  NcHICosmoClass* parent_class = NC_HICOSMO_CLASS (klass);
+  NcmModelClass *model_class   = NCM_MODEL_CLASS (klass);
 
   object_class->finalize     = &nc_hicosmo_lcdm_finalize;
 

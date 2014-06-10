@@ -390,6 +390,7 @@ ncm_model_init (NcmModel *model)
   g_array_set_size (model->vparam_pos, model_class->vparam_len);
 
   model->pkey    = 1;
+  model->skey    = 0;
   model->reparam = NULL;
   model->ptypes  = g_array_new (FALSE, TRUE, sizeof (NcmParamType));
 }
@@ -1382,6 +1383,21 @@ ncm_model_params_valid (NcmModel *model)
  * FIXME
  *
  * Returns: FIXME
+ */
+/**
+ * ncm_model_state_is_update:
+ * @model: a #NcmModel
+ *
+ * FIXME
+ *
+ * Returns: FIXME
+ */
+/**
+ * ncm_model_state_set_update:
+ * @model: a #NcmModel
+ * 
+ * FIXME
+ * 
  */
 /**
  * ncm_model_sparam_len:

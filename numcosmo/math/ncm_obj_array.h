@@ -36,9 +36,7 @@ G_BEGIN_DECLS
 
 #define NCM_TYPE_OBJ_ARRAY (ncm_obj_array_get_type ())
 
-#ifndef __GTK_DOC_IGNORE__
 typedef struct _GPtrArray NcmObjArray;
-#endif
 
 GType ncm_obj_array_get_type (void) G_GNUC_CONST;
 
