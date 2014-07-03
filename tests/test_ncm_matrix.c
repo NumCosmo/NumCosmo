@@ -231,9 +231,7 @@ test_ncm_matrix_new_gsl (void)
   test_ncm_matrix_new_sanity (mm);
   g_assert (ncm_matrix_nrows (mm) == gm->size1 && ncm_matrix_ncols (mm) == gm->size2);
 
-  ncm_matrix_free (mm);
-  NCM_TEST_FAIL (ncm_matrix_free (mm));
-  NCM_TEST_PASS (g_assert (mm->pdata == NULL));
+  NCM_TEST_FREE (ncm_matrix_free, mm);
 }
 
 void
@@ -251,9 +249,7 @@ test_ncm_matrix_new_array (void)
   g_assert (ga == ncm_matrix_get_array (mm));
   g_array_unref (ga);
 
-  ncm_matrix_free (mm);
-  NCM_TEST_FAIL (ncm_matrix_free (mm));
-  NCM_TEST_FAIL (g_array_unref (mm->pdata));
+  NCM_TEST_FREE (ncm_matrix_free, mm);
 }
 
 void
@@ -266,9 +262,7 @@ test_ncm_matrix_new_data_slice (void)
 
   g_assert ((ncm_matrix_nrows (mm) * ncm_matrix_ncols (mm)) == (_NCM_MATRIX_TEST_NROW * _NCM_MATRIX_TEST_NCOL));
 
-  ncm_matrix_free (mm);
-  NCM_TEST_FAIL (ncm_matrix_free (mm));
-  NCM_TEST_PASS (g_assert (ncm_matrix_data (mm) == NULL));
+  NCM_TEST_FREE (ncm_matrix_free, mm);
 }
 
 void
@@ -281,20 +275,7 @@ test_ncm_matrix_new_data_malloc (void)
 
   g_assert_cmpuint ((ncm_matrix_nrows (mm) * ncm_matrix_ncols (mm)), ==, (_NCM_MATRIX_TEST_NROW * _NCM_MATRIX_TEST_NCOL));
 
-  ncm_matrix_free (mm);
-  if (g_test_trap_fork (0, G_TEST_TRAP_SILENCE_STDOUT | G_TEST_TRAP_SILENCE_STDERR))
-  {
-    ncm_matrix_free (mm);
-    exit (0);
-  }
-  g_test_trap_assert_failed ();
-
-  if (g_test_trap_fork (0, G_TEST_TRAP_SILENCE_STDOUT | G_TEST_TRAP_SILENCE_STDERR))
-  {
-    g_assert (ncm_matrix_data (mm) == NULL);
-    exit (0);
-  }
-  g_test_trap_assert_passed ();
+  NCM_TEST_FREE (ncm_matrix_free, mm);
 }
 
 void
@@ -306,13 +287,8 @@ test_ncm_matrix_new_data_static (void)
   test_ncm_matrix_new_sanity (mm);
 
   g_assert ((ncm_matrix_nrows (mm) * ncm_matrix_ncols (mm)) == (_NCM_MATRIX_TEST_NROW * _NCM_MATRIX_TEST_NCOL));
-
-  if (g_test_trap_fork (0, G_TEST_TRAP_SILENCE_STDOUT | G_TEST_TRAP_SILENCE_STDERR))
-  {
-    ncm_matrix_free (mm);
-    exit (0);
-  }
-  g_test_trap_assert_passed ();
+  
+  ncm_matrix_free (mm);
 }
 
 void
@@ -354,12 +330,7 @@ test_ncm_matrix_new_data_static_tda (void)
     ncm_vector_free (v);
   }
 
-  if (g_test_trap_fork (0, G_TEST_TRAP_SILENCE_STDOUT | G_TEST_TRAP_SILENCE_STDERR))
-  {
-    ncm_matrix_free (mm);
-    exit (0);
-  }
-  g_test_trap_assert_passed ();
+  ncm_matrix_free (mm);
 }
 
 void
@@ -384,13 +355,7 @@ test_ncm_matrix_submatrix (void)
   g_assert (G_IS_OBJECT (m));
   ncm_matrix_ref (m);
 
-  ncm_matrix_free (sm);
-  if (g_test_trap_fork (0, G_TEST_TRAP_SILENCE_STDOUT | G_TEST_TRAP_SILENCE_STDERR))
-  {
-    ncm_matrix_free (sm);
-    exit (0);
-  }
-  g_test_trap_assert_failed ();
+  NCM_TEST_FREE (ncm_matrix_free, sm);
 }
 
 void
@@ -447,30 +412,11 @@ test_ncm_matrix_add_mul (void)
       }
     }
 
-    ncm_matrix_free (osm);
-    if (g_test_trap_fork (0, G_TEST_TRAP_SILENCE_STDOUT | G_TEST_TRAP_SILENCE_STDERR))
-    {
-      ncm_matrix_free (osm);
-      exit (0);
-    }
-    g_test_trap_assert_failed ();
-    
-    ncm_matrix_free (res);
-    if (g_test_trap_fork (0, G_TEST_TRAP_SILENCE_STDOUT | G_TEST_TRAP_SILENCE_STDERR))
-    {
-      ncm_matrix_free (res);
-      exit (0);
-    }
-    g_test_trap_assert_failed ();
+    NCM_TEST_FREE (ncm_matrix_free, osm);
+    NCM_TEST_FREE (ncm_matrix_free, res);    
   }
 
-  ncm_matrix_free (sm);
-  if (g_test_trap_fork (0, G_TEST_TRAP_SILENCE_STDOUT | G_TEST_TRAP_SILENCE_STDERR))
-  {
-    ncm_matrix_free (sm);
-    exit (0);
-  }
-  g_test_trap_assert_failed ();
+  NCM_TEST_FREE (ncm_matrix_free, sm);
 }
 
 
@@ -492,23 +438,11 @@ test_ncm_matrix_serialization (void)
     }
   }
 
-  ncm_matrix_free (m_dup);
-  if (g_test_trap_fork (0, G_TEST_TRAP_SILENCE_STDOUT | G_TEST_TRAP_SILENCE_STDERR))
-  {
-    ncm_matrix_free (m_dup);
-    exit (0);
-  }
-  g_test_trap_assert_failed ();
+  NCM_TEST_FREE (ncm_matrix_free, m_dup);
 }
 
 void
 test_ncm_matrix_free (void)
 {
-  ncm_matrix_free (m);
-  if (g_test_trap_fork (0, G_TEST_TRAP_SILENCE_STDOUT | G_TEST_TRAP_SILENCE_STDERR))
-  {
-    ncm_matrix_free (m);
-    exit (0);
-  }
-  g_test_trap_assert_failed ();
+  NCM_TEST_FREE (ncm_matrix_free, m);
 }

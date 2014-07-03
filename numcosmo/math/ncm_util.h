@@ -192,6 +192,13 @@ G_STMT_START { \
 
 #define NCM_UNUSED(x) (void)(x)
 
+#define NCM_TEST_FREE(cmd,obj) \
+G_STMT_START { \
+  g_object_add_weak_pointer (G_OBJECT (obj), (gpointer *)&obj); \
+  cmd (obj); \
+  g_assert (obj == NULL); \
+} G_STMT_END
+
 #define NCM_TEST_FAIL(cmd) \
 G_STMT_START { \
   if (g_test_subprocess ()) \

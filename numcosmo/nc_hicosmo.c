@@ -41,7 +41,7 @@
 #include "math/ncm_cfg.h"
 
 G_DEFINE_ABSTRACT_TYPE (NcHICosmo, nc_hicosmo, NCM_TYPE_MODEL);
-G_DEFINE_BOXED_TYPE (NcHICosmoEOMAdiabZeta, nc_hicosmo_eom_adiab_zeta, nc_hicosmo_eom_adiab_zeta_dup, nc_hicosmo_eom_adiab_zeta_free);
+G_DEFINE_BOXED_TYPE (NcHICosmoEOMTwoFluids, nc_hicosmo_eom_two_fluids, nc_hicosmo_eom_two_fluids_dup, nc_hicosmo_eom_two_fluids_free);
 
 static void
 nc_hicosmo_init (NcHICosmo *object)
@@ -324,34 +324,34 @@ NCM_MODEL_SET_IMPL_FUNC(NC_HICOSMO,NcHICosmo,nc_hicosmo,NcmModelFunc1,cd)
 NCM_MODEL_SET_IMPL_FUNC(NC_HICOSMO,NcHICosmo,nc_hicosmo,NcmModelFunc1,powspec)
 
 /**
- * nc_hicosmo_set_wkb_adiab_theta_impl: (skip)
+ * nc_hicosmo_set_wkb_two_fluids_nuB2_impl: (skip)
  * @model_class: FIXME
  * @f: FIXME
  *
  * FIXME
  *
  */
-NCM_MODEL_SET_IMPL_FUNC(NC_HICOSMO,NcHICosmo,nc_hicosmo,NcmModelFunc2,wkb_adiab_theta)
+NCM_MODEL_SET_IMPL_FUNC(NC_HICOSMO,NcHICosmo,nc_hicosmo,NcmModelFunc2,wkb_two_fluids_nuB2)
 
 /**
- * nc_hicosmo_set_wkb_adiab_dmtheta_impl: (skip)
+ * nc_hicosmo_set_wkb_two_fluids_dmSnuB_nuB_impl: (skip)
  * @model_class: FIXME
  * @f: FIXME
  *
  * FIXME
  *
  */
-NCM_MODEL_SET_IMPL_FUNC(NC_HICOSMO,NcHICosmo,nc_hicosmo,NcmModelFunc2,wkb_adiab_dmtheta)
+NCM_MODEL_SET_IMPL_FUNC(NC_HICOSMO,NcHICosmo,nc_hicosmo,NcmModelFunc2,wkb_two_fluids_dmSnuB_nuB)
 
 /**
- * nc_hicosmo_set_eom_adiab_zeta_impl: (skip)
+ * nc_hicosmo_set_eom_two_fluids_impl: (skip)
  * @model_class: FIXME
  * @f: FIXME
  *
  * FIXME
  *
  */
-NCM_MODEL_SET_IMPL_FUNC(NC_HICOSMO,NcHICosmo,nc_hicosmo,NcHICosmoFuncEOMAdiabZeta,eom_adiab_zeta)
+NCM_MODEL_SET_IMPL_FUNC(NC_HICOSMO,NcHICosmo,nc_hicosmo,NcHICosmoFuncEOMTwoFluids,eom_two_fluids)
 
 /*
  * Inlined functions
@@ -473,16 +473,6 @@ NCM_MODEL_SET_IMPL_FUNC(NC_HICOSMO,NcHICosmo,nc_hicosmo,NcHICosmoFuncEOMAdiabZet
  *
  * FIXME
  *
- * Returns: FIXME
- */
-/**
- * nc_hicosmo_adiabatic_zeta:
- * @cosmo: a #NcHICosmo.
- * @alpha: log-redshift time.
- * @k: mode.
- * 
- * FIXME
- * 
  * Returns: FIXME
  */
 /**
@@ -698,30 +688,30 @@ nc_hicosmo_create_mset_func1 (NcHICosmoFunc1 f1)
 
 
 /**
- * nc_hicosmo_eom_adiab_zeta_dup:
- * @adiab_zeta: a #NcHICosmoEOMAdiabZeta.
+ * nc_hicosmo_eom_two_fluids_dup:
+ * @two_fluids: a #NcHICosmoEOMTwoFluids.
  *
- * Duplicates @adiab_zeta.
+ * Duplicates @two_fluids.
  * 
- * Returns: (transfer full): a copy of @adiab_zeta.
+ * Returns: (transfer full): a copy of @two_fluids.
  */
-NcHICosmoEOMAdiabZeta *
-nc_hicosmo_eom_adiab_zeta_dup (NcHICosmoEOMAdiabZeta *adiab_zeta)
+NcHICosmoEOMTwoFluids *
+nc_hicosmo_eom_two_fluids_dup (NcHICosmoEOMTwoFluids *two_fluids)
 {
-  NcHICosmoEOMAdiabZeta *adiab_zeta_dup = g_new (NcHICosmoEOMAdiabZeta, 1);
-  *adiab_zeta_dup = *adiab_zeta;
-  return adiab_zeta_dup;
+  NcHICosmoEOMTwoFluids *two_fluids_dup = g_new (NcHICosmoEOMTwoFluids, 1);
+  *two_fluids_dup = *two_fluids;
+  return two_fluids_dup;
 }
 
 /**
- * nc_hicosmo_eom_adiab_zeta_free:
- * @adiab_zeta: a #NcHICosmoEOMAdiabZeta.
+ * nc_hicosmo_eom_two_fluids_free:
+ * @two_fluids: a #NcHICosmoEOMTwoFluids.
  *
- * Frees @adiab_zeta.
+ * Frees @two_fluids.
  * 
  */
 void
-nc_hicosmo_eom_adiab_zeta_free (NcHICosmoEOMAdiabZeta *adiab_zeta)
+nc_hicosmo_eom_two_fluids_free (NcHICosmoEOMTwoFluids *two_fluids)
 {
-  g_free (adiab_zeta);
+  g_free (two_fluids);
 }

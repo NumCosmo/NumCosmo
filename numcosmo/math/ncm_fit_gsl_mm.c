@@ -206,6 +206,8 @@ _ncm_fit_gsl_mm_run (NcmFit *fit, NcmFitRunMsgs mtype)
   if (ncm_fit_has_equality_constraints (fit) || ncm_fit_has_inequality_constraints (fit))
     g_error ("_ncm_fit_gsl_mm_run: GSL algorithms do not support constraints.");
 
+  g_assert (fit->fstate->fparam_len != 0);
+  
   ncm_mset_fparams_get_vector (fit->mset, fit->fstate->fparams);
   gsl_multimin_fdfminimizer_set (fit_gsl_mm->mm, &fit_gsl_mm->f, ncm_vector_gsl (fit->fstate->fparams), fit_gsl_mm->err_a, fit_gsl_mm->err_b);
 
@@ -293,7 +295,7 @@ _ncm_fit_gsl_mm_get_desc (NcmFit *fit)
   if (fit_gsl_mm->desc == NULL)
   {
     fit_gsl_mm->desc = g_strdup_printf ("GSL Multidimensional Minimization:%s", 
-                                        gsl_multimin_fdfminimizer_name (fit_gsl_mm->mm));
+                                        fit_gsl_mm->mm != NULL ? gsl_multimin_fdfminimizer_name (fit_gsl_mm->mm) : "not-set");
   }
   return fit_gsl_mm->desc;
 }

@@ -1,29 +1,30 @@
 /***************************************************************************
- *            map.h
+ *            ncm_sphere_map.h
  *
  *  Tue Jun 24 16:35:23 2008
  *  Copyright  2008  Sandro Dias Pinto Vitenti
  *  <sandro@isoftware.com.br>
  ****************************************************************************/
 /*
- * numcosmo
- * Copyright (C) Sandro Dias Pinto Vitenti 2012 <sandro@lapsandro>
+ * ncm_sphere_map.h
+ * Copyright (C) 2014 Sandro Dias Pinto Vitenti <sandro@isoftware.com.br>
+ *
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- *
+ * 
  * numcosmo is distributed in the hope that it will be useful, but
  * WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
  * See the GNU General Public License for more details.
- *
+ * 
  * You should have received a copy of the GNU General Public License along
  * with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef _NC_MAP_H
-#define _NC_MAP_H
+#ifndef _NCM_SPHERE_MAP_H_
+#define _NCM_SPHERE_MAP_H_
 
 #include <glib.h>
 #include <glib-object.h>
@@ -39,6 +40,22 @@
 #endif
 
 G_BEGIN_DECLS
+
+#define NCM_TYPE_SPHERE_MAP             (ncm_sphere_map_get_type ())
+#define NCM_SPHERE_MAP(obj)             (G_TYPE_CHECK_INSTANCE_CAST ((obj), NCM_TYPE_SPHERE_MAP, NcmSphereMap))
+#define NCM_SPHERE_MAP_CLASS(klass)     (G_TYPE_CHECK_CLASS_CAST ((klass), NCM_TYPE_SPHERE_MAP, NcmSphereMapClass))
+#define NCM_IS_SPHERE_MAP(obj)          (G_TYPE_CHECK_INSTANCE_TYPE ((obj), NCM_TYPE_SPHERE_MAP))
+#define NCM_IS_SPHERE_MAP_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE ((klass), NCM_TYPE_SPHERE_MAP))
+#define NCM_SPHERE_MAP_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS ((obj), NCM_TYPE_SPHERE_MAP, NcmSphereMapClass))
+
+typedef struct _NcmSphereMapClass NcmSphereMapClass;
+typedef struct _NcmSphereMap NcmSphereMap;
+
+struct _NcmSphereMapClass
+{
+  /*< private >*/
+  GObjectClass parent_class;
+};
 
 /**
  * NcmSphereMapOrder:
@@ -70,9 +87,6 @@ typedef enum _NcmSphereMapType
   NC_SPHERE_MAP_TYPE_N_OBS          = 1 << 4
 } NcmSphereMapType;
 
-
-typedef struct _NcmSphereMap NcmSphereMap;
-
 /**
  * NcmSphereMap:
  * 
@@ -82,6 +96,7 @@ typedef struct _NcmSphereMap NcmSphereMap;
 struct _NcmSphereMap
 {
   /*< private >*/
+  GObject parent_instance;
   gsl_vector_float *dt;
   gsl_vector_float *qpol;
   gsl_vector_float *upol;
@@ -150,7 +165,9 @@ struct _NcmSphereMapSHT
 };
 #endif /* NUMCOSMO_HAVE_FFTW3 */
 
-NcmSphereMap *ncm_sphere_map_new (gint nside);
+GType ncm_sphere_map_get_type (void) G_GNUC_CONST;
+
+NcmSphereMap *ncm_sphere_map_new (guint nside);
 NcmSphereMap *ncm_sphere_map_clone (NcmSphereMap *map);
 gboolean ncm_sphere_map_copy (NcmSphereMap *dest, NcmSphereMap *orig);
 gboolean ncm_sphere_map_init_coord (NcmSphereMap *map);
@@ -183,4 +200,4 @@ gdouble ncm_sphere_map_rotate_avg (NcmSphereMap *map, glong n);
 
 G_END_DECLS
 
-#endif /* _MAP_H */
+#endif /* _NCM_SPHERE_MAP_H_ */

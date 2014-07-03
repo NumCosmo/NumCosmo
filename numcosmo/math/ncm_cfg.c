@@ -48,6 +48,8 @@
 #include "math/ncm_model_ctrl.h"
 #include "math/ncm_reparam_linear.h"
 #include "math/ncm_stats_vec.h"
+#include "nc_hicosmo.h"
+#include "perturbations/nc_hipert_iadiab.h"
 #include "model/nc_hicosmo_qconst.h"
 #include "model/nc_hicosmo_qlinear.h"
 #include "model/nc_hicosmo_qpw.h"

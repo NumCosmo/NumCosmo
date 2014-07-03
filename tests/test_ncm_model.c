@@ -234,13 +234,7 @@ test_ncm_model_reparam_new (TestNcmModel *test, gconstpointer pdata)
 void 
 test_ncm_model_free (TestNcmModel *test, gconstpointer pdata)
 {
-  g_object_unref (test->tm);
-  if (g_test_trap_fork (0, G_TEST_TRAP_SILENCE_STDOUT | G_TEST_TRAP_SILENCE_STDERR))
-  {
-    g_object_unref (test->tm);
-    exit (0);
-  }
-  g_test_trap_assert_failed ();
+  NCM_TEST_FREE (g_object_unref, test->tm);
 }
 
 void
@@ -526,20 +520,9 @@ test_ncm_model_test_setget_prop (TestNcmModel *test, gconstpointer pdata)
       ncm_assert_cmpdouble (ncm_vector_get (tmp, j), ==, ncm_model_orig_param_get (model, n));
       ncm_assert_cmpdouble (ncm_vector_get (tmp, j), ==, ncm_vector_get (tmp_out, j));
     }
-    ncm_vector_free (tmp);
-    if (g_test_trap_fork (0, G_TEST_TRAP_SILENCE_STDOUT | G_TEST_TRAP_SILENCE_STDERR))
-    {
-      ncm_vector_free (tmp);
-      exit (0);
-    }
-    g_test_trap_assert_failed ();
-    ncm_vector_free (tmp_out);
-    if (g_test_trap_fork (0, G_TEST_TRAP_SILENCE_STDOUT | G_TEST_TRAP_SILENCE_STDERR))
-    {
-      ncm_vector_free (tmp_out);
-      exit (0);
-    }
-    g_test_trap_assert_failed ();
+
+    NCM_TEST_FREE (ncm_vector_free, tmp);
+    NCM_TEST_FREE (ncm_vector_free, tmp_out);
   }
 }
 
@@ -550,14 +533,11 @@ test_ncm_model_test_setget_vector (TestNcmModel *test, gconstpointer pdata)
   NcmModel *model = NCM_MODEL (tm);
   guint model_len = ncm_model_len (model);
 
-  if (g_test_trap_fork (0, G_TEST_TRAP_SILENCE_STDOUT | G_TEST_TRAP_SILENCE_STDERR))
-  {
+  NCM_TEST_FAIL (G_STMT_START {
     NcmVector *tmp2 = ncm_vector_new (model_len + 1);
     ncm_model_params_set_vector (model, tmp2);
     ncm_vector_free (tmp2);
-    exit (0);
-  }
-  g_test_trap_assert_failed ();
+  } G_STMT_END);
 }
 
 void
@@ -601,35 +581,11 @@ test_ncm_model_test_setget_model (TestNcmModel *test, gconstpointer pdata)
     ncm_assert_cmpdouble (ncm_model_param_get (model1, i), ==, ncm_model_param_get (model2, i));
   }
 
-  if (g_test_trap_fork (0, G_TEST_TRAP_SILENCE_STDOUT | G_TEST_TRAP_SILENCE_STDERR))
-  {
-    ncm_model_params_set_model (model1, model3);
-    exit (0);
-  }
-  g_test_trap_assert_failed ();
+  g_assert (!ncm_model_is_equal (model1, model3));
+  g_assert (!ncm_model_is_equal (model3, model1));
 
-  if (g_test_trap_fork (0, G_TEST_TRAP_SILENCE_STDOUT | G_TEST_TRAP_SILENCE_STDERR))
-  {
-    ncm_model_params_set_model (model3, model1);
-    exit (0);
-  }
-  g_test_trap_assert_failed ();
-
-  ncm_model_free (model2);
-  if (g_test_trap_fork (0, G_TEST_TRAP_SILENCE_STDOUT | G_TEST_TRAP_SILENCE_STDERR))
-  {
-    ncm_model_free (model2);
-    exit (0);
-  }
-  g_test_trap_assert_failed ();
-
-  ncm_model_free (model3);
-  if (g_test_trap_fork (0, G_TEST_TRAP_SILENCE_STDOUT | G_TEST_TRAP_SILENCE_STDERR))
-  {
-    ncm_model_free (model3);
-    exit (0);
-  }
-  g_test_trap_assert_failed ();
+  NCM_TEST_FREE (ncm_model_free, model2);
+  NCM_TEST_FREE (ncm_model_free, model3);
 }
 
 void

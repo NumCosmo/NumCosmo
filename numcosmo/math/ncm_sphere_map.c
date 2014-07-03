@@ -1,27 +1,27 @@
 /***************************************************************************
- *            map.c
+ *            ncm_sphere_map.c
  *
  *  Tue Jun 24 16:30:59 2008
  *  Copyright  2008  Sandro Dias Pinto Vitenti
  *  <sandro@isoftware.com.br>
  ****************************************************************************/
 /*
- * numcosmo
- * Copyright (C) Sandro Dias Pinto Vitenti 2012 <sandro@lapsandro>
+ * ncm_sphere_map.c
+ * Copyright (C) 2014 Sandro Dias Pinto Vitenti <sandro@isoftware.com.br>
+ *
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- *
+ * 
  * numcosmo is distributed in the hope that it will be useful, but
  * WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
  * See the GNU General Public License for more details.
- *
+ * 
  * You should have received a copy of the GNU General Public License along
  * with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-
 
 /**
  * SECTION:map
@@ -37,7 +37,7 @@
 #endif /* HAVE_CONFIG_H */
 #include "build_cfg.h"
 
-#include "sphere/map.h"
+#include "math/ncm_sphere_map.h"
 #include "sphere/healpix.h"
 #include "math/ncm_c.h"
 #include "math/ncm_cfg.h"
@@ -53,8 +53,93 @@
 #include <fitsio.h>
 #endif /* NUMCOSMO_HAVE_CFITSIO */
 
+enum
+{
+  PROP_0,
+  PROP_NSIDE,
+};
+
+
+G_DEFINE_TYPE (NcmSphereMap, ncm_sphere_map, G_TYPE_OBJECT);
+
+static void
+ncm_sphere_map_init (NcmSphereMap *map)
+{
+  map->loaded        = FALSE;
+  map->is_init_coord = FALSE;
+  map->type          = 0;
+  map->nside         = 0;
+  map->npix          = 0;
+  map->dt            = NULL;// gsl_vector_float_alloc (map->npix);
+  map->qpol          = NULL;// gsl_vector_float_alloc (map->npix);
+  map->upol          = NULL;// gsl_vector_float_alloc (map->npix);
+  map->spur_signal   = NULL;// gsl_vector_float_alloc (map->npix);
+  map->nobs          = NULL;// gsl_vector_float_alloc (map->npix);
+
+}
+
+static void
+ncm_sphere_map_finalize (GObject *object)
+{
+
+  G_OBJECT_CLASS (ncm_sphere_map_parent_class)->finalize (object);
+}
+
+static void
+ncm_sphere_map_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
+{
+  NcmSphereMap *map = NCM_SPHERE_MAP (object);
+  g_return_if_fail (NCM_IS_SPHERE_MAP (object));
+
+  switch (prop_id)
+  {
+    case PROP_NSIDE:
+      map->nside = g_value_get_uint (value);
+      map->npix  = HEALPIX_NPIX (map->nside);
+      break;
+    default:
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
+      break;
+  }
+}
+
+static void
+ncm_sphere_map_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
+{
+  NcmSphereMap *map = NCM_SPHERE_MAP (object);
+  g_return_if_fail (NCM_IS_SPHERE_MAP (object));
+
+  switch (prop_id)
+  {
+    case PROP_NSIDE:
+      g_value_set_uint (value, map->nside);
+      break;
+    default:
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
+      break;
+  }
+}
+
+static void
+ncm_sphere_map_class_init (NcmSphereMapClass *klass)
+{
+  GObjectClass* object_class = G_OBJECT_CLASS (klass);
+
+  object_class->set_property = &ncm_sphere_map_set_property;
+  object_class->get_property = &ncm_sphere_map_get_property;
+  object_class->finalize     = &ncm_sphere_map_finalize;
+
+  g_object_class_install_property (object_class,
+                                   PROP_NSIDE,
+                                   g_param_spec_uint ("nside",
+                                                      NULL,
+                                                      "nside",
+                                                      0, G_MAXUINT32, 0, 
+                                                      G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+}
+
 /**
- * ncm_sphere_map_new: (skip)
+ * ncm_sphere_map_new:
  * @nside: FIXME
  *
  * FIXME
@@ -62,20 +147,11 @@
  * Returns: FIXME
  */
 NcmSphereMap *
-ncm_sphere_map_new (gint nside)
+ncm_sphere_map_new (guint nside)
 {
-  NcmSphereMap *map = g_slice_new (NcmSphereMap);
-  memset (map, 0, sizeof(NcmSphereMap));
-  map->loaded = FALSE;
-  map->is_init_coord = FALSE;
-  map->type = 0;
-  map->nside = nside;
-  map->npix = HEALPIX_NPIX(map->nside);
-  map->dt          = NULL;// gsl_vector_float_alloc (map->npix);
-  map->qpol        = NULL;// gsl_vector_float_alloc (map->npix);
-  map->upol        = NULL;// gsl_vector_float_alloc (map->npix);
-  map->spur_signal = NULL;// gsl_vector_float_alloc (map->npix);
-  map->nobs        = NULL;// gsl_vector_float_alloc (map->npix);
+  NcmSphereMap *map = g_object_new (NCM_TYPE_SPHERE_MAP,
+                                    "nside", nside,
+                                    NULL);
   return map;
 }
 
@@ -111,12 +187,12 @@ ncm_sphere_map_copy (NcmSphereMap *dest, NcmSphereMap *orig)
 }
 
 /**
- * ncm_sphere_map_clone: (skip)
+ * ncm_sphere_map_clone:
  * @map: a #NcmSphereMap
  *
  * FIXME
  *
- * Returns: FIXME
+ * Returns: (transfer full): FIXME
  */
 NcmSphereMap *
 ncm_sphere_map_clone (NcmSphereMap *map)
@@ -241,14 +317,14 @@ ncm_sphere_mapalm_init (NcmSphereMapAlm *mapalm, gint lmax)
   mapalm->alm_size = NCM_MAP_ALM_SIZE(lmax);
   mapalm->alm = gsl_vector_complex_alloc (mapalm->alm_size);
   mapalm->Nc = gsl_vector_alloc (lmax + 1);
-  mapalm->sqrt_int = gsl_vector_alloc (2*lmax + 3 + 1);
+  mapalm->sqrt_int = gsl_vector_alloc (2 * lmax + 3 + 1);
   mapalm->sphPlm_recur1 = gsl_vector_alloc (mapalm->alm_size);
   mapalm->sphPlm_recur2 = gsl_vector_alloc (mapalm->alm_size);
   mapalm->sphPmm = gsl_vector_alloc (lmax + 1);
   mapalm->lnpoch_m_1_2 = gsl_vector_alloc (lmax + 1);
 
-  for (m = 0; m <= 2*lmax+3; m++)
-    gsl_vector_set (mapalm->sqrt_int, m, sqrt(m));
+  for (m = 0; m <= 2 * lmax + 3; m++)
+    gsl_vector_set (mapalm->sqrt_int, m, sqrt (m));
 
   for (m = 1; m <= lmax; m++)
   {
@@ -256,7 +332,7 @@ ncm_sphere_mapalm_init (NcmSphereMapAlm *mapalm, gint lmax)
     gsl_vector_set (mapalm->lnpoch_m_1_2, m, 0.5 * last_lnpoch - ncm_c_lnpi_4 ());
 
     y_mm = ncm_c_sqrt_1_4pi () *
-      gsl_vector_get (mapalm->sqrt_int, 2*m + 1) / gsl_vector_get(mapalm->sqrt_int, m) * sgn;
+      gsl_vector_get (mapalm->sqrt_int, 2 * m + 1) / gsl_vector_get(mapalm->sqrt_int, m) * sgn;
     gsl_vector_set (mapalm->sphPmm, m, y_mm);
 
     last_lnpoch += gsl_sf_log_1plusx ( 0.5 / ((gdouble)(m)) );
@@ -269,20 +345,20 @@ ncm_sphere_mapalm_init (NcmSphereMapAlm *mapalm, gint lmax)
     for (l = m + 2; l <= lmax; l++)
     {
       gdouble rec1 =
-        gsl_vector_get (mapalm->sqrt_int, l-m) *
-        gsl_vector_get (mapalm->sqrt_int, 2*l+1) *
-        gsl_vector_get (mapalm->sqrt_int, 2*l-1) /
+        gsl_vector_get (mapalm->sqrt_int, l - m) *
+        gsl_vector_get (mapalm->sqrt_int, 2 * l + 1) *
+        gsl_vector_get (mapalm->sqrt_int, 2 * l - 1) /
         gsl_vector_get (mapalm->sqrt_int, l + m);
       gdouble rec2 =
         gsl_vector_get (mapalm->sqrt_int, l - m) *
         gsl_vector_get (mapalm->sqrt_int, l - m - 1) *
-        gsl_vector_get (mapalm->sqrt_int, 2*l + 1) /
+        gsl_vector_get (mapalm->sqrt_int, 2 * l + 1) /
         (gsl_vector_get (mapalm->sqrt_int, l + m) *
          gsl_vector_get (mapalm->sqrt_int, l + m - 1) *
-         gsl_vector_get (mapalm->sqrt_int, 2*l - 3));
+         gsl_vector_get (mapalm->sqrt_int, 2 * l - 3));
 
-      gsl_vector_set (mapalm->sphPlm_recur1, start_index + l - m,  rec1 / ((gdouble)(l-m)));
-      gsl_vector_set (mapalm->sphPlm_recur2, start_index + l - m,  rec2 * ((gdouble)(l+m-1)) / ((gdouble)(l-m)));
+      gsl_vector_set (mapalm->sphPlm_recur1, start_index + l - m,  rec1 / ((gdouble)(l - m)));
+      gsl_vector_set (mapalm->sphPlm_recur2, start_index + l - m,  rec2 * ((gdouble)(l + m - 1)) / ((gdouble)(l - m)));
     }
   }
 
@@ -305,9 +381,9 @@ ncm_sphere_mapsht_new (NcmSphereMap *map, NcmSphereMapAlm *mapalm, guint fftw_fl
 {
   NcmSphereMapSHT *mapsht = g_slice_new (NcmSphereMapSHT);
   gint i, j = 0;
-  mapsht->n_rings = NCM_MAP_N_RINGS(map->nside);
-  mapsht->max_ring_size = NCM_MAP_MAX_RING_SIZE(map->nside);
-  mapsht->n_diff_rings = NCM_MAP_N_DIFFERENT_SIZED_RINGS(map->nside);
+  mapsht->n_rings = NCM_MAP_N_RINGS (map->nside);
+  mapsht->max_ring_size = NCM_MAP_MAX_RING_SIZE (map->nside);
+  mapsht->n_diff_rings = NCM_MAP_N_DIFFERENT_SIZED_RINGS (map->nside);
   mapsht->map = map;
   mapsht->mapalm = mapalm;
   mapsht->ring = gsl_vector_alloc (mapsht->max_ring_size);

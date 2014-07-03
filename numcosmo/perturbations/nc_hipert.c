@@ -58,12 +58,13 @@ G_DEFINE_ABSTRACT_TYPE (NcHIPert, nc_hipert, G_TYPE_OBJECT);
 static void
 nc_hipert_init (NcHIPert *pert)
 {
-  pert->alpha0     = 0.0;
-  pert->reltol     = 0.0;
-  pert->k          = 0.0;
-  pert->y          = NULL;
-  pert->cvode      = CVodeCreate (CV_ADAMS, CV_FUNCTIONAL);
-  pert->cvode_init = FALSE;
+  pert->alpha0      = 0.0;
+  pert->reltol      = 0.0;
+  pert->k           = 0.0;
+  pert->y           = NULL;
+  pert->cvode       = CVodeCreate (CV_ADAMS, CV_FUNCTIONAL);
+  pert->cvode_init  = FALSE;
+  pert->cvode_stiff = FALSE;
 }
 
 static void
@@ -197,5 +198,36 @@ nc_hipert_set_mode_k (NcHIPert *pert, gdouble k)
   {
     pert->k        = k;
     pert->prepared = FALSE;
+  }
+}
+
+/**
+ * nc_hipert_set_stiff_solver:
+ * @pert: a #NcHIPert.
+ * @stiff: whenever to enable or disable a stiff solver.
+ * 
+ * Sets the ode algorithm to use.
+ * 
+ */
+void 
+nc_hipert_set_stiff_solver (NcHIPert *pert, gboolean stiff)
+{
+  guint a = stiff ? 1 : 0;
+  guint b = pert->cvode_stiff ? 1 : 0;
+  if (a == b)
+  {
+    if (pert->cvode != NULL)
+    {
+      CVodeFree (&pert->cvode);
+      pert->cvode = NULL;
+    }
+    pert->cvode_stiff = TRUE;
+
+    if (stiff)
+      pert->cvode = CVodeCreate (CV_BDF, CV_NEWTON);
+    else
+      pert->cvode = CVodeCreate (CV_ADAMS, CV_FUNCTIONAL);
+    
+    pert->cvode_init = FALSE;
   }
 }

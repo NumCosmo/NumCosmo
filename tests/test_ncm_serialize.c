@@ -67,13 +67,7 @@ test_ncm_serialize_global_from_string_plain ()
   g_free (obj_new_ser);
   g_object_unref (obj_new);
 
-  nc_hicosmo_free (hic);
-  if (g_test_trap_fork (0, G_TEST_TRAP_SILENCE_STDOUT | G_TEST_TRAP_SILENCE_STDERR))
-  {
-    nc_hicosmo_free (hic);
-    exit (0);
-  }
-  g_test_trap_assert_failed ();
+  NCM_TEST_FREE (nc_hicosmo_free, hic);
 }
 
 void
@@ -82,25 +76,14 @@ test_ncm_serialize_global_from_string_params ()
   NcmModel *m = NCM_MODEL (ncm_serialize_global_from_string ("NcHICosmoLCDM{'H0':<12.3>,'Omegac':<0.2>}"));
   ncm_assert_cmpdouble (ncm_model_param_get (m, NC_HICOSMO_DE_H0), ==, 12.3);
   ncm_assert_cmpdouble (ncm_model_param_get (m, NC_HICOSMO_DE_OMEGA_C), ==, 0.2);
-  ncm_model_free (m);
-  if (g_test_trap_fork (0, G_TEST_TRAP_SILENCE_STDOUT | G_TEST_TRAP_SILENCE_STDERR))
-  {
-    ncm_model_free (m);
-    exit (0);
-  }
-  g_test_trap_assert_failed ();
 
+  NCM_TEST_FREE (ncm_model_free, m);
 
   m = NCM_MODEL (ncm_serialize_global_from_string ("{'NcHICosmoLCDM', {'H0':<12.3>,'Omegac':<0.2>}}"));
   ncm_assert_cmpdouble (ncm_model_param_get (m, NC_HICOSMO_DE_H0), ==, 12.3);
   ncm_assert_cmpdouble (ncm_model_param_get (m, NC_HICOSMO_DE_OMEGA_C), ==, 0.2);
-  ncm_model_free (m);
-  if (g_test_trap_fork (0, G_TEST_TRAP_SILENCE_STDOUT | G_TEST_TRAP_SILENCE_STDERR))
-  {
-    ncm_model_free (m);
-    exit (0);
-  }
-  g_test_trap_assert_failed ();
+
+  NCM_TEST_FREE (ncm_model_free, m);
 }
 
 void
@@ -127,12 +110,6 @@ test_ncm_serialize_global_from_string_nest ()
   g_assert (NC_IS_WINDOW_TOPHAT (mv->wp));
   g_assert (NC_IS_TRANSFER_FUNC_EH (mv->tf));
 
-  nc_matter_var_free (mv);
-  if (g_test_trap_fork (0, G_TEST_TRAP_SILENCE_STDOUT | G_TEST_TRAP_SILENCE_STDERR))
-  {
-    nc_matter_var_free (mv);
-    exit (0);
-  }
-  g_test_trap_assert_failed ();
+  NCM_TEST_FREE (nc_matter_var_free, mv);
 }
 

@@ -59,6 +59,10 @@ void test_ncm_stats_vec_var_test (TestNcmStatsVec *test, gconstpointer pdata);
 void test_ncm_stats_vec_cov_test (TestNcmStatsVec *test, gconstpointer pdata);
 void test_ncm_stats_vec_free (TestNcmStatsVec *test, gconstpointer pdata);
 
+void test_ncm_stats_vec_traps (TestNcmStatsVec *test, gconstpointer pdata);
+void test_ncm_stats_vec_invalid_get_cov (TestNcmStatsVec *test, gconstpointer pdata);
+void test_ncm_stats_vec_invalid_get_var (TestNcmStatsVec *test, gconstpointer pdata);
+
 gint
 main (gint argc, gchar *argv[])
 {
@@ -79,6 +83,24 @@ main (gint argc, gchar *argv[])
   g_test_add ("/numcosmo/ncm_stats_vec/cov", TestNcmStatsVec, NULL, 
               &test_ncm_stats_vec_cov_new, 
               &test_ncm_stats_vec_cov_test, 
+              &test_ncm_stats_vec_free);
+
+  g_test_add ("/numcosmo/ncm_stats_vec/mean/get_var/subprocess", TestNcmStatsVec, NULL, 
+              &test_ncm_stats_vec_mean_new, 
+              &test_ncm_stats_vec_invalid_get_var, 
+              &test_ncm_stats_vec_free);
+  g_test_add ("/numcosmo/ncm_stats_vec/mean/get_cov/subprocess", TestNcmStatsVec, NULL, 
+              &test_ncm_stats_vec_mean_new, 
+              &test_ncm_stats_vec_invalid_get_cov, 
+              &test_ncm_stats_vec_free);
+  g_test_add ("/numcosmo/ncm_stats_vec/var/get_cov/subprocess", TestNcmStatsVec, NULL, 
+              &test_ncm_stats_vec_var_new, 
+              &test_ncm_stats_vec_invalid_get_cov,
+              &test_ncm_stats_vec_free);
+
+  g_test_add ("/numcosmo/ncm_stats_vec/traps", TestNcmStatsVec, NULL, 
+              &test_ncm_stats_vec_var_new, 
+              &test_ncm_stats_vec_traps, 
               &test_ncm_stats_vec_free);
 
   g_test_run ();
@@ -131,14 +153,8 @@ test_ncm_stats_vec_free (TestNcmStatsVec *test, gconstpointer pdata)
   ncm_matrix_clear (&test->xs);
   ncm_vector_clear (&test->w);
   ncm_vector_clear (&test->mu);
-  
-  ncm_stats_vec_free (svec);
-  if (g_test_trap_fork (0, G_TEST_TRAP_SILENCE_STDOUT | G_TEST_TRAP_SILENCE_STDERR))
-  {
-    ncm_stats_vec_free (svec);
-    exit (0);
-  }
-  g_test_trap_assert_failed ();
+
+  NCM_TEST_FREE (ncm_stats_vec_free, svec);
 }
 
 void
@@ -181,20 +197,7 @@ test_ncm_stats_vec_mean_test (TestNcmStatsVec *test, gconstpointer pdata)
     }
   }
 
-  if (g_test_trap_fork (0, G_TEST_TRAP_SILENCE_STDOUT | G_TEST_TRAP_SILENCE_STDERR))
-  {
-    ncm_stats_vec_get_var (test->svec, 0);
-    exit (0);
-  }
-  g_test_trap_assert_failed ();
-
-  if (g_test_trap_fork (0, G_TEST_TRAP_SILENCE_STDOUT | G_TEST_TRAP_SILENCE_STDERR))
-  {
-    ncm_stats_vec_get_cov (test->svec, 0, 1);
-    exit (0);
-  }
-  g_test_trap_assert_failed ();
-  
+  NCM_TEST_FAIL (ncm_stats_vec_get_var (test->svec, 0));  
 }
 
 void
@@ -241,13 +244,7 @@ test_ncm_stats_vec_var_test (TestNcmStatsVec *test, gconstpointer pdata)
     }
   }
 
-  if (g_test_trap_fork (0, G_TEST_TRAP_SILENCE_STDOUT | G_TEST_TRAP_SILENCE_STDERR))
-  {
-    ncm_stats_vec_get_cov (test->svec, 0, 1);
-    exit (0);
-  }
-  g_test_trap_assert_failed ();
-  
+  NCM_TEST_FAIL (ncm_stats_vec_get_cov (test->svec, 0, 1));  
 }
 
 void
@@ -308,4 +305,29 @@ test_ncm_stats_vec_cov_test (TestNcmStatsVec *test, gconstpointer pdata)
       }
     }
   }  
+}
+
+void
+test_ncm_stats_vec_invalid_get_var (TestNcmStatsVec *test, gconstpointer pdata)
+{
+  ncm_stats_vec_get_var (test->svec, 0);  
+}
+
+void
+test_ncm_stats_vec_invalid_get_cov (TestNcmStatsVec *test, gconstpointer pdata)
+{
+  ncm_stats_vec_get_cov (test->svec, 0, 1);  
+}
+
+void 
+test_ncm_stats_vec_traps (TestNcmStatsVec *test, gconstpointer pdata)
+{
+  g_test_trap_subprocess ("/numcosmo/ncm_stats_vec/mean/get_var/subprocess", 0, 0);
+  g_test_trap_assert_failed ();
+  
+  g_test_trap_subprocess ("/numcosmo/ncm_stats_vec/mean/get_cov/subprocess", 0, 0);
+  g_test_trap_assert_failed ();
+  
+  g_test_trap_subprocess ("/numcosmo/ncm_stats_vec/var/get_cov/subprocess", 0, 0);
+  g_test_trap_assert_failed ();
 }

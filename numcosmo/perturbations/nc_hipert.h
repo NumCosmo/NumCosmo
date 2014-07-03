@@ -57,6 +57,7 @@ struct _NcHIPert
   N_Vector y;
   gpointer cvode;
   gboolean cvode_init;
+  gboolean cvode_stiff;
   gdouble reltol;
   gdouble abstol;
   gdouble k;
@@ -66,6 +67,7 @@ struct _NcHIPert
 GType nc_hipert_get_type (void) G_GNUC_CONST;
 
 void nc_hipert_set_mode_k (NcHIPert *pert, gdouble k);
+void nc_hipert_set_stiff_solver (NcHIPert *pert, gboolean stiff);
 
 G_END_DECLS
 

@@ -29,6 +29,13 @@
 #include <glib.h>
 #include <glib-object.h>
 #include <numcosmo/build_cfg.h>
+#include <numcosmo/math/ncm_vector.h>
+#include <gsl/gsl_math.h>
+#ifndef NUMCOSMO_GIR_SCAN
+#include <complex.h>
+#else
+#define complex
+#endif /* NUMCOSMO_GIR_SCAN */
 
 #ifndef NUMCOSMO_GIR_SCAN
 #ifdef NUMCOSMO_HAVE_FFTW3
@@ -58,19 +65,24 @@ struct _NcmFftlog
 {
   /*< private >*/
   GObject parent_instance;
-  guint N;
-  guint N_2;
+  gint N;
+  gint N_2;
   gdouble lnk0;
   gdouble lnr0;
-  gdouble L;
-  gdouble dr;
+  gdouble Lk;
+  gdouble Lk_N;
   gboolean prepared;
-  gchar *name;
+  gboolean evaluated;
+  NcmVector *lnr_vec;
+  NcmVector **Gr_vec;
 #ifdef NUMCOSMO_HAVE_FFTW3
-  fftw_complex *in;
-  fftw_complex *out;
-  fftw_plan p_in2out;
-  fftw_plan p_out2in;
+  fftw_complex *Fk;
+  fftw_complex *Cm;
+  fftw_complex **Gr;
+  fftw_complex **Ym;
+  fftw_complex **CmYm;
+  fftw_plan p_Fk2Cm;
+  fftw_plan *p_CmYm2Gr;
 #endif /* NUMCOSMO_HAVE_FFTW3 */
 };
 
@@ -78,16 +90,30 @@ struct _NcmFftlogClass
 {
   /*< private >*/
   GObjectClass parent_class;
+  guint ncomp;
+  gchar *name;
+  void (*get_Ym) (NcmFftlog *fftlog);
+  void (*generate_Gr) (NcmFftlog *fftlog);
 };
 
 GType ncm_fftlog_get_type (void) G_GNUC_CONST;
+
+NcmFftlog *ncm_fftlog_ref (NcmFftlog *fftlog);
+void ncm_fftlog_free (NcmFftlog *fftlog);
+void ncm_fftlog_clear (NcmFftlog **fftlog);
 
 void ncm_fftlog_set_name (NcmFftlog *fftlog, const gchar *name);
 gchar *ncm_fftlog_peek_name (NcmFftlog *fftlog);
 void ncm_fftlog_set_size (NcmFftlog *fftlog, guint n);
 guint ncm_fftlog_get_size (NcmFftlog *fftlog);
-void ncm_fftlog_set_length (NcmFftlog *fftlog, gdouble L);
+void ncm_fftlog_set_length (NcmFftlog *fftlog, gdouble Lk);
 gdouble ncm_fftlog_get_length (NcmFftlog *fftlog);
+
+void ncm_fftlog_eval_by_vector (NcmFftlog *fftlog, NcmVector *Fk);
+void ncm_fftlog_eval_by_function (NcmFftlog *fftlog, gsl_function *Fk);
+
+NcmVector *ncm_fftlog_get_vector_lnr (NcmFftlog *fftlog);
+NcmVector *ncm_fftlog_get_vector_Gr (NcmFftlog *fftlog, guint comp);
 
 G_END_DECLS
 

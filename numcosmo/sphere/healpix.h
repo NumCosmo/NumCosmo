@@ -29,7 +29,7 @@
 #include <glib-object.h>
 #include <numcosmo/build_cfg.h>
 #include <numcosmo/math/quaternion.h>
-#include <numcosmo/sphere/map.h>
+#include <numcosmo/math/ncm_sphere_map.h>
 
 G_BEGIN_DECLS
 
