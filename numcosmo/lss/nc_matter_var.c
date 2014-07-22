@@ -983,7 +983,7 @@ _nc_matter_var_prepare_fft (NcMatterVar *vp, NcHICosmo *model)
     const complex double Rsigma2 = in[ii] / N;
     const complex double lnsigma2 = log (Rsigma2) - r;
     const complex double dlnsigma2_dr = Rdsigma2_dr[ii] / (Rsigma2 * N);
-    const gdouble test = dlnsigma2_dr;
+
     /*
      const gdouble R = exp (r);
      const gdouble Rsigma2_old = R * nc_matter_var_over_growth2_tophat_old (vp, model, r);

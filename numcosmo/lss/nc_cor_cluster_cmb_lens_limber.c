@@ -336,7 +336,7 @@ _integrand_powspec_2h (gdouble lnM, gpointer userdata)
   gdouble R = exp (lnR);
   gdouble M_rho = nc_window_volume (int_data->hbf->mfp->vp->wp) * gsl_pow_3(R);
   gdouble dn_dlnM_times_b = nc_halo_bias_func_integrand (int_data->hbf, int_data->model, lnM, int_data->z);
-  gdouble u = nc_density_profile_eval_fourier (int_data->dp, int_data->model, int_data->k, M, int_data->z);
+  //gdouble u = nc_density_profile_eval_fourier (int_data->dp, int_data->model, int_data->k, M, int_data->z);
   //gdouble integrand_powspec_2h = (M / rho_mz) * dn_dlnM_times_b * u;
   //gdouble integrand_powspec_2h = (M / rho_mz) * dn_dlnM_times_b;
   gdouble integrand_powspec_2h = M_rho * dn_dlnM_times_b;

@@ -67,8 +67,8 @@ struct _NcMultiplicityFuncTinkerMeanNormalized
 GType nc_multiplicity_func_tinker_mean_normalized_get_type (void) G_GNUC_CONST;
 
 NcMultiplicityFunc *nc_multiplicity_func_tinker_mean_normalized_new (gdouble Delta);
-void nc_multiplicity_func_tinker_mean_normalized_set_Delta (NcMultiplicityFuncTinkerMeanNormalized *mulf_tinker_mean_normalized, gdouble Delta);
-gdouble nc_multiplicity_func_tinker_mean_normalized_get_Delta (const NcMultiplicityFuncTinkerMeanNormalized *mulf_tinker_mean_normalized);
+void nc_multiplicity_func_tinker_mean_normalized_set_Delta (NcMultiplicityFuncTinkerMeanNormalized *mtmn, gdouble Delta);
+gdouble nc_multiplicity_func_tinker_mean_normalized_get_Delta (const NcMultiplicityFuncTinkerMeanNormalized *mtmn);
 
 G_END_DECLS
 
