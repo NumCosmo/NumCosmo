@@ -30,6 +30,7 @@
 #include <numcosmo/build_cfg.h>
 #include <numcosmo/nc_hicosmo.h>
 #include <numcosmo/perturbations/nc_hipert_iadiab.h>
+#include <numcosmo/perturbations/nc_hipert_itwo_fluids.h>
 
 G_BEGIN_DECLS
 
@@ -110,7 +111,7 @@ struct _NcHICosmoQGRW
   NcHICosmo parent_instance;
   /*< private >*/
   NcHIPertIAdiabEOM eom_adiab_zeta;
-  NcHICosmoEOMTwoFluids eom_two_fluids;
+  NcHIPertITwoFluidsEOM eom_two_fluids;
 };
 
 GType nc_hicosmo_qgrw_get_type (void) G_GNUC_CONST;

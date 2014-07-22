@@ -74,6 +74,7 @@
 #include "math/ncm_spline_cubic_notaknot.h"
 #include "perturbations/nc_hipert_two_fluids.h"
 #include "perturbations/nc_hipert_iadiab.h"
+#include "perturbations/nc_hipert_itwo_fluids.h"
 
 #include "math/cvode_util.h"
 
@@ -203,7 +204,8 @@ static gdouble
 _nc_hipert_two_fluids_wkb_S_phase (gdouble y, gdouble x, gpointer userdata)
 {
   NcHIPertTwoFluidsWKBPhaseArg *arg = (NcHIPertTwoFluidsWKBPhaseArg *) userdata;
-  const gdouble nuB2 = nc_hicosmo_wkb_two_fluids_nuB2 (arg->cosmo, x, arg->k);
+  
+  const gdouble nuB2 = nc_hipert_itwo_fluids_nuB2 (NC_HIPERT_ITWO_FLUIDS (arg->cosmo), x, arg->k);
   const gdouble nuB = sqrt (nuB2);
   return nuB;
 }
@@ -293,7 +295,7 @@ void
 nc_hipert_two_fluids_wkb_zeta (NcHIPertTwoFluids *ptf, NcHICosmo *cosmo, gdouble alpha, gdouble *Re_zeta, gdouble *Im_zeta)
 {
   NcHIPert *pert = NC_HIPERT (ptf);
-  NcHICosmoEOMTwoFluids *eom = nc_hicosmo_two_fluids (cosmo, alpha, pert->k);
+  NcHIPertITwoFluidsEOM *eom = nc_hipert_itwo_fluids_eom (NC_HIPERT_ITWO_FLUIDS (cosmo), alpha, pert->k);
   complex double zeta;
   gdouble int_nuA;
   const gdouble nuA2 = nc_hipert_iadiab_nuA2 (NC_HIPERT_IADIAB (cosmo), alpha, pert->k);
@@ -326,7 +328,7 @@ void
 nc_hipert_two_fluids_wkb_zeta_Pzeta (NcHIPertTwoFluids *ptf, NcHICosmo *cosmo, gdouble alpha, gdouble *Re_zeta, gdouble *Im_zeta, gdouble *Re_Pzeta, gdouble *Im_Pzeta)
 {
   NcHIPert *pert = NC_HIPERT (ptf);
-  NcHICosmoEOMTwoFluids *eom = nc_hicosmo_two_fluids (cosmo, alpha, pert->k);
+  NcHIPertITwoFluidsEOM *eom = nc_hipert_itwo_fluids_eom (NC_HIPERT_ITWO_FLUIDS (cosmo), alpha, pert->k);
   complex double zeta, Pzeta;
   gdouble int_nuA;
   gdouble dmzetanuA_nuA;
@@ -364,10 +366,10 @@ void
 nc_hipert_two_fluids_wkb_Q (NcHIPertTwoFluids *ptf, NcHICosmo *cosmo, gdouble alpha, gdouble *Re_Q, gdouble *Im_Q)
 {
   NcHIPert *pert = NC_HIPERT (ptf);
-  NcHICosmoEOMTwoFluids *eom = nc_hicosmo_two_fluids (cosmo, alpha, pert->k);
+  NcHIPertITwoFluidsEOM *eom = nc_hipert_itwo_fluids_eom (NC_HIPERT_ITWO_FLUIDS (cosmo), alpha, pert->k);
   complex double Q;
   gdouble int_nuB;
-  const gdouble nuB2 = nc_hicosmo_wkb_two_fluids_nuB2 (cosmo, alpha, pert->k);
+  const gdouble nuB2 = nc_hipert_itwo_fluids_nuB2 (NC_HIPERT_ITWO_FLUIDS (cosmo), alpha, pert->k);
   const gdouble nuB = sqrt (nuB2); 
 
   g_assert (pert->prepared && ptf->S_wkb_prepared);
@@ -397,18 +399,18 @@ void
 nc_hipert_two_fluids_wkb_Q_PQ (NcHIPertTwoFluids *ptf, NcHICosmo *cosmo, gdouble alpha, gdouble *Re_Q, gdouble *Im_Q, gdouble *Re_PQ, gdouble *Im_PQ)
 {
   NcHIPert *pert = NC_HIPERT (ptf);
-  NcHICosmoEOMTwoFluids *eom = nc_hicosmo_two_fluids (cosmo, alpha, pert->k);
+  NcHIPertITwoFluidsEOM *eom = nc_hipert_itwo_fluids_eom (NC_HIPERT_ITWO_FLUIDS (cosmo), alpha, pert->k);
   complex double Q, PQ;
   gdouble int_nuB;
   gdouble dmSnuB_nuB;
-  const gdouble nuB2 = nc_hicosmo_wkb_two_fluids_nuB2 (cosmo, alpha, pert->k);
+  const gdouble nuB2 = nc_hipert_itwo_fluids_nuB2 (NC_HIPERT_ITWO_FLUIDS (cosmo), alpha, pert->k);
   const gdouble nuB = sqrt (nuB2); 
 
   g_assert (pert->prepared && ptf->S_wkb_prepared);
 
   int_nuB = ncm_spline_eval (ptf->wkb_S_phase->s, alpha);
 
-  dmSnuB_nuB = nc_hicosmo_wkb_two_fluids_dmSnuB_nuB (cosmo, alpha, pert->k);
+  dmSnuB_nuB = nc_hipert_itwo_fluids_dmSnuB_nuB (NC_HIPERT_ITWO_FLUIDS (cosmo), alpha, pert->k);
 
   Q = cexp (-I * int_nuB) / sqrt (2.0 * eom->mS * nuB);
 
@@ -435,15 +437,15 @@ void
 nc_hipert_two_fluids_wkb_full_zeta (NcHIPertTwoFluids *ptf, NcHICosmo *cosmo, gdouble alpha, gdouble **vars)
 {
   NcHIPert *pert = NC_HIPERT (ptf);
-  NcHICosmoEOMTwoFluids *eom = nc_hicosmo_two_fluids (cosmo, alpha, pert->k);
+  NcHIPertITwoFluidsEOM *eom = nc_hipert_itwo_fluids_eom (NC_HIPERT_ITWO_FLUIDS (cosmo), alpha, pert->k);
   complex double zeta, Pzeta, Q, PQ, C;
   gdouble int_nuA;
   const gdouble nuA2 = nc_hipert_iadiab_nuA2 (NC_HIPERT_IADIAB (cosmo), alpha, pert->k);
-  const gdouble nuB2 = nc_hicosmo_wkb_two_fluids_nuB2 (cosmo, alpha, pert->k);
+  const gdouble nuB2 = nc_hipert_itwo_fluids_nuB2 (NC_HIPERT_ITWO_FLUIDS (cosmo), alpha, pert->k);
   const gdouble nuA = sqrt (nuA2);
   const gdouble nuB = sqrt (nuB2);
   const gdouble k = pert->k;
-  const gdouble dmSnuB_nuB    = nc_hicosmo_wkb_two_fluids_dmSnuB_nuB (cosmo, alpha, pert->k);
+  const gdouble dmSnuB_nuB    = nc_hipert_itwo_fluids_dmSnuB_nuB (NC_HIPERT_ITWO_FLUIDS (cosmo), alpha, pert->k);
   const gdouble dmzetanuA_nuA = nc_hipert_iadiab_dmzetanuA_nuA (NC_HIPERT_IADIAB (cosmo), alpha, pert->k);
   const gdouble LA = 0.5 * k * dmzetanuA_nuA / (eom->mzeta * nuA);
   const gdouble LB = 0.5 * k * dmSnuB_nuB / (eom->mS * nuB);
@@ -490,15 +492,15 @@ void
 nc_hipert_two_fluids_wkb_full_Q (NcHIPertTwoFluids *ptf, NcHICosmo *cosmo, gdouble alpha, gdouble **vars)
 {
   NcHIPert *pert = NC_HIPERT (ptf);
-  NcHICosmoEOMTwoFluids *eom = nc_hicosmo_two_fluids (cosmo, alpha, pert->k);
+  NcHIPertITwoFluidsEOM *eom = nc_hipert_itwo_fluids_eom (NC_HIPERT_ITWO_FLUIDS (cosmo), alpha, pert->k);
   complex double zeta, Pzeta, Q, PQ, C;
   gdouble int_nuB;
   const gdouble nuA2 = nc_hipert_iadiab_nuA2 (NC_HIPERT_IADIAB (cosmo), alpha, pert->k);
-  const gdouble nuB2 = nc_hicosmo_wkb_two_fluids_nuB2 (cosmo, alpha, pert->k);
+  const gdouble nuB2 = nc_hipert_itwo_fluids_nuB2 (NC_HIPERT_ITWO_FLUIDS (cosmo), alpha, pert->k);
   const gdouble nuA  = sqrt (nuA2);
   const gdouble nuB  = sqrt (nuB2);
   const gdouble k    = pert->k;
-  const gdouble dmSnuB_nuB    = nc_hicosmo_wkb_two_fluids_dmSnuB_nuB (cosmo, alpha, pert->k);
+  const gdouble dmSnuB_nuB    = nc_hipert_itwo_fluids_dmSnuB_nuB (NC_HIPERT_ITWO_FLUIDS (cosmo), alpha, pert->k);
   const gdouble dmzetanuA_nuA = nc_hipert_iadiab_dmzetanuA_nuA (NC_HIPERT_IADIAB (cosmo), alpha, pert->k);
   const gdouble LA   = 0.5 * k * dmzetanuA_nuA / (eom->mzeta * nuA);
   const gdouble LB   = 0.5 * k * dmSnuB_nuB / (eom->mS * nuB);
@@ -545,7 +547,7 @@ static gdouble
 _nc_hipert_two_fluids_wkb_nuB2 (gdouble x, gpointer userdata)
 {
   NcHIPertTwoFluidsWKBPhaseArg *arg = (NcHIPertTwoFluidsWKBPhaseArg *) userdata;
-  const gdouble nuB2 = nc_hicosmo_wkb_two_fluids_nuB2 (arg->cosmo, x, arg->k);
+  const gdouble nuB2 = nc_hipert_itwo_fluids_nuB2 (NC_HIPERT_ITWO_FLUIDS (arg->cosmo), x, arg->k);
   return nuB2;
 }
 
@@ -651,7 +653,7 @@ _nc_hipert_two_fluids_f (realtype tau, N_Vector y, N_Vector ydot, gpointer f_dat
 {
   const gdouble alpha = NC_HIPERT_TWO_FLUIDS_TAU2ALPHA (tau);
   NcHIPertTwoFluidsArg *arg = (NcHIPertTwoFluidsArg *) f_data;
-  NcHICosmoEOMTwoFluids *eom = nc_hicosmo_two_fluids (arg->cosmo, alpha, NC_HIPERT (arg->ptf)->k);
+  NcHIPertITwoFluidsEOM *eom = nc_hipert_itwo_fluids_eom (NC_HIPERT_ITWO_FLUIDS (arg->cosmo), alpha, NC_HIPERT (arg->ptf)->k);
   const gdouble dadt = NC_HIPERT_TWO_FLUIDS_DALPHADTAU (alpha); 
 /*
   guint i;
@@ -687,7 +689,7 @@ _nc_hipert_two_fluids_J (_NCM_SUNDIALS_INT_TYPE N, realtype tau, N_Vector y, N_V
 {
   const gdouble alpha = NC_HIPERT_TWO_FLUIDS_TAU2ALPHA (tau);
   NcHIPertTwoFluidsArg *arg = (NcHIPertTwoFluidsArg *) jac_data;
-  NcHICosmoEOMTwoFluids *eom = nc_hicosmo_two_fluids (arg->cosmo, alpha, NC_HIPERT (arg->ptf)->k);
+  NcHIPertITwoFluidsEOM *eom = nc_hipert_itwo_fluids_eom (NC_HIPERT_ITWO_FLUIDS (arg->cosmo), alpha, NC_HIPERT (arg->ptf)->k);
   const gdouble dadt = NC_HIPERT_TWO_FLUIDS_DALPHADTAU (alpha);
 
   DENSE_ELEM (J, NC_HIPERT_TWO_FLUIDS_RE_ZETA,  NC_HIPERT_TWO_FLUIDS_RE_PZETA) = (1.0 / eom->mzeta) * dadt;

@@ -73,8 +73,8 @@ struct _NcHIPertIAdiabEOM
 GType nc_hipert_iadiab_eom_get_type (void) G_GNUC_CONST;
 GType nc_hipert_iadiab_get_type (void) G_GNUC_CONST;
 
-NcHIPertIAdiabEOM *nc_hipert_iadiab_eom_dup (NcHIPertIAdiabEOM *adiab);
-void nc_hipert_iadiab_eom_free (NcHIPertIAdiabEOM *adiab);
+NcHIPertIAdiabEOM *nc_hipert_iadiab_eom_dup (NcHIPertIAdiabEOM *adiab_eom);
+void nc_hipert_iadiab_eom_free (NcHIPertIAdiabEOM *adiab_eom);
 
 G_INLINE_FUNC gdouble nc_hipert_iadiab_nuA2 (NcHIPertIAdiab *iadiab, gdouble alpha, gdouble k);
 G_INLINE_FUNC gdouble nc_hipert_iadiab_dmzetanuA_nuA (NcHIPertIAdiab *iadiab, gdouble alpha, gdouble k);

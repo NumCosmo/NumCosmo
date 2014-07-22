@@ -226,41 +226,42 @@ nc_headers = \
         lss/nc_halo_bias_type_st_ellip.h \
         lss/nc_halo_bias_type_tinker.h   \
         lss/nc_halo_bias_func.h          \
-        lss/nc_cluster_redshift.h            \
-        lss/nc_cluster_redshift_nodist.h     \
-        lss/nc_cluster_photoz_gauss.h        \
-        lss/nc_cluster_photoz_gauss_global.h \
-        lss/nc_cluster_mass.h                \
-        lss/nc_cluster_mass_nodist.h         \
-        lss/nc_cluster_mass_lnnormal.h       \
-        lss/nc_cluster_mass_vanderlinde.h    \
-        lss/nc_cluster_mass_benson.h         \
-        lss/nc_cluster_mass_benson_xray.h    \
-        lss/nc_cluster_abundance.h           \
-        lss/nc_cor_cluster_cmb_lens_limber.h \
-	nc_data_snia.h                       \
-	nc_data_dist_mu.h                    \
-	nc_data_snia_cov.h                   \
-	nc_data_hubble.h                     \
-	nc_data_hubble_bao.h                 \
-	nc_data_bao_rdv.h                    \
-	nc_data_bao_dvdv.h                   \
-	nc_data_bao_a.h                      \
-	nc_data_bao_dv.h                     \
-	nc_data_bao.h                        \
-	nc_data_cmb_shift_param.h            \
-	nc_data_cmb_dist_priors.h            \
-	nc_data_cmb.h                        \
-	nc_data_cluster_ncount.h             \
-	nc_data_cluster_poisson.h            \
-	scalefactor.h                        \
-	model/quantum_gravity.h              \
-	perturbations/nc_hipert.h            \
-	perturbations/nc_hipert_iadiab.h     \
-	perturbations/nc_hipert_adiab.h      \
-	perturbations/nc_hipert_two_fluids.h \
-	perturbations/linear.h               \
-	perturbations/covariance.h           \
+        lss/nc_cluster_redshift.h             \
+        lss/nc_cluster_redshift_nodist.h      \
+        lss/nc_cluster_photoz_gauss.h         \
+        lss/nc_cluster_photoz_gauss_global.h  \
+        lss/nc_cluster_mass.h                 \
+        lss/nc_cluster_mass_nodist.h          \
+        lss/nc_cluster_mass_lnnormal.h        \
+        lss/nc_cluster_mass_vanderlinde.h     \
+        lss/nc_cluster_mass_benson.h          \
+        lss/nc_cluster_mass_benson_xray.h     \
+        lss/nc_cluster_abundance.h            \
+        lss/nc_cor_cluster_cmb_lens_limber.h  \
+	nc_data_snia.h                        \
+	nc_data_dist_mu.h                     \
+	nc_data_snia_cov.h                    \
+	nc_data_hubble.h                      \
+	nc_data_hubble_bao.h                  \
+	nc_data_bao_rdv.h                     \
+	nc_data_bao_dvdv.h                    \
+	nc_data_bao_a.h                       \
+	nc_data_bao_dv.h                      \
+	nc_data_bao.h                         \
+	nc_data_cmb_shift_param.h             \
+	nc_data_cmb_dist_priors.h             \
+	nc_data_cmb.h                         \
+	nc_data_cluster_ncount.h              \
+	nc_data_cluster_poisson.h             \
+	scalefactor.h                         \
+	model/quantum_gravity.h               \
+	perturbations/nc_hipert.h             \
+	perturbations/nc_hipert_iadiab.h      \
+	perturbations/nc_hipert_itwo_fluids.h \
+	perturbations/nc_hipert_adiab.h       \
+	perturbations/nc_hipert_two_fluids.h  \
+	perturbations/linear.h                \
+	perturbations/covariance.h            \
 	perturbations/linear_internal.h
 
 nc_sources = \
@@ -341,6 +342,7 @@ nc_sources = \
 	model/quantum_gravity.c                \
 	perturbations/nc_hipert.c              \
 	perturbations/nc_hipert_iadiab.c       \
+	perturbations/nc_hipert_itwo_fluids.c  \
 	perturbations/nc_hipert_adiab.c        \
 	perturbations/nc_hipert_two_fluids.c   \
 	perturbations/linear.c                 \

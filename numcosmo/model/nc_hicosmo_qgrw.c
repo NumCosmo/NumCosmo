@@ -48,10 +48,13 @@
 #include <gsl/gsl_sf_hyperg.h>
 
 static void nc_hipert_iadiab_interface_init (NcHIPertIAdiabInterface *iface);
+static void nc_hipert_itwo_fluids_interface_init (NcHIPertITwoFluidsInterface *iface);
 
 G_DEFINE_TYPE_WITH_CODE (NcHICosmoQGRW, nc_hicosmo_qgrw, NC_TYPE_HICOSMO,
                          G_IMPLEMENT_INTERFACE (NC_TYPE_HIPERT_IADIAB,
                                                 nc_hipert_iadiab_interface_init)
+                         G_IMPLEMENT_INTERFACE (NC_TYPE_HIPERT_ITWO_FLUIDS,
+                                                nc_hipert_itwo_fluids_interface_init)
                          );
 
 enum {
@@ -89,9 +92,9 @@ static gdouble _nc_hipert_iadiab_nuA2 (NcHIPertIAdiab *iadiab, gdouble alpha, gd
 static gdouble _nc_hipert_iadiab_dmzetanuA_nuA (NcHIPertIAdiab *iadiab, gdouble alpha, gdouble k);
 static NcHIPertIAdiabEOM *_nc_hipert_iadiab_eom (NcHIPertIAdiab *iadiab, gdouble alpha, gdouble k);
 
-static gdouble _nc_hicosmo_qgrw_wkb_two_fluids_nuB2 (NcmModel *model, gdouble alpha, gdouble k);
-static gdouble _nc_hicosmo_qgrw_wkb_two_fluids_dmSnuB_nuB (NcmModel *model, gdouble alpha, gdouble k);
-static NcHICosmoEOMTwoFluids *_nc_hicosmo_qgrw_eom_two_fluids (NcHICosmo *cosmo, gdouble alpha, gdouble k);
+static gdouble _nc_hipert_itwo_fluids_nuB2 (NcHIPertITwoFluids *itf, gdouble alpha, gdouble k);
+static gdouble _nc_hipert_itwo_fluids_dmSnuB_nuB (NcHIPertITwoFluids *itf, gdouble alpha, gdouble k);
+static NcHIPertITwoFluidsEOM *_nc_hipert_itwo_fluids_eom (NcHIPertITwoFluids *itf, gdouble alpha, gdouble k);
 
 static void
 nc_hicosmo_qgrw_class_init (NcHICosmoQGRWClass *klass)
@@ -142,11 +145,6 @@ nc_hicosmo_qgrw_class_init (NcHICosmoQGRWClass *klass)
   nc_hicosmo_set_cs2_impl       (parent_class, &_nc_hicosmo_qgrw_cs2);
   nc_hicosmo_set_rhopp_impl     (parent_class, &_nc_hicosmo_qgrw_rhopp);
 
-  nc_hicosmo_set_wkb_two_fluids_nuB2_impl (parent_class, _nc_hicosmo_qgrw_wkb_two_fluids_nuB2);
-  nc_hicosmo_set_wkb_two_fluids_dmSnuB_nuB_impl (parent_class, _nc_hicosmo_qgrw_wkb_two_fluids_dmSnuB_nuB);
-
-  nc_hicosmo_set_eom_two_fluids_impl (parent_class, &_nc_hicosmo_qgrw_eom_two_fluids);
-
   object_class->finalize = nc_hicosmo_qgrw_finalize;
 }
 
@@ -156,6 +154,16 @@ nc_hipert_iadiab_interface_init (NcHIPertIAdiabInterface *iface)
   iface->nuA2          = &_nc_hipert_iadiab_nuA2;
   iface->dmzetanuA_nuA = &_nc_hipert_iadiab_dmzetanuA_nuA;
   iface->eom           = &_nc_hipert_iadiab_eom;
+}
+
+static void
+nc_hipert_itwo_fluids_interface_init (NcHIPertITwoFluidsInterface *iface)
+{
+  iface->nuA2          = (NcHIPertITwoFluidsFuncNuA2) &_nc_hipert_iadiab_nuA2;
+  iface->nuB2          = &_nc_hipert_itwo_fluids_nuB2;
+  iface->dmzetanuA_nuA = (NcHIPertITwoFluidsFuncDmzetanuAnuA) &_nc_hipert_iadiab_dmzetanuA_nuA;
+  iface->dmSnuB_nuB    = &_nc_hipert_itwo_fluids_dmSnuB_nuB;
+  iface->eom           = &_nc_hipert_itwo_fluids_eom;
 }
 
 #define VECTOR   (model->params)
@@ -456,10 +464,11 @@ _nc_hipert_iadiab_dmzetanuA_nuA (NcHIPertIAdiab *iadiab, gdouble alpha, gdouble 
   return dmzetanuA_nuA;
 }
 
-static gdouble
-_nc_hicosmo_qgrw_wkb_two_fluids_nuB2 (NcmModel *model, gdouble alpha, gdouble k)
+static gdouble 
+_nc_hipert_itwo_fluids_nuB2 (NcHIPertITwoFluids *itf, gdouble alpha, gdouble k)
 {
-  NcHICosmo *cosmo = NC_HICOSMO (model);
+  NcmModel *model = NCM_MODEL (itf);
+  NcHICosmo *cosmo = NC_HICOSMO (itf);
   _NC_HICOSMO_QGRW_WKB_COMMON1;
   _NC_HICOSMO_QGRW_WKB_COMMON2;
   _NC_HICOSMO_QGRW_WKB_COMMON4;
@@ -471,10 +480,11 @@ _nc_hicosmo_qgrw_wkb_two_fluids_nuB2 (NcmModel *model, gdouble alpha, gdouble k)
   return nuB2;
 }
 
-static gdouble
-_nc_hicosmo_qgrw_wkb_two_fluids_dmSnuB_nuB (NcmModel *model, gdouble alpha, gdouble k)
+static gdouble 
+_nc_hipert_itwo_fluids_dmSnuB_nuB (NcHIPertITwoFluids *itf, gdouble alpha, gdouble k)
 {
-  NcHICosmo *cosmo = NC_HICOSMO (model);
+  NcmModel *model = NCM_MODEL (itf);
+  NcHICosmo *cosmo = NC_HICOSMO (itf);
   _NC_HICOSMO_QGRW_WKB_COMMON1;
   _NC_HICOSMO_QGRW_WKB_COMMON2;
   _NC_HICOSMO_QGRW_WKB_COMMON4;
@@ -546,13 +556,13 @@ _nc_hipert_iadiab_eom (NcHIPertIAdiab *iadiab, gdouble alpha, gdouble k)
   return &qgrw->eom_adiab_zeta;
 }
 
-
-static NcHICosmoEOMTwoFluids *
-_nc_hicosmo_qgrw_eom_two_fluids (NcHICosmo *cosmo, gdouble alpha, gdouble k)
+static NcHIPertITwoFluidsEOM *
+_nc_hipert_itwo_fluids_eom (NcHIPertITwoFluids *itf, gdouble alpha, gdouble k)
 {
-  NcmModel *model = NCM_MODEL (cosmo);
-  NcHICosmoQGRW *qgrw = NC_HICOSMO_QGRW (cosmo);
-  if (qgrw->eom_two_fluids.skey  != NCM_MODEL (cosmo)->pkey ||
+  NcmModel *model = NCM_MODEL (itf);
+  NcHICosmo *cosmo = NC_HICOSMO (itf);
+  NcHICosmoQGRW *qgrw = NC_HICOSMO_QGRW (itf);
+  if (qgrw->eom_two_fluids.skey  != NCM_MODEL (itf)->pkey ||
       qgrw->eom_two_fluids.alpha != alpha ||
       qgrw->eom_two_fluids.k     != k)
   {

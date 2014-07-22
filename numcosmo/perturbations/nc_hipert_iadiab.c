@@ -51,10 +51,10 @@ nc_hipert_iadiab_default_init (NcHIPertIAdiabInterface *iface)
 }
 
 /**
- * nc_hicosmo_eom_adiab_zeta_dup:
- * @adiab: a #NcHIPertIAdiabEOM.
+ * nc_hipert_iadiab_eom_dup:
+ * @adiab_eom: a #NcHIPertIAdiabEOM.
  *
- * Duplicates @adiab.
+ * Duplicates @adiab_eom.
  * 
  * Returns: (transfer full): a copy of @adiab.
  */
@@ -67,10 +67,10 @@ nc_hipert_iadiab_eom_dup (NcHIPertIAdiabEOM *adiab_eom)
 }
 
 /**
- * nc_hicosmo_eom_adiab_zeta_free:
- * @adiab_zeta: a #NcHIPertIAdiabEOM.
+ * nc_hipert_iadiab_eom_free:
+ * @adiab_eom: a #NcHIPertIAdiabEOM.
  *
- * Frees @adiab_zeta.
+ * Frees @adiab_eom.
  * 
  */
 void
