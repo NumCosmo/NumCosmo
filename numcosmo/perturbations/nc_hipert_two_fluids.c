@@ -72,8 +72,8 @@
 #include "build_cfg.h"
 
 #include "math/ncm_spline_cubic_notaknot.h"
-#include "nc_hipert_two_fluids.h"
-#include "nc_hipert_iadiab.h"
+#include "perturbations/nc_hipert_two_fluids.h"
+#include "perturbations/nc_hipert_iadiab.h"
 
 #include "math/cvode_util.h"
 
