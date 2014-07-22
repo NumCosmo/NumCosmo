@@ -52,14 +52,8 @@ test_nc_recomb_seager_new ()
   NcRecomb *recomb = nc_recomb_seager_new ();
   g_assert (NC_IS_RECOMB (recomb));
   g_assert (NC_IS_RECOMB_SEAGER (recomb));
-  nc_recomb_free (recomb);
 
-  if (g_test_trap_fork (0, G_TEST_TRAP_SILENCE_STDOUT | G_TEST_TRAP_SILENCE_STDERR))
-  {
-    nc_recomb_free (recomb);
-    exit (0);
-  }
-  g_test_trap_assert_failed ();
+  NCM_TEST_FREE (nc_recomb_free, recomb);
 
   recomb = nc_recomb_seager_new_full (1e-10, 2.2e9, 1e-5);
   g_assert (NC_IS_RECOMB (recomb));
@@ -68,15 +62,8 @@ test_nc_recomb_seager_new ()
   ncm_assert_cmpdouble (recomb->init_frac, ==, 1e-10);
   ncm_assert_cmpdouble (recomb->zi, ==, 2.2e9);
   ncm_assert_cmpdouble (recomb->prec, ==, 1e-5);
-  
-  nc_recomb_free (recomb);
 
-  if (g_test_trap_fork (0, G_TEST_TRAP_SILENCE_STDOUT | G_TEST_TRAP_SILENCE_STDERR))
-  {
-    nc_recomb_free (recomb);
-    exit (0);
-  }
-  g_test_trap_assert_failed ();
+  NCM_TEST_FREE (nc_recomb_free, recomb);
 
 #if !((GLIB_MAJOR_VERSION == 2) && (GLIB_MINOR_VERSION < 30))
   recomb = nc_recomb_new_from_name ("NcRecombSeager{'prec':<2e-7>}");
@@ -86,16 +73,10 @@ test_nc_recomb_seager_new ()
 
   g_assert (NC_IS_RECOMB (recomb));
   g_assert (NC_IS_RECOMB_SEAGER (recomb));
-  nc_recomb_free (recomb);
 
   ncm_assert_cmpdouble (recomb->prec, ==, 2e-7);
-  
-  if (g_test_trap_fork (0, G_TEST_TRAP_SILENCE_STDOUT | G_TEST_TRAP_SILENCE_STDERR))
-  {
-    nc_recomb_free (recomb);
-    exit (0);
-  }
-  g_test_trap_assert_failed ();  
+
+  NCM_TEST_FREE (nc_recomb_free, recomb);
 }
 
 void

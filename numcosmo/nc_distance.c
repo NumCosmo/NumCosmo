@@ -270,7 +270,7 @@ nc_distance_prepare (NcDistance *dist, NcHICosmo *cosmo)
   {
     NcmSpline *s = ncm_spline_cubic_notaknot_new ();
     dist->comoving_distance_spline =
-      ncm_ode_spline_new (s, dcddz, cosmo, 0.0, 0.0, dist->z_f);
+      ncm_ode_spline_new_full (s, dcddz, 0.0, 0.0, dist->z_f);
     ncm_spline_free (s);
   }
 

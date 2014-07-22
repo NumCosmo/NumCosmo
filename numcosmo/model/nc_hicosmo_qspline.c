@@ -51,10 +51,11 @@ G_DEFINE_TYPE (NcHICosmoQSpline, nc_hicosmo_qspline, NC_TYPE_HICOSMO);
 static void
 _nc_hicosmo_qspline_prepare (NcHICosmoQSpline *qs)
 {
-  if (ncm_model_ctrl_update (qs->qs_ctrl, NCM_MODEL (qs)))
+  if (!ncm_model_state_is_update (NCM_MODEL (qs)))
   {   
     ncm_spline_prepare (qs->q_z);
     ncm_ode_spline_prepare (qs->E2_z, qs);
+    ncm_model_state_set_update (NCM_MODEL (qs));
   }
   else
     return;
@@ -352,7 +353,6 @@ nc_hicosmo_qspline_init (NcHICosmoQSpline *qspline)
   qspline->z_f      = 0.0;
   qspline->q_z      = NULL;
   qspline->E2_z     = NULL;
-  qspline->qs_ctrl  = NULL;
 }
 
 static void
@@ -367,9 +367,7 @@ _nc_hicosmo_qspline_constructed (GObject *object)
     NcmVector *zv, *qv;
     guint i, qvi;
     guint qz_size = ncm_model_vparam_len (model, NC_HICOSMO_QSPLINE_Q);
-    
-    qspline->qs_ctrl = ncm_model_ctrl_new (NULL);
-    
+        
     qspline->nknots = qz_size;
     qspline->size = model_class->sparam_len + qspline->nknots;
 
@@ -397,10 +395,10 @@ _nc_hicosmo_qspline_constructed (GObject *object)
         qspline->q_z = ncm_spline_new (s, zv, qv, FALSE);
       else
         ncm_spline_set (qspline->q_z, zv, qv, FALSE);
-      
-      qspline->E2_z = ncm_ode_spline_new (s,
-                                          _nc_hicosmo_qspline_dE2dz, qspline,
-                                          1.0, 0.0, qspline->z_f);
+
+      qspline->E2_z = ncm_ode_spline_new_full (s,
+                                               _nc_hicosmo_qspline_dE2dz,
+                                               1.0, 0.0, qspline->z_f);
       ncm_spline_free (s);
       ncm_vector_free (zv);
       ncm_vector_free (qv);
@@ -464,7 +462,6 @@ nc_hicosmo_qspline_dispose (GObject *object)
 
   ncm_spline_clear (&qspline->q_z);
   ncm_ode_spline_clear (&qspline->E2_z);
-  ncm_model_ctrl_clear (&qspline->qs_ctrl);
 
   /* Chain up : end */
   G_OBJECT_CLASS (nc_hicosmo_qspline_parent_class)->dispose (object);

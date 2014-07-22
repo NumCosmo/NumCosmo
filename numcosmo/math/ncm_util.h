@@ -32,6 +32,7 @@
 #include <gsl/gsl_rng.h>
 #include <gsl/gsl_min.h>
 #ifndef NUMCOSMO_GIR_SCAN
+#include <complex.h>
 #include <gmp.h>
 #include <mpfr.h>
 #endif
@@ -62,6 +63,29 @@ void ncm_rational_coarce_double (gdouble x, mpq_t q);
 void ncm_mpz_inits (mpz_t z, ...);
 void ncm_mpz_clears (mpz_t z, ...);
 void _ncm_assertion_message_cmpdouble (const gchar *domain, const gchar *file, gint line, const gchar *func, const gchar *expr, gdouble arg1, const gchar *cmp, gdouble arg2);
+
+typedef struct _NcmComplex NcmComplex;
+
+struct _NcmComplex
+{
+  /*< private >*/
+#ifndef NUMCOSMO_GIR_SCAN
+  complex double z;
+#else
+  gdouble Rez, Imz;
+#endif /* NUMCOSMO_GIR_SCAN */
+};
+
+GType ncm_complex_get_type (void) G_GNUC_CONST;
+
+NcmComplex *ncm_complex_new ();
+NcmComplex *ncm_complex_ref (NcmComplex *c);
+NcmComplex *ncm_complex_dup (NcmComplex *c);
+void ncm_complex_free (NcmComplex *c);
+void ncm_complex_clear (NcmComplex **c);
+
+gdouble ncm_complex_Re (NcmComplex *c);
+gdouble ncm_complex_Im (NcmComplex *c);
 
 /* Macros */
 
@@ -167,6 +191,13 @@ G_STMT_START { \
 #define ncm_g_string_clear(s) G_STMT_START if (*(s) != NULL) { g_string_free (*(s), TRUE); *(s) = NULL; } G_STMT_END
 
 #define NCM_UNUSED(x) (void)(x)
+
+#define NCM_TEST_FREE(cmd,obj) \
+G_STMT_START { \
+  g_object_add_weak_pointer (G_OBJECT (obj), (gpointer *)&obj); \
+  cmd (obj); \
+  g_assert (obj == NULL); \
+} G_STMT_END
 
 #define NCM_TEST_FAIL(cmd) \
 G_STMT_START { \

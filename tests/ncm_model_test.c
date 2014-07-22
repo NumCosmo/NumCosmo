@@ -241,14 +241,10 @@ ncm_model_test_base_class_init (NcmModelClass* model_class)
   g_assert_cmpstr (model_class->name, ==, name);
   g_assert_cmpstr (model_class->nick, ==, nick);
 
+  NCM_TEST_FAIL (ncm_model_class_check_params_info (model_class));   
+
   for (i = 0; i < ci_sparam_len; i++)
   {
-    if (g_test_trap_fork (0, G_TEST_TRAP_SILENCE_STDOUT | G_TEST_TRAP_SILENCE_STDERR))
-    {
-      ncm_model_class_check_params_info (model_class);
-      exit (0);
-    }
-    g_test_trap_assert_failed ();
     ncm_model_class_set_sparam (model_class, model_class->parent_sparam_len + i, s_symbol[i], s_name[i],
                                 s_lb[i], s_ub[i], s_scale[i], s_abstol[i],
                                 s_defval[i], s_ftype[i]);
@@ -256,13 +252,6 @@ ncm_model_test_base_class_init (NcmModelClass* model_class)
 
   for (i = 0; i < ci_vparam_len; i++)
   {
-    if (g_test_trap_fork (0, G_TEST_TRAP_SILENCE_STDOUT | G_TEST_TRAP_SILENCE_STDERR))
-    {
-      ncm_model_class_check_params_info (model_class);
-      exit (0);
-    }
-    g_test_trap_assert_failed ();
-
     ncm_model_class_set_vparam (model_class, model_class->parent_vparam_len + i, v_len[i], v_symbol[i], v_name[i],
                                 v_lb[i], v_ub[i], v_scale[i], v_abstol[i],
                                 v_defval[i], v_ftype[i]);

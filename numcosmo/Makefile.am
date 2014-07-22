@@ -55,6 +55,7 @@ ncm_sources = \
 	math/ncm_mpsf_sbessel_int.c        \
 	math/ncm_mpsf_0F1.c                \
 	math/ncm_fftlog.c                  \
+	math/ncm_fftlog_j1pow2.c           \
 	math/ncm_sparam.c                  \
 	math/ncm_vparam.c                  \
 	math/ncm_model.c                   \
@@ -81,6 +82,7 @@ ncm_sources = \
 	math/ncm_fit_catalog.c             \
 	math/ncm_fit_mc.c                  \
 	math/ncm_fit_mcbs.c                \
+	math/ncm_fit_mcmc.c                \
 	math/ncm_lh_ratio1d.c              \
 	math/ncm_lh_ratio2d.c              \
 	math/poly.c               \
@@ -96,7 +98,7 @@ ncm_sources = \
 	math/grid_one.c           \
 	math/dividedifference.c   \
 	math/memory_pool.c        \
-	sphere/map.c              \
+	math/ncm_sphere_map.c     \
 	sphere/healpix.c
 
 ncm_headers = \
@@ -129,6 +131,7 @@ ncm_headers = \
 	math/ncm_mpsf_sbessel_int.h      \
 	math/ncm_mpsf_0F1.h              \
 	math/ncm_fftlog.h                \
+	math/ncm_fftlog_j1pow2.h         \
 	math/ncm_sparam.h                \
 	math/ncm_vparam.h                \
 	math/ncm_model.h                 \
@@ -155,6 +158,7 @@ ncm_headers = \
 	math/ncm_fit_catalog.h           \
 	math/ncm_fit_mc.h                \
 	math/ncm_fit_mcbs.h              \
+	math/ncm_fit_mcmc.h              \
 	math/ncm_lh_ratio1d.h            \
 	math/ncm_lh_ratio2d.h            \
 	math/cvode_util.h         \
@@ -170,7 +174,7 @@ ncm_headers = \
 	math/grid_one.h           \
 	math/dividedifference.h   \
 	math/memory_pool.h        \
-	sphere/map.h              \
+	math/ncm_sphere_map.h     \
 	sphere/healpix.h
 
 ncm_headers_internal = 
@@ -192,6 +196,7 @@ nc_headers = \
 	model/nc_hicosmo_qlinear.h    \
 	model/nc_hicosmo_qpw.h        \
 	model/nc_hicosmo_qspline.h    \
+	model/nc_hicosmo_qgrw.h       \
 	lss/nc_window.h               \
 	lss/nc_window_tophat.h        \
 	lss/nc_window_gaussian.h      \
@@ -233,27 +238,30 @@ nc_headers = \
         lss/nc_cluster_mass_benson_xray.h    \
         lss/nc_cluster_abundance.h           \
         lss/nc_cor_cluster_cmb_lens_limber.h \
-	nc_data_snia.h                  \
-	nc_data_dist_mu.h               \
-	nc_data_snia_cov.h              \
-	nc_data_hubble.h                \
-	nc_data_hubble_bao.h            \
-	nc_data_bao_rdv.h               \
-	nc_data_bao_dvdv.h              \
-	nc_data_bao_a.h                 \
-	nc_data_bao_dv.h                \
-	nc_data_bao.h                   \
-	nc_data_cmb_shift_param.h       \
-	nc_data_cmb_dist_priors.h       \
-	nc_data_cmb.h                   \
-	nc_data_cluster_ncount.h        \
-	nc_data_cluster_poisson.h       \
-	scalefactor.h                   \
-	model/quantum_gravity.h         \
-	perturbations/linear.h          \
-	perturbations/covariance.h      \
-	perturbations/linear_internal.h \
-	perturbations/hydrodyn_adiabatic.h
+	nc_data_snia.h                       \
+	nc_data_dist_mu.h                    \
+	nc_data_snia_cov.h                   \
+	nc_data_hubble.h                     \
+	nc_data_hubble_bao.h                 \
+	nc_data_bao_rdv.h                    \
+	nc_data_bao_dvdv.h                   \
+	nc_data_bao_a.h                      \
+	nc_data_bao_dv.h                     \
+	nc_data_bao.h                        \
+	nc_data_cmb_shift_param.h            \
+	nc_data_cmb_dist_priors.h            \
+	nc_data_cmb.h                        \
+	nc_data_cluster_ncount.h             \
+	nc_data_cluster_poisson.h            \
+	scalefactor.h                        \
+	model/quantum_gravity.h              \
+	perturbations/nc_hipert.h            \
+	perturbations/nc_hipert_iadiab.h     \
+	perturbations/nc_hipert_adiab.h      \
+	perturbations/nc_hipert_two_fluids.h \
+	perturbations/linear.h               \
+	perturbations/covariance.h           \
+	perturbations/linear_internal.h
 
 nc_sources = \
 	nc_hicosmo.c                 \
@@ -271,7 +279,8 @@ nc_sources = \
 	model/nc_hicosmo_qconst.c    \
 	model/nc_hicosmo_qlinear.c   \
 	model/nc_hicosmo_qpw.c       \
-	model/nc_hicosmo_qspline.c    \
+	model/nc_hicosmo_qspline.c   \
+	model/nc_hicosmo_qgrw.c      \
 	lss/nc_window.c              \
 	lss/nc_window_tophat.c       \
 	lss/nc_window_gaussian.c     \
@@ -313,29 +322,32 @@ nc_sources = \
 	lss/nc_cluster_mass_benson_xray.c      \
 	lss/nc_cluster_abundance.c             \
 	lss/nc_cor_cluster_cmb_lens_limber.c   \
-	nc_data_snia.c               \
-	nc_data_dist_mu.c            \
-	nc_data_snia_cov.c           \
-	nc_data_hubble.c             \
-	nc_data_hubble_bao.c         \
-	nc_data_bao_rdv.c            \
-	nc_data_bao_dvdv.c           \
-	nc_data_bao_a.c              \
-	nc_data_bao_dv.c             \
-	nc_data_bao.c                \
-	nc_data_cmb_shift_param.c    \
-	nc_data_cmb_dist_priors.c    \
-	nc_data_cmb.c                \
-	nc_data_cluster_ncount.c     \
-	nc_data_cluster_poisson.c    \
-	scalefactor.c                   \
-	model/quantum_gravity.c         \
-	perturbations/linear.c          \
-	perturbations/covariance.c      \
-	perturbations/linear_cvodes.c   \
-	perturbations/linear_gsl_ode.c  \
-	perturbations/linear_gsl_ode2.c \
-	perturbations/hydrodyn_adiabatic.c
+	nc_data_snia.c                         \
+	nc_data_dist_mu.c                      \
+	nc_data_snia_cov.c                     \
+	nc_data_hubble.c                       \
+	nc_data_hubble_bao.c                   \
+	nc_data_bao_rdv.c                      \
+	nc_data_bao_dvdv.c                     \
+	nc_data_bao_a.c                        \
+	nc_data_bao_dv.c                       \
+	nc_data_bao.c                          \
+	nc_data_cmb_shift_param.c              \
+	nc_data_cmb_dist_priors.c              \
+	nc_data_cmb.c                          \
+	nc_data_cluster_ncount.c               \
+	nc_data_cluster_poisson.c              \
+	scalefactor.c                          \
+	model/quantum_gravity.c                \
+	perturbations/nc_hipert.c              \
+	perturbations/nc_hipert_iadiab.c       \
+	perturbations/nc_hipert_adiab.c        \
+	perturbations/nc_hipert_two_fluids.c   \
+	perturbations/linear.c                 \
+	perturbations/covariance.c             \
+	perturbations/linear_cvodes.c          \
+	perturbations/linear_gsl_ode.c         \
+	perturbations/linear_gsl_ode2.c
 
 libnumcosmo_la_LDFLAGS = -version-info $(LT_CURRENT):$(LT_REVISION):$(LT_AGE)
 

@@ -41,6 +41,14 @@
 #include <numcosmo/nc_recomb.h>
 #include <numcosmo/nc_recomb_seager.h>
 
+/* Perturbations */
+#include <numcosmo/perturbations/linear.h>
+#include <numcosmo/perturbations/covariance.h>
+#include <numcosmo/perturbations/nc_hipert.h>
+#include <numcosmo/perturbations/nc_hipert_iadiab.h>
+#include <numcosmo/perturbations/nc_hipert_adiab.h>
+#include <numcosmo/perturbations/nc_hipert_two_fluids.h>
+
 /* Model implementations */
 #include <numcosmo/model/nc_hicosmo_de.h>
 #include <numcosmo/model/nc_hicosmo_de_linder.h>
@@ -52,12 +60,8 @@
 #include <numcosmo/model/nc_hicosmo_qlinear.h>
 #include <numcosmo/model/nc_hicosmo_qpw.h>
 #include <numcosmo/model/nc_hicosmo_qspline.h>
+#include <numcosmo/model/nc_hicosmo_qgrw.h>
 #include <numcosmo/model/quantum_gravity.h>
-
-/* Perturbations */
-#include <numcosmo/perturbations/linear.h>
-#include <numcosmo/perturbations/covariance.h>
-#include <numcosmo/perturbations/hydrodyn_adiabatic.h>
 
 /* Large Scale Structure / Structure Formation */
 #include <numcosmo/lss/nc_window.h>

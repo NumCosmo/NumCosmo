@@ -65,6 +65,7 @@ struct _NcmModel
   GHashTable *sparams_name_id;
   guint total_len;
   guint64 pkey;
+  guint64 skey;
 };
 
 struct _NcmModelClass
@@ -89,6 +90,7 @@ struct _NcmModelClass
 
 typedef gdouble (*NcmModelFunc0) (NcmModel *model);
 typedef gdouble (*NcmModelFunc1) (NcmModel *model, const gdouble x);
+typedef gdouble (*NcmModelFunc2) (NcmModel *model, const gdouble x, const gdouble y);
 
 GType ncm_model_get_type (void) G_GNUC_CONST;
 
@@ -109,6 +111,9 @@ G_INLINE_FUNC NcmModelID ncm_model_id (NcmModel *model);
 G_INLINE_FUNC NcmModelID ncm_model_id_by_type (GType model_type);
 G_INLINE_FUNC guint64 ncm_model_impl (NcmModel *model);
 G_INLINE_FUNC guint ncm_model_len (NcmModel *model);
+G_INLINE_FUNC gboolean ncm_model_state_is_update (NcmModel *model);
+G_INLINE_FUNC void ncm_model_state_set_update (NcmModel *model);
+
 G_INLINE_FUNC guint ncm_model_sparam_len (NcmModel *model);
 G_INLINE_FUNC guint ncm_model_vparam_array_len (NcmModel *model);
 G_INLINE_FUNC guint ncm_model_vparam_index (NcmModel *model, guint n, guint i);
@@ -201,6 +206,15 @@ G_INLINE_FUNC gdouble ns_name##_##name (NsName *m, const gdouble x) \
   return NS_NAME##_GET_CLASS (m)->name (NCM_MODEL (m), x); \
 }
 
+/*
+ * Model functions 2d call
+ */
+#define NCM_MODEL_FUNC2_IMPL(NS_NAME,NsName,ns_name,name) \
+G_INLINE_FUNC gdouble ns_name##_##name (NsName *m, const gdouble x, const gdouble y) \
+{ \
+  return NS_NAME##_GET_CLASS (m)->name (NCM_MODEL (m), x, y); \
+}
+
 G_END_DECLS
 
 #endif /* _NCM_MODEL_H_ */
@@ -250,6 +264,18 @@ G_INLINE_FUNC guint
 ncm_model_len (NcmModel *model)
 {
   return ncm_vector_len (model->params);
+}
+
+G_INLINE_FUNC gboolean
+ncm_model_state_is_update (NcmModel *model)
+{
+  return model->pkey == model->skey;
+}
+
+G_INLINE_FUNC void
+ncm_model_state_set_update (NcmModel *model)
+{
+  model->skey = model->pkey;
 }
 
 G_INLINE_FUNC guint

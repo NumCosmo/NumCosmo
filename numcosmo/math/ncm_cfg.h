@@ -41,10 +41,6 @@
 
 G_BEGIN_DECLS
 
-#ifndef __STDC_IEC_559__
-#error "Error: "PACKAGE_NAME" requires IEEE 754 floating point."
-#endif /* __STDC_IEC_559__ */
-
 void ncm_cfg_init (void);
 void ncm_cfg_enable_gsl_err_handler (void);
 void ncm_cfg_register_obj (GType obj);

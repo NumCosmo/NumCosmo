@@ -48,6 +48,8 @@
 #include "math/ncm_model_ctrl.h"
 #include "math/ncm_reparam_linear.h"
 #include "math/ncm_stats_vec.h"
+#include "nc_hicosmo.h"
+#include "perturbations/nc_hipert_iadiab.h"
 #include "model/nc_hicosmo_qconst.h"
 #include "model/nc_hicosmo_qlinear.h"
 #include "model/nc_hicosmo_qpw.h"
@@ -57,6 +59,7 @@
 #include "model/nc_hicosmo_de_linder.h"
 #include "model/nc_hicosmo_de_pad.h"
 #include "model/nc_hicosmo_de_qe.h"
+#include "model/nc_hicosmo_qgrw.h"
 #include "lss/nc_window_tophat.h"
 #include "lss/nc_window_gaussian.h"
 #include "lss/nc_growth_func.h"
@@ -194,6 +197,7 @@ ncm_cfg_init (void)
   ncm_cfg_register_obj (NC_TYPE_HICOSMO_DE_LINDER);
   ncm_cfg_register_obj (NC_TYPE_HICOSMO_DE_PAD);
   ncm_cfg_register_obj (NC_TYPE_HICOSMO_DE_QE);
+  ncm_cfg_register_obj (NC_TYPE_HICOSMO_QGRW);
 
   ncm_cfg_register_obj (NC_TYPE_WINDOW);
   ncm_cfg_register_obj (NC_TYPE_WINDOW_TOPHAT);

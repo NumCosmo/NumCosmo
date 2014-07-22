@@ -122,6 +122,20 @@ void test_ncm_spline_eval_deriv2 (void);
 void test_ncm_spline_eval_int (void);
 void test_ncm_spline_free_empty (void);
 
+void test_ncm_spline_invalid_vector_sizes (void);
+void test_ncm_spline_invalid_min_vector_sizes (void);
+void test_ncm_spline_invalid_x_vector (void);
+void test_ncm_spline_invalid_y_vector (void);
+void test_ncm_spline_invalid_xy_vector (void);
+
+void test_ncm_spline_invalid_array_sizes (void);
+void test_ncm_spline_invalid_min_array_sizes (void);
+void test_ncm_spline_invalid_x_array (void);
+void test_ncm_spline_invalid_y_array (void);
+void test_ncm_spline_invalid_xy_array (void);
+
+void test_ncm_spline_traps (void);
+
 NcmSpline *s_base = NULL;
 gsl_function F;
 
@@ -132,7 +146,20 @@ main (gint argc, gchar *argv[])
   ncm_cfg_init ();
   ncm_cfg_enable_gsl_err_handler ();
 
+  g_test_add_func ("/numcosmo/ncm_spline/vector/invalid/sizes/subprocess", &test_ncm_spline_invalid_vector_sizes);
+  g_test_add_func ("/numcosmo/ncm_spline/vector/invalid/min_sizes/subprocess", &test_ncm_spline_invalid_min_vector_sizes);
+  g_test_add_func ("/numcosmo/ncm_spline/vector/invalid/x/subprocess", &test_ncm_spline_invalid_x_vector);
+  g_test_add_func ("/numcosmo/ncm_spline/vector/invalid/y/subprocess", &test_ncm_spline_invalid_y_vector);
+  g_test_add_func ("/numcosmo/ncm_spline/vector/invalid/xy/subprocess", &test_ncm_spline_invalid_xy_vector);
+
+  g_test_add_func ("/numcosmo/ncm_spline/array/invalid/sizes/subprocess", &test_ncm_spline_invalid_array_sizes);
+  g_test_add_func ("/numcosmo/ncm_spline/array/invalid/min_sizes/subprocess", &test_ncm_spline_invalid_min_array_sizes);
+  g_test_add_func ("/numcosmo/ncm_spline/array/invalid/x/subprocess", &test_ncm_spline_invalid_x_array);
+  g_test_add_func ("/numcosmo/ncm_spline/array/invalid/y/subprocess", &test_ncm_spline_invalid_y_array);
+  g_test_add_func ("/numcosmo/ncm_spline/array/invalid/xy/subprocess", &test_ncm_spline_invalid_xy_array);
+
   g_test_add_func ("/numcosmo/ncm_spline_cubic_notaknot/new_empty", &test_ncm_spline_cubic_notaknot_new_empty);
+  g_test_add_func ("/numcosmo/ncm_spline_cubic_notaknot/traps", &test_ncm_spline_traps);
   g_test_add_func ("/numcosmo/ncm_spline_cubic_notaknot/new", &test_ncm_spline_new);
   g_test_add_func ("/numcosmo/ncm_spline_cubic_notaknot/new_array", &test_ncm_spline_new_array);
   g_test_add_func ("/numcosmo/ncm_spline_cubic_notaknot/new_data", &test_ncm_spline_new_data);
@@ -145,6 +172,7 @@ main (gint argc, gchar *argv[])
   g_test_add_func ("/numcosmo/ncm_spline_cubic_notaknot/free_empty", &test_ncm_spline_free_empty);
 
   g_test_add_func ("/numcosmo/ncm_spline_gsl/cspline/new_empty", &test_ncm_spline_gsl_cspline_new_empty);
+  g_test_add_func ("/numcosmo/ncm_spline_gsl/cspline/traps", &test_ncm_spline_traps);
   g_test_add_func ("/numcosmo/ncm_spline_gsl/cspline/new", &test_ncm_spline_new);
   g_test_add_func ("/numcosmo/ncm_spline_gsl/cspline/new_array", &test_ncm_spline_new_array);
   g_test_add_func ("/numcosmo/ncm_spline_gsl/cspline/new_data", &test_ncm_spline_new_data);
@@ -152,10 +180,9 @@ main (gint argc, gchar *argv[])
   g_test_add_func ("/numcosmo/ncm_spline_gsl/cspline/copy", &test_ncm_spline_copy);
   g_test_add_func ("/numcosmo/ncm_spline_gsl/cspline/eval", &test_ncm_spline_eval);
   g_test_add_func ("/numcosmo/ncm_spline_gsl/cspline/eval_deriv", &test_ncm_spline_eval_deriv);
-  //g_test_add_func ("/numcosmo/ncm_spline_gsl/cspline/eval_deriv2", &test_ncm_spline_eval_deriv2);
   g_test_add_func ("/numcosmo/ncm_spline_gsl/cspline/eval_int", &test_ncm_spline_eval_int);
   g_test_add_func ("/numcosmo/ncm_spline_gsl/cspline/free_empty", &test_ncm_spline_free_empty);
-
+  
   g_test_run ();
 }
 
@@ -182,9 +209,7 @@ test_ncm_spline_gsl_cspline_new_empty (void)
 void
 test_ncm_spline_free_empty (void)
 {
-  ncm_spline_free (s_base);
-  NCM_TEST_FAIL (ncm_spline_free (s_base));
-  s_base = NULL;
+  NCM_TEST_FREE (ncm_spline_free, s_base);
 }
 
 void
@@ -196,46 +221,6 @@ test_ncm_spline_new_sanity (NcmSpline *s)
 void
 test_ncm_spline_new (void)
 {
-  NCM_TEST_FAIL (G_STMT_START
-  {
-    NcmVector *x = ncm_vector_new (_NCM_SPLINE_TEST_NKNOTS);
-    NcmVector *y = ncm_vector_new (_NCM_SPLINE_TEST_NKNOTS + 1);
-    NcmSpline *s = ncm_spline_new (s_base, x, y, FALSE);
-    ncm_spline_free (s);
-  } G_STMT_END);
-
-  NCM_TEST_FAIL (G_STMT_START
-  {
-    NcmVector *x = ncm_vector_new (ncm_spline_min_size (s_base) - 1);
-    NcmVector *y = ncm_vector_new (ncm_spline_min_size (s_base) - 1);
-    NcmSpline *s = ncm_spline_new (s_base, x, y, FALSE);
-    ncm_spline_free (s);
-  } G_STMT_END);
-
-  NCM_TEST_FAIL (G_STMT_START
-  {
-    NcmVector *x = NULL;
-    NcmVector *y = ncm_vector_new (_NCM_SPLINE_TEST_NKNOTS);
-    NcmSpline *s = ncm_spline_new (s_base, x, y, FALSE);
-    ncm_spline_free (s);
-  } G_STMT_END);
-
-  NCM_TEST_FAIL (G_STMT_START
-  {
-    NcmVector *x = ncm_vector_new (_NCM_SPLINE_TEST_NKNOTS);
-    NcmVector *y = NULL;
-    NcmSpline *s = ncm_spline_new (s_base, x, y, FALSE);
-    ncm_spline_free (s);
-  } G_STMT_END);
-
-  NCM_TEST_FAIL (G_STMT_START
-  {
-    NcmVector *x = NULL;
-    NcmVector *y = NULL;
-    NcmSpline *s = ncm_spline_new (s_base, x, y, FALSE);
-    ncm_spline_free (s);
-  } G_STMT_END);
-
   {
     NcmVector *x = ncm_vector_new (_NCM_SPLINE_TEST_NKNOTS);
     NcmVector *y = ncm_vector_new (_NCM_SPLINE_TEST_NKNOTS);
@@ -271,52 +256,6 @@ test_ncm_spline_new (void)
 void
 test_ncm_spline_new_array (void)
 {
-  NCM_TEST_FAIL (G_STMT_START
-  {
-    GArray *x = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), _NCM_SPLINE_TEST_NKNOTS);
-    GArray *y = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), _NCM_SPLINE_TEST_NKNOTS + 1);
-    g_array_set_size (x, _NCM_SPLINE_TEST_NKNOTS);
-    g_array_set_size (x, _NCM_SPLINE_TEST_NKNOTS + 1);
-    NcmSpline *s = ncm_spline_new_array (s_base, x, y, FALSE);
-    ncm_spline_free (s);
-  } G_STMT_END);
-
-  NCM_TEST_FAIL (G_STMT_START
-  {
-    GArray *x = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), _NCM_SPLINE_TEST_NKNOTS);
-    GArray *y = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), _NCM_SPLINE_TEST_NKNOTS);
-    g_array_set_size (x, ncm_spline_min_size (s_base) - 1);
-    g_array_set_size (y, ncm_spline_min_size (s_base) - 1);
-    NcmSpline *s = ncm_spline_new_array (s_base, x, y, FALSE);
-    ncm_spline_free (s);
-  } G_STMT_END);
-
-  NCM_TEST_FAIL (G_STMT_START
-  {
-    GArray *x = NULL;
-    GArray *y = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), _NCM_SPLINE_TEST_NKNOTS);
-    g_array_set_size (y, _NCM_SPLINE_TEST_NKNOTS);
-    NcmSpline *s = ncm_spline_new_array (s_base, x, y, FALSE);
-    ncm_spline_free (s);
-  } G_STMT_END);
-
-  NCM_TEST_FAIL (G_STMT_START
-  {
-    GArray *x = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), _NCM_SPLINE_TEST_NKNOTS);
-    GArray *y = NULL;
-    g_array_set_size (x, _NCM_SPLINE_TEST_NKNOTS);
-    NcmSpline *s = ncm_spline_new_array (s_base, x, y, FALSE);
-    ncm_spline_free (s);
-  } G_STMT_END);
-
-  NCM_TEST_FAIL (G_STMT_START
-  {
-    GArray *x = NULL;
-    GArray *y = NULL;
-    NcmSpline *s = ncm_spline_new_array (s_base, x, y, FALSE);
-    ncm_spline_free (s);
-  } G_STMT_END);
-
   {
     GArray *x = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), _NCM_SPLINE_TEST_NKNOTS);
     GArray *y = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), _NCM_SPLINE_TEST_NKNOTS);
@@ -678,4 +617,134 @@ test_ncm_spline_eval_int (void)
     }
     ncm_spline_free (s);
   }
+}
+
+void
+test_ncm_spline_invalid_vector_sizes (void)
+{
+  NcmVector *x = ncm_vector_new (_NCM_SPLINE_TEST_NKNOTS);
+  NcmVector *y = ncm_vector_new (_NCM_SPLINE_TEST_NKNOTS + 1);
+  NcmSpline *s = ncm_spline_new (s_base, x, y, FALSE);
+  ncm_spline_free (s);
+}
+
+void
+test_ncm_spline_invalid_min_vector_sizes (void)
+{
+  NcmVector *x = ncm_vector_new (ncm_spline_min_size (s_base) - 1);
+  NcmVector *y = ncm_vector_new (ncm_spline_min_size (s_base) - 1);
+  NcmSpline *s = ncm_spline_new (s_base, x, y, FALSE);
+  ncm_spline_free (s);
+}
+
+void
+test_ncm_spline_invalid_x_vector (void)
+{
+  NcmVector *x = NULL;
+  NcmVector *y = ncm_vector_new (_NCM_SPLINE_TEST_NKNOTS);
+  NcmSpline *s = ncm_spline_new (s_base, x, y, FALSE);
+  ncm_spline_free (s);
+}
+
+void
+test_ncm_spline_invalid_y_vector (void)
+{
+  NcmVector *x = ncm_vector_new (_NCM_SPLINE_TEST_NKNOTS);
+  NcmVector *y = NULL;
+  NcmSpline *s = ncm_spline_new (s_base, x, y, FALSE);
+  ncm_spline_free (s);
+}
+
+void
+test_ncm_spline_invalid_xy_vector (void)
+{
+  NcmVector *x = NULL;
+  NcmVector *y = NULL;
+  NcmSpline *s = ncm_spline_new (s_base, x, y, FALSE);
+  ncm_spline_free (s);
+}
+
+void
+test_ncm_spline_invalid_array_sizes (void)
+{
+  GArray *x = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), _NCM_SPLINE_TEST_NKNOTS);
+  GArray *y = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), _NCM_SPLINE_TEST_NKNOTS + 1);
+  g_array_set_size (x, _NCM_SPLINE_TEST_NKNOTS);
+  g_array_set_size (x, _NCM_SPLINE_TEST_NKNOTS + 1);
+  NcmSpline *s = ncm_spline_new_array (s_base, x, y, FALSE);
+  ncm_spline_free (s);
+}
+
+void
+test_ncm_spline_invalid_min_array_sizes (void)
+{
+  GArray *x = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), _NCM_SPLINE_TEST_NKNOTS);
+  GArray *y = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), _NCM_SPLINE_TEST_NKNOTS);
+  g_array_set_size (x, ncm_spline_min_size (s_base) - 1);
+  g_array_set_size (y, ncm_spline_min_size (s_base) - 1);
+  NcmSpline *s = ncm_spline_new_array (s_base, x, y, FALSE);
+  ncm_spline_free (s);
+}
+
+void
+test_ncm_spline_invalid_x_array (void)
+{
+  GArray *x = NULL;
+  GArray *y = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), _NCM_SPLINE_TEST_NKNOTS);
+  g_array_set_size (y, _NCM_SPLINE_TEST_NKNOTS);
+  NcmSpline *s = ncm_spline_new_array (s_base, x, y, FALSE);
+  ncm_spline_free (s);
+}
+
+void
+test_ncm_spline_invalid_y_array (void)
+{
+  GArray *x = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), _NCM_SPLINE_TEST_NKNOTS);
+  GArray *y = NULL;
+  g_array_set_size (x, _NCM_SPLINE_TEST_NKNOTS);
+  NcmSpline *s = ncm_spline_new_array (s_base, x, y, FALSE);
+  ncm_spline_free (s);
+}
+
+void
+test_ncm_spline_invalid_xy_array (void)
+{
+  GArray *x = NULL;
+  GArray *y = NULL;
+  NcmSpline *s = ncm_spline_new_array (s_base, x, y, FALSE);
+  ncm_spline_free (s);
+}
+
+void 
+test_ncm_spline_traps (void)
+{
+  g_test_trap_subprocess ("/numcosmo/ncm_spline/vector/invalid/sizes/subprocess", 0, 0);
+  g_test_trap_assert_failed ();
+
+  g_test_trap_subprocess ("/numcosmo/ncm_spline/vector/invalid/min_sizes/subprocess", 0, 0);
+  g_test_trap_assert_failed ();
+  
+  g_test_trap_subprocess ("/numcosmo/ncm_spline/vector/invalid/x/subprocess", 0, 0);
+  g_test_trap_assert_failed ();
+
+  g_test_trap_subprocess ("/numcosmo/ncm_spline/vector/invalid/y/subprocess", 0, 0);
+  g_test_trap_assert_failed ();
+
+  g_test_trap_subprocess ("/numcosmo/ncm_spline/vector/invalid/xy/subprocess", 0, 0);
+  g_test_trap_assert_failed ();
+
+  g_test_trap_subprocess ("/numcosmo/ncm_spline/array/invalid/sizes/subprocess", 0, 0);
+  g_test_trap_assert_failed ();
+
+  g_test_trap_subprocess ("/numcosmo/ncm_spline/array/invalid/min_sizes/subprocess", 0, 0);
+  g_test_trap_assert_failed ();
+  
+  g_test_trap_subprocess ("/numcosmo/ncm_spline/array/invalid/x/subprocess", 0, 0);
+  g_test_trap_assert_failed ();
+
+  g_test_trap_subprocess ("/numcosmo/ncm_spline/array/invalid/y/subprocess", 0, 0);
+  g_test_trap_assert_failed ();
+
+  g_test_trap_subprocess ("/numcosmo/ncm_spline/array/invalid/xy/subprocess", 0, 0);
+  g_test_trap_assert_failed ();
 }

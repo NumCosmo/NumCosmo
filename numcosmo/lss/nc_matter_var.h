@@ -32,6 +32,7 @@
 #include <numcosmo/nc_hicosmo.h>
 #include <numcosmo/math/ncm_model_ctrl.h>
 #include <numcosmo/math/ncm_spline.h>
+#include <numcosmo/math/ncm_fftlog_j1pow2.h>
 #include <numcosmo/lss/nc_window.h>
 #include <numcosmo/lss/nc_transfer_func.h>
 
@@ -75,6 +76,7 @@ struct _NcMatterVar
   NcmSpline *integrand_overw2_spline; 
   NcmSpline *sigma2_over_growth; 
   NcmSpline *deriv_sigma2_over_growth;
+  NcmFftlog *fftlog;
   NcmModelCtrl *ctrl;
 };
 

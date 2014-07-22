@@ -76,13 +76,7 @@ test_ncm_data_gauss_cov_test_new (TestNcmDataGaussCovTest *test, gconstpointer p
 void
 test_ncm_data_gauss_cov_test_free (TestNcmDataGaussCovTest *test, gconstpointer pdata)
 {
-  ncm_data_free (test->data);
-  if (g_test_trap_fork (0, G_TEST_TRAP_SILENCE_STDOUT | G_TEST_TRAP_SILENCE_STDERR))
-  {
-    ncm_data_free (test->data);
-    exit (0);
-  }
-  g_test_trap_assert_failed ();
+  NCM_TEST_FREE (ncm_data_free, test->data);
 }
 
 void

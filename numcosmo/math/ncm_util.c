@@ -870,3 +870,91 @@ _ncm_assertion_message_cmpdouble (const gchar *domain, const gchar *file, gint l
   g_assertion_message (domain, file, line, func, s);
   g_free (s);
 }
+
+G_DEFINE_BOXED_TYPE (NcmComplex, ncm_complex, ncm_complex_dup, ncm_complex_free);
+
+/**
+ * ncm_complex_new:
+ * 
+ * Allocates a new complex number.
+ * 
+ * Returns: (transfer full): a new #NcmComplex.
+ */
+NcmComplex *
+ncm_complex_new ()
+{
+  return g_new0 (NcmComplex, 1);  
+}
+
+/**
+ * ncm_complex_dup:
+ * @c: a #NcmComplex.
+ * 
+ * Allocates a new complex number and copy the contents of @c to it.
+ * 
+ * Returns: (transfer full): a new #NcmComplex.
+ */
+NcmComplex *
+ncm_complex_dup (NcmComplex *c)
+{
+  NcmComplex *cc = ncm_complex_new ();
+printf ("Nhaca %p\n", c);
+  cc->z = c->z;
+  return cc;
+}
+
+/**
+ * ncm_complex_free:
+ * @c: a #NcmComplex.
+ * 
+ * Frees @c, it should not be used on a statically allocated NcmComplex.
+ * 
+ */
+void 
+ncm_complex_free (NcmComplex *c)
+{
+printf ("Nhoco %p\n", c);
+  g_free (c);
+}
+
+/**
+ * ncm_complex_clear:
+ * @c: a #NcmComplex.
+ * 
+ * Frees *@c and sets *@c to NULL, it should not be used on a statically allocated NcmComplex.
+ * 
+ */
+void 
+ncm_complex_clear (NcmComplex **c)
+{
+  g_clear_pointer (c, g_free);
+}
+
+/**
+ * ncm_complex_Re:
+ * @c: a #NcmComplex.
+ * 
+ * Returns the real part of @c.
+ * 
+ * Returns: Re$(c)$.
+ */
+gdouble 
+ncm_complex_Re (NcmComplex *c)
+{
+  return creal (c->z);
+}
+
+/**
+ * ncm_complex_Im:
+ * @c: a #NcmComplex.
+ * 
+ * Returns the imaginary part of @c.
+ * 
+ * Returns: Im$(c)$.
+ */
+gdouble 
+ncm_complex_Im (NcmComplex *c)
+{
+  printf ("Huga %p\n", c);
+  return cimag (c->z);
+}

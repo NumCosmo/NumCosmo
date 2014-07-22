@@ -258,14 +258,7 @@ test_ncm_spline2d_spline_new_empty (void)
 void
 test_ncm_spline2d_free_empty (void)
 {
-  ncm_spline2d_free (s2d_base);
-  if (g_test_trap_fork (0, G_TEST_TRAP_SILENCE_STDOUT | G_TEST_TRAP_SILENCE_STDERR))
-  {
-    ncm_spline2d_free (s2d_base);
-    exit (0);
-  }
-  g_test_trap_assert_failed ();
-  s2d_base = NULL;
+  NCM_TEST_FREE (ncm_spline2d_free, s2d_base);
 }
 
 void
@@ -287,95 +280,6 @@ test_ncm_spline2d_new (void)
     g_assert (s2d->init == FALSE);
     ncm_spline2d_free (s2d);
   }
-
-  if (g_test_trap_fork (0, G_TEST_TRAP_SILENCE_STDOUT | G_TEST_TRAP_SILENCE_STDERR))
-  {
-    NcmVector *x = ncm_vector_new (_NCM_SPLINE2D_TEST_NKNOTS_X);
-    NcmVector *y = ncm_vector_new (_NCM_SPLINE2D_TEST_NKNOTS_Y);
-    NcmMatrix *z = ncm_matrix_new (_NCM_SPLINE2D_TEST_NKNOTS_Y + 1, _NCM_SPLINE2D_TEST_NKNOTS_X);
-    NcmSpline2d *s2d = ncm_spline2d_new (s2d_base, x, y, z, FALSE);
-
-    ncm_spline2d_free (s2d);
-    exit (0);
-  }
-  g_test_trap_assert_failed ();
-
-  if (g_test_trap_fork (0, G_TEST_TRAP_SILENCE_STDOUT | G_TEST_TRAP_SILENCE_STDERR))
-  {
-    NcmVector *x = ncm_vector_new (_NCM_SPLINE2D_TEST_NKNOTS_X);
-    NcmVector *y = ncm_vector_new (_NCM_SPLINE2D_TEST_NKNOTS_Y);
-    NcmMatrix *z = ncm_matrix_new (_NCM_SPLINE2D_TEST_NKNOTS_Y, _NCM_SPLINE2D_TEST_NKNOTS_X + 1);
-    NcmSpline2d *s2d = ncm_spline2d_new (s2d_base, x, y, z, FALSE);
-    ncm_spline2d_free (s2d);
-    exit (0);
-  }
-  g_test_trap_assert_failed ();
-
-  if (g_test_trap_fork (0, G_TEST_TRAP_SILENCE_STDOUT | G_TEST_TRAP_SILENCE_STDERR))
-  {
-    NcmVector *x = ncm_vector_new (ncm_spline2d_min_size (s2d_base) -1);
-    NcmVector *y = ncm_vector_new (_NCM_SPLINE2D_TEST_NKNOTS_Y);
-    NcmMatrix *z = ncm_matrix_new (_NCM_SPLINE2D_TEST_NKNOTS_Y, ncm_spline2d_min_size (s2d_base) -1);
-    NcmSpline2d *s2d = ncm_spline2d_new (s2d_base, x, y, z, FALSE);
-    ncm_spline2d_free (s2d);
-    exit (0);
-  }
-  g_test_trap_assert_failed ();
-
-  if (g_test_trap_fork (0, G_TEST_TRAP_SILENCE_STDOUT | G_TEST_TRAP_SILENCE_STDERR))
-  {
-    NcmVector *x = ncm_vector_new (_NCM_SPLINE2D_TEST_NKNOTS_X);
-    NcmVector *y = ncm_vector_new (ncm_spline2d_min_size (s2d_base) -1);
-    NcmMatrix *z = ncm_matrix_new (ncm_spline2d_min_size (s2d_base) -1, _NCM_SPLINE2D_TEST_NKNOTS_X);
-    NcmSpline2d *s2d = ncm_spline2d_new (s2d_base, x, y, z, FALSE);
-    ncm_spline2d_free (s2d);
-    exit (0);
-  }
-  g_test_trap_assert_failed ();
-
-  if (g_test_trap_fork (0, G_TEST_TRAP_SILENCE_STDOUT | G_TEST_TRAP_SILENCE_STDERR))
-  {
-    NcmVector *x = NULL;
-    NcmVector *y = ncm_vector_new (_NCM_SPLINE2D_TEST_NKNOTS_Y);
-    NcmMatrix *z = ncm_matrix_new (_NCM_SPLINE2D_TEST_NKNOTS_Y, _NCM_SPLINE2D_TEST_NKNOTS_X);
-    NcmSpline2d *s2d = ncm_spline2d_new (s2d_base, x, y, z, FALSE);
-    ncm_spline2d_free (s2d);
-    exit (0);
-  }
-  g_test_trap_assert_failed ();
-
-  if (g_test_trap_fork (0, G_TEST_TRAP_SILENCE_STDOUT | G_TEST_TRAP_SILENCE_STDERR))
-  {
-    NcmVector *x = ncm_vector_new (_NCM_SPLINE2D_TEST_NKNOTS_X);
-    NcmVector *y = NULL;
-    NcmMatrix *z = ncm_matrix_new (_NCM_SPLINE2D_TEST_NKNOTS_Y, _NCM_SPLINE2D_TEST_NKNOTS_X);
-    NcmSpline2d *s2d = ncm_spline2d_new (s2d_base, x, y, z, FALSE);
-    ncm_spline2d_free (s2d);
-    exit (0);
-  }
-  g_test_trap_assert_failed ();
-
-  if (g_test_trap_fork (0, G_TEST_TRAP_SILENCE_STDOUT | G_TEST_TRAP_SILENCE_STDERR))
-  {
-    NcmVector *x = ncm_vector_new (_NCM_SPLINE2D_TEST_NKNOTS_X);
-    NcmVector *y = ncm_vector_new (_NCM_SPLINE2D_TEST_NKNOTS_Y);
-    NcmMatrix *z = NULL;
-    NcmSpline2d *s2d = ncm_spline2d_new (s2d_base, x, y, z, FALSE);
-    ncm_spline2d_free (s2d);
-    exit (0);
-  }
-  g_test_trap_assert_failed ();
-
-  if (g_test_trap_fork (0, G_TEST_TRAP_SILENCE_STDOUT | G_TEST_TRAP_SILENCE_STDERR))
-  {
-    NcmVector *x = NULL;
-    NcmVector *y = NULL;
-    NcmMatrix *z = NULL;
-    NcmSpline2d *s2d = ncm_spline2d_new (s2d_base, x, y, z, FALSE);
-    ncm_spline2d_free (s2d);
-    exit (0);
-  }
-  g_test_trap_assert_failed ();
 
   {
     NcmVector *x = ncm_vector_new (_NCM_SPLINE2D_TEST_NKNOTS_X);
@@ -907,22 +811,12 @@ test_ncm_spline2d_eval_integ_x_y_xy_spline (void)
     }
 
     sx = ncm_spline2d_integ_dx_spline (s2d, _NCM_SPLINE2D_TEST_XI, ncm_vector_get (s2d->xv, _NCM_SPLINE2D_TEST_NKNOTS_X - 1));
-    ncm_spline_free (sx);
-    if (g_test_trap_fork (0, G_TEST_TRAP_SILENCE_STDOUT | G_TEST_TRAP_SILENCE_STDERR))
-    {
-      ncm_spline_free (sx);
-      exit (0);
-    }
-    g_test_trap_assert_failed ();
+
+    NCM_TEST_FREE (ncm_spline_free, sx);
 
     sy = ncm_spline2d_integ_dy_spline (s2d, _NCM_SPLINE2D_TEST_YI, ncm_vector_get (s2d->yv, _NCM_SPLINE2D_TEST_NKNOTS_Y - 1));
-    ncm_spline_free (sy);
-    if (g_test_trap_fork (0, G_TEST_TRAP_SILENCE_STDOUT | G_TEST_TRAP_SILENCE_STDERR))
-    {
-      ncm_spline_free (sy);
-      exit (0);
-    }
-    g_test_trap_assert_failed ();
+
+    NCM_TEST_FREE (ncm_spline_free, sy);
 
     ncm_spline2d_prepare (s2d);
 

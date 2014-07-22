@@ -189,7 +189,7 @@ ncm_rng_class_init (NcmRNGClass *klass)
  * Creates a new #NcmRNG using the algorithm @algo see the list of algorithms
  * here ( http://www.gnu.org/software/gsl/manual/html_node/Random-number-generator-algorithms.html ).
  * If @algo is NULL the default algorithm and seed are used, see 
- * ( http://www.gnu.org/software/gsl/manual/html_node/Random-number-environment-variables.html#Random-number-environment-variables )
+ * ( http://www.gnu.org/software/gsl/manual/html_node/Random-number-environment-variables.html\#Random-number-environment-variables )
  * for more details.
  * 
  * Returns: (transfer full): a new #NcmRNG.
@@ -211,7 +211,7 @@ ncm_rng_new (const gchar *algo)
  * Creates a new #NcmRNG using the algorithm @algo see the list of algorithms
  * here ( http://www.gnu.org/software/gsl/manual/html_node/Random-number-generator-algorithms.html ).
  * If @algo is NULL the default algorithm is used, see 
- * ( http://www.gnu.org/software/gsl/manual/html_node/Random-number-environment-variables.html#Random-number-environment-variables )
+ * ( http://www.gnu.org/software/gsl/manual/html_node/Random-number-environment-variables.html\#Random-number-environment-variables )
  * for more details.
  * 
  * Returns: (transfer full): a new #NcmRNG.

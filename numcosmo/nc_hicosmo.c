@@ -41,6 +41,7 @@
 #include "math/ncm_cfg.h"
 
 G_DEFINE_ABSTRACT_TYPE (NcHICosmo, nc_hicosmo, NCM_TYPE_MODEL);
+G_DEFINE_BOXED_TYPE (NcHICosmoEOMTwoFluids, nc_hicosmo_eom_two_fluids, nc_hicosmo_eom_two_fluids_dup, nc_hicosmo_eom_two_fluids_free);
 
 static void
 nc_hicosmo_init (NcHICosmo *object)
@@ -230,6 +231,7 @@ NCM_MODEL_SET_IMPL_FUNC(NC_HICOSMO,NcHICosmo,nc_hicosmo,NcmModelFunc0,T_gamma0)
  *
  */
 NCM_MODEL_SET_IMPL_FUNC(NC_HICOSMO,NcHICosmo,nc_hicosmo,NcmModelFunc0,z_lss)
+
 /**
  * nc_hicosmo_set_as_drag_impl: (skip)
  * @model_class: FIXME
@@ -241,6 +243,16 @@ NCM_MODEL_SET_IMPL_FUNC(NC_HICOSMO,NcHICosmo,nc_hicosmo,NcmModelFunc0,z_lss)
 NCM_MODEL_SET_IMPL_FUNC(NC_HICOSMO,NcHICosmo,nc_hicosmo,NcmModelFunc0,as_drag)
 
 /**
+ * nc_hicosmo_set_xb_impl: (skip)
+ * @model_class: FIXME
+ * @f: FIXME
+ *
+ * FIXME
+ *
+ */
+NCM_MODEL_SET_IMPL_FUNC(NC_HICOSMO,NcHICosmo,nc_hicosmo,NcmModelFunc0,xb)
+
+/**
  * nc_hicosmo_set_E2_impl: (skip)
  * @model_class: FIXME
  * @f: FIXME
@@ -249,6 +261,7 @@ NCM_MODEL_SET_IMPL_FUNC(NC_HICOSMO,NcHICosmo,nc_hicosmo,NcmModelFunc0,as_drag)
  *
  */
 NCM_MODEL_SET_IMPL_FUNC(NC_HICOSMO,NcHICosmo,nc_hicosmo,NcmModelFunc1,E2)
+
 /**
  * nc_hicosmo_set_dE2_dz_impl: (skip)
  * @model_class: FIXME
@@ -258,6 +271,7 @@ NCM_MODEL_SET_IMPL_FUNC(NC_HICOSMO,NcHICosmo,nc_hicosmo,NcmModelFunc1,E2)
  *
  */
 NCM_MODEL_SET_IMPL_FUNC(NC_HICOSMO,NcHICosmo,nc_hicosmo,NcmModelFunc1,dE2_dz)
+
 /**
  * nc_hicosmo_set_d2E2_dz2_impl: (skip)
  * @model_class: FIXME
@@ -267,6 +281,27 @@ NCM_MODEL_SET_IMPL_FUNC(NC_HICOSMO,NcHICosmo,nc_hicosmo,NcmModelFunc1,dE2_dz)
  *
  */
 NCM_MODEL_SET_IMPL_FUNC(NC_HICOSMO,NcHICosmo,nc_hicosmo,NcmModelFunc1,d2E2_dz2)
+
+/**
+ * nc_hicosmo_set_cs2_impl: (skip)
+ * @model_class: FIXME
+ * @f: FIXME
+ *
+ * FIXME
+ *
+ */
+NCM_MODEL_SET_IMPL_FUNC(NC_HICOSMO,NcHICosmo,nc_hicosmo,NcmModelFunc1,cs2)
+
+/**
+ * nc_hicosmo_set_rhopp_impl: (skip)
+ * @model_class: FIXME
+ * @f: FIXME
+ *
+ * FIXME
+ *
+ */
+NCM_MODEL_SET_IMPL_FUNC(NC_HICOSMO,NcHICosmo,nc_hicosmo,NcmModelFunc1,rhopp)
+
 /**
  * nc_hicosmo_set_cd_impl: (skip)
  * @model_class: FIXME
@@ -275,7 +310,9 @@ NCM_MODEL_SET_IMPL_FUNC(NC_HICOSMO,NcHICosmo,nc_hicosmo,NcmModelFunc1,d2E2_dz2)
  * FIXME
  *
  */
+
 NCM_MODEL_SET_IMPL_FUNC(NC_HICOSMO,NcHICosmo,nc_hicosmo,NcmModelFunc1,cd)
+
 /**
  * nc_hicosmo_set_powspec_impl: (skip)
  * @model_class: FIXME
@@ -285,6 +322,36 @@ NCM_MODEL_SET_IMPL_FUNC(NC_HICOSMO,NcHICosmo,nc_hicosmo,NcmModelFunc1,cd)
  *
  */
 NCM_MODEL_SET_IMPL_FUNC(NC_HICOSMO,NcHICosmo,nc_hicosmo,NcmModelFunc1,powspec)
+
+/**
+ * nc_hicosmo_set_wkb_two_fluids_nuB2_impl: (skip)
+ * @model_class: FIXME
+ * @f: FIXME
+ *
+ * FIXME
+ *
+ */
+NCM_MODEL_SET_IMPL_FUNC(NC_HICOSMO,NcHICosmo,nc_hicosmo,NcmModelFunc2,wkb_two_fluids_nuB2)
+
+/**
+ * nc_hicosmo_set_wkb_two_fluids_dmSnuB_nuB_impl: (skip)
+ * @model_class: FIXME
+ * @f: FIXME
+ *
+ * FIXME
+ *
+ */
+NCM_MODEL_SET_IMPL_FUNC(NC_HICOSMO,NcHICosmo,nc_hicosmo,NcmModelFunc2,wkb_two_fluids_dmSnuB_nuB)
+
+/**
+ * nc_hicosmo_set_eom_two_fluids_impl: (skip)
+ * @model_class: FIXME
+ * @f: FIXME
+ *
+ * FIXME
+ *
+ */
+NCM_MODEL_SET_IMPL_FUNC(NC_HICOSMO,NcHICosmo,nc_hicosmo,NcHICosmoFuncEOMTwoFluids,eom_two_fluids)
 
 /*
  * Inlined functions
@@ -357,16 +424,16 @@ NCM_MODEL_SET_IMPL_FUNC(NC_HICOSMO,NcHICosmo,nc_hicosmo,NcmModelFunc1,powspec)
 /**
  * nc_hicosmo_E2:
  * @cosmo: a #NcHICosmo.
- * @x: FIXME
+ * @x: redshift
  *
- * FIXME
+ * Normalized Hubble function squared.
  *
- * Returns: FIXME
+ * Returns: $H^2/H_0^2$
  */
 /**
  * nc_hicosmo_dE2_dz:
  * @cosmo: a #NcHICosmo.
- * @x: FIXME
+ * @x: redshift
  *
  * FIXME
  *
@@ -375,16 +442,34 @@ NCM_MODEL_SET_IMPL_FUNC(NC_HICOSMO,NcHICosmo,nc_hicosmo,NcmModelFunc1,powspec)
 /**
  * nc_hicosmo_d2E2_dz2:
  * @cosmo: a #NcHICosmo.
- * @x: FIXME
+ * @x: redshift
  *
  * FIXME
  *
  * Returns: FIXME
  */
 /**
+ * nc_hicosmo_cs2:
+ * @cosmo: a #NcHICosmo.
+ * @x: redshift
+ *
+ * Speed of sound squared.
+ *
+ * Returns: $c_s^2$.
+ */
+/**
+ * nc_hicosmo_rhopp:
+ * @cosmo: a #NcHICosmo.
+ * @x: redshift
+ *
+ * Energy density plus pressure.
+ *
+ * Returns: $\rho + p$.
+ */
+/**
  * nc_hicosmo_powspec:
  * @cosmo: a #NcHICosmo.
- * @x: FIXME
+ * @x: redshift
  *
  * FIXME
  *
@@ -599,4 +684,34 @@ NcmMSetFunc *
 nc_hicosmo_create_mset_func1 (NcHICosmoFunc1 f1)
 {
   return ncm_mset_func_new (&_nc_hicosmo_func1, 1, 1, f1, NULL);
+}
+
+
+/**
+ * nc_hicosmo_eom_two_fluids_dup:
+ * @two_fluids: a #NcHICosmoEOMTwoFluids.
+ *
+ * Duplicates @two_fluids.
+ * 
+ * Returns: (transfer full): a copy of @two_fluids.
+ */
+NcHICosmoEOMTwoFluids *
+nc_hicosmo_eom_two_fluids_dup (NcHICosmoEOMTwoFluids *two_fluids)
+{
+  NcHICosmoEOMTwoFluids *two_fluids_dup = g_new (NcHICosmoEOMTwoFluids, 1);
+  *two_fluids_dup = *two_fluids;
+  return two_fluids_dup;
+}
+
+/**
+ * nc_hicosmo_eom_two_fluids_free:
+ * @two_fluids: a #NcHICosmoEOMTwoFluids.
+ *
+ * Frees @two_fluids.
+ * 
+ */
+void
+nc_hicosmo_eom_two_fluids_free (NcHICosmoEOMTwoFluids *two_fluids)
+{
+  g_free (two_fluids);
 }

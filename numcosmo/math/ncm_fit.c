@@ -485,9 +485,9 @@ ncm_fit_new (NcmFitType ftype, gchar *algo_name, NcmLikelihood *lh, NcmMSet *mse
  * ncm_fit_ref:
  * @fit: a #NcmFit.
  *
- * FIXME
+ * Increases the reference count of @fit.
  *
- * Returns: (transfer full): FIXME
+ * Returns: (transfer full): @fit.
  */
 NcmFit *
 ncm_fit_ref (NcmFit *fit)

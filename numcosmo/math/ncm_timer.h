@@ -51,6 +51,7 @@ struct _NcmTimer
   guint task_len;
   guint task_pos;
   gdouble pos_time;
+  gdouble last_log_time;
   NcmStatsVec *time_stats;
   GString *msg;
   GString *msg_tmp1;

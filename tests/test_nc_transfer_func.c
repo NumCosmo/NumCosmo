@@ -112,14 +112,7 @@ test_nc_transfer_func_new_eh (void)
 void
 test_nc_transfer_func_free (void)
 {
-  nc_transfer_func_free (tf);
-  if (g_test_trap_fork (0, G_TEST_TRAP_SILENCE_STDOUT | G_TEST_TRAP_SILENCE_STDERR))
-  {
-    nc_transfer_func_free (tf);
-    exit (0);
-  }
-  g_test_trap_assert_failed ();
-  tf = NULL;
+  NCM_TEST_FREE (nc_transfer_func_free, tf);
 }
 
 void 

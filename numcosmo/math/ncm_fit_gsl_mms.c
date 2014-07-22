@@ -84,7 +84,7 @@ _ncm_fit_gsl_mms_constructed (GObject *object)
       gdouble pscale = ncm_mset_fparam_get_scale (fit->mset, i);
       ncm_vector_set (fit_gsl_mms->ss, i, pscale * 1e-3);
     }
-    
+
     ncm_fit_gsl_mms_set_algo (fit_gsl_mms, fit_gsl_mms->algo);
   }
 }
@@ -205,6 +205,8 @@ _ncm_fit_gsl_mms_run (NcmFit *fit, NcmFitRunMsgs mtype)
   if (ncm_fit_has_equality_constraints (fit) || ncm_fit_has_inequality_constraints (fit))
     g_error ("_ncm_fit_gsl_mms_run: GSL algorithms do not support constraints.");
 
+  g_assert (fit->fstate->fparam_len != 0);
+  
   ncm_mset_fparams_get_vector (fit->mset, fit->fstate->fparams);
   gsl_multimin_fminimizer_set (fit_gsl_mms->mms, &fit_gsl_mms->f, ncm_vector_gsl (fit->fstate->fparams), ncm_vector_gsl (fit_gsl_mms->ss));
 
@@ -280,7 +282,8 @@ _ncm_fit_gsl_mms_get_desc (NcmFit *fit)
   if (fit_gsl_mms->desc == NULL)
   {
     fit_gsl_mms->desc = g_strdup_printf ("GSL Multidimensional Minimization:%s", 
-                                        gsl_multimin_fminimizer_name (fit_gsl_mms->mms));
+                                        fit_gsl_mms->mms != NULL ? gsl_multimin_fminimizer_name (fit_gsl_mms->mms) : 
+                                           "not-set");
   }
   return fit_gsl_mms->desc;
 }
@@ -381,9 +384,11 @@ ncm_fit_gsl_mms_set_algo (NcmFitGSLMMS *fit_gsl_mms, NcmFitGSLMMSAlgos algo)
     if (fit_gsl_mms->mms != NULL)
       gsl_multimin_fminimizer_free (fit_gsl_mms->mms);
     fit_gsl_mms->mms = NULL;
+
     if (fit_gsl_mms->desc != NULL)
       g_free (fit_gsl_mms->desc);
-  }
+    fit_gsl_mms->desc = NULL;
+  }    
 
   if (fit_gsl_mms->mms == NULL)
     fit_gsl_mms->mms = gsl_multimin_fminimizer_alloc (ncm_fit_gsl_mms_algos[fit_gsl_mms->algo], fit->fstate->fparam_len);
