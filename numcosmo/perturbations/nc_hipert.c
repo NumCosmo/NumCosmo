@@ -37,7 +37,7 @@
 #endif /* HAVE_CONFIG_H */
 #include "build_cfg.h"
 
-#include "nc_hipert.h"
+#include "perturbations/nc_hipert.h"
 
 #include <cvodes/cvodes.h>
 #include <cvodes/cvodes_dense.h>

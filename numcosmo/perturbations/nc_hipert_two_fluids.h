@@ -31,7 +31,7 @@
 #include <numcosmo/build_cfg.h>
 #include <numcosmo/math/ncm_ode_spline.h>
 #include <numcosmo/nc_hicosmo.h>
-#include <numcosmo/nc_hipert.h>
+#include <numcosmo/perturbations/nc_hipert.h>
 
 G_BEGIN_DECLS
 
