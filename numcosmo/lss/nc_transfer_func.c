@@ -26,7 +26,7 @@
 /**
  * SECTION:nc_transfer_func
  * @title: Transfer Function Abstract Class
- * @short_description: Defines the prototype of the #NcTransferFunc object.
+ * @short_description: Defines the prototype of the NcTransferFunc object.
  *
  * This module comprises the set of functions to compute the transfer function and
  * derived quantities.

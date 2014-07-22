@@ -201,15 +201,12 @@ nc_multiplicity_func_tinker_mean_get_Delta (const NcMultiplicityFuncTinkerMean *
 static void
 nc_multiplicity_func_tinker_mean_init (NcMultiplicityFuncTinkerMean *mulf_tinker_mean)
 {
-  /* TODO: Add initialization code here */
   mulf_tinker_mean->Delta = 200.0;
 }
 
 static void
 _nc_multiplicity_func_tinker_mean_finalize (GObject *object)
 {
-  /* TODO: Add deinitalization code here */
-
   G_OBJECT_CLASS (nc_multiplicity_func_tinker_mean_parent_class)->finalize (object);
 }
 
@@ -222,7 +219,7 @@ _nc_multiplicity_func_tinker_mean_set_property (GObject * object, guint prop_id,
   switch (prop_id)
   {
     case PROP_DELTA:
-      mulf_tinker_mean->Delta = g_value_get_double (value);
+      nc_multiplicity_func_tinker_mean_set_Delta (mulf_tinker_mean, g_value_get_double (value));
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);

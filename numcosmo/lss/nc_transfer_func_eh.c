@@ -26,7 +26,7 @@
 /**
  * SECTION:nc_transfer_func_eh
  * @title: EH Transfer Function
- * @short_description: FIXME
+ * @short_description: Eisenstein-Hu fitting function.
  *
  * FIXME
  */

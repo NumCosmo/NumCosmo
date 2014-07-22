@@ -179,6 +179,11 @@
     <xi:include href="xml/nc_growth_func.xml"/>
     <xi:include href="xml/nc_matter_var.xml"/>
     <section>
+      <title> Density Profile</title>
+      <xi:include href="xml/nc_density_profile.xml"/>
+      <xi:include href="xml/nc_density_profile_nfw.xml"/>
+    </section>
+    <section>
       <title>Multiplicity Function</title>
       <xi:include href="xml/nc_multiplicity_func.xml"/>
       <xi:include href="xml/nc_multiplicity_func_ps.xml"/>
@@ -188,6 +193,7 @@
       <xi:include href="xml/nc_multiplicity_func_tinker.xml"/>
       <xi:include href="xml/nc_multiplicity_func_tinker_mean.xml"/>
       <xi:include href="xml/nc_multiplicity_func_tinker_crit.xml"/>
+      <xi:include href="xml/nc_multiplicity_func_tinker_mean_normalized.xml"/>
     </section>
     <xi:include href="xml/nc_mass_function.xml"/>
     <section>
@@ -217,6 +223,7 @@
       <xi:include href="xml/nc_cluster_mass_benson_xray.xml"/>
     </section>
     <xi:include href="xml/nc_cluster_abundance.xml"/>
+    <xi:include href="xml/nc_cor_cluster_cmb_lens_limber.xml"/>
   </chapter>
   
   <chapter>

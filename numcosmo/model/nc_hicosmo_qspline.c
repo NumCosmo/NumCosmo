@@ -241,8 +241,8 @@ _nc_hicosmo_spline_continuity_prior_free (gpointer obj)
 
 /**
  * nc_hicosmo_qspline_add_continuity_prior:
- * @qspline: FIXME
- * @lh: FIXME
+ * @qspline: a #NcHICosmoQSpline
+ * @lh: a #NcmLikelihood
  * @knot: FIXME
  * @qspline_cp: FIXME
  *
@@ -263,8 +263,8 @@ nc_hicosmo_qspline_add_continuity_prior (NcHICosmoQSpline *qspline, NcmLikelihoo
 
 /**
  * nc_hicosmo_qspline_add_continuity_priors:
- * @qspline: FIXME
- * @lh: FIXME
+ * @qspline: a #NcHICosmoQSpline
+ * @lh: a #NcmLikelihood
  * @sigma: FIXME
  * @abstol: FIXME
  *
@@ -292,8 +292,8 @@ nc_hicosmo_qspline_add_continuity_priors (NcHICosmoQSpline *qspline, NcmLikeliho
 
 /**
  * nc_hicosmo_qspline_add_continuity_constraint:
- * @qspline: FIXME
- * @fit: FIXME
+ * @qspline: a #NcHICosmoQSpline
+ * @fit: a #NcmFit
  * @knot: FIXME
  * @qspline_cp: FIXME
  *
@@ -314,8 +314,8 @@ nc_hicosmo_qspline_add_continuity_constraint (NcHICosmoQSpline *qspline, NcmFit 
 
 /**
  * nc_hicosmo_qspline_add_continuity_constraints:
- * @qspline: FIXME
- * @fit: FIXME
+ * @qspline: a #NcHICosmoQSpline
+ * @fit: a #NcmFit
  * @sigma: FIXME
  *
  * FIXME

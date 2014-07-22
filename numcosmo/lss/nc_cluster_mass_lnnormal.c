@@ -210,8 +210,8 @@ nc_cluster_mass_lnnormal_class_init (NcClusterMassLnnormalClass *klass)
 
   object_class->finalize     = &_nc_cluster_mass_lnnormal_finalize;
 
-  model_class->set_property = &_nc_cluster_mass_lnnormal_set_property;
-  model_class->get_property = &_nc_cluster_mass_lnnormal_get_property;
+  model_class->set_property  = &_nc_cluster_mass_lnnormal_set_property;
+  model_class->get_property  = &_nc_cluster_mass_lnnormal_get_property;
 
   ncm_model_class_add_params (model_class, 2, 0, PROP_SIZE);
   ncm_model_class_set_name_nick (model_class, "Ln-normal distribution", "Ln_Normal");

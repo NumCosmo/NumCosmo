@@ -26,7 +26,7 @@
 /**
  * SECTION:nc_window_gaussian
  * @title: Gaussian window function
- * @short_description: Provides a #NcWindow of Gaussian type filter.  
+ * @short_description: Provides a NcWindow of Gaussian type filter.  
  * 
  * This object implements the #NcWindow class for a Gaussian window function.
  * 

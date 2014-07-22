@@ -963,6 +963,7 @@ _nc_matter_var_prepare_fft (NcMatterVar *vp, NcHICosmo *model)
     const complex double Rsigma2 = in[ii] / N;
     const complex double lnsigma2 = log (Rsigma2) - r;
     const complex double dlnsigma2_dr = Rdsigma2_dr[ii] / (Rsigma2 * N);
+    const gdouble test = dlnsigma2_dr;
     /*
      const gdouble R = exp (r);
      const gdouble Rsigma2_old = R * nc_matter_var_over_growth2_tophat_old (vp, model, r);
@@ -971,7 +972,7 @@ _nc_matter_var_prepare_fft (NcMatterVar *vp, NcHICosmo *model)
      const gdouble err_fft = fabs((Rsigma2_old - creal(Rsigma2)) / Rsigma2_old);
      printf ("%d %d % 20.15g % 20.15g % 20.15g % 20.15g % 8.5e % 8.5e\n", i, ii, r / M_LN10, creal(Rsigma2), Rsigma2_spline, Rsigma2_old, err_fft, err_spline);
      */
-    //printf ("%d %d % 20.15g % 20.15g % 20.15g\n", i, ii, r / M_LN10, creal(Rsigma2), creal(dlnsigma2_dr));
+    printf ("%d %d % 20.15g % 20.15g % 20.15g % 20.15g % 20.15g % 20.15g\n", i, ii, r / M_LN10, creal(Rsigma2), creal(dlnsigma2_dr), cimag(Rsigma2), cimag(dlnsigma2_dr), test);
     ncm_vector_set (vp->sigma2_over_growth->xv, j, r);
     ncm_vector_set (vp->sigma2_over_growth->yv, j, lnsigma2);
     ncm_vector_set (vp->deriv_sigma2_over_growth->xv, j, r);
@@ -1721,7 +1722,7 @@ nc_matter_var_dsigma0_dR (NcMatterVar *vp, NcHICosmo *model, gdouble lnR)
 /****************** Variance normalization with sigma8 ******************************************************************/
 
 /**
- * nc_matter_var_sigma_norma:
+ * nc_matter_var_sigma8_sqrtvar0:
  * @vp: a #NcMatterVar.
  * @model: a #NcHICosmo.
  *
@@ -1750,6 +1751,6 @@ nc_matter_var_sigma8_sqrtvar0 (NcMatterVar *vp, NcHICosmo *model)    /* eh calcu
     sigma0 = sqrt(nc_matter_var_var0 (vp, model, ln8));
 
   sigma0_norma = nc_hicosmo_sigma_8 (model) / sigma0;
-
+ 
   return sigma0_norma;
 }

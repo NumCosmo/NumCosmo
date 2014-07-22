@@ -66,6 +66,8 @@
 #include "lss/nc_transfer_func_camb.h"
 #include "lss/nc_transfer_func_pert.h"
 #include "lss/nc_matter_var.h"
+#include "lss/nc_density_profile.h"
+#include "lss/nc_density_profile_nfw.h"
 #include "lss/nc_multiplicity_func.h"
 #include "lss/nc_multiplicity_func_st.h"
 #include "lss/nc_multiplicity_func_ps.h"
@@ -74,6 +76,7 @@
 #include "lss/nc_multiplicity_func_tinker.h"
 #include "lss/nc_multiplicity_func_tinker_mean.h"
 #include "lss/nc_multiplicity_func_tinker_crit.h"
+#include "lss/nc_multiplicity_func_tinker_mean_normalized.h"
 #include "lss/nc_mass_function.h"
 #include "lss/nc_galaxy_acf.h"
 #include "lss/nc_cluster_mass.h"
@@ -206,6 +209,9 @@ ncm_cfg_init (void)
 
   ncm_cfg_register_obj (NC_TYPE_MATTER_VAR);
 
+  ncm_cfg_register_obj (NC_TYPE_DENSITY_PROFILE);
+  ncm_cfg_register_obj (NC_TYPE_DENSITY_PROFILE_NFW);
+
   ncm_cfg_register_obj (NC_TYPE_MULTIPLICITY_FUNC);
   ncm_cfg_register_obj (NC_TYPE_MULTIPLICITY_FUNC_PS);
   ncm_cfg_register_obj (NC_TYPE_MULTIPLICITY_FUNC_ST);
@@ -214,6 +220,7 @@ ncm_cfg_init (void)
   ncm_cfg_register_obj (NC_TYPE_MULTIPLICITY_FUNC_TINKER);
   ncm_cfg_register_obj (NC_TYPE_MULTIPLICITY_FUNC_TINKER_MEAN);
   ncm_cfg_register_obj (NC_TYPE_MULTIPLICITY_FUNC_TINKER_CRIT);
+  ncm_cfg_register_obj (NC_TYPE_MULTIPLICITY_FUNC_TINKER_MEAN_NORMALIZED);
 
   ncm_cfg_register_obj (NC_TYPE_MASS_FUNCTION);
 

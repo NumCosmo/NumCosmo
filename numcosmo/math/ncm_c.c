@@ -150,7 +150,7 @@ ncm_c_class_init (NcmCClass *klass)
 /**
  * ncm_c_c:
  *
- * Returns: Speed of light.
+ * Returns: Speed of light $\left[ \frac{m}{s} \right]$.
  *
  */
 /**
@@ -180,7 +180,11 @@ ncm_c_class_init (NcmCClass *klass)
 /**
  * ncm_c_G:
  *
- * Returns: Newton constant.
+ * \begin{equation}
+ * G = 6.67428 \times 10^{-11} \, \frac{\text{m}^3}{\text{kg} \, \text{s}^2} 
+ * \end{equation}
+ * 
+ * Returns: Newton's (or gravitational) constant $G$.
  *
  */
 /**
@@ -640,11 +644,19 @@ ncm_c_class_init (NcmCClass *klass)
 /**
  * ncm_c_pc:
  *
+ * \begin{equation}
+ * 1 \text{pc} = 3.085678 \times 10^{16} \, \text{m}
+ * \end{equation}
+ * 
  * Returns: Parsec unit 1 AU / tan (1 arcsec) - Copied from CAMB/constants.f90 to facilitate comparison.
  *
  */
 /**
  * ncm_c_mass_solar:
+ *
+ * \begin{equation}
+ * 1 M_\odot = 1.98892 \times 10^{30} \, \text{kg} 
+ * \end{equation}
  *
  * Returns: One solar mass.
  *
@@ -655,28 +667,28 @@ ncm_c_class_init (NcmCClass *klass)
 /**
  * ncm_c_stats_1sigma:
  *
- * The integral of a gaussian distribution with mean mu
- * and standard deviation sigma in (mu - 1 * sigma, mu + 1 * sigma)
+ * The integral of a Gaussian distribution with mean $\mu$
+ * and standard deviation $\sigma$ in $(\mu - 1 \sigma, \mu + 1 \sigma)$.
  *
- * Returns: P (mu - 1 * sigma, mu + 1 * sigma)
+ * Returns: $P (\mu - 1 \sigma, \mu + 1 \sigma)$
  *
  */
 /**
  * ncm_c_stats_2sigma:
  *
- * The integral of a gaussian distribution with mean mu
- * and standard deviation sigma in (mu - 2 * sigma, mu + 2 * sigma)
+ * The integral of a Gaussian distribution with mean $\mu$
+ * and standard deviation $\sigma$ in $(\mu - 2 \sigma, \mu + 2 \sigma)$.
  *
- * Returns: P (mu - 2 * sigma, mu + 2 * sigma)
+ * Returns: $P (\mu - 2 \sigma, \mu + 2 \sigma)$
  *
  */
 /**
  * ncm_c_stats_3sigma:
  *
- * The integral of a gaussian distribution with mean mu
- * and standard deviation sigma in (mu - 3 * sigma, mu + 3 * sigma)
+ * The integral of a Gaussian distribution with mean $\mu$
+ * and standard deviation sigma in $(\mu - 3 \sigma, \mu + 3 \sigma)$.
  *
- * Returns: P (mu - 3 * sigma, mu + 3 * sigma)
+ * Returns: $P (\mu - 3 \sigma, \mu + 3 \sigma)$
  *
  */
 
@@ -874,25 +886,40 @@ ncm_c_class_init (NcmCClass *klass)
 /**
  * ncm_c_crit_density:
  *
- * FIXME
- *
- * Returns: Critical density in ... units.
+ * The critical density is defined as
+ * \begin{equation}
+ * \rho_{crit} = \frac{3 c^2 H_0^2}{8\pi G},
+ * \end{equation}
+ * where $G$ is the gravitational constant (#ncm_c_G()), $c$ is the speed of light 
+ * (#ncm_c_c()) and $H_0$ is the Hubble parameter,
+ * $$H_0 = 100 \times h \, \frac{\text{km}}{\text{s} \, \text{Mpc}}.$$
+ * 
+ * Returns: Critical density, $$\left[\rho^h_{crit}\right] = \frac{\left[\rho^h_{crit}\right]}{h^2} = \frac{\text{kg}}{\text{m}^3} \frac{\text{m}^2}{\text{s}^2}.$$
  *
  */
 /**
  * ncm_c_crit_mass_density:
  *
- * FIXME
+ * The critical mass density is defined as
+ * \begin{equation}
+ * \rho_{crit} = \frac{3 H_0^2}{8\pi G},
+ * \end{equation}
+ * where $G$ is the gravitational constant (#ncm_c_G()), $c$ is the speed of light 
+ * (#ncm_c_c()) and $H_0$ is the Hubble parameter,
+ * $$H_0 = 100 \times h \, \frac{\text{km}}{\text{s} \, \text{Mpc}}.$$
  *
- * Returns: Critical mass density in ... units.
+ * Returns: Critical mass density, $$\left[\rho_{crit}\right] = \frac{\text{kg}}{\text{m}^3}.$$
  *
  */
 /**
  * ncm_c_crit_mass_density_solar_Mpc:
  *
- * FIXME
- *
- * Returns: Critical mass density in ... units.
+ * This function computes the critical mass density in units of solar mass $M_\odot$ and Mpc, i.e., 
+ * \begin{equation}
+ * \frac{\rho_{crit}}{1.98892 \times 10^{30}} \left(10^6 \times 3.085678 \times 10^{16} \right)^3.
+ * \end{equation}
+ * 
+ * Returns: Critical mass density in $M_\odot$ and Mpc units.
  *
  */
 /**

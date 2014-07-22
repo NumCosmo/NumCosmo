@@ -67,7 +67,7 @@ static gdouble _N (NcClusterAbundance *cad, NcHICosmo *model) { NCM_UNUSED (cad)
  * nc_cluster_abundance_new:
  * @mfp: a #NcMassFunction.
  * @mbiasf: (allow-none): a #NcHaloBiasFunc.
-   * @clusterz: a #NcClusterRedshift.
+ * @clusterz: a #NcClusterRedshift.
  * @clusterm: a #NcClusterMass.
  *
  * This function allocates memory for a new #NcClusterAbundance object and sets its properties to the values from
@@ -223,7 +223,6 @@ typedef struct _observables_integrand_data
   gdouble *z_obs_params;
   gdouble *lnM_obs;
   gdouble *lnM_obs_params;
-  gpointer data;
 } observables_integrand_data;
 
 static gdouble

@@ -70,6 +70,8 @@
 #include <numcosmo/lss/nc_transfer_func_pert.h>
 #include <numcosmo/lss/nc_growth_func.h>
 #include <numcosmo/lss/nc_matter_var.h>
+#include <numcosmo/lss/nc_density_profile.h>
+#include <numcosmo/lss/nc_density_profile_nfw.h>
 #include <numcosmo/lss/nc_galaxy_acf.h>
 #include <numcosmo/lss/nc_multiplicity_func.h>
 #include <numcosmo/lss/nc_multiplicity_func_ps.h>
@@ -79,6 +81,7 @@
 #include <numcosmo/lss/nc_multiplicity_func_tinker.h>
 #include <numcosmo/lss/nc_multiplicity_func_tinker_mean.h>
 #include <numcosmo/lss/nc_multiplicity_func_tinker_crit.h>
+#include <numcosmo/lss/nc_multiplicity_func_tinker_mean_normalized.h>
 #include <numcosmo/lss/nc_mass_function.h>
 #include <numcosmo/lss/nc_halo_bias_type.h>
 #include <numcosmo/lss/nc_halo_bias_type_ps.h>

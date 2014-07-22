@@ -202,6 +202,8 @@ nc_headers = \
 	lss/nc_transfer_func_pert.h   \
 	lss/nc_growth_func.h          \
 	lss/nc_matter_var.h           \
+	lss/nc_density_profile.h      \
+	lss/nc_density_profile_nfw.h  \
 	lss/nc_galaxy_acf.h           \
 	lss/nc_multiplicity_func.h    \
 	lss/nc_multiplicity_func_ps.h \
@@ -211,6 +213,7 @@ nc_headers = \
 	lss/nc_multiplicity_func_tinker.h \
 	lss/nc_multiplicity_func_tinker_mean.h \
 	lss/nc_multiplicity_func_tinker_crit.h \
+	lss/nc_multiplicity_func_tinker_mean_normalized.h \
 	lss/nc_mass_function.h           \
         lss/nc_halo_bias_type.h          \
         lss/nc_halo_bias_type_ps.h       \
@@ -228,7 +231,8 @@ nc_headers = \
         lss/nc_cluster_mass_vanderlinde.h    \
         lss/nc_cluster_mass_benson.h         \
         lss/nc_cluster_mass_benson_xray.h    \
-        lss/nc_cluster_abundance.h      \
+        lss/nc_cluster_abundance.h           \
+        lss/nc_cor_cluster_cmb_lens_limber.h \
 	nc_data_snia.h                  \
 	nc_data_dist_mu.h               \
 	nc_data_snia_cov.h              \
@@ -278,6 +282,8 @@ nc_sources = \
 	lss/nc_transfer_func_pert.c  \
 	lss/nc_growth_func.c         \
 	lss/nc_matter_var.c          \
+	lss/nc_density_profile.c     \
+	lss/nc_density_profile_nfw.c \
 	lss/nc_galaxy_acf.c          \
 	lss/nc_multiplicity_func.c   \
 	lss/nc_multiplicity_func_ps.c          \
@@ -287,6 +293,7 @@ nc_sources = \
 	lss/nc_multiplicity_func_tinker.c      \
 	lss/nc_multiplicity_func_tinker_mean.c \
 	lss/nc_multiplicity_func_tinker_crit.c \
+	lss/nc_multiplicity_func_tinker_mean_normalized.c \
 	lss/nc_mass_function.c                 \
 	lss/nc_halo_bias_type.c                \
 	lss/nc_halo_bias_type_ps.c             \
@@ -305,6 +312,7 @@ nc_sources = \
 	lss/nc_cluster_mass_benson.c           \
 	lss/nc_cluster_mass_benson_xray.c      \
 	lss/nc_cluster_abundance.c             \
+	lss/nc_cor_cluster_cmb_lens_limber.c   \
 	nc_data_snia.c               \
 	nc_data_dist_mu.c            \
 	nc_data_snia_cov.c           \

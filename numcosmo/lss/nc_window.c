@@ -26,7 +26,7 @@
 /**
  * SECTION:nc_window
  * @title: Window Function Abstract Class
- * @short_description: Defines the prototype of the #NcWindow object. 
+ * @short_description: Defines the prototype of the NcWindow object.
  * 
  * This module comprises the set of functions to compute the window function in both real 
  * and Fourier spaces as well as its derivative with respect to the scale $R$ in Fourier space. 

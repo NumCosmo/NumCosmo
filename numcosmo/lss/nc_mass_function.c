@@ -324,6 +324,7 @@ nc_mass_function_dn_dlnm (NcMassFunction *mfp, NcHICosmo *model, gdouble lnM, gd
   gdouble f = nc_multiplicity_func_eval (mfp->mulf, model, sigma, z);
   gdouble dn_dlnM = -(1.0 / (3.0 * M_rho)) * f * 0.5 * dlnvar0_dlnR;	/* dn/dlnM = - (\rho/3M) * f * (R/\sigma)* dsigma_dR */
 
+  //printf ("z = %.5g R = %.5g sigma = %.5g\n", z, R, sigma);
   //printf ("% 20.15g f = % 20.15g % 20.15g\n", -(1.0 / (3.0 * M_rho)), f, 0.5 * dlnvar0_dlnR);
 
   return dn_dlnM;
