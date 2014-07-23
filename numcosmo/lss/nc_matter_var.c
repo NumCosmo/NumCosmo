@@ -1013,7 +1013,7 @@ _nc_matter_var_prepare_fft (NcMatterVar *vp, NcHICosmo *model)
     const complex double Rsigma2 = in[ii] / N;
     const complex double lnsigma2 = log (Rsigma2) - r;
     const complex double dlnsigma2_dr = Rdsigma2_dr[ii] / (Rsigma2 * N);
-    printf ("% 20.15g % 20.15g % 20.15g\n", r, creal (lnsigma2), creal (dlnsigma2_dr));
+    printf ("Old: % 20.15g % 20.15g % 20.15g\n", r, creal (lnsigma2), creal (dlnsigma2_dr));
   }
   printf ("\n\n");
 
@@ -1038,7 +1038,7 @@ _nc_matter_var_prepare_fft (NcMatterVar *vp, NcHICosmo *model)
 
     for (i = 0; i < ncm_vector_len (lnr_vec); i++)
     {
-      printf ("% 20.15g % 20.15g % 20.15g\n", 
+      printf ("New: % 20.15g % 20.15g % 20.15g\n", 
               ncm_vector_get (lnr_vec, i),
               ncm_vector_get (lnGr_vec, i),
               ncm_vector_get (dlnGr_dlnr_vec, i));

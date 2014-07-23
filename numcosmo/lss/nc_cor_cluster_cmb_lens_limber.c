@@ -342,7 +342,7 @@ _integrand_powspec_2h (gdouble lnM, gpointer userdata)
   gdouble integrand_powspec_2h = M_rho * dn_dlnM_times_b;
   //gdouble integrand_powspec_2h = dn_dlnM_times_b;
 
-  printf("M = %e lnR= %.5g M_rho = %.5g dnxb = %.5g\n", M, lnR, M_rho, dn_dlnM_times_b);
+  //printf("M = %e lnR= %.5g M_rho = %.5g dnxb = %.5g\n", M, lnR, M_rho, dn_dlnM_times_b);
 
   return integrand_powspec_2h;
 }
@@ -401,7 +401,7 @@ nc_cor_cluster_cmb_lens_limber_twoh_int_mm (NcCorClusterCmbLensLimber *cccll, Nc
     if (!conv2)
       gsl_integration_qag (&F, b - step, b, 0.0, NCM_DEFAULT_PRECISION, NCM_INTEGRAL_PARTITION, _NC_CLUSTER_ABUNDANCE_DEFAULT_INT_KEY, *w, &res2, &err);
 
-    printf("res1 = %.5g res2 = %.5g tota = %.5g totd = %.5g\n", res1, res2, int_powspec_mm_2h, int_powspec_mm_2h + res1 + res2);
+    //printf("res1 = %.5g res2 = %.5g tota = %.5g totd = %.5g\n", res1, res2, int_powspec_mm_2h, int_powspec_mm_2h + res1 + res2);
     
     int_powspec_mm_2h += res1 - res2;
 

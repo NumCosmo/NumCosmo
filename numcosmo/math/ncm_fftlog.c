@@ -333,10 +333,10 @@ ncm_fftlog_peek_name (NcmFftlog *fftlog)
 
 /**
  * ncm_fftlog_set_size:
- * @fftlog: FIXME
- * @n: FIXME
+ * @fftlog: a #NcmFftlog
+ * @n: number of knots
  * 
- * FIXME
+ * Sets the number of knots where the integrated function is evaluated.
  * 
  */
 void
@@ -386,11 +386,11 @@ ncm_fftlog_set_size (NcmFftlog *fftlog, guint n)
 
 /**
  * ncm_fftlog_get_size:
- * @fftlog: FIXME
+ * @fftlog: a #NcmFftlog
  * 
- * FIXME
+ * Gets the number of knots N where the integrated function is evaluated.
  * 
- * Returns: FIXME
+ * Returns: the number of knots N
  */
 guint
 ncm_fftlog_get_size (NcmFftlog *fftlog)
@@ -400,10 +400,10 @@ ncm_fftlog_get_size (NcmFftlog *fftlog)
 
 /**
  * ncm_fftlog_set_length:
- * @fftlog: FIXME
- * @Lk: FIXME
+ * @fftlog: a #NcmFftlog
+ * @Lk: period in the logarithmic space
  * 
- * FIXME
+ * Sets the length of the period @Lk, where the function is periodic in logarithmic space log10 (r).  
  * 
  */
 void
@@ -420,11 +420,11 @@ ncm_fftlog_set_length (NcmFftlog *fftlog, gdouble Lk)
 
 /**
  * ncm_fftlog_get_length:
- * @fftlog: FIXME
+ * @fftlog: a #NcmFftlog
  * 
- * FIXME
+ * Gets the value of the period, where the function is periodic in logarithmic space log10 (r).
  * 
- * Returns: FIXME
+ * Returns: the period
  */
 gdouble
 ncm_fftlog_get_length (NcmFftlog *fftlog)
@@ -432,7 +432,7 @@ ncm_fftlog_get_length (NcmFftlog *fftlog)
   return fftlog->Lk;
 }
 
-void
+static void
 _ncm_fftlog_eval (NcmFftlog *fftlog)
 {
   guint comp;
@@ -465,7 +465,7 @@ _ncm_fftlog_eval (NcmFftlog *fftlog)
 /**
  * ncm_fftlog_eval_by_vector:
  * @fftlog: a #NcmFftlog
- * @Fk: Fk function vector.
+ * @Fk: Fk function vector
  * 
  * FIXME
  * 
