@@ -879,6 +879,7 @@ typedef struct _NcMatterVarFftlog
   NcHICosmo *model;
 } NcMatterVarFftlog;
 
+/*
 static gdouble 
 _powspec_k2 (gdouble k, gpointer userdata)
 {
@@ -889,6 +890,7 @@ _powspec_k2 (gdouble k, gpointer userdata)
   const gdouble f = matter_P * k2 / c1;
   return f;
 }
+*/
 
 static void
 _nc_matter_var_prepare_fft (NcMatterVar *vp, NcHICosmo *model)
@@ -1006,6 +1008,7 @@ _nc_matter_var_prepare_fft (NcMatterVar *vp, NcHICosmo *model)
   }
 
   
+/*  
   for (i = -N_2; i < N_2; i++)
   {
     const gint ii = (i < 0) ? i + N : i;
@@ -1047,9 +1050,8 @@ _nc_matter_var_prepare_fft (NcMatterVar *vp, NcHICosmo *model)
     ncm_vector_free (lnGr_vec);
     ncm_vector_free (dlnGr_dlnr_vec);
   }
+*/ 
 
-
-  
   ncm_spline_prepare (vp->sigma2_over_growth);
   ncm_spline_prepare (vp->deriv_sigma2_over_growth);
 }
