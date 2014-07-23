@@ -66,11 +66,12 @@ _nc_hicosmo_qspline_dE2dz (gdouble E2, gdouble z, gpointer userdata)
 {
   NcHICosmoQSpline *qs = NC_HICOSMO_QSPLINE (userdata);
   gdouble q;
-  _nc_hicosmo_qspline_prepare (qs);
+
   if (z > qs->z_f)
     q = ncm_spline_eval (qs->q_z, qs->z_f);
   else
     q = ncm_spline_eval (qs->q_z, z);
+
   return 2.0 * E2 * (q + 1.0) / (1.0 + z);
 }
 
