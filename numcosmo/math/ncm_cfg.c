@@ -1279,8 +1279,20 @@ ncm_cfg_get_default_sqlite3 (void)
   static sqlite3 *db = NULL;
   if (db == NULL)
   {
-    gchar *filename = g_build_filename (PACKAGE_DATA_DIR "/data", NCM_CFG_DEFAULT_SQLITE3_FILENAME, NULL);
+    const gchar *data_dir = g_getenv (NC_CFG_DATA_DIR_ENV);
+    gchar *filename = NULL;
     gint ret;
+    
+    if (data_dir != NULL)
+    {
+      filename = g_build_filename (data_dir, "data", NCM_CFG_DEFAULT_SQLITE3_FILENAME, NULL);
+
+      if (!g_file_test (filename, G_FILE_TEST_EXISTS))
+        g_clear_pointer (&filename, g_free);
+    }
+    
+    if (filename == NULL)
+      filename = g_build_filename (PACKAGE_DATA_DIR, "data", NCM_CFG_DEFAULT_SQLITE3_FILENAME, NULL);
 
     if (!g_file_test (filename, G_FILE_TEST_EXISTS))
       g_error ("Default database not found (%s)", filename);
@@ -1289,6 +1301,7 @@ ncm_cfg_get_default_sqlite3 (void)
       g_error ("Connection to database failed: %s", sqlite3_errmsg (db));
 
     g_free (filename);
+    
   }
 
   return db;

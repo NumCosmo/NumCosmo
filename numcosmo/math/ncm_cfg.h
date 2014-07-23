@@ -110,6 +110,8 @@ GVariant *ncm_cfg_array_to_variant (GArray *a, const GVariantType *etype);
 #define _NCM_SUNDIALS_INT_TYPE gint
 #endif
 
+#define NC_CFG_DATA_DIR_ENV "NUMCOSMO_DATA_DIR"
+
 #if (GLIB_MAJOR_VERSION == 2) && (GLIB_MINOR_VERSION < 32)
 #define _NCM_MUTEX_LOCK(l) g_static_mutex_lock (l)
 #define _NCM_MUTEX_UNLOCK(l) g_static_mutex_unlock (l)

@@ -1,19 +1,46 @@
-(simple) Examples of how to use the library.
+Examples of how to use the library.
+
+Every example below assumes that you have unpacked and compiled the library 
+in: /home/[username]/numcosmo
 
 ****************************************************************************
-Compile directly with:
+* Compilation of the examples in C
+***************************************************************************
 
-libtool --tag=CC --mode=link gcc simple_example.c -o simple_example \
+# To compile an example *without* installing numcosmo in your system:
+If you have libtool you can compile directly with:
+
+export NUMCOSMO_DATA_DIR=/home/[username]/numcosmo
+
+libtool --tag=CC --mode=link gcc example_simple.c -o example_simple \
 /home/[username]/numcosmo/numcosmo/libnumcosmo.la \
 -I/home/[username]/numcosmo \
 `pkg-config glib-2.0 --cflags`
 
-and if numcosmo is already installed in your system
+Libtool takes care in finding the correct place of the compiled but not
+installed library.
 
-gcc -Wall simple_example.c -o simple_example `pkg-config numcosmo --libs --cflags`
+# If numcosmo is already installed in your system
+
+gcc -Wall simple_example.c -o simple_example \
+`pkg-config numcosmo --libs --cflags`
 
 This line may need modification depending on the system. Just look
 for the missing header and add the corresponding pkg-config lib or -I
 
 ****************************************************************************
+* Running the python examples
+***************************************************************************
+
+All examples assumes that you are using python 2.* 
+
+export NUMCOSMO_DATA_DIR=/home/[username]/numcosmo
+export LD_LIBRARY_PATH=/home/[username]/numcosmo/numcosmo/.libs/
+export GI_TYPELIB_PATH=/home/[username]/numcosmo/numcosmo
+
+After these two steps just run the script:
+
+python2 ./example_simple.py
+
+Note that some examples depend on matplotlib.
 
