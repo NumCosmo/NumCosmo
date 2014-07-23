@@ -24,7 +24,7 @@
  */
 
 /**
- * SECTION:map
+ * SECTION:ncm_sphere_map
  * @title: Spherical Shell Map
  * @short_description: Object representing a spherical shell map
  *

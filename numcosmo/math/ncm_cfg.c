@@ -1279,7 +1279,7 @@ ncm_cfg_get_default_sqlite3 (void)
   static sqlite3 *db = NULL;
   if (db == NULL)
   {
-    const gchar *data_dir = g_getenv (NC_CFG_DATA_DIR_ENV);
+    const gchar *data_dir = g_getenv (NCM_CFG_DATA_DIR_ENV);
     gchar *filename = NULL;
     gint ret;
     

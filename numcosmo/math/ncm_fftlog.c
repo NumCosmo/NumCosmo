@@ -293,7 +293,7 @@ NcmFftlog *ncm_fftlog_ref (NcmFftlog *fftlog)
 
 /**
  * ncm_fftlog_free:
- * @fftlog: a #NcmFfftlog
+ * @fftlog: a #NcmFftlog
  * 
  * FIXME
  * 
@@ -306,7 +306,7 @@ ncm_fftlog_free (NcmFftlog *fftlog)
 
 /**
  * ncm_fftlog_clear:
- * @fftlog: a #NcmFfftlog
+ * @fftlog: a #NcmFftlog
  * 
  * FIXME
  * 
