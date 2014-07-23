@@ -49,33 +49,33 @@ nc_de_data_cluster_new (NcDistance *dist, NcmMSet *mset, NcDEDataClusterEntries 
   nc_matter_var_free (vp);
   nc_growth_func_free (gf);
   nc_multiplicity_func_free (mulf);
-  
+
   switch (id)
   {
 #ifdef NUMCOSMO_HAVE_CFITSIO
     case NC_DATA_CLUSTER_ABUNDANCE_FIT:
     {
-      gint i = 0;
-      if (de_data_cluster->cata_file == NULL)
-        g_error ("For --cluster-id 0, you must specify a fit catalog via --catalog file.fit");
-      while (de_data_cluster->cata_file[i] != NULL)
-      {
-        NcClusterAbundance *cad = nc_cluster_abundance_nodist_new (mfp, NULL);
-        NcmData *data = nc_data_cluster_ncount_new (cad);
-        nc_cluster_abundance_free (cad);
+    gint i = 0;
+    if (de_data_cluster->cata_file == NULL)
+      g_error ("For --cluster-id 0, you must specify a fit catalog via --catalog file.fit");
+    while (de_data_cluster->cata_file[i] != NULL)
+    {
+      NcClusterAbundance *cad = nc_cluster_abundance_nodist_new (mfp, NULL);
+      NcDataClusterNCount *ncount = nc_data_cluster_ncount_new (cad);
+      nc_cluster_abundance_free (cad);
 
-        nc_data_cluster_ncount_catalog_load (data, de_data_cluster->cata_file[i]);
+      nc_data_cluster_ncount_catalog_load (ncount, de_data_cluster->cata_file[i]);
 
-        ncm_mset_set (mset, NCM_MODEL (NC_DATA_CLUSTER_NCOUNT (data)->m));
+      ncm_mset_set (mset, NCM_MODEL (ncount->m));
 
-        nc_data_cluster_ncount_true_data (data, de_data_cluster->use_true_data);
-        _nc_de_data_cluster_append (de_data_cluster, data, dset);
-        g_ptr_array_add (ca_array, data);
-        if ((i == 0) && (de_data_cluster->save_cata != NULL))
-          nc_data_cluster_ncount_catalog_save (data, de_data_cluster->save_cata, TRUE);
-        i++;
-      }
+      nc_data_cluster_ncount_true_data (ncount, de_data_cluster->use_true_data);
+      _nc_de_data_cluster_append (de_data_cluster, NCM_DATA (ncount), dset);
+      g_ptr_array_add (ca_array, NCM_DATA (ncount));
+      if ((i == 0) && (de_data_cluster->save_cata != NULL))
+        nc_data_cluster_ncount_catalog_save (ncount, de_data_cluster->save_cata, TRUE);
+      i++;
     }
+  }
       break;
     case NC_DATA_CLUSTER_ABUNDANCE_TXT:
     {
@@ -85,17 +85,17 @@ nc_de_data_cluster_new (NcDistance *dist, NcmMSet *mset, NcDEDataClusterEntries 
       while (de_data_cluster->cata_file[i] != NULL)
       {
         NcClusterAbundance *cad = nc_cluster_abundance_nodist_new (mfp, NULL);
-        NcmData *data = nc_data_cluster_ncount_new (cad);
+        NcDataClusterNCount *ncount = nc_data_cluster_ncount_new (cad);
         nc_cluster_abundance_free (cad);
 
         //nc_data_cluster_abundance_unbinned_init_from_text_file (dca_unbinned, de_data_cluster->cata_file[i], opt, de_data_cluster->area_survey * gsl_pow_2 (M_PI / 180.0), log(de_data_cluster->Mi), log(de_data_cluster->Mf), de_data_cluster->z_initial, de_data_cluster->z_final, de_data_cluster->photoz_sigma0, de_data_cluster->photoz_bias, de_data_cluster->lnM_sigma0, de_data_cluster->lnM_bias);
         g_assert_not_reached ();
-        nc_data_cluster_ncount_true_data (data, de_data_cluster->use_true_data);
+        nc_data_cluster_ncount_true_data (ncount, de_data_cluster->use_true_data);
 
-        _nc_de_data_cluster_append (de_data_cluster, data, dset);
-        g_ptr_array_add (ca_array, data);
+        _nc_de_data_cluster_append (de_data_cluster, NCM_DATA (ncount), dset);
+        g_ptr_array_add (ca_array, NCM_DATA (ncount));
         if ((i == 0) && (de_data_cluster->save_cata != NULL))
-          nc_data_cluster_ncount_catalog_save (data, de_data_cluster->save_cata, TRUE);
+          nc_data_cluster_ncount_catalog_save (ncount, de_data_cluster->save_cata, TRUE);
         i++;
       }
     }
@@ -106,22 +106,22 @@ nc_de_data_cluster_new (NcDistance *dist, NcmMSet *mset, NcDEDataClusterEntries 
       NcClusterMass *clusterm = nc_cluster_mass_new_from_name (de_data_cluster->clusterm_ser);
       NcClusterRedshift *clusterz = nc_cluster_redshift_new_from_name (de_data_cluster->clusterz_ser);
       NcClusterAbundance *cad = nc_cluster_abundance_new (mfp, NULL, clusterz, clusterm);
-      NcmData *data = nc_data_cluster_ncount_new (cad);
+      NcDataClusterNCount *ncount = nc_data_cluster_ncount_new (cad);
 
       ncm_mset_set (mset, NCM_MODEL (clusterm));
       nc_cluster_abundance_free (cad);
-      
-      nc_data_cluster_ncount_init_from_sampling (data, mset, clusterz, clusterm, de_data_cluster->area_survey * gsl_pow_2 (M_PI / 180.0), rng);
-      nc_data_cluster_ncount_true_data (data, de_data_cluster->use_true_data);
+
+      nc_data_cluster_ncount_init_from_sampling (ncount, mset, clusterz, clusterm, de_data_cluster->area_survey * gsl_pow_2 (M_PI / 180.0), rng);
+      nc_data_cluster_ncount_true_data (ncount, de_data_cluster->use_true_data);
 
       if (de_data_cluster->save_cata != NULL)
 #ifdef NUMCOSMO_HAVE_CFITSIO
-        nc_data_cluster_ncount_catalog_save (data, de_data_cluster->save_cata, TRUE);
+        nc_data_cluster_ncount_catalog_save (ncount, de_data_cluster->save_cata, TRUE);
 #else
-        g_error ("darkenergy: cannot save file numcosmo built without support for fits files");
+      g_error ("darkenergy: cannot save file numcosmo built without support for fits files");
 #endif /* HAVE_CONFIG_H */
-      _nc_de_data_cluster_append (de_data_cluster, data, dset);
-      g_ptr_array_add (ca_array, data);
+      _nc_de_data_cluster_append (de_data_cluster, NCM_DATA (ncount), dset);
+      g_ptr_array_add (ca_array, NCM_DATA (ncount));
       nc_cluster_mass_free (clusterm);
       nc_cluster_redshift_free (clusterz);
     }

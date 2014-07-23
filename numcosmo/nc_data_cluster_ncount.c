@@ -433,14 +433,14 @@ _nc_data_cluster_ncount_begin (NcmData *data)
  * 
  * Returns: FIXME
  */
-NcmData *
+NcDataClusterNCount *
 nc_data_cluster_ncount_new (NcClusterAbundance *cad)
 {
   NcDataClusterNCount *ncount = g_object_new (NC_TYPE_DATA_CLUSTER_NCOUNT,
                                               "cluster-abundance", cad,
                                               NULL);
 
-  return NCM_DATA (ncount);
+  return ncount;
 }
 
 /**
@@ -722,9 +722,9 @@ nc_data_cluster_ncount_set_z_obs_params (NcDataClusterNCount *ncount, const NcmM
  * 
  */
 void
-nc_data_cluster_ncount_init_from_fits_file (NcmData *data, gchar *filename)
+nc_data_cluster_ncount_init_from_fits_file (NcDataClusterNCount *ncount, gchar *filename)
 {
-  NCM_UNUSED (data);
+  NCM_UNUSED (ncount);
   NCM_UNUSED (filename);
   g_assert_not_reached ();
 }
@@ -1115,16 +1115,15 @@ _nc_data_cluster_ncount_m2lnL_val (NcmData *data, NcmMSet *mset, gdouble *m2lnL)
 
 /**
  * nc_data_cluster_ncount_true_data:
- * @data: a #NcmData.
+ * @ncount: a #NcDataClusterNCount.
  * @use_true_data: FIXME
  *
  * FIXME
  *
  */
 void
-nc_data_cluster_ncount_true_data (NcmData *data, gboolean use_true_data)
+nc_data_cluster_ncount_true_data (NcDataClusterNCount *ncount, gboolean use_true_data)
 {
-  NcDataClusterNCount *ncount = NC_DATA_CLUSTER_NCOUNT (data);
   if (use_true_data)
   {
     g_assert (ncount->lnM_true != NULL);
@@ -1137,7 +1136,7 @@ static void _nc_data_cluster_ncount_model_init (NcDataClusterNCount *ncount);
 
 /**
  * nc_data_cluster_ncount_init_from_sampling:
- * @data: a #NcmData.
+ * @ncount: a #NcDataClusterNCount.
  * @mset: a #NcmMSet.
  * @clusterz: a #NcClusterRedshift.
  * @clusterm: a #NcClusterMass.
@@ -1148,9 +1147,8 @@ static void _nc_data_cluster_ncount_model_init (NcDataClusterNCount *ncount);
  *
  */
 void
-nc_data_cluster_ncount_init_from_sampling (NcmData *data, NcmMSet *mset, NcClusterRedshift *clusterz, NcClusterMass *clusterm, gdouble area_survey, NcmRNG *rng)
+nc_data_cluster_ncount_init_from_sampling (NcDataClusterNCount *ncount, NcmMSet *mset, NcClusterRedshift *clusterz, NcClusterMass *clusterm, gdouble area_survey, NcmRNG *rng)
 {
-  NcDataClusterNCount *ncount = NC_DATA_CLUSTER_NCOUNT (data);
 
   nc_data_cluster_ncount_set_redshift (ncount, clusterz);
   nc_data_cluster_ncount_set_mass (ncount, clusterm);
@@ -1158,14 +1156,14 @@ nc_data_cluster_ncount_init_from_sampling (NcmData *data, NcmMSet *mset, NcClust
 
   _nc_data_cluster_ncount_model_init (ncount);
 
-  ncm_data_set_init (data, TRUE);
+  ncm_data_set_init (NCM_DATA (ncount), TRUE);
 
-  ncm_data_resample (data, mset, rng);
+  ncm_data_resample (NCM_DATA (ncount), mset, rng);
 }
 
 /**
  * nc_data_cluster_ncount_bin_data: (skip)
- * @data: a #NcmData
+ * @ncount: a #NcDataClusterNCount.
  * @nodes: FIXME
  *
  * FIXME
@@ -1173,9 +1171,8 @@ nc_data_cluster_ncount_init_from_sampling (NcmData *data, NcmMSet *mset, NcClust
  * Returns: FIXME
  */
 NcmData *
-nc_data_cluster_ncount_bin_data (NcmData *data, gsl_vector *nodes)
+nc_data_cluster_ncount_bin_data (NcDataClusterNCount *ncount, gsl_vector *nodes)
 {
-  NcDataClusterNCount *ncount = NC_DATA_CLUSTER_NCOUNT (data);
   NcmData *data_cpoisson;
   gsl_histogram *hist;
   guint i;
@@ -1206,7 +1203,7 @@ nc_data_cluster_ncount_bin_data (NcmData *data, gsl_vector *nodes)
 
 /**
  * nc_data_cluster_ncount_hist_lnM_z: (skip)
- * @data: a #NcmData.
+ * @ncount: a #NcDataClusterNCount.
  * @lnM_nodes: FIXME
  * @z_nodes: FIXME
  *
@@ -1215,13 +1212,12 @@ nc_data_cluster_ncount_bin_data (NcmData *data, gsl_vector *nodes)
  * Returns: FIXME
  */
 gsl_histogram2d *
-nc_data_cluster_ncount_hist_lnM_z (NcmData *data, gsl_vector *lnM_nodes, gsl_vector *z_nodes)
+nc_data_cluster_ncount_hist_lnM_z (NcDataClusterNCount *ncount, gsl_vector *lnM_nodes, gsl_vector *z_nodes)
 {
-  NcDataClusterNCount *ncount = NC_DATA_CLUSTER_NCOUNT (data);
   gsl_histogram2d *hist;
   guint i;
 
-  g_assert (data->init);
+  g_assert (NCM_DATA (ncount)->init);
   g_assert (lnM_nodes->size > 1);
   g_assert (lnM_nodes->stride == 1);
   g_assert (z_nodes->size > 1);
@@ -1249,7 +1245,7 @@ nc_data_cluster_ncount_hist_lnM_z (NcmData *data, gsl_vector *lnM_nodes, gsl_vec
 
 /**
  * nc_data_cluster_ncount_print:
- * @data: FIXME
+ * @ncount: a #NcDataClusterNCount.
  * @cosmo: a NcHICosmo
  * @out: FIXME
  * @header: FIXME
@@ -1258,9 +1254,8 @@ nc_data_cluster_ncount_hist_lnM_z (NcmData *data, gsl_vector *lnM_nodes, gsl_vec
  *
  */
 void
-nc_data_cluster_ncount_print (NcmData *data, NcHICosmo *cosmo, FILE *out, gchar *header)
+nc_data_cluster_ncount_print (NcDataClusterNCount *ncount, NcHICosmo *cosmo, FILE *out, gchar *header)
 {
-  NcDataClusterNCount *ncount = NC_DATA_CLUSTER_NCOUNT (data);
   NcClusterAbundance *cad = ncount->cad;
   gint i, j;
   gint nbins_M = 100;
@@ -1289,7 +1284,7 @@ nc_data_cluster_ncount_print (NcmData *data, NcHICosmo *cosmo, FILE *out, gchar 
   else
     fprintf (out, "# ");
 
-  gsl_histogram2d *h = nc_data_cluster_ncount_hist_lnM_z (data, lnM_nodes, z_nodes);
+  gsl_histogram2d *h = nc_data_cluster_ncount_hist_lnM_z (ncount, lnM_nodes, z_nodes);
 
 
   fprintf (out, "# z M N/(logM * V) (catalog) dn/dlog10M (theory) Nmi(catalog)(abundance in bins of redshift and mass) Nmi(theory)\n");
@@ -1328,7 +1323,7 @@ nc_data_cluster_ncount_print (NcmData *data, NcHICosmo *cosmo, FILE *out, gchar 
 
 /**
  * nc_data_cluster_ncount_catalog_save:
- * @data: a #NcmData
+ * @ncount: a #NcDataClusterNCount.
  * @filename: name of the file
  * @overwrite: FIXME
  *
@@ -1336,9 +1331,8 @@ nc_data_cluster_ncount_print (NcmData *data, NcHICosmo *cosmo, FILE *out, gchar 
  *
  */
 void
-nc_data_cluster_ncount_catalog_save (NcmData *data, gchar *filename, gboolean overwrite)
+nc_data_cluster_ncount_catalog_save (NcDataClusterNCount *ncount, gchar *filename, gboolean overwrite)
 {
-  NcDataClusterNCount *ncount = NC_DATA_CLUSTER_NCOUNT (data);
   /*******************************************************************/
   /* Create a binary table extension                                 */
   /*******************************************************************/
@@ -1481,16 +1475,15 @@ nc_data_cluster_ncount_catalog_save (NcmData *data, gchar *filename, gboolean ov
 
 /**
  * nc_data_cluster_ncount_catalog_load:
- * @data: a #NcmData.
+ * @ncount: a #NcDataClusterNCount.
  * @filename: name of the file
  *
  * FIXME
  *
  */
 void
-nc_data_cluster_ncount_catalog_load (NcmData *data, gchar *filename)
+nc_data_cluster_ncount_catalog_load (NcDataClusterNCount *ncount, gchar *filename)
 {
-  NcDataClusterNCount *ncount = NC_DATA_CLUSTER_NCOUNT (data);
   gint status, hdutype;
   gchar comment[FLEN_COMMENT];
   fitsfile *fptr;
@@ -1676,7 +1669,7 @@ nc_data_cluster_ncount_catalog_load (NcmData *data, gchar *filename)
 
   _nc_data_cluster_ncount_model_init (ncount);
 
-  ncm_data_set_init (data, TRUE);
+  ncm_data_set_init (NCM_DATA (ncount), TRUE);
   
   return;
 }

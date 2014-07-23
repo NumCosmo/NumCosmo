@@ -97,7 +97,7 @@ struct _NcDataClusterNCountClass
 
 GType nc_data_cluster_ncount_get_type (void) G_GNUC_CONST;
 
-NcmData *nc_data_cluster_ncount_new (NcClusterAbundance *cad);
+NcDataClusterNCount *nc_data_cluster_ncount_new (NcClusterAbundance *cad);
 
 NcDataClusterNCount *nc_data_cluster_ncount_ref (NcDataClusterNCount *ncount);
 void nc_data_cluster_ncount_free (NcDataClusterNCount *ncount);
@@ -112,23 +112,23 @@ void nc_data_cluster_ncount_set_lnM_obs_params (NcDataClusterNCount *ncount, con
 void nc_data_cluster_ncount_set_z_obs (NcDataClusterNCount *ncount, const NcmMatrix *m);
 void nc_data_cluster_ncount_set_z_obs_params (NcDataClusterNCount *ncount, const NcmMatrix *m);
 
-NcmData *nc_data_cluster_ncount_binned_new (NcClusterAbundance *cad);
-void nc_data_cluster_ncount_binned_init_from_text_file_gkey (NcmData *data, gboolean obs, gchar *filename);
-void nc_data_cluster_ncount_binned_init_from_sampling (NcmData *data, NcmMSet *mset, NcmVector *nodes, gboolean obs, gdouble area_survey, gdouble lnMi, gdouble lnMf, gdouble photoz_sigma0, gdouble photoz_bias, gdouble lnM_sigma0, gdouble lnM_bias, NcmRNG *rng);
-void nc_data_cluster_ncount_binned_save (NcmData *data, gchar *filename);
+NcDataClusterNCount *nc_data_cluster_ncount_binned_new (NcClusterAbundance *cad);
+void nc_data_cluster_ncount_binned_init_from_text_file_gkey (NcDataClusterNCount *ncount, gboolean obs, gchar *filename);
+void nc_data_cluster_ncount_binned_init_from_sampling (NcDataClusterNCount *ncount, NcmMSet *mset, NcmVector *nodes, gboolean obs, gdouble area_survey, gdouble lnMi, gdouble lnMf, gdouble photoz_sigma0, gdouble photoz_bias, gdouble lnM_sigma0, gdouble lnM_bias, NcmRNG *rng);
+void nc_data_cluster_ncount_binned_save (NcDataClusterNCount *ncount, gchar *filename);
 NcmMSetFunc *nc_data_cluster_ncount_binned_create_func (NcClusterAbundance *cad);
 
 NcmData *nc_data_cluster_ncount_binned_lnM_z_new (NcClusterAbundance *cad);
-void nc_data_cluster_ncount_true_data (NcmData *data, gboolean use_true_data);
-void nc_data_cluster_ncount_init_from_sampling (NcmData *data, NcmMSet *mset, NcClusterRedshift *clusterz, NcClusterMass *clusterm, gdouble area_survey, NcmRNG *rng);
-NcmData *nc_data_cluster_ncount_bin_data (NcmData *data, gsl_vector *nodes);
-gsl_histogram2d *nc_data_cluster_ncount_hist_lnM_z (NcmData *data, gsl_vector *lnM_nodes, gsl_vector *z_nodes);
+void nc_data_cluster_ncount_true_data (NcDataClusterNCount *ncount, gboolean use_true_data);
+void nc_data_cluster_ncount_init_from_sampling (NcDataClusterNCount *ncount, NcmMSet *mset, NcClusterRedshift *clusterz, NcClusterMass *clusterm, gdouble area_survey, NcmRNG *rng);
+NcmData *nc_data_cluster_ncount_bin_data (NcDataClusterNCount *ncount, gsl_vector *nodes);
+gsl_histogram2d *nc_data_cluster_ncount_hist_lnM_z (NcDataClusterNCount *ncount, gsl_vector *lnM_nodes, gsl_vector *z_nodes);
 
-void nc_data_cluster_ncount_print (NcmData *data, NcHICosmo *cosmo, FILE *out, gchar *header);
+void nc_data_cluster_ncount_print (NcDataClusterNCount *ncount, NcHICosmo *cosmo, FILE *out, gchar *header);
 
 #ifdef NUMCOSMO_HAVE_CFITSIO
-void nc_data_cluster_ncount_catalog_save (NcmData *data, gchar *filename, gboolean overwrite);
-void nc_data_cluster_ncount_catalog_load (NcmData *data, gchar *filename);
+void nc_data_cluster_ncount_catalog_save (NcDataClusterNCount *ncount, gchar *filename, gboolean overwrite);
+void nc_data_cluster_ncount_catalog_load (NcDataClusterNCount *ncount, gchar *filename);
 #endif /* NUMCOSMO_HAVE_CFITSIO */
 
 G_END_DECLS

@@ -224,12 +224,16 @@ nc_cluster_photoz_gauss_global_init (NcClusterPhotozGaussGlobal *pzg_global)
 }
 
 static void
-_nc_cluster_photoz_gauss_global_finalize (GObject *object)
+_nc_cluster_photoz_gauss_global_constructed (GObject *object)
 {
-
-  /* Chain up : end */
-  G_OBJECT_CLASS (nc_cluster_photoz_gauss_global_parent_class)->finalize (object);
+  /* Chain up : start */
+  G_OBJECT_CLASS (nc_cluster_photoz_gauss_global_parent_class)->constructed (object);
+  {
+    NcClusterPhotozGaussGlobal *pzg_global = NC_CLUSTER_PHOTOZ_GAUSS_GLOBAL (object);
+    g_assert_cmpfloat (pzg_global->pz_min, <, pzg_global->pz_max);
+  }
 }
+
 
 static void
 _nc_cluster_photoz_gauss_global_set_property (GObject * object, guint prop_id, const GValue * value, GParamSpec * pspec)
@@ -284,6 +288,14 @@ _nc_cluster_photoz_gauss_global_get_property (GObject *object, guint prop_id, GV
 }
 
 static void
+_nc_cluster_photoz_gauss_global_finalize (GObject *object)
+{
+
+  /* Chain up : end */
+  G_OBJECT_CLASS (nc_cluster_photoz_gauss_global_parent_class)->finalize (object);
+}
+
+static void
 nc_cluster_photoz_gauss_global_class_init (NcClusterPhotozGaussGlobalClass *klass)
 {
   GObjectClass* object_class = G_OBJECT_CLASS (klass);
@@ -299,9 +311,10 @@ nc_cluster_photoz_gauss_global_class_init (NcClusterPhotozGaussGlobalClass *klas
 
   parent_class->impl = NC_CLUSTER_REDSHIFT_IMPL_ALL;
 
-  object_class->finalize = _nc_cluster_photoz_gauss_global_finalize;
-  object_class->set_property = _nc_cluster_photoz_gauss_global_set_property;
-  object_class->get_property = _nc_cluster_photoz_gauss_global_get_property;
+  object_class->constructed  = &_nc_cluster_photoz_gauss_global_constructed;
+  object_class->set_property = &_nc_cluster_photoz_gauss_global_set_property;
+  object_class->get_property = &_nc_cluster_photoz_gauss_global_get_property;
+  object_class->finalize     = &_nc_cluster_photoz_gauss_global_finalize;
 
   /**
    * NcClusterPhotozGaussGlobal:pz_min:
@@ -326,7 +339,7 @@ nc_cluster_photoz_gauss_global_class_init (NcClusterPhotozGaussGlobalClass *klas
                                    g_param_spec_double ("pz-max",
                                                         NULL,
                                                         "Maximum photoz",
-                                                        0.0, G_MAXDOUBLE, 0.0,
+                                                        0.0, G_MAXDOUBLE, 1.0,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY |G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   /**

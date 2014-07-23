@@ -197,11 +197,10 @@ nc_data_cluster_poisson_new (NcDataClusterNCount *ncount)
 NcmData *
 nc_data_cluster_poisson_new_cad (NcClusterAbundance *cad)
 {
-  NcmData *data_ncount = nc_data_cluster_ncount_new (cad);
-  NcDataClusterNCount *ncount = NC_DATA_CLUSTER_NCOUNT (data_ncount);
+  NcDataClusterNCount *ncount = nc_data_cluster_ncount_new (cad);
   NcmData *data = nc_data_cluster_poisson_new (ncount);  
 
-  ncm_data_free (data_ncount);
+  ncm_data_free (NCM_DATA (ncount));
   return data;
 }
 

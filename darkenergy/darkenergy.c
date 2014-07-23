@@ -817,7 +817,7 @@ main (gint argc, gchar *argv[])
     f_mf = nc_de_open_dataout_file (model, "MassFunction", &mfile);
     for (i = 0; i < ca_array->len; i++)
     {
-      NcmData *dca_unbinned = g_ptr_array_index (ca_array, i);
+      NcDataClusterNCount *dca_unbinned = g_ptr_array_index (ca_array, i);
       nc_data_cluster_ncount_print (dca_unbinned, model, f_mf, full_cmd_line);
       fprintf (f_mf, "\n\n");
     }
