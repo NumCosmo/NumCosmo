@@ -58,12 +58,12 @@ mf = Nc.MassFunction.new (dist, vp, gf, mulf)
 #
 # New Cluster Mass object using Log normal distribution
 #
-cluster_m = Nc.ClusterMass.new_from_name ("NcClusterMassLnnormal")
+cluster_m = Nc.ClusterMass.new_from_name ("NcClusterMassLnnormal{'lnMobs-min':<31.5430441213567>, 'lnMobs-max':<33.6224856630365>}")
 
 #
 # New Cluster Redshift object using a global gaussian distribution
 #
-cluster_z = Nc.ClusterRedshift.new_from_name ("NcClusterPhotozGaussGlobal")
+cluster_z = Nc.ClusterRedshift.new_from_name ("NcClusterPhotozGaussGlobal{'pz-min':<0.0>, 'pz-max':<1.0>, 'z-bias':<0.0>, 'sigma0':<0.03>}")
 
 #
 # New Cluster abundance object that uses all objects above
@@ -100,18 +100,8 @@ cosmo.props.w       = -1.0
 #
 #  Setting values for the mass distribution model
 #
-cluster_m.props.lnMobs_min = log (5.0e13)
-cluster_m.props.lnMobs_max = log (4.0e14)
 cluster_m.props.bias       = 0.0
 cluster_m.props.sigma      = 0.2
-
-#
-#  Setting values for the mass distribution model
-#
-cluster_z.props.pz_min = 0.0
-cluster_z.props.pz_max = 1.0
-cluster_z.props.z_bias = 0.0
-cluster_z.props.sigma0 = 0.03
 
 #
 #  Printing the parameters used.
