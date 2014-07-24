@@ -13,7 +13,8 @@ examples_DATA = \
 	example_ca.py          \
 	example_recomb.py      \
 	example_fit_snia.py    \
-	example_rg_snia_bao.py
+	example_rg_snia_bao.py \
+	example_ca_sampling.py
 
 EXTRA_DIST = \
 	$(examples_DATA)
