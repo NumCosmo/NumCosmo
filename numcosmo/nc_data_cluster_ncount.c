@@ -714,6 +714,210 @@ nc_data_cluster_ncount_set_z_obs_params (NcDataClusterNCount *ncount, const NcmM
 }
 
 /**
+ * nc_data_cluster_ncount_has_lnM_true:
+ * @ncount: a #NcDataClusterNCount.
+ *
+ * Returns: TRUE if it contains the lnM truth table.
+ * 
+ */
+gboolean 
+nc_data_cluster_ncount_has_lnM_true (NcDataClusterNCount *ncount)
+{
+  return ncount->lnM_true != NULL;
+}
+
+/**
+ * nc_data_cluster_ncount_has_z_true:
+ * @ncount: a #NcDataClusterNCount.
+ *
+ * Returns: TRUE if it contains the redshift truth table.
+ * 
+ */
+gboolean 
+nc_data_cluster_ncount_has_z_true (NcDataClusterNCount *ncount)
+{
+  return ncount->z_true != NULL;
+}
+
+/**
+ * nc_data_cluster_ncount_get_len:
+ * @ncount: a #NcDataClusterNCount.
+ * 
+ * Gets the total number of objects.
+ * 
+ * Returns: Number of objects in @ncount.
+ */
+guint 
+nc_data_cluster_ncount_get_len (NcDataClusterNCount *ncount)
+{
+  return ncount->np;
+}
+
+/**
+ * nc_data_cluster_ncount_lnM_obs_len:
+ * @ncount: a #NcDataClusterNCount.
+ * 
+ * Number of doubles to describe the observational data related to the mass
+ * of each object.
+ * 
+ * Returns: Length of each row describing the mass proxy.
+ */
+guint 
+nc_data_cluster_ncount_lnM_obs_len (NcDataClusterNCount *ncount)
+{
+  g_assert (ncount->lnM_obs != NULL);
+  return ncm_matrix_row_len (ncount->lnM_obs);
+}
+
+/**
+ * nc_data_cluster_ncount_lnM_obs_params_len:
+ * @ncount: a #NcDataClusterNCount.
+ * 
+ * Number of doubles to describe the observational data parameters related 
+ * mass to each object.
+ * 
+ * Returns: Length of each row describing the mass proxy, it can be zero.
+ */
+guint 
+nc_data_cluster_ncount_lnM_obs_params_len (NcDataClusterNCount *ncount)
+{
+  if (ncount->lnM_obs_params == NULL)
+    return 0;
+  else
+    return ncm_matrix_row_len (ncount->lnM_obs_params);
+}
+
+/**
+ * nc_data_cluster_ncount_z_obs_len:
+ * @ncount: a #NcDataClusterNCount.
+ * 
+ * Number of doubles to describe the observational data related to
+ * the redshift of each object.
+ * 
+ * Returns: Length of each row describing the mass proxy.
+ */
+guint 
+nc_data_cluster_ncount_z_obs_len (NcDataClusterNCount *ncount)
+{
+  g_assert (ncount->z_obs != NULL);
+  return ncm_matrix_row_len (ncount->z_obs);
+}
+
+/**
+ * nc_data_cluster_ncount_z_params_len:
+ * @ncount: a #NcDataClusterNCount.
+ * 
+ * Number of doubles to describe the observational data parameters related 
+ * to the redshift of each object.
+ * 
+ * Returns: Length of each row describing the mass proxy, it can be zero.
+ */
+guint 
+nc_data_cluster_ncount_z_obs_params_len (NcDataClusterNCount *ncount)
+{
+  if (ncount->z_obs_params == NULL)
+    return 0;
+  else
+    return ncm_matrix_row_len (ncount->z_obs_params);
+}
+
+/**
+ * nc_data_cluster_ncount_get_lnM_true:
+ * @ncount: a #NcDataClusterNCount.
+ * 
+ * Gets the vector containing the true values of the masses.
+ * 
+ * Returns: (transfer full): True masses #NcmVector.
+ */
+NcmVector *
+nc_data_cluster_ncount_get_lnM_true (NcDataClusterNCount *ncount)
+{
+  if (ncount->lnM_true != NULL)
+    return ncm_vector_ref (ncount->lnM_true);
+  else
+    return NULL;
+}
+
+/**
+ * nc_data_cluster_ncount_get_z_true:
+ * @ncount: a #NcDataClusterNCount.
+ * 
+ * Gets the vector containing the true values of the redshifts.
+ * 
+ * Returns: (transfer full): True redshift #NcmVector.
+ */
+NcmVector *
+nc_data_cluster_ncount_get_z_true (NcDataClusterNCount *ncount)
+{
+  if (ncount->z_true != NULL)
+    return ncm_vector_ref (ncount->z_true);
+  else
+    return NULL;
+}
+
+/**
+ * nc_data_cluster_ncount_get_lnM_obs:
+ * @ncount: a #NcDataClusterNCount.
+ * 
+ * Gets the matrix containing the mass observables.
+ * 
+ * Returns: (transfer full): Mass observable #NcmMatrix.
+ */
+NcmMatrix *
+nc_data_cluster_ncount_get_lnM_obs (NcDataClusterNCount *ncount)
+{
+  return ncm_matrix_ref (ncount->lnM_obs);
+}
+
+/**
+ * nc_data_cluster_ncount_get_lnM_obs_params:
+ * @ncount: a #NcDataClusterNCount.
+ * 
+ * Gets the matrix containing the mass observables parameters.
+ * 
+ * Returns: (transfer full): Mass observable parameters #NcmMatrix.
+ */
+NcmMatrix *
+nc_data_cluster_ncount_get_lnM_obs_params (NcDataClusterNCount *ncount)
+{
+  if (ncount->lnM_obs_params != NULL)
+    return ncm_matrix_ref (ncount->lnM_obs_params);
+  else
+    return NULL;
+}
+
+/**
+ * nc_data_cluster_ncount_get_z_obs:
+ * @ncount: a #NcDataClusterNCount.
+ * 
+ * Gets the matrix containing the redshift observables.
+ * 
+ * Returns: (transfer full): Redshift observable #NcmMatrix.
+ */
+NcmMatrix *
+nc_data_cluster_ncount_get_z_obs (NcDataClusterNCount *ncount)
+{
+  return ncm_matrix_ref (ncount->z_obs);
+}
+
+/**
+ * nc_data_cluster_ncount_get_z_obs_params:
+ * @ncount: a #NcDataClusterNCount.
+ * 
+ * Gets the matrix containing the redshift observables parameters.
+ * 
+ * Returns: (transfer full): Redshift observable parameters #NcmMatrix.
+ */
+NcmMatrix *
+nc_data_cluster_ncount_get_z_obs_params (NcDataClusterNCount *ncount)
+{
+  if (ncount->z_obs_params != NULL)
+    return ncm_matrix_ref (ncount->z_obs_params);
+  else
+    return NULL;
+}
+
+/**
  * nc_data_cluster_ncount_init_from_fits_file:
  * @data: a #NcmData
  * @filename: name of the file

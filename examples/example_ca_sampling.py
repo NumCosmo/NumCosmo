@@ -125,3 +125,67 @@ ncdata.init_from_sampling (mset, cluster_z, cluster_m, 300 * (pi / 180.0)**2, rn
 #
 ncdata.catalog_save ("ca_data.fits", True)
 
+#
+# Checking if it has the mass truth table, if so gets it
+#
+has_lnM_true = ncdata.has_lnM_true ()
+print "# Has mass truth table = ", has_lnM_true
+lnM_true = None
+if ncdata.has_lnM_true ():
+  lnM_true = ncdata.get_lnM_true ()
+
+#
+# Checking if it has the redshift truth table, if so gets it
+#
+has_z_true = ncdata.has_z_true ()
+print "# Has redshift truth table = ", has_z_true
+z_true = None
+if ncdata.has_z_true ():
+  z_true = ncdata.get_z_true ()
+
+#
+# Gets the mass observables and its parameters
+#
+lnM_obs = ncdata.get_lnM_obs ()
+lnM_obs_params = ncdata.get_lnM_obs_params ()
+
+#
+# Gets the redshift observables
+#
+z_obs = ncdata.get_z_obs ()
+z_obs_params = ncdata.get_z_obs_params ()
+
+#
+# Print everything
+#
+nobjects = ncdata.get_len ()
+print "# There are ", nobjects, " objects in the catalog (%d, %d)" % (lnM_obs.col_len (), z_obs.col_len ())
+
+for i in range (0, nobjects):
+  row = "%d " % (i)
+
+  if has_lnM_true: 
+    row += "%f " % (lnM_true.get (i))
+
+  if has_z_true: 
+    row += "%f " % (z_true.get (i))
+
+  for j in range (0, lnM_obs.row_len ()):
+    row += "%f " % (lnM_obs.get (i, j))
+
+  for j in range (0, z_obs.row_len ()):
+    row += "%f " % (z_obs.get (i, j))
+
+  if lnM_obs_params:
+    for j in range (0, lnM_obs_params.row_len ()):
+      row += "%f " % (lnM_obs_params.get (i, j))
+  
+  if z_obs_params:
+    for j in range (0, z_obs_params.row_len ()):
+      row += "%f " % (z_obs_params.get (i, j))
+
+  print row
+  
+  
+  
+  

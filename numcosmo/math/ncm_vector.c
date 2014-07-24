@@ -315,7 +315,7 @@ NcmVector *
 ncm_vector_dup (const NcmVector *cv)
 {
   NcmVector *cv_cp = ncm_vector_new (ncm_vector_len(cv));
-  gsl_vector_memcpy (ncm_vector_gsl(cv_cp), ncm_vector_const_gsl(cv));
+  gsl_vector_memcpy (ncm_vector_gsl (cv_cp), ncm_vector_const_gsl (cv));
   return cv_cp;
 }
 

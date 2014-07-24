@@ -132,7 +132,7 @@ _nc_cluster_mass_lnnormal_n_limits (NcClusterMass *clusterm, NcHICosmo *model, g
 }
 
 guint _nc_cluster_mass_lnnormal_obs_len (NcClusterMass *clusterm) { NCM_UNUSED (clusterm); return 1; }
-guint _nc_cluster_mass_lnnormal_obs_params_len (NcClusterMass *clusterm) { NCM_UNUSED (clusterm); return 2; }
+guint _nc_cluster_mass_lnnormal_obs_params_len (NcClusterMass *clusterm) { NCM_UNUSED (clusterm); return 0; }
 
 static void
 _nc_cluster_mass_lnnormal_set_property (GObject * object, guint prop_id, const GValue * value, GParamSpec * pspec)

@@ -112,6 +112,25 @@ void nc_data_cluster_ncount_set_lnM_obs_params (NcDataClusterNCount *ncount, con
 void nc_data_cluster_ncount_set_z_obs (NcDataClusterNCount *ncount, const NcmMatrix *m);
 void nc_data_cluster_ncount_set_z_obs_params (NcDataClusterNCount *ncount, const NcmMatrix *m);
 
+gboolean nc_data_cluster_ncount_has_lnM_true (NcDataClusterNCount *ncount);
+gboolean nc_data_cluster_ncount_has_z_true (NcDataClusterNCount *ncount);
+
+guint nc_data_cluster_ncount_get_len (NcDataClusterNCount *ncount);
+guint nc_data_cluster_ncount_lnM_obs_len (NcDataClusterNCount *ncount);
+guint nc_data_cluster_ncount_lnM_obs_params_len (NcDataClusterNCount *ncount);
+
+guint nc_data_cluster_ncount_z_obs_len (NcDataClusterNCount *ncount);
+guint nc_data_cluster_ncount_z_obs_params_len (NcDataClusterNCount *ncount);
+
+NcmVector *nc_data_cluster_ncount_get_lnM_true (NcDataClusterNCount *ncount);
+NcmVector *nc_data_cluster_ncount_get_z_true (NcDataClusterNCount *ncount);
+
+NcmMatrix *nc_data_cluster_ncount_get_lnM_obs (NcDataClusterNCount *ncount);
+NcmMatrix *nc_data_cluster_ncount_get_lnM_obs_params (NcDataClusterNCount *ncount);
+
+NcmMatrix *nc_data_cluster_ncount_get_z_obs (NcDataClusterNCount *ncount);
+NcmMatrix *nc_data_cluster_ncount_get_z_obs_params (NcDataClusterNCount *ncount);
+
 NcDataClusterNCount *nc_data_cluster_ncount_binned_new (NcClusterAbundance *cad);
 void nc_data_cluster_ncount_binned_init_from_text_file_gkey (NcDataClusterNCount *ncount, gboolean obs, gchar *filename);
 void nc_data_cluster_ncount_binned_init_from_sampling (NcDataClusterNCount *ncount, NcmMSet *mset, NcmVector *nodes, gboolean obs, gdouble area_survey, gdouble lnMi, gdouble lnMf, gdouble photoz_sigma0, gdouble photoz_bias, gdouble lnM_sigma0, gdouble lnM_bias, NcmRNG *rng);
@@ -130,6 +149,7 @@ void nc_data_cluster_ncount_print (NcDataClusterNCount *ncount, NcHICosmo *cosmo
 void nc_data_cluster_ncount_catalog_save (NcDataClusterNCount *ncount, gchar *filename, gboolean overwrite);
 void nc_data_cluster_ncount_catalog_load (NcDataClusterNCount *ncount, gchar *filename);
 #endif /* NUMCOSMO_HAVE_CFITSIO */
+
 
 G_END_DECLS
 
