@@ -126,6 +126,11 @@ ncdata.init_from_sampling (mset, cluster_z, cluster_m, 300 * (pi / 180.0)**2, rn
 ncdata.catalog_save ("ca_data.fits", True)
 
 #
+# Generate another sample by resampling from mset
+#
+ncdata.resample (mset, rng)
+
+#
 # Checking if it has the mass truth table, if so gets it
 #
 has_lnM_true = ncdata.has_lnM_true ()
@@ -156,10 +161,12 @@ z_obs = ncdata.get_z_obs ()
 z_obs_params = ncdata.get_z_obs_params ()
 
 #
-# Print everything
+# Print everything in a file
 #
 nobjects = ncdata.get_len ()
 print "# There are ", nobjects, " objects in the catalog (%d, %d)" % (lnM_obs.col_len (), z_obs.col_len ())
+
+f = open ('ca_data.txt', 'w')
 
 for i in range (0, nobjects):
   row = "%d " % (i)
@@ -184,8 +191,7 @@ for i in range (0, nobjects):
     for j in range (0, z_obs_params.row_len ()):
       row += "%f " % (z_obs_params.get (i, j))
 
-  print row
+  f.write (row)
+  f.write ("\n")
   
-  
-  
-  
+f.close ()
