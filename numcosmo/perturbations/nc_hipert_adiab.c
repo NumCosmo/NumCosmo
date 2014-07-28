@@ -88,6 +88,17 @@ nc_hipert_adiab_init (NcHIPertAdiab *pa)
 
   ncm_ode_spline_set_abstol (pa->wkb_phase, 0.0);
   ncm_spline_free (s);
+
+  pa->mzetanuA         = N_VNew_Serial (3);
+  pa->cvode_phase      = CVodeCreate (CV_BDF, CV_NEWTON);
+  pa->cvode_phase_init = FALSE;
+
+  pa->wkb_prep = FALSE;
+  pa->ode_prep = FALSE;
+
+  pa->lnphase  = ncm_spline_cubic_notaknot_new ();
+  pa->lnFzeta  = ncm_spline_cubic_notaknot_new ();
+  pa->dlnFzeta = ncm_spline_cubic_notaknot_new ();
 }
 
 static void
@@ -119,12 +130,38 @@ nc_hipert_adiab_get_property (GObject *object, guint prop_id, GValue *value, GPa
 }
 
 static void
-nc_hipert_adiab_finalize (GObject *object)
+nc_hipert_adiab_dispose (GObject *object)
 {
   NcHIPertAdiab *pa = NC_HIPERT_ADIAB (object);
 
   ncm_ode_spline_clear (&pa->wkb_phase);
+
+  ncm_spline_clear (&pa->lnphase);
+  ncm_spline_clear (&pa->lnFzeta);
+  ncm_spline_clear (&pa->dlnFzeta);
   
+  /* Chain up : end */
+  G_OBJECT_CLASS (nc_hipert_adiab_parent_class)->dispose (object);
+}
+
+
+static void
+nc_hipert_adiab_finalize (GObject *object)
+{
+  NcHIPertAdiab *pa = NC_HIPERT_ADIAB (object);
+
+  if (pa->cvode_phase != NULL)
+  {
+    CVodeFree (&pa->cvode_phase);
+    pa->cvode_phase = NULL;
+  }
+  
+  if (pa->mzetanuA != NULL)
+  {
+    N_VDestroy (pa->mzetanuA);
+    pa->mzetanuA = NULL;
+  }
+
   /* Chain up : end */
   G_OBJECT_CLASS (nc_hipert_adiab_parent_class)->finalize (object);
 }
@@ -133,10 +170,12 @@ static void
 nc_hipert_adiab_class_init (NcHIPertAdiabClass *klass)
 {
   GObjectClass* object_class = G_OBJECT_CLASS (klass);
-  
+
+  object_class->dispose      = &nc_hipert_adiab_dispose;
+  object_class->finalize     = &nc_hipert_adiab_finalize;
   object_class->set_property = &nc_hipert_adiab_set_property;
   object_class->get_property = &nc_hipert_adiab_get_property;
-  object_class->finalize     = &nc_hipert_adiab_finalize;
+  
 }
 
 /**
@@ -225,16 +264,204 @@ nc_hipert_adiab_prepare_wkb (NcHIPertAdiab *pa, NcHICosmo *cosmo, gdouble alpha_
   NcHIPert *pert = NC_HIPERT (pa);
   if (!pert->prepared)
   {
+    pa->wkb_prep   = FALSE;
+    pa->ode_prep   = FALSE;
+    pert->prepared = TRUE;
+  }  
+  
+  if (!pa->wkb_prep)
+  {
     NcHIPertAdiabWKBPhaseArg arg;
 
     arg.cosmo = cosmo;
     arg.k     = pert->k;
 
-    ncm_ode_spline_set_interval (pa->wkb_phase, 2.0 * M_PI, alpha_i, alpha_f);
+    ncm_ode_spline_set_interval (pa->wkb_phase, M_PI * 0.25, alpha_i, alpha_f);
 
     ncm_ode_spline_prepare (pa->wkb_phase, &arg);
 
+    pa->wkb_prep = TRUE;
+  }
+}
+
+typedef struct _NcHIPertAdiabArg
+{
+  NcHICosmo *cosmo;
+  NcHIPertAdiab *pa;
+} NcHIPertAdiabArg;
+
+
+static gint
+_nc_hipert_adiab_phase_f (realtype alpha, N_Vector y, N_Vector ydot, gpointer f_data)
+{
+  NcHIPertAdiabArg *arg   = (NcHIPertAdiabArg *) f_data;
+  NcHIPertIAdiabEOM *eom  = nc_hipert_iadiab_eom (NC_HIPERT_IADIAB (arg->cosmo), alpha, NC_HIPERT (arg->pa)->k);
+  const gdouble dlnmzeta  = nc_hipert_iadiab_dlnmzeta (NC_HIPERT_IADIAB (arg->cosmo), alpha, NC_HIPERT (arg->pa)->k);
+  const gdouble lnFzeta   = NV_Ith_S (y, 0);
+  const gdouble dlnFzeta  = NV_Ith_S (y, 1);
+  const gdouble lnphase   = NV_Ith_S (y, 2);
+  const gdouble dlnFzeta2 = dlnFzeta * dlnFzeta;
+  const gdouble mzeta2    = eom->m * eom->m; 
+  
+  NV_Ith_S (ydot, 0) = dlnFzeta;
+  NV_Ith_S (ydot, 1) = 2.0 * ((1.0 / 4.0) * dlnFzeta2 + eom->nu2 + dlnmzeta - exp (2.0 * lnFzeta) / mzeta2);
+  NV_Ith_S (ydot, 2) = exp (lnFzeta - lnphase) / eom->m;
+
+  return 0;
+}
+
+static gint
+_nc_hipert_adiab_phase_J (_NCM_SUNDIALS_INT_TYPE N, realtype alpha, N_Vector y, N_Vector fy, DlsMat J, gpointer jac_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3)
+{
+  NcHIPertAdiabArg *arg  = (NcHIPertAdiabArg *) jac_data;
+  NcHIPertIAdiabEOM *eom = nc_hipert_iadiab_eom (NC_HIPERT_IADIAB (arg->cosmo), alpha, NC_HIPERT (arg->pa)->k);
+  const gdouble lnFzeta  = NV_Ith_S (y, 0);
+  const gdouble dlnFzeta = NV_Ith_S (y, 1);
+  const gdouble lnphase  = NV_Ith_S (y, 2);
+  const gdouble mzeta2   = eom->m * eom->m; 
+
+  DENSE_ELEM (J, 0, 1) = 1.0;
+
+  DENSE_ELEM (J, 1, 0) = - 4.0 * exp (2.0 * lnFzeta) / mzeta2;
+  DENSE_ELEM (J, 1, 1) = dlnFzeta;
+
+  DENSE_ELEM (J, 2, 0) = exp (lnFzeta - lnphase) / eom->m;
+  DENSE_ELEM (J, 2, 2) = -exp (lnFzeta - lnphase) / eom->m;
+  
+  return 0;
+}
+
+/**
+ * nc_hipert_adiab_prepare_ode:
+ * @pa: a #NcHIPertAdiab.
+ * @cosmo: a #NcHICosmo.
+ * @alpha_i: initial log-redshift time.
+ * @alpha_f: final log-redshift time.
+ * 
+ * Prepare the object for WKB calculations using the cosmology @cosmo. Instead
+ * of using the wkb approximation as in @nc_hipert_adiab_prepare_wkb it solves
+ * the non-linear equation of motion for $\nu_A$. 
+ * 
+ */
+void 
+nc_hipert_adiab_prepare_ode (NcHIPertAdiab *pa, NcHICosmo *cosmo, gdouble alpha_i, gdouble alpha_f)
+{
+  NcHIPert *pert = NC_HIPERT (pa);
+  if (!pert->prepared)
+  {
+    pa->wkb_prep   = FALSE;
+    pa->ode_prep   = FALSE;
     pert->prepared = TRUE;
+  }  
+
+  if (!pa->ode_prep)
+  {
+    gint flag;
+    const gdouble nuA2 = nc_hipert_iadiab_nuA2 (NC_HIPERT_IADIAB (cosmo), alpha_i, pert->k);
+    const gdouble nuA = sqrt (nuA2);
+    const gdouble dmzetanuA_nuA = nc_hipert_iadiab_dmzetanuA_nuA (NC_HIPERT_IADIAB (cosmo), alpha_i, pert->k);
+    NcHIPertIAdiabEOM *eom = nc_hipert_iadiab_eom (NC_HIPERT_IADIAB (cosmo), alpha_i, pert->k);
+    const gdouble dmzetanuA = dmzetanuA_nuA * nuA;
+    gdouble alpha = alpha_i;
+    GArray *alpha_a;
+    GArray *lnphase;
+    GArray *lnFzeta;
+    GArray *dlnFzeta;
+    
+    NcmVector *v = NULL;
+
+    if ((v = ncm_spline_get_xv (pa->lnFzeta)) != NULL)
+    {
+      alpha_a = ncm_vector_get_array (v);
+      ncm_vector_free (v);
+
+      v = ncm_spline_get_yv (pa->lnFzeta);
+      lnFzeta = ncm_vector_get_array (v);
+      ncm_vector_free (v);
+
+      v = ncm_spline_get_yv (pa->dlnFzeta);
+      dlnFzeta = ncm_vector_get_array (v);
+      ncm_vector_free (v);
+
+      v = ncm_spline_get_yv (pa->lnphase);
+      lnphase = ncm_vector_get_array (v);
+      ncm_vector_clear (&v);
+
+      g_array_set_size (alpha_a, 0);
+      g_array_set_size (lnphase, 0);
+      g_array_set_size (lnFzeta, 0);
+      g_array_set_size (dlnFzeta, 0);
+    }
+    else
+    {
+      alpha_a  = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), 1000);
+      lnphase  = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), 1000);
+      lnFzeta  = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), 1000);
+      dlnFzeta = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), 1000);
+    }
+ 
+    NV_Ith_S (pa->mzetanuA, 0) = log (nuA * eom->m);
+    NV_Ith_S (pa->mzetanuA, 1) = dmzetanuA / (nuA * eom->m);
+    NV_Ith_S (pa->mzetanuA, 2) = log (M_PI * 0.25);
+    
+    if (!pa->cvode_phase_init)
+    {
+      flag = CVodeInit (pa->cvode_phase, &_nc_hipert_adiab_phase_f, alpha_i, pa->mzetanuA);
+      CVODE_CHECK (&flag, "CVodeInit", 1, );
+      pa->cvode_phase_init = TRUE;
+    }
+    else
+    {
+      flag = CVodeReInit (pa->cvode_phase, alpha_i, pa->mzetanuA);
+      CVODE_CHECK (&flag, "CVodeReInit", 1, );
+    }
+
+    flag = CVodeSStolerances (pa->cvode_phase, pert->reltol, pert->abstol);
+    CVODE_CHECK(&flag, "CVodeSStolerances", 1,);
+
+    flag = CVodeSetMaxNumSteps (pa->cvode_phase, 1000000);
+    CVODE_CHECK(&flag, "CVodeSetMaxNumSteps", 1, );
+
+    flag = CVDense (pa->cvode_phase, 3);
+    CVODE_CHECK(&flag, "CVDense", 1, );
+
+    flag = CVDlsSetDenseJacFn (pa->cvode_phase, &_nc_hipert_adiab_phase_J);
+    CVODE_CHECK(&flag, "CVDlsSetDenseJacFn", 1, );  
+
+    {
+      gdouble last = alpha_i;
+      NcHIPertAdiabArg arg;
+      arg.cosmo = cosmo;
+      arg.pa = pa;
+      
+      flag = CVodeSetUserData (pa->cvode_phase, &arg);
+      CVODE_CHECK (&flag, "CVodeSetFdata", 1, );
+
+      while (alpha < alpha_f)
+      {
+        flag = CVode (pa->cvode_phase, alpha_f, pa->mzetanuA, &alpha, CV_ONE_STEP);
+        CVODE_CHECK (&flag, "CVode[nc_hipert_adiab_prepare_ode]", 1, );
+
+        if (fabs (2.0 * (alpha - last) / (alpha + last)) > 1.0e-4)
+        {
+          g_array_append_val (alpha_a, alpha);
+          g_array_append_val (lnFzeta, NV_Ith_S (pa->mzetanuA, 0));
+          g_array_append_val (dlnFzeta, NV_Ith_S (pa->mzetanuA, 1));
+          g_array_append_val (lnphase, NV_Ith_S (pa->mzetanuA, 2));
+          last = alpha;
+        }
+      }
+    }
+
+    ncm_spline_set_array (pa->lnphase, alpha_a, lnphase, TRUE);
+    ncm_spline_set_array (pa->lnFzeta, alpha_a, lnFzeta, TRUE);
+    ncm_spline_set_array (pa->dlnFzeta, alpha_a, dlnFzeta, TRUE);
+
+    g_array_unref (alpha_a);
+    g_array_unref (lnphase);
+    g_array_unref (lnFzeta);
+    g_array_unref (dlnFzeta);
+    pa->ode_prep = TRUE;
   }
 }
 
@@ -259,9 +486,9 @@ nc_hipert_adiab_wkb_zeta (NcHIPertAdiab *pa, NcHICosmo *cosmo, gdouble alpha, gd
   const gdouble nuA2 = nc_hipert_iadiab_nuA2 (NC_HIPERT_IADIAB (cosmo), alpha, pert->k);
   const gdouble nuA = sqrt (nuA2); 
 
-  g_assert (pert->prepared);
+  g_assert (pa->wkb_prep);
 
-  int_nuA = ncm_spline_eval (pa->wkb_phase->s, alpha) + M_PI * 0.25; 
+  int_nuA = ncm_spline_eval (pa->wkb_phase->s, alpha); 
   
   zeta = cexp (-I * int_nuA) / sqrt (2.0 * eom->m * nuA);
 
@@ -293,15 +520,89 @@ nc_hipert_adiab_wkb_zeta_Pzeta (NcHIPertAdiab *pa, NcHICosmo *cosmo, gdouble alp
   const gdouble nuA2 = nc_hipert_iadiab_nuA2 (NC_HIPERT_IADIAB (cosmo), alpha, pert->k);
   const gdouble nuA = sqrt (nuA2); 
 
-  g_assert (pert->prepared);
+  g_assert (pa->wkb_prep);
 
-  int_nuA = ncm_spline_eval (pa->wkb_phase->s, alpha) + M_PI * 0.25;
+  int_nuA = ncm_spline_eval (pa->wkb_phase->s, alpha);
 
   dmzetanuA_nuA = nc_hipert_iadiab_nuA2 (NC_HIPERT_IADIAB (cosmo), alpha, pert->k);
 
   zeta = cexp (-I * int_nuA) / sqrt (2.0 * eom->m * nuA);
 
   Pzeta = -I * cexp (-I * int_nuA) * sqrt (0.5 * eom->m * nuA) - 0.5 * dmzetanuA_nuA * zeta;
+
+  *Re_zeta = creal (zeta);
+  *Im_zeta = cimag (zeta);
+
+  *Re_Pzeta = creal (Pzeta);
+  *Im_Pzeta = cimag (Pzeta);  
+}
+
+/**
+ * nc_hipert_adiab_ode_zeta:
+ * @pa: a #NcHIPertAdiab.
+ * @cosmo: a #NcHICosmo.
+ * @alpha: the log-redshift time.
+ * @Re_zeta: (out caller-allocates): Real part of the ode solution.
+ * @Im_zeta: (out caller-allocates): Imaginary part of the ode solution.
+ * 
+ * Computes the solution $\zeta_\text{ode}$ for the mode $k$ at the time $\alpha$. 
+ * 
+ */
+void
+nc_hipert_adiab_ode_zeta (NcHIPertAdiab *pa, NcHICosmo *cosmo, gdouble alpha, gdouble *Re_zeta, gdouble *Im_zeta)
+{
+  complex double zeta;
+  gdouble phase;
+  gdouble lnFzeta;
+  const gdouble one_sqrt2 = 1.0 / sqrt (2.0);
+
+  g_assert (pa->ode_prep);
+
+  phase = exp (ncm_spline_eval (pa->lnphase, alpha));
+  lnFzeta = ncm_spline_eval (pa->lnFzeta, alpha);
+  
+  zeta = cexp (-I * phase - lnFzeta * 0.5) * one_sqrt2;
+
+  *Re_zeta = creal (zeta);
+  *Im_zeta = cimag (zeta);
+}
+
+/**
+ * nc_hipert_adiab_ode_zeta_Pzeta:
+ * @pa: a #NcHIPertAdiab.
+ * @cosmo: a #NcHICosmo.
+ * @alpha: the log-redshift time.
+ * @Re_zeta: (out caller-allocates): Real part of the ode solution.
+ * @Im_zeta: (out caller-allocates): Imaginary part of the ode solution.
+ * @Re_Pzeta: (out caller-allocates): Real part of the ode solution momentum.
+ * @Im_Pzeta: (out caller-allocates): Imaginary part of the ode solution momentum.
+ * 
+ * Computes the ode solution $\zeta_\text{ode}$ and its momentum for the mode $k$ at the time $\alpha$. 
+ * 
+ */
+void
+nc_hipert_adiab_ode_zeta_Pzeta (NcHIPertAdiab *pa, NcHICosmo *cosmo, gdouble alpha, gdouble *Re_zeta, gdouble *Im_zeta, gdouble *Re_Pzeta, gdouble *Im_Pzeta)
+{
+  NcHIPert *pert = NC_HIPERT (pa);
+  NcHIPertIAdiabEOM *eom = nc_hipert_iadiab_eom (NC_HIPERT_IADIAB (cosmo), alpha, pert->k);
+  complex double zeta, Pzeta;
+  gdouble phase;
+  gdouble lnFzeta;
+  gdouble dlnFzeta;
+  const gdouble one_sqrt2 = 1.0 / sqrt (2.0);
+  gdouble int_nuA = ncm_spline_eval (pa->wkb_phase->s, alpha);
+
+  g_assert (pa->ode_prep);
+
+  phase    = exp (ncm_spline_eval (pa->lnphase, alpha));
+  lnFzeta  = ncm_spline_eval (pa->lnFzeta, alpha);
+  dlnFzeta = ncm_spline_eval (pa->dlnFzeta, alpha);
+
+  printf ("% 20.15g % 20.15g\n", int_nuA, phase);
+
+  zeta = cexp (-I * phase - lnFzeta * 0.5) * one_sqrt2;
+
+  Pzeta = -I * cexp (-I * phase + lnFzeta * 0.5) * one_sqrt2 - 0.5 * eom->m * dlnFzeta * zeta;
 
   *Re_zeta = creal (zeta);
   *Im_zeta = cimag (zeta);
@@ -405,9 +706,9 @@ nc_hipert_adiab_wkb_v (NcHIPertAdiab *pa, NcHICosmo *cosmo, gdouble alpha, gdoub
   complex double v;
   gdouble int_theta;
 
-  g_assert (pert->prepared);
+  g_assert (pa->wkb_prep);
 
-  int_theta = ncm_spline_eval (pa->wkb_phase->s, alpha) + M_PI * 0.25; 
+  int_theta = ncm_spline_eval (pa->wkb_phase->s, alpha); 
   
   v = cexp (-I * int_theta) / sqrt (2.0 * sqrt (eom->nu2));
 
@@ -415,17 +716,11 @@ nc_hipert_adiab_wkb_v (NcHIPertAdiab *pa, NcHICosmo *cosmo, gdouble alpha, gdoub
   *Im_v = cimag (v);
 }
 
-typedef struct _NcHIPertAdiabArg
-{
-  NcHICosmo *cosmo;
-  NcHIPertAdiab *pa;
-} NcHIPertAdiabArg;
-
 static gint
-_nc_hipert_adiab_f (realtype x, N_Vector y, N_Vector ydot, gpointer f_data)
+_nc_hipert_adiab_f (realtype alpha, N_Vector y, N_Vector ydot, gpointer f_data)
 {
   NcHIPertAdiabArg *arg = (NcHIPertAdiabArg *) f_data;
-  NcHIPertIAdiabEOM *eom = nc_hipert_iadiab_eom (NC_HIPERT_IADIAB (arg->cosmo), x, NC_HIPERT (arg->pa)->k);
+  NcHIPertIAdiabEOM *eom = nc_hipert_iadiab_eom (NC_HIPERT_IADIAB (arg->cosmo), alpha, NC_HIPERT (arg->pa)->k);
   
   NV_Ith_S (ydot, NC_HIPERT_ADIAB_RE_ZETA) = NV_Ith_S (y, NC_HIPERT_ADIAB_RE_PZETA) / eom->m;
   NV_Ith_S (ydot, NC_HIPERT_ADIAB_IM_ZETA) = NV_Ith_S (y, NC_HIPERT_ADIAB_IM_PZETA) / eom->m;
@@ -437,10 +732,10 @@ _nc_hipert_adiab_f (realtype x, N_Vector y, N_Vector ydot, gpointer f_data)
 }
 
 static gint
-_nc_hipert_adiab_J (_NCM_SUNDIALS_INT_TYPE N, realtype t, N_Vector y, N_Vector fy, DlsMat J, gpointer jac_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3)
+_nc_hipert_adiab_J (_NCM_SUNDIALS_INT_TYPE N, realtype alpha, N_Vector y, N_Vector fy, DlsMat J, gpointer jac_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3)
 {
   NcHIPertAdiabArg *arg = (NcHIPertAdiabArg *) jac_data;
-  NcHIPertIAdiabEOM *eom = nc_hipert_iadiab_eom (NC_HIPERT_IADIAB (arg->cosmo), t, NC_HIPERT (arg->pa)->k);
+  NcHIPertIAdiabEOM *eom = nc_hipert_iadiab_eom (NC_HIPERT_IADIAB (arg->cosmo), alpha, NC_HIPERT (arg->pa)->k);
 
   DENSE_ELEM (J, NC_HIPERT_ADIAB_RE_ZETA, NC_HIPERT_ADIAB_RE_PZETA) = 1.0 / eom->m;
   DENSE_ELEM (J, NC_HIPERT_ADIAB_IM_ZETA, NC_HIPERT_ADIAB_IM_PZETA) = 1.0 / eom->m;
@@ -454,7 +749,7 @@ _nc_hipert_adiab_J (_NCM_SUNDIALS_INT_TYPE N, realtype t, N_Vector y, N_Vector f
  * nc_hipert_adiab_set_init_cond:
  * @pa: a #NcHIPertAdiab.
  * @cosmo: a #NcHICosmo.
- * @alphai: the log-redshift time.
+ * @alpha_i: the log-redshift time.
  * @Re_zeta: Real part of the wkb solution.
  * @Im_zeta: Imaginary part of the wkb solution.
  * @Re_Pzeta: Real part of the wkb solution momentum.
@@ -464,12 +759,12 @@ _nc_hipert_adiab_J (_NCM_SUNDIALS_INT_TYPE N, realtype t, N_Vector y, N_Vector f
  * 
  */
 void 
-nc_hipert_adiab_set_init_cond (NcHIPertAdiab *pa, NcHICosmo *cosmo, gdouble alphai, gdouble Re_zeta, gdouble Im_zeta, gdouble Re_Pzeta, gdouble Im_Pzeta)
+nc_hipert_adiab_set_init_cond (NcHIPertAdiab *pa, NcHICosmo *cosmo, gdouble alpha_i, gdouble Re_zeta, gdouble Im_zeta, gdouble Re_Pzeta, gdouble Im_Pzeta)
 {
   NcHIPert *pert = NC_HIPERT (pa);
   gint flag;
 
-  pert->alpha0 = alphai;
+  pert->alpha0 = alpha_i;
 
   if (pert->y == NULL)
     pert->y = N_VNew_Serial (4);
@@ -481,13 +776,13 @@ nc_hipert_adiab_set_init_cond (NcHIPertAdiab *pa, NcHICosmo *cosmo, gdouble alph
 
   if (!pert->cvode_init)
   {
-    flag = CVodeInit (pert->cvode, &_nc_hipert_adiab_f, alphai, pert->y);
+    flag = CVodeInit (pert->cvode, &_nc_hipert_adiab_f, alpha_i, pert->y);
     CVODE_CHECK (&flag, "CVodeInit", 1, );
     pert->cvode_init = TRUE;
   }
   else
   {
-    flag = CVodeReInit (pert->cvode, alphai, pert->y);
+    flag = CVodeReInit (pert->cvode, alpha_i, pert->y);
     CVODE_CHECK (&flag, "CVodeReInit", 1, );
   }
 
@@ -508,18 +803,18 @@ nc_hipert_adiab_set_init_cond (NcHIPertAdiab *pa, NcHICosmo *cosmo, gdouble alph
  * nc_hipert_adiab_set_init_cond_wkb:
  * @pa: a #NcHIPertAdiab.
  * @cosmo: a #NcHICosmo.
- * @alphai: the log-redshift time.
+ * @alpha_i: the log-redshift time.
  * 
- * Sets the initial conditions for the zeta evolution using the value of the WKB solution at @alphai. 
+ * Sets the initial conditions for the zeta evolution using the value of the WKB solution at @alpha_i. 
  * 
  */
 void 
-nc_hipert_adiab_set_init_cond_wkb (NcHIPertAdiab *pa, NcHICosmo *cosmo, gdouble alphai)
+nc_hipert_adiab_set_init_cond_wkb (NcHIPertAdiab *pa, NcHICosmo *cosmo, gdouble alpha_i)
 {
   gdouble Re_zeta, Im_zeta, Re_Pzeta, Im_Pzeta;
 
-  nc_hipert_adiab_wkb_zeta_Pzeta (pa, cosmo, alphai, &Re_zeta, &Im_zeta, &Re_Pzeta, &Im_Pzeta);
-  nc_hipert_adiab_set_init_cond (pa, cosmo, alphai, Re_zeta, Im_zeta, Re_Pzeta, Im_Pzeta);
+  nc_hipert_adiab_wkb_zeta_Pzeta (pa, cosmo, alpha_i, &Re_zeta, &Im_zeta, &Re_Pzeta, &Im_Pzeta);
+  nc_hipert_adiab_set_init_cond (pa, cosmo, alpha_i, Re_zeta, Im_zeta, Re_Pzeta, Im_Pzeta);
 }
 
 /**
@@ -545,9 +840,6 @@ nc_hipert_adiab_evolve (NcHIPertAdiab *pa, NcHICosmo *cosmo, gdouble alphaf)
   flag = CVodeSetUserData (pert->cvode, &arg);
   CVODE_CHECK (&flag, "CVodeSetFdata", 1, );
 
-  flag = CVodeSetUserData (pert->cvode, &arg);
-  CVODE_CHECK (&flag, "CVodeSetFdata", 1, );
-
   flag = CVode (pert->cvode, alphaf, pert->y, &alpha_i, CV_NORMAL);
   CVODE_CHECK (&flag, "CVode[nc_hipert_adiab_evolve]", 1, );
 
@@ -557,7 +849,7 @@ nc_hipert_adiab_evolve (NcHIPertAdiab *pa, NcHICosmo *cosmo, gdouble alphaf)
 /**
  * nc_hipert_adiab_get_values:
  * @pa: a #NcHIPertAdiab.
- * @alphai: (out caller-allocates): Current time.
+ * @alpha_i: (out caller-allocates): Current time.
  * @Re_zeta: (out caller-allocates): Real part of the solution.
  * @Im_zeta: (out caller-allocates): Imaginary part of the solution.
  * @Re_Pzeta: (out caller-allocates): Real part of the solution momentum.
@@ -567,11 +859,11 @@ nc_hipert_adiab_evolve (NcHIPertAdiab *pa, NcHICosmo *cosmo, gdouble alphaf)
  * 
  */
 void
-nc_hipert_adiab_get_values (NcHIPertAdiab *pa, gdouble *alphai, gdouble *Re_zeta, gdouble *Im_zeta, gdouble *Re_Pzeta, gdouble *Im_Pzeta)
+nc_hipert_adiab_get_values (NcHIPertAdiab *pa, gdouble *alpha_i, gdouble *Re_zeta, gdouble *Im_zeta, gdouble *Re_Pzeta, gdouble *Im_Pzeta)
 {
   NcHIPert *pert = NC_HIPERT (pa);
   
-  *alphai = pert->alpha0;
+  *alpha_i = pert->alpha0;
   *Re_zeta  = NV_Ith_S (pert->y, NC_HIPERT_ADIAB_RE_ZETA);
   *Im_zeta  = NV_Ith_S (pert->y, NC_HIPERT_ADIAB_IM_ZETA);
   *Re_Pzeta = NV_Ith_S (pert->y, NC_HIPERT_ADIAB_RE_PZETA);

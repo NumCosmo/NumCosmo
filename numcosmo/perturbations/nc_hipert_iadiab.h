@@ -41,6 +41,7 @@ typedef struct _NcHIPertIAdiabInterface NcHIPertIAdiabInterface;
 typedef struct _NcHIPertIAdiabEOM NcHIPertIAdiabEOM;
 
 typedef gdouble (*NcHIPertIAdiabFuncNuA2) (NcHIPertIAdiab *iadiab, gdouble alpha, gdouble k);
+typedef gdouble (*NcHIPertIAdiabFuncDlnmzeta) (NcHIPertIAdiab *iadiab, gdouble alpha, gdouble k);
 typedef gdouble (*NcHIPertIAdiabFuncDmzetanuAnuA) (NcHIPertIAdiab *iadiab, gdouble alpha, gdouble k);
 typedef NcHIPertIAdiabEOM *(*NcHIPertIAdiabFuncEOM) (NcHIPertIAdiab *iadiab, gdouble alpha, gdouble k);
 
@@ -50,6 +51,7 @@ struct _NcHIPertIAdiabInterface
   GTypeInterface parent;
 
   NcHIPertIAdiabFuncNuA2 nuA2;
+  NcHIPertIAdiabFuncDlnmzeta dlnmzeta;
   NcHIPertIAdiabFuncDmzetanuAnuA dmzetanuA_nuA;
   NcHIPertIAdiabFuncEOM eom;
 };
@@ -77,6 +79,7 @@ NcHIPertIAdiabEOM *nc_hipert_iadiab_eom_dup (NcHIPertIAdiabEOM *adiab_eom);
 void nc_hipert_iadiab_eom_free (NcHIPertIAdiabEOM *adiab_eom);
 
 G_INLINE_FUNC gdouble nc_hipert_iadiab_nuA2 (NcHIPertIAdiab *iadiab, gdouble alpha, gdouble k);
+G_INLINE_FUNC gdouble nc_hipert_iadiab_dlnmzeta (NcHIPertIAdiab *iadiab, gdouble alpha, gdouble k);
 G_INLINE_FUNC gdouble nc_hipert_iadiab_dmzetanuA_nuA (NcHIPertIAdiab *iadiab, gdouble alpha, gdouble k);
 G_INLINE_FUNC NcHIPertIAdiabEOM *nc_hipert_iadiab_eom (NcHIPertIAdiab *iadiab, gdouble alpha, gdouble k);
 
@@ -97,6 +100,12 @@ nc_hipert_iadiab_nuA2 (NcHIPertIAdiab *iadiab, gdouble alpha, gdouble k)
 }
 
 G_INLINE_FUNC gdouble 
+nc_hipert_iadiab_dlnmzeta (NcHIPertIAdiab *iadiab, gdouble alpha, gdouble k)
+{
+  return NC_HIPERT_IADIAB_GET_INTERFACE (iadiab)->dlnmzeta (iadiab, alpha, k);
+}
+
+G_INLINE_FUNC gdouble 
 nc_hipert_iadiab_dmzetanuA_nuA (NcHIPertIAdiab *iadiab, gdouble alpha, gdouble k)
 {
   return NC_HIPERT_IADIAB_GET_INTERFACE (iadiab)->dmzetanuA_nuA (iadiab, alpha, k);
@@ -107,8 +116,6 @@ nc_hipert_iadiab_eom (NcHIPertIAdiab *iadiab, gdouble alpha, gdouble k)
 {
   return NC_HIPERT_IADIAB_GET_INTERFACE (iadiab)->eom (iadiab, alpha, k);
 }
-
-
 
 G_END_DECLS
 

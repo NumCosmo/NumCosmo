@@ -298,8 +298,10 @@ ncm_spline_set_data_static (NcmSpline *s, gdouble *x, gdouble *y, gsize len, gbo
 NcmVector *
 ncm_spline_get_xv (NcmSpline *s)
 {
-	g_object_ref (s->xv);
-	return s->xv;
+	if (s->xv != NULL)
+    return g_object_ref (s->xv);
+  else
+    return NULL;
 }
 
 /**
@@ -313,8 +315,10 @@ ncm_spline_get_xv (NcmSpline *s)
 NcmVector *
 ncm_spline_get_yv (NcmSpline *s)
 {
-	g_object_ref (s->yv);
-	return s->yv;
+  if (s->yv != NULL)
+    return g_object_ref (s->yv);
+  else
+    return NULL;
 }
 
 /**

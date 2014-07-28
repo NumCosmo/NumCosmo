@@ -29,6 +29,7 @@ alphae = cosmo.abs_alpha (1.0e-1)
 alphaz = cosmo.abs_alpha (1.0e30)
 
 pert.prepare_wkb (cosmo, alphai, alphaf)
+pert.prepare_ode (cosmo, alphai, -cosmo.abs_alpha (1.0e29))
 
 pert.set_stiff_solver (True)
 
@@ -38,6 +39,6 @@ for i in range (100000):
   alpha = alphai + (alphae - alphai) / 100000.0 * (i + 1)
   pert.evolve (cosmo, alpha)
   (alphas, Re_zeta, Im_zeta, Re_Pzeta, Im_Pzeta) = pert.get_values ()
-  (wkb_Re_zeta, wkb_Im_zeta, wkb_Re_Pzeta, wkb_Im_Pzeta) = pert.wkb_zeta_Pzeta (cosmo, alphas)  
+  (wkb_Re_zeta, wkb_Im_zeta, wkb_Re_Pzeta, wkb_Im_Pzeta) = pert.ode_zeta_Pzeta (cosmo, alphas)  
   print alphas, Re_zeta, Im_zeta, Re_Pzeta, Im_Pzeta, wkb_Re_zeta, wkb_Im_zeta, wkb_Re_Pzeta, wkb_Im_Pzeta
 
