@@ -80,6 +80,12 @@ enum {
 
 static gdouble _nc_hipert_adiab_wkb_phase (gdouble y, gdouble x, gpointer userdata);
 
+typedef struct _NcHIPertAdiabArg
+{
+  NcHICosmo *cosmo;
+  NcHIPertAdiab *pa;
+} NcHIPertAdiabArg;
+
 static void
 nc_hipert_adiab_init (NcHIPertAdiab *pa)
 {
@@ -234,17 +240,11 @@ nc_hipert_adiab_clear (NcHIPertAdiab **pa)
   g_clear_object (pa);
 }
 
-typedef struct _NcHIPertAdiabWKBPhaseArg
-{
-  NcHICosmo *cosmo;
-  gdouble k;
-} NcHIPertAdiabWKBPhaseArg;
-
 static gdouble 
 _nc_hipert_adiab_wkb_phase (gdouble y, gdouble x, gpointer userdata)
 {
-  NcHIPertAdiabWKBPhaseArg *arg = (NcHIPertAdiabWKBPhaseArg *) userdata;
-  const gdouble nuA2 = nc_hipert_iadiab_nuA2 (NC_HIPERT_IADIAB (arg->cosmo), x, arg->k);
+  NcHIPertAdiabArg *arg = (NcHIPertAdiabArg *) userdata;
+  const gdouble nuA2 = nc_hipert_iadiab_nuA2 (NC_HIPERT_IADIAB (arg->cosmo), x, NC_HIPERT (arg->pa)->k);
   return sqrt (nuA2);
 }
 
@@ -271,10 +271,10 @@ nc_hipert_adiab_prepare_wkb (NcHIPertAdiab *pa, NcHICosmo *cosmo, gdouble alpha_
   
   if (!pa->wkb_prep)
   {
-    NcHIPertAdiabWKBPhaseArg arg;
+    NcHIPertAdiabArg arg;
 
     arg.cosmo = cosmo;
-    arg.k     = pert->k;
+    arg.pa    = pa;
 
     ncm_ode_spline_set_interval (pa->wkb_phase, M_PI * 0.25, alpha_i, alpha_f);
 
@@ -283,13 +283,6 @@ nc_hipert_adiab_prepare_wkb (NcHIPertAdiab *pa, NcHICosmo *cosmo, gdouble alpha_
     pa->wkb_prep = TRUE;
   }
 }
-
-typedef struct _NcHIPertAdiabArg
-{
-  NcHICosmo *cosmo;
-  NcHIPertAdiab *pa;
-} NcHIPertAdiabArg;
-
 
 static gint
 _nc_hipert_adiab_phase_f (realtype alpha, N_Vector y, N_Vector ydot, gpointer f_data)
@@ -304,9 +297,12 @@ _nc_hipert_adiab_phase_f (realtype alpha, N_Vector y, N_Vector ydot, gpointer f_
   const gdouble mzeta2    = eom->m * eom->m; 
   
   NV_Ith_S (ydot, 0) = dlnFzeta;
-  NV_Ith_S (ydot, 1) = 2.0 * ((1.0 / 4.0) * dlnFzeta2 + eom->nu2 + dlnmzeta - exp (2.0 * lnFzeta) / mzeta2);
+  NV_Ith_S (ydot, 1) = 0.5 * dlnFzeta2 - dlnFzeta * dlnmzeta + 2.0 * (eom->nu2 - exp (2.0 * lnFzeta) / mzeta2);
   NV_Ith_S (ydot, 2) = exp (lnFzeta - lnphase) / eom->m;
 
+
+/*printf ("% 20.15e % 20.15e % 20.15e %e\n", nc_hicosmo_x_alpha (arg->cosmo, alpha), eom->nu2, exp (2.0 * lnFzeta) / mzeta2, fabs ((exp (2.0 * lnFzeta) / mzeta2 - eom->nu2)/eom->nu2) );*/
+  
   return 0;
 }
 
@@ -315,6 +311,7 @@ _nc_hipert_adiab_phase_J (_NCM_SUNDIALS_INT_TYPE N, realtype alpha, N_Vector y, 
 {
   NcHIPertAdiabArg *arg  = (NcHIPertAdiabArg *) jac_data;
   NcHIPertIAdiabEOM *eom = nc_hipert_iadiab_eom (NC_HIPERT_IADIAB (arg->cosmo), alpha, NC_HIPERT (arg->pa)->k);
+  const gdouble dlnmzeta  = nc_hipert_iadiab_dlnmzeta (NC_HIPERT_IADIAB (arg->cosmo), alpha, NC_HIPERT (arg->pa)->k);
   const gdouble lnFzeta  = NV_Ith_S (y, 0);
   const gdouble dlnFzeta = NV_Ith_S (y, 1);
   const gdouble lnphase  = NV_Ith_S (y, 2);
@@ -323,7 +320,7 @@ _nc_hipert_adiab_phase_J (_NCM_SUNDIALS_INT_TYPE N, realtype alpha, N_Vector y, 
   DENSE_ELEM (J, 0, 1) = 1.0;
 
   DENSE_ELEM (J, 1, 0) = - 4.0 * exp (2.0 * lnFzeta) / mzeta2;
-  DENSE_ELEM (J, 1, 1) = dlnFzeta;
+  DENSE_ELEM (J, 1, 1) = dlnFzeta - dlnmzeta;
 
   DENSE_ELEM (J, 2, 0) = exp (lnFzeta - lnphase) / eom->m;
   DENSE_ELEM (J, 2, 2) = -exp (lnFzeta - lnphase) / eom->m;
@@ -402,7 +399,7 @@ nc_hipert_adiab_prepare_ode (NcHIPertAdiab *pa, NcHICosmo *cosmo, gdouble alpha_
  
     NV_Ith_S (pa->mzetanuA, 0) = log (nuA * eom->m);
     NV_Ith_S (pa->mzetanuA, 1) = dmzetanuA / (nuA * eom->m);
-    NV_Ith_S (pa->mzetanuA, 2) = log (M_PI * 0.25);
+    NV_Ith_S (pa->mzetanuA, 2) = log (M_PI * 0.25);    
     
     if (!pa->cvode_phase_init)
     {
@@ -442,7 +439,7 @@ nc_hipert_adiab_prepare_ode (NcHIPertAdiab *pa, NcHICosmo *cosmo, gdouble alpha_
         flag = CVode (pa->cvode_phase, alpha_f, pa->mzetanuA, &alpha, CV_ONE_STEP);
         CVODE_CHECK (&flag, "CVode[nc_hipert_adiab_prepare_ode]", 1, );
 
-        if (fabs (2.0 * (alpha - last) / (alpha + last)) > 1.0e-4)
+        if (fabs (2.0 * (alpha - last) / (alpha + last)) > 1.0e-6)
         {
           g_array_append_val (alpha_a, alpha);
           g_array_append_val (lnFzeta, NV_Ith_S (pa->mzetanuA, 0));
@@ -590,15 +587,12 @@ nc_hipert_adiab_ode_zeta_Pzeta (NcHIPertAdiab *pa, NcHICosmo *cosmo, gdouble alp
   gdouble lnFzeta;
   gdouble dlnFzeta;
   const gdouble one_sqrt2 = 1.0 / sqrt (2.0);
-  gdouble int_nuA = ncm_spline_eval (pa->wkb_phase->s, alpha);
 
   g_assert (pa->ode_prep);
 
   phase    = exp (ncm_spline_eval (pa->lnphase, alpha));
   lnFzeta  = ncm_spline_eval (pa->lnFzeta, alpha);
   dlnFzeta = ncm_spline_eval (pa->dlnFzeta, alpha);
-
-  printf ("% 20.15g % 20.15g\n", int_nuA, phase);
 
   zeta = cexp (-I * phase - lnFzeta * 0.5) * one_sqrt2;
 
@@ -612,15 +606,25 @@ nc_hipert_adiab_ode_zeta_Pzeta (NcHIPertAdiab *pa, NcHICosmo *cosmo, gdouble alp
 }
 
 static gdouble 
-_nc_hipert_adiab_wkb_nuA2 (gdouble x, gpointer userdata)
+_nc_hipert_adiab_wkb_prec (gdouble alpha, gpointer userdata)
 {
-  NcHIPertAdiabWKBPhaseArg *arg = (NcHIPertAdiabWKBPhaseArg *) userdata;
-  const gdouble nuA2 = nc_hipert_iadiab_nuA2 (NC_HIPERT_IADIAB (arg->cosmo), x, arg->k);
-  return nuA2;
+  NcHIPertAdiabArg *arg = (NcHIPertAdiabArg *) userdata;
+  const gdouble nuA2 = nc_hipert_iadiab_nuA2 (NC_HIPERT_IADIAB (arg->cosmo), alpha, NC_HIPERT (arg->pa)->k);
+  const gdouble test = log (fabs (nuA2 * NC_HIPERT (arg->pa)->reltol / (alpha * alpha)));
+  return test;
+}
+
+static gdouble 
+_nc_hipert_adiab_wkb_nuA2 (gdouble alpha, gpointer userdata)
+{
+  NcHIPertAdiabArg *arg = (NcHIPertAdiabArg *) userdata;
+  const gdouble nuA2 = nc_hipert_iadiab_nuA2 (NC_HIPERT_IADIAB (arg->cosmo), alpha, NC_HIPERT (arg->pa)->k);
+  NcHIPertIAdiabEOM *eom  = nc_hipert_iadiab_eom (NC_HIPERT_IADIAB (arg->cosmo), alpha, NC_HIPERT (arg->pa)->k);
+  return nuA2 / eom->nu2;
 }
 
 static gint
-_nc_hipert_adiab_wkb_nu2_root (NcHIPertAdiab *pa, NcHICosmo *cosmo, gdouble alpha0, gdouble *alpha)
+_nc_hipert_adiab_wkb_nu2_root (NcHIPertAdiab *pa, NcHICosmo *cosmo, gdouble alpha0, gdouble *alpha, gdouble (*f) (gdouble, gpointer))
 {
   NcHIPert *pert = NC_HIPERT (pa);
   gint status;
@@ -629,12 +633,12 @@ _nc_hipert_adiab_wkb_nu2_root (NcHIPertAdiab *pa, NcHICosmo *cosmo, gdouble alph
   gsl_root_fsolver *s;
   gsl_function F;
   gdouble prec = pert->reltol, alpha1 = *alpha;
-  NcHIPertAdiabWKBPhaseArg arg;
+  NcHIPertAdiabArg arg;
 
   arg.cosmo = cosmo;
-  arg.k     = pert->k;
+  arg.pa    = pa;
 
-  F.function = &_nc_hipert_adiab_wkb_nuA2;
+  F.function = f;
   F.params   = &arg;
 
   T = gsl_root_fsolver_brent;
@@ -654,9 +658,18 @@ _nc_hipert_adiab_wkb_nu2_root (NcHIPertAdiab *pa, NcHICosmo *cosmo, gdouble alph
     *alpha = gsl_root_fsolver_root (s);
     alpha0 = gsl_root_fsolver_x_lower (s);
     alpha1 = gsl_root_fsolver_x_upper (s);
-    status = gsl_root_test_interval (alpha0, alpha1, 0, prec);
+
+    status = gsl_root_test_residual (GSL_FN_EVAL ((&F), *alpha), prec);
+    
+    if (status == GSL_CONTINUE && (gsl_root_test_interval (alpha0, alpha1, 0, prec) == GSL_SUCCESS))
+    {
+      gsl_root_fsolver_free (s);
+      return status;
+    }
   }
   while (status == GSL_CONTINUE && iter < max_iter);
+  if (iter >= max_iter)
+    return -1;
 
   gsl_root_fsolver_free (s);
 
@@ -678,10 +691,39 @@ gdouble
 nc_hipert_adiab_wkb_maxtime (NcHIPertAdiab *pa, NcHICosmo *cosmo, gdouble alpha0, gdouble alpha1)
 {
   gdouble alpha = alpha1;
-  guint ret = _nc_hipert_adiab_wkb_nu2_root (pa, cosmo, alpha0, &alpha);
+  guint ret = _nc_hipert_adiab_wkb_nu2_root (pa, cosmo, alpha0, &alpha, &_nc_hipert_adiab_wkb_nuA2);
 
   if (ret == 0)
     return alpha;
+  else
+    return GSL_NAN;
+}
+
+/**
+ * nc_hipert_adiab_wkb_maxtime_prec:
+ * @pa: a #NcHIPertAdiab.
+ * @cosmo: a #NcHICosmo.
+ * @alpha0: the initial log-redshift time.
+ * @alpha1: the final log-redshift time.
+ * 
+ * Search for the instant at which the WKB approximation starts to fails within the asked precision. 
+ * 
+ * Returns: the instant $\alpha$ between $\alpha_0$ and $\alpha_1$ or NaN if not found.
+ */
+gdouble 
+nc_hipert_adiab_wkb_maxtime_prec (NcHIPertAdiab *pa, NcHICosmo *cosmo, gdouble alpha0, gdouble alpha1)
+{
+  gdouble alpha = alpha1;
+  guint ret = _nc_hipert_adiab_wkb_nu2_root (pa, cosmo, alpha0, &alpha, &_nc_hipert_adiab_wkb_nuA2);
+
+  if (ret == 0)
+  {
+    ret = _nc_hipert_adiab_wkb_nu2_root (pa, cosmo, alpha0, &alpha, &_nc_hipert_adiab_wkb_prec);
+    if (ret == 0)
+      return alpha;
+    else
+      return GSL_NAN;
+  }
   else
     return GSL_NAN;
 }

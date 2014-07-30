@@ -98,6 +98,7 @@ void nc_hipert_adiab_wkb_zeta (NcHIPertAdiab *pa, NcHICosmo *cosmo, gdouble alph
 void nc_hipert_adiab_wkb_zeta_Pzeta (NcHIPertAdiab *pa, NcHICosmo *cosmo, gdouble alpha, gdouble *Re_zeta, gdouble *Im_zeta, gdouble *Re_Pzeta, gdouble *Im_Pzeta);
 void nc_hipert_adiab_wkb_v (NcHIPertAdiab *pa, NcHICosmo *cosmo, gdouble alpha, gdouble *Re_v, gdouble *Im_v);
 gdouble nc_hipert_adiab_wkb_maxtime (NcHIPertAdiab *pa, NcHICosmo *cosmo, gdouble alpha0, gdouble alpha1);
+gdouble nc_hipert_adiab_wkb_maxtime_prec (NcHIPertAdiab *pa, NcHICosmo *cosmo, gdouble alpha0, gdouble alpha1);
 
 void nc_hipert_adiab_ode_zeta (NcHIPertAdiab *pa, NcHICosmo *cosmo, gdouble alpha, gdouble *Re_zeta, gdouble *Im_zeta);
 void nc_hipert_adiab_ode_zeta_Pzeta (NcHIPertAdiab *pa, NcHICosmo *cosmo, gdouble alpha, gdouble *Re_zeta, gdouble *Im_zeta, gdouble *Re_Pzeta, gdouble *Im_Pzeta);
