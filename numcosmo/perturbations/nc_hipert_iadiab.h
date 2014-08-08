@@ -28,6 +28,7 @@
 
 #include <glib-object.h>
 #include <numcosmo/nc_hicosmo.h>
+#include <numcosmo/perturbations/nc_hipert_wkb.h>
 
 G_BEGIN_DECLS
 
@@ -51,9 +52,11 @@ struct _NcHIPertIAdiabInterface
   GTypeInterface parent;
 
   NcHIPertIAdiabFuncNuA2 nuA2;
+  NcHIPertIAdiabFuncNuA2 VA;
   NcHIPertIAdiabFuncDlnmzeta dlnmzeta;
   NcHIPertIAdiabFuncDmzetanuAnuA dmzetanuA_nuA;
   NcHIPertIAdiabFuncEOM eom;
+  NcHIPertWKBEom wkb_eom;
 };
 
 /**
@@ -79,9 +82,11 @@ NcHIPertIAdiabEOM *nc_hipert_iadiab_eom_dup (NcHIPertIAdiabEOM *adiab_eom);
 void nc_hipert_iadiab_eom_free (NcHIPertIAdiabEOM *adiab_eom);
 
 G_INLINE_FUNC gdouble nc_hipert_iadiab_nuA2 (NcHIPertIAdiab *iadiab, gdouble alpha, gdouble k);
+G_INLINE_FUNC gdouble nc_hipert_iadiab_VA (NcHIPertIAdiab *iadiab, gdouble alpha, gdouble k);
 G_INLINE_FUNC gdouble nc_hipert_iadiab_dlnmzeta (NcHIPertIAdiab *iadiab, gdouble alpha, gdouble k);
 G_INLINE_FUNC gdouble nc_hipert_iadiab_dmzetanuA_nuA (NcHIPertIAdiab *iadiab, gdouble alpha, gdouble k);
 G_INLINE_FUNC NcHIPertIAdiabEOM *nc_hipert_iadiab_eom (NcHIPertIAdiab *iadiab, gdouble alpha, gdouble k);
+G_INLINE_FUNC void nc_hipert_iadiab_wkb_eom (NcHIPertIAdiab *iadiab, gdouble alpha, gdouble k, gdouble *nu2, gdouble *m, gdouble *dlnm);
 
 G_END_DECLS
 
@@ -100,6 +105,12 @@ nc_hipert_iadiab_nuA2 (NcHIPertIAdiab *iadiab, gdouble alpha, gdouble k)
 }
 
 G_INLINE_FUNC gdouble 
+nc_hipert_iadiab_VA (NcHIPertIAdiab *iadiab, gdouble alpha, gdouble k)
+{
+  return NC_HIPERT_IADIAB_GET_INTERFACE (iadiab)->VA (iadiab, alpha, k);
+}
+
+G_INLINE_FUNC gdouble 
 nc_hipert_iadiab_dlnmzeta (NcHIPertIAdiab *iadiab, gdouble alpha, gdouble k)
 {
   return NC_HIPERT_IADIAB_GET_INTERFACE (iadiab)->dlnmzeta (iadiab, alpha, k);
@@ -115,6 +126,12 @@ G_INLINE_FUNC NcHIPertIAdiabEOM *
 nc_hipert_iadiab_eom (NcHIPertIAdiab *iadiab, gdouble alpha, gdouble k)
 {
   return NC_HIPERT_IADIAB_GET_INTERFACE (iadiab)->eom (iadiab, alpha, k);
+}
+
+G_INLINE_FUNC void 
+nc_hipert_iadiab_wkb_eom (NcHIPertIAdiab *iadiab, gdouble alpha, gdouble k, gdouble *nu2, gdouble *m, gdouble *dlnm)
+{
+  return NC_HIPERT_IADIAB_GET_INTERFACE (iadiab)->wkb_eom (G_OBJECT (iadiab), alpha, k, nu2, m, dlnm);
 }
 
 G_END_DECLS

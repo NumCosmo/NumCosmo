@@ -50,7 +50,7 @@
 gint 
 main (void)
 {
-#if defined NUMCOSMO_HAVE_CHEALPIX && defined NUMCOSMO_HAVE_CFITSIO  
+#if defined NUMCOSMO_HAVEaa_CHEALPIX && defined NUMCOSMO_HAVE_CFITSIO  
   GTimer *bench = g_timer_new ();
   NcSphereMapAlm *mapalm = nc_sphere_mapalm_new();
   NcSphereMap *omap = nc_sphere_healpix_read_map (argv[1], NULL);

@@ -17,10 +17,11 @@ Ncm.cfg_init ()
 #
 cosmo = Nc.HICosmo.new_from_name (Nc.HICosmo, "NcHICosmoQGRW")
 
-w      = 1.0e-4
-prec   = 1.0e-11
-k_min  = 1.0e-1
-k_max  = 1.0e4
+w        = 1.0e-8
+prec     = 1.0e-9
+k_min    = 1.0e-1
+k_max    = 1.0e4
+wkb_prec = prec
 
 cosmo.props.w      = w
 cosmo.props.Omegar = 1.0e-5
@@ -30,7 +31,7 @@ pertZ = Nc.HIPertTwoFluids.new ()
 pertQ = Nc.HIPertTwoFluids.new ()
 
 pertZ.props.reltol = prec
-pertQ.props.reltol  = prec
+pertQ.props.reltol = prec
 
 Delta_zeta_A = []
 Delta_zeta_B = []
@@ -39,44 +40,56 @@ Delta_Q_B = []
 
 k_a = []
 
-for i in range (1001):
-  mode_k = k_min * math.exp (math.log (k_max / k_min) * i / 1000.0)
+alpha_minf      = -cosmo.abs_alpha (1.0e-27)
+alpha_end       = cosmo.abs_alpha (1.0e25)  
+
+for i in range (101):
+  mode_k = k_min * math.exp (math.log (k_max / k_min) * i / 100.0)
   
   k_a.append (mode_k)
 
   pertZ.set_mode_k (mode_k);
   pertQ.set_mode_k (mode_k);
 
-  alphaZt = pertZ.wkb_zeta_maxtime (cosmo, -cosmo.abs_alpha (1.0e-30), -cosmo.abs_alpha (1.0e20))
-  alphaQt = pertZ.wkb_S_maxtime (cosmo, -cosmo.abs_alpha (1.0e-30), -cosmo.abs_alpha (1.0e20))
+  alpha_zeta_wkb  = pertZ.wkb_zeta_maxtime (cosmo, alpha_minf, -alpha_end)
+  alpha_S_wkb     = pertZ.wkb_S_maxtime (cosmo, alpha_minf, -alpha_end)   
+  alpha_zeta_prec = pertZ.wkb_zeta_maxtime_prec (cosmo, wkb_prec, alpha_minf, -alpha_end)
+  alpha_S_prec    = pertZ.wkb_S_maxtime_prec (cosmo, wkb_prec, alpha_minf, -alpha_end)   
+  alphai          = -cosmo.abs_alpha (cosmo.x_alpha (min (alpha_S_prec, alpha_zeta_prec)) * 1.0e-1)
+  
+  print "# Mode[%d] k = %f, prec = %e" % (i, mode_k, prec)
+  print "# Maxtime wkb zeta: %f %e" % (alpha_zeta_wkb, cosmo.x_alpha (alpha_zeta_wkb))
+  print "# Maxtime wkb Q:    %f %e" % (alpha_S_wkb, cosmo.x_alpha (alpha_S_wkb))
+  print "# Prec    wkb zeta: %f %e" % (alpha_zeta_prec, cosmo.x_alpha (alpha_zeta_prec))
+  print "# Prec    wkb Q:    %f %e" % (alpha_S_prec, cosmo.x_alpha (alpha_S_prec))
+  print "# Inital time:      %f %e" % (alphai, cosmo.x_alpha (alphai))
 
-  xi = min (cosmo.x_alpha (min (alphaZt, alphaQt)) * 1.0e-3, 1.0e-3)
+  pertZ.set_stiff_solver (True)
+  pertQ.set_stiff_solver (True)
 
-  alphai = -cosmo.abs_alpha (xi)
-  alphaf = cosmo.abs_alpha (1.0e20)
+  print "# Preparing zeta"
+  pertZ.prepare_patched_zeta (cosmo, wkb_prec, alphai, -alpha_end)
+  print "# Preparing Q"
+  pertZ.prepare_patched_S (cosmo, wkb_prec, alphai, -alpha_end)
+  
+  print "# Preparing zeta"
+  pertQ.prepare_patched_zeta (cosmo, wkb_prec, alphai, -alpha_end)
+  print "# Preparing Q"
+  pertQ.prepare_patched_S (cosmo, wkb_prec, alphai, -alpha_end)
 
-  print "# Mode[%d] k = %f" % (i, mode_k)
-  print "# Maxtime zeta", alphaZt, cosmo.x_alpha (alphaZt)
-  print "# Maxtime Q   ", alphaQt, cosmo.x_alpha (alphaQt)
-  print "# Initial time", alphai, cosmo.x_alpha (alphai)
-
-  #pert.set_stiff_solver (True)
-  pertZ.prepare_wkb_zeta (cosmo, alphai, alphaZt)
-  pertZ.prepare_wkb_S (cosmo, alphai, alphaQt)
-
-  pertQ.prepare_wkb_zeta (cosmo, alphai, alphaZt)
-  pertQ.prepare_wkb_S (cosmo, alphai, alphaQt)
-
-  pertZ.set_init_cond_wkb_zeta (cosmo, alphai)
-  pertQ.set_init_cond_wkb_Q (cosmo, alphai)
+  alphai = -cosmo.abs_alpha (1.0e-18)
+  
+  print "# Setting inital conditions"
+  pertZ.set_init_cond_patched_zeta (cosmo, alphai)
+  pertQ.set_init_cond_patched_Q (cosmo, alphai)
 
   varsZ = [1.234] * 8
   varsQ = [1.234] * 8
   varsZ_wkb = [1.234] * 8
   varsQ_wkb = [1.234] * 8
 
-  pertZ.evolve (cosmo, alphaf)
-  pertQ.evolve (cosmo, alphaf)
+  pertZ.evolve (cosmo, alpha_end)
+  pertQ.evolve (cosmo, alpha_end)
   (alphas, varsZ) = pertZ.get_values (varsZ)
   (alphas, varsQ) = pertQ.get_values (varsQ)
 

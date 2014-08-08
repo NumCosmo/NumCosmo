@@ -45,6 +45,7 @@
 #include <numcosmo/perturbations/linear.h>
 #include <numcosmo/perturbations/covariance.h>
 #include <numcosmo/perturbations/nc_hipert.h>
+#include <numcosmo/perturbations/nc_hipert_wkb.h>
 #include <numcosmo/perturbations/nc_hipert_iadiab.h>
 #include <numcosmo/perturbations/nc_hipert_itwo_fluids.h>
 #include <numcosmo/perturbations/nc_hipert_adiab.h>

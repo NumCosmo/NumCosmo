@@ -256,6 +256,7 @@ nc_headers = \
 	scalefactor.h                         \
 	model/quantum_gravity.h               \
 	perturbations/nc_hipert.h             \
+	perturbations/nc_hipert_wkb.h         \
 	perturbations/nc_hipert_iadiab.h      \
 	perturbations/nc_hipert_itwo_fluids.h \
 	perturbations/nc_hipert_adiab.h       \
@@ -341,6 +342,7 @@ nc_sources = \
 	scalefactor.c                          \
 	model/quantum_gravity.c                \
 	perturbations/nc_hipert.c              \
+	perturbations/nc_hipert_wkb.c          \
 	perturbations/nc_hipert_iadiab.c       \
 	perturbations/nc_hipert_itwo_fluids.c  \
 	perturbations/nc_hipert_adiab.c        \

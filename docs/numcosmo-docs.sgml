@@ -8,7 +8,7 @@
   <bookinfo>
     <title>NumCosmo Reference Manual</title>
     <releaseinfo>
-      for NumCosmo 0.11.0.
+      for NumCosmo 0.12.0.
       The latest version of this documentation can be found on-line at
       <ulink role="online-location" url="http://www.nongnu.org/numcosmo/manual/index.html">http://www.nongnu.org/numcosmo/manual/index.html</ulink>.
     </releaseinfo>
@@ -163,6 +163,7 @@
     <xi:include href="xml/linear.xml"/>
     <xi:include href="xml/covariance.xml"/>
     <xi:include href="xml/nc_hipert.xml"/>
+    <xi:include href="xml/nc_hipert_wkb.xml"/>
     <xi:include href="xml/nc_hipert_adiab.xml"/>
     <xi:include href="xml/nc_hipert_two_fluids.xml"/>
     <section>

@@ -73,7 +73,6 @@
 
 #include "math/ncm_spline_cubic_notaknot.h"
 #include "perturbations/nc_hipert_two_fluids.h"
-#include "perturbations/nc_hipert_iadiab.h"
 #include "perturbations/nc_hipert_itwo_fluids.h"
 
 #include "math/cvode_util.h"
@@ -86,47 +85,104 @@
 
 G_DEFINE_TYPE (NcHIPertTwoFluids, nc_hipert_two_fluids, NC_TYPE_HIPERT);
 
-static gdouble _nc_hipert_two_fluids_wkb_zeta_phase (gdouble y, gdouble x, gpointer userdata);
-static gdouble _nc_hipert_two_fluids_wkb_S_phase (gdouble y, gdouble x, gpointer userdata);
+typedef struct _NcHIPertTwoFluidsArg
+{
+  NcHICosmo *cosmo;
+  NcHIPertTwoFluids *ptf;
+} NcHIPertTwoFluidsArg;
 
 static void
 nc_hipert_two_fluids_init (NcHIPertTwoFluids *ptf)
 {
-  NcmSpline *s1      = ncm_spline_cubic_notaknot_new ();
-  NcmSpline *s2      = ncm_spline_cubic_notaknot_new ();
+  ptf->wkb_zeta = nc_hipert_wkb_new (NC_TYPE_HIPERT_ITWO_FLUIDS, 
+                                     (NcHIPertWKBFunc) &nc_hipert_itwo_fluids_nuA2,
+                                     (NcHIPertWKBFunc) &nc_hipert_itwo_fluids_VA,
+                                     (NcHIPertWKBFunc) &nc_hipert_itwo_fluids_dmzetanuA_nuA,
+                                     (NcHIPertWKBEom) &nc_hipert_itwo_fluids_wkb_zeta_eom);
 
-  ptf->wkb_zeta_phase = ncm_ode_spline_new (s1, &_nc_hipert_two_fluids_wkb_zeta_phase);
-  ptf->wkb_S_phase    = ncm_ode_spline_new (s2, &_nc_hipert_two_fluids_wkb_S_phase);
-
-  ptf->zeta_wkb_prepared = FALSE;
-  ptf->S_wkb_prepared    = FALSE;
-  
-  ncm_ode_spline_set_abstol (ptf->wkb_zeta_phase, 0.0);
-  ncm_ode_spline_set_abstol (ptf->wkb_S_phase, 0.0);
-  
-  ncm_spline_free (s1);
-  ncm_spline_free (s2);
+  ptf->wkb_S = nc_hipert_wkb_new (NC_TYPE_HIPERT_ITWO_FLUIDS, 
+                                  (NcHIPertWKBFunc) &nc_hipert_itwo_fluids_nuB2,
+                                  (NcHIPertWKBFunc) &nc_hipert_itwo_fluids_VB,
+                                  (NcHIPertWKBFunc) &nc_hipert_itwo_fluids_dmSnuB_nuB,
+                                  (NcHIPertWKBEom) &nc_hipert_itwo_fluids_wkb_S_eom);
 }
+
+static void
+nc_hipert_two_fluids_dispose (GObject *object)
+{
+  NcHIPertTwoFluids *ptf = NC_HIPERT_TWO_FLUIDS (object);
+
+  nc_hipert_wkb_clear (&ptf->wkb_zeta);
+  nc_hipert_wkb_clear (&ptf->wkb_S);
+  
+  /* Chain up : end */
+  G_OBJECT_CLASS (nc_hipert_two_fluids_parent_class)->dispose (object);
+}
+
 
 static void
 nc_hipert_two_fluids_finalize (GObject *object)
 {
-  NcHIPertTwoFluids *ptf = NC_HIPERT_TWO_FLUIDS (object);
-  
-  ncm_ode_spline_clear (&ptf->wkb_zeta_phase);
-  ncm_ode_spline_clear (&ptf->wkb_S_phase);
-  
+  /*NcHIPertTwoFluids *ptf = NC_HIPERT_TWO_FLUIDS (object);*/
+    
   /* Chain up : end */
   G_OBJECT_CLASS (nc_hipert_two_fluids_parent_class)->finalize (object);
 }
+
+static void _nc_hipert_two_fluids_set_mode_k (NcHIPert *pert, gdouble k);
+static void _nc_hipert_two_fluids_set_abstol (NcHIPert *pert, gdouble abstol);
+static void _nc_hipert_two_fluids_set_reltol (NcHIPert *pert, gdouble reltol); 
 
 static void
 nc_hipert_two_fluids_class_init (NcHIPertTwoFluidsClass *klass)
 {
   GObjectClass* object_class = G_OBJECT_CLASS (klass);
 
-
+  object_class->dispose  = nc_hipert_two_fluids_dispose;
   object_class->finalize = nc_hipert_two_fluids_finalize;
+
+  NC_HIPERT_CLASS (klass)->set_mode_k = &_nc_hipert_two_fluids_set_mode_k;
+  NC_HIPERT_CLASS (klass)->set_abstol = &_nc_hipert_two_fluids_set_abstol;
+  NC_HIPERT_CLASS (klass)->set_reltol = &_nc_hipert_two_fluids_set_reltol;  
+}
+
+static void 
+_nc_hipert_two_fluids_set_mode_k (NcHIPert *pert, gdouble k) 
+{
+  NC_HIPERT_CLASS (nc_hipert_two_fluids_parent_class)->set_mode_k (pert, k);
+  /* Chain up : start */
+  if (!pert->prepared)
+  {
+    NcHIPertTwoFluids *ptf = NC_HIPERT_TWO_FLUIDS (pert);
+    nc_hipert_set_mode_k (NC_HIPERT (ptf->wkb_zeta), k);
+    nc_hipert_set_mode_k (NC_HIPERT (ptf->wkb_S), k);
+  }
+}
+
+static void 
+_nc_hipert_two_fluids_set_abstol (NcHIPert *pert, gdouble abstol) 
+{
+  NC_HIPERT_CLASS (nc_hipert_two_fluids_parent_class)->set_abstol (pert, abstol);
+  /* Chain up : start */
+  if (!pert->prepared)
+  {
+    NcHIPertTwoFluids *ptf = NC_HIPERT_TWO_FLUIDS (pert);
+    nc_hipert_set_abstol (NC_HIPERT (ptf->wkb_zeta), abstol);
+    nc_hipert_set_abstol (NC_HIPERT (ptf->wkb_S), abstol);
+  }
+}
+
+static void 
+_nc_hipert_two_fluids_set_reltol (NcHIPert *pert, gdouble reltol) 
+{
+  NC_HIPERT_CLASS (nc_hipert_two_fluids_parent_class)->set_reltol (pert, reltol);
+  /* Chain up : start */
+  if (!pert->prepared)
+  {
+    NcHIPertTwoFluids *ptf = NC_HIPERT_TWO_FLUIDS (pert);
+    nc_hipert_set_reltol (NC_HIPERT (ptf->wkb_zeta), reltol);
+    nc_hipert_set_reltol (NC_HIPERT (ptf->wkb_S), reltol);
+  }
 }
 
 /**
@@ -185,31 +241,6 @@ nc_hipert_two_fluids_clear (NcHIPertTwoFluids **ptf)
   g_clear_object (ptf);
 }
 
-typedef struct _NcHIPertTwoFluidsWKBPhaseArg
-{
-  NcHICosmo *cosmo;
-  gdouble k;
-} NcHIPertTwoFluidsWKBPhaseArg;
-
-static gdouble 
-_nc_hipert_two_fluids_wkb_zeta_phase (gdouble y, gdouble x, gpointer userdata)
-{
-  NcHIPertTwoFluidsWKBPhaseArg *arg = (NcHIPertTwoFluidsWKBPhaseArg *) userdata;
-  const gdouble nuA2 = nc_hipert_iadiab_nuA2 (NC_HIPERT_IADIAB (arg->cosmo), x, arg->k);
-  const gdouble nuA = sqrt (nuA2);
-  return nuA;
-}
-
-static gdouble 
-_nc_hipert_two_fluids_wkb_S_phase (gdouble y, gdouble x, gpointer userdata)
-{
-  NcHIPertTwoFluidsWKBPhaseArg *arg = (NcHIPertTwoFluidsWKBPhaseArg *) userdata;
-  
-  const gdouble nuB2 = nc_hipert_itwo_fluids_nuB2 (NC_HIPERT_ITWO_FLUIDS (arg->cosmo), x, arg->k);
-  const gdouble nuB = sqrt (nuB2);
-  return nuB;
-}
-
 /**
  * nc_hipert_two_fluids_prepare_wkb_zeta:
  * @ptf: a #NcHIPertTwoFluids.
@@ -223,26 +254,7 @@ _nc_hipert_two_fluids_wkb_S_phase (gdouble y, gdouble x, gpointer userdata)
 void 
 nc_hipert_two_fluids_prepare_wkb_zeta (NcHIPertTwoFluids *ptf, NcHICosmo *cosmo, gdouble alpha_i, gdouble alpha_f)
 {
-  NcHIPert *pert = NC_HIPERT (ptf);
-  if (!pert->prepared)
-  {
-    ptf->zeta_wkb_prepared = FALSE;
-    ptf->S_wkb_prepared = FALSE;
-    pert->prepared = TRUE;
-  }
-
-  if (!ptf->zeta_wkb_prepared)
-  {
-    NcHIPertTwoFluidsWKBPhaseArg arg;
-
-    arg.cosmo = cosmo;
-    arg.k     = pert->k;
-
-    ncm_ode_spline_set_interval (ptf->wkb_zeta_phase, 0.25 * M_PI, alpha_i, alpha_f);
-    ncm_ode_spline_prepare (ptf->wkb_zeta_phase, &arg);
-
-    ptf->zeta_wkb_prepared = TRUE;
-  }
+  nc_hipert_wkb_prepare (ptf->wkb_zeta, G_OBJECT (cosmo), alpha_i, alpha_f);
 }
 
 /**
@@ -258,26 +270,73 @@ nc_hipert_two_fluids_prepare_wkb_zeta (NcHIPertTwoFluids *ptf, NcHICosmo *cosmo,
 void 
 nc_hipert_two_fluids_prepare_wkb_S (NcHIPertTwoFluids *ptf, NcHICosmo *cosmo, gdouble alpha_i, gdouble alpha_f)
 {
-  NcHIPert *pert = NC_HIPERT (ptf);
-  if (!pert->prepared)
-  {
-    ptf->zeta_wkb_prepared = FALSE;
-    ptf->S_wkb_prepared = FALSE;
-    pert->prepared = TRUE;
-  }
+  nc_hipert_wkb_prepare (ptf->wkb_S, G_OBJECT (cosmo), alpha_i, alpha_f);
+}
 
-  if (!ptf->S_wkb_prepared)
-  {
-    NcHIPertTwoFluidsWKBPhaseArg arg;
+/**
+ * nc_hipert_two_fluids_prepare_ewkb_zeta:
+ * @ptf: a #NcHIPertTwoFluids.
+ * @cosmo: a #NcHICosmo.
+ * @alpha_i: initial log-redshift time.
+ * @alpha_f: final log-redshift time.
+ * 
+ * Prepare the zeta component of the object for the exact WKB calculations using the cosmology @cosmo.
+ * 
+ */
+void 
+nc_hipert_two_fluids_prepare_ewkb_zeta (NcHIPertTwoFluids *ptf, NcHICosmo *cosmo, gdouble alpha_i, gdouble alpha_f)
+{
+  nc_hipert_wkb_prepare_exact (ptf->wkb_zeta, G_OBJECT (cosmo), alpha_i, alpha_f);
+}
 
-    arg.cosmo = cosmo;
-    arg.k     = pert->k;
+/**
+ * nc_hipert_two_fluids_prepare_ewkb_S:
+ * @ptf: a #NcHIPertTwoFluids.
+ * @cosmo: a #NcHICosmo.
+ * @alpha_i: initial log-redshift time.
+ * @alpha_f: final log-redshift time.
+ * 
+ * Prepare the zeta component of the object for the exact WKB calculations using the cosmology @cosmo.
+ * 
+ */
+void 
+nc_hipert_two_fluids_prepare_ewkb_S (NcHIPertTwoFluids *ptf, NcHICosmo *cosmo, gdouble alpha_i, gdouble alpha_f)
+{
+  nc_hipert_wkb_prepare_exact (ptf->wkb_S, G_OBJECT (cosmo), alpha_i, alpha_f);
+}
 
-    ncm_ode_spline_set_interval (ptf->wkb_S_phase, 0.25 * M_PI, alpha_i, alpha_f);
-    ncm_ode_spline_prepare (ptf->wkb_S_phase, &arg);
-    
-    ptf->S_wkb_prepared = TRUE;
-  }
+/**
+ * nc_hipert_two_fluids_prepare_patched_zeta:
+ * @ptf: a #NcHIPertTwoFluids.
+ * @cosmo: a #NcHICosmo.
+ * @prec: Required precision.
+ * @alpha_i: initial log-redshift time.
+ * @alpha_f: final log-redshift time.
+ * 
+ * Prepare the zeta component of the object for the patched calculations using the cosmology @cosmo.
+ * 
+ */
+void 
+nc_hipert_two_fluids_prepare_patched_zeta (NcHIPertTwoFluids *ptf, NcHICosmo *cosmo, gdouble prec, gdouble alpha_i, gdouble alpha_f)
+{
+  nc_hipert_wkb_prepare_patched (ptf->wkb_zeta, G_OBJECT (cosmo), prec, alpha_i, alpha_f);
+}
+
+/**
+ * nc_hipert_two_fluids_prepare_patched_S:
+ * @ptf: a #NcHIPertTwoFluids.
+ * @cosmo: a #NcHICosmo.
+ * @prec: Required precision.
+ * @alpha_i: initial log-redshift time.
+ * @alpha_f: final log-redshift time.
+ * 
+ * Prepare the zeta component of the object for the patched calculations using the cosmology @cosmo.
+ * 
+ */
+void 
+nc_hipert_two_fluids_prepare_patched_S (NcHIPertTwoFluids *ptf, NcHICosmo *cosmo, gdouble prec, gdouble alpha_i, gdouble alpha_f)
+{
+  nc_hipert_wkb_prepare_patched (ptf->wkb_S, G_OBJECT (cosmo), prec, alpha_i, alpha_f);
 }
 
 /**
@@ -294,21 +353,7 @@ nc_hipert_two_fluids_prepare_wkb_S (NcHIPertTwoFluids *ptf, NcHICosmo *cosmo, gd
 void
 nc_hipert_two_fluids_wkb_zeta (NcHIPertTwoFluids *ptf, NcHICosmo *cosmo, gdouble alpha, gdouble *Re_zeta, gdouble *Im_zeta)
 {
-  NcHIPert *pert = NC_HIPERT (ptf);
-  NcHIPertITwoFluidsEOM *eom = nc_hipert_itwo_fluids_eom (NC_HIPERT_ITWO_FLUIDS (cosmo), alpha, pert->k);
-  complex double zeta;
-  gdouble int_nuA;
-  const gdouble nuA2 = nc_hipert_iadiab_nuA2 (NC_HIPERT_IADIAB (cosmo), alpha, pert->k);
-  const gdouble nuA = sqrt (nuA2); 
-
-  g_assert (pert->prepared && ptf->zeta_wkb_prepared);
-
-  int_nuA = ncm_spline_eval (ptf->wkb_zeta_phase->s, alpha); 
-  
-  zeta = cexp (-I * int_nuA) / sqrt (2.0 * eom->mzeta * nuA);
-
-  *Re_zeta = creal (zeta);
-  *Im_zeta = cimag (zeta);
+  nc_hipert_wkb_q (ptf->wkb_zeta, G_OBJECT (cosmo), alpha, Re_zeta, Im_zeta);  
 }
 
 /**
@@ -327,28 +372,7 @@ nc_hipert_two_fluids_wkb_zeta (NcHIPertTwoFluids *ptf, NcHICosmo *cosmo, gdouble
 void
 nc_hipert_two_fluids_wkb_zeta_Pzeta (NcHIPertTwoFluids *ptf, NcHICosmo *cosmo, gdouble alpha, gdouble *Re_zeta, gdouble *Im_zeta, gdouble *Re_Pzeta, gdouble *Im_Pzeta)
 {
-  NcHIPert *pert = NC_HIPERT (ptf);
-  NcHIPertITwoFluidsEOM *eom = nc_hipert_itwo_fluids_eom (NC_HIPERT_ITWO_FLUIDS (cosmo), alpha, pert->k);
-  complex double zeta, Pzeta;
-  gdouble int_nuA;
-  gdouble dmzetanuA_nuA;
-  const gdouble nuA2 = nc_hipert_iadiab_nuA2 (NC_HIPERT_IADIAB (cosmo), alpha, pert->k);
-  const gdouble nuA = sqrt (nuA2); 
-
-  g_assert (pert->prepared && ptf->zeta_wkb_prepared);
-
-  int_nuA = ncm_spline_eval (ptf->wkb_zeta_phase->s, alpha);
-  dmzetanuA_nuA = nc_hipert_iadiab_dmzetanuA_nuA (NC_HIPERT_IADIAB (cosmo), alpha, pert->k);
-
-  zeta = cexp (-I * int_nuA) / sqrt (2.0 * eom->mzeta * nuA);
-
-  Pzeta = -I * cexp (-I * int_nuA) * sqrt (0.5 * eom->mzeta * nuA) - 0.5 * dmzetanuA_nuA * zeta;
-
-  *Re_zeta = creal (zeta);
-  *Im_zeta = cimag (zeta);
-
-  *Re_Pzeta = creal (Pzeta);
-  *Im_Pzeta = cimag (Pzeta);  
+  nc_hipert_wkb_q_p (ptf->wkb_zeta, G_OBJECT (cosmo), alpha, Re_zeta, Im_zeta, Re_Pzeta, Im_Pzeta);  
 }
 
 /**
@@ -365,21 +389,7 @@ nc_hipert_two_fluids_wkb_zeta_Pzeta (NcHIPertTwoFluids *ptf, NcHICosmo *cosmo, g
 void
 nc_hipert_two_fluids_wkb_Q (NcHIPertTwoFluids *ptf, NcHICosmo *cosmo, gdouble alpha, gdouble *Re_Q, gdouble *Im_Q)
 {
-  NcHIPert *pert = NC_HIPERT (ptf);
-  NcHIPertITwoFluidsEOM *eom = nc_hipert_itwo_fluids_eom (NC_HIPERT_ITWO_FLUIDS (cosmo), alpha, pert->k);
-  complex double Q;
-  gdouble int_nuB;
-  const gdouble nuB2 = nc_hipert_itwo_fluids_nuB2 (NC_HIPERT_ITWO_FLUIDS (cosmo), alpha, pert->k);
-  const gdouble nuB = sqrt (nuB2); 
-
-  g_assert (pert->prepared && ptf->S_wkb_prepared);
-
-  int_nuB = ncm_spline_eval (ptf->wkb_S_phase->s, alpha); 
-  
-  Q = cexp (-I * int_nuB) / sqrt (2.0 * eom->mS * nuB);
-
-  *Re_Q = creal (Q);
-  *Im_Q = cimag (Q);
+  nc_hipert_wkb_q (ptf->wkb_S, G_OBJECT (cosmo), alpha, Re_Q, Im_Q);  
 }
 
 /**
@@ -398,29 +408,151 @@ nc_hipert_two_fluids_wkb_Q (NcHIPertTwoFluids *ptf, NcHICosmo *cosmo, gdouble al
 void
 nc_hipert_two_fluids_wkb_Q_PQ (NcHIPertTwoFluids *ptf, NcHICosmo *cosmo, gdouble alpha, gdouble *Re_Q, gdouble *Im_Q, gdouble *Re_PQ, gdouble *Im_PQ)
 {
-  NcHIPert *pert = NC_HIPERT (ptf);
-  NcHIPertITwoFluidsEOM *eom = nc_hipert_itwo_fluids_eom (NC_HIPERT_ITWO_FLUIDS (cosmo), alpha, pert->k);
-  complex double Q, PQ;
-  gdouble int_nuB;
-  gdouble dmSnuB_nuB;
-  const gdouble nuB2 = nc_hipert_itwo_fluids_nuB2 (NC_HIPERT_ITWO_FLUIDS (cosmo), alpha, pert->k);
-  const gdouble nuB = sqrt (nuB2); 
+  nc_hipert_wkb_q_p (ptf->wkb_S, G_OBJECT (cosmo), alpha, Re_Q, Im_Q, Re_PQ, Im_PQ);  
+}
 
-  g_assert (pert->prepared && ptf->S_wkb_prepared);
+/**
+ * nc_hipert_two_fluids_ewkb_zeta:
+ * @ptf: a #NcHIPertTwoFluids.
+ * @cosmo: a #NcHICosmo.
+ * @alpha: the log-redshift time.
+ * @Re_zeta: (out caller-allocates): Real part of the wkb solution.
+ * @Im_zeta: (out caller-allocates): Imaginary part of the wkb solution.
+ * 
+ * Computes the exact WKB solution $\zeta_\text{WKB}$ for the mode $k$ at the time $\alpha$. 
+ * 
+ */
+void
+nc_hipert_two_fluids_ewkb_zeta (NcHIPertTwoFluids *ptf, NcHICosmo *cosmo, gdouble alpha, gdouble *Re_zeta, gdouble *Im_zeta)
+{
+  nc_hipert_wkb_exact_q (ptf->wkb_zeta, G_OBJECT (cosmo), alpha, Re_zeta, Im_zeta);  
+}
 
-  int_nuB = ncm_spline_eval (ptf->wkb_S_phase->s, alpha);
+/**
+ * nc_hipert_two_fluids_ewkb_zeta_Pzeta:
+ * @ptf: a #NcHIPertTwoFluids.
+ * @cosmo: a #NcHICosmo.
+ * @alpha: the log-redshift time.
+ * @Re_zeta: (out caller-allocates): Real part of the wkb solution.
+ * @Im_zeta: (out caller-allocates): Imaginary part of the wkb solution.
+ * @Re_Pzeta: (out caller-allocates): Real part of the wkb solution momentum.
+ * @Im_Pzeta: (out caller-allocates): Imaginary part of the wkb solution momentum.
+ * 
+ * Computes the exact WKB solution $\zeta_\text{WKB}$ and its momentum for the mode $k$ at the time $\alpha$. 
+ * 
+ */
+void
+nc_hipert_two_fluids_ewkb_zeta_Pzeta (NcHIPertTwoFluids *ptf, NcHICosmo *cosmo, gdouble alpha, gdouble *Re_zeta, gdouble *Im_zeta, gdouble *Re_Pzeta, gdouble *Im_Pzeta)
+{
+  nc_hipert_wkb_exact_q_p (ptf->wkb_zeta, G_OBJECT (cosmo), alpha, Re_zeta, Im_zeta, Re_Pzeta, Im_Pzeta);  
+}
 
-  dmSnuB_nuB = nc_hipert_itwo_fluids_dmSnuB_nuB (NC_HIPERT_ITWO_FLUIDS (cosmo), alpha, pert->k);
+/**
+ * nc_hipert_two_fluids_ewkb_Q:
+ * @ptf: a #NcHIPertTwoFluids.
+ * @cosmo: a #NcHICosmo.
+ * @alpha: the log-redshift time.
+ * @Re_Q: (out caller-allocates): Real part of the wkb solution.
+ * @Im_Q: (out caller-allocates): Imaginary part of the wkb solution.
+ * 
+ * Computes the exact WKB solution $Q_\text{WKB}$ for the mode $k$ at the time $\alpha$. 
+ * 
+ */
+void
+nc_hipert_two_fluids_ewkb_Q (NcHIPertTwoFluids *ptf, NcHICosmo *cosmo, gdouble alpha, gdouble *Re_Q, gdouble *Im_Q)
+{
+  nc_hipert_wkb_exact_q (ptf->wkb_S, G_OBJECT (cosmo), alpha, Re_Q, Im_Q);  
+}
 
-  Q = cexp (-I * int_nuB) / sqrt (2.0 * eom->mS * nuB);
+/**
+ * nc_hipert_two_fluids_ewkb_Q_PQ:
+ * @ptf: a #NcHIPertTwoFluids.
+ * @cosmo: a #NcHICosmo.
+ * @alpha: the log-redshift time.
+ * @Re_Q: (out caller-allocates): Real part of the wkb solution.
+ * @Im_Q: (out caller-allocates): Imaginary part of the wkb solution.
+ * @Re_PQ: (out caller-allocates): Real part of the wkb solution momentum.
+ * @Im_PQ: (out caller-allocates): Imaginary part of the wkb solution momentum.
+ * 
+ * Computes the exact WKB solution $Q_\text{WKB}$ and its momentum for the mode $k$ at the time $\alpha$. 
+ * 
+ */
+void
+nc_hipert_two_fluids_ewkb_Q_PQ (NcHIPertTwoFluids *ptf, NcHICosmo *cosmo, gdouble alpha, gdouble *Re_Q, gdouble *Im_Q, gdouble *Re_PQ, gdouble *Im_PQ)
+{
+  nc_hipert_wkb_exact_q_p (ptf->wkb_S, G_OBJECT (cosmo), alpha, Re_Q, Im_Q, Re_PQ, Im_PQ);  
+}
 
-  PQ = -I * cexp (-I * int_nuB) * sqrt (0.5 * eom->mS * nuB) - 0.5 * dmSnuB_nuB * Q;
+/**
+ * nc_hipert_two_fluids_patched_zeta:
+ * @ptf: a #NcHIPertTwoFluids.
+ * @cosmo: a #NcHICosmo.
+ * @alpha: the log-redshift time.
+ * @Re_zeta: (out caller-allocates): Real part of the wkb solution.
+ * @Im_zeta: (out caller-allocates): Imaginary part of the wkb solution.
+ * 
+ * Computes the patched WKB solution $\zeta_\text{WKB}$ for the mode $k$ at the time $\alpha$. 
+ * 
+ */
+void
+nc_hipert_two_fluids_patched_zeta (NcHIPertTwoFluids *ptf, NcHICosmo *cosmo, gdouble alpha, gdouble *Re_zeta, gdouble *Im_zeta)
+{
+  nc_hipert_wkb_patched_q (ptf->wkb_zeta, G_OBJECT (cosmo), alpha, Re_zeta, Im_zeta);  
+}
 
-  *Re_Q = creal (Q);
-  *Im_Q = cimag (Q);
+/**
+ * nc_hipert_two_fluids_patched_zeta_Pzeta:
+ * @ptf: a #NcHIPertTwoFluids.
+ * @cosmo: a #NcHICosmo.
+ * @alpha: the log-redshift time.
+ * @Re_zeta: (out caller-allocates): Real part of the wkb solution.
+ * @Im_zeta: (out caller-allocates): Imaginary part of the wkb solution.
+ * @Re_Pzeta: (out caller-allocates): Real part of the wkb solution momentum.
+ * @Im_Pzeta: (out caller-allocates): Imaginary part of the wkb solution momentum.
+ * 
+ * Computes the patched WKB solution $\zeta_\text{WKB}$ and its momentum for the mode $k$ at the time $\alpha$. 
+ * 
+ */
+void
+nc_hipert_two_fluids_patched_zeta_Pzeta (NcHIPertTwoFluids *ptf, NcHICosmo *cosmo, gdouble alpha, gdouble *Re_zeta, gdouble *Im_zeta, gdouble *Re_Pzeta, gdouble *Im_Pzeta)
+{
+  nc_hipert_wkb_patched_q_p (ptf->wkb_zeta, G_OBJECT (cosmo), alpha, Re_zeta, Im_zeta, Re_Pzeta, Im_Pzeta);  
+}
 
-  *Re_PQ = creal (PQ);
-  *Im_PQ = cimag (PQ);  
+/**
+ * nc_hipert_two_fluids_patched_Q:
+ * @ptf: a #NcHIPertTwoFluids.
+ * @cosmo: a #NcHICosmo.
+ * @alpha: the log-redshift time.
+ * @Re_Q: (out caller-allocates): Real part of the wkb solution.
+ * @Im_Q: (out caller-allocates): Imaginary part of the wkb solution.
+ * 
+ * Computes the patched WKB solution $Q_\text{WKB}$ for the mode $k$ at the time $\alpha$. 
+ * 
+ */
+void
+nc_hipert_two_fluids_patched_Q (NcHIPertTwoFluids *ptf, NcHICosmo *cosmo, gdouble alpha, gdouble *Re_Q, gdouble *Im_Q)
+{
+  nc_hipert_wkb_patched_q (ptf->wkb_S, G_OBJECT (cosmo), alpha, Re_Q, Im_Q);  
+}
+
+/**
+ * nc_hipert_two_fluids_patched_Q_PQ:
+ * @ptf: a #NcHIPertTwoFluids.
+ * @cosmo: a #NcHICosmo.
+ * @alpha: the log-redshift time.
+ * @Re_Q: (out caller-allocates): Real part of the wkb solution.
+ * @Im_Q: (out caller-allocates): Imaginary part of the wkb solution.
+ * @Re_PQ: (out caller-allocates): Real part of the wkb solution momentum.
+ * @Im_PQ: (out caller-allocates): Imaginary part of the wkb solution momentum.
+ * 
+ * Computes the patched WKB solution $Q_\text{WKB}$ and its momentum for the mode $k$ at the time $\alpha$. 
+ * 
+ */
+void
+nc_hipert_two_fluids_patched_Q_PQ (NcHIPertTwoFluids *ptf, NcHICosmo *cosmo, gdouble alpha, gdouble *Re_Q, gdouble *Im_Q, gdouble *Re_PQ, gdouble *Im_PQ)
+{
+  nc_hipert_wkb_patched_q_p (ptf->wkb_S, G_OBJECT (cosmo), alpha, Re_Q, Im_Q, Re_PQ, Im_PQ);  
 }
 
 /**
@@ -430,7 +562,8 @@ nc_hipert_two_fluids_wkb_Q_PQ (NcHIPertTwoFluids *ptf, NcHICosmo *cosmo, gdouble
  * @alpha: the log-redshift time.
  * @vars: (inout) (array fixed-size=8) (element-type double): Perturbations variables conforming to #NcHIPertTwoFluidsVars.
  * 
- * Computes the complete WKB solution their momenta for the mode $k$ at the time $\alpha$ for the principal mode $\zeta$. 
+ * Computes the approximated solution for the mode $Q$ and its momentum for the mode $k$ 
+ * at the time $\alpha$ using the solution for the mode $\zeta$ present in @vars.
  * 
  */
 void
@@ -438,39 +571,38 @@ nc_hipert_two_fluids_wkb_full_zeta (NcHIPertTwoFluids *ptf, NcHICosmo *cosmo, gd
 {
   NcHIPert *pert = NC_HIPERT (ptf);
   NcHIPertITwoFluidsEOM *eom = nc_hipert_itwo_fluids_eom (NC_HIPERT_ITWO_FLUIDS (cosmo), alpha, pert->k);
-  complex double zeta, Pzeta, Q, PQ, C;
-  gdouble int_nuA;
-  const gdouble nuA2 = nc_hipert_iadiab_nuA2 (NC_HIPERT_IADIAB (cosmo), alpha, pert->k);
-  const gdouble nuB2 = nc_hipert_itwo_fluids_nuB2 (NC_HIPERT_ITWO_FLUIDS (cosmo), alpha, pert->k);
+  complex double zeta, Q, PQ,C;
+  /*gdouble Re_zeta, Im_zeta, Re_Pzeta, Im_Pzeta;*/
+  const gdouble nuA2 = nc_hipert_wkb_nuA (ptf->wkb_zeta, G_OBJECT (cosmo), alpha);
+  const gdouble nuB2 = nc_hipert_wkb_nuA (ptf->wkb_S, G_OBJECT (cosmo), alpha);
   const gdouble nuA = sqrt (nuA2);
   const gdouble nuB = sqrt (nuB2);
   const gdouble k = pert->k;
   const gdouble dmSnuB_nuB    = nc_hipert_itwo_fluids_dmSnuB_nuB (NC_HIPERT_ITWO_FLUIDS (cosmo), alpha, pert->k);
-  const gdouble dmzetanuA_nuA = nc_hipert_iadiab_dmzetanuA_nuA (NC_HIPERT_IADIAB (cosmo), alpha, pert->k);
+  const gdouble dmzetanuA_nuA = nc_hipert_itwo_fluids_dmzetanuA_nuA (NC_HIPERT_ITWO_FLUIDS (cosmo), alpha, pert->k);
   const gdouble LA = 0.5 * k * dmzetanuA_nuA / (eom->mzeta * nuA);
   const gdouble LB = 0.5 * k * dmSnuB_nuB / (eom->mS * nuB);
   const gdouble YAB = eom->Y * sqrt (nuA * nuB * eom->mzeta * eom->mS) / k;
   const gdouble k2 = k * k;
+
+  /*nc_hipert_wkb_q_p (ptf->wkb_zeta, G_OBJECT (cosmo), alpha, &Re_zeta, &Im_zeta, &Re_Pzeta, &Im_Pzeta);*/
   
-  g_assert (pert->prepared && ptf->S_wkb_prepared && ptf->zeta_wkb_prepared);
+  zeta  = vars[0][NC_HIPERT_TWO_FLUIDS_RE_ZETA]  + I * vars[0][NC_HIPERT_TWO_FLUIDS_IM_ZETA];
+  /*Pzeta = vars[0][NC_HIPERT_TWO_FLUIDS_RE_PZETA] + I * vars[0][NC_HIPERT_TWO_FLUIDS_IM_PZETA];*/
+  
+  C = YAB * (k - I * LA) * zeta * sqrt (2.0 * eom->mzeta * nuA) / (sqrt (2.0 * k) * k * (nuA * nuA - nuB * nuB));
 
-  int_nuA = ncm_spline_eval (ptf->wkb_zeta_phase->s, alpha);
-
-  zeta = cexp (-I * int_nuA) / sqrt (2.0 * eom->mzeta * nuA);
-
-  Pzeta = -I * cexp (-I * int_nuA) * sqrt (0.5 * eom->mzeta * nuA) - 0.5 * dmzetanuA_nuA * zeta;
-
-  C = YAB * (k - I * LA) * cexp (-I * int_nuA) / (sqrt (2.0 * k) * k * (nuA * nuA - nuB * nuB));
+  /*  printf ("% 20.15g % 20.15g % 20.15e % 20.15e % 20.15e\n", alpha, nc_hicosmo_x_alpha (cosmo, alpha), fabs (alpha / nuA), fabs (alpha / nuB), fabs (YAB));*/
   
   Q = sqrt (k / (eom->mS * nuB)) * (k * nuA + I * LB * nuB) * C;
   PQ = - I * sqrt ((eom->mS * nuB) / k) * (k2 + LB * LB) * nuB * C;
-
+/*
   vars[0][NC_HIPERT_TWO_FLUIDS_RE_ZETA] = creal (zeta);
   vars[0][NC_HIPERT_TWO_FLUIDS_IM_ZETA] = cimag (zeta);
 
   vars[0][NC_HIPERT_TWO_FLUIDS_RE_PZETA] = creal (Pzeta);
   vars[0][NC_HIPERT_TWO_FLUIDS_IM_PZETA] = cimag (Pzeta);
-
+*/
   vars[0][NC_HIPERT_TWO_FLUIDS_RE_Q] = creal (Q);
   vars[0][NC_HIPERT_TWO_FLUIDS_IM_Q] = cimag (Q);
 
@@ -485,7 +617,8 @@ nc_hipert_two_fluids_wkb_full_zeta (NcHIPertTwoFluids *ptf, NcHICosmo *cosmo, gd
  * @alpha: the log-redshift time.
  * @vars: (inout) (array fixed-size=8) (element-type double): Perturbations variables conforming to #NcHIPertTwoFluidsVars.
  * 
- * Computes the complete WKB solution their momenta for the mode $k$ at the time $\alpha$ for the principal mode $Q$. 
+ * Computes the approximated solution for the mode $\zeta$ and its momentum for the mode $k$ 
+ * at the time $\alpha$ using the solution for the mode $Q$ present in @vars. 
  * 
  */
 void
@@ -493,34 +626,32 @@ nc_hipert_two_fluids_wkb_full_Q (NcHIPertTwoFluids *ptf, NcHICosmo *cosmo, gdoub
 {
   NcHIPert *pert = NC_HIPERT (ptf);
   NcHIPertITwoFluidsEOM *eom = nc_hipert_itwo_fluids_eom (NC_HIPERT_ITWO_FLUIDS (cosmo), alpha, pert->k);
-  complex double zeta, Pzeta, Q, PQ, C;
-  gdouble int_nuB;
-  const gdouble nuA2 = nc_hipert_iadiab_nuA2 (NC_HIPERT_IADIAB (cosmo), alpha, pert->k);
-  const gdouble nuB2 = nc_hipert_itwo_fluids_nuB2 (NC_HIPERT_ITWO_FLUIDS (cosmo), alpha, pert->k);
+  complex double zeta, Pzeta, Q, C;
+  /*gdouble Re_Q, Im_Q, Re_PQ, Im_PQ;*/
+  const gdouble nuA2 = nc_hipert_wkb_nuA (ptf->wkb_zeta, G_OBJECT (cosmo), alpha);
+  const gdouble nuB2 = nc_hipert_wkb_nuA (ptf->wkb_S, G_OBJECT (cosmo), alpha);
   const gdouble nuA  = sqrt (nuA2);
   const gdouble nuB  = sqrt (nuB2);
   const gdouble k    = pert->k;
   const gdouble dmSnuB_nuB    = nc_hipert_itwo_fluids_dmSnuB_nuB (NC_HIPERT_ITWO_FLUIDS (cosmo), alpha, pert->k);
-  const gdouble dmzetanuA_nuA = nc_hipert_iadiab_dmzetanuA_nuA (NC_HIPERT_IADIAB (cosmo), alpha, pert->k);
+  const gdouble dmzetanuA_nuA = nc_hipert_itwo_fluids_dmzetanuA_nuA (NC_HIPERT_ITWO_FLUIDS (cosmo), alpha, pert->k);
   const gdouble LA   = 0.5 * k * dmzetanuA_nuA / (eom->mzeta * nuA);
   const gdouble LB   = 0.5 * k * dmSnuB_nuB / (eom->mS * nuB);
   const gdouble YAB  = eom->Y * sqrt (nuA * nuB * eom->mzeta * eom->mS) / k;
   const gdouble k2   = k * k;
   
-  g_assert (pert->prepared && ptf->S_wkb_prepared && ptf->zeta_wkb_prepared);
+  /*nc_hipert_wkb_q_p (ptf->wkb_S, G_OBJECT (cosmo), alpha, &Re_Q, &Im_Q, &Re_PQ, &Im_PQ);*/
+  
+  Q  = vars[0][NC_HIPERT_TWO_FLUIDS_RE_Q]  + I * vars[0][NC_HIPERT_TWO_FLUIDS_IM_Q];
+  /*PQ = vars[0][NC_HIPERT_TWO_FLUIDS_RE_PQ] + I * vars[0][NC_HIPERT_TWO_FLUIDS_IM_PQ];*/
 
-  int_nuB = ncm_spline_eval (ptf->wkb_S_phase->s, alpha);
-
-  Q = cexp (-I * int_nuB) / sqrt (2.0 * eom->mS * nuB);
-
-  PQ = -I * cexp (-I * int_nuB) * sqrt (0.5 * eom->mS * nuB) - 0.5 * dmSnuB_nuB * Q;
-
-  C = YAB * (k - I * LB) * cexp (-I * int_nuB) / (sqrt (2.0 * k) * k * (nuB * nuB - nuA * nuA));
+  C = YAB * (k - I * LB) * sqrt (2.0 * eom->mS * nuB) * Q / (sqrt (2.0 * k) * k * (nuB * nuB - nuA * nuA));
 
   zeta  = sqrt (k / (eom->mzeta * nuA)) * (k * nuB + I * LA * nuA) * C;
   Pzeta = - I * sqrt ((eom->mzeta * nuA) / k) * (k2 + LA * LA) * nuA * C;
 
-/*  printf ("# WKB % 20.15g % 20.15g % 20.15g % 20.15g % 20.15g % 20.15g\n", alpha, eom->mzeta, nuA2, eom->mS, nuB2, eom->Y);*/
+  /*  printf ("% 20.15g % 20.15g % 20.15e % 20.15e % 20.15e\n", alpha, nc_hicosmo_x_alpha (cosmo, alpha), fabs (alpha / nuA), fabs (alpha / nuB), fabs (YAB));  */
+  /*  printf ("# WKB % 20.15g % 20.15g % 20.15g % 20.15g % 20.15g % 20.15g\n", alpha, eom->mzeta, nuA2, eom->mS, nuB2, eom->Y);  */
 
   vars[0][NC_HIPERT_TWO_FLUIDS_RE_ZETA]  = creal (zeta);
   vars[0][NC_HIPERT_TWO_FLUIDS_IM_ZETA]  = cimag (zeta);
@@ -528,72 +659,13 @@ nc_hipert_two_fluids_wkb_full_Q (NcHIPertTwoFluids *ptf, NcHICosmo *cosmo, gdoub
   vars[0][NC_HIPERT_TWO_FLUIDS_RE_PZETA] = creal (Pzeta);
   vars[0][NC_HIPERT_TWO_FLUIDS_IM_PZETA] = cimag (Pzeta);
 
+/*  
   vars[0][NC_HIPERT_TWO_FLUIDS_RE_Q]     = creal (Q);
   vars[0][NC_HIPERT_TWO_FLUIDS_IM_Q]     = cimag (Q);
 
   vars[0][NC_HIPERT_TWO_FLUIDS_RE_PQ]    = creal (PQ);
   vars[0][NC_HIPERT_TWO_FLUIDS_IM_PQ]    = cimag (PQ);  
-}
-
-static gdouble 
-_nc_hipert_two_fluids_wkb_nuA2 (gdouble x, gpointer userdata)
-{
-  NcHIPertTwoFluidsWKBPhaseArg *arg = (NcHIPertTwoFluidsWKBPhaseArg *) userdata;
-  const gdouble nuA2 = nc_hipert_iadiab_nuA2 (NC_HIPERT_IADIAB (arg->cosmo), x, arg->k);
-  return nuA2;
-}
-
-static gdouble 
-_nc_hipert_two_fluids_wkb_nuB2 (gdouble x, gpointer userdata)
-{
-  NcHIPertTwoFluidsWKBPhaseArg *arg = (NcHIPertTwoFluidsWKBPhaseArg *) userdata;
-  const gdouble nuB2 = nc_hipert_itwo_fluids_nuB2 (NC_HIPERT_ITWO_FLUIDS (arg->cosmo), x, arg->k);
-  return nuB2;
-}
-
-static gint
-_nc_hipert_two_fluids_wkb_nu2_root (NcHIPertTwoFluids *ptf, gdouble (*f) (gdouble, gpointer), NcHICosmo *cosmo, gdouble alpha0, gdouble *alpha)
-{
-  NcHIPert *pert = NC_HIPERT (ptf);
-  gint status;
-  gint iter = 0, max_iter = 1000000;
-  const gsl_root_fsolver_type *T;
-  gsl_root_fsolver *s;
-  gsl_function F;
-  gdouble prec = pert->reltol, alpha1 = *alpha;
-  NcHIPertTwoFluidsWKBPhaseArg arg;
-
-  arg.cosmo = cosmo;
-  arg.k     = pert->k;
-
-  F.function = f;
-  F.params   = &arg;
-
-  T = gsl_root_fsolver_brent;
-  s = gsl_root_fsolver_alloc (T);
-  gsl_root_fsolver_set (s, &F, alpha0, alpha1);
-
-  do
-  {
-    iter++;
-    status = gsl_root_fsolver_iterate (s);
-    if (status)
-    {
-      gsl_root_fsolver_free (s);
-      return status;
-    }
-
-    *alpha = gsl_root_fsolver_root (s);
-    alpha0 = gsl_root_fsolver_x_lower (s);
-    alpha1 = gsl_root_fsolver_x_upper (s);
-
-    status = gsl_root_test_interval (alpha0, alpha1, 0, prec);
-  }
-  while (status == GSL_CONTINUE && iter < max_iter);
-
-  gsl_root_fsolver_free (s);
-
-  return 0;
+*/
 }
 
 /**
@@ -610,13 +682,7 @@ _nc_hipert_two_fluids_wkb_nu2_root (NcHIPertTwoFluids *ptf, gdouble (*f) (gdoubl
 gdouble 
 nc_hipert_two_fluids_wkb_zeta_maxtime (NcHIPertTwoFluids *ptf, NcHICosmo *cosmo, gdouble alpha0, gdouble alpha1)
 {
-  gdouble alpha = alpha1;
-  guint ret = _nc_hipert_two_fluids_wkb_nu2_root (ptf, &_nc_hipert_two_fluids_wkb_nuA2, cosmo, alpha0, &alpha);
-
-  if (ret == 0)
-    return alpha;
-  else
-    return GSL_NAN;
+  return nc_hipert_wkb_maxtime (ptf->wkb_zeta, G_OBJECT (cosmo), alpha0, alpha1);  
 }
 
 /**
@@ -633,35 +699,51 @@ nc_hipert_two_fluids_wkb_zeta_maxtime (NcHIPertTwoFluids *ptf, NcHICosmo *cosmo,
 gdouble 
 nc_hipert_two_fluids_wkb_S_maxtime (NcHIPertTwoFluids *ptf, NcHICosmo *cosmo, gdouble alpha0, gdouble alpha1)
 {
-  gdouble alpha = alpha1;
-  guint ret = _nc_hipert_two_fluids_wkb_nu2_root (ptf, &_nc_hipert_two_fluids_wkb_nuB2, cosmo, alpha0, &alpha);
-
-  if (ret == 0)
-    return alpha;
-  else
-    return GSL_NAN;
+  return nc_hipert_wkb_maxtime (ptf->wkb_S, G_OBJECT (cosmo), alpha0, alpha1);  
 }
 
-typedef struct _NcHIPertTwoFluidsArg
+/**
+ * nc_hipert_two_fluids_wkb_zeta_maxtime_prec:
+ * @ptf: a #NcHIPertTwoFluids.
+ * @cosmo: a #NcHICosmo.
+ * @prec: Required precision.
+ * @alpha0: the initial log-redshift time.
+ * @alpha1: the final log-redshift time.
+ * 
+ * Search for the instant at which the WKB approximation starts to fails within the asked precision. 
+ * 
+ * Returns: the instant $\alpha$ between $\alpha_0$ and $\alpha_1$ or NaN if not found.
+ */
+gdouble 
+nc_hipert_two_fluids_wkb_zeta_maxtime_prec (NcHIPertTwoFluids *ptf, NcHICosmo *cosmo, gdouble prec, gdouble alpha0, gdouble alpha1)
 {
-  NcHICosmo *cosmo;
-  NcHIPertTwoFluids *ptf;
-} NcHIPertTwoFluidsArg;
+  return nc_hipert_wkb_maxtime_prec (ptf->wkb_zeta, G_OBJECT (cosmo), prec, alpha0, alpha1);  
+}
+
+/**
+ * nc_hipert_two_fluids_wkb_S_maxtime_prec:
+ * @ptf: a #NcHIPertTwoFluids.
+ * @cosmo: a #NcHICosmo.
+ * @prec: Required precision.
+ * @alpha0: the initial log-redshift time.
+ * @alpha1: the final log-redshift time.
+ * 
+ * Search for the instant at which the WKB approximation starts to fails within the asked precision. 
+ * 
+ * Returns: the instant $\alpha$ between $\alpha_0$ and $\alpha_1$ or NaN if not found.
+ */
+gdouble 
+nc_hipert_two_fluids_wkb_S_maxtime_prec (NcHIPertTwoFluids *ptf, NcHICosmo *cosmo, gdouble prec, gdouble alpha0, gdouble alpha1)
+{
+  return nc_hipert_wkb_maxtime_prec (ptf->wkb_S, G_OBJECT (cosmo), prec, alpha0, alpha1);
+}
 
 static gint
-_nc_hipert_two_fluids_f (realtype tau, N_Vector y, N_Vector ydot, gpointer f_data)
+_nc_hipert_two_fluids_f (realtype alpha, N_Vector y, N_Vector ydot, gpointer f_data)
 {
-  const gdouble alpha = NC_HIPERT_TWO_FLUIDS_TAU2ALPHA (tau);
   NcHIPertTwoFluidsArg *arg = (NcHIPertTwoFluidsArg *) f_data;
   NcHIPertITwoFluidsEOM *eom = nc_hipert_itwo_fluids_eom (NC_HIPERT_ITWO_FLUIDS (arg->cosmo), alpha, NC_HIPERT (arg->ptf)->k);
-  const gdouble dadt = NC_HIPERT_TWO_FLUIDS_DALPHADTAU (alpha); 
-/*
-  guint i;
-  printf ("% 20.15g", alpha);
-  for (i = 0; i < 8; i++)
-    printf ("% 15.8g ", NV_Ith_S (y, i));
-  printf ("\n");
-*/
+  
 /*
   printf ("% 20.15g % 20.15g % 20.15g % 20.15g % 20.15g\n", x, 
           NV_Ith_S (y, NC_HIPERT_TWO_FLUIDS_RE_PZETA) / eom->mzeta, 
@@ -669,44 +751,50 @@ _nc_hipert_two_fluids_f (realtype tau, N_Vector y, N_Vector ydot, gpointer f_dat
           NV_Ith_S (y, NC_HIPERT_TWO_FLUIDS_RE_PQ) / eom->mS, 
           eom->Y * NV_Ith_S (y, NC_HIPERT_TWO_FLUIDS_RE_PZETA));
 */  
-  NV_Ith_S (ydot, NC_HIPERT_TWO_FLUIDS_RE_ZETA)  = (NV_Ith_S (y, NC_HIPERT_TWO_FLUIDS_RE_PZETA) / eom->mzeta + eom->Y * NV_Ith_S (y, NC_HIPERT_TWO_FLUIDS_RE_PQ)) * dadt;
-  NV_Ith_S (ydot, NC_HIPERT_TWO_FLUIDS_IM_ZETA)  = (NV_Ith_S (y, NC_HIPERT_TWO_FLUIDS_IM_PZETA) / eom->mzeta + eom->Y * NV_Ith_S (y, NC_HIPERT_TWO_FLUIDS_IM_PQ)) * dadt;
+  NV_Ith_S (ydot, NC_HIPERT_TWO_FLUIDS_RE_ZETA)  = NV_Ith_S (y, NC_HIPERT_TWO_FLUIDS_RE_PZETA) / eom->mzeta + eom->Y * NV_Ith_S (y, NC_HIPERT_TWO_FLUIDS_RE_PQ);
+  NV_Ith_S (ydot, NC_HIPERT_TWO_FLUIDS_IM_ZETA)  = NV_Ith_S (y, NC_HIPERT_TWO_FLUIDS_IM_PZETA) / eom->mzeta + eom->Y * NV_Ith_S (y, NC_HIPERT_TWO_FLUIDS_IM_PQ);
 
-  NV_Ith_S (ydot, NC_HIPERT_TWO_FLUIDS_RE_Q)     = (NV_Ith_S (y, NC_HIPERT_TWO_FLUIDS_RE_PQ) / eom->mS + eom->Y * NV_Ith_S (y, NC_HIPERT_TWO_FLUIDS_RE_PZETA)) * dadt;
-  NV_Ith_S (ydot, NC_HIPERT_TWO_FLUIDS_IM_Q)     = (NV_Ith_S (y, NC_HIPERT_TWO_FLUIDS_IM_PQ) / eom->mS + eom->Y * NV_Ith_S (y, NC_HIPERT_TWO_FLUIDS_IM_PZETA)) * dadt;
+  NV_Ith_S (ydot, NC_HIPERT_TWO_FLUIDS_RE_Q)     = NV_Ith_S (y, NC_HIPERT_TWO_FLUIDS_RE_PQ) / eom->mS + eom->Y * NV_Ith_S (y, NC_HIPERT_TWO_FLUIDS_RE_PZETA);
+  NV_Ith_S (ydot, NC_HIPERT_TWO_FLUIDS_IM_Q)     = NV_Ith_S (y, NC_HIPERT_TWO_FLUIDS_IM_PQ) / eom->mS + eom->Y * NV_Ith_S (y, NC_HIPERT_TWO_FLUIDS_IM_PZETA);
 
-  NV_Ith_S (ydot, NC_HIPERT_TWO_FLUIDS_RE_PZETA) = (- eom->mzeta * eom->nuzeta2 * NV_Ith_S (y, NC_HIPERT_TWO_FLUIDS_RE_ZETA)) * dadt;
-  NV_Ith_S (ydot, NC_HIPERT_TWO_FLUIDS_IM_PZETA) = (- eom->mzeta * eom->nuzeta2 * NV_Ith_S (y, NC_HIPERT_TWO_FLUIDS_IM_ZETA)) * dadt;
+  NV_Ith_S (ydot, NC_HIPERT_TWO_FLUIDS_RE_PZETA) = - eom->mzeta * eom->nuzeta2 * NV_Ith_S (y, NC_HIPERT_TWO_FLUIDS_RE_ZETA);
+  NV_Ith_S (ydot, NC_HIPERT_TWO_FLUIDS_IM_PZETA) = - eom->mzeta * eom->nuzeta2 * NV_Ith_S (y, NC_HIPERT_TWO_FLUIDS_IM_ZETA);
 
-  NV_Ith_S (ydot, NC_HIPERT_TWO_FLUIDS_RE_PQ)    = (- eom->mS * eom->nuS2 * NV_Ith_S (y, NC_HIPERT_TWO_FLUIDS_RE_Q)) * dadt;
-  NV_Ith_S (ydot, NC_HIPERT_TWO_FLUIDS_IM_PQ)    = (- eom->mS * eom->nuS2 * NV_Ith_S (y, NC_HIPERT_TWO_FLUIDS_IM_Q)) * dadt;
+  NV_Ith_S (ydot, NC_HIPERT_TWO_FLUIDS_RE_PQ)    = - eom->mS * eom->nuS2 * NV_Ith_S (y, NC_HIPERT_TWO_FLUIDS_RE_Q);
+  NV_Ith_S (ydot, NC_HIPERT_TWO_FLUIDS_IM_PQ)    = - eom->mS * eom->nuS2 * NV_Ith_S (y, NC_HIPERT_TWO_FLUIDS_IM_Q);
 
+/*
+  guint i;
+  printf ("% 20.15g ", alpha);
+  for (i = 0; i < 8; i++)
+    printf ("[% 15.8g % 15.8g] ", NV_Ith_S (y, i), NV_Ith_S (ydot, i));
+  printf ("\n");
+
+*/
   return 0;
 }
 
 static gint
-_nc_hipert_two_fluids_J (_NCM_SUNDIALS_INT_TYPE N, realtype tau, N_Vector y, N_Vector fy, DlsMat J, gpointer jac_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3)
+_nc_hipert_two_fluids_J (_NCM_SUNDIALS_INT_TYPE N, realtype alpha, N_Vector y, N_Vector fy, DlsMat J, gpointer jac_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3)
 {
-  const gdouble alpha = NC_HIPERT_TWO_FLUIDS_TAU2ALPHA (tau);
   NcHIPertTwoFluidsArg *arg = (NcHIPertTwoFluidsArg *) jac_data;
   NcHIPertITwoFluidsEOM *eom = nc_hipert_itwo_fluids_eom (NC_HIPERT_ITWO_FLUIDS (arg->cosmo), alpha, NC_HIPERT (arg->ptf)->k);
-  const gdouble dadt = NC_HIPERT_TWO_FLUIDS_DALPHADTAU (alpha);
 
-  DENSE_ELEM (J, NC_HIPERT_TWO_FLUIDS_RE_ZETA,  NC_HIPERT_TWO_FLUIDS_RE_PZETA) = (1.0 / eom->mzeta) * dadt;
-  DENSE_ELEM (J, NC_HIPERT_TWO_FLUIDS_IM_ZETA,  NC_HIPERT_TWO_FLUIDS_IM_PZETA) = (1.0 / eom->mzeta) * dadt;
-  DENSE_ELEM (J, NC_HIPERT_TWO_FLUIDS_RE_PZETA, NC_HIPERT_TWO_FLUIDS_RE_ZETA) = (- eom->mzeta * eom->nuzeta2) * dadt;
-  DENSE_ELEM (J, NC_HIPERT_TWO_FLUIDS_IM_PZETA, NC_HIPERT_TWO_FLUIDS_IM_ZETA) = (- eom->mzeta * eom->nuzeta2) * dadt;
+  DENSE_ELEM (J, NC_HIPERT_TWO_FLUIDS_RE_ZETA,  NC_HIPERT_TWO_FLUIDS_RE_PZETA) = 1.0 / eom->mzeta;
+  DENSE_ELEM (J, NC_HIPERT_TWO_FLUIDS_IM_ZETA,  NC_HIPERT_TWO_FLUIDS_IM_PZETA) = 1.0 / eom->mzeta;
+  DENSE_ELEM (J, NC_HIPERT_TWO_FLUIDS_RE_PZETA, NC_HIPERT_TWO_FLUIDS_RE_ZETA) = - eom->mzeta * eom->nuzeta2;
+  DENSE_ELEM (J, NC_HIPERT_TWO_FLUIDS_IM_PZETA, NC_HIPERT_TWO_FLUIDS_IM_ZETA) = - eom->mzeta * eom->nuzeta2;
 
-  DENSE_ELEM (J, NC_HIPERT_TWO_FLUIDS_RE_Q,  NC_HIPERT_TWO_FLUIDS_RE_PQ) = (1.0 / eom->mS) * dadt;
-  DENSE_ELEM (J, NC_HIPERT_TWO_FLUIDS_IM_Q,  NC_HIPERT_TWO_FLUIDS_IM_PQ) = (1.0 / eom->mS) * dadt;
-  DENSE_ELEM (J, NC_HIPERT_TWO_FLUIDS_RE_PQ, NC_HIPERT_TWO_FLUIDS_RE_Q) = (- eom->mS * eom->nuS2) * dadt;
-  DENSE_ELEM (J, NC_HIPERT_TWO_FLUIDS_IM_PQ, NC_HIPERT_TWO_FLUIDS_IM_Q) = (- eom->mS * eom->nuS2) * dadt;
+  DENSE_ELEM (J, NC_HIPERT_TWO_FLUIDS_RE_Q,  NC_HIPERT_TWO_FLUIDS_RE_PQ) = 1.0 / eom->mS;
+  DENSE_ELEM (J, NC_HIPERT_TWO_FLUIDS_IM_Q,  NC_HIPERT_TWO_FLUIDS_IM_PQ) = 1.0 / eom->mS;
+  DENSE_ELEM (J, NC_HIPERT_TWO_FLUIDS_RE_PQ, NC_HIPERT_TWO_FLUIDS_RE_Q) = - eom->mS * eom->nuS2;
+  DENSE_ELEM (J, NC_HIPERT_TWO_FLUIDS_IM_PQ, NC_HIPERT_TWO_FLUIDS_IM_Q) = - eom->mS * eom->nuS2;
 
-  DENSE_ELEM (J, NC_HIPERT_TWO_FLUIDS_RE_ZETA, NC_HIPERT_TWO_FLUIDS_RE_PQ) = eom->Y * dadt;
-  DENSE_ELEM (J, NC_HIPERT_TWO_FLUIDS_IM_ZETA, NC_HIPERT_TWO_FLUIDS_IM_PQ) = eom->Y * dadt;
+  DENSE_ELEM (J, NC_HIPERT_TWO_FLUIDS_RE_ZETA, NC_HIPERT_TWO_FLUIDS_RE_PQ) = eom->Y;
+  DENSE_ELEM (J, NC_HIPERT_TWO_FLUIDS_IM_ZETA, NC_HIPERT_TWO_FLUIDS_IM_PQ) = eom->Y;
 
-  DENSE_ELEM (J, NC_HIPERT_TWO_FLUIDS_RE_Q, NC_HIPERT_TWO_FLUIDS_RE_PZETA) = eom->Y * dadt;
-  DENSE_ELEM (J, NC_HIPERT_TWO_FLUIDS_IM_Q, NC_HIPERT_TWO_FLUIDS_IM_PZETA) = eom->Y * dadt;
+  DENSE_ELEM (J, NC_HIPERT_TWO_FLUIDS_RE_Q, NC_HIPERT_TWO_FLUIDS_RE_PZETA) = eom->Y;
+  DENSE_ELEM (J, NC_HIPERT_TWO_FLUIDS_IM_Q, NC_HIPERT_TWO_FLUIDS_IM_PZETA) = eom->Y;
   
   return 0;
 }
@@ -727,27 +815,29 @@ nc_hipert_two_fluids_set_init_cond (NcHIPertTwoFluids *ptf, NcHICosmo *cosmo, gd
   NcHIPert *pert = NC_HIPERT (ptf);
   gint flag;
   guint i;
-  gdouble tau_i = NC_HIPERT_TWO_FLUIDS_ALPHA2TAU (alphai);
 
   pert->alpha0 = alphai;
 
   if (pert->y == NULL)
     pert->y = N_VNew_Serial (NC_HIPERT_TWO_FLUIDS_LEN);
 
+  /*printf ("# Initial conditions\n% 20.15g ", alphai);*/  
   for (i = 0; i < NC_HIPERT_TWO_FLUIDS_LEN; i++)
   {
     NV_Ith_S (pert->y, i) = vars[i];
+    /*printf ("% 20.15g ", vars[i]);*/
   }
+  /*printf ("\n");*/
 
   if (!pert->cvode_init)
   {
-    flag = CVodeInit (pert->cvode, &_nc_hipert_two_fluids_f, tau_i, pert->y);
+    flag = CVodeInit (pert->cvode, &_nc_hipert_two_fluids_f, alphai, pert->y);
     CVODE_CHECK (&flag, "CVodeInit", 1, );
     pert->cvode_init = TRUE;
   }
   else
   {
-    flag = CVodeReInit (pert->cvode, tau_i, pert->y);
+    flag = CVodeReInit (pert->cvode, alphai, pert->y);
     CVODE_CHECK (&flag, "CVodeReInit", 1, );
   }
 
@@ -779,6 +869,56 @@ nc_hipert_two_fluids_set_init_cond_wkb_zeta (NcHIPertTwoFluids *ptf, NcHICosmo *
   gdouble vars[8] = {0.0, };
   gdouble *vars_ptr = vars;
 
+  nc_hipert_two_fluids_wkb_zeta_Pzeta (ptf, cosmo, alphai,
+                                       &vars[NC_HIPERT_TWO_FLUIDS_RE_ZETA],  &vars[NC_HIPERT_TWO_FLUIDS_IM_ZETA],
+                                       &vars[NC_HIPERT_TWO_FLUIDS_RE_PZETA], &vars[NC_HIPERT_TWO_FLUIDS_IM_PZETA]
+                                       );
+  nc_hipert_two_fluids_wkb_full_zeta (ptf, cosmo, alphai, &vars_ptr);
+  nc_hipert_two_fluids_set_init_cond (ptf, cosmo, alphai, vars);
+}
+
+/**
+ * nc_hipert_two_fluids_set_init_cond_ewkb_zeta:
+ * @ptf: a #NcHIPertTwoFluids.
+ * @cosmo: a #NcHICosmo.
+ * @alphai: the log-redshift time.
+ * 
+ * Sets the initial conditions for the system evolution using the value of the exact WKB solution at @alphai with main mode $\zeta$. 
+ * 
+ */
+void 
+nc_hipert_two_fluids_set_init_cond_ewkb_zeta (NcHIPertTwoFluids *ptf, NcHICosmo *cosmo, gdouble alphai)
+{
+  gdouble vars[8] = {0.0, };
+  gdouble *vars_ptr = vars;
+
+  nc_hipert_two_fluids_ewkb_zeta_Pzeta (ptf, cosmo, alphai,
+                                        &vars[NC_HIPERT_TWO_FLUIDS_RE_ZETA],  &vars[NC_HIPERT_TWO_FLUIDS_IM_ZETA],
+                                        &vars[NC_HIPERT_TWO_FLUIDS_RE_PZETA], &vars[NC_HIPERT_TWO_FLUIDS_IM_PZETA]
+                                        );
+  nc_hipert_two_fluids_wkb_full_zeta (ptf, cosmo, alphai, &vars_ptr);
+  nc_hipert_two_fluids_set_init_cond (ptf, cosmo, alphai, vars);
+}
+
+/**
+ * nc_hipert_two_fluids_set_init_cond_patched_zeta:
+ * @ptf: a #NcHIPertTwoFluids.
+ * @cosmo: a #NcHICosmo.
+ * @alphai: the log-redshift time.
+ * 
+ * Sets the initial conditions for the system evolution using the value of the patched WKB solution at @alphai with main mode $\zeta$. 
+ * 
+ */
+void 
+nc_hipert_two_fluids_set_init_cond_patched_zeta (NcHIPertTwoFluids *ptf, NcHICosmo *cosmo, gdouble alphai)
+{
+  gdouble vars[8] = {0.0, };
+  gdouble *vars_ptr = vars;
+
+  nc_hipert_two_fluids_patched_zeta_Pzeta (ptf, cosmo, alphai,
+                                           &vars[NC_HIPERT_TWO_FLUIDS_RE_ZETA],  &vars[NC_HIPERT_TWO_FLUIDS_IM_ZETA],
+                                           &vars[NC_HIPERT_TWO_FLUIDS_RE_PZETA], &vars[NC_HIPERT_TWO_FLUIDS_IM_PZETA]
+                                           );
   nc_hipert_two_fluids_wkb_full_zeta (ptf, cosmo, alphai, &vars_ptr);
   nc_hipert_two_fluids_set_init_cond (ptf, cosmo, alphai, vars);
 }
@@ -798,6 +938,59 @@ nc_hipert_two_fluids_set_init_cond_wkb_Q (NcHIPertTwoFluids *ptf, NcHICosmo *cos
   gdouble vars[8] = {0.0, };
   gdouble *vars_ptr = vars;
 
+  nc_hipert_two_fluids_wkb_Q_PQ (ptf, cosmo, alphai,
+                                 &vars[NC_HIPERT_TWO_FLUIDS_RE_Q],  &vars[NC_HIPERT_TWO_FLUIDS_IM_Q],
+                                 &vars[NC_HIPERT_TWO_FLUIDS_RE_PQ], &vars[NC_HIPERT_TWO_FLUIDS_IM_PQ]
+                                 );
+  
+  nc_hipert_two_fluids_wkb_full_Q (ptf, cosmo, alphai, &vars_ptr);
+  nc_hipert_two_fluids_set_init_cond (ptf, cosmo, alphai, vars);
+}
+
+/**
+ * nc_hipert_two_fluids_set_init_cond_ewkb_Q:
+ * @ptf: a #NcHIPertTwoFluids.
+ * @cosmo: a #NcHICosmo.
+ * @alphai: the log-redshift time.
+ * 
+ * Sets the initial conditions for the system evolution using the value of the exact WKB solution at @alphai with main mode $Q$. 
+ * 
+ */
+void 
+nc_hipert_two_fluids_set_init_cond_ewkb_Q (NcHIPertTwoFluids *ptf, NcHICosmo *cosmo, gdouble alphai)
+{
+  gdouble vars[8] = {0.0, };
+  gdouble *vars_ptr = vars;
+
+  nc_hipert_two_fluids_ewkb_Q_PQ (ptf, cosmo, alphai,
+                                  &vars[NC_HIPERT_TWO_FLUIDS_RE_Q],  &vars[NC_HIPERT_TWO_FLUIDS_IM_Q],
+                                  &vars[NC_HIPERT_TWO_FLUIDS_RE_PQ], &vars[NC_HIPERT_TWO_FLUIDS_IM_PQ]
+                                  );
+  
+  nc_hipert_two_fluids_wkb_full_Q (ptf, cosmo, alphai, &vars_ptr);
+  nc_hipert_two_fluids_set_init_cond (ptf, cosmo, alphai, vars);
+}
+
+/**
+ * nc_hipert_two_fluids_set_init_cond_patched_Q:
+ * @ptf: a #NcHIPertTwoFluids.
+ * @cosmo: a #NcHICosmo.
+ * @alphai: the log-redshift time.
+ * 
+ * Sets the initial conditions for the system evolution using the value of the patched WKB solution at @alphai with main mode $Q$. 
+ * 
+ */
+void 
+nc_hipert_two_fluids_set_init_cond_patched_Q (NcHIPertTwoFluids *ptf, NcHICosmo *cosmo, gdouble alphai)
+{
+  gdouble vars[8] = {0.0, };
+  gdouble *vars_ptr = vars;
+
+  nc_hipert_two_fluids_patched_Q_PQ (ptf, cosmo, alphai,
+                                     &vars[NC_HIPERT_TWO_FLUIDS_RE_Q],  &vars[NC_HIPERT_TWO_FLUIDS_IM_Q],
+                                     &vars[NC_HIPERT_TWO_FLUIDS_RE_PQ], &vars[NC_HIPERT_TWO_FLUIDS_IM_PQ]
+                                     );
+  
   nc_hipert_two_fluids_wkb_full_Q (ptf, cosmo, alphai, &vars_ptr);
   nc_hipert_two_fluids_set_init_cond (ptf, cosmo, alphai, vars);
 }
@@ -816,9 +1009,8 @@ nc_hipert_two_fluids_evolve (NcHIPertTwoFluids *ptf, NcHICosmo *cosmo, gdouble a
 {
   NcHIPert *pert = NC_HIPERT (ptf);
   NcHIPertTwoFluidsArg arg;
-  gdouble tau_i = 0.0;
+  gdouble alpha_i = 0.0;
   gint flag;
-  gdouble tau_f = NC_HIPERT_TWO_FLUIDS_ALPHA2TAU (alphaf);
   
   arg.cosmo = cosmo;
   arg.ptf = ptf;
@@ -826,10 +1018,10 @@ nc_hipert_two_fluids_evolve (NcHIPertTwoFluids *ptf, NcHICosmo *cosmo, gdouble a
   flag = CVodeSetUserData (pert->cvode, &arg);
   CVODE_CHECK (&flag, "CVodeSetFdata", 1, );
 
-  flag = CVode (pert->cvode, tau_f, pert->y, &tau_i, CV_NORMAL);
+  flag = CVode (pert->cvode, alphaf, pert->y, &alpha_i, CV_NORMAL);
   CVODE_CHECK (&flag, "CVode[nc_hipert_two_fluids_evolve]", 1, );
 
-  pert->alpha0 = NC_HIPERT_TWO_FLUIDS_TAU2ALPHA (tau_i);
+  pert->alpha0 = alpha_i;
 }
 
 /**

@@ -57,6 +57,8 @@ public class Nc.GDE : GLib.Object {
   }
 
   public void add_model_by_type (Gtk.ListStore store, Type pt) {
+    
+/*    
     foreach (unowned Type ch in pt.children ()) {
       if (ch.is_abstract ()) {
         add_model_by_type (store, ch);
@@ -67,6 +69,7 @@ public class Nc.GDE : GLib.Object {
         store.set (iter, 0, ch.name ());
       }
     }    
+*/
   }
   
   public void load_models () {

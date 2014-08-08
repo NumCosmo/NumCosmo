@@ -28,6 +28,7 @@
 
 #include <glib-object.h>
 #include <numcosmo/nc_hicosmo.h>
+#include <numcosmo/perturbations/nc_hipert_wkb.h>
 
 G_BEGIN_DECLS
 
@@ -42,6 +43,10 @@ typedef struct _NcHIPertITwoFluidsEOM NcHIPertITwoFluidsEOM;
 
 typedef gdouble (*NcHIPertITwoFluidsFuncNuA2) (NcHIPertITwoFluids *itf, gdouble alpha, gdouble k);
 typedef gdouble (*NcHIPertITwoFluidsFuncNuB2) (NcHIPertITwoFluids *itf, gdouble alpha, gdouble k);
+typedef gdouble (*NcHIPertITwoFluidsFuncVA) (NcHIPertITwoFluids *itf, gdouble alpha, gdouble k);
+typedef gdouble (*NcHIPertITwoFluidsFuncVB) (NcHIPertITwoFluids *itf, gdouble alpha, gdouble k);
+typedef gdouble (*NcHIPertITwoFluidsFuncDlnmzeta) (NcHIPertITwoFluids *itf, gdouble alpha, gdouble k);
+typedef gdouble (*NcHIPertITwoFluidsFuncDlnmS) (NcHIPertITwoFluids *itf, gdouble alpha, gdouble k);
 typedef gdouble (*NcHIPertITwoFluidsFuncDmzetanuAnuA) (NcHIPertITwoFluids *itf, gdouble alpha, gdouble k);
 typedef gdouble (*NcHIPertITwoFluidsFuncDmSnuBnuB) (NcHIPertITwoFluids *itf, gdouble alpha, gdouble k);
 typedef NcHIPertITwoFluidsEOM *(*NcHIPertITwoFluidsFuncEOM) (NcHIPertITwoFluids *itf, gdouble alpha, gdouble k);
@@ -53,10 +58,15 @@ struct _NcHIPertITwoFluidsInterface
 
   NcHIPertITwoFluidsFuncNuA2 nuA2;
   NcHIPertITwoFluidsFuncNuB2 nuB2;
-  
+  NcHIPertITwoFluidsFuncVA VA;
+  NcHIPertITwoFluidsFuncVB VB;
+  NcHIPertITwoFluidsFuncDlnmzeta dlnmzeta;
+  NcHIPertITwoFluidsFuncDlnmS dlnmS;
   NcHIPertITwoFluidsFuncDmzetanuAnuA dmzetanuA_nuA;
   NcHIPertITwoFluidsFuncDmSnuBnuB dmSnuB_nuB;
   NcHIPertITwoFluidsFuncEOM eom;
+  NcHIPertWKBEom wkb_zeta_eom;
+  NcHIPertWKBEom wkb_S_eom;
 };
 
 /**
@@ -87,10 +97,19 @@ void nc_hipert_itwo_fluids_eom_free (NcHIPertITwoFluidsEOM *tf_eom);
 G_INLINE_FUNC gdouble nc_hipert_itwo_fluids_nuA2 (NcHIPertITwoFluids *itf, gdouble alpha, gdouble k);
 G_INLINE_FUNC gdouble nc_hipert_itwo_fluids_nuB2 (NcHIPertITwoFluids *itf, gdouble alpha, gdouble k);
 
+G_INLINE_FUNC gdouble nc_hipert_itwo_fluids_VA (NcHIPertITwoFluids *itf, gdouble alpha, gdouble k);
+G_INLINE_FUNC gdouble nc_hipert_itwo_fluids_VB (NcHIPertITwoFluids *itf, gdouble alpha, gdouble k);
+
+G_INLINE_FUNC gdouble nc_hipert_itwo_fluids_dlnmzeta (NcHIPertITwoFluids *itf, gdouble alpha, gdouble k);
+G_INLINE_FUNC gdouble nc_hipert_itwo_fluids_dlnmS (NcHIPertITwoFluids *itf, gdouble alpha, gdouble k);
+
 G_INLINE_FUNC gdouble nc_hipert_itwo_fluids_dmzetanuA_nuA (NcHIPertITwoFluids *itf, gdouble alpha, gdouble k);
 G_INLINE_FUNC gdouble nc_hipert_itwo_fluids_dmSnuB_nuB (NcHIPertITwoFluids *itf, gdouble alpha, gdouble k);
 
 G_INLINE_FUNC NcHIPertITwoFluidsEOM *nc_hipert_itwo_fluids_eom (NcHIPertITwoFluids *itf, gdouble alpha, gdouble k);
+
+G_INLINE_FUNC void nc_hipert_itwo_fluids_wkb_zeta_eom (NcHIPertITwoFluids *itf, gdouble alpha, gdouble k, gdouble *nu2, gdouble *m, gdouble *dlnm);
+G_INLINE_FUNC void nc_hipert_itwo_fluids_wkb_S_eom (NcHIPertITwoFluids *itf, gdouble alpha, gdouble k, gdouble *nu2, gdouble *m, gdouble *dlnm);
 
 G_END_DECLS
 
@@ -115,6 +134,30 @@ nc_hipert_itwo_fluids_nuB2 (NcHIPertITwoFluids *itf, gdouble alpha, gdouble k)
 }
 
 G_INLINE_FUNC gdouble 
+nc_hipert_itwo_fluids_VA (NcHIPertITwoFluids *itf, gdouble alpha, gdouble k)
+{
+  return NC_HIPERT_ITWO_FLUIDS_GET_INTERFACE (itf)->VA (itf, alpha, k);
+}
+
+G_INLINE_FUNC gdouble 
+nc_hipert_itwo_fluids_VB (NcHIPertITwoFluids *itf, gdouble alpha, gdouble k)
+{
+  return NC_HIPERT_ITWO_FLUIDS_GET_INTERFACE (itf)->VB (itf, alpha, k);
+}
+
+G_INLINE_FUNC gdouble 
+nc_hipert_itwo_fluids_dlnmzeta (NcHIPertITwoFluids *itf, gdouble alpha, gdouble k)
+{
+  return NC_HIPERT_ITWO_FLUIDS_GET_INTERFACE (itf)->dlnmzeta (itf, alpha, k);
+}
+
+G_INLINE_FUNC gdouble 
+nc_hipert_itwo_fluids_dlnmS (NcHIPertITwoFluids *itf, gdouble alpha, gdouble k)
+{
+  return NC_HIPERT_ITWO_FLUIDS_GET_INTERFACE (itf)->dlnmS (itf, alpha, k);
+}
+
+G_INLINE_FUNC gdouble 
 nc_hipert_itwo_fluids_dmzetanuA_nuA (NcHIPertITwoFluids *itf, gdouble alpha, gdouble k)
 {
   return NC_HIPERT_ITWO_FLUIDS_GET_INTERFACE (itf)->dmzetanuA_nuA (itf, alpha, k);
@@ -132,6 +175,17 @@ nc_hipert_itwo_fluids_eom (NcHIPertITwoFluids *itf, gdouble alpha, gdouble k)
   return NC_HIPERT_ITWO_FLUIDS_GET_INTERFACE (itf)->eom (itf, alpha, k);
 }
 
+G_INLINE_FUNC void
+nc_hipert_itwo_fluids_wkb_zeta_eom (NcHIPertITwoFluids *itf, gdouble alpha, gdouble k, gdouble *nu2, gdouble *m, gdouble *dlnm)
+{
+  return NC_HIPERT_ITWO_FLUIDS_GET_INTERFACE (itf)->wkb_zeta_eom (G_OBJECT (itf), alpha, k, nu2, m, dlnm);
+}
+
+G_INLINE_FUNC void
+nc_hipert_itwo_fluids_wkb_S_eom (NcHIPertITwoFluids *itf, gdouble alpha, gdouble k, gdouble *nu2, gdouble *m, gdouble *dlnm)
+{
+  return NC_HIPERT_ITWO_FLUIDS_GET_INTERFACE (itf)->wkb_S_eom (G_OBJECT (itf), alpha, k, nu2, m, dlnm);
+}
 
 
 G_END_DECLS

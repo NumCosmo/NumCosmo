@@ -357,8 +357,10 @@ ncm_ode_spline_prepare (NcmOdeSpline *os, gpointer userdata)
     if (x0 == x && i++ > 10)
       g_error ("ncm_ode_spline_prepare: cannot integrate function.");
     x0 = x;
+
     g_array_append_val (os->x_array, x);
     g_array_append_val (os->y_array, NV_Ith_S (os->y, 0));
+    
     if (x == os->xf)
       break;
   }

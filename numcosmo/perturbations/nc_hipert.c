@@ -79,10 +79,10 @@ nc_hipert_set_property (GObject *object, guint prop_id, const GValue *value, GPa
       nc_hipert_set_mode_k (pert, g_value_get_double (value));
       break;
     case PROP_RELTOL:
-      pert->reltol = g_value_get_double (value);
+      nc_hipert_set_reltol (pert, g_value_get_double (value));
       break;    
     case PROP_ABSTOL:
-      pert->abstol = g_value_get_double (value);
+      nc_hipert_set_abstol (pert, g_value_get_double (value));
       break;    
     case PROP_ALPHAI:
       pert->alpha0 = g_value_get_double (value);
@@ -105,10 +105,10 @@ nc_hipert_get_property (GObject *object, guint prop_id, GValue *value, GParamSpe
       g_value_set_double (value, pert->k);
       break;
     case PROP_RELTOL:
-      g_value_set_double (value, pert->reltol);
+      g_value_set_double (value, nc_hipert_get_reltol (pert));
       break;
     case PROP_ABSTOL:
-      g_value_set_double (value, pert->abstol);
+      g_value_set_double (value, nc_hipert_get_abstol (pert));
       break;
     case PROP_ALPHAI:
       g_value_set_double (value, pert->alpha0);
@@ -140,6 +140,10 @@ nc_hipert_finalize (GObject *object)
   /* Chain up : end */
   G_OBJECT_CLASS (nc_hipert_parent_class)->finalize (object);
 }
+
+static void _nc_hipert_set_mode_k (NcHIPert *pert, gdouble k);
+static void _nc_hipert_set_abstol (NcHIPert *pert, gdouble abstol);
+static void _nc_hipert_set_reltol (NcHIPert *pert, gdouble reltol);
 
 static void
 nc_hipert_class_init (NcHIPertClass *klass)
@@ -181,6 +185,10 @@ nc_hipert_class_init (NcHIPertClass *klass)
                                                         "Initial time",
                                                         -G_MAXDOUBLE, G_MAXDOUBLE, 0.0,
                                                         G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
+  klass->set_mode_k = &_nc_hipert_set_mode_k;
+  klass->set_abstol = &_nc_hipert_set_abstol;
+  klass->set_reltol = &_nc_hipert_set_reltol;
 }
 
 /**
@@ -191,8 +199,8 @@ nc_hipert_class_init (NcHIPertClass *klass)
  * Sets the value of the mode to be computed.
  * 
  */
-void 
-nc_hipert_set_mode_k (NcHIPert *pert, gdouble k)
+static void 
+_nc_hipert_set_mode_k (NcHIPert *pert, gdouble k)
 {
   if (pert->k != k)
   {
@@ -214,14 +222,14 @@ nc_hipert_set_stiff_solver (NcHIPert *pert, gboolean stiff)
 {
   guint a = stiff ? 1 : 0;
   guint b = pert->cvode_stiff ? 1 : 0;
-  if (a == b)
+  if (a != b)
   {
     if (pert->cvode != NULL)
     {
       CVodeFree (&pert->cvode);
       pert->cvode = NULL;
     }
-    pert->cvode_stiff = TRUE;
+    pert->cvode_stiff = stiff;
 
     if (stiff)
       pert->cvode = CVodeCreate (CV_BDF, CV_NEWTON);
@@ -230,4 +238,68 @@ nc_hipert_set_stiff_solver (NcHIPert *pert, gboolean stiff)
     
     pert->cvode_init = FALSE;
   }
+}
+
+
+/**
+ * nc_hipert_set_reltol:
+ * @pert: a #NcHIPert.
+ * @reltol: the relative tolarance.
+ * 
+ * Sets the value of the relative tolerance.
+ * 
+ */
+static void 
+_nc_hipert_set_reltol (NcHIPert *pert, gdouble reltol)
+{
+  if (pert->reltol != reltol)
+  {
+    pert->reltol   = reltol;
+    pert->prepared = FALSE;
+  }
+}
+
+/**
+ * nc_hipert_set_abstol:
+ * @pert: a #NcHIPert.
+ * @abstol: the absolute tolarance.
+ * 
+ * Sets the value of the absolute tolerance.
+ * 
+ */
+static void 
+_nc_hipert_set_abstol (NcHIPert *pert, gdouble abstol)
+{
+  if (pert->abstol != abstol)
+  {
+    pert->abstol   = abstol;
+    pert->prepared = FALSE;
+  }
+}
+
+/**
+ * nc_hipert_get_reltol:
+ * @pert: a #NcHIPert.
+ * 
+ * Gets the value of the relative tolerance.
+ * 
+ * Returns: reltol
+ */
+gdouble 
+nc_hipert_get_reltol (NcHIPert *pert)
+{
+  return pert->reltol;
+}
+
+/**
+ * nc_hipert_get_abstol:
+ * @pert: a #NcHIPert.
+ * 
+ * Gets the value of the relative tolerance.
+ * 
+ */
+gdouble
+nc_hipert_get_abstol (NcHIPert *pert)
+{
+  return pert->abstol;
 }
