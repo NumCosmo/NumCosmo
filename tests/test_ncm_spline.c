@@ -146,6 +146,7 @@ main (gint argc, gchar *argv[])
   ncm_cfg_init ();
   ncm_cfg_enable_gsl_err_handler ();
 
+#if !((GLIB_MAJOR_VERSION == 2) && (GLIB_MINOR_VERSION < 38))
   g_test_add_func ("/numcosmo/ncm_spline/vector/invalid/sizes/subprocess", &test_ncm_spline_invalid_vector_sizes);
   g_test_add_func ("/numcosmo/ncm_spline/vector/invalid/min_sizes/subprocess", &test_ncm_spline_invalid_min_vector_sizes);
   g_test_add_func ("/numcosmo/ncm_spline/vector/invalid/x/subprocess", &test_ncm_spline_invalid_x_vector);
@@ -157,7 +158,8 @@ main (gint argc, gchar *argv[])
   g_test_add_func ("/numcosmo/ncm_spline/array/invalid/x/subprocess", &test_ncm_spline_invalid_x_array);
   g_test_add_func ("/numcosmo/ncm_spline/array/invalid/y/subprocess", &test_ncm_spline_invalid_y_array);
   g_test_add_func ("/numcosmo/ncm_spline/array/invalid/xy/subprocess", &test_ncm_spline_invalid_xy_array);
-
+#endif
+  
   g_test_add_func ("/numcosmo/ncm_spline_cubic_notaknot/new_empty", &test_ncm_spline_cubic_notaknot_new_empty);
   g_test_add_func ("/numcosmo/ncm_spline_cubic_notaknot/traps", &test_ncm_spline_traps);
   g_test_add_func ("/numcosmo/ncm_spline_cubic_notaknot/new", &test_ncm_spline_new);
@@ -718,6 +720,7 @@ test_ncm_spline_invalid_xy_array (void)
 void 
 test_ncm_spline_traps (void)
 {
+#if !((GLIB_MAJOR_VERSION == 2) && (GLIB_MINOR_VERSION < 38))
   g_test_trap_subprocess ("/numcosmo/ncm_spline/vector/invalid/sizes/subprocess", 0, 0);
   g_test_trap_assert_failed ();
 
@@ -747,4 +750,5 @@ test_ncm_spline_traps (void)
 
   g_test_trap_subprocess ("/numcosmo/ncm_spline/array/invalid/xy/subprocess", 0, 0);
   g_test_trap_assert_failed ();
+#endif
 }

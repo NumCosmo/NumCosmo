@@ -175,7 +175,7 @@ nc_data_cluster_ncount_set_property (GObject *object, guint prop_id, const GValu
       ncount->seed = g_value_get_ulong (value);
       break;
     case PROP_RNG_NAME:
-      g_clear_pointer (&ncount->rnd_name, &g_free);
+      g_clear_pointer (&ncount->rnd_name, g_free);
       ncount->rnd_name = g_value_dup_string (value);
       break;
     default:

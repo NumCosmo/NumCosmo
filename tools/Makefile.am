@@ -1,12 +1,18 @@
 ## Process this file with automake to produce Makefile.in
 
+INCLUDES = \
+         -DG_LOG_DOMAIN=\"NUMCOSMO\" \
+         $(GLIB_CFLAGS) \
+         $(SUNDIALS_CFLAGS) \
+         $(GSL_CFLAGS) \
+         $(FFTW3_CFLAGS) \
+         $(CFITSIO_CFLAGS) \
+         $(NLOPT_CFLAGS) \
+         -I$(top_srcdir)
+
 AM_CFLAGS = \
 	-Wall \
-	$(GLIB_CFLAGS) \
-	$(SUNDIALS_CFLAGS) \
-	$(GSL_CFLAGS) \
-	-I$(top_srcdir) \
-	-I$(top_srcdir)/numcosmo
+	$(INCLUDES)
 
 noinst_PROGRAMS = \
 	cmb_maps \

@@ -1288,7 +1288,9 @@ ncm_cfg_get_default_sqlite3 (void)
       filename = g_build_filename (data_dir, "data", NCM_CFG_DEFAULT_SQLITE3_FILENAME, NULL);
 
       if (!g_file_test (filename, G_FILE_TEST_EXISTS))
+      {
         g_clear_pointer (&filename, g_free);
+      }
     }
     
     if (filename == NULL)

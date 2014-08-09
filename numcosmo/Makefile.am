@@ -1,7 +1,6 @@
 ## Process this file with automake to produce Makefile.in
 
-AM_CFLAGS = \
-	 -Wall \
+INCLUDES = \
 	 -DG_LOG_DOMAIN=\"NUMCOSMO\" \
 	 $(GLIB_CFLAGS) \
 	 $(SUNDIALS_CFLAGS) \
@@ -10,6 +9,10 @@ AM_CFLAGS = \
 	 $(CFITSIO_CFLAGS) \
 	 $(NLOPT_CFLAGS) \
 	 -I$(top_srcdir)
+
+AM_CFLAGS = \
+	 -Wall \
+	 $(INCLUDES)
 
 SUBDIRS = 
 

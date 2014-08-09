@@ -99,7 +99,7 @@ ncm_function_cache_free (NcmFunctionCache *cache)
 void
 ncm_function_cache_clear (NcmFunctionCache **cache)
 {
-  g_clear_pointer (cache, &ncm_function_cache_free);
+  g_clear_pointer (cache, ncm_function_cache_free);
 }
 
 /**

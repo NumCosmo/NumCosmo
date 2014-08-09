@@ -149,7 +149,14 @@ GVariant *ncm_cfg_array_to_variant (GArray *a, const GVariantType *etype);
 
 /* Workaround on g_clear_pointer */
 #if ((GLIB_MAJOR_VERSION == 2) && (GLIB_MINOR_VERSION < 34))
-#define g_clear_pointer(ptr,freefunc) G_STMT_START if (*(ptr) != NULL) { *(freefunc) (*(ptr)); *(ptr) = NULL; } G_STMT_END
+#define g_clear_pointer(ptr,freefunc) \
+G_STMT_START { \
+  if (*(ptr) != NULL) \
+  { \
+    freefunc (*(ptr)); \
+    *(ptr) = NULL; \
+  } \
+} G_STMT_END
 #endif /* Glib version < 2.34 */
 
 /* Workaround on g_clear_object. */

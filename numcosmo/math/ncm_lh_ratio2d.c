@@ -1096,7 +1096,7 @@ ncm_lh_ratio2d_region_free (NcmLHRatio2dRegion *rg)
 void 
 ncm_lh_ratio2d_region_clear (NcmLHRatio2dRegion **rg)
 {
-  g_clear_pointer (rg, &ncm_lh_ratio2d_region_free);
+  g_clear_pointer (rg, ncm_lh_ratio2d_region_free);
 }
 
 /**

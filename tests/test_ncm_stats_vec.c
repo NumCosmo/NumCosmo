@@ -84,7 +84,8 @@ main (gint argc, gchar *argv[])
               &test_ncm_stats_vec_cov_new, 
               &test_ncm_stats_vec_cov_test, 
               &test_ncm_stats_vec_free);
-
+  
+#if !((GLIB_MAJOR_VERSION == 2) && (GLIB_MINOR_VERSION < 38))
   g_test_add ("/numcosmo/ncm_stats_vec/mean/get_var/subprocess", TestNcmStatsVec, NULL, 
               &test_ncm_stats_vec_mean_new, 
               &test_ncm_stats_vec_invalid_get_var, 
@@ -97,7 +98,8 @@ main (gint argc, gchar *argv[])
               &test_ncm_stats_vec_var_new, 
               &test_ncm_stats_vec_invalid_get_cov,
               &test_ncm_stats_vec_free);
-
+#endif
+  
   g_test_add ("/numcosmo/ncm_stats_vec/traps", TestNcmStatsVec, NULL, 
               &test_ncm_stats_vec_var_new, 
               &test_ncm_stats_vec_traps, 
@@ -322,6 +324,7 @@ test_ncm_stats_vec_invalid_get_cov (TestNcmStatsVec *test, gconstpointer pdata)
 void 
 test_ncm_stats_vec_traps (TestNcmStatsVec *test, gconstpointer pdata)
 {
+#if !((GLIB_MAJOR_VERSION == 2) && (GLIB_MINOR_VERSION < 38))
   g_test_trap_subprocess ("/numcosmo/ncm_stats_vec/mean/get_var/subprocess", 0, 0);
   g_test_trap_assert_failed ();
   
@@ -330,4 +333,5 @@ test_ncm_stats_vec_traps (TestNcmStatsVec *test, gconstpointer pdata)
   
   g_test_trap_subprocess ("/numcosmo/ncm_stats_vec/var/get_cov/subprocess", 0, 0);
   g_test_trap_assert_failed ();
+#endif
 }
