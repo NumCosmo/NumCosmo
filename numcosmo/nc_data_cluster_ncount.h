@@ -133,7 +133,6 @@ NcmMatrix *nc_data_cluster_ncount_get_z_obs_params (NcDataClusterNCount *ncount)
 
 NcDataClusterNCount *nc_data_cluster_ncount_binned_new (NcClusterAbundance *cad);
 void nc_data_cluster_ncount_binned_init_from_text_file_gkey (NcDataClusterNCount *ncount, gboolean obs, gchar *filename);
-void nc_data_cluster_ncount_binned_init_from_sampling (NcDataClusterNCount *ncount, NcmMSet *mset, NcmVector *nodes, gboolean obs, gdouble area_survey, gdouble lnMi, gdouble lnMf, gdouble photoz_sigma0, gdouble photoz_bias, gdouble lnM_sigma0, gdouble lnM_bias, NcmRNG *rng);
 void nc_data_cluster_ncount_binned_save (NcDataClusterNCount *ncount, gchar *filename);
 NcmMSetFunc *nc_data_cluster_ncount_binned_create_func (NcClusterAbundance *cad);
 

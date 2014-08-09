@@ -319,7 +319,7 @@ ncm_fftlog_clear (NcmFftlog **fftlog)
 
 /**
  * ncm_fftlog_peek_name:
- * @fftlog: FIXME
+ * @fftlog: a #NcmFftlog
  * 
  * FIXME
  * 

@@ -24,7 +24,7 @@
 
 /**
  * SECTION:nc_hicosmo_qspline
- * @title: Spline Desceleration Parameter Model
+ * @title: Spline Deceleration Parameter Model
  * @short_description: FIXME
  *
  * FIXME
