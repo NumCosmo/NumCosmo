@@ -421,7 +421,7 @@ _nc_data_cluster_ncount_get_length (NcmData *data)
 static void
 _nc_data_cluster_ncount_begin (NcmData *data)
 {
-  NcDataClusterNCount *ncount = NC_DATA_CLUSTER_NCOUNT (data);
+  NcDataClusterNCount *ncount = NC_DATA_CLUSTER_NCOUNT (data);   
   ncount->log_np_fac = lgamma (ncount->np + 1);
 }
 
@@ -866,7 +866,10 @@ nc_data_cluster_ncount_get_z_true (NcDataClusterNCount *ncount)
 NcmMatrix *
 nc_data_cluster_ncount_get_lnM_obs (NcDataClusterNCount *ncount)
 {
-  return ncm_matrix_ref (ncount->lnM_obs);
+  if (ncount->lnM_obs != NULL)
+    return ncm_matrix_ref (ncount->lnM_obs);
+  else
+    return NULL;
 }
 
 /**
@@ -897,7 +900,10 @@ nc_data_cluster_ncount_get_lnM_obs_params (NcDataClusterNCount *ncount)
 NcmMatrix *
 nc_data_cluster_ncount_get_z_obs (NcDataClusterNCount *ncount)
 {
-  return ncm_matrix_ref (ncount->z_obs);
+  if (ncount->z_obs != NULL)
+    return ncm_matrix_ref (ncount->z_obs);
+  else
+    return NULL;
 }
 
 /**
@@ -1049,6 +1055,25 @@ _nc_data_cluster_ncount_resample (NcmData *data, NcmMSet *mset, NcmRNG *rng)
   total_np = gsl_ran_poisson (rng->r, cad->norma);
   ncm_rng_unlock (rng);
 
+  if (total_np == 0)
+  {
+    ncount->np = 0;
+    g_free (zi_obs);
+    g_free (lnMi_obs);
+    if (z_obs_params_len > 0)
+      g_free (zi_obs_params);
+    if (lnM_obs_params_len > 0)
+      g_free (lnMi_obs_params);
+
+    ncm_data_take_desc (data, 
+                        g_strdup_printf ("Cluster NCount resample unbinned. Generated %u from mean %10.5g. Resampled in range [%8.4f, %8.4f] [%1.8e, %1.8e] and area %8.4f degrees square", 
+                                         ncount->np, nc_cluster_abundance_n (cad, cosmo), 
+                                         cad->zi, cad->zf, 
+                                         exp (cad->lnMi), exp (cad->lnMf), 
+                                         ncount->area_survey / gsl_pow_2 (M_PI / 180.0)));
+    return;
+  }
+  
   lnM_true_array = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), total_np);
   z_true_array = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), total_np);
 
@@ -1088,6 +1113,34 @@ _nc_data_cluster_ncount_resample (NcmData *data, NcmMSet *mset, NcmRNG *rng)
       }
     }
   }
+
+  if (z_obs_array->len == 0 || lnM_obs_array->len == 0)
+  {
+    ncount->np = 0;
+    g_free (zi_obs);
+    g_free (lnMi_obs);
+    if (z_obs_params_len > 0)
+      g_free (zi_obs_params);
+    if (lnM_obs_params_len > 0)
+      g_free (lnMi_obs_params);
+
+    ncm_vector_clear (&ncount->lnM_true);
+    g_array_unref (lnM_true_array);
+    ncm_vector_clear (&ncount->z_true);
+    g_array_unref (z_true_array);
+    ncm_matrix_clear (&ncount->z_obs);
+    g_array_unref (z_obs_array);
+    ncm_matrix_clear (&ncount->lnM_obs);
+    g_array_unref (lnM_obs_array);
+
+    ncm_data_take_desc (data, 
+                        g_strdup_printf ("Cluster NCount resample unbinned. Generated %u from mean %10.5g. Resampled in range [%8.4f, %8.4f] [%1.8e, %1.8e] and area %8.4f degrees square", 
+                                         ncount->np, nc_cluster_abundance_n (cad, cosmo), 
+                                         cad->zi, cad->zf, 
+                                         exp (cad->lnMi), exp (cad->lnMf), 
+                                         ncount->area_survey / gsl_pow_2 (M_PI / 180.0)));
+    return;
+  }
   
   ncm_vector_clear (&ncount->lnM_true);
   ncount->lnM_true = ncm_vector_new_array (lnM_true_array);
@@ -1096,9 +1149,6 @@ _nc_data_cluster_ncount_resample (NcmData *data, NcmMSet *mset, NcmRNG *rng)
   ncm_vector_clear (&ncount->z_true);
   ncount->z_true = ncm_vector_new_array (z_true_array);
   g_array_unref (z_true_array);
-
-  if (z_obs_array->len == 0 || lnM_obs_array->len == 0)
-    g_error ("_nc_data_cluster_ncount_resample: error generating sample zero objects generated (%u, %u)", z_obs_array->len, lnM_obs_array->len);
 
   ncm_matrix_clear (&ncount->z_obs);
   ncount->z_obs = ncm_matrix_new_array (z_obs_array, z_obs_len);
@@ -1263,9 +1313,15 @@ _nc_data_cluster_ncount_m2lnL_val (NcmData *data, NcmMSet *mset, gdouble *m2lnL)
   NcDataClusterNCount *ncount = NC_DATA_CLUSTER_NCOUNT (data);
   NcClusterAbundance *cad = ncount->cad;
   NcHICosmo *cosmo = NC_HICOSMO (ncm_mset_peek (mset, nc_hicosmo_id ()));
-  GTimer *bench = g_timer_new ();
 
   *m2lnL = 0.0;
+
+  if (ncount->np == 0)
+  {
+    const gdouble n_th = nc_cluster_abundance_n (cad, cosmo);    
+    *m2lnL = 2.0 * (ncount->log_np_fac + n_th);
+    return;
+  }
 
   if (ncount->use_true_data)
   {
@@ -1313,8 +1369,6 @@ _nc_data_cluster_ncount_m2lnL_val (NcmData *data, NcmMSet *mset, gdouble *m2lnL)
   }
 
   *m2lnL *= 2.0;
-
-  g_timer_destroy (bench);
 }
 
 /**
@@ -1383,6 +1437,7 @@ nc_data_cluster_ncount_bin_data (NcDataClusterNCount *ncount, gsl_vector *nodes)
 
   g_assert (nodes->size > 1);
   g_assert (nodes->stride == 1);
+  g_assert (ncount->np > 0); 
 
   data_cpoisson = nc_data_cluster_poisson_new (ncount);
 
@@ -1426,6 +1481,7 @@ nc_data_cluster_ncount_hist_lnM_z (NcDataClusterNCount *ncount, gsl_vector *lnM_
   g_assert (lnM_nodes->stride == 1);
   g_assert (z_nodes->size > 1);
   g_assert (z_nodes->stride == 1);
+  g_assert (ncount->np > 0);
 
   //ca_binned = nc_data_cluster_ncount_binned_lnM_z_new (cad); /* I have to make this function. */
   //ca_binned = nc_data_cluster_ncount_new (cad);
@@ -1467,6 +1523,8 @@ nc_data_cluster_ncount_print (NcDataClusterNCount *ncount, NcHICosmo *cosmo, FIL
   gsl_vector *lnM_nodes = gsl_vector_alloc (nbins_M);
   gsl_vector *z_nodes = gsl_vector_alloc (nbins_z);
 
+  g_assert (ncount->np > 0);
+  
   for (i = 0; i < nbins_M; i++)
   {
     gdouble lnM = cad->lnMi + (cad->lnMf - cad->lnMi) / (nbins_M - 1.0) * i;
@@ -1554,6 +1612,8 @@ nc_data_cluster_ncount_catalog_save (NcDataClusterNCount *ncount, gchar *filenam
   guint lnM_obs_len = nc_cluster_mass_obs_len (ncount->m);
   guint lnM_obs_params_len = nc_cluster_mass_obs_params_len (ncount->m);
 
+  g_assert (ncount->np > 0);
+  
   g_ptr_array_set_free_func (tform_array, g_free);
 
   g_ptr_array_add (ttype_array, "Z_OBS");

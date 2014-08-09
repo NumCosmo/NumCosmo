@@ -24,7 +24,7 @@
 
 /**
  * SECTION:nc_hicosmo_qlinear
- * @title: Linear Desceleration Parameter Model
+ * @title: Linear Deceleration Parameter Model
  * @short_description: FIXME
  *
  * FIXME

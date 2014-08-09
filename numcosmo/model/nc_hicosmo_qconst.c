@@ -24,7 +24,7 @@
 
 /**
  * SECTION:nc_hicosmo_qconst
- * @title: Constant Desceleration Parameter Model
+ * @title: Constant Deceleration Parameter Model
  * @short_description: FIXME
  *
  * FIXME

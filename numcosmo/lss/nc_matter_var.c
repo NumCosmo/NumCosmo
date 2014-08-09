@@ -899,8 +899,8 @@ _nc_matter_var_prepare_fft (NcMatterVar *vp, NcHICosmo *model)
   const gint N_2 = 250;
   const gdouble L = 17.0 * M_LN10;
   const gdouble dr = L / (N * 1.0);
-  const gdouble r0 = 3.0 * M_LN10;
-  const gdouble lnk0 = -3.0 * M_LN10;
+  const gdouble r0 = 3.0 * M_LN10; 
+  const gdouble lnk0 = -3.0 * M_LN10; 
   static fftw_complex *in = NULL;
   static fftw_complex *out = NULL;
   static fftw_complex *u = NULL;
@@ -944,7 +944,7 @@ _nc_matter_var_prepare_fft (NcMatterVar *vp, NcHICosmo *model)
     in[ii] = f;
   }
   fftw_execute (p);
-
+ 
   if (!calc_u)
   {
     for (i = -N_2; i <= N_2; i++)
@@ -978,7 +978,8 @@ _nc_matter_var_prepare_fft (NcMatterVar *vp, NcHICosmo *model)
   fftw_execute (p_Rdsigma2_dr);
 
   j = 0;
-  for (i = -120; i < 30; i++)
+  
+  for (i = -120; i < 30; i++) 
   {
     const gint ii = (i < 0) ? i + N : i;
     const gdouble r = r0 + i * dr;
@@ -986,6 +987,8 @@ _nc_matter_var_prepare_fft (NcMatterVar *vp, NcHICosmo *model)
     const complex double lnsigma2 = log (Rsigma2) - r;
     const complex double dlnsigma2_dr = Rdsigma2_dr[ii] / (Rsigma2 * N);
 
+     //printf ("i = %d ii = %d lnr= %.5g lnsigma2 = % 20.15g dlnsigma2 = % 20.15g\n", i, ii, r, creal (lnsigma2), creal (dlnsigma2_dr));
+    
     /*
      const gdouble R = exp (r);
      const gdouble Rsigma2_old = R * nc_matter_var_over_growth2_tophat_old (vp, model, r);
@@ -993,13 +996,13 @@ _nc_matter_var_prepare_fft (NcMatterVar *vp, NcHICosmo *model)
      const gdouble err_spline = fabs((Rsigma2_old - Rsigma2_spline) / Rsigma2_old);
      const gdouble err_fft = fabs((Rsigma2_old - creal(Rsigma2)) / Rsigma2_old);
      printf ("%d %d % 20.15g % 20.15g % 20.15g % 20.15g % 8.5e % 8.5e\n", i, ii, r / M_LN10, creal(Rsigma2), Rsigma2_spline, Rsigma2_old, err_fft, err_spline);
-     */
+    */
 /*    printf ("%d %d % 20.15g % 20.15g % 20.15g % 20.15g % 20.15g % 20.15g\n", i, ii, r, creal (lnsigma2), creal (dlnsigma2_dr), 
             ncm_vector_get (lnr_vec, ii),
             ncm_vector_get (lnGr_vec, ii),
             ncm_vector_get (dlnGr_dlnr_vec, ii)
             );
-*/    
+*/            
     ncm_vector_set (vp->sigma2_over_growth->xv, j, r);
     ncm_vector_set (vp->sigma2_over_growth->yv, j, lnsigma2);
     ncm_vector_set (vp->deriv_sigma2_over_growth->xv, j, r);
@@ -1019,7 +1022,7 @@ _nc_matter_var_prepare_fft (NcMatterVar *vp, NcHICosmo *model)
     printf ("Old: % 20.15g % 20.15g % 20.15g\n", r, creal (lnsigma2), creal (dlnsigma2_dr));
   }
   printf ("\n\n");
-
+ 
   if (vp->fftlog == NULL)
   {
     gsl_function F;
@@ -1027,7 +1030,8 @@ _nc_matter_var_prepare_fft (NcMatterVar *vp, NcHICosmo *model)
     NcmVector *lnr_vec;
     NcmVector *lnGr_vec;
     NcmVector *dlnGr_dlnr_vec;
-    vp->fftlog = ncm_fftlog_j1pow2_new (exp (-6.0 * M_LN10), exp (6.0 * M_LN10), 22.0 * M_LN10, 3500);
+    //vp->fftlog = ncm_fftlog_j1pow2_new (exp (-6.0 * M_LN10), exp (6.0 * M_LN10), 22.0 * M_LN10, 3500);
+    vp->fftlog = ncm_fftlog_j1pow2_new (exp (-6.0 * M_LN10), exp (6.0 * M_LN10), 24.0 * M_LN10, 3500);
     arg.vp     = vp;
     arg.model  = model;
     F.function = &_powspec_k2;
@@ -1046,11 +1050,12 @@ _nc_matter_var_prepare_fft (NcMatterVar *vp, NcHICosmo *model)
               ncm_vector_get (lnGr_vec, i),
               ncm_vector_get (dlnGr_dlnr_vec, i));
     }
+    printf ("\n\n");
     ncm_vector_free (lnr_vec);
     ncm_vector_free (lnGr_vec);
     ncm_vector_free (dlnGr_dlnr_vec);
   }
-*/ 
+ */
 
   ncm_spline_prepare (vp->sigma2_over_growth);
   ncm_spline_prepare (vp->deriv_sigma2_over_growth);

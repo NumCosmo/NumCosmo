@@ -330,7 +330,7 @@ static gdouble
 _integrand_powspec_2h (gdouble lnM, gpointer userdata)
 {
   integrand_data_2h_mass2 *int_data = (integrand_data_2h_mass2 *) userdata;
-  /*gdouble M = exp (lnM);*/
+  //gdouble M = exp (lnM);
   //gdouble rho_mz = pow (1.0 + int_data->z, 3.0) * nc_hicosmo_Omega_m (int_data->model) * ncm_c_crit_mass_density_solar_Mpc ();
   gdouble lnR = nc_matter_var_lnM_to_lnR (int_data->hbf->mfp->vp, int_data->model, lnM);
   gdouble R = exp (lnR);
@@ -403,7 +403,7 @@ nc_cor_cluster_cmb_lens_limber_twoh_int_mm (NcCorClusterCmbLensLimber *cccll, Nc
 
     //printf("res1 = %.5g res2 = %.5g tota = %.5g totd = %.5g\n", res1, res2, int_powspec_mm_2h, int_powspec_mm_2h + res1 + res2);
     
-    int_powspec_mm_2h += res1 - res2;
+    int_powspec_mm_2h += res1 + res2;
 
     if (!conv1 && fabs (res1 / int_powspec_mm_2h) < NCM_DEFAULT_PRECISION)
       conv1 = TRUE;
