@@ -571,7 +571,6 @@ test_ncm_vector_variant (TestNcmVector *test, gconstpointer pdata)
 {
   NcmVector *v = test->v;
   GVariant *var = ncm_vector_get_variant (v);
-
   g_assert (!g_variant_is_floating (var));
   g_assert (g_variant_is_container (var));
   g_assert_cmpuint (ncm_vector_len (v), ==, g_variant_n_children (var));
@@ -585,10 +584,9 @@ test_ncm_vector_variant (TestNcmVector *test, gconstpointer pdata)
     {
       ncm_assert_cmpdouble (ncm_vector_get (v, i), ==, ncm_vector_get (nv, i));
     }
-
     NCM_TEST_FREE (ncm_vector_free, nv);
   }
-
+  
   g_variant_unref (var);
   NCM_TEST_FAIL (g_variant_unref (var); fprintf (stderr, "fail (%s)", g_variant_get_type_string (var)));
 }

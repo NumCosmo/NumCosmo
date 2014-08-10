@@ -199,7 +199,7 @@ G_STMT_START { \
   g_assert (obj == NULL); \
 } G_STMT_END
 
-#if ((GLIB_MAJOR_VERSION == 2) && (GLIB_MINOR_VERSION < 38))
+#if ((GLIB_MAJOR_VERSION == 2) && (GLIB_MINOR_VERSION < 40))
 #define NCM_TEST_FAIL(cmd) \
 G_STMT_START { \
   if (g_test_trap_fork (0, G_TEST_TRAP_SILENCE_STDOUT | G_TEST_TRAP_SILENCE_STDERR)) \
@@ -231,7 +231,7 @@ G_STMT_START { \
   } \
   else \
   { \
-    g_test_trap_subprocess (NULL, 0, 0); \
+    g_test_trap_subprocess (NULL, 0, G_TEST_SUBPROCESS_INHERIT_STDOUT | G_TEST_SUBPROCESS_INHERIT_STDERR); \
     g_test_trap_assert_failed (); \
   } \
 } G_STMT_END
@@ -245,7 +245,7 @@ G_STMT_START { \
   } \
   else \
   { \
-    g_test_trap_subprocess (NULL, 0, 0); \
+    g_test_trap_subprocess (NULL, 0, G_TEST_SUBPROCESS_INHERIT_STDOUT | G_TEST_SUBPROCESS_INHERIT_STDERR); \
     g_test_trap_assert_passed (); \
   } \
 } G_STMT_END
