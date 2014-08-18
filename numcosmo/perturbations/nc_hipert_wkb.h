@@ -69,6 +69,20 @@ typedef enum _NcHIPertWKBVars
   NC_HIPERT_WKB_IM_P,
 } NcHIPertWKBVars;
 
+/**
+ * NcHIPertWKBCmp:
+ * @NC_HIPERT_WKB_CMP_POTENTIAL: Compare with the potential.
+ * @NC_HIPERT_WKB_CMP_ALPHA2: Compare with $\alpha^2$.
+ * 
+ * FIXME
+ * 
+ */
+typedef enum _NcHIPertWKBCmp
+{
+  NC_HIPERT_WKB_CMP_POTENTIAL = 0,
+  NC_HIPERT_WKB_CMP_ALPHA2,
+} NcHIPertWKBCmp;
+
 typedef gdouble (*NcHIPertWKBFunc) (GObject *obj, gdouble alpha, gdouble k);
 typedef void (*NcHIPertWKBEom) (GObject *obj, gdouble alpha, gdouble k, gdouble *nu2, gdouble *m, gdouble *dlnm);
 
@@ -78,19 +92,14 @@ struct _NcHIPertWKB
   NcHIPert parent_instance;
   GType impl_type;
   GObject *obj;
-  NcmOdeSpline *phase;
-  NcmSpline *lnphase;
+  NcmSpline *nuA;
   NcmSpline *lnF;
   NcmSpline *dlnF;
-  gboolean prep;
-  gboolean exact_prep;
-  gboolean patched_prep;
+  gdouble alpha_phase;
+  gdouble cur_phase;
   gdouble alpha_i;
   gdouble alpha_f;
-  gdouble alpha_exact_i;
-  gdouble alpha_exact_f;
-  gdouble alpha_patched_i;
-  gdouble alpha_patched_f;
+  gdouble alpha_p;
   NcHIPertWKBFunc V;
   NcHIPertWKBFunc nuA2;
   NcHIPertWKBFunc dmnuA_nuA;
@@ -104,23 +113,16 @@ NcHIPertWKB *nc_hipert_wkb_ref (NcHIPertWKB *wkb);
 void nc_hipert_wkb_free (NcHIPertWKB *wkb);
 void nc_hipert_wkb_clear (NcHIPertWKB **wkb);
 
-void nc_hipert_wkb_prepare (NcHIPertWKB *wkb, GObject *obj, gdouble alpha_i, gdouble alpha_f);
-void nc_hipert_wkb_prepare_exact (NcHIPertWKB *wkb, GObject *obj, gdouble alpha_i, gdouble alpha_f);
-void nc_hipert_wkb_prepare_patched (NcHIPertWKB *wkb, GObject *obj, gdouble prec, gdouble alpha_i, gdouble alpha_f);
+void nc_hipert_wkb_prepare (NcHIPertWKB *wkb, GObject *obj, gdouble prec, gdouble alpha_i, gdouble alpha_f);
 
 void nc_hipert_wkb_q (NcHIPertWKB *wkb, GObject *obj, gdouble alpha, gdouble *Re_q, gdouble *Im_q);
 void nc_hipert_wkb_q_p (NcHIPertWKB *wkb, GObject *obj, gdouble alpha, gdouble *Re_q, gdouble *Im_q, gdouble *Re_p, gdouble *Im_p);
 
-void nc_hipert_wkb_exact_q (NcHIPertWKB *wkb, GObject *obj, gdouble alpha, gdouble *Re_q, gdouble *Im_q);
-void nc_hipert_wkb_exact_q_p (NcHIPertWKB *wkb, GObject *obj, gdouble alpha, gdouble *Re_q, gdouble *Im_q, gdouble *Re_p, gdouble *Im_p);
-
-void nc_hipert_wkb_patched_q (NcHIPertWKB *wkb, GObject *obj, gdouble alpha, gdouble *Re_q, gdouble *Im_q);
-void nc_hipert_wkb_patched_q_p (NcHIPertWKB *wkb, GObject *obj, gdouble alpha, gdouble *Re_q, gdouble *Im_q, gdouble *Re_p, gdouble *Im_p);
-
 gdouble nc_hipert_wkb_nuA (NcHIPertWKB *wkb, GObject *obj, gdouble alpha);
+gdouble nc_hipert_wkb_phase (NcHIPertWKB *wkb, GObject *obj, gdouble alpha);
 
 gdouble nc_hipert_wkb_maxtime (NcHIPertWKB *wkb, GObject *obj, gdouble alpha0, gdouble alpha1);
-gdouble nc_hipert_wkb_maxtime_prec (NcHIPertWKB *wkb, GObject *obj, gdouble prec, gdouble alpha0, gdouble alpha1);
+gdouble nc_hipert_wkb_maxtime_prec (NcHIPertWKB *wkb, GObject *obj, NcHIPertWKBCmp cmp, gdouble prec, gdouble alpha0, gdouble alpha1);
 
 G_END_DECLS
 

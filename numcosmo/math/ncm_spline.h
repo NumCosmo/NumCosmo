@@ -83,6 +83,8 @@ NcmSpline *ncm_spline_new_data (const NcmSpline *s, gdouble *x, gdouble *y, cons
 NcmSpline *ncm_spline_set (NcmSpline *s, NcmVector *xv, NcmVector *yv, gboolean init);
 NcmSpline *ncm_spline_ref (NcmSpline *s);
 
+void ncm_spline_acc (NcmSpline *s, gboolean enable);
+
 void ncm_spline_set_xv (NcmSpline *s, NcmVector *xv, gboolean init);
 void ncm_spline_set_yv (NcmSpline *s, NcmVector *yv, gboolean init);
 void ncm_spline_set_array (NcmSpline *s, GArray *x, GArray *y, gboolean init);

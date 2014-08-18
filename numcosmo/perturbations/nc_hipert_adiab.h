@@ -84,27 +84,17 @@ NcHIPertAdiab *nc_hipert_adiab_ref (NcHIPertAdiab *pa);
 void nc_hipert_adiab_free (NcHIPertAdiab *pa);
 void nc_hipert_adiab_clear (NcHIPertAdiab **pa);
 
-void nc_hipert_adiab_prepare_wkb (NcHIPertAdiab *pa, NcHICosmo *cosmo, gdouble alpha_i, gdouble alpha_f);
-void nc_hipert_adiab_prepare_ewkb (NcHIPertAdiab *pa, NcHICosmo *cosmo, gdouble alpha_i, gdouble alpha_f);
-void nc_hipert_adiab_prepare_patched (NcHIPertAdiab *pa, NcHICosmo *cosmo, gdouble prec, gdouble alpha_i, gdouble alpha_f);
+void nc_hipert_adiab_prepare_wkb (NcHIPertAdiab *pa, NcHICosmo *cosmo, gdouble prec, gdouble alpha_i, gdouble alpha_f);
 
 void nc_hipert_adiab_wkb_zeta (NcHIPertAdiab *pa, NcHICosmo *cosmo, gdouble alpha, gdouble *Re_zeta, gdouble *Im_zeta);
 void nc_hipert_adiab_wkb_zeta_Pzeta (NcHIPertAdiab *pa, NcHICosmo *cosmo, gdouble alpha, gdouble *Re_zeta, gdouble *Im_zeta, gdouble *Re_Pzeta, gdouble *Im_Pzeta);
 
-void nc_hipert_adiab_ewkb_zeta (NcHIPertAdiab *pa, NcHICosmo *cosmo, gdouble alpha, gdouble *Re_zeta, gdouble *Im_zeta);
-void nc_hipert_adiab_ewkb_zeta_Pzeta (NcHIPertAdiab *pa, NcHICosmo *cosmo, gdouble alpha, gdouble *Re_zeta, gdouble *Im_zeta, gdouble *Re_Pzeta, gdouble *Im_Pzeta);
-
-void nc_hipert_adiab_patched_zeta (NcHIPertAdiab *pa, NcHICosmo *cosmo, gdouble alpha, gdouble *Re_zeta, gdouble *Im_zeta);
-void nc_hipert_adiab_patched_zeta_Pzeta (NcHIPertAdiab *pa, NcHICosmo *cosmo, gdouble alpha, gdouble *Re_zeta, gdouble *Im_zeta, gdouble *Re_Pzeta, gdouble *Im_Pzeta);
-
 void nc_hipert_adiab_wkb_v (NcHIPertAdiab *pa, NcHICosmo *cosmo, gdouble alpha, gdouble *Re_v, gdouble *Im_v);
 gdouble nc_hipert_adiab_wkb_maxtime (NcHIPertAdiab *pa, NcHICosmo *cosmo, gdouble alpha0, gdouble alpha1);
-gdouble nc_hipert_adiab_wkb_maxtime_prec (NcHIPertAdiab *pa, NcHICosmo *cosmo, gdouble prec, gdouble alpha0, gdouble alpha1);
+gdouble nc_hipert_adiab_wkb_maxtime_prec (NcHIPertAdiab *pa, NcHICosmo *cosmo, NcHIPertWKBCmp cmp, gdouble prec, gdouble alpha0, gdouble alpha1);
 
 void nc_hipert_adiab_set_init_cond (NcHIPertAdiab *pa, NcHICosmo *cosmo, gdouble alpha_i, gdouble Re_zeta, gdouble Im_zeta, gdouble Re_Pzeta, gdouble Im_Pzeta);
 void nc_hipert_adiab_set_init_cond_wkb (NcHIPertAdiab *pa, NcHICosmo *cosmo, gdouble alpha_i);
-void nc_hipert_adiab_set_init_cond_ewkb (NcHIPertAdiab *pa, NcHICosmo *cosmo, gdouble alpha_i);
-void nc_hipert_adiab_set_init_cond_patched (NcHIPertAdiab *pa, NcHICosmo *cosmo, gdouble alpha_i);
 void nc_hipert_adiab_evolve (NcHIPertAdiab *pa, NcHICosmo *cosmo, gdouble alphaf);
 void nc_hipert_adiab_get_values (NcHIPertAdiab *pa, gdouble *alpha_i, gdouble *Re_zeta, gdouble *Im_zeta, gdouble *Re_Pzeta, gdouble *Im_Pzeta);
 

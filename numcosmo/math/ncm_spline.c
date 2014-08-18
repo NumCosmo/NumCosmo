@@ -214,6 +214,30 @@ ncm_spline_ref (NcmSpline *s)
 }
 
 /**
+ * ncm_spline_acc:
+ * @s: a #NcmSpline.
+ * @enable: a boolean.
+ *
+ * Enables or disables spline accelerator. Note that if 
+ * enabled the spline becomes non-reentrant.
+ *
+ */
+void 
+ncm_spline_acc (NcmSpline *s, gboolean enable)
+{
+  if (enable)
+  {
+    if (s->acc == NULL)
+      s->acc = gsl_interp_accel_alloc ();
+  }
+  else if (s->acc != NULL)
+  {
+    gsl_interp_accel_free (s->acc);
+    s->acc = NULL;
+  }
+}
+
+/**
  * ncm_spline_set_xv:
  * @s: a #NcmSpline.
  * @xv: #NcmVector of knots.
@@ -428,7 +452,7 @@ ncm_spline_init (NcmSpline *s)
   s->xv    = NULL;
   s->yv    = NULL;
   s->empty = TRUE;
-  s->acc   = NULL;//gsl_interp_accel_alloc ();
+  s->acc   = NULL;
 }
 
 static void
@@ -441,6 +465,7 @@ ncm_spline_dispose (GObject *object)
   
 	s->empty = TRUE;
 
+  /* Chain up : end */
   G_OBJECT_CLASS (ncm_spline_parent_class)->finalize (object);
 }
 
@@ -448,7 +473,11 @@ static void
 ncm_spline_finalize (GObject *object)
 {
   NcmSpline *s = NCM_SPLINE (object);
-  gsl_interp_accel_free (s->acc);
+
+  if (s->acc)
+    gsl_interp_accel_free (s->acc);
+
+  /* Chain up : end */
   G_OBJECT_CLASS (ncm_spline_parent_class)->finalize (object);
 }
 

@@ -499,6 +499,7 @@ ncm_spline_new_function_spline_lnknot (NcmSpline *s, gsl_function *F, gdouble xi
 void
 ncm_spline_set_func (NcmSpline *s, NcmSplineFuncType ftype, gsl_function *F, gdouble xi, gdouble xf, gsize max_nodes, gdouble rel_error)
 {
+  g_assert_cmpfloat (fabs (2.0 * (xf - xi) / (xf + xi)), >, DBL_EPSILON);
   switch (ftype)
   {
     case NCM_SPLINE_FUNCTION_4POINTS:

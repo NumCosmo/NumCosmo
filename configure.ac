@@ -138,11 +138,22 @@ AM_CONDITIONAL(OS_UNIX, [test "$glib_native_win32" != "yes"])
 dnl ***************************************************************************
 dnl Check for vapigen
 dnl ***************************************************************************
+AC_ARG_ENABLE(vapi,
+              [AC_HELP_STRING([--enable-vapi],
+                              [Generate vala bindings, experimental [default=no]])],enable_vapi=yes,
+              enable_vapi=no)
+
+
+if test "${enable_vapi}" != no; then
+
 AC_PATH_PROG(VAPIGEN, vapigen, [no])
 AC_SUBST(VAPIGEN)
-AM_CONDITIONAL(HAVE_VAPIGEN, [test "x$VAPIGEN" != xno])
 VAPIDIR="${datadir}/vala/vapi"
 AC_SUBST(VAPIDIR)
+
+fi
+
+AM_CONDITIONAL(HAVE_VAPIGEN, [test "x$VAPIGEN" != xno -a x$enable_vapi != xno])
 
 dnl ***************************************************************************
 dnl check for gtk-doc

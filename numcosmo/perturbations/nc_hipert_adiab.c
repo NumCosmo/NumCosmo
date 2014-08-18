@@ -256,6 +256,7 @@ nc_hipert_adiab_clear (NcHIPertAdiab **pa)
  * nc_hipert_adiab_prepare_wkb:
  * @pa: a #NcHIPertAdiab.
  * @cosmo: a #NcHICosmo.
+ * @prec: Required precision.
  * @alpha_i: initial log-redshift time.
  * @alpha_f: final log-redshift time.
  * 
@@ -263,46 +264,9 @@ nc_hipert_adiab_clear (NcHIPertAdiab **pa)
  * 
  */
 void 
-nc_hipert_adiab_prepare_wkb (NcHIPertAdiab *pa, NcHICosmo *cosmo, gdouble alpha_i, gdouble alpha_f)
+nc_hipert_adiab_prepare_wkb (NcHIPertAdiab *pa, NcHICosmo *cosmo, gdouble prec, gdouble alpha_i, gdouble alpha_f)
 {
-  nc_hipert_wkb_prepare (pa->wkb, G_OBJECT (cosmo), alpha_i, alpha_f);
-}
-
-/**
- * nc_hipert_adiab_prepare_ewkb:
- * @pa: a #NcHIPertAdiab.
- * @cosmo: a #NcHICosmo.
- * @alpha_i: initial log-redshift time.
- * @alpha_f: final log-redshift time.
- * 
- * Prepare the object for exact WKB calculations using the cosmology @cosmo. Instead
- * of using the wkb approximation as in @nc_hipert_adiab_prepare_wkb it solves
- * the non-linear equation of motion for $\nu_A$. 
- * 
- */
-void 
-nc_hipert_adiab_prepare_ewkb (NcHIPertAdiab *pa, NcHICosmo *cosmo, gdouble alpha_i, gdouble alpha_f)
-{
-  nc_hipert_wkb_prepare_exact (pa->wkb, G_OBJECT (cosmo), alpha_i, alpha_f);
-}
-
-/**
- * nc_hipert_adiab_prepare_patched:
- * @pa: a #NcHIPertAdiab.
- * @cosmo: a #NcHICosmo.
- * @prec: Required precision.
- * @alpha_i: initial log-redshift time.
- * @alpha_f: final log-redshift time.
- * 
- * Prepare the object for exact WKB calculations using the cosmology @cosmo. Instead
- * of using the wkb approximation as in @nc_hipert_adiab_prepare_wkb it solves
- * the non-linear equation of motion for $\nu_A$. 
- * 
- */
-void 
-nc_hipert_adiab_prepare_patched (NcHIPertAdiab *pa, NcHICosmo *cosmo, gdouble prec, gdouble alpha_i, gdouble alpha_f)
-{
-  nc_hipert_wkb_prepare_patched (pa->wkb, G_OBJECT (cosmo), prec, alpha_i, alpha_f);
+  nc_hipert_wkb_prepare (pa->wkb, G_OBJECT (cosmo), prec, alpha_i, alpha_f);
 }
 
 /**
@@ -342,78 +306,6 @@ nc_hipert_adiab_wkb_zeta_Pzeta (NcHIPertAdiab *pa, NcHICosmo *cosmo, gdouble alp
 }
 
 /**
- * nc_hipert_adiab_ewkb_zeta:
- * @pa: a #NcHIPertAdiab.
- * @cosmo: a #NcHICosmo.
- * @alpha: the log-redshift time.
- * @Re_zeta: (out caller-allocates): Real part of the exact WKB solution.
- * @Im_zeta: (out caller-allocates): Imaginary part of the exact WKB solution.
- * 
- * Computes the solution $\zeta_\text{ewkb}$ for the mode $k$ at the time $\alpha$. 
- * 
- */
-void
-nc_hipert_adiab_ewkb_zeta (NcHIPertAdiab *pa, NcHICosmo *cosmo, gdouble alpha, gdouble *Re_zeta, gdouble *Im_zeta)
-{
-  nc_hipert_wkb_exact_q (pa->wkb, G_OBJECT (cosmo), alpha, Re_zeta, Im_zeta);
-}
-
-/**
- * nc_hipert_adiab_ewkb_zeta_Pzeta:
- * @pa: a #NcHIPertAdiab.
- * @cosmo: a #NcHICosmo.
- * @alpha: the log-redshift time.
- * @Re_zeta: (out caller-allocates): Real part of the exact WKB solution.
- * @Im_zeta: (out caller-allocates): Imaginary part of the exact WKB solution.
- * @Re_Pzeta: (out caller-allocates): Real part of the exact WKB solution momentum.
- * @Im_Pzeta: (out caller-allocates): Imaginary part of the exact WKB solution momentum.
- * 
- * Computes the exact WKB solution $\zeta_\text{ewkb}$ and its momentum for the mode $k$ at the time $\alpha$. 
- * 
- */
-void
-nc_hipert_adiab_ewkb_zeta_Pzeta (NcHIPertAdiab *pa, NcHICosmo *cosmo, gdouble alpha, gdouble *Re_zeta, gdouble *Im_zeta, gdouble *Re_Pzeta, gdouble *Im_Pzeta)
-{
-  nc_hipert_wkb_exact_q_p (pa->wkb, G_OBJECT (cosmo), alpha, Re_zeta, Im_zeta, Re_Pzeta, Im_Pzeta);
-}
-
-/**
- * nc_hipert_adiab_patched_zeta:
- * @pa: a #NcHIPertAdiab.
- * @cosmo: a #NcHICosmo.
- * @alpha: the log-redshift time.
- * @Re_zeta: (out caller-allocates): Real part of the patched solution.
- * @Im_zeta: (out caller-allocates): Imaginary part of the patched solution.
- * 
- * Computes the solution $\zeta_\text{ewkb}$ for the mode $k$ at the time $\alpha$. 
- * 
- */
-void
-nc_hipert_adiab_patched_zeta (NcHIPertAdiab *pa, NcHICosmo *cosmo, gdouble alpha, gdouble *Re_zeta, gdouble *Im_zeta)
-{
-  nc_hipert_wkb_patched_q (pa->wkb, G_OBJECT (cosmo), alpha, Re_zeta, Im_zeta);
-}
-
-/**
- * nc_hipert_adiab_patched_zeta_Pzeta:
- * @pa: a #NcHIPertAdiab.
- * @cosmo: a #NcHICosmo.
- * @alpha: the log-redshift time.
- * @Re_zeta: (out caller-allocates): Real part of the patched solution.
- * @Im_zeta: (out caller-allocates): Imaginary part of the patched solution.
- * @Re_Pzeta: (out caller-allocates): Real part of the patched solution momentum.
- * @Im_Pzeta: (out caller-allocates): Imaginary part of the patched solution momentum.
- * 
- * Computes the patched solution $\zeta_\text{ewkb}$ and its momentum for the mode $k$ at the time $\alpha$. 
- * 
- */
-void
-nc_hipert_adiab_patched_zeta_Pzeta (NcHIPertAdiab *pa, NcHICosmo *cosmo, gdouble alpha, gdouble *Re_zeta, gdouble *Im_zeta, gdouble *Re_Pzeta, gdouble *Im_Pzeta)
-{
-  nc_hipert_wkb_patched_q_p (pa->wkb, G_OBJECT (cosmo), alpha, Re_zeta, Im_zeta, Re_Pzeta, Im_Pzeta);
-}
-
-/**
  * nc_hipert_adiab_wkb_maxtime:
  * @pa: a #NcHIPertAdiab.
  * @cosmo: a #NcHICosmo.
@@ -434,6 +326,7 @@ nc_hipert_adiab_wkb_maxtime (NcHIPertAdiab *pa, NcHICosmo *cosmo, gdouble alpha0
  * nc_hipert_adiab_wkb_maxtime_prec:
  * @pa: a #NcHIPertAdiab.
  * @cosmo: a #NcHICosmo.
+ * @cmp: Comparison type.
  * @prec: Required precision.
  * @alpha0: the initial log-redshift time.
  * @alpha1: the final log-redshift time.
@@ -443,9 +336,9 @@ nc_hipert_adiab_wkb_maxtime (NcHIPertAdiab *pa, NcHICosmo *cosmo, gdouble alpha0
  * Returns: the instant $\alpha$ between $\alpha_0$ and $\alpha_1$ or NaN if not found.
  */
 gdouble 
-nc_hipert_adiab_wkb_maxtime_prec (NcHIPertAdiab *pa, NcHICosmo *cosmo, gdouble prec, gdouble alpha0, gdouble alpha1)
+nc_hipert_adiab_wkb_maxtime_prec (NcHIPertAdiab *pa, NcHICosmo *cosmo, NcHIPertWKBCmp cmp, gdouble prec, gdouble alpha0, gdouble alpha1)
 {
-  return nc_hipert_wkb_maxtime_prec (pa->wkb, G_OBJECT (cosmo), prec, alpha0, alpha1);
+  return nc_hipert_wkb_maxtime_prec (pa->wkb, G_OBJECT (cosmo), cmp, prec, alpha0, alpha1);
 }
 
 static gint
@@ -546,42 +439,6 @@ nc_hipert_adiab_set_init_cond_wkb (NcHIPertAdiab *pa, NcHICosmo *cosmo, gdouble 
   gdouble Re_zeta, Im_zeta, Re_Pzeta, Im_Pzeta;
 
   nc_hipert_adiab_wkb_zeta_Pzeta (pa, cosmo, alpha_i, &Re_zeta, &Im_zeta, &Re_Pzeta, &Im_Pzeta);
-  nc_hipert_adiab_set_init_cond (pa, cosmo, alpha_i, Re_zeta, Im_zeta, Re_Pzeta, Im_Pzeta);
-}
-
-/**
- * nc_hipert_adiab_set_init_cond_ewkb:
- * @pa: a #NcHIPertAdiab.
- * @cosmo: a #NcHICosmo.
- * @alpha_i: the log-redshift time.
- * 
- * Sets the initial conditions for the zeta evolution using the value of the exact wkb solution at @alpha_i. 
- * 
- */
-void 
-nc_hipert_adiab_set_init_cond_ewkb (NcHIPertAdiab *pa, NcHICosmo *cosmo, gdouble alpha_i)
-{
-  gdouble Re_zeta, Im_zeta, Re_Pzeta, Im_Pzeta;
-
-  nc_hipert_adiab_ewkb_zeta_Pzeta (pa, cosmo, alpha_i, &Re_zeta, &Im_zeta, &Re_Pzeta, &Im_Pzeta);
-  nc_hipert_adiab_set_init_cond (pa, cosmo, alpha_i, Re_zeta, Im_zeta, Re_Pzeta, Im_Pzeta);
-}
-
-/**
- * nc_hipert_adiab_set_init_cond_patched:
- * @pa: a #NcHIPertAdiab.
- * @cosmo: a #NcHICosmo.
- * @alpha_i: the log-redshift time.
- * 
- * Sets the initial conditions for the zeta evolution using the value of the patched solution at @alpha_i. 
- * 
- */
-void 
-nc_hipert_adiab_set_init_cond_patched (NcHIPertAdiab *pa, NcHICosmo *cosmo, gdouble alpha_i)
-{
-  gdouble Re_zeta, Im_zeta, Re_Pzeta, Im_Pzeta;
-
-  nc_hipert_adiab_patched_zeta_Pzeta (pa, cosmo, alpha_i, &Re_zeta, &Im_zeta, &Re_Pzeta, &Im_Pzeta);
   nc_hipert_adiab_set_init_cond (pa, cosmo, alpha_i, Re_zeta, Im_zeta, Re_Pzeta, Im_Pzeta);
 }
 
