@@ -821,7 +821,7 @@ _ncm_model_class_set_property (GObject *object, guint prop_id, const GValue *val
 }
 
 /**
- * ncm_model_class_add_params: (skip)
+ * ncm_model_class_add_params:
  * @model_class: a #NcmModelClass.
  * @sparam_len: FIXME
  * @vparam_len: FIXME

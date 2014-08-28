@@ -49,6 +49,7 @@ enum
   PROP_0,
   PROP_Z_MIN,
   PROP_Z_MAX,
+  PROP_SIZE
 };
 
 static gdouble
@@ -174,6 +175,7 @@ nc_cluster_redshift_nodist_class_init (NcClusterRedshiftNodistClass *klass)
 {
   GObjectClass* object_class = G_OBJECT_CLASS (klass);
   NcClusterRedshiftClass* parent_class = NC_CLUSTER_REDSHIFT_CLASS (klass);
+  NcmModelClass *model_class = NCM_MODEL_CLASS (klass);
 
   parent_class->P              = &_nc_cluster_redshift_nodist_p;
   parent_class->intP           = &_nc_cluster_redshift_nodist_intp;
@@ -185,10 +187,14 @@ nc_cluster_redshift_nodist_class_init (NcClusterRedshiftNodistClass *klass)
 
   parent_class->impl           = NC_CLUSTER_REDSHIFT_N_LIMTS | NC_CLUSTER_REDSHIFT_RESAMPLE;
 
-  object_class->finalize     =  &nc_cluster_redshift_nodist_finalize;
-  object_class->set_property = &_nc_cluster_redshift_nodist_set_property;
-  object_class->get_property = &_nc_cluster_redshift_nodist_get_property;
+  object_class->finalize    =  &nc_cluster_redshift_nodist_finalize;
+  
+  model_class->set_property = &_nc_cluster_redshift_nodist_set_property;
+  model_class->get_property = &_nc_cluster_redshift_nodist_get_property;
 
+  ncm_model_class_add_params (model_class, 0, 0, PROP_SIZE);
+  ncm_model_class_set_name_nick (model_class, "No redshift distribution", "No_distribution");
+  
   /**
    * NcClusterRedshiftNodist:z_min:
    *
@@ -215,5 +221,6 @@ nc_cluster_redshift_nodist_class_init (NcClusterRedshiftNodistClass *klass)
                                                         0.0, G_MAXDOUBLE, 1.0,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY |G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
-
+  /* Check for errors in parameters initialization */
+  ncm_model_class_check_params_info (model_class);
 }

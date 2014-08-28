@@ -27,7 +27,9 @@
 
 #include <glib-object.h>
 #include <numcosmo/build_cfg.h>
+#include <numcosmo/math/ncm_model.h>
 #include <numcosmo/math/ncm_rng.h>
+#include <numcosmo/math/ncm_mset.h>
 
 G_BEGIN_DECLS
 
@@ -64,13 +66,13 @@ typedef enum _NcClusterRedshiftImpl
 struct _NcClusterRedshift
 {
   /*< private >*/
-  GObject parent_instance;
+  NcmModel parent_instance;
 };
 
 struct _NcClusterRedshiftClass
 {
   /*< private >*/
-  GObjectClass parent_class;
+  NcmModelClass parent_class;
   gdouble (*P) (NcClusterRedshift *clusterz, gdouble lnM, gdouble z, gdouble *z_obs, gdouble *z_obs_params);
   gdouble (*intP) (NcClusterRedshift *clusterz, gdouble lnM, gdouble z);
   gboolean (*resample) (NcClusterRedshift *clusterz, gdouble lnM, gdouble z, gdouble *z_obs, gdouble *z_obs_params, NcmRNG *rng);
@@ -82,6 +84,8 @@ struct _NcClusterRedshiftClass
 };
 
 GType nc_cluster_redshift_get_type (void) G_GNUC_CONST;
+
+NCM_MSET_MODEL_DECLARE_ID (nc_cluster_redshift);
 
 NcClusterRedshift *nc_cluster_redshift_new_from_name (gchar *redshift_name);
 NcClusterRedshift *nc_cluster_redshift_ref (NcClusterRedshift *clusterz);
@@ -98,6 +102,8 @@ gdouble nc_cluster_redshift_intp (NcClusterRedshift *clusterz, gdouble lnM, gdou
 gboolean nc_cluster_redshift_resample (NcClusterRedshift *clusterz, gdouble lnM, gdouble z, gdouble *z_obs, gdouble *z_obs_params, NcmRNG *rng);
 void nc_cluster_redshift_p_limits (NcClusterRedshift *clusterz, gdouble *z_obs, gdouble *z_obs_params, gdouble *z_lower, gdouble *z_upper);
 void nc_cluster_redshift_n_limits (NcClusterRedshift *clusterz, gdouble *z_lower, gdouble *z_upper);
+
+void nc_cluster_redshift_log_all_models (void);
 
 G_END_DECLS
 

@@ -42,6 +42,20 @@ G_BEGIN_DECLS
 typedef struct _NcClusterPhotozGaussGlobalClass NcClusterPhotozGaussGlobalClass;
 typedef struct _NcClusterPhotozGaussGlobal NcClusterPhotozGaussGlobal;
 
+/**
+ * NcClusterPhotozGaussGlobalParams:
+ * @NC_CLUSTER_PHOTOZ_GAUSS_GLOBAL_Z_BIAS: FIXME
+ * @NC_CLUSTER_PHOTOZ_GAUSS_GLOBAL_SIGMA0: standard deviation of the gaussian distribution
+ *
+ * FIXME
+ */
+typedef enum _NcClusterPhotozGaussGlobalParams
+{
+  NC_CLUSTER_PHOTOZ_GAUSS_GLOBAL_Z_BIAS = 0,
+  NC_CLUSTER_PHOTOZ_GAUSS_GLOBAL_SIGMA0,  /*< private >*/
+  NC_CLUSTER_PHOTOZ_GAUSS_GLOBAL_SPARAM_LEN, /*< skip >*/
+} NcClusterPhotozGaussGlobalParams;
+
 struct _NcClusterPhotozGaussGlobal
 {
   /*< private >*/
@@ -65,6 +79,10 @@ void nc_cluster_photoz_gauss_global_set_z_bias (NcClusterPhotozGaussGlobal *pzg_
 gdouble nc_cluster_photoz_gauss_global_get_z_bias (const NcClusterPhotozGaussGlobal *pzg_global);
 void nc_cluster_photoz_gauss_global_set_sigma0 (NcClusterPhotozGaussGlobal *pzg_global, gdouble sigma0);
 gdouble nc_cluster_photoz_gauss_global_get_sigma0 (const NcClusterPhotozGaussGlobal *pzg_global);
+
+#define NC_CLUSTER_REDSHIFT_PHOTOZ_GAUSS_GLOBAL_DEFAULT_BIAS (0.0)
+#define NC_CLUSTER_REDSHIFT_PHOTOZ_GAUSS_GLOBAL_DEFAULT_SIGMA0 (0.03)
+#define NC_CLUSTER_REDSHIFT_PHOTOZ_GAUSS_GLOBAL_DEFAULT_PARAMS_ABSTOL (0.0)
 
 G_END_DECLS
 

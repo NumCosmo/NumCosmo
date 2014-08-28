@@ -53,6 +53,7 @@ enum
   PROP_PZ_MAX,
   PROP_Z_BIAS,
   PROP_SIGMA0,
+  PROP_SIZE
 };
 
 /**
@@ -300,6 +301,7 @@ nc_cluster_photoz_gauss_global_class_init (NcClusterPhotozGaussGlobalClass *klas
 {
   GObjectClass* object_class = G_OBJECT_CLASS (klass);
   NcClusterRedshiftClass* parent_class = NC_CLUSTER_REDSHIFT_CLASS (klass);
+  NcmModelClass *model_class = NCM_MODEL_CLASS (klass);
 
   parent_class->P              = &_nc_cluster_photoz_gauss_global_p;
   parent_class->intP           = &_nc_cluster_photoz_gauss_global_intp;
@@ -311,11 +313,14 @@ nc_cluster_photoz_gauss_global_class_init (NcClusterPhotozGaussGlobalClass *klas
 
   parent_class->impl = NC_CLUSTER_REDSHIFT_IMPL_ALL;
 
-  object_class->constructed  = &_nc_cluster_photoz_gauss_global_constructed;
-  object_class->set_property = &_nc_cluster_photoz_gauss_global_set_property;
-  object_class->get_property = &_nc_cluster_photoz_gauss_global_get_property;
-  object_class->finalize     = &_nc_cluster_photoz_gauss_global_finalize;
+  object_class->constructed = &_nc_cluster_photoz_gauss_global_constructed;
+  model_class->set_property = &_nc_cluster_photoz_gauss_global_set_property;
+  model_class->get_property = &_nc_cluster_photoz_gauss_global_get_property;
+  object_class->finalize    = &_nc_cluster_photoz_gauss_global_finalize;
 
+  ncm_model_class_add_params (model_class, 2, 0, PROP_SIZE);
+  ncm_model_class_set_name_nick (model_class, "Global Gaussian distribution", "GaussianGlobal");
+  
   /**
    * NcClusterPhotozGaussGlobal:pz_min:
    *
@@ -347,25 +352,21 @@ nc_cluster_photoz_gauss_global_class_init (NcClusterPhotozGaussGlobalClass *klas
    *
    * FIXME Set correct values (limits)
    */
-  g_object_class_install_property (object_class,
-                                   PROP_Z_BIAS,
-                                   g_param_spec_double ("z-bias",
-                                                        NULL,
-                                                        "z-bias",
-                                                        -G_MAXDOUBLE, G_MAXDOUBLE, 0.0,
-                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY |G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  ncm_model_class_set_sparam (model_class, NC_CLUSTER_PHOTOZ_GAUSS_GLOBAL_Z_BIAS, "z-bias", "z-bias",
+                              -G_MAXDOUBLE, G_MAXDOUBLE, 1.0e-2,
+                              NC_CLUSTER_REDSHIFT_PHOTOZ_GAUSS_GLOBAL_DEFAULT_PARAMS_ABSTOL, NC_CLUSTER_REDSHIFT_PHOTOZ_GAUSS_GLOBAL_DEFAULT_BIAS,
+                              NCM_PARAM_TYPE_FIXED);
 
   /**
    * NcClusterPhotozGaussGlobal:sigma0:
    *
    * FIXME Set correct values (limits)
    */
-  g_object_class_install_property (object_class,
-                                   PROP_SIGMA0,
-                                   g_param_spec_double ("sigma0",
-                                                        NULL,
-                                                        "sigma0",
-                                                        0.0, G_MAXDOUBLE, 0.03,
-                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY |G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-}
+  ncm_model_class_set_sparam (model_class, NC_CLUSTER_PHOTOZ_GAUSS_GLOBAL_SIGMA0, "sigma0", "sigma0",
+                              0.0, G_MAXDOUBLE, 1.0e-2,
+                              NC_CLUSTER_REDSHIFT_PHOTOZ_GAUSS_GLOBAL_DEFAULT_PARAMS_ABSTOL, NC_CLUSTER_REDSHIFT_PHOTOZ_GAUSS_GLOBAL_DEFAULT_SIGMA0,
+                              NCM_PARAM_TYPE_FIXED);
 
+  /* Check for errors in parameters initialization */
+  ncm_model_class_check_params_info (model_class);
+}

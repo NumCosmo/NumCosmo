@@ -261,7 +261,7 @@ _nc_cluster_mass_log_all_models_go (GType model_type, guint n)
  *
  */
 void
-nc_cluster_mass_log_all_models ()
+nc_cluster_mass_log_all_models (void)
 {
   g_message ("# Registred NcClusterMass:%s are:\n", g_type_name (NC_TYPE_CLUSTER_MASS));
   _nc_cluster_mass_log_all_models_go (NC_TYPE_CLUSTER_MASS, 0);

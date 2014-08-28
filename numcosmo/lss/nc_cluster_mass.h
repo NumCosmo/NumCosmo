@@ -105,7 +105,7 @@ gboolean nc_cluster_mass_resample (NcClusterMass *clusterm, NcHICosmo *model, gd
 void nc_cluster_mass_p_limits (NcClusterMass *clusterm, NcHICosmo *model, gdouble *lnM_obs, gdouble *lnM_obs_params, gdouble *lnM_lower, gdouble *lnM_upper);
 void nc_cluster_mass_n_limits (NcClusterMass *clusterm, NcHICosmo *model, gdouble *lnM_lower, gdouble *lnM_upper);
 
-void nc_cluster_mass_log_all_models ();
+void nc_cluster_mass_log_all_models (void);
 
 
 G_END_DECLS

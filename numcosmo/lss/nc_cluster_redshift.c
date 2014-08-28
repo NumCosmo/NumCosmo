@@ -40,7 +40,7 @@
 #include "math/ncm_cfg.h"
 #include "math/ncm_util.h"
 
-G_DEFINE_ABSTRACT_TYPE (NcClusterRedshift, nc_cluster_redshift, G_TYPE_OBJECT);
+G_DEFINE_ABSTRACT_TYPE (NcClusterRedshift, nc_cluster_redshift, NCM_TYPE_MODEL);
 
 /**
  * nc_cluster_redshift_new_from_name:
@@ -231,6 +231,40 @@ nc_cluster_redshift_n_limits (NcClusterRedshift *clusterz, gdouble *z_lower, gdo
 }
 
 static void
+_nc_cluster_redshift_log_all_models_go (GType model_type, guint n)
+{
+  guint nc, i, j;
+  GType *models = g_type_children (model_type, &nc);
+  for (i = 0; i < nc; i++)
+  {
+    guint ncc;
+    GType *modelsc = g_type_children (models[i], &ncc);
+
+    g_message ("#  ");
+    for (j = 0; j < n; j++) g_message (" ");
+    g_message ("%s\n", g_type_name (models[i]));
+    if (ncc)
+      _nc_cluster_redshift_log_all_models_go (models[i], n + 2);
+
+    g_free (modelsc);
+  }
+  g_free (models);
+}
+
+/**
+ * nc_cluster_redshift_log_all_models:
+ *
+ * FIXME
+ *
+ */
+void
+nc_cluster_redshift_log_all_models (void)
+{
+  g_message ("# Registred NcClusterRedshift:%s are:\n", g_type_name (NC_TYPE_CLUSTER_REDSHIFT));
+  _nc_cluster_redshift_log_all_models_go (NC_TYPE_CLUSTER_REDSHIFT, 0);
+}
+
+static void
 nc_cluster_redshift_init (NcClusterRedshift *nc_cluster_redshift)
 {
   NCM_UNUSED (nc_cluster_redshift);
@@ -244,6 +278,8 @@ _nc_cluster_redshift_finalize (GObject *object)
   G_OBJECT_CLASS (nc_cluster_redshift_parent_class)->finalize (object);
 }
 
+NCM_MSET_MODEL_REGISTER_ID (nc_cluster_redshift, NC_TYPE_CLUSTER_REDSHIFT);
+
 static void
 nc_cluster_redshift_class_init (NcClusterRedshiftClass *klass)
 {
@@ -251,5 +287,12 @@ nc_cluster_redshift_class_init (NcClusterRedshiftClass *klass)
   //GObjectClass* parent_class = G_OBJECT_CLASS (klass);
 
   object_class->finalize = _nc_cluster_redshift_finalize;
-}
 
+  ncm_model_class_add_params (NCM_MODEL_CLASS (klass), 0, 0, 1);
+  
+  ncm_mset_model_register_id (NCM_MODEL_CLASS (klass),
+                              "NcClusterRedshift",
+                              "Cluster redshift observable models.",
+                              NULL);
+  ncm_model_class_check_params_info (NCM_MODEL_CLASS (klass));
+}

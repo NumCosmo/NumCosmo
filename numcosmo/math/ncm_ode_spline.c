@@ -316,7 +316,7 @@ ncm_ode_spline_new_full (NcmSpline *s, NcmOdeSplineDydx dydx, gdouble yi, gdoubl
 /**
  * ncm_ode_spline_prepare:
  * @os: a #NcmOdeSpline
- * @userdata: FIXME
+ * @userdata: (closure): FIXME
  *
  * FIXME
  */

@@ -51,6 +51,7 @@ enum
   PROP_0,
   PROP_PZ_MIN,
   PROP_PZ_MAX,
+  PROP_SIZE
 };
 
 /**
@@ -217,6 +218,7 @@ nc_cluster_photoz_gauss_class_init (NcClusterPhotozGaussClass *klass)
 {
   GObjectClass* object_class = G_OBJECT_CLASS (klass);
   NcClusterRedshiftClass* parent_class = NC_CLUSTER_REDSHIFT_CLASS (klass);
+  NcmModelClass *model_class = NCM_MODEL_CLASS (klass);
 
   parent_class->P              = &_nc_cluster_photoz_gauss_p;
   parent_class->intP           = &_nc_cluster_photoz_gauss_intp;
@@ -229,8 +231,12 @@ nc_cluster_photoz_gauss_class_init (NcClusterPhotozGaussClass *klass)
   parent_class->impl = NC_CLUSTER_REDSHIFT_IMPL_ALL;
 
   object_class->finalize = _nc_cluster_photoz_gauss_finalize;
-  object_class->set_property = _nc_cluster_photoz_gauss_set_property;
-  object_class->get_property = _nc_cluster_photoz_gauss_get_property;
+
+  model_class->set_property = _nc_cluster_photoz_gauss_set_property;
+  model_class->get_property = _nc_cluster_photoz_gauss_get_property;
+
+  ncm_model_class_add_params (model_class, 0, 0, PROP_SIZE);
+  ncm_model_class_set_name_nick (model_class, "Gaussian distribution", "Gaussian");
 
   /**
    * NcClusterPhotozGauss:pz_min:
@@ -257,4 +263,7 @@ nc_cluster_photoz_gauss_class_init (NcClusterPhotozGaussClass *klass)
                                                         "Maximum photoz",
                                                         0.0, G_MAXDOUBLE, 0.0,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY |G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
+  /* Check for errors in parameters initialization */
+  ncm_model_class_check_params_info (model_class);
 }
