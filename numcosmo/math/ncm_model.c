@@ -1922,3 +1922,75 @@ ncm_model_param_index_from_name (NcmModel *model, gchar *param_name, guint *i)
   else
     return ncm_model_orig_param_index_from_name (model, param_name, i);
 }
+
+/**
+ * ncm_model_param_set_by_name:
+ * @model: a #NcmModel.
+ * @param_name: parameter name.
+ * @val: parameter value.
+ *
+ * Sets the parameter value @val by @param_name.
+ * 
+ */
+void 
+ncm_model_param_set_by_name (NcmModel *model, gchar *param_name, gdouble val)
+{
+  guint i;
+  gboolean has_param = ncm_model_param_index_from_name (model, param_name, &i);
+  g_assert (has_param);
+  ncm_model_param_set (model, i, val);
+}
+
+/**
+ * ncm_model_orig_param_set_by_name:
+ * @model: a #NcmModel.
+ * @param_name: parameter name.
+ * @val: parameter value.
+ *
+ * Sets the parameter value @val by @param_name.
+ * 
+ */
+void 
+ncm_model_orig_param_set_by_name (NcmModel *model, gchar *param_name, gdouble val)
+{
+  guint i;
+  gboolean has_param = ncm_model_orig_param_index_from_name (model, param_name, &i);
+  g_assert (has_param);
+  ncm_model_orig_param_set (model, i, val);
+}
+
+/**
+ * ncm_model_param_get_by_name:
+ * @model: a #NcmModel.
+ * @param_name: parameter name.
+ *
+ * Gets the parameter value by @param_name.
+ * 
+ * Returns: parameter value.
+ */
+gdouble 
+ncm_model_param_get_by_name (NcmModel *model, gchar *param_name)
+{
+  guint i;
+  gboolean has_param = ncm_model_param_index_from_name (model, param_name, &i);
+  g_assert (has_param);
+  return ncm_model_param_get (model, i);
+}
+
+/**
+ * ncm_model_orig_param_get_by_name:
+ * @model: a #NcmModel.
+ * @param_name: parameter name.
+ *
+ * Gets the original parameter value by @param_name.
+ * 
+ * Returns: parameter value.
+ */
+gdouble
+ncm_model_orig_param_get_by_name (NcmModel *model, gchar *param_name)
+{
+  guint i;
+  gboolean has_param = ncm_model_orig_param_index_from_name (model, param_name, &i);
+  g_assert (has_param);
+  return ncm_model_orig_param_get (model, i);
+}

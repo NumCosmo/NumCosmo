@@ -220,7 +220,7 @@ main (gint argc, gchar *argv[])
   {
     if (!is_de)
       g_error ("flat option is valid only for darkenergy models");
-    nc_hicosmo_de_omega_x2omega_k (model);
+    nc_hicosmo_de_omega_x2omega_k (NC_HICOSMO_DE (model));
     ncm_model_param_set (NCM_MODEL (model), NC_HICOSMO_DE_OMEGA_X, 0.0);
     ncm_mset_param_set_ftype (mset, nc_hicosmo_id (), NC_HICOSMO_DE_OMEGA_X, NCM_PARAM_TYPE_FIXED);
   }
@@ -228,7 +228,7 @@ main (gint argc, gchar *argv[])
   {
     if (!is_de)
       g_error ("omegak option is valid only for darkenergy models");
-    nc_hicosmo_de_omega_x2omega_k (model);
+    nc_hicosmo_de_omega_x2omega_k (NC_HICOSMO_DE (model));
     ncm_mset_param_set_ftype (mset, nc_hicosmo_id (), NC_HICOSMO_DE_OMEGA_X, NCM_PARAM_TYPE_FREE);
   }
 

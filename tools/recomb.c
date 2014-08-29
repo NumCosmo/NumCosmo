@@ -161,11 +161,11 @@ main (gint argc, gchar *argv[])
 
 	if (flat)
 	{
-		nc_hicosmo_de_omega_x2omega_k (cosmo);
+		nc_hicosmo_de_omega_x2omega_k (NC_HICOSMO_DE (cosmo));
 		ncm_mset_param_set_ftype (mset, nc_hicosmo_id (), NC_HICOSMO_DE_OMEGA_X, NCM_PARAM_TYPE_FIXED);
 	}
 	else if (change_params)
-		nc_hicosmo_de_omega_x2omega_k (cosmo);
+		nc_hicosmo_de_omega_x2omega_k (NC_HICOSMO_DE (cosmo));
 
 	if (tofit)
 	{

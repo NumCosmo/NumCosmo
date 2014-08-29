@@ -1127,7 +1127,7 @@ ncm_mset_fparams_set_vector (NcmMSet *mset, const NcmVector *x)
 /**
  * ncm_mset_fparams_set_array:
  * @mset: a #NcmMSet
- * @x: FIXME
+ * @x: (array) (element-type double): FIXME
  *
  * FIXME
  *

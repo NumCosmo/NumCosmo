@@ -156,6 +156,11 @@ const gchar *ncm_model_param_name (NcmModel *model, guint n);
 const gchar *ncm_model_orig_param_symbol (NcmModel *model, guint n);
 const gchar *ncm_model_param_symbol (NcmModel *model, guint n);
 
+void ncm_model_param_set_by_name (NcmModel *model, gchar *param_name, gdouble val);
+void ncm_model_orig_param_set_by_name (NcmModel *model, gchar *param_name, gdouble val);
+gdouble ncm_model_param_get_by_name (NcmModel *model, gchar *param_name);
+gdouble ncm_model_orig_param_get_by_name (NcmModel *model, gchar *param_name);
+
 gdouble ncm_model_orig_param_get_scale (NcmModel *model, guint n);
 gdouble ncm_model_orig_param_get_lower_bound (NcmModel *model, guint n);
 gdouble ncm_model_orig_param_get_upper_bound (NcmModel *model, guint n);

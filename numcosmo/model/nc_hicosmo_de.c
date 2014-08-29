@@ -103,28 +103,28 @@ static gdouble _nc_hicosmo_de_sigma_8 (NcmModel *cosmo) { return SIGMA8; }
 static gdouble _nc_hicosmo_de_powspec (NcmModel *cosmo, gdouble k) { return pow (k, SPECINDEX); }
 
 void 
-nc_hicosmo_de_set_wmap5_params (NcHICosmo *cosmo)
+nc_hicosmo_de_set_wmap5_params (NcHICosmoDE *cosmo_de)
 {
-  g_assert (NC_IS_HICOSMO_DE (cosmo));
-  ncm_model_orig_param_set (NCM_MODEL (cosmo), NC_HICOSMO_DE_H0,       72.4000);
-  ncm_model_orig_param_set (NCM_MODEL (cosmo), NC_HICOSMO_DE_OMEGA_C,   0.2060);
-  ncm_model_orig_param_set (NCM_MODEL (cosmo), NC_HICOSMO_DE_OMEGA_X,   0.7510);
-  ncm_model_orig_param_set (NCM_MODEL (cosmo), NC_HICOSMO_DE_OMEGA_B,   0.0432);
-  ncm_model_orig_param_set (NCM_MODEL (cosmo), NC_HICOSMO_DE_T_GAMMA0,  2.7250);
-  ncm_model_orig_param_set (NCM_MODEL (cosmo), NC_HICOSMO_DE_SPECINDEX, 0.9610);
-  ncm_model_orig_param_set (NCM_MODEL (cosmo), NC_HICOSMO_DE_SIGMA8,    0.7870);
+  g_assert (NC_IS_HICOSMO_DE (cosmo_de));
+  ncm_model_orig_param_set (NCM_MODEL (cosmo_de), NC_HICOSMO_DE_H0,       72.4000);
+  ncm_model_orig_param_set (NCM_MODEL (cosmo_de), NC_HICOSMO_DE_OMEGA_C,   0.2060);
+  ncm_model_orig_param_set (NCM_MODEL (cosmo_de), NC_HICOSMO_DE_OMEGA_X,   0.7510);
+  ncm_model_orig_param_set (NCM_MODEL (cosmo_de), NC_HICOSMO_DE_OMEGA_B,   0.0432);
+  ncm_model_orig_param_set (NCM_MODEL (cosmo_de), NC_HICOSMO_DE_T_GAMMA0,  2.7250);
+  ncm_model_orig_param_set (NCM_MODEL (cosmo_de), NC_HICOSMO_DE_SPECINDEX, 0.9610);
+  ncm_model_orig_param_set (NCM_MODEL (cosmo_de), NC_HICOSMO_DE_SIGMA8,    0.7870);
 }
 
 /**
  * nc_hicosmo_de_omega_x2omega_k:
- * @cosmo: FIXME
+ * @cosmo_de: FIXME
  *
  * FIXME
  */
 void
-nc_hicosmo_de_omega_x2omega_k (NcHICosmo *cosmo)
+nc_hicosmo_de_omega_x2omega_k (NcHICosmoDE *cosmo_de)
 {
-  guint size = ncm_model_len (NCM_MODEL (cosmo));
+  guint size = ncm_model_len (NCM_MODEL (cosmo_de));
   NcmMatrix *T = ncm_matrix_new (size, size);
   NcmVector *v = ncm_vector_new (size);
   NcmReparamLinear *relin;
@@ -138,12 +138,12 @@ nc_hicosmo_de_omega_x2omega_k (NcHICosmo *cosmo)
 
   ncm_vector_set (v, NC_HICOSMO_DE_OMEGA_X, 1.0);
 
-  relin = ncm_reparam_linear_new (ncm_model_len (NCM_MODEL (cosmo)), T, v);
+  relin = ncm_reparam_linear_new (ncm_model_len (NCM_MODEL (cosmo_de)), T, v);
   ncm_reparam_set_param_desc_full (NCM_REPARAM (relin), NC_HICOSMO_DE_OMEGA_X, 
                                    "Omegak","\\Omega_k", -5.0, 5.0, 1.0e-2, 
                                    NC_HICOSMO_DEFAULT_PARAMS_ABSTOL, 0.0, NCM_PARAM_TYPE_FIXED);
 
-  ncm_model_set_reparam (NCM_MODEL (cosmo), NCM_REPARAM (relin));
+  ncm_model_set_reparam (NCM_MODEL (cosmo_de), NCM_REPARAM (relin));
   
   ncm_vector_free (v);
   ncm_matrix_free (T);
