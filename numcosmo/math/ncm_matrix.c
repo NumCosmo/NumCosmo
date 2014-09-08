@@ -504,6 +504,58 @@ ncm_matrix_peek_variant (NcmMatrix *cm)
 }
 
 /**
+ * ncm_matrix_set_from_data:
+ * @cm: a #NcmMatrix.
+ * @data: (array) (element-type double): Array of doubles.
+ *
+ * This function sets the valuus of @cm using @data. Data
+ * must have the same size as #NcmMatrix.
+ * 
+ */
+void 
+ncm_matrix_set_from_data (NcmMatrix *cm, gdouble *data)
+{
+  guint nrows = ncm_matrix_nrows (cm);
+  guint ncols = ncm_matrix_ncols (cm);
+  guint i, j;
+
+  for (i = 0; i < nrows; i++)
+  {
+    for (j = 0; j < ncols; j++)
+    {
+      ncm_matrix_set (cm, i, j, data[i * ncols + j]);
+    }
+  }
+}
+
+/**
+ * ncm_matrix_set_from_array:
+ * @cm: a #NcmMatrix.
+ * @a: (array) (element-type double): Array of doubles.
+ *
+ * This function sets the valuus of @cm using @data. Data
+ * must have the same size as #NcmMatrix.
+ * 
+ */
+void 
+ncm_matrix_set_from_array (NcmMatrix *cm, GArray *a)
+{
+  guint nrows = ncm_matrix_nrows (cm);
+  guint ncols = ncm_matrix_ncols (cm);
+  guint i, j;
+
+  g_assert_cmpuint (nrows * ncols, ==, a->len);
+
+  for (i = 0; i < nrows; i++)
+  {
+    for (j = 0; j < ncols; j++)
+    {
+      ncm_matrix_set (cm, i, j, g_array_index (a, gdouble, i * ncols + j));
+    }
+  }
+}
+
+/**
  * ncm_matrix_free:
  * @cm: a #NcmMatrix.
  *
@@ -834,6 +886,14 @@ ncm_matrix_cholesky_decomp (NcmMatrix *cm)
  * FIXME
  *
  * Returns: FIXME
+ */
+/**
+ * ncm_matrix_size:
+ * @cm: a #NcmMatrix.
+ *
+ * Calculates the total size of the matrix, ncols * nrows.
+ *
+ * Returns: Total size of the matrix.
  */
 /**
  * ncm_matrix_data:

@@ -62,8 +62,6 @@ struct _NcClusterPhotozGaussGlobal
   NcClusterRedshift parent_instance;
   gdouble pz_min;
   gdouble pz_max;
-  gdouble z_bias;
-  gdouble sigma0;
 };
 
 struct _NcClusterPhotozGaussGlobalClass

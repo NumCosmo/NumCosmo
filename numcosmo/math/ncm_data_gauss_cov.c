@@ -139,6 +139,7 @@ _ncm_data_gauss_cov_dispose (GObject *object)
   ncm_vector_clear (&gauss->v);
   ncm_matrix_clear (&gauss->cov);
   ncm_matrix_clear (&gauss->LLT);
+
   /* Chain up : end */
   G_OBJECT_CLASS (ncm_data_gauss_cov_parent_class)->dispose (object);
 }
@@ -267,7 +268,7 @@ _ncm_data_gauss_cov_resample (NcmData *data, NcmMSet *mset, NcmRNG *rng)
                         ncm_matrix_gsl (gauss->LLT), ncm_vector_gsl (gauss->v));
   NCM_TEST_GSL_RESULT ("_ncm_data_gauss_cov_resample", ret);
 
-  gauss_cov_class->mean_func (gauss, mset, gauss->y);
+  gauss_cov_class->mean_func (gauss, mset, gauss->y);  
   ncm_vector_sub (gauss->y, gauss->v);
 }
 

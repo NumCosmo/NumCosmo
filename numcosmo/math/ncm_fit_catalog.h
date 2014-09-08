@@ -136,6 +136,7 @@ gdouble ncm_fit_catalog_param_pdf_pvalue (NcmFitCatalog *fcat, gdouble pval, gbo
 #define NCM_FIT_CATALOG_RTYPE_LABEL "RTYPE"
 #define NCM_FIT_CATALOG_RTYPE_BSTRAP_MEAN "bootstrap-mean"
 #define NCM_FIT_CATALOG_RTYPE_UNDEFINED "undefined-run"
+#define NCM_FIT_CATALOG_FSYMB_LABEL "FSYMB"
 
 G_END_DECLS
 

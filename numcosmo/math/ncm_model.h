@@ -148,6 +148,7 @@ void ncm_model_params_print_all (NcmModel *model, FILE *out);
 void ncm_model_params_log_all (NcmModel *model);
 NcmVector *ncm_model_params_get_all (NcmModel *model);
 gboolean ncm_model_params_valid (NcmModel *model);
+gboolean ncm_model_params_valid_bounds (NcmModel *model);
 
 gboolean ncm_model_orig_param_index_from_name (NcmModel *model, gchar *param_name, guint *i);
 gboolean ncm_model_param_index_from_name (NcmModel *model, gchar *param_name, guint *i);

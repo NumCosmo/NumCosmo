@@ -77,6 +77,8 @@ ncm_sources = \
 	math/ncm_dataset.c                 \
 	math/ncm_likelihood.c              \
 	math/ncm_priors.c                  \
+	math/ncm_mc_sampler.c              \
+	math/ncm_mc_sampler_gauss.c        \
 	math/ncm_fit_state.c               \
 	math/ncm_fit.c                     \
 	math/ncm_fit_gsl_ls.c              \
@@ -152,6 +154,8 @@ ncm_headers = \
 	math/ncm_data_poisson.h          \
 	math/ncm_dataset.h               \
 	math/ncm_likelihood.h            \
+	math/ncm_mc_sampler.h            \
+	math/ncm_mc_sampler_gauss.h      \
 	math/ncm_priors.h                \
 	math/ncm_fit_state.h             \
 	math/ncm_fit.h                   \

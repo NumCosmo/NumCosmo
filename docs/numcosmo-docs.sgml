@@ -96,6 +96,8 @@
       <xi:include href="xml/ncm_bootstrap.xml"/>
       <xi:include href="xml/ncm_likelihood.xml"/>
       <xi:include href="xml/ncm_priors.xml"/>
+      <xi:include href="xml/ncm_mc_sampler.xml"/>
+      <xi:include href="xml/ncm_mc_sampler_gauss.xml"/>
       <xi:include href="xml/ncm_fit_state.xml"/>
       <xi:include href="xml/ncm_fit.xml"/>
       <xi:include href="xml/ncm_fit_nlopt.xml"/>

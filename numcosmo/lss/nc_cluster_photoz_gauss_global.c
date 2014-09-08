@@ -44,6 +44,10 @@
 #include <gsl/gsl_randist.h>
 #include <gsl/gsl_math.h>
 
+#define VECTOR (model->params)
+#define Z_BIAS (ncm_vector_get (VECTOR, NC_CLUSTER_PHOTOZ_GAUSS_GLOBAL_Z_BIAS))
+#define SIGMA0 (ncm_vector_get (VECTOR, NC_CLUSTER_PHOTOZ_GAUSS_GLOBAL_SIGMA0))
+
 G_DEFINE_TYPE (NcClusterPhotozGaussGlobal, nc_cluster_photoz_gauss_global, NC_TYPE_CLUSTER_REDSHIFT);
 
 enum
@@ -51,8 +55,6 @@ enum
   PROP_0,
   PROP_PZ_MIN,
   PROP_PZ_MAX,
-  PROP_Z_BIAS,
-  PROP_SIGMA0,
   PROP_SIZE
 };
 
@@ -81,23 +83,24 @@ nc_cluster_photoz_gauss_global_new (gdouble pz_min, gdouble pz_max, gdouble z_bi
 static gdouble
 _nc_cluster_photoz_gauss_global_p (NcClusterRedshift *clusterz, gdouble lnM, gdouble z, gdouble *z_obs, gdouble *z_obs_params)
 {
-  NcClusterPhotozGaussGlobal *pzg_global = NC_CLUSTER_PHOTOZ_GAUSS_GLOBAL (clusterz);
-  const gdouble z_eff = z + pzg_global->z_bias;
-  const gdouble sqrt2_sigma = M_SQRT2 * pzg_global->sigma0 * (1.0 + z);
+  NcmModel *model = NCM_MODEL (clusterz);
+  const gdouble z_eff = z + Z_BIAS;
+  const gdouble sqrt2_sigma = M_SQRT2 * SIGMA0 * (1.0 + z);
   const gdouble y1 = (z_obs[0] - z_eff) / sqrt2_sigma;
 
   NCM_UNUSED (lnM);
   NCM_UNUSED (z_obs_params);
 
-  return M_2_SQRTPI / M_SQRT2 * exp (- y1 * y1) / (pzg_global->sigma0 * (1.0 + z) * (1.0 + erf (z_eff / sqrt2_sigma)));
+  return M_2_SQRTPI / M_SQRT2 * exp (- y1 * y1) / (SIGMA0 * (1.0 + z) * (1.0 + erf (z_eff / sqrt2_sigma)));
 }
 
 static gdouble
 _nc_cluster_photoz_gauss_global_intp (NcClusterRedshift *clusterz, gdouble lnM, gdouble z)
 {
+  NcmModel *model = NCM_MODEL (clusterz);
   NcClusterPhotozGaussGlobal *pzg_global = NC_CLUSTER_PHOTOZ_GAUSS_GLOBAL (clusterz);
-  const gdouble z_eff = z + pzg_global->z_bias;
-  const gdouble sqrt2_sigma = M_SQRT2 * pzg_global->sigma0 * (1.0 + z);
+  const gdouble z_eff = z + Z_BIAS;
+  const gdouble sqrt2_sigma = M_SQRT2 * SIGMA0 * (1.0 + z);
   const gdouble x_min = (z_eff - pzg_global->pz_min) / sqrt2_sigma;
   const gdouble x_max = (z_eff - pzg_global->pz_max) / sqrt2_sigma;
 
@@ -118,15 +121,16 @@ _nc_cluster_photoz_gauss_global_intp (NcClusterRedshift *clusterz, gdouble lnM, 
 static gboolean
 _nc_cluster_photoz_gauss_global_resample (NcClusterRedshift *clusterz, gdouble lnM, gdouble z, gdouble *z_obs, gdouble *z_obs_params, NcmRNG *rng)
 {
+  NcmModel *model = NCM_MODEL (clusterz);
   NcClusterPhotozGaussGlobal *pzg_global = NC_CLUSTER_PHOTOZ_GAUSS_GLOBAL (clusterz);
-  const gdouble sigma_z = pzg_global->sigma0 * (1.0 + z);
+  const gdouble sigma_z = SIGMA0 * (1.0 + z);
 
   NCM_UNUSED (z_obs_params);
   NCM_UNUSED (lnM);
   
   ncm_rng_lock (rng);
   do {
-    z_obs[0] = z + pzg_global->z_bias + gsl_ran_gaussian (rng->r, sigma_z);
+    z_obs[0] = z + Z_BIAS + gsl_ran_gaussian (rng->r, sigma_z);
   } while (z_obs[0] < 0.0);
   ncm_rng_unlock (rng);
 
@@ -136,10 +140,10 @@ _nc_cluster_photoz_gauss_global_resample (NcClusterRedshift *clusterz, gdouble l
 static void
 _nc_cluster_photoz_gauss_global_p_limits (NcClusterRedshift *clusterz, gdouble *z_obs, gdouble *z_obs_params, gdouble *z_lower, gdouble *z_upper)
 {
-  NcClusterPhotozGaussGlobal *pzg_global = NC_CLUSTER_PHOTOZ_GAUSS_GLOBAL (clusterz);
-  const gdouble mean = z_obs[0] - pzg_global->z_bias;
-  const gdouble zl = GSL_MAX (mean - 10.0 * pzg_global->sigma0 * (1.0 + z_obs[0]), 0.0);
-  const gdouble zu = mean + 10.0 * pzg_global->sigma0 * (1.0 + z_obs[0]);
+  NcmModel *model = NCM_MODEL (clusterz);
+  const gdouble mean = z_obs[0] - Z_BIAS;
+  const gdouble zl = GSL_MAX (mean - 10.0 * SIGMA0 * (1.0 + z_obs[0]), 0.0);
+  const gdouble zu = mean + 10.0 * SIGMA0 * (1.0 + z_obs[0]);
 
   NCM_UNUSED (z_obs_params);
   
@@ -152,9 +156,10 @@ _nc_cluster_photoz_gauss_global_p_limits (NcClusterRedshift *clusterz, gdouble *
 static void
 _nc_cluster_photoz_gauss_global_n_limits (NcClusterRedshift *clusterz, gdouble *z_lower, gdouble *z_upper)
 {
+  NcmModel *model = NCM_MODEL (clusterz);
   NcClusterPhotozGaussGlobal *pzg_global = NC_CLUSTER_PHOTOZ_GAUSS_GLOBAL (clusterz);
-  const gdouble zl = GSL_MAX (pzg_global->pz_min - pzg_global->z_bias - 10.0 * pzg_global->sigma0 * (1.0 + pzg_global->pz_min), 0.0);
-  const gdouble zu = pzg_global->pz_max - pzg_global->z_bias + 10.0 * pzg_global->sigma0 * (1.0 + pzg_global->pz_max);
+  const gdouble zl = GSL_MAX (pzg_global->pz_min - Z_BIAS - 10.0 * SIGMA0 * (1.0 + pzg_global->pz_min), 0.0);
+  const gdouble zu = pzg_global->pz_max - Z_BIAS + 10.0 * SIGMA0 * (1.0 + pzg_global->pz_max);
 
   *z_lower = zl;
   *z_upper = zu;
@@ -176,7 +181,8 @@ guint _nc_cluster_photoz_gauss_global_obs_params_len (NcClusterRedshift *cluster
 void
 nc_cluster_photoz_gauss_global_set_z_bias (NcClusterPhotozGaussGlobal *pzg_global, gdouble z_bias)
 {
-  pzg_global->z_bias = z_bias;
+  NcmModel *model = NCM_MODEL (pzg_global);
+  ncm_model_param_set (model, NC_CLUSTER_PHOTOZ_GAUSS_GLOBAL_Z_BIAS, z_bias);
 }
 
 /**
@@ -188,7 +194,8 @@ nc_cluster_photoz_gauss_global_set_z_bias (NcClusterPhotozGaussGlobal *pzg_globa
 gdouble
 nc_cluster_photoz_gauss_global_get_z_bias (const NcClusterPhotozGaussGlobal *pzg_global)
 {
-  return pzg_global->z_bias;
+  NcmModel *model = NCM_MODEL (pzg_global);
+  return Z_BIAS;
 }
 
 /**
@@ -202,7 +209,8 @@ nc_cluster_photoz_gauss_global_get_z_bias (const NcClusterPhotozGaussGlobal *pzg
 void
 nc_cluster_photoz_gauss_global_set_sigma0 (NcClusterPhotozGaussGlobal *pzg_global, gdouble sigma0)
 {
-  pzg_global->sigma0 = sigma0;
+  NcmModel *model = NCM_MODEL (pzg_global);
+  ncm_model_param_set (model, NC_CLUSTER_PHOTOZ_GAUSS_GLOBAL_SIGMA0, sigma0);
 }
 
 /**
@@ -214,14 +222,13 @@ nc_cluster_photoz_gauss_global_set_sigma0 (NcClusterPhotozGaussGlobal *pzg_globa
 gdouble
 nc_cluster_photoz_gauss_global_get_sigma0 (const NcClusterPhotozGaussGlobal *pzg_global)
 {
-  return pzg_global->sigma0;
+  NcmModel *model = NCM_MODEL (pzg_global);
+  return SIGMA0;
 }
 
 static void
 nc_cluster_photoz_gauss_global_init (NcClusterPhotozGaussGlobal *pzg_global)
 {
-  pzg_global->z_bias = 0.0;
-  pzg_global->sigma0 = 0.0;
 }
 
 static void
@@ -250,12 +257,6 @@ _nc_cluster_photoz_gauss_global_set_property (GObject * object, guint prop_id, c
     case PROP_PZ_MAX:
       pzg_global->pz_max = g_value_get_double (value);
       break;
-    case PROP_Z_BIAS:
-      pzg_global->z_bias = g_value_get_double (value);
-      break;
-    case PROP_SIGMA0:
-      pzg_global->sigma0 = g_value_get_double (value);
-      break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
       break;
@@ -275,12 +276,6 @@ _nc_cluster_photoz_gauss_global_get_property (GObject *object, guint prop_id, GV
       break;
     case PROP_PZ_MAX:
       g_value_set_double (value, pzg_global->pz_max);
-      break;
-    case PROP_Z_BIAS:
-      g_value_set_double (value, pzg_global->z_bias);
-      break;
-    case PROP_SIGMA0:
-      g_value_set_double (value, pzg_global->sigma0);
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);

@@ -31,6 +31,7 @@
 #include <numcosmo/build_cfg.h>
 #include <numcosmo/math/ncm_fit.h>
 #include <numcosmo/math/ncm_fit_catalog.h>
+#include <numcosmo/math/ncm_mc_sampler.h>
 #include <numcosmo/math/ncm_timer.h>
 #include <numcosmo/math/memory_pool.h>
 #include <gsl/gsl_histogram.h>
@@ -50,21 +51,6 @@ G_BEGIN_DECLS
 typedef struct _NcmFitMCMCClass NcmFitMCMCClass;
 typedef struct _NcmFitMCMC NcmFitMCMC;
 
-/**
- * NcmFitMCMCType:
- * @NCM_FIT_MCMC_METROPOLIS: FIXME
- * 
- * Montecarlo resample options
- * 
- */
-typedef enum _NcmFitMCMCType
-{
-  NCM_FIT_MCMC_METROPOLIS = 0,         /*< private >*/
-  NCM_FIT_MCMC_LEN, /*< skip >*/
-} NcmFitMCMCType;
-
-typedef void (*NcmFitMCMCSampler) (NcmMSet *mset, NcmVector *theta, NcmVector *thetastar, NcmRNG *rng);
-
 struct _NcmFitMCMC
 {
   /*< private >*/
@@ -72,11 +58,10 @@ struct _NcmFitMCMC
   NcmFit *fit;
   NcmFitCatalog *fcat;
   NcmFitRunMsgs mtype;
-  NcmFitMCMCType mcmctype;
   NcmRNG *rng;
   NcmTimer *nt;
   NcmSerialize *ser;
-  NcmFitMCMCSampler sampler;
+  NcmMCSampler *mcs;
   NcmVector *theta;
   NcmVector *thetastar;
   guint nthreads;
@@ -104,14 +89,14 @@ struct _NcmFitMCMCClass
 
 GType ncm_fit_mcmc_get_type (void) G_GNUC_CONST;
 
-NcmFitMCMC *ncm_fit_mcmc_new (NcmFit *fit, NcmFitMCMCType mcmctype, NcmFitRunMsgs mtype);
+NcmFitMCMC *ncm_fit_mcmc_new (NcmFit *fit, NcmMCSampler *mcs, NcmFitRunMsgs mtype);
 void ncm_fit_mcmc_free (NcmFitMCMC *mc);
 void ncm_fit_mcmc_clear (NcmFitMCMC **mc);
 
 void ncm_fit_mcmc_set_data_file (NcmFitMCMC *mc, const gchar *filename);
 
 void ncm_fit_mcmc_set_mtype (NcmFitMCMC *mc, NcmFitRunMsgs mtype);
-void ncm_fit_mcmc_set_mcmctype (NcmFitMCMC *mc, NcmFitMCMCType mcmctype);
+void ncm_fit_mcmc_set_sampler (NcmFitMCMC *mc, NcmMCSampler *mcs);
 void ncm_fit_mcmc_set_nthreads (NcmFitMCMC *mc, guint nthreads);
 void ncm_fit_mcmc_set_fiducial (NcmFitMCMC *mc, NcmMSet *fiduc);
 void ncm_fit_mcmc_set_rng (NcmFitMCMC *mc, NcmRNG *rng);

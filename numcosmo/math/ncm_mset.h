@@ -167,6 +167,7 @@ void ncm_mset_params_pretty_print (NcmMSet *mset, FILE *out, gchar *header);
 void ncm_mset_params_log_vals (NcmMSet *mset);
 void ncm_mset_params_print_vals (NcmMSet *mset, FILE *out);
 gboolean ncm_mset_params_valid (NcmMSet *mset);
+gboolean ncm_mset_params_valid_bounds (NcmMSet *mset);
 gboolean ncm_mset_cmp (NcmMSet *mset0, NcmMSet *mset1, gboolean cmp_model);
 
 void ncm_mset_param_set (NcmMSet *mset, NcmModelID mid, guint pid, const gdouble x);
@@ -175,6 +176,7 @@ gdouble ncm_mset_orig_param_get (NcmMSet *mset, NcmModelID mid, guint pid);
 
 guint ncm_mset_param_len (NcmMSet *mset);
 const gchar *ncm_mset_param_name (NcmMSet *mset, NcmModelID mid, guint pid);
+const gchar *ncm_mset_param_symbol (NcmMSet *mset, NcmModelID mid, guint pid);
 void ncm_mset_param_set_ftype (NcmMSet *mset, NcmModelID mid, guint pid, NcmParamType ftype);
 void ncm_mset_param_set_all_ftype (NcmMSet *mset, NcmParamType ftype);
 void ncm_mset_param_set_vector (NcmMSet *mset, NcmVector *params);
@@ -196,6 +198,7 @@ void ncm_mset_fparams_set_gsl_vector (NcmMSet *mset, const gsl_vector *x);
 
 guint ncm_mset_fparams_len (NcmMSet *mset);
 const gchar *ncm_mset_fparam_name (NcmMSet *mset, guint n);
+const gchar *ncm_mset_fparam_symbol (NcmMSet *mset, guint n);
 const gchar *ncm_mset_fparam_full_name (NcmMSet *mset, guint n);
 gdouble ncm_mset_fparam_get_scale (NcmMSet *mset, guint n);
 gdouble ncm_mset_fparam_get_lower_bound (NcmMSet *mset, guint n);

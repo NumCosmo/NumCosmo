@@ -396,6 +396,20 @@ _ncm_fit_catalog_open_create_file (NcmFitCatalog *fcat)
 
     fits_update_key (fcat->fptr, TSTRING, NCM_FIT_CATALOG_RTYPE_LABEL, fcat->rtype_str, "Run type string.", &status);
     NCM_FITS_ERROR (status);  
+
+    for (i = 0; i < fparam_len; i++)
+    {
+      gchar *fsymbi = g_strdup_printf ("%s%d", NCM_FIT_CATALOG_FSYMB_LABEL, i + 1);
+      gchar *fsymb_desc = g_strdup_printf ("Symbol for parameter %s[%d]", 
+                                           ncm_mset_fparam_name (fcat->fit->mset, i), 
+                                           i + 1);
+      const gchar *fsymb  = ncm_mset_fparam_symbol (fcat->fit->mset, i);
+      
+      fits_update_key (fcat->fptr, TSTRING, fsymbi, fsymb, fsymb_desc, &status);
+      NCM_FITS_ERROR (status);  
+      g_free (fsymbi);
+      g_free (fsymb_desc);
+    }
     
     fcat->file_first_id = 0;
     fcat->file_cur_id   = -1;

@@ -52,8 +52,8 @@ G_DEFINE_BOXED_TYPE (NcmMSetPIndex, ncm_mset_pindex, ncm_mset_pindex_dup, ncm_ms
 
 /**
  * ncm_mset_pindex_new:
- * @mid: FIXME
- * @pid: FIXME
+ * @mid: Model id
+ * @pid: Parameter id
  *
  * FIXME
  *
@@ -242,7 +242,7 @@ ncm_mset_dup (NcmMSet *mset, NcmSerialize *ser)
 
 /**
  * ncm_mset_free:
- * @mset: FIXME
+ * @mset: a #NcmMSet
  *
  * FIXME
  *
@@ -255,7 +255,7 @@ ncm_mset_free (NcmMSet *mset)
 
 /**
  * ncm_mset_clear:
- * @mset: FIXME
+ * @mset: a #NcmMSet
  *
  * FIXME
  *
@@ -319,7 +319,7 @@ ncm_mset_remove (NcmMSet *mset, NcmModelID mid)
 
 /**
  * ncm_mset_set:
- * @mset: FIXME
+ * @mset: a #NcmMSet
  * @model: FIXME
  *
  * FIXME
@@ -352,7 +352,7 @@ ncm_mset_set (NcmMSet *mset, NcmModel *model)
 
 /**
  * ncm_mset_exists:
- * @mset: FIXME
+ * @mset: a #NcmMSet
  * @model: FIXME
  *
  * FIXME
@@ -394,7 +394,7 @@ ncm_mset_get_id_by_ns (const gchar *ns)
 
 /**
  * ncm_mset_prepare_fparam_map:
- * @mset: FIXME
+ * @mset: a #NcmMSet
  *
  * FIXME
  *
@@ -438,7 +438,7 @@ ncm_mset_prepare_fparam_map (NcmMSet *mset)
 
 /**
  * ncm_mset_total_len:
- * @mset: FIXME
+ * @mset: a #NcmMSet
  *
  * FIXME
  *
@@ -452,7 +452,7 @@ ncm_mset_total_len (NcmMSet *mset)
 
 /**
  * ncm_mset_fparam_len:
- * @mset: FIXME
+ * @mset: a #NcmMSet
  *
  * FIXME
  *
@@ -466,7 +466,7 @@ ncm_mset_fparam_len (NcmMSet *mset)
 
 /**
  * ncm_mset_max_param_name:
- * @mset: FIXME
+ * @mset: a #NcmMSet
  *
  * FIXME
  *
@@ -498,7 +498,7 @@ ncm_mset_max_param_name (NcmMSet *mset)
 
 /**
  * ncm_mset_param_len:
- * @mset: FIXME
+ * @mset: a #NcmMSet
  *
  * FIXME
  *
@@ -522,7 +522,7 @@ ncm_mset_param_len (NcmMSet *mset)
 
 /**
  * ncm_mset_max_fparam_name:
- * @mset: FIXME
+ * @mset: a #NcmMSet
  *
  * FIXME
  *
@@ -543,7 +543,7 @@ ncm_mset_max_fparam_name (NcmMSet *mset)
 
 /**
  * ncm_mset_max_model_nick:
- * @mset: FIXME
+ * @mset: a #NcmMSet
  *
  * FIXME
  *
@@ -570,7 +570,7 @@ ncm_mset_max_model_nick (NcmMSet *mset)
 
 /**
  * ncm_mset_pretty_log:
- * @mset: FIXME
+ * @mset: a #NcmMSet
  *
  * FIXME
  *
@@ -653,7 +653,7 @@ ncm_mset_params_pretty_print (NcmMSet *mset, FILE *out, gchar *header)
 
 /**
  * ncm_mset_params_log_vals:
- * @mset: FIXME
+ * @mset: a #NcmMSet
  *
  * FIXME
  *
@@ -683,7 +683,7 @@ ncm_mset_params_log_vals (NcmMSet *mset)
 
 /**
  * ncm_mset_params_print_vals:
- * @mset: FIXME
+ * @mset: a #NcmMSet
  * @out: FIXME
  *
  * FIXME
@@ -713,7 +713,7 @@ ncm_mset_params_print_vals (NcmMSet *mset, FILE *out)
 
 /**
  * ncm_mset_params_valid:
- * @mset: FIXME
+ * @mset: a #NcmMSet
  *
  * FIXME
  * 
@@ -730,6 +730,30 @@ ncm_mset_params_valid (NcmMSet *mset)
     if (model == NULL)
       continue;
     else if (!ncm_model_params_valid (model))
+      return FALSE;
+  }
+  return TRUE;
+}
+
+/**
+ * ncm_mset_params_bounds:
+ * @mset: a #NcmMSet.
+ *
+ * Check whenever the parameters respect the bounds.
+ * 
+ * Returns: If TRUE the parameter respect the bounds.
+ */
+gboolean 
+ncm_mset_params_valid_bounds (NcmMSet *mset)
+{
+  NcmModelID mid;
+
+  for (mid = 0; mid < NCM_MODEL_MAX_ID; mid++)
+  {
+    NcmModel *model = ncm_mset_peek (mset, mid);
+    if (model == NULL)
+      continue;
+    else if (!ncm_model_params_valid_bounds (model))
       return FALSE;
   }
   return TRUE;
@@ -770,8 +794,8 @@ ncm_mset_cmp (NcmMSet *mset0, NcmMSet *mset1, gboolean cmp_model)
 /**
  * ncm_mset_param_set:
  * @mset: a #NcmMSet
- * @mid: FIXME
- * @pid: FIXME
+ * @mid: Model id
+ * @pid: Parameter id
  * @x: FIXME
  *
  * FIXME
@@ -786,8 +810,8 @@ ncm_mset_param_set (NcmMSet *mset, NcmModelID mid, guint pid, const gdouble x)
 /**
  * ncm_mset_param_get:
  * @mset: a #NcmMSet
- * @mid: FIXME
- * @pid: FIXME
+ * @mid: Model id
+ * @pid: Parameter id
  *
  * FIXME
  *
@@ -802,8 +826,8 @@ ncm_mset_param_get (NcmMSet *mset, NcmModelID mid, guint pid)
 /**
  * ncm_mset_orig_param_get:
  * @mset: a #NcmMSet
- * @mid: FIXME
- * @pid: FIXME
+ * @mid: Model id
+ * @pid: Parameter id
  *
  * FIXME
  *
@@ -818,8 +842,8 @@ ncm_mset_orig_param_get (NcmMSet *mset, NcmModelID mid, guint pid)
 /**
  * ncm_mset_param_name:
  * @mset: a #NcmMSet
- * @mid: FIXME
- * @pid: FIXME
+ * @mid: Model id
+ * @pid: Parameter id
  *
  * FIXME
  *
@@ -832,10 +856,26 @@ ncm_mset_param_name (NcmMSet *mset, NcmModelID mid, guint pid)
 }
 
 /**
+ * ncm_mset_param_symbol:
+ * @mset: a #NcmMSet
+ * @mid: Model id
+ * @pid: Parameter id
+ *
+ * FIXME
+ *
+ * Returns: FIXME
+ */
+const gchar *
+ncm_mset_param_symbol (NcmMSet *mset, NcmModelID mid, guint pid)
+{
+  return ncm_model_param_symbol (ncm_mset_peek (mset, mid), pid);
+}
+
+/**
  * ncm_mset_param_get_scale:
  * @mset: a #NcmMSet
- * @mid: FIXME
- * @pid: FIXME
+ * @mid: Model id
+ * @pid: Parameter id
  *
  * FIXME
  *
@@ -850,8 +890,8 @@ ncm_mset_param_get_scale (NcmMSet *mset, NcmModelID mid, guint pid)
 /**
  * ncm_mset_param_get_lower_bound:
  * @mset: a #NcmMSet
- * @mid: FIXME
- * @pid: FIXME
+ * @mid: Model id
+ * @pid: Parameter id
  *
  * FIXME
  *
@@ -866,8 +906,8 @@ ncm_mset_param_get_lower_bound (NcmMSet *mset, NcmModelID mid, guint pid)
 /**
  * ncm_mset_param_get_upper_bound:
  * @mset: a #NcmMSet
- * @mid: FIXME
- * @pid: FIXME
+ * @mid: Model id
+ * @pid: Parameter id
  *
  * FIXME
  *
@@ -882,8 +922,8 @@ ncm_mset_param_get_upper_bound (NcmMSet *mset, NcmModelID mid, guint pid)
 /**
  * ncm_mset_param_get_abstol:
  * @mset: a #NcmMSet
- * @mid: FIXME
- * @pid: FIXME
+ * @mid: Model id
+ * @pid: Parameter id
  *
  * FIXME
  *
@@ -898,8 +938,8 @@ ncm_mset_param_get_abstol (NcmMSet *mset, NcmModelID mid, guint pid)
 /**
  * ncm_mset_param_set_ftype:
  * @mset: a #NcmMSet
- * @mid: FIXME
- * @pid: FIXME
+ * @mid: Model id
+ * @pid: Parameter id
  * @ftype: FIXME
  *
  * FIXME
@@ -1012,7 +1052,7 @@ ncm_mset_param_get_vector (NcmMSet *mset, NcmVector *params)
  * ncm_mset_param_get_ftype:
  * @mset: a #NcmMSet.
  * @mid: a #NcmModelID.
- * @pid: FIXME
+ * @pid: Parameter id
  *
  * FIXME
  *
@@ -1180,7 +1220,7 @@ ncm_mset_fparams_len (NcmMSet *mset)
 /**
  * ncm_mset_fparam_name:
  * @mset: a #NcmMSet
- * @n: FIXME
+ * @n: Free parameter index
  *
  * FIXME
  *
@@ -1197,9 +1237,28 @@ ncm_mset_fparam_name (NcmMSet *mset, guint n)
 }
 
 /**
+ * ncm_mset_fparam_symbol:
+ * @mset: a #NcmMSet
+ * @n: Free parameter index
+ *
+ * FIXME
+ *
+ * Returns: (transfer none): FIXME
+ */
+const gchar *
+ncm_mset_fparam_symbol (NcmMSet *mset, guint n)
+{
+  g_assert (mset->valid_map && n < mset->fparam_len);
+  {
+    const NcmMSetPIndex pi = g_array_index (mset->pi_array, NcmMSetPIndex, n);
+    return ncm_mset_param_symbol (mset, pi.mid, pi.pid);
+  }
+}
+
+/**
  * ncm_mset_fparam_full_name:
  * @mset: a #NcmMSet
- * @n: FIXME
+ * @n: Free parameter index
  *
  * FIXME
  *
@@ -1226,7 +1285,7 @@ ncm_mset_fparam_full_name (NcmMSet *mset, guint n)
 /**
  * ncm_mset_fparam_get_scale:
  * @mset: a #NcmMSet
- * @n: FIXME
+ * @n: Free parameter index
  *
  * FIXME
  *
@@ -1245,7 +1304,7 @@ ncm_mset_fparam_get_scale (NcmMSet *mset, guint n)
 /**
  * ncm_mset_fparam_get_lower_bound:
  * @mset: a #NcmMSet
- * @n: FIXME
+ * @n: Free parameter index
  *
  * FIXME
  *
@@ -1264,7 +1323,7 @@ ncm_mset_fparam_get_lower_bound (NcmMSet *mset, guint n)
 /**
  * ncm_mset_fparam_get_upper_bound:
  * @mset: a #NcmMSet
- * @n: FIXME
+ * @n: Free parameter index
  *
  * FIXME
  *
@@ -1283,7 +1342,7 @@ ncm_mset_fparam_get_upper_bound (NcmMSet *mset, guint n)
 /**
  * ncm_mset_fparam_get_abstol:
  * @mset: a #NcmMSet
- * @n: FIXME
+ * @n: Free parameter index
  *
  * FIXME
  *
@@ -1302,7 +1361,7 @@ ncm_mset_fparam_get_abstol (NcmMSet *mset, guint n)
 /**
  * ncm_mset_fparam_get:
  * @mset: a #NcmMSet
- * @n: FIXME
+ * @n: Free parameter index
  *
  * FIXME
  *
@@ -1321,7 +1380,7 @@ ncm_mset_fparam_get (NcmMSet *mset, guint n)
 /**
  * ncm_mset_fparam_set:
  * @mset: a #NcmMSet
- * @n: FIXME
+ * @n: Free parameter index
  * @x: FIXME
  *
  * FIXME
@@ -1340,7 +1399,7 @@ ncm_mset_fparam_set (NcmMSet *mset, guint n, const gdouble x)
 /**
  * ncm_mset_fparam_get_pi:
  * @mset: a #NcmMSet
- * @n: FIXME
+ * @n: Free parameter index
  *
  * FIXME
  *
@@ -1357,7 +1416,7 @@ ncm_mset_fparam_get_pi (NcmMSet *mset, guint n)
  * ncm_mset_fparam_get_fpi:
  * @mset: a #NcmMSet.
  * @mid: a #NcmModelID.
- * @pid: FIXME
+ * @pid: Parameter id
  *
  * FIXME
  *
@@ -1372,7 +1431,7 @@ ncm_mset_fparam_get_fpi (NcmMSet *mset, NcmModelID mid, guint pid)
 
 /**
  * ncm_mset_save:
- * @mset: FIXME
+ * @mset: a #NcmMSet
  * @filename: FIXME
  * @save_comment: FIXME
  * 

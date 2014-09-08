@@ -1336,6 +1336,7 @@ _nc_data_cluster_ncount_m2lnL_val (NcmData *data, NcmMSet *mset, gdouble *m2lnL)
     NcClusterMassImpl lnM_impl = nc_cluster_mass_impl (ncount->m);
     gboolean z_p = z_impl & NC_CLUSTER_REDSHIFT_P;
     gboolean lnM_p = lnM_impl & NC_CLUSTER_MASS_P;
+    
     if (z_p && lnM_p)
     {
       _Evald2N evald2n = {cad, ncount, cosmo, m2lnL};

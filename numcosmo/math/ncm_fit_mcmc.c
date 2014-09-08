@@ -48,7 +48,7 @@ enum
 {
   PROP_0,
   PROP_FIT,
-  PROP_MCMCTYPE,
+  PROP_SAMPLER,
   PROP_MTYPE,
   PROP_NTHREADS,
   PROP_DATA_FILE,
@@ -61,7 +61,7 @@ ncm_fit_mcmc_init (NcmFitMCMC *mcmc)
 {
   mcmc->fit             = NULL;
   mcmc->mtype           = NCM_FIT_RUN_MSGS_NONE;
-  mcmc->mcmctype        = NCM_FIT_MCMC_LEN;
+  mcmc->mcs             = NULL;
   mcmc->rng             = NULL;
   mcmc->nt              = ncm_timer_new ();
   mcmc->ser             = ncm_serialize_new (NCM_SERIALIZE_OPT_CLEAN_DUP);
@@ -102,8 +102,8 @@ ncm_fit_mcmc_set_property (GObject *object, guint prop_id, const GValue *value, 
     case PROP_FIT:
       _ncm_fit_mcmc_set_fit_obj (mcmc, g_value_get_object (value));
       break;
-    case PROP_MCMCTYPE:
-      ncm_fit_mcmc_set_mcmctype (mcmc, g_value_get_enum (value));
+    case PROP_SAMPLER:
+      ncm_fit_mcmc_set_sampler (mcmc, g_value_get_object (value));
       break;      
     case PROP_MTYPE:
       ncm_fit_mcmc_set_mtype (mcmc, g_value_get_enum (value));
@@ -131,8 +131,8 @@ ncm_fit_mcmc_get_property (GObject *object, guint prop_id, GValue *value, GParam
     case PROP_FIT:
       g_value_set_object (value, mcmc->fit);
       break;
-    case PROP_MCMCTYPE:
-      g_value_set_enum (value, mcmc->mcmctype);
+    case PROP_SAMPLER:
+      g_value_set_object (value, mcmc->mcs);
       break;      
     case PROP_MTYPE:
       g_value_set_enum (value, mcmc->mtype);
@@ -209,13 +209,13 @@ ncm_fit_mcmc_class_init (NcmFitMCMCClass *klass)
                                                         NCM_TYPE_FIT,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
   g_object_class_install_property (object_class,
-                                   PROP_MCMCTYPE,
-                                   g_param_spec_enum ("mcmctype",
-                                                      NULL,
-                                                      "Montecarlo run type",
-                                                      NCM_TYPE_FIT_MCMC_TYPE, NCM_FIT_MCMC_METROPOLIS,
-                                                      G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-
+                                   PROP_SAMPLER,
+                                   g_param_spec_object ("sampler",
+                                                        NULL,
+                                                        "Montecarlo sampler",
+                                                        NCM_TYPE_MC_SAMPLER,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  
   g_object_class_install_property (object_class,
                                    PROP_MTYPE,
                                    g_param_spec_enum ("mtype",
@@ -242,8 +242,8 @@ _ncm_fit_mcmc_set_fit_obj (NcmFitMCMC *mcmc, NcmFit *fit)
 
 /**
  * ncm_fit_mcmc_new:
- * @fit: FIXME
- * @mcmctype: FIXME
+ * @fit: a #NcmFit
+ * @mcs: a #NcmMCSampler.
  * @mtype: FIXME
  *
  * FIXME
@@ -251,11 +251,11 @@ _ncm_fit_mcmc_set_fit_obj (NcmFitMCMC *mcmc, NcmFit *fit)
  * Returns: FIXME
  */
 NcmFitMCMC *
-ncm_fit_mcmc_new (NcmFit *fit, NcmFitMCMCType rtype, NcmFitRunMsgs mtype)
+ncm_fit_mcmc_new (NcmFit *fit, NcmMCSampler *mcs, NcmFitRunMsgs mtype)
 {
   NcmFitMCMC *mcmc = g_object_new (NCM_TYPE_FIT_MCMC, 
                                 "fit", fit,
-                                "mcmctype", rtype,
+                                "sampler", mcs,
                                 "mtype", mtype,
                                 NULL);
   return mcmc;
@@ -381,33 +381,21 @@ ncm_fit_mcmc_metropolis (NcmMSet *mset, NcmVector *theta, NcmVector *thetastar, 
 /**
  * ncm_fit_mcmc_set_mcmctype:
  * @mc: FIXME
- * @mcmctype: FIXME
+ * @mcs: a #NcmMCSampler.
  *
  * FIXME
  *
  */
 void 
-ncm_fit_mcmc_set_mcmctype (NcmFitMCMC *mcmc, NcmFitMCMCType mcmctype)
+ncm_fit_mcmc_set_sampler (NcmFitMCMC *mcmc, NcmMCSampler *mcs)
 {
-  const GEnumValue *eval = ncm_cfg_enum_get_value (NCM_TYPE_FIT_MCMC_TYPE, mcmctype);
-
   if (mcmc->started)
     g_error ("ncm_fit_mcmc_set_rtype: Cannot change resample type during a run, call ncm_fit_mcmc_end_run() first.");
 
-  mcmc->mcmctype = mcmctype;
+  mcmc->mcs = ncm_mc_sampler_ref (mcs);
 
-  ncm_fit_catalog_set_run_type (mcmc->fcat, eval->value_nick);
-  
-  switch (mcmctype)
-  {
-    case NCM_FIT_MCMC_METROPOLIS:
-      mcmc->sampler = &ncm_fit_mcmc_metropolis;
-      ncm_dataset_bootstrap_set (mcmc->fit->lh->dset, NCM_DATASET_BSTRAP_DISABLE);
-      break;
-    case NCM_FIT_MCMC_LEN:
-      g_assert_not_reached ();
-      break;
-  }
+  ncm_fit_catalog_set_run_type (mcmc->fcat, ncm_mc_sampler_get_name (mcs));
+  ncm_mc_sampler_set_mset (mcs, mcmc->fit->mset);
 }
 
 /**
@@ -682,9 +670,8 @@ ncm_fit_mcmc_run (NcmFitMCMC *mcmc, guint n)
     case NCM_FIT_RUN_MSGS_FULL:
     case NCM_FIT_RUN_MSGS_SIMPLE:
     {
-      const GEnumValue *eval = ncm_cfg_enum_get_value (NCM_TYPE_FIT_MCMC_TYPE, mcmc->mcmctype);
       ncm_cfg_msg_sepa ();
-      g_message ("# NcmFitMCMC: Calculating [%06d] Markov Chain Montecarlo runs [%s]\n", mcmc->n, eval->value_nick);
+      g_message ("# NcmFitMCMC: Calculating [%06d] Markov Chain Montecarlo runs [%s]\n", mcmc->n, ncm_mc_sampler_get_name (mcmc->mcs));
     }
     case NCM_FIT_RUN_MSGS_NONE:
       break;
@@ -723,17 +710,18 @@ _ncm_fit_mcmc_run_single (NcmFitMCMC *mcmc)
     gdouble m2lnL_star, prob, jump = 0.0;
     
     ncm_mset_fparams_get_vector (mcmc->fit->mset, mcmc->theta);
-    mcmc->sampler (mcmc->fit->mset, mcmc->theta, mcmc->thetastar, mcmc->rng);
+    ncm_mc_sampler_generate (mcmc->mcs, mcmc->theta, mcmc->thetastar, mcmc->rng);
     ncm_mset_fparams_set_vector (mcmc->fit->mset, mcmc->thetastar);
 
     ncm_fit_m2lnL_val (mcmc->fit, &m2lnL_star);
 
-//    ncm_vector_log_vals (mcmc->theta, "# Theta  : ", "% 8.5g");
-//    ncm_vector_log_vals (mcmc->thetastar, "# Theta* : ", "% 8.5g");
-    
+/*    
+    ncm_vector_log_vals (mcmc->theta, "# Theta  : ", "% 8.5g");
+    ncm_vector_log_vals (mcmc->thetastar, "# Theta* : ", "% 8.5g");
+*/    
     prob = GSL_MIN (exp ((m2lnL_cur - m2lnL_star) * 0.5), 1.0);
     ncm_fit_state_set_m2lnL_curval (mcmc->fit->fstate, m2lnL_star);
-    
+    /*printf ("# Prob %e\n", prob);*/    
     if (prob != 1.0)
     {
       jump = gsl_rng_uniform (mcmc->rng->r);

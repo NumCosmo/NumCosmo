@@ -611,26 +611,36 @@ main (gint argc, gchar *argv[])
 
   if (de_fit.mcmc)
   {
-      NcmFitMCMC *mcmc = ncm_fit_mcmc_new (fit, NCM_FIT_MCMC_METROPOLIS, de_fit.msg_level);
+    NcmMCSamplerGauss *mcsg = ncm_mc_sampler_gauss_new (0);
+    NcmFitMCMC *mcmc = ncm_fit_mcmc_new (fit, NCM_MC_SAMPLER (mcsg), de_fit.msg_level);
 
-      if (de_fit.mc_seed > -1)
-      {
-        NcmRNG *mcmc_rng = ncm_rng_seeded_new (NULL, de_fit.mc_seed);
-        ncm_fit_mcmc_set_rng (mcmc, mcmc_rng);
-        ncm_rng_free (mcmc_rng);
-      }
-      
-      if (de_fit.mc_data != NULL)
-        ncm_fit_mcmc_set_data_file (mcmc, de_fit.mc_data);
-      
-      ncm_fit_mcmc_start_run (mcmc);
-      ncm_fit_mcmc_run_lre (mcmc, 0, de_fit.mc_lre);
-      ncm_fit_mcmc_end_run (mcmc);
-      
-      ncm_fit_mcmc_mean_covar (mcmc);
-      ncm_fit_catalog_param_pdf (mcmc->fcat, 0);
-      ncm_fit_log_covar (fit);
-      ncm_fit_mcmc_clear (&mcmc);    
+    if (de_fit.fisher)
+    {
+      ncm_mc_sampler_gauss_set_cov (mcsg, fit->fstate->covar);
+    }
+    else
+    {
+      ncm_mc_sampler_gauss_set_cov_from_scale (mcsg);
+    }
+    
+    if (de_fit.mc_seed > -1)
+    {
+      NcmRNG *mcmc_rng = ncm_rng_seeded_new (NULL, de_fit.mc_seed);
+      ncm_fit_mcmc_set_rng (mcmc, mcmc_rng);
+      ncm_rng_free (mcmc_rng);
+    }
+
+    if (de_fit.mc_data != NULL)
+      ncm_fit_mcmc_set_data_file (mcmc, de_fit.mc_data);
+
+    ncm_fit_mcmc_start_run (mcmc);
+    ncm_fit_mcmc_run_lre (mcmc, 0, de_fit.mc_lre);
+    ncm_fit_mcmc_end_run (mcmc);
+
+    ncm_fit_mcmc_mean_covar (mcmc);
+    ncm_fit_catalog_param_pdf (mcmc->fcat, 0);
+    ncm_fit_log_covar (fit);
+    ncm_fit_mcmc_clear (&mcmc);    
   }
   
   if (de_fit.onedim_cr != NULL)

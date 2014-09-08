@@ -1870,7 +1870,7 @@ ncm_fit_numdiff_m2lnL_hessian (NcmFit *fit, NcmMatrix *H)
     nd.n2 = i;
     diff = ncm_numdiff_2_err (&F, &fx, p, p_scale, target_err, &err);
     if (fabs(err / diff) > target_err)
-      g_warning ("ncm_fit_numdiff_m2lnL_hessian: effective error (% 20.15e) bigger then (% 20.15e)", fabs(err / diff), target_err);
+      g_warning ("ncm_fit_numdiff_m2lnL_hessian: effective error (% 20.15e) larger than (% 20.15e)", fabs(err / diff), target_err);
     ncm_matrix_set (H, i, i, diff);
     ncm_mset_fparam_set (fit->mset, i, p);
   }
@@ -1894,7 +1894,7 @@ ncm_fit_numdiff_m2lnL_hessian (NcmFit *fit, NcmMatrix *H)
       nd.p2_scale = p2_scale;
       diff = ncm_numdiff_2_err (&F, &fx, u, u_scale, target_err, &err);
       if (fabs(err / diff) > target_err)
-        g_warning ("ncm_fit_numdiff_m2lnL_hessian: effective error (% 20.15e) bigger then (% 20.15e)", fabs(err / diff), target_err);
+        g_warning ("ncm_fit_numdiff_m2lnL_hessian: effective error (% 20.15e) larger than (% 20.15e)", fabs(err / diff), target_err);
       ncm_matrix_set (H, i, j,
                       0.5 * ( p1_scale * p2_scale * diff -
                              (p2_scale / p1_scale) * ncm_matrix_get (H, i, i) -
