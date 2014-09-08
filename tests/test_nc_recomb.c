@@ -85,7 +85,7 @@ test_nc_recomb_seager_wmap_zstar (void)
   NcRecomb *recomb = nc_recomb_seager_new ();
   NcHICosmo *cosmo = nc_hicosmo_new_from_name (NC_TYPE_HICOSMO, "NcHICosmoDEXcdm");
 
-  nc_hicosmo_de_set_wmap5_params (cosmo);
+  nc_hicosmo_de_set_wmap5_params (NC_HICOSMO_DE (cosmo));
   ncm_model_orig_param_set (NCM_MODEL (cosmo), NC_HICOSMO_DE_XCDM_W,  -1.0);
 
   nc_recomb_prepare_if_needed (recomb, cosmo);
