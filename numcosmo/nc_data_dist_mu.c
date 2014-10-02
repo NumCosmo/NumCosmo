@@ -189,6 +189,7 @@ static gchar *_nc_data_snia_query[] =
   "CfA3 sample",     "SELECT z,mu,s FROM supernovae WHERE quality='CfA3' ORDER BY z",
   "Union2 sample",   "SELECT z,mu,s FROM supernovae WHERE quality='Union2' ORDER BY z",
   "Union2.1 sample", "SELECT z,mu,s FROM supernovae WHERE quality='Union2.1' ORDER BY z",
+  "SDSS sample by Emille", "SELECT z,mu,s FROM supernovae WHERE quality='SDSS-Emille' ORDER BY z",
 };
 #endif
 

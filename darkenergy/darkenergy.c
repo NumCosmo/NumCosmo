@@ -468,8 +468,7 @@ main (gint argc, gchar *argv[])
     }
   }
 
-
-  
+ 
   /* All initializations done! */
 
   if (de_fit.resample)
