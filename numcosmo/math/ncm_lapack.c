@@ -47,14 +47,14 @@
 #  include <mkl_lapacke.h>
 #elif defined HAVE_CLAPACK_H
 #  include <clapack.h>
-#elif defined HAVE_MKL_LAPACK_H
+#endif
+
+#ifdef HAVE_MKL_LAPACK_H
 #  include <mkl_lapack.h>
 #elif HAVE_LAPACK
 void dptsv_ (gint *N, gint *NRHS, gdouble *d, gdouble *e, gdouble *b, gint *ldb, gint *info);
 void dpotrf_ (const char *uplo, const gint *n, double *a, const gint *lda, gint *info);
 #endif /* HAVE_LAPACK */
-
-void dpotrf_ (const char *uplo, const gint *n, double *a, const gint *lda, gint *info);
 
 /**
  * ncm_lapack_dptsv:
