@@ -30,7 +30,7 @@
 #include <glib-object.h>
 #include <numcosmo/build_cfg.h>
 #include <numcosmo/math/ncm_fit.h>
-#include <numcosmo/math/ncm_fit_catalog.h>
+#include <numcosmo/math/ncm_mset_catalog.h>
 #include <numcosmo/math/ncm_timer.h>
 #include <numcosmo/math/memory_pool.h>
 #include <gsl/gsl_histogram.h>
@@ -76,10 +76,9 @@ struct _NcmFitMC
   NcmFitMCResample resample;
   NcmFit *fit;
   NcmMSet *fiduc;
-  NcmFitCatalog *fcat;
+  NcmMSetCatalog *mcat;
   NcmFitRunMsgs mtype;
   NcmFitMCResampleType rtype;
-  NcmRNG *rng;
   NcmVector *bf;
   NcmTimer *nt;
   NcmSerialize *ser;

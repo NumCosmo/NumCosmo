@@ -51,8 +51,7 @@ struct _NcmFitMCBS
   NcmFit *fit;
   NcmFitMC *mc_resample;
   NcmFitMC *mc_bstrap;
-  NcmFitCatalog *fcat;
-  NcmRNG *rng;
+  NcmMSetCatalog *mcat;
   gchar *base_name;
 };
 

@@ -43,7 +43,6 @@
 #include "nc_recomb_seager.h"
 #include "nc_recomb.h"
 #include "math/ncm_spline_func.h"
-#include "math/cvode_util.h"
 #include "math/ncm_util.h"
 #include "math/ncm_spline_cubic_notaknot.h"
 
@@ -154,13 +153,13 @@ nc_recomb_seager_prepare (NcRecomb *recomb, NcHICosmo *cosmo)
 	if (!recomb_seager->init)
 	{
 		gint flag = CVodeInit (recomb_seager->cvode, recomb_seager->ion, lambda_HeIII, recomb_seager->y0);
-		CVODE_CHECK (&flag, "CVodeInit", 1, );
+		NCM_CVODE_CHECK (&flag, "CVodeInit", 1, );
 		recomb_seager->init = TRUE;
 	}
 	else
 	{
 		gint flag = CVodeReInit (recomb_seager->cvode, lambda_HeIII, recomb_seager->y0);
-		CVODE_CHECK (&flag, "CVodeReInit", 1, );
+		NCM_CVODE_CHECK (&flag, "CVodeReInit", 1, );
 	}
 
 	{
@@ -172,25 +171,25 @@ nc_recomb_seager_prepare (NcRecomb *recomb, NcHICosmo *cosmo)
 		NV_Ith_S (recomb_seager->abstol, 1) = 0.0;
 		
 		flag = CVodeSVtolerances (recomb_seager->cvode, reltol, recomb_seager->abstol);
-		CVODE_CHECK (&flag, "CVodeSStolerances", 1, );
+		NCM_CVODE_CHECK (&flag, "CVodeSStolerances", 1, );
 
 		flag = CVodeSetUserData (recomb_seager->cvode , cosmo);
-		CVODE_CHECK (&flag, "CVodeSetUserData", 1, );
+		NCM_CVODE_CHECK (&flag, "CVodeSetUserData", 1, );
 
 		flag = CVodeSetMaxNumSteps (recomb_seager->cvode, 100000);
-		CVODE_CHECK (&flag, "CVodeSetMaxNumSteps", 1, );
+		NCM_CVODE_CHECK (&flag, "CVodeSetMaxNumSteps", 1, );
 
 		flag = CVDense (recomb_seager->cvode, recomb_seager->n);
-		CVODE_CHECK (&flag, "CVDense", 1, );
+		NCM_CVODE_CHECK (&flag, "CVDense", 1, );
 
 		flag = CVDlsSetDenseJacFn (recomb_seager->cvode, recomb_seager->ion_J);
-		CVODE_CHECK (&flag, "CVDlsSetDenseJacFn", 1, );
+		NCM_CVODE_CHECK (&flag, "CVDlsSetDenseJacFn", 1, );
 
 		flag = CVodeSetStopTime (recomb_seager->cvode, lambdaf);
-		CVODE_CHECK (&flag, "CVodeSetStopTime", 1, );
+		NCM_CVODE_CHECK (&flag, "CVodeSetStopTime", 1, );
 
 		flag = CVodeSetMaxErrTestFails (recomb_seager->cvode, 14);
-		CVODE_CHECK (&flag, "CVodeSetMaxErrTestFails", 1, );
+		NCM_CVODE_CHECK (&flag, "CVodeSetMaxErrTestFails", 1, );
 	}
 
 	{
@@ -210,7 +209,7 @@ nc_recomb_seager_prepare (NcRecomb *recomb, NcHICosmo *cosmo)
 		{
 			gdouble lambdai;
 			gint flag = CVode (recomb_seager->cvode, lambdaf, recomb_seager->y, &lambdai, CV_ONE_STEP);
-			CVODE_CHECK (&flag, "CVode", 1, );
+			NCM_CVODE_CHECK (&flag, "CVode", 1, );
 			{
 				const gdouble XHII  = NV_Ith_S (recomb_seager->y, 0);
 				const gdouble XHeII = NV_Ith_S (recomb_seager->y, 2);
@@ -262,7 +261,7 @@ nc_recomb_seager_init (NcRecombSeager *recomb_seager)
 {
 	NcRecomb *recomb = NC_RECOMB (recomb_seager);
   recomb_seager->cvode = CVodeCreate (CV_BDF, CV_NEWTON);
-  CVODE_CHECK ((void *)recomb_seager->cvode, "CVodeCreate", 0, );
+  NCM_CVODE_CHECK ((void *)recomb_seager->cvode, "CVodeCreate", 0, );
 	recomb_seager->init = FALSE;
 	
 	recomb_seager->ion   = &H_ion_full_f;

@@ -41,8 +41,6 @@
 #include "math/ncm_spline_func.h"
 #include "nc_hipert_wkb.h"
 
-#include "math/cvode_util.h"
-
 #include <cvodes/cvodes.h>
 #include <cvodes/cvodes_dense.h>
 #include <cvodes/cvodes_band.h>
@@ -479,26 +477,26 @@ _nc_hipert_wkb_prepare_exact (NcHIPertWKB *wkb, GObject *obj, gdouble alpha_i, g
   if (!pert->cvode_init)
   {
     flag = CVodeInit (pert->cvode, &_nc_hipert_wkb_phase_f, alpha_i, pert->y);
-    CVODE_CHECK (&flag, "CVodeInit", 1, );
+    NCM_CVODE_CHECK (&flag, "CVodeInit", 1, );
     pert->cvode_init = TRUE;
   }
   else
   {
     flag = CVodeReInit (pert->cvode, alpha_i, pert->y);
-    CVODE_CHECK (&flag, "CVodeReInit", 1, );
+    NCM_CVODE_CHECK (&flag, "CVodeReInit", 1, );
   }
 
   flag = CVodeSStolerances (pert->cvode, pert->reltol, pert->abstol);
-  CVODE_CHECK(&flag, "CVodeSStolerances", 1,);
+  NCM_CVODE_CHECK (&flag, "CVodeSStolerances", 1,);
 
   flag = CVodeSetMaxNumSteps (pert->cvode, 1000000);
-  CVODE_CHECK(&flag, "CVodeSetMaxNumSteps", 1, );
+  NCM_CVODE_CHECK (&flag, "CVodeSetMaxNumSteps", 1, );
 
   flag = CVDense (pert->cvode, 2);
-  CVODE_CHECK(&flag, "CVDense", 1, );
+  NCM_CVODE_CHECK (&flag, "CVDense", 1, );
 
   flag = CVDlsSetDenseJacFn (pert->cvode, &_nc_hipert_wkb_phase_J);
-  CVODE_CHECK(&flag, "CVDlsSetDenseJacFn", 1, );  
+  NCM_CVODE_CHECK (&flag, "CVDlsSetDenseJacFn", 1, );  
 
   {
     gdouble last = alpha_i;
@@ -507,12 +505,12 @@ _nc_hipert_wkb_prepare_exact (NcHIPertWKB *wkb, GObject *obj, gdouble alpha_i, g
     arg.wkb = wkb;
 
     flag = CVodeSetUserData (pert->cvode, &arg);
-    CVODE_CHECK (&flag, "CVodeSetFdata", 1, );
+    NCM_CVODE_CHECK (&flag, "CVodeSetFdata", 1, );
 
     while (alpha < alpha_f)
     {
       flag = CVode (pert->cvode, alpha_f, pert->y, &alpha, CV_ONE_STEP);
-      CVODE_CHECK (&flag, "CVode[_nc_hipert_wkb_prepare_exact]", 1, );
+      NCM_CVODE_CHECK (&flag, "CVode[_nc_hipert_wkb_prepare_exact]", 1, );
 
       if (fabs (2.0 * (alpha - last) / (alpha + last)) > 1.0e-6)
       {

@@ -64,6 +64,9 @@ void ncm_mpz_inits (mpz_t z, ...);
 void ncm_mpz_clears (mpz_t z, ...);
 void _ncm_assertion_message_cmpdouble (const gchar *domain, const gchar *file, gint line, const gchar *func, const gchar *expr, gdouble arg1, const gchar *cmp, gdouble arg2);
 
+gboolean ncm_util_cvode_check_flag (gpointer flagvalue, gchar *funcname, gint opt);
+gboolean ncm_util_cvode_print_stats (gpointer cvode);
+
 typedef struct _NcmComplex NcmComplex;
 
 struct _NcmComplex
@@ -250,6 +253,12 @@ G_STMT_START { \
   } \
 } G_STMT_END
 #endif /* !((GLIB_MAJOR_VERSION == 2) && (GLIB_MINOR_VERSION < 38)) */
+
+#define NCM_CVODE_CHECK(chk,name,val,ret) \
+G_STMT_START { \
+  if (!ncm_util_cvode_check_flag (chk, name, val)) \
+    return ret; \
+} G_STMT_END
 
 G_END_DECLS
 

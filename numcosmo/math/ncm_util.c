@@ -44,6 +44,9 @@
 #include <gsl/gsl_randist.h>
 #include <gsl/gsl_complex.h>
 #include <gsl/gsl_complex_math.h>
+#include <cvode/cvode.h>
+#include <cvode/cvode_dense.h>
+
 #ifdef NUMCOSMO_HAVE_FFTW3
 #include <fftw3.h>
 #endif /* NUMCOSMO_HAVE_FFTW3 */
@@ -957,4 +960,106 @@ ncm_complex_Im (NcmComplex *c)
 {
   printf ("Huga %p\n", c);
   return cimag (c->z);
+}
+
+/**
+ * ncm_util_cvode_check_flag:
+ * @flagvalue: FIXME
+ * @funcname: FIXME
+ * @opt: FIXME 
+ *
+ * FIXME
+ *
+ * Returns: FIXME
+ */
+gboolean
+ncm_util_cvode_check_flag (gpointer flagvalue, gchar *funcname, gint opt)
+{
+  gint *errflag;
+
+  switch (opt)
+  {
+    case 0:
+    {
+      if (flagvalue == NULL) 
+      {
+        g_message ("\nSUNDIALS_ERROR: %s() failed - returned NULL pointer\n\n", funcname);
+        return FALSE; 
+      }
+      break;
+    }
+    case 1:
+    {   
+      errflag = (int *) flagvalue;
+      if (*errflag < 0) 
+      {
+        g_message ("\nSUNDIALS_ERROR: %s() failed with flag = %d\n\n", funcname, *errflag);
+        return FALSE; 
+      }
+      break;
+    }
+    case 2:
+    {
+      if (flagvalue == NULL) 
+      {
+        g_message ("\nMEMORY_ERROR: %s() failed - returned NULL pointer\n\n", funcname);
+        return FALSE; 
+      }
+      break;
+    }
+    default:
+      g_assert_not_reached ();
+  }  
+  return TRUE;
+}
+
+/**
+ * ncm_util_cvode_print_stats:
+ * @cvode: FIXME
+ *
+ * FIXME
+ *
+ * Returns: FIXME
+ */
+gboolean 
+ncm_util_cvode_print_stats (gpointer cvode)
+{
+  glong nsteps, nfunceval, nlinsetups, njaceval, ndiffjaceval, nnonliniter, 
+		nconvfail, nerrortests, nrooteval;
+  gint flag, qcurorder, qlastorder;
+	gdouble hinused, hlast, hcur, tcur;
+
+	flag = CVodeGetIntegratorStats(cvode, &nsteps, &nfunceval,
+	                               &nlinsetups, &nerrortests, &qlastorder, &qcurorder,
+	                               &hinused, &hlast, &hcur, &tcur);
+	ncm_util_cvode_check_flag (&flag, "CVodeGetIntegratorStats", 1);
+	
+	
+  flag = CVodeGetNumNonlinSolvIters(cvode, &nnonliniter);
+  ncm_util_cvode_check_flag (&flag, "CVodeGetNumNonlinSolvIters", 1);
+  flag = CVodeGetNumNonlinSolvConvFails(cvode, &nconvfail);
+  ncm_util_cvode_check_flag (&flag, "CVodeGetNumNonlinSolvConvFails", 1); 
+
+  flag = CVDlsGetNumJacEvals (cvode, &njaceval);
+  ncm_util_cvode_check_flag (&flag, "CVDlsGetNumJacEvals", 1);
+  flag = CVDlsGetNumRhsEvals (cvode, &ndiffjaceval);
+  ncm_util_cvode_check_flag (&flag, "CVDlsGetNumRhsEvals", 1);  
+    
+  flag = CVodeGetNumGEvals(cvode, &nrooteval);
+  ncm_util_cvode_check_flag (&flag, "CVodeGetNumGEvals", 1);
+
+  flag = CVodeGetLastOrder(cvode, &qlastorder);
+  ncm_util_cvode_check_flag (&flag, "CVodeGetLastOrder", 1);
+
+  flag = CVodeGetCurrentOrder(cvode, &qcurorder);
+  ncm_util_cvode_check_flag (&flag, "CVodeGetCurrentOrder", 1);
+
+  g_message ("# Final Statistics:\n");
+	g_message ("# nerrortests = %-6ld | %.5e %.5e %.5e %.5e\n", nerrortests, hinused, hlast, hcur, tcur);
+  g_message ("# nsteps = %-6ld nfunceval  = %-6ld nlinsetups = %-6ld njaceval = %-6ld ndiffjaceval = %ld\n",
+         nsteps, nfunceval, nlinsetups, njaceval, ndiffjaceval);
+  g_message ("# nnonliniter = %-6ld nconvfail = %-6ld nerrortests = %-6ld nrooteval = %-6ld qcurorder = %-6d qlastorder = %-6d\n",
+         nnonliniter, nconvfail, nerrortests, nrooteval, qcurorder, qlastorder);
+  
+  return TRUE;
 }

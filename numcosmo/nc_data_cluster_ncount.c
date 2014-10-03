@@ -172,7 +172,7 @@ nc_data_cluster_ncount_set_property (GObject *object, guint prop_id, const GValu
       ncount->fiducial = g_value_get_boolean (value);
       break;
     case PROP_SEED:
-      ncount->seed = g_value_get_ulong (value);
+      ncount->seed = g_value_get_uint64 (value);
       break;
     case PROP_RNG_NAME:
       g_clear_pointer (&ncount->rnd_name, g_free);
@@ -204,14 +204,20 @@ nc_data_cluster_ncount_get_property (GObject *object, guint prop_id, GValue *val
       break;
     case PROP_LNM_TRUE:
     {
-      GVariant *var = ncm_vector_peek_variant (ncount->lnM_true); 
-      g_value_take_variant (value, var);
+      if (ncount->lnM_true != NULL)
+      {
+        GVariant *var = ncm_vector_peek_variant (ncount->lnM_true); 
+        g_value_take_variant (value, var);
+      }
       break;
     }
     case PROP_Z_TRUE:
     {
-      GVariant *var = ncm_vector_peek_variant (ncount->z_true); 
-      g_value_take_variant (value, var);
+      if (ncount->z_true != NULL)
+      {
+        GVariant *var = ncm_vector_peek_variant (ncount->z_true); 
+        g_value_take_variant (value, var);
+      }
       break;
     }
     case PROP_Z_OBS:
@@ -222,8 +228,11 @@ nc_data_cluster_ncount_get_property (GObject *object, guint prop_id, GValue *val
     }
     case PROP_Z_OBS_PARAMS:
     {
-      GVariant *var = ncm_matrix_peek_variant (ncount->z_obs_params); 
-      g_value_take_variant (value, var);
+      if (ncount->z_obs_params != NULL)
+      {
+        GVariant *var = ncm_matrix_peek_variant (ncount->z_obs_params); 
+        g_value_take_variant (value, var);
+      }
       break;
     }
     case PROP_LNM_OBS:
@@ -234,8 +243,11 @@ nc_data_cluster_ncount_get_property (GObject *object, guint prop_id, GValue *val
     }
     case PROP_LNM_OBS_PARAMS:
     {
-      GVariant *var = ncm_matrix_peek_variant (ncount->lnM_obs_params); 
-      g_value_take_variant (value, var);
+      if (ncount->lnM_obs_params != NULL)
+      {
+        GVariant *var = ncm_matrix_peek_variant (ncount->lnM_obs_params); 
+        g_value_take_variant (value, var);
+      }
       break;
     }
     case PROP_SURVEY_AREA:
@@ -248,7 +260,7 @@ nc_data_cluster_ncount_get_property (GObject *object, guint prop_id, GValue *val
       g_value_set_boolean (value, ncount->fiducial);
       break;
     case PROP_SEED:
-      g_value_set_ulong (value, ncount->seed);
+      g_value_set_uint64 (value, ncount->seed);
       break;
     case PROP_RNG_NAME:
       g_value_set_string (value, ncount->rnd_name);
@@ -398,10 +410,10 @@ nc_data_cluster_ncount_class_init (NcDataClusterNCountClass *klass)
                                                         G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
   g_object_class_install_property (object_class,
                                    PROP_SEED,
-                                   g_param_spec_ulong ("rng-seed",
+                                   g_param_spec_uint64 ("rng-seed",
                                                         NULL,
                                                         "Random number generator seed",
-                                                        0, G_MAXULONG, 0,
+                                                        0, G_MAXUINT64, 0,
                                                         G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
   data_class->name = "Cluster abundance unbinned";
 
@@ -1389,6 +1401,18 @@ nc_data_cluster_ncount_true_data (NcDataClusterNCount *ncount, gboolean use_true
     g_assert (ncount->z_true != NULL);
   }
   ncount->use_true_data = use_true_data;
+}
+
+/**
+ * nc_data_cluster_ncount_using_true_data:
+ * @ncount: a #NcDataClusterNCount.
+ *
+ * Returns: if it is using true data.
+ */
+gboolean 
+nc_data_cluster_ncount_using_true_data (NcDataClusterNCount *ncount)
+{
+  return ncount->use_true_data;
 }
 
 static void _nc_data_cluster_ncount_model_init (NcDataClusterNCount *ncount);

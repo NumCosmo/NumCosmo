@@ -755,7 +755,7 @@ ncm_cfg_load_fftw_wisdom (gchar *filename, ...)
   if (g_file_test (full_filename, G_FILE_TEST_EXISTS))
   {
     wis = g_fopen (full_filename, "r");
-    fftw_import_wisdom_from_file(wis);
+    fftw_import_wisdom_from_file (wis);
     fclose (wis);
     ret = TRUE;
   }

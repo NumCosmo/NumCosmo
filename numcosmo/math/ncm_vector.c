@@ -41,6 +41,16 @@
 #include "math/ncm_cfg.h"
 #include "math/ncm_util.h"
 
+#ifdef HAVE_BLAS
+#  ifdef HAVE_MKL_CBLAS_H
+#    include <mkl_cblas.h>
+#  elif HAVE_CBLAS_H
+#    include <cblas.h>
+#  else
+#    include <gsl/gsl_cblas.h>
+#  endif
+#endif
+
 enum
 {
   PROP_0,
@@ -728,6 +738,23 @@ ncm_vector_set_from_variant (NcmVector *cv, GVariant *var)
   }    
 }
 
+/**
+ * ncm_vector_dnrm2: 
+ * @cv: a @NcmVector.
+ * 
+ * Calculates the Euclidean norm of the vector @cv, i.e.,
+ * $\vert\text{cv}\vert_2$.
+ * 
+ * Returns: $\vert\text{cv}\vert_2$.
+ */
+gdouble 
+ncm_vector_dnrm2 (const NcmVector *cv)
+{
+  return cblas_dnrm2 (ncm_vector_len (cv), 
+                      ncm_vector_const_ptr (cv, 0), 
+                      ncm_vector_stride (cv));
+}
+
 static void
 _ncm_vector_dispose (GObject *object)
 {
@@ -812,7 +839,9 @@ static N_Vector
 _ncm_nvclone (N_Vector nv)
 {
   NcmVector *v = ncm_vector_new (ncm_vector_len (NCM_N2VECTOR (nv)));
-  return ncm_vector_nvector (v);
+  N_Vector nnv = ncm_vector_nvector (v);
+  ncm_vector_free (v);
+  return nnv;
 }
 
 static N_Vector
@@ -825,7 +854,7 @@ _ncm_nvcloneempty (N_Vector nv)
 static void
 _ncm_nvspace(N_Vector nv, glong *lrw, glong *liw)
 {
-  *lrw = ncm_vector_len(NCM_N2VECTOR(nv));
+  *lrw = ncm_vector_len (NCM_N2VECTOR (nv));
   *liw = (sizeof (NcmVector) % 4 == 0) ? sizeof (NcmVector) / 4 : sizeof (NcmVector) / 4 + 1;
 }
 
@@ -871,7 +900,9 @@ N_Vector
 ncm_vector_nvector (NcmVector *cv)
 {
   struct _generic_N_Vector *nv = g_slice_new (struct _generic_N_Vector);
-  nv->content = g_object_ref (cv);
+  g_assert_not_reached ();
+  if (cv != NULL)
+    nv->content = ncm_vector_ref (cv);
   nv->ops = &_ncm_ops;
   return nv;
 }
@@ -879,7 +910,8 @@ ncm_vector_nvector (NcmVector *cv)
 static void
 _ncm_vector_nvector_free (N_Vector nv)
 {
-  ncm_vector_free (NCM_N2VECTOR (nv));
+  if (NCM_N2VECTOR (nv) != NULL)
+    ncm_vector_free (NCM_N2VECTOR (nv));
   g_slice_free (struct _generic_N_Vector, nv);
 }
 

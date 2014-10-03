@@ -30,12 +30,8 @@
 
 G_BEGIN_DECLS
 
-#ifdef NUMCOSMO_HAVE_LAPACK
-#ifndef NUMCOSMO_GIR_SCAN
-void dptsv_ (gint *N, gint *NRHS, gdouble *d, gdouble *e, gdouble *b, gint *ldb, gint *info);
-#endif /* NUMCOSMO_GIR_SCAN */
-G_INLINE_FUNC gint ncm_lapack_dptsv (gdouble *d, gdouble *e, gdouble *b, guint size);
-#endif /* NUMCOSMO_HAVE_LAPACK */
+gint ncm_lapack_dptsv (gdouble *d, gdouble *e, gdouble *b, gdouble *x, guint size);
+gint ncm_lapack_dpotrf (gchar uplo, guint size, gdouble *a, guint lda);
 
 #define NCM_LAPACK_CHECK_INFO(func,info) if ((info) != 0) g_error ("Lapack[%s] error %d", func, (info))
 
@@ -48,19 +44,6 @@ G_END_DECLS
 #ifdef NUMCOSMO_HAVE_INLINE
 
 G_BEGIN_DECLS
-
-#ifdef NUMCOSMO_HAVE_LAPACK
-G_INLINE_FUNC gint
-ncm_lapack_dptsv (gdouble *d, gdouble *e, gdouble *b, guint size)
-{
-	gint N = size;
-	gint NRHS = 1;
-	gint LDB = N;
-	gint info;
-	dptsv_ (&N, &NRHS, d, e, b, &LDB, &info);
-	return info;
-}
-#endif /* NUMCOSMO_HAVE_LAPACK */
 
 G_END_DECLS
 

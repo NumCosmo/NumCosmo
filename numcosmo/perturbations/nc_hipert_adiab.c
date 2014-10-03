@@ -63,8 +63,6 @@
 #include "perturbations/nc_hipert_iadiab.h"
 #include "perturbations/nc_hipert_adiab.h"
 
-#include "math/cvode_util.h"
-
 #include <cvodes/cvodes.h>
 #include <cvodes/cvodes_dense.h>
 #include <cvodes/cvodes_band.h>
@@ -402,26 +400,26 @@ nc_hipert_adiab_set_init_cond (NcHIPertAdiab *pa, NcHICosmo *cosmo, gdouble alph
   if (!pert->cvode_init)
   {
     flag = CVodeInit (pert->cvode, &_nc_hipert_adiab_f, alpha_i, pert->y);
-    CVODE_CHECK (&flag, "CVodeInit", 1, );
+    NCM_CVODE_CHECK (&flag, "CVodeInit", 1, );
     pert->cvode_init = TRUE;
   }
   else
   {
     flag = CVodeReInit (pert->cvode, alpha_i, pert->y);
-    CVODE_CHECK (&flag, "CVodeReInit", 1, );
+    NCM_CVODE_CHECK (&flag, "CVodeReInit", 1, );
   }
 
   flag = CVodeSStolerances (pert->cvode, pert->reltol, pert->abstol);
-  CVODE_CHECK(&flag, "CVodeSStolerances", 1,);
+  NCM_CVODE_CHECK (&flag, "CVodeSStolerances", 1,);
 
   flag = CVodeSetMaxNumSteps (pert->cvode, 1000000);
-  CVODE_CHECK(&flag, "CVodeSetMaxNumSteps", 1, );
+  NCM_CVODE_CHECK (&flag, "CVodeSetMaxNumSteps", 1, );
 
   flag = CVDense (pert->cvode, 4);
-  CVODE_CHECK(&flag, "CVDense", 1, );
+  NCM_CVODE_CHECK (&flag, "CVDense", 1, );
 
   flag = CVDlsSetDenseJacFn (pert->cvode, &_nc_hipert_adiab_J);
-  CVODE_CHECK(&flag, "CVDlsSetDenseJacFn", 1, );  
+  NCM_CVODE_CHECK (&flag, "CVDlsSetDenseJacFn", 1, );  
 }
 
 /**
@@ -463,10 +461,10 @@ nc_hipert_adiab_evolve (NcHIPertAdiab *pa, NcHICosmo *cosmo, gdouble alphaf)
   arg.pa = pa;
 
   flag = CVodeSetUserData (pert->cvode, &arg);
-  CVODE_CHECK (&flag, "CVodeSetFdata", 1, );
+  NCM_CVODE_CHECK (&flag, "CVodeSetFdata", 1, );
 
   flag = CVode (pert->cvode, alphaf, pert->y, &alpha_i, CV_NORMAL);
-  CVODE_CHECK (&flag, "CVode[nc_hipert_adiab_evolve]", 1, );
+  NCM_CVODE_CHECK (&flag, "CVode[nc_hipert_adiab_evolve]", 1, );
 
   pert->alpha0 = alpha_i;
 }

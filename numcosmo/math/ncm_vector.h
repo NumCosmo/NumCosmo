@@ -110,6 +110,8 @@ void ncm_vector_log_vals_func (const NcmVector *v, const gchar *prestr, const gc
 
 void ncm_vector_set_from_variant (NcmVector *cv, GVariant *var);
 
+gdouble ncm_vector_dnrm2 (const NcmVector *cv);
+
 G_INLINE_FUNC const NcmVector *ncm_vector_const_new_gsl (const gsl_vector *v);
 G_INLINE_FUNC gdouble ncm_vector_get (const NcmVector *cv, const guint i);
 G_INLINE_FUNC gdouble ncm_vector_fast_get (const NcmVector *cv, const guint i);

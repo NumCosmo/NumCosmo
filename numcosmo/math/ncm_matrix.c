@@ -38,6 +38,7 @@
 #include "build_cfg.h"
 
 #include "math/ncm_matrix.h"
+#include "math/ncm_lapack.h"
 
 #if (defined HAVE_CLAPACK_H) && (defined HAVE_CLAPACK_DPOTRF)
 #include <clapack.h>
@@ -695,7 +696,7 @@ ncm_matrix_add_mul (NcmMatrix *cm, const gdouble alpha, NcmMatrix *b)
 }
 
 /**
- * ncm_matrix_cholesky_decomp: (skip)
+ * ncm_matrix_cholesky_decomp:
  * @cm: a #NcmMatrix.
  *
  * Calculates inplace the Cholesky decomposition for a symmetric positive
@@ -705,18 +706,23 @@ ncm_matrix_add_mul (NcmMatrix *cm, const gdouble alpha, NcmMatrix *b)
 void 
 ncm_matrix_cholesky_decomp (NcmMatrix *cm)
 {
-  gint ret;
-#if (defined HAVE_CLAPACK_H) && (defined HAVE_CLAPACK_DPOTRF)
-  ret = clapack_dpotrf (CblasRowMajor, CblasLower, ncm_matrix_nrows (cm), 
-                        ncm_matrix_data (cm), ncm_matrix_nrows (cm));
-  if (ret < 0)
-    g_error ("ncm_matrix_cholesky_decomp[clapack_dpotrf]: invalid parameter %d", -ret);
-  else if (ret > 0)
-    g_error ("ncm_matrix_cholesky_decomp[clapack_dpotrf]: the leading minor of order %d is not positive definite", ret);
-#else /* Fall back to gsl cholesky */
-  ret = gsl_linalg_cholesky_decomp (ncm_matrix_gsl (cm));
-  NCM_TEST_GSL_RESULT("ncm_matrix_cholesky_decomp[gsl_linalg_cholesky_decomp]", ret);
-#endif
+  gint ret = ncm_lapack_dpotrf ('L', ncm_matrix_nrows (cm), ncm_matrix_data (cm), ncm_matrix_nrows (cm));
+  if (ret != 0)
+  {
+    g_error ("ncm_matrix_cholesky_decomp[ncm_lapack_dpotrf]: %d\n", ret);
+  }
+  {
+    gint i, j;
+    printf ("%u %u!!!!!!\n", ncm_matrix_nrows (cm), ncm_matrix_ncols (cm));
+    for (i = 0; i < ncm_matrix_nrows (cm); i++)
+    {
+      for (j = 0; j < ncm_matrix_ncols (cm); j++)
+      {
+        printf ("% 14.9g ", ncm_matrix_get (cm, i, j));
+      }
+      printf ("\n");
+    }
+  }
 }
 
 /**

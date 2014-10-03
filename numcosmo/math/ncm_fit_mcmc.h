@@ -30,8 +30,8 @@
 #include <glib-object.h>
 #include <numcosmo/build_cfg.h>
 #include <numcosmo/math/ncm_fit.h>
-#include <numcosmo/math/ncm_fit_catalog.h>
-#include <numcosmo/math/ncm_mc_sampler.h>
+#include <numcosmo/math/ncm_mset_catalog.h>
+#include <numcosmo/math/ncm_mset_trans_kern.h>
 #include <numcosmo/math/ncm_timer.h>
 #include <numcosmo/math/memory_pool.h>
 #include <gsl/gsl_histogram.h>
@@ -56,12 +56,11 @@ struct _NcmFitMCMC
   /*< private >*/
   GObject parent_instance;
   NcmFit *fit;
-  NcmFitCatalog *fcat;
+  NcmMSetCatalog *mcat;
   NcmFitRunMsgs mtype;
-  NcmRNG *rng;
   NcmTimer *nt;
   NcmSerialize *ser;
-  NcmMCSampler *mcs;
+  NcmMSetTransKern *tkern;
   NcmVector *theta;
   NcmVector *thetastar;
   guint nthreads;
@@ -69,7 +68,6 @@ struct _NcmFitMCMC
   NcmMemoryPool *mp;
   gint write_index;
   gint cur_sample_id;
-  gint first_sample_id;
   gboolean started;
   GMutex *dup_fit;
   GMutex *resample_lock;
@@ -89,25 +87,25 @@ struct _NcmFitMCMCClass
 
 GType ncm_fit_mcmc_get_type (void) G_GNUC_CONST;
 
-NcmFitMCMC *ncm_fit_mcmc_new (NcmFit *fit, NcmMCSampler *mcs, NcmFitRunMsgs mtype);
-void ncm_fit_mcmc_free (NcmFitMCMC *mc);
-void ncm_fit_mcmc_clear (NcmFitMCMC **mc);
+NcmFitMCMC *ncm_fit_mcmc_new (NcmFit *fit, NcmMSetTransKern *tkern, NcmFitRunMsgs mtype);
+void ncm_fit_mcmc_free (NcmFitMCMC *mcmc);
+void ncm_fit_mcmc_clear (NcmFitMCMC **mcmc);
 
-void ncm_fit_mcmc_set_data_file (NcmFitMCMC *mc, const gchar *filename);
+void ncm_fit_mcmc_set_data_file (NcmFitMCMC *mcmc, const gchar *filename);
 
-void ncm_fit_mcmc_set_mtype (NcmFitMCMC *mc, NcmFitRunMsgs mtype);
-void ncm_fit_mcmc_set_sampler (NcmFitMCMC *mc, NcmMCSampler *mcs);
-void ncm_fit_mcmc_set_nthreads (NcmFitMCMC *mc, guint nthreads);
-void ncm_fit_mcmc_set_fiducial (NcmFitMCMC *mc, NcmMSet *fiduc);
-void ncm_fit_mcmc_set_rng (NcmFitMCMC *mc, NcmRNG *rng);
+void ncm_fit_mcmc_set_mtype (NcmFitMCMC *mcmc, NcmFitRunMsgs mtype);
+void ncm_fit_mcmc_set_trans_kern (NcmFitMCMC *mcmc, NcmMSetTransKern *tkern);
+void ncm_fit_mcmc_set_nthreads (NcmFitMCMC *mcmc, guint nthreads);
+void ncm_fit_mcmc_set_fiducial (NcmFitMCMC *mcmc, NcmMSet *fiduc);
+void ncm_fit_mcmc_set_rng (NcmFitMCMC *mcmc, NcmRNG *rng);
 
-void ncm_fit_mcmc_start_run (NcmFitMCMC *mc);
-void ncm_fit_mcmc_end_run (NcmFitMCMC *mc);
-void ncm_fit_mcmc_reset (NcmFitMCMC *mc);
-void ncm_fit_mcmc_set_first_sample_id (NcmFitMCMC *mc, gint first_sample_id);
-void ncm_fit_mcmc_run (NcmFitMCMC *mc, guint n);
-void ncm_fit_mcmc_run_lre (NcmFitMCMC *mc, guint prerun, gdouble lre);
-void ncm_fit_mcmc_mean_covar (NcmFitMCMC *mc);
+void ncm_fit_mcmc_start_run (NcmFitMCMC *mcmc);
+void ncm_fit_mcmc_end_run (NcmFitMCMC *mcmc);
+void ncm_fit_mcmc_reset (NcmFitMCMC *mcmc);
+void ncm_fit_mcmc_set_first_sample_id (NcmFitMCMC *mcmc, gint first_sample_id);
+void ncm_fit_mcmc_run (NcmFitMCMC *mcmc, guint n);
+void ncm_fit_mcmc_run_lre (NcmFitMCMC *mcmc, guint prerun, gdouble lre);
+void ncm_fit_mcmc_mean_covar (NcmFitMCMC *mcmc);
 
 #define NCM_FIT_MCMC_MIN_FLUSH_INTERVAL (10.0)
 

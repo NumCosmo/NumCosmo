@@ -1,6 +1,6 @@
 ## Process this file with automake to produce Makefile.in
 
-INCLUDES = \
+MY_CFLAGS = \
 	 -DG_LOG_DOMAIN=\"NUMCOSMO\" \
 	 $(GLIB_CFLAGS) \
 	 $(SUNDIALS_CFLAGS) \
@@ -12,7 +12,7 @@ INCLUDES = \
 
 AM_CFLAGS = \
 	 -Wall \
-	 $(INCLUDES)
+	 $(MY_CFLAGS)
 
 SUBDIRS = 
 
@@ -77,24 +77,25 @@ ncm_sources = \
 	math/ncm_dataset.c                 \
 	math/ncm_likelihood.c              \
 	math/ncm_priors.c                  \
-	math/ncm_mc_sampler.c              \
-	math/ncm_mc_sampler_gauss.c        \
+	math/ncm_mset_trans_kern.c         \
+	math/ncm_mset_trans_kern_flat.c    \
+	math/ncm_mset_trans_kern_gauss.c   \
 	math/ncm_fit_state.c               \
 	math/ncm_fit.c                     \
 	math/ncm_fit_gsl_ls.c              \
 	math/ncm_fit_gsl_mm.c              \
 	math/ncm_fit_gsl_mms.c             \
-	math/ncm_fit_catalog.c             \
+	math/ncm_mset_catalog.c            \
 	math/ncm_fit_mc.c                  \
 	math/ncm_fit_mcbs.c                \
 	math/ncm_fit_mcmc.c                \
 	math/ncm_lh_ratio1d.c              \
 	math/ncm_lh_ratio2d.c              \
+	math/ncm_abc.c                     \
 	math/poly.c               \
 	math/integral.c           \
 	math/function_cache.c     \
 	math/quaternion.c         \
-	math/cvode_util.c         \
 	math/quadrature.c         \
 	math/matrix_exp.c         \
 	math/magnus_iserles_ode.c \
@@ -154,21 +155,22 @@ ncm_headers = \
 	math/ncm_data_poisson.h          \
 	math/ncm_dataset.h               \
 	math/ncm_likelihood.h            \
-	math/ncm_mc_sampler.h            \
-	math/ncm_mc_sampler_gauss.h      \
+	math/ncm_mset_trans_kern.h       \
+	math/ncm_mset_trans_kern_flat.h  \
+	math/ncm_mset_trans_kern_gauss.h \
 	math/ncm_priors.h                \
 	math/ncm_fit_state.h             \
 	math/ncm_fit.h                   \
 	math/ncm_fit_gsl_ls.h            \
 	math/ncm_fit_gsl_mm.h            \
 	math/ncm_fit_gsl_mms.h           \
-	math/ncm_fit_catalog.h           \
+	math/ncm_mset_catalog.h          \
 	math/ncm_fit_mc.h                \
 	math/ncm_fit_mcbs.h              \
 	math/ncm_fit_mcmc.h              \
 	math/ncm_lh_ratio1d.h            \
 	math/ncm_lh_ratio2d.h            \
-	math/cvode_util.h         \
+	math/ncm_abc.h                   \
 	math/function_cache.h     \
 	math/integral.h           \
 	math/magnus_iserles_ode.h \
@@ -518,7 +520,7 @@ nc_introspection_sources = \
 NumCosmoMath-1.0.gir: libnumcosmo.la $(INTROSPECTION_SCANNER)
 NumCosmoMath_1_0_gir_VERSION      = 1.0
 NumCosmoMath_1_0_gir_INCLUDES     = GObject-2.0
-NumCosmoMath_1_0_gir_CFLAGS       = $(INCLUDES) -DNUMCOSMO_GIR_SCAN
+NumCosmoMath_1_0_gir_CFLAGS       = $(MY_CFLAGS) -DNUMCOSMO_GIR_SCAN
 NumCosmoMath_1_0_gir_LIBS         = libnumcosmo.la
 NumCosmoMath_1_0_gir_FILES        = $(ncm_introspection_sources)
 NumCosmoMath_1_0_gir_SCANNERFLAGS = \
@@ -530,7 +532,7 @@ INTROSPECTION_GIRS += NumCosmoMath-1.0.gir
 NumCosmo-1.0.gir: libnumcosmo.la $(INTROSPECTION_SCANNER) NumCosmoMath-1.0.gir
 NumCosmo_1_0_gir_VERSION      = 1.0
 NumCosmo_1_0_gir_INCLUDES     = GObject-2.0
-NumCosmo_1_0_gir_CFLAGS       = $(INCLUDES) -DNUMCOSMO_GIR_SCAN
+NumCosmo_1_0_gir_CFLAGS       = $(MY_CFLAGS) -DNUMCOSMO_GIR_SCAN
 NumCosmo_1_0_gir_LIBS         = libnumcosmo.la
 NumCosmo_1_0_gir_FILES        = $(nc_introspection_sources)
 NumCosmo_1_0_gir_SCANNERFLAGS = \

@@ -395,6 +395,20 @@ ncm_dataset_peek_data (NcmDataset *dset, guint n)
 }
 
 /**
+ * ncm_dataset_get_ndata:
+ * @dset: a #NcmDataset
+ *
+ * Gets number of #NcmData in @dset.
+ *
+ * Returns: number of #NcmData objects in @dset.
+ */
+guint
+ncm_dataset_get_ndata (NcmDataset *dset)
+{
+  return dset->oa->len;
+}
+
+/**
  * ncm_dataset_set_data_array:
  * @dset: a #NcmDataset
  * @oa: a #NcmObjArray containing #NcmData objects.

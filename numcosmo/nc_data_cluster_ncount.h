@@ -85,7 +85,7 @@ struct _NcDataClusterNCount
   gsl_histogram2d *purity;
   gsl_histogram2d *sd_lnM;
   gboolean fiducial;
-  gulong seed;
+  guint64 seed;
   gchar *rnd_name;
 };
 
@@ -138,6 +138,7 @@ NcmMSetFunc *nc_data_cluster_ncount_binned_create_func (NcClusterAbundance *cad)
 
 NcmData *nc_data_cluster_ncount_binned_lnM_z_new (NcClusterAbundance *cad);
 void nc_data_cluster_ncount_true_data (NcDataClusterNCount *ncount, gboolean use_true_data);
+gboolean nc_data_cluster_ncount_using_true_data (NcDataClusterNCount *ncount);
 void nc_data_cluster_ncount_init_from_sampling (NcDataClusterNCount *ncount, NcmMSet *mset, NcClusterRedshift *clusterz, NcClusterMass *clusterm, gdouble area_survey, NcmRNG *rng);
 NcmData *nc_data_cluster_ncount_bin_data (NcDataClusterNCount *ncount, gsl_vector *nodes);
 gsl_histogram2d *nc_data_cluster_ncount_hist_lnM_z (NcDataClusterNCount *ncount, gsl_vector *lnM_nodes, gsl_vector *z_nodes);

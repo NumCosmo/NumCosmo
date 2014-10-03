@@ -37,7 +37,6 @@
 #include "build_cfg.h"
 
 #include "math/ncm_ode_spline.h"
-#include "math/cvode_util.h"
 #include "math/integral.h"
 
 #include <cvodes/cvodes.h>
@@ -352,8 +351,8 @@ ncm_ode_spline_prepare (NcmOdeSpline *os, gpointer userdata)
   while (TRUE)
   {
     gint flag = CVode (os->cvode, os->xf, os->y, &x, CV_ONE_STEP);
-    if (!ncm_cvode_util_check_flag (&flag, "CVode", 1))
-      g_error ("ncm_ode_spline_prepare: cannot integrate function.");
+    NCM_CVODE_CHECK (&flag, "CVode", 1, );
+
     if (x0 == x && i++ > 10)
       g_error ("ncm_ode_spline_prepare: cannot integrate function.");
     x0 = x;

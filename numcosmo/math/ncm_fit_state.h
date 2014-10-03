@@ -109,7 +109,7 @@ ncm_fit_state_set_ls (NcmFitState *fstate, NcmVector *f, NcmMatrix *J)
 {
   g_assert (fstate->is_least_squares);
 
-  fstate->m2lnL_curval = gsl_blas_dnrm2 (ncm_vector_gsl (f));
+  fstate->m2lnL_curval = ncm_vector_dnrm2 (f);
 
   ncm_vector_memcpy (fstate->ls_f, f);
   

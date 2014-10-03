@@ -57,8 +57,7 @@ ncm_fit_mcbs_init (NcmFitMCBS *mcbs)
   mcbs->fit = NULL;
   mcbs->mc_resample = NULL;
   mcbs->mc_bstrap = NULL;
-  mcbs->fcat = NULL;
-  mcbs->rng = NULL;
+  mcbs->mcat = NULL;
   mcbs->base_name = NULL;
 }
 
@@ -74,8 +73,8 @@ ncm_fit_mcbs_set_property (GObject *object, guint prop_id, const GValue *value, 
       mcbs->fit = g_value_dup_object (value);
       mcbs->mc_resample = ncm_fit_mc_new (mcbs->fit, NCM_FIT_MC_RESAMPLE_FROM_MODEL, NCM_FIT_RUN_MSGS_NONE);
       mcbs->mc_bstrap = ncm_fit_mc_new (mcbs->fit, NCM_FIT_MC_RESAMPLE_BOOTSTRAP_NOMIX, NCM_FIT_RUN_MSGS_NONE);
-      mcbs->fcat = ncm_fit_catalog_new (mcbs->fit);
-      ncm_fit_catalog_set_run_type (mcbs->fcat, NCM_FIT_CATALOG_RTYPE_BSTRAP_MEAN);
+      mcbs->mcat = ncm_mset_catalog_new (mcbs->fit->mset, 1, NCM_MSET_CATALOG_M2LNL_COLNAME);
+      ncm_mset_catalog_set_run_type (mcbs->mcat, NCM_MSET_CATALOG_RTYPE_BSTRAP_MEAN);
       break;
     case PROP_FILE:
       ncm_fit_mcbs_set_filename (mcbs, g_value_get_string (value));
@@ -98,7 +97,7 @@ ncm_fit_mcbs_get_property (GObject *object, guint prop_id, GValue *value, GParam
       g_value_set_object (value, mcbs->fit);
       break;
     case PROP_FILE:
-      g_value_set_string (value, mcbs->fcat->file);
+      g_value_set_string (value, mcbs->mcat->file);
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -116,9 +115,7 @@ _ncm_fit_mcbs_dispose (GObject *object)
   ncm_fit_mc_clear (&mcbs->mc_resample);
   ncm_fit_mc_clear (&mcbs->mc_bstrap);
 
-  ncm_fit_catalog_clear (&mcbs->fcat);
-
-  ncm_rng_clear (&mcbs->rng);
+  ncm_mset_catalog_clear (&mcbs->mcat);
 
   /* Chain up : end */
   G_OBJECT_CLASS (ncm_fit_mcbs_parent_class)->dispose (object);
@@ -180,7 +177,7 @@ ncm_fit_mcbs_new (NcmFit *fit)
 
 /**
  * ncm_fit_mcbs_free:
- * @mcbs: FIXME
+ * @mcbs: a #NcmFitMCBS
  *
  * FIXME
  *
@@ -193,7 +190,7 @@ ncm_fit_mcbs_free (NcmFitMCBS *mcbs)
 
 /**
  * ncm_fit_mcbs_clear:
- * @mcbs: FIXME
+ * @mcbs: a #NcmFitMCBS
  *
  * FIXME
  *
@@ -206,7 +203,7 @@ ncm_fit_mcbs_clear (NcmFitMCBS **mcbs)
 
 /**
  * ncm_fit_mcbs_set_filename:
- * @mcbs: FIXME
+ * @mcbs: a #NcmFitMCBS
  * @filename: FIXME
  *
  * FIXME
@@ -215,7 +212,7 @@ ncm_fit_mcbs_clear (NcmFitMCBS **mcbs)
 void 
 ncm_fit_mcbs_set_filename (NcmFitMCBS *mcbs, const gchar *filename)
 {
-  const gchar *cur_filename = ncm_fit_catalog_peek_filename (mcbs->fcat); 
+  const gchar *cur_filename = ncm_mset_catalog_peek_filename (mcbs->mcat); 
 
   if (cur_filename != NULL && strcmp (cur_filename, filename) == 0)
     return;
@@ -238,27 +235,11 @@ ncm_fit_mcbs_set_filename (NcmFitMCBS *mcbs, const gchar *filename)
     {
       gchar *resample_str = g_strdup_printf ("%s-resample.fits", mcbs->base_name);
 
-      ncm_fit_catalog_set_file (mcbs->fcat, filename);
+      ncm_mset_catalog_set_file (mcbs->mcat, filename);
 
-      ncm_fit_catalog_reset (mcbs->fcat);
-      ncm_fit_catalog_erase_data (mcbs->fcat);
-      
-      if (mcbs->rng != NULL)
-      {
-        gchar *algo = NULL;
-        gulong seed;
-
-        if (ncm_fit_catalog_get_prng (mcbs->fcat, &algo, &seed))
-        {
-          if (strcmp (algo, ncm_rng_get_algo (mcbs->rng)) != 0 || seed != ncm_rng_get_seed (mcbs->rng))
-            g_error ("ncm_fit_mcbs_set_rng: catalog has PRNG with algorithm: `%s' and seed: %lu, and the montecarlo object has algorithm: `%s' and seed: %lu.",
-                     algo, seed, ncm_rng_get_algo (mcbs->rng), ncm_rng_get_seed (mcbs->rng));
-          g_free (algo);
-        }
-        else
-          ncm_fit_catalog_set_prng (mcbs->fcat, mcbs->rng);
-      }
-      
+      ncm_mset_catalog_reset (mcbs->mcat);
+      ncm_mset_catalog_erase_data (mcbs->mcat);
+            
       g_free (resample_str);
     }
   }
@@ -266,7 +247,7 @@ ncm_fit_mcbs_set_filename (NcmFitMCBS *mcbs, const gchar *filename)
 
 /**
  * ncm_fit_mcbs_set_rng:
- * @mcbs: FIXME
+ * @mcbs: a #NcmFitMCBS
  * @rng: FIXME
  *
  * FIXME
@@ -275,29 +256,15 @@ ncm_fit_mcbs_set_filename (NcmFitMCBS *mcbs, const gchar *filename)
 void
 ncm_fit_mcbs_set_rng (NcmFitMCBS *mcbs, NcmRNG *rng)
 {
-  gchar *algo = NULL;
-  gulong seed = 0;
-  
-  ncm_rng_clear (&mcbs->rng);
-  mcbs->rng = ncm_rng_ref (rng);
+  if (mcbs->mc_bstrap->started)
+    g_error ("ncm_fit_mcbs_set_rng: Cannot change the RNG object during a run.");
 
-  if (ncm_fit_catalog_peek_filename (mcbs->fcat) != NULL)
-  {
-    if (ncm_fit_catalog_get_prng (mcbs->fcat, &algo, &seed))
-    {
-      if (strcmp (algo, ncm_rng_get_algo (rng)) != 0 || seed != ncm_rng_get_seed (rng))
-        g_error ("ncm_fit_mcbs_set_rng: catalog has PRNG with algorithm: `%s' and seed: %lu, and the montecarlo object has algorithm: `%s' and seed: %lu.",
-                 algo, seed, ncm_rng_get_algo (rng), ncm_rng_get_seed (rng));
-      g_free (algo);
-    }
-    else
-      ncm_fit_catalog_set_prng (mcbs->fcat, rng);
-  }
+  ncm_mset_catalog_set_rng (mcbs->mcat, rng);
 }
 
 /**
  * ncm_fit_mcbs_run:
- * @mcbs: FIXME
+ * @mcbs: a #NcmFitMCBS
  * @fiduc: FIXME
  * @ni: FIXME
  * @nf: FIXME
@@ -321,9 +288,9 @@ ncm_fit_mcbs_run (NcmFitMCBS *mcbs, NcmMSet *fiduc, guint ni, guint nf, guint nb
   ncm_fit_mc_set_mtype (mcbs->mc_resample, NCM_FIT_RUN_MSGS_SIMPLE);
   ncm_fit_mc_set_fiducial (mcbs->mc_resample, fiduc);
 
-  if (mcbs->rng != NULL)
+  if (mcbs->mcat->rng != NULL)
   {
-    NcmRNG *rng = ncm_rng_seeded_new (ncm_rng_get_algo (mcbs->rng), ncm_rng_get_seed (mcbs->rng));
+    NcmRNG *rng = ncm_rng_seeded_new (ncm_rng_get_algo (mcbs->mcat->rng), ncm_rng_get_seed (mcbs->mcat->rng));
     ncm_fit_mc_set_rng (mcbs->mc_resample, rng);
     ncm_rng_free (rng);
     cat_has_rng = TRUE;
@@ -332,7 +299,7 @@ ncm_fit_mcbs_run (NcmFitMCBS *mcbs, NcmMSet *fiduc, guint ni, guint nf, guint nb
   ncm_fit_mc_start_run (mcbs->mc_resample);
 
   if (!cat_has_rng)
-    ncm_fit_catalog_set_prng (mcbs->fcat, mcbs->mc_resample->rng);
+    ncm_mset_catalog_set_rng (mcbs->mcat, mcbs->mc_resample->mcat->rng);
   
   if (ni > 0)
     ncm_fit_mc_set_first_sample_id (mcbs->mc_resample, ni);
@@ -361,13 +328,16 @@ ncm_fit_mcbs_run (NcmFitMCBS *mcbs, NcmMSet *fiduc, guint ni, guint nf, guint nb
     ncm_fit_mc_start_run (mcbs->mc_bstrap);
     ncm_fit_mc_run (mcbs->mc_bstrap, nbstraps);
 
-    ncm_fit_catalog_add_from_vector (mcbs->fcat, mcbs->mc_bstrap->fcat->pstats->mean);
-    ncm_fit_catalog_log_current_stats (mcbs->fcat);
+    ncm_mset_catalog_add_from_vector (mcbs->mcat, mcbs->mc_bstrap->mcat->pstats->mean);
+    ncm_mset_catalog_log_current_stats (mcbs->mcat);
 
     ncm_fit_mc_end_run (mcbs->mc_bstrap);
     ncm_fit_mc_reset (mcbs->mc_bstrap);
   }
 
-  ncm_fit_catalog_set_fit_mean_covar (mcbs->fcat);
+  ncm_mset_catalog_get_mean (mcbs->mcat, &mcbs->fit->fstate->fparams);
+  ncm_mset_catalog_get_covar (mcbs->mcat, &mcbs->fit->fstate->covar);
+  mcbs->fit->fstate->has_covar = TRUE;
+  
   ncm_fit_mc_end_run (mcbs->mc_resample);  
 }

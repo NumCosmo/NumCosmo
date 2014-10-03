@@ -61,8 +61,7 @@ ncm_fit_mcmc_init (NcmFitMCMC *mcmc)
 {
   mcmc->fit             = NULL;
   mcmc->mtype           = NCM_FIT_RUN_MSGS_NONE;
-  mcmc->mcs             = NULL;
-  mcmc->rng             = NULL;
+  mcmc->tkern           = NULL;
   mcmc->nt              = ncm_timer_new ();
   mcmc->ser             = ncm_serialize_new (NCM_SERIALIZE_OPT_CLEAN_DUP);
   mcmc->theta           = NULL;
@@ -103,7 +102,7 @@ ncm_fit_mcmc_set_property (GObject *object, guint prop_id, const GValue *value, 
       _ncm_fit_mcmc_set_fit_obj (mcmc, g_value_get_object (value));
       break;
     case PROP_SAMPLER:
-      ncm_fit_mcmc_set_sampler (mcmc, g_value_get_object (value));
+      ncm_fit_mcmc_set_trans_kern (mcmc, g_value_get_object (value));
       break;      
     case PROP_MTYPE:
       ncm_fit_mcmc_set_mtype (mcmc, g_value_get_enum (value));
@@ -132,7 +131,7 @@ ncm_fit_mcmc_get_property (GObject *object, guint prop_id, GValue *value, GParam
       g_value_set_object (value, mcmc->fit);
       break;
     case PROP_SAMPLER:
-      g_value_set_object (value, mcmc->mcs);
+      g_value_set_object (value, mcmc->tkern);
       break;      
     case PROP_MTYPE:
       g_value_set_enum (value, mcmc->mtype);
@@ -141,7 +140,7 @@ ncm_fit_mcmc_get_property (GObject *object, guint prop_id, GValue *value, GParam
       g_value_set_uint (value, mcmc->nthreads);
       break;
     case PROP_DATA_FILE:
-      g_value_set_string (value, ncm_fit_catalog_peek_filename (mcmc->fcat));
+      g_value_set_string (value, ncm_mset_catalog_peek_filename (mcmc->mcat));
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -157,8 +156,7 @@ ncm_fit_mcmc_dispose (GObject *object)
   ncm_fit_clear (&mcmc->fit);
   ncm_timer_clear (&mcmc->nt);
   ncm_serialize_clear (&mcmc->ser);
-  ncm_fit_catalog_clear (&mcmc->fcat);
-  ncm_rng_clear (&mcmc->rng);
+  ncm_mset_catalog_clear (&mcmc->mcat);
   ncm_vector_clear (&mcmc->theta);
   ncm_vector_clear (&mcmc->thetastar);
 
@@ -213,7 +211,7 @@ ncm_fit_mcmc_class_init (NcmFitMCMCClass *klass)
                                    g_param_spec_object ("sampler",
                                                         NULL,
                                                         "Montecarlo sampler",
-                                                        NCM_TYPE_MC_SAMPLER,
+                                                        NCM_TYPE_MSET_TRANS_KERN,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
   
   g_object_class_install_property (object_class,
@@ -237,13 +235,13 @@ _ncm_fit_mcmc_set_fit_obj (NcmFitMCMC *mcmc, NcmFit *fit)
 {
   g_assert (mcmc->fit == NULL);
   mcmc->fit = ncm_fit_ref (fit);
-  mcmc->fcat = ncm_fit_catalog_new (fit);
+  mcmc->mcat = ncm_mset_catalog_new (fit->mset, 1, NCM_MSET_CATALOG_M2LNL_COLNAME);
 }
 
 /**
  * ncm_fit_mcmc_new:
  * @fit: a #NcmFit
- * @mcs: a #NcmMCSampler.
+ * @tkern: a #NcmMSetTransKern.
  * @mtype: FIXME
  *
  * FIXME
@@ -251,11 +249,11 @@ _ncm_fit_mcmc_set_fit_obj (NcmFitMCMC *mcmc, NcmFit *fit)
  * Returns: FIXME
  */
 NcmFitMCMC *
-ncm_fit_mcmc_new (NcmFit *fit, NcmMCSampler *mcs, NcmFitRunMsgs mtype)
+ncm_fit_mcmc_new (NcmFit *fit, NcmMSetTransKern *tkern, NcmFitRunMsgs mtype)
 {
   NcmFitMCMC *mcmc = g_object_new (NCM_TYPE_FIT_MCMC, 
                                 "fit", fit,
-                                "sampler", mcs,
+                                "sampler", tkern,
                                 "mtype", mtype,
                                 NULL);
   return mcmc;
@@ -263,7 +261,7 @@ ncm_fit_mcmc_new (NcmFit *fit, NcmMCSampler *mcs, NcmFitRunMsgs mtype)
 
 /**
  * ncm_fit_mcmc_free:
- * @mc: FIXME
+ * @mcmc: a #NcmFitMCMC
  *
  * FIXME
  *
@@ -276,7 +274,7 @@ ncm_fit_mcmc_free (NcmFitMCMC *mcmc)
 
 /**
  * ncm_fit_mcmc_clear:
- * @mc: FIXME
+ * @mcmc: a #NcmFitMCMC
  *
  * FIXME
  *
@@ -289,7 +287,7 @@ ncm_fit_mcmc_clear (NcmFitMCMC **mcmc)
 
 /**
  * ncm_fit_mcmc_set_data_file:
- * @mc: FIXME
+ * @mcmc: a #NcmFitMCMC
  * @filename: a filename.
  *
  * FIXME
@@ -298,64 +296,23 @@ ncm_fit_mcmc_clear (NcmFitMCMC **mcmc)
 void 
 ncm_fit_mcmc_set_data_file (NcmFitMCMC *mcmc, const gchar *filename)
 {
-  const gchar *cur_filename = ncm_fit_catalog_peek_filename (mcmc->fcat); 
+  const gchar *cur_filename = ncm_mset_catalog_peek_filename (mcmc->mcat);
+  
   if (mcmc->started && cur_filename != NULL)
     g_error ("ncm_fit_mcmc_set_data_file: Cannot change data file during a run, call ncm_fit_mcmc_end_run() first.");    
 
   if (cur_filename != NULL && strcmp (cur_filename, filename) == 0)
     return;
 
-  ncm_fit_catalog_set_file (mcmc->fcat, filename);
-
+  ncm_mset_catalog_set_file (mcmc->mcat, filename);
+  
   if (mcmc->started)
-  {
-    gulong seed;
-    gchar *algo = NULL;
-    if (mcmc->fcat->cur_id > mcmc->cur_sample_id)
-    {
-//      ncm_fit_mcmc_intern_skip (mcmc, mcmc->fcat->cur_id - mcmc->cur_sample_id);
-      g_assert_cmpint (mcmc->cur_sample_id, ==, mcmc->fcat->cur_id);
-    }
-    else if (mcmc->fcat->cur_id < mcmc->cur_sample_id)
-      g_error ("ncm_fit_mcmc_set_data_file: Unknown error cur_id < cur_sample_id [%d < %d].", 
-               mcmc->fcat->cur_id, mcmc->cur_sample_id);
-
-    if (ncm_fit_catalog_get_prng (mcmc->fcat, &algo, &seed))
-    {
-      g_assert_cmpstr (algo, ==, ncm_rng_get_algo (mcmc->rng));
-      g_assert_cmpuint (seed, ==, ncm_rng_get_seed (mcmc->rng));
-      g_free (algo);
-    }
-    else
-      ncm_fit_catalog_set_prng (mcmc->fcat, mcmc->rng);
-  }
-  else
-  {
-    gulong seed;
-    gchar *algo = NULL;
-    if (ncm_fit_catalog_get_prng (mcmc->fcat, &algo, &seed))
-    {
-      if (mcmc->rng == NULL)
-      {
-        NcmRNG *rng = ncm_rng_seeded_new (algo, seed);
-        ncm_fit_mcmc_set_rng (mcmc, rng);
-        ncm_rng_free (rng);
-      }
-      else
-      {
-        g_assert_cmpstr (algo, ==, ncm_rng_get_algo (mcmc->rng));
-        g_assert_cmpuint (seed, ==, ncm_rng_get_seed (mcmc->rng));
-      }
-      g_free (algo);
-    }
-    else if (mcmc->rng != NULL)
-      ncm_fit_catalog_set_prng (mcmc->fcat, mcmc->rng);
-  }
+    g_assert_cmpint (mcmc->cur_sample_id, ==, mcmc->mcat->cur_id);
 }
 
 /**
  * ncm_fit_mcmc_set_mtype:
- * @mc: FIXME
+ * @mcmc: a #NcmFitMCMC
  * @mtype: FIXME
  *
  * FIXME
@@ -367,40 +324,29 @@ ncm_fit_mcmc_set_mtype (NcmFitMCMC *mcmc, NcmFitRunMsgs mtype)
   mcmc->mtype = mtype;
 }
 
-void
-ncm_fit_mcmc_metropolis (NcmMSet *mset, NcmVector *theta, NcmVector *thetastar, NcmRNG *rng)
-{
-  gint i;
-  for (i = 0; i < ncm_vector_len (theta); i++)
-  {
-    gdouble scale = ncm_mset_fparam_get_scale (mset, i);
-    ncm_vector_set (thetastar, i, ncm_vector_get (theta, i) + gsl_ran_gaussian (rng->r, scale * 10.0));
-  }
-}
-
 /**
- * ncm_fit_mcmc_set_mcmctype:
- * @mc: FIXME
- * @mcs: a #NcmMCSampler.
+ * ncm_fit_mcmc_set_trans_kern:
+ * @mcmc: a #NcmFitMCMC
+ * @tkern: a #NcmMSetTransKern.
  *
  * FIXME
  *
  */
 void 
-ncm_fit_mcmc_set_sampler (NcmFitMCMC *mcmc, NcmMCSampler *mcs)
+ncm_fit_mcmc_set_trans_kern (NcmFitMCMC *mcmc, NcmMSetTransKern *tkern)
 {
   if (mcmc->started)
     g_error ("ncm_fit_mcmc_set_rtype: Cannot change resample type during a run, call ncm_fit_mcmc_end_run() first.");
 
-  mcmc->mcs = ncm_mc_sampler_ref (mcs);
+  mcmc->tkern = ncm_mset_trans_kern_ref (tkern);
 
-  ncm_fit_catalog_set_run_type (mcmc->fcat, ncm_mc_sampler_get_name (mcs));
-  ncm_mc_sampler_set_mset (mcs, mcmc->fit->mset);
+  ncm_mset_catalog_set_run_type (mcmc->mcat, ncm_mset_trans_kern_get_name (tkern));
+  ncm_mset_trans_kern_set_mset (tkern, mcmc->fit->mset);
 }
 
 /**
  * ncm_fit_mcmc_set_nthreads:
- * @mc: FIXME
+ * @mcmc: a #NcmFitMCMC
  * @nthreads: FIXME
  *
  * FIXME
@@ -414,7 +360,7 @@ ncm_fit_mcmc_set_nthreads (NcmFitMCMC *mcmc, guint nthreads)
 
 /**
  * ncm_fit_mcmc_set_rng:
- * @mc: FIXME
+ * @mcmc: a #NcmFitMCMC
  * @rng: FIXME
  *
  * FIXME
@@ -423,27 +369,10 @@ ncm_fit_mcmc_set_nthreads (NcmFitMCMC *mcmc, guint nthreads)
 void
 ncm_fit_mcmc_set_rng (NcmFitMCMC *mcmc, NcmRNG *rng)
 {
-  gchar *algo = NULL;
-  gulong seed = 0;
-  
   if (mcmc->started)
-    g_error ("ncm_fit_mcmc_set_rng: Cannot change the PRNG object during a run, call ncm_fit_mcmc_end_run() first.");
+    g_error ("ncm_fit_mcmc_set_rng: Cannot change the RNG object during a run, call ncm_fit_mcmc_end_run() first.");
 
-  ncm_rng_clear (&mcmc->rng);
-  mcmc->rng = ncm_rng_ref (rng);
-
-  if (ncm_fit_catalog_peek_filename (mcmc->fcat) != NULL)
-  {
-    if (ncm_fit_catalog_get_prng (mcmc->fcat, &algo, &seed))
-    {
-      if (strcmp (algo, ncm_rng_get_algo (rng)) != 0 || seed != ncm_rng_get_seed (rng))
-        g_error ("ncm_fit_mcmc_set_rng: catalog has PRNG with algorithm: `%s' and seed: %lu, and the montecarlo object has algorithm: `%s' and seed: %lu.",
-                 algo, seed, ncm_rng_get_algo (rng), ncm_rng_get_seed (rng));
-      g_free (algo);
-    }
-    else
-      ncm_fit_catalog_set_prng (mcmc->fcat, rng);
-  }
+  ncm_mset_catalog_set_rng (mcmc->mcat, rng);
 }
 
 void
@@ -452,7 +381,7 @@ _ncm_fit_mcmc_update (NcmFitMCMC *mcmc, NcmFit *fit)
   const guint part = 5;
   const guint step = (mcmc->n / part) == 0 ? 1 : (mcmc->n / part);
 
-  ncm_fit_catalog_add_from_fit (mcmc->fcat, fit);
+  ncm_mset_catalog_add_from_mset (mcmc->mcat, fit->mset, ncm_fit_state_get_m2lnL_curval (fit->fstate));
   ncm_timer_task_increment (mcmc->nt);
 
   switch (mcmc->mtype)
@@ -465,7 +394,7 @@ _ncm_fit_mcmc_update (NcmFitMCMC *mcmc, NcmFit *fit)
       if ((stepi == 0) || (mcmc->nt->task_pos == mcmc->nt->task_len))
       {
         /* guint acc = stepi == 0 ? step : stepi; */
-        ncm_fit_catalog_log_current_stats (mcmc->fcat);
+        ncm_mset_catalog_log_current_stats (mcmc->mcat);
         /* ncm_timer_task_accumulate (mcmc->nt, acc); */
         ncm_timer_task_log_elapsed (mcmc->nt);
         ncm_timer_task_log_mean_time (mcmc->nt);
@@ -479,7 +408,7 @@ _ncm_fit_mcmc_update (NcmFitMCMC *mcmc, NcmFit *fit)
       fit->mtype = mcmc->mtype;
       ncm_fit_log_start (fit);
       ncm_fit_log_end (fit);
-      ncm_fit_catalog_log_current_stats (mcmc->fcat);
+      ncm_mset_catalog_log_current_stats (mcmc->mcat);
       /* ncm_timer_task_increment (mcmc->nt); */
       ncm_timer_task_log_elapsed (mcmc->nt);
       ncm_timer_task_log_mean_time (mcmc->nt);
@@ -488,23 +417,19 @@ _ncm_fit_mcmc_update (NcmFitMCMC *mcmc, NcmFit *fit)
       break;      
   }
 
-  if ((mcmc->fcat->fmode != NCM_FIT_MCMC_MIN_FLUSH_INTERVAL) &&
+  if ((mcmc->mcat->fmode != NCM_FIT_MCMC_MIN_FLUSH_INTERVAL) &&
       (ncm_timer_task_mean_time (mcmc->nt) < NCM_FIT_MCMC_MIN_FLUSH_INTERVAL))
   {
-    ncm_fit_catalog_set_flush_mode (mcmc->fcat, NCM_FIT_CATALOG_FLUSH_TIMED);
-    ncm_fit_catalog_set_flush_interval (mcmc->fcat, NCM_FIT_MCMC_MIN_FLUSH_INTERVAL);
+    ncm_mset_catalog_set_flush_mode (mcmc->mcat, NCM_MSET_CATALOG_FLUSH_TIMED);
+    ncm_mset_catalog_set_flush_interval (mcmc->mcat, NCM_FIT_MCMC_MIN_FLUSH_INTERVAL);
   }
 }
 
-void
-_ncm_fit_mcmc_resample_bstrap (NcmDataset *dset, NcmMSet *mset, NcmRNG *rng)
-{
-  ncm_dataset_bootstrap_resample (dset, rng);
-}
+static void ncm_fit_mcmc_intern_skip (NcmFitMCMC *mcmc, guint n);
 
 /**
  * ncm_fit_mcmc_start_run:
- * @mc: a #NcmFitMCMC
+ * @mcmc: a #NcmFitMCMC
  * 
  * FIXME
  * 
@@ -532,17 +457,17 @@ ncm_fit_mcmc_start_run (NcmFitMCMC *mcmc)
       break;
   }
 
-  if (mcmc->rng == NULL)
+  if (mcmc->mcat->rng == NULL)
   {
     NcmRNG *rng = ncm_rng_new (NULL);
     ncm_rng_set_random_seed (rng, FALSE);
     ncm_fit_mcmc_set_rng (mcmc, rng);
     if (mcmc->mtype > NCM_FIT_RUN_MSGS_NONE)
-      g_message ("# NcmFitMCMC: No PRNG was defined, using algorithm: `%s' and seed: %lu.\n",
+      g_message ("# NcmFitMCMC: No RNG was defined, using algorithm: `%s' and seed: %lu.\n",
                  ncm_rng_get_algo (rng), ncm_rng_get_seed (rng));
     ncm_rng_free (rng);
   }
-  
+
   mcmc->started = TRUE;
 
   {
@@ -556,21 +481,37 @@ ncm_fit_mcmc_start_run (NcmFitMCMC *mcmc)
     mcmc->thetastar = ncm_vector_new (fparam_len);
   }
   
-  ncm_fit_catalog_sync (mcmc->fcat, TRUE);
-  if (mcmc->fcat->cur_id > mcmc->cur_sample_id)
+  ncm_mset_catalog_sync (mcmc->mcat, TRUE);
+  if (mcmc->mcat->cur_id > mcmc->cur_sample_id)
   {
-//    ncm_fit_mcmc_intern_skip (mcmc, mcmc->fcat->cur_id - mcmc->cur_sample_id);
-    g_assert_cmpint (mcmc->cur_sample_id, ==, mcmc->fcat->cur_id);
+    ncm_fit_mcmc_intern_skip (mcmc, mcmc->mcat->cur_id - mcmc->cur_sample_id);
+    g_assert_cmpint (mcmc->cur_sample_id, ==, mcmc->mcat->cur_id);
   }
-  else if (mcmc->fcat->cur_id < mcmc->cur_sample_id)
+  else if (mcmc->mcat->cur_id < mcmc->cur_sample_id)
     g_error ("ncm_fit_mcmc_set_data_file: Unknown error cur_id < cur_sample_id [%d < %d].", 
-             mcmc->fcat->cur_id, mcmc->cur_sample_id);
+             mcmc->mcat->cur_id, mcmc->cur_sample_id);
   
+  {
+    NcmVector *cur_row = NULL;
+    
+    cur_row = ncm_mset_catalog_peek_current_row (mcmc->mcat);
+    if (cur_row != NULL)
+    {
+      ncm_mset_fparams_set_vector_offset (mcmc->fit->mset, cur_row, 1);
+      ncm_fit_state_set_m2lnL_curval (mcmc->fit->fstate, ncm_vector_get (cur_row, 0));
+    }
+    else
+    {
+      gdouble m2lnL = 0.0;
+      ncm_fit_m2lnL_val (mcmc->fit, &m2lnL);
+      ncm_fit_state_set_m2lnL_curval (mcmc->fit->fstate, m2lnL);
+    }
+  }
 }
 
 /**
  * ncm_fit_mcmc_end_run:
- * @mc: FIXME
+ * @mcmc: a #NcmFitMCMC
  * 
  * FIXME
  * 
@@ -587,14 +528,14 @@ ncm_fit_mcmc_end_run (NcmFitMCMC *mcmc)
     mcmc->mp = NULL;
   }
 
-  ncm_fit_catalog_sync (mcmc->fcat, TRUE);
+  ncm_mset_catalog_sync (mcmc->mcat, TRUE);
   
   mcmc->started = FALSE;
 }
 
 /**
  * ncm_fit_mcmc_reset:
- * @mc: FIXME
+ * @mcmc: a #NcmFitMCMC
  * 
  * FIXME
  * 
@@ -606,13 +547,35 @@ ncm_fit_mcmc_reset (NcmFitMCMC *mcmc)
   mcmc->cur_sample_id   = -1;
   mcmc->write_index     = 0;
   mcmc->started         = FALSE;  
-  ncm_fit_catalog_reset (mcmc->fcat);
-  ncm_rng_clear (&mcmc->rng);
+  ncm_mset_catalog_reset (mcmc->mcat);
+}
+
+static void 
+ncm_fit_mcmc_intern_skip (NcmFitMCMC *mcmc, guint n)
+{
+  if (n == 0)
+    return;
+
+  switch (mcmc->mtype)
+  {
+    default:
+    case NCM_FIT_RUN_MSGS_FULL:
+    case NCM_FIT_RUN_MSGS_SIMPLE:
+    {
+      ncm_cfg_msg_sepa ();
+      g_message ("# NcmFitMCMC: Skipping %u tries, will start at %u-th try.\n", n, mcmc->cur_sample_id + n + 1 + 1);
+    }
+    case NCM_FIT_RUN_MSGS_NONE:
+      break;
+  }
+
+  mcmc->cur_sample_id += n;
+  mcmc->write_index = mcmc->cur_sample_id + 1;
 }
 
 /**
  * ncm_fit_mcmc_set_first_sample_id:
- * @mc: FIXME
+ * @mcmc: a #NcmFitMCMC
  * @first_sample_id: FIXME
  * 
  * FIXME
@@ -621,7 +584,7 @@ ncm_fit_mcmc_reset (NcmFitMCMC *mcmc)
 void 
 ncm_fit_mcmc_set_first_sample_id (NcmFitMCMC *mcmc, gint first_sample_id)
 {
-  if (mcmc->fcat->first_id == first_sample_id)
+  if (mcmc->mcat->first_id == first_sample_id)
     return;
 
   if (!mcmc->started)
@@ -629,9 +592,9 @@ ncm_fit_mcmc_set_first_sample_id (NcmFitMCMC *mcmc, gint first_sample_id)
 
   if (first_sample_id <= mcmc->cur_sample_id)
     g_error ("ncm_fit_mcmc_set_first_sample_id: cannot move first sample id backwards to: %d, catalog first id: %d, current sample id: %d.",
-             first_sample_id, mcmc->fcat->first_id, mcmc->cur_sample_id);
+             first_sample_id, mcmc->mcat->first_id, mcmc->cur_sample_id);
 
-  ncm_fit_catalog_set_first_id (mcmc->fcat, first_sample_id);
+  ncm_mset_catalog_set_first_id (mcmc->mcat, first_sample_id);
 }
 
 static void _ncm_fit_mcmc_run_single (NcmFitMCMC *mcmc);
@@ -639,7 +602,7 @@ static void _ncm_fit_mcmc_run_mt (NcmFitMCMC *mcmc);
 
 /**
  * ncm_fit_mcmc_run:
- * @mc: a #NcmFitMCMC
+ * @mcmc: a #NcmFitMCMC
  * @n: total number of realizations to run
  * 
  * Runs the montecarlo until it reaches the @n-th realization. Note that
@@ -671,7 +634,7 @@ ncm_fit_mcmc_run (NcmFitMCMC *mcmc, guint n)
     case NCM_FIT_RUN_MSGS_SIMPLE:
     {
       ncm_cfg_msg_sepa ();
-      g_message ("# NcmFitMCMC: Calculating [%06d] Markov Chain Montecarlo runs [%s]\n", mcmc->n, ncm_mc_sampler_get_name (mcmc->mcs));
+      g_message ("# NcmFitMCMC: Calculating [%06d] Markov Chain Montecarlo runs [%s]\n", mcmc->n, ncm_mset_trans_kern_get_name (mcmc->tkern));
     }
     case NCM_FIT_RUN_MSGS_NONE:
       break;
@@ -702,37 +665,35 @@ static void
 _ncm_fit_mcmc_run_single (NcmFitMCMC *mcmc)
 {
   guint i = 0;
-  gdouble m2lnL_cur;
-  ncm_fit_m2lnL_val (mcmc->fit, &m2lnL_cur);
   
   for (i = 0; i < mcmc->n; i++)
   {
+    gdouble m2lnL_cur = ncm_fit_state_get_m2lnL_curval (mcmc->fit->fstate);
     gdouble m2lnL_star, prob, jump = 0.0;
     
     ncm_mset_fparams_get_vector (mcmc->fit->mset, mcmc->theta);
-    ncm_mc_sampler_generate (mcmc->mcs, mcmc->theta, mcmc->thetastar, mcmc->rng);
+    ncm_mset_trans_kern_generate (mcmc->tkern, mcmc->theta, mcmc->thetastar, mcmc->mcat->rng);
     ncm_mset_fparams_set_vector (mcmc->fit->mset, mcmc->thetastar);
 
     ncm_fit_m2lnL_val (mcmc->fit, &m2lnL_star);
-
-/*    
+/*
     ncm_vector_log_vals (mcmc->theta, "# Theta  : ", "% 8.5g");
     ncm_vector_log_vals (mcmc->thetastar, "# Theta* : ", "% 8.5g");
-*/    
+*/
     prob = GSL_MIN (exp ((m2lnL_cur - m2lnL_star) * 0.5), 1.0);
     ncm_fit_state_set_m2lnL_curval (mcmc->fit->fstate, m2lnL_star);
-    /*printf ("# Prob %e\n", prob);*/    
+    
+    /*printf ("# Prob %e [% 21.16g % 21.16g] % 21.16g\n", prob, m2lnL_cur, m2lnL_star, m2lnL_cur - m2lnL_star);*/    
+
     if (prob != 1.0)
     {
-      jump = gsl_rng_uniform (mcmc->rng->r);
+      jump = gsl_rng_uniform (mcmc->mcat->rng->r);
       if (jump > prob)
       {
         ncm_mset_fparams_set_vector (mcmc->fit->mset, mcmc->theta);
         ncm_fit_state_set_m2lnL_curval (mcmc->fit->fstate, m2lnL_cur);
       }
     }
-
-    m2lnL_cur = ncm_fit_state_get_m2lnL_curval (mcmc->fit->fstate);
     
     _ncm_fit_mcmc_update (mcmc, mcmc->fit);
     mcmc->write_index++;
@@ -760,6 +721,8 @@ _ncm_fit_mcmc_mt_eval (glong i, glong f, gpointer data)
   NcmFit **fit_ptr = ncm_memory_pool_get (mcmc->mp);
   NcmFit *fit = *fit_ptr;
   guint j;
+  
+  g_assert_not_reached (); /* FIXME not implemented */
 
   for (j = i; j < f; j++)
   {
@@ -818,7 +781,7 @@ _ncm_fit_mcmc_run_mt (NcmFitMCMC *mcmc)
 
 /**
  * ncm_fit_mcmc_run_lre:
- * @mc: FIXME
+ * @mcmc: a #NcmFitMCMC
  * @prerun: FIXME
  * @lre: FIXME
  *
@@ -840,20 +803,20 @@ ncm_fit_mcmc_run_lre (NcmFitMCMC *mcmc, guint prerun, gdouble lre)
     prerun = fparam_len * 100;
   }
 
-  if (ncm_fit_catalog_len (mcmc->fcat) < prerun)
+  if (ncm_mset_catalog_len (mcmc->mcat) < prerun)
   {
-    guint prerun_left = prerun - ncm_fit_catalog_len (mcmc->fcat);
+    guint prerun_left = prerun - ncm_mset_catalog_len (mcmc->mcat);
     if (mcmc->mtype >= NCM_FIT_RUN_MSGS_SIMPLE)
       g_message ("# NcmFitMCMC: Running first %u pre-runs...\n", prerun_left);
     ncm_fit_mcmc_run (mcmc, prerun);
   }
 
-  lerror = ncm_fit_catalog_largest_error (mcmc->fcat);
+  lerror = ncm_mset_catalog_largest_error (mcmc->mcat);
 
   while (lerror > lre)
   {
     const gdouble lerror2 = lerror * lerror;
-    gdouble n = ncm_fit_catalog_len (mcmc->fcat);
+    gdouble n = ncm_mset_catalog_len (mcmc->mcat);
     gdouble m = n * lerror2 / lre2;
     guint runs = ((m - n) > 1000.0) ? ceil ((m - n) * 0.25) : ceil (m - n);
 
@@ -863,7 +826,7 @@ ncm_fit_mcmc_run_lre (NcmFitMCMC *mcmc, guint prerun, gdouble lre)
       g_message ("# NcmFitMCMC: Running more %u runs...\n", runs);
     }
     ncm_fit_mcmc_run (mcmc, mcmc->cur_sample_id + runs + 1);
-    lerror = ncm_fit_catalog_largest_error (mcmc->fcat);
+    lerror = ncm_mset_catalog_largest_error (mcmc->mcat);
   }
 
   if (mcmc->mtype >= NCM_FIT_RUN_MSGS_SIMPLE)
@@ -872,12 +835,15 @@ ncm_fit_mcmc_run_lre (NcmFitMCMC *mcmc, guint prerun, gdouble lre)
 
 /**
  * ncm_fit_mcmc_mean_covar:
- * @mc: FIXME
+ * @mcmc: a #NcmFitMCMC
  *
  * FIXME
  */
 void
 ncm_fit_mcmc_mean_covar (NcmFitMCMC *mcmc)
 {
-  ncm_fit_catalog_set_fit_mean_covar (mcmc->fcat);
+  ncm_mset_catalog_get_mean (mcmc->mcat, &mcmc->fit->fstate->fparams);
+  ncm_mset_catalog_get_covar (mcmc->mcat, &mcmc->fit->fstate->covar);
+  ncm_mset_fparams_set_vector (mcmc->mcat->mset, mcmc->fit->fstate->fparams);
+  mcmc->fit->fstate->has_covar = TRUE;
 }

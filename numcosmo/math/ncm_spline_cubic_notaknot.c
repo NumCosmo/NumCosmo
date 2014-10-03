@@ -40,6 +40,7 @@
 #include "math/ncm_spline_cubic_notaknot.h"
 #include "math/ncm_cfg.h"
 #include "math/ncm_util.h"
+#include "math/ncm_lapack.h"
 
 #include <math.h>
 #include <gsl/gsl_math.h>
@@ -113,7 +114,7 @@ _ncm_spline_notaknot_prepare_base (NcmSpline *s)
 	const gdouble h_1 = ncm_vector_get (s->xv, 2) - ncm_vector_get (s->xv, 1);
 	const gdouble h_nm1 = ncm_vector_get (s->xv, n)   - ncm_vector_get (s->xv, nm1);
 	const gdouble h_nm2 = ncm_vector_get (s->xv, nm1) - ncm_vector_get (s->xv, nm2);
-#ifdef HAVE_LAPACKA
+#ifdef HAVE_LAPACK
 	NcmVector *g = sc->g;
 	sc->g = sc->c;
 #endif
@@ -174,46 +175,15 @@ _ncm_spline_notaknot_prepare_base (NcmSpline *s)
 
 	{
 		gsize loc_sys_size = sys_size - start_i - pad_i;
-#ifdef HAVE_LAPACKA
 		{
-			printf ("# nhocC[%zu] % 20.15g\n", nm2, ncm_vector_fast_get (sc->diag, nm2));
-			gint info = ncm_lapack_dptsv (&NCM_VECTOR_DATA(sc->diag)[start_i],
-			                              &NCM_VECTOR_DATA(sc->offdiag)[start_i],
-			                              &NCM_VECTOR_DATA(sc->g)[start_i + 1],
+			gint info = ncm_lapack_dptsv (ncm_vector_ptr (sc->diag, start_i),
+                                    ncm_vector_ptr (sc->offdiag, start_i),
+			                              ncm_vector_ptr (sc->g, start_i + 1),
+                                    ncm_vector_ptr (sc->g, start_i + 1),
 			                              loc_sys_size);
-			sc->g = g;
-			if (info != 0)
-			{
-				for (i = 0; i < s->len; i++)
-				{
-					printf ("[%zu/%zu] [%zu, %zu] % 20.15g %20.15g [% 20.15g % 20.15g]\n", i, loc_sys_size, start_i, pad_i, ncm_vector_get (s->xv, i), ncm_vector_get (s->yv, i),
-					        ncm_vector_fast_get (sc->diag, i),
-					        ncm_vector_fast_get (sc->offdiag, i));
-				}
-
-			}
+      sc->g = g;
 			NCM_LAPACK_CHECK_INFO ("dptsv", info);
 		}
-#else
-		{
-			gsl_vector_view g_vec = gsl_vector_subvector (ncm_vector_gsl (sc->g), 1 + start_i, loc_sys_size);
-			gsl_vector_view diag_vec = gsl_vector_subvector (ncm_vector_gsl (sc->diag), start_i, loc_sys_size);
-			gsl_vector_view offdiag_vec = gsl_vector_subvector (ncm_vector_gsl (sc->offdiag), start_i, loc_sys_size - 1);
-			gsl_vector_view solution_vec = gsl_vector_subvector (ncm_vector_gsl (sc->c), start_i + 1, loc_sys_size);
-			gint status = gsl_linalg_solve_symm_tridiag (&diag_vec.vector,
-			                                             &offdiag_vec.vector,
-			                                             &g_vec.vector,
-			                                             &solution_vec.vector);
-			if (status != GSL_SUCCESS)
-			{
-				guint i;
-				for (i = 0; i < s->len; i++)
-					printf ("x= % 20.8g y = % 20.8g\n", ncm_vector_get (s->xv, i), ncm_vector_get (s->yv, i));
-			}
-
-			NCM_TEST_GSL_RESULT ("_ncm_spline_notaknot_prepare[gsl_linalg_solve_symm_tridiag]", status);
-		}
-#endif
 		{
 			const gdouble c1   = ncm_vector_fast_get (sc->c, 1);
 			const gdouble c2   = ncm_vector_fast_get (sc->c, 2);

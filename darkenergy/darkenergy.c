@@ -568,10 +568,10 @@ main (gint argc, gchar *argv[])
       ncm_fit_mc_end_run (mc);
       
       ncm_fit_mc_mean_covar (mc);
-      ncm_fit_catalog_param_pdf (mc->fcat, 0);
+      ncm_mset_catalog_param_pdf (mc->mcat, 0);
       ncm_fit_log_covar (fit);
       {
-        gdouble p_value = ncm_fit_catalog_param_pdf_pvalue (mc->fcat, m2lnL, FALSE);
+        gdouble p_value = ncm_mset_catalog_param_pdf_pvalue (mc->mcat, m2lnL, FALSE);
         ncm_message ("#   - pvalue for fitted model [% 20.15g] %04.2f%%.\n#\n", m2lnL, 100.0 * p_value);
       }
       ncm_fit_mc_clear (&mc);
@@ -599,10 +599,10 @@ main (gint argc, gchar *argv[])
 
       ncm_fit_mcbs_run (mcbs, resample_mset, de_fit.mc_ni, de_fit.montecarlo, de_fit.mcbs, de_fit.mc_rtype, de_fit.msg_level, de_fit.mc_nthreads);
 
-      ncm_fit_catalog_param_pdf (mcbs->fcat, 0);
+      ncm_mset_catalog_param_pdf (mcbs->mcat, 0);
       ncm_fit_log_covar (fit);
       {
-        gdouble p_value = ncm_fit_catalog_param_pdf_pvalue (mcbs->fcat, m2lnL, FALSE);
+        gdouble p_value = ncm_mset_catalog_param_pdf_pvalue (mcbs->mcat, m2lnL, FALSE);
         ncm_message ("#   - pvalue for fitted model [% 20.15g] %04.2f%%.\n#\n", m2lnL, 100.0 * p_value);
       }
       ncm_fit_mcbs_clear (&mcbs);
@@ -611,16 +611,16 @@ main (gint argc, gchar *argv[])
 
   if (de_fit.mcmc)
   {
-    NcmMCSamplerGauss *mcsg = ncm_mc_sampler_gauss_new (0);
-    NcmFitMCMC *mcmc = ncm_fit_mcmc_new (fit, NCM_MC_SAMPLER (mcsg), de_fit.msg_level);
+    NcmMSetTransKernGauss *mcsg = ncm_mset_trans_kern_gauss_new (0);
+    NcmFitMCMC *mcmc = ncm_fit_mcmc_new (fit, NCM_MSET_TRANS_KERN (mcsg), de_fit.msg_level);
 
     if (de_fit.fisher)
     {
-      ncm_mc_sampler_gauss_set_cov (mcsg, fit->fstate->covar);
+      ncm_mset_trans_kern_gauss_set_cov (mcsg, fit->fstate->covar);
     }
     else
     {
-      ncm_mc_sampler_gauss_set_cov_from_scale (mcsg);
+      ncm_mset_trans_kern_gauss_set_cov_from_scale (mcsg);
     }
     
     if (de_fit.mc_seed > -1)
@@ -638,7 +638,7 @@ main (gint argc, gchar *argv[])
     ncm_fit_mcmc_end_run (mcmc);
 
     ncm_fit_mcmc_mean_covar (mcmc);
-    ncm_fit_catalog_param_pdf (mcmc->fcat, 0);
+    ncm_mset_catalog_param_pdf (mcmc->mcat, 0);
     ncm_fit_log_covar (fit);
     ncm_fit_mcmc_clear (&mcmc);    
   }

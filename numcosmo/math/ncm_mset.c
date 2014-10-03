@@ -1165,6 +1165,27 @@ ncm_mset_fparams_set_vector (NcmMSet *mset, const NcmVector *x)
 }
 
 /**
+ * ncm_mset_fparams_set_vector_offset:
+ * @mset: a #NcmMSet
+ * @x: FIXME
+ * @offset: Starting index.
+ *
+ * FIXME
+ *
+ */
+void
+ncm_mset_fparams_set_vector_offset (NcmMSet *mset, const NcmVector *x, guint offset)
+{
+  guint fpi;
+
+  for (fpi = 0; fpi < mset->fparam_len; fpi++)
+  {
+    const NcmMSetPIndex pi = g_array_index (mset->pi_array, NcmMSetPIndex, fpi);
+    ncm_mset_param_set (mset, pi.mid, pi.pid, ncm_vector_get (x, fpi + offset));
+  }
+}
+
+/**
  * ncm_mset_fparams_set_array:
  * @mset: a #NcmMSet
  * @x: (array) (element-type double): FIXME

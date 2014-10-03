@@ -95,18 +95,19 @@
 #ifdef NUMCOSMO_HAVE_LEVMAR
 #include <numcosmo/math/ncm_fit_levmar.h>
 #endif /* NUMCOSMO_HAVE_LEVMAR */
-#include <numcosmo/math/ncm_mc_sampler.h>
-#include <numcosmo/math/ncm_mc_sampler_gauss.h>
-#include <numcosmo/math/ncm_fit_catalog.h>
+#include <numcosmo/math/ncm_mset_catalog.h>
+#include <numcosmo/math/ncm_mset_trans_kern.h>
+#include <numcosmo/math/ncm_mset_trans_kern_flat.h>
+#include <numcosmo/math/ncm_mset_trans_kern_gauss.h>
 #include <numcosmo/math/ncm_fit_mc.h>
 #include <numcosmo/math/ncm_fit_mcbs.h>
 #include <numcosmo/math/ncm_fit_mcmc.h>
 #include <numcosmo/math/ncm_lh_ratio1d.h>
 #include <numcosmo/math/ncm_lh_ratio2d.h>
+#include <numcosmo/math/ncm_abc.h>
 
 /* Utilities */
 #include <numcosmo/math/memory_pool.h>
-#include <numcosmo/math/cvode_util.h>
 #include <numcosmo/math/mpq_tree.h>
 #include <numcosmo/math/quaternion.h>
 #include <numcosmo/math/integral.h>
@@ -116,7 +117,6 @@
 #include <numcosmo/math/magnus_iserles_ode.h>
 #include <numcosmo/math/binsplit.h>
 #include <numcosmo/math/dividedifference.h>
-/* #include <numcosmo/math/cvode_util.h> */
 
 /* Spherical maps, HEALPIX implementation */
 #include <numcosmo/math/ncm_sphere_map.h>

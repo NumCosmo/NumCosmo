@@ -145,7 +145,6 @@
 
 #include "nc_recomb.h"
 #include "math/integral.h"
-#include "math/cvode_util.h"
 #include "math/ncm_util.h"
 #include "math/ncm_serialize.h"
 #include "math/ncm_cfg.h"

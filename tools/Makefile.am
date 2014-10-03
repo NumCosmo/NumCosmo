@@ -1,6 +1,6 @@
 ## Process this file with automake to produce Makefile.in
 
-INCLUDES = \
+MY_CFLAGS = \
          -DG_LOG_DOMAIN=\"NUMCOSMO\" \
          $(GLIB_CFLAGS) \
          $(SUNDIALS_CFLAGS) \
@@ -12,7 +12,7 @@ INCLUDES = \
 
 AM_CFLAGS = \
 	-Wall \
-	$(INCLUDES)
+	$(MY_CFLAGS)
 
 noinst_PROGRAMS = \
 	cmb_maps \

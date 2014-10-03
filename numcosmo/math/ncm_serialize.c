@@ -786,8 +786,8 @@ ncm_serialize_set_property (NcmSerialize *ser, GObject *obj, const gchar *prop_s
         GVariant *nest_obj_params = g_variant_get_child_value (val, 1);
         GObject *nest_obj =
           ncm_serialize_from_name_params (ser,
-                                                 g_variant_get_string (nest_obj_key, NULL),
-                                                 nest_obj_params);
+                                          g_variant_get_string (nest_obj_key, NULL),
+                                          nest_obj_params);
         g_value_init (&value, G_TYPE_OBJECT);
         g_value_take_object (&value, nest_obj);
         g_variant_unref (nest_obj_key);
@@ -1201,6 +1201,10 @@ ncm_serialize_gvalue_to_gvariant (NcmSerialize *ser, GValue *val)
         break;
     }
   }
+  else if (t == G_TYPE_VARIANT)
+  {
+    var = g_value_dup_variant (val);
+  }
   else
     var = g_dbus_gvalue_to_gvariant (val, var_type);
 
@@ -1258,6 +1262,7 @@ _ncm_serialize_to_variant (NcmSerialize *ser, GObject *obj)
         g_object_get_property (obj, prop[i]->name, &val);
 
         var = ncm_serialize_gvalue_to_gvariant (ser, &val);
+        
         if (var == NULL)
         {
           g_value_unset (&val);

@@ -62,9 +62,9 @@ ncm_fit_mc_init (NcmFitMC *mc)
 {
   mc->fit             = NULL;
   mc->fiduc           = NULL;
+  mc->mcat            = NULL;
   mc->mtype           = NCM_FIT_RUN_MSGS_NONE;
   mc->rtype           = NCM_FIT_MC_RESAMPLE_BOOTSTRAP_LEN;
-  mc->rng             = NULL;
   mc->bf              = NULL;
   mc->nt              = ncm_timer_new ();
   mc->ser             = ncm_serialize_new (NCM_SERIALIZE_OPT_CLEAN_DUP);
@@ -148,7 +148,7 @@ ncm_fit_mc_get_property (GObject *object, guint prop_id, GValue *value, GParamSp
       g_value_set_uint (value, mc->nthreads);
       break;
     case PROP_DATA_FILE:
-      g_value_set_string (value, ncm_fit_catalog_peek_filename (mc->fcat));
+      g_value_set_string (value, ncm_mset_catalog_peek_filename (mc->mcat));
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -166,8 +166,7 @@ ncm_fit_mc_dispose (GObject *object)
   ncm_vector_clear (&mc->bf);
   ncm_timer_clear (&mc->nt);
   ncm_serialize_clear (&mc->ser);
-  ncm_fit_catalog_clear (&mc->fcat);
-  ncm_rng_clear (&mc->rng);
+  ncm_mset_catalog_clear (&mc->mcat);
 
   if (mc->mp != NULL)
   {
@@ -251,7 +250,7 @@ _ncm_fit_mc_set_fit_obj (NcmFitMC *mc, NcmFit *fit)
 {
   g_assert (mc->fit == NULL);
   mc->fit = ncm_fit_ref (fit);
-  mc->fcat = ncm_fit_catalog_new (fit);
+  mc->mcat = ncm_mset_catalog_new (fit->mset, 1, NCM_MSET_CATALOG_M2LNL_COLNAME);
 }
 
 /**
@@ -277,7 +276,7 @@ ncm_fit_mc_new (NcmFit *fit, NcmFitMCResampleType rtype, NcmFitRunMsgs mtype)
 
 /**
  * ncm_fit_mc_free:
- * @mc: FIXME
+ * @mc: a #NcmFitMC
  *
  * FIXME
  *
@@ -290,7 +289,7 @@ ncm_fit_mc_free (NcmFitMC *mc)
 
 /**
  * ncm_fit_mc_clear:
- * @mc: FIXME
+ * @mc: a #NcmFitMC
  *
  * FIXME
  *
@@ -305,7 +304,7 @@ static void ncm_fit_mc_intern_skip (NcmFitMC *mc, guint n);
 
 /**
  * ncm_fit_mc_set_data_file:
- * @mc: FIXME
+ * @mc: a #NcmFitMC
  * @filename: a filename.
  *
  * FIXME
@@ -314,64 +313,33 @@ static void ncm_fit_mc_intern_skip (NcmFitMC *mc, guint n);
 void 
 ncm_fit_mc_set_data_file (NcmFitMC *mc, const gchar *filename)
 {
-  const gchar *cur_filename = ncm_fit_catalog_peek_filename (mc->fcat); 
+  const gchar *cur_filename = ncm_mset_catalog_peek_filename (mc->mcat); 
   if (mc->started && cur_filename != NULL)
     g_error ("ncm_fit_mc_set_data_file: Cannot change data file during a run, call ncm_fit_mc_end_run() first.");    
 
   if (cur_filename != NULL && strcmp (cur_filename, filename) == 0)
     return;
 
-  ncm_fit_catalog_set_file (mc->fcat, filename);
+  ncm_mset_catalog_set_file (mc->mcat, filename);
 
   if (mc->started)
   {
-    gulong seed;
-    gchar *algo = NULL;
-    if (mc->fcat->cur_id > mc->cur_sample_id)
+    if (mc->mcat->cur_id > mc->cur_sample_id)
     {
-      ncm_fit_mc_intern_skip (mc, mc->fcat->cur_id - mc->cur_sample_id);
-      g_assert_cmpint (mc->cur_sample_id, ==, mc->fcat->cur_id);
+      ncm_fit_mc_intern_skip (mc, mc->mcat->cur_id - mc->cur_sample_id);
+      g_assert_cmpint (mc->cur_sample_id, ==, mc->mcat->cur_id);
     }
-    else if (mc->fcat->cur_id < mc->cur_sample_id)
+    else if (mc->mcat->cur_id < mc->cur_sample_id)
+    {
       g_error ("ncm_fit_mc_set_data_file: Unknown error cur_id < cur_sample_id [%d < %d].", 
-               mc->fcat->cur_id, mc->cur_sample_id);
-
-    if (ncm_fit_catalog_get_prng (mc->fcat, &algo, &seed))
-    {
-      g_assert_cmpstr (algo, ==, ncm_rng_get_algo (mc->rng));
-      g_assert_cmpuint (seed, ==, ncm_rng_get_seed (mc->rng));
-      g_free (algo);
+               mc->mcat->cur_id, mc->cur_sample_id);
     }
-    else
-      ncm_fit_catalog_set_prng (mc->fcat, mc->rng);
-  }
-  else
-  {
-    gulong seed;
-    gchar *algo = NULL;
-    if (ncm_fit_catalog_get_prng (mc->fcat, &algo, &seed))
-    {
-      if (mc->rng == NULL)
-      {
-        NcmRNG *rng = ncm_rng_seeded_new (algo, seed);
-        ncm_fit_mc_set_rng (mc, rng);
-        ncm_rng_free (rng);
-      }
-      else
-      {
-        g_assert_cmpstr (algo, ==, ncm_rng_get_algo (mc->rng));
-        g_assert_cmpuint (seed, ==, ncm_rng_get_seed (mc->rng));
-      }
-      g_free (algo);
-    }
-    else if (mc->rng != NULL)
-      ncm_fit_catalog_set_prng (mc->fcat, mc->rng);
   }
 }
 
 /**
  * ncm_fit_mc_set_mtype:
- * @mc: FIXME
+ * @mc: a #NcmFitMC
  * @mtype: FIXME
  *
  * FIXME
@@ -388,14 +356,14 @@ static void _ncm_fit_mc_resample_bstrap (NcmDataset *dset, NcmMSet *mset, NcmRNG
 static gint
 _ncm_fit_mc_resample (NcmFitMC *mc, NcmFit *fit)
 {
-  mc->resample (fit->lh->dset, mc->fiduc, mc->rng);
+  mc->resample (fit->lh->dset, mc->fiduc, mc->mcat->rng);
   mc->cur_sample_id++;
   return mc->cur_sample_id;
 }
 
 /**
  * ncm_fit_mc_set_rtype:
- * @mc: FIXME
+ * @mc: a #NcmFitMC
  * @rtype: FIXME
  *
  * FIXME
@@ -411,7 +379,7 @@ ncm_fit_mc_set_rtype (NcmFitMC *mc, NcmFitMCResampleType rtype)
 
   mc->rtype = rtype;
 
-  ncm_fit_catalog_set_run_type (mc->fcat, eval->value_nick);
+  ncm_mset_catalog_set_run_type (mc->mcat, eval->value_nick);
   
   switch (rtype)
   {
@@ -435,7 +403,7 @@ ncm_fit_mc_set_rtype (NcmFitMC *mc, NcmFitMCResampleType rtype)
 
 /**
  * ncm_fit_mc_set_nthreads:
- * @mc: FIXME
+ * @mc: a #NcmFitMC
  * @nthreads: FIXME
  *
  * FIXME
@@ -449,7 +417,7 @@ ncm_fit_mc_set_nthreads (NcmFitMC *mc, guint nthreads)
 
 /**
  * ncm_fit_mc_set_fiducial:
- * @mc: FIXME
+ * @mc: a #NcmFitMC
  * @fiduc: FIXME
  *
  * FIXME
@@ -475,7 +443,7 @@ ncm_fit_mc_set_fiducial (NcmFitMC *mc, NcmMSet *fiduc)
 
 /**
  * ncm_fit_mc_set_rng:
- * @mc: FIXME
+ * @mc: a #NcmFitMC
  * @rng: FIXME
  *
  * FIXME
@@ -483,28 +451,11 @@ ncm_fit_mc_set_fiducial (NcmFitMC *mc, NcmMSet *fiduc)
  */
 void
 ncm_fit_mc_set_rng (NcmFitMC *mc, NcmRNG *rng)
-{
-  gchar *algo = NULL;
-  gulong seed = 0;
-  
+{  
   if (mc->started)
-    g_error ("ncm_fit_mc_set_rng: Cannot change the PRNG object during a run, call ncm_fit_mc_end_run() first.");
+    g_error ("ncm_fit_mc_set_rng: Cannot change the RNG object during a run, call ncm_fit_mc_end_run() first.");
 
-  ncm_rng_clear (&mc->rng);
-  mc->rng = ncm_rng_ref (rng);
-
-  if (ncm_fit_catalog_peek_filename (mc->fcat) != NULL)
-  {
-    if (ncm_fit_catalog_get_prng (mc->fcat, &algo, &seed))
-    {
-      if (strcmp (algo, ncm_rng_get_algo (rng)) != 0 || seed != ncm_rng_get_seed (rng))
-        g_error ("ncm_fit_mc_set_rng: catalog has PRNG with algorithm: `%s' and seed: %lu, and the montecarlo object has algorithm: `%s' and seed: %lu.",
-                 algo, seed, ncm_rng_get_algo (rng), ncm_rng_get_seed (rng));
-      g_free (algo);
-    }
-    else
-      ncm_fit_catalog_set_prng (mc->fcat, rng);
-  }
+  ncm_mset_catalog_set_rng (mc->mcat, rng);
 }
 
 void
@@ -513,7 +464,7 @@ _ncm_fit_mc_update (NcmFitMC *mc, NcmFit *fit)
   const guint part = 5;
   const guint step = (mc->n / part) == 0 ? 1 : (mc->n / part);
 
-  ncm_fit_catalog_add_from_fit (mc->fcat, fit);
+  ncm_mset_catalog_add_from_mset (mc->mcat, fit->mset, ncm_fit_state_get_m2lnL_curval (fit->fstate));
   ncm_timer_task_increment (mc->nt);
 
   switch (mc->mtype)
@@ -529,7 +480,7 @@ _ncm_fit_mc_update (NcmFitMC *mc, NcmFit *fit)
       if (log_timeout || (stepi == 0) || (mc->nt->task_pos == mc->nt->task_len))
       {
         /* guint acc = stepi == 0 ? step : stepi; */
-        ncm_fit_catalog_log_current_stats (mc->fcat);
+        ncm_mset_catalog_log_current_stats (mc->mcat);
         /* ncm_timer_task_accumulate (mc->nt, acc); */
         ncm_timer_task_log_elapsed (mc->nt);
         ncm_timer_task_log_mean_time (mc->nt);
@@ -543,7 +494,7 @@ _ncm_fit_mc_update (NcmFitMC *mc, NcmFit *fit)
       fit->mtype = mc->mtype;
       ncm_fit_log_start (fit);
       ncm_fit_log_end (fit);
-      ncm_fit_catalog_log_current_stats (mc->fcat);
+      ncm_mset_catalog_log_current_stats (mc->mcat);
       /* ncm_timer_task_increment (mc->nt); */
       ncm_timer_task_log_elapsed (mc->nt);
       ncm_timer_task_log_mean_time (mc->nt);
@@ -552,11 +503,11 @@ _ncm_fit_mc_update (NcmFitMC *mc, NcmFit *fit)
       break;      
   }
 
-  if ((mc->fcat->fmode != NCM_FIT_MC_MIN_FLUSH_INTERVAL) &&
+  if ((mc->mcat->fmode != NCM_FIT_MC_MIN_FLUSH_INTERVAL) &&
       (ncm_timer_task_mean_time (mc->nt) < NCM_FIT_MC_MIN_FLUSH_INTERVAL))
   {
-    ncm_fit_catalog_set_flush_mode (mc->fcat, NCM_FIT_CATALOG_FLUSH_TIMED);
-    ncm_fit_catalog_set_flush_interval (mc->fcat, NCM_FIT_MC_MIN_FLUSH_INTERVAL);
+    ncm_mset_catalog_set_flush_mode (mc->mcat, NCM_MSET_CATALOG_FLUSH_TIMED);
+    ncm_mset_catalog_set_flush_interval (mc->mcat, NCM_FIT_MC_MIN_FLUSH_INTERVAL);
   }
 }
 
@@ -605,34 +556,34 @@ ncm_fit_mc_start_run (NcmFitMC *mc)
       break;
   }
 
-  if (mc->rng == NULL)
+  if (mc->mcat->rng == NULL)
   {
     NcmRNG *rng = ncm_rng_new (NULL);
     ncm_rng_set_random_seed (rng, FALSE);
     ncm_fit_mc_set_rng (mc, rng);
     if (mc->mtype > NCM_FIT_RUN_MSGS_NONE)
-      g_message ("# NcmFitMC: No PRNG was defined, using algorithm: `%s' and seed: %lu.\n",
+      g_message ("# NcmFitMC: No RNG was defined, using algorithm: `%s' and seed: %lu.\n",
                  ncm_rng_get_algo (rng), ncm_rng_get_seed (rng));
     ncm_rng_free (rng);
   }
-  
+
   mc->started = TRUE;
 
-  ncm_fit_catalog_sync (mc->fcat, TRUE);
-  if (mc->fcat->cur_id > mc->cur_sample_id)
+  ncm_mset_catalog_sync (mc->mcat, TRUE);
+  if (mc->mcat->cur_id > mc->cur_sample_id)
   {
-    ncm_fit_mc_intern_skip (mc, mc->fcat->cur_id - mc->cur_sample_id);
-    g_assert_cmpint (mc->cur_sample_id, ==, mc->fcat->cur_id);
+    ncm_fit_mc_intern_skip (mc, mc->mcat->cur_id - mc->cur_sample_id);
+    g_assert_cmpint (mc->cur_sample_id, ==, mc->mcat->cur_id);
   }
-  else if (mc->fcat->cur_id < mc->cur_sample_id)
+  else if (mc->mcat->cur_id < mc->cur_sample_id)
     g_error ("ncm_fit_mc_set_data_file: Unknown error cur_id < cur_sample_id [%d < %d].", 
-             mc->fcat->cur_id, mc->cur_sample_id);
+             mc->mcat->cur_id, mc->cur_sample_id);
   
 }
 
 /**
  * ncm_fit_mc_end_run:
- * @mc: FIXME
+ * @mc: a #NcmFitMC
  * 
  * FIXME
  * 
@@ -649,14 +600,14 @@ ncm_fit_mc_end_run (NcmFitMC *mc)
     mc->mp = NULL;
   }
 
-  ncm_fit_catalog_sync (mc->fcat, TRUE);
+  ncm_mset_catalog_sync (mc->mcat, TRUE);
   
   mc->started = FALSE;
 }
 
 /**
  * ncm_fit_mc_reset:
- * @mc: FIXME
+ * @mc: a #NcmFitMC
  * 
  * FIXME
  * 
@@ -668,15 +619,12 @@ ncm_fit_mc_reset (NcmFitMC *mc)
   mc->cur_sample_id   = -1;
   mc->write_index     = 0;
   mc->started         = FALSE;  
-  ncm_fit_catalog_reset (mc->fcat);
-  ncm_rng_clear (&mc->rng);
+  ncm_mset_catalog_reset (mc->mcat);
 }
 
 static void 
 ncm_fit_mc_intern_skip (NcmFitMC *mc, guint n)
 {
-  guint i;
-
   if (n == 0)
     return;
 
@@ -687,33 +635,20 @@ ncm_fit_mc_intern_skip (NcmFitMC *mc, guint n)
     case NCM_FIT_RUN_MSGS_SIMPLE:
     {
       ncm_cfg_msg_sepa ();
-      g_message ("# NcmFitMC: Skipping %u realizations, will start at %u-th realization.\n#", n, mc->cur_sample_id + n + 1 + 1);
+      g_message ("# NcmFitMC: Skipping %u realizations, will start at %u-th realization.\n", n, mc->cur_sample_id + n + 1 + 1);
     }
     case NCM_FIT_RUN_MSGS_NONE:
       break;
   }
-  
-  for (i = 0; i < n; i++)
-  {
-    guint part = (n / 100) == 0 ? 1 : (n / 100);
-    _ncm_fit_mc_resample (mc, mc->fit);
-    if (mc->mtype > NCM_FIT_RUN_MSGS_NONE)
-    {
-      if (i % part == 0)
-        g_message (".");
-    }
-  }
 
+  mc->cur_sample_id += n;
   mc->write_index = mc->cur_sample_id + 1;
-
-  if (n > 0 && mc->mtype > NCM_FIT_RUN_MSGS_NONE)
-    g_message ("\n");
 }
 
 
 /**
  * ncm_fit_mc_set_first_sample_id:
- * @mc: FIXME
+ * @mc: a #NcmFitMC
  * @first_sample_id: FIXME
  * 
  * FIXME
@@ -722,7 +657,7 @@ ncm_fit_mc_intern_skip (NcmFitMC *mc, guint n)
 void 
 ncm_fit_mc_set_first_sample_id (NcmFitMC *mc, gint first_sample_id)
 {
-  if (mc->fcat->first_id == first_sample_id)
+  if (mc->mcat->first_id == first_sample_id)
     return;
 
   if (!mc->started)
@@ -730,9 +665,9 @@ ncm_fit_mc_set_first_sample_id (NcmFitMC *mc, gint first_sample_id)
 
   if (first_sample_id <= mc->cur_sample_id)
     g_error ("ncm_fit_mc_set_first_sample_id: cannot move first sample id backwards to: %d, catalog first id: %d, current sample id: %d.",
-             first_sample_id, mc->fcat->first_id, mc->cur_sample_id);
+             first_sample_id, mc->mcat->first_id, mc->cur_sample_id);
 
-  ncm_fit_catalog_set_first_id (mc->fcat, first_sample_id);
+  ncm_mset_catalog_set_first_id (mc->mcat, first_sample_id);
   ncm_fit_mc_intern_skip (mc, first_sample_id - mc->cur_sample_id - 1);
 }
 
@@ -896,7 +831,7 @@ _ncm_fit_mc_run_mt (NcmFitMC *mc)
 
 /**
  * ncm_fit_mc_run_lre:
- * @mc: FIXME
+ * @mc: a #NcmFitMC
  * @prerun: FIXME
  * @lre: FIXME
  *
@@ -914,20 +849,20 @@ ncm_fit_mc_run_lre (NcmFitMC *mc, guint prerun, gdouble lre)
   
   prerun = (prerun == 0) ? 100 : prerun;
 
-  if (ncm_fit_catalog_len (mc->fcat) < prerun)
+  if (ncm_mset_catalog_len (mc->mcat) < prerun)
   {
-    guint prerun_left = prerun - ncm_fit_catalog_len (mc->fcat);
+    guint prerun_left = prerun - ncm_mset_catalog_len (mc->mcat);
     if (mc->mtype >= NCM_FIT_RUN_MSGS_SIMPLE)
       g_message ("# NcmFitMC: Running first %u pre-runs...\n", prerun_left);
     ncm_fit_mc_run (mc, prerun);
   }
 
-  lerror = ncm_fit_catalog_largest_error (mc->fcat);
+  lerror = ncm_mset_catalog_largest_error (mc->mcat);
 
   while (lerror > lre)
   {
     const gdouble lerror2 = lerror * lerror;
-    gdouble n = ncm_fit_catalog_len (mc->fcat);
+    gdouble n = ncm_mset_catalog_len (mc->mcat);
     gdouble m = n * lerror2 / lre2;
     guint runs = ((m - n) > 1000.0) ? ceil ((m - n) * 0.25) : ceil (m - n);
 
@@ -937,7 +872,7 @@ ncm_fit_mc_run_lre (NcmFitMC *mc, guint prerun, gdouble lre)
       g_message ("# NcmFitMC: Running more %u runs...\n", runs);
     }
     ncm_fit_mc_run (mc, mc->cur_sample_id + runs + 1);
-    lerror = ncm_fit_catalog_largest_error (mc->fcat);
+    lerror = ncm_mset_catalog_largest_error (mc->mcat);
   }
 
   if (mc->mtype >= NCM_FIT_RUN_MSGS_SIMPLE)
@@ -946,12 +881,15 @@ ncm_fit_mc_run_lre (NcmFitMC *mc, guint prerun, gdouble lre)
 
 /**
  * ncm_fit_mc_mean_covar:
- * @mc: FIXME
+ * @mc: a #NcmFitMC
  *
  * FIXME
  */
 void
 ncm_fit_mc_mean_covar (NcmFitMC *mc)
 {
-  ncm_fit_catalog_set_fit_mean_covar (mc->fcat);
+  ncm_mset_catalog_get_mean (mc->mcat, &mc->fit->fstate->fparams);
+  ncm_mset_catalog_get_covar (mc->mcat, &mc->fit->fstate->covar);
+  ncm_mset_fparams_set_vector (mc->mcat->mset, mc->fit->fstate->fparams);
+  mc->fit->fstate->has_covar = TRUE;
 }

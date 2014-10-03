@@ -28,7 +28,6 @@
 #include "build_cfg.h"
 
 #include "perturbations/linear.h"
-#include "math/cvode_util.h"
 
 #include <cvodes/cvodes_diag.h>
 #include <cvodes/cvodes_band.h>
@@ -144,23 +143,12 @@ cvodes_create (NcLinearPert *pert)
 #endif
     data->abstol = N_VNew_Serial(pert->sys_size);
   }
-  else
-  {
-    data->yi = ncm_cvode_util_nvector_new (pert->sys_size);
-    data->y = ncm_cvode_util_nvector_new (pert->sys_size);
-    data->yS = ncm_cvode_util_nvector_new (pert->sys_size);
-
-#ifdef SIMUL_LOS_INT
-    data->yQ = ncm_cvode_util_nvector_new (pert->los_table->len);
-#endif
-    data->abstol = ncm_cvode_util_nvector_new (pert->sys_size);
-  }
 
   data->cvode_nonstiff = CVodeCreate(CV_ADAMS, CV_FUNCTIONAL);
-  CVODE_CHECK((void *)data->cvode_nonstiff, "CVodeCreate", 0, NULL);
+  NCM_CVODE_CHECK ((void *)data->cvode_nonstiff, "CVodeCreate", 0, NULL);
 
   data->cvode_stiff = CVodeCreate(CV_BDF, CV_NEWTON);
-  CVODE_CHECK((void *)data->cvode_stiff, "CVodeCreate", 0, NULL);
+  NCM_CVODE_CHECK ((void *)data->cvode_stiff, "CVodeCreate", 0, NULL);
 
   data->cvode = data->cvode_stiff;
 
@@ -177,7 +165,7 @@ cvodes_set_opts (NcLinearPert *pert)
   gint flag, i;
   CVodesData *data = CVODES_DATA (pert->solver->data);
 //  flag = CVodeSetMinStep (pert->cvode, 1e-12);
-//  CVODE_CHECK(&flag, "CVodeSetMinStep", 1, FALSE);
+//  NCM_CVODE_CHECK (&flag, "CVodeSetMinStep", 1, FALSE);
 
   if (pert->pws->tight_coupling)
   {
@@ -187,7 +175,7 @@ cvodes_set_opts (NcLinearPert *pert)
     NV_Ith_S(data->abstol, NC_PERT_T) = pert->tc_abstol;
 
     flag = CVodeSVtolerances (data->cvode, pert->tc_reltol, data->abstol);
-    CVODE_CHECK(&flag, "CVodeSVtolerances", 1,);
+    NCM_CVODE_CHECK (&flag, "CVodeSVtolerances", 1,);
   }
   else
   {
@@ -196,20 +184,20 @@ cvodes_set_opts (NcLinearPert *pert)
       NV_Ith_S(data->abstol, i) = 0.0;
 
     flag = CVodeSVtolerances (data->cvode, pert->reltol, data->abstol);
-    CVODE_CHECK(&flag, "CVodeSVtolerances", 1,);
+    NCM_CVODE_CHECK (&flag, "CVodeSVtolerances", 1,);
   }
 
 
   flag = CVodeSetMaxNumSteps(data->cvode, 1000000);
-  CVODE_CHECK(&flag, "CVodeSetMaxNumSteps", 1,);
+  NCM_CVODE_CHECK (&flag, "CVodeSetMaxNumSteps", 1,);
 
   flag = CVodeSetUserData (data->cvode, pert);
-  CVODE_CHECK(&flag, "CVodeSetUserData", 1,);
+  NCM_CVODE_CHECK (&flag, "CVodeSetUserData", 1,);
 
   if (FALSE)
   {
     flag = CVDiag (data->cvode);
-    CVODE_CHECK(&flag, "CVDiag", 1,);
+    NCM_CVODE_CHECK (&flag, "CVDiag", 1,);
   }
   else if (FALSE)
   {
@@ -218,22 +206,22 @@ cvodes_set_opts (NcLinearPert *pert)
 //    flag = CVSpgmr (data->cvode, PREC_LEFT, 0);
     flag = CVSpbcg (data->cvode, PREC_LEFT, 0);
 //    flag = CVSptfqmr (data->cvode, PREC_LEFT, 0);
-    CVODE_CHECK(&flag, "CVSpgmr", 1,);
+    NCM_CVODE_CHECK (&flag, "CVSpgmr", 1,);
 
     if (FALSE)
     {
       /* Call CVBandPreInit to initialize band preconditioner */
       flag = CVBandPrecInit (data->cvode, pert->sys_size, 6, 6);
-      CVODE_CHECK(&flag, "CVBandPrecInit", 1,);
+      NCM_CVODE_CHECK (&flag, "CVBandPrecInit", 1,);
     }
     else
     {
       /* perturbations_step_Mz_r */
 			flag = CVSpilsSetJacTimesVecFn (data->cvode, &cvodes_Jv);
-			CVODE_CHECK(&flag, "CVSpilsSetJacTimesVecFn", 1,);
+			NCM_CVODE_CHECK (&flag, "CVSpilsSetJacTimesVecFn", 1,);
 
 			flag = CVSpilsSetPreconditioner (data->cvode, NULL, cvodes_Mz_r);
-      CVODE_CHECK(&flag, "CVSpilsSetPreconditioner", 1,);
+      NCM_CVODE_CHECK (&flag, "CVSpilsSetPreconditioner", 1,);
     }
   }
   else
@@ -243,20 +231,20 @@ cvodes_set_opts (NcLinearPert *pert)
 		else
 			flag = CVBand (data->cvode, pert->sys_size, 4, 4);
 
-		CVODE_CHECK(&flag, "CVBand", 1,);
+		NCM_CVODE_CHECK (&flag, "CVBand", 1,);
 
     if (FALSE)
     {
       flag = CVDlsSetBandJacFn (data->cvode, cvodes_band_J);
-      CVODE_CHECK(&flag, "CVDlsSetBandJacFn", 1,);
+      NCM_CVODE_CHECK (&flag, "CVDlsSetBandJacFn", 1,);
     }
   }
 
   flag = CVodeSetStabLimDet (data->cvode, FALSE);
-  CVODE_CHECK(&flag, "CVodeSetStabLimDet", 1,);
+  NCM_CVODE_CHECK (&flag, "CVodeSetStabLimDet", 1,);
 
   flag = CVodeSetStopTime (data->cvode, pert->lambdaf);
-  CVODE_CHECK(&flag, "CVodeSetStopTime", 1,);
+  NCM_CVODE_CHECK (&flag, "CVodeSetStopTime", 1,);
 
   if (FALSE)
   {
@@ -267,29 +255,29 @@ cvodes_set_opts (NcLinearPert *pert)
     if (data->sens_init)
     {
       flag = CVodeSensReInit (data->cvode, flag_cv, &data->yS);
-      CVODE_CHECK(&flag, "CVodeSensInit", 1,);
+      NCM_CVODE_CHECK (&flag, "CVodeSensInit", 1,);
     }
     else
     {
       flag = CVodeSensInit (data->cvode, 1, flag_cv, fS, &data->yS);
-      CVODE_CHECK(&flag, "CVodeSensInit", 1,);
+      NCM_CVODE_CHECK (&flag, "CVodeSensInit", 1,);
     }
 
     flag = CVodeSensEEtolerances (data->cvode);
-    CVODE_CHECK(&flag, "CVodeSensEEtolerances", 1,);
+    NCM_CVODE_CHECK (&flag, "CVodeSensEEtolerances", 1,);
 
     flag = CVodeSetSensParams (data->cvode, &pert->pws->k, NULL, NULL);
-    CVODE_CHECK(&flag, "CVodeSetSensParams", 1,);
+    NCM_CVODE_CHECK (&flag, "CVodeSetSensParams", 1,);
 
     data->sens_init = TRUE;
   }
 
 #ifdef SIMUL_LOS_INT
   flag = CVodeSetQuadErrCon (data->cvode, FALSE);
-  CVODE_CHECK(&flag, "CVodeSetQuadErrCon", 1,);
+  NCM_CVODE_CHECK (&flag, "CVodeSetQuadErrCon", 1,);
 
   flag = CVodeQuadSStolerances (data->cvode, 1e-7, 1e-120);
-  CVODE_CHECK(&flag, "CVodeQuadSStolerances", 1,);
+  NCM_CVODE_CHECK (&flag, "CVodeQuadSStolerances", 1,);
 #endif
 
   return;
@@ -304,20 +292,20 @@ cvodes_reset (NcLinearPert *pert)
   if (((data->cvode == data->cvode_stiff) ? (!data->malloc_stiff) : (!data->malloc_nonstiff)))
   {
     flag = CVodeInit (data->cvode, &cvodes_step, pert->pws->lambda, data->y);
-    CVODE_CHECK(&flag, "CVodeMalloc", 1,);
+    NCM_CVODE_CHECK (&flag, "CVodeMalloc", 1,);
 #ifdef SIMUL_LOS_INT
     flag = CVodeQuadInit (data->cvode, &cvodes_lineofsight, data->yQ);
-    CVODE_CHECK(&flag, "CVodeQuadInit", 1,);
+    NCM_CVODE_CHECK (&flag, "CVodeQuadInit", 1,);
 #endif
     (data->cvode == data->cvode_stiff) ? (data->malloc_stiff = TRUE) : (data->malloc_nonstiff = TRUE);
   }
   else
   {
     flag = CVodeReInit (data->cvode, pert->pws->lambda, data->y);
-    CVODE_CHECK(&flag, "CVodeReInit", 1,);
+    NCM_CVODE_CHECK (&flag, "CVodeReInit", 1,);
 #ifdef SIMUL_LOS_INT
     CVodeQuadReInit (data->cvode, data->yQ);
-    CVODE_CHECK(&flag, "CVodeQuadReInit", 1,);
+    NCM_CVODE_CHECK (&flag, "CVodeQuadReInit", 1,);
 #endif
   }
 
@@ -332,7 +320,7 @@ cvodes_update_los (NcLinearPert *pert)
   gint flag;
   gdouble gi;
   flag = CVodeGetQuad(data->cvode, &gi, data->yQ);
-  CVODE_CHECK (&flag, "CVodeGetQuad", 1, FALSE);
+  NCM_CVODE_CHECK (&flag, "CVodeGetQuad", 1, FALSE);
   return TRUE;
 }
 
@@ -344,7 +332,7 @@ cvodes_evol_step (NcLinearPert *pert, gdouble lambda)
   CVodesData *data = CVODES_DATA (pert->solver->data);
 
   flag = CVode (data->cvode, lambda, data->y, &lambdai, CV_ONE_STEP);
-  CVODE_CHECK (&flag, "cvodes_evol_step", 1, FALSE);
+  NCM_CVODE_CHECK (&flag, "cvodes_evol_step", 1, FALSE);
 
   pert->pws->dlambda = lambdai - pert->pws->lambda_int;
   pert->pws->lambda_int = lambdai;
@@ -372,7 +360,7 @@ cvodes_evol (NcLinearPert *pert, gdouble lambda)
   while (lambda > pert->pws->lambda_int)
   {
     flag = CVode (data->cvode, lambda, data->y, &lambdai, CV_ONE_STEP);
-    CVODE_CHECK (&flag, "cvodes_evol[evol]", 1, FALSE);
+    NCM_CVODE_CHECK (&flag, "cvodes_evol[evol]", 1, FALSE);
     pert->pws->dlambda = lambdai - pert->pws->lambda_int;
     pert->pws->lambda_int = lambdai;
     pert->pws->lambda = lambdai;
@@ -407,7 +395,7 @@ cvodes_evol (NcLinearPert *pert, gdouble lambda)
       if (!(lambda > pert->pws->lambda_int))
       {
         flag = CVodeGetDky (data->cvode, lambda, 0, data->y);
-        CVODE_CHECK (&flag, "cvodes_evol[interp]", 1, FALSE);
+        NCM_CVODE_CHECK (&flag, "cvodes_evol[interp]", 1, FALSE);
         pert->pws->lambda = lambda;
       }
       cvodes_end_tight_coupling (pert);
@@ -421,7 +409,7 @@ cvodes_evol (NcLinearPert *pert, gdouble lambda)
   else if ((lambda <= pert->pws->lambda_int) && (lambda > (pert->pws->lambda_int - pert->pws->dlambda)))
   {
     flag = CVodeGetDky (data->cvode, lambda, 0, data->y);
-    CVODE_CHECK (&flag, "cvodes_evol[interp]", 1, FALSE);
+    NCM_CVODE_CHECK (&flag, "cvodes_evol[interp]", 1, FALSE);
     pert->pws->lambda = lambda;
   }
   else
@@ -429,7 +417,7 @@ cvodes_evol (NcLinearPert *pert, gdouble lambda)
 
 #ifdef SIMUL_LOS_INT
   flag = CVodeGetQuad(data->cvode, &gi, data->yQ);
-  CVODE_CHECK (&flag, "CVodeGetQuad", 1, FALSE);
+  NCM_CVODE_CHECK (&flag, "CVodeGetQuad", 1, FALSE);
 #endif
 
   return TRUE;
@@ -453,7 +441,7 @@ static void
 cvodes_print_stats (NcLinearPert *pert)
 {
   CVodesData *data = CVODES_DATA (pert->solver->data);
-  ncm_cvode_util_print_stats (data->cvode);
+  ncm_util_cvode_print_stats (data->cvode);
 }
 
 #define LINEAR_VECTOR_PREPARE N_Vector y = CVODES_DATA(pert->solver->data)->y

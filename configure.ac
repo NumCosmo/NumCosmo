@@ -119,6 +119,7 @@ dnl ***************************************************************************
 AC_LANG(C)
 AC_PROG_CC
 AC_PROG_CPP
+AC_PROG_F77
 AC_PROG_INSTALL   
 AC_PROG_LN_S
 AC_PROG_CC_STDC
@@ -227,7 +228,7 @@ AC_ARG_ENABLE(inline,
   [enable_inline=$enableval],[enable_inline="yes"])
 AC_MSG_RESULT($enable_inline)
 
-if test "$enable_inline" = "yes"; then
+if test "x$enable_inline" = "xyes"; then
   if test "$ac_cv_c_inline" != no ; then
     AC_DEFINE([HAVE_INLINE], [1], [use inline functions in GSL])
     AC_SUBST(HAVE_INLINE)
@@ -375,94 +376,80 @@ TEST_SHARED_CFLAGS="$TEST_SHARED_CFLAGS $FFTW3_CFLAGS"
 PKG_CHECK_EXISTS([fftw3 >= $FFTW3_ALLOC_VERSION], [AC_DEFINE([HAVE_FFTW3_ALLOC],[1], [fftw has alloc functions])], [])
 
 dnl ***************************************************************************
-dnl Check for atlas + lapack
+dnl Check for BLAS
 dnl ***************************************************************************
 
-AC_MSG_CHECKING([--with-atlas-path])
-AC_ARG_WITH(atlas-path,
-  [AS_HELP_STRING([--with-atlas-path=PATH],[Full Path to Atlas.])],
-  [LIBS="-L$withval $LIBS"])
-AC_MSG_RESULT($ATLAS_PATH)
+AX_BLAS([],[have_blas="no"])
+AC_MSG_CHECKING([blas support])
+if test "x$have_blas" != "xno"; then
+  blas_mkl=`echo $BLAS_LIBS | grep -i mkl`
+  blas_atlas=`echo $BLAS_LIBS | grep -i atlas`
+  blas_openblas=`echo $BLAS_LIBS | grep -i openblas`
+  
+  if test "x$blas_mkl" != "x"; then
+    blas_support="Intel's MKL"
+  elif test "x$blas_atlas" != "x"; then
+    blas_support="ATLAS"
+  elif test "x$blas_openblas" != "x"; then 
+    blas_support="OpenBLAS"
+  else
+    blas_support="other"
+  fi
+  AC_MSG_RESULT([$blas_support])
 
-AC_MSG_CHECKING([--with-atlas])
-AC_ARG_WITH(atlas,
-  [AS_HELP_STRING([--with-atlas=atlas],[Atlas library name, default is 'atlas'])],
-  [ATLAS="$withval"], [ATLAS="atlas"])
-AC_MSG_RESULT($ATLAS)
-
-AC_MSG_CHECKING([--with-atlas-cblas])
-AC_ARG_WITH(atlas-cblas,
-  [AS_HELP_STRING([--with-atlas-cblas=cblas],[Atlas cblas library name, default is 'cblas'])],
-  [ATLAS_CBLAS="$withval"], [ATLAS_CBLAS="cblas"])
-AC_MSG_RESULT($ATLAS_CBLAS)
-
-AC_MSG_CHECKING([--with-atlas-blas])
-AC_ARG_WITH(atlas-blas,
-  [AS_HELP_STRING([--with-atlas-blas=blas],[Atlas blas (fortran) library name, default is 'f77blas'])],
-  [ATLAS_BLAS="$withval"], [ATLAS_BLAS="f77blas"])
-AC_MSG_RESULT($ATLAS_BLAS)
-
-AC_MSG_CHECKING([--with-atlas-lapack])
-AC_ARG_WITH(atlas-lapack,
-  [AS_HELP_STRING([--with-atlas-lapack=lapack],[Atlas lapack library name, default is 'lapack'])],
-  [ATLAS_LAPACK="$withval"], [ATLAS_LAPACK="lapack"])
-AC_MSG_RESULT($ATLAS_LAPACK)
-
-AC_MSG_CHECKING([--with-atlas-extra-libs])
-AC_ARG_WITH(atlas-extra-libs,
-  [AS_HELP_STRING([--with-atlas-extra-libs=LIBS],[Atlas extra libraries, default is empty])],
-  [ATLAS_EXTRA_LIBS="$withval"], [ATLAS_EXTRA_LIBS=""])
-AC_MSG_RESULT($ATLAS_EXTRA_LIBS)
-
-AC_CHECK_LIB([$ATLAS], [ATL_dgemv],, [have_atlas='no'])
-
-AC_CHECK_LIB([$ATLAS_CBLAS], [cblas_dgemv],, [have_atlas_cblas='no'])
-AC_CHECK_FUNC([cblas_dgemm], [], [have_atlas_cblas='no'])
-
-AC_CHECK_LIB([$ATLAS_BLAS], [dgemv_],, [have_atlas_blas='no'])
-AC_CHECK_FUNC([dgemm_], [], [have_atlas_blas='no'])
-
-if test "x$have_atlas_cblas" != "xno"; then
+  if test "x$blas_mkl" != "x"; then
+    AC_CHECK_HEADERS([mkl_blas.h])
+    AC_CHECK_HEADERS([mkl_cblas.h])
+  else
+    AC_CHECK_HEADERS([cblas.h])
+  fi
   GSL_LIBS=`echo $GSL_LIBS | sed 's/\-lgslcblas//g'`
-  have_atlas_support="#define NUMCOSMO_HAVE_ATLAS 1"
+  LIBS="$BLAS_LIBS $LIBS"
 else
-  have_atlas_support=""
+  AC_MSG_RESULT([GSL's BLAS])
+  AC_DEFINE([HAVE_GSL_CBLAS_H], [1], [use lapack functions])
 fi
-AC_SUBST(have_atlas_support)
 
 dnl ***************************************************************************
-dnl Check for lapack
+dnl Check for LAPACK
 dnl ***************************************************************************
 
-AC_CHECK_LIB([$ATLAS_LAPACK], [sgesv_],,[have_lapack='no'])
-
+AX_LAPACK([],[have_lapack="no"])
+AC_MSG_CHECKING([if lapack is available $LAPACK_LIBS])
 if test "x$have_lapack" != "xno"; then
-  have_lapack_support="#define NUMCOSMO_HAVE_LAPACK 1"
-  AC_DEFINE([HAVE_LAPACK], [1], [use lapack functions])
-  AC_SUBST(HAVE_LAPACK)  
+  AC_MSG_RESULT([yes])
+  AC_MSG_CHECKING([lapack support])
+  lapack_mkl=`echo $BLAS_LIBS $LAPACK_LIBS | grep -i mkl`
+  lapack_atlas=`echo $BLAS_LIBS $LAPACK_LIBS | grep -i atlas`
+  lapack_openblas=`echo $BLAS_LIBS $LAPACK_LIBS | grep -i openblas`
+
+  if test "x$lapack_mkl" != "x"; then
+    lapack_support="Intel's MKL"
+  elif test "x$lapack_atlas" != "x"; then
+    lapack_support="ATLAS"
+  elif test "x$lapack_openblas" != "x"; then
+    lapack_support="OpenBLAS"
+  else
+    lapack_support="Other"
+  fi
+  AC_MSG_RESULT([$lapack_support])
+
+  if test "x$lapack_mkl" != "x"; then
+    AC_CHECK_HEADERS([mkl_lapacke.h],
+      [AC_DEFINE([HAVE_LAPACKE],[1], [have lapacke support])
+       AC_DEFINE([HAVE_MKL_LAPACKE_H],[1], [have mkl_lapacke.h header])])
+    AC_CHECK_HEADERS([mkl_lapack.h])
+  else
+    AC_CHECK_HEADERS([lapacke.h],
+      [AC_DEFINE([HAVE_LAPACKE],[1], [have lapacke support])
+       AC_DEFINE([HAVE_LAPACKE_H],[1], [have lapacke.h header])])
+    AC_CHECK_HEADERS([clapack.h],
+      [AC_DEFINE([HAVE_CLAPACK],[1], [have clapack support])
+       AC_DEFINE([HAVE_CLAPACK_H],[1], [have clapack.h header])])
+  fi
+  LIBS="$LAPACK_LIBS $LIBS"
 else
-  have_lapack_support=""
-fi
-AC_SUBST(have_lapack_support)
-
-dnl ***************************************************************************
-dnl Check for clapack
-dnl ***************************************************************************
-
-AC_CHECK_FUNC([clapack_sgesv], [], [have_clapack='no'])
-
-if test "x$have_clapack" != "xno"; then
-  have_clapack_support="#define NUMCOSMO_HAVE_CLAPACK 1"
-  AC_DEFINE([HAVE_CLAPACK], [1], [use lapack functions])
-  AC_SUBST(HAVE_CLAPACK)  
-else
-  have_clapack_support=""
-fi
-AC_SUBST(have_clapack_support)
-
-if test "x$have_clapack_support" != x; then
-  AC_CHECK_HEADERS([clapack.h])
-  AC_CHECK_FUNCS([clapack_dpotrf])
+  AC_MSG_RESULT([no])
 fi
 
 dnl ***************************************************************************
@@ -666,23 +653,12 @@ else
        echo "Building  with FFTW3 support: ....................................NO"
        echo "        Requires FFTW3 (>= $FFTW3_REQUIRED_VERSION)"
 fi
-if [ test "x$have_atlas_support" != x ]; then
-       echo "Building with Atlas support: ....................................YES"
-else
-       echo "Building  with Atlas support: ....................................NO"
-       echo "        Requires ATLAS - Automatically Tuned Linear Algebra Software"
-fi
-if [ test "x$have_lapack_support" != x ]; then
-       echo "Building with Lapack support: ...................................YES"
+       echo "Building with BLAS support: .....................................$blas_support"
+if [ test "x$have_lapack" != "xno" ]; then
+       echo "Building with Lapack support: ...................................$lapack_support"
 else
        echo "Building  with Lapack support: ...................................NO"
        echo "        Requires Lapack Linear Algebra PACKage"
-fi
-if [ test "x$have_clapack_support" != x ]; then
-       echo "Building with C - Lapack support: ...............................YES"
-else
-       echo "Building  with C - Lapack support: ...............................NO"
-       echo "        Requires C - Lapack Linear Algebra PACKage"
 fi
 if [ test "x$have_levmar_support" != x ]; then
        echo "Building with levmar support: ...................................YES"

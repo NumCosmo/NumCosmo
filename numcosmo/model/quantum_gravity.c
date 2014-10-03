@@ -36,7 +36,6 @@
 #include "build_cfg.h"
 
 #include "model/quantum_gravity.h"
-#include "math/cvode_util.h"
 #include "math/ncm_spline_gsl.h"
 #include "math/magnus_iserles_ode.h"
 
@@ -968,7 +967,7 @@ nc_hicosmo_qgint_init (NcHICosmoQG *qgint, gdouble lambda, gdouble g, gdouble gb
   if (!qgint->initialized)
   {
     flag = CVodeInit (qgint->cvode, &scalefactor_step, lambda, qgint->y);
-    CVODE_CHECK (&flag, "CVodeMalloc", 1, FALSE);
+    NCM_CVODE_CHECK (&flag, "CVodeMalloc", 1, FALSE);
     CVodeQuadInit (qgint->cvode, scale_factor_time, qgint->yQ);
     qgint->initialized = TRUE;
   }
@@ -976,7 +975,7 @@ nc_hicosmo_qgint_init (NcHICosmoQG *qgint, gdouble lambda, gdouble g, gdouble gb
   {
     flag = CVodeReInit (qgint->cvode, lambda, qgint->y);
     CVodeQuadReInit (qgint->cvode, qgint->yQ);
-    CVODE_CHECK(&flag, "CVodeReInit", 1, FALSE);
+    NCM_CVODE_CHECK (&flag, "CVodeReInit", 1, FALSE);
   }
 
   return TRUE;
@@ -988,37 +987,37 @@ nc_hicosmo_qgint_set_opts (NcHICosmoQG *qgint, NcHICosmoQGScaleFactor *qgscale)
   gint flag;
 
   flag = CVodeSStolerances (qgint->cvode, qgint->reltol, qgint->abstol);
-  CVODE_CHECK(&flag, "CVodeSStolerances", 1, FALSE);
+  NCM_CVODE_CHECK (&flag, "CVodeSStolerances", 1, FALSE);
 
   flag = CVodeSetMaxNumSteps(qgint->cvode, 1000000);
-  CVODE_CHECK(&flag, "CVodeSetMaxNumSteps", 1, FALSE);
+  NCM_CVODE_CHECK (&flag, "CVodeSetMaxNumSteps", 1, FALSE);
 
   flag = CVodeSetUserData (qgint->cvode, qgscale);
-  CVODE_CHECK(&flag, "CVodeSetFdata", 1, FALSE);
+  NCM_CVODE_CHECK (&flag, "CVodeSetFdata", 1, FALSE);
 
   if (TRUE)
   {
     flag = CVDense(qgint->cvode, 2);
-    CVODE_CHECK(&flag, "CVDense", 1, FALSE);
+    NCM_CVODE_CHECK (&flag, "CVDense", 1, FALSE);
 
     flag = CVDlsSetDenseJacFn (qgint->cvode, &scalefactor_step_J);
-    CVODE_CHECK(&flag, "CVDlsSetDenseJacFn", 1, FALSE);
+    NCM_CVODE_CHECK (&flag, "CVDlsSetDenseJacFn", 1, FALSE);
   }
 
 //  flag = CVodeSetStabLimDet(qgint->cvode, TRUE);
-//  CVODE_CHECK(&flag, "CVodeSetStabLimDet", 1, FALSE);
+//  NCM_CVODE_CHECK (&flag, "CVodeSetStabLimDet", 1, FALSE);
 
 //  flag = CVodeSetMaxStep(qgint->cvode, 1.0);
-//  CVODE_CHECK(&flag, "CVodeSetMaxStep", 1, FALSE);
+//  NCM_CVODE_CHECK (&flag, "CVodeSetMaxStep", 1, FALSE);
 
 //  flag = CVodeSetInitStep (qgint->cvode, 1e-15);
-//  CVODE_CHECK(&flag, "CVodeSetMaxStep", 1, FALSE);
+//  NCM_CVODE_CHECK (&flag, "CVodeSetMaxStep", 1, FALSE);
 
   flag = CVodeRootInit (qgint->cvode, 3, scale_factor_root);
-  CVODE_CHECK(&flag, "CVodeRootInit", 1, FALSE);
+  NCM_CVODE_CHECK (&flag, "CVodeRootInit", 1, FALSE);
 
 //  flag = CVodeSetStopTime(qgint->cvode, qgint->tf);
-//  CVODE_CHECK(&flag, "CVodeSetStopTime", 1, FALSE);
+//  NCM_CVODE_CHECK (&flag, "CVodeSetStopTime", 1, FALSE);
 
   return TRUE;
 }
@@ -1072,7 +1071,7 @@ nc_hicosmo_qg_init_spline (NcHICosmoQG *qgint, NcmModel *model)
       gdouble x, zeta, xdzeta_zeta, cs2zeta2_int_1_zeta2;
 
       flag = CVode (qgint->cvode, lambda_i * 1.001, qgint->y, &lambda_i, CV_ONE_STEP);
-      CVODE_CHECK (&flag, "CVode[nc_hicosmo_qg_init_spline]", 1, FALSE);
+      NCM_CVODE_CHECK (&flag, "CVode[nc_hicosmo_qg_init_spline]", 1, FALSE);
       CVodeGetQuad (qgint->cvode, &lambda_iQ, qgint->yQ);
 
       printf ("% 20.15g % 20.15g % 20.15g % 20.15g % 20.15g\n", lambda_i, NV_Ith_S (qgint->y, 0), NV_Ith_S (qgint->y, 1), NV_Ith_S (qgint->yQ, 0), exp(-NV_Ith_S (qgint->y, 0)));
@@ -1094,7 +1093,7 @@ nc_hicosmo_qg_init_spline (NcHICosmoQG *qgint, NcmModel *model)
       gdouble x, zeta, xdzeta_zeta, cs2zeta2_int_1_zeta2;
 
       flag = CVode (qgint->cvode, lambda_i * 1.001, qgint->y, &lambda_i, CV_ONE_STEP);
-      CVODE_CHECK (&flag, "CVode[nc_hicosmo_qg_init_spline]", 1, FALSE);
+      NCM_CVODE_CHECK (&flag, "CVode[nc_hicosmo_qg_init_spline]", 1, FALSE);
       CVodeGetQuad (qgint->cvode, &lambda_iQ, qgint->yQ);
 
       printf ("% 20.15g % 20.15g % 20.15g % 20.15g % 20.15g\n", lambda_i, NV_Ith_S (qgint->y, 0), NV_Ith_S (qgint->y, 1), NV_Ith_S (qgint->yQ, 0), exp(-NV_Ith_S (qgint->y, 0)));
@@ -1147,7 +1146,7 @@ nc_hicosmo_qg_init_spline (NcHICosmoQG *qgint, NcmModel *model)
       gdouble x, zeta, xdzeta_zeta, cs2zeta2_int_1_zeta2;
 
       flag = CVode (qgint->cvode, lambda_i * 1.001, qgint->y, &lambda_i, CV_NORMAL);
-      CVODE_CHECK (&flag, "CVode[nc_hicosmo_qg_init_spline]", 1, FALSE);
+      NCM_CVODE_CHECK (&flag, "CVode[nc_hicosmo_qg_init_spline]", 1, FALSE);
       CVodeGetQuad (qgint->cvode, &lambda_iQ, qgint->yQ);
       CVodeGetDky (qgint->cvode, lambda_i, 1, dstep);
 
@@ -1354,21 +1353,21 @@ nc_hicosmo_qg_pert_set_opts (NcHICosmoQGMode *qgmode)
   gint flag;
 
   flag = CVodeSStolerances (qgmode->cvode, qgmode->reltol, qgmode->abstol);
-  CVODE_CHECK(&flag, "CVodeSStolerances", 1, FALSE);
+  NCM_CVODE_CHECK (&flag, "CVodeSStolerances", 1, FALSE);
 
   flag = CVodeSetMaxNumSteps (qgmode->cvode, 1000000);
-  CVODE_CHECK(&flag, "CVodeSetMaxNumSteps", 1, FALSE);
+  NCM_CVODE_CHECK (&flag, "CVodeSetMaxNumSteps", 1, FALSE);
 
   flag = CVodeSetUserData (qgmode->cvode, qgmode);
-  CVODE_CHECK(&flag, "CVodeSetUserData", 1, FALSE);
+  NCM_CVODE_CHECK (&flag, "CVodeSetUserData", 1, FALSE);
 
   if (TRUE)
   {
     flag = CVDense (qgmode->cvode, _PERT_SYS_DIM);
-    CVODE_CHECK(&flag, "CVDense", 1, FALSE);
+    NCM_CVODE_CHECK (&flag, "CVDense", 1, FALSE);
 
     flag = CVDlsSetDenseJacFn (qgmode->cvode, qgmode->jac);
-    CVODE_CHECK (&flag, "CVDlsSetDenseJacFn", 1, FALSE);
+    NCM_CVODE_CHECK (&flag, "CVDlsSetDenseJacFn", 1, FALSE);
   }
 
   return TRUE;
@@ -1414,13 +1413,13 @@ nc_hicosmo_qg_pert_init (NcHICosmoQGMode *qgmode, gdouble k)
   if (!(*qgmode->initialized))
   {
     flag = CVodeInit (qgmode->cvode, qgmode->f, qgmode->t_i, qgmode->y);
-    CVODE_CHECK(&flag, "CVodeMalloc", 1, FALSE);
+    NCM_CVODE_CHECK (&flag, "CVodeMalloc", 1, FALSE);
     *qgmode->initialized = TRUE;
   }
   else
   {
     flag = CVodeReInit (qgmode->cvode, qgmode->t_i, qgmode->y);
-    CVODE_CHECK(&flag, "CVodeReInit", 1, FALSE);
+    NCM_CVODE_CHECK (&flag, "CVodeReInit", 1, FALSE);
   }
 
   nc_hicosmo_qg_pert_set_opts (qgmode);
@@ -1495,13 +1494,13 @@ nc_hicosmo_qg_pert_switch (NcHICosmoQGMode *qgmode, NcHICosmoQGPertType type, gd
   if (!(*qgmode->initialized))
   {
     flag = CVodeInit (qgmode->cvode, qgmode->f, qgmode->t, qgmode->y);
-    CVODE_CHECK(&flag, "CVodeMalloc", 1, FALSE);
+    NCM_CVODE_CHECK (&flag, "CVodeMalloc", 1, FALSE);
     *qgmode->initialized = TRUE;
   }
   else
   {
     flag = CVodeReInit (qgmode->cvode, qgmode->t, qgmode->y);
-    CVODE_CHECK(&flag, "CVodeReInit", 1, FALSE);
+    NCM_CVODE_CHECK (&flag, "CVodeReInit", 1, FALSE);
   }
 
   nc_hicosmo_qg_pert_set_opts (qgmode);
@@ -1526,13 +1525,13 @@ nc_hicosmo_qg_pert_evolve (NcHICosmoQGMode *qgmode)
   printf ("# Going to %.15e %.15e\n", exp(qgmode->t), xeq);
 
   flag = CVodeSetStopTime(qgmode->cvode, alpha_eq);
-  CVODE_CHECK(&flag, "CVodeSetStopTime", 1, FALSE);
+  NCM_CVODE_CHECK (&flag, "CVodeSetStopTime", 1, FALSE);
 
   last_alpha = qgmode->t;
   while (1)
   {
     flag = CVode (qgmode->cvode, alpha_eq, qgmode->y, &alpha, CV_ONE_STEP);
-    CVODE_CHECK(&flag, "CVode[nc_hicosmo_qg_pert_evolve]", 1, FALSE);
+    NCM_CVODE_CHECK (&flag, "CVode[nc_hicosmo_qg_pert_evolve]", 1, FALSE);
 
     if (TRUE)
     {
@@ -1564,12 +1563,12 @@ nc_hicosmo_qg_pert_evolve (NcHICosmoQGMode *qgmode)
   nc_hicosmo_qg_pert_switch (qgmode, NC_HICOSMO_QG_PERT_CURVATURE, lambda_eq);
 
   flag = CVodeSetStopTime(qgmode->cvode, qgint->last_lambda);
-  CVODE_CHECK(&flag, "CVodeSetStopTime", 1, FALSE);
+  NCM_CVODE_CHECK (&flag, "CVodeSetStopTime", 1, FALSE);
 
   while (1)
   {
     flag = CVode (qgmode->cvode, qgint->last_lambda, qgmode->y, &lambda, CV_ONE_STEP);
-    CVODE_CHECK(&flag, "CVode[nc_hicosmo_qg_pert_evolve]", 1, FALSE);
+    NCM_CVODE_CHECK (&flag, "CVode[nc_hicosmo_qg_pert_evolve]", 1, FALSE);
     if (TRUE)
     {
       x = nc_hicosmo_qg_x_lambda (qgmode->cp, lambda, FALSE);
@@ -1721,13 +1720,13 @@ nc_hicosmo_qg_modefuncm_cvode_init (NcHICosmoQGMode *qgmode)
   if (!*qgmode->initialized)
   {
     flag = CVodeInit(qgmode->cvode, f, qgmode->alphai, qgmode->y);
-    CVODE_CHECK(&flag, "CVodeMalloc", 1, FALSE);
+    NCM_CVODE_CHECK (&flag, "CVodeMalloc", 1, FALSE);
     *qgmode->initialized = TRUE;
   }
   else
   {
     flag = CVodeReInit (qgmode->cvode, qgmode->alphai, qgmode->y);
-    CVODE_CHECK(&flag, "CVodeReInit", 1, FALSE);
+    NCM_CVODE_CHECK (&flag, "CVodeReInit", 1, FALSE);
   }
 
   nc_hicosmo_qg_modefunc_set_opts (qgmode);
@@ -1781,42 +1780,42 @@ nc_hicosmo_qg_modefunc_set_opts (NcHICosmoQGMode *qgmode)
   gint flag;
 
   flag = CVodeSStolerances (qgmode->cvode, qgmode->reltol, qgmode->abstol);
-  CVODE_CHECK(&flag, "CVodeSStolerances", 1, FALSE);
+  NCM_CVODE_CHECK (&flag, "CVodeSStolerances", 1, FALSE);
 
   flag = CVodeSetMaxNumSteps(qgmode->cvode, 10000000);
-  CVODE_CHECK(&flag, "CVodeSetMaxNumSteps", 1, FALSE);
+  NCM_CVODE_CHECK (&flag, "CVodeSetMaxNumSteps", 1, FALSE);
 
   flag = CVodeSetUserData (qgmode->cvode, qgmode);
-  CVODE_CHECK(&flag, "CVodeSetUserData", 1, FALSE);
+  NCM_CVODE_CHECK (&flag, "CVodeSetUserData", 1, FALSE);
 
   if (FALSE)
   {
     flag = CVDense(qgmode->cvode, 4);
-    CVODE_CHECK(&flag, "CVDense", 1, FALSE);
+    NCM_CVODE_CHECK (&flag, "CVDense", 1, FALSE);
 
     if (OLD_CODE)
     {
       flag = CVDlsSetDenseJacFn (qgmode->cvode, &hk_step_J);
-      CVODE_CHECK(&flag, "CVDenseSetJacFn", 1, FALSE);
+      NCM_CVODE_CHECK (&flag, "CVDenseSetJacFn", 1, FALSE);
     }
     else
     {
       flag = CVDlsSetDenseJacFn (qgmode->cvode, &Rak_step_J);
-      CVODE_CHECK(&flag, "CVDenseSetJacFn", 1, FALSE);
+      NCM_CVODE_CHECK (&flag, "CVDenseSetJacFn", 1, FALSE);
     }
   }
 
 //  flag = CVodeSetStabLimDet(qgmode->cvode, TRUE);
-//  CVODE_CHECK(&flag, "CVodeSetStabLimDet", 1, FALSE);
+//  NCM_CVODE_CHECK (&flag, "CVodeSetStabLimDet", 1, FALSE);
 
 //  flag = CVodeSetMaxStep(qgmode->cvode, 10.0);
-//  CVODE_CHECK(&flag, "CVodeSetMaxStep", 1, FALSE);
+//  NCM_CVODE_CHECK (&flag, "CVodeSetMaxStep", 1, FALSE);
 
 //  flag = CVodeRootInit (qgmode->cvode, 2, scale_factor_root, params);
-//  CVODE_CHECK(&flag, "CVodeRootInit", 1, FALSE);
+//  NCM_CVODE_CHECK (&flag, "CVodeRootInit", 1, FALSE);
 
 //  flag = CVodeSetStopTime(qgmode->cvode, qgmode->tf);
-//  CVODE_CHECK(&flag, "CVodeSetStopTime", 1, FALSE);
+//  NCM_CVODE_CHECK (&flag, "CVodeSetStopTime", 1, FALSE);
 
   return TRUE;
 }
@@ -1895,14 +1894,14 @@ nc_hicosmo_qg_modefunc_evolve (NcHICosmoQGMode *qgmode)
   //qgmode->alphaf = 0.0;
   nc_hicosmo_qg_modefuncm_cvode_init (qgmode);
   flag = CVodeSetStopTime(qgmode->cvode, qgmode->alphaf);
-  CVODE_CHECK(&flag, "CVodeSetStopTime", 1, FALSE);
+  NCM_CVODE_CHECK (&flag, "CVodeSetStopTime", 1, FALSE);
   printf ("# Ode solver changed at %.15g.\n", exp(qgmode->alphai));
   while (1)
   {
     gdouble x_i;
 
     flag = CVode (qgmode->cvode, qgmode->alphaf, qgmode->y, &x_i, CV_ONE_STEP);
-    CVODE_CHECK(&flag, "CVode[nc_hicosmo_qg_modefunc_evolve]", 1, FALSE);
+    NCM_CVODE_CHECK (&flag, "CVode[nc_hicosmo_qg_modefunc_evolve]", 1, FALSE);
 
     if (FALSE && (x_i < 0 ? (x_i > (last_x * 0.9999)) : ((x_i > (last_x * 1.0001)))))
     {

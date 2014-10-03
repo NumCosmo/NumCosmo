@@ -193,6 +193,7 @@ void ncm_mset_param_get_pi (NcmMSet *mset, NcmMSetPIndex *pi, gdouble *x, guint 
 void ncm_mset_fparams_get_vector (NcmMSet *mset, NcmVector *x);
 void ncm_mset_fparams_get_vector_offset (NcmMSet *mset, NcmVector *x, guint offset);
 void ncm_mset_fparams_set_vector (NcmMSet *mset, const NcmVector *x);
+void ncm_mset_fparams_set_vector_offset (NcmMSet *mset, const NcmVector *x, guint offset);
 void ncm_mset_fparams_set_array (NcmMSet *mset, const gdouble *x);
 void ncm_mset_fparams_set_gsl_vector (NcmMSet *mset, const gsl_vector *x);
 

@@ -37,7 +37,6 @@
 
 #include "scalefactor.h"
 #include "math/ncm_spline_cubic_notaknot.h"
-#include "math/cvode_util.h"
 
 #include <nvector/nvector_serial.h>
 
@@ -71,7 +70,7 @@ nc_scale_factor_new (NcScaleFactorTimeType ttype, gdouble zf)
 	a->zf = zf;
 
   a->cvode = CVodeCreate (CV_BDF, CV_NEWTON);
-  CVODE_CHECK((void *)a->cvode, "CVodeCreate", 0, NULL);
+  NCM_CVODE_CHECK ((void *)a->cvode, "CVodeCreate", 0, NULL);
   a->cvode_malloc = FALSE;
 
   a->reltol = 1e-13;
@@ -188,32 +187,32 @@ nc_scale_factor_init_cvode (NcScaleFactor *a, NcHICosmo *model)
   if (a->cvode_malloc)
   {
     flag = CVodeReInit (a->cvode, a->ti, a->y);
-    CVODE_CHECK(&flag, "CVodeReInit", 1, );
+    NCM_CVODE_CHECK (&flag, "CVodeReInit", 1, );
   }
   else
   {
     flag = CVodeInit (a->cvode, a->dz_dt_f, a->ti, a->y);
-    CVODE_CHECK(&flag, "CVodeMalloc", 1, );
+    NCM_CVODE_CHECK (&flag, "CVodeMalloc", 1, );
     a->cvode_malloc = TRUE;
   }
 
   flag = CVodeSStolerances (a->cvode, a->reltol, a->abstol);
-  CVODE_CHECK(&flag, "CVodeSStolerances", 1, );
+  NCM_CVODE_CHECK (&flag, "CVodeSStolerances", 1, );
 
   flag = CVodeSetStopTime(a->cvode, a->tf);
-  CVODE_CHECK(&flag, "CVodeSetStopTime", 1, );
+  NCM_CVODE_CHECK (&flag, "CVodeSetStopTime", 1, );
 
   flag = CVodeSetUserData (a->cvode, model);
-  CVODE_CHECK(&flag, "CVodeSetUserData", 1, );
+  NCM_CVODE_CHECK (&flag, "CVodeSetUserData", 1, );
 
   flag = CVodeSetMaxNumSteps(a->cvode, 500);
-  CVODE_CHECK(&flag, "CVodeSetMaxNumSteps", 1, );
+  NCM_CVODE_CHECK (&flag, "CVodeSetMaxNumSteps", 1, );
 
   flag = CVDense(a->cvode, 1);
-  CVODE_CHECK(&flag, "CVDense", 1, );
+  NCM_CVODE_CHECK (&flag, "CVDense", 1, );
 
   flag = CVDlsSetDenseJacFn (a->cvode, a->dz_dt_J);
-  CVODE_CHECK(&flag, "CVDlsSetDenseJacFn", 1, );
+  NCM_CVODE_CHECK (&flag, "CVDlsSetDenseJacFn", 1, );
 
   return;
 }
@@ -316,7 +315,7 @@ _nc_scale_factor_calc_spline (NcScaleFactor *a)
     gint flag;
 
     flag = CVode(a->cvode, a->tf, a->y, &t, CV_ONE_STEP);
-    CVODE_CHECK(&flag, "CVode", 1, );
+    NCM_CVODE_CHECK (&flag, "CVode", 1, );
     mzi = -NV_Ith_S (a->y, 0);
     g_array_append_val (x, t);
     g_array_append_val (y, mzi);
