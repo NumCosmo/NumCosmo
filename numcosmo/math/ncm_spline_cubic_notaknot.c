@@ -114,10 +114,8 @@ _ncm_spline_notaknot_prepare_base (NcmSpline *s)
 	const gdouble h_1 = ncm_vector_get (s->xv, 2) - ncm_vector_get (s->xv, 1);
 	const gdouble h_nm1 = ncm_vector_get (s->xv, n)   - ncm_vector_get (s->xv, nm1);
 	const gdouble h_nm2 = ncm_vector_get (s->xv, nm1) - ncm_vector_get (s->xv, nm2);
-#ifdef HAVE_LAPACK
 	NcmVector *g = sc->g;
 	sc->g = sc->c;
-#endif
 
 	size_t start_i = 0, pad_i = 0;
 	size_t i;
