@@ -118,7 +118,6 @@ dnl Checks for programs.
 dnl ***************************************************************************
 AC_LANG(C)
 AC_PROG_CC
-AC_PROG_CPP
 AC_PROG_F77
 AC_PROG_INSTALL   
 AC_PROG_LN_S
@@ -393,7 +392,7 @@ if test "x$have_blas" != "xno"; then
   elif test "x$blas_openblas" != "x"; then 
     blas_support="OpenBLAS"
   else
-    blas_support="other"
+    blas_support="Other"
   fi
   AC_MSG_RESULT([$blas_support])
 
@@ -403,8 +402,25 @@ if test "x$have_blas" != "xno"; then
   else
     AC_CHECK_HEADERS([cblas.h])
   fi
-  GSL_LIBS=`echo $GSL_LIBS | sed 's/\-lgslcblas//g'`
   LIBS="$BLAS_LIBS $LIBS"
+
+  AC_CHECK_FUNC([cblas_dnrm2], [have_cblas="yes"], [])
+  AC_MSG_CHECKING([if cblas is already supported])
+
+  if test "x$have_cblas" != "xyes"; then
+    AC_MSG_RESULT([no])
+    AC_SEARCH_LIBS([cblas_dgemm],[cblas],[have_cblas="yes"],[])  
+  else
+    AC_MSG_RESULT([yes])
+  fi
+
+  AC_MSG_CHECKING([which cblas to use])
+  if test "x$have_cblas" = "xyes"; then
+    AC_MSG_RESULT([cblas, removing gslcblas])
+    GSL_LIBS=`echo $GSL_LIBS | sed 's/\-lgslcblas//g'`
+  else
+    AC_MSG_RESULT([none found, using gslcblas])
+  fi
 else
   AC_MSG_RESULT([GSL's BLAS])
   AC_DEFINE([HAVE_GSL_CBLAS_H], [1], [use lapack functions])
