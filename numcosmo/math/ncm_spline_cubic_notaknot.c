@@ -114,10 +114,12 @@ _ncm_spline_notaknot_prepare_base (NcmSpline *s)
 	const gdouble h_1 = ncm_vector_get (s->xv, 2) - ncm_vector_get (s->xv, 1);
 	const gdouble h_nm1 = ncm_vector_get (s->xv, n)   - ncm_vector_get (s->xv, nm1);
 	const gdouble h_nm2 = ncm_vector_get (s->xv, nm1) - ncm_vector_get (s->xv, nm2);
+  const gdouble h_0_p_2h_1     = h_0   + 2.0 * h_1;
+  const gdouble h_nm1_p_2h_nm2 = h_nm1 + 2.0 * h_nm2;
+  
 	NcmVector *g = sc->g;
 	sc->g = sc->c;
 
-	size_t start_i = 0, pad_i = 0;
 	size_t i;
 
 	g_assert (sys_size > 1);
@@ -128,72 +130,62 @@ _ncm_spline_notaknot_prepare_base (NcmSpline *s)
 		const gdouble h_ip1     = ncm_vector_get (s->xv, i + 2) - ncm_vector_get (s->xv, i + 1);
 		const gdouble ydiff_i   = ncm_vector_get (s->yv, i + 1) - ncm_vector_get (s->yv, i);
 		const gdouble ydiff_ip1 = ncm_vector_get (s->yv, i + 2) - ncm_vector_get (s->yv, i + 1);
-		const gdouble g_i = 1.0 / h_i;
-		const gdouble g_ip1 = 1.0 / h_ip1;
+		const gdouble g_i       = 1.0 / h_i;
+		const gdouble g_ip1     = 1.0 / h_ip1;
 
 		ncm_vector_fast_set (sc->offdiag, i, h_ip1);
-		ncm_vector_fast_set (sc->diag, i,    2.0 * (h_ip1 + h_i));
-		ncm_vector_fast_set (sc->g, 1 + i,   3.0 * (ydiff_ip1 * g_ip1 -  ydiff_i * g_i));
+		ncm_vector_fast_set (sc->diag,    i, 2.0 * (h_ip1 + h_i));
+		ncm_vector_fast_set (sc->g,   1 + i, 3.0 * (ydiff_ip1 * g_ip1 -  ydiff_i * g_i));
 	}
 
 	{
 		const gdouble ydiff_0 = ncm_vector_get (s->yv, 1) - ncm_vector_get (s->yv, 0);
 		const gdouble ydiff_1 = ncm_vector_get (s->yv, 2) - ncm_vector_get (s->yv, 1);
-		if (fabs((h_0 - h_1) / h_0) < GSL_SQRT_DBL_EPSILON)
-		{
-			start_i = 1;
-			ncm_vector_fast_set (sc->c, 1, 3.0 * (ydiff_1 -  ydiff_0 * h_1 / h_0) / ((h_1 + h_0) * (2.0 * h_1 + h_0)));
-			ncm_vector_fast_subfrom (sc->g, 1 + 1, h_1 * ncm_vector_fast_get (sc->c, 1));
-		}
-		else
-		{
-			ncm_vector_fast_set (sc->offdiag, 0, h_1);
-			ncm_vector_fast_set (sc->diag, 0,    h_1 * (2.0 * h_1 + h_0) / (h_1 - h_0));
-			ncm_vector_fast_set (sc->g, 1 + 0,   3.0 * h_1 * (ydiff_1 -  ydiff_0 * h_1 / h_0) / (h_1 * h_1 - h_0 * h_0));
-		}
-	}
+		const gdouble g_0     = 1.0 / h_0;
+		const gdouble g_1     = 1.0 / h_1;
+    
+    ncm_vector_fast_set (sc->c,         0, 3.0 * (ydiff_1 * g_1 -  ydiff_0 * g_0) / h_0_p_2h_1);
+    ncm_vector_fast_set (sc->c,         1, ncm_vector_fast_get (sc->c, 0) * h_1 / (h_1 + h_0));
+
+    ncm_vector_fast_addto (sc->diag,    1, (h_0 - h_1) * h_1 / h_0_p_2h_1);
+    ncm_vector_fast_subfrom (sc->g,     2, h_1 * ncm_vector_fast_get (sc->c, 1));
+  }
 
 	{
 		const gdouble ydiff_nm1 = ncm_vector_get (s->yv, n)   - ncm_vector_get (s->yv, nm1);
 		const gdouble ydiff_nm2 = ncm_vector_get (s->yv, nm1) - ncm_vector_get (s->yv, nm2);
+		const gdouble g_nm1     = 1.0 / h_nm1;
+		const gdouble g_nm2     = 1.0 / h_nm2;
 
-		if (fabs((h_nm2 - h_nm1) / h_nm2) < GSL_SQRT_DBL_EPSILON)
-		{
-			pad_i = 1;
-			ncm_vector_fast_set (sc->c, nm1, 3.0 * (ydiff_nm1 * h_nm2 / h_nm1 - ydiff_nm2) / ((h_nm2 + h_nm1) * (2.0 * h_nm2 + h_nm1)));
-			ncm_vector_fast_subfrom (sc->g, 1 + nm1 - 2, h_nm2 * ncm_vector_fast_get (sc->c, nm1));
-		}
-		else
-		{
-			ncm_vector_fast_set (sc->offdiag, nm2, h_nm1);
-			ncm_vector_fast_set (sc->diag,    nm2, h_nm2 * (2.0 * h_nm2 + h_nm1) / (h_nm2 - h_nm1));
-			ncm_vector_fast_set (sc->g,   1 + nm2, 3.0 * h_nm2 * (ydiff_nm1 * h_nm2 / h_nm1 - ydiff_nm2) / (h_nm2 * h_nm2 - h_nm1 * h_nm1));
-		}
-	}
+    ncm_vector_fast_set (sc->c,   n, 3.0 * (ydiff_nm1 * g_nm1 - ydiff_nm2 * g_nm2) / h_nm1_p_2h_nm2);
+    ncm_vector_fast_set (sc->c, nm1, ncm_vector_fast_get (sc->c, n) * h_nm2 / (h_nm2 + h_nm1));
+
+    ncm_vector_fast_addto (sc->diag,    nm1 - 2, (h_nm1 - h_nm2) * h_nm2 / h_nm1_p_2h_nm2);
+    ncm_vector_fast_subfrom (sc->g, 1 + nm1 - 2, h_nm2 * ncm_vector_fast_get (sc->c, nm1));
+  }
 
 	{
-		gsize loc_sys_size = sys_size - start_i - pad_i;
-		{
-			gint info = ncm_lapack_dptsv (ncm_vector_ptr (sc->diag, start_i),
-                                    ncm_vector_ptr (sc->offdiag, start_i),
-			                              ncm_vector_ptr (sc->g, start_i + 1),
-                                    ncm_vector_ptr (sc->g, start_i + 1),
-			                              loc_sys_size);
-      sc->g = g;
-			NCM_LAPACK_CHECK_INFO ("dptsv", info);
-		}
-		{
-			const gdouble c1   = ncm_vector_fast_get (sc->c, 1);
-			const gdouble c2   = ncm_vector_fast_get (sc->c, 2);
-			const gdouble cnm1 = ncm_vector_fast_get (sc->c, nm1);
-			const gdouble cnm2 = ncm_vector_fast_get (sc->c, nm2);
-
-			ncm_vector_fast_set (sc->c, 0, c1 + h_0 * (c1 - c2) / h_1);
-			ncm_vector_fast_set (sc->c, n, cnm1 + h_nm1 * (cnm1 - cnm2) / h_nm2);
-		}
-
-		return;
+		gsize loc_sys_size = sys_size - 2;
+    gint info = ncm_lapack_dptsv (ncm_vector_ptr (sc->diag, 1),
+                                  ncm_vector_ptr (sc->offdiag, 1),
+                                  ncm_vector_ptr (sc->g, 2),
+                                  ncm_vector_ptr (sc->g, 2),
+                                  loc_sys_size);
+    sc->g = g;
+    NCM_LAPACK_CHECK_INFO ("dptsv", info);
 	}
+
+  {
+    const gdouble c_2   = ncm_vector_fast_get (sc->c, 2);
+    const gdouble c_nm2 = ncm_vector_fast_get (sc->c, nm2);
+
+    ncm_vector_fast_subfrom (sc->c, 0, c_2 * (2.0 * h_0 + h_1) / h_0_p_2h_1);
+    ncm_vector_fast_subfrom (sc->c, 1, c_2 * (h_1 - h_0) / h_0_p_2h_1);
+
+    ncm_vector_fast_subfrom (sc->c, nm1, c_nm2 * (h_nm2 - h_nm1) / h_nm1_p_2h_nm2);
+    ncm_vector_fast_subfrom (sc->c,   n, c_nm2 * (h_nm2 + 2.0 * h_nm1) / h_nm1_p_2h_nm2);
+  }
+  return;
 }
 
 static void

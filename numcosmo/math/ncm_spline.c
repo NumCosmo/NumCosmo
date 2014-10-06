@@ -68,6 +68,7 @@ ncm_spline_copy_empty (const NcmSpline *s)
 NcmSpline *
 ncm_spline_copy (const NcmSpline *s)
 {
+  g_assert (s->xv != NULL && s->yv != NULL);
 	return ncm_spline_new (s, ncm_vector_dup (s->xv), ncm_vector_dup (s->yv), TRUE);
 }
 

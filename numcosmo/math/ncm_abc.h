@@ -72,6 +72,7 @@ struct _NcmABC
   NcmFitRunMsgs mtype;
   NcmVector *theta;
   NcmVector *thetastar;
+  GArray *weights;
   gboolean started;
   gint cur_sample_id;
   guint nthreads;

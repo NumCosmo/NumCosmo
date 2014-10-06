@@ -65,6 +65,7 @@ ncm_abc_init (NcmABC *abc)
   abc->mtype         = NCM_FIT_RUN_MSGS_NONE;
   abc->theta         = NULL;
   abc->thetastar     = NULL;  
+  abc->weights       = g_array_new (FALSE, FALSE, sizeof (gdouble));
   abc->started       = FALSE;
   abc->cur_sample_id = -1; /* Represents that no samples were calculated yet. */
   abc->nthreads      = 0;
@@ -153,6 +154,8 @@ _ncm_abc_dispose (GObject *object)
   ncm_timer_clear (&abc->nt);
   ncm_serialize_clear (&abc->ser);
 
+  g_clear_pointer (&abc->weights, g_array_unref);
+  
   if (abc->mp != NULL)
   {
     ncm_memory_pool_free (abc->mp, TRUE);
@@ -386,13 +389,15 @@ ncm_abc_set_rng (NcmABC *abc, NcmRNG *rng)
 }
 
 void
-_ncm_abc_update (NcmABC *abc, NcmMSet *mset, gdouble dist)
+_ncm_abc_update (NcmABC *abc, NcmMSet *mset, gdouble dist, gdouble weight)
 {
   const guint part = 5;
   const guint step = (abc->n / part) == 0 ? 1 : (abc->n / part);
 
-  ncm_mset_catalog_add_from_mset (abc->mcat, mset, dist, 1.0);
+  ncm_mset_catalog_add_from_mset (abc->mcat, mset, dist, weight);
   ncm_timer_task_increment (abc->nt);
+  /*g_array_index (abc->weights, gdouble, abc->n) = weight;*/
+  printf ("# c_id %d\n", abc->cur_sample_id);
 
   switch (abc->mtype)
   {
@@ -621,6 +626,8 @@ ncm_abc_run (NcmABC *abc, guint n)
   }
   
   abc->n = n - (abc->cur_sample_id + 1);
+
+  g_array_set_size (abc->weights, abc->n);
   
   switch (abc->mtype)
   {
@@ -674,7 +681,8 @@ _ncm_abc_run_single (NcmABC *abc)
     
     if (prob == 1.0 || (prob != 0.0 && gsl_rng_uniform (abc->mcat->rng->r) < prob))
     {
-      _ncm_abc_update (abc, abc->mcat->mset, dist);
+      _ncm_abc_update (abc, abc->mcat->mset, dist, 1.0);
+      abc->cur_sample_id++;
       i++;
     }
   }
@@ -744,7 +752,7 @@ _ncm_abc_thread_eval (glong i, glong f, gpointer data)
     if (prob == 1.0 || (prob != 0.0 && gsl_rng_uniform (abct->rng->r) < prob))
     {
       _NCM_MUTEX_LOCK (&update_lock);    
-      _ncm_abc_update (abc, abct->mset, dist);
+      _ncm_abc_update (abc, abct->mset, dist, 1.0);
       abc->cur_sample_id++;
       j++;
       _NCM_MUTEX_UNLOCK (&update_lock);
