@@ -38,6 +38,7 @@
 #include "math/integral.h"
 #include "math/memory_pool.h"
 #include "math/ncm_util.h"
+#include "cubature/cubature.h"
 
 #include <gsl/gsl_integration.h>
 #ifdef HAVE_LIBCUBA
@@ -241,6 +242,16 @@ _integrand_2dim (const gint *ndim, const gdouble x[], const gint *ncomp, gdouble
   f[0] = iinteg->integ->f ((iinteg->xf - iinteg->xi) * x[0] + iinteg->xi, (iinteg->yf - iinteg->yi) * x[1] + iinteg->yi, iinteg->integ->userdata);
 	return 0;
 }
+#else
+gint 
+_integrand_cubature_2dim (guint ndim, const gdouble *x, gpointer fdata, guint fdim, gdouble *fval)
+{
+  NcmIntegrand2dim *integ = (NcmIntegrand2dim *) fdata;
+  NCM_UNUSED (ndim);
+  NCM_UNUSED (fdim);
+  fval[0] = integ->f (x[0], x[1], integ->userdata);
+  return 0;
+}
 #endif /* HAVE_LIBCUBA */
 
 /**
@@ -284,7 +295,17 @@ ncm_integrate_2dim (NcmIntegrand2dim *integ, gdouble xi, gdouble yi, gdouble xf,
 
 	ret = (fail == 0);
 #else
-	g_assert_not_reached ();
+  const gint maxeval = 10000;
+  const gdouble xmin[2] = {xi, yi};
+  const gdouble xmax[2] = {xf, yf};
+  gint retpc = pcubature (1, &_integrand_cubature_2dim, integ,
+                          2, xmin, xmax,
+                          maxeval, epsabs, epsrel,
+                          ERROR_INDIVIDUAL, result, error);
+  if (retpc == 0)
+    return TRUE;
+  else
+    return FALSE;
 #endif
 	return ret;
 }

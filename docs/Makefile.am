@@ -32,6 +32,7 @@ DOC_MAIN_SGML_FILE=$(DOC_MODULE)-docs.sgml
 # e.g. DOC_SOURCE_DIR=../../../gtk ../../../gdk
 DOC_SOURCE_DIR=$(top_srcdir)/numcosmo \
 	       $(top_srcdir)/numcosmo/lss \
+	       $(top_srcdir)/numcosmo/abc \
 	       $(top_srcdir)/numcosmo/math \
 	       $(top_srcdir)/numcosmo/model \
 	       $(top_srcdir)/numcosmo/perturbations \
@@ -68,6 +69,7 @@ FIXXREF_OPTIONS=--extra-dir=$(GLIB_PREFIX)/share/gtk-doc/html
 # e.g. CFILE_GLOB=$(top_srcdir)/gtk/*.c
 HFILE_GLOB=$(top_srcdir)/numcosmo/*.h \
 	   $(top_srcdir)/numcosmo/lss/*.h \
+	   $(top_srcdir)/numcosmo/abc/*.h \
 	   $(top_srcdir)/numcosmo/math/*.h \
 	   $(top_srcdir)/numcosmo/model/*.h \
 	   $(top_srcdir)/numcosmo/perturbations/*.h \
@@ -75,6 +77,7 @@ HFILE_GLOB=$(top_srcdir)/numcosmo/*.h \
 
 CFILE_GLOB=$(top_srcdir)/numcosmo/*.c \
 	   $(top_srcdir)/numcosmo/lss/*.c \
+	   $(top_srcdir)/numcosmo/abc/*.c \
 	   $(top_srcdir)/numcosmo/math/*.c \
 	   $(top_srcdir)/numcosmo/model/*.c \
 	   $(top_srcdir)/numcosmo/perturbations/*.c \
@@ -101,7 +104,10 @@ IGNORE_HFILES=linear_internal.h         \
               config.h                  \
               ncm_fit_nlopt_enum_meta.h \
               $(ignore_nlopt)           \
-              $(ignore_levmar)          
+              $(ignore_levmar)          \
+              cubature.h                \
+              converged.h               \
+              vwrapper.h
 
 # Images to copy into HTML directory.
 # e.g. HTML_IMAGES=$(top_srcdir)/gtk/stock-icons/stock_about_24.png

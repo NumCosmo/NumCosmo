@@ -712,6 +712,58 @@ ncm_mset_params_print_vals (NcmMSet *mset, FILE *out)
 }
 
 /**
+ * ncm_mset_fparams_log_covar:
+ * @mset: a #NcmMSet
+ * @covar: a #NcmMatrix
+ *
+ * FIXME
+ *
+ */
+void 
+ncm_mset_fparams_log_covar (NcmMSet *mset, NcmMatrix *covar)
+{
+  guint i, j;
+  guint name_size = ncm_mset_max_fparam_name (mset);
+  guint free_params_len = ncm_mset_fparam_len (mset);
+  gchar *box = "---------------";
+  g_assert (covar != NULL);
+
+  ncm_cfg_msg_sepa ();
+  g_message ("# NcmMSet parameters covariance matrix\n");
+  g_message ("#                                        ");
+  for (i = 0; i < name_size; i++) g_message (" ");
+
+  for (i = 0; i < free_params_len; i++)
+    i ? g_message ("%s",box) : g_message ("-%s",box);
+  if (i)
+    g_message ("\n");
+
+  for (i = 0; i < free_params_len; i++)
+  {
+    NcmMSetPIndex *pi = ncm_mset_fparam_get_pi (mset, i);
+    const gchar *pname = ncm_mset_fparam_name (mset, i);
+    g_message ("# %*s[%02d%02d] = % -12.4g +/- % -12.4g |",
+               name_size, pname, pi->mid, pi->pid,
+               ncm_mset_fparam_get (mset, i),
+               sqrt (ncm_matrix_get (covar, i, i))
+               );
+    for (j = 0; j < free_params_len; j++)
+    {
+      g_message (" % -12.4g |", ncm_matrix_get (covar, i, j) / (sqrt (ncm_matrix_get (covar, i, i) * ncm_matrix_get (covar, j, j))));
+    }
+    g_message ("\n");
+  }
+  g_message ("#                                        ");
+  for (i = 0; i < name_size; i++) g_message (" ");
+  for (i = 0; i < free_params_len; i++)
+    i ? g_message ("%s",box) : g_message ("-%s",box);
+  if (i)
+    g_message ("\n");
+
+  return;
+}
+
+/**
  * ncm_mset_params_valid:
  * @mset: a #NcmMSet
  *

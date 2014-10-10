@@ -174,11 +174,11 @@ nc_distance_class_init (NcDistanceClass *klass)
 {
   GObjectClass* object_class = G_OBJECT_CLASS (klass);
 
-  object_class->dispose = nc_distance_dispose;
-  object_class->finalize = nc_distance_finalize;
+  object_class->constructed  = nc_distance_constructed;
   object_class->set_property = nc_distance_set_property;
   object_class->get_property = nc_distance_get_property;
-  object_class->constructed  = nc_distance_constructed;
+  object_class->dispose = nc_distance_dispose;
+  object_class->finalize = nc_distance_finalize;
 
   g_object_class_install_property (object_class,
                                    PROP_ZF,
@@ -271,6 +271,7 @@ nc_distance_prepare (NcDistance *dist, NcHICosmo *cosmo)
     NcmSpline *s = ncm_spline_cubic_notaknot_new ();
     dist->comoving_distance_spline =
       ncm_ode_spline_new_full (s, dcddz, 0.0, 0.0, dist->z_f);
+    
     ncm_spline_free (s);
   }
 

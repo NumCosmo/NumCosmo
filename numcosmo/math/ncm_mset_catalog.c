@@ -62,6 +62,7 @@ enum
   PROP_0,
   PROP_MSET,
   PROP_NADD_VALS,
+  PROP_WEIGHTED,
   PROP_RNG,
   PROP_FILE,
   PROP_RUN_TYPE_STR,
@@ -78,6 +79,7 @@ ncm_mset_catalog_init (NcmMSetCatalog *mcat)
   mcat->pstats         = NULL;
   mcat->fmode          = NCM_MSET_CATALOG_FLUSH_LEN;
   mcat->rng            = NULL;
+  mcat->weighted       = FALSE;
   mcat->first_flush    = FALSE;
   mcat->rng_inis       = NULL;
   mcat->rng_stat       = NULL;
@@ -107,7 +109,7 @@ _ncm_mset_catalog_constructed (GObject *object)
   {
     NcmMSetCatalog *mcat = NCM_MSET_CATALOG (object);
     guint free_params_len = ncm_mset_fparams_len (mcat->mset);
-    guint total = free_params_len + mcat->nadd_vals;
+    guint total = free_params_len + mcat->nadd_vals + (mcat->weighted ? 1 : 0);
     guint i;
 
     mcat->pstats     = ncm_stats_vec_new (total, NCM_STATS_VEC_COV, TRUE);
@@ -119,10 +121,16 @@ _ncm_mset_catalog_constructed (GObject *object)
 
     g_array_set_size (mcat->porder, total);
     g_ptr_array_set_size (mcat->add_vals_names, 0);
-
+    
     for (i = 0; i < mcat->nadd_vals; i++)
     {
-      g_ptr_array_add (mcat->add_vals_names, g_strdup_printf ("additional-param-%u", i + 1));
+      g_ptr_array_add (mcat->add_vals_names, g_strdup_printf ("NcmMSetCatalog:additional-param-%u", i + 1));
+    }
+
+    if (mcat->weighted)
+    {
+      g_ptr_array_add (mcat->add_vals_names, g_strdup ("NcmMSetCatalog:Row-weights"));
+      mcat->nadd_vals++;
     }
   }
 }
@@ -140,6 +148,9 @@ _ncm_mset_catalog_set_property (GObject *object, guint prop_id, const GValue *va
       break;
     case PROP_NADD_VALS:
       mcat->nadd_vals = g_value_get_uint (value);
+      break;
+    case PROP_WEIGHTED:
+      mcat->weighted = g_value_get_boolean (value);
       break;
     case PROP_RNG:
       ncm_mset_catalog_set_rng (mcat, g_value_get_object (value));
@@ -175,6 +186,9 @@ _ncm_mset_catalog_get_property (GObject *object, guint prop_id, GValue *value, G
       break;
     case PROP_NADD_VALS:
       g_value_set_uint (value, mcat->nadd_vals);
+      break;
+    case PROP_WEIGHTED:
+      g_value_set_boolean (value, mcat->weighted);
       break;
     case PROP_RNG:
       g_value_set_object (value, mcat->rng);
@@ -267,6 +281,14 @@ ncm_mset_catalog_class_init (NcmMSetCatalogClass *klass)
                                                       G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
   
   g_object_class_install_property (object_class,
+                                   PROP_WEIGHTED,
+                                   g_param_spec_boolean ("weighted",
+                                                         NULL,
+                                                         "Catalog with weighted rows",
+                                                         FALSE,
+                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  
+  g_object_class_install_property (object_class,
                                    PROP_RNG,
                                    g_param_spec_object ("rng",
                                                         NULL,
@@ -309,6 +331,7 @@ ncm_mset_catalog_class_init (NcmMSetCatalogClass *klass)
  * ncm_mset_catalog_new:
  * @mset: a #NcmMSet.
  * @nadd_vals: number of additional values.
+ * @weighted: set to TRUE whenever the catalog is weighted.
  * @...: additional values names.
  *
  * Creates a new #NcmMSetCatalog based on the #NcmFit object @fit. The catalog assumes that
@@ -317,16 +340,17 @@ ncm_mset_catalog_class_init (NcmMSetCatalogClass *klass)
  * Returns: (transfer full): a new #NcmMSetCatalog
  */
 NcmMSetCatalog *
-ncm_mset_catalog_new (NcmMSet *mset, guint nadd_vals, ...)
+ncm_mset_catalog_new (NcmMSet *mset, guint nadd_vals, gboolean weighted, ...)
 {
   va_list ap;
   NcmMSetCatalog *mcat = g_object_new (NCM_TYPE_MSET_CATALOG, 
                                        "mset", mset,
                                        "nadd-vals", nadd_vals,
+                                       "weighted", weighted,
                                        NULL);
   guint i;
 
-  va_start (ap, nadd_vals);
+  va_start (ap, weighted);
   
   for (i = 0; i < nadd_vals; i++)
   {
@@ -1038,17 +1062,19 @@ ncm_mset_catalog_reset (NcmMSetCatalog *mcat)
 void
 ncm_mset_catalog_erase_data (NcmMSetCatalog *mcat)
 {
-  gint status = 0;
-  gint nrows = mcat->file_cur_id - mcat->file_first_id + 1; 
-  g_assert (mcat->fptr != NULL);
+  if (mcat->fptr != NULL)
+  {
+    gint status = 0;
+    gint nrows = mcat->file_cur_id - mcat->file_first_id + 1; 
 
-  if (nrows > 0)
-  {    
-    fits_delete_rows (mcat->fptr, 1, nrows, &status);
-    NCM_FITS_ERROR (status);
+    if (nrows > 0)
+    {    
+      fits_delete_rows (mcat->fptr, 1, nrows, &status);
+      NCM_FITS_ERROR (status);
 
-    mcat->file_cur_id = mcat->file_first_id - 1;
-    _ncm_mset_catalog_flush_file (mcat);
+      mcat->file_cur_id = mcat->file_first_id - 1;
+      _ncm_mset_catalog_flush_file (mcat);
+    }
   }
 }
 
@@ -1099,11 +1125,13 @@ ncm_mset_catalog_largest_error (NcmMSetCatalog *mcat)
   guint free_params_len = ncm_mset_fparams_len (mcat->mset);
   const gdouble n = ncm_stats_vec_get_weight (mcat->pstats);
   const gdouble sqrt_n = sqrt (n);
+  const gdouble fpi = mcat->nadd_vals;
+  const gdouble fpf = free_params_len + mcat->nadd_vals;
   gdouble lerror = 0.0;
   
   if (n < 10)
   {
-    for (i = 0; i < free_params_len; i++)
+    for (i = fpi; i < fpf; i++)
     {
       const gdouble mu = ncm_stats_vec_get_mean (mcat->pstats, i);
       const gdouble sd = ncm_stats_vec_get_sd (mcat->pstats, i);
@@ -1113,7 +1141,7 @@ ncm_mset_catalog_largest_error (NcmMSetCatalog *mcat)
   }
   else
   {
-    for (i = 0; i < free_params_len; i++)
+    for (i = fpi; i < fpf; i++)
     {
       const gdouble mu = ncm_stats_vec_get_mean (mcat->pstats, i);
       const gdouble sd = ncm_stats_vec_get_sd (mcat->pstats, i);
@@ -1212,8 +1240,11 @@ _ncm_mset_catalog_post_update (NcmMSetCatalog *mcat)
     ncm_vector_set (mcat->params_max, i, GSL_MAX (p_i, cur_max_p_i));
     ncm_vector_set (mcat->params_min, i, GSL_MIN (p_i, cur_min_p_i));
   }
-  
-  ncm_stats_vec_update (mcat->pstats);
+
+  if (mcat->weighted)
+    ncm_stats_vec_update_weight (mcat->pstats, ncm_vector_get (x, mcat->nadd_vals - 1));
+  else  
+    ncm_stats_vec_update (mcat->pstats);
 
   mcat->cur_id++;
 
@@ -1326,6 +1357,24 @@ ncm_mset_catalog_log_current_stats (NcmMSetCatalog *mcat)
 }
 
 /**
+ * ncm_mset_catalog_peek_row:
+ * @mcat: a #NcmMSetCatalog
+ * @i: the row index.
+ * 
+ * Gets the @i-th row.
+ * 
+ * Returns: (transfer none): the row with index @i or NULL if not available. 
+ */
+NcmVector *
+ncm_mset_catalog_peek_row (NcmMSetCatalog *mcat, guint i)
+{
+  if (mcat->pstats->nitens == 0 || i >= mcat->pstats->nitens)
+    return NULL;
+  else
+    return ncm_stats_vec_peek_row (mcat->pstats, i);
+}
+
+/**
  * ncm_mset_catalog_peek_current_row:
  * @mcat: a #NcmMSetCatalog
  * 
@@ -1354,8 +1403,8 @@ void
 ncm_mset_catalog_get_mean (NcmMSetCatalog *mcat, NcmVector **mean)
 {
   if (*mean == NULL)
-    *mean = ncm_vector_new (mcat->pstats->len - 1);
-  ncm_stats_vec_get_mean_vector (mcat->pstats, *mean, 1);
+    *mean = ncm_vector_new (mcat->pstats->len - mcat->nadd_vals);
+  ncm_stats_vec_get_mean_vector (mcat->pstats, *mean, mcat->nadd_vals);
 }
 
 /**
@@ -1370,8 +1419,8 @@ void
 ncm_mset_catalog_get_covar (NcmMSetCatalog *mcat, NcmMatrix **cov)
 {
   if (*cov == NULL)
-    *cov = ncm_matrix_new (mcat->pstats->len - 1, mcat->pstats->len - 1);
-  ncm_stats_vec_get_cov_matrix (mcat->pstats, *cov, 1);
+    *cov = ncm_matrix_new (mcat->pstats->len - mcat->nadd_vals, mcat->pstats->len - mcat->nadd_vals);
+  ncm_stats_vec_get_cov_matrix (mcat->pstats, *cov, mcat->nadd_vals);
 }
 
 /**
@@ -1445,10 +1494,8 @@ ncm_mset_catalog_param_pdf_pvalue (NcmMSetCatalog *mcat, gdouble pval, gboolean 
     NCM_UNUSED (both);
     if (pval < p_min || pval > p_max)
     {
-      /*
-       g_message ("# NcmMSetCatalog: value % 20.15g outside mc obtained interval [% 20.15g % 20.15g]. Assuming 0 pvalue.",
-       m2lnL, mc->mcat->m2lnL_min, mc->mcat->m2lnL_max);
-       */
+      g_warning ("ncm_mset_catalog_param_pdf_pvalue: value % 20.15g outside mc obtained interval [% 20.15g % 20.15g]. Assuming 0 pvalue.",
+                 pval, p_min, p_max);
       return 0.0;
     }
     gsl_histogram_find (mcat->h, pval, &i);

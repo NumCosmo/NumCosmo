@@ -126,3 +126,19 @@ _ncm_mset_trans_kern_flat_get_name (NcmMSetTransKern *tkern)
 {
   return "Multivariate Flat Sampler";
 }
+
+/**
+ * ncm_mset_trans_kern_flat_new:
+ *
+ * New NcmMSetTransKern flat.
+ * 
+ * Returns: (transfer full): a new #NcmMSetTransKernFlat.
+ * 
+ */
+NcmMSetTransKernFlat *
+ncm_mset_trans_kern_flat_new (void)
+{
+  NcmMSetTransKernFlat *tkernf = g_object_new (NCM_TYPE_MSET_TRANS_KERN_FLAT,
+                                               NULL);
+  return tkernf;
+}

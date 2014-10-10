@@ -711,18 +711,6 @@ ncm_matrix_cholesky_decomp (NcmMatrix *cm)
   {
     g_error ("ncm_matrix_cholesky_decomp[ncm_lapack_dpotrf]: %d\n", ret);
   }
-  {
-    gint i, j;
-    printf ("%u %u!!!!!!\n", ncm_matrix_nrows (cm), ncm_matrix_ncols (cm));
-    for (i = 0; i < ncm_matrix_nrows (cm); i++)
-    {
-      for (j = 0; j < ncm_matrix_ncols (cm); j++)
-      {
-        printf ("% 14.9g ", ncm_matrix_get (cm, i, j));
-      }
-      printf ("\n");
-    }
-  }
 }
 
 /**
@@ -900,6 +888,13 @@ ncm_matrix_cholesky_decomp (NcmMatrix *cm)
  * Calculates the total size of the matrix, ncols * nrows.
  *
  * Returns: Total size of the matrix.
+ */
+/**
+ * ncm_matrix_tda:
+ * @cm: a #NcmMatrix.
+ *
+ *
+ * Returns: The matrix tda.
  */
 /**
  * ncm_matrix_data:

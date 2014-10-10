@@ -166,6 +166,8 @@ void ncm_mset_pretty_log (NcmMSet *mset);
 void ncm_mset_params_pretty_print (NcmMSet *mset, FILE *out, gchar *header);
 void ncm_mset_params_log_vals (NcmMSet *mset);
 void ncm_mset_params_print_vals (NcmMSet *mset, FILE *out);
+void ncm_mset_fparams_log_covar (NcmMSet *mset, NcmMatrix *covar);
+
 gboolean ncm_mset_params_valid (NcmMSet *mset);
 gboolean ncm_mset_params_valid_bounds (NcmMSet *mset);
 gboolean ncm_mset_cmp (NcmMSet *mset0, NcmMSet *mset1, gboolean cmp_model);

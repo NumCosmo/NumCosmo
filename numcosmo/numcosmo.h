@@ -124,4 +124,7 @@
 #include <numcosmo/nc_data_cluster_ncount.h>
 #include <numcosmo/nc_data_cluster_poisson.h>
 
+/* ABC */
+#include <numcosmo/abc/nc_abc_cluster_ncount.h>
+
 #endif /* _NUMCOSMO_H */

@@ -1269,43 +1269,8 @@ ncm_fit_log_info (NcmFit *fit)
 void
 ncm_fit_log_covar (NcmFit *fit)
 {
-  guint i, j;
-  guint name_size = ncm_mset_max_fparam_name (fit->mset);
-  guint free_params_len = ncm_mset_fparam_len (fit->mset);
-  gchar *box = "---------------";
   g_assert (fit->fstate->has_covar);
-
-  ncm_cfg_msg_sepa ();
-  g_message ("# Fitted parameters covariance matrix\n");
-  g_message ("#                                        ");
-  for (i = 0; i < name_size; i++) g_message (" ");
-
-  for (i = 0; i < free_params_len; i++)
-    i ? g_message ("%s",box) : g_message ("-%s",box);
-  if (i)
-    g_message ("\n");
-
-  for (i = 0; i < free_params_len; i++)
-  {
-    NcmMSetPIndex *pi = ncm_mset_fparam_get_pi (fit->mset, i);
-    const gchar *pname = ncm_mset_fparam_name (fit->mset, i);
-    g_message ("# %*s[%02d%02d] = % -12.4g +/- % -12.4g |",
-               name_size, pname, pi->mid, pi->pid,
-               ncm_mset_fparam_get (fit->mset, i),
-               ncm_fit_covar_fparam_sd (fit, i));
-    for (j = 0; j < free_params_len; j++)
-    {
-      g_message (" % -12.4g |", ncm_fit_covar_fparam_cor (fit, i, j));
-    }
-    g_message ("\n");
-  }
-  g_message ("#                                        ");
-  for (i = 0; i < name_size; i++) g_message (" ");
-  for (i = 0; i < free_params_len; i++)
-    i ? g_message ("%s",box) : g_message ("-%s",box);
-  if (i)
-    g_message ("\n");
-
+  ncm_mset_fparams_log_covar (fit->mset, fit->fstate->covar);
   return;
 }
 

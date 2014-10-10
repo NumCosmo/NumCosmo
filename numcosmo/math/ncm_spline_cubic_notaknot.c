@@ -100,6 +100,8 @@ _ncm_spline_notaknot_name (NcmSpline *s)
   return "NcmSplineCubicNotaknot";
 }
 
+#define NUMCOSMO_CHECK_SPLINE_NODES 1
+
 static void
 _ncm_spline_notaknot_prepare_base (NcmSpline *s)
 {
@@ -116,6 +118,12 @@ _ncm_spline_notaknot_prepare_base (NcmSpline *s)
 	const gdouble h_nm2 = ncm_vector_get (s->xv, nm1) - ncm_vector_get (s->xv, nm2);
   const gdouble h_0_p_2h_1     = h_0   + 2.0 * h_1;
   const gdouble h_nm1_p_2h_nm2 = h_nm1 + 2.0 * h_nm2;
+  const gdouble ydiff_0 = ncm_vector_get (s->yv, 1) - ncm_vector_get (s->yv, 0);
+  const gdouble ydiff_1 = ncm_vector_get (s->yv, 2) - ncm_vector_get (s->yv, 1);
+  register gdouble h_i        = h_0;
+  register gdouble h_ip1      = h_1;
+  register gdouble ydiff_i   = ydiff_0;
+  register gdouble ydiff_ip1 = ydiff_1;
   
 	NcmVector *g = sc->g;
 	sc->g = sc->c;
@@ -123,24 +131,35 @@ _ncm_spline_notaknot_prepare_base (NcmSpline *s)
 	size_t i;
 
 	g_assert (sys_size > 1);
+#ifdef NUMCOSMO_CHECK_SPLINE_NODES
+  g_assert_cmpfloat (h_0, >, 0.0);
+  g_assert_cmpfloat (h_1, >, 0.0);
+  g_assert_cmpfloat (h_nm1, >, 0.0);
+#endif
 
 	for (i = 1; i <= nm3; i++)
 	{
-		const gdouble h_i       = ncm_vector_get (s->xv, i + 1) - ncm_vector_get (s->xv, i);
-		const gdouble h_ip1     = ncm_vector_get (s->xv, i + 2) - ncm_vector_get (s->xv, i + 1);
-		const gdouble ydiff_i   = ncm_vector_get (s->yv, i + 1) - ncm_vector_get (s->yv, i);
-		const gdouble ydiff_ip1 = ncm_vector_get (s->yv, i + 2) - ncm_vector_get (s->yv, i + 1);
-		const gdouble g_i       = 1.0 / h_i;
-		const gdouble g_ip1     = 1.0 / h_ip1;
+    h_i       = h_ip1;
+		h_ip1     = ncm_vector_get (s->xv, i + 2) - ncm_vector_get (s->xv, i + 1);
+    ydiff_i   = ydiff_ip1;
+		ydiff_ip1 = ncm_vector_get (s->yv, i + 2) - ncm_vector_get (s->yv, i + 1);
 
-		ncm_vector_fast_set (sc->offdiag, i, h_ip1);
-		ncm_vector_fast_set (sc->diag,    i, 2.0 * (h_ip1 + h_i));
-		ncm_vector_fast_set (sc->g,   1 + i, 3.0 * (ydiff_ip1 * g_ip1 -  ydiff_i * g_i));
+#ifdef NUMCOSMO_CHECK_SPLINE_NODES
+    g_assert_cmpfloat (h_ip1, >, 0.0);
+#endif
+    
+    {
+      const gdouble g_i       = 1.0 / h_i;
+      const gdouble g_ip1     = 1.0 / h_ip1;
+
+      ncm_vector_fast_set (sc->offdiag, i, h_ip1);
+      ncm_vector_fast_set (sc->diag,    i, 2.0 * (h_ip1 + h_i));
+      ncm_vector_fast_set (sc->g,   1 + i, 3.0 * (ydiff_ip1 * g_ip1 -  ydiff_i * g_i));
+    }
 	}
 
+  
 	{
-		const gdouble ydiff_0 = ncm_vector_get (s->yv, 1) - ncm_vector_get (s->yv, 0);
-		const gdouble ydiff_1 = ncm_vector_get (s->yv, 2) - ncm_vector_get (s->yv, 1);
 		const gdouble g_0     = 1.0 / h_0;
 		const gdouble g_1     = 1.0 / h_1;
     
@@ -152,10 +171,10 @@ _ncm_spline_notaknot_prepare_base (NcmSpline *s)
   }
 
 	{
-		const gdouble ydiff_nm1 = ncm_vector_get (s->yv, n)   - ncm_vector_get (s->yv, nm1);
 		const gdouble ydiff_nm2 = ncm_vector_get (s->yv, nm1) - ncm_vector_get (s->yv, nm2);
-		const gdouble g_nm1     = 1.0 / h_nm1;
+		const gdouble ydiff_nm1 = ncm_vector_get (s->yv, n)   - ncm_vector_get (s->yv, nm1);
 		const gdouble g_nm2     = 1.0 / h_nm2;
+		const gdouble g_nm1     = 1.0 / h_nm1;
 
     ncm_vector_fast_set (sc->c,   n, 3.0 * (ydiff_nm1 * g_nm1 - ydiff_nm2 * g_nm2) / h_nm1_p_2h_nm2);
     ncm_vector_fast_set (sc->c, nm1, ncm_vector_fast_get (sc->c, n) * h_nm2 / (h_nm2 + h_nm1));

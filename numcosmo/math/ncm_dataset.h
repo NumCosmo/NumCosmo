@@ -106,6 +106,7 @@ void ncm_dataset_resample (NcmDataset *dset, NcmMSet *mset, NcmRNG *rng);
 void ncm_dataset_bootstrap_set (NcmDataset *dset, NcmDatasetBStrapType bstype);
 void ncm_dataset_bootstrap_resample (NcmDataset *dset, NcmRNG *rng);
 void ncm_dataset_log_info (NcmDataset *dset);
+gchar *ncm_dataset_get_info (NcmDataset *dset);
 
 gboolean ncm_dataset_has_leastsquares_f (NcmDataset *dset);
 gboolean ncm_dataset_has_leastsquares_J (NcmDataset *dset);

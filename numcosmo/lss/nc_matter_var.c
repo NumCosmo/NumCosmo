@@ -895,6 +895,9 @@ _powspec_k2 (gdouble k, gpointer userdata)
 static void
 _nc_matter_var_prepare_fft (NcMatterVar *vp, NcHICosmo *model)
 {
+  _NCM_STATIC_MUTEX_DECL (prepare_fft_lock);
+  _NCM_MUTEX_LOCK (&prepare_fft_lock);
+  {
   const gint N = 500 + 1;
   const gint N_2 = 250;
   const gdouble L = 17.0 * M_LN10;
@@ -1007,6 +1010,7 @@ _nc_matter_var_prepare_fft (NcMatterVar *vp, NcHICosmo *model)
     ncm_vector_set (vp->sigma2_over_growth->yv, j, lnsigma2);
     ncm_vector_set (vp->deriv_sigma2_over_growth->xv, j, r);
     ncm_vector_set (vp->deriv_sigma2_over_growth->yv, j, dlnsigma2_dr);
+
     j++;
   }
 
@@ -1057,8 +1061,13 @@ _nc_matter_var_prepare_fft (NcMatterVar *vp, NcHICosmo *model)
   }
  */
 
+  }
+  _NCM_MUTEX_UNLOCK (&prepare_fft_lock);
+
   ncm_spline_prepare (vp->sigma2_over_growth);
   ncm_spline_prepare (vp->deriv_sigma2_over_growth);
+
+
 }
 #endif /* NUMCOSMO_HAVE_FFTW3 */
 

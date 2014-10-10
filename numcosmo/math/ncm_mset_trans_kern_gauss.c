@@ -238,7 +238,7 @@ _ncm_mset_trans_kern_gauss_pdf (NcmMSetTransKern *tkern, NcmVector *theta, NcmVe
     m2lnP += 2.0 * log (ncm_matrix_get (tkerng->LLT, i, i));
   }
   
-  return m2lnP;
+  return exp (- 0.5 * m2lnP);
 }
 
 static const gchar *

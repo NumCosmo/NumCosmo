@@ -107,6 +107,10 @@ ncm_sources = \
 	math/ncm_sphere_map.c     \
 	sphere/healpix.c
 
+ncm_external_sources = \
+	cubature/hcubature.c      \
+	cubature/pcubature.c
+
 ncm_headers = \
 	math/ncm_c.h                     \
 	math/ncm_cfg.h                   \
@@ -186,6 +190,9 @@ ncm_headers = \
 	math/ncm_sphere_map.h     \
 	sphere/healpix.h
 
+ncm_external_headers = \
+	cubature/cubature.h
+
 ncm_headers_internal = 
 
 nc_headers = \
@@ -220,58 +227,59 @@ nc_headers = \
 	lss/nc_density_profile_nfw.h  \
 	lss/nc_galaxy_acf.h           \
 	lss/nc_multiplicity_func.h    \
-	lss/nc_multiplicity_func_ps.h \
-	lss/nc_multiplicity_func_st.h \
-	lss/nc_multiplicity_func_jenkins.h \
-	lss/nc_multiplicity_func_warren.h \
-	lss/nc_multiplicity_func_tinker.h \
+	lss/nc_multiplicity_func_ps.h          \
+	lss/nc_multiplicity_func_st.h          \
+	lss/nc_multiplicity_func_jenkins.h     \
+	lss/nc_multiplicity_func_warren.h      \
+	lss/nc_multiplicity_func_tinker.h      \
 	lss/nc_multiplicity_func_tinker_mean.h \
 	lss/nc_multiplicity_func_tinker_crit.h \
 	lss/nc_multiplicity_func_tinker_mean_normalized.h \
-	lss/nc_mass_function.h           \
-        lss/nc_halo_bias_type.h          \
-        lss/nc_halo_bias_type_ps.h       \
-        lss/nc_halo_bias_type_st_spher.h \
-        lss/nc_halo_bias_type_st_ellip.h \
-        lss/nc_halo_bias_type_tinker.h   \
-        lss/nc_halo_bias_func.h          \
-        lss/nc_cluster_redshift.h             \
-        lss/nc_cluster_redshift_nodist.h      \
-        lss/nc_cluster_photoz_gauss.h         \
-        lss/nc_cluster_photoz_gauss_global.h  \
-        lss/nc_cluster_mass.h                 \
-        lss/nc_cluster_mass_nodist.h          \
-        lss/nc_cluster_mass_lnnormal.h        \
-        lss/nc_cluster_mass_vanderlinde.h     \
-        lss/nc_cluster_mass_benson.h          \
-        lss/nc_cluster_mass_benson_xray.h     \
-        lss/nc_cluster_abundance.h            \
-        lss/nc_cor_cluster_cmb_lens_limber.h  \
-	nc_data_snia.h                        \
-	nc_data_dist_mu.h                     \
-	nc_data_snia_cov.h                    \
-	nc_data_hubble.h                      \
-	nc_data_hubble_bao.h                  \
-	nc_data_bao_rdv.h                     \
-	nc_data_bao_dvdv.h                    \
-	nc_data_bao_a.h                       \
-	nc_data_bao_dv.h                      \
-	nc_data_bao.h                         \
-	nc_data_cmb_shift_param.h             \
-	nc_data_cmb_dist_priors.h             \
-	nc_data_cmb.h                         \
-	nc_data_cluster_ncount.h              \
-	nc_data_cluster_poisson.h             \
-	scalefactor.h                         \
-	model/quantum_gravity.h               \
-	perturbations/nc_hipert.h             \
-	perturbations/nc_hipert_wkb.h         \
-	perturbations/nc_hipert_iadiab.h      \
-	perturbations/nc_hipert_itwo_fluids.h \
-	perturbations/nc_hipert_adiab.h       \
-	perturbations/nc_hipert_two_fluids.h  \
-	perturbations/linear.h                \
-	perturbations/covariance.h            \
+	lss/nc_mass_function.h                 \
+        lss/nc_halo_bias_type.h                \
+        lss/nc_halo_bias_type_ps.h             \
+        lss/nc_halo_bias_type_st_spher.h       \
+        lss/nc_halo_bias_type_st_ellip.h       \
+        lss/nc_halo_bias_type_tinker.h         \
+        lss/nc_halo_bias_func.h                \
+        lss/nc_cluster_redshift.h              \
+        lss/nc_cluster_redshift_nodist.h       \
+        lss/nc_cluster_photoz_gauss.h          \
+        lss/nc_cluster_photoz_gauss_global.h   \
+        lss/nc_cluster_mass.h                  \
+        lss/nc_cluster_mass_nodist.h           \
+        lss/nc_cluster_mass_lnnormal.h         \
+        lss/nc_cluster_mass_vanderlinde.h      \
+        lss/nc_cluster_mass_benson.h           \
+        lss/nc_cluster_mass_benson_xray.h      \
+        lss/nc_cluster_abundance.h             \
+        lss/nc_cor_cluster_cmb_lens_limber.h   \
+	nc_data_snia.h                         \
+	nc_data_dist_mu.h                      \
+	nc_data_snia_cov.h                     \
+	nc_data_hubble.h                       \
+	nc_data_hubble_bao.h                   \
+	nc_data_bao_rdv.h                      \
+	nc_data_bao_dvdv.h                     \
+	nc_data_bao_a.h                        \
+	nc_data_bao_dv.h                       \
+	nc_data_bao.h                          \
+	nc_data_cmb_shift_param.h              \
+	nc_data_cmb_dist_priors.h              \
+	nc_data_cmb.h                          \
+	nc_data_cluster_ncount.h               \
+	nc_data_cluster_poisson.h              \
+	abc/nc_abc_cluster_ncount.h            \
+	scalefactor.h                          \
+	model/quantum_gravity.h                \
+	perturbations/nc_hipert.h              \
+	perturbations/nc_hipert_wkb.h          \
+	perturbations/nc_hipert_iadiab.h       \
+	perturbations/nc_hipert_itwo_fluids.h  \
+	perturbations/nc_hipert_adiab.h        \
+	perturbations/nc_hipert_two_fluids.h   \
+	perturbations/linear.h                 \
+	perturbations/covariance.h             \
 	perturbations/linear_internal.h
 
 nc_sources = \
@@ -348,6 +356,7 @@ nc_sources = \
 	nc_data_cmb.c                          \
 	nc_data_cluster_ncount.c               \
 	nc_data_cluster_poisson.c              \
+	abc/nc_abc_cluster_ncount.c            \
 	scalefactor.c                          \
 	model/quantum_gravity.c                \
 	perturbations/nc_hipert.c              \
@@ -446,13 +455,15 @@ nc_enum_types.c: $(nc_headers) nc_enum_types.c.template
 	  nc_enum_types.c.tmp && mv nc_enum_types.c.tmp nc_enum_types.c
 
 libnumcosmo_la_SOURCES = \
-	$(ncm_sources)      \
-	$(ncm_headers)      \
-	$(nc_sources)       \
-	$(nc_headers)       \
-	$(ncm_cond_sources) \
-	$(ncm_cond_headers) \
-	numcosmo-math.h     \
+	$(ncm_sources)          \
+	$(ncm_headers)          \
+	$(ncm_external_sources) \
+	$(ncm_external_headers) \
+	$(nc_sources)           \
+	$(nc_headers)           \
+	$(ncm_cond_sources)     \
+	$(ncm_cond_headers)     \
+	numcosmo-math.h         \
 	numcosmo.h
 
 nodist_libnumcosmo_la_SOURCES = \
@@ -487,7 +498,8 @@ EXTRA_DIST = \
 	nc_enum_types.h.template        \
 	nc_enum_types.c.template        \
 	ncm_gir_scan.h                  \
-	ncm_fit_nlopt_enum_meta.c
+	ncm_fit_nlopt_enum_meta.c       \
+	cubature/converged.h
 
 CLEANFILES = $(BUILT_SOURCES)
 

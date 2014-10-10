@@ -134,6 +134,8 @@ _ncm_cfg_log_message (const gchar *log_domain, GLogLevelFlags log_level, const g
   }
 }
 
+void clencurt_gen (int M);
+
 /**
  * ncm_cfg_init:
  *
@@ -149,6 +151,10 @@ ncm_cfg_init (void)
   numcosmo_path = g_build_filename (home, ".numcosmo", NULL);
   if (!g_file_test (numcosmo_path, G_FILE_TEST_EXISTS))
     g_mkdir_with_parents (numcosmo_path, 0755);
+
+#ifndef HAVE_LIBCUBA
+  clencurt_gen (19);
+#endif /* !HAVE_LIBCUBA */
 
   gsl_err = gsl_set_error_handler_off ();
 #if (GLIB_MAJOR_VERSION == 2) && (GLIB_MINOR_VERSION < 32)
@@ -325,6 +331,13 @@ ncm_cfg_logfile (gboolean on) { _enable_msg = on; }
 void
 ncm_cfg_logfile_flush (gboolean on) { _enable_msg_flush = on; }
 
+/**
+ * ncm_cfg_logfile_flush_now:
+ *
+ * FIXME
+ */
+void
+ncm_cfg_logfile_flush_now (void) { fflush (_log_stream); }
 
 /**
  * nc_message:

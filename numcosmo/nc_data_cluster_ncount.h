@@ -81,9 +81,13 @@ struct _NcDataClusterNCount
   guint np;
   gdouble log_np_fac;
   gboolean use_true_data;
+  gboolean binned;
+  NcmVector *z_nodes;
+  NcmVector *lnM_nodes;
   gsl_histogram2d *completeness;
   gsl_histogram2d *purity;
   gsl_histogram2d *sd_lnM;
+  gsl_histogram2d *z_lnM;
   gboolean fiducial;
   guint64 seed;
   gchar *rnd_name;
@@ -131,19 +135,14 @@ NcmMatrix *nc_data_cluster_ncount_get_lnM_obs_params (NcDataClusterNCount *ncoun
 NcmMatrix *nc_data_cluster_ncount_get_z_obs (NcDataClusterNCount *ncount);
 NcmMatrix *nc_data_cluster_ncount_get_z_obs_params (NcDataClusterNCount *ncount);
 
-NcDataClusterNCount *nc_data_cluster_ncount_binned_new (NcClusterAbundance *cad);
-void nc_data_cluster_ncount_binned_init_from_text_file_gkey (NcDataClusterNCount *ncount, gboolean obs, gchar *filename);
-void nc_data_cluster_ncount_binned_save (NcDataClusterNCount *ncount, gchar *filename);
-NcmMSetFunc *nc_data_cluster_ncount_binned_create_func (NcClusterAbundance *cad);
-
-NcmData *nc_data_cluster_ncount_binned_lnM_z_new (NcClusterAbundance *cad);
 void nc_data_cluster_ncount_true_data (NcDataClusterNCount *ncount, gboolean use_true_data);
 gboolean nc_data_cluster_ncount_using_true_data (NcDataClusterNCount *ncount);
 void nc_data_cluster_ncount_init_from_sampling (NcDataClusterNCount *ncount, NcmMSet *mset, NcClusterRedshift *clusterz, NcClusterMass *clusterm, gdouble area_survey, NcmRNG *rng);
-NcmData *nc_data_cluster_ncount_bin_data (NcDataClusterNCount *ncount, gsl_vector *nodes);
-gsl_histogram2d *nc_data_cluster_ncount_hist_lnM_z (NcDataClusterNCount *ncount, gsl_vector *lnM_nodes, gsl_vector *z_nodes);
-
 void nc_data_cluster_ncount_print (NcDataClusterNCount *ncount, NcHICosmo *cosmo, FILE *out, gchar *header);
+
+void nc_data_cluster_ncount_set_bin_by_nodes (NcDataClusterNCount *ncount, NcmVector *z_nodes, NcmVector *lnM_nodes);
+void nc_data_cluster_ncount_set_bin_by_quantile (NcDataClusterNCount *ncount, NcmVector *z_quantiles, NcmVector *lnM_quantiles);
+void nc_data_cluster_ncount_set_binned (NcDataClusterNCount *ncount, gboolean on);
 
 #ifdef NUMCOSMO_HAVE_CFITSIO
 void nc_data_cluster_ncount_catalog_save (NcDataClusterNCount *ncount, gchar *filename, gboolean overwrite);

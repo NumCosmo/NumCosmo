@@ -210,7 +210,7 @@ ncm_stats_vec_get_cov_matrix (NcmStatsVec *svec, NcmMatrix *m, guint offset)
 {
   guint i;
   g_assert (m != NULL);
-  g_assert_cmpint (offset + 1, <, svec->len);
+  g_assert_cmpint (offset, <, svec->len);
 
   if (offset > 0)
   {

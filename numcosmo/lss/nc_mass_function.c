@@ -320,13 +320,9 @@ nc_mass_function_dn_dlnm (NcMassFunction *mfp, NcHICosmo *model, gdouble lnM, gd
   gdouble dlnvar0_dlnR = nc_matter_var_dlnvar0_dlnR (mfp->vp, model, lnR);
   gdouble growth = nc_growth_func_eval (mfp->gf, model, z);
   gdouble sigma = nc_matter_var_sigma8_sqrtvar0 (mfp->vp, model) * sqrt (var0) * growth;
-  //gdouble sigma = sqrt(var0) * growth;
   gdouble f = nc_multiplicity_func_eval (mfp->mulf, model, sigma, z);
   gdouble dn_dlnM = -(1.0 / (3.0 * M_rho)) * f * 0.5 * dlnvar0_dlnR;	/* dn/dlnM = - (\rho/3M) * f * (R/\sigma)* dsigma_dR */
-
-  //printf ("z = %.5g R = %.5g sigma = %.5g\n", z, R, sigma);
-  //printf ("% 20.15g f = % 20.15g % 20.15g\n", -(1.0 / (3.0 * M_rho)), f, 0.5 * dlnvar0_dlnR);
-
+  
   return dn_dlnM;
 }
 
@@ -504,7 +500,7 @@ nc_mass_function_dn_m1_to_m2_dv (NcMassFunction *mfp, NcHICosmo *model, gdouble 
 
   gsl_integration_qag (&F, R1, R2, 0.0, NCM_DEFAULT_PRECISION, NCM_INTEGRAL_PARTITION, 1, w, &n, &error);
 
-  printf ("R1 = %5.5g R2 = %5.5g z = %5.5g n = %5.5g\n", R1, R2, z, n);
+  /*printf ("R1 = %5.5g R2 = %5.5g z = %5.5g n = %5.5g\n", R1, R2, z, n);*/
   return n;
 }
 
@@ -714,12 +710,7 @@ _encapsulated_z (gdouble z, gpointer p)
     nc_mass_function_dv_dzdomega (args->mfp, args->model, z) *
     nc_mass_function_dn_dlnm (args->mfp, args->model, args->lnM, z);
 
-  //printf ("z %.5g lnM %.5g d2N % 20.15g mf % 20.15g dV % 20.15g\n", z, args->lnM, A, nc_mass_function_dn_dlnm (args->mfp, args->model, args->lnM, z), nc_mass_function_dv_dzdomega (args->mfp, args->model, z));
   return A;
-
-  //return args->mfp->area_survey *
-  //nc_dcomoving_volume_dzdomega (args->mfp, args->model, z) *
-  //nc_mass_function_dn_dlnm (args->mfp, args->model, args->lnM, z);
 }
 
 static gdouble
@@ -729,10 +720,7 @@ _encapsulated_lnM (gdouble lnM, gpointer p)
 
   gdouble A = args->dVdz * nc_mass_function_dn_dlnm (args->mfp, args->model, lnM, args->z);
 
-  //printf ("2 z %.5g lnM %.5g d2N % 20.15g\n", args->z, lnM, A);
   return A;
-
-  //return args->dVdz * nc_mass_function_dn_dlnm (args->mfp, args->model, lnM, args->z);
 }
 
 static void

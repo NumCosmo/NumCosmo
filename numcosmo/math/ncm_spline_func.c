@@ -283,6 +283,8 @@ ncm_spline_new_function_spline (NcmSpline *s, gsl_function *F, gdouble xi, gdoub
     BIVEC_LIST_OK (nodes) = 0;
     g_array_append_val (x_array, x);
     g_array_append_val (y_array, y);
+    g_assert (gsl_finite (x));
+    g_assert (gsl_finite (y));
   }
   ncm_spline_set_array (s, x_array, y_array, TRUE);
 
@@ -354,7 +356,17 @@ ncm_spline_new_function_spline (NcmSpline *s, gsl_function *F, gdouble xi, gdoub
     SWAP_PTR (y_array, yt_array);
 
     if (x_array->len > max_nodes)
-      g_error ("ncm_spline_new_function_spline: cannot achive requested precision with at most %zu nodes", max_nodes);
+    {
+      g_warning ("ncm_spline_new_function_spline: cannot achive requested precision with at most %zu nodes", max_nodes);
+      for (i = 0; i < x_array->len; i++)
+      {
+        printf ("% 21.16g % 21.16g\n", 
+                g_array_index (x_array, gdouble, i), 
+                g_array_index (y_array, gdouble, i));
+      }
+      ncm_spline_set_array (s, x_array, y_array, TRUE);
+      break;
+    }
 
     ncm_spline_set_array (s, x_array, y_array, TRUE);
     if (improves == 0)

@@ -1,11 +1,18 @@
 ## Process this file with automake to produce Makefile.in
 
-AM_CFLAGS = -Wall \
-	$(GLIB_CFLAGS) \
-	$(GSL_CFLAGS) \
-	$(SUNDIALS_CFLAGS) \
-	$(NUMCOSMO_CFLAGS) \
-	-I$(top_srcdir) 
+MY_CFLAGS = \
+	 -DG_LOG_DOMAIN=\"NUMCOSMO\" \
+	 $(GLIB_CFLAGS) \
+	 $(SUNDIALS_CFLAGS) \
+	 $(GSL_CFLAGS) \
+	 $(FFTW3_CFLAGS) \
+	 $(CFITSIO_CFLAGS) \
+	 $(NLOPT_CFLAGS) \
+	 -I$(top_srcdir)
+
+AM_CFLAGS = \
+	 -Wall \
+	 $(MY_CFLAGS)
 
 test_ncm_sparam_SOURCES =  \
 	test_ncm_sparam.c

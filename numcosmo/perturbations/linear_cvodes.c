@@ -427,8 +427,8 @@ static void
 cvodes_free (NcLinearPert *pert)
 {
   CVodesData *data = CVODES_DATA (pert->solver->data);
-  CVodeFree (data->cvode_stiff);
-  CVodeFree (data->cvode_nonstiff);
+  CVodeFree (&data->cvode_stiff);
+  CVodeFree (&data->cvode_nonstiff);
 
   g_free (data->JD);
   g_free (data->JL);

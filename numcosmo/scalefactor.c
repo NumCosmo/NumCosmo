@@ -123,7 +123,7 @@ nc_scale_factor_free (NcScaleFactor *a)
     ncm_spline_free (a->a_t);
   if (a->t_a != NULL)
     ncm_spline_free (a->t_a);
-  CVodeFree (a->cvode);
+  CVodeFree (&a->cvode);
   N_VDestroy (a->y);
 
 	ncm_model_ctrl_free (a->ctrl);

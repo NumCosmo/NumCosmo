@@ -362,6 +362,9 @@ ncm_stats_vec_reset (NcmStatsVec *svec)
   if (svec->save_x)
   {
     g_assert (svec->saved_x != NULL);
+    g_ptr_array_unref (svec->saved_x);
+    svec->saved_x = g_ptr_array_new ();
+    g_ptr_array_set_free_func (svec->saved_x, (GDestroyNotify)ncm_vector_free);
     g_ptr_array_set_size (svec->saved_x, 0);
   }
   svec->weight   = 0.0;
@@ -459,7 +462,6 @@ _ncm_stats_vec_update_from_vec_weight (NcmStatsVec *svec, const gdouble w, NcmVe
         const gdouble var     = ncm_vector_fast_get (svec->var, i);
         const gdouble dvar    = svec->weight * delta_i * R_i;
 
-
 #ifdef NCM_STATS_VEC_INC
         inc = sqrt (curweight) / (fabs (mean_i / R_i) + 1.0);
         svec->mean_inc = GSL_MAX (svec->mean_inc, inc);
@@ -474,7 +476,7 @@ _ncm_stats_vec_update_from_vec_weight (NcmStatsVec *svec, const gdouble w, NcmVe
         {
           const gdouble x_j = ncm_vector_fast_get (x, j);
           const gdouble mean_j = ncm_vector_fast_get (svec->mean, j);
-          const gdouble dC_ij = (x_i - mean_i) * (x_j - mean_j);
+          const gdouble dC_ij = w * (x_i - mean_i) * (x_j - mean_j);
           const gdouble oC_ij = ncm_matrix_get (svec->cov, i, j);
           const gdouble C_ij = oC_ij + dC_ij;
           ncm_matrix_set (svec->cov, i, j, C_ij);

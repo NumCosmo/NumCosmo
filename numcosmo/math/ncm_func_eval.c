@@ -100,6 +100,8 @@ ncm_func_eval_get_pool ()
   if (_function_thread_pool == NULL)
   {
     _function_thread_pool = g_thread_pool_new (func, NULL, NCM_THREAD_POOL_MAX, TRUE, &err);
+    if (err != NULL)
+      g_error ("ncm_func_eval_get_pool: %s", err->message);
     g_clear_error (&err);
   }
   _NCM_MUTEX_UNLOCK (&create_lock);
@@ -122,6 +124,8 @@ ncm_func_eval_set_max_threads (gint mt)
   GError *err = NULL;
   ncm_func_eval_get_pool ();
   g_thread_pool_set_max_threads (_function_thread_pool, mt, &err);
+  if (err != NULL)
+    g_error ("ncm_func_eval_set_max_threads: %s", err->message);
 }
 
 /**
@@ -193,15 +197,6 @@ ncm_func_eval_threaded_loop_nw (NcmLoopFunc lfunc, glong i, glong f, gpointer da
   while (ctrl.active_threads != 0)
     g_cond_wait (ctrl.finish, ctrl.update);
   g_mutex_unlock (ctrl.update);
-
-  if (FALSE)
-  {
-    printf  ("Unused:      %d\n", g_thread_pool_get_num_unused_threads ());fflush (stdout);
-    printf  ("Max Unused:  %d\n", g_thread_pool_get_max_unused_threads ());fflush (stdout);
-    printf  ("Running:     %d\n", g_thread_pool_get_num_threads (_function_thread_pool));fflush (stdout);
-    printf  ("Unprocessed: %d\n", g_thread_pool_unprocessed (_function_thread_pool));fflush (stdout);
-    printf  ("Unused:      %d\n", g_thread_pool_get_max_threads (_function_thread_pool));fflush (stdout);
-  }
 
 #if (GLIB_MAJOR_VERSION == 2) && (GLIB_MINOR_VERSION < 32)
   g_mutex_free (ctrl.update);
@@ -295,15 +290,6 @@ ncm_func_eval_threaded_loop_full (NcmLoopFunc lfunc, glong i, glong f, gpointer 
     g_cond_wait (ctrl.finish, ctrl.update);
   g_mutex_unlock (ctrl.update);
 
-  if (FALSE)
-  {
-    printf  ("Unused:      %d\n", g_thread_pool_get_num_unused_threads ());fflush (stdout);
-    printf  ("Max Unused:  %d\n", g_thread_pool_get_max_unused_threads ());fflush (stdout);
-    printf  ("Running:     %d\n", g_thread_pool_get_num_threads (_function_thread_pool));fflush (stdout);
-    printf  ("Unprocessed: %d\n", g_thread_pool_unprocessed (_function_thread_pool));fflush (stdout);
-    printf  ("Unused:      %d\n", g_thread_pool_get_max_threads (_function_thread_pool));fflush (stdout);
-  }
-
 #if (GLIB_MAJOR_VERSION == 2) && (GLIB_MINOR_VERSION < 32)
   g_mutex_free (ctrl.update);
   g_cond_free (ctrl.finish);
@@ -320,3 +306,13 @@ ncm_func_eval_threaded_loop_full (NcmLoopFunc lfunc, glong i, glong f, gpointer 
 }
 #endif
 
+void 
+ncm_func_eval_log_pool_stats ()
+{
+  ncm_func_eval_get_pool ();
+  g_message  ("# NcmThreadPool:Unused:      %d\n", g_thread_pool_get_num_unused_threads ());
+  g_message  ("# NcmThreadPool:Max Unused:  %d\n", g_thread_pool_get_max_unused_threads ());
+  g_message  ("# NcmThreadPool:Running:     %d\n", g_thread_pool_get_num_threads (_function_thread_pool));
+  g_message  ("# NcmThreadPool:Unprocessed: %d\n", g_thread_pool_unprocessed (_function_thread_pool));
+  g_message  ("# NcmThreadPool:Unused:      %d\n", g_thread_pool_get_max_threads (_function_thread_pool));  
+}

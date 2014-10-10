@@ -7,7 +7,7 @@
  ****************************************************************************/
 /*
  * numcosmo
- * Copyright (C) Sandro Dias Pinto Vitenti 2012 <sandro@lapsandro>
+ * Copyright (C) Sandro Dias Pinto Vitenti 2012 <sandro@isoftware.com.br>
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
@@ -58,7 +58,7 @@ static gboolean cache_clean (NcmFunctionCache *cache);
  * FIXME
  *
  * Returns: FIXME
-*/
+ */
 NcmFunctionCache *
 ncm_function_cache_new (guint n, gdouble abstol, gdouble reltol)
 {
@@ -79,7 +79,7 @@ ncm_function_cache_new (guint n, gdouble abstol, gdouble reltol)
  *
  * FIXME
  *
-*/
+ */
 void
 ncm_function_cache_free (NcmFunctionCache *cache)
 {
@@ -95,7 +95,7 @@ ncm_function_cache_free (NcmFunctionCache *cache)
  *
  * FIXME
  *
-*/
+ */
 void
 ncm_function_cache_clear (NcmFunctionCache **cache)
 {
@@ -110,7 +110,7 @@ ncm_function_cache_clear (NcmFunctionCache **cache)
  *
  * FIXME
  *
-*/
+ */
 void
 ncm_function_cache_insert_vector (NcmFunctionCache *cache, gdouble x, gsl_vector *p)
 {
@@ -136,7 +136,7 @@ ncm_function_cache_insert (NcmFunctionCache *cache, gdouble x, ...)
 
   if (g_tree_lookup (cache->tree, &x) != NULL)
   {
-	_NCM_MUTEX_UNLOCK (&cache->lock);
+    _NCM_MUTEX_UNLOCK (&cache->lock);
     return;
   }
 
@@ -172,7 +172,7 @@ static gint gdouble_search_near (gconstpointer a, gconstpointer b);
  * @x_found_ptr: FIXME
  * @v: FIXME
  * @type: a #NcmFunctionCacheSearchType
-*/
+ */
 gboolean
 ncm_function_cache_get_near (NcmFunctionCache *cache, gdouble x, gdouble *x_found_ptr, gsl_vector **v, NcmFunctionCacheSearchType type)
 {
@@ -184,7 +184,7 @@ ncm_function_cache_get_near (NcmFunctionCache *cache, gdouble x, gdouble *x_foun
 
   if (cache_clean (cache))
   {
-	_NCM_MUTEX_UNLOCK (&cache->lock);
+    _NCM_MUTEX_UNLOCK (&cache->lock);
     return FALSE;
   }
 
@@ -197,7 +197,7 @@ ncm_function_cache_get_near (NcmFunctionCache *cache, gdouble x, gdouble *x_foun
   }
   if (res == NULL)
   {
-	_NCM_MUTEX_UNLOCK (&cache->lock);
+    _NCM_MUTEX_UNLOCK (&cache->lock);
     return FALSE;
   }
   *v = res;
@@ -215,7 +215,7 @@ ncm_function_cache_get_near (NcmFunctionCache *cache, gdouble x, gdouble *x_foun
  * FIXME
  *
  * Returns: FIXME
-*/
+ */
 gboolean
 ncm_function_cache_get (NcmFunctionCache *cache, gdouble *x_ptr, gsl_vector **v)
 {
@@ -225,14 +225,14 @@ ncm_function_cache_get (NcmFunctionCache *cache, gdouble *x_ptr, gsl_vector **v)
 
   if (cache_clean (cache))
   {
-	_NCM_MUTEX_UNLOCK (&cache->lock);
+    _NCM_MUTEX_UNLOCK (&cache->lock);
     return FALSE;
   }
   res = g_tree_lookup (cache->tree, x_ptr);
   if (res == NULL)
   {
-	_NCM_MUTEX_UNLOCK (&cache->lock);
-	return FALSE;
+    _NCM_MUTEX_UNLOCK (&cache->lock);
+    return FALSE;
   }
 
   *v = res;
@@ -256,7 +256,7 @@ cache_clean (NcmFunctionCache *cache)
 static gint
 gdouble_compare (gconstpointer a, gconstpointer b, gpointer user_data)
 {
-//  printf ("BLOB %g %g\n", *((gdouble *)a), *((gdouble *)b));
+  //  printf ("BLOB %g %g\n", *((gdouble *)a), *((gdouble *)b));
   NCM_UNUSED (user_data);
   return gsl_fcmp ( *((gdouble *)a), *((gdouble *)b), 1e-15);
 }

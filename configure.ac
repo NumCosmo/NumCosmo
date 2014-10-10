@@ -287,8 +287,20 @@ fi
 dnl ***************************************************************************
 dnl Check for fortran lib.
 dnl ***************************************************************************
+AC_F77_LIBRARY_LDFLAGS
 AC_FC_LIBRARY_LDFLAGS
 if test "x$FCLIBS" != x; then
+  FCLIBS_WL="-Wl"
+  for fc_opt in $FCLIBS; do
+    FCLIBS_WL="$FCLIBS_WL,${fc_opt}"
+  done
+  FLIBS_WL="-Wl"
+  for fc_opt in $FLIBS; do
+    FLIBS_WL="$FLIBS_WL,${fc_opt}"
+  done
+
+  FLIBS="$FLIBS_WL"
+  FCLIBS="$FCLIBS_WL"
   LIBS="$FCLIBS $LIBS"
 fi
 
@@ -362,7 +374,7 @@ dnl ***************************************************************************
 dnl Check for fftw3
 dnl ***************************************************************************
 
-PKG_CHECK_MODULES(FFTW3, [fftw3 >= $FFTW3_REQUIRED_VERSION],[
+PKG_CHECK_MODULES(FFTW3, [fftw3 >= $FFTW3_REQUIRED_VERSION fftw3l >= $FFTW3_REQUIRED_VERSION],[
   AC_DEFINE([HAVE_FFTW3],[1], [Have the fast fourier package])
   have_fftw3_support="#define NUMCOSMO_HAVE_FFTW3 1"],[
   have_fftw3_support=""])

@@ -34,6 +34,9 @@
 #include <gsl/gsl_matrix.h>
 #include <gsl/gsl_spline.h>
 #include <gsl/gsl_rng.h>
+#ifndef NUMCOSMO_GIR_SCAN
+#include <gmp.h>
+#endif /* NUMCOSMO_GIR_SCAN */
 #ifdef NUMCOSMO_HAVE_SQLITE3
 #include <sqlite3.h>
 #endif
@@ -59,6 +62,7 @@ gboolean ncm_cfg_exists (gchar *filename, ...);
 void ncm_cfg_set_logfile (gchar *filename);
 void ncm_cfg_logfile (gboolean on);
 void ncm_cfg_logfile_flush (gboolean on);
+void ncm_cfg_logfile_flush_now (void);
 
 void ncm_message (gchar *msg, ...);
 gchar *ncm_string_ww (const gchar *msg, const gchar *first, const gchar *rest, guint ncols);

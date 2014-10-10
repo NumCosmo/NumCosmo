@@ -75,6 +75,7 @@ struct _NcmMSetCatalog
   NcmStatsVec *pstats;
   NcmMSetCatalogFlush fmode;
   NcmRNG *rng;
+  gboolean weighted;
   gboolean first_flush;
   gchar *rng_inis;
   gchar *rng_stat;
@@ -105,7 +106,7 @@ struct _NcmMSetCatalogClass
 
 GType ncm_mset_catalog_get_type (void) G_GNUC_CONST;
 
-NcmMSetCatalog *ncm_mset_catalog_new (NcmMSet *mset, guint nadd_vals, ...);
+NcmMSetCatalog *ncm_mset_catalog_new (NcmMSet *mset, guint nadd_vals, gboolean weighted, ...);
 void ncm_mset_catalog_free (NcmMSetCatalog *mcat);
 void ncm_mset_catalog_clear (NcmMSetCatalog **mcat);
 
@@ -130,6 +131,7 @@ void ncm_mset_catalog_add_from_mset_array (NcmMSetCatalog *mcat, NcmMSet *mset, 
 void ncm_mset_catalog_add_from_vector (NcmMSetCatalog *mcat, NcmVector *vals);
 void ncm_mset_catalog_log_current_stats (NcmMSetCatalog *mcat);
 
+NcmVector *ncm_mset_catalog_peek_row (NcmMSetCatalog *mcat, guint i);
 NcmVector *ncm_mset_catalog_peek_current_row (NcmMSetCatalog *mcat);
 
 void ncm_mset_catalog_get_mean (NcmMSetCatalog *mcat, NcmVector  **mean);

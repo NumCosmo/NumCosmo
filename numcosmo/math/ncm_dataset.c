@@ -619,6 +619,36 @@ ncm_dataset_log_info (NcmDataset *dset)
 }
 
 /**
+ * ncm_dataset_get_info:
+ * @dset: a #NcmDataset
+ *
+ * Obtains the informations associated with every #NcmData in @dset.
+ * 
+ * Returns: (transfer full): @dset description
+ */
+gchar *
+ncm_dataset_get_info (NcmDataset *dset)
+{
+  guint i;
+  GString *desc = g_string_new ("# Data used:\n");
+  for (i = 0; i < dset->oa->len; i++)
+  {
+    NcmData *data = ncm_dataset_peek_data (dset, i);
+    const gchar *desc_i = ncm_data_peek_desc (data);
+    gchar *desc_i_ww = ncm_string_ww (desc_i, 
+                                      "#   - ", 
+                                      "#       ", 
+                                      80);
+    g_string_append (desc, desc_i_ww);
+    g_free (desc_i_ww);
+  }
+
+  return g_string_free (desc, FALSE);
+}
+
+
+
+/**
  * ncm_dataset_has_leastsquares_f:
  * @dset: a #NcmDataset
  *

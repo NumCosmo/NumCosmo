@@ -134,6 +134,7 @@ G_INLINE_FUNC guint ncm_matrix_row_len (const NcmMatrix *cm);
 G_INLINE_FUNC guint ncm_matrix_nrows (const NcmMatrix *cm);
 G_INLINE_FUNC guint ncm_matrix_ncols (const NcmMatrix *cm);
 G_INLINE_FUNC guint ncm_matrix_size (const NcmMatrix *cm);
+G_INLINE_FUNC guint ncm_matrix_tda (const NcmMatrix *cm);
 G_INLINE_FUNC gdouble *ncm_matrix_data (NcmMatrix *cm);
 
 NcmMatrix *ncm_matrix_dup (const NcmMatrix *cm);
@@ -281,6 +282,12 @@ G_INLINE_FUNC guint
 ncm_matrix_size (const NcmMatrix *cm)
 {
   return cm->mv.matrix.size1 * cm->mv.matrix.size2;
+}
+
+G_INLINE_FUNC guint 
+ncm_matrix_tda (const NcmMatrix *cm)
+{
+  return cm->mv.matrix.tda;
 }
 
 G_INLINE_FUNC gdouble *

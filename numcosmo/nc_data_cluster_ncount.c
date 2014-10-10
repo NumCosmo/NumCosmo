@@ -45,6 +45,8 @@
 
 #include <glib/gstdio.h>
 #include <gsl/gsl_randist.h>
+#include <gsl/gsl_sort.h>
+#include <gsl/gsl_statistics_double.h>
 #ifdef NUMCOSMO_HAVE_CFITSIO
 #include <fitsio.h>
 #endif /* NUMCOSMO_HAVE_CFITSIO */
@@ -63,6 +65,9 @@ enum
   PROP_LNM_OBS_PARAMS,
   PROP_SURVEY_AREA,
   PROP_USE_TRUE,
+  PROP_BINNED,
+  PROP_Z_NODES,
+  PROP_LNM_NODES,
   PROP_FIDUCIAL,
   PROP_SEED,
   PROP_RNG_NAME,
@@ -87,9 +92,13 @@ nc_data_cluster_ncount_init (NcDataClusterNCount *ncount)
   ncount->np             = 0.0;
   ncount->log_np_fac     = 0.0;
   ncount->use_true_data  = FALSE;
+  ncount->binned         = FALSE;
+  ncount->z_nodes        = NULL;
+  ncount->lnM_nodes      = NULL;
   ncount->completeness   = NULL;
   ncount->purity         = NULL;
   ncount->sd_lnM         = NULL;
+  ncount->z_lnM          = NULL;
   ncount->fiducial       = FALSE;
   ncount->seed           = 0;
   ncount->rnd_name       = NULL;
@@ -168,6 +177,33 @@ nc_data_cluster_ncount_set_property (GObject *object, guint prop_id, const GValu
     case PROP_USE_TRUE:
       ncount->use_true_data = g_value_get_boolean (value);
       break;
+    case PROP_BINNED:
+      nc_data_cluster_ncount_set_binned (ncount, g_value_get_boolean (value));
+      break;
+    case PROP_Z_NODES:
+    {
+      GVariant *var = g_value_get_variant (value);
+      if (var != NULL)
+      {
+        NcmVector *v = ncm_vector_new_variant (var);
+        ncm_vector_clear (&ncount->z_nodes);
+        ncount->z_nodes = v;
+        ncount->binned = FALSE;
+      }
+      break;
+    }
+    case PROP_LNM_NODES:
+    {
+      GVariant *var = g_value_get_variant (value);
+      if (var != NULL)
+      {
+        NcmVector *v = ncm_vector_new_variant (var);
+        ncm_vector_clear (&ncount->lnM_nodes);
+        ncount->lnM_nodes = v;
+        ncount->binned = FALSE;
+      }
+      break;
+    }
     case PROP_FIDUCIAL:
       ncount->fiducial = g_value_get_boolean (value);
       break;
@@ -256,6 +292,27 @@ nc_data_cluster_ncount_get_property (GObject *object, guint prop_id, GValue *val
     case PROP_USE_TRUE:
       g_value_set_boolean (value, ncount->use_true_data);
       break;
+    case PROP_BINNED:
+      g_value_set_boolean (value, ncount->binned);
+      break;
+    case PROP_Z_NODES:
+    {
+      if (ncount->z_nodes != NULL)
+      {
+        GVariant *var = ncm_vector_peek_variant (ncount->z_nodes); 
+        g_value_take_variant (value, var);
+      }
+      break;
+    }
+    case PROP_LNM_NODES:
+    {
+      if (ncount->z_nodes != NULL)
+      {
+        GVariant *var = ncm_vector_peek_variant (ncount->lnM_nodes); 
+        g_value_take_variant (value, var);
+      }
+      break;
+    }
     case PROP_FIDUCIAL:
       g_value_set_boolean (value, ncount->fiducial);
       break;
@@ -275,7 +332,8 @@ static void
 nc_data_cluster_ncount_dispose (GObject *object)
 {
   NcDataClusterNCount *ncount = NC_DATA_CLUSTER_NCOUNT (object);
-  
+
+  nc_cluster_abundance_clear (&ncount->cad);
   nc_cluster_redshift_clear (&ncount->z);
   nc_cluster_mass_clear (&ncount->m);
 
@@ -286,6 +344,9 @@ nc_data_cluster_ncount_dispose (GObject *object)
   ncm_matrix_clear (&ncount->z_obs_params);
   ncm_matrix_clear (&ncount->lnM_obs);
   ncm_matrix_clear (&ncount->lnM_obs_params);
+
+  ncm_vector_clear (&ncount->lnM_nodes);
+  ncm_vector_clear (&ncount->z_nodes);  
   
   /* Chain up : end */
   G_OBJECT_CLASS (nc_data_cluster_ncount_parent_class)->dispose (object);
@@ -294,6 +355,14 @@ nc_data_cluster_ncount_dispose (GObject *object)
 static void
 nc_data_cluster_ncount_finalize (GObject *object)
 {
+  NcDataClusterNCount *ncount = NC_DATA_CLUSTER_NCOUNT (object);
+
+  g_clear_pointer (&ncount->rnd_name, g_free);
+  g_clear_pointer (&ncount->completeness, gsl_histogram_free);
+  g_clear_pointer (&ncount->purity, gsl_histogram_free);
+  g_clear_pointer (&ncount->sd_lnM, gsl_histogram_free);
+  g_clear_pointer (&ncount->z_lnM, gsl_histogram_free);
+
   /* Chain up : end */
   G_OBJECT_CLASS (nc_data_cluster_ncount_parent_class)->finalize (object);
 }
@@ -395,6 +464,28 @@ nc_data_cluster_ncount_class_init (NcDataClusterNCountClass *klass)
                                                          FALSE,
                                                          G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
   g_object_class_install_property (object_class,
+                                   PROP_BINNED,
+                                   g_param_spec_boolean ("binned",
+                                                         NULL,
+                                                         "Whether use binned data",
+                                                         FALSE,
+                                                         G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  g_object_class_install_property (object_class,
+                                   PROP_Z_NODES,
+                                   g_param_spec_variant ("z-nodes",
+                                                         NULL,
+                                                         "Clusters redshifts nodes for binning",
+                                                         G_VARIANT_TYPE ("ad"), NULL,
+                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  g_object_class_install_property (object_class,
+                                   PROP_LNM_NODES,
+                                   g_param_spec_variant ("lnM-nodes",
+                                                         NULL,
+                                                         "Clusters mass nodes for binning",
+                                                         G_VARIANT_TYPE ("ad"), NULL,
+                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
+  g_object_class_install_property (object_class,
                                    PROP_FIDUCIAL,
                                    g_param_spec_boolean ("fiducial",
                                                          NULL,
@@ -433,8 +524,9 @@ _nc_data_cluster_ncount_get_length (NcmData *data)
 static void
 _nc_data_cluster_ncount_begin (NcmData *data)
 {
+  gint signp = 0;
   NcDataClusterNCount *ncount = NC_DATA_CLUSTER_NCOUNT (data);   
-  ncount->log_np_fac = lgamma (ncount->np + 1);
+  ncount->log_np_fac = lgamma_r (ncount->np + 1, &signp);
 }
 
 /**
@@ -935,67 +1027,6 @@ nc_data_cluster_ncount_get_z_obs_params (NcDataClusterNCount *ncount)
     return NULL;
 }
 
-/**
- * nc_data_cluster_ncount_init_from_fits_file:
- * @data: a #NcmData
- * @filename: name of the file
- *
- * FIXME
- * 
- */
-void
-nc_data_cluster_ncount_init_from_fits_file (NcDataClusterNCount *ncount, gchar *filename)
-{
-  NCM_UNUSED (ncount);
-  NCM_UNUSED (filename);
-  g_assert_not_reached ();
-}
-
-static void
-_nc_data_cluster_ncount_binned_f (NcmMSet *mset, gpointer obj, const gdouble *x, gdouble *f)
-{
-  //NcHICosmo *cosmo = NC_HICOSMO (ncm_mset_peek (mset, NC_HICOSMO_ID));
-  //NcClusterAbundance *cad = NC_CLUSTER_ABUNDANCE (obj);
-  //f[0] = nc_cluster_abundance_N_val (cad, model, cad->lnMi, cad->lnMf, cad->zi, x[0]);
-  NCM_UNUSED (mset);
-  NCM_UNUSED (obj);
-  NCM_UNUSED (x);
-  NCM_UNUSED (f);
-  g_assert_not_reached ();
-  return;
-}
-
-/**
- * nc_data_cluster_ncount_binned_create_func: (skip)
- * @cad: a #NcClusterAbundance
- *
- * FIXME
- *
- * Returns: FIXME
- */
-NcmMSetFunc *
-nc_data_cluster_ncount_binned_create_func (NcClusterAbundance *cad)
-{
-  NcmMSetFunc *func = ncm_mset_func_new (_nc_data_cluster_ncount_binned_f, 1, 1, cad, (GDestroyNotify) nc_cluster_abundance_free);
-  return func;
-}
-
-/**
- * nc_data_cluster_ncount_binned_lnM_z_new:
- * @cad: a #NcClusterAbundance
- *
- * FIXME
- *
- * Returns: FIXME
- */
-NcmData *
-nc_data_cluster_ncount_binned_lnM_z_new (NcClusterAbundance *cad)
-{
-  NCM_UNUSED (cad);
-  g_assert_not_reached ();
-  return NULL;
-}
-
 /************************************************************************************************************
  * Unbinned number count data                                                                               *
  ************************************************************************************************************/
@@ -1029,6 +1060,20 @@ _nc_data_cluster_ncount_prepare (NcmData *data, NcmMSet *mset)
     nc_cluster_abundance_prepare (ncount->cad, cosmo);
   }
 }
+
+static gchar *
+_nc_data_cluster_ncount_desc (NcDataClusterNCount *ncount, NcHICosmo *cosmo)
+{
+  NcClusterAbundance *cad = ncount->cad;
+  return g_strdup_printf ("Cluster NCount resample %s. Generated %u from mean %10.5g (full). Resampled in range [%8.4f, %8.4f] [%1.8e, %1.8e] and area %8.4f degrees square",
+                          ncount->binned ? "binned" : "unbinned",
+                          ncount->np, cad->norma /*nc_cluster_abundance_n (cad, cosmo)*/, 
+                          cad->zi, cad->zf, 
+                          exp (cad->lnMi), exp (cad->lnMf), 
+                          ncount->area_survey / gsl_pow_2 (M_PI / 180.0));
+}
+
+void _nc_data_cluster_ncount_bin_data (NcDataClusterNCount *ncount);
 
 /**
  * _nc_data_cluster_ncount_resample:
@@ -1077,15 +1122,10 @@ _nc_data_cluster_ncount_resample (NcmData *data, NcmMSet *mset, NcmRNG *rng)
     if (lnM_obs_params_len > 0)
       g_free (lnMi_obs_params);
 
-    ncm_data_take_desc (data, 
-                        g_strdup_printf ("Cluster NCount resample unbinned. Generated %u from mean %10.5g. Resampled in range [%8.4f, %8.4f] [%1.8e, %1.8e] and area %8.4f degrees square", 
-                                         ncount->np, nc_cluster_abundance_n (cad, cosmo), 
-                                         cad->zi, cad->zf, 
-                                         exp (cad->lnMi), exp (cad->lnMf), 
-                                         ncount->area_survey / gsl_pow_2 (M_PI / 180.0)));
+    ncm_data_take_desc (data, _nc_data_cluster_ncount_desc (ncount, cosmo));
     return;
   }
-  
+
   lnM_true_array = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), total_np);
   z_true_array = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), total_np);
 
@@ -1096,7 +1136,7 @@ _nc_data_cluster_ncount_resample (NcmData *data, NcmMSet *mset, NcmRNG *rng)
   lnM_obs_array = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), total_np * lnM_obs_len);
   if (lnM_obs_params_len > 0)
     lnM_obs_params_array = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), total_np * lnM_obs_params_len);
-  
+
   nc_cluster_abundance_prepare_inv_dNdz (cad, NC_HICOSMO (ncm_mset_peek (mset, nc_hicosmo_id ())));
 
   for (i = 0; i < total_np; i++)
@@ -1145,15 +1185,10 @@ _nc_data_cluster_ncount_resample (NcmData *data, NcmMSet *mset, NcmRNG *rng)
     ncm_matrix_clear (&ncount->lnM_obs);
     g_array_unref (lnM_obs_array);
 
-    ncm_data_take_desc (data, 
-                        g_strdup_printf ("Cluster NCount resample unbinned. Generated %u from mean %10.5g. Resampled in range [%8.4f, %8.4f] [%1.8e, %1.8e] and area %8.4f degrees square", 
-                                         ncount->np, nc_cluster_abundance_n (cad, cosmo), 
-                                         cad->zi, cad->zf, 
-                                         exp (cad->lnMi), exp (cad->lnMf), 
-                                         ncount->area_survey / gsl_pow_2 (M_PI / 180.0)));
+    ncm_data_take_desc (data, _nc_data_cluster_ncount_desc (ncount, cosmo));
     return;
   }
-  
+
   ncm_vector_clear (&ncount->lnM_true);
   ncount->lnM_true = ncm_vector_new_array (lnM_true_array);
   g_array_unref (lnM_true_array);
@@ -1187,18 +1222,17 @@ _nc_data_cluster_ncount_resample (NcmData *data, NcmMSet *mset, NcmRNG *rng)
   ncount->np = ncm_matrix_nrows (ncount->z_obs);
 
   /* printf ("Generated %u, Expected %10.5g\n", ncount->np, nc_cluster_abundance_n (cad, cosmo)); */
+  ncm_data_take_desc (data, _nc_data_cluster_ncount_desc (ncount, cosmo));
 
-  ncm_data_take_desc (data, 
-                      g_strdup_printf ("Cluster NCount resample unbinned. Generated %u from mean %10.5g. Resampled in range [%8.4f, %8.4f] [%1.8e, %1.8e] and area %8.4f degrees square", 
-                                       ncount->np, nc_cluster_abundance_n (cad, cosmo), 
-                                       cad->zi, cad->zf, 
-                                       exp (cad->lnMi), exp (cad->lnMf), 
-                                       ncount->area_survey / gsl_pow_2 (M_PI / 180.0)));
-  ncm_rng_unlock (rng);
   g_free (zi_obs);
   g_free (zi_obs_params);
   g_free (lnMi_obs);
   g_free (lnMi_obs_params);
+
+  if (ncount->binned)
+  {
+    _nc_data_cluster_ncount_bin_data (ncount);
+  }
 }
 
 typedef struct
@@ -1328,6 +1362,9 @@ _nc_data_cluster_ncount_m2lnL_val (NcmData *data, NcmMSet *mset, gdouble *m2lnL)
 
   *m2lnL = 0.0;
 
+  if (ncount->binned)
+    g_error ("_nc_data_cluster_ncount_m2lnL_val: don't support binned likelihood yet.");
+
   if (ncount->np == 0)
   {
     const gdouble n_th = nc_cluster_abundance_n (cad, cosmo);    
@@ -1445,90 +1482,6 @@ nc_data_cluster_ncount_init_from_sampling (NcDataClusterNCount *ncount, NcmMSet 
 }
 
 /**
- * nc_data_cluster_ncount_bin_data: (skip)
- * @ncount: a #NcDataClusterNCount.
- * @nodes: FIXME
- *
- * FIXME
- *
- * Returns: FIXME
- */
-NcmData *
-nc_data_cluster_ncount_bin_data (NcDataClusterNCount *ncount, gsl_vector *nodes)
-{
-  NcmData *data_cpoisson;
-  gsl_histogram *hist;
-  guint i;
-
-  g_assert (nodes->size > 1);
-  g_assert (nodes->stride == 1);
-  g_assert (ncount->np > 0); 
-
-  data_cpoisson = nc_data_cluster_poisson_new (ncount);
-
-  hist = gsl_histogram_alloc (nodes->size - 1);
-  gsl_histogram_set_ranges (hist, nodes->data, nodes->size);
-
-  {
-    for (i = 0; i < ncount->np; i++)
-    {
-      const gdouble z_i = 0.0;//gsl_matrix_get (ncount->real.z_lnM, i, 0);
-      gsl_histogram_increment (hist, z_i);
-      g_assert_not_reached ();
-    }
-  }
-
-  ncm_data_poisson_init_from_histogram (data_cpoisson, hist);
-
-  gsl_histogram_free (hist);
-
-  return data_cpoisson;
-}
-
-/**
- * nc_data_cluster_ncount_hist_lnM_z: (skip)
- * @ncount: a #NcDataClusterNCount.
- * @lnM_nodes: FIXME
- * @z_nodes: FIXME
- *
- * FIXME
- *
- * Returns: FIXME
- */
-gsl_histogram2d *
-nc_data_cluster_ncount_hist_lnM_z (NcDataClusterNCount *ncount, gsl_vector *lnM_nodes, gsl_vector *z_nodes)
-{
-  gsl_histogram2d *hist;
-  guint i;
-
-  g_assert (NCM_DATA (ncount)->init);
-  g_assert (lnM_nodes->size > 1);
-  g_assert (lnM_nodes->stride == 1);
-  g_assert (z_nodes->size > 1);
-  g_assert (z_nodes->stride == 1);
-  g_assert (ncount->np > 0);
-
-  //ca_binned = nc_data_cluster_ncount_binned_lnM_z_new (cad); /* I have to make this function. */
-  //ca_binned = nc_data_cluster_ncount_new (cad);
-
-  hist = gsl_histogram2d_alloc (lnM_nodes->size - 1, z_nodes->size - 1);
-  gsl_histogram2d_set_ranges (hist, lnM_nodes->data, lnM_nodes->size, z_nodes->data, z_nodes->size);
-
-  {
-    for (i = 0; i < ncount->np; i++)
-    {
-      const gdouble zi_real = 0.0;//gsl_matrix_get (ncount->real.z_lnM, i, 0);
-      const gdouble lnMi_real = 0.0;//gsl_matrix_get (ncount->real.z_lnM, i, 1);
-      g_assert_not_reached ();
-
-      gsl_histogram2d_increment (hist, lnMi_real, zi_real);
-    }
-  }
-
-  return hist;
-}
-
-/**
  * nc_data_cluster_ncount_print:
  * @ncount: a #NcDataClusterNCount.
  * @cosmo: a NcHICosmo
@@ -1571,8 +1524,9 @@ nc_data_cluster_ncount_print (NcDataClusterNCount *ncount, NcHICosmo *cosmo, FIL
   else
     fprintf (out, "# ");
 
-  gsl_histogram2d *h = nc_data_cluster_ncount_hist_lnM_z (ncount, lnM_nodes, z_nodes);
-
+  g_assert_not_reached ();
+  gsl_histogram2d *h = NULL;
+  /*gsl_histogram2d *h = nc_data_cluster_ncount_hist_lnM_z (ncount, lnM_nodes, z_nodes);*/
 
   fprintf (out, "# z M N/(logM * V) (catalog) dn/dlog10M (theory) Nmi(catalog)(abundance in bins of redshift and mass) Nmi(theory)\n");
   for (j = 0; j < nbins_z - 1; j++)
@@ -1604,6 +1558,220 @@ nc_data_cluster_ncount_print (NcDataClusterNCount *ncount, NcHICosmo *cosmo, FIL
   gsl_vector_free (lnM_nodes);
   gsl_vector_free (z_nodes);
   gsl_histogram2d_free (h);
+}
+
+void
+_nc_data_cluster_ncount_bin_data (NcDataClusterNCount *ncount)
+{
+  gsl_histogram2d_reset (ncount->z_lnM);
+
+  if (ncount->np == 0)
+    return;
+
+  if (ncount->use_true_data)
+  {
+    guint i;
+
+    for (i = 0; i < ncount->np; i++)
+    {
+      const gdouble lnM = ncm_vector_get (ncount->lnM_true, i);
+      const gdouble z   = ncm_vector_get (ncount->z_true, i);
+      gsl_histogram2d_increment (ncount->z_lnM, z, lnM);
+    }    
+  }
+  else
+  {
+    guint i;
+    
+    for (i = 0; i < ncount->np; i++)
+    {
+      const gdouble lnM = ncm_matrix_get (ncount->lnM_obs, i, 0);
+      const gdouble z   = ncm_matrix_get (ncount->z_obs, i, 0);
+      gsl_histogram2d_increment (ncount->z_lnM, z, lnM);
+    }
+  }
+}
+
+static void
+_nc_data_cluster_ncount_bin_alloc (NcDataClusterNCount *ncount, guint z_bins, guint lnM_bins)
+{
+  g_assert_cmpint (z_bins, >=, 1);
+  g_assert_cmpint (lnM_bins, >=, 1);
+
+  if (ncount->z_lnM != NULL)
+  {
+    if (ncount->z_lnM->nx != z_bins || ncount->z_lnM->ny != lnM_bins)
+    {
+      g_clear_pointer (&ncount->z_lnM, &gsl_histogram2d_free);
+      ncount->z_lnM = gsl_histogram2d_alloc (z_bins, lnM_bins);
+    }
+  }
+  else
+    ncount->z_lnM = gsl_histogram2d_alloc (z_bins, lnM_bins);
+
+}
+
+/**
+ * nc_data_cluster_ncount_set_bin_by_nodes:
+ * @ncount: a #NcDataClusterNCount.
+ * @z_nodes: FIXME
+ * @lnM_nodes: FIXME
+ *
+ * FIXME
+ *
+ */
+void
+nc_data_cluster_ncount_set_bin_by_nodes (NcDataClusterNCount *ncount, NcmVector *z_nodes, NcmVector *lnM_nodes)
+{
+  guint z_bins   = ncm_vector_len (z_nodes) - 1;
+  guint lnM_bins = ncm_vector_len (lnM_nodes) - 1;
+  _nc_data_cluster_ncount_bin_alloc (ncount, z_bins, lnM_bins);
+
+  g_assert_cmpint (ncm_vector_stride (z_nodes), ==, 1);
+  g_assert_cmpint (ncm_vector_stride (lnM_nodes), ==, 1);
+  
+  gsl_histogram2d_set_ranges (ncount->z_lnM, 
+                              ncm_vector_ptr (z_nodes, 0), z_bins + 1, 
+                              ncm_vector_ptr (lnM_nodes, 0), lnM_bins + 1);
+
+  _nc_data_cluster_ncount_bin_data (ncount);
+  ncount->binned = TRUE;
+/*
+  ncm_vector_log_vals (z_nodes,   "# z   ", "% 20.15g");
+  ncm_vector_log_vals (lnM_nodes, "# lnM ", "% 20.15g");
+*/  
+  if (ncount->z_nodes != z_nodes)
+  {
+    ncm_vector_clear (&ncount->z_nodes);
+    ncount->z_nodes = ncm_vector_ref (z_nodes);
+  }
+
+  if (ncount->lnM_nodes != lnM_nodes)
+  {
+    ncm_vector_clear (&ncount->lnM_nodes);
+    ncount->lnM_nodes = ncm_vector_ref (lnM_nodes);
+  }
+}
+
+/**
+ * nc_data_cluster_ncount_set_bin_by_quantile:
+ * @ncount: a #NcDataClusterNCount.
+ * @z_quantiles: FIXME
+ * @lnM_quantiles: FIXME
+ *
+ * FIXME
+ *
+ */
+void 
+nc_data_cluster_ncount_set_bin_by_quantile (NcDataClusterNCount *ncount, NcmVector *z_quantiles, NcmVector *lnM_quantiles)
+{
+  guint z_bins   = ncm_vector_len (z_quantiles) + 1;
+  guint lnM_bins = ncm_vector_len (lnM_quantiles) + 1;
+  NcmVector *z_nodes = ncm_vector_new (z_bins + 1);
+  NcmVector *lnM_nodes = ncm_vector_new (lnM_bins + 1);
+  guint i;
+
+  if ((ncm_vector_get (z_quantiles, 0) == 0.0) || 
+      (ncm_vector_get (lnM_quantiles, 0) == 0.0) ||
+      (ncm_vector_get (z_quantiles, ncm_vector_len (z_quantiles) - 1) == 1.0) ||
+      (ncm_vector_get (lnM_quantiles, ncm_vector_len (lnM_quantiles) - 1) == 1.0))
+  {
+    g_error ("nc_data_cluster_ncount_set_bin_by_quantile: quantiles must be > 0.0 and < 1.0");
+  }
+
+
+  {
+    gdouble *z_data, *lnM_data;
+    guint z_stride, lnM_stride;
+    guint z_len, lnM_len;
+    NcmVector *z_dup = NULL;
+    NcmVector *lnM_dup = NULL;
+    
+    if (ncount->use_true_data)
+    {
+      z_dup   = ncm_vector_dup (ncount->z_true);
+      lnM_dup = ncm_vector_dup (ncount->lnM_true);
+    }
+    else
+    {
+      NcmVector *col = ncm_matrix_get_col (ncount->z_obs, 0);
+
+      z_dup   = ncm_vector_dup (col);
+      ncm_vector_free (col);
+
+      col = ncm_matrix_get_col (ncount->lnM_obs, 0);
+      lnM_dup = ncm_vector_dup (col);
+      
+      ncm_vector_free (col);
+    }
+
+    z_data     = ncm_vector_ptr (z_dup, 0);
+    lnM_data   = ncm_vector_ptr (lnM_dup, 0);
+    z_stride   = ncm_vector_stride (z_dup);
+    lnM_stride = ncm_vector_stride (lnM_dup);
+    z_len      = ncm_vector_len (z_dup);
+    lnM_len    = ncm_vector_len (lnM_dup);
+    
+    ncm_vector_set (z_nodes, 0, 0.0);
+    ncm_vector_set (lnM_nodes, 0, 0.0);
+
+    gsl_sort (z_data, z_stride, z_len);
+    gsl_sort (lnM_data, lnM_stride, lnM_len);
+    
+    for (i = 1; i < z_bins; i++)
+    {
+      const gdouble z_node = gsl_stats_quantile_from_sorted_data (z_data, z_stride, z_len,
+                                                                  ncm_vector_get (z_quantiles, i - 1)); 
+      ncm_vector_set (z_nodes, i, z_node);
+    }
+    for (i = 1; i < lnM_bins; i++)
+    {
+      const gdouble lnM_node = gsl_stats_quantile_from_sorted_data (lnM_data, lnM_stride, lnM_len,
+                                                                    ncm_vector_get (lnM_quantiles, i - 1)); 
+      ncm_vector_set (lnM_nodes, i, lnM_node);
+    }
+    
+    ncm_vector_set (z_nodes, z_bins, z_data[z_stride * (z_len - 1)] + 2.0);
+    ncm_vector_set (lnM_nodes, lnM_bins, lnM_data[lnM_stride * (lnM_len - 1)] + 10.0);
+    ncm_vector_free (z_dup);
+    ncm_vector_free (lnM_dup);
+  }
+
+  nc_data_cluster_ncount_set_bin_by_nodes (ncount, z_nodes, lnM_nodes);
+
+  ncm_vector_free (z_nodes);
+  ncm_vector_free (lnM_nodes);
+}
+
+/**
+ * nc_data_cluster_ncount_set_binned:
+ * @ncount: a #NcDataClusterNCount.
+ * @on: FIXME
+ *
+ * FIXME
+ *
+ */
+void 
+nc_data_cluster_ncount_set_binned (NcDataClusterNCount *ncount, gboolean on)
+{
+  if (on)
+  {
+    if (ncount->binned)
+      return;
+    else
+    {
+      if (ncount->z_nodes == NULL || ncount->lnM_nodes == NULL)
+      {
+        g_error ("nc_data_cluster_ncount_set_binned: cannot turn on, no nodes were defined.");
+      }
+      else
+      {
+        nc_data_cluster_ncount_set_bin_by_nodes (ncount, ncount->z_nodes, ncount->lnM_nodes);
+      }
+    }
+  }
+  else
+    ncount->binned = FALSE;  
 }
 
 #ifdef NUMCOSMO_HAVE_CFITSIO

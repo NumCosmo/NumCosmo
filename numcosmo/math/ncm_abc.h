@@ -54,6 +54,7 @@ struct _NcmABCClass
   gboolean (*data_summary) (NcmABC *abc);
   gdouble (*mock_distance) (NcmABC *abc, NcmDataset *dset, NcmVector *theta, NcmVector *thetastar, NcmRNG *rng);
   gdouble (*distance_prob) (NcmABC *abc, gdouble distance);
+  void (*update_tkern) (NcmABC *abc);
   const gchar *(*get_desc) (NcmABC *abc);
   const gchar *(*log_info) (NcmABC *abc);
 };
@@ -72,10 +73,20 @@ struct _NcmABC
   NcmFitRunMsgs mtype;
   NcmVector *theta;
   NcmVector *thetastar;
+  NcmMatrix *covar;
   GArray *weights;
+  GArray *weights_tm1;
+  GArray *pchoice;
+  GArray *dists;
+  gboolean dists_sorted;
+  gsl_ran_discrete_t *wran;
+  GPtrArray *mcat_tm1;
   gboolean started;
   gint cur_sample_id;
+  guint ntotal;
+  guint naccepted;
   guint nthreads;
+  guint nupdates;
   guint n;
 };
 
@@ -87,6 +98,7 @@ void ncm_abc_clear (NcmABC **abc);
 gboolean ncm_abc_data_summary (NcmABC *abc);
 gdouble ncm_abc_mock_distance (NcmABC *abc, NcmDataset *dset, NcmVector *theta, NcmVector *thetastar, NcmRNG *rng);
 gdouble ncm_abc_distance_prob (NcmABC *abc, gdouble distance);
+void ncm_abc_update_tkern (NcmABC *abc);
 const gchar *ncm_abc_get_desc (NcmABC *abc);
 const gchar *ncm_abc_log_info (NcmABC *abc);
 
@@ -94,13 +106,21 @@ void ncm_abc_set_mtype (NcmABC *abc, NcmFitRunMsgs mtype);
 void ncm_abc_set_data_file (NcmABC *abc, const gchar *filename);
 void ncm_abc_set_nthreads (NcmABC *abc, guint nthreads);
 void ncm_abc_set_rng (NcmABC *abc, NcmRNG *rng);
+void ncm_abc_set_first_sample_id (NcmABC *abc, gint first_sample_id);
+void ncm_abc_set_trans_kern (NcmABC *abc, NcmMSetTransKern *tkern);
+
+gdouble ncm_abc_get_dist_quantile (NcmABC *abc, gdouble p);
+
 void ncm_abc_start_run (NcmABC *abc);
 void ncm_abc_end_run (NcmABC *abc);
 void ncm_abc_reset (NcmABC *abc);
-void ncm_abc_set_first_sample_id (NcmABC *abc, gint first_sample_id);
 void ncm_abc_run (NcmABC *abc, guint n);
 void ncm_abc_run_lre (NcmABC *abc, guint prerun, gdouble lre);
 void ncm_abc_mean_covar (NcmABC *abc, NcmFit *fit);
+
+void ncm_abc_start_update (NcmABC *abc);
+void ncm_abc_end_update (NcmABC *abc);
+void ncm_abc_update (NcmABC *abc);
 
 #define NCM_ABC_MIN_FLUSH_INTERVAL (10.0)
 
