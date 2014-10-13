@@ -78,6 +78,8 @@ struct _NcmABC
   GArray *weights_tm1;
   GArray *pchoice;
   GArray *dists;
+  gdouble epsilon;
+  gdouble depsilon;
   gboolean dists_sorted;
   gsl_ran_discrete_t *wran;
   GPtrArray *mcat_tm1;
@@ -110,6 +112,10 @@ void ncm_abc_set_first_sample_id (NcmABC *abc, gint first_sample_id);
 void ncm_abc_set_trans_kern (NcmABC *abc, NcmMSetTransKern *tkern);
 
 gdouble ncm_abc_get_dist_quantile (NcmABC *abc, gdouble p);
+gdouble ncm_abc_get_accept_rate (NcmABC *abc);
+void ncm_abc_update_epsilon (NcmABC *abc, gdouble epsilon);
+gdouble ncm_abc_get_epsilon (NcmABC *abc);
+gdouble ncm_abc_get_depsilon (NcmABC *abc);
 
 void ncm_abc_start_run (NcmABC *abc);
 void ncm_abc_end_run (NcmABC *abc);

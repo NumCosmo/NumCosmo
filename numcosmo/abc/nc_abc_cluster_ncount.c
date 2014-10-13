@@ -44,7 +44,8 @@
 enum
 {
   PROP_0,
-  PROP_EPSILON
+  PROP_SCALE_COV,
+  PROP_QUANTILES,
 };
 
 
@@ -53,23 +54,21 @@ G_DEFINE_TYPE (NcABCClusterNCount, nc_abc_cluster_ncount, NCM_TYPE_ABC);
 static void
 nc_abc_cluster_ncount_init (NcABCClusterNCount *abcnc)
 {
-  abcnc->epsilon = 0.0;
   abcnc->data_summary = NULL;
-  abcnc->covar = NULL;
+  abcnc->covar        = NULL;
+  abcnc->scale_cov    = FALSE;
+  abcnc->quantiles    = NULL;
 }
 
 static void
 _nc_abc_cluster_ncount_constructed (GObject *object)
 {
   NcmABC *abc = NCM_ABC (object);
-  NcABCClusterNCount *abcnc = NC_ABC_CLUSTER_NCOUNT (object);
   
   NcmMSetTransKernGauss *tkerng = ncm_mset_trans_kern_gauss_new (0);
   ncm_mset_trans_kern_set_mset (NCM_MSET_TRANS_KERN (tkerng), abc->mcat->mset);
   ncm_mset_trans_kern_gauss_set_cov_from_scale (tkerng);
   ncm_abc_set_trans_kern (abc, NCM_MSET_TRANS_KERN (tkerng));
-
-  abcnc->epsilon = 1e20;
 }
 
 static void
@@ -80,9 +79,17 @@ _nc_abc_cluster_ncount_set_property (GObject *object, guint prop_id, const GValu
 
   switch (prop_id)
   {
-    case PROP_EPSILON:
-      abcnc->epsilon = g_value_get_double (value);
+    case PROP_SCALE_COV:
+      nc_abc_cluster_ncount_set_scale_cov (abcnc, g_value_get_boolean (value));
       break;
+    case PROP_QUANTILES:
+    {
+      GVariant *var = g_value_get_variant (value);
+      NcmVector *v = ncm_vector_new_variant (var);
+      ncm_vector_clear (&abcnc->quantiles);
+      abcnc->quantiles = v;
+      break;
+    }
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
       break;
@@ -97,9 +104,18 @@ _nc_abc_cluster_ncount_get_property (GObject *object, guint prop_id, GValue *val
 
   switch (prop_id)
   {
-    case PROP_EPSILON:
-      g_value_set_double (value, abcnc->epsilon);
+    case PROP_SCALE_COV:
+      g_value_set_boolean (value, abcnc->scale_cov);
       break;
+    case PROP_QUANTILES:
+    {
+      if (abcnc->quantiles != NULL)
+      {
+        GVariant *var = ncm_vector_peek_variant (abcnc->quantiles); 
+        g_value_take_variant (value, var);
+      }
+      break;
+    }
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
       break;
@@ -112,6 +128,8 @@ _nc_abc_cluster_ncount_dispose (GObject *object)
   NcABCClusterNCount *abcnc = NC_ABC_CLUSTER_NCOUNT (object);
   
   ncm_matrix_clear (&abcnc->covar);
+  ncm_vector_clear (&abcnc->quantiles);
+  
   /* Chain up : end */
   G_OBJECT_CLASS (nc_abc_cluster_ncount_parent_class)->dispose (object);
 }
@@ -147,13 +165,13 @@ nc_abc_cluster_ncount_class_init (NcABCClusterNCountClass *klass)
   object_class->finalize = &_nc_abc_cluster_ncount_finalize;
 
   g_object_class_install_property (object_class,
-                                   PROP_EPSILON,
-                                   g_param_spec_double ("epsilon",
-                                                        NULL,
-                                                        "epsilon",
-                                                        0.0, G_MAXDOUBLE, 1.0,
-                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-
+                                   PROP_SCALE_COV,
+                                   g_param_spec_boolean ("scale-cov",
+                                                         NULL,
+                                                         "Scaled covariance",
+                                                         TRUE,
+                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  
   abc_class->data_summary  = &_nc_abc_cluster_ncount_data_summary;
   abc_class->mock_distance = &_nc_abc_cluster_ncount_mock_distance;
   abc_class->distance_prob = &_nc_abc_cluster_ncount_distance_prob;
@@ -169,18 +187,23 @@ _nc_abc_cluster_ncount_data_summary (NcmABC *abc)
   g_assert (abc->dset != NULL);
   g_assert_cmpuint (ncm_dataset_get_ndata (abc->dset), ==, 1);
   {
-    gdouble quantiles[7] = {0.02, 0.09, 0.25, 0.5, 0.75, 0.91, 0.98};
     NcmData *data = ncm_dataset_get_data (abc->dset, 0);
     NcDataClusterNCount *ncount = NC_DATA_CLUSTER_NCOUNT (data);
-    NcmVector *quantiles_v = ncm_vector_new_data_static (quantiles, 7, 1);
+
+    if (abcnc->quantiles == NULL)
+    {
+      gdouble quantiles_data[7] = {0.02, 0.09, 0.25, 0.5, 0.75, 0.91, 0.98};
+      NcmVector *quantiles_static = ncm_vector_new_data_static (quantiles_data, 7, 1);
+      abcnc->quantiles = ncm_vector_dup (quantiles_static);
+      ncm_vector_free (quantiles_static);
+    }
+    
     g_assert (NC_IS_DATA_CLUSTER_NCOUNT (data));
 
-    nc_data_cluster_ncount_set_bin_by_quantile (ncount, quantiles_v, quantiles_v);
+    nc_data_cluster_ncount_set_bin_by_quantile (ncount, abcnc->quantiles, abcnc->quantiles);
 
     g_clear_pointer (&abcnc->data_summary, gsl_histogram2d_free);
     abcnc->data_summary = gsl_histogram2d_clone (ncount->z_lnM);
-    
-    ncm_vector_free (quantiles_v);
   }
   
 
@@ -212,9 +235,7 @@ _nc_abc_cluster_ncount_mock_distance (NcmABC *abc, NcmDataset *dset, NcmVector *
 static gdouble 
 _nc_abc_cluster_ncount_distance_prob (NcmABC *abc, gdouble distance)
 {
-  NcABCClusterNCount *abcnc = NC_ABC_CLUSTER_NCOUNT (abc);
-
-  if (distance < abcnc->epsilon)
+  if (distance < abc->epsilon)
     return 1.0;
   else
     return 0.0;
@@ -224,31 +245,19 @@ static void
 _nc_abc_cluster_ncount_update_tkern (NcmABC *abc)
 {
   NcABCClusterNCount *abcnc = NC_ABC_CLUSTER_NCOUNT (abc);
+  const gdouble scale = abcnc->scale_cov ? 0.25 + 1.75 * ncm_abc_get_accept_rate (abc) : 2.0;
+  
   ncm_mset_catalog_get_covar (abc->mcat, &abc->covar);
   
-  ncm_matrix_scale (abc->covar, 2.0);
+  ncm_matrix_scale (abc->covar, scale);
   ncm_mset_trans_kern_gauss_set_cov (NCM_MSET_TRANS_KERN_GAUSS (abc->tkern), abc->covar);
+
+  if (abc->mtype > NCM_FIT_RUN_MSGS_NONE)
+    g_message ("# NcABCClusterNCount: scale covariance by %f\n", scale);
 
   {
     gdouble dist_75 = ncm_abc_get_dist_quantile (abc, 0.75);
-    if (abc->mtype > NCM_FIT_RUN_MSGS_NONE)
-    {
-      guint i;
-      g_message ("# NcABCClusterNCount: ");
-      for (i = 0; i < 8; i++)
-      {
-        gdouble p = (15.0 * i) / 100.0;
-        p = p > 1.0 ? 1.0 : p;
-        g_message ("[%2.0f%% %4.2f] ", 100.0 * p, ncm_abc_get_dist_quantile (abc, p));
-      }
-      g_message ("\n");
-      g_message ("# NcABCClusterNCount: epsilon_t   = %g.\n", 
-                 abcnc->epsilon);
-      g_message ("# NcABCClusterNCount: epsilon_t+1 = %g.\n", 
-                 dist_75 );
-      
-    }
-    abcnc->epsilon = dist_75;
+    ncm_abc_update_epsilon (abc, dist_75);
   }
 }
 
@@ -282,4 +291,18 @@ nc_abc_cluster_ncount_new (NcmMSet *mset, NcmMSetTransKern *prior, NcmDataset *d
                                             "data-set", dset,
                                             NULL);
   return abcnc;
+}
+
+/**
+ * nc_abc_cluster_ncount_set_scale_cov:
+ * @abcnc: a #NcABCClusterNCount.
+ * @on: whether sets on or off covariance scaling.
+ * 
+ * FIXME
+ * 
+ */
+void 
+nc_abc_cluster_ncount_set_scale_cov (NcABCClusterNCount *abcnc, gboolean on)
+{
+  abcnc->scale_cov = on;
 }

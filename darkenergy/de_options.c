@@ -40,8 +40,10 @@ nc_de_opt_get_run_group (NcDERunEntries *de_run)
 {
   GOptionEntry run_entries[] =
   {
-    { "runconf",  'c', 0, G_OPTION_ARG_FILENAME, &de_run->runconf, "Configuration file defining a run.",                          NULL },
-    { "save-run", 's', 0, G_OPTION_ARG_FILENAME, &de_run->saverun, "Save run confuguration to file.",                             NULL },
+    { "runconf",  'c', 0, G_OPTION_ARG_FILENAME, &de_run->runconf,   "Configuration file defining a run.",                          NULL },
+    { "save-run", 's', 0, G_OPTION_ARG_FILENAME, &de_run->saverun,   "Save run confuguration to file.",                             NULL },
+    { "main-seed",  0, 0, G_OPTION_ARG_INT64,    &de_run->main_seed, "Seed used to setup the main RNG.",                            NULL },
+    { "nthreads",   0, 0, G_OPTION_ARG_INT,      &de_run->nthreads,  "Max number of threads to be created by the pool.",            NULL },
     { NULL }
   };
   GOptionGroup *run_group = g_option_group_new ("run", " - Run configuration options", "Show help options related to a run", NULL, NULL);

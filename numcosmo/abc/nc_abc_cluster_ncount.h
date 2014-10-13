@@ -56,14 +56,16 @@ struct _NcABCClusterNCount
 {
   /*< private >*/
   NcmABC parent_instance;
-  gdouble epsilon;
+  gboolean scale_cov;
   gsl_histogram2d *data_summary;
   NcmMatrix *covar;
+  NcmVector *quantiles;
 };
 
 GType nc_abc_cluster_ncount_get_type (void) G_GNUC_CONST;
 
 NcABCClusterNCount *nc_abc_cluster_ncount_new (NcmMSet *mset, NcmMSetTransKern *prior, NcmDataset *dset);
+void nc_abc_cluster_ncount_set_scale_cov (NcABCClusterNCount *abcnc, gboolean on);
 
 G_END_DECLS
 

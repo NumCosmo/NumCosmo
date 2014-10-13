@@ -33,9 +33,11 @@ struct _NcDERunEntries
 {
   gchar *runconf;
   gchar *saverun;
+  gint64 main_seed;
+  guint nthreads;
 };
 
-#define NC_DE_RUN_ENTRIES {NULL, NULL}
+#define NC_DE_RUN_ENTRIES {NULL, NULL, -1, 0}
 
 typedef struct _NcDEModelEntries NcDEModelEntries;
 

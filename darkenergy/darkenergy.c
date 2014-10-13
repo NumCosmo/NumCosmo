@@ -82,8 +82,10 @@ main (gint argc, gchar *argv[])
       {
         if (i + 1 == argc || argv[i + 1] == NULL)
         {
-          fprintf (stderr, "Invalid run options:\n  %s.\n", error->message);
-          printf ("%s", g_option_context_get_help (context, TRUE, NULL));
+          gchar *msg = g_option_context_get_help (context, TRUE, NULL);
+          fprintf (stderr, "Invalid run options:\n");
+          printf ("%s", msg);
+          g_free (msg);
           g_option_context_free (context);
           return 0;
         }
@@ -178,6 +180,12 @@ main (gint argc, gchar *argv[])
   if (de_fit.file_out != NULL)
     ncm_cfg_set_logfile (de_fit.file_out);
 
+  if (de_run.main_seed >= 0)
+    ncm_rng_set_seed (rng, de_run.main_seed);
+
+  if (de_run.nthreads > 0)
+    ncm_func_eval_set_max_threads (de_run.nthreads);
+  
   if (de_data_simple.snia_id == NULL &&
       de_data_simple.cmb_id == NULL &&
       de_data_simple.bao_id == NULL &&

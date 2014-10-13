@@ -49,6 +49,7 @@ enum
   PROP_PRIOR,
   PROP_TKERN,
   PROP_DATASET,
+  PROP_EPSILON,
   PROP_LEN
 };
 
@@ -72,6 +73,8 @@ ncm_abc_init (NcmABC *abc)
   abc->weights_tm1   = g_array_new (FALSE, FALSE, sizeof (gdouble));
   abc->dists         = g_array_new (FALSE, FALSE, sizeof (gdouble));
   abc->dists_sorted  = FALSE;
+  abc->epsilon       = 0.0;
+  abc->depsilon      = 0.0;
   abc->wran          = NULL;
   abc->mcat_tm1      = NULL;
   abc->started       = FALSE;
@@ -121,6 +124,10 @@ _ncm_abc_set_property (GObject *object, guint prop_id, const GValue *value, GPar
       abc->dset = dset;
       break;
     }
+    case PROP_EPSILON:
+      abc->epsilon  = g_value_get_double (value);
+      abc->depsilon = abc->epsilon;
+      break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
       break;
@@ -146,6 +153,9 @@ _ncm_abc_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec
       break;
     case PROP_DATASET:
       g_value_set_object (value, abc->dset);
+      break;
+    case PROP_EPSILON:
+      g_value_set_double (value, abc->epsilon);
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -234,6 +244,13 @@ ncm_abc_class_init (NcmABCClass *klass)
                                                         "Dataset",
                                                         NCM_TYPE_DATASET,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  g_object_class_install_property (object_class,
+                                   PROP_EPSILON,
+                                   g_param_spec_double ("epsilon",
+                                                        NULL,
+                                                        "epsilon",
+                                                        0.0, G_MAXDOUBLE, 1.0e20,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 }
 
 /**
@@ -498,6 +515,84 @@ ncm_abc_get_dist_quantile (NcmABC *abc, gdouble p)
   return gsl_stats_quantile_from_sorted_data ((gdouble *)abc->dists->data, 1, abc->dists->len, p);
 }
 
+/**
+ * ncm_abc_get_accept_rate:
+ * @abc: a #NcmABC
+ * 
+ * FIXME
+ * 
+ * Returns: FIXME
+ */
+gdouble 
+ncm_abc_get_accept_rate (NcmABC *abc)
+{
+  return abc->naccepted * 1.0 / (abc->ntotal * 1.0);
+}
+
+/**
+ * ncm_abc_update_epsilon:
+ * @abc: a #NcmABC
+ * @epsilon: new epsilon.
+ * 
+ * FIXME
+ * 
+ */
+void 
+ncm_abc_update_epsilon (NcmABC *abc, gdouble epsilon)
+{
+  if (epsilon >= abc->epsilon)
+    g_warning ("ncm_abc_update_epsilon: increasing epsilon.");
+
+  if (abc->mtype > NCM_FIT_RUN_MSGS_NONE)
+  {
+    guint i;
+    g_message ("# NcmABC: ");
+    for (i = 0; i < 11; i++)
+    {
+      gdouble p = (10.0 * i) / 100.0;
+      p = p > 1.0 ? 1.0 : p;
+      g_message ("[%02.0f%% %4.2f] ", 100.0 * p, ncm_abc_get_dist_quantile (abc, p));
+    }
+    g_message ("\n");
+    g_message ("# NcmABC: epsilon_t        = %g.\n", 
+               abc->epsilon);
+    g_message ("# NcmABC: epsilon_t+1      = %g.\n", 
+               epsilon);
+    g_message ("# NcmABC: depsilon/epsilon = %04.2f%%.\n", 100.0 * (abc->epsilon - epsilon) / abc->epsilon);
+  }
+
+  abc->depsilon = abc->epsilon - epsilon;
+  abc->epsilon  = epsilon;
+}
+
+/**
+ * ncm_abc_get_epsilon:
+ * @abc: a #NcmABC
+ * 
+ * FIXME
+ * 
+ * Returns: FIXME
+ */
+gdouble 
+ncm_abc_get_epsilon (NcmABC *abc)
+{
+  return abc->epsilon;
+}
+
+/**
+ * ncm_abc_get_depsilon:
+ * @abc: a #NcmABC
+ * 
+ * FIXME
+ * 
+ * Returns: FIXME
+ */
+gdouble 
+ncm_abc_get_depsilon (NcmABC *abc)
+{
+  return abc->depsilon;
+}
+
 void
 _ncm_abc_update (NcmABC *abc, NcmMSet *mset, gdouble dist, gdouble weight)
 {
@@ -520,7 +615,7 @@ _ncm_abc_update (NcmABC *abc, NcmMSet *mset, gdouble dist, gdouble weight)
       {
         /* guint acc = stepi == 0 ? step : stepi; */
         ncm_mset_catalog_log_current_stats (abc->mcat);
-        g_message ("# NcmABC:acceptance ratio %7.4f%%.\n", abc->naccepted * 100.0 / (abc->ntotal * 1.0));
+        g_message ("# NcmABC:acceptance ratio %7.4f%%.\n", ncm_abc_get_accept_rate (abc) * 100.0);
         /* ncm_timer_task_accumulate (abc->nt, acc); */
         ncm_timer_task_log_elapsed (abc->nt);
         ncm_timer_task_log_mean_time (abc->nt);
@@ -533,7 +628,7 @@ _ncm_abc_update (NcmABC *abc, NcmMSet *mset, gdouble dist, gdouble weight)
     default:
     case NCM_FIT_RUN_MSGS_FULL:
       ncm_mset_catalog_log_current_stats (abc->mcat);
-      g_message ("# NcmABC:acceptance ratio %7.4f%%.\n", abc->naccepted * 100.0 / (abc->ntotal * 1.0));
+      g_message ("# NcmABC:acceptance ratio %7.4f%%.\n", ncm_abc_get_accept_rate (abc) * 100.0);
       /* ncm_timer_task_increment (abc->nt); */
       ncm_timer_task_log_elapsed (abc->nt);
       ncm_timer_task_log_mean_time (abc->nt);
@@ -1091,7 +1186,7 @@ ncm_abc_end_update (NcmABC *abc)
       break;
     case NCM_FIT_RUN_MSGS_SIMPLE:
     case NCM_FIT_RUN_MSGS_FULL:
-      g_message ("# NcmABC:Current covariance matrix %7.4f%%.\n", abc->naccepted * 100.0 / (abc->ntotal * 1.0));
+      g_message ("# NcmABC:Current covariance matrix:\n");
       ncm_mset_catalog_get_mean (abc->mcat, &abc->theta);
       ncm_mset_fparams_set_vector (abc->mcat->mset, abc->theta);
       ncm_mset_catalog_get_covar (abc->mcat, &abc->covar);
