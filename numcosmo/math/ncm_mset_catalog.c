@@ -225,7 +225,9 @@ _ncm_mset_catalog_dispose (GObject *object)
   G_OBJECT_CLASS (ncm_mset_catalog_parent_class)->dispose (object);
 }
 
+#ifdef NUMCOSMO_HAVE_CFITSIO
 static void _ncm_mset_catalog_close_file (NcmMSetCatalog *mcat);
+#endif /* NUMCOSMO_HAVE_CFITSIO */
 
 static void
 _ncm_mset_catalog_finalize (GObject *object)
@@ -237,7 +239,9 @@ _ncm_mset_catalog_finalize (GObject *object)
   if (mcat->h_pdf != NULL)
     gsl_histogram_pdf_free (mcat->h_pdf);
 
+#ifdef NUMCOSMO_HAVE_CFITSIO
   _ncm_mset_catalog_close_file (mcat);
+#endif /* NUMCOSMO_HAVE_CFITSIO */
 
   g_clear_pointer (&mcat->rtype_str, g_free);
   
@@ -392,6 +396,7 @@ ncm_mset_catalog_clear (NcmMSetCatalog **mcat)
   g_clear_object (mcat);
 }
 
+#ifdef NUMCOSMO_HAVE_CFITSIO
 static void
 _ncm_mset_catalog_open_create_file (NcmMSetCatalog *mcat)
 {
@@ -581,6 +586,7 @@ _ncm_mset_catalog_open_create_file (NcmMSetCatalog *mcat)
 }
 
 static void _ncm_mset_catalog_flush_file (NcmMSetCatalog *mcat);
+#endif /* NUMCOSMO_HAVE_CFITSIO */
 
 /**
  * ncm_mset_catalog_set_add_val_name:
@@ -609,6 +615,7 @@ ncm_mset_catalog_set_add_val_name (NcmMSetCatalog *mcat, guint i, const gchar *n
 void 
 ncm_mset_catalog_set_file (NcmMSetCatalog *mcat, const gchar *filename)
 {
+#ifdef NUMCOSMO_HAVE_CFITSIO
   gint status = 0;
   if (mcat->file != NULL && strcmp (mcat->file, filename) == 0)
     return;
@@ -617,14 +624,15 @@ ncm_mset_catalog_set_file (NcmMSetCatalog *mcat, const gchar *filename)
 
   g_clear_pointer (&mcat->file, g_free);
   mcat->file = g_strdup (filename);  
-
   _ncm_mset_catalog_open_create_file (mcat);
   ncm_mset_catalog_sync (mcat, TRUE);
 
   _ncm_mset_catalog_flush_file (mcat);
-
   fits_flush_file (mcat->fptr, &status);
   NCM_FITS_ERROR (status);
+#else
+  g_error ("ncm_mset_catalog_set_file: cannot set file without cfitsio.");
+#endif /* NUMCOSMO_HAVE_CFITSIO */
 
   mcat->first_flush = TRUE;
 }
@@ -683,15 +691,15 @@ ncm_mset_catalog_set_first_id (NcmMSetCatalog *mcat, gint first_id)
 
   mcat->file_first_id = first_id;
   mcat->file_cur_id   = first_id - 1;
-
+#ifdef NUMCOSMO_HAVE_CFITSIO
   if (mcat->fptr != NULL)
   {
     gint status = 0;
     fits_update_key (mcat->fptr, TINT, NCM_MSET_CATALOG_FIRST_ID_LABEL, &mcat->file_first_id, "Id of the first element.", &status);
     NCM_FITS_ERROR (status);
-    
     ncm_mset_catalog_sync (mcat, TRUE);
   }
+#endif /* NUMCOSMO_HAVE_CFITSIO */
 }
 
 /**
@@ -705,7 +713,6 @@ ncm_mset_catalog_set_first_id (NcmMSetCatalog *mcat, gint first_id)
 void 
 ncm_mset_catalog_set_run_type (NcmMSetCatalog *mcat, const gchar *rtype_str)
 {
-  gint status = 0;
   g_assert (rtype_str != NULL);
   
   if (mcat->rtype_str != NULL)
@@ -725,11 +732,14 @@ ncm_mset_catalog_set_run_type (NcmMSetCatalog *mcat, const gchar *rtype_str)
   }
 
   mcat->rtype_str = g_strdup (rtype_str);
+#ifdef NUMCOSMO_HAVE_CFITSIO
   if (mcat->fptr != NULL)
   {
+    gint status = 0;
     fits_update_key (mcat->fptr, TSTRING, NCM_MSET_CATALOG_RTYPE_LABEL, mcat->rtype_str, NULL, &status);
     NCM_FITS_ERROR (status);
   }
+#endif /* NUMCOSMO_HAVE_CFITSIO */
 }
 
 /**
@@ -758,7 +768,7 @@ ncm_mset_catalog_set_rng (NcmMSetCatalog *mcat, NcmRNG *rng)
 
   mcat->rng_inis = ncm_rng_get_state (rng);
   mcat->rng_stat = g_strdup (mcat->rng_inis);
-
+#ifdef NUMCOSMO_HAVE_CFITSIO
   if (mcat->file != NULL)
   {
     gint status = 0;
@@ -779,8 +789,9 @@ ncm_mset_catalog_set_rng (NcmMSetCatalog *mcat, NcmRNG *rng)
     fits_flush_file (mcat->fptr, &status);
     NCM_FITS_ERROR (status);
   }
+#endif /* NUMCOSMO_HAVE_CFITSIO */
 }
-
+#ifdef NUMCOSMO_HAVE_CFITSIO
 static void
 _ncm_mset_catalog_flush_file (NcmMSetCatalog *mcat)
 {
@@ -816,7 +827,6 @@ static void
 _ncm_mset_catalog_close_file (NcmMSetCatalog *mcat)
 {
   gint status = 0;
-#ifdef NUMCOSMO_HAVE_CFITSIO
   if (mcat->fptr != NULL)
   {
     _ncm_mset_catalog_flush_file (mcat);
@@ -826,7 +836,6 @@ _ncm_mset_catalog_close_file (NcmMSetCatalog *mcat)
 
     mcat->fptr = NULL;
   }
-#endif /* NUMCOSMO_HAVE_CFITSIO */
 }
 
 static void 
@@ -856,6 +865,7 @@ _ncm_mset_catalog_read_row (NcmMSetCatalog *mcat, NcmVector *row, guint row_inde
     NCM_FITS_ERROR (status);
   }
 }
+#endif /* NUMCOSMO_HAVE_CFITSIO */
 
 /**
  * ncm_mset_catalog_sync:
@@ -868,13 +878,13 @@ _ncm_mset_catalog_read_row (NcmMSetCatalog *mcat, NcmVector *row, guint row_inde
 void
 ncm_mset_catalog_sync (NcmMSetCatalog *mcat, gboolean check)
 {
+#ifdef NUMCOSMO_HAVE_CFITSIO
   gint status = 0;
   guint i;
 
   if (mcat->file == NULL)
     return;
 
-#ifdef NUMCOSMO_HAVE_CFITSIO
   g_assert (mcat->fptr != NULL);
   
   if (check)
@@ -1048,7 +1058,9 @@ ncm_mset_catalog_reset (NcmMSetCatalog *mcat)
   ncm_vector_set_all (mcat->params_min, GSL_POSINF);
 
   mcat->cur_id    = mcat->first_id - 1;
+#ifdef NUMCOSMO_HAVE_CFITSIO
   _ncm_mset_catalog_close_file (mcat);
+#endif /* NUMCOSMO_HAVE_CFITSIO */
 }
 
 /**
@@ -1062,6 +1074,7 @@ ncm_mset_catalog_reset (NcmMSetCatalog *mcat)
 void
 ncm_mset_catalog_erase_data (NcmMSetCatalog *mcat)
 {
+#ifdef NUMCOSMO_HAVE_CFITSIO  
   if (mcat->fptr != NULL)
   {
     gint status = 0;
@@ -1076,6 +1089,7 @@ ncm_mset_catalog_erase_data (NcmMSetCatalog *mcat)
       _ncm_mset_catalog_flush_file (mcat);
     }
   }
+#endif /* NUMCOSMO_HAVE_CFITSIO */
 }
 
 /**
@@ -1183,6 +1197,7 @@ ncm_mset_catalog_len (NcmMSetCatalog *mcat)
 gboolean
 ncm_mset_catalog_get_rng (NcmMSetCatalog *mcat, gchar **rng_algo, gulong *seed)
 {
+#ifdef NUMCOSMO_HAVE_CFITSIO
   if (mcat->file != NULL)
   {
     gint status = 0;
@@ -1222,6 +1237,9 @@ ncm_mset_catalog_get_rng (NcmMSetCatalog *mcat, gchar **rng_algo, gulong *seed)
   }
   else
     return FALSE;
+#else
+  return FALSE;
+#endif /* NUMCOSMO_HAVE_CFITSIO */
 }
 
 static void

@@ -164,16 +164,18 @@ _ncm_fftlog_constructed (GObject *object)
 
     fftlog->Gr_vec    = g_new0 (NcmVector *, ncomp);
 
+#ifdef NUMCOSMO_HAVE_FFTW3
     fftlog->Gr        = g_new0 (fftw_complex *, ncomp);
     fftlog->Ym        = g_new0 (fftw_complex *, ncomp);
     fftlog->CmYm      = g_new0 (fftw_complex *, ncomp);
     fftlog->p_CmYm2Gr = g_new0 (fftw_plan, ncomp);
-#ifndef NUMCOSMO_HAVE_FFTW3
+#else
     g_error ("Cannot construct FFTLog object, fftw3 library is not present, recompile numcosmo with fftw3 support.");
 #endif /* NUMCOSMO_HAVE_FFTW3 */
   }
 }
 
+#ifdef NUMCOSMO_HAVE_FFTW3
 static void
 _ncm_fftlog_free_all (NcmFftlog *fftlog)
 {
@@ -196,6 +198,7 @@ _ncm_fftlog_free_all (NcmFftlog *fftlog)
     ncm_vector_clear (&fftlog->Gr_vec[i]);
   }
 }
+#endif /* NUMCOSMO_HAVE_FFTW3 */
 
 static void
 ncm_fftlog_finalize (GObject *object)
@@ -432,6 +435,7 @@ ncm_fftlog_get_length (NcmFftlog *fftlog)
   return fftlog->Lk;
 }
 
+#ifdef NUMCOSMO_HAVE_FFTW3
 static void
 _ncm_fftlog_eval (NcmFftlog *fftlog)
 {
@@ -461,6 +465,7 @@ _ncm_fftlog_eval (NcmFftlog *fftlog)
 
   fftlog->evaluated = TRUE;
 }
+#endif /* NUMCOSMO_HAVE_FFTW3 */
 
 /**
  * ncm_fftlog_eval_by_vector:
@@ -473,6 +478,7 @@ _ncm_fftlog_eval (NcmFftlog *fftlog)
 void 
 ncm_fftlog_eval_by_vector (NcmFftlog *fftlog, NcmVector *Fk)
 {
+#ifdef NUMCOSMO_HAVE_FFTW3
   gint i;
 
   for (i = -fftlog->N_2; i <= fftlog->N_2; i++)
@@ -481,6 +487,7 @@ ncm_fftlog_eval_by_vector (NcmFftlog *fftlog, NcmVector *Fk)
     fftlog->Fk[ii] = ncm_vector_get (Fk, ii);
   }
   _ncm_fftlog_eval (fftlog);
+#endif /* NUMCOSMO_HAVE_FFTW3 */
 }
 
 /**
@@ -494,6 +501,7 @@ ncm_fftlog_eval_by_vector (NcmFftlog *fftlog, NcmVector *Fk)
 void 
 ncm_fftlog_eval_by_function (NcmFftlog *fftlog, gsl_function *Fk)
 {
+#ifdef NUMCOSMO_HAVE_FFTW3
   gint i;
   for (i = -fftlog->N_2; i <= fftlog->N_2; i++)
   {
@@ -503,6 +511,7 @@ ncm_fftlog_eval_by_function (NcmFftlog *fftlog, gsl_function *Fk)
     fftlog->Fk[ii] = Fk_i;
   }
   _ncm_fftlog_eval (fftlog);
+#endif /* NUMCOSMO_HAVE_FFTW3 */
 }
 
 /**

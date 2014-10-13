@@ -358,10 +358,10 @@ nc_data_cluster_ncount_finalize (GObject *object)
   NcDataClusterNCount *ncount = NC_DATA_CLUSTER_NCOUNT (object);
 
   g_clear_pointer (&ncount->rnd_name, g_free);
-  g_clear_pointer (&ncount->completeness, gsl_histogram_free);
-  g_clear_pointer (&ncount->purity, gsl_histogram_free);
-  g_clear_pointer (&ncount->sd_lnM, gsl_histogram_free);
-  g_clear_pointer (&ncount->z_lnM, gsl_histogram_free);
+  g_clear_pointer (&ncount->completeness, gsl_histogram2d_free);
+  g_clear_pointer (&ncount->purity, gsl_histogram2d_free);
+  g_clear_pointer (&ncount->sd_lnM, gsl_histogram2d_free);
+  g_clear_pointer (&ncount->z_lnM, gsl_histogram2d_free);
 
   /* Chain up : end */
   G_OBJECT_CLASS (nc_data_cluster_ncount_parent_class)->finalize (object);

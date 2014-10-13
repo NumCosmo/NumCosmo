@@ -550,7 +550,11 @@ nc_data_snia_cov_new_full (gchar *filename, gboolean use_det)
   NcmData *data = g_object_new (NC_TYPE_DATA_SNIA_COV,
                                 "use-det", use_det,
                                 NULL);
+#ifdef NUMCOSMO_HAVE_CFITSIO
   nc_data_snia_cov_load (NC_DATA_SNIA_COV (data), filename);
+#else
+  g_error ("nc_data_snia_cov_new_full: cannot load data file, no cfitsio support.");
+#endif /* NUMCOSMO_HAVE_CFITSIO */
   return data;
 }
 

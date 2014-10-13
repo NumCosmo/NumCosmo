@@ -81,6 +81,7 @@ void
 _ncm_fftlog_j1pow2_get_Ym (NcmFftlog *fftlog)
 {
   /*NcmFftlogJ1pow2 *j1pow2 = NCM_FFTLOG_J1POW2 (fftlog);*/
+#ifdef NUMCOSMO_HAVE_FFTW3  
   gint i;
   for (i = -fftlog->N_2; i <= fftlog->N_2; i++)
   {
@@ -99,11 +100,13 @@ _ncm_fftlog_j1pow2_get_Ym (NcmFftlog *fftlog)
     fftlog->Ym[0][ii] = U * cexp (-2.0 * M_PI / fftlog->Lk * i * I * (fftlog->lnk0 + fftlog->lnr0));
     fftlog->Ym[1][ii] = -(1.0 + I * a) * fftlog->Ym[0][ii];
   }
+#endif /* NUMCOSMO_HAVE_FFTW3 */
 }
 
 void 
 _ncm_fftlog_j1pow2_generate_Gr (NcmFftlog *fftlog)
 {
+#ifdef NUMCOSMO_HAVE_FFTW3
   gint i, j = 0;
   
   for (i = -fftlog->N_2; i <= fftlog->N_2; i++)
@@ -121,7 +124,7 @@ _ncm_fftlog_j1pow2_generate_Gr (NcmFftlog *fftlog)
     ncm_vector_set (fftlog->Gr_vec[1], j, dlnGr_dlnr);
     j++;
   }
-
+#endif /* NUMCOSMO_HAVE_FFTW3 */
 }
 
 NcmFftlog *

@@ -284,7 +284,9 @@ nc_matter_var_class_init (NcMatterVarClass *klass)
 
 static void _nc_matter_var_prepare_numint (NcMatterVar *vp, NcHICosmo *model);
 static void _nc_matter_var_prepare_splineint (NcMatterVar *vp, NcHICosmo *model);
+#ifdef NUMCOSMO_HAVE_FFTW3
 static void _nc_matter_var_prepare_fft (NcMatterVar *vp, NcHICosmo *model);
+#endif /* NUMCOSMO_HAVE_FFTW3 */
 
 /**
  * nc_matter_var_prepare:
