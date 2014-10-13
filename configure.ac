@@ -374,7 +374,7 @@ dnl ***************************************************************************
 dnl Check for fftw3
 dnl ***************************************************************************
 
-PKG_CHECK_MODULES(FFTW3, [fftw3 >= $FFTW3_REQUIRED_VERSION fftw3l >= $FFTW3_REQUIRED_VERSION],[
+PKG_CHECK_MODULES(FFTW3, [fftw3 >= $FFTW3_REQUIRED_VERSION],[
   AC_DEFINE([HAVE_FFTW3],[1], [Have the fast fourier package])
   have_fftw3_support="#define NUMCOSMO_HAVE_FFTW3 1"],[
   have_fftw3_support=""])

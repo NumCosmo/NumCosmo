@@ -1602,7 +1602,7 @@ _nc_data_cluster_ncount_bin_alloc (NcDataClusterNCount *ncount, guint z_bins, gu
   {
     if (ncount->z_lnM->nx != z_bins || ncount->z_lnM->ny != lnM_bins)
     {
-      g_clear_pointer (&ncount->z_lnM, &gsl_histogram2d_free);
+      g_clear_pointer (&ncount->z_lnM, gsl_histogram2d_free);
       ncount->z_lnM = gsl_histogram2d_alloc (z_bins, lnM_bins);
     }
   }

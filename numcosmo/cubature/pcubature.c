@@ -30,6 +30,10 @@
 #include <fftw3.h>
 
 #include "cubature.h"
+#ifdef HAVE_CONFIG_H
+#  include "config.h"
+#endif /* HAVE_CONFIG_H */
+#include "build_cfg.h"
 
 /* error return codes */
 #define SUCCESS 0
@@ -79,6 +83,7 @@ extern long double cosl(long double x);
    clencurt_x except that it starts with the weight for x=0.
 */
 
+#ifdef NUMCOSMO_HAVE_FFTW3 
 static int P(int m, int j)
 {
      if (m == 0) return j;
@@ -112,19 +117,20 @@ static int P(int m, int j)
    The weights are for integration of functions on (-1,1).
 */
 
-void clencurt_weights(int n, long double *w)
+void clencurt_weights(int n, double *w)
 {
-     fftwl_plan p;
+     fftw_plan p;
      int j;
-     long double scale = 1.0 / n;
+     double scale = 1.0 / n;
      
-     p = fftwl_plan_r2r_1d(n+1, w, w, FFTW_REDFT00, FFTW_ESTIMATE);
+     p = fftw_plan_r2r_1d(n+1, w, w, FFTW_REDFT00, FFTW_ESTIMATE);
      for (j = 0; j <= n; ++j) w[j] = scale / (1 - 4*j*j);
-     fftwl_execute(p);
+     fftw_execute(p);
      w[0] *= 0.5;
-     fftwl_destroy_plan(p);
+     fftw_destroy_plan(p);
 }
 /***************************************************************************/
+#endif
 
 #define KPI 3.1415926535897932384626433832795028841971L
 
@@ -135,9 +141,10 @@ static double *clencurt_w = NULL;
 void 
 clencurt_gen (int M)
 {
-  long double *w;
+#ifdef NUMCOSMO_HAVE_FFTW3 
+  double *w;
   int j, m;
-  long double k;
+  double k;
   long int clencurt_x_len = 1 << M;             /* length 2^M */
   long int clencurt_w_len = M + (1 << (M + 1)); /* length M+2^(M+1) */
   long int ii = 0;
@@ -147,7 +154,7 @@ clencurt_gen (int M)
     return;
   }
 
-  w = (long double *) fftwl_malloc(sizeof(long double) * ((1<<(M+2)) - 2));
+  w = (double *) fftw_malloc(sizeof(double) * ((1<<(M+2)) - 2));
   if (!w) {
     fprintf(stderr, "clencurt_gen: out of memory\n");
     return;
@@ -155,7 +162,7 @@ clencurt_gen (int M)
 
   clencurt_M = M;
 
-  k = KPI / ((long double) (1<<(M+1)));
+  k = KPI / ((double) (1<<(M+1)));
   if (clencurt_x != NULL)
     free (clencurt_x);
   clencurt_x = (double *) malloc (sizeof (double) * clencurt_x_len);
@@ -176,8 +183,11 @@ clencurt_gen (int M)
     for (j = 0; j < (1 << m); ++j)
       clencurt_w[ii++] = w[P (m,j)];
   }
-  fftwl_free (w);
+  fftw_free (w);
   return;
+#else
+  clencurt_M = 0;
+#endif
 }
 
 /* no point in supporting very high dimensional integrals here */
