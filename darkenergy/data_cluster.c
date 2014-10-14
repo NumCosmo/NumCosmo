@@ -67,6 +67,7 @@ nc_de_data_cluster_new (NcDistance *dist, NcmMSet *mset, NcDEDataClusterEntries 
       nc_data_cluster_ncount_catalog_load (ncount, de_data_cluster->cata_file[i]);
 
       ncm_mset_set (mset, NCM_MODEL (ncount->m));
+      ncm_mset_set (mset, NCM_MODEL (ncount->z));
 
       nc_data_cluster_ncount_true_data (ncount, de_data_cluster->use_true_data);
       _nc_de_data_cluster_append (de_data_cluster, NCM_DATA (ncount), dset);
@@ -109,6 +110,8 @@ nc_de_data_cluster_new (NcDistance *dist, NcmMSet *mset, NcDEDataClusterEntries 
       NcDataClusterNCount *ncount = nc_data_cluster_ncount_new (cad);
 
       ncm_mset_set (mset, NCM_MODEL (clusterm));
+      ncm_mset_set (mset, NCM_MODEL (clusterz));
+      
       nc_cluster_abundance_free (cad);
 
       nc_data_cluster_ncount_init_from_sampling (ncount, mset, clusterz, clusterm, de_data_cluster->area_survey * gsl_pow_2 (M_PI / 180.0), rng);

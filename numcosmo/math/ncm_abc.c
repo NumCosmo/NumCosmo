@@ -721,7 +721,7 @@ ncm_abc_start_run (NcmABC *abc)
     cur_row = ncm_mset_catalog_peek_current_row (abc->mcat);
     if (cur_row != NULL)
     {
-      ncm_mset_fparams_set_vector_offset (abc->mcat->mset, cur_row, 1);
+      ncm_mset_fparams_set_vector_offset (abc->mcat->mset, cur_row, 2);
     }
   }
 
@@ -916,7 +916,7 @@ _ncm_abc_dup_thread (gpointer userdata)
   _NCM_STATIC_MUTEX_DECL (dup_thread);
   NcmABC *abc = NCM_ABC (userdata);
   NcmABCThread *abct = g_new (NcmABCThread, 1);
-  
+
   _NCM_MUTEX_LOCK (&dup_thread);
   {
     abct->mset      = ncm_mset_dup (abc->mcat->mset, abc->ser);
@@ -957,7 +957,9 @@ _ncm_abc_thread_eval (glong i, glong f, gpointer data)
     gdouble dist, prob;
 
     ncm_mset_trans_kern_prior_sample (abc->prior, abct->thetastar, abct->rng);
+
     ncm_mset_fparams_set_vector (abct->mset, abct->thetastar);
+
     ncm_dataset_resample (abct->dset, abct->mset, abct->rng);
     dist = ncm_abc_mock_distance (abc, abct->dset, abct->thetastar, abct->thetastar, abct->rng);
     prob = ncm_abc_distance_prob (abc, dist);
