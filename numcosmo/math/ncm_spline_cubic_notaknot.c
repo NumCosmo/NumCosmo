@@ -145,7 +145,11 @@ _ncm_spline_notaknot_prepare_base (NcmSpline *s)
 		ydiff_ip1 = ncm_vector_get (s->yv, i + 2) - ncm_vector_get (s->yv, i + 1);
 
 #ifdef NUMCOSMO_CHECK_SPLINE_NODES
-    g_assert_cmpfloat (h_ip1, >, 0.0);
+    if (h_ip1 <= 0.0)
+      g_error ("_ncm_spline_notaknot_prepare_base: in node %zd of %zd x_ip2 = % 20.15g and x_ip1 = % 20.15g, y_ip2 = % 20.15g and y_ip1 = % 20.15g.", 
+               i, n,
+               ncm_vector_get (s->xv, i + 2), ncm_vector_get (s->xv, i + 1),
+               ncm_vector_get (s->yv, i + 2), ncm_vector_get (s->yv, i + 1));
 #endif
     
     {
