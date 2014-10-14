@@ -1675,7 +1675,7 @@ nc_data_cluster_ncount_set_bin_by_minmax (NcDataClusterNCount *ncount, guint z_n
   else
   {
     gsl_matrix_minmax (ncm_matrix_gsl (ncount->z_obs), &z_min, &z_max);
-    gsl_matrix_minmax (ncm_matrix_gsl (ncount->z_obs), &lnM_min, &lnM_max);
+    gsl_matrix_minmax (ncm_matrix_gsl (ncount->lnM_obs), &lnM_min, &lnM_max);
   }
 
   z_min = 0.0;
@@ -1694,6 +1694,10 @@ nc_data_cluster_ncount_set_bin_by_minmax (NcDataClusterNCount *ncount, guint z_n
   ncm_vector_clear (&ncount->lnM_nodes);
   ncount->z_nodes   = ncm_vector_new_data_dup (ncount->z_lnM->xrange, ncount->z_lnM->nx + 1, 1);
   ncount->lnM_nodes = ncm_vector_new_data_dup (ncount->z_lnM->yrange, ncount->z_lnM->ny + 1, 1);
+/*
+  ncm_vector_log_vals (ncount->z_nodes,   "minmax-z  ", "%8.4g");
+  ncm_vector_log_vals (ncount->lnM_nodes, "minmax-lnM", "%8.4g");
+*/
 }
 
 /**
@@ -1729,6 +1733,7 @@ nc_data_cluster_ncount_set_bin_by_quantile (NcDataClusterNCount *ncount, NcmVect
     guint z_len, lnM_len;
     NcmVector *z_dup = NULL;
     NcmVector *lnM_dup = NULL;
+    gdouble z_min = 0.0, z_max = 0.0, lnM_min = 0.0, lnM_max = 0.0;
     
     if (ncount->use_true_data)
     {
@@ -1754,13 +1759,22 @@ nc_data_cluster_ncount_set_bin_by_quantile (NcDataClusterNCount *ncount, NcmVect
     lnM_stride = ncm_vector_stride (lnM_dup);
     z_len      = ncm_vector_len (z_dup);
     lnM_len    = ncm_vector_len (lnM_dup);
-    
-    ncm_vector_set (z_nodes, 0, 0.0);
-    ncm_vector_set (lnM_nodes, 0, 0.0);
 
     gsl_sort (z_data, z_stride, z_len);
     gsl_sort (lnM_data, lnM_stride, lnM_len);
     
+    z_min = 0.0;
+    z_max = z_data[z_stride * (z_len - 1)] * 1.5;
+
+    lnM_min = lnM_data[0];
+    lnM_max = lnM_data[lnM_stride * (lnM_len - 1)];
+    
+    lnM_min = lnM_min + (lnM_min > 0.0 ? -0.5 * lnM_min : 0.5 * lnM_min);
+    lnM_max = lnM_max + (lnM_max > 0.0 ? 0.5 * lnM_min : - 0.5 * lnM_min);    
+    
+    ncm_vector_set (z_nodes,   0, z_min);
+    ncm_vector_set (lnM_nodes, 0, lnM_min);
+
     for (i = 1; i < z_bins; i++)
     {
       const gdouble z_node = gsl_stats_quantile_from_sorted_data (z_data, z_stride, z_len,
@@ -1773,9 +1787,9 @@ nc_data_cluster_ncount_set_bin_by_quantile (NcDataClusterNCount *ncount, NcmVect
                                                                     ncm_vector_get (lnM_quantiles, i - 1)); 
       ncm_vector_set (lnM_nodes, i, lnM_node);
     }
-    
-    ncm_vector_set (z_nodes, z_bins, z_data[z_stride * (z_len - 1)] + 2.0);
-    ncm_vector_set (lnM_nodes, lnM_bins, lnM_data[lnM_stride * (lnM_len - 1)] + 10.0);
+
+    ncm_vector_set (z_nodes,   z_bins,   z_max);
+    ncm_vector_set (lnM_nodes, lnM_bins, lnM_max);
     ncm_vector_free (z_dup);
     ncm_vector_free (lnM_dup);
   }
