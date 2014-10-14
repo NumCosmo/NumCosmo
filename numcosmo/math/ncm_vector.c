@@ -77,7 +77,7 @@ ncm_vector_new (gsize n)
 
 /**
  * ncm_vector_new_full:
- * @d: pointer to the first double allocated.
+ * @d: (array) (element-type double): pointer to the first double allocated.
  * @size: number of doubles allocated.
  * @stride: the step-size from one element to the next in physical memory, measured in units of double.
  * @pdata: (allow-none): descending data pointer.
@@ -140,7 +140,7 @@ ncm_vector_new_gsl_static (gsl_vector *gv)
 
 /**
  * ncm_vector_new_array:
- * @a: (array) (element-type double) (transfer full): array of doubles to be converted into a #NcmVector.
+ * @a: (array) (element-type double): array of doubles to be converted into a #NcmVector.
  *
  * This function saves @a internally and frees it when it is no longer necessary.
  * The @a array must not be freed.
@@ -158,7 +158,7 @@ ncm_vector_new_array (GArray *a)
 
 /**
  * ncm_vector_new_data_slice:
- * @d: pointer to the first double allocated.
+ * @d: (array) (element-type double): pointer to the first double allocated.
  * @size: number of doubles allocated.
  * @stride: the step-size from one element to the next in physical memory, measured in units of double.
  *
@@ -179,7 +179,7 @@ ncm_vector_new_data_slice (gdouble *d, gsize size, gsize stride)
 
 /**
  * ncm_vector_new_data_malloc:
- * @d: pointer to the first double allocated.
+ * @d: (array) (element-type double): pointer to the first double allocated.
  * @size: number of doubles allocated.
  * @stride: the step-size from one element to the next in physical memory, measured in units of double.
  *
@@ -199,7 +199,7 @@ ncm_vector_new_data_malloc (gdouble *d, gsize size, gsize stride)
 
 /**
  * ncm_vector_new_data_static:
- * @d: pointer to the first double allocated.
+ * @d: (array) (element-type double): pointer to the first double allocated.
  * @size: number of doubles allocated.
  * @stride: the step-size from one element to the next in physical memory, measured in units of double.
  *
@@ -216,6 +216,26 @@ ncm_vector_new_data_static (gdouble *d, gsize size, gsize stride)
                                        NULL, NULL); 
   cv->type  = NCM_VECTOR_DERIVED;
   return cv;
+}
+
+/**
+ * ncm_vector_new_data_dup:
+ * @d: (array) (element-type double): pointer to the first double allocated.
+ * @size: number of doubles allocated.
+ * @stride: the step-size from one element to the next in physical memory, measured in units of double.
+ *
+ * This function returns a #NcmVector of the array @d.
+ * It allocate a new vector and copy the contents of @d into it.
+ *
+ * Returns: (transfer full): A new #NcmVector.
+ */
+NcmVector *
+ncm_vector_new_data_dup (gdouble *d, const gsize size, const gsize stride)
+{
+  NcmVector *s = ncm_vector_new_data_static (d, size, stride);
+  NcmVector *dup = ncm_vector_dup (s);
+  ncm_vector_free (s);
+  return dup;
 }
 
 /**
@@ -238,7 +258,7 @@ ncm_vector_new_variant (GVariant *var)
 
 /**
  * ncm_vector_const_new_data:
- * @d: pointer to the first double allocated.
+ * @d: (array) (element-type double): pointer to the first double allocated.
  * @size: number of doubles allocated.
  * @stride: the step-size from one element to the next in physical memory, measured in units of double.
  *

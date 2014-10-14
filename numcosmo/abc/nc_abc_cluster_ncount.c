@@ -40,12 +40,18 @@
 #include "abc/nc_abc_cluster_ncount.h"
 #include "nc_data_cluster_ncount.h"
 #include "math/ncm_mset_trans_kern_gauss.h"
+#include "nc_enum_types.h"
 
 enum
 {
   PROP_0,
   PROP_SCALE_COV,
+  PROP_BIN_TYPE,
   PROP_QUANTILES,
+  PROP_Z_NODES,
+  PROP_LNM_NODES,
+  PROP_Z_BINS,
+  PROP_LNM_BINS,
 };
 
 
@@ -58,6 +64,10 @@ nc_abc_cluster_ncount_init (NcABCClusterNCount *abcnc)
   abcnc->covar        = NULL;
   abcnc->scale_cov    = FALSE;
   abcnc->quantiles    = NULL;
+  abcnc->z_nodes      = NULL;
+  abcnc->lnM_nodes    = NULL;
+  abcnc->z_bins       = 0;
+  abcnc->lnM_bins     = 0;
 }
 
 static void
@@ -82,14 +92,68 @@ _nc_abc_cluster_ncount_set_property (GObject *object, guint prop_id, const GValu
     case PROP_SCALE_COV:
       nc_abc_cluster_ncount_set_scale_cov (abcnc, g_value_get_boolean (value));
       break;
+    case PROP_BIN_TYPE:
+    {
+      NcABCClusterNCountBin bin_type = g_value_get_enum (value);
+      switch (bin_type)
+      {
+        case NC_ABC_CLUSTER_NCOUNT_BIN_UNIFORM:
+          break;
+        case NC_ABC_CLUSTER_NCOUNT_BIN_QUANTILE:
+          g_assert (abcnc->quantiles != NULL);
+          break;
+        case NC_ABC_CLUSTER_NCOUNT_BIN_NODES:
+          g_assert (abcnc->z_nodes != NULL);
+          g_assert (abcnc->lnM_nodes != NULL);
+          break;
+        default:
+          g_assert_not_reached ();
+          break;
+      }
+      abcnc->bin_type = bin_type;
+      break;
+    }
     case PROP_QUANTILES:
     {
       GVariant *var = g_value_get_variant (value);
-      NcmVector *v = ncm_vector_new_variant (var);
-      ncm_vector_clear (&abcnc->quantiles);
-      abcnc->quantiles = v;
+      if (var != NULL)
+      {
+        NcmVector *v = ncm_vector_new_variant (var);
+        ncm_vector_clear (&abcnc->quantiles);
+        abcnc->quantiles = v;
+      }
       break;
     }
+    case PROP_Z_NODES:
+    {
+      GVariant *var = g_value_get_variant (value);
+      if (var != NULL)
+      {
+        NcmVector *v = ncm_vector_new_variant (var);
+        ncm_vector_clear (&abcnc->z_nodes);
+        abcnc->z_nodes = v;
+      }
+      break;
+    }
+    case PROP_LNM_NODES:
+    {
+      GVariant *var = g_value_get_variant (value);
+      if (var != NULL)
+      {
+        NcmVector *v = ncm_vector_new_variant (var);
+        ncm_vector_clear (&abcnc->lnM_nodes);
+        abcnc->lnM_nodes = v;
+      }
+      break;
+    }
+    case PROP_Z_BINS:
+      abcnc->z_bins = g_value_get_uint (value);
+      g_assert_cmpuint (abcnc->z_bins, >, 0);
+      break;
+    case PROP_LNM_BINS:
+      abcnc->lnM_bins = g_value_get_uint (value);
+      g_assert_cmpuint (abcnc->lnM_bins, >, 0);
+      break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
       break;
@@ -107,6 +171,9 @@ _nc_abc_cluster_ncount_get_property (GObject *object, guint prop_id, GValue *val
     case PROP_SCALE_COV:
       g_value_set_boolean (value, abcnc->scale_cov);
       break;
+    case PROP_BIN_TYPE:
+      g_value_set_enum (value, abcnc->bin_type);
+      break;
     case PROP_QUANTILES:
     {
       if (abcnc->quantiles != NULL)
@@ -116,6 +183,30 @@ _nc_abc_cluster_ncount_get_property (GObject *object, guint prop_id, GValue *val
       }
       break;
     }
+    case PROP_Z_NODES:
+    {
+      if (abcnc->quantiles != NULL)
+      {
+        GVariant *var = ncm_vector_peek_variant (abcnc->z_nodes); 
+        g_value_take_variant (value, var);
+      }
+      break;
+    }
+    case PROP_LNM_NODES:
+    {
+      if (abcnc->quantiles != NULL)
+      {
+        GVariant *var = ncm_vector_peek_variant (abcnc->lnM_nodes); 
+        g_value_take_variant (value, var);
+      }
+      break;
+    }
+    case PROP_Z_BINS:
+      g_value_set_uint (value, abcnc->z_bins);
+      break;
+    case PROP_LNM_BINS:
+      g_value_set_uint (value, abcnc->lnM_bins);
+      break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
       break;
@@ -129,6 +220,8 @@ _nc_abc_cluster_ncount_dispose (GObject *object)
   
   ncm_matrix_clear (&abcnc->covar);
   ncm_vector_clear (&abcnc->quantiles);
+  ncm_vector_clear (&abcnc->z_nodes);
+  ncm_vector_clear (&abcnc->lnM_nodes);
   
   /* Chain up : end */
   G_OBJECT_CLASS (nc_abc_cluster_ncount_parent_class)->dispose (object);
@@ -171,6 +264,54 @@ nc_abc_cluster_ncount_class_init (NcABCClusterNCountClass *klass)
                                                          "Scaled covariance",
                                                          TRUE,
                                                          G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
+  g_object_class_install_property (object_class,
+                                   PROP_BIN_TYPE,
+                                   g_param_spec_enum ("binning-type",
+                                                      NULL,
+                                                      "Binning type",
+                                                      NC_TYPE_ABC_CLUSTER_NCOUNT_BIN, NC_ABC_CLUSTER_NCOUNT_BIN_UNIFORM,
+                                                      G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB)); 
+
+  g_object_class_install_property (object_class,
+                                   PROP_QUANTILES,
+                                   g_param_spec_variant ("quantiles",
+                                                         NULL,
+                                                         "Quantiles for binning",
+                                                         G_VARIANT_TYPE ("ad"), NULL,
+                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  
+  g_object_class_install_property (object_class,
+                                   PROP_Z_NODES,
+                                   g_param_spec_variant ("z-nodes",
+                                                         NULL,
+                                                         "Nodes for z",
+                                                         G_VARIANT_TYPE ("ad"), NULL,
+                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  
+  g_object_class_install_property (object_class,
+                                   PROP_LNM_NODES,
+                                   g_param_spec_variant ("lnM-nodes",
+                                                         NULL,
+                                                         "Nodes for lnM",
+                                                         G_VARIANT_TYPE ("ad"), NULL,
+                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
+  g_object_class_install_property (object_class,
+                                   PROP_Z_BINS,
+                                   g_param_spec_uint ("z-bins",
+                                                      NULL,
+                                                      "Number of bins in z",
+                                                      1, G_MAXUINT32, 5,
+                                                      G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
+  g_object_class_install_property (object_class,
+                                   PROP_LNM_BINS,
+                                   g_param_spec_uint ("lnM-bins",
+                                                      NULL,
+                                                      "Number of bins in lnM",
+                                                      1, G_MAXUINT32, 5,
+                                                      G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
   
   abc_class->data_summary  = &_nc_abc_cluster_ncount_data_summary;
   abc_class->mock_distance = &_nc_abc_cluster_ncount_mock_distance;
@@ -189,23 +330,33 @@ _nc_abc_cluster_ncount_data_summary (NcmABC *abc)
   {
     NcmData *data = ncm_dataset_get_data (abc->dset, 0);
     NcDataClusterNCount *ncount = NC_DATA_CLUSTER_NCOUNT (data);
-
-    if (abcnc->quantiles == NULL)
-    {
-      gdouble quantiles_data[7] = {0.02, 0.09, 0.25, 0.5, 0.75, 0.91, 0.98};
-      NcmVector *quantiles_static = ncm_vector_new_data_static (quantiles_data, 7, 1);
-      abcnc->quantiles = ncm_vector_dup (quantiles_static);
-      ncm_vector_free (quantiles_static);
-    }
-    
     g_assert (NC_IS_DATA_CLUSTER_NCOUNT (data));
 
-    nc_data_cluster_ncount_set_bin_by_quantile (ncount, abcnc->quantiles, abcnc->quantiles);
+    switch (abcnc->bin_type)
+    {
+      case NC_ABC_CLUSTER_NCOUNT_BIN_UNIFORM:
+      {
+        nc_data_cluster_ncount_set_bin_by_minmax (ncount, abcnc->z_bins, abcnc->lnM_bins);    
+        break;
+      }
+      case NC_ABC_CLUSTER_NCOUNT_BIN_QUANTILE:
+      {
+        nc_data_cluster_ncount_set_bin_by_quantile (ncount, abcnc->quantiles, abcnc->quantiles);
+        break;
+      }
+      case NC_ABC_CLUSTER_NCOUNT_BIN_NODES:
+      {
+        nc_data_cluster_ncount_set_bin_by_nodes (ncount, abcnc->z_nodes, abcnc->lnM_nodes);
+        break;
+      }
+      default:
+        g_assert_not_reached ();
+        break;
+    }
 
     g_clear_pointer (&abcnc->data_summary, gsl_histogram2d_free);
     abcnc->data_summary = gsl_histogram2d_clone (ncount->z_lnM);
   }
-  
 
   return TRUE;
 }
@@ -305,4 +456,69 @@ void
 nc_abc_cluster_ncount_set_scale_cov (NcABCClusterNCount *abcnc, gboolean on)
 {
   abcnc->scale_cov = on;
+}
+
+/**
+ * nc_abc_cluster_ncount_set_bin_uniform:
+ * @abcnc: a #NcABCClusterNCount.
+ * @z_bins: number of bins in z.
+ * @lnM_bins: number of bins in lnM.
+ * 
+ * Sets the binning type to #NC_ABC_CLUSTER_NCOUNT_BIN_UNIFORM.
+ * 
+ */
+void 
+nc_abc_cluster_ncount_set_bin_uniform (NcABCClusterNCount *abcnc, guint z_bins, guint lnM_bins)
+{
+  g_assert_cmpuint (z_bins, >, 0);
+  g_assert_cmpuint (lnM_bins, >, 0);
+  abcnc->z_bins = z_bins;
+  abcnc->lnM_bins = lnM_bins;
+  abcnc->bin_type = NC_ABC_CLUSTER_NCOUNT_BIN_UNIFORM;
+}
+
+/**
+ * nc_abc_cluster_ncount_set_bin_quantile:
+ * @abcnc: a #NcABCClusterNCount.
+ * @quantiles: (allow-none): a #NcmVector or NULL.
+ * 
+ * Sets the binning type to #NC_ABC_CLUSTER_NCOUNT_BIN_QUANTILE and uses
+ * @quantiles as the quantiles for both z and lnM. If @quantiles is NULL
+ * uses the defaults: (0.02, 0.09, 0.25, 0.5, 0.75, 0.91, 0.98).
+ * 
+ */
+void 
+nc_abc_cluster_ncount_set_bin_quantile (NcABCClusterNCount *abcnc, NcmVector *quantiles)
+{
+  if (quantiles == NULL)
+  {
+    gdouble quantiles_data[7] = {0.02, 0.09, 0.25, 0.5, 0.75, 0.91, 0.98};
+    quantiles = ncm_vector_new_data_dup (quantiles_data, 7, 1);
+  }
+  else
+    ncm_vector_ref (quantiles);
+
+  abcnc->bin_type = NC_ABC_CLUSTER_NCOUNT_BIN_QUANTILE;
+  abcnc->quantiles = quantiles;
+}
+
+/**
+ * nc_abc_cluster_ncount_set_bin_nodes:
+ * @abcnc: a #NcABCClusterNCount.
+ * @z_nodes: a #NcmVector.
+ * @lnM_nodes: a #NcmVector.
+ * 
+ * Sets the binning type to #NC_ABC_CLUSTER_NCOUNT_BIN_NODES and uses
+ * @z_nodes and @lnM_nodes as nodes for binning.
+ * 
+ */
+void 
+nc_abc_cluster_ncount_set_bin_nodes (NcABCClusterNCount *abcnc, NcmVector *z_nodes, NcmVector *lnM_nodes)
+{
+  g_assert (z_nodes != NULL);
+  g_assert (lnM_nodes != NULL);
+
+  abcnc->bin_type  = NC_ABC_CLUSTER_NCOUNT_BIN_NODES;
+  abcnc->z_nodes   = ncm_vector_ref (z_nodes);
+  abcnc->lnM_nodes = ncm_vector_ref (lnM_nodes);
 }

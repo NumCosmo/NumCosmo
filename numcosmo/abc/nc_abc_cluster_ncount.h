@@ -52,6 +52,13 @@ struct _NcABCClusterNCountClass
 
 };
 
+typedef enum _NcABCClusterNCountBin 
+{
+  NC_ABC_CLUSTER_NCOUNT_BIN_UNIFORM = 0,
+  NC_ABC_CLUSTER_NCOUNT_BIN_QUANTILE,
+  NC_ABC_CLUSTER_NCOUNT_BIN_NODES,
+} NcABCClusterNCountBin;
+
 struct _NcABCClusterNCount
 {
   /*< private >*/
@@ -60,12 +67,21 @@ struct _NcABCClusterNCount
   gsl_histogram2d *data_summary;
   NcmMatrix *covar;
   NcmVector *quantiles;
+  NcmVector *z_nodes;
+  NcmVector *lnM_nodes;
+  guint z_bins;
+  guint lnM_bins;
+  NcABCClusterNCountBin bin_type;
 };
 
 GType nc_abc_cluster_ncount_get_type (void) G_GNUC_CONST;
 
 NcABCClusterNCount *nc_abc_cluster_ncount_new (NcmMSet *mset, NcmMSetTransKern *prior, NcmDataset *dset);
 void nc_abc_cluster_ncount_set_scale_cov (NcABCClusterNCount *abcnc, gboolean on);
+
+void nc_abc_cluster_ncount_set_bin_uniform (NcABCClusterNCount *abcnc, guint z_bins, guint lnM_bins);
+void nc_abc_cluster_ncount_set_bin_quantile (NcABCClusterNCount *abcnc, NcmVector *quantiles);
+void nc_abc_cluster_ncount_set_bin_nodes (NcABCClusterNCount *abcnc, NcmVector *z_nodes, NcmVector *lnM_nodes);
 
 G_END_DECLS
 

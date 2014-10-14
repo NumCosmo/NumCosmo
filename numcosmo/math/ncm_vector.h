@@ -94,6 +94,7 @@ NcmVector *ncm_vector_new_array (GArray *a);
 NcmVector *ncm_vector_new_data_slice (gdouble *d, const gsize size, const gsize stride);
 NcmVector *ncm_vector_new_data_malloc (gdouble *d, const gsize size, const gsize stride);
 NcmVector *ncm_vector_new_data_static (gdouble *d, const gsize size, const gsize stride);
+NcmVector *ncm_vector_new_data_dup (gdouble *d, const gsize size, const gsize stride);
 NcmVector *ncm_vector_new_variant (GVariant *var);
 NcmVector *ncm_vector_ref (NcmVector *cv);
 const NcmVector *ncm_vector_const_ref (const NcmVector *cv);

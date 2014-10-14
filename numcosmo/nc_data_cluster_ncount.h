@@ -141,6 +141,7 @@ void nc_data_cluster_ncount_init_from_sampling (NcDataClusterNCount *ncount, Ncm
 void nc_data_cluster_ncount_print (NcDataClusterNCount *ncount, NcHICosmo *cosmo, FILE *out, gchar *header);
 
 void nc_data_cluster_ncount_set_bin_by_nodes (NcDataClusterNCount *ncount, NcmVector *z_nodes, NcmVector *lnM_nodes);
+void nc_data_cluster_ncount_set_bin_by_minmax (NcDataClusterNCount *ncount, guint z_nbins, guint lnM_nbins);
 void nc_data_cluster_ncount_set_bin_by_quantile (NcDataClusterNCount *ncount, NcmVector *z_quantiles, NcmVector *lnM_quantiles);
 void nc_data_cluster_ncount_set_binned (NcDataClusterNCount *ncount, gboolean on);
 

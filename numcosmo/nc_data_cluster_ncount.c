@@ -1654,6 +1654,49 @@ nc_data_cluster_ncount_set_bin_by_nodes (NcDataClusterNCount *ncount, NcmVector 
 }
 
 /**
+ * nc_data_cluster_ncount_set_bin_by_minmax:
+ * @ncount: a #NcDataClusterNCount.
+ * @z_nbins: number of bins in z.
+ * @lnM_nbins: number of bins in $\ln(M)$. 
+ *
+ * Creates a uniform binning with @z_nbins and @lnM_nbins.
+ *
+ */
+void
+nc_data_cluster_ncount_set_bin_by_minmax (NcDataClusterNCount *ncount, guint z_nbins, guint lnM_nbins)
+{
+  gdouble z_min = 0.0, z_max = 0.0, lnM_min = 0.0, lnM_max = 0.0;
+  _nc_data_cluster_ncount_bin_alloc (ncount, z_nbins, lnM_nbins);
+  if (ncount->use_true_data)
+  {
+    gsl_vector_minmax (ncm_vector_gsl (ncount->z_true), &z_min, &z_max);
+    gsl_vector_minmax (ncm_vector_gsl (ncount->lnM_true), &lnM_min, &lnM_max);
+  }
+  else
+  {
+    gsl_matrix_minmax (ncm_matrix_gsl (ncount->z_obs), &z_min, &z_max);
+    gsl_matrix_minmax (ncm_matrix_gsl (ncount->z_obs), &lnM_min, &lnM_max);
+  }
+
+  z_min = 0.0;
+  z_max = z_max * 1.5;
+
+  lnM_min = lnM_min + (lnM_min > 0.0 ? -0.5 * lnM_min : 0.5 * lnM_min);
+  lnM_max = lnM_max + (lnM_max > 0.0 ? 0.5 * lnM_min : - 0.5 * lnM_min);
+
+  /*printf ("% 20.15g % 20.15g % 20.15g % 20.15g\n", z_min, z_max, lnM_min, lnM_max);*/
+  
+  gsl_histogram2d_set_ranges_uniform (ncount->z_lnM, z_min, z_max, lnM_min, lnM_max);
+  _nc_data_cluster_ncount_bin_data (ncount);
+  ncount->binned = TRUE;
+
+  ncm_vector_clear (&ncount->z_nodes);
+  ncm_vector_clear (&ncount->lnM_nodes);
+  ncount->z_nodes   = ncm_vector_new_data_dup (ncount->z_lnM->xrange, ncount->z_lnM->nx + 1, 1);
+  ncount->lnM_nodes = ncm_vector_new_data_dup (ncount->z_lnM->yrange, ncount->z_lnM->ny + 1, 1);
+}
+
+/**
  * nc_data_cluster_ncount_set_bin_by_quantile:
  * @ncount: a #NcDataClusterNCount.
  * @z_quantiles: FIXME
