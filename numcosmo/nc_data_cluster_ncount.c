@@ -1377,7 +1377,7 @@ _nc_data_cluster_ncount_m2lnL_val (NcmData *data, NcmMSet *mset, gdouble *m2lnL)
     _Evald2N evald2n = {cad, ncount, cosmo, m2lnL};
     g_assert (ncount->z_true);
     g_assert (ncount->lnM_true);
-    ncm_func_eval_threaded_loop (&_eval_intp_d2n, 0, ncount->np, &evald2n);
+    ncm_func_eval_threaded_loop_full (&_eval_intp_d2n, 0, ncount->np, &evald2n);
   }
   else
   {
@@ -1389,26 +1389,26 @@ _nc_data_cluster_ncount_m2lnL_val (NcmData *data, NcmMSet *mset, gdouble *m2lnL)
     if (z_p && lnM_p)
     {
       _Evald2N evald2n = {cad, ncount, cosmo, m2lnL};
-      ncm_func_eval_threaded_loop (&_eval_z_p_lnm_p_d2n, 0, ncount->np, &evald2n);
+      ncm_func_eval_threaded_loop_full (&_eval_z_p_lnm_p_d2n, 0, ncount->np, &evald2n);
     }
     else if (z_p && !lnM_p)
     {
       g_assert (ncount->lnM_true);
       _Evald2N evald2n = {cad, ncount, cosmo, m2lnL};
-      ncm_func_eval_threaded_loop (&_eval_z_p_d2n, 0, ncount->np, &evald2n);
+      ncm_func_eval_threaded_loop_full (&_eval_z_p_d2n, 0, ncount->np, &evald2n);
     }
     else if (!z_p && lnM_p)
     {
       g_assert (ncount->z_true);
       _Evald2N evald2n = {cad, ncount, cosmo, m2lnL};
-      ncm_func_eval_threaded_loop (&_eval_lnm_p_d2n, 0, ncount->np, &evald2n);
+      ncm_func_eval_threaded_loop_full (&_eval_lnm_p_d2n, 0, ncount->np, &evald2n);
     }
     else
     {
       g_assert (ncount->z_true);
       g_assert (ncount->lnM_true);
       _Evald2N evald2n = {cad, ncount, cosmo, m2lnL};
-      ncm_func_eval_threaded_loop (&_eval_d2n, 0, ncount->np, &evald2n);
+      ncm_func_eval_threaded_loop_full (&_eval_d2n, 0, ncount->np, &evald2n);
 
     }
   }
