@@ -33,6 +33,7 @@ EXTRA_DIST =
 AM_VALAFLAGS = 
 
 if HAVE_GTK
+if HAVE_VAPIGEN
 
 AM_CFLAGS += $(GTK_CFLAGS) -Wl,--export-dynamic
 
@@ -59,4 +60,5 @@ gdarkenergydir = \
 gdarkenergy_LDADD = \
         $(top_builddir)/numcosmo/libnumcosmo.la $(GTK_LIBS)
 
+endif
 endif
