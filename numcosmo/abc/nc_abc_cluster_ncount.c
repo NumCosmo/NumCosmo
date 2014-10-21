@@ -52,6 +52,8 @@ enum
   PROP_LNM_NODES,
   PROP_Z_BINS,
   PROP_LNM_BINS,
+  PROP_EPSILON_UPDATE,
+  PROP_EPSILON_UPDATE_TYPE, 
 };
 
 
@@ -60,14 +62,18 @@ G_DEFINE_TYPE (NcABCClusterNCount, nc_abc_cluster_ncount, NCM_TYPE_ABC);
 static void
 nc_abc_cluster_ncount_init (NcABCClusterNCount *abcnc)
 {
-  abcnc->data_summary = NULL;
-  abcnc->covar        = NULL;
-  abcnc->scale_cov    = FALSE;
-  abcnc->quantiles    = NULL;
-  abcnc->z_nodes      = NULL;
-  abcnc->lnM_nodes    = NULL;
-  abcnc->z_bins       = 0;
-  abcnc->lnM_bins     = 0;
+  abcnc->data_summary   = NULL;
+  abcnc->data_total     = 0.0;
+  abcnc->covar          = NULL;
+  abcnc->scale_cov      = FALSE;
+  abcnc->quantiles      = NULL;
+  abcnc->z_nodes        = NULL;
+  abcnc->lnM_nodes      = NULL;
+  abcnc->z_bins         = 0;
+  abcnc->lnM_bins       = 0;
+  abcnc->epsilon_update = 0.0;
+  abcnc->bin_type       = NC_ABC_CLUSTER_NCOUNT_BIN_NTYPES;
+  abcnc->uptype         = NC_ABC_CLUSTER_NCOUNT_EPSILON_UPDATE_NTYPE;
 }
 
 static void
@@ -154,6 +160,12 @@ _nc_abc_cluster_ncount_set_property (GObject *object, guint prop_id, const GValu
       abcnc->lnM_bins = g_value_get_uint (value);
       g_assert_cmpuint (abcnc->lnM_bins, >, 0);
       break;
+    case PROP_EPSILON_UPDATE:
+      nc_abc_cluster_ncount_set_epsilon_update (abcnc, g_value_get_double (value));
+      break;
+    case PROP_EPSILON_UPDATE_TYPE:
+      abcnc->uptype = g_value_get_enum (value);
+      break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
       break;
@@ -206,6 +218,12 @@ _nc_abc_cluster_ncount_get_property (GObject *object, guint prop_id, GValue *val
       break;
     case PROP_LNM_BINS:
       g_value_set_uint (value, abcnc->lnM_bins);
+      break;
+    case PROP_EPSILON_UPDATE:
+      g_value_set_double (value, abcnc->epsilon_update);
+      break;
+    case PROP_EPSILON_UPDATE_TYPE:
+      g_value_set_enum (value, abcnc->uptype);
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -313,6 +331,22 @@ nc_abc_cluster_ncount_class_init (NcABCClusterNCountClass *klass)
                                                       1, G_MAXUINT32, 5,
                                                       G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
   
+  g_object_class_install_property (object_class,
+                                   PROP_EPSILON_UPDATE,
+                                   g_param_spec_double ("epsilon-update",
+                                                      NULL,
+                                                      "Value used to update epsilon",
+                                                      0.0, 1.0, 0.75,
+                                                      G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
+  g_object_class_install_property (object_class,
+                                   PROP_EPSILON_UPDATE_TYPE,
+                                   g_param_spec_enum ("epsilon-update-type",
+                                                      NULL,
+                                                      "Method used to update epsilon",
+                                                      NC_TYPE_ABC_CLUSTER_NCOUNT_EPSILON_UPDATE, NC_ABC_CLUSTER_NCOUNT_EPSILON_UPDATE_QUANTILE,
+                                                      G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
   abc_class->data_summary  = &_nc_abc_cluster_ncount_data_summary;
   abc_class->mock_distance = &_nc_abc_cluster_ncount_mock_distance;
   abc_class->distance_prob = &_nc_abc_cluster_ncount_distance_prob;
@@ -355,7 +389,9 @@ _nc_abc_cluster_ncount_data_summary (NcmABC *abc)
     }
 
     g_clear_pointer (&abcnc->data_summary, gsl_histogram2d_free);
+    
     abcnc->data_summary = gsl_histogram2d_clone (ncount->z_lnM);
+    abcnc->data_total   = gsl_histogram2d_sum (abcnc->data_summary);
   }
 
   return TRUE;
@@ -365,7 +401,7 @@ static gdouble
 _nc_abc_cluster_ncount_mock_distance (NcmABC *abc, NcmDataset *dset, NcmVector *theta, NcmVector *thetastar, NcmRNG *rng)
 {
   NcABCClusterNCount *abcnc = NC_ABC_CLUSTER_NCOUNT (abc);
-  NcmData *data = ncm_dataset_get_data (dset, 0);
+  NcmData *data = ncm_dataset_peek_data (dset, 0);
   NcDataClusterNCount *ncount = NC_DATA_CLUSTER_NCOUNT (data);
 
   const gsize nx = gsl_histogram2d_nx (abcnc->data_summary);
@@ -374,13 +410,18 @@ _nc_abc_cluster_ncount_mock_distance (NcmABC *abc, NcmDataset *dset, NcmVector *
   gsize i; 
 
   gdouble res = 0.0;
-  
+  gdouble pdf_data = 0.0;
+  gdouble pdf_mock = 0.0;
+
   for (i = 0; i < total; i++)
   {
-    res += gsl_pow_2 (abcnc->data_summary->bin[i] - ncount->z_lnM->bin[i]); 
+    pdf_data += abcnc->data_summary->bin[i];
+    pdf_mock += ncount->z_lnM->bin[i];
+    
+    res += gsl_pow_2 ((pdf_data - pdf_mock) / abcnc->data_total); 
   }
   
-  return sqrt (res) / total;
+  return sqrt (res);
 }
 
 static gdouble 
@@ -397,6 +438,7 @@ _nc_abc_cluster_ncount_update_tkern (NcmABC *abc)
 {
   NcABCClusterNCount *abcnc = NC_ABC_CLUSTER_NCOUNT (abc);
   const gdouble scale = abcnc->scale_cov ? 0.25 + 1.75 * ncm_abc_get_accept_rate (abc) : 2.0;
+  const gdouble epsilon = NCM_ABC (abcnc)->epsilon;
   
   ncm_mset_catalog_get_covar (abc->mcat, &abc->covar);
   
@@ -406,9 +448,25 @@ _nc_abc_cluster_ncount_update_tkern (NcmABC *abc)
   if (abc->mtype > NCM_FIT_RUN_MSGS_NONE)
     g_message ("# NcABCClusterNCount: scale covariance by %f\n", scale);
 
+  switch (abcnc->uptype)
   {
-    gdouble dist_75 = ncm_abc_get_dist_quantile (abc, 0.75);
-    ncm_abc_update_epsilon (abc, dist_75);
+    case NC_ABC_CLUSTER_NCOUNT_EPSILON_UPDATE_UNIFORM:
+    {
+      if (epsilon - abcnc->epsilon_update < 0)
+        ncm_abc_update_epsilon (abc, epsilon * abcnc->epsilon_update);
+      else
+        ncm_abc_update_epsilon (abc, epsilon - abcnc->epsilon_update);
+      break;
+    }
+    case NC_ABC_CLUSTER_NCOUNT_EPSILON_UPDATE_QUANTILE:
+    {
+      gdouble dist = ncm_abc_get_dist_quantile (abc, abcnc->epsilon_update);
+      ncm_abc_update_epsilon (abc, dist);
+      break;
+    }
+    default:
+      g_assert_not_reached ();
+      break;
   }
 }
 
@@ -456,6 +514,22 @@ void
 nc_abc_cluster_ncount_set_scale_cov (NcABCClusterNCount *abcnc, gboolean on)
 {
   abcnc->scale_cov = on;
+}
+
+/**
+ * nc_abc_cluster_ncount_set_epsilon_update:
+ * @abcnc: a #NcABCClusterNCount.
+ * @q: the quantile $q \in (0, 1)$.
+ * 
+ * Sets the quantile used to update epsilon.
+ * 
+ */
+void 
+nc_abc_cluster_ncount_set_epsilon_update (NcABCClusterNCount *abcnc, gdouble q)
+{
+  g_assert_cmpfloat (q, <, 1.0);
+  g_assert_cmpfloat (q, >, 0.0);
+  abcnc->epsilon_update = q;
 }
 
 /**

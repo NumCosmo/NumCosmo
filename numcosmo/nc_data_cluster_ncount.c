@@ -602,14 +602,9 @@ nc_data_cluster_ncount_set_mass (NcDataClusterNCount *ncount, NcClusterMass *m)
     g_assert_cmpuint (ncm_matrix_ncols (ncount->lnM_obs), ==, nc_cluster_mass_obs_len (m));
   if (ncount->lnM_obs_params != NULL)
     g_assert_cmpuint (ncm_matrix_ncols (ncount->lnM_obs_params), ==, nc_cluster_mass_obs_params_len (m));
-  
-  if (ncount->m == NULL)
-    ncount->m = nc_cluster_mass_ref (m);
-  else
-  {
-    nc_cluster_mass_clear (&ncount->m);
-    ncount->m = nc_cluster_mass_ref (m);
-  }
+
+  nc_cluster_mass_clear (&ncount->m);
+  ncount->m = nc_cluster_mass_ref (m);
 }
 
 /**
@@ -627,14 +622,8 @@ nc_data_cluster_ncount_set_redshift (NcDataClusterNCount *ncount, NcClusterRedsh
     g_assert_cmpuint (ncm_matrix_ncols (ncount->z_obs), ==, nc_cluster_redshift_obs_len (z));
   if (ncount->lnM_obs_params != NULL)
     g_assert_cmpuint (ncm_matrix_ncols (ncount->z_obs_params), ==, nc_cluster_redshift_obs_params_len (z));
-
-  if (ncount->z == NULL)
-    ncount->z = nc_cluster_redshift_ref (z);
-  else
-  {
-    nc_cluster_redshift_clear (&ncount->z);
-    ncount->z = nc_cluster_redshift_ref (z);
-  }
+  nc_cluster_redshift_clear (&ncount->z);
+  ncount->z = nc_cluster_redshift_ref (z);
 }
 
 /**
@@ -1122,6 +1111,11 @@ _nc_data_cluster_ncount_resample (NcmData *data, NcmMSet *mset, NcmRNG *rng)
     if (lnM_obs_params_len > 0)
       g_free (lnMi_obs_params);
 
+    if (ncount->binned)
+    {
+      _nc_data_cluster_ncount_bin_data (ncount);
+    }
+
     ncm_data_take_desc (data, _nc_data_cluster_ncount_desc (ncount, cosmo));
     return;
   }
@@ -1185,6 +1179,11 @@ _nc_data_cluster_ncount_resample (NcmData *data, NcmMSet *mset, NcmRNG *rng)
     ncm_matrix_clear (&ncount->lnM_obs);
     g_array_unref (lnM_obs_array);
 
+    if (ncount->binned)
+    {
+      _nc_data_cluster_ncount_bin_data (ncount);
+    }
+    
     ncm_data_take_desc (data, _nc_data_cluster_ncount_desc (ncount, cosmo));
     return;
   }
@@ -2016,11 +2015,9 @@ nc_data_cluster_ncount_catalog_load (NcDataClusterNCount *ncount, gchar *filenam
   if (hdutype != BINARY_TBL)
     g_error ("%s (%d): NcDataClusterNCount catalog is not binary!\n", __FILE__, __LINE__);
 
-  if (ncount->z != NULL)
-    nc_cluster_redshift_free (ncount->z);
-  if (ncount->m != NULL)
-    nc_cluster_mass_free (ncount->m);
-
+  nc_cluster_redshift_clear (&ncount->z);
+  nc_cluster_mass_clear (&ncount->m);
+  
   {
     gchar *z_ser = NULL;
     gchar *lnM_ser = NULL;

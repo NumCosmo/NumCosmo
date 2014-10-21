@@ -60,6 +60,7 @@ ncm_abc_init (NcmABC *abc)
 {
   abc->mcat          = NULL;
   abc->dset          = NULL;
+  abc->dset_mock     = NULL;
   abc->mp            = NULL;
   abc->tkern         = NULL;
   abc->prior         = NULL;
@@ -172,6 +173,7 @@ _ncm_abc_dispose (GObject *object)
   ncm_mset_trans_kern_clear (&abc->prior);
   ncm_mset_trans_kern_clear (&abc->tkern);
   ncm_dataset_clear (&abc->dset);
+  ncm_dataset_clear (&abc->dset_mock);
   ncm_timer_clear (&abc->nt);
   ncm_serialize_clear (&abc->ser);
 
@@ -547,11 +549,11 @@ ncm_abc_update_epsilon (NcmABC *abc, gdouble epsilon)
   {
     guint i;
     g_message ("# NcmABC: ");
-    for (i = 0; i < 11; i++)
+    for (i = 0; i < 8; i++)
     {
-      gdouble p = (10.0 * i) / 100.0;
+      gdouble p = (15.0 * i) / 100.0;
       p = p > 1.0 ? 1.0 : p;
-      g_message ("[%02.0f%% %4.2f] ", 100.0 * p, ncm_abc_get_dist_quantile (abc, p));
+      g_message ("[%02.0f%% %-8.2g] ", 100.0 * p, ncm_abc_get_dist_quantile (abc, p));
     }
     g_message ("\n");
     g_message ("# NcmABC: epsilon_t        = %g.\n", 
@@ -728,6 +730,10 @@ ncm_abc_start_run (NcmABC *abc)
   if (!ncm_abc_data_summary (abc))
     g_error ("ncm_abc_start_run: error calculating summary data.");
 
+  ncm_dataset_clear (&abc->dset_mock);
+  abc->dset_mock = ncm_dataset_dup (abc->dset, abc->ser);
+  ncm_serialize_clear_instances (abc->ser);
+
   abc->ntotal = 0;
   abc->naccepted = 0;
 }
@@ -885,9 +891,9 @@ _ncm_abc_run_single (NcmABC *abc)
     ncm_mset_trans_kern_prior_sample (abc->prior, abc->thetastar, abc->mcat->rng);
 
     ncm_mset_fparams_set_vector (abc->mcat->mset, abc->thetastar);
-    ncm_dataset_resample (abc->dset, abc->mcat->mset, abc->mcat->rng);
+    ncm_dataset_resample (abc->dset_mock, abc->mcat->mset, abc->mcat->rng);
     
-    dist = ncm_abc_mock_distance (abc, abc->dset, abc->theta, abc->thetastar, abc->mcat->rng);
+    dist = ncm_abc_mock_distance (abc, abc->dset_mock, abc->theta, abc->thetastar, abc->mcat->rng);
     prob = ncm_abc_distance_prob (abc, dist);
 
     abc->ntotal++;
@@ -921,12 +927,13 @@ _ncm_abc_dup_thread (gpointer userdata)
   {
     abct->mset      = ncm_mset_dup (abc->mcat->mset, abc->ser);
     abct->dset      = ncm_dataset_dup (abc->dset, abc->ser);
-
     abct->thetastar = ncm_vector_dup (abc->thetastar);
     abct->rng       = ncm_rng_new (NULL);
+
     ncm_rng_set_seed (abct->rng, gsl_rng_get (abc->mcat->rng->r));
 
-    ncm_serialize_reset (abc->ser);
+    ncm_serialize_clear_instances (abc->ser);
+
     _NCM_MUTEX_UNLOCK (&dup_thread);
     return abct;
   }
@@ -936,12 +943,12 @@ static void
 _ncm_abc_free_thread (gpointer data)
 {
   NcmABCThread *abct = (NcmABCThread *) data;
-  
+
   ncm_mset_clear (&abct->mset);
   ncm_dataset_clear (&abct->dset);
   ncm_vector_clear (&abct->thetastar);
   ncm_rng_clear (&abct->rng);
-  g_free (abct);  
+  g_free (abct);
 }
 
 static void 
@@ -1159,6 +1166,10 @@ ncm_abc_start_update (NcmABC *abc)
   if (!ncm_abc_data_summary (abc))
     g_error ("ncm_abc_start_run: error calculating summary data.");
 
+  ncm_dataset_clear (&abc->dset_mock);
+  abc->dset_mock = ncm_dataset_dup (abc->dset, abc->ser);
+  ncm_serialize_clear_instances (abc->ser);
+
   abc->dists_sorted = FALSE;
   abc->started = TRUE;
   abc->ntotal = 0;
@@ -1266,9 +1277,9 @@ _ncm_abc_update_single (NcmABC *abc)
     
     ncm_mset_trans_kern_generate (abc->tkern, theta, abc->thetastar, abc->mcat->rng);
     ncm_mset_fparams_set_vector (abc->mcat->mset, abc->thetastar);
-    ncm_dataset_resample (abc->dset, abc->mcat->mset, abc->mcat->rng);
+    ncm_dataset_resample (abc->dset_mock, abc->mcat->mset, abc->mcat->rng);
     
-    dist = ncm_abc_mock_distance (abc, abc->dset, abc->theta, abc->thetastar, abc->mcat->rng);
+    dist = ncm_abc_mock_distance (abc, abc->dset_mock, abc->theta, abc->thetastar, abc->mcat->rng);
     prob = ncm_abc_distance_prob (abc, dist);
     ncm_vector_free (theta);
 

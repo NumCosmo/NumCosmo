@@ -78,6 +78,7 @@ ncm_obj_array_new_from_variant (NcmSerialize *ser, GVariant *var)
     {
       GVariant *cvar = g_variant_get_child_value (var, i);
       GObject *cobj = ncm_serialize_from_variant (ser, cvar);
+      
       ncm_obj_array_add (oa, cobj);
       g_object_unref (cobj);
       g_variant_unref (cvar);

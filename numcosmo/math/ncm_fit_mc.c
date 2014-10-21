@@ -432,7 +432,7 @@ ncm_fit_mc_set_fiducial (NcmFitMC *mc, NcmMSet *fiduc)
   if (fiduc == NULL || fiduc == mc->fit->mset)
   {
     mc->fiduc = ncm_mset_dup (mc->fit->mset, mc->ser);
-    ncm_serialize_reset (mc->ser);
+    ncm_serialize_clear_instances (mc->ser);
   }
   else
   {
@@ -759,7 +759,7 @@ _ncm_fit_mc_dup_fit (gpointer userdata)
   g_mutex_lock (mc->dup_fit);
   {
     NcmFit *fit = ncm_fit_dup (mc->fit, mc->ser);
-    ncm_serialize_reset (mc->ser);
+    ncm_serialize_clear_instances (mc->ser);
     g_mutex_unlock (mc->dup_fit);
     return fit;
   }

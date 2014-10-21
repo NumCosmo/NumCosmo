@@ -306,10 +306,10 @@ ncm_spline_new_function_spline (NcmSpline *s, gsl_function *F, gdouble xi, gdoub
         continue;
       else
       {
-        const gdouble x0 = BIVEC_LIST_X(wnodes);
-        const gdouble x1 = BIVEC_LIST_X(wnodes->next);
-        const gdouble y0 = BIVEC_LIST_Y(wnodes);
-        const gdouble y1 = BIVEC_LIST_Y(wnodes->next);
+        const gdouble x0 = BIVEC_LIST_X (wnodes);
+        const gdouble x1 = BIVEC_LIST_X (wnodes->next);
+        const gdouble y0 = BIVEC_LIST_Y (wnodes);
+        const gdouble y1 = BIVEC_LIST_Y (wnodes->next);
         const gdouble x = (x0 + x1) / 2.0;
         const gdouble y = GSL_FN_EVAL (F, x);
         const gdouble ys = ncm_spline_eval (s, x);
@@ -323,14 +323,14 @@ ncm_spline_new_function_spline (NcmSpline *s, gsl_function *F, gdouble xi, gdoub
         const gboolean test_d = (TEST_CMP(dyc, dys) < rel_error);
 #endif /* _NCM_SPLINE_TEST_DIFF */
 
-        if (fabs ((x-x0)/x) < NCM_SPLINE_KNOT_DIFF_TOL)
+        if (fabs ((x - x0)/x) < NCM_SPLINE_KNOT_DIFF_TOL)
           g_error ("Tolerance of the difference between knots was reached. Interpolated function is probably discontinuous at % 20.15g.", x);
 
         BIVEC_LIST_INSERT_BEFORE (nodes, wnodes->next, x, y);
         wnodes = g_list_next (wnodes);
-        g_array_append_val(xt_array, BIVEC_LIST_X(wnodes));
-        g_array_append_val(yt_array, BIVEC_LIST_Y(wnodes));
-        BIVEC_LIST_OK(wnodes) = BIVEC_LIST_OK(wnodes->prev);
+        g_array_append_val (xt_array, BIVEC_LIST_X (wnodes));
+        g_array_append_val (yt_array, BIVEC_LIST_Y (wnodes));
+        BIVEC_LIST_OK (wnodes) = BIVEC_LIST_OK (wnodes->prev);
 
 #ifdef _NCM_SPLINE_TEST_DIFF
         if (test_p && test_I && test_d)

@@ -126,7 +126,7 @@ _ncm_serialize_finalize (GObject *object)
   
   g_regex_unref (ser->is_named_regex);
   g_regex_unref (ser->parse_obj_regex);
-  
+printf ("Fucking finalizing!\n");
   /* Chain up : end */
   G_OBJECT_CLASS (ncm_serialize_parent_class)->finalize (object);
 }
@@ -229,19 +229,49 @@ ncm_serialize_clear (NcmSerialize **ser)
  * ncm_serialize_reset:
  * @ser: a #NcmSerialize.
  * 
- * Releases all objects in @ser.
+ * Releases all objects in @ser and erase all serialized
+ * objects.
  * 
  */
 void 
 ncm_serialize_reset (NcmSerialize *ser)
 {
-  g_hash_table_remove_all (ser->name_ptr);
-  g_hash_table_remove_all (ser->ptr_name);
-/*
+  ncm_serialize_clear_instances (ser);
+
   g_hash_table_remove_all (ser->saved_ptr_name);
   g_hash_table_remove_all (ser->saved_name_ser);
   ser->autosave_count = 0;
-*/
+}
+
+/**
+ * ncm_serialize_clear_instances:
+ * @ser: a #NcmSerialize.
+ * 
+ * Releases all objects in @ser.
+ * 
+ */
+void 
+ncm_serialize_clear_instances (NcmSerialize *ser)
+{
+  g_hash_table_remove_all (ser->name_ptr);
+  g_hash_table_remove_all (ser->ptr_name);
+}
+
+/**
+ * ncm_serialize_log_stats:
+ * @ser: a #NcmSerialize.
+ * 
+ * Releases all objects in @ser.
+ * 
+ */
+void 
+ncm_serialize_log_stats (NcmSerialize *ser)
+{
+  g_message ("# NcmSerialize: autosaved object %u\n", ser->autosave_count);
+  g_message ("# NcmSerialize: name_ptr         %u\n", g_hash_table_size (ser->name_ptr));
+  g_message ("# NcmSerialize: ptr_name         %u\n", g_hash_table_size (ser->ptr_name));
+  g_message ("# NcmSerialize: saved_ptr_name   %u\n", g_hash_table_size (ser->saved_ptr_name));
+  g_message ("# NcmSerialize: saved_name_ser   %u\n", g_hash_table_size (ser->saved_name_ser));  
 }
 
 /**
@@ -379,7 +409,7 @@ _ncm_serialize_save_ser (NcmSerialize *ser, gchar *name, gpointer obj, GVariant 
   if (g_hash_table_lookup (ser->saved_ptr_name, obj) != NULL)
     g_error ("_ncm_serialize_save_ser: instance already saved.");
 
-  /* printf ("\n``%s'' <=> %s\n", name, g_variant_print (ser_var, TRUE)); */
+  /*printf ("Saving: ``%s'' <=> %s\n", name, g_variant_print (ser_var, TRUE));*/
   
   g_hash_table_insert (ser->saved_ptr_name, 
                        g_object_ref (obj), g_strdup (name));
@@ -803,6 +833,7 @@ ncm_serialize_set_property (NcmSerialize *ser, GObject *obj, const gchar *prop_s
       g_variant_unref (val);
       g_variant_unref (var_val);
       g_variant_unref (var);
+      g_value_unset (&value);
     }
 
     g_variant_iter_free (p_iter);
@@ -851,7 +882,7 @@ _ncm_serialize_from_saved_or_named (NcmSerialize *ser, const gchar *obj_ser, GVa
     if (ncm_serialize_contain_name (ser, ni_name))
     {
       obj = ncm_serialize_get_by_name (ser, ni_name);
-      /* printf ("found ni: ``%s'' <=> %s\n", ni_name, obj_ser); */
+      /*printf ("found ni: ``%s'' <=> %s [%d]\n", ni_name, obj_ser, obj->ref_count);*/
       g_free (ni_name);
       return obj;
     }
@@ -860,7 +891,7 @@ _ncm_serialize_from_saved_or_named (NcmSerialize *ser, const gchar *obj_ser, GVa
       obj = ncm_serialize_from_variant (ser, var_obj);
       if (ser->opts & NCM_SERIALIZE_OPT_AUTONAME_SER)
         ncm_serialize_set (ser, obj, ni_name, FALSE);
-      /* printf ("found saved: ``%s'' <=> %s\n", ni_name, obj_ser); */
+      /*printf ("found saved: ``%s'' <=> %s [%d]\n", ni_name, obj_ser, obj->ref_count);*/
       g_free (ni_name);
       return obj;
     }
@@ -1222,13 +1253,14 @@ _ncm_serialize_to_variant (NcmSerialize *ser, GObject *obj)
   {
     gchar *ni_name = ncm_serialize_peek_name (ser, obj);
     gchar *fname = g_strdup_printf ("%s[%s]", obj_name, ni_name);
-
+    /*printf ("# Found instante %p at ptr_name %s.\n", obj, fname);*/
     ser_var = g_variant_ref_sink (g_variant_new (NCM_SERIALIZE_OBJECT_TYPE, fname, NULL));
     g_free (fname);
   }
   else if ((saved_name = g_hash_table_lookup (ser->saved_ptr_name, obj)) != NULL)
   {
     gchar *fname = g_strdup_printf ("%s[%s]", obj_name, saved_name);
+    /*printf ("# Found instante %p at saved_ptr_name %s.\n", obj, fname);*/
     ser_var = g_variant_ref_sink (g_variant_new (NCM_SERIALIZE_OBJECT_TYPE, fname, NULL));
     g_free (fname);
   }
@@ -1406,7 +1438,8 @@ ncm_serialize_global (void)
 /**
  * ncm_serialize_global_reset:
  * 
- * Releases all objects in global #NcmSerialize.
+ * Releases all objects in global #NcmSerialize and erase
+ * all serialized objects.
  * 
  */
 void 
@@ -1414,6 +1447,34 @@ ncm_serialize_global_reset (void)
 {
   NcmSerialize *ser = ncm_serialize_global ();
   ncm_serialize_reset (ser);
+  ncm_serialize_unref (ser);
+}
+
+/**
+ * ncm_serialize_global_clear_instances:
+ * 
+ * Releases all objects in global #NcmSerialize.
+ * 
+ */
+void 
+ncm_serialize_global_clear_instances (void)
+{
+  NcmSerialize *ser = ncm_serialize_global ();
+  ncm_serialize_clear_instances (ser);
+  ncm_serialize_unref (ser);
+}
+
+/**
+ * ncm_serialize_global_log_stats:
+ * 
+ * Releases all objects in global #NcmSerialize.
+ * 
+ */
+void 
+ncm_serialize_global_log_stats (void)
+{
+  NcmSerialize *ser = ncm_serialize_global ();
+  ncm_serialize_log_stats (ser);
   ncm_serialize_unref (ser);
 }
 

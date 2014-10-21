@@ -69,19 +69,37 @@ typedef enum _NcABCClusterNCountBin
   NC_ABC_CLUSTER_NCOUNT_BIN_NTYPES, /*< skip >*/
 } NcABCClusterNCountBin;
 
+/**
+ * NcABCClusterNCountEpsilonUpdate:
+ * @NC_ABC_CLUSTER_NCOUNT_EPSILON_UPDATE_UNIFORM: FIXME
+ * @NC_ABC_CLUSTER_NCOUNT_EPSILON_UPDATE_QUANTILE: FIXME
+ * 
+ * FIXME
+ * 
+ */
+typedef enum _NcABCClusterNCountEpsilonUpdate 
+{
+  NC_ABC_CLUSTER_NCOUNT_EPSILON_UPDATE_UNIFORM = 0, 
+  NC_ABC_CLUSTER_NCOUNT_EPSILON_UPDATE_QUANTILE, /*< private >*/
+  NC_ABC_CLUSTER_NCOUNT_EPSILON_UPDATE_NTYPE,    /*< skip >*/
+}NcABCClusterNCountEpsilonUpdate;
+
 struct _NcABCClusterNCount
 {
   /*< private >*/
   NcmABC parent_instance;
   gboolean scale_cov;
   gsl_histogram2d *data_summary;
+  gdouble data_total;
   NcmMatrix *covar;
   NcmVector *quantiles;
   NcmVector *z_nodes;
   NcmVector *lnM_nodes;
   guint z_bins;
   guint lnM_bins;
+  gdouble epsilon_update;
   NcABCClusterNCountBin bin_type;
+  NcABCClusterNCountEpsilonUpdate uptype;
 };
 
 GType nc_abc_cluster_ncount_get_type (void) G_GNUC_CONST;
@@ -89,6 +107,7 @@ GType nc_abc_cluster_ncount_get_type (void) G_GNUC_CONST;
 NcABCClusterNCount *nc_abc_cluster_ncount_new (NcmMSet *mset, NcmMSetTransKern *prior, NcmDataset *dset);
 void nc_abc_cluster_ncount_set_scale_cov (NcABCClusterNCount *abcnc, gboolean on);
 
+void nc_abc_cluster_ncount_set_epsilon_update (NcABCClusterNCount *abcnc, gdouble q);
 void nc_abc_cluster_ncount_set_bin_uniform (NcABCClusterNCount *abcnc, guint z_bins, guint lnM_bins);
 void nc_abc_cluster_ncount_set_bin_quantile (NcABCClusterNCount *abcnc, NcmVector *quantiles);
 void nc_abc_cluster_ncount_set_bin_nodes (NcABCClusterNCount *abcnc, NcmVector *z_nodes, NcmVector *lnM_nodes);

@@ -132,9 +132,12 @@ _ncm_spline_notaknot_prepare_base (NcmSpline *s)
 
 	g_assert (sys_size > 1);
 #ifdef NUMCOSMO_CHECK_SPLINE_NODES
-  g_assert_cmpfloat (h_0, >, 0.0);
-  g_assert_cmpfloat (h_1, >, 0.0);
-  g_assert_cmpfloat (h_nm1, >, 0.0);
+  if (h_0 < 0.0 || h_1 < 0.0 || h_nm1 < 0.0)
+  {                                                                          
+    g_error ("_ncm_spline_notaknot_prepare_base: in node [0, 1, 2, %zu, %zu] (% 20.15g, % 20.15g, % 20.15g, % 20.15g, % 20.15g), (% 20.15g, % 20.15g, % 20.15g, % 20.15g, % 20.15g).", nm1, n,
+             ncm_vector_get (s->xv, 0), ncm_vector_get (s->xv, 1), ncm_vector_get (s->xv, 2), ncm_vector_get (s->xv, nm1), ncm_vector_get (s->xv, n),
+             ncm_vector_get (s->yv, 0), ncm_vector_get (s->yv, 1), ncm_vector_get (s->yv, 2), ncm_vector_get (s->yv, nm1), ncm_vector_get (s->yv, n));
+  }
 #endif
 
 	for (i = 1; i <= nm3; i++)
@@ -146,10 +149,12 @@ _ncm_spline_notaknot_prepare_base (NcmSpline *s)
 
 #ifdef NUMCOSMO_CHECK_SPLINE_NODES
     if (h_ip1 <= 0.0)
+    {
       g_error ("_ncm_spline_notaknot_prepare_base: in node %zd of %zd x_ip2 = % 20.15g and x_ip1 = % 20.15g, y_ip2 = % 20.15g and y_ip1 = % 20.15g.", 
                i, n,
                ncm_vector_get (s->xv, i + 2), ncm_vector_get (s->xv, i + 1),
                ncm_vector_get (s->yv, i + 2), ncm_vector_get (s->yv, i + 1));
+    }
 #endif
     
     {

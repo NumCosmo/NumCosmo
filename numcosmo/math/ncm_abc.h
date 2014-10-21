@@ -65,6 +65,7 @@ struct _NcmABC
   GObject parent_instance;
   NcmMSetCatalog *mcat;
   NcmDataset *dset;
+  NcmDataset *dset_mock;
   NcmMemoryPool *mp;
   NcmMSetTransKern *prior;
   NcmMSetTransKern *tkern;
