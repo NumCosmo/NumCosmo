@@ -126,7 +126,7 @@ _ncm_serialize_finalize (GObject *object)
   
   g_regex_unref (ser->is_named_regex);
   g_regex_unref (ser->parse_obj_regex);
-printf ("Fucking finalizing!\n");
+
   /* Chain up : end */
   G_OBJECT_CLASS (ncm_serialize_parent_class)->finalize (object);
 }
