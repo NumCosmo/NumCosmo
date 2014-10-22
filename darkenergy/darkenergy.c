@@ -623,7 +623,10 @@ main (gint argc, gchar *argv[])
 
     if (de_fit.fisher)
     {
-      ncm_mset_trans_kern_gauss_set_cov (mcsg, fit->fstate->covar);
+      NcmMatrix *covar = ncm_matrix_dup (fit->fstate->covar);
+      ncm_matrix_scale (covar, 2.0);
+      ncm_mset_trans_kern_gauss_set_cov (mcsg, covar);
+      ncm_matrix_free (covar);
     }
     else
     {

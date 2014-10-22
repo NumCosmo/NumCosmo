@@ -417,7 +417,7 @@ _ncm_fit_mcmc_update (NcmFitMCMC *mcmc, NcmFit *fit)
       break;      
   }
 
-  if ((mcmc->mcat->fmode != NCM_FIT_MCMC_MIN_FLUSH_INTERVAL) &&
+  if ((mcmc->mcat->fmode != NCM_MSET_CATALOG_FLUSH_TIMED) &&
       (ncm_timer_task_mean_time (mcmc->nt) < NCM_FIT_MCMC_MIN_FLUSH_INTERVAL))
   {
     ncm_mset_catalog_set_flush_mode (mcmc->mcat, NCM_MSET_CATALOG_FLUSH_TIMED);

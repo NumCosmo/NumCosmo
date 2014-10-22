@@ -30,35 +30,35 @@ darkenergy_LDADD = \
 
 EXTRA_DIST = 
 
-AM_VALAFLAGS = 
-
-if HAVE_GTK
-if HAVE_VAPIGEN
-
-AM_CFLAGS += $(GTK_CFLAGS) -Wl,--export-dynamic
-
-AM_VALAFLAGS += \
-	--pkg numcosmomath-1.0 \
-	--pkg numcosmo-1.0     \
-	--pkg gtk+-3.0         \
-	--pkg gmodule-2.0      \
-	--vapidir=$(abs_top_builddir)/numcosmo
-
-bin_PROGRAMS += gdarkenergy
-
-gdarkenergy_SOURCES =  \
-	gdarkenergy.vala
-
-gdarkenergy_DATA =  \
-	gdarkenergy.glade
-
-EXTRA_DIST += $(gdarkenergy_DATA)
-
-gdarkenergydir = \
-        $(pkgdatadir)-$(VERSION)/gdarkenergy
-
-gdarkenergy_LDADD = \
-        $(top_builddir)/numcosmo/libnumcosmo.la $(GTK_LIBS)
-
-endif
-endif
+#AM_VALAFLAGS = 
+#
+#if HAVE_GTK
+#if HAVE_VAPIGEN
+#
+#AM_CFLAGS += $(GTK_CFLAGS) -Wl,--export-dynamic
+#
+#AM_VALAFLAGS += \
+#	--pkg numcosmomath-1.0 \
+#	--pkg numcosmo-1.0     \
+#	--pkg gtk+-3.0         \
+#	--pkg gmodule-2.0      \
+#	--vapidir=$(abs_top_builddir)/numcosmo
+#
+#bin_PROGRAMS += gdarkenergy
+#
+#gdarkenergy_SOURCES =  \
+#	gdarkenergy.vala
+#
+#gdarkenergy_DATA =  \
+#	gdarkenergy.glade
+#
+#EXTRA_DIST += $(gdarkenergy_DATA)
+#
+#gdarkenergydir = \
+#        $(pkgdatadir)-$(VERSION)/gdarkenergy
+#
+#gdarkenergy_LDADD = \
+#        $(top_builddir)/numcosmo/libnumcosmo.la $(GTK_LIBS)
+#
+#endif
+#endif
