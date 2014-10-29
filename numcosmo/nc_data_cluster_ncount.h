@@ -77,6 +77,7 @@ struct _NcDataClusterNCount
   NcmMatrix *z_obs_params;
   NcmMatrix *lnM_obs;
   NcmMatrix *lnM_obs_params;
+  GArray *m2lnL_a;
   gdouble area_survey;
   guint np;
   gdouble log_np_fac;

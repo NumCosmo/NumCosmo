@@ -412,7 +412,9 @@ _nc_abc_cluster_ncount_mock_distance (NcmABC *abc, NcmDataset *dset, NcmVector *
   gdouble res = 0.0;
   gdouble pdf_data = 0.0;
   gdouble pdf_mock = 0.0;
-
+  gdouble nebins = 0.0;
+  gint e = 0;
+/*
   for (i = 0; i < total; i++)
   {
     pdf_data += abcnc->data_summary->bin[i];
@@ -420,8 +422,39 @@ _nc_abc_cluster_ncount_mock_distance (NcmABC *abc, NcmDataset *dset, NcmVector *
     
     res += gsl_pow_2 ((pdf_data - pdf_mock) / abcnc->data_total); 
   }
+  */
+
+  for (i = 0; i < total; i++)
+  {
+    pdf_data += abcnc->data_summary->bin[i];
+    pdf_mock += ncount->z_lnM->bin[i];
+
+    if (abcnc->data_total - pdf_data <= 5.0)
+      break;
+    
+    if (pdf_data >= 5.0)
+    {
+      nebins++;
+      res += -2.0 * ((pdf_mock - pdf_data) * log (pdf_data) + lgamma_r (pdf_data + 1.0, &e) - lgamma_r (pdf_mock + 1, &e));
+      pdf_data = 0.0;
+      pdf_mock = 0.0;
+    }
+  }
+
+  for (; i < total; i++)
+  {
+    pdf_data += abcnc->data_summary->bin[i];
+    pdf_mock += ncount->z_lnM->bin[i];
+  }
+  if (pdf_data != 0.0 || pdf_mock != 0.0)
+  {
+    nebins++;
+    res += -2.0 * ((pdf_mock - pdf_data) * log (pdf_data) + lgamma_r (pdf_data + 1.0, &e) - lgamma_r (pdf_mock + 1, &e));
+    pdf_data = 0.0;
+    pdf_mock = 0.0;    
+  }
   
-  return sqrt (res);
+  return res / nebins;
 }
 
 static gdouble 

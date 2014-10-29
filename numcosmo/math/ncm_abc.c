@@ -748,10 +748,17 @@ ncm_abc_start_run (NcmABC *abc)
 void
 ncm_abc_end_run (NcmABC *abc)
 {
+  guint i;
+  gdouble WT = 0.0;
   if (ncm_timer_task_is_running (abc->nt))
     ncm_timer_task_end (abc->nt);
 
   ncm_mset_catalog_sync (abc->mcat, TRUE);
+
+  for (i = 0; i < abc->n; i++)
+    WT += g_array_index (abc->weights, gdouble, i);
+  for (i = 0; i < abc->n; i++)
+    g_array_index (abc->weights, gdouble, i) = g_array_index (abc->weights, gdouble, i) / WT;
 
   switch (abc->mtype)
   {
@@ -1186,12 +1193,20 @@ ncm_abc_start_update (NcmABC *abc)
 void
 ncm_abc_end_update (NcmABC *abc)
 {
+  guint i;
+  gdouble WT = 0.0;
+  
   if (ncm_timer_task_is_running (abc->nt))
     ncm_timer_task_end (abc->nt);
 
   g_clear_pointer (&abc->wran, gsl_ran_discrete_free);
   g_clear_pointer (&abc->mcat_tm1, g_ptr_array_unref);
 
+  for (i = 0; i < abc->n; i++)
+    WT += g_array_index (abc->weights, gdouble, i);
+  for (i = 0; i < abc->n; i++)
+    g_array_index (abc->weights, gdouble, i) = g_array_index (abc->weights, gdouble, i) / WT;
+  
   ncm_mset_catalog_sync (abc->mcat, TRUE);
   switch (abc->mtype)
   {
@@ -1326,22 +1341,21 @@ _ncm_abc_thread_update_eval (glong i, glong f, gpointer data)
 
     ncm_mset_trans_kern_generate (abc->tkern, theta, abct->thetastar, abct->rng);
 
-/*
-    _NCM_MUTEX_LOCK (&update_lock);
-    printf ("# choice %zu\n", np);
-    ncm_vector_log_vals (theta,           "# v_choice = ", "% 20.15g");
-    ncm_vector_log_vals (abct->thetastar, "# v_tkern  = ", "% 20.15g");
-    _NCM_MUTEX_UNLOCK (&update_lock);
-*/
-
     ncm_mset_fparams_set_vector (abct->mset, abct->thetastar);
     ncm_dataset_resample (abct->dset, abct->mset, abct->rng);
 
     dist = ncm_abc_mock_distance (abc, abct->dset, theta, abct->thetastar, abct->rng);
     prob = ncm_abc_distance_prob (abc, dist);
-
+/*
+    _NCM_MUTEX_LOCK (&update_lock);
+    printf ("# choice %zu\n", np);
+    ncm_vector_log_vals (theta,           "# v_choice = ", "% 20.15g");
+    ncm_vector_log_vals (abct->thetastar, "# v_tkern  = ", "% 20.15g");
+    printf ("# dist % 20.15g prob % 20.15g\n", dist, prob);
+    _NCM_MUTEX_UNLOCK (&update_lock);
+*/
     ncm_vector_free (theta);
-
+    
     _NCM_MUTEX_LOCK (&update_lock);
     abc->ntotal++;
     _NCM_MUTEX_UNLOCK (&update_lock);

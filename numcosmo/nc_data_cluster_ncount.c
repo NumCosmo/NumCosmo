@@ -88,6 +88,7 @@ nc_data_cluster_ncount_init (NcDataClusterNCount *ncount)
   ncount->z_obs_params   = NULL;
   ncount->lnM_obs        = NULL;
   ncount->lnM_obs_params = NULL;
+  ncount->m2lnL_a        = g_array_new (FALSE, FALSE, sizeof (gdouble));
   ncount->area_survey    = 0.0;
   ncount->np             = 0.0;
   ncount->log_np_fac     = 0.0;
@@ -347,6 +348,8 @@ nc_data_cluster_ncount_dispose (GObject *object)
 
   ncm_vector_clear (&ncount->lnM_nodes);
   ncm_vector_clear (&ncount->z_nodes);  
+
+  g_clear_pointer (&ncount->m2lnL_a, &g_array_unref);
   
   /* Chain up : end */
   G_OBJECT_CLASS (nc_data_cluster_ncount_parent_class)->dispose (object);
@@ -1239,7 +1242,6 @@ typedef struct
   NcClusterAbundance *cad;
   NcDataClusterNCount *ncount;
   NcHICosmo *cosmo;
-  gdouble *m2lnL;
 } _Evald2N;
 
 static void
@@ -1247,9 +1249,7 @@ _eval_z_p_lnm_p_d2n (glong i, glong f, gpointer data)
 {
   _Evald2N *evald2n = (_Evald2N *) data;
   glong n;
-  gdouble m2lnL = 0.0;
-  G_LOCK_DEFINE_STATIC (save_m2lnL);
-
+  
   for (n = i; n < f; n++)
   {
     gdouble *lnMn_obs = ncm_matrix_ptr (evald2n->ncount->lnM_obs, n, 0);
@@ -1257,12 +1257,8 @@ _eval_z_p_lnm_p_d2n (glong i, glong f, gpointer data)
     gdouble *zn_obs = ncm_matrix_ptr (evald2n->ncount->z_obs, n, 0);
     gdouble *zn_obs_params = evald2n->ncount->z_obs_params != NULL ? ncm_matrix_ptr (evald2n->ncount->z_obs_params, n, 0) : NULL;
     const gdouble mlnLn = -log (nc_cluster_abundance_z_p_lnm_p_d2n (evald2n->cad, evald2n->cosmo, lnMn_obs, lnMn_obs_params, zn_obs, zn_obs_params));
-    m2lnL += mlnLn;
+    g_array_index (evald2n->ncount->m2lnL_a, gdouble, n) = mlnLn;
   }
-
-  G_LOCK (save_m2lnL);
-  *evald2n->m2lnL += m2lnL;
-  G_UNLOCK (save_m2lnL);
 }
 
 static void
@@ -1270,8 +1266,6 @@ _eval_z_p_d2n (glong i, glong f, gpointer data)
 {
   _Evald2N *evald2n = (_Evald2N *) data;
   glong n;
-  gdouble m2lnL = 0.0;
-  G_LOCK_DEFINE_STATIC (save_m2lnL);
 
   for (n = i; n < f; n++)
   {
@@ -1279,12 +1273,8 @@ _eval_z_p_d2n (glong i, glong f, gpointer data)
     gdouble *zn_obs = ncm_matrix_ptr (evald2n->ncount->z_obs, n, 0);
     gdouble *zn_obs_params = evald2n->ncount->z_obs_params != NULL ? ncm_matrix_ptr (evald2n->ncount->z_obs_params, n, 0) : NULL;
     const gdouble mlnLn = -log (nc_cluster_abundance_z_p_d2n (evald2n->cad, evald2n->cosmo, lnMn, zn_obs, zn_obs_params));
-    m2lnL += mlnLn;
+    g_array_index (evald2n->ncount->m2lnL_a, gdouble, n) = mlnLn;
   }
-
-  G_LOCK (save_m2lnL);
-  *evald2n->m2lnL += m2lnL;
-  G_UNLOCK (save_m2lnL);
 }
 
 static void
@@ -1292,8 +1282,6 @@ _eval_lnm_p_d2n (glong i, glong f, gpointer data)
 {
   _Evald2N *evald2n = (_Evald2N *) data;
   glong n;
-  gdouble m2lnL = 0.0;
-  G_LOCK_DEFINE_STATIC (save_m2lnL);
 
   for (n = i; n < f; n++)
   {
@@ -1301,13 +1289,8 @@ _eval_lnm_p_d2n (glong i, glong f, gpointer data)
     gdouble *lnMn_obs = ncm_matrix_ptr (evald2n->ncount->lnM_obs, n, 0);
     gdouble *lnMn_obs_params = evald2n->ncount->lnM_obs_params != NULL ? ncm_matrix_ptr (evald2n->ncount->lnM_obs_params, n, 0) : NULL;
     const gdouble mlnLn = -log (nc_cluster_abundance_lnm_p_d2n (evald2n->cad, evald2n->cosmo, lnMn_obs, lnMn_obs_params, zn));
-
-    m2lnL += mlnLn;
+    g_array_index (evald2n->ncount->m2lnL_a, gdouble, n) = mlnLn;
   }
-
-  G_LOCK (save_m2lnL);
-  *evald2n->m2lnL += m2lnL;
-  G_UNLOCK (save_m2lnL);
 }
 
 static void
@@ -1315,20 +1298,14 @@ _eval_d2n (glong i, glong f, gpointer data)
 {
   _Evald2N *evald2n = (_Evald2N *) data;
   glong n;
-  gdouble m2lnL = 0.0;
-  G_LOCK_DEFINE_STATIC (save_m2lnL);
 
   for (n = i; n < f; n++)
   {
     const gdouble lnMn = ncm_vector_get (evald2n->ncount->lnM_true, n);
     const gdouble zn = ncm_vector_get (evald2n->ncount->z_true, n);
     const gdouble mlnLn = -log (nc_cluster_abundance_d2n (evald2n->cad, evald2n->cosmo, lnMn, zn));
-    m2lnL += mlnLn;
+    g_array_index (evald2n->ncount->m2lnL_a, gdouble, n) = mlnLn;
   }
-
-  G_LOCK (save_m2lnL);
-  *evald2n->m2lnL += m2lnL;
-  G_UNLOCK (save_m2lnL);
 }
 
 static void
@@ -1336,20 +1313,14 @@ _eval_intp_d2n (glong i, glong f, gpointer data)
 {
   _Evald2N *evald2n = (_Evald2N *) data;
   glong n;
-  gdouble m2lnL = 0.0;
-  G_LOCK_DEFINE_STATIC (save_m2lnL);
 
   for (n = i; n < f; n++)
   {
     const gdouble lnMn = ncm_vector_get (evald2n->ncount->lnM_true, n);
     const gdouble zn = ncm_vector_get (evald2n->ncount->z_true, n);
     const gdouble mlnLn = -log (nc_cluster_abundance_intp_d2n (evald2n->cad, evald2n->cosmo, lnMn, zn));
-    m2lnL += mlnLn;
+    g_array_index (evald2n->ncount->m2lnL_a, gdouble, n) = mlnLn;
   }
-
-  G_LOCK (save_m2lnL);
-  *evald2n->m2lnL += m2lnL;
-  G_UNLOCK (save_m2lnL);
 }
 
 static void
@@ -1358,7 +1329,7 @@ _nc_data_cluster_ncount_m2lnL_val (NcmData *data, NcmMSet *mset, gdouble *m2lnL)
   NcDataClusterNCount *ncount = NC_DATA_CLUSTER_NCOUNT (data);
   NcClusterAbundance *cad = ncount->cad;
   NcHICosmo *cosmo = NC_HICOSMO (ncm_mset_peek (mset, nc_hicosmo_id ()));
-
+  
   *m2lnL = 0.0;
 
   if (ncount->binned)
@@ -1371,9 +1342,11 @@ _nc_data_cluster_ncount_m2lnL_val (NcmData *data, NcmMSet *mset, gdouble *m2lnL)
     return;
   }
 
+  g_array_set_size (ncount->m2lnL_a, ncount->np);
+
   if (ncount->use_true_data)
   {
-    _Evald2N evald2n = {cad, ncount, cosmo, m2lnL};
+    _Evald2N evald2n = {cad, ncount, cosmo};
     g_assert (ncount->z_true);
     g_assert (ncount->lnM_true);
     ncm_func_eval_threaded_loop_full (&_eval_intp_d2n, 0, ncount->np, &evald2n);
@@ -1387,33 +1360,38 @@ _nc_data_cluster_ncount_m2lnL_val (NcmData *data, NcmMSet *mset, gdouble *m2lnL)
     
     if (z_p && lnM_p)
     {
-      _Evald2N evald2n = {cad, ncount, cosmo, m2lnL};
+      _Evald2N evald2n = {cad, ncount, cosmo};
       ncm_func_eval_threaded_loop_full (&_eval_z_p_lnm_p_d2n, 0, ncount->np, &evald2n);
     }
     else if (z_p && !lnM_p)
     {
       g_assert (ncount->lnM_true);
-      _Evald2N evald2n = {cad, ncount, cosmo, m2lnL};
+      _Evald2N evald2n = {cad, ncount, cosmo};
       ncm_func_eval_threaded_loop_full (&_eval_z_p_d2n, 0, ncount->np, &evald2n);
     }
     else if (!z_p && lnM_p)
     {
       g_assert (ncount->z_true);
-      _Evald2N evald2n = {cad, ncount, cosmo, m2lnL};
+      _Evald2N evald2n = {cad, ncount, cosmo};
       ncm_func_eval_threaded_loop_full (&_eval_lnm_p_d2n, 0, ncount->np, &evald2n);
     }
     else
     {
       g_assert (ncount->z_true);
       g_assert (ncount->lnM_true);
-      _Evald2N evald2n = {cad, ncount, cosmo, m2lnL};
+      _Evald2N evald2n = {cad, ncount, cosmo};
       ncm_func_eval_threaded_loop_full (&_eval_d2n, 0, ncount->np, &evald2n);
 
     }
   }
 
   {
-    const gdouble n_th = nc_cluster_abundance_n (cad, cosmo);    
+    const gdouble n_th = nc_cluster_abundance_n (cad, cosmo);
+    guint i;
+    for (i = 0 ; i < ncount->np; i++) 
+    { 
+      *m2lnL += g_array_index (ncount->m2lnL_a, gdouble, i); 
+    }
     *m2lnL += (ncount->log_np_fac + n_th);
   }
 
