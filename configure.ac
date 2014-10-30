@@ -552,21 +552,26 @@ else
 fi
 AC_SUBST(have_cuba_support)
 
-AC_MSG_CHECKING([if libcuba version is >= 3.1])
+AC_MSG_CHECKING([libcuba version])
 AC_COMPILE_IFELSE(
             [AC_LANG_PROGRAM([[#include <cuba.h>]],
                [[Cuhre (0, 0, (void *)0, (void *)0, 0.0, 0.0, 0, 0, 0, 0, (void *)0 /*AQUI*/,  (void *)0, (void *)0, (void *)0, (void *)0, (void *)0, (void *)0);]])],
             [AC_DEFINE([HAVE_LIBCUBA_3_1],[1], [Have the libcuba >= 3.1])
-             cuba_3_1="yes"],
-            [cuba_3_1="no"
+             cuba_3_1="<= 3.3"],
+            [cuba_3_1="error"
 AC_COMPILE_IFELSE(
             [AC_LANG_PROGRAM([[#include <cuba.h>]],
                [[Cuhre (0, 0, (void *)0, (void *)0, 0, 0.0, 0.0, 0, 0, 0, 0, (void *)0 /*AQUI*/,  (void *)0, (void *)0, (void *)0, (void *)0, (void *)0, (void *)0);]])],
             [AC_DEFINE([HAVE_LIBCUBA_3_3],[1], [Have the libcuba >= 3.3])
-             cuba_3_1="yes"],
-            [cuba_3_1="no"
-            ])
-            ])
+             cuba_3_1="<= 3.3"],
+            [cuba_3_1="error"
+AC_COMPILE_IFELSE(
+            [AC_LANG_PROGRAM([[#include <cuba.h>]],
+               [[Cuhre (0, 0, (void *)0, (void *)0, 0, 0.0, 0.0, 0, 0, 0, 0, (void *)0 /*AQUI*/,  /*AQUI*/ (void *)0, (void *)0, (void *)0, (void *)0, (void *)0, (void *)0, (void *)0);]])],
+            [AC_DEFINE([HAVE_LIBCUBA_4_0],[1], [Have the libcuba >= 4.0])
+             cuba_3_1=">= 4.0"],
+            [cuba_3_1="error"
+            ])])])
 AC_MSG_RESULT([$cuba_3_1])
 
 dnl ***************************************************************************

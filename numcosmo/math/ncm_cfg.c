@@ -108,6 +108,10 @@
 #include <fftw3.h>
 #endif /* NUMCOSMO_HAVE_FFTW3 */
 
+#ifdef HAVE_LIBCUBA
+#include <cuba.h>
+#endif
+
 #ifndef G_VALUE_INIT
 #define G_VALUE_INIT {0}
 #endif
@@ -154,6 +158,15 @@ ncm_cfg_init (void)
 
 #ifndef HAVE_LIBCUBA
   clencurt_gen (19);
+#else
+  g_setenv ("CUBACORES", "0", TRUE);
+  g_setenv ("CUBACORESMAX", "0", TRUE);
+  g_setenv ("CUBAACCEL", "0", TRUE);
+  g_setenv ("CUBAACCELMAX", "0", TRUE);
+#  ifdef HAVE_LIBCUBA_4_0
+  cubaaccel (0, 0);
+  cubacores (0, 0);
+#  endif
 #endif /* !HAVE_LIBCUBA */
 
   gsl_err = gsl_set_error_handler_off ();
@@ -165,7 +178,7 @@ ncm_cfg_init (void)
   g_type_init();
 #endif
 
-  g_setenv ("CUBACORES", "0", TRUE);
+  
 
   _log_msg_id = g_log_set_handler (G_LOG_DOMAIN, G_LOG_LEVEL_MESSAGE | G_LOG_LEVEL_DEBUG, _ncm_cfg_log_message, NULL);
   _log_stream = stdout;
