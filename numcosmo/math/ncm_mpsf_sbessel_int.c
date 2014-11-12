@@ -1006,7 +1006,7 @@ _xn_jl_finite_inverse_x (gint l, guint j, mpq_t q, mpz_t sum_sin, mpz_t sum_cos,
   }
 
   if (last_k[0] && last_k[1] && (abs (last_k[0] - last_k[1]) != 1))
-    g_error ("Series for sin and cos dont converge together %lu %lu\n", last_k[0], last_k[1]);
+    g_error ("Series for sin and cos dont converge together %lu %lu.", last_k[0], last_k[1]);
 
   if (last_k[1] > last_k[0])
   {

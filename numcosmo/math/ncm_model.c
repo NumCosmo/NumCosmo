@@ -929,7 +929,7 @@ ncm_model_class_set_sparam (NcmModelClass *model_class, guint sparam_id, gchar *
   g_assert (prop_id > 0);
 
   if (g_ptr_array_index (model_class->sparam, sparam_id) != NULL)
-    g_error ("Scalar Parameter: %u is already set\n", sparam_id);
+    g_error ("Scalar Parameter: %u is already set.", sparam_id);
 
   g_ptr_array_index (model_class->sparam, sparam_id) = sparam;
 
@@ -982,7 +982,7 @@ ncm_model_class_set_vparam (NcmModelClass *model_class, guint vparam_id, guint d
   g_assert (prop_len_id > 0);
 
   if (g_ptr_array_index (model_class->vparam, vparam_id) != NULL)
-    g_error ("Vector Parameter: %u is already set\n", vparam_id);
+    g_error ("Vector Parameter: %u is already set.", vparam_id);
 
   g_ptr_array_index (model_class->vparam, vparam_id) = vparam;
   g_object_class_install_property (object_class, prop_id,

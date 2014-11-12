@@ -105,7 +105,7 @@ ncm_lh_ratio2d_constructed (GObject *object)
       g_assert_cmpint (lhr2d->pi[i].mid,  <, NCM_MODEL_MAX_ID);
 
       if (ncm_mset_peek (lhr2d->fit->mset, lhr2d->pi[i].mid) == NULL)
-        g_error ("ncm_lh_ratio2d_constructed: cannot use parameter[%d:%u], model not set\n", 
+        g_error ("ncm_lh_ratio2d_constructed: cannot use parameter[%d:%u], model not set.", 
                  lhr2d->pi[i].mid, lhr2d->pi[i].pid);
 
       if (ncm_mset_param_get_ftype (lhr2d->fit->mset, lhr2d->pi[0].mid, lhr2d->pi[0].pid) != NCM_PARAM_TYPE_FREE)

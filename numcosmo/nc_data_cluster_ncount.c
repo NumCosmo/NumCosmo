@@ -1991,7 +1991,7 @@ nc_data_cluster_ncount_catalog_load (NcDataClusterNCount *ncount, gchar *filenam
   NCM_FITS_ERROR (status);
 
   if (hdutype != BINARY_TBL)
-    g_error ("%s (%d): NcDataClusterNCount catalog is not binary!\n", __FILE__, __LINE__);
+    g_error ("%s (%d): NcDataClusterNCount catalog is not binary!", __FILE__, __LINE__);
 
   nc_cluster_redshift_clear (&ncount->z);
   nc_cluster_mass_clear (&ncount->m);

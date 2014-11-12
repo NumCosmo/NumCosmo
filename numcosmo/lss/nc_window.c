@@ -63,7 +63,7 @@ nc_window_new_from_name (gchar *window_name)
   GObject *obj = ncm_serialize_global_from_string (window_name);
   GType window_type = G_OBJECT_TYPE (obj);
   if (!g_type_is_a (window_type, NC_TYPE_WINDOW))
-	g_error ("nc_window_new_from_name: NcWindow %s do not descend from %s\n", window_name, g_type_name (NC_TYPE_WINDOW));
+	g_error ("nc_window_new_from_name: NcWindow %s do not descend from %s.", window_name, g_type_name (NC_TYPE_WINDOW));
   return NC_WINDOW (obj);
 }
 

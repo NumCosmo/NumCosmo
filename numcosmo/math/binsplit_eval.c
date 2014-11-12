@@ -121,7 +121,7 @@ NC_BINSPLIT_EVAL_NAME (NcmBinSplit *bs, gulong n1, gulong n2)
         mpz_add (bs->T, bs->T, bs->temp4);
         break;
       default:
-        g_error ("binsplit_eval[%s] should not be called with (%ld, %ld) nd = %ld\n", __func__, n1, n2, nd);
+        g_error ("binsplit_eval[%s] should not be called with (%ld, %ld) nd = %ld.", __func__, n1, n2, nd);
         break;
     }
   }

@@ -176,7 +176,7 @@ main (void)
   }
 #endif /* NUMCOSMO_HAVE_FFTW3 */
 #else
-  g_error ("chealpix or cfitsio not installed\n");
+  g_error ("chealpix or cfitsio not installed.");
 #endif /* defined NUMCOSMO_HAVE_CHEALPIX && defined NUMCOSMO_HAVE_CFITSIO */  
   return 0;
 }

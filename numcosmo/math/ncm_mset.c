@@ -1584,9 +1584,9 @@ ncm_mset_save (NcmMSet *mset, gchar *filename, gboolean save_comment)
     gsize len = 0;
     gchar *mset_data = g_key_file_to_data (msetfile, &len, &error);
     if (error != NULL)
-      g_error ("Error converting NcmMSet to configuration file:\n  %s\n", error->message);
+      g_error ("Error converting NcmMSet to configuration file: %s", error->message);
     if (!g_file_set_contents (filename, mset_data, len, &error))
-      g_error ("Error saving configuration file to disk:\n  %s\n", error->message);
+      g_error ("Error saving configuration file to disk: %s", error->message);
     g_free (mset_data);
     g_key_file_free (msetfile);
   }
@@ -1612,7 +1612,7 @@ ncm_mset_load (gchar *filename)
   
   if (!g_key_file_load_from_file (msetfile, filename, G_KEY_FILE_KEEP_COMMENTS | G_KEY_FILE_KEEP_TRANSLATIONS, &error))
   {
-    g_error ("ncm_mset_load: Invalid mset configuration file: %s\n  %s\n", filename, error->message);
+    g_error ("ncm_mset_load: Invalid mset configuration file: %s %s", filename, error->message);
     return NULL;
   }
 

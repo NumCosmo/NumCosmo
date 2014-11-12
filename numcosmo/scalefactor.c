@@ -328,7 +328,7 @@ _nc_scale_factor_calc_spline (NcScaleFactor *a)
 		g_array_index (y, gdouble, y->len - 1) = 0.0;
 	}
 	else
-		g_error ("_nc_scale_factor_calc_spline today redshift must be zero not % 20.15g\n",
+		g_error ("_nc_scale_factor_calc_spline today redshift must be zero not % 20.15g.",
 		         fabs (g_array_index (y, gdouble, y->len - 1)));
 
 	ncm_spline_set_array (a->a_t, x, y, TRUE);

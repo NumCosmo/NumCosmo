@@ -116,10 +116,16 @@
 #define G_VALUE_INIT {0}
 #endif
 
+#ifdef HAVE_EXECINFO_H
+#include <execinfo.h>
+#endif /* HAVE_EXECINFO_H */
+
 static gchar *numcosmo_path = NULL;
 static gboolean numcosmo_init = FALSE;
 static FILE *_log_stream = NULL;
+static FILE *_log_stream_err = NULL;
 static guint _log_msg_id = 0;
+static guint _log_err_id = 0;
 static gboolean _enable_msg = TRUE;
 static gboolean _enable_msg_flush = TRUE;
 static gsl_error_handler_t *gsl_err = NULL;
@@ -137,6 +143,35 @@ _ncm_cfg_log_message (const gchar *log_domain, GLogLevelFlags log_level, const g
       fflush (_log_stream);
   }
 }
+
+static void
+_ncm_cfg_log_error (const gchar *log_domain, GLogLevelFlags log_level, const gchar *message, gpointer user_data)
+{
+  const gchar *pname = g_get_prgname ();
+  NCM_UNUSED (log_domain);
+  NCM_UNUSED (log_level);
+  NCM_UNUSED (user_data);
+
+  fprintf (_log_stream_err, "# (%s): %s-ERROR: %s\n", pname, log_domain, message);
+#if defined (HAVE_BACKTRACE) && defined (HAVE_BACKTRACE_SYMBOLS)
+  {
+    gpointer tarray[30];
+    gsize size = backtrace (tarray, 30);
+    gchar **trace = backtrace_symbols (tarray, size);
+    gsize i;
+    // print out all the frames to stderr
+    for (i = 0; i < size; i++)
+    {
+      fprintf (_log_stream_err, "# (%s): %s-BACKTRACE:[%02zd] %s\n", pname, log_domain, i, trace[i]);
+    }
+    g_free (trace);
+  }
+#endif
+  fflush (_log_stream_err);
+  
+  abort ();
+}
+
 
 void clencurt_gen (int M);
 
@@ -178,10 +213,11 @@ ncm_cfg_init (void)
   g_type_init();
 #endif
 
-  
+  _log_stream = stdout;
+  _log_stream_err = stderr;
 
   _log_msg_id = g_log_set_handler (G_LOG_DOMAIN, G_LOG_LEVEL_MESSAGE | G_LOG_LEVEL_DEBUG, _ncm_cfg_log_message, NULL);
-  _log_stream = stdout;
+  _log_err_id = g_log_set_handler (G_LOG_DOMAIN, G_LOG_LEVEL_ERROR | G_LOG_LEVEL_CRITICAL | G_LOG_FLAG_FATAL | G_LOG_FLAG_RECURSION, _ncm_cfg_log_error, NULL);
 
   ncm_cfg_register_obj (NCM_TYPE_RNG);
   

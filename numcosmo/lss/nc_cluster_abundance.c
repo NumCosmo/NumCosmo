@@ -769,7 +769,11 @@ nc_cluster_abundance_prepare_inv_dNdz (NcClusterAbundance *cad, NcHICosmo *model
       else
       {
         gdouble onemn = nc_mass_function_n (cad->mfp, model, cad->lnMi, cad->lnMf, z1, cad->zf, sp_optimize) / cad->norma;
-        f = _nc_cad_inv_dNdz_convergence_f_onemn (onemn, cad->z_epsilon);
+        gdouble f_try = _nc_cad_inv_dNdz_convergence_f_onemn (onemn, cad->z_epsilon);
+        if (f_try < f)
+          f = f * (1.0 + GSL_SIGN (f) * 0.01);
+        else
+          f = f_try;
       }
       ncm_vector_set (cad->inv_z->xv, i, f);
       ncm_vector_set (cad->inv_z->yv, i, z1);
@@ -818,45 +822,32 @@ nc_cluster_abundance_prepare_inv_dNdlnM_z (NcClusterAbundance *cad, NcHICosmo *m
   guint i;
   g_assert (z > 0.0);
 
-  ncm_vector_set (cad->inv_lnM->xv, 0, f); //dNdz_u2 / dNdz;
+  ncm_vector_set (cad->inv_lnM->xv, 0, f);
   ncm_vector_set (cad->inv_lnM->yv, 0, lnM0);
-
-  //printf ("prep[%d] % 20.15g % 20.15g % 20.15g % 20.15g\n", 0, ntot, f, lnM0, z);
   
   for (i = 1; i < cad->inv_lnM->len; i++)
   {
     gdouble lnM1 = cad->lnMi + dlnM * i;
-    Delta = nc_mass_function_dn_dz (cad->mfp, model, lnM0, lnM1, z, use_spline) / dNdz;
-    ntot += fabs (Delta);
-    if (ntot > 0.99)
-      break;
-    else
+    if (ntot < 0.99)
+    {
+      Delta = nc_mass_function_dn_dz (cad->mfp, model, lnM0, lnM1, z, use_spline) / dNdz;
+      ntot += fabs (Delta);
       f = _nc_cad_inv_dNdz_convergence_f (ntot, cad->lnM_epsilon);
-    ncm_vector_set (cad->inv_lnM->xv, i, f); //dNdz_u2 / dNdz;
+    }
+    else
+    {
+      gdouble onemn = nc_mass_function_dn_dz (cad->mfp, model, lnM1, cad->lnMf, z, use_spline) / dNdz;
+      gdouble f_try = _nc_cad_inv_dNdz_convergence_f_onemn (fabs (onemn), cad->lnM_epsilon);
+      if (f_try < f)
+        f = f * (1.0 + GSL_SIGN (f) * 0.01);
+      else
+        f = f_try;
+    }
+    ncm_vector_set (cad->inv_lnM->xv, i, f);
     ncm_vector_set (cad->inv_lnM->yv, i, lnM1);
-    //printf ("prep[%d] % 20.15g % 20.15g % 20.15g % 20.15g\n", i, 1.0 - ntot, f, lnM1, z);
+
     lnM0 = lnM1;
   }
-
-  for (; i < cad->inv_lnM->len; i++)
-  {
-    gdouble lnM1 = cad->lnMi + dlnM * i;
-    gdouble onemn = nc_mass_function_dn_dz (cad->mfp, model, lnM1, cad->lnMf, z, use_spline) / dNdz;
-    gdouble f_try = _nc_cad_inv_dNdz_convergence_f_onemn (fabs (onemn), cad->lnM_epsilon);
-    if (f_try < f)
-      break;
-    f = f_try;
-    ncm_vector_set (cad->inv_lnM->xv, i, f); //dNdz_u2 / dNdz;
-    ncm_vector_set (cad->inv_lnM->yv, i, lnM1);
-    //printf ("prep[%d] % 20.15g % 20.15g % 20.15g % 20.15g % 20.15g\n", i, onemn, f, lnM1, cad->lnMf, z);
-  }
-
-  for (; i < cad->inv_lnM->len; i++)
-  {
-    gdouble lnM1 = cad->lnMi + dlnM * i;
-    ncm_vector_set (cad->inv_lnM->xv, i, ncm_vector_get (cad->inv_lnM->xv, i - 1) + 5.0);
-    ncm_vector_set (cad->inv_lnM->yv, i, lnM1);
-  }  
 
   ncm_spline_prepare (cad->inv_lnM);
 }

@@ -942,7 +942,7 @@ ncm_serialize_from_string (NcmSerialize *ser, const gchar *obj_ser)
                                 obj_prop, NULL, NULL, &error);
       if (error != NULL)
       {
-        g_error ("ncm_serialize_from_string: cannot parse object '%s' parameters '%s', error %s\n", obj_name, obj_prop, error->message);
+        g_error ("ncm_serialize_from_string: cannot parse object '%s' parameters '%s', error %s.", obj_name, obj_prop, error->message);
         g_error_free (error);
       }
     }
@@ -958,7 +958,7 @@ ncm_serialize_from_string (NcmSerialize *ser, const gchar *obj_ser)
   else
   {
     g_match_info_free (match_info);
-    g_error ("ncm_serialize_from_string: cannot indentify object (%s) in string '%s'\n", NCM_SERIALIZE_OBJECT_TYPE, obj_ser);
+    g_error ("ncm_serialize_from_string: cannot indentify object (%s) in string '%s'.", NCM_SERIALIZE_OBJECT_TYPE, obj_ser);
   }
 
   return obj;
@@ -984,7 +984,7 @@ ncm_serialize_from_name_params (NcmSerialize *ser, const gchar *obj_name, GVaria
     return obj;
 
   if (gtype == 0)
-    g_error ("ncm_serialize_from_name_params: object '%s' is not registered\n", obj_name);
+    g_error ("ncm_serialize_from_name_params: object '%s' is not registered.", obj_name);
 
   g_assert (params == NULL || g_variant_is_of_type (params, G_VARIANT_TYPE (NCM_SERIALIZE_PROPERTIES_TYPE)));
 
@@ -1094,7 +1094,7 @@ _ncm_serialize_gtype_to_gvariant_type (GType t)
           return G_VARIANT_TYPE_INT64;
           break;
         default:
-          g_error ("Unknown gint size %"G_GSIZE_FORMAT"\n", sizeof(gint));
+          g_error ("Unknown gint size %"G_GSIZE_FORMAT".", sizeof(gint));
           break;
       }
       break;
@@ -1113,7 +1113,7 @@ _ncm_serialize_gtype_to_gvariant_type (GType t)
           return G_VARIANT_TYPE_UINT64;
           break;
         default:
-          g_error ("Unknown gint size %"G_GSIZE_FORMAT"\n", sizeof(guint));
+          g_error ("Unknown gint size %"G_GSIZE_FORMAT".", sizeof(guint));
           break;
       }
       break;
@@ -1132,7 +1132,7 @@ _ncm_serialize_gtype_to_gvariant_type (GType t)
           return G_VARIANT_TYPE_INT64;
           break;
         default:
-          g_error ("Unknown gint size %"G_GSIZE_FORMAT"\n", sizeof(glong));
+          g_error ("Unknown gint size %"G_GSIZE_FORMAT".", sizeof(glong));
           break;
       }
       break;
@@ -1151,7 +1151,7 @@ _ncm_serialize_gtype_to_gvariant_type (GType t)
           return G_VARIANT_TYPE_UINT64;
           break;
         default:
-          g_error ("Unknown gint size %"G_GSIZE_FORMAT"\n", sizeof(gulong));
+          g_error ("Unknown gint size %"G_GSIZE_FORMAT".", sizeof(gulong));
           break;
       }
       break;

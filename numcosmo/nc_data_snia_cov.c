@@ -666,7 +666,7 @@ nc_data_snia_cov_load_txt (NcDataSNIACov *snia_cov, const gchar *filename)
   guint64 mu_len;
 
   if (!g_key_file_load_from_file (snia_keyfile, filename, G_KEY_FILE_NONE, &error))
-    g_error ("nc_data_snia_cov_load: invalid configuration: %s\n  %s\n", 
+    g_error ("nc_data_snia_cov_load: invalid configuration: %s %s", 
              filename, 
              error->message);
 
@@ -838,7 +838,7 @@ _nc_data_snia_cov_load_snia_data (NcDataSNIACov *snia_cov, const gchar *filename
           g_error ("_nc_data_snia_cov_load_snia_data: data file [%s] has different number of columns in different rows [%u]", filename, nrow);
         
         if (nrow >= snia_cov->mu_len)
-          g_error ("_nc_data_snia_cov_load_snia_data: cannot load data file [%s] expected nrows %u obtained >%u\n", 
+          g_error ("_nc_data_snia_cov_load_snia_data: cannot load data file [%s] expected nrows %u obtained >%u", 
                    filename, snia_cov->mu_len, nrow);
 
         {
@@ -881,7 +881,7 @@ _nc_data_snia_cov_load_snia_data (NcDataSNIACov *snia_cov, const gchar *filename
     }
 
     if (nrow != snia_cov->mu_len)
-      g_error ("_nc_data_snia_cov_load_snia_data: cannot load data file [%s] expected nrows %u obtained %u\n", 
+      g_error ("_nc_data_snia_cov_load_snia_data: cannot load data file [%s] expected nrows %u obtained %u", 
                filename, snia_cov->mu_len, nrow);
 
     snia_cov->dataset_len = max_dset_id + 1;
@@ -928,7 +928,7 @@ _nc_data_snia_cov_load_matrix (const gchar *filename, NcmMatrix *data)
              ncm_matrix_nrows (data), ncm_matrix_nrows (data), matrix_len, matrix_len);
   
   if (matrix_len * matrix_len != itens_len)
-    g_error ("_nc_data_snia_cov_load_matrix: matrix header say %"G_GINT64_MODIFIER"d length but got %u\n", 
+    g_error ("_nc_data_snia_cov_load_matrix: matrix header say %"G_GINT64_MODIFIER"d length but got %u", 
              matrix_len * matrix_len , itens_len);
 
   for (i = 0; i < matrix_len; i++)

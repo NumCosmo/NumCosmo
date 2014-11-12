@@ -63,7 +63,7 @@ main (gint argc, gchar *argv[])
   NcmRNG *rng = ncm_rng_pool_get ("darkenergy");
 
   ncm_cfg_init ();
-
+  
   context = g_option_context_new ("- test the dark energy models");
   g_option_context_set_summary (context, "DE Summary <FIXME>");
   g_option_context_set_description (context, "DE Description <FIXME>");

@@ -187,7 +187,7 @@ ncm_gsl_odeiv2_evol_step (NcLinearPert *pert, gdouble lambda)
 
   status = gsl_odeiv2_evolve_apply (data->e, data->c, data->s, &data->sys, &pert->pws->lambda, lambda, &pert->pws->dlambda, data->y->data);
   if (status != GSL_SUCCESS)
-    g_error ("Argg!! %d\n", status);
+    g_error ("Argg!! %d.", status);
 
   if (pert->pws->tight_coupling && pert->pws->tight_coupling_end)
     ncm_gsl_odeiv2_end_tight_coupling (pert);

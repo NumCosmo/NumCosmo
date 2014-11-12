@@ -352,7 +352,7 @@ ncm_rng_set_algo (NcmRNG *rng, const gchar *algo)
       }
     }
     if (!found)
-      g_error ("ncm_rng_set_algo: cannot find algorithm %s\n", algo);
+      g_error ("ncm_rng_set_algo: cannot find algorithm %s.", algo);
     type = *t;
   }
   else

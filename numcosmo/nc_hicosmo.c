@@ -140,7 +140,7 @@ nc_hicosmo_new_from_name (GType parent_type, gchar *cosmo_name)
   GType model_type = G_OBJECT_TYPE (obj);
 
   if (!g_type_is_a (model_type, parent_type))
-	g_error ("nc_hicosmo_new_from_name: NcHICosmo %s do not descend from %s\n", cosmo_name, g_type_name (parent_type));
+	g_error ("nc_hicosmo_new_from_name: NcHICosmo %s do not descend from %s.", cosmo_name, g_type_name (parent_type));
   return NC_HICOSMO (obj);
 }
 

@@ -88,7 +88,7 @@ ncm_lh_ratio1d_constructed (GObject *object)
     g_assert (lhr1d->fit->fstate->is_best_fit);
 
     if (ncm_mset_peek (lhr1d->fit->mset, lhr1d->pi.mid) == NULL)
-      g_error ("ncm_lh_ratio1d_constructed: cannot use parameter[%d:%u], model not set\n", 
+      g_error ("ncm_lh_ratio1d_constructed: cannot use parameter[%d:%u], model not set.", 
                lhr1d->pi.mid, lhr1d->pi.pid);
     
     if (ncm_mset_param_get_ftype (lhr1d->fit->mset, lhr1d->pi.mid, lhr1d->pi.pid) != NCM_PARAM_TYPE_FREE)

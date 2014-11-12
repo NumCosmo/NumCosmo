@@ -30,6 +30,7 @@
 #include <glib-object.h>
 #include <numcosmo/build_cfg.h>
 #include <numcosmo/math/ncm_abc.h>
+#include <numcosmo/nc_data_cluster_ncount.h>
 
 #include <gsl/gsl_histogram2d.h>
 
@@ -90,6 +91,7 @@ struct _NcABCClusterNCount
   NcmABC parent_instance;
   gboolean scale_cov;
   gsl_histogram2d *data_summary;
+  NcDataClusterNCount *ncount;
   gdouble data_total;
   NcmMatrix *covar;
   NcmVector *quantiles;

@@ -577,7 +577,7 @@ ncm_fit_nlopt_new_by_name (NcmLikelihood *lh, NcmMSet *mset, NcmFitGradType gtyp
     }
     else
     {
-      g_error ("ncm_fit_nlopt_new_by_name: cannot parse algorithm name ``%s''\n", algo_name);
+      g_error ("ncm_fit_nlopt_new_by_name: cannot parse algorithm name ``%s''.", algo_name);
       return NULL;
     }
   }

@@ -230,7 +230,7 @@ nc_growth_func_prepare (NcGrowthFunc *gf, NcHICosmo *model)
       {
         printf ("zf = %20.16g D = % 20.16g\n", g_array_index (x_array, gdouble, i), g_array_index (y_array, gdouble, i));
       }
-      g_error ("Error: More than %d points to compute the growth spline.\n", _NC_MAX_SPLINE_POINTS);
+      g_error ("Error: More than %d points to compute the growth spline.", _NC_MAX_SPLINE_POINTS);
     }
 
   }

@@ -709,7 +709,7 @@ ncm_matrix_cholesky_decomp (NcmMatrix *cm)
   gint ret = ncm_lapack_dpotrf ('L', ncm_matrix_nrows (cm), ncm_matrix_data (cm), ncm_matrix_nrows (cm));
   if (ret != 0)
   {
-    g_error ("ncm_matrix_cholesky_decomp[ncm_lapack_dpotrf]: %d\n", ret);
+    g_error ("ncm_matrix_cholesky_decomp[ncm_lapack_dpotrf]: %d.", ret);
   }
 }
 

@@ -297,7 +297,7 @@ ncm_rational_coarce_double (gdouble x, mpq_t q)
   if (fabs(mpq_get_d (q) / x - 1) > 1e-15)
   {
     mpfr_fprintf (stderr, "# Q = %Qd\n", q);
-    g_error ("Wrong rational approximation for x = %.16g N(q) = %.16g [%.5e] | 2^(%d)\n", x, mpq_get_d (q), fabs(mpq_get_d (q) / x - 1), expo2);
+    g_error ("Wrong rational approximation for x = %.16g N(q) = %.16g [%.5e] | 2^(%d).", x, mpq_get_d (q), fabs(mpq_get_d (q) / x - 1), expo2);
   }
 
   ncm_memory_pool_return (cdbl_ptr);

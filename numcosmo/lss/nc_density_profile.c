@@ -59,7 +59,7 @@ nc_density_profile_new_from_name (gchar *density_profile_name)
   GObject *obj = ncm_serialize_global_from_string (density_profile_name);
   GType density_profile_type = G_OBJECT_TYPE (obj);
   if (!g_type_is_a (density_profile_type, NC_TYPE_DENSITY_PROFILE))
-    g_error ("nc_density_profile_new_from_name: NcDensityProfile %s do not descend from %s\n", density_profile_name, g_type_name (NC_TYPE_DENSITY_PROFILE));
+    g_error ("nc_density_profile_new_from_name: NcDensityProfile %s do not descend from %s.", density_profile_name, g_type_name (NC_TYPE_DENSITY_PROFILE));
   return NC_DENSITY_PROFILE (obj);
 }
 

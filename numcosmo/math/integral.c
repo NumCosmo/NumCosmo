@@ -339,7 +339,7 @@ ncm_integral_fixed_new (gulong n_nodes, gulong rule_n, gdouble xl, gdouble xu)
 #ifdef HAVE_GSL_GLF
   intf->glt = gsl_integration_glfixed_table_alloc (rule_n);
 #else
-  g_error ("NcmIntegralFixed: Needs gsl version > 1.4\n");
+  g_error ("NcmIntegralFixed: Needs gsl version > 1.4.");
 #endif /* HAVE_GSL_GLF */
 
   return intf;
@@ -359,7 +359,7 @@ ncm_integral_fixed_free (NcmIntegralFixed *intf)
 #ifdef HAVE_GSL_GLF
   gsl_integration_glfixed_table_free (intf->glt);
 #else
-  g_error ("ncm_integral_fixed_free: Needs gsl version > 1.4\n");
+  g_error ("ncm_integral_fixed_free: Needs gsl version > 1.4.");
 #endif /* HAVE_GSL_GLF */
   g_slice_free (NcmIntegralFixed, intf);
 }
@@ -411,7 +411,7 @@ ncm_integral_fixed_calc_nodes (NcmIntegralFixed *intf, gsl_function *F)
     }
   }
 #else
-  g_error ("ncm_integral_fixed_calc_nodes: Needs gsl version > 1.4\n");
+  g_error ("ncm_integral_fixed_calc_nodes: Needs gsl version > 1.4.");
 #endif /* HAVE_GSL_GLF */
 }
 
@@ -487,7 +487,7 @@ ncm_integral_fixed_integ_mult (NcmIntegralFixed *intf, gsl_function *F)
 
   return res * delta_x * 0.5;
 #else
-  g_error ("ncm_integral_fixed_integ_mult: Needs gsl version > 1.4\n");
+  g_error ("ncm_integral_fixed_integ_mult: Needs gsl version > 1.4.");
   return 0.0;
 #endif /* HAVE_GSL_GLF */
 }
@@ -600,7 +600,7 @@ ncm_integral_fixed_integ_posdef_mult (NcmIntegralFixed *intf, gsl_function *F, g
 
   return res * delta_x * 0.5;
 #else
-  g_error ("ncm_integral_fixed_integ_posdef_mult: Needs gsl version > 1.4\n");
+  g_error ("ncm_integral_fixed_integ_posdef_mult: Needs gsl version > 1.4.");
   return 0.0;
 #endif /* HAVE_GSL_GLF */
 }

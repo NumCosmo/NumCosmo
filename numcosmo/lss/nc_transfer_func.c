@@ -58,7 +58,7 @@ nc_transfer_func_new_from_name (gchar *transfer_name)
   GType transfer_type = G_OBJECT_TYPE (obj);
 
   if (!g_type_is_a (transfer_type, NC_TYPE_TRANSFER_FUNC))
-	g_error ("nc_transfer_func_new_from_name: NcTransferFunc %s do not descend from %s\n", transfer_name, g_type_name (NC_TYPE_TRANSFER_FUNC));
+	g_error ("nc_transfer_func_new_from_name: NcTransferFunc %s do not descend from %s.", transfer_name, g_type_name (NC_TYPE_TRANSFER_FUNC));
   return NC_TRANSFER_FUNC (obj);
 }
 

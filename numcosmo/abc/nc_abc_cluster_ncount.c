@@ -63,6 +63,7 @@ static void
 nc_abc_cluster_ncount_init (NcABCClusterNCount *abcnc)
 {
   abcnc->data_summary   = NULL;
+  abcnc->ncount         = NULL;
   abcnc->data_total     = 0.0;
   abcnc->covar          = NULL;
   abcnc->scale_cov      = FALSE;
@@ -240,6 +241,8 @@ _nc_abc_cluster_ncount_dispose (GObject *object)
   ncm_vector_clear (&abcnc->quantiles);
   ncm_vector_clear (&abcnc->z_nodes);
   ncm_vector_clear (&abcnc->lnM_nodes);
+
+  nc_data_cluster_ncount_clear (&abcnc->ncount);
   
   /* Chain up : end */
   G_OBJECT_CLASS (nc_abc_cluster_ncount_parent_class)->dispose (object);
@@ -355,6 +358,52 @@ nc_abc_cluster_ncount_class_init (NcABCClusterNCountClass *klass)
   abc_class->log_info      = &_nc_abc_cluster_ncount_log_info;
 }
 
+static gdouble
+_nc_abc_summary_smooth (NcABCClusterNCount *abcnc, NcDataClusterNCount *ncount, gdouble z, gdouble lnM)
+{
+  const gsize nx = gsl_histogram2d_nx (abcnc->data_summary);
+  const gsize ny = gsl_histogram2d_ny (abcnc->data_summary);
+  const gdouble dz      = (abcnc->data_summary->xrange[nx - 1] - abcnc->data_summary->xrange[0]);
+  const gdouble dlnM    = (abcnc->data_summary->yrange[ny - 1] - abcnc->data_summary->yrange[0]);
+  const gdouble sigma_z   = dz * 0.05;
+  const gdouble sigma_lnM = dlnM * 0.05;
+  const gdouble logsqrt2pi_sigma_z = log (sqrt (2.0 * M_PI) * sigma_z);
+  const gdouble logsqrt2pi_sigma_lnM = log (sqrt (2.0 * M_PI) * sigma_lnM);
+  
+  gdouble res = 0.0;
+  /*gsize i, j;*/
+  gsize i;
+
+  for (i = 0; i < ncount->np; i++)
+  {
+    const gdouble zi = ncm_matrix_get (ncount->z_obs, i, 0);
+    const gdouble lnMi = ncm_matrix_get (ncount->lnM_obs, i, 0);
+    const gdouble x2      = -pow ((z - zi) / sigma_z, 2.0) * 0.5 - logsqrt2pi_sigma_z;
+    const gdouble y2      = -pow ((lnM - lnMi) / sigma_lnM, 2.0) * 0.5 - logsqrt2pi_sigma_lnM;
+    res += exp (x2 + y2);
+//printf ("# dist % 20.15g % 20.15g % 20.15g % 20.15g % 20.15g % 20.15g % 20.15g\n", x2 + y2, exp (x2 + y2), nij, z, lnM, z_bin, lnM_bin);
+  }
+/*
+  for (i = 0; i < nx - 1; i++)
+  {
+    for (j = 0; j < ny - 1; j++)
+    {
+      const gdouble nij = abcnc->data_summary->bin[i * ny + j];
+      if (nij > 0)
+      {
+        const gdouble z_bin   = (abcnc->data_summary->xrange[i + 1] + abcnc->data_summary->xrange[i]) * 0.5;
+        const gdouble lnM_bin = (abcnc->data_summary->yrange[j + 1] + abcnc->data_summary->yrange[j]) * 0.5;
+        const gdouble x2      = -pow ((z - z_bin) / sigma_z, 2.0) * 0.5 - logsqrt2pi_sigma_z;
+        const gdouble y2      = -pow ((lnM - lnM_bin) / sigma_lnM, 2.0) * 0.5 - logsqrt2pi_sigma_lnM;
+//printf ("# dist % 20.15g % 20.15g % 20.15g % 20.15g % 20.15g % 20.15g % 20.15g\n", x2 + y2, exp (x2 + y2), nij, z, lnM, z_bin, lnM_bin);
+        res += exp (x2 + y2) * nij;
+      }
+    }
+  }
+*/
+  return res;
+}
+
 static gboolean 
 _nc_abc_cluster_ncount_data_summary (NcmABC *abc)
 {
@@ -389,11 +438,32 @@ _nc_abc_cluster_ncount_data_summary (NcmABC *abc)
     }
 
     g_clear_pointer (&abcnc->data_summary, gsl_histogram2d_free);
-    
+
+    nc_data_cluster_ncount_clear (&abcnc->ncount);
+    abcnc->ncount = nc_data_cluster_ncount_ref (ncount);
     abcnc->data_summary = gsl_histogram2d_clone (ncount->z_lnM);
     abcnc->data_total   = gsl_histogram2d_sum (abcnc->data_summary);
-  }
 
+    if (TRUE)
+    {
+      gsize i;
+      gdouble res = 0.0;
+      gdouble te = 0.0;
+
+      for (i = 0; i < abcnc->ncount->np; i++)
+      {
+        const gdouble zi = ncm_matrix_get (abcnc->ncount->z_obs, i, 0);
+        const gdouble lnMi = ncm_matrix_get (abcnc->ncount->lnM_obs, i, 0);
+        const gdouble smooth  = _nc_abc_summary_smooth (abcnc, abcnc->ncount, zi, lnMi);
+        res += -log (smooth);
+        te++;
+      }
+
+      abcnc->data_total = 2.0 * (res + te);
+      /*printf ("# Real data gives % 20.15g % 20.15g % 20.15g\n", res, te, abcnc->data_total);*/
+    }
+  }
+  
   return TRUE;
 }
 
@@ -404,17 +474,45 @@ _nc_abc_cluster_ncount_mock_distance (NcmABC *abc, NcmDataset *dset, NcmVector *
   NcmData *data = ncm_dataset_peek_data (dset, 0);
   NcDataClusterNCount *ncount = NC_DATA_CLUSTER_NCOUNT (data);
 
-  const gsize nx = gsl_histogram2d_nx (abcnc->data_summary);
-  const gsize ny = gsl_histogram2d_ny (abcnc->data_summary);
-  const gsize total = nx * ny;
   gsize i; 
+  gdouble res = 0.0, te = 0.0;
 
-  gdouble res = 0.0;
+  for (i = 0; i < abcnc->ncount->np; i++)
+  {
+    const gdouble zi = ncm_matrix_get (abcnc->ncount->z_obs, i, 0);
+    const gdouble lnMi = ncm_matrix_get (abcnc->ncount->lnM_obs, i, 0);
+    const gdouble smooth  = _nc_abc_summary_smooth (abcnc, ncount, zi, lnMi);
+    res += -log (smooth);
+  }
+  te = ncount->np;
+  /*
+  for (i = 0; i < nx - 1; i++)
+  {
+    for (j = 0; j < ny - 1; j++)
+    {
+      const gdouble nij = ncount->z_lnM->bin[i * ny + j];
+      if (nij > 0)
+      {
+        const gdouble z_bin   = (abcnc->data_summary->xrange[i + 1] + abcnc->data_summary->xrange[i]) * 0.5;
+        const gdouble lnM_bin = (abcnc->data_summary->yrange[j + 1] + abcnc->data_summary->yrange[j]) * 0.5;
+        const gdouble smooth  = _nc_abc_summary_smooth (abcnc, z_bin, lnM_bin);
+        
+        res += -log (nij * smooth);
+        te  += nij;
+        // printf ("% zd % zd % 20.15g % 20.15g % 20.15g % 20.15g\n", i, j, res, te, nij, smooth);
+      }
+    }
+  }
+*/
+  /*printf ("try: % 20.15g % 20.15g % 20.15g\n", res, te, (2.0 * (res + te) - abcnc->data_total) / abcnc->ncount->np);*/
+  return (2.0 * (res + te) - abcnc->data_total) / abcnc->ncount->np;
+
+  /*
   gdouble pdf_data = 0.0;
   gdouble pdf_mock = 0.0;
   gdouble nebins = 0.0;
   gint e = 0;
-/*
+
   for (i = 0; i < total; i++)
   {
     pdf_data += abcnc->data_summary->bin[i];
@@ -423,7 +521,7 @@ _nc_abc_cluster_ncount_mock_distance (NcmABC *abc, NcmDataset *dset, NcmVector *
     res += gsl_pow_2 ((pdf_data - pdf_mock) / abcnc->data_total); 
   }
   */
-
+/*
   for (i = 0; i < total; i++)
   {
     pdf_data += abcnc->data_summary->bin[i];
@@ -455,6 +553,7 @@ _nc_abc_cluster_ncount_mock_distance (NcmABC *abc, NcmDataset *dset, NcmVector *
   }
   
   return res / nebins;
+*/
 }
 
 static gdouble 

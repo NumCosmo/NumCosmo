@@ -114,7 +114,7 @@ ncm_sphere_healpix_read_map (gchar *fits_file, NcmSphereMap *map)
   NCM_FITS_ERROR (status);
 
   if (hdutype != BINARY_TBL) 
-    g_error ("%s (%d): Extension is not binary!\n", __FILE__, __LINE__);
+    g_error ("%s (%d): Extension is not binary!", __FILE__, __LINE__);
    
   fits_read_key_lng (fptr, "NSIDE", &nside, comment, &status); 
   NCM_FITS_ERROR(status);

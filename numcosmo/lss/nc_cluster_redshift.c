@@ -56,7 +56,7 @@ nc_cluster_redshift_new_from_name (gchar *redshift_name)
   GObject *obj = ncm_serialize_global_from_string (redshift_name);
   GType redshift_type = G_OBJECT_TYPE (obj);
   if (!g_type_is_a (redshift_type, NC_TYPE_CLUSTER_REDSHIFT))
-    g_error ("nc_cluster_redshift_new_from_name: NcClusterRedshift %s do not descend from %s\n", redshift_name, g_type_name (NC_TYPE_CLUSTER_REDSHIFT));
+    g_error ("nc_cluster_redshift_new_from_name: NcClusterRedshift %s do not descend from %s.", redshift_name, g_type_name (NC_TYPE_CLUSTER_REDSHIFT));
   return NC_CLUSTER_REDSHIFT (obj);
 }
 

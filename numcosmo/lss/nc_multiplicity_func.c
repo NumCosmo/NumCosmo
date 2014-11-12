@@ -56,7 +56,7 @@ nc_multiplicity_func_new_from_name (gchar *multiplicity_name)
   GObject *obj = ncm_serialize_global_from_string (multiplicity_name);
   GType multiplicity_type = G_OBJECT_TYPE (obj);
   if (!g_type_is_a (multiplicity_type, NC_TYPE_MULTIPLICITY_FUNC))
-	g_error ("nc_multiplicity_func_new_from_name: NcMultiplicityFunc %s do not descend from %s\n", multiplicity_name, g_type_name (NC_TYPE_MULTIPLICITY_FUNC));
+	g_error ("nc_multiplicity_func_new_from_name: NcMultiplicityFunc %s do not descend from %s.", multiplicity_name, g_type_name (NC_TYPE_MULTIPLICITY_FUNC));
   return NC_MULTIPLICITY_FUNC (obj);
 }
 

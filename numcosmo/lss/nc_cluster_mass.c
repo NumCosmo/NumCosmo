@@ -57,7 +57,7 @@ nc_cluster_mass_new_from_name (gchar *mass_name)
   GObject *obj = ncm_serialize_global_from_string (mass_name);
   GType mass_type = G_OBJECT_TYPE (obj);
   if (!g_type_is_a (mass_type, NC_TYPE_CLUSTER_MASS))
-	g_error ("nc_cluster_mass_new_from_name: NcClusterMass %s do not descend from %s\n", mass_name, g_type_name (NC_TYPE_CLUSTER_MASS));
+	g_error ("nc_cluster_mass_new_from_name: NcClusterMass %s do not descend from %s.", mass_name, g_type_name (NC_TYPE_CLUSTER_MASS));
   return NC_CLUSTER_MASS (obj);
 }
 

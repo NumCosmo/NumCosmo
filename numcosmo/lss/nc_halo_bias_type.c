@@ -58,7 +58,7 @@ nc_halo_bias_type_new_from_name (gchar *bias_name)
   GType bias_type = G_OBJECT_TYPE (obj);
 
   if (!g_type_is_a (bias_type, NC_TYPE_HALO_BIAS_TYPE))
-	g_error ("nc_halo_bias_type_new_from_name: NcHaloBiasType %s do not descend from %s\n", bias_name, g_type_name (NC_TYPE_HALO_BIAS_TYPE));
+	g_error ("nc_halo_bias_type_new_from_name: NcHaloBiasType %s do not descend from %s.", bias_name, g_type_name (NC_TYPE_HALO_BIAS_TYPE));
   return NC_HALO_BIAS_TYPE (obj);
 }
 
