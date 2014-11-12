@@ -349,7 +349,7 @@ nc_data_cluster_ncount_dispose (GObject *object)
   ncm_vector_clear (&ncount->lnM_nodes);
   ncm_vector_clear (&ncount->z_nodes);  
 
-  g_clear_pointer (&ncount->m2lnL_a, &g_array_unref);
+  g_clear_pointer (&ncount->m2lnL_a, g_array_unref);
   
   /* Chain up : end */
   G_OBJECT_CLASS (nc_data_cluster_ncount_parent_class)->dispose (object);
