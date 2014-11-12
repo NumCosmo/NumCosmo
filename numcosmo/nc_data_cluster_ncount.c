@@ -2020,10 +2020,15 @@ nc_data_cluster_ncount_catalog_load (NcDataClusterNCount *ncount, gchar *filenam
     ncount->z = nc_cluster_redshift_new_from_name (z_ser);
     ncount->m = nc_cluster_mass_new_from_name (lnM_ser);
 
+#ifdef HAVE_CFITSIO_3_27
     fits_free_memory (z_ser, &status);
     NCM_FITS_ERROR (status);
     fits_free_memory (lnM_ser, &status);
     NCM_FITS_ERROR (status);
+#else
+    g_free (z_ser);
+    g_free (lnM_ser);
+#endif /* HAVE_CFITSIO_3_27 */ 
   }
 
   {

@@ -527,13 +527,19 @@ dnl ***************************************************************************
 dnl Check for cfitsio
 dnl ***************************************************************************
 
-PKG_CHECK_MODULES(CFITSIO, [cfitsio >= 3.25],[
+PKG_CHECK_MODULES(CFITSIO, [cfitsio >= 3.27],[
   AC_DEFINE([HAVE_CFITSIO],[1], [Have the cfitsio package])
+  AC_DEFINE([HAVE_CFITSIO_3_27],[1], [Have the cfitsio package >= 3.27])
   have_cfitsio_support="#define NUMCOSMO_HAVE_CFITSIO 1"],[
-  have_cfitsio_support=""])
+  PKG_CHECK_MODULES(CFITSIO, [cfitsio >= 3.25],[
+    AC_DEFINE([HAVE_CFITSIO],[1], [Have the cfitsio package >= 3.25])
+    have_cfitsio_support="#define NUMCOSMO_HAVE_CFITSIO 1"],[
+    have_cfitsio_support=""]) 
+  ])
 AC_SUBST(CFITSIO_CFLAGS)
 AC_SUBST(CFITSIO_LIBS)
 AC_SUBST(have_cfitsio_support)
+
 
 dnl ***************************************************************************
 dnl Check for chealpix
