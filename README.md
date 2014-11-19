@@ -3,6 +3,12 @@ NumCosmo
 
 This is the readme file of the numcosmo library.
 
+Links:
+------
+
+The Savannah project page can be found [here](https://savannah.nongnu.org/projects/numcosmo/).
+The NumCosmo homepage is [here](http://www.nongnu.org/numcosmo/), it contains the documentation and some examples.
+
 Building from repository:
 -------------------------
 
