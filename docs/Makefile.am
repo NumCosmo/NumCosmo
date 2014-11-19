@@ -35,6 +35,7 @@ DOC_SOURCE_DIR=$(top_srcdir)/numcosmo \
 	       $(top_srcdir)/numcosmo/abc \
 	       $(top_srcdir)/numcosmo/math \
 	       $(top_srcdir)/numcosmo/model \
+	       $(top_srcdir)/numcosmo/data \
 	       $(top_srcdir)/numcosmo/perturbations \
 	       $(top_srcdir)/numcosmo/sphere \
 	       $(top_builddir)/numcosmo
@@ -72,6 +73,7 @@ HFILE_GLOB=$(top_srcdir)/numcosmo/*.h \
 	   $(top_srcdir)/numcosmo/abc/*.h \
 	   $(top_srcdir)/numcosmo/math/*.h \
 	   $(top_srcdir)/numcosmo/model/*.h \
+	   $(top_srcdir)/numcosmo/data/*.h \
 	   $(top_srcdir)/numcosmo/perturbations/*.h \
 	   $(top_srcdir)/numcosmo/sphere/*.h
 
@@ -80,6 +82,7 @@ CFILE_GLOB=$(top_srcdir)/numcosmo/*.c \
 	   $(top_srcdir)/numcosmo/abc/*.c \
 	   $(top_srcdir)/numcosmo/math/*.c \
 	   $(top_srcdir)/numcosmo/model/*.c \
+	   $(top_srcdir)/numcosmo/data/*.c \
 	   $(top_srcdir)/numcosmo/perturbations/*.c \
 	   $(top_srcdir)/numcosmo/sphere/*.c
 

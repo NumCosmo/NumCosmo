@@ -254,21 +254,21 @@ nc_headers = \
         lss/nc_cluster_mass_benson_xray.h      \
         lss/nc_cluster_abundance.h             \
         lss/nc_cor_cluster_cmb_lens_limber.h   \
-	nc_data_snia.h                         \
-	nc_data_dist_mu.h                      \
-	nc_data_snia_cov.h                     \
-	nc_data_hubble.h                       \
-	nc_data_hubble_bao.h                   \
-	nc_data_bao_rdv.h                      \
-	nc_data_bao_dvdv.h                     \
-	nc_data_bao_a.h                        \
-	nc_data_bao_dv.h                       \
-	nc_data_bao.h                          \
-	nc_data_cmb_shift_param.h              \
-	nc_data_cmb_dist_priors.h              \
-	nc_data_cmb.h                          \
-	nc_data_cluster_ncount.h               \
-	nc_data_cluster_poisson.h              \
+	data/nc_data_snia.h                    \
+	data/nc_data_dist_mu.h                 \
+	data/nc_data_snia_cov.h                \
+	data/nc_data_hubble.h                  \
+	data/nc_data_hubble_bao.h              \
+	data/nc_data_bao_rdv.h                 \
+	data/nc_data_bao_dvdv.h                \
+	data/nc_data_bao_a.h                   \
+	data/nc_data_bao_dv.h                  \
+	data/nc_data_bao.h                     \
+	data/nc_data_cmb_shift_param.h         \
+	data/nc_data_cmb_dist_priors.h         \
+	data/nc_data_cmb.h                     \
+	data/nc_data_cluster_ncount.h          \
+	data/nc_data_cluster_poisson.h         \
 	abc/nc_abc_cluster_ncount.h            \
 	scalefactor.h                          \
 	model/quantum_gravity.h                \
@@ -341,21 +341,21 @@ nc_sources = \
 	lss/nc_cluster_mass_benson_xray.c      \
 	lss/nc_cluster_abundance.c             \
 	lss/nc_cor_cluster_cmb_lens_limber.c   \
-	nc_data_snia.c                         \
-	nc_data_dist_mu.c                      \
-	nc_data_snia_cov.c                     \
-	nc_data_hubble.c                       \
-	nc_data_hubble_bao.c                   \
-	nc_data_bao_rdv.c                      \
-	nc_data_bao_dvdv.c                     \
-	nc_data_bao_a.c                        \
-	nc_data_bao_dv.c                       \
-	nc_data_bao.c                          \
-	nc_data_cmb_shift_param.c              \
-	nc_data_cmb_dist_priors.c              \
-	nc_data_cmb.c                          \
-	nc_data_cluster_ncount.c               \
-	nc_data_cluster_poisson.c              \
+	data/nc_data_snia.c                    \
+	data/nc_data_dist_mu.c                 \
+	data/nc_data_snia_cov.c                \
+	data/nc_data_hubble.c                  \
+	data/nc_data_hubble_bao.c              \
+	data/nc_data_bao_rdv.c                 \
+	data/nc_data_bao_dvdv.c                \
+	data/nc_data_bao_a.c                   \
+	data/nc_data_bao_dv.c                  \
+	data/nc_data_bao.c                     \
+	data/nc_data_cmb_shift_param.c         \
+	data/nc_data_cmb_dist_priors.c         \
+	data/nc_data_cmb.c                     \
+	data/nc_data_cluster_ncount.c          \
+	data/nc_data_cluster_poisson.c         \
 	abc/nc_abc_cluster_ncount.c            \
 	scalefactor.c                          \
 	model/quantum_gravity.c                \
@@ -593,6 +593,7 @@ numcosmo-1.0.vapi: NumCosmo-1.0.gir numcosmomath-1.0.vapi
 CLEANFILES += $(vapi_DATA)
 EXTRA_DIST += $(vapi_DATA)
 
-endif
+endif # HAVE_INTROSPECTION
 
-endif
+endif # HAVE_VAPIGEN
+

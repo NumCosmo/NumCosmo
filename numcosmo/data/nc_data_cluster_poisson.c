@@ -44,8 +44,8 @@ enum
 #endif /* HAVE_CONFIG_H */
 #include "build_cfg.h"
 
-#include "nc_data_cluster_poisson.h"
-#include "nc_data_cluster_ncount.h"
+#include "data/nc_data_cluster_poisson.h"
+#include "data/nc_data_cluster_ncount.h"
 #include "math/ncm_util.h"
 
 #include <gsl/gsl_randist.h>

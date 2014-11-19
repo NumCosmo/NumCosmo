@@ -38,7 +38,7 @@
 #include "build_cfg.h"
 
 #include "abc/nc_abc_cluster_ncount.h"
-#include "nc_data_cluster_ncount.h"
+#include "data/nc_data_cluster_ncount.h"
 #include "math/ncm_mset_trans_kern_gauss.h"
 #include "nc_enum_types.h"
 
@@ -46,12 +46,13 @@ enum
 {
   PROP_0,
   PROP_SCALE_COV,
-  PROP_BIN_TYPE,
+  PROP_SUMMARY_TYPE,
   PROP_QUANTILES,
   PROP_Z_NODES,
   PROP_LNM_NODES,
   PROP_Z_BINS,
   PROP_LNM_BINS,
+  PROP_GAUSS_RBF_SCALE,
   PROP_EPSILON_UPDATE,
   PROP_EPSILON_UPDATE_TYPE, 
 };
@@ -72,8 +73,13 @@ nc_abc_cluster_ncount_init (NcABCClusterNCount *abcnc)
   abcnc->lnM_nodes      = NULL;
   abcnc->z_bins         = 0;
   abcnc->lnM_bins       = 0;
+  abcnc->rbf_scale      = 0.0;
+  abcnc->z_lnM_stats    = ncm_stats_vec_new (2, NCM_STATS_VEC_COV, FALSE);
+  abcnc->sigma_z        = 0.0;
+  abcnc->sigma_lnM      = 0.0;
+  abcnc->rho            = 0.0;
   abcnc->epsilon_update = 0.0;
-  abcnc->bin_type       = NC_ABC_CLUSTER_NCOUNT_BIN_NTYPES;
+  abcnc->s_type         = NC_ABC_CLUSTER_NCOUNT_SUMMARY_NTYPES;
   abcnc->uptype         = NC_ABC_CLUSTER_NCOUNT_EPSILON_UPDATE_NTYPE;
 }
 
@@ -99,17 +105,18 @@ _nc_abc_cluster_ncount_set_property (GObject *object, guint prop_id, const GValu
     case PROP_SCALE_COV:
       nc_abc_cluster_ncount_set_scale_cov (abcnc, g_value_get_boolean (value));
       break;
-    case PROP_BIN_TYPE:
+    case PROP_SUMMARY_TYPE:
     {
-      NcABCClusterNCountBin bin_type = g_value_get_enum (value);
-      switch (bin_type)
+      NcABCClusterNCountSummary s_type = g_value_get_enum (value);
+      switch (s_type)
       {
-        case NC_ABC_CLUSTER_NCOUNT_BIN_UNIFORM:
+        case NC_ABC_CLUSTER_NCOUNT_SUMMARY_BIN_UNIFORM:
+        case NC_ABC_CLUSTER_NCOUNT_SUMMARY_GAUSS_RBF:
           break;
-        case NC_ABC_CLUSTER_NCOUNT_BIN_QUANTILE:
+        case NC_ABC_CLUSTER_NCOUNT_SUMMARY_BIN_QUANTILE:
           g_assert (abcnc->quantiles != NULL);
           break;
-        case NC_ABC_CLUSTER_NCOUNT_BIN_NODES:
+        case NC_ABC_CLUSTER_NCOUNT_SUMMARY_BIN_NODES:
           g_assert (abcnc->z_nodes != NULL);
           g_assert (abcnc->lnM_nodes != NULL);
           break;
@@ -117,7 +124,7 @@ _nc_abc_cluster_ncount_set_property (GObject *object, guint prop_id, const GValu
           g_assert_not_reached ();
           break;
       }
-      abcnc->bin_type = bin_type;
+      abcnc->s_type = s_type;
       break;
     }
     case PROP_QUANTILES:
@@ -161,6 +168,9 @@ _nc_abc_cluster_ncount_set_property (GObject *object, guint prop_id, const GValu
       abcnc->lnM_bins = g_value_get_uint (value);
       g_assert_cmpuint (abcnc->lnM_bins, >, 0);
       break;
+    case PROP_GAUSS_RBF_SCALE:
+      abcnc->rbf_scale = g_value_get_double (value);
+      break;
     case PROP_EPSILON_UPDATE:
       nc_abc_cluster_ncount_set_epsilon_update (abcnc, g_value_get_double (value));
       break;
@@ -184,8 +194,8 @@ _nc_abc_cluster_ncount_get_property (GObject *object, guint prop_id, GValue *val
     case PROP_SCALE_COV:
       g_value_set_boolean (value, abcnc->scale_cov);
       break;
-    case PROP_BIN_TYPE:
-      g_value_set_enum (value, abcnc->bin_type);
+    case PROP_SUMMARY_TYPE:
+      g_value_set_enum (value, abcnc->s_type);
       break;
     case PROP_QUANTILES:
     {
@@ -220,6 +230,9 @@ _nc_abc_cluster_ncount_get_property (GObject *object, guint prop_id, GValue *val
     case PROP_LNM_BINS:
       g_value_set_uint (value, abcnc->lnM_bins);
       break;
+    case PROP_GAUSS_RBF_SCALE:
+      g_value_set_double (value, abcnc->rbf_scale);
+      break;
     case PROP_EPSILON_UPDATE:
       g_value_set_double (value, abcnc->epsilon_update);
       break;
@@ -241,6 +254,8 @@ _nc_abc_cluster_ncount_dispose (GObject *object)
   ncm_vector_clear (&abcnc->quantiles);
   ncm_vector_clear (&abcnc->z_nodes);
   ncm_vector_clear (&abcnc->lnM_nodes);
+
+  ncm_stats_vec_clear (&abcnc->z_lnM_stats);
 
   nc_data_cluster_ncount_clear (&abcnc->ncount);
   
@@ -287,11 +302,11 @@ nc_abc_cluster_ncount_class_init (NcABCClusterNCountClass *klass)
                                                          G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   g_object_class_install_property (object_class,
-                                   PROP_BIN_TYPE,
-                                   g_param_spec_enum ("binning-type",
+                                   PROP_SUMMARY_TYPE,
+                                   g_param_spec_enum ("summary-type",
                                                       NULL,
-                                                      "Binning type",
-                                                      NC_TYPE_ABC_CLUSTER_NCOUNT_BIN, NC_ABC_CLUSTER_NCOUNT_BIN_UNIFORM,
+                                                      "Summary type",
+                                                      NC_TYPE_ABC_CLUSTER_NCOUNT_SUMMARY, NC_ABC_CLUSTER_NCOUNT_SUMMARY_BIN_UNIFORM,
                                                       G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB)); 
 
   g_object_class_install_property (object_class,
@@ -335,6 +350,14 @@ nc_abc_cluster_ncount_class_init (NcABCClusterNCountClass *klass)
                                                       G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
   
   g_object_class_install_property (object_class,
+                                   PROP_GAUSS_RBF_SCALE,
+                                   g_param_spec_double ("rbf-scale",
+                                                      NULL,
+                                                      "Scale for RBF interpolation",
+                                                      1.0e-6, 1.0e3, 0.20,
+                                                      G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
+  g_object_class_install_property (object_class,
                                    PROP_EPSILON_UPDATE,
                                    g_param_spec_double ("epsilon-update",
                                                       NULL,
@@ -359,49 +382,50 @@ nc_abc_cluster_ncount_class_init (NcABCClusterNCountClass *klass)
 }
 
 static gdouble
-_nc_abc_summary_smooth (NcABCClusterNCount *abcnc, NcDataClusterNCount *ncount, gdouble z, gdouble lnM)
+_nc_abc_summary_smooth (NcABCClusterNCount *abcnc, NcDataClusterNCount *ncount, gdouble z, gdouble lnM, gdouble sigma_z, gdouble sigma_lnM, gdouble rho)
 {
-  const gsize nx = gsl_histogram2d_nx (abcnc->data_summary);
-  const gsize ny = gsl_histogram2d_ny (abcnc->data_summary);
-  const gdouble dz      = (abcnc->data_summary->xrange[nx - 1] - abcnc->data_summary->xrange[0]);
-  const gdouble dlnM    = (abcnc->data_summary->yrange[ny - 1] - abcnc->data_summary->yrange[0]);
-  const gdouble sigma_z   = dz * 0.05;
-  const gdouble sigma_lnM = dlnM * 0.05;
-  const gdouble logsqrt2pi_sigma_z = log (sqrt (2.0 * M_PI) * sigma_z);
-  const gdouble logsqrt2pi_sigma_lnM = log (sqrt (2.0 * M_PI) * sigma_lnM);
-  
+  const gdouble rho2 = rho * rho;
+  const gdouble onemrho2 = 1.0 - rho2;
+  const gdouble lognorma = log (2.0 * M_PI * sigma_z * sigma_lnM * sqrt (onemrho2));  
   gdouble res = 0.0;
-  /*gsize i, j;*/
   gsize i;
 
   for (i = 0; i < ncount->np; i++)
   {
-    const gdouble zi = ncm_matrix_get (ncount->z_obs, i, 0);
-    const gdouble lnMi = ncm_matrix_get (ncount->lnM_obs, i, 0);
-    const gdouble x2      = -pow ((z - zi) / sigma_z, 2.0) * 0.5 - logsqrt2pi_sigma_z;
-    const gdouble y2      = -pow ((lnM - lnMi) / sigma_lnM, 2.0) * 0.5 - logsqrt2pi_sigma_lnM;
-    res += exp (x2 + y2);
-//printf ("# dist % 20.15g % 20.15g % 20.15g % 20.15g % 20.15g % 20.15g % 20.15g\n", x2 + y2, exp (x2 + y2), nij, z, lnM, z_bin, lnM_bin);
+    const gdouble zi    = ncm_matrix_get (ncount->z_obs, i, 0);
+    const gdouble lnMi  = ncm_matrix_get (ncount->lnM_obs, i, 0);
+    const gdouble dz    = (z - zi) / sigma_z;
+    const gdouble dlnM  = (lnM - lnMi) / sigma_lnM;
+    const gdouble dz2   = dz * dz;
+    const gdouble dlnM2 = dlnM * dlnM;
+    const gdouble chi2  = - (dz2 + dlnM2 - 2.0 * rho *  dlnM * dz) / (2.0 * onemrho2) - lognorma;
+    res += exp (chi2);
   }
-/*
-  for (i = 0; i < nx - 1; i++)
-  {
-    for (j = 0; j < ny - 1; j++)
-    {
-      const gdouble nij = abcnc->data_summary->bin[i * ny + j];
-      if (nij > 0)
-      {
-        const gdouble z_bin   = (abcnc->data_summary->xrange[i + 1] + abcnc->data_summary->xrange[i]) * 0.5;
-        const gdouble lnM_bin = (abcnc->data_summary->yrange[j + 1] + abcnc->data_summary->yrange[j]) * 0.5;
-        const gdouble x2      = -pow ((z - z_bin) / sigma_z, 2.0) * 0.5 - logsqrt2pi_sigma_z;
-        const gdouble y2      = -pow ((lnM - lnM_bin) / sigma_lnM, 2.0) * 0.5 - logsqrt2pi_sigma_lnM;
-//printf ("# dist % 20.15g % 20.15g % 20.15g % 20.15g % 20.15g % 20.15g % 20.15g\n", x2 + y2, exp (x2 + y2), nij, z, lnM, z_bin, lnM_bin);
-        res += exp (x2 + y2) * nij;
-      }
-    }
-  }
-*/
   return res;
+}
+
+static gdouble 
+_nc_abc_summary_distance (NcABCClusterNCount *abcnc, NcDataClusterNCount *model, NcDataClusterNCount *data)
+{
+  gsize i;
+  gdouble res = 0.0;
+  gdouble te = 0.0;
+
+  if (model->np == 0)
+    return 0.0;
+
+  te = model->np;
+  /*printf ("% 20.15g % 20.15g % 20.15g % 20.15g\n", abcnc->sigma_z, abcnc->sigma_lnM, abcnc->rho, te);*/
+
+  for (i = 0; i < data->np; i++)
+  {
+    const gdouble zi = ncm_matrix_get (data->z_obs, i, 0);
+    const gdouble lnMi = ncm_matrix_get (data->lnM_obs, i, 0);
+    const gdouble smooth  = _nc_abc_summary_smooth (abcnc, model, zi, lnMi, abcnc->sigma_z, abcnc->sigma_lnM, abcnc->rho);
+    res += -log (smooth);
+  }
+
+  return 2.0 * (res + te);
 }
 
 static gboolean 
@@ -415,23 +439,25 @@ _nc_abc_cluster_ncount_data_summary (NcmABC *abc)
     NcDataClusterNCount *ncount = NC_DATA_CLUSTER_NCOUNT (data);
     g_assert (NC_IS_DATA_CLUSTER_NCOUNT (data));
 
-    switch (abcnc->bin_type)
+    switch (abcnc->s_type)
     {
-      case NC_ABC_CLUSTER_NCOUNT_BIN_UNIFORM:
+      case NC_ABC_CLUSTER_NCOUNT_SUMMARY_BIN_UNIFORM:
       {
         nc_data_cluster_ncount_set_bin_by_minmax (ncount, abcnc->z_bins, abcnc->lnM_bins);    
         break;
       }
-      case NC_ABC_CLUSTER_NCOUNT_BIN_QUANTILE:
+      case NC_ABC_CLUSTER_NCOUNT_SUMMARY_BIN_QUANTILE:
       {
         nc_data_cluster_ncount_set_bin_by_quantile (ncount, abcnc->quantiles, abcnc->quantiles);
         break;
       }
-      case NC_ABC_CLUSTER_NCOUNT_BIN_NODES:
+      case NC_ABC_CLUSTER_NCOUNT_SUMMARY_BIN_NODES:
       {
         nc_data_cluster_ncount_set_bin_by_nodes (ncount, abcnc->z_nodes, abcnc->lnM_nodes);
         break;
       }
+      case NC_ABC_CLUSTER_NCOUNT_SUMMARY_GAUSS_RBF:
+        break;
       default:
         g_assert_not_reached ();
         break;
@@ -441,26 +467,41 @@ _nc_abc_cluster_ncount_data_summary (NcmABC *abc)
 
     nc_data_cluster_ncount_clear (&abcnc->ncount);
     abcnc->ncount = nc_data_cluster_ncount_ref (ncount);
-    abcnc->data_summary = gsl_histogram2d_clone (ncount->z_lnM);
-    abcnc->data_total   = gsl_histogram2d_sum (abcnc->data_summary);
 
-    if (TRUE)
+    switch (abcnc->s_type)
     {
-      gsize i;
-      gdouble res = 0.0;
-      gdouble te = 0.0;
-
-      for (i = 0; i < abcnc->ncount->np; i++)
+      case NC_ABC_CLUSTER_NCOUNT_SUMMARY_BIN_UNIFORM:
+      case NC_ABC_CLUSTER_NCOUNT_SUMMARY_BIN_QUANTILE:
+      case NC_ABC_CLUSTER_NCOUNT_SUMMARY_BIN_NODES:
       {
-        const gdouble zi = ncm_matrix_get (abcnc->ncount->z_obs, i, 0);
-        const gdouble lnMi = ncm_matrix_get (abcnc->ncount->lnM_obs, i, 0);
-        const gdouble smooth  = _nc_abc_summary_smooth (abcnc, abcnc->ncount, zi, lnMi);
-        res += -log (smooth);
-        te++;
+        abcnc->data_summary = gsl_histogram2d_clone (ncount->z_lnM);
+        abcnc->data_total   = gsl_histogram2d_sum (abcnc->data_summary);
+        break;
       }
+      case NC_ABC_CLUSTER_NCOUNT_SUMMARY_GAUSS_RBF:
+      {
+        guint i;
+        ncm_stats_vec_reset (abcnc->z_lnM_stats);
 
-      abcnc->data_total = 2.0 * (res + te);
-      /*printf ("# Real data gives % 20.15g % 20.15g % 20.15g\n", res, te, abcnc->data_total);*/
+        for (i = 0; i < abcnc->ncount->np; i++)
+        {
+          const gdouble zi = ncm_matrix_get (abcnc->ncount->z_obs, i, 0);
+          const gdouble lnMi = ncm_matrix_get (abcnc->ncount->lnM_obs, i, 0);
+          ncm_stats_vec_set (abcnc->z_lnM_stats, 0, zi);
+          ncm_stats_vec_set (abcnc->z_lnM_stats, 1, lnMi);
+          ncm_stats_vec_update (abcnc->z_lnM_stats);
+        }
+        
+        abcnc->sigma_z   = ncm_stats_vec_get_sd (abcnc->z_lnM_stats, 0) * abcnc->rbf_scale;
+        abcnc->sigma_lnM = ncm_stats_vec_get_sd (abcnc->z_lnM_stats, 1) * abcnc->rbf_scale;
+        abcnc->rho       = ncm_stats_vec_get_cor (abcnc->z_lnM_stats, 0, 1);
+        
+        abcnc->data_total = _nc_abc_summary_distance (abcnc, abcnc->ncount, abcnc->ncount);
+        break;
+      }
+      default:
+        g_assert_not_reached ();
+        break;
     }
   }
   
@@ -473,87 +514,90 @@ _nc_abc_cluster_ncount_mock_distance (NcmABC *abc, NcmDataset *dset, NcmVector *
   NcABCClusterNCount *abcnc = NC_ABC_CLUSTER_NCOUNT (abc);
   NcmData *data = ncm_dataset_peek_data (dset, 0);
   NcDataClusterNCount *ncount = NC_DATA_CLUSTER_NCOUNT (data);
+  gdouble res;
 
-  gsize i; 
-  gdouble res = 0.0, te = 0.0;
-
-  for (i = 0; i < abcnc->ncount->np; i++)
+  switch (abcnc->s_type)
   {
-    const gdouble zi = ncm_matrix_get (abcnc->ncount->z_obs, i, 0);
-    const gdouble lnMi = ncm_matrix_get (abcnc->ncount->lnM_obs, i, 0);
-    const gdouble smooth  = _nc_abc_summary_smooth (abcnc, ncount, zi, lnMi);
-    res += -log (smooth);
-  }
-  te = ncount->np;
-  /*
-  for (i = 0; i < nx - 1; i++)
-  {
-    for (j = 0; j < ny - 1; j++)
+    case NC_ABC_CLUSTER_NCOUNT_SUMMARY_BIN_UNIFORM:
+    case NC_ABC_CLUSTER_NCOUNT_SUMMARY_BIN_QUANTILE:
+    case NC_ABC_CLUSTER_NCOUNT_SUMMARY_BIN_NODES:
     {
-      const gdouble nij = ncount->z_lnM->bin[i * ny + j];
-      if (nij > 0)
+      const gsize nx = gsl_histogram2d_nx (abcnc->data_summary);
+      const gsize ny = gsl_histogram2d_ny (abcnc->data_summary);
+      const gsize total = nx * ny;
+      gsize i;
+
+      gdouble pdf_data = 0.0;
+      gdouble pdf_mock = 0.0;
+      gdouble nebins = 0.0;
+
+      res = 0.0;
+    
+      if (FALSE)
       {
-        const gdouble z_bin   = (abcnc->data_summary->xrange[i + 1] + abcnc->data_summary->xrange[i]) * 0.5;
-        const gdouble lnM_bin = (abcnc->data_summary->yrange[j + 1] + abcnc->data_summary->yrange[j]) * 0.5;
-        const gdouble smooth  = _nc_abc_summary_smooth (abcnc, z_bin, lnM_bin);
-        
-        res += -log (nij * smooth);
-        te  += nij;
-        // printf ("% zd % zd % 20.15g % 20.15g % 20.15g % 20.15g\n", i, j, res, te, nij, smooth);
+        for (i = 0; i < total; i++)
+        {
+          pdf_data += abcnc->data_summary->bin[i];
+          pdf_mock += ncount->z_lnM->bin[i];
+
+          res += gsl_pow_2 ((pdf_data - pdf_mock) / abcnc->data_total); 
+        }
       }
-    }
-  }
-*/
-  /*printf ("try: % 20.15g % 20.15g % 20.15g\n", res, te, (2.0 * (res + te) - abcnc->data_total) / abcnc->ncount->np);*/
-  return (2.0 * (res + te) - abcnc->data_total) / abcnc->ncount->np;
+      else
+      {
+        gdouble mock_total = gsl_histogram2d_sum (ncount->z_lnM);
 
-  /*
-  gdouble pdf_data = 0.0;
-  gdouble pdf_mock = 0.0;
-  gdouble nebins = 0.0;
-  gint e = 0;
+        for (i = 0; i < total; i++)
+        {
+          pdf_data += abcnc->data_summary->bin[i];
+          pdf_mock += ncount->z_lnM->bin[i];
 
-  for (i = 0; i < total; i++)
-  {
-    pdf_data += abcnc->data_summary->bin[i];
-    pdf_mock += ncount->z_lnM->bin[i];
-    
-    res += gsl_pow_2 ((pdf_data - pdf_mock) / abcnc->data_total); 
-  }
-  */
-/*
-  for (i = 0; i < total; i++)
-  {
-    pdf_data += abcnc->data_summary->bin[i];
-    pdf_mock += ncount->z_lnM->bin[i];
+          if (mock_total - pdf_mock <= 5.0)
+            break;
 
-    if (abcnc->data_total - pdf_data <= 5.0)
+          if (pdf_mock >= 5.0)
+          {
+            nebins++;
+            if (pdf_data > 0.0)
+              res += 2.0 * (pdf_mock - pdf_data * (1.0 + log (pdf_mock / pdf_data)));
+            else
+              res += 2.0 * pdf_mock;
+            pdf_data = 0.0;
+            pdf_mock = 0.0;
+          }
+        }  
+
+        for (; i < total; i++)
+        {
+          pdf_data += abcnc->data_summary->bin[i];
+          pdf_mock += ncount->z_lnM->bin[i];
+        }
+        if (pdf_mock != 0.0)
+        {
+          nebins++;
+          if (pdf_data > 0.0)
+            res += 2.0 * (pdf_mock - pdf_data * (1.0 + log (pdf_mock / pdf_data)));
+          else
+            res += 2.0 * pdf_mock;
+          pdf_data = 0.0;
+          pdf_mock = 0.0;    
+        }
+
+        res = res / nebins;
+      }
       break;
-    
-    if (pdf_data >= 5.0)
-    {
-      nebins++;
-      res += -2.0 * ((pdf_mock - pdf_data) * log (pdf_data) + lgamma_r (pdf_data + 1.0, &e) - lgamma_r (pdf_mock + 1, &e));
-      pdf_data = 0.0;
-      pdf_mock = 0.0;
     }
+    case NC_ABC_CLUSTER_NCOUNT_SUMMARY_GAUSS_RBF:
+    {
+      res = (_nc_abc_summary_distance (abcnc, ncount, abcnc->ncount) - abcnc->data_total) / abcnc->ncount->np;
+      break;
+    }
+    default:
+      g_assert_not_reached ();
+      break;
   }
 
-  for (; i < total; i++)
-  {
-    pdf_data += abcnc->data_summary->bin[i];
-    pdf_mock += ncount->z_lnM->bin[i];
-  }
-  if (pdf_data != 0.0 || pdf_mock != 0.0)
-  {
-    nebins++;
-    res += -2.0 * ((pdf_mock - pdf_data) * log (pdf_data) + lgamma_r (pdf_data + 1.0, &e) - lgamma_r (pdf_mock + 1, &e));
-    pdf_data = 0.0;
-    pdf_mock = 0.0;    
-  }
-  
-  return res / nebins;
-*/
+  return res;
 }
 
 static gdouble 
@@ -670,7 +714,7 @@ nc_abc_cluster_ncount_set_epsilon_update (NcABCClusterNCount *abcnc, gdouble q)
  * @z_bins: number of bins in z.
  * @lnM_bins: number of bins in lnM.
  * 
- * Sets the binning type to #NC_ABC_CLUSTER_NCOUNT_BIN_UNIFORM.
+ * Sets the binning type to #NC_ABC_CLUSTER_NCOUNT_SUMMARY_BIN_UNIFORM.
  * 
  */
 void 
@@ -680,7 +724,7 @@ nc_abc_cluster_ncount_set_bin_uniform (NcABCClusterNCount *abcnc, guint z_bins, 
   g_assert_cmpuint (lnM_bins, >, 0);
   abcnc->z_bins = z_bins;
   abcnc->lnM_bins = lnM_bins;
-  abcnc->bin_type = NC_ABC_CLUSTER_NCOUNT_BIN_UNIFORM;
+  abcnc->s_type = NC_ABC_CLUSTER_NCOUNT_SUMMARY_BIN_UNIFORM;
 }
 
 /**
@@ -688,7 +732,7 @@ nc_abc_cluster_ncount_set_bin_uniform (NcABCClusterNCount *abcnc, guint z_bins, 
  * @abcnc: a #NcABCClusterNCount.
  * @quantiles: (allow-none): a #NcmVector or NULL.
  * 
- * Sets the binning type to #NC_ABC_CLUSTER_NCOUNT_BIN_QUANTILE and uses
+ * Sets the binning type to #NC_ABC_CLUSTER_NCOUNT_SUMMARY_BIN_QUANTILE and uses
  * @quantiles as the quantiles for both z and lnM. If @quantiles is NULL
  * uses the defaults: (0.02, 0.09, 0.25, 0.5, 0.75, 0.91, 0.98).
  * 
@@ -704,7 +748,7 @@ nc_abc_cluster_ncount_set_bin_quantile (NcABCClusterNCount *abcnc, NcmVector *qu
   else
     ncm_vector_ref (quantiles);
 
-  abcnc->bin_type = NC_ABC_CLUSTER_NCOUNT_BIN_QUANTILE;
+  abcnc->s_type = NC_ABC_CLUSTER_NCOUNT_SUMMARY_BIN_QUANTILE;
   abcnc->quantiles = quantiles;
 }
 
@@ -714,7 +758,7 @@ nc_abc_cluster_ncount_set_bin_quantile (NcABCClusterNCount *abcnc, NcmVector *qu
  * @z_nodes: a #NcmVector.
  * @lnM_nodes: a #NcmVector.
  * 
- * Sets the binning type to #NC_ABC_CLUSTER_NCOUNT_BIN_NODES and uses
+ * Sets the binning type to #NC_ABC_CLUSTER_NCOUNT_SUMMARY_BIN_NODES and uses
  * @z_nodes and @lnM_nodes as nodes for binning.
  * 
  */
@@ -724,7 +768,7 @@ nc_abc_cluster_ncount_set_bin_nodes (NcABCClusterNCount *abcnc, NcmVector *z_nod
   g_assert (z_nodes != NULL);
   g_assert (lnM_nodes != NULL);
 
-  abcnc->bin_type  = NC_ABC_CLUSTER_NCOUNT_BIN_NODES;
+  abcnc->s_type  = NC_ABC_CLUSTER_NCOUNT_SUMMARY_BIN_NODES;
   abcnc->z_nodes   = ncm_vector_ref (z_nodes);
   abcnc->lnM_nodes = ncm_vector_ref (lnM_nodes);
 }

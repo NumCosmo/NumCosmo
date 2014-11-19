@@ -255,9 +255,6 @@ _ncm_data_gauss_prepare_weight (NcmData *data)
   diag->prepared_w = TRUE;
 }
 
-#include "numcosmo/nc_hicosmo.h"
-#include "numcosmo/nc_data_dist_mu.h"
-
 static void
 _ncm_data_gauss_diag_resample (NcmData *data, NcmMSet *mset, NcmRNG *rng)
 {

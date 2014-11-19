@@ -1,4 +1,10 @@
+NumCosmo
+========
+
 This is the readme file of the numcosmo library.
+
+Building from repository:
+-------------------------
 
 To build from the git repository first run ./autogen.sh to build the
 configure script. Note that this requires the autotools developer 
@@ -12,6 +18,7 @@ make install
 For a generic installation instructions, see INSTALL.
 
 Requirements:
+-------------
 
   - Glib >= 2.28.0
     Data structures, threads, portability, memory allocation, etc.
@@ -19,10 +26,10 @@ Requirements:
   - GSL  >= 1.15
     Several computational tools.
     * http://www.gnu.org/software/gsl/
-  - GMP  >= 4.3.2 (?)
+  - GMP  >= 4.3.2
     Big integers library.
     * http://gmplib.org/
-  - MPFR >= 2.4.2 (?)
+  - MPFR >= 2.4.2
     Multiple precision float library.
     * http://www.mpfr.org/
   - Sundials >= 2.4.0
@@ -30,6 +37,7 @@ Requirements:
     * https://computation.llnl.gov/casc/sundials/main.html
   
 Optional packages:
+------------------
 
   - SQLite3 >= 3.6.10
     Standalone database used to store several observation data (SN Ia, BAO

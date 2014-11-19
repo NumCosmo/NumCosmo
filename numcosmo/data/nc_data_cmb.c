@@ -1,7 +1,7 @@
 /***************************************************************************
- *            nc_data_bao.c
+ *            nc_data_cmb.c
  *
- *  Thu November 22 20:41:23 2012
+ *  Thu November 22 21:19:23 2012
  *  Copyright  2012  Sandro Dias Pinto Vitenti
  *  <sandro@isoftware.com.br>
  ****************************************************************************/
@@ -24,9 +24,9 @@
  */
 
 /**
- * SECTION:nc_data_bao
- * @title: BAO Data
- * @short_description: Helper function for obtaining BAO data
+ * SECTION:nc_data_cmb
+ * @title: CMB Data
+ * @short_description: Helper function for obtaining CMB data
  *
  * FIXME
  * 
@@ -37,15 +37,13 @@
 #endif /* HAVE_CONFIG_H */
 #include "build_cfg.h"
 
-#include "nc_data_bao.h"
+#include "data/nc_data_cmb.h"
 
-#include "nc_data_bao_a.h"
-#include "nc_data_bao_dv.h"
-#include "nc_data_bao_rdv.h"
-#include "nc_data_bao_dvdv.h"
+#include "data/nc_data_cmb_shift_param.h"
+#include "data/nc_data_cmb_dist_priors.h"
 
 /**
- * nc_data_bao_create:
+ * nc_data_cmb_create:
  * @dist: FIXME
  * @id: FIXME
  *
@@ -54,32 +52,22 @@
  * Returns: (transfer full): FIXME
  */
 NcmData *
-nc_data_bao_create (NcDistance *dist, NcDataBaoId id)
+nc_data_cmb_create (NcDistance *dist, NcDataCMBId id)
 {
-  /* FIXME the switch is wrong but works since we have only two options. */
   switch (id)
   {
-    case NC_DATA_BAO_A_EISENSTEIN2005:
-      return nc_data_bao_a_new (dist, id);
-      break;      
-    case NC_DATA_BAO_DV_EISENSTEIN2005:
-      return nc_data_bao_dv_new (dist, id);
+    case NC_DATA_CMB_SHIFT_PARAM_WMAP3:
+    case NC_DATA_CMB_SHIFT_PARAM_WMAP5:
+    case NC_DATA_CMB_SHIFT_PARAM_WMAP7:
+      return nc_data_cmb_shift_param_new (dist, id);
       break;
-    case NC_DATA_BAO_DVDV_PERCIVAL2007:
-    case NC_DATA_BAO_DVDV_PERCIVAL2010:
-      return nc_data_bao_dvdv_new (dist, id);
-      break;
-    case NC_DATA_BAO_RDV_PERCIVAL2007:
-    case NC_DATA_BAO_RDV_PERCIVAL2010:
-    case NC_DATA_BAO_RDV_BEUTLER2011:
-    case NC_DATA_BAO_RDV_PADMANABHAN2012:
-    case NC_DATA_BAO_RDV_ANDERSON2012:
-    case NC_DATA_BAO_RDV_BLAKE2012:
-      return nc_data_bao_rdv_new (dist, id);
+    case NC_DATA_CMB_DIST_PRIORS_WMAP5:
+    case NC_DATA_CMB_DIST_PRIORS_WMAP7:
+    case NC_DATA_CMB_DIST_PRIORS_WMAP9:
+      return nc_data_cmb_dist_priors_new (dist, id);
       break;
     default:
       g_assert_not_reached ();
       break;
   }
 }
-

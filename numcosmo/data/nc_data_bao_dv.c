@@ -37,7 +37,7 @@
 #endif /* HAVE_CONFIG_H */
 #include "build_cfg.h"
 
-#include "nc_data_bao_dv.h"
+#include "data/nc_data_bao_dv.h"
 #include "nc_enum_types.h"
 #include "math/ncm_cfg.h"
 

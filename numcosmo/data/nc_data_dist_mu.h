@@ -1,7 +1,7 @@
 /***************************************************************************
- *            nc_data_bao_a.h
+ *            nc_data_distance_mu.h
  *
- *  Thu Apr 22 15:31:19 2010
+ *  Thu Apr 22 10:37:39 2010
  *  Copyright  2010  Sandro Dias Pinto Vitenti
  *  <sandro@isoftware.com.br>
  ****************************************************************************/
@@ -23,29 +23,29 @@
  * with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef _NC_DATA_BAO_A_H_
-#define _NC_DATA_BAO_A_H_
+#ifndef _NC_DATA_DIST_MU_H_
+#define _NC_DATA_DIST_MU_H_
 
 #include <glib.h>
 #include <glib-object.h>
 #include <numcosmo/build_cfg.h>
 #include <numcosmo/math/ncm_data_gauss_diag.h>
 #include <numcosmo/nc_distance.h>
-#include <numcosmo/nc_data_bao.h>
+#include <numcosmo/data/nc_data_snia.h>
 
 G_BEGIN_DECLS
 
-#define NC_TYPE_DATA_BAO_A             (nc_data_bao_a_get_type ())
-#define NC_DATA_BAO_A(obj)             (G_TYPE_CHECK_INSTANCE_CAST ((obj), NC_TYPE_DATA_BAO_A, NcDataBaoA))
-#define NC_DATA_BAO_A_CLASS(klass)     (G_TYPE_CHECK_CLASS_CAST ((klass), NC_TYPE_DATA_BAO_A, NcDataBaoAClass))
-#define NC_IS_DATA_BAO_A(obj)          (G_TYPE_CHECK_INSTANCE_TYPE ((obj), NC_TYPE_DATA_BAO_A))
-#define NC_IS_DATA_BAO_A_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE ((klass), NC_TYPE_DATA_BAO_A))
-#define NC_DATA_BAO_A_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS ((obj), NC_TYPE_DATA_BAO_A, NcDataBaoAClass))
+#define NC_TYPE_DATA_DIST_MU             (nc_data_dist_mu_get_type ())
+#define NC_DATA_DIST_MU(obj)             (G_TYPE_CHECK_INSTANCE_CAST ((obj), NC_TYPE_DATA_DIST_MU, NcDataDistMu))
+#define NC_DATA_DIST_MU_CLASS(klass)     (G_TYPE_CHECK_CLASS_CAST ((klass), NC_TYPE_DATA_DIST_MU, NcDataDistMuClass))
+#define NC_IS_DATA_DIST_MU(obj)          (G_TYPE_CHECK_INSTANCE_TYPE ((obj), NC_TYPE_DATA_DIST_MU))
+#define NC_IS_DATA_DIST_MU_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE ((klass), NC_TYPE_DATA_DIST_MU))
+#define NC_DATA_DIST_MU_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS ((obj), NC_TYPE_DATA_DIST_MU, NcDataDistMuClass))
 
-typedef struct _NcDataBaoAClass NcDataBaoAClass;
-typedef struct _NcDataBaoA NcDataBaoA;
+typedef struct _NcDataDistMuClass NcDataDistMuClass;
+typedef struct _NcDataDistMu NcDataDistMu;
 
-struct _NcDataBaoA
+struct _NcDataDistMu
 {
   /*< private >*/
   NcmDataGaussDiag parent_instance;
@@ -53,18 +53,19 @@ struct _NcDataBaoA
   NcmVector *x;
 };
 
-struct _NcDataBaoAClass
+struct _NcDataDistMuClass
 {
   /*< private >*/
   NcmDataGaussDiagClass parent_class;
 };
 
-GType nc_data_bao_a_get_type (void) G_GNUC_CONST;
+GType nc_data_dist_mu_get_type (void) G_GNUC_CONST;
 
-NcmData *nc_data_bao_a_new (NcDistance *dist, NcDataBaoId id);
+NcmData *nc_data_dist_mu_new (NcDistance *dist, NcDataSNIAId id);
 
-void nc_data_bao_a_set_sample (NcDataBaoA *bao_a, NcDataBaoId id);
+void nc_data_dist_mu_set_sample (NcDataDistMu *dist_mu, NcDataSNIAId id);
 
 G_END_DECLS
 
-#endif /* _NC_DATA_BAO_A_H_ */
+#endif /* _NC_DATA_DIST_MU_H_ */
+

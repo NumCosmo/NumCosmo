@@ -108,21 +108,21 @@
 #include <numcosmo/lss/nc_cluster_abundance.h>
 
 /* Observable data */
-#include <numcosmo/nc_data_snia.h>
-#include <numcosmo/nc_data_dist_mu.h>
-#include <numcosmo/nc_data_snia_cov.h>
-#include <numcosmo/nc_data_hubble.h>
-#include <numcosmo/nc_data_hubble_bao.h>
-#include <numcosmo/nc_data_bao_a.h>
-#include <numcosmo/nc_data_bao_dv.h>
-#include <numcosmo/nc_data_bao_rdv.h>
-#include <numcosmo/nc_data_bao_dvdv.h>
-#include <numcosmo/nc_data_bao.h>
-#include <numcosmo/nc_data_cmb_dist_priors.h>
-#include <numcosmo/nc_data_cmb_shift_param.h>
-#include <numcosmo/nc_data_cmb.h>
-#include <numcosmo/nc_data_cluster_ncount.h>
-#include <numcosmo/nc_data_cluster_poisson.h>
+#include <numcosmo/data/nc_data_snia.h>
+#include <numcosmo/data/nc_data_dist_mu.h>
+#include <numcosmo/data/nc_data_snia_cov.h>
+#include <numcosmo/data/nc_data_hubble.h>
+#include <numcosmo/data/nc_data_hubble_bao.h>
+#include <numcosmo/data/nc_data_bao_a.h>
+#include <numcosmo/data/nc_data_bao_dv.h>
+#include <numcosmo/data/nc_data_bao_rdv.h>
+#include <numcosmo/data/nc_data_bao_dvdv.h>
+#include <numcosmo/data/nc_data_bao.h>
+#include <numcosmo/data/nc_data_cmb_dist_priors.h>
+#include <numcosmo/data/nc_data_cmb_shift_param.h>
+#include <numcosmo/data/nc_data_cmb.h>
+#include <numcosmo/data/nc_data_cluster_ncount.h>
+#include <numcosmo/data/nc_data_cluster_poisson.h>
 
 /* ABC */
 #include <numcosmo/abc/nc_abc_cluster_ncount.h>

@@ -37,7 +37,7 @@
 #endif /* HAVE_CONFIG_H */
 #include "build_cfg.h"
 
-#include "nc_data_snia_cov.h"
+#include "data/nc_data_snia_cov.h"
 #include "nc_snia_dist_cov.h"
 #include "math/ncm_model_ctrl.h"
 #include "math/ncm_cfg.h"

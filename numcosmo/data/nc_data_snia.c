@@ -36,10 +36,10 @@
 #endif /* HAVE_CONFIG_H */
 #include "build_cfg.h"
 
-#include "nc_data_snia.h"
+#include "data/nc_data_snia.h"
 
-#include "nc_data_dist_mu.h"
-#include "nc_data_snia_cov.h"
+#include "data/nc_data_dist_mu.h"
+#include "data/nc_data_snia_cov.h"
 #include "nc_snia_dist_cov.h"
 #include "math/ncm_cfg.h"
 #include "nc_enum_types.h"

@@ -30,7 +30,7 @@
 #include <glib-object.h>
 #include <numcosmo/build_cfg.h>
 #include <numcosmo/math/ncm_abc.h>
-#include <numcosmo/nc_data_cluster_ncount.h>
+#include <numcosmo/data/nc_data_cluster_ncount.h>
 
 #include <gsl/gsl_histogram2d.h>
 
@@ -54,21 +54,23 @@ struct _NcABCClusterNCountClass
 };
 
 /**
- * NcABCClusterNCountBin:
- * @NC_ABC_CLUSTER_NCOUNT_BIN_UNIFORM: FIXME
- * @NC_ABC_CLUSTER_NCOUNT_BIN_QUANTILE: FIXME
- * @NC_ABC_CLUSTER_NCOUNT_BIN_NODES: FIXME
+ * NcABCClusterNCountSummary:
+ * @NC_ABC_CLUSTER_NCOUNT_SUMMARY_BIN_UNIFORM: FIXME
+ * @NC_ABC_CLUSTER_NCOUNT_SUMMARY_BIN_QUANTILE: FIXME
+ * @NC_ABC_CLUSTER_NCOUNT_SUMMARY_BIN_NODES: FIXME
+ * @NC_ABC_CLUSTER_NCOUNT_SUMMARY_GAUSS_RBF: FIXME
  * 
  * FIXME
  * 
  */
-typedef enum _NcABCClusterNCountBin 
+typedef enum _NcABCClusterNCountSummary 
 {
-  NC_ABC_CLUSTER_NCOUNT_BIN_UNIFORM = 0,
-  NC_ABC_CLUSTER_NCOUNT_BIN_QUANTILE,
-  NC_ABC_CLUSTER_NCOUNT_BIN_NODES,  /*< private >*/
-  NC_ABC_CLUSTER_NCOUNT_BIN_NTYPES, /*< skip >*/
-} NcABCClusterNCountBin;
+  NC_ABC_CLUSTER_NCOUNT_SUMMARY_BIN_UNIFORM = 0,
+  NC_ABC_CLUSTER_NCOUNT_SUMMARY_BIN_QUANTILE,
+  NC_ABC_CLUSTER_NCOUNT_SUMMARY_BIN_NODES,  
+  NC_ABC_CLUSTER_NCOUNT_SUMMARY_GAUSS_RBF, /*< private >*/
+  NC_ABC_CLUSTER_NCOUNT_SUMMARY_NTYPES,    /*< skip >*/
+} NcABCClusterNCountSummary;
 
 /**
  * NcABCClusterNCountEpsilonUpdate:
@@ -99,8 +101,11 @@ struct _NcABCClusterNCount
   NcmVector *lnM_nodes;
   guint z_bins;
   guint lnM_bins;
+  gdouble rbf_scale;
+  NcmStatsVec *z_lnM_stats;
+  gdouble sigma_z, sigma_lnM, rho;
   gdouble epsilon_update;
-  NcABCClusterNCountBin bin_type;
+  NcABCClusterNCountSummary s_type;
   NcABCClusterNCountEpsilonUpdate uptype;
 };
 
