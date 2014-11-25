@@ -11,6 +11,7 @@ DISTCHECK_CONFIGURE_FLAGS=--enable-gtk-doc --enable-introspection
 numcosmodocdir = ${docdir}-$(VERSION)
 numcosmodoc_DATA = \
 	README.md  \
+	README     \
 	COPYING    \
 	AUTHORS    \
 	ChangeLog  \
