@@ -476,7 +476,7 @@ ncm_fit_new (NcmFitType ftype, gchar *algo_name, NcmLikelihood *lh, NcmMSet *mse
       break;
 #endif /* NUMCOSMO_HAVE_NLOPT */
     default:
-      g_assert_not_reached ();
+      g_error ("ncm_fit_new: fit-type not found %d, try to compile the library with the optional packages LEVMAR and NLOpt.", ftype);
       break;
   }
 }
