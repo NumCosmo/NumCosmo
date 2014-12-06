@@ -274,6 +274,57 @@ nc_hipert_two_fluids_prepare_wkb_S (NcHIPertTwoFluids *ptf, NcHICosmo *cosmo, gd
 }
 
 /**
+ * nc_hipert_two_fluids_nuA:
+ * @ptf: a #NcHIPertTwoFluids.
+ * @cosmo: a #NcHICosmo.
+ * @alpha: log-redshift time.
+ * 
+ * FIXME
+ * 
+ * Return: FIXME
+ */
+gdouble 
+nc_hipert_two_fluids_nuA (NcHIPertTwoFluids *ptf, NcHICosmo *cosmo, gdouble alpha)
+{
+  return nc_hipert_wkb_nuA (ptf->wkb_zeta, G_OBJECT (cosmo), alpha);
+}
+
+/**
+ * nc_hipert_two_fluids_nuB:
+ * @ptf: a #NcHIPertTwoFluids.
+ * @cosmo: a #NcHICosmo.
+ * @alpha: log-redshift time.
+ * 
+ * FIXME
+ * 
+ * Return: FIXME
+ */
+gdouble 
+nc_hipert_two_fluids_nuB (NcHIPertTwoFluids *ptf, NcHICosmo *cosmo, gdouble alpha)
+{
+  return nc_hipert_wkb_nuA (ptf->wkb_S, G_OBJECT (cosmo), alpha);
+}
+
+/**
+ * nc_hipert_two_fluids_YAB:
+ * @ptf: a #NcHIPertTwoFluids.
+ * @cosmo: a #NcHICosmo.
+ * @alpha: log-redshift time.
+ * 
+ * FIXME
+ * 
+ * Return: FIXME
+ */
+gdouble 
+nc_hipert_two_fluids_YAB (NcHIPertTwoFluids *ptf, NcHICosmo *cosmo, gdouble alpha)
+{
+  NcHIPert *pert = NC_HIPERT (ptf);
+  NcHIPertITwoFluidsEOM *eom = nc_hipert_itwo_fluids_eom (NC_HIPERT_ITWO_FLUIDS (cosmo), alpha, pert->k);
+  const gdouble YAB = eom->Y * sqrt (eom->mzeta * eom->mS);
+  return YAB;
+}
+
+/**
  * nc_hipert_two_fluids_wkb_zeta:
  * @ptf: a #NcHIPertTwoFluids.
  * @cosmo: a #NcHICosmo.

@@ -1,5 +1,6 @@
 #!/usr/bin/python2
 
+from gi.repository import GObject
 from gi.repository import NumCosmo as Nc
 from gi.repository import NumCosmoMath as Ncm
 import matplotlib.pyplot as plt
@@ -80,6 +81,14 @@ Re_Q_B = []
 Im_Q_B = []
 Q_A = []
 Q_B = []
+
+for i in range (10000):
+  alpha = alphai + (alpha_end - alphai) / 10000.0 * (i + 1)
+  print ("% 20.15g % 20.15g % 20.15g % 20.15g" % (alpha, pert.nuA (cosmo, alpha), pert.nuB (cosmo, alpha), pert.YAB (cosmo, alpha)))
+
+
+exit ()
+
 
 print "# Setting inital conditions (zeta)"
 pert.set_init_cond_wkb_zeta (cosmo, alphai)

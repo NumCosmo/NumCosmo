@@ -50,88 +50,24 @@ enum
   PROP_GROWTH,
   PROP_MULTIPLICITY,
   PROP_AREA,
+  PROP_PREC,
 };
 
 G_DEFINE_TYPE (NcMassFunction, nc_mass_function, G_TYPE_OBJECT);
 
-/**
- * nc_mass_function_new:
- * @dist: a #NcDistance sets to #NcMassFunction:distance.
- * @vp: a #NcMatterVar sets to #NcMassFunction:variance.
- * @gf: a #NcGrowthFunc sets to #NcMassFunction:growth.
- * @mulf: a #NcMultiplicityFunc sets to #NcMassFunction:multiplicity.
- *
- * This function allocates memory for a new #NcMassFunction object and sets its properties to the values from
- * the input arguments.
- *
- * Returns: A new #NcMassFunction.
- */
-NcMassFunction *
-nc_mass_function_new (NcDistance *dist, NcMatterVar *vp, NcGrowthFunc *gf, NcMultiplicityFunc *mulf)
-{
-  NcMassFunction *mfp = g_object_new (NC_TYPE_MASS_FUNCTION,
-                                      "distance", dist,
-                                      "variance", vp,
-                                      "growth", gf,
-                                      "multiplicity", mulf,
-                                      NULL);
-  return mfp;
-}
-
-/**
- * nc_mass_function_copy:
- * @mfp: a #NcMassFunction.
- *
- * This function duplicates the #NcMassFunction object setting the same values of the original propertities.
- *
- * Returns: (transfer full): A new #NcMassFunction.
-   */
-NcMassFunction *
-nc_mass_function_copy (NcMassFunction *mfp)
-{
-  return nc_mass_function_new (mfp->dist, mfp->vp, mfp->gf, mfp->mulf);
-}
-
-/**
- * nc_mass_function_free:
- * @mfp: a #NcMassFunction.
- *
- * Atomically decrements the reference count of @mfp by one. If the reference count drops to 0,
- * all memory allocated by @mfp is released.
- *
- */
-void
-nc_mass_function_free (NcMassFunction *mfp)
-{
-  g_object_unref (mfp);
-}
-
-/**
- * nc_mass_function_clear:
- * @mfp: a #NcMassFunction.
- *
- * Atomically decrements the reference count of @mfp by one. If the reference count drops to 0,
- * all memory allocated by @mfp is released. Set pointer to NULL.
- *
- */
-void
-nc_mass_function_clear (NcMassFunction **mfp)
-{
-  g_clear_object (mfp);
-}
-
 static void
 nc_mass_function_init (NcMassFunction *mfp)
 {
-  mfp->lnMi = 0.0;
-  mfp->lnMf = 0.0;
-  mfp->zi = 0.0;
-  mfp->zf = 0.0;
+  mfp->lnMi        = 0.0;
+  mfp->lnMf        = 0.0;
+  mfp->zi          = 0.0;
+  mfp->zf          = 0.0;
   mfp->area_survey = 0.0;
-  mfp->N_sigma = 0.0;
-  mfp->growth = 0.0;
-  mfp->d2NdzdlnM = NULL;
-  mfp->ctrl = ncm_model_ctrl_new (NULL);
+  mfp->N_sigma     = 0.0;
+  mfp->growth      = 0.0;
+  mfp->d2NdzdlnM   = NULL;
+  mfp->prec        = 0.0;
+  mfp->ctrl        = ncm_model_ctrl_new (NULL);
 }
 
 static void
@@ -181,6 +117,9 @@ _nc_mass_function_set_property (GObject *object, guint prop_id, const GValue *va
     case PROP_AREA:
       nc_mass_function_set_area (mfp, g_value_get_double (value));
       break;
+    case PROP_PREC:
+      nc_mass_function_set_prec (mfp, g_value_get_double (value));
+      break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
       break;
@@ -209,6 +148,9 @@ _nc_mass_function_get_property (GObject *object, guint prop_id, GValue *value, G
       break;
     case PROP_AREA:
       g_value_set_double (value, mfp->area_survey);
+      break;
+    case PROP_PREC:
+      g_value_set_double (value, mfp->prec);
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -295,8 +237,88 @@ nc_mass_function_class_init (NcMassFunctionClass *klass)
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME
                                                         | G_PARAM_STATIC_BLURB));
 
-
+  /**
+   * NcMassFunction:prec:
+   *
+   * This property sets the precision.
+   */
+  g_object_class_install_property (object_class,
+                                   PROP_PREC,
+                                   g_param_spec_double ("prec",
+                                                        NULL,
+                                                        "Precision",
+                                                        1.0e-15, 1.0, 1.0e-6,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME
+                                                        | G_PARAM_STATIC_BLURB));
 }
+
+
+/**
+ * nc_mass_function_new:
+ * @dist: a #NcDistance sets to #NcMassFunction:distance.
+ * @vp: a #NcMatterVar sets to #NcMassFunction:variance.
+ * @gf: a #NcGrowthFunc sets to #NcMassFunction:growth.
+ * @mulf: a #NcMultiplicityFunc sets to #NcMassFunction:multiplicity.
+ *
+ * This function allocates memory for a new #NcMassFunction object and sets its properties to the values from
+ * the input arguments.
+ *
+ * Returns: A new #NcMassFunction.
+ */
+NcMassFunction *
+nc_mass_function_new (NcDistance *dist, NcMatterVar *vp, NcGrowthFunc *gf, NcMultiplicityFunc *mulf)
+{
+  NcMassFunction *mfp = g_object_new (NC_TYPE_MASS_FUNCTION,
+                                      "distance", dist,
+                                      "variance", vp,
+                                      "growth", gf,
+                                      "multiplicity", mulf,
+                                      NULL);
+  return mfp;
+}
+
+/**
+ * nc_mass_function_copy:
+ * @mfp: a #NcMassFunction.
+ *
+ * This function duplicates the #NcMassFunction object setting the same values of the original propertities.
+ *
+ * Returns: (transfer full): A new #NcMassFunction.
+   */
+NcMassFunction *
+nc_mass_function_copy (NcMassFunction *mfp)
+{
+  return nc_mass_function_new (mfp->dist, mfp->vp, mfp->gf, mfp->mulf);
+}
+
+/**
+ * nc_mass_function_free:
+ * @mfp: a #NcMassFunction.
+ *
+ * Atomically decrements the reference count of @mfp by one. If the reference count drops to 0,
+ * all memory allocated by @mfp is released.
+ *
+ */
+void
+nc_mass_function_free (NcMassFunction *mfp)
+{
+  g_object_unref (mfp);
+}
+
+/**
+ * nc_mass_function_clear:
+ * @mfp: a #NcMassFunction.
+ *
+ * Atomically decrements the reference count of @mfp by one. If the reference count drops to 0,
+ * all memory allocated by @mfp is released. Set pointer to NULL.
+ *
+ */
+void
+nc_mass_function_clear (NcMassFunction **mfp)
+{
+  g_clear_object (mfp);
+}
+
 
 /**
  * nc_mass_function_dn_dlnm:
@@ -544,6 +566,24 @@ nc_mass_function_set_area (NcMassFunction *mfp, gdouble area)
 }
 
 /**
+ * nc_mass_function_set_prec:
+ * @mfp: a #NcMassFunction.
+ * @prec: precision.
+ *
+ * FIXME
+ *
+ */
+void
+nc_mass_function_set_prec (NcMassFunction *mfp, gdouble prec)
+{
+  if (mfp->prec != prec)
+  {
+    mfp->prec = prec;
+    ncm_spline2d_clear (&mfp->d2NdzdlnM);
+  }
+}
+
+/**
  * nc_mass_function_set_area_sd:
  * @mfp: a #NcMassFunction.
  * @area_sd: area in square degree.
@@ -583,7 +623,7 @@ nc_mass_function_set_eval_limits (NcMassFunction *mfp, NcHICosmo *model, gdouble
   }
 
   if (mfp->d2NdzdlnM == NULL)
-    _nc_mass_function_generate_2Dspline_knots (mfp, model, 1e-5);
+    _nc_mass_function_generate_2Dspline_knots (mfp, model, mfp->prec);
 }
 
 /**
@@ -617,7 +657,7 @@ nc_mass_function_prepare (NcMassFunction *mfp, NcHICosmo *model)
       const gdouble lnM = ncm_vector_get (D2NDZDLNM_LNM (mfp), j);
       const gdouble d2NdzdlnM_ij = (dVdz * nc_mass_function_dn_dlnm (mfp, model, lnM, z));
       ncm_matrix_set (D2NDZDLNM_VAL (mfp), i, j, d2NdzdlnM_ij);
-      //printf ("prep matrix % 20.15g % 20.15g % 20.15g\n", z, lnM, d2NdzdlnM_ij);
+      /*printf ("prep matrix % 20.15g % 20.15g % 20.15g\n", z, lnM, d2NdzdlnM_ij);*/
     }
   }
   ncm_spline2d_prepare (mfp->d2NdzdlnM);

@@ -913,8 +913,8 @@ _nc_matter_var_prepare_fft (NcMatterVar *vp, NcHICosmo *model)
   static fftw_complex *Rdsigma2_dr = NULL;
   static fftw_complex *du = NULL;
   static fftw_plan p, p_Rsigma2, p_Rdsigma2_dr;
-  static gdouble planned = FALSE;
-  static gdouble calc_u = FALSE;
+  static gboolean planned = FALSE;
+  static gboolean calc_u = FALSE;
   gint i, j;
   
   //fprintf (stderr, "# %d % 20.15g [% 20.15g]\n", N, dr, L);

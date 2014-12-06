@@ -793,6 +793,7 @@ nc_cluster_abundance_prepare_inv_dNdz (NcClusterAbundance *cad, NcHICosmo *model
       ncm_matrix_set (cad->inv_lnM_z->zm, i, j, cad->lnMf);
     }
   }
+  
   ncm_spline2d_prepare (cad->inv_lnM_z);
   ncm_spline_prepare (cad->inv_z);
 }
@@ -824,7 +825,7 @@ nc_cluster_abundance_prepare_inv_dNdlnM_z (NcClusterAbundance *cad, NcHICosmo *m
 
   ncm_vector_set (cad->inv_lnM->xv, 0, f);
   ncm_vector_set (cad->inv_lnM->yv, 0, lnM0);
-  
+
   for (i = 1; i < cad->inv_lnM->len; i++)
   {
     gdouble lnM1 = cad->lnMi + dlnM * i;
@@ -845,7 +846,6 @@ nc_cluster_abundance_prepare_inv_dNdlnM_z (NcClusterAbundance *cad, NcHICosmo *m
     }
     ncm_vector_set (cad->inv_lnM->xv, i, f);
     ncm_vector_set (cad->inv_lnM->yv, i, lnM1);
-
     lnM0 = lnM1;
   }
 
