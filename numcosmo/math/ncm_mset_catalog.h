@@ -32,6 +32,8 @@
 #include <numcosmo/math/ncm_fit.h>
 #include <numcosmo/math/ncm_stats_vec.h>
 #include <gsl/gsl_histogram.h>
+#include <gsl/gsl_eigen.h>
+#include <gsl/gsl_vector_complex.h>
 #ifdef NUMCOSMO_HAVE_CFITSIO
 #include <fitsio.h>
 #endif /* NUMCOSMO_HAVE_CFITSIO */
@@ -77,6 +79,16 @@ struct _NcmMSetCatalog
   NcmRNG *rng;
   gboolean weighted;
   gboolean first_flush;
+  guint nchains;
+  GPtrArray *chain_pstats;
+  NcmStatsVec *mean_pstats;
+  NcmVector *chain_means;
+  NcmVector *chain_vars;
+  NcmMatrix *chain_cov;
+  NcmMatrix *chain_sM;
+  gsl_eigen_nonsymm_workspace *chain_sM_ws;
+  gsl_vector_complex *chain_sM_ev;
+  NcmVector *tau;
   gchar *rng_inis;
   gchar *rng_stat;
   GTimer *flush_timer;
@@ -106,7 +118,7 @@ struct _NcmMSetCatalogClass
 
 GType ncm_mset_catalog_get_type (void) G_GNUC_CONST;
 
-NcmMSetCatalog *ncm_mset_catalog_new (NcmMSet *mset, guint nadd_vals, gboolean weighted, ...);
+NcmMSetCatalog *ncm_mset_catalog_new (NcmMSet *mset, guint nadd_vals, guint nchains, gboolean weighted, ...);
 void ncm_mset_catalog_free (NcmMSetCatalog *mcat);
 void ncm_mset_catalog_clear (NcmMSetCatalog **mcat);
 
@@ -130,12 +142,18 @@ void ncm_mset_catalog_add_from_mset (NcmMSetCatalog *mcat, NcmMSet *mset, ...);
 void ncm_mset_catalog_add_from_mset_array (NcmMSetCatalog *mcat, NcmMSet *mset, gdouble *ax);
 void ncm_mset_catalog_add_from_vector (NcmMSetCatalog *mcat, NcmVector *vals);
 void ncm_mset_catalog_log_current_stats (NcmMSetCatalog *mcat);
+void ncm_mset_catalog_log_current_chain_stats (NcmMSetCatalog *mcat);
 
 NcmVector *ncm_mset_catalog_peek_row (NcmMSetCatalog *mcat, guint i);
 NcmVector *ncm_mset_catalog_peek_current_row (NcmMSetCatalog *mcat);
 
 void ncm_mset_catalog_get_mean (NcmMSetCatalog *mcat, NcmVector  **mean);
 void ncm_mset_catalog_get_covar (NcmMSetCatalog *mcat, NcmMatrix **cov);
+
+void ncm_mset_catalog_estimate_autocorrelation_tau (NcmMSetCatalog *mcat);
+NcmVector *ncm_mset_catalog_peek_autocorrelation_tau (NcmMSetCatalog *mcat);
+gdouble ncm_mset_catalog_get_param_shrink_factor (NcmMSetCatalog *mcat, guint p);
+gdouble ncm_mset_catalog_get_shrink_factor (NcmMSetCatalog *mcat);
 
 void ncm_mset_catalog_param_pdf (NcmMSetCatalog *mcat, guint i);
 gdouble ncm_mset_catalog_param_pdf_pvalue (NcmMSetCatalog *mcat, gdouble pval, gboolean both);

@@ -89,6 +89,7 @@ ncm_sources = \
 	math/ncm_fit_mc.c                  \
 	math/ncm_fit_mcbs.c                \
 	math/ncm_fit_mcmc.c                \
+	math/ncm_fit_esmcmc.c              \
 	math/ncm_lh_ratio1d.c              \
 	math/ncm_lh_ratio2d.c              \
 	math/ncm_abc.c                     \
@@ -172,6 +173,7 @@ ncm_headers = \
 	math/ncm_fit_mc.h                \
 	math/ncm_fit_mcbs.h              \
 	math/ncm_fit_mcmc.h              \
+	math/ncm_fit_esmcmc.h            \
 	math/ncm_lh_ratio1d.h            \
 	math/ncm_lh_ratio2d.h            \
 	math/ncm_abc.h                   \

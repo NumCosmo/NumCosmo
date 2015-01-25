@@ -541,79 +541,77 @@ main (gint argc, gchar *argv[])
     }
   }
 
-  if (de_fit.montecarlo > 0)
+  if (de_fit.mc)
   {
-    if (de_fit.mcbs <= 0)
+    NcmFitMC *mc = ncm_fit_mc_new (fit, de_fit.mc_rtype, de_fit.msg_level);
+    gdouble m2lnL = 0.0;
+    if (fit->fstate->is_best_fit)
+      m2lnL = ncm_fit_state_get_m2lnL_curval (fit->fstate);
+
+    if (de_fit.fiducial != NULL)
+      ncm_fit_mc_set_fiducial (mc, fiduc);
+
+    if (de_fit.mc_nthreads > 1)
+      ncm_fit_mc_set_nthreads (mc, de_fit.mc_nthreads);
+
+    if (de_fit.mc_seed > -1)
     {
-      NcmFitMC *mc = ncm_fit_mc_new (fit, de_fit.mc_rtype, de_fit.msg_level);
-      gdouble m2lnL = 0.0;
-      if (fit->fstate->is_best_fit)
-        m2lnL = ncm_fit_state_get_m2lnL_curval (fit->fstate);
-
-      if (de_fit.fiducial != NULL)
-        ncm_fit_mc_set_fiducial (mc, fiduc);
-
-      if (de_fit.mc_nthreads > 1)
-        ncm_fit_mc_set_nthreads (mc, de_fit.mc_nthreads);
-
-      if (de_fit.mc_seed > -1)
-      {
-        NcmRNG *mc_rng = ncm_rng_seeded_new (NULL, de_fit.mc_seed);
-        ncm_fit_mc_set_rng (mc, mc_rng);
-        ncm_rng_free (mc_rng);
-      }
-      
-      if (de_fit.mc_data != NULL)
-        ncm_fit_mc_set_data_file (mc, de_fit.mc_data);
-      
-      ncm_fit_mc_start_run (mc);
-      
-      if (de_fit.mc_ni >= 0)
-        ncm_fit_mc_set_first_sample_id (mc, de_fit.mc_ni);
-
-      ncm_fit_mc_run_lre (mc, de_fit.montecarlo, de_fit.mc_lre);
-      ncm_fit_mc_end_run (mc);
-      
-      ncm_fit_mc_mean_covar (mc);
-      ncm_mset_catalog_param_pdf (mc->mcat, 0);
-      ncm_fit_log_covar (fit);
-      {
-        gdouble p_value = ncm_mset_catalog_param_pdf_pvalue (mc->mcat, m2lnL, FALSE);
-        ncm_message ("#   - pvalue for fitted model [% 20.15g] %04.2f%%.\n#\n", m2lnL, 100.0 * p_value);
-      }
-      ncm_fit_mc_clear (&mc);
+      NcmRNG *mc_rng = ncm_rng_seeded_new (NULL, de_fit.mc_seed);
+      ncm_fit_mc_set_rng (mc, mc_rng);
+      ncm_rng_free (mc_rng);
     }
+
+    if (de_fit.mc_data != NULL)
+      ncm_fit_mc_set_data_file (mc, de_fit.mc_data);
+
+    ncm_fit_mc_start_run (mc);
+
+    if (de_fit.mc_ni >= 0)
+      ncm_fit_mc_set_first_sample_id (mc, de_fit.mc_ni);
+
+    ncm_fit_mc_run_lre (mc, de_fit.mc_prerun, de_fit.mc_lre);
+    ncm_fit_mc_end_run (mc);
+
+    ncm_fit_mc_mean_covar (mc);
+    ncm_mset_catalog_param_pdf (mc->mcat, 0);
+    ncm_fit_log_covar (fit);
+    {
+      gdouble p_value = ncm_mset_catalog_param_pdf_pvalue (mc->mcat, m2lnL, FALSE);
+      ncm_message ("#   - pvalue for fitted model [% 20.15g] %04.2f%%.\n#\n", m2lnL, 100.0 * p_value);
+    }
+    ncm_fit_mc_clear (&mc);
+  }
+
+  if (de_fit.mcbs)
+  {
+    NcmMSet *resample_mset;
+    NcmFitMCBS *mcbs = ncm_fit_mcbs_new (fit);
+    gdouble m2lnL = ncm_fit_state_get_m2lnL_curval (fit->fstate);
+
+    if (de_fit.fiducial != NULL)
+      resample_mset = fiduc;
     else
+      resample_mset = fit->mset;
+
+    if (de_fit.mc_seed > -1)
     {
-      NcmMSet *resample_mset;
-      NcmFitMCBS *mcbs = ncm_fit_mcbs_new (fit);
-      gdouble m2lnL = ncm_fit_state_get_m2lnL_curval (fit->fstate);
-
-      if (de_fit.fiducial != NULL)
-        resample_mset = fiduc;
-      else
-        resample_mset = fit->mset;
-
-      if (de_fit.mc_seed > -1)
-      {
-        NcmRNG *mc_rng = ncm_rng_seeded_new (NULL, de_fit.mc_seed);
-        ncm_fit_mcbs_set_rng (mcbs, mc_rng);
-        ncm_rng_free (mc_rng);
-      }
-      
-      if (de_fit.mc_data != NULL)
-        ncm_fit_mcbs_set_filename (mcbs, de_fit.mc_data);
-
-      ncm_fit_mcbs_run (mcbs, resample_mset, de_fit.mc_ni, de_fit.montecarlo, de_fit.mcbs, de_fit.mc_rtype, de_fit.msg_level, de_fit.mc_nthreads);
-
-      ncm_mset_catalog_param_pdf (mcbs->mcat, 0);
-      ncm_fit_log_covar (fit);
-      {
-        gdouble p_value = ncm_mset_catalog_param_pdf_pvalue (mcbs->mcat, m2lnL, FALSE);
-        ncm_message ("#   - pvalue for fitted model [% 20.15g] %04.2f%%.\n#\n", m2lnL, 100.0 * p_value);
-      }
-      ncm_fit_mcbs_clear (&mcbs);
+      NcmRNG *mc_rng = ncm_rng_seeded_new (NULL, de_fit.mc_seed);
+      ncm_fit_mcbs_set_rng (mcbs, mc_rng);
+      ncm_rng_free (mc_rng);
     }
+
+    if (de_fit.mc_data != NULL)
+      ncm_fit_mcbs_set_filename (mcbs, de_fit.mc_data);
+
+    ncm_fit_mcbs_run (mcbs, resample_mset, de_fit.mc_ni, de_fit.mc_prerun, de_fit.mcbs_nbootstraps, de_fit.mc_rtype, de_fit.msg_level, de_fit.mc_nthreads);
+
+    ncm_mset_catalog_param_pdf (mcbs->mcat, 0);
+    ncm_fit_log_covar (fit);
+    {
+      gdouble p_value = ncm_mset_catalog_param_pdf_pvalue (mcbs->mcat, m2lnL, FALSE);
+      ncm_message ("#   - pvalue for fitted model [% 20.15g] %04.2f%%.\n#\n", m2lnL, 100.0 * p_value);
+    }
+    ncm_fit_mcbs_clear (&mcbs);
   }
 
   if (de_fit.mcmc)
@@ -644,7 +642,7 @@ main (gint argc, gchar *argv[])
       ncm_fit_mcmc_set_data_file (mcmc, de_fit.mc_data);
 
     ncm_fit_mcmc_start_run (mcmc);
-    ncm_fit_mcmc_run_lre (mcmc, 0, de_fit.mc_lre);
+    ncm_fit_mcmc_run_lre (mcmc, de_fit.mc_prerun, de_fit.mc_lre);
     ncm_fit_mcmc_end_run (mcmc);
 
     ncm_fit_mcmc_mean_covar (mcmc);
@@ -653,6 +651,53 @@ main (gint argc, gchar *argv[])
     ncm_fit_mcmc_clear (&mcmc);    
   }
   
+  if (de_fit.esmcmc)
+  {
+    NcmMSetTransKernGauss *init_sampler = ncm_mset_trans_kern_gauss_new (0);
+    NcmFitESMCMC *esmcmc = ncm_fit_esmcmc_new (fit, 
+                                               de_fit.mc_nwalkers, 
+                                               NCM_MSET_TRANS_KERN (init_sampler), 
+                                               NCM_FIT_ESMCMC_MOVE_TYPE_STRETCH, 
+                                               de_fit.msg_level);
+
+    ncm_mset_trans_kern_set_mset (NCM_MSET_TRANS_KERN (init_sampler), mset);
+    ncm_mset_trans_kern_set_prior_from_mset (NCM_MSET_TRANS_KERN (init_sampler));
+
+    if (de_fit.mc_nthreads > 1)
+      ncm_fit_esmcmc_set_nthreads (esmcmc, de_fit.mc_nthreads);
+    
+    if (de_fit.fisher)
+    {
+      NcmMatrix *covar = ncm_matrix_dup (fit->fstate->covar);
+      ncm_matrix_scale (covar, 2.0);
+      ncm_mset_trans_kern_gauss_set_cov (init_sampler, covar);
+      ncm_matrix_free (covar);
+    }
+    else
+    {
+      ncm_mset_trans_kern_gauss_set_cov_from_scale (init_sampler);
+    }
+
+    if (de_fit.mc_seed > -1)
+    {
+      NcmRNG *esmcmc_rng = ncm_rng_seeded_new (NULL, de_fit.mc_seed);
+      ncm_fit_esmcmc_set_rng (esmcmc, esmcmc_rng);
+      ncm_rng_free (esmcmc_rng);
+    }
+
+    if (de_fit.mc_data != NULL)
+      ncm_fit_esmcmc_set_data_file (esmcmc, de_fit.mc_data);
+
+    ncm_fit_esmcmc_start_run (esmcmc);
+    ncm_fit_esmcmc_run_lre (esmcmc, de_fit.mc_prerun, de_fit.mc_lre);
+    ncm_fit_esmcmc_end_run (esmcmc);
+
+    ncm_fit_esmcmc_mean_covar (esmcmc);
+    ncm_mset_catalog_param_pdf (esmcmc->mcat, 0);
+    ncm_fit_log_covar (fit);
+    ncm_fit_esmcmc_clear (&esmcmc);    
+  }
+
   if (de_fit.onedim_cr != NULL)
   {
     while (de_fit.onedim_cr[0] != NULL)

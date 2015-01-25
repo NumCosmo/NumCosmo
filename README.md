@@ -1,7 +1,38 @@
 NumCosmo
 ========
 
-This is the readme file of the numcosmo library.
+NumCosmo is a numerical cosmology library. It contains a comprehensive set of
+tools for calculating cosmology observables and to analyze statistical models.
+
+Description
+-----------
+
+The library is written in C, but since it uses the [GObject](https://wiki.gnome.org/action/show/Projects/GObjectIntrospection) 
+framework, it is developed in a object oriented fashion. Additionally, it has automatic
+bindings for every language which supports GObject introspection (Perl,
+Python, etc. For a complete list see https://wiki.gnome.org/Projects/GObjectIntrospection/Users ).
+
+The available observables objects are:
+  - Supernovae Ia.
+  - Baryon Acoustic Oscillations.
+  - Cosmic Microwave Background (shift parameter and distance priors, full
+  analysis is on the way).
+  - Cluster Number counts.
+  - Hubble data H(z).
+
+Currently is has the following statistical tools:
+  - Monte Carlo (NcmFitMC) -- resampling and fitting.
+  - Monte Carlo Bootstrap (NcmFitMCBS) -- resampling/bootstraping and fitting.
+  - Markov Chain Monte Carlog -- MCMC with the Metropolis-Hastings sampler, it supports
+    general samplers through transtion kernel object NcmMSetTransKern.
+  - Ensemble Sampler MCMC -- Ensemble Markov Chain Monte Carlo consists in
+    every point of the MCMC chain being a emsemble of points in the
+    parameter space. It implements an affine invariant move method (stretch move).
+
+All methods above generate a catalog using the NcmMSetCatalog which provide
+a unified way to analyze the results. Besides, the use of an catalog
+provides the support for restarting the algorithms from a previous crash
+or to extend the precision.
 
 Links:
 ------

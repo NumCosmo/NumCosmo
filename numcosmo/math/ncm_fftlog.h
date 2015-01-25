@@ -33,10 +33,7 @@
 #include <gsl/gsl_math.h>
 #ifndef NUMCOSMO_GIR_SCAN
 #include <complex.h>
-#else
-#define complex
 #endif /* NUMCOSMO_GIR_SCAN */
-
 #ifndef NUMCOSMO_GIR_SCAN
 #ifdef NUMCOSMO_HAVE_FFTW3
 #include <fftw3.h>

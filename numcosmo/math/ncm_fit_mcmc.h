@@ -68,6 +68,8 @@ struct _NcmFitMCMC
   NcmMemoryPool *mp;
   gint write_index;
   gint cur_sample_id;
+  guint naccepted;
+  guint ntotal;
   gboolean started;
   GMutex *dup_fit;
   GMutex *resample_lock;
@@ -98,6 +100,8 @@ void ncm_fit_mcmc_set_trans_kern (NcmFitMCMC *mcmc, NcmMSetTransKern *tkern);
 void ncm_fit_mcmc_set_nthreads (NcmFitMCMC *mcmc, guint nthreads);
 void ncm_fit_mcmc_set_fiducial (NcmFitMCMC *mcmc, NcmMSet *fiduc);
 void ncm_fit_mcmc_set_rng (NcmFitMCMC *mcmc, NcmRNG *rng);
+
+gdouble ncm_fit_mcmc_get_accept_ratio (NcmFitMCMC *mcmc);
 
 void ncm_fit_mcmc_start_run (NcmFitMCMC *mcmc);
 void ncm_fit_mcmc_end_run (NcmFitMCMC *mcmc);

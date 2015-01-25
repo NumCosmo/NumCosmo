@@ -32,6 +32,7 @@ G_BEGIN_DECLS
 
 gint ncm_lapack_dptsv (gdouble *d, gdouble *e, gdouble *b, gdouble *x, guint size);
 gint ncm_lapack_dpotrf (gchar uplo, guint size, gdouble *a, guint lda);
+gint ncm_lapack_dpotri (gchar uplo, guint size, gdouble *a, guint lda);
 
 #define NCM_LAPACK_CHECK_INFO(func,info) if ((info) != 0) g_error ("Lapack[%s] error %d", func, (info))
 

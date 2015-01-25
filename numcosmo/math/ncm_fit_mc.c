@@ -250,7 +250,7 @@ _ncm_fit_mc_set_fit_obj (NcmFitMC *mc, NcmFit *fit)
 {
   g_assert (mc->fit == NULL);
   mc->fit = ncm_fit_ref (fit);
-  mc->mcat = ncm_mset_catalog_new (fit->mset, 1, FALSE, NCM_MSET_CATALOG_M2LNL_COLNAME);
+  mc->mcat = ncm_mset_catalog_new (fit->mset, 1, 1, FALSE, NCM_MSET_CATALOG_M2LNL_COLNAME);
 }
 
 /**

@@ -188,6 +188,9 @@ ncm_mset_trans_kern_set_mset (NcmMSetTransKern *tkern, NcmMSet *mset)
   if (mset != NULL)
   {
     g_assert (mset->valid_map);
+    if (ncm_mset_fparam_len (mset) == 0)
+      g_error ("ncm_mset_trans_kern_set_mset: invalid mset, no free parameters.");
+    
     tkern->mset = ncm_mset_ref (mset);
     NCM_MSET_TRANS_KERN_GET_CLASS (tkern)->set_mset (tkern, mset);
   }

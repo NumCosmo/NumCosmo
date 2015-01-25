@@ -144,7 +144,12 @@ void ncm_matrix_free (NcmMatrix *cm);
 void ncm_matrix_clear (NcmMatrix **cm);
 void ncm_matrix_const_free (const NcmMatrix *cm);
 
+void ncm_matrix_dsymm (NcmMatrix *cm, const gdouble alpha, NcmMatrix *b, const gdouble beta, NcmMatrix *c);
+
 void ncm_matrix_cholesky_decomp (NcmMatrix *cm);
+void ncm_matrix_cholesky_inverse (NcmMatrix *cm);
+void ncm_matrix_log_vals (NcmMatrix *cm, gchar *prefix, gchar *format);
+
 
 G_END_DECLS
 

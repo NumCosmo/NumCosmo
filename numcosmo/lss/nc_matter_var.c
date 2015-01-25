@@ -929,9 +929,9 @@ _nc_matter_var_prepare_fft (NcMatterVar *vp, NcHICosmo *model)
     du = (fftw_complex *) fftw_malloc (sizeof(fftw_complex) * N);
 
     ncm_cfg_load_fftw_wisdom ("nc_matter_var_wisdown.fftw3");
-    p = fftw_plan_dft_1d (N, in, out, FFTW_FORWARD, FFTW_PATIENT | FFTW_DESTROY_INPUT);
-    p_Rsigma2 = fftw_plan_dft_1d (N, out, in, FFTW_FORWARD, FFTW_PATIENT | FFTW_DESTROY_INPUT);
-    p_Rdsigma2_dr = fftw_plan_dft_1d (N, fftRdsigma2_dr, Rdsigma2_dr, FFTW_FORWARD, FFTW_PATIENT | FFTW_DESTROY_INPUT);
+    p = fftw_plan_dft_1d (N, in, out, FFTW_FORWARD, fftw_default_flags | FFTW_DESTROY_INPUT);
+    p_Rsigma2 = fftw_plan_dft_1d (N, out, in, FFTW_FORWARD, fftw_default_flags | FFTW_DESTROY_INPUT);
+    p_Rdsigma2_dr = fftw_plan_dft_1d (N, fftRdsigma2_dr, Rdsigma2_dr, FFTW_FORWARD, fftw_default_flags | FFTW_DESTROY_INPUT);
     ncm_cfg_save_fftw_wisdom ("nc_matter_var_wisdown.fftw3");
     
     planned = TRUE;

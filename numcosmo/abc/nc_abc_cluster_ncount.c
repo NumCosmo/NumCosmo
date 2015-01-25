@@ -613,7 +613,7 @@ static void
 _nc_abc_cluster_ncount_update_tkern (NcmABC *abc)
 {
   NcABCClusterNCount *abcnc = NC_ABC_CLUSTER_NCOUNT (abc);
-  const gdouble scale = abcnc->scale_cov ? 0.25 + 1.75 * ncm_abc_get_accept_rate (abc) : 2.0;
+  const gdouble scale = abcnc->scale_cov ? 0.25 + 1.75 * ncm_abc_get_accept_ratio (abc) : 2.0;
   const gdouble epsilon = NCM_ABC (abcnc)->epsilon;
   
   ncm_mset_catalog_get_covar (abc->mcat, &abc->covar);

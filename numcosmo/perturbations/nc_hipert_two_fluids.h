@@ -33,6 +33,7 @@
 #include <numcosmo/nc_hicosmo.h>
 #include <numcosmo/perturbations/nc_hipert.h>
 #include <numcosmo/perturbations/nc_hipert_wkb.h>
+#include <numcosmo/perturbations/nc_hipert_itwo_fluids.h>
 
 G_BEGIN_DECLS
 
@@ -58,6 +59,7 @@ struct _NcHIPertTwoFluids
   NcHIPert parent_instance;
   NcHIPertWKB *wkb_zeta;
   NcHIPertWKB *wkb_S;
+  N_Vector abstol;
 };
 
 /**
@@ -100,6 +102,15 @@ void nc_hipert_two_fluids_prepare_wkb_S (NcHIPertTwoFluids *ptf, NcHICosmo *cosm
 gdouble nc_hipert_two_fluids_nuA (NcHIPertTwoFluids *ptf, NcHICosmo *cosmo, gdouble alpha);
 gdouble nc_hipert_two_fluids_nuB (NcHIPertTwoFluids *ptf, NcHICosmo *cosmo, gdouble alpha);
 gdouble nc_hipert_two_fluids_YAB (NcHIPertTwoFluids *ptf, NcHICosmo *cosmo, gdouble alpha);
+gdouble nc_hipert_two_fluids_LA (NcHIPertTwoFluids *ptf, NcHICosmo *cosmo, gdouble alpha);
+gdouble nc_hipert_two_fluids_LB (NcHIPertTwoFluids *ptf, NcHICosmo *cosmo, gdouble alpha);
+gdouble nc_hipert_two_fluids_nuzeta2 (NcHIPertTwoFluids *ptf, NcHICosmo *cosmo, gdouble alpha);
+gdouble nc_hipert_two_fluids_nuS2 (NcHIPertTwoFluids *ptf, NcHICosmo *cosmo, gdouble alpha);
+gdouble nc_hipert_two_fluids_laq2 (NcHIPertTwoFluids *ptf, NcHICosmo *cosmo, gdouble alpha);
+gdouble nc_hipert_two_fluids_lazeta2 (NcHIPertTwoFluids *ptf, NcHICosmo *cosmo, gdouble alpha);
+gdouble nc_hipert_two_fluids_nuplus2 (NcHIPertTwoFluids *ptf, NcHICosmo *cosmo, gdouble alpha);
+gdouble nc_hipert_two_fluids_numinus2 (NcHIPertTwoFluids *ptf, NcHICosmo *cosmo, gdouble alpha);
+void nc_hipert_two_fluids_eom_full (NcHIPertTwoFluids *ptf, NcHICosmo *cosmo, gdouble alpha, NcHIPertITwoFluidsEOM **eom_full);
 
 void nc_hipert_two_fluids_wkb_zeta (NcHIPertTwoFluids *ptf, NcHICosmo *cosmo, gdouble alpha, gdouble *Re_zeta, gdouble *Im_zeta);
 void nc_hipert_two_fluids_wkb_zeta_Pzeta (NcHIPertTwoFluids *ptf, NcHICosmo *cosmo, gdouble alpha, gdouble *Re_zeta, gdouble *Im_zeta, gdouble *Re_Pzeta, gdouble *Im_Pzeta);

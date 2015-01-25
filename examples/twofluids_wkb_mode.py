@@ -25,6 +25,7 @@ mode_k = 1.0
 cosmo.props.w      = w
 cosmo.props.Omegar = 1.0e-5
 cosmo.props.Omegaw = 1.0 - 1.0e-5
+cosmo.props.xb     = 1.e30
 
 pert = Nc.HIPertTwoFluids.new ()
 
@@ -56,9 +57,9 @@ print "# Prec a2 wkb Q:    %f %e" % (alpha_S_prec_a2, cosmo.x_alpha (alpha_S_pre
 print "# Inital time:      %f %e" % (alphai, cosmo.x_alpha (alphai))
 
 print "# Preparing zeta"
-pert.prepare_wkb_zeta (cosmo, wkb_prec, alpha_minf, -alpha_end)
+#pert.prepare_wkb_zeta (cosmo, wkb_prec, alpha_minf, -alpha_end)
 print "# Preparing Q"
-pert.prepare_wkb_S (cosmo, wkb_prec, alpha_minf, -alpha_end)
+#pert.prepare_wkb_S (cosmo, wkb_prec, alpha_minf, -alpha_end)
 
 pert.set_stiff_solver (True)
 
@@ -84,7 +85,32 @@ Q_B = []
 
 for i in range (10000):
   alpha = alphai + (alpha_end - alphai) / 10000.0 * (i + 1)
-  print ("% 20.15g % 20.15g % 20.15g % 20.15g" % (alpha, pert.nuA (cosmo, alpha), pert.nuB (cosmo, alpha), pert.YAB (cosmo, alpha)))
+  eom_full = pert.eom_full (cosmo, alpha)
+  
+  nup = eom_full.nu_plus
+  num = eom_full.nu_minus
+  laq = eom_full.lambda_s
+  laz = eom_full.lambda_zeta
+  Uplus  = eom_full.Uplus
+  Uminus = eom_full.Uminus
+  Wplus  = eom_full.Wplus
+  Wminus = eom_full.Wminus
+  
+  
+#  qpz = math.sqrt (nuz / nup) * laq
+#  qpq = math.sqrt (nuq / nup) * laz
+#  qmz = math.sqrt (nuz / num) * laz
+#  qmq = math.sqrt (nuq / num) * laq
+  
+#  Ppz = math.sqrt (nup / nuz) * laq  
+#  Ppq = math.sqrt (nup / nuq) * laz
+#  Pmz = math.sqrt (num / nuz) * laz  
+#  Pmq = math.sqrt (num / nuq) * laq
+
+  #print ("% 20.15g % 20.15g % 20.15g % 20.15g % 20.15g % 20.15g" % (alpha, pert.nuA (cosmo, alpha), pert.nuB (cosmo, alpha), pert.YAB (cosmo, alpha), pert.LA (cosmo, alpha), pert.LB (cosmo, alpha)))
+  #print ("% 20.15f % 20.15e % 20.15e % 20.15e % 20.15e % 20.15e % 20.15e % 20.15e % 20.15e" % (alpha, nuz, nuq, y, nu1, nup, num, laq, laz))
+  #print ("% 20.15f % 20.15e % 20.15e % 20.15e % 20.15e % 20.15e % 20.15e % 20.15e % 20.15e" % (alpha, qpz, qpq, qmz, qmq, Ppz, Ppq, Pmz, Pmq))
+  print ("% 20.15f % 20.15e % 20.15e % 20.15e % 20.15e % 20.15e % 20.15e % 20.15e % 20.15e" % (alpha, nup, num, laq, laz, Uplus, Uminus, Wplus, Wminus))
 
 
 exit ()

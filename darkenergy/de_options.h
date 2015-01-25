@@ -120,7 +120,6 @@ typedef struct _NcDEFitEntries NcDEFitEntries;
 struct _NcDEFitEntries
 {
   gchar *file_out;
-  gboolean fit;
   gchar *fit_type;
   gchar *fit_diff;
   gchar *fit_algo;
@@ -133,16 +132,21 @@ struct _NcDEFitEntries
   gint max_iter;
   gboolean resample;
   gint msg_level;
-  gint montecarlo;
-  gint mcbs;
   gint mc_rtype;
   gint mc_ni;
   gint mc_nthreads;
   glong mc_seed;
+  gint mc_nwalkers;
+  gint mc_prerun;
+  gint mcbs_nbootstraps;
   gdouble mc_lre;
   gchar *fiducial;
   gchar *mc_data;
+  gboolean fit;
+  gboolean mc;
+  gboolean mcbs;
   gboolean mcmc;
+  gboolean esmcmc;
   gboolean fisher;
   gboolean kinematics_sigma;
   gdouble kinematics_z;
@@ -155,9 +159,9 @@ struct _NcDEFitEntries
 };
 
 #ifdef NUMCOSMO_HAVE_NLOPT
-#define NC_DE_FIT_ENTRIES { NULL, FALSE, "nlopt",   "numdiff-forward", NULL, 1e-8, 1e-5, -1, -1, {-1, -1}, NULL, NCM_FIT_DEFAULT_MAXITER, FALSE, NCM_FIT_RUN_MSGS_SIMPLE, -1, -1, NCM_FIT_MC_RESAMPLE_FROM_MODEL, 0, 0, -1, 1.0e3, NULL, NULL, FALSE, FALSE, FALSE, 1.0, 100, FALSE, 1.0, FALSE, FALSE, NULL}
+#define NC_DE_FIT_ENTRIES { NULL, "nlopt",   "numdiff-forward", NULL, 1e-8, 1e-5, -1, -1, {-1, -1}, NULL, NCM_FIT_DEFAULT_MAXITER, FALSE, NCM_FIT_RUN_MSGS_SIMPLE, NCM_FIT_MC_RESAMPLE_FROM_MODEL, 0, 0, -1, 100, 0, 100, 1.0e3, NULL, NULL, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, 1.0, 100, FALSE, 1.0, FALSE, FALSE, NULL}
 #else
-#define NC_DE_FIT_ENTRIES { NULL, FALSE, "gsl-mms", "numdiff-forward", NULL, 1e-8, 1e-5, -1, -1, {-1, -1}, NULL, NCM_FIT_DEFAULT_MAXITER, FALSE, NCM_FIT_RUN_MSGS_SIMPLE, -1, -1, NCM_FIT_MC_RESAMPLE_FROM_MODEL, 0, 0, -1, 1.0e3, NULL, NULL, FALSE, FALSE, FALSE, 1.0, 100, FALSE, 1.0, FALSE, FALSE, NULL}
+#define NC_DE_FIT_ENTRIES { NULL, "gsl-mms", "numdiff-forward", NULL, 1e-8, 1e-5, -1, -1, {-1, -1}, NULL, NCM_FIT_DEFAULT_MAXITER, FALSE, NCM_FIT_RUN_MSGS_SIMPLE, NCM_FIT_MC_RESAMPLE_FROM_MODEL, 0, 0, -1, 100, 0, 100, 1.0e3, NULL, NULL, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, 1.0, 100, FALSE, 1.0, FALSE, FALSE, NULL}
 #endif
 
 GOptionGroup *nc_de_opt_get_run_group (NcDERunEntries *de_run);

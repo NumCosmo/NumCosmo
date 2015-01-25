@@ -46,4 +46,14 @@
 #define NUMCOSMO_MICRO_VERSION @NUMCOSMO_MICRO_VERSION@
 #define NUMCOSMO_VERSION "@NUMCOSMO_VERSION@"
 
+/**
+ * SECTION:build_cfg
+ * @title: NumCosmo building configuration
+ * @short_description: Macros describing the current building configuration
+ *
+ * This section shows the macros controling which prerequisite/option was
+ * used when compiling NumCosmo.
+ * 
+ */
+
 #endif /* _CL_BUILD_CFG_H */

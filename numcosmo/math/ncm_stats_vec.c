@@ -115,8 +115,18 @@ ncm_stats_vec_init (NcmStatsVec *svec)
   svec->mean     = NULL;
   svec->var      = NULL;
   svec->cov      = NULL;
+  svec->real_cov = NULL;
   svec->saved_x  = NULL;
   svec->save_x   = FALSE;
+
+#ifdef NUMCOSMO_HAVE_FFTW3
+  svec->fft_size       = 0;
+  svec->fft_plan_size  = 0;
+  svec->param_data     = NULL;
+  svec->param_fft      = NULL;
+  svec->param_r2c      = NULL;
+  svec->param_c2r      = NULL;
+#endif /* NUMCOSMO_HAVE_FFTW3 */
 }
 
 static void
@@ -127,6 +137,7 @@ _ncm_stats_vec_dispose (GObject *object)
   ncm_vector_clear (&svec->mean);
   ncm_vector_clear (&svec->var);
   ncm_matrix_clear (&svec->cov);
+  ncm_matrix_clear (&svec->real_cov);
   if (svec->saved_x != NULL)
   {
     g_ptr_array_unref (svec->saved_x);
@@ -140,7 +151,15 @@ _ncm_stats_vec_dispose (GObject *object)
 static void
 _ncm_stats_vec_finalize (GObject *object)
 {
+  NcmStatsVec *svec = NCM_STATS_VEC (object);
 
+#ifdef NUMCOSMO_HAVE_FFTW3
+  g_clear_pointer (&svec->param_fft,  (GDestroyNotify) fftw_free);
+  g_clear_pointer (&svec->param_data, (GDestroyNotify) fftw_free);
+  g_clear_pointer (&svec->param_c2r,  (GDestroyNotify) fftw_destroy_plan);
+  g_clear_pointer (&svec->param_r2c,  (GDestroyNotify) fftw_destroy_plan);
+#endif /* NUMCOSMO_HAVE_FFTW3 */
+    
   /* Chain up : end */
   G_OBJECT_CLASS (ncm_stats_vec_parent_class)->finalize (object);
 }
@@ -520,6 +539,67 @@ ncm_stats_vec_update_weight (NcmStatsVec *svec, const gdouble w)
 }
 
 /**
+ * ncm_stats_vec_append:
+ * @svec: a #NcmStatsVec.
+ * @x: a #NcmVector to be added.
+ * @dup: a #gboolean.
+ * 
+ * Appends and updates the statistics using the vector @x #NcmVector of same 
+ * size #NcmStatsVec:length and with continuous allocation. i.e., NcmVector:stride == 1.
+ * 
+ * If @svec was created with save_x TRUE, the paramenter @dup determines if the vector
+ * @x will be duplicated or if just a reference for @x will be saved.
+ * 
+ */
+void 
+ncm_stats_vec_append (NcmStatsVec *svec, NcmVector *x, gboolean dup)
+{
+  _ncm_stats_vec_update_from_vec_weight (svec, 1.0, x);
+  if (svec->save_x)
+  {
+    if (dup)
+      g_ptr_array_add (svec->saved_x, ncm_vector_dup (x));
+    else
+      g_ptr_array_add (svec->saved_x, ncm_vector_ref (x));
+  }
+}
+
+/**
+ * ncm_stats_vec_prepend:
+ * @svec: a #NcmStatsVec.
+ * @x: a #NcmVector to be added.
+ * @dup: a boolean.
+ * 
+ * Prepends and updates the statistics using the vector @x and weight == 1.0. 
+ * It assumes that #NcmVector is of same size #NcmStatsVec:length and
+ * with continuous allocation. i.e., NcmVector:stride == 1.
+ * 
+ * If @svec was created with save_x TRUE, the paramenter @dup determines if the vector
+ * will be duplicated or if just a reference for @x will be saved.
+ * 
+ */
+void 
+ncm_stats_vec_prepend (NcmStatsVec *svec, NcmVector *x, gboolean dup)
+{
+  _ncm_stats_vec_update_from_vec_weight (svec, 1.0, x);
+
+  if (svec->save_x)
+  {
+    const guint cp_len  = 1;
+    const guint old_len = svec->saved_x->len;
+    const guint new_len = old_len + cp_len;
+
+    g_ptr_array_set_size (svec->saved_x, new_len);
+    memmove (&svec->saved_x->pdata[cp_len], svec->saved_x->pdata, sizeof (gpointer) * old_len);
+    
+    if (dup)
+      g_ptr_array_index (svec->saved_x, 0) = ncm_vector_dup (x);
+    else
+      g_ptr_array_index (svec->saved_x, 0) = ncm_vector_ref (x);
+  }
+}
+
+/**
  * ncm_stats_vec_append_data:
  * @svec: a #NcmStatsVec.
  * @data: (element-type NcmVector): a #GPtrArray containing #NcmVector s to be added.
@@ -538,16 +618,18 @@ void
 ncm_stats_vec_append_data (NcmStatsVec *svec, GPtrArray *data, gboolean dup)
 {
   guint i;
-  g_assert (svec->save_x);
 
   for (i = 0; i < data->len; i++)
   {
     NcmVector *x = g_ptr_array_index (data, i);
     _ncm_stats_vec_update_from_vec_weight (svec, 1.0, x);
-    if (dup)
-      g_ptr_array_add (svec->saved_x, ncm_vector_dup (x));
-    else
-      g_ptr_array_add (svec->saved_x, ncm_vector_ref (x));
+    if (svec->save_x)
+    {
+      if (dup)
+        g_ptr_array_add (svec->saved_x, ncm_vector_dup (x));
+      else
+        g_ptr_array_add (svec->saved_x, ncm_vector_ref (x));
+    }
   }
 }
 
@@ -570,24 +652,267 @@ void
 ncm_stats_vec_prepend_data (NcmStatsVec *svec, GPtrArray *data, gboolean dup)
 {
   guint i;
-  const guint cp_len = data->len;
-  const guint old_len = svec->saved_x->len;
-  const guint new_len = old_len + cp_len;
-  g_assert (svec->save_x);
+  if (svec->save_x)
+  {
+    const guint cp_len = data->len;
+    const guint old_len = svec->saved_x->len;
+    const guint new_len = old_len + cp_len;
 
-  g_ptr_array_set_size (svec->saved_x, new_len);
-  memmove (&svec->saved_x->pdata[cp_len], svec->saved_x->pdata, sizeof (gpointer) * old_len);
+    g_ptr_array_set_size (svec->saved_x, new_len);
+    memmove (&svec->saved_x->pdata[cp_len], svec->saved_x->pdata, sizeof (gpointer) * old_len);
+  }
 
   for (i = 0; i < data->len; i++)
   {
     NcmVector *x = g_ptr_array_index (data, i);
     _ncm_stats_vec_update_from_vec_weight (svec, 1.0, x);
-    if (dup)
-      g_ptr_array_index (svec->saved_x, i) = ncm_vector_dup (x);
-    else
-      g_ptr_array_index (svec->saved_x, i) = ncm_vector_ref (x);
+    if (svec->save_x)
+    {
+      if (dup)
+        g_ptr_array_index (svec->saved_x, i) = ncm_vector_dup (x);
+      else
+        g_ptr_array_index (svec->saved_x, i) = ncm_vector_ref (x);
+    }
   }
 }
+
+static void
+_ncm_stats_vec_get_autocorr_alloc (NcmStatsVec *svec, guint size)
+{
+#ifdef NUMCOSMO_HAVE_FFTW3
+  guint effsize = 2 * size;
+  if (!svec->save_x)
+    g_error ("_ncm_stats_vec_get_autocorr_alloc: NcmStatsVec must have saved data to calculate autocorrelation.");
+
+  effsize = exp2 (ceil (log2 (effsize)));
+  
+  if (svec->fft_size < effsize)
+  {
+    g_clear_pointer (&svec->param_fft,  (GDestroyNotify) fftw_free);
+    g_clear_pointer (&svec->param_data, (GDestroyNotify) fftw_free);
+    {
+      svec->param_fft  = (fftw_complex *) fftw_malloc (sizeof (fftw_complex) * (effsize / 2 + 1));
+      svec->param_data = (gdouble *) fftw_malloc (sizeof (gdouble) * effsize);
+    }
+    svec->fft_size = effsize;
+  }
+
+  if (svec->fft_plan_size != effsize)
+  {
+    g_clear_pointer (&svec->param_c2r,  (GDestroyNotify) fftw_destroy_plan);
+    g_clear_pointer (&svec->param_r2c,  (GDestroyNotify) fftw_destroy_plan);
+
+    /*g_debug ("# _ncm_stats_vec_get_autocorr_alloc: calculating wisdown %u\n", effsize);*/
+    ncm_cfg_load_fftw_wisdom ("NcmStatsVec:autocorr");
+    svec->param_r2c = fftw_plan_dft_r2c_1d (effsize, svec->param_data, svec->param_fft, fftw_default_flags | FFTW_DESTROY_INPUT);
+    svec->param_c2r = fftw_plan_dft_c2r_1d (effsize, svec->param_fft, svec->param_data, fftw_default_flags | FFTW_DESTROY_INPUT);
+    ncm_cfg_save_fftw_wisdom ("NcmStatsVec:autocorr");
+    svec->fft_plan_size = effsize;
+    /*g_debug ("# _ncm_stats_vec_get_autocorr_alloc: calculated  wisdown %u\n", effsize);*/
+  }
+    
+#endif /* NUMCOSMO_HAVE_FFTW3 */
+}
+
+static void
+_ncm_stats_vec_get_autocov (NcmStatsVec *svec, guint p, guint subsample, guint pad)
+{
+#ifdef NUMCOSMO_HAVE_FFTW3
+  guint eff_nitens = svec->nitens / subsample - pad;
+
+  g_assert_cmpuint (svec->nitens / subsample, >, pad);
+
+  if (eff_nitens == 0)
+    g_error ("_ncm_stats_vec_get_autocov: too few itens to calculate.");
+  
+  _ncm_stats_vec_get_autocorr_alloc (svec, eff_nitens);
+  {
+    guint i;
+    const gdouble mean = ncm_stats_vec_get_mean (svec, p);
+    memset (&svec->param_data[eff_nitens], 0, sizeof (gdouble) * (svec->fft_plan_size - eff_nitens));
+
+    if (subsample > 1)
+    {
+      for (i = 0; i < eff_nitens; i++)
+      {
+        guint j;
+        gdouble e_mean = 0.0;
+        for (j = 0; j < subsample; j++)
+        {
+          e_mean += ncm_vector_get (g_ptr_array_index (svec->saved_x, (i + pad) * subsample + j), p);
+        }
+        e_mean = e_mean / (1.0 * subsample);
+        
+        svec->param_data[i] = (e_mean - mean);
+      }
+    }
+    else
+    {
+      for (i = 0; i < eff_nitens; i++)
+      {
+        svec->param_data[i] = (ncm_vector_get (g_ptr_array_index (svec->saved_x, i + pad), p) - mean);
+      }
+    }
+
+    fftw_execute (svec->param_r2c);
+    
+    for (i = 0; i < svec->fft_plan_size / 2 + 1; i++)
+    {
+      svec->param_fft[i] = svec->param_fft[i] * conj (svec->param_fft[i]);
+    }
+
+    fftw_execute (svec->param_c2r);
+  }
+#endif /* NUMCOSMO_HAVE_FFTW3 */
+}
+
+/**
+ * ncm_stats_vec_get_autocorr:
+ * @svec: a #NcmStatsVec.
+ * @p: parameter id.
+ * 
+ * Calculates the autocorrelation vector, the j-th element represent
+ * the selfcorrelation with lag-j.
+ * 
+ * The returning vector use the internal memory allocation and will
+ * change with subsequent calls to ncm_stats_vec_get_autocorr().
+ * 
+ * Returns: (transfer full): a read only autocorrelation vector.
+ */
+NcmVector *
+ncm_stats_vec_get_autocorr (NcmStatsVec *svec, guint p)
+{
+#ifdef NUMCOSMO_HAVE_FFTW3
+  _ncm_stats_vec_get_autocov (svec, p, 1, 0);
+  {
+    NcmVector *autocor = ncm_vector_new_data_static (svec->param_data, svec->nitens, 1);
+    ncm_vector_scale (autocor, 1.0 / svec->param_data[0]);
+    return autocor;
+  }
+#else
+  g_error ("ncm_stats_vec_get_autocorr: recompile NumCosmo with fftw support.");
+  return NULL;
+#endif /* NUMCOSMO_HAVE_FFTW3 */
+}
+
+/**
+ * ncm_stats_vec_get_subsample_autocorr:
+ * @svec: a #NcmStatsVec.
+ * @p: parameter id.
+ * @subsample: size of the subsample (>0).
+ * 
+ * Calculates the autocorrelation vector, the j-th element represent
+ * the selfcorrelation with lag-j using the @subsample parameter.
+ * 
+ * The returning vector use the internal memory allocation and will
+ * change with subsequent calls to ncm_stats_vec_get_autocorr().
+ * 
+ * Returns: (transfer full): a read only autocorrelation vector.
+ */
+NcmVector *
+ncm_stats_vec_get_subsample_autocorr (NcmStatsVec *svec, guint p, guint subsample)
+{
+#ifdef NUMCOSMO_HAVE_FFTW3
+  _ncm_stats_vec_get_autocov (svec, p, subsample, 0);
+  g_assert_cmpuint (svec->nitens, >=, subsample);
+  {
+    NcmVector *autocor = ncm_vector_new_data_static (svec->param_data, svec->nitens / subsample, 1);
+    ncm_vector_scale (autocor, 1.0 / svec->param_data[0]);
+    return autocor;
+  }
+#else
+  g_error ("ncm_stats_vec_get_subsample_autocorr: recompile NumCosmo with fftw support.");
+  return NULL;
+#endif /* NUMCOSMO_HAVE_FFTW3 */
+}
+
+/**
+ * ncm_stats_vec_get_autocorr_tau:
+ * @svec: a #NcmStatsVec.
+ * @p: parameter id.
+ * @max_lag: max lag in the computation.
+ * @min_rho: minimum autocorrelation to be considered in the sum.
+ * 
+ * Calculates the integrated autocorrelation time for the parameter @p
+ * using all rows of data.
+ * 
+ * If @max_lag is 0 or larger than the current number of itens than it use
+ * the current number of itens as @max_lag.
+ * 
+ * Returns: the integrated autocorrelation time of the whole data.
+ */
+gdouble 
+ncm_stats_vec_get_autocorr_tau (NcmStatsVec *svec, guint p, guint max_lag, const gdouble min_rho)
+{
+#ifdef NUMCOSMO_HAVE_FFTW3
+  guint i;
+  gdouble tau = 0.0;
+
+  _ncm_stats_vec_get_autocov (svec, p, 1, 0);
+  if (max_lag == 0 || max_lag > svec->nitens)
+    max_lag = svec->nitens;
+
+  for (i = 1; i < max_lag; i++)
+  {
+    gdouble rho_i = svec->param_data[i] / svec->param_data[0];
+    if (rho_i < min_rho)
+      break;
+    /*printf ("# self cor %u % 20.15g\n", i, rho_i);*/
+    tau += rho_i;
+  }
+
+  tau = 1.0 + 2.0 * tau;
+  
+  
+  return tau;
+#else
+  g_error ("ncm_stats_vec_get_autocorr: recompile NumCosmo with fftw support.");
+  return 0.0;
+#endif /* NUMCOSMO_HAVE_FFTW3 */  
+}
+
+/**
+ * ncm_stats_vec_get_subsample_autocorr_tau:
+ * @svec: a #NcmStatsVec.
+ * @p: parameter id.
+ * @subsample: size of the subsample (>0).
+ * @max_lag: max lag in the computation.
+ * @min_rho: minimum autocorrelation to be considered in the sum.
+ * 
+ * Calculates the integrated autocorrelation time for the parameter @p
+ * using the @subsample parameter.
+ * 
+ * Returns: the integrated autocorrelation time of data with @subsample.
+ */
+gdouble 
+ncm_stats_vec_get_subsample_autocorr_tau (NcmStatsVec *svec, guint p, guint subsample, guint max_lag, const gdouble min_rho)
+{
+#ifdef NUMCOSMO_HAVE_FFTW3
+  guint i;
+  gdouble tau = 0.0;
+  guint eff_nitens = svec->nitens / subsample;
+  
+  _ncm_stats_vec_get_autocov (svec, p, subsample, 0);
+  if (max_lag == 0 || max_lag > eff_nitens)
+    max_lag = eff_nitens;
+
+  for (i = 1; i < max_lag; i++)
+  {
+    gdouble rho_i = svec->param_data[i] / svec->param_data[0];
+    if (rho_i < min_rho)
+      break;
+    tau += rho_i;
+  }
+
+  tau = 1.0 + 2.0 * tau;
+
+  return tau;
+#else
+  g_error ("ncm_stats_vec_get_autocorr: recompile NumCosmo with fftw support.");
+  return 0.0;
+#endif /* NUMCOSMO_HAVE_FFTW3 */  
+}
+
 
 /**
  * ncm_stats_vec_peek_x:
@@ -701,6 +1026,17 @@ ncm_stats_vec_prepend_data (NcmStatsVec *svec, GPtrArray *data, gboolean dup)
  * 
  */
 /**
+ * ncm_stats_vec_peek_cov_matrix:
+ * @svec: a #NcmStatsVec.
+ * @offset: first parameter index.
+ * 
+ * Gets the internal covariance matrix starting from paramenter @offset. 
+ * This is the internal matrix of @svec and can change with further 
+ * additions to @svec. It is not guaranteed to be valid after new additions.
+ * 
+ * Returns: (transfer none): the covariance matrix.
+ */
+/**
  * ncm_stats_vec_peek_row:
  * @svec: a #NcmStatsVec.
  * @i: the row's index.
@@ -709,4 +1045,15 @@ ncm_stats_vec_prepend_data (NcmStatsVec *svec, GPtrArray *data, gboolean dup)
  * was not created with save_x == TRUE;  
  * 
  * Returns: (transfer none): the i-th data row.
+ */
+/**
+ * ncm_stats_vec_get_param_at:
+ * @svec: a #NcmStatsVec.
+ * @i: the row's index.
+ * @p: the parameter's index.
+ * 
+ * Gets the p-th parameter in the i-th data row used in the statistics, this 
+ * function fails if the object was not created with save_x == TRUE;  
+ * 
+ * Returns: the parameter value.
  */

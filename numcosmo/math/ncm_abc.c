@@ -101,7 +101,7 @@ _ncm_abc_set_property (GObject *object, guint prop_id, const GValue *value, GPar
       g_assert (abc->mcat == NULL);
       if (mset == NULL)
         g_error ("ncm_abc_new: mset (NcmMSet) cannot be NULL."); 
-      abc->mcat = ncm_mset_catalog_new (mset, 1, TRUE, "NcmABC:Distance");
+      abc->mcat = ncm_mset_catalog_new (mset, 1, 1, TRUE, "NcmABC:Distance");
       break;
     }
     case PROP_PRIOR:
@@ -518,7 +518,7 @@ ncm_abc_get_dist_quantile (NcmABC *abc, gdouble p)
 }
 
 /**
- * ncm_abc_get_accept_rate:
+ * ncm_abc_get_accept_ratio:
  * @abc: a #NcmABC
  * 
  * FIXME
@@ -526,7 +526,7 @@ ncm_abc_get_dist_quantile (NcmABC *abc, gdouble p)
  * Returns: FIXME
  */
 gdouble 
-ncm_abc_get_accept_rate (NcmABC *abc)
+ncm_abc_get_accept_ratio (NcmABC *abc)
 {
   return abc->naccepted * 1.0 / (abc->ntotal * 1.0);
 }
@@ -617,7 +617,7 @@ _ncm_abc_update (NcmABC *abc, NcmMSet *mset, gdouble dist, gdouble weight)
       {
         /* guint acc = stepi == 0 ? step : stepi; */
         ncm_mset_catalog_log_current_stats (abc->mcat);
-        g_message ("# NcmABC:acceptance ratio %7.4f%%.\n", ncm_abc_get_accept_rate (abc) * 100.0);
+        g_message ("# NcmABC:acceptance ratio %7.4f%%.\n", ncm_abc_get_accept_ratio (abc) * 100.0);
         /* ncm_timer_task_accumulate (abc->nt, acc); */
         ncm_timer_task_log_elapsed (abc->nt);
         ncm_timer_task_log_mean_time (abc->nt);
@@ -630,7 +630,7 @@ _ncm_abc_update (NcmABC *abc, NcmMSet *mset, gdouble dist, gdouble weight)
     default:
     case NCM_FIT_RUN_MSGS_FULL:
       ncm_mset_catalog_log_current_stats (abc->mcat);
-      g_message ("# NcmABC:acceptance ratio %7.4f%%.\n", ncm_abc_get_accept_rate (abc) * 100.0);
+      g_message ("# NcmABC:acceptance ratio %7.4f%%.\n", ncm_abc_get_accept_ratio (abc) * 100.0);
       /* ncm_timer_task_increment (abc->nt); */
       ncm_timer_task_log_elapsed (abc->nt);
       ncm_timer_task_log_mean_time (abc->nt);

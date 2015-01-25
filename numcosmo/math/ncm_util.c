@@ -832,7 +832,7 @@ ncm_sqrt1px_m1 (gdouble x)
     xn *= x;
     res += binfact * xn;
 
-    if (fabs(binfact * xn / res) < GSL_DBL_EPSILON)
+    if (fabs (binfact * xn / res) < GSL_DBL_EPSILON)
       break;
   }
 

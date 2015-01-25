@@ -55,6 +55,110 @@ enum
 
 G_DEFINE_TYPE (NcmMatrix, ncm_matrix, G_TYPE_OBJECT);
 
+static void
+ncm_matrix_init (NcmMatrix *m)
+{
+  memset (&m->mv, 0, sizeof (gsl_matrix_view));
+  m->pdata = NULL;
+  m->pfree = NULL;
+  m->type = 0;
+}
+
+static void
+_ncm_matrix_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
+{
+  NcmMatrix *m = NCM_MATRIX (object);
+  g_return_if_fail (NCM_IS_MATRIX (object));
+
+  switch (prop_id)
+  {
+    case PROP_VALS:
+    {
+      GVariant *var = ncm_matrix_get_variant (m);
+      g_value_take_variant (value, var);
+      break;
+    }
+    default:
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
+      break;
+  }
+}
+
+static void
+_ncm_matrix_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
+{
+  NcmMatrix *m = NCM_MATRIX (object);
+  g_return_if_fail (NCM_IS_MATRIX (object));
+
+  switch (prop_id)
+  {
+    case PROP_VALS:
+    {
+      GVariant *var = g_value_get_variant (value);
+      ncm_matrix_set_from_variant (m, var);
+      break;
+    }
+    default:
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
+      break;
+  }
+}
+
+static void
+_ncm_matrix_dispose (GObject *object)
+{
+  NcmMatrix *cm = NCM_MATRIX (object);
+
+  if (cm->pdata != NULL)
+  {
+    g_assert (cm->pfree != NULL);
+    cm->pfree (cm->pdata);
+    cm->pdata = NULL;
+    cm->pfree = NULL;
+  }
+
+  /* Chain up : end */
+  G_OBJECT_CLASS (ncm_matrix_parent_class)->dispose (object);
+}
+
+static void
+_ncm_matrix_finalize (GObject *object)
+{
+  NcmMatrix *cm = NCM_MATRIX (object);
+  switch (cm->type)
+  {
+    case NCM_MATRIX_SLICE:
+      g_slice_free1 (sizeof(gdouble) * ncm_matrix_nrows (cm) * ncm_matrix_ncols (cm), ncm_matrix_data (cm));
+      break;
+    case NCM_MATRIX_GARRAY:
+    case NCM_MATRIX_MALLOC:
+    case NCM_MATRIX_GSL_MATRIX:
+    case NCM_MATRIX_DERIVED:
+      break;
+  }
+
+  cm->mv.matrix.data = NULL;
+
+  /* Chain up : end */
+  G_OBJECT_CLASS (ncm_matrix_parent_class)->finalize (object);
+}
+
+static void
+ncm_matrix_class_init (NcmMatrixClass *klass)
+{
+  GObjectClass* object_class = G_OBJECT_CLASS (klass);
+
+  object_class->set_property = &_ncm_matrix_set_property;
+  object_class->get_property = &_ncm_matrix_get_property;
+  object_class->dispose      = &_ncm_matrix_dispose;
+  object_class->finalize     = &_ncm_matrix_finalize;
+
+  g_object_class_install_property (object_class, PROP_VALS,
+                                   g_param_spec_variant ("values", NULL, "values",
+                                                         G_VARIANT_TYPE_ARRAY, NULL,
+                                                         G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+}
+
 /**
  * ncm_matrix_new:
  * @nrows: number of rows.
@@ -598,45 +702,6 @@ ncm_matrix_const_free (const NcmMatrix *cm)
   ncm_matrix_free (NCM_MATRIX (cm));
 }
 
-static void
-_ncm_matrix_dispose (GObject *object)
-{
-  NcmMatrix *cm = NCM_MATRIX (object);
-
-  if (cm->pdata != NULL)
-  {
-    g_assert (cm->pfree != NULL);
-    cm->pfree (cm->pdata);
-    cm->pdata = NULL;
-    cm->pfree = NULL;
-  }
-
-  /* Chain up : end */
-  G_OBJECT_CLASS (ncm_matrix_parent_class)->dispose (object);
-}
-
-static void
-_ncm_matrix_finalize (GObject *object)
-{
-  NcmMatrix *cm = NCM_MATRIX (object);
-  switch (cm->type)
-  {
-    case NCM_MATRIX_SLICE:
-      g_slice_free1 (sizeof(gdouble) * ncm_matrix_nrows (cm) * ncm_matrix_ncols (cm), ncm_matrix_data (cm));
-      break;
-    case NCM_MATRIX_GARRAY:
-    case NCM_MATRIX_MALLOC:
-    case NCM_MATRIX_GSL_MATRIX:
-    case NCM_MATRIX_DERIVED:
-      break;
-  }
-
-  cm->mv.matrix.data = NULL;
-
-  /* Chain up : end */
-  G_OBJECT_CLASS (ncm_matrix_parent_class)->finalize (object);
-}
-
 
 /**
  * ncm_matrix_dup:
@@ -696,6 +761,33 @@ ncm_matrix_add_mul (NcmMatrix *cm, const gdouble alpha, NcmMatrix *b)
 }
 
 /**
+ * ncm_matrix_dsymm:
+ * @cm: FIXME
+ * @alpha: FIXME
+ * @b: FIXME
+ * @beta: FIXME
+ * @c: FIXME
+ *
+ * FIXME
+ *
+ */
+void 
+ncm_matrix_dsymm (NcmMatrix *cm, const gdouble alpha, NcmMatrix *b, const gdouble beta, NcmMatrix *c)
+{
+  g_assert_cmpuint (ncm_matrix_ncols (cm), ==, ncm_matrix_ncols (b));
+  g_assert_cmpuint (ncm_matrix_nrows (cm), ==, ncm_matrix_nrows (b));
+  g_assert_cmpuint (ncm_matrix_ncols (cm), ==, ncm_matrix_ncols (c));
+  g_assert_cmpuint (ncm_matrix_nrows (cm), ==, ncm_matrix_nrows (c));
+
+  cblas_dsymm (CblasRowMajor, CblasLeft, CblasLower, ncm_matrix_nrows (cm), ncm_matrix_ncols (cm), 
+               alpha, 
+               ncm_matrix_data (cm), ncm_matrix_gsl (cm)->tda,
+               ncm_matrix_data (b), ncm_matrix_gsl (b)->tda, 
+               beta,
+               ncm_matrix_data (c), ncm_matrix_gsl (c)->tda);
+}
+
+/**
  * ncm_matrix_cholesky_decomp:
  * @cm: a #NcmMatrix.
  *
@@ -710,6 +802,52 @@ ncm_matrix_cholesky_decomp (NcmMatrix *cm)
   if (ret != 0)
   {
     g_error ("ncm_matrix_cholesky_decomp[ncm_lapack_dpotrf]: %d.", ret);
+  }
+}
+
+/**
+ * ncm_matrix_cholesky_inverse:
+ * @cm: a #NcmMatrix.
+ *
+ * Calculates inplace the Cholesky decomposition for a symmetric positive
+ * definite matrix and afterwards its inverse.
+ * 
+ */
+void 
+ncm_matrix_cholesky_inverse (NcmMatrix *cm)
+{
+  gint ret = ncm_lapack_dpotrf ('L', ncm_matrix_nrows (cm), ncm_matrix_data (cm), ncm_matrix_nrows (cm));
+  if (ret != 0)
+    g_error ("ncm_matrix_cholesky_decomp[ncm_lapack_dpotrf]: %d.", ret);
+
+  ret = ncm_lapack_dpotri ('L', ncm_matrix_nrows (cm), ncm_matrix_data (cm), ncm_matrix_nrows (cm));
+  if (ret != 0)
+    g_error ("ncm_matrix_cholesky_decomp[ncm_lapack_dpotri]: %d.", ret);
+}
+
+
+/**
+ * ncm_matrix_log_vals:
+ * @cm: a #NcmMatrix.
+ * @prefix: the prefixed text.
+ * @format: double format.
+ * 
+ * Prints to the log the values of @cm. 
+ * 
+ */
+void 
+ncm_matrix_log_vals (NcmMatrix *cm, gchar *prefix, gchar *format)
+{
+  guint i, j;
+  for (i = 0; i < ncm_matrix_nrows (cm); i++)
+  {
+    g_message ("%s", prefix);
+    for (j = 0; j < ncm_matrix_ncols (cm); j++)
+    {
+      g_message (" ");
+      g_message (format, ncm_matrix_get (cm, i, j));
+    }
+    g_message ("\n");
   }
 }
 
@@ -905,67 +1043,3 @@ ncm_matrix_cholesky_decomp (NcmMatrix *cm)
  * Returns: (transfer none): FIXME
  */
 
-static void
-ncm_matrix_init (NcmMatrix *m)
-{
-  memset (&m->mv, 0, sizeof (gsl_matrix_view));
-  m->pdata = NULL;
-  m->pfree = NULL;
-  m->type = 0;
-}
-
-static void
-_ncm_matrix_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
-{
-  NcmMatrix *m = NCM_MATRIX (object);
-  g_return_if_fail (NCM_IS_MATRIX (object));
-
-  switch (prop_id)
-  {
-    case PROP_VALS:
-    {
-      GVariant *var = ncm_matrix_get_variant (m);
-      g_value_take_variant (value, var);
-      break;
-    }
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
-  }
-}
-
-static void
-_ncm_matrix_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
-{
-  NcmMatrix *m = NCM_MATRIX (object);
-  g_return_if_fail (NCM_IS_MATRIX (object));
-
-  switch (prop_id)
-  {
-    case PROP_VALS:
-    {
-      GVariant *var = g_value_get_variant (value);
-      ncm_matrix_set_from_variant (m, var);
-      break;
-    }
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
-  }
-}
-
-static void
-ncm_matrix_class_init (NcmMatrixClass *klass)
-{
-  GObjectClass* object_class = G_OBJECT_CLASS (klass);
-
-  object_class->set_property = &_ncm_matrix_set_property;
-  object_class->get_property = &_ncm_matrix_get_property;
-  object_class->dispose      = &_ncm_matrix_dispose;
-  object_class->finalize     = &_ncm_matrix_finalize;
-
-  g_object_class_install_property (object_class, PROP_VALS,
-                                   g_param_spec_variant ("values", NULL, "values",
-                                                         G_VARIANT_TYPE_ARRAY, NULL,
-                                                         G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-}

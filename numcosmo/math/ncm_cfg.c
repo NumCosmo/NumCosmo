@@ -1484,3 +1484,19 @@ ncm_cfg_array_to_variant (GArray *a, const GVariantType *etype)
   g_variant_type_free (atype);
   return g_variant_ref_sink (vvar);
 }
+
+guint fftw_default_flags = FFTW_PATIENT; /* FFTW_ESTIMATE, FFTW_MEASURE, FFTW_PATIENT, FFTW_EXHAUSTIVE */
+
+/**
+ * ncm_cfg_set_fftw_default_flag:
+ * @flag: a FFTW library flag.
+ *
+ * Sets the default FFTW flag (FFTW_ESTIMATE, FFTW_MEASURE, FFTW_PATIENT, FFTW_EXHAUSTIVE)
+ * to be used when building plans.
+ *
+ */
+void 
+ncm_cfg_set_fftw_default_flag (guint flag)
+{
+  fftw_default_flags = flag;
+}

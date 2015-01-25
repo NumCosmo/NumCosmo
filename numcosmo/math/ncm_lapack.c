@@ -140,3 +140,45 @@ ncm_lapack_dpotrf (gchar uplo, guint size, gdouble *a, guint lda)
   return ret; /* THAT'S NOT OK FIXME */
 #endif
 }
+
+/**
+ * ncm_lapack_dpotri:
+ * @uplo: FIXME
+ * @size: FIXME
+ * @a: FIXME
+ * @lda: FIXME
+ *
+ * FIXME
+ *
+ * Returns: FIXME
+ */
+gint 
+ncm_lapack_dpotri (gchar uplo, guint size, gdouble *a, guint lda)
+{
+#ifdef HAVE_LAPACKE
+  lapack_int info = LAPACKE_dpotri (LAPACK_ROW_MAJOR, uplo, size, a, lda);
+  return info;
+#elif defined HAVE_CLAPACK
+  gint ret = clapack_dpotri (CblasRowMajor, 
+                             uplo == 'U' ? CblasUpper : CblasLower, 
+                             size, a, size);
+  if (ret < 0)
+    g_error ("ncm_lapack_dpotrf: invalid parameter %d", -ret);
+  else if (ret > 0)
+    g_error ("ncm_lapack_dpotrf: the leading minor of order %d is not positive definite", ret);
+  return ret;
+#elif defined HAVE_LAPACK
+  gint info = 0;
+  gint n = size;
+  gint LDA = lda;
+  gchar UPLO = uplo == 'L' ? 'U' : 'L';
+  dpotri_ (&UPLO, &n, a, &LDA, &info);  
+  return info;
+#else /* Fall back to gsl cholesky */
+  gint ret;
+  gsl_matrix_view mv = gsl_matrix_view_array_with_tda (a, size, size, lda);
+  ret = gsl_linalg_cholesky_invert (&mv.matrix);
+  NCM_TEST_GSL_RESULT("gsl_linalg_cholesky_decomp", ret);
+  return ret; /* THAT'S NOT OK FIXME */
+#endif
+}

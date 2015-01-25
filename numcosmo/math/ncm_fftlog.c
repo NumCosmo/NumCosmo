@@ -366,7 +366,7 @@ ncm_fftlog_set_size (NcmFftlog *fftlog, guint n)
 
     ncm_cfg_load_fftw_wisdom (NCM_FFTLOG_GET_CLASS (fftlog)->name);
     
-    fftlog->p_Fk2Cm = fftw_plan_dft_1d (fftlog->N, fftlog->Fk, fftlog->Cm, FFTW_FORWARD, FFTW_EXHAUSTIVE | FFTW_DESTROY_INPUT);
+    fftlog->p_Fk2Cm = fftw_plan_dft_1d (fftlog->N, fftlog->Fk, fftlog->Cm, FFTW_FORWARD, fftw_default_flags | FFTW_DESTROY_INPUT);
 
     for (i = 0; i < NCM_FFTLOG_GET_CLASS (fftlog)->ncomp; i++)
     {
@@ -376,7 +376,7 @@ ncm_fftlog_set_size (NcmFftlog *fftlog, guint n)
       fftlog->Gr[i]     = fftw_alloc_complex (fftlog->N);
       fftlog->Ym[i]     = fftw_alloc_complex (fftlog->N);
       
-      fftlog->p_CmYm2Gr[i] = fftw_plan_dft_1d (fftlog->N, fftlog->CmYm[i], fftlog->Gr[i], FFTW_FORWARD, FFTW_EXHAUSTIVE | FFTW_DESTROY_INPUT);
+      fftlog->p_CmYm2Gr[i] = fftw_plan_dft_1d (fftlog->N, fftlog->CmYm[i], fftlog->Gr[i], FFTW_FORWARD, fftw_default_flags | FFTW_DESTROY_INPUT);
     }
 
     ncm_cfg_save_fftw_wisdom (NCM_FFTLOG_GET_CLASS (fftlog)->name);

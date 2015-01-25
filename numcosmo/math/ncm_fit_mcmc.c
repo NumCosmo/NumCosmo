@@ -70,6 +70,8 @@ ncm_fit_mcmc_init (NcmFitMCMC *mcmc)
   mcmc->n               = 0;
   mcmc->mp              = NULL;
   mcmc->cur_sample_id   = -1; /* Represents that no samples were calculated yet. */
+  mcmc->naccepted       = 0;
+  mcmc->ntotal          = 0;
   mcmc->write_index     = 0;
   mcmc->started         = FALSE;
 #if (GLIB_MAJOR_VERSION == 2) && (GLIB_MINOR_VERSION < 32)
@@ -154,6 +156,7 @@ ncm_fit_mcmc_dispose (GObject *object)
   NcmFitMCMC *mcmc = NCM_FIT_MCMC (object);
 
   ncm_fit_clear (&mcmc->fit);
+  ncm_mset_trans_kern_clear (&mcmc->tkern);
   ncm_timer_clear (&mcmc->nt);
   ncm_serialize_clear (&mcmc->ser);
   ncm_mset_catalog_clear (&mcmc->mcat);
@@ -235,7 +238,7 @@ _ncm_fit_mcmc_set_fit_obj (NcmFitMCMC *mcmc, NcmFit *fit)
 {
   g_assert (mcmc->fit == NULL);
   mcmc->fit = ncm_fit_ref (fit);
-  mcmc->mcat = ncm_mset_catalog_new (fit->mset, 1, FALSE, NCM_MSET_CATALOG_M2LNL_COLNAME);
+  mcmc->mcat = ncm_mset_catalog_new (fit->mset, 1, 1, FALSE, NCM_MSET_CATALOG_M2LNL_COLNAME);
 }
 
 /**
@@ -375,6 +378,20 @@ ncm_fit_mcmc_set_rng (NcmFitMCMC *mcmc, NcmRNG *rng)
   ncm_mset_catalog_set_rng (mcmc->mcat, rng);
 }
 
+/**
+ * ncm_fit_mcmc_get_accept_ratio:
+ * @mcmc: a #NcmFitMCMC
+ *
+ * FIXME
+ * 
+ * Returns: FIXME
+ */
+gdouble 
+ncm_fit_mcmc_get_accept_ratio (NcmFitMCMC *mcmc)
+{
+  return mcmc->naccepted * 1.0 / (mcmc->ntotal * 1.0);
+}
+
 void
 _ncm_fit_mcmc_update (NcmFitMCMC *mcmc, NcmFit *fit)
 {
@@ -395,6 +412,8 @@ _ncm_fit_mcmc_update (NcmFitMCMC *mcmc, NcmFit *fit)
       {
         /* guint acc = stepi == 0 ? step : stepi; */
         ncm_mset_catalog_log_current_stats (mcmc->mcat);
+        g_message ("# NcmFitMCMC:acceptance ratio %7.4f%%.\n", ncm_fit_mcmc_get_accept_ratio (mcmc) * 100.0);
+
         /* ncm_timer_task_accumulate (mcmc->nt, acc); */
         ncm_timer_task_log_elapsed (mcmc->nt);
         ncm_timer_task_log_mean_time (mcmc->nt);
@@ -409,6 +428,7 @@ _ncm_fit_mcmc_update (NcmFitMCMC *mcmc, NcmFit *fit)
       ncm_fit_log_start (fit);
       ncm_fit_log_end (fit);
       ncm_mset_catalog_log_current_stats (mcmc->mcat);
+      g_message ("# NcmFitMCMC:acceptance ratio %7.4f%%.\n", ncm_fit_mcmc_get_accept_ratio (mcmc) * 100.0);
       /* ncm_timer_task_increment (mcmc->nt); */
       ncm_timer_task_log_elapsed (mcmc->nt);
       ncm_timer_task_log_mean_time (mcmc->nt);
@@ -480,6 +500,9 @@ ncm_fit_mcmc_start_run (NcmFitMCMC *mcmc)
     mcmc->theta = ncm_vector_new (fparam_len);
     mcmc->thetastar = ncm_vector_new (fparam_len);
   }
+
+  mcmc->naccepted = 0;
+  mcmc->ntotal = 0;
   
   ncm_mset_catalog_sync (mcmc->mcat, TRUE);
   if (mcmc->mcat->cur_id > mcmc->cur_sample_id)
@@ -546,6 +569,8 @@ ncm_fit_mcmc_reset (NcmFitMCMC *mcmc)
   mcmc->n               = 0;
   mcmc->cur_sample_id   = -1;
   mcmc->write_index     = 0;
+  mcmc->ntotal          = 0;
+  mcmc->naccepted       = 0;
   mcmc->started         = FALSE;  
   ncm_mset_catalog_reset (mcmc->mcat);
 }
@@ -676,6 +701,8 @@ _ncm_fit_mcmc_run_single (NcmFitMCMC *mcmc)
     ncm_mset_fparams_set_vector (mcmc->fit->mset, mcmc->thetastar);
 
     ncm_fit_m2lnL_val (mcmc->fit, &m2lnL_star);
+    mcmc->ntotal++;
+    mcmc->naccepted++;
 /*
     ncm_vector_log_vals (mcmc->theta, "# Theta  : ", "% 8.5g");
     ncm_vector_log_vals (mcmc->thetastar, "# Theta* : ", "% 8.5g");
@@ -692,6 +719,7 @@ _ncm_fit_mcmc_run_single (NcmFitMCMC *mcmc)
       {
         ncm_mset_fparams_set_vector (mcmc->fit->mset, mcmc->theta);
         ncm_fit_state_set_m2lnL_curval (mcmc->fit->fstate, m2lnL_cur);
+        mcmc->naccepted--;
       }
     }
     
@@ -793,15 +821,11 @@ ncm_fit_mcmc_run_lre (NcmFitMCMC *mcmc, guint prerun, gdouble lre)
 {
   gdouble lerror;
   const gdouble lre2 = lre * lre;
-
+  const guint fparam_len = ncm_mset_fparam_len (mcmc->fit->mset);
+  
   g_assert_cmpfloat (lre, >, 0.0);
-  /* g_assert_cmpfloat (lre, <, 1.0); */
 
-  if (prerun == 0)
-  {
-    guint fparam_len = ncm_mset_fparam_len (mcmc->fit->mset);
-    prerun = fparam_len * 100;
-  }
+  prerun = GSL_MAX (prerun, fparam_len * 1000);
 
   if (ncm_mset_catalog_len (mcmc->mcat) < prerun)
   {
@@ -811,6 +835,7 @@ ncm_fit_mcmc_run_lre (NcmFitMCMC *mcmc, guint prerun, gdouble lre)
     ncm_fit_mcmc_run (mcmc, prerun);
   }
 
+  ncm_mset_catalog_estimate_autocorrelation_tau (mcmc->mcat);
   lerror = ncm_mset_catalog_largest_error (mcmc->mcat);
 
   while (lerror > lre)
@@ -818,7 +843,7 @@ ncm_fit_mcmc_run_lre (NcmFitMCMC *mcmc, guint prerun, gdouble lre)
     const gdouble lerror2 = lerror * lerror;
     gdouble n = ncm_mset_catalog_len (mcmc->mcat);
     gdouble m = n * lerror2 / lre2;
-    guint runs = ((m - n) > 1000.0) ? ceil ((m - n) * 0.25) : ceil (m - n);
+    guint runs = ((m - n) > 1000.0) ? ceil ((m - n) * 1.0e-1) : ceil (m - n);
 
     if (mcmc->mtype >= NCM_FIT_RUN_MSGS_SIMPLE)
     {
@@ -826,6 +851,7 @@ ncm_fit_mcmc_run_lre (NcmFitMCMC *mcmc, guint prerun, gdouble lre)
       g_message ("# NcmFitMCMC: Running more %u runs...\n", runs);
     }
     ncm_fit_mcmc_run (mcmc, mcmc->cur_sample_id + runs + 1);
+    ncm_mset_catalog_estimate_autocorrelation_tau (mcmc->mcat);
     lerror = ncm_mset_catalog_largest_error (mcmc->mcat);
   }
 

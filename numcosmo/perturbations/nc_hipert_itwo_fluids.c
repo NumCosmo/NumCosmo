@@ -65,6 +65,7 @@ nc_hipert_itwo_fluids_eom_dup (NcHIPertITwoFluidsEOM *tf_eom)
 {
   NcHIPertITwoFluidsEOM *tf_eom_dup = g_new (NcHIPertITwoFluidsEOM, 1);
   *tf_eom_dup = *tf_eom;
+
   return tf_eom_dup;
 }
 

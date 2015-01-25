@@ -33,6 +33,14 @@
 #include <numcosmo/math/ncm_matrix.h>
 
 #include <math.h>
+#ifndef NUMCOSMO_GIR_SCAN
+#include <complex.h>
+#endif /* NUMCOSMO_GIR_SCAN */
+#ifndef NUMCOSMO_GIR_SCAN
+#ifdef NUMCOSMO_HAVE_FFTW3
+#include <fftw3.h>
+#endif /* NUMCOSMO_HAVE_FFTW3 */
+#endif
 
 G_BEGIN_DECLS
 
@@ -83,7 +91,16 @@ struct _NcmStatsVec
   NcmVector *mean;
   NcmVector *var;
   NcmMatrix *cov;
+  NcmMatrix *real_cov;
   GPtrArray *saved_x;
+#ifdef NUMCOSMO_HAVE_FFTW3
+  guint fft_size;
+  guint fft_plan_size;
+  gdouble *param_data;
+  fftw_complex *param_fft;
+  fftw_plan param_r2c;
+  fftw_plan param_c2r;
+#endif /* NUMCOSMO_HAVE_FFTW3 */
 };
 
 struct _NcmStatsVecClass
@@ -102,8 +119,15 @@ void ncm_stats_vec_clear (NcmStatsVec **svec);
 void ncm_stats_vec_reset (NcmStatsVec *svec);
 void ncm_stats_vec_update_weight (NcmStatsVec *svec, gdouble w);
 
+void ncm_stats_vec_append (NcmStatsVec *svec, NcmVector *x, gboolean dup);
+void ncm_stats_vec_prepend (NcmStatsVec *svec, NcmVector *x, gboolean dup);
 void ncm_stats_vec_append_data (NcmStatsVec *svec, GPtrArray *data, gboolean dup);
 void ncm_stats_vec_prepend_data (NcmStatsVec *svec, GPtrArray *data, gboolean dup);
+
+NcmVector *ncm_stats_vec_get_autocorr (NcmStatsVec *svec, guint p);
+NcmVector *ncm_stats_vec_get_subsample_autocorr (NcmStatsVec *svec, guint p, guint subsample);
+gdouble ncm_stats_vec_get_autocorr_tau (NcmStatsVec *svec, guint p, guint max_lag, const gdouble min_rho);
+gdouble ncm_stats_vec_get_subsample_autocorr_tau (NcmStatsVec *svec, guint p, guint subsample, guint max_lag, const gdouble min_rho);
 
 G_INLINE_FUNC NcmVector *ncm_stats_vec_peek_x (NcmStatsVec *svec);
 G_INLINE_FUNC void ncm_stats_vec_set (NcmStatsVec *svec, guint i, gdouble x_i);
@@ -117,7 +141,9 @@ G_INLINE_FUNC gdouble ncm_stats_vec_get_cor (NcmStatsVec *svec, guint i, guint j
 G_INLINE_FUNC gdouble ncm_stats_vec_get_weight (NcmStatsVec *svec);
 G_INLINE_FUNC void ncm_stats_vec_get_mean_vector (NcmStatsVec *svec, NcmVector *mean, guint offset);
 G_INLINE_FUNC void ncm_stats_vec_get_cov_matrix (NcmStatsVec *svec, NcmMatrix *m, guint offset);
+G_INLINE_FUNC NcmMatrix *ncm_stats_vec_peek_cov_matrix (NcmStatsVec *svec, guint offset);
 G_INLINE_FUNC NcmVector *ncm_stats_vec_peek_row (NcmStatsVec *svec, guint i);
+G_INLINE_FUNC gdouble ncm_stats_vec_get_param_at (NcmStatsVec *svec, guint i, guint p);
 
 G_END_DECLS
 
@@ -227,12 +253,41 @@ ncm_stats_vec_get_cov_matrix (NcmStatsVec *svec, NcmMatrix *m, guint offset)
   ncm_matrix_scale (m, svec->bias_wt);
 }
 
+G_INLINE_FUNC NcmMatrix *
+ncm_stats_vec_peek_cov_matrix (NcmStatsVec *svec, guint offset)
+{
+  gint effsize = svec->len - offset;
+  g_assert_cmpint (effsize, >, 0);
+  if (svec->real_cov != NULL)
+  {
+    if (ncm_matrix_nrows (svec->real_cov) != effsize)
+    {
+      ncm_matrix_free (svec->real_cov);
+      svec->real_cov = ncm_matrix_new (effsize, effsize);
+    }
+  }
+  else
+    svec->real_cov = ncm_matrix_new (effsize, effsize);
+
+  ncm_stats_vec_get_cov_matrix (svec, svec->real_cov, offset);
+
+  return svec->real_cov;
+}
+
 G_INLINE_FUNC NcmVector *
 ncm_stats_vec_peek_row (NcmStatsVec *svec, guint i)
 {
   g_assert (svec->save_x);
   g_assert (i < svec->nitens);
   return g_ptr_array_index (svec->saved_x, i);
+}
+
+G_INLINE_FUNC gdouble 
+ncm_stats_vec_get_param_at (NcmStatsVec *svec, guint i, guint p)
+{
+  g_assert (svec->save_x);
+  g_assert (i < svec->nitens);
+  return ncm_vector_get (g_ptr_array_index (svec->saved_x, i), p);
 }
 
 G_END_DECLS

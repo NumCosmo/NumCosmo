@@ -501,11 +501,11 @@ ncm_vector_log_vals_func (const NcmVector *v, const gchar *prestr, const gchar *
   const guint len = ncm_vector_len (v);
   g_message ("%s", prestr);
 
-  g_message (format, f (ncm_vector_get (v, i), user_data));
+  g_message (format, f (ncm_vector_get (v, i), i, user_data));
   for (i = 1; i < len; i++)
   {
     g_message (" ");
-    g_message (format, f (ncm_vector_get (v, i), user_data));
+    g_message (format, f (ncm_vector_get (v, i), i, user_data));
   }
   g_message ("\n");
 }

@@ -80,7 +80,7 @@ struct _NcmVectorClass
   GObjectClass parent_class;
 };
 
-typedef gdouble (*NcmVectorCompFunc) (gdouble v_i, gpointer user_data);
+typedef gdouble (*NcmVectorCompFunc) (gdouble v_i, guint i, gpointer user_data);
 
 GType ncm_vector_get_type (void) G_GNUC_CONST;
 
