@@ -154,10 +154,10 @@ _ncm_stats_vec_finalize (GObject *object)
   NcmStatsVec *svec = NCM_STATS_VEC (object);
 
 #ifdef NUMCOSMO_HAVE_FFTW3
-  g_clear_pointer (&svec->param_fft,  (GDestroyNotify) fftw_free);
-  g_clear_pointer (&svec->param_data, (GDestroyNotify) fftw_free);
-  g_clear_pointer (&svec->param_c2r,  (GDestroyNotify) fftw_destroy_plan);
-  g_clear_pointer (&svec->param_r2c,  (GDestroyNotify) fftw_destroy_plan);
+  g_clear_pointer (&svec->param_fft,  fftw_free);
+  g_clear_pointer (&svec->param_data, fftw_free);
+  g_clear_pointer (&svec->param_c2r,  fftw_destroy_plan);
+  g_clear_pointer (&svec->param_r2c,  fftw_destroy_plan);
 #endif /* NUMCOSMO_HAVE_FFTW3 */
     
   /* Chain up : end */
