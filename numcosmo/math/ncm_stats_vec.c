@@ -688,8 +688,8 @@ _ncm_stats_vec_get_autocorr_alloc (NcmStatsVec *svec, guint size)
   
   if (svec->fft_size < effsize)
   {
-    g_clear_pointer (&svec->param_fft,  (GDestroyNotify) fftw_free);
-    g_clear_pointer (&svec->param_data, (GDestroyNotify) fftw_free);
+    g_clear_pointer (&svec->param_fft,  fftw_free);
+    g_clear_pointer (&svec->param_data, fftw_free);
     {
       svec->param_fft  = (fftw_complex *) fftw_malloc (sizeof (fftw_complex) * (effsize / 2 + 1));
       svec->param_data = (gdouble *) fftw_malloc (sizeof (gdouble) * effsize);
@@ -699,8 +699,8 @@ _ncm_stats_vec_get_autocorr_alloc (NcmStatsVec *svec, guint size)
 
   if (svec->fft_plan_size != effsize)
   {
-    g_clear_pointer (&svec->param_c2r,  (GDestroyNotify) fftw_destroy_plan);
-    g_clear_pointer (&svec->param_r2c,  (GDestroyNotify) fftw_destroy_plan);
+    g_clear_pointer (&svec->param_c2r, fftw_destroy_plan);
+    g_clear_pointer (&svec->param_r2c, fftw_destroy_plan);
 
     /*g_debug ("# _ncm_stats_vec_get_autocorr_alloc: calculating wisdown %u\n", effsize);*/
     ncm_cfg_load_fftw_wisdom ("NcmStatsVec:autocorr");

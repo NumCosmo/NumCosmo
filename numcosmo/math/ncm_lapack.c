@@ -54,6 +54,7 @@
 #elif HAVE_LAPACK
 void dptsv_ (gint *N, gint *NRHS, gdouble *d, gdouble *e, gdouble *b, gint *ldb, gint *info);
 void dpotrf_ (const char *uplo, const gint *n, double *a, const gint *lda, gint *info);
+void dpotri_ (const char *uplo, const gint *n, double *a, const gint *lda, gint *info);
 #endif /* HAVE_LAPACK */
 
 /**
