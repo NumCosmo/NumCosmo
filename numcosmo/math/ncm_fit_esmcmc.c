@@ -666,7 +666,7 @@ ncm_fit_esmcmc_start_run (NcmFitESMCMC *esmcmc)
     default:
     case NCM_FIT_RUN_MSGS_FULL:
       ncm_cfg_msg_sepa ();
-      g_message ("# NcmFitESMCMC: Starting Ensamble Sampler Markov Chain Montecarlo...\n");
+      g_message ("# NcmFitESMCMC: Starting Ensamble Sampler Markov Chain Monte Carlo...\n");
       ncm_dataset_log_info (esmcmc->fit->lh->dset);
       ncm_cfg_msg_sepa ();
       g_message ("# NcmFitESMCMC: Model set:\n");
@@ -828,7 +828,7 @@ static void _ncm_fit_esmcmc_run_mt (NcmFitESMCMC *esmcmc);
  * @esmcmc: a #NcmFitESMCMC
  * @n: total number of realizations to run
  * 
- * Runs the montecarlo until it reaches the @n-th realization. Note that
+ * Runs the Monte Carlo until it reaches the @n-th realization. Note that
  * if the first_id is non-zero it will run @n - first_id realizations.
  *
  */
@@ -844,7 +844,7 @@ ncm_fit_esmcmc_run (NcmFitESMCMC *esmcmc, guint n)
     if (esmcmc->mtype > NCM_FIT_RUN_MSGS_NONE)
     {
       ncm_cfg_msg_sepa ();
-      g_message ("# NcmFitESMCMC: Nothing to do, current Montecarlo run is %d\n", ti);
+      g_message ("# NcmFitESMCMC: Nothing to do, current Monte Carlo run is %d\n", ti);
     }
     return;
   }
@@ -861,7 +861,7 @@ ncm_fit_esmcmc_run (NcmFitESMCMC *esmcmc, guint n)
       switch (esmcmc->mt)
       {
         case NCM_FIT_ESMCMC_MOVE_TYPE_STRETCH:
-        g_message ("# NcmFitESMCMC: Calculating [%06d] Ensemble Sampler Markov Chain Montecarlo runs [Stretch Move]\n", esmcmc->n);
+        g_message ("# NcmFitESMCMC: Calculating [%06d] Ensemble Sampler Markov Chain Monte Carlo runs [Stretch Move]\n", esmcmc->n);
           break;
         default:
           g_assert_not_reached ();

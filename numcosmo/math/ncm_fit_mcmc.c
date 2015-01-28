@@ -26,9 +26,9 @@
 /**
  * SECTION:ncm_fit_mcmc
  * @title: Markov Chain Monte Carlo Analysis
- * @short_description: Object implementing Markov Chain Monte Carlo analysis
+ * @short_description: Object implementing Markov Chain Monte Carlo analysis.
  *
- * FIXME
+ * FIXME Metropolis–Hastings sampler.
  * 
  */
 
@@ -213,7 +213,7 @@ ncm_fit_mcmc_class_init (NcmFitMCMCClass *klass)
                                    PROP_SAMPLER,
                                    g_param_spec_object ("sampler",
                                                         NULL,
-                                                        "Montecarlo sampler",
+                                                        "Metropolis–Hastings sampler",
                                                         NCM_TYPE_MSET_TRANS_KERN,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
   
@@ -465,7 +465,7 @@ ncm_fit_mcmc_start_run (NcmFitMCMC *mcmc)
     default:
     case NCM_FIT_RUN_MSGS_FULL:
       ncm_cfg_msg_sepa ();
-      g_message ("# NcmFitMCMC: Starting Markov Chain Montecarlo...\n");
+      g_message ("# NcmFitMCMC: Starting Markov Chain Monte Carlo...\n");
       ncm_dataset_log_info (mcmc->fit->lh->dset);
       ncm_cfg_msg_sepa ();
       g_message ("# NcmFitMCMC: Model set:\n");
@@ -630,7 +630,7 @@ static void _ncm_fit_mcmc_run_mt (NcmFitMCMC *mcmc);
  * @mcmc: a #NcmFitMCMC
  * @n: total number of realizations to run
  * 
- * Runs the montecarlo until it reaches the @n-th realization. Note that
+ * Runs the Markov Chain Monte Carlo until it reaches the @n-th realization. Note that
  * if the first_id is non-zero it will run @n - first_id realizations.
  *
  */
@@ -645,7 +645,7 @@ ncm_fit_mcmc_run (NcmFitMCMC *mcmc, guint n)
     if (mcmc->mtype > NCM_FIT_RUN_MSGS_NONE)
     {
       ncm_cfg_msg_sepa ();
-      g_message ("# NcmFitMCMC: Nothing to do, current Montecarlo run is %d\n", mcmc->cur_sample_id + 1);
+      g_message ("# NcmFitMCMC: Nothing to do, current Monte Carlo run is %d\n", mcmc->cur_sample_id + 1);
     }
     return;
   }
@@ -659,7 +659,7 @@ ncm_fit_mcmc_run (NcmFitMCMC *mcmc, guint n)
     case NCM_FIT_RUN_MSGS_SIMPLE:
     {
       ncm_cfg_msg_sepa ();
-      g_message ("# NcmFitMCMC: Calculating [%06d] Markov Chain Montecarlo runs [%s]\n", mcmc->n, ncm_mset_trans_kern_get_name (mcmc->tkern));
+      g_message ("# NcmFitMCMC: Calculating [%06d] Markov Chain Monte Carlo runs [%s]\n", mcmc->n, ncm_mset_trans_kern_get_name (mcmc->tkern));
     }
     case NCM_FIT_RUN_MSGS_NONE:
       break;

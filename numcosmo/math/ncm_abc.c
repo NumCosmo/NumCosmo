@@ -828,7 +828,7 @@ static void _ncm_abc_run_mt (NcmABC *abc);
  * @abc: a #NcmABC
  * @n: total number of realizations to run
  * 
- * Runs the montecarlo until it reaches the @n-th realization. Note that
+ * Runs the Monte Carlo until it reaches the @n-th realization. Note that
  * if the first_id is non-zero it will run @n - first_id realizations.
  *
  */
@@ -1234,7 +1234,7 @@ static void _ncm_abc_update_mt (NcmABC *abc);
  * ncm_abc_update:
  * @abc: a #NcmABC
  * 
- * Runs the montecarlo until it reaches the @n-th realization. Note that
+ * Runs the Monte Carlo until it reaches the @n-th realization. Note that
  * if the first_id is non-zero it will run @n - first_id realizations.
  *
  */
