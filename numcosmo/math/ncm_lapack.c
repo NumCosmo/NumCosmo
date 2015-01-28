@@ -63,7 +63,7 @@ void dpotri_ (const char *uplo, const gint *n, double *a, const gint *lda, gint 
 /**
  * ncm_lapack_dptsv:
  * @d: array of doubles with dimension @size.
- * @e: array of doubles with dimension @size.
+ * @e: array of doubles with dimension @size -1.
  * @b: array of doubles with dimension @size.
  * @x: array of doubles with dimension @size.
  * @size: The order of the matrix $A$.  @size >= 0.
