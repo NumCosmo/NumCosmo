@@ -218,7 +218,7 @@ ncm_fit_mc_class_init (NcmFitMCClass *klass)
                                    PROP_RTYPE,
                                    g_param_spec_enum ("rtype",
                                                       NULL,
-                                                      "Montecarlo run type",
+                                                      "Monte Carlo run type",
                                                       NCM_TYPE_FIT_MC_RESAMPLE_TYPE, NCM_FIT_MC_RESAMPLE_FROM_MODEL,
                                                       G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
   g_object_class_install_property (object_class,
@@ -541,7 +541,7 @@ ncm_fit_mc_start_run (NcmFitMC *mc)
     default:
     case NCM_FIT_RUN_MSGS_FULL:
       ncm_cfg_msg_sepa ();
-      g_message ("# NcmFitMC: Starting Montecarlo...\n");
+      g_message ("# NcmFitMC: Starting Monte Carlo...\n");
       ncm_dataset_log_info (mc->fit->lh->dset);
       ncm_cfg_msg_sepa ();
       g_message ("# NcmFitMC: Fiducial model set:\n");
@@ -679,7 +679,7 @@ static void _ncm_fit_mc_run_mt (NcmFitMC *mc);
  * @mc: a #NcmFitMC
  * @n: total number of realizations to run
  * 
- * Runs the montecarlo until it reaches the @n-th realization. Note that
+ * Runs the Monte Carlo until it reaches the @n-th realization. Note that
  * if the first_id is non-zero it will run @n - first_id realizations.
  *
  */
@@ -694,7 +694,7 @@ ncm_fit_mc_run (NcmFitMC *mc, guint n)
     if (mc->mtype > NCM_FIT_RUN_MSGS_NONE)
     {
       ncm_cfg_msg_sepa ();
-      g_message ("# NcmFitMC: Nothing to do, current Montecarlo run is %d\n", mc->cur_sample_id + 1);
+      g_message ("# NcmFitMC: Nothing to do, current Monte Carlo run is %d\n", mc->cur_sample_id + 1);
     }
     return;
   }
@@ -709,7 +709,7 @@ ncm_fit_mc_run (NcmFitMC *mc, guint n)
     {
       const GEnumValue *eval = ncm_cfg_enum_get_value (NCM_TYPE_FIT_MC_RESAMPLE_TYPE, mc->rtype);
       ncm_cfg_msg_sepa ();
-      g_message ("# NcmFitMC: Calculating [%06d] Montecarlo fits [%s]\n", mc->n, eval->value_nick);
+      g_message ("# NcmFitMC: Calculating [%06d] Monte Carlo fits [%s]\n", mc->n, eval->value_nick);
     }
     case NCM_FIT_RUN_MSGS_NONE:
       break;

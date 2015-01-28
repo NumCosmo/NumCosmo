@@ -25,10 +25,13 @@
 /**
  * SECTION:ncm_lapack
  * @title: Lapack Helper C Functions
- * @short_description: Encapsulated fortran lapack functions
+ * @short_description: encapsulated LAPACK functions 
  *
- * FIXME
+ * This object is dedicated to encapsulate functions from <ulink url="http://www.netlib.org/lapack/">LAPACK</ulink> choosing the most suitable backend.
  * 
+ * Priority order: (1) LAPACKE, (2) CLAPACK, (3) LAPACK and (4) GSL.
+ * 
+ * The description of each function follows its respective LAPACK documentation.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -59,15 +62,27 @@ void dpotri_ (const char *uplo, const gint *n, double *a, const gint *lda, gint 
 
 /**
  * ncm_lapack_dptsv:
- * @d: FIXME
- * @e: FIXME
- * @b: FIXME
- * @x: FIXME
- * @size: FIXME
+ * @d: array of doubles with dimension @size.
+ * @e: array of doubles with dimension @size.
+ * @b: array of doubles with dimension @size.
+ * @x: array of doubles with dimension @size.
+ * @size: The order of the matrix $A$.  @size >= 0.
  *
- * FIXME
+ * This function computes the solution to a real system of linear equations
+ * $A*X = B$ (B = @b), where $A$ is an N-by-N (N = @size) symmetric positive definite tridiagonal
+ * matrix, and $X$ and $B$ are N-by-NRHS (NRHS = 1) matrices.
  *
- * Returns: FIXME
+ * $A$ is factored as $A = L*D*L^T$, and the factored form of $A$ is then
+ * used to solve the system of equations.
+ *
+ * Returns: i = 0:  successful exit
+ * 
+ *        < 0:  -i, the i-th argument had an illegal value
+ * 
+ *        > 0:   i, the leading minor of order i is not
+ *               positive definite, and the solution has not been
+ *               computed.  The factorization has not been completed
+ *               unless i = N.
  */
 gint
 ncm_lapack_dptsv (gdouble *d, gdouble *e, gdouble *b, gdouble *x, guint size)
@@ -102,14 +117,26 @@ ncm_lapack_dptsv (gdouble *d, gdouble *e, gdouble *b, gdouble *x, guint size)
 
 /**
  * ncm_lapack_dpotrf:
- * @uplo: FIXME
- * @size: FIXME
- * @a: FIXME
- * @lda: FIXME
+ * @uplo: 'U' upper triangle of @a is stored; 'L' lower triangle of @a is stored.
+ * @size: The order of the matrix @a.  @size >= 0.
+ * @a: array of doubles with dimension (@size, @lda).
+ * @lda: The leading dimension of the array @a.  @lda >= max(1,@size).
  *
- * FIXME
+ * This function computes the Cholesky factorization of a real symmetric
+ * positive definite matrix @a.
+ * 
+ * The factorization has the form
+ * $A = U^T * U$, if @uplo = 'U', or
+ * $A = L  * L^T$, if @uplo = 'L',
+ * where A = @a, $U$ is an upper triangular matrix and $L$ is lower triangular.
  *
- * Returns: FIXME
+ * Returns: i = 0:  successful exit
+ * 
+ *          < 0:  -i, the i-th argument had an illegal value
+ * 
+ *          > 0:   i, the leading minor of order i is not
+ *                positive definite, and the factorization could not be
+ *                completed.
  */
 gint 
 ncm_lapack_dpotrf (gchar uplo, guint size, gdouble *a, guint lda)
@@ -144,14 +171,21 @@ ncm_lapack_dpotrf (gchar uplo, guint size, gdouble *a, guint lda)
 
 /**
  * ncm_lapack_dpotri:
- * @uplo: FIXME
- * @size: FIXME
- * @a: FIXME
- * @lda: FIXME
+ * @uplo: 'U' upper triangle of @a is stored; 'L' lower triangle of @a is stored.
+ * @size: The order of the matrix @a.  @size >= 0.
+ * @a: array of doubles with dimension (@size, @lda).
+ * @lda: The leading dimension of the array @a.  @lda >= max(1,@size).
  *
- * FIXME
+ * This function computes the inverse of a real symmetric positive
+ * definite matrix @a = A using the Cholesky factorization 
+ * $A = U^T*U$ or $A = L*L^T$ computed by %ncm_lapack_dpotrf.
  *
- * Returns: FIXME
+ * Returns: i = 0:  successful exit
+ * 
+ *          < 0:  -i, the i-th argument had an illegal value
+ *
+ *          > 0: the (i,i) element of the factor U
+ *            or L is zero, and the inverse could not be computed.
  */
 gint 
 ncm_lapack_dpotri (gchar uplo, guint size, gdouble *a, guint lda)
