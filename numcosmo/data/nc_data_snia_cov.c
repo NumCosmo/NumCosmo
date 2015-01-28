@@ -808,6 +808,7 @@ _nc_data_snia_cov_load_snia_data (NcDataSNIACov *snia_cov, const gchar *filename
     guint nrow = 0;
     guint i;
     guint max_dset_id = 0;
+    guint min_dset_id = 1000;
     gboolean has_dataset = FALSE;
     
     while (g_io_channel_read_line (file, &line, &len, &tpos, &error) != G_IO_STATUS_EOF)
@@ -870,6 +871,7 @@ _nc_data_snia_cov_load_snia_data (NcDataSNIACov *snia_cov, const gchar *filename
           gint64 dset_id = g_ascii_strtoll (itens[i + 1], NULL, 10);
           g_array_index (dataset, guint32, nrow) = dset_id;
           max_dset_id = GSL_MAX (max_dset_id, dset_id);
+          min_dset_id = GSL_MIN (min_dset_id, dset_id);
         }
         else
           g_array_index (dataset, guint32, nrow) = 0;
@@ -881,9 +883,22 @@ _nc_data_snia_cov_load_snia_data (NcDataSNIACov *snia_cov, const gchar *filename
     }
 
     if (nrow != snia_cov->mu_len)
-      g_error ("_nc_data_snia_cov_load_snia_data: cannot load data file [%s] expected nrows %u obtained %u", 
+    {
+      g_error ("_nc_data_snia_cov_load_snia_data: cannot load data file [%s] expected nrows %u obtained %u",
                filename, snia_cov->mu_len, nrow);
-
+    }
+    if (min_dset_id > 1)
+    {
+      g_error ("_nc_data_snia_cov_load_snia_data: wrongly aligned dataset ids. First id = %u\n", min_dset_id);
+    }
+    else if (min_dset_id == 1)
+    {
+      for (i = 0; i < dataset->len; i++)
+      {
+        g_array_index (dataset, guint32, i)--;
+      }
+      max_dset_id--;
+    }
     snia_cov->dataset_len = max_dset_id + 1;
 
     g_regex_unref (comment_line);
