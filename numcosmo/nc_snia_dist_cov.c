@@ -47,6 +47,7 @@
 #define BETA    (ncm_vector_get (VECTOR, NC_SNIA_DIST_COV_BETA))
 #define ABSMAG1 (ncm_vector_get (VECTOR, NC_SNIA_DIST_COV_M1))
 #define ABSMAG2 (ncm_vector_get (VECTOR, NC_SNIA_DIST_COV_M2))
+#define SIGMA_PECZ (ncm_vector_get (VECTOR, NC_SNIA_DIST_COV_SIGMA_PECZ))
 
 enum
 {
@@ -80,6 +81,16 @@ nc_snia_dist_cov_constructed (GObject *object)
         ncm_model_orig_vparam_set (model, NC_SNIA_DIST_COV_SIGMA_INT, 2, 0.0815);
         ncm_model_orig_vparam_set (model, NC_SNIA_DIST_COV_SIGMA_INT, 3, 0.0989);
         break;
+      default:
+      {
+        guint i;
+        for (i = 0; i < sigma_int_len; i++)
+        {
+          ncm_model_orig_vparam_set (model, NC_SNIA_DIST_COV_SIGMA_INT, i, 0.0);
+        }
+      }
+      break;
+      
     }
   }
 }
@@ -184,6 +195,11 @@ nc_snia_dist_cov_class_init (NcSNIADistCovClass *klass)
                               NC_SNIA_DIST_COV_DEFAULT_PARAMS_ABSTOL, NC_SNIA_DIST_COV_DEFAULT_M2,
                               NCM_PARAM_TYPE_FIXED);
   
+  ncm_model_class_set_sparam (model_class, NC_SNIA_DIST_COV_SIGMA_PECZ, "Error from SN Ia peculiar velocity", "sigma_pecz",
+                              0.0, 1.0e1, 1.0e-1,
+                              NC_SNIA_DIST_COV_DEFAULT_PARAMS_ABSTOL, NC_SNIA_DIST_COV_DEFAULT_SIGMA_PECZ,
+                              NCM_PARAM_TYPE_FIXED);
+
   ncm_model_class_set_vparam (model_class, NC_SNIA_DIST_COV_SIGMA_INT, NC_SNIA_DIST_COV_SIGMA_INT_DEFAULT_LEN, 
                               "Sigma intrisic", "sigma_int",
                               0.0, 1.0e1, 1.0e-3, 
@@ -207,17 +223,19 @@ nc_snia_dist_cov_class_init (NcSNIADistCovClass *klass)
 
 /**
  * nc_snia_dist_cov_new:
- * @dist: FIXME
+ * @dist: a #NcDistance.
+ * @sigma_int_len: length of the sigma_int dataset.
  * 
  * FIXME
  * 
  * Returns: FIXME
  */
 NcSNIADistCov *
-nc_snia_dist_cov_new (NcDistance *dist)
+nc_snia_dist_cov_new (NcDistance *dist, guint sigma_int_len)
 {
   return g_object_new (NC_TYPE_SNIA_DIST_COV,
                        "dist", dist,
+                       "sigma_int-length", sigma_int_len,
                        NULL);
 }
 
@@ -327,15 +345,16 @@ nc_snia_dist_cov_calc (NcSNIADistCov *dcov, NcDataSNIACov *snia_cov, NcmMatrix *
   }
   for (i = 0; i < snia_cov->mu_len; i++)
   {
-    const gdouble zfacsq    = (5.0 / M_LN10) * (5.0 / M_LN10);
-    const guint dset_id     = g_array_index (snia_cov->dataset, guint32, i);
-    const gdouble sigma_int = ncm_model_orig_vparam_get (model, NC_SNIA_DIST_COV_SIGMA_INT, dset_id);
-    const gdouble var_int   = sigma_int * sigma_int; 
-    const gdouble z_cmb     = ncm_vector_get (snia_cov->z_cmb, i);
-    const gdouble sigma_z   = ncm_vector_get (snia_cov->sigma_z, i);
-    const gdouble emptyfac  = (1.0 + z_cmb) / (z_cmb * (1.0 + 0.5 * z_cmb));
-    const gdouble var_pecz  = snia_cov->sigma_pecz * snia_cov->sigma_pecz;
-    const gdouble var_z_tot = (var_pecz + sigma_z * sigma_z) * zfacsq * emptyfac * emptyfac; 
+    const gdouble zfacsq     = (5.0 / M_LN10) * (5.0 / M_LN10);
+    const guint dset_id      = g_array_index (snia_cov->dataset, guint32, i);
+    const gdouble sigma_int  = ncm_model_orig_vparam_get (model, NC_SNIA_DIST_COV_SIGMA_INT, dset_id);
+    const gdouble var_int    = sigma_int * sigma_int; 
+    const gdouble z_cmb      = ncm_vector_get (snia_cov->z_cmb, i);
+    const gdouble sigma_z    = ncm_vector_get (snia_cov->sigma_z, i);
+    const gdouble emptyfac   = (1.0 + z_cmb) / (z_cmb * (1.0 + 0.5 * z_cmb));
+    const gdouble sigma_pecz = SIGMA_PECZ;
+    const gdouble var_pecz   = sigma_pecz * sigma_pecz;
+    const gdouble var_z_tot  = (var_pecz + sigma_z * sigma_z) * zfacsq * emptyfac * emptyfac; 
 
     const gdouble sigma_mag        =  ncm_vector_get (snia_cov->sigma_mag, i);
     const gdouble sigma_width      =  ncm_vector_get (snia_cov->sigma_width, i);
@@ -349,6 +368,7 @@ nc_snia_dist_cov_calc (NcSNIADistCov *dcov, NcDataSNIACov *snia_cov, NcmMatrix *
 
     const gdouble var_tot = var_mag + var_z_tot + var_int + var_width + 
       var_colour + var_mag_width + var_mag_colour + var_width_colour;
+
     ncm_matrix_set (cov, i, i, ncm_matrix_get (cov, i, i) + var_tot);
   }
 }

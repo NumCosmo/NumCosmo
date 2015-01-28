@@ -265,17 +265,19 @@ main (gint argc, gchar *argv[])
     else if (snia_id->value >= NC_DATA_SNIA_COV_START && snia_id->value <= NC_DATA_SNIA_COV_END)
     {
       NcSNIADistCov *dcov;
-      NcmData *data;
+      NcmData *data = nc_data_snia_cov_new (de_data_simple.snia_use_det);
+      guint sigma_int_len;
+      
+      nc_data_snia_load_cat (NC_DATA_SNIA_COV (data), snia_id->value);
+
+      sigma_int_len = nc_data_snia_cov_sigma_int_len (NC_DATA_SNIA_COV (data));
 
       if (de_data_simple.snia_objser == NULL)
-        dcov = nc_snia_dist_cov_new (dist);
+        dcov = nc_snia_dist_cov_new (dist, sigma_int_len);
       else
         dcov = NC_SNIA_DIST_COV (ncm_serialize_global_from_string (de_data_simple.snia_objser));
 
       g_assert (NC_IS_SNIA_DIST_COV (dcov));
-
-      data = nc_data_snia_cov_new (de_data_simple.snia_use_det);
-      nc_data_snia_load_cat (NC_DATA_SNIA_COV (data), snia_id->value);
       
       ncm_mset_set (mset, NCM_MODEL (dcov));
       ncm_dataset_append_data (dset, data);

@@ -60,7 +60,8 @@ typedef enum _NcSNIADistCovSParams
   NC_SNIA_DIST_COV_ALPHA = 0,
   NC_SNIA_DIST_COV_BETA,
   NC_SNIA_DIST_COV_M1,
-  NC_SNIA_DIST_COV_M2,         /*< private >*/
+  NC_SNIA_DIST_COV_M2,         
+  NC_SNIA_DIST_COV_SIGMA_PECZ, /*< private >*/
   NC_SNIA_DIST_COV_SPARAM_LEN, /*< skip >*/
 } NcSNIADistCovSParams;
 
@@ -96,7 +97,7 @@ GType nc_snia_dist_cov_get_type (void) G_GNUC_CONST;
 
 NCM_MSET_MODEL_DECLARE_ID (nc_snia_dist_cov);
 
-NcSNIADistCov *nc_snia_dist_cov_new (NcDistance *dist);
+NcSNIADistCov *nc_snia_dist_cov_new (NcDistance *dist, guint sigma_int_len);
 NcSNIADistCov *nc_snia_dist_cov_ref (NcSNIADistCov *dcov);
 void nc_snia_dist_cov_free (NcSNIADistCov *dcov);
 void nc_snia_dist_cov_clear (NcSNIADistCov **dcov);
@@ -111,6 +112,7 @@ void nc_snia_dist_cov_mean (NcSNIADistCov *dcov, NcHICosmo *cosmo, NcDataSNIACov
 #define NC_SNIA_DIST_COV_DEFAULT_BETA (3.16)
 #define NC_SNIA_DIST_COV_DEFAULT_M1 (-19.1686133146)
 #define NC_SNIA_DIST_COV_DEFAULT_M2 (-19.1856133146)
+#define NC_SNIA_DIST_COV_DEFAULT_SIGMA_PECZ (5.0e-4)
 #define NC_SNIA_DIST_COV_DEFAULT_PARAMS_ABSTOL (0.0)
 
 #define NC_SNIA_DIST_COV_SIGMA_INT_DEFAULT_LEN (4)
