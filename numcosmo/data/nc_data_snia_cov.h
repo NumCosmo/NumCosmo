@@ -147,6 +147,9 @@ void nc_data_snia_cov_load (NcDataSNIACov *snia_cov, const gchar *filename);
 void nc_data_snia_cov_save (NcDataSNIACov *snia_cov, const gchar *filename, gboolean overwrite);
 #endif /* NUMCOSMO_HAVE_CFITSIO */
 
+#define NC_DATA_SNIA_COV_CAT_DESC "DESC"
+#define NC_DATA_SNIA_COV_DATA_DESC "Description"
+
 #define NC_DATA_SNIA_COV_DATA_GROUP "Supernovae Ia Data"
 #define NC_DATA_SNIA_COV_DATA_LEN_KEY "data-length"
 #define NC_DATA_SNIA_COV_DATA_KEY "snia-data"
