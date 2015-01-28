@@ -50,7 +50,6 @@
 enum
 {
   PROP_0,
-  PROP_SIGMA_PECZ,
   PROP_ZCMB,
   PROP_ZHE,
   PROP_SIGMA_Z,
@@ -107,7 +106,6 @@ nc_data_snia_cov_init (NcDataSNIACov *snia_cov)
   snia_cov->var_mag_colour    = NULL;
   snia_cov->var_width_colour  = NULL;
 
-  snia_cov->sigma_pecz        = 0.0;
   snia_cov->dataset           = NULL;
   snia_cov->dataset_len       = 0;
 }
@@ -120,9 +118,6 @@ nc_data_snia_cov_set_property (GObject *object, guint prop_id, const GValue *val
 
   switch (prop_id)
   {
-    case PROP_SIGMA_PECZ:
-      snia_cov->sigma_pecz = g_value_get_double (value);
-      break;
     case PROP_ZCMB:
       ncm_vector_set_from_variant (snia_cov->z_cmb, g_value_get_variant (value));
       break;
@@ -209,9 +204,6 @@ nc_data_snia_cov_get_property (GObject *object, guint prop_id, GValue *value, GP
 
   switch (prop_id)
   {
-    case PROP_SIGMA_PECZ:
-      g_value_set_double (value, snia_cov->sigma_pecz);
-      break;
     case PROP_ZCMB:
       g_value_take_variant (value, ncm_vector_peek_variant (snia_cov->z_cmb));
       break;
@@ -331,13 +323,6 @@ nc_data_snia_cov_class_init (NcDataSNIACovClass *klass)
   object_class->dispose      = &nc_data_snia_cov_dispose;
   object_class->finalize     = &nc_data_snia_cov_finalize;
 
-  g_object_class_install_property (object_class,
-                                   PROP_SIGMA_PECZ,
-                                   g_param_spec_double ("sigma-pecz",
-                                                        NULL,
-                                                        "Error from SN Ia peculiar velocity",
-                                                        0.0, 1.0e1, 5.0e-4,
-                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
   g_object_class_install_property (object_class,
                                    PROP_ZCMB,
                                    g_param_spec_variant ("z-cmb",
@@ -556,6 +541,21 @@ nc_data_snia_cov_new_full (gchar *filename, gboolean use_det)
   g_error ("nc_data_snia_cov_new_full: cannot load data file, no cfitsio support.");
 #endif /* NUMCOSMO_HAVE_CFITSIO */
   return data;
+}
+
+/**
+ * nc_data_snia_cov_sigma_int_len:
+ * @snia_cov: a #NcDataSNIACov.
+ * 
+ * Gets the number of different intrinsic sigma parameters in the
+ * catalog.
+ * 
+ * Returns: The number of different sigma_int.
+ */
+guint
+nc_data_snia_cov_sigma_int_len (NcDataSNIACov *snia_cov)
+{
+  return snia_cov->dataset_len;
 }
 
 static void 
@@ -1069,6 +1069,9 @@ nc_data_snia_cov_save (NcDataSNIACov *snia_cov, const gchar *filename, gboolean 
   GPtrArray *tform_array = g_ptr_array_sized_new (NC_DATA_SNIA_COV_TOTAL_LENGTH);
   GPtrArray *tunit_array = g_ptr_array_sized_new (NC_DATA_SNIA_COV_TOTAL_LENGTH);
 
+  if (ncm_data_gauss_cov_get_size (NCM_DATA_GAUSS_COV (snia_cov)) == 0)
+    g_error ("nc_data_snia_cov_save: cannot save empy catalog.");
+  
   g_ptr_array_set_size (ttype_array, NC_DATA_SNIA_COV_TOTAL_LENGTH);
   g_ptr_array_set_size (tform_array, NC_DATA_SNIA_COV_TOTAL_LENGTH);
   g_ptr_array_set_size (tunit_array, NC_DATA_SNIA_COV_TOTAL_LENGTH);
