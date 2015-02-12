@@ -874,7 +874,7 @@ ncm_cfg_save_fftw_wisdom (gchar *filename, ...)
 #endif /* NUMCOSMO_HAVE_FFTW3 */
 
 /**
- * ncm_cfg_fopen: (skip)
+ * ncm_cfg_fopen:
  * @filename: FIXME
  * @mode: FIXME
  * @...: FIXME

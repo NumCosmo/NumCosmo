@@ -518,6 +518,7 @@ EXTRA_DIST = \
 CLEANFILES = $(BUILT_SOURCES)
 
 -include $(INTROSPECTION_MAKEFILE)
+INTROSPECTION_SCANNER_ENV = CC="$(CC)"
 INTROSPECTION_GIRS =
 INTROSPECTION_SCANNER_ARGS = --add-include-path=$(srcdir) -I$(srcdir)/../ -I$(top_builddir) --warn-all 
 
