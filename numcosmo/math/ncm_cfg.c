@@ -358,11 +358,12 @@ ncm_cfg_register_obj (GType obj)
 void
 ncm_cfg_set_logfile (gchar *filename)
 {
-  FILE *out = fopen (filename, "w");
+  FILE *out = g_fopen (filename, "w");
+  
   if (out != NULL)
     _log_stream = out;
   else
-    g_error ("ncm_cfg_set_logfile: Can't open logfile (%s)", filename);
+    g_error ("ncm_cfg_set_logfile: Can't open logfile `%s' %s", filename, g_strerror (errno));
 }
 
 /**
@@ -820,6 +821,11 @@ ncm_cfg_load_fftw_wisdom (gchar *filename, ...)
   if (g_file_test (full_filename, G_FILE_TEST_EXISTS))
   {
     wis = g_fopen (full_filename, "r");
+    if (wis == NULL)
+    {
+      g_error ("ncm_cfg_load_fftw_wisdom: cannot open wisdom file %s [%s].", full_filename, g_strerror (errno));
+    }
+        
     fftw_import_wisdom_from_file (wis);
     fclose (wis);
     ret = TRUE;
@@ -856,7 +862,7 @@ ncm_cfg_save_fftw_wisdom (gchar *filename, ...)
   wis = g_fopen (full_filename, "w");
   if (wis == NULL)
   {
-    g_error ("ncm_cfg_save_fftw_wisdom: cannot save wisdown file %s [%s].", full_filename, g_strerror (errno));
+    g_error ("ncm_cfg_save_fftw_wisdom: cannot save wisdom file %s [%s].", full_filename, g_strerror (errno));
   }
 
   fftw_export_wisdom_to_file(wis);
@@ -893,6 +899,11 @@ ncm_cfg_fopen (gchar *filename, gchar *mode, ...)
   full_filename = g_build_filename (numcosmo_path, file, NULL);
 
   F = g_fopen (full_filename, mode);
+  if (F == NULL)
+  {
+    g_error ("ncm_cfg_fopen: cannot open file %s [%s].", full_filename, g_strerror (errno));
+  }
+  
   g_free (file);
   g_free (full_filename);
   return F;
@@ -920,6 +931,11 @@ ncm_cfg_vfopen (gchar *filename, gchar *mode, va_list ap)
   full_filename = g_build_filename (numcosmo_path, file, NULL);
 
   F = g_fopen (full_filename, mode);
+  if (F == NULL)
+  {
+    g_error ("ncm_cfg_fopen: cannot open file %s [%s].", full_filename, g_strerror (errno));
+  }
+
   g_free (file);
   g_free (full_filename);
   return F;
