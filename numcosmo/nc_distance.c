@@ -25,7 +25,7 @@
 /**
  * SECTION:nc_distance
  * @title: Cosmological Distances and Times
- * @short_description: Calculate cosmological distances and related quantities.
+ * @short_description: calculates cosmological distances and related quantities
  *
  * This object implements several distances used in cosmology, here we have
  * the following definitions.
@@ -193,12 +193,12 @@ nc_distance_class_init (NcDistanceClass *klass)
 
 /**
  * nc_distance_new:
- * @z_f: final redshift $z_f$.
+ * @z_f: final redshift $z_f$
  *
  * Creates a new #NcDistance object optimized to perform distance calculations
  * to redshift up to $z_f$.
  *
- * Returns: a new #NcDistance.
+ * Returns: a new #NcDistance
  */
 NcDistance *
 nc_distance_new (gdouble z_f)
@@ -208,7 +208,7 @@ nc_distance_new (gdouble z_f)
 
 /**
  * nc_distance_ref:
- * @dist: a #NcDistance.
+ * @dist: a #NcDistance
  *
  * FIXME
  *
@@ -222,7 +222,7 @@ nc_distance_ref (NcDistance *dist)
 
 /**
  * nc_distance_free:
- * @dist: a #NcDistance.
+ * @dist: a #NcDistance
  *
  * FIXME
  *
@@ -235,7 +235,7 @@ nc_distance_free (NcDistance *dist)
 
 /**
  * nc_distance_clear:
- * @dist: a #NcDistance.
+ * @dist: a #NcDistance
  *
  * FIXME
  *
@@ -250,8 +250,8 @@ static gdouble dcddz (gdouble y, gdouble x, gpointer userdata);
 
 /**
  * nc_distance_prepare:
- * @dist: a #NcDistance.
- * @cosmo: a #NcHICosmo.
+ * @dist: a #NcDistance
+ * @cosmo: a #NcHICosmo
  *
  * FIXME
  *
@@ -284,8 +284,8 @@ nc_distance_prepare (NcDistance *dist, NcHICosmo *cosmo)
 
 /**
  * nc_distance_prepare_if_needed:
- * @dist: FIXME,
- * @cosmo: FIXME
+ * @dist: a #NcDistance
+ * @cosmo: a #NcHICosmo
  *
  * FIXME
  * 
@@ -310,13 +310,13 @@ nc_distance_init (NcDistance *dist)
 
 /**
  * nc_distance_hubble:
- * @dist: a #NcDistance.
- * @cosmo: a #NcHICosmo.
+ * @dist: a #NcDistance
+ * @cosmo: a #NcHICosmo
  *
  * Calculate the curvature scale today as defined in Eq $\eqref{eq:def:DH}$ in
  * units of megaparsec (Mpc) [ncm_c_Mpc()].
  *
- * Returns: $D_{H0}$.
+ * Returns: $D_{H0}$
  */
 gdouble
 nc_distance_hubble (NcDistance *dist, NcHICosmo *cosmo)
@@ -329,13 +329,13 @@ static gdouble comoving_distance_integral_argument(gdouble z, gpointer p);
 
 /**
  * nc_distance_comoving:
- * @dist: a #NcDistance.
- * @cosmo: a #NcHICosmo.
- * @z: redshift $z$.
+ * @dist: a #NcDistance
+ * @cosmo: a #NcHICosmo
+ * @z: redshift $z$
  * 
  * Calculate the comoving distance $D_c (z)$ as defined in Eq. $\eqref{eq:def:Dc}$.
  *
- * Returns: $D_c(z)$.
+ * Returns: $D_c(z)$
  */
 gdouble
 nc_distance_comoving (NcDistance *dist, NcHICosmo *cosmo, gdouble z)
@@ -383,13 +383,13 @@ dcddz (gdouble cd, gdouble z, gpointer userdata)
 
 /**
  * nc_distance_transverse:
- * @dist: a #NcDistance.
- * @cosmo: a #NcHICosmo.
- * @z: redshift $z$.
+ * @dist: a #NcDistance
+ * @cosmo: a #NcHICosmo
+ * @z: redshift $z$
  *
  * Compute the transverse comoving distance $D_t (z)$ defined in Eq. $\eqref{eq:def:Dt}$.
  *
- * Returns: $D_t(z)$.
+ * Returns: $D_t(z)$
  */
 gdouble
 nc_distance_transverse (NcDistance *dist, NcHICosmo *cosmo, gdouble z)
@@ -427,14 +427,14 @@ nc_distance_transverse (NcDistance *dist, NcHICosmo *cosmo, gdouble z)
 
 /**
  * nc_distance_dtransverse_dz:
- * @dist: a #NcDistance.
- * @cosmo: a #NcHICosmo.
- * @z: redshift $z$.
+ * @dist: a #NcDistance
+ * @cosmo: a #NcHICosmo
+ * @z: redshift $z$
  *
  * Compute the derivative of $D_t(z)$ with respect to $z$ defined in 
  * Eq. $\eqref{eq:def:Dt}$.
  *
- * Returns: $\frac{dD_t(z)}{dz}$.
+ * Returns: $\frac{dD_t(z)}{dz}$
  */
 gdouble
 nc_distance_dtransverse_dz (NcDistance *dist, NcHICosmo *cosmo, gdouble z)
@@ -470,13 +470,13 @@ nc_distance_dtransverse_dz (NcDistance *dist, NcHICosmo *cosmo, gdouble z)
 
 /**
  * nc_distance_luminosity:
- * @dist: a #NcDistance.
- * @cosmo: a #NcHICosmo.
- * @z: redshift $z$.
+ * @dist: a #NcDistance
+ * @cosmo: a #NcHICosmo
+ * @z: redshift $z$
  *
  * Compute the luminosity distance $D_l(z)$  defined in Eq. $\eqref{eq:def:Dl}$.
  *
- * Returns: $D_l(z)$.
+ * Returns: $D_l(z)$
  */
 gdouble
 nc_distance_luminosity (NcDistance *dist, NcHICosmo *cosmo, gdouble z)
@@ -489,13 +489,13 @@ nc_distance_luminosity (NcDistance *dist, NcHICosmo *cosmo, gdouble z)
 
 /**
  * nc_distance_modulus:
- * @dist: a #NcDistance.
- * @cosmo: a #NcHICosmo.
- * @z: redshift $z$.
+ * @dist: a #NcDistance
+ * @cosmo: a #NcHICosmo
+ * @z: redshift $z$
  *
  * Compute the distance modulus $\mu(z)$ defined in Eq. $\eqref{eq:def:mu}$.
  *
- * Returns: $\mu(z)$.
+ * Returns: $\mu(z)$
  */
 gdouble
 nc_distance_modulus (NcDistance *dist, NcHICosmo *cosmo, gdouble z)
@@ -508,14 +508,14 @@ nc_distance_modulus (NcDistance *dist, NcHICosmo *cosmo, gdouble z)
 
 /**
  * nc_distance_luminosity_hef:
- * @dist: a #NcDistance.
- * @cosmo: a #NcHICosmo.
- * @z_he: redshift $z_{he}$ in our local frame.
- * @z_cmb: redshift $z_{CMB}$ in the CMB frame.
+ * @dist: a #NcDistance
+ * @cosmo: a #NcHICosmo
+ * @z_he: redshift $z_{he}$ in our local frame
+ * @z_cmb: redshift $z_{CMB}$ in the CMB frame
  *
  * Calculate the luminosity distance $D_l$ corrected to our local frame.
  *
- * Returns: $D_l(z_{hef},z_{CMB})$.
+ * Returns: $D_l(z_{hef},z_{CMB})$
  */
 gdouble 
 nc_distance_luminosity_hef (NcDistance *dist, NcHICosmo *cosmo, gdouble z_he, gdouble z_cmb)
@@ -528,15 +528,15 @@ nc_distance_luminosity_hef (NcDistance *dist, NcHICosmo *cosmo, gdouble z_he, gd
 
 /**
  * nc_distance_modulus_hef:
- * @dist: a #NcDistance.
- * @cosmo: a #NcHICosmo.
- * @z_he: redshift $z_{he}$ in our local frame.
- * @z_cmb: redshift $z_{CMB}$ in the CMB frame.
+ * @dist: a #NcDistance
+ * @cosmo: a #NcHICosmo
+ * @z_he: redshift $z_{he}$ in our local frame
+ * @z_cmb: redshift $z_{CMB}$ in the CMB frame
  *
  * Calculate the distance modulus using the frame corrected luminosity distance
  * [nc_distance_luminosity_hef()].
  *
- * Returns: $\mu(z_{hef},z_{CMB})$.
+ * Returns: $\mu(z_{hef},z_{CMB})$
  */
 gdouble 
 nc_distance_modulus_hef (NcDistance *dist, NcHICosmo *cosmo, gdouble z_he, gdouble z_cmb)
@@ -558,7 +558,7 @@ nc_distance_modulus_hef (NcDistance *dist, NcHICosmo *cosmo, gdouble z_he, gdoub
  * $E(z_\star)$ is the normalized Hubble function [Eq. $\eqref{eq:def:Ez}$] and 
  * $D_t(z_\star)$ is the transverse comoving distance [Eq. $\eqref{eq:def:Dt}$] both computed at $z_\star$.
  *
- * Returns: $D_a(z_\star)$.
+ * Returns: $D_a(z_\star)$
  */
 gdouble
 nc_distance_angular_diameter_curvature_scale (NcDistance *dist, NcHICosmo *cosmo)
@@ -575,9 +575,9 @@ nc_distance_angular_diameter_curvature_scale (NcDistance *dist, NcHICosmo *cosmo
 
 /**
  * nc_distance_shift_parameter:
- * @dist: a #NcDistance.
- * @cosmo: a #NcHICosmo.
- * @z: redshift $z$.
+ * @dist: a #NcDistance
+ * @cosmo: a #NcHICosmo
+ * @z: redshift $z$
  *
  * The shift parameter $R(z)$ is defined as
  * \begin{align}
@@ -588,7 +588,7 @@ nc_distance_angular_diameter_curvature_scale (NcDistance *dist, NcHICosmo *cosmo
  * $D_A(z) = D_{H_0} D_t(z) / (1 + z)$ is the angular diameter distance and 
  * $D_t(z)$ is the tranverse comoving distance [Eq. $\eqref{eq:def:Dt}$].
  *
- * Returns: $R(z)$.
+ * Returns: $R(z)$
  */
 gdouble
 nc_distance_shift_parameter (NcDistance *dist, NcHICosmo *cosmo, gdouble z)
@@ -606,7 +606,7 @@ nc_distance_shift_parameter (NcDistance *dist, NcHICosmo *cosmo, gdouble z)
  * Compute the shift parameter $R(z)$ [nc_distance_shift_parameter()] at the
  * decoupling redshift $z_\star$ [nc_distance_decoupling_redshift()].
  *
- * Returns: $R(z_\star)$.
+ * Returns: $R(z_\star)$
  */
 gdouble
 nc_distance_shift_parameter_lss (NcDistance *dist, NcHICosmo *cosmo)
@@ -624,13 +624,13 @@ nc_distance_shift_parameter_lss (NcDistance *dist, NcHICosmo *cosmo)
 
 /**
  * nc_distance_comoving_lss:
- * @dist: a #NcDistance.
- * @cosmo: a #NcHICosmo.
+ * @dist: a #NcDistance
+ * @cosmo: a #NcHICosmo
  *
  * Compute the comoving distance $D_c(z)$ [Eq. \eqref{eq:def:Dc}] at the 
  * decoupling redshift $z_\star$ [nc_distance_decoupling_redshift()].
  *
- * Returns: $D_c(z_\star)$.
+ * Returns: $D_c(z_\star)$
  */
 gdouble
 nc_distance_comoving_lss (NcDistance *dist, NcHICosmo *cosmo)
@@ -644,8 +644,8 @@ nc_distance_comoving_lss (NcDistance *dist, NcHICosmo *cosmo)
 
 /**
  * nc_distance_decoupling_redshift:
- * @dist: a #NcDistance.
- * @cosmo: a #NcHICosmo.
+ * @dist: a #NcDistance
+ * @cosmo: a #NcHICosmo
  *
  * The decoupling redshift $z_\star$ corresponds to the epoch of 
  * the last scattering surface of the cosmic microwave background photons. 
@@ -682,9 +682,9 @@ static gdouble sound_horizon_integral_argument(gdouble z, gpointer p);
 
 /**
  * nc_distance_sound_horizon:
- * @dist: a #NcDistance.
- * @cosmo: a #NcHICosmo.
- * @z: redshift $z$.
+ * @dist: a #NcDistance
+ * @cosmo: a #NcHICosmo
+ * @z: redshift $z$
  *
  * Compute the sound horizon $r_s$, 
  * \begin{equation}
@@ -700,7 +700,7 @@ static gdouble sound_horizon_integral_argument(gdouble z, gpointer p);
  * $\Omega_b$ [nc_hicosmo_Omega_b()] and $\Omega_r$ [nc_hicosmo_Omega_r()] are the baryonic and radiation density parameter, respectively. 
  * If $\Omega_r = 0$, the integrand returns 0.0.
  *
- * Returns: $r_s(z)$.
+ * Returns: $r_s(z)$
  */
 gdouble
 nc_distance_sound_horizon (NcDistance *dist, NcHICosmo *cosmo, gdouble z)
@@ -736,15 +736,15 @@ sound_horizon_integral_argument (gdouble z, gpointer p)
 
 /**
  * nc_distance_dsound_horizon_dz:
- * @dist: a #NcDistance.
- * @cosmo: a #NcHICosmo.
- * @z: redshift $z$.
+ * @dist: a #NcDistance
+ * @cosmo: a #NcHICosmo
+ * @z: redshift $z$
  *
  * Calculate the sound horizon [nc_distance_sound_horizon()] derivative with respect to $z$, 
  * $$\frac{d r_s(z)}{dz} = - \frac{c_s(z)}{E(z)},$$
  * where $c_s(z) / E(z)$ is given by Eq. \eqref{eq:def:rs:integrand}.
  *
- * Returns: $\frac{d r_s(z)}{dz}$.
+ * Returns: $\frac{d r_s(z)}{dz}$
  */
 gdouble
 nc_distance_dsound_horizon_dz (NcDistance *dist, NcHICosmo *cosmo, gdouble z)
@@ -755,8 +755,8 @@ nc_distance_dsound_horizon_dz (NcDistance *dist, NcHICosmo *cosmo, gdouble z)
 
 /**
  * nc_distance_acoustic_scale:
- * @dist: a #NcDistance.
- * @cosmo: a #NcHICosmo.
+ * @dist: a #NcDistance
+ * @cosmo: a #NcHICosmo
  *
  * Compute the acoustic scale $l_A (z_\star)$ at $z_\star$ [nc_distance_decoupling_redshift()],
  * \begin{equation}
@@ -766,7 +766,7 @@ nc_distance_dsound_horizon_dz (NcDistance *dist, NcHICosmo *cosmo, gdouble z)
  * and $r_s(z_\star)$ is the sound horizon [nc_distance_sound_horizon()] both 
  * both computed at $z_\star$.
  *
- * Returns: $l_A(z_\star)$.
+ * Returns: $l_A(z_\star)$
  */
 gdouble
 nc_distance_acoustic_scale (NcDistance *dist, NcHICosmo *cosmo)
@@ -780,8 +780,8 @@ nc_distance_acoustic_scale (NcDistance *dist, NcHICosmo *cosmo)
 
 /**
  * nc_distance_drag_redshift:
- * @dist: a #NcDistance.
- * @cosmo: a #NcHICosmo.
+ * @dist: a #NcDistance
+ * @cosmo: a #NcHICosmo
  *
  * Drag redshift is the epoch at which baryons were released from photons. 
  * 
@@ -796,7 +796,7 @@ nc_distance_acoustic_scale (NcDistance *dist, NcHICosmo *cosmo)
  * $$b_1 = 0.313 (\Omega_m h^2)^{-0.419} \left(1 + 0.607 (\Omega_m h^2)^{0.674}\right) \; 
  * \text{and} \; b_2 = 0.238 (\Omega_m h^2)^{0.223}.$$
  * 
- * Returns: $z_d$.
+ * Returns: $z_d$
  */
 gdouble
 nc_distance_drag_redshift (NcDistance *dist, NcHICosmo *cosmo)
@@ -814,14 +814,22 @@ nc_distance_drag_redshift (NcDistance *dist, NcHICosmo *cosmo)
 
 /**
  * nc_distance_dilation_scale:
- * @dist: a #NcDistance.
- * @cosmo: a #NcHICosmo.
- * @z: redshift $z$.
+ * @dist: a #NcDistance
+ * @cosmo: a #NcHICosmo
+ * @z: redshift $z$
  *
- * The dilation scale is the cube root of the product of the radial dilation
- * times the square of the transverse dilation -- (arXiv:astro-ph/0501171)
+ * The dilation scale is the spherically averaged distance for perturbations along and 
+ * orthogonal to the line of sight,
+ * $$D_V(z) = \left[D_{H_0}^2 D_t(z)^2 \frac{cz}{H(z)} \right]^{1/3},$$
+ * where $D_t(z)$ is the transverse comoving distance [Eq. $\eqref{eq:def:Dt}$], $c$ is the speed of light 
+ * [ncm_c_c()] and $H(z)$ is the Hubble function [nc_hicosmo_H()].  
+ * See <link linkend="XEisenstein2005">Eisenstein et al. (2005)</link>.
  *
- * Returns: $D_V(z)$.
+ * This function computes the adimensional dilation scale:
+ * $$D_V^\star(z) = \left[D_t(z)^2 \frac{z}{E(z)} \right]^{1/3} = \frac{D_V(z)}{D_{H_0}},$$
+ * where $E(z)$ is the normalized Hubble function [nc_hicosmo_E2()].
+ * 
+ * Returns: $D_V^\star(z)$
  */
 gdouble
 nc_distance_dilation_scale (NcDistance *dist, NcHICosmo *cosmo, gdouble z)
@@ -834,13 +842,18 @@ nc_distance_dilation_scale (NcDistance *dist, NcHICosmo *cosmo, gdouble z)
 
 /**
  * nc_distance_bao_A_scale:
- * @dist: a #NcDistance.
- * @cosmo: a #NcHICosmo.
- * @z: the redshift $z$.
+ * @dist: a #NcDistance
+ * @cosmo: a #NcHICosmo
+ * @z: the redshift $z$
  *
  * Bao 'A' scale D_v(z) sqrt(Omega_m) / z -- (arXiv:astro-ph/0501171)
+ * The acoustic scale is defined as 
+ * $$ A \equiv D_V (z) \frac{\sqrt{\Omega_m H_0^2}}{z c},$$
+ * where $\Omega_m$ is the matter density parameter [nc_hicosmo_Omega_m()], $c$ is the speed of light [ncm_c_c()], 
+ * $H_0$ is the Hubble parameter [nc_hicosmo_H0()] and $D_V(z)$ is the dilation scale [nc_distance_dilation_scale()].
+ * See Section 4.5 from <link linkend="XEisenstein2005">Eisenstein et al. (2005)</link>.
  *
- * Returns: FIXME
+ * Returns: $A(z)$
  */
 gdouble
 nc_distance_bao_A_scale (NcDistance *dist, NcHICosmo *cosmo, gdouble z)

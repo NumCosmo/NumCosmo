@@ -46,12 +46,12 @@
 
 /**
  * nc_data_bao_create:
- * @dist: FIXME
- * @id: FIXME
+ * @dist: a #NcDistance
+ * @id: a #NcDataBaoId
  *
  * FIXME
  *
- * Returns: (transfer full): FIXME
+ * Returns: (transfer full): a #NcmData
  */
 NcmData *
 nc_data_bao_create (NcDistance *dist, NcDataBaoId id)
@@ -61,7 +61,7 @@ nc_data_bao_create (NcDistance *dist, NcDataBaoId id)
   {
     case NC_DATA_BAO_A_EISENSTEIN2005:
       return nc_data_bao_a_new (dist, id);
-      break;      
+      break;  
     case NC_DATA_BAO_DV_EISENSTEIN2005:
       return nc_data_bao_dv_new (dist, id);
       break;
@@ -75,6 +75,7 @@ nc_data_bao_create (NcDistance *dist, NcDataBaoId id)
     case NC_DATA_BAO_RDV_PADMANABHAN2012:
     case NC_DATA_BAO_RDV_ANDERSON2012:
     case NC_DATA_BAO_RDV_BLAKE2012:
+    case NC_DATA_BAO_RDV_KAZIN2014:  
       return nc_data_bao_rdv_new (dist, id);
       break;
     default:

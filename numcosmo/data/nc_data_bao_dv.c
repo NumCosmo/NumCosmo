@@ -196,12 +196,12 @@ _nc_data_bao_dv_set_size (NcmDataGaussDiag *diag, guint np)
 
 /**
  * nc_data_bao_dv_new:
- * @dist: FIXME
- * @id: FIXME
+ * @dist: a #NcDistance
+ * @id: a #NcDataBaoId
  *
  * FIXME
  *
- * Returns: FIXME
+ * Returns: a #NcmData
  */
 NcmData *
 nc_data_bao_dv_new (NcDistance *dist, NcDataBaoId id)
@@ -216,7 +216,7 @@ nc_data_bao_dv_new (NcDistance *dist, NcDataBaoId id)
 /**
  * nc_data_bao_dv_set_sample:
  * @bao_dv: a #NcDataBaoDV.
- * @id: FIXME
+ * @id: a #NcDataBaoId
  *
  * FIXME
  *

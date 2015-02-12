@@ -36,16 +36,17 @@ G_BEGIN_DECLS
 
 /**
  * NcDataBaoId:
- * @NC_DATA_BAO_A_EISENSTEIN2005: FIXME
- * @NC_DATA_BAO_DV_EISENSTEIN2005: FIXME
- * @NC_DATA_BAO_DVDV_PERCIVAL2007: FIXME
- * @NC_DATA_BAO_DVDV_PERCIVAL2010: FIXME
- * @NC_DATA_BAO_RDV_PERCIVAL2007: FIXME
- * @NC_DATA_BAO_RDV_PERCIVAL2010: FIXME
- * @NC_DATA_BAO_RDV_BEUTLER2011: FIXME
- * @NC_DATA_BAO_RDV_PADMANABHAN2012: FIXME
- * @NC_DATA_BAO_RDV_ANDERSON2012: FIXME
- * @NC_DATA_BAO_RDV_BLAKE2012: FIXME
+ * @NC_DATA_BAO_A_EISENSTEIN2005: <link linkend="XEisenstein2005">Eisenstein et al. (2005)</link>
+ * @NC_DATA_BAO_DV_EISENSTEIN2005: <link linkend="XEisenstein2005">Eisenstein et al. (2005)</link>
+ * @NC_DATA_BAO_DVDV_PERCIVAL2007: <link linkend="XPercival2007">Percival et al. (2007)</link>
+ * @NC_DATA_BAO_DVDV_PERCIVAL2010: <link linkend="XPercival2010">Percival et al. (2010)</link>
+ * @NC_DATA_BAO_RDV_PERCIVAL2007: <link linkend="XPercival2007">Percival et al. (2007)</link>
+ * @NC_DATA_BAO_RDV_PERCIVAL2010: <link linkend="XPercival2010">Percival et al. (2010)</link>
+ * @NC_DATA_BAO_RDV_BEUTLER2011: <link linkend="XBeutler2011">Beutler et al. (2011)</link>
+ * @NC_DATA_BAO_RDV_PADMANABHAN2012: <link linkend="XPadmanabhan2012">Padmanabhan et al. (2012)</link>
+ * @NC_DATA_BAO_RDV_ANDERSON2012: <link linkend="XAnderson2012">Anderson et al. (2012)</link>
+ * @NC_DATA_BAO_RDV_BLAKE2012: <link linkend="XBlake2011">Blake et al. (2011)</link>
+ * @NC_DATA_BAO_RDV_KAZIN2014: <link linkend="XKazin2014">Kazin et al. (2014)</link>
  *
  * FIXME
  */
@@ -60,9 +61,14 @@ typedef enum _NcDataBaoId
   NC_DATA_BAO_RDV_BEUTLER2011,
   NC_DATA_BAO_RDV_PADMANABHAN2012,
   NC_DATA_BAO_RDV_ANDERSON2012,
-  NC_DATA_BAO_RDV_BLAKE2012,    /*< private >*/
+  NC_DATA_BAO_RDV_BLAKE2012,
+  NC_DATA_BAO_RDV_KAZIN2014,  /*< private >*/
   NC_DATA_BAO_NSAMPLES,         /*< skip >*/
 } NcDataBaoId;
+
+#define NC_DATA_BAO_RDV_FIRST NC_DATA_BAO_RDV_PERCIVAL2007
+#define NC_DATA_BAO_RDV_LAST NC_DATA_BAO_RDV_KAZIN2014
+#define NC_DATA_BAO_RDV_LEN (NC_DATA_BAO_RDV_LAST - NC_DATA_BAO_RDV_FIRST + 1)
 
 NcmData *nc_data_bao_create (NcDistance *dist, NcDataBaoId id);
 

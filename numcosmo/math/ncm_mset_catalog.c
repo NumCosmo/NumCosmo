@@ -26,22 +26,23 @@
 /**
  * SECTION:ncm_mset_catalog
  * @title: Fit Catalog
- * @short_description: Ordered catalog of different #NcmMSet parameter values.
+ * @short_description: ordered catalog of different #NcmMSet parameter values
  *
- * This class defines a catalog type object. This object can automatically syncronise
+ * This class defines a catalog type object. This object can automatically synchronize
  * with a fits file (thought cfitsio). 
  * 
- * For Motecarlo studies like resampling from a fiducial model or bootstrap it is used
- * to save the values of the best-fit values for each realization. Since the order of
- * resampling is important due to the fact that we use the same pseudo-random number 
+ * For Mote Carlo studies, like resampling from a fiducial model or bootstrap, it is used
+ * to save the best-fitting values of each realization. Since the order of the
+ * resampling is important, due to the fact that we use the same pseudo-random number 
  * generator for all resamplings, this object also guarantees the order of the samples
  * added.
  * 
- * For Markov Chain Montecarlo this object saves the value of the same likelihood in
+ * For Markov Chain Monte Carlo (MCMC) this object saves the value of the same likelihood in
  * different points of the parameter space.
  * 
- * For both applications this object keeps an interactive mean and variance for the
- * parameters added, this allows a sample by sample analyses of the convergence.
+ * For both applications this object keeps an interactive mean and variance of the
+ * parameters added, this allows a sample by sample analyses of the convergence. 
+ * Some MCMC convergence diagnostic functions are also implemented here.
  * 
  */
 
@@ -390,14 +391,14 @@ ncm_mset_catalog_class_init (NcmMSetCatalogClass *klass)
 
 /**
  * ncm_mset_catalog_new:
- * @mset: a #NcmMSet.
- * @nadd_vals: number of additional values.
- * @nchains: number of different chains in the catalog (>=1).
- * @weighted: set to TRUE whenever the catalog is weighted.
- * @...: additional values names.
+ * @mset: a #NcmMSet
+ * @nadd_vals: number of additional values
+ * @nchains: number of different chains in the catalog (>=1)
+ * @weighted: set to TRUE whenever the catalog is weighted
+ * @...: additional values names
  *
  * Creates a new #NcmMSetCatalog based on the #NcmFit object @fit. The catalog assumes that
- * the @fit object will remain with the same set of free parameters during his whole lifetime.
+ * the @fit object will remain with the same set of free parameters during its whole lifetime.
  * 
  * If @nchains is larger than one, the catalog will keep track of the statistics of each chain
  * separately.
@@ -655,11 +656,11 @@ static void _ncm_mset_catalog_flush_file (NcmMSetCatalog *mcat);
 
 /**
  * ncm_mset_catalog_set_add_val_name:
- * @mcat: a #NcmMSetCatalog.
- * @i: index of the additional value.
- * @name: additional value name.
+ * @mcat: a #NcmMSetCatalog
+ * @i: index of the additional value
+ * @name: additional value name
  *
- * Sets the @i-th additional value name.
+ * Sets the @i-th additional value name
  *
  */
 void 
@@ -734,7 +735,7 @@ ncm_mset_catalog_set_flush_interval (NcmMSetCatalog *mcat, gdouble interval)
 /**
  * ncm_mset_catalog_set_first_id:
  * @mcat: a #NcmMSetCatalog
- * @first_id: the id of the first item in the sample.
+ * @first_id: the id of the first item in the sample
  * 
  * Sets the first id of the catalog, mainly used to inform in which realization the catalog starts. 
  * 
@@ -771,7 +772,7 @@ ncm_mset_catalog_set_first_id (NcmMSetCatalog *mcat, gint first_id)
 /**
  * ncm_mset_catalog_set_run_type:
  * @mcat: a #NcmMSetCatalog
- * @rtype_str: the run type string.
+ * @rtype_str: the run type string
  * 
  * Sets the run type string. 
  * 
@@ -811,7 +812,7 @@ ncm_mset_catalog_set_run_type (NcmMSetCatalog *mcat, const gchar *rtype_str)
 /**
  * ncm_mset_catalog_set_rng:
  * @mcat: a #NcmMSetCatalog
- * @rng: a #NcmRNG.
+ * @rng: a #NcmRNG
  * 
  * Sets the random number generator. 
  * 
@@ -935,9 +936,9 @@ _ncm_mset_catalog_read_row (NcmMSetCatalog *mcat, NcmVector *row, guint row_inde
 /**
  * ncm_mset_catalog_sync:
  * @mcat: a #NcmMSetCatalog
- * @check: whether to check consistence between file and memory data.
+ * @check: whether to check consistence between file and memory data
  * 
- * Syncronise memory and data file. If no file was defined simply returns.
+ * Synchronize memory and data file. If no file was defined, it simply returns.
  * 
  */
 void
@@ -1175,7 +1176,7 @@ ncm_mset_catalog_reset (NcmMSetCatalog *mcat)
  * ncm_mset_catalog_erase_data:
  * @mcat: a #NcmMSetCatalog
  * 
- * This function erases all data from the fits file associated with the
+ * Erases all data from the fits file associated with the
  * catalog.
  * 
  */
@@ -1218,7 +1219,7 @@ ncm_mset_catalog_peek_filename (NcmMSetCatalog *mcat)
  * ncm_mset_catalog_is_empty:
  * @mcat: a #NcmMSetCatalog
  * 
- * Returns: TRUE when the catalog is empty;
+ * Returns: TRUE when the catalog is empty.
  */
 gboolean 
 ncm_mset_catalog_is_empty (NcmMSetCatalog *mcat)
@@ -1231,14 +1232,14 @@ ncm_mset_catalog_is_empty (NcmMSetCatalog *mcat)
  * ncm_mset_catalog_largest_error:
  * @mcat: a #NcmMSetCatalog
  * 
- * Calculates the largest proportional error of the parameters included, i.e., $\text{lre} = \sigma_{\hat{p}}/(|\hat{p}|\sqrt{n})$ 
+ * This function calculates the largest proportional error of the parameters included, i.e., $\text{lre} = \sigma_{\hat{p}}/(|\hat{p}|\sqrt{n})$ 
  * where $n$ represents the number of samples in the catalog, $\hat{p}$ is the estimated mean of the parameter $p$
  * and $\sigma_{\hat{p}}$ its standard deviation. 
  * 
- * It tries to guess when $p = 0$. In this case $\sigma_{\hat{p}} \approx |\hat{p}|\sqrt{n}$, therefore for $n > 10$ it tests
- * if $\text{lre} \approx 1$ and if it is the case it returns $\text{lre} = \sigma_{\hat{p}}/\sqrt{n}$ instead.
+ * It tries to guess when $p = 0$. In this case $\sigma_{\hat{p}} \approx |\hat{p}|\sqrt{n}$. Therefore, for $n > 10$, it tests
+ * if $\text{lre} \approx 1$ and, if it is the case, it returns $\text{lre} = \sigma_{\hat{p}}/\sqrt{n}$ instead.
  * 
- * Returns: $\text{lre}$.
+ * Returns: the largest proportional error $\text{lre}$.
  */
 gdouble
 ncm_mset_catalog_largest_error (NcmMSetCatalog *mcat)
@@ -1299,11 +1300,11 @@ ncm_mset_catalog_len (NcmMSetCatalog *mcat)
 /**
  * ncm_mset_catalog_get_rng:
  * @mcat: a #NcmMSetCatalog
- * @rng_algo: (out callee-allocates) (transfer full) (allow-none): the name of the RNG algorithm.
- * @seed: (out caller-allocates) (allow-none): the seed used to initialize the RNG.
+ * @rng_algo: (out callee-allocates) (transfer full) (allow-none): the name of the RNG algorithm
+ * @seed: (out caller-allocates) (allow-none): the seed used to initialize the RNG
  * 
- * This function checks if any pseudo random number generator (RNG) is registred in the catalog
- * and returns its properties in @rng_algo and @seed if so.
+ * This function checks if any pseudo random number generator (RNG) is registred in the catalog.
+ * If so, it returns its properties in @rng_algo and @seed.
  * 
  * Returns: TRUE if a RNG is defined in the catalog.
  */
@@ -1404,9 +1405,9 @@ _ncm_mset_catalog_post_update (NcmMSetCatalog *mcat)
  * ncm_mset_catalog_add_from_mset:
  * @mcat: a #NcmMSetCatalog
  * @mset: a #NcmMSet
- * @...: additional values.
+ * @...: additional values
  * 
- * Adds a new element to the catalog using the parameters from @mset. 
+ * This function adds a new element to the catalog using the parameters from @mset. 
  * It assumes that @mset is compatible with the catalog and expect the
  * right number of additional values.
  * 
@@ -1437,9 +1438,9 @@ ncm_mset_catalog_add_from_mset (NcmMSetCatalog *mcat, NcmMSet *mset, ...)
  * ncm_mset_catalog_add_from_mset_array:
  * @mcat: a #NcmMSetCatalog
  * @mset: a #NcmMSet
- * @ax: (array) (element-type double): additional values array.
+ * @ax: (array) (element-type double): additional values array
  * 
- * Adds a new element to the catalog using the parameters from @mset. 
+ * This funtion adds a new element to the catalog using the parameters from @mset. 
  * It assumes that @mset is compatible with the catalog and expect the
  * right number of additional values in the array @ax.
  * 
@@ -1541,7 +1542,7 @@ ncm_mset_catalog_log_current_chain_stats (NcmMSetCatalog *mcat)
 /**
  * ncm_mset_catalog_peek_row:
  * @mcat: a #NcmMSetCatalog
- * @i: the row index.
+ * @i: the row index
  * 
  * Gets the @i-th row.
  * 
@@ -1656,7 +1657,7 @@ ncm_mset_catalog_peek_autocorrelation_tau (NcmMSetCatalog *mcat)
  * @mcat: a #NcmMSetCatalog
  * @p: parameter id.
  *
- * Gets the current shrink factor for parameter @p.
+ * Gets the current shrink factor of parameter @p.
  * 
  * Returns: the shrink factor of @p.
  */
@@ -1693,9 +1694,24 @@ ncm_mset_catalog_get_param_shrink_factor (NcmMSetCatalog *mcat, guint p)
  * ncm_mset_catalog_get_shrink_factor:
  * @mcat: a #NcmMSetCatalog
  *
- * Gets the current shrink factor using .... FIXME
+ * Gets the current shrink factor which is  the multivatiate potential scale reduction factor (MPSRF), namely,
+ * $$\hat{R}^p = \sqrt{\frac{n - 1}{n} + \left( \frac{m + 1}{m} \right) \lambda_1},$$
+ * where $n$ is the number of points of one chain, $m$ is the number of chains and $\lambda_1$ is the largest 
+ * eigenvalue of the positive definite matrix $W^{-1}B/n$.
  * 
- * Returns: the shrink factor ....
+ * $W$ is the within-chain variance: $$W = $$ FIXME
+ * 
+ * $B$ is the between-chain variance: $$B = $$ FIXME
+ * 
+ * Refined version:
+ * $$\hat{R}^p = \sqrt{\frac{\hat{d} + 3}{\hat{d} + 1} \left(\frac{n - 1}{n} + \left( \frac{m + 1}{m} \right) \lambda_1\right)},$$
+ * where $\hat{d} = 2 \hat{V}^2 / \widehat{Var}(\hat{V})$, $$\hat{V} = \frac{n -1}{n}W + \frac{m + 1}{m} \frac{B}{n}.$$
+ * 
+ * Some references for this MCMC convergence diagnostic: <link linkend="XBrooks1998">Brooks and Gelman (1998)</link>,
+ * <link linkend="XGelman1992">Gelman and Rubin (1992)</link>,
+ * <ulink url="http://support.sas.com/documentation/cdl/en/statug/63033/HTML/default/viewer.htm#statug_introbayes_sect008.htm">SAS/STAT</ulink>
+ * 
+ * Returns: the shrink factor $\hat{R}^p$
  */
 gdouble 
 ncm_mset_catalog_get_shrink_factor (NcmMSetCatalog *mcat)
@@ -1815,7 +1831,7 @@ ncm_mset_catalog_param_pdf (NcmMSetCatalog *mcat, guint i)
  * ncm_mset_catalog_param_pdf_pvalue:
  * @mcat: a #NcmMSetCatalog
  * @pval: parameter value
- * @both: one or both sides p-value.
+ * @both: one or both sides p-value
  *
  * Calculates the p-value associated with the parameter value @pval.
  * 

@@ -206,12 +206,12 @@ _nc_data_hubble_bao_mean_func (NcmDataGaussDiag *diag, NcmMSet *mset, NcmVector 
 
 /**
  * nc_data_hubble_bao_new:
- * @dist: FIXME
- * @id: FIXME
+ * @dist: a #NcDistance
+ * @id: a #NcDataHubbleBaoId
  *
  * FIXME
  *
- * Returns: FIXME
+ * Returns: a #NcmData
  */
 NcmData *
 nc_data_hubble_bao_new (NcDistance *dist, NcDataHubbleBaoId id)
@@ -244,7 +244,7 @@ _nc_data_hubble_bao_set_size (NcmDataGaussDiag *diag, guint np)
 /**
  * nc_data_hubble_bao_set_sample:
  * @hubble_bao: a #NcDataHubbleBao.
- * @id: FIXME
+ * @id: a #NcDataHubbleBaoId
  *
  * FIXME
  *

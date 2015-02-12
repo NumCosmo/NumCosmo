@@ -60,6 +60,9 @@ test_nc_galaxy_acf_SOURCES =  \
 test_nc_recomb_SOURCES =  \
 	test_nc_recomb.c
 
+test_nc_data_bao_rdv_SOURCES =  \
+        test_nc_data_bao_rdv.c
+
 check_PROGRAMS =  \
 	test_ncm_sparam               \
 	test_ncm_vector               \
@@ -74,7 +77,8 @@ check_PROGRAMS =  \
 	test_nc_window                \
 	test_nc_transfer_func         \
 	test_nc_galaxy_acf            \
-	test_nc_recomb
+	test_nc_recomb                \
+	test_nc_data_bao_rdv
 
 
 # TEST_PROGS += $(check_PROGRAMS)
@@ -106,5 +110,7 @@ test_nc_transfer_func_LDADD = $(top_builddir)/numcosmo/libnumcosmo.la
 test_nc_galaxy_acf_LDADD = $(top_builddir)/numcosmo/libnumcosmo.la 
 
 test_nc_recomb_LDADD = $(top_builddir)/numcosmo/libnumcosmo.la 
+
+test_nc_data_bao_rdv_LDADD = $(top_builddir)/numcosmo/libnumcosmo.la
 
 TESTS = $(check_PROGRAMS)
