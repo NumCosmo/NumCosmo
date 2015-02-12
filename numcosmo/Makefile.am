@@ -40,6 +40,8 @@ ncm_sources = \
 	math/ncm_obj_array.c               \
 	math/ncm_rng.c                     \
 	math/ncm_stats_vec.c               \
+	math/ncm_stats_dist1d.c            \
+	math/ncm_stats_dist1d_spline.c     \
 	math/ncm_bootstrap.c               \
 	math/ncm_spline.c                  \
 	math/ncm_spline_gsl.c              \
@@ -124,6 +126,8 @@ ncm_headers = \
 	math/ncm_obj_array.h             \
 	math/ncm_rng.h                   \
 	math/ncm_stats_vec.h             \
+	math/ncm_stats_dist1d.h          \
+	math/ncm_stats_dist1d_spline.h   \
 	math/ncm_bootstrap.h             \
 	math/ncm_spline.h                \
 	math/ncm_spline_gsl.h            \
@@ -265,6 +269,7 @@ nc_headers = \
 	data/nc_data_bao_dvdv.h                \
 	data/nc_data_bao_a.h                   \
 	data/nc_data_bao_dv.h                  \
+	data/nc_data_bao_empirical_fit.h       \
 	data/nc_data_bao.h                     \
 	data/nc_data_cmb_shift_param.h         \
 	data/nc_data_cmb_dist_priors.h         \
@@ -280,8 +285,10 @@ nc_headers = \
 	perturbations/nc_hipert_itwo_fluids.h  \
 	perturbations/nc_hipert_adiab.h        \
 	perturbations/nc_hipert_two_fluids.h   \
-	perturbations/linear.h                 \
-	perturbations/covariance.h             \
+	perturbations/nc_hipert_boltzmann.h    \
+	perturbations/nc_hipert_boltzmann_std.h \
+	perturbations/linear.h                  \
+	perturbations/covariance.h              \
 	perturbations/linear_internal.h
 
 nc_sources = \
@@ -352,6 +359,7 @@ nc_sources = \
 	data/nc_data_bao_dvdv.c                \
 	data/nc_data_bao_a.c                   \
 	data/nc_data_bao_dv.c                  \
+	data/nc_data_bao_empirical_fit.c       \
 	data/nc_data_bao.c                     \
 	data/nc_data_cmb_shift_param.c         \
 	data/nc_data_cmb_dist_priors.c         \
@@ -367,10 +375,12 @@ nc_sources = \
 	perturbations/nc_hipert_itwo_fluids.c  \
 	perturbations/nc_hipert_adiab.c        \
 	perturbations/nc_hipert_two_fluids.c   \
-	perturbations/linear.c                 \
-	perturbations/covariance.c             \
-	perturbations/linear_cvodes.c          \
-	perturbations/linear_gsl_ode.c         \
+	perturbations/nc_hipert_boltzmann.c    \
+	perturbations/nc_hipert_boltzmann_std.c \
+	perturbations/linear.c                  \
+	perturbations/covariance.c              \
+	perturbations/linear_cvodes.c           \
+	perturbations/linear_gsl_ode.c          \
 	perturbations/linear_gsl_ode2.c
 
 libnumcosmo_la_LDFLAGS = -version-info $(LT_CURRENT):$(LT_REVISION):$(LT_AGE)

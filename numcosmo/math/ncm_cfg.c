@@ -102,6 +102,7 @@
 #include "nc_recomb.h"
 #include "nc_recomb_seager.h"
 #include "nc_snia_dist_cov.h"
+#include "data/nc_data_bao_empirical_fit.h"
 
 #include <gio/gio.h>
 #ifdef NUMCOSMO_HAVE_FFTW3
@@ -313,6 +314,8 @@ ncm_cfg_init (void)
   ncm_cfg_register_obj (NC_TYPE_RECOMB_SEAGER);
 
   ncm_cfg_register_obj (NC_TYPE_SNIA_DIST_COV);
+
+  ncm_cfg_register_obj (NC_TYPE_DATA_BAO_EMPIRICAL_FIT);
   
   numcosmo_init = TRUE;
   return;
@@ -851,6 +854,11 @@ ncm_cfg_save_fftw_wisdom (gchar *filename, ...)
   full_filename = g_build_filename (numcosmo_path, file, NULL);
 
   wis = g_fopen (full_filename, "w");
+  if (wis == NULL)
+  {
+    g_error ("ncm_cfg_save_fftw_wisdom: cannot save wisdown file %s [%s].", full_filename, g_strerror (errno));
+  }
+
   fftw_export_wisdom_to_file(wis);
   fclose (wis);
   g_free (file);
@@ -1327,6 +1335,48 @@ load_save_vector_matrix(float)
    */
 load_save_vector_matrix(complex)
 
+/**
+ * ncm_cfg_get_data_filename:
+ * @filename: filename to search in the data path.
+ * @must_exist: raises an error if @filename is not found.
+ *
+ * Looks for @filename in the data path and returns
+ * the full path if found.
+ * 
+ * Returns: (transfer full): Full path for @filename. 
+ */
+gchar *
+ncm_cfg_get_data_filename (const gchar *filename, gboolean must_exist)
+{
+  const gchar *data_dir = g_getenv (NCM_CFG_DATA_DIR_ENV);
+  gchar *full_filename = NULL;
+
+  if (data_dir != NULL)
+  {
+    full_filename = g_build_filename (data_dir, "data", filename, NULL);
+
+    if (!g_file_test (full_filename, G_FILE_TEST_EXISTS))
+    {
+      g_clear_pointer (&full_filename, g_free);
+    }
+  }
+
+  if (full_filename == NULL)
+    full_filename = g_build_filename (PACKAGE_DATA_DIR, "data", filename, NULL);
+
+  if (!g_file_test (full_filename, G_FILE_TEST_EXISTS))
+  {
+    if (must_exist)
+      g_error ("ncm_cfg_get_data_filename: cannot find `%s'.", filename);
+    else
+    {
+      g_clear_pointer (&full_filename, g_free);
+    }
+  }
+
+  return full_filename;
+}
+
 #ifdef NUMCOSMO_HAVE_SQLITE3
 /**
  * ncm_cfg_get_default_sqlite3: (skip)
@@ -1341,25 +1391,9 @@ ncm_cfg_get_default_sqlite3 (void)
   static sqlite3 *db = NULL;
   if (db == NULL)
   {
-    const gchar *data_dir = g_getenv (NCM_CFG_DATA_DIR_ENV);
-    gchar *filename = NULL;
+    gchar *filename = ncm_cfg_get_data_filename (NCM_CFG_DEFAULT_SQLITE3_FILENAME, TRUE);
     gint ret;
-    
-    if (data_dir != NULL)
-    {
-      filename = g_build_filename (data_dir, "data", NCM_CFG_DEFAULT_SQLITE3_FILENAME, NULL);
 
-      if (!g_file_test (filename, G_FILE_TEST_EXISTS))
-      {
-        g_clear_pointer (&filename, g_free);
-      }
-    }
-    
-    if (filename == NULL)
-      filename = g_build_filename (PACKAGE_DATA_DIR, "data", NCM_CFG_DEFAULT_SQLITE3_FILENAME, NULL);
-
-    if (!g_file_test (filename, G_FILE_TEST_EXISTS))
-      g_error ("Default database not found (%s)", filename);
     ret = sqlite3_open (filename, &db);
     if (ret  != SQLITE_OK)
       g_error ("Connection to database failed: %s", sqlite3_errmsg (db));

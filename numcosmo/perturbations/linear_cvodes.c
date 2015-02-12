@@ -114,7 +114,6 @@ static NcLinearPertOdeSolver _cvodes_solver = {
 NcLinearPertOdeSolver *cvodes_solver = &_cvodes_solver;
 
 static gint cvodes_step (realtype lambda, N_Vector y, N_Vector ydot, gpointer user_data);
-//static gint perturbations_step_S (gint Ns, realtype lambda, N_Vector y, N_Vector ydot, N_Vector *yS, N_Vector *ySdot, gpointer user_data, N_Vector tmp1, N_Vector tmp2);
 static gint cvodes_band_J (_NCM_SUNDIALS_INT_TYPE N, _NCM_SUNDIALS_INT_TYPE mupper, _NCM_SUNDIALS_INT_TYPE mlower, realtype lambda, N_Vector y, N_Vector fy, DlsMat J, gpointer user_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3);
 static gint cvodes_Jv (N_Vector v, N_Vector Jv, realtype lambda, N_Vector y, N_Vector fy, gpointer user_data, N_Vector tmp);
 static gint cvodes_Mz_r (realtype lambda, N_Vector y, N_Vector fy, N_Vector r, N_Vector z, realtype gamma, realtype delta, gint lr, gpointer user_data, N_Vector tmp);
@@ -186,7 +185,6 @@ cvodes_set_opts (NcLinearPert *pert)
     flag = CVodeSVtolerances (data->cvode, pert->reltol, data->abstol);
     NCM_CVODE_CHECK (&flag, "CVodeSVtolerances", 1,);
   }
-
 
   flag = CVodeSetMaxNumSteps(data->cvode, 1000000);
   NCM_CVODE_CHECK (&flag, "CVodeSetMaxNumSteps", 1,);

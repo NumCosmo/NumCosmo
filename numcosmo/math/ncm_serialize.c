@@ -965,6 +965,37 @@ ncm_serialize_from_string (NcmSerialize *ser, const gchar *obj_ser)
 }
 
 /**
+ * ncm_serialize_from_file:
+ * @ser: a #NcmSerialize.
+ * @filename: File containing the serialized version of the object.
+ *
+ * Parses the serialized string in @filename and returns the newly created object.
+ *
+ * Returns: (transfer full): A new #GObject.
+ */
+GObject *
+ncm_serialize_from_file (NcmSerialize *ser, const gchar *filename)
+{
+  GError *error = NULL;
+  gchar *file = NULL;
+  gsize length = 0;
+  GObject *obj = NULL;
+  
+  g_assert (filename != NULL);
+  if (!g_file_get_contents (filename, &file, &length, &error))
+    g_error ("_nc_data_snia_cov_load_matrix: cannot open file %s: %s",
+             filename, error->message);
+
+  g_assert_cmpint (length, >, 0);
+
+  obj = ncm_serialize_from_string (ser, file);
+
+  g_free (file);
+  
+  return obj;
+}
+
+/**
  * ncm_serialize_from_name_params:
  * @ser: a #NcmSerialize.
  * @obj_name: string containing the object name.
@@ -1644,6 +1675,23 @@ ncm_serialize_global_from_string (const gchar *obj_ser)
 {
   NcmSerialize *ser = ncm_serialize_global ();
   GObject *ret = ncm_serialize_from_string (ser, obj_ser);
+  ncm_serialize_unref (ser);
+  return ret;
+}
+
+/**
+ * ncm_serialize_global_from_file:
+ * @filename: File containing the serialized version of the object.
+ *
+ * Global version of ncm_serialize_from_file().
+ *
+ * Returns: (transfer full): A new #GObject.
+ */
+GObject *
+ncm_serialize_global_from_file (const gchar *filename)
+{
+  NcmSerialize *ser = ncm_serialize_global ();
+  GObject *ret = ncm_serialize_from_file (ser, filename);
   ncm_serialize_unref (ser);
   return ret;
 }

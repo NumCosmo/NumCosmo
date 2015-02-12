@@ -131,6 +131,7 @@ void test_ncm_spline_new_array (TestNcmSpline *test, gconstpointer pdata);
 void test_ncm_spline_new_data (TestNcmSpline *test, gconstpointer pdata);
 void test_ncm_spline_copy_empty (TestNcmSpline *test, gconstpointer pdata);
 void test_ncm_spline_copy (TestNcmSpline *test, gconstpointer pdata);
+void test_ncm_spline_serialize (TestNcmSpline *test, gconstpointer pdata);
 void test_ncm_spline_eval (TestNcmSpline *test, gconstpointer pdata);
 void test_ncm_spline_eval_deriv (TestNcmSpline *test, gconstpointer pdata);
 void test_ncm_spline_eval_deriv2 (TestNcmSpline *test, gconstpointer pdata);
@@ -176,6 +177,7 @@ TestNcmSplineFunc _test_ncm_spline_tests[] = {
   {&test_ncm_spline_new_data,    "/new/data"},
   {&test_ncm_spline_copy_empty,  "/copy/empty"},
   {&test_ncm_spline_copy,        "/copy"},
+  {&test_ncm_spline_serialize,   "/serialize"},
   {&test_ncm_spline_eval,        "/eval"},
   {&test_ncm_spline_eval_deriv,  "/eval/deriv"},
   {&test_ncm_spline_eval_deriv2, "/eval/deriv2"},
@@ -447,6 +449,39 @@ test_ncm_spline_copy (TestNcmSpline *test, gconstpointer pdata)
     ncm_spline_free (s);
   }
 }
+
+void
+test_ncm_spline_serialize (TestNcmSpline *test, gconstpointer pdata)
+{
+  NcmVector *xv = ncm_vector_new (test->nknots);
+  NcmVector *yv = ncm_vector_new (test->nknots);
+  guint i;
+
+  for (i = 0; i < test->nknots; i++)
+  {
+    ncm_vector_set (xv, i, i * M_PI);
+    ncm_vector_set (yv, i, i * M_PI_2);
+  }
+
+  ncm_spline_set (test->s_base, xv, yv, FALSE);
+  {
+    NcmSerialize *ser = ncm_serialize_new (NCM_SERIALIZE_OPT_CLEAN_DUP);
+    NcmSpline *s = NCM_SPLINE (ncm_serialize_dup_obj (ser, G_OBJECT (test->s_base)));
+
+    ncm_spline_prepare (s);
+    ncm_serialize_free (ser);
+    
+    g_assert (s->xv != test->s_base->xv && s->yv != test->s_base->yv);
+    for (i = 0; i < test->nknots; i++)
+    {
+      ncm_assert_cmpdouble (ncm_vector_get (s->xv, i), ==, ncm_vector_get (test->s_base->xv, i));
+      ncm_assert_cmpdouble (ncm_vector_get (s->yv, i), ==, ncm_vector_get (test->s_base->yv, i));
+    }
+
+    ncm_spline_free (s);
+  }
+}
+
 #define _TEST_EPSILON (1.00000001) 
 void
 test_ncm_spline_eval (TestNcmSpline *test, gconstpointer pdata)

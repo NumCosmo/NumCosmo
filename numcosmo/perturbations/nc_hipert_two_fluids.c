@@ -193,8 +193,9 @@ _nc_hipert_two_fluids_set_reltol (NcHIPert *pert, gdouble reltol)
 NcHIPertTwoFluids *
 nc_hipert_two_fluids_new (void)
 {
-  NcHIPertTwoFluids *ptf = g_object_new (NC_TYPE_HIPERT_TWO_FLUIDS, 
-                                        NULL);
+  NcHIPertTwoFluids *ptf = g_object_new (NC_TYPE_HIPERT_TWO_FLUIDS,
+                                         "sys-size", /*NC_HIPERT_TWO_FLUIDS_LEN*/ 4,
+                                         NULL);
 
   return ptf;
 }
@@ -896,9 +897,8 @@ nc_hipert_two_fluids_set_init_cond (NcHIPertTwoFluids *ptf, NcHICosmo *cosmo, gd
 
   pert->alpha0 = alphai;
 
-  if (pert->y == NULL)
+  if (ptf->abstol == NULL)
   {
-    pert->y = N_VNew_Serial (/*NC_HIPERT_TWO_FLUIDS_LEN*/ 4);
     ptf->abstol = N_VNew_Serial (/*NC_HIPERT_TWO_FLUIDS_LEN*/ 4);
     NV_Ith_S (ptf->abstol, 0) = 0.0;
     NV_Ith_S (ptf->abstol, 1) = 0.0;

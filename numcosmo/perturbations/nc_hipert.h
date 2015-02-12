@@ -58,11 +58,13 @@ struct _NcHIPert
   GObject parent_instance;
   gdouble alpha0;
   N_Vector y;
+  guint sys_size;
   gpointer cvode;
   gboolean cvode_init;
   gboolean cvode_stiff;
   gdouble reltol;
   gdouble abstol;
+  N_Vector vec_abstol;
   gdouble k;
   gboolean prepared;
 };
@@ -73,6 +75,7 @@ G_INLINE_FUNC void nc_hipert_set_mode_k (NcHIPert *pert, gdouble k);
 G_INLINE_FUNC void nc_hipert_set_reltol (NcHIPert *pert, gdouble reltol);
 G_INLINE_FUNC void nc_hipert_set_abstol (NcHIPert *pert, gdouble abstol);
 
+void nc_hipert_set_sys_size (NcHIPert *pert, guint sys_size);
 void nc_hipert_set_stiff_solver (NcHIPert *pert, gboolean stiff);
 
 gdouble nc_hipert_get_reltol (NcHIPert *pert);

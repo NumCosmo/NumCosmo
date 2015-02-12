@@ -80,6 +80,7 @@ GType nc_recomb_get_type (void) G_GNUC_CONST;
 NcRecomb *nc_recomb_new_from_name (gchar *recomb_name);
 NcRecomb *nc_recomb_ref (NcRecomb *recomb);
 void nc_recomb_free (NcRecomb *recomb);
+void nc_recomb_clear (NcRecomb **recomb);
 void nc_recomb_prepare (NcRecomb *recomb, NcHICosmo *cosmo);
 G_INLINE_FUNC void nc_recomb_prepare_if_needed (NcRecomb *recomb, NcHICosmo *cosmo);
 

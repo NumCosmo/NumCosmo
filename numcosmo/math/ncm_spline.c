@@ -40,7 +40,186 @@
 #include "math/ncm_spline.h"
 #include "math/ncm_cfg.h"
 
+enum
+{
+  PROP_0,
+  PROP_LEN,
+  PROP_X,
+  PROP_Y,
+  PROP_ACC,
+};
+
 G_DEFINE_ABSTRACT_TYPE (NcmSpline, ncm_spline, G_TYPE_OBJECT);
+
+static void
+ncm_spline_init (NcmSpline *s)
+{
+  s->len   = 0;
+  s->xv    = NULL;
+  s->yv    = NULL;
+  s->empty = TRUE;
+  s->acc   = NULL;
+}
+
+static void
+ncm_spline_constructed (GObject *object)
+{
+  /* Chain up : start */
+  G_OBJECT_CLASS (ncm_spline_parent_class)->constructed (object);
+  {
+    NcmSpline *s = NCM_SPLINE (object);
+    if (s->len > 0)
+    {
+      guint len = s->len;
+      s->len = 0;
+      ncm_spline_set_len (s, len);
+    }
+  }
+}
+
+static void
+ncm_spline_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
+{
+  NcmSpline *s = NCM_SPLINE (object);
+  g_return_if_fail (NCM_IS_SPLINE (object));
+
+  switch (prop_id)
+  {
+    case PROP_LEN:
+      s->len = g_value_get_uint (value);
+      break;
+    case PROP_X:
+    {
+      if (s->len == 0)
+        g_error ("ncm_spline_set_property: cannot set vector on an empty spline.");
+      else
+        ncm_vector_set_from_variant (s->xv, g_value_get_variant (value));
+      break;
+    }
+    case PROP_Y:
+    {
+      if (s->len == 0)
+        g_error ("ncm_spline_set_property: cannot set vector on an empty spline.");
+      else
+        ncm_vector_set_from_variant (s->yv, g_value_get_variant (value));
+      break;
+    }
+    case PROP_ACC:
+      ncm_spline_acc (s, g_value_get_boolean (value));
+      break;
+    default:
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
+      break;
+  }
+}
+
+static void
+ncm_spline_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
+{
+  NcmSpline *s = NCM_SPLINE (object);
+  g_return_if_fail (NCM_IS_SPLINE (object));
+
+  switch (prop_id)
+  {
+    case PROP_LEN:
+      g_value_set_uint (value, s->len);
+      break;
+    case PROP_X:
+    {
+      if (s->xv != NULL)
+      {
+        g_value_take_variant (value, ncm_vector_get_variant (s->xv));
+      }
+      break;
+    }
+    case PROP_Y:
+    {
+      if (s->yv != NULL)
+      {
+        g_value_take_variant (value, ncm_vector_get_variant (s->yv));
+      }
+      break;
+    }
+    case PROP_ACC:
+      g_value_set_boolean (value, s->acc != NULL ? TRUE : FALSE);
+      break;
+    default:
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
+      break;
+  }
+}
+
+static void
+ncm_spline_dispose (GObject *object)
+{
+	NcmSpline *s = NCM_SPLINE (object);
+
+  ncm_vector_clear (&s->xv);
+  ncm_vector_clear (&s->yv);
+  
+	s->empty = TRUE;
+
+  /* Chain up : end */
+  G_OBJECT_CLASS (ncm_spline_parent_class)->finalize (object);
+}
+
+static void
+ncm_spline_finalize (GObject *object)
+{
+  NcmSpline *s = NCM_SPLINE (object);
+
+  if (s->acc)
+    gsl_interp_accel_free (s->acc);
+
+  /* Chain up : end */
+  G_OBJECT_CLASS (ncm_spline_parent_class)->finalize (object);
+}
+
+static void
+ncm_spline_class_init (NcmSplineClass *klass)
+{
+  GObjectClass* object_class = G_OBJECT_CLASS (klass);
+
+  object_class->constructed  = &ncm_spline_constructed;
+  object_class->set_property = &ncm_spline_set_property;
+  object_class->get_property = &ncm_spline_get_property;
+  object_class->dispose      = &ncm_spline_dispose;
+  object_class->finalize     = &ncm_spline_finalize;
+
+  g_object_class_install_property (object_class,
+                                   PROP_LEN,
+                                   g_param_spec_uint ("length",
+                                                      NULL,
+                                                      "Spline length",
+                                                      0, G_MAXUINT32, 0,
+                                                      G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
+  g_object_class_install_property (object_class,
+                                   PROP_X,
+                                   g_param_spec_variant ("x",
+                                                         NULL,
+                                                         "Spline knots",
+                                                         G_VARIANT_TYPE ("ad"), NULL,
+                                                         G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
+  g_object_class_install_property (object_class,
+                                   PROP_Y,
+                                   g_param_spec_variant ("y",
+                                                         NULL,
+                                                         "Spline values",
+                                                         G_VARIANT_TYPE ("ad"), NULL,
+                                                         G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  
+  klass->name = NULL;
+  klass->reset = NULL;
+  klass->prepare = NULL;
+  klass->prepare_base = NULL;
+  klass->min_size = NULL;
+  klass->eval = NULL;
+  klass->deriv = NULL;
+  klass->deriv2 = NULL;
+  klass->integ = NULL;  
+}
 
 /**
  * ncm_spline_copy_empty:
@@ -215,6 +394,32 @@ ncm_spline_ref (NcmSpline *s)
 }
 
 /**
+ * ncm_spline_free:
+ * @s: a #NcmSpline.
+ *
+ * Atomically decrements the reference count of @s by one. If the reference count drops to 0,
+ * all memory allocated by @s is released.
+ */
+void
+ncm_spline_free (NcmSpline *s)
+{
+  g_object_unref (s);
+}
+
+/**
+ * ncm_spline_clear:
+ * @s: a #NcmSpline.
+ *
+ * Atomically decrements the reference count of @s by one. If the reference count drops to 0,
+ * all memory allocated by @s is released. The pointer is set to NULL.
+ */
+void
+ncm_spline_clear (NcmSpline **s)
+{
+  g_clear_object (s);
+}
+
+/**
  * ncm_spline_acc:
  * @s: a #NcmSpline.
  * @enable: a boolean.
@@ -235,6 +440,33 @@ ncm_spline_acc (NcmSpline *s, gboolean enable)
   {
     gsl_interp_accel_free (s->acc);
     s->acc = NULL;
+  }
+}
+
+/**
+ * ncm_spline_set_len:
+ * @s: a #NcmSpline.
+ * @len: number of knots in the spline.
+ *
+ * This function sets @len as the length of the spline,
+ * it allocates the necessary #NcmVector. If it is already
+ * allocated with different length it frees the current vectors
+ * and allocates new ones.
+ *
+ */
+void
+ncm_spline_set_len (NcmSpline *s, guint len)
+{
+  if (s->len != len)
+  {
+    g_assert_cmpuint (len, >, 0);
+    {
+      NcmVector *xv = ncm_vector_new (len);
+      NcmVector *yv = ncm_vector_new (len);
+      ncm_spline_set (s, xv, yv, FALSE);
+      ncm_vector_free (xv);
+      ncm_vector_free (yv);
+    }
   }
 }
 
@@ -347,6 +579,24 @@ ncm_spline_get_yv (NcmSpline *s)
 }
 
 /**
+ * ncm_spline_get_bounds:
+ * @s: a #NcmSpline.
+ * @lb: (out): spline lower bound.
+ * @ub: (out): spline upper bound.
+ *
+ * This function returns the lower and upper bound of @s.
+ * 
+ */
+void 
+ncm_spline_get_bounds (NcmSpline *s, gdouble *lb, gdouble *ub)
+{
+  g_assert_cmpuint (s->len, >, 0);
+
+  *lb = ncm_vector_get (s->xv, 0);
+  *ub = ncm_vector_get (s->xv, s->len - 1);
+}
+
+/**
  * ncm_spline_prepare:
  * @s: a #NcmSpline.
  * 
@@ -419,84 +669,3 @@ ncm_spline_get_yv (NcmSpline *s)
  *
  * Returns: The index of the lower knot of the interval @x belongs to.
  */
-
-/**
- * ncm_spline_free:
- * @s: a #NcmSpline.
- *
- * Atomically decrements the reference count of @s by one. If the reference count drops to 0,
- * all memory allocated by @s is released.
- */
-void
-ncm_spline_free (NcmSpline *s)
-{
-  g_object_unref (s);
-}
-
-/**
- * ncm_spline_clear:
- * @s: a #NcmSpline.
- *
- * Atomically decrements the reference count of @s by one. If the reference count drops to 0,
- * all memory allocated by @s is released. The pointer is set to NULL.
- */
-void
-ncm_spline_clear (NcmSpline **s)
-{
-  g_clear_object (s);
-}
-
-static void
-ncm_spline_init (NcmSpline *s)
-{
-  s->len   = 0;
-  s->xv    = NULL;
-  s->yv    = NULL;
-  s->empty = TRUE;
-  s->acc   = NULL;
-}
-
-static void
-ncm_spline_dispose (GObject *object)
-{
-	NcmSpline *s = NCM_SPLINE (object);
-
-  ncm_vector_clear (&s->xv);
-  ncm_vector_clear (&s->yv);
-  
-	s->empty = TRUE;
-
-  /* Chain up : end */
-  G_OBJECT_CLASS (ncm_spline_parent_class)->finalize (object);
-}
-
-static void
-ncm_spline_finalize (GObject *object)
-{
-  NcmSpline *s = NCM_SPLINE (object);
-
-  if (s->acc)
-    gsl_interp_accel_free (s->acc);
-
-  /* Chain up : end */
-  G_OBJECT_CLASS (ncm_spline_parent_class)->finalize (object);
-}
-
-static void
-ncm_spline_class_init (NcmSplineClass *klass)
-{
-  GObjectClass* object_class = G_OBJECT_CLASS (klass);
-
-  klass->name = NULL;
-  klass->reset = NULL;
-  klass->prepare = NULL;
-  klass->prepare_base = NULL;
-  klass->min_size = NULL;
-  klass->eval = NULL;
-  klass->deriv = NULL;
-  klass->deriv2 = NULL;
-  klass->integ = NULL;
-
-  object_class->dispose = ncm_spline_dispose;
-  object_class->finalize = ncm_spline_finalize;
-}

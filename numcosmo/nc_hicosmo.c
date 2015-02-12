@@ -145,18 +145,44 @@ nc_hicosmo_new_from_name (GType parent_type, gchar *cosmo_name)
 }
 
 /**
+ * nc_hicosmo_ref:
+ * @cosmo: a #NcHICosmo
+ *
+ * FIXME
+ *
+ * Returns: (transfer full): FIXME
+ */
+NcHICosmo *
+nc_hicosmo_ref (NcHICosmo *cosmo)
+{
+  return g_object_ref (cosmo);
+}
+
+/**
  * nc_hicosmo_free:
- * @hic: FIXME
+ * @cosmo: a #NcHICosmo
  *
  * FIXME
  *
  */
 void
-nc_hicosmo_free (NcHICosmo *hic)
+nc_hicosmo_free (NcHICosmo *cosmo)
 {
-  g_object_unref (hic);
+  g_object_unref (cosmo);
 }
 
+/**
+ * nc_hicosmo_clear:
+ * @cosmo: a #NcHICosmo
+ *
+ * FIXME
+ *
+ */
+void 
+nc_hicosmo_clear (NcHICosmo **cosmo)
+{
+  g_clear_object (cosmo);
+}
 
 /**
  * nc_hicosmo_set_H0_impl: (skip)

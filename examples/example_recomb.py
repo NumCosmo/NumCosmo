@@ -62,14 +62,18 @@ recomb.prepare (cosmo)
 #  Calculating Xe, equilibrium Xe, v_tau and its derivatives.
 #
 x_a = []
+x_dtau_a = []
 Xe_a = []
 Xefi_a = []
+dtau_dlambda_a = []
+x_E_a = []
+x_Etaub_a = []
 v_tau_a = []
 dv_tau_dlambda_a = []
 d2v_tau_dlambda2_a = []
 
 for i in range (10000):
-  alpha = -log (10000.0) + (log (10000.0) - log (100.0)) / 9999.0 * i
+  alpha = -log (1.0e4) + (log (1.0e4) - log (1.0e2)) / 9999.0 * i
   Xe = recomb.Xe (cosmo, alpha)
   x = exp (-alpha)
   Xefi = recomb.equilibrium_Xe (cosmo, x)
@@ -83,6 +87,18 @@ for i in range (10000):
   v_tau_a.append (-v_tau)
   dv_tau_dlambda_a.append (-dv_tau_dlambda / 10.0)
   d2v_tau_dlambda2_a.append (-d2v_tau_dlambda2 / 200.0)
+
+for i in range (10000):
+  alpha = -log (1.0e10) + (log (1.0e10) - log (1.0e2)) / 9999.0 * i
+  x = exp (-alpha)
+  dtau_dlambda = abs(recomb.dtau_dlambda (cosmo, alpha))
+  x_E = x / sqrt (cosmo.E2 (x))
+  x_E_taub = x_E / dtau_dlambda
+  
+  x_dtau_a.append (x)
+  x_E_a.append (x_E)
+  x_Etaub_a.append (x_E_taub)
+  dtau_dlambda_a.append (dtau_dlambda)
 
 #
 #  Ploting ionization history.
@@ -146,4 +162,22 @@ plt.annotate (r'$z^\star=%5.2f$' % (exp(-lambdastar)-1),
               xy=(0.65, 0.95), xycoords='axes fraction')
 
 plt.savefig ("recomb_v_tau.png")
+
+plt.clf ()
+
+#
+#  Ploting dtau_dlambda
+#
+
+plt.title (r'dtau_dlambda')
+plt.xscale('log')
+plt.yscale('log')
+plt.plot (x_dtau_a, dtau_dlambda_a, 'r', label=r'$\vert\mathrm{d}\tau/\mathrm{d}\lambda\vert$')
+plt.plot (x_dtau_a, x_E_a, 'b', label=r'$x/E$')
+plt.plot (x_dtau_a, (x_Etaub_a), 'b', label=r'$x/(E\bar{\tau})$')
+
+plt.legend()
+plt.legend(loc=2)
+
+plt.savefig ("recomb_dtau_dlambda.png")
 

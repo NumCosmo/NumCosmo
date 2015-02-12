@@ -132,6 +132,23 @@ nc_scale_factor_free (NcScaleFactor *a)
   g_slice_free (NcScaleFactor, a);
 }
 
+/**
+ * nc_scale_factor_clear:
+ * @a: FIXME
+ *
+ * FIXME
+ */
+void
+nc_scale_factor_clear (NcScaleFactor **a)
+{
+  if (*a != NULL)
+  {
+    nc_scale_factor_free (*a);
+    *a = NULL;
+  }
+}
+
+
 static void nc_scale_factor_init_cvode (NcScaleFactor *a, NcHICosmo *model);
 
 /**
