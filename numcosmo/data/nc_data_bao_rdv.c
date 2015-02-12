@@ -25,7 +25,7 @@
 
 /**
  * SECTION:nc_data_bao_rdv
- * @title: Baryonic Oscillation Data -- rDv
+ * @title: Baryon Oscillation Data -- rDv
  * @short_description: BAO $r/D_V$ ratio estimator
  *
  * See <link linkend="XPercival2007">Percival et al. (2007)</link>.
