@@ -164,12 +164,12 @@ _nc_data_bao_dvdv_mean_func (NcmDataGaussDiag *diag, NcmMSet *mset, NcmVector *v
 
 /**
  * nc_data_bao_dvdv_new:
- * @dist: FIXME
- * @id: FIXME
+ * @dist: a #NcDistance
+ * @id: a #NcDataBaoId
  *
  * FIXME
  *
- * Returns: FIXME
+ * Returns: a #NcmData
  */
 NcmData *
 nc_data_bao_dvdv_new (NcDistance *dist, NcDataBaoId id)
@@ -183,8 +183,8 @@ nc_data_bao_dvdv_new (NcDistance *dist, NcDataBaoId id)
 
 /**
  * nc_data_bao_rddv_set_sample:
- * @data: a #NcDataBaoDVDV.
- * @id: FIXME
+ * @data: a #NcDataBaoDVDV
+ * @id: a #NcDataBaoId
  *
  * FIXME
  *

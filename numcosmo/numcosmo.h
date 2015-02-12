@@ -106,6 +106,7 @@
 #include <numcosmo/lss/nc_cluster_mass_benson.h>
 #include <numcosmo/lss/nc_cluster_mass_benson_xray.h>
 #include <numcosmo/lss/nc_cluster_abundance.h>
+#include <numcosmo/lss/nc_cor_cluster_cmb_lens_limber.h>
 
 /* Observable data */
 #include <numcosmo/data/nc_data_snia.h>
