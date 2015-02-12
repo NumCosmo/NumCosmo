@@ -29,7 +29,9 @@
  * @short_description: BAO acoustic scale estimator
  *
  * The acoustic scale is defined as 
- * $$ A \equiv D_V (z) \frac{\sqrt{\Omega_m H_0^2}}{z c}$$
+ * $$ A \equiv D_V (z) \frac{\sqrt{\Omega_m H_0^2}}{z c},$$
+ * where $\Omega_m$ is the matter density parameter [nc_hicosmo_Omega_m()], $c$ is the speed of light [ncm_c_c()], 
+ * $H_0$ is the Hubble parameter [nc_hicosmo_H0()] and $D_V(z)$ is the dilation scale [nc_distance_dilation_scale()].
  * See Section 4.5 from <link linkend="XEisenstein2005">Eisenstein et al. (2005)</link>.
  * 
  */
@@ -183,12 +185,12 @@ _nc_data_bao_a_mean_func (NcmDataGaussDiag *diag, NcmMSet *mset, NcmVector *vp)
 
 /**
  * nc_data_bao_a_new:
- * @dist: FIXME
- * @id: FIXME
+ * @dist: a #NcDistance
+ * @id: a #NcDataBaoId
  *
  * FIXME
  *
- * Returns: FIXME
+ * Returns: a #NcmData
  */
 NcmData *
 nc_data_bao_a_new (NcDistance *dist, NcDataBaoId id)
@@ -217,8 +219,8 @@ _nc_data_bao_a_set_size (NcmDataGaussDiag *diag, guint np)
 
 /**
  * nc_data_bao_a_set_sample:
- * @bao_a: a #NcDataBaoA.
- * @id: FIXME
+ * @bao_a: a #NcDataBaoA
+ * @id: a #NcDataBaoId
  *
  * FIXME
  *

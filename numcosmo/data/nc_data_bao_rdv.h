@@ -51,6 +51,7 @@ struct _NcDataBaoRDV
   NcmDataGauss parent_instance;
   NcDistance *dist;
   NcmVector *x;
+  gboolean r_DV;
 };
 
 struct _NcDataBaoRDVClass
