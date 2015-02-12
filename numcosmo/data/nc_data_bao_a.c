@@ -25,7 +25,7 @@
 
 /**
  * SECTION:nc_data_bao_a
- * @title: Baryonic Oscillation Data -- Acoustic Scale
+ * @title: Baryon Oscillation Data -- Acoustic Scale
  * @short_description: BAO acoustic scale estimator
  *
  * The acoustic scale is defined as 

@@ -25,10 +25,11 @@
 
 /**
  * SECTION:nc_data_bao_empirical_fit
- * @title: FIXME
- * @short_description: FIXME
+ * @title: Baryon Oscillation data -- Dv/r
+ * @short_description: full likelihood
  *
- * FIXME
+ * This object implements the BAO data when its likelihood function is provided, 
+ * e.g., <link linkend="XRoss2014">Ross et al. (2015)</link>. 
  * 
  */
 
@@ -240,10 +241,10 @@ _nc_data_bao_empirical_fit_inv_pdf (NcmDataDist1d *dist1d, NcmMSet *mset, gdoubl
 
 /**
  * nc_data_bao_empirical_fit_new:
- * @m2lnp: a #NcmSpline containing $-2\ln (p)$.
- * @Dv_fiduc: fiducial $D_V$.
- * @rs_fiduc: fiducial $r_s$.
- * @z: data redshift.
+ * @m2lnp: a #NcmSpline containing $-2\ln (p)$
+ * @Dv_fiduc: fiducial $D_V$
+ * @rs_fiduc: fiducial $r_s$
+ * @z: data redshift
  * 
  * Creates a new #NcDataBaoEmpiricalFit.
  * 
@@ -289,7 +290,7 @@ nc_data_bao_empirical_fit_new_from_file (const gchar *filename)
 
 /**
  * nc_data_bao_empirical_fit_new_from_id:
- * @id: the sample id.
+ * @id: a #NcDataBaoId
  * 
  * Creates a new #NcDataBaoEmpiricalFit from @id.
  * 
@@ -318,7 +319,7 @@ nc_data_bao_empirical_fit_new_from_id (NcDataBaoId id)
 
 /**
  * nc_data_bao_empirical_fit_get_mode:
- * @bao_ef: a #NcDataBaoEmpiricalFit.
+ * @bao_ef: a #NcDataBaoEmpiricalFit
  * 
  * Calculates the mode of the empirical distribution.
  * 
@@ -332,12 +333,12 @@ nc_data_bao_empirical_fit_get_mode (NcDataBaoEmpiricalFit *bao_ef)
 
 /**
  * nc_data_bao_empirical_fit_get_alpha:
- * @bao_ef: a #NcDataBaoEmpiricalFit.
- * @mset: a #NcmMSet.
+ * @bao_ef: a #NcDataBaoEmpiricalFit
+ * @mset: a #NcmMSet
  * 
  * Calculates value of $\alpha$ given a #NcmMSet.
  * 
- * Returns: $\alpha$.
+ * Returns: $\alpha$
  */
 gdouble 
 nc_data_bao_empirical_fit_get_alpha (NcDataBaoEmpiricalFit *bao_ef, NcmMSet *mset)
