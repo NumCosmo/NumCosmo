@@ -30,7 +30,6 @@
 #include <glib-object.h>
 #include <numcosmo/build_cfg.h>
 #include <numcosmo/math/ncm_vector.h>
-#include <numcosmo/math/ncm_mset_func.h>
 #include <numcosmo/math/ncm_data.h>
 
 G_BEGIN_DECLS
@@ -57,8 +56,8 @@ struct _NcmDataDist1dClass
 {
   /*< private >*/
   NcmDataClass parent_class;
-  NcmMSetFunc *dist;
-  NcmMSetFunc *inv_pdf;
+  gdouble (*m2lnL_val) (NcmDataDist1d *dist1d, NcmMSet *mset, gdouble x);
+  gdouble (*inv_pdf) (NcmDataDist1d *dist1d, NcmMSet *mset, gdouble u);  
   void (*set_size) (NcmDataDist1d *dist1d, guint np);
   guint (*get_size) (NcmDataDist1d *dist1d);
 };
@@ -67,6 +66,7 @@ GType ncm_data_dist1d_get_type (void) G_GNUC_CONST;
 
 void ncm_data_dist1d_set_size (NcmDataDist1d *dist1d, guint np);
 guint ncm_data_dist1d_get_size (NcmDataDist1d *dist1d);
+NcmVector *ncm_data_dist1d_get_data (NcmDataDist1d *dist1d);
 
 G_END_DECLS
 

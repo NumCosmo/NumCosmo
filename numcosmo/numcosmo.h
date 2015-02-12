@@ -50,6 +50,8 @@
 #include <numcosmo/perturbations/nc_hipert_itwo_fluids.h>
 #include <numcosmo/perturbations/nc_hipert_adiab.h>
 #include <numcosmo/perturbations/nc_hipert_two_fluids.h>
+#include <numcosmo/perturbations/nc_hipert_boltzmann.h>
+#include <numcosmo/perturbations/nc_hipert_boltzmann_std.h>
 
 /* Model implementations */
 #include <numcosmo/model/nc_hicosmo_de.h>
@@ -117,6 +119,7 @@
 #include <numcosmo/data/nc_data_bao_dv.h>
 #include <numcosmo/data/nc_data_bao_rdv.h>
 #include <numcosmo/data/nc_data_bao_dvdv.h>
+#include <numcosmo/data/nc_data_bao_empirical_fit.h>
 #include <numcosmo/data/nc_data_bao.h>
 #include <numcosmo/data/nc_data_cmb_dist_priors.h>
 #include <numcosmo/data/nc_data_cmb_shift_param.h>

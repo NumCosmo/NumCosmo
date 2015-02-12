@@ -173,8 +173,10 @@ G_INLINE_FUNC gdouble nc_hicosmo_abs_alpha (NcHICosmo *cosmo, gdouble x);
 G_INLINE_FUNC gdouble nc_hicosmo_x_alpha (NcHICosmo *cosmo, gdouble alpha);
 
 NcHICosmo *nc_hicosmo_new_from_name (GType parent_type, gchar *cosmo_name);
+NcHICosmo *nc_hicosmo_ref (NcHICosmo *cosmo);
 void nc_hicosmo_log_all_models (GType parent);
-void nc_hicosmo_free (NcHICosmo *hic);
+void nc_hicosmo_free (NcHICosmo *cosmo);
+void nc_hicosmo_clear (NcHICosmo **cosmo);
 
 NcmMSetFunc *nc_hicosmo_create_mset_func0 (NcHICosmoFunc0 f0);
 NcmMSetFunc *nc_hicosmo_create_mset_func1 (NcHICosmoFunc1 f1);

@@ -204,8 +204,9 @@ _nc_hipert_adiab_set_reltol (NcHIPert *pert, gdouble reltol)
 NcHIPertAdiab *
 nc_hipert_adiab_new (void)
 {
-  NcHIPertAdiab *pa = g_object_new (NC_TYPE_HIPERT_ADIAB, 
-                                        NULL);
+  NcHIPertAdiab *pa = g_object_new (NC_TYPE_HIPERT_ADIAB,
+                                    "sys-size", 4,
+                                    NULL);
 
   return pa;
 }
@@ -388,9 +389,6 @@ nc_hipert_adiab_set_init_cond (NcHIPertAdiab *pa, NcHICosmo *cosmo, gdouble alph
   gint flag;
 
   pert->alpha0 = alpha_i;
-
-  if (pert->y == NULL)
-    pert->y = N_VNew_Serial (4);
 
   NV_Ith_S (pert->y, NC_HIPERT_ADIAB_RE_ZETA) = Re_zeta;
   NV_Ith_S (pert->y, NC_HIPERT_ADIAB_IM_ZETA) = Im_zeta;

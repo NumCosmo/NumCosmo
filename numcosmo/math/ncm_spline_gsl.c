@@ -29,7 +29,7 @@
  *
  * This object comprises the proper functions to use the GNU Scientific 
  * Library (GSL) spline functions and interpolation methods.
-   * 
+ * 
  */
 
 #ifdef HAVE_CONFIG_H
@@ -296,9 +296,6 @@ _ncm_spline_gsl_set_property (GObject *object, guint prop_id, const GValue *valu
 
   switch (prop_id)
   {
-    case PROP_TYPE_ID:
-      ncm_spline_gsl_set_type_by_id (fit, g_value_get_enum (value));
-      break;
     case PROP_TYPE_NAME:
       ncm_spline_gsl_set_type_by_name (fit, g_value_get_string (value));
       break;
@@ -316,9 +313,12 @@ _ncm_spline_gsl_get_property (GObject *object, guint prop_id, GValue *value, GPa
 
   switch (prop_id)
   {
-    case PROP_TYPE_ID:
-      g_value_set_enum (value, sgsl->type_id);
+    case PROP_TYPE_NAME:
+    {
+      const GEnumValue *e = ncm_cfg_enum_get_value (NCM_TYPE_SPLINE_GSL_TYPE, sgsl->type_id);
+      g_value_set_string (value, e->value_name);
       break;
+    }
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
       break;
@@ -346,22 +346,14 @@ ncm_spline_gsl_class_init (NcmSplineGslClass *klass)
   object_class->set_property = &_ncm_spline_gsl_set_property;
   object_class->get_property = &_ncm_spline_gsl_get_property;
   object_class->finalize     = &ncm_spline_gsl_finalize;
-  
-  g_object_class_install_property (object_class,
-                                   PROP_TYPE_ID,
-                                   g_param_spec_enum ("type",
-                                                      NULL,
-                                                      "GSL Interpolation method",
-                                                      NCM_TYPE_SPLINE_GSL_TYPE, NCM_SPLINE_GSL_CSPLINE,
-                                                      G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));  
 
   g_object_class_install_property (object_class,
                                    PROP_TYPE_NAME,
                                    g_param_spec_string ("type-name",
                                                         NULL,
                                                         "GSL Interpolation method name",
-                                                        NULL,
-                                                        G_PARAM_WRITABLE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));  
+                                                        "NCM_SPLINE_GSL_CSPLINE",
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));  
   
   s_class->name         = &_ncm_spline_gsl_name;
   s_class->reset        = &_ncm_spline_gsl_reset;

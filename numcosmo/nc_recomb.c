@@ -171,14 +171,13 @@ enum
 static void
 nc_recomb_init (NcRecomb *recomb)
 {
-  recomb->zi = 0.0;
-  recomb->prec      = 0.0;
-  recomb->lambdai   = 0.0;
-  recomb->lambdaf   = 0.0;
-  recomb->init_frac = 0.0;
-  recomb->fsol         = gsl_root_fsolver_alloc (gsl_root_fsolver_brent);
-  recomb->fmin         = gsl_min_fminimizer_alloc (gsl_min_fminimizer_brent);
-  /* recomb->fmin         = gsl_min_fminimizer_alloc (gsl_min_fminimizer_quad_golden); */
+  recomb->zi             = 0.0;
+  recomb->prec           = 0.0;
+  recomb->lambdai        = 0.0;
+  recomb->lambdaf        = 0.0;
+  recomb->init_frac      = 0.0;
+  recomb->fsol           = gsl_root_fsolver_alloc (gsl_root_fsolver_brent);
+  recomb->fmin           = gsl_min_fminimizer_alloc (gsl_min_fminimizer_brent);
   recomb->Xe_s           = NULL;
   recomb->dtau_dlambda_s = NULL;
   recomb->tau_s          = NULL;
@@ -265,10 +264,10 @@ nc_recomb_class_init (NcRecombClass *klass)
 {
   GObjectClass* object_class = G_OBJECT_CLASS (klass);
 
-  object_class->dispose      = &nc_recomb_dispose;
-  object_class->finalize     = &nc_recomb_finalize;
   object_class->set_property = &nc_recomb_set_property;
   object_class->get_property = &nc_recomb_get_property;
+  object_class->dispose      = &nc_recomb_dispose;
+  object_class->finalize     = &nc_recomb_finalize;
 
   /**
    * NcRecomb:init_frac:
@@ -677,6 +676,20 @@ void
 nc_recomb_free (NcRecomb *recomb)
 {
   g_object_unref (recomb);
+}
+
+/**
+ * nc_recomb_clear:
+ * @recomb: a #NcRecomb.
+ * 
+ * Decreases the reference count of *@recomb if
+ * *@recomb is not NULL, then sets *@recomb to NULL.
+ * 
+ */
+void
+nc_recomb_clear (NcRecomb **recomb)
+{
+  g_clear_object (recomb);
 }
 
 /**

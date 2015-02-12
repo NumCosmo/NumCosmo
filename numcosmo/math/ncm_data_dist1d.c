@@ -97,8 +97,11 @@ _ncm_data_dist1d_get_property (GObject *object, guint prop_id, GValue *value, GP
       g_value_set_uint (value, ncm_data_dist1d_get_size (dist1d));
       break;
     case PROP_VECTOR:
-      g_value_take_variant (value, ncm_vector_get_variant (dist1d->x));
+    {
+      if (dist1d->x != NULL)
+        g_value_take_variant (value, ncm_vector_get_variant (dist1d->x));
       break;
+    }
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
       break;
@@ -166,10 +169,10 @@ ncm_data_dist1d_class_init (NcmDataDist1dClass *klass)
   data_class->resample   = &_ncm_data_dist1d_resample;
   data_class->m2lnL_val  = &_ncm_data_dist1d_m2lnL_val;
 
-  dist1d_class->dist    = NULL;
-  dist1d_class->inv_pdf = NULL;
-  dist1d_class->set_size = &_ncm_data_dist1d_set_size;
-  dist1d_class->get_size = &_ncm_data_dist1d_get_size;
+  dist1d_class->m2lnL_val = NULL;
+  dist1d_class->inv_pdf   = NULL;
+  dist1d_class->set_size  = &_ncm_data_dist1d_set_size;
+  dist1d_class->get_size  = &_ncm_data_dist1d_get_size;
 }
 
 static guint 
@@ -192,7 +195,7 @@ _ncm_data_dist1d_m2lnL_val (NcmData *data, NcmMSet *mset, gdouble *m2lnL)
     for (i = 0; i < dist1d->np; i++)
     {
       const gdouble x_i = ncm_vector_get (dist1d->x, i);
-      *m2lnL += ncm_mset_func_eval1 (dist1d_class->dist, mset, x_i);
+      *m2lnL += dist1d_class->m2lnL_val (dist1d, mset, x_i);
     }
   }
   else
@@ -202,7 +205,7 @@ _ncm_data_dist1d_m2lnL_val (NcmData *data, NcmMSet *mset, gdouble *m2lnL)
     {
       guint k = ncm_bootstrap_get (data->bstrap, i);
       const gdouble x_i = ncm_vector_get (dist1d->x, k);
-      *m2lnL += ncm_mset_func_eval1 (dist1d_class->dist, mset, x_i);
+      *m2lnL += dist1d_class->m2lnL_val (dist1d, mset, x_i);
     }    
   }
   return;
@@ -222,7 +225,7 @@ _ncm_data_dist1d_resample (NcmData *data, NcmMSet *mset, NcmRNG *rng)
   for (i = 0; i < dist1d->np; i++)
   {
     const gdouble u_i = gsl_rng_uniform (rng->r);
-    const gdouble x_i = ncm_mset_func_eval1 (dist1d_class->inv_pdf, mset, u_i);
+    const gdouble x_i = dist1d_class->inv_pdf (dist1d, mset, u_i);
     ncm_vector_set (dist1d->x, i, x_i);
   }
   ncm_rng_unlock (rng);
@@ -284,4 +287,18 @@ guint
 ncm_data_dist1d_get_size (NcmDataDist1d *dist1d)
 {
   return NCM_DATA_DIST1D_GET_CLASS (dist1d)->get_size (dist1d);
+}
+
+/**
+ * ncm_data_dist1d_get_data:
+ * @dist1d: a #NcmDataDist1d
+ *
+ * Gets the data #NcmVector.
+ * 
+ * Returns: (transfer full): Data vector. 
+ */
+NcmVector *
+ncm_data_dist1d_get_data (NcmDataDist1d *dist1d)
+{
+  return ncm_vector_ref (dist1d->x);
 }

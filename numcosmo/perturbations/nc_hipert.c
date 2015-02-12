@@ -47,6 +47,7 @@
 enum {
   PROP_0,
   PROP_K,
+  PROP_SYS_SIZE,
   PROP_RELTOL,
   PROP_ABSTOL,
   PROP_ALPHAI,
@@ -61,7 +62,9 @@ nc_hipert_init (NcHIPert *pert)
   pert->alpha0      = 0.0;
   pert->reltol      = 0.0;
   pert->k           = 0.0;
+  pert->sys_size    = 0;
   pert->y           = NULL;
+  pert->vec_abstol  = NULL;
   pert->cvode       = CVodeCreate (CV_ADAMS, CV_FUNCTIONAL);
   pert->cvode_init  = FALSE;
   pert->cvode_stiff = FALSE;
@@ -77,6 +80,9 @@ nc_hipert_set_property (GObject *object, guint prop_id, const GValue *value, GPa
   {
     case PROP_K:
       nc_hipert_set_mode_k (pert, g_value_get_double (value));
+      break;
+    case PROP_SYS_SIZE:
+      nc_hipert_set_sys_size (pert, g_value_get_uint (value));
       break;
     case PROP_RELTOL:
       nc_hipert_set_reltol (pert, g_value_get_double (value));
@@ -103,6 +109,9 @@ nc_hipert_get_property (GObject *object, guint prop_id, GValue *value, GParamSpe
   {
     case PROP_K:
       g_value_set_double (value, pert->k);
+      break;
+    case PROP_SYS_SIZE:
+      g_value_set_uint (value, pert->sys_size);
       break;
     case PROP_RELTOL:
       g_value_set_double (value, nc_hipert_get_reltol (pert));
@@ -136,7 +145,6 @@ nc_hipert_finalize (GObject *object)
     pert->y = NULL;
   }
 
-  
   /* Chain up : end */
   G_OBJECT_CLASS (nc_hipert_parent_class)->finalize (object);
 }
@@ -161,6 +169,14 @@ nc_hipert_class_init (NcHIPertClass *klass)
                                                         "Mode k",
                                                         0.0, G_MAXDOUBLE, 1.0,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
+  g_object_class_install_property (object_class,
+                                   PROP_SYS_SIZE,
+                                   g_param_spec_uint ("sys-size",
+                                                      NULL,
+                                                      "System size",
+                                                      1, G_MAXUINT32, 1,
+                                                      G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   g_object_class_install_property (object_class,
                                    PROP_RELTOL,
@@ -207,6 +223,42 @@ _nc_hipert_set_mode_k (NcHIPert *pert, gdouble k)
     pert->k        = k;
     pert->prepared = FALSE;
   }
+}
+
+/**
+ * nc_hipert_set_sys_size:
+ * @pert: a #NcHIPert.
+ * @sys_size: the system size.
+ * 
+ * Sets the system size.
+ * 
+ */
+void 
+nc_hipert_set_sys_size (NcHIPert *pert, guint sys_size)
+{
+  printf ("# Setting sys_size %u %u %p %p\n", pert->sys_size, sys_size, pert->y, pert->vec_abstol);
+  if (pert->sys_size != sys_size)
+  {
+    if (pert->y != NULL)
+    {
+      N_VDestroy (pert->y);
+      pert->y = NULL;
+    }
+    if (pert->vec_abstol != NULL)
+    {
+      N_VDestroy (pert->vec_abstol);
+      pert->vec_abstol = NULL;
+    }
+    
+    pert->sys_size = sys_size;
+    if (pert->sys_size > 0)
+    {
+      pert->y          = N_VNew_Serial (sys_size);
+      pert->vec_abstol = N_VNew_Serial (sys_size);
+    }
+    pert->prepared = FALSE;
+  }
+  printf ("# Setting sys_size %u %u %p %p\n", pert->sys_size, sys_size, pert->y, pert->vec_abstol);
 }
 
 /**

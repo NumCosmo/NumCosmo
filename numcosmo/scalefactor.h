@@ -84,6 +84,7 @@ struct _NcScaleFactor
 NcScaleFactor *nc_scale_factor_new (NcScaleFactorTimeType ttype, gdouble zf);
 NcScaleFactor *nc_scale_factor_copy (NcScaleFactor *a);
 void nc_scale_factor_free (NcScaleFactor *a);
+void nc_scale_factor_clear (NcScaleFactor **a);
 void nc_scale_factor_prepare (NcScaleFactor *a, NcHICosmo *model);
 void nc_scale_factor_prepare_if_needed (NcScaleFactor *a, NcHICosmo *model);
 
