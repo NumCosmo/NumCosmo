@@ -47,6 +47,7 @@ G_BEGIN_DECLS
  * @NC_DATA_BAO_RDV_ANDERSON2012: <link linkend="XAnderson2012">Anderson et al. (2012)</link>
  * @NC_DATA_BAO_RDV_BLAKE2012: <link linkend="XBlake2011">Blake et al. (2011)</link>
  * @NC_DATA_BAO_RDV_KAZIN2014: <link linkend="XKazin2014">Kazin et al. (2014)</link>
+ * @NC_DATA_BAO_EMPIRICAL_FIT_ROSS2015: <link linkend="XRoss2014">Ross et al. (2015)</link>
  *
  * FIXME
  */
