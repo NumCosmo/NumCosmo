@@ -662,8 +662,6 @@ nc_data_snia_cov_load_txt (NcDataSNIACov *snia_cov, const gchar *filename)
 {
   GKeyFile *snia_keyfile = g_key_file_new ();
   GError *error   = NULL;
-  gchar *datafile = NULL;
-  guint64 mu_len;
 
   if (!g_key_file_load_from_file (snia_keyfile, filename, G_KEY_FILE_NONE, &error))
     g_error ("nc_data_snia_cov_load: invalid configuration: %s %s", 
@@ -672,29 +670,51 @@ nc_data_snia_cov_load_txt (NcDataSNIACov *snia_cov, const gchar *filename)
 
   if (!g_key_file_has_key (snia_keyfile, 
                            NC_DATA_SNIA_COV_DATA_GROUP,
-                           NC_DATA_SNIA_COV_DATA_KEY,
-                           &error))
-    g_error ("nc_data_snia_cov_load: invalid %s key file, it must define at least the data file key ["NC_DATA_SNIA_COV_DATA_KEY"]", filename);
-  if (!g_key_file_has_key (snia_keyfile, 
-                           NC_DATA_SNIA_COV_DATA_GROUP,
                            NC_DATA_SNIA_COV_DATA_LEN_KEY,
                            &error))
+  {
     g_error ("nc_data_snia_cov_load: invalid %s key file, it must define at least the data length file key ["NC_DATA_SNIA_COV_DATA_LEN_KEY"]", filename);
+  }
+  else
+  {
+    guint64 mu_len = g_key_file_get_uint64 (snia_keyfile, 
+                                            NC_DATA_SNIA_COV_DATA_GROUP,
+                                            NC_DATA_SNIA_COV_DATA_LEN_KEY,
+                                            &error);
+    ncm_data_gauss_cov_set_size (NCM_DATA_GAUSS_COV (snia_cov), mu_len);
+  }
 
-  datafile = g_key_file_get_string (snia_keyfile, 
-                                    NC_DATA_SNIA_COV_DATA_GROUP,
-                                    NC_DATA_SNIA_COV_DATA_KEY,
-                                    &error);
+  if (!g_key_file_has_key (snia_keyfile, 
+                           NC_DATA_SNIA_COV_DATA_GROUP,
+                           NC_DATA_SNIA_COV_DATA_KEY,
+                           &error))
+  {
+    g_error ("nc_data_snia_cov_load: invalid %s key file, it must define at least the data file key ["NC_DATA_SNIA_COV_DATA_KEY"]", filename);
+  }
+  else
+  {
+    gchar *datafile = g_key_file_get_string (snia_keyfile, 
+                                             NC_DATA_SNIA_COV_DATA_GROUP,
+                                             NC_DATA_SNIA_COV_DATA_KEY,
+                                             &error);
+    _nc_data_snia_cov_load_snia_data (snia_cov, datafile);
+    g_free (datafile);
+  }
 
-  mu_len = g_key_file_get_uint64 (snia_keyfile, 
-                                  NC_DATA_SNIA_COV_DATA_GROUP,
-                                  NC_DATA_SNIA_COV_DATA_LEN_KEY,
-                                  &error);
 
-  ncm_data_gauss_cov_set_size (NCM_DATA_GAUSS_COV (snia_cov), mu_len);
+  if (g_key_file_has_key (snia_keyfile, 
+                          NC_DATA_SNIA_COV_DATA_GROUP,
+                          NC_DATA_SNIA_COV_DATA_DESC,
+                          &error))
+  {
+    gchar *desc = g_key_file_get_string (snia_keyfile, 
+                                         NC_DATA_SNIA_COV_DATA_GROUP,
+                                         NC_DATA_SNIA_COV_DATA_DESC,
+                                         &error);
+    ncm_data_set_desc (NCM_DATA (snia_cov), desc);    
+    g_free (desc);
+  }
   
-  _nc_data_snia_cov_load_snia_data (snia_cov, datafile);
-
   /* Get magnitude cov matrix */
   
   if (g_key_file_has_key (snia_keyfile, 
@@ -702,12 +722,13 @@ nc_data_snia_cov_load_txt (NcDataSNIACov *snia_cov, const gchar *filename)
                           NC_DATA_SNIA_COV_MAG_KEY,
                           &error))
   {
-    datafile = g_key_file_get_string (snia_keyfile, 
-                                      NC_DATA_SNIA_COV_DATA_GROUP,
-                                      NC_DATA_SNIA_COV_MAG_KEY,
-                                      &error);
-    
+    gchar *datafile = g_key_file_get_string (snia_keyfile, 
+                                             NC_DATA_SNIA_COV_DATA_GROUP,
+                                             NC_DATA_SNIA_COV_MAG_KEY,
+                                             &error);
+
     _nc_data_snia_cov_load_matrix (datafile, snia_cov->var_mag);
+    g_free (datafile);
   }
 
   /* Get width cov matrix */
@@ -717,12 +738,13 @@ nc_data_snia_cov_load_txt (NcDataSNIACov *snia_cov, const gchar *filename)
                           NC_DATA_SNIA_COV_WIDTH_KEY,
                           &error))
   {
-    datafile = g_key_file_get_string (snia_keyfile, 
-                                      NC_DATA_SNIA_COV_DATA_GROUP,
-                                      NC_DATA_SNIA_COV_WIDTH_KEY,
-                                      &error);
-    
+    gchar *datafile = g_key_file_get_string (snia_keyfile, 
+                                             NC_DATA_SNIA_COV_DATA_GROUP,
+                                             NC_DATA_SNIA_COV_WIDTH_KEY,
+                                             &error);
+
     _nc_data_snia_cov_load_matrix (datafile, snia_cov->var_width);
+    g_free (datafile);
   }
 
   /* Get colour cov matrix */
@@ -732,12 +754,13 @@ nc_data_snia_cov_load_txt (NcDataSNIACov *snia_cov, const gchar *filename)
                           NC_DATA_SNIA_COV_COLOUR_KEY,
                           &error))
   {
-    datafile = g_key_file_get_string (snia_keyfile, 
-                                      NC_DATA_SNIA_COV_DATA_GROUP,
-                                      NC_DATA_SNIA_COV_COLOUR_KEY,
-                                      &error);
-    
+    gchar *datafile = g_key_file_get_string (snia_keyfile, 
+                                             NC_DATA_SNIA_COV_DATA_GROUP,
+                                             NC_DATA_SNIA_COV_COLOUR_KEY,
+                                             &error);
+
     _nc_data_snia_cov_load_matrix (datafile, snia_cov->var_colour);
+    g_free (datafile);
   }
 
   /* Get magnitude-width cov matrix */
@@ -747,12 +770,13 @@ nc_data_snia_cov_load_txt (NcDataSNIACov *snia_cov, const gchar *filename)
                           NC_DATA_SNIA_COV_MAG_WIDTH_KEY,
                           &error))
   {
-    datafile = g_key_file_get_string (snia_keyfile, 
-                                      NC_DATA_SNIA_COV_DATA_GROUP,
-                                      NC_DATA_SNIA_COV_MAG_WIDTH_KEY,
-                                      &error);
-    
+    gchar *datafile = g_key_file_get_string (snia_keyfile, 
+                                             NC_DATA_SNIA_COV_DATA_GROUP,
+                                             NC_DATA_SNIA_COV_MAG_WIDTH_KEY,
+                                             &error);
+
     _nc_data_snia_cov_load_matrix (datafile, snia_cov->var_mag_width);
+    g_free (datafile);
   }
 
   /* Get magnitude-colour cov matrix */
@@ -762,12 +786,13 @@ nc_data_snia_cov_load_txt (NcDataSNIACov *snia_cov, const gchar *filename)
                           NC_DATA_SNIA_COV_MAG_COLOUR_KEY,
                           &error))
   {
-    datafile = g_key_file_get_string (snia_keyfile, 
-                                      NC_DATA_SNIA_COV_DATA_GROUP,
-                                      NC_DATA_SNIA_COV_MAG_COLOUR_KEY,
-                                      &error);
-    
+    gchar *datafile = g_key_file_get_string (snia_keyfile, 
+                                             NC_DATA_SNIA_COV_DATA_GROUP,
+                                             NC_DATA_SNIA_COV_MAG_COLOUR_KEY,
+                                             &error);
+
     _nc_data_snia_cov_load_matrix (datafile, snia_cov->var_mag_colour);
+    g_free (datafile);
   }
 
   /* Get width-colour cov matrix */
@@ -777,16 +802,17 @@ nc_data_snia_cov_load_txt (NcDataSNIACov *snia_cov, const gchar *filename)
                           NC_DATA_SNIA_COV_WIDTH_COLOUR_KEY,
                           &error))
   {
-    datafile = g_key_file_get_string (snia_keyfile, 
-                                      NC_DATA_SNIA_COV_DATA_GROUP,
-                                      NC_DATA_SNIA_COV_WIDTH_COLOUR_KEY,
-                                      &error);
-    
+    gchar *datafile = g_key_file_get_string (snia_keyfile, 
+                                             NC_DATA_SNIA_COV_DATA_GROUP,
+                                             NC_DATA_SNIA_COV_WIDTH_COLOUR_KEY,
+                                             &error);
+
     _nc_data_snia_cov_load_matrix (datafile, snia_cov->var_width_colour);
+    g_free (datafile);
   }
 
   ncm_data_set_init (NCM_DATA (snia_cov), TRUE);
- 
+
   g_key_file_free (snia_keyfile);
 }
 
@@ -808,6 +834,7 @@ _nc_data_snia_cov_load_snia_data (NcDataSNIACov *snia_cov, const gchar *filename
     guint nrow = 0;
     guint i;
     guint max_dset_id = 0;
+    guint min_dset_id = 1000;
     gboolean has_dataset = FALSE;
     
     while (g_io_channel_read_line (file, &line, &len, &tpos, &error) != G_IO_STATUS_EOF)
@@ -870,6 +897,7 @@ _nc_data_snia_cov_load_snia_data (NcDataSNIACov *snia_cov, const gchar *filename
           gint64 dset_id = g_ascii_strtoll (itens[i + 1], NULL, 10);
           g_array_index (dataset, guint32, nrow) = dset_id;
           max_dset_id = GSL_MAX (max_dset_id, dset_id);
+          min_dset_id = GSL_MIN (min_dset_id, dset_id);
         }
         else
           g_array_index (dataset, guint32, nrow) = 0;
@@ -881,9 +909,22 @@ _nc_data_snia_cov_load_snia_data (NcDataSNIACov *snia_cov, const gchar *filename
     }
 
     if (nrow != snia_cov->mu_len)
-      g_error ("_nc_data_snia_cov_load_snia_data: cannot load data file [%s] expected nrows %u obtained %u", 
+    {
+      g_error ("_nc_data_snia_cov_load_snia_data: cannot load data file [%s] expected nrows %u obtained %u",
                filename, snia_cov->mu_len, nrow);
-
+    }
+    if (min_dset_id > 1)
+    {
+      g_error ("_nc_data_snia_cov_load_snia_data: wrongly aligned dataset ids. First id = %u\n", min_dset_id);
+    }
+    else if (min_dset_id == 1)
+    {
+      for (i = 0; i < dataset->len; i++)
+      {
+        g_array_index (dataset, guint32, i)--;
+      }
+      max_dset_id--;
+    }
     snia_cov->dataset_len = max_dset_id + 1;
 
     g_regex_unref (comment_line);
@@ -972,8 +1013,31 @@ nc_data_snia_cov_load (NcDataSNIACov *snia_cov, const gchar *filename)
   NCM_FITS_ERROR (status);
 
   if (hdutype != BINARY_TBL)
+  {
     g_error ("nc_data_snia_cov_load: NcSNIADistCov catalog is not binary.");
+  }
 
+  {
+    gchar *desc = NULL;
+    gchar comment[FLEN_COMMENT];
+
+    fits_read_key_longstr (fptr, NC_DATA_SNIA_COV_CAT_DESC, &desc, comment, &status);
+    if (!status)
+    {
+      NCM_FITS_ERROR (status);
+
+      ncm_data_set_desc (NCM_DATA (snia_cov), desc);
+#ifdef HAVE_CFITSIO_3_27
+      fits_free_memory (desc, &status);
+      NCM_FITS_ERROR (status);
+#else
+      g_free (desc);
+#endif /* HAVE_CFITSIO_3_27 */
+    }
+    else
+      status = 0;
+  }
+  
   fits_get_num_rows (fptr, &nrows, &status);
   NCM_FITS_ERROR (status);
   ncm_data_gauss_cov_set_size (NCM_DATA_GAUSS_COV (snia_cov), nrows);
@@ -1178,6 +1242,12 @@ nc_data_snia_cov_save (NcDataSNIACov *snia_cov, const gchar *filename, gboolean 
   fits_create_tbl (fptr, BINARY_TBL, snia_cov->mu_len, tfields, (gchar **)ttype_array->pdata, (gchar **)tform_array->pdata,
                    (gchar **)tunit_array->pdata, extname, &status);
   NCM_FITS_ERROR (status);
+
+  {
+    const gchar *desc = ncm_data_peek_desc (NCM_DATA (snia_cov));
+    fits_write_key_longstr (fptr, NC_DATA_SNIA_COV_CAT_DESC, desc, "Catalog description", &status);
+    NCM_FITS_ERROR (status);
+  }
   
   {
     NcmVector *data[NC_DATA_SNIA_COV_LENGTH];
