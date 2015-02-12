@@ -32,26 +32,27 @@
 #include <numcosmo/math/ncm_data_dist1d.h>
 #include <numcosmo/math/ncm_stats_dist1d_spline.h>
 #include <numcosmo/nc_distance.h>
+#include <numcosmo/data/nc_data_bao.h>
 
 G_BEGIN_DECLS
 
 #define NC_TYPE_DATA_BAO_EMPIRICAL_FIT             (nc_data_bao_empirical_fit_get_type ())
-#define NC_DATA_BAO_EMPIRICAL_FIT(obj)             (G_TYPE_CHECK_INSTANCE_CAST ((obj), NC_TYPE_DATA_BAO_EMPIRICAL_FIT, NcDataBAOEmpiricalFit))
-#define NC_DATA_BAO_EMPIRICAL_FIT_CLASS(klass)     (G_TYPE_CHECK_CLASS_CAST ((klass), NC_TYPE_DATA_BAO_EMPIRICAL_FIT, NcDataBAOEmpiricalFitClass))
+#define NC_DATA_BAO_EMPIRICAL_FIT(obj)             (G_TYPE_CHECK_INSTANCE_CAST ((obj), NC_TYPE_DATA_BAO_EMPIRICAL_FIT, NcDataBaoEmpiricalFit))
+#define NC_DATA_BAO_EMPIRICAL_FIT_CLASS(klass)     (G_TYPE_CHECK_CLASS_CAST ((klass), NC_TYPE_DATA_BAO_EMPIRICAL_FIT, NcDataBaoEmpiricalFitClass))
 #define NC_IS_DATA_BAO_EMPIRICAL_FIT(obj)          (G_TYPE_CHECK_INSTANCE_TYPE ((obj), NC_TYPE_DATA_BAO_EMPIRICAL_FIT))
 #define NC_IS_DATA_BAO_EMPIRICAL_FIT_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE ((klass), NC_TYPE_DATA_BAO_EMPIRICAL_FIT))
-#define NC_DATA_BAO_EMPIRICAL_FIT_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS ((obj), NC_TYPE_DATA_BAO_EMPIRICAL_FIT, NcDataBAOEmpiricalFitClass))
+#define NC_DATA_BAO_EMPIRICAL_FIT_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS ((obj), NC_TYPE_DATA_BAO_EMPIRICAL_FIT, NcDataBaoEmpiricalFitClass))
 
-typedef struct _NcDataBAOEmpiricalFitClass NcDataBAOEmpiricalFitClass;
-typedef struct _NcDataBAOEmpiricalFit NcDataBAOEmpiricalFit;
+typedef struct _NcDataBaoEmpiricalFitClass NcDataBaoEmpiricalFitClass;
+typedef struct _NcDataBaoEmpiricalFit NcDataBaoEmpiricalFit;
 
-struct _NcDataBAOEmpiricalFitClass
+struct _NcDataBaoEmpiricalFitClass
 {
   /*< private >*/
   NcmDataDist1dClass parent_class;
 };
 
-struct _NcDataBAOEmpiricalFit
+struct _NcDataBaoEmpiricalFit
 {
   /*< private >*/
   NcmDataDist1d parent_instance;
@@ -66,9 +67,12 @@ struct _NcDataBAOEmpiricalFit
 
 GType nc_data_bao_empirical_fit_get_type (void) G_GNUC_CONST;
 
-NcDataBAOEmpiricalFit *nc_data_bao_empirical_fit_new (NcmSpline *m2lnp, gdouble Dv_fiduc, gdouble rs_fiduc, gdouble z);
-gdouble nc_data_bao_empirical_fit_get_mode (NcDataBAOEmpiricalFit *bao_ef);
-gdouble nc_data_bao_empirical_fit_get_alpha (NcDataBAOEmpiricalFit *bao_ef, NcmMSet *mset);
+NcDataBaoEmpiricalFit *nc_data_bao_empirical_fit_new (NcmSpline *m2lnp, gdouble Dv_fiduc, gdouble rs_fiduc, gdouble z);
+NcDataBaoEmpiricalFit *nc_data_bao_empirical_fit_new_from_file (const gchar *filename);
+NcDataBaoEmpiricalFit *nc_data_bao_empirical_fit_new_from_id (NcDataBaoId id);
+
+gdouble nc_data_bao_empirical_fit_get_mode (NcDataBaoEmpiricalFit *bao_ef);
+gdouble nc_data_bao_empirical_fit_get_alpha (NcDataBaoEmpiricalFit *bao_ef, NcmMSet *mset);
 
 G_END_DECLS
 

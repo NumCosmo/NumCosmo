@@ -1335,6 +1335,48 @@ load_save_vector_matrix(float)
    */
 load_save_vector_matrix(complex)
 
+/**
+ * ncm_cfg_get_data_filename:
+ * @filename: filename to search in the data path.
+ * @must_exist: raises an error if @filename is not found.
+ *
+ * Looks for @filename in the data path and returns
+ * the full path if found.
+ * 
+ * Returns: (transfer full): Full path for @filename. 
+ */
+gchar *
+ncm_cfg_get_data_filename (const gchar *filename, gboolean must_exist)
+{
+  const gchar *data_dir = g_getenv (NCM_CFG_DATA_DIR_ENV);
+  gchar *full_filename = NULL;
+
+  if (data_dir != NULL)
+  {
+    full_filename = g_build_filename (data_dir, "data", filename, NULL);
+
+    if (!g_file_test (full_filename, G_FILE_TEST_EXISTS))
+    {
+      g_clear_pointer (&full_filename, g_free);
+    }
+  }
+
+  if (full_filename == NULL)
+    full_filename = g_build_filename (PACKAGE_DATA_DIR, "data", filename, NULL);
+
+  if (!g_file_test (full_filename, G_FILE_TEST_EXISTS))
+  {
+    if (must_exist)
+      g_error ("ncm_cfg_get_data_filename: cannot find `%s'.", filename);
+    else
+    {
+      g_clear_pointer (&full_filename, g_free);
+    }
+  }
+
+  return full_filename;
+}
+
 #ifdef NUMCOSMO_HAVE_SQLITE3
 /**
  * ncm_cfg_get_default_sqlite3: (skip)
@@ -1349,25 +1391,9 @@ ncm_cfg_get_default_sqlite3 (void)
   static sqlite3 *db = NULL;
   if (db == NULL)
   {
-    const gchar *data_dir = g_getenv (NCM_CFG_DATA_DIR_ENV);
-    gchar *filename = NULL;
+    gchar *filename = ncm_cfg_get_data_filename (NCM_CFG_DEFAULT_SQLITE3_FILENAME, TRUE);
     gint ret;
-    
-    if (data_dir != NULL)
-    {
-      filename = g_build_filename (data_dir, "data", NCM_CFG_DEFAULT_SQLITE3_FILENAME, NULL);
 
-      if (!g_file_test (filename, G_FILE_TEST_EXISTS))
-      {
-        g_clear_pointer (&filename, g_free);
-      }
-    }
-    
-    if (filename == NULL)
-      filename = g_build_filename (PACKAGE_DATA_DIR, "data", NCM_CFG_DEFAULT_SQLITE3_FILENAME, NULL);
-
-    if (!g_file_test (filename, G_FILE_TEST_EXISTS))
-      g_error ("Default database not found (%s)", filename);
     ret = sqlite3_open (filename, &db);
     if (ret  != SQLITE_OK)
       g_error ("Connection to database failed: %s", sqlite3_errmsg (db));

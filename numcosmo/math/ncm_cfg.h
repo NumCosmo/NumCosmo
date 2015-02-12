@@ -90,6 +90,8 @@ LOAD_SAVE_VECTOR_MATRIX_DEF(int)
 LOAD_SAVE_VECTOR_MATRIX_DEF(float)
 LOAD_SAVE_VECTOR_MATRIX_DEF(complex)
 
+gchar *ncm_cfg_get_data_filename (const gchar *filename, gboolean must_exist);
+
 #ifdef NUMCOSMO_HAVE_SQLITE3
 sqlite3 *ncm_cfg_get_default_sqlite3 (void);
 #endif

@@ -40,6 +40,7 @@
 #include "data/nc_data_bao_empirical_fit.h"
 #include "nc_hicosmo.h"
 #include "nc_distance.h"
+#include "math/ncm_cfg.h"
 
 enum
 {
@@ -51,10 +52,10 @@ enum
   PROP_DIST,
 };
 
-G_DEFINE_TYPE (NcDataBAOEmpiricalFit, nc_data_bao_empirical_fit, NCM_TYPE_DATA_DIST1D);
+G_DEFINE_TYPE (NcDataBaoEmpiricalFit, nc_data_bao_empirical_fit, NCM_TYPE_DATA_DIST1D);
 
 static void
-nc_data_bao_empirical_fit_init (NcDataBAOEmpiricalFit *bao_ef)
+nc_data_bao_empirical_fit_init (NcDataBaoEmpiricalFit *bao_ef)
 {
   bao_ef->Dv_fiduc = 0.0;
   bao_ef->rs_fiduc = 0.0;
@@ -68,7 +69,7 @@ nc_data_bao_empirical_fit_init (NcDataBAOEmpiricalFit *bao_ef)
 static void
 nc_data_bao_empirical_fit_constructed (GObject *object)
 {
-  NcDataBAOEmpiricalFit *bao_ef = NC_DATA_BAO_EMPIRICAL_FIT (object);
+  NcDataBaoEmpiricalFit *bao_ef = NC_DATA_BAO_EMPIRICAL_FIT (object);
 
   ncm_stats_dist1d_prepare (bao_ef->p);
   bao_ef->p_mode = ncm_stats_dist1d_mode (bao_ef->p);
@@ -79,7 +80,7 @@ nc_data_bao_empirical_fit_constructed (GObject *object)
 static void
 nc_data_bao_empirical_fit_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
 {
-  NcDataBAOEmpiricalFit *bao_ef = NC_DATA_BAO_EMPIRICAL_FIT (object);
+  NcDataBaoEmpiricalFit *bao_ef = NC_DATA_BAO_EMPIRICAL_FIT (object);
   g_return_if_fail (NC_IS_DATA_BAO_EMPIRICAL_FIT (object));
 
   switch (prop_id)
@@ -112,7 +113,7 @@ nc_data_bao_empirical_fit_set_property (GObject *object, guint prop_id, const GV
 static void
 nc_data_bao_empirical_fit_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
 {
-  NcDataBAOEmpiricalFit *bao_ef = NC_DATA_BAO_EMPIRICAL_FIT (object);
+  NcDataBaoEmpiricalFit *bao_ef = NC_DATA_BAO_EMPIRICAL_FIT (object);
   g_return_if_fail (NC_IS_DATA_BAO_EMPIRICAL_FIT (object));
 
   switch (prop_id)
@@ -141,7 +142,7 @@ nc_data_bao_empirical_fit_get_property (GObject *object, guint prop_id, GValue *
 static void
 nc_data_bao_empirical_fit_dispose (GObject *object)
 {
-  NcDataBAOEmpiricalFit *bao_ef = NC_DATA_BAO_EMPIRICAL_FIT (object);
+  NcDataBaoEmpiricalFit *bao_ef = NC_DATA_BAO_EMPIRICAL_FIT (object);
 
   ncm_spline_clear (&bao_ef->m2lnp);
   ncm_stats_dist1d_clear (&bao_ef->p);
@@ -165,7 +166,7 @@ static gdouble _nc_data_bao_empirical_fit_m2lnL_val (NcmDataDist1d *dist1d, NcmM
 static gdouble _nc_data_bao_empirical_fit_inv_pdf (NcmDataDist1d *dist1d, NcmMSet *mset, gdouble u);
 
 static void
-nc_data_bao_empirical_fit_class_init (NcDataBAOEmpiricalFitClass *klass)
+nc_data_bao_empirical_fit_class_init (NcDataBaoEmpiricalFitClass *klass)
 {
   GObjectClass* object_class = G_OBJECT_CLASS (klass);
   NcmDataDist1dClass *bao_ef_class = NCM_DATA_DIST1D_CLASS (klass);
@@ -223,7 +224,7 @@ nc_data_bao_empirical_fit_class_init (NcDataBAOEmpiricalFitClass *klass)
 static gdouble 
 _nc_data_bao_empirical_fit_m2lnL_val (NcmDataDist1d *dist1d, NcmMSet *mset, gdouble x)
 {
-  NcDataBAOEmpiricalFit *bao_ef = NC_DATA_BAO_EMPIRICAL_FIT (dist1d);
+  NcDataBaoEmpiricalFit *bao_ef = NC_DATA_BAO_EMPIRICAL_FIT (dist1d);
   const gdouble alpha  = nc_data_bao_empirical_fit_get_alpha (bao_ef, mset);
   const gdouble alphap = alpha - x;
 
@@ -233,7 +234,7 @@ _nc_data_bao_empirical_fit_m2lnL_val (NcmDataDist1d *dist1d, NcmMSet *mset, gdou
 static gdouble 
 _nc_data_bao_empirical_fit_inv_pdf (NcmDataDist1d *dist1d, NcmMSet *mset, gdouble u)
 {
-  NcDataBAOEmpiricalFit *bao_ef = NC_DATA_BAO_EMPIRICAL_FIT (dist1d);
+  NcDataBaoEmpiricalFit *bao_ef = NC_DATA_BAO_EMPIRICAL_FIT (dist1d);
   return ncm_stats_dist1d_inv_pdf (bao_ef->p, u) - bao_ef->p_mode;
 }
 
@@ -244,14 +245,14 @@ _nc_data_bao_empirical_fit_inv_pdf (NcmDataDist1d *dist1d, NcmMSet *mset, gdoubl
  * @rs_fiduc: fiducial $r_s$.
  * @z: data redshift.
  * 
- * Creates a new #NcDataBAOEmpiricalFit.
+ * Creates a new #NcDataBaoEmpiricalFit.
  * 
- * Returns: the newly created #NcDataBAOEmpiricalFit.
+ * Returns: the newly created #NcDataBaoEmpiricalFit.
  */
-NcDataBAOEmpiricalFit *
+NcDataBaoEmpiricalFit *
 nc_data_bao_empirical_fit_new (NcmSpline *m2lnp, gdouble Dv_fiduc, gdouble rs_fiduc, gdouble z)
 {
-  NcDataBAOEmpiricalFit *bao_ef;
+  NcDataBaoEmpiricalFit *bao_ef;
   NcmVector *d = ncm_vector_new (1);
 
   ncm_vector_set (d, 0, 0.0);
@@ -270,22 +271,68 @@ nc_data_bao_empirical_fit_new (NcmSpline *m2lnp, gdouble Dv_fiduc, gdouble rs_fi
 }
 
 /**
+ * nc_data_bao_empirical_fit_new_from_file:
+ * @filename: file containing a serialized #NcDataBaoEmpiricalFit.
+ * 
+ * Creates a new #NcDataBaoEmpiricalFit from @filename.
+ * 
+ * Returns: (transfer full): the newly created #NcDataBaoEmpiricalFit.
+ */
+NcDataBaoEmpiricalFit *
+nc_data_bao_empirical_fit_new_from_file (const gchar *filename)
+{
+  NcDataBaoEmpiricalFit *bao_ef = NC_DATA_BAO_EMPIRICAL_FIT (ncm_serialize_global_from_file (filename));
+  g_assert (NC_IS_DATA_BAO_EMPIRICAL_FIT (bao_ef));
+
+  return bao_ef;
+}
+
+/**
+ * nc_data_bao_empirical_fit_new_from_id:
+ * @id: the sample id.
+ * 
+ * Creates a new #NcDataBaoEmpiricalFit from @id.
+ * 
+ * Returns: (transfer full): the newly created #NcDataBaoEmpiricalFit.
+ */
+NcDataBaoEmpiricalFit *
+nc_data_bao_empirical_fit_new_from_id (NcDataBaoId id)
+{
+  NcDataBaoEmpiricalFit *bao_ef;
+  gchar *filename;
+  switch (id)
+  {
+    case NC_DATA_BAO_EMPIRICAL_FIT_ROSS2015:
+      filename = ncm_cfg_get_data_filename ("nc_data_bao_empirical_fit_ross2015.obj", TRUE);
+      break;
+    default:
+      g_error ("nc_data_bao_empirical_fit_new_from_id: id %d not recognized.", id);
+      break;
+  }
+
+  bao_ef = nc_data_bao_empirical_fit_new_from_file (filename);
+  g_free (filename);
+
+  return bao_ef;
+}
+
+/**
  * nc_data_bao_empirical_fit_get_mode:
- * @bao_ef: a #NcDataBAOEmpiricalFit.
+ * @bao_ef: a #NcDataBaoEmpiricalFit.
  * 
  * Calculates the mode of the empirical distribution.
  * 
  * Returns: the mode of the distribution.
  */
 gdouble 
-nc_data_bao_empirical_fit_get_mode (NcDataBAOEmpiricalFit *bao_ef)
+nc_data_bao_empirical_fit_get_mode (NcDataBaoEmpiricalFit *bao_ef)
 {
   return bao_ef->p_mode;
 }
 
 /**
  * nc_data_bao_empirical_fit_get_alpha:
- * @bao_ef: a #NcDataBAOEmpiricalFit.
+ * @bao_ef: a #NcDataBaoEmpiricalFit.
  * @mset: a #NcmMSet.
  * 
  * Calculates value of $\alpha$ given a #NcmMSet.
@@ -293,7 +340,7 @@ nc_data_bao_empirical_fit_get_mode (NcDataBAOEmpiricalFit *bao_ef)
  * Returns: $\alpha$.
  */
 gdouble 
-nc_data_bao_empirical_fit_get_alpha (NcDataBAOEmpiricalFit *bao_ef, NcmMSet *mset)
+nc_data_bao_empirical_fit_get_alpha (NcDataBaoEmpiricalFit *bao_ef, NcmMSet *mset)
 {
   NcHICosmo *cosmo         = NC_HICOSMO (ncm_mset_peek (mset, nc_hicosmo_id ()));
   const gdouble Dv_r       = 1.0 / nc_distance_bao_r_Dv (bao_ef->dist, cosmo, bao_ef->z);
