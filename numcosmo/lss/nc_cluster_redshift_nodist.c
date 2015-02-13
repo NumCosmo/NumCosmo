@@ -25,8 +25,8 @@
 
 /**
  * SECTION:nc_cluster_redshift_nodist
- * @title: Cluster Abundance Redshift No Distribution
- * @short_description: FIXME
+ * @title: NcClusterRedshiftNodist
+ * @short_description: Cluster abundance redshift real redshift distribution.
  *
  * FIXME
  */

@@ -25,8 +25,8 @@
 
 /**
  * SECTION:ncm_fit_mcbs
- * @title: Monte Carlo Bootstrap Analysis
- * @short_description: Object implementing Monte Carlo of Bootstrap analysis
+ * @title: NcmFitMCBS
+ * @short_description: Monte Carlo and bootstrap analysis.
  *
  * FIXME
  * 

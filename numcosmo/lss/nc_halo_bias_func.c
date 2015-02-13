@@ -24,8 +24,8 @@
 
 /**
  * SECTION:nc_halo_bias_func
- * @title: Mean Halo Bias Function
- * @short_description: FIXME
+ * @title: NcHaloBiasFunc
+ * @short_description: Mean halo bias function.
  *
  * FIXME
  */

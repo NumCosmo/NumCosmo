@@ -25,8 +25,8 @@
 
 /**
  * SECTION:ncm_data_gauss
- * @title: Gaussian Data - InvCov
- * @short_description: Gaussian data object, inverse covariance
+ * @title: NcmDataGauss
+ * @short_description: Gaussian data -- inverse covariance provided.
  *
  * Gaussian distribution which uses the inverse covariance matrix as input.
  * 

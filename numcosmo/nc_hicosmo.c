@@ -24,8 +24,8 @@
 
 /**
  * SECTION:nc_hicosmo
- * @title: Cosmological Model Abstract Class
- * @short_description: Class for implementing homogeneous and isotropic cosmological models 
+ * @title: NcHICosmo
+ * @short_description: Abstract class for implementing homogeneous and isotropic cosmological models. 
  *
  * FIXME
  *

@@ -24,8 +24,8 @@
 
 /**
  * SECTION:nc_mass_function
- * @title: Mass Function
- * @short_description: FIXME
+ * @title: NcMassFunction
+ * @short_description: Clusters mass function.
  *
  * FIXME
  */

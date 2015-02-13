@@ -24,9 +24,9 @@
 
 /**
  * SECTION:ncm_sparam
- * @title: Model Scalar Parameter Description
- * @short_description: Describes the properties of a scalar parameter
- *
+ * @title: NcmSParam
+ * @short_description: Properties of a scalar parameter.
+ * 
  * This object comprises the necessary properties to define a scalar parameter.
  * It is used by #NcmModel to store the description of the scalar model parameters.
  * 

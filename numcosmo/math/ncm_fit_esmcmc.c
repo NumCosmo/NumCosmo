@@ -25,8 +25,8 @@
 
 /**
  * SECTION:ncm_fit_esmcmc
- * @title: Ensemble Sampler Markov Chain Monte Carlo Analysis
- * @short_description: Object implementing Esemble Sampler Markov Chain Monte Carlo analysis
+ * @title: NcmFitESMCMC
+ * @short_description: Ensemble sampler Markov Chain Monte Carlo analysis.
  *
  * FIXME
  * 

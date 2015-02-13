@@ -24,8 +24,8 @@
 
 /**
  * SECTION:nc_cluster_photoz_gauss_global
- * @title: Global Gaussian Photoz Cluster
- * @short_description: Gaussian photometric redshift
+ * @title: NcClusterPhotozGaussGlobal
+ * @short_description: Global gaussian photometric distribution for clusters.
  *
  * FIXME
  */

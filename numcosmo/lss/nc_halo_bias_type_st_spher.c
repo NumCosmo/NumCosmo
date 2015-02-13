@@ -25,8 +25,8 @@
 
 /**
  * SECTION:nc_halo_bias_type_st_spher
- * @title: ST Halo Bias Function Type
- * @short_description: Sheth-Tormen Spherical FIXME
+ * @title: NcHaloBiasTypeSTSpher
+ * @short_description: Sheth-Tormen spherical halo bias function type.
  *
  * FIXME
  */

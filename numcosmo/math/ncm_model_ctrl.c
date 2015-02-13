@@ -24,10 +24,11 @@
 
 /**
  * SECTION:ncm_model_ctrl
- * @title: Model Update Control Object
- * @short_description: Control object for testing updates on model status
+ * @title: NcmModelCtrl
+ * @short_description: Control object for testing updates on model status.
  *
  * FIXME
+ * 
  */
 
 #ifdef HAVE_CONFIG_H

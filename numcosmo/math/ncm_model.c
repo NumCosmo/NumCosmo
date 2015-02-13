@@ -24,8 +24,8 @@
 
 /**
  * SECTION:ncm_model
- * @title: Model Abstract Class
- * @short_description: Base class for implementing models
+ * @title: NcmModel
+ * @short_description: Abstract class for implementing models.
  *
  * The #NcmModel abstract class represents a general model. This object serves
  * for two general objectives. First, all the numerical properties (doubles), i.e., 

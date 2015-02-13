@@ -25,8 +25,8 @@
 
 /**
  * SECTION:ncm_mset_trans_kern_gauss
- * @title: Markov Chain Multivariate Gaussian Sampler 
- * @short_description: Object implementing a multivariate gaussian sampler.
+ * @title: NcmMSetTransKernGauss 
+ * @short_description: A multivariate gaussian sampler.
  *
  * FIXME
  * 

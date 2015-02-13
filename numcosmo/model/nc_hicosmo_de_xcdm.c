@@ -24,8 +24,8 @@
 
 /**
  * SECTION:nc_hicosmo_de_xcdm
- * @title: Dark Energy -- XCDM
- * @short_description: Constant dark energy equation of state model
+ * @title: NcHICosmoDEXcdm
+ * @short_description: Dark Energy -- constant dark energy equation of state model.
  *
  * FIXME
  * 

@@ -24,8 +24,8 @@
 
 /**
  * SECTION:quantum_gravity
- * @title: Quantum Gravity Bouncing Model
- * @short_description: FIXME
+ * @title: NcHICosmoQG
+ * @short_description: Quantum gravity bouncing model.
  *
  * FIXME
  */

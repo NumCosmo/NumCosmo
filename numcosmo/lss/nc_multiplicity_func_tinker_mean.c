@@ -25,10 +25,11 @@
 
 /**
  * SECTION:nc_multiplicity_func_tinker_mean
- * @title: Mean Tinker Multiplicity Function
- * @short_description: Dark Matter Halo FIXME
+ * @title: NcMultiplicityFuncTinkerMean
+ * @short_description: Dark matter halo -- Tinker multiplicity function mean matter density. 
  *
  * FIXME
+ * 
  */
 
 #ifdef HAVE_CONFIG_H

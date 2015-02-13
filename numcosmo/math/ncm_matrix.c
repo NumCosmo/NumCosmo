@@ -24,7 +24,7 @@
 
 /**
  * SECTION:ncm_matrix
- * @title: Matrix Object
+ * @title: NcmMatrix
  * @short_description: Matrix object representing an array of doubles.
  *
  * This object defines the functions for allocating and accessing matrices.

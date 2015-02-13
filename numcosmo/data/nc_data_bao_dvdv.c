@@ -25,8 +25,8 @@
 
 /**
  * SECTION:nc_data_bao_dvdv
- * @title: Baryon Oscillation Data -- DVDV
- * @short_description: BAO $D_V/D_V$ ratio estimator
+ * @title: NcDataBaoDVDV
+ * @short_description: Baryon oscillation data -- $D_V / D_V$ ratio.
  *
  * See <link linkend="XPercival2007">Percival et al. (2007)</link>.
  * 

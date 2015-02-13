@@ -25,8 +25,8 @@
 
 /**
  * SECTION:ncm_mset_trans_kern_flat
- * @title: Markov Chain Multivariate Flat Sampler 
- * @short_description: Object implementing a multivariate flat sampler.
+ * @title: NcmMSetTransKernFlat 
+ * @short_description: Multivariate flat sampler.
  *
  * FIXME
  * 

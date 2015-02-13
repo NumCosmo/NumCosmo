@@ -25,8 +25,8 @@
 
 /**
  * SECTION:nc_multiplicity_func
- * @title: Multiplicity Function
- * @short_description: Dark Matter Halo FIXME
+ * @title: NcMultiplicityFunc
+ * @short_description: Dark matter halo multiplicity function.
  *
  * FIXME
  */

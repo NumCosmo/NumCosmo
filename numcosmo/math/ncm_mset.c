@@ -25,10 +25,11 @@
 
 /**
  * SECTION:ncm_mset
- * @title: A Set of NcmModels
- * @short_description: Object representing a set of different NcmModel objects
+ * @title: NcmMSet
+ * @short_description: A set of different NcmModel objects.
  *
  * FIXME
+ * 
  */
 
 #ifdef HAVE_CONFIG_H

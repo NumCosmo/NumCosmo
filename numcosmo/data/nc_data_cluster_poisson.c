@@ -25,8 +25,8 @@
 
 /**
  * SECTION:nc_data_cluster_poisson
- * @title: Cluster number count data
- * @short_description: FIXME
+ * @title: NcDataClusterPoisson
+ * @short_description: Binned cluster number count data.
  *
  * FIXME
  * 

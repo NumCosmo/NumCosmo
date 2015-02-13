@@ -24,10 +24,13 @@
 
 /**
  * SECTION:grid_one
- * @title: Unidimensional Grid
- * @short_description: FIXME
+ * @title: NcmGrid
+ * @short_description: Unidimensional grid.
+ * @stability: Stable
+ * @include: numcosmo/math/grid_one.h
  *
  * FIXME
+ * 
  */
 
 #ifdef HAVE_CONFIG_H

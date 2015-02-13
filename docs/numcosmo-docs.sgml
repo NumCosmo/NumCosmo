@@ -45,8 +45,11 @@
       <title>Splines 1D</title>
       <xi:include href="xml/ncm_spline.xml"/>
       <xi:include href="xml/ncm_spline_gsl.xml"/>
-      <xi:include href="xml/ncm_spline_cubic.xml"/>
-      <xi:include href="xml/ncm_spline_cubic_notaknot.xml"/>
+      <section>
+        <title>Cubic Splines</title>
+        <xi:include href="xml/ncm_spline_cubic.xml"/>
+        <xi:include href="xml/ncm_spline_cubic_notaknot.xml"/>
+      </section>
       <xi:include href="xml/ncm_spline_func.xml"/>
       <xi:include href="xml/ncm_ode_spline.xml"/>
     </section>
@@ -105,7 +108,7 @@
       <xi:include href="xml/ncm_fit_state.xml"/>
       <xi:include href="xml/ncm_fit.xml"/>
       <xi:include href="xml/ncm_fit_nlopt.xml"/>
-      <xi:include href="xml/ncm_fit_nlopt_enum.xml"/>
+      <xi:include href="xml/ncm_fit_nlopt_enum.xml"><xi:fallback /></xi:include>
       <xi:include href="xml/ncm_fit_gsl_ls.xml"/>
       <xi:include href="xml/ncm_fit_gsl_mm.xml"/>
       <xi:include href="xml/ncm_fit_gsl_mms.xml"/>
@@ -151,7 +154,6 @@
       <title>Kinematical</title>
       <xi:include href="xml/nc_hicosmo_qconst.xml"/>
       <xi:include href="xml/nc_hicosmo_qlinear.xml"/>
-      <xi:include href="xml/nc_hicosmo_qpw.xml"/>
       <xi:include href="xml/nc_hicosmo_qspline.xml"/>
     </section>
   </chapter>

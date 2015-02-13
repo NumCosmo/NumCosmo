@@ -25,10 +25,11 @@
 
 /**
  * SECTION:nc_growth_func
- * @title: Perturbations Growth Function
- * @short_description: FIXME
+ * @title: NcGrowthFunc
+ * @short_description: Perturbations growth function.
  *
  * FIXME
+ * 
  */
 
 #ifdef HAVE_CONFIG_H

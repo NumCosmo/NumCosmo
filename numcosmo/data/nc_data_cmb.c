@@ -25,8 +25,8 @@
 
 /**
  * SECTION:nc_data_cmb
- * @title: CMB Data
- * @short_description: Helper function for obtaining CMB data
+ * @title: NcDataCMB
+ * @short_description: Helper function for instantiating CMB data.
  *
  * FIXME
  * 

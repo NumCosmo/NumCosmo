@@ -25,8 +25,8 @@
 
 /**
  * SECTION:nc_recomb
- * @title: Recombination
- * @short_description: Cosmic recombination abstract object.
+ * @title: NcRecomb
+ * @short_description: Abstract class for cosmic recombination.
  * @include: numcosmo/nc_recomb.h
  * 
  * $

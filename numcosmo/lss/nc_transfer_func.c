@@ -25,11 +25,12 @@
 
 /**
  * SECTION:nc_transfer_func
- * @title: Transfer Function Abstract Class
- * @short_description: Defines the prototype of the NcTransferFunc object.
+ * @title: NcTransferFunc
+ * @short_description: Abstrac class for perturbation transfer function.
  *
  * This module comprises the set of functions to compute the transfer function and
  * derived quantities.
+ * 
  */
 
 #ifdef HAVE_CONFIG_H

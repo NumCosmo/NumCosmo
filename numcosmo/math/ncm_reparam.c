@@ -24,8 +24,8 @@
 
 /**
  * SECTION:ncm_reparam
- * @title: Reparametrization Abstract Class
- * @short_description: Base class for model reparametrization
+ * @title: NcmReparam
+ * @short_description: Abstract class for model reparametrization.
  *
  * FIXME
  */

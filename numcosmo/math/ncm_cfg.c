@@ -24,8 +24,8 @@
 
 /**
  * SECTION:ncm_cfg
- * @title: Library Configuration
- * @short_description: Library configuration and helper functions
+ * @title: NcmCfg
+ * @short_description: Library configuration and helper functions.
  *
  * FIXME
  * 
@@ -52,7 +52,6 @@
 #include "perturbations/nc_hipert_iadiab.h"
 #include "model/nc_hicosmo_qconst.h"
 #include "model/nc_hicosmo_qlinear.h"
-#include "model/nc_hicosmo_qpw.h"
 #include "model/nc_hicosmo_qspline.h"
 #include "model/nc_hicosmo_lcdm.h"
 #include "model/nc_hicosmo_de_xcdm.h"
@@ -246,7 +245,6 @@ ncm_cfg_init (void)
 
   ncm_cfg_register_obj (NC_TYPE_HICOSMO_QCONST);
   ncm_cfg_register_obj (NC_TYPE_HICOSMO_QLINEAR);
-  ncm_cfg_register_obj (NC_TYPE_HICOSMO_QPW);
   ncm_cfg_register_obj (NC_TYPE_HICOSMO_QSPLINE);
   ncm_cfg_register_obj (NC_TYPE_HICOSMO_LCDM);
   ncm_cfg_register_obj (NC_TYPE_HICOSMO_DE_XCDM);

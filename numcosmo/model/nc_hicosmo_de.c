@@ -24,8 +24,8 @@
 
 /**
  * SECTION:nc_hicosmo_de
- * @title: Dark Energy Abstract Class
- * @short_description: Base class for implementing dark energy models
+ * @title: NcHICosmoDE
+ * @short_description: Abstract class for implementing dark energy models.
  *
  * FIXME
  */

@@ -25,8 +25,8 @@
 
 /**
  * SECTION:nc_transfer_func_eh
- * @title: EH Transfer Function
- * @short_description: Eisenstein-Hu fitting function.
+ * @title: NcTransferFuncEH
+ * @short_description: Eisenstein-Hu fitting function for the transfer function.
  *
  * FIXME
  */

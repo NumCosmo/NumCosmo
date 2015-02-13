@@ -24,10 +24,13 @@
  
 /**
  * SECTION:dividedifference
- * @title: Divided Difference
- * @short_description: Divided difference methods for function interpolation with derivatives
- *
+ * @title: NcmDividedDifference
+ * @short_description: Divided difference methods for function interpolation with derivatives.
+ * @stability: Unstable
+ * @include: numcosmo/math/dividedifference.h
+ * 
  * FIXME
+ * 
  */
 
 #ifdef HAVE_CONFIG_H

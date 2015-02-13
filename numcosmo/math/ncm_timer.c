@@ -25,8 +25,8 @@
 
 /**
  * SECTION:ncm_timer
- * @title: Timer Object
- * @short_description: Timer object with ETA support.
+ * @title: NcmTimer
+ * @short_description: A timer with ETA support.
  *
  * FIXME
  * 

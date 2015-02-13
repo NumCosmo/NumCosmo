@@ -24,8 +24,8 @@
 
 /**
  * SECTION:quaternion
- * @title: Quanternions
- * @short_description: Quaternions algebra and mapping to matrix
+ * @title: NcmQ
+ * @short_description: Quaternions algebra and mapping to matrix.
  *
  * FIXME
  */

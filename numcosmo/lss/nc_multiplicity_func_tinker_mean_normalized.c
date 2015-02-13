@@ -25,11 +25,13 @@
 
 /**
  * SECTION:nc_multiplicity_func_tinker_mean_normalized
- * @title: Mean Tinker Normalized Multiplicity Function
- * @short_description: Dark Matter Halo FIXME
+ * @title: NcMultiplicityFuncTinkerMeanNormalized
+ * @short_description: Dark matter halo -- Tinker normalized multiplicity function mean matter density.
  *
  * Normalized multiplicity function that has to be used in the halo model approach.
+ * 
  * FIXME
+ * 
  */
 
 #ifdef HAVE_CONFIG_H

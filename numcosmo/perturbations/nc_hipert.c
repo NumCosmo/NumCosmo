@@ -25,8 +25,8 @@
 
 /**
  * SECTION:nc_hipert
- * @title: General Perturbation Object
- * @short_description: Perturbation object for homogeneous and isotropic cosmologies 
+ * @title: NcHIPert
+ * @short_description: Abstract class for perturbation in homogeneous and isotropic cosmologies. 
  *
  * FIXME
  * 

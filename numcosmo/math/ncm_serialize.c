@@ -25,9 +25,9 @@
 
 /**
  * SECTION:ncm_serialize
- * @title: Serialization object.
+ * @title: NcmSerialize
  * @short_description: Serialization, deserialization and duplication object.
- *
+ * 
  * FIXME
  * 
  */

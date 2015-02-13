@@ -25,8 +25,8 @@
 
 /**
  * SECTION:ncm_fit_levmar
- * @title: Least Squares -- Levmar
- * @short_description: Interface for Levenberg-Marquardt nonlinear least squares algorithm library
+ * @title: NcmFitLevmar
+ * @short_description: Best-fit finder -- Levenberg-Marquardt nonlinear least squares algorithm library.
  *
  * FIXME
  * 

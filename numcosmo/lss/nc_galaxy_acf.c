@@ -25,8 +25,8 @@
 
 /**
  * SECTION:nc_galaxy_acf
- * @title: Galaxy Angular Corelation Function
- * @short_description: FIXME
+ * @title: NcGalaxyAcf
+ * @short_description: Galaxy angular correlation function.
  *
  * FIXME
  */

@@ -25,8 +25,8 @@
 
 /**
  * SECTION:ncm_stats_vec
- * @title: Statistics vector object
- * @short_description: An online statistics vector object.
+ * @title: NcmStatsVec
+ * @short_description: An online statistics vector.
  *
  * This object calculates some basic statistics (mean, variance and covariance)
  * of a set of random variables. 

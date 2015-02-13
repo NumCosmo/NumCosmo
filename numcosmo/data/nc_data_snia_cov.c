@@ -25,8 +25,8 @@
 
 /**
  * SECTION:nc_data_snia_cov
- * @title: Supernovae Ia Data -- Covariance
- * @short_description: SNIa data with covariance error matrix
+ * @title: NcDataSNIACov
+ * @short_description: Supernovae Ia Data with covariance error matrix.
  * 
  * See #NcSNIADistCov.
  * 

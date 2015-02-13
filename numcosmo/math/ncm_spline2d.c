@@ -24,8 +24,8 @@
 
 /**
  * SECTION:ncm_spline2d
- * @title: Bidimensional Spline Abstract Class
- * @short_description: Base class for implementing bidimensional splines
+ * @title: NcmSpline2d
+ * @short_description: Abstract class for implementing bidimensional splines.
  *
  * This class comprises all functions to provide a #NcmSpline2d, get its properties
  * and evaluate it given an interpolation method.

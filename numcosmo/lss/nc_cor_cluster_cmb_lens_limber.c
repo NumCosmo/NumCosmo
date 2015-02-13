@@ -25,8 +25,8 @@
 
 /**
  * SECTION:nc_cor_cluster_cmb_lens_limber
- * @title: Cluster and CMB Lensing Correlation
- * @short_description: using halo model and Limber approximation.
+ * @title: NcCorClusterCmbLensLimber
+ * @short_description: Cluster and CMB lensing correlation using halo model and Limber approximation.
  *
  * FIXME
  */

@@ -25,8 +25,8 @@
 
 /**
  * SECTION:nc_hipert_itwo_fluids
- * @title: Two Fluids Perturbation Interface
- * @short_description: Perturbation interface for two fluids system 
+ * @title: NcHIPertITwoFluids
+ * @short_description: Perturbation interface for two fluids system.
  *
  * FIXME
  *

@@ -25,8 +25,8 @@
 
 /**
  * SECTION:nc_hipert_boltzmann_std
- * @title: Standard Boltzmann Perturbation Object
- * @short_description: Perturbation object for Boltzmann hierarchy 
+ * @title: NcHIPertBoltzmannStd
+ * @short_description: Perturbations object for standard Boltzmann hierarchy model. 
  *
  * FIXME
  * 

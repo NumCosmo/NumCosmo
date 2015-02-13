@@ -25,9 +25,9 @@
 
 /**
  * SECTION:nc_hicosmo_priors
- * @title: Homogeneus and Isotropic Models Priors
- * @short_description: Priors for HICosmo models
- *
+ * @title: NcHICosmoPrior
+ * @short_description: Collection of priors for #NcHICosmo models.
+ * 
  * FIXME
  *
  */

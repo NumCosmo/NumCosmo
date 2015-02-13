@@ -25,8 +25,8 @@
 
 /**
  * SECTION:ncm_fftlog
- * @title: Logarithm Fast Fourier Algorithm
- * @short_description: Object implementing logarithm fast fourier transform
+ * @title: NcmFftlog
+ * @short_description: Abstract class for implementing logarithm fast fourier transform.
  *
  * FIXME
  */

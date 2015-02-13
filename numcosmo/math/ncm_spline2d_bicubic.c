@@ -24,8 +24,8 @@
 
 /**
  * SECTION:ncm_spline2d_bicubic
- * @title: Bidimensional Bicubic Spline
- * @short_description: Implements a bidimensional bicubic spline.
+ * @title: NcmSpline2dBicubic
+ * @short_description: Bidimensional bicubic spline.
  *
  * This class implements the functions which use a bicubic interpolation method.
  * 

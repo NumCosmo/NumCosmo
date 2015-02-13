@@ -25,10 +25,12 @@
 
 /**
  * SECTION:ncm_fit_mcmc
- * @title: Markov Chain Monte Carlo Analysis
- * @short_description: Object implementing Markov Chain Monte Carlo analysis.
+ * @title: NcmFitMCMC
+ * @short_description: Markov Chain Monte Carlo analysis.
  *
- * FIXME Metropolis–Hastings sampler.
+ * FIXME 
+ * 
+ * Metropolis–Hastings sampler.
  * 
  */
 

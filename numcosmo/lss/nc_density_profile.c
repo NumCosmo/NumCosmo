@@ -25,8 +25,8 @@
 
 /**
  * SECTION:nc_density_profile
- * @title: Density Profile Function Abstract Class
- * @short_description: Defines the prototype of the NcDensityProfile object. 
+ * @title: NcDensityProfile
+ * @short_description: Abstract class for density profile functions. 
  * 
  * This module comprises the set of functions to compute the matter density profile in both real 
  * and Fourier spaces. 

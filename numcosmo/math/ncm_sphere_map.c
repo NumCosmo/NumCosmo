@@ -25,8 +25,8 @@
 
 /**
  * SECTION:ncm_sphere_map
- * @title: Spherical Shell Map
- * @short_description: Object representing a spherical shell map
+ * @title: NcmSphereMap
+ * @short_description: A spherical shell map.
  *
  * Map manipulation algorithms, Ylm decomposition.
  * 

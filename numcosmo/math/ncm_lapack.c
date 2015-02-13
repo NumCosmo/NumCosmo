@@ -24,14 +24,15 @@
 
 /**
  * SECTION:ncm_lapack
- * @title: Lapack Helper C Functions
- * @short_description: encapsulated LAPACK functions 
+ * @title: NcmLapack
+ * @short_description: Encapsulated LAPACK functions. 
  *
  * This object is dedicated to encapsulate functions from <ulink url="http://www.netlib.org/lapack/">LAPACK</ulink> choosing the most suitable backend.
  * 
  * Priority order: (1) LAPACKE, (2) CLAPACK, (3) LAPACK and (4) GSL.
  * 
  * The description of each function follows its respective LAPACK documentation.
+ * 
  */
 
 #ifdef HAVE_CONFIG_H

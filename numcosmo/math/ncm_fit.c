@@ -25,8 +25,8 @@
 
 /**
  * SECTION:ncm_fit
- * @title: Model Fitting Abstract Class
- * @short_description: Class for implementing fitting methods
+ * @title: NcmFit
+ * @short_description: Abstract class for implementing fitting methods.
  *
  * FIXME
  * 

@@ -25,9 +25,9 @@
 
 /**
  * SECTION:nc_transfer_func_bbks
- * @title: BBKS Transfer Function
- * @short_description: FIXME
- *
+ * @title: NcTransferFuncBBKS
+ * @short_description: Bardeen, Bond, Kaiser and Szalay (BBKS) transfer function.
+ * 
  * FIXME
  */
 

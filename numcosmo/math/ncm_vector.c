@@ -24,8 +24,10 @@
 
 /**
  * SECTION:ncm_vector
- * @title: Vector Object
+ * @title: NcmVector
  * @short_description: Vector object representing arrays of doubles.
+ * @stability: Stable
+ * @include: numcosmo/math/ncm_vector.h
  *
  * This object defines the functions for allocating and accessing vectors.
  * Also includes several vector operations.

@@ -24,8 +24,8 @@
 
 /**
  * SECTION:linear
- * @title: Linear Perturbations
- * @short_description: FIXME
+ * @title: NcLinearPert
+ * @short_description: Linear perturbations.
  *
  * FIXME
  */

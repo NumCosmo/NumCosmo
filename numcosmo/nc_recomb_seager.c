@@ -25,8 +25,8 @@
 
 /**
  * SECTION:nc_recomb_seager
- * @title: Recombination Seager 1999.
- * @short_description: Cosmic recombination implementing Seager (1999)
+ * @title: NcRecombSeager
+ * @short_description: Cosmic recombination implementing Seager (1999).
  * @include: numcosmo/nc_recomb_seager.h
  *
  * Cosmic recobination as describe in <link linkend="XSeager1999">Seager (1999)</link>.

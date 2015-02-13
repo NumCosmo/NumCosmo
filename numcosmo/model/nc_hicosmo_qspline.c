@@ -24,10 +24,11 @@
 
 /**
  * SECTION:nc_hicosmo_qspline
- * @title: Spline Deceleration Parameter Model
- * @short_description: FIXME
+ * @title: NcHICosmoQSpline
+ * @short_description: Spline deceleration parameter kinetic model.
  *
  * FIXME
+ * 
  */
 
 #ifdef HAVE_CONFIG_H

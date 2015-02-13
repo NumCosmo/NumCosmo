@@ -25,8 +25,8 @@
 
 /**
  * SECTION:nc_window_tophat
- * @title: Top-hat Window Function
- * @short_description: Provides a NcWindow of top-hat type filter
+ * @title: NcWindowTophat
+ * @short_description: A top-hat window function.
  * 
  * This object implements the #NcWindow class for a top-hat window function.
  * 

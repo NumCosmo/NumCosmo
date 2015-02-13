@@ -25,8 +25,8 @@
 
 /**
  * SECTION:ncm_fit_gsl_mms
- * @title: Non-linear Simplex Minimization -- GSL
- * @short_description: Interface for GSL non-linear minimization (simplex) algorithms
+ * @title: NcmFitGSLMMS
+ * @short_description: Best-fit finder -- GSL non-linear minimization (simplex) algorithms.
  *
  * FIXME
  * 

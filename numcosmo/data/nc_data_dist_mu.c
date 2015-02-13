@@ -25,8 +25,8 @@
 
 /**
  * SECTION:nc_data_dist_mu
- * @title: Distance Modulus Data
- * @short_description: Data samples of distance modulus
+ * @title: NcDataDistMu
+ * @short_description: Distance modulus data.
  *
  * FIXME
  *

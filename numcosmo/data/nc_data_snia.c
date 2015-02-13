@@ -24,8 +24,8 @@
 
 /**
  * SECTION:nc_data_snia
- * @title: SN Ia Data
- * @short_description: Helper function for obtaining Supernovae Ia data
+ * @title: NcDataSNIAId
+ * @short_description: Helper function for instantiating Supernovae Ia data.
  * 
  * FIXME
  * 

@@ -5,6 +5,12 @@
 #endif /* HAVE_CONFIG_H */
 #include <numcosmo/numcosmo.h>
 
+/**
+ * SECTION:nc_enum_types
+ * @title: NcEnumTypes
+ * @short_description: Automaticaly generated enum types from NumCosmo library.
+ *
+ */
 /*** END file-header ***/
 
 /*** BEGIN file-production ***/

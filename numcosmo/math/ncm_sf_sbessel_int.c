@@ -24,8 +24,8 @@
 
 /**
  * SECTION:ncm_sf_sbessel_int
- * @title: Spherical Bessel Integral -- Double Precision
- * @short_description: Double precision spherical bessel integrals implementation
+ * @title: NcmSFSphericalBesselInteg
+ * @short_description: Double precision spherical bessel integrals implementation.
  *
  * FIXME
  */

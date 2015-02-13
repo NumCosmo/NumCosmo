@@ -25,8 +25,8 @@
 
 /**
  * SECTION:nc_data_hubble_bao
- * @title: Hubble Function Data from BAO
- * @short_description: Object representing Hubble Function BAO data
+ * @title: NcDataHubbleBao
+ * @short_description: Hubble function data from BAO.
  *
  * FIXME
  * 

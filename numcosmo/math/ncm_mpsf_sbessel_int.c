@@ -24,10 +24,11 @@
 
 /**
  * SECTION:ncm_mpsf_sbessel_int
- * @title: Spherical Bessel Integral
- * @short_description: Spherical bessel integrals implementation with support for multiple precision calculation
+ * @title: NcmMpsfSBesselInt
+ * @short_description: Multiple precision spherical bessel integrals implementation.
  *
  * FIXME
+ * 
  */
 
 #ifdef HAVE_CONFIG_H

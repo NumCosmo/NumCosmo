@@ -25,10 +25,11 @@
 
 /**
  * SECTION:nc_transfer_func_pert
- * @title: Pert Transfer Function
- * @short_description: FIXME
+ * @title: NcTransferFuncPert
+ * @short_description: Transfer function using NcHIPertBoltzmann as backend.
  *
  * FIXME
+ * 
  */
 
 #ifdef HAVE_CONFIG_H

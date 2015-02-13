@@ -25,9 +25,9 @@
 
 /**
  * SECTION:ncm_mset_trans_kern
- * @title: Model set transition kernel
- * @short_description: Object implementing a generic transition kernel and prior.
- *
+ * @title: NcmMSetTransKern
+ * @short_description: Abstract Class for a transition kernel and prior.
+ * 
  * FIXME
  * 
  */

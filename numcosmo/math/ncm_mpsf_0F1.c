@@ -24,8 +24,8 @@
 
 /**
  * SECTION:ncm_mpsf_0F1
- * @title: Hypergeometric 0F1
- * @short_description: Hypergeometric 0F1 multiple precision implementation
+ * @title: NcmMpsf0F1
+ * @short_description: Multiple precision implementation of the hypergeometric 0F1.
  *
  * FIXME
  * 

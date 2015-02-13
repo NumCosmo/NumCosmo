@@ -24,10 +24,13 @@
 
 /**
  * SECTION:binsplit
- * @title: Binnary Splitting
- * @short_description: Binnary splitting algorithms used to evaluate sums fast and with arbitrary precision
+ * @title: NcmBinSplit
+ * @short_description: Binnary splitting algorithms used to evaluate sums fast and with arbitrary precision.
+ * @stability: Stable
+ * @include: numcosmo/math/binsplit.h
  *
  * FIXME
+ * 
  */
 
 #ifdef HAVE_CONFIG_H

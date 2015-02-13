@@ -25,8 +25,8 @@
 
 /**
  * SECTION:ncm_mset_catalog
- * @title: Fit Catalog
- * @short_description: ordered catalog of different #NcmMSet parameter values
+ * @title: NcmMSetCatalog
+ * @short_description: Ordered catalog of different NcmMSet parameter values.
  *
  * This class defines a catalog type object. This object can automatically synchronize
  * with a fits file (thought cfitsio). 

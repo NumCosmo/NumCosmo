@@ -216,7 +216,6 @@ nc_headers = \
 	model/nc_hicosmo_lcdm.h       \
 	model/nc_hicosmo_qconst.h     \
 	model/nc_hicosmo_qlinear.h    \
-	model/nc_hicosmo_qpw.h        \
 	model/nc_hicosmo_qspline.h    \
 	model/nc_hicosmo_qgrw.h       \
 	lss/nc_window.h               \
@@ -306,7 +305,6 @@ nc_sources = \
 	model/nc_hicosmo_lcdm.c      \
 	model/nc_hicosmo_qconst.c    \
 	model/nc_hicosmo_qlinear.c   \
-	model/nc_hicosmo_qpw.c       \
 	model/nc_hicosmo_qspline.c   \
 	model/nc_hicosmo_qgrw.c      \
 	lss/nc_window.c              \

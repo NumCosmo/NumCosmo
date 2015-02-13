@@ -25,8 +25,8 @@
 
 /**
  * SECTION:ncm_data_dist1d
- * @title: One Variable Distribution Data
- * @short_description: Object representing a one variable distribution data
+ * @title: NcmDataDist1d
+ * @short_description: Abstract class for one variable distribution data.
  *
  * FIXME
  * 

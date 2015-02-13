@@ -25,8 +25,8 @@
 
 /**
  * SECTION:nc_cluster_mass_lnnormal
- * @title: Cluster Mass Ln Normal Distribution
- * @short_description: FIXME
+ * @title: NcClusterMassLnnormal
+ * @short_description: Cluster mass ln-normal distribution.
  *
  * FIXME
  */

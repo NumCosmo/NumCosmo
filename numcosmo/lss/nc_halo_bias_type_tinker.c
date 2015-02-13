@@ -25,8 +25,8 @@
 
 /**
  * SECTION:nc_halo_bias_type_tinker
- * @title: Tinker Halo Bias Function Type
- * @short_description: Tinker et al. FIXME
+ * @title: NcHaloBiasTypeTinker
+ * @short_description: Tinker halo bias function type.
  *
  * FIXME
  */

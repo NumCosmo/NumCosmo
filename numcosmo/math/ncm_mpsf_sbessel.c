@@ -24,12 +24,12 @@
 
 /**
  * SECTION:ncm_mpsf_sbessel
- * @title: Spherical Bessel
- * @short_description: Spherical bessel implementation with support for multiple precision calculation
+ * @title: NcmMpsfSBessel
+ * @short_description: Multiple precision spherical bessel implementation.
  *
  * FIXME
+ * 
  */
-
 
 #ifdef HAVE_CONFIG_H
 #  include "config.h"

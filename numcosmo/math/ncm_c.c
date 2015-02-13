@@ -25,12 +25,13 @@
 
 /**
  * SECTION:ncm_c
- * @title: Numerical and Physical Constants
- * @short_description: Numerical constants
+ * @title: NcmC
+ * @short_description: Numerical and physical constants.
  *
  * Mathematical and physical constants and constants manipulation
  * functions.
- * Using 2006 CODATA recommended values, see constants.txt.
+ * Using 2006 CODATA recommended values, see constants.txt distributed with
+ * sources.
  *
  */
 

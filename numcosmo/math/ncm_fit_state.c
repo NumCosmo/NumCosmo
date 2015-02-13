@@ -25,10 +25,11 @@
 
 /**
  * SECTION:ncm_fit_state
- * @title: Fitting State
- * @short_description: Object representing the current state of a NcmFit object
+ * @title: NcmFitState
+ * @short_description: State of a NcmFit object.
  *
  * FIXME
+ * 
  */
 
 #ifdef HAVE_CONFIG_H

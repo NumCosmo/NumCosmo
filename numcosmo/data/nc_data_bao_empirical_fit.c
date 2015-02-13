@@ -25,9 +25,9 @@
 
 /**
  * SECTION:nc_data_bao_empirical_fit
- * @title: Baryon Oscillation data -- Dv/r
- * @short_description: full likelihood
- *
+ * @title: NcDataBaoEmpiricalFit
+ * @short_description: Baryon oscillation data -- $D_V / r_s$ empirical likelihood.
+ * 
  * This object implements the BAO data when its likelihood function is provided, 
  * e.g., <link linkend="XRoss2014">Ross et al. (2015)</link>. 
  * 

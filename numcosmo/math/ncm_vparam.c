@@ -25,8 +25,8 @@
 
 /**
  * SECTION:ncm_vparam
- * @title: Model Vector Parameter Description
- * @short_description: Describes the properties of a vector parameter
+ * @title: NcmVParam
+ * @short_description: Properties of a vector-like parameter.
  *
  * This object comprises the necessary properties to define a vector parameter.
  * It is used by #NcmModel to store the description of the vector model parameters.

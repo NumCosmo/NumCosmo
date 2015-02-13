@@ -25,8 +25,8 @@
 
 /**
  * SECTION:nc_hipert_two_fluids
- * @title: Two fluids Perturbation Object
- * @short_description: Perturbation object for a two fluids system 
+ * @title: NcHIPertTwoFluids
+ * @short_description: Perturbation object for a two fluids system. 
  *
  * This object provides the computation of the two fluid system of cosmological 
  * perturbations. This problem is decribed by two fluids with energy density and pressure

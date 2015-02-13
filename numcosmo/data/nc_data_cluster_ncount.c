@@ -25,8 +25,8 @@
 
 /**
  * SECTION:nc_data_cluster_ncount
- * @title: Cluster number count data
- * @short_description: FIXME
+ * @title: NcDataClusterNCount
+ * @short_description: Cluster number count data.
  *
  * FIXME
  */

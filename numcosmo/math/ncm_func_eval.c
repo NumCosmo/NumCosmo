@@ -24,8 +24,8 @@
 
 /**
  * SECTION:ncm_func_eval
- * @title: Function Evaluator
- * @short_description: A general purpose multi-threaded function evaluator
+ * @title: NcmFuncEval
+ * @short_description: A general purpose multi-threaded function evaluator.
  *
  * FIXME
  */
@@ -40,7 +40,7 @@
 #include "math/ncm_util.h"
 #include <stdio.h>
 
-typedef struct _NcmFunctionEvalCtrl
+typedef struct _NcmFuncEvalCtrl
 {
   gint active_threads;
   GMutex *update;
@@ -49,27 +49,27 @@ typedef struct _NcmFunctionEvalCtrl
   GMutex update_m;
   GCond finish_c;
 #endif
-} NcmFunctionEvalCtrl;
+} NcmFuncEvalCtrl;
 
-typedef struct _NcmLoopFuncEval
+typedef struct _NcmFuncEvalLoopEval
 {
-  NcmLoopFunc lfunc;
+  NcmFuncEvalLoop lfunc;
   glong i;
   glong f;
   gpointer data;
-  NcmFunctionEvalCtrl *ctrl;
-} NcmLoopFuncEval;
+  NcmFuncEvalCtrl *ctrl;
+} NcmFuncEvalLoopEval;
 
 static GThreadPool *_function_thread_pool = NULL;
 
 static void
 func (gpointer data, gpointer empty)
 {
-  NcmLoopFuncEval *arg = (NcmLoopFuncEval *)data;
-  NcmFunctionEvalCtrl *ctrl = arg->ctrl;
+  NcmFuncEvalLoopEval *arg = (NcmFuncEvalLoopEval *)data;
+  NcmFuncEvalCtrl *ctrl = arg->ctrl;
   NCM_UNUSED (empty);
   arg->lfunc (arg->i, arg->f, arg->data);
-  g_slice_free (NcmLoopFuncEval, arg);
+  g_slice_free (NcmFuncEvalLoopEval, arg);
 
   g_mutex_lock (ctrl->update);
 
@@ -130,7 +130,7 @@ ncm_func_eval_set_max_threads (gint mt)
 
 /**
  * ncm_func_eval_threaded_loop_nw:
- * @lfunc: (scope notified): #NcmLoopFunc to be evaluated in threads
+ * @lfunc: (scope notified): #NcmFuncEvalLoop to be evaluated in threads
  * @i: initial index
  * @f: final index
  * @data: pointer to be passed to @fl
@@ -141,9 +141,9 @@ ncm_func_eval_set_max_threads (gint mt)
  */
 #if NCM_THREAD_POOL_MAX > 1
 void
-ncm_func_eval_threaded_loop_nw (NcmLoopFunc lfunc, glong i, glong f, gpointer data, guint nworkers)
+ncm_func_eval_threaded_loop_nw (NcmFuncEvalLoop lfunc, glong i, glong f, gpointer data, guint nworkers)
 {
-  NcmFunctionEvalCtrl ctrl = {0, NULL, NULL, 
+  NcmFuncEvalCtrl ctrl = {0, NULL, NULL, 
 #if !((GLIB_MAJOR_VERSION == 2) && (GLIB_MINOR_VERSION < 32))
     {NULL},
     {NULL},
@@ -181,7 +181,7 @@ ncm_func_eval_threaded_loop_nw (NcmLoopFunc lfunc, glong i, glong f, gpointer da
     ctrl.active_threads = nworkers;
 
     do {
-      NcmLoopFuncEval *arg = g_slice_new (NcmLoopFuncEval);
+      NcmFuncEvalLoopEval *arg = g_slice_new (NcmFuncEvalLoopEval);
       arg->lfunc = lfunc;
       arg->i = li;
       arg->f = lf;
@@ -208,7 +208,7 @@ ncm_func_eval_threaded_loop_nw (NcmLoopFunc lfunc, glong i, glong f, gpointer da
 }
 #else
 void
-ncm_func_eval_threaded_loop_nw (NcmLoopFunc lfunc, glong i, glong f, gpointer data, guint nworkers)
+ncm_func_eval_threaded_loop_nw (NcmFuncEvalLoop lfunc, glong i, glong f, gpointer data, guint nworkers)
 {
   lfunc (i, f, data);
 }
@@ -216,7 +216,7 @@ ncm_func_eval_threaded_loop_nw (NcmLoopFunc lfunc, glong i, glong f, gpointer da
 
 /**
  * ncm_func_eval_threaded_loop:
- * @lfunc: (scope notified): #NcmLoopFunc to be evaluated in threads
+ * @lfunc: (scope notified): #NcmFuncEvalLoop to be evaluated in threads
  * @i: initial index
  * @f: final index
  * @data: pointer to be passed to @fl
@@ -225,7 +225,7 @@ ncm_func_eval_threaded_loop_nw (NcmLoopFunc lfunc, glong i, glong f, gpointer da
  *
  */
 void
-ncm_func_eval_threaded_loop (NcmLoopFunc lfunc, glong i, glong f, gpointer data)
+ncm_func_eval_threaded_loop (NcmFuncEvalLoop lfunc, glong i, glong f, gpointer data)
 {
   ncm_func_eval_get_pool ();
   {
@@ -236,7 +236,7 @@ ncm_func_eval_threaded_loop (NcmLoopFunc lfunc, glong i, glong f, gpointer data)
 
 /**
  * ncm_func_eval_threaded_loop_full:
- * @lfunc: (scope notified): #NcmLoopFunc to be evaluated in threads
+ * @lfunc: (scope notified): #NcmFuncEvalLoop to be evaluated in threads
  * @i: initial index
  * @f: final index
  * @data: pointer to be passed to @fl
@@ -246,9 +246,9 @@ ncm_func_eval_threaded_loop (NcmLoopFunc lfunc, glong i, glong f, gpointer data)
  */
 #if NCM_THREAD_POOL_MAX > 1
 void
-ncm_func_eval_threaded_loop_full (NcmLoopFunc lfunc, glong i, glong f, gpointer data)
+ncm_func_eval_threaded_loop_full (NcmFuncEvalLoop lfunc, glong i, glong f, gpointer data)
 {
-  NcmFunctionEvalCtrl ctrl = {0, NULL, NULL, 
+  NcmFuncEvalCtrl ctrl = {0, NULL, NULL, 
 #if !((GLIB_MAJOR_VERSION == 2) && (GLIB_MINOR_VERSION < 32))
     {NULL},
     {NULL},
@@ -275,7 +275,7 @@ ncm_func_eval_threaded_loop_full (NcmLoopFunc lfunc, glong i, glong f, gpointer 
 
     for (l = i; l < f; l++)
     {
-      NcmLoopFuncEval *arg = g_slice_new (NcmLoopFuncEval);
+      NcmFuncEvalLoopEval *arg = g_slice_new (NcmFuncEvalLoopEval);
       arg->lfunc = lfunc;
       arg->i = l;
       arg->f = l + 1;
@@ -300,7 +300,7 @@ ncm_func_eval_threaded_loop_full (NcmLoopFunc lfunc, glong i, glong f, gpointer 
 }
 #else
 void
-ncm_func_eval_threaded_loop_full (NcmLoopFunc lfunc, glong i, glong f, gpointer data)
+ncm_func_eval_threaded_loop_full (NcmFuncEvalLoop lfunc, glong i, glong f, gpointer data)
 {
   lfunc (i, f, data);
 }

@@ -25,9 +25,9 @@
 
 /**
  * SECTION:nc_hicosmo_qgrw
- * @title: Quantum Gravity Radiation $w$ model
- * @short_description: Radiation plus $w$-fluid model with a quantum generated bounce phase.
- *
+ * @title: NcHICosmoQGRW
+ * @short_description: Radiation plus $w$-fluid model with a quantum generated bounce phase model.
+ * 
  * In this model the adiabatic mode $\zeta$ has its mass, speed of sound square $c_s^2$ and frequency square $\nu_\zeta^2$ given by
  * \begin{align}
  * m_\zeta &= 3 \Delta_\bar{K}\sqrt{\Omega_w} x^{-3(1-w)/2}\frac{(1 + w) +  4R/3}{c_s^2}\frac{1}{\sqrt{(1-exp(-2\vert\alpha\vert)) + (1-exp(-3(1-w)\vert\alpha\vert))}}, \\\\

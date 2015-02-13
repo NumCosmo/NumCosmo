@@ -25,10 +25,11 @@
 
 /**
  * SECTION:nc_multiplicity_func_st
- * @title: Sheth-Tormen Multiplicity Function
- * @short_description: Dark Matter Halo FIXME
+ * @title: NcMultiplicityFuncST
+ * @short_description: Dark matter halo -- Sheth-Tormen multiplicity function.
  *
  * FIXME
+ * 
  */
 
 #ifdef HAVE_CONFIG_H

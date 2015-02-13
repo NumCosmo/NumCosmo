@@ -24,8 +24,10 @@
 
 /**
  * SECTION:healpix
- * @title: Healpix
+ * @title: NcmSphereHealpix
  * @short_description: Healpix re-implementation
+ * @stability: Stable
+ * @include: numcosmo/sphere/healpix.h
  *
  * FIXME
  * 

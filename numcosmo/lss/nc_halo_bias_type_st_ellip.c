@@ -25,8 +25,8 @@
 
 /**
  * SECTION:nc_halo_bias_type_st_ellip
- * @title: ST Halo Bias Function Type
- * @short_description: Sheth-Tormen Elliptical FIXME
+ * @title: NcHaloBiasTypeSTEllip
+ * @short_description: Sheth-Tormen elliptical halo bias function type.
  *
  * FIXME
  */

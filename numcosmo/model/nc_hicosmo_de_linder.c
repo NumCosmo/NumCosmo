@@ -24,8 +24,8 @@
 
 /**
  * SECTION:nc_hicosmo_de_linder
- * @title: Dark Energy -- Linder
- * @short_description: Linder dark energy equation of state parametrization
+ * @title: NcHICosmoDELinder
+ * @short_description: Dark Energy -- Linder equation of state parametrization.
  *
  * See <link linkend="XLinder2003">Linder (2003)</link>.
  * 

@@ -25,8 +25,8 @@
 
 /**
  * SECTION:ncm_lh_ratio2d
- * @title: Likelihood Ratio 2D
- * @short_description: Likelihood ratio object for bidimensional analysis.
+ * @title: NcmLHRatio2d
+ * @short_description: Likelihood ratio object for bidimensional parameter analysis.
  *
  * FIXME
  * 

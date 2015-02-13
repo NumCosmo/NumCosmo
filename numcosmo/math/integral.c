@@ -24,10 +24,13 @@
 
 /**
  * SECTION:integral
- * @title: Numerical Integration
- * @short_description: FIXME
+ * @title: NcmIntegral
+ * @short_description: Numerical integration helpers.
+ * @stability: Stable
+ * @include: numcosmo/math/integral.h
  *
  * FIXME
+ * 
  */
 
 #ifdef HAVE_CONFIG_H

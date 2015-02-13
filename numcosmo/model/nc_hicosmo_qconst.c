@@ -24,8 +24,8 @@
 
 /**
  * SECTION:nc_hicosmo_qconst
- * @title: Constant Deceleration Parameter Model
- * @short_description: FIXME
+ * @title: NcHICosmoQConst
+ * @short_description: Constant deceleration parameter kinetic model.
  *
  * FIXME
  */
@@ -58,7 +58,7 @@ _nc_hicosmo_qconst_cd (NcmModel *model, gdouble z)
   ln_x_x1 = gsl_sf_log (x/x1);
 
   if (Z1 == z)
-	return CD;
+    return CD;
 
   return CD + x1 * ln_x_x1 / E * gsl_sf_exprel (-Q * ln_x_x1);
 }

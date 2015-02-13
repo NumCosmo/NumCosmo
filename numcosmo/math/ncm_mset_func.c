@@ -25,8 +25,8 @@
 
 /**
  * SECTION:ncm_mset_func
- * @title: A Function of NcmMSet
- * @short_description: Object representing a function on NcmMSet
+ * @title: NcmMSetFunc
+ * @short_description: A function of NcmMSet.
  *
  * FIXME
  * 

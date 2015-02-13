@@ -24,8 +24,8 @@
 
 /**
  * SECTION:ncm_util
- * @title: Miscellaneous Utilities
- * @short_description: Miscellaneous Utilities
+ * @title: NcmUtil
+ * @short_description: Miscellaneous utilities.
  *
  * Miscellaneous utility functions, macros and objects.
  * 

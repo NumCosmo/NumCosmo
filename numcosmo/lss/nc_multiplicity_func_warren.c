@@ -25,10 +25,11 @@
 
 /**
  * SECTION:nc_multiplicity_func_warren
- * @title: Warren Multiplicity Function
- * @short_description: Dark Matter Halo FIXME
+ * @title: NcMultiplicityFuncWarren
+ * @short_description: Dark matter halo -- Warren multiplicity function.
  *
  * FIXME
+ * 
  */
 
 #ifdef HAVE_CONFIG_H

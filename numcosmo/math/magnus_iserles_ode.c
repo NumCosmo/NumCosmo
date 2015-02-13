@@ -24,10 +24,11 @@
    
 /**
  * SECTION:magnus_iserles_ode
- * @title: Magnus Iserles Ode Method
- * @short_description: Ode solver for fast oscillating systems
+ * @title: NcmMIOde
+ * @short_description: Magnus Iserles ode solver for fast oscillatory systems.
  *
  * FIXME
+ * 
  */
 
 #ifdef HAVE_CONFIG_H

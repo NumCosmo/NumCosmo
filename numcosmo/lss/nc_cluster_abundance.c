@@ -24,8 +24,8 @@
 
 /**
  * SECTION:nc_cluster_abundance
- * @title: Cluster Abundance Distribution
- * @short_description: FIXME
+ * @title: NcClusterAbundance
+ * @short_description: Cluster abundance distribution.
  *
  * FIXME
  */
