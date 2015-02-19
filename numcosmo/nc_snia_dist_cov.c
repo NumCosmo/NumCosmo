@@ -49,7 +49,7 @@
 #define BETA    (ncm_vector_get (VECTOR, NC_SNIA_DIST_COV_BETA))
 #define ABSMAG1 (ncm_vector_get (VECTOR, NC_SNIA_DIST_COV_M1))
 #define ABSMAG2 (ncm_vector_get (VECTOR, NC_SNIA_DIST_COV_M2))
-#define SIGMA_PECZ (ncm_vector_get (VECTOR, NC_SNIA_DIST_COV_SIGMA_PECZ))
+#define LNSIGMA_PECZ (ncm_vector_get (VECTOR, NC_SNIA_DIST_COV_LNSIGMA_PECZ))
 
 enum
 {
@@ -73,22 +73,22 @@ nc_snia_dist_cov_constructed (GObject *object)
   G_OBJECT_CLASS (nc_snia_dist_cov_parent_class)->constructed (object);
   {
     NcmModel *model = NCM_MODEL (object);
-    guint sigma_int_len = ncm_model_vparam_len (model, NC_SNIA_DIST_COV_SIGMA_INT);
+    guint sigma_int_len = ncm_model_vparam_len (model, NC_SNIA_DIST_COV_LNSIGMA_INT);
 
     switch (sigma_int_len)
     {
       case 4:
-        ncm_model_orig_vparam_set (model, NC_SNIA_DIST_COV_SIGMA_INT, 0, 0.0675);
-        ncm_model_orig_vparam_set (model, NC_SNIA_DIST_COV_SIGMA_INT, 1, 0.1133);
-        ncm_model_orig_vparam_set (model, NC_SNIA_DIST_COV_SIGMA_INT, 2, 0.0815);
-        ncm_model_orig_vparam_set (model, NC_SNIA_DIST_COV_SIGMA_INT, 3, 0.0989);
+        ncm_model_orig_vparam_set (model, NC_SNIA_DIST_COV_LNSIGMA_INT, 0, log (0.0675));
+        ncm_model_orig_vparam_set (model, NC_SNIA_DIST_COV_LNSIGMA_INT, 1, log (0.1133));
+        ncm_model_orig_vparam_set (model, NC_SNIA_DIST_COV_LNSIGMA_INT, 2, log (0.0815));
+        ncm_model_orig_vparam_set (model, NC_SNIA_DIST_COV_LNSIGMA_INT, 3, log (0.0989));
         break;
       default:
       {
         guint i;
         for (i = 0; i < sigma_int_len; i++)
         {
-          ncm_model_orig_vparam_set (model, NC_SNIA_DIST_COV_SIGMA_INT, i, 0.0);
+          ncm_model_orig_vparam_set (model, NC_SNIA_DIST_COV_LNSIGMA_INT, i, -5.0 * M_LN10);
         }
       }
       break;
@@ -177,39 +177,39 @@ nc_snia_dist_cov_class_init (NcSNIADistCovClass *klass)
                                                         NC_TYPE_DISTANCE,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));  
 
-  ncm_model_class_set_sparam (model_class, NC_SNIA_DIST_COV_ALPHA, "alpha", "alpha",
+  ncm_model_class_set_sparam (model_class, NC_SNIA_DIST_COV_ALPHA, "\\alpha", "alpha",
                               -10.0, 10.0, 1.0e-1,
                               NC_SNIA_DIST_COV_DEFAULT_PARAMS_ABSTOL, NC_SNIA_DIST_COV_DEFAULT_ALPHA,
                               NCM_PARAM_TYPE_FIXED);
 
-  ncm_model_class_set_sparam (model_class, NC_SNIA_DIST_COV_BETA, "beta", "beta",
+  ncm_model_class_set_sparam (model_class, NC_SNIA_DIST_COV_BETA, "\\beta", "beta",
                               -10.0, 10.0, 1.0e-1,
                               NC_SNIA_DIST_COV_DEFAULT_PARAMS_ABSTOL, NC_SNIA_DIST_COV_DEFAULT_BETA,
                               NCM_PARAM_TYPE_FIXED);
 
-  ncm_model_class_set_sparam (model_class, NC_SNIA_DIST_COV_M1, "Absolute Magnitude 1", "M1",
+  ncm_model_class_set_sparam (model_class, NC_SNIA_DIST_COV_M1, "\\mathcal{M}_1", "M1",
                               -50.0, 10.0, 1.0,
                               NC_SNIA_DIST_COV_DEFAULT_PARAMS_ABSTOL, NC_SNIA_DIST_COV_DEFAULT_M1,
                               NCM_PARAM_TYPE_FIXED);
 
-  ncm_model_class_set_sparam (model_class, NC_SNIA_DIST_COV_M2, "Absolute Magnitude 2", "M2",
+  ncm_model_class_set_sparam (model_class, NC_SNIA_DIST_COV_M2, "\\mathcal{M}_1", "M2",
                               -50.0, 10.0, 1.0,
                               NC_SNIA_DIST_COV_DEFAULT_PARAMS_ABSTOL, NC_SNIA_DIST_COV_DEFAULT_M2,
                               NCM_PARAM_TYPE_FIXED);
   
-  ncm_model_class_set_sparam (model_class, NC_SNIA_DIST_COV_SIGMA_PECZ, "Error from SN Ia peculiar velocity", "sigma_pecz",
-                              0.0, 1.0e1, 1.0e-1,
-                              NC_SNIA_DIST_COV_DEFAULT_PARAMS_ABSTOL, NC_SNIA_DIST_COV_DEFAULT_SIGMA_PECZ,
+  ncm_model_class_set_sparam (model_class, NC_SNIA_DIST_COV_LNSIGMA_PECZ, "\\ln(\\sigma_{\\mathrm{pecz}})", "lnsigma_pecz",
+                              -5.0 * M_LN10, 5.0 * M_LN10, 1.0e-1,
+                              NC_SNIA_DIST_COV_DEFAULT_PARAMS_ABSTOL, NC_SNIA_DIST_COV_DEFAULT_LNSIGMA_PECZ,
                               NCM_PARAM_TYPE_FIXED);
 
-  ncm_model_class_set_vparam (model_class, NC_SNIA_DIST_COV_SIGMA_INT, NC_SNIA_DIST_COV_SIGMA_INT_DEFAULT_LEN, 
-                              "Sigma intrisic", "sigma_int",
-                              0.0, 1.0e1, 1.0e-3, 
-                              NC_SNIA_DIST_COV_DEFAULT_PARAMS_ABSTOL, NC_SNIA_DIST_COV_DEFAULT_SIGMA_INT,
+  ncm_model_class_set_vparam (model_class, NC_SNIA_DIST_COV_LNSIGMA_INT, NC_SNIA_DIST_COV_LNSIGMA_INT_DEFAULT_LEN, 
+                              "\\ln(\\sigma_{\\mathrm{int}})", "lnsigma_int",
+                              -5.0 * M_LN10, 5.0 * M_LN10, 1.0e-1, 
+                              NC_SNIA_DIST_COV_DEFAULT_PARAMS_ABSTOL, NC_SNIA_DIST_COV_DEFAULT_LNSIGMA_INT,
                               NCM_PARAM_TYPE_FIXED);
 
   ncm_model_class_set_vparam (model_class, NC_SNIA_DIST_COV_MU, NC_SNIA_DIST_COV_MU_DEFAULT_LEN, 
-                              "Distance modulus", "mu",
+                              "\\mu", "Distance modulus",
                               -50.0, 50.0, 1.0e-2, 
                               NC_SNIA_DIST_COV_DEFAULT_PARAMS_ABSTOL, NC_SNIA_DIST_COV_DEFAULT_MU,
                               NCM_PARAM_TYPE_FIXED);
@@ -320,12 +320,12 @@ nc_snia_dist_cov_calc (NcSNIADistCov *dcov, NcDataSNIACov *snia_cov, NcmMatrix *
 
   g_assert (NCM_DATA (snia_cov)->init);
 
-  if (ncm_model_vparam_len (model, NC_SNIA_DIST_COV_SIGMA_INT) > snia_cov->dataset_len)
+  if (ncm_model_vparam_len (model, NC_SNIA_DIST_COV_LNSIGMA_INT) > snia_cov->dataset_len)
     g_warning ("nc_snia_dist_cov_calc: model dataset is larger then the used by the data: %u > %u.", 
-               ncm_model_vparam_len (model, NC_SNIA_DIST_COV_SIGMA_INT), snia_cov->dataset_len);
-  else if (ncm_model_vparam_len (model, NC_SNIA_DIST_COV_SIGMA_INT) < snia_cov->dataset_len)    
+               ncm_model_vparam_len (model, NC_SNIA_DIST_COV_LNSIGMA_INT), snia_cov->dataset_len);
+  else if (ncm_model_vparam_len (model, NC_SNIA_DIST_COV_LNSIGMA_INT) < snia_cov->dataset_len)    
     g_error ("nc_snia_dist_cov_calc: model dataset is smaller then the used by the data: %u < %u.", 
-             ncm_model_vparam_len (model, NC_SNIA_DIST_COV_SIGMA_INT), snia_cov->dataset_len);
+             ncm_model_vparam_len (model, NC_SNIA_DIST_COV_LNSIGMA_INT), snia_cov->dataset_len);
   
   for (ij = 0; ij < ij_len; ij++)
   {
@@ -347,16 +347,16 @@ nc_snia_dist_cov_calc (NcSNIADistCov *dcov, NcDataSNIACov *snia_cov, NcmMatrix *
   }
   for (i = 0; i < snia_cov->mu_len; i++)
   {
-    const gdouble zfacsq     = (5.0 / M_LN10) * (5.0 / M_LN10);
-    const guint dset_id      = g_array_index (snia_cov->dataset, guint32, i);
-    const gdouble sigma_int  = ncm_model_orig_vparam_get (model, NC_SNIA_DIST_COV_SIGMA_INT, dset_id);
-    const gdouble var_int    = sigma_int * sigma_int; 
-    const gdouble z_cmb      = ncm_vector_get (snia_cov->z_cmb, i);
-    const gdouble sigma_z    = ncm_vector_get (snia_cov->sigma_z, i);
-    const gdouble emptyfac   = (1.0 + z_cmb) / (z_cmb * (1.0 + 0.5 * z_cmb));
-    const gdouble sigma_pecz = SIGMA_PECZ;
-    const gdouble var_pecz   = sigma_pecz * sigma_pecz;
-    const gdouble var_z_tot  = (var_pecz + sigma_z * sigma_z) * zfacsq * emptyfac * emptyfac; 
+    const gdouble zfacsq      = (5.0 / M_LN10) * (5.0 / M_LN10);
+    const guint dset_id       = g_array_index (snia_cov->dataset, guint32, i);
+    const gdouble lnsigma_int = ncm_model_orig_vparam_get (model, NC_SNIA_DIST_COV_LNSIGMA_INT, dset_id);
+    const gdouble var_int     = exp (2.0 * lnsigma_int); 
+    const gdouble z_cmb       = ncm_vector_get (snia_cov->z_cmb, i);
+    const gdouble sigma_z     = ncm_vector_get (snia_cov->sigma_z, i);
+    const gdouble emptyfac    = (1.0 + z_cmb) / (z_cmb * (1.0 + 0.5 * z_cmb));
+    const gdouble sigma_pecz  = exp (LNSIGMA_PECZ);
+    const gdouble var_pecz    = sigma_pecz * sigma_pecz;
+    const gdouble var_z_tot   = (var_pecz + sigma_z * sigma_z) * zfacsq * emptyfac * emptyfac; 
 
     const gdouble sigma_mag        =  ncm_vector_get (snia_cov->sigma_mag, i);
     const gdouble sigma_width      =  ncm_vector_get (snia_cov->sigma_width, i);

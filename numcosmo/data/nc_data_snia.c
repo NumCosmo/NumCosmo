@@ -93,6 +93,7 @@ void
 nc_data_snia_load_cat (NcDataSNIACov *snia_cov, NcDataSNIAId id)
 {
   gchar *full_filename = nc_data_snia_get_catalog_by_id (id);
+  
 #ifdef NUMCOSMO_HAVE_CFITSIO
   nc_data_snia_cov_load (snia_cov, full_filename);
 #else

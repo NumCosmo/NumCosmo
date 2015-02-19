@@ -175,12 +175,11 @@ _ncm_mset_trans_kern_gauss_generate (NcmMSetTransKern *tkern, NcmVector *theta, 
 {
   NcmMSetTransKernGauss *tkerng = NCM_MSET_TRANS_KERN_GAUSS (tkern);
   gint ret;
-  guint i, j;
-  gboolean valid = FALSE;
+  guint i;
 
   g_assert (tkerng->init);
 
-  while (!valid)
+  while (TRUE)
   {
     ncm_rng_lock (rng);
     for (i = 0; i < tkerng->len; i++)
@@ -196,18 +195,8 @@ _ncm_mset_trans_kern_gauss_generate (NcmMSetTransKern *tkern, NcmVector *theta, 
 
     ncm_vector_add (thetastar, theta);
 
-    valid = TRUE;
-    for (j = 0; j < tkerng->len; j++)
-    {
-      const gdouble lb  = ncm_mset_fparam_get_lower_bound (tkern->mset, j);
-      const gdouble ub  = ncm_mset_fparam_get_upper_bound (tkern->mset, j);
-      const gdouble val = ncm_vector_get (thetastar, j);
-      if (val < lb || val > ub)
-      {
-        valid = FALSE;
-        break;
-      }
-    }
+    if (ncm_mset_fparam_valid_bounds (tkern->mset, thetastar))
+      break;
   }
 }
 

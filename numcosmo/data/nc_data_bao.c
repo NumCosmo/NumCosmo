@@ -43,6 +43,7 @@
 #include "data/nc_data_bao_dv.h"
 #include "data/nc_data_bao_rdv.h"
 #include "data/nc_data_bao_dvdv.h"
+#include "data/nc_data_bao_empirical_fit.h"
 
 /**
  * nc_data_bao_create:
@@ -77,6 +78,9 @@ nc_data_bao_create (NcDistance *dist, NcDataBaoId id)
     case NC_DATA_BAO_RDV_BLAKE2012:
     case NC_DATA_BAO_RDV_KAZIN2014:  
       return nc_data_bao_rdv_new (dist, id);
+      break;
+    case NC_DATA_BAO_EMPIRICAL_FIT_ROSS2015:  
+      return NCM_DATA (nc_data_bao_empirical_fit_new_from_id (dist, id));
       break;
     default:
       g_assert_not_reached ();

@@ -69,10 +69,12 @@ GType nc_data_bao_empirical_fit_get_type (void) G_GNUC_CONST;
 
 NcDataBaoEmpiricalFit *nc_data_bao_empirical_fit_new (NcmSpline *m2lnp, gdouble Dv_fiduc, gdouble rs_fiduc, gdouble z);
 NcDataBaoEmpiricalFit *nc_data_bao_empirical_fit_new_from_file (const gchar *filename);
-NcDataBaoEmpiricalFit *nc_data_bao_empirical_fit_new_from_id (NcDataBaoId id);
+NcDataBaoEmpiricalFit *nc_data_bao_empirical_fit_new_from_id (NcDistance *dist, NcDataBaoId id);
 
 gdouble nc_data_bao_empirical_fit_get_mode (NcDataBaoEmpiricalFit *bao_ef);
 gdouble nc_data_bao_empirical_fit_get_alpha (NcDataBaoEmpiricalFit *bao_ef, NcmMSet *mset);
+
+void nc_data_bao_empirical_fit_set_dist (NcDataBaoEmpiricalFit *bao_ef, NcDistance *dist);
 
 G_END_DECLS
 

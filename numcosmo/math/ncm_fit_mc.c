@@ -52,6 +52,7 @@ enum
   PROP_FIDUC,
   PROP_MTYPE,
   PROP_NTHREADS,
+  PROP_KEEP_ORDER,
   PROP_DATA_FILE,
 };
 
@@ -70,6 +71,7 @@ ncm_fit_mc_init (NcmFitMC *mc)
   mc->ser             = ncm_serialize_new (NCM_SERIALIZE_OPT_CLEAN_DUP);
   mc->nthreads        = 0;
   mc->n               = 0;
+  mc->keep_order      = FALSE;
   mc->mp              = NULL;
   mc->cur_sample_id   = -1; /* Represents that no samples were calculated yet. */
   mc->write_index     = 0;
@@ -115,6 +117,9 @@ ncm_fit_mc_set_property (GObject *object, guint prop_id, const GValue *value, GP
     case PROP_NTHREADS:
       ncm_fit_mc_set_nthreads (mc, g_value_get_uint (value));
       break;
+    case PROP_KEEP_ORDER:
+      ncm_fit_mc_keep_order (mc, g_value_get_boolean (value));
+      break;
     case PROP_DATA_FILE:
       ncm_fit_mc_set_data_file (mc, g_value_get_string (value));
       break;    
@@ -146,6 +151,9 @@ ncm_fit_mc_get_property (GObject *object, guint prop_id, GValue *value, GParamSp
       break;
     case PROP_NTHREADS:
       g_value_set_uint (value, mc->nthreads);
+      break;
+    case PROP_KEEP_ORDER:
+      g_value_set_boolean (value, mc->keep_order);
       break;
     case PROP_DATA_FILE:
       g_value_set_string (value, ncm_mset_catalog_peek_filename (mc->mcat));
@@ -236,6 +244,13 @@ ncm_fit_mc_class_init (NcmFitMCClass *klass)
                                                       "Run messages type",
                                                       NCM_TYPE_FIT_RUN_MSGS, NCM_FIT_RUN_MSGS_SIMPLE,
                                                       G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  g_object_class_install_property (object_class,
+                                   PROP_KEEP_ORDER,
+                                   g_param_spec_boolean ("keep-order",
+                                                         NULL,
+                                                         "Whether keep the catalog in order of sampling",
+                                                         TRUE,
+                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
   g_object_class_install_property (object_class,
                                    PROP_NTHREADS,
                                    g_param_spec_uint ("nthreads",
@@ -413,6 +428,20 @@ void
 ncm_fit_mc_set_nthreads (NcmFitMC *mc, guint nthreads)
 {
   mc->nthreads = nthreads;
+}
+
+/**
+ * ncm_fit_mc_keep_order:
+ * @mc: a #NcmFitMC
+ * @keep_order: FIXME
+ *
+ * FIXME
+ *
+ */
+void 
+ncm_fit_mc_keep_order (NcmFitMC *mc, gboolean keep_order)
+{
+  mc->keep_order = keep_order;
 }
 
 /**
@@ -766,7 +795,7 @@ _ncm_fit_mc_dup_fit (gpointer userdata)
 }
 
 static void 
-_ncm_fit_mc_mt_eval (glong i, glong f, gpointer data)
+_ncm_fit_mc_mt_eval_keep_order (glong i, glong f, gpointer data)
 {
   _NCM_STATIC_MUTEX_DECL (update_lock);
   NcmFitMC *mc = NCM_FIT_MC (data);
@@ -800,6 +829,36 @@ _ncm_fit_mc_mt_eval (glong i, glong f, gpointer data)
   ncm_memory_pool_return (fit_ptr);
 }
 
+
+static void 
+_ncm_fit_mc_mt_eval (glong i, glong f, gpointer data)
+{
+  _NCM_STATIC_MUTEX_DECL (update_lock);
+  NcmFitMC *mc = NCM_FIT_MC (data);
+  NcmFit **fit_ptr = ncm_memory_pool_get (mc->mp);
+  NcmFit *fit = *fit_ptr;
+  guint j;
+
+  for (j = i; j < f; j++)
+  {
+    ncm_mset_param_set_vector (fit->mset, mc->bf);
+
+    g_mutex_lock (mc->resample_lock);
+    _ncm_fit_mc_resample (mc, fit);
+    g_mutex_unlock (mc->resample_lock);
+
+    ncm_fit_run (fit, NCM_FIT_RUN_MSGS_NONE);
+
+    _NCM_MUTEX_LOCK (&update_lock);    
+    _ncm_fit_mc_update (mc, fit);
+    mc->write_index++;
+    _NCM_MUTEX_UNLOCK (&update_lock);
+  }
+
+  ncm_memory_pool_return (fit_ptr);
+}
+
+
 static void
 _ncm_fit_mc_run_mt (NcmFitMC *mc)
 {
@@ -825,8 +884,10 @@ _ncm_fit_mc_run_mt (NcmFitMC *mc)
 
   g_assert_cmpuint (mc->nthreads, >, 1);
 
-  ncm_func_eval_threaded_loop_full (&_ncm_fit_mc_mt_eval, 0, mc->n, mc);
-  //ncm_func_eval_threaded_loop_nw (&_ncm_fit_mc_mt_eval, 0, mc->n, mc, nthreads);  
+  if (mc->keep_order)
+    ncm_func_eval_threaded_loop_full (&_ncm_fit_mc_mt_eval_keep_order, 0, mc->n, mc);
+  else
+    ncm_func_eval_threaded_loop_full (&_ncm_fit_mc_mt_eval, 0, mc->n, mc);  
 }
 
 /**

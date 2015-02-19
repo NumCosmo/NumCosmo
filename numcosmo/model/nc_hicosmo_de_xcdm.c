@@ -49,6 +49,7 @@ static gdouble
 _nc_hicosmo_de_xcdm_weff (NcmModel *model, gdouble z)
 {
   const gdouble x = 1.0 + z;
+
   return OMEGA_X * pow (x, 3.0 * ( 1.0 + W ) );
 }
 
@@ -110,7 +111,7 @@ nc_hicosmo_de_xcdm_class_init (NcHICosmoDEXcdmClass *klass)
   ncm_model_class_add_params (model_class, 1, 0, PROP_SIZE);
   /* Set w_0 param info */
   ncm_model_class_set_sparam (model_class, NC_HICOSMO_DE_XCDM_W, "w", "w",
-                               -10.0, 1.0, 1.0e-2,
+                               -5.0, 0.0, 1.0e-2,
                                NC_HICOSMO_DEFAULT_PARAMS_ABSTOL, NC_HICOSMO_DE_LINDER_DEFAULT_W0,
                                NCM_PARAM_TYPE_FREE);
   /* Check for errors in parameters initialization */

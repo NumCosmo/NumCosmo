@@ -102,8 +102,7 @@ nc_data_bao_empirical_fit_set_property (GObject *object, guint prop_id, const GV
       bao_ef->p = ncm_stats_dist1d_spline_new (bao_ef->m2lnp);
       break;
     case PROP_DIST:
-      nc_distance_clear (&bao_ef->dist);
-      bao_ef->dist = g_value_dup_object (value);
+      nc_data_bao_empirical_fit_set_dist (bao_ef, g_value_get_object (value));
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -290,6 +289,7 @@ nc_data_bao_empirical_fit_new_from_file (const gchar *filename)
 
 /**
  * nc_data_bao_empirical_fit_new_from_id:
+ * @dist: a #NcDistance
  * @id: a #NcDataBaoId
  * 
  * Creates a new #NcDataBaoEmpiricalFit from @id.
@@ -297,7 +297,7 @@ nc_data_bao_empirical_fit_new_from_file (const gchar *filename)
  * Returns: (transfer full): the newly created #NcDataBaoEmpiricalFit.
  */
 NcDataBaoEmpiricalFit *
-nc_data_bao_empirical_fit_new_from_id (NcDataBaoId id)
+nc_data_bao_empirical_fit_new_from_id (NcDistance *dist, NcDataBaoId id)
 {
   NcDataBaoEmpiricalFit *bao_ef;
   gchar *filename;
@@ -312,6 +312,7 @@ nc_data_bao_empirical_fit_new_from_id (NcDataBaoId id)
   }
 
   bao_ef = nc_data_bao_empirical_fit_new_from_file (filename);
+  nc_data_bao_empirical_fit_set_dist (bao_ef, dist);
   g_free (filename);
 
   return bao_ef;
@@ -349,4 +350,19 @@ nc_data_bao_empirical_fit_get_alpha (NcDataBaoEmpiricalFit *bao_ef, NcmMSet *mse
   const gdouble alpha      = Dv_r / Dv_r_fiduc;
 
   return alpha;
+}
+
+/**
+ * nc_data_bao_empirical_fit_set_dist:
+ * @bao_ef: a #NcDataBaoEmpiricalFit
+ * @dist: a #NcDistance
+ * 
+ * Sets the distance object.
+ * 
+ */
+void 
+nc_data_bao_empirical_fit_set_dist (NcDataBaoEmpiricalFit *bao_ef, NcDistance *dist)
+{
+  nc_distance_clear (&bao_ef->dist);
+  bao_ef->dist = nc_distance_ref (dist);
 }

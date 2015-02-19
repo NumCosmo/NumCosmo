@@ -188,6 +188,7 @@ gdouble ncm_mset_param_get_lower_bound (NcmMSet *mset, NcmModelID mid, guint pid
 gdouble ncm_mset_param_get_upper_bound (NcmMSet *mset, NcmModelID mid, guint pid);
 gdouble ncm_mset_param_get_abstol (NcmMSet *mset, NcmModelID mid, guint pid);
 NcmParamType ncm_mset_param_get_ftype (NcmMSet *mset, NcmModelID mid, guint pid);
+void ncm_mset_param_set_scale (NcmMSet *mset, NcmModelID mid, guint pid, gdouble scale);
 
 void ncm_mset_param_set_pi (NcmMSet *mset, NcmMSetPIndex *pi, const gdouble *x, guint n);
 void ncm_mset_param_get_pi (NcmMSet *mset, NcmMSetPIndex *pi, gdouble *x, guint n);
@@ -207,6 +208,8 @@ gdouble ncm_mset_fparam_get_scale (NcmMSet *mset, guint n);
 gdouble ncm_mset_fparam_get_lower_bound (NcmMSet *mset, guint n);
 gdouble ncm_mset_fparam_get_upper_bound (NcmMSet *mset, guint n);
 gdouble ncm_mset_fparam_get_abstol (NcmMSet *mset, guint n);
+void ncm_mset_fparam_set_scale (NcmMSet *mset, guint n, gdouble scale);
+gboolean ncm_mset_fparam_valid_bounds (NcmMSet *mset, NcmVector *theta);
 
 gdouble ncm_mset_fparam_get (NcmMSet *mset, guint n);
 void ncm_mset_fparam_set (NcmMSet *mset, guint n, const gdouble x);

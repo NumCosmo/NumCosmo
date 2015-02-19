@@ -42,12 +42,28 @@
 #include "ncm_enum_types.h"
 
 #include <gsl/gsl_blas.h>
+
 #ifdef NUMCOSMO_HAVE_LEVMAR
+
+/*
+ * Levmar defines HAVE_LAPACK, to avoid the clash we make the hack below...
+ */
+#ifdef HAVE_LAPACK
+#undef HAVE_LAPACK
+#define _NCM_HAVE_LAPACK
+#endif /* HAVE_LAPACK */
+
 #ifdef NC_LEVMAR_NEED_PREFIX
 #include <levmar/levmar.h>
 #else
 #include <levmar.h>
 #endif /* NC_LEVMAR_NEED_PREFIX */
+
+#ifdef _NCM_HAVE_LAPACK
+#ifndef HAVE_LAPACK
+#define HAVE_LAPACK 1
+#endif /* HAVE_LAPACK */
+#endif /* _NCM_HAVE_LAPACK */
 
 enum
 {

@@ -1515,10 +1515,10 @@ void
 ncm_mset_catalog_log_current_stats (NcmMSetCatalog *mcat)
 {
   ncm_vector_log_vals (mcat->pstats->mean,     "# NcmMSetCatalog: Current mean:  ", "% -12.5g");
-  ncm_vector_log_vals_func (mcat->pstats->var, "# NcmMSetCatalog: Current msd :  ", "% -12.5g", &_fmeanvar, mcat);
-  ncm_vector_log_vals_func (mcat->pstats->var, "# NcmMSetCatalog: Current sd  :  ", "% -12.5g", &_fvar, mcat->pstats);
-  ncm_vector_log_vals_avpb (mcat->pstats->var, "# NcmMSetCatalog: Current var :  ", "% -12.5g", mcat->pstats->bias_wt, 0.0);
-  ncm_vector_log_vals_func (mcat->pstats->var, "# NcmMSetCatalog: Current tau :  ", "% -12.5g", &_ftau, mcat);
+  ncm_vector_log_vals_func (mcat->pstats->var, "# NcmMSetCatalog: Current msd:   ", "% -12.5g", &_fmeanvar, mcat);
+  ncm_vector_log_vals_func (mcat->pstats->var, "# NcmMSetCatalog: Current sd:    ", "% -12.5g", &_fvar, mcat->pstats);
+  ncm_vector_log_vals_avpb (mcat->pstats->var, "# NcmMSetCatalog: Current var:   ", "% -12.5g", mcat->pstats->bias_wt, 0.0);
+  ncm_vector_log_vals_func (mcat->pstats->var, "# NcmMSetCatalog: Current tau:   ", "% -12.5g", &_ftau, mcat);
 }
 
 /**

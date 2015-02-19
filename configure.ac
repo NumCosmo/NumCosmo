@@ -635,13 +635,20 @@ AC_CHECK_TYPE([CVDlsDenseJacFn],[],[AC_MSG_ERROR([sundials too old, please insta
 CFLAGS="$SAVED_CFLAGS"
 
 AC_MSG_CHECKING([whenever sundials uses long int])
+SAVED_CFLAGS="$CFLAGS"
+CFLAGS="$CFLAGS -Werror"
 AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[
 #include <cvodes/cvodes_direct.h>
-typedef int (*CVDlsDenseJacFn)(long int N, realtype t,
-                               N_Vector y, N_Vector fy,
-                               DlsMat Jac, void *user_data,
-                               N_Vector tmp1, N_Vector tmp2, N_Vector tmp3);
-]],[[1;]])],[AC_DEFINE([SUNDIALS_USES_LONG_INT],[1], [If sundials version >= 2.5.0]) AC_MSG_RESULT([yes])],[AC_MSG_RESULT([no])])
+int test_dense_jac (long int N, realtype t,
+                    N_Vector y, N_Vector fy,
+                    DlsMat Jac, void *user_data,
+                    N_Vector tmp1, N_Vector tmp2, N_Vector tmp3)
+{ return 0; }
+]],[[
+CVDlsDenseJacFn func = &test_dense_jac;
+func (0, 0.0, (void *)0, (void *)0, (void *)0, (void *)0, (void *)0, (void *)0, (void *)0);
+]])],[AC_DEFINE([SUNDIALS_USES_LONG_INT],[1], [If sundials version >= 2.5.0]) AC_MSG_RESULT([yes])],[AC_MSG_RESULT([no])])
+CFLAGS="$SAVED_CFLAGS"
 
 dnl ***************************************************************************
 dnl Appending libs and setting up TEST_SHARED

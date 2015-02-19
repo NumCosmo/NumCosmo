@@ -84,6 +84,7 @@ struct _NcmFitMC
   NcmSerialize *ser;
   guint nthreads;
   guint n;
+  gboolean keep_order;
   NcmMemoryPool *mp;
   gint write_index;
   gint cur_sample_id;
@@ -116,6 +117,7 @@ void ncm_fit_mc_set_data_file (NcmFitMC *mc, const gchar *filename);
 void ncm_fit_mc_set_mtype (NcmFitMC *mc, NcmFitRunMsgs mtype);
 void ncm_fit_mc_set_rtype (NcmFitMC *mc, NcmFitMCResampleType rtype);
 void ncm_fit_mc_set_nthreads (NcmFitMC *mc, guint nthreads);
+void ncm_fit_mc_keep_order (NcmFitMC *mc, gboolean keep_order);
 void ncm_fit_mc_set_fiducial (NcmFitMC *mc, NcmMSet *fiduc);
 void ncm_fit_mc_set_rng (NcmFitMC *mc, NcmRNG *rng);
 

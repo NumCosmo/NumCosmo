@@ -1829,13 +1829,27 @@ ncm_fit_numdiff_m2lnL_hessian (NcmFit *fit, NcmMatrix *H)
   for (i = 0; i < free_params_len; i++)
   {
     const gdouble p = ncm_mset_fparam_get (fit->mset, i);
-    const gdouble p_scale = ncm_mset_fparam_get_scale (fit->mset, i);
+    gdouble p_scale = ncm_mset_fparam_get_scale (fit->mset, i);
     gdouble err, diff;
+    gint tries = 10; 
     nd.n1 = i;
     nd.n2 = i;
     diff = ncm_numdiff_2_err (&F, &fx, p, p_scale, target_err, &err);
+
+    while (diff == 0.0 && tries > 0)
+    {
+      ncm_mset_fparam_set (fit->mset, i, p);
+      p_scale *= 1.0e2;
+      diff = ncm_numdiff_2_err (&F, &fx, p, p_scale, target_err, &err);
+      tries--;
+      ncm_mset_fparam_set_scale (fit->mset, i, p_scale);
+    }
+    
     if (fabs(err / diff) > target_err)
-      g_warning ("ncm_fit_numdiff_m2lnL_hessian: effective error (% 20.15e) larger than (% 20.15e)", fabs(err / diff), target_err);
+      g_warning ("ncm_fit_numdiff_m2lnL_hessian: effective error on second derivative with respect to parameter %u is (% 20.15e) larger than the required (% 20.15e)", i, fabs(err / diff), target_err);
+    if (diff == 0.0)
+      g_warning ("ncm_fit_numdiff_m2lnL_hessian: the second derivatinve with respect to parameter %u is zero.", i);
+    
     ncm_matrix_set (H, i, i, diff);
     ncm_mset_fparam_set (fit->mset, i, p);
   }
@@ -1859,7 +1873,7 @@ ncm_fit_numdiff_m2lnL_hessian (NcmFit *fit, NcmMatrix *H)
       nd.p2_scale = p2_scale;
       diff = ncm_numdiff_2_err (&F, &fx, u, u_scale, target_err, &err);
       if (fabs(err / diff) > target_err)
-        g_warning ("ncm_fit_numdiff_m2lnL_hessian: effective error (% 20.15e) larger than (% 20.15e)", fabs(err / diff), target_err);
+        g_warning ("ncm_fit_numdiff_m2lnL_hessian: effective error on the %u-%u derivative is (% 20.15e) larger than the required (% 20.15e)", i, j, fabs(err / diff), target_err);
       ncm_matrix_set (H, i, j,
                       0.5 * ( p1_scale * p2_scale * diff -
                              (p2_scale / p1_scale) * ncm_matrix_get (H, i, i) -

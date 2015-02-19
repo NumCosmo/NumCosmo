@@ -941,6 +941,22 @@ ncm_mset_param_get_scale (NcmMSet *mset, NcmModelID mid, guint pid)
 }
 
 /**
+ * ncm_mset_param_set_scale:
+ * @mset: a #NcmMSet
+ * @mid: Model id
+ * @pid: Parameter id
+ * @scale: new scale
+ *
+ * FIXME
+ *
+ */
+void
+ncm_mset_param_set_scale (NcmMSet *mset, NcmModelID mid, guint pid, gdouble scale)
+{
+  ncm_model_param_set_scale (ncm_mset_peek (mset, mid), pid, scale);
+}
+
+/**
  * ncm_mset_param_get_lower_bound:
  * @mset: a #NcmMSet
  * @mid: Model id
@@ -1429,6 +1445,52 @@ ncm_mset_fparam_get_abstol (NcmMSet *mset, guint n)
   {
     const NcmMSetPIndex pi = g_array_index (mset->pi_array, NcmMSetPIndex, n);
     return ncm_mset_param_get_abstol (mset, pi.mid, pi.pid);
+  }
+}
+
+/**
+ * ncm_mset_fparam_set_scale:
+ * @mset: a #NcmMSet
+ * @n: Free parameter index
+ * @scale: new scale.
+ *
+ * FIXME
+ * 
+ */
+void
+ncm_mset_fparam_set_scale (NcmMSet *mset, guint n, gdouble scale)
+{
+  g_assert (mset->valid_map && n < mset->fparam_len);
+  {
+    const NcmMSetPIndex pi = g_array_index (mset->pi_array, NcmMSetPIndex, n);
+    ncm_mset_param_set_scale (mset, pi.mid, pi.pid, scale);
+  }
+}
+
+/**
+ * ncm_mset_fparam_valid_bounds:
+ * @mset: a #NcmMSet
+ * @theta: free parameters vector
+ *
+ * FIXME
+ * 
+ * Returns: whether @theta contain values respecting the parameter bounds.
+ */
+gboolean
+ncm_mset_fparam_valid_bounds (NcmMSet *mset, NcmVector *theta)
+{
+  g_assert (mset->valid_map && ncm_vector_len (theta) == mset->fparam_len);
+  {
+    guint i;
+    for (i = 0; i < mset->fparam_len; i++)
+    {
+      const gdouble lb  = ncm_mset_fparam_get_lower_bound (mset, i);
+      const gdouble ub  = ncm_mset_fparam_get_upper_bound (mset, i);
+      const gdouble val = ncm_vector_get (theta, i);
+      if (val < lb || val > ub)
+        return FALSE;
+    }
+    return TRUE;
   }
 }
 

@@ -78,9 +78,27 @@ main (gint argc, gchar *argv[])
     gint i;
     for (i = 0; i < argc; i++)
     {
-      if (strcmp (argv[i], "--runconf") == 0 || strcmp (argv[i], "-c") == 0)
+      if (strncmp (argv[i], "--runconf", 9) == 0 || strncmp (argv[i], "-c", 2) == 0)
       {
-        if (i + 1 == argc || argv[i + 1] == NULL)
+        if (strlen (argv[i]) == 9)
+        {
+          if (i + 1 == argc || argv[i + 1] == NULL)
+          {
+            gchar *msg = g_option_context_get_help (context, TRUE, NULL);
+            fprintf (stderr, "Invalid run options:\n");
+            printf ("%s", msg);
+            g_free (msg);
+            g_option_context_free (context);
+            return 0;
+          }
+          else
+            de_run.runconf = argv[i + 1];
+        }
+        else if (argv[i][9] == '=')
+        {
+          de_run.runconf = &argv[i][10];
+        }
+        else
         {
           gchar *msg = g_option_context_get_help (context, TRUE, NULL);
           fprintf (stderr, "Invalid run options:\n");
@@ -89,8 +107,6 @@ main (gint argc, gchar *argv[])
           g_option_context_free (context);
           return 0;
         }
-        else
-          de_run.runconf = argv[i + 1];
       }
     }
   }
