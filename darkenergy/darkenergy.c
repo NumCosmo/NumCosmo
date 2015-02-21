@@ -582,6 +582,9 @@ main (gint argc, gchar *argv[])
     if (de_fit.mc_data != NULL)
       ncm_fit_mc_set_data_file (mc, de_fit.mc_data);
 
+    if (de_fit.mc_unordered)
+      ncm_fit_mc_keep_order (mc, FALSE);
+
     ncm_fit_mc_start_run (mc);
 
     if (de_fit.mc_ni >= 0)

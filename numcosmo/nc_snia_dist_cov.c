@@ -209,7 +209,7 @@ nc_snia_dist_cov_class_init (NcSNIADistCovClass *klass)
                               NCM_PARAM_TYPE_FIXED);
 
   ncm_model_class_set_vparam (model_class, NC_SNIA_DIST_COV_MU, NC_SNIA_DIST_COV_MU_DEFAULT_LEN, 
-                              "\\mu", "Distance modulus",
+                              "\\mu", "mu",
                               -50.0, 50.0, 1.0e-2, 
                               NC_SNIA_DIST_COV_DEFAULT_PARAMS_ABSTOL, NC_SNIA_DIST_COV_DEFAULT_MU,
                               NCM_PARAM_TYPE_FIXED);
