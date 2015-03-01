@@ -14,18 +14,19 @@ AM_CFLAGS = \
 	 -Wall \
 	 $(MY_CFLAGS)
 
-SUBDIRS = 
+SUBDIRS = levmar .
 
 lib_LTLIBRARIES = libnumcosmo.la
 
-libnumcosmo_la_LIBADD = \
+libnumcosmo_la_LIBADD =  \
 	$(SUNDIALS_LIBS) \
-	$(FFTW3_LIBS) \
-	$(GLIB_LIBS) \
-	$(NLOPT_LIBS) \
-	$(GSL_LIBS) \
-	$(SQLITE3_LIBS) \
-	$(CFITSIO_LIBS)
+	$(FFTW3_LIBS)    \
+	$(GLIB_LIBS)     \
+	$(NLOPT_LIBS)    \
+	$(GSL_LIBS)      \
+	$(SQLITE3_LIBS)  \
+	$(CFITSIO_LIBS)  \
+	levmar/liblevmar.la
 
 ncm_sources = \
 	ncm_build_inline.c                 \
@@ -84,6 +85,7 @@ ncm_sources = \
 	math/ncm_mset_trans_kern_gauss.c   \
 	math/ncm_fit_state.c               \
 	math/ncm_fit.c                     \
+	math/ncm_fit_levmar.c              \
 	math/ncm_fit_gsl_ls.c              \
 	math/ncm_fit_gsl_mm.c              \
 	math/ncm_fit_gsl_mms.c             \
@@ -170,6 +172,7 @@ ncm_headers = \
 	math/ncm_priors.h                \
 	math/ncm_fit_state.h             \
 	math/ncm_fit.h                   \
+	math/ncm_fit_levmar.h            \
 	math/ncm_fit_gsl_ls.h            \
 	math/ncm_fit_gsl_mm.h            \
 	math/ncm_fit_gsl_mms.h           \
@@ -410,11 +413,11 @@ ncm_fit_nlopt_enum_meta.h: ncm_fit_nlopt_enum_meta.c
 	$(SED) 's/nlopt_algorithm/NcmFitNloptAlgorithm/' ncm_fit_nlopt_enum_meta.h.tmp1 > ncm_fit_nlopt_enum_meta.h.tmp2
 	$(SED) 's/nlopt_result/NcmFitNloptResult/' ncm_fit_nlopt_enum_meta.h.tmp2 > ncm_fit_nlopt_enum_meta.h
 
-ncm_fit_nlopt_enum.h: ncm_fit_nlopt_enum_meta.h
+ncm_fit_nlopt_enum.h: ncm_fit_nlopt_enum_meta.h $(srcdir)/ncm_fit_nlopt_enum.h.template
 	$(AM_V_GEN) ( $(GLIB_MKENUMS) --template $(srcdir)/ncm_fit_nlopt_enum.h.template ncm_fit_nlopt_enum_meta.h ) > \
 	  ncm_fit_nlopt_enum.h.tmp && mv ncm_fit_nlopt_enum.h.tmp ncm_fit_nlopt_enum.h
 
-ncm_fit_nlopt_enum.c: ncm_fit_nlopt_enum_meta.h
+ncm_fit_nlopt_enum.c: ncm_fit_nlopt_enum_meta.h $(srcdir)/ncm_fit_nlopt_enum.c.template
 	$(AM_V_GEN) ( $(GLIB_MKENUMS) --template $(srcdir)/ncm_fit_nlopt_enum.c.template ncm_fit_nlopt_enum_meta.h ) > \
 	  ncm_fit_nlopt_enum.c.tmp && mv ncm_fit_nlopt_enum.c.tmp ncm_fit_nlopt_enum.c
 
@@ -429,16 +432,6 @@ ncm_enum_types_headers += \
 
 ncm_cond_headers += \
 	math/ncm_fit_nlopt.h
-
-endif
-
-if HAVE_LIBLEVMAR
-
-ncm_cond_headers += \
-	math/ncm_fit_levmar.h
-
-ncm_cond_sources += \
-	math/ncm_fit_levmar.c
 
 endif
 

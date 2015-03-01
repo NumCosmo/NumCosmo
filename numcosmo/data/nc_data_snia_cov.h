@@ -30,6 +30,7 @@
 #include <glib-object.h>
 #include <numcosmo/build_cfg.h>
 #include <numcosmo/math/ncm_data_gauss_cov.h>
+#include <numcosmo/math/ncm_model_ctrl.h>
 
 G_BEGIN_DECLS
 
@@ -67,7 +68,7 @@ typedef struct _NcDataSNIACov NcDataSNIACov;
  * @NC_DATA_SNIA_COV_VAR_MAG_COLOUR: FIXME
  * @NC_DATA_SNIA_COV_VAR_WIDTH_COLOUR: FIXME
  * 
- * FIXME
+ * Data ordering of Version 0 (V0) data format.
  * 
  */
 typedef enum _NcDataSNIACovData
@@ -98,33 +99,101 @@ typedef enum _NcDataSNIACovData
 
 #define NC_DATA_SNIA_COV_LENGTH NC_DATA_SNIA_COV_ABSMAG_SET
 
+/**
+ * NcDataSNIACovDataV1:
+ * @NC_DATA_SNIA_COV_V1_ZCMB: Redshift in the CMB frame.
+ * @NC_DATA_SNIA_COV_V1_ZHE: Redshift in sun's frame.
+ * @NC_DATA_SNIA_COV_V1_SIGMA_Z: Redshift error.
+ * @NC_DATA_SNIA_COV_V1_MAG: Magnitude.
+ * @NC_DATA_SNIA_COV_V1_WIDTH: Width (strecth).
+ * @NC_DATA_SNIA_COV_V1_COLOUR: Colour.
+ * @NC_DATA_SNIA_COV_V1_THIRDPAR: Third parameter.
+ * @NC_DATA_SNIA_COV_V1_SIGMA_THIRDPAR: Error on third parameter.
+ * @NC_DATA_SNIA_COV_V1_ABSMAG_SET: Data set index.
+ * @NC_DATA_SNIA_COV_V1_MAG_MAG: Covariance mag-mag.
+ * @NC_DATA_SNIA_COV_V1_MAG_WIDTH: Covariance mag-width.
+ * @NC_DATA_SNIA_COV_V1_MAG_COLOUR: Covariance mag-colour.
+ * @NC_DATA_SNIA_COV_V1_WIDTH_WIDTH: Covariance width-width.
+ * @NC_DATA_SNIA_COV_V1_WIDTH_COLOUR: Covariance width-colour.
+ * @NC_DATA_SNIA_COV_V1_COLOUR_COLOUR: Covariance colour-colour.
+ * 
+ * Data ordering of Version 1 (V1) data format.
+ * 
+ */
+typedef enum _NcDataSNIACovDataV1
+{
+  NC_DATA_SNIA_COV_V1_ZCMB = 0,
+  NC_DATA_SNIA_COV_V1_ZHE,
+  NC_DATA_SNIA_COV_V1_SIGMA_Z,
+  NC_DATA_SNIA_COV_V1_MAG,
+  NC_DATA_SNIA_COV_V1_WIDTH,
+  NC_DATA_SNIA_COV_V1_COLOUR,
+  NC_DATA_SNIA_COV_V1_THIRDPAR,
+  NC_DATA_SNIA_COV_V1_SIGMA_THIRDPAR,
+  NC_DATA_SNIA_COV_V1_ABSMAG_SET, 
+  NC_DATA_SNIA_COV_V1_MAG_MAG,
+  NC_DATA_SNIA_COV_V1_MAG_WIDTH,
+  NC_DATA_SNIA_COV_V1_MAG_COLOUR,
+  NC_DATA_SNIA_COV_V1_WIDTH_WIDTH,
+  NC_DATA_SNIA_COV_V1_WIDTH_COLOUR,
+  NC_DATA_SNIA_COV_V1_COLOUR_COLOUR, /*< private >*/
+  NC_DATA_SNIA_COV_V1_TOTAL_LENGTH,  /*< skip >*/
+} NcDataSNIACovDataV1;
+
+#define NC_DATA_SNIA_COV_V1_LENGTH NC_DATA_SNIA_COV_V1_ABSMAG_SET
+
+/**
+ * NcDataSNIACovOrder:
+ * @NC_DATA_SNIA_COV_ORDER_MAG_MAG: mag-mag.
+ * @NC_DATA_SNIA_COV_ORDER_MAG_WIDTH: mag-width.
+ * @NC_DATA_SNIA_COV_ORDER_MAG_COLOUR: mag-colour.
+ * @NC_DATA_SNIA_COV_ORDER_WIDTH_WIDTH: width-width.
+ * @NC_DATA_SNIA_COV_ORDER_WIDTH_COLOUR: width-colour.
+ * @NC_DATA_SNIA_COV_ORDER_COLOUR_COLOUR: colour-colour.
+ * 
+ * Data ordering for covariance.
+ * 
+ */
+typedef enum _NcDataSNIACovOrder
+{
+  NC_DATA_SNIA_COV_ORDER_MAG_MAG = 0,
+  NC_DATA_SNIA_COV_ORDER_MAG_WIDTH,
+  NC_DATA_SNIA_COV_ORDER_MAG_COLOUR,
+  NC_DATA_SNIA_COV_ORDER_WIDTH_WIDTH,
+  NC_DATA_SNIA_COV_ORDER_WIDTH_COLOUR,
+  NC_DATA_SNIA_COV_ORDER_COLOUR_COLOUR, /*< private >*/
+  NC_DATA_SNIA_COV_ORDER_LENGTH,        /*< skip >*/
+} NcDataSNIACovOrder;
+
 struct _NcDataSNIACov
 {
   /*< private >*/
   NcmDataGaussCov parent_instance;
   guint mu_len;
+  guint uppertri_len;
   NcmVector *z_cmb;
   NcmVector *z_he;
   NcmVector *mag;
   NcmVector *width;
   NcmVector *colour;
   NcmVector *thirdpar;
+  NcmVector *width_true;
+  NcmVector *colour_true;
+  NcmVector *mag_width_colour;
   NcmVector *sigma_z;
-  NcmVector *sigma_mag;
-  NcmVector *sigma_width;
-  NcmVector *sigma_colour;
   NcmVector *sigma_thirdpar;
-  NcmVector *diag_mag_width;
-  NcmVector *diag_mag_colour;
-  NcmVector *diag_width_colour;
-  NcmMatrix *var_mag;
-  NcmMatrix *var_width;
-  NcmMatrix *var_colour;
-  NcmMatrix *var_mag_width;
-  NcmMatrix *var_mag_colour;
-  NcmMatrix *var_width_colour;
+  NcmVector *cov_packed;
+  NcmMatrix *cov_full;
+  NcmVector *cov_full_diag;
+  gboolean has_complete_cov;
+  guint cov_full_state;
+  gboolean has_true_wc;
+  gboolean saved_cov_full;
   GArray *dataset;
   guint dataset_len;
+  NcmModelCtrl *cosmo_resample_ctrl;
+  NcmModelCtrl *dcov_resample_ctrl;
+  NcmModelCtrl *dcov_cov_full_ctrl;
 };
 
 struct _NcDataSNIACovClass
@@ -135,8 +204,8 @@ struct _NcDataSNIACovClass
 
 GType nc_data_snia_cov_get_type (void) G_GNUC_CONST;
 
-NcmData *nc_data_snia_cov_new (gboolean use_det);
-NcmData *nc_data_snia_cov_new_full (gchar *filename, gboolean use_det);
+NcmData *nc_data_snia_cov_new (gboolean use_norma);
+NcmData *nc_data_snia_cov_new_full (gchar *filename, gboolean use_norma);
 
 guint nc_data_snia_cov_sigma_int_len (NcDataSNIACov *snia_cov);
 
@@ -147,12 +216,26 @@ void nc_data_snia_cov_load (NcDataSNIACov *snia_cov, const gchar *filename);
 void nc_data_snia_cov_save (NcDataSNIACov *snia_cov, const gchar *filename, gboolean overwrite);
 #endif /* NUMCOSMO_HAVE_CFITSIO */
 
+gdouble nc_data_snia_cov_estimate_width_colour (NcDataSNIACov *snia_cov, NcmMSet *mset);
+
+#define NC_DATA_SNIA_COV_SYMM_TOL (1.0e-13)
+
+#define NC_DATA_SNIA_COV_CAT_LAST_VERSION 1
+
 #define NC_DATA_SNIA_COV_CAT_DESC "DESC"
 #define NC_DATA_SNIA_COV_DATA_DESC "Description"
+#define NC_DATA_SNIA_COV_CAT_DESC_COMMENT "Catalog data description"
+
+#define NC_DATA_SNIA_COV_CAT_VERSION "VERSION"
+#define NC_DATA_SNIA_COV_CAT_VERSION_COMMENT "Version number"
 
 #define NC_DATA_SNIA_COV_DATA_GROUP "Supernovae Ia Data"
 #define NC_DATA_SNIA_COV_DATA_LEN_KEY "data-length"
 #define NC_DATA_SNIA_COV_DATA_KEY "snia-data"
+
+#define NC_DATA_SNIA_COV_DATA_HAS_COMPLETE_COV_KEY "has-complete-cov"
+#define NC_DATA_SNIA_COV_CAT_HAS_COMPLETE_COV "CMPL_COV"
+#define NC_DATA_SNIA_COV_CAT_HAS_COMPLETE_COV_COMMENT "Whether the covariance matrix is complete"
 
 #define NC_DATA_SNIA_COV_MAG_KEY "magnitude"
 #define NC_DATA_SNIA_COV_WIDTH_KEY "width"

@@ -40,6 +40,7 @@
 #include "math/ncm_data_gauss_cov.h"
 #include "math/ncm_cfg.h"
 #include "math/ncm_c.h"
+#include "math/ncm_lapack.h"
 
 #include <gsl/gsl_linalg.h>
 #include <gsl/gsl_blas.h>
@@ -49,7 +50,7 @@ enum
 {
   PROP_0,
   PROP_NPOINTS,
-  PROP_USE_DET,
+  PROP_USE_NORMA,
   PROP_MEAN,
   PROP_COV,
   PROP_SIZE,
@@ -66,7 +67,7 @@ ncm_data_gauss_cov_init (NcmDataGaussCov *gauss)
   gauss->cov              = NULL;
   gauss->LLT              = NULL;
   gauss->prepared_LLT     = FALSE;
-  gauss->use_det          = FALSE;
+  gauss->use_norma        = FALSE;
 }
 
 static void
@@ -89,8 +90,8 @@ _ncm_data_gauss_cov_set_property (GObject *object, guint prop_id, const GValue *
     case PROP_NPOINTS:
       ncm_data_gauss_cov_set_size (gauss, g_value_get_uint (value));
       break;
-    case PROP_USE_DET:
-      gauss->use_det = g_value_get_boolean (value);
+    case PROP_USE_NORMA:
+      gauss->use_norma = g_value_get_boolean (value);
       break;
     case PROP_MEAN:
       ncm_vector_set_from_variant (gauss->y, g_value_get_variant (value));
@@ -115,8 +116,8 @@ _ncm_data_gauss_cov_get_property (GObject *object, guint prop_id, GValue *value,
     case PROP_NPOINTS:
       g_value_set_uint (value, gauss->np);
       break;
-    case PROP_USE_DET:
-      g_value_set_boolean (value, gauss->use_det);
+    case PROP_USE_NORMA:
+      g_value_set_boolean (value, gauss->use_norma);
       break;
     case PROP_MEAN:
       g_value_take_variant (value, ncm_vector_get_variant (gauss->y));
@@ -159,6 +160,8 @@ static void _ncm_data_gauss_cov_m2lnL_val (NcmData *data, NcmMSet *mset, gdouble
 static void _ncm_data_gauss_cov_leastsquares_f (NcmData *data, NcmMSet *mset, NcmVector *v);
 static void _ncm_data_gauss_cov_set_size (NcmDataGaussCov *gauss, guint np);
 static guint _ncm_data_gauss_cov_get_size (NcmDataGaussCov *gauss);
+static gdouble _ncm_data_gauss_cov_lnNorma2 (NcmDataGaussCov *gauss, NcmMSet *mset);
+static gdouble _ncm_data_gauss_cov_lnNorma2_bs (NcmDataGaussCov *gauss, NcmMSet *mset, NcmBootstrap *bstrap);
 
 static void
 ncm_data_gauss_cov_class_init (NcmDataGaussCovClass *klass)
@@ -182,10 +185,10 @@ ncm_data_gauss_cov_class_init (NcmDataGaussCovClass *klass)
                                                       G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   g_object_class_install_property (object_class,
-                                   PROP_USE_DET,
-                                   g_param_spec_boolean ("use-det",
+                                   PROP_USE_NORMA,
+                                   g_param_spec_boolean ("use-norma",
                                                          NULL,
-                                                         "Use determinant to calculate -2lnL",
+                                                         "Use the likelihood normalization to calculate -2lnL",
                                                          FALSE,
                                                          G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
@@ -214,10 +217,12 @@ ncm_data_gauss_cov_class_init (NcmDataGaussCovClass *klass)
   data_class->m2lnL_val          = &_ncm_data_gauss_cov_m2lnL_val;
   data_class->leastsquares_f     = &_ncm_data_gauss_cov_leastsquares_f;
 
-  gauss_cov_class->mean_func = NULL;
-  gauss_cov_class->cov_func  = NULL;
-  gauss_cov_class->set_size  = &_ncm_data_gauss_cov_set_size;
-  gauss_cov_class->get_size  = &_ncm_data_gauss_cov_get_size;
+  gauss_cov_class->mean_func    = NULL;
+  gauss_cov_class->cov_func     = NULL;
+  gauss_cov_class->lnNorma2     = &_ncm_data_gauss_cov_lnNorma2;
+  gauss_cov_class->lnNorma2_bs  = &_ncm_data_gauss_cov_lnNorma2_bs;
+  gauss_cov_class->set_size     = &_ncm_data_gauss_cov_set_size;
+  gauss_cov_class->get_size     = &_ncm_data_gauss_cov_get_size;
 }
 
 static guint 
@@ -236,7 +241,7 @@ _ncm_data_gauss_cov_prepare_LLT (NcmData *data)
   else
     ncm_matrix_memcpy (gauss->LLT, gauss->cov);
 
-  ncm_matrix_cholesky_decomp (gauss->LLT);
+  ncm_matrix_cholesky_decomp (gauss->LLT, 'U');
 
   gauss->prepared_LLT = TRUE;
 }
@@ -263,13 +268,55 @@ _ncm_data_gauss_cov_resample (NcmData *data, NcmMSet *mset, NcmRNG *rng)
     ncm_vector_set (gauss->v, i, u_i);
   }
   ncm_rng_unlock (rng);
-  
-  ret = gsl_blas_dtrmv (CblasLower, CblasNoTrans, CblasNonUnit, 
+
+  /* CblasLower, CblasNoTrans => CblasUpper, CblasTrans */
+  ret = gsl_blas_dtrmv (CblasUpper, CblasTrans, CblasNonUnit, 
                         ncm_matrix_gsl (gauss->LLT), ncm_vector_gsl (gauss->v));
   NCM_TEST_GSL_RESULT ("_ncm_data_gauss_cov_resample", ret);
 
   gauss_cov_class->mean_func (gauss, mset, gauss->y);  
   ncm_vector_sub (gauss->y, gauss->v);
+}
+
+static gdouble 
+_ncm_data_gauss_cov_lnNorma2 (NcmDataGaussCov *gauss, NcmMSet *mset)
+{
+  gint exponent = 0;
+  guint i;
+  gdouble detL = 1.0;
+  //gdouble lndetL = 0.0;
+
+  for (i = 0; i < gauss->np; i++)
+  {
+    const gdouble Lii = ncm_matrix_get (gauss->LLT, i, i);
+    const gdouble ndetL = detL * Lii;
+    if (ndetL < 1.0e-300 || ndetL > 1.0e300)
+    {
+      gint exponent_i = 0;
+      detL = frexp (ndetL, &exponent_i);
+      exponent += exponent_i;
+    }
+    else
+      detL = ndetL;
+//    lndetL += log (Lii);
+  }
+  
+  return gauss->np * ncm_c_ln2pi () + 2.0 * (log (detL) + exponent * M_LN2);
+  //return gauss->np * ncm_c_ln2pi () + 2.0 * lndetL;
+}
+
+static gdouble 
+_ncm_data_gauss_cov_lnNorma2_bs (NcmDataGaussCov *gauss, NcmMSet *mset, NcmBootstrap *bstrap)
+{
+  guint i;
+  gdouble detL = 1.0;
+
+  for (i = 0; i < gauss->np; i++)
+  {
+    guint k = ncm_bootstrap_get (bstrap, i);
+    detL *= ncm_matrix_get (gauss->LLT, k, k);
+  }
+  return gauss->np * ncm_c_ln2pi () + 2.0 * log (detL);  
 }
 
 static void
@@ -292,7 +339,8 @@ _ncm_data_gauss_cov_m2lnL_val (NcmData *data, NcmMSet *mset, gdouble *m2lnL)
   if (cov_update || !gauss->prepared_LLT)
     _ncm_data_gauss_cov_prepare_LLT (data);
 
-  ret = gsl_blas_dtrsv (CblasLower, CblasNoTrans, CblasNonUnit, 
+  /* CblasLower, CblasNoTrans => CblasUpper, CblasTrans */
+  ret = gsl_blas_dtrsv (CblasUpper, CblasTrans, CblasNonUnit, 
                         ncm_matrix_gsl (gauss->LLT), ncm_vector_gsl (gauss->v));
   NCM_TEST_GSL_RESULT ("_ncm_data_gauss_cov_m2lnL_val", ret);
 
@@ -303,47 +351,23 @@ _ncm_data_gauss_cov_m2lnL_val (NcmData *data, NcmMSet *mset, gdouble *m2lnL)
                          m2lnL);
     NCM_TEST_GSL_RESULT ("_ncm_data_gauss_cov_m2lnL_val", ret);
 
-    if (gauss->use_det)
-    {
-      guint i;
-      gdouble lndetL = 0.0;
-      *m2lnL += gauss->np * ncm_c_ln2pi ();
-
-      for (i = 0; i < gauss->np; i++)
-      {
-        lndetL += log (ncm_matrix_get (gauss->LLT, i, i));
-      }
-      *m2lnL += 2.0 * lndetL;
-    }
+    if (gauss->use_norma)
+      *m2lnL += gauss_cov_class->lnNorma2 (gauss, mset);
   }
   else
   {
     const guint bsize = ncm_bootstrap_get_bsize (data->bstrap);
     guint i;
     g_assert (ncm_bootstrap_is_init (data->bstrap));
-    
-    if (gauss->use_det)
+
+    for (i = 0; i < bsize; i++)
     {
-      gdouble lndetL = 0.0;
-      *m2lnL += bsize * ncm_c_ln2pi ();
-      for (i = 0; i < bsize; i++)
-      {
-        guint k = ncm_bootstrap_get (data->bstrap, i);
-        const gdouble u_i = ncm_vector_get (gauss->v, k); 
-        lndetL += log (ncm_matrix_get (gauss->LLT, k, k));
-        *m2lnL += u_i * u_i;
-      }
-      *m2lnL += 2.0 * lndetL;
-    }
-    else
-    {
-      for (i = 0; i < bsize; i++)
-      {
-        guint k = ncm_bootstrap_get (data->bstrap, i);
-        const gdouble u_i = ncm_vector_get (gauss->v, k); 
-        *m2lnL += u_i * u_i;
-      }
-    }
+      guint k = ncm_bootstrap_get (data->bstrap, i);
+      const gdouble u_i = ncm_vector_get (gauss->v, k); 
+      *m2lnL += u_i * u_i;
+    }    
+    if (gauss->use_norma)
+      *m2lnL += gauss_cov_class->lnNorma2_bs (gauss, mset, data->bstrap);
   }
 }
 
@@ -367,7 +391,8 @@ _ncm_data_gauss_cov_leastsquares_f (NcmData *data, NcmMSet *mset, NcmVector *v)
   if (cov_update || !gauss->prepared_LLT)
     _ncm_data_gauss_cov_prepare_LLT (data);
 
-  ret = gsl_blas_dtrsv (CblasLower, CblasNoTrans, CblasNonUnit, 
+  /* CblasLower, CblasNoTrans => CblasUpper, CblasTrans */
+  ret = gsl_blas_dtrsv (CblasUpper, CblasTrans, CblasNonUnit, 
                         ncm_matrix_gsl (gauss->LLT), ncm_vector_gsl (v));
   NCM_TEST_GSL_RESULT ("_ncm_data_gauss_cov_leastsquares_f", ret);
 }

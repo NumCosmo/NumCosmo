@@ -954,3 +954,17 @@ ncm_fit_mc_mean_covar (NcmFitMC *mc)
   ncm_mset_fparams_set_vector (mc->mcat->mset, mc->fit->fstate->fparams);
   mc->fit->fstate->has_covar = TRUE;
 }
+
+/**
+ * ncm_fit_mc_get_catalog:
+ * @mc: a #NcmFitMC
+ *
+ * Gets the generated catalog of @mc.
+ * 
+ * Returns: (transfer full): the generated catalog.
+ */
+NcmMSetCatalog *
+ncm_fit_mc_get_catalog (NcmFitMC *mc)
+{
+  return ncm_mset_catalog_ref (mc->mcat);
+}

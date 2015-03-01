@@ -35,6 +35,7 @@
 #include <math.h>
 #include <glib.h>
 #include <gsl/gsl_blas.h>
+#include <gsl/gsl_cdf.h>
 
 gint
 main (gint argc, gchar *argv[])
@@ -61,6 +62,7 @@ main (gint argc, gchar *argv[])
   gchar *runconf_cmd_line = NULL;
   gboolean is_de = FALSE;
   NcmRNG *rng = ncm_rng_pool_get ("darkenergy");
+  NcmMSetCatalog *mcat = NULL;
 
   ncm_cfg_init ();
   
@@ -494,21 +496,13 @@ main (gint argc, gchar *argv[])
     }
   }
 
- 
   /* All initializations done! */
 
   if (de_fit.resample)
   {
-    NcmRNG *resample_rng;
-    if (de_fit.mc_seed > -1)
-      resample_rng = ncm_rng_seeded_new (NULL, de_fit.mc_seed);
-    else
-      resample_rng = ncm_rng_new (NULL);
-
     ncm_cfg_msg_sepa ();
     ncm_message ("# Resampling from fiducial model.\n");
-    ncm_dataset_resample (dset, fiduc, resample_rng);
-    ncm_rng_free (resample_rng);
+    ncm_dataset_resample (dset, fiduc, rng);
   }
 
   de_fit.fisher = (de_fit.fisher || (de_fit.nsigma_fisher != -1) || (de_fit.nsigma != -1) || (de_fit.onedim_cr != NULL));
@@ -600,6 +594,8 @@ main (gint argc, gchar *argv[])
       gdouble p_value = ncm_mset_catalog_param_pdf_pvalue (mc->mcat, m2lnL, FALSE);
       ncm_message ("#   - pvalue for fitted model [% 20.15g] %04.2f%%.\n#\n", m2lnL, 100.0 * p_value);
     }
+    ncm_mset_catalog_clear (&mcat);
+    mcat = ncm_fit_mc_get_catalog (mc);
     ncm_fit_mc_clear (&mc);
   }
 
@@ -632,6 +628,9 @@ main (gint argc, gchar *argv[])
       gdouble p_value = ncm_mset_catalog_param_pdf_pvalue (mcbs->mcat, m2lnL, FALSE);
       ncm_message ("#   - pvalue for fitted model [% 20.15g] %04.2f%%.\n#\n", m2lnL, 100.0 * p_value);
     }
+
+    ncm_mset_catalog_clear (&mcat);
+    mcat = ncm_fit_mcbs_get_catalog (mcbs);
     ncm_fit_mcbs_clear (&mcbs);
   }
 
@@ -669,6 +668,9 @@ main (gint argc, gchar *argv[])
     ncm_fit_mcmc_mean_covar (mcmc);
     ncm_mset_catalog_param_pdf (mcmc->mcat, 0);
     ncm_fit_log_covar (fit);
+
+    ncm_mset_catalog_clear (&mcat);
+    mcat = ncm_fit_mcmc_get_catalog (mcmc);
     ncm_fit_mcmc_clear (&mcmc);    
   }
   
@@ -716,6 +718,10 @@ main (gint argc, gchar *argv[])
     ncm_fit_esmcmc_mean_covar (esmcmc);
     ncm_mset_catalog_param_pdf (esmcmc->mcat, 0);
     ncm_fit_log_covar (fit);
+
+    ncm_mset_catalog_clear (&mcat);
+    mcat = ncm_fit_esmcmc_get_catalog (esmcmc);
+
     ncm_fit_esmcmc_clear (&esmcmc);    
   }
 
@@ -918,35 +924,113 @@ main (gint argc, gchar *argv[])
 
   if (de_fit.kinematics_sigma)
   {
-    NcmMSetFunc *dec_param_func = nc_hicosmo_create_mset_func1 (nc_hicosmo_q);
-    NcmMSetFunc *E2_func = nc_hicosmo_create_mset_func1 (nc_hicosmo_E2);
-    NcmMSetFunc *Em2_func = nc_hicosmo_create_mset_func1 (nc_hicosmo_Em2);
-    NcmMSetFunc *dec_func = nc_hicosmo_create_mset_func1 (nc_hicosmo_dec);
-    NcmMSetFunc *wec_func = nc_hicosmo_create_mset_func1 (nc_hicosmo_wec);
-    gint i;
-
-    ncm_message ("# Kinematics data:\n");
-    for (i = 0; i < de_fit.kinematics_n; i++)
+    if (mcat == NULL)
     {
-      gdouble z = de_fit.kinematics_z / (de_fit.kinematics_n - 1.0) * i;
-      gdouble q_z, E2_z, Em2_z, dec, wec;
-      gdouble sigma_q_z, sigma_E2_z, sigma_Em2_z, sigma_dec, sigma_wec;
-      ncm_fit_function_error (fit, dec_param_func, &z, FALSE, &q_z, &sigma_q_z);
-      ncm_fit_function_error (fit, E2_func, &z, FALSE, &E2_z, &sigma_E2_z);
-      ncm_fit_function_error (fit, Em2_func, &z, FALSE, &Em2_z, &sigma_Em2_z);
-      ncm_fit_function_error (fit, dec_func, &z, FALSE, &dec, &sigma_dec);
-      ncm_fit_function_error (fit, wec_func, &z, FALSE, &wec, &sigma_wec);
-      ncm_message ("% 20.15g % 20.15g % 20.15g % 20.15g % 20.15g % 20.15g % 20.15g % 20.15g % 20.15g % 20.15g % 20.15g\n", 
-                   z, 
-                   q_z, sigma_q_z, 
-                   E2_z, sigma_E2_z, 
-                   Em2_z, sigma_Em2_z,
-                   dec, sigma_dec,
-                   wec, sigma_wec);
+      NcmMSetFunc *dec_param_func = nc_hicosmo_create_mset_func1 (nc_hicosmo_q);
+      NcmMSetFunc *E2_func = nc_hicosmo_create_mset_func1 (nc_hicosmo_E2);
+      NcmMSetFunc *Em2_func = nc_hicosmo_create_mset_func1 (nc_hicosmo_Em2);
+      NcmMSetFunc *dec_func = nc_hicosmo_create_mset_func1 (nc_hicosmo_dec);
+      NcmMSetFunc *wec_func = nc_hicosmo_create_mset_func1 (nc_hicosmo_wec);
+      struct {
+        gchar *name; 
+        NcmMSetFunc *func;
+      } kinematics[5] = {
+        {"H^2/H_0^2", E2_func},
+        {"q(z)", dec_param_func},
+        {"H_0^2/H^2", Em2_func},
+        {"DEC", dec_func},
+        {"WEC", wec_func}
+      };
+      gint i, j;
+
+      ncm_message ("# Kinematics data propagating the covariance matrix:\n");
+      for (j = 0; j < 5; j++)
+      {
+        ncm_message ("# Kinematics data propagating the covariance matrix: %s:\n", kinematics[j].name);
+        for (i = 0; i < de_fit.kinematics_n; i++)
+        {
+          gdouble z = de_fit.kinematics_z / (de_fit.kinematics_n - 1.0) * i;
+          gdouble kf_z, sigma_kf_z;
+          ncm_fit_function_error (fit, kinematics[j].func, &z, FALSE, &kf_z, &sigma_kf_z);
+          ncm_message ("% 20.15g % 20.15g % 20.15g % 20.15g % 20.15g % 20.15g % 20.15g % 20.15g\n", 
+                       z, 
+                       kf_z, 
+                       kf_z - 1.0 * sigma_kf_z, kf_z + 1.0 * sigma_kf_z, 
+                       kf_z - 2.0 * sigma_kf_z, kf_z + 2.0 * sigma_kf_z, 
+                       kf_z - 3.0 * sigma_kf_z, kf_z + 3.0 * sigma_kf_z);
+        }
+        if (j != 4)
+          ncm_message ("\n\n");
+      }
+      ncm_mset_func_free (dec_param_func);
+      ncm_mset_func_free (E2_func);
+      ncm_mset_func_free (Em2_func);
+      ncm_mset_func_free (dec_func);
+      ncm_mset_func_free (wec_func);
     }
-    ncm_mset_func_free (dec_param_func);
-    ncm_mset_func_free (E2_func);
-    ncm_mset_func_free (Em2_func);
+    else
+    {
+      const guint nz = de_fit.kinematics_n; 
+      NcmMSetFunc *dec_param_func = nc_hicosmo_create_mset_arrayfunc1 (nc_hicosmo_q, nz);
+      NcmMSetFunc *E2_func = nc_hicosmo_create_mset_arrayfunc1 (nc_hicosmo_E2, nz);
+      NcmMSetFunc *Em2_func = nc_hicosmo_create_mset_arrayfunc1 (nc_hicosmo_Em2, nz);
+      NcmMSetFunc *dec_func = nc_hicosmo_create_mset_arrayfunc1 (nc_hicosmo_dec, nz);
+      NcmMSetFunc *wec_func = nc_hicosmo_create_mset_arrayfunc1 (nc_hicosmo_wec, nz);
+      NcmVector *z_vec = ncm_vector_new (nz);
+      GArray *p_val = g_array_new (FALSE, FALSE, sizeof (gdouble));
+      gint i, j;
+      struct {
+        gchar *name; 
+        NcmMSetFunc *func;
+      } kinematics[5] = {
+        {"H^2/H_0^2", E2_func},
+        {"q(z)", dec_param_func},
+        {"H_0^2/H^2", Em2_func},
+        {"DEC", dec_func},
+        {"WEC", wec_func}
+      };
+
+      g_array_set_size (p_val, 3);
+      g_array_index (p_val, gdouble, 0) = gsl_cdf_chisq_P (1.0, 1.0);
+      g_array_index (p_val, gdouble, 1) = gsl_cdf_chisq_P (4.0, 1.0);
+      g_array_index (p_val, gdouble, 2) = gsl_cdf_chisq_P (9.0, 1.0);
+      
+      ncm_message ("# Kinematics data from catalog:\n");
+
+      for (i = 0; i < de_fit.kinematics_n; i++)
+      {
+        const gdouble z = de_fit.kinematics_z / (de_fit.kinematics_n - 1.0) * i;
+        ncm_vector_set (z_vec, i, z);
+      }
+      
+      for (j = 0; j < 5; j++)
+      {
+        NcmMatrix *res = ncm_mset_catalog_calc_ci (mcat, kinematics[j].func, ncm_vector_ptr (z_vec, 0), p_val);
+        ncm_message ("# Kinematics data from catalog: %s:\n", kinematics[j].name);
+        
+        for (i = 0; i < nz; i++)
+        {
+
+          ncm_message ("% 20.15g % 20.15g % 20.15g % 20.15g % 20.15g % 20.15g % 20.15g % 20.15g\n", 
+                       ncm_vector_get (z_vec, i), 
+                       ncm_matrix_get (res, i, 0), 
+                       ncm_matrix_get (res, i, 1), ncm_matrix_get (res, i, 2), 
+                       ncm_matrix_get (res, i, 3), ncm_matrix_get (res, i, 4), 
+                       ncm_matrix_get (res, i, 5), ncm_matrix_get (res, i, 6));
+        }
+        if (j != 4)
+          ncm_message ("\n\n");
+        ncm_matrix_free (res);
+      }
+      ncm_vector_free (z_vec);
+      g_array_unref (p_val);
+      ncm_mset_func_free (dec_param_func);
+      ncm_mset_func_free (E2_func);
+      ncm_mset_func_free (Em2_func);
+      ncm_mset_func_free (dec_func);
+      ncm_mset_func_free (wec_func);
+    }
+
   }
 
   if (ca_array != NULL)
@@ -964,7 +1048,8 @@ main (gint argc, gchar *argv[])
 
   if (fiduc != NULL)
     ncm_mset_free (fiduc);
-  
+
+  ncm_mset_catalog_clear (&mcat);
   ncm_serialize_global_reset ();
   ncm_model_free (NCM_MODEL (model));
   ncm_mset_free (mset);

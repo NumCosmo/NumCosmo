@@ -26,8 +26,8 @@ dnl ***************************************************************************
 
 m4_define([numcosmo_major_version], [0])
 m4_define([numcosmo_minor_version], [12])
-m4_define([numcosmo_micro_version], [0])
-m4_define([numcosmo_interface_age], [0])
+m4_define([numcosmo_micro_version], [1])
+m4_define([numcosmo_interface_age], [1])
 m4_define([numcosmo_binary_age],
           [m4_eval(100 * numcosmo_minor_version + numcosmo_micro_version)])
 m4_define([numcosmo_version],
@@ -442,12 +442,17 @@ if test "x$have_blas" != "xno"; then
   fi
 else
   AC_MSG_RESULT([GSL's BLAS])
-  AC_DEFINE([HAVE_GSL_CBLAS_H], [1], [use lapack functions])
+  AC_DEFINE([HAVE_GSL_CBLAS_H], [1], [use GSL's BLAS])
 fi
 
-dnl ***************************************************************************
-dnl Check for LAPACK
-dnl ***************************************************************************
+AC_ARG_WITH(lapacke,
+        [AS_HELP_STRING([--with-lapacke=<lib>], [use LAPACKe library <lib>])])
+case $with_lapacke in
+        yes | "") ;;
+        no) lapacke_ok=disable ;;
+        -* | */* | *.a | *.so | *.so.* | *.o) LAPACKE_LIBS="$with_lapacke" ;;
+        *) LAPACKE_LIBS="-l$with_lapacke" ;;
+esac
 
 AX_LAPACK([],[have_lapack="no"])
 AC_MSG_CHECKING([if lapack is available $LAPACK_LIBS])
@@ -467,60 +472,45 @@ if test "x$have_lapack" != "xno"; then
   else
     lapack_support="Other"
   fi
+
+  LIBS="$LAPACK_LIBS $LIBS"
   AC_MSG_RESULT([$lapack_support])
 
   if test "x$lapack_mkl" != "x"; then
     AC_CHECK_HEADERS([mkl_lapacke.h],
-      [AC_DEFINE([HAVE_LAPACKE],[1], [have lapacke support])
-       AC_DEFINE([HAVE_MKL_LAPACKE_H],[1], [have mkl_lapacke.h header])])
+      [AC_CHECK_FUNC([LAPACKE_dptsv],
+        [AC_DEFINE([HAVE_LAPACKE],[1], [have lapacke support])
+         AC_DEFINE([HAVE_MKL_LAPACKE_H],[1], [have mkl_lapacke.h header])
+         have_lapacke="yes"][])])
     AC_CHECK_HEADERS([mkl_lapack.h])
-  else
-    AC_CHECK_HEADERS([lapacke.h],
-      [AC_DEFINE([HAVE_LAPACKE],[1], [have lapacke support])
-       AC_DEFINE([HAVE_LAPACKE_H],[1], [have lapacke.h header])])
-    AC_CHECK_HEADERS([clapack.h],
-      [AC_DEFINE([HAVE_CLAPACK],[1], [have clapack support])
-       AC_DEFINE([HAVE_CLAPACK_H],[1], [have clapack.h header])])
   fi
-  LIBS="$LAPACK_LIBS $LIBS"
+
+  if test "x$have_lapacke" != "xyes"; then
+    AC_CHECK_HEADERS([lapacke.h],
+      [AC_SEARCH_LIBS([LAPACKE_dptsv],[lapacke],  
+        [AC_DEFINE([HAVE_LAPACKE],[1], [have lapacke support])
+         AC_DEFINE([HAVE_LAPACKE_H],[1], [have lapacke.h header])
+         have_lapacke="yes"],[])])
+  fi
+
+  if test "x$have_lapacke" != "xyes"; then
+    AC_CHECK_HEADERS([clapack.h],
+      [AC_SEARCH_LIBS([clapack_dpotri],[clapack],
+        [AC_DEFINE([HAVE_CLAPACK],[1], [have clapack support])
+         AC_DEFINE([HAVE_CLAPACK_H],[1], [have clapack.h header])
+         have_clapack="yes"],[])])
+  fi
+  
+  if test "x$have_lapacke" = "xyes"; then
+    lapack_support="$lapack_support+LAPACKe"
+  fi
+
+  if test "x$have_clapack" = "xyes"; then
+    lapack_support="$lapack_support+cLAPACK"
+  fi
+
 else
   AC_MSG_RESULT([no])
-fi
-
-dnl ***************************************************************************
-dnl Check for levmar
-dnl ***************************************************************************
-
-AC_MSG_CHECKING([--with-levmar-path])
-AC_ARG_WITH(levmar-path,
-  [AS_HELP_STRING([--with-levmar-path=PATH],[Levmar library location])],
-  [LEVMAR_PATH="-L$withval"], [])
-AC_MSG_RESULT($LEVMAR_PATH)
-
-if test "x$LEVMAR_PATH" != x; then
-  LIBS="$LEVMAR_PATH $LIBS"
-fi
-
-AC_MSG_CHECKING([--with-levmar-extra-libs])
-AC_ARG_WITH(levmar-extra-libs,
-  [AS_HELP_STRING([--with-levmar-extra-libs=LIBS],[Levmar extra libraries, default is none])],
-  [LEVMAR_EXTRA_LIBS="$withval"], [])
-AC_MSG_RESULT($LEVMAR_EXTRA_LIBS)
-
-AC_CHECK_LIB([levmar], [dlevmar_der],[LIBS="-llevmar $LEVMAR_EXTRA_LIBS $LIBS"],[levmar_missing="yes"],[$LEVMAR_EXTRA_LIBS])
-
-AC_CHECK_HEADER(levmar.h, , [AC_CHECK_HEADER(levmar/levmar.h, [levmar_need_prefix="yes"], [levmar_missing="yes"])])
-if test "x$levmar_missing" = "xyes"; then
-  have_levmar_support=""
-else
-  have_levmar_support="#define NUMCOSMO_HAVE_LEVMAR 1"
-fi
-AC_SUBST(have_levmar_support)
-
-AM_CONDITIONAL([HAVE_LIBLEVMAR], [test "x$have_levmar_support" != x])
-
-if test "x$levmar_need_prefix" = "xyes"; then
-  AC_DEFINE([NC_LEVMAR_NEED_PREFIX],[1], [Duh!])
 fi
 
 dnl ***************************************************************************
@@ -679,6 +669,7 @@ AC_CONFIG_FILES([
 numcosmo.pc
 Makefile
 numcosmo/Makefile
+numcosmo/levmar/Makefile
 tools/Makefile
 tests/Makefile
 docs/Makefile
@@ -712,12 +703,6 @@ if [ test "x$have_lapack" != "xno" ]; then
 else
        echo "Building  with Lapack support: ...................................NO"
        echo "        Requires Lapack Linear Algebra PACKage"
-fi
-if [ test "x$have_levmar_support" != x ]; then
-       echo "Building with levmar support: ...................................YES"
-else
-       echo "Building  with levmar support: ...................................NO"
-       echo "        Requires levmar Levenberg-Marquardt least squares library"
 fi
 if [ test "x$have_cfitsio_support" != x ]; then
        echo "Building with cfitsio support: ..................................YES"

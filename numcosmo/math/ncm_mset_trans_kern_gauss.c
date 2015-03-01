@@ -310,7 +310,7 @@ ncm_mset_trans_kern_gauss_set_cov (NcmMSetTransKernGauss *tkerng, const NcmMatri
   g_assert_cmpuint (ncm_matrix_nrows (tkerng->cov), ==, ncm_matrix_nrows (cov));
   ncm_matrix_memcpy (tkerng->cov, cov);
   ncm_matrix_memcpy (tkerng->LLT, cov);
-  ncm_matrix_cholesky_decomp (tkerng->LLT);
+  ncm_matrix_cholesky_decomp (tkerng->LLT, 'L');
   tkerng->init = TRUE;
 }
 
@@ -327,7 +327,7 @@ ncm_mset_trans_kern_gauss_set_cov_variant (NcmMSetTransKernGauss *tkerng, GVaria
 {
   ncm_matrix_set_from_variant (tkerng->cov, cov);
   ncm_matrix_memcpy (tkerng->LLT, tkerng->cov);
-  ncm_matrix_cholesky_decomp (tkerng->LLT);
+  ncm_matrix_cholesky_decomp (tkerng->LLT, 'L');
   tkerng->init = TRUE;
 }
 
@@ -344,7 +344,7 @@ ncm_mset_trans_kern_gauss_set_cov_data (NcmMSetTransKernGauss *tkerng, gdouble *
 {
   ncm_matrix_set_from_data (tkerng->cov, cov);
   ncm_matrix_memcpy (tkerng->LLT, tkerng->cov);
-  ncm_matrix_cholesky_decomp (tkerng->LLT);
+  ncm_matrix_cholesky_decomp (tkerng->LLT, 'L');
   tkerng->init = TRUE;
 }
 
@@ -383,6 +383,6 @@ ncm_mset_trans_kern_gauss_set_cov_from_scale (NcmMSetTransKernGauss *tkerng)
     ncm_matrix_set (tkerng->cov, i, i, scale * scale);
   }
   ncm_matrix_memcpy (tkerng->LLT, tkerng->cov);
-  ncm_matrix_cholesky_decomp (tkerng->LLT);
+  ncm_matrix_cholesky_decomp (tkerng->LLT, 'L');
   tkerng->init = TRUE;
 }

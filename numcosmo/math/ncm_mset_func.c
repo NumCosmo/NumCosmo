@@ -42,6 +42,47 @@
 
 G_DEFINE_TYPE (NcmMSetFunc, ncm_mset_func, G_TYPE_OBJECT);
 
+static void
+ncm_mset_func_init (NcmMSetFunc *func)
+{
+  func->func = NULL;
+  func->obj = NULL;
+  func->free = NULL;
+  func->np = 0;
+  func->dim = 0;
+}
+
+static void
+ncm_mset_func_dispose (GObject *object)
+{
+  NcmMSetFunc *func = NCM_MSET_FUNC (object);
+
+  if (func->free && func->obj != NULL)
+  {
+    func->free (func->obj);
+    func->obj = NULL;
+  }
+
+  /* Chain up : end */
+  G_OBJECT_CLASS (ncm_mset_func_parent_class)->dispose (object);
+}
+
+static void
+ncm_mset_func_finalize (GObject *object)
+{
+  /* Chain up : end */
+  G_OBJECT_CLASS (ncm_mset_func_parent_class)->finalize (object);
+}
+
+static void
+ncm_mset_func_class_init (NcmMSetFuncClass *klass)
+{
+  GObjectClass* object_class = G_OBJECT_CLASS (klass);
+
+  object_class->dispose  = ncm_mset_func_dispose;
+  object_class->finalize = ncm_mset_func_finalize;
+}
+
 /**
  * ncm_mset_func_new:
  * @func: FIXME
@@ -107,6 +148,22 @@ GPtrArray *
 ncm_mset_func_array_new (void)
 {
   return g_ptr_array_new_with_free_func ((GDestroyNotify) &ncm_mset_func_free);
+}
+
+/**
+ * ncm_mset_func_eval_direct:
+ * @func: FIXME
+ * @mset: FIXME
+ * @x: FIXME
+ * @res: (out caller-allocates) (array): FIXME
+ * 
+ * FIXME
+ * 
+ */
+void
+ncm_mset_func_eval_direct (NcmMSetFunc *func, NcmMSet *mset, const gdouble *x, gdouble *res)
+{
+  func->func (mset, func->obj, x, res);
 }
 
 /**
@@ -289,43 +346,30 @@ ncm_mset_func_numdiff_fparams (NcmMSetFunc *func, NcmMSet *mset, const gdouble *
   return out;
 }
 
-static void
-ncm_mset_func_init (NcmMSetFunc *func)
+/**
+ * ncm_mset_func_get_nparams:
+ * @func: a #NcmMSetFunc
+ *
+ * Gets the number of parameter of @func.
+ *
+ * Returns: number of parameters expected by @func.
+ */
+guint 
+ncm_mset_func_get_nparams (NcmMSetFunc *func)
 {
-  func->func = NULL;
-  func->obj = NULL;
-  func->free = NULL;
-  func->np = 0;
-  func->dim = 0;
+  return func->np;
 }
 
-static void
-ncm_mset_func_dispose (GObject *object)
+/**
+ * ncm_mset_func_get_dim:
+ * @func: a #NcmMSetFunc
+ *
+ * Gets the dimension of @func.
+ *
+ * Returns: number values returned by @func.
+ */
+guint 
+ncm_mset_func_get_dim (NcmMSetFunc *func)
 {
-  NcmMSetFunc *func = NCM_MSET_FUNC (object);
-
-  if (func->free && func->obj != NULL)
-  {
-    func->free (func->obj);
-    func->obj = NULL;
-  }
-
-  /* Chain up : end */
-  G_OBJECT_CLASS (ncm_mset_func_parent_class)->dispose (object);
-}
-
-static void
-ncm_mset_func_finalize (GObject *object)
-{
-  /* Chain up : end */
-  G_OBJECT_CLASS (ncm_mset_func_parent_class)->finalize (object);
-}
-
-static void
-ncm_mset_func_class_init (NcmMSetFuncClass *klass)
-{
-  GObjectClass* object_class = G_OBJECT_CLASS (klass);
-
-  object_class->dispose  = ncm_mset_func_dispose;
-  object_class->finalize = ncm_mset_func_finalize;
+  return func->dim;
 }

@@ -216,7 +216,7 @@ _ncm_data_gauss_prepare_LLT (NcmData *data)
   else
     ncm_matrix_memcpy (gauss->LLT, gauss->inv_cov);
 
-  ncm_matrix_cholesky_decomp (gauss->LLT);
+  ncm_matrix_cholesky_decomp (gauss->LLT, 'U');
 
   gauss->prepared_LLT = TRUE;
 }
@@ -243,8 +243,9 @@ _ncm_data_gauss_resample (NcmData *data, NcmMSet *mset, NcmRNG *rng)
     ncm_vector_set (gauss->v, i, u_i);
   }
   ncm_rng_unlock (rng);
-  
-  ret = gsl_blas_dtrsv (CblasLower, CblasTrans, CblasNonUnit, 
+
+  /* CblasLower, CblasTrans => CblasUpper, CblasNoTrans */
+  ret = gsl_blas_dtrsv (CblasUpper, CblasNoTrans, CblasNonUnit, 
                         ncm_matrix_gsl (gauss->LLT), ncm_vector_gsl (gauss->v));
   NCM_TEST_GSL_RESULT ("_ncm_data_gauss_resample", ret);
   
@@ -289,7 +290,8 @@ _ncm_data_gauss_m2lnL_val (NcmData *data, NcmMSet *mset, gdouble *m2lnL)
     if (inv_cov_update || !gauss->prepared_LLT)
       _ncm_data_gauss_prepare_LLT (data);
 
-    ret = gsl_blas_dtrmv (CblasLower, CblasTrans, CblasNonUnit, 
+    /* CblasLower, CblasTrans => CblasUpper, CblasNoTrans */
+    ret = gsl_blas_dtrmv (CblasUpper, CblasNoTrans, CblasNonUnit, 
                           ncm_matrix_gsl (gauss->LLT), ncm_vector_gsl (gauss->v));
     NCM_TEST_GSL_RESULT ("_ncm_data_gauss_cov_resample", ret);
     
@@ -322,7 +324,8 @@ _ncm_data_gauss_leastsquares_f (NcmData *data, NcmMSet *mset, NcmVector *v)
   if (inv_cov_update || !gauss->prepared_LLT)
     _ncm_data_gauss_prepare_LLT (data);
 
-  ret = gsl_blas_dtrmv (CblasLower, CblasTrans, CblasNonUnit, 
+  /* CblasLower, CblasTrans => CblasUpper, CblasNoTrans */
+  ret = gsl_blas_dtrmv (CblasUpper, CblasNoTrans, CblasNonUnit, 
                         ncm_matrix_gsl (gauss->LLT), ncm_vector_gsl (v));
   NCM_TEST_GSL_RESULT("_ncm_data_gauss_leastsquares_f", ret);
 }

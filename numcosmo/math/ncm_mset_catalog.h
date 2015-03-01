@@ -96,6 +96,7 @@ struct _NcmMSetCatalog
   gchar *file;
   gchar *rtype_str;
   GArray *porder;
+  GArray *quantile_ws;
   gint first_id;
   gint cur_id;
   gint file_first_id;
@@ -119,6 +120,7 @@ struct _NcmMSetCatalogClass
 GType ncm_mset_catalog_get_type (void) G_GNUC_CONST;
 
 NcmMSetCatalog *ncm_mset_catalog_new (NcmMSet *mset, guint nadd_vals, guint nchains, gboolean weighted, ...);
+NcmMSetCatalog *ncm_mset_catalog_ref (NcmMSetCatalog *mcat);
 void ncm_mset_catalog_free (NcmMSetCatalog *mcat);
 void ncm_mset_catalog_clear (NcmMSetCatalog **mcat);
 
@@ -157,6 +159,8 @@ gdouble ncm_mset_catalog_get_shrink_factor (NcmMSetCatalog *mcat);
 
 void ncm_mset_catalog_param_pdf (NcmMSetCatalog *mcat, guint i);
 gdouble ncm_mset_catalog_param_pdf_pvalue (NcmMSetCatalog *mcat, gdouble pval, gboolean both);
+
+NcmMatrix *ncm_mset_catalog_calc_ci (NcmMSetCatalog *mcat, NcmMSetFunc *func, gdouble *x, GArray *p_val);
 
 #define NCM_MSET_CATALOG_EXTNAME "NcmMSetCatalog:DATA"
 #define NCM_MSET_CATALOG_M2LNL_COLNAME "NcmFit:m2lnL"

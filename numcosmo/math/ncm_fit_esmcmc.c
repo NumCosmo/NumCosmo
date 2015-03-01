@@ -1170,3 +1170,17 @@ ncm_fit_esmcmc_mean_covar (NcmFitESMCMC *esmcmc)
   ncm_mset_fparams_set_vector (esmcmc->mcat->mset, esmcmc->fit->fstate->fparams);
   esmcmc->fit->fstate->has_covar = TRUE;
 }
+
+/**
+ * ncm_fit_esmcmc_get_catalog:
+ * @esmcmc: a #NcmFitESMCMC
+ *
+ * Gets the generated catalog of @esmcmc.
+ * 
+ * Returns: (transfer full): the generated catalog.
+ */
+NcmMSetCatalog *
+ncm_fit_esmcmc_get_catalog (NcmFitESMCMC *esmcmc)
+{
+  return ncm_mset_catalog_ref (esmcmc->mcat);
+}
