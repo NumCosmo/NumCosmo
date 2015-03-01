@@ -341,3 +341,18 @@ ncm_fit_mcbs_run (NcmFitMCBS *mcbs, NcmMSet *fiduc, guint ni, guint nf, guint nb
   
   ncm_fit_mc_end_run (mcbs->mc_resample);  
 }
+
+/**
+ * ncm_fit_mcbs_get_catalog:
+ * @mcbs: a #NcmFitMCBS
+ *
+ * Gets the generated catalog of @mcbs.
+ * 
+ * Returns: (transfer full): the generated catalog.
+ */
+NcmMSetCatalog *
+ncm_fit_mcbs_get_catalog (NcmFitMCBS *mcbs)
+{
+  return ncm_mset_catalog_ref (mcbs->mcat);
+}
+

@@ -57,6 +57,7 @@
 #include "ncm_enum_types.h"
 
 #include <gsl/gsl_statistics_double.h>
+#include <gsl/gsl_sort.h>
 
 G_DEFINE_TYPE (NcmMSetCatalog, ncm_mset_catalog, G_TYPE_OBJECT);
 
@@ -107,6 +108,7 @@ ncm_mset_catalog_init (NcmMSetCatalog *mcat)
   mcat->file           = NULL;
   mcat->rtype_str      = NULL;
   mcat->porder         = g_array_new (FALSE, FALSE, sizeof (gint));
+  mcat->quantile_ws    = g_array_new (FALSE, FALSE, sizeof (gdouble));
 #ifdef NUMCOSMO_HAVE_CFITSIO
   mcat->fptr           = NULL;
 #endif /* NUMCOSMO_HAVE_CFITSIO */
@@ -296,6 +298,7 @@ _ncm_mset_catalog_finalize (GObject *object)
   g_clear_pointer (&mcat->rtype_str, g_free);
   
   g_array_unref (mcat->porder);
+  g_array_unref (mcat->quantile_ws);
   g_timer_destroy (mcat->flush_timer);
 
   g_ptr_array_unref (mcat->add_vals_names);
@@ -432,10 +435,24 @@ ncm_mset_catalog_new (NcmMSet *mset, guint nadd_vals, guint nchains, gboolean we
 }
 
 /**
+ * ncm_mset_catalog_ref:
+ * @mcat: a #NcmMSetCatalog
+ *
+ * Increases the reference count of @mcat atomically.
+ *
+ * Returns: (transfer full): @mcat.
+ */
+NcmMSetCatalog *
+ncm_mset_catalog_ref (NcmMSetCatalog *mcat)
+{
+  return g_object_ref (mcat);
+}
+
+/**
  * ncm_mset_catalog_free:
  * @mcat: a #NcmMSetCatalog
  *
- * Decrese the reference count of @mcat atomically.
+ * Decreases the reference count of @mcat atomically.
  *
  */
 void 
@@ -455,7 +472,8 @@ ncm_mset_catalog_free (NcmMSetCatalog *mcat)
 void 
 ncm_mset_catalog_clear (NcmMSetCatalog **mcat)
 {
-  ncm_mset_catalog_sync (*mcat, TRUE);  
+  if (*mcat != NULL)
+    ncm_mset_catalog_sync (*mcat, TRUE);  
   g_clear_object (mcat);
 }
 
@@ -1754,9 +1772,9 @@ ncm_mset_catalog_get_shrink_factor (NcmMSetCatalog *mcat)
     if (gsl_finite (ncm_matrix_get (mcat->chain_cov, 0, 0)))
     {
       gdouble lev = 0.0;
-      ncm_matrix_cholesky_inverse (mcat->chain_cov);
+      ncm_matrix_cholesky_inverse (mcat->chain_cov, 'L');
 
-      ncm_matrix_dsymm (mcat->chain_cov, 1.0, cov, 0.0, mcat->chain_sM);
+      ncm_matrix_dsymm (mcat->chain_cov, 'L', 1.0, cov, 0.0, mcat->chain_sM);
 /*      
       ncm_matrix_log_vals (mcat->chain_cov, "# mean iov", "% 10.5g");
       ncm_matrix_log_vals (mcat->chain_sM, "# sM ", "% 10.5g");
@@ -1861,5 +1879,81 @@ ncm_mset_catalog_param_pdf_pvalue (NcmMSetCatalog *mcat, gdouble pval, gboolean 
       return 1.0;
     else
       return (1.0 - mcat->h_pdf->sum[i - 1]);
+  }
+}
+
+/**
+ * ncm_mset_catalog_calc_ci:
+ * @mcat: a #NcmMSetCatalog
+ * @func: a #NcmMSetFunc of type 0-n
+ * @x: (array) (element-type double): the argument of @func.
+ * @p_val: (element-type double): p-values for the confidence intervals
+ *
+ * Calculates the mean and the confidence interval (CI) for the value of @func 
+ * for each p-value in @p_val. It stores the results in a #NcmVector, where the 
+ * first element contains the mean and the following contain the lower and 
+ * upper bounds for each p-value in @p_val.
+ * 
+ * The #NcmMSetFunc @func must be of dimension one.
+ * 
+ * # Example: #
+ * 
+ * If @p_val contains two values ($1\sigma$) 0.6827 and ($\sigma$) 0.9545,
+ * the first element will contain the mean, the second and third, the lower 
+ * and upper bounds, respectively. Then, the fourth and fifth elements the 
+ * lower and upper bounds of $2\sigma$ CI.
+ * 
+ * Returns: (transfer full): a #NcmVector containing the mean and lower/upper bound of the confidence interval for @func.
+ */
+NcmMatrix * 
+ncm_mset_catalog_calc_ci (NcmMSetCatalog *mcat, NcmMSetFunc *func, gdouble *x, GArray *p_val)
+{
+  guint dim = ncm_mset_func_get_dim (func);
+  g_assert_cmpuint (p_val->len, >, 1);
+  {
+    const guint nelem = p_val->len * 2 + 1;
+    NcmMatrix *res = ncm_matrix_new (dim, nelem);
+    NcmVector *save_params = ncm_vector_new (ncm_mset_fparams_len (mcat->mset));
+    const guint cat_len = ncm_mset_catalog_len (mcat);
+    guint i, j;
+    
+    ncm_mset_fparams_get_vector (mcat->mset, save_params);
+    
+    g_array_set_size (mcat->quantile_ws, cat_len * dim);
+
+    for (i = 0; i < cat_len; i++)
+    {
+      NcmVector *row = ncm_mset_catalog_peek_row (mcat, i);
+      ncm_mset_fparams_set_vector_offset (mcat->mset, row, mcat->nadd_vals);
+      ncm_mset_func_eval_direct (func, mcat->mset, x, &g_array_index (mcat->quantile_ws, gdouble, i * dim));
+    }
+
+    for (i = 0; i < dim; i++)
+    {
+      gdouble *ret_i = &g_array_index (mcat->quantile_ws, gdouble, i);
+      gsl_sort (ret_i, dim, cat_len);
+      ncm_matrix_set (res, i, 0, gsl_stats_mean (ret_i, dim, cat_len));
+    }
+
+    for (j = 0; j < p_val->len; j++)
+    {
+      const gdouble p = g_array_index (p_val, gdouble, j);
+      g_assert_cmpfloat (p, >, 0.0);
+      g_assert_cmpfloat (p, <, 1.0);
+      for (i = 0; i < dim; i++)
+      {
+        gdouble *ret_i = &g_array_index (mcat->quantile_ws, gdouble, i);
+        const gdouble lb_prob = (1.0 - p) / 2.0;
+        const gdouble ub_prob = (1.0 + p) / 2.0;
+        const gdouble lb = gsl_stats_quantile_from_sorted_data (ret_i, dim, cat_len, lb_prob);
+        const gdouble ub = gsl_stats_quantile_from_sorted_data (ret_i, dim, cat_len, ub_prob);
+        ncm_matrix_set (res, i, 1 + j * 2 + 0, lb);
+        ncm_matrix_set (res, i, 1 + j * 2 + 1, ub);
+      }
+    }
+
+    g_array_set_size (mcat->quantile_ws, 0);
+    ncm_mset_fparams_set_vector (mcat->mset, save_params);
+    return res;
   }
 }

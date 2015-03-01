@@ -129,6 +129,8 @@ void ncm_fit_esmcmc_run (NcmFitESMCMC *esmcmc, guint n);
 void ncm_fit_esmcmc_run_lre (NcmFitESMCMC *esmcmc, guint prerun, gdouble lre);
 void ncm_fit_esmcmc_mean_covar (NcmFitESMCMC *esmcmc);
 
+NcmMSetCatalog *ncm_fit_esmcmc_get_catalog (NcmFitESMCMC *esmcmc);
+
 #define NCM_FIT_ESMCMC_WALKER_ID "NcmFitESMCMC:Walker"
 #define NCM_FIT_ESMCMC_MIN_FLUSH_INTERVAL (10.0)
 

@@ -50,6 +50,7 @@ static const gchar *_nc_data_snia_cats[] = {
   "snls3_conley_2011_sys_stat.fits",
   "snls3_conley_2011_stat_only.fits",
   "jla_snls3_sdss_sys_stat.fits",
+  "jla_snls3_sdss_sys_stat_cmpl.fits",
 };
 
 /**

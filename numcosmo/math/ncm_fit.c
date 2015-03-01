@@ -55,6 +55,8 @@
 #include <gsl/gsl_linalg.h>
 #include <gsl/gsl_randist.h>
 #include <gsl/gsl_machine.h>
+#include <gsl/gsl_statistics_double.h>
+#include <gsl/gsl_sort_vector.h>
 
 enum
 {
@@ -465,11 +467,9 @@ ncm_fit_new (NcmFitType ftype, gchar *algo_name, NcmLikelihood *lh, NcmMSet *mse
     case NCM_FIT_TYPE_GSL_MMS:
       return ncm_fit_gsl_mms_new_by_name (lh, mset, gtype, algo_name);
       break;
-#ifdef NUMCOSMO_HAVE_LEVMAR
     case NCM_FIT_TYPE_LEVMAR:
       return ncm_fit_levmar_new_by_name (lh, mset, gtype, algo_name);
       break;
-#endif /* NUMCOSMO_HAVE_LEVMAR */
 #ifdef NUMCOSMO_HAVE_NLOPT
     case NCM_FIT_TYPE_NLOPT:
       return ncm_fit_nlopt_new_by_name (lh, mset, gtype, algo_name);
@@ -1257,6 +1257,20 @@ ncm_fit_log_info (NcmFit *fit)
 {
   ncm_dataset_log_info (fit->lh->dset);
   ncm_mset_pretty_log (fit->mset);
+
+  if (FALSE)
+  {
+    gdouble ks_test, mean, sd, skew, kurtosis, max;
+    ks_test = ncm_fit_residual_ks_test (fit, &mean, &sd, &skew, &kurtosis, &max);
+    ncm_cfg_msg_sepa ();
+    g_message ("# Residuals Kolmogorov-Smirnov test:\n");
+    g_message ("#   - mean:     % -20.15g\n", mean);
+    g_message ("#   - sd:       % -20.15g\n", sd);
+    g_message ("#   - skew:     % -20.15g\n", skew);
+    g_message ("#   - kurtosis: % -20.15g\n", kurtosis);
+    g_message ("#   - max:      % -20.15g\n", max);
+    g_message ("#   - pval:     % -20.15e\n", 1.0 - ks_test);
+  }
   return;
 }
 
@@ -1935,6 +1949,87 @@ ncm_fit_numdiff_m2lnL_covar (NcmFit *fit)
   else
     NCM_TEST_GSL_RESULT ("ncm_fit_numdiff_m2lnL_covar[gsl_linalg_cholesky_decomp]", ret);
   fit->fstate->has_covar = TRUE;
+}
+
+/**
+ * ncm_fit_residual_ks_test:
+ * @fit: a #NcmFit.
+ * @o_mean: (out): FIXME
+ * @o_sd: (out): FIXME
+ * @o_skew: (out): FIXME
+ * @o_kurtosis: (out): FIXME
+ * @o_max: (out): FIXME
+ * 
+ * FIXME
+ *
+ * Returns: FIXME
+ */
+gdouble
+ncm_fit_residual_ks_test (NcmFit *fit, gdouble *o_mean, gdouble *o_sd, gdouble *o_skew, gdouble *o_kurtosis, gdouble *o_max)
+{
+  if (!ncm_dataset_has_leastsquares_f (fit->lh->dset))
+    return - 1.0;
+  else
+  {
+    NcmVector *f = fit->fstate->is_least_squares ? ncm_vector_ref (fit->fstate->ls_f) : ncm_vector_new (fit->fstate->data_len); 
+    guint n = ncm_vector_len (f);
+    gdouble *d = ncm_vector_data (f);
+    gdouble mean, sd;
+    gdouble max = 0.0;
+    guint i;
+
+    ncm_fit_ls_f (fit, f);
+
+    if (FALSE)
+    {
+      for (i = 0; i < n; i++)
+      {
+        const gdouble x = ncm_vector_get (f, i);
+        printf ("% 20.15g\n", x );
+      }
+    }
+    
+    gsl_sort_vector (ncm_vector_gsl (f));
+
+    mean = gsl_stats_mean (d, ncm_vector_stride (f), n);
+    sd   = gsl_stats_sd_m (d, ncm_vector_stride (f), n, mean);
+    
+    for (i = 0; i < n; i++)
+    {
+      const gdouble prob = (i + 1.0) / (n * 1.0);
+      const gdouble x = ncm_vector_get (f, i);
+      const gdouble pgauss = gsl_cdf_gaussian_P (x - mean, sd);
+      max = GSL_MAX (max, fabs (prob - pgauss));
+    }
+
+    if (o_mean != NULL)
+      *o_mean = mean;
+    if (o_sd != NULL)
+      *o_sd = sd;
+
+    if (o_skew != NULL)
+      *o_skew = gsl_stats_skew_m_sd (d, ncm_vector_stride (f), n, mean, sd);
+
+    if (o_kurtosis != NULL)
+      *o_kurtosis = gsl_stats_kurtosis_m_sd (d, ncm_vector_stride (f), n, mean, sd);
+
+    if (o_max != NULL)
+      *o_max = max;
+
+    if (FALSE)
+    {
+      gdouble w, pw;
+      gint ret;
+      
+      ncm_util_swilk (d, n, &w, &pw, &ret);
+
+      printf ("Swilk test % 20.15g % 20.15g %d\n", w, pw, ret);
+    }
+    
+    
+    ncm_vector_free (f);
+    return ncm_util_KScdf (n, max);
+  }  
 }
 
 typedef struct _FitDProb

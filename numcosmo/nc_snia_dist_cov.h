@@ -86,6 +86,7 @@ struct _NcSNIADistCov
   /*< private >*/
   NcmModel parent_instance;
   NcDistance *dist;
+  GArray *var_int;
 };
 
 struct _NcSNIADistCovClass
@@ -109,15 +110,19 @@ void nc_snia_dist_cov_prepare_if_needed (NcSNIADistCov *dcov, NcmMSet *mset);
 void nc_snia_dist_cov_calc (NcSNIADistCov *dcov, NcDataSNIACov *snia_cov, NcmMatrix *cov);
 void nc_snia_dist_cov_mean (NcSNIADistCov *dcov, NcHICosmo *cosmo, NcDataSNIACov *snia_cov, NcmVector *y);
 
+gdouble nc_snia_dist_cov_mag (NcSNIADistCov *dcov, NcHICosmo *cosmo, NcDataSNIACov *snia_cov, guint i, gdouble width_th, gdouble colour_th);
+void nc_snia_dist_cov_mag_to_width_colour (NcSNIADistCov *dcov, NcHICosmo *cosmo, NcDataSNIACov *snia_cov, NcmVector *obs, NcmMatrix *X, gboolean colmajor);
+gdouble nc_snia_dist_cov_extra_var (NcSNIADistCov *dcov, NcDataSNIACov *snia_cov, guint i);
+
 #define NC_SNIA_DIST_COV_DEFAULT_ALPHA (1.45)
 #define NC_SNIA_DIST_COV_DEFAULT_BETA (3.16)
 #define NC_SNIA_DIST_COV_DEFAULT_M1 (-19.1686133146)
 #define NC_SNIA_DIST_COV_DEFAULT_M2 (-19.1856133146)
-#define NC_SNIA_DIST_COV_DEFAULT_LNSIGMA_PECZ (log (5.0e-4))
+#define NC_SNIA_DIST_COV_DEFAULT_LNSIGMA_PECZ (log (150.0e3 / ncm_c_c ()))
 #define NC_SNIA_DIST_COV_DEFAULT_PARAMS_ABSTOL (0.0)
 
 #define NC_SNIA_DIST_COV_LNSIGMA_INT_DEFAULT_LEN (4)
-#define NC_SNIA_DIST_COV_DEFAULT_LNSIGMA_INT (0.0989)
+#define NC_SNIA_DIST_COV_DEFAULT_LNSIGMA_INT (log (0.0989))
 
 #define NC_SNIA_DIST_COV_MU_DEFAULT_LEN (0)
 #define NC_SNIA_DIST_COV_DEFAULT_MU (18.0)
