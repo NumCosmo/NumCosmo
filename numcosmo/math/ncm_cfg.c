@@ -172,13 +172,25 @@ _ncm_cfg_log_error (const gchar *log_domain, GLogLevelFlags log_level, const gch
   abort ();
 }
 
-
 void clencurt_gen (int M);
+
+#ifdef HAVE_OPENBLAS_SET_NUM_THREADS
+  void openblas_set_num_threads (gint);
+#endif /* HAVE_OPENBLAS_SET_NUM_THREADS */
+
+#ifdef HAVE_MKL_SET_NUM_THREADS
+  void MKL_Set_Num_Threads (gint);
+#endif /* HAVE_MKL_SET_NUM_THREADS */
 
 /**
  * ncm_cfg_init:
  *
- * FIXME
+ * Main library configuration function. Must be called before any 
+ * other function of NumCosmo.
+ * 
+ * Initializes internal variables and sets
+ * all other library number of threads to one.
+ * 
  */
 void
 ncm_cfg_init (void)
@@ -191,6 +203,14 @@ ncm_cfg_init (void)
   if (!g_file_test (numcosmo_path, G_FILE_TEST_EXISTS))
     g_mkdir_with_parents (numcosmo_path, 0755);
 
+#ifdef HAVE_OPENBLAS_SET_NUM_THREADS
+  openblas_set_num_threads (1);
+#endif /* HAVE_OPENBLAS_SET_NUM_THREADS */
+
+#ifdef HAVE_MKL_SET_NUM_THREADS
+  MKL_Set_Num_Threads (1);
+#endif /* HAVE_MKL_SET_NUM_THREADS */
+  
 #ifndef HAVE_LIBCUBA
   clencurt_gen (19);
 #else

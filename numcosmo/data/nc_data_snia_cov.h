@@ -143,6 +143,44 @@ typedef enum _NcDataSNIACovDataV1
 #define NC_DATA_SNIA_COV_V1_LENGTH NC_DATA_SNIA_COV_V1_ABSMAG_SET
 
 /**
+ * NcDataSNIACovDataInit:
+ * @NC_DATA_SNIA_COV_INIT_ZCMB: Redshift in the CMB frame.
+ * @NC_DATA_SNIA_COV_INIT_ZHE: Redshift in sun's frame.
+ * @NC_DATA_SNIA_COV_INIT_SIGMA_Z: Redshift error.
+ * @NC_DATA_SNIA_COV_INIT_MAG: Magnitude.
+ * @NC_DATA_SNIA_COV_INIT_WIDTH: Width (strecth).
+ * @NC_DATA_SNIA_COV_INIT_COLOUR: Colour.
+ * @NC_DATA_SNIA_COV_INIT_THIRDPAR: Third parameter.
+ * @NC_DATA_SNIA_COV_INIT_ABSMAG_SET: Data set index.
+ * @NC_DATA_SNIA_COV_INIT_COV_FULL: Full covariance matrix.
+ * 
+ * Bitwise control of data initialization.
+ * 
+ */
+typedef enum _NcDataSNIACovDataInit
+{
+  NC_DATA_SNIA_COV_INIT_ZCMB       = 1 << 0,
+  NC_DATA_SNIA_COV_INIT_ZHE        = 1 << 1,
+  NC_DATA_SNIA_COV_INIT_SIGMA_Z    = 1 << 2,
+  NC_DATA_SNIA_COV_INIT_MAG        = 1 << 3,
+  NC_DATA_SNIA_COV_INIT_WIDTH      = 1 << 4,
+  NC_DATA_SNIA_COV_INIT_COLOUR     = 1 << 5,
+  NC_DATA_SNIA_COV_INIT_THIRDPAR   = 1 << 6,
+  NC_DATA_SNIA_COV_INIT_ABSMAG_SET = 1 << 7, 
+  NC_DATA_SNIA_COV_INIT_COV_FULL   = 1 << 8,
+} NcDataSNIACovDataInit;
+
+#define NC_DATA_SNIA_COV_INIT_ALL (NC_DATA_SNIA_COV_INIT_ZCMB | \
+                                   NC_DATA_SNIA_COV_INIT_ZHE | \
+                                   NC_DATA_SNIA_COV_INIT_SIGMA_Z | \
+                                   NC_DATA_SNIA_COV_INIT_MAG | \
+                                   NC_DATA_SNIA_COV_INIT_WIDTH | \
+                                   NC_DATA_SNIA_COV_INIT_COLOUR | \
+                                   NC_DATA_SNIA_COV_INIT_THIRDPAR | \
+                                   NC_DATA_SNIA_COV_INIT_ABSMAG_SET | \
+                                   NC_DATA_SNIA_COV_INIT_COV_FULL)
+
+/**
  * NcDataSNIACovOrder:
  * @NC_DATA_SNIA_COV_ORDER_MAG_MAG: mag-mag.
  * @NC_DATA_SNIA_COV_ORDER_MAG_WIDTH: mag-width.
@@ -188,9 +226,9 @@ struct _NcDataSNIACov
   gboolean has_complete_cov;
   guint cov_full_state;
   gboolean has_true_wc;
-  gboolean saved_cov_full;
   GArray *dataset;
   guint dataset_len;
+  guint data_init;
   NcmModelCtrl *cosmo_resample_ctrl;
   NcmModelCtrl *dcov_resample_ctrl;
   NcmModelCtrl *dcov_cov_full_ctrl;
@@ -209,8 +247,27 @@ NcmData *nc_data_snia_cov_new_full (gchar *filename, gboolean use_norma);
 
 guint nc_data_snia_cov_sigma_int_len (NcDataSNIACov *snia_cov);
 
-void nc_data_snia_cov_load_txt (NcDataSNIACov *snia_cov, const gchar *filename);
+NcmVector *nc_data_snia_cov_peek_z_cmb (NcDataSNIACov *snia_cov);
+NcmVector *nc_data_snia_cov_peek_z_he (NcDataSNIACov *snia_cov);
+NcmVector *nc_data_snia_cov_peek_sigma_z (NcDataSNIACov *snia_cov);
+NcmVector *nc_data_snia_cov_peek_mag (NcDataSNIACov *snia_cov);
+NcmVector *nc_data_snia_cov_peek_width (NcDataSNIACov *snia_cov);
+NcmVector *nc_data_snia_cov_peek_colour (NcDataSNIACov *snia_cov);
+NcmVector *nc_data_snia_cov_peek_thirdpar (NcDataSNIACov *snia_cov);
+GArray *nc_data_snia_cov_peek_abs_mag_set (NcDataSNIACov *snia_cov);
+NcmMatrix *nc_data_snia_cov_peek_cov_full (NcDataSNIACov *snia_cov);
 
+void nc_data_snia_cov_set_z_cmb (NcDataSNIACov *snia_cov, NcmVector *z_cmb);
+void nc_data_snia_cov_set_z_he (NcDataSNIACov *snia_cov, NcmVector *z_he);
+void nc_data_snia_cov_set_sigma_z (NcDataSNIACov *snia_cov, NcmVector *sigma_z);
+void nc_data_snia_cov_set_mag (NcDataSNIACov *snia_cov, NcmVector *mag);
+void nc_data_snia_cov_set_width (NcDataSNIACov *snia_cov, NcmVector *width);
+void nc_data_snia_cov_set_colour (NcDataSNIACov *snia_cov, NcmVector *colour);
+void nc_data_snia_cov_set_thirdpar (NcDataSNIACov *snia_cov, NcmVector *thirdpar);
+void nc_data_snia_cov_set_abs_mag_set (NcDataSNIACov *snia_cov, GArray *abs_mag_set);
+void nc_data_snia_cov_set_cov_full (NcDataSNIACov *snia_cov, NcmMatrix *cov_full);
+
+void nc_data_snia_cov_load_txt (NcDataSNIACov *snia_cov, const gchar *filename);
 #ifdef NUMCOSMO_HAVE_CFITSIO
 void nc_data_snia_cov_load (NcDataSNIACov *snia_cov, const gchar *filename);
 void nc_data_snia_cov_save (NcDataSNIACov *snia_cov, const gchar *filename, gboolean overwrite);

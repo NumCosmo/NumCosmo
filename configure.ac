@@ -445,6 +445,8 @@ else
   AC_DEFINE([HAVE_GSL_CBLAS_H], [1], [use GSL's BLAS])
 fi
 
+AC_CHECK_FUNCS([openblas_set_num_threads MKL_Set_Num_Threads])
+
 AC_ARG_WITH(lapacke,
         [AS_HELP_STRING([--with-lapacke=<lib>], [use LAPACKe library <lib>])])
 case $with_lapacke in
