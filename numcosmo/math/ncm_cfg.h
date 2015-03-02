@@ -114,12 +114,6 @@ extern guint fftw_default_flags;
 
 /* Macros */
 
-#ifdef SUNDIALS_USES_LONG_INT
-#define _NCM_SUNDIALS_INT_TYPE glong
-#else
-#define _NCM_SUNDIALS_INT_TYPE gint
-#endif
-
 #define NCM_CFG_DATA_DIR_ENV "NUMCOSMO_DATA_DIR"
 
 #if (GLIB_MAJOR_VERSION == 2) && (GLIB_MINOR_VERSION < 32)

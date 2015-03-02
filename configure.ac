@@ -519,19 +519,40 @@ dnl ***************************************************************************
 dnl Check for cfitsio
 dnl ***************************************************************************
 
-PKG_CHECK_MODULES(CFITSIO, [cfitsio >= 3.27],[
+PKG_CHECK_MODULES(CFITSIO, [cfitsio >= 3.25],[
   AC_DEFINE([HAVE_CFITSIO],[1], [Have the cfitsio package])
-  AC_DEFINE([HAVE_CFITSIO_3_27],[1], [Have the cfitsio package >= 3.27])
-  have_cfitsio_support="#define NUMCOSMO_HAVE_CFITSIO 1"],[
-  PKG_CHECK_MODULES(CFITSIO, [cfitsio >= 3.25],[
-    AC_DEFINE([HAVE_CFITSIO],[1], [Have the cfitsio package >= 3.25])
-    have_cfitsio_support="#define NUMCOSMO_HAVE_CFITSIO 1"],[
-    have_cfitsio_support=""]) 
-  ])
+  have_cfitsio_support="#define NUMCOSMO_HAVE_CFITSIO 1"])
 AC_SUBST(CFITSIO_CFLAGS)
 AC_SUBST(CFITSIO_LIBS)
 AC_SUBST(have_cfitsio_support)
 
+SAVED_LIBS="$LIBS"
+LIBS="$CFITSIO_LIBS $LIBS"
+SAVED_CFLAGS="$CFLAGS"
+CFLAGS="$CFLAGS $CFITSIO_CFLAGS -Werror"
+
+AC_MSG_CHECKING([fits_free_memory presence])
+AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[
+#include <fitsio.h>
+]],[[
+fits_free_memory ((void *)0, (void *)0);
+]])],[AC_MSG_RESULT([yes])],[
+AC_DEFINE([fits_free_memory(p,s)],[fffree(p,s)], [fits_free_memory])
+AC_MSG_RESULT([no])
+])
+
+AC_MSG_CHECKING([fffree presence])
+AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[
+#include <fitsio.h>
+]],[[
+fffree ((void *)0, (void *)0);
+]])],[AC_MSG_RESULT([yes])],[
+AC_DEFINE([fffree(p,s)],[g_free(p)], [fffree])
+AC_MSG_RESULT([no])
+])
+
+LIBS="$SAVED_LIBS"
+CFLAGS="$SAVED_CFLAGS"
 
 dnl ***************************************************************************
 dnl Check for chealpix
@@ -639,7 +660,11 @@ int test_dense_jac (long int N, realtype t,
 ]],[[
 CVDlsDenseJacFn func = &test_dense_jac;
 func (0, 0.0, (void *)0, (void *)0, (void *)0, (void *)0, (void *)0, (void *)0, (void *)0);
-]])],[AC_DEFINE([SUNDIALS_USES_LONG_INT],[1], [If sundials version >= 2.5.0]) AC_MSG_RESULT([yes])],[AC_MSG_RESULT([no])])
+]])],
+[AC_DEFINE([_NCM_SUNDIALS_INT_TYPE],[glong], [glong])
+ AC_MSG_RESULT([yes])],
+[AC_DEFINE([_NCM_SUNDIALS_INT_TYPE],[gint], [gint])
+ AC_MSG_RESULT([no])])
 CFLAGS="$SAVED_CFLAGS"
 
 dnl ***************************************************************************

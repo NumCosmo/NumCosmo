@@ -202,6 +202,7 @@ G_STMT_START { \
   g_assert (obj == NULL); \
 } G_STMT_END
 
+/* Minumum version here is 2.38 but it segfault during tests so we start at 2.40. */
 #if ((GLIB_MAJOR_VERSION == 2) && (GLIB_MINOR_VERSION < 40))
 #define NCM_TEST_FAIL(cmd) \
 G_STMT_START { \

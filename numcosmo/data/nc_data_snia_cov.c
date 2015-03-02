@@ -1594,12 +1594,8 @@ nc_data_snia_cov_load (NcDataSNIACov *snia_cov, const gchar *filename)
     NCM_FITS_ERROR (status);
 
     ncm_data_set_desc (NCM_DATA (snia_cov), desc);
-#ifdef HAVE_CFITSIO_3_27
     fits_free_memory (desc, &status);
     NCM_FITS_ERROR (status);
-#else
-    g_free (desc);
-#endif /* HAVE_CFITSIO_3_27 */
   }
   else
     status = 0;

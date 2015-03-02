@@ -635,12 +635,9 @@ _ncm_mset_catalog_open_create_file (NcmMSetCatalog *mcat)
       ncm_mset_catalog_set_rng (mcat, rng);
       ncm_rng_free (rng);
     }
-#ifdef HAVE_CFITSIO_3_27
+
     fits_free_memory (inis, &status);
     NCM_FITS_ERROR (status);
-#else
-    g_free (inis);
-#endif /* HAVE_CFITSIO_3_27 */
   }
   else if (status == KEY_NO_EXIST)
   {
@@ -1047,12 +1044,8 @@ ncm_mset_catalog_sync (NcmMSetCatalog *mcat, gboolean check)
         g_clear_pointer (&mcat->rng_inis, g_free);
         mcat->rng_inis = g_strdup (inis);
 
-#ifdef HAVE_CFITSIO_3_27
         fits_free_memory (inis, &status);
         NCM_FITS_ERROR (status);
-#else
-        g_free (inis);
-#endif /* HAVE_CFITSIO_3_27 */ 
       }
     }
     g_assert_cmpint (mcat->file_first_id, ==, mcat->first_id);
@@ -1121,12 +1114,8 @@ ncm_mset_catalog_sync (NcmMSetCatalog *mcat, gboolean check)
         g_clear_pointer (&mcat->rng_stat, g_free);
         mcat->rng_stat = g_strdup (stat);
 
-#ifdef HAVE_CFITSIO_3_27
         fits_free_memory (stat, &status);
         NCM_FITS_ERROR (status);
-#else
-        g_free (stat);
-#endif /* HAVE_CFITSIO_3_27 */ 
 
         ncm_rng_set_state (mcat->rng, mcat->rng_stat);
       }
