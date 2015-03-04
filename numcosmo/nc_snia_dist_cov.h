@@ -87,6 +87,7 @@ struct _NcSNIADistCov
   NcmModel parent_instance;
   NcDistance *dist;
   GArray *var_int;
+  gboolean empty_fac;
 };
 
 struct _NcSNIADistCovClass
@@ -103,6 +104,8 @@ NcSNIADistCov *nc_snia_dist_cov_new (NcDistance *dist, guint sigma_int_len);
 NcSNIADistCov *nc_snia_dist_cov_ref (NcSNIADistCov *dcov);
 void nc_snia_dist_cov_free (NcSNIADistCov *dcov);
 void nc_snia_dist_cov_clear (NcSNIADistCov **dcov);
+
+void nc_snia_dist_cov_set_empty_fac (NcSNIADistCov *dcov, gboolean enable);
 
 void nc_snia_dist_cov_prepare (NcSNIADistCov *dcov, NcmMSet *mset);
 void nc_snia_dist_cov_prepare_if_needed (NcSNIADistCov *dcov, NcmMSet *mset);

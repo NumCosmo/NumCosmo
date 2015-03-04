@@ -352,7 +352,9 @@ _ncm_data_gauss_cov_m2lnL_val (NcmData *data, NcmMSet *mset, gdouble *m2lnL)
     NCM_TEST_GSL_RESULT ("_ncm_data_gauss_cov_m2lnL_val", ret);
 
     if (gauss->use_norma)
+    {
       *m2lnL += gauss_cov_class->lnNorma2 (gauss, mset);
+    }
   }
   else
   {

@@ -316,7 +316,48 @@ dnl Check for math.h
 dnl ***************************************************************************
 
 AC_CHECK_HEADERS(math.h,, AC_MSG_ERROR([math.h header files missing]))
-AC_CHECK_FUNC([cos],[],[AC_CHECK_LIB([m],[cos])])
+AC_CHECK_LIB([m],[cos])
+AC_CHECK_FUNCS([cos sin erf powl])
+
+dnl ***************************************************************************
+dnl Checks for internal libcuba
+dnl ***************************************************************************
+
+AC_FUNC_ALLOCA
+AC_FUNC_FORK
+AC_C_LONG_DOUBLE
+
+AC_TYPE_SIZE_T
+AC_TYPE_SSIZE_T
+AC_TYPE_PID_T
+
+AC_DEFINE([NOUNDERSCORE],[1],[libcuba C interface])
+
+MAXDIM=${MAXDIM:-16}
+AC_ARG_WITH(maxdim, 
+  [AS_HELP_STRING([--with-libcuba-maxdim=N],
+    [the maximum dimension for integration,
+     if variable-size array are not supported])],
+  [MAXDIM=$withval])
+
+MAXCOMP=${MAXCOMP:-4}
+AC_ARG_WITH(maxcomp,
+  [AS_HELP_STRING([--with-libcuba-maxcomp=N],
+    [the maximum number of components of the integrand,
+     if variable-size array are not supported])],
+  [MAXCOMP=$withval])
+
+AC_MSG_CHECKING([for variable-size arrays])
+AC_COMPILE_IFELSE([AC_LANG_SOURCE(,[[
+        void test(int n) {
+          char s[n];
+        }
+  ]])],  
+  [AC_MSG_RESULT([yes])],
+  [AC_MSG_RESULT([no, using MAXDIM=$MAXDIM and MAXCOMP=$MAXCOMP])
+   AC_DEFINE_UNQUOTED([NDIM], [$MAXDIM], [Maximum number of components])
+   AC_DEFINE_UNQUOTED([NCOMP], [$MAXCOMP], [Maximum number of dimensions])]
+)
 
 dnl ***************************************************************************
 dnl Check for glib.
@@ -571,34 +612,37 @@ dnl Check for libcuba
 dnl ***************************************************************************
 
 AC_CHECK_LIB([cuba], [Cuhre],,[cuba_missing="yes"],[])
+AM_CONDITIONAL([USE_INTERNAL_LIBCUBA], [test "x$cuba_missing" = "xyes"])
+
+AC_MSG_CHECKING([libcuba])
 if test "x$cuba_missing" = "xyes"; then
   have_cuba_support=""
+  AC_MSG_RESULT([internal v4.1])
+  AC_DEFINE([HAVE_LIBCUBA_4_0],[1], [Have the libcuba >= 4.0])
 else
-  have_cuba_support="#define NUMCOSMO_HAVE_CUBA 1"
+  AC_MSG_RESULT([external])
+  AC_MSG_CHECKING([libcuba version])
+  AC_COMPILE_IFELSE(
+              [AC_LANG_PROGRAM([[#include <cuba.h>]],
+                 [[Cuhre (0, 0, (void *)0, (void *)0, 0.0, 0.0, 0, 0, 0, 0, (void *)0 /*AQUI*/,  (void *)0, (void *)0, (void *)0, (void *)0, (void *)0, (void *)0);]])],
+              [AC_DEFINE([HAVE_LIBCUBA_3_1],[1], [Have the libcuba >= 3.1])
+               cuba_3_1="<= 3.3"],
+              [cuba_3_1="error"
+  AC_COMPILE_IFELSE(
+              [AC_LANG_PROGRAM([[#include <cuba.h>]],
+                 [[Cuhre (0, 0, (void *)0, (void *)0, 0, 0.0, 0.0, 0, 0, 0, 0, (void *)0 /*AQUI*/,  (void *)0, (void *)0, (void *)0, (void *)0, (void *)0, (void *)0);]])],
+              [AC_DEFINE([HAVE_LIBCUBA_3_3],[1], [Have the libcuba >= 3.3])
+               cuba_3_1="<= 3.3"],
+              [cuba_3_1="error"
+  AC_COMPILE_IFELSE(
+              [AC_LANG_PROGRAM([[#include <cuba.h>]],
+                 [[Cuhre (0, 0, (void *)0, (void *)0, 0, 0.0, 0.0, 0, 0, 0, 0, (void *)0 /*AQUI*/,  /*AQUI*/ (void *)0, (void *)0, (void *)0, (void *)0, (void *)0, (void *)0, (void *)0);]])],
+              [AC_DEFINE([HAVE_LIBCUBA_4_0],[1], [Have the libcuba >= 4.0])
+               cuba_3_1=">= 4.0"],
+              [cuba_3_1="error"
+              ])])])
+  AC_MSG_RESULT([$cuba_3_1])
 fi
-AC_SUBST(have_cuba_support)
-
-AC_MSG_CHECKING([libcuba version])
-AC_COMPILE_IFELSE(
-            [AC_LANG_PROGRAM([[#include <cuba.h>]],
-               [[Cuhre (0, 0, (void *)0, (void *)0, 0.0, 0.0, 0, 0, 0, 0, (void *)0 /*AQUI*/,  (void *)0, (void *)0, (void *)0, (void *)0, (void *)0, (void *)0);]])],
-            [AC_DEFINE([HAVE_LIBCUBA_3_1],[1], [Have the libcuba >= 3.1])
-             cuba_3_1="<= 3.3"],
-            [cuba_3_1="error"
-AC_COMPILE_IFELSE(
-            [AC_LANG_PROGRAM([[#include <cuba.h>]],
-               [[Cuhre (0, 0, (void *)0, (void *)0, 0, 0.0, 0.0, 0, 0, 0, 0, (void *)0 /*AQUI*/,  (void *)0, (void *)0, (void *)0, (void *)0, (void *)0, (void *)0);]])],
-            [AC_DEFINE([HAVE_LIBCUBA_3_3],[1], [Have the libcuba >= 3.3])
-             cuba_3_1="<= 3.3"],
-            [cuba_3_1="error"
-AC_COMPILE_IFELSE(
-            [AC_LANG_PROGRAM([[#include <cuba.h>]],
-               [[Cuhre (0, 0, (void *)0, (void *)0, 0, 0.0, 0.0, 0, 0, 0, 0, (void *)0 /*AQUI*/,  /*AQUI*/ (void *)0, (void *)0, (void *)0, (void *)0, (void *)0, (void *)0, (void *)0);]])],
-            [AC_DEFINE([HAVE_LIBCUBA_4_0],[1], [Have the libcuba >= 4.0])
-             cuba_3_1=">= 4.0"],
-            [cuba_3_1="error"
-            ])])])
-AC_MSG_RESULT([$cuba_3_1])
 
 dnl ***************************************************************************
 dnl Check for nlopt
@@ -697,6 +741,11 @@ numcosmo.pc
 Makefile
 numcosmo/Makefile
 numcosmo/levmar/Makefile
+numcosmo/libcuba/Makefile
+numcosmo/libcuba/cuhre/Makefile
+numcosmo/libcuba/divonne/Makefile
+numcosmo/libcuba/suave/Makefile
+numcosmo/libcuba/vegas/Makefile
 tools/Makefile
 tests/Makefile
 docs/Makefile
@@ -742,13 +791,6 @@ if [ test "x$have_nlopt_support" != x ]; then
 else
        echo "Building  with nlopt support: ....................................NO"
        echo "        Requires nlopt - NonLinear OPTimization library"
-fi
-if [ test "x$have_cuba_support" != x ]; then
-       echo "Building with cuba support: .....................................YES"
-else
-       echo "Building  with libcuba support: ..................................NO"
-       echo "        Requires libcuba - "
-       echo "                 library for multidimensional numerical integration"
 fi
 echo "--------------------------------------------------------------------"
 echo "AM_CFLAGS = $AM_CFLAGS"

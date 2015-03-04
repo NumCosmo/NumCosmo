@@ -101,11 +101,15 @@ nc_data_snia_cov_init (NcDataSNIACov *snia_cov)
   snia_cov->cov_full_diag     = NULL;
   snia_cov->cov_packed        = NULL;
 
+  snia_cov->inv_cov_mm        = NULL;
+  snia_cov->inv_cov_mm_LU     = NULL;
+
   snia_cov->has_complete_cov  = FALSE;
   snia_cov->cov_full_state    = NC_DATA_SNIA_COV_PREP_TO_NOTHING;
   snia_cov->has_true_wc       = FALSE;
 
   snia_cov->dataset           = NULL;
+  snia_cov->dataset_size      = NULL;
   snia_cov->dataset_len       = 0;
 
   snia_cov->data_init         = 0;
@@ -416,15 +420,16 @@ nc_data_snia_cov_class_init (NcDataSNIACovClass *klass)
                                                          NULL,
                                                          "Whether the covariance matrix is complete",
                                                          FALSE,
-                                                         G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   data_class->resample   = &_nc_data_snia_cov_resample;
   data_class->prepare    = &_nc_data_snia_cov_prepare;
 
   gauss_class->mean_func = &_nc_data_snia_cov_mean_func;
   gauss_class->cov_func  = &_nc_data_snia_cov_func;
-  gauss_class->set_size  = &_nc_data_snia_cov_set_size;  
-  gauss_class->lnNorma2  = &_nc_data_snia_cov_lnNorma2;
+  gauss_class->set_size  = &_nc_data_snia_cov_set_size;
+  if (FALSE)
+    gauss_class->lnNorma2  = &_nc_data_snia_cov_lnNorma2;
 }
 
 static void
@@ -459,30 +464,33 @@ _nc_data_snia_cov_lnNorma2 (NcmDataGaussCov *gauss, NcmMSet *mset)
 {
   NcDataSNIACov *snia_cov = NC_DATA_SNIA_COV (gauss);
   NcSNIADistCov *dcov = NC_SNIA_DIST_COV (ncm_mset_peek (mset, nc_snia_dist_cov_id ()));
-  const guint tmu_len = 3 * snia_cov->mu_len;
+  const guint mu_len  = snia_cov->mu_len;
+  gdouble lndetC;
+  gdouble lndetD = 0.0;
+  gdouble lndetG = 0.0;
+/*  gdouble fparams_len = ncm_mset_fparams_len (mset);*/
   guint i;
-  gint exponent = 0;
-  gdouble detL = 1.0;
-  gboolean dcov_cov_full_up = ncm_model_ctrl_update (snia_cov->dcov_cov_full_ctrl, NCM_MODEL (dcov));
 
-  if (dcov_cov_full_up || (snia_cov->cov_full_state != NC_DATA_SNIA_COV_PREP_TO_ESTIMATE))
-    _nc_data_snia_cov_prep_to_estimate (snia_cov, dcov);
+  ncm_matrix_memcpy (snia_cov->inv_cov_mm_LU, snia_cov->inv_cov_mm);
 
-  for (i = 0; i < tmu_len; i++)
+  for (i = 0; i < mu_len; i++)
   {
-    const gdouble Lii = ncm_matrix_get (snia_cov->cov_full, i, i);
-    const gdouble ndetL = detL * Lii;
-    if (ndetL < 1.0e-200 || ndetL > 1.0e200)
-    {
-      gint exponent_i = 0;
-      detL = frexp (ndetL, &exponent_i);
-      exponent += exponent_i;
-    }
-    else
-      detL = ndetL;
-  }
+    
+    const guint32 di          = g_array_index (snia_cov->dataset, guint32, i);
+    const guint32 ni          = g_array_index (snia_cov->dataset_size, guint32, di);
+    const gdouble cor_exp     = sqrt (1.0 - (1.0 * ni) / 740.0);
 
-  return tmu_len * ncm_c_ln2pi () + 2.0 * (log (detL) + exponent * M_LN2);
+    const gdouble extra_var_i = pow (nc_snia_dist_cov_extra_var (dcov, snia_cov, i), cor_exp);
+    ncm_matrix_addto (snia_cov->inv_cov_mm_LU, i, i, 1.0 / extra_var_i);
+    lndetD += log (extra_var_i);
+  }
+  ncm_matrix_cholesky_decomp (snia_cov->inv_cov_mm_LU, 'U');
+  for (i = 0; i < mu_len; i++)
+    lndetG += log (ncm_matrix_get (snia_cov->inv_cov_mm_LU, i, i));
+
+  lndetC = (2.0 * lndetG + lndetD);
+  
+  return mu_len * ncm_c_ln2pi () + /*sqrt (((mu_len * 1.0) - fparams_len) / (3.0 * mu_len))*/1.0 * lndetC;
 }
 
 /**
@@ -572,11 +580,16 @@ _nc_data_snia_cov_set_size (NcmDataGaussCov *gauss, guint mu_len)
       ncm_vector_clear (&snia_cov->cov_full_diag);
       ncm_matrix_clear (&snia_cov->cov_full);
 
+      ncm_matrix_clear (&snia_cov->inv_cov_mm_LU);
+      ncm_matrix_clear (&snia_cov->inv_cov_mm);
+      
       if (snia_cov->dataset != NULL)
       {
         g_array_unref (snia_cov->dataset);
-        snia_cov->dataset     = NULL;
-        snia_cov->dataset_len = 0;
+        g_array_unref (snia_cov->dataset_size);
+        snia_cov->dataset      = NULL;
+        snia_cov->dataset_size = NULL;
+        snia_cov->dataset_len  = 0;
       }
       ncm_data_set_init (NCM_DATA (snia_cov), FALSE);
     }
@@ -607,7 +620,11 @@ _nc_data_snia_cov_set_size (NcmDataGaussCov *gauss, guint mu_len)
       snia_cov->cov_full         = ncm_matrix_new (3 * mu_len, 3 * mu_len);
       snia_cov->cov_packed       = ncm_vector_new (snia_cov->uppertri_len * NC_DATA_SNIA_COV_ORDER_LENGTH);
 
+      snia_cov->inv_cov_mm       = ncm_matrix_new (mu_len, mu_len);
+      snia_cov->inv_cov_mm_LU    = ncm_matrix_new (mu_len, mu_len);
+        
       snia_cov->dataset          = g_array_sized_new (FALSE, FALSE, sizeof (guint32), mu_len);
+      snia_cov->dataset_size     = g_array_new (FALSE, TRUE, sizeof (guint32));
       snia_cov->dataset_len      = 0;
 
       g_array_set_size (snia_cov->dataset, mu_len);
@@ -919,6 +936,7 @@ nc_data_snia_cov_set_thirdpar (NcDataSNIACov *snia_cov, NcmVector *thirdpar)
 void 
 nc_data_snia_cov_set_abs_mag_set (NcDataSNIACov *snia_cov, GArray *abs_mag_set)
 {
+  guint total;
   guint max_id = 0;
   guint i;
 
@@ -938,7 +956,20 @@ nc_data_snia_cov_set_abs_mag_set (NcDataSNIACov *snia_cov, GArray *abs_mag_set)
   }
 
   snia_cov->dataset_len = max_id + 1;
-  
+  g_array_set_size (snia_cov->dataset_size, snia_cov->dataset_len);
+
+  for (i = 0; i < abs_mag_set->len; i++)
+  {
+    guint32 vi = g_array_index (abs_mag_set, guint32, i);
+    g_array_index (snia_cov->dataset_size, guint32, vi)++;
+  }
+
+  total = 0;
+  for (i = 0; i < snia_cov->dataset_size->len; i++)
+  {
+    total += g_array_index (snia_cov->dataset_size, guint32, i);
+  }  
+  g_assert_cmpuint (total, ==, snia_cov->mu_len);  
   _nc_data_snia_cov_set_data_init (snia_cov, NC_DATA_SNIA_COV_INIT_ABSMAG_SET);
 }
 
@@ -956,6 +987,7 @@ nc_data_snia_cov_set_cov_full (NcDataSNIACov *snia_cov, NcmMatrix *cov_full)
 {
   const guint mu_len  = snia_cov->mu_len;
   const guint tmu_len = 3 * mu_len;
+  guint i, j, ij;
   
   if (snia_cov->cov_full != cov_full)
   {
@@ -967,7 +999,6 @@ nc_data_snia_cov_set_cov_full (NcDataSNIACov *snia_cov, NcmMatrix *cov_full)
 
   /* Filling the cov_packed from cov_full. */
   {
-    guint i, j, ij;
     ij = 0;
     for (i = 0; i < snia_cov->mu_len; i++)
     {
@@ -999,6 +1030,22 @@ nc_data_snia_cov_set_cov_full (NcDataSNIACov *snia_cov, NcmMatrix *cov_full)
   }
   
   _nc_data_snia_cov_save_cov_lowertri (snia_cov);
+
+  if (snia_cov->has_complete_cov)
+  {
+    ncm_matrix_cholesky_decomp (snia_cov->cov_full, 'U');
+    ncm_matrix_cholesky_inverse (snia_cov->cov_full, 'U');
+
+    ncm_matrix_set_zero (snia_cov->inv_cov_mm);
+    for (i = 0; i < mu_len; i++)
+    {
+      for (j = i; j < mu_len; j++)
+      {
+        const gdouble inv_cov_full_ij = ncm_matrix_get (snia_cov->cov_full, i, j);
+        ncm_matrix_set (snia_cov->inv_cov_mm, i, j, inv_cov_full_ij);
+      }
+    }
+  }
   _nc_data_snia_cov_set_data_init (snia_cov, NC_DATA_SNIA_COV_INIT_COV_FULL);
 }
 
@@ -1335,7 +1382,7 @@ _nc_data_snia_cov_load_snia_data (NcDataSNIACov *snia_cov, const gchar *filename
       }
       max_dset_id--;
     }
-    snia_cov->dataset_len = max_dset_id + 1;
+    nc_data_snia_cov_set_abs_mag_set (snia_cov, snia_cov->dataset);
 
     g_regex_unref (comment_line);
   }
@@ -1490,10 +1537,7 @@ nc_data_snia_cov_load_V0 (NcDataSNIACov *snia_cov, fitsfile *fptr)
                           NULL, &status);
   NCM_FITS_ERROR (status);
 
-  for (i = 0; i < snia_cov->mu_len; i++)
-  {
-    snia_cov->dataset_len = GSL_MAX (g_array_index (snia_cov->dataset, guint32, i) + 1, snia_cov->dataset_len);
-  }
+  nc_data_snia_cov_set_abs_mag_set (snia_cov, snia_cov->dataset);
 
   _nc_data_snia_cov_diag_to_full_cov (snia_cov, sigma_mag, sigma_width, sigma_colour, diag_mag_width, diag_mag_colour, diag_width_colour);
   
@@ -1641,11 +1685,7 @@ nc_data_snia_cov_load (NcDataSNIACov *snia_cov, const gchar *filename)
                         0, &g_array_index (snia_cov->dataset, guint32, 0), 
                         NULL, &status);
     NCM_FITS_ERROR (status);
-
-    for (i = 0; i < snia_cov->mu_len; i++)
-    {
-      snia_cov->dataset_len = GSL_MAX (g_array_index (snia_cov->dataset, guint32, i) + 1, snia_cov->dataset_len);
-    }
+    nc_data_snia_cov_set_abs_mag_set (snia_cov, snia_cov->dataset);
 
     for (i = NC_DATA_SNIA_COV_V1_MAG_MAG; i < NC_DATA_SNIA_COV_V1_TOTAL_LENGTH; i++)
     {
@@ -2142,6 +2182,7 @@ nc_data_snia_cov_estimate_width_colour (NcDataSNIACov *snia_cov, NcmMSet *mset)
       {
         const gdouble width_true = ncm_vector_get (params, i);
         const gdouble colour_true = ncm_vector_get (params, i + mu_len);
+        //printf ("% 20.15g % 20.15g\n", width_true, colour_true);
         ncm_vector_set (snia_cov->width_true, i, width_true);
         ncm_vector_set (snia_cov->colour_true, i, colour_true);
       }

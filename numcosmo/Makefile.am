@@ -1,31 +1,41 @@
 ## Process this file with automake to produce Makefile.in
 
+if USE_INTERNAL_LIBCUBA
+  MAYBE_LIBCUBA  = libcuba
+  LIBCUBA_PLACE  = libcuba/libcuba.la
+  LIBCUBA_INCDIR = -I$(top_srcdir)/numcosmo/libcuba
+else
+  
+endif
+
 MY_CFLAGS = \
 	 -DG_LOG_DOMAIN=\"NUMCOSMO\" \
-	 $(GLIB_CFLAGS) \
+	 $(GLIB_CFLAGS)     \
 	 $(SUNDIALS_CFLAGS) \
-	 $(GSL_CFLAGS) \
-	 $(FFTW3_CFLAGS) \
-	 $(CFITSIO_CFLAGS) \
-	 $(NLOPT_CFLAGS) \
+	 $(GSL_CFLAGS)      \
+	 $(FFTW3_CFLAGS)    \
+	 $(CFITSIO_CFLAGS)  \
+	 $(NLOPT_CFLAGS)    \
+	 $(LIBCUBA_INCDIR)  \
 	 -I$(top_srcdir)
 
 AM_CFLAGS = \
 	 -Wall \
 	 $(MY_CFLAGS)
 
-SUBDIRS = levmar .
+SUBDIRS = $(MAYBE_LIBCUBA) levmar .
 
 lib_LTLIBRARIES = libnumcosmo.la
 
-libnumcosmo_la_LIBADD =  \
-	$(SUNDIALS_LIBS) \
-	$(FFTW3_LIBS)    \
-	$(GLIB_LIBS)     \
-	$(NLOPT_LIBS)    \
-	$(GSL_LIBS)      \
-	$(SQLITE3_LIBS)  \
-	$(CFITSIO_LIBS)  \
+libnumcosmo_la_LIBADD =     \
+	$(SUNDIALS_LIBS)    \
+	$(FFTW3_LIBS)       \
+	$(GLIB_LIBS)        \
+	$(NLOPT_LIBS)       \
+	$(GSL_LIBS)         \
+	$(SQLITE3_LIBS)     \
+	$(CFITSIO_LIBS)     \
+	$(LIBCUBA_PLACE)    \
 	levmar/liblevmar.la
 
 ncm_sources = \
@@ -112,10 +122,6 @@ ncm_sources = \
 	math/ncm_sphere_map.c     \
 	sphere/healpix.c
 
-ncm_external_sources = \
-	cubature/hcubature.c      \
-	cubature/pcubature.c
-
 ncm_headers = \
 	math/ncm_c.h                     \
 	math/ncm_cfg.h                   \
@@ -198,9 +204,6 @@ ncm_headers = \
 	math/memory_pool.h        \
 	math/ncm_sphere_map.h     \
 	sphere/healpix.h
-
-ncm_external_headers = \
-	cubature/cubature.h
 
 ncm_headers_internal = 
 
@@ -460,8 +463,6 @@ nc_enum_types.c: $(nc_headers) nc_enum_types.c.template
 libnumcosmo_la_SOURCES = \
 	$(ncm_sources)          \
 	$(ncm_headers)          \
-	$(ncm_external_sources) \
-	$(ncm_external_headers) \
 	$(nc_sources)           \
 	$(nc_headers)           \
 	$(ncm_cond_sources)     \
@@ -501,10 +502,7 @@ EXTRA_DIST = \
 	nc_enum_types.h.template        \
 	nc_enum_types.c.template        \
 	ncm_gir_scan.h                  \
-	ncm_fit_nlopt_enum_meta.c       \
-	cubature/converged.h            \
-	cubature/vwrapper.h             \
-	cubature/COPYING
+	ncm_fit_nlopt_enum_meta.c
 
 CLEANFILES = $(BUILT_SOURCES)
 

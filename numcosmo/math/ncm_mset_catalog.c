@@ -1761,6 +1761,7 @@ ncm_mset_catalog_get_shrink_factor (NcmMSetCatalog *mcat)
     if (gsl_finite (ncm_matrix_get (mcat->chain_cov, 0, 0)))
     {
       gdouble lev = 0.0;
+      ncm_matrix_cholesky_decomp (mcat->chain_cov, 'L');
       ncm_matrix_cholesky_inverse (mcat->chain_cov, 'L');
 
       ncm_matrix_dsymm (mcat->chain_cov, 'L', 1.0, cov, 0.0, mcat->chain_sM);

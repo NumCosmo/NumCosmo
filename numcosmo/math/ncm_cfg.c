@@ -107,10 +107,7 @@
 #ifdef NUMCOSMO_HAVE_FFTW3
 #include <fftw3.h>
 #endif /* NUMCOSMO_HAVE_FFTW3 */
-
-#ifdef HAVE_LIBCUBA
 #include <cuba.h>
-#endif
 
 #ifndef G_VALUE_INIT
 #define G_VALUE_INIT {0}
@@ -211,18 +208,14 @@ ncm_cfg_init (void)
   MKL_Set_Num_Threads (1);
 #endif /* HAVE_MKL_SET_NUM_THREADS */
   
-#ifndef HAVE_LIBCUBA
-  clencurt_gen (19);
-#else
   g_setenv ("CUBACORES", "0", TRUE);
   g_setenv ("CUBACORESMAX", "0", TRUE);
   g_setenv ("CUBAACCEL", "0", TRUE);
   g_setenv ("CUBAACCELMAX", "0", TRUE);
-#  ifdef HAVE_LIBCUBA_4_0
+#ifdef HAVE_LIBCUBA_4_0
   cubaaccel (0, 0);
   cubacores (0, 0);
-#  endif
-#endif /* !HAVE_LIBCUBA */
+#endif
 
   gsl_err = gsl_set_error_handler_off ();
 #if (GLIB_MAJOR_VERSION == 2) && (GLIB_MINOR_VERSION < 32)

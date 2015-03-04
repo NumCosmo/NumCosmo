@@ -26,7 +26,7 @@
 /**
  * SECTION:nc_hicosmo_priors
  * @title: NcHICosmoPrior
- * @short_description: Collection of priors for #NcHICosmo models.
+ * @short_description: Collection of priors for NcHICosmo models.
  * 
  * FIXME
  *

@@ -223,10 +223,13 @@ struct _NcDataSNIACov
   NcmVector *cov_packed;
   NcmMatrix *cov_full;
   NcmVector *cov_full_diag;
+  NcmMatrix *inv_cov_mm;
+  NcmMatrix *inv_cov_mm_LU;
   gboolean has_complete_cov;
   guint cov_full_state;
   gboolean has_true_wc;
   GArray *dataset;
+  GArray *dataset_size;
   guint dataset_len;
   guint data_init;
   NcmModelCtrl *cosmo_resample_ctrl;

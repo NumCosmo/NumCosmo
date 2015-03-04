@@ -256,7 +256,7 @@ ncm_matrix_memcpy (NcmMatrix *cm1, const NcmMatrix *cm2)
   g_assert_cmpuint (nrows, ==, ncm_matrix_nrows (cm2));
   g_assert_cmpuint (ncols, ==, ncm_matrix_ncols (cm2));
   
-  if (ncm_matrix_tda (cm1) != ncm_matrix_tda (cm2))
+  if ((ncm_matrix_tda (cm1) != ncols) || (ncm_matrix_tda (cm2) != ncm_matrix_ncols (cm2)))
   {
     register guint i;
     const guint ncols_bytes = sizeof (gdouble) * ncols;

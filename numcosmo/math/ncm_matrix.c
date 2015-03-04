@@ -832,18 +832,14 @@ ncm_matrix_cholesky_decomp (NcmMatrix *cm, gchar UL)
  * @cm: a #NcmMatrix
  * @UL: char indicating 'U'pper or 'L'ower matrix
  * 
- * Calculates inplace the Cholesky decomposition for a symmetric positive
- * definite matrix and afterwards its inverse.
+ * Calculates inplace the inverse of @cm that has been previously decomposed by
+ * the Cholesky decomposition ncm_matrix_cholesky_decomp().
  * 
  */
 void 
 ncm_matrix_cholesky_inverse (NcmMatrix *cm, gchar UL)
 {
-  gint ret = ncm_lapack_dpotrf (UL, ncm_matrix_nrows (cm), ncm_matrix_data (cm), ncm_matrix_nrows (cm));
-  if (ret != 0)
-    g_error ("ncm_matrix_cholesky_decomp[ncm_lapack_dpotrf]: %d.", ret);
-
-  ret = ncm_lapack_dpotri (UL, ncm_matrix_nrows (cm), ncm_matrix_data (cm), ncm_matrix_nrows (cm));
+  gint ret = ncm_lapack_dpotri (UL, ncm_matrix_nrows (cm), ncm_matrix_data (cm), ncm_matrix_nrows (cm));
   if (ret != 0)
     g_error ("ncm_matrix_cholesky_decomp[ncm_lapack_dpotri]: %d.", ret);
 }

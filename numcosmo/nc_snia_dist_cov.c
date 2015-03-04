@@ -55,6 +55,7 @@ enum
 {
   PROP_0,
   PROP_DIST,
+  PROP_EMPTY_FAC,
   PROP_SIZE,
 };
 
@@ -63,8 +64,9 @@ G_DEFINE_TYPE (NcSNIADistCov, nc_snia_dist_cov, NCM_TYPE_MODEL);
 static void
 nc_snia_dist_cov_init (NcSNIADistCov *dcov)
 {
-  dcov->dist    = NULL;
-  dcov->var_int = g_array_new (FALSE, FALSE, sizeof (gdouble));
+  dcov->dist      = NULL;
+  dcov->var_int   = g_array_new (FALSE, FALSE, sizeof (gdouble));
+  dcov->empty_fac = FALSE;
 }
 
 static void
@@ -113,6 +115,9 @@ _nc_snia_dist_cov_set_property (GObject * object, guint prop_id, const GValue * 
       dcov->dist = g_value_dup_object (value);
       g_assert (dcov->dist != NULL);
       break;
+    case PROP_EMPTY_FAC:
+      dcov->empty_fac = g_value_get_boolean (value);
+      break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
       break;
@@ -129,6 +134,9 @@ _nc_snia_dist_cov_get_property (GObject *object, guint prop_id, GValue *value, G
   {
     case PROP_DIST:
       g_value_set_object (value, dcov->dist);
+      break;
+    case PROP_EMPTY_FAC:
+      g_value_set_boolean (value, dcov->empty_fac);
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -180,7 +188,14 @@ nc_snia_dist_cov_class_init (NcSNIADistCovClass *klass)
                                                         "Distance object",
                                                         NC_TYPE_DISTANCE,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));  
-
+  g_object_class_install_property (object_class,
+                                   PROP_EMPTY_FAC,
+                                   g_param_spec_boolean ("empty-fac",
+                                                         NULL,
+                                                         "Empty universe approximation factor",
+                                                         TRUE,
+                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));  
+  
   ncm_model_class_set_sparam (model_class, NC_SNIA_DIST_COV_ALPHA, "\\alpha", "alpha",
                               -10.0, 10.0, 1.0e-1,
                               NC_SNIA_DIST_COV_DEFAULT_PARAMS_ABSTOL, NC_SNIA_DIST_COV_DEFAULT_ALPHA,
@@ -285,6 +300,28 @@ nc_snia_dist_cov_clear (NcSNIADistCov **dcov)
   g_clear_object (dcov);
 }
 
+/**
+ * nc_snia_dist_cov_set_empty_fac:
+ * @dcov: FIXME
+ * @enable: FIXME
+ * 
+ * FIXME
+ * 
+ */
+void 
+nc_snia_dist_cov_set_empty_fac (NcSNIADistCov *dcov, gboolean enable)
+{
+  dcov->empty_fac = enable;
+}
+
+/**
+ * nc_snia_dist_cov_prepare:
+ * @dcov: FIXME
+ * @mset: FIXME
+ * 
+ * FIXME
+ * 
+ */
 void 
 nc_snia_dist_cov_prepare (NcSNIADistCov *dcov, NcmMSet *mset)
 {
@@ -292,11 +329,29 @@ nc_snia_dist_cov_prepare (NcSNIADistCov *dcov, NcmMSet *mset)
   nc_distance_prepare (dcov->dist, cosmo);
 }
 
+/**
+ * nc_snia_dist_cov_prepare_if_needed:
+ * @dcov: FIXME
+ * @mset: FIXME
+ * 
+ * FIXME
+ * 
+ */
 void 
 nc_snia_dist_cov_prepare_if_needed (NcSNIADistCov *dcov, NcmMSet *mset)
 {
   NcHICosmo *cosmo = NC_HICOSMO (ncm_mset_peek (mset, nc_hicosmo_id ()));
   nc_distance_prepare_if_needed (dcov->dist, cosmo);
+}
+
+static gdouble
+_nc_snia_dist_cov_calc_empty_fac (NcSNIADistCov *dcov, gdouble z_cmb)
+{
+  static const gdouble zfac = (5.0 / M_LN10);
+  if (dcov->empty_fac)
+    return  ((1.0 + z_cmb) / (z_cmb * (1.0 + 0.5 * z_cmb))) * zfac; 
+  else
+    return zfac / z_cmb;  
 }
 
 /**
@@ -321,7 +376,6 @@ nc_snia_dist_cov_calc (NcSNIADistCov *dcov, NcDataSNIACov *snia_cov, NcmMatrix *
   const gdouble two_beta       = 2.0 * beta;
   const gdouble var_pecz       = exp (2.0 * LNSIGMA_PECZ);
   const guint mu_len           = snia_cov->mu_len;
-  const gdouble zfacsq         = (5.0 / M_LN10) * (5.0 / M_LN10);
   register guint i, j, ij;
 
   g_assert (NCM_DATA (snia_cov)->init);
@@ -366,8 +420,8 @@ nc_snia_dist_cov_calc (NcSNIADistCov *dcov, NcDataSNIACov *snia_cov, NcmMatrix *
       const gdouble var_int   = g_array_index (dcov->var_int, gdouble, dset_id); 
       const gdouble z_cmb     = ncm_vector_get (snia_cov->z_cmb, i);
       const gdouble sigma_z   = ncm_vector_get (snia_cov->sigma_z, i);
-      const gdouble emptyfac  = (1.0 + z_cmb) / (z_cmb * (1.0 + 0.5 * z_cmb));
-      const gdouble var_z_tot = (var_pecz + sigma_z * sigma_z) * zfacsq * emptyfac * emptyfac; 
+      const gdouble emptyfac    = _nc_snia_dist_cov_calc_empty_fac (dcov, z_cmb);
+      const gdouble var_z_tot = (var_pecz + sigma_z * sigma_z) * emptyfac * emptyfac; 
       const gdouble var_tot   = var_z_tot + var_int;
 
       ncm_matrix_addto (cov, i, i, var_tot);
@@ -575,15 +629,14 @@ nc_snia_dist_cov_extra_var (NcSNIADistCov *dcov, NcDataSNIACov *snia_cov, guint 
   g_assert (NCM_DATA (snia_cov)->init);
   
   {
-    const gdouble zfacsq      = (5.0 / M_LN10) * (5.0 / M_LN10);
     const guint dset_id       = g_array_index (snia_cov->dataset, guint32, i);
     const gdouble lnsigma_int = ncm_model_orig_vparam_get (model, NC_SNIA_DIST_COV_LNSIGMA_INT, dset_id);
     const gdouble var_int     = exp (2.0 * lnsigma_int); 
     const gdouble z_cmb       = ncm_vector_get (snia_cov->z_cmb, i);
     const gdouble sigma_z     = ncm_vector_get (snia_cov->sigma_z, i);
-    const gdouble emptyfac    = (1.0 + z_cmb) / (z_cmb * (1.0 + 0.5 * z_cmb));
+    const gdouble emptyfac    = _nc_snia_dist_cov_calc_empty_fac (dcov, z_cmb);
     const gdouble var_pecz    = exp (2.0 * LNSIGMA_PECZ);
-    const gdouble var_z_tot   = (var_pecz + sigma_z * sigma_z) * zfacsq * emptyfac * emptyfac; 
+    const gdouble var_z_tot   = (var_pecz + sigma_z * sigma_z) * emptyfac * emptyfac; 
 
     const gdouble var_tot = var_z_tot + var_int;
 

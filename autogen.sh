@@ -121,72 +121,8 @@ do
     echo processing $dr
     ( cd $dr
 
-      aclocalinclude="$ACLOCAL_FLAGS"
-
-      if grep "^AM_GLIB_GNU_GETTEXT" configure.ac >/dev/null; then
-	echo "Creating $dr/aclocal.m4 ..."
-	test -r $dr/aclocal.m4 || touch $dr/aclocal.m4
-	echo "Running glib-gettextize...  Ignore non-fatal messages."
-	echo "no" | glib-gettextize --force --copy
-	echo "Making $dr/aclocal.m4 writable ..."
-	test -r $dr/aclocal.m4 && chmod u+w $dr/aclocal.m4
-      fi
-
-      if grep "^IT_PROG_INTLTOOL" configure.ac >/dev/null; then
-        echo "Running intltoolize..."
-	intltoolize --copy --force --automake
-      fi
-
-      if grep "^AM_PROG_XML_I18N_TOOLS" configure.ac >/dev/null; then
-        echo "Running xml-i18n-toolize..."
-	xml-i18n-toolize --copy --force --automake
-      fi
-
-      if grep "^AC_PROG_XML_I18N_TOOLS" configure.ac >/dev/null; then
-        echo "Running xml-i18n-toolize..."
-	xml-i18n-toolize --copy --force --automake
-      fi
-
-      if grep "^AM_PROG_LIBTOOL" configure.ac >/dev/null; then
-	if test -z "$NO_LIBTOOLIZE" ; then 
-	  echo "Running libtoolize..."
-	  libtoolize --force --copy
-	fi
-      fi
-
-      if grep "^AC_PROG_LIBTOOL" configure.ac >/dev/null; then
-	if test -z "$NO_LIBTOOLIZE" ; then 
-	  echo "Running libtoolize..."
-	  libtoolize --force --copy
-	fi
-      fi
-
-      if grep "^LT_INIT" configure.ac >/dev/null; then
-	if test -z "$NO_LIBTOOLIZE" ; then 
-	  echo "Running libtoolize..."
-	  libtoolize --force --copy
-	fi
-      fi
-
-      echo "Running aclocal $aclocalinclude ..."
-      aclocal $aclocalinclude
-
-      if grep "^AC_CONFIG_HEADERS" configure.ac >/dev/null; then
-	echo "Running autoheader..."
-	autoheader
-      fi
-
-      if grep "^GTK_DOC_CHECK" configure.ac >/dev/null; then
-        echo "Running gtkdocize..."
-	gtkdocize
-      fi
-      
-      echo "Running automake --gnu $am_opt ..."
-      automake --add-missing --gnu $am_opt
-
-      echo "Running autoconf ..."
-      autoconf
-
+      echo "Running autoreconf in $dr $srcdir ..."
+      autoreconf -fvi
     )
   fi
 done
