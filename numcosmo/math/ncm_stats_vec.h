@@ -260,7 +260,7 @@ ncm_stats_vec_peek_cov_matrix (NcmStatsVec *svec, guint offset)
   g_assert_cmpint (effsize, >, 0);
   if (svec->real_cov != NULL)
   {
-    if (ncm_matrix_nrows (svec->real_cov) != effsize)
+    if ((gint)ncm_matrix_nrows (svec->real_cov) != effsize)
     {
       ncm_matrix_free (svec->real_cov);
       svec->real_cov = ncm_matrix_new (effsize, effsize);

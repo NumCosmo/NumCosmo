@@ -111,7 +111,7 @@ G_LOCK_DEFINE_STATIC (last_model_id);
  * 
  */ 
 void
-ncm_mset_model_register_id (NcmModelClass *model_class, gchar *ns, gchar *desc, gchar *long_desc)
+ncm_mset_model_register_id (NcmModelClass *model_class, const gchar *ns, const gchar *desc, const gchar *long_desc)
 {
   if (model_class->model_id < 0)
   {
@@ -617,7 +617,7 @@ ncm_mset_pretty_log (NcmMSet *mset)
  *
  */
 void
-ncm_mset_params_pretty_print (NcmMSet *mset, FILE *out, gchar *header)
+ncm_mset_params_pretty_print (NcmMSet *mset, FILE *out, const gchar *header)
 {
   NcmModelID mid;
   gint i;
@@ -726,7 +726,7 @@ ncm_mset_fparams_log_covar (NcmMSet *mset, NcmMatrix *covar)
   guint i, j;
   guint name_size = ncm_mset_max_fparam_name (mset);
   guint free_params_len = ncm_mset_fparam_len (mset);
-  gchar *box = "---------------";
+  const gchar *box = "---------------";
   g_assert (covar != NULL);
 
   ncm_cfg_msg_sepa ();
@@ -1575,7 +1575,7 @@ ncm_mset_fparam_get_fpi (NcmMSet *mset, NcmModelID mid, guint pid)
  * 
  */
 void 
-ncm_mset_save (NcmMSet *mset, gchar *filename, gboolean save_comment)
+ncm_mset_save (NcmMSet *mset, const gchar *filename, gboolean save_comment)
 {
   NcmMSetClass *mset_class = NCM_MSET_GET_CLASS (mset);
   GKeyFile *msetfile = g_key_file_new ();
@@ -1664,7 +1664,7 @@ ncm_mset_save (NcmMSet *mset, gchar *filename, gboolean save_comment)
  * Returns: (transfer full): FIXME
  */
 NcmMSet * 
-ncm_mset_load (gchar *filename)
+ncm_mset_load (const gchar *filename)
 {
   NcmMSet *mset = ncm_mset_empty_new ();
   GKeyFile *msetfile = g_key_file_new ();

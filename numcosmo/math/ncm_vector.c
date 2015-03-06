@@ -46,7 +46,7 @@
 #ifdef HAVE_BLAS
 #  ifdef HAVE_MKL_CBLAS_H
 #    include <mkl_cblas.h>
-#  elif HAVE_CBLAS_H
+#  elif defined (HAVE_CBLAS_H)
 #    include <cblas.h>
 #  else
 #    include <gsl/gsl_cblas.h>
@@ -807,6 +807,9 @@ _ncm_vector_finalize (GObject *object)
     case NCM_VECTOR_MALLOC:
     case NCM_VECTOR_GSL_VECTOR:
     case NCM_VECTOR_DERIVED:
+      break;
+    default:
+      g_assert_not_reached ();
       break;
   }
   cv->vv.vector.data = NULL;

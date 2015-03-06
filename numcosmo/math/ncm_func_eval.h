@@ -36,7 +36,7 @@ void ncm_func_eval_set_max_threads (gint mt);
 void ncm_func_eval_threaded_loop_nw (NcmFuncEvalLoop lfunc, glong i, glong f, gpointer data, guint nworkers);
 void ncm_func_eval_threaded_loop (NcmFuncEvalLoop lfunc, glong i, glong f, gpointer data);
 void ncm_func_eval_threaded_loop_full (NcmFuncEvalLoop lfunc, glong i, glong f, gpointer data);
-void ncm_func_eval_log_pool_stats ();
+void ncm_func_eval_log_pool_stats (void);
 
 G_END_DECLS
 

@@ -57,7 +57,7 @@ struct _NcWindowTophatClass
 
 GType nc_window_tophat_get_type (void) G_GNUC_CONST;
 
-NcWindow *nc_window_tophat_new ();
+NcWindow *nc_window_tophat_new (void);
 
 #define NC_WINDOW_VOLUME_TOPHAT (4.0 * M_PI / 3.0)
 

@@ -87,7 +87,7 @@ struct _NcmSpline2dBicubicClass
 GType ncm_spline2d_bicubic_get_type (void) G_GNUC_CONST;
 
 NcmSpline2d *ncm_spline2d_bicubic_new (NcmSpline *s);
-NcmSpline2d *ncm_spline2d_bicubic_notaknot_new ();
+NcmSpline2d *ncm_spline2d_bicubic_notaknot_new (void);
 
 #define NCM_SPLINE2D_BICUBIC_00 (0)
 #define NCM_SPLINE2D_BICUBIC_10 (1)

@@ -91,7 +91,7 @@ func (gpointer data, gpointer empty)
  * Returns: the pointer to the internal GThreadPool pool
  */
 GThreadPool *
-ncm_func_eval_get_pool ()
+ncm_func_eval_get_pool (void)
 {
   _NCM_STATIC_MUTEX_DECL (create_lock);
   GError *err = NULL;

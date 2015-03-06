@@ -411,7 +411,7 @@ ncm_cfg_logfile_flush_now (void) { fflush (_log_stream); }
  * FIXME
  */
 void
-ncm_message (gchar *msg, ...)
+ncm_message (const gchar *msg, ...)
 {
   va_list ap;
   va_start(ap, msg);
@@ -543,7 +543,7 @@ ncm_cfg_get_fullpath (const gchar *filename, ...)
  * Returns: FIXME
  */
 void
-ncm_cfg_keyfile_to_arg (GKeyFile *kfile, gchar *group_name, GOptionEntry *entries, gchar **argv, gint *argc)
+ncm_cfg_keyfile_to_arg (GKeyFile *kfile, const gchar *group_name, GOptionEntry *entries, gchar **argv, gint *argc)
 {
   if (g_key_file_has_group (kfile, group_name))
   {
@@ -623,7 +623,7 @@ ncm_cfg_string_to_comment (const gchar *str)
  *
  */
 void
-ncm_cfg_entries_to_keyfile (GKeyFile *kfile, gchar *group_name, GOptionEntry *entries)
+ncm_cfg_entries_to_keyfile (GKeyFile *kfile, const gchar *group_name, GOptionEntry *entries)
 {
   GError *error = NULL;
   gint i;
@@ -678,6 +678,7 @@ ncm_cfg_entries_to_keyfile (GKeyFile *kfile, gchar *group_name, GOptionEntry *en
         g_key_file_set_double (kfile, group_name, entries[i].long_name, arg_d);
         break;
       }
+      case G_OPTION_ARG_CALLBACK:
       default:
         skip_comment = TRUE;
         //g_error ("ncm_cfg_entries_to_keyfile: cannot convert entry type %d to keyfile", entries[i].arg);
@@ -763,7 +764,7 @@ ncm_cfg_enum_get_value (GType enum_type, guint n)
  *
  */
 void
-ncm_cfg_enum_print_all (GType enum_type, gchar *header)
+ncm_cfg_enum_print_all (GType enum_type, const gchar *header)
 {
   GEnumClass *enum_class;
   GEnumValue *snia;
@@ -814,7 +815,7 @@ ncm_cfg_enum_print_all (GType enum_type, gchar *header)
  * Returns: FIXME
  */
 gboolean
-ncm_cfg_load_fftw_wisdom (gchar *filename, ...)
+ncm_cfg_load_fftw_wisdom (const gchar *filename, ...)
 {
   FILE *wis;
   gchar *file;
@@ -856,7 +857,7 @@ ncm_cfg_load_fftw_wisdom (gchar *filename, ...)
  * Returns: FIXME
  */
 gboolean
-ncm_cfg_save_fftw_wisdom (gchar *filename, ...)
+ncm_cfg_save_fftw_wisdom (const gchar *filename, ...)
 {
   FILE *wis;
   gchar *file;
@@ -895,7 +896,7 @@ ncm_cfg_save_fftw_wisdom (gchar *filename, ...)
  * Returns: FIXME
  */
 FILE *
-ncm_cfg_fopen (gchar *filename, gchar *mode, ...)
+ncm_cfg_fopen (const gchar *filename, const gchar *mode, ...)
 {
   FILE *F;
   gchar *file;
@@ -931,7 +932,7 @@ ncm_cfg_fopen (gchar *filename, gchar *mode, ...)
  * Returns: FIXME
  */
 FILE *
-ncm_cfg_vfopen (gchar *filename, gchar *mode, va_list ap)
+ncm_cfg_vfopen (const gchar *filename, const gchar *mode, va_list ap)
 {
   FILE *F;
   gchar *file;
@@ -962,7 +963,7 @@ ncm_cfg_vfopen (gchar *filename, gchar *mode, va_list ap)
  * Returns: FIXME
  */
 gboolean
-ncm_cfg_exists (gchar *filename, ...)
+ncm_cfg_exists (const gchar *filename, ...)
 {
   gboolean exists;
   gchar *file;
@@ -994,7 +995,7 @@ ncm_cfg_exists (gchar *filename, ...)
  * Returns: FIXME
  */
 gboolean
-ncm_cfg_load_spline (gchar *filename, const gsl_interp_type *stype, NcmSpline **s, ...)
+ncm_cfg_load_spline (const gchar *filename, const gsl_interp_type *stype, NcmSpline **s, ...)
 {
   guint64 size;
   NcmVector *xv, *yv;
@@ -1052,7 +1053,7 @@ ncm_cfg_load_spline (gchar *filename, const gsl_interp_type *stype, NcmSpline **
  * Returns: FIXME
  */
 gboolean
-ncm_cfg_save_spline (gchar *filename, NcmSpline *s, ...)
+ncm_cfg_save_spline (const gchar *filename, NcmSpline *s, ...)
 {
   guint64 size;
   va_list ap;
@@ -1089,7 +1090,7 @@ ncm_cfg_save_spline (gchar *filename, NcmSpline *s, ...)
  * Returns: FIXME
  */
 gboolean
-ncm_cfg_load_vector (gchar *filename, gsl_vector *v, ...)
+ncm_cfg_load_vector (const gchar *filename, gsl_vector *v, ...)
 {
   va_list ap;
 
@@ -1115,7 +1116,7 @@ ncm_cfg_load_vector (gchar *filename, gsl_vector *v, ...)
  * Returns: FIXME
  */
 gboolean
-ncm_cfg_save_vector (gchar *filename, gsl_vector *v, ...)
+ncm_cfg_save_vector (const gchar *filename, gsl_vector *v, ...)
 {
   va_list ap;
 
@@ -1141,7 +1142,7 @@ ncm_cfg_save_vector (gchar *filename, gsl_vector *v, ...)
  * Returns: FIXME
  */
 gboolean
-ncm_cfg_load_matrix (gchar *filename, gsl_matrix *M, ...)
+ncm_cfg_load_matrix (const gchar *filename, gsl_matrix *M, ...)
 {
   va_list ap;
 
@@ -1167,7 +1168,7 @@ ncm_cfg_load_matrix (gchar *filename, gsl_matrix *M, ...)
  * Returns: FIXME
  */
 gboolean
-ncm_cfg_save_matrix (gchar *filename, gsl_matrix *M, ...)
+ncm_cfg_save_matrix (const gchar *filename, gsl_matrix *M, ...)
 {
   va_list ap;
 

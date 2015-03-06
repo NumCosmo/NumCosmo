@@ -94,7 +94,7 @@ ncm_vparam_new (guint len, NcmSParam *default_param)
  * Returns: A new #NcmVParam.
  */
 NcmVParam *
-ncm_vparam_full_new (guint len, gchar *name, gchar *symbol, gdouble lower_bound, gdouble upper_bound, gdouble scale, gdouble abstol, gdouble default_val, NcmParamType ftype)
+ncm_vparam_full_new (guint len, const gchar *name, const gchar *symbol, gdouble lower_bound, gdouble upper_bound, gdouble scale, gdouble abstol, gdouble default_val, NcmParamType ftype)
 {
   NcmSParam *default_param = ncm_sparam_new (name, symbol, lower_bound, upper_bound, scale, abstol, default_val, ftype);
   NcmVParam *vparam = ncm_vparam_new (len, default_param);

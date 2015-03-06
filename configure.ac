@@ -42,7 +42,7 @@ m4_define([numcosmo_lt_age], [m4_eval(numcosmo_binary_age - numcosmo_interface_a
 m4_define([numcosmo_lt_current_minus_age],
           [m4_eval(numcosmo_lt_current - numcosmo_lt_age)])                    
           
-AC_INIT([numcosmo],[numcosmo_version], https://savannah.nongnu.org/bugs/?func=additem&group=numcosmo, numcosmo, http://www.nongnu.org/numcosmo/)
+AC_INIT([numcosmo],[numcosmo_version],[https://savannah.nongnu.org/bugs/?func=additem&group=numcosmo],[numcosmo],[http://www.nongnu.org/numcosmo/])
 AC_CONFIG_SRCDIR([numcosmo/numcosmo.h])
 AC_CONFIG_MACRO_DIR([m4])
 
@@ -136,11 +136,42 @@ dnl ***************************************************************************
 AM_CONDITIONAL(OS_UNIX, [test "$glib_native_win32" != "yes"])
 
 dnl ***************************************************************************
+dnl Compiler flags
+dnl ***************************************************************************
+FCFLAGS="$CFLAGS"
+AC_ARG_ENABLE([opt-compiler-flags], 
+  [  --enable-opt-compiler-flags  Enable all safe and useful speedups compiler flags (also remove -g and change any -O? to -O3 from CFLAGS)], 
+  [enable_comp_flags="yes"],[])
+if test x$enable_comp_flags = "xyes"; then
+  FCFLAGS=`echo $FCFLAGS | $SED 's/\-O\[0-9\]//g'`
+  FCFLAGS=`echo $FCFLAGS | $SED 's/\-g\s//g'`
+  AX_CHECK_COMPILE_FLAG([-O3],[FCFLAGS="$FCFLAGS -O3"])
+  AX_CHECK_COMPILE_FLAG([-funroll-loops],[FCFLAGS="$FCFLAGS -funroll-loops"])
+  AX_CHECK_COMPILE_FLAG([-fno-math-errno],[FCFLAGS="$FCFLAGS -fno-math-errno"])
+  AX_CHECK_COMPILE_FLAG([-march=native],[FCFLAGS="$FCFLAGS -march=native"])
+  AX_CHECK_COMPILE_FLAG([-mfpmath=sse],[FCFLAGS="$FCFLAGS -mfpmath=sse"])
+fi
+
+AC_ARG_ENABLE([warn-compiler-flags], 
+  [  --enable-warn-compiler-flags  Enable all useful warning compiler flags], 
+  [enable_warn_flags="yes"],[])
+if test x$enable_warn_flags = "xyes"; then
+  FCFLAGS=`echo $FCFLAGS | $SED 's/\-Wall//g'`
+  AX_CHECK_COMPILE_FLAG([-Wall],[FCFLAGS="$FCFLAGS -Wall"])
+dnl  AX_CHECK_COMPILE_FLAG([-Wundef],[FCFLAGS="$FCFLAGS -Wundef"])
+dnl  AX_CHECK_COMPILE_FLAG([-Wshadow],[FCFLAGS="$FCFLAGS -Wshadow"])
+dnl  AX_CHECK_COMPILE_FLAG([-Wpointer-arith],[FCFLAGS="$FCFLAGS -Wpointer-arith"])
+dnl  AX_CHECK_COMPILE_FLAG([-Wcast-align],[FCFLAGS="$FCFLAGS -Wcast-align"])
+dnl  AX_CHECK_COMPILE_FLAG([-Wstrict-prototypes],[FCFLAGS="$FCFLAGS -Wstrict-prototypes"])
+dnl  AX_CHECK_COMPILE_FLAG([-Wwrite-strings],[FCFLAGS="$FCFLAGS -Wwrite-strings"])
+dnl  AX_CHECK_COMPILE_FLAG([-Wunreachable-code],[FCFLAGS="$FCFLAGS -Wunreachable-code"])
+fi
+
+dnl ***************************************************************************
 dnl Check for vapigen
 dnl ***************************************************************************
 AC_ARG_ENABLE(vapi,
-              [AC_HELP_STRING([--enable-vapi],
-                              [Generate vala bindings, experimental [default=no]])],enable_vapi=yes,
+              [AS_HELP_STRING([--enable-vapi],[Generate vala bindings, experimental [default=no]])],enable_vapi=yes,
               enable_vapi=no)
 
 
@@ -161,8 +192,7 @@ dnl ***************************************************************************
 GTK_DOC_CHECK([1.14],[--flavour no-tmpl])
 
 AC_ARG_ENABLE(man,
-              [AC_HELP_STRING([--enable-man],
-                              [regenerate man pages from Docbook [default=no]])],enable_man=yes,
+              [AS_HELP_STRING([--enable-man],[regenerate man pages from Docbook [default=no]])],enable_man=yes,
               enable_man=no)
 
 if test "${enable_man}" != no; then
@@ -325,8 +355,11 @@ dnl ***************************************************************************
 
 AC_FUNC_ALLOCA
 AC_FUNC_FORK
-AC_C_LONG_DOUBLE
-
+AC_TYPE_LONG_DOUBLE_WIDER
+ac_cv_c_long_double=$ac_cv_type_long_double_wider
+if test $ac_cv_c_long_double = yes; then
+  AC_DEFINE([HAVE_LONG_DOUBLE],[1],[Define to 1 if the type `long double' works and has more range or precision than `double'.])
+fi
 AC_TYPE_SIZE_T
 AC_TYPE_SSIZE_T
 AC_TYPE_PID_T
@@ -477,7 +510,7 @@ if test "x$have_blas" != "xno"; then
   AC_MSG_CHECKING([which cblas to use])
   if test "x$have_cblas" = "xyes"; then
     AC_MSG_RESULT([cblas, removing gslcblas])
-    GSL_LIBS=`echo $GSL_LIBS | sed 's/\-lgslcblas//g'`
+    GSL_LIBS=`echo $GSL_LIBS | $SED 's/\-lgslcblas//g'`
   else
     AC_MSG_RESULT([none found, using gslcblas])
   fi
@@ -731,6 +764,7 @@ dnl AC_LINK_IFELSE([int main(){}],[],[])
 dnl LIBS="$SAVE_LIBS"
 dnl CFLAGS="$SAVE_CFLAGS"
 dnl LDFLAGS="SAVE_LDFLAGS"
+CFLAGS="$FCFLAGS"
 
 dnl ***************************************************************************
 dnl Setting up

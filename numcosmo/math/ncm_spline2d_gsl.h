@@ -65,7 +65,7 @@ struct _NcmSpline2dGslClass
 GType ncm_spline2d_gsl_get_type (void) G_GNUC_CONST;
 
 NcmSpline2d *ncm_spline2d_gsl_new (NcmSpline *s);
-NcmSpline2d *ncm_spline2d_gsl_natural_new ();
+NcmSpline2d *ncm_spline2d_gsl_natural_new (void);
 
 G_END_DECLS
 

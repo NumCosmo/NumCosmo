@@ -58,7 +58,7 @@ struct _NcDensityProfileNFW
 
 GType nc_density_profile_nfw_get_type (void) G_GNUC_CONST;
 
-NcDensityProfile *nc_density_profile_nfw_new ();
+NcDensityProfile *nc_density_profile_nfw_new (void);
 
 G_END_DECLS
 

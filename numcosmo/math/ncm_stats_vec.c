@@ -200,6 +200,7 @@ _ncm_stats_vec_constructed (GObject *object)
         ncm_vector_set_zero (svec->x);
         ncm_vector_set_zero (svec->mean);
         break;
+      case NCM_STATS_VEC_TYPES_LEN:
       default:
         g_assert_not_reached ();
         break;

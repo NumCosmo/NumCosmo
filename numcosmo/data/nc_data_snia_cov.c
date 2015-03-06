@@ -428,8 +428,7 @@ nc_data_snia_cov_class_init (NcDataSNIACovClass *klass)
   gauss_class->mean_func = &_nc_data_snia_cov_mean_func;
   gauss_class->cov_func  = &_nc_data_snia_cov_func;
   gauss_class->set_size  = &_nc_data_snia_cov_set_size;
-  if (FALSE)
-    gauss_class->lnNorma2  = &_nc_data_snia_cov_lnNorma2;
+  gauss_class->lnNorma2  = &_nc_data_snia_cov_lnNorma2;
 }
 
 static void
@@ -523,10 +522,10 @@ nc_data_snia_cov_new (gboolean use_norma)
  * Returns: (transfer full): the newly created instance of #NcDataSNIACov.
  */
 NcmData *
-nc_data_snia_cov_new_full (gchar *filename, gboolean use_det)
+nc_data_snia_cov_new_full (gchar *filename, gboolean use_norma)
 {
   NcmData *data = g_object_new (NC_TYPE_DATA_SNIA_COV,
-                                "use-det", use_det,
+                                "use-norma", use_norma,
                                 NULL);
 #ifdef NUMCOSMO_HAVE_CFITSIO
   nc_data_snia_cov_load (NC_DATA_SNIA_COV (data), filename);

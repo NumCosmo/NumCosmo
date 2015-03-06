@@ -48,37 +48,37 @@ void ncm_cfg_init (void);
 void ncm_cfg_enable_gsl_err_handler (void);
 void ncm_cfg_register_obj (GType obj);
 gchar *ncm_cfg_get_fullpath (const gchar *filename, ...);
-void ncm_cfg_keyfile_to_arg (GKeyFile *kfile, gchar *group_name, GOptionEntry *entries, gchar **argv, gint *argc);
-void ncm_cfg_entries_to_keyfile (GKeyFile *kfile, gchar *group_name, GOptionEntry *entries);
+void ncm_cfg_keyfile_to_arg (GKeyFile *kfile, const gchar *group_name, GOptionEntry *entries, gchar **argv, gint *argc);
+void ncm_cfg_entries_to_keyfile (GKeyFile *kfile, const gchar *group_name, GOptionEntry *entries);
 gchar *ncm_cfg_string_to_comment (const gchar *str);
 const GEnumValue *ncm_cfg_get_enum_by_id_name_nick (GType enum_type, const gchar *id_name_nick);
 const GEnumValue *ncm_cfg_enum_get_value (GType enum_type, guint n);
-void ncm_cfg_enum_print_all (GType enum_type, gchar *header);
+void ncm_cfg_enum_print_all (GType enum_type, const gchar *header);
 
-gboolean ncm_cfg_load_fftw_wisdom (gchar *filename, ...);
-gboolean ncm_cfg_save_fftw_wisdom (gchar *filename, ...);
-gboolean ncm_cfg_exists (gchar *filename, ...);
+gboolean ncm_cfg_load_fftw_wisdom (const gchar *filename, ...);
+gboolean ncm_cfg_save_fftw_wisdom (const gchar *filename, ...);
+gboolean ncm_cfg_exists (const gchar *filename, ...);
 
 void ncm_cfg_set_logfile (gchar *filename);
 void ncm_cfg_logfile (gboolean on);
 void ncm_cfg_logfile_flush (gboolean on);
 void ncm_cfg_logfile_flush_now (void);
 
-void ncm_message (gchar *msg, ...);
+void ncm_message (const gchar *msg, ...);
 gchar *ncm_string_ww (const gchar *msg, const gchar *first, const gchar *rest, guint ncols);
 void ncm_message_ww (const gchar *msg, const gchar *first, const gchar *rest, guint ncols);
 void ncm_cfg_msg_sepa (void);
 
-FILE *ncm_cfg_fopen (gchar *filename, gchar *mode, ...);
-FILE *ncm_cfg_vfopen (gchar *filename, gchar *mode, va_list ap);
+FILE *ncm_cfg_fopen (const gchar *filename, const gchar *mode, ...);
+FILE *ncm_cfg_vfopen (const gchar *filename, const gchar *mode, va_list ap);
 
-gboolean ncm_cfg_load_spline (gchar *filename, const gsl_interp_type *stype, NcmSpline **s, ...);
-gboolean ncm_cfg_save_spline (gchar *filename, NcmSpline *s, ...);
+gboolean ncm_cfg_load_spline (const gchar *filename, const gsl_interp_type *stype, NcmSpline **s, ...);
+gboolean ncm_cfg_save_spline (const gchar *filename, NcmSpline *s, ...);
 
-gboolean ncm_cfg_load_vector (gchar *filename, gsl_vector *v, ...);
-gboolean ncm_cfg_save_vector (gchar *filename, gsl_vector *v, ...);
-gboolean ncm_cfg_load_matrix (gchar *filename, gsl_matrix *M, ...);
-gboolean ncm_cfg_save_matrix (gchar *filename, gsl_matrix *M, ...);
+gboolean ncm_cfg_load_vector (const gchar *filename, gsl_vector *v, ...);
+gboolean ncm_cfg_save_vector (const gchar *filename, gsl_vector *v, ...);
+gboolean ncm_cfg_load_matrix (const gchar *filename, gsl_matrix *M, ...);
+gboolean ncm_cfg_save_matrix (const gchar *filename, gsl_matrix *M, ...);
 
 #define LOAD_SAVE_VECTOR_MATRIX_DEF(typen) \
 gboolean ncm_cfg_load_vector_##typen (gchar *filename, gsl_vector_##typen *v, ...); \

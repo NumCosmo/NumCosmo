@@ -75,7 +75,7 @@ struct _NcmSParamClass
 
 GType ncm_sparam_get_type (void) G_GNUC_CONST;
 
-NcmSParam *ncm_sparam_new (gchar *name, gchar *symbol, gdouble lower_bound, gdouble upper_bound, gdouble scale, gdouble abstol, gdouble default_val, NcmParamType ftype);
+NcmSParam *ncm_sparam_new (const gchar *name, const gchar *symbol, gdouble lower_bound, gdouble upper_bound, gdouble scale, gdouble abstol, gdouble default_val, NcmParamType ftype);
 NcmSParam *ncm_sparam_copy (NcmSParam *sparam);
 NcmSParam *ncm_sparam_ref (NcmSParam *sparam);
 void ncm_sparam_free (NcmSParam *sparam);

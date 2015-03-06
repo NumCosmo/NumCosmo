@@ -452,7 +452,6 @@ main (gint argc, gchar *argv[])
     
     for (i = 0; i < npriors; i++)
     {
-      GError *error = NULL;
       gchar *priors_str = de_data_simple.priors_gauss[i];
       GVariant *prior_hash = g_variant_parse (G_VARIANT_TYPE ("a{sv}"), priors_str, NULL, NULL, &error);
       if (prior_hash == NULL)
@@ -932,7 +931,7 @@ main (gint argc, gchar *argv[])
       NcmMSetFunc *dec_func = nc_hicosmo_create_mset_func1 (nc_hicosmo_dec);
       NcmMSetFunc *wec_func = nc_hicosmo_create_mset_func1 (nc_hicosmo_wec);
       struct {
-        gchar *name; 
+        const gchar *name; 
         NcmMSetFunc *func;
       } kinematics[5] = {
         {"H^2/H_0^2", E2_func},
@@ -980,7 +979,7 @@ main (gint argc, gchar *argv[])
       GArray *p_val = g_array_new (FALSE, FALSE, sizeof (gdouble));
       gint i, j;
       struct {
-        gchar *name; 
+        const gchar *name; 
         NcmMSetFunc *func;
       } kinematics[5] = {
         {"H^2/H_0^2", E2_func},

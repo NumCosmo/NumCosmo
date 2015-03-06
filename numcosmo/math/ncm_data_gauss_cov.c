@@ -414,7 +414,6 @@ _ncm_data_gauss_cov_set_size (NcmDataGaussCov *gauss, guint np)
   }
   if ((np != 0) && (np != gauss->np))
   {
-    NcmData *data = NCM_DATA (gauss);
     gauss->np  = np;
     gauss->y   = ncm_vector_new (gauss->np);
     gauss->v   = ncm_vector_new (gauss->np);

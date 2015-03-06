@@ -803,7 +803,7 @@ nc_hicosmo_qg_get_lambda_d (NcmModel *model, gpointer userdata)
 
 
 NcHICosmoQG *
-nc_hicosmo_qgint_new ()
+nc_hicosmo_qgint_new (void)
 {
   NcHICosmoQG *qgint = g_slice_new (NcHICosmoQG);
   qgint->cvode = CVodeCreate(CV_BDF, CV_NEWTON);

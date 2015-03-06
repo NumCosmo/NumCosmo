@@ -49,7 +49,7 @@ G_DEFINE_TYPE (NcTransferFuncPert, nc_transfer_func_pert, NC_TYPE_TRANSFER_FUNC)
  * Returns: A new #NcTransferFunc.
  */
 NcTransferFunc *
-nc_transfer_func_pert_new ()
+nc_transfer_func_pert_new (void)
 {
   return g_object_new (NC_TYPE_TRANSFER_FUNC_PERT, NULL);
 }

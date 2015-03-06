@@ -226,9 +226,9 @@ ncm_sphere_healpix_write_map (NcmSphereMap *map, gchar *filename, gboolean overw
   
   gchar *order;                 /* HEALPix ordering */
   gchar extname[] = "BINTABLE";   /* extension name */  
-  gchar *ttype[] = { "SIGNAL" };
-  gchar *tform[] = { "1E" };
-  gchar *tunit[] = { " " }; 
+  const gchar *ttype[] = { "SIGNAL" };
+  const gchar *tform[] = { "1E" };
+  const gchar *tunit[] = { " " }; 
   
   /* initialize status before calling fitsio routines */
   status = 0;

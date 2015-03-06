@@ -177,7 +177,7 @@ _nc_data_hubble_mean_func (NcmDataGaussDiag *diag, NcmMSet *mset, NcmVector *vp)
 }
 
 #ifdef NUMCOSMO_HAVE_SQLITE3
-static gchar *_nc_data_hubble_function_query[] =
+static const gchar *_nc_data_hubble_function_query[] =
 {
   "Simon 2005 H(z) sample", "SELECT z,p,s FROM kinematics WHERE param='Hz_Simon2005' ORDER BY z",
   "Cabre sample", "SELECT z,p,s FROM kinematics WHERE param='H_CABRE' ORDER BY z",

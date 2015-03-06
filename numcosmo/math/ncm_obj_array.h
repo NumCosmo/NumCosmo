@@ -40,7 +40,7 @@ typedef struct _GPtrArray NcmObjArray;
 
 GType ncm_obj_array_get_type (void) G_GNUC_CONST;
 
-NcmObjArray *ncm_obj_array_new ();
+NcmObjArray *ncm_obj_array_new (void);
 NcmObjArray *ncm_obj_array_new_from_variant (NcmSerialize *ser, GVariant *var);
 NcmObjArray *ncm_obj_array_sized_new (guint n);
 NcmObjArray *ncm_obj_array_ref (NcmObjArray *oa);

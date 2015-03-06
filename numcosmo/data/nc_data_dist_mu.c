@@ -178,7 +178,7 @@ _nc_data_dist_mu_prepare (NcmData *data, NcmMSet *mset)
 }
 
 #ifdef NUMCOSMO_HAVE_SQLITE3
-static gchar *_nc_data_snia_query[] =
+static const gchar *_nc_data_snia_query[] =
 {
   "Gold sample 157", "SELECT z,mu-0.32 AS muc,s FROM supernovae WHERE quality='Gold-2004' ORDER BY z",
   "Gold sample 182 - removed low redshift", "SELECT z,mu-0.32 AS muc,s FROM supernovae WHERE quality='Gold' AND z >= 0.0233 ORDER BY z",

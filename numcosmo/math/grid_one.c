@@ -212,6 +212,8 @@ ncm_grid_set_nodes_d (NcmGrid *grid, NcmGridNodesEndPoints incl, guint32 start, 
       a = 0; b = -1; break;
     case NCM_GRID_NODES_NONE:
       a = 1; b = +1; break;
+    default:
+      g_assert_not_reached ();
   }
 
   for (i = 0; i < size; i++)

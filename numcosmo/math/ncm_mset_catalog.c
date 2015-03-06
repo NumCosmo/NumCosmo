@@ -1023,7 +1023,6 @@ ncm_mset_catalog_sync (NcmMSetCatalog *mcat, gboolean check)
       ncm_stats_vec_prepend_data (mcat->pstats, rows, FALSE);
       if (mcat->nchains > 1)
       {
-        guint i;
         for (i = 0; i < rows->len; i++)
         {
           NcmVector *x = g_ptr_array_index (rows, i);
@@ -1092,7 +1091,6 @@ ncm_mset_catalog_sync (NcmMSetCatalog *mcat, gboolean check)
       ncm_stats_vec_append_data (mcat->pstats, rows, FALSE);
       if (mcat->nchains > 1)
       {
-        guint i;
         for (i = 0; i < rows->len; i++)
         {
           NcmVector *x = g_ptr_array_index (rows, i);

@@ -64,7 +64,7 @@ void ncm_mpz_inits (mpz_t z, ...);
 void ncm_mpz_clears (mpz_t z, ...);
 void _ncm_assertion_message_cmpdouble (const gchar *domain, const gchar *file, gint line, const gchar *func, const gchar *expr, gdouble arg1, const gchar *cmp, gdouble arg2);
 
-gboolean ncm_util_cvode_check_flag (gpointer flagvalue, gchar *funcname, gint opt);
+gboolean ncm_util_cvode_check_flag (gpointer flagvalue, const gchar *funcname, gint opt);
 gboolean ncm_util_cvode_print_stats (gpointer cvode);
 
 typedef struct _NcmComplex NcmComplex;
@@ -81,7 +81,7 @@ struct _NcmComplex
 
 GType ncm_complex_get_type (void) G_GNUC_CONST;
 
-NcmComplex *ncm_complex_new ();
+NcmComplex *ncm_complex_new (void);
 NcmComplex *ncm_complex_ref (NcmComplex *c);
 NcmComplex *ncm_complex_dup (NcmComplex *c);
 void ncm_complex_free (NcmComplex *c);

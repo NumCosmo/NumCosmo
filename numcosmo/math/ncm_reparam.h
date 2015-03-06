@@ -108,8 +108,8 @@ void ncm_reparam_set_params_desc_dict (NcmReparam *reparam, GVariant *pdesc_dict
 void ncm_reparam_set_param_desc (NcmReparam *reparam, guint i, NcmSParam *sp);
 NcmSParam *ncm_reparam_peek_param_desc (NcmReparam *reparam, guint i);
 NcmSParam *ncm_reparam_get_param_desc (NcmReparam *reparam, guint i);
-void ncm_reparam_set_param_desc_full (NcmReparam *reparam, guint i, gchar *name, gchar *symbol, gdouble lower_bound, gdouble upper_bound, gdouble scale, gdouble abstol, gdouble default_val, NcmParamType ftype);
-gboolean ncm_reparam_index_from_name (NcmReparam *reparam, gchar *param_name, guint *i);
+void ncm_reparam_set_param_desc_full (NcmReparam *reparam, guint i, const gchar *name, const gchar *symbol, gdouble lower_bound, gdouble upper_bound, gdouble scale, gdouble abstol, gdouble default_val, NcmParamType ftype);
+gboolean ncm_reparam_index_from_name (NcmReparam *reparam, const gchar *param_name, guint *i);
 
 
 #define NCM_REPARAM_PARAMS_DESC_DICT_TYPE "a{u"NCM_SERIALIZE_OBJECT_TYPE"}" 

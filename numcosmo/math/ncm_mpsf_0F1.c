@@ -84,7 +84,7 @@ _besselj_bs_free (gpointer p)
  * Returns: FIXME
  */
 NcmBinSplit **
-_ncm_mpsf_0F1_get_bs ()
+_ncm_mpsf_0F1_get_bs (void)
 {
   _NCM_STATIC_MUTEX_DECL (create_lock);
   static NcmMemoryPool *mp = NULL;

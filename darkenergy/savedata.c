@@ -31,7 +31,7 @@
 #include "data_cluster.h"
 
 FILE *
-nc_de_open_dataout_file (NcHICosmo *model, gchar *prefix, gchar **filename)
+nc_de_open_dataout_file (NcHICosmo *model, const gchar *prefix, gchar **filename)
 {
   FILE *f;
   time_t now = time (NULL);

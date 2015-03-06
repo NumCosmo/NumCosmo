@@ -485,7 +485,7 @@ ncm_reparam_get_param_desc (NcmReparam *reparam, guint i)
  * 
  */
 void 
-ncm_reparam_set_param_desc_full (NcmReparam *reparam, guint i, gchar *name, gchar *symbol, gdouble lower_bound, gdouble upper_bound, gdouble scale, gdouble abstol, gdouble default_val, NcmParamType ftype)
+ncm_reparam_set_param_desc_full (NcmReparam *reparam, guint i, const gchar *name, const gchar *symbol, gdouble lower_bound, gdouble upper_bound, gdouble scale, gdouble abstol, gdouble default_val, NcmParamType ftype)
 {
   NcmSParam *sp = ncm_sparam_new (name, symbol, lower_bound, upper_bound, 
                                          scale, abstol, default_val, ftype);
@@ -506,7 +506,7 @@ ncm_reparam_set_param_desc_full (NcmReparam *reparam, guint i, gchar *name, gcha
  * Returns: whenever the parameter is found. 
  */
 gboolean
-ncm_reparam_index_from_name (NcmReparam *reparam, gchar *param_name, guint *i)
+ncm_reparam_index_from_name (NcmReparam *reparam, const gchar *param_name, guint *i)
 {
   gpointer param_id;
   gboolean found = g_hash_table_lookup_extended (reparam->sparams_name_id, param_name, NULL, &param_id);

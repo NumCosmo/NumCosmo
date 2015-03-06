@@ -135,6 +135,9 @@ _ncm_matrix_finalize (GObject *object)
     case NCM_MATRIX_GSL_MATRIX:
     case NCM_MATRIX_DERIVED:
       break;
+    default:
+      g_assert_not_reached ();
+      break;
   }
 
   cm->mv.matrix.data = NULL;

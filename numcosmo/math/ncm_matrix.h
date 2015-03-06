@@ -249,9 +249,9 @@ ncm_matrix_scale (NcmMatrix *cm, gdouble val)
 G_INLINE_FUNC void
 ncm_matrix_memcpy (NcmMatrix *cm1, const NcmMatrix *cm2)
 {
-  const gint nrows = ncm_matrix_nrows (cm1);
-  const gint ncols = ncm_matrix_ncols (cm1);
-  const gint total = nrows * ncols;
+  const guint nrows = ncm_matrix_nrows (cm1);
+  const guint ncols = ncm_matrix_ncols (cm1);
+  const guint total = nrows * ncols;
 
   g_assert_cmpuint (nrows, ==, ncm_matrix_nrows (cm2));
   g_assert_cmpuint (ncols, ==, ncm_matrix_ncols (cm2));

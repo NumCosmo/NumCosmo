@@ -61,7 +61,7 @@ struct _NcmVParamClass
 GType ncm_vparam_get_type (void) G_GNUC_CONST;
 
 NcmVParam *ncm_vparam_new (guint len, NcmSParam *default_param);
-NcmVParam *ncm_vparam_full_new (guint len, gchar *name, gchar *symbol, gdouble lower_bound, gdouble upper_bound, gdouble scale, gdouble abstol, gdouble default_val, NcmParamType ftype);
+NcmVParam *ncm_vparam_full_new (guint len, const gchar *name, const gchar *symbol, gdouble lower_bound, gdouble upper_bound, gdouble scale, gdouble abstol, gdouble default_val, NcmParamType ftype);
 NcmVParam *ncm_vparam_copy (NcmVParam *vparam);
 void ncm_vparam_free (NcmVParam *vparam);
 void ncm_vparam_clear (NcmVParam **vparam);
