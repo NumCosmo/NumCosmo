@@ -277,6 +277,9 @@ void nc_data_snia_cov_save (NcDataSNIACov *snia_cov, const gchar *filename, gboo
 #endif /* NUMCOSMO_HAVE_CFITSIO */
 
 gdouble nc_data_snia_cov_estimate_width_colour (NcDataSNIACov *snia_cov, NcmMSet *mset);
+NcmVector *nc_data_snia_cov_get_estimated_mag (NcDataSNIACov *snia_cov, NcmMSet *mset);
+NcmVector *nc_data_snia_cov_get_estimated_width (NcDataSNIACov *snia_cov, NcmMSet *mset);
+NcmVector *nc_data_snia_cov_get_estimated_colour (NcDataSNIACov *snia_cov, NcmMSet *mset);
 
 #define NC_DATA_SNIA_COV_SYMM_TOL (1.0e-13)
 

@@ -251,8 +251,8 @@ ncm_sphere_healpix_write_map (NcmSphereMap *map, gchar *filename, gboolean overw
   NCM_FITS_ERROR (status);
   
   /* append a new empty binary table onto the FITS file */
-  fits_create_tbl (fptr, BINARY_TBL, map->npix, tfields, ttype, tform,
-                   tunit, extname, &status);
+  fits_create_tbl (fptr, BINARY_TBL, map->npix, tfields, (gchar **)ttype, (gchar **)tform,
+                   (gchar **)tunit, extname, &status);
   NCM_FITS_ERROR (status);
   
   fits_write_key (fptr, TSTRING, "PIXTYPE", "HEALPIX", "HEALPIX Pixelisation", &status);   

@@ -403,7 +403,6 @@ nc_snia_dist_cov_calc (NcSNIADistCov *dcov, NcDataSNIACov *snia_cov, NcmMatrix *
       const gdouble width_width   = ncm_vector_fast_get (snia_cov->cov_packed, NC_DATA_SNIA_COV_ORDER_LENGTH * ij + NC_DATA_SNIA_COV_ORDER_WIDTH_WIDTH);
       const gdouble width_colour  = ncm_vector_fast_get (snia_cov->cov_packed, NC_DATA_SNIA_COV_ORDER_LENGTH * ij + NC_DATA_SNIA_COV_ORDER_WIDTH_COLOUR);
       const gdouble colour_colour = ncm_vector_fast_get (snia_cov->cov_packed, NC_DATA_SNIA_COV_ORDER_LENGTH * ij + NC_DATA_SNIA_COV_ORDER_COLOUR_COLOUR);
-
       ncm_matrix_set (cov, i, j, 
                       mag_mag 
                       + alpha2 * width_width
@@ -411,7 +410,7 @@ nc_snia_dist_cov_calc (NcSNIADistCov *dcov, NcDataSNIACov *snia_cov, NcmMatrix *
                       + two_alpha * mag_width
                       - two_beta * mag_colour
                       - two_alpha_beta * width_colour
-                      );
+                      ); 
       ij++;
     }
 

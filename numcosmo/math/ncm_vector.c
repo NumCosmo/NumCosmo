@@ -542,6 +542,13 @@ ncm_vector_log_vals_func (const NcmVector *v, const gchar *prestr, const gchar *
  * Returns: A pointer to the @i-th component of the vector @cv.
  */
 /**
+ * ncm_vector_fast_ptr:
+ * @cv: a #NcmVector.
+ * @i: component index.
+ *
+ * Returns: A pointer to the @i-th component of the vector @cv assuming stride == 1.
+ */
+/**
  * ncm_vector_set:
  * @cv: a #NcmVector.
  * @i: component index.

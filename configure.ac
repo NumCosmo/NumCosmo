@@ -138,33 +138,34 @@ AM_CONDITIONAL(OS_UNIX, [test "$glib_native_win32" != "yes"])
 dnl ***************************************************************************
 dnl Compiler flags
 dnl ***************************************************************************
-FCFLAGS="$CFLAGS"
+NC_CFLAGS="$CFLAGS"
 AC_ARG_ENABLE([opt-compiler-flags], 
-  [  --enable-opt-compiler-flags  Enable all safe and useful speedups compiler flags (also remove -g and change any -O? to -O3 from CFLAGS)], 
+  [  --enable-opt-compiler-flags  Enable all safe and useful speedups compiler flags (change any -O? to -O3 from CFLAGS)], 
   [enable_comp_flags="yes"],[])
 if test x$enable_comp_flags = "xyes"; then
-  FCFLAGS=`echo $FCFLAGS | $SED 's/\-O\[0-9\]//g'`
-  FCFLAGS=`echo $FCFLAGS | $SED 's/\-g\s//g'`
-  AX_CHECK_COMPILE_FLAG([-O3],[FCFLAGS="$FCFLAGS -O3"])
-  AX_CHECK_COMPILE_FLAG([-funroll-loops],[FCFLAGS="$FCFLAGS -funroll-loops"])
-  AX_CHECK_COMPILE_FLAG([-fno-math-errno],[FCFLAGS="$FCFLAGS -fno-math-errno"])
-  AX_CHECK_COMPILE_FLAG([-march=native],[FCFLAGS="$FCFLAGS -march=native"])
-  AX_CHECK_COMPILE_FLAG([-mfpmath=sse],[FCFLAGS="$FCFLAGS -mfpmath=sse"])
+  NC_CFLAGS=`echo $NC_CFLAGS | $SED 's/\-O[[0123456789]][[ ]]*//g'`
+dnl  NC_CFLAGS=`echo $NC_CFLAGS | $SED 's/\-g[[ ]]*//g'`
+  AX_GCC_ARCHFLAG([no],[nc_march_flag="$ax_cv_gcc_archflag"],[nc_march_flag="-march=native"])
+  AX_CHECK_COMPILE_FLAG([$nc_march_flag],[NC_CFLAGS="$NC_CFLAGS $nc_march_flag"])
+  AX_CHECK_COMPILE_FLAG([-O3],[NC_CFLAGS="$NC_CFLAGS -O3"])
+  AX_CHECK_COMPILE_FLAG([-funroll-loops],[NC_CFLAGS="$NC_CFLAGS -funroll-loops"])
+  AX_CHECK_COMPILE_FLAG([-fno-math-errno],[NC_CFLAGS="$NC_CFLAGS -fno-math-errno"])
+  AX_CHECK_COMPILE_FLAG([-mfpmath=sse],[NC_CFLAGS="$NC_CFLAGS -mfpmath=sse"])
 fi
 
 AC_ARG_ENABLE([warn-compiler-flags], 
   [  --enable-warn-compiler-flags  Enable all useful warning compiler flags], 
   [enable_warn_flags="yes"],[])
 if test x$enable_warn_flags = "xyes"; then
-  FCFLAGS=`echo $FCFLAGS | $SED 's/\-Wall//g'`
-  AX_CHECK_COMPILE_FLAG([-Wall],[FCFLAGS="$FCFLAGS -Wall"])
-dnl  AX_CHECK_COMPILE_FLAG([-Wundef],[FCFLAGS="$FCFLAGS -Wundef"])
-dnl  AX_CHECK_COMPILE_FLAG([-Wshadow],[FCFLAGS="$FCFLAGS -Wshadow"])
-dnl  AX_CHECK_COMPILE_FLAG([-Wpointer-arith],[FCFLAGS="$FCFLAGS -Wpointer-arith"])
-dnl  AX_CHECK_COMPILE_FLAG([-Wcast-align],[FCFLAGS="$FCFLAGS -Wcast-align"])
-dnl  AX_CHECK_COMPILE_FLAG([-Wstrict-prototypes],[FCFLAGS="$FCFLAGS -Wstrict-prototypes"])
-dnl  AX_CHECK_COMPILE_FLAG([-Wwrite-strings],[FCFLAGS="$FCFLAGS -Wwrite-strings"])
-dnl  AX_CHECK_COMPILE_FLAG([-Wunreachable-code],[FCFLAGS="$FCFLAGS -Wunreachable-code"])
+  NC_CFLAGS=`echo $NC_CFLAGS | $SED 's/\-Wall//g'`
+  AX_CHECK_COMPILE_FLAG([-Wall],[NC_CFLAGS="$NC_CFLAGS -Wall"])
+dnl  AX_CHECK_COMPILE_FLAG([-Wundef],[NC_CFLAGS="$NC_CFLAGS -Wundef"])
+dnl  AX_CHECK_COMPILE_FLAG([-Wshadow],[NC_CFLAGS="$NC_CFLAGS -Wshadow"])
+dnl  AX_CHECK_COMPILE_FLAG([-Wpointer-arith],[NC_CFLAGS="$NC_CFLAGS -Wpointer-arith"])
+dnl  AX_CHECK_COMPILE_FLAG([-Wcast-align],[NC_CFLAGS="$NC_CFLAGS -Wcast-align"])
+dnl  AX_CHECK_COMPILE_FLAG([-Wstrict-prototypes],[NC_CFLAGS="$NC_CFLAGS -Wstrict-prototypes"])
+dnl  AX_CHECK_COMPILE_FLAG([-Wwrite-strings],[NC_CFLAGS="$NC_CFLAGS -Wwrite-strings"])
+dnl  AX_CHECK_COMPILE_FLAG([-Wunreachable-code],[NC_CFLAGS="$NC_CFLAGS -Wunreachable-code"])
 fi
 
 dnl ***************************************************************************
@@ -268,6 +269,25 @@ else
   AC_DEFINE([G_IMPLEMENT_INLINES], [1], [force glib to disable inline])
   AC_SUBST(G_IMPLEMENT_INLINES)
 fi
+
+dnl ***************************************************************************
+dnl GCC vector extensions
+dnl ***************************************************************************
+
+support_for_gcc_vector_extensions=no
+
+AC_MSG_CHECKING([for GCC vector extensions])
+AC_LINK_IFELSE([AC_LANG_SOURCE([[
+unsigned int __attribute__ ((vector_size(16))) e, a, b;
+int main (void) { e = a - ((b << 27) + (b >> (32 - 27))) + 1; return e[0]; }
+]])], support_for_gcc_vector_extensions=yes)
+
+if test x$support_for_gcc_vector_extensions = xyes; then
+  AC_DEFINE([HAVE_GCC_VECTOR_EXTENSIONS], [],
+            [Whether the compiler supports GCC vector extensions])
+fi
+
+AC_MSG_RESULT($support_for_gcc_vector_extensions)
 
 dnl ***************************************************************************
 dnl Disable GObject cast checks for speed improvements
@@ -764,7 +784,7 @@ dnl AC_LINK_IFELSE([int main(){}],[],[])
 dnl LIBS="$SAVE_LIBS"
 dnl CFLAGS="$SAVE_CFLAGS"
 dnl LDFLAGS="SAVE_LDFLAGS"
-CFLAGS="$FCFLAGS"
+CFLAGS="$NC_CFLAGS"
 
 dnl ***************************************************************************
 dnl Setting up

@@ -2199,4 +2199,82 @@ nc_data_snia_cov_estimate_width_colour (NcDataSNIACov *snia_cov, NcmMSet *mset)
   }
 }
 
+/**
+ * nc_data_snia_cov_get_estimated_mag:
+ * @snia_cov: a #NcDataSNIACov
+ * @mset: a #NcmMSet
+ * 
+ * Estimate the values of width and colour from the catalog using the models in @mset
+ * and fitting the width and colour as free parameters.
+ * 
+ * Returns: (transfer full): the magnitude vector.
+ */
+NcmVector *
+nc_data_snia_cov_get_estimated_mag (NcDataSNIACov *snia_cov, NcmMSet *mset)
+{
+  NcHICosmo *cosmo = NC_HICOSMO (ncm_mset_peek (mset, nc_hicosmo_id ()));
+  NcSNIADistCov *dcov = NC_SNIA_DIST_COV (ncm_mset_peek (mset, nc_snia_dist_cov_id ()));
+  gboolean dcov_resample_up  = ncm_model_ctrl_update (snia_cov->dcov_resample_ctrl, NCM_MODEL (dcov));
+  gboolean cosmo_resample_up = ncm_model_ctrl_update (snia_cov->cosmo_resample_ctrl, NCM_MODEL (cosmo));
+  NcmVector *mag = ncm_vector_new (snia_cov->mu_len);
+  guint i;
+
+  if (dcov_resample_up || cosmo_resample_up || !snia_cov->has_true_wc)
+    nc_data_snia_cov_estimate_width_colour (snia_cov, mset);
+
+  for (i = 0; i < snia_cov->mu_len; i++)
+  {
+    const gdouble width_th  = ncm_vector_get (snia_cov->width_true, i);
+    const gdouble colour_th = ncm_vector_get (snia_cov->colour_true, i);
+    const gdouble mag_th = nc_snia_dist_cov_mag (dcov, cosmo, snia_cov, i, width_th, colour_th);
+    ncm_vector_set (mag, i, mag_th);
+  }
+  return mag;
+}
+
+/**
+ * nc_data_snia_cov_get_estimated_width:
+ * @snia_cov: a #NcDataSNIACov
+ * @mset: a #NcmMSet
+ * 
+ * Estimate the values of width and colour from the catalog using the models in @mset
+ * and fitting the width and colour as free parameters.
+ * 
+ * Returns: (transfer full): the width vector.
+ */
+NcmVector *
+nc_data_snia_cov_get_estimated_width (NcDataSNIACov *snia_cov, NcmMSet *mset)
+{
+  NcHICosmo *cosmo = NC_HICOSMO (ncm_mset_peek (mset, nc_hicosmo_id ()));
+  NcSNIADistCov *dcov = NC_SNIA_DIST_COV (ncm_mset_peek (mset, nc_snia_dist_cov_id ()));
+  gboolean dcov_resample_up  = ncm_model_ctrl_update (snia_cov->dcov_resample_ctrl, NCM_MODEL (dcov));
+  gboolean cosmo_resample_up = ncm_model_ctrl_update (snia_cov->cosmo_resample_ctrl, NCM_MODEL (cosmo));
+  if (dcov_resample_up || cosmo_resample_up || !snia_cov->has_true_wc)
+    nc_data_snia_cov_estimate_width_colour (snia_cov, mset);
+
+  return ncm_vector_dup (snia_cov->width_true);
+}
+
+/**
+ * nc_data_snia_cov_get_estimated_colour:
+ * @snia_cov: a #NcDataSNIACov
+ * @mset: a #NcmMSet
+ * 
+ * Estimate the values of width and colour from the catalog using the models in @mset
+ * and fitting the width and colour as free parameters.
+ * 
+ * Returns: (transfer full): the colour vector.
+ */
+NcmVector *
+nc_data_snia_cov_get_estimated_colour (NcDataSNIACov *snia_cov, NcmMSet *mset)
+{
+  NcHICosmo *cosmo = NC_HICOSMO (ncm_mset_peek (mset, nc_hicosmo_id ()));
+  NcSNIADistCov *dcov = NC_SNIA_DIST_COV (ncm_mset_peek (mset, nc_snia_dist_cov_id ()));
+  gboolean dcov_resample_up  = ncm_model_ctrl_update (snia_cov->dcov_resample_ctrl, NCM_MODEL (dcov));
+  gboolean cosmo_resample_up = ncm_model_ctrl_update (snia_cov->cosmo_resample_ctrl, NCM_MODEL (cosmo));
+  if (dcov_resample_up || cosmo_resample_up || !snia_cov->has_true_wc)
+    nc_data_snia_cov_estimate_width_colour (snia_cov, mset);
+
+  return ncm_vector_dup (snia_cov->colour_true);
+}
 
