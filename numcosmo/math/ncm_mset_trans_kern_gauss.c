@@ -306,11 +306,15 @@ ncm_mset_trans_kern_gauss_get_size (NcmMSetTransKernGauss *tkerng)
 void 
 ncm_mset_trans_kern_gauss_set_cov (NcmMSetTransKernGauss *tkerng, const NcmMatrix *cov)
 {
+  gint ret;
   g_assert_cmpuint (ncm_matrix_ncols (tkerng->cov), ==, ncm_matrix_ncols (cov));
   g_assert_cmpuint (ncm_matrix_nrows (tkerng->cov), ==, ncm_matrix_nrows (cov));
   ncm_matrix_memcpy (tkerng->cov, cov);
   ncm_matrix_memcpy (tkerng->LLT, cov);
-  ncm_matrix_cholesky_decomp (tkerng->LLT, 'L');
+
+  ret = ncm_matrix_cholesky_decomp (tkerng->LLT, 'L');
+  if (ret != 0)
+    g_error ("ncm_mset_trans_kern_gauss_set_cov[ncm_matrix_cholesky_decomp]: %d.", ret);
   tkerng->init = TRUE;
 }
 
@@ -325,9 +329,13 @@ ncm_mset_trans_kern_gauss_set_cov (NcmMSetTransKernGauss *tkerng, const NcmMatri
 void 
 ncm_mset_trans_kern_gauss_set_cov_variant (NcmMSetTransKernGauss *tkerng, GVariant *cov)
 {
+  gint ret;
   ncm_matrix_set_from_variant (tkerng->cov, cov);
   ncm_matrix_memcpy (tkerng->LLT, tkerng->cov);
-  ncm_matrix_cholesky_decomp (tkerng->LLT, 'L');
+
+  ret = ncm_matrix_cholesky_decomp (tkerng->LLT, 'L');
+  if (ret != 0)
+    g_error ("ncm_mset_trans_kern_gauss_set_cov_variant[ncm_matrix_cholesky_decomp]: %d.", ret);
   tkerng->init = TRUE;
 }
 
@@ -342,9 +350,13 @@ ncm_mset_trans_kern_gauss_set_cov_variant (NcmMSetTransKernGauss *tkerng, GVaria
 void 
 ncm_mset_trans_kern_gauss_set_cov_data (NcmMSetTransKernGauss *tkerng, gdouble *cov)
 {
+  gint ret;
   ncm_matrix_set_from_data (tkerng->cov, cov);
   ncm_matrix_memcpy (tkerng->LLT, tkerng->cov);
-  ncm_matrix_cholesky_decomp (tkerng->LLT, 'L');
+
+  ret = ncm_matrix_cholesky_decomp (tkerng->LLT, 'L');
+  if (ret != 0)
+    g_error ("ncm_mset_trans_kern_gauss_set_cov_variant[ncm_matrix_cholesky_decomp]: %d.", ret);
   tkerng->init = TRUE;
 }
 
@@ -374,6 +386,8 @@ ncm_mset_trans_kern_gauss_set_cov_from_scale (NcmMSetTransKernGauss *tkerng)
 {
   NcmMSetTransKern *tkern = NCM_MSET_TRANS_KERN (tkerng);
   guint i;
+  gint ret;
+  
   g_assert (tkern->mset != NULL);
 
   ncm_matrix_set_identity (tkerng->cov);
@@ -383,6 +397,10 @@ ncm_mset_trans_kern_gauss_set_cov_from_scale (NcmMSetTransKernGauss *tkerng)
     ncm_matrix_set (tkerng->cov, i, i, scale * scale);
   }
   ncm_matrix_memcpy (tkerng->LLT, tkerng->cov);
-  ncm_matrix_cholesky_decomp (tkerng->LLT, 'L');
+
+  ret = ncm_matrix_cholesky_decomp (tkerng->LLT, 'L');
+  if (ret != 0)
+    g_error ("ncm_mset_trans_kern_gauss_set_cov_from_scale[ncm_matrix_cholesky_decomp]: %d.", ret);
+  
   tkerng->init = TRUE;
 }

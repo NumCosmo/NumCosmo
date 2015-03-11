@@ -642,3 +642,20 @@ nc_snia_dist_cov_extra_var (NcSNIADistCov *dcov, NcDataSNIACov *snia_cov, guint 
     return var_tot;
   }
 }
+
+/**
+ * nc_snia_dist_cov_alpha_beta:
+ * @dcov: a #NcSNIADistCov
+ * @alpha: (out caller-allocates): value of alpha
+ * @beta: (out caller-allocates): value of beta
+ * 
+ * FIXME
+ * 
+ */
+void 
+nc_snia_dist_cov_alpha_beta (NcSNIADistCov *dcov, gdouble *alpha, gdouble *beta)
+{
+  *alpha = ALPHA;
+  *beta  = BETA;
+}
+

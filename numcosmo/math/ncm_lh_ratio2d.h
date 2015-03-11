@@ -69,6 +69,7 @@ struct _NcmLHRatio2d
   gdouble lb[2];
   gdouble ub[2];
   gdouble bf[2];
+  gdouble border_prec;
   NcmMatrix *e_vec;
   NcmVector *e_val;
   gdouble r, theta;
@@ -125,7 +126,7 @@ struct _NcmLHRatio2dRegion
 GType ncm_lh_ratio2d_get_type (void) G_GNUC_CONST;
 GType ncm_lh_ratio2d_region_get_type (void) G_GNUC_CONST;
 
-NcmLHRatio2d *ncm_lh_ratio2d_new (NcmFit *fit, NcmMSetPIndex *pi1, NcmMSetPIndex *pi2);
+NcmLHRatio2d *ncm_lh_ratio2d_new (NcmFit *fit, NcmMSetPIndex *pi1, NcmMSetPIndex *pi2, gdouble border_prec);
 void ncm_lh_ratio2d_free (NcmLHRatio2d *lhr2d);
 void ncm_lh_ratio2d_clear (NcmLHRatio2d **lhr2d);
 

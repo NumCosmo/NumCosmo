@@ -696,6 +696,15 @@ ncm_vector_log_vals_func (const NcmVector *v, const gchar *prestr, const gchar *
  * Returns: (transfer none): FIXME
  */
 /**
+ * ncm_vector_ddot:
+ * @a: a #NcmVector.
+ * @b: a #NcmVector.
+ *
+ * FIXME
+ *
+ * Returns: FIXME
+ */
+/**
  * ncm_vector_gsl: (skip)
  * @cv: a #NcmVector.
  *

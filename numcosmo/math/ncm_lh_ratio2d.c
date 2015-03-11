@@ -55,6 +55,7 @@ enum
   PROP_FIT,
   PROP_PI1,
   PROP_PI2,
+  PROP_BORDER_PREC,
   PROP_SIZE,
 };
 
@@ -76,11 +77,12 @@ ncm_lh_ratio2d_init (NcmLHRatio2d *lhr2d)
   lhr2d->rtype       = NCM_LH_RATIO2D_ROOT_BRACKET;
   lhr2d->e_vec       = ncm_matrix_new (2, 2);
   lhr2d->e_val       = ncm_vector_new (2);
-  lhr2d->r        = 0.0;
-  lhr2d->theta    = 0.0;
-  lhr2d->shift[0] = 0.0;
-  lhr2d->shift[1] = 0.0;
-  lhr2d->angular  = FALSE;
+  lhr2d->r           = 0.0;
+  lhr2d->theta       = 0.0;
+  lhr2d->shift[0]    = 0.0;
+  lhr2d->shift[1]    = 0.0;
+  lhr2d->border_prec = 0.0;
+  lhr2d->angular     = FALSE;
 }
 
 static void _ncm_lh_ratio2d_prepare_coords (NcmLHRatio2d *lhr2d);
@@ -151,6 +153,9 @@ ncm_lh_ratio2d_set_property (GObject *object, guint prop_id, const GValue *value
       lhr2d->pi[1] = *pi;
       break;
     }
+    case PROP_BORDER_PREC:
+      lhr2d->border_prec = g_value_get_double (value);
+      break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
       break;
@@ -177,6 +182,9 @@ ncm_lh_ratio2d_get_property (GObject *object, guint prop_id, GValue *value, GPar
       g_value_take_boxed (value, pi);
       break;
     }
+    case PROP_BORDER_PREC:
+      g_value_set_double (value, lhr2d->border_prec);
+      break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
       break;
@@ -240,28 +248,35 @@ ncm_lh_ratio2d_class_init (NcmLHRatio2dClass *klass)
                                                        "Second param index",
                                                        NCM_TYPE_MSET_PINDEX,
                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  g_object_class_install_property (object_class,
+                                   PROP_BORDER_PREC,
+                                   g_param_spec_double ("border-prec",
+                                                        NULL,
+                                                        "Border precision",
+                                                        1.0e-16, 1.0e3, 1.0e-5,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 }
-
 
 /**
  * ncm_lh_ratio2d_new:
  * @fit: FIXME
  * @pi1: FIXME
  * @pi2: FIXME
+ * @border_prec: precision on the border finder.
  *
  * FIXME
  * 
  * Returns: FIXME
  */
 NcmLHRatio2d *
-ncm_lh_ratio2d_new (NcmFit *fit, NcmMSetPIndex *pi1, NcmMSetPIndex *pi2)
+ncm_lh_ratio2d_new (NcmFit *fit, NcmMSetPIndex *pi1, NcmMSetPIndex *pi2, gdouble border_prec)
 {
   return g_object_new (NCM_TYPE_LH_RATIO2D, 
                        "fit", fit,
                        "pi1", pi1,
                        "pi2", pi2,
-                       NULL);
-  
+                       "border-prec", border_prec,
+                       NULL);  
 }
 
 /**
@@ -312,7 +327,7 @@ _ncm_lh_ratio2d_prepare_coords (NcmLHRatio2d *lhr2d)
                    ncm_matrix_gsl (lhr2d->e_vec), 
                    vw);
   gsl_eigen_symmv_free (vw);
-
+  
   {
     gdouble sigma_e[2];
     gdouble e_vec1[2];
@@ -505,7 +520,7 @@ ncm_lh_ratio2d_tofparam (NcmLHRatio2d *lhr2d, gdouble *p1, gdouble *p2)
   beta  = lhr2d->shift[1] + lhr2d->r * sin (lhr2d->theta);
 
   *p1 = lhr2d->bf[0] + alpha * ncm_matrix_get (lhr2d->e_vec, 0, 0) + beta * ncm_matrix_get (lhr2d->e_vec, 0, 1);
-  *p2 = lhr2d->bf[1] + alpha * ncm_matrix_get (lhr2d->e_vec, 1, 0) + beta * ncm_matrix_get (lhr2d->e_vec, 1, 1);
+  *p2 = lhr2d->bf[1] + alpha * ncm_matrix_get (lhr2d->e_vec, 1, 0) + beta * ncm_matrix_get (lhr2d->e_vec, 1, 1);  
 }
 
 static gdouble
@@ -520,13 +535,15 @@ ncm_lh_ratio2d_f (gdouble x, gpointer ptr)
     lhr2d->r = x;
 
   ncm_lh_ratio2d_tofparam (lhr2d, &p[0], &p[1]);
+  if (lhr2d->mtype > NCM_FIT_RUN_MSGS_SIMPLE)
+    g_message ("#  stepping to [% 12.8g % 12.8g]:\n", p[0], p[1]);
   
   skip = skip || !_ncm_lh_ratio2d_inside_interval (&p[0], lhr2d->lb[0], lhr2d->ub[0], 1e-4);
   skip = skip || !_ncm_lh_ratio2d_inside_interval (&p[1], lhr2d->lb[1], lhr2d->ub[1], 1e-4);
 
   if (skip)
     return HUGE_VAL;
-  
+
   ncm_mset_param_set_pi (lhr2d->constrained->mset, lhr2d->pi, p, 2);
   ncm_fit_run (lhr2d->constrained, NCM_FIT_RUN_MSGS_NONE);
 
@@ -549,7 +566,7 @@ ncm_lh_ratio2d_root_brent (NcmLHRatio2d *lhr2d, gdouble x0, gdouble x)
   const gsl_root_fsolver_type *T;
   gsl_root_fsolver *s;
   gsl_function F;
-  gdouble prec = 1e-5, x1 = x;
+  gdouble x1 = x;
 
   F.function = &ncm_lh_ratio2d_f;
   F.params   = lhr2d;
@@ -574,7 +591,7 @@ ncm_lh_ratio2d_root_brent (NcmLHRatio2d *lhr2d, gdouble x0, gdouble x)
     x = gsl_root_fsolver_root (s);
     x0 = gsl_root_fsolver_x_lower (s);
     x1 = gsl_root_fsolver_x_upper (s);
-    status = gsl_root_test_interval (x0, x1, 0, prec);
+    status = gsl_root_test_interval (x0, x1, 0, lhr2d->border_prec);
 
     ncm_lh_ratio2d_log_root_step (lhr2d, x0, x1);
 
@@ -588,7 +605,7 @@ ncm_lh_ratio2d_root_brent (NcmLHRatio2d *lhr2d, gdouble x0, gdouble x)
   while (status == GSL_CONTINUE && iter < max_iter);
 
   gsl_root_fsolver_free (s);
-  ncm_lh_ratio2d_log_root_finish (lhr2d, x, prec);
+  ncm_lh_ratio2d_log_root_finish (lhr2d, x, lhr2d->border_prec);
 
   return x;
 }
@@ -621,7 +638,6 @@ ncm_lh_ratio2d_root_steffenson (NcmLHRatio2d *lhr2d, gdouble x0, gdouble x1)
   const gsl_root_fdfsolver_type *T;
   gsl_root_fdfsolver *s;
   gsl_function_fdf F;
-  gdouble prec = 1e-5;
   gdouble x = (x0 + x1) * 0.5;
 
   F.f = &ncm_lh_ratio2d_f;
@@ -649,7 +665,7 @@ ncm_lh_ratio2d_root_steffenson (NcmLHRatio2d *lhr2d, gdouble x0, gdouble x1)
 
     x0 = x;
     x = gsl_root_fdfsolver_root (s);
-    status = gsl_root_test_delta (x, x0, 0, prec);
+    status = gsl_root_test_delta (x, x0, 0, lhr2d->border_prec);
 
     ncm_lh_ratio2d_log_root_step (lhr2d, x, x0);
 
@@ -662,7 +678,7 @@ ncm_lh_ratio2d_root_steffenson (NcmLHRatio2d *lhr2d, gdouble x0, gdouble x1)
   }
   while (status == GSL_CONTINUE && iter < max_iter);
 
-  ncm_lh_ratio2d_log_root_finish (lhr2d, x, prec);
+  ncm_lh_ratio2d_log_root_finish (lhr2d, x, lhr2d->border_prec);
     
   gsl_root_fdfsolver_free (s);
   return x;
@@ -881,7 +897,6 @@ ncm_lh_ratio2d_conf_region (NcmLHRatio2d *lhr2d, gdouble clevel, gdouble expecte
     expected_np = 100.0;
   
   lhr2d->mtype = mtype;
-  
   ncm_lh_ratio2d_log_start (lhr2d, clevel);
 
   lhr2d->chisquare = gsl_cdf_chisq_Qinv (1.0 - clevel, 2);

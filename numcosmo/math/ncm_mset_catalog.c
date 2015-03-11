@@ -681,6 +681,7 @@ static void _ncm_mset_catalog_flush_file (NcmMSetCatalog *mcat);
 void 
 ncm_mset_catalog_set_add_val_name (NcmMSetCatalog *mcat, guint i, const gchar *name)
 {
+  g_assert_cmpuint (i, <, mcat->nadd_vals);
   g_free (g_ptr_array_index (mcat->add_vals_names, i));
   g_ptr_array_index (mcat->add_vals_names, i) = g_strdup (name);
 }
@@ -1221,6 +1222,24 @@ ncm_mset_catalog_peek_filename (NcmMSetCatalog *mcat)
 }
 
 /**
+ * ncm_mset_catalog_get_rng:
+ * @mcat: a #NcmMSetCatalog
+ * 
+ * This function checks if any pseudo random number generator (RNG) is registred in the catalog.
+ * If so, it returns it or NULL.
+ * 
+ * Returns: (transfer full) (allow-none): the registered #NcmRNG in the catalog or NULL.
+ */
+NcmRNG *
+ncm_mset_catalog_get_rng (NcmMSetCatalog *mcat)
+{
+  if (mcat->rng != NULL)
+    return ncm_rng_ref (mcat->rng);
+  else
+    return NULL;
+}
+
+/**
  * ncm_mset_catalog_is_empty:
  * @mcat: a #NcmMSetCatalog
  * 
@@ -1300,65 +1319,6 @@ guint
 ncm_mset_catalog_len (NcmMSetCatalog *mcat)
 {
   return mcat->pstats->nitens;
-}
-
-/**
- * ncm_mset_catalog_get_rng:
- * @mcat: a #NcmMSetCatalog
- * @rng_algo: (out callee-allocates) (transfer full) (allow-none): the name of the RNG algorithm
- * @seed: (out caller-allocates) (allow-none): the seed used to initialize the RNG
- * 
- * This function checks if any pseudo random number generator (RNG) is registred in the catalog.
- * If so, it returns its properties in @rng_algo and @seed.
- * 
- * Returns: TRUE if a RNG is defined in the catalog.
- */
-gboolean
-ncm_mset_catalog_get_rng (NcmMSetCatalog *mcat, gchar **rng_algo, gulong *seed)
-{
-#ifdef NUMCOSMO_HAVE_CFITSIO
-  if (mcat->file != NULL)
-  {
-    gint status = 0;
-    gchar algo[FLEN_VALUE];
-    gboolean has_algo = FALSE;
-    gboolean has_seed = FALSE;
-
-    g_assert (*rng_algo == NULL);
-    g_assert (seed != NULL);
-
-    fits_read_key (mcat->fptr, TSTRING, NCM_MSET_CATALOG_RNG_ALGO_LABEL,
-                   &algo, NULL, &status);
-    if (status == 0)
-      has_algo = TRUE;
-    else if (status == KEY_NO_EXIST)
-      status = 0;
-    else
-      NCM_FITS_ERROR (status);
-
-    fits_read_key (mcat->fptr, TULONG, NCM_MSET_CATALOG_RNG_SEED_LABEL,
-                   seed, NULL, &status);
-    if (status == 0)
-      has_seed = TRUE;
-    else if (status == KEY_NO_EXIST)
-      status = 0;
-    else
-      NCM_FITS_ERROR (status);
-
-    if (has_seed != has_algo)
-      g_error ("ncm_mset_catalog_get_rng: catalog contains algorithm name but no seed or vice-versa, has algorithm: %s, has seed: %s",
-               has_algo ? "true" : "false", has_seed ? "true" : "false");
-
-    if (has_algo)
-      *rng_algo = g_strdup (algo);
-
-    return has_algo;
-  }
-  else
-    return FALSE;
-#else
-  return FALSE;
-#endif /* NUMCOSMO_HAVE_CFITSIO */
 }
 
 static void
@@ -1721,6 +1681,7 @@ ncm_mset_catalog_get_param_shrink_factor (NcmMSetCatalog *mcat, guint p)
 gdouble 
 ncm_mset_catalog_get_shrink_factor (NcmMSetCatalog *mcat)
 {
+  gint ret;
   guint i;
   guint n = mcat->pstats->nitens;
   const guint free_params_len = mcat->pstats->len - mcat->nadd_vals;
@@ -1759,8 +1720,12 @@ ncm_mset_catalog_get_shrink_factor (NcmMSetCatalog *mcat)
     if (gsl_finite (ncm_matrix_get (mcat->chain_cov, 0, 0)))
     {
       gdouble lev = 0.0;
-      ncm_matrix_cholesky_decomp (mcat->chain_cov, 'L');
-      ncm_matrix_cholesky_inverse (mcat->chain_cov, 'L');
+      ret = ncm_matrix_cholesky_decomp (mcat->chain_cov, 'L');
+      if (ret != 0)
+        g_error ("ncm_mset_catalog_get_shrink_factor[ncm_matrix_cholesky_decomp]: %d.", ret);
+      ret = ncm_matrix_cholesky_inverse (mcat->chain_cov, 'L');
+      if (ret != 0)
+        g_error ("ncm_mset_catalog_get_shrink_factor[ncm_matrix_cholesky_inverse]: %d.", ret);
 
       ncm_matrix_dsymm (mcat->chain_cov, 'L', 1.0, cov, 0.0, mcat->chain_sM);
 /*      

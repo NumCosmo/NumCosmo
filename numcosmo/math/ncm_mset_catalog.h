@@ -134,7 +134,9 @@ void ncm_mset_catalog_set_rng (NcmMSetCatalog *mcat, NcmRNG *rng);
 void ncm_mset_catalog_sync (NcmMSetCatalog *mcat, gboolean check);
 void ncm_mset_catalog_reset (NcmMSetCatalog *mcat);
 void ncm_mset_catalog_erase_data (NcmMSetCatalog *mcat);
+
 const gchar *ncm_mset_catalog_peek_filename (NcmMSetCatalog *mcat);
+NcmRNG *ncm_mset_catalog_get_rng (NcmMSetCatalog *mcat);
 
 gboolean ncm_mset_catalog_is_empty (NcmMSetCatalog *mcat);
 gdouble ncm_mset_catalog_largest_error (NcmMSetCatalog *mcat);

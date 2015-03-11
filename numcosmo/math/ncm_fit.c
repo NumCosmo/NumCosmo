@@ -1369,8 +1369,7 @@ ncm_fit_priors_m2lnL_val (NcmFit *fit, gdouble *priors_m2lnL)
 void
 ncm_fit_m2lnL_val (NcmFit *fit, gdouble *m2lnL)
 {
-  ncm_likelihood_m2lnL_val (fit->lh, fit->mset, m2lnL);
-  
+  ncm_likelihood_m2lnL_val (fit->lh, fit->mset, m2lnL);  
   fit->fstate->func_eval++;
 }
 
@@ -1458,15 +1457,61 @@ ncm_fit_m2lnL_grad_nd_ce (NcmFit *fit, NcmVector *grad)
     gdouble m2lnL_pph, m2lnL_pmh;
 
     ncm_mset_fparam_set (fit->mset, i, pph);
-    ncm_fit_m2lnL_val (fit, &m2lnL_pph);
+    ncm_likelihood_m2lnL_val (fit->lh, fit->mset, &m2lnL_pph);
+    /*ncm_fit_m2lnL_val (fit, &m2lnL_pph);*/
 
     ncm_mset_fparam_set (fit->mset, i, pmh);
-    ncm_fit_m2lnL_val (fit, &m2lnL_pmh);
+    ncm_likelihood_m2lnL_val (fit->lh, fit->mset, &m2lnL_pmh);
+    /*ncm_fit_m2lnL_val (fit, &m2lnL_pmh);*/
 
     ncm_vector_set (grad, i, (m2lnL_pph - m2lnL_pmh) * one_2h);
     ncm_mset_fparam_set (fit->mset, i, p);
   }
 
+  fit->fstate->grad_eval++;
+}
+
+/**
+ * ncm_fit_m2lnL_hessian_nd_ce:
+ * @fit: a #NcmFit
+ * @hessian: a #NcmMatrix
+ *
+ * Numerical differentiation (central) Hessian matrix.
+ * 
+ */
+void
+ncm_fit_m2lnL_hessian_nd_ce (NcmFit *fit, NcmMatrix *hessian)
+{
+  guint i;
+  guint fparam_len = ncm_mset_fparam_len (fit->mset);
+  NcmVector *tmp = ncm_vector_new (fparam_len);
+
+  for (i = 0; i < fparam_len; i++)
+  {
+    const gdouble p = ncm_mset_fparam_get (fit->mset, i);
+    const gdouble p_scale = GSL_MAX (fabs (p), ncm_mset_fparam_get_scale (fit->mset, i));
+    const gdouble h = p_scale * GSL_ROOT3_DBL_EPSILON;
+    const gdouble pph = p + h;
+    const gdouble pmh = p - h;
+    const gdouble twoh = pph - pmh;
+    const gdouble one_2h = 1.0 / twoh;
+    NcmVector *row = ncm_matrix_get_row (hessian, i);
+
+    ncm_mset_fparam_set (fit->mset, i, pph);
+    ncm_fit_m2lnL_grad_nd_ce (fit, row);
+
+    ncm_mset_fparam_set (fit->mset, i, pmh);
+    ncm_fit_m2lnL_grad_nd_ce (fit, tmp);
+
+    ncm_vector_sub (row, tmp);
+    ncm_vector_scale (row, one_2h);
+    
+    ncm_mset_fparam_set (fit->mset, i, p);
+
+    ncm_vector_free (row);
+  }
+
+  ncm_vector_free (tmp);
   fit->fstate->grad_eval++;
 }
 
@@ -1726,7 +1771,6 @@ ncm_fit_ls_J_nd_ce (NcmFit *fit, NcmMatrix *J)
   fit->fstate->grad_eval++;
 }
 
-
 /**
  * ncm_fit_ls_f_J:
  * @fit: a #NcmFit
@@ -1812,7 +1856,8 @@ _ncm_fit_numdiff_2_m2lnL (gdouble u, gpointer userdata)
     ncm_mset_fparam_set (nd->fit->mset, nd->n1, (u + nd->v) / nd->p1_scale);
     ncm_mset_fparam_set (nd->fit->mset, nd->n2, (u - nd->v) / nd->p2_scale);
   }
-  ncm_fit_m2lnL_val (nd->fit, &res);
+  ncm_likelihood_m2lnL_val (nd->fit->lh, nd->fit->mset, &res);
+  /*ncm_fit_m2lnL_val (nd->fit, &res);*/
   return res;
 }
 
@@ -1820,20 +1865,22 @@ _ncm_fit_numdiff_2_m2lnL (gdouble u, gpointer userdata)
  * ncm_fit_numdiff_m2lnL_hessian:
  * @fit: a #NcmFit
  * @H: a #NcmMatrix
+ * @reltol: relative tolerance.
  *
  * FIXME
  */
 void
-ncm_fit_numdiff_m2lnL_hessian (NcmFit *fit, NcmMatrix *H)
+ncm_fit_numdiff_m2lnL_hessian (NcmFit *fit, NcmMatrix *H, gdouble reltol)
 {
   gsl_function F;
   _ncm_fit_numdiff_2 nd;
   guint i, j;
   gdouble fx;
-  const gdouble target_err = 1e-5;
+  const gdouble target_err = reltol;
   guint free_params_len = ncm_mset_fparams_len (fit->mset);
 
-  ncm_fit_m2lnL_val (fit, &fx);
+  ncm_likelihood_m2lnL_val (fit->lh, fit->mset, &fx);
+  /*ncm_fit_m2lnL_val (fit, &fx);*/
 
   nd.fit = fit;
   F.params = &nd;
@@ -1912,21 +1959,22 @@ void
 ncm_fit_numdiff_m2lnL_covar (NcmFit *fit)
 {
   gint ret;
-
   if (ncm_mset_fparam_len (fit->mset) == 0)
     g_error ("ncm_fit_numdiff_m2lnL_covar: mset object has 0 free parameters");
 
-  ncm_fit_numdiff_m2lnL_hessian (fit, fit->fstate->hessian);
+  ncm_fit_numdiff_m2lnL_hessian (fit, fit->fstate->hessian, fit->params_reltol);
   ncm_matrix_memcpy (fit->fstate->covar, fit->fstate->hessian);
   ncm_matrix_scale (fit->fstate->covar, 0.5);
 
-  ret = gsl_linalg_cholesky_decomp (ncm_matrix_gsl (fit->fstate->covar));
-  if (ret == GSL_SUCCESS)
+  ret = ncm_matrix_cholesky_decomp (fit->fstate->covar, 'U');
+  if (ret == 0)
   {
-    ret = gsl_linalg_cholesky_invert (ncm_matrix_gsl (fit->fstate->covar));
-    NCM_TEST_GSL_RESULT ("ncm_fit_numdiff_m2lnL_covar[gsl_linalg_cholesky_invert]", ret);
+    ret = ncm_matrix_cholesky_inverse (fit->fstate->covar, 'U');
+    if (ret != 0)
+      g_error ("ncm_fit_numdiff_m2lnL_covar[ncm_matrix_cholesky_decomp]: %d.", ret);
+    ncm_matrix_copy_triangle (fit->fstate->covar, 'U');
   }
-  else if (ret == GSL_EDOM)
+  else if (ret > 0)
   {
     NcmMatrix *LU = ncm_matrix_dup (fit->fstate->hessian);
     gsl_permutation *p = gsl_permutation_alloc (ncm_mset_fparam_len (fit->mset));
@@ -1947,9 +1995,68 @@ ncm_fit_numdiff_m2lnL_covar (NcmFit *fit)
     ncm_matrix_free (LU);
   }
   else
-    NCM_TEST_GSL_RESULT ("ncm_fit_numdiff_m2lnL_covar[gsl_linalg_cholesky_decomp]", ret);
+    g_error ("ncm_fit_numdiff_m2lnL_covar[ncm_matrix_cholesky_decomp]: %d.", ret);
+  
   fit->fstate->has_covar = TRUE;
 }
+
+/**
+ * ncm_fit_numdiff_m2lnL_lndet_covar:
+ * @fit: a #NcmFit
+ *
+ * FIXME
+ * 
+ * Returns: the logarithm of the determinant of the covariance matrix.
+ */
+gdouble
+ncm_fit_numdiff_m2lnL_lndet_covar (NcmFit *fit)
+{
+  const guint len = ncm_matrix_nrows (fit->fstate->covar);            
+  gdouble lndetC = 0.0;
+  guint i;
+  gint ret;
+
+  if (ncm_mset_fparam_len (fit->mset) == 0)
+    g_error ("ncm_fit_numdiff_m2lnL_covar: mset object has 0 free parameters");
+
+  ncm_fit_numdiff_m2lnL_hessian (fit, fit->fstate->hessian, 1.0e-2);
+  ncm_matrix_memcpy (fit->fstate->covar, fit->fstate->hessian);
+  ncm_matrix_scale (fit->fstate->covar, 0.5);
+
+  ret = ncm_matrix_cholesky_decomp (fit->fstate->covar, 'U');
+  if (ret == 0)
+  {
+    for (i = 0; i < len; i++)
+      lndetC += log (ncm_matrix_get (fit->fstate->covar, i, i));
+    lndetC = -2.0 * lndetC;
+  }
+  else if (ret > 0)
+  {
+    NcmMatrix *LU = ncm_matrix_dup (fit->fstate->hessian);
+    gsl_permutation *p = gsl_permutation_alloc (ncm_mset_fparam_len (fit->mset));
+    gint signum;
+    gint ret1;
+
+    ncm_matrix_scale (LU, 0.5);
+    
+    g_warning ("ncm_fit_numdiff_m2lnL_covar: covariance matrix not positive definite, errors are not trustworthy.");
+    
+    ret1 = gsl_linalg_LU_decomp (ncm_matrix_gsl (LU), p, &signum);
+    NCM_TEST_GSL_RESULT ("ncm_fit_numdiff_m2lnL_covar[gsl_linalg_LU_decomp]", ret1);
+
+    for (i = 0; i < len; i++)
+      lndetC += log (fabs (ncm_matrix_get (LU, i, i)));
+    lndetC = -lndetC;
+
+    gsl_permutation_free (p);
+    ncm_matrix_free (LU);
+  }
+  else
+    g_error ("ncm_fit_numdiff_m2lnL_lndet_covar[ncm_matrix_cholesky_decomp]: %d.", ret);
+
+  return lndetC;
+}
+
 
 /**
  * ncm_fit_residual_ks_test:

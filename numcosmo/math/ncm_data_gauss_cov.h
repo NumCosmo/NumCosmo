@@ -63,8 +63,8 @@ struct _NcmDataGaussCovClass
   NcmDataClass parent_class;
   void (*mean_func) (NcmDataGaussCov *gauss, NcmMSet *mset, NcmVector *vp);
   gboolean (*cov_func) (NcmDataGaussCov *gauss, NcmMSet *mset, NcmMatrix *cov);
-  gdouble (*lnNorma2) (NcmDataGaussCov *gauss, NcmMSet *mset);
-  gdouble (*lnNorma2_bs) (NcmDataGaussCov *gauss, NcmMSet *mset, NcmBootstrap *bstrap);
+  void (*lnNorma2) (NcmDataGaussCov *gauss, NcmMSet *mset, gdouble *m2lnL);
+  void (*lnNorma2_bs) (NcmDataGaussCov *gauss, NcmMSet *mset, NcmBootstrap *bstrap, gdouble *m2lnL);
   void (*set_size) (NcmDataGaussCov *gauss, guint np);
   guint (*get_size) (NcmDataGaussCov *gauss);
 };

@@ -328,7 +328,7 @@ static void _nc_data_snia_cov_resample (NcmData *data, NcmMSet *mset, NcmRNG *rn
 static void _nc_data_snia_cov_mean_func (NcmDataGaussCov *gauss, NcmMSet *mset, NcmVector *vp);
 static gboolean _nc_data_snia_cov_func (NcmDataGaussCov *gauss, NcmMSet *mset, NcmMatrix *cov);
 static void _nc_data_snia_cov_set_size (NcmDataGaussCov *gauss, guint np);
-static gdouble _nc_data_snia_cov_lnNorma2 (NcmDataGaussCov *gauss, NcmMSet *mset);
+static void _nc_data_snia_cov_lnNorma2 (NcmDataGaussCov *gauss, NcmMSet *mset, gdouble *m2lnL);
 
 static void
 nc_data_snia_cov_class_init (NcDataSNIACovClass *klass)
@@ -428,7 +428,10 @@ nc_data_snia_cov_class_init (NcDataSNIACovClass *klass)
   gauss_class->mean_func = &_nc_data_snia_cov_mean_func;
   gauss_class->cov_func  = &_nc_data_snia_cov_func;
   gauss_class->set_size  = &_nc_data_snia_cov_set_size;
-  gauss_class->lnNorma2  = &_nc_data_snia_cov_lnNorma2;
+
+  /* EXPERIMENTAL CODE : NOTE USED! */
+  if (FALSE)
+    gauss_class->lnNorma2  = &_nc_data_snia_cov_lnNorma2;
 }
 
 static void
@@ -458,16 +461,79 @@ _nc_data_snia_cov_func (NcmDataGaussCov *gauss, NcmMSet *mset, NcmMatrix *cov)
   return TRUE;
 }
 
-static gdouble 
-_nc_data_snia_cov_lnNorma2 (NcmDataGaussCov *gauss, NcmMSet *mset)
+/* EXPERIMENTAL CODE : NOTE USED! */
+static void 
+_nc_data_snia_cov_lnNorma2 (NcmDataGaussCov *gauss, NcmMSet *mset, gdouble *m2lnL)
 {
+  NcDataSNIACov *snia_cov = NC_DATA_SNIA_COV (gauss);
+  /* Chain up : start */
+  gdouble alpha, beta, alpha2, beta2, two_alpha, two_beta, two_alpha_beta;
+  gdouble chi2 = *m2lnL;
+  gdouble lndetC = 0.0;
+  //gdouble fact1, fact2;
+  NcSNIADistCov *dcov = NC_SNIA_DIST_COV (ncm_mset_peek (mset, nc_snia_dist_cov_id ()));
+  const guint mu_len = snia_cov->mu_len;
+  guint i, j, ij;
+
+  if (TRUE)
+  {
+    NCM_DATA_GAUSS_COV_CLASS (nc_data_snia_cov_parent_class)->lnNorma2 (gauss, mset, &lndetC);
+  }
+  else
+  {
+    nc_snia_dist_cov_alpha_beta (dcov, &alpha, &beta);
+    ij = 0;
+    alpha = alpha;
+    beta  = beta;
+    alpha2  = alpha * alpha;
+    beta2   = beta * beta;
+    two_alpha = 2.0 * alpha;
+    two_beta = 2.0 * beta;
+    two_alpha_beta = 2.0 * alpha * beta;
+
+    for (i = 0; i < mu_len; i++)
+    {
+      for (j = i; j < mu_len; j++)
+      {
+        const gdouble mag_mag       = ncm_vector_fast_get (snia_cov->cov_packed, NC_DATA_SNIA_COV_ORDER_LENGTH * ij + NC_DATA_SNIA_COV_ORDER_MAG_MAG);
+        const gdouble mag_width     = ncm_vector_fast_get (snia_cov->cov_packed, NC_DATA_SNIA_COV_ORDER_LENGTH * ij + NC_DATA_SNIA_COV_ORDER_MAG_WIDTH);
+        const gdouble mag_colour    = ncm_vector_fast_get (snia_cov->cov_packed, NC_DATA_SNIA_COV_ORDER_LENGTH * ij + NC_DATA_SNIA_COV_ORDER_MAG_COLOUR);
+        const gdouble width_width   = ncm_vector_fast_get (snia_cov->cov_packed, NC_DATA_SNIA_COV_ORDER_LENGTH * ij + NC_DATA_SNIA_COV_ORDER_WIDTH_WIDTH);
+        const gdouble width_colour  = ncm_vector_fast_get (snia_cov->cov_packed, NC_DATA_SNIA_COV_ORDER_LENGTH * ij + NC_DATA_SNIA_COV_ORDER_WIDTH_COLOUR);
+        const gdouble colour_colour = ncm_vector_fast_get (snia_cov->cov_packed, NC_DATA_SNIA_COV_ORDER_LENGTH * ij + NC_DATA_SNIA_COV_ORDER_COLOUR_COLOUR);
+        ncm_matrix_set (snia_cov->inv_cov_mm_LU, i, j, 
+                        mag_mag 
+                        + alpha2 * width_width
+                        + beta2 * colour_colour
+                        + two_alpha * mag_width
+                        - two_beta * mag_colour
+                        - two_alpha_beta * width_colour
+                        ); 
+        ij++;
+      }
+
+      {
+        const gdouble var_tot = nc_snia_dist_cov_extra_var (dcov, snia_cov, i);
+        ncm_matrix_addto (snia_cov->inv_cov_mm_LU, i, i, var_tot);
+      }
+    }
+    ncm_matrix_cholesky_decomp (snia_cov->inv_cov_mm_LU, 'U');
+    lndetC = 0.0;
+    for (i = 0; i < mu_len; i++)
+    {
+      lndetC += 2.0 * log (ncm_matrix_get (snia_cov->inv_cov_mm_LU, i, i));
+    }
+  }
+  
+  *m2lnL = chi2 + lndetC;// - 1.0 * 740.0 * log (fact1) - 0.5 * 740.0 * log (fact2);
+/*
   NcDataSNIACov *snia_cov = NC_DATA_SNIA_COV (gauss);
   NcSNIADistCov *dcov = NC_SNIA_DIST_COV (ncm_mset_peek (mset, nc_snia_dist_cov_id ()));
   const guint mu_len  = snia_cov->mu_len;
   gdouble lndetC;
   gdouble lndetD = 0.0;
   gdouble lndetG = 0.0;
-/*  gdouble fparams_len = ncm_mset_fparams_len (mset);*/
+  gint ret;
   guint i;
 
   ncm_matrix_memcpy (snia_cov->inv_cov_mm_LU, snia_cov->inv_cov_mm);
@@ -483,13 +549,17 @@ _nc_data_snia_cov_lnNorma2 (NcmDataGaussCov *gauss, NcmMSet *mset)
     ncm_matrix_addto (snia_cov->inv_cov_mm_LU, i, i, 1.0 / extra_var_i);
     lndetD += log (extra_var_i);
   }
-  ncm_matrix_cholesky_decomp (snia_cov->inv_cov_mm_LU, 'U');
+  ret = ncm_matrix_cholesky_decomp (snia_cov->inv_cov_mm_LU, 'U');
+  if (ret != 0)
+    g_error ("_nc_data_snia_cov_lnNorma2[ncm_matrix_cholesky_decomp]: %d.", ret);
+  
   for (i = 0; i < mu_len; i++)
     lndetG += log (ncm_matrix_get (snia_cov->inv_cov_mm_LU, i, i));
 
   lndetC = (2.0 * lndetG + lndetD);
   
-  return mu_len * ncm_c_ln2pi () + /*sqrt (((mu_len * 1.0) - fparams_len) / (3.0 * mu_len))*/1.0 * lndetC;
+  return mu_len * ncm_c_ln2pi () + 1.0 * lndetC;
+*/
 }
 
 /**
@@ -1032,8 +1102,13 @@ nc_data_snia_cov_set_cov_full (NcDataSNIACov *snia_cov, NcmMatrix *cov_full)
 
   if (snia_cov->has_complete_cov)
   {
-    ncm_matrix_cholesky_decomp (snia_cov->cov_full, 'U');
-    ncm_matrix_cholesky_inverse (snia_cov->cov_full, 'U');
+    gint ret;
+    ret = ncm_matrix_cholesky_decomp (snia_cov->cov_full, 'U');
+    if (ret != 0)
+      g_error ("nc_data_snia_cov_set_cov_full[ncm_matrix_cholesky_decomp]: %d.", ret);
+    ret = ncm_matrix_cholesky_inverse (snia_cov->cov_full, 'U');
+    if (ret != 0)
+      g_error ("nc_data_snia_cov_set_cov_full[ncm_matrix_cholesky_inverse]: %d.", ret);
 
     ncm_matrix_set_zero (snia_cov->inv_cov_mm);
     for (i = 0; i < mu_len; i++)
@@ -1942,6 +2017,7 @@ _nc_data_snia_cov_prep_to_resample (NcDataSNIACov *snia_cov, NcSNIADistCov *dcov
   const guint mu_len = snia_cov->mu_len;
   const guint tmu_len = 3 * snia_cov->mu_len;
   guint i, j;
+  gint ret;
 
   if (mu_len == 0 || !snia_cov->has_complete_cov)
     g_error ("_nc_data_snia_cov_prep_to_resample: cannot prepare to resample, empty catalog %d or it hasn't a complete covariance %d.\n",
@@ -1957,7 +2033,10 @@ _nc_data_snia_cov_prep_to_resample (NcDataSNIACov *snia_cov, NcSNIADistCov *dcov
     }
   }
 
-  ncm_matrix_cholesky_decomp (snia_cov->cov_full, 'U');
+  ret = ncm_matrix_cholesky_decomp (snia_cov->cov_full, 'U');
+  if (ret != 0)
+    g_error ("_nc_data_snia_cov_prep_to_resample[ncm_matrix_cholesky_decomp]: %d.", ret);
+  
   snia_cov->cov_full_state = NC_DATA_SNIA_COV_PREP_TO_RESAMPLE;
 }
 
@@ -1967,6 +2046,7 @@ _nc_data_snia_cov_prep_to_estimate (NcDataSNIACov *snia_cov, NcSNIADistCov *dcov
   const guint mu_len = snia_cov->mu_len;
   const guint tmu_len = 3 * snia_cov->mu_len;
   guint i, j;
+  gint ret;
 
   if (mu_len == 0 || !snia_cov->has_complete_cov)
     g_error ("_nc_data_snia_cov_prep_to_estimate: cannot prepare to estimate, empty catalog %d or it hasn't a complete covariance %d.\n",
@@ -1996,7 +2076,10 @@ _nc_data_snia_cov_prep_to_estimate (NcDataSNIACov *snia_cov, NcSNIADistCov *dcov
   }
 
   /* Make the Cholesky decomposition substituting the upper triagle of cov_full. */
-  ncm_matrix_cholesky_decomp (snia_cov->cov_full, 'U');
+  ret = ncm_matrix_cholesky_decomp (snia_cov->cov_full, 'U');
+  if (ret != 0)
+    g_error ("_nc_data_snia_cov_prep_to_estimate[ncm_matrix_cholesky_decomp]: %d.", ret);
+    
   snia_cov->cov_full_state = NC_DATA_SNIA_COV_PREP_TO_ESTIMATE;
 }
 
@@ -2150,6 +2233,8 @@ nc_data_snia_cov_estimate_width_colour (NcDataSNIACov *snia_cov, NcmMSet *mset)
       }
       info = ncm_lapack_dggglm_run (ws, L, X, params, obs, y);
       NCM_LAPACK_CHECK_INFO ("nc_data_snia_cov_estimate_width_colour", info);
+      chisq = gsl_pow_2 (ncm_vector_dnrm2 (y));
+      
       ncm_matrix_clear (&L);
       g_array_unref (ws);
     }
@@ -2187,6 +2272,8 @@ nc_data_snia_cov_estimate_width_colour (NcDataSNIACov *snia_cov, NcmMSet *mset)
       }
     }
     snia_cov->has_true_wc = TRUE;
+    if (chisq / (mu_len * 1.0) > 2.0)
+      g_warning ("nc_data_snia_cov_estimate_width_colour: estimate with a very poor fit chisq = % 20.15g/%-20.15g = %20.15g", chisq, mu_len * 1.0, chisq / (mu_len * 1.0));
 
     ncm_vector_clear (&obs);
     ncm_vector_clear (&y);

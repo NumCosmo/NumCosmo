@@ -48,6 +48,16 @@
 #include <gsl/gsl_vector.h>
 #include <gsl/gsl_linalg.h>
 
+#ifdef HAVE_BLAS
+#  ifdef HAVE_MKL_CBLAS_H
+#    include <mkl_cblas.h>
+#  elif defined (HAVE_CBLAS_H)
+#    include <cblas.h>
+#  else
+#    include <gsl/gsl_cblas.h>
+#  endif
+#endif
+
 #ifdef HAVE_MKL_LAPACKE_H
 #  include <mkl_lapacke.h>
 #elif defined HAVE_LAPACKE

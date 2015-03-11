@@ -117,6 +117,8 @@ gdouble nc_snia_dist_cov_mag (NcSNIADistCov *dcov, NcHICosmo *cosmo, NcDataSNIAC
 void nc_snia_dist_cov_mag_to_width_colour (NcSNIADistCov *dcov, NcHICosmo *cosmo, NcDataSNIACov *snia_cov, NcmVector *obs, NcmMatrix *X, gboolean colmajor);
 gdouble nc_snia_dist_cov_extra_var (NcSNIADistCov *dcov, NcDataSNIACov *snia_cov, guint i);
 
+void nc_snia_dist_cov_alpha_beta (NcSNIADistCov *dcov, gdouble *alpha, gdouble *beta);
+
 #define NC_SNIA_DIST_COV_DEFAULT_ALPHA (1.45)
 #define NC_SNIA_DIST_COV_DEFAULT_BETA (3.16)
 #define NC_SNIA_DIST_COV_DEFAULT_M1 (-19.1686133146)

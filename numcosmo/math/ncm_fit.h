@@ -227,6 +227,7 @@ void ncm_fit_m2lnL_grad_an (NcmFit *fit, NcmVector *df);
 void ncm_fit_m2lnL_grad_nd_fo (NcmFit *fit, NcmVector *grad);
 void ncm_fit_m2lnL_grad_nd_ce (NcmFit *fit, NcmVector *grad);
 void ncm_fit_m2lnL_grad_nd_ac (NcmFit *fit, NcmVector *grad);
+void ncm_fit_m2lnL_hessian_nd_ce (NcmFit *fit, NcmMatrix *hessian);
 
 void ncm_fit_m2lnL_val_grad (NcmFit *fit, gdouble *result, NcmVector *df);
 void ncm_fit_m2lnL_val_grad_an (NcmFit *fit, gdouble *result, NcmVector *df);
@@ -244,9 +245,10 @@ void ncm_fit_ls_f_J_an (NcmFit *fit, NcmVector *f, NcmMatrix *J);
 void ncm_fit_ls_f_J_nd_fo (NcmFit *fit, NcmVector *f, NcmMatrix *J);
 void ncm_fit_ls_f_J_nd_ce (NcmFit *fit, NcmVector *f, NcmMatrix *J);
 
-void ncm_fit_numdiff_m2lnL_hessian (NcmFit *fit, NcmMatrix *H);
+void ncm_fit_numdiff_m2lnL_hessian (NcmFit *fit, NcmMatrix *H, gdouble reltol);
 void ncm_fit_numdiff_m2lnL_covar (NcmFit *fit);
 void ncm_fit_ls_covar (NcmFit *fit);
+gdouble ncm_fit_numdiff_m2lnL_lndet_covar (NcmFit *fit);
 
 gdouble ncm_fit_covar_var (NcmFit *fit, NcmModelID mid, guint pid);
 gdouble ncm_fit_covar_sd (NcmFit *fit, NcmModelID mid, guint pid);

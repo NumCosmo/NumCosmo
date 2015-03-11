@@ -29,6 +29,9 @@
 #include <numcosmo/math/ncm_matrix.h>
 #include <numcosmo/build_cfg.h>
 
+#define _NCM_LAPACK_CONV_UPLO(uplo) (uplo == 'L' ? 'U' : 'L')
+#define _NCM_LAPACK_CONV_TRANS(trans) (trans == 'N' ? 'T' : 'N')
+
 G_BEGIN_DECLS
 
 gint ncm_lapack_dptsv (gdouble *d, gdouble *e, gdouble *b, gdouble *x, guint size);

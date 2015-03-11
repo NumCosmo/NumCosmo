@@ -394,6 +394,24 @@ ncm_mset_get_id_by_ns (const gchar *ns)
 }
 
 /**
+ * ncm_mset_get_ns_by_id:
+ * @id: namespace id.
+ * 
+ * Returns: namespace for @id. 
+ */
+const gchar *
+ncm_mset_get_ns_by_id (gint id)
+{
+  NcmMSetClass *mset_class = g_type_class_ref (NCM_TYPE_MSET);
+  g_assert_cmpint (id, <, NCM_MODEL_MAX_ID);
+  {
+    const gchar *ns = mset_class->model_desc[id].ns;
+    g_type_class_unref (mset_class);
+    return ns;
+  }
+}
+
+/**
  * ncm_mset_prepare_fparam_map:
  * @mset: a #NcmMSet
  *
@@ -1364,9 +1382,9 @@ ncm_mset_fparam_full_name (NcmMSet *mset, guint n)
   else
   {
     const NcmMSetPIndex pi = g_array_index (mset->pi_array, NcmMSetPIndex, n);
-    const gchar *model_nick = ncm_model_nick (ncm_mset_peek (mset, pi.mid));
+    const gchar *model_ns = ncm_mset_get_ns_by_id (pi.mid); /* ncm_model_nick (ncm_mset_peek (mset, pi.mid));*/
     const gchar *pname = ncm_mset_param_name (mset, pi.mid, pi.pid);
-    fullname = g_strdup_printf ("%s:%s", model_nick, pname);
+    fullname = g_strdup_printf ("%s:%s", model_ns, pname);
     g_ptr_array_index (mset->fullname_parray, n) = fullname;
   }
   return fullname;
@@ -1563,6 +1581,65 @@ ncm_mset_fparam_get_fpi (NcmMSet *mset, NcmModelID mid, guint pid)
 {
   g_assert (mset->valid_map);
   return g_array_index (mset->fpi_array[mid], gint, pid);
+}
+
+/**
+ * ncm_mset_fparam_get_pi_by_name:
+ * @mset: a #NcmMSet.
+ * @name: FIXME
+ *
+ * FIXME
+ *
+ * Returns: FIXME
+ */
+NcmMSetPIndex *
+ncm_mset_fparam_get_pi_by_name (NcmMSet *mset, const gchar *name)
+{
+  guint match = 0;
+  guint match_i = 0;
+  guint i;
+  g_assert (mset->valid_map);
+  for (i = 0; i < mset->fparam_len; i++)
+  {
+    const gchar *name_i = ncm_mset_fparam_name (mset, i);
+    if (strcmp (name, name_i) == 0)
+    {
+      match++;
+      match_i = i;
+    }
+  }
+
+  if (match > 1)
+  {
+    g_warning ("ncm_mset_fparam_get_pi_by_name: more than one [%u] parameters with the same name %s, use the full name to avoid ambiguities, returning the last match.",
+               match, name);
+    return NULL;
+  }
+  else if (match == 1)
+  {
+    return ncm_mset_fparam_get_pi (mset, match_i);
+  }
+  else
+  {
+    for (i = 0; i < mset->fparam_len; i++)
+    {
+      const gchar *name_i = ncm_mset_fparam_full_name (mset, i);
+      if (strcmp (name, name_i) == 0)
+      {
+        match++;
+        match_i = i;
+      }
+    }
+    if (match == 0)
+      return NULL;
+    else if (match > 1)
+    {
+      g_error ("ncm_mset_fparam_get_pi_by_name: more than one full names [%u] match %s.", match, name);
+      return NULL;
+    }
+    else
+      return ncm_mset_fparam_get_pi (mset, match_i);
+  }
 }
 
 /**

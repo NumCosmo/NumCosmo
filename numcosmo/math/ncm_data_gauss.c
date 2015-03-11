@@ -210,14 +210,17 @@ static void
 _ncm_data_gauss_prepare_LLT (NcmData *data)
 {
   NcmDataGauss *gauss = NCM_DATA_GAUSS (data);
+  gint ret;
 
   if (gauss->LLT == NULL)
     gauss->LLT = ncm_matrix_dup (gauss->inv_cov);
   else
     ncm_matrix_memcpy (gauss->LLT, gauss->inv_cov);
 
-  ncm_matrix_cholesky_decomp (gauss->LLT, 'U');
-
+  ret = ncm_matrix_cholesky_decomp (gauss->LLT, 'U');
+  if (ret != 0)
+    g_error ("_ncm_data_gauss_prepare_LLT[ncm_matrix_cholesky_decomp]: %d.", ret);
+  
   gauss->prepared_LLT = TRUE;
 }
 

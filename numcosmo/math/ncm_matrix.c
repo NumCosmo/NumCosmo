@@ -783,6 +783,49 @@ ncm_matrix_add_mul (NcmMatrix *cm, const gdouble alpha, NcmMatrix *b)
 }
 
 /**
+ * ncm_matrix_copy_triangle:
+ * @cm: a #NcmMatrix
+ * @UL: char indicating 'U'pper or 'L'ower matrix 
+ *
+ * If @UL == 'U' copy the upper triangle over the lower.
+ * If @UL == 'L' copy the lower triangle over the lower.
+ *
+ */
+void 
+ncm_matrix_copy_triangle (NcmMatrix *cm, gchar UL)
+{
+  const guint nrows = ncm_matrix_nrows (cm);
+  const guint ncols = ncm_matrix_nrows (cm);
+  guint i, j;
+
+  if (nrows != ncols)
+    g_error ("ncm_matrix_copy_triangle: only works on square a matrix [%ux%u]", nrows, ncols);
+  if (UL != 'U' && UL != 'L')
+    g_error ("ncm_matrix_copy_triangle: expect U or L and received %c.", UL);
+
+  if (UL == 'U')
+  {
+    for (i = 0; i < nrows; i++)
+    {
+      for (j = i + 1; j < ncols; j++)
+      {
+        ncm_matrix_set (cm, j, i, ncm_matrix_get (cm, i, j));
+      }
+    }
+  }
+  else
+  {
+    for (i = 0; i < nrows; i++)
+    {
+      for (j = i + 1; j < ncols; j++)
+      {
+        ncm_matrix_set (cm, i, j, ncm_matrix_get (cm, j, i));
+      }
+    }
+  }
+}
+
+/**
  * ncm_matrix_dsymm:
  * @cm: a #NcmMatrix
  * @UL: char indicating 'U'pper or 'L'ower matrix 
@@ -820,14 +863,11 @@ ncm_matrix_dsymm (NcmMatrix *cm, gchar UL, const gdouble alpha, NcmMatrix *b, co
  * definite matrix.
  * 
  */
-void 
+gint
 ncm_matrix_cholesky_decomp (NcmMatrix *cm, gchar UL)
 {
   gint ret = ncm_lapack_dpotrf (UL, ncm_matrix_nrows (cm), ncm_matrix_data (cm), ncm_matrix_nrows (cm));
-  if (ret != 0)
-  {
-    g_error ("ncm_matrix_cholesky_decomp[ncm_lapack_dpotrf]: %d.", ret);
-  }
+  return ret;
 }
 
 /**
@@ -839,12 +879,11 @@ ncm_matrix_cholesky_decomp (NcmMatrix *cm, gchar UL)
  * the Cholesky decomposition ncm_matrix_cholesky_decomp().
  * 
  */
-void 
+gint
 ncm_matrix_cholesky_inverse (NcmMatrix *cm, gchar UL)
 {
   gint ret = ncm_lapack_dpotri (UL, ncm_matrix_nrows (cm), ncm_matrix_data (cm), ncm_matrix_nrows (cm));
-  if (ret != 0)
-    g_error ("ncm_matrix_cholesky_decomp[ncm_lapack_dpotri]: %d.", ret);
+  return ret;
 }
 
 /**
