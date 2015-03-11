@@ -313,9 +313,9 @@ nc_cluster_photoz_gauss_global_class_init (NcClusterPhotozGaussGlobalClass *klas
   model_class->get_property = &_nc_cluster_photoz_gauss_global_get_property;
   object_class->finalize    = &_nc_cluster_photoz_gauss_global_finalize;
 
-  ncm_model_class_add_params (model_class, 2, 0, PROP_SIZE);
   ncm_model_class_set_name_nick (model_class, "Global Gaussian distribution", "GaussianGlobal");
-  
+  ncm_model_class_add_params (model_class, 2, 0, PROP_SIZE);
+    
   /**
    * NcClusterPhotozGaussGlobal:pz_min:
    *

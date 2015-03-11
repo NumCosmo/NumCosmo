@@ -60,14 +60,14 @@ G_DEFINE_TYPE (NcmSParam, ncm_sparam, G_TYPE_OBJECT);
 
 /**
  * ncm_sparam_new:
- * @name: #NcmSParam:name.
- * @symbol: #NcmSParam:symbol.
- * @lower_bound: value of #NcmSParam:lower-bound.
- * @upper_bound: value of #NcmSParam:upper-bound.
- * @scale: value of #NcmSParam:scale.
- * @abstol: value of #NcmSParam:absolute-tolerance.
- * @default_val: value of #NcmSParam:default-value.
- * @ftype: a #NcmParamType.
+ * @name: #NcmSParam:name
+ * @symbol: #NcmSParam:symbol
+ * @lower_bound: value of #NcmSParam:lower-bound
+ * @upper_bound: value of #NcmSParam:upper-bound
+ * @scale: value of #NcmSParam:scale
+ * @abstol: value of #NcmSParam:absolute-tolerance
+ * @default_val: value of #NcmSParam:default-value
+ * @ftype: a #NcmParamType
  *
  * This function allocates memory for a new #NcmSParam object and sets its properties to the values from
  * the input arguments.
@@ -77,7 +77,7 @@ G_DEFINE_TYPE (NcmSParam, ncm_sparam, G_TYPE_OBJECT);
  * @abstol is the absolute error tolerance of the parameter.
  * @ftype indicates if the parameter will be fitted or not.
  *
- * Returns: A new #NcmSParam.
+ * Returns: A new #NcmSParam
  */
 NcmSParam *
 ncm_sparam_new (gchar *name, gchar *symbol, gdouble lower_bound, gdouble upper_bound, gdouble scale, gdouble abstol, gdouble default_val, NcmParamType ftype)
@@ -97,11 +97,11 @@ ncm_sparam_new (gchar *name, gchar *symbol, gdouble lower_bound, gdouble upper_b
 
 /**
  * ncm_sparam_copy:
- * @sparam: a #NcmSParam.
+ * @sparam: a #NcmSParam
  *
  * Duplicates the #NcmSParam object setting the same values of the original propertities.
  *
- * Returns: (transfer full): A new #NcmSParam.
+ * Returns: (transfer full): A new #NcmSParam
    */
 NcmSParam *
 ncm_sparam_copy (NcmSParam *sparam)
@@ -113,7 +113,7 @@ ncm_sparam_copy (NcmSParam *sparam)
 
 /**
  * ncm_sparam_free:
- * @sparam: a #NcmSParam.
+ * @sparam: a #NcmSParam
  *
  * Atomically decrements the reference count of @sparam by one. If the reference count drops to 0,
  * all memory allocated by @sparam is released.
@@ -127,7 +127,7 @@ ncm_sparam_free (NcmSParam *sparam)
 
 /**
  * ncm_sparam_clear:
- * @sparam: a #NcmSParam.
+ * @sparam: a #NcmSParam
  *
  * Atomically decrements the reference count of @sparam by one. If the reference count drops to 0,
  * all memory allocated by @sparam is released. Set the pointer to NULL.
@@ -141,9 +141,9 @@ ncm_sparam_clear (NcmSParam **sparam)
 
 /**
  * ncm_sparam_ref:
- * @sparam: a #NcmSParam.
+ * @sparam: a #NcmSParam
  *
- * Atomically increase the reference count of @sparam by one.
+ * Atomically increases the reference count of @sparam by one.
  *
  * Returns: (transfer full): @sparam
    */
@@ -155,8 +155,8 @@ ncm_sparam_ref (NcmSParam *sparam)
 
 /**
  * ncm_sparam_set_lower_bound:
- * @sparam: a #NcmSParam.
- * @lb: value of #NcmSParam:lower-bound.
+ * @sparam: a #NcmSParam
+ * @lb: value of #NcmSParam:lower-bound
  *
  * Sets the value @lb to the #NcmSParam:lower-bound property.
  *
@@ -170,7 +170,7 @@ ncm_sparam_set_lower_bound (NcmSParam *sparam, const gdouble lb)
 
 /**
  * ncm_sparam_get_lower_bound:
- * @sparam: a #NcmSParam.
+ * @sparam: a #NcmSParam
  *
  * Returns: the value of #NcmSParam:lower-bound property.
  */
@@ -182,8 +182,8 @@ ncm_sparam_get_lower_bound (const NcmSParam *sparam)
 
 /**
  * ncm_sparam_set_upper_bound:
- * @sparam: a #NcmSParam.
- * @ub: value of #NcmSParam:upper-bound.
+ * @sparam: a #NcmSParam
+ * @ub: value of #NcmSParam:upper-bound
  *
  * Sets the value @ub to the #NcmSParam:upper-bound property.
  *
@@ -197,7 +197,7 @@ ncm_sparam_set_upper_bound (NcmSParam *sparam, const gdouble ub)
 
 /**
  * ncm_sparam_get_upper_bound:
- * @sparam: a #NcmSParam.
+ * @sparam: a #NcmSParam
  *
  * Returns: The value of #NcmSParam:upper-bound property.
  */
@@ -209,8 +209,8 @@ ncm_sparam_get_upper_bound (const NcmSParam *sparam)
 
 /**
  * ncm_sparam_set_scale:
- * @sparam: a #NcmSParam.
- * @scale: value of #NcmSParam:scale.
+ * @sparam: a #NcmSParam
+ * @scale: value of #NcmSParam:scale
  *
  * Sets the value @scale to the #NcmSParam:scale property.
  *
@@ -225,7 +225,7 @@ ncm_sparam_set_scale (NcmSParam *sparam, const gdouble scale)
 
 /**
  * ncm_sparam_get_scale:
- * @sparam: a #NcmSParam.
+ * @sparam: a #NcmSParam
  *
  * Returns: The value of #NcmSParam:scale property.
  */
@@ -237,8 +237,8 @@ ncm_sparam_get_scale (const NcmSParam *sparam)
 
 /**
  * ncm_sparam_set_absolute_tolerance:
- * @sparam: a #NcmSParam.
- * @abstol: value of #NcmSParam:absolute-tolerance.
+ * @sparam: a #NcmSParam
+ * @abstol: value of #NcmSParam:absolute-tolerance
  *
  * Sets the value @abstol to the #NcmSParam:absolute-tolerance property.
  *
@@ -252,7 +252,7 @@ ncm_sparam_set_absolute_tolerance (NcmSParam *sparam, gdouble abstol)
 
 /**
  * ncm_sparam_get_absolute_tolerance:
- * @sparam: a #NcmSParam.
+ * @sparam: a #NcmSParam
  *
  * Returns: the value of #NcmSParam:absolute_tolerance property.
  */
@@ -264,8 +264,8 @@ ncm_sparam_get_absolute_tolerance (const NcmSParam *sparam)
 
 /**
  * ncm_sparam_set_default_value:
- * @sparam: a #NcmSParam.
- * @default_val: value of #NcmSParam:default-value.
+ * @sparam: a #NcmSParam
+ * @default_val: value of #NcmSParam:default-value
  *
  * Sets the value @default_val to the #NcmSParam:default-value property.
  *
@@ -278,7 +278,7 @@ ncm_sparam_set_default_value (NcmSParam *sparam, gdouble default_val)
 
 /**
  * ncm_sparam_get_default_value:
- * @sparam: a #NcmSParam.
+ * @sparam: a #NcmSParam
  *
  * Returns: the value of #NcmSParam:default-value property.
  */
@@ -290,8 +290,8 @@ ncm_sparam_get_default_value (const NcmSParam *sparam)
 
 /**
  * ncm_sparam_set_fit_type:
- * @sparam: a #NcmSParam.
- * @ftype: a #NcmParamType.
+ * @sparam: a #NcmSParam
+ * @ftype: a #NcmParamType
  *
  * Sets the value @ftype to the #NcmSParam:fit-type property.
  *
@@ -304,7 +304,7 @@ ncm_sparam_set_fit_type (NcmSParam *sparam, NcmParamType ftype)
 
 /**
  * ncm_sparam_get_fit_type:
- * @sparam: a #NcmSParam.
+ * @sparam: a #NcmSParam
  *
  * Returns: the #NcmParamType value of #NcmSParam:fit-type property.
  */
@@ -316,10 +316,10 @@ ncm_sparam_get_fit_type (const NcmSParam *sparam)
 
 /**
  * ncm_sparam_take_name:
- * @sparam: a #NcmSParam.
+ * @sparam: a #NcmSParam
  * @name: a string
  *
- * Take @name as the name string.
+ * Takes @name as the name string.
  * The caller doesn't have to free it any more.
  *
  */
@@ -332,10 +332,10 @@ ncm_sparam_take_name (NcmSParam *sparam, gchar *name)
 
 /**
  * ncm_sparam_take_symbol:
- * @sparam: a #NcmSParam.
+ * @sparam: a #NcmSParam
  * @symbol: a string
  *
- * Take @symbol as the symbol string.
+ * Takes @symbol as the symbol string.
  * The caller doesn't have to free it any more.
  *
  */
@@ -348,7 +348,7 @@ ncm_sparam_take_symbol (NcmSParam *sparam, gchar *symbol)
 
 /**
  * ncm_sparam_name:
- * @sparam: a #NcmSParam.
+ * @sparam: a #NcmSParam
  *
  * Returns: the internal name string. The caller must not free it.
  */
@@ -360,7 +360,7 @@ ncm_sparam_name (const NcmSParam *sparam)
 
 /**
  * ncm_sparam_symbol:
- * @sparam: a #NcmSParam.
+ * @sparam: a #NcmSParam
  *
  * Returns: the internal symbol string. The caller must not free it.
  */

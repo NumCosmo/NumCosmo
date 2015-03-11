@@ -476,8 +476,8 @@ nc_hicosmo_qpw_class_init (NcHICosmoQPWClass *klass)
   model_class->set_property = &_nc_hicosmo_qpw_set_property;
   model_class->get_property = &_nc_hicosmo_qpw_get_property;
 
-  ncm_model_class_add_params (model_class, NC_HICOSMO_QPW_SPARAM_LEN, NC_HICOSMO_QPW_VPARAM_LEN, PROP_SIZE);
   ncm_model_class_set_name_nick (model_class, "Q piecewise", "qpw");
+  ncm_model_class_add_params (model_class, NC_HICOSMO_QPW_SPARAM_LEN, NC_HICOSMO_QPW_VPARAM_LEN, PROP_SIZE);
 
   ncm_model_class_set_sparam (model_class, NC_HICOSMO_QPW_H0, "H_0", "H0",
                               10.0, 500.0, 1.0,

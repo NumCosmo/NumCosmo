@@ -490,13 +490,13 @@ nc_hicosmo_qspline_class_init (NcHICosmoQSplineClass *klass)
   model_class->set_property = &_nc_hicosmo_qspline_set_property;
   model_class->get_property = &_nc_hicosmo_qspline_get_property;
 
-  ncm_model_class_add_params (model_class, NC_HICOSMO_QSPLINE_SPARAM_LEN, NC_HICOSMO_QSPLINE_VPARAM_LEN, PROP_SIZE);
   ncm_model_class_set_name_nick (model_class, "Q Spline", "qspline");
+  ncm_model_class_add_params (model_class, NC_HICOSMO_QSPLINE_SPARAM_LEN, NC_HICOSMO_QSPLINE_VPARAM_LEN, PROP_SIZE);
 
   /**
    * NcHICosmoQSpline:H0:
    *
-   * FIXME
+   * Hubble parameter today (z = 0).
    */  
   /**
    * NcHICosmoQSpline:H0-fit:
@@ -670,8 +670,8 @@ nc_hicosmo_qspline_cont_prior_class_init (NcHICosmoQSplineContPriorClass *klass)
   model_class->set_property  = nc_hicosmo_qspline_cont_prior_set_property;
   model_class->get_property  = nc_hicosmo_qspline_cont_prior_get_property;
 
-  ncm_model_class_add_params (model_class, 1, 1, PROP_CP_SIZE);
   ncm_model_class_set_name_nick (model_class, "Q Spline Cont Prior", "qspline_cp");
+  ncm_model_class_add_params (model_class, 1, 1, PROP_CP_SIZE);
 
   /**
    * NcHICosmoQSplineContPrior:abstol:

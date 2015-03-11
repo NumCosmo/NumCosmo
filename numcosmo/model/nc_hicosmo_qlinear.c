@@ -165,8 +165,8 @@ nc_hicosmo_qlinear_class_init (NcHICosmoQLinearClass *klass)
 
   object_class->finalize     = &nc_hicosmo_qlinear_finalize;
 
-  ncm_model_class_add_params (model_class, 7, 0, PROP_SIZE);
   ncm_model_class_set_name_nick (model_class, "Q Linear", "qlinear");
+  ncm_model_class_add_params (model_class, 7, 0, PROP_SIZE);
 
   ncm_model_class_set_sparam (model_class, NC_HICOSMO_QLINEAR_H0, "H_0", "H0",
                                10.0, 500.0, 1.0,

@@ -218,9 +218,9 @@ ncm_stats_dist1d_class_init (NcmStatsDist1dClass *klass)
 
 /**
  * ncm_stats_dist1d_ref:
- * @sd1: a #NcmStatsDist1d.
+ * @sd1: a #NcmStatsDist1d
  *
- * Increase the reference count of @sd1.
+ * Increases the reference count of @sd1.
  * 
  * Returns: (transfer full): @sd1.
  */
@@ -232,9 +232,9 @@ ncm_stats_dist1d_ref (NcmStatsDist1d *sd1)
 
 /**
  * ncm_stats_dist1d_free:
- * @sd1: a #NcmStatsDist1d.
+ * @sd1: a #NcmStatsDist1d
  *
- * Decrease the reference count of @sd1.
+ * Decreases the reference count of @sd1.
  *
  */
 void 
@@ -245,9 +245,9 @@ ncm_stats_dist1d_free (NcmStatsDist1d *sd1)
 
 /**
  * ncm_stats_dist1d_clear:
- * @sd1: a #NcmStatsDist1d.
+ * @sd1: a #NcmStatsDist1d
  *
- * Decrease the reference count of *@sd1 and sets the pointer *@sd1 to NULL.
+ * Decreases the reference count of *@sd1 and sets the pointer *@sd1 to NULL.
  *
  */
 void 
@@ -258,9 +258,9 @@ ncm_stats_dist1d_clear (NcmStatsDist1d **sd1)
 
 /**
  * ncm_stats_dist1d_prepare:
- * @sd1: a #NcmStatsDist1d.
+ * @sd1: a #NcmStatsDist1d
  *
- * Prepare the object for calculations.
+ * Prepares the object for calculations.
  */
 void 
 ncm_stats_dist1d_prepare (NcmStatsDist1d *sd1)
@@ -280,7 +280,6 @@ ncm_stats_dist1d_prepare (NcmStatsDist1d *sd1)
   ncm_ode_spline_set_interval (sd1->pdf, 0.0, sd1->xi, sd1->xf);
 
   ncm_ode_spline_prepare (sd1->pdf, sd1);
-  sd1->norma = 1.0;
   sd1->norma = ncm_spline_eval (sd1->pdf->s, sd1->xf);
 
   ncm_ode_spline_prepare (sd1->inv_pdf, sd1);
@@ -288,8 +287,8 @@ ncm_stats_dist1d_prepare (NcmStatsDist1d *sd1)
 
 /**
  * ncm_stats_dist1d_p:
- * @sd1: a #NcmStatsDist1d.
- * @x: random variable value.
+ * @sd1: a #NcmStatsDist1d
+ * @x: random variable value
  *
  * Calculates the value of the probability density at @x.
  * It can be unnormalized, the norma can be retrieved using
@@ -305,8 +304,8 @@ ncm_stats_dist1d_p (NcmStatsDist1d *sd1, gdouble x)
 
 /**
  * ncm_stats_dist1d_m2lnp:
- * @sd1: a #NcmStatsDist1d.
- * @x: random variable value.
+ * @sd1: a #NcmStatsDist1d
+ * @x: random variable value
  *
  * Calculates the value of the $-2\ln(p(x))$ for the probability density.
  * It can be unnormalized, the norma can be retrieved using
@@ -322,8 +321,8 @@ ncm_stats_dist1d_m2lnp (NcmStatsDist1d *sd1, gdouble x)
 
 /**
  * ncm_stats_dist1d_pdf:
- * @sd1: a #NcmStatsDist1d.
- * @x: random variable value.
+ * @sd1: a #NcmStatsDist1d
+ * @x: random variable value
  *
  * Calculates the value of the probability of the interval [x_i, @x].
  * 
@@ -337,7 +336,7 @@ ncm_stats_dist1d_pdf (NcmStatsDist1d *sd1, gdouble x)
 
 /**
  * ncm_stats_dist1d_norma:
- * @sd1: a #NcmStatsDist1d.
+ * @sd1: a #NcmStatsDist1d
  *
  * Calculates the norma of the distribution. If the probability
  * density is already normalized it will return 1.0.
@@ -352,8 +351,8 @@ ncm_stats_dist1d_norma (NcmStatsDist1d *sd1)
 
 /**
  * ncm_stats_dist1d_inv_pdf:
- * @sd1: a #NcmStatsDist1d.
- * @u: a number between [0, 1].
+ * @sd1: a #NcmStatsDist1d
+ * @u: a number between [0, 1]
  *
  * Calculates the value of the random variable $x$ for which the cumulative
  * distribution satisfy $\int_{x_i}^x\mathrm{d}x^\prime p(x^\prime) = u$.
@@ -368,8 +367,8 @@ ncm_stats_dist1d_inv_pdf (NcmStatsDist1d *sd1, gdouble x)
 
 /**
  * ncm_stats_dist1d_gen:
- * @sd1: a #NcmStatsDist1d.
- * @rng: a #NcmRNG.
+ * @sd1: a #NcmStatsDist1d
+ * @rng: a #NcmRNG
  * 
  * Generates a realization of the probability distribution.
  * 
@@ -391,7 +390,7 @@ _ncm_stats_dist1d_m2lnp (gdouble x, gpointer p)
 
 /**
  * ncm_stats_dist1d_mode:
- * @sd1: a #NcmStatsDist1d.
+ * @sd1: a #NcmStatsDist1d
  * 
  * Calculates the mode of the distribution.
  * 

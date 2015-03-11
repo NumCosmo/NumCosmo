@@ -195,9 +195,9 @@ nc_cluster_mass_nodist_class_init (NcClusterMassNodistClass *klass)
   model_class->set_property = &_nc_cluster_mass_nodist_set_property;
   model_class->get_property = &_nc_cluster_mass_nodist_get_property;
 
-  ncm_model_class_add_params (model_class, 0, 0, PROP_SIZE);
   ncm_model_class_set_name_nick (model_class, "No mass distribution", "No_distribution");
-
+  ncm_model_class_add_params (model_class, 0, 0, PROP_SIZE);
+  
   /**
    * NcClusterMassNodist:lnM_min:
    *

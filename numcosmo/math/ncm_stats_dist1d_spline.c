@@ -228,6 +228,15 @@ ncm_stats_dist1d_spline_prepare (NcmStatsDist1d *sd1)
   ncm_stats_dist1d_spline_tail_init (&sd1s->right_tail, x_ub, m2lnp_ub, d1m2lnp_ub, d2m2lnp_ub, sd1s->tail_sigma);
 }
 
+/**
+ * ncm_stats_dist1d_spline_new:
+ * @m2lnp: a #NcmSpline
+ * 
+ * Returns a new #NcmStatsDist1d when @m2lnp, $-2\ln(p(x))$, is a #NcmSpline, where $p(x)$ 
+ * is the probability density.
+ * 
+ * Returns: a new #NcmStatsDist1d
+ */
 NcmStatsDist1d *
 ncm_stats_dist1d_spline_new (NcmSpline *m2lnp)
 {

@@ -110,8 +110,8 @@ nc_hicosmo_qgrw_class_init (NcHICosmoQGRWClass *klass)
   NcHICosmoClass* parent_class = NC_HICOSMO_CLASS (klass);
   NcmModelClass *model_class   = NCM_MODEL_CLASS (klass);
 
-  ncm_model_class_add_params (model_class, NC_HICOSMO_QGRW_SPARAM_LEN, 0, PROP_SIZE);
   ncm_model_class_set_name_nick (model_class, "QGRW", "QGRW");
+  ncm_model_class_add_params (model_class, NC_HICOSMO_QGRW_SPARAM_LEN, 0, PROP_SIZE);
 
   /* Set H_0 param info */
   ncm_model_class_set_sparam (model_class, NC_HICOSMO_QGRW_H0, "H_0", "H0",
