@@ -423,8 +423,8 @@ nc_cluster_mass_benson_class_init (NcClusterMassBensonClass *klass)
   model_class->set_property = &_nc_cluster_mass_benson_set_property;
   model_class->get_property = &_nc_cluster_mass_benson_get_property;
 
-  ncm_model_class_add_params (model_class, 4, 0, PROP_SIZE);
   ncm_model_class_set_name_nick (model_class, "Benson - SZ", "Benson_SZ");
+  ncm_model_class_add_params (model_class, 4, 0, PROP_SIZE);
 
   /**
    * NcClusterMassBenson:signif_obs_min:

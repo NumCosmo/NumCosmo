@@ -111,8 +111,8 @@ nc_hicosmo_qconst_class_init (NcHICosmoQConstClass *klass)
 
   object_class->finalize     = &nc_hicosmo_qconst_finalize;
 
-  ncm_model_class_add_params (model_class, 6, 0, PROP_SIZE);
   ncm_model_class_set_name_nick (model_class, "Q Constant", "qconst");
+  ncm_model_class_add_params (model_class, 6, 0, PROP_SIZE);
 
   ncm_model_class_set_sparam (model_class, NC_HICOSMO_QCONST_H0, "H_0", "H0",
                                10.0, 500.0, 1.0,

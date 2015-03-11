@@ -263,6 +263,7 @@ nc_headers = \
         lss/nc_cluster_mass_vanderlinde.h      \
         lss/nc_cluster_mass_benson.h           \
         lss/nc_cluster_mass_benson_xray.h      \
+        lss/nc_cluster_mass_plcl.h             \
         lss/nc_cluster_abundance.h             \
         lss/nc_cor_cluster_cmb_lens_limber.h   \
 	data/nc_data_snia.h                    \
@@ -352,6 +353,7 @@ nc_sources = \
 	lss/nc_cluster_mass_vanderlinde.c      \
 	lss/nc_cluster_mass_benson.c           \
 	lss/nc_cluster_mass_benson_xray.c      \
+	lss/nc_cluster_mass_plcl.c             \
 	lss/nc_cluster_abundance.c             \
 	lss/nc_cor_cluster_cmb_lens_limber.c   \
 	data/nc_data_snia.c                    \

@@ -42,10 +42,12 @@ typedef struct _NcmSParam NcmSParam;
 
 /**
  * NcmParamType:
- * @NCM_PARAM_TYPE_FREE: FIXME
- * @NCM_PARAM_TYPE_FIXED: FIXME
+ * @NCM_PARAM_TYPE_FREE: parameter to be fitted
+ * @NCM_PARAM_TYPE_FIXED: fixed parameter
  *
- * FIXME
+ * NcmParamType indicates if the parameter must be fitted, @NCM_PARAM_TYPE_FREE, 
+ * or if it remains fixed, @NCM_PARAM_TYPE_FIXED, when a statistical analysis is 
+ * carried out.
  */
 typedef enum _NcmParamType
 {

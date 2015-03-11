@@ -178,8 +178,8 @@ nc_snia_dist_cov_class_init (NcSNIADistCovClass *klass)
   model_class->set_property = &_nc_snia_dist_cov_set_property;
   model_class->get_property = &_nc_snia_dist_cov_get_property;
 
-  ncm_model_class_add_params (model_class, NC_SNIA_DIST_COV_SPARAM_LEN, NC_SNIA_DIST_COV_VPARAM_LEN, PROP_SIZE);
   ncm_model_class_set_name_nick (model_class, "Supernovae Ia Distance Covariance", "SNIaDistCov");
+  ncm_model_class_add_params (model_class, NC_SNIA_DIST_COV_SPARAM_LEN, NC_SNIA_DIST_COV_VPARAM_LEN, PROP_SIZE);
   
   g_object_class_install_property (object_class,
                                    PROP_DIST,

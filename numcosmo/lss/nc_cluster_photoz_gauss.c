@@ -235,9 +235,9 @@ nc_cluster_photoz_gauss_class_init (NcClusterPhotozGaussClass *klass)
   model_class->set_property = _nc_cluster_photoz_gauss_set_property;
   model_class->get_property = _nc_cluster_photoz_gauss_get_property;
 
-  ncm_model_class_add_params (model_class, 0, 0, PROP_SIZE);
   ncm_model_class_set_name_nick (model_class, "Gaussian distribution", "Gaussian");
-
+  ncm_model_class_add_params (model_class, 0, 0, PROP_SIZE);
+  
   /**
    * NcClusterPhotozGauss:pz_min:
    *

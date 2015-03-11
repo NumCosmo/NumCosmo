@@ -192,8 +192,8 @@ nc_cluster_redshift_nodist_class_init (NcClusterRedshiftNodistClass *klass)
   model_class->set_property = &_nc_cluster_redshift_nodist_set_property;
   model_class->get_property = &_nc_cluster_redshift_nodist_get_property;
 
-  ncm_model_class_add_params (model_class, 0, 0, PROP_SIZE);
   ncm_model_class_set_name_nick (model_class, "No redshift distribution", "No_distribution");
+  ncm_model_class_add_params (model_class, 0, 0, PROP_SIZE);
   
   /**
    * NcClusterRedshiftNodist:z_min:

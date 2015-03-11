@@ -333,8 +333,8 @@ G_DEFINE_ABSTRACT_TYPE (NcmModel, ncm_model, G_TYPE_OBJECT);
 
 /**
  * ncm_model_dup:
- * @model: a #NcmModel.
- * @ser: a #NcmSerialize.
+ * @model: a #NcmModel
+ * @ser: a #NcmSerialize
  *
  * Duplicates @model by serializing and deserializing it.
  * 
@@ -348,7 +348,7 @@ ncm_model_dup (NcmModel *model, NcmSerialize *ser)
 
 /**
  * ncm_model_free:
- * @model: a #NcmModel.
+ * @model: a #NcmModel
  *
  * Atomically decrements the reference count of @model by one. If the reference count drops to 0,
  * all memory allocated by @model is released.
@@ -362,7 +362,7 @@ ncm_model_free (NcmModel *model)
 
 /**
  * ncm_model_clear:
- * @model: a #NcmModel.
+ * @model: a #NcmModel
  *
  * Atomically decrements the reference count of @model by one. If the reference count drops to 0,
  * all memory allocated by @model is released. Set pointer to NULL.
@@ -822,10 +822,10 @@ _ncm_model_class_set_property (GObject *object, guint prop_id, const GValue *val
 
 /**
  * ncm_model_class_add_params:
- * @model_class: a #NcmModelClass.
- * @sparam_len: FIXME
- * @vparam_len: FIXME
- * @nonparam_prop_len: FIXME
+ * @model_class: a #NcmModelClass
+ * @sparam_len: number of scalar paramters
+ * @vparam_len: number of vector parameters
+ * @nonparam_prop_len: number of properties
  *
  * FIXME
  *
@@ -834,7 +834,7 @@ void
 ncm_model_class_add_params (NcmModelClass *model_class, guint sparam_len, guint vparam_len, guint nonparam_prop_len)
 {
   GObjectClass *object_class = G_OBJECT_CLASS (model_class);
-  
+
   object_class->set_property = &_ncm_model_class_set_property;
   object_class->get_property = &_ncm_model_class_get_property;
   model_class->parent_sparam_len = model_class->sparam_len;
@@ -884,11 +884,11 @@ ncm_model_class_add_params (NcmModelClass *model_class, guint sparam_len, guint 
 
 /**
  * ncm_model_class_set_name_nick:
- * @model_class: a #NcmModelClass.
- * @name: FIXME
- * @nick: FIXME
+ * @model_class: a #NcmModelClass
+ * @name: name and/or very short description of the model
+ * @nick: model nickname
  *
- * FIXME
+ * Attributes @name and @nick, respectively, as the name and nickname of the model.
  *
  */
 void
@@ -903,16 +903,16 @@ ncm_model_class_set_name_nick (NcmModelClass *model_class, const gchar *name, co
 
 /**
  * ncm_model_class_set_sparam:
- * @model_class: a #NcmModelClass.
- * @sparam_id: FIXME
- * @symbol: FIXME
- * @name: FIXME
- * @lower_bound: FIXME
- * @upper_bound: FIXME
+ * @model_class: a #NcmModelClass
+ * @sparam_id: id of the scalar parameter
+ * @symbol: symbol of the scalar parameter
+ * @name: name of the sacalar parameter
+ * @lower_bound: lower-bound value
+ * @upper_bound: upper-bound value
  * @scale: FIXME
  * @abstol: FIXME
- * @default_value: FIXME
- * @ppt: FIXME
+ * @default_value: default value
+ * @ppt: a #NcmParamType
  *
  * FIXME
  *
@@ -925,7 +925,9 @@ ncm_model_class_set_sparam (NcmModelClass *model_class, guint sparam_id, const g
   const guint prop_fit_id = prop_id + (model_class->sparam_len - model_class->parent_sparam_len) + 2 * (model_class->vparam_len - model_class->parent_vparam_len);
 
   NcmSParam *sparam = ncm_sparam_new (name, symbol, lower_bound, upper_bound, scale, abstol, default_value, ppt);
-
+  if (sparam_id >= model_class->sparam_len)
+    g_error ("ncm_model_class_set_sparam: setting parameter %u-th of %u (%s) parameters declared for model ``%s''.",
+             sparam_id + 1, model_class->sparam_len, name, model_class->name);
   g_assert (prop_id > 0);
 
   if (g_ptr_array_index (model_class->sparam, sparam_id) != NULL)
@@ -954,16 +956,16 @@ ncm_model_class_set_sparam (NcmModelClass *model_class, guint sparam_id, const g
 /**
  * ncm_model_class_set_vparam:
  * @model_class: a #NcmModelClass
- * @vparam_id: FIXME
- * @default_length: FIXME
- * @symbol: FIXME
- * @name: FIXME
+ * @vparam_id: id of the vector parameter
+ * @default_length: default length of the vector parameter
+ * @symbol: symbol of the vector parameter
+ * @name: name of the vector parameter
  * @lower_bound: FIXME
  * @upper_bound: FIXME
  * @scale: FIXME
  * @abstol: FIXME
- * @default_value: FIXME
- * @ppt: FIXME
+ * @default_value: default value
+ * @ppt: a #NcmParamType
  *
  * FIXME
  *
@@ -977,6 +979,9 @@ ncm_model_class_set_vparam (NcmModelClass *model_class, guint vparam_id, guint d
   const guint prop_fit_id = prop_len_id + (model_class->vparam_len - model_class->parent_vparam_len) + (model_class->sparam_len - model_class->parent_sparam_len);
 
   NcmVParam *vparam = ncm_vparam_full_new (default_length, name, symbol, lower_bound, upper_bound, scale, abstol, default_value, ppt);
+  if (vparam_id >= model_class->vparam_len)
+    g_error ("ncm_model_class_set_vparam: setting parameter %u-th of %u (%s) parameters declared for model ``%s''.",
+             vparam_id + 1, model_class->vparam_len, name, model_class->name);
 
   g_assert (prop_id > 0);
   g_assert (prop_len_id > 0);
@@ -1633,7 +1638,7 @@ ncm_model_orig_param_get_scale (NcmModel *model, guint n)
 /**
  * ncm_model_orig_param_get_lower_bound:
  * @model: a #NcmModel
- * @n: parameter index.
+ * @n: parameter index
  *
  * Gets the lower bound of the original @n-th parameter.
  *
@@ -1648,7 +1653,7 @@ ncm_model_orig_param_get_lower_bound (NcmModel *model, guint n)
 /**
  * ncm_model_orig_param_get_upper_bound:
  * @model: a #NcmModel
- * @n: parameter index.
+ * @n: parameter index
  *
  * Gets the upper bound of the original @n-th parameter.
  *
@@ -1693,7 +1698,7 @@ ncm_model_param_get_scale (NcmModel *model, guint n)
 /**
  * ncm_model_param_get_lower_bound:
  * @model: a #NcmModel
- * @n: parameter index.
+ * @n: parameter index
  *
  * Gets the lower bound of the @n-th parameter.
  *
@@ -1708,7 +1713,7 @@ ncm_model_param_get_lower_bound (NcmModel *model, guint n)
 /**
  * ncm_model_param_get_upper_bound:
  * @model: a #NcmModel
- * @n: parameter index.
+ * @n: parameter index
  *
  * Gets the upper bound of the @n-th parameter.
  *
@@ -1738,7 +1743,7 @@ ncm_model_param_get_abstol (NcmModel *model, guint n)
 /**
  * ncm_model_param_get_ftype:
  * @model: a #NcmModel
- * @n: parameter index.
+ * @n: parameter index
  *
  * Gets the fitting type of the @n-th parameter.
  *
@@ -1753,7 +1758,7 @@ ncm_model_param_get_ftype (NcmModel *model, guint n)
 /**
  * ncm_model_param_set_scale:
  * @model: a #NcmModel
- * @n: FIXME
+ * @n: parameter index
  * @scale: FIXME
  *
  * FIXME
@@ -1768,10 +1773,10 @@ ncm_model_param_set_scale (NcmModel *model, guint n, const gdouble scale)
 /**
  * ncm_model_param_set_lower_bound:
  * @model: a #NcmModel
- * @n: FIXME
- * @lb: FIXME
+ * @n: parameter index
+ * @lb: lower-bound value
  *
- * FIXME
+ * Sets @lb as the lower-bound value of the @n-th parameter.
  *
  */
 void
@@ -1783,10 +1788,10 @@ ncm_model_param_set_lower_bound (NcmModel *model, guint n, const gdouble lb)
 /**
  * ncm_model_param_set_upper_bound:
  * @model: a #NcmModel
- * @n: FIXME
- * @ub: FIXME
+ * @n: parameter index
+ * @ub: upper-bound value
  *
- * FIXME
+ * Sets @ub as the lower-bound value of the @n-th parameter.
  *
  */
 void
@@ -1798,7 +1803,7 @@ ncm_model_param_set_upper_bound (NcmModel *model, guint n, const gdouble ub)
 /**
  * ncm_model_param_set_abstol:
  * @model: a #NcmModel
- * @n: FIXME
+ * @n: parameter index
  * @abstol: FIXME
  *
  * FIXME
@@ -1813,10 +1818,10 @@ ncm_model_param_set_abstol (NcmModel *model, guint n, const gdouble abstol)
 /**
  * ncm_model_param_set_ftype:
  * @model: a #NcmModel
- * @n: FIXME
- * @ptype: FIXME
+ * @n: parameter index
+ * @ptype: a #NcmParamType
  *
- * FIXME
+ * Sets @ptype as #NcmParamType of the @n-th parameter.  
  *
  */
 void
@@ -1828,7 +1833,7 @@ ncm_model_param_set_ftype (NcmModel *model, guint n, const NcmParamType ptype)
 /**
  * ncm_model_orig_param_get_name:
  * @model: a #NcmModel
- * @n: FIXME
+ * @n: parameter index
  *
  * FIXME
  *
@@ -1843,11 +1848,11 @@ ncm_model_orig_param_name (NcmModel *model, guint n)
 /**
  * ncm_model_param_get_name:
  * @model: a #NcmModel
- * @n: FIXME
+ * @n: parameter index
  *
- * FIXME
+ * Gets the name of the @n-th parameter of @model.
  *
- * Returns: (transfer none): FIXME
+ * Returns: (transfer none): the parameter name
  */
 const gchar *
 ncm_model_param_name (NcmModel *model, guint n)
@@ -1858,7 +1863,7 @@ ncm_model_param_name (NcmModel *model, guint n)
 /**
  * ncm_model_orig_param_get_symbol:
  * @model: a #NcmModel
- * @n: FIXME
+ * @n: parameter index
  *
  * FIXME
  *
@@ -1873,11 +1878,11 @@ ncm_model_orig_param_symbol (NcmModel *model, guint n)
 /**
  * ncm_model_param_get_symbol:
  * @model: a #NcmModel
- * @n: FIXME
+ * @n: parameter index
  *
- * FIXME
+ * Gets the symbol of the @n-th parameter of @model. 
  *
- * Returns: (transfer none): FIXME
+ * Returns: (transfer none): the parameter symbol
  */
 const gchar *
 ncm_model_param_symbol (NcmModel *model, guint n)
@@ -1888,9 +1893,9 @@ ncm_model_param_symbol (NcmModel *model, guint n)
 
 /**
  * ncm_model_orig_param_index_from_name:
- * @model: a #NcmModel.
- * @param_name: parameter name.
- * @i: (out): parameter index.
+ * @model: a #NcmModel
+ * @param_name: parameter name
+ * @i: (out): parameter index
  *
  * Looks for parameter named @param_name in the original parameters of @model 
  * and puts its index in @i and returns TRUE if found.
@@ -1911,9 +1916,9 @@ ncm_model_orig_param_index_from_name (NcmModel *model, const gchar *param_name, 
 
 /**
  * ncm_model_param_index_from_name:
- * @model: a #NcmModel.
- * @param_name: parameter name.
- * @i: (out): parameter index.
+ * @model: a #NcmModel
+ * @param_name: parameter name
+ * @i: (out): parameter index
  *
  * Looks for parameter named @param_name in @model and puts its index in @i
  * and returns TRUE if found.
@@ -1948,9 +1953,9 @@ ncm_model_param_index_from_name (NcmModel *model, const gchar *param_name, guint
 
 /**
  * ncm_model_param_set_by_name:
- * @model: a #NcmModel.
- * @param_name: parameter name.
- * @val: parameter value.
+ * @model: a #NcmModel
+ * @param_name: parameter name
+ * @val: parameter value
  *
  * Sets the parameter value @val by @param_name.
  * 
@@ -1966,9 +1971,9 @@ ncm_model_param_set_by_name (NcmModel *model, const gchar *param_name, gdouble v
 
 /**
  * ncm_model_orig_param_set_by_name:
- * @model: a #NcmModel.
- * @param_name: parameter name.
- * @val: parameter value.
+ * @model: a #NcmModel
+ * @param_name: parameter name
+ * @val: parameter value
  *
  * Sets the parameter value @val by @param_name.
  * 
@@ -1984,12 +1989,12 @@ ncm_model_orig_param_set_by_name (NcmModel *model, const gchar *param_name, gdou
 
 /**
  * ncm_model_param_get_by_name:
- * @model: a #NcmModel.
- * @param_name: parameter name.
+ * @model: a #NcmModel
+ * @param_name: parameter name
  *
- * Gets the parameter value by @param_name.
+ * Gets the parameter value by @param_name
  * 
- * Returns: parameter value.
+ * Returns: parameter value
  */
 gdouble 
 ncm_model_param_get_by_name (NcmModel *model, const gchar *param_name)
@@ -2002,12 +2007,12 @@ ncm_model_param_get_by_name (NcmModel *model, const gchar *param_name)
 
 /**
  * ncm_model_orig_param_get_by_name:
- * @model: a #NcmModel.
- * @param_name: parameter name.
+ * @model: a #NcmModel
+ * @param_name: parameter name
  *
  * Gets the original parameter value by @param_name.
  * 
- * Returns: parameter value.
+ * Returns: parameter value
  */
 gdouble
 ncm_model_orig_param_get_by_name (NcmModel *model, const gchar *param_name)
