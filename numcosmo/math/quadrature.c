@@ -24,8 +24,8 @@
 
 /**
  * SECTION:quadrature
- * @title: Quadrature Algorithims
- * @short_description: FIXME
+ * @title: NcmQuad
+ * @short_description: Quadrature algorithims.
  *
  * FIXME
  */

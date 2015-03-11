@@ -131,7 +131,7 @@ NC_TRIVEC_SET_0(q->x); \
  */
 #define NC_QUATERNION_MEMCPY(a,b) memcpy (a, b, sizeof(NcmQ))
 
-NcmQ *ncm_quaternion_new ();
+NcmQ *ncm_quaternion_new (void);
 NcmQ *ncm_quaternion_new_from_vector (NcmTriVector v);
 NcmQ *ncm_quaternion_new_from_data (gdouble x, gdouble y, gdouble z, gdouble theta);
 

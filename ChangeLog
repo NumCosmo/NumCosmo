@@ -3,8 +3,272 @@ CHANGELOG
 
 [Current]
 
+[v0.12.1]
+ * New minor version. Several improvements.
+
+     Better building tool support for lapack/BLAS. Improved speed using
+     different interfaces for Lapack/BLAS. Included levmar internally and
+     removed as optional dependency. Levmar intreface now supports box
+     constraints. Added virtual functions for lnNorma2 and resample in
+     NcmDataGaussCov. Updated interval vector usage in NcmFitNLOpt and
+     NcmFitLevmar. Added support for estimating true width and colour in
+     NcDataSNIACov. Improved resampling in NcDataSNIACov, now it resamples all
+     data m_B, w and c. Several new functions in NcmMatrix (support to writing
+     data in col-major order). New ncm_mset_catalog_calc_ci for calculating
+     confidence intervals for generic function using a NcmMSetCatalog. Added
+     option for confidence intervals from catalogs in darkenergy. Added
+     templates as dependency for NcmFitNLOpt enums files.
+
+     NcDataSNIACov now uses the (hopefully) the right normalization (new feature
+     still experimental).
+
+     Added some misc statistical functions in NcmUtil (experimental).
+
+ * Added option for unordered MC runs. Fixed typo in parameter of NcSNIADistCov.
+
+ * Several minor fixes and improvements.
+
+     Fixed some type detection problem in configure. Fix darkenergy problem when
+     using --runconf with the = symbol. Added timeout log on ESMCMC and MCMC. 
+     Some adjustments on the default parameters bound of NcHICosmoDE and
+     NcHICosmoDEXcdm. Fixed parameters symbols in NcSNIADistCov. Added some
+     helper function on NcmMSet to change parameters scale. Added test for zero
+     derivative in ncm_fit_numdiff_m2lnL_hessian and a workaround. Added
+     ncm_mset_fparam_valid_bounds to check if the new parameters would respect
+     bounds. Used ncm_mset_fparam_valid_bounds in both MCMC and ESMCMC to avoid
+     stepping out of the box.
+
+ * Formated section documentation for all object, some simple doc fixes.
+
+     Removed some very old tools and object.
+
+ * Added option to OGbject introspection scanner use the same CC flag.
+
+ * Added checks for file open/close.
+
+ * Documentation: changed titles and short description: BAO
+
+ * Missing files.
+
+ * Added missing references.
+
+ * New test: test_nc_data_bao_dvdv.c Added nc_cor_cluster_cmb_lens_limber.h in
+     numcomso.h
+
+ * Fixed typo in name nc_data_bao_empirical_fit. Support for data filenames. New
+     BAO data.
+
+     New BAO data in nc_data_bao_empirical_fit_ross2015.obj, simple txt file 
+     format to include new data.
+
+ * Improved NcmSpline is now serializable. New ncm_stats_dist1d_* family. New BAO
+     data nc_data_bao_empirical_fit. Alpha^3 version of the new Boltzmann
+     object.
+
+     Added the necessary properties to allow NcmSpline to be serializable, added
+     the related tests to test_ncm_spline.
+
+     New Boltzmann object, slowly migrating the old Perturbations object.
+
+     New abstract class NcmStatsDist1d that gives support for generic 1d 
+     distribution, it calculates the pdf and inverse pdf to allow resampling it
+     can also calculates the mode of the distribution.
+
+     New object NcmStatsDist1dSpline that implements NcmStatsDist1d for the case
+     where the distribution is given by a NcmSpline object.
+
+ * Created test for object nc_data_bao_rdv.
+
+     Included Kazin et al. (2014) BAO data - WiggleZ. Object nc_data_bao_rdv can
+     now be written as r_s/D_v or D_v/r_s. Data from Anderson et al. and 
+     Padmanabhan et al. were modified, i.e., written as  D_v/r_s. Function
+     nc_data_bao_rdv_set_sample was modified.
+
+     Documentation: in progress, references added, documentation of
+     ncm_mset_catalog_get_shrink_factor is incomplete.
+
+ * Include catalog description in the fits in NcDataSNIACov and fixed minors
+     leaks.
+
+     New catalogs and updates catalogs available in
+     http://download.savannah.gnu.org/releases/numcosmo/
+
+ * Added dataset minimum id check in NcDataSNIACov.
+
+ * Fixed documentation.
+
+ * Fixed missing docs tag in nc_snia_dist_cov.h.
+
+ * Added SNIa from SDSS-II/SNLS3 ( arXiv:1401.4064 ).
+
+     Combined in a single fits the data from SDSS-II/SNLS3 as we previously done 
+     for SNLS3 only. The same model work for both.
+
+ * Object ncm_lapck.c was documented.
+
+     Minor modifications in the documentation of the NcmFit children.
+
+ * Fixed other compilation problems.
+
+ * Fixed some minor compilation problems.
+
+ * New Ensemble Monte Carlo object added, several minor fixes and MC codes
+     organization. Work in progress on nc_hipert_two_fluids family.
+
+     - New object NcmFitESMCMC for ensemble sampling Markov Chain Monte Carlo
+     analysis.
+      One move method implemented (stretch move) in serial and parallel forms.
+     - Autocorrelation (and its integrated) code added to NcmStatsVec and its
+     test unity.
+     - Both autocorrelation and shrink factor added to EsMCMC as chain
+     diagnosis.
+     - Added autocorrelation tau correction for the effective number of points
+     in a MCMC
+      analysis to improve the adaptive method.
+     - Studying the possibility of using different variables to solve the
+     TwoFluids problem,
+      work in progress (unstable code).
+     - Several minor functions added in NcmLapack, NcmVector, etc, to sustain
+     the additions above.
+
+ * Testing twofluids_wkb. Added precision property in nc_mass_function, default
+     10^{-6}.
+
+ * Better error message in ncm_fit_new and fixed wrong parameters in
+     example_simple.py and example_simple.c.
+
+ * Added README to conform with automake. Fixed verbosity in NCM_TEST_FAIL and
+     NCM_TEST_PASS.
+
+ * Added links to README.md
+
+ * Corrected file.
+
+ * Added generic INSTALL file.
+
+ * Removed old README.
+
+ * Reorganized data objects. Improved README.md and docs.
+
+ * Fixed bug in g_clear_pointer usage.
+
+ * Added support for old cfitsio >= 3.25.
+
+ * Added traceback for error messages. Testing differents summaries in
+     NcABCClusterNCount.
+
+ * Added support for the new version of libcuba 4.0.
+
+ * Trying different ABC summary statistics.
+
+ * Removed old gdarkenergy from building. Scale fisher matrix by two when using in
+     the transition kernel in mcmc.
+
+ * Removed debug message.
+
+ * Fixed bug, trying to compile a vala source without vala available.
+
+ * Fixed memory leaks in NcABCClusterNCount and NcClusterAbundance. Some new
+     additions and more stable ABC code.
+
+     Added log function for NcmSerialize. Better implementation of NcmABC and
+     NcABCClusterNCount. Changed summary statistics in NcABCClusterNCount. First
+     functional version of NcABCClusterNCount.
+
+ * Better error message in prepare_base.
+
+ * Updated the threaded evaluation function.
+
+ * Fixed binning methods.
+
+ * Fixed documentation in NcABCClusterNCount.
+
+ * Added more options for binning in nc_data_cluster_ncount and
+     nc_abc_cluster_ncount.
+
+ * Fixed bug in ncm_abc.c (wrong number of additional columns). New main-seed and
+     nthreads options in darkenergy.
+
+ * Improvement on ABC interface. Added seed and nthreads options to darkenergy.
+
+
+[v0.12.0rc4_corrected]
+ * Fixed more compilation problems (when lacking of fftw3l).
+
+ * Fixed some compilation errors for systems without fftw or cfitsio.
+
+ * Missing file in EXTRA.
+
+
+[v0.12.0rc4]
+ * Fix several minor memory leaks, racing conditions. Functional version of NcmABC
+     and NcABCClusterNCount.
+
+     Improved log functions on NcmFit, NcmMSet and NcmDataset. Fixed old leak in
+     cvode functions. Fixed bug in NcmStatsVec for online covariance estimates
+     for weigthed samples. Fixed several minor bugs and leaks. Added mutex lock
+     to avoid threads problems in _nc_matter_var_prepare_fft. Included cubature
+     for systems without libcuba. New NcABCClusterNCount for ABC analysis of
+     cluster number counts.
+
+ * Improvement on NcmSplineCubicNotaknot and NcmABC.
+
+     Improved spline_cubic_notaknot algorithm (faster and simpler). Improved
+     tests on spline_cubic_notaknot.
+
+
+[v0.12.0rc3]
+ * Improved blas/lapack search.
+
+ * Fixed non-defined variable for lapackless systems.
+
+ * Fixed lapack header inclusion.
+
+ * Better support for blas and lapack search in configure and code organization
+     and new NcmABC.
+
+     Better support for searching blas and lapack libs through ax_blas and
+     ax_lapack. Organized lapack calling code in ncm_lapack. Renamed
+     NcmMCSampler to NcmMSetTransKern (transition kernel) to better represent
+     the object functions. NcmMSetTransKern can also be used as a prior (fixing
+     one of the points). Added NcmMSetTransFlat to work as a flat transition
+     kernel or prior. Adapted NcmFitMCMC to use NcmMSetTransKern. Renamed
+     NcmFitCatalog to NcmMSetCatalog to better represent the object functions. 
+     Removed old cvode_util reorganized its code in ncm_util.
+
+     New NcmABC (Approximate Bayesian Computation) object, abstract object used
+     to perform ABC analysis.
+
+ * Fixed: property seed is no longer G_PARAM_CONSTRUCT (ncm_rng.c).
+
+     Included a supernovae sample from SDSS provided by Emille Ishida.
+
+
+[v0.12.0rc2]
+ * Fixed wrong casting.
+
+ * Organized mc samplers in NcmMCSampler abstract object. New methods for Vector,
+     Matrix, Model and MSet. Fixed bugs in NcClusterPhotozGaussGlobal.
+
+ * Fixed nc_hicosmo_de prototypes for better bindings. New get/set functions by
+     parameter names.
+
+ * New example ode_spline. NcClusterRedshift transformed in NcmModel.
+
+     Transformed all NcClusterRedshift and descendants to NcmModel.
+
+
+[0.12.0rc1]
+ * Minor fixes, release candidate 0.12.0rc1.
+
+     Working on NcPertTwoFluids. Make vala bindings conditional, default no. 
+     Fixed minor doc bugs.
+
+
 [v0.12.0rc0]
  * Fixed tests (using g_test_trap_fork unitl glib < 2.40).
+
+     Updated ChangeLog.
 
  * Several fixes for release candidate 0.12.0rc0.
 

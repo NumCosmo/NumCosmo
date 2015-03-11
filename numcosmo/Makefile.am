@@ -1,31 +1,42 @@
 ## Process this file with automake to produce Makefile.in
 
+if USE_INTERNAL_LIBCUBA
+  MAYBE_LIBCUBA  = libcuba
+  LIBCUBA_PLACE  = libcuba/libcuba.la
+  LIBCUBA_INCDIR = -I$(top_srcdir)/numcosmo/libcuba
+else
+  
+endif
+
 MY_CFLAGS = \
 	 -DG_LOG_DOMAIN=\"NUMCOSMO\" \
-	 $(GLIB_CFLAGS) \
+	 $(GLIB_CFLAGS)     \
 	 $(SUNDIALS_CFLAGS) \
-	 $(GSL_CFLAGS) \
-	 $(FFTW3_CFLAGS) \
-	 $(CFITSIO_CFLAGS) \
-	 $(NLOPT_CFLAGS) \
+	 $(GSL_CFLAGS)      \
+	 $(FFTW3_CFLAGS)    \
+	 $(CFITSIO_CFLAGS)  \
+	 $(NLOPT_CFLAGS)    \
+	 $(LIBCUBA_INCDIR)  \
 	 -I$(top_srcdir)
 
 AM_CFLAGS = \
 	 -Wall \
 	 $(MY_CFLAGS)
 
-SUBDIRS = 
+SUBDIRS = $(MAYBE_LIBCUBA) levmar .
 
 lib_LTLIBRARIES = libnumcosmo.la
 
-libnumcosmo_la_LIBADD = \
-	$(SUNDIALS_LIBS) \
-	$(FFTW3_LIBS) \
-	$(GLIB_LIBS) \
-	$(NLOPT_LIBS) \
-	$(GSL_LIBS) \
-	$(SQLITE3_LIBS) \
-	$(CFITSIO_LIBS)
+libnumcosmo_la_LIBADD =     \
+	$(SUNDIALS_LIBS)    \
+	$(FFTW3_LIBS)       \
+	$(GLIB_LIBS)        \
+	$(NLOPT_LIBS)       \
+	$(GSL_LIBS)         \
+	$(SQLITE3_LIBS)     \
+	$(CFITSIO_LIBS)     \
+	$(LIBCUBA_PLACE)    \
+	levmar/liblevmar.la
 
 ncm_sources = \
 	ncm_build_inline.c                 \
@@ -84,6 +95,7 @@ ncm_sources = \
 	math/ncm_mset_trans_kern_gauss.c   \
 	math/ncm_fit_state.c               \
 	math/ncm_fit.c                     \
+	math/ncm_fit_levmar.c              \
 	math/ncm_fit_gsl_ls.c              \
 	math/ncm_fit_gsl_mm.c              \
 	math/ncm_fit_gsl_mms.c             \
@@ -109,10 +121,6 @@ ncm_sources = \
 	math/memory_pool.c        \
 	math/ncm_sphere_map.c     \
 	sphere/healpix.c
-
-ncm_external_sources = \
-	cubature/hcubature.c      \
-	cubature/pcubature.c
 
 ncm_headers = \
 	math/ncm_c.h                     \
@@ -170,6 +178,7 @@ ncm_headers = \
 	math/ncm_priors.h                \
 	math/ncm_fit_state.h             \
 	math/ncm_fit.h                   \
+	math/ncm_fit_levmar.h            \
 	math/ncm_fit_gsl_ls.h            \
 	math/ncm_fit_gsl_mm.h            \
 	math/ncm_fit_gsl_mms.h           \
@@ -196,9 +205,6 @@ ncm_headers = \
 	math/ncm_sphere_map.h     \
 	sphere/healpix.h
 
-ncm_external_headers = \
-	cubature/cubature.h
-
 ncm_headers_internal = 
 
 nc_headers = \
@@ -216,7 +222,6 @@ nc_headers = \
 	model/nc_hicosmo_lcdm.h       \
 	model/nc_hicosmo_qconst.h     \
 	model/nc_hicosmo_qlinear.h    \
-	model/nc_hicosmo_qpw.h        \
 	model/nc_hicosmo_qspline.h    \
 	model/nc_hicosmo_qgrw.h       \
 	lss/nc_window.h               \
@@ -307,7 +312,6 @@ nc_sources = \
 	model/nc_hicosmo_lcdm.c      \
 	model/nc_hicosmo_qconst.c    \
 	model/nc_hicosmo_qlinear.c   \
-	model/nc_hicosmo_qpw.c       \
 	model/nc_hicosmo_qspline.c   \
 	model/nc_hicosmo_qgrw.c      \
 	lss/nc_window.c              \
@@ -414,11 +418,11 @@ ncm_fit_nlopt_enum_meta.h: ncm_fit_nlopt_enum_meta.c
 	$(SED) 's/nlopt_algorithm/NcmFitNloptAlgorithm/' ncm_fit_nlopt_enum_meta.h.tmp1 > ncm_fit_nlopt_enum_meta.h.tmp2
 	$(SED) 's/nlopt_result/NcmFitNloptResult/' ncm_fit_nlopt_enum_meta.h.tmp2 > ncm_fit_nlopt_enum_meta.h
 
-ncm_fit_nlopt_enum.h: ncm_fit_nlopt_enum_meta.h
+ncm_fit_nlopt_enum.h: ncm_fit_nlopt_enum_meta.h $(srcdir)/ncm_fit_nlopt_enum.h.template
 	$(AM_V_GEN) ( $(GLIB_MKENUMS) --template $(srcdir)/ncm_fit_nlopt_enum.h.template ncm_fit_nlopt_enum_meta.h ) > \
 	  ncm_fit_nlopt_enum.h.tmp && mv ncm_fit_nlopt_enum.h.tmp ncm_fit_nlopt_enum.h
 
-ncm_fit_nlopt_enum.c: ncm_fit_nlopt_enum_meta.h
+ncm_fit_nlopt_enum.c: ncm_fit_nlopt_enum_meta.h $(srcdir)/ncm_fit_nlopt_enum.c.template
 	$(AM_V_GEN) ( $(GLIB_MKENUMS) --template $(srcdir)/ncm_fit_nlopt_enum.c.template ncm_fit_nlopt_enum_meta.h ) > \
 	  ncm_fit_nlopt_enum.c.tmp && mv ncm_fit_nlopt_enum.c.tmp ncm_fit_nlopt_enum.c
 
@@ -433,16 +437,6 @@ ncm_enum_types_headers += \
 
 ncm_cond_headers += \
 	math/ncm_fit_nlopt.h
-
-endif
-
-if HAVE_LIBLEVMAR
-
-ncm_cond_headers += \
-	math/ncm_fit_levmar.h
-
-ncm_cond_sources += \
-	math/ncm_fit_levmar.c
 
 endif
 
@@ -471,8 +465,6 @@ nc_enum_types.c: $(nc_headers) nc_enum_types.c.template
 libnumcosmo_la_SOURCES = \
 	$(ncm_sources)          \
 	$(ncm_headers)          \
-	$(ncm_external_sources) \
-	$(ncm_external_headers) \
 	$(nc_sources)           \
 	$(nc_headers)           \
 	$(ncm_cond_sources)     \
@@ -512,14 +504,12 @@ EXTRA_DIST = \
 	nc_enum_types.h.template        \
 	nc_enum_types.c.template        \
 	ncm_gir_scan.h                  \
-	ncm_fit_nlopt_enum_meta.c       \
-	cubature/converged.h            \
-	cubature/vwrapper.h             \
-	cubature/COPYING
+	ncm_fit_nlopt_enum_meta.c
 
 CLEANFILES = $(BUILT_SOURCES)
 
 -include $(INTROSPECTION_MAKEFILE)
+INTROSPECTION_SCANNER_ENV = CC="$(CC)"
 INTROSPECTION_GIRS =
 INTROSPECTION_SCANNER_ARGS = --add-include-path=$(srcdir) -I$(srcdir)/../ -I$(top_builddir) --warn-all 
 

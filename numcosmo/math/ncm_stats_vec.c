@@ -25,8 +25,8 @@
 
 /**
  * SECTION:ncm_stats_vec
- * @title: Statistics vector object
- * @short_description: An online statistics vector object.
+ * @title: NcmStatsVec
+ * @short_description: An online statistics vector.
  *
  * This object calculates some basic statistics (mean, variance and covariance)
  * of a set of random variables. 
@@ -200,6 +200,7 @@ _ncm_stats_vec_constructed (GObject *object)
         ncm_vector_set_zero (svec->x);
         ncm_vector_set_zero (svec->mean);
         break;
+      case NCM_STATS_VEC_TYPES_LEN:
       default:
         g_assert_not_reached ();
         break;

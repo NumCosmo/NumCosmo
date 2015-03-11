@@ -24,10 +24,13 @@
  
 /**
  * SECTION:covariance
- * @title: Perturbation Covariance
- * @short_description: FIXME
+ * @title: NcLinearPertCov
+ * @short_description: Perturbations covariance.
+ * @stability: Unstable
+ * @include: numcosmo/perturbations/covariance.h
  *
  * FIXME
+ * 
  */
 
 #ifdef HAVE_CONFIG_H

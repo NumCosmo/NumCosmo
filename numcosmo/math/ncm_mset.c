@@ -25,10 +25,11 @@
 
 /**
  * SECTION:ncm_mset
- * @title: A Set of NcmModels
- * @short_description: Object representing a set of different NcmModel objects
+ * @title: NcmMSet
+ * @short_description: A set of different NcmModel objects.
  *
  * FIXME
+ * 
  */
 
 #ifdef HAVE_CONFIG_H
@@ -110,7 +111,7 @@ G_LOCK_DEFINE_STATIC (last_model_id);
  * 
  */ 
 void
-ncm_mset_model_register_id (NcmModelClass *model_class, gchar *ns, gchar *desc, gchar *long_desc)
+ncm_mset_model_register_id (NcmModelClass *model_class, const gchar *ns, const gchar *desc, const gchar *long_desc)
 {
   if (model_class->model_id < 0)
   {
@@ -616,7 +617,7 @@ ncm_mset_pretty_log (NcmMSet *mset)
  *
  */
 void
-ncm_mset_params_pretty_print (NcmMSet *mset, FILE *out, gchar *header)
+ncm_mset_params_pretty_print (NcmMSet *mset, FILE *out, const gchar *header)
 {
   NcmModelID mid;
   gint i;
@@ -725,7 +726,7 @@ ncm_mset_fparams_log_covar (NcmMSet *mset, NcmMatrix *covar)
   guint i, j;
   guint name_size = ncm_mset_max_fparam_name (mset);
   guint free_params_len = ncm_mset_fparam_len (mset);
-  gchar *box = "---------------";
+  const gchar *box = "---------------";
   g_assert (covar != NULL);
 
   ncm_cfg_msg_sepa ();
@@ -937,6 +938,22 @@ gdouble
 ncm_mset_param_get_scale (NcmMSet *mset, NcmModelID mid, guint pid)
 {
   return ncm_model_param_get_scale (ncm_mset_peek (mset, mid), pid);
+}
+
+/**
+ * ncm_mset_param_set_scale:
+ * @mset: a #NcmMSet
+ * @mid: Model id
+ * @pid: Parameter id
+ * @scale: new scale
+ *
+ * FIXME
+ *
+ */
+void
+ncm_mset_param_set_scale (NcmMSet *mset, NcmModelID mid, guint pid, gdouble scale)
+{
+  ncm_model_param_set_scale (ncm_mset_peek (mset, mid), pid, scale);
 }
 
 /**
@@ -1432,6 +1449,52 @@ ncm_mset_fparam_get_abstol (NcmMSet *mset, guint n)
 }
 
 /**
+ * ncm_mset_fparam_set_scale:
+ * @mset: a #NcmMSet
+ * @n: Free parameter index
+ * @scale: new scale.
+ *
+ * FIXME
+ * 
+ */
+void
+ncm_mset_fparam_set_scale (NcmMSet *mset, guint n, gdouble scale)
+{
+  g_assert (mset->valid_map && n < mset->fparam_len);
+  {
+    const NcmMSetPIndex pi = g_array_index (mset->pi_array, NcmMSetPIndex, n);
+    ncm_mset_param_set_scale (mset, pi.mid, pi.pid, scale);
+  }
+}
+
+/**
+ * ncm_mset_fparam_valid_bounds:
+ * @mset: a #NcmMSet
+ * @theta: free parameters vector
+ *
+ * FIXME
+ * 
+ * Returns: whether @theta contain values respecting the parameter bounds.
+ */
+gboolean
+ncm_mset_fparam_valid_bounds (NcmMSet *mset, NcmVector *theta)
+{
+  g_assert (mset->valid_map && ncm_vector_len (theta) == mset->fparam_len);
+  {
+    guint i;
+    for (i = 0; i < mset->fparam_len; i++)
+    {
+      const gdouble lb  = ncm_mset_fparam_get_lower_bound (mset, i);
+      const gdouble ub  = ncm_mset_fparam_get_upper_bound (mset, i);
+      const gdouble val = ncm_vector_get (theta, i);
+      if (val < lb || val > ub)
+        return FALSE;
+    }
+    return TRUE;
+  }
+}
+
+/**
  * ncm_mset_fparam_get:
  * @mset: a #NcmMSet
  * @n: Free parameter index
@@ -1512,7 +1575,7 @@ ncm_mset_fparam_get_fpi (NcmMSet *mset, NcmModelID mid, guint pid)
  * 
  */
 void 
-ncm_mset_save (NcmMSet *mset, gchar *filename, gboolean save_comment)
+ncm_mset_save (NcmMSet *mset, const gchar *filename, gboolean save_comment)
 {
   NcmMSetClass *mset_class = NCM_MSET_GET_CLASS (mset);
   GKeyFile *msetfile = g_key_file_new ();
@@ -1601,7 +1664,7 @@ ncm_mset_save (NcmMSet *mset, gchar *filename, gboolean save_comment)
  * Returns: (transfer full): FIXME
  */
 NcmMSet * 
-ncm_mset_load (gchar *filename)
+ncm_mset_load (const gchar *filename)
 {
   NcmMSet *mset = ncm_mset_empty_new ();
   GKeyFile *msetfile = g_key_file_new ();

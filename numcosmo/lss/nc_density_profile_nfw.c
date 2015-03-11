@@ -25,8 +25,8 @@
 
 /**
  * SECTION:nc_density_profile_nfw
- * @title: NFW Density Profile
- * @short_description: Provides a NcDensityProfile of NFW type.
+ * @title: NcDensityProfileNFW
+ * @short_description: Density profile of Navarro-Frenk-White type.
  * 
  * This object implements the #NcDensityProfile class for a Navarro-Frenk-White (NFW) density profile.
  * 

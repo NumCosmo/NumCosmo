@@ -24,8 +24,8 @@
 
 /**
  * SECTION:ncm_spline_gsl
- * @title: GSL Spline
- * @short_description: GSL spline object wrapper
+ * @title: NcmSplineGsl
+ * @short_description: GSL spline object wrapper.
  *
  * This object comprises the proper functions to use the GNU Scientific 
  * Library (GSL) spline functions and interpolation methods.

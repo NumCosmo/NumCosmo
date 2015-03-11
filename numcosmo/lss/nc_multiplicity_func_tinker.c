@@ -25,8 +25,8 @@
 
 /**
  * SECTION:nc_multiplicity_func_tinker
- * @title: Tinker Multiplicity Function
- * @short_description: Dark Matter Halo FIXME
+ * @title: NcMultiplicityFuncTinker
+ * @short_description: Dark matter halo -- Tinker multiplicity function.
  *
  * FIXME
  */

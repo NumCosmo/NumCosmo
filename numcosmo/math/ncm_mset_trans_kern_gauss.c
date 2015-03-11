@@ -25,8 +25,8 @@
 
 /**
  * SECTION:ncm_mset_trans_kern_gauss
- * @title: Markov Chain Multivariate Gaussian Sampler 
- * @short_description: Object implementing a multivariate gaussian sampler.
+ * @title: NcmMSetTransKernGauss 
+ * @short_description: A multivariate gaussian sampler.
  *
  * FIXME
  * 
@@ -175,12 +175,11 @@ _ncm_mset_trans_kern_gauss_generate (NcmMSetTransKern *tkern, NcmVector *theta, 
 {
   NcmMSetTransKernGauss *tkerng = NCM_MSET_TRANS_KERN_GAUSS (tkern);
   gint ret;
-  guint i, j;
-  gboolean valid = FALSE;
+  guint i;
 
   g_assert (tkerng->init);
 
-  while (!valid)
+  while (TRUE)
   {
     ncm_rng_lock (rng);
     for (i = 0; i < tkerng->len; i++)
@@ -196,18 +195,8 @@ _ncm_mset_trans_kern_gauss_generate (NcmMSetTransKern *tkern, NcmVector *theta, 
 
     ncm_vector_add (thetastar, theta);
 
-    valid = TRUE;
-    for (j = 0; j < tkerng->len; j++)
-    {
-      const gdouble lb  = ncm_mset_fparam_get_lower_bound (tkern->mset, j);
-      const gdouble ub  = ncm_mset_fparam_get_upper_bound (tkern->mset, j);
-      const gdouble val = ncm_vector_get (thetastar, j);
-      if (val < lb || val > ub)
-      {
-        valid = FALSE;
-        break;
-      }
-    }
+    if (ncm_mset_fparam_valid_bounds (tkern->mset, thetastar))
+      break;
   }
 }
 
@@ -321,7 +310,7 @@ ncm_mset_trans_kern_gauss_set_cov (NcmMSetTransKernGauss *tkerng, const NcmMatri
   g_assert_cmpuint (ncm_matrix_nrows (tkerng->cov), ==, ncm_matrix_nrows (cov));
   ncm_matrix_memcpy (tkerng->cov, cov);
   ncm_matrix_memcpy (tkerng->LLT, cov);
-  ncm_matrix_cholesky_decomp (tkerng->LLT);
+  ncm_matrix_cholesky_decomp (tkerng->LLT, 'L');
   tkerng->init = TRUE;
 }
 
@@ -338,7 +327,7 @@ ncm_mset_trans_kern_gauss_set_cov_variant (NcmMSetTransKernGauss *tkerng, GVaria
 {
   ncm_matrix_set_from_variant (tkerng->cov, cov);
   ncm_matrix_memcpy (tkerng->LLT, tkerng->cov);
-  ncm_matrix_cholesky_decomp (tkerng->LLT);
+  ncm_matrix_cholesky_decomp (tkerng->LLT, 'L');
   tkerng->init = TRUE;
 }
 
@@ -355,7 +344,7 @@ ncm_mset_trans_kern_gauss_set_cov_data (NcmMSetTransKernGauss *tkerng, gdouble *
 {
   ncm_matrix_set_from_data (tkerng->cov, cov);
   ncm_matrix_memcpy (tkerng->LLT, tkerng->cov);
-  ncm_matrix_cholesky_decomp (tkerng->LLT);
+  ncm_matrix_cholesky_decomp (tkerng->LLT, 'L');
   tkerng->init = TRUE;
 }
 
@@ -394,6 +383,6 @@ ncm_mset_trans_kern_gauss_set_cov_from_scale (NcmMSetTransKernGauss *tkerng)
     ncm_matrix_set (tkerng->cov, i, i, scale * scale);
   }
   ncm_matrix_memcpy (tkerng->LLT, tkerng->cov);
-  ncm_matrix_cholesky_decomp (tkerng->LLT);
+  ncm_matrix_cholesky_decomp (tkerng->LLT, 'L');
   tkerng->init = TRUE;
 }

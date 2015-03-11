@@ -24,10 +24,11 @@
 
 /**
  * SECTION:scalefactor
- * @title: Scale Factor
- * @short_description: FIXME
+ * @title: NcScaleFactor
+ * @short_description: Scale factor for NcHICosmo computations.
  *
  * FIXME
+ * 
  */
 
 #ifdef HAVE_CONFIG_H

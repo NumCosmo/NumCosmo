@@ -25,8 +25,8 @@
 
 /**
  * SECTION:nc_data_bao_rdv
- * @title: Baryon Oscillation Data -- rDv
- * @short_description: BAO $r/D_V$ ratio estimator
+ * @title: NcDataBaoRDV
+ * @short_description: Baryon Oscillation Data -- $r_s / D_V$ ratio.
  *
  * See <link linkend="XPercival2007">Percival et al. (2007)</link>.
  * 
@@ -304,14 +304,14 @@ NcDataBaoRDVSample nc_data_bao_rdv_samples[] = {
    {
      NC_DATA_BAO_RDV_BEUTLER2011, TRUE, 1,
      { 0.106 },
-     { 0.336 },
-     { 1.0 / (0.015 * 0.015) },
+     { 0.336 / 1.027}, /* Correction for r_{s,EH}/r_{sCAMB} = 1.027 see Kazin (2014) */
+     { 1.0 * 1.027 * 1.027 / (0.015 * 0.015) },
      "6dFGRS -- Beutler (2011), BAO Sample R-Dv"},
    {
      NC_DATA_BAO_RDV_PADMANABHAN2012, FALSE, 1,
      { 0.35 },
-     { 8.88 },
-     { 1.0 / (0.17 * 0.17) },
+     { 8.88 * 1.025}, /* Correction for r_{s,EH}/r_{sCAMB} = 1.025 see Kazin (2014) */
+     { 1.0 / (0.17 * 0.17 * 1.025 * 1.025) },
      "SDSS-DR7-rec -- Padmanabhan (2012), BAO Sample R-Dv"},
    {
      NC_DATA_BAO_RDV_ANDERSON2012, FALSE, 1,

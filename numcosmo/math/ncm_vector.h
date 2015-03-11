@@ -117,6 +117,7 @@ G_INLINE_FUNC const NcmVector *ncm_vector_const_new_gsl (const gsl_vector *v);
 G_INLINE_FUNC gdouble ncm_vector_get (const NcmVector *cv, const guint i);
 G_INLINE_FUNC gdouble ncm_vector_fast_get (const NcmVector *cv, const guint i);
 G_INLINE_FUNC gdouble *ncm_vector_ptr (NcmVector *cv, const guint i);
+G_INLINE_FUNC gdouble *ncm_vector_fast_ptr (NcmVector *cv, const guint i);
 G_INLINE_FUNC const gdouble *ncm_vector_const_ptr (const NcmVector *cv, const guint i);
 G_INLINE_FUNC void ncm_vector_set (NcmVector *cv, const guint i, const gdouble val);
 G_INLINE_FUNC void ncm_vector_fast_set (NcmVector *cv, const guint i, const gdouble val);
@@ -181,6 +182,12 @@ G_INLINE_FUNC gdouble *
 ncm_vector_ptr (NcmVector *cv, const guint i)
 {
   return gsl_vector_ptr (ncm_vector_gsl (cv), i);
+}
+
+G_INLINE_FUNC gdouble *
+ncm_vector_fast_ptr (NcmVector *cv, const guint i)
+{
+  return &(ncm_vector_const_gsl (cv)->data[i]);
 }
 
 G_INLINE_FUNC const gdouble *

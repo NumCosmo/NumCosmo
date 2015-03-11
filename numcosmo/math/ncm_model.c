@@ -24,8 +24,8 @@
 
 /**
  * SECTION:ncm_model
- * @title: Model Abstract Class
- * @short_description: Base class for implementing models
+ * @title: NcmModel
+ * @short_description: Abstract class for implementing models.
  *
  * The #NcmModel abstract class represents a general model. This object serves
  * for two general objectives. First, all the numerical properties (doubles), i.e., 
@@ -918,7 +918,7 @@ ncm_model_class_set_name_nick (NcmModelClass *model_class, const gchar *name, co
  *
  */
 void
-ncm_model_class_set_sparam (NcmModelClass *model_class, guint sparam_id, gchar *symbol, gchar *name, gdouble lower_bound, gdouble upper_bound, gdouble scale, gdouble abstol, gdouble default_value, NcmParamType ppt)
+ncm_model_class_set_sparam (NcmModelClass *model_class, guint sparam_id, const gchar *symbol, const gchar *name, gdouble lower_bound, gdouble upper_bound, gdouble scale, gdouble abstol, gdouble default_value, NcmParamType ppt)
 {
   GObjectClass* object_class = G_OBJECT_CLASS (model_class);
   const guint prop_id = sparam_id - model_class->parent_sparam_len + model_class->nonparam_prop_len;
@@ -971,7 +971,7 @@ ncm_model_class_set_sparam (NcmModelClass *model_class, guint sparam_id, gchar *
  *
  */
 void
-ncm_model_class_set_vparam (NcmModelClass *model_class, guint vparam_id, guint default_length, gchar *symbol, gchar *name, gdouble lower_bound, gdouble upper_bound, gdouble scale, gdouble abstol, gdouble default_value, NcmParamType ppt)
+ncm_model_class_set_vparam (NcmModelClass *model_class, guint vparam_id, guint default_length, const gchar *symbol, const gchar *name, gdouble lower_bound, gdouble upper_bound, gdouble scale, gdouble abstol, gdouble default_value, NcmParamType ppt)
 {
   GObjectClass* object_class = G_OBJECT_CLASS (model_class);
   const guint prop_id = vparam_id + model_class->nonparam_prop_len - model_class->parent_vparam_len + (model_class->sparam_len - model_class->parent_sparam_len);
@@ -1903,7 +1903,7 @@ ncm_model_param_symbol (NcmModel *model, guint n)
  * Returns: whether the parameter @param_name is found in the @model.
  */
 gboolean
-ncm_model_orig_param_index_from_name (NcmModel *model, gchar *param_name, guint *i)
+ncm_model_orig_param_index_from_name (NcmModel *model, const gchar *param_name, guint *i)
 {
   gpointer param_id;
   gboolean found = g_hash_table_lookup_extended (model->sparams_name_id, param_name, NULL, &param_id);
@@ -1926,7 +1926,7 @@ ncm_model_orig_param_index_from_name (NcmModel *model, gchar *param_name, guint 
  * Returns: whether the parameter @param_name is found in the @model.
  */
 gboolean
-ncm_model_param_index_from_name (NcmModel *model, gchar *param_name, guint *i)
+ncm_model_param_index_from_name (NcmModel *model, const gchar *param_name, guint *i)
 {
   NcmReparam *reparam = ncm_model_peek_reparam (model); 
   if (reparam != NULL)
@@ -1961,7 +1961,7 @@ ncm_model_param_index_from_name (NcmModel *model, gchar *param_name, guint *i)
  * 
  */
 void 
-ncm_model_param_set_by_name (NcmModel *model, gchar *param_name, gdouble val)
+ncm_model_param_set_by_name (NcmModel *model, const gchar *param_name, gdouble val)
 {
   guint i;
   gboolean has_param = ncm_model_param_index_from_name (model, param_name, &i);
@@ -1979,7 +1979,7 @@ ncm_model_param_set_by_name (NcmModel *model, gchar *param_name, gdouble val)
  * 
  */
 void 
-ncm_model_orig_param_set_by_name (NcmModel *model, gchar *param_name, gdouble val)
+ncm_model_orig_param_set_by_name (NcmModel *model, const gchar *param_name, gdouble val)
 {
   guint i;
   gboolean has_param = ncm_model_orig_param_index_from_name (model, param_name, &i);
@@ -1997,7 +1997,7 @@ ncm_model_orig_param_set_by_name (NcmModel *model, gchar *param_name, gdouble va
  * Returns: parameter value
  */
 gdouble 
-ncm_model_param_get_by_name (NcmModel *model, gchar *param_name)
+ncm_model_param_get_by_name (NcmModel *model, const gchar *param_name)
 {
   guint i;
   gboolean has_param = ncm_model_param_index_from_name (model, param_name, &i);
@@ -2015,7 +2015,7 @@ ncm_model_param_get_by_name (NcmModel *model, gchar *param_name)
  * Returns: parameter value
  */
 gdouble
-ncm_model_orig_param_get_by_name (NcmModel *model, gchar *param_name)
+ncm_model_orig_param_get_by_name (NcmModel *model, const gchar *param_name)
 {
   guint i;
   gboolean has_param = ncm_model_orig_param_index_from_name (model, param_name, &i);

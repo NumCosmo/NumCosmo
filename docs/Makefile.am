@@ -96,21 +96,14 @@ ignore_nlopt = \
 	ncm_fit_nlopt.h
 endif
 
-if ! HAVE_LIBLEVMAR
-ignore_levmar = \
-	ncm_fit_levmar.h
-endif
-
 # Header files or dirs to ignore when scanning. Use base file/dir names
 # e.g. IGNORE_HFILES=gtkdebug.h gtkintl.h private_code
 IGNORE_HFILES=linear_internal.h         \
               config.h                  \
               ncm_fit_nlopt_enum_meta.h \
               $(ignore_nlopt)           \
-              $(ignore_levmar)          \
-              cubature.h                \
-              converged.h               \
-              vwrapper.h
+              levmar                    \
+              libcuba
 
 # Images to copy into HTML directory.
 # e.g. HTML_IMAGES=$(top_srcdir)/gtk/stock-icons/stock_about_24.png

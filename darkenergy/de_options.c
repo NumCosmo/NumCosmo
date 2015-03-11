@@ -187,9 +187,7 @@ _nc_de_print_fit_list (const gchar *option_name, const gchar *value, gpointer da
     
   ncm_cfg_enum_print_all (NCM_TYPE_FIT_GSLMM_ALGOS, "Minimization algorithims [gsl-mm]");
   ncm_cfg_enum_print_all (NCM_TYPE_FIT_GSLMMS_ALGOS, "Minimization algorithims [gsl-mms]");
-#ifdef NUMCOSMO_HAVE_LEVMAR
   ncm_cfg_enum_print_all (NCM_TYPE_FIT_LEVMAR_ALGOS, "Minimization algorithims [levmar]");
-#endif
 #ifdef NUMCOSMO_HAVE_NLOPT
   ncm_cfg_enum_print_all (NCM_TYPE_FIT_NLOPT_ALGORITHM, "Minimization algorithims [nlopt]");
 #endif
@@ -231,6 +229,7 @@ nc_de_opt_get_fit_group (NcDEFitEntries *de_fit, GOptionEntry **de_fit_entries)
     { "mc-nwalkers",      0, 0, G_OPTION_ARG_INT   ,       &de_fit->mc_nwalkers,      "Number of walkers to use in the ESMCMC analysis, it must be even for a parallel analysis.", NULL},
     { "mc-prerun",        0, 0, G_OPTION_ARG_INT   ,       &de_fit->mc_prerun,        "Minimum number of point to calculate in a MC, MCMC or ESMCMC analysis, set to zero to use the default values.", NULL},
     { "mc-data",          0, 0, G_OPTION_ARG_FILENAME,     &de_fit->mc_data,          "Use file to keep Monte Carlo run data.", NULL},
+    { "mc-unordered",     0, 0, G_OPTION_ARG_NONE,         &de_fit->mc_unordered,     "Do not maintain the sample order in the catalog.", NULL},
     { "mcbs-nbootstraps", 0, 0, G_OPTION_ARG_INT   ,       &de_fit->mcbs_nbootstraps, "Number of bootstraps per iteration of MCBS.", NULL},
     { "fiducial",         0, 0, G_OPTION_ARG_STRING,       &de_fit->fiducial,         "Use the fiducial model to resample.", NULL},
     { "kinematics-sigma", 0, 0, G_OPTION_ARG_NONE,         &de_fit->kinematics_sigma, "Compute q(z), E(z)^2 and E(z)^-2 plus 1sigma error bar from the Fisher matrix.", NULL},

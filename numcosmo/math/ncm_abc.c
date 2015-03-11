@@ -25,8 +25,8 @@
 
 /**
  * SECTION:ncm_abc
- * @title: Monte Carlo ABC Analysis
- * @short_description: Object implementing abstract Approximate Bayesian Computation (ABC)
+ * @title: NcmABC
+ * @short_description: Abstract class for Approximate Bayesian Computation (ABC).
  *
  * FIXME
  * 

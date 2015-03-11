@@ -25,8 +25,8 @@
 
 /**
  * SECTION:nc_cluster_mass_benson
- * @title: SZ Cluster Mass Distribution
- * @short_description: Sunyaev-Zel'dovich FIXME
+ * @title: NcClusterMassBenson
+ * @short_description: Sunyaev-Zel'dovich cluster mass distribution.
  *
  * FIXME
  */

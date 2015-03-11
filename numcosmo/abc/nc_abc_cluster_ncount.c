@@ -25,8 +25,8 @@
 
 /**
  * SECTION:nc_abc_cluster_ncount
- * @title: Monte Carlo ABC analysis for cluster number counts
- * @short_description: Object implementing Approximate Bayesian Computation (ABC) for cluster number counts 
+ * @title: NcABCClusterNCount
+ * @short_description: Object implementing Approximate Bayesian Computation (ABC) for cluster number counts.
  *
  * FIXME
  * 

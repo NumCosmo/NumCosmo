@@ -24,8 +24,8 @@
 
 /**
  * SECTION:nc_hicosmo_de_pad
- * @title: Dark Energy -- Jassal-Bagla-Padmanabhan
- * @short_description: Jassal-Bagla-Padmanabhan  dark energy equation of state parametrization
+ * @title: NcHICosmoDEPad
+ * @short_description: Dark Energy -- Jassal-Bagla-Padmanabhan of state parametrization.
  *
  * See <link linkend="XJassal2005">Jassal et al. (2005)</link>.
  * 

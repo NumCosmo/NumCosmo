@@ -25,8 +25,8 @@
 
 /**
  * SECTION:ncm_data
- * @title: Data Abstract Class
- * @short_description: Base class for implementing data objects
+ * @title: NcmData
+ * @short_description: Abstract class for implementing data objects.
  *
  * The #NcmData object represent generic data. This is the root object used when
  * building a statistical analysis. Every implementation of #NcmData envolves 

@@ -24,8 +24,8 @@
 
 /**
  * SECTION:ncm_mpsf_trig_int
- * @title: Trigonometric Integrals
- * @short_description: Sin integral implementation with support for multiple precision calculation
+ * @title: NcmMpsfTrigInt
+ * @short_description: Multiple precision sin integral implementation.
  *
  * FIXME
  * 

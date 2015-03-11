@@ -111,6 +111,8 @@ void ncm_fit_mcmc_run (NcmFitMCMC *mcmc, guint n);
 void ncm_fit_mcmc_run_lre (NcmFitMCMC *mcmc, guint prerun, gdouble lre);
 void ncm_fit_mcmc_mean_covar (NcmFitMCMC *mcmc);
 
+NcmMSetCatalog *ncm_fit_mcmc_get_catalog (NcmFitMCMC *mcmc);
+
 #define NCM_FIT_MCMC_MIN_FLUSH_INTERVAL (10.0)
 
 G_END_DECLS

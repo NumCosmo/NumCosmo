@@ -25,8 +25,8 @@
 
 /**
  * SECTION:nc_transfer_func_camb
- * @title: CAMB Transfer Function
- * @short_description: FIXME
+ * @title: NcTransferFuncCAMB
+ * @short_description: Transfer function using CAMB as backend.
  *
  * FIXME
  */

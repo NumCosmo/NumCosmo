@@ -24,8 +24,8 @@
 
 /**
  * SECTION:nc_data_snia
- * @title: SN Ia Data
- * @short_description: Helper function for obtaining Supernovae Ia data
+ * @title: NcDataSNIAId
+ * @short_description: Helper function for instantiating Supernovae Ia data.
  * 
  * FIXME
  * 
@@ -50,6 +50,7 @@ static const gchar *_nc_data_snia_cats[] = {
   "snls3_conley_2011_sys_stat.fits",
   "snls3_conley_2011_stat_only.fits",
   "jla_snls3_sdss_sys_stat.fits",
+  "jla_snls3_sdss_sys_stat_cmpl.fits",
 };
 
 /**
@@ -93,6 +94,7 @@ void
 nc_data_snia_load_cat (NcDataSNIACov *snia_cov, NcDataSNIAId id)
 {
   gchar *full_filename = nc_data_snia_get_catalog_by_id (id);
+  
 #ifdef NUMCOSMO_HAVE_CFITSIO
   nc_data_snia_cov_load (snia_cov, full_filename);
 #else

@@ -24,10 +24,11 @@
 
 /**
  * SECTION:nc_hicosmo_qlinear
- * @title: Linear Deceleration Parameter Model
- * @short_description: FIXME
+ * @title: NcHICosmoQLinear
+ * @short_description: Linear deceleration parameter kinetic model.
  *
  * FIXME
+ * 
  */
 
 #ifdef HAVE_CONFIG_H

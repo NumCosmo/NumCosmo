@@ -24,8 +24,8 @@
 
 /**
  * SECTION:nc_hicosmo
- * @title: Cosmological Model Abstract Class
- * @short_description: Class for implementing homogeneous and isotropic cosmological models 
+ * @title: NcHICosmo
+ * @short_description: Abstract class for implementing homogeneous and isotropic cosmological models. 
  *
  * FIXME
  *
@@ -679,4 +679,41 @@ NcmMSetFunc *
 nc_hicosmo_create_mset_func1 (NcHICosmoFunc1 f1)
 {
   return ncm_mset_func_new (&_nc_hicosmo_func1, 1, 1, f1, NULL);
+}
+
+typedef struct __NcHICosmoArrayFunc
+{
+  guint size;
+  NcHICosmoFunc1 f1;
+} _NcHICosmoArrayFunc;
+
+static void
+_nc_hicosmo_arrayfunc1 (NcmMSet *mset, gpointer obj, const gdouble *x, gdouble *f)
+{
+  _NcHICosmoArrayFunc *af1 = (_NcHICosmoArrayFunc *) obj;
+  guint i;
+
+  for (i = 0; i < af1->size; i++)
+  {
+    f[i] = af1->f1 (NC_HICOSMO (ncm_mset_peek (mset, nc_hicosmo_id ())), x[i]);
+  }
+}
+
+/**
+ * nc_hicosmo_create_mset_arrayfunc1:
+ * @f1: (scope notified): FIXME
+ * @size: function dimension
+ *
+ * Returns: (transfer full): FIXME
+ */
+NcmMSetFunc *
+nc_hicosmo_create_mset_arrayfunc1 (NcHICosmoFunc1 f1, guint size)
+{
+  g_assert_cmpuint (size, !=, 0);
+  _NcHICosmoArrayFunc *af1 = g_new (_NcHICosmoArrayFunc, 1);
+
+  af1->size = size;
+  af1->f1 = f1;
+
+  return ncm_mset_func_new (&_nc_hicosmo_arrayfunc1, size, size, af1, g_free);
 }

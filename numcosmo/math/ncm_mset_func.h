@@ -70,6 +70,7 @@ void ncm_mset_func_free (NcmMSetFunc *func);
 
 GPtrArray *ncm_mset_func_array_new (void);
 
+void ncm_mset_func_eval_direct (NcmMSetFunc *func, NcmMSet *mset, const gdouble *x, gdouble *res);
 gdouble ncm_mset_func_eval (NcmMSetFunc *func, NcmMSet *mset, const gdouble *x);
 gdouble ncm_mset_func_eval0 (NcmMSetFunc *func, NcmMSet *mset);
 gdouble ncm_mset_func_eval1 (NcmMSetFunc *func, NcmMSet *mset, const gdouble x);
@@ -77,6 +78,9 @@ gboolean ncm_mset_func_is_scalar (NcmMSetFunc *func);
 gboolean ncm_mset_func_is_vector (NcmMSetFunc *func, guint dim);
 gboolean ncm_mset_func_is_const (NcmMSetFunc *func);
 gboolean ncm_mset_func_has_params (NcmMSetFunc *func, guint np);
+
+guint ncm_mset_func_get_nparams (NcmMSetFunc *func);
+guint ncm_mset_func_get_dim (NcmMSetFunc *func);
 
 NcmVector *ncm_mset_func_numdiff_fparams (NcmMSetFunc *func, NcmMSet *mset, const gdouble *x, NcmVector *out);
 

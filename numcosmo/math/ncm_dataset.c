@@ -25,8 +25,8 @@
 
 /**
  * SECTION:ncm_dataset
- * @title: Data Set
- * @short_description: Object representing a set of NcmData objects
+ * @title: NcmDataset
+ * @short_description: A set of NcmData objects
  *
  * FIXME
  * 

@@ -25,8 +25,8 @@
 
 /**
  * SECTION:ncm_stats_dist1d
- * @title: Abstract Class for generic 1d probability distributions.
- * @short_description: Base class for implementing 1d probability distributions.
+ * @title: NcmStatsDist1d
+ * @short_description: Abstract class for implementing 1d probability distributions.
  *
  * FIXME
  * 

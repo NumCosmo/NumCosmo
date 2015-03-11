@@ -25,10 +25,11 @@
 
 /**
  * SECTION:ncm_fit_gsl_ls
- * @title: Least Squares -- GSL
- * @short_description: Interface for GSL least squares algorithms
+ * @title: NcmFitGSLLS
+ * @short_description: Best-fit finder -- GSL least squares algorithms.
  *
  * FIXME
+ * 
  */
 
 #ifdef HAVE_CONFIG_H

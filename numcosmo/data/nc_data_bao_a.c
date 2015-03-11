@@ -25,8 +25,8 @@
 
 /**
  * SECTION:nc_data_bao_a
- * @title: Baryon Oscillation Data -- Acoustic Scale
- * @short_description: BAO acoustic scale estimator
+ * @title: NcDataBaoA
+ * @short_description: Baryon oscillation data -- acoustic scale $A$.
  *
  * The acoustic scale is defined as 
  * $$ A \equiv D_V (z) \frac{\sqrt{\Omega_m H_0^2}}{z c},$$

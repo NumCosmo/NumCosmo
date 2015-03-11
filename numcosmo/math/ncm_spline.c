@@ -24,8 +24,8 @@
 
 /**
  * SECTION:ncm_spline
- * @title: Spline Abstract Class
- * @short_description: Base class for implementing splines
+ * @title: NcmSpline
+ * @short_description: Abstract class for implementing splines.
  *
  * This class comprises all functions to provide a #NcmSpline, together with 
  * all necessary methods.

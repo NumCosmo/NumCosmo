@@ -22,4 +22,4 @@
  * with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
  
-FILE *nc_de_open_dataout_file (NcHICosmo *model, gchar *prefix, gchar **filename);
+FILE *nc_de_open_dataout_file (NcHICosmo *model, const gchar *prefix, gchar **filename);

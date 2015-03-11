@@ -25,10 +25,11 @@
 
 /**
  * SECTION:nc_halo_bias_type_ps
- * @title: PS Halo Bias Function Type
- * @short_description: Press-Schechter FIXME
+ * @title: NcHaloBiasTypePS
+ * @short_description: Press-Schechter halo bias function type.
  *
  * FIXME
+ * 
  */
 
 #ifdef HAVE_CONFIG_H

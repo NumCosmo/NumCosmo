@@ -58,7 +58,7 @@ struct _NcClusterPhotozGaussClass
 
 GType nc_cluster_photoz_gauss_get_type (void) G_GNUC_CONST;
 
-NcClusterRedshift *nc_cluster_photoz_gauss_new ();
+NcClusterRedshift *nc_cluster_photoz_gauss_new (void);
 
 #define NC_CLUSTER_PHOTOZ_GAUSS_BIAS  (0)
 #define NC_CLUSTER_PHOTOZ_GAUSS_SIGMA (1)

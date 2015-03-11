@@ -91,12 +91,10 @@
 #include <numcosmo/math/ncm_fit_nlopt.h>
 #include <numcosmo/ncm_fit_nlopt_enum.h>
 #endif /* NUMCOSMO_HAVE_NLOPT */
+#include <numcosmo/math/ncm_fit_levmar.h>
 #include <numcosmo/math/ncm_fit_gsl_ls.h>
 #include <numcosmo/math/ncm_fit_gsl_mm.h>
 #include <numcosmo/math/ncm_fit_gsl_mms.h>
-#ifdef NUMCOSMO_HAVE_LEVMAR
-#include <numcosmo/math/ncm_fit_levmar.h>
-#endif /* NUMCOSMO_HAVE_LEVMAR */
 #include <numcosmo/math/ncm_mset_catalog.h>
 #include <numcosmo/math/ncm_mset_trans_kern.h>
 #include <numcosmo/math/ncm_mset_trans_kern_flat.h>

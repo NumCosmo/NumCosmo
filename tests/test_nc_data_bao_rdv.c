@@ -245,9 +245,9 @@ test_nc_data_bao_rdv_set_sample_beutler2011 (TestNcDataBaoRDV *test, gconstpoint
   gboolean R_DV = TRUE;
   
   const gdouble z0 = 0.106;
-  const gdouble bf0 = 0.336; 
+  const gdouble bf0 = 0.336 / 1.027; 
 
-  const gdouble icov00 = 1.0 / (0.015 * 0.015); 
+  const gdouble icov00 = 1.0 * 1.027 * 1.027 / (0.015 * 0.015); 
   
   g_assert (rdv != NULL);
   g_assert (NC_IS_DATA_BAO_RDV (rdv));
@@ -287,9 +287,9 @@ test_nc_data_bao_rdv_set_sample_padmanabhan2012 (TestNcDataBaoRDV *test, gconstp
   gboolean R_DV = FALSE;
 
   const gdouble z0 = 0.35;
-  const gdouble bf0 = 8.88; 
+  const gdouble bf0 = 8.88 * 1.025; 
 
-  const gdouble icov00 = 1.0 / (0.17 * 0.17); 
+  const gdouble icov00 = 1.0 / (0.17 * 0.17 * 1.025 * 1.025); 
   
   g_assert (rdv != NULL);
   g_assert (NC_IS_DATA_BAO_RDV (rdv));

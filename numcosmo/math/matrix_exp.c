@@ -24,8 +24,8 @@
  
 /**
  * SECTION:matrix_exp
- * @title: Matrix Exponential
- * @short_description: Simple functions to calculate matrix exponential (only 2x2 to date)
+ * @title: NcmMatrixExp
+ * @short_description: Simple functions to calculate matrix exponential (only 2x2).
  *
  * FIXME
  */

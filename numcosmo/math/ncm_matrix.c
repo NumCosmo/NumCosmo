@@ -24,7 +24,7 @@
 
 /**
  * SECTION:ncm_matrix
- * @title: Matrix Object
+ * @title: NcmMatrix
  * @short_description: Matrix object representing an array of doubles.
  *
  * This object defines the functions for allocating and accessing matrices.
@@ -135,6 +135,9 @@ _ncm_matrix_finalize (GObject *object)
     case NCM_MATRIX_GSL_MATRIX:
     case NCM_MATRIX_DERIVED:
       break;
+    default:
+      g_assert_not_reached ();
+      break;
   }
 
   cm->mv.matrix.data = NULL;
@@ -161,8 +164,8 @@ ncm_matrix_class_init (NcmMatrixClass *klass)
 
 /**
  * ncm_matrix_new:
- * @nrows: number of rows.
- * @ncols: number of columns.
+ * @nrows: number of rows
+ * @ncols: number of columns
  *
  * This function allocates memory for a new #NcmMatrix of doubles
  * with @nrows rows and @ncols columns.
@@ -170,7 +173,7 @@ ncm_matrix_class_init (NcmMatrixClass *klass)
  * Returns: A new #NcmMatrix.
  */
 NcmMatrix *
-ncm_matrix_new (guint nrows, guint ncols)
+ncm_matrix_new (const guint nrows, const guint ncols)
 {
   gdouble *d = g_slice_alloc (sizeof(gdouble) * nrows * ncols);
   NcmMatrix *cm = ncm_matrix_new_full (d, nrows, ncols, ncols, NULL, NULL);
@@ -179,13 +182,33 @@ ncm_matrix_new (guint nrows, guint ncols)
 }
 
 /**
+ * ncm_matrix_new0:
+ * @nrows: number of rows
+ * @ncols: number of columns
+ *
+ * This function allocates memory for a new #NcmMatrix of doubles
+ * with @nrows rows and @ncols columns and sets all elements to zero.
+ *
+ * Returns: (transfer full): A new #NcmMatrix.
+ */
+NcmMatrix *
+ncm_matrix_new0 (const guint nrows, const guint ncols)
+{
+  gdouble *d = g_slice_alloc0 (sizeof(gdouble) * nrows * ncols);
+  NcmMatrix *cm = ncm_matrix_new_full (d, nrows, ncols, ncols, NULL, NULL);
+  cm->type = NCM_MATRIX_SLICE;
+  return cm;
+}
+
+
+/**
  * ncm_matrix_new_full:
- * @d: pointer to the data.
- * @nrows: number of rows.
- * @ncols: number of columns.
- * @tda: row trailing dimension.
- * @pdata: (allow-none): descending data pointer.
- * @pfree: (scope notified) (allow-none): free function to be called when destroying the matrix.
+ * @d: pointer to the data
+ * @nrows: number of rows
+ * @ncols: number of columns
+ * @tda: row trailing dimension
+ * @pdata: (allow-none): descending data pointer
+ * @pfree: (scope notified) (allow-none): free function to be called when destroying the matrix
  *
  * This function allocates memory for a new #NcmMatrix of doubles
  * with @nrows rows and @ncols columns.
@@ -211,7 +234,7 @@ ncm_matrix_new_full (gdouble *d, guint nrows, guint ncols, guint tda, gpointer p
 
 /**
  * ncm_matrix_new_gsl: (skip)
- * @gm: matrix from GNU Scientific Library (GSL) to be converted into a #NcmMatrix.
+ * @gm: matrix from GNU Scientific Library (GSL) to be converted into a #NcmMatrix
  *
  * This function saves @gm internally and frees it when it is no longer necessary.
  * The @gm matrix must not be freed.
@@ -229,7 +252,7 @@ ncm_matrix_new_gsl (gsl_matrix *gm)
 
 /**
  * ncm_matrix_new_gsl_static: (skip)
- * @gm: matrix from GNU Scientific Library (GSL) to be converted into a #NcmMatrix.
+ * @gm: matrix from GNU Scientific Library (GSL) to be converted into a #NcmMatrix
  *
  * This function saves @gm internally and does not frees it.
  * The @gm matrix must be valid during the life of the created #NcmMatrix.
@@ -246,9 +269,9 @@ ncm_matrix_new_gsl_static (gsl_matrix *gm)
 
 /**
  * ncm_matrix_new_array:
- * @a: (element-type double): GArray of doubles to be converted into a #NcmMatrix.
- * @ncols: number of columns.
- *
+ * @a: (element-type double): GArray of doubles to be converted into a #NcmMatrix
+ * @ncols: number of columns
+ * 
  * The number of rows is defined dividing the lenght of @a by @ncols.
  * This function saves @a internally and frees it when it is no longer necessary.
  * The GArray @a must not be freed.
@@ -271,9 +294,9 @@ ncm_matrix_new_array (GArray *a, guint ncols)
 
 /**
  * ncm_matrix_new_data_slice: (skip)
- * @d: pointer to the first double allocated.
- * @nrows: number of rows.
- * @ncols: number of columns.
+ * @d: pointer to the first double allocated
+ * @nrows: number of rows
+ * @ncols: number of columns
  *
  * This function returns a #NcmMatrix of the array @d allocated using g_slice function.
  * It saves @d internally and frees it when it is no longer necessary.
@@ -293,9 +316,9 @@ ncm_matrix_new_data_slice (gdouble *d, guint nrows, guint ncols)
 
 /**
  * ncm_matrix_new_data_malloc: (skip)
- * @d: pointer to the first double allocated.
- * @nrows: number of rows.
- * @ncols: number of columns.
+ * @d: pointer to the first double allocated
+ * @nrows: number of rows
+ * @ncols: number of columns
  *
  * This function returns a #NcmMatrix of the array @d allocated using malloc.
  * It saves @d internally and frees it when it is no longer necessary.
@@ -313,9 +336,9 @@ ncm_matrix_new_data_malloc (gdouble *d, guint nrows, guint ncols)
 
 /**
  * ncm_matrix_new_data_static: (skip)
- * @d: pointer to the first double allocated.
- * @nrows: number of rows.
- * @ncols: number of columns.
+ * @d: pointer to the first double allocated
+ * @nrows: number of rows
+ * @ncols: number of columns
  *
  * This function returns a #NcmMatrix of the array @d.
  * The memory allocated is kept during all time life of the object and
@@ -334,10 +357,10 @@ ncm_matrix_new_data_static (gdouble *d, guint nrows, guint ncols)
 
 /**
  * ncm_matrix_new_data_static_tda: (skip)
- * @d: pointer to the first double allocated.
- * @nrows: number of rows.
- * @ncols: number of columns.
- * @tda: physical number of columns which may differ from the corresponding dimension of the matrix.
+ * @d: pointer to the first double allocated
+ * @nrows: number of rows
+ * @ncols: number of columns
+ * @tda: physical number of columns which may differ from the corresponding dimension of the matrix
  *
  * This function returns a #NcmMatrix of the array @d with a physical number of columns tda which may differ
  * from the corresponding dimension of the matrix. The matrix has @nrows rows and @ncols columns, and the physical
@@ -373,9 +396,9 @@ ncm_matrix_new_variant (GVariant *var)
 
 /**
  * ncm_matrix_const_new_data:
- * @d: pointer to the first double allocated.
- * @nrows: number of rows.
- * @ncols: number of cols.
+ * @d: pointer to the first double allocated
+ * @nrows: number of rows
+ * @ncols: number of cols
  *
  * This function returns a constant #NcmMatrix of the array @d.
  * The memory allocated is kept during all time life of the object and
@@ -420,11 +443,11 @@ ncm_matrix_const_new_variant (GVariant *var)
 
 /**
  * ncm_matrix_get_submatrix:
- * @cm: a #NcmMatrix.
- * @k1: row index of the original matrix @cm.
- * @k2: column index of the original matrix @cm.
- * @nrows: number of rows of the submatrix.
- * @ncols: number of columns of the submatrix.
+ * @cm: a #NcmMatrix
+ * @k1: row index of the original matrix @cm
+ * @k2: column index of the original matrix @cm
+ * @nrows: number of rows of the submatrix
+ * @ncols: number of columns of the submatrix
  *
  * This function returns a submatrix #NcmMatrix of the matrix @cm.
  * The upper-left element of the submatrix is the element (@k1,@k2) of the original matrix.
@@ -447,8 +470,8 @@ ncm_matrix_get_submatrix (NcmMatrix *cm, guint k1, guint k2, guint nrows, guint 
 
 /**
  * ncm_matrix_get_col:
- * @cm: a #NcmMatrix.
- * @col: column index.
+ * @cm: a #NcmMatrix
+ * @col: column index
  *
  * This function returns the elements of the @col column of the matrix @cm
  * into a #NcmVector.
@@ -470,8 +493,8 @@ ncm_matrix_get_col (NcmMatrix *cm, const guint col)
 
 /**
  * ncm_matrix_get_row:
- * @cm: a #NcmMatrix.
- * @row: row index.
+ * @cm: a #NcmMatrix
+ * @row: row index
  *
  * This function returns the elements of the @row row of the matrix @cm
  * into a #NcmVector.
@@ -493,7 +516,7 @@ ncm_matrix_get_row (NcmMatrix *cm, const guint row)
 
 /**
  * ncm_matrix_set_from_variant:
- * @cm: a #NcmMatrix.
+ * @cm: a #NcmMatrix
  * @var: a #GVariant of type "aad"
  *
  * This function sets the values of @cm using the variant @var.
@@ -538,7 +561,7 @@ ncm_matrix_set_from_variant (NcmMatrix *cm, GVariant *var)
 
 /**
  * ncm_matrix_get_variant:
- * @cm: a #NcmMatrix.
+ * @cm: a #NcmMatrix
  *
  * This function gets a variant of values taken from @cm.
  * 
@@ -571,7 +594,7 @@ ncm_matrix_get_variant (NcmMatrix *cm)
 
 /**
  * ncm_matrix_peek_variant:
- * @cm: a #NcmMatrix.
+ * @cm: a #NcmMatrix
  *
  * This function gets a variant of values taken from @cm using the same memory.
  * The matrix @cm should not be modified during the variant existance.
@@ -610,8 +633,8 @@ ncm_matrix_peek_variant (NcmMatrix *cm)
 
 /**
  * ncm_matrix_set_from_data:
- * @cm: a #NcmMatrix.
- * @data: (array) (element-type double): Array of doubles.
+ * @cm: a #NcmMatrix
+ * @data: (array) (element-type double): Array of doubles
  *
  * This function sets the valuus of @cm using @data. Data
  * must have the same size as #NcmMatrix.
@@ -635,8 +658,8 @@ ncm_matrix_set_from_data (NcmMatrix *cm, gdouble *data)
 
 /**
  * ncm_matrix_set_from_array:
- * @cm: a #NcmMatrix.
- * @a: (array) (element-type double): Array of doubles.
+ * @cm: a #NcmMatrix
+ * @a: (array) (element-type double): Array of doubles
  *
  * This function sets the valuus of @cm using @data. Data
  * must have the same size as #NcmMatrix.
@@ -662,7 +685,7 @@ ncm_matrix_set_from_array (NcmMatrix *cm, GArray *a)
 
 /**
  * ncm_matrix_free:
- * @cm: a #NcmMatrix.
+ * @cm: a #NcmMatrix
  *
  * Atomically decrements the reference count of @cm by one. If the reference count drops to 0,
  * all memory allocated by @cm is released.
@@ -676,7 +699,7 @@ ncm_matrix_free (NcmMatrix *cm)
 
 /**
  * ncm_matrix_clear:
- * @cm: a #NcmMatrix.
+ * @cm: a #NcmMatrix
  *
  * Atomically decrements the reference count of @cm by one. If the reference count drops to 0,
  * all memory allocated by @cm is released. The pointer is set to NULL.
@@ -690,7 +713,7 @@ ncm_matrix_clear (NcmMatrix **cm)
 
 /**
  * ncm_matrix_const_free:
- * @cm: a constant #NcmMatrix.
+ * @cm: a constant #NcmMatrix
  *
  * Atomically decrements the reference count of @cv by one. If the reference count drops to 0,
  * all memory allocated by @cv is released.
@@ -701,7 +724,6 @@ ncm_matrix_const_free (const NcmMatrix *cm)
 {
   ncm_matrix_free (NCM_MATRIX (cm));
 }
-
 
 /**
  * ncm_matrix_dup:
@@ -762,7 +784,8 @@ ncm_matrix_add_mul (NcmMatrix *cm, const gdouble alpha, NcmMatrix *b)
 
 /**
  * ncm_matrix_dsymm:
- * @cm: FIXME
+ * @cm: a #NcmMatrix
+ * @UL: char indicating 'U'pper or 'L'ower matrix 
  * @alpha: FIXME
  * @b: FIXME
  * @beta: FIXME
@@ -772,14 +795,15 @@ ncm_matrix_add_mul (NcmMatrix *cm, const gdouble alpha, NcmMatrix *b)
  *
  */
 void 
-ncm_matrix_dsymm (NcmMatrix *cm, const gdouble alpha, NcmMatrix *b, const gdouble beta, NcmMatrix *c)
+ncm_matrix_dsymm (NcmMatrix *cm, gchar UL, const gdouble alpha, NcmMatrix *b, const gdouble beta, NcmMatrix *c)
 {
+  g_assert (UL == 'U' || UL == 'L');
   g_assert_cmpuint (ncm_matrix_ncols (cm), ==, ncm_matrix_ncols (b));
   g_assert_cmpuint (ncm_matrix_nrows (cm), ==, ncm_matrix_nrows (b));
   g_assert_cmpuint (ncm_matrix_ncols (cm), ==, ncm_matrix_ncols (c));
   g_assert_cmpuint (ncm_matrix_nrows (cm), ==, ncm_matrix_nrows (c));
 
-  cblas_dsymm (CblasRowMajor, CblasLeft, CblasLower, ncm_matrix_nrows (cm), ncm_matrix_ncols (cm), 
+  cblas_dsymm (CblasRowMajor, CblasLeft, (UL == 'U') ? CblasUpper : CblasLower, ncm_matrix_nrows (cm), ncm_matrix_ncols (cm), 
                alpha, 
                ncm_matrix_data (cm), ncm_matrix_gsl (cm)->tda,
                ncm_matrix_data (b), ncm_matrix_gsl (b)->tda, 
@@ -789,16 +813,17 @@ ncm_matrix_dsymm (NcmMatrix *cm, const gdouble alpha, NcmMatrix *b, const gdoubl
 
 /**
  * ncm_matrix_cholesky_decomp:
- * @cm: a #NcmMatrix.
+ * @cm: a #NcmMatrix
+ * @UL: char indicating 'U'pper or 'L'ower matrix
  *
  * Calculates inplace the Cholesky decomposition for a symmetric positive
  * definite matrix.
  * 
  */
 void 
-ncm_matrix_cholesky_decomp (NcmMatrix *cm)
+ncm_matrix_cholesky_decomp (NcmMatrix *cm, gchar UL)
 {
-  gint ret = ncm_lapack_dpotrf ('L', ncm_matrix_nrows (cm), ncm_matrix_data (cm), ncm_matrix_nrows (cm));
+  gint ret = ncm_lapack_dpotrf (UL, ncm_matrix_nrows (cm), ncm_matrix_data (cm), ncm_matrix_nrows (cm));
   if (ret != 0)
   {
     g_error ("ncm_matrix_cholesky_decomp[ncm_lapack_dpotrf]: %d.", ret);
@@ -807,30 +832,26 @@ ncm_matrix_cholesky_decomp (NcmMatrix *cm)
 
 /**
  * ncm_matrix_cholesky_inverse:
- * @cm: a #NcmMatrix.
- *
- * Calculates inplace the Cholesky decomposition for a symmetric positive
- * definite matrix and afterwards its inverse.
+ * @cm: a #NcmMatrix
+ * @UL: char indicating 'U'pper or 'L'ower matrix
+ * 
+ * Calculates inplace the inverse of @cm that has been previously decomposed by
+ * the Cholesky decomposition ncm_matrix_cholesky_decomp().
  * 
  */
 void 
-ncm_matrix_cholesky_inverse (NcmMatrix *cm)
+ncm_matrix_cholesky_inverse (NcmMatrix *cm, gchar UL)
 {
-  gint ret = ncm_lapack_dpotrf ('L', ncm_matrix_nrows (cm), ncm_matrix_data (cm), ncm_matrix_nrows (cm));
-  if (ret != 0)
-    g_error ("ncm_matrix_cholesky_decomp[ncm_lapack_dpotrf]: %d.", ret);
-
-  ret = ncm_lapack_dpotri ('L', ncm_matrix_nrows (cm), ncm_matrix_data (cm), ncm_matrix_nrows (cm));
+  gint ret = ncm_lapack_dpotri (UL, ncm_matrix_nrows (cm), ncm_matrix_data (cm), ncm_matrix_nrows (cm));
   if (ret != 0)
     g_error ("ncm_matrix_cholesky_decomp[ncm_lapack_dpotri]: %d.", ret);
 }
 
-
 /**
  * ncm_matrix_log_vals:
- * @cm: a #NcmMatrix.
- * @prefix: the prefixed text.
- * @format: double format.
+ * @cm: a #NcmMatrix
+ * @prefix: the prefixed text
+ * @format: double format
  * 
  * Prints to the log the values of @cm. 
  * 
@@ -853,7 +874,7 @@ ncm_matrix_log_vals (NcmMatrix *cm, gchar *prefix, gchar *format)
 
 /**
  * ncm_matrix_new_gsl_const: (skip)
- * @m: matrix from GNU Scientific Library (GSL).
+ * @m: matrix from GNU Scientific Library (GSL)
  *
  * This function converts @m into a constant #NcmMatrix.
  *
@@ -861,24 +882,32 @@ ncm_matrix_log_vals (NcmMatrix *cm, gchar *prefix, gchar *format)
  */
 /**
  * ncm_matrix_get:
- * @cm: a constant #NcmMatrix.
- * @i: row index.
- * @j: column index.
+ * @cm: a constant #NcmMatrix
+ * @i: row index
+ * @j: column index
  *
  *
  * Returns: The (@i,@j)-th element of the matrix @cm.
  */
 /**
  * ncm_matrix_ptr:
- * @cm: a #NcmMatrix.
- * @i: row index.
- * @j: column index.
+ * @cm: a #NcmMatrix
+ * @i: row index
+ * @j: column index
  *
  * Returns: A pointer to the (@i,@j)-th element of the matrix @cm.
  */
 /**
+ * ncm_matrix_const_ptr:
+ * @cm: a #NcmMatrix
+ * @i: row index
+ * @j: column index
+ *
+ * Returns: A constant pointer to the (@i,@j)-th element of the matrix @cm.
+ */
+/**
  * ncm_matrix_ref:
- * @cm: a #NcmMatrix.
+ * @cm: a #NcmMatrix
  *
  * Increase the reference count of @cm by one.
  *
@@ -886,17 +915,27 @@ ncm_matrix_log_vals (NcmMatrix *cm, gchar *prefix, gchar *format)
  */
 /**
  * ncm_matrix_set:
- * @cm: a #NcmMatrix.
- * @i: row index.
- * @j: column index.
- * @val: a double.
+ * @cm: a #NcmMatrix
+ * @i: row index
+ * @j: column index
+ * @val: a double
  *
  * This function sets the value of the (@i,@j)-th element of the matrix @cm to @val.
  *
  */
 /**
+ * ncm_matrix_addto:
+ * @cm: a #NcmMatrix
+ * @i: row index
+ * @j: column index
+ * @val: a double
+ * 
+ * This function adds the value @val to the (@i,@j)-th element of the matrix @cm.
+ * 
+ */
+/**
  * ncm_matrix_transpose:
- * @cm: a #NcmMatrix.
+ * @cm: a #NcmMatrix
  *
  * This function replaces the matrix @cm by its transpose by copying the elements of the matrix in-place.
  * The matrix must be square for this operation to be possible.
@@ -904,7 +943,7 @@ ncm_matrix_log_vals (NcmMatrix *cm, gchar *prefix, gchar *format)
  */
 /**
  * ncm_matrix_set_identity:
- * @cm: a #NcmMatrix.
+ * @cm: a #NcmMatrix
  *
  * This function sets the elements of the matrix @cm to the corresponding elements of the identity matrix,
  * i.e. a unit diagonal with all off-diagonal elements zero. This applies to both square and rectangular matrices.
@@ -912,15 +951,23 @@ ncm_matrix_log_vals (NcmMatrix *cm, gchar *prefix, gchar *format)
  */
 /**
  * ncm_matrix_set_zero:
- * @cm: a #NcmMatrix.
+ * @cm: a #NcmMatrix
  *
  * This function sets all the elements of the matrix @cm to zero.
  *
  */
 /**
+ * ncm_matrix_set_all:
+ * @cm: a #NcmMatrix
+ * @val: a double
+ *
+ * This function sets all the elements of the matrix @cm to @val.
+ *
+ */
+/**
  * ncm_matrix_scale:
- * @cm: a #NcmMatrix.
- * @val: a double.
+ * @cm: a #NcmMatrix
+ * @val: a double
  *
  * This function multiplies the elements of the matrix @cm by the constant factor @val.
  * The result is stored in @cm.
@@ -928,8 +975,8 @@ ncm_matrix_log_vals (NcmMatrix *cm, gchar *prefix, gchar *format)
  */
 /**
  * ncm_matrix_memcpy:
- * @cm1: a #NcmMatrix.
- * @cm2: a #NcmMatrix.
+ * @cm1: a #NcmMatrix
+ * @cm2: a #NcmMatrix
  *
  * This function copies the elements of the matrix @cm1 into the matrix @cm2.
  * The two matrices must have the same size.
@@ -937,9 +984,9 @@ ncm_matrix_log_vals (NcmMatrix *cm, gchar *prefix, gchar *format)
  */
 /**
  * ncm_matrix_set_col:
- * @cm: a #NcmMatrix.
- * @n: column index.
- * @cv: a constant #NcmVector.
+ * @cm: a #NcmMatrix
+ * @n: column index
+ * @cv: a constant #NcmVector
  *
  * This function copies the elements of the vector @cv into the @n-th column of the matrix @cm.
  * The length of the vector must be the same as the length of the column.
@@ -947,7 +994,7 @@ ncm_matrix_log_vals (NcmMatrix *cm, gchar *prefix, gchar *format)
  */
 /**
  * ncm_matrix_get_array:
- * @cm: a #NcmMatrix.
+ * @cm: a #NcmMatrix
  *
  * FIXME
  *
@@ -955,7 +1002,7 @@ ncm_matrix_log_vals (NcmMatrix *cm, gchar *prefix, gchar *format)
  */
 /**
  * ncm_matrix_fast_get:
- * @cm: a #NcmMatrix.
+ * @cm: a #NcmMatrix
  * @ij: FIXME
  *
  * FIXME
@@ -964,7 +1011,7 @@ ncm_matrix_log_vals (NcmMatrix *cm, gchar *prefix, gchar *format)
  */
 /**
  * ncm_matrix_fast_set:
- * @cm: a #NcmMatrix.
+ * @cm: a #NcmMatrix
  * @ij: FIXME
  * @val: FIXME
  *
@@ -973,7 +1020,7 @@ ncm_matrix_log_vals (NcmMatrix *cm, gchar *prefix, gchar *format)
  */
 /**
  * ncm_matrix_gsl: (skip)
- * @cm: a #NcmMatrix.
+ * @cm: a #NcmMatrix
  *
  * FIXME
  * 
@@ -981,7 +1028,7 @@ ncm_matrix_log_vals (NcmMatrix *cm, gchar *prefix, gchar *format)
  */
 /**
  * ncm_matrix_const_gsl: (skip)
- * @cm: a #NcmMatrix.
+ * @cm: a #NcmMatrix
  *
  * FIXME
  *
@@ -989,7 +1036,7 @@ ncm_matrix_log_vals (NcmMatrix *cm, gchar *prefix, gchar *format)
  */
 /**
  * ncm_matrix_col_len:
- * @cm: a #NcmMatrix.
+ * @cm: a #NcmMatrix
  *
  * FIXME
  *
@@ -997,7 +1044,7 @@ ncm_matrix_log_vals (NcmMatrix *cm, gchar *prefix, gchar *format)
  */
 /**
  * ncm_matrix_row_len:
- * @cm: a #NcmMatrix.
+ * @cm: a #NcmMatrix
  *
  * FIXME
  *
@@ -1005,7 +1052,7 @@ ncm_matrix_log_vals (NcmMatrix *cm, gchar *prefix, gchar *format)
  */
 /**
  * ncm_matrix_nrows:
- * @cm: a #NcmMatrix.
+ * @cm: a #NcmMatrix
  *
  * FIXME
  *
@@ -1013,7 +1060,7 @@ ncm_matrix_log_vals (NcmMatrix *cm, gchar *prefix, gchar *format)
  */
 /**
  * ncm_matrix_ncols:
- * @cm: a #NcmMatrix.
+ * @cm: a #NcmMatrix
  *
  * FIXME
  *
@@ -1021,7 +1068,7 @@ ncm_matrix_log_vals (NcmMatrix *cm, gchar *prefix, gchar *format)
  */
 /**
  * ncm_matrix_size:
- * @cm: a #NcmMatrix.
+ * @cm: a #NcmMatrix
  *
  * Calculates the total size of the matrix, ncols * nrows.
  *
@@ -1029,14 +1076,22 @@ ncm_matrix_log_vals (NcmMatrix *cm, gchar *prefix, gchar *format)
  */
 /**
  * ncm_matrix_tda:
- * @cm: a #NcmMatrix.
+ * @cm: a #NcmMatrix
  *
  *
  * Returns: The matrix tda.
  */
 /**
  * ncm_matrix_data:
- * @cm: a #NcmMatrix.
+ * @cm: a #NcmMatrix
+ *
+ * FIXME
+ *
+ * Returns: (transfer none): FIXME
+ */
+/**
+ * ncm_matrix_const_data:
+ * @cm: a #NcmMatrix
  *
  * FIXME
  *

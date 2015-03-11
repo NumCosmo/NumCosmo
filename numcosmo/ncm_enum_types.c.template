@@ -5,6 +5,12 @@
 #endif /* HAVE_CONFIG_H */
 #include <numcosmo/numcosmo.h>
 
+/**
+ * SECTION:ncm_enum_types     
+ * @title: NcmEnumTypes                           
+ * @short_description: Automaticaly generated enum types from NumCosmoMath library.
+ *   
+ */
 /*** END file-header ***/
 
 /*** BEGIN file-production ***/
@@ -38,3 +44,4 @@ GType
 }
  
 /*** END value-tail ***/
+

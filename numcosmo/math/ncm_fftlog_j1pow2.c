@@ -25,8 +25,8 @@
 
 /**
  * SECTION:ncm_fftlog_j1pow2
- * @title: Logarithm Fast Fourier Algorithm for Spherical Bessel One Squared
- * @short_description: Object implementing logarithm fast fourier transform for a kernel with a spherical bessel of order one squared.
+ * @title: NcmFftlogJ1pow2
+ * @short_description: Logarithm fast fourier transform for a kernel with a spherical bessel of order one squared.
  *
  * Kernel $(j_1(x)/x)^2$.
  * 

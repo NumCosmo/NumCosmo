@@ -24,8 +24,8 @@
 
 /**
  * SECTION:ncm_cfg
- * @title: Library Configuration
- * @short_description: Library configuration and helper functions
+ * @title: NcmCfg
+ * @short_description: Library configuration and helper functions.
  *
  * FIXME
  * 
@@ -52,7 +52,6 @@
 #include "perturbations/nc_hipert_iadiab.h"
 #include "model/nc_hicosmo_qconst.h"
 #include "model/nc_hicosmo_qlinear.h"
-#include "model/nc_hicosmo_qpw.h"
 #include "model/nc_hicosmo_qspline.h"
 #include "model/nc_hicosmo_lcdm.h"
 #include "model/nc_hicosmo_de_xcdm.h"
@@ -108,10 +107,7 @@
 #ifdef NUMCOSMO_HAVE_FFTW3
 #include <fftw3.h>
 #endif /* NUMCOSMO_HAVE_FFTW3 */
-
-#ifdef HAVE_LIBCUBA
 #include <cuba.h>
-#endif
 
 #ifndef G_VALUE_INIT
 #define G_VALUE_INIT {0}
@@ -173,13 +169,25 @@ _ncm_cfg_log_error (const gchar *log_domain, GLogLevelFlags log_level, const gch
   abort ();
 }
 
-
 void clencurt_gen (int M);
+
+#ifdef HAVE_OPENBLAS_SET_NUM_THREADS
+  void openblas_set_num_threads (gint);
+#endif /* HAVE_OPENBLAS_SET_NUM_THREADS */
+
+#ifdef HAVE_MKL_SET_NUM_THREADS
+  void MKL_Set_Num_Threads (gint);
+#endif /* HAVE_MKL_SET_NUM_THREADS */
 
 /**
  * ncm_cfg_init:
  *
- * FIXME
+ * Main library configuration function. Must be called before any 
+ * other function of NumCosmo.
+ * 
+ * Initializes internal variables and sets
+ * all other library number of threads to one.
+ * 
  */
 void
 ncm_cfg_init (void)
@@ -192,18 +200,22 @@ ncm_cfg_init (void)
   if (!g_file_test (numcosmo_path, G_FILE_TEST_EXISTS))
     g_mkdir_with_parents (numcosmo_path, 0755);
 
-#ifndef HAVE_LIBCUBA
-  clencurt_gen (19);
-#else
+#ifdef HAVE_OPENBLAS_SET_NUM_THREADS
+  openblas_set_num_threads (1);
+#endif /* HAVE_OPENBLAS_SET_NUM_THREADS */
+
+#ifdef HAVE_MKL_SET_NUM_THREADS
+  MKL_Set_Num_Threads (1);
+#endif /* HAVE_MKL_SET_NUM_THREADS */
+  
   g_setenv ("CUBACORES", "0", TRUE);
   g_setenv ("CUBACORESMAX", "0", TRUE);
   g_setenv ("CUBAACCEL", "0", TRUE);
   g_setenv ("CUBAACCELMAX", "0", TRUE);
-#  ifdef HAVE_LIBCUBA_4_0
+#ifdef HAVE_LIBCUBA_4_0
   cubaaccel (0, 0);
   cubacores (0, 0);
-#  endif
-#endif /* !HAVE_LIBCUBA */
+#endif
 
   gsl_err = gsl_set_error_handler_off ();
 #if (GLIB_MAJOR_VERSION == 2) && (GLIB_MINOR_VERSION < 32)
@@ -246,7 +258,6 @@ ncm_cfg_init (void)
 
   ncm_cfg_register_obj (NC_TYPE_HICOSMO_QCONST);
   ncm_cfg_register_obj (NC_TYPE_HICOSMO_QLINEAR);
-  ncm_cfg_register_obj (NC_TYPE_HICOSMO_QPW);
   ncm_cfg_register_obj (NC_TYPE_HICOSMO_QSPLINE);
   ncm_cfg_register_obj (NC_TYPE_HICOSMO_LCDM);
   ncm_cfg_register_obj (NC_TYPE_HICOSMO_DE_XCDM);
@@ -358,11 +369,12 @@ ncm_cfg_register_obj (GType obj)
 void
 ncm_cfg_set_logfile (gchar *filename)
 {
-  FILE *out = fopen (filename, "w");
+  FILE *out = g_fopen (filename, "w");
+  
   if (out != NULL)
     _log_stream = out;
   else
-    g_error ("ncm_cfg_set_logfile: Can't open logfile (%s)", filename);
+    g_error ("ncm_cfg_set_logfile: Can't open logfile `%s' %s", filename, g_strerror (errno));
 }
 
 /**
@@ -399,7 +411,7 @@ ncm_cfg_logfile_flush_now (void) { fflush (_log_stream); }
  * FIXME
  */
 void
-ncm_message (gchar *msg, ...)
+ncm_message (const gchar *msg, ...)
 {
   va_list ap;
   va_start(ap, msg);
@@ -531,7 +543,7 @@ ncm_cfg_get_fullpath (const gchar *filename, ...)
  * Returns: FIXME
  */
 void
-ncm_cfg_keyfile_to_arg (GKeyFile *kfile, gchar *group_name, GOptionEntry *entries, gchar **argv, gint *argc)
+ncm_cfg_keyfile_to_arg (GKeyFile *kfile, const gchar *group_name, GOptionEntry *entries, gchar **argv, gint *argc)
 {
   if (g_key_file_has_group (kfile, group_name))
   {
@@ -611,7 +623,7 @@ ncm_cfg_string_to_comment (const gchar *str)
  *
  */
 void
-ncm_cfg_entries_to_keyfile (GKeyFile *kfile, gchar *group_name, GOptionEntry *entries)
+ncm_cfg_entries_to_keyfile (GKeyFile *kfile, const gchar *group_name, GOptionEntry *entries)
 {
   GError *error = NULL;
   gint i;
@@ -666,6 +678,7 @@ ncm_cfg_entries_to_keyfile (GKeyFile *kfile, gchar *group_name, GOptionEntry *en
         g_key_file_set_double (kfile, group_name, entries[i].long_name, arg_d);
         break;
       }
+      case G_OPTION_ARG_CALLBACK:
       default:
         skip_comment = TRUE;
         //g_error ("ncm_cfg_entries_to_keyfile: cannot convert entry type %d to keyfile", entries[i].arg);
@@ -751,7 +764,7 @@ ncm_cfg_enum_get_value (GType enum_type, guint n)
  *
  */
 void
-ncm_cfg_enum_print_all (GType enum_type, gchar *header)
+ncm_cfg_enum_print_all (GType enum_type, const gchar *header)
 {
   GEnumClass *enum_class;
   GEnumValue *snia;
@@ -802,7 +815,7 @@ ncm_cfg_enum_print_all (GType enum_type, gchar *header)
  * Returns: FIXME
  */
 gboolean
-ncm_cfg_load_fftw_wisdom (gchar *filename, ...)
+ncm_cfg_load_fftw_wisdom (const gchar *filename, ...)
 {
   FILE *wis;
   gchar *file;
@@ -820,6 +833,11 @@ ncm_cfg_load_fftw_wisdom (gchar *filename, ...)
   if (g_file_test (full_filename, G_FILE_TEST_EXISTS))
   {
     wis = g_fopen (full_filename, "r");
+    if (wis == NULL)
+    {
+      g_error ("ncm_cfg_load_fftw_wisdom: cannot open wisdom file %s [%s].", full_filename, g_strerror (errno));
+    }
+        
     fftw_import_wisdom_from_file (wis);
     fclose (wis);
     ret = TRUE;
@@ -839,7 +857,7 @@ ncm_cfg_load_fftw_wisdom (gchar *filename, ...)
  * Returns: FIXME
  */
 gboolean
-ncm_cfg_save_fftw_wisdom (gchar *filename, ...)
+ncm_cfg_save_fftw_wisdom (const gchar *filename, ...)
 {
   FILE *wis;
   gchar *file;
@@ -856,7 +874,7 @@ ncm_cfg_save_fftw_wisdom (gchar *filename, ...)
   wis = g_fopen (full_filename, "w");
   if (wis == NULL)
   {
-    g_error ("ncm_cfg_save_fftw_wisdom: cannot save wisdown file %s [%s].", full_filename, g_strerror (errno));
+    g_error ("ncm_cfg_save_fftw_wisdom: cannot save wisdom file %s [%s].", full_filename, g_strerror (errno));
   }
 
   fftw_export_wisdom_to_file(wis);
@@ -868,7 +886,7 @@ ncm_cfg_save_fftw_wisdom (gchar *filename, ...)
 #endif /* NUMCOSMO_HAVE_FFTW3 */
 
 /**
- * ncm_cfg_fopen: (skip)
+ * ncm_cfg_fopen:
  * @filename: FIXME
  * @mode: FIXME
  * @...: FIXME
@@ -878,7 +896,7 @@ ncm_cfg_save_fftw_wisdom (gchar *filename, ...)
  * Returns: FIXME
  */
 FILE *
-ncm_cfg_fopen (gchar *filename, gchar *mode, ...)
+ncm_cfg_fopen (const gchar *filename, const gchar *mode, ...)
 {
   FILE *F;
   gchar *file;
@@ -893,6 +911,11 @@ ncm_cfg_fopen (gchar *filename, gchar *mode, ...)
   full_filename = g_build_filename (numcosmo_path, file, NULL);
 
   F = g_fopen (full_filename, mode);
+  if (F == NULL)
+  {
+    g_error ("ncm_cfg_fopen: cannot open file %s [%s].", full_filename, g_strerror (errno));
+  }
+  
   g_free (file);
   g_free (full_filename);
   return F;
@@ -909,7 +932,7 @@ ncm_cfg_fopen (gchar *filename, gchar *mode, ...)
  * Returns: FIXME
  */
 FILE *
-ncm_cfg_vfopen (gchar *filename, gchar *mode, va_list ap)
+ncm_cfg_vfopen (const gchar *filename, const gchar *mode, va_list ap)
 {
   FILE *F;
   gchar *file;
@@ -920,6 +943,11 @@ ncm_cfg_vfopen (gchar *filename, gchar *mode, va_list ap)
   full_filename = g_build_filename (numcosmo_path, file, NULL);
 
   F = g_fopen (full_filename, mode);
+  if (F == NULL)
+  {
+    g_error ("ncm_cfg_fopen: cannot open file %s [%s].", full_filename, g_strerror (errno));
+  }
+
   g_free (file);
   g_free (full_filename);
   return F;
@@ -935,7 +963,7 @@ ncm_cfg_vfopen (gchar *filename, gchar *mode, va_list ap)
  * Returns: FIXME
  */
 gboolean
-ncm_cfg_exists (gchar *filename, ...)
+ncm_cfg_exists (const gchar *filename, ...)
 {
   gboolean exists;
   gchar *file;
@@ -967,7 +995,7 @@ ncm_cfg_exists (gchar *filename, ...)
  * Returns: FIXME
  */
 gboolean
-ncm_cfg_load_spline (gchar *filename, const gsl_interp_type *stype, NcmSpline **s, ...)
+ncm_cfg_load_spline (const gchar *filename, const gsl_interp_type *stype, NcmSpline **s, ...)
 {
   guint64 size;
   NcmVector *xv, *yv;
@@ -1025,7 +1053,7 @@ ncm_cfg_load_spline (gchar *filename, const gsl_interp_type *stype, NcmSpline **
  * Returns: FIXME
  */
 gboolean
-ncm_cfg_save_spline (gchar *filename, NcmSpline *s, ...)
+ncm_cfg_save_spline (const gchar *filename, NcmSpline *s, ...)
 {
   guint64 size;
   va_list ap;
@@ -1062,7 +1090,7 @@ ncm_cfg_save_spline (gchar *filename, NcmSpline *s, ...)
  * Returns: FIXME
  */
 gboolean
-ncm_cfg_load_vector (gchar *filename, gsl_vector *v, ...)
+ncm_cfg_load_vector (const gchar *filename, gsl_vector *v, ...)
 {
   va_list ap;
 
@@ -1088,7 +1116,7 @@ ncm_cfg_load_vector (gchar *filename, gsl_vector *v, ...)
  * Returns: FIXME
  */
 gboolean
-ncm_cfg_save_vector (gchar *filename, gsl_vector *v, ...)
+ncm_cfg_save_vector (const gchar *filename, gsl_vector *v, ...)
 {
   va_list ap;
 
@@ -1114,7 +1142,7 @@ ncm_cfg_save_vector (gchar *filename, gsl_vector *v, ...)
  * Returns: FIXME
  */
 gboolean
-ncm_cfg_load_matrix (gchar *filename, gsl_matrix *M, ...)
+ncm_cfg_load_matrix (const gchar *filename, gsl_matrix *M, ...)
 {
   va_list ap;
 
@@ -1140,7 +1168,7 @@ ncm_cfg_load_matrix (gchar *filename, gsl_matrix *M, ...)
  * Returns: FIXME
  */
 gboolean
-ncm_cfg_save_matrix (gchar *filename, gsl_matrix *M, ...)
+ncm_cfg_save_matrix (const gchar *filename, gsl_matrix *M, ...)
 {
   va_list ap;
 

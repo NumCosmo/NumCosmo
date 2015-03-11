@@ -26,8 +26,8 @@
 
 /**
  * SECTION:nc_cluster_mass_nodist
- * @title: Cluster Mass No Distribution
- * @short_description: FIXME
+ * @title: NcClusterMassNodist
+ * @short_description: Cluster mass real mass distribution.
  *
  * FIXME
  */

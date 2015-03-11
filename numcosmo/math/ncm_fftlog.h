@@ -88,7 +88,7 @@ struct _NcmFftlogClass
   /*< private >*/
   GObjectClass parent_class;
   guint ncomp;
-  gchar *name;
+  const gchar *name;
   void (*get_Ym) (NcmFftlog *fftlog);
   void (*generate_Gr) (NcmFftlog *fftlog);
 };
@@ -100,7 +100,7 @@ void ncm_fftlog_free (NcmFftlog *fftlog);
 void ncm_fftlog_clear (NcmFftlog **fftlog);
 
 void ncm_fftlog_set_name (NcmFftlog *fftlog, const gchar *name);
-gchar *ncm_fftlog_peek_name (NcmFftlog *fftlog);
+const gchar *ncm_fftlog_peek_name (NcmFftlog *fftlog);
 void ncm_fftlog_set_size (NcmFftlog *fftlog, guint n);
 guint ncm_fftlog_get_size (NcmFftlog *fftlog);
 void ncm_fftlog_set_length (NcmFftlog *fftlog, gdouble Lk);

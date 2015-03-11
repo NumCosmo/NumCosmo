@@ -24,8 +24,8 @@
 
 /**
  * SECTION:poly
- * @title: Polynomials
- * @short_description: FIXME
+ * @title: NcmPoly
+ * @short_description: Polynomials.
  *
  * FIXME
  */

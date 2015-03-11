@@ -24,8 +24,8 @@
 
 /**
  * SECTION:ncm_ode_spline
- * @title: ODE Spline Interpolation
- * @short_description: Automatic generation of splines from ODE solutions
+ * @title: NcmOdeSpline
+ * @short_description: Automatic generation of splines from ODE solvers.
  *
  * FIXME
  * 

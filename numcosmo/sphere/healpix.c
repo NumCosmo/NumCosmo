@@ -24,8 +24,10 @@
 
 /**
  * SECTION:healpix
- * @title: Healpix
+ * @title: NcmSphereHealpix
  * @short_description: Healpix re-implementation
+ * @stability: Stable
+ * @include: numcosmo/sphere/healpix.h
  *
  * FIXME
  * 
@@ -224,9 +226,9 @@ ncm_sphere_healpix_write_map (NcmSphereMap *map, gchar *filename, gboolean overw
   
   gchar *order;                 /* HEALPix ordering */
   gchar extname[] = "BINTABLE";   /* extension name */  
-  gchar *ttype[] = { "SIGNAL" };
-  gchar *tform[] = { "1E" };
-  gchar *tunit[] = { " " }; 
+  const gchar *ttype[] = { "SIGNAL" };
+  const gchar *tform[] = { "1E" };
+  const gchar *tunit[] = { " " }; 
   
   /* initialize status before calling fitsio routines */
   status = 0;
@@ -249,8 +251,8 @@ ncm_sphere_healpix_write_map (NcmSphereMap *map, gchar *filename, gboolean overw
   NCM_FITS_ERROR (status);
   
   /* append a new empty binary table onto the FITS file */
-  fits_create_tbl (fptr, BINARY_TBL, map->npix, tfields, ttype, tform,
-                   tunit, extname, &status);
+  fits_create_tbl (fptr, BINARY_TBL, map->npix, tfields, (gchar **)ttype, (gchar **)tform,
+                   (gchar **)tunit, extname, &status);
   NCM_FITS_ERROR (status);
   
   fits_write_key (fptr, TSTRING, "PIXTYPE", "HEALPIX", "HEALPIX Pixelisation", &status);   

@@ -24,9 +24,9 @@
 
 /**
  * SECTION:ncm_sparam
- * @title: Model Scalar Parameter Description
- * @short_description: Describes the properties of a scalar parameter
- *
+ * @title: NcmSParam
+ * @short_description: Properties of a scalar parameter.
+ * 
  * This object comprises the necessary properties to define a scalar parameter.
  * It is used by #NcmModel to store the description of the scalar model parameters.
  * 
@@ -80,7 +80,7 @@ G_DEFINE_TYPE (NcmSParam, ncm_sparam, G_TYPE_OBJECT);
  * Returns: A new #NcmSParam
  */
 NcmSParam *
-ncm_sparam_new (gchar *name, gchar *symbol, gdouble lower_bound, gdouble upper_bound, gdouble scale, gdouble abstol, gdouble default_val, NcmParamType ftype)
+ncm_sparam_new (const gchar *name, const gchar *symbol, gdouble lower_bound, gdouble upper_bound, gdouble scale, gdouble abstol, gdouble default_val, NcmParamType ftype)
 {
   NcmSParam *sparam = g_object_new (NCM_TYPE_SPARAM,
                                     "name",               name,

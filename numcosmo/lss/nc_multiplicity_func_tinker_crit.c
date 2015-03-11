@@ -25,8 +25,8 @@
 
 /**
  * SECTION:nc_multiplicity_func_tinker_crit
- * @title: Critical Tinker Multiplicity Function
- * @short_description: Dark Matter Halo FIXME
+ * @title: NcMultiplicityFuncTinkerCrit
+ * @short_description: Dark matter halo -- Tinker multiplicity function critical density.
  *
  * FIXME
  */

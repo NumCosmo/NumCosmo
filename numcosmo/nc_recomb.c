@@ -25,8 +25,8 @@
 
 /**
  * SECTION:nc_recomb
- * @title: Recombination
- * @short_description: Cosmic recombination abstract object.
+ * @title: NcRecomb
+ * @short_description: Abstract class for cosmic recombination.
  * @include: numcosmo/nc_recomb.h
  * 
  * $
@@ -641,7 +641,7 @@ nc_recomb_equilibrium_Xe (NcRecomb *recomb, NcHICosmo *cosmo, const gdouble x)
  * Returns: a new #NcRecomb.
  */
 NcRecomb *
-nc_recomb_new_from_name (gchar *recomb_name)
+nc_recomb_new_from_name (const gchar *recomb_name)
 {
   GObject *obj = ncm_serialize_global_from_string (recomb_name);
   GType multiplicity_type = G_OBJECT_TYPE (obj);

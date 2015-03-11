@@ -25,8 +25,8 @@
 
 /**
  * SECTION:nc_hipert_boltzmann
- * @title: Boltzmann Perturbation Object
- * @short_description: Perturbation object for Boltzmann hierarchy 
+ * @title: NcHIPertBoltzmann
+ * @short_description: Abstract class for perturbative Boltzmann hierarchy. 
  *
  * FIXME
  * 

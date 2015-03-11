@@ -62,7 +62,6 @@
 #include <numcosmo/model/nc_hicosmo_lcdm.h>
 #include <numcosmo/model/nc_hicosmo_qconst.h>
 #include <numcosmo/model/nc_hicosmo_qlinear.h>
-#include <numcosmo/model/nc_hicosmo_qpw.h>
 #include <numcosmo/model/nc_hicosmo_qspline.h>
 #include <numcosmo/model/nc_hicosmo_qgrw.h>
 #include <numcosmo/model/quantum_gravity.h>

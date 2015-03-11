@@ -25,8 +25,8 @@
 
 /**
  * SECTION:nc_hipert_adiab
- * @title: Adiabatic Perturbation Object
- * @short_description: Perturbation object for adiabatic mode only 
+ * @title: NcHIPertAdiab
+ * @short_description: Perturbation object for adiabatic mode only. 
  *
  * This object provides the computation of the adiabatic mode for the cosmological 
  * perturbations. It solves the equation of motion for the gauge invariant variable

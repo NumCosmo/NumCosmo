@@ -25,8 +25,8 @@
 
 /**
  * SECTION:nc_recomb_seager
- * @title: Recombination Seager 1999.
- * @short_description: Cosmic recombination implementing Seager (1999)
+ * @title: NcRecombSeager
+ * @short_description: Cosmic recombination implementing Seager (1999).
  * @include: numcosmo/nc_recomb_seager.h
  *
  * Cosmic recobination as describe in <link linkend="XSeager1999">Seager (1999)</link>.
@@ -207,22 +207,22 @@ nc_recomb_seager_prepare (NcRecomb *recomb, NcHICosmo *cosmo)
 
 		while (TRUE)
 		{
-			gdouble lambdai;
-			gint flag = CVode (recomb_seager->cvode, lambdaf, recomb_seager->y, &lambdai, CV_ONE_STEP);
+			gdouble lambda_i;
+			gint flag = CVode (recomb_seager->cvode, lambdaf, recomb_seager->y, &lambda_i, CV_ONE_STEP);
 			NCM_CVODE_CHECK (&flag, "CVode", 1, );
 			{
 				const gdouble XHII  = NV_Ith_S (recomb_seager->y, 0);
 				const gdouble XHeII = NV_Ith_S (recomb_seager->y, 2);
 				const gdouble Xe    = XHII + XHeII;
 				//printf ("% 20.15g % 20.15g % 20.15g % 20.15g\n", lambdai, XHII, XHeII, NV_Ith_S (recomb_seager->y, 1));
-				if (fabs ((lambda_last - lambdai) / lambda_last) > 1e-7)
+				if (fabs ((lambda_last - lambda_i) / lambda_last) > 1e-7)
 				{
-					g_array_append_val (lambda_a, lambdai);
+					g_array_append_val (lambda_a, lambda_i);
 					g_array_append_val (Xe_a,     Xe);
-					lambda_last = lambdai;
+					lambda_last = lambda_i;
 				}
 
-				if (lambdai == lambdaf)
+				if (lambda_i == lambdaf)
 					break;
 			}
 		}

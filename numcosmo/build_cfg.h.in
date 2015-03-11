@@ -30,7 +30,6 @@
 
 @have_fftw3_support@
 @have_cfitsio_support@
-@have_levmar_support@
 
 @have_sqlite3_support@
 @have_nlopt_support@

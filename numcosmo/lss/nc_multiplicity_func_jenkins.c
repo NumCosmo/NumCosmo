@@ -25,8 +25,8 @@
 
 /**
  * SECTION:nc_multiplicity_func_jenkins
- * @title: Jenkins Multiplicity Function
- * @short_description: Dark Matter Halo FIXME
+ * @title: NcMultiplicityFuncJenkins
+ * @short_description: Dark matter halo -- Jenkins multiplicity function.
  *
  * FIXME
  */

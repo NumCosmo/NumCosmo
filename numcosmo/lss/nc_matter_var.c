@@ -25,10 +25,11 @@
 
 /**
  * SECTION:nc_matter_var
- * @title: Matter Fluctuation Variance
- * @short_description: FIXME
+ * @title: NcMatterVar
+ * @short_description: Matter perturbations variance.
  *
  * FIXME
+ * 
  */
 
 #ifdef HAVE_CONFIG_H

@@ -25,8 +25,8 @@
 
 /**
  * SECTION:ncm_fit_gsl_mm
- * @title: Non-linear Minimization -- GSL
- * @short_description: Interface for non-linear minimization GSL algorithms
+ * @title: NcmFitGSLMM
+ * @short_description: Best-fit finder -- GSL non-linear minimization algorithms.
  *
  * FIXME
  */

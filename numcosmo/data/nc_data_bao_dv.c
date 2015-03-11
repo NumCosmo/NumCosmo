@@ -25,8 +25,8 @@
 
 /**
  * SECTION:nc_data_bao_dv
- * @title: Baryon Oscillation Data -- Volume Mean
- * @short_description: BAO averaged volume $D_V$ estimator
+ * @title: NcDataBaoDV
+ * @short_description: Baryon oscillation data -- volume mean $D_V$.
  *
  * See <link linkend="XEisenstein2005">Eisenstein et al. (2005)</link>.
  * 

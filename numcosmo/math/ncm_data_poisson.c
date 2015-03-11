@@ -25,10 +25,11 @@
 
 /**
  * SECTION:ncm_data_poisson
- * @title: Poisson Data
- * @short_description: Poisson data
+ * @title: NcmDataPoisson
+ * @short_description: Abstract class for implementing poisson distributed data.
  *
  * FIXME
+ * 
  */
 
 #ifdef HAVE_CONFIG_H

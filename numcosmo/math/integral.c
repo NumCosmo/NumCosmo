@@ -24,10 +24,13 @@
 
 /**
  * SECTION:integral
- * @title: Numerical Integration
- * @short_description: FIXME
+ * @title: NcmIntegral
+ * @short_description: Numerical integration helpers.
+ * @stability: Stable
+ * @include: numcosmo/math/integral.h
  *
  * FIXME
+ * 
  */
 
 #ifdef HAVE_CONFIG_H
@@ -38,13 +41,9 @@
 #include "math/integral.h"
 #include "math/memory_pool.h"
 #include "math/ncm_util.h"
-#include "cubature/cubature.h"
 
 #include <gsl/gsl_integration.h>
-#ifdef HAVE_LIBCUBA
 #include <cuba.h>
-#endif /* HAVE_LIBCUBA */
-
 
 static gpointer
 _integral_ws_alloc (gpointer userdata)
@@ -232,7 +231,6 @@ typedef struct _iCLIntegrand2dim
 	gdouble yf;
 } iCLIntegrand2dim;
 
-#ifdef HAVE_LIBCUBA
 static gint
 _integrand_2dim (const gint *ndim, const gdouble x[], const gint *ncomp, gdouble f[], gpointer userdata)
 {
@@ -242,17 +240,6 @@ _integrand_2dim (const gint *ndim, const gdouble x[], const gint *ncomp, gdouble
   f[0] = iinteg->integ->f ((iinteg->xf - iinteg->xi) * x[0] + iinteg->xi, (iinteg->yf - iinteg->yi) * x[1] + iinteg->yi, iinteg->integ->userdata);
 	return 0;
 }
-#else
-gint 
-_integrand_cubature_2dim (guint ndim, const gdouble *x, gpointer fdata, guint fdim, gdouble *fval)
-{
-  NcmIntegrand2dim *integ = (NcmIntegrand2dim *) fdata;
-  NCM_UNUSED (ndim);
-  NCM_UNUSED (fdim);
-  fval[0] = integ->f (x[0], x[1], integ->userdata);
-  return 0;
-}
-#endif /* HAVE_LIBCUBA */
 
 /**
  * ncm_integrate_2dim:
@@ -274,7 +261,6 @@ gboolean
 ncm_integrate_2dim (NcmIntegrand2dim *integ, gdouble xi, gdouble yi, gdouble xf, gdouble yf, gdouble epsrel, gdouble epsabs, gdouble *result, gdouble *error)
 {
   gboolean ret = FALSE;
-#ifdef HAVE_LIBCUBA
 	const gint mineval = 1;
 	const gint maxeval = 10000;
 	const gint key = 13; /* 13 points rule */
@@ -284,9 +270,9 @@ ncm_integrate_2dim (NcmIntegrand2dim *integ, gdouble xi, gdouble yi, gdouble xf,
 
 #ifdef HAVE_LIBCUBA_3_1
 	Cuhre (2, 1, &_integrand_2dim, &iinteg, epsrel, epsabs, 0, mineval, maxeval, key, NULL, &nregions, &neval, &fail, result, error, &prob);
-#elif HAVE_LIBCUBA_3_3
+#elif defined (HAVE_LIBCUBA_3_3)
 	Cuhre (2, 1, &_integrand_2dim, &iinteg, 1, epsrel, epsabs, 0, mineval, maxeval, key, NULL, &nregions, &neval, &fail, result, error, &prob);
-#elif HAVE_LIBCUBA_4_0
+#elif defined (HAVE_LIBCUBA_4_0)
 	Cuhre (2, 1, &_integrand_2dim, &iinteg, 1, epsrel, epsabs, 0, mineval, maxeval, key, NULL, NULL, &nregions, &neval, &fail, result, error, &prob);
 #else
   Cuhre (2, 1, &_integrand_2dim, &iinteg, epsrel, epsabs, 0, mineval, maxeval, key, &nregions, &neval, &fail, result, error, &prob);
@@ -296,19 +282,6 @@ ncm_integrate_2dim (NcmIntegrand2dim *integ, gdouble xi, gdouble yi, gdouble xf,
 	*error *= (xf - xi) * (yf - yi);
 
 	ret = (fail == 0);
-#else
-  const gint maxeval = 10000;
-  const gdouble xmin[2] = {xi, yi};
-  const gdouble xmax[2] = {xf, yf};
-  gint retpc = pcubature (1, &_integrand_cubature_2dim, integ,
-                          2, xmin, xmax,
-                          maxeval, epsabs, epsrel,
-                          ERROR_INDIVIDUAL, result, error);
-  if (retpc == 0)
-    return TRUE;
-  else
-    return FALSE;
-#endif
 	return ret;
 }
 

@@ -180,6 +180,7 @@ void nc_hicosmo_clear (NcHICosmo **cosmo);
 
 NcmMSetFunc *nc_hicosmo_create_mset_func0 (NcHICosmoFunc0 f0);
 NcmMSetFunc *nc_hicosmo_create_mset_func1 (NcHICosmoFunc1 f1);
+NcmMSetFunc *nc_hicosmo_create_mset_arrayfunc1 (NcHICosmoFunc1 f1, guint size);
 
 void nc_hicosmo_set_H0_impl (NcHICosmoClass *model_class, NcmModelFunc0 f);
 void nc_hicosmo_set_Omega_b_impl (NcHICosmoClass *model_class, NcmModelFunc0 f);

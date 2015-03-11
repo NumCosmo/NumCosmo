@@ -25,9 +25,9 @@
 
 /**
  * SECTION:ncm_serialize
- * @title: Serialization object.
+ * @title: NcmSerialize
  * @short_description: Serialization, deserialization and duplication object.
- *
+ * 
  * FIXME
  * 
  */
@@ -300,7 +300,7 @@ ncm_serialize_contain_instance (NcmSerialize *ser, gpointer obj)
  * Returns: if there is instance named @name in @ser.
  */
 gboolean 
-ncm_serialize_contain_name (NcmSerialize *ser, gchar *name)
+ncm_serialize_contain_name (NcmSerialize *ser, const gchar *name)
 {
   g_assert (name != NULL);
   return (g_hash_table_lookup (ser->name_ptr, name) != NULL);
@@ -330,7 +330,7 @@ ncm_serialize_count_instances (NcmSerialize *ser)
  * Returns: (transfer full) (type GObject): Gets the instance named @name or NULL.
  */
 gpointer 
-ncm_serialize_get_by_name (NcmSerialize *ser, gchar *name)
+ncm_serialize_get_by_name (NcmSerialize *ser, const gchar *name)
 {
   g_assert (name != NULL);
   {
@@ -373,7 +373,7 @@ ncm_serialize_peek_name (NcmSerialize *ser, gpointer obj)
  * 
  */
 void 
-ncm_serialize_set (NcmSerialize *ser, gpointer obj, gchar *name, gboolean overwrite)
+ncm_serialize_set (NcmSerialize *ser, gpointer obj, const gchar *name, gboolean overwrite)
 {
   g_assert (G_IS_OBJECT (obj));
   g_assert (name != NULL);
@@ -1535,7 +1535,7 @@ ncm_serialize_global_contain_instance (gpointer obj)
  * Returns: if there is instance named @name in @ser.
  */
 gboolean 
-ncm_serialize_global_contain_name (gchar *name)
+ncm_serialize_global_contain_name (const gchar *name)
 {
   NcmSerialize *ser = ncm_serialize_global ();
   gboolean ret = ncm_serialize_contain_name (ser, name);
@@ -1568,7 +1568,7 @@ ncm_serialize_global_count_instances (void)
  * Returns: (transfer full) (type GObject): Gets the instance named @name or NULL.
  */
 gpointer 
-ncm_serialize_global_get_by_name (gchar *name)
+ncm_serialize_global_get_by_name (const gchar *name)
 {
   NcmSerialize *ser = ncm_serialize_global ();
   gpointer ret = ncm_serialize_get_by_name (ser, name);
@@ -1603,7 +1603,7 @@ ncm_serialize_global_peek_name (gpointer obj)
  * 
  */
 void 
-ncm_serialize_global_set (gpointer obj, gchar *name, gboolean overwrite)
+ncm_serialize_global_set (gpointer obj, const gchar *name, gboolean overwrite)
 {
   NcmSerialize *ser = ncm_serialize_global ();
   ncm_serialize_set (ser, obj, name, overwrite);

@@ -24,8 +24,8 @@
 
 /**
  * SECTION:memory_pool
- * @title: Memory Pool
- * @short_description: FIXME
+ * @title: NcmMemoryPool
+ * @short_description: Generic memory pool.
  *
  * FIXME
  */

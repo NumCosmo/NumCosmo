@@ -26,8 +26,8 @@
 
 /**
  * SECTION:nc_cluster_mass
- * @title: Cluster Mass Distribution
- * @short_description: FIXME
+ * @title: NcClusterMass
+ * @short_description: Abstract class for cluster mass distributions.
  *
  * FIXME
  */

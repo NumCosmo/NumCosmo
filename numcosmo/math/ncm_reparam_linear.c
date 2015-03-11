@@ -24,8 +24,8 @@
 
 /**
  * SECTION:ncm_reparam_linear
- * @title: Linear Reparametrization
- * @short_description: Linear reparametrization object
+ * @title: NcmReparamLinear
+ * @short_description: Linear reparametrization object.
  *
  * Object implementing a linear reparametrization of the model's parameters.
  * It uses as imput a matrix $M$ (#NcmReparamLinear:matrix) and a vector $v$ 

@@ -25,8 +25,8 @@
 
 /**
  * SECTION:ncm_fit_esmcmc
- * @title: Ensemble Sampler Markov Chain Monte Carlo Analysis
- * @short_description: Object implementing Esemble Sampler Markov Chain Monte Carlo analysis
+ * @title: NcmFitESMCMC
+ * @short_description: Ensemble sampler Markov Chain Monte Carlo analysis.
  *
  * FIXME
  * 
@@ -531,7 +531,10 @@ _ncm_fit_esmcmc_update (NcmFitESMCMC *esmcmc, NcmFit *fit, guint k)
     case NCM_FIT_RUN_MSGS_SIMPLE:
     {
       guint stepi = (esmcmc->cur_sample_id + 1) % step;
-      if ((stepi == 0) || (esmcmc->nt->task_pos == esmcmc->nt->task_len))
+      gboolean log_timeout = FALSE;
+      if ((esmcmc->nt->pos_time - esmcmc->nt->last_log_time) > 60.0)
+        log_timeout = TRUE && ((esmcmc->cur_sample_id + 1) % esmcmc->nwalkers == 0);
+      if (log_timeout || (stepi == 0) || (esmcmc->nt->task_pos == esmcmc->nt->task_len))
       {
         /* guint acc = stepi == 0 ? step : stepi; */
         ncm_mset_catalog_log_current_stats (esmcmc->mcat);
@@ -902,6 +905,7 @@ ncm_fit_esmcmc_move_try (NcmFitESMCMC *esmcmc, gdouble z, NcmVector *theta_k, Nc
   {
     const gdouble theta_j_i = ncm_vector_get (theta_j, i);
     const gdouble theta_k_i = ncm_vector_get (theta_k, i);
+    
     ncm_vector_set (thetastar, i, theta_j_i + z * (theta_k_i - theta_j_i));
   }
 }
@@ -915,7 +919,8 @@ _ncm_fit_esmcmc_run_single (NcmFitESMCMC *esmcmc)
 
   for (i = ti; i < esmcmc->n; i++)
   {
-    for (k = ki; k < esmcmc->nwalkers; k++)
+    k = ki;
+    while (k < esmcmc->nwalkers)
     {
       NcmFit *fit_k = g_ptr_array_index (esmcmc->walker_fits, k);
 
@@ -937,9 +942,14 @@ _ncm_fit_esmcmc_run_single (NcmFitESMCMC *esmcmc)
 
       ncm_mset_fparams_get_vector (fit_k->mset, theta_k);
       ncm_mset_fparams_get_vector (NCM_FIT (g_ptr_array_index (esmcmc->walker_fits, j))->mset, theta_j);
-      
+        
       ncm_fit_esmcmc_move_try (esmcmc, z, theta_k, theta_j, thetastar);
+      if (!ncm_mset_fparam_valid_bounds (fit_k->mset, thetastar))
+        continue;
+      
       ncm_mset_fparams_set_vector (fit_k->mset, thetastar);
+
+      if (!ncm_mset_params_valid_bounds (fit_k->mset))
 
       ncm_fit_m2lnL_val (fit_k, &m2lnL_star);
       esmcmc->ntotal++;
@@ -966,6 +976,7 @@ _ncm_fit_esmcmc_run_single (NcmFitESMCMC *esmcmc)
 
       _ncm_fit_esmcmc_update (esmcmc, fit_k, k);
       esmcmc->write_index++;
+      k++;
     }
     ki = 0;
   }
@@ -978,9 +989,9 @@ _ncm_fit_esmcmc_mt_eval (glong i, glong f, gpointer data)
   NcmFitESMCMC *esmcmc = NCM_FIT_ESMCMC (data);
   const guint nwalkers_2 = esmcmc->nwalkers / 2;
   const guint subensemble = (i < nwalkers_2) ? nwalkers_2 : 0;
-  guint k;
+  guint k = i;
 
-  for (k = i; k < f; k++)
+  while (k < f)
   {
     NcmFit *fit_k = g_ptr_array_index (esmcmc->walker_fits, k);
     NcmVector *theta_k = g_ptr_array_index (esmcmc->theta_k, k);
@@ -1005,6 +1016,9 @@ _ncm_fit_esmcmc_mt_eval (glong i, glong f, gpointer data)
     ncm_mset_fparams_get_vector (NCM_FIT (g_ptr_array_index (esmcmc->walker_fits, j))->mset, theta_j);
 
     ncm_fit_esmcmc_move_try (esmcmc, z, theta_k, theta_j, thetastar);
+    if (!ncm_mset_fparam_valid_bounds (fit_k->mset, thetastar))
+      continue;
+
     ncm_mset_fparams_set_vector (fit_k->mset, thetastar);
 
     ncm_fit_m2lnL_val (fit_k, &m2lnL_star);
@@ -1041,6 +1055,7 @@ _ncm_fit_esmcmc_mt_eval (glong i, glong f, gpointer data)
     g_cond_broadcast (esmcmc->write_cond);
 
     _NCM_MUTEX_UNLOCK (&update_lock);
+    k++;
   }
 }
 
@@ -1050,18 +1065,11 @@ _ncm_fit_esmcmc_run_mt (NcmFitESMCMC *esmcmc)
   const guint nthreads = esmcmc->n > esmcmc->nthreads ? esmcmc->nthreads : (esmcmc->n - 1);
   guint i;
 
-  if (nthreads == 0)
+  if (nthreads <= 1)
   {
     _ncm_fit_esmcmc_run_single (esmcmc);
     return;
   }
-
-  /*
-   * The line below added de main fit object to the pool, but can cause
-   * several race conditions as it is used to make the copies for the other
-   * threads. So, no.
-   */
-  //ncm_memory_pool_add (mc->mp, mc->fit);
 
   g_assert_cmpuint (esmcmc->nthreads, >, 1);
 
@@ -1161,4 +1169,18 @@ ncm_fit_esmcmc_mean_covar (NcmFitESMCMC *esmcmc)
   ncm_mset_catalog_get_covar (esmcmc->mcat, &esmcmc->fit->fstate->covar);
   ncm_mset_fparams_set_vector (esmcmc->mcat->mset, esmcmc->fit->fstate->fparams);
   esmcmc->fit->fstate->has_covar = TRUE;
+}
+
+/**
+ * ncm_fit_esmcmc_get_catalog:
+ * @esmcmc: a #NcmFitESMCMC
+ *
+ * Gets the generated catalog of @esmcmc.
+ * 
+ * Returns: (transfer full): the generated catalog.
+ */
+NcmMSetCatalog *
+ncm_fit_esmcmc_get_catalog (NcmFitESMCMC *esmcmc)
+{
+  return ncm_mset_catalog_ref (esmcmc->mcat);
 }

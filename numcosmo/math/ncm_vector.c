@@ -24,8 +24,10 @@
 
 /**
  * SECTION:ncm_vector
- * @title: Vector Object
+ * @title: NcmVector
  * @short_description: Vector object representing arrays of doubles.
+ * @stability: Stable
+ * @include: numcosmo/math/ncm_vector.h
  *
  * This object defines the functions for allocating and accessing vectors.
  * Also includes several vector operations.
@@ -44,7 +46,7 @@
 #ifdef HAVE_BLAS
 #  ifdef HAVE_MKL_CBLAS_H
 #    include <mkl_cblas.h>
-#  elif HAVE_CBLAS_H
+#  elif defined (HAVE_CBLAS_H)
 #    include <cblas.h>
 #  else
 #    include <gsl/gsl_cblas.h>
@@ -540,6 +542,13 @@ ncm_vector_log_vals_func (const NcmVector *v, const gchar *prestr, const gchar *
  * Returns: A pointer to the @i-th component of the vector @cv.
  */
 /**
+ * ncm_vector_fast_ptr:
+ * @cv: a #NcmVector.
+ * @i: component index.
+ *
+ * Returns: A pointer to the @i-th component of the vector @cv assuming stride == 1.
+ */
+/**
  * ncm_vector_set:
  * @cv: a #NcmVector.
  * @i: component index.
@@ -805,6 +814,9 @@ _ncm_vector_finalize (GObject *object)
     case NCM_VECTOR_MALLOC:
     case NCM_VECTOR_GSL_VECTOR:
     case NCM_VECTOR_DERIVED:
+      break;
+    default:
+      g_assert_not_reached ();
       break;
   }
   cv->vv.vector.data = NULL;

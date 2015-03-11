@@ -25,11 +25,11 @@
 
 /**
  * SECTION:ncm_bootstrap
- * @title: Bootstrap object
+ * @title: NcmBootstrap
  * @short_description: Generic index bootstrap.
  * 
  * This object generate random samples of indexes. These samples are used 
- * to calculate statistics using different combinations of the actual data set.
+ * to calculate statistics using different combinations of the same data set.
  * 
  */
 

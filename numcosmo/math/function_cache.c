@@ -24,10 +24,13 @@
 
 /**
  * SECTION:function_cache
- * @title: Function Cache
+ * @title: NcmFunctionCache
  * @short_description: A generic cache for functions values
+ * @stability: Stable
+ * @include: numcosmo/math/function_cache.h
  *
  * FIXME
+ * 
  */
 
 #ifdef HAVE_CONFIG_H

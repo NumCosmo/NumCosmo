@@ -24,8 +24,8 @@
 
 /**
  * SECTION:nc_cluster_redshift
- * @title: Abstract Cluster Redshift Object
- * @short_description: Observed redshift distribution
+ * @title: NcClusterRedshift
+ * @short_description: Abstract class for cluster redshift distributions.
  *
  * FIXME
  */

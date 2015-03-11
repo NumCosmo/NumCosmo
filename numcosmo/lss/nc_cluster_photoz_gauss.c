@@ -24,8 +24,8 @@
 
 /**
  * SECTION:nc_cluster_photoz_gauss
- * @title: Individual Gaussian Photoz Cluster
- * @short_description: Gaussian photometric redshift
+ * @title: NcClusterPhotozGauss
+ * @short_description: Individual gaussian photometric distribution for clusters.
  *
  * FIXME
  */

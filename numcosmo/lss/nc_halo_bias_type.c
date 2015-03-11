@@ -25,8 +25,8 @@
 
 /**
  * SECTION:nc_halo_bias_type
- * @title: Halo Bias Function Type
- * @short_description: FIXME
+ * @title: NcHaloBiasType
+ * @short_description: Abstract class for halo bias function type.
  *
  * FIXME
  */

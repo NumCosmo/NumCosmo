@@ -91,7 +91,7 @@ struct _NcmMSetPIndex
 GType ncm_mset_get_type (void) G_GNUC_CONST;
 GType ncm_mset_pindex_get_type (void) G_GNUC_CONST;
 
-void ncm_mset_model_register_id (NcmModelClass *model_class, gchar *ns, gchar *desc, gchar *long_desc);
+void ncm_mset_model_register_id (NcmModelClass *model_class, const gchar *ns, const gchar *desc, const gchar *long_desc);
 
 /**
  * NCM_MSET_MODEL_ID_FUNC: (skip)
@@ -163,7 +163,7 @@ guint ncm_mset_max_fparam_name (NcmMSet *mset);
 guint ncm_mset_max_model_nick (NcmMSet *mset);
 
 void ncm_mset_pretty_log (NcmMSet *mset);
-void ncm_mset_params_pretty_print (NcmMSet *mset, FILE *out, gchar *header);
+void ncm_mset_params_pretty_print (NcmMSet *mset, FILE *out, const gchar *header);
 void ncm_mset_params_log_vals (NcmMSet *mset);
 void ncm_mset_params_print_vals (NcmMSet *mset, FILE *out);
 void ncm_mset_fparams_log_covar (NcmMSet *mset, NcmMatrix *covar);
@@ -188,6 +188,7 @@ gdouble ncm_mset_param_get_lower_bound (NcmMSet *mset, NcmModelID mid, guint pid
 gdouble ncm_mset_param_get_upper_bound (NcmMSet *mset, NcmModelID mid, guint pid);
 gdouble ncm_mset_param_get_abstol (NcmMSet *mset, NcmModelID mid, guint pid);
 NcmParamType ncm_mset_param_get_ftype (NcmMSet *mset, NcmModelID mid, guint pid);
+void ncm_mset_param_set_scale (NcmMSet *mset, NcmModelID mid, guint pid, gdouble scale);
 
 void ncm_mset_param_set_pi (NcmMSet *mset, NcmMSetPIndex *pi, const gdouble *x, guint n);
 void ncm_mset_param_get_pi (NcmMSet *mset, NcmMSetPIndex *pi, gdouble *x, guint n);
@@ -207,6 +208,8 @@ gdouble ncm_mset_fparam_get_scale (NcmMSet *mset, guint n);
 gdouble ncm_mset_fparam_get_lower_bound (NcmMSet *mset, guint n);
 gdouble ncm_mset_fparam_get_upper_bound (NcmMSet *mset, guint n);
 gdouble ncm_mset_fparam_get_abstol (NcmMSet *mset, guint n);
+void ncm_mset_fparam_set_scale (NcmMSet *mset, guint n, gdouble scale);
+gboolean ncm_mset_fparam_valid_bounds (NcmMSet *mset, NcmVector *theta);
 
 gdouble ncm_mset_fparam_get (NcmMSet *mset, guint n);
 void ncm_mset_fparam_set (NcmMSet *mset, guint n, const gdouble x);
@@ -214,8 +217,8 @@ void ncm_mset_fparam_set (NcmMSet *mset, guint n, const gdouble x);
 NcmMSetPIndex *ncm_mset_fparam_get_pi (NcmMSet *mset, guint n);
 gint ncm_mset_fparam_get_fpi (NcmMSet *mset, NcmModelID mid, guint pid);
 
-void ncm_mset_save (NcmMSet *mset, gchar *filename, gboolean save_comment);
-NcmMSet *ncm_mset_load (gchar *filename);
+void ncm_mset_save (NcmMSet *mset, const gchar *filename, gboolean save_comment);
+NcmMSet *ncm_mset_load (const gchar *filename);
 
 G_END_DECLS
 

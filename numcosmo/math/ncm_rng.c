@@ -25,8 +25,8 @@
 
 /**
  * SECTION:ncm_rng
- * @title: Encapsulated GSL random number generator. 
- * @short_description: GSL random number generator with support for multhreading.
+ * @title: NcmRNG 
+ * @short_description: Encapsulated GSL random number generator with support for multhreading.
  *
  * This object encapsulates the GSL pseudo random number generator (PRNG). The purpose is to
  * add support for saving and loading state and multhreading.

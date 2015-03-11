@@ -24,10 +24,11 @@
 
 /**
  * SECTION:mpq_tree
- * @title: MPQ Tree
- * @short_description: FIXME
+ * @title: NcmMPQTree
+ * @short_description: MPQ data tree.
  *
  * FIXME
+ * 
  */
 
 #ifdef HAVE_CONFIG_H

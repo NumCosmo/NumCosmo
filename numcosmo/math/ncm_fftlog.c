@@ -25,8 +25,8 @@
 
 /**
  * SECTION:ncm_fftlog
- * @title: Logarithm Fast Fourier Algorithm
- * @short_description: Object implementing logarithm fast fourier transform
+ * @title: NcmFftlog
+ * @short_description: Abstract class for implementing logarithm fast fourier transform.
  *
  * FIXME
  */
@@ -328,7 +328,7 @@ ncm_fftlog_clear (NcmFftlog **fftlog)
  * 
  * Returns: (transfer none): FIXME
  */
-gchar *
+const gchar *
 ncm_fftlog_peek_name (NcmFftlog *fftlog)
 {
   return NCM_FFTLOG_GET_CLASS (fftlog)->name;

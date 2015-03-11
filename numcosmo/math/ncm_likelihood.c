@@ -25,9 +25,9 @@
 
 /**
  * SECTION:ncm_likelihood
- * @title: Likelihood
- * @short_description: Likelihood object combining data and priors
- *
+ * @title: NcmLikelihood
+ * @short_description: Likelihood combining a NcmDataset and priors.
+ * 
  * FIXME
  * 
  */

@@ -30,7 +30,6 @@
 #include <glib-object.h>
 #include <numcosmo/build_cfg.h>
 #include <numcosmo/math/ncm_fit.h>
-#ifdef NUMCOSMO_HAVE_LEVMAR
 
 G_BEGIN_DECLS
 
@@ -46,15 +45,20 @@ typedef struct _NcmFitLevmar NcmFitLevmar;
 
 /**
  * NcmFitLevmarAlgos:
- * @NCM_FIT_LEVMAR_DER: FIXME
- * @NCM_FIT_LEVMAR_DIF: FIXME
+ * @NCM_FIT_LEVMAR_DER: with external derivatives. 
+ * @NCM_FIT_LEVMAR_DIF: with internal derivatives (inside levmar).
+ * @NCM_FIT_LEVMAR_BC_DER: with box constraints and external derivatives. 
+ * @NCM_FIT_LEVMAR_BC_DIF: with box constraints and internal derivatives (inside levmar).
  *
- * FIXME
+ * Levmar algorithms. 
+ * 
  */
 typedef enum _NcmFitLevmarAlgos
 {
   NCM_FIT_LEVMAR_DER = 0,
-  NCM_FIT_LEVMAR_DIF,       /*< private >*/
+  NCM_FIT_LEVMAR_DIF,
+  NCM_FIT_LEVMAR_BC_DER,
+  NCM_FIT_LEVMAR_BC_DIF,    /*< private >*/
   NCM_FIT_LEVMAR_NUM_ALGOS, /*< skip >*/
 } NcmFitLevmarAlgos;
 
@@ -62,10 +66,11 @@ struct _NcmFitLevmar
 {
   /*< private >*/
   NcmFit parent_instance;
-  gpointer dif;
-  gpointer der;
+  gpointer workz;
   guint fparam_len;
   guint data_len;
+  NcmVector *lb;
+  NcmVector *ub;
   NcmFitLevmarAlgos algo;
 };
 
@@ -84,6 +89,4 @@ void ncm_fit_levmar_set_algo (NcmFitLevmar *fit_levmar, NcmFitLevmarAlgos algo);
 
 G_END_DECLS
 
-#endif /* NUMCOSMO_HAVE_LEVMAR */
 #endif /* _NCM_FIT_LEVMAR_H_ */
-

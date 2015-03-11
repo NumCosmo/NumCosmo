@@ -84,6 +84,7 @@ struct _NcmFitMC
   NcmSerialize *ser;
   guint nthreads;
   guint n;
+  gboolean keep_order;
   NcmMemoryPool *mp;
   gint write_index;
   gint cur_sample_id;
@@ -116,6 +117,7 @@ void ncm_fit_mc_set_data_file (NcmFitMC *mc, const gchar *filename);
 void ncm_fit_mc_set_mtype (NcmFitMC *mc, NcmFitRunMsgs mtype);
 void ncm_fit_mc_set_rtype (NcmFitMC *mc, NcmFitMCResampleType rtype);
 void ncm_fit_mc_set_nthreads (NcmFitMC *mc, guint nthreads);
+void ncm_fit_mc_keep_order (NcmFitMC *mc, gboolean keep_order);
 void ncm_fit_mc_set_fiducial (NcmFitMC *mc, NcmMSet *fiduc);
 void ncm_fit_mc_set_rng (NcmFitMC *mc, NcmRNG *rng);
 
@@ -126,6 +128,8 @@ void ncm_fit_mc_set_first_sample_id (NcmFitMC *mc, gint first_sample_id);
 void ncm_fit_mc_run (NcmFitMC *mc, guint n);
 void ncm_fit_mc_run_lre (NcmFitMC *mc, guint prerun, gdouble lre);
 void ncm_fit_mc_mean_covar (NcmFitMC *mc);
+
+NcmMSetCatalog *ncm_fit_mc_get_catalog (NcmFitMC *mc);
 
 #define NCM_FIT_MC_MIN_FLUSH_INTERVAL (10.0)
 

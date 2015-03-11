@@ -26,8 +26,8 @@ dnl ***************************************************************************
 
 m4_define([numcosmo_major_version], [0])
 m4_define([numcosmo_minor_version], [12])
-m4_define([numcosmo_micro_version], [0])
-m4_define([numcosmo_interface_age], [0])
+m4_define([numcosmo_micro_version], [1])
+m4_define([numcosmo_interface_age], [1])
 m4_define([numcosmo_binary_age],
           [m4_eval(100 * numcosmo_minor_version + numcosmo_micro_version)])
 m4_define([numcosmo_version],
@@ -42,7 +42,7 @@ m4_define([numcosmo_lt_age], [m4_eval(numcosmo_binary_age - numcosmo_interface_a
 m4_define([numcosmo_lt_current_minus_age],
           [m4_eval(numcosmo_lt_current - numcosmo_lt_age)])                    
           
-AC_INIT([numcosmo],[numcosmo_version], https://savannah.nongnu.org/bugs/?func=additem&group=numcosmo, numcosmo, http://www.nongnu.org/numcosmo/)
+AC_INIT([numcosmo],[numcosmo_version],[https://savannah.nongnu.org/bugs/?func=additem&group=numcosmo],[numcosmo],[http://www.nongnu.org/numcosmo/])
 AC_CONFIG_SRCDIR([numcosmo/numcosmo.h])
 AC_CONFIG_MACRO_DIR([m4])
 
@@ -136,11 +136,43 @@ dnl ***************************************************************************
 AM_CONDITIONAL(OS_UNIX, [test "$glib_native_win32" != "yes"])
 
 dnl ***************************************************************************
+dnl Compiler flags
+dnl ***************************************************************************
+NC_CFLAGS="$CFLAGS"
+AC_ARG_ENABLE([opt-compiler-flags], 
+  [  --enable-opt-compiler-flags  Enable all safe and useful speedups compiler flags (change any -O? to -O3 from CFLAGS)], 
+  [enable_comp_flags="yes"],[])
+if test x$enable_comp_flags = "xyes"; then
+  NC_CFLAGS=`echo $NC_CFLAGS | $SED 's/\-O[[0123456789]][[ ]]*//g'`
+dnl  NC_CFLAGS=`echo $NC_CFLAGS | $SED 's/\-g[[ ]]*//g'`
+  AX_GCC_ARCHFLAG([no],[nc_march_flag="$ax_cv_gcc_archflag"],[nc_march_flag="-march=native"])
+  AX_CHECK_COMPILE_FLAG([$nc_march_flag],[NC_CFLAGS="$NC_CFLAGS $nc_march_flag"])
+  AX_CHECK_COMPILE_FLAG([-O3],[NC_CFLAGS="$NC_CFLAGS -O3"])
+  AX_CHECK_COMPILE_FLAG([-funroll-loops],[NC_CFLAGS="$NC_CFLAGS -funroll-loops"])
+  AX_CHECK_COMPILE_FLAG([-fno-math-errno],[NC_CFLAGS="$NC_CFLAGS -fno-math-errno"])
+  AX_CHECK_COMPILE_FLAG([-mfpmath=sse],[NC_CFLAGS="$NC_CFLAGS -mfpmath=sse"])
+fi
+
+AC_ARG_ENABLE([warn-compiler-flags], 
+  [  --enable-warn-compiler-flags  Enable all useful warning compiler flags], 
+  [enable_warn_flags="yes"],[])
+if test x$enable_warn_flags = "xyes"; then
+  NC_CFLAGS=`echo $NC_CFLAGS | $SED 's/\-Wall//g'`
+  AX_CHECK_COMPILE_FLAG([-Wall],[NC_CFLAGS="$NC_CFLAGS -Wall"])
+dnl  AX_CHECK_COMPILE_FLAG([-Wundef],[NC_CFLAGS="$NC_CFLAGS -Wundef"])
+dnl  AX_CHECK_COMPILE_FLAG([-Wshadow],[NC_CFLAGS="$NC_CFLAGS -Wshadow"])
+dnl  AX_CHECK_COMPILE_FLAG([-Wpointer-arith],[NC_CFLAGS="$NC_CFLAGS -Wpointer-arith"])
+dnl  AX_CHECK_COMPILE_FLAG([-Wcast-align],[NC_CFLAGS="$NC_CFLAGS -Wcast-align"])
+dnl  AX_CHECK_COMPILE_FLAG([-Wstrict-prototypes],[NC_CFLAGS="$NC_CFLAGS -Wstrict-prototypes"])
+dnl  AX_CHECK_COMPILE_FLAG([-Wwrite-strings],[NC_CFLAGS="$NC_CFLAGS -Wwrite-strings"])
+dnl  AX_CHECK_COMPILE_FLAG([-Wunreachable-code],[NC_CFLAGS="$NC_CFLAGS -Wunreachable-code"])
+fi
+
+dnl ***************************************************************************
 dnl Check for vapigen
 dnl ***************************************************************************
 AC_ARG_ENABLE(vapi,
-              [AC_HELP_STRING([--enable-vapi],
-                              [Generate vala bindings, experimental [default=no]])],enable_vapi=yes,
+              [AS_HELP_STRING([--enable-vapi],[Generate vala bindings, experimental [default=no]])],enable_vapi=yes,
               enable_vapi=no)
 
 
@@ -161,8 +193,7 @@ dnl ***************************************************************************
 GTK_DOC_CHECK([1.14],[--flavour no-tmpl])
 
 AC_ARG_ENABLE(man,
-              [AC_HELP_STRING([--enable-man],
-                              [regenerate man pages from Docbook [default=no]])],enable_man=yes,
+              [AS_HELP_STRING([--enable-man],[regenerate man pages from Docbook [default=no]])],enable_man=yes,
               enable_man=no)
 
 if test "${enable_man}" != no; then
@@ -238,6 +269,25 @@ else
   AC_DEFINE([G_IMPLEMENT_INLINES], [1], [force glib to disable inline])
   AC_SUBST(G_IMPLEMENT_INLINES)
 fi
+
+dnl ***************************************************************************
+dnl GCC vector extensions
+dnl ***************************************************************************
+
+support_for_gcc_vector_extensions=no
+
+AC_MSG_CHECKING([for GCC vector extensions])
+AC_LINK_IFELSE([AC_LANG_SOURCE([[
+unsigned int __attribute__ ((vector_size(16))) e, a, b;
+int main (void) { e = a - ((b << 27) + (b >> (32 - 27))) + 1; return e[0]; }
+]])], support_for_gcc_vector_extensions=yes)
+
+if test x$support_for_gcc_vector_extensions = xyes; then
+  AC_DEFINE([HAVE_GCC_VECTOR_EXTENSIONS], [],
+            [Whether the compiler supports GCC vector extensions])
+fi
+
+AC_MSG_RESULT($support_for_gcc_vector_extensions)
 
 dnl ***************************************************************************
 dnl Disable GObject cast checks for speed improvements
@@ -316,7 +366,51 @@ dnl Check for math.h
 dnl ***************************************************************************
 
 AC_CHECK_HEADERS(math.h,, AC_MSG_ERROR([math.h header files missing]))
-AC_CHECK_FUNC([cos],[],[AC_CHECK_LIB([m],[cos])])
+AC_CHECK_LIB([m],[cos])
+AC_CHECK_FUNCS([cos sin erf powl])
+
+dnl ***************************************************************************
+dnl Checks for internal libcuba
+dnl ***************************************************************************
+
+AC_FUNC_ALLOCA
+AC_FUNC_FORK
+AC_TYPE_LONG_DOUBLE_WIDER
+ac_cv_c_long_double=$ac_cv_type_long_double_wider
+if test $ac_cv_c_long_double = yes; then
+  AC_DEFINE([HAVE_LONG_DOUBLE],[1],[Define to 1 if the type `long double' works and has more range or precision than `double'.])
+fi
+AC_TYPE_SIZE_T
+AC_TYPE_SSIZE_T
+AC_TYPE_PID_T
+
+AC_DEFINE([NOUNDERSCORE],[1],[libcuba C interface])
+
+MAXDIM=${MAXDIM:-16}
+AC_ARG_WITH(maxdim, 
+  [AS_HELP_STRING([--with-libcuba-maxdim=N],
+    [the maximum dimension for integration,
+     if variable-size array are not supported])],
+  [MAXDIM=$withval])
+
+MAXCOMP=${MAXCOMP:-4}
+AC_ARG_WITH(maxcomp,
+  [AS_HELP_STRING([--with-libcuba-maxcomp=N],
+    [the maximum number of components of the integrand,
+     if variable-size array are not supported])],
+  [MAXCOMP=$withval])
+
+AC_MSG_CHECKING([for variable-size arrays])
+AC_COMPILE_IFELSE([AC_LANG_SOURCE(,[[
+        void test(int n) {
+          char s[n];
+        }
+  ]])],  
+  [AC_MSG_RESULT([yes])],
+  [AC_MSG_RESULT([no, using MAXDIM=$MAXDIM and MAXCOMP=$MAXCOMP])
+   AC_DEFINE_UNQUOTED([NDIM], [$MAXDIM], [Maximum number of components])
+   AC_DEFINE_UNQUOTED([NCOMP], [$MAXCOMP], [Maximum number of dimensions])]
+)
 
 dnl ***************************************************************************
 dnl Check for glib.
@@ -436,18 +530,25 @@ if test "x$have_blas" != "xno"; then
   AC_MSG_CHECKING([which cblas to use])
   if test "x$have_cblas" = "xyes"; then
     AC_MSG_RESULT([cblas, removing gslcblas])
-    GSL_LIBS=`echo $GSL_LIBS | sed 's/\-lgslcblas//g'`
+    GSL_LIBS=`echo $GSL_LIBS | $SED 's/\-lgslcblas//g'`
   else
     AC_MSG_RESULT([none found, using gslcblas])
   fi
 else
   AC_MSG_RESULT([GSL's BLAS])
-  AC_DEFINE([HAVE_GSL_CBLAS_H], [1], [use lapack functions])
+  AC_DEFINE([HAVE_GSL_CBLAS_H], [1], [use GSL's BLAS])
 fi
 
-dnl ***************************************************************************
-dnl Check for LAPACK
-dnl ***************************************************************************
+AC_CHECK_FUNCS([openblas_set_num_threads MKL_Set_Num_Threads])
+
+AC_ARG_WITH(lapacke,
+        [AS_HELP_STRING([--with-lapacke=<lib>], [use LAPACKe library <lib>])])
+case $with_lapacke in
+        yes | "") ;;
+        no) lapacke_ok=disable ;;
+        -* | */* | *.a | *.so | *.so.* | *.o) LAPACKE_LIBS="$with_lapacke" ;;
+        *) LAPACKE_LIBS="-l$with_lapacke" ;;
+esac
 
 AX_LAPACK([],[have_lapack="no"])
 AC_MSG_CHECKING([if lapack is available $LAPACK_LIBS])
@@ -467,79 +568,85 @@ if test "x$have_lapack" != "xno"; then
   else
     lapack_support="Other"
   fi
+
+  LIBS="$LAPACK_LIBS $LIBS"
   AC_MSG_RESULT([$lapack_support])
 
   if test "x$lapack_mkl" != "x"; then
     AC_CHECK_HEADERS([mkl_lapacke.h],
-      [AC_DEFINE([HAVE_LAPACKE],[1], [have lapacke support])
-       AC_DEFINE([HAVE_MKL_LAPACKE_H],[1], [have mkl_lapacke.h header])])
+      [AC_CHECK_FUNC([LAPACKE_dptsv],
+        [AC_DEFINE([HAVE_LAPACKE],[1], [have lapacke support])
+         AC_DEFINE([HAVE_MKL_LAPACKE_H],[1], [have mkl_lapacke.h header])
+         have_lapacke="yes"][])])
     AC_CHECK_HEADERS([mkl_lapack.h])
-  else
-    AC_CHECK_HEADERS([lapacke.h],
-      [AC_DEFINE([HAVE_LAPACKE],[1], [have lapacke support])
-       AC_DEFINE([HAVE_LAPACKE_H],[1], [have lapacke.h header])])
-    AC_CHECK_HEADERS([clapack.h],
-      [AC_DEFINE([HAVE_CLAPACK],[1], [have clapack support])
-       AC_DEFINE([HAVE_CLAPACK_H],[1], [have clapack.h header])])
   fi
-  LIBS="$LAPACK_LIBS $LIBS"
+
+  if test "x$have_lapacke" != "xyes"; then
+    AC_CHECK_HEADERS([lapacke.h],
+      [AC_SEARCH_LIBS([LAPACKE_dptsv],[lapacke],  
+        [AC_DEFINE([HAVE_LAPACKE],[1], [have lapacke support])
+         AC_DEFINE([HAVE_LAPACKE_H],[1], [have lapacke.h header])
+         have_lapacke="yes"],[])])
+  fi
+
+  if test "x$have_lapacke" != "xyes"; then
+    AC_CHECK_HEADERS([clapack.h],
+      [AC_SEARCH_LIBS([clapack_dpotri],[clapack],
+        [AC_DEFINE([HAVE_CLAPACK],[1], [have clapack support])
+         AC_DEFINE([HAVE_CLAPACK_H],[1], [have clapack.h header])
+         have_clapack="yes"],[])])
+  fi
+  
+  if test "x$have_lapacke" = "xyes"; then
+    lapack_support="$lapack_support+LAPACKe"
+  fi
+
+  if test "x$have_clapack" = "xyes"; then
+    lapack_support="$lapack_support+cLAPACK"
+  fi
+
 else
   AC_MSG_RESULT([no])
-fi
-
-dnl ***************************************************************************
-dnl Check for levmar
-dnl ***************************************************************************
-
-AC_MSG_CHECKING([--with-levmar-path])
-AC_ARG_WITH(levmar-path,
-  [AS_HELP_STRING([--with-levmar-path=PATH],[Levmar library location])],
-  [LEVMAR_PATH="-L$withval"], [])
-AC_MSG_RESULT($LEVMAR_PATH)
-
-if test "x$LEVMAR_PATH" != x; then
-  LIBS="$LEVMAR_PATH $LIBS"
-fi
-
-AC_MSG_CHECKING([--with-levmar-extra-libs])
-AC_ARG_WITH(levmar-extra-libs,
-  [AS_HELP_STRING([--with-levmar-extra-libs=LIBS],[Levmar extra libraries, default is none])],
-  [LEVMAR_EXTRA_LIBS="$withval"], [])
-AC_MSG_RESULT($LEVMAR_EXTRA_LIBS)
-
-AC_CHECK_LIB([levmar], [dlevmar_der],[LIBS="-llevmar $LEVMAR_EXTRA_LIBS $LIBS"],[levmar_missing="yes"],[$LEVMAR_EXTRA_LIBS])
-
-AC_CHECK_HEADER(levmar.h, , [AC_CHECK_HEADER(levmar/levmar.h, [levmar_need_prefix="yes"], [levmar_missing="yes"])])
-if test "x$levmar_missing" = "xyes"; then
-  have_levmar_support=""
-else
-  have_levmar_support="#define NUMCOSMO_HAVE_LEVMAR 1"
-fi
-AC_SUBST(have_levmar_support)
-
-AM_CONDITIONAL([HAVE_LIBLEVMAR], [test "x$have_levmar_support" != x])
-
-if test "x$levmar_need_prefix" = "xyes"; then
-  AC_DEFINE([NC_LEVMAR_NEED_PREFIX],[1], [Duh!])
 fi
 
 dnl ***************************************************************************
 dnl Check for cfitsio
 dnl ***************************************************************************
 
-PKG_CHECK_MODULES(CFITSIO, [cfitsio >= 3.27],[
+PKG_CHECK_MODULES(CFITSIO, [cfitsio >= 3.25],[
   AC_DEFINE([HAVE_CFITSIO],[1], [Have the cfitsio package])
-  AC_DEFINE([HAVE_CFITSIO_3_27],[1], [Have the cfitsio package >= 3.27])
-  have_cfitsio_support="#define NUMCOSMO_HAVE_CFITSIO 1"],[
-  PKG_CHECK_MODULES(CFITSIO, [cfitsio >= 3.25],[
-    AC_DEFINE([HAVE_CFITSIO],[1], [Have the cfitsio package >= 3.25])
-    have_cfitsio_support="#define NUMCOSMO_HAVE_CFITSIO 1"],[
-    have_cfitsio_support=""]) 
-  ])
+  have_cfitsio_support="#define NUMCOSMO_HAVE_CFITSIO 1"])
 AC_SUBST(CFITSIO_CFLAGS)
 AC_SUBST(CFITSIO_LIBS)
 AC_SUBST(have_cfitsio_support)
 
+SAVED_LIBS="$LIBS"
+LIBS="$CFITSIO_LIBS $LIBS"
+SAVED_CFLAGS="$CFLAGS"
+CFLAGS="$CFLAGS $CFITSIO_CFLAGS -Werror"
+
+AC_MSG_CHECKING([fits_free_memory presence])
+AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[
+#include <fitsio.h>
+]],[[
+fits_free_memory ((void *)0, (void *)0);
+]])],[AC_MSG_RESULT([yes])],[
+AC_DEFINE([fits_free_memory(p,s)],[fffree(p,s)], [fits_free_memory])
+AC_MSG_RESULT([no])
+])
+
+AC_MSG_CHECKING([fffree presence])
+AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[
+#include <fitsio.h>
+]],[[
+fffree ((void *)0, (void *)0);
+]])],[AC_MSG_RESULT([yes])],[
+AC_DEFINE([fffree(p,s)],[g_free(p)], [fffree])
+AC_MSG_RESULT([no])
+])
+
+LIBS="$SAVED_LIBS"
+CFLAGS="$SAVED_CFLAGS"
 
 dnl ***************************************************************************
 dnl Check for chealpix
@@ -558,34 +665,37 @@ dnl Check for libcuba
 dnl ***************************************************************************
 
 AC_CHECK_LIB([cuba], [Cuhre],,[cuba_missing="yes"],[])
+AM_CONDITIONAL([USE_INTERNAL_LIBCUBA], [test "x$cuba_missing" = "xyes"])
+
+AC_MSG_CHECKING([libcuba])
 if test "x$cuba_missing" = "xyes"; then
   have_cuba_support=""
+  AC_MSG_RESULT([internal v4.1])
+  AC_DEFINE([HAVE_LIBCUBA_4_0],[1], [Have the libcuba >= 4.0])
 else
-  have_cuba_support="#define NUMCOSMO_HAVE_CUBA 1"
+  AC_MSG_RESULT([external])
+  AC_MSG_CHECKING([libcuba version])
+  AC_COMPILE_IFELSE(
+              [AC_LANG_PROGRAM([[#include <cuba.h>]],
+                 [[Cuhre (0, 0, (void *)0, (void *)0, 0.0, 0.0, 0, 0, 0, 0, (void *)0 /*AQUI*/,  (void *)0, (void *)0, (void *)0, (void *)0, (void *)0, (void *)0);]])],
+              [AC_DEFINE([HAVE_LIBCUBA_3_1],[1], [Have the libcuba >= 3.1])
+               cuba_3_1="<= 3.3"],
+              [cuba_3_1="error"
+  AC_COMPILE_IFELSE(
+              [AC_LANG_PROGRAM([[#include <cuba.h>]],
+                 [[Cuhre (0, 0, (void *)0, (void *)0, 0, 0.0, 0.0, 0, 0, 0, 0, (void *)0 /*AQUI*/,  (void *)0, (void *)0, (void *)0, (void *)0, (void *)0, (void *)0);]])],
+              [AC_DEFINE([HAVE_LIBCUBA_3_3],[1], [Have the libcuba >= 3.3])
+               cuba_3_1="<= 3.3"],
+              [cuba_3_1="error"
+  AC_COMPILE_IFELSE(
+              [AC_LANG_PROGRAM([[#include <cuba.h>]],
+                 [[Cuhre (0, 0, (void *)0, (void *)0, 0, 0.0, 0.0, 0, 0, 0, 0, (void *)0 /*AQUI*/,  /*AQUI*/ (void *)0, (void *)0, (void *)0, (void *)0, (void *)0, (void *)0, (void *)0);]])],
+              [AC_DEFINE([HAVE_LIBCUBA_4_0],[1], [Have the libcuba >= 4.0])
+               cuba_3_1=">= 4.0"],
+              [cuba_3_1="error"
+              ])])])
+  AC_MSG_RESULT([$cuba_3_1])
 fi
-AC_SUBST(have_cuba_support)
-
-AC_MSG_CHECKING([libcuba version])
-AC_COMPILE_IFELSE(
-            [AC_LANG_PROGRAM([[#include <cuba.h>]],
-               [[Cuhre (0, 0, (void *)0, (void *)0, 0.0, 0.0, 0, 0, 0, 0, (void *)0 /*AQUI*/,  (void *)0, (void *)0, (void *)0, (void *)0, (void *)0, (void *)0);]])],
-            [AC_DEFINE([HAVE_LIBCUBA_3_1],[1], [Have the libcuba >= 3.1])
-             cuba_3_1="<= 3.3"],
-            [cuba_3_1="error"
-AC_COMPILE_IFELSE(
-            [AC_LANG_PROGRAM([[#include <cuba.h>]],
-               [[Cuhre (0, 0, (void *)0, (void *)0, 0, 0.0, 0.0, 0, 0, 0, 0, (void *)0 /*AQUI*/,  (void *)0, (void *)0, (void *)0, (void *)0, (void *)0, (void *)0);]])],
-            [AC_DEFINE([HAVE_LIBCUBA_3_3],[1], [Have the libcuba >= 3.3])
-             cuba_3_1="<= 3.3"],
-            [cuba_3_1="error"
-AC_COMPILE_IFELSE(
-            [AC_LANG_PROGRAM([[#include <cuba.h>]],
-               [[Cuhre (0, 0, (void *)0, (void *)0, 0, 0.0, 0.0, 0, 0, 0, 0, (void *)0 /*AQUI*/,  /*AQUI*/ (void *)0, (void *)0, (void *)0, (void *)0, (void *)0, (void *)0, (void *)0);]])],
-            [AC_DEFINE([HAVE_LIBCUBA_4_0],[1], [Have the libcuba >= 4.0])
-             cuba_3_1=">= 4.0"],
-            [cuba_3_1="error"
-            ])])])
-AC_MSG_RESULT([$cuba_3_1])
 
 dnl ***************************************************************************
 dnl Check for nlopt
@@ -635,13 +745,24 @@ AC_CHECK_TYPE([CVDlsDenseJacFn],[],[AC_MSG_ERROR([sundials too old, please insta
 CFLAGS="$SAVED_CFLAGS"
 
 AC_MSG_CHECKING([whenever sundials uses long int])
+SAVED_CFLAGS="$CFLAGS"
+CFLAGS="$CFLAGS -Werror"
 AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[
 #include <cvodes/cvodes_direct.h>
-typedef int (*CVDlsDenseJacFn)(long int N, realtype t,
-                               N_Vector y, N_Vector fy,
-                               DlsMat Jac, void *user_data,
-                               N_Vector tmp1, N_Vector tmp2, N_Vector tmp3);
-]],[[1;]])],[AC_DEFINE([SUNDIALS_USES_LONG_INT],[1], [If sundials version >= 2.5.0]) AC_MSG_RESULT([yes])],[AC_MSG_RESULT([no])])
+int test_dense_jac (long int N, realtype t,
+                    N_Vector y, N_Vector fy,
+                    DlsMat Jac, void *user_data,
+                    N_Vector tmp1, N_Vector tmp2, N_Vector tmp3)
+{ return 0; }
+]],[[
+CVDlsDenseJacFn func = &test_dense_jac;
+func (0, 0.0, (void *)0, (void *)0, (void *)0, (void *)0, (void *)0, (void *)0, (void *)0);
+]])],
+[AC_DEFINE([_NCM_SUNDIALS_INT_TYPE],[glong], [glong])
+ AC_MSG_RESULT([yes])],
+[AC_DEFINE([_NCM_SUNDIALS_INT_TYPE],[gint], [gint])
+ AC_MSG_RESULT([no])])
+CFLAGS="$SAVED_CFLAGS"
 
 dnl ***************************************************************************
 dnl Appending libs and setting up TEST_SHARED
@@ -663,6 +784,7 @@ dnl AC_LINK_IFELSE([int main(){}],[],[])
 dnl LIBS="$SAVE_LIBS"
 dnl CFLAGS="$SAVE_CFLAGS"
 dnl LDFLAGS="SAVE_LDFLAGS"
+CFLAGS="$NC_CFLAGS"
 
 dnl ***************************************************************************
 dnl Setting up
@@ -672,6 +794,12 @@ AC_CONFIG_FILES([
 numcosmo.pc
 Makefile
 numcosmo/Makefile
+numcosmo/levmar/Makefile
+numcosmo/libcuba/Makefile
+numcosmo/libcuba/cuhre/Makefile
+numcosmo/libcuba/divonne/Makefile
+numcosmo/libcuba/suave/Makefile
+numcosmo/libcuba/vegas/Makefile
 tools/Makefile
 tests/Makefile
 docs/Makefile
@@ -706,12 +834,6 @@ else
        echo "Building  with Lapack support: ...................................NO"
        echo "        Requires Lapack Linear Algebra PACKage"
 fi
-if [ test "x$have_levmar_support" != x ]; then
-       echo "Building with levmar support: ...................................YES"
-else
-       echo "Building  with levmar support: ...................................NO"
-       echo "        Requires levmar Levenberg-Marquardt least squares library"
-fi
 if [ test "x$have_cfitsio_support" != x ]; then
        echo "Building with cfitsio support: ..................................YES"
 else
@@ -723,13 +845,6 @@ if [ test "x$have_nlopt_support" != x ]; then
 else
        echo "Building  with nlopt support: ....................................NO"
        echo "        Requires nlopt - NonLinear OPTimization library"
-fi
-if [ test "x$have_cuba_support" != x ]; then
-       echo "Building with cuba support: .....................................YES"
-else
-       echo "Building  with libcuba support: ..................................NO"
-       echo "        Requires libcuba - "
-       echo "                 library for multidimensional numerical integration"
 fi
 echo "--------------------------------------------------------------------"
 echo "AM_CFLAGS = $AM_CFLAGS"

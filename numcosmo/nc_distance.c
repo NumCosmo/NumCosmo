@@ -24,8 +24,8 @@
 
 /**
  * SECTION:nc_distance
- * @title: Cosmological Distances and Times
- * @short_description: calculates cosmological distances and related quantities
+ * @title: NcDistance
+ * @short_description: Cosmological distance and time related quantities.
  *
  * This object implements several distances used in cosmology, here we have
  * the following definitions.

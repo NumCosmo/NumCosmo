@@ -26,9 +26,9 @@
 
 /**
  * SECTION:ncm_obj_array
- * @title: GObjects array.
- * @short_description: GObjects array with serialization support. 
- *
+ * @title: NcmObjArray
+ * @short_description: GObjects array with serialization support.
+ * 
  * FIXME
  * 
  */

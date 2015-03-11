@@ -96,8 +96,8 @@ GType ncm_model_get_type (void) G_GNUC_CONST;
 
 void ncm_model_class_add_params (NcmModelClass *model_class, guint sparam_len, guint vparam_len, guint nonparam_prop_len);
 void ncm_model_class_set_name_nick (NcmModelClass *model_class, const gchar *name, const gchar *nick);
-void ncm_model_class_set_sparam (NcmModelClass *model_class, guint sparam_id, gchar *symbol, gchar *name, gdouble lower_bound, gdouble upper_bound, gdouble scale, gdouble abstol, gdouble default_value, NcmParamType ppt);
-void ncm_model_class_set_vparam (NcmModelClass *model_class, guint vparam_id, guint default_length, gchar *symbol, gchar *name, gdouble lower_bound, gdouble upper_bound, gdouble scale, gdouble abstol, gdouble default_value, NcmParamType ppt);
+void ncm_model_class_set_sparam (NcmModelClass *model_class, guint sparam_id, const gchar *symbol, const gchar *name, gdouble lower_bound, gdouble upper_bound, gdouble scale, gdouble abstol, gdouble default_value, NcmParamType ppt);
+void ncm_model_class_set_vparam (NcmModelClass *model_class, guint vparam_id, guint default_length, const gchar *symbol, const gchar *name, gdouble lower_bound, gdouble upper_bound, gdouble scale, gdouble abstol, gdouble default_value, NcmParamType ppt);
 void ncm_model_class_check_params_info (NcmModelClass *model_class);
 
 NcmModel *ncm_model_dup (NcmModel *model, NcmSerialize *ser);
@@ -150,17 +150,17 @@ NcmVector *ncm_model_params_get_all (NcmModel *model);
 gboolean ncm_model_params_valid (NcmModel *model);
 gboolean ncm_model_params_valid_bounds (NcmModel *model);
 
-gboolean ncm_model_orig_param_index_from_name (NcmModel *model, gchar *param_name, guint *i);
-gboolean ncm_model_param_index_from_name (NcmModel *model, gchar *param_name, guint *i);
+gboolean ncm_model_orig_param_index_from_name (NcmModel *model, const gchar *param_name, guint *i);
+gboolean ncm_model_param_index_from_name (NcmModel *model, const gchar *param_name, guint *i);
 const gchar *ncm_model_orig_param_name (NcmModel *model, guint n);
 const gchar *ncm_model_param_name (NcmModel *model, guint n);
 const gchar *ncm_model_orig_param_symbol (NcmModel *model, guint n);
 const gchar *ncm_model_param_symbol (NcmModel *model, guint n);
 
-void ncm_model_param_set_by_name (NcmModel *model, gchar *param_name, gdouble val);
-void ncm_model_orig_param_set_by_name (NcmModel *model, gchar *param_name, gdouble val);
-gdouble ncm_model_param_get_by_name (NcmModel *model, gchar *param_name);
-gdouble ncm_model_orig_param_get_by_name (NcmModel *model, gchar *param_name);
+void ncm_model_param_set_by_name (NcmModel *model, const gchar *param_name, gdouble val);
+void ncm_model_orig_param_set_by_name (NcmModel *model, const gchar *param_name, gdouble val);
+gdouble ncm_model_param_get_by_name (NcmModel *model, const gchar *param_name);
+gdouble ncm_model_orig_param_get_by_name (NcmModel *model, const gchar *param_name);
 
 gdouble ncm_model_orig_param_get_scale (NcmModel *model, guint n);
 gdouble ncm_model_orig_param_get_lower_bound (NcmModel *model, guint n);

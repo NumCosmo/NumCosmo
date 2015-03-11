@@ -33,7 +33,7 @@
 
 G_BEGIN_DECLS
 
-gsl_integration_workspace **ncm_integral_get_workspace ();
+gsl_integration_workspace **ncm_integral_get_workspace (void);
 
 typedef struct _NcmIntegrand2dim NcmIntegrand2dim;
 typedef gdouble (*_NcmIntegrand2dimFunc) (gdouble x, gdouble y, gpointer userdata);

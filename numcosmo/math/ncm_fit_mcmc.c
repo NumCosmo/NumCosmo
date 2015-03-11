@@ -25,10 +25,12 @@
 
 /**
  * SECTION:ncm_fit_mcmc
- * @title: Markov Chain Monte Carlo Analysis
- * @short_description: Object implementing Markov Chain Monte Carlo analysis.
+ * @title: NcmFitMCMC
+ * @short_description: Markov Chain Monte Carlo analysis.
  *
- * FIXME Metropolis–Hastings sampler.
+ * FIXME 
+ * 
+ * Metropolis–Hastings sampler.
  * 
  */
 
@@ -408,7 +410,10 @@ _ncm_fit_mcmc_update (NcmFitMCMC *mcmc, NcmFit *fit)
     case NCM_FIT_RUN_MSGS_SIMPLE:
     {
       guint stepi = mcmc->nt->task_pos % step;
-      if ((stepi == 0) || (mcmc->nt->task_pos == mcmc->nt->task_len))
+      gboolean log_timeout = FALSE;
+      if ((mcmc->nt->pos_time - mcmc->nt->last_log_time) > 60.0)
+        log_timeout = TRUE;
+      if (log_timeout || (stepi == 0) || (mcmc->nt->task_pos == mcmc->nt->task_len))
       {
         /* guint acc = stepi == 0 ? step : stepi; */
         ncm_mset_catalog_log_current_stats (mcmc->mcat);
@@ -873,3 +878,18 @@ ncm_fit_mcmc_mean_covar (NcmFitMCMC *mcmc)
   ncm_mset_fparams_set_vector (mcmc->mcat->mset, mcmc->fit->fstate->fparams);
   mcmc->fit->fstate->has_covar = TRUE;
 }
+
+/**
+ * ncm_fit_mcmc_get_catalog:
+ * @mcmc: a #NcmFitMCMC
+ *
+ * Gets the generated catalog of @mcmc.
+ * 
+ * Returns: (transfer full): the generated catalog.
+ */
+NcmMSetCatalog *
+ncm_fit_mcmc_get_catalog (NcmFitMCMC *mcmc)
+{
+  return ncm_mset_catalog_ref (mcmc->mcat);
+}
+

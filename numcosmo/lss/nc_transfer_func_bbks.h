@@ -63,7 +63,7 @@ struct _NcTransferFuncBBKSClass
 
 GType nc_transfer_func_bbks_get_type (void) G_GNUC_CONST;
 
-NcTransferFunc *nc_transfer_func_bbks_new ();
+NcTransferFunc *nc_transfer_func_bbks_new (void);
 
 G_END_DECLS
 

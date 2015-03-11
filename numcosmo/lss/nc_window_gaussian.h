@@ -57,7 +57,7 @@ struct _NcWindowGaussianClass
 
 GType nc_window_gaussian_get_type (void) G_GNUC_CONST;
 
-NcWindow *nc_window_gaussian_new ();
+NcWindow *nc_window_gaussian_new (void);
 
 #define NC_WINDOW_VOLUME_GAUSSIAN (sqrt(2.0 * M_PI)*sqrt(2.0 * M_PI)*sqrt(2.0 * M_PI))  /* (2.0 \Pi)^(3/2) */
 

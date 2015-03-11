@@ -24,8 +24,8 @@
 
 /**
  * SECTION:nc_hicosmo_lcdm
- * @title: $\Lambda$CDM
- * @short_description: Implementation of $\Lambda$CDM model
+ * @title: NcHICosmoLCDM
+ * @short_description: $\Lambda$CDM model.
  *
  * FIXME
  * 

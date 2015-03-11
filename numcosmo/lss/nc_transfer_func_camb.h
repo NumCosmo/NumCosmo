@@ -60,7 +60,7 @@ struct _NcTransferFuncCAMBClass
 
 GType nc_transfer_func_camb_get_type (void) G_GNUC_CONST;
 
-NcTransferFunc *nc_transfer_func_camb_new ();
+NcTransferFunc *nc_transfer_func_camb_new (void);
 
 extern gchar *camb_filename;
 

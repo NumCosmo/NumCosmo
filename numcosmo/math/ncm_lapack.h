@@ -26,6 +26,7 @@
 #define _NCM_LAPACK_H_
 
 #include <glib.h>
+#include <numcosmo/math/ncm_matrix.h>
 #include <numcosmo/build_cfg.h>
 
 G_BEGIN_DECLS
@@ -33,6 +34,10 @@ G_BEGIN_DECLS
 gint ncm_lapack_dptsv (gdouble *d, gdouble *e, gdouble *b, gdouble *x, guint size);
 gint ncm_lapack_dpotrf (gchar uplo, guint size, gdouble *a, guint lda);
 gint ncm_lapack_dpotri (gchar uplo, guint size, gdouble *a, guint lda);
+
+GArray *ncm_lapack_dggglm_alloc (NcmMatrix *L, NcmMatrix *X, NcmVector *p, NcmVector *d, NcmVector *y);
+gint ncm_lapack_dggglm_run (GArray *ws, NcmMatrix *L, NcmMatrix *X, NcmVector *p, NcmVector *d, NcmVector *y);
+void ncm_lapack_dtrsv (gchar uplo, gchar trans, gchar diag, NcmMatrix *A, NcmVector *v);
 
 #define NCM_LAPACK_CHECK_INFO(func,info) if ((info) != 0) g_error ("Lapack[%s] error %d", func, (info))
 

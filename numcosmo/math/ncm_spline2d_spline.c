@@ -24,7 +24,7 @@
 
 /**
  * SECTION:ncm_spline2d_spline
- * @title: Bidimensional Spline from Spline
+ * @title: NcmSpline2dSpline
  * @short_description: Implements bidimensional splines from splines method.
  *
  * FIXME

@@ -25,8 +25,8 @@
 
 /**
  * SECTION:nc_hipert_iadiab
- * @title: Adiabatic Perturbation Interface
- * @short_description: Perturbation interface for adiabatic mode only 
+ * @title: NcHIPertIAdiab
+ * @short_description: Perturbation interface for adiabatic mode only.
  *
  * FIXME
  *

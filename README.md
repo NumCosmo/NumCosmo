@@ -72,24 +72,36 @@ Requirements:
   - Sundials >= 2.4.0
     ODE solver library. 
     * https://computation.llnl.gov/casc/sundials/main.html
-  
+
 Optional packages:
 ------------------
+
+NumCosmo, provides it own internal version of Levmar and Cuba for a full version 
+of the original libraries visit their website linked below. It is, therefore,
+*not* necessary to install them.
 
   - SQLite3 >= 3.6.10
     Standalone database used to store several observation data (SN Ia, BAO
     Dv, etc), some data are already included in numcosmo.
     * http://www.sqlite.org/
-  - FFTW3   >= 3.1.2
+  - FFTW3 >= 3.1.2
     Needed to build the spherical harmonic decomposition of CMB data.
     * http://www.fftw.org/
-  - Atlas (cblas) any version
+  - Any optimized BLAS library (ATLAS, OpenBLAS, MKL, etc)
     Improve speed in linear algebra calculations.
     * http://math-atlas.sourceforge.net/
+    * http://www.openblas.net/
+    * https://software.intel.com/en-us/intel-mkl
+  - Lapack
+    Linear Algebra PACKage    
+    * http://www.netlib.org/lapack/
   - Extra (besides gsl's) minimization packages
     - Levmar
       Least squares minimization library.
       * http://www.ics.forth.gr/~lourakis/levmar/
+    - Cuba 
+      A library for multidimensional numerical integration
+      * http://www.feynarts.de/cuba/  
     - NLOpt
       Several general purpose minimization algorithms.
       * http://ab-initio.mit.edu/wiki/index.php/NLopt
@@ -99,4 +111,4 @@ Optional packages:
     * http://heasarc.nasa.gov/fitsio/fitsio.html
   - gtk-doc
     GTK-Doc is used to generate API documentation from comments added to 
-    C code.
+    C code, needed only to generate new releases.
