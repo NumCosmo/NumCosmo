@@ -34,6 +34,22 @@ gobj_itest_LDADD = \
 
 AM_CPPFLAGS = 
 
-bin_PROGRAMS = 
+bin_PROGRAMS = darkenergy \
+	mcat_analyze
 
-## File created by the gnome-build tools
+darkenergy_SOURCES = \
+	darkenergy.c\
+	data_cluster.c \
+	data_cluster.h \
+	de_options.c \
+	de_options.h \
+	savedata.c \
+	savedata.h
+
+darkenergy_LDADD = \
+        $(top_builddir)/numcosmo/libnumcosmo.la
+
+mcat_analyze_SOURCES =  \
+	mcat_analyze.c
+
+mcat_analyze_LDADD = $(top_builddir)/numcosmo/libnumcosmo.la 

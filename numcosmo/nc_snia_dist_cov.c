@@ -197,22 +197,22 @@ nc_snia_dist_cov_class_init (NcSNIADistCovClass *klass)
                                                          G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));  
   
   ncm_model_class_set_sparam (model_class, NC_SNIA_DIST_COV_ALPHA, "\\alpha", "alpha",
-                              -10.0, 10.0, 1.0e-1,
+                              0.0, 5.0, 1.0e-1,
                               NC_SNIA_DIST_COV_DEFAULT_PARAMS_ABSTOL, NC_SNIA_DIST_COV_DEFAULT_ALPHA,
                               NCM_PARAM_TYPE_FIXED);
 
   ncm_model_class_set_sparam (model_class, NC_SNIA_DIST_COV_BETA, "\\beta", "beta",
-                              -10.0, 10.0, 1.0e-1,
+                              0.0, 5.0, 1.0e-1,
                               NC_SNIA_DIST_COV_DEFAULT_PARAMS_ABSTOL, NC_SNIA_DIST_COV_DEFAULT_BETA,
                               NCM_PARAM_TYPE_FIXED);
 
   ncm_model_class_set_sparam (model_class, NC_SNIA_DIST_COV_M1, "\\mathcal{M}_1", "M1",
-                              -50.0, 10.0, 1.0,
+                              -30.0, -10.0, 1.0,
                               NC_SNIA_DIST_COV_DEFAULT_PARAMS_ABSTOL, NC_SNIA_DIST_COV_DEFAULT_M1,
                               NCM_PARAM_TYPE_FIXED);
 
   ncm_model_class_set_sparam (model_class, NC_SNIA_DIST_COV_M2, "\\mathcal{M}_1", "M2",
-                              -50.0, 10.0, 1.0,
+                              -30.0, -10.0, 1.0,
                               NC_SNIA_DIST_COV_DEFAULT_PARAMS_ABSTOL, NC_SNIA_DIST_COV_DEFAULT_M2,
                               NCM_PARAM_TYPE_FIXED);
   

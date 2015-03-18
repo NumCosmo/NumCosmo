@@ -53,6 +53,7 @@ ncm_sources = \
 	math/ncm_stats_vec.c               \
 	math/ncm_stats_dist1d.c            \
 	math/ncm_stats_dist1d_spline.c     \
+	math/ncm_stats_dist1d_epdf.c       \
 	math/ncm_bootstrap.c               \
 	math/ncm_spline.c                  \
 	math/ncm_spline_gsl.c              \
@@ -136,6 +137,7 @@ ncm_headers = \
 	math/ncm_stats_vec.h             \
 	math/ncm_stats_dist1d.h          \
 	math/ncm_stats_dist1d_spline.h   \
+	math/ncm_stats_dist1d_epdf.h     \
 	math/ncm_bootstrap.h             \
 	math/ncm_spline.h                \
 	math/ncm_spline_gsl.h            \

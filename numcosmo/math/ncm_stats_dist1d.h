@@ -63,7 +63,9 @@ struct _NcmStatsDist1d
   gdouble norma;
   gdouble reltol;
   gdouble abstol;
-  NcmOdeSpline *inv_pdf;
+  gdouble max_prob;
+  NcmOdeSpline *inv_P;
+  NcmOdeSpline *inv_Q;
   NcmOdeSpline *pdf;
   gsl_min_fminimizer *fmin;
 };
@@ -76,12 +78,13 @@ void ncm_stats_dist1d_clear (NcmStatsDist1d **sd1);
 
 void ncm_stats_dist1d_prepare (NcmStatsDist1d *sd1);
 
-gdouble ncm_stats_dist1d_p (NcmStatsDist1d *sd1, gdouble x);
-gdouble ncm_stats_dist1d_m2lnp (NcmStatsDist1d *sd1, gdouble x);
-gdouble ncm_stats_dist1d_pdf (NcmStatsDist1d *sd1, gdouble x);
-gdouble ncm_stats_dist1d_norma (NcmStatsDist1d *sd1);
-gdouble ncm_stats_dist1d_inv_pdf (NcmStatsDist1d *sd1, gdouble u);
-gdouble ncm_stats_dist1d_mode (NcmStatsDist1d *sd1);
+gdouble ncm_stats_dist1d_eval_p (NcmStatsDist1d *sd1, gdouble x);
+gdouble ncm_stats_dist1d_eval_m2lnp (NcmStatsDist1d *sd1, gdouble x);
+gdouble ncm_stats_dist1d_eval_pdf (NcmStatsDist1d *sd1, gdouble x);
+gdouble ncm_stats_dist1d_eval_norma (NcmStatsDist1d *sd1);
+gdouble ncm_stats_dist1d_eval_inv_pdf (NcmStatsDist1d *sd1, gdouble u);
+gdouble ncm_stats_dist1d_eval_inv_pdf_tail (NcmStatsDist1d *sd1, gdouble v);
+gdouble ncm_stats_dist1d_eval_mode (NcmStatsDist1d *sd1);
 
 G_END_DECLS
 

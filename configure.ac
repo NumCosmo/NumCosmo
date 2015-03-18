@@ -805,7 +805,6 @@ tests/Makefile
 docs/Makefile
 examples/Makefile
 data/Makefile
-darkenergy/Makefile
 numcosmo/build_cfg.h
 ])
 

@@ -68,6 +68,8 @@ struct _NcmOdeSpline
   NcmSpline *s;
   gboolean s_init;
   gboolean cvode_init;
+  gboolean hnil;
+  gboolean stop_hnil;
   NcmModelCtrl *ctrl;
 };
 
@@ -88,6 +90,7 @@ void ncm_ode_spline_set_yi (NcmOdeSpline *os, gdouble yi);
 
 #define NCM_ODE_SPLINE_DEFAULT_RELTOL (1.0e-13)
 #define NCM_ODE_SPLINE_DEFAULT_ABSTOL (1.0e-80)
+#define NCM_ODE_SPLINE_MIN_STEP (1.0e-10)
 
 G_END_DECLS
 

@@ -98,6 +98,7 @@
       <xi:include href="xml/ncm_stats_vec.xml"/>
       <xi:include href="xml/ncm_stats_dist1d.xml"/>
       <xi:include href="xml/ncm_stats_dist1d_spline.xml"/>
+      <xi:include href="xml/ncm_stats_dist1d_epdf.xml"/>
       <xi:include href="xml/ncm_bootstrap.xml"/>
       <xi:include href="xml/ncm_likelihood.xml"/>
       <xi:include href="xml/ncm_priors.xml"/>

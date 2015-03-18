@@ -876,6 +876,30 @@ ncm_vector_const_free (const NcmVector *cv)
   ncm_vector_free (NCM_VECTOR (cv));
 }
 
+static struct _generic_N_Vector_Ops _ncm_ops;
+
+/**
+ * ncm_vector_nvector: (skip)
+ * @cv: a #NcmVector.
+ *
+ * FIXME
+ *
+ * Returns: FIXME
+ */
+N_Vector
+ncm_vector_nvector (NcmVector *cv)
+{
+  struct _generic_N_Vector *nv = g_new0 (struct _generic_N_Vector, 1);
+  if (cv != NULL)
+  {
+    if (ncm_vector_stride (cv) != 1)
+      g_error ("ncm_vector_nvector: cannot convert vector to N_Vector, stride must be 1.");
+    nv->content = ncm_vector_ref (cv);
+  }
+  nv->ops = &_ncm_ops;
+  return nv;
+}
+
 static N_Vector
 _ncm_nvclone (N_Vector nv)
 {
@@ -893,7 +917,7 @@ _ncm_nvcloneempty (N_Vector nv)
 }
 
 static void
-_ncm_nvspace(N_Vector nv, glong *lrw, glong *liw)
+_ncm_nvspace (N_Vector nv, glong *lrw, glong *liw)
 {
   *lrw = ncm_vector_len (NCM_N2VECTOR (nv));
   *liw = (sizeof (NcmVector) % 4 == 0) ? sizeof (NcmVector) / 4 : sizeof (NcmVector) / 4 + 1;
@@ -908,7 +932,9 @@ _ncm_nvgetarraypointer (N_Vector nv)
 static void
 _ncm_nvsetarraypointer (realtype *data, N_Vector nv)
 {
-  ncm_vector_gsl (NCM_N2VECTOR (nv))->data = data;
+  NcmVector *v = ncm_vector_new_data_malloc (data, ncm_vector_len (NCM_N2VECTOR (nv)), 1);
+  ncm_vector_free (NCM_N2VECTOR (nv));
+  nv->content = v;
 }
 
 static void
@@ -924,28 +950,7 @@ _ncm_nvlinearsum (realtype a, N_Vector x, realtype b, N_Vector y, N_Vector z)
 static void
 _ncm_nvconst (realtype a, N_Vector nv)
 {
-  gsl_vector_set_all (ncm_vector_gsl(NCM_N2VECTOR(nv)), a);
-}
-
-static struct _generic_N_Vector_Ops _ncm_ops;
-
-/**
- * ncm_vector_nvector: (skip)
- * @cv: a #NcmVector.
- *
- * FIXME
- *
- * Returns: FIXME
- */
-N_Vector
-ncm_vector_nvector (NcmVector *cv)
-{
-  struct _generic_N_Vector *nv = g_slice_new (struct _generic_N_Vector);
-  g_assert_not_reached ();
-  if (cv != NULL)
-    nv->content = ncm_vector_ref (cv);
-  nv->ops = &_ncm_ops;
-  return nv;
+  gsl_vector_set_all (ncm_vector_gsl (NCM_N2VECTOR(nv)), a);
 }
 
 static void
@@ -953,7 +958,7 @@ _ncm_vector_nvector_free (N_Vector nv)
 {
   if (NCM_N2VECTOR (nv) != NULL)
     ncm_vector_free (NCM_N2VECTOR (nv));
-  g_slice_free (struct _generic_N_Vector, nv);
+  g_free (nv);
 }
 
 static struct _generic_N_Vector_Ops _ncm_ops =

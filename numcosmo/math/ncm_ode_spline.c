@@ -55,9 +55,12 @@ enum
   PROP_YI,
   PROP_DYDX,
   PROP_SPLINE,
+  PROP_STOP_HNIL,
 };
 
 G_DEFINE_TYPE (NcmOdeSpline, ncm_ode_spline, G_TYPE_OBJECT);
+
+void _ncm_ode_spline_cvode_err (gint error_code, const gchar *module, const gchar *function, gchar *msg, gpointer eh_data);
 
 static void
 ncm_ode_spline_init (NcmOdeSpline *os)
@@ -75,7 +78,15 @@ ncm_ode_spline_init (NcmOdeSpline *os)
   os->dydx       = NULL;
   os->s          = NULL;
   os->s_init     = FALSE;
+  os->hnil       = FALSE;
+  os->stop_hnil  = FALSE;
   os->ctrl       = ncm_model_ctrl_new (NULL);
+
+  {
+    gint flag = CVodeSetErrHandlerFn (os->cvode, &_ncm_ode_spline_cvode_err, os);
+    NCM_CVODE_CHECK (&flag, "ncm_ode_spline_init[CVodeSetErrHandlerFn]", 1, );
+  }
+  
 }
 
 static void
@@ -106,6 +117,9 @@ ncm_ode_spline_set_property (GObject *object, guint prop_id, const GValue *value
       break;
     case PROP_SPLINE:
       os->s = g_value_dup_object (value);
+      break;
+    case PROP_STOP_HNIL:
+      os->stop_hnil = g_value_get_boolean (value);
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -141,6 +155,9 @@ ncm_ode_spline_get_property (GObject *object, guint prop_id, GValue *value, GPar
       break;
     case PROP_SPLINE:
       g_value_set_object (value, os->s);
+      break;
+    case PROP_STOP_HNIL:
+      g_value_set_boolean (value, os->stop_hnil);
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -245,6 +262,27 @@ ncm_ode_spline_class_init (NcmOdeSplineClass *klass)
                                                         "Spline algorithm to be used",
                                                         NCM_TYPE_SPLINE,
                                                         G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  g_object_class_install_property (object_class,
+                                   PROP_STOP_HNIL,
+                                   g_param_spec_boolean ("stop-hnil",
+                                                         NULL,
+                                                         "Whether treat hnil as error",
+                                                         TRUE,
+                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+}
+
+void 
+_ncm_ode_spline_cvode_err (gint error_code, const gchar *module, const gchar *function, gchar *msg, gpointer eh_data)
+{
+  NcmOdeSpline *os = NCM_ODE_SPLINE (eh_data);
+  if (error_code != CV_WARNING)
+  {
+    g_error ("NcmOdeSpline[%d]: %s[%s]: `%s'", error_code, module, function, msg);
+  }
+  else
+  {
+    os->hnil = TRUE;
+  }
 }
 
 typedef struct _NcmOdeSplineDydxData NcmOdeSplineDydxData;
@@ -265,6 +303,7 @@ _ncm_ode_spline_f (realtype x, N_Vector y, N_Vector ydot, gpointer f_data)
 {
   NcmOdeSplineDydxData *dydx_data = (NcmOdeSplineDydxData *) f_data;
   NV_Ith_S (ydot, 0) = dydx_data->dydx (NV_Ith_S (y, 0), x, dydx_data->userdata);
+  /*printf ("% 20.15g % 20.15g % 20.15g\n", x, NV_Ith_S (y, 0), NV_Ith_S (ydot, 0));*/
   return 0;
 }
 
@@ -324,7 +363,6 @@ ncm_ode_spline_prepare (NcmOdeSpline *os, gpointer userdata)
 {
   NcmOdeSplineDydxData f_data = {os->dydx, userdata};
   gdouble x, x0;
-  gint i = 0;
 
   NV_Ith_S (os->y, 0) = os->yi;
   
@@ -348,18 +386,31 @@ ncm_ode_spline_prepare (NcmOdeSpline *os, gpointer userdata)
   CVodeSetUserData (os->cvode, &f_data);
 
   x0 = os->xi;
+  if (!gsl_finite (os->dydx (NV_Ith_S (os->y, 0), x0, f_data.userdata)))
+    g_error ("ncm_ode_spline_prepare: not finite integrand.");
+
+  os->hnil = FALSE;
   while (TRUE)
   {
     gint flag = CVode (os->cvode, os->xf, os->y, &x, CV_ONE_STEP);
-    NCM_CVODE_CHECK (&flag, "CVode", 1, );
+    NCM_CVODE_CHECK (&flag, "ncm_ode_spline_prepare[CVode]", 1, );
 
-    if (x0 == x && i++ > 10)
-      g_error ("ncm_ode_spline_prepare: cannot integrate function.");
-    x0 = x;
+    if (os->hnil)
+    {
+      if (os->stop_hnil)
+        g_error ("ncm_ode_spline_prepare: cannot integrate function %d.", flag);
+      else
+        break;
+    }
 
-    g_array_append_val (os->x_array, x);
-    g_array_append_val (os->y_array, NV_Ith_S (os->y, 0));
-    
+    /*if (((x0 != 0.0) ? fabs ((x - x0) / x0) : fabs (x - x0)) > NCM_ODE_SPLINE_MIN_STEP)*/
+    {
+      g_array_append_val (os->x_array, x);
+      g_array_append_val (os->y_array, NV_Ith_S (os->y, 0));
+      /*printf ("% 20.15g % 20.15g\n", x, NV_Ith_S (os->y, 0));*/
+      x0 = x;
+    }
+
     if (x == os->xf)
       break;
   }

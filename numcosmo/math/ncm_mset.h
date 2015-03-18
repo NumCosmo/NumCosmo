@@ -219,8 +219,8 @@ gint ncm_mset_fparam_get_fpi (NcmMSet *mset, NcmModelID mid, guint pid);
 
 NcmMSetPIndex *ncm_mset_fparam_get_pi_by_name (NcmMSet *mset, const gchar *name);
 
-void ncm_mset_save (NcmMSet *mset, const gchar *filename, gboolean save_comment);
-NcmMSet *ncm_mset_load (const gchar *filename);
+void ncm_mset_save (NcmMSet *mset, NcmSerialize *ser, const gchar *filename, gboolean save_comment);
+NcmMSet *ncm_mset_load (const gchar *filename, NcmSerialize *ser);
 
 G_END_DECLS
 

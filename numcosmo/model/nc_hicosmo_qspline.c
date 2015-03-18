@@ -55,6 +55,18 @@ _nc_hicosmo_qspline_prepare (NcHICosmoQSpline *qs)
   if (!ncm_model_state_is_update (NCM_MODEL (qs)))
   {   
     ncm_spline_prepare (qs->q_z);
+/*
+    if (!gsl_finite (ncm_spline_eval (qs->q_z, 0)))
+    {
+      guint i;
+      for (i = 0; i < ncm_vector_len (qs->q_z->xv); i++)
+      {
+        printf ("% 20.15g % 20.15g\n", 
+                ncm_vector_get (qs->q_z->xv, i),
+                ncm_vector_get (qs->q_z->yv, i));
+      }
+    }
+*/    
     ncm_ode_spline_prepare (qs->E2_z, qs);
     ncm_model_state_set_update (NCM_MODEL (qs));
   }
@@ -72,7 +84,7 @@ _nc_hicosmo_qspline_dE2dz (gdouble E2, gdouble z, gpointer userdata)
     q = ncm_spline_eval (qs->q_z, qs->z_f);
   else
     q = ncm_spline_eval (qs->q_z, z);
-
+  
   return 2.0 * E2 * (q + 1.0) / (1.0 + z);
 }
 
@@ -519,7 +531,7 @@ nc_hicosmo_qspline_class_init (NcHICosmoQSplineClass *klass)
    * FIXME
    */  
   ncm_model_class_set_sparam (model_class, NC_HICOSMO_QSPLINE_OMEGA_T, "Omega_t", "Omegat",
-                              -5.0, 5.0, 1.0e-1,
+                              0.05, 2.0, 1.0e-1,
                               NC_HICOSMO_DEFAULT_PARAMS_ABSTOL, NC_HICOSMO_QSPLINE_DEFAULT_OMEGA_T,
                               NCM_PARAM_TYPE_FIXED);
 
@@ -534,7 +546,7 @@ nc_hicosmo_qspline_class_init (NcHICosmoQSplineClass *klass)
    * FIXME
    */  
   ncm_model_class_set_sparam (model_class, NC_HICOSMO_QSPLINE_AS_DRAG, "A_s drag", "asdrag",
-                              0.0, 5.0, 1.0e-3,
+                              1.0e-4, 1.0, 1.0e-3,
                               NC_HICOSMO_DEFAULT_PARAMS_ABSTOL, NC_HICOSMO_QSPLINE_DEFAULT_AS_DRAG,
                               NCM_PARAM_TYPE_FIXED);
 
@@ -554,7 +566,7 @@ nc_hicosmo_qspline_class_init (NcHICosmoQSplineClass *klass)
    * FIXME
    */
   ncm_model_class_set_vparam (model_class, NC_HICOSMO_QSPLINE_Q, NC_HICOSMO_QSPLINE_DEFAULT_Q_LEN, "qparam", "qparam",
-                              -50.0, 50.0, 1.0e-1, NC_HICOSMO_DEFAULT_PARAMS_ABSTOL, NC_HICOSMO_QSPLINE_DEFAULT_Q,
+                              -50.0, 50.0, 2.0e-1, NC_HICOSMO_DEFAULT_PARAMS_ABSTOL, NC_HICOSMO_QSPLINE_DEFAULT_Q,
                               NCM_PARAM_TYPE_FREE);
 
   /* Check for errors in parameters initialization */

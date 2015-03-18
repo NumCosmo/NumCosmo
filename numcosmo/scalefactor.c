@@ -332,8 +332,8 @@ _nc_scale_factor_calc_spline (NcScaleFactor *a)
   {
     gint flag;
 
-    flag = CVode(a->cvode, a->tf, a->y, &t, CV_ONE_STEP);
-    NCM_CVODE_CHECK (&flag, "CVode", 1, );
+    flag = CVode (a->cvode, a->tf, a->y, &t, CV_ONE_STEP);
+    NCM_CVODE_CHECK (&flag, "_nc_scale_factor_calc_spline[CVode]", 1, );
     mzi = -NV_Ith_S (a->y, 0);
     g_array_append_val (x, t);
     g_array_append_val (y, mzi);

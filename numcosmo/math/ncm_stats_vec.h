@@ -279,6 +279,7 @@ ncm_stats_vec_peek_row (NcmStatsVec *svec, guint i)
 {
   g_assert (svec->save_x);
   g_assert (i < svec->nitens);
+
   return g_ptr_array_index (svec->saved_x, i);
 }
 

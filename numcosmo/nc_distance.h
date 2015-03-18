@@ -62,13 +62,38 @@ struct _NcDistance
   gboolean use_cache;
 };
 
+typedef struct _NcDistanceFunc
+{
+  const gchar *name;
+  const gchar *desc;
+  NcDistanceFunc0 f;
+  NcHICosmoImpl impl;
+} NcDistanceFunc;
+
+typedef struct _NcDistanceFuncZ
+{
+  const gchar *name;
+  const gchar *desc;
+  NcDistanceFunc1 f;
+  NcHICosmoImpl impl;
+} NcDistanceFuncZ;
+
 struct _NcDistanceClass
 {
   /*< private >*/
   GObjectClass parent_class;
+  GArray *func_table;
+  GArray *func_z_table;
+  GHashTable *func_hash;
+  GHashTable *func_z_hash;
 };
 
 GType nc_distance_get_type (void) G_GNUC_CONST;
+
+GArray *nc_distance_class_func_table (void);
+GArray *nc_distance_class_func_z_table (void);
+NcDistanceFunc *nc_distance_class_get_func (const gchar *name);
+NcDistanceFuncZ *nc_distance_class_get_func_z (const gchar *name);
 
 NcDistance *nc_distance_new (gdouble z_f);
 NcDistance *nc_distance_ref (NcDistance *dist);
@@ -79,6 +104,7 @@ void nc_distance_clear (NcDistance **dist);
 
 NcmMSetFunc *nc_distance_func0_new (NcDistance *dist, NcDistanceFunc0 f0);
 NcmMSetFunc *nc_distance_func1_new (NcDistance *dist, NcDistanceFunc1 f1);
+NcmMSetFunc *nc_distance_create_mset_arrayfunc1 (NcDistance *dist, NcDistanceFunc1 f1, guint size);
 
 /***************************************************************************
  * Redshift independent 'distances'

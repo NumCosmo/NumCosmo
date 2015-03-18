@@ -37,7 +37,7 @@
 #endif /* HAVE_CONFIG_H */
 #include "build_cfg.h"
 
-#include "ncm_stats_dist1d_spline.h"
+#include "math/ncm_stats_dist1d_spline.h"
 
 enum
 {
@@ -232,16 +232,16 @@ ncm_stats_dist1d_spline_prepare (NcmStatsDist1d *sd1)
  * ncm_stats_dist1d_spline_new:
  * @m2lnp: a #NcmSpline
  * 
- * Returns a new #NcmStatsDist1d when @m2lnp, $-2\ln(p(x))$, is a #NcmSpline, where $p(x)$ 
- * is the probability density.
+ * Returns a new #NcmStatsDist1dSpline where @m2lnp, $-2\ln(p(x))$, is a #NcmSpline, where $p(x)$ 
+ * is the probability density. The probability density $p(x)$ do not need to be normalized.
  * 
- * Returns: a new #NcmStatsDist1d
+ * Returns: a new #NcmStatsDist1dSpline
  */
-NcmStatsDist1d *
+NcmStatsDist1dSpline *
 ncm_stats_dist1d_spline_new (NcmSpline *m2lnp)
 {
-  NcmStatsDist1d *sd1 = g_object_new (NCM_TYPE_STATS_DIST1D_SPLINE,
-                                      "m2lnp", m2lnp,
-                                      NULL);
-  return sd1;
+  NcmStatsDist1dSpline *sd1s = g_object_new (NCM_TYPE_STATS_DIST1D_SPLINE,
+                                             "m2lnp", m2lnp,
+                                             NULL);
+  return sd1s;
 }

@@ -31,6 +31,7 @@
 #include <numcosmo/build_cfg.h>
 #include <numcosmo/math/ncm_fit.h>
 #include <numcosmo/math/ncm_stats_vec.h>
+#include <numcosmo/math/ncm_stats_dist1d_epdf.h>
 #include <gsl/gsl_histogram.h>
 #include <gsl/gsl_eigen.h>
 #include <gsl/gsl_vector_complex.h>
@@ -94,9 +95,10 @@ struct _NcmMSetCatalog
   GTimer *flush_timer;
   gdouble flush_interval;
   gchar *file;
+  gchar *mset_file;
   gchar *rtype_str;
   GArray *porder;
-  GArray *quantile_ws;
+  NcmVector *quantile_ws;
   gint first_id;
   gint cur_id;
   gint file_first_id;
@@ -120,6 +122,7 @@ struct _NcmMSetCatalogClass
 GType ncm_mset_catalog_get_type (void) G_GNUC_CONST;
 
 NcmMSetCatalog *ncm_mset_catalog_new (NcmMSet *mset, guint nadd_vals, guint nchains, gboolean weighted, ...);
+NcmMSetCatalog *ncm_mset_catalog_new_from_file (const gchar *filename);
 NcmMSetCatalog *ncm_mset_catalog_ref (NcmMSetCatalog *mcat);
 void ncm_mset_catalog_free (NcmMSetCatalog *mcat);
 void ncm_mset_catalog_clear (NcmMSetCatalog **mcat);
@@ -148,6 +151,9 @@ void ncm_mset_catalog_add_from_vector (NcmMSetCatalog *mcat, NcmVector *vals);
 void ncm_mset_catalog_log_current_stats (NcmMSetCatalog *mcat);
 void ncm_mset_catalog_log_current_chain_stats (NcmMSetCatalog *mcat);
 
+NcmMSet *ncm_mset_catalog_get_mset (NcmMSetCatalog *mcat);
+const gchar *ncm_mset_catalog_get_run_type (NcmMSetCatalog *mcat);
+
 NcmVector *ncm_mset_catalog_peek_row (NcmMSetCatalog *mcat, guint i);
 NcmVector *ncm_mset_catalog_peek_current_row (NcmMSetCatalog *mcat);
 
@@ -162,7 +168,11 @@ gdouble ncm_mset_catalog_get_shrink_factor (NcmMSetCatalog *mcat);
 void ncm_mset_catalog_param_pdf (NcmMSetCatalog *mcat, guint i);
 gdouble ncm_mset_catalog_param_pdf_pvalue (NcmMSetCatalog *mcat, gdouble pval, gboolean both);
 
-NcmMatrix *ncm_mset_catalog_calc_ci (NcmMSetCatalog *mcat, NcmMSetFunc *func, gdouble *x, GArray *p_val);
+NcmMatrix *ncm_mset_catalog_calc_ci_direct (NcmMSetCatalog *mcat, guint burnin, NcmMSetFunc *func, gdouble *x, GArray *p_val);
+NcmMatrix *ncm_mset_catalog_calc_ci_interp (NcmMSetCatalog *mcat, guint burnin, NcmMSetFunc *func, gdouble *x, GArray *p_val, guint nodes, NcmFitRunMsgs mtype);
+NcmStatsDist1d *ncm_mset_catalog_calc_distrib (NcmMSetCatalog *mcat, guint burnin, NcmMSetFunc *func, NcmFitRunMsgs mtype);
+NcmStatsDist1d *ncm_mset_catalog_calc_param_distrib (NcmMSetCatalog *mcat, guint burnin, NcmMSetPIndex *pi, NcmFitRunMsgs mtype);
+NcmStatsDist1d *ncm_mset_catalog_calc_add_param_distrib (NcmMSetCatalog *mcat, guint burnin, guint add_param, NcmFitRunMsgs mtype);
 
 #define NCM_MSET_CATALOG_EXTNAME "NcmMSetCatalog:DATA"
 #define NCM_MSET_CATALOG_M2LNL_COLNAME "NcmFit:m2lnL"
@@ -173,6 +183,9 @@ NcmMatrix *ncm_mset_catalog_calc_ci (NcmMSetCatalog *mcat, NcmMSetFunc *func, gd
 #define NCM_MSET_CATALOG_RNG_INIS_LABEL "RNG_INIS"
 #define NCM_MSET_CATALOG_NROWS_LABEL "NAXIS2"
 #define NCM_MSET_CATALOG_RTYPE_LABEL "RTYPE"
+#define NCM_MSET_CATALOG_NCHAINS_LABEL "NCHAINS"
+#define NCM_MSET_CATALOG_NADDVAL_LABEL "NADDVAL"
+#define NCM_MSET_CATALOG_WEIGHTED_LABEL "WEIGHTED"
 #define NCM_MSET_CATALOG_RTYPE_BSTRAP_MEAN "bootstrap-mean"
 #define NCM_MSET_CATALOG_RTYPE_UNDEFINED "undefined-run"
 #define NCM_MSET_CATALOG_FSYMB_LABEL "FSYMB"

@@ -189,6 +189,113 @@ nc_distance_class_init (NcDistanceClass *klass)
                                                         G_MAXDOUBLE,
                                                         10.0,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
+  klass->func_table   = g_array_new (FALSE, FALSE, sizeof (NcDistanceFunc));
+  klass->func_z_table = g_array_new (FALSE, FALSE, sizeof (NcDistanceFuncZ));
+  klass->func_hash    = g_hash_table_new (g_str_hash, g_str_equal);
+  klass->func_z_hash  = g_hash_table_new (g_str_hash, g_str_equal);
+  
+  {
+    NcDistanceFunc func_table[] = 
+    {
+      {"decoupling_redshift",              "Decoupling redshift.",              &nc_distance_decoupling_redshift,               NC_HICOSMO_IMPL_Omega_mh2},
+      {"drag_redshift",                    "Drag redshift.",                    &nc_distance_drag_redshift,                     NC_HICOSMO_IMPL_Omega_mh2},
+      {"shift_parameter_lss",              "Shift parameter at lss.",           &nc_distance_shift_parameter_lss,               NC_HICOSMO_IMPL_Omega_mh2 | NC_HICOSMO_IMPL_E2},
+      {"comoving_lss",                     "Comoving scale of lss.",            &nc_distance_comoving_lss,                      NC_HICOSMO_IMPL_Omega_mh2 | NC_HICOSMO_IMPL_E2},
+      {"acoustic_scale",                   "Acoustic scale at lss.",            &nc_distance_acoustic_scale,                    NC_HICOSMO_IMPL_Omega_mh2 | NC_HICOSMO_IMPL_E2},
+      {"angular_diameter_curvature_scale", "Angular diameter curvature scale.", &nc_distance_angular_diameter_curvature_scale,  NC_HICOSMO_IMPL_Omega_mh2 | NC_HICOSMO_IMPL_E2},
+    };
+    const guint nfuncs = sizeof (func_table) / sizeof (NcDistanceFunc);
+    guint i;
+    for (i = 0; i < nfuncs; i++)
+    {
+      g_array_append_val (klass->func_table, func_table[i]);
+      g_hash_table_insert (klass->func_hash, (gchar *)func_table[i].name, GINT_TO_POINTER (i + 1));
+    }
+  }
+
+  {
+    NcDistanceFuncZ func_z_table[] = 
+    {
+      {"d_c",      "Comoving distance.",   &nc_distance_comoving,       NC_HICOSMO_IMPL_E2},
+      {"d_t",      "Transverse distance.", &nc_distance_transverse,     NC_HICOSMO_IMPL_E2},
+      {"d_l",      "Luminozity distance.", &nc_distance_luminosity,     NC_HICOSMO_IMPL_E2},
+      {"mu",       "Distance modulus.",    &nc_distance_modulus,        NC_HICOSMO_IMPL_E2},
+      {"D_A",      "Dilation scale.",      &nc_distance_dilation_scale, NC_HICOSMO_IMPL_E2},
+      {"BAO_A",    "BAO A scale.",         &nc_distance_bao_A_scale,    NC_HICOSMO_IMPL_E2 | NC_HICOSMO_IMPL_Omega_m},
+      {"r_Dv",     "BAO r_Dv.",            &nc_distance_bao_r_Dv,       NC_HICOSMO_IMPL_E2},
+      {"sound_h",  "Sound horizon.",       &nc_distance_sound_horizon,  NC_HICOSMO_IMPL_E2 | NC_HICOSMO_IMPL_Omega_b | NC_HICOSMO_IMPL_Omega_r},
+    };
+    const guint nfuncs = sizeof (func_z_table) / sizeof (NcDistanceFuncZ);
+    guint i;
+    for (i = 0; i < nfuncs; i++)
+    {
+      g_array_append_val (klass->func_z_table, func_z_table[i]);
+      g_hash_table_insert (klass->func_z_hash, (gchar *)func_z_table[i].name, GINT_TO_POINTER (i + 1));
+    }
+  }
+}
+
+/**
+ * nc_distance_class_func_table:
+ * 
+ * Returns: (transfer container) (element-type NcDistanceFunc): the function table.
+ */
+GArray *
+nc_distance_class_func_table (void)
+{
+  NcDistanceClass *distance_class = g_type_class_ref (NC_TYPE_DISTANCE);
+  GArray *func_table = g_array_ref (distance_class->func_table);
+  g_type_class_unref (distance_class);
+  return func_table;
+}
+
+/**
+ * nc_distance_class_func_z_table:
+ * 
+ * Returns: (transfer container) (element-type NcDistanceFuncZ): the function table.
+ */
+GArray *
+nc_distance_class_func_z_table (void)
+{
+  NcDistanceClass *distance_class = g_type_class_ref (NC_TYPE_DISTANCE);
+  GArray *func_z_table = g_array_ref (distance_class->func_z_table);
+  g_type_class_unref (distance_class);
+  return func_z_table;
+}
+
+/**
+ * nc_distance_class_get_func:
+ * @name: function name.
+ * 
+ * Returns: (transfer none): the function @name or null if not found.
+ */
+NcDistanceFunc *
+nc_distance_class_get_func (const gchar *name)
+{
+  NcDistanceClass *distance_class = g_type_class_ref (NC_TYPE_DISTANCE);
+  gpointer f_i_ptr = g_hash_table_lookup (distance_class->func_hash, name);
+  guint f_i = GPOINTER_TO_INT (f_i_ptr) - 1;
+  NcDistanceFunc *f = (f_i_ptr != NULL) ? &g_array_index (distance_class->func_table, NcDistanceFunc, f_i) : NULL;
+  g_type_class_unref (distance_class);
+  return f;
+}
+
+/**
+ * nc_distance_class_get_func_z:
+ * @name: function name.
+ * 
+ * Returns: (transfer none): the function @name or null if not found.
+ */
+NcDistanceFuncZ *
+nc_distance_class_get_func_z (const gchar *name)
+{
+  NcDistanceClass *distance_class = g_type_class_ref (NC_TYPE_DISTANCE);
+  gpointer f_i_ptr = g_hash_table_lookup (distance_class->func_z_hash, name);
+  guint f_i = GPOINTER_TO_INT (f_i_ptr) - 1;
+  NcDistanceFuncZ *fz = (f_i_ptr != NULL) ? &g_array_index (distance_class->func_z_table, NcDistanceFuncZ, f_i) : NULL;
+  g_type_class_unref (distance_class);
+  return fz;
 }
 
 /**
@@ -412,15 +519,13 @@ nc_distance_transverse (NcDistance *dist, NcHICosmo *cosmo, gdouble z)
       Dt = sinh (sqrt_Omega_k * comoving_dist) / sqrt_Omega_k;
       break;
     case 1:
-      Dt = sin (sqrt_Omega_k * comoving_dist) / sqrt_Omega_k;
+      Dt = fabs (sin (sqrt_Omega_k * comoving_dist) / sqrt_Omega_k);
       break;
     default:
       g_assert_not_reached();
       Dt = 0.0;
       break;
   }
-
-  g_assert (Dt >= 0);
   
   return Dt;
 }
@@ -1016,7 +1121,7 @@ _nc_distance_free (gpointer obj)
 
 /**
  * nc_distance_func0_new:
- * @dist: FIXME
+ * @dist: a #NcDistance
  * @f0: (scope notified): FIXME
  *
  * Returns: (transfer full): FIXME
@@ -1033,11 +1138,11 @@ nc_distance_func0_new (NcDistance *dist, NcDistanceFunc0 f0)
 
 /**
  * nc_distance_func1_new:
- * @dist: FIXME
+ * @dist: a #NcDistance
  * @f1: (scope notified): FIXME
-   *
+ *
  * Returns: (transfer full): FIXME
-   */
+ */
 NcmMSetFunc *
 nc_distance_func1_new (NcDistance *dist, NcDistanceFunc1 f1)
 {
@@ -1046,4 +1151,53 @@ nc_distance_func1_new (NcDistance *dist, NcDistanceFunc1 f1)
   dist_data->f0 = NULL;
   dist_data->f1 = f1;
   return ncm_mset_func_new (&_nc_distance_func1, 1, 1, dist_data, &_nc_distance_free);
+}
+
+typedef struct __NcDistanceArrayFunc
+{
+  guint size;
+  NcDistance *dist;
+  NcDistanceFunc1 f1;
+} _NcDistanceArrayFunc;
+
+static void
+_nc_distance_arrayfunc1_free (_NcDistanceArrayFunc *af1)
+{
+  nc_distance_clear (&af1->dist);
+  g_free (af1);
+}
+
+static void
+_nc_distance_arrayfunc1 (NcmMSet *mset, gpointer obj, const gdouble *x, gdouble *f)
+{
+  _NcDistanceArrayFunc *af1 = (_NcDistanceArrayFunc *) obj;
+  guint i;
+
+  for (i = 0; i < af1->size; i++)
+  {
+    f[i] = af1->f1 (af1->dist, NC_HICOSMO (ncm_mset_peek (mset, nc_hicosmo_id ())), x[i]);
+  }
+}
+
+/**
+ * nc_distance_create_mset_arrayfunc1:
+ * @dist: a #NcDistance
+ * @f1: (scope notified): FIXME
+ * @size: array size 
+ * 
+ * FIXME
+ * 
+ * Returns: (transfer full): FIXME
+ */
+NcmMSetFunc *
+nc_distance_create_mset_arrayfunc1 (NcDistance *dist, NcDistanceFunc1 f1, guint size)
+{
+  g_assert_cmpuint (size, !=, 0);
+  _NcDistanceArrayFunc *af1 = g_new (_NcDistanceArrayFunc, 1);
+
+  af1->size = size;
+  af1->f1 = f1;
+  af1->dist = nc_distance_ref (dist);
+
+  return ncm_mset_func_new (&_nc_distance_arrayfunc1, size, size, af1, (GDestroyNotify)_nc_distance_arrayfunc1_free);
 }

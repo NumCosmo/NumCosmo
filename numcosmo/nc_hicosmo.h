@@ -86,6 +86,26 @@ typedef enum _NcHICosmoImpl
   NC_HICOSMO_IMPL_LAST            = 1 << 23, /*< skip >*/
 } NcHICosmoImpl;
 
+#define NC_HICOSMO_IMPL_c_H0 (NC_HICOSMO_IMPL_H0)
+#define NC_HICOSMO_IMPL_Omega_k (NC_HICOSMO_IMPL_Omega_t)
+#define NC_HICOSMO_IMPL_Omega_m (NC_HICOSMO_IMPL_Omega_c | NC_HICOSMO_IMPL_Omega_b)
+#define NC_HICOSMO_IMPL_h (NC_HICOSMO_IMPL_H0)
+#define NC_HICOSMO_IMPL_h2 (NC_HICOSMO_IMPL_H0)
+#define NC_HICOSMO_IMPL_Omega_bh2 (NC_HICOSMO_IMPL_Omega_b | NC_HICOSMO_IMPL_h2)
+#define NC_HICOSMO_IMPL_Omega_ch2 (NC_HICOSMO_IMPL_Omega_c | NC_HICOSMO_IMPL_h2)
+#define NC_HICOSMO_IMPL_Omega_rh2 (NC_HICOSMO_IMPL_Omega_r | NC_HICOSMO_IMPL_h2)
+#define NC_HICOSMO_IMPL_Omega_mh2 (NC_HICOSMO_IMPL_Omega_m | NC_HICOSMO_IMPL_h2)
+
+#define NC_HICOSMO_IMPL_H (NC_HICOSMO_IMPL_H0 | NC_HICOSMO_IMPL_E2)
+#define NC_HICOSMO_IMPL_dH_dz (NC_HICOSMO_IMPL_H0 | NC_HICOSMO_IMPL_E2 | NC_HICOSMO_IMPL_dE2_dz)
+#define NC_HICOSMO_IMPL_E (NC_HICOSMO_IMPL_E2)
+#define NC_HICOSMO_IMPL_Em2 (NC_HICOSMO_IMPL_E2)
+#define NC_HICOSMO_IMPL_q (NC_HICOSMO_IMPL_E2 | NC_HICOSMO_IMPL_dE2_dz)
+#define NC_HICOSMO_IMPL_j (NC_HICOSMO_IMPL_E2 | NC_HICOSMO_IMPL_dE2_dz | NC_HICOSMO_IMPL_d2E2_dz2)
+#define NC_HICOSMO_IMPL_Omega_k (NC_HICOSMO_IMPL_Omega_t)
+#define NC_HICOSMO_IMPL_wec (NC_HICOSMO_IMPL_E2 | NC_HICOSMO_IMPL_Omega_k)
+#define NC_HICOSMO_IMPL_dec (NC_HICOSMO_IMPL_E2 | NC_HICOSMO_IMPL_Omega_k)
+
 typedef struct _NcHICosmoClass NcHICosmoClass;
 typedef struct _NcHICosmo NcHICosmo;
 typedef gdouble (*NcHICosmoFunc0) (NcHICosmo *cosmo);
@@ -103,6 +123,22 @@ struct _NcHICosmo
   NcmModel parent_instance;
   gboolean is_eternal;
 };
+
+typedef struct _NcHICosmoFuncZ
+{
+  const gchar *name;
+  const gchar *desc;
+  NcHICosmoFunc1 f;
+  NcHICosmoImpl impl;
+} NcHICosmoFuncZ;
+
+typedef struct _NcHICosmoFunc
+{
+  const gchar *name;
+  const gchar *desc;
+  NcHICosmoFunc0 f;
+  NcHICosmoImpl impl;
+} NcHICosmoFunc;
 
 struct _NcHICosmoClass
 {
@@ -125,6 +161,10 @@ struct _NcHICosmoClass
   NcmModelFunc1 rhopp;
   NcmModelFunc1 cd;
   NcmModelFunc1 powspec;
+  GArray *func_table;
+  GArray *func_z_table;
+  GHashTable *func_hash;
+  GHashTable *func_z_hash;
 };
 
 GType nc_hicosmo_get_type (void) G_GNUC_CONST;
@@ -171,6 +211,11 @@ G_INLINE_FUNC gdouble nc_hicosmo_dec (NcHICosmo *cosmo, gdouble z);
 G_INLINE_FUNC gdouble nc_hicosmo_wec (NcHICosmo *cosmo, gdouble z);
 G_INLINE_FUNC gdouble nc_hicosmo_abs_alpha (NcHICosmo *cosmo, gdouble x);
 G_INLINE_FUNC gdouble nc_hicosmo_x_alpha (NcHICosmo *cosmo, gdouble alpha);
+
+GArray *nc_hicosmo_class_func_table (void);
+GArray *nc_hicosmo_class_func_z_table (void);
+NcHICosmoFunc *nc_hicosmo_class_get_func (const gchar *name);
+NcHICosmoFuncZ *nc_hicosmo_class_get_func_z (const gchar *name);
 
 NcHICosmo *nc_hicosmo_new_from_name (GType parent_type, gchar *cosmo_name);
 NcHICosmo *nc_hicosmo_ref (NcHICosmo *cosmo);
