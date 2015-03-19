@@ -1142,7 +1142,8 @@ ncm_fit_esmcmc_run_lre (NcmFitESMCMC *esmcmc, guint prerun, gdouble lre)
     gdouble n = ncm_mset_catalog_len (esmcmc->mcat);
     gdouble m = n * lerror2 / lre2;
     guint runs = ((m - n) > 1000.0) ? ceil ((m - n) * 1.0e-1) : ceil (m - n);
-
+    guint ti = (esmcmc->cur_sample_id + 1) / esmcmc->nwalkers;
+    
     runs = runs / esmcmc->nwalkers + 1;
 
     if (esmcmc->mtype >= NCM_FIT_RUN_MSGS_SIMPLE)
@@ -1150,7 +1151,7 @@ ncm_fit_esmcmc_run_lre (NcmFitESMCMC *esmcmc, guint prerun, gdouble lre)
       g_message ("# NcmFitESMCMC: Largest relative error %e not attained: %e\n", lre, lerror);
       g_message ("# NcmFitESMCMC: Running more %u runs...\n", runs);
     }
-    ncm_fit_esmcmc_run (esmcmc, runs);
+    ncm_fit_esmcmc_run (esmcmc, ti + runs);
     ncm_mset_catalog_estimate_autocorrelation_tau (esmcmc->mcat);
     lerror = ncm_mset_catalog_largest_error (esmcmc->mcat);
   }
