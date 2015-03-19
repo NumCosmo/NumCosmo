@@ -329,8 +329,6 @@ ncm_stats_dist1d_prepare (NcmStatsDist1d *sd1)
  * @x: random variable value
  *
  * Calculates the value of the probability density at @x.
- * It can be unnormalized, the norma can be retrieved using
- * ncm_stats_dist1d_norma().
  * 
  * Returns: the value of the probability density at @x.
  */
@@ -349,7 +347,7 @@ ncm_stats_dist1d_eval_p (NcmStatsDist1d *sd1, gdouble x)
  *
  * Calculates the value of the $-2\ln(p(x))$ for the probability density.
  * It can be unnormalized, the norma can be retrieved using
- * ncm_stats_dist1d_norma().
+ * ncm_stats_dist1d_eval_norma().
  * 
  * Returns: the value of $-2\ln(p(x))$.
  */
