@@ -395,10 +395,12 @@ ncm_ode_spline_prepare (NcmOdeSpline *os, gpointer userdata)
     gint flag = CVode (os->cvode, os->xf, os->y, &x, CV_ONE_STEP);
     NCM_CVODE_CHECK (&flag, "ncm_ode_spline_prepare[CVode]", 1, );
 
-    if (os->hnil)
+    if (G_UNLIKELY (os->hnil))
     {
       if (os->stop_hnil)
+      {
         g_error ("ncm_ode_spline_prepare: cannot integrate function %d.", flag);
+      }
       else
         break;
     }

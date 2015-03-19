@@ -429,7 +429,7 @@ nc_data_snia_cov_class_init (NcDataSNIACovClass *klass)
   gauss_class->cov_func  = &_nc_data_snia_cov_func;
   gauss_class->set_size  = &_nc_data_snia_cov_set_size;
 
-  /* EXPERIMENTAL CODE : NOTE USED! */
+  /* EXPERIMENTAL CODE : NOT USED! */
   if (FALSE)
     gauss_class->lnNorma2  = &_nc_data_snia_cov_lnNorma2;
 }
@@ -461,12 +461,13 @@ _nc_data_snia_cov_func (NcmDataGaussCov *gauss, NcmMSet *mset, NcmMatrix *cov)
   return TRUE;
 }
 
-/* EXPERIMENTAL CODE : NOTE USED! */
+/* EXPERIMENTAL CODE : NOT USED! */
 static void 
 _nc_data_snia_cov_lnNorma2 (NcmDataGaussCov *gauss, NcmMSet *mset, gdouble *m2lnL)
 {
   NcDataSNIACov *snia_cov = NC_DATA_SNIA_COV (gauss);
   /* Chain up : start */
+/*
   gdouble alpha, beta, alpha2, beta2, two_alpha, two_beta, two_alpha_beta;
   gdouble chi2 = *m2lnL;
   gdouble lndetC = 0.0;
@@ -526,8 +527,8 @@ _nc_data_snia_cov_lnNorma2 (NcmDataGaussCov *gauss, NcmMSet *mset, gdouble *m2ln
   }
   
   *m2lnL = chi2 + lndetC;// - 1.0 * 740.0 * log (fact1) - 0.5 * 740.0 * log (fact2);
-/*
-  NcDataSNIACov *snia_cov = NC_DATA_SNIA_COV (gauss);
+  */
+
   NcSNIADistCov *dcov = NC_SNIA_DIST_COV (ncm_mset_peek (mset, nc_snia_dist_cov_id ()));
   const guint mu_len  = snia_cov->mu_len;
   gdouble lndetC;
@@ -558,8 +559,8 @@ _nc_data_snia_cov_lnNorma2 (NcmDataGaussCov *gauss, NcmMSet *mset, gdouble *m2ln
 
   lndetC = (2.0 * lndetG + lndetD);
   
-  return mu_len * ncm_c_ln2pi () + 1.0 * lndetC;
-*/
+  *m2lnL += mu_len * ncm_c_ln2pi () + 1.0 * lndetC;
+
 }
 
 /**
