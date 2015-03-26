@@ -62,6 +62,16 @@ _nc_hicosmo_de_xcdm_dweff_dz (NcmModel *model, gdouble z)
   return 3.0 * ( 1.0 + W ) / x * weff;
 }
 
+static gdouble
+_nc_hicosmo_de_xcdm_d2weff_dz2 (NcmModel *model, gdouble z)
+{
+  const gdouble x = 1.0 + z;
+  const gdouble x2 = x * x;
+  const gdouble weff = OMEGA_X * pow (x, 3.0 * ( 1.0 + W ));
+
+  return 3.0 * ( 1.0 + W ) * (2.0 + 3.0 * W) / x2 * weff;
+}
+
 /**
  * nc_hicosmo_de_xcdm_new:
  *
@@ -106,6 +116,7 @@ nc_hicosmo_de_xcdm_class_init (NcHICosmoDEXcdmClass *klass)
 
   nc_hicosmo_de_set_weff_impl (parent_class, &_nc_hicosmo_de_xcdm_weff);
   nc_hicosmo_de_set_dweff_dz_impl (parent_class, &_nc_hicosmo_de_xcdm_dweff_dz);
+  nc_hicosmo_de_set_d2weff_dz2_impl (parent_class, &_nc_hicosmo_de_xcdm_d2weff_dz2);
 
   ncm_model_class_set_name_nick (model_class, "XCDM - Constant EOS", "XCDM");
   ncm_model_class_add_params (model_class, 1, 0, PROP_SIZE);

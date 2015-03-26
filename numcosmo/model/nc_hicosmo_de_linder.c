@@ -50,7 +50,7 @@ _nc_hicosmo_de_linder_weff (NcmModel *model, gdouble z)
 {
   gdouble x = 1.0 + z;
   gdouble lnx = log1p (z);
-  return OMEGA_X * exp(-3.0 * OMEGA_1 * z / x + 3.0 * (1 + OMEGA_0 + OMEGA_1) * lnx);
+  return OMEGA_X * exp (-3.0 * OMEGA_1 * z / x + 3.0 * (1.0 + OMEGA_0 + OMEGA_1) * lnx);
 }
 
 static gdouble
@@ -62,6 +62,21 @@ _nc_hicosmo_de_linder_dweff_dz (NcmModel *model, gdouble z)
   const gdouble weff = OMEGA_X * exp(-3.0 * OMEGA_1 * z / x + 3.0 * (1.0 + OMEGA_0 + OMEGA_1) * lnx);
 
   return 3.0 * ((x * (OMEGA_0 + 1.0) + z * OMEGA_1) / x2) * weff;
+}
+
+static gdouble
+_nc_hicosmo_de_linder_d2weff_dz2 (NcmModel *model, gdouble z)
+{
+  const gdouble x    = 1.0 + z;
+  const gdouble x2   = x * x;
+  const gdouble x4   = x2 * x2;
+  const gdouble lnx  = log1p (z);
+  const gdouble weff = OMEGA_X * exp (-3.0 * OMEGA_1 * z / x + 3.0 * (1.0 + OMEGA_0 + OMEGA_1) * lnx);
+  const gdouble w0   = OMEGA_0;
+  const gdouble w1   = OMEGA_1;
+  const gdouble w12  = w1 * w1;
+
+  return (9.0 * w12 - 6.0 * w1 * (2.0 + 3.0 * w0 + 3.0 * w1) * x + 3.0 * (1.0 + w0 + w1) * (2.0 + 3.0 * w0 + 3.0 * w1) * x2) * weff/ x4;
 }
 
 /**
@@ -108,6 +123,7 @@ nc_hicosmo_de_linder_class_init (NcHICosmoDELinderClass *klass)
 
   nc_hicosmo_de_set_weff_impl (parent_class, &_nc_hicosmo_de_linder_weff);
   nc_hicosmo_de_set_dweff_dz_impl (parent_class, &_nc_hicosmo_de_linder_dweff_dz);
+  nc_hicosmo_de_set_d2weff_dz2_impl (parent_class, &_nc_hicosmo_de_linder_d2weff_dz2);
 
   ncm_model_class_set_name_nick (model_class, "Chevalier-Polarski-Linder parametrization", "CPL");
   ncm_model_class_add_params (model_class, 2, 0, PROP_SIZE);

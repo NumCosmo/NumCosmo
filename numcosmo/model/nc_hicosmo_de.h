@@ -47,14 +47,16 @@ typedef struct _NcHICosmoDE NcHICosmoDE;
  * NcHICosmoDEImpl:
  * @NC_HICOSMO_DE_IMPL_weff: FIXME
  * @NC_HICOSMO_DE_IMPL_dweff_dz: FIXME
+ * @NC_HICOSMO_DE_IMPL_d2weff_dz2: FIXME
  *
  * FIXME
  */
 typedef enum _NcHICosmoDEImpl
 {
-  NC_HICOSMO_DE_IMPL_weff     = NC_HICOSMO_IMPL_LAST << 0,
-  NC_HICOSMO_DE_IMPL_dweff_dz = NC_HICOSMO_IMPL_LAST << 1, /*< private >*/
-  NC_HICOSMO_DE_IMPL_LAST     = NC_HICOSMO_IMPL_LAST << 2, /*< skip >*/
+  NC_HICOSMO_DE_IMPL_weff       = NC_HICOSMO_IMPL_LAST << 0,
+  NC_HICOSMO_DE_IMPL_dweff_dz   = NC_HICOSMO_IMPL_LAST << 1,
+  NC_HICOSMO_DE_IMPL_d2weff_dz2 = NC_HICOSMO_IMPL_LAST << 2, /*< private >*/
+  NC_HICOSMO_DE_IMPL_LAST       = NC_HICOSMO_IMPL_LAST << 3, /*< skip >*/
 } NcHICosmoDEImpl;
 
 /**
@@ -101,6 +103,7 @@ struct _NcHICosmoDEClass
   NcHICosmoClass parent_class;
   NcmModelFunc1 weff;
   NcmModelFunc1 dweff_dz;
+  NcmModelFunc1 d2weff_dz2;
 };
 
 GType nc_hicosmo_de_get_type (void) G_GNUC_CONST;
@@ -111,9 +114,11 @@ gboolean nc_hicosmo_de_new_add_bbn (NcmLikelihood *lh);
 
 void nc_hicosmo_de_set_weff_impl (NcHICosmoDEClass *cosmo_de_class, NcmModelFunc1 f);
 void nc_hicosmo_de_set_dweff_dz_impl (NcHICosmoDEClass *cosmo_de_class, NcmModelFunc1 f);
+void nc_hicosmo_de_set_d2weff_dz2_impl (NcHICosmoDEClass *cosmo_de_class, NcmModelFunc1 f);
 
 G_INLINE_FUNC gdouble nc_hicosmo_de_weff (NcHICosmoDE *cosmo, gdouble x);
 G_INLINE_FUNC gdouble nc_hicosmo_de_dweff_dz (NcHICosmoDE *cosmo, gdouble x);
+G_INLINE_FUNC gdouble nc_hicosmo_de_d2weff_dz2 (NcHICosmoDE *cosmo, gdouble x);
 
 G_END_DECLS
 
@@ -127,6 +132,7 @@ G_BEGIN_DECLS
 
 NCM_MODEL_FUNC1_IMPL (NC_HICOSMO_DE,NcHICosmoDE,nc_hicosmo_de,weff)
 NCM_MODEL_FUNC1_IMPL (NC_HICOSMO_DE,NcHICosmoDE,nc_hicosmo_de,dweff_dz)
+NCM_MODEL_FUNC1_IMPL (NC_HICOSMO_DE,NcHICosmoDE,nc_hicosmo_de,d2weff_dz2)
 
 G_END_DECLS
 
