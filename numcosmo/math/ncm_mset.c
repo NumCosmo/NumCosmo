@@ -1645,6 +1645,7 @@ ncm_mset_fparam_get_pi_by_name (NcmMSet *mset, const gchar *name)
 /**
  * ncm_mset_save:
  * @mset: a #NcmMSet
+ * @ser: a #NcmSerialize
  * @filename: FIXME
  * @save_comment: FIXME
  * 
@@ -1652,12 +1653,28 @@ ncm_mset_fparam_get_pi_by_name (NcmMSet *mset, const gchar *name)
  * 
  */
 void 
-ncm_mset_save (NcmMSet *mset, const gchar *filename, gboolean save_comment)
+ncm_mset_save (NcmMSet *mset, NcmSerialize *ser, const gchar *filename, gboolean save_comment)
 {
   NcmMSetClass *mset_class = NCM_MSET_GET_CLASS (mset);
   GKeyFile *msetfile = g_key_file_new ();
   guint i;
 
+  {
+    GError *error = NULL;
+    gchar *mset_desc = ncm_cfg_string_to_comment ("NcmMSet");
+    gchar *mset_valid_map_desc = ncm_cfg_string_to_comment ("valid-map property");
+    
+    g_key_file_set_boolean (msetfile, "NcmMSet", "valid_map", mset->valid_map);
+    
+    if (!g_key_file_set_comment (msetfile, "NcmMSet", NULL, mset_desc, &error))
+      g_error ("ncm_mset_save: %s", error->message);
+    if (!g_key_file_set_comment (msetfile, "NcmMSet", "valid_map", mset_valid_map_desc, &error))
+      g_error ("ncm_mset_save: %s", error->message);
+
+    g_free (mset_desc);
+    g_free (mset_valid_map_desc);
+  }
+  
   for (i = 0; i < NCM_MODEL_MAX_ID; i++)
   {
     NcmModel *model = ncm_mset_peek (mset, i);
@@ -1671,7 +1688,7 @@ ncm_mset_save (NcmMSet *mset, const gchar *filename, gboolean save_comment)
       GVariant *params = NULL;
       gchar *obj_name = NULL;
       gchar *group = g_strdup_printf ("%s", mset_class->model_desc[i].ns);
-      GVariant *model_var = ncm_serialize_global_to_variant (G_OBJECT (model));
+      GVariant *model_var = ncm_serialize_to_variant (ser, G_OBJECT (model));
       guint nparams;
 
       g_variant_get (model_var, "{s@a{sv}}", &obj_name, &params);
@@ -1734,20 +1751,22 @@ ncm_mset_save (NcmMSet *mset, const gchar *filename, gboolean save_comment)
 
 /**
  * ncm_mset_load:
- * @filename: FIXME
+ * @filename: mset filename
+ * @ser: a #NcmSerialize
  * 
  * FIXME
  * 
  * Returns: (transfer full): FIXME
  */
 NcmMSet * 
-ncm_mset_load (const gchar *filename)
+ncm_mset_load (const gchar *filename, NcmSerialize *ser)
 {
   NcmMSet *mset = ncm_mset_empty_new ();
   GKeyFile *msetfile = g_key_file_new ();
   GError *error = NULL;
   gchar **groups = NULL;
   gsize ngroups = 0;
+  gboolean valid_map = FALSE;
   guint i;
   
   if (!g_key_file_load_from_file (msetfile, filename, G_KEY_FILE_KEEP_COMMENTS | G_KEY_FILE_KEEP_TRANSLATIONS, &error))
@@ -1756,6 +1775,15 @@ ncm_mset_load (const gchar *filename)
     return NULL;
   }
 
+  if (g_key_file_has_group (msetfile, "NcmMSet"))
+  {
+    if (g_key_file_has_key (msetfile, "NcmMSet", "valid_map", &error))
+    {
+      valid_map = g_key_file_get_boolean (msetfile, "NcmMSet", "valid_map", &error);
+    }
+    g_key_file_remove_group (msetfile, "NcmMSet", &error);
+  }
+  
   groups = g_key_file_get_groups (msetfile, &ngroups);
   for (i = 0; i < ngroups; i++)
   {
@@ -1798,7 +1826,7 @@ ncm_mset_load (const gchar *filename)
     }
 
     {
-      GObject *obj = ncm_serialize_global_from_string (obj_ser->str);
+      GObject *obj = ncm_serialize_from_string (ser, obj_ser->str);
       g_assert (NCM_IS_MODEL (obj));
       if (ncm_mset_exists (mset, NCM_MODEL (obj)))
         g_error ("ncm_mset_load: a model ``%s'' already exists in NcmMSet.", obj_ser->str);
@@ -1810,6 +1838,9 @@ ncm_mset_load (const gchar *filename)
 
   g_key_file_unref (msetfile);
   g_strfreev (groups);
+  if (valid_map)
+    ncm_mset_prepare_fparam_map (mset);
+
   return mset;
 }
 

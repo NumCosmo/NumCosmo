@@ -672,7 +672,7 @@ ncm_numdiff_1 (gsl_function *F, const gdouble x, const gdouble ho, gdouble *err)
   return ans;
 }
 
-#define NCM_NUMDIFF_RETRY_PP (0.1)
+#define NCM_NUMDIFF_RETRY_PP (0.2)
 #define NCM_NUMDIFF_RETRY_N (8)
 
 /**

@@ -1,6 +1,6 @@
 ## Process this file with automake to produce Makefile.in
 
-SUBDIRS = numcosmo tools darkenergy data docs tests examples
+SUBDIRS = numcosmo tools data docs tests examples
 
 pkgconfigdir = $(libdir)/pkgconfig
 pkgconfig_DATA = numcosmo.pc

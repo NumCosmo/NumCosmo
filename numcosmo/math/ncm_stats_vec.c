@@ -535,7 +535,10 @@ ncm_stats_vec_update_weight (NcmStatsVec *svec, const gdouble w)
 {
   _ncm_stats_vec_update_from_vec_weight (svec, w, svec->x);
   if (svec->save_x)
-    g_ptr_array_add (svec->saved_x, ncm_vector_dup (svec->x));
+  {
+    NcmVector *v = ncm_vector_dup (svec->x);
+    g_ptr_array_add (svec->saved_x, v);
+  }
   ncm_vector_set_zero (svec->x);
 }
 
@@ -653,6 +656,7 @@ void
 ncm_stats_vec_prepend_data (NcmStatsVec *svec, GPtrArray *data, gboolean dup)
 {
   guint i;
+  
   if (svec->save_x)
   {
     const guint cp_len = data->len;
@@ -863,8 +867,7 @@ ncm_stats_vec_get_autocorr_tau (NcmStatsVec *svec, guint p, guint max_lag, const
   }
 
   tau = 1.0 + 2.0 * tau;
-  
-  
+
   return tau;
 #else
   g_error ("ncm_stats_vec_get_autocorr: recompile NumCosmo with fftw support.");

@@ -3,6 +3,103 @@ CHANGELOG
 
 [Current]
 
+[v0.12.2]
+ * Bumped to v0.12.2
+
+ * Fixed bug in ncm_fit_esmcmc_run_lre.
+
+ * Added new lnsigma_lens parameter to NcSNIADistCov.
+
+     New release of JLA data available on NumCosmo site, full sample without any
+     additional variance included (everything now is included by the model).
+
+ * Tools reorganization and several improvements.
+
+     Moved darkenergy to tools directory. Removed from darkenergy options for
+     catalog analyze.
+
+     Created mcat_analize to perform analysis on Monte Carlo catalogs
+      including MC, MCMC, ESMCMC and Bootstrap MC.
+
+     New NcmStatsDist1dEPDF for 1-dimensional empirical distributions,
+      it implements a fast Gaussian basis function interpolation for
+      general 1d distributions, recreating the pdf, cdf and inverse cdf.
+      Allowing fast resample and quantiles calculation.
+
+     Added hash table interface to access functions from NcHICosmo and
+     NcDistance. All these functions are accessible from mcat_analyze, allowing
+     it to generate quantiles, distributions, cdf for all these quantities.
+
+ * Added missing docs directives.
+
+ * Improved interface to NcmLHRatio2d in darkenergy. Minor improvements.
+
+ * New cluster mass relation: Planck-CLASH correlated mass-observable relations.
+     Planck - SZ signal. CLASH - lensing signal. This object is not finalized.
+     Work in progress.
+
+     The function "ncm_model_class_set_name_nick" shall be called before
+     "ncm_model_class_add_params". Fixed this order in various models.
+
+     Documentation (improvement): ncm_stats_dist1d.c, ncm_stats_dist1d_spline.c,
+     ncm_model.c, ncm_sparam.c, ncm_sparam.h.
+
+     Removed spurious line (sd1->norma = 1.0;) from ncm_stats_dist1d_prepare
+     function.
+
+     Improved message error in ncm_model_class_set_sparam and
+     ncm_model_class_set_vparam functions.
+
+ * Missing file.
+
+ * Optimization flags.
+
+ * Added and enable flag to include compiler's optimization/warnings flags. Made
+     several minor code quality improvements.
+
+ * Added a internal version of Cuba. Fixed minor typos and updated autogen to use
+     autoreconf.
+
+     It is no longer necessary to have an installed version of Cuba. If it is
+     not available in the system the library compiles its own internal version
+     of Cuba. The same was done recently for levmar. Updated README.md to
+     explain these points.
+
+     Removed cubature lib support (now it always use Cuba).
+
+     Added option for different inclusing of redshift errors in NcSNIADistCov.
+
+     Removed the call for cholesky_decomp in cholesky_inverse, now the user must 
+     call both.
+
+ * Better workaround for the missing fffree/fits_free_memory functions and
+     SUNDIALS_USES_LONG_INT macro. Corrected version for g_test_subprocess
+     usage.
+
+ * Fixed threads competitions with OpenBLAS or MKL. Finished the NcDataSNIACov
+     interface.
+
+ * New minor version. Several improvements.
+
+     Better building tool support for lapack/BLAS. Improved speed using
+     different interfaces for Lapack/BLAS. Included levmar internally and
+     removed as optional dependency. Levmar intreface now supports box
+     constraints. Added virtual functions for lnNorma2 and resample in
+     NcmDataGaussCov. Updated interval vector usage in NcmFitNLOpt and
+     NcmFitLevmar. Added support for estimating true width and colour in
+     NcDataSNIACov. Improved resampling in NcDataSNIACov, now it resamples all
+     data m_B, w and c. Several new functions in NcmMatrix (support to writing
+     data in col-major order). New ncm_mset_catalog_calc_ci for calculating
+     confidence intervals for generic function using a NcmMSetCatalog. Added
+     option for confidence intervals from catalogs in darkenergy. Added
+     templates as dependency for NcmFitNLOpt enums files.
+
+     NcDataSNIACov now uses the (hopefully) the right normalization (new feature
+     still experimental).
+
+     Added some misc statistical functions in NcmUtil (experimental).
+
+
 [v0.12.1]
  * New minor version. Several improvements.
 

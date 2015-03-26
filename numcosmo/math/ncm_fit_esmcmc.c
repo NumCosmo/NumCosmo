@@ -114,7 +114,7 @@ _ncm_fit_esmcmc_constructed (GObject *object)
   g_assert_cmpint (esmcmc->nwalkers, >, 0);
   esmcmc->fparam_len = ncm_mset_fparam_len (esmcmc->fit->mset);
 
-  esmcmc->mcat = ncm_mset_catalog_new (esmcmc->fit->mset, 2, esmcmc->nwalkers, FALSE, NCM_FIT_ESMCMC_WALKER_ID, NCM_MSET_CATALOG_M2LNL_COLNAME);
+  esmcmc->mcat = ncm_mset_catalog_new (esmcmc->fit->mset, 1, esmcmc->nwalkers, FALSE, NCM_MSET_CATALOG_M2LNL_COLNAME);
   ncm_mset_catalog_set_run_type (esmcmc->mcat, "Ensemble Sampler MCMC -- Stretch Move");
   
   for (k = 0; k < esmcmc->nwalkers; k++)
@@ -518,9 +518,8 @@ _ncm_fit_esmcmc_update (NcmFitESMCMC *esmcmc, NcmFit *fit, guint k)
 {
   const guint part = 5;
   const guint step = esmcmc->nwalkers * ((esmcmc->n / part) == 0 ? 1 : (esmcmc->n / part));
-  gdouble kval = k; /* Must convert to double since ncm_mset_catalog_add_from_mset has non typed arguments */
 
-  ncm_mset_catalog_add_from_mset (esmcmc->mcat, fit->mset, kval, ncm_fit_state_get_m2lnL_curval (fit->fstate));
+  ncm_mset_catalog_add_from_mset (esmcmc->mcat, fit->mset, ncm_fit_state_get_m2lnL_curval (fit->fstate));
   esmcmc->cur_sample_id++;
   ncm_timer_task_increment (esmcmc->nt);
 
@@ -725,8 +724,8 @@ ncm_fit_esmcmc_start_run (NcmFitESMCMC *esmcmc)
       NcmVector *cur_row = ncm_mset_catalog_peek_row (esmcmc->mcat, k);
       NcmFit *fit_k = g_ptr_array_index (esmcmc->walker_fits, k);
       g_assert (cur_row != NULL);
-      ncm_mset_fparams_set_vector_offset (fit_k->mset, cur_row, 2);
-      ncm_fit_state_set_m2lnL_curval (fit_k->fstate, ncm_vector_get (cur_row, 1));
+      ncm_mset_fparams_set_vector_offset (fit_k->mset, cur_row, NCM_FIT_ESMCMC_NADD_VALS);
+      ncm_fit_state_set_m2lnL_curval (fit_k->fstate, ncm_vector_get (cur_row, NCM_FIT_ESMCMC_M2LNL_ID));
     }
     esmcmc->write_index = k;
     _ncm_fit_esmcmc_gen_init_points (esmcmc);
@@ -745,8 +744,8 @@ ncm_fit_esmcmc_start_run (NcmFitESMCMC *esmcmc)
       NcmVector *cur_row = ncm_mset_catalog_peek_row (esmcmc->mcat, esmcmc->nwalkers * t + k);
       NcmFit *fit_k = g_ptr_array_index (esmcmc->walker_fits, k);
       g_assert (cur_row != NULL);
-      ncm_mset_fparams_set_vector_offset (fit_k->mset, cur_row, 2);
-      ncm_fit_state_set_m2lnL_curval (fit_k->fstate, ncm_vector_get (cur_row, 1));
+      ncm_mset_fparams_set_vector_offset (fit_k->mset, cur_row, NCM_FIT_ESMCMC_NADD_VALS);
+      ncm_fit_state_set_m2lnL_curval (fit_k->fstate, ncm_vector_get (cur_row, NCM_FIT_ESMCMC_M2LNL_ID));
     }
 
     for (k = ki; k < esmcmc->nwalkers; k++)
@@ -754,8 +753,8 @@ ncm_fit_esmcmc_start_run (NcmFitESMCMC *esmcmc)
       NcmVector *cur_row = ncm_mset_catalog_peek_row (esmcmc->mcat, esmcmc->nwalkers * tm1 + k);
       NcmFit *fit_k = g_ptr_array_index (esmcmc->walker_fits, k);
       g_assert (cur_row != NULL);
-      ncm_mset_fparams_set_vector_offset (fit_k->mset, cur_row, 2);
-      ncm_fit_state_set_m2lnL_curval (fit_k->fstate, ncm_vector_get (cur_row, 1));
+      ncm_mset_fparams_set_vector_offset (fit_k->mset, cur_row, NCM_FIT_ESMCMC_NADD_VALS);
+      ncm_fit_state_set_m2lnL_curval (fit_k->fstate, ncm_vector_get (cur_row, NCM_FIT_ESMCMC_M2LNL_ID));
     }
     esmcmc->write_index = k;
   }
@@ -839,10 +838,12 @@ void
 ncm_fit_esmcmc_run (NcmFitESMCMC *esmcmc, guint n)
 {
   guint ti = (esmcmc->cur_sample_id + 1) / esmcmc->nwalkers;
+  guint ki = (esmcmc->cur_sample_id + 1) % esmcmc->nwalkers;
+  
   if (!esmcmc->started)
     g_error ("ncm_fit_esmcmc_run: run not started, run ncm_fit_esmcmc_start_run() first.");
 
-  if (n == 0)
+  if (n <= ti)
   {
     if (esmcmc->mtype > NCM_FIT_RUN_MSGS_NONE)
     {
@@ -852,7 +853,7 @@ ncm_fit_esmcmc_run (NcmFitESMCMC *esmcmc, guint n)
     return;
   }
   
-  esmcmc->n += n;
+  esmcmc->n = n - ti;
   
   switch (esmcmc->mtype)
   {
@@ -876,12 +877,12 @@ ncm_fit_esmcmc_run (NcmFitESMCMC *esmcmc, guint n)
 
   if (ncm_timer_task_is_running (esmcmc->nt))
   {
-    ncm_timer_task_add_tasks (esmcmc->nt, esmcmc->n * esmcmc->nwalkers - esmcmc->cur_sample_id - 1);
+    ncm_timer_task_add_tasks (esmcmc->nt, esmcmc->n * esmcmc->nwalkers - ki);
     ncm_timer_task_continue (esmcmc->nt);
   }
   else
   {
-    ncm_timer_task_start (esmcmc->nt, esmcmc->n * esmcmc->nwalkers - esmcmc->cur_sample_id - 1);
+    ncm_timer_task_start (esmcmc->nt, esmcmc->n * esmcmc->nwalkers - ki);
     ncm_timer_set_name (esmcmc->nt, "NcmFitESMCMC");
   }
   if (esmcmc->mtype > NCM_FIT_RUN_MSGS_NONE)
@@ -914,10 +915,9 @@ static void
 _ncm_fit_esmcmc_run_single (NcmFitESMCMC *esmcmc)
 {
   guint i = 0, k;
-  guint ti = (esmcmc->cur_sample_id + 1) / esmcmc->nwalkers;
   guint ki = (esmcmc->cur_sample_id + 1) % esmcmc->nwalkers;
 
-  for (i = ti; i < esmcmc->n; i++)
+  for (i = 0; i < esmcmc->n; i++)
   {
     k = ki;
     while (k < esmcmc->nwalkers)
@@ -942,8 +942,13 @@ _ncm_fit_esmcmc_run_single (NcmFitESMCMC *esmcmc)
 
       ncm_mset_fparams_get_vector (fit_k->mset, theta_k);
       ncm_mset_fparams_get_vector (NCM_FIT (g_ptr_array_index (esmcmc->walker_fits, j))->mset, theta_j);
-        
+
       ncm_fit_esmcmc_move_try (esmcmc, z, theta_k, theta_j, thetastar);
+/*
+      ncm_vector_log_vals (theta_k, "# theta_k  ", "% 20.15g");
+      ncm_vector_log_vals (theta_j, "# theta_j  ", "% 20.15g");
+      ncm_vector_log_vals (thetastar, "# thetastar", "% 20.15g");
+*/
       if (!ncm_mset_fparam_valid_bounds (fit_k->mset, thetastar))
         continue;
       
@@ -987,7 +992,7 @@ _ncm_fit_esmcmc_mt_eval (glong i, glong f, gpointer data)
 {
   _NCM_STATIC_MUTEX_DECL (update_lock);
   NcmFitESMCMC *esmcmc = NCM_FIT_ESMCMC (data);
-  const guint nwalkers_2 = esmcmc->nwalkers / 2;
+  const guint nwalkers_2  = esmcmc->nwalkers / 2;
   const guint subensemble = (i < nwalkers_2) ? nwalkers_2 : 0;
   guint k = i;
 
@@ -1062,10 +1067,9 @@ _ncm_fit_esmcmc_mt_eval (glong i, glong f, gpointer data)
 static void
 _ncm_fit_esmcmc_run_mt (NcmFitESMCMC *esmcmc)
 {
-  const guint nthreads = esmcmc->n > esmcmc->nthreads ? esmcmc->nthreads : (esmcmc->n - 1);
   guint i;
 
-  if (nthreads <= 1)
+  if (esmcmc->nthreads <= 1)
   {
     _ncm_fit_esmcmc_run_single (esmcmc);
     return;
@@ -1075,10 +1079,9 @@ _ncm_fit_esmcmc_run_mt (NcmFitESMCMC *esmcmc)
 
   {
     const guint nwalkers_2 = esmcmc->nwalkers / 2;
-    guint ti = (esmcmc->cur_sample_id + 1) / esmcmc->nwalkers;
     guint ki = (esmcmc->cur_sample_id + 1) % esmcmc->nwalkers;
 
-    if (ti < esmcmc->n - 1)
+    if (esmcmc->n > 0)
     {
       esmcmc->write_index = ki;
       if (ki < nwalkers_2)
@@ -1090,9 +1093,8 @@ _ncm_fit_esmcmc_run_mt (NcmFitESMCMC *esmcmc)
       {
         ncm_func_eval_threaded_loop_full (&_ncm_fit_esmcmc_mt_eval, ki, esmcmc->nwalkers, esmcmc);
       }
-      ti++;
 
-      for (i = ti; i < esmcmc->n; i++)
+      for (i = 1; i < esmcmc->n; i++)
       {
         esmcmc->write_index = 0;
         ncm_func_eval_threaded_loop_full (&_ncm_fit_esmcmc_mt_eval, 0, nwalkers_2, esmcmc);
@@ -1117,14 +1119,15 @@ ncm_fit_esmcmc_run_lre (NcmFitESMCMC *esmcmc, guint prerun, gdouble lre)
   gdouble lerror;
   const gdouble lre2 = lre * lre;
   const guint fparam_len = ncm_mset_fparam_len (esmcmc->fit->mset);
+  const guint catlen = ncm_mset_catalog_len (esmcmc->mcat) / esmcmc->nwalkers;
 
   g_assert_cmpfloat (lre, >, 0.0);
 
   prerun = GSL_MAX (prerun, fparam_len * 100);
 
-  if (ncm_mset_catalog_len (esmcmc->mcat) < prerun)
+  if (catlen < prerun)
   {
-    guint prerun_left = prerun - ncm_mset_catalog_len (esmcmc->mcat);
+    guint prerun_left = prerun - catlen;
     if (esmcmc->mtype >= NCM_FIT_RUN_MSGS_SIMPLE)
       g_message ("# NcmFitESMCMC: Running first %u pre-runs...\n", prerun_left);
     ncm_fit_esmcmc_run (esmcmc, prerun);
@@ -1139,7 +1142,8 @@ ncm_fit_esmcmc_run_lre (NcmFitESMCMC *esmcmc, guint prerun, gdouble lre)
     gdouble n = ncm_mset_catalog_len (esmcmc->mcat);
     gdouble m = n * lerror2 / lre2;
     guint runs = ((m - n) > 1000.0) ? ceil ((m - n) * 1.0e-1) : ceil (m - n);
-
+    guint ti = (esmcmc->cur_sample_id + 1) / esmcmc->nwalkers;
+    
     runs = runs / esmcmc->nwalkers + 1;
 
     if (esmcmc->mtype >= NCM_FIT_RUN_MSGS_SIMPLE)
@@ -1147,7 +1151,7 @@ ncm_fit_esmcmc_run_lre (NcmFitESMCMC *esmcmc, guint prerun, gdouble lre)
       g_message ("# NcmFitESMCMC: Largest relative error %e not attained: %e\n", lre, lerror);
       g_message ("# NcmFitESMCMC: Running more %u runs...\n", runs);
     }
-    ncm_fit_esmcmc_run (esmcmc, runs);
+    ncm_fit_esmcmc_run (esmcmc, ti + runs);
     ncm_mset_catalog_estimate_autocorrelation_tau (esmcmc->mcat);
     lerror = ncm_mset_catalog_largest_error (esmcmc->mcat);
   }

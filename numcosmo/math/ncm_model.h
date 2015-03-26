@@ -110,6 +110,7 @@ G_INLINE_FUNC NcmModel *ncm_model_ref (NcmModel *model);
 G_INLINE_FUNC NcmModelID ncm_model_id (NcmModel *model);
 G_INLINE_FUNC NcmModelID ncm_model_id_by_type (GType model_type);
 G_INLINE_FUNC guint64 ncm_model_impl (NcmModel *model);
+G_INLINE_FUNC gboolean ncm_model_check_impl (NcmModel *model, guint64 impl);
 G_INLINE_FUNC guint ncm_model_len (NcmModel *model);
 G_INLINE_FUNC gboolean ncm_model_state_is_update (NcmModel *model);
 G_INLINE_FUNC void ncm_model_state_set_update (NcmModel *model);
@@ -264,6 +265,15 @@ G_INLINE_FUNC guint64
 ncm_model_impl (NcmModel *model)
 {
   return NCM_MODEL_GET_CLASS (model)->impl;
+}
+
+G_INLINE_FUNC gboolean 
+ncm_model_check_impl (NcmModel *model, guint64 impl)
+{
+  if (impl == 0)
+    return TRUE;
+  else
+    return ((NCM_MODEL_GET_CLASS (model)->impl & impl) == impl);
 }
 
 G_INLINE_FUNC guint

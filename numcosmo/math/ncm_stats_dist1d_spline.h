@@ -70,7 +70,7 @@ struct _NcmStatsDist1dSpline
 
 GType ncm_stats_dist1d_spline_get_type (void) G_GNUC_CONST;
 
-NcmStatsDist1d *ncm_stats_dist1d_spline_new (NcmSpline *m2lnp);
+NcmStatsDist1dSpline *ncm_stats_dist1d_spline_new (NcmSpline *m2lnp);
 
 G_END_DECLS
 

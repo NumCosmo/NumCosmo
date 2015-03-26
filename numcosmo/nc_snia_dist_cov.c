@@ -44,12 +44,13 @@
 #include "nc_snia_dist_cov.h"
 #include "math/ncm_cfg.h"
 
-#define VECTOR  (NCM_MODEL (dcov)->params)
-#define ALPHA   (ncm_vector_get (VECTOR, NC_SNIA_DIST_COV_ALPHA))
-#define BETA    (ncm_vector_get (VECTOR, NC_SNIA_DIST_COV_BETA))
-#define ABSMAG1 (ncm_vector_get (VECTOR, NC_SNIA_DIST_COV_M1))
-#define ABSMAG2 (ncm_vector_get (VECTOR, NC_SNIA_DIST_COV_M2))
+#define VECTOR       (NCM_MODEL (dcov)->params)
+#define ALPHA        (ncm_vector_get (VECTOR, NC_SNIA_DIST_COV_ALPHA))
+#define BETA         (ncm_vector_get (VECTOR, NC_SNIA_DIST_COV_BETA))
+#define ABSMAG1      (ncm_vector_get (VECTOR, NC_SNIA_DIST_COV_M1))
+#define ABSMAG2      (ncm_vector_get (VECTOR, NC_SNIA_DIST_COV_M2))
 #define LNSIGMA_PECZ (ncm_vector_get (VECTOR, NC_SNIA_DIST_COV_LNSIGMA_PECZ))
+#define LNSIGMA_LENS (ncm_vector_get (VECTOR, NC_SNIA_DIST_COV_LNSIGMA_LENS))
 
 enum
 {
@@ -197,33 +198,38 @@ nc_snia_dist_cov_class_init (NcSNIADistCovClass *klass)
                                                          G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));  
   
   ncm_model_class_set_sparam (model_class, NC_SNIA_DIST_COV_ALPHA, "\\alpha", "alpha",
-                              -10.0, 10.0, 1.0e-1,
+                              0.0, 5.0, 1.0e-1,
                               NC_SNIA_DIST_COV_DEFAULT_PARAMS_ABSTOL, NC_SNIA_DIST_COV_DEFAULT_ALPHA,
                               NCM_PARAM_TYPE_FIXED);
 
   ncm_model_class_set_sparam (model_class, NC_SNIA_DIST_COV_BETA, "\\beta", "beta",
-                              -10.0, 10.0, 1.0e-1,
+                              0.0, 5.0, 1.0e-1,
                               NC_SNIA_DIST_COV_DEFAULT_PARAMS_ABSTOL, NC_SNIA_DIST_COV_DEFAULT_BETA,
                               NCM_PARAM_TYPE_FIXED);
 
   ncm_model_class_set_sparam (model_class, NC_SNIA_DIST_COV_M1, "\\mathcal{M}_1", "M1",
-                              -50.0, 10.0, 1.0,
+                              -30.0, -10.0, 1.0,
                               NC_SNIA_DIST_COV_DEFAULT_PARAMS_ABSTOL, NC_SNIA_DIST_COV_DEFAULT_M1,
                               NCM_PARAM_TYPE_FIXED);
 
   ncm_model_class_set_sparam (model_class, NC_SNIA_DIST_COV_M2, "\\mathcal{M}_1", "M2",
-                              -50.0, 10.0, 1.0,
+                              -30.0, -10.0, 1.0,
                               NC_SNIA_DIST_COV_DEFAULT_PARAMS_ABSTOL, NC_SNIA_DIST_COV_DEFAULT_M2,
                               NCM_PARAM_TYPE_FIXED);
   
   ncm_model_class_set_sparam (model_class, NC_SNIA_DIST_COV_LNSIGMA_PECZ, "\\ln(\\sigma_{\\mathrm{pecz}})", "lnsigma_pecz",
-                              -10.0 * M_LN10, 5.0 * M_LN10, 1.0e-1,
+                              -10.0 * M_LN10, 5.0 * M_LN10, 1.0e-3,
                               NC_SNIA_DIST_COV_DEFAULT_PARAMS_ABSTOL, NC_SNIA_DIST_COV_DEFAULT_LNSIGMA_PECZ,
+                              NCM_PARAM_TYPE_FIXED);
+
+  ncm_model_class_set_sparam (model_class, NC_SNIA_DIST_COV_LNSIGMA_LENS, "\\ln(\\sigma_{\\mathrm{lens}})", "lnsigma_lens",
+                              -10.0 * M_LN10, 5.0 * M_LN10, 1.0e-3,
+                              NC_SNIA_DIST_COV_DEFAULT_PARAMS_ABSTOL, NC_SNIA_DIST_COV_DEFAULT_LNSIGMA_LENS,
                               NCM_PARAM_TYPE_FIXED);
 
   ncm_model_class_set_vparam (model_class, NC_SNIA_DIST_COV_LNSIGMA_INT, NC_SNIA_DIST_COV_LNSIGMA_INT_DEFAULT_LEN, 
                               "\\ln(\\sigma_{\\mathrm{int}})", "lnsigma_int",
-                              -10.0 * M_LN10, 5.0 * M_LN10, 1.0e-1, 
+                              -10.0 * M_LN10, 5.0 * M_LN10, 1.0e-3, 
                               NC_SNIA_DIST_COV_DEFAULT_PARAMS_ABSTOL, NC_SNIA_DIST_COV_DEFAULT_LNSIGMA_INT,
                               NCM_PARAM_TYPE_FIXED);
 
@@ -375,6 +381,7 @@ nc_snia_dist_cov_calc (NcSNIADistCov *dcov, NcDataSNIACov *snia_cov, NcmMatrix *
   const gdouble two_alpha      = 2.0 * alpha;
   const gdouble two_beta       = 2.0 * beta;
   const gdouble var_pecz       = exp (2.0 * LNSIGMA_PECZ);
+  const gdouble var_lens       = exp (2.0 * LNSIGMA_LENS);
   const guint mu_len           = snia_cov->mu_len;
   register guint i, j, ij;
 
@@ -415,13 +422,14 @@ nc_snia_dist_cov_calc (NcSNIADistCov *dcov, NcDataSNIACov *snia_cov, NcmMatrix *
     }
 
     {
-      const guint dset_id     = g_array_index (snia_cov->dataset, guint32, i);
-      const gdouble var_int   = g_array_index (dcov->var_int, gdouble, dset_id); 
-      const gdouble z_cmb     = ncm_vector_get (snia_cov->z_cmb, i);
-      const gdouble sigma_z   = ncm_vector_get (snia_cov->sigma_z, i);
-      const gdouble emptyfac    = _nc_snia_dist_cov_calc_empty_fac (dcov, z_cmb);
-      const gdouble var_z_tot = (var_pecz + sigma_z * sigma_z) * emptyfac * emptyfac; 
-      const gdouble var_tot   = var_z_tot + var_int;
+      const guint dset_id      = g_array_index (snia_cov->dataset, guint32, i);
+      const gdouble var_int    = g_array_index (dcov->var_int, gdouble, dset_id); 
+      const gdouble z_cmb      = ncm_vector_get (snia_cov->z_cmb, i);
+      const gdouble sigma_z    = ncm_vector_get (snia_cov->sigma_z, i);
+      const gdouble emptyfac   = _nc_snia_dist_cov_calc_empty_fac (dcov, z_cmb);
+      const gdouble var_z_tot  = (var_pecz + sigma_z * sigma_z) * emptyfac * emptyfac;
+      const gdouble var_lens_z = var_lens * z_cmb * z_cmb;
+      const gdouble var_tot    = var_z_tot + var_int + var_lens_z;
 
       ncm_matrix_addto (cov, i, i, var_tot);
     }
@@ -635,9 +643,11 @@ nc_snia_dist_cov_extra_var (NcSNIADistCov *dcov, NcDataSNIACov *snia_cov, guint 
     const gdouble sigma_z     = ncm_vector_get (snia_cov->sigma_z, i);
     const gdouble emptyfac    = _nc_snia_dist_cov_calc_empty_fac (dcov, z_cmb);
     const gdouble var_pecz    = exp (2.0 * LNSIGMA_PECZ);
+    const gdouble var_lens    = exp (2.0 * LNSIGMA_LENS);
+    const gdouble var_lens_z  = var_lens * z_cmb * z_cmb;
     const gdouble var_z_tot   = (var_pecz + sigma_z * sigma_z) * emptyfac * emptyfac; 
 
-    const gdouble var_tot = var_z_tot + var_int;
+    const gdouble var_tot = var_z_tot + var_int + var_lens_z;
 
     return var_tot;
   }

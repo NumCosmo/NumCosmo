@@ -52,6 +52,7 @@ typedef struct _NcSNIADistCov NcSNIADistCov;
  * @NC_SNIA_DIST_COV_M1: FIXME
  * @NC_SNIA_DIST_COV_M2: FIXME
  * @NC_SNIA_DIST_COV_LNSIGMA_PECZ: FIXME
+ * @NC_SNIA_DIST_COV_LNSIGMA_LENS: FIXME
  *
  * FIXME
  * 
@@ -62,8 +63,9 @@ typedef enum _NcSNIADistCovSParams
   NC_SNIA_DIST_COV_BETA,
   NC_SNIA_DIST_COV_M1,
   NC_SNIA_DIST_COV_M2,         
-  NC_SNIA_DIST_COV_LNSIGMA_PECZ, /*< private >*/
-  NC_SNIA_DIST_COV_SPARAM_LEN, /*< skip >*/
+  NC_SNIA_DIST_COV_LNSIGMA_PECZ,
+  NC_SNIA_DIST_COV_LNSIGMA_LENS, /*< private >*/
+  NC_SNIA_DIST_COV_SPARAM_LEN,   /*< skip >*/
 } NcSNIADistCovSParams;
 
 /**
@@ -124,6 +126,7 @@ void nc_snia_dist_cov_alpha_beta (NcSNIADistCov *dcov, gdouble *alpha, gdouble *
 #define NC_SNIA_DIST_COV_DEFAULT_M1 (-19.1686133146)
 #define NC_SNIA_DIST_COV_DEFAULT_M2 (-19.1856133146)
 #define NC_SNIA_DIST_COV_DEFAULT_LNSIGMA_PECZ (log (150.0e3 / ncm_c_c ()))
+#define NC_SNIA_DIST_COV_DEFAULT_LNSIGMA_LENS (log (0.055))
 #define NC_SNIA_DIST_COV_DEFAULT_PARAMS_ABSTOL (0.0)
 
 #define NC_SNIA_DIST_COV_LNSIGMA_INT_DEFAULT_LEN (4)

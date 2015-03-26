@@ -73,7 +73,7 @@ nc_data_bao_empirical_fit_constructed (GObject *object)
   NcDataBaoEmpiricalFit *bao_ef = NC_DATA_BAO_EMPIRICAL_FIT (object);
 
   ncm_stats_dist1d_prepare (bao_ef->p);
-  bao_ef->p_mode = ncm_stats_dist1d_mode (bao_ef->p);
+  bao_ef->p_mode = ncm_stats_dist1d_eval_mode (bao_ef->p);
 
   ncm_data_set_init (NCM_DATA (bao_ef), TRUE);
 }
@@ -99,7 +99,7 @@ nc_data_bao_empirical_fit_set_property (GObject *object, guint prop_id, const GV
       ncm_spline_clear (&bao_ef->m2lnp);
       ncm_stats_dist1d_clear (&bao_ef->p);
       bao_ef->m2lnp = g_value_dup_object (value);
-      bao_ef->p = ncm_stats_dist1d_spline_new (bao_ef->m2lnp);
+      bao_ef->p = NCM_STATS_DIST1D (ncm_stats_dist1d_spline_new (bao_ef->m2lnp));
       break;
     case PROP_DIST:
       nc_data_bao_empirical_fit_set_dist (bao_ef, g_value_get_object (value));
@@ -228,14 +228,14 @@ _nc_data_bao_empirical_fit_m2lnL_val (NcmDataDist1d *dist1d, NcmMSet *mset, gdou
   const gdouble alpha  = nc_data_bao_empirical_fit_get_alpha (bao_ef, mset);
   const gdouble alphap = alpha - x;
 
-  return ncm_stats_dist1d_m2lnp (bao_ef->p, alphap);
+  return ncm_stats_dist1d_eval_m2lnp (bao_ef->p, alphap);
 }
 
 static gdouble 
 _nc_data_bao_empirical_fit_inv_pdf (NcmDataDist1d *dist1d, NcmMSet *mset, gdouble u)
 {
   NcDataBaoEmpiricalFit *bao_ef = NC_DATA_BAO_EMPIRICAL_FIT (dist1d);
-  return ncm_stats_dist1d_inv_pdf (bao_ef->p, u) - bao_ef->p_mode;
+  return ncm_stats_dist1d_eval_inv_pdf (bao_ef->p, u) - bao_ef->p_mode;
 }
 
 /**

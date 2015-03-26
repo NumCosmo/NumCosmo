@@ -250,11 +250,8 @@ _ncm_fit_nlopt_reset (NcmFit *fit)
       fit_nlopt->pscale = ncm_vector_new (fit_nlopt->fparam_len);
 
 #ifdef HAVE_NLOPT_2_2
-      if (fit_nlopt->nlopt != NULL)
-      {
-        nlopt_destroy (fit_nlopt->nlopt);
-        fit_nlopt->nlopt = NULL;
-      }
+      g_clear_pointer (&fit_nlopt->nlopt, nlopt_destroy);
+      g_clear_pointer (&fit_nlopt->local_nlopt, nlopt_destroy);
 #endif /* HAVE_NLOPT_2_2 */
       
       ncm_fit_nlopt_set_algo (fit_nlopt, fit_nlopt->nlopt_algo);
@@ -334,7 +331,7 @@ _ncm_fit_nlopt_run (NcmFit *fit, NcmFitRunMsgs mtype)
       nlopt_set_maxeval (fit_nlopt->local_nlopt, ncm_fit_get_maxiter (fit));
       ret = nlopt_set_local_optimizer (fit_nlopt->nlopt, fit_nlopt->local_nlopt);
       if (ret < 0)
-        g_error ("_ncm_fit_nlopt_run: (%d)", ret);
+        g_error ("_ncm_fit_nlopt_run[local_nlopt]: (%d)", ret);
     }
 
     ret = nlopt_optimize (fit_nlopt->nlopt, ncm_vector_data (fit->fstate->fparams), &minf);
@@ -393,15 +390,19 @@ _ncm_fit_nlopt_func (guint n, const gdouble *x, gdouble *grad, gpointer userdata
 {
   NcmFit *fit = NCM_FIT (userdata);
   gdouble m2lnL;
+  guint i;
 
   fit->fstate->niter++;
+  for (i = 0; i < n; i++)
+  {
+    if (!gsl_finite (x[i]))
+      return GSL_POSINF;
+  }
+  
   ncm_mset_fparams_set_array (fit->mset, x);
-/*
-  printf ("######################!!!!!!!!!!!!\n");
-  ncm_mset_params_log_vals (fit->mset);
-*/  
+  
   if (!ncm_mset_params_valid (fit->mset))
-    return GSL_NAN;
+    return GSL_POSINF;
   
   if (grad != NULL)
   {
@@ -414,7 +415,7 @@ _ncm_fit_nlopt_func (guint n, const gdouble *x, gdouble *grad, gpointer userdata
 
   ncm_fit_state_set_m2lnL_curval (fit->fstate, m2lnL);
   ncm_fit_log_step (fit);
-
+  
   return m2lnL;
 }
 
@@ -599,19 +600,12 @@ void
 ncm_fit_nlopt_set_algo (NcmFitNLOpt *fit_nlopt, nlopt_algorithm algo)
 {
 #ifdef HAVE_NLOPT_2_2
-  gboolean nlopt_alloc = FALSE;
   NcmFit *fit = NCM_FIT (fit_nlopt);
 
+  if (fit_nlopt->nlopt_algo != algo)
+    g_clear_pointer (&fit_nlopt->nlopt, nlopt_destroy);
+
   if (fit_nlopt->nlopt == NULL)
-    nlopt_alloc = TRUE;
-
-  else if (fit_nlopt->nlopt_algo != algo)
-  {
-    nlopt_destroy (fit_nlopt->nlopt);
-    nlopt_alloc = TRUE;
-  }
-
-  if (nlopt_alloc)
   {
     fit_nlopt->nlopt = nlopt_create (algo, fit->fstate->fparam_len);
     fit_nlopt->nlopt_algo = algo;
@@ -620,13 +614,12 @@ ncm_fit_nlopt_set_algo (NcmFitNLOpt *fit_nlopt, nlopt_algorithm algo)
   if (fit_nlopt->nlopt_algo != algo)
   {
     fit_nlopt->nlopt_algo = algo;
-    if (fit_nlopt->desc != NULL)
-      g_free (fit_nlopt->desc);
+    g_clear_pointer (&fit_nlopt->desc, g_free);
   }
 }
 
 /**
- * ncm_fit_nlopt_set_local_algo: (skip)
+ * ncm_fit_nlopt_set_local_algo:
  * @fit_nlopt: a #NcmFitNLOpt.
  * @algo: a #nlopt_algorithm.
  *
@@ -637,19 +630,12 @@ void
 ncm_fit_nlopt_set_local_algo (NcmFitNLOpt *fit_nlopt, nlopt_algorithm algo)
 {
 #ifdef HAVE_NLOPT_2_2
-  gboolean nlopt_alloc = FALSE;
   NcmFit *fit = NCM_FIT (fit_nlopt);
 
+  if (fit_nlopt->local_nlopt_algo != algo)
+    g_clear_pointer (&fit_nlopt->local_nlopt, nlopt_destroy);
+
   if (fit_nlopt->local_nlopt == NULL)
-    nlopt_alloc = TRUE;
-
-  else if (fit_nlopt->local_nlopt_algo != algo)
-  {
-    nlopt_destroy (fit_nlopt->local_nlopt);
-    nlopt_alloc = TRUE;
-  }
-
-  if (nlopt_alloc)
   {
     fit_nlopt->local_nlopt = nlopt_create (algo, fit->fstate->fparam_len);
     fit_nlopt->local_nlopt_algo = algo;
@@ -658,8 +644,7 @@ ncm_fit_nlopt_set_local_algo (NcmFitNLOpt *fit_nlopt, nlopt_algorithm algo)
   if (fit_nlopt->local_nlopt_algo != algo)
   {
     fit_nlopt->local_nlopt_algo = algo;
-    if (fit_nlopt->desc != NULL)
-      g_free (fit_nlopt->desc);
+    g_clear_pointer (&fit_nlopt->desc, g_free);
   }
 }
 
