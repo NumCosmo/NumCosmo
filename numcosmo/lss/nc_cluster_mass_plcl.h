@@ -44,15 +44,14 @@ typedef struct _NcClusterMassPlCLClass NcClusterMassPlCLClass;
 typedef struct _NcClusterMassPlCL NcClusterMassPlCL;
 
 /**
- * NcClusterMassPlclParams:
+ * NcClusterMassPlCLParams:
  * @NC_CLUSTER_MASS_PLCL_A_SZ: slope of the mass-SZ relation
  * @NC_CLUSTER_MASS_PLCL_B_SZ: FIXME
  * @NC_CLUSTER_MASS_PLCL_SD_SZ: standard deviation of the mass-SZ relation
  * @NC_CLUSTER_MASS_PLCL_A_L: slope of the mass-lensing relation
  * @NC_CLUSTER_MASS_PLCL_B_L: FIXME
  * @NC_CLUSTER_MASS_PLCL_SD_L: standard deviation of the mass-lensing relation 
- * @NC_CLUSTER_MASS_PLCL_COR: correlation coefficient between the SZ and lensing masses
- * @NC_CLUSTER_MASS_PLCL_MCUT: lower mass cut-off 
+ * @NC_CLUSTER_MASS_PLCL_COR: correlation coefficient between the SZ and lensing masses 
  *
  * FIXME
  */
@@ -64,25 +63,19 @@ typedef enum _NcClusterMassPlCLParams
   NC_CLUSTER_MASS_PLCL_A_L,
   NC_CLUSTER_MASS_PLCL_B_L,
   NC_CLUSTER_MASS_PLCL_SD_L, 
-  NC_CLUSTER_MASS_PLCL_COR, 
-  NC_CLUSTER_MASS_PLCL_MCUT, 
-  NC_CLUSTER_MASS_PLCL_SD_MCUT, /*< private >*/
+  NC_CLUSTER_MASS_PLCL_COR, /*< private >*/
   NC_CLUSTER_MASS_PLCL_SPARAM_LEN, /*< skip >*/
-} NcClusterMassPlclParams;
+} NcClusterMassPlCLParams;
 
-#define NC_CLUSTER_MASS_PLCL_DEFAULT_A_SZ  (1.0)
-#define NC_CLUSTER_MASS_PLCL_DEFAULT_B_SZ  (1.32)
-#define NC_CLUSTER_MASS_PLCL_DEFAULT_SD_SZ (0.3)
-#define NC_CLUSTER_MASS_PLCL_DEFAULT_A_L  (0.9)
+#define NC_CLUSTER_MASS_PLCL_DEFAULT_A_SZ  (1.041)
+#define NC_CLUSTER_MASS_PLCL_DEFAULT_B_SZ  (0.17)
+#define NC_CLUSTER_MASS_PLCL_DEFAULT_SD_SZ (0.234)
+#define NC_CLUSTER_MASS_PLCL_DEFAULT_A_L  (0.9737)
 #define NC_CLUSTER_MASS_PLCL_DEFAULT_B_L  (0.0)
-#define NC_CLUSTER_MASS_PLCL_DEFAULT_SD_L (0.2)
-#define NC_CLUSTER_MASS_PLCL_DEFAULT_COR  (0.5)
-#define NC_CLUSTER_MASS_PLCL_DEFAULT_MCUT  (6.5e14)
-#define NC_CLUSTER_MASS_PLCL_DEFAULT_SD_MCUT (0.2)
+#define NC_CLUSTER_MASS_PLCL_DEFAULT_SD_L (0.569)
+#define NC_CLUSTER_MASS_PLCL_DEFAULT_COR  (0.488)
 
 #define NC_CLUSTER_MASS_PLCL_DEFAULT_PARAMS_ABSTOL (0.0)
-
-//#define NC_CLUSTER_MASS_PLCL_M_LOWER_BOUND (1.0e13)
 
 #define NC_CLUSTER_MASS_PLCL_MPL (0)
 #define NC_CLUSTER_MASS_PLCL_SD_PL (0)
@@ -92,12 +85,7 @@ typedef enum _NcClusterMassPlCLParams
 struct _NcClusterMassPlCL
 {
   /*< private >*/
-  NcClusterMass parent_instance;
-  //gdouble sz_obs_min;
-  //gdouble sz_obs_max;
-  //gdouble lens_obs_min;
-  //gdouble lens_obs_max;
-  //gdouble M0;
+  NcClusterMass parent_instance;  
 };
 
 struct _NcClusterMassPlCLClass
@@ -107,6 +95,8 @@ struct _NcClusterMassPlCLClass
 };
 
 GType nc_cluster_mass_plcl_get_type (void) G_GNUC_CONST;
+
+gdouble nc_cluster_mass_plcl_pdf (NcClusterMass *clusterm, gdouble lnM500, gdouble lnMsz, gdouble lnMl, const gdouble *Mobs, const gdouble *Mobs_params);
 
 G_END_DECLS
 

@@ -87,6 +87,7 @@
 #include "lss/nc_cluster_mass_vanderlinde.h"
 #include "lss/nc_cluster_mass_benson.h"
 #include "lss/nc_cluster_mass_benson_xray.h"
+#include "lss/nc_cluster_mass_plcl.h"
 #include "lss/nc_cluster_redshift.h"
 #include "lss/nc_cluster_redshift_nodist.h"
 #include "lss/nc_cluster_photoz_gauss_global.h"
@@ -97,11 +98,14 @@
 #include "lss/nc_halo_bias_type_st_spher.h"
 #include "lss/nc_halo_bias_type_tinker.h"
 #include "lss/nc_cluster_abundance.h"
+#include "lss/nc_cluster_pseudo_counts.h"
+#include "lss/nc_cor_cluster_cmb_lens_limber.h"
 #include "nc_distance.h"
 #include "nc_recomb.h"
 #include "nc_recomb_seager.h"
 #include "nc_snia_dist_cov.h"
 #include "data/nc_data_bao_empirical_fit.h"
+#include "data/nc_data_cluster_pseudo_counts.h"
 
 #include <gio/gio.h>
 #ifdef NUMCOSMO_HAVE_FFTW3
@@ -303,6 +307,7 @@ ncm_cfg_init (void)
   ncm_cfg_register_obj (NC_TYPE_CLUSTER_MASS_VANDERLINDE);
   ncm_cfg_register_obj (NC_TYPE_CLUSTER_MASS_BENSON);
   ncm_cfg_register_obj (NC_TYPE_CLUSTER_MASS_BENSON_XRAY);
+  ncm_cfg_register_obj (NC_TYPE_CLUSTER_MASS_PLCL);
 
   ncm_cfg_register_obj (NC_TYPE_CLUSTER_REDSHIFT);
   ncm_cfg_register_obj (NC_TYPE_CLUSTER_REDSHIFT_NODIST);
@@ -319,6 +324,10 @@ ncm_cfg_init (void)
 
   ncm_cfg_register_obj (NC_TYPE_CLUSTER_ABUNDANCE);
 
+  ncm_cfg_register_obj (NC_TYPE_CLUSTER_PSEUDO_COUNTS);
+
+  ncm_cfg_register_obj (NC_TYPE_COR_CLUSTER_CMB_LENS_LIMBER);
+
   ncm_cfg_register_obj (NC_TYPE_DISTANCE);
 
   ncm_cfg_register_obj (NC_TYPE_RECOMB);
@@ -327,6 +336,8 @@ ncm_cfg_init (void)
   ncm_cfg_register_obj (NC_TYPE_SNIA_DIST_COV);
 
   ncm_cfg_register_obj (NC_TYPE_DATA_BAO_EMPIRICAL_FIT);
+
+  ncm_cfg_register_obj (NC_TYPE_DATA_CLUSTER_PSEUDO_COUNTS);
   
   numcosmo_init = TRUE;
   return;

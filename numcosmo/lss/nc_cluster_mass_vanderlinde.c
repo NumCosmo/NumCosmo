@@ -64,10 +64,10 @@ enum
 typedef struct _integrand_data
 {
   NcClusterMassVanderlinde *msz;
-  gdouble *xi_params;
+  const gdouble *xi_params;
   gdouble z;
   gdouble lnM;
-  gdouble *xi;
+  const gdouble *xi;
   /* new: optimizing */
   gdouble lnA;
   gdouble lnM0;
@@ -113,7 +113,7 @@ _nc_cluster_mass_vanderlinde_significance_m_intp_integrand (gdouble zeta, gpoint
 }
 
 static gdouble
-_nc_cluster_mass_vanderlinde_significance_m_p (NcClusterMass *clusterm, NcHICosmo *model, gdouble lnM, gdouble z, gdouble *xi, gdouble *xi_params)
+_nc_cluster_mass_vanderlinde_significance_m_p (NcClusterMass *clusterm, NcHICosmo *cosmo, gdouble lnM, gdouble z, const gdouble *xi, const gdouble *xi_params)
 {
   integrand_data data;
   NcClusterMassVanderlinde *msz = NC_CLUSTER_MASS_VANDERLINDE (clusterm);
@@ -121,7 +121,7 @@ _nc_cluster_mass_vanderlinde_significance_m_p (NcClusterMass *clusterm, NcHICosm
   gsl_function F;
   gsl_integration_workspace **w = ncm_integral_get_workspace ();
 
-  NCM_UNUSED (model);
+  NCM_UNUSED (cosmo);
 
   data.msz = msz;
   data.lnM = lnM;
@@ -159,7 +159,7 @@ _nc_cluster_mass_vanderlinde_significance_m_p (NcClusterMass *clusterm, NcHICosm
 }
 
 static gdouble
-_nc_cluster_mass_vanderlinde_intp (NcClusterMass *clusterm, NcHICosmo *model, gdouble lnM, gdouble z)
+_nc_cluster_mass_vanderlinde_intp (NcClusterMass *clusterm, NcHICosmo *cosmo, gdouble lnM, gdouble z)
 {
   integrand_data data;
   NcClusterMassVanderlinde *msz = NC_CLUSTER_MASS_VANDERLINDE (clusterm);
@@ -167,8 +167,8 @@ _nc_cluster_mass_vanderlinde_intp (NcClusterMass *clusterm, NcHICosmo *model, gd
   gsl_function F;
   gsl_integration_workspace **w = ncm_integral_get_workspace ();
 
-  NCM_UNUSED (model);
-  
+  NCM_UNUSED (cosmo);
+    
   data.msz = msz;
   data.lnM = lnM;
   data.z = z;
@@ -203,12 +203,12 @@ _nc_cluster_mass_vanderlinde_intp (NcClusterMass *clusterm, NcHICosmo *model, gd
 }
 
 static gboolean
-_nc_cluster_mass_vanderlinde_resample (NcClusterMass *clusterm, NcHICosmo *model, gdouble lnM, gdouble z, gdouble *xi, gdouble *xi_params, NcmRNG *rng)
+_nc_cluster_mass_vanderlinde_resample (NcClusterMass *clusterm, NcHICosmo *cosmo, gdouble lnM, gdouble z, gdouble *xi, const gdouble *xi_params, NcmRNG *rng)
 {
   NcClusterMassVanderlinde *msz = NC_CLUSTER_MASS_VANDERLINDE (clusterm);
   gdouble lnzeta, lnzeta_obs, zeta_obs, xi_mean;
 
-  NCM_UNUSED (model);
+  NCM_UNUSED (cosmo);
   NCM_UNUSED (xi_params);
   
   lnzeta = B_SZ * (lnM - log (msz->M0)) + C_SZ * log ((1.0 + z) / (1.0 + msz->z0)) + log (A_SZ);
@@ -240,14 +240,14 @@ _significance_to_mass (NcClusterMass *clusterm, gdouble z, gdouble xi)
 }
 
 static void
-_nc_cluster_mass_vanderlinde_p_limits (NcClusterMass *clusterm, NcHICosmo *model, gdouble *xi, gdouble *xi_params, gdouble *lnM_lower, gdouble *lnM_upper)
+_nc_cluster_mass_vanderlinde_p_limits (NcClusterMass *clusterm, NcHICosmo *cosmo, const gdouble *xi, const gdouble *xi_params, gdouble *lnM_lower, gdouble *lnM_upper)
 {
   NcClusterMassVanderlinde *msz = NC_CLUSTER_MASS_VANDERLINDE (clusterm);
   const gdouble xil = GSL_MAX (xi[0] - 7.0, msz->signif_obs_min);
   const gdouble lnMl = GSL_MAX (_significance_to_mass (clusterm, 2.0, xil) - 7.0 * D_SZ, log (2.0e14));
   const gdouble lnMu = _significance_to_mass (clusterm, 0.0, xi[0] + 7.0) + 7.0 * D_SZ;
 
-  NCM_UNUSED (model);
+  NCM_UNUSED (cosmo);
   NCM_UNUSED (xi_params);
   
   *lnM_lower = lnMl;
@@ -257,13 +257,13 @@ _nc_cluster_mass_vanderlinde_p_limits (NcClusterMass *clusterm, NcHICosmo *model
 }
 
 static void
-_nc_cluster_mass_vanderlinde_n_limits (NcClusterMass *clusterm, NcHICosmo *model, gdouble *lnM_lower, gdouble *lnM_upper)
+_nc_cluster_mass_vanderlinde_n_limits (NcClusterMass *clusterm, NcHICosmo *cosmo, gdouble *lnM_lower, gdouble *lnM_upper)
 {
   NcClusterMassVanderlinde *msz = NC_CLUSTER_MASS_VANDERLINDE (clusterm);
   const gdouble lnMl = GSL_MAX (_significance_to_mass (clusterm, 2.0, msz->signif_obs_min) - 7.0 * D_SZ, log (2.0e14));
   const gdouble lnMu = _significance_to_mass (clusterm, 0.0, msz->signif_obs_max) + 7.0 * D_SZ;
 
-  NCM_UNUSED (model);
+  NCM_UNUSED (cosmo);
   
   *lnM_lower = lnMl;
   *lnM_upper = lnMu;

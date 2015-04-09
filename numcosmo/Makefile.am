@@ -267,6 +267,7 @@ nc_headers = \
         lss/nc_cluster_mass_benson_xray.h      \
         lss/nc_cluster_mass_plcl.h             \
         lss/nc_cluster_abundance.h             \
+        lss/nc_cluster_pseudo_counts.h         \
         lss/nc_cor_cluster_cmb_lens_limber.h   \
 	data/nc_data_snia.h                    \
 	data/nc_data_dist_mu.h                 \
@@ -284,6 +285,7 @@ nc_headers = \
 	data/nc_data_cmb.h                     \
 	data/nc_data_cluster_ncount.h          \
 	data/nc_data_cluster_poisson.h         \
+	data/nc_data_cluster_pseudo_counts.h   \
 	abc/nc_abc_cluster_ncount.h            \
 	scalefactor.h                          \
 	model/quantum_gravity.h                \
@@ -357,6 +359,7 @@ nc_sources = \
 	lss/nc_cluster_mass_benson_xray.c      \
 	lss/nc_cluster_mass_plcl.c             \
 	lss/nc_cluster_abundance.c             \
+	lss/nc_cluster_pseudo_counts.c         \
 	lss/nc_cor_cluster_cmb_lens_limber.c   \
 	data/nc_data_snia.c                    \
 	data/nc_data_dist_mu.c                 \
@@ -374,6 +377,7 @@ nc_sources = \
 	data/nc_data_cmb.c                     \
 	data/nc_data_cluster_ncount.c          \
 	data/nc_data_cluster_poisson.c         \
+	data/nc_data_cluster_pseudo_counts.c   \
 	abc/nc_abc_cluster_ncount.c            \
 	scalefactor.c                          \
 	model/quantum_gravity.c                \

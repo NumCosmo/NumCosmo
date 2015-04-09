@@ -65,10 +65,10 @@ typedef struct _integrand_data
 {
   NcClusterMassBenson *msz;
   NcHICosmo *model;
-  gdouble *xi_params;
+  const gdouble *xi_params;
   gdouble z;
   gdouble lnM;
-  gdouble *xi;
+  const gdouble *xi;
   gdouble lnA;
   gdouble lnM0;
   gdouble lnE_E0;  /* ln (E/E0)  */
@@ -133,7 +133,7 @@ _nc_cluster_mass_benson_significance_m_intp_integrand (gdouble zeta, gpointer us
 }
 
 static gdouble
-_nc_cluster_mass_benson_significance_m_p (NcClusterMass *clusterm, NcHICosmo *model, gdouble lnM, gdouble z, gdouble *xi, gdouble *xi_params)
+_nc_cluster_mass_benson_significance_m_p (NcClusterMass *clusterm, NcHICosmo *model, gdouble lnM, gdouble z, const gdouble *xi, const gdouble *xi_params)
 {
   integrand_data data;
   NcClusterMassBenson *msz = NC_CLUSTER_MASS_BENSON (clusterm);
@@ -206,7 +206,7 @@ _nc_cluster_mass_benson_intp (NcClusterMass *clusterm, NcHICosmo *model, gdouble
 
   F.function = &_nc_cluster_mass_benson_significance_m_intp_integrand;
   F.params = &data;
-
+  
   {
     gdouble Pi, a, b;
 //    a = 0.25;
@@ -235,7 +235,7 @@ _nc_cluster_mass_benson_intp (NcClusterMass *clusterm, NcHICosmo *model, gdouble
 }
 
 static gboolean
-_nc_cluster_mass_benson_resample (NcClusterMass *clusterm, NcHICosmo *model, gdouble lnM, gdouble z, gdouble *xi, gdouble *xi_params, NcmRNG *rng)
+_nc_cluster_mass_benson_resample (NcClusterMass *clusterm, NcHICosmo *model, gdouble lnM, gdouble z, gdouble *xi, const gdouble *xi_params, NcmRNG *rng)
 {
   NcClusterMassBenson *msz = NC_CLUSTER_MASS_BENSON (clusterm);
   gdouble lnzeta, lnzeta_obs, zeta_obs, xi_mean;
@@ -291,7 +291,7 @@ _zeta_to_mass (NcClusterMass *clusterm, NcHICosmo *model, gdouble z, gdouble zet
 }
 
 static void
-_nc_cluster_mass_benson_p_limits (NcClusterMass *clusterm, NcHICosmo *model, gdouble *xi, gdouble *xi_params, gdouble *lnM_lower, gdouble *lnM_upper)
+_nc_cluster_mass_benson_p_limits (NcClusterMass *clusterm, NcHICosmo *model, const gdouble *xi, const gdouble *xi_params, gdouble *lnM_lower, gdouble *lnM_upper)
 {
   NcClusterMassBenson *msz = NC_CLUSTER_MASS_BENSON (clusterm);
   const gdouble xil = GSL_MAX (xi[0] - 7.0, msz->signif_obs_min);

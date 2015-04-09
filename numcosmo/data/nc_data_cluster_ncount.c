@@ -7,7 +7,7 @@
  ****************************************************************************/
 /*
  * numcosmo
- * Copyright (C) 2012 Sandro Dias Pinto Vitenti <sandro@isoftware.com.br>
+ * Copyright (C) 2012 Mariana Penna Lima <pennalima@gmail.com>
  * 
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -534,7 +534,7 @@ _nc_data_cluster_ncount_begin (NcmData *data)
 
 /**
  * nc_data_cluster_ncount_new:
- * @cad: FIXME
+ * @cad: a #NcClusterAbundance
  *
  * FIXME
  * 
@@ -552,7 +552,7 @@ nc_data_cluster_ncount_new (NcClusterAbundance *cad)
 
 /**
  * nc_data_cluster_ncount_ref:
- * @ncount: FIXME
+ * @ncount: a #NcDataClusterNCount
  *
  * FIXME
  * 
@@ -566,7 +566,7 @@ nc_data_cluster_ncount_ref (NcDataClusterNCount *ncount)
 
 /**
  * nc_data_cluster_ncount_free:
- * @ncount: FIXME
+ * @ncount: a #NcDataClusterNCount
  *
  * FIXME
  * 
@@ -579,7 +579,7 @@ nc_data_cluster_ncount_free (NcDataClusterNCount *ncount)
 
 /**
  * nc_data_cluster_ncount_clear:
- * @ncount: FIXME
+ * @ncount: a #NcDataClusterNCount
  *
  * FIXME
  * 
@@ -592,8 +592,8 @@ nc_data_cluster_ncount_clear (NcDataClusterNCount **ncount)
 
 /**
  * nc_data_cluster_ncount_set_mass:
- * @ncount: a #NcDataClusterNCount.
- * @m: the #NcClusterMass object.
+ * @ncount: a #NcDataClusterNCount
+ * @m: a #NcClusterMass
  *
  * Sets the mass observable object.
  * 
@@ -612,8 +612,8 @@ nc_data_cluster_ncount_set_mass (NcDataClusterNCount *ncount, NcClusterMass *m)
 
 /**
  * nc_data_cluster_ncount_set_redshift:
- * @ncount: a #NcDataClusterNCount.
- * @z: the #NcClusterRedshift object.
+ * @ncount: a #NcDataClusterNCount
+ * @z: a #NcClusterRedshift
  *
  * Sets the redshift observable object.
  * 
@@ -631,10 +631,10 @@ nc_data_cluster_ncount_set_redshift (NcDataClusterNCount *ncount, NcClusterRedsh
 
 /**
  * nc_data_cluster_ncount_set_lnM_true:
- * @ncount: a #NcDataClusterNCount.
- * @v: the value of the masses.
+ * @ncount: a #NcDataClusterNCount
+ * @v: a #NcmVector
  *
- * Sets the vector representing the clusters true masses.
+ * Sets the vector @v containing the values of the clusters true masses.
  * 
  */
 void 
@@ -659,10 +659,10 @@ nc_data_cluster_ncount_set_lnM_true (NcDataClusterNCount *ncount, const NcmVecto
 
 /**
  * nc_data_cluster_ncount_set_z_true:
- * @ncount: a #NcDataClusterNCount.
- * @v: the value of the redshifts.
+ * @ncount: a #NcDataClusterNCount
+ * @v: a #NcmVector 
  *
- * Sets the vector representing the clusters true redshifts.
+ * Sets the vector @v containing the true redshift values of the clusters.
  * 
  */
 void 
@@ -687,10 +687,10 @@ nc_data_cluster_ncount_set_z_true (NcDataClusterNCount *ncount, const NcmVector 
 
 /**
  * nc_data_cluster_ncount_set_lnM_obs:
- * @ncount: a #NcDataClusterNCount.
- * @m: the value of the mass observables.
+ * @ncount: a #NcDataClusterNCount
+ * @m: a #NcmMatrix
  *
- * Sets the matrix representing the clusters mass observables.
+ * Sets the matrix @m representing the cluster mass observables.
  * 
  */
 void 
@@ -718,10 +718,10 @@ nc_data_cluster_ncount_set_lnM_obs (NcDataClusterNCount *ncount, const NcmMatrix
 
 /**
  * nc_data_cluster_ncount_set_lnM_obs_params:
- * @ncount: a #NcDataClusterNCount.
- * @m: the mass observables parameters.
+ * @ncount: a #NcDataClusterNCount
+ * @m: a #NcmMatrix
  *
- * Sets the matrix representing the clusters mass observables parameters.
+ * Sets the matrix @m representing the cluster mass-observable parameters.
  * 
  */
 void 
@@ -749,10 +749,10 @@ nc_data_cluster_ncount_set_lnM_obs_params (NcDataClusterNCount *ncount, const Nc
 
 /**
  * nc_data_cluster_ncount_set_z_obs:
- * @ncount: a #NcDataClusterNCount.
- * @m: the value of the redshift observables.
+ * @ncount: a #NcDataClusterNCount
+ * @m: a #NcmMatrix
  *
- * Sets the matrix representing the clusters redshift observables.
+ * Sets the matrix @m representing the cluster redshift observables.
  * 
  */
 void 
@@ -780,10 +780,10 @@ nc_data_cluster_ncount_set_z_obs (NcDataClusterNCount *ncount, const NcmMatrix *
 
 /**
  * nc_data_cluster_ncount_set_z_obs_params:
- * @ncount: a #NcDataClusterNCount.
- * @m: the redshift observables parameters.
+ * @ncount: a #NcDataClusterNCount
+ * @m: a #NcmMatrix
  *
- * Sets the matrix representing the clusters redshift observables parameters.
+ * Sets the matrix @m representing the cluster redshift observable parameters.
  * 
  */
 void 
@@ -811,7 +811,7 @@ nc_data_cluster_ncount_set_z_obs_params (NcDataClusterNCount *ncount, const NcmM
 
 /**
  * nc_data_cluster_ncount_has_lnM_true:
- * @ncount: a #NcDataClusterNCount.
+ * @ncount: a #NcDataClusterNCount
  *
  * Returns: TRUE if it contains the lnM truth table.
  * 
@@ -824,7 +824,7 @@ nc_data_cluster_ncount_has_lnM_true (NcDataClusterNCount *ncount)
 
 /**
  * nc_data_cluster_ncount_has_z_true:
- * @ncount: a #NcDataClusterNCount.
+ * @ncount: a #NcDataClusterNCount
  *
  * Returns: TRUE if it contains the redshift truth table.
  * 
@@ -837,7 +837,7 @@ nc_data_cluster_ncount_has_z_true (NcDataClusterNCount *ncount)
 
 /**
  * nc_data_cluster_ncount_get_len:
- * @ncount: a #NcDataClusterNCount.
+ * @ncount: a #NcDataClusterNCount
  * 
  * Gets the total number of objects.
  * 
@@ -851,7 +851,7 @@ nc_data_cluster_ncount_get_len (NcDataClusterNCount *ncount)
 
 /**
  * nc_data_cluster_ncount_lnM_obs_len:
- * @ncount: a #NcDataClusterNCount.
+ * @ncount: a #NcDataClusterNCount
  * 
  * Number of doubles to describe the observational data related to the mass
  * of each object.
@@ -867,7 +867,7 @@ nc_data_cluster_ncount_lnM_obs_len (NcDataClusterNCount *ncount)
 
 /**
  * nc_data_cluster_ncount_lnM_obs_params_len:
- * @ncount: a #NcDataClusterNCount.
+ * @ncount: a #NcDataClusterNCount
  * 
  * Number of doubles to describe the observational data parameters related 
  * mass to each object.
@@ -885,7 +885,7 @@ nc_data_cluster_ncount_lnM_obs_params_len (NcDataClusterNCount *ncount)
 
 /**
  * nc_data_cluster_ncount_z_obs_len:
- * @ncount: a #NcDataClusterNCount.
+ * @ncount: a #NcDataClusterNCount
  * 
  * Number of doubles to describe the observational data related to
  * the redshift of each object.
@@ -901,7 +901,7 @@ nc_data_cluster_ncount_z_obs_len (NcDataClusterNCount *ncount)
 
 /**
  * nc_data_cluster_ncount_z_params_len:
- * @ncount: a #NcDataClusterNCount.
+ * @ncount: a #NcDataClusterNCount
  * 
  * Number of doubles to describe the observational data parameters related 
  * to the redshift of each object.
@@ -919,7 +919,7 @@ nc_data_cluster_ncount_z_obs_params_len (NcDataClusterNCount *ncount)
 
 /**
  * nc_data_cluster_ncount_get_lnM_true:
- * @ncount: a #NcDataClusterNCount.
+ * @ncount: a #NcDataClusterNCount
  * 
  * Gets the vector containing the true values of the masses.
  * 
@@ -936,7 +936,7 @@ nc_data_cluster_ncount_get_lnM_true (NcDataClusterNCount *ncount)
 
 /**
  * nc_data_cluster_ncount_get_z_true:
- * @ncount: a #NcDataClusterNCount.
+ * @ncount: a #NcDataClusterNCount
  * 
  * Gets the vector containing the true values of the redshifts.
  * 
@@ -953,7 +953,7 @@ nc_data_cluster_ncount_get_z_true (NcDataClusterNCount *ncount)
 
 /**
  * nc_data_cluster_ncount_get_lnM_obs:
- * @ncount: a #NcDataClusterNCount.
+ * @ncount: a #NcDataClusterNCount
  * 
  * Gets the matrix containing the mass observables.
  * 
@@ -970,7 +970,7 @@ nc_data_cluster_ncount_get_lnM_obs (NcDataClusterNCount *ncount)
 
 /**
  * nc_data_cluster_ncount_get_lnM_obs_params:
- * @ncount: a #NcDataClusterNCount.
+ * @ncount: a #NcDataClusterNCount
  * 
  * Gets the matrix containing the mass observables parameters.
  * 
@@ -987,7 +987,7 @@ nc_data_cluster_ncount_get_lnM_obs_params (NcDataClusterNCount *ncount)
 
 /**
  * nc_data_cluster_ncount_get_z_obs:
- * @ncount: a #NcDataClusterNCount.
+ * @ncount: a #NcDataClusterNCount
  * 
  * Gets the matrix containing the redshift observables.
  * 
@@ -1004,7 +1004,7 @@ nc_data_cluster_ncount_get_z_obs (NcDataClusterNCount *ncount)
 
 /**
  * nc_data_cluster_ncount_get_z_obs_params:
- * @ncount: a #NcDataClusterNCount.
+ * @ncount: a #NcDataClusterNCount
  * 
  * Gets the matrix containing the redshift observables parameters.
  * 
@@ -1400,7 +1400,7 @@ _nc_data_cluster_ncount_m2lnL_val (NcmData *data, NcmMSet *mset, gdouble *m2lnL)
 
 /**
  * nc_data_cluster_ncount_true_data:
- * @ncount: a #NcDataClusterNCount.
+ * @ncount: a #NcDataClusterNCount
  * @use_true_data: FIXME
  *
  * FIXME
@@ -1419,7 +1419,7 @@ nc_data_cluster_ncount_true_data (NcDataClusterNCount *ncount, gboolean use_true
 
 /**
  * nc_data_cluster_ncount_using_true_data:
- * @ncount: a #NcDataClusterNCount.
+ * @ncount: a #NcDataClusterNCount
  *
  * Returns: if it is using true data.
  */
@@ -1433,12 +1433,12 @@ static void _nc_data_cluster_ncount_model_init (NcDataClusterNCount *ncount);
 
 /**
  * nc_data_cluster_ncount_init_from_sampling:
- * @ncount: a #NcDataClusterNCount.
- * @mset: a #NcmMSet.
- * @clusterz: a #NcClusterRedshift.
- * @clusterm: a #NcClusterMass.
- * @area_survey: area in units of square degrees.
- * @rng: a #NcmRNG.
+ * @ncount: a #NcDataClusterNCount
+ * @mset: a #NcmMSet
+ * @clusterz: a #NcClusterRedshift
+ * @clusterm: a #NcClusterMass
+ * @area_survey: area in units of square degrees
+ * @rng: a #NcmRNG
  *
  * FIXME
  *
@@ -1460,8 +1460,8 @@ nc_data_cluster_ncount_init_from_sampling (NcDataClusterNCount *ncount, NcmMSet 
 
 /**
  * nc_data_cluster_ncount_print:
- * @ncount: a #NcDataClusterNCount.
- * @cosmo: a NcHICosmo
+ * @ncount: a #NcDataClusterNCount
+ * @cosmo: a #NcHICosmo
  * @out: FIXME
  * @header: FIXME
  *
@@ -1590,9 +1590,9 @@ _nc_data_cluster_ncount_bin_alloc (NcDataClusterNCount *ncount, guint z_bins, gu
 
 /**
  * nc_data_cluster_ncount_set_bin_by_nodes:
- * @ncount: a #NcDataClusterNCount.
- * @z_nodes: FIXME
- * @lnM_nodes: FIXME
+ * @ncount: a #NcDataClusterNCount
+ * @z_nodes: a #NcmVector
+ * @lnM_nodes: a #NcmVector
  *
  * FIXME
  *

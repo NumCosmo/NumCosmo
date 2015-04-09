@@ -51,11 +51,11 @@ enum
 };
 
 static gdouble
-_nc_cluster_mass_nodist_p (NcClusterMass *clusterm, NcHICosmo *model, gdouble lnM, gdouble z, gdouble *lnM_obs, gdouble *lnM_obs_params)
+_nc_cluster_mass_nodist_p (NcClusterMass *clusterm, NcHICosmo *cosmo, gdouble lnM, gdouble z, const gdouble *lnM_obs, const gdouble *lnM_obs_params)
 {
   g_error ("This object don't implement p.");
   NCM_UNUSED (clusterm);
-  NCM_UNUSED (model);
+  NCM_UNUSED (cosmo);
   NCM_UNUSED (lnM);
   NCM_UNUSED (z);
   NCM_UNUSED (lnM_obs);
@@ -64,23 +64,23 @@ _nc_cluster_mass_nodist_p (NcClusterMass *clusterm, NcHICosmo *model, gdouble ln
 }
 
 static gdouble
-_nc_cluster_mass_nodist_intp (NcClusterMass *clusterm, NcHICosmo *model, gdouble lnM, gdouble z)
+_nc_cluster_mass_nodist_intp (NcClusterMass *clusterm, NcHICosmo *cosmo, gdouble lnM, gdouble z)
 {
   g_error ("This object don't implement intp.");
   NCM_UNUSED (clusterm);
-  NCM_UNUSED (model);
+  NCM_UNUSED (cosmo);
   NCM_UNUSED (lnM);
   NCM_UNUSED (z);
   return GSL_NAN;
 }
 
 static gboolean
-_nc_cluster_mass_nodist_resample (NcClusterMass *clusterm, NcHICosmo *model, gdouble lnM, gdouble z, gdouble *lnM_obs, gdouble *lnM_obs_params, NcmRNG *rng)
+_nc_cluster_mass_nodist_resample (NcClusterMass *clusterm, NcHICosmo *cosmo, gdouble lnM, gdouble z, gdouble *lnM_obs, const gdouble *lnM_obs_params, NcmRNG *rng)
 {
   NcClusterMassNodist *mnodist = NC_CLUSTER_MASS_NODIST (clusterm);
   lnM_obs[0] = lnM;
 
-  NCM_UNUSED (model);
+  NCM_UNUSED (cosmo);
   NCM_UNUSED (z);
   NCM_UNUSED (lnM_obs_params);
 
@@ -88,12 +88,12 @@ _nc_cluster_mass_nodist_resample (NcClusterMass *clusterm, NcHICosmo *model, gdo
 }
 
 static void
-_nc_cluster_mass_nodist_p_limits (NcClusterMass *clusterm, NcHICosmo *model, gdouble *lnM_obs, gdouble *lnM_obs_params, gdouble *lnM_lower, gdouble *lnM_upper)
+_nc_cluster_mass_nodist_p_limits (NcClusterMass *clusterm, NcHICosmo *cosmo, const gdouble *lnM_obs, const gdouble *lnM_obs_params, gdouble *lnM_lower, gdouble *lnM_upper)
 {
   g_error ("This object don't implement integ_limits.");
 
   NCM_UNUSED (clusterm);
-  NCM_UNUSED (model);
+  NCM_UNUSED (cosmo);
   NCM_UNUSED (lnM_obs);
   NCM_UNUSED (lnM_obs_params);
   NCM_UNUSED (lnM_lower);
@@ -103,11 +103,11 @@ _nc_cluster_mass_nodist_p_limits (NcClusterMass *clusterm, NcHICosmo *model, gdo
 }
 
 static void
-_nc_cluster_mass_nodist_n_limits (NcClusterMass *clusterm, NcHICosmo *model, gdouble *lnm_lower, gdouble *lnm_upper)
+_nc_cluster_mass_nodist_n_limits (NcClusterMass *clusterm, NcHICosmo *cosmo, gdouble *lnm_lower, gdouble *lnm_upper)
 {
   NcClusterMassNodist *mn = NC_CLUSTER_MASS_NODIST (clusterm);
 
-  NCM_UNUSED (model);
+  NCM_UNUSED (cosmo);
 
   *lnm_lower = mn->lnM_min;
   *lnm_upper = mn->lnM_max;

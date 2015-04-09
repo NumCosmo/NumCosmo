@@ -108,6 +108,7 @@
 #include <numcosmo/lss/nc_cluster_mass_benson_xray.h>
 #include <numcosmo/lss/nc_cluster_mass_plcl.h>
 #include <numcosmo/lss/nc_cluster_abundance.h>
+#include <numcosmo/lss/nc_cluster_pseudo_counts.h>
 #include <numcosmo/lss/nc_cor_cluster_cmb_lens_limber.h>
 
 /* Observable data */
@@ -127,6 +128,7 @@
 #include <numcosmo/data/nc_data_cmb.h>
 #include <numcosmo/data/nc_data_cluster_ncount.h>
 #include <numcosmo/data/nc_data_cluster_poisson.h>
+#include <numcosmo/data/nc_data_cluster_pseudo_counts.h>
 
 /* ABC */
 #include <numcosmo/abc/nc_abc_cluster_ncount.h>
