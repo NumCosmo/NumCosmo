@@ -164,6 +164,12 @@ main (gint argc, gchar *argv[])
       const gchar *rtype_str = ncm_mset_catalog_get_run_type (mcat);
       ncm_cfg_msg_sepa ();
       g_message ("# Catalog run type: `%s'.\n", rtype_str);
+      g_message ("# Catalog size:      %u.\n", ncm_mset_catalog_len (mcat));
+      g_message ("# Catalog n-chains:  %u.\n", mcat->nchains);
+      g_message ("# Catalog nadd-vals: %u.\n", mcat->nadd_vals);
+      g_message ("# Catalog weighted:  %s.\n", mcat->weighted ? "yes" : "no");
+      g_message ("#\n");
+      
       ncm_mset_pretty_log (mset);
       ncm_mset_catalog_get_covar (mcat, &cov);
       ncm_mset_fparams_log_covar (mset, cov);
