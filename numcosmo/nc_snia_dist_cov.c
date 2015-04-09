@@ -250,8 +250,8 @@ nc_snia_dist_cov_class_init (NcSNIADistCovClass *klass)
 
 /**
  * nc_snia_dist_cov_new:
- * @dist: a #NcDistance.
- * @sigma_int_len: length of the sigma_int dataset.
+ * @dist: a #NcDistance
+ * @sigma_int_len: length of the sigma_int dataset
  * 
  * FIXME
  * 
@@ -268,7 +268,7 @@ nc_snia_dist_cov_new (NcDistance *dist, guint sigma_int_len)
 
 /**
  * nc_snia_dist_cov_ref:
- * @dcov: FIXME
+ * @dcov: a #NcSNIADistCov
  * 
  * FIXME
  * 
@@ -282,7 +282,7 @@ nc_snia_dist_cov_ref (NcSNIADistCov *dcov)
 
 /**
  * nc_snia_dist_cov_free:
- * @dcov: FIXME
+ * @dcov: a #NcSNIADistCov
  * 
  * FIXME
  * 
@@ -295,7 +295,7 @@ nc_snia_dist_cov_free (NcSNIADistCov *dcov)
 
 /**
  * nc_snia_dist_cov_clear:
- * @dcov: FIXME
+ * @dcov: a #NcSNIADistCov
  * 
  * FIXME
  * 
@@ -308,7 +308,7 @@ nc_snia_dist_cov_clear (NcSNIADistCov **dcov)
 
 /**
  * nc_snia_dist_cov_set_empty_fac:
- * @dcov: FIXME
+ * @dcov: a #NcSNIADistCov
  * @enable: FIXME
  * 
  * FIXME
@@ -322,8 +322,8 @@ nc_snia_dist_cov_set_empty_fac (NcSNIADistCov *dcov, gboolean enable)
 
 /**
  * nc_snia_dist_cov_prepare:
- * @dcov: FIXME
- * @mset: FIXME
+ * @dcov: a #NcSNIADistCov
+ * @mset: a #NcmMSet
  * 
  * FIXME
  * 
@@ -337,8 +337,8 @@ nc_snia_dist_cov_prepare (NcSNIADistCov *dcov, NcmMSet *mset)
 
 /**
  * nc_snia_dist_cov_prepare_if_needed:
- * @dcov: FIXME
- * @mset: FIXME
+ * @dcov: a #NcSNIADistCov
+ * @mset: a #NcmMSet
  * 
  * FIXME
  * 
@@ -362,9 +362,9 @@ _nc_snia_dist_cov_calc_empty_fac (NcSNIADistCov *dcov, gdouble z_cmb)
 
 /**
  * nc_snia_dist_cov_calc:
- * @dcov: FIXME
- * @snia_cov: FIXME
- * @cov: FIXME
+ * @dcov: a #NcSNIADistCov
+ * @snia_cov: a #NcDataSNIACov
+ * @cov: a #NcmMatrix
  * 
  * FIXME
  * 
@@ -438,10 +438,10 @@ nc_snia_dist_cov_calc (NcSNIADistCov *dcov, NcDataSNIACov *snia_cov, NcmMatrix *
 
 /**
  * nc_snia_dist_cov_mean:
- * @dcov: FIXME
- * @cosmo: FIXME
- * @snia_cov: FIXME
- * @y: FIXME
+ * @dcov: a #NcSNIADistCov
+ * @cosmo: a #NcHICosmo
+ * @snia_cov: a #NcDataSNIACov
+ * @y: a #NcmVector
  * 
  * FIXME
  * 
@@ -544,7 +544,7 @@ nc_snia_dist_cov_mag (NcSNIADistCov *dcov, NcHICosmo *cosmo, NcDataSNIACov *snia
  * @snia_cov: a #NcDataSNIACov
  * @obs: a #NcmVector
  * @X: a #NcmMatrix
- * @colmajor: whether to fill the matrices in a col-major format.
+ * @colmajor: whether to fill the matrices in a col-major format
  * 
  * Computes effective observed vector @obs, the first @snia_cov->mu_len params
  * are set to the width colour combination using the values of the distance 

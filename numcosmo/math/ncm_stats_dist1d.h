@@ -84,6 +84,7 @@ gdouble ncm_stats_dist1d_eval_pdf (NcmStatsDist1d *sd1, gdouble x);
 gdouble ncm_stats_dist1d_eval_norma (NcmStatsDist1d *sd1);
 gdouble ncm_stats_dist1d_eval_inv_pdf (NcmStatsDist1d *sd1, gdouble u);
 gdouble ncm_stats_dist1d_eval_inv_pdf_tail (NcmStatsDist1d *sd1, gdouble v);
+gdouble ncm_stats_dist1d_gen (NcmStatsDist1d *sd1, NcmRNG *rng);
 gdouble ncm_stats_dist1d_eval_mode (NcmStatsDist1d *sd1);
 
 G_END_DECLS

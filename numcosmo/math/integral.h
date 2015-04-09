@@ -50,6 +50,21 @@ struct _NcmIntegrand2dim
   _NcmIntegrand2dimFunc f;
 };
 
+typedef struct _NcmIntegrand3dim NcmIntegrand3dim;
+typedef gdouble (*_NcmIntegrand3dimFunc) (gdouble x, gdouble y, gdouble z, gpointer userdata);
+
+/**
+ * NcmIntegrand3dim:
+ *
+ * FIXME
+ */
+struct _NcmIntegrand3dim
+{
+  /*< private >*/
+  gpointer userdata;
+  _NcmIntegrand3dimFunc f;
+};
+
 typedef struct _NcmIntegralFixed NcmIntegralFixed;
 
 /**
@@ -77,6 +92,7 @@ gint ncm_integral_cached_0_x (NcmFunctionCache *cache, gsl_function *F, gdouble 
 gint ncm_integral_cached_x_inf (NcmFunctionCache *cache, gsl_function *F, gdouble x, gdouble *result, gdouble *error);
 
 gboolean ncm_integrate_2dim (NcmIntegrand2dim *integ, gdouble xi, gdouble yi, gdouble xf, gdouble yf, gdouble epsrel, gdouble epsabs, gdouble *result, gdouble *error);
+gboolean ncm_integrate_3dim (NcmIntegrand3dim *integ, gdouble xi, gdouble yi, gdouble zi, gdouble xf, gdouble yf, gdouble zf, gdouble epsrel, gdouble epsabs, gdouble *result, gdouble *error);
 
 NcmIntegralFixed *ncm_integral_fixed_new (gulong n_nodes, gulong rule_n, gdouble xl, gdouble xu);
 void ncm_integral_fixed_free (NcmIntegralFixed *intf);

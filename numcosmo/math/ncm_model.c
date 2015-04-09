@@ -842,7 +842,7 @@ ncm_model_class_add_params (NcmModelClass *model_class, guint sparam_len, guint 
   model_class->sparam_len += sparam_len;
   model_class->vparam_len += vparam_len;
   model_class->nonparam_prop_len = nonparam_prop_len;
-
+ 
   if (model_class->sparam_len > 0)
   {
     if (model_class->sparam == NULL)
@@ -1020,7 +1020,7 @@ ncm_model_class_set_vparam (NcmModelClass *model_class, guint vparam_id, guint d
 
 /**
  * ncm_model_class_check_params_info:
- * @model_class: a #NcmModelClass.
+ * @model_class: a #NcmModelClass
  *
  * FIXME
  *
@@ -1064,8 +1064,8 @@ ncm_model_class_check_params_info (NcmModelClass *model_class)
 
 /**
  * ncm_model_set_reparam:
- * @model: a #NcmModel.
- * @reparam: a #NcmReparam.
+ * @model: a #NcmModel
+ * @reparam: a #NcmReparam
  *
  * FIXME
  *
@@ -1089,8 +1089,8 @@ ncm_model_set_reparam (NcmModel *model, NcmReparam *reparam)
 
 /**
  * ncm_model_is_equal:
- * @model1: a #NcmModel.
- * @model2: a #NcmModel.
+ * @model1: a #NcmModel
+ * @model2: a #NcmModel
  *
  * Compares if model1 and model2 are the same,
  * with same dimension and reparametrization.
@@ -1115,7 +1115,7 @@ ncm_model_is_equal (NcmModel *model1, NcmModel *model2)
 
 /**
  * ncm_model_get_reparam:
- * @model: a #NcmModel.
+ * @model: a #NcmModel
  *
  * FIXME
  *
@@ -1132,9 +1132,9 @@ ncm_model_get_reparam (NcmModel *model)
 
 /**
  * ncm_model_reparam_df:
- * @model: a #NcmModel.
- * @fv: a #NcmVector.
- * @v: a #NcmVector.
+ * @model: a #NcmModel
+ * @fv: a #NcmVector
+ * @v: a #NcmVector
  *
  * FIXME
  *
@@ -1149,9 +1149,9 @@ ncm_model_reparam_df (NcmModel *model, NcmVector *fv, NcmVector *v)
 
 /**
  * ncm_model_reparam_J:
- * @model: a #NcmModel.
- * @fJ: a #NcmMatrix.
- * @J: a #NcmMatrix.
+ * @model: a #NcmModel
+ * @fJ: a #NcmMatrix
+ * @J: a #NcmMatrix
  *
  * FIXME
  *
@@ -1166,7 +1166,7 @@ ncm_model_reparam_J (NcmModel *model, NcmMatrix *fJ, NcmMatrix *J)
 
 /**
  * ncm_model_params_set_default:
- * @model: a #NcmModel.
+ * @model: a #NcmModel
  *
  * FIXME
  *
@@ -1186,7 +1186,7 @@ ncm_model_params_set_default (NcmModel *model)
 
 /**
  * ncm_model_params_save_as_default:
- * @model: a #NcmModel.
+ * @model: a #NcmModel
  *
  * FIXME
  *
@@ -1204,8 +1204,8 @@ ncm_model_params_save_as_default (NcmModel *model)
 
 /**
  * ncm_model_params_copyto:
- * @model: a #NcmModel.
- * @model_dest: a #NcmModel.
+ * @model: a #NcmModel
+ * @model_dest: a #NcmModel
  *
  * FIXME
  *
@@ -1219,7 +1219,7 @@ ncm_model_params_copyto (NcmModel *model, NcmModel *model_dest)
 
 /**
  * ncm_model_params_set_all:
- * @model: a #NcmModel.
+ * @model: a #NcmModel
  * @...: FIXME
  *
  * FIXME
@@ -1244,7 +1244,7 @@ ncm_model_params_set_all (NcmModel *model, ...)
 
 /**
  * ncm_model_params_set_all_data:
- * @model: a #NcmModel.
+ * @model: a #NcmModel
  * @data: FIXME
  *
  * FIXME
@@ -1264,8 +1264,8 @@ ncm_model_params_set_all_data (NcmModel *model, gdouble *data)
 
 /**
  * ncm_model_params_set_vector:
- * @model: a #NcmModel.
- * @v: a #NcmVector.
+ * @model: a #NcmModel
+ * @v: a #NcmVector
  *
  * FIXME
  *
@@ -1279,8 +1279,8 @@ ncm_model_params_set_vector (NcmModel *model, NcmVector *v)
 
 /**
  * ncm_model_params_set_model:
- * @model: a #NcmModel.
- * @model_src: a #NcmModel.
+ * @model: a #NcmModel
+ * @model_src: a #NcmModel
  *
  * FIXME
  *

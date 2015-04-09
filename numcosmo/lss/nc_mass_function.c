@@ -255,10 +255,10 @@ nc_mass_function_class_init (NcMassFunctionClass *klass)
 
 /**
  * nc_mass_function_new:
- * @dist: a #NcDistance sets to #NcMassFunction:distance.
- * @vp: a #NcMatterVar sets to #NcMassFunction:variance.
- * @gf: a #NcGrowthFunc sets to #NcMassFunction:growth.
- * @mulf: a #NcMultiplicityFunc sets to #NcMassFunction:multiplicity.
+ * @dist: a #NcDistance sets to #NcMassFunction:distance
+ * @vp: a #NcMatterVar sets to #NcMassFunction:variance
+ * @gf: a #NcGrowthFunc sets to #NcMassFunction:growth
+ * @mulf: a #NcMultiplicityFunc sets to #NcMassFunction:multiplicity
  *
  * This function allocates memory for a new #NcMassFunction object and sets its properties to the values from
  * the input arguments.
@@ -279,7 +279,7 @@ nc_mass_function_new (NcDistance *dist, NcMatterVar *vp, NcGrowthFunc *gf, NcMul
 
 /**
  * nc_mass_function_copy:
- * @mfp: a #NcMassFunction.
+ * @mfp: a #NcMassFunction
  *
  * This function duplicates the #NcMassFunction object setting the same values of the original propertities.
  *
@@ -293,7 +293,7 @@ nc_mass_function_copy (NcMassFunction *mfp)
 
 /**
  * nc_mass_function_free:
- * @mfp: a #NcMassFunction.
+ * @mfp: a #NcMassFunction
  *
  * Atomically decrements the reference count of @mfp by one. If the reference count drops to 0,
  * all memory allocated by @mfp is released.
@@ -307,7 +307,7 @@ nc_mass_function_free (NcMassFunction *mfp)
 
 /**
  * nc_mass_function_clear:
- * @mfp: a #NcMassFunction.
+ * @mfp: a #NcMassFunction
  *
  * Atomically decrements the reference count of @mfp by one. If the reference count drops to 0,
  * all memory allocated by @mfp is released. Set pointer to NULL.
@@ -322,15 +322,15 @@ nc_mass_function_clear (NcMassFunction **mfp)
 
 /**
  * nc_mass_function_dn_dlnm:
- * @mfp: a #NcMassFunction.
- * @model: a #NcHICosmo.
- * @lnM: logarithm base e of mass.
- * @z: redshift.
+ * @mfp: a #NcMassFunction
+ * @model: a #NcHICosmo
+ * @lnM: logarithm base e of mass
+ * @z: redshift
  *
- * This function computes the comoving number density of dark matter halos at redshift z and
+ * This function computes the comoving number density of dark matter halos at redshift @z and
  * mass M.
  *
- * Returns: dn/dlnM.
+ * Returns: $\frac{dn}{dlnM}$
  */
 gdouble
 nc_mass_function_dn_dlnm (NcMassFunction *mfp, NcHICosmo *model, gdouble lnM, gdouble z)
@@ -352,15 +352,15 @@ nc_mass_function_dn_dlnm (NcMassFunction *mfp, NcHICosmo *model, gdouble lnM, gd
 /* coloca os valores de dn/dm e sigma nos enderecos apontados pelos ponteiros */
 /**
  * nc_mass_function_sigma:
- * @mfp: a #NcMassFunction.
- * @model: a #NcHICosmo.
- * @lnM: logarithm base e of mass.
- * @z: redshift.
- * @dn_dlnM_ptr: pointer to comoving number density of halos.
- * @sigma_ptr: pointer to the standard deviation of the density contrast.
+ * @mfp: a #NcMassFunction
+ * @model: a #NcHICosmo
+ * @lnM: logarithm base e of mass
+ * @z: redshift
+ * @dn_dlnM_ptr: pointer to comoving number density of halos
+ * @sigma_ptr: pointer to the standard deviation of the density contrast
  *
  * This function computes the standard deviation of density contrast of the matter fluctuations and
- * the the comoving number density of dark matter halos at redshift z and mass M.
+ * the the comoving number density of dark matter halos at redshift @z and mass M.
  * These values are stored in @sigma_ptr and @dn_dlnM_ptr, respectively.
  *
  */
@@ -385,9 +385,9 @@ nc_mass_function_sigma (NcMassFunction *mfp, NcHICosmo *model, gdouble lnM, gdou
 /* A funcao abaixo foi feita para compararmos o nosso calculo com o resultado (equacao 9) do artigo astro-ph/0110246.*/
 /**
  * nc_mass_function_alpha_eff:
- * @vp: a #NcMatterVar.
- * @model: a #NcHICosmo.
- * @lnM: logarithm base e of mass.
+ * @vp: a #NcMatterVar
+ * @model: a #NcHICosmo
+ * @lnM: logarithm base e of mass
  * @a_eff_ptr: FIXME
  *
  * FIXME
@@ -441,10 +441,10 @@ nc_mass_function_cluster_abundance_integrand (gdouble R, gpointer params)
 
 /**
  * nc_mass_function_dcluster_abundance_dv:
- * @mfp: a #NcMassFunction.
- * @model: a #NcHICosmo.
- * @M: mass in units of h^{-1} * M_sun.
- * @z: redshift.
+ * @mfp: a #NcMassFunction
+ * @model: a #NcHICosmo
+ * @M: mass in units of h^{-1} * M_sun
+ * @z: redshift
  *
  * FIXME
  *
@@ -488,11 +488,11 @@ nc_mass_function_dn_m_to_inf_dv (NcMassFunction *mfp, NcHICosmo *model, gdouble 
 
 /**
  * nc_mass_function_dn_m1_to_m2_dv:
- * @mfp: a #NcMassFunction.
- * @model: a #NcHICosmo.
- * @M1: mass in units of h^{-1} M_sun - lower limit of integration.
- * @M2: mass in units of h^{-1} M_sun- upper limit of integration.
- * @z: redshift.
+ * @mfp: a #NcMassFunction
+ * @model: a #NcHICosmo
+ * @M1: mass in units of h^{-1} M_sun - lower limit of integration
+ * @M2: mass in units of h^{-1} M_sun- upper limit of integration
+ * @z: redshift
  *
  * FIXME
  *
@@ -528,13 +528,15 @@ nc_mass_function_dn_m1_to_m2_dv (NcMassFunction *mfp, NcHICosmo *model, gdouble 
 
 /**
  * nc_mass_function_dv_dzdomega:
- * @mfp: a #NcMassFunction.
- * @model: a #NcHICosmo.
- * @z: redshift.
+ * @mfp: a #NcMassFunction
+ * @model: a #NcHICosmo
+ * @z: redshift
  *
- * FIXME
+ * This function computes the comoving volume (flat universe) element per unit solid angle $d\Omega$ 
+ * given @z, namely, $$\frac{d^2V}{dzd\Omega} = \frac{c}{H(z)} D_c^2(z),$$
+ * where $H(z)$ is the Hubble function and $D_c$ is the comoving distance.
  *
- * Returns: FIXME
+ * Returns: comoving volume element $d^2V / dzd\Omega$.
  */
 gdouble
 nc_mass_function_dv_dzdomega (NcMassFunction *mfp, NcHICosmo *model, gdouble z)
@@ -549,8 +551,8 @@ static void _nc_mass_function_generate_2Dspline_knots (NcMassFunction *mfp, NcHI
 
 /**
  * nc_mass_function_set_area:
- * @mfp: a #NcMassFunction.
- * @area: area in steradian.
+ * @mfp: a #NcMassFunction
+ * @area: area in steradian
  *
  * FIXME
  *
@@ -567,8 +569,8 @@ nc_mass_function_set_area (NcMassFunction *mfp, gdouble area)
 
 /**
  * nc_mass_function_set_prec:
- * @mfp: a #NcMassFunction.
- * @prec: precision.
+ * @mfp: a #NcMassFunction
+ * @prec: precision
  *
  * FIXME
  *
@@ -585,8 +587,8 @@ nc_mass_function_set_prec (NcMassFunction *mfp, gdouble prec)
 
 /**
  * nc_mass_function_set_area_sd:
- * @mfp: a #NcMassFunction.
- * @area_sd: area in square degree.
+ * @mfp: a #NcMassFunction
+ * @area_sd: area in square degree
  *
  * FIXME
  *
@@ -600,12 +602,12 @@ nc_mass_function_set_area_sd (NcMassFunction *mfp, gdouble area_sd)
 
 /**
  * nc_mass_function_set_eval_limits:
- * @mfp: a #NcMassFunction.
- * @model: a #NcHICosmo.
- * @lnMi: minimum logarithm base e of mass.
- * @lnMf: maximum logarithm base e of mass.
- * @zi: minimum redshift.
- * @zf: maximum redshift.
+ * @mfp: a #NcMassFunction
+ * @model: a #NcHICosmo
+ * @lnMi: minimum logarithm base e of mass
+ * @lnMf: maximum logarithm base e of mass
+ * @zi: minimum redshift
+ * @zf: maximum redshift
  *
  * FIXME
  *
@@ -628,8 +630,8 @@ nc_mass_function_set_eval_limits (NcMassFunction *mfp, NcHICosmo *model, gdouble
 
 /**
  * nc_mass_function_prepare:
- * @mfp: a #NcMassFunction.
- * @model: a #NcHICosmo.
+ * @mfp: a #NcMassFunction
+ * @model: a #NcHICosmo
  *
  * FIXME
  *
@@ -667,12 +669,12 @@ nc_mass_function_prepare (NcMassFunction *mfp, NcHICosmo *model)
 
 /**
  * nc_mass_function_dn_dz:
- * @mfp: a #NcMassFunction.
- * @model: a #NcHICosmo.
- * @lnMl: logarithm base e of mass, lower threshold.
- * @lnMu: logarithm base e of mass, upper threshold.
- * @z: redshift.
- * @spline: Whenever to create an intermediary spline of the mass integration.
+ * @mfp: a #NcMassFunction
+ * @model: a #NcHICosmo
+ * @lnMl: logarithm base e of mass, lower threshold
+ * @lnMu: logarithm base e of mass, upper threshold
+ * @z: redshift
+ * @spline: whenever to create an intermediary spline of the mass integration
  *
  * FIXME
  *
@@ -695,13 +697,13 @@ nc_mass_function_dn_dz (NcMassFunction *mfp, NcHICosmo *model, gdouble lnMl, gdo
 
 /**
  * nc_mass_function_n:
- * @mfp: a #NcMassFunction.
- * @model: a #NcHICosmo.
- * @lnMl: logarithm base e of mass, lower threshold.
- * @lnMu: logarithm base e of mass, upper threshold.
- * @zl: minimum redshift.
- * @zu: maximum redshift.
- * @spline: Whenever to create an intermediary spline of the integration.
+ * @mfp: a #NcMassFunction
+ * @model: a #NcHICosmo
+ * @lnMl: logarithm base e of mass, lower threshold
+ * @lnMu: logarithm base e of mass, upper threshold
+ * @zl: minimum redshift
+ * @zu: maximum redshift
+ * @spline: whenever to create an intermediary spline of the integration
  *
  * FIXME
  *
@@ -789,18 +791,18 @@ _nc_mass_function_generate_2Dspline_knots (NcMassFunction *mfp, NcHICosmo *model
 
 /**
  * nc_mass_function_prepare_if_needed:
- * @mfp: a #NcMassFunction.
- * @model: a #NcHICosmo.
+ * @mfp: a #NcMassFunction
+ * @model: a #NcHICosmo
  *
  * FIXME
  *
  */
 /**
  * nc_mass_function_d2n_dzdlnm:
- * @mfp: a #NcMassFunction.
- * @model: a #NcHICosmo.
- * @lnM: logarithm base e of mass.
- * @z: redshift.
+ * @mfp: a #NcMassFunction
+ * @model: a #NcHICosmo
+ * @lnM: logarithm base e of mass
+ * @z: redshift
  *
  * FIXME
  *

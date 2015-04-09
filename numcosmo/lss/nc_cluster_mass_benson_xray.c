@@ -66,10 +66,10 @@ typedef struct _integrand_data
 {
   NcClusterMassBensonXRay *mx;
   NcHICosmo *model;
-  gdouble *xi_params;
+  const gdouble *xi_params;
   gdouble z;
   gdouble lnM;
-  gdouble *xi;
+  const gdouble *xi;
   gdouble lnAxh;
   gdouble lnM0;
   gdouble lnE;
@@ -78,7 +78,7 @@ typedef struct _integrand_data
 } integrand_data;
 
 static gdouble
-_nc_cluster_mass_benson_xray_m_p (NcClusterMass *clusterm, NcHICosmo *model, gdouble lnM, gdouble z, gdouble *xi, gdouble *xi_params)
+_nc_cluster_mass_benson_xray_m_p (NcClusterMass *clusterm, NcHICosmo *model, gdouble lnM, gdouble z, const gdouble *xi, const gdouble *xi_params)
 {
   gdouble Psz = NC_CLUSTER_MASS_CLASS (nc_cluster_mass_benson_xray_parent_class)->P (clusterm, model, lnM, z, xi, xi_params);
   gdouble Px = 1.0;
@@ -138,7 +138,7 @@ _Yx_to_mass (NcClusterMass *clusterm, NcHICosmo *model, gdouble z, gdouble Yx)
 }
 
 static void
-_nc_cluster_mass_benson_xray_p_limits (NcClusterMass *clusterm, NcHICosmo *model, gdouble *xi, gdouble *xi_params, gdouble *lnM_lower, gdouble *lnM_upper)
+_nc_cluster_mass_benson_xray_p_limits (NcClusterMass *clusterm, NcHICosmo *model, const gdouble *xi, const gdouble *xi_params, gdouble *lnM_lower, gdouble *lnM_upper)
 {
   NC_CLUSTER_MASS_CLASS (nc_cluster_mass_benson_xray_parent_class)->P_limits (clusterm, model, xi, xi_params, lnM_lower, lnM_upper);
   if (xi[1] != 0.0)
@@ -169,7 +169,7 @@ _nc_cluster_mass_benson_xray_n_limits (NcClusterMass *clusterm, NcHICosmo *model
 }
 
 static gboolean
-_nc_cluster_mass_benson_xray_resample (NcClusterMass *clusterm, NcHICosmo *model, gdouble lnM, gdouble z, gdouble *xi, gdouble *xi_params, NcmRNG *rng)
+_nc_cluster_mass_benson_xray_resample (NcClusterMass *clusterm, NcHICosmo *model, gdouble lnM, gdouble z, gdouble *xi, const gdouble *xi_params, NcmRNG *rng)
 {
   NcClusterMassBensonXRay *mx = NC_CLUSTER_MASS_BENSON_XRAY (clusterm);
   gboolean xi_obs_return;

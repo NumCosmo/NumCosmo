@@ -261,6 +261,7 @@ typedef struct _integrand_data_2h_mass1
   NcClusterAbundance *cad;
   NcHICosmo *model;
   NcHaloBiasFunc *hbf;
+  gdouble *lnMobs_params;
   gdouble z;
 } integrand_data_2h_mass1;
 
