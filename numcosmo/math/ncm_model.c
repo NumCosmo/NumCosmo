@@ -1056,9 +1056,19 @@ ncm_model_class_check_params_info (NcmModelClass *model_class)
   {
     GObjectClass *object_class = G_OBJECT_CLASS (model_class);
     if (object_class->set_property != &_ncm_model_class_set_property)
-      g_error ("Class (%s) set object_class set_property, use model_class set_property instead.", model_class->name ? model_class->name : "no-name");
+      g_error ("Class (%s) is using object_class set_property, use model_class set_property instead.", model_class->name ? model_class->name : "no-name");
     if (object_class->get_property != &_ncm_model_class_get_property)
-      g_error ("Class (%s) set object_class get_property, use model_class get_property instead.", model_class->name ? model_class->name : "no-name");
+      g_error ("Class (%s) is using object_class get_property, use model_class get_property instead.", model_class->name ? model_class->name : "no-name");
+  }
+
+  {
+    if (model_class->nonparam_prop_len > 1)
+    {
+      if (model_class->set_property == NULL)
+        g_error ("Class (%s) uses non parameter properties but does not set model_class->set_property.", model_class->name ? model_class->name : "no-name");
+      if (model_class->get_property == NULL)
+        g_error ("Class (%s) uses non parameter properties but does not set model_class->get_property.", model_class->name ? model_class->name : "no-name");
+    }
   }
 }
 

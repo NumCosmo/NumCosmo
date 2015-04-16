@@ -3,7 +3,7 @@
 		integrate over the unit hypercube
 		this file is part of Suave
 		checkpointing by B. Chokoufe
-		last modified 28 Nov 14 th
+		last modified 13 Mar 15 th
 */
 
 
@@ -42,11 +42,11 @@ static int Integrate(This *t, real *integral, real *error, real *prob)
       "  statefile \"%s\"",
       t->ndim, t->ncomp,
       ML_NOT(t->nvec,)
-      t->epsrel, t->epsabs,
+      SHOW(t->epsrel), SHOW(t->epsabs),
       t->flags, t->seed,
       t->mineval, t->maxeval,
       t->nnew, t->nmin,
-      t->flatness,
+      SHOW(t->flatness),
       t->statefile);
     Print(out);
   }
@@ -137,7 +137,8 @@ static int Integrate(This *t, real *integral, real *error, real *prob)
       for( tot = state->totals, comp = 0; tot < Tot; ++tot )
         oe += sprintf(oe, "\n[" COUNT "] "
           REAL " +- " REAL "  \tchisq " REAL " (" COUNT " df)",
-          ++comp, tot->avg, tot->err, tot->chisq, state->df);
+          ++comp, SHOW(tot->avg), SHOW(tot->err),
+          SHOW(tot->chisq), state->df);
       Print(out);
     }
 
@@ -178,7 +179,7 @@ static int Integrate(This *t, real *integral, real *error, real *prob)
       region->result[maxcomp].avg, Max(maxerr, t->epsabs));
 
     bias = (t->epsrel < 1e-50) ? 2 :
-      Max(pow(2., -(real)region->div/t->ndim)/t->epsrel, 2.);
+      Max(powx(2., -(real)region->div/t->ndim)/t->epsrel, 2.);
     minfluct = INFTY;
     bisectdim = 0;
     for( dim = 0; dim < t->ndim; ++dim ) {
@@ -216,7 +217,7 @@ static int Integrate(This *t, real *integral, real *error, real *prob)
     while( n-- ) {
       cbool final = (*w < 0);
       if( x[bisectdim] < mid ) {
-        if( final && wR > RegionW(regionR) ) wR[-1] = -fabs(wR[-1]);
+        if( final && wR > RegionW(regionR) ) wR[-1] = -fabsx(wR[-1]);
         *wL++ = *w++;
         XCopy(xL, x);
         xL += t->ndim;
@@ -224,7 +225,7 @@ static int Integrate(This *t, real *integral, real *error, real *prob)
         fL += t->ncomp;
       }
       else {
-        if( final && wL > RegionW(regionL) ) wL[-1] = -fabs(wL[-1]);
+        if( final && wL > RegionW(regionL) ) wL[-1] = -fabsx(wL[-1]);
         *wR++ = *w++;
         XCopy(xR, x);
         xR += t->ndim;
@@ -264,15 +265,15 @@ static int Integrate(This *t, real *integral, real *error, real *prob)
       diff = Sq(.25*diff);
       sigsq = resL->sigsq + resR->sigsq;
       if( sigsq > 0 ) {
-        creal c = Sq(1 + sqrt(diff/sigsq));
+        creal c = Sq(1 + sqrtx(diff/sigsq));
         resL->sigsq *= c;
         resR->sigsq *= c;
       }
-      resL->err = sqrt(resL->sigsq += diff);
-      resR->err = sqrt(resR->sigsq += diff);
+      resL->err = sqrtx(resL->sigsq += diff);
+      resR->err = sqrtx(resR->sigsq += diff);
 
       tot->sigsq += resL->sigsq + resR->sigsq - res->sigsq;
-      tot->err = sqrt(tot->sigsq);
+      tot->err = sqrtx(tot->sigsq);
 
       tot->chisq += resL->chisq + resR->chisq - res->chisq;
     }
@@ -324,12 +325,12 @@ static int Integrate(This *t, real *integral, real *error, real *prob)
 
       MLPutFunction(stdlink, "Cuba`Suave`region", 3);
 
-      MLPutRealList(stdlink, bounds, 2*t->ndim);
+      MLPutRealxList(stdlink, bounds, 2*t->ndim);
 
       MLPutFunction(stdlink, "List", t->ncomp);
       for( Res = (res = region->result) + t->ncomp; res < Res; ++res ) {
         real r[] = {res->avg, res->err, res->chisq};
-        MLPutRealList(stdlink, r, Elements(r));
+        MLPutRealxList(stdlink, r, Elements(r));
       }
 
       MLPutInteger(stdlink, region->df);

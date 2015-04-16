@@ -2,7 +2,7 @@
 	Integrate.c
 		integrate over the unit hypercube
 		this file is part of Vegas
-		last modified 23 May 14 th
+		last modified 13 Mar 15 th
 */
 
 
@@ -40,7 +40,7 @@ static int Integrate(This *t, real *integral, real *error, real *prob)
       "  statefile \"%s\"",
       t->ndim, t->ncomp,
       ML_NOT(t->nvec,)
-      t->epsrel, t->epsabs,
+      SHOW(t->epsrel), SHOW(t->epsabs),
       t->flags, t->seed,
       t->mineval, t->maxeval,
       t->nstart, t->nincrease, t->nbatch,
@@ -70,12 +70,12 @@ static int Integrate(This *t, real *integral, real *error, real *prob)
     t->rng.skiprandom(t, t->neval);
   }
 
-  if( ini ) {
+  if( ini | ZAPSTATE ) {
+    t->neval = 0;
     state->niter = 0;
     state->nsamples = t->nstart;
     FClear(state->cumul);
-    GetGrid(t, state_grid);
-    t->neval = 0;
+    if( ini ) GetGrid(t, state_grid);
   }
 
   /* main iteration loop */
@@ -145,7 +145,7 @@ static int Integrate(This *t, real *integral, real *error, real *prob)
       real avg = sigsq*(c->avgsum += w*c->sum);
 
       c->avg = LAST ? (sigsq = 1/w, c->sum) : avg;
-      c->err = sqrt(sigsq);
+      c->err = sqrtx(sigsq);
       fail |= (c->err > MaxErr(c->avg));
 
       if( state->niter == 0 ) c->guess = c->sum;
@@ -165,7 +165,8 @@ static int Integrate(This *t, real *integral, real *error, real *prob)
       for( c = state->cumul, comp = 0; c < C; ++c )
         oe += sprintf(oe, "\n[" COUNT "] "
           REAL " +- " REAL "  \tchisq " REAL " (" COUNT " df)",
-          ++comp, c->avg, c->err, c->chisq, state->niter);
+          ++comp, SHOW(c->avg), SHOW(c->err),
+          SHOW(c->chisq), state->niter);
       Print(out);
     }
 

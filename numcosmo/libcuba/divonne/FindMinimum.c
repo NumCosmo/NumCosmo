@@ -2,7 +2,7 @@
 	FindMinimum.c
 		find minimum (maximum) of hyperrectangular region
 		this file is part of Divonne
-		last modified 7 Aug 13 th
+		last modified 12 Mar 15 th
 */
 
 
@@ -42,7 +42,7 @@ static inline real Dot(ccount n, creal *a, creal *b)
 
 static inline real Length(ccount n, creal *vec)
 {
-  return sqrt(Dot(n, vec, vec));
+  return sqrtx(Dot(n, vec, vec));
 }
 
 /*********************************************************************/
@@ -120,7 +120,7 @@ static void UpdateCholesky(cThis *t, ccount n, real *hessian,
     p[i] = dir;
     gamma += Sq(dir)/Hessian(i, i);
   }
-  gamma = Max(fabs(1 - gamma), EPS);
+  gamma = Max(fabsx(1 - gamma), EPS);
 
   while( --i >= 0 ) {
     creal dir = z[i] = p[i];
@@ -154,7 +154,7 @@ static inline void BFGS(cThis *t, ccount n, real *hessian,
 
   c = Dot(n, g, p);
   if( c >= 0 ) return;
-  c = 1/sqrt(-c);
+  c = 1/sqrtx(-c);
   for( i = 0; i < n; ++i )
     y[i] = c*g[i];
   UpdateCholesky(t, n, hessian, y, p);
@@ -199,7 +199,7 @@ static Point LineSearch(This *t, ccount nfree, ccount *ifree,
      c) the gradient is positive, i.e. we'd move uphill */
 
   if( step > 0 && range > tol2 && grad <= 0 ) {
-    creal eps = RTEPS*fabs(range) + ftol;
+    creal eps = RTEPS*fabsx(range) + ftol;
     creal mingrad = -1e-4*grad, maxgrad = -gtol*grad;
 
     real end = range + eps;
@@ -225,7 +225,7 @@ static Point LineSearch(This *t, ccount nfree, ccount *ifree,
         maxstep = maxstep*(1 + .75*RTEPS) + .75*tol;
       }
 
-      cur.dx = (fabs(step) >= tol) ? step : (step > 0) ? tol : -tol;
+      cur.dx = (fabsx(step) >= tol) ? step : (step > 0) ? tol : -tol;
       dist = distmin + cur.dx;
       for( i = 0; i < nfree; ++i ) {
         ccount dim = ifree[i];
@@ -248,7 +248,7 @@ static Point LineSearch(This *t, ccount nfree, ccount *ifree,
         if( cur.dx < 0 ) b = w;
         else a = w;
 
-        tol = RTEPS*fabs(distmin) + ftol;
+        tol = RTEPS*fabsx(distmin) + ftol;
         tol2 = tol + tol;
       }
       else {
@@ -260,14 +260,14 @@ static Point LineSearch(This *t, ccount nfree, ccount *ifree,
 
       if( distmin + b.dx <= xtol ) break;
       if( min.f < fini &&
-          a.f - min.f <= fabs(a.dx)*maxgrad &&
-          (fabs(distmin - range) > tol || maxstep < b.dx) ) break;
+          a.f - min.f <= fabsx(a.dx)*maxgrad &&
+          (fabsx(distmin - range) > tol || maxstep < b.dx) ) break;
 
       mid = .5*(a.dx + b.dx);
-      if( fabs(mid) <= tol2 - .5*(b.dx - a.dx) ) break;
+      if( fabsx(mid) <= tol2 - .5*(b.dx - a.dx) ) break;
 
       r = q = s = 0;
-      if( fabs(end) > tol ) {
+      if( fabsx(end) > tol ) {
         if( first ) {
           creal s1 = w.dx*grad;
           creal s2 = w.f - min.f;
@@ -281,7 +281,7 @@ static Point LineSearch(This *t, ccount nfree, ccount *ifree,
           q = 2*(s2 - s1);
         }
         if( q > 0 ) s = -s;
-        q = fabs(q);
+        q = fabsx(q);
         r = end;
         if( step != b1 || b.dx <= maxstep ) end = step;
       }
@@ -290,15 +290,15 @@ static Point LineSearch(This *t, ccount nfree, ccount *ifree,
       else if( b.dx > maxstep ) step = (step < b.dx) ? -4*a.dx : maxstep;
       else {
         real num = a.dx, den = b.dx;
-        if( fabs(b.dx) <= tol || (w.dx > 0 && fabs(a.dx) > tol) )
+        if( fabsx(b.dx) <= tol || (w.dx > 0 && fabsx(a.dx) > tol) )
           num = b.dx, den = a.dx;
         num /= -den;
-        step = (num < 1) ? .5*den*sqrt(num) : 5/11.*den*(.1 + 1/num);
+        step = (num < 1) ? .5*den*sqrtx(num) : 5/11.*den*(.1 + 1/num);
       }
 
       if( step > 0 ) a1 = a.dx, b1 = step;
       else a1 = step, b1 = b.dx;
-      if( fabs(s) < fabs(.5*q*r) && s > q*a1 && s < q*b1 ) {
+      if( fabsx(s) < fabsx(.5*q*r) && s > q*a1 && s < q*b1 ) {
         step = s/q;
         if( step - a.dx < tol2 || b.dx - step < tol2 )
           step = (mid > 0) ? tol : -tol;
@@ -307,7 +307,7 @@ static Point LineSearch(This *t, ccount nfree, ccount *ifree,
     }
 
     first = true;
-    if( fabs(distmin - range) < tol ) {
+    if( fabsx(distmin - range) < tol ) {
       distmin = range;
       if( maxstep > b.dx ) first = false;
     }
@@ -372,7 +372,7 @@ static real LocalSearch(This *t, ccount nfree, ccount *ifree,
      or we come close to a border. */
 
   XCopy(y, x);
-  ftest = SUFTOL*(1 + fabs(fx));
+  ftest = SUFTOL*(1 + fabsx(fx));
   delta = RTDELTA/5;
   do {
     delta = Min(5*delta, smax);
@@ -381,7 +381,7 @@ static real LocalSearch(This *t, ccount nfree, ccount *ifree,
       y[dim] = x[dim] + delta*p[i];
     }
     fy = Sample(t, y);
-    if( fabs(fy - fx) > ftest ) break;
+    if( fabsx(fy - fx) > ftest ) break;
   } while( delta != smax );
 
   /* Construct a second direction p' orthogonal to p, i.e. p.p' = 0.
@@ -425,7 +425,7 @@ static real LocalSearch(This *t, ccount nfree, ccount *ifree,
      or we come close to a border. */
 
   XCopy(z, y);
-  ftest = SUFTOL*(1 + fabs(fy));
+  ftest = SUFTOL*(1 + fabsx(fy));
   delta = RTDELTA/5;
   do {
     delta = Min(5*delta, smax);
@@ -434,7 +434,7 @@ static real LocalSearch(This *t, ccount nfree, ccount *ifree,
       z[dim] = y[dim] + delta*p[i];
     }
     fz = Sample(t, z);
-    if( fabs(fz - fy) > ftest ) break;
+    if( fabsx(fz - fy) > ftest ) break;
   } while( delta != smax );
 
   if( fy != fz ) {
@@ -541,12 +541,12 @@ static real FindMinimum(This *t, cBounds *b, real *xmin, real fmin)
     bool resample = false;
     nfree = nfix = 0;
     for( dim = 0; dim < t->ndim; ++dim ) {
-      if( xmin[dim] < b[dim].lower + (1 + fabs(b[dim].lower))*QEPS ) {
+      if( xmin[dim] < b[dim].lower + (1 + fabsx(b[dim].lower))*QEPS ) {
         xmin[dim] = b[dim].lower;
         ifix[nfix++] = dim;
         resample = true;
       }
-      else if( xmin[dim] > b[dim].upper - (1 + fabs(b[dim].upper))*QEPS ) {
+      else if( xmin[dim] > b[dim].upper - (1 + fabsx(b[dim].upper))*QEPS ) {
         xmin[dim] = b[dim].upper;
         ifix[nfix++] = Tag(dim);
         resample = true;
@@ -562,7 +562,7 @@ static real FindMinimum(This *t, cBounds *b, real *xmin, real fmin)
     if( local || Length(nfree, gfree) > GTOL ) break;
 
     ftmp = LocalSearch(t, nfree, ifree, b, xmin, fmin, tmp);
-    if( ftmp > fmin - (1 + fabs(fmin))*RTEPS )
+    if( ftmp > fmin - (1 + fabsx(fmin))*RTEPS )
       goto releasebounds;
     fmin = ftmp;
     XCopy(xmin, tmp);
@@ -586,7 +586,7 @@ static real FindMinimum(This *t, cBounds *b, real *xmin, real fmin)
       minstep = INFTY;
       for( i = 0; i < nfree; ++i ) {
         count dim = Untag(ifree[i]);
-        if( fabs(p[i]) > EPS ) {
+        if( fabsx(p[i]) > EPS ) {
           real step;
           count fix;
           if( p[i] < 0 ) {
@@ -642,11 +642,11 @@ fixbound:
         BFGS(t, nfree, hessian, tmp, gfree, p, low.dx);
         XCopy(gfree, tmp);
 
-        if( fabs(low.dx - minstep) < QEPS*minstep ) goto fixbound;
+        if( fabsx(low.dx - minstep) < QEPS*minstep ) goto fixbound;
 
         fdiff = fini - fmin;
         fini = fmin;
-        if( fdiff > (1 + fabs(fmin))*FTOL ||
+        if( fdiff > (1 + fabsx(fmin))*FTOL ||
             low.dx*plen > (1 + Length(t->ndim, xmin))*FTOL ) continue;
       }
     }

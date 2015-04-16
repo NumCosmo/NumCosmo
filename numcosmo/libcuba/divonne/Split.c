@@ -2,7 +2,7 @@
 	Split.c
 		determine optimal cuts for splitting a region
 		this file is part of Divonne
-		last modified 28 May 14 th
+		last modified 12 Mar 15 th
 */
 
 
@@ -31,7 +31,7 @@ typedef struct {
 
 static inline real Div(creal a, creal b)
 {
-  return (b != 0 /*&& fabs(a) > SMALL*fabs(b)*/) ? a/b : a;
+  return (b != 0 /*&& fabsx(a) > SMALL*fabsx(b)*/) ? a/b : a;
 }
 
 /*********************************************************************/
@@ -58,7 +58,7 @@ static void SomeCut(This *t, Cut *cut, Bounds *b)
     yupper = Sample(t, xmid);
     xmid[dim] = x;
 
-    dev = fabs(ymid - .5*(ylower + yupper));
+    dev = fabsx(ymid - .5*(ylower + yupper));
     if( dev >= maxdev ) {
       maxdev = dev;
       maxdim = dim;
@@ -178,7 +178,7 @@ static count FindCuts(This *t, Cut *cut, Bounds *bounds, creal vol,
 
     for( icut = 0; icut < ncuts; ++icut ) {
       Cut *c = &cut[icut];
-      creal diff = fabs(fmajor - c->f);
+      creal diff = fabsx(fmajor - c->f);
       if( diff <= mindiff ) {
         mindiff = diff;
         mincut = c;
@@ -230,18 +230,18 @@ repeat:
     if( lhssqnew <= lhssq ) {
       real fmax;
 
-      if( fabs(gammanew - gamma) < GAMMATOL*gamma ) break;
+      if( fabsx(gammanew - gamma) < GAMMATOL*gamma ) break;
       gamma = gammanew;
 
-      fmax = fabs(fgamma);
+      fmax = fabsx(fgamma);
       for( icut = 0; icut < ncuts; ++icut ) {
         Cut *c = &cut[icut];
         creal dfmin = SINGTOL*c->df;
         creal sol = c->sol/div;
         real df = c->f - c->fold;
-        df = (fabs(df) > SMALL*fabs(sol)) ? df/sol : 1;
-        c->df = (fabs(df) < fabs(dfmin)) ? dfmin : df;
-        fmax = Max(fmax, fabs(c->f));
+        df = (fabsx(df) > SMALL*fabsx(sol)) ? df/sol : 1;
+        c->df = (fabsx(df) < fabsx(dfmin)) ? dfmin : df;
+        fmax = Max(fmax, fabsx(c->f));
         c->fold = c->f;
       }
 

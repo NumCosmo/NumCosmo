@@ -1,7 +1,7 @@
 /*
 	stddecl.h
 		declarations common to all Cuba routines
-		last modified 22 Jul 14 th
+		last modified 17 Mar 15 th
 */
 
 
@@ -16,6 +16,7 @@
 #define _BSD_SOURCE
 #define _SVID_SOURCE
 */
+#define _DEFAULT_SOURCE
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -109,6 +110,7 @@ enum { uninitialized = 0x61627563 };
 #define LAST (t->flags & 4)
 #define SHARPEDGES (t->flags & 8)
 #define KEEPFILE (t->flags & 16)
+#define ZAPSTATE (t->flags & 32)
 #define REGIONS (t->flags & 128)
 #define RNG (t->flags >> 8)
 
@@ -142,7 +144,7 @@ enum { uninitialized = 0x61627563 };
 
 #define Zap(d) memset(d, 0, sizeof(d))
 
-#define MaxErr(avg) Max(t->epsrel*fabs(avg), t->epsabs)
+#define MaxErr(avg) Max(t->epsrel*fabsx(avg), t->epsabs)
 
 #ifdef __cplusplus
 #define mallocset(p, n) (*(void **)&p = malloc(n))
@@ -359,13 +361,50 @@ typedef const number cnumber;
 
 #define REAL "%g"
 #define REALF "%f"
-typedef /*long*/ double real;
-	/* Switching to long double is not as trivial as it
-	   might seem here.  sqrt, erf, exp, pow need to be
-	   replaced by their long double versions (sqrtl, ...),
-	   printf formats need to be updated similarly, and
-	   ferrying long doubles to Mathematica is of course
-	   quite another matter, too. */
+#define SHOW(r) (double)(r)
+	/* floating-point numbers are printed with SHOW */
+
+#if REALSIZE == 16
+#include <quadmath.h>
+typedef __float128 real;
+#define RC(x) x##Q
+#define sqrtx sqrtq
+#define expx expq
+#define powx powq
+#define erfx erfq
+#define fabsx fabsq
+#define ldexpx ldexpq
+#define REAL_MAX_EXP FLT128_MAX_EXP
+#define REAL_MAX FLT128_MAX
+#elif REALSIZE == 10
+typedef long double real;
+#define RC(x) x##L
+#define sqrtx sqrtl
+#define expx expl
+#define powx powl
+#define erfx erfl
+#define fabsx fabsl
+#define ldexpx ldexpl
+#define REAL_MAX_EXP LDBL_MAX_EXP
+#define REAL_MAX LDBL_MAX
+#define MLPutRealxList MLPutReal128List
+#define MLGetRealxList MLGetReal128List
+#define MLReleaseRealxList MLReleaseReal128List
+#else
+typedef double real;
+#define RC(x) x
+#define sqrtx sqrt
+#define expx exp
+#define powx pow
+#define erfx erf
+#define fabsx fabs
+#define ldexpx ldexp
+#define REAL_MAX_EXP DBL_MAX_EXP
+#define REAL_MAX DBL_MAX
+#define MLPutRealxList MLPutReal64List
+#define MLGetRealxList MLGetReal64List
+#define MLReleaseRealxList MLReleaseReal64List
+#endif
 
 typedef const real creal;
 
@@ -467,7 +506,7 @@ static inline real Max(creal a, creal b) {
 }
 
 static inline real Weight(creal sum, creal sqsum, cnumber n) {
-  creal w = sqrt(sqsum*n);
+  creal w = sqrtx(sqsum*n);
   return (n - 1)/Max((w + sum)*(w - sum), NOTZERO);
 }
 

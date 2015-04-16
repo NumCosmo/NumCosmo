@@ -2,34 +2,42 @@
 	Fluct.c
 		compute the fluctuation in the left and right half
 		this file is part of Suave
-		last modified 29 Jul 13 th
+		last modified 14 Mar 15 th
 */
 
 
-#if defined(HAVE_LONG_DOUBLE) && defined(HAVE_POWL)
+#if defined(HAVE_LONG_DOUBLE) && defined(HAVE_POWL) && REALSIZE <= 10
 
-typedef long double realx;
-#define XDBL_MAX_EXP LDBL_MAX_EXP
-#define XDBL_MAX LDBL_MAX
-#define powx powl
-#define ldexpx ldexpl
+typedef long double realL;
+#define REALL_MAX_EXP LDBL_MAX_EXP
+#define REALL_MAX LDBL_MAX
+#define powL powl
+#define ldexpL ldexpl
 
 #else
 
-typedef double realx;
-#define XDBL_MAX_EXP DBL_MAX_EXP
-#define XDBL_MAX DBL_MAX
-#define powx pow
-#define ldexpx ldexp
+typedef real realL;
+#define REALL_MAX_EXP REAL_MAX_EXP
+#define REALL_MAX REAL_MAX
+#define powL powx
+#define ldexpL ldexpx
 
 #endif
 
-typedef const realx crealx;
+typedef const realL crealL;
 
 typedef struct {
-  realx fluct;
+  realL fluct;
   number n;
 } Var;
+
+static inline realL MinL(crealL a, crealL b) {
+  return (a < b) ? a : b;
+}
+
+static inline realL MaxL(crealL a, crealL b) {
+  return (a > b) ? a : b;
+}
 
 /*********************************************************************/
 
@@ -41,27 +49,27 @@ static void Fluct(cThis *t, Var *var,
   count nvar = 2*t->ndim;
   creal norm = 1/(err*Max(fabs(avg), err));
   creal flat = 2/3./t->flatness;
-  crealx max = ldexpx(1., (int)((XDBL_MAX_EXP - 2)/t->flatness));
+  crealL max = ldexpL(1., (int)((REALL_MAX_EXP - 2)/t->flatness));
 
   Clear(var, nvar);
 
   while( n-- ) {
     count dim;
-    crealx arg = 1 + fabs(*w++)*Sq(*f - avg)*norm;
-    crealx ft = powx(arg < max ? arg : max, t->flatness);
+    crealL arg = 1 + fabs(*w++)*Sq(*f - avg)*norm;
+    crealL ft = powL(MinL(arg, max), t->flatness);
 
     f += t->ncomp;
 
     for( dim = 0; dim < t->ndim; ++dim ) {
       Var *v = &var[2*dim + (*x++ >= .5*(b[dim].lower + b[dim].upper))];
-      crealx f = v->fluct + ft;
-      v->fluct = (f > XDBL_MAX/2) ? XDBL_MAX/2 : f;
+      crealL f = v->fluct + ft;
+      v->fluct = MaxL(f, REALL_MAX/2);
       ++v->n;
     }
   }
 
   while( nvar-- ) {
-    var->fluct = powx(var->fluct, flat);
+    var->fluct = powL(var->fluct, flat);
     ++var;
   }
 }

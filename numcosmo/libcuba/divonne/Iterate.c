@@ -2,7 +2,7 @@
 	Iterate.c
 		recursion over regions
 		this file is part of Divonne
-		last modified 2 Aug 13 th
+		last modified 12 Mar 15 th
 */
 
 
@@ -85,10 +85,10 @@ FORK_ONLY(more:)
 
       norm = 1./nsplit--;
       for( res = RegionResult(parent), c = corr; c < C; ++res, ++c ) {
-        creal diff = fabs(res->avg - c->avg)*norm;
+        creal diff = fabsx(res->avg - c->avg)*norm;
         c->avg = diff*norm*nsplit;
         c->err = (c->err == 0) ? 1 : 1 + diff/c->err;
-        c->spread = (c->spread == 0) ? 1 : 1 + diff/sqrt(c->spread);
+        c->spread = (c->spread == 0) ? 1 : 1 + diff/sqrtx(c->spread);
       }
 
       for( td = todo; td < tdmax; ++td )

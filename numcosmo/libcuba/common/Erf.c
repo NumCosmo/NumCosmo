@@ -4,7 +4,7 @@
 		= 2/Sqrt[Pi] Integrate[Exp[-t^2], {t, 0, x}]
 		Code from Takuya Ooura's gamerf2a.f
 		http://www.kurims.kyoto-u.ac.jp/~ooura/gamerf.html
-		last modified 8 Feb 05 th
+		last modified 12 Mar 15 th
 */
 
 
@@ -21,12 +21,12 @@ static real Erfc(creal x)
     1.66642447174307753e-07, 1.48455557345597957e+01,
     6.10399733098688199e+00, 1.26974899965115684e+01 };
   real y = x*x;
-  y = exp(-y)*x*(
+  y = expx(-y)*x*(
     c[0]/(y + c[1]) + c[2]/(y + c[3]) +
     c[4]/(y + c[5]) + c[6]/(y + c[7]) +
     c[8]/(y + c[9]) + c[10]/(y + c[11]) +
     c[12]/(y + c[13]) + c[14]/(y + c[15]) );
-  if( x < c[16] ) y += 2/(exp(c[17]*x) + 1);
+  if( x < c[16] ) y += 2/(expx(c[17]*x) + 1);
   return y;
 }
 
@@ -40,7 +40,7 @@ static real Erf(creal x)
    -2.68661698447642378e-02,
     5.22387877685618101e-03,
    -8.49202435186918470e-04 };
-  real y = fabs(x);
+  real y = fabsx(x);
   if( y > .125 ) {
     y = 1 - Erfc(y);
     return (x > 0) ? y : -y;

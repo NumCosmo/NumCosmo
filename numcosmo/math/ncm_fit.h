@@ -277,7 +277,7 @@ gdouble ncm_fit_function_cov (NcmFit *fit, NcmMSetFunc *func1, gdouble z1, NcmMS
 #define NCM_FIT_NPARAM(fit) ((fit)->pt->nfree)
 #define NCM_FIT_DEFAULT_M2LNL_RELTOL (1e-8)
 #define NCM_FIT_DEFAULT_M2LNL_ABSTOL (0.0)
-#define NCM_FIT_DEFAULT_PARAMS_RELTOL (1e-8)
+#define NCM_FIT_DEFAULT_PARAMS_RELTOL (1e-5)
 #define NCM_FIT_DEFAULT_MAXITER 10000
 
 G_END_DECLS

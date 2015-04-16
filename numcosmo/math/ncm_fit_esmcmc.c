@@ -591,12 +591,19 @@ _ncm_fit_esmcmc_gen_init_points_mt_eval (glong i, glong f, gpointer data)
     NcmFit *fit_k = g_ptr_array_index (esmcmc->walker_fits, k);
     NcmVector *thetastar = g_ptr_array_index (esmcmc->thetastar, k);
 
-    g_mutex_lock (esmcmc->resample_lock);
-    ncm_mset_trans_kern_prior_sample (esmcmc->sampler, thetastar, esmcmc->mcat->rng);
-    g_mutex_unlock (esmcmc->resample_lock);
+    while (TRUE)
+    {
+      g_mutex_lock (esmcmc->resample_lock);
+      ncm_mset_trans_kern_prior_sample (esmcmc->sampler, thetastar, esmcmc->mcat->rng);
+      g_mutex_unlock (esmcmc->resample_lock);
 
-    ncm_mset_fparams_set_vector (fit_k->mset, thetastar);
-    ncm_fit_m2lnL_val (fit_k, &m2lnL);
+      ncm_mset_fparams_set_vector (fit_k->mset, thetastar);
+      ncm_fit_m2lnL_val (fit_k, &m2lnL);
+
+      if (gsl_finite (m2lnL))
+        break;
+    }
+    
     ncm_fit_state_set_m2lnL_curval (fit_k->fstate, m2lnL);
 
     _NCM_MUTEX_LOCK (&update_lock);
@@ -636,10 +643,15 @@ _ncm_fit_esmcmc_gen_init_points (NcmFitESMCMC *esmcmc)
       NcmVector *thetastar = g_ptr_array_index (esmcmc->thetastar, k);
       gdouble m2lnL = 0.0;
 
-      ncm_mset_trans_kern_prior_sample (esmcmc->sampler, thetastar, esmcmc->mcat->rng);
-      ncm_mset_fparams_set_vector (fit_k->mset, thetastar);
+      while (TRUE)
+      {
+        ncm_mset_trans_kern_prior_sample (esmcmc->sampler, thetastar, esmcmc->mcat->rng);
+        ncm_mset_fparams_set_vector (fit_k->mset, thetastar);
 
-      ncm_fit_m2lnL_val (fit_k, &m2lnL);
+        ncm_fit_m2lnL_val (fit_k, &m2lnL);
+        if (gsl_finite (m2lnL))
+          break;
+      }
       ncm_fit_state_set_m2lnL_curval (fit_k->fstate, m2lnL);
       esmcmc->ntotal++;
       esmcmc->naccepted++;
@@ -963,9 +975,14 @@ _ncm_fit_esmcmc_run_single (NcmFitESMCMC *esmcmc)
        ncm_vector_log_vals (esmcmc->theta, "# Theta  : ", "% 8.5g");
        ncm_vector_log_vals (esmcmc->thetastar, "# Theta* : ", "% 8.5g");
        */
-      prob = pow (z, esmcmc->fparam_len - 1.0) * exp ((m2lnL_cur - m2lnL_star) * 0.5);
-      prob = GSL_MIN (prob, 1.0);
-      ncm_fit_state_set_m2lnL_curval (fit_k->fstate, m2lnL_star);
+      if (gsl_finite (m2lnL_star))
+      {
+        prob = pow (z, esmcmc->fparam_len - 1.0) * exp ((m2lnL_cur - m2lnL_star) * 0.5);
+        prob = GSL_MIN (prob, 1.0);
+        ncm_fit_state_set_m2lnL_curval (fit_k->fstate, m2lnL_star);
+      }
+      else
+        prob = 0.0;
 
       /*printf ("# Prob %e [% 21.16g % 21.16g] % 21.16g\n", prob, m2lnL_cur, m2lnL_star, m2lnL_cur - m2lnL_star);*/    
 
@@ -1031,10 +1048,15 @@ _ncm_fit_esmcmc_mt_eval (glong i, glong f, gpointer data)
      ncm_vector_log_vals (esmcmc->theta, "# Theta  : ", "% 8.5g");
      ncm_vector_log_vals (esmcmc->thetastar, "# Theta* : ", "% 8.5g");
      */
-    prob = pow (z, esmcmc->fparam_len - 1.0) * exp ((m2lnL_cur - m2lnL_star) * 0.5);
-    prob = GSL_MIN (prob, 1.0);
-    ncm_fit_state_set_m2lnL_curval (fit_k->fstate, m2lnL_star);
-
+    if (gsl_finite (m2lnL_star))
+    {
+      prob = pow (z, esmcmc->fparam_len - 1.0) * exp ((m2lnL_cur - m2lnL_star) * 0.5);
+      prob = GSL_MIN (prob, 1.0);
+      ncm_fit_state_set_m2lnL_curval (fit_k->fstate, m2lnL_star);
+    }
+    else
+      prob = 0.0;
+    
     /*printf ("# Prob %e [% 21.16g % 21.16g] % 21.16g\n", prob, m2lnL_cur, m2lnL_star, m2lnL_cur - m2lnL_star);*/    
 
     if (prob != 1.0)

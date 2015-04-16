@@ -3,7 +3,7 @@
 		integrate over the unit hypercube
 		this file is part of Cuhre
 		checkpointing by B. Chokoufe
-		last modified 23 May 14 th
+		last modified 14 Mar 15 th
 */
 
 
@@ -11,6 +11,9 @@
 
 typedef struct pool {
   struct pool *next;
+#if REALSIZE > 8
+  void *dummy; /* for alignment */
+#endif
   char region[];
 } Pool;
 
@@ -49,7 +52,7 @@ static int Integrate(This *t, real *integral, real *error, real *prob)
       "  statefile \"%s\"",
       t->ndim, t->ncomp,
       ML_NOT(t->nvec,)
-      t->epsrel, t->epsabs,
+      SHOW(t->epsrel), SHOW(t->epsabs),
       t->flags, t->mineval, t->maxeval,
       t->key,
       t->statefile);
@@ -127,7 +130,8 @@ static int Integrate(This *t, real *integral, real *error, real *prob)
       for( tot = state->totals, comp = 0; tot < Tot; ++tot )
         oe += sprintf(oe, "\n[" COUNT "] "
           REAL " +- " REAL "  \tchisq " REAL " (" COUNT " df)",
-          ++comp, tot->avg, tot->err, tot->chisq, t->nregions - 1);
+          ++comp, SHOW(tot->avg), SHOW(tot->err),
+          SHOW(tot->chisq), t->nregions - 1);
       Print(out);
     }
 
@@ -190,7 +194,7 @@ static int Integrate(This *t, real *integral, real *error, real *prob)
 
       tot->lastavg += diff = resL->avg + resR->avg - res->avg;
 
-      diff = fabs(.25*diff);
+      diff = fabsx(.25*diff);
       err = resL->err + resR->err;
       if( err > 0 ) {
         creal c = 1 + 2*diff/err;
@@ -215,7 +219,7 @@ static int Integrate(This *t, real *integral, real *error, real *prob)
       }
       else {
         tot->avg = avg;
-        tot->err = sqrt(sigsq);
+        tot->err = sqrtx(sigsq);
       }
     }
     ++t->nregions;
@@ -251,13 +255,13 @@ static int Integrate(This *t, real *integral, real *error, real *prob)
         Result *Res;
 
         MLPutFunction(stdlink, "Cuba`Cuhre`region", 2);
-        MLPutRealList(stdlink, (real *)region->bounds, 2*t->ndim);
+        MLPutRealxList(stdlink, (real *)region->bounds, 2*t->ndim);
 
         MLPutFunction(stdlink, "List", t->ncomp);
         for( Res = (res = RegionResult(region)) + t->ncomp;
              res < Res; ++res ) {
           real r[] = {res->avg, res->err};
-          MLPutRealList(stdlink, r, Elements(r));
+          MLPutRealxList(stdlink, r, Elements(r));
         }
       }
   }

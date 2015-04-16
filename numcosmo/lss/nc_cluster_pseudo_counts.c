@@ -167,7 +167,7 @@ _nc_cluster_pseudo_counts_get_property (GObject *object, guint prop_id, GValue *
 static void
 nc_cluster_pseudo_counts_init (NcClusterPseudoCounts *cpc)
 {
-  cpc->mfp      = NULL;
+  cpc->mfp = NULL;
 }
 
 static void
@@ -182,7 +182,7 @@ _nc_cluster_pseudo_counts_dispose (GObject *object)
 }
 
 static void
-nc_cluster_pseudo_counts_finalize (GObject *object)
+_nc_cluster_pseudo_counts_finalize (GObject *object)
 {
   
   /* Chain up : end */
@@ -197,10 +197,10 @@ nc_cluster_pseudo_counts_class_init (NcClusterPseudoCountsClass *klass)
   GObjectClass* object_class = G_OBJECT_CLASS (klass);
   NcmModelClass* model_class = NCM_MODEL_CLASS (klass);
 
-  object_class->dispose = _nc_cluster_pseudo_counts_dispose;
-  object_class->finalize = nc_cluster_pseudo_counts_finalize;
-  model_class->set_property = _nc_cluster_pseudo_counts_set_property;
-  model_class->get_property = _nc_cluster_pseudo_counts_get_property;
+  model_class->set_property = &_nc_cluster_pseudo_counts_set_property;
+  model_class->get_property = &_nc_cluster_pseudo_counts_get_property;
+  object_class->dispose     = &_nc_cluster_pseudo_counts_dispose;
+  object_class->finalize    = &_nc_cluster_pseudo_counts_finalize;
 
   ncm_model_class_set_name_nick (model_class, "Galaxy Cluster observable: pseudo number counts", "PseudoClusterCounts");
   ncm_model_class_add_params (model_class, NC_CLUSTER_PSEUDO_COUNTS_SPARAM_LEN, 0, PROP_SIZE);
@@ -209,6 +209,7 @@ nc_cluster_pseudo_counts_class_init (NcClusterPseudoCountsClass *klass)
    * NcClusterPseudoCounts:mass-function:
    *
    * FIXME
+   * 
    */
   g_object_class_install_property (object_class,
                                    PROP_MASS_FUNCTION,
@@ -217,35 +218,46 @@ nc_cluster_pseudo_counts_class_init (NcClusterPseudoCountsClass *klass)
                                                         "Mass Function",
                                                         NC_TYPE_MASS_FUNCTION,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-  /*
-   * Lower mass cut-off: LNMCUT.
+  /**
+   * NcClusterPseudoCounts:lnMcut:
+   * 
    * Logarithm base e of the lower mass cut-off, $\ln (M_{CUT}) \in [12.0 \ln(10), 16.0 \ln(10)]$.
+   *  
    */
-  ncm_model_class_set_sparam (model_class, NC_CLUSTER_PSEUDO_COUNTS_LNMCUT, "\\ln(M_{CUT})", "LNMCUT",
+  /**
+   * NcClusterPseudoCounts:lnMcut-fit:
+   * 
+   * FIXME
+   *  
+   */
+  ncm_model_class_set_sparam (model_class, NC_CLUSTER_PSEUDO_COUNTS_LNMCUT, "\\ln(M_{CUT})", "lnMcut",
                               12.0 * M_LN10, 16.0 * M_LN10, 1.0,
                               NC_CLUSTER_PSEUDO_COUNTS_DEFAULT_PARAMS_ABSTOL, NC_CLUSTER_PSEUDO_COUNTS_DEFAULT_LNMCUT,
                               NCM_PARAM_TYPE_FIXED);
-  /*
-   * Standard deviation of the selection function: SD_MCUT.
+  /**
+   * NcClusterPseudoCounts:sigma_Mcut:
+   * 
    * Standard deviation of the selection function, $\sigma_{CUT} \in [0.1, 0.9]$.
    */
-  ncm_model_class_set_sparam (model_class, NC_CLUSTER_PSEUDO_COUNTS_SD_MCUT, "\\sigma_{MCUT}", "SD_MCUT",
-                              1.0e-3,  1.0, 1.0e-2,
+  ncm_model_class_set_sparam (model_class, NC_CLUSTER_PSEUDO_COUNTS_SD_MCUT, "\\sigma_{MCUT}", "sigma_Mcut",
+                              1.0e-3,  0.9, 1.0e-2,
                               NC_CLUSTER_PSEUDO_COUNTS_DEFAULT_PARAMS_ABSTOL, NC_CLUSTER_PSEUDO_COUNTS_DEFAULT_SD_MCUT,
                               NCM_PARAM_TYPE_FIXED);
-  /*
-   * Minimum redshift: ZMIN.
+  /**
+   * NcClusterPseudoCounts:zmin:
+   * 
    * Range: $z_{min} \in [10^{-5}, 2.0]$
    */
-  ncm_model_class_set_sparam (model_class, NC_CLUSTER_PSEUDO_COUNTS_ZMIN, "\\z_{min}", "ZMIN",
-                              1.0e-5,  2.0, 1.0e-1,
+  ncm_model_class_set_sparam (model_class, NC_CLUSTER_PSEUDO_COUNTS_ZMIN, "z_{min}", "zmin",
+                              1e-5,  2.0, 1.0e-1,
                               NC_CLUSTER_PSEUDO_COUNTS_DEFAULT_PARAMS_ABSTOL, NC_CLUSTER_PSEUDO_COUNTS_DEFAULT_ZMIN,
                               NCM_PARAM_TYPE_FIXED);
-  /*
-   * Redshift interval size: DELTAZ.
+  /**
+   * NcClusterPseudoCounts:Deltaz:
+   * 
    * Maximum redsift is $z_{max} = z_{min} + \Delta z$. Range: $\Delta z \in [0.1, 2.0]$.
    */
-  ncm_model_class_set_sparam (model_class, NC_CLUSTER_PSEUDO_COUNTS_DELTAZ, "\\delta{}z", "DELTAZ",
+  ncm_model_class_set_sparam (model_class, NC_CLUSTER_PSEUDO_COUNTS_DELTAZ, "\\delta{}z", "Deltaz",
                               1e-1,  2.0, 1.0e-1,
                               NC_CLUSTER_PSEUDO_COUNTS_DEFAULT_PARAMS_ABSTOL, NC_CLUSTER_PSEUDO_COUNTS_DEFAULT_DELTAZ,
                               NCM_PARAM_TYPE_FIXED);
@@ -253,7 +265,7 @@ nc_cluster_pseudo_counts_class_init (NcClusterPseudoCountsClass *klass)
   /* Check for errors in parameters initialization */
   ncm_model_class_check_params_info (model_class);
 
-  ncm_mset_model_register_id (model_class, 
+  ncm_mset_model_register_id (model_class,
                               "NcClusterPseudoCounts",
                               "Galaxy cluster observable: pseudo number counts.",
                               NULL);

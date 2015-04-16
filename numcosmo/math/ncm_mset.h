@@ -49,7 +49,7 @@ typedef struct _NcmMSet NcmMSet;
 typedef struct _NcmMSetPIndex NcmMSetPIndex;
 typedef struct _NcmMSetModelDesc NcmMSetModelDesc; 
 
-#define NCM_MODEL_MAX_ID 5
+#define NCM_MODEL_MAX_ID 10
 
 struct _NcmMSetModelDesc
 {
