@@ -48,6 +48,10 @@ test_ncm_data_gauss_cov_SOURCES = \
 	ncm_data_gauss_cov_test.c \
 	ncm_data_gauss_cov_test.h
 
+test_ncm_func_eval_SOURCES =  \
+	test_ncm_func_eval.c
+
+
 test_nc_window_SOURCES =  \
         test_nc_window.c
         
@@ -77,6 +81,7 @@ check_PROGRAMS =  \
 	test_ncm_model                \
 	test_ncm_serialize            \
 	test_ncm_data_gauss_cov       \
+	test_ncm_func_eval            \
 	test_nc_window                \
 	test_nc_transfer_func         \
 	test_nc_galaxy_acf            \
@@ -105,6 +110,8 @@ test_ncm_model_LDADD = $(top_builddir)/numcosmo/libnumcosmo.la
 test_ncm_serialize_LDADD = $(top_builddir)/numcosmo/libnumcosmo.la
 
 test_ncm_data_gauss_cov_LDADD = $(top_builddir)/numcosmo/libnumcosmo.la
+
+test_ncm_func_eval_LDADD = $(top_builddir)/numcosmo/libnumcosmo.la 
 
 test_nc_window_LDADD = $(top_builddir)/numcosmo/libnumcosmo.la
 

@@ -2,7 +2,7 @@
 	Sample.c
 		most of what is related to sampling
 		this file is part of Divonne
-		last modified 25 Mar 14 th
+		last modified 12 Mar 15 th
 */
 
 
@@ -98,7 +98,7 @@ static void SampleKorobov(This *t, ccount iregion)
   }
 
   if( dist > 0 ) {
-    dist = sqrt(dist)/EXTRAPOLATE_EPS;
+    dist = sqrtx(dist)/EXTRAPOLATE_EPS;
     for( dim = 0; dim < t->ndim; ++dim ) {
       real x2 = x[dim], dx = x2 - t->border.upper;
       if( dx > 0 ) {
@@ -243,7 +243,7 @@ static real Sample(This *t, creal *x0)
   }
 
   if( dist > 0 ) {
-    dist = sqrt(dist)/EXTRAPOLATE_EPS;
+    dist = sqrtx(dist)/EXTRAPOLATE_EPS;
     for( dim = 0; dim < t->ndim; ++dim ) {
       real x2 = xtmp[dim], dx, b;
       if( (dx = x2 - (b = t->border.lower)) < 0 ||

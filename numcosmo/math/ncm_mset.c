@@ -119,6 +119,7 @@ ncm_mset_model_register_id (NcmModelClass *model_class, const gchar *ns, const g
     guint id;
     NcmMSetClass *mset_class = g_type_class_ref (NCM_TYPE_MSET);
     G_LOCK (last_model_id);
+    
     model_class->model_id = last_model_id++;
     id = model_class->model_id;
     mset_class->model_desc[id].init = TRUE;
@@ -148,7 +149,7 @@ ncm_mset_model_register_id (NcmModelClass *model_class, const gchar *ns, const g
   {
     g_error ("This model or its parent is already registred, id = %d. This function must be use once and only in the defining model.", model_class->model_id);
   }
-  if (model_class->model_id > NCM_MODEL_MAX_ID)
+  if (model_class->model_id >= NCM_MODEL_MAX_ID)
     g_error ("Max model id was already attained. Increase by altering NCM_MODEL_MAX_ID.");
 
   return;

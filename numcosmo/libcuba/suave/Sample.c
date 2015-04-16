@@ -2,7 +2,7 @@
 	Sample.c
 		the sampling step of Suave
 		this file is part of Suave
-		last modified 28 Nov 14 th
+		last modified 13 Mar 15 th
 */
 
 
@@ -71,7 +71,7 @@ static void Sample(This *t, cnumber nnew, Region *region,
 
   while( w < lastw ) {
     cbool final = (*w < 0);
-    creal weight = fabs(*w++);
+    creal weight = fabsx(*w++);
     ++n;
 
     for( c = cumul, comp = 0; c < C; ++c ) {
@@ -86,14 +86,14 @@ static void Sample(This *t, cnumber nnew, Region *region,
           c->avgsum += c->avg = w*c->sum;
 
           if( VERBOSE > 2 ) {
-            creal sig = sqrt(1/w);
+            creal sig = sqrtx(1/w);
             ss[comp] += (df == 0) ?
               sprintf(ss[comp], "\n[" COUNT "] "
                 REAL " +- " REAL " (" NUMBER ")", comp + 1,
-                c->sum, sig, n) :
+                SHOW(c->sum), SHOW(sig), n) :
               sprintf(ss[comp], "\n    "
                 REAL " +- " REAL " (" NUMBER ")",
-                c->sum, sig, n);
+                SHOW(c->sum), SHOW(sig), n);
           }
 
           if( df == 0 ) c->guess = c->sum;
@@ -124,7 +124,7 @@ static void Sample(This *t, cnumber nnew, Region *region,
       res->sigsq = sigsq;
       res->avg = avg;
     }
-    res->err = sqrt(res->sigsq);
+    res->err = sqrtx(res->sigsq);
 
     res->chisq = (sigsq < .9*NOTZERO) ? 0 : c->chisqsum - avg*c->chisum;
       /* This catches the special case where the integrand is constant
@@ -153,7 +153,7 @@ static void Sample(This *t, cnumber nnew, Region *region,
     for( comp = 0, res = region->result;
          comp < t->ncomp; ++comp, ++res ) {
       p += sprintf(p, "%s  \tchisq " REAL " (" COUNT " df)",
-        p0, res->chisq, df);
+        p0, SHOW(res->chisq), df);
       p0 += chars;
     }
 

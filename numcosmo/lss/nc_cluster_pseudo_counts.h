@@ -50,10 +50,10 @@ typedef struct _NcClusterPseudoCounts NcClusterPseudoCounts;
 
 /**
  * NcClusterPseudoCountsParams:
- * @NC_CLUSTER_PSEUDO_COUNTS_MCUT: lower mass cut-off
+ * @NC_CLUSTER_PSEUDO_COUNTS_LNMCUT: lower mass cut-off
  * @NC_CLUSTER_PSEUDO_COUNTS_SD_MCUT: standard deviation of the mass cut-off
  * @NC_CLUSTER_PSEUDO_COUNTS_ZMIN: minimum redshift
- * @NC_CLUSTER_PSEUDO_COUNTS_ZMAX: maximum redshift
+ * @NC_CLUSTER_PSEUDO_COUNTS_DELTAZ: redshift interval size
  * 
  * FIXME
  */

@@ -264,6 +264,10 @@ _nc_data_cluster_pseudo_counts_m2lnL_val (NcmData *data, NcmMSet *mset, gdouble 
   NcHICosmo *cosmo = NC_HICOSMO (ncm_mset_peek (mset, nc_hicosmo_id ()));
   NcClusterMass *clusterm = NC_CLUSTER_MASS (ncm_mset_peek (mset, nc_cluster_mass_id ()));
   NcClusterPseudoCounts *cpc = NC_CLUSTER_PSEUDO_COUNTS (ncm_mset_peek (mset, nc_cluster_pseudo_counts_id ()));
+
+  g_assert (cosmo != NULL);
+  g_assert (clusterm != NULL);
+  g_assert (cpc != NULL);
   
   gdouble Ndet = nc_cluster_pseudo_counts_ndet (cpc, cosmo);
   gint i;

@@ -209,7 +209,8 @@ main (gint argc, gchar *argv[])
       de_data_simple.cmb_id == NULL &&
       de_data_simple.bao_id == NULL &&
       de_data_simple.H_id == NULL &&
-      de_data_simple.cluster_id == NULL)
+      de_data_simple.cluster_id == NULL &&
+      de_data_simple.data_files == NULL)
   {
     printf ("No action or data were chosen.\n");
     printf ("%s", g_option_context_get_help (context, TRUE, NULL));
@@ -394,6 +395,28 @@ main (gint argc, gchar *argv[])
 
   }
 
+  if (de_data_simple.data_files != NULL)
+  {
+    guint ndata_files = g_strv_length (de_data_simple.data_files);
+    guint i;
+    
+    for (i = 0; i < ndata_files; i++)
+    {
+      if (!g_file_test (de_data_simple.data_files[i], G_FILE_TEST_EXISTS))
+      {
+        g_warning ("data file: `%s' not found, skipping.", de_data_simple.data_files[i]);
+        continue;
+      }
+      else
+      {
+        NcmData *data = ncm_data_new_from_file (de_data_simple.data_files[i]);
+        ncm_dataset_append_data (dset, data);
+        ncm_data_free (data);        
+      }
+    }
+    
+  }
+  
   if (de_data_simple.BBN)
     nc_hicosmo_de_new_add_bbn (lh);
 

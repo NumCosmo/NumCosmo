@@ -150,7 +150,7 @@ nc_cluster_mass_plcl_class_init (NcClusterMassPlCLClass *klass)
                               NCM_PARAM_TYPE_FIXED);
 
   /*
-   * SZ signal-mass scaling parameter: SDsz.
+   * SZ signal-mass scaling parameter: sigma_sz.
    * FIXME Set correct values (limits)
    */
   ncm_model_class_set_sparam (model_class, NC_CLUSTER_MASS_PLCL_SD_SZ, "\\sigma_{SZ}", "sigma_sz",
@@ -176,7 +176,7 @@ nc_cluster_mass_plcl_class_init (NcClusterMassPlCLClass *klass)
                               NCM_PARAM_TYPE_FIXED);
 
   /*
-   * Lensing signal-mass scaling parameter: SDl.
+   * Lensing signal-mass scaling parameter: sigma_l.
    * FIXME Set correct values (limits)
    */
   ncm_model_class_set_sparam (model_class, NC_CLUSTER_MASS_PLCL_SD_L, "\\sigma_{L}", "sigma_l",
@@ -184,7 +184,7 @@ nc_cluster_mass_plcl_class_init (NcClusterMassPlCLClass *klass)
                               NC_CLUSTER_MASS_PLCL_DEFAULT_PARAMS_ABSTOL, NC_CLUSTER_MASS_PLCL_DEFAULT_SD_L,
                               NCM_PARAM_TYPE_FIXED);
   /*
-   * SZ-Lensing signal-mass correlation: COR.
+   * SZ-Lensing signal-mass correlation: cor.
    * FIXME Set correct values (limits)
    */
   ncm_model_class_set_sparam (model_class, NC_CLUSTER_MASS_PLCL_COR, "\\rho", "cor",

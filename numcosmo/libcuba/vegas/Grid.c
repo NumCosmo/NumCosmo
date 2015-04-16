@@ -2,7 +2,7 @@
 	Grid.c
 		utility functions for the Vegas grid
 		this file is part of Vegas
-		last modified 13 Dec 11 th
+		last modified 12 Mar 15 th
 */
 
 
@@ -70,7 +70,7 @@ static void RefineGrid(cThis *t, Grid grid, Grid margsum)
     real impfun = 0;
     if( margsum[bin] > 0 ) {
       creal r = margsum[bin]*norm;
-      avgperbin += impfun = pow((r - 1)/log(r), 1.5);
+      avgperbin += impfun = powx((r - 1)/log(r), 1.5);
     }
     imp[bin] = impfun;
   }

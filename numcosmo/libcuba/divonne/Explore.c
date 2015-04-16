@@ -2,7 +2,7 @@
 	Explore.c
 		sample region, determine min and max, split if necessary
 		this file is part of Divonne
-		last modified 28 May 14 th
+		last modified 12 Mar 15 th
 */
 
 
@@ -116,7 +116,7 @@ skip:
     }
 
     r->spread = halfvol*(r->fmax - r->fmin);
-    err = r->spread/Max(fabs(r->avg), NOTZERO);
+    err = r->spread/Max(fabsx(r->avg), NOTZERO);
     if( err > maxerr ) {
       maxerr = err;
       maxcomp = comp;
