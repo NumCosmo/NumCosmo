@@ -47,9 +47,9 @@ typedef struct _NcClusterMass NcClusterMass;
 
 /**
  * NcClusterMassImpl:
- * @NC_CLUSTER_MASS_P: FIXME
- * @NC_CLUSTER_MASS_INTP: FIXME
- * @NC_CLUSTER_MASS_RESAMPLE: resample function to generate cluster catalogs following 
+ * @NC_CLUSTER_MASS_P: probability density function of the true-observable cluster masses
+ * @NC_CLUSTER_MASS_INTP: probability distribution (integration over the observable mass(es))
+ * @NC_CLUSTER_MASS_RESAMPLE: resample function to generate the cluster masses following 
  * the underlying cluster mass distribution.
  * @NC_CLUSTER_MASS_P_LIMITS: function to set the lower and upper limits of the to compute
  * the integral of the cluster mass distribution.

@@ -300,7 +300,7 @@ nc_hicosmo_free (NcHICosmo *cosmo)
  * nc_hicosmo_clear:
  * @cosmo: a #NcHICosmo
  *
- * FIXME
+ * The reference count of @cosmo is decreased and the pointer is set to NULL.
  *
  */
 void 

@@ -29,7 +29,10 @@
  * @title: NcClusterMass
  * @short_description: Abstract class for cluster mass distributions.
  *
- * FIXME
+ * NcClusterMass is the abstract class designed to abrigde the functions 
+ * that any cluster mass distribution should implement, see NcClusterMassImpl. 
+ * Its parent_class is NcmModel. 
+ * 
  */
 
 #ifdef HAVE_CONFIG_H
@@ -93,8 +96,7 @@ nc_cluster_mass_free (NcClusterMass *clusterm)
  * nc_cluster_mass_clear:
  * @clusterm: a #NcClusterMass
  *
- * Atomically decrements the reference count of @clusterm by one. If the reference count drops to 0,
- * all memory allocated by @clusterm is released.
+ * The reference count of @clusterm is decreased and the pointer is set to NULL.
  *
  */
 void
@@ -119,11 +121,17 @@ nc_cluster_mass_impl (NcClusterMass *clusterm)
 
 /**
  * nc_cluster_mass_obs_len:
- * @clusterm: a #NcClusterMass.
+ * @clusterm: a #NcClusterMass
  *
- * FIXME
- *
- * Returns: FIXME
+ * The number of observable masses (or just the observable which is related to the cluster mass)
+ * of each cluster, e.g.,
+ * 1 - SZ mass,
+ * 1 - X-ray mass,
+ * 1 - Lensing mass,
+ * 2 - SZ and X-ray masses,
+ * 3 - SZ, X-ray and lensing masses.
+ * 
+ * Returns: The number of observable masses.
  */
 guint
 nc_cluster_mass_obs_len (NcClusterMass *clusterm)
@@ -133,11 +141,14 @@ nc_cluster_mass_obs_len (NcClusterMass *clusterm)
 
 /**
  * nc_cluster_mass_obs_params_len:
- * @clusterm: a #NcClusterMass.
+ * @clusterm: a #NcClusterMass
  *
- * FIXME
+ * The number of parameters related to the observable masses of each cluster, e.g., 
+ * 1 - error of the SZ mass,
+ * 1 - error of the X-ray mass,
+ * 2 - errors of SZ and X-ray masses.
  *
- * Returns: FIXME
+ * Returns: The number of parameters related to the observable masses.
  */
 guint
 nc_cluster_mass_obs_params_len (NcClusterMass *clusterm)
@@ -154,9 +165,10 @@ nc_cluster_mass_obs_params_len (NcClusterMass *clusterm)
  * @lnM_obs: (array) (element-type double): logarithm base e of the observed mass
  * @lnM_obs_params: (array) (element-type double): observed mass paramaters
  *
- * FIXME
+ * It computes the probability density function (pdf) of the cluster mass distribution @clusterm 
+ * given @cosmo, @lnM, @z and the observable cluster mass (or just the observable). 
  *
- * Returns: FIXME
+ * Returns: The pdf of @clusterm.
 */
 gdouble
 nc_cluster_mass_p (NcClusterMass *clusterm, NcHICosmo *cosmo, gdouble lnM, gdouble z, const gdouble *lnM_obs, const gdouble *lnM_obs_params)
@@ -171,9 +183,12 @@ nc_cluster_mass_p (NcClusterMass *clusterm, NcHICosmo *cosmo, gdouble lnM, gdoub
  * @z: true redshift
  * @lnM: logarithm base e of the true mass
  * 
- * FIXME
+ * It computes the @clusterm probability distribution of @lnM lying  
+ * in the range $[]$, namely,
+ * $$ intp = \int_{\ln M^{obs}_{min}}^{\ln M^{obs}_{max}} p \, d\ln M^{obs},$$
+ * where $p$ is [nc_cluster_mass_p()].
  *
- * Returns: FIXME
+ * Returns: The probability distribution of @lnM lying within $[\ln M^{obs}_{min}, \ln M^{obs}_{max}]$.
 */
 gdouble
 nc_cluster_mass_intp (NcClusterMass *clusterm, NcHICosmo *cosmo, gdouble lnM, gdouble z)
@@ -259,7 +274,7 @@ _nc_cluster_mass_log_all_models_go (GType model_type, guint n)
 /**
  * nc_cluster_mass_log_all_models:
  *
- * FIXME
+ * This function lists all implemented models of cluster mass distributions.
  *
  */
 void

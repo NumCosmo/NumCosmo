@@ -107,9 +107,9 @@ nc_cluster_pseudo_counts_ref (NcClusterPseudoCounts *cpc)
  * nc_cluster_pseudo_counts_free:
  * @cpc: a #NcClusterPseudoCounts
  *
- * Atomically decrements the reference count of @cpc by one. If the reference count drops to 0,
+ * Atomically decreases the reference count of @cpc by one. If the reference count drops to 0,
  * all memory allocated by @cpc is released.
- *
+ *  
  */
 void
 nc_cluster_pseudo_counts_free (NcClusterPseudoCounts *cpc)
@@ -121,8 +121,7 @@ nc_cluster_pseudo_counts_free (NcClusterPseudoCounts *cpc)
  * nc_cluster_pseudo_counts_clear:
  * @cpc: a #NcClusterPseudoCounts
  *
- * Atomically decrements the reference count of @cpc by one. If the reference count drops to 0,
- * all memory allocated by @cpc is released.
+ * The reference count of @cpc is decreased and the pointer is set to NULL.
  *
  */
 void
@@ -231,7 +230,7 @@ nc_cluster_pseudo_counts_class_init (NcClusterPseudoCountsClass *klass)
    * Standard deviation of the selection function, $\sigma_{CUT} \in [0.1, 0.9]$.
    */
   ncm_model_class_set_sparam (model_class, NC_CLUSTER_PSEUDO_COUNTS_SD_MCUT, "\\sigma_{MCUT}", "SD_MCUT",
-                              0.1,  0.9, 1.0e-2,
+                              1.0e-3,  1.0, 1.0e-2,
                               NC_CLUSTER_PSEUDO_COUNTS_DEFAULT_PARAMS_ABSTOL, NC_CLUSTER_PSEUDO_COUNTS_DEFAULT_SD_MCUT,
                               NCM_PARAM_TYPE_FIXED);
   /*
@@ -239,12 +238,12 @@ nc_cluster_pseudo_counts_class_init (NcClusterPseudoCountsClass *klass)
    * Range: $z_{min} \in [10^{-5}, 2.0]$
    */
   ncm_model_class_set_sparam (model_class, NC_CLUSTER_PSEUDO_COUNTS_ZMIN, "\\z_{min}", "ZMIN",
-                              1e-5,  2.0, 1.0e-1,
+                              1.0e-5,  2.0, 1.0e-1,
                               NC_CLUSTER_PSEUDO_COUNTS_DEFAULT_PARAMS_ABSTOL, NC_CLUSTER_PSEUDO_COUNTS_DEFAULT_ZMIN,
                               NCM_PARAM_TYPE_FIXED);
   /*
    * Redshift interval size: DELTAZ.
-   * Maximum redsift is $z_{max} = z_{min} + \Delta z$. Range: $z_{max} \in [0.1, 2.0]$.
+   * Maximum redsift is $z_{max} = z_{min} + \Delta z$. Range: $\Delta z \in [0.1, 2.0]$.
    */
   ncm_model_class_set_sparam (model_class, NC_CLUSTER_PSEUDO_COUNTS_DELTAZ, "\\delta{}z", "DELTAZ",
                               1e-1,  2.0, 1.0e-1,

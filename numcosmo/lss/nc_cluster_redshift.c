@@ -62,11 +62,11 @@ nc_cluster_redshift_new_from_name (gchar *redshift_name)
 
 /**
  * nc_cluster_redshift_ref:
- * @clusterz: FIXME.
+ * @clusterz: a #NcClusterRedshift
  *
- * FIXME
+ * Increases the reference count of @clusterz by one.
  *
- * Returns: (transfer full): @clusterz.
+ * Returns: (transfer full): @clusterz
  */
 NcClusterRedshift *
 nc_cluster_redshift_ref (NcClusterRedshift *clusterz)
@@ -76,7 +76,7 @@ nc_cluster_redshift_ref (NcClusterRedshift *clusterz)
 
 /**
  * nc_cluster_redshift_free:
- * @clusterz: a #NcClusterRedshift.
+ * @clusterz: a #NcClusterRedshift
  *
  * Atomically decrements the reference count of @clusterz by one. If the reference count drops to 0,
  * all memory allocated by @clusterz is released.
@@ -90,10 +90,9 @@ nc_cluster_redshift_free (NcClusterRedshift *clusterz)
 
 /**
  * nc_cluster_redshift_clear:
- * @clusterz: a #NcClusterRedshift.
+ * @clusterz: a #NcClusterRedshift
  *
- * Atomically decrements the reference count of @clusterz by one. If the reference count drops to 0,
- * all memory allocated by @clusterz is released. Set pointer to NULL.
+ * Atomically decrements the reference count of @clusterz by one. Set pointer to NULL.
  *
  */
 void
@@ -104,11 +103,11 @@ nc_cluster_redshift_clear (NcClusterRedshift **clusterz)
 
 /**
  * nc_cluster_redshift_impl:
- * @clusterz: FIXME.
+ * @clusterz: a #NcClusterRedshift
  *
  * FIXME
  * 
- * Returns: FIXME
+ * Returns: a #NcClusterRedshiftImpl
  */
 NcClusterRedshiftImpl 
 nc_cluster_redshift_impl (NcClusterRedshift *clusterz)
@@ -118,11 +117,14 @@ nc_cluster_redshift_impl (NcClusterRedshift *clusterz)
 
 /**
  * nc_cluster_redshift_obs_len:
- * @clusterz: FIXME.
+ * @clusterz: a #NcClusterRedshift
  *
- * FIXME
- *
- * Returns: FIXME
+ * The number of observable redshifts of each cluster, e.g.,
+ * 1 - only photometric redshift,
+ * 1 - only spectroscopic redshift,
+ * 2 - both photometric and spectroscopic redshifts.
+ * 
+ * Returns: The number of observable redshifts.
  */
 guint
 nc_cluster_redshift_obs_len (NcClusterRedshift *clusterz)
@@ -132,11 +134,12 @@ nc_cluster_redshift_obs_len (NcClusterRedshift *clusterz)
 
 /**
  * nc_cluster_redshift_obs_params_len:
- * @clusterz: FIXME.
+ * @clusterz: a #NcClusterRedshift
  *
- * FIXME
- *
- * Returns: FIXME
+ * The number of parameters related to the observable redshifts of each cluster, e.g., 
+ * 1 - measured error of the photometric redshift.
+ * 
+ * Returns: The number of parameters related to the observable redshifts.
  */
 guint
 nc_cluster_redshift_obs_params_len (NcClusterRedshift *clusterz)
@@ -146,15 +149,16 @@ nc_cluster_redshift_obs_params_len (NcClusterRedshift *clusterz)
 
 /**
  * nc_cluster_redshift_p:
- * @clusterz: a #NcClusterRedshift.
- * @z: true redshift.
- * @lnM: true mass.
- * @z_obs: observed redshift.
- * @z_obs_params: observed redshift params.
+ * @clusterz: a #NcClusterRedshift
+ * @z: true redshift
+ * @lnM: true mass
+ * @z_obs: measured redshift
+ * @z_obs_params: measured redshift params
  *
- * FIXME
+ * It computes the probability density function (pdf) of the cluster redshift distribution @clusterz 
+ * given @z, @lnM and the measured redshit @z_obs and its parameter(s) @z_obs_params.
  *
- * Returns: FIXME
+ * Returns: The pdf of @clusterz.
 */
 gdouble
 nc_cluster_redshift_p (NcClusterRedshift *clusterz, gdouble lnM, gdouble z, gdouble *z_obs, gdouble *z_obs_params)
@@ -164,13 +168,16 @@ nc_cluster_redshift_p (NcClusterRedshift *clusterz, gdouble lnM, gdouble z, gdou
 
 /**
  * nc_cluster_redshift_intp:
- * @clusterz: a #NcClusterRedshift.
- * @z: true redshift.
- * @lnM: true mass.
+ * @clusterz: a #NcClusterRedshift
+ * @z: true redshift
+ * @lnM: true mass
  *
- * FIXME
+ * It computes the @clusterz probability distribution of @z lying  
+ * in the range $[z^{obs}_{min}, z^{obs}_{max}]$, namely,
+ * $$ intp = \int_{z^{obs}_{min}}^{z^{obs}_{max}} p \, dz^{obs},$$
+ * where $p$ is [nc_cluster_redshift_p()].
  *
- * Returns: FIXME
+ * Returns: The probability distribution of @z lying within $[z^{obs}_{min}, z^{obs}_{max}]$.
  */
 gdouble
 nc_cluster_redshift_intp (NcClusterRedshift *clusterz, gdouble lnM, gdouble z)
@@ -180,12 +187,12 @@ nc_cluster_redshift_intp (NcClusterRedshift *clusterz, gdouble lnM, gdouble z)
 
 /**
  * nc_cluster_redshift_resample:
- * @clusterz: a #NcClusterRedshift.
- * @z: true redshift.
- * @lnM: true mass.
- * @z_obs: (out): observed redshift.
- * @z_obs_params: (out): observed redshift params.
-   @rng: a #NcmRNG.
+ * @clusterz: a #NcClusterRedshift
+ * @z: true redshift
+ * @lnM: true mass
+ * @z_obs: (out): observed redshift
+ * @z_obs_params: (out): observed redshift params
+   @rng: a #NcmRNG
  *
  * FIXME
  * The function which will call this one is responsible to allocate enough memory for @z_lower and @z_upper.
@@ -200,11 +207,11 @@ nc_cluster_redshift_resample (NcClusterRedshift *clusterz, gdouble lnM, gdouble 
 
 /**
  * nc_cluster_redshift_p_limits:
- * @clusterz: a #NcClusterRedshift.
- * @z_obs: observed redshift.
- * @z_obs_params: observed redshift params.
- * @z_lower: (out): pointer to the lower limit of the true redshift integration.
- * @z_upper: (out): pointer to the upper limit of the true redshift integration.
+ * @clusterz: a #NcClusterRedshift
+ * @z_obs: observed redshift
+ * @z_obs_params: observed redshift params
+ * @z_lower: (out): pointer to the lower limit of the true redshift integration
+ * @z_upper: (out): pointer to the upper limit of the true redshift integration
  *
  * FIXME
  * The function which will call this one is responsible to allocate memory for @z_lower and @z_upper.
@@ -217,9 +224,9 @@ nc_cluster_redshift_p_limits (NcClusterRedshift *clusterz, gdouble *z_obs, gdoub
 
 /**
  * nc_cluster_redshift_n_limits:
- * @clusterz: a #NcClusterRedshift.
- * @z_lower: (out): pointer to the lower limit of the true redshift.
- * @z_upper: (out): pointer to the upper limit of the true redshift.
+ * @clusterz: a #NcClusterRedshift
+ * @z_lower: (out): pointer to the lower limit of the true redshift
+ * @z_upper: (out): pointer to the upper limit of the true redshift
  *
  * FIXME
  * The function which will call this one is responsible to allocate memory for @z_lower and @z_upper.
@@ -254,7 +261,7 @@ _nc_cluster_redshift_log_all_models_go (GType model_type, guint n)
 /**
  * nc_cluster_redshift_log_all_models:
  *
- * FIXME
+ * This function lists all implemented models of cluster redshift distributions. 
  *
  */
 void

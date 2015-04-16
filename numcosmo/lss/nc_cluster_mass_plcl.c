@@ -144,8 +144,8 @@ nc_cluster_mass_plcl_class_init (NcClusterMassPlCLClass *klass)
    * SZ signal-mass scaling parameter: Bsz.
    * FIXME Set correct values (limits)
    */
-  ncm_model_class_set_sparam (model_class, NC_CLUSTER_MASS_PLCL_B_SZ, "\\b_{SZ}", "Bsz",
-                              0.0,  9.9999, 1.0e-1,
+  ncm_model_class_set_sparam (model_class, NC_CLUSTER_MASS_PLCL_B_SZ, "b_{SZ}", "Bsz",
+                              -2.0,  0.9999, 1.0e-1,
                               NC_CLUSTER_MASS_PLCL_DEFAULT_PARAMS_ABSTOL, NC_CLUSTER_MASS_PLCL_DEFAULT_B_SZ,
                               NCM_PARAM_TYPE_FIXED);
 
@@ -170,7 +170,7 @@ nc_cluster_mass_plcl_class_init (NcClusterMassPlCLClass *klass)
    * Lensing signal-mass scaling parameter: Bl.
    * FIXME Set correct values (limits)
    */
-  ncm_model_class_set_sparam (model_class, NC_CLUSTER_MASS_PLCL_B_L, "B_{L}", "Bl",
+  ncm_model_class_set_sparam (model_class, NC_CLUSTER_MASS_PLCL_B_L, "b_{L}", "Bl",
                               0.0,  10.0, 1.0e-1,
                               NC_CLUSTER_MASS_PLCL_DEFAULT_PARAMS_ABSTOL, NC_CLUSTER_MASS_PLCL_DEFAULT_B_L,
                               NCM_PARAM_TYPE_FIXED);
@@ -224,14 +224,14 @@ typedef struct _integrand_data
 static gdouble
 _SZ_lnmass_mean (NcClusterMassPlCL *mszl,  gdouble lnM)
 {
-  const gdouble lnMsz_mean = log1p (- B_SZ) + A_SZ * lnM;
+  const gdouble lnMsz_mean = log1p (- B_SZ) + A_SZ * lnM + (1.0 - A_SZ) * 14.0 * M_LN10;
   return lnMsz_mean;
 }
 
 static gdouble
 _Lens_lnmass_mean (NcClusterMassPlCL *mszl, gdouble lnM)
 {
-  const gdouble lnMlens_mean = B_L + A_L * lnM;
+  const gdouble lnMlens_mean = B_L + A_L * lnM + (1.0 - A_L) * 14.0 * M_LN10;
   return lnMlens_mean;
 }
 

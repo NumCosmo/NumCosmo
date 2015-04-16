@@ -45,11 +45,14 @@ typedef struct _NcClusterRedshift NcClusterRedshift;
 
 /**
  * NcClusterRedshiftImpl:
- * @NC_CLUSTER_REDSHIFT_P: FIXME
- * @NC_CLUSTER_REDSHIFT_INTP: FIXME
- * @NC_CLUSTER_REDSHIFT_RESAMPLE: FIXME
- * @NC_CLUSTER_REDSHIFT_P_LIMITS: FIXME
- * @NC_CLUSTER_REDSHIFT_N_LIMTS: FIXME
+ * @NC_CLUSTER_REDSHIFT_P: probability density function of the true-measured cluster redshifts
+ * @NC_CLUSTER_REDSHIFT_INTP: probability distribution (integration over the measured redshift)
+ * @NC_CLUSTER_REDSHIFT_RESAMPLE: resample function to generate the cluster redshifts following 
+ * the underlying cluster redshift distribution.
+ * @NC_CLUSTER_REDSHIFT_P_LIMITS: function to set the lower and upper limits of the to compute
+ * the integral of the cluster redshift distribution.
+ * @NC_CLUSTER_REDSHIFT_N_LIMTS: function to set the lower and upper thresholds of 
+ * the observable cluster redshift to compute the normalization of the cluster redshift distribution.
  * 
  */ 
 typedef enum _NcClusterRedshiftImpl

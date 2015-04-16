@@ -187,9 +187,9 @@ nc_data_cluster_pseudo_counts_new_from_file (const gchar *filename)
  * nc_data_cluster_pseudo_counts_ref:
  * @dcpc: a #NcDataClusterPseudoCounts
  *
- * FIXME
+ * Increases the reference count of @dcpc by one.
  * 
- * Returns: (transfer full): FIXME
+ * Returns: (transfer full): @dcpc
  */
 NcDataClusterPseudoCounts *
 nc_data_cluster_pseudo_counts_ref (NcDataClusterPseudoCounts *dcpc)
@@ -201,7 +201,8 @@ nc_data_cluster_pseudo_counts_ref (NcDataClusterPseudoCounts *dcpc)
  * nc_data_cluster_pseudo_counts_free:
  * @dcpc: a #NcDataClusterPseudoCounts
  *
- * FIXME
+ * Atomically decrements the reference count of @dcpc by one. If the reference count drops to 0,
+ * all memory allocated by @dcpc is released.
  * 
  */
 void
@@ -214,7 +215,7 @@ nc_data_cluster_pseudo_counts_free (NcDataClusterPseudoCounts *dcpc)
  * nc_data_cluster_pseudo_counts_clear:
  * @dcpc: a #NcDataClusterPseudoCounts
  *
- * FIXME
+ * The reference count of @dcpc is decreased and the pointer is set to NULL.
  * 
  */
 void
@@ -228,7 +229,8 @@ nc_data_cluster_pseudo_counts_clear (NcDataClusterPseudoCounts **dcpc)
  * @dcpc: a #NcDataClusterPseudoCounts
  * @m: a #NcmMatrix
  *
- * Sets the matrix @m representing the cluster mass observables.
+ * Sets the matrix @m representing the cluster mass observables, e.g., redshift 
+ * observed mass(es) and the parameters of the redshift and/or mass-observable distributions.
  * 
  */
 void 
