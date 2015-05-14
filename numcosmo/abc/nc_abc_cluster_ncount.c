@@ -481,7 +481,7 @@ _nc_abc_cluster_ncount_data_summary (NcmABC *abc)
       case NC_ABC_CLUSTER_NCOUNT_SUMMARY_GAUSS_RBF:
       {
         guint i;
-        ncm_stats_vec_reset (abcnc->z_lnM_stats);
+        ncm_stats_vec_reset (abcnc->z_lnM_stats, TRUE);
 
         for (i = 0; i < abcnc->ncount->np; i++)
         {
@@ -529,7 +529,7 @@ _nc_abc_cluster_ncount_mock_distance (NcmABC *abc, NcmDataset *dset, NcmVector *
 
       gdouble pdf_data = 0.0;
       gdouble pdf_mock = 0.0;
-      gdouble nebins = 0.0;
+      gdouble nebins   = 0.0;
 
       res = 0.0;
     

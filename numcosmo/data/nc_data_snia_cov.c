@@ -2130,9 +2130,12 @@ _nc_data_snia_cov_resample (NcmData *data, NcmMSet *mset, NcmRNG *rng)
     NcHICosmo *cosmo = NC_HICOSMO (ncm_mset_peek (mset, nc_hicosmo_id ()));
     NcSNIADistCov *dcov = NC_SNIA_DIST_COV (ncm_mset_peek (mset, nc_snia_dist_cov_id ()));
     const guint total_len = 3 * snia_cov->mu_len;
+
     gboolean dcov_resample_up  = ncm_model_ctrl_update (snia_cov->dcov_resample_ctrl, NCM_MODEL (dcov));
     gboolean cosmo_resample_up = ncm_model_ctrl_update (snia_cov->cosmo_resample_ctrl, NCM_MODEL (cosmo));
     gboolean dcov_cov_full_up  = ncm_model_ctrl_update (snia_cov->dcov_cov_full_ctrl, NCM_MODEL (dcov));
+
+
     gint ret;
     guint i;
 

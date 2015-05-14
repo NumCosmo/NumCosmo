@@ -135,6 +135,7 @@ void ncm_mset_catalog_set_first_id (NcmMSetCatalog *mcat, gint first_id);
 void ncm_mset_catalog_set_run_type (NcmMSetCatalog *mcat, const gchar *rtype_str);
 void ncm_mset_catalog_set_rng (NcmMSetCatalog *mcat, NcmRNG *rng);
 void ncm_mset_catalog_sync (NcmMSetCatalog *mcat, gboolean check);
+void ncm_mset_catalog_reset_stats (NcmMSetCatalog *mcat);
 void ncm_mset_catalog_reset (NcmMSetCatalog *mcat);
 void ncm_mset_catalog_erase_data (NcmMSetCatalog *mcat);
 

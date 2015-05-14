@@ -108,6 +108,7 @@ _ncm_data_gauss_cov_test_cov_func (NcmDataGaussCov *gauss, NcmMSet *mset, NcmMat
     NcmMatrix *t1 = ncm_matrix_dup (gauss->cov);
     gint ret = gsl_blas_dgemm (CblasNoTrans, CblasTrans, 1.0, ncm_matrix_gsl (t1), ncm_matrix_gsl (t1), 0.0, ncm_matrix_gsl (gauss->cov));
     NCM_TEST_GSL_RESULT ("_ncm_data_gauss_cov_test_cov_func", ret);
+    ncm_matrix_copy_triangle (gauss->cov, 'U');
     ncm_matrix_free (t1);
   }
   

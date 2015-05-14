@@ -371,15 +371,17 @@ ncm_stats_vec_clear (NcmStatsVec **svec)
 
 /**
  * ncm_stats_vec_reset:
- * @svec: a #NcmStatsVec.
+ * @svec: a #NcmStatsVec
+ * @rm_saved: a boolean
  * 
- * Reset all data in @svec.
+ * Reset all data in @svec. If @rm_saved is TRUE and @svec has
+ * saved data, it will be also removed from the object.
  * 
  */
 void 
-ncm_stats_vec_reset (NcmStatsVec *svec)
+ncm_stats_vec_reset (NcmStatsVec *svec, gboolean rm_saved)
 {
-  if (svec->save_x)
+  if (rm_saved && svec->save_x)
   {
     g_assert (svec->saved_x != NULL);
     g_ptr_array_unref (svec->saved_x);
@@ -387,13 +389,14 @@ ncm_stats_vec_reset (NcmStatsVec *svec)
     g_ptr_array_set_free_func (svec->saved_x, (GDestroyNotify)ncm_vector_free);
     g_ptr_array_set_size (svec->saved_x, 0);
   }
+  
   svec->weight   = 0.0;
   svec->weight2  = 0.0;
   svec->bias_wt  = 0.0;
 #ifdef NCM_STATS_VEC_INC
-   svec->mean_inc = 0.0;
-   svec->var_inc  = 0.0;
-   svec->cov_inc  = 0.0;
+  svec->mean_inc = 0.0;
+  svec->var_inc  = 0.0;
+  svec->cov_inc  = 0.0;
 #endif /* NCM_STATS_VEC_INC */
   svec->nitens   = 0;
   
@@ -1039,6 +1042,15 @@ ncm_stats_vec_get_subsample_autocorr_tau (NcmStatsVec *svec, guint p, guint subs
  * additions to @svec. It is not guaranteed to be valid after new additions.
  * 
  * Returns: (transfer none): the covariance matrix.
+ */
+/**
+ * ncm_stats_vec_nrows:
+ * @svec: a #NcmStatsVec.
+ * 
+ * Gets the number of saved rows, this function fails if the object 
+ * was not created with save_x == TRUE;  
+ * 
+ * Returns: the number of saved rows.
  */
 /**
  * ncm_stats_vec_peek_row:

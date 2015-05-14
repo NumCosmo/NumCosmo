@@ -35,6 +35,7 @@
 G_BEGIN_DECLS
 
 #define NCM_TYPE_OBJ_ARRAY (ncm_obj_array_get_type ())
+#define NCM_OBJ_ARRAY(obj) ((NcmObjArray *)(obj)) 
 
 typedef struct _GPtrArray NcmObjArray;
 

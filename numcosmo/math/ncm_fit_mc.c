@@ -556,7 +556,7 @@ _ncm_fit_mc_resample_bstrap (NcmDataset *dset, NcmMSet *mset, NcmRNG *rng)
 void 
 ncm_fit_mc_start_run (NcmFitMC *mc)
 {
-  guint param_len = ncm_mset_param_len (mc->fit->mset);
+  guint param_len = ncm_mset_total_len (mc->fit->mset);
 
   if (mc->started)
     g_error ("ncm_fit_mc_start_run: run already started, run ncm_fit_mc_end_run() first.");

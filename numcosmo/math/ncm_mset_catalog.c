@@ -1351,6 +1351,32 @@ ncm_mset_catalog_sync (NcmMSetCatalog *mcat, gboolean check)
 }
 
 /**
+ * ncm_mset_catalog_reset_stats:
+ * @mcat: a #NcmMSetCatalog
+ * 
+ * Reset catalog statistical quantities.
+ * 
+ */
+void
+ncm_mset_catalog_reset_stats (NcmMSetCatalog *mcat)
+{  
+  ncm_stats_vec_reset (mcat->pstats, FALSE);
+  if (mcat->nchains > 1)
+  {
+    guint i;
+    for (i = 0; i < mcat->nchains; i++)
+    {
+      NcmStatsVec *pstats = g_ptr_array_index (mcat->chain_pstats, i);
+      ncm_stats_vec_reset (pstats, FALSE);
+    }
+    ncm_stats_vec_reset (mcat->mean_pstats, FALSE);
+  }
+  ncm_vector_set_all (mcat->params_max, GSL_NEGINF);
+  ncm_vector_set_all (mcat->params_min, GSL_POSINF);
+}
+
+
+/**
  * ncm_mset_catalog_reset:
  * @mcat: a #NcmMSetCatalog
  * 
@@ -1363,16 +1389,16 @@ ncm_mset_catalog_reset (NcmMSetCatalog *mcat)
 {  
   ncm_mset_catalog_erase_data (mcat);
   
-  ncm_stats_vec_reset (mcat->pstats);
+  ncm_stats_vec_reset (mcat->pstats, TRUE);
   if (mcat->nchains > 1)
   {
     guint i;
     for (i = 0; i < mcat->nchains; i++)
     {
       NcmStatsVec *pstats = g_ptr_array_index (mcat->chain_pstats, i);
-      ncm_stats_vec_reset (pstats);
+      ncm_stats_vec_reset (pstats, TRUE);
     }
-    ncm_stats_vec_reset (mcat->mean_pstats);
+    ncm_stats_vec_reset (mcat->mean_pstats, TRUE);
   }
   
   ncm_vector_set_all (mcat->params_max, GSL_NEGINF);
@@ -1750,7 +1776,8 @@ ncm_mset_catalog_log_current_chain_stats (NcmMSetCatalog *mcat)
 NcmVector *
 ncm_mset_catalog_peek_row (NcmMSetCatalog *mcat, guint i)
 {
-  if (mcat->pstats->nitens == 0 || i >= mcat->pstats->nitens)
+  guint nrows = ncm_stats_vec_nrows (mcat->pstats);
+  if (i >= nrows)
     return NULL;
   else
     return ncm_stats_vec_peek_row (mcat->pstats, i);
@@ -1927,7 +1954,7 @@ ncm_mset_catalog_get_shrink_factor (NcmMSetCatalog *mcat)
   if (n % mcat->nchains != 0)
     g_warning ("ncm_mset_catalog_get_shrink_factor: not all chains have the same size [%u %u] %u.", n, mcat->nchains, (n % mcat->nchains));
 
-  ncm_stats_vec_reset (mcat->mean_pstats);
+  ncm_stats_vec_reset (mcat->mean_pstats, TRUE);
   ncm_matrix_set_zero (mcat->chain_cov);
 
   for (i = 0; i < mcat->nchains; i++)

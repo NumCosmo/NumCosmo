@@ -49,7 +49,10 @@ typedef struct _NcmMSet NcmMSet;
 typedef struct _NcmMSetPIndex NcmMSetPIndex;
 typedef struct _NcmMSetModelDesc NcmMSetModelDesc; 
 
-#define NCM_MODEL_MAX_ID 10
+#define NCM_MSET_MAX_SUBMODEL 1000
+#define NCM_MSET_INIT_MARRAY 32
+#define NCM_MSET_GET_BASE_MID(mid) (mid / NCM_MSET_MAX_SUBMODEL)
+#define NCM_MSET_MID(id,pos) ((id) + pos)
 
 struct _NcmMSetModelDesc
 {
@@ -64,10 +67,12 @@ struct _NcmMSet
 {
   /*< private >*/
   GObject parent_instance;
-  NcmModel *model[NCM_MODEL_MAX_ID];
-  GArray *pi_array;
-  GArray *fpi_array[NCM_MODEL_MAX_ID];
+  GPtrArray *model_array;
+  GHashTable *mid_item_hash;
+  GHashTable *model_item_hash;
+  GHashTable *fpi_hash;
   GPtrArray *fullname_parray;
+  GArray *pi_array;
   gboolean valid_map;
   guint total_len;
   guint fparam_len;
@@ -78,7 +83,7 @@ struct _NcmMSetClass
   /*< private >*/
   GObjectClass parent_class;
   GHashTable *ns_table;
-  NcmMSetModelDesc model_desc[NCM_MODEL_MAX_ID];
+  GArray *model_desc_array;
 };
 
 struct _NcmMSetPIndex
@@ -147,9 +152,12 @@ void ncm_mset_free (NcmMSet *mset);
 void ncm_mset_clear (NcmMSet **mset);
 
 NcmModel *ncm_mset_peek (NcmMSet *mset, NcmModelID mid);
+NcmModel *ncm_mset_peek_pos (NcmMSet *mset, NcmModelID base_mid, guint submodel_id);
 NcmModel *ncm_mset_get (NcmMSet *mset, NcmModelID mid);
 void ncm_mset_remove (NcmMSet *mset, NcmModelID mid);
 void ncm_mset_set (NcmMSet *mset, NcmModel *model);
+void ncm_mset_push (NcmMSet *mset, NcmModel *model);
+void ncm_mset_set_pos (NcmMSet *mset, NcmModel *model, guint submodel_id);
 gboolean ncm_mset_exists (NcmMSet *mset, NcmModel *model);
 
 gint ncm_mset_get_id_by_ns (const gchar *ns);
@@ -176,7 +184,6 @@ void ncm_mset_param_set (NcmMSet *mset, NcmModelID mid, guint pid, const gdouble
 gdouble ncm_mset_param_get (NcmMSet *mset, NcmModelID mid, guint pid);
 gdouble ncm_mset_orig_param_get (NcmMSet *mset, NcmModelID mid, guint pid);
 
-guint ncm_mset_param_len (NcmMSet *mset);
 const gchar *ncm_mset_param_name (NcmMSet *mset, NcmModelID mid, guint pid);
 const gchar *ncm_mset_param_symbol (NcmMSet *mset, NcmModelID mid, guint pid);
 void ncm_mset_param_set_ftype (NcmMSet *mset, NcmModelID mid, guint pid, NcmParamType ftype);

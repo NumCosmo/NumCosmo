@@ -144,7 +144,7 @@ _ncm_stats_dist1d_epdf_trim_outliers (NcmStatsDist1dEPDF *epdf1d)
   gdouble max = GSL_NEGINF;
   register guint i, j;
 
-  ncm_stats_vec_reset (epdf1d->obs_stats);
+  ncm_stats_vec_reset (epdf1d->obs_stats, TRUE);
   g_array_sort (epdf1d->obs, _ncm_stats_dist1d_epdf_cmp_double);
 
   j = 0;
@@ -543,7 +543,7 @@ ncm_stats_dist1d_epdf_add_obs (NcmStatsDist1dEPDF *epdf1d, gdouble x)
 void
 ncm_stats_dist1d_epdf_reset (NcmStatsDist1dEPDF *epdf1d)
 {
-  ncm_stats_vec_reset (epdf1d->obs_stats);
+  ncm_stats_vec_reset (epdf1d->obs_stats, TRUE);
   epdf1d->n_obs = 0;
   epdf1d->np_obs = 0;
 }

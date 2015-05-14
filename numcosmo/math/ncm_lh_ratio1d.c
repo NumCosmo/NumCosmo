@@ -83,7 +83,6 @@ ncm_lh_ratio1d_constructed (GObject *object)
 
     ncm_serialize_free (ser);
     g_assert_cmpint (lhr1d->pi.mid, >=, 0);
-    g_assert_cmpint (lhr1d->pi.mid,  <, NCM_MODEL_MAX_ID);
     
     g_assert (lhr1d->fit->fstate->is_best_fit);
 

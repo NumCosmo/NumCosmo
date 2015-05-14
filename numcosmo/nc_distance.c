@@ -372,7 +372,7 @@ nc_distance_prepare (NcDistance *dist, NcHICosmo *cosmo)
   dist->conformal_time_cache->clear = TRUE;
 
   dist->sound_horizon_cache->clear = TRUE;
-
+  
   if (dist->comoving_distance_spline == NULL)
   {
     NcmSpline *s = ncm_spline_cubic_notaknot_new ();
