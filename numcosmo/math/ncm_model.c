@@ -682,9 +682,12 @@ _ncm_model_class_get_property (GObject *object, guint prop_id, GValue *value, GP
   else if (vparam_id < model_class->vparam_len)
   {
     NcmVector *vp = ncm_model_orig_vparam_get_vector (model, vparam_id);
-    GVariant *vp_var = ncm_vector_get_variant (vp);
-    g_value_take_variant (value, vp_var);
-    ncm_vector_free (vp);
+    if (vp != NULL)
+    {
+      GVariant *vp_var = ncm_vector_get_variant (vp);
+      g_value_take_variant (value, vp_var);
+      ncm_vector_free (vp);
+    }
   }
   else if (vparam_len_id < model_class->vparam_len)
   {
@@ -985,6 +988,7 @@ ncm_model_class_set_vparam (NcmModelClass *model_class, guint vparam_id, guint d
 
   g_assert (prop_id > 0);
   g_assert (prop_len_id > 0);
+  /*g_assert_cmpuint (default_length, >, 0);*/
 
   if (g_ptr_array_index (model_class->vparam, vparam_id) != NULL)
     g_error ("Vector Parameter: %u is already set.", vparam_id);

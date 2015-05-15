@@ -154,11 +154,13 @@ void ncm_mset_clear (NcmMSet **mset);
 NcmModel *ncm_mset_peek (NcmMSet *mset, NcmModelID mid);
 NcmModel *ncm_mset_peek_pos (NcmMSet *mset, NcmModelID base_mid, guint submodel_id);
 NcmModel *ncm_mset_get (NcmMSet *mset, NcmModelID mid);
+NcmModel *ncm_mset_peek_array_pos (NcmMSet *mset, guint i);
 void ncm_mset_remove (NcmMSet *mset, NcmModelID mid);
 void ncm_mset_set (NcmMSet *mset, NcmModel *model);
 void ncm_mset_push (NcmMSet *mset, NcmModel *model);
 void ncm_mset_set_pos (NcmMSet *mset, NcmModel *model, guint submodel_id);
 gboolean ncm_mset_exists (NcmMSet *mset, NcmModel *model);
+gboolean ncm_mset_exists_pos (NcmMSet *mset, NcmModel *model, guint submodel_id);
 
 gint ncm_mset_get_id_by_ns (const gchar *ns);
 
@@ -169,6 +171,7 @@ guint ncm_mset_fparam_len (NcmMSet *mset);
 guint ncm_mset_max_param_name (NcmMSet *mset);
 guint ncm_mset_max_fparam_name (NcmMSet *mset);
 guint ncm_mset_max_model_nick (NcmMSet *mset);
+guint ncm_mset_nmodels (NcmMSet *mset);
 
 void ncm_mset_pretty_log (NcmMSet *mset);
 void ncm_mset_params_pretty_print (NcmMSet *mset, FILE *out, const gchar *header);
