@@ -421,6 +421,32 @@ ncm_mset_dup (NcmMSet *mset, NcmSerialize *ser)
 }
 
 /**
+ * ncm_mset_shallow_copy:
+ * @mset: a #NcmMSet
+ *
+ * FIXME
+ *
+ * Returns: (transfer full): a new #NcmMSet
+ */
+NcmMSet *
+ncm_mset_shallow_copy (NcmMSet *mset)
+{
+  NcmMSet *mset_sc = ncm_mset_empty_new ();
+  const guint nmodels = ncm_mset_nmodels (mset);
+  guint i;
+
+  for (i = 0; i < nmodels; i++)
+  {
+    NcmModel *model = ncm_mset_peek_array_pos (mset, i);
+    ncm_mset_push (mset_sc, model);
+  }
+  if (mset->valid_map)
+    ncm_mset_prepare_fparam_map (mset_sc);
+
+  return mset_sc;
+}
+
+/**
  * ncm_mset_free:
  * @mset: a #NcmMSet
  *
@@ -1069,11 +1095,11 @@ ncm_mset_fparams_log_covar (NcmMSet *mset, NcmMatrix *covar)
 
   ncm_cfg_msg_sepa ();
   g_message ("# NcmMSet parameters covariance matrix\n");
-  g_message ("#                                        ");
+  g_message ("#                                            ");
   for (i = 0; i < name_size; i++) g_message (" ");
 
   for (i = 0; i < free_params_len; i++)
-    i ? g_message ("%s",box) : g_message ("-%s",box);
+    i ? g_message ("%s", box) : g_message ("-%s",box);
   if (i)
     g_message ("\n");
 
@@ -1081,7 +1107,7 @@ ncm_mset_fparams_log_covar (NcmMSet *mset, NcmMatrix *covar)
   {
     NcmMSetPIndex *pi = ncm_mset_fparam_get_pi (mset, i);
     const gchar *pname = ncm_mset_fparam_name (mset, i);
-    g_message ("# %*s[%02d%02d] = % -12.4g +/- % -12.4g |",
+    g_message ("# %*s[%05d:%02d] = % -12.4g +/- % -12.4g |",
                name_size, pname, pi->mid, pi->pid,
                ncm_mset_fparam_get (mset, i),
                sqrt (ncm_matrix_get (covar, i, i))
@@ -1092,10 +1118,10 @@ ncm_mset_fparams_log_covar (NcmMSet *mset, NcmMatrix *covar)
     }
     g_message ("\n");
   }
-  g_message ("#                                        ");
+  g_message ("#                                            ");
   for (i = 0; i < name_size; i++) g_message (" ");
   for (i = 0; i < free_params_len; i++)
-    i ? g_message ("%s",box) : g_message ("-%s",box);
+    i ? g_message ("%s", box) : g_message ("-%s",box);
   if (i)
     g_message ("\n");
 
