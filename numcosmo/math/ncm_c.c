@@ -764,48 +764,6 @@ ncm_c_class_init (NcmCClass *klass)
  *
  */
 /**
- * ncm_c_bao_eisenstein_z:
- *
- * Returns: FIXME
- *
- */
-/**
- * ncm_c_bao_eisenstein_A:
- *
- * Returns: FIXME
- *
- */
-/**
- * ncm_c_bao_eisenstein_sigma_A:
- *
- * Returns: FIXME
- *
- */
-/**
- * ncm_c_bao_eisenstein_DV:
- *
- * Returns: FIXME
- *
- */
-/**
- * ncm_c_bao_eisenstein_sigma_DV:
- *
- * Returns: FIXME
- *
- */
-/**
- * ncm_c_bao_percival_DV_DV:
- *
- * Returns: FIXME
- *
- */
-/**
- * ncm_c_bao_percival_sigma_DV_DV:
- *
- * Returns: FIXME
- *
- */
-/**
  * ncm_c_hubble_cte_wmap:
  *
  * FIXME

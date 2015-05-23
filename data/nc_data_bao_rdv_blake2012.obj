@@ -1,0 +1,17 @@
+{
+  'NcDataBaoRDV', 
+  {
+    'desc'      : <'WiggleZ -- Blake (2012), BAO Sample R-Dv'>, 
+    'init'      : <true>, 
+    'n-points'  : <uint32 3>, 
+    'mean'      : <[0.0916, 0.0726, 0.0592]>, 
+    'inv-cov'   : <[
+                     [ 24532.1, -25137.7,  12099.1], 
+                     [-25137.7, 134598.4, -64783.9], 
+                     [ 12099.1, -64783.9, 128837.6]
+                   ]>,
+    'z'         : <[0.44, 0.6, 0.73]>, 
+    'is-rDV'    : <true>,
+    'long-desc' : <'BAO WiggleZ Blake et al. (2012) arXiv:1108.2635 - r_s computed using EH1998 - Inverse covariance matrix arXiv:1212.5226.'>
+  }
+}

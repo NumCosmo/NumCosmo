@@ -58,7 +58,7 @@ G_DEFINE_TYPE (NcDataBaoA, nc_data_bao_a, NCM_TYPE_DATA_GAUSS_DIAG);
 static void
 nc_data_bao_a_init (NcDataBaoA *bao_a)
 {
-  bao_a->dist = NULL;
+  bao_a->dist = nc_distance_new (2.0);
   bao_a->x    = NULL;
 }
 
@@ -71,8 +71,7 @@ nc_data_bao_a_set_property (GObject *object, guint prop_id, const GValue *value,
   switch (prop_id)
   {
     case PROP_DIST:
-      nc_distance_clear (&bao_a->dist);
-      bao_a->dist = g_value_dup_object (value);
+      nc_data_bao_a_set_dist (bao_a, g_value_get_object (value));
       break;
     case PROP_Z:
       ncm_vector_set_from_variant (bao_a->x, g_value_get_variant (value));
@@ -145,7 +144,7 @@ nc_data_bao_a_class_init (NcDataBaoAClass *klass)
                                                         NULL,
                                                         "Distance object",
                                                         NC_TYPE_DISTANCE,
-                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+                                                        G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   g_object_class_install_property (object_class,
                                    PROP_Z,
@@ -184,22 +183,52 @@ _nc_data_bao_a_mean_func (NcmDataGaussDiag *diag, NcmMSet *mset, NcmVector *vp)
 }
 
 /**
+ * nc_data_bao_a_new_from_file:
+ * @filename: file containing a serialized #NcDataBaoA.
+ * 
+ * Creates a new #NcDataBaoA from @filename.
+ * 
+ * Returns: (transfer full): the newly created #NcDataBaoA.
+ */
+NcDataBaoA *
+nc_data_bao_a_new_from_file (const gchar *filename)
+{
+  NcDataBaoA *bao_a = NC_DATA_BAO_A (ncm_serialize_global_from_file (filename));
+  g_assert (NC_IS_DATA_BAO_A (bao_a));
+
+  return bao_a;
+}
+
+/**
  * nc_data_bao_a_new:
  * @dist: a #NcDistance
  * @id: a #NcDataBaoId
  *
  * FIXME
  *
- * Returns: a #NcmData
+ * Returns: a #NcDataBaoA
  */
-NcmData *
-nc_data_bao_a_new (NcDistance *dist, NcDataBaoId id)
+NcDataBaoA *
+nc_data_bao_a_new_from_id (NcDistance *dist, NcDataBaoId id)
 {
-  NcmData *data = g_object_new (NC_TYPE_DATA_BAO_A,
-                                "dist", dist,
-                                NULL);
-  nc_data_bao_a_set_sample (NC_DATA_BAO_A (data), id);
-  return data;
+  NcDataBaoA *bao_a;
+  gchar *filename;
+  
+  switch (id)
+  {
+    case NC_DATA_BAO_A_EISENSTEIN2005:
+      filename = ncm_cfg_get_data_filename ("nc_data_bao_a_eisenstein2005.obj", TRUE);
+      break;
+    default:
+      g_error ("nc_data_bao_a_new_from_id: id %d not recognized.", id);
+      break;
+  }
+
+  bao_a = nc_data_bao_a_new_from_file (filename);
+  nc_data_bao_a_set_dist (bao_a, dist);
+  g_free (filename);
+
+  return bao_a;
 }
 
 static void 
@@ -218,28 +247,16 @@ _nc_data_bao_a_set_size (NcmDataGaussDiag *diag, guint np)
 }
 
 /**
- * nc_data_bao_a_set_sample:
+ * nc_data_bao_a_set_dist:
  * @bao_a: a #NcDataBaoA
- * @id: a #NcDataBaoId
- *
- * FIXME
- *
+ * @dist: a #NcDistance
+ * 
+ * Sets the distance object.
+ * 
  */
 void 
-nc_data_bao_a_set_sample (NcDataBaoA *bao_a, NcDataBaoId id)
+nc_data_bao_a_set_dist (NcDataBaoA *bao_a, NcDistance *dist)
 {
-  NcmData *data = NCM_DATA (bao_a);
-  NcmDataGaussDiag *diag = NCM_DATA_GAUSS_DIAG (bao_a);
-  
-  g_assert (id == NC_DATA_BAO_A_EISENSTEIN2005);
-
-  ncm_data_set_desc (data, "Eisenstein 2005, BAO Sample A");
-
-  ncm_data_gauss_diag_set_size (diag, 1);
-
-  ncm_vector_set (bao_a->x,    0, ncm_c_bao_eisenstein_z ());
-  ncm_vector_set (diag->y,     0, ncm_c_bao_eisenstein_A ());
-  ncm_vector_set (diag->sigma, 0, ncm_c_bao_eisenstein_sigma_A ());
-
-  ncm_data_set_init (data, TRUE);
+  nc_distance_clear (&bao_a->dist);
+  bao_a->dist = nc_distance_ref (dist);
 }

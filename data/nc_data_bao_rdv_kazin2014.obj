@@ -1,0 +1,17 @@
+{
+  'NcDataBaoRDV', 
+  {
+    'desc'      : <'WiggleZ -- Kazin (2014), BAO Sample R-Dv'>, 
+    'init'      : <true>, 
+    'n-points'  : <3>, 
+    'mean'      : <[11.55, 14.945, 16.932]>, 
+    'inv-cov'   : <[
+                     [ 4.8116, -2.4651,  1.0375], 
+                     [-2.4651,  3.7697, -1.5865], 
+                     [ 1.0375, -1.5865,  3.6498]
+                   ]>, 
+    'z'         : <[0.44, 0.60, 0.73]>, 
+    'is-rDV'    : <false>,
+    'long-desc' : <'BAO WiggleZ Kazin et al. (2014) arXiv:1401.0358 - r_s computed using CAMB - r_s^{fid} = 148.6, D_V*(r_s^{fid}/r_s) = {1716.4, 2220.8, 2516.1}.'>
+  }
+}

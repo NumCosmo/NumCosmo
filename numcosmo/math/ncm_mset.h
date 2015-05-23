@@ -156,12 +156,14 @@ NcmModel *ncm_mset_peek (NcmMSet *mset, NcmModelID mid);
 NcmModel *ncm_mset_peek_pos (NcmMSet *mset, NcmModelID base_mid, guint submodel_id);
 NcmModel *ncm_mset_get (NcmMSet *mset, NcmModelID mid);
 NcmModel *ncm_mset_peek_array_pos (NcmMSet *mset, guint i);
+NcmModelID ncm_mset_get_mid_array_pos (NcmMSet *mset, guint i);
 void ncm_mset_remove (NcmMSet *mset, NcmModelID mid);
 void ncm_mset_set (NcmMSet *mset, NcmModel *model);
 void ncm_mset_push (NcmMSet *mset, NcmModel *model);
 void ncm_mset_set_pos (NcmMSet *mset, NcmModel *model, guint submodel_id);
 gboolean ncm_mset_exists (NcmMSet *mset, NcmModel *model);
 gboolean ncm_mset_exists_pos (NcmMSet *mset, NcmModel *model, guint submodel_id);
+gboolean ncm_mset_is_subset (NcmMSet *mset, NcmMSet *sub_mset);
 
 gint ncm_mset_get_id_by_ns (const gchar *ns);
 

@@ -2124,7 +2124,7 @@ static void
 _nc_data_snia_cov_resample (NcmData *data, NcmMSet *mset, NcmRNG *rng)
 {
   NcDataSNIACov *snia_cov = NC_DATA_SNIA_COV (data);
-  
+
   if (snia_cov->has_complete_cov)
   {
     NcHICosmo *cosmo = NC_HICOSMO (ncm_mset_peek (mset, nc_hicosmo_id ()));
@@ -2134,7 +2134,6 @@ _nc_data_snia_cov_resample (NcmData *data, NcmMSet *mset, NcmRNG *rng)
     gboolean dcov_resample_up  = ncm_model_ctrl_update (snia_cov->dcov_resample_ctrl, NCM_MODEL (dcov));
     gboolean cosmo_resample_up = ncm_model_ctrl_update (snia_cov->cosmo_resample_ctrl, NCM_MODEL (cosmo));
     gboolean dcov_cov_full_up  = ncm_model_ctrl_update (snia_cov->dcov_cov_full_ctrl, NCM_MODEL (dcov));
-
 
     gint ret;
     guint i;
@@ -2181,6 +2180,7 @@ _nc_data_snia_cov_resample (NcmData *data, NcmMSet *mset, NcmRNG *rng)
   else
   {
     /* Fallback to the default method. */  
+    g_warning ("_nc_data_snia_cov_resample: data set does not support full covariance resampling. Resampling from the reduced covariance.");
     NCM_DATA_CLASS (nc_data_snia_cov_parent_class)->resample (data, mset, rng);
   }
 }

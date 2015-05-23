@@ -87,7 +87,7 @@ test_nc_data_bao_dvdv_new_percival2007 (TestNcDataBaoDVDV *test, gconstpointer p
   NcDistance *dist = nc_distance_new (2.0);
 
   test->id = id;
-  data = nc_data_bao_dvdv_new (dist, id);
+  data = NCM_DATA (nc_data_bao_dvdv_new_from_id (dist, id));
   g_assert (data != NULL);
   test->dvdv = NC_DATA_BAO_DVDV (data);
   g_assert (NC_IS_DATA_BAO_DVDV (data));
@@ -124,7 +124,7 @@ test_nc_data_bao_dvdv_new_percival2010 (TestNcDataBaoDVDV *test, gconstpointer p
   NcDistance *dist = nc_distance_new (2.0);
 
   test->id = id;
-  data = nc_data_bao_dvdv_new (dist, id);
+  data = NCM_DATA (nc_data_bao_dvdv_new_from_id (dist, id));
   g_assert (data != NULL);
   test->dvdv = NC_DATA_BAO_DVDV (data);
   g_assert (NC_IS_DATA_BAO_DVDV (data));

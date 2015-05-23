@@ -544,6 +544,22 @@ ncm_mset_peek_array_pos (NcmMSet *mset, guint i)
 }
 
 /**
+ * ncm_mset_get_mid_array_pos:
+ * @mset: a #NcmMSet
+ * @i: array position
+ *
+ * FIXME
+ *
+ * Returns: (transfer none): FIXME
+ */
+NcmModelID 
+ncm_mset_get_mid_array_pos (NcmMSet *mset, guint i)
+{
+  g_assert_cmpuint (i, <, mset->model_array->len);
+  return ((NcmMSetItem *)g_ptr_array_index (mset->model_array, i))->mid;
+}
+
+/**
  * ncm_mset_remove:
  * @mset: a #NcmMSet
  * @mid: a #NcmModelID
@@ -712,6 +728,31 @@ ncm_mset_exists_pos (NcmMSet *mset, NcmModel *model, guint submodel_id)
     return FALSE;
 }
 
+/**
+ * ncm_mset_is_subset:
+ * @mset: a #NcmMSet
+ * @sub_mset: a #NcmMSet
+ *
+ * FIXME
+ * 
+ * Returns: FIXME
+ */
+gboolean 
+ncm_mset_is_subset (NcmMSet *mset, NcmMSet *sub_mset)
+{
+  guint sub_nmodels = ncm_mset_nmodels (sub_mset);
+  guint i;
+
+  for (i = 0; i < sub_nmodels; i++)
+  {
+    NcmModelID mid = ncm_mset_get_mid_array_pos (sub_mset, i);
+    NcmModel *sub_model = ncm_mset_peek_array_pos (sub_mset, i);
+    NcmModel *model = ncm_mset_peek (mset, mid);
+    if (sub_model != model)
+      return FALSE;
+  }
+  return TRUE;
+}
 
 /**
  * ncm_mset_get_id_by_ns:

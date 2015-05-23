@@ -62,11 +62,11 @@ struct _NcDataBaoRDVClass
 
 GType nc_data_bao_rdv_get_type (void) G_GNUC_CONST;
 
-NcmData *nc_data_bao_rdv_new (NcDistance *dist, NcDataBaoId id);
+NcDataBaoRDV *nc_data_bao_rdv_new_from_file (const gchar *filename);
+NcDataBaoRDV *nc_data_bao_rdv_new_from_id (NcDistance *dist, NcDataBaoId id);
 
-void nc_data_bao_rdv_set_sample (NcDataBaoRDV *bao_rdv, NcDataBaoId id);
+void nc_data_bao_rdv_set_dist (NcDataBaoRDV *bao_rdv, NcDistance *dist);
 
 G_END_DECLS
 
 #endif /* _NC_DATA_BAO_RDV_H_ */
-

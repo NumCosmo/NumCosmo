@@ -1,0 +1,15 @@
+{
+  'NcDataBaoRDV', 
+  {
+    'desc'      : <'SDSS-DR7-rec -- Padmanabhan (2012), BAO Sample R-Dv'>, 
+    'init'      : <true>, 
+    'n-points'  : <1>, 
+    'mean'      : <[9.102]>, 
+    'inv-cov'   : <[
+                     [32.934754193520497]
+                   ]>, 
+    'z'         : <[0.35]>, 
+    'is-rDV'    : <false>,
+    'long-desc' : <'BAO SDSS-DR7-rec Padmanabhan et al. (2012) (arXiv:1202.0090) - r_s computed using EH1998.\nCorrection for r_{s,EH}/r_{sCAMB} = 1.025 included, see Kazin (2014).'>
+  }
+}

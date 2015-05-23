@@ -61,9 +61,9 @@ struct _NcDataBaoAClass
 
 GType nc_data_bao_a_get_type (void) G_GNUC_CONST;
 
-NcmData *nc_data_bao_a_new (NcDistance *dist, NcDataBaoId id);
-
-void nc_data_bao_a_set_sample (NcDataBaoA *bao_a, NcDataBaoId id);
+NcDataBaoA *nc_data_bao_a_new_from_file (const gchar *filename);
+NcDataBaoA *nc_data_bao_a_new_from_id (NcDistance *dist, NcDataBaoId id);
+void nc_data_bao_a_set_dist (NcDataBaoA *bao_a, NcDistance *dist);
 
 G_END_DECLS
 

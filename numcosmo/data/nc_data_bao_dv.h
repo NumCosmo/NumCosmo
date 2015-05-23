@@ -61,9 +61,9 @@ struct _NcDataBaoDVClass
 
 GType nc_data_bao_dv_get_type (void) G_GNUC_CONST;
 
-NcmData *nc_data_bao_dv_new (NcDistance *dist, NcDataBaoId id);
-
-void nc_data_bao_dv_set_sample (NcDataBaoDV *bao_dv, NcDataBaoId id);
+NcDataBaoDV *nc_data_bao_dv_new_from_file (const gchar *filename);
+NcDataBaoDV *nc_data_bao_dv_new_from_id (NcDistance *dist, NcDataBaoId id);
+void nc_data_bao_dv_set_dist (NcDataBaoDV *bao_dv, NcDistance *dist);
 
 G_END_DECLS
 

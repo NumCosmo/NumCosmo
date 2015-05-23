@@ -1,4 +1,5 @@
-{'NcDataBaoEmpiricalFit',
+{
+  'NcDataBaoEmpiricalFit',
   {
     'desc'     : <"SDSS-DR7-lowz -- Ross (2015), Empirical m2lnp">,
     'Dv-fiduc' : <638.95>,

@@ -104,7 +104,12 @@
 #include "nc_recomb.h"
 #include "nc_recomb_seager.h"
 #include "nc_snia_dist_cov.h"
+#include "data/nc_data_bao_a.h"
+#include "data/nc_data_bao_dv.h"
+#include "data/nc_data_bao_dvdv.h"
+#include "data/nc_data_bao_rdv.h"
 #include "data/nc_data_bao_empirical_fit.h"
+#include "data/nc_data_bao_dhr_dar.h"
 #include "data/nc_data_cluster_pseudo_counts.h"
 
 #include <gio/gio.h>
@@ -335,7 +340,12 @@ ncm_cfg_init (void)
 
   ncm_cfg_register_obj (NC_TYPE_SNIA_DIST_COV);
 
+  ncm_cfg_register_obj (NC_TYPE_DATA_BAO_A);
+  ncm_cfg_register_obj (NC_TYPE_DATA_BAO_DV);
+  ncm_cfg_register_obj (NC_TYPE_DATA_BAO_DVDV);
+  ncm_cfg_register_obj (NC_TYPE_DATA_BAO_RDV);
   ncm_cfg_register_obj (NC_TYPE_DATA_BAO_EMPIRICAL_FIT);
+  ncm_cfg_register_obj (NC_TYPE_DATA_BAO_DHR_DAR);
 
   ncm_cfg_register_obj (NC_TYPE_DATA_CLUSTER_PSEUDO_COUNTS);
   

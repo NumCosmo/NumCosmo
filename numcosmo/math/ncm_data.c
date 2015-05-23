@@ -51,6 +51,7 @@ enum
   PROP_0,
   PROP_NAME,
   PROP_DESC,
+  PROP_LONG_DESC,
   PROP_INIT,
   PROP_BSTRAP,
   PROP_SIZE,
@@ -61,9 +62,10 @@ G_DEFINE_ABSTRACT_TYPE (NcmData, ncm_data, G_TYPE_OBJECT);
 static void
 ncm_data_init (NcmData *data)
 {
-  data->desc  = NULL;
-  data->init  = FALSE;
-  data->begin = FALSE;
+  data->desc      = NULL;
+  data->long_desc = NULL;
+  data->init      = FALSE;
+  data->begin     = FALSE;
 }
 
 static void
@@ -76,6 +78,10 @@ ncm_data_set_property (GObject *object, guint prop_id, const GValue *value, GPar
   {
     case PROP_DESC:
       ncm_data_set_desc (data, g_value_get_string (value));
+      break;
+    case PROP_LONG_DESC:
+      g_clear_pointer (&data->long_desc, g_free);
+      data->long_desc = g_value_dup_string (value);
       break;
     case PROP_INIT:
       ncm_data_set_init (data, g_value_get_boolean (value));
@@ -107,6 +113,9 @@ ncm_data_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec
       break;
     case PROP_DESC:
       g_value_set_string (value, ncm_data_peek_desc (data));
+      break;
+    case PROP_LONG_DESC:
+      g_value_set_string (value, data->long_desc);
       break;
     case PROP_INIT:
       g_value_set_boolean (value, data->init);
@@ -160,7 +169,7 @@ ncm_data_class_init (NcmDataClass *klass)
                                                         G_PARAM_READABLE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
   
   /**
-   * NcmData:description:
+   * NcmData:desc:
    *
    * Description of the data object.
    * 
@@ -173,6 +182,19 @@ ncm_data_class_init (NcmDataClass *klass)
                                                         NULL,
                                                         G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
+  /**
+   * NcmData:long-desc:
+   *
+   * Description of the data object.
+   * 
+   */  
+  g_object_class_install_property (object_class,
+                                   PROP_LONG_DESC,
+                                   g_param_spec_string ("long-desc",
+                                                        NULL,
+                                                        "Data detailed description",
+                                                        NULL,
+                                                        G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
   /**
    * NcmData:initialized:
    *

@@ -375,9 +375,11 @@ test_ncm_mset_shallow_copy (TestNcmMSet *test, gconstpointer pdata)
 
   {
     NcmMSet *mset_dup = ncm_mset_shallow_copy (test->mset);
-    
+
     g_assert (ncm_mset_cmp (test->mset, mset_dup, FALSE));
     g_assert (ncm_mset_cmp (test->mset, mset_dup, TRUE));
+
+    g_assert (ncm_mset_is_subset (test->mset, mset_dup));
 
     {
       guint i;
@@ -390,7 +392,13 @@ test_ncm_mset_shallow_copy (TestNcmMSet *test, gconstpointer pdata)
         g_assert (model0 == model1);
       }
     }
-    
+
+    while (ncm_mset_nmodels (mset_dup) > 0)
+    {
+      ncm_mset_remove (mset_dup, ncm_mset_get_mid_array_pos (mset_dup, 0));
+      g_assert (ncm_mset_is_subset (test->mset, mset_dup));
+    }
+
     {
       gboolean destroyed = FALSE;
       g_object_set_data_full (G_OBJECT (mset_dup), "test-destroy", &destroyed, _set_destroyed);
@@ -398,7 +406,7 @@ test_ncm_mset_shallow_copy (TestNcmMSet *test, gconstpointer pdata)
       g_assert (destroyed);
     }
   }
-  
+
   nc_cluster_mass_free (mass);
 }
 

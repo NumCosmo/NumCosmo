@@ -1,0 +1,15 @@
+{
+  'NcDataBaoRDV', 
+  {
+    'desc'     : <'Percival 2010, BAO Sample R-Dv'>, 
+    'init'     : <true>, 
+    'n-points' : <2>, 
+    'mean'     : <[0.1905, 0.1097]>, 
+    'inv-cov'  : <[
+                    [ 30124.0, -17227.0], 
+                    [-17227.0,  86977.0]
+                  ]>, 
+    'z'        : <[0.20, 0.35]>, 
+    'is-rDV'   : <true>
+  }
+}

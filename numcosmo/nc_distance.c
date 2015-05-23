@@ -55,9 +55,10 @@
  * \qquad \frac{dD_t}{dz}(z) = \frac{\cosh\left(\sqrt{\Omega_{k0}}D_c(z)\right)}{E(z)},
  * \end{equation}
  * where $\Omega_{k0}$ is the value of the curvature today [nc_hicosmo_Omega_k()].
- * Using the definition above we have that the luminosity distance is
+ * Using the definition above we have that the luminosity and angular diameter distances 
+ * are respectively:
  * \begin{equation}\label{eq:def:Dl}
- * D_l = (1+z)D_t(z),
+ * D_l = (1 + z)D_t(z), \qquad D_A = D_t (z) / (1 + z),
  * \end{equation}
  * and the distance modulus is given by
  * \begin{equation}\label{eq:def:mu}
@@ -204,6 +205,7 @@ nc_distance_class_init (NcDistanceClass *klass)
       {"comoving_lss",                     "Comoving scale of lss.",            &nc_distance_comoving_lss,                      NC_HICOSMO_IMPL_Omega_mh2 | NC_HICOSMO_IMPL_E2},
       {"acoustic_scale",                   "Acoustic scale at lss.",            &nc_distance_acoustic_scale,                    NC_HICOSMO_IMPL_Omega_mh2 | NC_HICOSMO_IMPL_E2},
       {"angular_diameter_curvature_scale", "Angular diameter curvature scale.", &nc_distance_angular_diameter_curvature_scale,  NC_HICOSMO_IMPL_Omega_mh2 | NC_HICOSMO_IMPL_E2},
+      {"r_zd",                             "Sound horizon at drag redshift.",   &nc_distance_r_zd,                              NC_HICOSMO_IMPL_Omega_mh2 | NC_HICOSMO_IMPL_E2},
     };
     const guint nfuncs = sizeof (func_table) / sizeof (NcDistanceFunc);
     guint i;
@@ -217,14 +219,17 @@ nc_distance_class_init (NcDistanceClass *klass)
   {
     NcDistanceFuncZ func_z_table[] = 
     {
-      {"d_c",      "Comoving distance.",   &nc_distance_comoving,       NC_HICOSMO_IMPL_E2},
-      {"d_t",      "Transverse distance.", &nc_distance_transverse,     NC_HICOSMO_IMPL_E2},
-      {"d_l",      "Luminozity distance.", &nc_distance_luminosity,     NC_HICOSMO_IMPL_E2},
-      {"mu",       "Distance modulus.",    &nc_distance_modulus,        NC_HICOSMO_IMPL_E2},
-      {"D_A",      "Dilation scale.",      &nc_distance_dilation_scale, NC_HICOSMO_IMPL_E2},
-      {"BAO_A",    "BAO A scale.",         &nc_distance_bao_A_scale,    NC_HICOSMO_IMPL_E2 | NC_HICOSMO_IMPL_Omega_m},
-      {"r_Dv",     "BAO r_Dv.",            &nc_distance_bao_r_Dv,       NC_HICOSMO_IMPL_E2},
-      {"sound_h",  "Sound horizon.",       &nc_distance_sound_horizon,  NC_HICOSMO_IMPL_E2 | NC_HICOSMO_IMPL_Omega_b | NC_HICOSMO_IMPL_Omega_r},
+      {"d_c",      "Comoving distance.",         &nc_distance_comoving,         NC_HICOSMO_IMPL_E2},
+      {"d_t",      "Transverse distance.",       &nc_distance_transverse,       NC_HICOSMO_IMPL_E2},
+      {"d_l",      "Luminosity distance.",       &nc_distance_luminosity,       NC_HICOSMO_IMPL_E2},
+      {"d_A",      "Angular diameter distance.", &nc_distance_angular_diameter, NC_HICOSMO_IMPL_E2},
+      {"mu",       "Distance modulus.",          &nc_distance_modulus,          NC_HICOSMO_IMPL_E2},
+      {"D_A",      "Dilation scale.",            &nc_distance_dilation_scale,   NC_HICOSMO_IMPL_E2},
+      {"BAO_A",    "BAO A scale.",               &nc_distance_bao_A_scale,      NC_HICOSMO_IMPL_E2 | NC_HICOSMO_IMPL_Omega_m},
+      {"r_Dv",     "BAO r_Dv.",                  &nc_distance_bao_r_Dv,         NC_HICOSMO_IMPL_E2},
+      {"H_r",      "BAO H/(c r_zd).",            &nc_distance_DH_r,             NC_HICOSMO_IMPL_E2},
+      {"dA_r",     "BAO dA/r.",                  &nc_distance_DA_r,             NC_HICOSMO_IMPL_E2},
+      {"sound_h",  "Sound horizon.",             &nc_distance_sound_horizon,    NC_HICOSMO_IMPL_E2 | NC_HICOSMO_IMPL_Omega_b | NC_HICOSMO_IMPL_Omega_r},
     };
     const guint nfuncs = sizeof (func_z_table) / sizeof (NcDistanceFuncZ);
     guint i;
@@ -590,6 +595,24 @@ nc_distance_luminosity (NcDistance *dist, NcHICosmo *cosmo, gdouble z)
   const gdouble Dl = (1.0 + z) * Dt;
 
   return Dl;
+}
+
+/**
+ * nc_distance_angular_diameter:
+ * @dist: a #NcDistance
+ * @cosmo: a #NcHICosmo
+ * @z: redshift $z$
+ *
+ * Compute the angular diameter $D_A(z)$  defined in Eq. $\eqref{eq:def:Dl}$.
+ *
+ * Returns: $D_A(z)$
+ */
+gdouble
+nc_distance_angular_diameter (NcDistance *dist, NcHICosmo *cosmo, gdouble z)
+{
+  const gdouble Dt = nc_distance_transverse (dist, cosmo, z);
+  const gdouble DA = Dt / (1.0 + z);
+  return DA;
 }
 
 /**
@@ -969,20 +992,18 @@ nc_distance_bao_A_scale (NcDistance *dist, NcHICosmo *cosmo, gdouble z)
 }
 
 /**
- * nc_distance_bao_r_Dv:
- * @dist: a #NcDistance.
- * @cosmo: a #NcHICosmo.
- * @z: the redshift $z$.
+ * nc_distance_r_zd:
+ * @dist: a #NcDistance
+ * @cosmo: a #NcHICosmo
  *
- * r(z_d) / D_v(z) -- (arXiv:0705.3323).
+ * $r(z_d)$.
  *
  * Returns: FIXME
  */
 gdouble
-nc_distance_bao_r_Dv (NcDistance *dist, NcHICosmo *cosmo, gdouble z)
+nc_distance_r_zd (NcDistance *dist, NcHICosmo *cosmo)
 {
   gdouble r_zd;
-  gdouble Dv;
 
   if (ncm_model_impl (NCM_MODEL (cosmo)) & NC_HICOSMO_IMPL_as_drag)
     r_zd = nc_hicosmo_as_drag (cosmo);
@@ -994,8 +1015,61 @@ nc_distance_bao_r_Dv (NcDistance *dist, NcHICosmo *cosmo, gdouble z)
     r_zd = nc_distance_sound_horizon (dist, cosmo, zd);
   }
 
-  Dv = nc_distance_dilation_scale (dist, cosmo, z);
+  return r_zd;
+}
+
+/**
+ * nc_distance_bao_r_Dv:
+ * @dist: a #NcDistance
+ * @cosmo: a #NcHICosmo
+ * @z: the redshift $z$
+ *
+ * $r(z_d) / D_V(z)$ -- (arXiv:0705.3323).
+ *
+ * Returns: FIXME
+ */
+gdouble
+nc_distance_bao_r_Dv (NcDistance *dist, NcHICosmo *cosmo, gdouble z)
+{
+  gdouble r_zd = nc_distance_r_zd (dist, cosmo);
+  gdouble Dv = nc_distance_dilation_scale (dist, cosmo, z);
   return r_zd / Dv;
+}
+
+/**
+ * nc_distance_DH_r:
+ * @dist: a #NcDistance
+ * @cosmo: a #NcHICosmo
+ * @z: the redshift $z$
+ *
+ * $H(z) / (c r_{z_d})$.
+ *
+ * Returns: FIXME
+ */
+gdouble
+nc_distance_DH_r (NcDistance *dist, NcHICosmo *cosmo, gdouble z)
+{
+  gdouble r_zd = nc_distance_r_zd (dist, cosmo);
+  gdouble E = nc_hicosmo_E (cosmo, z);
+  return 1.0 / (E * r_zd);
+}
+
+/**
+ * nc_distance_DA_r:
+ * @dist: a #NcDistance
+ * @cosmo: a #NcHICosmo
+ * @z: the redshift $z$
+ *
+ * $D_A(z) / (c r_{z_d})$.
+ *
+ * Returns: FIXME
+ */
+gdouble
+nc_distance_DA_r (NcDistance *dist, NcHICosmo *cosmo, gdouble z)
+{
+  gdouble r_zd = nc_distance_r_zd (dist, cosmo);
+  gdouble DA = nc_distance_angular_diameter (dist, cosmo, z);
+  return DA / r_zd;
 }
 
 /***************************************************************************
