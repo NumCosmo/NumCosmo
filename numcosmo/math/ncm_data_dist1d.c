@@ -162,7 +162,8 @@ ncm_data_dist1d_class_init (NcmDataDist1dClass *klass)
                                                          "Data vector",
                                                          G_VARIANT_TYPE ("ad"), NULL,
                                                          G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-  
+
+  data_class->bootstrap  = TRUE;
   data_class->get_length = &_ncm_data_dist1d_get_length;
   data_class->begin      = NULL;
 
