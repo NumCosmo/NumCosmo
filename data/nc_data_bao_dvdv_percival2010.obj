@@ -1,0 +1,12 @@
+{
+  'NcDataBaoDVDV', 
+  {
+    'desc'      : <'Percival 2010, BAO Sample Dv-Dv'>, 
+    'init'      : <true>, 
+    'n-points'  : <1>, 
+    'w-mean'    : <false>, 
+    'mean'      : <[1.736]>, 
+    'sigma'     : <[0.065]>,
+    'long-desc' : <'BAO Percival data (arXiv:0907.1660).'>
+  }
+}

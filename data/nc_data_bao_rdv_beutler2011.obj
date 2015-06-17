@@ -1,0 +1,13 @@
+{
+  'NcDataBaoRDV', 
+  {
+    'desc'      : <'6dFGRS -- Beutler (2011), BAO Sample R-Dv'>, 
+    'init'      : <true>, 
+    'n-points'  : <1>, 
+    'mean'      : <[0.32716650438169431]>, 
+    'inv-cov'   : <[[4687.6844444444441]]>, 
+    'z'         : <[0.106]>, 
+    'is-rDV'    : <true>,
+    'long-desc' : <'BAO 6dFGRS Beutler et al. (2011) (arXiv:1106.3366) - r_s computed using EH1998.\nCorrection for r_{s,EH}/r_{sCAMB} = 1.027 included, see Kazin (2014).'>
+  }
+}

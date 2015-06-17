@@ -53,7 +53,7 @@ G_DEFINE_TYPE (NcDataBaoDVDV, nc_data_bao_dvdv, NCM_TYPE_DATA_GAUSS_DIAG);
 static void
 nc_data_bao_dvdv_init (NcDataBaoDVDV *bao_dvdv)
 {
-  bao_dvdv->dist = NULL;
+  bao_dvdv->dist = nc_distance_new (2.0);
 }
 
 static void
@@ -64,9 +64,8 @@ nc_data_bao_dvdv_set_property (GObject *object, guint prop_id, const GValue *val
 
   switch (prop_id)
   {
-    case PROP_DIST:
-      nc_distance_clear (&bao_dvdv->dist);
-      bao_dvdv->dist = g_value_dup_object (value);
+    case PROP_DIST: 
+      nc_data_bao_dvdv_set_dist (bao_dvdv, g_value_get_object (value));
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -131,7 +130,7 @@ nc_data_bao_dvdv_class_init (NcDataBaoDVDVClass *klass)
                                                         NULL,
                                                         "Distance object",
                                                         NC_TYPE_DISTANCE,
-                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+                                                        G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   data_class->prepare   = &_nc_data_bao_dvdv_prepare;
   diag_class->mean_func = &_nc_data_bao_dvdv_mean_func;
@@ -163,65 +162,68 @@ _nc_data_bao_dvdv_mean_func (NcmDataGaussDiag *diag, NcmMSet *mset, NcmVector *v
 }
 
 /**
+ * nc_data_bao_dvdv_new_from_file:
+ * @filename: file containing a serialized #NcDataBaoDVDV.
+ * 
+ * Creates a new #NcDataBaoDVDV from @filename.
+ * 
+ * Returns: (transfer full): the newly created #NcDataBaoDVDV.
+ */
+NcDataBaoDVDV *
+nc_data_bao_dvdv_new_from_file (const gchar *filename)
+{
+  NcDataBaoDVDV *bao_dvdv = NC_DATA_BAO_DVDV (ncm_serialize_global_from_file (filename));
+  g_assert (NC_IS_DATA_BAO_DVDV (bao_dvdv));
+
+  return bao_dvdv;
+}
+
+/**
  * nc_data_bao_dvdv_new:
  * @dist: a #NcDistance
  * @id: a #NcDataBaoId
  *
  * FIXME
  *
- * Returns: a #NcmData
+ * Returns: a #NcDataBaoDVDV
  */
-NcmData *
-nc_data_bao_dvdv_new (NcDistance *dist, NcDataBaoId id)
+NcDataBaoDVDV *
+nc_data_bao_dvdv_new_from_id (NcDistance *dist, NcDataBaoId id)
 {
-  NcmData *data = g_object_new (NC_TYPE_DATA_BAO_DVDV,
-                                "dist", dist,
-                                NULL);
-  nc_data_bao_dvdv_set_sample (NC_DATA_BAO_DVDV (data), id);
-  return data;
-}
-
-/**
- * nc_data_bao_rddv_set_sample:
- * @data: a #NcDataBaoDVDV
- * @id: a #NcDataBaoId
- *
- * FIXME
- *
- */
-void 
-nc_data_bao_dvdv_set_sample (NcDataBaoDVDV *bao_dvdv, NcDataBaoId id)
-{
-  NcmData *data = NCM_DATA (bao_dvdv);
-  NcmDataGaussDiag *diag = NCM_DATA_GAUSS_DIAG (bao_dvdv);
-
-  g_assert (id >= NC_DATA_BAO_DVDV_PERCIVAL2007 && id <= NC_DATA_BAO_DVDV_PERCIVAL2010);
-
-  if (data->desc != NULL)
-    g_free (data->desc);
-
+  NcDataBaoDVDV *bao_dvdv;
+  gchar *filename;
+  
   switch (id)
   {
     case NC_DATA_BAO_DVDV_PERCIVAL2007:
-    {
-      data->desc = g_strdup ("Percival 2007, BAO Sample Dv-Dv");
-      ncm_data_gauss_diag_set_size (diag, 1);
-      ncm_vector_set (diag->y,     0, ncm_c_bao_percival2007_DV_DV ());
-      ncm_vector_set (diag->sigma, 0, ncm_c_bao_percival2007_sigma_DV_DV ());
+      filename = ncm_cfg_get_data_filename ("nc_data_bao_dvdv_percival2007.obj", TRUE);
       break;
-    }
     case NC_DATA_BAO_DVDV_PERCIVAL2010:
-    {
-      data->desc = g_strdup ("Percival 2010, BAO Sample Dv-Dv");
-      ncm_data_gauss_diag_set_size (diag, 1);
-      ncm_vector_set (diag->y,     0, ncm_c_bao_percival2010_DV_DV ());
-      ncm_vector_set (diag->sigma, 0, ncm_c_bao_percival2010_sigma_DV_DV ());
+      filename = ncm_cfg_get_data_filename ("nc_data_bao_dvdv_percival2010.obj", TRUE);
       break;
-    }
     default:
-      g_assert_not_reached ();
+      g_error ("nc_data_bao_dvdv_new_from_id: id %d not recognized.", id);
       break;
   }
 
-  ncm_data_set_init (data, TRUE);
+  bao_dvdv = nc_data_bao_dvdv_new_from_file (filename);
+  nc_data_bao_dvdv_set_dist (bao_dvdv, dist);
+  g_free (filename);
+
+  return bao_dvdv;
+}
+
+/**
+ * nc_data_bao_dvdv_set_dist:
+ * @bao_dvdv: a #NcDataBaoDVDV
+ * @dist: a #NcDistance
+ * 
+ * Sets the distance object.
+ * 
+ */
+void 
+nc_data_bao_dvdv_set_dist (NcDataBaoDVDV *bao_dvdv, NcDistance *dist)
+{
+  nc_distance_clear (&bao_dvdv->dist);
+  bao_dvdv->dist = nc_distance_ref (dist);
 }

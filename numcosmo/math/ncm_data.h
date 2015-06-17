@@ -52,6 +52,7 @@ struct _NcmData
   /*< private >*/
   GObject parent_instance;
   gchar *desc;
+  gchar *long_desc;
   gboolean init;
   gboolean begin;
   NcmBootstrap *bstrap;

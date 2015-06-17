@@ -83,14 +83,15 @@ struct _NcmABC
   gdouble depsilon;
   gboolean dists_sorted;
   gsl_ran_discrete_t *wran;
-  GPtrArray *mcat_tm1;
   gboolean started;
+  gboolean started_up;
   gint cur_sample_id;
   guint ntotal;
   guint naccepted;
   guint nthreads;
   guint nupdates;
   guint n;
+  guint nparticles;
 };
 
 GType ncm_abc_get_type (void) G_GNUC_CONST;
@@ -109,7 +110,6 @@ void ncm_abc_set_mtype (NcmABC *abc, NcmFitRunMsgs mtype);
 void ncm_abc_set_data_file (NcmABC *abc, const gchar *filename);
 void ncm_abc_set_nthreads (NcmABC *abc, guint nthreads);
 void ncm_abc_set_rng (NcmABC *abc, NcmRNG *rng);
-void ncm_abc_set_first_sample_id (NcmABC *abc, gint first_sample_id);
 void ncm_abc_set_trans_kern (NcmABC *abc, NcmMSetTransKern *tkern);
 
 gdouble ncm_abc_get_dist_quantile (NcmABC *abc, gdouble p);
@@ -121,8 +121,7 @@ gdouble ncm_abc_get_depsilon (NcmABC *abc);
 void ncm_abc_start_run (NcmABC *abc);
 void ncm_abc_end_run (NcmABC *abc);
 void ncm_abc_reset (NcmABC *abc);
-void ncm_abc_run (NcmABC *abc, guint n);
-void ncm_abc_run_lre (NcmABC *abc, guint prerun, gdouble lre);
+void ncm_abc_run (NcmABC *abc, guint nparticles);
 void ncm_abc_mean_covar (NcmABC *abc, NcmFit *fit);
 
 void ncm_abc_start_update (NcmABC *abc);

@@ -118,6 +118,7 @@ gdouble nc_distance_comoving_lss (NcDistance *dist, NcHICosmo *cosmo);
 gdouble nc_distance_acoustic_scale (NcDistance *dist, NcHICosmo *cosmo);
 gdouble nc_distance_Omega_k (NcDistance *dist, NcHICosmo *cosmo);
 gdouble nc_distance_angular_diameter_curvature_scale (NcDistance *dist, NcHICosmo *cosmo);
+gdouble nc_distance_r_zd (NcDistance *dist, NcHICosmo *cosmo);
 
 /***************************************************************************
  * Redshift dependent 'distances'
@@ -127,6 +128,7 @@ gdouble nc_distance_comoving (NcDistance *dist, NcHICosmo *cosmo, gdouble z);
 gdouble nc_distance_transverse (NcDistance *dist, NcHICosmo *cosmo, gdouble z);
 gdouble nc_distance_dtransverse_dz (NcDistance *dist, NcHICosmo *cosmo, gdouble z);
 gdouble nc_distance_luminosity (NcDistance *dist, NcHICosmo *cosmo, gdouble z);
+gdouble nc_distance_angular_diameter (NcDistance *dist, NcHICosmo *cosmo, gdouble z);
 gdouble nc_distance_modulus (NcDistance *dist, NcHICosmo *cosmo, gdouble z);
 gdouble nc_distance_luminosity_hef (NcDistance *dist, NcHICosmo *cosmo, gdouble z_he, gdouble z_cmb);
 gdouble nc_distance_modulus_hef (NcDistance *dist, NcHICosmo *cosmo, gdouble z_he, gdouble z_cmb);
@@ -136,6 +138,8 @@ gdouble nc_distance_bao_A_scale (NcDistance *dist, NcHICosmo *cosmo, gdouble z);
 gdouble nc_distance_sound_horizon (NcDistance *dist, NcHICosmo *cosmo, gdouble z);
 gdouble nc_distance_dsound_horizon_dz (NcDistance *dist, NcHICosmo *cosmo, gdouble z);
 gdouble nc_distance_bao_r_Dv (NcDistance *dist, NcHICosmo *cosmo, gdouble z);
+gdouble nc_distance_DH_r (NcDistance *dist, NcHICosmo *cosmo, gdouble z);
+gdouble nc_distance_DA_r (NcDistance *dist, NcHICosmo *cosmo, gdouble z);
 
 /***************************************************************************
  *            cosmic_time.h

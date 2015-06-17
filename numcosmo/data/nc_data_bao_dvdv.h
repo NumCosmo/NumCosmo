@@ -60,12 +60,11 @@ struct _NcDataBaoDVDVClass
 
 GType nc_data_bao_dvdv_get_type (void) G_GNUC_CONST;
 
-NcmData *nc_data_bao_dvdv_new (NcDistance *dist, NcDataBaoId id);
+NcDataBaoDVDV *nc_data_bao_dvdv_new_from_file (const gchar *filename);
+NcDataBaoDVDV *nc_data_bao_dvdv_new_from_id (NcDistance *dist, NcDataBaoId id);
 
-void nc_data_bao_dvdv_set_sample (NcDataBaoDVDV *bao_dvdv, NcDataBaoId id);
-NcDataBaoId nc_data_bao_dvdv_get_sample (NcDataBaoDVDV *bao_dvdv);
+void nc_data_bao_dvdv_set_dist (NcDataBaoDVDV *bao_dvdv, NcDistance *dist);
 
 G_END_DECLS
 
 #endif /* _NC_DATA_BAO_DVDV_H_ */
-

@@ -154,7 +154,7 @@ nc_hicosmo_de_omega_x2omega_k (NcHICosmoDE *cosmo_de)
 
   relin = ncm_reparam_linear_new (ncm_model_len (NCM_MODEL (cosmo_de)), T, v);
   ncm_reparam_set_param_desc_full (NCM_REPARAM (relin), NC_HICOSMO_DE_OMEGA_X, 
-                                   "Omegak","\\Omega_k", -5.0, 5.0, 1.0e-2, 
+                                   "Omegak","\\Omega_k", -5.0e-1, 5.0e-1, 1.0e-2, 
                                    NC_HICOSMO_DEFAULT_PARAMS_ABSTOL, 0.0, NCM_PARAM_TYPE_FIXED);
 
   ncm_model_set_reparam (NCM_MODEL (cosmo_de), NCM_REPARAM (relin));

@@ -411,7 +411,7 @@ ncm_timer_task_start (NcmTimer *nt, guint task_len)
   nt->task_pos   = 0;
   nt->pos_time   = g_timer_elapsed (nt->gt, NULL);
   nt->last_log_time = 0.0;
-  ncm_stats_vec_reset (nt->time_stats);
+  ncm_stats_vec_reset (nt->time_stats, TRUE);
 }
 
 /**

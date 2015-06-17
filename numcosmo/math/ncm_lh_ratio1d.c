@@ -83,7 +83,6 @@ ncm_lh_ratio1d_constructed (GObject *object)
 
     ncm_serialize_free (ser);
     g_assert_cmpint (lhr1d->pi.mid, >=, 0);
-    g_assert_cmpint (lhr1d->pi.mid,  <, NCM_MODEL_MAX_ID);
     
     g_assert (lhr1d->fit->fstate->is_best_fit);
 
@@ -126,6 +125,9 @@ ncm_lh_ratio1d_set_property (GObject *object, guint prop_id, const GValue *value
       lhr1d->pi = *pi;
       break;
     }
+    case PROP_CONSTRAINT:
+      lhr1d->constraint = g_value_dup_object (value);
+      break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
       break;
@@ -140,12 +142,18 @@ ncm_lh_ratio1d_get_property (GObject *object, guint prop_id, GValue *value, GPar
 
   switch (prop_id)
   {
+    case PROP_FIT:
+      g_value_set_object (value, lhr1d->fit);
+      break;
     case PROP_PI:
     {
       NcmMSetPIndex *pi = ncm_mset_pindex_new (lhr1d->pi.mid, lhr1d->pi.pid);
       g_value_take_boxed (value, pi);
       break;
     }
+    case PROP_CONSTRAINT:
+      g_value_set_object (value, lhr1d->constraint);
+      break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
       break;
@@ -189,7 +197,7 @@ ncm_lh_ratio1d_class_init (NcmLHRatio1dClass *klass)
                                                         NULL,
                                                         "NcmFit object",
                                                         NCM_TYPE_FIT,
-                                                        G_PARAM_WRITABLE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   g_object_class_install_property (object_class,
                                    PROP_PI,
@@ -200,12 +208,12 @@ ncm_lh_ratio1d_class_init (NcmLHRatio1dClass *klass)
                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
   
   g_object_class_install_property (object_class,
-                                   PROP_PI,
+                                   PROP_CONSTRAINT,
                                    g_param_spec_object ("constraint",
                                                         NULL,
                                                         "Constraint",
                                                         NCM_TYPE_MSET_FUNC,
-                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+                                                        G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 }
 
 
@@ -224,8 +232,7 @@ ncm_lh_ratio1d_new (NcmFit *fit, NcmMSetPIndex *pi)
   return g_object_new (NCM_TYPE_LH_RATIO1D, 
                        "fit", fit,
                        "pi", pi,
-                       NULL);
-  
+                       NULL); 
 }
 
 /**
@@ -569,7 +576,8 @@ ncm_lh_ratio1d_find_bounds (NcmLHRatio1d *lhr1d, gdouble clevel, NcmFitRunMsgs m
   gdouble scale, r, r_min, r_max, val;
   static gdouble (*root) (NcmLHRatio1d *lhr1d, gdouble x0, gdouble x);
 
-  g_assert (clevel > 0.0 && clevel < 1.0);
+  g_assert_cmpfloat (clevel, >, 0.0);
+  g_assert_cmpfloat (clevel, <, 1.0);
 
   lhr1d->chisquare = gsl_cdf_chisq_Qinv (1.0 - clevel, 1.0);
   scale = sqrt (lhr1d->chisquare) * 

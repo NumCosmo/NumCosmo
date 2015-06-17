@@ -1,0 +1,13 @@
+{
+  'NcDataBaoRDV', 
+  {
+    'desc'      : <'SDSS-DR9-rec -- Anderson (2012), BAO Sample R-Dv'>, 
+    'init'      : <true>, 
+    'n-points'  : <1>, 
+    'mean'      : <[13.67]>, 
+    'inv-cov'   : <[[20.66115702479339]]>, 
+    'z'         : <[0.57]>, 
+    'is-rDV'    : <false>,
+    'long-desc' : <'BAO SDSS-DR9-rec Anderson et al. (2012) (arXiv:1203.6594) - r_s computed using EH1998.'>
+  }
+}

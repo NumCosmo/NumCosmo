@@ -184,15 +184,6 @@ G_INLINE_FUNC gdouble ncm_c_wmap5_coadded_I_Ka (void) G_GNUC_CONST;
 G_INLINE_FUNC gdouble ncm_c_wmap5_coadded_I_Q (void) G_GNUC_CONST;
 G_INLINE_FUNC gdouble ncm_c_wmap5_coadded_I_V (void) G_GNUC_CONST;
 G_INLINE_FUNC gdouble ncm_c_wmap5_coadded_I_W (void) G_GNUC_CONST;
-G_INLINE_FUNC gdouble ncm_c_bao_eisenstein_z (void) G_GNUC_CONST;
-G_INLINE_FUNC gdouble ncm_c_bao_eisenstein_A (void) G_GNUC_CONST;
-G_INLINE_FUNC gdouble ncm_c_bao_eisenstein_sigma_A (void) G_GNUC_CONST;
-G_INLINE_FUNC gdouble ncm_c_bao_eisenstein_DV (void) G_GNUC_CONST;
-G_INLINE_FUNC gdouble ncm_c_bao_eisenstein_sigma_DV (void) ;
-G_INLINE_FUNC gdouble ncm_c_bao_percival2007_DV_DV (void) G_GNUC_CONST;
-G_INLINE_FUNC gdouble ncm_c_bao_percival2007_sigma_DV_DV (void) G_GNUC_CONST;
-G_INLINE_FUNC gdouble ncm_c_bao_percival2010_DV_DV (void) G_GNUC_CONST;
-G_INLINE_FUNC gdouble ncm_c_bao_percival2010_sigma_DV_DV (void) G_GNUC_CONST;
 G_INLINE_FUNC gdouble ncm_c_hubble_cte_wmap (void) G_GNUC_CONST;
 G_INLINE_FUNC gdouble ncm_c_hubble_cte_hst (void) G_GNUC_CONST;
 G_INLINE_FUNC gdouble ncm_c_hubble_cte_msa (void) G_GNUC_CONST;
@@ -546,33 +537,6 @@ G_INLINE_FUNC gdouble ncm_c_wmap5_coadded_I_V (void)
 
 G_INLINE_FUNC gdouble ncm_c_wmap5_coadded_I_W (void)
 { return 6.538; }
-
-G_INLINE_FUNC gdouble ncm_c_bao_eisenstein_z (void)
-{ return 0.35; }
-
-G_INLINE_FUNC gdouble ncm_c_bao_eisenstein_A (void)
-{ return 0.469; }
-
-G_INLINE_FUNC gdouble ncm_c_bao_eisenstein_sigma_A (void)
-{ return 0.017; }
-
-G_INLINE_FUNC gdouble ncm_c_bao_eisenstein_DV (void)
-{ return 1334.0; }
-
-G_INLINE_FUNC gdouble ncm_c_bao_eisenstein_sigma_DV (void)
-{ return 88.0; }
-
-G_INLINE_FUNC gdouble ncm_c_bao_percival2007_DV_DV (void)
-{ return 1.812; }
-
-G_INLINE_FUNC gdouble ncm_c_bao_percival2007_sigma_DV_DV (void)
-{ return 0.060; }
-
-G_INLINE_FUNC gdouble ncm_c_bao_percival2010_DV_DV (void)
-{ return 1.736; }
-
-G_INLINE_FUNC gdouble ncm_c_bao_percival2010_sigma_DV_DV (void)
-{ return 0.065; }
 
 G_INLINE_FUNC gdouble ncm_c_hubble_cte_wmap (void)
 { return 73.0; }

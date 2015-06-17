@@ -44,6 +44,7 @@
 #include "data/nc_data_bao_rdv.h"
 #include "data/nc_data_bao_dvdv.h"
 #include "data/nc_data_bao_empirical_fit.h"
+#include "data/nc_data_bao_dhr_dar.h"
 
 /**
  * nc_data_bao_create:
@@ -57,18 +58,18 @@
 NcmData *
 nc_data_bao_create (NcDistance *dist, NcDataBaoId id)
 {
-  /* FIXME the switch is wrong but works since we have only two options. */
+  NcmData *data;
   switch (id)
   {
     case NC_DATA_BAO_A_EISENSTEIN2005:
-      return nc_data_bao_a_new (dist, id);
+      data = NCM_DATA (nc_data_bao_a_new_from_id (dist, id));
       break;  
     case NC_DATA_BAO_DV_EISENSTEIN2005:
-      return nc_data_bao_dv_new (dist, id);
+      data = NCM_DATA (nc_data_bao_dv_new_from_id (dist, id));
       break;
     case NC_DATA_BAO_DVDV_PERCIVAL2007:
     case NC_DATA_BAO_DVDV_PERCIVAL2010:
-      return nc_data_bao_dvdv_new (dist, id);
+      data = NCM_DATA (nc_data_bao_dvdv_new_from_id (dist, id));
       break;
     case NC_DATA_BAO_RDV_PERCIVAL2007:
     case NC_DATA_BAO_RDV_PERCIVAL2010:
@@ -77,14 +78,18 @@ nc_data_bao_create (NcDistance *dist, NcDataBaoId id)
     case NC_DATA_BAO_RDV_ANDERSON2012:
     case NC_DATA_BAO_RDV_BLAKE2012:
     case NC_DATA_BAO_RDV_KAZIN2014:  
-      return nc_data_bao_rdv_new (dist, id);
+      data = NCM_DATA (nc_data_bao_rdv_new_from_id (dist, id));
       break;
     case NC_DATA_BAO_EMPIRICAL_FIT_ROSS2015:  
-      return NCM_DATA (nc_data_bao_empirical_fit_new_from_id (dist, id));
+      data = NCM_DATA (nc_data_bao_empirical_fit_new_from_id (dist, id));
+      break;
+    case NC_DATA_BAO_DHR_DAR_SDSS_DR11_2015:  
+      data = NCM_DATA (nc_data_bao_dhr_dar_new_from_id (dist, id));
       break;
     default:
       g_assert_not_reached ();
       break;
   }
+  g_assert (NCM_IS_DATA (data));
+  return data;
 }
-

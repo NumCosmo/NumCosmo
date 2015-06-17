@@ -752,34 +752,43 @@ main (gint argc, gchar *argv[])
   {
     while (de_fit.onedim_cr[0] != NULL)
     {
-      gint p_n = atoi (de_fit.onedim_cr[0]);
-      gdouble prob_sigma, err_inf, err_sup;
+      const gchar *pname = de_fit.onedim_cr[0];
+      NcmMSetPIndex *pi = ncm_mset_fparam_get_pi_by_name (mset, de_fit.onedim_cr[0]);
       de_fit.onedim_cr = &de_fit.onedim_cr[1];
-      switch (de_fit.nsigma)
+
+      if (pi == NULL)
       {
-        case 1:
-          prob_sigma = ncm_c_stats_1sigma ();
-          break;
-        case 2:
-          prob_sigma = ncm_c_stats_2sigma ();
-          break;
-        case 3:
-          prob_sigma = ncm_c_stats_3sigma ();
-          break;
-        default:
-          prob_sigma = ncm_c_stats_1sigma ();
-          break;
+        g_warning ("darkenergy: parameter `%s' not found.", pname);
+        continue;
       }
+      else
       {
-        NcmMSetPIndex pi = {nc_hicosmo_id (), p_n};
-        NcmLHRatio1d *lhr1d = ncm_lh_ratio1d_new (fit, &pi);
-        ncm_lh_ratio1d_find_bounds (lhr1d, fit->mtype, prob_sigma, &err_inf, &err_sup);
+        NcmLHRatio1d *lhr1d = ncm_lh_ratio1d_new (fit, pi);
+        gdouble prob_sigma, err_inf, err_sup;
+
+        switch (de_fit.nsigma)
+        {
+          case 1:
+            prob_sigma = ncm_c_stats_1sigma ();
+            break;
+          case 2:
+            prob_sigma = ncm_c_stats_2sigma ();
+            break;
+          case 3:
+            prob_sigma = ncm_c_stats_3sigma ();
+            break;
+          default:
+            prob_sigma = ncm_c_stats_1sigma ();
+            break;
+        }
+
+        ncm_lh_ratio1d_find_bounds (lhr1d, prob_sigma, fit->mtype, &err_inf, &err_sup);
         ncm_lh_ratio1d_free (lhr1d);
+
+        ncm_message ("#  One dimension confidence region for %s[%05d:%02d] = % .5g (% .5g, % .5g)\n",
+                     ncm_mset_param_name (mset, pi->mid, pi->pid), pi->mid, pi->pid,
+                     ncm_mset_param_get (mset, pi->mid, pi->pid), err_inf, err_sup);
       }
-      //ncm_fit_cr_1dim (fit, nc_hicosmo_id (), p_n, prob_sigma, 1, &err_inf, &err_sup);
-      ncm_message ("#  One dimension confidence region for %s[%02d] = % .5g (% .5g, % .5g)\n",
-                   ncm_model_param_name (NCM_MODEL (model), p_n), p_n,
-                   ncm_model_param_get (NCM_MODEL (model), p_n), err_inf, err_sup);
     }
   }
 

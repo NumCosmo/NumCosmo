@@ -452,11 +452,17 @@ ncm_model_orig_vparam_set_vector (NcmModel *model, guint n, NcmVector *val)
 G_INLINE_FUNC NcmVector *
 ncm_model_orig_vparam_get_vector (NcmModel *model, guint n)
 {
-  NcmVector *val = ncm_vector_new (ncm_model_vparam_len (model, n));
-  ncm_vector_memcpy2 (val, model->params,
-                      0, ncm_model_vparam_index (model, n, 0),
-                      ncm_model_vparam_len (model, n));
-  return val;
+  const guint vparam_len = ncm_model_vparam_len (model, n);
+  if (vparam_len > 0)
+  {
+    NcmVector *val = ncm_vector_new (vparam_len);
+    ncm_vector_memcpy2 (val, model->params,
+                        0, ncm_model_vparam_index (model, n, 0),
+                        ncm_model_vparam_len (model, n));
+    return val;
+  }
+  else
+    return NULL;
 }
 
 G_END_DECLS

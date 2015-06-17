@@ -50,6 +50,7 @@ enum
   PROP_TKERN,
   PROP_DATASET,
   PROP_EPSILON,
+  PROP_NPARTICLES,
   PROP_LEN
 };
 
@@ -77,10 +78,11 @@ ncm_abc_init (NcmABC *abc)
   abc->epsilon       = 0.0;
   abc->depsilon      = 0.0;
   abc->wran          = NULL;
-  abc->mcat_tm1      = NULL;
   abc->started       = FALSE;
+  abc->started_up    = FALSE;
   abc->cur_sample_id = -1; /* Represents that no samples were calculated yet. */
   abc->nthreads      = 0;
+  abc->nparticles    = 0;
   abc->n             = 0;
   abc->ntotal        = 0;
   abc->naccepted     = 0;
@@ -129,6 +131,11 @@ _ncm_abc_set_property (GObject *object, guint prop_id, const GValue *value, GPar
       abc->epsilon  = g_value_get_double (value);
       abc->depsilon = abc->epsilon;
       break;
+    case PROP_NPARTICLES:
+      g_assert (!abc->started);
+      g_assert_not_reached ();
+      abc->nparticles = g_value_get_uint (value);
+      break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
       break;
@@ -158,6 +165,9 @@ _ncm_abc_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec
     case PROP_EPSILON:
       g_value_set_double (value, abc->epsilon);
       break;
+    case PROP_NPARTICLES:
+      g_value_set_uint (value, abc->nparticles);
+      break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
       break;
@@ -180,12 +190,11 @@ _ncm_abc_dispose (GObject *object)
   ncm_vector_clear (&abc->theta);
   ncm_vector_clear (&abc->thetastar);
   ncm_matrix_clear (&abc->covar);
-  
+
   g_clear_pointer (&abc->weights, g_array_unref);
   g_clear_pointer (&abc->weights_tm1, g_array_unref);
   g_clear_pointer (&abc->dists, g_array_unref);
   g_clear_pointer (&abc->wran, gsl_ran_discrete_free);
-  g_clear_pointer (&abc->mcat_tm1, g_ptr_array_unref);
 
   if (abc->mp != NULL)
   {
@@ -253,6 +262,13 @@ ncm_abc_class_init (NcmABCClass *klass)
                                                         "epsilon",
                                                         0.0, G_MAXDOUBLE, 1.0e20,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  g_object_class_install_property (object_class,
+                                   PROP_NPARTICLES,
+                                   g_param_spec_uint ("nparticles",
+                                                      NULL,
+                                                      "Number of particles",
+                                                      0, G_MAXUINT, 100,
+                                                      G_PARAM_READABLE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 }
 
 /**
@@ -397,7 +413,7 @@ ncm_abc_set_data_file (NcmABC *abc, const gchar *filename)
 {
   const gchar *cur_filename = ncm_mset_catalog_peek_filename (abc->mcat);
   
-  if (abc->started && cur_filename != NULL)
+  if (abc->cur_sample_id >= 0 && cur_filename != NULL)
     g_error ("ncm_abc_set_data_file: Cannot change data file during a run, call ncm_abc_end_run() first.");    
 
   if (cur_filename != NULL && strcmp (cur_filename, filename) == 0)
@@ -434,34 +450,10 @@ ncm_abc_set_nthreads (NcmABC *abc, guint nthreads)
 void
 ncm_abc_set_rng (NcmABC *abc, NcmRNG *rng)
 {
-  if (abc->started)
-    g_error ("ncm_abc_set_rng: Cannot change the RNG object during a run, call ncm_abc_end_run() first.");
+  if (abc->cur_sample_id >= 0)
+    g_error ("ncm_abc_set_rng: Cannot change the RNG object in a non-empty catalog.");
 
   ncm_mset_catalog_set_rng (abc->mcat, rng);
-}
-
-/**
- * ncm_abc_set_first_sample_id:
- * @abc: a #NcmABC
- * @first_sample_id: FIXME
- * 
- * FIXME
- *
- */
-void 
-ncm_abc_set_first_sample_id (NcmABC *abc, gint first_sample_id)
-{
-  if (abc->mcat->first_id == first_sample_id)
-    return;
-
-  if (!abc->started)
-    g_error ("ncm_abc_set_first_sample_id: run not started, run ncm_abc_start_run () first.");
-
-  if (first_sample_id <= abc->cur_sample_id)
-    g_error ("ncm_abc_set_first_sample_id: cannot move first sample id backwards to: %d, catalog first id: %d, current sample id: %d.",
-             first_sample_id, abc->mcat->first_id, abc->cur_sample_id);
-
-  ncm_mset_catalog_set_first_id (abc->mcat, first_sample_id);
 }
 
 /**
@@ -505,6 +497,7 @@ ncm_abc_get_dist_quantile (NcmABC *abc, gdouble p)
 {
   if (abc->started)
     g_error ("ncm_abc_get_dist_quantile: Cannot get quantiles during a run, call ncm_abc_end_run() first.");
+  
   if (abc->dists->len < 1)
     g_error ("ncm_abc_get_dist_quantile: Cannot get quantiles, no particles calculated.");
   
@@ -600,20 +593,26 @@ _ncm_abc_update (NcmABC *abc, NcmMSet *mset, gdouble dist, gdouble weight)
 {
   const guint part = 5;
   const guint step = (abc->n / part) == 0 ? 1 : (abc->n / part);
+  const guint pindex = abc->cur_sample_id % abc->nparticles;
 
   ncm_mset_catalog_add_from_mset (abc->mcat, mset, dist, weight);
   ncm_timer_task_increment (abc->nt);
-  g_array_index (abc->weights, gdouble, abc->cur_sample_id) = weight;
-  g_array_index (abc->dists,   gdouble, abc->cur_sample_id) = dist;
-
+  g_array_index (abc->weights, gdouble, pindex) = weight;
+  g_array_index (abc->dists,   gdouble, pindex) = dist;
+  abc->dists_sorted = FALSE;
+  
   switch (abc->mtype)
   {
     case NCM_FIT_RUN_MSGS_NONE:
       break;
     case NCM_FIT_RUN_MSGS_SIMPLE:
     {
-      guint stepi = abc->nt->task_pos % step;
-      if ((stepi == 0) || (abc->nt->task_pos == abc->nt->task_len))
+      guint stepi = (abc->cur_sample_id + 1) % step;
+      gboolean log_timeout = FALSE;    
+      if ((abc->nt->pos_time - abc->nt->last_log_time) > 60.0)
+        log_timeout = TRUE;
+    
+      if (log_timeout || (stepi == 0) || (abc->nt->task_pos == abc->nt->task_len))
       {
         /* guint acc = stepi == 0 ? step : stepi; */
         ncm_mset_catalog_log_current_stats (abc->mcat);
@@ -750,14 +749,18 @@ ncm_abc_end_run (NcmABC *abc)
 {
   guint i;
   gdouble WT = 0.0;
+
+  g_assert (abc->started);
+  
   if (ncm_timer_task_is_running (abc->nt))
     ncm_timer_task_end (abc->nt);
 
   ncm_mset_catalog_sync (abc->mcat, TRUE);
 
-  for (i = 0; i < abc->n; i++)
+  for (i = 0; i < abc->nparticles; i++)
     WT += g_array_index (abc->weights, gdouble, i);
-  for (i = 0; i < abc->n; i++)
+  
+  for (i = 0; i < abc->nparticles; i++)
     g_array_index (abc->weights, gdouble, i) = g_array_index (abc->weights, gdouble, i) / WT;
 
   switch (abc->mtype)
@@ -826,32 +829,35 @@ static void _ncm_abc_run_mt (NcmABC *abc);
 /**
  * ncm_abc_run:
  * @abc: a #NcmABC
- * @n: total number of realizations to run
+ * @nparticles: total number of particles to generate
  * 
- * Runs the Monte Carlo until it reaches the @n-th realization. Note that
- * if the first_id is non-zero it will run @n - first_id realizations.
+ * Generates particlea until @n particles are accepted.
  *
  */
 void 
-ncm_abc_run (NcmABC *abc, guint n)
+ncm_abc_run (NcmABC *abc, guint nparticles)
 {
   if (!abc->started)
     g_error ("ncm_abc_run: run not started, run ncm_abc_start_run() first.");
-
-  if (n <= (abc->cur_sample_id + 1))
+  
+  if (nparticles <= (abc->cur_sample_id + 1))
   {
     if (abc->mtype > NCM_FIT_RUN_MSGS_NONE)
     {
       ncm_cfg_msg_sepa ();
-      g_message ("# NcmABC: Nothing to do, current ABC particle number is %d\n", abc->cur_sample_id + 1);
+      g_message ("# NcmABC: Nothing to do, current ABC particle number is already %d of %u\n", abc->cur_sample_id + 1, nparticles);
     }
     return;
   }
   
-  abc->n = n - (abc->cur_sample_id + 1);
+  abc->n = nparticles - (abc->cur_sample_id + 1);
 
-  g_array_set_size (abc->weights, abc->n);
-  g_array_set_size (abc->dists, abc->n);
+  if (abc->n > 0 && abc->nupdates > 0)
+    g_error ("ncm_abc_run: cannot generate new particles when time t = %u != 0.", abc->nupdates);
+  
+  abc->nparticles = nparticles;
+  g_array_set_size (abc->weights, nparticles);
+  g_array_set_size (abc->dists, nparticles);
   
   switch (abc->mtype)
   {
@@ -885,6 +891,8 @@ ncm_abc_run (NcmABC *abc, guint n)
     _ncm_abc_run_mt (abc);
 
   ncm_timer_task_pause (abc->nt);
+  
+  g_assert_cmpuint (abc->nparticles, ==, abc->cur_sample_id + 1);
 }
 
 static void 
@@ -1076,6 +1084,7 @@ ncm_abc_run_lre (NcmABC *abc, guint prerun, gdouble lre)
  * @fit: a #NcmFit
  *
  * FIXME
+ * 
  */
 void
 ncm_abc_mean_covar (NcmABC *abc, NcmFit *fit)
@@ -1097,12 +1106,13 @@ void
 ncm_abc_start_update (NcmABC *abc)
 {
   if (abc->started)
-    g_error ("ncm_abc_start_update: run already started, run ncm_abc_end_run() first.");
+    g_error ("ncm_abc_start_update: particle generation not finished, run ncm_abc_end_run() first.");
+  if (abc->started_up)
+    g_error ("ncm_abc_start_update: run already started, run ncm_abc_end_update() first.");
 
   if (abc->tkern == NULL)
     g_error ("ncm_abc_start_update: no transition kernel defined.");
 
-  abc->nupdates++;
   switch (abc->mtype)
   {
     default:
@@ -1156,19 +1166,16 @@ ncm_abc_start_update (NcmABC *abc)
     g_error ("ncm_abc_set_data_file: Unknown error cur_id < cur_sample_id [%d < %d].", 
              abc->mcat->cur_id, abc->cur_sample_id);
 
-  g_assert_cmpuint (abc->weights->len, ==, abc->n);
+  g_assert_cmpuint (abc->weights->len, ==, abc->nparticles);
   g_clear_pointer (&abc->wran, gsl_ran_discrete_free);
-  g_clear_pointer (&abc->mcat_tm1, g_ptr_array_unref);
-  g_array_set_size (abc->weights_tm1, abc->n);
-  
+  g_array_set_size (abc->weights_tm1, abc->nparticles);
+
   ncm_abc_update_tkern (abc);
   
-  memcpy (abc->weights_tm1->data, abc->weights->data, sizeof (gdouble) * abc->n);
-  abc->wran = gsl_ran_discrete_preproc (abc->n, (gdouble *)abc->weights->data);
-  abc->mcat_tm1 = g_ptr_array_ref (abc->mcat->pstats->saved_x);
+  memcpy (abc->weights_tm1->data, abc->weights->data, sizeof (gdouble) * abc->nparticles);
+  abc->wran = gsl_ran_discrete_preproc (abc->nparticles, (gdouble *)abc->weights->data);
 
-  ncm_mset_catalog_reset (abc->mcat);
-  abc->cur_sample_id   = -1;
+  ncm_mset_catalog_reset_stats (abc->mcat);
   
   if (!ncm_abc_data_summary (abc))
     g_error ("ncm_abc_start_run: error calculating summary data.");
@@ -1178,7 +1185,7 @@ ncm_abc_start_update (NcmABC *abc)
   ncm_serialize_clear_instances (abc->ser);
 
   abc->dists_sorted = FALSE;
-  abc->started = TRUE;
+  abc->started_up = TRUE;
   abc->ntotal = 0;
   abc->naccepted = 0;
 }
@@ -1195,18 +1202,20 @@ ncm_abc_end_update (NcmABC *abc)
 {
   guint i;
   gdouble WT = 0.0;
+
+  g_assert (abc->started_up);
   
   if (ncm_timer_task_is_running (abc->nt))
     ncm_timer_task_end (abc->nt);
 
   g_clear_pointer (&abc->wran, gsl_ran_discrete_free);
-  g_clear_pointer (&abc->mcat_tm1, g_ptr_array_unref);
 
-  for (i = 0; i < abc->n; i++)
+  for (i = 0; i < abc->nparticles; i++)
     WT += g_array_index (abc->weights, gdouble, i);
-  for (i = 0; i < abc->n; i++)
+
+  for (i = 0; i < abc->nparticles; i++)
     g_array_index (abc->weights, gdouble, i) = g_array_index (abc->weights, gdouble, i) / WT;
-  
+
   ncm_mset_catalog_sync (abc->mcat, TRUE);
   switch (abc->mtype)
   {
@@ -1224,7 +1233,7 @@ ncm_abc_end_update (NcmABC *abc)
       break;
   }
 
-  abc->started = FALSE;
+  abc->started_up = FALSE;
 }
 
 static void _ncm_abc_update_single (NcmABC *abc);
@@ -1241,7 +1250,7 @@ static void _ncm_abc_update_mt (NcmABC *abc);
 void 
 ncm_abc_update (NcmABC *abc)
 {
-  if (!abc->started)
+  if (!abc->started_up)
     g_error ("ncm_abc_update: run not started, run ncm_abc_start_update() first.");
 
   switch (abc->mtype)
@@ -1274,6 +1283,7 @@ ncm_abc_update (NcmABC *abc)
   else
     _ncm_abc_update_mt (abc);
 
+  abc->nupdates++;
   ncm_timer_task_pause (abc->nt);
 }
 
@@ -1287,7 +1297,7 @@ _ncm_abc_update_single (NcmABC *abc)
     gdouble dist = 0.0, prob = 0.0;
     gsize np = gsl_ran_discrete (abc->mcat->rng->r, abc->wran);
 
-    NcmVector *row = g_ptr_array_index (abc->mcat_tm1, np);
+    NcmVector *row = ncm_mset_catalog_peek_row (abc->mcat, abc->nparticles * abc->nupdates + np);
     NcmVector *theta = ncm_vector_get_subvector (row, 2, ncm_vector_len (row) - 2);
     
     ncm_mset_trans_kern_generate (abc->tkern, theta, abc->thetastar, abc->mcat->rng);
@@ -1305,9 +1315,9 @@ _ncm_abc_update_single (NcmABC *abc)
       gdouble new_weight = ncm_mset_trans_kern_prior_pdf (abc->prior, abc->thetastar);
       gdouble denom = 0.0;
       guint j;
-      for (j = 0; j < abc->n; j++)
-      {
-        row    = g_ptr_array_index (abc->mcat_tm1, j);
+      for (j = 0; j < abc->nparticles; j++)
+      {        
+        row    = ncm_mset_catalog_peek_row (abc->mcat, abc->nparticles * abc->nupdates + j);
         theta  = ncm_vector_get_subvector (row, 2, ncm_vector_len (row) - 2);
         denom += g_array_index (abc->weights_tm1, gdouble, j) * ncm_mset_trans_kern_pdf (abc->tkern, theta, abc->thetastar);
         ncm_vector_free (theta);
@@ -1336,7 +1346,7 @@ _ncm_abc_thread_update_eval (glong i, glong f, gpointer data)
     gdouble dist = 0.0, prob = 0.0;
     gsize np = gsl_ran_discrete (abct->rng->r, abc->wran);
 
-    NcmVector *row = g_ptr_array_index (abc->mcat_tm1, np);
+    NcmVector *row = ncm_mset_catalog_peek_row (abc->mcat, abc->nparticles * abc->nupdates + np);
     NcmVector *theta = ncm_vector_get_subvector (row, 2, ncm_vector_len (row) - 2);
 
     ncm_mset_trans_kern_generate (abc->tkern, theta, abct->thetastar, abct->rng);
@@ -1365,9 +1375,9 @@ _ncm_abc_thread_update_eval (glong i, glong f, gpointer data)
       gdouble new_weight = ncm_mset_trans_kern_prior_pdf (abc->prior, abct->thetastar);
       gdouble denom = 0.0;
       guint k;
-      for (k = 0; k < abc->n; k++)
+      for (k = 0; k < abc->nparticles; k++)
       {
-        row    = g_ptr_array_index (abc->mcat_tm1, k);
+        row    = ncm_mset_catalog_peek_row (abc->mcat, abc->nparticles * abc->nupdates + k);
         theta  = ncm_vector_get_subvector (row, 2, ncm_vector_len (row) - 2);
         denom += g_array_index (abc->weights_tm1, gdouble, k) * ncm_mset_trans_kern_pdf (abc->tkern, theta, abct->thetastar);
         ncm_vector_free (theta);

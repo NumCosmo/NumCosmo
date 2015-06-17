@@ -1,0 +1,12 @@
+{
+  'NcDataBaoDV', 
+  {
+    'desc'     : <'Eisenstein 2005, BAO Sample Dv'>, 
+    'init'     : <true>, 
+    'n-points' : <1>, 
+    'w-mean'   : <false>, 
+    'mean'     : <[1334.0]>, 
+    'sigma'    : <[88.0]>, 
+    'z': <[0.35]>
+  }
+}

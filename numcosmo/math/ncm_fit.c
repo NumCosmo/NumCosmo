@@ -2133,7 +2133,6 @@ ncm_fit_residual_ks_test (NcmFit *fit, gdouble *o_mean, gdouble *o_sd, gdouble *
       printf ("Swilk test % 20.15g % 20.15g %d\n", w, pw, ret);
     }
     
-    
     ncm_vector_free (f);
     return ncm_util_KScdf (n, max);
   }  

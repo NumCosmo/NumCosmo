@@ -151,10 +151,10 @@ ncm_dataset_class_init (NcmDatasetClass *klass)
   g_object_class_install_property (object_class,
                                    PROP_BSTYPE,
                                    g_param_spec_enum ("bootstrap-type",
-                                                        NULL,
-                                                        "Bootstrap type",
-                                                        NCM_TYPE_DATASET_BSTRAP_TYPE, NCM_DATASET_BSTRAP_DISABLE,
-                                                        G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+                                                      NULL,
+                                                      "Bootstrap type",
+                                                      NCM_TYPE_DATASET_BSTRAP_TYPE, NCM_DATASET_BSTRAP_DISABLE,
+                                                      G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
   /**
    * NcmData:data-array:
    *

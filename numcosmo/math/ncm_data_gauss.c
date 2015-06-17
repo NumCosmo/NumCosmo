@@ -275,7 +275,6 @@ _ncm_data_gauss_m2lnL_val (NcmData *data, NcmMSet *mset, gdouble *m2lnL)
 
   if (!ncm_data_bootstrap_enabled (data))
   {
-
     for (i = 0; i < gauss->np; i++)
     {
       const gdouble f_i = ncm_vector_get (gauss->v, i);

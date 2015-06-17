@@ -48,6 +48,7 @@ G_BEGIN_DECLS
  * @NC_DATA_BAO_RDV_BLAKE2012: <link linkend="XBlake2011">Blake et al. (2011)</link>
  * @NC_DATA_BAO_RDV_KAZIN2014: <link linkend="XKazin2014">Kazin et al. (2014)</link>
  * @NC_DATA_BAO_EMPIRICAL_FIT_ROSS2015: <link linkend="XRoss2014">Ross et al. (2015)</link>
+ * @NC_DATA_BAO_DHR_DAR_SDSS_DR11_2015: <link linkend="XDelubac2015">Delubac et al. (2015)</link>
  *
  * FIXME
  */
@@ -64,7 +65,8 @@ typedef enum _NcDataBaoId
   NC_DATA_BAO_RDV_ANDERSON2012,
   NC_DATA_BAO_RDV_BLAKE2012,
   NC_DATA_BAO_RDV_KAZIN2014,  
-  NC_DATA_BAO_EMPIRICAL_FIT_ROSS2015, /*< private >*/
+  NC_DATA_BAO_EMPIRICAL_FIT_ROSS2015, 
+  NC_DATA_BAO_DHR_DAR_SDSS_DR11_2015, /*< private >*/
   NC_DATA_BAO_NSAMPLES,               /*< skip >*/
 } NcDataBaoId;
 
