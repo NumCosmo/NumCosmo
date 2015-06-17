@@ -211,8 +211,8 @@ ncm_lh_ratio1d_class_init (NcmLHRatio1dClass *klass)
 
 /**
  * ncm_lh_ratio1d_new:
- * @fit: FIXME
- * @pi: FIXME
+ * @fit: a #NcmFit
+ * @pi: a #NcmMSetPIndex
  *
  * FIXME
  * 
@@ -230,7 +230,7 @@ ncm_lh_ratio1d_new (NcmFit *fit, NcmMSetPIndex *pi)
 
 /**
  * ncm_lh_ratio1d_free:
- * @lhr1d: FIXME
+ * @lhr1d: a #NcmLHRatio1d
  *
  * FIXME
  *
@@ -243,7 +243,7 @@ ncm_lh_ratio1d_free (NcmLHRatio1d *lhr1d)
 
 /**
  * ncm_lh_ratio1d_clear:
- * @lhr1d: FIXME
+ * @lhr1d: a #NcmLHRatio1d
  *
  * FIXME
  *
@@ -256,8 +256,8 @@ ncm_lh_ratio1d_clear (NcmLHRatio1d **lhr1d)
 
 /**
  * ncm_lh_ratio1d_set_pindex:
- * @lhr1d: a #NcmLHRatio1d.
- * @pi: FIXME
+ * @lhr1d: a #NcmLHRatio1d
+ * @pi: a #NcmMSetPIndex
  *
  * FIXME
  *
@@ -554,11 +554,11 @@ ncm_lh_ratio1d_root_steffenson (NcmLHRatio1d *lhr1d, gdouble x0, gdouble x1)
 
 /**
  * ncm_lh_ratio1d_find_bounds:
- * @lhr1d: a #NcmLHRatio1d.
- * @clevel: The confidence level (0,1).
- * @mtype: FIXME
- * @lb: (out): Lower bound
- * @ub: (out): Upper bound 
+ * @lhr1d: a #NcmLHRatio1d
+ * @clevel: the confidence level (0,1)
+ * @mtype: a #NcmFitRunMsgs
+ * @lb: (out): lower bound
+ * @ub: (out): upper bound 
  * 
  * FIXME
  * 

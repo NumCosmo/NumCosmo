@@ -2,12 +2,12 @@
  *            integral.c
  *
  *  Wed Aug 13 20:35:59 2008
- *  Copyright  2008  Sandro Dias Pinto Vitenti
- *  <sandro@isoftware.com.br>
+ *  Copyright  2008  Sandro Dias Pinto Vitenti & Mariana Penna Lima
+ *  <sandro@isoftware.com.br>, <pennalima@gmail.com>
  ****************************************************************************/
 /*
  * numcosmo
- * Copyright (C) Sandro Dias Pinto Vitenti 2012 <sandro@lapsandro>
+ * Copyright (C) Sandro Dias Pinto Vitenti & Mariana Penna Lima 2012 <sandro@lapsandro>, <pennalima@gmail.com>
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
@@ -229,6 +229,8 @@ typedef struct _iCLIntegrand2dim
 	gdouble xf;
 	gdouble yi;
 	gdouble yf;
+  gint ldxgiven;
+  NcmIntegralPeakfinder p;
 } iCLIntegrand2dim;
 
 static gint
@@ -239,6 +241,31 @@ _integrand_2dim (const gint *ndim, const gdouble x[], const gint *ncomp, gdouble
   NCM_UNUSED (ncomp);
   f[0] = iinteg->integ->f ((iinteg->xf - iinteg->xi) * x[0] + iinteg->xi, (iinteg->yf - iinteg->yi) * x[1] + iinteg->yi, iinteg->integ->userdata);
 	return 0;
+}
+
+static void
+_peakfinder_2dim (const gint *ndim, const gdouble b[], gint *n, gdouble x[], void *userdata)
+{
+  iCLIntegrand2dim *iinteg = (iCLIntegrand2dim *) userdata;
+  gint i;
+  gdouble newb[4];
+  newb[0] = iinteg->xi + (iinteg->xf - iinteg->xi) * b[0];
+  newb[1] = iinteg->xi + (iinteg->xf - iinteg->xi) * b[1];
+  newb[2] = iinteg->yi + (iinteg->yf - iinteg->yi) * b[2];
+  newb[3] = iinteg->yi + (iinteg->yf - iinteg->yi) * b[3];
+
+  //printf ("bounds: %.5g %.5g %.5g %.5g\n", b[0], b[1], b[2], b[3]);
+  //printf ("new bounds: %.5g %.5g %.5g %.5g\n", newb[0], newb[1], newb[2], newb[3]);
+
+  iinteg->p (ndim, newb, n, x, iinteg->integ->userdata);
+
+  //printf ("real minimo: %.15g, %.15g\n", x[0], x[1]);
+  for (i = 0; i < *n; i++)
+  {
+    x[i * iinteg->ldxgiven + 0] = (x[i * iinteg->ldxgiven + 0] - iinteg->xi) / (iinteg->xf - iinteg->xi);
+    x[i * iinteg->ldxgiven + 1] = (x[i * iinteg->ldxgiven + 1] - iinteg->yi) / (iinteg->yf - iinteg->yi);
+  }
+  //printf ("minimo: %.15g, %.15g\n", x[0], x[1]);
 }
 
 /**
@@ -262,9 +289,9 @@ ncm_integrate_2dim (NcmIntegrand2dim *integ, gdouble xi, gdouble yi, gdouble xf,
 {
   gboolean ret = FALSE;
 	const gint mineval = 1;
-	const gint maxeval = 10000;
+	const gint maxeval = 10000000;
 	const gint key = 13; /* 13 points rule */
-  iCLIntegrand2dim iinteg = {integ, xi, xf, yi, yf};
+  iCLIntegrand2dim iinteg = {integ, xi, xf, yi, yf, 0, NULL};
 	gint nregions, neval, fail;
 	gdouble prob;
 
@@ -278,6 +305,9 @@ ncm_integrate_2dim (NcmIntegrand2dim *integ, gdouble xi, gdouble yi, gdouble xf,
   Cuhre (2, 1, &_integrand_2dim, &iinteg, epsrel, epsabs, 0, mineval, maxeval, key, &nregions, &neval, &fail, result, error, &prob);
 #endif /* HAVE_LIBCUBA_3_1 */         
 
+  if (neval >= maxeval)
+    g_warning ("ncm_integrate_2dim: number of evaluations %d >= maximum number of evaluations %d.\n", neval, maxeval);
+  
 	*result *= (xf - xi) * (yf - yi);
 	*error *= (xf - xi) * (yf - yi);
 
@@ -294,6 +324,7 @@ typedef struct _iCLIntegrand3dim
 	gdouble yf;
   gdouble zi;
 	gdouble zf;
+  gint ldxgiven;
 } iCLIntegrand3dim;
 
 static gint
@@ -329,9 +360,9 @@ ncm_integrate_3dim (NcmIntegrand3dim *integ, gdouble xi, gdouble yi, gdouble zi,
 {
   gboolean ret = FALSE;
 	const gint mineval = 1;
-	const gint maxeval = 10000;
+	const gint maxeval = 10000000;
 	const gint key = 11; /* 11 points rule */
-  iCLIntegrand3dim iinteg = {integ, xi, xf, yi, yf, zi, zf};
+  iCLIntegrand3dim iinteg = {integ, xi, xf, yi, yf, zi, zf, 0};
 	gint nregions, neval, fail;
 	gdouble prob;
 
@@ -345,6 +376,9 @@ ncm_integrate_3dim (NcmIntegrand3dim *integ, gdouble xi, gdouble yi, gdouble zi,
   Cuhre (3, 1, &_integrand_3dim, &iinteg, epsrel, epsabs, 0, mineval, maxeval, key, &nregions, &neval, &fail, result, error, &prob);
 #endif /* HAVE_LIBCUBA_3_1 */         
 
+  if (neval >= maxeval)
+    g_warning ("ncm_integrate_3dim: number of evaluations %d >= maximum number of evaluations %d.\n", neval, maxeval);
+    
 	*result *= (xf - xi) * (yf - yi) * (zf - zi);
 	*error *= (xf - xi) * (yf - yi) * (zf - zi);
 
@@ -373,15 +407,156 @@ ncm_integrate_3dim (NcmIntegrand3dim *integ, gdouble xi, gdouble yi, gdouble zi,
  *
  * Returns: a gboolean
  */
-/*
 gboolean
 ncm_integrate_2dim_divonne (NcmIntegrand2dim *integ, gdouble xi, gdouble yi, gdouble xf, gdouble yf, gdouble epsrel, gdouble epsabs, const gint ngiven, const gint ldxgiven, gdouble xgiven[], gdouble *result, gdouble *error)
 {
   gboolean ret = FALSE;
+  const gint nvec = 1;
+  const gint seed = 0;
 	const gint mineval = 1;
-	const gint maxeval = 10000;
+	const gint maxeval = 10000000;
 	const gint key1 = 13; // 13 points rule 
   const gint key2 = 13;
+  const gint key3 = 1;
+  const int maxpass = 10;
+  const double border = 0.0;
+  const double maxchisq = 0.10;
+  const double mindeviation = 0.25;
+  const int nextra = 0;
+  peakfinder_t peakfinder = NULL;
+  guint i;
+  
+  iCLIntegrand2dim iinteg = {integ, xi, xf, yi, yf, ldxgiven, NULL};
+	gint nregions, neval, fail;
+	gdouble prob;
+
+  //printf ("xgiven: %.20g %.20g\n", xgiven[0], xgiven[1]);
+  for (i = 0; i < ngiven; i++)
+  {
+    xgiven[i * ldxgiven + 0] = (xgiven[i * ldxgiven + 0] - xi) / (xf - xi);
+    xgiven[i * ldxgiven + 1] = (xgiven[i * ldxgiven + 1] - yi) / (yf - yi);
+    //printf ("conv xgiven: %.20g %.20g\n", xgiven[0], xgiven[1]);
+  }
+  
+#ifdef HAVE_LIBCUBA_4_0
+	Divonne (2, 1, &_integrand_2dim, &iinteg, nvec, epsrel, epsabs, 0, seed, mineval, maxeval, key1, key2, key3, maxpass, border, 
+           maxchisq, mindeviation, ngiven, ldxgiven, xgiven, nextra, peakfinder, NULL, NULL, &nregions, &neval, &fail, 
+           result, error, &prob);  
+#else
+  g_error ("ncm_integrate_2dim_divonne: Needs libcuba > 4.0.");
+#endif //HAVE_LIBCUBA_4_0  
+
+  if (neval >= maxeval)
+    g_warning ("ncm_integrate_2dim_divonne: number of evaluations %d >= maximum number of evaluations %d.\n", neval, maxeval);
+    
+	*result *= (xf - xi) * (yf - yi);
+	*error *= (xf - xi) * (yf - yi);
+
+	ret = (fail == 0);
+	return ret;
+}
+
+/**
+ * ncm_integrate_2dim_divonne_peakfinder:
+ * @integ: a pointer to #NcmIntegrand2dim
+ * @xi: gbouble which is the lower integration limit of variable x.
+ * @yi: gbouble which is the lower integration limit of variable y.
+ * @xf: gbouble which is the upper integration limit of variable x.
+ * @yf: gbouble which is the upper integration limit of variable y.
+ * @epsrel: relative error
+ * @epsabs: absolute error
+ * @ngiven: number of peaks
+ * @ldxgiven: the leading dimension of xgiven, i.e. the offset between one
+ * point and the next in memory (ref. libcuba documentation)
+ * @xgiven: list of points where the integrand might have peaks (ref. libcuba documentation)
+ * @nextra: the maximum number of extra points the peakfinder will return. 
+ * @peakfinder: (scope call): a #NcmIntegralPeakfinder
+ * @result: a pointer to a gdouble in which the function stores the result.
+ * @error: a pointer to a gdouble in which the function stores the estimated error.
+ *
+ * This function FIXME
+ *
+ * Returns: a gboolean
+ */
+gboolean
+ncm_integrate_2dim_divonne_peakfinder (NcmIntegrand2dim *integ, gdouble xi, gdouble yi, gdouble xf, gdouble yf, gdouble epsrel, gdouble epsabs, const gint ngiven, const gint ldxgiven, gdouble xgiven[], const gint nextra, NcmIntegralPeakfinder peakfinder, gdouble *result, gdouble *error)
+{
+  gboolean ret = FALSE;
+  const gint nvec = 1;
+  const gint seed = 0;
+	const gint mineval = 1;
+	const gint maxeval = 100000000;
+	const gint key1 = 13; // 13 points rule 
+  const gint key2 = 13;
+  const gint key3 = 1;
+  const int maxpass = 10;
+  const double border = 0.0;
+  const double maxchisq = 0.10;
+  const double mindeviation = 0.25;
+  
+  iCLIntegrand2dim iinteg = {integ, xi, xf, yi, yf, ldxgiven, peakfinder};
+	gint nregions, neval, fail;
+	gdouble prob;
+  guint i;
+
+  //printf ("xgiven: %.20g %.20g\n", xgiven[0], xgiven[1]);
+  for (i = 0; i < ngiven; i++)
+  {
+    xgiven[i * ldxgiven + 0] = (xgiven[i * ldxgiven + 0] - xi) / (xf - xi);
+    xgiven[i * ldxgiven + 1] = (xgiven[i * ldxgiven + 1] - yi) / (yf - yi);
+  }
+  //printf ("xgiven: %.20g %.20g\n", xgiven[0], xgiven[1]);
+//printf ("chamando divonne\n");
+#ifdef HAVE_LIBCUBA_4_0
+	Divonne (2, 1, &_integrand_2dim, &iinteg, nvec, epsrel, epsabs, 0, seed, mineval, maxeval, key1, key2, key3, maxpass, border, 
+           maxchisq, mindeviation, ngiven, ldxgiven, xgiven, nextra, _peakfinder_2dim, NULL, NULL, &nregions, &neval, &fail, 
+           result, error, &prob);  
+#else
+  g_error ("ncm_integrate_2dim_divonne: Needs libcuba > 4.0.");
+#endif //HAVE_LIBCUBA_4_0  
+
+  if (neval >= maxeval)
+    g_warning ("ncm_integrate_2dim_divonne_peakfinder: number of evaluations %d >= maximum number of evaluations %d.\n", neval, maxeval);
+  
+	*result *= (xf - xi) * (yf - yi);
+	*error *= (xf - xi) * (yf - yi);
+
+	ret = (fail == 0);
+	return ret;
+}
+
+/**
+ * ncm_integrate_3dim_divonne:
+ * @integ: a pointer to #NcmIntegrand3dim
+ * @xi: gbouble which is the lower integration limit of variable x.
+ * @yi: gbouble which is the lower integration limit of variable y.
+ * @zi: gbouble which is the lower integration limit of variable z.
+ * @xf: gbouble which is the upper integration limit of variable x.
+ * @yf: gbouble which is the upper integration limit of variable y.
+ * @zf: gbouble which is the upper integration limit of variable z.
+ * @epsrel: relative error
+ * @epsabs: absolute error
+ * @ngiven: number of peaks
+ * @ldxgiven: the leading dimension of xgiven, i.e. the offset between one
+ * point and the next in memory (ref. libcuba documentation)
+ * @xgiven: list of points where the integrand might have peaks (ref. libcuba documentation)
+ * @result: a pointer to a gdouble in which the function stores the result.
+ * @error: a pointer to a gdouble in which the function stores the estimated error.
+ *
+ * This function FIXME
+ *
+ * Returns: a gboolean
+ */
+gboolean
+ncm_integrate_3dim_divonne (NcmIntegrand3dim *integ, gdouble xi, gdouble yi, gdouble zi, gdouble xf, gdouble yf, gdouble zf, gdouble epsrel, gdouble epsabs, const gint ngiven, const gint ldxgiven, gdouble xgiven[], gdouble *result, gdouble *error)
+{
+  gboolean ret = FALSE;
+  const gint nvec = 1;
+  const gint seed = 0;
+	const gint mineval = 1;
+	const gint maxeval = 100000000;
+	const gint key1 = 11; // 11 points rule 
+  const gint key2 = 11;
   const gint key3 = 0;
   const int maxpass = 10;
   const double border = 0.0;
@@ -390,28 +565,35 @@ ncm_integrate_2dim_divonne (NcmIntegrand2dim *integ, gdouble xi, gdouble yi, gdo
   const int nextra = 0;
   peakfinder_t peakfinder = NULL;
   
-  iCLIntegrand2dim iinteg = {integ, xi, xf, yi, yf};
-	gint nregions, neval, fail;
+  iCLIntegrand3dim iinteg = {integ, xi, xf, yi, yf, zi, zf, ldxgiven};
+	gint nregions, neval, fail, i;
 	gdouble prob;
 
+  for (i = 0; i < ngiven; i++)
+  {
+    xgiven[i * ldxgiven + 0] = (xgiven[i * ldxgiven + 0] - xi) / (xf - xi);
+    xgiven[i * ldxgiven + 1] = (xgiven[i * ldxgiven + 1] - yi) / (yf - yi);
+    xgiven[i * ldxgiven + 2] = (xgiven[i * ldxgiven + 2] - zi) / (zf - zi);
+  }
+  
 #ifdef HAVE_LIBCUBA_4_0
-	Divonne (2, 1, &_integrand_2dim, &iinteg, 1, epsrel, epsabs, 0, mineval, maxeval, key, NULL, NULL, &nregions, &neval, &fail, result, error, &prob);
-    (2, 1, &_integrand_2dim, &iinteg, epsrel, epsabs, 0, const int seed, mineval, maxeval, key1, key2, key3,
-     maxpass, border, maxchisq, mindeviation, 
-   const int ngiven, const int ldxgiven, double xgiven[], nextra, peakfinder, 
-   NULL, NULL, &nregions, &neval, &fail, result, error, &prob)
+	Divonne (3, 1, &_integrand_3dim, &iinteg, nvec, epsrel, epsabs, 0, seed, mineval, maxeval, key1, key2, key3, maxpass, border, 
+           maxchisq, mindeviation, ngiven, ldxgiven, xgiven, nextra, peakfinder, NULL, NULL, &nregions, &neval, &fail, 
+           result, error, &prob);  
 #else
-  Divonne (2, 1, &_integrand_2dim, &iinteg, epsrel, epsabs, 0, mineval, maxeval, key, &nregions, &neval, &fail, result, error, &prob);
-#endif //HAVE_LIBCUBA_4_0          
+  g_error ("ncm_integrate_3dim_divonne: Needs libcuba > 4.0.");
+#endif //HAVE_LIBCUBA_4_0  
 
-	*result *= (xf - xi) * (yf - yi);
-	*error *= (xf - xi) * (yf - yi);
+  if (neval >= maxeval)
+    g_warning ("ncm_integrate_3dim_divonne: number of evaluations %d >= maximum number of evaluations %d.\n", neval, maxeval);
+ 
+	*result *= (xf - xi) * (yf - yi) * (zf - zi);
+	*error *= (xf - xi) * (yf - yi) * (zf - zi);
 
 	ret = (fail == 0);
 	return ret;
 }
-*/
-    
+
 /**
  * ncm_integral_fixed_new: (skip)
  * @n_nodes: number of nodes in the full interval.

@@ -61,6 +61,207 @@ enum
   PROP_SIZE,
 };
 
+static void
+nc_cluster_mass_benson_init (NcClusterMassBenson *msz)
+{
+  msz->signif_obs_min = 0.0;
+  msz->signif_obs_max = 0.0;
+  msz->z0 = 0.0;
+  msz->M0 = 0.0;
+}
+
+static void
+_nc_cluster_mass_benson_set_property (GObject * object, guint prop_id, const GValue * value, GParamSpec * pspec)
+{
+  NcClusterMassBenson *msz = NC_CLUSTER_MASS_BENSON (object);
+  g_return_if_fail (NC_IS_CLUSTER_MASS_BENSON (object));
+
+  switch (prop_id)
+  {
+    case PROP_SIGNIFICANCE_OBS_MIN:
+      msz->signif_obs_min = g_value_get_double (value);
+      break;
+    case PROP_SIGNIFICANCE_OBS_MAX:
+      msz->signif_obs_max = g_value_get_double (value);
+      break;
+    case PROP_Z0:
+      msz->z0 = g_value_get_double (value);
+      break;
+    case PROP_M0:
+      msz->M0 = g_value_get_double (value);
+      break;
+    default:
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
+      break;
+  }
+}
+
+static void
+_nc_cluster_mass_benson_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
+{
+  NcClusterMassBenson *msz = NC_CLUSTER_MASS_BENSON (object);
+  g_return_if_fail (NC_IS_CLUSTER_MASS_BENSON (object));
+
+  switch (prop_id)
+  {
+    case PROP_SIGNIFICANCE_OBS_MIN:
+      g_value_set_double (value, msz->signif_obs_min);
+      break;
+    case PROP_SIGNIFICANCE_OBS_MAX:
+      g_value_set_double (value, msz->signif_obs_max);
+      break;
+    case PROP_Z0:
+      g_value_set_double (value, msz->z0);
+      break;
+    case PROP_M0:
+      g_value_set_double (value, msz->M0);
+      break;
+    default:
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
+      break;
+  }
+}
+
+static void
+_nc_cluster_mass_benson_finalize (GObject *object)
+{
+
+  /* Chain up : end */
+  G_OBJECT_CLASS (nc_cluster_mass_benson_parent_class)->finalize (object);
+}
+
+guint _nc_cluster_mass_benson_obs_len (NcClusterMass *clusterm) { NCM_UNUSED (clusterm); return 1; }
+guint _nc_cluster_mass_benson_obs_params_len (NcClusterMass *clusterm) { NCM_UNUSED (clusterm); return 0; }
+static gdouble _nc_cluster_mass_benson_significance_m_p (NcClusterMass *clusterm, NcHICosmo *model, gdouble lnM, gdouble z, const gdouble *xi, const gdouble *xi_params);
+static gdouble _nc_cluster_mass_benson_intp (NcClusterMass *clusterm, NcHICosmo *model, gdouble lnM, gdouble z);
+static void _nc_cluster_mass_benson_p_limits (NcClusterMass *clusterm, NcHICosmo *model, const gdouble *xi, const gdouble *xi_params, gdouble *lnM_lower, gdouble *lnM_upper);
+static void _nc_cluster_mass_benson_n_limits (NcClusterMass *clusterm, NcHICosmo *model, gdouble *lnM_lower, gdouble *lnM_upper);
+static gboolean _nc_cluster_mass_benson_resample (NcClusterMass *clusterm, NcHICosmo *model, gdouble lnM, gdouble z, gdouble *xi, const gdouble *xi_params, NcmRNG *rng);
+
+
+static void
+nc_cluster_mass_benson_class_init (NcClusterMassBensonClass *klass)
+{
+  GObjectClass* object_class = G_OBJECT_CLASS (klass);
+  NcClusterMassClass* parent_class = NC_CLUSTER_MASS_CLASS (klass);
+  NcmModelClass *model_class = NCM_MODEL_CLASS (klass);
+
+  parent_class->P = &_nc_cluster_mass_benson_significance_m_p;
+  parent_class->intP = &_nc_cluster_mass_benson_intp;
+  parent_class->P_limits = &_nc_cluster_mass_benson_p_limits;
+  parent_class->N_limits = &_nc_cluster_mass_benson_n_limits;
+  parent_class->resample = &_nc_cluster_mass_benson_resample;
+  parent_class->obs_len = &_nc_cluster_mass_benson_obs_len;
+  parent_class->obs_params_len = &_nc_cluster_mass_benson_obs_params_len;
+
+  parent_class->impl = NC_CLUSTER_MASS_IMPL_ALL;
+
+  model_class->set_property = &_nc_cluster_mass_benson_set_property;
+  model_class->get_property = &_nc_cluster_mass_benson_get_property;
+  object_class->finalize = _nc_cluster_mass_benson_finalize;
+
+  ncm_model_class_set_name_nick (model_class, "Benson - SZ", "Benson_SZ");
+  ncm_model_class_add_params (model_class, 4, 0, PROP_SIZE);
+
+  /**
+   * NcClusterMassBenson:signif_obs_min:
+   *
+   * FIXME Set correct values (limits)
+   */
+  g_object_class_install_property (object_class,
+                                   PROP_SIGNIFICANCE_OBS_MIN,
+                                   g_param_spec_double ("signif-obs-min",
+                                                        NULL,
+                                                        "Minimum obsevational significance",
+                                                        2.0, G_MAXDOUBLE, 5.0,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY |G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  /**
+   * NcClusterMassBenson:signif_obs_max:
+   *
+   * FIXME Set correct values (limits)
+   */
+  g_object_class_install_property (object_class,
+                                   PROP_SIGNIFICANCE_OBS_MAX,
+                                   g_param_spec_double ("signif-obs-max",
+                                                        NULL,
+                                                        "Maximum obsevational significance",
+                                                        2.0, G_MAXDOUBLE, 40.0,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY |G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  /**
+   * NcClusterMassBenson:z0:
+   *
+   * Reference redshift in the SZ signal-mass scaling relation.
+   * FIXME Set correct values (limits)
+   */
+  g_object_class_install_property (object_class,
+                                   PROP_Z0,
+                                   g_param_spec_double ("z0",
+                                                        NULL,
+                                                        "Reference redshift",
+                                                        0.0, G_MAXDOUBLE, 0.6,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY |G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB)); 
+  /**
+   * NcClusterMassBenson:M0:
+   *
+   * Reference mass (in h^(-1) * M_sun unit) in the SZ signal-mass scaling relation.
+   * FIXME Set correct values (limits)
+   */
+  g_object_class_install_property (object_class,
+                                   PROP_M0,
+                                   g_param_spec_double ("M0",
+                                                        NULL,
+                                                        "Reference mass",
+                                                        1.0e13, G_MAXDOUBLE, 3.0e14,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY |G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  /**
+   * NcClusterMassBenson:Asz:
+   * 
+   * Slope of the SZ signal-mass scaling relation.
+   * FIXME Set correct values (limits)
+   */
+  ncm_model_class_set_sparam (model_class, NC_CLUSTER_MASS_BENSON_A_SZ, "A_{SZ}", "Asz",
+                              1e-8,  10.0, 1.0e-2,
+                              NC_CLUSTER_MASS_BENSON_DEFAULT_PARAMS_ABSTOL, NC_CLUSTER_MASS_BENSON_DEFAULT_A_SZ,
+                              NCM_PARAM_TYPE_FIXED);
+
+  /**
+   * NcClusterMassBenson:Bsz:
+   * 
+   * SZ signal-mass scaling parameter.
+   * FIXME Set correct values (limits)
+   */
+  ncm_model_class_set_sparam (model_class, NC_CLUSTER_MASS_BENSON_B_SZ, "B_{SZ}", "Bsz",
+                              1e-8,  10.0, 1.0e-2,
+                              NC_CLUSTER_MASS_BENSON_DEFAULT_PARAMS_ABSTOL, NC_CLUSTER_MASS_BENSON_DEFAULT_B_SZ,
+                              NCM_PARAM_TYPE_FIXED);
+
+  /**
+   * NcClusterMassBenson:Csz:
+   * 
+   * SZ signal-mass scaling parameter.
+   * FIXME Set correct values (limits)
+   */
+  ncm_model_class_set_sparam (model_class, NC_CLUSTER_MASS_BENSON_C_SZ, "C_{SZ}", "Csz",
+                              1e-8,  10.0, 1.0e-2,
+                              NC_CLUSTER_MASS_BENSON_DEFAULT_PARAMS_ABSTOL, NC_CLUSTER_MASS_BENSON_DEFAULT_C_SZ,
+                              NCM_PARAM_TYPE_FIXED);
+
+  /**
+   * NcClusterMassBenson:Dsz:
+   * 
+   * Standard deviation of the SZ signal-mass scaling relation.
+   * $D_sz \in [0.01, 2.0]$.
+   */
+  ncm_model_class_set_sparam (model_class, NC_CLUSTER_MASS_BENSON_D_SZ, "D_{SZ}", "Dsz",
+                              1e-2,  2.0, 1.0e-2,
+                              NC_CLUSTER_MASS_BENSON_DEFAULT_PARAMS_ABSTOL, NC_CLUSTER_MASS_BENSON_DEFAULT_D_SZ,
+                              NCM_PARAM_TYPE_FIXED);
+
+  /* Check for errors in parameters initialization */
+  ncm_model_class_check_params_info (model_class);
+}
+
+
 typedef struct _integrand_data
 {
   NcClusterMassBenson *msz;
@@ -329,189 +530,3 @@ _nc_cluster_mass_benson_n_limits (NcClusterMass *clusterm, NcHICosmo *model, gdo
   return;  
 }
 
-guint _nc_cluster_mass_benson_obs_len (NcClusterMass *clusterm) { NCM_UNUSED (clusterm); return 1; }
-guint _nc_cluster_mass_benson_obs_params_len (NcClusterMass *clusterm) { NCM_UNUSED (clusterm); return 0; }
-
-static void
-_nc_cluster_mass_benson_set_property (GObject * object, guint prop_id, const GValue * value, GParamSpec * pspec)
-{
-  NcClusterMassBenson *msz = NC_CLUSTER_MASS_BENSON (object);
-  g_return_if_fail (NC_IS_CLUSTER_MASS_BENSON (object));
-
-  switch (prop_id)
-  {
-    case PROP_SIGNIFICANCE_OBS_MIN:
-      msz->signif_obs_min = g_value_get_double (value);
-      break;
-    case PROP_SIGNIFICANCE_OBS_MAX:
-      msz->signif_obs_max = g_value_get_double (value);
-      break;
-    case PROP_Z0:
-      msz->z0 = g_value_get_double (value);
-      break;
-    case PROP_M0:
-      msz->M0 = g_value_get_double (value);
-      break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
-  }
-}
-
-static void
-_nc_cluster_mass_benson_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
-{
-  NcClusterMassBenson *msz = NC_CLUSTER_MASS_BENSON (object);
-  g_return_if_fail (NC_IS_CLUSTER_MASS_BENSON (object));
-
-  switch (prop_id)
-  {
-    case PROP_SIGNIFICANCE_OBS_MIN:
-      g_value_set_double (value, msz->signif_obs_min);
-      break;
-    case PROP_SIGNIFICANCE_OBS_MAX:
-      g_value_set_double (value, msz->signif_obs_max);
-      break;
-    case PROP_Z0:
-      g_value_set_double (value, msz->z0);
-      break;
-    case PROP_M0:
-      g_value_set_double (value, msz->M0);
-      break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
-  }
-}
-
-static void
-nc_cluster_mass_benson_init (NcClusterMassBenson *msz)
-{
-  msz->signif_obs_min = 0.0;
-  msz->signif_obs_max = 0.0;
-  msz->z0 = 0.0;
-  msz->M0 = 0.0;
-}
-
-static void
-_nc_cluster_mass_benson_finalize (GObject *object)
-{
-
-  /* Chain up : end */
-  G_OBJECT_CLASS (nc_cluster_mass_benson_parent_class)->finalize (object);
-}
-
-static void
-nc_cluster_mass_benson_class_init (NcClusterMassBensonClass *klass)
-{
-  GObjectClass* object_class = G_OBJECT_CLASS (klass);
-  NcClusterMassClass* parent_class = NC_CLUSTER_MASS_CLASS (klass);
-  NcmModelClass *model_class = NCM_MODEL_CLASS (klass);
-
-  parent_class->P = &_nc_cluster_mass_benson_significance_m_p;
-  parent_class->intP = &_nc_cluster_mass_benson_intp;
-  parent_class->P_limits = &_nc_cluster_mass_benson_p_limits;
-  parent_class->N_limits = &_nc_cluster_mass_benson_n_limits;
-  parent_class->resample = &_nc_cluster_mass_benson_resample;
-  parent_class->obs_len = &_nc_cluster_mass_benson_obs_len;
-  parent_class->obs_params_len = &_nc_cluster_mass_benson_obs_params_len;
-
-  parent_class->impl = NC_CLUSTER_MASS_IMPL_ALL;
-
-  object_class->finalize = _nc_cluster_mass_benson_finalize;
-
-  model_class->set_property = &_nc_cluster_mass_benson_set_property;
-  model_class->get_property = &_nc_cluster_mass_benson_get_property;
-
-  ncm_model_class_set_name_nick (model_class, "Benson - SZ", "Benson_SZ");
-  ncm_model_class_add_params (model_class, 4, 0, PROP_SIZE);
-
-  /**
-   * NcClusterMassBenson:signif_obs_min:
-   *
-   * FIXME Set correct values (limits)
-   */
-  g_object_class_install_property (object_class,
-                                   PROP_SIGNIFICANCE_OBS_MIN,
-                                   g_param_spec_double ("signif-obs-min",
-                                                        NULL,
-                                                        "Minimum obsevational significance",
-                                                        2.0, G_MAXDOUBLE, 5.0,
-                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY |G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-  /**
-   * NcClusterMassBenson:signif_obs_max:
-   *
-   * FIXME Set correct values (limits)
-   */
-  g_object_class_install_property (object_class,
-                                   PROP_SIGNIFICANCE_OBS_MAX,
-                                   g_param_spec_double ("signif-obs-max",
-                                                        NULL,
-                                                        "Maximum obsevational significance",
-                                                        2.0, G_MAXDOUBLE, 40.0,
-                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY |G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-  /**
-   * NcClusterMassBenson:z0:
-   *
-   * Reference redshift in the SZ signal-mass scaling relation.
-   * FIXME Set correct values (limits)
-   */
-  g_object_class_install_property (object_class,
-                                   PROP_Z0,
-                                   g_param_spec_double ("z0",
-                                                        NULL,
-                                                        "Reference redshift",
-                                                        0.0, G_MAXDOUBLE, 0.6,
-                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY |G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB)); 
-  /**
-   * NcClusterMassBenson:M0:
-   *
-   * Reference mass (in h^(-1) * M_sun unit) in the SZ signal-mass scaling relation.
-     * FIXME Set correct values (limits)
-     */
-  g_object_class_install_property (object_class,
-                                   PROP_M0,
-                                   g_param_spec_double ("M0",
-                                                        NULL,
-                                                        "Reference mass",
-                                                        1.0e13, G_MAXDOUBLE, 3.0e14,
-                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY |G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-  /*
-   * SZ signal-mass scaling parameter: Asz.
-   * FIXME Set correct values (limits)
-   */
-  ncm_model_class_set_sparam (model_class, NC_CLUSTER_MASS_BENSON_A_SZ, "A_{SZ}", "Asz",
-                              1e-8,  10.0, 1.0e-2,
-                              NC_CLUSTER_MASS_BENSON_DEFAULT_PARAMS_ABSTOL, NC_CLUSTER_MASS_BENSON_DEFAULT_A_SZ,
-                              NCM_PARAM_TYPE_FIXED);
-
-  /*
-   * SZ signal-mass scaling parameter: Bsz.
-   * FIXME Set correct values (limits)
-   */
-  ncm_model_class_set_sparam (model_class, NC_CLUSTER_MASS_BENSON_B_SZ, "B_{SZ}", "Bsz",
-                              1e-8,  10.0, 1.0e-2,
-                              NC_CLUSTER_MASS_BENSON_DEFAULT_PARAMS_ABSTOL, NC_CLUSTER_MASS_BENSON_DEFAULT_B_SZ,
-                              NCM_PARAM_TYPE_FIXED);
-
-  /*
-   * SZ signal-mass scaling parameter: Csz.
-   * FIXME Set correct values (limits)
-   */
-  ncm_model_class_set_sparam (model_class, NC_CLUSTER_MASS_BENSON_C_SZ, "C_{SZ}", "Csz",
-                              1e-8,  10.0, 1.0e-2,
-                              NC_CLUSTER_MASS_BENSON_DEFAULT_PARAMS_ABSTOL, NC_CLUSTER_MASS_BENSON_DEFAULT_C_SZ,
-                              NCM_PARAM_TYPE_FIXED);
-
-  /*
-   * SZ signal-mass scaling parameter: Dsz.
-   * FIXME Set correct values (limits)
-   */
-  ncm_model_class_set_sparam (model_class, NC_CLUSTER_MASS_BENSON_D_SZ, "D_{SZ}", "Dsz",
-                              1e-2,  1.0, 1.0e-2,
-                              NC_CLUSTER_MASS_BENSON_DEFAULT_PARAMS_ABSTOL, NC_CLUSTER_MASS_BENSON_DEFAULT_D_SZ,
-                              NCM_PARAM_TYPE_FIXED);
-
-  /* Check for errors in parameters initialization */
-  ncm_model_class_check_params_info (model_class);
-}

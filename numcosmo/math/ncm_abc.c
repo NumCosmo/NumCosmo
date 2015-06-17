@@ -272,7 +272,7 @@ ncm_abc_free (NcmABC *abc)
  * ncm_abc_clear:
  * @abc: a #NcmABC
  *
- * FIXME *
+ * FIXME 
  */
 void 
 ncm_abc_clear (NcmABC **abc)
@@ -282,7 +282,7 @@ ncm_abc_clear (NcmABC **abc)
 
 /**
  * ncm_abc_data_summary: (virtual data_summary)
- * @abc: a #NcmABC.
+ * @abc: a #NcmABC
  *
  * Calculates the data summary and stores internally.
  * 
@@ -296,11 +296,11 @@ ncm_abc_data_summary (NcmABC *abc)
 
 /**
  * ncm_abc_mock_distance: (virtual mock_distance)
- * @abc: a #NcmABC.
- * @dset: a #NcmDataset.
- * @theta: a #NcmVector.
- * @thetastar: a #NcmVector.
- * @rng: a #NcmRNG.
+ * @abc: a #NcmABC
+ * @dset: a #NcmDataset
+ * @theta: a #NcmVector
+ * @thetastar: a #NcmVector
+ * @rng: a #NcmRNG
  *
  * Calculates the distance of the new point given by @thetastar 
  * given the old point @theta.
@@ -315,8 +315,8 @@ ncm_abc_mock_distance (NcmABC *abc, NcmDataset *dset, NcmVector *theta, NcmVecto
 
 /**
  * ncm_abc_distance_prob: (virtual distance_prob)
- * @abc: a #NcmABC.
- * @distance: the distance.
+ * @abc: a #NcmABC
+ * @distance: the distance
  *
  * Calculates the probability of the distance been accepted. 
  * 
@@ -330,7 +330,7 @@ ncm_abc_distance_prob (NcmABC *abc, gdouble distance)
 
 /**
  * ncm_abc_update_tkern: (virtual update_tkern)
- * @abc: a #NcmABC.
+ * @abc: a #NcmABC
  *
  * Updates the transition kernel present in @abc->tkern. 
  * 
@@ -344,7 +344,7 @@ ncm_abc_update_tkern (NcmABC *abc)
 
 /**
  * ncm_abc_get_desc: (virtual get_desc)
- * @abc: a #NcmABC.
+ * @abc: a #NcmABC
  *
  * Gets the description of the current ABC implementation. 
  * 
@@ -358,7 +358,7 @@ ncm_abc_get_desc (NcmABC *abc)
 
 /**
  * ncm_abc_log_info: (virtual log_info)
- * @abc: a #NcmABC.
+ * @abc: a #NcmABC
  *
  * Gets the informations about the current run of ABC. 
  * 
@@ -373,7 +373,7 @@ ncm_abc_log_info (NcmABC *abc)
 /**
  * ncm_abc_set_mtype:
  * @abc: a #NcmFitMC
- * @mtype: FIXME
+ * @mtype: a #NcmFitRunMsgs
  *
  * FIXME
  *
@@ -387,7 +387,7 @@ ncm_abc_set_mtype (NcmABC *abc, NcmFitRunMsgs mtype)
 /**
  * ncm_abc_set_data_file:
  * @abc: a #NcmABC
- * @filename: a filename.
+ * @filename: a filename
  *
  * FIXME
  *
@@ -412,7 +412,7 @@ ncm_abc_set_data_file (NcmABC *abc, const gchar *filename)
 /**
  * ncm_abc_set_nthreads:
  * @abc: a #NcmABC
- * @nthreads: FIXME
+ * @nthreads: number of threads
  *
  * FIXME
  *
@@ -426,7 +426,7 @@ ncm_abc_set_nthreads (NcmABC *abc, guint nthreads)
 /**
  * ncm_abc_set_rng:
  * @abc: a #NcmABC
- * @rng: FIXME
+ * @rng: a #NcmRNG
  *
  * FIXME
  *
@@ -1020,7 +1020,7 @@ _ncm_abc_run_mt (NcmABC *abc)
  * ncm_abc_run_lre:
  * @abc: a #NcmABC
  * @prerun: FIXME
- * @lre: FIXME
+ * @lre: largest relative error
  *
  * FIXME
  * 
