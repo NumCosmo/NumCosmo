@@ -144,6 +144,7 @@ G_INLINE_FUNC gdouble *ncm_matrix_data (NcmMatrix *cm);
 G_INLINE_FUNC const gdouble *ncm_matrix_const_data (const NcmMatrix *cm);
 
 NcmMatrix *ncm_matrix_dup (const NcmMatrix *cm);
+void ncm_matrix_substitute (NcmMatrix **cm, NcmMatrix *nm, gboolean check_size);
 void ncm_matrix_add_mul (NcmMatrix *cm, const gdouble alpha, NcmMatrix *b);
 
 void ncm_matrix_free (NcmMatrix *cm);

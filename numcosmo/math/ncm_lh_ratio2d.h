@@ -126,7 +126,7 @@ struct _NcmLHRatio2dRegion
 GType ncm_lh_ratio2d_get_type (void) G_GNUC_CONST;
 GType ncm_lh_ratio2d_region_get_type (void) G_GNUC_CONST;
 
-NcmLHRatio2d *ncm_lh_ratio2d_new (NcmFit *fit, NcmMSetPIndex *pi1, NcmMSetPIndex *pi2, gdouble border_prec);
+NcmLHRatio2d *ncm_lh_ratio2d_new (NcmFit *fit, const NcmMSetPIndex *pi1, const NcmMSetPIndex *pi2, gdouble border_prec);
 void ncm_lh_ratio2d_free (NcmLHRatio2d *lhr2d);
 void ncm_lh_ratio2d_clear (NcmLHRatio2d **lhr2d);
 

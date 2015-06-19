@@ -218,7 +218,7 @@ _ncm_fit_gsl_mms_run (NcmFit *fit, NcmFitRunMsgs mtype)
 
     if (fit->fstate->niter == 1 && !gsl_finite(fit_gsl_mms->mms->fval))
     {
-      ncm_mset_fparams_set_vector (fit->mset, fit->fstate->fparams);
+      ncm_fit_params_set_vector (fit, fit->fstate->fparams);
       return FALSE;
     }
 
@@ -253,7 +253,7 @@ _ncm_fit_gsl_mms_run (NcmFit *fit, NcmFitRunMsgs mtype)
   }
   while ( (status == GSL_CONTINUE) && (fit->fstate->niter < fit->maxiter) );
 
-  ncm_mset_fparams_set_gsl_vector (fit->mset, fit_gsl_mms->mms->x);
+  ncm_fit_params_set_gsl_vector (fit, fit_gsl_mms->mms->x);
 
   ncm_fit_state_set_m2lnL_curval (fit->fstate, fit_gsl_mms->mms->fval);
   ncm_fit_state_set_m2lnL_prec (fit->fstate, last_size);
@@ -267,7 +267,7 @@ nc_residual_multimin_f (const gsl_vector *x, gpointer p)
   NcmFit *fit = NCM_FIT (p);
   gdouble result;
   
-  ncm_mset_fparams_set_gsl_vector (fit->mset, x);
+  ncm_fit_params_set_gsl_vector (fit, x);
   if (!ncm_mset_params_valid (fit->mset))
     return GSL_NAN;
 

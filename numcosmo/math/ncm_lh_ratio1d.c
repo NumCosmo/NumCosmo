@@ -227,7 +227,7 @@ ncm_lh_ratio1d_class_init (NcmLHRatio1dClass *klass)
  * Returns: FIXME
  */
 NcmLHRatio1d *
-ncm_lh_ratio1d_new (NcmFit *fit, NcmMSetPIndex *pi)
+ncm_lh_ratio1d_new (NcmFit *fit, const NcmMSetPIndex *pi)
 {
   return g_object_new (NCM_TYPE_LH_RATIO1D, 
                        "fit", fit,

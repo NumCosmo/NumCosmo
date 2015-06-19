@@ -74,7 +74,7 @@ nc_data_bao_dhr_dar_set_property (GObject *object, guint prop_id, const GValue *
       nc_data_bao_dhr_dar_set_dist (dhda, g_value_get_object (value));
       break;
     case PROP_Z:
-      ncm_vector_set_from_variant (dhda->x, g_value_get_variant (value));
+      ncm_vector_substitute (&dhda->x, g_value_get_object (value), TRUE);
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -94,7 +94,7 @@ nc_data_bao_dhr_dar_get_property (GObject *object, guint prop_id, GValue *value,
       g_value_set_object (value, dhda->dist);
       break;
     case PROP_Z:
-      g_value_take_variant (value, ncm_vector_get_variant (dhda->x));
+      g_value_set_object (value, dhda->x);
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -148,12 +148,12 @@ nc_data_bao_dhr_dar_class_init (NcDataBaoDHrDArClass *klass)
                                                         G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
   g_object_class_install_property (object_class,
                                    PROP_Z,
-                                   g_param_spec_variant ("z",
-                                                         NULL,
-                                                         "Data redshift",
-                                                         G_VARIANT_TYPE ("ad"), NULL,
-                                                         G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-
+                                   g_param_spec_object ("z",
+                                                        NULL,
+                                                        "Data redshift",
+                                                        NCM_TYPE_VECTOR,
+                                                        G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  
   data_class->prepare    = &_nc_data_bao_dhr_dar_prepare;
   gauss_class->mean_func = &_nc_data_bao_dhr_dar_mean_func;
   gauss_class->set_size  = &_nc_data_bao_dhr_dar_set_size;

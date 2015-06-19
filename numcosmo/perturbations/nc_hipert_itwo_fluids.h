@@ -96,6 +96,8 @@ struct _NcHIPertITwoFluidsEOM
   gdouble Uminus;
   gdouble Wplus;
   gdouble Wminus;
+  gdouble US[4];
+  gdouble UA;
 };
 
 GType nc_hipert_itwo_fluids_eom_get_type (void) G_GNUC_CONST;

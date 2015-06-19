@@ -93,7 +93,7 @@ ncm_spline_set_property (GObject *object, guint prop_id, const GValue *value, GP
       if (s->len == 0)
         g_error ("ncm_spline_set_property: cannot set vector on an empty spline.");
       else
-        ncm_vector_set_from_variant (s->xv, g_value_get_variant (value));
+        ncm_vector_substitute (&s->xv, g_value_get_object (value), TRUE);
       break;
     }
     case PROP_Y:
@@ -101,7 +101,7 @@ ncm_spline_set_property (GObject *object, guint prop_id, const GValue *value, GP
       if (s->len == 0)
         g_error ("ncm_spline_set_property: cannot set vector on an empty spline.");
       else
-        ncm_vector_set_from_variant (s->yv, g_value_get_variant (value));
+        ncm_vector_substitute (&s->yv, g_value_get_object (value), TRUE);
       break;
     }
     case PROP_ACC:
@@ -125,21 +125,11 @@ ncm_spline_get_property (GObject *object, guint prop_id, GValue *value, GParamSp
       g_value_set_uint (value, s->len);
       break;
     case PROP_X:
-    {
-      if (s->xv != NULL)
-      {
-        g_value_take_variant (value, ncm_vector_get_variant (s->xv));
-      }
+      g_value_set_object (value, s->xv);
       break;
-    }
     case PROP_Y:
-    {
-      if (s->yv != NULL)
-      {
-        g_value_take_variant (value, ncm_vector_get_variant (s->yv));
-      }
+      g_value_set_object (value, s->yv);
       break;
-    }
     case PROP_ACC:
       g_value_set_boolean (value, s->acc != NULL ? TRUE : FALSE);
       break;
@@ -196,20 +186,20 @@ ncm_spline_class_init (NcmSplineClass *klass)
 
   g_object_class_install_property (object_class,
                                    PROP_X,
-                                   g_param_spec_variant ("x",
-                                                         NULL,
-                                                         "Spline knots",
-                                                         G_VARIANT_TYPE ("ad"), NULL,
-                                                         G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+                                   g_param_spec_object ("x",
+                                                        NULL,
+                                                        "Spline knots",
+                                                        NCM_TYPE_VECTOR,
+                                                        G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   g_object_class_install_property (object_class,
                                    PROP_Y,
-                                   g_param_spec_variant ("y",
-                                                         NULL,
-                                                         "Spline values",
-                                                         G_VARIANT_TYPE ("ad"), NULL,
-                                                         G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-  
+                                   g_param_spec_object ("y",
+                                                        NULL,
+                                                        "Spline values",
+                                                        NCM_TYPE_VECTOR,
+                                                        G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
   klass->name = NULL;
   klass->reset = NULL;
   klass->prepare = NULL;

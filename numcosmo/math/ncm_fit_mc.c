@@ -455,9 +455,7 @@ ncm_fit_mc_keep_order (NcmFitMC *mc, gboolean keep_order)
 void 
 ncm_fit_mc_set_fiducial (NcmFitMC *mc, NcmMSet *fiduc)
 {
-  if (mc->fiduc != NULL)
-    ncm_mset_clear (&mc->fiduc);
-
+  ncm_mset_clear (&mc->fiduc);
   if (fiduc == NULL || fiduc == mc->fit->mset)
   {
     mc->fiduc = ncm_mset_dup (mc->fit->mset, mc->ser);

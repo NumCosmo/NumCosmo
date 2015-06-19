@@ -172,7 +172,7 @@ gdouble ncm_mset_catalog_param_pdf_pvalue (NcmMSetCatalog *mcat, gdouble pval, g
 NcmMatrix *ncm_mset_catalog_calc_ci_direct (NcmMSetCatalog *mcat, guint burnin, NcmMSetFunc *func, gdouble *x, GArray *p_val);
 NcmMatrix *ncm_mset_catalog_calc_ci_interp (NcmMSetCatalog *mcat, guint burnin, NcmMSetFunc *func, gdouble *x, GArray *p_val, guint nodes, NcmFitRunMsgs mtype);
 NcmStatsDist1d *ncm_mset_catalog_calc_distrib (NcmMSetCatalog *mcat, guint burnin, NcmMSetFunc *func, NcmFitRunMsgs mtype);
-NcmStatsDist1d *ncm_mset_catalog_calc_param_distrib (NcmMSetCatalog *mcat, guint burnin, NcmMSetPIndex *pi, NcmFitRunMsgs mtype);
+NcmStatsDist1d *ncm_mset_catalog_calc_param_distrib (NcmMSetCatalog *mcat, guint burnin, const NcmMSetPIndex *pi, NcmFitRunMsgs mtype);
 NcmStatsDist1d *ncm_mset_catalog_calc_add_param_distrib (NcmMSetCatalog *mcat, guint burnin, guint add_param, NcmFitRunMsgs mtype);
 
 #define NCM_MSET_CATALOG_EXTNAME "NcmMSetCatalog:DATA"

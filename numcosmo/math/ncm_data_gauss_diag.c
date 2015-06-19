@@ -93,10 +93,10 @@ ncm_data_gauss_diag_set_property (GObject *object, guint prop_id, const GValue *
       diag->wmean = g_value_get_boolean (value);
       break;
     case PROP_MEAN:
-      ncm_vector_set_from_variant (diag->y, g_value_get_variant (value));
+      ncm_vector_substitute (&diag->y, g_value_get_object (value), TRUE);
       break;
     case PROP_SIGMA:
-      ncm_vector_set_from_variant (diag->sigma, g_value_get_variant (value));
+      ncm_vector_substitute (&diag->sigma, g_value_get_object (value), TRUE);
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -119,10 +119,10 @@ ncm_data_gauss_diag_get_property (GObject *object, guint prop_id, GValue *value,
       g_value_set_boolean (value, diag->wmean);
       break;
     case PROP_MEAN:
-      g_value_take_variant (value, ncm_vector_get_variant (diag->y));
+      g_value_set_object (value, diag->y);
       break;
     case PROP_SIGMA:
-      g_value_take_variant (value, ncm_vector_get_variant (diag->sigma));
+      g_value_set_object (value, diag->sigma);
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -192,20 +192,20 @@ ncm_data_gauss_diag_class_init (NcmDataGaussDiagClass *klass)
 
   g_object_class_install_property (object_class,
                                    PROP_MEAN,
-                                   g_param_spec_variant ("mean",
-                                                         NULL,
-                                                         "Data mean",
-                                                         G_VARIANT_TYPE ("ad"), NULL,
-                                                         G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-  
+                                   g_param_spec_object ("mean",
+                                                        NULL,
+                                                        "Data mean",
+                                                        NCM_TYPE_VECTOR,
+                                                        G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
   g_object_class_install_property (object_class,
                                    PROP_SIGMA,
-                                   g_param_spec_variant ("sigma",
-                                                         NULL,
-                                                         "Data standard deviation",
-                                                         G_VARIANT_TYPE ("ad"), NULL,
-                                                         G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-
+                                   g_param_spec_object ("sigma",
+                                                        NULL,
+                                                        "Data standard deviation",
+                                                        NCM_TYPE_VECTOR,
+                                                        G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  
   data_class->bootstrap        = TRUE;
   data_class->get_length       = &_ncm_data_gauss_diag_get_length;
   data_class->get_dof          = &_ncm_data_gauss_diag_get_dof;

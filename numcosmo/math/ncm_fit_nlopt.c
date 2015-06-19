@@ -380,7 +380,7 @@ _ncm_fit_nlopt_run (NcmFit *fit, NcmFitRunMsgs mtype)
 #endif
 
   ncm_fit_state_set_m2lnL_curval (fit->fstate, minf);
-  ncm_fit_set_params (fit, fit->fstate->fparams);
+  ncm_fit_params_set_vector (fit, fit->fstate->fparams);
 
   return TRUE;
 }
@@ -399,7 +399,7 @@ _ncm_fit_nlopt_func (guint n, const gdouble *x, gdouble *grad, gpointer userdata
       return GSL_POSINF;
   }
   
-  ncm_mset_fparams_set_array (fit->mset, x);
+  ncm_fit_params_set_array (fit, x);
   
   if (!ncm_mset_params_valid (fit->mset))
     return GSL_POSINF;
@@ -428,7 +428,7 @@ _ncm_fit_nlopt_func_constraint (guint n, const gdouble *x, gdouble *grad, gpoint
   gdouble constraint;
 
   fit->fstate->func_eval++;
-  ncm_mset_fparams_set_array (fit->mset, x);
+  ncm_fit_params_set_array (fit, x);
   
   if (!ncm_mset_params_valid (fit->mset))
     return GSL_NAN;

@@ -48,6 +48,7 @@ typedef struct _NcmSerializePrivate NcmSerializePrivate;
  * @NCM_SERIALIZE_OPT_NONE: Use default serialization.
  * @NCM_SERIALIZE_OPT_AUTOSAVE_SER: Whether to automatically save objects serializations.
  * @NCM_SERIALIZE_OPT_AUTONAME_SER: Whether to automatically include objects created from saved serialization in the named instances.
+ * @NCM_SERIALIZE_OPT_CLEAN_DUP: Combination of NCM_SERIALIZE_OPT_AUTOSAVE_SER and NCM_SERIALIZE_OPT_AUTONAME_SER
  * 
  * Options for serialization.
  * 
@@ -57,9 +58,8 @@ typedef enum _NcmSerializeOpt
   NCM_SERIALIZE_OPT_NONE         = 0,
   NCM_SERIALIZE_OPT_AUTOSAVE_SER = 1 << 0,
   NCM_SERIALIZE_OPT_AUTONAME_SER = 1 << 1,
+  NCM_SERIALIZE_OPT_CLEAN_DUP    = NCM_SERIALIZE_OPT_AUTOSAVE_SER | NCM_SERIALIZE_OPT_AUTONAME_SER,
 } NcmSerializeOpt;
-
-#define NCM_SERIALIZE_OPT_CLEAN_DUP (NCM_SERIALIZE_OPT_AUTOSAVE_SER | NCM_SERIALIZE_OPT_AUTONAME_SER)
 
 struct _NcmSerialize
 {
@@ -143,6 +143,7 @@ GObject *ncm_serialize_global_dup_obj (GObject *obj);
 #define NCM_SERIALIZE_OBJECT_FORMAT "{s@"NCM_SERIALIZE_PROPERTIES_TYPE"}"
 #define NCM_SERIALIZE_VECTOR_TYPE "ad"
 #define NCM_SERIALIZE_MATRIX_TYPE "aad"
+#define NCM_SERIALIZE_STRV_TYPE "as"
 #define NCM_SERIALIZE_AUTOSAVE_NAME "auto:saved:"
 #define NCM_SERIALIZE_AUTOSAVE_NFORMAT "%04u" 
 

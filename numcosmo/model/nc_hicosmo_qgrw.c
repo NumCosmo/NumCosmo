@@ -835,7 +835,7 @@ _nc_hipert_itwo_fluids_eom_full (NcHIPertITwoFluids *itf, gdouble alpha, gdouble
     const gdouble lambda_zeta2 = 2.0 * onepw / p4;
     const gdouble lambda_s2 = 2.0 * onepw2 * R / p4;
     const gdouble y = GSL_SIGN (alpha) * (w2 - w) * sqrt (p5 / (p1 * p3 * p6));
-    const gdouble nu_plus = sqrt (nu_plus2);
+    const gdouble nu_plus  = sqrt (nu_plus2);
     const gdouble nu_minus = sqrt (nu_minus2);
     const gdouble lambda_s     = sqrt (lambda_s2);
     const gdouble lambda_zeta  = sqrt (lambda_zeta2);
@@ -848,16 +848,36 @@ _nc_hipert_itwo_fluids_eom_full (NcHIPertITwoFluids *itf, gdouble alpha, gdouble
     qgrw->eom_two_fluids.lambda_s    = lambda_s;
 
     /*
-     qgrw->eom_two_fluids.Uplus  = 0.25 * (lambda_zeta2 * dlnmSnuS2 + lambda_s2 * dlnmzetanuzeta2 - dlnnu_plus2);
+     * qgrw->eom_two_fluids.Uplus  = 0.25 * (lambda_zeta2 * dlnmSnuS2 + lambda_s2 * dlnmzetanuzeta2 - dlnnu_plus2);
      */
     qgrw->eom_two_fluids.Uplus  = 0.25 * (lambda_s2 * dlnmzetanuzeta2_mSnuS2 + 2.0 * dlnmSnuS2_dlnnu_plus);
     qgrw->eom_two_fluids.Uminus = 0.25 * (lambda_s2 * dlnmSnuS2 + lambda_zeta2 * dlnmzetanuzeta2 - dlnnu_minus2);
     qgrw->eom_two_fluids.Wplus  = 0.25 * (sqrt (nu_minus / nu_plus) * lambda_s * lambda_zeta * (dlnmzetanuzeta2_mSnuS2 + dlnlambda_s2_lambda_zeta2));
     qgrw->eom_two_fluids.Wminus = 0.25 * (sqrt (nu_plus / nu_minus) * lambda_s * lambda_zeta * (dlnmzetanuzeta2_mSnuS2 - dlnlambda_s2_lambda_zeta2)); 
 
-
     qgrw->eom_two_fluids.Yt    = y;
 
+    {
+      const gdouble cos_gamma      = lambda_zeta / sqrt (2.0);
+      const gdouble sin_gamma      = lambda_s / sqrt (2.0);
+      const gdouble cos2_gamma     = cos_gamma * cos_gamma;
+      const gdouble sin2_gamma     = sin_gamma * sin_gamma;
+      const gdouble sincos_gamma   = sin_gamma * cos_gamma;
+      const gdouble sin2cos2_gamma = sincos_gamma * sincos_gamma;
+      const gdouble r2             = w / w2;
+      const gdouble rm2            = 1.0 / r2;
+      const gdouble r_factor11     = (r2 - 4.0 + 3.0 * rm2) * 0.5;
+      const gdouble r_factor21     = (r2 - 2.0 - 3.0 * rm2) * 0.25;
+      const gdouble r_factor31     = (r2 + 2.0 - 3.0 * rm2) * 0.25;
+      const gdouble r_factor12     = (rm2 - 4.0 + 3.0 * r2) * 0.5;
+      const gdouble r_factor22     = (rm2 - 2.0 - 3.0 * r2) * 0.25;
+      const gdouble r_factor22     = (rm2 + 2.0 - 3.0 * r2) * 0.25;
+      const gdouble dgamma         = onepw2 * d1R * lambda_zeta / (2.0 * p4 * lambda_s);
+      
+      
+
+    }
+    
     qgrw->eom_two_fluids.skey  = NCM_MODEL (cosmo)->pkey;
     qgrw->eom_two_fluids.alpha = alpha;
     qgrw->eom_two_fluids.k     = k;

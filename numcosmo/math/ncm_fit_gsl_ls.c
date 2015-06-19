@@ -163,7 +163,7 @@ _ncm_fit_gsl_ls_run (NcmFit *fit, NcmFitRunMsgs mtype)
 
     if (fit->fstate->niter == 1 && !gsl_finite (gsl_blas_dnrm2(fit_gsl_ls->ls->f)))
     {
-      ncm_mset_fparams_set_vector (fit->mset, fit->fstate->fparams);
+      ncm_fit_params_set_vector (fit, fit->fstate->fparams);
       return FALSE;
     }
     prec = ncm_fit_gsl_ls_test_grad (fit);
@@ -192,7 +192,7 @@ _ncm_fit_gsl_ls_run (NcmFit *fit, NcmFitRunMsgs mtype)
     NcmVector *_x = ncm_vector_new_gsl_static (fit_gsl_ls->ls->x);
     NcmVector *_f = ncm_vector_new_gsl_static (fit_gsl_ls->ls->f);
     NcmMatrix *_J = ncm_matrix_new_gsl_static (fit_gsl_ls->ls->J);
-    ncm_fit_set_params (fit, _x);
+    ncm_fit_params_set_vector (fit, _x);
     ncm_fit_state_set_ls (fit->fstate, _f, _J);
     ncm_fit_state_set_params_prec (fit->fstate, prec);
     ncm_vector_free (_x);
@@ -209,7 +209,7 @@ ncm_fit_gsl_ls_f (const gsl_vector *x, gpointer p, gsl_vector *f)
   NcmFit *fit = NCM_FIT (p);
   NcmVector *fv = ncm_vector_new_gsl_static (f);
   
-  ncm_mset_fparams_set_gsl_vector (fit->mset, x);
+  ncm_fit_params_set_gsl_vector (fit, x);
   if (!ncm_mset_params_valid (fit->mset))
     return GSL_EDOM;
 
@@ -225,7 +225,7 @@ ncm_fit_gsl_ls_df (const gsl_vector *x, gpointer p, gsl_matrix *J)
   NcmFit *fit = NCM_FIT (p);
   NcmMatrix *Jm = ncm_matrix_new_gsl_static (J);
   
-  ncm_mset_fparams_set_gsl_vector (fit->mset, x);
+  ncm_fit_params_set_gsl_vector (fit, x);
   if (!ncm_mset_params_valid (fit->mset))
     return GSL_EDOM;
 
@@ -242,7 +242,7 @@ ncm_fit_gsl_ls_fdf (const gsl_vector *x, gpointer p, gsl_vector *f, gsl_matrix *
   NcmVector *fv = ncm_vector_new_gsl_static (f);
   NcmMatrix *Jm = ncm_matrix_new_gsl_static (J);
   
-  ncm_mset_fparams_set_gsl_vector (fit->mset, x);
+  ncm_fit_params_set_gsl_vector (fit, x);
   if (!ncm_mset_params_valid (fit->mset))
     return GSL_EDOM;
   

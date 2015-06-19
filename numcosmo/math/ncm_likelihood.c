@@ -66,7 +66,7 @@ ncm_likelihood_set_property (GObject *object, guint prop_id, const GValue *value
 {
   NcmLikelihood *lh = NCM_LIKELIHOOD (object);
   g_return_if_fail (NCM_IS_LIKELIHOOD (object));
-
+  
   switch (prop_id)
   {
     case PROP_DATASET:
@@ -75,8 +75,9 @@ ncm_likelihood_set_property (GObject *object, guint prop_id, const GValue *value
       break;
     case PROP_PRIORS_M2LNL:
     {
-      guint p = g_value_get_int (value);
-      GPtrArray *priors_m2lnL = GINT_TO_POINTER (p);
+      gint64 p = g_value_get_int64 (value);
+      GPtrArray *priors_m2lnL = GSIZE_TO_POINTER (p);
+
       if (priors_m2lnL != lh->priors_m2lnL)
       {
         g_ptr_array_unref (lh->priors_m2lnL);
@@ -86,8 +87,9 @@ ncm_likelihood_set_property (GObject *object, guint prop_id, const GValue *value
     }
     case PROP_PRIORS_F:
     {
-      guint p = g_value_get_int (value);
-      GPtrArray *priors_f = GINT_TO_POINTER (p);
+      gint64 p = g_value_get_int64 (value);
+      GPtrArray *priors_f = GSIZE_TO_POINTER (p);
+
       if (priors_f != lh->priors_f)
       {
         g_ptr_array_unref (lh->priors_f);
@@ -113,10 +115,10 @@ ncm_likelihood_get_property (GObject *object, guint prop_id, GValue *value, GPar
       g_value_set_object (value, lh->dset);
       break;
     case PROP_PRIORS_M2LNL:
-      g_value_set_int (value, GPOINTER_TO_INT (lh->priors_m2lnL));
+      g_value_set_int64 (value, GPOINTER_TO_SIZE (lh->priors_m2lnL));
       break;
     case PROP_PRIORS_F:
-      g_value_set_int (value, GPOINTER_TO_INT (lh->priors_f));
+      g_value_set_int64 (value, GPOINTER_TO_SIZE (lh->priors_f));
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -173,18 +175,18 @@ ncm_likelihood_class_init (NcmLikelihoodClass *klass)
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
   g_object_class_install_property (object_class,
                                    PROP_PRIORS_M2LNL,
-                                   g_param_spec_int ("priors-m2lnL-ptr",
-                                                     NULL,
-                                                     "Priors m2lnL pointer",
-                                                     G_MININT, G_MAXINT, 0,
-                                                     G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+                                   g_param_spec_int64 ("priors-m2lnL-ptr",
+                                                       NULL,
+                                                       "Priors m2lnL pointer",
+                                                       G_MININT64, G_MAXINT64, 0,
+                                                       G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
   g_object_class_install_property (object_class,
                                    PROP_PRIORS_F,
-                                   g_param_spec_int ("priors-f-ptr",
-                                                     NULL,
-                                                     "Priors f pointer",
-                                                     G_MININT, G_MAXINT, 0,
-                                                     G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+                                   g_param_spec_int64 ("priors-f-ptr",
+                                                       NULL,
+                                                       "Priors f pointer",
+                                                       G_MININT64, G_MAXINT64, 0,
+                                                       G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 }
 
 /**

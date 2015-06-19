@@ -273,7 +273,7 @@ test_ncm_mset_fparams (TestNcmMSet *test, gconstpointer pdata)
   g_assert_cmpuint (ncm_mset_fparam_len (test->mset), ==, 1);
 
   {
-    NcmMSetPIndex *pi = ncm_mset_fparam_get_pi (test->mset, 0);
+    const NcmMSetPIndex *pi = ncm_mset_fparam_get_pi (test->mset, 0);
     g_assert_cmpuint (pi->mid, ==, NCM_MSET_MID (nc_cluster_mass_id (), 1));
     g_assert_cmpuint (pi->pid, ==, 0);
   }
@@ -300,6 +300,19 @@ test_ncm_mset_dup (TestNcmMSet *test, gconstpointer pdata)
   g_ptr_array_add (test->ma, mass);
   g_array_append_val (test->ma_destroyed, f);
 
+  ncm_mset_param_set_all_ftype (test->mset, NCM_PARAM_TYPE_FREE);
+  ncm_mset_prepare_fparam_map (test->mset);
+  {
+    guint i;
+    for (i = 0; i < ncm_mset_fparam_len (test->mset); i++)
+    {
+      const NcmMSetPIndex *pi = ncm_mset_fparam_get_pi (test->mset, i);
+      gboolean free = g_test_rand_double_range (0.0, 1.0) < 0.5;
+      ncm_mset_param_set_ftype (test->mset, pi->mid, pi->pid, free ? NCM_PARAM_TYPE_FREE : NCM_PARAM_TYPE_FIXED);
+    }
+  }
+  ncm_mset_prepare_fparam_map (test->mset);
+  
   {
     NcClusterMass *benson = nc_cluster_mass_new_from_name ("NcClusterMassBenson");
     NcmSerialize *ser = ncm_serialize_new (NCM_SERIALIZE_OPT_CLEAN_DUP);
@@ -323,6 +336,13 @@ test_ncm_mset_dup (TestNcmMSet *test, gconstpointer pdata)
         {
           ncm_assert_cmpdouble (ncm_model_param_get (model0, pid), ==, ncm_model_param_get (model1, pid));
         }
+      }
+
+      g_assert_cmpuint (ncm_mset_fparams_len (test->mset), ==, ncm_mset_fparams_len (mset_dup));
+      for (i = 0; i < ncm_mset_fparams_len (test->mset); i++)
+      {
+        g_assert_cmpstr (ncm_mset_fparam_full_name (test->mset, i), ==, ncm_mset_fparam_full_name (mset_dup, i));
+        ncm_assert_cmpdouble (ncm_mset_fparam_get (test->mset, i), ==, ncm_mset_fparam_get (mset_dup, i));
       }
     }
 

@@ -40,6 +40,8 @@
 #include "math/ncm_serialize.h"
 #include "math/ncm_cfg.h"
 #include "math/ncm_obj_array.h"
+#include "math/ncm_vector.h"
+#include "math/ncm_matrix.h"
 #include "ncm_enum_types.h"
 #include <gio/gio.h>
 
@@ -1026,6 +1028,8 @@ ncm_serialize_from_name_params (NcmSerialize *ser, const gchar *obj_name, GVaria
     GParameter *gprop = g_new (GParameter, nprop);
     GVariant *var = NULL;
     guint i = 0;
+    gboolean is_NcmVector = g_type_is_a (gtype, NCM_TYPE_VECTOR);
+    gboolean is_NcmMatrix = g_type_is_a (gtype, NCM_TYPE_MATRIX);
 
     while ((var = g_variant_iter_next_value (p_iter)))
     {
@@ -1033,27 +1037,32 @@ ncm_serialize_from_name_params (NcmSerialize *ser, const gchar *obj_name, GVaria
       GVariant *var_val = g_variant_get_child_value (var, 1);
       GVariant *val = g_variant_get_variant (var_val);
       gprop[i].name = g_variant_get_string (var_key, NULL);
-      /*
-      if (g_variant_is_of_type (val, G_VARIANT_TYPE (NCM_SERIALIZE_VECTOR_TYPE)))
+
+      if (g_variant_is_of_type (val, G_VARIANT_TYPE (NCM_SERIALIZE_VECTOR_TYPE)) && !is_NcmVector)
       {
-        NcmVector *vec = ncm_vector_new_variant (var);
+        NcmVector *vec = ncm_vector_new_variant (val);
         GValue lval = G_VALUE_INIT;
         g_value_init (&lval, G_TYPE_OBJECT);
         gprop[i].value = lval;
         g_value_take_object (&gprop[i].value, vec);
-        ncm_vector_free (vec);
       }
-      else if (g_variant_is_of_type (val, G_VARIANT_TYPE (NCM_SERIALIZE_MATRIX_TYPE)))
+      else if (g_variant_is_of_type (val, G_VARIANT_TYPE (NCM_SERIALIZE_MATRIX_TYPE)) && !is_NcmMatrix)
       {
-        NcmMatrix *mat = ncm_matrix_new_variant (var);
+        NcmMatrix *mat = ncm_matrix_new_variant (val);
         GValue lval = G_VALUE_INIT;
         g_value_init (&lval, G_TYPE_OBJECT);
         gprop[i].value = lval;
         g_value_take_object (&gprop[i].value, mat);
-        ncm_matrix_free (mat);        
       }
-      else */
-      if (g_variant_is_of_type (val, G_VARIANT_TYPE (NCM_OBJ_ARRAY_TYPE)))
+      else if (g_variant_is_of_type (val, G_VARIANT_TYPE (NCM_SERIALIZE_STRV_TYPE)))
+      {
+        gchar **strv = g_variant_dup_strv (val, NULL);
+        GValue lval = G_VALUE_INIT;
+        g_value_init (&lval, G_TYPE_STRV);
+        gprop[i].value = lval;
+        g_value_take_boxed (&gprop[i].value, strv);
+      }
+      else if (g_variant_is_of_type (val, G_VARIANT_TYPE (NCM_OBJ_ARRAY_TYPE)))
       {
         NcmObjArray *oa = ncm_obj_array_new_from_variant (ser, val);
         GValue lval = G_VALUE_INIT;
@@ -1253,6 +1262,12 @@ ncm_serialize_gvalue_to_gvariant (NcmSerialize *ser, GValue *val)
           NcmObjArray *oa = g_value_get_boxed (val);
           if (oa != NULL)
             var = _ncm_obj_array_ser (oa, ser);
+        }
+        else if (g_type_is_a (t, G_TYPE_STRV))
+        {
+          const gchar * const * strv = g_value_get_boxed (val);
+          if (strv != NULL)
+            var = g_variant_ref_sink (g_variant_new_strv (strv, -1));
         }
         else
           g_error ("Cannot convert GValue '%s' to GVariant.", g_type_name (t));  

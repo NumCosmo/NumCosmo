@@ -82,7 +82,7 @@ struct _NcmLHRatio1dClass
 
 GType ncm_lh_ratio1d_get_type (void) G_GNUC_CONST;
 
-NcmLHRatio1d *ncm_lh_ratio1d_new (NcmFit *fit, NcmMSetPIndex *pi);
+NcmLHRatio1d *ncm_lh_ratio1d_new (NcmFit *fit, const NcmMSetPIndex *pi);
 void ncm_lh_ratio1d_free (NcmLHRatio1d *lhr1d);
 void ncm_lh_ratio1d_clear (NcmLHRatio1d **lhr1d);
 
