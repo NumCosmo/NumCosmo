@@ -50,6 +50,124 @@ enum
   PROP_SIZE,
 };
 
+static void
+nc_cluster_mass_nodist_init (NcClusterMassNodist *mn)
+{
+  mn->lnM_min = 0.0;
+  mn->lnM_max = 0.0;
+}
+
+static void
+_nc_cluster_mass_nodist_set_property (GObject * object, guint prop_id, const GValue * value, GParamSpec * pspec)
+{
+  NcClusterMassNodist *mnodist = NC_CLUSTER_MASS_NODIST (object);
+  g_return_if_fail (NC_IS_CLUSTER_MASS_NODIST (object));
+
+  switch (prop_id)
+  {
+    case PROP_LNM_MIN:
+      mnodist->lnM_min = g_value_get_double (value);
+      break;
+    case PROP_LNM_MAX:
+      mnodist->lnM_max = g_value_get_double (value);
+      break;
+    default:
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
+      break;
+  }
+}
+
+static void
+_nc_cluster_mass_nodist_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
+{
+  NcClusterMassNodist *mnodist = NC_CLUSTER_MASS_NODIST (object);
+  g_return_if_fail (NC_IS_CLUSTER_MASS_NODIST (object));
+
+  switch (prop_id)
+  {
+    case PROP_LNM_MIN:
+      g_value_set_double (value, mnodist->lnM_min);
+      break;
+    case PROP_LNM_MAX:
+      g_value_set_double (value, mnodist->lnM_max);
+      break;
+    default:
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
+      break;
+  }
+}
+
+static void
+nc_cluster_mass_nodist_finalize (GObject *object)
+{
+
+  /* Chain up : end */
+  G_OBJECT_CLASS (nc_cluster_mass_nodist_parent_class)->finalize (object);
+}
+
+guint _nc_cluster_mass_nodist_obs_len (NcClusterMass *clusterm) { NCM_UNUSED (clusterm); return 1; }
+guint _nc_cluster_mass_nodist_obs_params_len (NcClusterMass *clusterm) { NCM_UNUSED (clusterm); return 0; }
+static gdouble _nc_cluster_mass_nodist_p (NcClusterMass *clusterm, NcHICosmo *cosmo, gdouble lnM, gdouble z, const gdouble *lnM_obs, const gdouble *lnM_obs_params);
+static gdouble _nc_cluster_mass_nodist_intp (NcClusterMass *clusterm, NcHICosmo *cosmo, gdouble lnM, gdouble z);
+static gboolean _nc_cluster_mass_nodist_resample (NcClusterMass *clusterm, NcHICosmo *cosmo, gdouble lnM, gdouble z, gdouble *lnM_obs, const gdouble *lnM_obs_params, NcmRNG *rng);
+static void _nc_cluster_mass_nodist_p_limits (NcClusterMass *clusterm, NcHICosmo *cosmo, const gdouble *lnM_obs, const gdouble *lnM_obs_params, gdouble *lnM_lower, gdouble *lnM_upper);
+static void _nc_cluster_mass_nodist_n_limits (NcClusterMass *clusterm, NcHICosmo *cosmo, gdouble *lnm_lower, gdouble *lnm_upper);
+
+static void
+nc_cluster_mass_nodist_class_init (NcClusterMassNodistClass *klass)
+{
+  GObjectClass* object_class = G_OBJECT_CLASS (klass);
+  NcClusterMassClass* parent_class = NC_CLUSTER_MASS_CLASS (klass);
+  NcmModelClass *model_class = NCM_MODEL_CLASS (klass);
+
+  parent_class->P              = &_nc_cluster_mass_nodist_p;
+  parent_class->intP           = &_nc_cluster_mass_nodist_intp;
+  parent_class->resample       = &_nc_cluster_mass_nodist_resample;
+  parent_class->P_limits       = &_nc_cluster_mass_nodist_p_limits;
+  parent_class->N_limits       = &_nc_cluster_mass_nodist_n_limits;
+  parent_class->obs_len        = &_nc_cluster_mass_nodist_obs_len;
+  parent_class->obs_params_len = &_nc_cluster_mass_nodist_obs_params_len;
+
+  parent_class->impl = NC_CLUSTER_MASS_N_LIMITS | NC_CLUSTER_MASS_RESAMPLE;
+
+  object_class->finalize     =  &nc_cluster_mass_nodist_finalize;
+
+  model_class->set_property = &_nc_cluster_mass_nodist_set_property;
+  model_class->get_property = &_nc_cluster_mass_nodist_get_property;
+
+  ncm_model_class_set_name_nick (model_class, "No mass distribution", "No_distribution");
+  ncm_model_class_add_params (model_class, 0, 0, PROP_SIZE);
+  
+  /**
+   * NcClusterMassNodist:lnM_min:
+   *
+   * FIXME Set correct values (limits)
+   */
+  g_object_class_install_property (object_class,
+                                   PROP_LNM_MIN,
+                                   g_param_spec_double ("lnM-min",
+                                                        NULL,
+                                                        "Minimum mass",
+                                                        11.0 * M_LN10, G_MAXDOUBLE, log (5.0) + 13.0 * M_LN10,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY |G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
+  /**
+   * NcClusterMassNodist:lnM_max:
+   *
+   * FIXME Set correct values (limits)
+   */
+  g_object_class_install_property (object_class,
+                                   PROP_LNM_MAX,
+                                   g_param_spec_double ("lnM-max",
+                                                        NULL,
+                                                        "Maximum mass",
+                                                        11.0 * M_LN10, G_MAXDOUBLE, 16.0 * M_LN10,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY |G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
+
+}
+
+
 static gdouble
 _nc_cluster_mass_nodist_p (NcClusterMass *clusterm, NcHICosmo *cosmo, gdouble lnM, gdouble z, const gdouble *lnM_obs, const gdouble *lnM_obs_params)
 {
@@ -115,114 +233,3 @@ _nc_cluster_mass_nodist_n_limits (NcClusterMass *clusterm, NcHICosmo *cosmo, gdo
   return;
 }
 
-guint _nc_cluster_mass_nodist_obs_len (NcClusterMass *clusterm) { NCM_UNUSED (clusterm); return 1; }
-guint _nc_cluster_mass_nodist_obs_params_len (NcClusterMass *clusterm) { NCM_UNUSED (clusterm); return 0; }
-
-static void
-_nc_cluster_mass_nodist_set_property (GObject * object, guint prop_id, const GValue * value, GParamSpec * pspec)
-{
-  NcClusterMassNodist *mnodist = NC_CLUSTER_MASS_NODIST (object);
-  g_return_if_fail (NC_IS_CLUSTER_MASS_NODIST (object));
-
-  switch (prop_id)
-  {
-    case PROP_LNM_MIN:
-      mnodist->lnM_min = g_value_get_double (value);
-      break;
-    case PROP_LNM_MAX:
-      mnodist->lnM_max = g_value_get_double (value);
-      break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
-  }
-}
-
-static void
-_nc_cluster_mass_nodist_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
-{
-  NcClusterMassNodist *mnodist = NC_CLUSTER_MASS_NODIST (object);
-  g_return_if_fail (NC_IS_CLUSTER_MASS_NODIST (object));
-
-  switch (prop_id)
-  {
-    case PROP_LNM_MIN:
-      g_value_set_double (value, mnodist->lnM_min);
-      break;
-    case PROP_LNM_MAX:
-      g_value_set_double (value, mnodist->lnM_max);
-      break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
-  }
-}
-
-static void
-nc_cluster_mass_nodist_init (NcClusterMassNodist *mn)
-{
-  mn->lnM_min = 0.0;
-  mn->lnM_max = 0.0;
-}
-
-static void
-nc_cluster_mass_nodist_finalize (GObject *object)
-{
-
-  /* Chain up : end */
-  G_OBJECT_CLASS (nc_cluster_mass_nodist_parent_class)->finalize (object);
-}
-
-static void
-nc_cluster_mass_nodist_class_init (NcClusterMassNodistClass *klass)
-{
-  GObjectClass* object_class = G_OBJECT_CLASS (klass);
-  NcClusterMassClass* parent_class = NC_CLUSTER_MASS_CLASS (klass);
-  NcmModelClass *model_class = NCM_MODEL_CLASS (klass);
-
-  parent_class->P              = &_nc_cluster_mass_nodist_p;
-  parent_class->intP           = &_nc_cluster_mass_nodist_intp;
-  parent_class->resample       = &_nc_cluster_mass_nodist_resample;
-  parent_class->P_limits       = &_nc_cluster_mass_nodist_p_limits;
-  parent_class->N_limits       = &_nc_cluster_mass_nodist_n_limits;
-  parent_class->obs_len        = &_nc_cluster_mass_nodist_obs_len;
-  parent_class->obs_params_len = &_nc_cluster_mass_nodist_obs_params_len;
-
-  parent_class->impl = NC_CLUSTER_MASS_N_LIMITS | NC_CLUSTER_MASS_RESAMPLE;
-
-  object_class->finalize     =  &nc_cluster_mass_nodist_finalize;
-
-  model_class->set_property = &_nc_cluster_mass_nodist_set_property;
-  model_class->get_property = &_nc_cluster_mass_nodist_get_property;
-
-  ncm_model_class_set_name_nick (model_class, "No mass distribution", "No_distribution");
-  ncm_model_class_add_params (model_class, 0, 0, PROP_SIZE);
-  
-  /**
-   * NcClusterMassNodist:lnM_min:
-   *
-   * FIXME Set correct values (limits)
-   */
-  g_object_class_install_property (object_class,
-                                   PROP_LNM_MIN,
-                                   g_param_spec_double ("lnM-min",
-                                                        NULL,
-                                                        "Minimum mass",
-                                                        11.0 * M_LN10, G_MAXDOUBLE, log (5.0) + 13.0 * M_LN10,
-                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY |G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-
-  /**
-   * NcClusterMassNodist:lnM_max:
-   *
-   * FIXME Set correct values (limits)
-   */
-  g_object_class_install_property (object_class,
-                                   PROP_LNM_MAX,
-                                   g_param_spec_double ("lnM-max",
-                                                        NULL,
-                                                        "Maximum mass",
-                                                        11.0 * M_LN10, G_MAXDOUBLE, 16.0 * M_LN10,
-                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY |G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-
-
-}

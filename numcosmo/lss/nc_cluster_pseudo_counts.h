@@ -78,6 +78,7 @@ struct _NcClusterPseudoCounts
   /*< private >*/
   NcmModel parent_instance;
   NcMassFunction *mfp;
+  gdouble *workz;
 };
 
 struct _NcClusterPseudoCountsClass
@@ -96,10 +97,11 @@ NcClusterPseudoCounts *nc_cluster_pseudo_counts_ref (NcClusterPseudoCounts *cpc)
 void nc_cluster_pseudo_counts_free (NcClusterPseudoCounts *cpc);
 void nc_cluster_pseudo_counts_clear (NcClusterPseudoCounts **cpc);
 
+gdouble nc_cluster_pseudo_counts_ndet_no_z_integral (NcClusterPseudoCounts *cpc, NcHICosmo *cosmo, gdouble z);
 gdouble nc_cluster_pseudo_counts_ndet (NcClusterPseudoCounts *cpc, NcHICosmo *cosmo);
 gdouble nc_cluster_pseudo_counts_posterior_numerator (NcClusterPseudoCounts *cpc, NcClusterMass *clusterm, NcHICosmo *cosmo, const gdouble z, const gdouble *Mobs, const gdouble *Mobs_params);
 gdouble nc_cluster_pseudo_counts_posterior_numerator_plcl (NcClusterPseudoCounts *cpc, NcClusterMass *clusterm, NcHICosmo *cosmo, const gdouble z, const gdouble *Mobs, const gdouble *Mobs_params);
-
+gdouble nc_cluster_pseudo_counts_posterior_numerator_normalization (NcClusterPseudoCounts *cpc, NcClusterMass *clusterm, NcHICosmo *cosmo, const gdouble z, const gdouble *Mobs_params);
 
 G_END_DECLS
 

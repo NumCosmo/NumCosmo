@@ -288,7 +288,7 @@ ncm_abc_free (NcmABC *abc)
  * ncm_abc_clear:
  * @abc: a #NcmABC
  *
- * FIXME *
+ * FIXME 
  */
 void 
 ncm_abc_clear (NcmABC **abc)
@@ -298,7 +298,7 @@ ncm_abc_clear (NcmABC **abc)
 
 /**
  * ncm_abc_data_summary: (virtual data_summary)
- * @abc: a #NcmABC.
+ * @abc: a #NcmABC
  *
  * Calculates the data summary and stores internally.
  * 
@@ -312,11 +312,11 @@ ncm_abc_data_summary (NcmABC *abc)
 
 /**
  * ncm_abc_mock_distance: (virtual mock_distance)
- * @abc: a #NcmABC.
- * @dset: a #NcmDataset.
- * @theta: a #NcmVector.
- * @thetastar: a #NcmVector.
- * @rng: a #NcmRNG.
+ * @abc: a #NcmABC
+ * @dset: a #NcmDataset
+ * @theta: a #NcmVector
+ * @thetastar: a #NcmVector
+ * @rng: a #NcmRNG
  *
  * Calculates the distance of the new point given by @thetastar 
  * given the old point @theta.
@@ -331,8 +331,8 @@ ncm_abc_mock_distance (NcmABC *abc, NcmDataset *dset, NcmVector *theta, NcmVecto
 
 /**
  * ncm_abc_distance_prob: (virtual distance_prob)
- * @abc: a #NcmABC.
- * @distance: the distance.
+ * @abc: a #NcmABC
+ * @distance: the distance
  *
  * Calculates the probability of the distance been accepted. 
  * 
@@ -346,7 +346,7 @@ ncm_abc_distance_prob (NcmABC *abc, gdouble distance)
 
 /**
  * ncm_abc_update_tkern: (virtual update_tkern)
- * @abc: a #NcmABC.
+ * @abc: a #NcmABC
  *
  * Updates the transition kernel present in @abc->tkern. 
  * 
@@ -360,7 +360,7 @@ ncm_abc_update_tkern (NcmABC *abc)
 
 /**
  * ncm_abc_get_desc: (virtual get_desc)
- * @abc: a #NcmABC.
+ * @abc: a #NcmABC
  *
  * Gets the description of the current ABC implementation. 
  * 
@@ -374,7 +374,7 @@ ncm_abc_get_desc (NcmABC *abc)
 
 /**
  * ncm_abc_log_info: (virtual log_info)
- * @abc: a #NcmABC.
+ * @abc: a #NcmABC
  *
  * Gets the informations about the current run of ABC. 
  * 
@@ -389,7 +389,7 @@ ncm_abc_log_info (NcmABC *abc)
 /**
  * ncm_abc_set_mtype:
  * @abc: a #NcmFitMC
- * @mtype: FIXME
+ * @mtype: a #NcmFitRunMsgs
  *
  * FIXME
  *
@@ -403,7 +403,7 @@ ncm_abc_set_mtype (NcmABC *abc, NcmFitRunMsgs mtype)
 /**
  * ncm_abc_set_data_file:
  * @abc: a #NcmABC
- * @filename: a filename.
+ * @filename: a filename
  *
  * FIXME
  *
@@ -428,7 +428,7 @@ ncm_abc_set_data_file (NcmABC *abc, const gchar *filename)
 /**
  * ncm_abc_set_nthreads:
  * @abc: a #NcmABC
- * @nthreads: FIXME
+ * @nthreads: number of threads
  *
  * FIXME
  *
@@ -442,7 +442,7 @@ ncm_abc_set_nthreads (NcmABC *abc, guint nthreads)
 /**
  * ncm_abc_set_rng:
  * @abc: a #NcmABC
- * @rng: FIXME
+ * @rng: a #NcmRNG
  *
  * FIXME
  *
@@ -1022,6 +1022,60 @@ _ncm_abc_run_mt (NcmABC *abc)
   g_assert_cmpuint (abc->nthreads, >, 1);
 
   ncm_func_eval_threaded_loop_full (&_ncm_abc_thread_eval, 0, abc->n, abc);
+}
+
+/**
+ * ncm_abc_run_lre:
+ * @abc: a #NcmABC
+ * @prerun: FIXME
+ * @lre: largest relative error
+ *
+ * FIXME
+ * 
+ */
+void 
+ncm_abc_run_lre (NcmABC *abc, guint prerun, gdouble lre)
+{
+  gdouble lerror;
+  const gdouble lre2 = lre * lre;
+
+  g_assert_cmpfloat (lre, >, 0.0);
+  /* g_assert_cmpfloat (lre, <, 1.0); */
+
+  if (prerun == 0)
+  {
+    guint fparam_len = ncm_mset_fparam_len (abc->mcat->mset);
+    prerun = fparam_len * 100;
+  }
+
+  if (ncm_mset_catalog_len (abc->mcat) < prerun)
+  {
+    guint prerun_left = prerun - ncm_mset_catalog_len (abc->mcat);
+    if (abc->mtype >= NCM_FIT_RUN_MSGS_SIMPLE)
+      g_message ("# NcmABC: Running first %u pre-runs...\n", prerun_left);
+    ncm_abc_run (abc, prerun);
+  }
+
+  lerror = ncm_mset_catalog_largest_error (abc->mcat);
+
+  while (lerror > lre)
+  {
+    const gdouble lerror2 = lerror * lerror;
+    gdouble n = ncm_mset_catalog_len (abc->mcat);
+    gdouble m = n * lerror2 / lre2;
+    guint runs = ((m - n) > 1000.0) ? ceil ((m - n) * 0.25) : ceil (m - n);
+
+    if (abc->mtype >= NCM_FIT_RUN_MSGS_SIMPLE)
+    {
+      g_message ("# NcmABC: Largest relative error %e not attained: %e\n", lre, lerror);
+      g_message ("# NcmABC: Running more %u runs...\n", runs);
+    }
+    ncm_abc_run (abc, abc->cur_sample_id + runs + 1);
+    lerror = ncm_mset_catalog_largest_error (abc->mcat);
+  }
+
+  if (abc->mtype >= NCM_FIT_RUN_MSGS_SIMPLE)
+    g_message ("# NcmABC: Largest relative error %e attained: %e\n", lre, lerror);
 }
 
 /**

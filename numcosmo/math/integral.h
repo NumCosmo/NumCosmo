@@ -2,12 +2,12 @@
  *            integral.h
  *
  *  Wed Aug 13 20:38:13 2008
- *  Copyright  2008  Sandro Dias Pinto Vitenti
- *  <sandro@isoftware.com.br>
+ *  Copyright  2008  Sandro Dias Pinto Vitenti and Mariana Penna Lima
+ *  <sandro@isoftware.com.br>, <pennalima@gmail.com>
  ****************************************************************************/
 /*
  * numcosmo
- * Copyright (C) Sandro Dias Pinto Vitenti 2012 <sandro@lapsandro>
+ * Copyright (C) Sandro Dias Pinto Vitenti & Mariana Penna Lima 2012 <sandro@lapsandro>, <pennalima@gmail.com>
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
@@ -37,6 +37,8 @@ gsl_integration_workspace **ncm_integral_get_workspace (void);
 
 typedef struct _NcmIntegrand2dim NcmIntegrand2dim;
 typedef gdouble (*_NcmIntegrand2dimFunc) (gdouble x, gdouble y, gpointer userdata);
+
+typedef void (*NcmIntegralPeakfinder) (const gint *ndim, const gdouble b[], gint *n, gdouble x[], void *userdata);
 
 /**
  * NcmIntegrand2dim:
@@ -93,6 +95,9 @@ gint ncm_integral_cached_x_inf (NcmFunctionCache *cache, gsl_function *F, gdoubl
 
 gboolean ncm_integrate_2dim (NcmIntegrand2dim *integ, gdouble xi, gdouble yi, gdouble xf, gdouble yf, gdouble epsrel, gdouble epsabs, gdouble *result, gdouble *error);
 gboolean ncm_integrate_3dim (NcmIntegrand3dim *integ, gdouble xi, gdouble yi, gdouble zi, gdouble xf, gdouble yf, gdouble zf, gdouble epsrel, gdouble epsabs, gdouble *result, gdouble *error);
+gboolean ncm_integrate_2dim_divonne (NcmIntegrand2dim *integ, gdouble xi, gdouble yi, gdouble xf, gdouble yf, gdouble epsrel, gdouble epsabs, const gint ngiven, const gint ldxgiven, gdouble xgiven[], gdouble *result, gdouble *error);
+gboolean ncm_integrate_2dim_divonne_peakfinder (NcmIntegrand2dim *integ, gdouble xi, gdouble yi, gdouble xf, gdouble yf, gdouble epsrel, gdouble epsabs, const gint ngiven, const gint ldxgiven, gdouble xgiven[], const gint nextra, NcmIntegralPeakfinder peakfinder, gdouble *result, gdouble *error);
+gboolean ncm_integrate_3dim_divonne (NcmIntegrand3dim *integ, gdouble xi, gdouble yi, gdouble zi, gdouble xf, gdouble yf, gdouble zf, gdouble epsrel, gdouble epsabs, const gint ngiven, const gint ldxgiven, gdouble xgiven[], gdouble *result, gdouble *error);
 
 NcmIntegralFixed *ncm_integral_fixed_new (gulong n_nodes, gulong rule_n, gdouble xl, gdouble xu);
 void ncm_integral_fixed_free (NcmIntegralFixed *intf);

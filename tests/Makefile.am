@@ -54,7 +54,6 @@ test_ncm_data_gauss_cov_SOURCES = \
 test_ncm_func_eval_SOURCES =  \
 	test_ncm_func_eval.c
 
-
 test_nc_window_SOURCES =  \
         test_nc_window.c
         
@@ -72,7 +71,10 @@ test_nc_data_bao_rdv_SOURCES =  \
 
 test_nc_data_bao_dvdv_SOURCES =  \
         test_nc_data_bao_dvdv.c
-
+        
+test_nc_cluster_pseudo_counts_SOURCES =  \
+        test_nc_cluster_pseudo_counts.c
+        
 check_PROGRAMS =  \
 	test_ncm_sparam               \
 	test_ncm_vector               \
@@ -91,7 +93,8 @@ check_PROGRAMS =  \
 	test_nc_galaxy_acf            \
 	test_nc_recomb                \
 	test_nc_data_bao_rdv          \
-        test_nc_data_bao_dvdv
+        test_nc_data_bao_dvdv         \
+        test_nc_cluster_pseudo_counts
 
 # TEST_PROGS += $(check_PROGRAMS)
 
@@ -130,5 +133,7 @@ test_nc_recomb_LDADD = $(top_builddir)/numcosmo/libnumcosmo.la
 test_nc_data_bao_rdv_LDADD = $(top_builddir)/numcosmo/libnumcosmo.la
 
 test_nc_data_bao_dvdv_LDADD = $(top_builddir)/numcosmo/libnumcosmo.la
+
+test_nc_cluster_pseudo_counts_LDADD = $(top_builddir)/numcosmo/libnumcosmo.la
 
 TESTS = $(check_PROGRAMS)

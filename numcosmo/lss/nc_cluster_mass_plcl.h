@@ -72,7 +72,7 @@ typedef enum _NcClusterMassPlCLParams
 #define NC_CLUSTER_MASS_PLCL_DEFAULT_SD_SZ (0.234)
 #define NC_CLUSTER_MASS_PLCL_DEFAULT_A_L  (0.9737)
 #define NC_CLUSTER_MASS_PLCL_DEFAULT_B_L  (0.0)
-#define NC_CLUSTER_MASS_PLCL_DEFAULT_SD_L (0.569)
+#define NC_CLUSTER_MASS_PLCL_DEFAULT_SD_L (0.4)
 #define NC_CLUSTER_MASS_PLCL_DEFAULT_COR  (0.488)
 
 #define NC_CLUSTER_MASS_PLCL_DEFAULT_PARAMS_ABSTOL (0.0)
@@ -85,7 +85,9 @@ typedef enum _NcClusterMassPlCLParams
 struct _NcClusterMassPlCL
 {
   /*< private >*/
-  NcClusterMass parent_instance;  
+  NcClusterMass parent_instance;
+  gdouble M0;
+  gdouble *workz;
 };
 
 struct _NcClusterMassPlCLClass
@@ -96,6 +98,7 @@ struct _NcClusterMassPlCLClass
 
 GType nc_cluster_mass_plcl_get_type (void) G_GNUC_CONST;
 
+void nc_cluster_mass_plcl_levmar_f (gdouble *p, gdouble *hx, gint m, gint n, NcClusterMassPlCL *mszl, gdouble lnM, const gdouble *Mobs, const gdouble *Mobs_params);
 gdouble nc_cluster_mass_plcl_pdf (NcClusterMass *clusterm, gdouble lnM500, gdouble lnMsz, gdouble lnMl, const gdouble *Mobs, const gdouble *Mobs_params);
 
 G_END_DECLS
