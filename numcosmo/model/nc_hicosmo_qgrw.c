@@ -871,7 +871,7 @@ _nc_hipert_itwo_fluids_eom_full (NcHIPertITwoFluids *itf, gdouble alpha, gdouble
       const gdouble r_factor31     = (r2 + 2.0 - 3.0 * rm2) * 0.25;
       const gdouble r_factor12     = (rm2 - 4.0 + 3.0 * r2) * 0.5;
       const gdouble r_factor22     = (rm2 - 2.0 - 3.0 * r2) * 0.25;
-      const gdouble r_factor22     = (rm2 + 2.0 - 3.0 * r2) * 0.25;
+      const gdouble r_factor23     = (rm2 + 2.0 - 3.0 * r2) * 0.25;
       const gdouble dgamma         = onepw2 * d1R * lambda_zeta / (2.0 * p4 * lambda_s);
       
       
