@@ -149,6 +149,7 @@ struct _NcmFit
   GTimer *timer;
   GPtrArray *equality_constraints;
   GPtrArray *inequality_constraints;
+  NcmFit *sub_fit;
 };
 
 struct _NcmFitClass
@@ -184,17 +185,26 @@ NcmFit *ncm_fit_dup (NcmFit *fit, NcmSerialize *ser);
 void ncm_fit_free (NcmFit *fit);
 void ncm_fit_clear (NcmFit **fit);
 
+void ncm_fit_set_sub_fit (NcmFit *fit, NcmFit *sub_fit);
+NcmFit *ncm_fit_get_sub_fit (NcmFit *fit);
+
 void ncm_fit_set_grad_type (NcmFit *fit, NcmFitGradType gtype);
 
 void ncm_fit_set_maxiter (NcmFit *fit, guint maxiter);
-guint ncm_fit_get_maxiter (NcmFit *fit);
 void ncm_fit_set_m2lnL_reltol (NcmFit *fit, gdouble tol);
-gdouble ncm_fit_get_m2lnL_reltol (NcmFit *fit);
 void ncm_fit_set_m2lnL_abstol (NcmFit *fit, gdouble tol);
-gdouble ncm_fit_get_m2lnL_abstol (NcmFit *fit);
 void ncm_fit_set_params_reltol (NcmFit *fit, gdouble tol);
+guint ncm_fit_get_maxiter (NcmFit *fit);
+gdouble ncm_fit_get_m2lnL_reltol (NcmFit *fit);
+gdouble ncm_fit_get_m2lnL_abstol (NcmFit *fit);
 gdouble ncm_fit_get_params_reltol (NcmFit *fit);
-void ncm_fit_set_params (NcmFit *fit, NcmVector *params);
+
+G_INLINE_FUNC void ncm_fit_params_set (NcmFit *fit, guint i, const gdouble x);
+G_INLINE_FUNC void ncm_fit_params_set_vector (NcmFit *fit, NcmVector *x);
+G_INLINE_FUNC void ncm_fit_params_set_vector_offset (NcmFit *fit, NcmVector *x, guint offset);
+G_INLINE_FUNC void ncm_fit_params_set_array (NcmFit *fit, const gdouble *x);
+G_INLINE_FUNC void ncm_fit_params_set_gsl_vector (NcmFit *fit, const gsl_vector *x);
+G_INLINE_FUNC void ncm_fit_params_update (NcmFit *fit);
 
 void ncm_fit_add_equality_constraint (NcmFit *fit, NcmMSetFunc *func, gdouble tot);
 void ncm_fit_add_inequality_constraint (NcmFit *fit, NcmMSetFunc *func, gdouble tot);
@@ -216,31 +226,31 @@ void ncm_fit_log_end (NcmFit *fit);
 
 void ncm_fit_fishermatrix_print (NcmFit *fit, FILE *out, gchar *header);
 
-void ncm_fit_data_m2lnL_val (NcmFit *fit, gdouble *data_m2lnL);
-void ncm_fit_priors_m2lnL_val (NcmFit *fit, gdouble *priors_m2lnL);
+G_INLINE_FUNC void ncm_fit_data_m2lnL_val (NcmFit *fit, gdouble *data_m2lnL);
+G_INLINE_FUNC void ncm_fit_priors_m2lnL_val (NcmFit *fit, gdouble *priors_m2lnL);
 
-void ncm_fit_m2lnL_val (NcmFit *fit, gdouble *m2lnL);
-void ncm_fit_ls_f (NcmFit *fit, NcmVector *f);
+G_INLINE_FUNC void ncm_fit_m2lnL_val (NcmFit *fit, gdouble *m2lnL);
+G_INLINE_FUNC void ncm_fit_ls_f (NcmFit *fit, NcmVector *f);
 
-void ncm_fit_m2lnL_grad (NcmFit *fit, NcmVector *df);
+G_INLINE_FUNC void ncm_fit_m2lnL_grad (NcmFit *fit, NcmVector *df);
 void ncm_fit_m2lnL_grad_an (NcmFit *fit, NcmVector *df);
 void ncm_fit_m2lnL_grad_nd_fo (NcmFit *fit, NcmVector *grad);
 void ncm_fit_m2lnL_grad_nd_ce (NcmFit *fit, NcmVector *grad);
 void ncm_fit_m2lnL_grad_nd_ac (NcmFit *fit, NcmVector *grad);
 void ncm_fit_m2lnL_hessian_nd_ce (NcmFit *fit, NcmMatrix *hessian);
 
-void ncm_fit_m2lnL_val_grad (NcmFit *fit, gdouble *result, NcmVector *df);
+G_INLINE_FUNC void ncm_fit_m2lnL_val_grad (NcmFit *fit, gdouble *result, NcmVector *df);
 void ncm_fit_m2lnL_val_grad_an (NcmFit *fit, gdouble *result, NcmVector *df);
 void ncm_fit_m2lnL_val_grad_nd_fo (NcmFit *fit, gdouble *m2lnL, NcmVector *grad);
 void ncm_fit_m2lnL_val_grad_nd_ce (NcmFit *fit, gdouble *m2lnL, NcmVector *grad);
 void ncm_fit_m2lnL_val_grad_nd_ac (NcmFit *fit, gdouble *m2lnL, NcmVector *grad);
 
-void ncm_fit_ls_J (NcmFit *fit, NcmMatrix *J);
+G_INLINE_FUNC void ncm_fit_ls_J (NcmFit *fit, NcmMatrix *J);
 void ncm_fit_ls_J_an (NcmFit *fit, NcmMatrix *J);
 void ncm_fit_ls_J_nd_fo (NcmFit *fit, NcmMatrix *J);
 void ncm_fit_ls_J_nd_ce (NcmFit *fit, NcmMatrix *J);
 
-void ncm_fit_ls_f_J (NcmFit *fit, NcmVector *f, NcmMatrix *J);
+G_INLINE_FUNC void ncm_fit_ls_f_J (NcmFit *fit, NcmVector *f, NcmMatrix *J);
 void ncm_fit_ls_f_J_an (NcmFit *fit, NcmVector *f, NcmMatrix *J);
 void ncm_fit_ls_f_J_nd_fo (NcmFit *fit, NcmVector *f, NcmMatrix *J);
 void ncm_fit_ls_f_J_nd_ce (NcmFit *fit, NcmVector *f, NcmMatrix *J);
@@ -274,7 +284,6 @@ gdouble ncm_fit_type_constrain_error (NcmFit *fit, gdouble p, gint nu, gdouble d
 void ncm_fit_function_error (NcmFit *fit, NcmMSetFunc *func, gdouble *x, gboolean pretty_print, gdouble *f, gdouble *sigma_f);
 gdouble ncm_fit_function_cov (NcmFit *fit, NcmMSetFunc *func1, gdouble z1, NcmMSetFunc *func2, gdouble z2, gboolean pretty_print);
 
-#define NCM_FIT_NPARAM(fit) ((fit)->pt->nfree)
 #define NCM_FIT_DEFAULT_M2LNL_RELTOL (1e-8)
 #define NCM_FIT_DEFAULT_M2LNL_ABSTOL (0.0)
 #define NCM_FIT_DEFAULT_PARAMS_RELTOL (1e-5)
@@ -283,3 +292,106 @@ gdouble ncm_fit_function_cov (NcmFit *fit, NcmMSetFunc *func1, gdouble z1, NcmMS
 G_END_DECLS
 
 #endif /* _NCM_FIT_H_ */
+
+#ifndef _NCM_FIT_INLINE_H_
+#define _NCM_FIT_INLINE_H_
+#ifdef NUMCOSMO_HAVE_INLINE
+
+G_BEGIN_DECLS
+
+G_INLINE_FUNC void 
+ncm_fit_params_set (NcmFit *fit, guint i, const gdouble x)
+{
+  ncm_mset_fparam_set (fit->mset, i, x);
+  ncm_fit_params_update (fit);
+}
+
+G_INLINE_FUNC void 
+ncm_fit_params_set_vector (NcmFit *fit, NcmVector *x)
+{
+  ncm_mset_fparams_set_vector (fit->mset, x);
+  ncm_fit_params_update (fit);
+}
+
+G_INLINE_FUNC void 
+ncm_fit_params_set_vector_offset (NcmFit *fit, NcmVector *x, guint offset)
+{
+  ncm_mset_fparams_set_vector_offset (fit->mset, x, offset);
+  ncm_fit_params_update (fit);
+}
+
+G_INLINE_FUNC void 
+ncm_fit_params_set_array (NcmFit *fit, const gdouble *x)
+{
+  ncm_mset_fparams_set_array (fit->mset, x);
+  ncm_fit_params_update (fit);
+}
+
+G_INLINE_FUNC void 
+ncm_fit_params_set_gsl_vector (NcmFit *fit, const gsl_vector *x)
+{
+  ncm_mset_fparams_set_gsl_vector (fit->mset, x);
+  ncm_fit_params_update (fit);
+}
+
+G_INLINE_FUNC void 
+ncm_fit_params_update (NcmFit *fit)
+{
+  if (fit->sub_fit != NULL)
+    ncm_fit_run (fit->sub_fit, NCM_FIT_RUN_MSGS_NONE);
+}
+
+G_INLINE_FUNC void
+ncm_fit_data_m2lnL_val (NcmFit *fit, gdouble *data_m2lnL)
+{
+  ncm_dataset_m2lnL_val (fit->lh->dset, fit->mset, data_m2lnL);
+}
+
+G_INLINE_FUNC void
+ncm_fit_priors_m2lnL_val (NcmFit *fit, gdouble *priors_m2lnL)
+{
+  ncm_likelihood_priors_m2lnL_val (fit->lh, fit->mset, priors_m2lnL);
+}
+
+G_INLINE_FUNC void
+ncm_fit_m2lnL_val (NcmFit *fit, gdouble *m2lnL)
+{
+  ncm_likelihood_m2lnL_val (fit->lh, fit->mset, m2lnL);  
+  fit->fstate->func_eval++;
+}
+
+G_INLINE_FUNC void
+ncm_fit_ls_f (NcmFit *fit, NcmVector *f)
+{
+  ncm_likelihood_leastsquares_f (fit->lh, fit->mset, f);
+  fit->fstate->func_eval++;
+}
+
+G_INLINE_FUNC void
+ncm_fit_m2lnL_grad (NcmFit *fit, NcmVector *df)
+{
+  fit->grad.m2lnL_grad (fit, df);
+}
+
+G_INLINE_FUNC void
+ncm_fit_m2lnL_val_grad (NcmFit *fit, gdouble *result, NcmVector *df)
+{
+  fit->grad.m2lnL_val_grad (fit, result, df);
+}
+
+G_INLINE_FUNC void
+ncm_fit_ls_J (NcmFit *fit, NcmMatrix *J)
+{
+  fit->grad.ls_J (fit, J);
+}
+
+G_INLINE_FUNC void
+ncm_fit_ls_f_J (NcmFit *fit, NcmVector *f, NcmMatrix *J)
+{
+  fit->grad.ls_f_J (fit, f, J);
+}
+
+G_END_DECLS
+
+#endif /* NUMCOSMO_HAVE_INLINE */
+#endif /* _NCM_FIT_INLINE_H_ */

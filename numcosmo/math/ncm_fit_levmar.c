@@ -284,7 +284,7 @@ ncm_fit_levmar_der_run (NcmFit *fit, NcmFitRunMsgs mtype)
   ncm_fit_state_set_m2lnL_prec (fit->fstate, info[2] / info[1]);
   fit->fstate->niter = info[5];
 
-  ncm_fit_set_params (fit, fit->fstate->fparams);
+  ncm_fit_params_set_vector (fit, fit->fstate->fparams);
 
   return TRUE;
 }
@@ -324,7 +324,7 @@ ncm_fit_levmar_dif_run (NcmFit *fit, NcmFitRunMsgs mtype)
   ncm_fit_state_set_m2lnL_prec (fit->fstate, info[2] / info[1]);
   fit->fstate->niter = info[5];
 
-  ncm_fit_set_params (fit, fit->fstate->fparams);
+  ncm_fit_params_set_vector (fit, fit->fstate->fparams);
 
   return TRUE;
 }
@@ -365,7 +365,7 @@ ncm_fit_levmar_bc_der_run (NcmFit *fit, NcmFitRunMsgs mtype)
   ncm_fit_state_set_m2lnL_prec (fit->fstate, info[2] / info[1]);
   fit->fstate->niter = info[5];
 
-  ncm_fit_set_params (fit, fit->fstate->fparams);
+  ncm_fit_params_set_vector (fit, fit->fstate->fparams);
 
   return TRUE;
 }
@@ -406,7 +406,7 @@ ncm_fit_levmar_bc_dif_run (NcmFit *fit, NcmFitRunMsgs mtype)
   ncm_fit_state_set_m2lnL_prec (fit->fstate, info[2] / info[1]);
   fit->fstate->niter = info[5];
 
-  ncm_fit_set_params (fit, fit->fstate->fparams);
+  ncm_fit_params_set_vector (fit, fit->fstate->fparams);
 
   return TRUE;
 }
@@ -419,7 +419,7 @@ nc_residual_levmar_f (gdouble *p, gdouble *hx, gint m, gint n, gpointer adata)
 
   NCM_UNUSED (m);
   
-  ncm_mset_fparams_set_array (fit->mset, p);
+  ncm_fit_params_set_array (fit, p);
   if (!ncm_mset_params_valid (fit->mset))
     g_warning ("nc_residual_levmar_f: stepping in a invalid parameter point, continuing anyway.");
   
@@ -436,7 +436,7 @@ nc_residual_levmar_J (gdouble *p, gdouble *j, gint m, gint n, gpointer adata)
   NcmFit *fit = NCM_FIT (adata);
   NcmMatrix *J = ncm_matrix_new_data_static (j, n, m);
 
-  ncm_mset_fparams_set_array (fit->mset, p);
+  ncm_fit_params_set_array (fit, p);
   if (!ncm_mset_params_valid (fit->mset))
     g_warning ("nc_residual_levmar_J: stepping in a invalid parameter point, continuing anyway.");
 

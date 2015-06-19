@@ -284,19 +284,14 @@ nc_hipert_boltzmann_set_recomb (NcHIPertBoltzmann *pb, NcRecomb *recomb)
 void 
 nc_hipert_boltzmann_prepare (NcHIPertBoltzmann *pb, NcHICosmo *cosmo)
 {
-  NcHIPert *pert = NC_HIPERT (pb);
-
-  nc_hipert_set_mode_k (pert, 1.0);
+  /*NcHIPert *pert = NC_HIPERT (pb);*/
 
   nc_recomb_prepare_if_needed (pb->recomb, cosmo);
-
-  printf ("# prep y ptr %p\n", NC_HIPERT (pb)->y);
   
   NC_HIPERT_BOLTZMANN_GET_CLASS (pb)->init (pb, cosmo);
   NC_HIPERT_BOLTZMANN_GET_CLASS (pb)->reset (pb);
   NC_HIPERT_BOLTZMANN_GET_CLASS (pb)->set_opts (pb);
   NC_HIPERT_BOLTZMANN_GET_CLASS (pb)->evol (pb, pb->lambdaf);
-
 }
 
 

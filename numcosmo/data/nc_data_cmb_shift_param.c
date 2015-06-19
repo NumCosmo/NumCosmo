@@ -69,7 +69,7 @@ nc_data_cmb_shift_param_set_property (GObject *object, guint prop_id, const GVal
       cmb_shift_param->dist = g_value_dup_object (value);
       break;
     case PROP_Z:
-      ncm_vector_set_from_variant (cmb_shift_param->x, g_value_get_variant (value));
+      ncm_vector_substitute (&cmb_shift_param->x, g_value_get_object (value), TRUE);
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -89,7 +89,7 @@ nc_data_cmb_shift_param_get_property (GObject *object, guint prop_id, GValue *va
       g_value_set_object (value, cmb_shift_param->dist);
       break;
     case PROP_Z:
-      g_value_take_variant (value, ncm_vector_get_variant (cmb_shift_param->x));
+      g_value_set_object (value, cmb_shift_param->x);
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -141,12 +141,12 @@ nc_data_cmb_shift_param_class_init (NcDataCMBShiftParamClass *klass)
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
   g_object_class_install_property (object_class,
                                    PROP_Z,
-                                   g_param_spec_variant ("z",
-                                                         NULL,
-                                                         "Data redshift",
-                                                         G_VARIANT_TYPE ("ad"), NULL,
-                                                         G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-
+                                   g_param_spec_object ("z",
+                                                        NULL,
+                                                        "Data redshift",
+                                                        NCM_TYPE_VECTOR,
+                                                        G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  
   data_class->prepare   = &_nc_data_cmb_shift_param_prepare;
   diag_class->mean_func = &_nc_data_cmb_shift_param_mean_func;
   diag_class->set_size  = &_nc_data_cmb_shift_param_set_size;

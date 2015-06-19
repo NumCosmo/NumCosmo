@@ -220,7 +220,7 @@ _ncm_fit_gsl_mm_run (NcmFit *fit, NcmFitRunMsgs mtype)
 
     if (fit->fstate->niter == 1 && !gsl_finite(fit_gsl_mm->mm->f))
     {
-      ncm_mset_fparams_set_vector (fit->mset, fit->fstate->fparams);
+      ncm_fit_params_set_vector (fit, fit->fstate->fparams);
       return FALSE;
     }
 
@@ -240,7 +240,7 @@ _ncm_fit_gsl_mm_run (NcmFit *fit, NcmFitRunMsgs mtype)
   ncm_fit_state_set_m2lnL_curval (fit->fstate, fit_gsl_mm->mm->f);
   ncm_fit_state_set_m2lnL_prec (fit->fstate, gsl_blas_dnrm2 (fit_gsl_mm->mm->gradient) / fit_gsl_mm->mm->f);
 
-  ncm_mset_fparams_set_gsl_vector (fit->mset, fit_gsl_mm->mm->x);
+  ncm_fit_params_set_gsl_vector (fit, fit_gsl_mm->mm->x);
 
   return TRUE;
 }
@@ -251,7 +251,7 @@ nc_residual_multimin_f (const gsl_vector *x, gpointer p)
   NcmFit *fit = NCM_FIT (p);
   gdouble result;
 
-  ncm_mset_fparams_set_gsl_vector (fit->mset, x);
+  ncm_fit_params_set_gsl_vector (fit, x);
   if (!ncm_mset_params_valid (fit->mset))
     return GSL_EDOM;
   
@@ -265,7 +265,7 @@ nc_residual_multimin_df (const gsl_vector *x, gpointer p, gsl_vector *df)
   NcmFit *fit = NCM_FIT (p);
   NcmVector *dfv = ncm_vector_new_gsl_static (df);
   
-  ncm_mset_fparams_set_gsl_vector (fit->mset, x);
+  ncm_fit_params_set_gsl_vector (fit, x);
   if (!ncm_mset_params_valid (fit->mset))
     g_warning ("nc_residual_multimin_df: stepping in a invalid parameter point, continuing anyway.");
 
@@ -279,7 +279,7 @@ nc_residual_multimin_fdf (const gsl_vector *x, gpointer p, gdouble *f, gsl_vecto
   NcmFit *fit = NCM_FIT (p);
   NcmVector *dfv = ncm_vector_new_gsl_static (df);
   
-  ncm_mset_fparams_set_gsl_vector (fit->mset, x);
+  ncm_fit_params_set_gsl_vector (fit, x);
   if (!ncm_mset_params_valid (fit->mset))
     g_warning ("nc_residual_multimin_fdf: stepping in a invalid parameter point, continuing anyway.");
 

@@ -682,12 +682,7 @@ _ncm_model_class_get_property (GObject *object, guint prop_id, GValue *value, GP
   else if (vparam_id < model_class->vparam_len)
   {
     NcmVector *vp = ncm_model_orig_vparam_get_vector (model, vparam_id);
-    if (vp != NULL)
-    {
-      GVariant *vp_var = ncm_vector_get_variant (vp);
-      g_value_take_variant (value, vp_var);
-      ncm_vector_free (vp);
-    }
+    g_value_take_object (value, vp);
   }
   else if (vparam_len_id < model_class->vparam_len)
   {
@@ -695,7 +690,7 @@ _ncm_model_class_get_property (GObject *object, guint prop_id, GValue *value, GP
   }
   else if (sparam_fit_id < model_class->sparam_len)
   {
-    g_value_set_boolean (value, ncm_model_param_get_ftype (model, sparam_fit_id) == NCM_PARAM_TYPE_FREE ? TRUE: FALSE);
+    g_value_set_boolean (value, ncm_model_param_get_ftype (model, sparam_fit_id) == NCM_PARAM_TYPE_FREE ? TRUE : FALSE);
   }
   else if (vparam_fit_id < model_class->vparam_len)
   {
@@ -744,16 +739,14 @@ _ncm_model_class_set_property (GObject *object, guint prop_id, const GValue *val
   }
   else if (vparam_id < model_class->vparam_len)
   {
-    GVariant *var = g_value_get_variant (value);
-    NcmVector *vals = ncm_vector_new_variant (var);
-    gsize n = ncm_vector_len (vals);
+    NcmVector *vals = g_value_get_object (value);
+    guint n = ncm_vector_len (vals);
 
     if (n != g_array_index (model->vparam_len, guint, vparam_id))
-      g_error ("set_property: cannot set value of vector parameter, variant contains %zu childs but vector dimension is %u", 
+      g_error ("set_property: cannot set value of vector parameter, vector contains %u elements but vparam dimension is %u", 
                               n, ncm_model_vparam_len (model, vparam_id));
 
     ncm_model_orig_vparam_set_vector (model, vparam_id, vals);
-    ncm_vector_free (vals);
   }
   else if (vparam_len_id < model_class->vparam_len)
   {
@@ -995,9 +988,9 @@ ncm_model_class_set_vparam (NcmModelClass *model_class, guint vparam_id, guint d
 
   g_ptr_array_index (model_class->vparam, vparam_id) = vparam;
   g_object_class_install_property (object_class, prop_id,
-                                   g_param_spec_variant (name, NULL, symbol, 
-                                                         G_VARIANT_TYPE ("ad"), NULL, 
-                                                         G_PARAM_READWRITE));
+                                   g_param_spec_object (name, NULL, symbol, 
+                                                        NCM_TYPE_VECTOR, 
+                                                        G_PARAM_READWRITE));
   {
     gchar *param_length_name = g_strdup_printf ("%s-length", name);
     gchar *param_length_symbol = g_strdup_printf ("%s:length", symbol);

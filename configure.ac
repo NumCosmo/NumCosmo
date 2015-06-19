@@ -729,18 +729,45 @@ dnl ***************************************************************************
 dnl Check for sundials
 dnl ***************************************************************************
 
-AC_CHECK_PROG(has_sundials, sundials-config, yes, no)
-if test "x$has_sundials" = "xyes"; then
-  SUNDIALS_LIBS=`sundials-config -s libs -m cvodes -t s -l c`
-  SUNDIALS_CFLAGS=`sundials-config -s cppflags -m cvodes -t s -l c`
-  AC_SUBST(SUNDIALS_LIBS)
-  AC_SUBST(SUNDIALS_CFLAGS)
-else
-  AC_MSG_ERROR(Cannot find sundials-config.)
-fi
+AC_ARG_VAR([SUNDIALS_LIBS], [C compiler flags for SUNDIALS])
+AC_ARG_VAR([SUNDIALS_CFLAGS], [linker flags for SUNDIALS])
+AC_SUBST(SUNDIALS_LIBS)
+AC_SUBST(SUNDIALS_CFLAGS)
+
+AC_CHECK_LIB([sundials_nvecserial],[N_VNew_Serial],[SUNDIALS_LIBS="$SUNDIALS_LIBS -lsundials_nvecserial"],[AC_MSG_ERROR([Cannot find library sundials_nvecserial, use SUNDIALS_LIBS="-L<path_to_SUNDIALS_libs>".])],[])
+dnl AC_CHECK_LIB([sundials_cvode],[CVodeCreate],[SUNDIALS_LIBS="$SUNDIALS_LIBS -lsundials_cvode"],[AC_MSG_ERROR([Cannot find library sundials_cvode, use SUNDIALS_LIBS="-L<path_to_SUNDIALS_libs>".])],[])
+AC_CHECK_LIB([sundials_cvodes],[CVodeCreate],[SUNDIALS_LIBS="$SUNDIALS_LIBS -lsundials_cvodes"],[AC_MSG_ERROR([Cannot find library sundials_cvodes, use SUNDIALS_LIBS="-L<path_to_SUNDIALS_libs>".])],[])
+AC_CHECK_LIB([sundials_arkode],[ARKodeCreate],[SUNDIALS_LIBS="$SUNDIALS_LIBS -lsundials_arkode"],[],[])
 
 SAVED_CFLAGS="$CFLAGS"
 CFLAGS="$CFLAGS $SUNDIALS_CFLAGS"
+
+AC_CHECK_HEADER([sundials/sundials_config.h],[],[
+AC_MSG_ERROR([Cannot find sundials/sundials_config.h, use SUNDIALS_CFLAGS="-I<path_to_SUNDIALS_headers>".])
+],[])
+
+AC_MSG_CHECKING([SUNDIALS version])
+AC_EGREP_CPP([2.6.0],
+  [
+    #include <sundials/sundials_config.h>
+    SUNDIALS_PACKAGE_VERSION;
+  ],[
+      AC_MSG_RESULT([2.6.0])
+      AC_DEFINE([HAVE_SUNDIALS_2_6_0], [1], [SUNDIALS version])
+    ],
+    AC_EGREP_CPP([2.5.0],
+      [
+        #include <sundials/sundials_config.h>
+        SUNDIALS_PACKAGE_VERSION;
+      ],
+      [
+        AC_MSG_RESULT([2.5.0])
+        AC_DEFINE([HAVE_SUNDIALS_2_5_0], [1], [SUNDIALS version])
+      ],
+      AC_MSG_ERROR([Cannot identify SUNDIALS version (2.5.0|2.6.0)])
+    )
+)
+
 AC_CHECK_TYPE([CVDlsDenseJacFn],[],[AC_MSG_ERROR([sundials too old, please install version >= 2.4.0])], [#include <cvodes/cvodes_direct.h>])
 CFLAGS="$SAVED_CFLAGS"
 

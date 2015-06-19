@@ -218,6 +218,7 @@ nc_hipert_class_init (NcHIPertClass *klass)
 static void 
 _nc_hipert_set_mode_k (NcHIPert *pert, gdouble k)
 {
+printf ("setting k % 20.15g % 20.15g\n", k, pert->k);
   if (pert->k != k)
   {
     pert->k        = k;

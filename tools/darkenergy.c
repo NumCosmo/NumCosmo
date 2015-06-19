@@ -753,7 +753,7 @@ main (gint argc, gchar *argv[])
     while (de_fit.onedim_cr[0] != NULL)
     {
       const gchar *pname = de_fit.onedim_cr[0];
-      NcmMSetPIndex *pi = ncm_mset_fparam_get_pi_by_name (mset, de_fit.onedim_cr[0]);
+      const NcmMSetPIndex *pi = ncm_mset_fparam_get_pi_by_name (mset, de_fit.onedim_cr[0]);
       de_fit.onedim_cr = &de_fit.onedim_cr[1];
 
       if (pi == NULL)
@@ -795,8 +795,8 @@ main (gint argc, gchar *argv[])
   if (de_fit.nsigma >= 0 && (de_fit.bidim_cr[0] != NULL) && (de_fit.bidim_cr[1] != NULL))
   {
     NcmLHRatio2d *lhr2d;
-    NcmMSetPIndex *pi1 = ncm_mset_fparam_get_pi_by_name (mset, de_fit.bidim_cr[0]);
-    NcmMSetPIndex *pi2 = ncm_mset_fparam_get_pi_by_name (mset, de_fit.bidim_cr[1]);
+    const NcmMSetPIndex *pi1 = ncm_mset_fparam_get_pi_by_name (mset, de_fit.bidim_cr[0]);
+    const NcmMSetPIndex *pi2 = ncm_mset_fparam_get_pi_by_name (mset, de_fit.bidim_cr[1]);
     NcmLHRatio2dRegion *rg_1sigma = NULL;
     NcmLHRatio2dRegion *rg_2sigma = NULL;
     NcmLHRatio2dRegion *rg_3sigma = NULL;
@@ -866,8 +866,8 @@ main (gint argc, gchar *argv[])
   if (de_fit.nsigma_fisher >= 0 && (de_fit.bidim_cr[0] != NULL) && (de_fit.bidim_cr[1] != NULL))
   {
     NcmLHRatio2d *lhr2d;
-    NcmMSetPIndex *pi1 = ncm_mset_fparam_get_pi_by_name (mset, de_fit.bidim_cr[0]);
-    NcmMSetPIndex *pi2 = ncm_mset_fparam_get_pi_by_name (mset, de_fit.bidim_cr[1]);
+    const NcmMSetPIndex *pi1 = ncm_mset_fparam_get_pi_by_name (mset, de_fit.bidim_cr[0]);
+    const NcmMSetPIndex *pi2 = ncm_mset_fparam_get_pi_by_name (mset, de_fit.bidim_cr[1]);
     NcmLHRatio2dRegion *rg_1sigma = NULL;
     NcmLHRatio2dRegion *rg_2sigma = NULL;
     NcmLHRatio2dRegion *rg_3sigma = NULL;

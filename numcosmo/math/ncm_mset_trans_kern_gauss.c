@@ -75,7 +75,7 @@ ncm_mset_trans_kern_gauss_set_property (GObject *object, guint prop_id, const GV
       ncm_mset_trans_kern_gauss_set_size (tkerng, g_value_get_uint (value));
       break;
     case PROP_COV:
-      ncm_mset_trans_kern_gauss_set_cov_variant (tkerng, g_value_get_variant (value));
+      ncm_mset_trans_kern_gauss_set_cov (tkerng, g_value_get_object (value));
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -95,7 +95,7 @@ ncm_mset_trans_kern_gauss_get_property (GObject *object, guint prop_id, GValue *
       g_value_set_uint (value, tkerng->len);
       break;
     case PROP_COV:
-      g_value_take_variant (value, ncm_matrix_get_variant (tkerng->cov));
+      g_value_set_object (value, tkerng->cov);
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -147,14 +147,14 @@ ncm_mset_trans_kern_gauss_class_init (NcmMSetTransKernGaussClass *klass)
                                                       "length",
                                                       0, G_MAXUINT32, 0,
                                                       G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-    
+
   g_object_class_install_property (object_class,
                                    PROP_COV,
-                                   g_param_spec_variant ("cov",
-                                                         NULL,
-                                                         "covariance",
-                                                         G_VARIANT_TYPE ("aad"), NULL,
-                                                         G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+                                   g_param_spec_object ("cov",
+                                                        NULL,
+                                                        "covariance",
+                                                        NCM_TYPE_MATRIX,
+                                                        G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   tkern_class->set_mset = &_ncm_mset_trans_kern_gauss_set_mset;
   tkern_class->generate = &_ncm_mset_trans_kern_gauss_generate;

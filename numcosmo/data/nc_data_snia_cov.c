@@ -128,84 +128,29 @@ nc_data_snia_cov_set_property (GObject *object, guint prop_id, const GValue *val
   switch (prop_id)
   {
     case PROP_ZCMB:
-    {
-      GVariant *var = g_value_get_variant (value);
-      if (var != NULL)
-      {
-        ncm_vector_set_from_variant (snia_cov->z_cmb, var);
-        nc_data_snia_cov_set_z_cmb (snia_cov, snia_cov->z_cmb);
-      }
+      nc_data_snia_cov_set_z_cmb (snia_cov, g_value_get_object (value));
       break;
-    }
     case PROP_ZHE:
-    {
-      GVariant *var = g_value_get_variant (value);
-      if (var != NULL)
-      {
-        ncm_vector_set_from_variant (snia_cov->z_he, var);
-        nc_data_snia_cov_set_z_he (snia_cov, snia_cov->z_he);
-      }
+      nc_data_snia_cov_set_z_he (snia_cov, g_value_get_object (value));
       break;
-    }
     case PROP_SIGMA_Z:
-    {
-      GVariant *var = g_value_get_variant (value);
-      if (var != NULL)
-      {
-        ncm_vector_set_from_variant (snia_cov->sigma_z, var);
-        nc_data_snia_cov_set_sigma_z (snia_cov, snia_cov->sigma_z);
-      }
+      nc_data_snia_cov_set_sigma_z (snia_cov, g_value_get_object (value));
       break;
-    }
     case PROP_MAG:
-    {
-      GVariant *var = g_value_get_variant (value);
-      if (var != NULL)
-      {
-        ncm_vector_set_from_variant (snia_cov->mag, var);
-        nc_data_snia_cov_set_mag (snia_cov, snia_cov->mag);
-      }
+      nc_data_snia_cov_set_mag (snia_cov, g_value_get_object (value));
       break;
-    }
     case PROP_WIDTH:
-    {
-      GVariant *var = g_value_get_variant (value);
-      if (var != NULL)
-      {
-        ncm_vector_set_from_variant (snia_cov->width, var);
-        nc_data_snia_cov_set_width (snia_cov, snia_cov->width);
-      }
+      nc_data_snia_cov_set_width (snia_cov, g_value_get_object (value));
       break;
-    }
     case PROP_COLOUR:
-    {
-      GVariant *var = g_value_get_variant (value);
-      if (var != NULL)
-      {
-        ncm_vector_set_from_variant (snia_cov->colour, var);
-        nc_data_snia_cov_set_colour (snia_cov, snia_cov->colour);
-      }
+      nc_data_snia_cov_set_colour (snia_cov, g_value_get_object (value));
       break;
-    }
     case PROP_THIRDPAR:
-    {
-      GVariant *var = g_value_get_variant (value);
-      if (var != NULL)
-      {
-        ncm_vector_set_from_variant (snia_cov->thirdpar, var);
-        nc_data_snia_cov_set_thirdpar (snia_cov, snia_cov->thirdpar);
-      }
+      nc_data_snia_cov_set_thirdpar (snia_cov, g_value_get_object (value));
       break;
-    }
     case PROP_SIGMA_THIRDPAR:
-    {
-      GVariant *var = g_value_get_variant (value);
-      if (var != NULL)
-      {
-        ncm_vector_set_from_variant (snia_cov->sigma_thirdpar, var);
-      }
+      ncm_vector_substitute (&snia_cov->sigma_thirdpar, g_value_get_object (value), TRUE);
       break;
-    }
     case PROP_ABSMAG_SET:
     {
       GVariant *var = g_value_get_variant (value);
@@ -217,15 +162,8 @@ nc_data_snia_cov_set_property (GObject *object, guint prop_id, const GValue *val
       break;
     }
     case PROP_COV_FULL:
-    {
-      GVariant *var = g_value_get_variant (value);
-      if (var != NULL)
-      {
-        ncm_matrix_set_from_variant (snia_cov->cov_full, var);
-        nc_data_snia_cov_set_cov_full (snia_cov, snia_cov->cov_full);
-      }
+      nc_data_snia_cov_set_cov_full (snia_cov, g_value_get_object (value));
       break;
-    }
     case PROP_HAS_COMPLETE_COV:
       snia_cov->has_complete_cov = g_value_get_boolean (value);
       break;
@@ -244,38 +182,35 @@ nc_data_snia_cov_get_property (GObject *object, guint prop_id, GValue *value, GP
   switch (prop_id)
   {
     case PROP_ZCMB:
-      g_value_take_variant (value, ncm_vector_peek_variant (snia_cov->z_cmb));
+      g_value_set_object (value, snia_cov->z_cmb);
       break;
     case PROP_ZHE:
-      g_value_take_variant (value, ncm_vector_peek_variant (snia_cov->z_he));
+      g_value_set_object (value, snia_cov->z_he);
       break;
     case PROP_SIGMA_Z:
-      g_value_take_variant (value, ncm_vector_peek_variant (snia_cov->sigma_z));
+      g_value_set_object (value, snia_cov->sigma_z);
       break;
     case PROP_MAG:
-      g_value_take_variant (value, ncm_vector_peek_variant (snia_cov->mag));
+      g_value_set_object (value, snia_cov->mag);
       break;
     case PROP_WIDTH:
-      g_value_take_variant (value, ncm_vector_peek_variant (snia_cov->width));
+      g_value_set_object (value, snia_cov->width);
       break;
     case PROP_COLOUR:
-      g_value_take_variant (value, ncm_vector_peek_variant (snia_cov->colour));
+      g_value_set_object (value, snia_cov->colour);
       break;
     case PROP_THIRDPAR:
-      g_value_take_variant (value, ncm_vector_peek_variant (snia_cov->thirdpar));
+      g_value_set_object (value, snia_cov->thirdpar);
       break;
     case PROP_SIGMA_THIRDPAR:
-      g_value_take_variant (value, ncm_vector_peek_variant (snia_cov->sigma_thirdpar));
+      g_value_set_object (value, snia_cov->sigma_thirdpar);
       break;
     case PROP_ABSMAG_SET:
       g_value_take_variant (value, ncm_cfg_array_to_variant (snia_cov->dataset, G_VARIANT_TYPE ("u")));
       break;
     case PROP_COV_FULL:
-    {
-      NcmMatrix *cov_full = nc_data_snia_cov_peek_cov_full (snia_cov);
-      g_value_take_variant (value, ncm_matrix_peek_variant (cov_full));
+      g_value_set_object (value, nc_data_snia_cov_peek_cov_full (snia_cov));
       break;
-    }
     case PROP_HAS_COMPLETE_COV:
       g_value_set_boolean (value, snia_cov->has_complete_cov);
       break;
@@ -345,60 +280,60 @@ nc_data_snia_cov_class_init (NcDataSNIACovClass *klass)
 
   g_object_class_install_property (object_class,
                                    PROP_ZCMB,
-                                   g_param_spec_variant ("z-cmb",
-                                                         NULL,
-                                                         "Data cmb redshifts",
-                                                         G_VARIANT_TYPE ("ad"), NULL,
-                                                         G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+                                   g_param_spec_object ("z-cmb",
+                                                        NULL,
+                                                        "Data cmb redshifts",
+                                                        NCM_TYPE_VECTOR,
+                                                        G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
   g_object_class_install_property (object_class,
                                    PROP_ZHE,
-                                   g_param_spec_variant ("z-He",
-                                                         NULL,
-                                                         "Data He redshifts",
-                                                         G_VARIANT_TYPE ("ad"), NULL,
-                                                         G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+                                   g_param_spec_object ("z-He",
+                                                        NULL,
+                                                        "Data He redshifts",
+                                                        NCM_TYPE_VECTOR,
+                                                        G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
   g_object_class_install_property (object_class,
                                    PROP_SIGMA_Z,
-                                   g_param_spec_variant ("sigma-z",
-                                                         NULL,
-                                                         "Redshifts standard deviation",
-                                                         G_VARIANT_TYPE ("ad"), NULL,
-                                                         G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+                                   g_param_spec_object ("sigma-z",
+                                                        NULL,
+                                                        "Redshifts standard deviation",
+                                                        NCM_TYPE_VECTOR,
+                                                        G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
   g_object_class_install_property (object_class,
                                    PROP_MAG,
-                                   g_param_spec_variant ("magnitudes",
-                                                         NULL,
-                                                         "Magnitudes",
-                                                         G_VARIANT_TYPE ("ad"), NULL,
-                                                         G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+                                   g_param_spec_object ("magnitudes",
+                                                        NULL,
+                                                        "Magnitudes",
+                                                        NCM_TYPE_VECTOR,
+                                                        G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
   g_object_class_install_property (object_class,
                                    PROP_WIDTH,
-                                   g_param_spec_variant ("width",
-                                                         NULL,
-                                                         "Width",
-                                                         G_VARIANT_TYPE ("ad"), NULL,
-                                                         G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+                                   g_param_spec_object ("width",
+                                                        NULL,
+                                                        "Width",
+                                                        NCM_TYPE_VECTOR,
+                                                        G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
   g_object_class_install_property (object_class,
                                    PROP_COLOUR,
-                                   g_param_spec_variant ("colour",
-                                                         NULL,
-                                                         "Colour",
-                                                         G_VARIANT_TYPE ("ad"), NULL,
-                                                         G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+                                   g_param_spec_object ("colour",
+                                                        NULL,
+                                                        "Colour",
+                                                        NCM_TYPE_VECTOR,
+                                                        G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
   g_object_class_install_property (object_class,
                                    PROP_THIRDPAR,
-                                   g_param_spec_variant ("thirdpar",
-                                                         NULL,
-                                                         "Thirdpar",
-                                                         G_VARIANT_TYPE ("ad"), NULL,
-                                                         G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+                                   g_param_spec_object ("thirdpar",
+                                                        NULL,
+                                                        "Thirdpar",
+                                                        NCM_TYPE_VECTOR,
+                                                        G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
   g_object_class_install_property (object_class,
                                    PROP_SIGMA_THIRDPAR,
-                                   g_param_spec_variant ("sigma-thirdpar",
-                                                         NULL,
-                                                         "Thirdpar standard deviation",
-                                                         G_VARIANT_TYPE ("ad"), NULL,
-                                                         G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+                                   g_param_spec_object ("sigma-thirdpar",
+                                                        NULL,
+                                                        "Thirdpar standard deviation",
+                                                        NCM_TYPE_VECTOR,
+                                                        G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
   g_object_class_install_property (object_class,
                                    PROP_ABSMAG_SET,
                                    g_param_spec_variant ("absmag-set",
@@ -408,11 +343,11 @@ nc_data_snia_cov_class_init (NcDataSNIACovClass *klass)
                                                          G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
   g_object_class_install_property (object_class,
                                    PROP_COV_FULL,
-                                   g_param_spec_variant ("cov-full",
-                                                         NULL,
-                                                         "Full covariance matrix",
-                                                         G_VARIANT_TYPE ("aad"), NULL,
-                                                         G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+                                   g_param_spec_object ("cov-full",
+                                                        NULL,
+                                                        "Full covariance matrix",
+                                                        NCM_TYPE_MATRIX,
+                                                        G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   g_object_class_install_property (object_class,
                                    PROP_HAS_COMPLETE_COV,
@@ -930,6 +865,8 @@ nc_data_snia_cov_set_mag (NcDataSNIACov *snia_cov, NcmVector *mag)
     g_assert_cmpuint (snia_cov->mu_len, ==, ncm_vector_len (mag));
     ncm_vector_free (snia_cov->mag);
     snia_cov->mag = ncm_vector_ref (mag);
+
+    ncm_vector_substitute (&NCM_DATA_GAUSS_COV (snia_cov)->y, mag, TRUE);
   }
   _nc_data_snia_cov_set_data_init (snia_cov, NC_DATA_SNIA_COV_INIT_MAG);
 }
@@ -1063,8 +1000,12 @@ nc_data_snia_cov_set_cov_full (NcDataSNIACov *snia_cov, NcmMatrix *cov_full)
   {
     g_assert_cmpuint (ncm_matrix_nrows (cov_full), ==, tmu_len);
     g_assert_cmpuint (ncm_matrix_ncols (cov_full), ==, tmu_len);
+
+    ncm_matrix_memcpy (snia_cov->cov_full, cov_full);
+/*    
     ncm_matrix_clear (&snia_cov->cov_full);
     snia_cov->cov_full = ncm_matrix_ref (cov_full);
+*/    
   }
 
   /* Filling the cov_packed from cov_full. */

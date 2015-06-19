@@ -742,6 +742,35 @@ ncm_matrix_dup (const NcmMatrix *cm)
 }
 
 /**
+ * ncm_matrix_substitute:
+ * @cm: a #NcmMatrix
+ * @nm: (allow-none): a #NcmMatrix
+ * @check_size: a boolean
+ *
+ * Substitute the matrix *@cm by @nm, first it unref *@cm if it is not NULL.
+ * If @check_size is TRUE then check if the two matrix have the same size.
+ *
+ */
+void 
+ncm_matrix_substitute (NcmMatrix **cm, NcmMatrix *nm, gboolean check_size)
+{
+  if (*cm == nm)
+    return;
+  
+  if (*cm != NULL)
+  {
+    if (nm != NULL && check_size)
+    {
+      g_assert_cmpuint (ncm_matrix_nrows (*cm), ==, ncm_matrix_nrows (nm));
+      g_assert_cmpuint (ncm_matrix_ncols (*cm), ==, ncm_matrix_ncols (nm));
+    }
+    ncm_matrix_clear (cm);
+  }
+  if (nm != NULL)
+    *cm = ncm_matrix_ref (nm);
+}
+
+/**
  * ncm_matrix_add_mul:
  * @cm: FIXME
  * @alpha: FIXME

@@ -268,7 +268,7 @@ ncm_lh_ratio2d_class_init (NcmLHRatio2dClass *klass)
  * Returns: FIXME
  */
 NcmLHRatio2d *
-ncm_lh_ratio2d_new (NcmFit *fit, NcmMSetPIndex *pi1, NcmMSetPIndex *pi2, gdouble border_prec)
+ncm_lh_ratio2d_new (NcmFit *fit, const NcmMSetPIndex *pi1, const NcmMSetPIndex *pi2, gdouble border_prec)
 {
   return g_object_new (NCM_TYPE_LH_RATIO2D, 
                        "fit", fit,

@@ -2424,7 +2424,7 @@ ncm_mset_catalog_calc_distrib (NcmMSetCatalog *mcat, guint burnin, NcmMSetFunc *
  * Returns: (transfer full): a #NcmStatsDist1d describing the distribution.
  */
 NcmStatsDist1d *
-ncm_mset_catalog_calc_param_distrib (NcmMSetCatalog *mcat, guint burnin, NcmMSetPIndex *pi, NcmFitRunMsgs mtype)
+ncm_mset_catalog_calc_param_distrib (NcmMSetCatalog *mcat, guint burnin, const NcmMSetPIndex *pi, NcmFitRunMsgs mtype)
 {
   NcmStatsDist1dEPDF *epdf1d = ncm_stats_dist1d_epdf_new (1000, 0.1, 0.01);
   NcmVector *save_params = ncm_vector_new (ncm_mset_fparams_len (mcat->mset));

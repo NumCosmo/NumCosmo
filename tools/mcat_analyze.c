@@ -352,7 +352,7 @@ main (gint argc, gchar *argv[])
 
       for (i = 0; i < nparams; i++)
       {
-        NcmMSetPIndex *pi = ncm_mset_fparam_get_pi_by_name (mset, params[i]);
+        const NcmMSetPIndex *pi = ncm_mset_fparam_get_pi_by_name (mset, params[i]);
         gchar *end_ptr = NULL;
         glong add_param = strtol (params[i], &end_ptr, 10);
         guint k;

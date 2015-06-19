@@ -128,38 +128,14 @@ _nc_abc_cluster_ncount_set_property (GObject *object, guint prop_id, const GValu
       break;
     }
     case PROP_QUANTILES:
-    {
-      GVariant *var = g_value_get_variant (value);
-      if (var != NULL)
-      {
-        NcmVector *v = ncm_vector_new_variant (var);
-        ncm_vector_clear (&abcnc->quantiles);
-        abcnc->quantiles = v;
-      }
+      ncm_vector_substitute (&abcnc->quantiles, g_value_get_object (value), TRUE);
       break;
-    }
     case PROP_Z_NODES:
-    {
-      GVariant *var = g_value_get_variant (value);
-      if (var != NULL)
-      {
-        NcmVector *v = ncm_vector_new_variant (var);
-        ncm_vector_clear (&abcnc->z_nodes);
-        abcnc->z_nodes = v;
-      }
+      ncm_vector_substitute (&abcnc->z_nodes, g_value_get_object (value), TRUE);
       break;
-    }
     case PROP_LNM_NODES:
-    {
-      GVariant *var = g_value_get_variant (value);
-      if (var != NULL)
-      {
-        NcmVector *v = ncm_vector_new_variant (var);
-        ncm_vector_clear (&abcnc->lnM_nodes);
-        abcnc->lnM_nodes = v;
-      }
+      ncm_vector_substitute (&abcnc->lnM_nodes, g_value_get_object (value), TRUE);
       break;
-    }
     case PROP_Z_BINS:
       abcnc->z_bins = g_value_get_uint (value);
       g_assert_cmpuint (abcnc->z_bins, >, 0);
@@ -198,32 +174,14 @@ _nc_abc_cluster_ncount_get_property (GObject *object, guint prop_id, GValue *val
       g_value_set_enum (value, abcnc->s_type);
       break;
     case PROP_QUANTILES:
-    {
-      if (abcnc->quantiles != NULL)
-      {
-        GVariant *var = ncm_vector_peek_variant (abcnc->quantiles); 
-        g_value_take_variant (value, var);
-      }
+      g_value_set_object (value, abcnc->quantiles);
       break;
-    }
     case PROP_Z_NODES:
-    {
-      if (abcnc->quantiles != NULL)
-      {
-        GVariant *var = ncm_vector_peek_variant (abcnc->z_nodes); 
-        g_value_take_variant (value, var);
-      }
+      g_value_set_object (value, abcnc->z_nodes);
       break;
-    }
     case PROP_LNM_NODES:
-    {
-      if (abcnc->quantiles != NULL)
-      {
-        GVariant *var = ncm_vector_peek_variant (abcnc->lnM_nodes); 
-        g_value_take_variant (value, var);
-      }
+      g_value_set_object (value, abcnc->lnM_nodes);
       break;
-    }
     case PROP_Z_BINS:
       g_value_set_uint (value, abcnc->z_bins);
       break;
@@ -311,28 +269,28 @@ nc_abc_cluster_ncount_class_init (NcABCClusterNCountClass *klass)
 
   g_object_class_install_property (object_class,
                                    PROP_QUANTILES,
-                                   g_param_spec_variant ("quantiles",
-                                                         NULL,
-                                                         "Quantiles for binning",
-                                                         G_VARIANT_TYPE ("ad"), NULL,
-                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-  
+                                   g_param_spec_object ("quantiles",
+                                                        NULL,
+                                                        "Quantiles for binning",
+                                                        NCM_TYPE_VECTOR,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
   g_object_class_install_property (object_class,
                                    PROP_Z_NODES,
-                                   g_param_spec_variant ("z-nodes",
-                                                         NULL,
-                                                         "Nodes for z",
-                                                         G_VARIANT_TYPE ("ad"), NULL,
-                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-  
+                                   g_param_spec_object ("z-nodes",
+                                                        NULL,
+                                                        "Nodes for z",
+                                                        NCM_TYPE_VECTOR,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
   g_object_class_install_property (object_class,
                                    PROP_LNM_NODES,
-                                   g_param_spec_variant ("lnM-nodes",
-                                                         NULL,
-                                                         "Nodes for lnM",
-                                                         G_VARIANT_TYPE ("ad"), NULL,
-                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-
+                                   g_param_spec_object ("lnM-nodes",
+                                                        NULL,
+                                                        "Nodes for lnM",
+                                                        NCM_TYPE_VECTOR,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  
   g_object_class_install_property (object_class,
                                    PROP_Z_BINS,
                                    g_param_spec_uint ("z-bins",

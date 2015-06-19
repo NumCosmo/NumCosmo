@@ -107,10 +107,10 @@ ncm_data_gauss_set_property (GObject *object, guint prop_id, const GValue *value
       ncm_data_gauss_set_size (gauss, g_value_get_uint (value));
       break;
     case PROP_MEAN:
-      ncm_vector_set_from_variant (gauss->y, g_value_get_variant (value));
+      ncm_vector_substitute (&gauss->y, g_value_get_object (value), TRUE);
       break;
     case PROP_INV_COV:
-      ncm_matrix_set_from_variant (gauss->inv_cov, g_value_get_variant (value));
+      ncm_matrix_substitute (&gauss->inv_cov, g_value_get_object (value), TRUE);
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -130,10 +130,10 @@ ncm_data_gauss_get_property (GObject *object, guint prop_id, GValue *value, GPar
       g_value_set_uint (value, gauss->np);
       break;
     case PROP_MEAN:
-      g_value_take_variant (value, ncm_vector_get_variant (gauss->y));
+      g_value_set_object (value, gauss->y);
       break;
     case PROP_INV_COV:
-      g_value_take_variant (value, ncm_matrix_get_variant (gauss->inv_cov));
+      g_value_set_object (value, gauss->inv_cov);
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -172,20 +172,20 @@ ncm_data_gauss_class_init (NcmDataGaussClass *klass)
 
   g_object_class_install_property (object_class,
                                    PROP_MEAN,
-                                   g_param_spec_variant ("mean",
-                                                         NULL,
-                                                         "Data mean",
-                                                         G_VARIANT_TYPE ("ad"), NULL,
-                                                         G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-  
+                                   g_param_spec_object ("mean",
+                                                        NULL,
+                                                        "Data mean",
+                                                        NCM_TYPE_VECTOR,
+                                                        G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
   g_object_class_install_property (object_class,
                                    PROP_INV_COV,
-                                   g_param_spec_variant ("inv-cov",
-                                                         NULL,
-                                                         "Data covariance inverse",
-                                                         G_VARIANT_TYPE ("aad"), NULL,
-                                                         G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-
+                                   g_param_spec_object ("inv-cov",
+                                                        NULL,
+                                                        "Data covariance inverse",
+                                                        NCM_TYPE_MATRIX,
+                                                        G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  
   data_class->bootstrap      = TRUE;
   data_class->get_length     = &_ncm_data_gauss_get_length;
   data_class->begin          = NULL;

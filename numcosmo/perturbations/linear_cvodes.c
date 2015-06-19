@@ -35,9 +35,15 @@
 #include <cvodes/cvodes_spbcgs.h>
 #include <nvector/nvector_serial.h>
 
-#if SUNDIALS_BLAS_LAPACK == 1
-#include <cvodes/cvodes_lapack.h>      /* prototype for CVBand */
-#endif /* SUNDIALS_BLAS_LAPACK */
+#ifdef HAVE_SUNDIALS_2_5_0
+#  if SUNDIALS_BLAS_LAPACK == 1
+#    include <cvodes/cvodes_lapack.h>      /* prototype for CVBand */
+#  endif /* SUNDIALS_BLAS_LAPACK == 1 */
+#elif defined (HAVE_SUNDIALS_2_6_0)
+#  ifdef SUNDIALS_BLAS_LAPACK
+#    include <cvodes/cvodes_lapack.h>      /* prototype for CVBand */
+#  endif /* SUNDIALS_BLAS_LAPACK == 1 */
+#endif /* HAVE_SUNDIALS_2_5_0 */
 
 #include "linear_internal.h"
 

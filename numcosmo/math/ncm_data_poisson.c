@@ -84,7 +84,7 @@ ncm_data_poisson_set_property (GObject *object, guint prop_id, const GValue *val
     case PROP_MEAN:
     {
       NcmVector *v = ncm_vector_new_data_static (poisson->h->bin, poisson->h->n, 1); 
-      ncm_vector_set_from_variant (v, g_value_get_variant (value));
+      ncm_vector_memcpy (v, g_value_get_object (value));
       ncm_vector_free (v);
       break;
     }
@@ -108,8 +108,7 @@ ncm_data_poisson_get_property (GObject *object, guint prop_id, GValue *value, GP
     case PROP_MEAN:
     {
       NcmVector *v = ncm_vector_new_data_static (poisson->h->bin, poisson->h->n, 1); 
-      g_value_take_variant (value, ncm_vector_get_variant (v));
-      ncm_vector_free (v);
+      g_value_take_object (value, v);
       break;
     }
     default:
@@ -170,12 +169,12 @@ ncm_data_poisson_class_init (NcmDataPoissonClass *klass)
 
   g_object_class_install_property (object_class,
                                    PROP_MEAN,
-                                   g_param_spec_variant ("mean",
-                                                         NULL,
-                                                         "Data mean",
-                                                         G_VARIANT_TYPE ("ad"), NULL,
-                                                         G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-
+                                   g_param_spec_object ("mean",
+                                                        NULL,
+                                                        "Data mean",
+                                                        NCM_TYPE_VECTOR,
+                                                        G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  
   data_class->get_length     = &_ncm_data_poisson_get_length;
   data_class->begin          = &_ncm_data_poisson_begin;
 

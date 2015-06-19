@@ -428,7 +428,7 @@ nc_hipert_boltzmann_std_new (NcRecomb *recomb, guint lmax)
                                             "recomb", recomb,
                                             "l-max", lmax,
                                             NULL);
-  NC_HIPERT_BOLTZMANN (pbs)->lambdai = NC_HIPERT_BOLTZMANN_X2LAMBDA (1.0e4);
+  NC_HIPERT_BOLTZMANN (pbs)->lambdai = NC_HIPERT_BOLTZMANN_X2LAMBDA (1.0e9);
   NC_HIPERT_BOLTZMANN (pbs)->lambdaf = NC_HIPERT_BOLTZMANN_X2LAMBDA (1.0);
   nc_hipert_set_stiff_solver (NC_HIPERT (pbs), TRUE);
 
@@ -506,13 +506,30 @@ _nc_hipert_boltzmann_std_step (realtype lambda, N_Vector y, N_Vector ydot, gpoin
       const gdouble taunp = (taubar * R0 + 1.0) * x - R0x_onepR0x;
       const gdouble Sigma = _NC_THETA1 + _NC_B1 / (R0 * x);
       Delta = -1.0 / taunp * (R0x_onepR0x * Sigma + kx_3E * (_NC_THETA0 - 2.0 * _NC_THETA2 - _NC_PHI));
-      printf ("# % 20.15e % 20.15e % 20.15e % 20.15e % 20.15e % 20.15e % 20.15e\n", _NC_THETA0, _NC_THETA1, fabs (_NC_B1 - _NC_THETA1), fabs (_NC_C1 - _NC_THETA1), fabs (_NC_C0 - _NC_THETA0), fabs (_NC_B0 - _NC_THETA0), kx_E);
-      printf ("# % 20.15e % 20.15e % 20.15e % 20.15e % 20.15e\n", R0x_onepR0x * Sigma, kx_3E * _NC_THETA0, - kx_3E * _NC_PHI, - kx_3E * 2.0 * _NC_THETA2, Delta);
-    }
+
+
+      printf ("% 20.15g % 20.15g % 20.15g % 20.15g % 20.15g\n",
+              -log (NC_HIPERT_BOLTZMANN_LAMBDA2X (lambda)),
+              (_NC_THETA0 - _NC_PHI + _NC_THETA1 / kx_3E),
+              _NC_THETA0, - _NC_PHI, _NC_THETA1 / kx_3E
+              );
+      
+/*      printf ("% 20.15g % 20.15e % 20.15e % 20.15e % 20.15e % 20.15e % 20.15e % 20.15e\n",
+              -log (NC_HIPERT_BOLTZMANN_LAMBDA2X (lambda)),
+              _NC_THETA0, _NC_THETA1, 
+              fabs ((_NC_B1 - _NC_THETA1)/_NC_THETA1), 
+              fabs ((_NC_C1 - _NC_THETA1)/_NC_THETA1), 
+              fabs ((_NC_C0 - _NC_THETA0)/_NC_THETA0), 
+              fabs ((_NC_B0 - _NC_THETA0)/_NC_THETA0), kx_E);
+*/      //printf ("# % 20.15e % 20.15e % 20.15e % 20.15e % 20.15e\n", R0x_onepR0x * Sigma, kx_3E * _NC_THETA0, - kx_3E * _NC_PHI, - kx_3E * 2.0 * _NC_THETA2, Delta);
+/*      printf ("% 20.15g % 20.15e % 20.15e % 20.15e % 20.15e % 20.15e % 20.15e % 20.15e % 20.15e\n",
+              -log (NC_HIPERT_BOLTZMANN_LAMBDA2X (lambda)),
+              _NC_THETA0, _NC_B0, _NC_C0, _NC_THETA1, _NC_B1, _NC_C1, kx_E, pert->k);
+*/    }
     else
       Delta = _NC_THETA1 - _NC_B1;
 
-    printf ("% 20.15g % 20.15e % 20.15g % 20.15g\n", lambda, NC_HIPERT_BOLTZMANN_LAMBDA2X (lambda), Delta, _NC_THETA1 - _NC_B1);
+    //printf ("% 20.15g % 20.15e % 20.15g % 20.15g\n", lambda, NC_HIPERT_BOLTZMANN_LAMBDA2X (lambda), Delta, _NC_THETA1 - _NC_B1);
     Delta = _NC_THETA1 - _NC_B1;
     
     _NC_DC1 = -_NC_C1 + kx_3E * psi;

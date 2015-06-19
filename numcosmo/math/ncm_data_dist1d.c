@@ -76,7 +76,7 @@ _ncm_data_dist1d_set_property (GObject *object, guint prop_id, const GValue *val
       ncm_data_dist1d_set_size (dist1d, g_value_get_uint (value));
       break;
     case PROP_VECTOR:
-      ncm_vector_set_from_variant (dist1d->x, g_value_get_variant (value));
+      ncm_vector_substitute (&dist1d->x, g_value_get_object (value), TRUE);
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -97,11 +97,8 @@ _ncm_data_dist1d_get_property (GObject *object, guint prop_id, GValue *value, GP
       g_value_set_uint (value, ncm_data_dist1d_get_size (dist1d));
       break;
     case PROP_VECTOR:
-    {
-      if (dist1d->x != NULL)
-        g_value_take_variant (value, ncm_vector_get_variant (dist1d->x));
+      g_value_set_object (value, dist1d->x);
       break;
-    }
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
       break;
@@ -157,10 +154,10 @@ ncm_data_dist1d_class_init (NcmDataDist1dClass *klass)
 
   g_object_class_install_property (object_class,
                                    PROP_VECTOR,
-                                   g_param_spec_variant ("vector",
+                                   g_param_spec_object ("vector",
                                                          NULL,
                                                          "Data vector",
-                                                         G_VARIANT_TYPE ("ad"), NULL,
+                                                         NCM_TYPE_VECTOR,
                                                          G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   data_class->bootstrap  = TRUE;

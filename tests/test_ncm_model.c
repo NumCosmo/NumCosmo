@@ -66,10 +66,10 @@ main (gint argc, gchar *argv[])
   ncm_cfg_init ();
   ncm_cfg_enable_gsl_err_handler ();
   gpointer ccc[TEST_NCM_MODEL_NTYPES][3] = {
-    {"ncm_model",            &test_ncm_model_new,             &test_ncm_model_free},
-    {"ncm_model/child",      &test_ncm_model_child_new,       &test_ncm_model_free},
-    {"ncm_model/grandchild", &test_ncm_model_child_child_new, &test_ncm_model_free},
-    {"ncm_model/reparam",    &test_ncm_model_reparam_new,     &test_ncm_model_free},
+    {"model",            &test_ncm_model_new,             &test_ncm_model_free},
+    {"model/child",      &test_ncm_model_child_new,       &test_ncm_model_free},
+    {"model/grandchild", &test_ncm_model_child_child_new, &test_ncm_model_free},
+    {"model/reparam",    &test_ncm_model_reparam_new,     &test_ncm_model_free},
   };
   
   for (i = 0; i < TEST_NCM_MODEL_NTYPES; i++)
@@ -227,7 +227,7 @@ test_ncm_model_reparam_new (TestNcmModel *test, gconstpointer pdata)
   test->name       = name_tot[0];
   test->nick       = nick_tot[0];
   test->reparam    = _test_ncm_model_create_reparam (test);
-  
+
   g_assert (test->type != 0);
 }
 
@@ -253,7 +253,6 @@ test_ncm_model_test_new (TestNcmModel *test, gconstpointer pdata)
   g_assert_cmpstr (ncm_model_nick (model), ==, test->nick);
   g_assert (ncm_model_impl (model) == 0);
   g_assert (ncm_model_peek_reparam (model) == test->reparam);
-
 }
 
 void
@@ -503,17 +502,10 @@ test_ncm_model_test_setget_prop (TestNcmModel *test, gconstpointer pdata)
       ncm_vector_set (tmp, j, val);
     }
 
-    {
-      GVariant *var = ncm_vector_get_variant (tmp);
-      GVariant *var_out = NULL;
-      g_object_set (model, v_name_tot[i], var, NULL);
-      g_object_get (model, v_name_tot[i], &var_out, NULL);
-
-      tmp_out = ncm_vector_new_variant (var_out);
-      g_variant_unref (var);
-      g_variant_unref (var_out);
-    }
-
+    tmp_out = NULL;
+    g_object_set (model, v_name_tot[i], tmp, NULL);
+    g_object_get (model, v_name_tot[i], &tmp_out, NULL);
+    
     for (j = 0; j < v_len_tot[i]; j++)
     {
       guint n = ncm_model_vparam_index (model, i, j);

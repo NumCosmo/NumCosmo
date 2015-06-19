@@ -147,7 +147,7 @@ ncm_vector_new_gsl_static (gsl_vector *gv)
  * This function saves @a internally and frees it when it is no longer necessary.
  * The @a array must not be freed.
  *
- * Returns: A new #NcmVector.
+ * Returns: (transfer full): A new #NcmVector.
  */
 NcmVector *
 ncm_vector_new_array (GArray *a)
@@ -349,6 +349,34 @@ ncm_vector_dup (const NcmVector *cv)
   NcmVector *cv_cp = ncm_vector_new (ncm_vector_len(cv));
   gsl_vector_memcpy (ncm_vector_gsl (cv_cp), ncm_vector_const_gsl (cv));
   return cv_cp;
+}
+
+/**
+ * ncm_vector_substitute:
+ * @cv: a #NcmVector
+ * @nv: a #NcmVector
+ * @check_size: whether to check vector size.
+ *
+ * This function substitute the vector *@cv by @nv, it will unref *@cv first.
+ * If @check_size is TRUE then the function asserts that both vectors have the 
+ * same size.
+ *
+ */
+void 
+ncm_vector_substitute (NcmVector **cv, NcmVector *nv, gboolean check_size)
+{
+  if (*cv == nv)
+    return;
+
+  if (*cv != NULL)
+  {
+    if (nv != NULL && check_size)
+      g_assert_cmpuint (ncm_vector_len (*cv), ==, ncm_vector_len (nv));
+    ncm_vector_clear (cv);
+  }
+
+  if (nv != NULL)
+    *cv = ncm_vector_ref (nv);
 }
 
 /**

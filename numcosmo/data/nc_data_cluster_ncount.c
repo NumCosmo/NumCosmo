@@ -125,53 +125,23 @@ nc_data_cluster_ncount_set_property (GObject *object, guint prop_id, const GValu
       nc_data_cluster_ncount_set_mass (ncount, g_value_get_object (value));
       break;
     case PROP_LNM_TRUE:
-    {
-      GVariant *var = g_value_get_variant (value);
-      const NcmVector *v = ncm_vector_const_new_variant (var);
-      nc_data_cluster_ncount_set_lnM_true (ncount, v);
-      ncm_vector_const_free (v);
+      nc_data_cluster_ncount_set_lnM_true (ncount, g_value_get_object (value));
       break;
-    }
     case PROP_Z_TRUE:
-    {
-      GVariant *var = g_value_get_variant (value);
-      const NcmVector *v = ncm_vector_const_new_variant (var);
-      nc_data_cluster_ncount_set_z_true (ncount, v);
-      ncm_vector_const_free (v);
+      nc_data_cluster_ncount_set_z_true (ncount, g_value_get_object (value));
       break;
-    }
     case PROP_Z_OBS:
-    {
-      GVariant *var = g_value_get_variant (value);
-      const NcmMatrix *m = ncm_matrix_const_new_variant (var);
-      nc_data_cluster_ncount_set_z_obs (ncount, m);
-      ncm_matrix_const_free (m);
+      nc_data_cluster_ncount_set_z_obs (ncount, g_value_get_object (value));
       break;
-    }
     case PROP_Z_OBS_PARAMS:
-    {
-      GVariant *var = g_value_get_variant (value);
-      const NcmMatrix *m = ncm_matrix_const_new_variant (var);
-      nc_data_cluster_ncount_set_z_obs_params (ncount, m);
-      ncm_matrix_const_free (m);
+      nc_data_cluster_ncount_set_z_obs_params (ncount, g_value_get_object (value));
       break;
-    }
     case PROP_LNM_OBS:
-    {
-      GVariant *var = g_value_get_variant (value);
-      const NcmMatrix *m = ncm_matrix_const_new_variant (var);
-      nc_data_cluster_ncount_set_lnM_obs (ncount, m);
-      ncm_matrix_const_free (m);
+      nc_data_cluster_ncount_set_lnM_obs (ncount, g_value_get_object (value));
       break;
-    }
     case PROP_LNM_OBS_PARAMS:
-    {
-      GVariant *var = g_value_get_variant (value);
-      const NcmMatrix *m = ncm_matrix_const_new_variant (var);
-      nc_data_cluster_ncount_set_lnM_obs_params (ncount, m);
-      ncm_matrix_const_free (m);
+      nc_data_cluster_ncount_set_lnM_obs_params (ncount, g_value_get_object (value));
       break;
-    }
     case PROP_SURVEY_AREA:
       ncount->area_survey = g_value_get_double (value);
       break;
@@ -183,26 +153,18 @@ nc_data_cluster_ncount_set_property (GObject *object, guint prop_id, const GValu
       break;
     case PROP_Z_NODES:
     {
-      GVariant *var = g_value_get_variant (value);
-      if (var != NULL)
-      {
-        NcmVector *v = ncm_vector_new_variant (var);
-        ncm_vector_clear (&ncount->z_nodes);
-        ncount->z_nodes = v;
+      ncm_vector_clear (&ncount->z_nodes);
+      ncount->z_nodes = g_value_dup_object (value);
+      if (ncount->z_nodes != NULL)
         ncount->binned = FALSE;
-      }
       break;
     }
     case PROP_LNM_NODES:
     {
-      GVariant *var = g_value_get_variant (value);
-      if (var != NULL)
-      {
-        NcmVector *v = ncm_vector_new_variant (var);
-        ncm_vector_clear (&ncount->lnM_nodes);
-        ncount->lnM_nodes = v;
+      ncm_vector_clear (&ncount->lnM_nodes);
+      ncount->lnM_nodes = g_value_dup_object (value);
+      if (ncount->lnM_nodes != NULL)
         ncount->binned = FALSE;
-      }
       break;
     }
     case PROP_FIDUCIAL:
@@ -240,53 +202,23 @@ nc_data_cluster_ncount_get_property (GObject *object, guint prop_id, GValue *val
       g_value_set_object (value, ncount->m);
       break;
     case PROP_LNM_TRUE:
-    {
-      if (ncount->lnM_true != NULL)
-      {
-        GVariant *var = ncm_vector_peek_variant (ncount->lnM_true); 
-        g_value_take_variant (value, var);
-      }
+      g_value_set_object (value, ncount->lnM_true);
       break;
-    }
     case PROP_Z_TRUE:
-    {
-      if (ncount->z_true != NULL)
-      {
-        GVariant *var = ncm_vector_peek_variant (ncount->z_true); 
-        g_value_take_variant (value, var);
-      }
+      g_value_set_object (value, ncount->z_true);
       break;
-    }
     case PROP_Z_OBS:
-    {
-      GVariant *var = ncm_matrix_peek_variant (ncount->z_obs); 
-      g_value_take_variant (value, var);
+      g_value_set_object (value, ncount->z_obs);
       break;
-    }
     case PROP_Z_OBS_PARAMS:
-    {
-      if (ncount->z_obs_params != NULL)
-      {
-        GVariant *var = ncm_matrix_peek_variant (ncount->z_obs_params); 
-        g_value_take_variant (value, var);
-      }
+      g_value_set_object (value, ncount->z_obs_params);
       break;
-    }
     case PROP_LNM_OBS:
-    {
-      GVariant *var = ncm_matrix_peek_variant (ncount->lnM_obs); 
-      g_value_take_variant (value, var);
+      g_value_set_object (value, ncount->lnM_obs);
       break;
-    }
     case PROP_LNM_OBS_PARAMS:
-    {
-      if (ncount->lnM_obs_params != NULL)
-      {
-        GVariant *var = ncm_matrix_peek_variant (ncount->lnM_obs_params); 
-        g_value_take_variant (value, var);
-      }
+      g_value_set_object (value, ncount->lnM_obs_params);
       break;
-    }
     case PROP_SURVEY_AREA:
       g_value_set_double (value, ncount->area_survey);
       break;
@@ -297,23 +229,11 @@ nc_data_cluster_ncount_get_property (GObject *object, guint prop_id, GValue *val
       g_value_set_boolean (value, ncount->binned);
       break;
     case PROP_Z_NODES:
-    {
-      if (ncount->z_nodes != NULL)
-      {
-        GVariant *var = ncm_vector_peek_variant (ncount->z_nodes); 
-        g_value_take_variant (value, var);
-      }
+      g_value_set_object (value, ncount->z_nodes);
       break;
-    }
     case PROP_LNM_NODES:
-    {
-      if (ncount->z_nodes != NULL)
-      {
-        GVariant *var = ncm_vector_peek_variant (ncount->lnM_nodes); 
-        g_value_take_variant (value, var);
-      }
+      g_value_set_object (value, ncount->lnM_nodes);
       break;
-    }
     case PROP_FIDUCIAL:
       g_value_set_boolean (value, ncount->fiducial);
       break;
@@ -350,7 +270,7 @@ nc_data_cluster_ncount_dispose (GObject *object)
   ncm_vector_clear (&ncount->z_nodes);  
 
   g_clear_pointer (&ncount->m2lnL_a, g_array_unref);
-  
+
   /* Chain up : end */
   G_OBJECT_CLASS (nc_data_cluster_ncount_parent_class)->dispose (object);
 }
@@ -394,7 +314,7 @@ nc_data_cluster_ncount_class_init (NcDataClusterNCountClass *klass)
                                                         "Cluster abundance",
                                                         NC_TYPE_CLUSTER_ABUNDANCE,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-  
+
   g_object_class_install_property (object_class,
                                    PROP_CLUSTERM,
                                    g_param_spec_object ("mass",
@@ -412,46 +332,46 @@ nc_data_cluster_ncount_class_init (NcDataClusterNCountClass *klass)
                                                         G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
   g_object_class_install_property (object_class,
                                    PROP_LNM_TRUE,
-                                   g_param_spec_variant ("lnM-true",
-                                                         NULL,
-                                                         "Clusters true masses",
-                                                         G_VARIANT_TYPE ("ad"), NULL,
-                                                         G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));  
+                                   g_param_spec_object ("lnM-true",
+                                                        NULL,
+                                                        "Clusters true masses",
+                                                        NCM_TYPE_VECTOR,
+                                                        G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));  
   g_object_class_install_property (object_class,
                                    PROP_Z_TRUE,
-                                   g_param_spec_variant ("z-true",
-                                                         NULL,
-                                                         "Clusters true redshifts",
-                                                         G_VARIANT_TYPE ("ad"), NULL,
-                                                         G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+                                   g_param_spec_object ("z-true",
+                                                        NULL,
+                                                        "Clusters true redshifts",
+                                                        NCM_TYPE_VECTOR,
+                                                        G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
   g_object_class_install_property (object_class,
                                    PROP_LNM_OBS,
-                                   g_param_spec_variant ("lnM-obs",
-                                                         NULL,
-                                                         "Clusters mass observables",
-                                                         G_VARIANT_TYPE ("aad"), NULL,
-                                                         G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+                                   g_param_spec_object ("lnM-obs",
+                                                        NULL,
+                                                        "Clusters mass observables",
+                                                        NCM_TYPE_MATRIX,
+                                                        G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
   g_object_class_install_property (object_class,
                                    PROP_LNM_OBS_PARAMS,
-                                   g_param_spec_variant ("lnM-obs-params",
-                                                         NULL,
-                                                         "Clusters mass observables parameters",
-                                                         G_VARIANT_TYPE ("aad"), NULL,
-                                                         G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+                                   g_param_spec_object ("lnM-obs-params",
+                                                        NULL,
+                                                        "Clusters mass observables parameters",
+                                                        NCM_TYPE_MATRIX,
+                                                        G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
   g_object_class_install_property (object_class,
                                    PROP_Z_OBS,
-                                   g_param_spec_variant ("z-obs",
-                                                         NULL,
-                                                         "Clusters redshift observables",
-                                                         G_VARIANT_TYPE ("aad"), NULL,
-                                                         G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+                                   g_param_spec_object ("z-obs",
+                                                        NULL,
+                                                        "Clusters redshift observables",
+                                                        NCM_TYPE_MATRIX,
+                                                        G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
   g_object_class_install_property (object_class,
                                    PROP_Z_OBS_PARAMS,
-                                   g_param_spec_variant ("z-obs-params",
-                                                         NULL,
-                                                         "Clusters redshift observables parameters",
-                                                         G_VARIANT_TYPE ("aad"), NULL,
-                                                         G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+                                   g_param_spec_object ("z-obs-params",
+                                                        NULL,
+                                                        "Clusters redshift observables parameters",
+                                                        NCM_TYPE_MATRIX,
+                                                        G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
   g_object_class_install_property (object_class,
                                    PROP_SURVEY_AREA,
                                    g_param_spec_double ("area",
@@ -475,18 +395,18 @@ nc_data_cluster_ncount_class_init (NcDataClusterNCountClass *klass)
                                                          G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
   g_object_class_install_property (object_class,
                                    PROP_Z_NODES,
-                                   g_param_spec_variant ("z-nodes",
-                                                         NULL,
-                                                         "Clusters redshifts nodes for binning",
-                                                         G_VARIANT_TYPE ("ad"), NULL,
-                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+                                   g_param_spec_object ("z-nodes",
+                                                        NULL,
+                                                        "Clusters redshifts nodes for binning",
+                                                        NCM_TYPE_VECTOR,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
   g_object_class_install_property (object_class,
                                    PROP_LNM_NODES,
-                                   g_param_spec_variant ("lnM-nodes",
-                                                         NULL,
-                                                         "Clusters mass nodes for binning",
-                                                         G_VARIANT_TYPE ("ad"), NULL,
-                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+                                   g_param_spec_object ("lnM-nodes",
+                                                        NULL,
+                                                        "Clusters mass nodes for binning",
+                                                        NCM_TYPE_VECTOR,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   g_object_class_install_property (object_class,
                                    PROP_FIDUCIAL,

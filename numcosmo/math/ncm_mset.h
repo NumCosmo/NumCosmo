@@ -73,6 +73,7 @@ struct _NcmMSet
   GHashTable *fpi_hash;
   GPtrArray *fullname_parray;
   GArray *pi_array;
+  GRegex *fullname_regex;
   gboolean valid_map;
   guint total_len;
   guint fparam_len;
@@ -167,6 +168,8 @@ gboolean ncm_mset_is_subset (NcmMSet *mset, NcmMSet *sub_mset);
 
 gint ncm_mset_get_id_by_ns (const gchar *ns);
 
+void ncm_mset_set_fmap (NcmMSet *mset, const gchar *const *fmap);
+gchar **ncm_mset_get_fmap (NcmMSet *mset);
 void ncm_mset_prepare_fparam_map (NcmMSet *mset);
 
 guint ncm_mset_total_len (NcmMSet *mset);
@@ -217,6 +220,7 @@ guint ncm_mset_fparams_len (NcmMSet *mset);
 const gchar *ncm_mset_fparam_name (NcmMSet *mset, guint n);
 const gchar *ncm_mset_fparam_symbol (NcmMSet *mset, guint n);
 const gchar *ncm_mset_fparam_full_name (NcmMSet *mset, guint n);
+NcmMSetPIndex *ncm_mset_param_get_by_full_name (NcmMSet *mset, const gchar *fullname);
 gdouble ncm_mset_fparam_get_scale (NcmMSet *mset, guint n);
 gdouble ncm_mset_fparam_get_lower_bound (NcmMSet *mset, guint n);
 gdouble ncm_mset_fparam_get_upper_bound (NcmMSet *mset, guint n);
@@ -227,10 +231,9 @@ gboolean ncm_mset_fparam_valid_bounds (NcmMSet *mset, NcmVector *theta);
 gdouble ncm_mset_fparam_get (NcmMSet *mset, guint n);
 void ncm_mset_fparam_set (NcmMSet *mset, guint n, const gdouble x);
 
-NcmMSetPIndex *ncm_mset_fparam_get_pi (NcmMSet *mset, guint n);
+const NcmMSetPIndex *ncm_mset_fparam_get_pi (NcmMSet *mset, guint n);
 gint ncm_mset_fparam_get_fpi (NcmMSet *mset, NcmModelID mid, guint pid);
-
-NcmMSetPIndex *ncm_mset_fparam_get_pi_by_name (NcmMSet *mset, const gchar *name);
+const NcmMSetPIndex *ncm_mset_fparam_get_pi_by_name (NcmMSet *mset, const gchar *name);
 
 void ncm_mset_save (NcmMSet *mset, NcmSerialize *ser, const gchar *filename, gboolean save_comment);
 NcmMSet *ncm_mset_load (const gchar *filename, NcmSerialize *ser);

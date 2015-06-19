@@ -144,6 +144,7 @@ G_INLINE_FUNC guint ncm_vector_len (const NcmVector *cv);
 G_INLINE_FUNC guint ncm_vector_stride (const NcmVector *cv);
 
 NcmVector *ncm_vector_dup (const NcmVector *cv);
+void ncm_vector_substitute (NcmVector **cv, NcmVector *nv, gboolean check_size);
 void ncm_vector_free (NcmVector *cv);
 void ncm_vector_clear (NcmVector **cv);
 void ncm_vector_const_free (const NcmVector *cv);

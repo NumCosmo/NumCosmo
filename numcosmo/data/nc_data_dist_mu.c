@@ -83,7 +83,7 @@ nc_data_dist_mu_set_property (GObject *object, guint prop_id, const GValue *valu
       dist_mu->dist = g_value_dup_object (value);
       break;
     case PROP_Z:
-      ncm_vector_set_from_variant (dist_mu->x, g_value_get_variant (value));
+      ncm_vector_substitute (&dist_mu->x, g_value_get_object (value), TRUE);
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -103,7 +103,7 @@ nc_data_dist_mu_get_property (GObject *object, guint prop_id, GValue *value, GPa
       g_value_set_object (value, dist_mu->dist);
       break;
     case PROP_Z:
-      g_value_take_variant (value, ncm_vector_get_variant (dist_mu->x));
+      g_value_set_object (value, dist_mu->x);
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -157,12 +157,12 @@ nc_data_dist_mu_class_init (NcDataDistMuClass *klass)
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
   g_object_class_install_property (object_class,
                                    PROP_Z,
-                                   g_param_spec_variant ("z",
-                                                         NULL,
-                                                         "Data redshift",
-                                                         G_VARIANT_TYPE ("ad"), NULL,
-                                                         G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-
+                                   g_param_spec_object ("z",
+                                                        NULL,
+                                                        "Data redshift",
+                                                        NCM_TYPE_VECTOR,
+                                                        G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  
 
   data_class->prepare   = &_nc_data_dist_mu_prepare;
   diag_class->mean_func = &_nc_data_dist_mu_mean_func;
