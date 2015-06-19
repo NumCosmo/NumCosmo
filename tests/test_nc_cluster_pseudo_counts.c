@@ -74,6 +74,8 @@ test_nc_cluster_pseudo_counts_free (TestNcClusterPseudoCounts *test, gconstpoint
   gboolean destroyed = FALSE;
   
   nc_matter_var_free (test->vp);
+  nc_hicosmo_free (test->cosmo);
+  nc_cluster_mass_free (test->mszl);
   
   g_object_set_data_full (G_OBJECT (cpc), "test-destroy", &destroyed, _set_destroyed);
   nc_cluster_pseudo_counts_free (cpc);
@@ -112,11 +114,6 @@ test_nc_cluster_pseudo_counts_new (TestNcClusterPseudoCounts *test, gconstpointe
     
   cpc  = NC_CLUSTER_PSEUDO_COUNTS (nc_cluster_pseudo_counts_new (mfp));
   mszl = NC_CLUSTER_MASS_PLCL (nc_cluster_mass_new_from_name ("NcClusterMassPlCL{}"));
-    
-  nc_window_free (wp);
-  nc_transfer_func_free (tf);
-  nc_growth_func_free (gf);
-  nc_multiplicity_func_free (mulf);
 
   g_assert (cpc != NULL);
   g_assert (mszl != NULL);
@@ -126,12 +123,20 @@ test_nc_cluster_pseudo_counts_new (TestNcClusterPseudoCounts *test, gconstpointe
   test->Mobs = Mobs;
   test->Mobs_params = Mobs_params;
   g_assert (NC_IS_CLUSTER_PSEUDO_COUNTS (cpc));
- 
+
+  nc_distance_free (dist);
+  nc_window_free (wp);
+  nc_transfer_func_free (tf);
+  nc_growth_func_free (gf);
+  nc_multiplicity_func_free (mulf);
+  nc_mass_function_free (mfp);
 }
 
 void 
 test_nc_cluster_mass_plcl_bounds_1p2_integral (TestNcClusterPseudoCounts *test, gconstpointer pdata)
 {
   nc_matter_var_prepare (test->vp, test->cosmo);
+
+  printf ("z = %.5g Msz = %.5g Ml = %.5g\n", test->z, test->Mobs[0], test->Mobs[1]);
 }
 
