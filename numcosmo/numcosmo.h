@@ -134,4 +134,11 @@
 /* ABC */
 #include <numcosmo/abc/nc_abc_cluster_ncount.h>
 
+/* Cross-correlations */
+#include <numcosmo/xcor/nc_xcor.h>
+#include <numcosmo/xcor/nc_xcor_limber.h>
+#include <numcosmo/xcor/nc_xcor_limber_gal.h>
+#include <numcosmo/xcor/nc_xcor_limber_lensing.h>
+#include <numcosmo/xcor/nc_data_xcor.h>
+
 #endif /* _NUMCOSMO_H */

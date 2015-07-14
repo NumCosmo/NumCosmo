@@ -93,42 +93,31 @@ nc_data_xcor_set_property (GObject* object, guint prop_id, const GValue* value, 
 	}
 	case PROP_ELL:
 	{
-		fprintf (stderr, "courgette\n");
 		xcdata->ell = g_value_get_object (value);
 		break;
 	}
 	case PROP_CLDATA:
 	{
-		fprintf (stderr, "tomate\n");
-
 		xcdata->cldata = g_value_get_object (value);
 		break;
 	}
 	case PROP_X_MATRIX_1:
 	{
-		fprintf (stderr, "aubergine\n");
-
 		xcdata->X_matrix_1 = g_value_get_object (value);
 		break;
 	}
 	case PROP_X_MATRIX_2:
 	{
-		fprintf (stderr, "sel\n");
-
 		xcdata->X_matrix_2 = g_value_get_object (value);
 		break;
 	}
 	case PROP_MIXING:
 	{
-		fprintf (stderr, "poivre\n");
-
 		xcdata->mixing = g_value_get_object (value);
 		break;
 	}
 	case PROP_XC:
 	{
-		fprintf (stderr, "lardon\n");
-
 		xcdata->xc = g_value_get_object (value);
 		break;
 	}
@@ -319,23 +308,15 @@ nc_data_xcor_class_init (NcDataXcorClass* klass)
 static void
 _nc_data_xcor_prepare (NcmData* data, NcmMSet* mset)
 {
-	fprintf (stderr, "pomme\n");
-
 	NcDataXcor* xcdata = NC_DATA_XCOR (data);
 	NcHICosmo* cosmo = NC_HICOSMO (ncm_mset_peek (mset, nc_hicosmo_id ()));
 
-	fprintf (stderr, "poire\n");
-
 	gboolean doprep = ncm_model_ctrl_update (xcdata->cosmo_ctrl, NCM_MODEL (cosmo)); /*if any xcl or cosmo has been updated */
-
-	fprintf (stderr, "pruneau\n");
 
 	if (doprep)
 	{
 		nc_xcor_prepare (xcdata->xc, cosmo);
 	}
-	fprintf (stderr, "peche\n");
-
 
 	guint i;
 	gboolean doprepxcl;
@@ -353,8 +334,6 @@ _nc_data_xcor_prepare (NcmData* data, NcmMSet* mset)
 
 		doprep = doprepxcl | doprep;
 	}
-	fprintf (stderr, "prune");
-
 
 	if (doprep) _nc_data_xcor_compute_cl (xcdata, mset);
 }
@@ -542,8 +521,6 @@ NcDataXcor* nc_data_xcor_new_full (NcmVector* ell, const guint nobs, NcmMatrix* 
 		g_error ("\nThe size of mixing doesn't match nobs and nell.\n");
 	}
 
-	fprintf (stderr, "pingouin\n");
-
 	NcDataXcor* xcdata = g_object_new (NC_TYPE_DATA_XCOR,
 	                                   "use-norma", use_norma,
 	                                   "nobs", nobs,
@@ -555,8 +532,6 @@ NcDataXcor* nc_data_xcor_new_full (NcmVector* ell, const guint nobs, NcmMatrix* 
 	                                   "xc", xc, /* ADD EVRYTHING HERE ! */
 	                                   NULL);
 
-	fprintf (stderr, "requin\n");
-
 	xcdata->mu_len = mu_len;
 	xcdata->nell = nell;
 	xcdata->clth = ncm_vector_new (mu_len);
@@ -567,22 +542,13 @@ NcDataXcor* nc_data_xcor_new_full (NcmVector* ell, const guint nobs, NcmMatrix* 
 	GPtrArray* ctrl_array = g_ptr_array_new ();
 	guint i;
 
-	fprintf (stderr, "lion\n");
-
-
 	g_ptr_array_set_free_func (ctrl_array, &g_object_unref);
-
-	fprintf (stderr, "poule\n");
-
 
 	for (i = 0; i < nobs; i++)
 	{
 		NcmModelCtrl* ctrl = ncm_model_ctrl_new (NULL);
 		g_ptr_array_add (ctrl_array, ctrl);
 	}
-
-	fprintf (stderr, "kangourou\n");
-
 
 	xcdata->xcl_ctrl_array = ctrl_array;
 
@@ -599,8 +565,6 @@ NcDataXcor* nc_data_xcor_new_full (NcmVector* ell, const guint nobs, NcmMatrix* 
 			i++;
 		}
 	}
-
-	fprintf (stderr, "narwhal\n");
 
 	NcmDataGaussCov* gauss = NCM_DATA_GAUSS_COV (xcdata);
 	NcmData* data = NCM_DATA (gauss);

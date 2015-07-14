@@ -178,11 +178,8 @@ gdouble nc_xcor_limber_noise_spec (NcXcorLimber* xcl, guint l)
 */
 void nc_xcor_limber_prepare (NcXcorLimber* xcl, NcHICosmo* cosmo)
 {
-	printf("ratatouille1");
 	if (ncm_model_ctrl_update (xcl->cosmo_ctrl, NCM_MODEL (cosmo)))
-	{
-		printf("ratatouille2");
-		
+	{		
 		return NC_XCOR_LIMBER_GET_CLASS (xcl)->prepare (xcl, cosmo);
 	}
 }

@@ -248,6 +248,14 @@
       <xi:include href="xml/nc_cluster_mass_benson_xray.xml"/>
       <xi:include href="xml/nc_cluster_mass_plcl.xml"/>
     </section>
+    <section>
+      <title>Cross-correlations</title>
+      <xi:include href="xml/nc_xcor.xml"/>
+      <xi:include href="xml/nc_xcor_limber.xml"/>
+      <xi:include href="xml/nc_xcor_limber_gal.xml"/>
+      <xi:include href="xml/nc_xcor_limber_lensing.xml"/>
+      <xi:include href="xml/nc_data_xcor.xml"/>
+    </section>
     <xi:include href="xml/nc_cluster_abundance.xml"/>
     <xi:include href="xml/nc_cluster_pseudo_counts.xml"/>
     <xi:include href="xml/nc_cor_cluster_cmb_lens_limber.xml"/>
