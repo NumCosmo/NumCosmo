@@ -526,6 +526,56 @@ ncm_integrate_2dim_divonne_peakfinder (NcmIntegrand2dim *integ, gdouble xi, gdou
 }
 
 /**
+ * ncm_integrate_2dim_vegas:
+ * @integ: a pointer to #NcmIntegrand2dim
+ * @xi: gbouble which is the lower integration limit of variable x.
+ * @yi: gbouble which is the lower integration limit of variable y.
+ * @xf: gbouble which is the upper integration limit of variable x.
+ * @yf: gbouble which is the upper integration limit of variable y.
+ * @epsrel: relative error
+ * @epsabs: absolute error
+ * @nstart: number of samples to start the first round of integration with.
+ * @result: a pointer to a gdouble in which the function stores the result.
+ * @error: a pointer to a gdouble in which the function stores the estimated error.
+ *
+ * This function FIXME
+ *
+ * Returns: a gboolean
+ */
+gboolean
+ncm_integrate_2dim_vegas (NcmIntegrand2dim *integ, gdouble xi, gdouble yi, gdouble xf, gdouble yf, gdouble epsrel, gdouble epsabs, const gint nstart, gdouble *result, gdouble *error)
+{
+  gboolean ret = FALSE;
+  const gint nvec = 1;
+  const gint seed = 0;
+	const gint mineval = 1;
+	const gint maxeval = 10000;
+	const gint nincrease = 500;
+  const int nbatch = 1000;
+  const int gridno = 0;
+  
+  iCLIntegrand2dim iinteg = {integ, xi, xf, yi, yf, 0, NULL};
+	gint neval, fail;
+	gdouble prob;
+  
+#ifdef HAVE_LIBCUBA_4_0
+	Vegas (2, 1, &_integrand_2dim, &iinteg, nvec, epsrel, epsabs, 0, seed, mineval, maxeval, 
+         nstart, nincrease, nbatch, gridno, NULL, NULL, &neval, &fail, result, error, &prob);  
+#else
+  g_error ("ncm_integrate_2dim_vegas: Needs libcuba > 4.0.");
+#endif //HAVE_LIBCUBA_4_0  
+
+  if (neval >= maxeval)
+    g_warning ("ncm_integrate_2dim_vegas: number of evaluations %d >= maximum number of evaluations %d.\n", neval, maxeval);
+    
+	*result *= (xf - xi) * (yf - yi);
+	*error  *= (xf - xi) * (yf - yi);
+
+	ret = (fail == 0);
+	return ret;
+}
+
+/**
  * ncm_integrate_3dim_divonne:
  * @integ: a pointer to #NcmIntegrand3dim
  * @xi: gbouble which is the lower integration limit of variable x.
@@ -553,12 +603,12 @@ ncm_integrate_3dim_divonne (NcmIntegrand3dim *integ, gdouble xi, gdouble yi, gdo
   gboolean ret = FALSE;
   const gint nvec = 1;
   const gint seed = 0;
-	const gint mineval = 1;
-	const gint maxeval = 100000000;
+	const gint mineval = 1; //1000000;
+	const gint maxeval = G_MAXINT;
 	const gint key1 = 11; // 11 points rule 
   const gint key2 = 11;
-  const gint key3 = 0;
-  const int maxpass = 10;
+  const gint key3 = 1;
+  const int maxpass = 1;
   const double border = 0.0;
   const double maxchisq = 0.10;
   const double mindeviation = 0.25;
@@ -588,8 +638,60 @@ ncm_integrate_3dim_divonne (NcmIntegrand3dim *integ, gdouble xi, gdouble yi, gdo
     g_warning ("ncm_integrate_3dim_divonne: number of evaluations %d >= maximum number of evaluations %d.\n", neval, maxeval);
  
 	*result *= (xf - xi) * (yf - yi) * (zf - zi);
-	*error *= (xf - xi) * (yf - yi) * (zf - zi);
+	*error  *= (xf - xi) * (yf - yi) * (zf - zi);
 
+	ret = (fail == 0);
+	return ret;
+}
+
+/**
+ * ncm_integrate_3dim_vegas:
+ * @integ: a pointer to #NcmIntegrand3dim
+ * @xi: gbouble which is the lower integration limit of variable x.
+ * @yi: gbouble which is the lower integration limit of variable y.
+ * @zi: gbouble which is the lower integration limit of variable z.
+ * @xf: gbouble which is the upper integration limit of variable x.
+ * @yf: gbouble which is the upper integration limit of variable y.
+ * @zf: gbouble which is the upper integration limit of variable z.
+ * @epsrel: relative error
+ * @epsabs: absolute error
+ * @nstart: number of samples to start the first round of integration with.
+ * @result: a pointer to a gdouble in which the function stores the result.
+ * @error: a pointer to a gdouble in which the function stores the estimated error.
+ *
+ * This function FIXME
+ *
+ * Returns: a gboolean
+ */
+gboolean
+ncm_integrate_3dim_vegas (NcmIntegrand3dim *integ, gdouble xi, gdouble yi, gdouble zi, gdouble xf, gdouble yf, gdouble zf, gdouble epsrel, gdouble epsabs, const gint nstart, gdouble *result, gdouble *error)
+{
+  gboolean ret = FALSE;
+  const gint nvec = 1;
+  const gint seed = 0;
+	const gint mineval = 1;
+	const gint maxeval = G_MAXINT;
+	const gint nincrease = 500;
+  const int nbatch = 1000;
+  const int gridno = 0;
+  
+  iCLIntegrand3dim iinteg = {integ, xi, xf, yi, yf, zi, zf, 0, NULL};
+	gint neval, fail;
+	gdouble prob;
+  
+#ifdef HAVE_LIBCUBA_4_0
+	Vegas (3, 1, &_integrand_3dim, &iinteg, nvec, epsrel, epsabs, 0, seed, mineval, maxeval, 
+         nstart, nincrease, nbatch, gridno, NULL, NULL, &neval, &fail, result, error, &prob);  
+#else
+  g_error ("ncm_integrate_3dim_vegas: Needs libcuba > 4.0.");
+#endif //HAVE_LIBCUBA_4_0  
+
+  if (neval >= maxeval)
+    g_warning ("ncm_integrate_3dim_vegas: number of evaluations %d >= maximum number of evaluations %d.\n", neval, maxeval);
+    
+	*result *= (xf - xi) * (yf - yi) * (zf - zi);
+	*error  *= (xf - xi) * (yf - yi) * (zf - zi);
+  
 	ret = (fail == 0);
 	return ret;
 }

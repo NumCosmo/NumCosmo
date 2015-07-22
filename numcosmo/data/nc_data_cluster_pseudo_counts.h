@@ -87,7 +87,6 @@ NcDataClusterPseudoCounts *nc_data_cluster_pseudo_counts_ref (NcDataClusterPseud
 void nc_data_cluster_pseudo_counts_free (NcDataClusterPseudoCounts *dcpc);
 void nc_data_cluster_pseudo_counts_clear (NcDataClusterPseudoCounts **dcpc);
 
-
 void nc_data_cluster_pseudo_counts_set_obs (NcDataClusterPseudoCounts *dcpc, const NcmMatrix *m);
 
 G_END_DECLS

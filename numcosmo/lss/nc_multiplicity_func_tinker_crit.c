@@ -8,12 +8,12 @@
 /*
  * numcosmo
  * Copyright (C) Mariana Penna Lima 2012 <pennalima@gmail.com>
-   * 
+ * 
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
-   * 
+ * 
  * numcosmo is distributed in the hope that it will be useful, but
  * WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
@@ -88,17 +88,29 @@ _nc_multiplicity_func_tinker_crit_eval (NcMultiplicityFunc *mulf, NcHICosmo *mod
   const gdouble E2 = nc_hicosmo_E2 (model, z);
   const gdouble Delta_z = mulf_tinker_crit->Delta * E2 / (Omega_m * gsl_pow_3 (1.0 + z));
   const gdouble log10_Delta_z = log10 (Delta_z);
-  const gdouble log10_200 = log10 (200.0);
-  const gdouble log10_300 = log10 (300.0);
-  const gdouble log10_400 = log10 (400.0);
-  const gdouble log10_600 = log10 (600.0);
-  const gdouble log10_800 = log10 (800.0);
-  const gdouble log10_1200 = log10 (1200.0);
-  const gdouble log10_1600 = log10 (1600.0);
-  const gdouble log10_2400 = log10 (2400.0);
-  const gdouble log10_3200 = log10 (3200.0);
+/*
+  const gdouble log10_200  = 2.301029995663981195213738894724493026768; //log10 (200.0);
+  const gdouble log10_300  = 2.477121254719662437295027903255115309202; //log10 (300.0);
+  const gdouble log10_400  = 2.602059991327962390427477789448986053536; //log10 (400.0);
+  const gdouble log10_600  = 2.778151250383643632508766797979608335970; //log10 (600.0);
+  const gdouble log10_800  = 2.903089986991943585641216684173479080304; //log10 (800.0);
+  const gdouble log10_1200 = 3.079181246047624827722505692704101362737; //log10 (1200.0);
+  const gdouble log10_1600 = 3.204119982655924780854955578897972107072; //log10 (1600.0);
+  const gdouble log10_2400 = 3.380211241711606022936244587428594389505; //log10 (2400.0);
+  const gdouble log10_3200 = 3.505149978319905976068694473622465133840; //log10 (3200.0);
+*/
 
-  const gdouble coef_A[8][6] = {
+#define log10_200  2.301029995663981195213738894724493026768 //log10 (200.0);
+#define log10_300  2.477121254719662437295027903255115309202 //log10 (300.0);
+#define log10_400  2.602059991327962390427477789448986053536 //log10 (400.0);
+#define log10_600  2.778151250383643632508766797979608335970 //log10 (600.0);
+#define log10_800  2.903089986991943585641216684173479080304 //log10 (800.0);
+#define log10_1200 3.079181246047624827722505692704101362737 //log10 (1200.0);
+#define log10_1600 3.204119982655924780854955578897972107072 //log10 (1600.0);
+#define log10_2400 3.380211241711606022936244587428594389505 //log10 (2400.0);
+#define log10_3200 3.505149978319905976068694473622465133840 //log10 (3200.0);
+  
+  static const gdouble coef_A[8][6] = {
     {log10_200, log10_300, 0.186, 0.0, 0.2, 0.5},
     {log10_300, log10_400, 0.2, 0.5, 0.212, -1.56},
     {log10_400, log10_600, 0.212, -1.56, 0.218, 3.05},
@@ -107,7 +119,7 @@ _nc_multiplicity_func_tinker_crit_eval (NcMultiplicityFunc *mulf, NcHICosmo *mod
     {log10_1200, log10_1600, 0.255, 1.07, 0.26, -0.71},
     {log10_1600, log10_2400, 0.26, -0.71, 0.26, 0.21},
     {log10_2400, log10_3200, 0.26, 0.21, 0.26, 0.0}};
-  const gdouble coef_a[8][6] = {
+  static const gdouble coef_a[8][6] = {
     {log10_200, log10_300, 1.47, 0.0, 1.52, 1.19},
     {log10_300, log10_400, 1.52, 1.19, 1.46, -6.34},
     {log10_400, log10_600, 1.46, -6.34, 1.61, 21.36},
@@ -116,7 +128,7 @@ _nc_multiplicity_func_tinker_crit_eval (NcMultiplicityFunc *mulf, NcHICosmo *mod
     {log10_1200, log10_1600, 2.13, 2.59, 2.3, -0.85},
     {log10_1600, log10_2400, 2.3, -0.85, 2.53, -2.07},
     {log10_2400, log10_3200, 2.53, -2.07, 2.66, 0.0}};
-  const gdouble coef_b[8][6] = {
+  static const gdouble coef_b[8][6] = {
     {log10_200, log10_300, 2.57, 0.0, 2.25, -1.08},
     {log10_300, log10_400, 2.25, -1.08, 2.05, 12.61},
     {log10_400, log10_600, 2.05, 12.61, 1.87, -20.96},
@@ -125,7 +137,7 @@ _nc_multiplicity_func_tinker_crit_eval (NcMultiplicityFunc *mulf, NcHICosmo *mod
     {log10_1200, log10_1600, 1.51, -6.64, 1.46, 3.84},
     {log10_1600, log10_2400, 1.46, 3.84, 1.44, -2.09},
     {log10_2400, log10_3200, 1.44, -2.09, 1.41, 0.0}};
-  const gdouble coef_c[8][6] = {
+  static const gdouble coef_c[8][6] = {
     {log10_200, log10_300, 1.19, 0.0, 1.27, 0.94},
     {log10_300, log10_400, 1.27, 0.94, 1.34, -0.43},
     {log10_400, log10_600, 1.34, -0.43, 1.45, 4.61},
@@ -170,12 +182,12 @@ _nc_multiplicity_func_tinker_crit_eval (NcMultiplicityFunc *mulf, NcHICosmo *mod
   }
 
   {
-    const gdouble A = A0 * pow(1.0 + z, -0.14);
-    const gdouble a = a0 * pow(1.0 + z, -0.06);
-    const gdouble log10alpha = -pow(0.75 / log10 (Delta_z / 75.0), 1.2);
-    const gdouble alpha = pow(10.0, log10alpha);
-    const gdouble b = b0 * pow(1.0 + z, -alpha);
-    const gdouble f_Tinker_Delta_spline = A * (pow(sigma / b, -a) + 1.0) * exp(-c / (sigma * sigma));
+    const gdouble A          = A0 * pow(1.0 + z, -0.14);
+    const gdouble a          = a0 * pow(1.0 + z, -0.06);
+    const gdouble log10alpha = - pow (0.75 / log10 (Delta_z / 75.0), 1.2);
+    const gdouble alpha      = pow (10.0, log10alpha);
+    const gdouble b          = b0 * pow(1.0 + z, -alpha);
+    const gdouble f_Tinker_Delta_spline = A * (pow (sigma / b, -a) + 1.0) * exp(-c / (sigma * sigma));
 
     return f_Tinker_Delta_spline;
   }
