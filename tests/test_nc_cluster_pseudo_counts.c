@@ -50,7 +50,6 @@ typedef struct _TestNcClusterPseudoCounts
 void test_nc_cluster_pseudo_counts_new (TestNcClusterPseudoCounts *test, gconstpointer pdata);
 void test_nc_cluster_pseudo_counts_1p2_integral (TestNcClusterPseudoCounts *test, gconstpointer pdata);
 void test_nc_cluster_pseudo_counts_3d_integral (TestNcClusterPseudoCounts *test, gconstpointer pdata);
-void test_nc_cluster_pseudo_counts_3d_integral_new_variables (TestNcClusterPseudoCounts *test, gconstpointer pdata);
 void test_nc_cluster_pseudo_counts_m2lnL (TestNcClusterPseudoCounts *test, gconstpointer pdata);
 void test_nc_cluster_pseudo_counts_free (TestNcClusterPseudoCounts *test, gconstpointer pdata);
 
@@ -66,13 +65,9 @@ main (gint argc, gchar *argv[])
               &test_nc_cluster_pseudo_counts_new, 
               &test_nc_cluster_pseudo_counts_1p2_integral, 
               &test_nc_cluster_pseudo_counts_free);
-  /*g_test_add ("/numcosmo/nc_cluster_pseudo_counts/3d_integral", TestNcClusterPseudoCounts, NULL, 
+  g_test_add ("/numcosmo/nc_cluster_pseudo_counts/3d_integral", TestNcClusterPseudoCounts, NULL, 
               &test_nc_cluster_pseudo_counts_new, 
               &test_nc_cluster_pseudo_counts_3d_integral, 
-              &test_nc_cluster_pseudo_counts_free);*/
-  g_test_add ("/numcosmo/nc_cluster_pseudo_counts/3d_integral_new_variables", TestNcClusterPseudoCounts, NULL, 
-              &test_nc_cluster_pseudo_counts_new, 
-              &test_nc_cluster_pseudo_counts_3d_integral_new_variables, 
               &test_nc_cluster_pseudo_counts_free);
   g_test_add ("/numcosmo/nc_cluster_pseudo_counts/m2lnL", TestNcClusterPseudoCounts, NULL, 
               &test_nc_cluster_pseudo_counts_new, 
@@ -232,26 +227,8 @@ test_nc_cluster_pseudo_counts_3d_integral (TestNcClusterPseudoCounts *test, gcon
 
   nc_matter_var_prepare (test->vp, test->cosmo);
 
-  printf ("Integral 3d\n");
-  nc_cluster_pseudo_counts_posterior_numerator_plcl (cpc, clusterm, cosmo, test->z, test->Mobs, test->Mobs_params);
-}
-
-void 
-test_nc_cluster_pseudo_counts_3d_integral_new_variables (TestNcClusterPseudoCounts *test, gconstpointer pdata)
-{
-  NcHICosmo *cosmo           = test->cosmo;
-  NcClusterMass *clusterm    = test->clusterm;
-  NcClusterPseudoCounts *cpc = test->cpc;
- 
-  printf ("z = %.5g Msz = %.5g Ml = %.5g SDsz = %.5g SDl = %.5g\n", test->z, test->Mobs[0], test->Mobs[1], test->Mobs_params[0], test->Mobs_params[1]);
-  //ncm_model_params_log_all (NCM_MODEL (cosmo));
-  //ncm_model_params_log_all (NCM_MODEL (clusterm));
-  //ncm_model_params_log_all (NCM_MODEL (cpc));
-
-  nc_matter_var_prepare (test->vp, test->cosmo);
-
   printf ("Integral 3dnew variables\n");
-  nc_cluster_pseudo_counts_posterior_numerator_plcl_new_variables (cpc, clusterm, cosmo, test->z, test->Mobs[0], test->Mobs[1], test->Mobs_params[0], test->Mobs_params[1]);
+  nc_cluster_pseudo_counts_posterior_numerator_plcl (cpc, clusterm, cosmo, test->z, test->Mobs[0], test->Mobs[1], test->Mobs_params[0], test->Mobs_params[1]);
 }
 
 void 

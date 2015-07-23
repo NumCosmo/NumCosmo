@@ -480,82 +480,6 @@ static void
 _nc_cluster_pseudo_counts_levmar_f (gdouble *p, gdouble *hx, gint m, gint n, gpointer adata)
 {
   integrand_data *data = (integrand_data *) adata;
-  NcClusterPseudoCounts *cpc = data->cpc;
-  NcClusterMass *clusterm = data->clusterm;
-  g_assert (NC_IS_CLUSTER_MASS_PLCL (clusterm));
-  NcClusterMassPlCL *mszl = NC_CLUSTER_MASS_PLCL (clusterm);
-  const gdouble lnM_true  = p[2]; 
-  const gint m1 = m - 1;
-  const gint n1 = n - 1;
-  gdouble sf = _selection_function (cpc,  lnM_true);
-  gdouble mf = nc_mass_function_dn_dlnm (cpc->mfp, data->cosmo, lnM_true, data->z);
- 
-  //printf ("m = %d n = %d pa = %.5g p1 = %.5g\n", m1, n1, p[0], p[1]);
-  //printf ("lnMtrue = %.5g mf = %.5g sf = %.5g\n", lnM_true, mf, sf); 
-  //printf ("lnMsz/M0 = %.5g lnMl/M0 = %.5g\n", lnMsz_M0, lnMl_M0); 
-
-  nc_cluster_mass_plcl_levmar_f (p, hx, m1, n1, mszl, lnM_true, data->Mobs, data->Mobs_params);
-
-  if (sf == 0.0)
-    hx[4] = GSL_LOG_DBL_MAX;
-  else
-    hx[4] = sqrt (-2.0 * log (sf));
-
-  hx[5] = sqrt (-2.0 * log (mf));  
-  //printf ("levmarf h0 = %.5g h1 = %.5g h2 = %.5g h3 = %.5g h4 = %.5g h5 = %.5g\n", hx[0], hx[1], hx[2], hx[3], hx[4], hx[5]);
-  NCM_UNUSED (m);
-}
-
-static void
-peakfinder (const gint *ndim, const gdouble bounds[], gint *n, gdouble x[], void *userdata)
-{
-  integrand_data *data = (integrand_data *) userdata;
-  NcClusterPseudoCounts *cpc = data->cpc;
-  NcClusterMass *clusterm = data->clusterm;
-  gdouble p0[] = {log (data->Mobs[NC_CLUSTER_MASS_PLCL_MPL]/1.0e14), log (data->Mobs[NC_CLUSTER_MASS_PLCL_MCL]/1.0e14), LNMCUT};
-  gdouble lb[] = {bounds[0], bounds[2], bounds[4]};
-  gdouble ub[] = {bounds[1], bounds[3], bounds[5]};
-  gdouble info[LM_INFO_SZ];
-  gdouble opts[LM_OPTS_SZ];
-  gint ret;
-
-  g_assert (NC_IS_CLUSTER_MASS_PLCL (clusterm));
-  opts[0] = LM_INIT_MU; 
-  opts[1] = 1.0e-15; 
-  opts[2] = 1.0e-15;
-  opts[3] = 1.0e-20;
-  
-  p0[0] = GSL_MAX (p0[0], lb[0]);
-  p0[1] = GSL_MAX (p0[1], lb[1]);
-  p0[2] = GSL_MAX (p0[2], lb[2]);
-  p0[0] = GSL_MIN (p0[0], ub[0]);
-  p0[1] = GSL_MIN (p0[1], ub[1]);
-  p0[2] = GSL_MIN (p0[2], ub[2]);
-
-  //printf ("p0[0] = %.5g p0[1] = %.5g p0[2] = %.5g lb[0] = %.5g lb[1] = %.5g lb[2] = %.5g ub[0] = %.5g ub[1] = %.5g ub[2] = %.5g\n", p0[0], p0[1], p0[2], lb[0], lb[1], lb[2], ub[0], ub[1], ub[2]);
-  ret = dlevmar_bc_dif (
-                        &_nc_cluster_pseudo_counts_levmar_f, p0, NULL, 3, 5, lb, ub, NULL, 1.0e5, 
-                        opts, info, cpc->workz, NULL, data
-                        );
-  if (ret < 0)
-    g_error ("error: NcClusterPseudoCounts peakfinder function.\n");
-
-//  printf ("Min %g %g Max %g %g\n", lb[0], lb[1], ub[0], ub[1]);
-//  printf ("%g %g %g %g %g %g %g %g %g %g\n", 
-//          info[0], info[1], info[2], info[3], info[4], info[5],
-//          info[6], info[7], info[8], info[9]);
-
-  x[0] = p0[0];
-  x[1] = p0[1];
-  x[2] = p0[2]; 
-  //printf ("Minimo: x0 = %.5g x1 = %.5g x2 = %.5g\n", x[0], x[1], x[2]);
-  *n = 1;
-}
-
-static void
-_nc_cluster_pseudo_counts_levmar_f_new_variables (gdouble *p, gdouble *hx, gint m, gint n, gpointer adata)
-{
-  integrand_data *data = (integrand_data *) adata;
   NcClusterMass *clusterm = data->clusterm;
   g_assert (NC_IS_CLUSTER_MASS_PLCL (clusterm));
   NcClusterMassPlCL *mszl = NC_CLUSTER_MASS_PLCL (clusterm);
@@ -572,7 +496,7 @@ _nc_cluster_pseudo_counts_levmar_f_new_variables (gdouble *p, gdouble *hx, gint 
 }
 
 static void
-_nc_cluster_pseudo_counts_levmar_J_new_variables (gdouble *p, gdouble *J, gint m, gint n, gpointer adata)
+_nc_cluster_pseudo_counts_levmar_J (gdouble *p, gdouble *J, gint m, gint n, gpointer adata)
 {
   integrand_data *data = (integrand_data *) adata;
   NcClusterMass *clusterm = data->clusterm;
@@ -591,7 +515,7 @@ _nc_cluster_pseudo_counts_levmar_J_new_variables (gdouble *p, gdouble *J, gint m
 }
 
 static void
-peakfinder_new_variables (gdouble lnM_M0, gdouble p0[], const gint *ndim, const gdouble bounds[], gint *n, gdouble x[], void *userdata)
+peakfinder (gdouble lnM_M0, gdouble p0[], const gint *ndim, const gdouble bounds[], gint *n, gdouble x[], void *userdata)
 {
   integrand_data *data = (integrand_data *) userdata;
   NcClusterPseudoCounts *cpc = data->cpc;
@@ -620,8 +544,8 @@ peakfinder_new_variables (gdouble lnM_M0, gdouble p0[], const gint *ndim, const 
 
   //printf ("p0[0] = %.5g p0[1] = %.5g lb[0] = %.5g lb[1] = %.5g ub[0] = %.5g ub[1] = %.5g\n", p0[0], p0[1], lb[0], lb[1], ub[0], ub[1]);
   ret = dlevmar_der (
-                     &_nc_cluster_pseudo_counts_levmar_f_new_variables, 
-                     &_nc_cluster_pseudo_counts_levmar_J_new_variables,
+                     &_nc_cluster_pseudo_counts_levmar_f, 
+                     &_nc_cluster_pseudo_counts_levmar_J,
                      p0, NULL, 2, 4, 1.0e5, opts, info, cpc->workz, NULL, data
                      );
   
@@ -641,247 +565,7 @@ peakfinder_new_variables (gdouble lnM_M0, gdouble p0[], const gint *ndim, const 
 }
 
 static gdouble
-_function_at (gdouble *p, integrand_data *data)
-{
-  gdouble fp[6];
-  _nc_cluster_pseudo_counts_levmar_f (p, fp, 3, 5, data);
-  return (fp[0] * fp[0] + fp[1] * fp[1] + fp[2] * fp[2] + fp[3] * fp[3] + fp[4] * fp[4] + fp[5] * fp[5]) / 2.0;
-}
-
-#define PEAK_DEC (100.0 * M_LN10)
-
-static gdouble
-_function_bounds_Msz (gdouble x, void *params)
-{
-  integrand_data *data = (integrand_data *) params;
-  gdouble p[3] = {x, data->peak[1], data->peak[2]};
-  return _function_at (p, data) - (data->func_peak + PEAK_DEC);
-}
-
-static gdouble
-_function_bounds_Ml (gdouble x, void *params)
-{
-  integrand_data *data = (integrand_data *) params;
-  gdouble p[3] = {data->peak[0], x, data->peak[2]};
-  return _function_at (p, data) - (data->func_peak + PEAK_DEC);
-}
-
-static gdouble
-_function_bounds_Mtrue (gdouble x, void *params)
-{
-  integrand_data *data = (integrand_data *) params;
-  gdouble p[3] = {data->peak[0], data->peak[1], x}; 
-  return _function_at (p, data) - (data->func_peak + PEAK_DEC);
-}
-
-static gdouble
-_border_finder (gsl_function *F, gdouble x_lo, gdouble x_hi, gdouble prec, guint max_iter)
-{
-  const gsl_root_fsolver_type *T = gsl_root_fsolver_brent;
-  gsl_root_fsolver *s = gsl_root_fsolver_alloc (T);
-  gdouble r = 0.0;
-  guint iter = 0;
-  gint status;
-  //printf ("x_lo = %.5g F em x_lo = %.5g x_hi= %.5g F em x_hi = %.5g\n", x_lo, F->function (x_lo, F->params), x_hi, F->function (x_hi, F->params));
-  gsl_root_fsolver_set (s, F, x_lo, x_hi);
-
-  do
-  {
-    iter++;
-    status = gsl_root_fsolver_iterate (s);
-    r = gsl_root_fsolver_root (s);
-    x_lo = gsl_root_fsolver_x_lower (s);
-    x_hi = gsl_root_fsolver_x_upper (s);
-    status = gsl_root_test_interval (x_lo, x_hi, 0, prec);
-    if (status == GSL_SUCCESS)
-      break;
-  } while (status == GSL_CONTINUE && iter < max_iter);
-
-  gsl_root_fsolver_free (s);
-
-  return r;
-}
-
-static void
-_p_bounds (gdouble *lb, gdouble *ub, integrand_data *data)
-{
-  gint max_iter = 1000000;
-  gdouble prec = 1e-1;
-  gsl_function F;
-
-  F.params = data;
-
-  F.function = &_function_bounds_Msz;
-  lb[0] = _border_finder (&F, -10.0, data->peak[0], prec, max_iter);
-  ub[0] = _border_finder (&F, data->peak[0], 60.0, prec, max_iter);
-
-  F.function = &_function_bounds_Ml;
-  lb[1] = _border_finder (&F, -10.0, data->peak[1], prec, max_iter);
-  ub[1] = _border_finder (&F, data->peak[1], 60.0, prec, max_iter);
-  
-  F.function = &_function_bounds_Mtrue;
-  lb[2] = _border_finder (&F, log (1.1e13), data->peak[2], prec, max_iter); /* this function range is closed, [lower, upper]. This is why we didn't use 1e12 and 1e16. */
-  ub[2] = _border_finder (&F, data->peak[2], log (9.9e15), prec, max_iter);
-
-  if (FALSE)
-  {
-    gdouble p[3];
-    p[0] = lb[0];
-    p[1] = lb[1];
-    p[2] = lb[2];
-    printf ("% 20.15g % 20.15g % 20.15g % 20.15g\n", p[0], p[1], p[2], _function_at (p, data) - (data->func_peak + PEAK_DEC));
-    p[0] = lb[0];
-    p[1] = lb[1];
-    p[2] = ub[2];
-    printf ("% 20.15g % 20.15g % 20.15g % 20.15g\n", p[0], p[1], p[2], _function_at (p, data) - (data->func_peak + PEAK_DEC));
-    p[0] = lb[0];
-    p[1] = ub[1];
-    p[2] = lb[2];
-    printf ("% 20.15g % 20.15g % 20.15g % 20.15g\n", p[0], p[1], p[2], _function_at (p, data) - (data->func_peak + PEAK_DEC));
-    p[0] = ub[0];
-    p[1] = lb[1];
-    p[2] = lb[2];
-    printf ("% 20.15g % 20.15g % 20.15g % 20.15g\n", p[0], p[1], p[2], _function_at (p, data) - (data->func_peak + PEAK_DEC));
-    p[0] = lb[0];
-    p[1] = ub[1];
-    p[2] = ub[2];
-    printf ("% 20.15g % 20.15g % 20.15g % 20.15g\n", p[0], p[1], p[2], _function_at (p, data) - (data->func_peak + PEAK_DEC));
-    p[0] = ub[0];
-    p[1] = lb[1];
-    p[2] = ub[2];
-    printf ("% 20.15g % 20.15g % 20.15g % 20.15g\n", p[0], p[1], p[2], _function_at (p, data) - (data->func_peak + PEAK_DEC));
-    p[0] = ub[0];
-    p[1] = ub[1];
-    p[2] = lb[2];
-    printf ("% 20.15g % 20.15g % 20.15g % 20.15g\n", p[0], p[1], p[2], _function_at (p, data) - (data->func_peak + PEAK_DEC));
-    p[0] = ub[0];
-    p[1] = ub[1];
-    p[2] = ub[2];
-    printf ("% 20.15g % 20.15g % 20.15g % 20.15g\n", p[0], p[1], p[2], _function_at (p, data) - (data->func_peak + PEAK_DEC));
-  }
-
-}
-
-static gdouble
-_posterior_numerator_integrand_plcl (gdouble lnMsz, gdouble lnMl, gdouble lnM, gpointer userdata)
-{
-  integrand_data *data = (integrand_data *) userdata;
-  NcClusterPseudoCounts *cpc = data->cpc;
-  gdouble sf = _selection_function (cpc,  lnM);
-
-  if (sf == 0.0)
-    return exp (-200.0);
-  else
-  {
-    gdouble mf = nc_mass_function_dn_dlnm (cpc->mfp, data->cosmo, lnM, data->z);
-    //gdouble dV_dzdOmega = nc_mass_function_dv_dzdomega (cpc->mfp, data->cosmo, data->z);
-    gdouble pdf_Mobs_Mtrue = nc_cluster_mass_plcl_pdf (data->clusterm, lnM, lnMsz, lnMl, data->Mobs, data->Mobs_params);
-
-    gdouble result = sf * mf * pdf_Mobs_Mtrue + exp (-200.0); // * dV_dzdOmega;
-
-    printf ("===> %12.8g %12.8g %12.8g %12.8g %12.8g %12.8g %12.8g\n", lnM, lnMsz, lnMl, sf, mf, pdf_Mobs_Mtrue, result);
-    return result;  
-  }
-}
-
-/**
- * nc_cluster_pseudo_counts_posterior_numerator_plcl:
- * @cpc: a #NcClusterPseudoCounts
- * @clusterm: a #NcClusterMass
- * @cosmo: a #NcHICosmo 
- * @z: spectroscopic redshift
- * @Mobs: (array) (element-type double): logarithm base e of the observed mass
- * @Mobs_params: (array) (element-type double): observed mass paramaters
- *
- * FIXME
- *
- * Returns: FIXME
-*/
-gdouble
-nc_cluster_pseudo_counts_posterior_numerator_plcl (NcClusterPseudoCounts *cpc, NcClusterMass *clusterm, NcHICosmo *cosmo, const gdouble z, const gdouble *Mobs, const gdouble *Mobs_params)
-{
-  integrand_data data;
-  gdouble P, err;
-  gdouble dV_dzdOmega;
-  NcmIntegrand3dim integ;
-  
-  if (z < ZMIN || z > (ZMIN + DELTAZ))
-    return 0.0;
-  else
-  {
-    g_assert (NC_IS_CLUSTER_MASS_PLCL (clusterm)); 
-
-    data.cpc = cpc;
-    data.clusterm = clusterm;
-    data.cosmo = cosmo;
-    data.z = z;
-    data.Mobs = Mobs;
-    data.Mobs_params = Mobs_params;
-    
-    dV_dzdOmega = nc_mass_function_dv_dzdomega (data.cpc->mfp, data.cosmo, data.z);
-
-    integ.f = _posterior_numerator_integrand_plcl;
-    integ.userdata = &data;
-
-    {
-      gint n = 1;
-      gint ndim = 3;
-      gdouble a_true, a_sz, a_l, b_true, b_sz, b_l, bounds[ndim * 2], x[ndim];
-      gdouble lb[3], ub[3]; 
-      const gint ngiven   = 1;
-      const gint ldxgiven = 3;
-      //gdouble P2, err2;
-
-      a_sz = -10.0; 
-      b_sz = 60.0;
-      a_l = -10.0;
-      b_l = 60.0;
-      a_true = log (1.0e12);
-      b_true = log (1.0e16);
-      bounds[0] = a_sz;
-      bounds[2] = a_l;
-      bounds[4] = a_true;
-      bounds[1] = b_sz; 
-      bounds[3] = b_l;
-      bounds[5] = b_true;
-
-      peakfinder (&ndim, bounds, &n, x, &data);
-      data.peak[0] = x[0];
-      data.peak[1] = x[1];
-      data.peak[2] = x[2];
-      data.func_peak = _function_at (x, &data);
-
-      printf ("peak computed %.5g %.5g %.5g\n", data.peak[0], data.peak[1], data.peak[2]);
-      _p_bounds (lb, ub, &data);
-
-      lb[0] = 1.78;
-      //ub[0] = 2.2;
-      //lb[1] = -0.35;
-      //ub[1] = 0.35;
-      //lb[2] = 31.4;
-      //ub[2] = 33.0;
-      printf ("[%.5g, %.5g] [%.5g, %.5g] [%.5g, %.5g]\n", lb[0], ub[0], lb[1], ub[1], lb[2], ub[2]);
-      //ncm_integrate_3dim (&integ, lb[0], lb[1], lb[2], ub[0], ub[1], ub[2], 1e-7, 0.0, &P3, &err3);
-      //ncm_integrate_3dim (&integ, bounds[0], bounds[2], bounds[4], bounds[1], bounds[3], bounds[5], 1e-5, 0.0, &P, &err);
-      
-      //ncm_integrate_3dim_divonne (&integ, bounds[0], bounds[2], bounds[4], bounds[1], bounds[3], bounds[5], 1e-7, 0.0, ngiven, ldxgiven, x, &P, &err);
-      //ncm_integrate_3dim_divonne (&integ, lb[0], lb[1], bounds[4], ub[0], ub[1], bounds[5], 1e-5, 0.0, ngiven, ldxgiven, x, &P, &err);
-      ncm_integrate_3dim_divonne (&integ, lb[0], lb[1], lb[2], ub[0], ub[1], ub[2], 1e-7, 0.0, ngiven, ldxgiven, x, &P, &err);
-
-      //ncm_integrate_3dim_vegas (&integ, lb[0], lb[1], lb[2], ub[0], ub[1], ub[2], 1e-8, 1.0e-13, 1000, &P, &err);
-      
-      printf ("%10.8g %10.8g\n", P, err/P);
-      //printf ("%10.8g %10.8g P/P2 = %10.8g %10.8g %10.8g \n", P, P2, P/P2, err/P, err2/P2);
-    }
-
-    printf ("Mpl = %.5g Mcl = %.5g\n", Mobs[0], Mobs[1]);
-    printf ("P = %.8g err = %.8g dV = %.8g result = %.8g\n", P, err, dV_dzdOmega, P * dV_dzdOmega);
-    return P * dV_dzdOmega;
-  }
-}
-
-static gdouble
-_posterior_numerator_integrand_plcl_new_variables (gdouble w1, gdouble w2, gdouble lnM_M0, gpointer userdata)
+_posterior_numerator_integrand_plcl (gdouble w1, gdouble w2, gdouble lnM_M0, gpointer userdata)
 {
   integrand_data *data = (integrand_data *) userdata;
   NcClusterPseudoCounts *cpc = data->cpc;   
@@ -894,7 +578,7 @@ _posterior_numerator_integrand_plcl_new_variables (gdouble w1, gdouble w2, gdoub
   else
   {
     const gdouble mf = nc_mass_function_dn_dlnm (cpc->mfp, data->cosmo, lnM, data->z);
-    const gdouble pdf_Mobs_Mtrue = nc_cluster_mass_plcl_pdf_new_variables (data->clusterm, lnM_M0, w1, w2, data->Mobs, data->Mobs_params);
+    const gdouble pdf_Mobs_Mtrue = nc_cluster_mass_plcl_pdf (data->clusterm, lnM_M0, w1, w2, data->Mobs, data->Mobs_params);
     res = sf * mf * pdf_Mobs_Mtrue + exp (-200.0); 
   }
   //printf ("% 20.15g % 20.15g % 20.15g % 20.15g\n", w1, w2, lnM_M0, res);
@@ -902,7 +586,7 @@ _posterior_numerator_integrand_plcl_new_variables (gdouble w1, gdouble w2, gdoub
 }
 
 /**
- * nc_cluster_pseudo_counts_posterior_numerator_plcl_new_variables:
+ * nc_cluster_pseudo_counts_posterior_numerator_plcl:
  * @cpc: a #NcClusterPseudoCounts
  * @clusterm: a #NcClusterMass
  * @cosmo: a #NcHICosmo 
@@ -917,7 +601,7 @@ _posterior_numerator_integrand_plcl_new_variables (gdouble w1, gdouble w2, gdoub
  * Returns: FIXME
 */
 gdouble
-nc_cluster_pseudo_counts_posterior_numerator_plcl_new_variables (NcClusterPseudoCounts *cpc, NcClusterMass *clusterm, NcHICosmo *cosmo, const gdouble z, const gdouble Mpl, const gdouble Mcl, const gdouble sigma_pl, const gdouble sigma_cl)
+nc_cluster_pseudo_counts_posterior_numerator_plcl (NcClusterPseudoCounts *cpc, NcClusterMass *clusterm, NcHICosmo *cosmo, const gdouble z, const gdouble Mpl, const gdouble Mcl, const gdouble sigma_pl, const gdouble sigma_cl)
 {
   integrand_data data;
   gdouble P, err;
@@ -944,7 +628,7 @@ nc_cluster_pseudo_counts_posterior_numerator_plcl_new_variables (NcClusterPseudo
     
     dV_dzdOmega = nc_mass_function_dv_dzdomega (data.cpc->mfp, data.cosmo, data.z);
 
-    integ.f = _posterior_numerator_integrand_plcl_new_variables;
+    integ.f = _posterior_numerator_integrand_plcl;
     integ.userdata = &data;
 
     {
@@ -988,33 +672,13 @@ nc_cluster_pseudo_counts_posterior_numerator_plcl_new_variables (NcClusterPseudo
       for (i = 0; i < ngiven; i++)
       {
         gdouble lnM_M0 = log (2.0e12) + (log (7.0e15) - log (2.0e12)) * i * 1.0 / (ngiven - 1.0) - data.lnM0;
-        peakfinder_new_variables (lnM_M0, p0, &ndim, bounds, &n, x1, &data); 
+        peakfinder (lnM_M0, p0, &ndim, bounds, &n, x1, &data); 
         x[i * ldxgiven + 0] = x1[0]; /* w1 */
         x[i * ldxgiven + 1] = x1[1]; /* w2 */
         x[i * ldxgiven + 2] = x1[2]; /* True mass */
         //printf ("Picos: %d [%.5g, %.5g, %.5g] lnMcut % 20.15e\n", i, x[i * ldxgiven + 0], x[i * ldxgiven + 1], x[i * ldxgiven + 2], exp (LNMCUT));
-
-        //p0[0] = x1[0];
-        //p0[1] = x1[1];
-        //p0[2] = x1[2];
-        
-        //nc_cluster_mass_plcl_peak_new_variables(0.0, peak1, peak2, NC_CLUSTER_MASS_PLCL (data.clusterm), lnM_true, data.Mobs, data.Mobs_params);
-        //x[i * ldxgiven + 0] = peak1[0]; /* w1 */
-        //x[i * ldxgiven + 1] = peak1[1]; /* w2 */
-        //x[i * ldxgiven + 2] = lnM_true; /* True mass */
-        //r2 = peak1[0] * peak1[0] + peak1[1] * peak1[1];  
-        //printf ("Picos: [%.5g, %.5g, %.5g] r2 = %.5g\n", x[i * ldxgiven + 0], x[i * ldxgiven + 1], x[i * ldxgiven + 2], r2);
-        
-        //nc_cluster_mass_plcl_peak_new_variables(5.0, lb1, ub1, NC_CLUSTER_MASS_PLCL (data.clusterm), lnM_true, data.Mobs, data.Mobs_params);
-        //lb[0] = GSL_MIN (lb1[0], lb[0]);
-        //lb[1] = GSL_MIN (lb1[1], lb[1]);
-        //ub[0] = GSL_MAX (ub1[0], ub[0]);
-        //ub[1] = GSL_MAX (ub1[1], ub[1]);
-        //printf ("[%.5g, %.5g] [%.5g, %.5g] [%.5g, %.5g]\n", lb1[0], ub1[0], lb1[1], ub1[1], lb[2], ub[2]);
-        //printf ("[%.5g, %.5g] [%.5g, %.5g] [%.5g, %.5g]\n", lb[0], ub[0], lb[1], ub[1], lb[2], ub[2]);  
+          
       }    
-
-      //printf ("Final bounds: [%.5g, %.5g] [%.5g, %.5g] [%.5g, %.5g]\n", lb[0], ub[0], lb[1], ub[1], lb[2], ub[2]);
 
       ncm_integrate_3dim_divonne (&integ, lb[0], lb[1], lb[2], ub[0], ub[1], ub[2], 1e-5, 0.0, ngiven, ldxgiven, x, &P, &err);
       

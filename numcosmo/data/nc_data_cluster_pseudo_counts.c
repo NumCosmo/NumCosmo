@@ -279,7 +279,7 @@ _nc_data_cluster_pseudo_counts_m2lnL_val (NcmData *data, NcmMSet *mset, gdouble 
     const gdouble *M = ncm_matrix_ptr (dcpc->obs, i, NC_DATA_CLUSTER_PSEUDO_COUNTS_MPL);
     const gdouble *M_params = ncm_matrix_ptr (dcpc->obs, i, NC_DATA_CLUSTER_PSEUDO_COUNTS_SD_MPL);
     //const gdouble m2lnL_i = log (nc_cluster_pseudo_counts_posterior_numerator (cpc, clusterm, cosmo, z, M, M_params));
-    const gdouble m2lnL_i = log (nc_cluster_pseudo_counts_posterior_numerator_plcl_new_variables (cpc, clusterm, cosmo, z, M[0], M[1], M_params[0], M_params[1]));
+    const gdouble m2lnL_i = log (nc_cluster_pseudo_counts_posterior_numerator_plcl (cpc, clusterm, cosmo, z, M[0], M[1], M_params[0], M_params[1]));
 
     //printf ("%d % 20.15g % 20.15g % 20.15g % 20.15g\n", i, m2lnL_i, m2lnL_i - log (Ndet), log (Ndet), Ndet);
     if (!gsl_finite (m2lnL_i))

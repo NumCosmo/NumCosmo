@@ -271,7 +271,7 @@ _Lens_lnmass_mean (NcClusterMassPlCL *mszl, gdouble lnM)
 }
 
 /**
- * nc_cluster_mass_plcl_pdf_new_variables:
+ * nc_cluster_mass_plcl_pdf:
  * @clusterm: a #NcClusterMass
  * @lnM_M0:logarithm base e of the true mass minus lnM0 (pivot mass)
  * @w1: new variable 1 
@@ -290,7 +290,7 @@ _Lens_lnmass_mean (NcClusterMassPlCL *mszl, gdouble lnM)
  * Returns: FIXME
 */
 gdouble 
-nc_cluster_mass_plcl_pdf_new_variables (NcClusterMass *clusterm, gdouble lnM_M0, gdouble w1, gdouble w2, const gdouble *Mobs, const gdouble *Mobs_params)
+nc_cluster_mass_plcl_pdf (NcClusterMass *clusterm, gdouble lnM_M0, gdouble w1, gdouble w2, const gdouble *Mobs, const gdouble *Mobs_params)
 {
   NcClusterMassPlCL *mszl = NC_CLUSTER_MASS_PLCL (clusterm);
   
@@ -313,69 +313,6 @@ nc_cluster_mass_plcl_pdf_new_variables (NcClusterMass *clusterm, gdouble lnM_M0,
   else
   {
     const gdouble result = exp (exp_arg) + exp (-200.0);
-    //printf ("Msz = %.8g Ml = %.8g m_dist = %.8g\n", Msz, Ml, result);
-    return result;
-  }
-}
-
-/**
- * nc_cluster_mass_plcl_pdf:
- * @clusterm: a #NcClusterMass
- * @lnM500:logarithm base e of the true mass
- * @lnMsz: logarithm base e of the SZ mass
- * @lnMl: logarithm base e of the lensing mass
- * @Mobs: (array) (element-type double): observed masses
- * @Mobs_params: (array) (element-type double): observed mass paramaters
- *
- * FIXME
- * Integrals in $M_{sz}$ and $M_l$ performed in the adimensional quantities $\ln (M_{sz} / M_0)$ 
- * and $\ln (M_l / M_0)$, respectively. The Gaussian distributions between $M_{Pl}$ and $M_{CL}$ 
- * are written in terms of the dimensional masses. 
- *
- * Returns: FIXME
-*/
-gdouble 
-nc_cluster_mass_plcl_pdf (NcClusterMass *clusterm, gdouble lnM500, gdouble lnMsz, gdouble lnMl, const gdouble *Mobs, const gdouble *Mobs_params)
-{
-  NcClusterMassPlCL *mszl = NC_CLUSTER_MASS_PLCL (clusterm);
-  const gdouble Msz = exp (lnMsz) * mszl->M0;
-  const gdouble Ml  = exp (lnMl) * mszl->M0;
-  const gdouble diff_Msz = lnMsz - _SZ_lnmass_mean (mszl, lnM500);
-  const gdouble diff_Ml  = lnMl - _Lens_lnmass_mean (mszl, lnM500);
-
-  const gdouble M_Pl  = Mobs[NC_CLUSTER_MASS_PLCL_MPL];
-  const gdouble sd_Pl = Mobs_params[NC_CLUSTER_MASS_PLCL_SD_PL];
-  const gdouble M_CL  = Mobs[NC_CLUSTER_MASS_PLCL_MCL];
-  const gdouble sd_CL = Mobs_params[NC_CLUSTER_MASS_PLCL_SD_CL];
-  
-  const gdouble ysz     = (M_Pl - Msz) / sd_Pl;
-  const gdouble arg_ysz = ysz * ysz / 2.0;
-  const gdouble yl      = (M_CL - Ml) / sd_CL;
-  const gdouble arg_yl  = yl * yl / 2.0;
-  
-  const gdouble xsz             = diff_Msz / SD_SZ;
-  const gdouble arg_xsz         = xsz * xsz;
-  const gdouble xl              =  diff_Ml / SD_L;
-  const gdouble arg_xl          = xl * xl;
-  const gdouble sdsz_sdl        = SD_SZ * SD_L;
-  const gdouble twocor_sdsz_sdl = 2.0 * COR / sdsz_sdl;
-  const gdouble arg_x_szl       = twocor_sdsz_sdl * diff_Msz * diff_Ml;
-
-  const gdouble norma_factor =  sdsz_sdl * sqrt(1.0 - COR * COR);
-  const gdouble lnnorma_p    = log (4.0 * M_PI * M_PI * (sd_Pl * sd_CL)/(mszl->M0 * mszl->M0) *  norma_factor);
-
-  //const gdouble lnnorma_p = log (2.0 * M_PI * norma_factor);
-  //const gdouble lnnorma_p = log (2.0 * M_PI * sd_Pl * sd_CL / (mszl->M0 * mszl->M0));
-  
-  const gdouble exp_arg = - arg_ysz - arg_yl - (arg_xsz + arg_xl - arg_x_szl) / (2.0 * (1.0 - COR * COR));
-  //const gdouble exp_arg = - (arg_xsz + arg_xl - arg_x_szl) / (2.0 * (1.0 - COR * COR));
-  //const gdouble exp_arg = - arg_ysz - arg_yl;
-  
-  if (exp_arg < GSL_LOG_DBL_MIN)
-    return exp (-200.0);
-  else
-  {
-    const gdouble result = exp (exp_arg - lnnorma_p) + exp (-200.0);
     //printf ("Msz = %.8g Ml = %.8g m_dist = %.8g\n", Msz, Ml, result);
     return result;
   }
@@ -424,6 +361,19 @@ _nc_cluster_mass_plcl_Msz_Ml_M500_p_integrand (gdouble lnMsz, gdouble lnMl, gpoi
   }
 }
 
+/**
+ * nc_cluster_mass_plcl_peak_new_variables:
+ * @N: FIXME
+ * @lb: lower bounds
+ * @ub: upper bounds 
+ * @mszl: a #NcClusterMassPlCL
+ * @lnM: logarithm base e of the mass
+ * @Mobs: (array) (element-type double): observed mass
+ * @Mobs_params: (array) (element-type double): observed mass paramaters
+ *
+ * FIXME
+ *
+*/
 void
 nc_cluster_mass_plcl_peak_new_variables (gdouble N, gdouble *lb, gdouble *ub, NcClusterMassPlCL *mszl, gdouble lnM, const gdouble *Mobs, const gdouble *Mobs_params)
 {
@@ -487,6 +437,20 @@ nc_cluster_mass_plcl_peak_new_variables (gdouble N, gdouble *lb, gdouble *ub, Nc
   }
 }
 
+/**
+ * nc_cluster_mass_plcl_levmar_f_new_variables:
+ * @p: FIXME
+ * @hx: FIXME
+ * @m: FIXME 
+ * @n: FIXME 
+ * @mszl: a #NcClusterMassPlCL
+ * @lnM_M0: logarithm base e of the mass divided by the pivot mass
+ * @Mobs: (array) (element-type double): observed mass
+ * @Mobs_params: (array) (element-type double): observed mass paramaters
+ *
+ * FIXME
+ *
+*/
 void
 nc_cluster_mass_plcl_levmar_f_new_variables (gdouble *p, gdouble *hx, gint m, gint n, NcClusterMassPlCL *mszl, gdouble lnM_M0, const gdouble *Mobs, const gdouble *Mobs_params)
 {
@@ -516,6 +480,20 @@ nc_cluster_mass_plcl_levmar_f_new_variables (gdouble *p, gdouble *hx, gint m, gi
   NCM_UNUSED (m);
 }
 
+/**
+ * nc_cluster_mass_plcl_levmar_J_new_variables:
+ * @p: FIXME
+ * @j: FIXME
+ * @m: FIXME 
+ * @n: FIXME 
+ * @mszl: a #NcClusterMassPlCL
+ * @lnM_M0: logarithm base e of the mass divided by the pivot mass
+ * @Mobs: (array) (element-type double): observed mass
+ * @Mobs_params: (array) (element-type double): observed mass paramaters
+ *
+ * FIXME
+ *
+*/
 void
 nc_cluster_mass_plcl_levmar_J_new_variables (gdouble *p, gdouble *j, gint m, gint n, NcClusterMassPlCL *mszl, gdouble lnM_M0, const gdouble *Mobs, const gdouble *Mobs_params)
 {
@@ -544,6 +522,20 @@ nc_cluster_mass_plcl_levmar_J_new_variables (gdouble *p, gdouble *j, gint m, gin
   NCM_UNUSED (m);
 }
 
+/**
+ * nc_cluster_mass_plcl_levmar_f:
+ * @p: FIXME
+ * @hx: FIXME
+ * @m: FIXME 
+ * @n: FIXME 
+ * @mszl: a #NcClusterMassPlCL
+ * @lnM: logarithm base e of the mass divided by the pivot mass
+ * @Mobs: (array) (element-type double): observed mass
+ * @Mobs_params: (array) (element-type double): observed mass paramaters
+ *
+ * FIXME
+ *
+*/
 void
 nc_cluster_mass_plcl_levmar_f (gdouble *p, gdouble *hx, gint m, gint n, NcClusterMassPlCL *mszl, gdouble lnM, const gdouble *Mobs, const gdouble *Mobs_params)
 {
