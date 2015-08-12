@@ -94,10 +94,13 @@ gint ncm_integral_cached_0_x (NcmFunctionCache *cache, gsl_function *F, gdouble 
 gint ncm_integral_cached_x_inf (NcmFunctionCache *cache, gsl_function *F, gdouble x, gdouble *result, gdouble *error);
 
 gboolean ncm_integrate_2dim (NcmIntegrand2dim *integ, gdouble xi, gdouble yi, gdouble xf, gdouble yf, gdouble epsrel, gdouble epsabs, gdouble *result, gdouble *error);
-gboolean ncm_integrate_3dim (NcmIntegrand3dim *integ, gdouble xi, gdouble yi, gdouble zi, gdouble xf, gdouble yf, gdouble zf, gdouble epsrel, gdouble epsabs, gdouble *result, gdouble *error);
 gboolean ncm_integrate_2dim_divonne (NcmIntegrand2dim *integ, gdouble xi, gdouble yi, gdouble xf, gdouble yf, gdouble epsrel, gdouble epsabs, const gint ngiven, const gint ldxgiven, gdouble xgiven[], gdouble *result, gdouble *error);
 gboolean ncm_integrate_2dim_divonne_peakfinder (NcmIntegrand2dim *integ, gdouble xi, gdouble yi, gdouble xf, gdouble yf, gdouble epsrel, gdouble epsabs, const gint ngiven, const gint ldxgiven, gdouble xgiven[], const gint nextra, NcmIntegralPeakfinder peakfinder, gdouble *result, gdouble *error);
+gboolean ncm_integrate_2dim_vegas (NcmIntegrand2dim *integ, gdouble xi, gdouble yi, gdouble xf, gdouble yf, gdouble epsrel, gdouble epsabs, const gint nstart, gdouble *result, gdouble *error);
+
+gboolean ncm_integrate_3dim (NcmIntegrand3dim *integ, gdouble xi, gdouble yi, gdouble zi, gdouble xf, gdouble yf, gdouble zf, gdouble epsrel, gdouble epsabs, gdouble *result, gdouble *error);
 gboolean ncm_integrate_3dim_divonne (NcmIntegrand3dim *integ, gdouble xi, gdouble yi, gdouble zi, gdouble xf, gdouble yf, gdouble zf, gdouble epsrel, gdouble epsabs, const gint ngiven, const gint ldxgiven, gdouble xgiven[], gdouble *result, gdouble *error);
+gboolean ncm_integrate_3dim_vegas (NcmIntegrand3dim *integ, gdouble xi, gdouble yi, gdouble zi, gdouble xf, gdouble yf, gdouble zf, gdouble epsrel, gdouble epsabs, const gint nstart, gdouble *result, gdouble *error);
 
 NcmIntegralFixed *ncm_integral_fixed_new (gulong n_nodes, gulong rule_n, gdouble xl, gdouble xu);
 void ncm_integral_fixed_free (NcmIntegralFixed *intf);

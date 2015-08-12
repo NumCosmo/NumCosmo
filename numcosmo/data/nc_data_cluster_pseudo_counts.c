@@ -66,16 +66,8 @@ nc_data_cluster_pseudo_counts_set_property (GObject *object, guint prop_id, cons
   switch (prop_id)
   {
     case PROP_OBS:
-    {
-      GVariant *var = g_value_get_variant (value);
-      if (var != NULL)
-      {
-        const NcmMatrix *m = ncm_matrix_const_new_variant (var);
-        nc_data_cluster_pseudo_counts_set_obs (dcpc, m);
-        ncm_matrix_const_free (m);
-      }
+      nc_data_cluster_pseudo_counts_set_obs (dcpc, g_value_get_object (value));
       break;
-    }
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
       break;
@@ -91,11 +83,8 @@ nc_data_cluster_pseudo_counts_get_property (GObject *object, guint prop_id, GVal
   switch (prop_id)
   {
     case PROP_OBS:
-    {
-      GVariant *var = ncm_matrix_peek_variant (dcpc->obs); 
-      g_value_take_variant (value, var);
+      g_value_set_object (value, dcpc->obs);
       break;
-    }
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
       break;
@@ -138,10 +127,10 @@ nc_data_cluster_pseudo_counts_class_init (NcDataClusterPseudoCountsClass *klass)
 
   g_object_class_install_property (object_class,
                                    PROP_OBS,
-                                   g_param_spec_variant ("obs",
+                                   g_param_spec_object ("obs",
                                                          NULL,
                                                          "Cluster observables",
-                                                         G_VARIANT_TYPE ("aad"), NULL,
+                                                         NCM_TYPE_MATRIX,
                                                          G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
   
   data_class->m2lnL_val  = &_nc_data_cluster_pseudo_counts_m2lnL_val;
@@ -161,7 +150,7 @@ nc_data_cluster_pseudo_counts_new (void)
   NcDataClusterPseudoCounts *dcpc;
 
   dcpc = g_object_new (NC_TYPE_DATA_CLUSTER_PSEUDO_COUNTS,
-                         NULL);
+                       NULL);
 
   return dcpc;
 }
@@ -272,18 +261,27 @@ _nc_data_cluster_pseudo_counts_m2lnL_val (NcmData *data, NcmMSet *mset, gdouble 
   g_assert (cpc != NULL);
   
   gdouble Ndet = nc_cluster_pseudo_counts_ndet (cpc, cosmo);
+  gdouble lnNdet = log (Ndet);
   gint i;
   *m2lnL = 0.0;
-      
+  if (Ndet < 1.0)
+  {
+    *m2lnL = GSL_POSINF;
+    return;
+  }
+  else
+    *m2lnL = 0.0;
+
+  printf ("# Ndet % 20.15g\n", Ndet);
   for (i = 0; i < dcpc->np; i++)
   {
     const gdouble z = ncm_matrix_get (dcpc->obs, i, NC_DATA_CLUSTER_PSEUDO_COUNTS_Z);
     const gdouble *M = ncm_matrix_ptr (dcpc->obs, i, NC_DATA_CLUSTER_PSEUDO_COUNTS_MPL);
     const gdouble *M_params = ncm_matrix_ptr (dcpc->obs, i, NC_DATA_CLUSTER_PSEUDO_COUNTS_SD_MPL);
-    const gdouble m2lnL_i = log (nc_cluster_pseudo_counts_posterior_numerator (cpc, clusterm, cosmo, z, M, M_params));
-    //const gdouble m2lnL_i = log (nc_cluster_pseudo_counts_posterior_numerator_plcl (cpc, clusterm, cosmo, z, M, M_params));
+    //const gdouble m2lnL_i = log (nc_cluster_pseudo_counts_posterior_numerator (cpc, clusterm, cosmo, z, M, M_params));
+    const gdouble m2lnL_i = log (nc_cluster_pseudo_counts_posterior_numerator_plcl (cpc, clusterm, cosmo, z, M[0], M[1], M_params[0], M_params[1]));
 
-    printf ("%d % 20.15g % 20.15g % 20.15g\n", i, m2lnL_i, m2lnL_i - log (Ndet), log (Ndet));
+    //printf ("%d % 20.15g % 20.15g % 20.15g % 20.15g\n", i, m2lnL_i, m2lnL_i - log (Ndet), log (Ndet), Ndet);
     if (!gsl_finite (m2lnL_i))
     {
       *m2lnL += m2lnL_i;
@@ -295,7 +293,7 @@ _nc_data_cluster_pseudo_counts_m2lnL_val (NcmData *data, NcmMSet *mset, gdouble 
     }
   }
 
-  *m2lnL -= dcpc->np * log (Ndet);
+  *m2lnL -= dcpc->np * lnNdet;
 
   *m2lnL = -2.0 * (*m2lnL);
   return;
