@@ -131,7 +131,7 @@ nc_data_cluster_pseudo_counts_class_init (NcDataClusterPseudoCountsClass *klass)
                                                          NULL,
                                                          "Cluster observables",
                                                          NCM_TYPE_MATRIX,
-                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+                                                         G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
   
   data_class->m2lnL_val  = &_nc_data_cluster_pseudo_counts_m2lnL_val;
   data_class->get_length = &_nc_data_cluster_pseudo_counts_get_len;
@@ -272,7 +272,7 @@ _nc_data_cluster_pseudo_counts_m2lnL_val (NcmData *data, NcmMSet *mset, gdouble 
   else
     *m2lnL = 0.0;
 
-  printf ("# Ndet % 20.15g\n", Ndet);
+  //printf ("# Ndet % 20.15g\n", Ndet);
   for (i = 0; i < dcpc->np; i++)
   {
     const gdouble z = ncm_matrix_get (dcpc->obs, i, NC_DATA_CLUSTER_PSEUDO_COUNTS_Z);

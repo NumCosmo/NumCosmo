@@ -415,7 +415,10 @@ ncm_mset_newv (NcmModel *model0, va_list ap)
   ncm_mset_set (mset, model0);
 
   while ((model = va_arg (ap, NcmModel *)) != NULL)
+  {
+    g_assert (NCM_IS_MODEL (model));
     ncm_mset_push (mset, model);
+  }
 
   return mset;
 }

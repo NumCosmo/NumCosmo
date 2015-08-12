@@ -60,7 +60,6 @@ main (gint argc, gchar *argv[])
   ncm_cfg_init ();
   ncm_cfg_enable_gsl_err_handler ();
 
-  
   g_test_add ("/numcosmo/nc_cluster_pseudo_counts/1p2_integral", TestNcClusterPseudoCounts, NULL, 
               &test_nc_cluster_pseudo_counts_new, 
               &test_nc_cluster_pseudo_counts_1p2_integral, 
@@ -110,7 +109,7 @@ test_nc_cluster_pseudo_counts_new (TestNcClusterPseudoCounts *test, gconstpointe
   NcClusterPseudoCounts *cpc      = NC_CLUSTER_PSEUDO_COUNTS (nc_cluster_pseudo_counts_new (mfp));
   NcClusterMass *clusterm         = NC_CLUSTER_MASS (nc_cluster_mass_new_from_name ("NcClusterMassPlCL"));
   NcDataClusterPseudoCounts *dcpc = nc_data_cluster_pseudo_counts_new ();
-  NcmMSet *mset                   = ncm_mset_new (NCM_MODEL (cosmo), NCM_MODEL (clusterm), NCM_MODEL (cpc));
+  NcmMSet *mset                   = ncm_mset_new (NCM_MODEL (cosmo), NCM_MODEL (clusterm), NCM_MODEL (cpc), NULL);
   NcmDataset *dset                = ncm_dataset_new ();
   NcmLikelihood *lh;              
   NcmFit *fit;                    
@@ -174,6 +173,7 @@ test_nc_cluster_pseudo_counts_new (TestNcClusterPseudoCounts *test, gconstpointe
   ncm_matrix_set (m, 0, 2, test->Mobs[1]);
   ncm_matrix_set (m, 0, 3, test->Mobs_params[0]);
   ncm_matrix_set (m, 0, 4, test->Mobs_params[1]);
+  
   nc_data_cluster_pseudo_counts_set_obs (dcpc, m);
   test->dcpc = dcpc;
   
@@ -202,14 +202,14 @@ test_nc_cluster_pseudo_counts_1p2_integral (TestNcClusterPseudoCounts *test, gco
   NcClusterMass *clusterm    = test->clusterm;
   NcClusterPseudoCounts *cpc = test->cpc;
  
-  printf ("z = %.5g Msz = %.5g Ml = %.5g\n", test->z, test->Mobs[0], test->Mobs[1]);
+  //printf ("z = %.5g Msz = %.5g Ml = %.5g\n", test->z, test->Mobs[0], test->Mobs[1]);
   //ncm_model_params_log_all (NCM_MODEL (cosmo));
   //ncm_model_params_log_all (NCM_MODEL (clusterm));
   //ncm_model_params_log_all (NCM_MODEL (cpc));
 
   nc_matter_var_prepare (test->vp, test->cosmo);
 
-  printf ("Integral 1p2\n");
+  //printf ("Integral 1p2\n");
   nc_cluster_pseudo_counts_posterior_numerator (cpc, clusterm, cosmo, test->z, test->Mobs, test->Mobs_params);  
 }
 
@@ -220,14 +220,14 @@ test_nc_cluster_pseudo_counts_3d_integral (TestNcClusterPseudoCounts *test, gcon
   NcClusterMass *clusterm    = test->clusterm;
   NcClusterPseudoCounts *cpc = test->cpc;
  
-  printf ("z = %.5g Msz = %.5g Ml = %.5g SDsz = %.5g SDl = %.5g\n", test->z, test->Mobs[0], test->Mobs[1], test->Mobs_params[0], test->Mobs_params[1]);
+  //printf ("z = %.5g Msz = %.5g Ml = %.5g SDsz = %.5g SDl = %.5g\n", test->z, test->Mobs[0], test->Mobs[1], test->Mobs_params[0], test->Mobs_params[1]);
   //ncm_model_params_log_all (NCM_MODEL (cosmo));
   //ncm_model_params_log_all (NCM_MODEL (clusterm));
   //ncm_model_params_log_all (NCM_MODEL (cpc));
 
   nc_matter_var_prepare (test->vp, test->cosmo);
 
-  printf ("Integral 3dnew variables\n");
+  //printf ("Integral 3dnew variables\n");
   nc_cluster_pseudo_counts_posterior_numerator_plcl (cpc, clusterm, cosmo, test->z, test->Mobs[0], test->Mobs[1], test->Mobs_params[0], test->Mobs_params[1]);
 }
 
@@ -236,14 +236,14 @@ test_nc_cluster_pseudo_counts_m2lnL (TestNcClusterPseudoCounts *test, gconstpoin
 {
   gdouble m2lnL;
  
-  printf ("z = %.5g Msz = %.5g Ml = %.5g SDsz = %.5g SDl = %.5g\n", test->z, test->Mobs[0], test->Mobs[1], test->Mobs_params[0], test->Mobs_params[1]);
+  //printf ("z = %.5g Msz = %.5g Ml = %.5g SDsz = %.5g SDl = %.5g\n", test->z, test->Mobs[0], test->Mobs[1], test->Mobs_params[0], test->Mobs_params[1]);
   //ncm_model_params_log_all (NCM_MODEL (cosmo));
   //ncm_model_params_log_all (NCM_MODEL (clusterm));
   //ncm_model_params_log_all (NCM_MODEL (cpc));
 
   nc_matter_var_prepare (test->vp, test->cosmo);
 
-  printf ("Test m2lnL\n");
+  //printf ("Test m2lnL\n");
   ncm_fit_set_params_reltol (test->fit, 1.0e-5);
   ncm_fit_m2lnL_val (test->fit, &m2lnL);
 //  printf ("m2lnL = %.5g\n", m2lnL);

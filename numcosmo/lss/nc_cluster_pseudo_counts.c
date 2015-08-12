@@ -321,6 +321,7 @@ _Ndet_wout_volume_integrand (gdouble lnM500, gpointer userdata)
  * nc_cluster_pseudo_counts_ndet_no_z_integral:
  * @cpc: a #NcClusterPseudoCounts
  * @cosmo: a #NcHICosmo 
+ * @z: redshift
  *
  * FIXME
  *
@@ -349,7 +350,7 @@ nc_cluster_pseudo_counts_ndet_no_z_integral (NcClusterPseudoCounts *cpc, NcHICos
   lnM_max = log (1.0e16);
   gsl_integration_qag (&F, lnM_min, lnM_max, 0.0, NCM_DEFAULT_PRECISION, NCM_INTEGRAL_PARTITION, 6, *w, &P, &err);
 
-  printf ("Ndet wout z integral = %.8g\n", P);
+  //printf ("Ndet wout z integral = %.8g\n", P);
   return P; // * dV_dzdOmega;
 }
 
@@ -468,7 +469,7 @@ nc_cluster_pseudo_counts_posterior_numerator (NcClusterPseudoCounts *cpc, NcClus
       gsl_integration_qag (&F, lnM_min, lnM_max, 0.0, 1.0e2 * NCM_DEFAULT_PRECISION, NCM_INTEGRAL_PARTITION, 6, *w, &P, &err);
     }
 
-    printf ("numerator = %.8g err = %.8g dV = %.8g result = %.8g\n", P, err, dV_dzdOmega, P * dV_dzdOmega);
+    //printf ("numerator = %.8g err = %.8g dV = %.8g result = %.8g\n", P, err, dV_dzdOmega, P * dV_dzdOmega);
     ncm_memory_pool_return (w);
     return P * dV_dzdOmega;
   }
@@ -686,7 +687,7 @@ nc_cluster_pseudo_counts_posterior_numerator_plcl (NcClusterPseudoCounts *cpc, N
     }
 
     //printf ("Mpl = %.5g Mcl = %.5g\n", Mobs[0], Mobs[1]);
-    printf ("P = %.8g err = %.8e dV = %.8g result = %.8g\n", P / norma_p, err / P, dV_dzdOmega, P * dV_dzdOmega / norma_p);
+    //printf ("P = %.8g err = %.8e dV = %.8g result = %.8g\n", P / norma_p, err / P, dV_dzdOmega, P * dV_dzdOmega / norma_p);
     return P * dV_dzdOmega / norma_p;
   }
 }

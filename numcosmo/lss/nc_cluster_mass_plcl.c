@@ -285,7 +285,7 @@ _Lens_lnmass_mean (NcClusterMassPlCL *mszl, gdouble lnM)
  * are written in terms of the dimensional masses. 
  * 
  * This distribution is non-normalized. Normalization factor is included 
- * only in nc_cluster_pseudo_counts_posterior_numerator_plcl_new_variables().
+ * only in nc_cluster_pseudo_counts_posterior_numerator_plcl().
  *
  * Returns: FIXME
 */
