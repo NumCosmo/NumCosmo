@@ -784,7 +784,8 @@ static gint
 _nc_hipert_two_fluids_f (realtype alpha, N_Vector y, N_Vector ydot, gpointer f_data)
 {
   NcHIPertTwoFluidsArg *arg = (NcHIPertTwoFluidsArg *) f_data;
-  NcHIPertITwoFluidsEOM *eom = nc_hipert_itwo_fluids_eom_full (NC_HIPERT_ITWO_FLUIDS (arg->cosmo), alpha, NC_HIPERT (arg->ptf)->k);
+  const gdouble k = NC_HIPERT (arg->ptf)->k;
+  NcHIPertITwoFluidsEOM *eom = nc_hipert_itwo_fluids_eom_full (NC_HIPERT_ITWO_FLUIDS (arg->cosmo), alpha, k);
 /*  
   NV_Ith_S (ydot, NC_HIPERT_TWO_FLUIDS_RE_ZETA)  = NV_Ith_S (y, NC_HIPERT_TWO_FLUIDS_RE_PZETA) / eom->mzeta + eom->Y * NV_Ith_S (y, NC_HIPERT_TWO_FLUIDS_RE_PQ);
   NV_Ith_S (ydot, NC_HIPERT_TWO_FLUIDS_IM_ZETA)  = NV_Ith_S (y, NC_HIPERT_TWO_FLUIDS_IM_PZETA) / eom->mzeta + eom->Y * NV_Ith_S (y, NC_HIPERT_TWO_FLUIDS_IM_PQ);
@@ -803,10 +804,24 @@ _nc_hipert_two_fluids_f (realtype alpha, N_Vector y, N_Vector ydot, gpointer f_d
   const gdouble phip = NV_Ith_S (y, 2);
   const gdouble phim = NV_Ith_S (y, 3);
   
+  NV_Ith_S (ydot, 0) = - eom->US[0] * Ip * sin (2.0 * phip) / eom->nu_plus + 2.0 * sqrt (Im * Ip) * 
+    (-eom->US[2] * cos (phip) * sin (phim) + eom->UA * (eom->nu_plus * sin (phip) * sin (phim) + eom->nu_minus * cos (phip) * cos (phim))) / k;
+
+  NV_Ith_S (ydot, 1) = - eom->US[1] * Im * sin (2.0 * phim) / eom->nu_minus + 2.0 * sqrt (Im * Ip) * 
+    (-eom->US[2] * cos (phim) * sin (phip) - eom->UA * (eom->nu_plus * cos (phip) * cos (phim) + eom->nu_minus * sin (phip) * sin (phim))) / k;
+
+  NV_Ith_S (ydot, 2) = (eom->nu_plus - 0.5 * eom->US[0] / eom->nu_plus) - 0.5 * eom->US[0] * cos (2.0 * phip) / eom->nu_plus 
+    + sqrt (Im / Ip) * (eom->US[2] * sin (phip) * sin (phim) + eom->UA * (eom->nu_plus * cos (phip) * sin (phim) - eom->nu_minus * sin (phip) * cos (phim))) / k;
+
+  NV_Ith_S (ydot, 3) = (eom->nu_minus - 0.5 * eom->US[1] / eom->nu_minus) - 0.5 * eom->US[1] * cos (2.0 * phim) / eom->nu_minus 
+    + sqrt (Ip / Im) * (eom->US[2] * sin (phip) * sin (phim) + eom->UA * (eom->nu_plus * cos (phip) * sin (phim) - eom->nu_minus * sin (phip) * cos (phim))) / k;
+
+/*  
   NV_Ith_S (ydot, 0) = - eom->Uplus  * Ip * cos (2.0 * phip) + Im * (eom->Wplus * sin (phip) * sin (phim) - eom->Wminus * cos (phip) * cos (phim));
   NV_Ith_S (ydot, 1) = - eom->Uminus * Im * cos (2.0 * phim) - Ip * (eom->Wplus * cos (phip) * cos (phim) - eom->Wminus * sin (phip) * sin (phim));
   NV_Ith_S (ydot, 2) = eom->nu_plus  + eom->Uplus  * sin (2.0 * phip) + Im / Ip * (eom->Wplus * cos (phip) * sin (phim) + eom->Wminus * cos (phim) * sin (phip));
   NV_Ith_S (ydot, 3) = eom->nu_minus + eom->Uminus * sin (2.0 * phim) + Ip / Im * (eom->Wplus * cos (phip) * sin (phim) + eom->Wminus * cos (phim) * sin (phip));
+*/
 /*
 printf ("#-------------------------------------------------------------------------------------------------------\n");
 printf ("% 20.15g % 20.15e % 20.15e % 20.15e % 20.15e % 20.15e % 20.15e\n", alpha, eom->nu_plus, eom->nu_minus, eom->Uplus, eom->Uminus, eom->Wplus, eom->Wminus);
@@ -815,11 +830,12 @@ printf ("% 20.15e | % 20.15e % 20.15e % 20.15e = % 20.15e\n", Im, - eom->Uminus 
 printf ("% 20.15e | % 20.15e % 20.15e % 20.15e % 20.15e = % 20.15e\n", phip, eom->nu_plus, eom->Uplus  * sin (2.0 * phip), + Im / Ip * eom->Wplus * cos (phip) * sin (phim), + Im / Ip * eom->Wminus * cos (phim) * sin (phip), NV_Ith_S (ydot, 2));
 printf ("% 20.15e | % 20.15e % 20.15e % 20.15e % 20.15e = % 20.15e\n", phim, eom->nu_minus, eom->Uminus * sin (2.0 * phim), + Ip / Im * eom->Wplus * cos (phip) * sin (phim), + Ip / Im *  eom->Wminus * cos (phim) * sin (phip), NV_Ith_S (ydot, 3));
 */
-/*
+
 printf ("#-----------------------------------------------------------------------------\n");
-printf ("% 20.15g % 20.15e % 20.15e % 20.15e % 20.15e % 20.15e % 20.15e\n", alpha, eom->nu_plus, eom->nu_minus, eom->Uplus, eom->Uminus, eom->Wplus, eom->Wminus);
+printf ("% 20.15g % 20.15e % 20.15e % 20.15e % 20.15e % 20.15e % 20.15e\n", alpha, eom->nu_plus, eom->nu_minus, eom->US[0] / gsl_pow_2 (eom->nu_plus), eom->US[1] / gsl_pow_2 (eom->nu_minus), eom->US[2], eom->UA);
 printf ("% 20.15g % 20.15e % 20.15e % 20.15e % 20.15e\n", alpha, Ip, Im, phip, phim);
-printf ("% 20.15g % 20.15e % 20.15e % 20.15e % 20.15e\n", alpha, NV_Ith_S (ydot, 0), NV_Ith_S (ydot, 1), NV_Ith_S (ydot, 2), NV_Ith_S (ydot, 3));*/
+printf ("% 20.15g % 20.15e % 20.15e % 20.15e % 20.15e\n", alpha, NV_Ith_S (ydot, 0), NV_Ith_S (ydot, 1), NV_Ith_S (ydot, 2), NV_Ith_S (ydot, 3));
+
 
   return 0;
 }

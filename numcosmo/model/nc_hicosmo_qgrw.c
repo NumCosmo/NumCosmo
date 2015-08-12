@@ -310,6 +310,14 @@ static gdouble _nc_hicosmo_qgrw_xb (NcmModel *model) { return X_B; }
 /****************************************************************************
  * Wkb theta
  ****************************************************************************/
+
+static gdouble 
+_d2f_alpha2_f (const gdouble alpha2, const gdouble d1lnf, const gdouble d2lnf)
+{
+  const gdouble d2f_f = d1lnf * d1lnf + d2lnf;
+  return alpha2 * d2f_f - d1lnf;
+}
+
 #define _exprel(x) gsl_sf_hyperg_1F1_int (1, 2, (x))
 #define _d1exprel(x) (0.5 * gsl_sf_hyperg_1F1_int (2, 3, (x)))
 #define _d2exprel(x) (gsl_sf_hyperg_1F1_int (3, 4, (x)) / 3.0)
@@ -822,11 +830,15 @@ _nc_hipert_itwo_fluids_eom_full (NcHIPertITwoFluids *itf, gdouble alpha, gdouble
   {
     _NC_HICOSMO_QGRW_WKB_COMMON1;
     _NC_HICOSMO_QGRW_WKB_COMMON2;
+    _NC_HICOSMO_QGRW_WKB_COMMON22;
+    _NC_HICOSMO_QGRW_WKB_COMMON222;
+    _NC_HICOSMO_QGRW_WKB_COMMON2222;
     _NC_HICOSMO_QGRW_WKB_COMMON3;
     _NC_HICOSMO_QGRW_WKB_COMMON33;
     _NC_HICOSMO_QGRW_WKB_COMMON4;
     _NC_HICOSMO_QGRW_WKB_COMMON44;
     _NC_HICOSMO_QGRW_WKB_COMMON5;
+    _NC_HICOSMO_QGRW_WKB_COMMON555;
     _NC_HICOSMO_QGRW_WKB_COMMON56;
     _NC_HICOSMO_QGRW_WKB_P6;
     _NC_HICOSMO_QGRW_WKB_D1LNP5;
@@ -858,26 +870,78 @@ _nc_hipert_itwo_fluids_eom_full (NcHIPertITwoFluids *itf, gdouble alpha, gdouble
     qgrw->eom_two_fluids.Yt    = y;
 
     {
-      const gdouble cos_gamma      = lambda_zeta / sqrt (2.0);
-      const gdouble sin_gamma      = lambda_s / sqrt (2.0);
-      const gdouble cos2_gamma     = cos_gamma * cos_gamma;
-      const gdouble sin2_gamma     = sin_gamma * sin_gamma;
-      const gdouble sincos_gamma   = sin_gamma * cos_gamma;
-      const gdouble sin2cos2_gamma = sincos_gamma * sincos_gamma;
-      const gdouble r2             = w / w2;
-      const gdouble rm2            = 1.0 / r2;
-      const gdouble r_factor11     = (r2 - 4.0 + 3.0 * rm2) * 0.5;
-      const gdouble r_factor21     = (r2 - 2.0 - 3.0 * rm2) * 0.25;
-      const gdouble r_factor31     = (r2 + 2.0 - 3.0 * rm2) * 0.25;
-      const gdouble r_factor12     = (rm2 - 4.0 + 3.0 * r2) * 0.5;
-      const gdouble r_factor22     = (rm2 - 2.0 - 3.0 * r2) * 0.25;
-      const gdouble r_factor23     = (rm2 + 2.0 - 3.0 * r2) * 0.25;
-      const gdouble dgamma         = onepw2 * d1R * lambda_zeta / (2.0 * p4 * lambda_s);
-      
-      
+      const gdouble f2              = sqrt (p2 * k2 / p0);
+      const gdouble cos_gamma       = lambda_zeta / sqrt (2.0);
+      const gdouble sin_gamma       = lambda_s / sqrt (2.0);
+      const gdouble cos2_gamma      = cos_gamma * cos_gamma;
+      const gdouble sin2_gamma      = sin_gamma * sin_gamma;
+      const gdouble sincos_gamma    = sin_gamma * cos_gamma;
+      const gdouble sin2cos2_gamma  = sincos_gamma * sincos_gamma;
+      const gdouble r2              = w / w2;
+      const gdouble rm2             = 1.0 / r2;
+      const gdouble r               = sqrt (r2);
+      const gdouble rm1             = 1.0 / r;
+      const gdouble r_factor11      = (r2 - 4.0 + 3.0 * rm2) * 0.5;
+      const gdouble r_factor21      = (r2 + 2.0 - 3.0 * rm2) * 0.25;
+      const gdouble r_factor12      = (rm2 - 4.0 + 3.0 * r2) * 0.5;
+      const gdouble r_factor22      = (rm2 + 2.0 - 3.0 * r2) * 0.25;
+      const gdouble dgamma_dalpha   = - alpha * onepw2 * d1R * lambda_zeta / (2.0 * p4 * lambda_s);
+      const gdouble d2gamma_dalpha2 = sincos_gamma * (4.0 * R * (alpha2 * d2R - d1R) - (1.0 + 2.0 * sin2_gamma) * alpha2 * d1R * d1R)/ (4.0 * R * R);
 
+      const gdouble d2lnp5          = 0.0;
+      const gdouble d2lnp6          = 0.0;
+      
+      const gdouble d1lnZs_Zz       = 0.5 * (d1lnp2 + d1lnp5 + d1lnp6) - 1.0 / alpha2;
+      const gdouble d2lnZs_Zz       = 0.5 * (d2lnp2 + d2lnp5 + d2lnp6) - 2.0 / (alpha2 * alpha2);
+      const gdouble dlnZs_Zz_dalpha = - alpha * d1lnZs_Zz;
+      const gdouble d2Zz_Zs_dalpha2 = _d2f_alpha2_f (alpha2, d1lnZs_Zz, d2lnZs_Zz);
+
+      const gdouble d1lnZz          = 0.5 * d1lnp4 - 0.25 * d1lnp2 - 0.5 * d1lnp5 + 1.0 / alpha2;
+      const gdouble dlnZz_dalpha    = - alpha * d1lnZz;
+      const gdouble d2lnZz          = 0.5 * d2lnp4 - 0.25 * d2lnp2 - 0.5 * d2lnp5 + 2.0 / (alpha2 * alpha2);
+      const gdouble d2Zz_dalpha2_Zz = _d2f_alpha2_f (alpha2, d1lnZz, d2lnZz);
+
+      const gdouble d1lnZs          = 0.25 * d1lnp2 + 0.5 * d1lnp4 + 0.5 * d1lnp6;
+      const gdouble dlnZs_dalpha    = - alpha * d1lnZs;
+      const gdouble d2lnZs          = 0.25 * d2lnp2 + 0.5 * d2lnp4 + 0.5 * d2lnp6;
+      const gdouble d2Zs_dalpha2_Zs = _d2f_alpha2_f (alpha2, d1lnZs, d2lnZs);
+
+      const gdouble d1lnZsZz        = d1lnp4 + 0.5 * d1lnp6 - 0.5 * d1lnp5 + 1.0 / alpha2;
+      const gdouble dlnZsZz_dalpha  = - alpha * d1lnZsZz;
+      
+      const gdouble d1lnf           = 0.25 * (d1lnp2 - d1lnp0);
+      const gdouble d2lnf           = 0.25 * (d2lnp2 - d2lnp0);
+      const gdouble d2f_dalpha2_f   = _d2f_alpha2_f (alpha2, d1lnf, d2lnf);
+      
+      qgrw->eom_two_fluids.US[0] = 
+        r_factor11 * sincos_gamma * dlnZs_Zz_dalpha * dgamma_dalpha 
+        - r_factor21 * dgamma_dalpha * dgamma_dalpha 
+        - r_factor21 * sin2cos2_gamma * dlnZs_Zz_dalpha * dlnZs_Zz_dalpha
+        - d2f_dalpha2_f
+        + cos2_gamma * d2Zs_dalpha2_Zs
+        + sin2_gamma * d2Zz_dalpha2_Zz;
+      
+      qgrw->eom_two_fluids.US[1] = 
+        r_factor12 * sincos_gamma * dlnZs_Zz_dalpha * dgamma_dalpha 
+        - r_factor22 * dgamma_dalpha * dgamma_dalpha 
+        - r_factor22 * sin2cos2_gamma * dlnZs_Zz_dalpha * dlnZs_Zz_dalpha
+        - d2f_dalpha2_f
+        + cos2_gamma * d2Zz_dalpha2_Zz
+        + sin2_gamma * d2Zs_dalpha2_Zs;
+
+      qgrw->eom_two_fluids.US[2] = 
+        (- sincos_gamma * (
+                          cos2_gamma * dlnZs_Zz_dalpha * (r * dlnZs_dalpha + rm1 * dlnZz_dalpha) + 
+                          sin2_gamma * dlnZs_Zz_dalpha * (rm1 * dlnZs_dalpha + r * dlnZz_dalpha) + 
+                          0.5 * (rm1 + r) * (d2Zz_Zs_dalpha2)
+                          )
+        + 0.5 * (r - rm1) * (dlnZsZz_dalpha * dgamma_dalpha + d2gamma_dalpha2)) * f2 / pow (w * w2, 0.25);
+
+      qgrw->eom_two_fluids.UA = ((r + rm1) * dgamma_dalpha - (r - rm1) * sincos_gamma * dlnZs_Zz_dalpha ) * f2 * 0.5 / pow (w * w2, 0.25);
+      qgrw->eom_two_fluids.m_plus  = f2 / sqrt (w2);
+      qgrw->eom_two_fluids.m_minus = f2 / sqrt (w);
     }
-    
+
     qgrw->eom_two_fluids.skey  = NCM_MODEL (cosmo)->pkey;
     qgrw->eom_two_fluids.alpha = alpha;
     qgrw->eom_two_fluids.k     = k;

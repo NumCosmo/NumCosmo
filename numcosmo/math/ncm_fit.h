@@ -338,7 +338,10 @@ G_INLINE_FUNC void
 ncm_fit_params_update (NcmFit *fit)
 {
   if (fit->sub_fit != NULL)
-    ncm_fit_run (fit->sub_fit, NCM_FIT_RUN_MSGS_NONE);
+  {
+    NcmFitRunMsgs mlevel = fit->mtype == NCM_FIT_RUN_MSGS_FULL ? NCM_FIT_RUN_MSGS_SIMPLE : NCM_FIT_RUN_MSGS_NONE;    
+    ncm_fit_run (fit->sub_fit, mlevel);
+  }
 }
 
 G_INLINE_FUNC void
@@ -356,7 +359,7 @@ ncm_fit_priors_m2lnL_val (NcmFit *fit, gdouble *priors_m2lnL)
 G_INLINE_FUNC void
 ncm_fit_m2lnL_val (NcmFit *fit, gdouble *m2lnL)
 {
-  ncm_likelihood_m2lnL_val (fit->lh, fit->mset, m2lnL);  
+  ncm_likelihood_m2lnL_val (fit->lh, fit->mset, m2lnL);
   fit->fstate->func_eval++;
 }
 

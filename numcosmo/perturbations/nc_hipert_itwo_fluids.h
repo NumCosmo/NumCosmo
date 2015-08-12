@@ -96,7 +96,9 @@ struct _NcHIPertITwoFluidsEOM
   gdouble Uminus;
   gdouble Wplus;
   gdouble Wminus;
-  gdouble US[4];
+  gdouble m_plus;
+  gdouble m_minus;
+  gdouble US[3];
   gdouble UA;
 };
 

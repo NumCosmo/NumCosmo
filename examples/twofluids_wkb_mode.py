@@ -20,7 +20,7 @@ cosmo = Nc.HICosmo.new_from_name (Nc.HICosmo, "NcHICosmoQGRW")
 
 w      = 1.0e-16
 prec   = 1.0e-10
-mode_k = 1.0
+mode_k = 1.0e0
 
 cosmo.props.w      = w
 cosmo.props.Omegar = 1.0e-5
@@ -95,7 +95,9 @@ for i in range (10000):
   Uminus = eom_full.Uminus
   Wplus  = eom_full.Wplus
   Wminus = eom_full.Wminus
-  
+  U11    = eom_full.US[0]
+  U22    = eom_full.US[1]
+  U12    = eom_full.US[2]
   
 #  qpz = math.sqrt (nuz / nup) * laq
 #  qpq = math.sqrt (nuq / nup) * laz
@@ -110,7 +112,7 @@ for i in range (10000):
   #print ("% 20.15g % 20.15g % 20.15g % 20.15g % 20.15g % 20.15g" % (alpha, pert.nuA (cosmo, alpha), pert.nuB (cosmo, alpha), pert.YAB (cosmo, alpha), pert.LA (cosmo, alpha), pert.LB (cosmo, alpha)))
   #print ("% 20.15f % 20.15e % 20.15e % 20.15e % 20.15e % 20.15e % 20.15e % 20.15e % 20.15e" % (alpha, nuz, nuq, y, nu1, nup, num, laq, laz))
   #print ("% 20.15f % 20.15e % 20.15e % 20.15e % 20.15e % 20.15e % 20.15e % 20.15e % 20.15e" % (alpha, qpz, qpq, qmz, qmq, Ppz, Ppq, Pmz, Pmq))
-  print ("% 20.15f % 20.15e % 20.15e % 20.15e % 20.15e % 20.15e % 20.15e % 20.15e % 20.15e" % (alpha, nup, num, laq, laz, Uplus, Uminus, Wplus, Wminus))
+  print ("% 20.15f % 20.15e % 20.15e % 20.15e % 20.15e % 20.15e % 20.15e % 20.15e % 20.15e % 20.15e % 20.15e % 20.15e" % (alpha, nup, num, laq, laz, Uplus, Uminus, Wplus, Wminus, U11, U22, U12))
 
 
 exit ()
