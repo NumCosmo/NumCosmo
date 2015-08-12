@@ -111,6 +111,11 @@
 #include "data/nc_data_bao_empirical_fit.h"
 #include "data/nc_data_bao_dhr_dar.h"
 #include "data/nc_data_cluster_pseudo_counts.h"
+#include "xcor/nc_xcor.h"
+#include "xcor/nc_xcor_limber.h"
+#include "xcor/nc_xcor_limber_gal.h"
+#include "xcor/nc_xcor_limber_lensing.h"
+#include "xcor/nc_data_xcor.h"
 
 #include <gio/gio.h>
 #ifdef NUMCOSMO_HAVE_FFTW3
@@ -348,6 +353,13 @@ ncm_cfg_init (void)
   ncm_cfg_register_obj (NC_TYPE_DATA_BAO_DHR_DAR);
 
   ncm_cfg_register_obj (NC_TYPE_DATA_CLUSTER_PSEUDO_COUNTS);
+  
+  ncm_cfg_register_obj (NC_TYPE_XCOR);
+  ncm_cfg_register_obj (NC_TYPE_XCOR_LIMBER);
+  ncm_cfg_register_obj (NC_TYPE_XCOR_LIMBER_GAL);
+  ncm_cfg_register_obj (NC_TYPE_XCOR_LIMBER_LENSING);
+  ncm_cfg_register_obj (NC_TYPE_DATA_XCOR);
+  
   
   numcosmo_init = TRUE;
   return;

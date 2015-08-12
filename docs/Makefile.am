@@ -38,6 +38,7 @@ DOC_SOURCE_DIR=$(top_srcdir)/numcosmo \
 	       $(top_srcdir)/numcosmo/data \
 	       $(top_srcdir)/numcosmo/perturbations \
 	       $(top_srcdir)/numcosmo/sphere \
+	       $(top_srcdir)/numcosmo/xcor \
 	       $(top_builddir)/numcosmo
 
 DOC_BUILD_DIR=$(top_builddir)/numcosmo

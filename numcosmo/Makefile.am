@@ -300,7 +300,13 @@ nc_headers = \
 	perturbations/nc_hipert_boltzmann_std.h \
 	perturbations/linear.h                  \
 	perturbations/covariance.h              \
-	perturbations/linear_internal.h
+	perturbations/linear_internal.h        \
+	xcor/nc_xcor.h                         \
+	xcor/nc_xcor_limber.h                  \
+	xcor/nc_xcor_limber_gal.h              \
+	xcor/nc_xcor_limber_lensing.h          \
+	xcor/nc_data_xcor.h
+	
 
 nc_sources = \
 	nc_hicosmo.c                 \
@@ -395,7 +401,13 @@ nc_sources = \
 	perturbations/covariance.c              \
 	perturbations/linear_cvodes.c           \
 	perturbations/linear_gsl_ode.c          \
-	perturbations/linear_gsl_ode2.c
+	perturbations/linear_gsl_ode2.c         \
+	xcor/nc_xcor.c                         \
+	xcor/nc_xcor_limber.c                  \
+	xcor/nc_xcor_limber_gal.c              \
+	xcor/nc_xcor_limber_lensing.c          \
+	xcor/nc_data_xcor.c
+	
 
 libnumcosmo_la_LDFLAGS = -version-info $(LT_CURRENT):$(LT_REVISION):$(LT_AGE)
 
