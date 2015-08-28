@@ -168,6 +168,7 @@ main (gint argc, gchar *argv[])
       g_message ("# Catalog n-chains:  %u.\n", mcat->nchains);
       g_message ("# Catalog nadd-vals: %u.\n", mcat->nadd_vals);
       g_message ("# Catalog weighted:  %s.\n", mcat->weighted ? "yes" : "no");
+      ncm_mset_catalog_log_current_chain_stats (mcat);
       g_message ("#\n");
       
       ncm_mset_pretty_log (mset);
@@ -175,6 +176,7 @@ main (gint argc, gchar *argv[])
       ncm_mset_fparams_log_covar (mset, cov);
       ncm_matrix_clear (&cov);
       ncm_mset_catalog_log_current_stats (mcat);
+
     }
     /*********************************************************************************************************
      * 

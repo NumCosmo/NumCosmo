@@ -675,7 +675,7 @@ ncm_integrate_3dim_vegas (NcmIntegrand3dim *integ, gdouble xi, gdouble yi, gdoub
   const int nbatch = 1000;
   const int gridno = 0;
   
-  iCLIntegrand3dim iinteg = {integ, xi, xf, yi, yf, zi, zf, 0, NULL};
+  iCLIntegrand3dim iinteg = {integ, xi, xf, yi, yf, zi, zf, 0};
 	gint neval, fail;
 	gdouble prob;
   
