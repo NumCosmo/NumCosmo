@@ -198,7 +198,7 @@ nc_cluster_mass_plcl_class_init (NcClusterMassPlCLClass *klass)
    * FIXME Set correct values (limits)
    */
   ncm_model_class_set_sparam (model_class, NC_CLUSTER_MASS_PLCL_B_L, "b_{L}", "Bl",
-                              0.0,  10.0, 2.0e-2,
+                              -2.0,  0.9999, 2.0e-2,
                               NC_CLUSTER_MASS_PLCL_DEFAULT_PARAMS_ABSTOL, NC_CLUSTER_MASS_PLCL_DEFAULT_B_L,
                               NCM_PARAM_TYPE_FIXED);
 
@@ -266,7 +266,7 @@ static gdouble
 _Lens_lnmass_mean (NcClusterMassPlCL *mszl, gdouble lnM)
 {
   const gdouble lnM0 = log (mszl->M0);
-  const gdouble lnMlens_mean = B_L + A_L * (lnM - lnM0);
+  const gdouble lnMlens_mean = log1p (- B_L) + A_L * (lnM - lnM0);
   return lnMlens_mean;
 }
 
