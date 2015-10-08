@@ -127,7 +127,7 @@ G_INLINE_FUNC void
 nc_mass_function_prepare_if_needed (NcMassFunction *mfp, NcHICosmo *model)
 {
   if (ncm_model_ctrl_update (mfp->ctrl, NCM_MODEL (model)))
-	nc_mass_function_prepare (mfp, model);
+	  nc_mass_function_prepare (mfp, model);
 }
 
 G_INLINE_FUNC gdouble

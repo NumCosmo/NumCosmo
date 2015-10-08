@@ -290,6 +290,6 @@ nc_multiplicity_func_tinker_crit_class_init (NcMultiplicityFuncTinkerCritClass *
                                                         NULL,
                                                         "Delta",
                                                         200.0, 3200.0, 200.0,
-                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY |G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 }
 
