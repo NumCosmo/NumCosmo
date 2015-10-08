@@ -30,6 +30,7 @@
 #include <glib-object.h>
 #include <numcosmo/build_cfg.h>
 #include <numcosmo/lss/nc_cluster_mass.h>
+#include <numcosmo/lss/nc_cluster_abundance.h>
 #include <numcosmo/lss/nc_cluster_pseudo_counts.h>
 #include <numcosmo/math/ncm_data.h>
 
@@ -53,11 +54,11 @@ struct _NcDataClusterPseudoCountsClass
 
 /**
  * NcDataClusterPseudoCountsObs:
- * @NC_DATA_CLUSTER_PSEUDO_COUNTS_Z: FIXME
- * @NC_DATA_CLUSTER_PSEUDO_COUNTS_MPL: FIXME
- * @NC_DATA_CLUSTER_PSEUDO_COUNTS_MCL: FIXME
- * @NC_DATA_CLUSTER_PSEUDO_COUNTS_SD_MPL: FIXME
- * @NC_DATA_CLUSTER_PSEUDO_COUNTS_SD_MCL: FIXME
+ * @NC_DATA_CLUSTER_PSEUDO_COUNTS_Z: redshift
+ * @NC_DATA_CLUSTER_PSEUDO_COUNTS_MPL: Planck cluster mass
+ * @NC_DATA_CLUSTER_PSEUDO_COUNTS_MCL: CLASH cluster mass
+ * @NC_DATA_CLUSTER_PSEUDO_COUNTS_SD_MPL: Planck mass error
+ * @NC_DATA_CLUSTER_PSEUDO_COUNTS_SD_MCL: CLASH mass error
  * 
  */
 typedef enum _NcDataClusterPseudoCountsObs
@@ -74,20 +75,23 @@ struct _NcDataClusterPseudoCounts
 {
   /*< private >*/
   NcmData parent_instance;
+  NcClusterAbundance *cad;
   NcmMatrix *obs;
+  NcmMatrix *true_data;
   guint np;
   gchar *rnd_name;
 };
 
 GType nc_data_cluster_pseudo_counts_get_type (void) G_GNUC_CONST;
 
-NcDataClusterPseudoCounts *nc_data_cluster_pseudo_counts_new (void);
+NcDataClusterPseudoCounts *nc_data_cluster_pseudo_counts_new (NcClusterAbundance *cad);
 NcDataClusterPseudoCounts *nc_data_cluster_pseudo_counts_new_from_file (const gchar *filename);
 NcDataClusterPseudoCounts *nc_data_cluster_pseudo_counts_ref (NcDataClusterPseudoCounts *dcpc);
 void nc_data_cluster_pseudo_counts_free (NcDataClusterPseudoCounts *dcpc);
 void nc_data_cluster_pseudo_counts_clear (NcDataClusterPseudoCounts **dcpc);
 
 void nc_data_cluster_pseudo_counts_set_obs (NcDataClusterPseudoCounts *dcpc, const NcmMatrix *m);
+void nc_data_cluster_pseudo_counts_set_true_data (NcDataClusterPseudoCounts *dcpc, const NcmMatrix *m);
 
 G_END_DECLS
 

@@ -106,7 +106,7 @@ nc_de_data_cluster_new (NcDistance *dist, NcmMSet *mset, NcDEDataClusterEntries 
     {
       NcClusterMass *clusterm = nc_cluster_mass_new_from_name (de_data_cluster->clusterm_ser);
       NcClusterRedshift *clusterz = nc_cluster_redshift_new_from_name (de_data_cluster->clusterz_ser);
-      NcClusterAbundance *cad = nc_cluster_abundance_new (mfp, NULL, clusterz, clusterm);
+      NcClusterAbundance *cad = nc_cluster_abundance_new (mfp, NULL);
       NcDataClusterNCount *ncount = nc_data_cluster_ncount_new (cad);
 
       ncm_mset_set (mset, NCM_MODEL (clusterm));

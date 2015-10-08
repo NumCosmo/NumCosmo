@@ -32,6 +32,7 @@
 #include <numcosmo/math/ncm_model.h>
 #include <numcosmo/nc_hicosmo.h>
 #include <numcosmo/lss/nc_mass_function.h>
+#include <numcosmo/lss/nc_cluster_abundance.h>
 #include <numcosmo/lss/nc_cluster_mass.h>
 #include <numcosmo/lss/nc_cluster_mass_plcl.h>
 #include <gsl/gsl_rng.h>
@@ -78,6 +79,8 @@ struct _NcClusterPseudoCounts
   /*< private >*/
   NcmModel parent_instance;
   NcMassFunction *mfp;
+  NcClusterAbundance *cad;
+  gdouble nclusters;
   gdouble *workz;
 };
 
@@ -91,12 +94,13 @@ GType nc_cluster_pseudo_counts_get_type (void) G_GNUC_CONST;
 
 NCM_MSET_MODEL_DECLARE_ID (nc_cluster_pseudo_counts);
 
-NcClusterPseudoCounts *nc_cluster_pseudo_counts_new (NcMassFunction *mfp);
+NcClusterPseudoCounts *nc_cluster_pseudo_counts_new (NcMassFunction *mfp, gdouble nclusters);
 NcClusterPseudoCounts *nc_cluster_pseudo_counts_copy (NcClusterPseudoCounts *cpc);
 NcClusterPseudoCounts *nc_cluster_pseudo_counts_ref (NcClusterPseudoCounts *cpc);
 void nc_cluster_pseudo_counts_free (NcClusterPseudoCounts *cpc);
 void nc_cluster_pseudo_counts_clear (NcClusterPseudoCounts **cpc);
 
+gdouble nc_cluster_pseudo_counts_selection_function (NcClusterPseudoCounts *cpc, gdouble lnM);
 gdouble nc_cluster_pseudo_counts_ndet_no_z_integral (NcClusterPseudoCounts *cpc, NcHICosmo *cosmo, gdouble z);
 gdouble nc_cluster_pseudo_counts_ndet (NcClusterPseudoCounts *cpc, NcHICosmo *cosmo);
 gdouble nc_cluster_pseudo_counts_posterior_numerator (NcClusterPseudoCounts *cpc, NcClusterMass *clusterm, NcHICosmo *cosmo, const gdouble z, const gdouble *Mobs, const gdouble *Mobs_params);

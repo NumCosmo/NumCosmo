@@ -29,6 +29,8 @@
  * @short_description: Planck-CLASH Cluster Mass Distribution
  *
  * FIXME Planck-CLASH Cluster Mass Distribution (SZ - Lensing).
+ *
+ * Do not use this object to perform cluster abundance analyses. For now, it is suitable just for cluster pseudo counts.  
  */
 
 #ifdef HAVE_CONFIG_H
@@ -119,6 +121,7 @@ guint _nc_cluster_mass_plcl_obs_params_len (NcClusterMass *clusterm) { NCM_UNUSE
 static gdouble _nc_cluster_mass_plcl_Msz_Ml_M500_p (NcClusterMass *clusterm, NcHICosmo *cosmo, gdouble lnM, gdouble z, const gdouble *Mobs, const gdouble *Mobs_params);
 static gdouble _nc_cluster_mass_plcl_intp (NcClusterMass *clusterm, NcHICosmo *cosmo, gdouble lnM, gdouble z);
 static gboolean _nc_cluster_mass_plcl_resample (NcClusterMass *clusterm, NcHICosmo *cosmo, gdouble lnM, gdouble z, gdouble *lnMobs, const gdouble *lnMobs_params, NcmRNG *rng);
+static void _nc_cluster_mass_plcl_n_limits (NcClusterMass *clusterm, NcHICosmo *cosmo, gdouble *lnM_lower, gdouble *lnM_upper);
 
 static void
 nc_cluster_mass_plcl_class_init (NcClusterMassPlCLClass *klass)
@@ -228,7 +231,7 @@ nc_cluster_mass_plcl_class_init (NcClusterMassPlCLClass *klass)
   parent_class->P = &_nc_cluster_mass_plcl_Msz_Ml_M500_p;
   parent_class->intP = &_nc_cluster_mass_plcl_intp;
   //parent_class->P_limits = &_nc_cluster_mass_plcl_p_limits;
-  //parent_class->N_limits = &_nc_cluster_mass_plcl_n_limits;
+  parent_class->N_limits = &_nc_cluster_mass_plcl_n_limits;
   parent_class->resample = &_nc_cluster_mass_plcl_resample;
   parent_class->obs_len = &_nc_cluster_mass_plcl_obs_len;
   parent_class->obs_params_len = &_nc_cluster_mass_plcl_obs_params_len;
@@ -259,6 +262,7 @@ _SZ_lnmass_mean (NcClusterMassPlCL *mszl,  gdouble lnM)
 {
   const gdouble lnM0 = log (mszl->M0);
   const gdouble lnMsz_mean = log1p (- B_SZ) + A_SZ * (lnM - lnM0);
+
   return lnMsz_mean;
 }
 
@@ -912,22 +916,43 @@ _nc_cluster_mass_plcl_resample (NcClusterMass *clusterm, NcHICosmo *cosmo, gdoub
 {
   NcClusterMassPlCL *mszl = NC_CLUSTER_MASS_PLCL (clusterm);
   gdouble r_SZ, r_L;
-
+  gdouble lnM_SZ_ran, lnM_L_ran, M_SZ_ran, M_L_ran;
+  
   const gdouble lnM_SZ = _SZ_lnmass_mean (mszl, lnM);
   const gdouble lnM_L = _Lens_lnmass_mean (mszl, lnM);
+
+  const gdouble sd_PL = lnMobs_params[0] / mszl->M0;
+  const gdouble sd_CL = lnMobs_params[1] / mszl->M0;
   
-  NCM_UNUSED (lnMobs_params);
   NCM_UNUSED (clusterm);
   NCM_UNUSED (cosmo);
   NCM_UNUSED (z);
   
   ncm_rng_lock (rng);
   gsl_ran_bivariate_gaussian (rng->r, SD_SZ, SD_L, COR, &r_SZ, &r_L);
-  lnMobs[NC_CLUSTER_MASS_PLCL_MPL] = lnM_SZ + r_SZ;
-  lnMobs[NC_CLUSTER_MASS_PLCL_MCL] = lnM_L + r_L;
+  lnM_SZ_ran = lnM_SZ + r_SZ;
+  lnM_L_ran  = lnM_L + r_L;
   ncm_rng_unlock (rng);
 
-  return FALSE;
+  M_SZ_ran = exp (lnM_SZ_ran); /* M is in units of M0, i.e., M -> M/M0 */
+  M_L_ran = exp (lnM_L_ran);
+  
+  //printf ("lnM_true = %.5g\n", lnM);
+  //printf ("SZ = %.5g rsz = %.5g SZr = %.5g || L = %.5g rl = %.5g Lr = %.5g\n", lnM_SZ, r_SZ, lnM_SZ_ran, lnM_L, r_L, lnM_L_ran);
+  
+  ncm_rng_lock (rng);
+  lnMobs[NC_CLUSTER_MASS_PLCL_MPL] = log (M_SZ_ran + gsl_ran_gaussian (rng->r, sd_PL)) + log (mszl->M0);  
+  ncm_rng_unlock (rng);
+
+  printf ("M_sz_ran = %.5g lnMo_pl = %.5g sd_pl = %.5g\n", M_SZ_ran, lnMobs[NC_CLUSTER_MASS_PLCL_MPL], sd_PL);
+  
+  ncm_rng_lock (rng);
+  lnMobs[NC_CLUSTER_MASS_PLCL_MCL] = log (M_L_ran + gsl_ran_gaussian (rng->r, sd_CL)) + log (mszl->M0);
+  ncm_rng_unlock (rng);
+
+  printf ("M_pl_ran = %.5g lnMo_cl = %.5g sd_cl = %.5g\n", M_L_ran, lnMobs[NC_CLUSTER_MASS_PLCL_MCL], sd_CL);
+  
+  return TRUE; /* Information to select these masses are not implemented here. The selection function is in nc_cluster_pseudo_counts */
   //return (lnMobs[NC_CLUSTER_MASS_PLCL_MPL] >= mszl->lnMobs_min) && (lnMobs[NC_CLUSTER_MASS_PLCL_MCL] >= mszl->lnMobs_min); 
 }
 
@@ -953,23 +978,18 @@ _nc_cluster_mass_plcl_p_limits (NcClusterMass *clusterm, NcHICosmo *cosmo, gdoub
 }
 */
 
-/*
+
 static void
 _nc_cluster_mass_plcl_n_limits (NcClusterMass *clusterm, NcHICosmo *cosmo, gdouble *lnM_lower, gdouble *lnM_upper)
 {
-  NcClusterMassBenson *msz = NC_CLUSTER_MASS_BENSON (clusterm);
+  NcClusterMassPlCL *mszl = NC_CLUSTER_MASS_PLCL (clusterm);
 
-  const gdouble xil = msz->signif_obs_min;
-  const gdouble zetal = _significance_to_zeta (clusterm, model, 2.0, xil) - 7.0 * D_SZ;
-  const gdouble lnMl = GSL_MAX (_zeta_to_mass (clusterm, model, 2.0, zetal), log (NC_CLUSTER_MASS_BENSON_M_LOWER_BOUND));
-
-  const gdouble xiu = msz->signif_obs_max;
-  const gdouble zetau = _significance_to_zeta (clusterm, model, 0.0, xiu) + 7.0 * D_SZ;
-  const gdouble lnMu = _zeta_to_mass (clusterm, model, 0.0, zetau);
-
-  *lnM_lower = lnMl;
-  *lnM_upper = lnMu;
+  NCM_UNUSED (cosmo);
+  NCM_UNUSED (mszl);
+  
+  *lnM_lower = 12.0 * M_LN10; /* This value must be compatible with M_cut and sigma_cut from cluster pseudo counts */ 
+  *lnM_upper = 16.0 * M_LN10; /* Largest mass compatible with Tinker multiplicity function */
 
   return;  
 }
-*/
+

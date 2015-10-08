@@ -948,12 +948,6 @@ _nc_data_cluster_ncount_model_init (NcDataClusterNCount *ncount)
 {
   NcClusterAbundance *cad = ncount->cad;
 
-  if (ncount->z == NULL || ncount->m == NULL)
-    g_error ("_nc_data_cluster_ncount_model_init: Cannot init NcClusterAbundance missing NcClusterRedshift or NcClusterMass object.");
-
-  nc_cluster_abundance_set_redshift (cad, ncount->z);
-  nc_cluster_abundance_set_mass (cad, ncount->m);
-
   cad->completeness  = ncount->completeness;
   cad->purity        = ncount->purity;
   cad->sd_lnM        = ncount->sd_lnM;
@@ -965,12 +959,16 @@ static void
 _nc_data_cluster_ncount_prepare (NcmData *data, NcmMSet *mset)
 {
   NcDataClusterNCount *ncount = NC_DATA_CLUSTER_NCOUNT (data);
-  NcHICosmo *cosmo = NC_HICOSMO (ncm_mset_peek (mset, nc_hicosmo_id ()));
+  NcHICosmo *cosmo            = NC_HICOSMO (ncm_mset_peek (mset, nc_hicosmo_id ()));
+  NcClusterRedshift *clusterz = NC_CLUSTER_REDSHIFT (ncm_mset_peek (mset, nc_cluster_redshift_id ()));
+  NcClusterMass *clusterm     = NC_CLUSTER_MASS (ncm_mset_peek (mset, nc_cluster_mass_id ()));
 
-  if (ncm_model_ctrl_update (ncount->cad->ctrl, NCM_MODEL (cosmo)))
-  {
-    nc_cluster_abundance_prepare (ncount->cad, cosmo);
-  }
+  g_assert ((cosmo != NULL) && (clusterz != NULL) && (clusterm != NULL));
+  
+  g_assert (ncount->z == NULL || g_type_is_a (G_OBJECT_TYPE (clusterz), G_OBJECT_TYPE (ncount->z)));
+  g_assert (ncount->m == NULL || g_type_is_a (G_OBJECT_TYPE (clusterm), G_OBJECT_TYPE (ncount->m)));
+    
+  nc_cluster_abundance_prepare_if_needed (ncount->cad, cosmo, clusterz, clusterm);
 }
 
 static gchar *
@@ -1002,10 +1000,12 @@ _nc_data_cluster_ncount_resample (NcmData *data, NcmMSet *mset, NcmRNG *rng)
   NcDataClusterNCount *ncount = NC_DATA_CLUSTER_NCOUNT (data);
   NcClusterAbundance *cad = ncount->cad;
   NcHICosmo *cosmo = NC_HICOSMO (ncm_mset_peek (mset, nc_hicosmo_id ()));
-  guint z_obs_len = nc_cluster_redshift_obs_len (cad->z);
-  guint z_obs_params_len = nc_cluster_redshift_obs_params_len (cad->z);
-  guint lnM_obs_len = nc_cluster_mass_obs_len (cad->m);
-  guint lnM_obs_params_len = nc_cluster_mass_obs_params_len (cad->m);
+  NcClusterRedshift *clusterz = NC_CLUSTER_REDSHIFT (ncm_mset_peek (mset, nc_cluster_redshift_id ()));
+  NcClusterMass *clusterm     = NC_CLUSTER_MASS (ncm_mset_peek (mset, nc_cluster_mass_id ()));
+  guint z_obs_len = nc_cluster_redshift_obs_len (clusterz);
+  guint z_obs_params_len = nc_cluster_redshift_obs_params_len (clusterz);
+  guint lnM_obs_len = nc_cluster_mass_obs_len (clusterm);
+  guint lnM_obs_params_len = nc_cluster_mass_obs_params_len (clusterm);
   GArray *lnM_true_array = NULL;
   GArray *z_true_array = NULL;
   GArray *z_obs_array = NULL;
@@ -1066,8 +1066,8 @@ _nc_data_cluster_ncount_resample (NcmData *data, NcmMSet *mset, NcmRNG *rng)
       const gdouble lnM_true = ncm_spline2d_eval (cad->inv_lnM_z, u2, z_true);
       ncm_rng_unlock (rng);
 
-      if ( nc_cluster_redshift_resample (cad->z, lnM_true, z_true, zi_obs, zi_obs_params, rng) &&
-          nc_cluster_mass_resample (cad->m, cosmo, lnM_true, z_true, lnMi_obs, lnMi_obs_params, rng) )
+      if ( nc_cluster_redshift_resample (clusterz, lnM_true, z_true, zi_obs, zi_obs_params, rng) &&
+          nc_cluster_mass_resample (clusterm, cosmo, lnM_true, z_true, lnMi_obs, lnMi_obs_params, rng) )
       {
         g_array_append_val (lnM_true_array, lnM_true);
         g_array_append_val (z_true_array, z_true);
@@ -1161,6 +1161,8 @@ typedef struct
 {
   NcClusterAbundance *cad;
   NcDataClusterNCount *ncount;
+  NcClusterRedshift *clusterz;
+  NcClusterMass *clusterm;
   NcHICosmo *cosmo;
 } _Evald2N;
 
@@ -1176,7 +1178,7 @@ _eval_z_p_lnm_p_d2n (glong i, glong f, gpointer data)
     gdouble *lnMn_obs_params = evald2n->ncount->lnM_obs_params != NULL ? ncm_matrix_ptr (evald2n->ncount->lnM_obs_params, n, 0) : NULL;
     gdouble *zn_obs = ncm_matrix_ptr (evald2n->ncount->z_obs, n, 0);
     gdouble *zn_obs_params = evald2n->ncount->z_obs_params != NULL ? ncm_matrix_ptr (evald2n->ncount->z_obs_params, n, 0) : NULL;
-    const gdouble mlnLn = -log (nc_cluster_abundance_z_p_lnm_p_d2n (evald2n->cad, evald2n->cosmo, lnMn_obs, lnMn_obs_params, zn_obs, zn_obs_params));
+    const gdouble mlnLn = -log (nc_cluster_abundance_z_p_lnm_p_d2n (evald2n->cad, evald2n->cosmo, evald2n->clusterz, evald2n->clusterm, lnMn_obs, lnMn_obs_params, zn_obs, zn_obs_params));
     g_array_index (evald2n->ncount->m2lnL_a, gdouble, n) = mlnLn;
   }
 }
@@ -1192,7 +1194,7 @@ _eval_z_p_d2n (glong i, glong f, gpointer data)
     const gdouble lnMn = ncm_vector_get (evald2n->ncount->lnM_true, n);
     gdouble *zn_obs = ncm_matrix_ptr (evald2n->ncount->z_obs, n, 0);
     gdouble *zn_obs_params = evald2n->ncount->z_obs_params != NULL ? ncm_matrix_ptr (evald2n->ncount->z_obs_params, n, 0) : NULL;
-    const gdouble mlnLn = -log (nc_cluster_abundance_z_p_d2n (evald2n->cad, evald2n->cosmo, lnMn, zn_obs, zn_obs_params));
+    const gdouble mlnLn = -log (nc_cluster_abundance_z_p_d2n (evald2n->cad, evald2n->cosmo, evald2n->clusterz, evald2n->clusterm, lnMn, zn_obs, zn_obs_params));
     g_array_index (evald2n->ncount->m2lnL_a, gdouble, n) = mlnLn;
   }
 }
@@ -1208,7 +1210,7 @@ _eval_lnm_p_d2n (glong i, glong f, gpointer data)
     const gdouble zn = ncm_vector_get (evald2n->ncount->z_true, n);
     gdouble *lnMn_obs = ncm_matrix_ptr (evald2n->ncount->lnM_obs, n, 0);
     gdouble *lnMn_obs_params = evald2n->ncount->lnM_obs_params != NULL ? ncm_matrix_ptr (evald2n->ncount->lnM_obs_params, n, 0) : NULL;
-    const gdouble mlnLn = -log (nc_cluster_abundance_lnm_p_d2n (evald2n->cad, evald2n->cosmo, lnMn_obs, lnMn_obs_params, zn));
+    const gdouble mlnLn = -log (nc_cluster_abundance_lnm_p_d2n (evald2n->cad, evald2n->cosmo, evald2n->clusterz, evald2n->clusterm, lnMn_obs, lnMn_obs_params, zn));
     g_array_index (evald2n->ncount->m2lnL_a, gdouble, n) = mlnLn;
   }
 }
@@ -1223,7 +1225,7 @@ _eval_d2n (glong i, glong f, gpointer data)
   {
     const gdouble lnMn = ncm_vector_get (evald2n->ncount->lnM_true, n);
     const gdouble zn = ncm_vector_get (evald2n->ncount->z_true, n);
-    const gdouble mlnLn = -log (nc_cluster_abundance_d2n (evald2n->cad, evald2n->cosmo, lnMn, zn));
+    const gdouble mlnLn = -log (nc_cluster_abundance_d2n (evald2n->cad, evald2n->cosmo, evald2n->clusterz, evald2n->clusterm, lnMn, zn));
     g_array_index (evald2n->ncount->m2lnL_a, gdouble, n) = mlnLn;
   }
 }
@@ -1238,7 +1240,7 @@ _eval_intp_d2n (glong i, glong f, gpointer data)
   {
     const gdouble lnMn = ncm_vector_get (evald2n->ncount->lnM_true, n);
     const gdouble zn = ncm_vector_get (evald2n->ncount->z_true, n);
-    const gdouble mlnLn = -log (nc_cluster_abundance_intp_d2n (evald2n->cad, evald2n->cosmo, lnMn, zn));
+    const gdouble mlnLn = -log (nc_cluster_abundance_intp_d2n (evald2n->cad, evald2n->cosmo, evald2n->clusterz, evald2n->clusterm, lnMn, zn));
     g_array_index (evald2n->ncount->m2lnL_a, gdouble, n) = mlnLn;
   }
 }
@@ -1249,6 +1251,8 @@ _nc_data_cluster_ncount_m2lnL_val (NcmData *data, NcmMSet *mset, gdouble *m2lnL)
   NcDataClusterNCount *ncount = NC_DATA_CLUSTER_NCOUNT (data);
   NcClusterAbundance *cad = ncount->cad;
   NcHICosmo *cosmo = NC_HICOSMO (ncm_mset_peek (mset, nc_hicosmo_id ()));
+  NcClusterRedshift *clusterz = NC_CLUSTER_REDSHIFT (ncm_mset_peek (mset, nc_cluster_redshift_id ()));
+  NcClusterMass *clusterm = NC_CLUSTER_MASS (ncm_mset_peek (mset, nc_cluster_mass_id ()));
   
   *m2lnL = 0.0;
 
@@ -1257,7 +1261,7 @@ _nc_data_cluster_ncount_m2lnL_val (NcmData *data, NcmMSet *mset, gdouble *m2lnL)
 
   if (ncount->np == 0)
   {
-    const gdouble n_th = nc_cluster_abundance_n (cad, cosmo);    
+    const gdouble n_th = nc_cluster_abundance_n (cad, cosmo, clusterz, clusterm);    
     *m2lnL = 2.0 * (ncount->log_np_fac + n_th);
     return;
   }
@@ -1266,7 +1270,7 @@ _nc_data_cluster_ncount_m2lnL_val (NcmData *data, NcmMSet *mset, gdouble *m2lnL)
 
   if (ncount->use_true_data)
   {
-    _Evald2N evald2n = {cad, ncount, cosmo};
+    _Evald2N evald2n = {cad, ncount, clusterz, clusterm, cosmo};
     g_assert (ncount->z_true);
     g_assert (ncount->lnM_true);
     ncm_func_eval_threaded_loop_full (&_eval_intp_d2n, 0, ncount->np, &evald2n);
@@ -1280,33 +1284,33 @@ _nc_data_cluster_ncount_m2lnL_val (NcmData *data, NcmMSet *mset, gdouble *m2lnL)
     
     if (z_p && lnM_p)
     {
-      _Evald2N evald2n = {cad, ncount, cosmo};
+      _Evald2N evald2n = {cad, ncount, clusterz, clusterm, cosmo};
       ncm_func_eval_threaded_loop_full (&_eval_z_p_lnm_p_d2n, 0, ncount->np, &evald2n);
     }
     else if (z_p && !lnM_p)
     {
       g_assert (ncount->lnM_true);
-      _Evald2N evald2n = {cad, ncount, cosmo};
+      _Evald2N evald2n = {cad, ncount, clusterz, clusterm, cosmo};
       ncm_func_eval_threaded_loop_full (&_eval_z_p_d2n, 0, ncount->np, &evald2n);
     }
     else if (!z_p && lnM_p)
     {
       g_assert (ncount->z_true);
-      _Evald2N evald2n = {cad, ncount, cosmo};
+      _Evald2N evald2n = {cad, ncount, clusterz, clusterm, cosmo};
       ncm_func_eval_threaded_loop_full (&_eval_lnm_p_d2n, 0, ncount->np, &evald2n);
     }
     else
     {
       g_assert (ncount->z_true);
       g_assert (ncount->lnM_true);
-      _Evald2N evald2n = {cad, ncount, cosmo};
+      _Evald2N evald2n = {cad, ncount, clusterz, clusterm, cosmo};
       ncm_func_eval_threaded_loop_full (&_eval_d2n, 0, ncount->np, &evald2n);
 
     }
   }
 
   {
-    const gdouble n_th = nc_cluster_abundance_n (cad, cosmo);
+    const gdouble n_th = nc_cluster_abundance_n (cad, cosmo, clusterz, clusterm);
     guint i;
     for (i = 0 ; i < ncount->np; i++) 
     { 

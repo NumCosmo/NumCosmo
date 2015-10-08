@@ -146,7 +146,7 @@ _nc_cluster_redshift_nodist_get_property (GObject *object, guint prop_id, GValue
     case PROP_Z_MIN:
       g_value_set_double (value, zn->z_min);
       break;
-	case PROP_Z_MAX:
+    case PROP_Z_MAX:
       g_value_set_double (value, zn->z_max);
       break;
     default:

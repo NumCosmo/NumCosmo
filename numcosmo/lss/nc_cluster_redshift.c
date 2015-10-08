@@ -195,7 +195,6 @@ nc_cluster_redshift_intp (NcClusterRedshift *clusterz, gdouble lnM, gdouble z)
    @rng: a #NcmRNG
  *
  * FIXME
- * The function which will call this one is responsible to allocate enough memory for @z_lower and @z_upper.
  *
  * Returns: FIXME
  */

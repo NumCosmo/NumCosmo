@@ -57,12 +57,14 @@ enum
 {
   PROP_0,
   PROP_MASS_FUNCTION,
+  PROP_NCLUSTERS,
   PROP_SIZE,
 };
 
 /**
  * nc_cluster_pseudo_counts_new: 
  * @mfp: a #NcMassFunction
+ * @nclusters: total number of clusters (resample)
  *
  * This function allocates memory for a new #NcClusterPseudoCounts object and sets its properties to the values from
  * the input argument.
@@ -70,10 +72,11 @@ enum
  * Returns: A new #NcClusterPseudoCounts.
  */
 NcClusterPseudoCounts *
-nc_cluster_pseudo_counts_new (NcMassFunction *mfp)
+nc_cluster_pseudo_counts_new (NcMassFunction *mfp, gdouble nclusters)
 {
   NcClusterPseudoCounts *cpc = g_object_new (NC_TYPE_CLUSTER_PSEUDO_COUNTS,
-                                          "mass-function", mfp,                                        
+                                          "mass-function", mfp,
+                                          "number-clusters", nclusters,   
                                           NULL);
   return cpc;
 }
@@ -89,7 +92,7 @@ nc_cluster_pseudo_counts_new (NcMassFunction *mfp)
 NcClusterPseudoCounts *
 nc_cluster_pseudo_counts_copy (NcClusterPseudoCounts *cpc)
 {
-  return nc_cluster_pseudo_counts_new (cpc->mfp);
+  return nc_cluster_pseudo_counts_new (cpc->mfp, cpc->nclusters);
 }
 
 /**
@@ -143,7 +146,11 @@ _nc_cluster_pseudo_counts_set_property (GObject *object, guint prop_id, const GV
   {
     case PROP_MASS_FUNCTION:
       cpc->mfp = g_value_dup_object (value);
+      cpc->cad = nc_cluster_abundance_new (cpc->mfp, NULL);
       break;
+    case PROP_NCLUSTERS:
+      cpc->nclusters = g_value_get_double (value);
+      break;  
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
       break;
@@ -161,6 +168,9 @@ _nc_cluster_pseudo_counts_get_property (GObject *object, guint prop_id, GValue *
     case PROP_MASS_FUNCTION:
       g_value_set_object (value, cpc->mfp);
       break;
+    case PROP_NCLUSTERS:
+      g_value_set_double (value, cpc->nclusters);
+      break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
       break;
@@ -171,6 +181,8 @@ static void
 nc_cluster_pseudo_counts_init (NcClusterPseudoCounts *cpc)
 {
   cpc->mfp = NULL;
+  cpc->cad = NULL;
+  cpc->nclusters = 1.0;
   cpc->workz = g_new0 (gdouble, LM_BC_DER_WORKSZ (3, 5));
 }
 
@@ -222,6 +234,20 @@ nc_cluster_pseudo_counts_class_init (NcClusterPseudoCountsClass *klass)
                                                         "Mass Function",
                                                         NC_TYPE_MASS_FUNCTION,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  
+  /**
+   * NcClusterPseudoCounts:nclusters:
+   *
+   * Total number of clusters to generate a realization with nclusters values of redshift and masses.
+   */
+  g_object_class_install_property (object_class,
+                                   PROP_NCLUSTERS,
+                                   g_param_spec_double ("number-clusters",
+                                                        NULL,
+                                                        "Number of clusters",
+                                                        1.0, G_MAXDOUBLE, 21.0,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
   /**
    * NcClusterPseudoCounts:lnMcut:
    * 
@@ -292,7 +318,7 @@ typedef struct _integrand_data
 } integrand_data;
 
 static gdouble
-_selection_function (NcClusterPseudoCounts *cpc,  gdouble lnM500)
+_selection_function (NcClusterPseudoCounts *cpc, gdouble lnM500)
 {
   const gdouble sqrt2_sdcut = sqrt(2) * SD_MCUT;
   const gdouble difM = lnM500 - LNMCUT;
@@ -301,6 +327,21 @@ _selection_function (NcClusterPseudoCounts *cpc,  gdouble lnM500)
     return 0.5 * erfc (fabs(difM) / sqrt2_sdcut);
   else
     return 0.5 * (1.0 + erf (difM / sqrt2_sdcut));
+}
+
+/**
+ * nc_cluster_pseudo_counts_selection_function:
+ * @cpc: a #NcClusterPseudoCounts
+ * @lnM: logarithm base e of the true mass 
+ *
+ * This function computes the selection function (include equation). FIXME 
+ *
+ * Returns: FIXME
+*/
+gdouble 
+nc_cluster_pseudo_counts_selection_function (NcClusterPseudoCounts *cpc, gdouble lnM)
+{
+  return _selection_function (cpc, lnM);
 }
 
 static gdouble
