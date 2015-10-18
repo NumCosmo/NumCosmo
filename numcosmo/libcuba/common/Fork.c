@@ -3,7 +3,7 @@
 		fork the cores for parallel sampling
 		(C version only)
 		by Thomas Hahn
-		last modified 27 Aug 14 th
+		last modified 23 Apr 15 th
 */
 
 
@@ -43,7 +43,8 @@ static inline void Child(cint fd, cint core)
 Extern void SUFFIX(cubafork)(Spin **pspin)
 {
   char out[128];
-  int cores, core, *pfd;
+  int cores, core;
+  fdpid *pfp;
   Spin *spin;
 
   VerboseInit();
@@ -88,9 +89,9 @@ Extern void SUFFIX(cubafork)(Spin **pspin)
 			   or else buffered content will be written
 			   out multiply, at each child's exit(0) */
 
-  MemAlloc(spin, sizeof *spin + cores*sizeof(int));
+  MemAlloc(spin, sizeof *spin + cores*sizeof *spin->fp);
   spin->spec = cubaworkers_;
-  pfd = spin->fd;
+  pfp = spin->fp;
   for( core = -spin->spec.naccel; core < spin->spec.ncores; ++core ) {
     int fd[2];
     pid_t pid;
@@ -106,7 +107,9 @@ Extern void SUFFIX(cubafork)(Spin **pspin)
     MASTER("forked pid %d pipe %d(master) -> %d(worker)",
       pid, fd[0], fd[1]);
     close(fd[1]);
-    *pfd++ = fd[0];
+    pfp->fd = fd[0];
+    pfp->pid = pid;
+    ++pfp;
   }
 
   *pspin = spin;
@@ -126,9 +129,16 @@ Extern void SUFFIX(cubawait)(Spin **pspin)
   cores = spin->spec.naccel + spin->spec.ncores;
 
   for( core = 0; core < cores; ++core ) {
-    MASTER("closing fd %d", spin->fd[core]);
-    close(spin->fd[core]);
+    MASTER("closing fd %d", spin->fp[core].fd);
+    close(spin->fp[core].fd);
   }
+
+#ifdef KILL_WORKERS
+  for( core = 0; core < cores; ++core ) {
+    MASTER("killing pid %d", spin->fp[core].pid);
+    kill(spin->fp[core].pid, SIGKILL);
+  }
+#endif
 
   for( core = 0; core < cores; ++core ) {
     DEB_ONLY(pid_t pid;)

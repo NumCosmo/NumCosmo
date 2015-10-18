@@ -670,7 +670,7 @@ AM_CONDITIONAL([USE_INTERNAL_LIBCUBA], [test "x$cuba_missing" = "xyes"])
 AC_MSG_CHECKING([libcuba])
 if test "x$cuba_missing" = "xyes"; then
   have_cuba_support=""
-  AC_MSG_RESULT([internal v4.1])
+  AC_MSG_RESULT([internal v4.2])
   AC_DEFINE([HAVE_LIBCUBA_4_0],[1], [Have the libcuba >= 4.0])
 else
   AC_MSG_RESULT([external])

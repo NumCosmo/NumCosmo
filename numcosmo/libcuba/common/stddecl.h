@@ -1,7 +1,7 @@
 /*
 	stddecl.h
 		declarations common to all Cuba routines
-		last modified 17 Mar 15 th
+		last modified 23 Apr 15 th
 */
 
 
@@ -33,6 +33,7 @@
 #ifdef HAVE_FORK
 #include <sys/wait.h>
 #include <sys/socket.h>
+#include <signal.h>
 #ifdef HAVE_SHMGET
 #include <sys/ipc.h>
 #include <sys/shm.h>
@@ -424,8 +425,12 @@ typedef struct {
 } corespec;
 
 typedef struct {
+  int fd, pid;
+} fdpid;
+
+typedef struct {
   corespec spec;
-  int fd[];
+  fdpid fp[];
 } Spin;
 
 
