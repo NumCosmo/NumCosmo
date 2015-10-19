@@ -104,7 +104,8 @@ IGNORE_HFILES=linear_internal.h         \
               ncm_fit_nlopt_enum_meta.h \
               $(ignore_nlopt)           \
               levmar                    \
-              libcuba
+              libcuba                   \
+              plc
 
 # Images to copy into HTML directory.
 # e.g. HTML_IMAGES=$(top_srcdir)/gtk/stock-icons/stock_about_24.png

@@ -171,10 +171,11 @@ plik/clik_plik_f90.lo: \
 
 clik_tool_sources =            \
         minipmc/pmc.h          \
+        minipmc/maths_base.h   \
 	minipmc/errorlist.c    \
 	minipmc/errorlist.h    \
 	minipmc/io.c           \
-	miniomc/io.h           \
+	minipmc/io.h           \
 	minipmc/distribution.c \
 	cldf/cldf.c            \
 	cldf/cldf.h            \
@@ -191,17 +192,17 @@ clik_main_sources = \
 	lowly_common.h  \
 	clik_helper.c   \
 	clik_helper.h   \
-	click_lensing.h
+	clik_lensing.h
 
 clik_act_spt_lkl_sources = \
 	actspt/Highell_options.F90          \
-	actspt/Highell_subroutines.f90      \
-	actspt/Foregrounds_loading.f90      \
-	actspt/ACT_equa_likelihood.f90      \
-	actspt/SPT_reichardt_likelihood.f90 \
-	actspt/ACT_south_likelihood.f90     \
-	actspt/SPT_keisler_likelihood.f90   \
-	actspt/Highell_likelihood.f90       \
+	actspt/Highell_subroutines.F90      \
+	actspt/Foregrounds_loading.F90      \
+	actspt/ACT_equa_likelihood.F90      \
+	actspt/SPT_reichardt_likelihood.F90 \
+	actspt/ACT_south_likelihood.F90     \
+	actspt/SPT_keisler_likelihood.F90   \
+	actspt/Highell_likelihood.F90       \
 	actspt/clik_actspt_f90.f90          \
 	actspt/clik_actspt.c
 
@@ -222,9 +223,9 @@ clik_lowlike_lkl_sources = \
 	lowlike/read_archive_map.f90      \
 	lowlike/read_fits.f90             \
 	lowlike/br_mod_dist.f90           \
-	lowlike/Planck_options.f90        \
-	lowlike/Planck_teeebb_pixlike.f90 \
-	lowlike/Planck_likelihood.f90     \
+	lowlike/Planck_options.F90        \
+	lowlike/Planck_teeebb_pixlike.F90 \
+	lowlike/Planck_likelihood.F90     \
 	lowlike/clik_lowlike_f90.f90      \
 	lowlike/clik_lowlike.c
 
@@ -244,8 +245,10 @@ clik_pliklite_lkl_sources =   \
 
 clik_plik_lkl_sources =   \
 	plik/smica.c                 \
+	plik/smica.h                 \
 	plik/clik_hfipack.c          \
 	plik/clik_parametric.c       \
+	plik/clik_parametric.h       \
 	plik/clik_parametric_addon.c \
 	plik/clik_parametric_addon.h \
 	plik/component_plugin/rel2015/fg2015.c    \
@@ -274,7 +277,10 @@ libclik_la_SOURCES = \
 	$(clik_plik_lkl_sources)     \
 	$(clik_lens_lkl_sources)
 
-EXTRA_DIST = 
+EXTRA_DIST = \
+	lowlike/read_archive_map.fh \
+	lowlike/read_fits.fh        
+
 
 CLEANFILES = \
 	actspt_extra.mod act_equa_likelihood.mod act_south_likelihood.mod  \

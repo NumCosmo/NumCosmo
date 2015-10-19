@@ -36,6 +36,7 @@ libnumcosmo_la_LIBADD =     \
 	$(SQLITE3_LIBS)     \
 	$(CFITSIO_LIBS)     \
 	$(LIBCUBA_PLACE)    \
+	plc/libclik.la      \
 	levmar/liblevmar.la
 
 ncm_sources = \
