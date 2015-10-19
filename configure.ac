@@ -169,6 +169,13 @@ dnl  AX_CHECK_COMPILE_FLAG([-Wunreachable-code],[NC_CFLAGS="$NC_CFLAGS -Wunreach
 fi
 
 dnl ***************************************************************************
+dnl Fortran flags
+dnl ***************************************************************************
+
+AC_FC_FREEFORM()
+AC_FC_LINE_LENGTH([unlimited])
+
+dnl ***************************************************************************
 dnl Check for vapigen
 dnl ***************************************************************************
 AC_ARG_ENABLE(vapi,
@@ -328,11 +335,18 @@ AC_ARG_WITH([thread-pool-max],
             AS_HELP_STRING([--with-thread-pool-max=N],[Number of threads in the pool]), 
             [thread_pool_max='yes'], [thread_pool_max='no'])
 
+AC_MSG_CHECKING([Cheking for the number of threads in the global thread pool])
 if test "x$thread_pool_max" = "xyes"; then
+  AC_MSG_RESULT([$with_thread_pool_max])
   AC_DEFINE_UNQUOTED([NCM_THREAD_POOL_MAX],[$with_thread_pool_max], [Number of threads in the pool])
 else
+  AC_MSG_RESULT([not defined, using number of cores: $CPU_COUNT])
   AC_DEFINE_UNQUOTED([NCM_THREAD_POOL_MAX],[$CPU_COUNT], [Number of threads in the pool])  
 fi
+
+AX_OPENMP()
+AC_SUBST(OPENMP_CFLAGS)
+AC_SUBST(OPENMP_FCFLAGS)
 
 dnl ***************************************************************************
 dnl Check for backtrace support.
@@ -800,6 +814,21 @@ func (0, 0.0, (void *)0, (void *)0, (void *)0, (void *)0, (void *)0, (void *)0, 
 CFLAGS="$SAVED_CFLAGS"
 
 dnl ***************************************************************************
+dnl PLC
+dnl ***************************************************************************
+
+if test "x$lapack_mkl" = "xyesDISABLED"; then
+  PLC_DEFINES="$PLC_DEFINES -DHAS_MKL"
+elif test "x$have_clapack" != "xyes"; then
+  PLC_DEFINES="$PLC_DEFINES -DLAPACK_CLIK"
+fi
+
+PLC_DEFINES="$PLC_DEFINES -DNOHEALPIX -DCLIK_LENSING -DCAMSPEC_V1"
+PLC_DEFINES="$PLC_DEFINES -DCLIKSVNVERSION=6dc2a8cf3965"
+
+AC_SUBST(PLC_DEFINES)
+
+dnl ***************************************************************************
 dnl Appending libs and setting up TEST_SHARED
 dnl ***************************************************************************
 
@@ -835,6 +864,7 @@ numcosmo/libcuba/cuhre/Makefile
 numcosmo/libcuba/divonne/Makefile
 numcosmo/libcuba/suave/Makefile
 numcosmo/libcuba/vegas/Makefile
+numcosmo/plc/Makefile
 tools/Makefile
 tests/Makefile
 docs/Makefile

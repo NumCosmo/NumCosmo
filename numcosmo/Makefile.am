@@ -23,7 +23,7 @@ AM_CFLAGS = \
 	 -Wall \
 	 $(MY_CFLAGS)
 
-SUBDIRS = $(MAYBE_LIBCUBA) levmar .
+SUBDIRS = $(MAYBE_LIBCUBA) levmar plc .
 
 lib_LTLIBRARIES = libnumcosmo.la
 
