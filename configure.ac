@@ -136,7 +136,7 @@ dnl ***************************************************************************
 AM_CONDITIONAL(OS_UNIX, [test "$glib_native_win32" != "yes"])
 
 dnl ***************************************************************************
-dnl Compiler flags
+dnl Compiler flags for C
 dnl ***************************************************************************
 NC_CFLAGS="$CFLAGS"
 AC_ARG_ENABLE([opt-compiler-flags], 
@@ -174,6 +174,11 @@ dnl ***************************************************************************
 
 AC_FC_FREEFORM()
 AC_FC_LINE_LENGTH([unlimited])
+
+AC_LANG_PUSH([Fortran])
+dnl  AX_APPEND_COMPILE_FLAGS([-finit-local-zero -finit-integer=0 -finit-real=zero -finit-logical=false -fno-automatic], [FCFLAGS])
+  AX_OPENMP()
+AC_LANG_POP([Fortran])
 
 dnl ***************************************************************************
 dnl Check for vapigen
@@ -913,4 +918,5 @@ fi
 echo "--------------------------------------------------------------------"
 echo "AM_CFLAGS = $AM_CFLAGS"
 echo "CFLAGS = $CFLAGS"
+echo "FCFLAGS = $FCFLAGS"
 echo "LIBS = $LIBS"

@@ -28,7 +28,7 @@
  * @short_description: Library configuration and helper functions.
  *
  * FIXME
- * 
+ *
  */
 
 #ifdef HAVE_CONFIG_H
@@ -179,7 +179,7 @@ _ncm_cfg_log_error (const gchar *log_domain, GLogLevelFlags log_level, const gch
   }
 #endif
   fflush (_log_stream_err);
-  
+
   abort ();
 }
 
@@ -196,12 +196,12 @@ void clencurt_gen (int M);
 /**
  * ncm_cfg_init:
  *
- * Main library configuration function. Must be called before any 
+ * Main library configuration function. Must be called before any
  * other function of NumCosmo.
- * 
+ *
  * Initializes internal variables and sets
  * all other library number of threads to one.
- * 
+ *
  */
 void
 ncm_cfg_init (void)
@@ -221,7 +221,7 @@ ncm_cfg_init (void)
 #ifdef HAVE_MKL_SET_NUM_THREADS
   MKL_Set_Num_Threads (1);
 #endif /* HAVE_MKL_SET_NUM_THREADS */
-  
+
   g_setenv ("CUBACORES", "0", TRUE);
   g_setenv ("CUBACORESMAX", "0", TRUE);
   g_setenv ("CUBAACCEL", "0", TRUE);
@@ -247,10 +247,10 @@ ncm_cfg_init (void)
   _log_err_id = g_log_set_handler (G_LOG_DOMAIN, G_LOG_LEVEL_ERROR | G_LOG_LEVEL_CRITICAL | G_LOG_FLAG_FATAL | G_LOG_FLAG_RECURSION, _ncm_cfg_log_error, NULL);
 
   ncm_cfg_register_obj (NCM_TYPE_RNG);
-  
+
   ncm_cfg_register_obj (NCM_TYPE_VECTOR);
   ncm_cfg_register_obj (NCM_TYPE_MATRIX);
-  
+
   ncm_cfg_register_obj (NCM_TYPE_SPLINE);
   ncm_cfg_register_obj (NCM_TYPE_SPLINE_CUBIC);
   ncm_cfg_register_obj (NCM_TYPE_SPLINE_CUBIC_NOTAKNOT);
@@ -353,14 +353,13 @@ ncm_cfg_init (void)
   ncm_cfg_register_obj (NC_TYPE_DATA_BAO_DHR_DAR);
 
   ncm_cfg_register_obj (NC_TYPE_DATA_CLUSTER_PSEUDO_COUNTS);
-  
+
   ncm_cfg_register_obj (NC_TYPE_XCOR);
   ncm_cfg_register_obj (NC_TYPE_XCOR_LIMBER);
   ncm_cfg_register_obj (NC_TYPE_XCOR_LIMBER_GAL);
   ncm_cfg_register_obj (NC_TYPE_XCOR_LIMBER_LENSING);
   ncm_cfg_register_obj (NC_TYPE_DATA_XCOR);
-  
-  
+
   numcosmo_init = TRUE;
   return;
 }
@@ -403,7 +402,7 @@ void
 ncm_cfg_set_logfile (gchar *filename)
 {
   FILE *out = g_fopen (filename, "w");
-  
+
   if (out != NULL)
     _log_stream = out;
   else
@@ -460,7 +459,7 @@ ncm_message (const gchar *msg, ...)
  * @ncols: FIXME
  *
  * FIXME
- * 
+ *
  * Returns: (transfer full): word wraped string @msg.
  */
 gchar *
@@ -517,7 +516,7 @@ ncm_string_ww (const gchar *msg, const gchar *first, const gchar *rest, guint nc
  *
  * FIXME
  */
-void 
+void
 ncm_message_ww (const gchar *msg, const gchar *first, const gchar *rest, guint ncols)
 {
   gchar *msg_ww = ncm_string_ww (msg, first, rest, ncols);
@@ -529,9 +528,9 @@ ncm_message_ww (const gchar *msg, const gchar *first, const gchar *rest, guint n
  * ncm_cfg_msg_sepa:
  *
  * Log a message separator.
- * 
+ *
  */
-void 
+void
 ncm_cfg_msg_sepa (void)
 {
   g_message ("#----------------------------------------------------------------------------------\n");
@@ -605,7 +604,7 @@ ncm_cfg_keyfile_to_arg (GKeyFile *kfile, const gchar *group_name, GOptionEntry *
           gchar *val = g_key_file_get_value (kfile, group_name, entries[i].long_name, &error);
           if (error != NULL)
             g_error ("ncm_cfg_keyfile_to_arg: Cannot parse key file[%s]", error->message);
-          
+
           if (entries[i].arg == G_OPTION_ARG_NONE)
           {
             if ((g_ascii_strcasecmp (val, "1") == 0) ||
@@ -629,9 +628,9 @@ ncm_cfg_keyfile_to_arg (GKeyFile *kfile, const gchar *group_name, GOptionEntry *
 /**
  * ncm_cfg_string_to_comment:
  * @str: FIXME
- * 
+ *
  * FIXME
- * 
+ *
  * Returns: (transfer full): FIXME
  */
 gchar *
@@ -719,7 +718,7 @@ ncm_cfg_entries_to_keyfile (GKeyFile *kfile, const gchar *group_name, GOptionEnt
     }
     if (!skip_comment)
     {
-      gchar *desc = ncm_cfg_string_to_comment (entries[i].description); 
+      gchar *desc = ncm_cfg_string_to_comment (entries[i].description);
       if (!g_key_file_set_comment (kfile, group_name, entries[i].long_name, desc, &error))
         g_error ("ncm_cfg_entries_to_keyfile: %s", error->message);
       g_free (desc);
@@ -770,7 +769,7 @@ ncm_cfg_get_enum_by_id_name_nick (GType enum_type, const gchar *id_name_nick)
  * @n: FIXME
  *
  * FIXME
- * 
+ *
  * Returns: (transfer none)
  */
 const GEnumValue *
@@ -870,7 +869,7 @@ ncm_cfg_load_fftw_wisdom (const gchar *filename, ...)
     {
       g_error ("ncm_cfg_load_fftw_wisdom: cannot open wisdom file %s [%s].", full_filename, g_strerror (errno));
     }
-        
+
     fftw_import_wisdom_from_file (wis);
     fclose (wis);
     ret = TRUE;
@@ -948,7 +947,7 @@ ncm_cfg_fopen (const gchar *filename, const gchar *mode, ...)
   {
     g_error ("ncm_cfg_fopen: cannot open file %s [%s].", full_filename, g_strerror (errno));
   }
-  
+
   g_free (file);
   g_free (full_filename);
   return F;
@@ -1067,7 +1066,7 @@ ncm_cfg_load_spline (const gchar *filename, const gsl_interp_type *stype, NcmSpl
   }
   else
     ncm_spline_prepare (*s);
-    
+
   ncm_vector_free (xv);
   ncm_vector_free (yv);
 
@@ -1403,8 +1402,8 @@ load_save_vector_matrix(complex)
  *
  * Looks for @filename in the data path and returns
  * the full path if found.
- * 
- * Returns: (transfer full): Full path for @filename. 
+ *
+ * Returns: (transfer full): Full path for @filename.
  */
 gchar *
 ncm_cfg_get_data_filename (const gchar *filename, gboolean must_exist)
@@ -1460,7 +1459,7 @@ ncm_cfg_get_default_sqlite3 (void)
       g_error ("Connection to database failed: %s", sqlite3_errmsg (db));
 
     g_free (filename);
-    
+
   }
 
   return db;
@@ -1545,7 +1544,7 @@ ncm_cfg_variant_to_array (GVariant *var, gsize esize)
  * FIXME
  *
  */
-void 
+void
 ncm_cfg_array_set_variant (GArray *a, GVariant *var)
 {
   gsize esize = g_array_get_element_size (a);
@@ -1590,7 +1589,7 @@ guint fftw_default_flags = FFTW_PATIENT; /* FFTW_ESTIMATE, FFTW_MEASURE, FFTW_PA
  * to be used when building plans.
  *
  */
-void 
+void
 ncm_cfg_set_fftw_default_flag (guint flag)
 {
   fftw_default_flags = flag;

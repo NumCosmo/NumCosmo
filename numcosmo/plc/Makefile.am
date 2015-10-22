@@ -33,7 +33,8 @@ SUBDIRS = .
 
 noinst_LTLIBRARIES = libclik.la
 
-libclik_la_LIBADD =
+libclik_la_LIBADD = \
+	$(OPENMP_CFLAGS)
 
 ## Fortran modules
 actspt_extra.mod:             actspt/clik_actspt_f90.lo

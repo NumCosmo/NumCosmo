@@ -130,6 +130,7 @@
 #include <numcosmo/data/nc_data_cluster_ncount.h>
 #include <numcosmo/data/nc_data_cluster_poisson.h>
 #include <numcosmo/data/nc_data_cluster_pseudo_counts.h>
+#include <numcosmo/data/nc_data_planck_lkl.h>
 
 /* ABC */
 #include <numcosmo/abc/nc_abc_cluster_ncount.h>

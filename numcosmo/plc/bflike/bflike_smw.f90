@@ -1,21 +1,21 @@
 ! Code for evaluation of CMB likelihood in pixel space
-! Author: L. Colombo <colombo@usc.edu> 
+! Author: L. Colombo <colombo@usc.edu>
 ! Original code based on Tegmark & de Oliveira-Costa  arXiv:astro-ph/0012120
 ! This version implements a low rank update to speed up computations
 !
 !**************************************************************************
-!* THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS OR   *    
-!* IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED         *    
-!* WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE *    
-!* DISCLAIMED.  IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY DIRECT,    *    
-!* INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES     *    
-!* (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR     *    
-!* SERVICES; LOSS OF USE, DATA, OR PROFITS; BUSINESS INTERRUPTION; OR     *    
+!* THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS OR   *
+!* IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED         *
+!* WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE *
+!* DISCLAIMED.  IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY DIRECT,    *
+!* INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES     *
+!* (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR     *
+!* SERVICES; LOSS OF USE, DATA, OR PROFITS; BUSINESS INTERRUPTION; OR     *
 !* UNFOUNDED CONCLUSIONS ON THE NATURE OF LIFE, THE UNIVERSE AND          *
-!* EVERYTHING) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN  * 
+!* EVERYTHING) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN  *
 !* CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)*
 !* ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF *
-!* THE POSSIBILITY OF SUCH DAMAGE.                                        *    
+!* THE POSSIBILITY OF SUCH DAMAGE.                                        *
 !**************************************************************************
 
 module fiducial_cls_mod_smw
@@ -30,7 +30,7 @@ module fiducial_cls_mod_smw
      real(kind=8) :: cls(2:130,6)
 
    contains
-     
+
      procedure :: init
 
   end type fiducial_cls
@@ -188,11 +188,11 @@ module bflike_utils_smw
   type allocatable_vector
      real(dp) ,allocatable :: row(:)
   end type allocatable_vector
-  
+
   type triangular_matrix
 
-     integer :: size 
-     logical :: allocated 
+     integer :: size
+     logical :: allocated
      type(allocatable_vector) ,allocatable :: column(:)
 
    contains
@@ -206,7 +206,7 @@ module bflike_utils_smw
      integer  :: nrow
      integer  :: ncol
      logical  :: allocated
-     real(dp) ,allocatable :: m(:,:)
+     real(dp), allocatable :: m(:,:)
 
    contains
 
@@ -224,49 +224,53 @@ contains
   subroutine alloc_tm(self,n)
     class(triangular_matrix) ,intent(inout) :: self
     integer ,intent(in)                     :: n
-    
+
     integer                                 :: i
-    
+
     if(self%allocated) call self%clean()
-    
+
     self%size = n
     allocate(self%column(n))
-    
+
     do i = 1,n
        allocate(self%column(i)%row(i:n))
     end do
-    
+
     self%allocated = .true.
-    
+
   end subroutine alloc_tm
 
   subroutine clean_tm(self)
     class(triangular_matrix) ,intent(inout) :: self
     integer                                 :: i
     if(.not. self%allocated) return
-    
+
     do i = 1,self%size
        deallocate(self%column(i)%row)
     end do
     deallocate(self%column)
-    
+
     self%size = -1
     self%allocated = .false.
-    
+
   end subroutine clean_tm
 
   subroutine alloc_am(self,nrow,ncol)
-    class(allocatable_matrix) ,intent(inout) :: self
-    integer ,intent(in)                     :: nrow,ncol
-      
+    class(allocatable_matrix), intent(inout) :: self
+    integer, intent(in)                     :: nrow,ncol
+
     if(self%allocated) call self%clean()
-    
+
     self%nrow = nrow
-    self%nrow = ncol
+    self%ncol = ncol
     allocate(self%m(nrow,ncol))
-    
+    ! fixed bug it was originally:
+    ! self%nrow = nrow
+    ! self%nrow = ncol
+    ! Author: Sandro Dias Pinto Vitenti 22/10/2015
+
     self%allocated = .true.
-    
+
   end subroutine alloc_am
 
   subroutine clean_am(self)
@@ -274,11 +278,11 @@ contains
     if(.not. self%allocated) return
 
     deallocate(self%m)
-    
+
     self%nrow = -1
     self%ncol = -1
     self%allocated = .false.
-    
+
   end subroutine clean_am
 
 end module bflike_utils_smw
@@ -287,7 +291,7 @@ module bflike_smw
 
   use healpix_types
   use bflike_utils_smw
-  use fitstools_smw , only : read_dbintab ,printerror 
+  use fitstools_smw , only : read_dbintab ,printerror
   implicit none
 
   private
@@ -300,7 +304,7 @@ module bflike_smw
   real(dp) ,allocatable ,dimension(:) ,save   :: reflike ,pl,plm,f1,f2
   real(dp) ,allocatable ,target               :: S(:,:)
 
-  type(triangular_matrix) ,save               :: cos1 ,cos2 ,sin1 ,sin2 ,ncov 
+  type(triangular_matrix) ,save               :: cos1 ,cos2 ,sin1 ,sin2 ,ncov
   type(allocatable_matrix) ,allocatable ,save :: fevec(:) ,feval(:) ,cblocks(:)
 
   abstract interface
@@ -313,19 +317,19 @@ module bflike_smw
        integer ,intent(in)  :: linf ,lsup
        real(dp) ,intent(out):: cov(:,:)
        logical ,optional ,intent(in) :: project_mondip ,symmetrize
-       
+
      end subroutine get_cov_interface
 
   end  interface
-    
+
 contains
 
   subroutine external_compute_plms(passntemp,passnq,passnu,theta,phi,beam,passlswitch,basisfile)
     implicit none
     integer ,intent(in)  :: passntemp ,passnq ,passnu ,passlswitch
-    real(dp) ,intent(in) :: theta(:) ,phi(:) ,beam(0:,:) 
+    real(dp) ,intent(in) :: theta(:) ,phi(:) ,beam(0:,:)
     character(len=*) ,intent(in) :: basisfile
-    
+
     real(dp)            :: mod
     integer             :: i ,j ,jdum ,l
 
@@ -405,7 +409,7 @@ contains
        call feval(l)%clean()
        call cblocks(l)%clean()
     end do
-    
+
     deallocate(fevec,feval,cblocks)
 
     deallocate(cls,pl,plm,f1,f2)
@@ -416,17 +420,17 @@ contains
 
     implicit none
     character(len=*) ,intent(in) :: clik_bflike_dir
-    
+
     integer(i4b)          :: i ,j ,l ,myunit ,err  &
          ,iq ,iu ,jq ,ju ,il ,nside ,nwrite ,jdum ,blocksize ,readwrite ,hdutype
     real(dp)              :: theta ,phi ,ell ,mod ,a1 ,a2 ,nullval
-    real(dp) ,allocatable :: evec(:,:) ,clstmp(:,:) ,NCVM(:,:) ,bl(:,:) 
+    real(dp) ,allocatable :: evec(:,:) ,clstmp(:,:) ,NCVM(:,:) ,bl(:,:)
     character(len=256)    :: datafile ,basisfile ,clfiducial
     character(len=80)     :: comment
     logical               :: project_mondip ,anynull
-    integer(i4b)          :: info ,neigen 
-    
-    namelist /inputs/ datafile ,project_mondip ,lmax ,lswitch ,basisfile ,clfiducial 
+    integer(i4b)          :: info ,neigen
+
+    namelist /inputs/ datafile ,project_mondip ,lmax ,lswitch ,basisfile ,clfiducial
 
     myunit = 42
 
@@ -438,14 +442,14 @@ contains
     readwrite = 0
 
     call ftopen(myunit,trim(clik_bflike_dir)//datafile,readwrite,blocksize,err)
-    if(err .gt. 0) then 
+    if(err .gt. 0) then
        write(*,*) 'OPEN'
        call printerror(info)
        stop
     end if
 
     call ftmrhd(myunit, +1, hdutype, err)
-    if(err >0) then 
+    if(err >0) then
        write(*,*) 'HDR'
        call printerror(err)
        stop
@@ -473,9 +477,9 @@ contains
 
     ntot = ntemp +nq +nu
     nqu  = nq +nu
-    
+
     call ftgkyj(myunit,'NSIDE',nside ,comment ,err)
-    if(err >0) then 
+    if(err >0) then
        write(*,*) 'NSIDE'
        call printerror(err)
        stop
@@ -507,7 +511,7 @@ contains
 
     call ftclos(myunit, err)
     if (err > 0) call printerror(err)
-    
+
     write(*,*) 'BFLike Ntemp  =',ntemp
     write(*,*) 'BFLike Nq     =',nq
     write(*,*) 'BFLike Nu     =',nu
@@ -550,7 +554,7 @@ contains
        mod = sqrt(sum(Uvec(:,i)**2))
        Uvec(:,i) = Uvec(:,i)/mod
     end do
-       
+
 !beam
     iu = jdum
     allocate(bl(0:4*nside,6),clnorm(2:lmax,6))
@@ -598,7 +602,7 @@ contains
 !update the NCVM
     allocate(clstmp(2:lmax,6))
     clstmp = 0._dp
-    
+
     if(lswitch .lt. lmax) then
        if(.not. read_cls_from_file(clfiducial,clstmp)) then
           write(0,*) 'WARNING: '//trim(clfiducial)//' not found or not enough columns'
@@ -618,6 +622,13 @@ contains
     end if
 
     allocate(fevec(2:lswitch),feval(2:lswitch),cblocks(2:lswitch))
+    ! fixed bug, one cannot assume allocate will set everything to zero
+    ! now it works with -O3 using gfortran
+    ! Author: Sandro Dias Pinto Vitenti 22/10/2015
+    fevec(:)%allocated = .FALSE.
+    feval(:)%allocated = .FALSE.
+    cblocks(:)%allocated = .FALSE.
+
     do l=2,lswitch
        call fevec(l)%alloc(nrow=ntot,ncol=3*(2*l+1))
        fevec(l)%m = 0.d0
@@ -636,7 +647,7 @@ contains
        write(*,*) 'done'
     end if
 
-    !contract NCVM and data on the plms 
+    !contract NCVM and data on the plms
     neigen = 0
     do l=2,lswitch
        neigen = neigen +2*l+1
@@ -655,7 +666,7 @@ contains
 
     auxdt = dt
     call dposv('L',ntot,ndata,NCVM,ntot,auxdt,ntot,info)
-    if(info .ne. 0) then 
+    if(info .ne. 0) then
        write(*,*) '(updated) NCVM is not invertible'
        write(*,*) 'info = ',info
        stop
@@ -687,7 +698,7 @@ contains
 
     deallocate(evec)
     deallocate(S) ;allocate(S(neigen,neigen))
-    
+
     !clean up all the stuff we don't need anymore
     do l=2,lswitch
        call fevec(l)%clean()
@@ -779,13 +790,13 @@ contains
     implicit none
     real(dp) ,intent(in)  :: bl(2:,:)
     real(dp) ,intent(out) :: clnorm(2:,:)
-    
+
     integer               :: l
     real(dp)              :: fct ,fct2 ,ell ,chngconv
 
     fct2 = 1._dp/24._dp
     fct = sqrt(fct2)
-    
+
     clnorm(2,smwTT) = bl(2,smwTT)**2/2.4_dp
     clnorm(2,smwEE) = bl(2,smwEE)**2*fct2/2.4_dp
     clnorm(2,smwBB) = bl(2,smwBB)**2*fct2/2.4_dp
@@ -817,11 +828,11 @@ contains
     type(allocatable_matrix) ,intent(inout) :: eigenval(2:) ,eigenvec(2:) ,blocks(2:)
     character(len=*) ,intent(in) ,optional :: file
 
-    integer(i4b)              :: il ,iu ,l ,lwork ,liwork ,info ,neigenl 
+    integer(i4b)              :: il ,iu ,l ,lwork ,liwork ,info ,neigenl
     real(dp)     ,allocatable :: work(:) ,evec(:,:) ,eval(:) ,clstmp(:,:) &
          ,Z(:,:)
     integer(i4b) ,allocatable :: isupp(:) ,iwork(:)
- 
+
     double precision dlamch
     external dlamch
 
@@ -839,7 +850,7 @@ contains
        write(*,*) 'computing basis for TT l=',l
        il = ntemp +1 -(2*l+1)
        iu = ntemp
-       
+
        clstmp = 0._dp
        clstmp(l,smwTT) = 1._dp
        call get_tt_cov(clstmp,l,l,Z(1:ntemp,1:ntemp),project_mondip=.false.)
@@ -861,7 +872,7 @@ contains
        write(*,*) 'computing basis for PP l=',l
        il = nqu +1 -(2*l+1)
        iu = nqu
-       
+
        clstmp = 0._dp
        clstmp(l,smwEE) = 1._dp
        call get_pp_cov(clstmp,l,l,Z(1+ntemp:ntot,1+ntemp:ntot),project_mondip=.false.)
@@ -902,7 +913,7 @@ contains
     end do
 
     deallocate(clstmp,Z)
-    
+
     if (present(file)) call write_plms_to_file(file,eigenval,eigenvec,blocks)
 
   end subroutine compute_plms
@@ -1015,8 +1026,8 @@ contains
     cls(2:lsup,smwTT) =clsin(2:lsup,smwTT)*clnorm(2:lsup,smwTT)
 
     do i=1,ntemp
-! TT 
-       cov(i,i) = sum(cls(linf:lsup,smwTT)) +ct1 +ct0        
+! TT
+       cov(i,i) = sum(cls(linf:lsup,smwTT)) +ct1 +ct0
        do j=i+1,ntemp
           cz = sum(Tvec(:,j)*Tvec(:,i))
           pl(1) = cz
@@ -1058,7 +1069,7 @@ contains
     cls(2:lsup,smwEB) = clsin(2:lsup,smwEB)*clnorm(2:lsup,smwEB)
 
     do i = 1,nq
-!QQ 
+!QQ
        iq = i +ntemp
        do j = i,nq
           cz = sum(Qvec(:,j)*Qvec(:,i))
@@ -1087,7 +1098,7 @@ contains
 
        end do
 
-!UQ 
+!UQ
        do j=1,nu
           cz = sum(Uvec(:,j)*Qvec(:,i))
           plm(1) = 0.d0
@@ -1116,7 +1127,7 @@ contains
     end do
 
     do i =1,nu
-!UU 
+!UU
        iu = i+nq+ntemp
        do j=i,nu
           cz = sum(Uvec(:,j)*Uvec(:,i))
@@ -1223,7 +1234,7 @@ contains
 !input clsin are l(l+1)C_l/2pi
 
     implicit none
-    
+
     real(dp),intent(in)   :: clsin(2:,1:)
     real(dp),intent(out)  :: alike
 
@@ -1255,12 +1266,12 @@ contains
     do l=2,lswitch
 
        tmplog(l) = 0._dp
-    
+
        nl = 2*l+1
        nl2 = 2*nl
        nl3 = 3*nl
- 
-       ! TT,TE,EE 
+
+       ! TT,TE,EE
        do i=1,nl
           tm1(i,i)        = clsin(l,smwTT)*feval(l)%m(i,1)
           tm1(i+1:nl,i)   = 0.d0
@@ -1284,19 +1295,19 @@ contains
           end do
        end do
 
-       !BB is diagonal 
+       !BB is diagonal
        do i = nl2+1,nl3
           tmp = 1._dp/(max(clsin(l,smwBB),1.d-30)*feval(l)%m(i,1))
           S(il(l)+i-1,il(l)+i-1) = S(il(l)+i-1,il(l)+i-1) +tmp
-          tmplog(l) = tmplog(l) -.5_dp*log(tmp) 
+          tmplog(l) = tmplog(l) -.5_dp*log(tmp)
        end do
- 
+
     end do
     call cpu_time(t2)
 
     !print*,'build matrix in :',t2-t1
     logdet = sum(tmplog(2:lswitch))
-    
+
     do l=2,lswitch
        if(pinfo(l).ne.0) then
           write(*,*) 'block inversion failed for l =',l,' info =',pinfo(l)
@@ -1341,7 +1352,7 @@ contains
 !input clsin are l(l+1)C_l/2pi
 
     implicit none
-    
+
     real(dp)  ,intent(in)         :: clsin(2:,:)
     integer  ,intent(in)          :: linf ,lsup
     real(dp) ,intent(inout)       :: NCM(:,:)
@@ -1363,7 +1374,7 @@ contains
     cls(2:lsup,:) =clsin(2:lsup,:)*clnorm(2:lsup,:)
 
     do i=1,ntemp
-! TT 
+! TT
        do j=i,ntemp
           cz = sum(Tvec(:,j)*Tvec(:,i))
           pl(1) = cz
@@ -1371,7 +1382,7 @@ contains
           do l = 3,lsup
              pl(l) =(cz*(2*l -1)*pl(l-1) -(l-1)*pl(l-2))/l
           enddo
-          tt = sum(cls(linf:lsup,smwTT)*pl(linf:lsup)) 
+          tt = sum(cls(linf:lsup,smwTT)*pl(linf:lsup))
           NCM(j,i) = NCM(j,i) +tt +ct0 +pl(1)*ct1
        enddo
 
@@ -1410,7 +1421,7 @@ contains
     end do
 
     do i = 1,nq
-!QQ 
+!QQ
        do j = i,nq
           cz = sum(Qvec(:,j)*Qvec(:,i))
           plm(1) = 0.d0
@@ -1439,7 +1450,7 @@ contains
 
        end do
 
-!UQ 
+!UQ
        do j=1,nu
 
           cz = sum(Uvec(:,j)*Qvec(:,i))
@@ -1472,7 +1483,7 @@ contains
     end do
 
     do i =1,nu
-!UU 
+!UU
        do j=i,nu
           cz = sum(Uvec(:,j)*Uvec(:,i))
           plm(1) = 0.d0
@@ -1514,7 +1525,7 @@ contains
 
     real(dp) ,parameter ::eps = 3.141592653589793d0/180.d0/3600.d0/100.d0
     real(dp) ,parameter ,dimension(3) :: zz =(/0,0,1/),epsilon =(/eps,0.d0,0.d0/)
-    
+
     real(dp) ,dimension(3) :: r12,r1star,r2star
     real(dp)               :: mod
 
@@ -1524,14 +1535,14 @@ contains
        a12 = 0.d0
        if(present(a21)) a21 = 0.d0
        return
-       
+
     end if
     r12 = r12/mod
 
     call ext_prod(zz,r1,r1star)
     r1star(3) = 0.d0
     mod = sqrt(sum(r1star*r1star))
-    if(mod.lt.1.d-8) then   !r1 is at a pole            
+    if(mod.lt.1.d-8) then   !r1 is at a pole
        r1star = r1star+epsilon
        mod = sqrt(sum(r1star*r1star))
     end if
@@ -1540,7 +1551,7 @@ contains
     call ext_prod(zz,r2,r2star)
     r2star(3) = 0.d0
     mod = sqrt(sum(r2star*r2star))
-    if(mod.lt.1.d-8) then   !r2 is at a pole            
+    if(mod.lt.1.d-8) then   !r2 is at a pole
        r2star = r2star+epsilon
        mod = sqrt(sum(r2star*r2star))
     end if
@@ -1577,7 +1588,7 @@ contains
     implicit none
     real(dp),intent(in) :: v1(3),v2(3)
     real(dp),intent(out) :: v3(3)
-    
+
     v3(1) = v1(2)*v2(3) - v1(3)*v2(2)
     v3(2) = v1(3)*v2(1) - v1(1)*v2(3)
     v3(3) = v1(1)*v2(2) - v1(2)*v2(1)
@@ -1608,7 +1619,7 @@ contains
        return
     end if
     read(unit,*,iostat=istat) idum,cls(2,1:4)
-    if(istat .eq. 0) then 
+    if(istat .eq. 0) then
        write(*,*) 'cls file appears to have 5+ columns'
        write(*,*) 'assuming it is a CAMB file with l, TT, EE, BB, TE'
        do l=3,lmax
@@ -1632,7 +1643,7 @@ contains
 
   end function read_cls_from_file
 
-end module 
+end module
 
 
 

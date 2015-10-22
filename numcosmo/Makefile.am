@@ -8,6 +8,8 @@ else
   
 endif
 
+PLC_DIR = $(top_srcdir)/numcosmo/plc
+
 MY_CFLAGS = \
 	 -DG_LOG_DOMAIN=\"NUMCOSMO\" \
 	 $(GLIB_CFLAGS)     \
@@ -17,6 +19,10 @@ MY_CFLAGS = \
 	 $(CFITSIO_CFLAGS)  \
 	 $(NLOPT_CFLAGS)    \
 	 $(LIBCUBA_INCDIR)  \
+	 -I$(PLC_DIR)         \
+	 -I$(PLC_DIR)/cldf    \
+	 -I$(PLC_DIR)/minipmc \
+	 -I$(PLC_DIR)/plik    \
 	 -I$(top_srcdir)
 
 AM_CFLAGS = \
@@ -288,6 +294,7 @@ nc_headers = \
 	data/nc_data_cluster_ncount.h          \
 	data/nc_data_cluster_poisson.h         \
 	data/nc_data_cluster_pseudo_counts.h   \
+	data/nc_data_planck_lkl.h              \
 	abc/nc_abc_cluster_ncount.h            \
 	scalefactor.h                          \
 	model/quantum_gravity.h                \
@@ -387,6 +394,7 @@ nc_sources = \
 	data/nc_data_cluster_ncount.c          \
 	data/nc_data_cluster_poisson.c         \
 	data/nc_data_cluster_pseudo_counts.c   \
+	data/nc_data_planck_lkl.c              \
 	abc/nc_abc_cluster_ncount.c            \
 	scalefactor.c                          \
 	model/quantum_gravity.c                \
