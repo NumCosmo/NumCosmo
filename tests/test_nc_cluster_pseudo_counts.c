@@ -106,9 +106,10 @@ test_nc_cluster_pseudo_counts_new (TestNcClusterPseudoCounts *test, gconstpointe
   NcGrowthFunc *gf                = nc_growth_func_new ();
   NcMultiplicityFunc *mulf        = nc_multiplicity_func_new_from_name ("NcMultiplicityFuncTinkerCrit{'Delta':<500.0>}");
   NcMassFunction *mfp             = nc_mass_function_new (dist, vp, gf, mulf);
-  NcClusterPseudoCounts *cpc      = NC_CLUSTER_PSEUDO_COUNTS (nc_cluster_pseudo_counts_new (mfp));
+  NcClusterPseudoCounts *cpc      = NC_CLUSTER_PSEUDO_COUNTS (nc_cluster_pseudo_counts_new (mfp, 1.0));
   NcClusterMass *clusterm         = NC_CLUSTER_MASS (nc_cluster_mass_new_from_name ("NcClusterMassPlCL"));
-  NcDataClusterPseudoCounts *dcpc = nc_data_cluster_pseudo_counts_new ();
+  NcClusterAbundance *cad         = nc_cluster_abundance_new (mfp, NULL);
+  NcDataClusterPseudoCounts *dcpc = nc_data_cluster_pseudo_counts_new (cad);
   NcmMSet *mset                   = ncm_mset_new (NCM_MODEL (cosmo), NCM_MODEL (clusterm), NCM_MODEL (cpc), NULL);
   NcmDataset *dset                = ncm_dataset_new ();
   NcmLikelihood *lh;              
@@ -116,7 +117,7 @@ test_nc_cluster_pseudo_counts_new (TestNcClusterPseudoCounts *test, gconstpointe
   gdouble m1, m2;
   gdouble z                       = g_test_rand_double_range (0.188, 0.890);
   NcmMatrix *m                     = ncm_matrix_new (1, 5);
-  
+
   m1 = g_test_rand_double_range (1.235, 2.496); /* ln(M/M0), M0 = 10^14 h^-1 M_sun */
   m2 = m1 + 0.4;
   test->Mobs[0]        = exp (m1) * 1.0e14;
@@ -173,10 +174,9 @@ test_nc_cluster_pseudo_counts_new (TestNcClusterPseudoCounts *test, gconstpointe
   ncm_matrix_set (m, 0, 2, test->Mobs[1]);
   ncm_matrix_set (m, 0, 3, test->Mobs_params[0]);
   ncm_matrix_set (m, 0, 4, test->Mobs_params[1]);
-  
+
   nc_data_cluster_pseudo_counts_set_obs (dcpc, m);
   test->dcpc = dcpc;
-  
   ncm_dataset_append_data (dset, NCM_DATA (test->dcpc));
   //printf ("rows = %d cols = %d np = %d dset = %d\n", ncm_matrix_nrows (m), ncm_matrix_ncols (m), test->dcpc->np, ncm_dataset_get_ndata (dset));
   
@@ -190,6 +190,7 @@ test_nc_cluster_pseudo_counts_new (TestNcClusterPseudoCounts *test, gconstpointe
   nc_growth_func_free (gf);
   nc_multiplicity_func_free (mulf);
   nc_mass_function_free (mfp);
+  nc_cluster_abundance_free (cad);
   ncm_mset_free (mset);
   ncm_dataset_free (dset);
   ncm_likelihood_free (lh);
@@ -209,7 +210,7 @@ test_nc_cluster_pseudo_counts_1p2_integral (TestNcClusterPseudoCounts *test, gco
 
   nc_matter_var_prepare (test->vp, test->cosmo);
 
-  //printf ("Integral 1p2\n");
+  printf ("Integral 1p2\n");
   nc_cluster_pseudo_counts_posterior_numerator (cpc, clusterm, cosmo, test->z, test->Mobs, test->Mobs_params);  
 }
 
@@ -227,7 +228,7 @@ test_nc_cluster_pseudo_counts_3d_integral (TestNcClusterPseudoCounts *test, gcon
 
   nc_matter_var_prepare (test->vp, test->cosmo);
 
-  //printf ("Integral 3dnew variables\n");
+  printf ("Integral 3dnew variables\n");
   nc_cluster_pseudo_counts_posterior_numerator_plcl (cpc, clusterm, cosmo, test->z, test->Mobs[0], test->Mobs[1], test->Mobs_params[0], test->Mobs_params[1]);
 }
 
@@ -243,7 +244,7 @@ test_nc_cluster_pseudo_counts_m2lnL (TestNcClusterPseudoCounts *test, gconstpoin
 
   nc_matter_var_prepare (test->vp, test->cosmo);
 
-  //printf ("Test m2lnL\n");
+  printf ("Test m2lnL\n");
   ncm_fit_set_params_reltol (test->fit, 1.0e-5);
   ncm_fit_m2lnL_val (test->fit, &m2lnL);
 //  printf ("m2lnL = %.5g\n", m2lnL);
