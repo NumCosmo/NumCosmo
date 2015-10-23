@@ -25,7 +25,7 @@
 /**
  * SECTION:nc_hicosmo
  * @title: NcHICosmo
- * @short_description: Abstract class for implementing homogeneous and isotropic cosmological models. 
+ * @short_description: Abstract class for implementing homogeneous and isotropic cosmological models.
  *
  * FIXME
  *
@@ -64,27 +64,27 @@ nc_hicosmo_class_init (NcHICosmoClass *klass)
 {
   GObjectClass* object_class = G_OBJECT_CLASS (klass);
   NcmModelClass *model_class = NCM_MODEL_CLASS (klass);
-  
+
   object_class->finalize = nc_hicosmo_finalize;
 
   ncm_model_class_add_params (model_class, 0, 0, 1);
-  
-  ncm_mset_model_register_id (model_class, 
+
+  ncm_mset_model_register_id (model_class,
                               "NcHICosmo",
                               "Homogeneous and isotropic cosmological models.",
                               NULL);
 
   ncm_model_class_check_params_info (model_class);
-  
+
   model_class->valid = &_nc_hicosmo_valid;
 
   klass->func_table   = g_array_new (FALSE, FALSE, sizeof (NcHICosmoFunc));
   klass->func_z_table = g_array_new (FALSE, FALSE, sizeof (NcHICosmoFuncZ));
   klass->func_hash    = g_hash_table_new (g_str_hash, g_str_equal);
   klass->func_z_hash  = g_hash_table_new (g_str_hash, g_str_equal);
-  
+
   {
-    NcHICosmoFunc func_table[] = 
+    NcHICosmoFunc func_table[] =
     {
       {"H0",        "Hubble constant.",                           &nc_hicosmo_H0,        NC_HICOSMO_IMPL_H0},
       {"Omega_b",   "Baryons density today.",                     &nc_hicosmo_Omega_b,   NC_HICOSMO_IMPL_Omega_b},
@@ -114,9 +114,9 @@ nc_hicosmo_class_init (NcHICosmoClass *klass)
       g_hash_table_insert (klass->func_hash, (gchar *)func_table[i].name, GINT_TO_POINTER (i + 1));
     }
   }
-  
+
   {
-    NcHICosmoFuncZ func_z_table[] = 
+    NcHICosmoFuncZ func_z_table[] =
     {
       {"H",        "Hubble function.",                            &nc_hicosmo_H,               NC_HICOSMO_IMPL_H},
       {"dH_dz",    "Derivative of the Hubble function.",          &nc_hicosmo_dH_dz,           NC_HICOSMO_IMPL_dH_dz},
@@ -139,16 +139,16 @@ nc_hicosmo_class_init (NcHICosmoClass *klass)
       g_hash_table_insert (klass->func_z_hash, (gchar *)func_z_table[i].name, GINT_TO_POINTER (i + 1));
     }
   }
-  
+
 }
 
-static gboolean 
+static gboolean
 _nc_hicosmo_valid (NcmModel *model)
 {
   if (!NCM_MODEL_CLASS (nc_hicosmo_parent_class)->valid (model))
     return FALSE;
   /* Chain up : start */
-  
+
   return (nc_hicosmo_E2 (NC_HICOSMO (model), 0) >= 0.0);
 }
 
@@ -189,7 +189,7 @@ nc_hicosmo_log_all_models (GType parent)
 
 /**
  * nc_hicosmo_class_func_table:
- * 
+ *
  * Returns: (transfer container) (element-type NcHICosmoFunc): the function table.
  */
 GArray *
@@ -203,7 +203,7 @@ nc_hicosmo_class_func_table (void)
 
 /**
  * nc_hicosmo_class_func_z_table:
- * 
+ *
  * Returns: (transfer container) (element-type NcHICosmoFuncZ): the function table.
  */
 GArray *
@@ -218,7 +218,7 @@ nc_hicosmo_class_func_z_table (void)
 /**
  * nc_hicosmo_class_get_func:
  * @name: function name.
- * 
+ *
  * Returns: (transfer none): the function @name or null if not found.
  */
 NcHICosmoFunc *
@@ -235,7 +235,7 @@ nc_hicosmo_class_get_func (const gchar *name)
 /**
  * nc_hicosmo_class_get_func_z:
  * @name: function name.
- * 
+ *
  * Returns: (transfer none): the function @name or null if not found.
  */
 NcHICosmoFuncZ *
@@ -265,7 +265,7 @@ nc_hicosmo_new_from_name (GType parent_type, gchar *cosmo_name)
   GType model_type = G_OBJECT_TYPE (obj);
 
   if (!g_type_is_a (model_type, parent_type))
-	g_error ("nc_hicosmo_new_from_name: NcHICosmo %s do not descend from %s.", cosmo_name, g_type_name (parent_type));
+    g_error ("nc_hicosmo_new_from_name: NcHICosmo %s do not descend from %s.", cosmo_name, g_type_name (parent_type));
   return NC_HICOSMO (obj);
 }
 
@@ -303,7 +303,7 @@ nc_hicosmo_free (NcHICosmo *cosmo)
  * The reference count of @cosmo is decreased and the pointer is set to NULL.
  *
  */
-void 
+void
 nc_hicosmo_clear (NcHICosmo **cosmo)
 {
   g_clear_object (cosmo);

@@ -36,6 +36,10 @@
 #endif /* HAVE_CONFIG_H */
 #include "build_cfg.h"
 
+#include "math/ncm_mset.h"
+#include "math/ncm_model.h"
+#include "nc_planck_fi.h"
+#include "nc_planck_fi_tt.h"
 #include "data/nc_data_planck_lkl.h"
 #include "plc/clik.h"
 
@@ -51,7 +55,7 @@ enum
 
 G_DEFINE_TYPE (NcDataPlanckLKL, nc_data_planck_lkl, NCM_TYPE_DATA);
 
-void _nc_data_planck_set_filename (NcDataPlanckLKL *plik, const gchar *filename);
+void _nc_data_planck_lkl_set_filename (NcDataPlanckLKL *plik, const gchar *filename);
 #define CLIK_OBJ(obj) ((clik_object *)(obj))
 #define CLIK_LENS_OBJ(obj) ((clik_lensing_object *)(obj))
 
@@ -73,6 +77,7 @@ nc_data_planck_lkl_init (NcDataPlanckLKL *plik)
   plik->obj         = NULL;
   plik->is_lensing  = FALSE;
   plik->nparams     = 0;
+  plik->ndata_entry = 0;
   plik->pnames      = NULL;
   plik->chksum      = NULL;
   plik->cmb_data    = 0;
@@ -95,7 +100,7 @@ nc_data_planck_lkl_set_property (GObject *object, guint prop_id, const GValue *v
   switch (prop_id)
   {
     case PROP_DATA_FILE:
-      _nc_data_planck_set_filename (plik, g_value_get_string (value));
+      _nc_data_planck_lkl_set_filename (plik, g_value_get_string (value));
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -176,10 +181,17 @@ nc_data_planck_lkl_finalize (GObject *object)
   G_OBJECT_CLASS (nc_data_planck_lkl_parent_class)->finalize (object);
 }
 
+static guint _nc_data_planck_lkl_get_length (NcmData *data);
+static void _nc_data_planck_lkl_begin (NcmData *data);
+static void _nc_data_planck_lkl_prepare (NcmData *data, NcmMSet *mset);
+/*static void _nc_data_planck_lkl_resample (NcmData *data, NcmMSet *mset, NcmRNG *rng);*/
+static void _nc_data_planck_lkl_m2lnL_val (NcmData *data, NcmMSet *mset, gdouble *m2lnL);
+
 static void
 nc_data_planck_lkl_class_init (NcDataPlanckLKLClass *klass)
 {
   GObjectClass* object_class = G_OBJECT_CLASS (klass);
+  NcmDataClass *data_class   = NCM_DATA_CLASS (klass);
 
   object_class->set_property = nc_data_planck_lkl_set_property;
   object_class->get_property = nc_data_planck_lkl_get_property;
@@ -217,11 +229,109 @@ nc_data_planck_lkl_class_init (NcDataPlanckLKLClass *klass)
                                                         "Params names checksum",
                                                         NULL,
                                                         G_PARAM_READABLE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
+  data_class->get_length = &_nc_data_planck_lkl_get_length;
+  data_class->begin      = &_nc_data_planck_lkl_begin;
+  data_class->prepare    = &_nc_data_planck_lkl_prepare;
+  /*data_class->resample   = &_nc_data_planck_lkl_resample;*/
+  data_class->m2lnL_val  = &_nc_data_planck_lkl_m2lnL_val;
 }
 
+static guint
+_nc_data_planck_lkl_get_length (NcmData *data)
+{
+  return NC_DATA_PLANCK_LKL (data)->ndata_entry;
+}
+
+static void
+_nc_data_planck_lkl_begin (NcmData *data)
+{
+  /* Nothing to do. */
+  NCM_UNUSED (data);
+}
+
+static void
+_nc_data_planck_lkl_prepare (NcmData *data, NcmMSet *mset)
+{
+
+}
+
+/*static void
+_nc_data_planck_lkl_resample (NcmData *data, NcmMSet *mset, NcmRNG *rng)
+{
+}
+*/
+
+/*
+ * Some parameters have differet upper/lower case combination in different
+ * likelihood, so we make a case insensitive search, if it is found
+ * update the name to mach the model's.
+ */
+static gboolean
+_nc_data_planck_lkl_find_param (NcmModel *model, gchar *name, guint *pi)
+{
+  guint nparams = ncm_model_len (model);
+  guint i;
+
+  for (i = 0; i < nparams; i++)
+  {
+    const gchar *mname = ncm_model_param_name (model, i);
+    const guint ns = strlen (name);
+    if (strncasecmp (name, mname, ns) == 0)
+    {
+      memcpy (name, mname, ns);
+      *pi = i;
+      return TRUE;
+    }
+  }
+  return FALSE;
+}
+
+static void
+_nc_data_planck_lkl_m2lnL_val (NcmData *data, NcmMSet *mset, gdouble *m2lnL)
+{
+  NcDataPlanckLKL *clik = NC_DATA_PLANCK_LKL (data);
+  gdouble *cl_and_pars = ncm_vector_ptr (clik->data_params, 0);
+  error *err = initError ();
+  NcPlanckFI *pfi = NC_PLANCK_FI (ncm_mset_peek (mset, nc_planck_fi_id ()));
+  guint i;
+
+  if (pfi == NULL)
+    g_error ("_nc_data_planck_lkl_m2lnL_val: a NcPlanckFI* model is required in NcmMSet.");
+
+  for (i = 0; i < clik->nparams; i++)
+  {
+    guint pi = 0;
+    gboolean pfound = ncm_model_param_index_from_name (NCM_MODEL (pfi), clik->pnames[i], &pi);
+    if (!pfound)
+    {
+      gboolean pfound2 = _nc_data_planck_lkl_find_param (NCM_MODEL (pfi), clik->pnames[i], &pi);
+      if (!pfound2)
+      {
+        g_error ("_nc_data_planck_lkl_m2lnL_val: cannot find parameter `%s' in models `%s'.",
+                 clik->pnames[i], ncm_model_name (NCM_MODEL (pfi)));
+      }
+    }
+    const gdouble p_i = ncm_model_param_get (NCM_MODEL (pfi), pi);
+    ncm_vector_set (clik->params, i, p_i);
+  }
+
+  if (clik->is_lensing)
+  {
+    *m2lnL = -2.0 * clik_lensing_compute (clik->obj, cl_and_pars, &err);
+    CLIK_CHECK_ERROR ("_nc_data_planck_lkl_m2lnL_val[clik_lensing_compute]", err);
+  }
+  else
+  {
+    *m2lnL = -2.0 * clik_compute (clik->obj, cl_and_pars, &err);
+    CLIK_CHECK_ERROR ("_nc_data_planck_lkl_m2lnL_val[clik_compute]", err);
+  }
+  endError (&err);
+  return;
+}
 
 void
-_nc_data_planck_set_filename (NcDataPlanckLKL *plik, const gchar *filename)
+_nc_data_planck_lkl_set_filename (NcDataPlanckLKL *plik, const gchar *filename)
 {
   g_assert (plik->filename == NULL);
   g_assert (plik->obj == NULL);
@@ -238,7 +348,9 @@ _nc_data_planck_set_filename (NcDataPlanckLKL *plik, const gchar *filename)
     guint i;
 
     plik->is_lensing = clik_try_lensing (plik->filename, &err) == 1;
-    CLIK_CHECK_ERROR ("_nc_data_planck_set_filename[clik_try_lensing]", err);
+    CLIK_CHECK_ERROR ("_nc_data_planck_lkl_set_filename[clik_try_lensing]", err);
+
+    plik->ndata_entry = 0;
 
 #define N_LENS_CMP 7
 #define N_CMP 6
@@ -264,20 +376,21 @@ _nc_data_planck_set_filename (NcDataPlanckLKL *plik, const gchar *filename)
       };
 
       clik_lensing_object *obj = clik_lensing_init (plik->filename, &err);
-      CLIK_CHECK_ERROR ("_nc_data_planck_set_filename[clik_lensing_init]", err);
+      CLIK_CHECK_ERROR ("_nc_data_planck_lkl_set_filename[clik_lensing_init]", err);
       plik->obj = obj;
 
       plik->nparams = clik_lensing_get_extra_parameter_names (obj, &names, &err);
-      CLIK_CHECK_ERROR ("_nc_data_planck_set_filename[clik_lensing_get_extra_parameter_names]", err);
-
-      data_params_len += plik->nparams;
+      CLIK_CHECK_ERROR ("_nc_data_planck_lkl_set_filename[clik_lensing_get_extra_parameter_names]", err);
 
       clik_lensing_get_lmaxs (obj, lmax, &err);
-      CLIK_CHECK_ERROR ("_nc_data_planck_set_filename[clik_lensing_get_lmaxs]", err);
+      CLIK_CHECK_ERROR ("_nc_data_planck_lkl_set_filename[clik_lensing_get_lmaxs]", err);
 
       for (i = 0; i < N_LENS_CMP; i++)
         data_params_len += lmax[i] >= 0 ? (lmax[i] + 1) : 0;
 
+      plik->ndata_entry = data_params_len;
+
+      data_params_len += plik->nparams;
       plik->data_params = ncm_vector_new (data_params_len);
 
       for (i = 0; i < N_LENS_CMP; i++)
@@ -312,16 +425,14 @@ _nc_data_planck_set_filename (NcDataPlanckLKL *plik, const gchar *filename)
       };
 
       clik_object *obj = clik_init (plik->filename, &err);
-      CLIK_CHECK_ERROR ("_nc_data_planck_set_filename[clik_init]", err);
+      CLIK_CHECK_ERROR ("_nc_data_planck_lkl_set_filename[clik_init]", err);
       plik->obj = obj;
 
       plik->nparams = clik_get_extra_parameter_names (obj, &names, &err);
-      CLIK_CHECK_ERROR ("_nc_data_planck_set_filename[clik_get_extra_parameter_names]", err);
-
-      data_params_len += plik->nparams;
+      CLIK_CHECK_ERROR ("_nc_data_planck_lkl_set_filename[clik_get_extra_parameter_names]", err);
 
       clik_get_lmax (obj, lmax, &err);
-      CLIK_CHECK_ERROR ("_nc_data_planck_set_filename[clik_get_lmaxs]", err);
+      CLIK_CHECK_ERROR ("_nc_data_planck_lkl_set_filename[clik_get_lmaxs]", err);
 
       printf ("###################################\n");
       printf ("# data_params_len %u\n", data_params_len);
@@ -331,6 +442,9 @@ _nc_data_planck_set_filename (NcDataPlanckLKL *plik, const gchar *filename)
         printf ("# data_params_len %d, %d\n", lmax[i], data_params_len);
       }
 
+      plik->ndata_entry = data_params_len;
+
+      data_params_len += plik->nparams;
       plik->data_params = ncm_vector_new (data_params_len);
 
       for (i = 0; i < N_CMP; i++)
@@ -364,6 +478,8 @@ _nc_data_planck_set_filename (NcDataPlanckLKL *plik, const gchar *filename)
     g_clear_pointer (&names, g_free);
     endError (&err);
   }
+
+  ncm_data_set_init (NCM_DATA (plik), TRUE);
 }
 
 /**

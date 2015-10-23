@@ -169,6 +169,12 @@
   </chapter>
   
   <chapter>
+    <title>Planck Foreground and Instrument Models</title>
+    <xi:include href="xml/nc_planck_fi.xml"/>
+    <xi:include href="xml/nc_planck_fi_tt.xml"/>
+  </chapter>
+
+  <chapter>
     <title>Perturbations</title>
     <xi:include href="xml/linear.xml"/>
     <xi:include href="xml/covariance.xml"/>

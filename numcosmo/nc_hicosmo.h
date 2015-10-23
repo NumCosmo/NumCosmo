@@ -52,16 +52,16 @@ G_BEGIN_DECLS
  * @NC_HICOSMO_IMPL_sigma_8: Standard deviation of the matter density contrast at scale $R = 8h^{-1} \text{Mpc}$, $\sigma_8$
  * @NC_HICOSMO_IMPL_T_gamma0: Radiation temperature today
  * @NC_HICOSMO_IMPL_z_lss: Redshift of the last scatering surface
- * @NC_HICOSMO_IMPL_as_drag: Acoustic Scale at drag redshift 
- * @NC_HICOSMO_IMPL_xb: Maximum redshift 
- * @NC_HICOSMO_IMPL_E2: Adimensional Hubble function squared 
+ * @NC_HICOSMO_IMPL_as_drag: Acoustic Scale at drag redshift
+ * @NC_HICOSMO_IMPL_xb: Maximum redshift
+ * @NC_HICOSMO_IMPL_E2: Adimensional Hubble function squared
  * @NC_HICOSMO_IMPL_dE2_dz: Derivative of the adimensional Hubble function squared.
  * @NC_HICOSMO_IMPL_d2E2_dz2: Second derivative of the adimensional Hubble function squared.
  * @NC_HICOSMO_IMPL_cs2: Speed of sound squared.
  * @NC_HICOSMO_IMPL_rhopp: energy density plus pressure.
  * @NC_HICOSMO_IMPL_cd: Comoving distance
  * @NC_HICOSMO_IMPL_powspec: Perturbations power spectrum
- * 
+ *
  * FIXME
  */
 typedef enum _NcHICosmoImpl
@@ -219,9 +219,10 @@ NcHICosmoFuncZ *nc_hicosmo_class_get_func_z (const gchar *name);
 
 NcHICosmo *nc_hicosmo_new_from_name (GType parent_type, gchar *cosmo_name);
 NcHICosmo *nc_hicosmo_ref (NcHICosmo *cosmo);
-void nc_hicosmo_log_all_models (GType parent);
 void nc_hicosmo_free (NcHICosmo *cosmo);
 void nc_hicosmo_clear (NcHICosmo **cosmo);
+
+void nc_hicosmo_log_all_models (GType parent);
 
 NcmMSetFunc *nc_hicosmo_create_mset_func0 (NcHICosmoFunc0 f0);
 NcmMSetFunc *nc_hicosmo_create_mset_func1 (NcHICosmoFunc1 f1);
@@ -374,7 +375,7 @@ nc_hicosmo_dec (NcHICosmo *cosmo, gdouble z)
   q = nc_hicosmo_q (cosmo, z);
   E2 = nc_hicosmo_E2 (cosmo, z);
   Ok = nc_hicosmo_Omega_k (cosmo);
-  
+
   return (2.0 * E2 - q * E2 - 2.0 * Ok * x * x) / 3.0;
 }
 
@@ -385,7 +386,7 @@ nc_hicosmo_wec (NcHICosmo *cosmo, gdouble z)
   gdouble x = 1.0 + z;
   E2 = nc_hicosmo_E2 (cosmo, z);
   Ok = nc_hicosmo_Omega_k (cosmo);
-  
+
   return (E2 - Ok * x * x);
 }
 

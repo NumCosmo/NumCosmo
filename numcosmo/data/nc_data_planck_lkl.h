@@ -60,6 +60,7 @@ struct _NcDataPlanckLKL
   gpointer obj;
   gboolean is_lensing;
   guint nparams;
+  guint ndata_entry;
   gchar **pnames;
   gchar *chksum;
   NcDataCMBDataType cmb_data;
