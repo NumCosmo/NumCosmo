@@ -61,7 +61,7 @@ nc_data_cluster_pseudo_counts_init (NcDataClusterPseudoCounts *dcpc)
   dcpc->cad       = NULL;
   dcpc->obs       = NULL;
   dcpc->true_data = NULL;
-  dcpc->np        = 1.0;
+  dcpc->np        = 0;
 }
 
 static void

@@ -510,7 +510,7 @@ nc_cluster_pseudo_counts_posterior_numerator (NcClusterPseudoCounts *cpc, NcClus
       gsl_integration_qag (&F, lnM_min, lnM_max, 0.0, 1.0e2 * NCM_DEFAULT_PRECISION, NCM_INTEGRAL_PARTITION, 6, *w, &P, &err);
     }
 
-    //printf ("numerator = %.8g err = %.8g dV = %.8g result = %.8g\n", P, err, dV_dzdOmega, P * dV_dzdOmega);
+    printf ("numerator = %.8g err = %.8g dV = %.8g result = %.8g\n", P, err, dV_dzdOmega, P * dV_dzdOmega);
     ncm_memory_pool_return (w);
     return P * dV_dzdOmega;
   }

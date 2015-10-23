@@ -98,6 +98,7 @@ for i in range (0, np):
   za.append (z)
   Da.append (D)
   dDa.append (dD)
+  print z, D
 
 #
 #  Ploting growth function.
