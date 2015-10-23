@@ -39,7 +39,7 @@
 #include "math/ncm_mset.h"
 #include "math/ncm_model.h"
 #include "nc_planck_fi.h"
-#include "nc_planck_fi_tt.h"
+#include "nc_planck_fi_cor_tt.h"
 #include "data/nc_data_planck_lkl.h"
 #include "plc/clik.h"
 

@@ -870,6 +870,7 @@ numcosmo/libcuba/divonne/Makefile
 numcosmo/libcuba/suave/Makefile
 numcosmo/libcuba/vegas/Makefile
 numcosmo/plc/Makefile
+numcosmo/class/Makefile
 tools/Makefile
 tests/Makefile
 docs/Makefile

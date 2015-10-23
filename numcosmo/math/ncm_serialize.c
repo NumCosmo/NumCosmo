@@ -70,8 +70,8 @@ ncm_serialize_init (NcmSerialize *ser)
   ser->saved_name_ser = g_hash_table_new_full (&g_str_hash, &g_str_equal, &g_free,
                                                (GDestroyNotify)&g_variant_unref);
 
-  ser->is_named_regex  = g_regex_new ("^\\s*[A-Z][A-Za-z0-9_]+\\s*\\[([A-Za-z0-9\\:]+)\\]\\s*$", 0, 0, &error);
-  ser->parse_obj_regex = g_regex_new ("^\\s*([A-Z][A-Za-z0-9_]+)\\s*([\\{]?.*[\\}]?)\\s*$", 0, 0, &error);
+  ser->is_named_regex  = g_regex_new ("^\\s*[A-Z][A-Za-z0-9]+\\s*\\[([A-Za-z0-9\\:]+)\\]\\s*$", 0, 0, &error);
+  ser->parse_obj_regex = g_regex_new ("^\\s*([A-Z][A-Za-z0-9]+)\\s*([\\{]?.*[\\}]?)\\s*$", 0, 0, &error);
   ser->autosave_count = 0;
 }
 

@@ -105,7 +105,7 @@
 #include "nc_recomb_seager.h"
 #include "nc_snia_dist_cov.h"
 #include "nc_planck_fi.h"
-#include "nc_planck_fi_tt.h"
+#include "nc_planck_fi_cor_tt.h"
 #include "data/nc_data_bao_a.h"
 #include "data/nc_data_bao_dv.h"
 #include "data/nc_data_bao_dvdv.h"
@@ -348,7 +348,7 @@ ncm_cfg_init (void)
   ncm_cfg_register_obj (NC_TYPE_SNIA_DIST_COV);
 
   ncm_cfg_register_obj (NC_TYPE_PLANCK_FI);
-  ncm_cfg_register_obj (NC_TYPE_PLANCK_FI_TT);
+  ncm_cfg_register_obj (NC_TYPE_PLANCK_FI_COR_TT);
 
   ncm_cfg_register_obj (NC_TYPE_DATA_BAO_A);
   ncm_cfg_register_obj (NC_TYPE_DATA_BAO_DV);

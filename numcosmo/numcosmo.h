@@ -37,7 +37,7 @@
 #include <numcosmo/nc_hicosmo_priors.h>
 #include <numcosmo/nc_snia_dist_cov.h>
 #include <numcosmo/nc_planck_fi.h>
-#include <numcosmo/nc_planck_fi_tt.h>
+#include <numcosmo/nc_planck_fi_cor_tt.h>
 #include <numcosmo/scalefactor.h>
 /* Cosmic thermodynamics */
 #include <numcosmo/nc_recomb.h>

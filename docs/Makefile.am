@@ -105,7 +105,14 @@ IGNORE_HFILES=linear_internal.h         \
               $(ignore_nlopt)           \
               levmar                    \
               libcuba                   \
-              plc
+              plc			\
+              class			\
+              class/source		\
+              class/hyrec		\
+              class/include
+
+# Ignore files also in the mkdb phase
+MKDB_OPTIONS=--ignore-files "${IGNORE_HFILES}"
 
 # Images to copy into HTML directory.
 # e.g. HTML_IMAGES=$(top_srcdir)/gtk/stock-icons/stock_about_24.png

@@ -27,8 +27,8 @@
  * @title: NcHICosmoDELinder
  * @short_description: Dark Energy -- Linder equation of state parametrization.
  *
- * See <link linkend="XLinder2003">Linder (2003)</link>.
- * 
+ * See [Linder (2003)][XLinder2003].
+ *
  */
 
 #ifdef HAVE_CONFIG_H

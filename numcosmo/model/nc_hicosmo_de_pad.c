@@ -27,8 +27,8 @@
  * @title: NcHICosmoDEPad
  * @short_description: Dark Energy -- Jassal-Bagla-Padmanabhan of state parametrization.
  *
- * See <link linkend="XJassal2005">Jassal et al. (2005)</link>.
- * 
+ * See [Jassal et al. (2005)][XJassal2005].
+ *
  */
 
 #ifdef HAVE_CONFIG_H

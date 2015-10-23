@@ -28,7 +28,7 @@
  * @title: NcDataBaoRDV
  * @short_description: Baryon Oscillation Data -- $r_s / D_V$ ratio.
  *
- * See <link linkend="XPercival2007">Percival et al. (2007)</link>.
+ * See [Percival et al. (2007)][XPercival2007].
  * 
  * Kazin et al. (arXiv:1401.0358): our implementation of the inverse covariance matrix is given by  
  * $$C^{-1}_{new} = \frac{1}{r_s^{\text{fid}}} C^{-1},$$

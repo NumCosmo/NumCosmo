@@ -29,7 +29,7 @@ AM_CFLAGS = \
 	 -Wall \
 	 $(MY_CFLAGS)
 
-SUBDIRS = $(MAYBE_LIBCUBA) levmar plc .
+SUBDIRS = $(MAYBE_LIBCUBA) levmar plc class .
 
 lib_LTLIBRARIES = libnumcosmo.la
 
@@ -43,7 +43,8 @@ libnumcosmo_la_LIBADD =     \
 	$(CFITSIO_LIBS)     \
 	$(LIBCUBA_PLACE)    \
 	plc/libclik.la      \
-	levmar/liblevmar.la
+	levmar/liblevmar.la \
+	class/libclass.la
 
 ncm_sources = \
 	ncm_build_inline.c                 \
@@ -224,7 +225,7 @@ nc_headers = \
 	nc_recomb_seager.h            \
 	nc_snia_dist_cov.h            \
 	nc_planck_fi.h                \
-	nc_planck_fi_tt.h             \
+	nc_planck_fi_cor_tt.h         \
 	model/nc_hicosmo_de.h         \
 	model/nc_hicosmo_de_linder.h  \
 	model/nc_hicosmo_de_pad.h     \
@@ -326,7 +327,7 @@ nc_sources = \
 	nc_recomb_seager.c           \
 	nc_snia_dist_cov.c           \
 	nc_planck_fi.c               \
-	nc_planck_fi_tt.c            \
+	nc_planck_fi_cor_tt.c        \
 	model/nc_hicosmo_de.c        \
 	model/nc_hicosmo_de_linder.c \
 	model/nc_hicosmo_de_pad.c    \

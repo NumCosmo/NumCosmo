@@ -8,17 +8,17 @@
 /*
  * numcosmo
  * Copyright (C) 2012 Sandro Dias Pinto Vitenti <sandro@isoftware.com.br>
- * 
+ *
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * numcosmo is distributed in the hope that it will be useful, but
  * WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
  * See the GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License along
  * with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
@@ -28,8 +28,8 @@
  * @title: NcDataBaoDVDV
  * @short_description: Baryon oscillation data -- $D_V / D_V$ ratio.
  *
- * See <link linkend="XPercival2007">Percival et al. (2007)</link>.
- * 
+ * See [Percival et al. (2007)][XPercival2007].
+ *
  */
 
 #ifdef HAVE_CONFIG_H
@@ -64,7 +64,7 @@ nc_data_bao_dvdv_set_property (GObject *object, guint prop_id, const GValue *val
 
   switch (prop_id)
   {
-    case PROP_DIST: 
+    case PROP_DIST:
       nc_data_bao_dvdv_set_dist (bao_dvdv, g_value_get_object (value));
       break;
     default:
@@ -96,7 +96,7 @@ nc_data_bao_dvdv_dispose (GObject *object)
   NcDataBaoDVDV *bao_dvdv = NC_DATA_BAO_DVDV (object);
 
   nc_distance_clear (&bao_dvdv->dist);
-  
+
   /* Chain up : end */
   G_OBJECT_CLASS (nc_data_bao_dvdv_parent_class)->dispose (object);
 }
@@ -149,7 +149,7 @@ _nc_data_bao_dvdv_prepare (NcmData *data, NcmMSet *mset)
  *
  ****************************************************************************/
 
-static void 
+static void
 _nc_data_bao_dvdv_mean_func (NcmDataGaussDiag *diag, NcmMSet *mset, NcmVector *vp)
 {
   NcDataBaoDVDV *bao_dvdv = NC_DATA_BAO_DVDV (diag);
@@ -157,16 +157,16 @@ _nc_data_bao_dvdv_mean_func (NcmDataGaussDiag *diag, NcmMSet *mset, NcmVector *v
 
   const gdouble Dv_035 = nc_distance_dilation_scale (bao_dvdv->dist, cosmo, 0.35);
   const gdouble Dv_020 = nc_distance_dilation_scale (bao_dvdv->dist, cosmo, 0.20);
-  
+
   ncm_vector_set (vp, 0, Dv_035 / Dv_020);
 }
 
 /**
  * nc_data_bao_dvdv_new_from_file:
  * @filename: file containing a serialized #NcDataBaoDVDV.
- * 
+ *
  * Creates a new #NcDataBaoDVDV from @filename.
- * 
+ *
  * Returns: (transfer full): the newly created #NcDataBaoDVDV.
  */
 NcDataBaoDVDV *
@@ -192,7 +192,7 @@ nc_data_bao_dvdv_new_from_id (NcDistance *dist, NcDataBaoId id)
 {
   NcDataBaoDVDV *bao_dvdv;
   gchar *filename;
-  
+
   switch (id)
   {
     case NC_DATA_BAO_DVDV_PERCIVAL2007:
@@ -217,11 +217,11 @@ nc_data_bao_dvdv_new_from_id (NcDistance *dist, NcDataBaoId id)
  * nc_data_bao_dvdv_set_dist:
  * @bao_dvdv: a #NcDataBaoDVDV
  * @dist: a #NcDistance
- * 
+ *
  * Sets the distance object.
- * 
+ *
  */
-void 
+void
 nc_data_bao_dvdv_set_dist (NcDataBaoDVDV *bao_dvdv, NcDistance *dist)
 {
   nc_distance_clear (&bao_dvdv->dist);
