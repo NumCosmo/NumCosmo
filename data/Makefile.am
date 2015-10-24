@@ -17,7 +17,8 @@ data_observational_DATA = \
 	nc_data_bao_dvdv_percival2007.obj \
 	nc_data_bao_empirical_fit_ross2015.obj \
 	nc_data_bao_rdv_blake2012.obj \
-	nc_data_bao_rdv_percival2007.obj
+	nc_data_bao_rdv_percival2007.obj \
+	class_data/bbn/sBBN.dat
 
 data_observationaldir = \
 	$(pkgdatadir)-$(VERSION)/data

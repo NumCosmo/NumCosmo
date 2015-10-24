@@ -184,6 +184,7 @@
     <xi:include href="xml/nc_hipert_two_fluids.xml"/>
     <xi:include href="xml/nc_hipert_boltzmann.xml"/>
     <xi:include href="xml/nc_hipert_boltzmann_std.xml"/>
+    <xi:include href="xml/nc_hipert_boltzmann_cbe.xml"/>
     <section>
       <title>Perturbation Interfaces</title>
       <xi:include href="xml/nc_hipert_iadiab.xml"/>

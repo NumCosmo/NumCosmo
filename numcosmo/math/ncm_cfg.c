@@ -1427,7 +1427,16 @@ ncm_cfg_get_data_filename (const gchar *filename, gboolean must_exist)
   }
 
   if (full_filename == NULL)
+  {
     full_filename = g_build_filename (PACKAGE_DATA_DIR, "data", filename, NULL);
+    if (!g_file_test (full_filename, G_FILE_TEST_EXISTS))
+    {
+      g_clear_pointer (&full_filename, g_free);
+    }
+  }
+
+  if (full_filename == NULL)
+    full_filename = g_build_filename (PACKAGE_SOURCE_DIR, "data", filename, NULL);
 
   if (!g_file_test (full_filename, G_FILE_TEST_EXISTS))
   {

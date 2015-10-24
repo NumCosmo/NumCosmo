@@ -54,6 +54,7 @@
 #include <numcosmo/perturbations/nc_hipert_two_fluids.h>
 #include <numcosmo/perturbations/nc_hipert_boltzmann.h>
 #include <numcosmo/perturbations/nc_hipert_boltzmann_std.h>
+#include <numcosmo/perturbations/nc_hipert_boltzmann_cbe.h>
 
 /* Model implementations */
 #include <numcosmo/model/nc_hicosmo_de.h>

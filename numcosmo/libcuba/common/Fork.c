@@ -1,3 +1,4 @@
+
 /*
 	Fork.c
 		fork the cores for parallel sampling

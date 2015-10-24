@@ -309,6 +309,7 @@ nc_headers = \
 	perturbations/nc_hipert_two_fluids.h   \
 	perturbations/nc_hipert_boltzmann.h    \
 	perturbations/nc_hipert_boltzmann_std.h \
+	perturbations/nc_hipert_boltzmann_cbe.h \
 	perturbations/linear.h                  \
 	perturbations/covariance.h              \
 	perturbations/linear_internal.h        \
@@ -411,6 +412,7 @@ nc_sources = \
 	perturbations/nc_hipert_two_fluids.c   \
 	perturbations/nc_hipert_boltzmann.c    \
 	perturbations/nc_hipert_boltzmann_std.c \
+	perturbations/nc_hipert_boltzmann_cbe.c \
 	perturbations/linear.c                  \
 	perturbations/covariance.c              \
 	perturbations/linear_cvodes.c           \

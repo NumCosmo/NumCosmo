@@ -86,7 +86,8 @@ class_sources = \
 	include/spectra.h        \
 	include/transfer.h       \
 	include/class.h          \
-	include/output.h
+	include/output.h         \
+	include/svnversion.h
 	
 
 libclass_la_SOURCES = \
