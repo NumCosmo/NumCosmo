@@ -34,7 +34,7 @@
 
 G_BEGIN_DECLS
 
-#define NC_TYPE_HIPERT_BOLTZMANN_CBE             (nc_hi_pert_boltzmann_cbe_get_type ())
+#define NC_TYPE_HIPERT_BOLTZMANN_CBE             (nc_hipert_boltzmann_cbe_get_type ())
 #define NC_HIPERT_BOLTZMANN_CBE(obj)             (G_TYPE_CHECK_INSTANCE_CAST ((obj), NC_TYPE_HIPERT_BOLTZMANN_CBE, NcHIPertBoltzmannCBE))
 #define NC_HIPERT_BOLTZMANN_CBE_CLASS(klass)     (G_TYPE_CHECK_CLASS_CAST ((klass), NC_TYPE_HIPERT_BOLTZMANN_CBE, NcHIPertBoltzmannCBEClass))
 #define NC_IS_HIPERT_BOLTZMANN_CBE(obj)          (G_TYPE_CHECK_INSTANCE_TYPE ((obj), NC_TYPE_HIPERT_BOLTZMANN_CBE))
@@ -59,7 +59,13 @@ struct _NcHIPertBoltzmannCBE
 
 };
 
-GType nc_hi_pert_boltzmann_cbe_get_type (void) G_GNUC_CONST;
+GType nc_hipert_boltzmann_cbe_get_type (void) G_GNUC_CONST;
+
+NcHIPertBoltzmannCBE *nc_hipert_boltzmann_cbe_new (void);
+NcHIPertBoltzmannCBE *nc_hipert_boltzmann_cbe_ref (NcHIPertBoltzmannCBE *cbe);
+void nc_hipert_boltzmann_cbe_free (NcHIPertBoltzmannCBE *cbe);
+void nc_hipert_boltzmann_cbe_clear (NcHIPertBoltzmannCBE **cbe);
+void nc_hipert_boltzmann_cbe_assert_default (NcHIPertBoltzmannCBE *cbe);
 
 G_END_DECLS
 
