@@ -274,12 +274,15 @@ _nc_data_planck_lkl_prepare (NcmData *data, NcmMSet *mset)
 {
   NcDataPlanckLKL *clik = NC_DATA_PLANCK_LKL (data);
   NcHICosmo *cosmo = NC_HICOSMO (ncm_mset_peek (mset, nc_hicosmo_id ()));
+  NcHIPrim *prim = NC_HIPRIM (ncm_mset_peek (mset, nc_hiprim_id ()));
   if (clik->pb == NULL)
     g_error ("_nc_data_planck_lkl_prepare: cannot prepare without a #NcHIPertBoltzmann object. Use nc_data_planck_lkl_set_hipert_boltzmann to set the perturbations object.");
   if (cosmo == NULL)
     g_error ("_nc_data_planck_lkl_prepare: cannot prepare without a #NcHICosmo object. Add one to the #NcmMSet.");
+  if (prim == NULL)
+    g_error ("_nc_data_planck_lkl_prepare: cannot prepare without a #NcHIPrim object. Add one to the #NcmMSet.");
 
-  nc_hipert_boltzmann_prepare_if_needed (clik->pb, cosmo);
+  nc_hipert_boltzmann_prepare_if_needed (clik->pb, prim, cosmo);
 }
 
 /*static void
@@ -393,6 +396,15 @@ _nc_data_planck_lkl_set_filename (NcDataPlanckLKL *plik, const gchar *filename)
 
     plik->is_lensing = clik_try_lensing (plik->filename, &err) == 1;
     CLIK_CHECK_ERROR ("_nc_data_planck_lkl_set_filename[clik_try_lensing]", err);
+
+    {
+      const gchar *type_name = g_type_name (NC_TYPE_DATA_PLANCK_LKL);
+      gchar *bfile     = g_path_get_basename (filename);
+      gchar *data_desc = g_strdup_printf ("%s[%s]", type_name, bfile);
+      ncm_data_set_desc (NCM_DATA (plik), data_desc);
+      g_free (bfile);
+      g_free (data_desc);
+    }
 
     plik->ndata_entry = 0;
 

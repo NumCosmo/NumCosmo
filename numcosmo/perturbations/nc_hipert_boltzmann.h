@@ -30,6 +30,7 @@
 #include <glib-object.h>
 #include <numcosmo/build_cfg.h>
 #include <numcosmo/math/ncm_model_ctrl.h>
+#include <numcosmo/nc_hiprim.h>
 #include <numcosmo/nc_hicosmo.h>
 #include <numcosmo/perturbations/nc_hipert.h>
 #include <numcosmo/nc_recomb.h>
@@ -49,6 +50,7 @@ typedef struct _NcHIPertBoltzmannClass NcHIPertBoltzmannClass;
 typedef struct _NcHIPertBoltzmann NcHIPertBoltzmann;
 
 typedef void (*NcHIPertBoltzmannCreate) (NcHIPertBoltzmann *pb, NcHICosmo *cosmo);
+typedef void (*NcHIPertBoltzmannPrepare) (NcHIPertBoltzmann *pb, NcHIPrim *prim, NcHICosmo *cosmo);
 typedef void (*NcHIPertBoltzmannConf) (NcHIPertBoltzmann *pb);
 typedef void (*NcHIPertBoltzmannEvol) (NcHIPertBoltzmann *pb, gdouble g);
 typedef gboolean (*NcHIPertBoltzmannTest) (NcHIPertBoltzmann *pb);
@@ -66,8 +68,8 @@ struct _NcHIPertBoltzmannClass
   NcHIPertBoltzmannConf reset;
   NcHIPertBoltzmannEvol evol_step;
   NcHIPertBoltzmannEvol evol;
-  NcHIPertBoltzmannCreate prepare;
-  NcHIPertBoltzmannCreate prepare_if_needed;
+  NcHIPertBoltzmannPrepare prepare;
+  NcHIPertBoltzmannPrepare prepare_if_needed;
   NcHIPertBoltzmannSources get_sources;
   NcHIPertBoltzmannConf print_stats;
   NcHIPertBoltzmannGet get_z;
@@ -154,7 +156,8 @@ struct _NcHIPertBoltzmann
   gboolean calc_transfer;
   guint TT_lmax, EE_lmax, BB_lmax, TE_lmax, TB_lmax, EB_lmax;
   gboolean tight_coupling;
-  NcmModelCtrl *ctrl;
+  NcmModelCtrl *ctrl_cosmo;
+  NcmModelCtrl *ctrl_prim;
 };
 
 GType nc_hipert_boltzmann_get_type (void) G_GNUC_CONST;
@@ -185,8 +188,8 @@ guint nc_hipert_boltzmann_get_TE_lmax (NcHIPertBoltzmann *pb);
 guint nc_hipert_boltzmann_get_TB_lmax (NcHIPertBoltzmann *pb);
 guint nc_hipert_boltzmann_get_EB_lmax (NcHIPertBoltzmann *pb);
 
-void nc_hipert_boltzmann_prepare (NcHIPertBoltzmann *pb, NcHICosmo *cosmo);
-void nc_hipert_boltzmann_prepare_if_needed (NcHIPertBoltzmann *pb, NcHICosmo *cosmo);
+void nc_hipert_boltzmann_prepare (NcHIPertBoltzmann *pb, NcHIPrim *prim, NcHICosmo *cosmo);
+void nc_hipert_boltzmann_prepare_if_needed (NcHIPertBoltzmann *pb, NcHIPrim *prim, NcHICosmo *cosmo);
 
 void nc_hipert_boltzmann_get_TT_Cls (NcHIPertBoltzmann *pb, NcmVector *Cls);
 void nc_hipert_boltzmann_get_EE_Cls (NcHIPertBoltzmann *pb, NcmVector *Cls);

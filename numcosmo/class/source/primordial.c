@@ -371,7 +371,7 @@ int primordial_init(
 
   /** - deal with the case of external calculation of Pk */
 
-  else if (ppm->primordial_spec_type == external_Pk) {
+  else if ((ppm->primordial_spec_type == external_Pk) || (ppm->primordial_spec_type == external_Pk_callback)) {
 
     class_test(ppt->has_scalars == _FALSE_,
                ppm->error_message,
@@ -388,10 +388,23 @@ int primordial_init(
     if (ppm->primordial_verbose > 0)
       printf(" (Pk calculated externally)\n");
 
-    class_call_except(primordial_external_spectrum_init(ppt,ppm),
-                      ppm->error_message,
-                      ppm->error_message,
-                      primordial_free(ppm));
+    switch (ppm->primordial_spec_type)
+    {
+      case external_Pk:
+        class_call_except(primordial_external_spectrum_init(ppt,ppm),
+                          ppm->error_message,
+                          ppm->error_message,
+                          primordial_free(ppm));
+        break;
+      case external_Pk_callback:
+        class_call_except(primordial_external_callback_spectrum_init(ppt,ppm),
+                          ppm->error_message,
+                          ppm->error_message,
+                          primordial_free(ppm));
+        break;
+      default:
+        break;
+    }
   }
 
   else {
@@ -421,7 +434,7 @@ int primordial_init(
   /** derive spectral parameters from numerically computed spectra
       (not used by the rest of the code, but useful to keep in memory for several types of investigations) */
 
-  if (ppm->primordial_spec_type != analytic_Pk) {
+  if (ppm->primordial_spec_type != analytic_Pk && _FALSE_ /* Turned off! */) {
 
     dlnk = log(10.)/ppr->k_per_decade_primordial;
 
@@ -3019,6 +3032,62 @@ int primordial_external_spectrum_init(
 
   return _SUCCESS_;
 }
+
+/**
+ * This routine gets the primordial spectrum from a callback function,
+ * and stores the tabulated values.
+ * The sampling of the k's from CLASS is used.
+ *
+ * Author: Sandro Dias Pinto Vitenti (sandro@isoftware.com.br)
+ * Date:   2015-10-27
+ *
+ * @param ppm  Input/output: pointer to perturbs structure
+ * @param ppm  Input/output: pointer to primordial structure
+ * @return the error status
+ */
+
+int primordial_external_callback_spectrum_init(
+                                      struct perturbs * ppt,
+                                      struct primordial * ppm
+                                      ) {
+  unsigned int i;
+
+  class_test (ppm->external_Pk_callback_pks == NULL,
+              ppm->error_message,
+              "At least the scalar callback must be called when "
+              "using primordial_external_callback. ",
+              ppt->k_max);
+
+  if (ppm->external_Pk_callback_pkt == NULL)
+  {
+    for (i = 0; i < ppm->lnk_size; i++)
+    {
+      const double lnk_i  = ppm->lnk[i];
+      const double lnpks_i = ppm->external_Pk_callback_pks (lnk_i, ppm->external_Pk_callback_data);
+
+      ppm->lnpk[ppt->index_md_scalars][i] = lnpks_i;
+    }
+    ppm->is_non_zero[ppt->index_md_scalars][ppt->index_ic_ad]  = _TRUE_;
+    ppm->is_non_zero[ppt->index_md_tensors][ppt->index_ic_ten] = _TRUE_;
+  }
+  else
+  {
+    for (i = 0; i < ppm->lnk_size; i++)
+    {
+      const double lnk_i   = ppm->lnk[i];
+      const double lnpks_i = ppm->external_Pk_callback_pks (lnk_i, ppm->external_Pk_callback_data);
+      const double lnpkt_i = ppm->external_Pk_callback_pkt (lnk_i, ppm->external_Pk_callback_data);
+
+      ppm->lnpk[ppt->index_md_scalars][i] = lnpks_i;
+      ppm->lnpk[ppt->index_md_tensors][i] = lnpkt_i;
+    }
+    ppm->is_non_zero[ppt->index_md_scalars][ppt->index_ic_ad]  = _TRUE_;
+    ppm->is_non_zero[ppt->index_md_tensors][ppt->index_ic_ten] = _TRUE_;
+  }
+
+  return _SUCCESS_;
+}
+
 
 int primordial_output_titles(struct perturbs * ppt,
                              struct primordial * ppm,

@@ -51,6 +51,7 @@
 #endif /* HAVE_CONFIG_H */
 #include "build_cfg.h"
 
+#include "nc_hiprim.h"
 #include "model/nc_hicosmo_de.h"
 #include "nc_hipert_boltzmann_cbe.h"
 
@@ -364,7 +365,7 @@ nc_hipert_boltzmann_cbe_set_property (GObject *object, guint prop_id, const GVal
     case PROP_PREC:
       nc_cbe_precision_clear (&cbe->prec);
       cbe->prec = g_value_dup_object (value);
-      ncm_model_ctrl_force_update (NC_HIPERT_BOLTZMANN (cbe)->ctrl);
+      ncm_model_ctrl_force_update (NC_HIPERT_BOLTZMANN (cbe)->ctrl_cosmo);
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -415,7 +416,7 @@ nc_hipert_boltzmann_cbe_finalize (GObject *object)
   G_OBJECT_CLASS (nc_hipert_boltzmann_cbe_parent_class)->finalize (object);
 }
 
-static void _nc_hipert_boltzmann_cbe_prepare (NcHIPertBoltzmann *pb, NcHICosmo *cosmo);
+static void _nc_hipert_boltzmann_cbe_prepare (NcHIPertBoltzmann *pb, NcHIPrim *prim, NcHICosmo *cosmo);
 static void _nc_hipert_boltzmann_cbe_get_TT_Cls (NcHIPertBoltzmann *pb, NcmVector *Cls);
 static void _nc_hipert_boltzmann_cbe_get_EE_Cls (NcHIPertBoltzmann *pb, NcmVector *Cls);
 static void _nc_hipert_boltzmann_cbe_get_BB_Cls (NcHIPertBoltzmann *pb, NcmVector *Cls);
@@ -789,10 +790,31 @@ G_STMT_START { \
   cbe->priv->ppt.perturbations_verbose = cbe->pert_verbose;
 }
 
-static void
-_nc_hipert_boltzmann_cbe_set_prim (NcHIPertBoltzmannCBE *cbe, NcHICosmo *cosmo)
+gdouble
+_external_Pk_callback_pks (const double lnk, gpointer data)
 {
-  cbe->priv->ppm.primordial_spec_type = analytic_Pk;
+  NcHIPrim *prim = NC_HIPRIM (data);
+
+  return nc_hiprim_lnSA_powspec_lnk (prim, lnk);
+}
+
+gdouble
+_external_Pk_callback_pkt (const double lnk, gpointer data)
+{
+  NcHIPrim *prim = NC_HIPRIM (data);
+
+  return nc_hiprim_lnT_powspec_lnk (prim, lnk);
+}
+
+static void
+_nc_hipert_boltzmann_cbe_set_prim (NcHIPertBoltzmannCBE *cbe, NcHIPrim *prim, NcHICosmo *cosmo)
+{
+  cbe->priv->ppm.primordial_spec_type = external_Pk_callback;
+  /*cbe->priv->ppm.primordial_spec_type = analytic_Pk;*/
+  cbe->priv->ppm.external_Pk_callback_pks  = &_external_Pk_callback_pks;
+  /*cbe->priv->ppm.external_Pk_callback_pkt  = &_external_Pk_callback_pkt;*/
+  cbe->priv->ppm.external_Pk_callback_data = prim;
+
   cbe->priv->ppm.k_pivot       = 0.05;
   cbe->priv->ppm.A_s           = 2.215e-9;
   cbe->priv->ppm.n_s           = 0.9619;
@@ -912,13 +934,13 @@ _nc_hipert_boltzmann_cbe_set_nonlin (NcHIPertBoltzmannCBE *cbe, NcHICosmo *cosmo
 }
 
 static void
-_nc_hipert_boltzmann_cbe_prepare (NcHIPertBoltzmann *pb, NcHICosmo *cosmo)
+_nc_hipert_boltzmann_cbe_prepare (NcHIPertBoltzmann *pb, NcHIPrim *prim, NcHICosmo *cosmo)
 {
   NcHIPertBoltzmannCBE *cbe = NC_HIPERT_BOLTZMANN_CBE (pb);
   _nc_hipert_boltzmann_cbe_set_bg (cbe, cosmo);
   _nc_hipert_boltzmann_cbe_set_thermo (cbe, cosmo);
   _nc_hipert_boltzmann_cbe_set_pert (cbe, cosmo);
-  _nc_hipert_boltzmann_cbe_set_prim (cbe, cosmo);
+  _nc_hipert_boltzmann_cbe_set_prim (cbe, prim, cosmo);
   _nc_hipert_boltzmann_cbe_set_transfer (cbe, cosmo);
   _nc_hipert_boltzmann_cbe_set_spectra (cbe, cosmo);
   _nc_hipert_boltzmann_cbe_set_lensing (cbe, cosmo);

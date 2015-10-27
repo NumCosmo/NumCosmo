@@ -219,7 +219,7 @@ nc_hicosmo_de_class_init (NcHICosmoDEClass *klass)
   ncm_model_class_add_params (model_class, NC_HICOSMO_DE_SPARAM_LEN, 0, PROP_SIZE);
   /* Set H_0 param info */
   ncm_model_class_set_sparam (model_class, NC_HICOSMO_DE_H0, "H_0", "H0",
-                              10.0, 200.0, 1.0,
+                              40.0, 120.0, 1.0,
                               NC_HICOSMO_DEFAULT_PARAMS_ABSTOL, NC_HICOSMO_DE_DEFAULT_H0,
                               NCM_PARAM_TYPE_FIXED);
   /* Set Omega_c param info */
@@ -234,17 +234,17 @@ nc_hicosmo_de_class_init (NcHICosmoDEClass *klass)
                               NCM_PARAM_TYPE_FREE);
   /* Set T_gamma0 param info */
   ncm_model_class_set_sparam (model_class, NC_HICOSMO_DE_T_GAMMA0, "T_{\\gamma0}", "Tgamma0",
-                              1e-8,  10.0, 1.0e-2,
+                              2.0,  3.0, 1.0e-2,
                               NC_HICOSMO_DEFAULT_PARAMS_ABSTOL, NC_HICOSMO_DE_DEFAULT_T_GAMMA0,
                               NCM_PARAM_TYPE_FIXED);
   /* Set ENnu param info */
   ncm_model_class_set_sparam (model_class, NC_HICOSMO_DE_ENNU, "N_\nu", "ENnu",
-                              0.0,  10.0, 1.0e-2,
+                              0.0,  4.0, 1.0e-2,
                               NC_HICOSMO_DEFAULT_PARAMS_ABSTOL, NC_HICOSMO_DE_DEFAULT_ENNU,
                               NCM_PARAM_TYPE_FIXED);
   /* Set Omega_b param info */
   ncm_model_class_set_sparam (model_class, NC_HICOSMO_DE_OMEGA_B, "\\Omega_b", "Omegab",
-                              1e-8,  2.0, 1.0e-2,
+                              0.03,  0.05, 5.0e-4,
                               NC_HICOSMO_DEFAULT_PARAMS_ABSTOL, NC_HICOSMO_DE_DEFAULT_OMEGA_B,
                               NCM_PARAM_TYPE_FIXED);
   /* Set n_s param info */

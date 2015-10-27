@@ -43,6 +43,7 @@ G_BEGIN_DECLS
  * @NC_DATA_CMB_TYPE_TB: Temperature - Mode B correlation data
  * @NC_DATA_CMB_TYPE_EB: Mode E - Mode B correlation data
  * @NC_DATA_CMB_TYPE_PHIPHI: $\phi$ - $\phi$ correlation data
+ * @NC_DATA_CMB_TYPE_ALL: All types above
  *
  * FIXME
  *

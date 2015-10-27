@@ -187,7 +187,7 @@ _nc_hicosmo_log_all_models_go (GType model_type, guint n)
 void
 nc_hicosmo_log_all_models (GType parent)
 {
-  g_message ("# Registred NcHICosmos:%s are:\n", g_type_name (parent));
+  g_message ("# Registred NcHICosmo:%s are:\n", g_type_name (parent));
   _nc_hicosmo_log_all_models_go (parent, 0);
 }
 

@@ -33,6 +33,7 @@
 
 /* Base types and components */
 #include <numcosmo/nc_hicosmo.h>
+#include <numcosmo/nc_hiprim.h>
 #include <numcosmo/nc_distance.h>
 #include <numcosmo/nc_hicosmo_priors.h>
 #include <numcosmo/nc_snia_dist_cov.h>
@@ -69,6 +70,7 @@
 #include <numcosmo/model/nc_hicosmo_qlinear.h>
 #include <numcosmo/model/nc_hicosmo_qspline.h>
 #include <numcosmo/model/nc_hicosmo_qgrw.h>
+#include <numcosmo/model/nc_hiprim_power_law.h>
 #include <numcosmo/model/quantum_gravity.h>
 
 /* Large Scale Structure / Structure Formation */

@@ -219,6 +219,7 @@ ncm_headers_internal =
 
 nc_headers = \
 	nc_hicosmo.h                  \
+	nc_hiprim.h                   \
 	nc_distance.h                 \
 	nc_hicosmo_priors.h           \
 	nc_recomb.h                   \
@@ -238,6 +239,7 @@ nc_headers = \
 	model/nc_hicosmo_qlinear.h    \
 	model/nc_hicosmo_qspline.h    \
 	model/nc_hicosmo_qgrw.h       \
+	model/nc_hiprim_power_law.h   \
 	lss/nc_window.h               \
 	lss/nc_window_tophat.h        \
 	lss/nc_window_gaussian.h      \
@@ -324,6 +326,7 @@ nc_headers = \
 
 nc_sources = \
 	nc_hicosmo.c                 \
+	nc_hiprim.c                  \
 	nc_distance.c                \
 	nc_hicosmo_priors.c          \
 	nc_recomb.c                  \
@@ -343,6 +346,7 @@ nc_sources = \
 	model/nc_hicosmo_qlinear.c   \
 	model/nc_hicosmo_qspline.c   \
 	model/nc_hicosmo_qgrw.c      \
+	model/nc_hiprim_power_law.c   \
 	lss/nc_window.c              \
 	lss/nc_window_tophat.c       \
 	lss/nc_window_gaussian.c     \

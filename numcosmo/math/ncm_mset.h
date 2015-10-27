@@ -47,7 +47,7 @@ G_BEGIN_DECLS
 typedef struct _NcmMSetClass NcmMSetClass;
 typedef struct _NcmMSet NcmMSet;
 typedef struct _NcmMSetPIndex NcmMSetPIndex;
-typedef struct _NcmMSetModelDesc NcmMSetModelDesc; 
+typedef struct _NcmMSetModelDesc NcmMSetModelDesc;
 
 #define NCM_MSET_MAX_SUBMODEL 1000
 #define NCM_MSET_INIT_MARRAY 32
@@ -102,18 +102,18 @@ void ncm_mset_model_register_id (NcmModelClass *model_class, const gchar *ns, co
 /**
  * NCM_MSET_MODEL_ID_FUNC: (skip)
  * @model_ns: FIXME
- * 
+ *
  * FIXME
- * 
+ *
  */
 #define NCM_MSET_MODEL_ID_FUNC(model_ns) model_ns##_id
 
 /**
  * NCM_MSET_MODEL_DECLARE_ID: (skip)
  * @model_ns: FIXME
- * 
+ *
  * FIXME
- * 
+ *
  */
 #define NCM_MSET_MODEL_DECLARE_ID(model_ns) gint32 NCM_MSET_MODEL_ID_FUNC(model_ns) (void) G_GNUC_CONST
 
@@ -121,9 +121,9 @@ void ncm_mset_model_register_id (NcmModelClass *model_class, const gchar *ns, co
  * NCM_MSET_MODEL_REGISTER_ID: (skip)
  * @model_ns: FIXME
  * @typemacro: FIXME
- * 
+ *
  * FIXME
- * 
+ *
  */
 #define NCM_MSET_MODEL_REGISTER_ID(model_ns,typemacro) \
 gint32 NCM_MSET_MODEL_ID_FUNC(model_ns) (void) \
@@ -197,6 +197,7 @@ const gchar *ncm_mset_param_name (NcmMSet *mset, NcmModelID mid, guint pid);
 const gchar *ncm_mset_param_symbol (NcmMSet *mset, NcmModelID mid, guint pid);
 void ncm_mset_param_set_ftype (NcmMSet *mset, NcmModelID mid, guint pid, NcmParamType ftype);
 void ncm_mset_param_set_all_ftype (NcmMSet *mset, NcmParamType ftype);
+void ncm_mset_param_set_mid_ftype (NcmMSet *mset, NcmModelID mid, NcmParamType ftype);
 void ncm_mset_param_set_vector (NcmMSet *mset, NcmVector *params);
 void ncm_mset_param_get_vector (NcmMSet *mset, NcmVector *params);
 gdouble ncm_mset_param_get_scale (NcmMSet *mset, NcmModelID mid, guint pid);

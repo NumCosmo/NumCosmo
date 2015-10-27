@@ -134,7 +134,7 @@
   </chapter>
 
   <chapter>
-    <title>Models</title>
+    <title>Cosmological Models</title>
     <xi:include href="xml/nc_hicosmo.xml"/>
     <xi:include href="xml/nc_hicosmo_priors.xml"/>
     <xi:include href="xml/nc_hicosmo_lcdm.xml"/>
@@ -161,19 +161,33 @@
   </chapter>
 
   <chapter>
-    <title>Cosmological Functions</title>
+    <title>Primordial Cosmology Models</title>
+    <xi:include href="xml/nc_hiprim.xml"/>
+    <section>
+      <title>Inflationary</title>
+      <xi:include href="xml/nc_hiprim_power_law.xml"/>
+    </section>
+  </chapter>
+
+  <chapter>
+    <title>Observational Cosmology Models</title>
+    <section>
+      <title>Planck Foreground and Instrument Models</title>
+      <xi:include href="xml/nc_planck_fi.xml"/>
+      <xi:include href="xml/nc_planck_fi_cor_tt.xml"/>
+    </section>
+    <section>
+      <title>Supernova Covariance Models</title>      
+      <xi:include href="xml/nc_snia_dist_cov.xml"/>
+    </section>
+  </chapter>
+
+  <chapter>
+    <title>Cosmological Calculators</title>
     <xi:include href="xml/nc_distance.xml"/>
     <xi:include href="xml/nc_recomb.xml"/>
     <xi:include href="xml/nc_recomb_seager.xml"/>
-    <xi:include href="xml/nc_snia_dist_cov.xml"/>
     <xi:include href="xml/scalefactor.xml"/>
-    <xi:include href="xml/nc_cbe_precision.xml"/>
-  </chapter>
-  
-  <chapter>
-    <title>Planck Foreground and Instrument Models</title>
-    <xi:include href="xml/nc_planck_fi.xml"/>
-    <xi:include href="xml/nc_planck_fi_cor_tt.xml"/>
   </chapter>
 
   <chapter>
@@ -186,7 +200,11 @@
     <xi:include href="xml/nc_hipert_two_fluids.xml"/>
     <xi:include href="xml/nc_hipert_boltzmann.xml"/>
     <xi:include href="xml/nc_hipert_boltzmann_std.xml"/>
-    <xi:include href="xml/nc_hipert_boltzmann_cbe.xml"/>
+    <section>
+      <title>CLASS Backend</title>
+        <xi:include href="xml/nc_cbe_precision.xml"/>
+        <xi:include href="xml/nc_hipert_boltzmann_cbe.xml"/>
+     </section>
     <section>
       <title>Perturbation Interfaces</title>
       <xi:include href="xml/nc_hipert_iadiab.xml"/>

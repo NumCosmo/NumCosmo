@@ -13,7 +13,8 @@ enum primordial_spectrum_type {
   inflation_V,
   inflation_H,
   inflation_V_end,
-  external_Pk
+  external_Pk,
+  external_Pk_callback
 };
 
 /** enum defining whether the spectrum routine works with linear or logarithmic input/output */
@@ -277,6 +278,11 @@ struct primordial {
 
   ErrorMsg error_message; /**< zone for writing error messages */
 
+  /* external callback support */
+
+  double (*external_Pk_callback_pks) (const double lnk, void *data);
+  double (*external_Pk_callback_pkt) (const double lnk, void *data);
+  void *external_Pk_callback_data;
 };
 
 struct primordial_inflation_parameters_and_workspace {
@@ -466,6 +472,11 @@ extern "C" {
                                   );
 
   int primordial_external_spectrum_init(
+                                        struct perturbs * ppt,
+                                        struct primordial * ppm
+                                        );
+
+  int primordial_external_callback_spectrum_init(
                                         struct perturbs * ppt,
                                         struct primordial * ppm
                                         );
