@@ -1,6 +1,6 @@
 ## Process this file with automake to produce Makefile.in
 
-SUBDIRS = 
+SUBDIRS =
 
 data_observational_DATA = \
 	data_observation.sqlite3               \
@@ -21,7 +21,7 @@ data_observational_DATA = \
 	class_data/bbn/sBBN.dat                \
 	class_data/hyrec/Alpha_inf.dat         \
 	class_data/hyrec/input.dat             \
-	class_data/hyrec/R_inf.dat             \ 
+	class_data/hyrec/R_inf.dat             \
 	class_data/hyrec/two_photon_tables.dat
 
 data_observationaldir = \

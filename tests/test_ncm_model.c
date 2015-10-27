@@ -61,7 +61,7 @@ gint
 main (gint argc, gchar *argv[])
 {
   gint i;
-  
+
   g_test_init (&argc, &argv, NULL);
   ncm_cfg_init ();
   ncm_cfg_enable_gsl_err_handler ();
@@ -71,7 +71,7 @@ main (gint argc, gchar *argv[])
     {"model/grandchild", &test_ncm_model_child_child_new, &test_ncm_model_free},
     {"model/reparam",    &test_ncm_model_reparam_new,     &test_ncm_model_free},
   };
-  
+
   for (i = 0; i < TEST_NCM_MODEL_NTYPES; i++)
   {
     gchar *d;
@@ -120,11 +120,11 @@ main (gint argc, gchar *argv[])
   g_test_run ();
 }
 
-void 
+void
 test_ncm_model_new (TestNcmModel *test, gconstpointer pdata)
 {
   test->type       = NCM_TYPE_MODEL_TEST;
-  test->tm         = g_object_new (test->type, NULL);  
+  test->tm         = g_object_new (test->type, NULL);
   test->sparam_len = SPARAM_LEN1;
   test->vparam_len = VPARAM_LEN1;
   test->name       = name_tot[0];
@@ -134,7 +134,7 @@ test_ncm_model_new (TestNcmModel *test, gconstpointer pdata)
   g_assert (test->type != 0);
 }
 
-void 
+void
 test_ncm_model_child_new (TestNcmModel *test, gconstpointer pdata)
 {
   test->type       = NCM_TYPE_MODEL_TEST_CHILD;
@@ -144,11 +144,11 @@ test_ncm_model_child_new (TestNcmModel *test, gconstpointer pdata)
   test->name       = name_tot[1];
   test->nick       = nick_tot[1];
   test->reparam    = NULL;
-  
+
   g_assert (test->type != 0);
 }
 
-void 
+void
 test_ncm_model_child_child_new (TestNcmModel *test, gconstpointer pdata)
 {
   test->type       = NCM_TYPE_MODEL_TEST_CHILD_CHILD;
@@ -158,7 +158,7 @@ test_ncm_model_child_child_new (TestNcmModel *test, gconstpointer pdata)
   test->name       = name_tot[2];
   test->nick       = nick_tot[2];
   test->reparam    = NULL;
-  
+
   g_assert (test->type != 0);
 }
 
@@ -187,6 +187,7 @@ _test_ncm_model_create_reparam (TestNcmModel *test)
   }
 
   relin = ncm_reparam_linear_new (size, T, v);
+  ncm_reparam_linear_set_compat_type (relin, NCM_TYPE_MODEL_TEST);
 
   for (i = 0; i < cdesc_n; i++)
   {
@@ -217,7 +218,7 @@ _test_ncm_model_create_reparam (TestNcmModel *test)
   return NCM_REPARAM (relin);
 }
 
-void 
+void
 test_ncm_model_reparam_new (TestNcmModel *test, gconstpointer pdata)
 {
   test->type       = NCM_TYPE_MODEL_TEST;
@@ -231,7 +232,7 @@ test_ncm_model_reparam_new (TestNcmModel *test, gconstpointer pdata)
   g_assert (test->type != 0);
 }
 
-void 
+void
 test_ncm_model_free (TestNcmModel *test, gconstpointer pdata)
 {
   NCM_TEST_FREE (g_object_unref, test->tm);
@@ -394,7 +395,7 @@ test_ncm_model_test_setget (TestNcmModel *test, gconstpointer pdata)
       if (val != ncm_model_param_get (model, i))
         break;
     }
-    
+
     ncm_model_param_set (model, i, val);
     ncm_assert_cmpdouble (ncm_model_param_get (model, i), ==, val);
 
@@ -476,7 +477,7 @@ test_ncm_model_test_setget_prop (TestNcmModel *test, gconstpointer pdata)
       if (val != ncm_model_orig_param_get (model, i))
         break;
     }
-    
+
     g_object_set (model, s_name_tot[i], val, NULL);
     g_object_get (model, s_name_tot[i], &val_out, NULL);
     ncm_assert_cmpdouble (val_out, ==, val);
@@ -505,7 +506,7 @@ test_ncm_model_test_setget_prop (TestNcmModel *test, gconstpointer pdata)
     tmp_out = NULL;
     g_object_set (model, v_name_tot[i], tmp, NULL);
     g_object_get (model, v_name_tot[i], &tmp_out, NULL);
-    
+
     for (j = 0; j < v_len_tot[i]; j++)
     {
       guint n = ncm_model_vparam_index (model, i, j);
@@ -623,7 +624,7 @@ test_ncm_model_test_name_index (TestNcmModel *test, gconstpointer pdata)
   }
 }
 
-void 
+void
 test_ncm_model_test_dup (TestNcmModel *test, gconstpointer pdata)
 {
   NcmSerialize *ser = ncm_serialize_global ();

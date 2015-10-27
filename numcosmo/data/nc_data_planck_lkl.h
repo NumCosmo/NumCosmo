@@ -33,6 +33,7 @@
 #include <numcosmo/math/ncm_vector.h>
 #include <numcosmo/math/ncm_matrix.h>
 #include <numcosmo/data/nc_data_cmb.h>
+#include <numcosmo/perturbations/nc_hipert_boltzmann.h>
 
 G_BEGIN_DECLS
 
@@ -56,6 +57,7 @@ struct _NcDataPlanckLKL
 {
   /*< private >*/
   NcmData parent_instance;
+  NcHIPertBoltzmann *pb;
   gchar *filename;
   gpointer obj;
   gboolean is_lensing;
@@ -78,8 +80,11 @@ struct _NcDataPlanckLKL
 GType nc_data_planck_lkl_get_type (void) G_GNUC_CONST;
 
 NcDataPlanckLKL *nc_data_planck_lkl_new (const gchar *filename);
+NcDataPlanckLKL *nc_data_planck_lkl_full_new (const gchar *filename, NcHIPertBoltzmann *pb);
 const gchar *nc_data_planck_lkl_get_param_name (NcDataPlanckLKL *plik, guint i);
 gchar **nc_data_planck_lkl_get_param_names (NcDataPlanckLKL *plik);
+
+void nc_data_planck_lkl_set_hipert_boltzmann (NcDataPlanckLKL *plik, NcHIPertBoltzmann *pb);
 
 G_END_DECLS
 

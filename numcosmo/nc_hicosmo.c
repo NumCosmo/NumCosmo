@@ -86,25 +86,29 @@ nc_hicosmo_class_init (NcHICosmoClass *klass)
   {
     NcHICosmoFunc func_table[] =
     {
-      {"H0",        "Hubble constant.",                           &nc_hicosmo_H0,        NC_HICOSMO_IMPL_H0},
-      {"Omega_b",   "Baryons density today.",                     &nc_hicosmo_Omega_b,   NC_HICOSMO_IMPL_Omega_b},
-      {"Omega_c",   "CDM density today.",                         &nc_hicosmo_Omega_c,   NC_HICOSMO_IMPL_Omega_c},
-      {"Omega_r",   "Radiation density today.",                   &nc_hicosmo_Omega_r,   NC_HICOSMO_IMPL_Omega_r},
-      {"Omega_t",   "Total energy density today.",                &nc_hicosmo_Omega_t,   NC_HICOSMO_IMPL_Omega_t},
-      {"T_gamma0",  "Photons temperature today.",                 &nc_hicosmo_T_gamma0,  NC_HICOSMO_IMPL_T_gamma0},
-      {"sigma_8",   "sigma_8.",                                   &nc_hicosmo_sigma_8,   NC_HICOSMO_IMPL_sigma_8},
-      {"z_lss",     "redshift at lss.",                           &nc_hicosmo_z_lss,     NC_HICOSMO_IMPL_z_lss},
-      {"as_drag",   "as_drag.",                                   &nc_hicosmo_as_drag,   NC_HICOSMO_IMPL_as_drag},
-      {"xb",        "Bounce scale.",                              &nc_hicosmo_xb,        NC_HICOSMO_IMPL_xb},
-      {"c_H0",      "Hubble radius.",                             &nc_hicosmo_c_H0,      NC_HICOSMO_IMPL_c_H0},
-      {"Omega_k",   "Curvature scale.",                           &nc_hicosmo_Omega_k,   NC_HICOSMO_IMPL_Omega_k},
-      {"Omega_m",   "Total cold matter density today.",           &nc_hicosmo_Omega_m,   NC_HICOSMO_IMPL_Omega_m},
-      {"h",         "Adimensional Hubble constant.",              &nc_hicosmo_h,         NC_HICOSMO_IMPL_h},
-      {"h2",        "Adimensional Hubble constant square.",       &nc_hicosmo_h2,        NC_HICOSMO_IMPL_h2},
-      {"Omega_bh2", "Baryons density today times h^2.",           &nc_hicosmo_Omega_bh2, NC_HICOSMO_IMPL_Omega_bh2},
-      {"Omega_ch2", "CDM density today times h^2.",               &nc_hicosmo_Omega_ch2, NC_HICOSMO_IMPL_Omega_ch2},
-      {"Omega_rh2", "Total radiation today times h^2.",           &nc_hicosmo_Omega_rh2, NC_HICOSMO_IMPL_Omega_rh2},
-      {"Omega_mh2", "Total cold matter density today times h^2.", &nc_hicosmo_Omega_mh2, NC_HICOSMO_IMPL_Omega_mh2},
+      {"H0",         "Hubble constant.",                           &nc_hicosmo_H0,         NC_HICOSMO_IMPL_H0},
+      {"Omega_b",    "Baryons density today.",                     &nc_hicosmo_Omega_b,    NC_HICOSMO_IMPL_Omega_b},
+      {"Omega_g",    "Photons density today.",                     &nc_hicosmo_Omega_g,    NC_HICOSMO_IMPL_Omega_g},
+      {"Omega_nu",   "Ultra-relativistic neutrino density today.", &nc_hicosmo_Omega_nu,   NC_HICOSMO_IMPL_Omega_nu},
+      {"Omega_c",    "CDM density today.",                         &nc_hicosmo_Omega_c,    NC_HICOSMO_IMPL_Omega_c},
+      {"Omega_r",    "Radiation density today.",                   &nc_hicosmo_Omega_r,    NC_HICOSMO_IMPL_Omega_r},
+      {"Omega_t",    "Total energy density today.",                &nc_hicosmo_Omega_t,    NC_HICOSMO_IMPL_Omega_t},
+      {"T_gamma0",   "Photons temperature today.",                 &nc_hicosmo_T_gamma0,   NC_HICOSMO_IMPL_T_gamma0},
+      {"sigma_8",    "sigma_8.",                                   &nc_hicosmo_sigma_8,    NC_HICOSMO_IMPL_sigma_8},
+      {"z_lss",      "redshift at lss.",                           &nc_hicosmo_z_lss,      NC_HICOSMO_IMPL_z_lss},
+      {"as_drag",    "as_drag.",                                   &nc_hicosmo_as_drag,    NC_HICOSMO_IMPL_as_drag},
+      {"xb",         "Bounce scale.",                              &nc_hicosmo_xb,         NC_HICOSMO_IMPL_xb},
+      {"c_H0",       "Hubble radius.",                             &nc_hicosmo_c_H0,       NC_HICOSMO_IMPL_c_H0},
+      {"Omega_k",    "Curvature scale.",                           &nc_hicosmo_Omega_k,    NC_HICOSMO_IMPL_Omega_k},
+      {"Omega_m",    "Total cold matter density today.",           &nc_hicosmo_Omega_m,    NC_HICOSMO_IMPL_Omega_m},
+      {"h",          "Adimensional Hubble constant.",              &nc_hicosmo_h,          NC_HICOSMO_IMPL_h},
+      {"h2",         "Adimensional Hubble constant square.",       &nc_hicosmo_h2,         NC_HICOSMO_IMPL_h2},
+      {"Omega_bh2",  "Baryons density today times h^2.",           &nc_hicosmo_Omega_bh2,  NC_HICOSMO_IMPL_Omega_bh2},
+      {"Omega_gh2",  "Photons density today times h^2.",           &nc_hicosmo_Omega_gh2,  NC_HICOSMO_IMPL_Omega_gh2},
+      {"Omega_nuh2", "UR Neutrinos density today times h^2.",      &nc_hicosmo_Omega_nuh2, NC_HICOSMO_IMPL_Omega_nuh2},
+      {"Omega_ch2",  "CDM density today times h^2.",               &nc_hicosmo_Omega_ch2,  NC_HICOSMO_IMPL_Omega_ch2},
+      {"Omega_rh2",  "Total radiation today times h^2.",           &nc_hicosmo_Omega_rh2,  NC_HICOSMO_IMPL_Omega_rh2},
+      {"Omega_mh2",  "Total cold matter density today times h^2.", &nc_hicosmo_Omega_mh2,  NC_HICOSMO_IMPL_Omega_mh2},
     };
     const guint nfuncs = sizeof (func_table) / sizeof (NcHICosmoFunc);
     guint i;
@@ -328,6 +332,24 @@ NCM_MODEL_SET_IMPL_FUNC(NC_HICOSMO,NcHICosmo,nc_hicosmo,NcmModelFunc0,H0)
  */
 NCM_MODEL_SET_IMPL_FUNC(NC_HICOSMO,NcHICosmo,nc_hicosmo,NcmModelFunc0,Omega_b)
 /**
+ * nc_hicosmo_set_Omega_g_impl: (skip)
+ * @model_class: FIXME
+ * @f: FIXME
+ *
+ * FIXME
+ *
+ */
+NCM_MODEL_SET_IMPL_FUNC(NC_HICOSMO,NcHICosmo,nc_hicosmo,NcmModelFunc0,Omega_g)
+/**
+ * nc_hicosmo_set_Omega_nu_impl: (skip)
+ * @model_class: FIXME
+ * @f: FIXME
+ *
+ * FIXME
+ *
+ */
+NCM_MODEL_SET_IMPL_FUNC(NC_HICOSMO,NcHICosmo,nc_hicosmo,NcmModelFunc0,Omega_nu)
+/**
  * nc_hicosmo_set_Omega_r_impl: (skip)
  * @model_class: FIXME
  * @f: FIXME
@@ -494,6 +516,22 @@ NCM_MODEL_SET_IMPL_FUNC(NC_HICOSMO,NcHICosmo,nc_hicosmo,NcmModelFunc1,powspec)
  * Returns: $\Omega_b$
  */
 /**
+ * nc_hicosmo_Omega_g:
+ * @cosmo: a #NcHICosmo.
+ *
+ * FIXME
+ *
+ * Returns: $\Omega_\gamma$
+ */
+/**
+ * nc_hicosmo_Omega_nu:
+ * @cosmo: a #NcHICosmo.
+ *
+ * FIXME
+ *
+ * Returns: $\Omega_\nu$
+ */
+/**
  * nc_hicosmo_Omega_r:
  * @cosmo: a #NcHICosmo.
  *
@@ -655,6 +693,22 @@ NCM_MODEL_SET_IMPL_FUNC(NC_HICOSMO,NcHICosmo,nc_hicosmo,NcmModelFunc1,powspec)
  */
 /**
  * nc_hicosmo_Omega_bh2:
+ * @cosmo: a #NcHICosmo
+ *
+ * FIXME
+ *
+ * Returns: FIXME
+ */
+/**
+ * nc_hicosmo_Omega_gh2:
+ * @cosmo: a #NcHICosmo
+ *
+ * FIXME
+ *
+ * Returns: FIXME
+ */
+/**
+ * nc_hicosmo_Omega_nuh2:
  * @cosmo: a #NcHICosmo
  *
  * FIXME

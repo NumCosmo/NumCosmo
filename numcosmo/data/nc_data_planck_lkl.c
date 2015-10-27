@@ -47,6 +47,7 @@ enum
 {
   PROP_0,
   PROP_DATA_FILE,
+  PROP_PERT_BOLTZMANN,
   PROP_IS_LENSING,
   PROP_NPARAMS,
   PROP_CHKSUM,
@@ -55,7 +56,8 @@ enum
 
 G_DEFINE_TYPE (NcDataPlanckLKL, nc_data_planck_lkl, NCM_TYPE_DATA);
 
-void _nc_data_planck_lkl_set_filename (NcDataPlanckLKL *plik, const gchar *filename);
+static void _nc_data_planck_lkl_set_filename (NcDataPlanckLKL *plik, const gchar *filename);
+
 #define CLIK_OBJ(obj) ((clik_object *)(obj))
 #define CLIK_LENS_OBJ(obj) ((clik_lensing_object *)(obj))
 
@@ -74,6 +76,7 @@ static void
 nc_data_planck_lkl_init (NcDataPlanckLKL *plik)
 {
   plik->filename    = NULL;
+  plik->pb          = NULL;
   plik->obj         = NULL;
   plik->is_lensing  = FALSE;
   plik->nparams     = 0;
@@ -102,6 +105,9 @@ nc_data_planck_lkl_set_property (GObject *object, guint prop_id, const GValue *v
     case PROP_DATA_FILE:
       _nc_data_planck_lkl_set_filename (plik, g_value_get_string (value));
       break;
+    case PROP_PERT_BOLTZMANN:
+      nc_data_planck_lkl_set_hipert_boltzmann (plik, g_value_get_object (value));
+      break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
       break;
@@ -118,6 +124,9 @@ nc_data_planck_lkl_get_property (GObject *object, guint prop_id, GValue *value, 
   {
     case PROP_DATA_FILE:
       g_value_set_string (value, plik->filename);
+      break;
+    case PROP_PERT_BOLTZMANN:
+      g_value_set_object (value, plik->pb);
       break;
     case PROP_IS_LENSING:
       g_value_set_boolean (value, plik->is_lensing);
@@ -138,6 +147,8 @@ static void
 nc_data_planck_lkl_dispose (GObject *object)
 {
   NcDataPlanckLKL *plik = NC_DATA_PLANCK_LKL (object);
+
+  nc_hipert_boltzmann_clear (&plik->pb);
 
   ncm_vector_clear (&plik->data_params);
   ncm_vector_clear (&plik->data_TT);
@@ -207,6 +218,14 @@ nc_data_planck_lkl_class_init (NcDataPlanckLKLClass *klass)
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   g_object_class_install_property (object_class,
+                                   PROP_PERT_BOLTZMANN,
+                                   g_param_spec_object ("hipert-boltzmann",
+                                                        NULL,
+                                                        "NcHIPertBoltzmann object",
+                                                        NC_TYPE_HIPERT_BOLTZMANN,
+                                                        G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
+  g_object_class_install_property (object_class,
                                    PROP_IS_LENSING,
                                    g_param_spec_boolean ("is-lensing",
                                                         NULL,
@@ -253,7 +272,14 @@ _nc_data_planck_lkl_begin (NcmData *data)
 static void
 _nc_data_planck_lkl_prepare (NcmData *data, NcmMSet *mset)
 {
+  NcDataPlanckLKL *clik = NC_DATA_PLANCK_LKL (data);
+  NcHICosmo *cosmo = NC_HICOSMO (ncm_mset_peek (mset, nc_hicosmo_id ()));
+  if (clik->pb == NULL)
+    g_error ("_nc_data_planck_lkl_prepare: cannot prepare without a #NcHIPertBoltzmann object. Use nc_data_planck_lkl_set_hipert_boltzmann to set the perturbations object.");
+  if (cosmo == NULL)
+    g_error ("_nc_data_planck_lkl_prepare: cannot prepare without a #NcHICosmo object. Add one to the #NcmMSet.");
 
+  nc_hipert_boltzmann_prepare_if_needed (clik->pb, cosmo);
 }
 
 /*static void
@@ -316,6 +342,24 @@ _nc_data_planck_lkl_m2lnL_val (NcmData *data, NcmMSet *mset, gdouble *m2lnL)
     ncm_vector_set (clik->params, i, p_i);
   }
 
+  if (clik->cmb_data & NC_DATA_CMB_TYPE_TT)
+    nc_hipert_boltzmann_get_TT_Cls (clik->pb, clik->data_TT);
+
+  if (clik->cmb_data & NC_DATA_CMB_TYPE_EE)
+    nc_hipert_boltzmann_get_EE_Cls (clik->pb, clik->data_EE);
+
+  if (clik->cmb_data & NC_DATA_CMB_TYPE_BB)
+    nc_hipert_boltzmann_get_BB_Cls (clik->pb, clik->data_BB);
+
+  if (clik->cmb_data & NC_DATA_CMB_TYPE_TE)
+    nc_hipert_boltzmann_get_TE_Cls (clik->pb, clik->data_TE);
+
+  if (clik->cmb_data & NC_DATA_CMB_TYPE_TB)
+    nc_hipert_boltzmann_get_TB_Cls (clik->pb, clik->data_TB);
+
+  if (clik->cmb_data & NC_DATA_CMB_TYPE_EB)
+    nc_hipert_boltzmann_get_EB_Cls (clik->pb, clik->data_EB);
+
   if (clik->is_lensing)
   {
     *m2lnL = -2.0 * clik_lensing_compute (clik->obj, cl_and_pars, &err);
@@ -330,7 +374,7 @@ _nc_data_planck_lkl_m2lnL_val (NcmData *data, NcmMSet *mset, gdouble *m2lnL)
   return;
 }
 
-void
+static void
 _nc_data_planck_lkl_set_filename (NcDataPlanckLKL *plik, const gchar *filename)
 {
   g_assert (plik->filename == NULL);
@@ -434,12 +478,12 @@ _nc_data_planck_lkl_set_filename (NcDataPlanckLKL *plik, const gchar *filename)
       clik_get_lmax (obj, lmax, &err);
       CLIK_CHECK_ERROR ("_nc_data_planck_lkl_set_filename[clik_get_lmaxs]", err);
 
-      printf ("###################################\n");
-      printf ("# data_params_len %u\n", data_params_len);
+      /*printf ("###################################\n");*/
+      /*printf ("# data_params_len %u\n", data_params_len);*/
       for (i = 0; i < N_CMP; i++)
       {
         data_params_len += lmax[i] >= 0 ? (lmax[i] + 1) : 0;
-        printf ("# data_params_len %d, %d\n", lmax[i], data_params_len);
+        /*printf ("# data_params_len %d, %d\n", lmax[i], data_params_len);*/
       }
 
       plik->ndata_entry = data_params_len;
@@ -500,6 +544,25 @@ nc_data_planck_lkl_new (const gchar *filename)
 }
 
 /**
+ * nc_data_planck_lkl_full_new:
+ * @filename: a Planck likelihood file
+ * @pb: a #NcHIPertBoltzmann
+ *
+ * FIXME
+ *
+ * Returns: a new #NcDataPlanckLKL
+ */
+NcDataPlanckLKL *
+nc_data_planck_lkl_full_new (const gchar *filename, NcHIPertBoltzmann *pb)
+{
+  NcDataPlanckLKL *plik = g_object_new (NC_TYPE_DATA_PLANCK_LKL,
+                                        "data-file", filename,
+                                        "hipert-boltzmann", pb,
+                                        NULL);
+  return plik;
+}
+
+/**
  * nc_data_planck_lkl_get_param_name:
  * @plik: a #NcDataPlanckLKL
  * @i: param index
@@ -527,4 +590,58 @@ gchar **
 nc_data_planck_lkl_get_param_names (NcDataPlanckLKL *plik)
 {
   return g_strdupv (plik->pnames);
+}
+
+/**
+ * nc_data_planck_lkl_set_hipert_boltzmann:
+ * @plik: a #NcDataPlanckLKL
+ * @pb: a #NcHIPertBoltzmann
+ *
+ * Sets the #NcHIPertBoltzmann to be used in the likelihood calculation.
+ *
+ */
+void
+nc_data_planck_lkl_set_hipert_boltzmann (NcDataPlanckLKL *plik, NcHIPertBoltzmann *pb)
+{
+  nc_hipert_boltzmann_clear (&plik->pb);
+  plik->pb = nc_hipert_boltzmann_ref (pb);
+
+  nc_hipert_boltzmann_set_target_Cls (plik->pb, plik->cmb_data);
+
+  if (plik->data_TT != NULL)
+  {
+    guint TT_lmax = ncm_vector_len (plik->data_TT) - 1;
+    if (TT_lmax > nc_hipert_boltzmann_get_TT_lmax (plik->pb))
+      nc_hipert_boltzmann_set_TT_lmax (plik->pb, TT_lmax);
+  }
+  if (plik->data_EE != NULL)
+  {
+    guint EE_lmax = ncm_vector_len (plik->data_EE) - 1;
+    if (EE_lmax > nc_hipert_boltzmann_get_EE_lmax (plik->pb))
+      nc_hipert_boltzmann_set_TT_lmax (plik->pb, EE_lmax);
+  }
+  if (plik->data_BB != NULL)
+  {
+    guint BB_lmax = ncm_vector_len (plik->data_BB) - 1;
+    if (BB_lmax > nc_hipert_boltzmann_get_BB_lmax (plik->pb))
+      nc_hipert_boltzmann_set_TT_lmax (plik->pb, BB_lmax);
+  }
+  if (plik->data_TE != NULL)
+  {
+    guint TE_lmax = ncm_vector_len (plik->data_TE) - 1;
+    if (TE_lmax > nc_hipert_boltzmann_get_TE_lmax (plik->pb))
+      nc_hipert_boltzmann_set_TE_lmax (plik->pb, TE_lmax);
+  }
+  if (plik->data_TB != NULL)
+  {
+    guint TB_lmax = ncm_vector_len (plik->data_TB) - 1;
+    if (TB_lmax > nc_hipert_boltzmann_get_TB_lmax (plik->pb))
+      nc_hipert_boltzmann_set_TB_lmax (plik->pb, TB_lmax);
+  }
+  if (plik->data_EB != NULL)
+  {
+    guint EB_lmax = ncm_vector_len (plik->data_EB) - 1;
+    if (EB_lmax > nc_hipert_boltzmann_get_EB_lmax (plik->pb))
+      nc_hipert_boltzmann_set_EB_lmax (plik->pb, EB_lmax);
+  }
 }

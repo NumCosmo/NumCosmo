@@ -1075,13 +1075,18 @@ ncm_model_set_reparam (NcmModel *model, NcmReparam *reparam)
 {
   if (reparam != NULL)
   {
+    GType compat_type = ncm_reparam_get_compat_type (reparam);
+    if (!g_type_is_a (G_OBJECT_TYPE (model), compat_type))
+      g_error ("ncm_model_set_reparam: model `%s' is not compatible with the reparametrization `%s'",
+               g_type_name (G_OBJECT_TYPE (model)), g_type_name (compat_type));
+
     ncm_reparam_clear (&model->reparam);
     model->reparam = ncm_reparam_ref (reparam);
 
     ncm_vector_clear (&model->p);
     model->p = ncm_vector_ref (model->reparam->new_params);
 
-    ncm_reparam_old2new (model->reparam, model, model->params, model->reparam->new_params);
+    ncm_reparam_old2new (model->reparam, model);
   }
   else
     _ncm_model_sparams_remove_reparam (model);
@@ -1312,6 +1317,23 @@ ncm_model_params_print_all (NcmModel *model, FILE *out)
 }
 
 /**
+ * ncm_model_orig_params_log_all:
+ * @model: a #NcmModel
+ *
+ * FIXME
+ *
+ */
+void
+ncm_model_orig_params_log_all (NcmModel *model)
+{
+  guint i;
+  for (i = 0; i < ncm_vector_len (model->params); i++)
+    g_message ("  % 20.16g", ncm_vector_get (model->params, i));
+  g_message ("\n");
+  return;
+}
+
+/**
  * ncm_model_params_log_all:
  * @model: a #NcmModel
  *
@@ -1499,6 +1521,15 @@ ncm_model_params_valid_bounds (NcmModel *model)
  * Update the new parameters. It causes an error to call this
  * function with a model without reparametrization.
  *
+ */
+/**
+ * ncm_model_orig_params_peek_vector:
+ * @model: a #NcmModel
+ *
+ * Peeks the original parameters vector. This functions is provided for
+ * reparametrization implementations, do not use it in other contexts.
+ *
+ * Returns: (transfer none): the original parameters #NcmVector
  */
 /**
  * ncm_model_vparam_index:

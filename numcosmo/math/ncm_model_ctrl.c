@@ -28,7 +28,7 @@
  * @short_description: Control object for testing updates on model status.
  *
  * FIXME
- * 
+ *
  */
 
 #ifdef HAVE_CONFIG_H
@@ -152,12 +152,10 @@ ncm_model_ctrl_set_model (NcmModelCtrl *ctrl, NcmModel *model)
 {
   if (model != ctrl->model)
   {
-	if (ctrl->model)
-	  g_object_unref (ctrl->model);
-	g_object_ref (model);
-	ctrl->model = model;
-	ctrl->pkey = model->pkey;
-	return TRUE;
+    ncm_model_clear (&ctrl->model);
+    ctrl->model = ncm_model_ref (model);
+    ctrl->pkey = model->pkey;
+    return TRUE;
   }
   return FALSE;
 }
@@ -188,9 +186,7 @@ ncm_model_ctrl_has_model (NcmModelCtrl *ctrl, NcmModel *model)
 void
 ncm_model_ctrl_force_update (NcmModelCtrl *ctrl)
 {
-  if (ctrl->model)
-	g_object_unref (ctrl->model);
-  ctrl->model = NULL;
+  ncm_model_clear (&ctrl->model);
   return;
 }
 

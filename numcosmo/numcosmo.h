@@ -39,6 +39,7 @@
 #include <numcosmo/nc_planck_fi.h>
 #include <numcosmo/nc_planck_fi_cor_tt.h>
 #include <numcosmo/scalefactor.h>
+#include <numcosmo/nc_cbe_precision.h>
 /* Cosmic thermodynamics */
 #include <numcosmo/nc_recomb.h>
 #include <numcosmo/nc_recomb_seager.h>
@@ -58,6 +59,7 @@
 
 /* Model implementations */
 #include <numcosmo/model/nc_hicosmo_de.h>
+#include <numcosmo/model/nc_hicosmo_de_reparam_ok.h>
 #include <numcosmo/model/nc_hicosmo_de_linder.h>
 #include <numcosmo/model/nc_hicosmo_de_pad.h>
 #include <numcosmo/model/nc_hicosmo_de_qe.h>

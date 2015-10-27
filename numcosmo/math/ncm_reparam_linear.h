@@ -67,6 +67,7 @@ struct _NcmReparamLinearClass
 GType ncm_reparam_linear_get_type (void) G_GNUC_CONST;
 
 NcmReparamLinear *ncm_reparam_linear_new (guint size, NcmMatrix *T, NcmVector *v);
+void ncm_reparam_linear_set_compat_type (NcmReparamLinear *lin, GType compat_type);
 
 G_END_DECLS
 

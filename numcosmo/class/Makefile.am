@@ -15,7 +15,9 @@ MY_CFLAGS = \
 	 -I$(CLASS_DIR)/include \
 	 -I$(CLASS_DIR)/hyrec   \
 	 $(CLASS_DEFINES)       \
-	 $(OPENMP_CFLAGS)
+	 $(OPENMP_CFLAGS)       \
+	 -DHYREC                \
+	 -D__CLASSDIR__=\"$(PACKAGE_DATA_DIR)\/class_data\"
 
 AM_CFLAGS = \
 	 -Wall \

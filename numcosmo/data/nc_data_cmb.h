@@ -55,11 +55,10 @@ typedef enum _NcDataCMBDataType
   NC_DATA_CMB_TYPE_TE     = 1 << 3,
   NC_DATA_CMB_TYPE_TB     = 1 << 4,
   NC_DATA_CMB_TYPE_EB     = 1 << 5,
-  NC_DATA_CMB_TYPE_PHIPHI = 1 << 6, /*< private >*/
-  NC_DATA_CMB_TYPE_LEN,    /*< skip >*/
+  NC_DATA_CMB_TYPE_PHIPHI = 1 << 6,
+  NC_DATA_CMB_TYPE_ALL    = (1 << 7) - 1, /*< private >*/
+  NC_DATA_CMB_TYPE_LEN,                   /*< skip >*/
 } NcDataCMBDataType;
-
-#define NC_DATA_CMB_FLAG(ten) (1 << ten)
 
 /**
  * NcDataCMBId:

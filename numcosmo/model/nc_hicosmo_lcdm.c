@@ -28,7 +28,7 @@
  * @short_description: $\Lambda$CDM model.
  *
  * FIXME
- * 
+ *
  */
 
 #ifdef HAVE_CONFIG_H
@@ -46,6 +46,7 @@ G_DEFINE_TYPE (NcHICosmoLCDM, nc_hicosmo_lcdm, NC_TYPE_HICOSMO);
 #define OMEGA_C   (ncm_vector_get (VECTOR, NC_HICOSMO_DE_OMEGA_C))
 #define OMEGA_X   (ncm_vector_get (VECTOR, NC_HICOSMO_DE_OMEGA_X))
 #define T_GAMMA0  (ncm_vector_get (VECTOR, NC_HICOSMO_DE_T_GAMMA0))
+#define ENNU      (ncm_vector_get (VECTOR, NC_HICOSMO_DE_ENNU))
 #define OMEGA_R   nc_hicosmo_Omega_r (NC_HICOSMO (model))
 #define OMEGA_B   (ncm_vector_get (VECTOR, NC_HICOSMO_DE_OMEGA_B))
 #define SPECINDEX (ncm_vector_get (VECTOR, NC_HICOSMO_DE_SPECINDEX))
@@ -106,12 +107,23 @@ static gdouble _nc_hicosmo_lcdm_H0 (NcmModel *model) { return MACRO_H0; }
 static gdouble _nc_hicosmo_lcdm_Omega_t (NcmModel *model) { return OMEGA_M + OMEGA_X + OMEGA_R; }
 static gdouble _nc_hicosmo_lcdm_Omega_c (NcmModel *model) { return OMEGA_C; }
 static gdouble _nc_hicosmo_lcdm_T_gamma0 (NcmModel *model) { return T_GAMMA0; }
-static gdouble
-_nc_hicosmo_lcdm_Omega_r (NcmModel *model)
+static gdouble _nc_hicosmo_lcdm_Omega_g (NcmModel *model)
 {
   const gdouble h = MACRO_H0 / 100.0;
   const gdouble h2 = h * h;
-  return (1.0 + 0.2271 * ncm_c_neutrino_n_eff ()) * ncm_c_radiation_temp_to_h2omega_r (T_GAMMA0) / h2;
+  return ncm_c_radiation_temp_to_h2omega_r (T_GAMMA0) / h2;
+}
+static gdouble
+_nc_hicosmo_lcdm_Omega_nu (NcmModel *model)
+{
+  const gdouble conv = 7.0 / 8.0 * pow (4.0 / 11.0, 4.0 / 3.0);
+  return ENNU * conv * _nc_hicosmo_lcdm_Omega_g (model);
+}
+static gdouble
+_nc_hicosmo_lcdm_Omega_r (NcmModel *model)
+{
+  const gdouble conv = 7.0 / 8.0 * pow (4.0 / 11.0, 4.0 / 3.0);
+  return (1.0 + ENNU * conv) * _nc_hicosmo_lcdm_Omega_g (model);
 }
 static gdouble _nc_hicosmo_lcdm_Omega_b (NcmModel *model) { return OMEGA_B; }
 static gdouble _nc_hicosmo_lcdm_sigma_8 (NcmModel *model) { return SIGMA8; }
@@ -160,8 +172,8 @@ nc_hicosmo_lcdm_class_init (NcHICosmoLCDMClass *klass)
   object_class->finalize     = &nc_hicosmo_lcdm_finalize;
 
   ncm_model_class_set_name_nick (model_class, "\\Lambda{}CDM", "LCDM");
-  ncm_model_class_add_params (model_class, 7, 0, PROP_SIZE);
-  
+  ncm_model_class_add_params (model_class, NC_HICOSMO_DE_SPARAM_LEN, 0, PROP_SIZE);
+
   /* Set H_0 param info */
   ncm_model_class_set_sparam (model_class, NC_HICOSMO_DE_H0, "H_0", "H0",
                                10.0, 500.0, 1.0,
@@ -182,6 +194,11 @@ nc_hicosmo_lcdm_class_init (NcHICosmoLCDMClass *klass)
                                1e-8,  10.0, 1.0e-2,
                                NC_HICOSMO_DEFAULT_PARAMS_ABSTOL, NC_HICOSMO_DE_DEFAULT_T_GAMMA0,
                                NCM_PARAM_TYPE_FIXED);
+  /* Set ENnu param info */
+  ncm_model_class_set_sparam (model_class, NC_HICOSMO_DE_ENNU, "N_\nu", "ENnu",
+                              0.0,  10.0, 1.0e-2,
+                              NC_HICOSMO_DEFAULT_PARAMS_ABSTOL, NC_HICOSMO_DE_DEFAULT_ENNU,
+                              NCM_PARAM_TYPE_FIXED);
   /* Set Omega_b param info */
   ncm_model_class_set_sparam (model_class, NC_HICOSMO_DE_OMEGA_B, "\\Omega_b", "Omegab",
                                1e-8,  10.0, 1.0e-2,
@@ -205,6 +222,8 @@ nc_hicosmo_lcdm_class_init (NcHICosmoLCDMClass *klass)
   nc_hicosmo_set_Omega_c_impl   (parent_class, &_nc_hicosmo_lcdm_Omega_c);
   nc_hicosmo_set_Omega_r_impl   (parent_class, &_nc_hicosmo_lcdm_Omega_r);
   nc_hicosmo_set_Omega_b_impl   (parent_class, &_nc_hicosmo_lcdm_Omega_b);
+  nc_hicosmo_set_Omega_g_impl   (parent_class, &_nc_hicosmo_lcdm_Omega_g);
+  nc_hicosmo_set_Omega_nu_impl  (parent_class, &_nc_hicosmo_lcdm_Omega_nu);
   nc_hicosmo_set_Omega_t_impl   (parent_class, &_nc_hicosmo_lcdm_Omega_t);
   nc_hicosmo_set_sigma_8_impl   (parent_class, &_nc_hicosmo_lcdm_sigma_8);
   nc_hicosmo_set_T_gamma0_impl  (parent_class, &_nc_hicosmo_lcdm_T_gamma0);

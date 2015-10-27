@@ -126,6 +126,8 @@ G_INLINE_FUNC gboolean ncm_model_params_finite (NcmModel *model);
 G_INLINE_FUNC gboolean ncm_model_param_finite (NcmModel *model, guint i);
 G_INLINE_FUNC void ncm_model_params_update (NcmModel *model);
 G_INLINE_FUNC void ncm_model_orig_params_update (NcmModel *model);
+G_INLINE_FUNC NcmVector *ncm_model_orig_params_peek_vector (NcmModel *model);
+void ncm_model_orig_params_log_all (NcmModel *model);
 
 G_INLINE_FUNC void ncm_model_param_set (NcmModel *model, guint n, gdouble val);
 G_INLINE_FUNC void ncm_model_param_set_default (NcmModel *model, guint n);
@@ -267,7 +269,7 @@ ncm_model_impl (NcmModel *model)
   return NCM_MODEL_GET_CLASS (model)->impl;
 }
 
-G_INLINE_FUNC gboolean 
+G_INLINE_FUNC gboolean
 ncm_model_check_impl (NcmModel *model, guint64 impl)
 {
   if (impl == 0)
@@ -347,7 +349,7 @@ G_INLINE_FUNC void
 ncm_model_params_update (NcmModel *model)
 {
   if (model->reparam)
-    ncm_reparam_new2old (model->reparam, model, model->reparam->new_params, model->params);
+    ncm_reparam_new2old (model->reparam, model);
   model->pkey++;
 }
 
@@ -355,8 +357,14 @@ G_INLINE_FUNC void
 ncm_model_orig_params_update (NcmModel *model)
 {
   if (model->reparam)
-    ncm_reparam_old2new (model->reparam, model, model->params, model->reparam->new_params);
+    ncm_reparam_old2new (model->reparam, model);
   model->pkey++;
+}
+
+G_INLINE_FUNC NcmVector *
+ncm_model_orig_params_peek_vector (NcmModel *model)
+{
+  return model->params;
 }
 
 G_INLINE_FUNC guint
@@ -395,11 +403,11 @@ ncm_model_orig_param_peek_desc (NcmModel *model, guint n)
 G_INLINE_FUNC NcmSParam *
 ncm_model_param_peek_desc (NcmModel *model, guint n)
 {
-  NcmReparam *reparam = ncm_model_peek_reparam (model); 
+  NcmReparam *reparam = ncm_model_peek_reparam (model);
   g_assert (n < model->total_len);
   if (reparam != NULL)
   {
-    NcmSParam *sp = ncm_reparam_peek_param_desc (reparam, n); 
+    NcmSParam *sp = ncm_reparam_peek_param_desc (reparam, n);
     if (sp != NULL)
       return sp;
   }

@@ -29,10 +29,12 @@
 #include <glib.h>
 #include <glib-object.h>
 #include <numcosmo/build_cfg.h>
+#include <numcosmo/math/ncm_model_ctrl.h>
 #include <numcosmo/nc_hicosmo.h>
 #include <numcosmo/perturbations/nc_hipert.h>
 #include <numcosmo/nc_recomb.h>
 #include <numcosmo/scalefactor.h>
+#include <numcosmo/data/nc_data_cmb.h>
 
 G_BEGIN_DECLS
 
@@ -53,6 +55,7 @@ typedef gboolean (*NcHIPertBoltzmannTest) (NcHIPertBoltzmann *pb);
 typedef void (*NcHIPertBoltzmannSources) (NcHIPertBoltzmann *pb, gdouble *S0, gdouble *S1, gdouble *S2);
 typedef gdouble (*NcHIPertBoltzmannGet) (NcHIPertBoltzmann *pb);
 typedef gdouble (*NcHIPertBoltzmannGetN) (NcHIPertBoltzmann *pb, guint n);
+typedef void (*NcHIPertBoltzmannGetCl) (NcHIPertBoltzmann *pb, NcmVector *Cls);
 
 struct _NcHIPertBoltzmannClass
 {
@@ -63,6 +66,8 @@ struct _NcHIPertBoltzmannClass
   NcHIPertBoltzmannConf reset;
   NcHIPertBoltzmannEvol evol_step;
   NcHIPertBoltzmannEvol evol;
+  NcHIPertBoltzmannCreate prepare;
+  NcHIPertBoltzmannCreate prepare_if_needed;
   NcHIPertBoltzmannSources get_sources;
   NcHIPertBoltzmannConf print_stats;
   NcHIPertBoltzmannGet get_z;
@@ -75,6 +80,12 @@ struct _NcHIPertBoltzmannClass
   NcHIPertBoltzmannGetN get_theta;
   NcHIPertBoltzmannGetN get_theta_p;
   NcHIPertBoltzmannGetN get_los_theta;
+  NcHIPertBoltzmannGetCl get_TT_Cls;
+  NcHIPertBoltzmannGetCl get_EE_Cls;
+  NcHIPertBoltzmannGetCl get_BB_Cls;
+  NcHIPertBoltzmannGetCl get_TE_Cls;
+  NcHIPertBoltzmannGetCl get_TB_Cls;
+  NcHIPertBoltzmannGetCl get_EB_Cls;
 	NcHIPertBoltzmannConf print_all;
   gpointer data;
 };
@@ -139,8 +150,11 @@ struct _NcHIPertBoltzmann
   gdouble lambda_rec;
   gdouble lambda_rec_10m2_max[2];
   gdouble lambda;
-  guint lmax;
+  NcDataCMBDataType target_Cls;
+  gboolean calc_transfer;
+  guint TT_lmax, EE_lmax, BB_lmax, TE_lmax, TB_lmax, EB_lmax;
   gboolean tight_coupling;
+  NcmModelCtrl *ctrl;
 };
 
 GType nc_hipert_boltzmann_get_type (void) G_GNUC_CONST;
@@ -150,8 +164,36 @@ void nc_hipert_boltzmann_free (NcHIPertBoltzmann *pb);
 void nc_hipert_boltzmann_clear (NcHIPertBoltzmann **pb);
 
 void nc_hipert_boltzmann_set_recomb (NcHIPertBoltzmann *pb, NcRecomb *recomb);
-void nc_hipert_boltzmann_set_lmax (NcHIPertBoltzmann *pb, guint lmax);
+
+void nc_hipert_boltzmann_set_target_Cls (NcHIPertBoltzmann *pb, NcDataCMBDataType tCls);
+NcDataCMBDataType nc_hipert_boltzmann_get_target_Cls (NcHIPertBoltzmann *pb);
+
+void nc_hipert_boltzmann_set_calc_transfer (NcHIPertBoltzmann *pb, gboolean calc_transfer);
+gboolean nc_hipert_boltzmann_get_calc_transfer (NcHIPertBoltzmann *pb);
+
+void nc_hipert_boltzmann_set_TT_lmax (NcHIPertBoltzmann *pb, guint lmax);
+void nc_hipert_boltzmann_set_EE_lmax (NcHIPertBoltzmann *pb, guint lmax);
+void nc_hipert_boltzmann_set_BB_lmax (NcHIPertBoltzmann *pb, guint lmax);
+void nc_hipert_boltzmann_set_TE_lmax (NcHIPertBoltzmann *pb, guint lmax);
+void nc_hipert_boltzmann_set_TB_lmax (NcHIPertBoltzmann *pb, guint lmax);
+void nc_hipert_boltzmann_set_EB_lmax (NcHIPertBoltzmann *pb, guint lmax);
+
+guint nc_hipert_boltzmann_get_TT_lmax (NcHIPertBoltzmann *pb);
+guint nc_hipert_boltzmann_get_EE_lmax (NcHIPertBoltzmann *pb);
+guint nc_hipert_boltzmann_get_BB_lmax (NcHIPertBoltzmann *pb);
+guint nc_hipert_boltzmann_get_TE_lmax (NcHIPertBoltzmann *pb);
+guint nc_hipert_boltzmann_get_TB_lmax (NcHIPertBoltzmann *pb);
+guint nc_hipert_boltzmann_get_EB_lmax (NcHIPertBoltzmann *pb);
+
 void nc_hipert_boltzmann_prepare (NcHIPertBoltzmann *pb, NcHICosmo *cosmo);
+void nc_hipert_boltzmann_prepare_if_needed (NcHIPertBoltzmann *pb, NcHICosmo *cosmo);
+
+void nc_hipert_boltzmann_get_TT_Cls (NcHIPertBoltzmann *pb, NcmVector *Cls);
+void nc_hipert_boltzmann_get_EE_Cls (NcHIPertBoltzmann *pb, NcmVector *Cls);
+void nc_hipert_boltzmann_get_BB_Cls (NcHIPertBoltzmann *pb, NcmVector *Cls);
+void nc_hipert_boltzmann_get_TE_Cls (NcHIPertBoltzmann *pb, NcmVector *Cls);
+void nc_hipert_boltzmann_get_TB_Cls (NcHIPertBoltzmann *pb, NcmVector *Cls);
+void nc_hipert_boltzmann_get_EB_Cls (NcHIPertBoltzmann *pb, NcmVector *Cls);
 
 #define NC_HIPERT_BOLTZMANN_LAMBDA2X(lambda) (exp (-(lambda)))
 #define NC_HIPERT_BOLTZMANN_X2LAMBDA(x) (-log (x))

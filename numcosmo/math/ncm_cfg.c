@@ -49,6 +49,7 @@
 #include "math/ncm_reparam_linear.h"
 #include "math/ncm_stats_vec.h"
 #include "nc_hicosmo.h"
+#include "nc_cbe_precision.h"
 #include "perturbations/nc_hipert_iadiab.h"
 #include "model/nc_hicosmo_qconst.h"
 #include "model/nc_hicosmo_qlinear.h"
@@ -281,6 +282,8 @@ ncm_cfg_init (void)
   ncm_cfg_register_obj (NC_TYPE_HICOSMO_DE_PAD);
   ncm_cfg_register_obj (NC_TYPE_HICOSMO_DE_QE);
   ncm_cfg_register_obj (NC_TYPE_HICOSMO_QGRW);
+
+  ncm_cfg_register_obj (NC_TYPE_CBE_PRECISION);
 
   ncm_cfg_register_obj (NC_TYPE_WINDOW);
   ncm_cfg_register_obj (NC_TYPE_WINDOW_TOPHAT);

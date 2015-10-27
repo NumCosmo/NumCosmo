@@ -225,10 +225,13 @@ dnl ***************************************************************************
 dnl Set PACKAGE_DATA_DIR in config.h.
 dnl ***************************************************************************
 if test "x${prefix}" = "xNONE"; then
+  PACKAGE_DATA_DIR="${ac_default_prefix}/share/${PACKAGE}-${VERSION}"
   AC_DEFINE_UNQUOTED(PACKAGE_DATA_DIR, "${ac_default_prefix}/share/${PACKAGE}-${VERSION}", [PACKAGE_DATA_DIR])
 else
+  PACKAGE_DATA_DIR="${prefix}/share/${PACKAGE}-${VERSION}"
   AC_DEFINE_UNQUOTED(PACKAGE_DATA_DIR, "${prefix}/share/${PACKAGE}-${VERSION}", [PACKAGE_DATA_DIR])
 fi
+AC_SUBST(PACKAGE_DATA_DIR)
 
 dnl ***************************************************************************
 dnl Set PACKAGE_SOURCE_DIR in config.h.
