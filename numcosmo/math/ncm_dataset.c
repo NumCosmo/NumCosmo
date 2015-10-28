@@ -8,17 +8,17 @@
 /*
  * numcosmo
  * Copyright (C) 2012 Sandro Dias Pinto Vitenti <sandro@isoftware.com.br>
- * 
+ *
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * numcosmo is distributed in the hope that it will be useful, but
  * WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
  * See the GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License along
  * with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
@@ -29,7 +29,7 @@
  * @short_description: A set of NcmData objects
  *
  * FIXME
- * 
+ *
  */
 
 #ifdef HAVE_CONFIG_H
@@ -146,8 +146,8 @@ ncm_dataset_class_init (NcmDatasetClass *klass)
    * NcmData:bootstrap-type:
    *
    * Bootstrap method to be used.
-   * 
-   */  
+   *
+   */
   g_object_class_install_property (object_class,
                                    PROP_BSTYPE,
                                    g_param_spec_enum ("bootstrap-type",
@@ -159,8 +159,8 @@ ncm_dataset_class_init (NcmDatasetClass *klass)
    * NcmData:data-array:
    *
    * The #NcmData array.
-   * 
-   */  
+   *
+   */
   g_object_class_install_property (object_class,
                                    PROP_OA,
                                    g_param_spec_boxed ("data-array",
@@ -173,7 +173,7 @@ ncm_dataset_class_init (NcmDatasetClass *klass)
 /**
  * ncm_dataset_new:
  *
- * Creates a new empty #NcmDataset object. 
+ * Creates a new empty #NcmDataset object.
  *
  * Returns: a new #NcmDataset.
  */
@@ -205,7 +205,7 @@ _ncm_dataset_update_bstrap (NcmDataset *dset)
   {
     guint n = ncm_dataset_get_n (dset);
     guint i;
-    
+
     g_array_set_size (dset->data_prob, dset->oa->len);
     g_array_set_size (dset->bstrap, dset->oa->len);
 
@@ -298,7 +298,7 @@ ncm_dataset_get_n (NcmDataset *dset)
     NcmData *data = ncm_dataset_peek_data (dset, i);
     n += ncm_data_get_length (data);
   }
-  
+
   return n;
 }
 
@@ -309,7 +309,7 @@ ncm_dataset_get_n (NcmDataset *dset)
  * Calculate the total degrees of freedom associated with all #NcmData
  * objects.
  *
- * Returns: summed degrees of freedom of all #NcmData in @dset. 
+ * Returns: summed degrees of freedom of all #NcmData in @dset.
  */
 guint
 ncm_dataset_get_dof (NcmDataset *dset)
@@ -322,7 +322,7 @@ ncm_dataset_get_dof (NcmDataset *dset)
     NcmData *data = ncm_dataset_peek_data (dset, i);
     dof += ncm_data_get_dof (data);
   }
-  
+
   return dof;
 }
 
@@ -416,12 +416,12 @@ ncm_dataset_get_ndata (NcmDataset *dset)
  * Sets the @dset with @oa.
  *
  */
-void 
+void
 ncm_dataset_set_data_array (NcmDataset *dset, NcmObjArray *oa)
 {
   guint i;
-  NcmObjArray *old_oa = dset->oa; 
-  
+  NcmObjArray *old_oa = dset->oa;
+
   dset->oa = ncm_obj_array_ref (oa);
   ncm_obj_array_unref (old_oa);
 
@@ -433,7 +433,7 @@ ncm_dataset_set_data_array (NcmDataset *dset, NcmObjArray *oa)
     else
       ncm_data_bootstrap_create (data);
   }
-  
+
   _ncm_dataset_update_bstrap (dset);
 }
 
@@ -442,8 +442,8 @@ ncm_dataset_set_data_array (NcmDataset *dset, NcmObjArray *oa)
  * @dset: a #NcmDataset
  *
  * Gets the #NcmObjArray from @dset.
- * 
- * Returns: (transfer none): the array of #NcmData. 
+ *
+ * Returns: (transfer none): the array of #NcmData.
  */
 NcmObjArray *
 ncm_dataset_peek_data_array (NcmDataset *dset)
@@ -456,8 +456,8 @@ ncm_dataset_peek_data_array (NcmDataset *dset)
  * @dset: a #NcmDataset
  *
  * Gets the #NcmObjArray from @dset.
- * 
- * Returns: (transfer full): the array of #NcmData. 
+ *
+ * Returns: (transfer full): the array of #NcmData.
  */
 NcmObjArray *
 ncm_dataset_get_data_array (NcmDataset *dset)
@@ -536,7 +536,7 @@ ncm_dataset_bootstrap_set (NcmDataset *dset, NcmDatasetBStrapType bstype)
       else
         ncm_data_bootstrap_remove (data);
     }
-    
+
     _ncm_dataset_update_bstrap (dset);
   }
 }
@@ -546,7 +546,7 @@ ncm_dataset_bootstrap_set (NcmDataset *dset, NcmDatasetBStrapType bstype)
  * @dset: a #NcmDataset.
  * @rng: a #NcmRNG.
  *
- * Perform one bootstrap as in ncm_data_bootstrap_resample() in every #NcmData 
+ * Perform one bootstrap as in ncm_data_bootstrap_resample() in every #NcmData
  * in @dset.
  *
  */
@@ -570,11 +570,11 @@ ncm_dataset_bootstrap_resample (NcmDataset *dset, NcmRNG *rng)
     {
       guint n = ncm_dataset_get_n (dset);
       ncm_rng_lock (rng);
-      gsl_ran_multinomial (rng->r, dset->oa->len, n, 
-                           (gdouble *)dset->data_prob->data, 
+      gsl_ran_multinomial (rng->r, dset->oa->len, n,
+                           (gdouble *)dset->data_prob->data,
                            (guint *)dset->bstrap->data);
       ncm_rng_unlock (rng);
-      
+
       for (i = 0; i < dset->oa->len; i++)
       {
         NcmData *data = ncm_dataset_peek_data (dset, i);
@@ -596,7 +596,7 @@ ncm_dataset_bootstrap_resample (NcmDataset *dset, NcmRNG *rng)
  * @dset: a #NcmDataset
  *
  * Prints in the log the informations associated with every #NcmData in @dset.
- * 
+ *
  */
 void
 ncm_dataset_log_info (NcmDataset *dset)
@@ -610,8 +610,8 @@ ncm_dataset_log_info (NcmDataset *dset)
     NcmData *data = ncm_dataset_peek_data (dset, i);
     const gchar *desc = ncm_data_peek_desc (data);
     ncm_message_ww (desc,
-                    "#   - ", 
-                    "#       ", 
+                    "#   - ",
+                    "#       ",
                     80);
   }
 
@@ -623,7 +623,7 @@ ncm_dataset_log_info (NcmDataset *dset)
  * @dset: a #NcmDataset
  *
  * Obtains the informations associated with every #NcmData in @dset.
- * 
+ *
  * Returns: (transfer full): @dset description
  */
 gchar *
@@ -635,9 +635,9 @@ ncm_dataset_get_info (NcmDataset *dset)
   {
     NcmData *data = ncm_dataset_peek_data (dset, i);
     const gchar *desc_i = ncm_data_peek_desc (data);
-    gchar *desc_i_ww = ncm_string_ww (desc_i, 
-                                      "#   - ", 
-                                      "#       ", 
+    gchar *desc_i_ww = ncm_string_ww (desc_i,
+                                      "#   - ",
+                                      "#       ",
                                       80);
     g_string_append (desc, desc_i_ww);
     g_free (desc_i_ww);
@@ -653,10 +653,10 @@ ncm_dataset_get_info (NcmDataset *dset)
  * @dset: a #NcmDataset
  *
  * FIXME
- * 
+ *
  * Returns: FIXME
  */
-gboolean 
+gboolean
 ncm_dataset_has_leastsquares_f (NcmDataset *dset)
 {
   if (dset->oa->len == 0)
@@ -679,10 +679,10 @@ ncm_dataset_has_leastsquares_f (NcmDataset *dset)
  * @dset: a #NcmDataset
  *
  * FIXME
- * 
+ *
  * Returns: FIXME
  */
-gboolean 
+gboolean
 ncm_dataset_has_leastsquares_J (NcmDataset *dset)
 {
   if (dset->oa->len == 0)
@@ -705,10 +705,10 @@ ncm_dataset_has_leastsquares_J (NcmDataset *dset)
  * @dset: a #NcmDataset
  *
  * FIXME
- * 
+ *
  * Returns: FIXME
  */
-gboolean 
+gboolean
 ncm_dataset_has_leastsquares_f_J (NcmDataset *dset)
 {
   if (dset->oa->len == 0)
@@ -731,11 +731,11 @@ ncm_dataset_has_leastsquares_f_J (NcmDataset *dset)
  * @dset: a #NcmDataset
  *
  * FIXME
- * 
+ *
  * Returns: FIXME
- * 
+ *
  */
-gboolean 
+gboolean
 ncm_dataset_has_m2lnL_val (NcmDataset *dset)
 {
   if (dset->oa->len == 0)
@@ -758,11 +758,11 @@ ncm_dataset_has_m2lnL_val (NcmDataset *dset)
  * @dset: a #NcmDataset
  *
  * FIXME
- * 
+ *
  * Returns: FIXME
- * 
+ *
  */
-gboolean 
+gboolean
 ncm_dataset_has_m2lnL_grad (NcmDataset *dset)
 {
   if (dset->oa->len == 0)
@@ -785,11 +785,11 @@ ncm_dataset_has_m2lnL_grad (NcmDataset *dset)
  * @dset: a #NcmDataset
  *
  * FIXME
- * 
+ *
  * Returns: FIXME
- * 
+ *
  */
-gboolean 
+gboolean
 ncm_dataset_has_m2lnL_val_grad (NcmDataset *dset)
 {
   if (dset->oa->len == 0)
@@ -836,7 +836,7 @@ ncm_dataset_leastsquares_f (NcmDataset *dset, NcmMSet *mset, NcmVector *f)
       ncm_vector_free (f_i);
     }
   }
-  
+
   return;
 }
 
@@ -847,7 +847,7 @@ ncm_dataset_leastsquares_f (NcmDataset *dset, NcmMSet *mset, NcmVector *f)
  * @J: a #NcmMatrix.
  *
  * FIXME
- * 
+ *
  */
 void
 ncm_dataset_leastsquares_J (NcmDataset *dset, NcmMSet *mset, NcmMatrix *J)
@@ -865,14 +865,14 @@ ncm_dataset_leastsquares_J (NcmDataset *dset, NcmMSet *mset, NcmMatrix *J)
     {
       NcmMatrix *J_i = ncm_matrix_get_submatrix (J, pos, 0, n, ncm_matrix_ncols (J));
       ncm_data_prepare (data, mset);
-      
+
       NCM_DATA_GET_CLASS (data)->leastsquares_J (data, mset, J_i);
-      
+
       pos += n;
       ncm_matrix_free (J_i);
     }
   }
-  
+
   return;
 }
 
@@ -919,7 +919,7 @@ ncm_dataset_leastsquares_f_J (NcmDataset *dset, NcmMSet *mset, NcmVector *f, Ncm
  * @dset: a #NcmLikelihood.
  * @mset: a #NcmMSet.
  * @m2lnL: (out): FIXME
- * 
+ *
  * FIXME
  */
 void
@@ -945,6 +945,38 @@ ncm_dataset_m2lnL_val (NcmDataset *dset, NcmMSet *mset, gdouble *m2lnL)
 
   return;
 }
+
+/**
+ * ncm_dataset_m2lnL_i_val:
+ * @dset: a #NcmLikelihood
+ * @mset: a #NcmMSet
+ * @i: an integer
+ * @m2lnL_i: (out): FIXME
+ *
+ * Get the value of the @i-th data in the dataset.
+ *
+ */
+void
+ncm_dataset_m2lnL_i_val (NcmDataset *dset, NcmMSet *mset, guint i, gdouble *m2lnL_i)
+{
+  *m2lnL_i = 0.0;
+
+  g_assert_cmpuint (i, <, dset->oa->len);
+  {
+    NcmData *data = ncm_dataset_peek_data (dset, i);
+
+    if (!NCM_DATA_GET_CLASS (data)->m2lnL_val)
+      g_error ("ncm_dataset_m2lnL_val: %s dont implement m2lnL", G_OBJECT_TYPE_NAME (data));
+    else
+    {
+      ncm_data_prepare (data, mset);
+      NCM_DATA_GET_CLASS (data)->m2lnL_val (data, mset, m2lnL_i);
+    }
+  }
+
+  return;
+}
+
 
 /**
  * ncm_dataset_m2lnL_grad:
@@ -1007,7 +1039,7 @@ ncm_dataset_m2lnL_val_grad (NcmDataset *dset, NcmMSet *mset, gdouble *m2lnL, Ncm
     gdouble m2lnL_i;
 
     ncm_data_prepare (data, mset);
-    
+
     if (NCM_DATA_GET_CLASS (data)->m2lnL_val_grad != NULL)
       NCM_DATA_GET_CLASS (data)->m2lnL_val_grad (data, mset, &m2lnL_i, grad_i);
     else if (NCM_DATA_GET_CLASS (data)->m2lnL_val != NULL && NCM_DATA_GET_CLASS (data)->m2lnL_grad != NULL)
@@ -1022,5 +1054,5 @@ ncm_dataset_m2lnL_val_grad (NcmDataset *dset, NcmMSet *mset, gdouble *m2lnL, Ncm
     ncm_vector_add (grad, grad_i);
   }
 
-  ncm_vector_free (grad_i);  
+  ncm_vector_free (grad_i);
 }

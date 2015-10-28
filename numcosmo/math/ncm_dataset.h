@@ -8,17 +8,17 @@
 /*
  * numcosmo
  * Copyright (C) 2012 Sandro Dias Pinto Vitenti <sandro@isoftware.com.br>
- * 
+ *
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * numcosmo is distributed in the hope that it will be useful, but
  * WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
  * See the GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License along
  * with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
@@ -49,7 +49,7 @@ typedef struct _NcmDataset NcmDataset;
  * @NCM_DATASET_BSTRAP_DISABLE: Bootstrap disabled.
  * @NCM_DATASET_BSTRAP_PARTIAL: Partial bootstrap, each #NcmData is bootstraped individually.
  * @NCM_DATASET_BSTRAP_TOTAL: Total bootstrap, all data is bootstraped simultaneously.
- * 
+ *
  */
 typedef enum _NcmDatasetBStrapType
 {
@@ -123,6 +123,8 @@ void ncm_dataset_leastsquares_f_J (NcmDataset *dset, NcmMSet *mset, NcmVector *f
 void ncm_dataset_m2lnL_val (NcmDataset *dset, NcmMSet *mset, gdouble *m2lnL);
 void ncm_dataset_m2lnL_grad (NcmDataset *dset, NcmMSet *mset, NcmVector *grad);
 void ncm_dataset_m2lnL_val_grad (NcmDataset *dset, NcmMSet *mset, gdouble *m2lnL, NcmVector *grad);
+
+void ncm_dataset_m2lnL_i_val (NcmDataset *dset, NcmMSet *mset, guint i, gdouble *m2lnL_i);
 
 G_END_DECLS
 

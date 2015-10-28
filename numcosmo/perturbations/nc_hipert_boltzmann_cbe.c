@@ -79,15 +79,16 @@ G_DEFINE_TYPE (NcHIPertBoltzmannCBE, nc_hipert_boltzmann_cbe, NC_TYPE_HIPERT_BOL
 static void
 nc_hipert_boltzmann_cbe_init (NcHIPertBoltzmannCBE *cbe)
 {
-  cbe->priv   = G_TYPE_INSTANCE_GET_PRIVATE (cbe, NC_TYPE_HIPERT_BOLTZMANN_CBE, NcHIPertBoltzmannCBEPrivate);
-  cbe->prec   = NULL;
-  cbe->lmax   = 0;
-  cbe->TT_Cls = NULL;
-  cbe->EE_Cls = NULL;
-  cbe->BB_Cls = NULL;
-  cbe->TE_Cls = NULL;
-  cbe->TB_Cls = NULL;
-  cbe->EB_Cls = NULL;
+  cbe->priv           = G_TYPE_INSTANCE_GET_PRIVATE (cbe, NC_TYPE_HIPERT_BOLTZMANN_CBE, NcHIPertBoltzmannCBEPrivate);
+  cbe->prec           = NULL;
+  cbe->use_lensed_Cls = FALSE;
+  cbe->lmax           = 0;
+  cbe->TT_Cls         = NULL;
+  cbe->EE_Cls         = NULL;
+  cbe->BB_Cls         = NULL;
+  cbe->TE_Cls         = NULL;
+  cbe->TB_Cls         = NULL;
+  cbe->EB_Cls         = NULL;
 
   cbe->priv->pba.h                    = 0.0;
   cbe->priv->pba.H0                   = 0.0;
@@ -618,8 +619,8 @@ _nc_hipert_boltzmann_cbe_set_bg (NcHIPertBoltzmannCBE *cbe, NcHICosmo *cosmo)
     cbe->priv->pba.sgnK                = 0;
     cbe->priv->pba.a_today             = 1.0;
   }
+  cbe->priv->pba.Omega0_lambda       = ncm_model_orig_param_get (NCM_MODEL (cosmo), NC_HICOSMO_DE_OMEGA_X);
 
-  cbe->priv->pba.Omega0_lambda       = ncm_model_orig_param_get (NCM_MODEL (cosmo), NC_HICOSMO_DE_OMEGA_X) ;
   cbe->priv->pba.Omega0_fld          = 0.0;
   cbe->priv->pba.w0_fld              = -1.0;
   cbe->priv->pba.wa_fld              = 0.0;
@@ -634,14 +635,13 @@ _nc_hipert_boltzmann_cbe_set_thermo (NcHIPertBoltzmannCBE *cbe, NcHICosmo *cosmo
   cbe->priv->pth.YHe                      = _BBN_;
   cbe->priv->pth.recombination            = recfast;
   cbe->priv->pth.reio_parametrization     = reio_camb;
-  cbe->priv->pth.reio_z_or_tau            = reio_z;
-  cbe->priv->pth.z_reio                   = 11.357;
-  cbe->priv->pth.tau_reio                 = 0.0925;
+  cbe->priv->pth.reio_z_or_tau            = reio_tau;
+  cbe->priv->pth.z_reio                   = 13.0/*ncm_model_orig_param_get (NCM_MODEL (cosmo), NC_HICOSMO_DE_Z_RE)*/;
+  cbe->priv->pth.tau_reio                 = ncm_model_orig_param_get (NCM_MODEL (cosmo), NC_HICOSMO_DE_Z_RE)/*0.0925*/;
   cbe->priv->pth.reionization_exponent    = 1.5;
   cbe->priv->pth.reionization_width       = 0.5;
   cbe->priv->pth.helium_fullreio_redshift = 3.5;
   cbe->priv->pth.helium_fullreio_width    = 0.5;
-
   cbe->priv->pth.binned_reio_num            = 0;
   cbe->priv->pth.binned_reio_z              = NULL;
   cbe->priv->pth.binned_reio_xe             = NULL;
@@ -684,7 +684,7 @@ _nc_hipert_boltzmann_cbe_set_pert (NcHIPertBoltzmannCBE *cbe, NcHICosmo *cosmo)
   cbe->priv->ppt.has_cl_cmb_temperature       = pb->target_Cls & NC_DATA_CMB_TYPE_TT ? _TRUE_ : _FALSE_;
   cbe->priv->ppt.has_cl_cmb_polarization      =
     pb->target_Cls & (NC_DATA_CMB_TYPE_EE | NC_DATA_CMB_TYPE_BB | NC_DATA_CMB_TYPE_TE) ? _TRUE_ : _FALSE_;
-  cbe->priv->ppt.has_cl_cmb_lensing_potential = _FALSE_;
+  cbe->priv->ppt.has_cl_cmb_lensing_potential = _TRUE_;
   cbe->priv->ppt.has_cl_number_count          = _FALSE_;
   cbe->priv->ppt.has_cl_lensing_potential     = _FALSE_;
   cbe->priv->ppt.has_pk_matter                = pb->calc_transfer ? _TRUE_ : _FALSE_;
@@ -921,7 +921,7 @@ _nc_hipert_boltzmann_cbe_set_spectra (NcHIPertBoltzmannCBE *cbe, NcHICosmo *cosm
 static void
 _nc_hipert_boltzmann_cbe_set_lensing (NcHIPertBoltzmannCBE *cbe, NcHICosmo *cosmo)
 {
-  cbe->priv->ple.has_lensed_cls  = _FALSE_;
+  cbe->priv->ple.has_lensed_cls  = _TRUE_;
   cbe->priv->ple.lensing_verbose = cbe->lensing_verbose;
 }
 
@@ -971,52 +971,80 @@ _nc_hipert_boltzmann_cbe_prepare (NcHIPertBoltzmann *pb, NcHIPrim *prim, NcHICos
     g_error ("nc_hipert_boltzmann_cbe_prepare: Error running lensing_init `%s'\n", cbe->priv->ple.error_message);
 
   {
-    guint TT_lmax = cbe->priv->psp.has_tt ? nc_hipert_boltzmann_get_TT_lmax (pb) : 0;
-    guint EE_lmax = cbe->priv->psp.has_ee ? nc_hipert_boltzmann_get_EE_lmax (pb) : 0;
-    guint BB_lmax = cbe->priv->psp.has_bb ? nc_hipert_boltzmann_get_BB_lmax (pb) : 0;
-    guint TE_lmax = cbe->priv->psp.has_te ? nc_hipert_boltzmann_get_TE_lmax (pb) : 0;
+    guint all_Cls_size, index_tt, index_ee, index_bb, index_te;
+    gboolean has_tt, has_ee, has_bb, has_te;
+    if (cbe->use_lensed_Cls)
+    {
+      struct lensing *ptr = &cbe->priv->ple;
+      all_Cls_size = ptr->lt_size; /* ptr->ct_size */
+      index_tt = ptr->index_lt_tt;
+      index_ee = ptr->index_lt_ee;
+      index_bb = ptr->index_lt_bb;
+      index_te = ptr->index_lt_te;
+      has_tt = ptr->has_tt;
+      has_ee = ptr->has_ee;
+      has_bb = ptr->has_bb;
+      has_te = ptr->has_te;
+    }
+    else
+    {
+      struct spectra *ptr = &cbe->priv->psp;
+      all_Cls_size = ptr->ct_size;
+      index_tt = ptr->index_ct_tt;
+      index_ee = ptr->index_ct_ee;
+      index_bb = ptr->index_ct_bb;
+      index_te = ptr->index_ct_te;
+      has_tt = ptr->has_tt;
+      has_ee = ptr->has_ee;
+      has_bb = ptr->has_bb;
+      has_te = ptr->has_te;
+    }
+
+    guint TT_lmax = has_tt ? nc_hipert_boltzmann_get_TT_lmax (pb) : 0;
+    guint EE_lmax = has_ee ? nc_hipert_boltzmann_get_EE_lmax (pb) : 0;
+    guint BB_lmax = has_bb ? nc_hipert_boltzmann_get_BB_lmax (pb) : 0;
+    guint TE_lmax = has_te ? nc_hipert_boltzmann_get_TE_lmax (pb) : 0;
     const gdouble T_gamma0 = nc_hicosmo_T_gamma0 (cosmo);
     const gdouble Cl_fac   = gsl_pow_2 (1.0e6 * T_gamma0);
-    gdouble *all_Cls       = g_new0 (gdouble, cbe->priv->psp.ct_size);
+    gdouble *all_Cls       = g_new0 (gdouble, all_Cls_size);
     guint l;
 
-    g_assert (!(pb->target_Cls & NC_DATA_CMB_TYPE_TT) || cbe->priv->psp.has_tt);
-    g_assert (!(pb->target_Cls & NC_DATA_CMB_TYPE_EE) || cbe->priv->psp.has_ee);
-    g_assert (!(pb->target_Cls & NC_DATA_CMB_TYPE_BB) || cbe->priv->psp.has_bb);
-    g_assert (!(pb->target_Cls & NC_DATA_CMB_TYPE_TE) || cbe->priv->psp.has_te);
+    g_assert (!(pb->target_Cls & NC_DATA_CMB_TYPE_TT) || has_tt);
+    g_assert (!(pb->target_Cls & NC_DATA_CMB_TYPE_EE) || has_ee);
+    g_assert (!(pb->target_Cls & NC_DATA_CMB_TYPE_BB) || has_bb);
+    g_assert (!(pb->target_Cls & NC_DATA_CMB_TYPE_TE) || has_te);
 
-    for (l = 2; l <= cbe->lmax; l++)
+    for (l = 1; l <= cbe->lmax; l++)
     {
-      spectra_cl_at_l (&cbe->priv->psp, l, all_Cls, NULL, NULL);
-      /*printf ("A %d %u %u %u %u\n", l, TT_lmax, EE_lmax, BB_lmax, TE_lmax);fflush (stdout);*/
-      if (TT_lmax > 1)
+      if (cbe->use_lensed_Cls)
+        lensing_cl_at_l (&cbe->priv->ple, l, all_Cls);
+      else
+        spectra_cl_at_l (&cbe->priv->psp, l, all_Cls, NULL, NULL);
+
+      if (TT_lmax > 0)
       {
-        const gdouble TT_Cl = all_Cls[cbe->priv->psp.index_ct_tt];
+        const gdouble TT_Cl = all_Cls[index_tt];
         ncm_vector_set (cbe->TT_Cls, l, Cl_fac * TT_Cl);
         TT_lmax--;
       }
-      /*printf ("B %d\n", l);fflush (stdout);*/
-      if (EE_lmax > 1)
+      if (EE_lmax > 0)
       {
-        const gdouble EE_Cl = all_Cls[cbe->priv->psp.index_ct_ee];
+        const gdouble EE_Cl = all_Cls[index_ee];
         ncm_vector_set (cbe->EE_Cls, l, Cl_fac * EE_Cl);
         EE_lmax--;
       }
-      /*printf ("C %d\n", l);fflush (stdout);*/
-      if (BB_lmax > 1)
+      if (BB_lmax > 0)
       {
-        const gdouble BB_Cl = all_Cls[cbe->priv->psp.index_ct_bb];
+        const gdouble BB_Cl = all_Cls[index_bb];
         ncm_vector_set (cbe->BB_Cls, l, Cl_fac * BB_Cl);
         BB_lmax--;
       }
-      /*printf ("D %d\n", l);fflush (stdout);*/
-      if (TE_lmax > 1)
+      if (TE_lmax > 0)
       {
-        const gdouble TE_Cl = all_Cls[cbe->priv->psp.index_ct_te];
+        const gdouble TE_Cl = all_Cls[index_te];
         ncm_vector_set (cbe->TE_Cls, l, Cl_fac * TE_Cl);
         TE_lmax--;
       }
-      /*printf ("E %d\n", l);fflush (stdout);*/
     }
     g_free (all_Cls);
   }

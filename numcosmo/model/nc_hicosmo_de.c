@@ -257,6 +257,11 @@ nc_hicosmo_de_class_init (NcHICosmoDEClass *klass)
                               0.2,   1.8, 1.0e-2,
                               NC_HICOSMO_DEFAULT_PARAMS_ABSTOL, NC_HICOSMO_DE_DEFAULT_SIGMA8,
                               NCM_PARAM_TYPE_FIXED);
+  /* Set z_re param info */
+  ncm_model_class_set_sparam (model_class, NC_HICOSMO_DE_Z_RE, "z_{re}", "z_re",
+                              0.0, 1.0, 1.0e-3,
+                              NC_HICOSMO_DEFAULT_PARAMS_ABSTOL, NC_HICOSMO_DE_DEFAULT_Z_RE,
+                              NCM_PARAM_TYPE_FIXED);
   /* Check for errors in parameters initialization */
   ncm_model_class_check_params_info (model_class);
 

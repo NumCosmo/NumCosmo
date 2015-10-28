@@ -239,7 +239,7 @@ nc_hipert_boltzmann_class_init (NcHIPertBoltzmannClass *klass)
                                    g_param_spec_uint ("TT-l-max",
                                                       NULL,
                                                       "Last multipole in the TT correlation",
-                                                      4, G_MAXUINT32, 4,
+                                                      4, G_MAXUINT32, 30,
                                                       G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
   g_object_class_install_property (object_class,
                                    PROP_EE_LMAX,

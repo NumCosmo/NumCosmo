@@ -843,6 +843,73 @@ ncm_serialize_set_property (NcmSerialize *ser, GObject *obj, const gchar *prop_s
 }
 
 /**
+ * ncm_serialize_set_property_from_key_file:
+ * @ser: a #NcmSerialize.
+ * @obj: a #GObject.
+ * @prop_file: a GKeyFile file containing the parameters to set.
+ *
+ * Deserializes the set of object properties in @prop_file and sets the @obj.
+ *
+ */
+void
+ncm_serialize_set_property_from_key_file (NcmSerialize *ser, GObject *obj, const gchar *prop_file)
+{
+  GKeyFile *key_file = g_key_file_new ();
+  GError *error = NULL;
+  GString *prop_ser = g_string_sized_new (200);
+
+  if (!g_key_file_load_from_file (key_file, prop_file, G_KEY_FILE_KEEP_COMMENTS | G_KEY_FILE_KEEP_TRANSLATIONS, &error))
+  {
+    gchar *contents;
+    gsize length = 0;
+
+    /* If it does not posses a group add one. */
+    g_clear_error (&error);
+    if (!g_file_get_contents (prop_file, &contents, &length, &error))
+    {
+      g_error ("ncm_serialize_set_property_from_key_file: Invalid mset configuration file: %s %s", prop_file, error->message);
+      return;
+    }
+    else
+    {
+      gchar *gcontents = g_strconcat ("[Precision Parameters]\n\n\n", contents, NULL);
+      g_free (contents);
+      if (!g_key_file_load_from_data (key_file, gcontents, strlen (gcontents), G_KEY_FILE_KEEP_COMMENTS | G_KEY_FILE_KEEP_TRANSLATIONS, &error))
+      {
+        g_error ("ncm_serialize_set_property_from_key_file: Invalid mset configuration file: %s %s", prop_file, error->message);
+        return;
+      }
+      g_free (gcontents);
+    }
+  }
+
+  g_string_append_printf (prop_ser, "@a{sv} {");
+  {
+    gsize nkeys = 0;
+    gchar **keys = g_key_file_get_keys (key_file, "Precision Parameters", &nkeys, &error);
+    guint i;
+    if (error != NULL)
+      g_error ("ncm_serialize_set_property_from_key_file: %s", error->message);
+    for (i = 0; i < nkeys; i++)
+    {
+      gchar *propval = g_key_file_get_value (key_file, "Precision Parameters", keys[i], &error);
+      if (error != NULL)
+        g_error ("ncm_serialize_set_property_from_key_file: %s", error->message);
+      g_string_append_printf (prop_ser, "\'%s\':<%s>", keys[i], propval);
+      g_free (propval);
+      if (i + 1 != nkeys)
+        g_string_append (prop_ser, ", ");
+    }
+    g_string_append (prop_ser, "}");
+    g_strfreev (keys);
+  }
+
+  ncm_serialize_set_property (ser, obj, prop_ser->str);
+  g_key_file_unref (key_file);
+  g_string_free (prop_ser, TRUE);
+}
+
+/**
  * ncm_serialize_from_variant:
  * @ser: a #NcmSerialize.
  * @var_obj: A #GVariant containing the serialized version of the object.
@@ -1656,6 +1723,22 @@ ncm_serialize_global_set_property (GObject *obj, const gchar *prop_str)
 {
   NcmSerialize *ser = ncm_serialize_global ();
   ncm_serialize_set_property (ser, obj, prop_str);
+  ncm_serialize_unref (ser);
+}
+
+/**
+ * ncm_serialize_global_set_property_from_key_file:
+ * @obj: a #GObject.
+ * @prop_file: a #GKeyFile containing the parameters to set.
+ *
+ * Global version of ncm_serialize_set_property().
+ *
+ */
+void
+ncm_serialize_global_set_property_from_key_file (GObject *obj, const gchar *prop_file)
+{
+  NcmSerialize *ser = ncm_serialize_global ();
+  ncm_serialize_set_property_from_key_file (ser, obj, prop_file);
   ncm_serialize_unref (ser);
 }
 

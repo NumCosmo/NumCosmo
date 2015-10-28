@@ -81,7 +81,8 @@ typedef enum _NcHICosmoDEParams
   NC_HICOSMO_DE_ENNU,
   NC_HICOSMO_DE_OMEGA_B,
   NC_HICOSMO_DE_SPECINDEX,
-  NC_HICOSMO_DE_SIGMA8,     /*< private >*/
+  NC_HICOSMO_DE_SIGMA8,
+  NC_HICOSMO_DE_Z_RE,       /*< private >*/
   NC_HICOSMO_DE_SPARAM_LEN, /*< skip >*/
 } NcHICosmoDEParams;
 
@@ -93,6 +94,8 @@ typedef enum _NcHICosmoDEParams
 #define NC_HICOSMO_DE_DEFAULT_ENNU      (3.046)
 #define NC_HICOSMO_DE_DEFAULT_SPECINDEX (1.0)
 #define NC_HICOSMO_DE_DEFAULT_SIGMA8    (0.9)
+#define NC_HICOSMO_DE_DEFAULT_Z_RE      (0.1)
+/*(11.357)*/
 
 struct _NcHICosmoDE
 {

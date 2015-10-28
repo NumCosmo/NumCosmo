@@ -67,6 +67,7 @@ struct _NcDataPlanckLKL
   gchar *chksum;
   NcDataCMBDataType cmb_data;
   NcmVector *data_params;
+  NcmVector *check_data_params;
   NcmVector *data_TT;
   NcmVector *data_EE;
   NcmVector *data_BB;

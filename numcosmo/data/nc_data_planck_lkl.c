@@ -85,6 +85,7 @@ nc_data_planck_lkl_init (NcDataPlanckLKL *plik)
   plik->chksum      = NULL;
   plik->cmb_data    = 0;
   plik->data_params = NULL;
+  plik->check_data_params = NULL;
   plik->data_TT     = NULL;
   plik->data_EE     = NULL;
   plik->data_BB     = NULL;
@@ -151,6 +152,7 @@ nc_data_planck_lkl_dispose (GObject *object)
   nc_hipert_boltzmann_clear (&plik->pb);
 
   ncm_vector_clear (&plik->data_params);
+  ncm_vector_clear (&plik->check_data_params);
   ncm_vector_clear (&plik->data_TT);
   ncm_vector_clear (&plik->data_EE);
   ncm_vector_clear (&plik->data_BB);
@@ -372,6 +374,8 @@ _nc_data_planck_lkl_m2lnL_val (NcmData *data, NcmMSet *mset, gdouble *m2lnL)
   {
     *m2lnL = -2.0 * clik_compute (clik->obj, cl_and_pars, &err);
     CLIK_CHECK_ERROR ("_nc_data_planck_lkl_m2lnL_val[clik_compute]", err);
+
+    printf ("# m2lnL % 20.15g check % 20.15g\n", *m2lnL, -2.0 * clik_compute (clik->obj, ncm_vector_ptr (clik->check_data_params, 0), &err));
   }
   endError (&err);
   return;
@@ -513,6 +517,22 @@ _nc_data_planck_lkl_set_filename (NcDataPlanckLKL *plik, const gchar *filename)
         }
       }
       plik->params = ncm_vector_get_subvector (plik->data_params, vec_pos, plik->nparams);
+    }
+
+    {
+      gint npar_out       = 0;
+      gdouble check_value = 0.0;
+      gdouble *chkp       = NULL;
+
+      clik_get_check_param (plik->obj, plik->filename, &chkp, &check_value, &npar_out, &err);
+      g_assert_cmpint (npar_out, ==, ncm_vector_len (plik->data_params));
+
+      ncm_vector_set_array (plik->data_params, chkp);
+      ncm_vector_clear (&plik->check_data_params);
+
+      plik->check_data_params = ncm_vector_dup (plik->data_params);
+
+      g_free (chkp);
     }
 
     if (plik->nparams > 0)
