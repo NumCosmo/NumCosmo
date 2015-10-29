@@ -34,8 +34,10 @@ gobj_itest_LDADD = \
 
 AM_CPPFLAGS = 
 
-bin_PROGRAMS = darkenergy \
-	mcat_analyze
+bin_PROGRAMS = \
+	darkenergy   \
+	mcat_analyze \
+	mset_gen
 
 darkenergy_SOURCES = \
 	darkenergy.c\
@@ -53,3 +55,12 @@ mcat_analyze_SOURCES =  \
 	mcat_analyze.c
 
 mcat_analyze_LDADD = $(top_builddir)/numcosmo/libnumcosmo.la 
+
+mset_gen_SOURCES =  \
+	mset_gen.c
+
+mset_gen_LDADD = $(top_builddir)/numcosmo/libnumcosmo.la 
+
+
+
+
