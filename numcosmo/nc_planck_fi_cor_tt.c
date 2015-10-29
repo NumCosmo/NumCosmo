@@ -25,7 +25,7 @@
 
 /**
  * SECTION:nc_planck_fi_cor_tt
- * @title: NcPlanclFICorTT
+ * @title: NcPlanckFICorTT
  * @short_description: Planck Foreground and Instrument model for TT correlation maps
  *
  * FIXME
