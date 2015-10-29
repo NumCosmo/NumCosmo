@@ -270,14 +270,14 @@ clik_get_check_param (clik_object *target, char* hdffilepath, double **chkp, dou
   _dealwitherr;
 
   df  = cldf_open (hdffilepath, err);
-  _forwardError(*err,__LINE__,NULL);
+  _forwardError(*err,__LINE__,);
 
   n_lkl = cldf_readint (df, "clik/n_lkl_object", err);
-  _forwardError (*err, __LINE__, NULL);
+  _forwardError (*err, __LINE__,);
 
   sz = 6;
   lmax = cldf_readintarray (df, "clik/lmax", &sz,err);
-  _forwardError (*err, __LINE__, NULL);
+  _forwardError (*err, __LINE__,);
 
   n_cl = 0;
   for(cli=0;cli<6;cli++) {
@@ -285,23 +285,23 @@ clik_get_check_param (clik_object *target, char* hdffilepath, double **chkp, dou
   }
 
   cdf = cldf_openchild (df, "clik", err);
-  _forwardError (*err, __LINE__, NULL);
+  _forwardError (*err, __LINE__,);
 
   hk = cldf_haskey (cdf, "check_param", err);
-  _forwardError (*err, __LINE__, NULL);
+  _forwardError (*err, __LINE__,);
 
   if (hk == 1)
   {
     int npar;
     double res,res2;
     npar = clik_get_extra_parameter_names (target, NULL, err) + n_cl;
-    _forwardError(*err,__LINE__,NULL);
+    _forwardError(*err,__LINE__,);
 
     *chkp = cldf_readfloatarray (cdf, "check_param", &npar, err);
-    _forwardError(*err,__LINE__,NULL);
+    _forwardError(*err,__LINE__,);
 
     *check_value = cldf_readfloat (cdf,"check_value",err);
-    _forwardError(*err,__LINE__,NULL);
+    _forwardError(*err,__LINE__,);
 
     *npar_out = npar;
   }
