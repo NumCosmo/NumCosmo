@@ -988,11 +988,14 @@ ncm_serialize_from_string (NcmSerialize *ser, const gchar *obj_ser)
   GMatchInfo *match_info = NULL;
   GVariant *var_obj = NULL;
   GObject *obj = _ncm_serialize_from_saved_or_named (ser, obj_ser, NULL);
+  gchar *error_msg = NULL;
 
   if (obj != NULL)
     return obj;
 
   var_obj = g_variant_parse (G_VARIANT_TYPE (NCM_SERIALIZE_OBJECT_TYPE), obj_ser, NULL, NULL, &error);
+  if (error != NULL)
+    error_msg = g_strdup (error->message);
   g_clear_error (&error);
   if (var_obj != NULL)
   {
@@ -1005,6 +1008,7 @@ ncm_serialize_from_string (NcmSerialize *ser, const gchar *obj_ser)
     gchar *obj_prop = g_match_info_fetch (match_info, 2);
     GVariant *params = NULL;
 
+    g_free (error_msg);
     if (obj_prop != NULL && strlen (obj_prop) > 0)
     {
       params = g_variant_parse (G_VARIANT_TYPE (NCM_SERIALIZE_PROPERTIES_TYPE),
@@ -1027,7 +1031,11 @@ ncm_serialize_from_string (NcmSerialize *ser, const gchar *obj_ser)
   else
   {
     g_match_info_free (match_info);
-    g_error ("ncm_serialize_from_string: cannot indentify object (%s) in string '%s'.", NCM_SERIALIZE_OBJECT_TYPE, obj_ser);
+    g_error ("ncm_serialize_from_string: cannot indentify object (%s) in string '%s', variant error `%s'.",
+             NCM_SERIALIZE_OBJECT_TYPE,
+             obj_ser,
+             error_msg);
+    g_free (error_msg);
   }
 
   return obj;
