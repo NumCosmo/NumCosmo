@@ -32,7 +32,7 @@
  * spectrum inspired in the quantum equilibrium models.
  * See:
  * - [Valentini (2010)][XValentini2010]
- * - [Colin (2015)][XColin2010]
+ * - [Colin (2015)][XColin2015]
  * - [Underwood (2015)][XUnderwood2015]
  * - [Valentini (2015)][XValentini2015]
  */
