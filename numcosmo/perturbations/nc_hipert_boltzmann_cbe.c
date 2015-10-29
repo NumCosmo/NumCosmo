@@ -59,6 +59,7 @@ enum
 {
   PROP_0,
   PROP_PREC,
+  PROP_USE_LENSED_CLS,
 };
 
 struct _NcHIPertBoltzmannCBEPrivate
@@ -368,6 +369,10 @@ nc_hipert_boltzmann_cbe_set_property (GObject *object, guint prop_id, const GVal
       cbe->prec = g_value_dup_object (value);
       ncm_model_ctrl_force_update (NC_HIPERT_BOLTZMANN (cbe)->ctrl_cosmo);
       break;
+    case PROP_USE_LENSED_CLS:
+      cbe->use_lensed_Cls = g_value_get_boolean (value);
+      ncm_model_ctrl_force_update (NC_HIPERT_BOLTZMANN (cbe)->ctrl_cosmo);
+      break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
       break;
@@ -384,6 +389,9 @@ nc_hipert_boltzmann_cbe_get_property (GObject *object, guint prop_id, GValue *va
   {
     case PROP_PREC:
       g_value_set_object (value, cbe->prec);
+      break;
+    case PROP_USE_LENSED_CLS:
+      g_value_set_boolean (value, cbe->use_lensed_Cls);
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -444,6 +452,13 @@ nc_hipert_boltzmann_cbe_class_init (NcHIPertBoltzmannCBEClass *klass)
                                                         "CLASS precision object",
                                                         NC_TYPE_CBE_PRECISION,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  g_object_class_install_property (object_class,
+                                   PROP_USE_LENSED_CLS,
+                                   g_param_spec_boolean ("use-lensed-Cls",
+                                                         NULL,
+                                                         "Whether use the lensed corrected Cls",
+                                                         TRUE,
+                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   NC_HIPERT_BOLTZMANN_CLASS (klass)->prepare    = &_nc_hipert_boltzmann_cbe_prepare;
   NC_HIPERT_BOLTZMANN_CLASS (klass)->get_TT_Cls = &_nc_hipert_boltzmann_cbe_get_TT_Cls;
@@ -632,12 +647,14 @@ _nc_hipert_boltzmann_cbe_set_bg (NcHIPertBoltzmannCBE *cbe, NcHICosmo *cosmo)
 static void
 _nc_hipert_boltzmann_cbe_set_thermo (NcHIPertBoltzmannCBE *cbe, NcHICosmo *cosmo)
 {
+  struct precision *ppr = (struct precision *)cbe->prec->priv;
+
   cbe->priv->pth.YHe                      = _BBN_;
   cbe->priv->pth.recombination            = recfast;
   cbe->priv->pth.reio_parametrization     = reio_camb;
   cbe->priv->pth.reio_z_or_tau            = reio_tau;
-  cbe->priv->pth.z_reio                   = 13.0/*ncm_model_orig_param_get (NCM_MODEL (cosmo), NC_HICOSMO_DE_Z_RE)*/;
-  cbe->priv->pth.tau_reio                 = ncm_model_orig_param_get (NCM_MODEL (cosmo), NC_HICOSMO_DE_Z_RE)/*0.0925*/;
+  cbe->priv->pth.z_reio                   = 13.0;
+  cbe->priv->pth.tau_reio                 = ncm_model_orig_param_get (NCM_MODEL (cosmo), NC_HICOSMO_DE_TAU_RE);
   cbe->priv->pth.reionization_exponent    = 1.5;
   cbe->priv->pth.reionization_width       = 0.5;
   cbe->priv->pth.helium_fullreio_redshift = 3.5;
@@ -660,6 +677,10 @@ _nc_hipert_boltzmann_cbe_set_thermo (NcHIPertBoltzmannCBE *cbe, NcHICosmo *cosmo
   cbe->priv->pth.compute_cb2_derivatives = _FALSE_;
 
   cbe->priv->pth.thermodynamics_verbose  = cbe->thermo_verbose;
+
+  if ((ppr->tight_coupling_approximation == (gint) first_order_CLASS) ||
+      (ppr->tight_coupling_approximation == (gint) second_order_CLASS))
+    cbe->priv->pth.compute_cb2_derivatives = _TRUE_;
 }
 
 static void
@@ -668,6 +689,7 @@ _nc_hipert_boltzmann_cbe_set_pert (NcHIPertBoltzmannCBE *cbe, NcHICosmo *cosmo)
   NcHIPertBoltzmann *pb = NC_HIPERT_BOLTZMANN (cbe);
   gboolean has_cls = (pb->target_Cls & NC_DATA_CMB_TYPE_ALL) != 0;
   gboolean has_perturbations = has_cls || pb->calc_transfer;
+  struct precision *ppr = (struct precision *)cbe->prec->priv;
 
   /*
    * Inside CLASS they compare booleans with _TRUE_ and _FALSE_.
@@ -757,7 +779,10 @@ G_STMT_START { \
     cbe->lmax = GSL_MAX (cbe->lmax, TB_lmax);
     cbe->lmax = GSL_MAX (cbe->lmax, EB_lmax);
 
-    cbe->priv->ppt.l_scalar_max = cbe->lmax;
+    cbe->priv->ppt.l_scalar_max = cbe->lmax +
+        (cbe->use_lensed_Cls ? ppr->delta_l_max : 0);
+
+
     cbe->priv->ppt.l_vector_max = 500;
     cbe->priv->ppt.l_tensor_max = 500;
     cbe->priv->ppt.l_lss_max    = 300;
@@ -816,8 +841,8 @@ _nc_hipert_boltzmann_cbe_set_prim (NcHIPertBoltzmannCBE *cbe, NcHIPrim *prim, Nc
   cbe->priv->ppm.external_Pk_callback_data = prim;
 
   cbe->priv->ppm.k_pivot       = 0.05;
-  cbe->priv->ppm.A_s           = 2.215e-9;
-  cbe->priv->ppm.n_s           = 0.9619;
+  cbe->priv->ppm.A_s           = 2.40227188179e-9;
+  cbe->priv->ppm.n_s           = 0.9742;
   cbe->priv->ppm.alpha_s       = 0.0;
   cbe->priv->ppm.f_bi          = 1.0;
   cbe->priv->ppm.n_bi          = 1.0;
@@ -921,7 +946,7 @@ _nc_hipert_boltzmann_cbe_set_spectra (NcHIPertBoltzmannCBE *cbe, NcHICosmo *cosm
 static void
 _nc_hipert_boltzmann_cbe_set_lensing (NcHIPertBoltzmannCBE *cbe, NcHICosmo *cosmo)
 {
-  cbe->priv->ple.has_lensed_cls  = _TRUE_;
+  cbe->priv->ple.has_lensed_cls  = cbe->use_lensed_Cls ? _TRUE_ : _FALSE_;
   cbe->priv->ple.lensing_verbose = cbe->lensing_verbose;
 }
 
@@ -930,7 +955,6 @@ _nc_hipert_boltzmann_cbe_set_nonlin (NcHIPertBoltzmannCBE *cbe, NcHICosmo *cosmo
 {
   cbe->priv->pnl.method = nl_none;
   cbe->priv->pnl.nonlinear_verbose = cbe->nonlin_verbose;
-
 }
 
 static void
@@ -973,6 +997,7 @@ _nc_hipert_boltzmann_cbe_prepare (NcHIPertBoltzmann *pb, NcHIPrim *prim, NcHICos
   {
     guint all_Cls_size, index_tt, index_ee, index_bb, index_te;
     gboolean has_tt, has_ee, has_bb, has_te;
+
     if (cbe->use_lensed_Cls)
     {
       struct lensing *ptr = &cbe->priv->ple;

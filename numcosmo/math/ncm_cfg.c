@@ -60,6 +60,8 @@
 #include "model/nc_hicosmo_de_pad.h"
 #include "model/nc_hicosmo_de_qe.h"
 #include "model/nc_hicosmo_qgrw.h"
+#include "model/nc_hicosmo_de_reparam_ok.h"
+#include "model/nc_hiprim_power_law.h"
 #include "lss/nc_window_tophat.h"
 #include "lss/nc_window_gaussian.h"
 #include "lss/nc_growth_func.h"
@@ -282,6 +284,10 @@ ncm_cfg_init (void)
   ncm_cfg_register_obj (NC_TYPE_HICOSMO_DE_PAD);
   ncm_cfg_register_obj (NC_TYPE_HICOSMO_DE_QE);
   ncm_cfg_register_obj (NC_TYPE_HICOSMO_QGRW);
+
+  ncm_cfg_register_obj (NC_TYPE_HICOSMO_DE_REPARAM_OK);
+
+  ncm_cfg_register_obj (NC_TYPE_HIPRIM_POWER_LAW);
 
   ncm_cfg_register_obj (NC_TYPE_CBE_PRECISION);
 

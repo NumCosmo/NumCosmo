@@ -181,7 +181,7 @@ _ncm_mset_set_property (GObject *object, guint prop_id, const GValue *value, GPa
     {
       const gchar * const *fmap = g_value_get_boxed (value);
       if (fmap != NULL)
-        ncm_mset_set_fmap (mset, fmap);
+        ncm_mset_set_fmap (mset, fmap, FALSE);
       break;
     }
     default:
@@ -879,19 +879,19 @@ ncm_mset_prepare_fparam_map (NcmMSet *mset)
 /**
  * ncm_mset_set_fmap:
  * @mset: a #NcmMSet
- * @fmap: an array of strings
+ * @fmap: (in) (array zero-terminated=1) (element-type utf8): an array of strings
+ * @update_models: a boolean
  *
  * FIXME
  *
  */
 void
-ncm_mset_set_fmap (NcmMSet *mset, const gchar *const *fmap)
+ncm_mset_set_fmap (NcmMSet *mset, const gchar *const *fmap, gboolean update_models)
 {
   g_assert (fmap != NULL);
   {
     guint len = g_strv_length ((gchar **)fmap);
     guint i;
-
     for (i = 0; i < mset->model_array->len; i++)
     {
       NcmMSetItem *item = g_ptr_array_index (mset->model_array, i);
@@ -928,8 +928,11 @@ ncm_mset_set_fmap (NcmMSet *mset, const gchar *const *fmap)
 
     g_ptr_array_set_size (mset->fullname_parray, mset->fparam_len);
     mset->valid_map = TRUE;
+    if (update_models)
+      ncm_mset_param_set_ftype_from_fmap (mset);
   }
 }
+
 
 /**
  * ncm_mset_get_fmap:
@@ -937,7 +940,7 @@ ncm_mset_set_fmap (NcmMSet *mset, const gchar *const *fmap)
  *
  * FIXME
  *
- * Returns: (transfer full): an array of strings
+ * Returns: (transfer full) (array zero-terminated=1) (element-type utf8): an array of strings
  */
 gchar **
 ncm_mset_get_fmap (NcmMSet *mset)
@@ -1612,6 +1615,74 @@ ncm_mset_param_set_mid_ftype (NcmMSet *mset, NcmModelID mid, NcmParamType ftype)
       for (pid = 0; pid < item->added_total_params; pid++)
       {
         ncm_model_param_set_ftype (item->model, pid, ftype);
+      }
+    }
+  }
+  if (mset->valid_map)
+    ncm_mset_prepare_fparam_map (mset);
+}
+
+/**
+ * ncm_mset_param_set_all_but_mid_ftype:
+ * @mset: a #NcmMSet
+ * @mid: model id
+ * @ftype: a #NcmParamType
+ *
+ * Set all parameters of all models but @mid to @ftype.
+ *
+ */
+void
+ncm_mset_param_set_all_but_mid_ftype (NcmMSet *mset, NcmModelID mid, NcmParamType ftype)
+{
+  guint i;
+
+  for (i = 0; i < mset->model_array->len; i++)
+  {
+    NcmMSetItem *item = g_ptr_array_index (mset->model_array, i);
+    if (item->dup || (item->mid == mid))
+      continue;
+    else
+    {
+      gint pid;
+
+      for (pid = 0; pid < item->added_total_params; pid++)
+      {
+        ncm_model_param_set_ftype (item->model, pid, ftype);
+      }
+    }
+  }
+  if (mset->valid_map)
+    ncm_mset_prepare_fparam_map (mset);
+}
+
+/**
+ * ncm_mset_param_set_ftype_from_fmap:
+ * @mset: a #NcmMSet
+ *
+ * Set all parameters of all models inside @mset in order
+ * to reflect the current fmap.
+ *
+ */
+void
+ncm_mset_param_set_ftype_from_fmap (NcmMSet *mset)
+{
+  guint i;
+
+  for (i = 0; i < mset->model_array->len; i++)
+  {
+    NcmMSetItem *item = g_ptr_array_index (mset->model_array, i);
+    if (item->dup)
+      continue;
+    else
+    {
+      GArray *fpi_array = g_hash_table_lookup (mset->fpi_hash, GINT_TO_POINTER (item->mid));
+
+      gint pid;
+      for (pid = 0; pid < item->added_total_params; pid++)
+      {
+        if (g_array_index (fpi_array, gint, pid) == - 1)
+          continue;
+        ncm_model_param_set_ftype (item->model, pid, NCM_PARAM_TYPE_FREE);
       }
     }
   }

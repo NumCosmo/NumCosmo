@@ -168,7 +168,7 @@ gboolean ncm_mset_is_subset (NcmMSet *mset, NcmMSet *sub_mset);
 
 gint ncm_mset_get_id_by_ns (const gchar *ns);
 
-void ncm_mset_set_fmap (NcmMSet *mset, const gchar *const *fmap);
+void ncm_mset_set_fmap (NcmMSet *mset, const gchar *const *fmap, gboolean update_models);
 gchar **ncm_mset_get_fmap (NcmMSet *mset);
 void ncm_mset_prepare_fparam_map (NcmMSet *mset);
 
@@ -198,6 +198,8 @@ const gchar *ncm_mset_param_symbol (NcmMSet *mset, NcmModelID mid, guint pid);
 void ncm_mset_param_set_ftype (NcmMSet *mset, NcmModelID mid, guint pid, NcmParamType ftype);
 void ncm_mset_param_set_all_ftype (NcmMSet *mset, NcmParamType ftype);
 void ncm_mset_param_set_mid_ftype (NcmMSet *mset, NcmModelID mid, NcmParamType ftype);
+void ncm_mset_param_set_all_but_mid_ftype (NcmMSet *mset, NcmModelID mid, NcmParamType ftype);
+void ncm_mset_param_set_ftype_from_fmap (NcmMSet *mset);
 void ncm_mset_param_set_vector (NcmMSet *mset, NcmVector *params);
 void ncm_mset_param_get_vector (NcmMSet *mset, NcmVector *params);
 gdouble ncm_mset_param_get_scale (NcmMSet *mset, NcmModelID mid, guint pid);

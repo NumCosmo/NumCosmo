@@ -374,8 +374,6 @@ _nc_data_planck_lkl_m2lnL_val (NcmData *data, NcmMSet *mset, gdouble *m2lnL)
   {
     *m2lnL = -2.0 * clik_compute (clik->obj, cl_and_pars, &err);
     CLIK_CHECK_ERROR ("_nc_data_planck_lkl_m2lnL_val[clik_compute]", err);
-
-    printf ("# m2lnL % 20.15g check % 20.15g\n", *m2lnL, -2.0 * clik_compute (clik->obj, ncm_vector_ptr (clik->check_data_params, 0), &err));
   }
   endError (&err);
   return;
