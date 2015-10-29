@@ -59,6 +59,7 @@ struct _NcHIPertBoltzmannCBE
   NcCBEPrecision *prec;
   NcHIPertBoltzmannCBEPrivate *priv;
   gboolean use_lensed_Cls;
+  gboolean use_tensor;
   guint bg_verbose;
   guint thermo_verbose;
   guint pert_verbose;

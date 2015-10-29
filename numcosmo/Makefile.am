@@ -240,6 +240,7 @@ nc_headers = \
 	model/nc_hicosmo_qspline.h    \
 	model/nc_hicosmo_qgrw.h       \
 	model/nc_hiprim_power_law.h   \
+	model/nc_hiprim_atan.h        \
 	lss/nc_window.h               \
 	lss/nc_window_tophat.h        \
 	lss/nc_window_gaussian.h      \
@@ -346,7 +347,8 @@ nc_sources = \
 	model/nc_hicosmo_qlinear.c   \
 	model/nc_hicosmo_qspline.c   \
 	model/nc_hicosmo_qgrw.c      \
-	model/nc_hiprim_power_law.c   \
+	model/nc_hiprim_power_law.c  \
+	model/nc_hiprim_atan.c       \
 	lss/nc_window.c              \
 	lss/nc_window_tophat.c       \
 	lss/nc_window_gaussian.c     \

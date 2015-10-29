@@ -29,6 +29,7 @@
 #include <glib.h>
 #include <glib-object.h>
 #include <numcosmo/build_cfg.h>
+#include <numcosmo/math/ncm_likelihood.h>
 #include <numcosmo/nc_planck_fi.h>
 
 G_BEGIN_DECLS
@@ -117,6 +118,16 @@ struct _NcPlanckFICorTT
 };
 
 GType nc_planck_fi_cor_tt_get_type (void) G_GNUC_CONST;
+
+void nc_planck_fi_cor_tt_add_gal_priors (NcmLikelihood *lh, NcmVector *mean, NcmVector *sigma);
+void nc_planck_fi_cor_tt_add_calib_priors (NcmLikelihood *lh, NcmVector *mean, NcmVector *sigma);
+void nc_planck_fi_cor_tt_add_sz_prior (NcmLikelihood *lh, gdouble f_tSZ, gdouble mean, gdouble sigma);
+
+void nc_planck_fi_cor_tt_add_default_gal_priors (NcmLikelihood *lh);
+void nc_planck_fi_cor_tt_add_default_calib_priors (NcmLikelihood *lh);
+void nc_planck_fi_cor_tt_add_default_sz_prior (NcmLikelihood *lh);
+
+void nc_planck_fi_cor_tt_add_all_default_priors (NcmLikelihood *lh);
 
 G_END_DECLS
 

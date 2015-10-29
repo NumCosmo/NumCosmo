@@ -127,7 +127,7 @@ nc_hiprim_power_law_new (void)
 #define N_T        (ncm_vector_get (VECTOR, NC_HIPRIM_POWER_LAW_N_T))
 
 /****************************************************************************
- * Normalized Hubble function
+ * Power spectra
  ****************************************************************************/
 
 static gdouble

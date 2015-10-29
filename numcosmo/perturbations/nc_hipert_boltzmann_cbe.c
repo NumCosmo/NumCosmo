@@ -60,6 +60,7 @@ enum
   PROP_0,
   PROP_PREC,
   PROP_USE_LENSED_CLS,
+  PROP_USE_TENSOR,
 };
 
 struct _NcHIPertBoltzmannCBEPrivate
@@ -373,6 +374,10 @@ nc_hipert_boltzmann_cbe_set_property (GObject *object, guint prop_id, const GVal
       cbe->use_lensed_Cls = g_value_get_boolean (value);
       ncm_model_ctrl_force_update (NC_HIPERT_BOLTZMANN (cbe)->ctrl_cosmo);
       break;
+    case PROP_USE_TENSOR:
+      cbe->use_tensor = g_value_get_boolean (value);
+      ncm_model_ctrl_force_update (NC_HIPERT_BOLTZMANN (cbe)->ctrl_cosmo);
+      break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
       break;
@@ -392,6 +397,9 @@ nc_hipert_boltzmann_cbe_get_property (GObject *object, guint prop_id, GValue *va
       break;
     case PROP_USE_LENSED_CLS:
       g_value_set_boolean (value, cbe->use_lensed_Cls);
+      break;
+    case PROP_USE_TENSOR:
+      g_value_set_boolean (value, cbe->use_tensor);
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -458,6 +466,14 @@ nc_hipert_boltzmann_cbe_class_init (NcHIPertBoltzmannCBEClass *klass)
                                                          NULL,
                                                          "Whether use the lensed corrected Cls",
                                                          TRUE,
+                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
+  g_object_class_install_property (object_class,
+                                   PROP_USE_TENSOR,
+                                   g_param_spec_boolean ("use-tensor",
+                                                         NULL,
+                                                         "Whether use tensor contribution",
+                                                         FALSE,
                                                          G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   NC_HIPERT_BOLTZMANN_CLASS (klass)->prepare    = &_nc_hipert_boltzmann_cbe_prepare;
@@ -740,7 +756,7 @@ _nc_hipert_boltzmann_cbe_set_pert (NcHIPertBoltzmannCBE *cbe, NcHICosmo *cosmo)
 
   cbe->priv->ppt.has_scalars = _TRUE_;
   cbe->priv->ppt.has_vectors = _FALSE_;
-  cbe->priv->ppt.has_tensors = _FALSE_;
+  cbe->priv->ppt.has_tensors = cbe->use_tensor ? _TRUE_ : _FALSE_;
 
   {
     guint TT_lmax = nc_hipert_boltzmann_get_TT_lmax (pb);
@@ -837,7 +853,11 @@ _nc_hipert_boltzmann_cbe_set_prim (NcHIPertBoltzmannCBE *cbe, NcHIPrim *prim, Nc
   cbe->priv->ppm.primordial_spec_type = external_Pk_callback;
   /*cbe->priv->ppm.primordial_spec_type = analytic_Pk;*/
   cbe->priv->ppm.external_Pk_callback_pks  = &_external_Pk_callback_pks;
-  /*cbe->priv->ppm.external_Pk_callback_pkt  = &_external_Pk_callback_pkt;*/
+  if (cbe->use_tensor)
+  {
+    g_assert (ncm_model_impl (NCM_MODEL (prim)) & NC_HIPRIM_IMPL_lnT_powspec_lnk);
+    cbe->priv->ppm.external_Pk_callback_pkt  = &_external_Pk_callback_pkt;
+  }
   cbe->priv->ppm.external_Pk_callback_data = prim;
 
   cbe->priv->ppm.k_pivot       = 0.05;
