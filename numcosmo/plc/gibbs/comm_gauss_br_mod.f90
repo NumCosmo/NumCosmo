@@ -101,6 +101,7 @@ contains
     end do
     
     ! Set up priors
+    if (allocated(comm_gauss_br(id)%prior)) deallocate(comm_gauss_br(id)%prior)
     allocate(comm_gauss_br(id)%prior(lmin:lmax,2))
     do l = lmin, lmax
        j = 1
