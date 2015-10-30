@@ -28,7 +28,7 @@
  * @short_description: Miscellaneous utilities.
  *
  * Miscellaneous utility functions, macros and objects.
- * 
+ *
  */
 
 #ifdef HAVE_CONFIG_H
@@ -808,10 +808,10 @@ ncm_numdiff_2 (gsl_function *F, gdouble *ofx, const gdouble x, const gdouble ho,
 /**
  * ncm_sqrt1px_m1:
  * @x: a real number $&gt;-1$
- * 
- * Calculates $\sqrt{1+x}-1$ using the appropriated taylor series when 
+ *
+ * Calculates $\sqrt{1+x}-1$ using the appropriated taylor series when
  * $x \approx 1$.
- * 
+ *
  * Returns: $\sqrt{1+x}-1$.
  */
 gdouble
@@ -846,13 +846,13 @@ ncm_sqrt1px_m1 (gdouble x)
  * @x: a double.
  * @y: a double.
  * @reltol: relative precision.
- * 
+ *
  * Compare x and y and return -1 if x < y, 0 if x == y and 1 if x > y,
  * all comparisons are done with precision @prec.
- * 
+ *
  * Returns: -1, 0, 1.
  */
-gint 
+gint
 ncm_cmp (gdouble x, gdouble y, gdouble reltol)
 {
   if (G_UNLIKELY (x == 0.0 && y == 0.0))
@@ -880,23 +880,23 @@ G_DEFINE_BOXED_TYPE (NcmComplex, ncm_complex, ncm_complex_dup, ncm_complex_free)
 
 /**
  * ncm_complex_new:
- * 
+ *
  * Allocates a new complex number.
- * 
+ *
  * Returns: (transfer full): a new #NcmComplex.
  */
 NcmComplex *
 ncm_complex_new ()
 {
-  return g_new0 (NcmComplex, 1);  
+  return g_new0 (NcmComplex, 1);
 }
 
 /**
  * ncm_complex_dup:
  * @c: a #NcmComplex.
- * 
+ *
  * Allocates a new complex number and copy the contents of @c to it.
- * 
+ *
  * Returns: (transfer full): a new #NcmComplex.
  */
 NcmComplex *
@@ -911,11 +911,11 @@ printf ("Nhaca %p\n", c);
 /**
  * ncm_complex_free:
  * @c: a #NcmComplex.
- * 
+ *
  * Frees @c, it should not be used on a statically allocated NcmComplex.
- * 
+ *
  */
-void 
+void
 ncm_complex_free (NcmComplex *c)
 {
 printf ("Nhoco %p\n", c);
@@ -925,11 +925,11 @@ printf ("Nhoco %p\n", c);
 /**
  * ncm_complex_clear:
  * @c: a #NcmComplex.
- * 
+ *
  * Frees *@c and sets *@c to NULL, it should not be used on a statically allocated NcmComplex.
- * 
+ *
  */
-void 
+void
 ncm_complex_clear (NcmComplex **c)
 {
   g_clear_pointer (c, g_free);
@@ -938,12 +938,12 @@ ncm_complex_clear (NcmComplex **c)
 /**
  * ncm_complex_Re:
  * @c: a #NcmComplex.
- * 
+ *
  * Returns the real part of @c.
- * 
+ *
  * Returns: Re$(c)$.
  */
-gdouble 
+gdouble
 ncm_complex_Re (NcmComplex *c)
 {
   return creal (c->z);
@@ -952,12 +952,12 @@ ncm_complex_Re (NcmComplex *c)
 /**
  * ncm_complex_Im:
  * @c: a #NcmComplex.
- * 
+ *
  * Returns the imaginary part of @c.
- * 
+ *
  * Returns: Im$(c)$.
  */
-gdouble 
+gdouble
 ncm_complex_Im (NcmComplex *c)
 {
   printf ("Huga %p\n", c);
@@ -968,7 +968,7 @@ ncm_complex_Im (NcmComplex *c)
  * ncm_util_cvode_check_flag:
  * @flagvalue: FIXME
  * @funcname: FIXME
- * @opt: FIXME 
+ * @opt: FIXME
  *
  * FIXME
  *
@@ -983,35 +983,35 @@ ncm_util_cvode_check_flag (gpointer flagvalue, const gchar *funcname, gint opt)
   {
     case 0:
     {
-      if (flagvalue == NULL) 
+      if (flagvalue == NULL)
       {
         g_message ("\nSUNDIALS_ERROR: %s() failed - returned NULL pointer\n\n", funcname);
-        return FALSE; 
+        return FALSE;
       }
       break;
     }
     case 1:
-    {   
+    {
       errflag = (int *) flagvalue;
-      if (*errflag < 0) 
+      if (*errflag < 0)
       {
         g_message ("\nSUNDIALS_ERROR: %s() failed with flag = %d\n\n", funcname, *errflag);
-        return FALSE; 
+        return FALSE;
       }
       break;
     }
     case 2:
     {
-      if (flagvalue == NULL) 
+      if (flagvalue == NULL)
       {
         g_message ("\nMEMORY_ERROR: %s() failed - returned NULL pointer\n\n", funcname);
-        return FALSE; 
+        return FALSE;
       }
       break;
     }
     default:
       g_assert_not_reached ();
-  }  
+  }
   return TRUE;
 }
 
@@ -1023,10 +1023,10 @@ ncm_util_cvode_check_flag (gpointer flagvalue, const gchar *funcname, gint opt)
  *
  * Returns: FIXME
  */
-gboolean 
+gboolean
 ncm_util_cvode_print_stats (gpointer cvode)
 {
-  glong nsteps, nfunceval, nlinsetups, njaceval, ndiffjaceval, nnonliniter, 
+  glong nsteps, nfunceval, nlinsetups, njaceval, ndiffjaceval, nnonliniter,
 		nconvfail, nerrortests, nrooteval;
   gint flag, qcurorder, qlastorder;
 	gdouble hinused, hlast, hcur, tcur;
@@ -1035,18 +1035,18 @@ ncm_util_cvode_print_stats (gpointer cvode)
 	                               &nlinsetups, &nerrortests, &qlastorder, &qcurorder,
 	                               &hinused, &hlast, &hcur, &tcur);
 	ncm_util_cvode_check_flag (&flag, "CVodeGetIntegratorStats", 1);
-	
-	
+
+
   flag = CVodeGetNumNonlinSolvIters(cvode, &nnonliniter);
   ncm_util_cvode_check_flag (&flag, "CVodeGetNumNonlinSolvIters", 1);
   flag = CVodeGetNumNonlinSolvConvFails(cvode, &nconvfail);
-  ncm_util_cvode_check_flag (&flag, "CVodeGetNumNonlinSolvConvFails", 1); 
+  ncm_util_cvode_check_flag (&flag, "CVodeGetNumNonlinSolvConvFails", 1);
 
   flag = CVDlsGetNumJacEvals (cvode, &njaceval);
   ncm_util_cvode_check_flag (&flag, "CVDlsGetNumJacEvals", 1);
   flag = CVDlsGetNumRhsEvals (cvode, &ndiffjaceval);
-  ncm_util_cvode_check_flag (&flag, "CVDlsGetNumRhsEvals", 1);  
-    
+  ncm_util_cvode_check_flag (&flag, "CVDlsGetNumRhsEvals", 1);
+
   flag = CVodeGetNumGEvals(cvode, &nrooteval);
   ncm_util_cvode_check_flag (&flag, "CVodeGetNumGEvals", 1);
 
@@ -1062,8 +1062,15 @@ ncm_util_cvode_print_stats (gpointer cvode)
          nsteps, nfunceval, nlinsetups, njaceval, ndiffjaceval);
   g_message ("# nnonliniter = %-6ld nconvfail = %-6ld nerrortests = %-6ld nrooteval = %-6ld qcurorder = %-6d qlastorder = %-6d\n",
          nnonliniter, nconvfail, nerrortests, nrooteval, qcurorder, qlastorder);
-  
+
   return TRUE;
+}
+
+void
+_ncm_util_set_destroyed (gpointer b)
+{
+  gboolean *destroyed = b;
+  *destroyed = TRUE;
 }
 
 /********************************************************************
@@ -1641,7 +1648,7 @@ static double cdfSpecial (int n, double x)
  * ncm_util_KScdf: (skip)
  * @n: FIXME
  * @x: FIXME
- * 
+ *
  */
 double ncm_util_KScdf (int n, double x)
 {
@@ -1702,7 +1709,7 @@ static double fbarSpecial (int n, double x)
  * ncm_util_KSfbar: (skip)
  * @n: FIXME
  * @x: FIXME
- * 
+ *
  */
 double ncm_util_KSfbar (int n, double x)
 {
