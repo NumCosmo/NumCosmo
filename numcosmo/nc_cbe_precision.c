@@ -927,7 +927,7 @@ nc_cbe_precision_get_property (GObject *object, guint prop_id, GValue *value, GP
       g_value_set_double (value, cbe_prec->priv->ppr.perturb_sampling_stepsize);
       break;
     case PROP_RADIATION_STREAMING_APPROXIMATION:
-      g_value_set_double (value, cbe_prec->priv->ppr.radiation_streaming_approximation);
+      g_value_set_int (value, cbe_prec->priv->ppr.radiation_streaming_approximation);
       break;
     case PROP_RADIATION_STREAMING_TRIGGER_TAU_OVER_TAU_K:
       g_value_set_double (value, cbe_prec->priv->ppr.radiation_streaming_trigger_tau_over_tau_k);

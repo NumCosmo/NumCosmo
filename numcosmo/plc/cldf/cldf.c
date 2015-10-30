@@ -157,6 +157,7 @@ cldf * cldf_open_sub(char *path, char* sub,error **err) {
     strcpy(df->datakey[df->ndata],dc->d_name);
     df->ndata++;
   }
+  closedir (dd); /* opendir leak corrected 29/10/2015 Sandro Dias Pinto Vitenti */
   return df;
 }
 

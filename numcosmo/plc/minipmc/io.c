@@ -5,6 +5,7 @@
 /* simplified version from pmclib*/
 
 #include "io.h"
+#include <errno.h>
 
 /* ============================================================ *
  * I/O and memory tools.					*
@@ -14,7 +15,7 @@ FILE* fopen_err(const char* fname, const char *mode, error **err)
 {
   FILE* fp;
   fp = fopen(fname, mode);
-  testErrorRetVA(fp==NULL, err_io, "Cannot open file '%s' (mode \"%s\")", *err,__LINE__,NULL,fname, mode);
+  testErrorRetVA(fp==NULL, err_io, "Cannot open file '%s' (mode \"%s\") strerror=`%s' ", *err,__LINE__,NULL,fname, mode, strerror (errno));
   return fp;
 }
 
