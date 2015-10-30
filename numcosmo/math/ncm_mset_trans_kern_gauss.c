@@ -13,23 +13,23 @@
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * numcosmo is distributed in the hope that it will be useful, but
  * WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
  * See the GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License along
  * with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
 /**
  * SECTION:ncm_mset_trans_kern_gauss
- * @title: NcmMSetTransKernGauss 
+ * @title: NcmMSetTransKernGauss
  * @short_description: A multivariate gaussian sampler.
  *
  * FIXME
- * 
+ *
  */
 
 #ifdef HAVE_CONFIG_H
@@ -107,7 +107,7 @@ static void
 ncm_mset_trans_kern_gauss_dispose (GObject *object)
 {
   NcmMSetTransKernGauss *tkerng = NCM_MSET_TRANS_KERN_GAUSS (object);
-  
+
   ncm_matrix_clear (&tkerng->cov);
   ncm_matrix_clear (&tkerng->LLT);
   ncm_vector_clear (&tkerng->v);
@@ -162,7 +162,7 @@ ncm_mset_trans_kern_gauss_class_init (NcmMSetTransKernGaussClass *klass)
   tkern_class->get_name = &_ncm_mset_trans_kern_gauss_get_name;
 }
 
-static void 
+static void
 _ncm_mset_trans_kern_gauss_set_mset (NcmMSetTransKern *tkern, NcmMSet *mset)
 {
   NCM_UNUSED (mset);
@@ -170,7 +170,7 @@ _ncm_mset_trans_kern_gauss_set_mset (NcmMSetTransKern *tkern, NcmMSet *mset)
   ncm_mset_trans_kern_gauss_set_size (NCM_MSET_TRANS_KERN_GAUSS (tkern), fparam_len);
 }
 
-static void 
+static void
 _ncm_mset_trans_kern_gauss_generate (NcmMSetTransKern *tkern, NcmVector *theta, NcmVector *thetastar, NcmRNG *rng)
 {
   NcmMSetTransKernGauss *tkerng = NCM_MSET_TRANS_KERN_GAUSS (tkern);
@@ -189,7 +189,7 @@ _ncm_mset_trans_kern_gauss_generate (NcmMSetTransKern *tkern, NcmVector *theta, 
     }
     ncm_rng_unlock (rng);
 
-    ret = gsl_blas_dtrmv (CblasLower, CblasNoTrans, CblasNonUnit, 
+    ret = gsl_blas_dtrmv (CblasLower, CblasNoTrans, CblasNonUnit,
                           ncm_matrix_gsl (tkerng->LLT), ncm_vector_gsl (thetastar));
     NCM_TEST_GSL_RESULT ("ncm_mset_trans_kern_gauss_sample", ret);
 
@@ -200,7 +200,7 @@ _ncm_mset_trans_kern_gauss_generate (NcmMSetTransKern *tkern, NcmVector *theta, 
   }
 }
 
-static gdouble 
+static gdouble
 _ncm_mset_trans_kern_gauss_pdf (NcmMSetTransKern *tkern, NcmVector *theta, NcmVector *thetastar)
 {
   NcmMSetTransKernGauss *tkerng = NCM_MSET_TRANS_KERN_GAUSS (tkern);
@@ -211,7 +211,7 @@ _ncm_mset_trans_kern_gauss_pdf (NcmMSetTransKern *tkern, NcmVector *theta, NcmVe
   ncm_vector_memcpy (tkerng->v, theta);
   ncm_vector_sub (tkerng->v, thetastar);
 
-  ret = gsl_blas_dtrsv (CblasLower, CblasNoTrans, CblasNonUnit, 
+  ret = gsl_blas_dtrsv (CblasLower, CblasNoTrans, CblasNonUnit,
                         ncm_matrix_gsl (tkerng->LLT), ncm_vector_gsl (tkerng->v));
   NCM_TEST_GSL_RESULT ("_ncm_mset_trans_kern_gauss_pdf", ret);
 
@@ -226,7 +226,7 @@ _ncm_mset_trans_kern_gauss_pdf (NcmMSetTransKern *tkern, NcmVector *theta, NcmVe
   {
     m2lnP += 2.0 * log (ncm_matrix_get (tkerng->LLT, i, i));
   }
-  
+
   return exp (- 0.5 * m2lnP);
 }
 
@@ -241,14 +241,14 @@ _ncm_mset_trans_kern_gauss_get_name (NcmMSetTransKern *tkern)
  * @len: Number of variables
  *
  * New NcmMSetTransKern gauss for @len multivariate gaussian.
- * 
+ *
  * Returns: (transfer full): a new #NcmMSetTransKernGauss.
- * 
+ *
  */
 NcmMSetTransKernGauss *
 ncm_mset_trans_kern_gauss_new (guint len)
 {
-  NcmMSetTransKernGauss *tkerng = g_object_new (NCM_TYPE_MSET_TRANS_KERN_GAUSS, 
+  NcmMSetTransKernGauss *tkerng = g_object_new (NCM_TYPE_MSET_TRANS_KERN_GAUSS,
                                           "length", len,
                                           NULL);
   return tkerng;
@@ -260,9 +260,9 @@ ncm_mset_trans_kern_gauss_new (guint len)
  * @len: Number of variables.
  *
  * Sets size of #NcmMSetTransKernGauss.
- * 
+ *
  */
-void 
+void
 ncm_mset_trans_kern_gauss_set_size (NcmMSetTransKernGauss *tkerng, guint len)
 {
   if ((len == 0) || (len != tkerng->len))
@@ -286,10 +286,10 @@ ncm_mset_trans_kern_gauss_set_size (NcmMSetTransKernGauss *tkerng, guint len)
  * @tkerng: a #NcmMSetTransKernGauss.
  *
  * Gets size of #NcmMSetTransKernGauss.
- * 
+ *
  * Returns: size of the gaussian multivariate.
  */
-guint 
+guint
 ncm_mset_trans_kern_gauss_get_size (NcmMSetTransKernGauss *tkerng)
 {
   return tkerng->len;
@@ -301,9 +301,9 @@ ncm_mset_trans_kern_gauss_get_size (NcmMSetTransKernGauss *tkerng)
  * @cov: a #NcmMatrix.
  *
  * Sets the covariance given by the #NcmMatrix @cov.
- * 
+ *
  */
-void 
+void
 ncm_mset_trans_kern_gauss_set_cov (NcmMSetTransKernGauss *tkerng, const NcmMatrix *cov)
 {
   gint ret;
@@ -324,9 +324,9 @@ ncm_mset_trans_kern_gauss_set_cov (NcmMSetTransKernGauss *tkerng, const NcmMatri
  * @cov: a #GVariant.
  *
  * Sets the covariance given by the #GVariant @cov.
- * 
+ *
  */
-void 
+void
 ncm_mset_trans_kern_gauss_set_cov_variant (NcmMSetTransKernGauss *tkerng, GVariant *cov)
 {
   gint ret;
@@ -345,9 +345,9 @@ ncm_mset_trans_kern_gauss_set_cov_variant (NcmMSetTransKernGauss *tkerng, GVaria
  * @cov: a #GVariant.
  *
  * Sets the covariance given by the double array @cov.
- * 
+ *
  */
-void 
+void
 ncm_mset_trans_kern_gauss_set_cov_data (NcmMSetTransKernGauss *tkerng, gdouble *cov)
 {
   gint ret;
@@ -365,7 +365,7 @@ ncm_mset_trans_kern_gauss_set_cov_data (NcmMSetTransKernGauss *tkerng, gdouble *
  * @tkerng: a #NcmMSetTransKernGauss.
  *
  * Gets the covariance.
- * 
+ *
  * Returns: (transfer full): the covariance.
  */
 NcmMatrix *
@@ -376,18 +376,19 @@ ncm_mset_trans_kern_gauss_get_cov (NcmMSetTransKernGauss *tkerng)
 
 /**
  * ncm_mset_trans_kern_gauss_set_cov_from_scale:
- * @tkerng: a #NcmMSetTransKernGauss.
+ * @tkerng: a #NcmMSetTransKernGauss
  *
- * Sets the covariance using the scale property of the parameters.
- * 
+ * Sets the covariance using the scale property of the parameters as
+ * standard deviation and zero correlation.
+ *
  */
-void 
+void
 ncm_mset_trans_kern_gauss_set_cov_from_scale (NcmMSetTransKernGauss *tkerng)
 {
   NcmMSetTransKern *tkern = NCM_MSET_TRANS_KERN (tkerng);
   guint i;
   gint ret;
-  
+
   g_assert (tkern->mset != NULL);
 
   ncm_matrix_set_identity (tkerng->cov);
@@ -401,6 +402,39 @@ ncm_mset_trans_kern_gauss_set_cov_from_scale (NcmMSetTransKernGauss *tkerng)
   ret = ncm_matrix_cholesky_decomp (tkerng->LLT, 'L');
   if (ret != 0)
     g_error ("ncm_mset_trans_kern_gauss_set_cov_from_scale[ncm_matrix_cholesky_decomp]: %d.", ret);
-  
+
+  tkerng->init = TRUE;
+}
+
+/**
+ * ncm_mset_trans_kern_gauss_set_cov_from_rescale:
+ * @tkerng: a #NcmMSetTransKernGauss
+ * @epsilon: the overall rescale
+ *
+ * Sets the covariance using the scale property of the parameters times
+ * @epsilon as standard deviation and zero correlation.
+ *
+ */
+void
+ncm_mset_trans_kern_gauss_set_cov_from_rescale (NcmMSetTransKernGauss *tkerng, const gdouble epsilon)
+{
+  NcmMSetTransKern *tkern = NCM_MSET_TRANS_KERN (tkerng);
+  guint i;
+  gint ret;
+
+  g_assert (tkern->mset != NULL);
+
+  ncm_matrix_set_identity (tkerng->cov);
+  for (i = 0; i < tkerng->len; i++)
+  {
+    const gdouble scale = ncm_mset_fparam_get_scale (tkern->mset, i) * epsilon;
+    ncm_matrix_set (tkerng->cov, i, i, scale * scale);
+  }
+  ncm_matrix_memcpy (tkerng->LLT, tkerng->cov);
+
+  ret = ncm_matrix_cholesky_decomp (tkerng->LLT, 'L');
+  if (ret != 0)
+    g_error ("ncm_mset_trans_kern_gauss_set_cov_from_scale[ncm_matrix_cholesky_decomp]: %d.", ret);
+
   tkerng->init = TRUE;
 }
