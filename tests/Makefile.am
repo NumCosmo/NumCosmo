@@ -143,3 +143,8 @@ test_nc_data_bao_dvdv_LDADD = $(top_builddir)/numcosmo/libnumcosmo.la
 test_nc_cluster_pseudo_counts_LDADD = $(top_builddir)/numcosmo/libnumcosmo.la
 
 TESTS = $(check_PROGRAMS)
+
+export VERBOSE = 1
+
+
+
