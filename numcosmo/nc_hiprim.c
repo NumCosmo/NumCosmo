@@ -111,6 +111,7 @@ nc_hiprim_class_init (NcHIPrimClass *klass)
 
   object_class->finalize     = nc_hiprim_finalize;
 
+  ncm_model_class_set_name_nick (model_class, "Homogeneous and isotropic primordial cosmological models.", "NcHIPrim");
   ncm_model_class_add_params (model_class, 0, 0, PROP_SIZE);
 
   ncm_mset_model_register_id (model_class,

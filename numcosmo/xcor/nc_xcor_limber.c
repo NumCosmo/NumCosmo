@@ -8,17 +8,17 @@
 /*
  * numcosmo
  * Copyright (C) 2015 Cyrille Doux <cdoux@apc.in2p3.fr>
- * 
+ *
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * numcosmo is distributed in the hope that it will be useful, but
  * WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
  * See the GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License along
  * with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
@@ -179,7 +179,7 @@ gdouble nc_xcor_limber_noise_spec (NcXcorLimber* xcl, guint l)
 void nc_xcor_limber_prepare (NcXcorLimber* xcl, NcHICosmo* cosmo)
 {
 	if (ncm_model_ctrl_update (xcl->cosmo_ctrl, NCM_MODEL (cosmo)))
-	{		
+	{
 		return NC_XCOR_LIMBER_GET_CLASS (xcl)->prepare (xcl, cosmo);
 	}
 }
@@ -237,14 +237,16 @@ NCM_MSET_MODEL_REGISTER_ID (nc_xcor_limber, NC_TYPE_XCOR_LIMBER);
 static void nc_xcor_limber_class_init (NcXcorLimberClass* klass)
 {
 	GObjectClass* object_class = G_OBJECT_CLASS (klass);
+  NcmModelClass *model_class = NCM_MODEL_CLASS (klass);
 
 	object_class->finalize = nc_xcor_limber_finalize;
 
-	ncm_model_class_add_params (NCM_MODEL_CLASS (klass), 0, 0, 1);
+	ncm_model_class_set_name_nick (model_class, "Xcor limber", "Xcor-limber");
+	ncm_model_class_add_params (model_class, 0, 0, 1);
 
-	ncm_mset_model_register_id (NCM_MODEL_CLASS (klass), "NcXcorLimber", "Cluster mass observable relation models (this at "
-	                                                                     "line 297 of nc_cor_limber.c, to be modified "
-	                                                                     "accordingly).",
+	ncm_mset_model_register_id (model_class, "NcXcorLimber", "Cluster mass observable relation models (this at "
+                                                           "line 297 of nc_cor_limber.c, to be modified "
+	                                                         "accordingly).",
 	                            NULL);
 	ncm_model_class_check_params_info (NCM_MODEL_CLASS (klass));
 }

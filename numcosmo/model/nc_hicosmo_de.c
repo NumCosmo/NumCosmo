@@ -216,6 +216,7 @@ nc_hicosmo_de_class_init (NcHICosmoDEClass *klass)
 
   object_class->finalize     = &nc_hicosmo_de_finalize;
 
+  ncm_model_class_set_name_nick (model_class, "Darkenergy models abstract class", "NcHICosmoDE");
   ncm_model_class_add_params (model_class, NC_HICOSMO_DE_SPARAM_LEN, 0, PROP_SIZE);
   /* Set H_0 param info */
   ncm_model_class_set_sparam (model_class, NC_HICOSMO_DE_H0, "H_0", "H0",

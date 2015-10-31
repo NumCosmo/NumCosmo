@@ -228,13 +228,12 @@ ncm_model_test_base_class_init (NcmModelClass* model_class)
     v_defval[i] = g_test_rand_double_range ( v_lb[i], v_ub[i]);
     v_ftype[i]  = g_test_rand_bit () ? NCM_PARAM_TYPE_FREE  : NCM_PARAM_TYPE_FIXED;
   }
-
+printf ("descendent model_class init!\n");
+  ncm_model_class_set_name_nick (model_class, name, nick);
   ncm_model_class_add_params (model_class, ci_sparam_len, ci_vparam_len, PROP_SIZE);
 
   g_assert (model_class->sparam_len == model_class->parent_sparam_len + ci_sparam_len);
   g_assert (model_class->vparam_len == model_class->parent_vparam_len + ci_vparam_len);
-
-  ncm_model_class_set_name_nick (model_class, name, nick);
 
   g_assert (model_class->name != name);
   g_assert (model_class->nick != nick);
@@ -301,15 +300,6 @@ ncm_model_test_class_init (NcmModelTestClass *klass)
   model_class->set_property = &_ncm_model_test_set_property;
   model_class->get_property = &_ncm_model_test_get_property;
 
-  g_object_class_install_property (object_class,
-                                   PROP_A,
-                                   g_param_spec_double ("A",
-                                                        NULL,
-                                                        "Test A",
-                                                        0.0, 100.0, 1.0,
-                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-  object_class->finalize = ncm_model_test_finalize;
-
   name     = name_tot[0];
   nick     = nick_tot[0];
   s_symbol = &s_symbol_tot[0];
@@ -335,6 +325,16 @@ ncm_model_test_class_init (NcmModelTestClass *klass)
   name_ext = "Base";
 
   ncm_model_test_base_class_init (model_class);
+
+  g_object_class_install_property (object_class,
+                                   PROP_A,
+                                   g_param_spec_double ("A",
+                                                        NULL,
+                                                        "Test A",
+                                                        0.0, 100.0, 1.0,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  object_class->finalize = ncm_model_test_finalize;
+
 }
 
 static void
@@ -345,15 +345,6 @@ ncm_model_test_child_class_init (NcmModelTestChildClass *klass)
 
   model_class->set_property = &_ncm_model_test_child_set_property;
   model_class->get_property = &_ncm_model_test_child_get_property;
-
-  g_object_class_install_property (object_class,
-                                   PROP_A,
-                                   g_param_spec_double ("B",
-                                                        NULL,
-                                                        "Test B",
-                                                        0.0, 100.0, 1.0,
-                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-  object_class->finalize = ncm_model_test_child_finalize;
 
   name     = name_tot[1];
   nick     = nick_tot[1];
@@ -380,6 +371,15 @@ ncm_model_test_child_class_init (NcmModelTestChildClass *klass)
   name_ext = "Child";
 
   ncm_model_test_base_class_init (model_class);
+
+  g_object_class_install_property (object_class,
+                                   PROP_A,
+                                   g_param_spec_double ("B",
+                                                        NULL,
+                                                        "Test B",
+                                                        0.0, 100.0, 1.0,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  object_class->finalize = ncm_model_test_child_finalize;
 }
 
 static void
@@ -390,15 +390,6 @@ ncm_model_test_child_child_class_init (NcmModelTestChildChildClass *klass)
 
   model_class->set_property = &_ncm_model_test_child_child_set_property;
   model_class->get_property = &_ncm_model_test_child_child_get_property;
-
-  g_object_class_install_property (object_class,
-                                   PROP_A,
-                                   g_param_spec_double ("C",
-                                                        NULL,
-                                                        "Test C",
-                                                        0.0, 100.0, 1.0,
-                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-  object_class->finalize = ncm_model_test_child_child_finalize;
 
   name     = name_tot[2];
   nick     = nick_tot[2];
@@ -425,4 +416,14 @@ ncm_model_test_child_child_class_init (NcmModelTestChildChildClass *klass)
   name_ext = "Grandchild";
 
   ncm_model_test_base_class_init (model_class);
+
+  g_object_class_install_property (object_class,
+                                   PROP_A,
+                                   g_param_spec_double ("C",
+                                                        NULL,
+                                                        "Test C",
+                                                        0.0, 100.0, 1.0,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  object_class->finalize = ncm_model_test_child_child_finalize;
+
 }

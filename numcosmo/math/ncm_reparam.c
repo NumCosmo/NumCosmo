@@ -133,11 +133,9 @@ _ncm_reparam_finalize (GObject *object)
 {
   NcmReparam *reparam = NCM_REPARAM (object);
 
-  if (reparam->sparams_name_id != NULL)
-  {
-    g_hash_table_unref (reparam->sparams_name_id);
-    reparam->sparams_name_id = NULL;
-  }
+  g_clear_pointer (&reparam->sparams_name_id, g_hash_table_unref);
+  g_clear_pointer (&reparam->sparams, g_ptr_array_unref);
+  ncm_vector_clear (&reparam->new_params);
 
   /* Chain up : end */
   G_OBJECT_CLASS (ncm_reparam_parent_class)->finalize (object);
@@ -325,9 +323,11 @@ ncm_reparam_M_old2new (NcmReparam *reparam, struct _NcmModel *model, NcmMatrix *
 GVariant *
 ncm_reparam_get_params_desc_dict (NcmReparam *reparam)
 {
-  GVariantBuilder *builder = g_variant_builder_new (G_VARIANT_TYPE (NCM_REPARAM_PARAMS_DESC_DICT_TYPE));
-
+  GVariantBuilder builder;
   guint i;
+
+  g_variant_builder_init (&builder, G_VARIANT_TYPE (NCM_REPARAM_PARAMS_DESC_DICT_TYPE));
+
   for (i = 0; i < reparam->length; i++)
   {
     NcmSParam *sp_i = g_ptr_array_index (reparam->sparams, i);
@@ -336,11 +336,11 @@ ncm_reparam_get_params_desc_dict (NcmReparam *reparam)
       GVariant *i_var = g_variant_new_uint32 (i);
       GVariant *sp_var_i = ncm_serialize_global_to_variant (G_OBJECT (sp_i));
       GVariant *entry_i = g_variant_new_dict_entry (i_var, sp_var_i);
-      g_variant_builder_add_value (builder, entry_i);
+      g_variant_builder_add_value (&builder, entry_i);
     }
   }
 
-  return g_variant_ref_sink (g_variant_builder_end (builder));
+  return g_variant_ref_sink (g_variant_builder_end (&builder));
 }
 
 /**

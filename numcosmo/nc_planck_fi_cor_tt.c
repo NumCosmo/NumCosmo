@@ -105,7 +105,7 @@ nc_planck_fi_cor_tt_class_init (NcPlanckFICorTTClass *klass)
   model_class->get_property = nc_planck_fi_cor_tt_get_property;
   object_class->finalize    = nc_planck_fi_cor_tt_finalize;
 
-  ncm_model_class_set_name_nick (model_class, "Planck Foreground and Instument Model -- TT", "PlanckFI_TT");
+  ncm_model_class_set_name_nick (model_class, "Planck Foreground and Instument Model -- TT", "PlanckFICorTT");
   ncm_model_class_add_params (model_class, NC_PLANCK_FI_COR_TT_SPARAM_LEN, 0, PROP_SIZE);
 
   g_object_class_install_property (object_class,

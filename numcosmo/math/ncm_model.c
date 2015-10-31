@@ -370,17 +370,13 @@ ncm_model_clear (NcmModel **model)
 static void
 ncm_model_init (NcmModel *model)
 {
-  NcmModelClass *model_class = NCM_MODEL_GET_CLASS (model);
-
   model->sparams         = g_ptr_array_new_with_free_func ((GDestroyNotify)&ncm_sparam_free);
   model->sparams_name_id = g_hash_table_new_full (&g_str_hash, &g_str_equal, &g_free, NULL);
   model->params          = NULL;
   model->p               = NULL;
 
-  model->vparam_len = g_array_sized_new (TRUE, TRUE, sizeof (guint), model_class->vparam_len);
-  g_array_set_size (model->vparam_len, model_class->vparam_len);
-  model->vparam_pos = g_array_sized_new (TRUE, TRUE, sizeof (guint), model_class->vparam_len);
-  g_array_set_size (model->vparam_pos, model_class->vparam_len);
+  model->vparam_len = g_array_sized_new (TRUE, TRUE, sizeof (guint), 0);
+  model->vparam_pos = g_array_sized_new (TRUE, TRUE, sizeof (guint), 0);
 
   model->pkey    = 1;
   model->skey    = 0;
@@ -743,7 +739,18 @@ _ncm_model_class_set_property (GObject *object, guint prop_id, const GValue *val
   }
   else if (vparam_len_id < model_class->vparam_len)
   {
+    NcmModelClass *model_class = NCM_MODEL_GET_CLASS (model);
     guint psize = g_value_get_uint (value);
+    if (model->vparam_len->len == 0)
+    {
+      g_array_set_size (model->vparam_len, model_class->vparam_len);
+      g_array_set_size (model->vparam_pos, model_class->vparam_len);
+    }
+    else
+    {
+      g_assert_cmpuint (model->vparam_len->len, ==, model_class->vparam_len);
+      g_assert_cmpuint (model->vparam_pos->len, ==, model_class->vparam_len);
+    }
     g_array_index (model->vparam_len, guint, vparam_len_id) = psize;
   }
   else if (sparam_fit_id < model_class->sparam_len)
@@ -883,9 +890,8 @@ ncm_model_class_add_params (NcmModelClass *model_class, guint sparam_len, guint 
 void
 ncm_model_class_set_name_nick (NcmModelClass *model_class, const gchar *name, const gchar *nick)
 {
-/*  g_free (model_class->name);
-  g_free (model_class->nick); */
-
+  /*g_clear_pointer (&model_class->name, g_free);*/
+  /*g_clear_pointer (&model_class->nick, g_free);*/
   model_class->name = g_strdup (name);
   model_class->nick = g_strdup (nick);
 }
