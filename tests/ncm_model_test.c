@@ -241,7 +241,7 @@ ncm_model_test_base_class_init (NcmModelClass* model_class)
   g_assert_cmpstr (model_class->name, ==, name);
   g_assert_cmpstr (model_class->nick, ==, nick);
 
-  NCM_TEST_FAIL (ncm_model_class_check_params_info (model_class));   
+  NCM_TEST_FAIL (ncm_model_class_check_params_info (model_class));
 
   for (i = 0; i < ci_sparam_len; i++)
   {
@@ -301,8 +301,6 @@ ncm_model_test_class_init (NcmModelTestClass *klass)
   model_class->set_property = &_ncm_model_test_set_property;
   model_class->get_property = &_ncm_model_test_get_property;
 
-  ncm_model_class_add_params (model_class, 0, 0, 2);
-
   g_object_class_install_property (object_class,
                                    PROP_A,
                                    g_param_spec_double ("A",
@@ -348,8 +346,6 @@ ncm_model_test_child_class_init (NcmModelTestChildClass *klass)
   model_class->set_property = &_ncm_model_test_child_set_property;
   model_class->get_property = &_ncm_model_test_child_get_property;
 
-  ncm_model_class_add_params (model_class, 0, 0, 2);
-  
   g_object_class_install_property (object_class,
                                    PROP_A,
                                    g_param_spec_double ("B",
@@ -392,8 +388,6 @@ ncm_model_test_child_child_class_init (NcmModelTestChildChildClass *klass)
   GObjectClass* object_class = G_OBJECT_CLASS (klass);
   NcmModelClass* model_class = NCM_MODEL_CLASS (klass);
 
-  ncm_model_class_add_params (model_class, 0, 0, 2);
-  
   model_class->set_property = &_ncm_model_test_child_child_set_property;
   model_class->get_property = &_ncm_model_test_child_child_get_property;
 

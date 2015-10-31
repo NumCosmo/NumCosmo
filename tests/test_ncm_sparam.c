@@ -59,62 +59,62 @@ main (gint argc, gchar *argv[])
   g_test_init (&argc, &argv, NULL);
   ncm_cfg_init ();
   ncm_cfg_enable_gsl_err_handler ();
-  
-  g_test_add ("/numcosmo/ncm_sparam/setget/lower_bound", TestNcmSparam, NULL, 
-              &test_ncm_sparam_new, 
-              &test_ncm_sparam_setget_lower_bound, 
+
+  g_test_add ("/numcosmo/ncm_sparam/setget/lower_bound", TestNcmSparam, NULL,
+              &test_ncm_sparam_new,
+              &test_ncm_sparam_setget_lower_bound,
               &test_ncm_sparam_free);
 
-  g_test_add ("/numcosmo/ncm_sparam/setget/upper_bound", TestNcmSparam, NULL, 
-              &test_ncm_sparam_new, 
-              &test_ncm_sparam_setget_upper_bound, 
+  g_test_add ("/numcosmo/ncm_sparam/setget/upper_bound", TestNcmSparam, NULL,
+              &test_ncm_sparam_new,
+              &test_ncm_sparam_setget_upper_bound,
               &test_ncm_sparam_free);
 
-  g_test_add ("/numcosmo/ncm_sparam/setget/scale", TestNcmSparam, NULL, 
-              &test_ncm_sparam_new, 
-              &test_ncm_sparam_setget_scale, 
+  g_test_add ("/numcosmo/ncm_sparam/setget/scale", TestNcmSparam, NULL,
+              &test_ncm_sparam_new,
+              &test_ncm_sparam_setget_scale,
               &test_ncm_sparam_free);
 
-  g_test_add ("/numcosmo/ncm_sparam/setget/abstol", TestNcmSparam, NULL, 
-              &test_ncm_sparam_new, 
-              &test_ncm_sparam_setget_abstol, 
+  g_test_add ("/numcosmo/ncm_sparam/setget/abstol", TestNcmSparam, NULL,
+              &test_ncm_sparam_new,
+              &test_ncm_sparam_setget_abstol,
               &test_ncm_sparam_free);
 
-  g_test_add ("/numcosmo/ncm_sparam/setget/default_value", TestNcmSparam, NULL, 
-              &test_ncm_sparam_new, 
-              &test_ncm_sparam_setget_default_value, 
+  g_test_add ("/numcosmo/ncm_sparam/setget/default_value", TestNcmSparam, NULL,
+              &test_ncm_sparam_new,
+              &test_ncm_sparam_setget_default_value,
               &test_ncm_sparam_free);
 
-  g_test_add ("/numcosmo/ncm_sparam/traps", TestNcmSparam, NULL, 
-              &test_ncm_sparam_new, 
-              &test_ncm_sparam_traps, 
+  g_test_add ("/numcosmo/ncm_sparam/traps", TestNcmSparam, NULL,
+              &test_ncm_sparam_new,
+              &test_ncm_sparam_traps,
               &test_ncm_sparam_free);
 #if !((GLIB_MAJOR_VERSION == 2) && (GLIB_MINOR_VERSION < 38))
-  g_test_add ("/numcosmo/ncm_sparam/invalid/lower_bound/subprocess", TestNcmSparam, NULL, 
-              &test_ncm_sparam_new, 
-              &test_ncm_sparam_invalid_lower_bound, 
+  g_test_add ("/numcosmo/ncm_sparam/invalid/lower_bound/subprocess", TestNcmSparam, NULL,
+              &test_ncm_sparam_new,
+              &test_ncm_sparam_invalid_lower_bound,
               &test_ncm_sparam_free);
 
-  g_test_add ("/numcosmo/ncm_sparam/invalid/upper_bound/subprocess", TestNcmSparam, NULL, 
-              &test_ncm_sparam_new, 
-              &test_ncm_sparam_invalid_upper_bound, 
+  g_test_add ("/numcosmo/ncm_sparam/invalid/upper_bound/subprocess", TestNcmSparam, NULL,
+              &test_ncm_sparam_new,
+              &test_ncm_sparam_invalid_upper_bound,
               &test_ncm_sparam_free);
 
-  g_test_add ("/numcosmo/ncm_sparam/invalid/scale/subprocess", TestNcmSparam, NULL, 
-              &test_ncm_sparam_new, 
-              &test_ncm_sparam_invalid_scale, 
+  g_test_add ("/numcosmo/ncm_sparam/invalid/scale/subprocess", TestNcmSparam, NULL,
+              &test_ncm_sparam_new,
+              &test_ncm_sparam_invalid_scale,
               &test_ncm_sparam_free);
 
-  g_test_add ("/numcosmo/ncm_sparam/invalid/abstol/subprocess", TestNcmSparam, NULL, 
-              &test_ncm_sparam_new, 
-              &test_ncm_sparam_invalid_abstol, 
+  g_test_add ("/numcosmo/ncm_sparam/invalid/abstol/subprocess", TestNcmSparam, NULL,
+              &test_ncm_sparam_new,
+              &test_ncm_sparam_invalid_abstol,
               &test_ncm_sparam_free);
 
-  g_test_add ("/numcosmo/ncm_sparam/invalid/default_value/subprocess", TestNcmSparam, NULL, 
-              &test_ncm_sparam_new, 
-              &test_ncm_sparam_invalid_default_value, 
+  g_test_add ("/numcosmo/ncm_sparam/invalid/default_value/subprocess", TestNcmSparam, NULL,
+              &test_ncm_sparam_new,
+              &test_ncm_sparam_invalid_default_value,
               &test_ncm_sparam_free);
-#endif 
+#endif
   g_test_run ();
 }
 
@@ -149,16 +149,11 @@ test_ncm_sparam_new (TestNcmSparam *test, gconstpointer pdata)
   ncm_assert_cmpdouble (p->abstol, ==, abstol);
 }
 
-void _set_destroyed (gpointer b) { gboolean *destroyed = b; *destroyed = TRUE; }
-
 void
 test_ncm_sparam_free (TestNcmSparam *test, gconstpointer pdata)
 {
   NcmSParam *p = test->p;
-  gboolean destroyed = FALSE;
-  g_object_set_data_full (G_OBJECT (p), "test-destroy", &destroyed, _set_destroyed);
-  ncm_sparam_free (p);
-  g_assert (destroyed);
+  NCM_TEST_FREE (ncm_sparam_free, p);
 }
 
 void
@@ -303,16 +298,16 @@ test_ncm_sparam_traps (TestNcmSparam *test, gconstpointer pdata)
 #if !((GLIB_MAJOR_VERSION == 2) && (GLIB_MINOR_VERSION < 38))
   g_test_trap_subprocess ("/numcosmo/ncm_sparam/invalid/lower_bound/subprocess", 0, 0);
   g_test_trap_assert_failed ();
-  
+
   g_test_trap_subprocess ("/numcosmo/ncm_sparam/invalid/upper_bound/subprocess", 0, 0);
   g_test_trap_assert_failed ();
-  
+
   g_test_trap_subprocess ("/numcosmo/ncm_sparam/invalid/scale/subprocess", 0, 0);
   g_test_trap_assert_failed ();
-  
+
   g_test_trap_subprocess ("/numcosmo/ncm_sparam/invalid/abstol/subprocess", 0, 0);
   g_test_trap_assert_failed ();
-  
+
   g_test_trap_subprocess ("/numcosmo/ncm_sparam/invalid/default_value/subprocess", 0, 0);
   g_test_trap_assert_failed ();
 #endif

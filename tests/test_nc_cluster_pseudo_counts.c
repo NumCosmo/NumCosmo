@@ -21,7 +21,7 @@
  * You should have received a copy of the GNU General Public License along
  * with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
- 
+
 #ifdef HAVE_CONFIG_H
 #  include "config.h"
 #undef GSL_RANGE_CHECK_OFF
@@ -60,39 +60,34 @@ main (gint argc, gchar *argv[])
   ncm_cfg_init ();
   ncm_cfg_enable_gsl_err_handler ();
 
-  g_test_add ("/numcosmo/nc_cluster_pseudo_counts/1p2_integral", TestNcClusterPseudoCounts, NULL, 
-              &test_nc_cluster_pseudo_counts_new, 
-              &test_nc_cluster_pseudo_counts_1p2_integral, 
+  g_test_add ("/numcosmo/nc_cluster_pseudo_counts/1p2_integral", TestNcClusterPseudoCounts, NULL,
+              &test_nc_cluster_pseudo_counts_new,
+              &test_nc_cluster_pseudo_counts_1p2_integral,
               &test_nc_cluster_pseudo_counts_free);
-  g_test_add ("/numcosmo/nc_cluster_pseudo_counts/3d_integral", TestNcClusterPseudoCounts, NULL, 
-              &test_nc_cluster_pseudo_counts_new, 
-              &test_nc_cluster_pseudo_counts_3d_integral, 
+  g_test_add ("/numcosmo/nc_cluster_pseudo_counts/3d_integral", TestNcClusterPseudoCounts, NULL,
+              &test_nc_cluster_pseudo_counts_new,
+              &test_nc_cluster_pseudo_counts_3d_integral,
               &test_nc_cluster_pseudo_counts_free);
-  g_test_add ("/numcosmo/nc_cluster_pseudo_counts/m2lnL", TestNcClusterPseudoCounts, NULL, 
-              &test_nc_cluster_pseudo_counts_new, 
-              &test_nc_cluster_pseudo_counts_m2lnL, 
+  g_test_add ("/numcosmo/nc_cluster_pseudo_counts/m2lnL", TestNcClusterPseudoCounts, NULL,
+              &test_nc_cluster_pseudo_counts_new,
+              &test_nc_cluster_pseudo_counts_m2lnL,
               &test_nc_cluster_pseudo_counts_free);
- 
+
   g_test_run ();
 }
 
-void _set_destroyed (gpointer b) { gboolean *destroyed = b; *destroyed = TRUE; }
-
 void
 test_nc_cluster_pseudo_counts_free (TestNcClusterPseudoCounts *test, gconstpointer pdata)
-{  
+{
   NcClusterPseudoCounts *cpc = NC_CLUSTER_PSEUDO_COUNTS (test->cpc);
-  gboolean destroyed = FALSE;
-  
+
   nc_matter_var_free (test->vp);
   nc_hicosmo_free (test->cosmo);
   nc_cluster_mass_free (test->clusterm);
   nc_data_cluster_pseudo_counts_free (test->dcpc);
   ncm_fit_free (test->fit);
-  
-  g_object_set_data_full (G_OBJECT (cpc), "test-destroy", &destroyed, _set_destroyed);
-  nc_cluster_pseudo_counts_free (cpc);
-  g_assert (destroyed);
+
+  NCM_TEST_FREE (nc_cluster_pseudo_counts_free, cpc);
 }
 
 void
@@ -100,7 +95,7 @@ test_nc_cluster_pseudo_counts_new (TestNcClusterPseudoCounts *test, gconstpointe
 {
   NcHICosmo *cosmo                = nc_hicosmo_new_from_name (NC_TYPE_HICOSMO, "NcHICosmoDEXcdm");
   NcDistance *dist                = nc_distance_new (3.0);
-  NcWindow *wf                    = nc_window_new_from_name ("NcWindowTophat"); 
+  NcWindow *wf                    = nc_window_new_from_name ("NcWindowTophat");
   NcTransferFunc *tf              = nc_transfer_func_new_from_name ("NcTransferFuncEH");
   NcMatterVar *vp                 = nc_matter_var_new (NC_MATTER_VAR_FFT, wf, tf);
   NcGrowthFunc *gf                = nc_growth_func_new ();
@@ -112,8 +107,8 @@ test_nc_cluster_pseudo_counts_new (TestNcClusterPseudoCounts *test, gconstpointe
   NcDataClusterPseudoCounts *dcpc = nc_data_cluster_pseudo_counts_new (cad);
   NcmMSet *mset                   = ncm_mset_new (NCM_MODEL (cosmo), NCM_MODEL (clusterm), NCM_MODEL (cpc), NULL);
   NcmDataset *dset                = ncm_dataset_new ();
-  NcmLikelihood *lh;              
-  NcmFit *fit;                    
+  NcmLikelihood *lh;
+  NcmFit *fit;
   gdouble m1, m2;
   gdouble z                       = g_test_rand_double_range (0.188, 0.890);
   NcmMatrix *m                     = ncm_matrix_new (1, 5);
@@ -124,7 +119,7 @@ test_nc_cluster_pseudo_counts_new (TestNcClusterPseudoCounts *test, gconstpointe
   test->Mobs[1]        = exp (m2) * 1.0e14;
   test->Mobs_params[0] = 0.09 * test->Mobs[0];
   test->Mobs_params[1] = 0.12 * test->Mobs[1];
-  
+
   g_assert (cpc != NULL);
   g_assert (clusterm != NULL);
   test->cosmo     = cosmo;
@@ -158,7 +153,7 @@ test_nc_cluster_pseudo_counts_new (TestNcClusterPseudoCounts *test, gconstpointe
   ncm_model_param_set_ftype (NCM_MODEL (clusterm), 4, NCM_PARAM_TYPE_FREE);
   ncm_model_param_set_ftype (NCM_MODEL (clusterm), 5, NCM_PARAM_TYPE_FREE);
   ncm_model_param_set_ftype (NCM_MODEL (clusterm), 6, NCM_PARAM_TYPE_FREE);
-  
+
   ncm_model_param_set_by_name (NCM_MODEL (test->cpc), "lnMcut", 34.5);
   ncm_model_param_set_by_name (NCM_MODEL (test->cpc), "sigma_Mcut", 0.05);
   ncm_model_param_set_by_name (NCM_MODEL (test->cpc), "zmin", 0.188);
@@ -179,11 +174,11 @@ test_nc_cluster_pseudo_counts_new (TestNcClusterPseudoCounts *test, gconstpointe
   test->dcpc = dcpc;
   ncm_dataset_append_data (dset, NCM_DATA (test->dcpc));
   //printf ("rows = %d cols = %d np = %d dset = %d\n", ncm_matrix_nrows (m), ncm_matrix_ncols (m), test->dcpc->np, ncm_dataset_get_ndata (dset));
-  
+
   lh        = ncm_likelihood_new (dset);
   fit       = ncm_fit_new (NCM_FIT_TYPE_NLOPT, "ln-neldermead", lh, mset, NCM_FIT_GRAD_NUMDIFF_CENTRAL);
   test->fit = fit;
-  
+
   nc_distance_free (dist);
   nc_window_free (wf);
   nc_transfer_func_free (tf);
@@ -196,13 +191,13 @@ test_nc_cluster_pseudo_counts_new (TestNcClusterPseudoCounts *test, gconstpointe
   ncm_likelihood_free (lh);
 }
 
-void 
+void
 test_nc_cluster_pseudo_counts_1p2_integral (TestNcClusterPseudoCounts *test, gconstpointer pdata)
 {
   NcHICosmo *cosmo           = test->cosmo;
   NcClusterMass *clusterm    = test->clusterm;
   NcClusterPseudoCounts *cpc = test->cpc;
- 
+
   //printf ("z = %.5g Msz = %.5g Ml = %.5g\n", test->z, test->Mobs[0], test->Mobs[1]);
   //ncm_model_params_log_all (NCM_MODEL (cosmo));
   //ncm_model_params_log_all (NCM_MODEL (clusterm));
@@ -211,16 +206,16 @@ test_nc_cluster_pseudo_counts_1p2_integral (TestNcClusterPseudoCounts *test, gco
   nc_matter_var_prepare (test->vp, test->cosmo);
 
   printf ("Integral 1p2\n");
-  nc_cluster_pseudo_counts_posterior_numerator (cpc, clusterm, cosmo, test->z, test->Mobs, test->Mobs_params);  
+  nc_cluster_pseudo_counts_posterior_numerator (cpc, clusterm, cosmo, test->z, test->Mobs, test->Mobs_params);
 }
 
-void 
+void
 test_nc_cluster_pseudo_counts_3d_integral (TestNcClusterPseudoCounts *test, gconstpointer pdata)
 {
   NcHICosmo *cosmo           = test->cosmo;
   NcClusterMass *clusterm    = test->clusterm;
   NcClusterPseudoCounts *cpc = test->cpc;
- 
+
   //printf ("z = %.5g Msz = %.5g Ml = %.5g SDsz = %.5g SDl = %.5g\n", test->z, test->Mobs[0], test->Mobs[1], test->Mobs_params[0], test->Mobs_params[1]);
   //ncm_model_params_log_all (NCM_MODEL (cosmo));
   //ncm_model_params_log_all (NCM_MODEL (clusterm));
@@ -232,11 +227,11 @@ test_nc_cluster_pseudo_counts_3d_integral (TestNcClusterPseudoCounts *test, gcon
   nc_cluster_pseudo_counts_posterior_numerator_plcl (cpc, clusterm, cosmo, test->z, test->Mobs[0], test->Mobs[1], test->Mobs_params[0], test->Mobs_params[1]);
 }
 
-void 
+void
 test_nc_cluster_pseudo_counts_m2lnL (TestNcClusterPseudoCounts *test, gconstpointer pdata)
 {
   gdouble m2lnL;
- 
+
   //printf ("z = %.5g Msz = %.5g Ml = %.5g SDsz = %.5g SDl = %.5g\n", test->z, test->Mobs[0], test->Mobs[1], test->Mobs_params[0], test->Mobs_params[1]);
   //ncm_model_params_log_all (NCM_MODEL (cosmo));
   //ncm_model_params_log_all (NCM_MODEL (clusterm));
@@ -249,6 +244,6 @@ test_nc_cluster_pseudo_counts_m2lnL (TestNcClusterPseudoCounts *test, gconstpoin
   ncm_fit_m2lnL_val (test->fit, &m2lnL);
 //  printf ("m2lnL = %.5g\n", m2lnL);
   //ncm_fit_log_info (test->fit);
-  //ncm_fit_run (test->fit, NCM_FIT_RUN_MSGS_FULL); 
+  //ncm_fit_run (test->fit, NCM_FIT_RUN_MSGS_FULL);
 }
 

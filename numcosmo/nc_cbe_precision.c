@@ -1240,6 +1240,7 @@ nc_cbe_precision_class_init (NcCBEPrecisionClass *klass)
                                                           "SBBN filename",
                                                           sBBN_file,
                                                           G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+    g_free (sBBN_file);
   }
   g_object_class_install_property (object_class,
                                    PROP_RECFAST_Z_INI,
@@ -1439,6 +1440,7 @@ nc_cbe_precision_class_init (NcCBEPrecisionClass *klass)
                                                           "Hyrec Alpha inf file",
                                                           hyrec_Alpha_inf_file,
                                                           G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+    g_free (hyrec_Alpha_inf_file);
   }
   {
     gchar *hyrec_R_inf_file = ncm_cfg_get_data_filename ("class_data"G_DIR_SEPARATOR_S"hyrec"G_DIR_SEPARATOR_S"R_inf.dat", TRUE);
@@ -1449,6 +1451,7 @@ nc_cbe_precision_class_init (NcCBEPrecisionClass *klass)
                                                           "Hyrec R inf file",
                                                           hyrec_R_inf_file,
                                                           G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+    g_free (hyrec_R_inf_file);
   }
   {
     gchar *hyrec_two_photon_tables_file = ncm_cfg_get_data_filename ("class_data"G_DIR_SEPARATOR_S"hyrec"G_DIR_SEPARATOR_S"two_photon_tables.dat", TRUE);
@@ -1459,6 +1462,7 @@ nc_cbe_precision_class_init (NcCBEPrecisionClass *klass)
                                                           "Hyrec two photon tables file",
                                                           hyrec_two_photon_tables_file,
                                                           G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+    g_free (hyrec_two_photon_tables_file);
   }
   /* for reionization */
   g_object_class_install_property (object_class,
@@ -2168,7 +2172,7 @@ nc_cbe_precision_class_init (NcCBEPrecisionClass *klass)
                                                         0.0, G_MAXDOUBLE, 5.0,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
   /*
-   * - parameter related to lensing
+   * parameter related to lensing
    */
   g_object_class_install_property (object_class,
                                    PROP_ACCURATE_LENSING,
