@@ -199,6 +199,10 @@ void clencurt_gen (int M);
   void MKL_Set_Num_Threads (gint);
 #endif /* HAVE_MKL_SET_NUM_THREADS */
 
+#ifdef HAVE_OPENMP
+#include <omp.h>
+#endif /* HAVE_OPENMP */
+
 /**
  * ncm_cfg_init:
  *
@@ -227,6 +231,10 @@ ncm_cfg_init (void)
 #ifdef HAVE_MKL_SET_NUM_THREADS
   MKL_Set_Num_Threads (1);
 #endif /* HAVE_MKL_SET_NUM_THREADS */
+
+#ifdef HAVE_OPENMP
+  omp_set_num_threads (1);
+#endif /* HAVE_OPENMP */
 
   g_setenv ("CUBACORES", "0", TRUE);
   g_setenv ("CUBACORESMAX", "0", TRUE);

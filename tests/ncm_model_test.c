@@ -228,7 +228,7 @@ ncm_model_test_base_class_init (NcmModelClass* model_class)
     v_defval[i] = g_test_rand_double_range ( v_lb[i], v_ub[i]);
     v_ftype[i]  = g_test_rand_bit () ? NCM_PARAM_TYPE_FREE  : NCM_PARAM_TYPE_FIXED;
   }
-printf ("descendent model_class init!\n");
+
   ncm_model_class_set_name_nick (model_class, name, nick);
   ncm_model_class_add_params (model_class, ci_sparam_len, ci_vparam_len, PROP_SIZE);
 
