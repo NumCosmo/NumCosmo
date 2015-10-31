@@ -1765,7 +1765,7 @@ nc_cbe_precision_class_init (NcCBEPrecisionClass *klass)
                                                      G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
   g_object_class_install_property (object_class,
                                    PROP_NCDM_FLUID_TRIGGER_TAU_OVER_TAU_K,
-                                   g_param_spec_double ("NCDM-fluid-trigger-tau-over-tau-k",
+                                   g_param_spec_double ("ncdm-fluid-trigger-tau-over-tau-k",
                                                         NULL,
                                                         "when to switch off ncdm (massive neutrinos / non-cold relics) fluid approximation",
                                                         0.0, G_MAXDOUBLE, 31.0,
