@@ -13,12 +13,12 @@
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * numcosmo is distributed in the hope that it will be useful, but
  * WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
  * See the GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License along
  * with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
@@ -29,7 +29,7 @@
  * @short_description: A spherical shell map.
  *
  * Map manipulation algorithms, Ylm decomposition.
- * 
+ *
  */
 
 #ifdef HAVE_CONFIG_H
@@ -134,7 +134,7 @@ ncm_sphere_map_class_init (NcmSphereMapClass *klass)
                                    g_param_spec_uint ("nside",
                                                       NULL,
                                                       "nside",
-                                                      0, G_MAXUINT32, 0, 
+                                                      0, G_MAXUINT32, 0,
                                                       G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 }
 
@@ -388,7 +388,7 @@ ncm_sphere_mapsht_new (NcmSphereMap *map, NcmSphereMapAlm *mapalm, guint fftw_fl
   mapsht->mapalm = mapalm;
   mapsht->ring = gsl_vector_alloc (mapsht->max_ring_size);
   mapsht->fft_ring = gsl_matrix_complex_alloc (mapsht->n_rings, mapsht->max_ring_size);
-  mapsht->sphPl0 = gsl_vector_alloc (gsl_sf_legendre_array_size (mapalm->lmax, 0));
+  mapsht->sphPl0 = gsl_vector_alloc (mapalm->lmax + 1);
   mapsht->sphPlm = gsl_vector_complex_alloc (mapalm->alm_size);
   mapsht->sphPlm_upper_limit = gsl_vector_alloc (mapalm->lmax + 1);
 
@@ -783,7 +783,7 @@ ncm_sphere_map_homogenize_noise (NcmSphereMap *map, gdouble base_sigma)
   glong i;
   NcmRNG *rng = ncm_rng_pool_get (NCM_SPHERE_MAP_RNG_NAME);
   ncm_rng_lock (rng);
-  
+
   g_assert (map->nobs != NULL);
   min = gsl_vector_float_min (map->nobs);
   sigma_m = base_sigma / sqrt (min);
@@ -799,7 +799,7 @@ ncm_sphere_map_homogenize_noise (NcmSphereMap *map, gdouble base_sigma)
   }
 
   ncm_rng_unlock (rng);
-  ncm_rng_free (rng);  
+  ncm_rng_free (rng);
   return sigma_m;
 }
 

@@ -409,24 +409,48 @@ gdouble
 ncm_sphPlm_test_theta (gdouble theta, gint lmax, gint *lmin_data)
 {
   gdouble x = cos (theta);
-  gdouble Plm_data[4096];
   gint m;
+#ifdef HAVE_GSL_2_0
+  gsize a_size = gsl_sf_legendre_array_n (lmax);
+  gdouble *Plm_data = g_new0 (gdouble, a_size);
+  g_free (Plm_data);
+  gsl_sf_legendre_array (GSL_SF_LEGENDRE_SPHARM, lmax, x, Plm_data);
+  for (m = 0; m <= lmax; m++)
+  {
+    gint last = lmax - m;
+    gint l;
+    for (l = 0; l <= last; l++)
+    {
+      if (fabs (Plm_data[gsl_sf_legendre_array_index (l, m)]) > 1e-20)
+      {
+        lmin_data[m] = l + m;
+        break;
+      }
+    }
+  }
+#else
+  gdouble Plm_data[4096];
   gsl_vector_int_view lmin_view = gsl_vector_int_view_array (lmin_data, lmax+1);
+
   g_assert (lmax <= 4096);
-  gsl_vector_int_set_all (&lmin_view.vector, 1e9);
+  gsl_vector_int_set_all (&lmin_view.vector, 1.0e9);
 
   for (m = 0; m <= lmax; m++)
   {
     gint last = gsl_sf_legendre_array_size (lmax, m);
     gint l;
+
     gsl_sf_legendre_sphPlm_array (lmax, m, x, Plm_data);
     for (l = 0; l < last; l++)
-      if (fabs(Plm_data[l]) > 1e-20)
     {
-      lmin_data[m] = l+m;
-      break;
+      if (fabs (Plm_data[l]) > 1e-20)
+      {
+        lmin_data[m] = l + m;
+        break;
+      }
     }
   }
+#endif /* HAVE_GSL_2_0 */
   return 0.0;
 }
 
