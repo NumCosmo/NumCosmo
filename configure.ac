@@ -202,7 +202,11 @@ AM_CONDITIONAL(HAVE_VAPIGEN, [test "x$VAPIGEN" != xno -a x$enable_vapi != xno])
 dnl ***************************************************************************
 dnl check for gtk-doc
 dnl ***************************************************************************
+m4_ifdef([GTK_DOC_CHECK], [
 GTK_DOC_CHECK([1.14],[--flavour no-tmpl])
+],[
+AM_CONDITIONAL([ENABLE_GTK_DOC], false)
+])
 
 AC_ARG_ENABLE(man,
               [AS_HELP_STRING([--enable-man],[regenerate man pages from Docbook [default=no]])],enable_man=yes,
