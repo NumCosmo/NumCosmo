@@ -41,13 +41,13 @@
 
 G_DEFINE_TYPE (NcHICosmoLCDM, nc_hicosmo_lcdm, NC_TYPE_HICOSMO);
 
-#define VECTOR    (model->params)
+#define VECTOR    (NCM_MODEL (cosmo)->params)
 #define MACRO_H0  (ncm_vector_get (VECTOR, NC_HICOSMO_DE_H0))
 #define OMEGA_C   (ncm_vector_get (VECTOR, NC_HICOSMO_DE_OMEGA_C))
 #define OMEGA_X   (ncm_vector_get (VECTOR, NC_HICOSMO_DE_OMEGA_X))
 #define T_GAMMA0  (ncm_vector_get (VECTOR, NC_HICOSMO_DE_T_GAMMA0))
 #define ENNU      (ncm_vector_get (VECTOR, NC_HICOSMO_DE_ENNU))
-#define OMEGA_R   nc_hicosmo_Omega_r (NC_HICOSMO (model))
+#define OMEGA_R   nc_hicosmo_Omega_r (cosmo)
 #define OMEGA_B   (ncm_vector_get (VECTOR, NC_HICOSMO_DE_OMEGA_B))
 #define SPECINDEX (ncm_vector_get (VECTOR, NC_HICOSMO_DE_SPECINDEX))
 #define SIGMA8    (ncm_vector_get (VECTOR, NC_HICOSMO_DE_SIGMA8))
@@ -60,7 +60,7 @@ G_DEFINE_TYPE (NcHICosmoLCDM, nc_hicosmo_lcdm, NC_TYPE_HICOSMO);
  ****************************************************************************/
 
 static gdouble
-_nc_hicosmo_lcdm_E2 (NcmModel *model, gdouble z)
+_nc_hicosmo_lcdm_E2 (NcHICosmo *cosmo, gdouble z)
 {
   gdouble omega_k = OMEGA_K;
   const gdouble x = 1.0 + z;
@@ -76,7 +76,7 @@ _nc_hicosmo_lcdm_E2 (NcmModel *model, gdouble z)
  ****************************************************************************/
 
 static gdouble
-_nc_hicosmo_lcdm_dE2_dz (NcmModel *model, gdouble z)
+_nc_hicosmo_lcdm_dE2_dz (NcHICosmo *cosmo, gdouble z)
 {
   const gdouble omega_k = OMEGA_K;
   const gdouble x = 1.0 + z;
@@ -89,7 +89,7 @@ _nc_hicosmo_lcdm_dE2_dz (NcmModel *model, gdouble z)
 }
 
 static gdouble
-_nc_hicosmo_lcdm_d2E2_dz2 (NcmModel *model, gdouble z)
+_nc_hicosmo_lcdm_d2E2_dz2 (NcHICosmo *cosmo, gdouble z)
 {
   const gdouble omega_k = OMEGA_K;
   const gdouble x = 1.0 + z;
@@ -103,31 +103,31 @@ _nc_hicosmo_lcdm_d2E2_dz2 (NcmModel *model, gdouble z)
 /****************************************************************************
  * Simple functions
  ****************************************************************************/
-static gdouble _nc_hicosmo_lcdm_H0 (NcmModel *model) { return MACRO_H0; }
-static gdouble _nc_hicosmo_lcdm_Omega_t (NcmModel *model) { return OMEGA_M + OMEGA_X + OMEGA_R; }
-static gdouble _nc_hicosmo_lcdm_Omega_c (NcmModel *model) { return OMEGA_C; }
-static gdouble _nc_hicosmo_lcdm_T_gamma0 (NcmModel *model) { return T_GAMMA0; }
-static gdouble _nc_hicosmo_lcdm_Omega_g (NcmModel *model)
+static gdouble _nc_hicosmo_lcdm_H0 (NcHICosmo *cosmo) { return MACRO_H0; }
+static gdouble _nc_hicosmo_lcdm_Omega_t (NcHICosmo *cosmo) { return OMEGA_M + OMEGA_X + OMEGA_R; }
+static gdouble _nc_hicosmo_lcdm_Omega_c (NcHICosmo *cosmo) { return OMEGA_C; }
+static gdouble _nc_hicosmo_lcdm_T_gamma0 (NcHICosmo *cosmo) { return T_GAMMA0; }
+static gdouble _nc_hicosmo_lcdm_Omega_g (NcHICosmo *cosmo)
 {
   const gdouble h = MACRO_H0 / 100.0;
   const gdouble h2 = h * h;
   return ncm_c_radiation_temp_to_h2omega_r (T_GAMMA0) / h2;
 }
 static gdouble
-_nc_hicosmo_lcdm_Omega_nu (NcmModel *model)
+_nc_hicosmo_lcdm_Omega_nu (NcHICosmo *cosmo)
 {
   const gdouble conv = 7.0 / 8.0 * pow (4.0 / 11.0, 4.0 / 3.0);
-  return ENNU * conv * _nc_hicosmo_lcdm_Omega_g (model);
+  return ENNU * conv * _nc_hicosmo_lcdm_Omega_g (cosmo);
 }
 static gdouble
-_nc_hicosmo_lcdm_Omega_r (NcmModel *model)
+_nc_hicosmo_lcdm_Omega_r (NcHICosmo *cosmo)
 {
   const gdouble conv = 7.0 / 8.0 * pow (4.0 / 11.0, 4.0 / 3.0);
-  return (1.0 + ENNU * conv) * _nc_hicosmo_lcdm_Omega_g (model);
+  return (1.0 + ENNU * conv) * _nc_hicosmo_lcdm_Omega_g (cosmo);
 }
-static gdouble _nc_hicosmo_lcdm_Omega_b (NcmModel *model) { return OMEGA_B; }
-static gdouble _nc_hicosmo_lcdm_sigma_8 (NcmModel *model) { return SIGMA8; }
-static gdouble _nc_hicosmo_lcdm_powspec (NcmModel *model, gdouble k) { return pow (k, SPECINDEX); }
+static gdouble _nc_hicosmo_lcdm_Omega_b (NcHICosmo *cosmo) { return OMEGA_B; }
+static gdouble _nc_hicosmo_lcdm_sigma_8 (NcHICosmo *cosmo) { return SIGMA8; }
+static gdouble _nc_hicosmo_lcdm_powspec (NcHICosmo *cosmo, gdouble k) { return pow (k, SPECINDEX); }
 
 /**
  * nc_hicosmo_lcdm_new:

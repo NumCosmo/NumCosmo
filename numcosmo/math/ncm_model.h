@@ -94,10 +94,18 @@ typedef gdouble (*NcmModelFunc2) (NcmModel *model, const gdouble x, const gdoubl
 
 GType ncm_model_get_type (void) G_GNUC_CONST;
 
+/*void ncm_model_class_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec);*/
+/*void ncm_model_class_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec);*/
+
 void ncm_model_class_add_params (NcmModelClass *model_class, guint sparam_len, guint vparam_len, guint nonparam_prop_len);
 void ncm_model_class_set_name_nick (NcmModelClass *model_class, const gchar *name, const gchar *nick);
+
+void ncm_model_class_set_sparam_obj (NcmModelClass *model_class, guint sparam_id, NcmSParam *sparam);
+void ncm_model_class_set_vparam_obj (NcmModelClass *model_class, guint vparam_id, NcmVParam *vparam);
+
 void ncm_model_class_set_sparam (NcmModelClass *model_class, guint sparam_id, const gchar *symbol, const gchar *name, gdouble lower_bound, gdouble upper_bound, gdouble scale, gdouble abstol, gdouble default_value, NcmParamType ppt);
 void ncm_model_class_set_vparam (NcmModelClass *model_class, guint vparam_id, guint default_length, const gchar *symbol, const gchar *name, gdouble lower_bound, gdouble upper_bound, gdouble scale, gdouble abstol, gdouble default_value, NcmParamType ppt);
+
 void ncm_model_class_check_params_info (NcmModelClass *model_class);
 
 NcmModel *ncm_model_dup (NcmModel *model, NcmSerialize *ser);
@@ -203,7 +211,7 @@ ns_name##_set_##name##_impl (NsName##Class *model_class, type f) \
 #define NCM_MODEL_FUNC0_IMPL(NS_NAME,NsName,ns_name,name) \
 G_INLINE_FUNC gdouble ns_name##_##name (NsName *m) \
 { \
-  return NS_NAME##_GET_CLASS (m)->name (NCM_MODEL (m)); \
+  return NS_NAME##_GET_CLASS (m)->name (NS_NAME (m)); \
 }
 
 /*
@@ -212,7 +220,7 @@ G_INLINE_FUNC gdouble ns_name##_##name (NsName *m) \
 #define NCM_MODEL_FUNC1_IMPL(NS_NAME,NsName,ns_name,name) \
 G_INLINE_FUNC gdouble ns_name##_##name (NsName *m, const gdouble x) \
 { \
-  return NS_NAME##_GET_CLASS (m)->name (NCM_MODEL (m), x); \
+  return NS_NAME##_GET_CLASS (m)->name (NS_NAME (m), x); \
 }
 
 /*
@@ -221,7 +229,7 @@ G_INLINE_FUNC gdouble ns_name##_##name (NsName *m, const gdouble x) \
 #define NCM_MODEL_FUNC2_IMPL(NS_NAME,NsName,ns_name,name) \
 G_INLINE_FUNC gdouble ns_name##_##name (NsName *m, const gdouble x, const gdouble y) \
 { \
-  return NS_NAME##_GET_CLASS (m)->name (NCM_MODEL (m), x, y); \
+  return NS_NAME##_GET_CLASS (m)->name (NS_NAME (m), x, y); \
 }
 
 G_END_DECLS

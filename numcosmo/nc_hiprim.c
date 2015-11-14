@@ -271,7 +271,7 @@ nc_hiprim_get_lnk_pivot (NcHIPrim *prim)
 }
 
 /**
- * nc_hiprim_lnSA_powspec_lnk:
+ * nc_hiprim_lnSA_powspec_lnk: (virtual lnSA_powspec_lnk)
  * @prim: a #NcHIPrim
  * @lnk: $\ln(k\mathrm{Mpc})$
  *
@@ -281,7 +281,7 @@ nc_hiprim_get_lnk_pivot (NcHIPrim *prim)
  * Return: $\log(P_{SA})$
  */
 /**
- * nc_hiprim_lnT_powspec_lnk:
+ * nc_hiprim_lnT_powspec_lnk: (virtual lnT_powspec_lnk)
  * @prim: a #NcHIPrim
  * @lnk: $\ln(k\mathrm{Mpc})$
  *
@@ -343,7 +343,7 @@ nc_hiprim_get_lnk_pivot (NcHIPrim *prim)
  * FIXME
  *
  */
-NCM_MODEL_SET_IMPL_FUNC(NC_HIPRIM,NcHIPrim,nc_hiprim,NcmModelFunc1,lnSA_powspec_lnk)
+NCM_MODEL_SET_IMPL_FUNC(NC_HIPRIM,NcHIPrim,nc_hiprim,NcHIPrimFunc1,lnSA_powspec_lnk)
 /**
  * nc_hiprim_set_lnT_powspec_lnk_impl: (skip)
  * @model_class: FIXME
@@ -352,4 +352,4 @@ NCM_MODEL_SET_IMPL_FUNC(NC_HIPRIM,NcHIPrim,nc_hiprim,NcmModelFunc1,lnSA_powspec_
  * FIXME
  *
  */
-NCM_MODEL_SET_IMPL_FUNC(NC_HIPRIM,NcHIPrim,nc_hiprim,NcmModelFunc1,lnT_powspec_lnk)
+NCM_MODEL_SET_IMPL_FUNC(NC_HIPRIM,NcHIPrim,nc_hiprim,NcHIPrimFunc1,lnT_powspec_lnk)

@@ -59,8 +59,8 @@ nc_hiprim_power_law_finalize (GObject *object)
   G_OBJECT_CLASS (nc_hiprim_power_law_parent_class)->finalize (object);
 }
 
-static gdouble _nc_hiprim_power_law_lnSA_powespec_lnk (NcmModel *model, const gdouble lnk);
-static gdouble _nc_hiprim_power_law_lnT_powespec_lnk (NcmModel *model, const gdouble lnk);
+static gdouble _nc_hiprim_power_law_lnSA_powespec_lnk (NcHIPrim *prim, const gdouble lnk);
+static gdouble _nc_hiprim_power_law_lnT_powespec_lnk (NcHIPrim *prim, const gdouble lnk);
 
 static void
 nc_hiprim_power_law_class_init (NcHIPrimPowerLawClass *klass)
@@ -120,7 +120,7 @@ nc_hiprim_power_law_new (void)
   return prim_pl;
 }
 
-#define VECTOR     (model->params)
+#define VECTOR     (NCM_MODEL (prim)->params)
 #define LN10E10ASA (ncm_vector_get (VECTOR, NC_HIPRIM_POWER_LAW_LN10E10ASA))
 #define T_SA_RATIO (ncm_vector_get (VECTOR, NC_HIPRIM_POWER_LAW_T_SA_RATIO))
 #define N_SA       (ncm_vector_get (VECTOR, NC_HIPRIM_POWER_LAW_N_SA))
@@ -131,17 +131,15 @@ nc_hiprim_power_law_new (void)
  ****************************************************************************/
 
 static gdouble
-_nc_hiprim_power_law_lnSA_powespec_lnk (NcmModel *model, const gdouble lnk)
+_nc_hiprim_power_law_lnSA_powespec_lnk (NcHIPrim *prim, const gdouble lnk)
 {
-  NcHIPrim *prim = NC_HIPRIM (model);
   const gdouble ln_ka = lnk - prim->lnk_pivot;
   return (N_SA - 1.0) * ln_ka + LN10E10ASA - 10.0 * M_LN10;
 }
 
 static gdouble
-_nc_hiprim_power_law_lnT_powespec_lnk (NcmModel *model, const gdouble lnk)
+_nc_hiprim_power_law_lnT_powespec_lnk (NcHIPrim *prim, const gdouble lnk)
 {
-  NcHIPrim *prim = NC_HIPRIM (model);
   const gdouble ln_ka = lnk - prim->lnk_pivot;
   return N_T * ln_ka + LN10E10ASA - 10.0 * M_LN10 + log (T_SA_RATIO);
 }

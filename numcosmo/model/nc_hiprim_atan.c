@@ -64,7 +64,7 @@ nc_hiprim_atan_finalize (GObject *object)
   G_OBJECT_CLASS (nc_hiprim_atan_parent_class)->finalize (object);
 }
 
-static gdouble _nc_hiprim_atan_lnSA_powespec_lnk (NcmModel *model, const gdouble lnk);
+static gdouble _nc_hiprim_atan_lnSA_powespec_lnk (NcHIPrim *prim, const gdouble lnk);
 
 static void
 nc_hiprim_atan_class_init (NcHIPrimAtanClass *klass)
@@ -127,7 +127,7 @@ nc_hiprim_atan_new (void)
   return prim_pl;
 }
 
-#define VECTOR     (model->params)
+#define VECTOR     (NCM_MODEL (prim)->params)
 #define LN10E10ASA (ncm_vector_get (VECTOR, NC_HIPRIM_ATAN_LN10E10ASA))
 #define N_SA       (ncm_vector_get (VECTOR, NC_HIPRIM_ATAN_N_SA))
 #define C1         (ncm_vector_get (VECTOR, NC_HIPRIM_ATAN_C1))
@@ -139,9 +139,8 @@ nc_hiprim_atan_new (void)
  ****************************************************************************/
 
 static gdouble
-_nc_hiprim_atan_lnSA_powespec_lnk (NcmModel *model, const gdouble lnk)
+_nc_hiprim_atan_lnSA_powespec_lnk (NcHIPrim *prim, const gdouble lnk)
 {
-  NcHIPrim *prim = NC_HIPRIM (model);
   const gdouble ln_ka = lnk - prim->lnk_pivot;
   const gdouble ka = exp (ln_ka);
   const gdouble c1 = C1;

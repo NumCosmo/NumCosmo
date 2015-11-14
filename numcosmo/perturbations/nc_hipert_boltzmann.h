@@ -88,7 +88,7 @@ struct _NcHIPertBoltzmannClass
   NcHIPertBoltzmannGetCl get_TE_Cls;
   NcHIPertBoltzmannGetCl get_TB_Cls;
   NcHIPertBoltzmannGetCl get_EB_Cls;
-	NcHIPertBoltzmannConf print_all;
+  NcHIPertBoltzmannConf print_all;
   gpointer data;
 };
 

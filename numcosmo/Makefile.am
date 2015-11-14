@@ -85,6 +85,7 @@ ncm_sources = \
 	math/ncm_vparam.c                  \
 	math/ncm_model.c                   \
 	math/ncm_model_ctrl.c              \
+	math/ncm_model_builder.c           \
 	math/ncm_mset.c                    \
 	math/ncm_mset_func.c               \
 	math/ncm_ode_spline.c              \
@@ -169,6 +170,7 @@ ncm_headers = \
 	math/ncm_vparam.h                \
 	math/ncm_model.h                 \
 	math/ncm_model_ctrl.h            \
+	math/ncm_model_builder.h         \
 	math/ncm_mset.h                  \
 	math/ncm_mset_func.h             \
 	math/ncm_ode_spline.h            \

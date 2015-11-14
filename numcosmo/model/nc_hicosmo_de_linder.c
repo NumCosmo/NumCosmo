@@ -40,13 +40,13 @@
 
 G_DEFINE_TYPE (NcHICosmoDELinder, nc_hicosmo_de_linder, NC_TYPE_HICOSMO_DE);
 
-#define VECTOR  (model->params)
+#define VECTOR  (NCM_MODEL (cosmo_de)->params)
 #define OMEGA_X (ncm_vector_get (VECTOR, NC_HICOSMO_DE_OMEGA_X))
 #define OMEGA_0 (ncm_vector_get (VECTOR, NC_HICOSMO_DE_LINDER_W0))
 #define OMEGA_1 (ncm_vector_get (VECTOR, NC_HICOSMO_DE_LINDER_W1))
 
 static gdouble
-_nc_hicosmo_de_linder_weff (NcmModel *model, gdouble z)
+_nc_hicosmo_de_linder_weff (NcHICosmoDE *cosmo_de, gdouble z)
 {
   gdouble x = 1.0 + z;
   gdouble lnx = log1p (z);
@@ -54,7 +54,7 @@ _nc_hicosmo_de_linder_weff (NcmModel *model, gdouble z)
 }
 
 static gdouble
-_nc_hicosmo_de_linder_dweff_dz (NcmModel *model, gdouble z)
+_nc_hicosmo_de_linder_dweff_dz (NcHICosmoDE *cosmo_de, gdouble z)
 {
   const gdouble x = 1.0 + z;
   const gdouble x2 = x * x;
@@ -65,7 +65,7 @@ _nc_hicosmo_de_linder_dweff_dz (NcmModel *model, gdouble z)
 }
 
 static gdouble
-_nc_hicosmo_de_linder_d2weff_dz2 (NcmModel *model, gdouble z)
+_nc_hicosmo_de_linder_d2weff_dz2 (NcHICosmoDE *cosmo_de, gdouble z)
 {
   const gdouble x    = 1.0 + z;
   const gdouble x2   = x * x;

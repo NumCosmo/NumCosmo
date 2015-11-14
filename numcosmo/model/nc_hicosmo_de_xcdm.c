@@ -28,7 +28,7 @@
  * @short_description: Dark Energy -- constant dark energy equation of state model.
  *
  * FIXME
- * 
+ *
  */
 
 #ifdef HAVE_CONFIG_H
@@ -41,12 +41,12 @@
 
 G_DEFINE_TYPE (NcHICosmoDEXcdm, nc_hicosmo_de_xcdm, NC_TYPE_HICOSMO_DE);
 
-#define VECTOR  (model->params)
+#define VECTOR  (NCM_MODEL (cosmo_de)->params)
 #define OMEGA_X (ncm_vector_get (VECTOR, NC_HICOSMO_DE_OMEGA_X))
 #define W       (ncm_vector_get (VECTOR, NC_HICOSMO_DE_XCDM_W))
 
 static gdouble
-_nc_hicosmo_de_xcdm_weff (NcmModel *model, gdouble z)
+_nc_hicosmo_de_xcdm_weff (NcHICosmoDE *cosmo_de, gdouble z)
 {
   const gdouble x = 1.0 + z;
 
@@ -54,7 +54,7 @@ _nc_hicosmo_de_xcdm_weff (NcmModel *model, gdouble z)
 }
 
 static gdouble
-_nc_hicosmo_de_xcdm_dweff_dz (NcmModel *model, gdouble z)
+_nc_hicosmo_de_xcdm_dweff_dz (NcHICosmoDE *cosmo_de, gdouble z)
 {
   const gdouble x = 1.0 + z;
   const gdouble weff = OMEGA_X * pow (x, 3.0 * ( 1.0 + W ) );
@@ -63,7 +63,7 @@ _nc_hicosmo_de_xcdm_dweff_dz (NcmModel *model, gdouble z)
 }
 
 static gdouble
-_nc_hicosmo_de_xcdm_d2weff_dz2 (NcmModel *model, gdouble z)
+_nc_hicosmo_de_xcdm_d2weff_dz2 (NcHICosmoDE *cosmo_de, gdouble z)
 {
   const gdouble x = 1.0 + z;
   const gdouble x2 = x * x;

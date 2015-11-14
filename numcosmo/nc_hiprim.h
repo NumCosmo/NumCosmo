@@ -59,12 +59,15 @@ typedef enum _NcHIPrimImpl
   NC_HIPRIM_IMPL_LAST             = 1 << 2, /*< skip >*/
 } NcHIPrimImpl;
 
+typedef gdouble (*NcHIPrimFunc1) (NcHIPrim *prim, gdouble lnk);
+
 struct _NcHIPrimClass
 {
   /*< private >*/
   NcmModelClass parent_class;
-  NcmModelFunc1 lnSA_powspec_lnk;
-  NcmModelFunc1 lnT_powspec_lnk;
+  NcHIPrimFunc1 lnSA_powspec_lnk;
+  NcHIPrimFunc1 lnT_powspec_lnk;
+  gdouble (*testee) (NcHIPrim *prim, gdouble x);
 };
 
 struct _NcHIPrim
@@ -100,8 +103,8 @@ G_INLINE_FUNC gdouble nc_hiprim_SA_Ampl (NcHIPrim *prim);
 G_INLINE_FUNC gdouble nc_hiprim_T_Ampl (NcHIPrim *prim);
 G_INLINE_FUNC gdouble nc_hiprim_T_SA_ratio (NcHIPrim *prim);
 
-void nc_hiprim_set_lnSA_powspec_lnk_impl (NcHIPrimClass *model_class, NcmModelFunc1 f);
-void nc_hiprim_set_lnT_powspec_lnk_impl (NcHIPrimClass *model_class, NcmModelFunc1 f);
+void nc_hiprim_set_lnSA_powspec_lnk_impl (NcHIPrimClass *model_class, NcHIPrimFunc1 f);
+void nc_hiprim_set_lnT_powspec_lnk_impl (NcHIPrimClass *model_class, NcHIPrimFunc1 f);
 
 #define NC_HIPRIM_DEFAULT_K_PIVOT (0.05) /* In units of 1/Mpc */
 #define NC_HIPRIM_DEFAULT_PARAMS_RELTOL (1e-7)

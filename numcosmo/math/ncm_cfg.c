@@ -46,6 +46,7 @@
 #include "math/ncm_spline2d_spline.h"
 #include "math/ncm_model.h"
 #include "math/ncm_model_ctrl.h"
+#include "math/ncm_model_builder.h"
 #include "math/ncm_reparam_linear.h"
 #include "math/ncm_stats_vec.h"
 #include "nc_hicosmo.h"
@@ -277,6 +278,7 @@ ncm_cfg_init (void)
 
   ncm_cfg_register_obj (NCM_TYPE_MODEL);
   ncm_cfg_register_obj (NCM_TYPE_MODEL_CTRL);
+  ncm_cfg_register_obj (NCM_TYPE_MODEL_BUILDER);
 
   ncm_cfg_register_obj (NCM_TYPE_REPARAM);
   ncm_cfg_register_obj (NCM_TYPE_REPARAM_LINEAR);
@@ -411,6 +413,9 @@ static uint nreg_model = 0;
 void
 ncm_cfg_register_obj (GType obj)
 {
+#if !((GLIB_MAJOR_VERSION == 2) && (GLIB_MINOR_VERSION < 33))
+  g_type_ensure (obj);
+#endif /* GLIB >= 2.34*/
   gpointer obj_class = g_type_class_ref (obj);
   g_type_class_unref (obj_class);
   nreg_model++;

@@ -30,7 +30,7 @@
  *
  * This object comprises the necessary properties to define a vector parameter.
  * It is used by #NcmModel to store the description of the vector model parameters.
- * 
+ *
  */
 
 #ifdef HAVE_CONFIG_H
@@ -50,6 +50,92 @@ enum
 };
 
 G_DEFINE_TYPE (NcmVParam, ncm_vparam, G_TYPE_OBJECT);
+
+static void
+ncm_vparam_init (NcmVParam *vp)
+{
+  vp->len = 0;
+  vp->default_sparam = NULL;
+  vp->sparam = g_ptr_array_new_with_free_func ((GDestroyNotify) &ncm_sparam_free);
+}
+
+static void
+_ncm_vparam_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
+{
+  NcmVParam *vparam = NCM_VPARAM (object);
+  g_return_if_fail (NCM_IS_VPARAM (object));
+
+  switch (prop_id)
+  {
+    case PROP_DEFAULT_SPARAM:
+      vparam->default_sparam = g_value_dup_object (value);
+      break;
+    default:
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
+      break;
+  }
+}
+
+static void
+_ncm_vparam_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
+{
+  NcmVParam *vparam = NCM_VPARAM (object);
+  g_return_if_fail (NCM_IS_VPARAM (vparam));
+
+  NCM_UNUSED (value);
+
+  switch (prop_id)
+  {
+    default:
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
+      break;
+  }
+}
+
+static void
+_ncm_vparam_dispose (GObject *object)
+{
+  NcmVParam *vp = NCM_VPARAM (object);
+
+  vp->len = 0;
+  ncm_sparam_clear (&vp->default_sparam);
+  if (vp->sparam != NULL)
+  {
+    g_ptr_array_unref (vp->sparam);
+    vp->sparam = NULL;
+  }
+
+  /* Chain up : end */
+  G_OBJECT_CLASS (ncm_vparam_parent_class)->dispose (object);
+}
+
+static void
+_ncm_vparam_finalize (GObject *object)
+{
+  /* Chain up : end */
+  G_OBJECT_CLASS (ncm_vparam_parent_class)->finalize (object);
+}
+
+
+static void
+ncm_vparam_class_init (NcmVParamClass *klass)
+{
+  GObjectClass* object_class = G_OBJECT_CLASS (klass);
+
+  object_class->set_property = _ncm_vparam_set_property;
+  object_class->get_property = _ncm_vparam_get_property;
+  object_class->dispose      = _ncm_vparam_dispose;
+  object_class->finalize     = _ncm_vparam_finalize;
+
+  g_object_class_install_property (object_class,
+                                   PROP_DEFAULT_SPARAM,
+                                   g_param_spec_object  ("default-sparam",
+                                                        NULL,
+                                                        "Default sparam for the vector components",
+                                                        NCM_TYPE_SPARAM,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+}
+
 
 /**
  * ncm_vparam_new:
@@ -103,6 +189,20 @@ ncm_vparam_full_new (guint len, const gchar *name, const gchar *symbol, gdouble 
 }
 
 /**
+ * ncm_vparam_ref:
+ * @vparam: a #NcmVParam.
+ *
+ * Increases the reference count of @vparam by one.
+ *
+ * Returns: (transfer full): @vparam
+ */
+NcmVParam *
+ncm_vparam_ref (NcmVParam *vparam)
+{
+  return g_object_ref (vparam);
+}
+
+/**
  * ncm_vparam_copy:
  * @vparam: a #NcmVParam.
  *
@@ -123,8 +223,8 @@ ncm_vparam_copy (NcmVParam *vparam)
 
   for (i = 0; i < vparam->len; i++)
   {
-	NcmSParam *sp = ncm_sparam_copy (ncm_vparam_peek_sparam (vparam, i));
-	g_ptr_array_index (vparam_new->sparam, i) = sp;
+    NcmSParam *sp = ncm_sparam_copy (ncm_vparam_peek_sparam (vparam, i));
+    g_ptr_array_index (vparam_new->sparam, i) = sp;
   }
   return vparam_new;
 }
@@ -364,6 +464,34 @@ ncm_vparam_set_fit_type (NcmVParam *vparam, guint n, const NcmParamType ftype)
 }
 
 /**
+ * ncm_vparam_name:
+ * @vparam: a #NcmVParam.
+ *
+ * Gets the @vparam base name.
+ *
+ * Returns: (transfer none): @vparam base name
+ */
+const gchar *
+ncm_vparam_name (const NcmVParam *vparam)
+{
+  return ncm_sparam_name (vparam->default_sparam);
+}
+
+/**
+ * ncm_vparam_symbol:
+ * @vparam: a #NcmVParam.
+ *
+ * Gets the @vparam base symbol.
+ *
+ * Returns: (transfer none): @vparam base symbol
+ */
+const gchar *
+ncm_vparam_symbol (const NcmVParam *vparam)
+{
+  return ncm_sparam_symbol (vparam->default_sparam);
+}
+
+/**
  * ncm_vparam_get_lower_bound:
  * @vparam: a #NcmVParam.
  * @n: vector index.
@@ -447,86 +575,14 @@ ncm_vparam_get_fit_type (const NcmVParam *vparam, guint n)
   return ncm_sparam_get_fit_type (sp);
 }
 
-static void
-ncm_vparam_init (NcmVParam *vp)
+/**
+ * ncm_vparam_len:
+ * @vparam: a #NcmVParam.
+ *
+ * Returns: The length of @vparam.
+ */
+guint
+ncm_vparam_len (const NcmVParam *vparam)
 {
-  vp->len = 0;
-  vp->default_sparam = NULL;
-  vp->sparam = g_ptr_array_new_with_free_func ((GDestroyNotify) &ncm_sparam_free);
-}
-
-static void
-_ncm_vparam_dispose (GObject *object)
-{
-  NcmVParam *vp = NCM_VPARAM (object);
-
-  vp->len = 0;
-  ncm_sparam_clear (&vp->default_sparam);
-  if (vp->sparam != NULL)
-  {
-    g_ptr_array_unref (vp->sparam);
-    vp->sparam = NULL;
-  }
-
-  /* Chain up : end */
-  G_OBJECT_CLASS (ncm_vparam_parent_class)->dispose (object);
-}
-
-static void
-_ncm_vparam_finalize (GObject *object)
-{
-  /* Chain up : end */
-  G_OBJECT_CLASS (ncm_vparam_parent_class)->finalize (object);
-}
-
-static void
-_ncm_vparam_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
-{
-  NcmVParam *vparam = NCM_VPARAM (object);
-  g_return_if_fail (NCM_IS_VPARAM (object));
-  
-  switch (prop_id)
-  {
-	case PROP_DEFAULT_SPARAM:
-	  vparam->default_sparam = g_value_dup_object (value);
-	  break;
-	default:
-	  G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-	  break;
-  }
-}
-
-static void
-_ncm_vparam_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
-{
-  NcmVParam *vparam = NCM_VPARAM (object);
-  g_return_if_fail (NCM_IS_VPARAM (vparam));
-
-  NCM_UNUSED (value);
-
-  switch (prop_id)
-  {
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
-  }
-}
-
-static void
-ncm_vparam_class_init (NcmVParamClass *klass)
-{
-  GObjectClass* object_class = G_OBJECT_CLASS (klass);
-
-  object_class->finalize = _ncm_vparam_finalize;
-  object_class->dispose = _ncm_vparam_dispose;
-  object_class->set_property = _ncm_vparam_set_property;
-  object_class->get_property = _ncm_vparam_get_property;
-
-  g_object_class_install_property (object_class,
-                                   PROP_DEFAULT_SPARAM,
-                                   g_param_spec_object  ("default-sparam",
-                                                        NULL,
-                                                        "Default sparam for the vector components",
-                                                        NCM_TYPE_SPARAM,
-                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  return vparam->len;
 }
