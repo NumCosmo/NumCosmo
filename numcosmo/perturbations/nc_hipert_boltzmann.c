@@ -54,6 +54,8 @@ enum
   PROP_RECOMB,
   PROP_TARGET_CLS,
   PROP_CALC_TRANSFER,
+  PROP_USE_LENSED_CLS,
+  PROP_USE_TENSOR,
   PROP_TT_LMAX,
   PROP_EE_LMAX,
   PROP_BB_LMAX,
@@ -78,6 +80,8 @@ nc_hipert_boltzmann_init (NcHIPertBoltzmann *pb)
   pb->lambda                 = 0.0;
 
   pb->target_Cls             = 0;
+  pb->use_lensed_Cls         = FALSE;
+  pb->use_tensor             = FALSE;
   pb->calc_transfer          = FALSE;
   pb->TT_lmax                = 0;
   pb->EE_lmax                = 0;
@@ -107,6 +111,12 @@ _nc_hipert_boltzmann_set_property (GObject *object, guint prop_id, const GValue 
       break;
     case PROP_CALC_TRANSFER:
       nc_hipert_boltzmann_set_calc_transfer (pb, g_value_get_boolean (value));
+      break;
+    case PROP_USE_LENSED_CLS:
+      nc_hipert_boltzmann_set_lensed_Cls (pb, g_value_get_boolean (value));
+      break;
+    case PROP_USE_TENSOR:
+      nc_hipert_boltzmann_set_tensor (pb, g_value_get_boolean (value));
       break;
     case PROP_TT_LMAX:
       nc_hipert_boltzmann_set_TT_lmax (pb, g_value_get_uint (value));
@@ -148,6 +158,12 @@ _nc_hipert_boltzmann_get_property (GObject *object, guint prop_id, GValue *value
       break;
     case PROP_CALC_TRANSFER:
       g_value_set_boolean (value, nc_hipert_boltzmann_get_calc_transfer (pb));
+      break;
+    case PROP_USE_LENSED_CLS:
+      g_value_set_boolean (value, nc_hipert_boltzmann_lensed_Cls (pb));
+      break;
+    case PROP_USE_TENSOR:
+      g_value_set_boolean (value, nc_hipert_boltzmann_tensor (pb));
       break;
     case PROP_TT_LMAX:
       g_value_set_uint (value, nc_hipert_boltzmann_get_TT_lmax (pb));
@@ -232,6 +248,20 @@ nc_hipert_boltzmann_class_init (NcHIPertBoltzmannClass *klass)
                                    g_param_spec_boolean ("calc-transfer",
                                                          NULL,
                                                          "Whether to calculate the matter transfer function",
+                                                         FALSE,
+                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  g_object_class_install_property (object_class,
+                                   PROP_USE_LENSED_CLS,
+                                   g_param_spec_boolean ("use-lensed-Cls",
+                                                         NULL,
+                                                         "Whether use the lensed corrected Cls",
+                                                         TRUE,
+                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  g_object_class_install_property (object_class,
+                                   PROP_USE_TENSOR,
+                                   g_param_spec_boolean ("use-tensor",
+                                                         NULL,
+                                                         "Whether use tensor contribution",
                                                          FALSE,
                                                          G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
   g_object_class_install_property (object_class,
@@ -441,6 +471,64 @@ gboolean
 nc_hipert_boltzmann_get_calc_transfer (NcHIPertBoltzmann *pb)
 {
   return pb->calc_transfer;
+}
+
+/**
+ * nc_hipert_boltzmann_set_lensed_Cls:
+ * @pb: a #NcHIPertBoltzmann
+ * @use_lensed_Cls: a boolean
+ *
+ * FIXME
+ *
+ */
+void
+nc_hipert_boltzmann_set_lensed_Cls (NcHIPertBoltzmann *pb, gboolean use_lensed_Cls)
+{
+  pb->use_lensed_Cls = use_lensed_Cls;
+  ncm_model_ctrl_force_update (pb->ctrl_cosmo);
+}
+
+/**
+ * nc_hipert_boltzmann_lensed_Cls:
+ * @pb: a #NcHIPertBoltzmann.
+ *
+ * FIXME
+ *
+ * Returns: FIXME
+ */
+gboolean
+nc_hipert_boltzmann_lensed_Cls (NcHIPertBoltzmann *pb)
+{
+  return pb->use_lensed_Cls;
+}
+
+/**
+ * nc_hipert_boltzmann_set_tensor:
+ * @pb: a #NcHIPertBoltzmann
+ * @use_tensor: a boolean
+ *
+ * FIXME
+ *
+ */
+void
+nc_hipert_boltzmann_set_tensor (NcHIPertBoltzmann *pb, gboolean use_tensor)
+{
+  pb->use_tensor = use_tensor;
+  ncm_model_ctrl_force_update (pb->ctrl_cosmo);
+}
+
+/**
+ * nc_hipert_boltzmann_tensor:
+ * @pb: a #NcHIPertBoltzmann.
+ *
+ * FIXME
+ *
+ * Returns: FIXME
+ */
+gboolean
+nc_hipert_boltzmann_tensor (NcHIPertBoltzmann *pb)
+{
+  return pb->use_tensor;
 }
 
 /**

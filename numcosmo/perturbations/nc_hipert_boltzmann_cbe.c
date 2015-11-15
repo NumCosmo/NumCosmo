@@ -37,7 +37,6 @@
  * - [Lesgourgues (2011) CLASS IV][XLesgourgues2011b] and
  * - [CLASS website](http://class-code.net/).
  *
- *
  */
 
 /*
@@ -59,8 +58,6 @@ enum
 {
   PROP_0,
   PROP_PREC,
-  PROP_USE_LENSED_CLS,
-  PROP_USE_TENSOR,
 };
 
 struct _NcHIPertBoltzmannCBEPrivate
@@ -83,7 +80,6 @@ nc_hipert_boltzmann_cbe_init (NcHIPertBoltzmannCBE *cbe)
 {
   cbe->priv           = G_TYPE_INSTANCE_GET_PRIVATE (cbe, NC_TYPE_HIPERT_BOLTZMANN_CBE, NcHIPertBoltzmannCBEPrivate);
   cbe->prec           = NULL;
-  cbe->use_lensed_Cls = FALSE;
   cbe->lmax           = 0;
   cbe->TT_Cls         = NULL;
   cbe->EE_Cls         = NULL;
@@ -370,14 +366,6 @@ nc_hipert_boltzmann_cbe_set_property (GObject *object, guint prop_id, const GVal
       cbe->prec = g_value_dup_object (value);
       ncm_model_ctrl_force_update (NC_HIPERT_BOLTZMANN (cbe)->ctrl_cosmo);
       break;
-    case PROP_USE_LENSED_CLS:
-      cbe->use_lensed_Cls = g_value_get_boolean (value);
-      ncm_model_ctrl_force_update (NC_HIPERT_BOLTZMANN (cbe)->ctrl_cosmo);
-      break;
-    case PROP_USE_TENSOR:
-      cbe->use_tensor = g_value_get_boolean (value);
-      ncm_model_ctrl_force_update (NC_HIPERT_BOLTZMANN (cbe)->ctrl_cosmo);
-      break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
       break;
@@ -394,12 +382,6 @@ nc_hipert_boltzmann_cbe_get_property (GObject *object, guint prop_id, GValue *va
   {
     case PROP_PREC:
       g_value_set_object (value, cbe->prec);
-      break;
-    case PROP_USE_LENSED_CLS:
-      g_value_set_boolean (value, cbe->use_lensed_Cls);
-      break;
-    case PROP_USE_TENSOR:
-      g_value_set_boolean (value, cbe->use_tensor);
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -460,21 +442,6 @@ nc_hipert_boltzmann_cbe_class_init (NcHIPertBoltzmannCBEClass *klass)
                                                         "CLASS precision object",
                                                         NC_TYPE_CBE_PRECISION,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-  g_object_class_install_property (object_class,
-                                   PROP_USE_LENSED_CLS,
-                                   g_param_spec_boolean ("use-lensed-Cls",
-                                                         NULL,
-                                                         "Whether use the lensed corrected Cls",
-                                                         TRUE,
-                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-
-  g_object_class_install_property (object_class,
-                                   PROP_USE_TENSOR,
-                                   g_param_spec_boolean ("use-tensor",
-                                                         NULL,
-                                                         "Whether use tensor contribution",
-                                                         FALSE,
-                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   NC_HIPERT_BOLTZMANN_CLASS (klass)->prepare    = &_nc_hipert_boltzmann_cbe_prepare;
   NC_HIPERT_BOLTZMANN_CLASS (klass)->get_TT_Cls = &_nc_hipert_boltzmann_cbe_get_TT_Cls;
@@ -709,7 +676,7 @@ _nc_hipert_boltzmann_cbe_set_pert (NcHIPertBoltzmannCBE *cbe, NcHICosmo *cosmo)
 
   /*
    * Inside CLASS they compare booleans with _TRUE_ and _FALSE_.
-   * This is a bad ideia, but to be compatible we must always
+   * This is a bad idea, but to be compatible we must always
    * use their _TRUE_ and _FALSE_.
    */
 
@@ -756,7 +723,7 @@ _nc_hipert_boltzmann_cbe_set_pert (NcHIPertBoltzmannCBE *cbe, NcHICosmo *cosmo)
 
   cbe->priv->ppt.has_scalars = _TRUE_;
   cbe->priv->ppt.has_vectors = _FALSE_;
-  cbe->priv->ppt.has_tensors = cbe->use_tensor ? _TRUE_ : _FALSE_;
+  cbe->priv->ppt.has_tensors = pb->use_tensor ? _TRUE_ : _FALSE_;
 
   {
     guint TT_lmax = nc_hipert_boltzmann_get_TT_lmax (pb);
@@ -796,7 +763,7 @@ G_STMT_START { \
     cbe->lmax = GSL_MAX (cbe->lmax, EB_lmax);
 
     cbe->priv->ppt.l_scalar_max = cbe->lmax +
-        (cbe->use_lensed_Cls ? ppr->delta_l_max : 0);
+        (pb->use_lensed_Cls ? ppr->delta_l_max : 0);
 
 
     cbe->priv->ppt.l_vector_max = 500;
@@ -850,10 +817,12 @@ _external_Pk_callback_pkt (const double lnk, gpointer data)
 static void
 _nc_hipert_boltzmann_cbe_set_prim (NcHIPertBoltzmannCBE *cbe, NcHIPrim *prim, NcHICosmo *cosmo)
 {
+  NcHIPertBoltzmann *pb = NC_HIPERT_BOLTZMANN (cbe);
+
   cbe->priv->ppm.primordial_spec_type = external_Pk_callback;
   /*cbe->priv->ppm.primordial_spec_type = analytic_Pk;*/
   cbe->priv->ppm.external_Pk_callback_pks  = &_external_Pk_callback_pks;
-  if (cbe->use_tensor)
+  if (pb->use_tensor)
   {
     g_assert (ncm_model_impl (NCM_MODEL (prim)) & NC_HIPRIM_IMPL_lnT_powspec_lnk);
     cbe->priv->ppm.external_Pk_callback_pkt  = &_external_Pk_callback_pkt;
@@ -966,7 +935,9 @@ _nc_hipert_boltzmann_cbe_set_spectra (NcHIPertBoltzmannCBE *cbe, NcHICosmo *cosm
 static void
 _nc_hipert_boltzmann_cbe_set_lensing (NcHIPertBoltzmannCBE *cbe, NcHICosmo *cosmo)
 {
-  cbe->priv->ple.has_lensed_cls  = cbe->use_lensed_Cls ? _TRUE_ : _FALSE_;
+  NcHIPertBoltzmann *pb = NC_HIPERT_BOLTZMANN (cbe);
+
+  cbe->priv->ple.has_lensed_cls  = pb->use_lensed_Cls ? _TRUE_ : _FALSE_;
   cbe->priv->ple.lensing_verbose = cbe->lensing_verbose;
 }
 
@@ -1018,7 +989,7 @@ _nc_hipert_boltzmann_cbe_prepare (NcHIPertBoltzmann *pb, NcHIPrim *prim, NcHICos
     guint all_Cls_size, index_tt, index_ee, index_bb, index_te;
     gboolean has_tt, has_ee, has_bb, has_te;
 
-    if (cbe->use_lensed_Cls)
+    if (pb->use_lensed_Cls)
     {
       struct lensing *ptr = &cbe->priv->ple;
       all_Cls_size = ptr->lt_size; /* ptr->ct_size */
@@ -1061,7 +1032,7 @@ _nc_hipert_boltzmann_cbe_prepare (NcHIPertBoltzmann *pb, NcHIPrim *prim, NcHICos
 
     for (l = 1; l <= cbe->lmax; l++)
     {
-      if (cbe->use_lensed_Cls)
+      if (pb->use_lensed_Cls)
         lensing_cl_at_l (&cbe->priv->ple, l, all_Cls);
       else
         spectra_cl_at_l (&cbe->priv->psp, l, all_Cls, NULL, NULL);

@@ -2,6 +2,9 @@
 
 import gi
 import math
+import numpy as np
+import matplotlib.pyplot as plt
+
 gi.require_version('NumCosmo', '1.0')
 gi.require_version('NumCosmoMath', '1.0')
 
@@ -9,84 +12,29 @@ from gi.repository import GObject
 from gi.repository import NumCosmo as Nc
 from gi.repository import NumCosmoMath as Ncm
 
-#
-#  Initializing the library objects, this must be called before
-#  any other library function.
-#
-Ncm.cfg_init ()
+from py_hiprim_example import PyHIPrimExample
 
 #
-# New ModelBuilder object, defines a new model NcHIPrimExample implementing
-# the Nc.HIPrim abstract class.
-# 
-mb = Ncm.ModelBuilder.new (Nc.HIPrim, "NcHIPrimExample", "A example primordial model")
-
+# Script params
 #
-# New parameter A_s to describe the spectrum amplitud (it is usually better
-# to work with ln(10^10As))
-#
-mb.add_sparam ("A_s", "As", 0.0, 1.0, 0.1, 0.0, 1.0e-9, Ncm.ParamType.FREE)
-
-#
-# New parameter n_s to describe the spectral index
-#
-mb.add_sparam ("n_s", "ns", 0.5, 1.5, 0.1, 0.0, 0.96,   Ncm.ParamType.FREE)
-
-#
-# Creates a new GObject, it is not a Python object yet!
-#
-GNcHIPrimExample = mb.create ()
-
-#
-# Gets the Python version of the object (.pytype)
-#
-NcHIPrimExample = GNcHIPrimExample.pytype
-
-#
-# Workaraound to make the pygobject "see" the new object
-#
-GObject.new (GNcHIPrimExample)
-GObject.type_register (NcHIPrimExample)
-
-#
-# Creating a new class implementing our object NcHIPrimExample
-#
-class PyHIPrimExample (NcHIPrimExample):
-  #
-  # Defining some property which is not part of the model paramers.
-  # All model parameters must be defined by the ModelBuilder.
-  #
-  some_property = GObject.Property (type = str)
-  
-  #
-  # Implementing the adiabatic spectrum function
-  #
-  def do_lnSA_powspec_lnk (self, lnk):
-    lnk0 = self.get_lnk_pivot ()
-    lnka = lnk - lnk0
-    As = self.props.As
-    ns = self.props.ns
-    
-    return (ns - 1.0) * lnka + math.log (1.0e10 * As) - 10.0 * math.log (10.0)
-
-#
-# Register our new Python class PyHIPrimExample
-#
-GObject.type_register(PyHIPrimExample)
+lmax = 2500
 
 #
 # Creating a new instance of PyHIPrimExample
 #
 prim = PyHIPrimExample ()
 
-print "# As     = ", prim.props.As
-print "# P(k=1) = ", prim.SA_powspec_k (1.0)
-
+print "# As        = ", prim.props.As
+print "# P (k = 1) = ", prim.SA_powspec_k (1.0)
+print "# (a, b, c) = ( ", prim.props.a, ", ", prim.props.b, ", ", prim.props.c, " )"
 
 #
 #  New CLASS backend precision object
+#  Lets also increase k_per_decade_primordial since we are
+#  dealing with a modified spectrum.
 #
 cbe_prec = Nc.CBEPrecision.new ()
+cbe_prec.props.k_per_decade_primordial = 50.0
 
 #
 #  Set precision parameters
@@ -97,9 +45,9 @@ cbe_prec = Nc.CBEPrecision.new ()
 #  New CLASS backend object
 #
 cbe = Nc.HIPertBoltzmannCBE.prec_new (cbe_prec)
-cbe.set_TT_lmax (1024)
+cbe.set_TT_lmax (lmax)
 cbe.set_target_Cls (Nc.DataCMBDataType.TT)
-cbe.props.use_lensed_Cls = True
+cbe.set_lensed_Cls (True)
 
 #
 # Makes sure that cbe constain the default values
@@ -117,12 +65,40 @@ cosmo.param_set_by_name ("Omegak", 0.0)
 # Preparing the Class backend object
 #
 cbe.prepare (prim, cosmo)
-Cls = Ncm.Vector.new (1024)
-cbe.get_TT_Cls (Cls)
 
-l = 0
-for Cl in Cls.dup_array ():
-  print l, Cl
-  l = l + 1
+Cls1 = Ncm.Vector.new (lmax + 1)
+Cls2 = Ncm.Vector.new (lmax + 1)
 
+cbe.get_TT_Cls (Cls1)
 
+prim.props.a = 0
+cbe.prepare (prim, cosmo)
+cbe.get_TT_Cls (Cls2)
+
+Cls1_a = Cls1.dup_array ()
+Cls2_a = Cls2.dup_array ()
+
+Cls1_a = np.array (Cls1_a[2:])
+Cls2_a = np.array (Cls2_a[2:])
+
+ell = np.array (range (2, lmax + 1))
+
+Cls1_a = ell * (ell + 1.0) * Cls1_a
+Cls2_a = ell * (ell + 1.0) * Cls2_a
+
+#
+#  Ploting ionization history.
+#
+
+plt.title (r'Modified and non-modified $C_\ell$')
+plt.xscale('log')
+plt.plot (ell, Cls1_a, 'r', label="Modified")
+plt.plot (ell, Cls2_a, 'b--', label="Non-modified")
+
+plt.xlabel(r'$\ell$')
+plt.ylabel(r'$C_\ell$')
+plt.legend(loc=2)
+
+plt.savefig ("hiprim_Cls.png")
+
+plt.clf ()

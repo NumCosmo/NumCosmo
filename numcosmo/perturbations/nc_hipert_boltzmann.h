@@ -154,6 +154,8 @@ struct _NcHIPertBoltzmann
   gdouble lambda;
   NcDataCMBDataType target_Cls;
   gboolean calc_transfer;
+  gboolean use_lensed_Cls;
+  gboolean use_tensor;
   guint TT_lmax, EE_lmax, BB_lmax, TE_lmax, TB_lmax, EB_lmax;
   gboolean tight_coupling;
   NcmModelCtrl *ctrl_cosmo;
@@ -173,6 +175,12 @@ NcDataCMBDataType nc_hipert_boltzmann_get_target_Cls (NcHIPertBoltzmann *pb);
 
 void nc_hipert_boltzmann_set_calc_transfer (NcHIPertBoltzmann *pb, gboolean calc_transfer);
 gboolean nc_hipert_boltzmann_get_calc_transfer (NcHIPertBoltzmann *pb);
+
+void nc_hipert_boltzmann_set_lensed_Cls (NcHIPertBoltzmann *pb, gboolean use_lensed_Cls);
+gboolean nc_hipert_boltzmann_lensed_Cls (NcHIPertBoltzmann *pb);
+
+void nc_hipert_boltzmann_set_tensor (NcHIPertBoltzmann *pb, gboolean use_tensor);
+gboolean nc_hipert_boltzmann_tensor (NcHIPertBoltzmann *pb);
 
 void nc_hipert_boltzmann_set_TT_lmax (NcHIPertBoltzmann *pb, guint lmax);
 void nc_hipert_boltzmann_set_EE_lmax (NcHIPertBoltzmann *pb, guint lmax);
