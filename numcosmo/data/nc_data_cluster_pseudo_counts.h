@@ -92,6 +92,7 @@ void nc_data_cluster_pseudo_counts_clear (NcDataClusterPseudoCounts **dcpc);
 
 void nc_data_cluster_pseudo_counts_set_obs (NcDataClusterPseudoCounts *dcpc, const NcmMatrix *m);
 void nc_data_cluster_pseudo_counts_set_true_data (NcDataClusterPseudoCounts *dcpc, const NcmMatrix *m);
+void nc_data_cluster_pseudo_counts_init_from_sampling (NcDataClusterPseudoCounts *dcpc, NcmMSet *mset, NcmRNG *rng, const gint np);
 
 G_END_DECLS
 

@@ -638,7 +638,7 @@ _posterior_numerator_integrand_plcl (gdouble w1, gdouble w2, gdouble lnM_M0, gpo
  * @sigma_pl: standard deviation of Planck mass
  * @sigma_cl: standard deviation of CLASH mass
  *
- * FIXME
+ * FIXME Warning! The pivot mass is hard coded ($M_0 = 5.7 \times 10^{14} \, h^{-1} M_\odot$).  
  *
  * Returns: FIXME
 */
@@ -650,7 +650,7 @@ nc_cluster_pseudo_counts_posterior_numerator_plcl (NcClusterPseudoCounts *cpc, N
   gdouble dV_dzdOmega;
   NcmIntegrand3dim integ;
   gdouble norma_p;
-  const gdouble M0 = 1.0e14;
+  const gdouble M0 = 5.7e14; //1.0e14;
   const gdouble Mobs[] = {Mpl / M0, Mcl / M0};
   const gdouble Mobs_params[] = {sigma_pl / M0, sigma_cl / M0};
   
@@ -718,7 +718,7 @@ nc_cluster_pseudo_counts_posterior_numerator_plcl (NcClusterPseudoCounts *cpc, N
         x[i * ldxgiven + 0] = x1[0]; /* w1 */
         x[i * ldxgiven + 1] = x1[1]; /* w2 */
         x[i * ldxgiven + 2] = x1[2]; /* True mass */
-        //printf ("Picos: %d [%.5g, %.5g, %.5g] lnMcut % 20.15e\n", i, x[i * ldxgiven + 0], x[i * ldxgiven + 1], x[i * ldxgiven + 2], exp (LNMCUT));
+        //printf ("Picos: %d [%.5g, %.5g, %.5g] Mcut % 20.15e\n", i, x[i * ldxgiven + 0], x[i * ldxgiven + 1], x[i * ldxgiven + 2], exp (LNMCUT));
           
       }    
 

@@ -26,7 +26,7 @@
 /**
  * SECTION:nc_growth_func
  * @title: NcGrowthFunc
- * @short_description: Perturbations growth function.
+ * @short_description: Growth function of linear perturbations.
  *
  * FIXME
  * 
@@ -63,7 +63,7 @@ nc_growth_func_new (void)
 
 /**
  * nc_growth_func_copy:
- * @gf: a #NcGrowthFunc.
+ * @gf: a #NcGrowthFunc
  *
  * This function duplicates @gf.
  *
@@ -78,7 +78,7 @@ nc_growth_func_copy (NcGrowthFunc *gf)
 
 /**
  * nc_growth_func_free:
- * @gf: a #NcGrowthFunc.
+ * @gf: a #NcGrowthFunc
  *
  * Atomically decrements the reference count of @gf by one. If the reference count drops to 0,
  * all memory allocated by @gf is released.
@@ -92,7 +92,7 @@ nc_growth_func_free (NcGrowthFunc *gf)
 
 /**
  * nc_growth_func_clear:
- * @gf: a #NcGrowthFunc.
+ * @gf: a #NcGrowthFunc
  *
  * Atomically decrements the reference count of @gf by one. If the reference count drops to 0,
  * all memory allocated by @gf is released. Set pointer to NULL.
@@ -152,8 +152,8 @@ growth_J (_NCM_SUNDIALS_INT_TYPE N, realtype z, N_Vector y, N_Vector fy, DlsMat 
 
 /**
  * nc_growth_func_prepare:
- * @gf: a #NcGrowthFunc.
- * @model: a #NcHICosmo.
+ * @gf: a #NcGrowthFunc
+ * @model: a #NcHICosmo
  *
  * FIXME
  *
@@ -259,19 +259,19 @@ nc_growth_func_prepare (NcGrowthFunc *gf, NcHICosmo *model)
 
 /**
  * nc_growth_func_eval:
- * @gf: a #NcGrowthFunc.
- * @model: a #NcHICosmo.
- * @z: redshift.
+ * @gf: a #NcGrowthFunc
+ * @model: a #NcHICosmo
+ * @z: redshift
  *
  * FIXME
  *
- * Returns: The normalized groth function at @z.
+ * Returns: The normalized growth function at @z.
  */
 /**
  * nc_growth_func_eval_deriv:
- * @gf: a #NcGrowthFunc.
- * @model: a #NcHICosmo.
- * @z: redshift.
+ * @gf: a #NcGrowthFunc
+ * @model: a #NcHICosmo
+ * @z: redshift
  *
  * FIXME
  *
@@ -279,11 +279,11 @@ nc_growth_func_prepare (NcGrowthFunc *gf, NcHICosmo *model)
  */
 /**
  * nc_growth_func_eval_both:
- * @gf: a #NcGrowthFunc.
- * @model: a #NcHICosmo.
- * @z: redshift.
- * @d: Growth function.
- * @f: Growth function derivative.
+ * @gf: a #NcGrowthFunc
+ * @model: a #NcHICosmo
+ * @z: redshift
+ * @d: Growth function
+ * @f: Growth function derivative
  *
  * FIXME
  *
