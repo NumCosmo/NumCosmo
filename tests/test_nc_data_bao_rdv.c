@@ -67,49 +67,44 @@ main (gint argc, gchar *argv[])
   g_test_init (&argc, &argv, NULL);
   ncm_cfg_init ();
   ncm_cfg_enable_gsl_err_handler ();
-  
-  g_test_add ("/numcosmo/nc_data_bao_rdv/set_sample/percival2007", TestNcDataBaoRDV, NULL, 
-              &test_nc_data_bao_rdv_new_percival2007, 
-              &test_nc_data_bao_rdv_set_sample_percival2007, 
+
+  g_test_add ("/numcosmo/nc_data_bao_rdv/set_sample/percival2007", TestNcDataBaoRDV, NULL,
+              &test_nc_data_bao_rdv_new_percival2007,
+              &test_nc_data_bao_rdv_set_sample_percival2007,
               &test_nc_data_bao_rdv_free);
-  g_test_add ("/numcosmo/nc_data_bao_rdv/set_sample/percival2010", TestNcDataBaoRDV, NULL, 
-              &test_nc_data_bao_rdv_new_percival2010, 
-              &test_nc_data_bao_rdv_set_sample_percival2010, 
+  g_test_add ("/numcosmo/nc_data_bao_rdv/set_sample/percival2010", TestNcDataBaoRDV, NULL,
+              &test_nc_data_bao_rdv_new_percival2010,
+              &test_nc_data_bao_rdv_set_sample_percival2010,
               &test_nc_data_bao_rdv_free);
-  g_test_add ("/numcosmo/nc_data_bao_rdv/set_sample/beutler2011", TestNcDataBaoRDV, NULL, 
-              &test_nc_data_bao_rdv_new_beutler2011, 
-              &test_nc_data_bao_rdv_set_sample_beutler2011, 
+  g_test_add ("/numcosmo/nc_data_bao_rdv/set_sample/beutler2011", TestNcDataBaoRDV, NULL,
+              &test_nc_data_bao_rdv_new_beutler2011,
+              &test_nc_data_bao_rdv_set_sample_beutler2011,
               &test_nc_data_bao_rdv_free);
-  g_test_add ("/numcosmo/nc_data_bao_rdv/set_sample/padmanabhan2012", TestNcDataBaoRDV, NULL, 
-              &test_nc_data_bao_rdv_new_padmanabhan2012, 
-              &test_nc_data_bao_rdv_set_sample_padmanabhan2012, 
+  g_test_add ("/numcosmo/nc_data_bao_rdv/set_sample/padmanabhan2012", TestNcDataBaoRDV, NULL,
+              &test_nc_data_bao_rdv_new_padmanabhan2012,
+              &test_nc_data_bao_rdv_set_sample_padmanabhan2012,
               &test_nc_data_bao_rdv_free);
-  g_test_add ("/numcosmo/nc_data_bao_rdv/set_sample/anderson2012", TestNcDataBaoRDV, NULL, 
-              &test_nc_data_bao_rdv_new_anderson2012, 
-              &test_nc_data_bao_rdv_set_sample_anderson2012, 
-              &test_nc_data_bao_rdv_free); 
-  g_test_add ("/numcosmo/nc_data_bao_rdv/set_sample/blake2012", TestNcDataBaoRDV, NULL, 
-              &test_nc_data_bao_rdv_new_blake2012, 
-              &test_nc_data_bao_rdv_set_sample_blake2012, 
-              &test_nc_data_bao_rdv_free); 
-  g_test_add ("/numcosmo/nc_data_bao_rdv/set_sample/kazin2014", TestNcDataBaoRDV, NULL, 
-              &test_nc_data_bao_rdv_new_kazin2014, 
-              &test_nc_data_bao_rdv_set_sample_kazin2014, 
-              &test_nc_data_bao_rdv_free); 
+  g_test_add ("/numcosmo/nc_data_bao_rdv/set_sample/anderson2012", TestNcDataBaoRDV, NULL,
+              &test_nc_data_bao_rdv_new_anderson2012,
+              &test_nc_data_bao_rdv_set_sample_anderson2012,
+              &test_nc_data_bao_rdv_free);
+  g_test_add ("/numcosmo/nc_data_bao_rdv/set_sample/blake2012", TestNcDataBaoRDV, NULL,
+              &test_nc_data_bao_rdv_new_blake2012,
+              &test_nc_data_bao_rdv_set_sample_blake2012,
+              &test_nc_data_bao_rdv_free);
+  g_test_add ("/numcosmo/nc_data_bao_rdv/set_sample/kazin2014", TestNcDataBaoRDV, NULL,
+              &test_nc_data_bao_rdv_new_kazin2014,
+              &test_nc_data_bao_rdv_set_sample_kazin2014,
+              &test_nc_data_bao_rdv_free);
 
   g_test_run ();
 }
-
-void _set_destroyed (gpointer b) { gboolean *destroyed = b; *destroyed = TRUE; }
 
 void
 test_nc_data_bao_rdv_free (TestNcDataBaoRDV *test, gconstpointer pdata)
 {
   NcmData *rdv = NCM_DATA(test->rdv);
-  gboolean destroyed = FALSE;
-  g_object_set_data_full (G_OBJECT (rdv), "test-destroy", &destroyed, _set_destroyed);
-  ncm_data_free (rdv);
-  g_assert (destroyed);
+  NCM_TEST_FREE (ncm_data_free, rdv);
 }
 
 /* Percival2007 */
@@ -126,7 +121,7 @@ test_nc_data_bao_rdv_new_percival2007 (TestNcDataBaoRDV *test, gconstpointer pda
   g_assert (data != NULL);
   test->rdv = NC_DATA_BAO_RDV (data);
   g_assert (NC_IS_DATA_BAO_RDV (data));
- 
+
   nc_distance_free (dist);
 }
 
@@ -137,9 +132,9 @@ test_nc_data_bao_rdv_set_sample_percival2007 (TestNcDataBaoRDV *test, gconstpoin
   NcmDataGauss *gauss = NCM_DATA_GAUSS (rdv);
   NcDataBaoId id = NC_DATA_BAO_RDV_PERCIVAL2007;
   gboolean R_DV = TRUE;
-  
+
   const gdouble z0 = 0.2;
-  const gdouble z1 = 0.35; 
+  const gdouble z1 = 0.35;
 
   const gdouble bf0 = 0.1980;
   const gdouble bf1 = 0.1094;
@@ -148,10 +143,10 @@ test_nc_data_bao_rdv_set_sample_percival2007 (TestNcDataBaoRDV *test, gconstpoin
   const gdouble icov01 = -24031.0;
   const gdouble icov10 = -24031.0;
   const gdouble icov11 = 108300.0;
-  
+
   g_assert (rdv != NULL);
   g_assert (NC_IS_DATA_BAO_RDV (rdv));
-  
+
   g_assert_cmpuint (test->id, ==, id);
   g_assert (R_DV);
 
@@ -179,7 +174,7 @@ test_nc_data_bao_rdv_new_percival2010 (TestNcDataBaoRDV *test, gconstpointer pda
   g_assert (data != NULL);
   test->rdv = NC_DATA_BAO_RDV (data);
   g_assert (NC_IS_DATA_BAO_RDV (data));
- 
+
   nc_distance_free (dist);
 }
 
@@ -190,21 +185,21 @@ test_nc_data_bao_rdv_set_sample_percival2010 (TestNcDataBaoRDV *test, gconstpoin
   NcmDataGauss *gauss = NCM_DATA_GAUSS (rdv);
   NcDataBaoId id = NC_DATA_BAO_RDV_PERCIVAL2010;
   gboolean R_DV = TRUE;
-  
-  const gdouble z0 = 0.2;
-  const gdouble z1 = 0.35; 
 
-  const gdouble bf0 = 0.1905; 
+  const gdouble z0 = 0.2;
+  const gdouble z1 = 0.35;
+
+  const gdouble bf0 = 0.1905;
   const gdouble bf1 = 0.1097;
 
-  const gdouble icov00 = 30124.0; 
+  const gdouble icov00 = 30124.0;
   const gdouble icov01 = -17227.0;
   const gdouble icov10 = -17227.0;
   const gdouble icov11 = 86977.0;
-  
+
   g_assert (rdv != NULL);
   g_assert (NC_IS_DATA_BAO_RDV (rdv));
-  
+
   g_assert_cmpuint (test->id, ==, id);
   g_assert (R_DV);
 
@@ -232,7 +227,7 @@ test_nc_data_bao_rdv_new_beutler2011 (TestNcDataBaoRDV *test, gconstpointer pdat
   g_assert (data != NULL);
   test->rdv = NC_DATA_BAO_RDV (data);
   g_assert (NC_IS_DATA_BAO_RDV (data));
- 
+
   nc_distance_free (dist);
 }
 
@@ -243,15 +238,15 @@ test_nc_data_bao_rdv_set_sample_beutler2011 (TestNcDataBaoRDV *test, gconstpoint
   NcmDataGauss *gauss = NCM_DATA_GAUSS (rdv);
   NcDataBaoId id = NC_DATA_BAO_RDV_BEUTLER2011;
   gboolean R_DV = TRUE;
-  
-  const gdouble z0 = 0.106;
-  const gdouble bf0 = 0.336 / 1.027; 
 
-  const gdouble icov00 = 1.0 * 1.027 * 1.027 / (0.015 * 0.015); 
-  
+  const gdouble z0 = 0.106;
+  const gdouble bf0 = 0.336 / 1.027;
+
+  const gdouble icov00 = 1.0 * 1.027 * 1.027 / (0.015 * 0.015);
+
   g_assert (rdv != NULL);
   g_assert (NC_IS_DATA_BAO_RDV (rdv));
-  
+
   g_assert_cmpuint (test->id, ==, id);
   g_assert (R_DV);
 
@@ -274,7 +269,7 @@ test_nc_data_bao_rdv_new_padmanabhan2012 (TestNcDataBaoRDV *test, gconstpointer 
   g_assert (data != NULL);
   test->rdv = NC_DATA_BAO_RDV (data);
   g_assert (NC_IS_DATA_BAO_RDV (data));
- 
+
   nc_distance_free (dist);
 }
 
@@ -287,13 +282,13 @@ test_nc_data_bao_rdv_set_sample_padmanabhan2012 (TestNcDataBaoRDV *test, gconstp
   gboolean R_DV = FALSE;
 
   const gdouble z0 = 0.35;
-  const gdouble bf0 = 8.88 * 1.025; 
+  const gdouble bf0 = 8.88 * 1.025;
 
-  const gdouble icov00 = 1.0 / (0.17 * 0.17 * 1.025 * 1.025); 
-  
+  const gdouble icov00 = 1.0 / (0.17 * 0.17 * 1.025 * 1.025);
+
   g_assert (rdv != NULL);
   g_assert (NC_IS_DATA_BAO_RDV (rdv));
-  
+
   g_assert_cmpuint (test->id, ==, id);
   g_assert (!R_DV);
 
@@ -316,7 +311,7 @@ test_nc_data_bao_rdv_new_anderson2012 (TestNcDataBaoRDV *test, gconstpointer pda
   g_assert (data != NULL);
   test->rdv = NC_DATA_BAO_RDV (data);
   g_assert (NC_IS_DATA_BAO_RDV (data));
- 
+
   nc_distance_free (dist);
 }
 
@@ -329,13 +324,13 @@ test_nc_data_bao_rdv_set_sample_anderson2012 (TestNcDataBaoRDV *test, gconstpoin
   gboolean R_DV = FALSE;
 
   const gdouble z0 = 0.57;
-  const gdouble bf0 = 13.67; 
+  const gdouble bf0 = 13.67;
 
-  const gdouble icov00 = 1.0 / (0.22 * 0.22); 
-  
+  const gdouble icov00 = 1.0 / (0.22 * 0.22);
+
   g_assert (rdv != NULL);
   g_assert (NC_IS_DATA_BAO_RDV (rdv));
-  
+
   g_assert_cmpuint (test->id, ==, id);
   g_assert (!R_DV);
 
@@ -358,7 +353,7 @@ test_nc_data_bao_rdv_new_blake2012 (TestNcDataBaoRDV *test, gconstpointer pdata)
   g_assert (data != NULL);
   test->rdv = NC_DATA_BAO_RDV (data);
   g_assert (NC_IS_DATA_BAO_RDV (data));
- 
+
   nc_distance_free (dist);
 }
 
@@ -369,16 +364,16 @@ test_nc_data_bao_rdv_set_sample_blake2012 (TestNcDataBaoRDV *test, gconstpointer
   NcmDataGauss *gauss = NCM_DATA_GAUSS (rdv);
   NcDataBaoId id = NC_DATA_BAO_RDV_BLAKE2012;
   gboolean R_DV = TRUE;
-  
-  const gdouble z0 = 0.44;    
+
+  const gdouble z0 = 0.44;
   const gdouble z1 = 0.60;
   const gdouble z2 = 0.73;
 
-  const gdouble bf0 = 0.0916; 
+  const gdouble bf0 = 0.0916;
   const gdouble bf1 = 0.0726;
   const gdouble bf2 = 0.0592;
 
-  const gdouble icov00 = 24532.1;  
+  const gdouble icov00 = 24532.1;
   const gdouble icov01 = -25137.7;
   const gdouble icov02 = 12099.1;
   const gdouble icov10 = -25137.7;
@@ -387,10 +382,10 @@ test_nc_data_bao_rdv_set_sample_blake2012 (TestNcDataBaoRDV *test, gconstpointer
   const gdouble icov20 = 12099.1;
   const gdouble icov21 = -64783.9;
   const gdouble icov22 = 128837.6;
-  
+
   g_assert (rdv != NULL);
   g_assert (NC_IS_DATA_BAO_RDV (rdv));
-  
+
   g_assert_cmpuint (test->id, ==, id);
   g_assert (R_DV);
 
@@ -425,7 +420,7 @@ test_nc_data_bao_rdv_new_kazin2014 (TestNcDataBaoRDV *test, gconstpointer pdata)
   g_assert (data != NULL);
   test->rdv = NC_DATA_BAO_RDV (data);
   g_assert (NC_IS_DATA_BAO_RDV (data));
- 
+
   nc_distance_free (dist);
 }
 
@@ -436,12 +431,12 @@ test_nc_data_bao_rdv_set_sample_kazin2014 (TestNcDataBaoRDV *test, gconstpointer
   NcmDataGauss *gauss = NCM_DATA_GAUSS (rdv);
   NcDataBaoId id = NC_DATA_BAO_RDV_KAZIN2014;
   gboolean R_DV = FALSE;
-  
-  const gdouble z0 = 0.44;    
+
+  const gdouble z0 = 0.44;
   const gdouble z1 = 0.60;
   const gdouble z2 = 0.73;
 
-  const gdouble bf0 = 11.550; 
+  const gdouble bf0 = 11.550;
   const gdouble bf1 = 14.945;
   const gdouble bf2 = 16.932;
 
@@ -454,10 +449,10 @@ test_nc_data_bao_rdv_set_sample_kazin2014 (TestNcDataBaoRDV *test, gconstpointer
   const gdouble icov20 = 1.0375;
   const gdouble icov21 = -1.5865;
   const gdouble icov22 = 3.6498;
-  
+
   g_assert (rdv != NULL);
   g_assert (NC_IS_DATA_BAO_RDV (rdv));
-  
+
   g_assert_cmpuint (test->id, ==, id);
   g_assert (!R_DV);
 

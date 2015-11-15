@@ -25,9 +25,9 @@ dnl ***************************************************************************
 # <mclasen> on the unstable (ie master), interface age = 0
 
 m4_define([numcosmo_major_version], [0])
-m4_define([numcosmo_minor_version], [12])
-m4_define([numcosmo_micro_version], [2])
-m4_define([numcosmo_interface_age], [2])
+m4_define([numcosmo_minor_version], [13])
+m4_define([numcosmo_micro_version], [0])
+m4_define([numcosmo_interface_age], [0])
 m4_define([numcosmo_binary_age],
           [m4_eval(100 * numcosmo_minor_version + numcosmo_micro_version)])
 m4_define([numcosmo_version],
@@ -136,7 +136,7 @@ dnl ***************************************************************************
 AM_CONDITIONAL(OS_UNIX, [test "$glib_native_win32" != "yes"])
 
 dnl ***************************************************************************
-dnl Compiler flags
+dnl Compiler flags for C
 dnl ***************************************************************************
 NC_CFLAGS="$CFLAGS"
 AC_ARG_ENABLE([opt-compiler-flags], 
@@ -169,6 +169,18 @@ dnl  AX_CHECK_COMPILE_FLAG([-Wunreachable-code],[NC_CFLAGS="$NC_CFLAGS -Wunreach
 fi
 
 dnl ***************************************************************************
+dnl Fortran flags
+dnl ***************************************************************************
+
+AC_FC_FREEFORM()
+AC_FC_LINE_LENGTH([unlimited])
+
+AC_LANG_PUSH([Fortran])
+dnl  AX_APPEND_COMPILE_FLAGS([-finit-local-zero -finit-integer=0 -finit-real=zero -finit-logical=false -fno-automatic], [FCFLAGS])
+  AX_OPENMP()
+AC_LANG_POP([Fortran])
+
+dnl ***************************************************************************
 dnl Check for vapigen
 dnl ***************************************************************************
 AC_ARG_ENABLE(vapi,
@@ -190,7 +202,11 @@ AM_CONDITIONAL(HAVE_VAPIGEN, [test "x$VAPIGEN" != xno -a x$enable_vapi != xno])
 dnl ***************************************************************************
 dnl check for gtk-doc
 dnl ***************************************************************************
+m4_ifdef([GTK_DOC_CHECK], [
 GTK_DOC_CHECK([1.14],[--flavour no-tmpl])
+],[
+AM_CONDITIONAL([ENABLE_GTK_DOC], false)
+])
 
 AC_ARG_ENABLE(man,
               [AS_HELP_STRING([--enable-man],[regenerate man pages from Docbook [default=no]])],enable_man=yes,
@@ -213,10 +229,13 @@ dnl ***************************************************************************
 dnl Set PACKAGE_DATA_DIR in config.h.
 dnl ***************************************************************************
 if test "x${prefix}" = "xNONE"; then
+  PACKAGE_DATA_DIR="${ac_default_prefix}/share/${PACKAGE}-${VERSION}"
   AC_DEFINE_UNQUOTED(PACKAGE_DATA_DIR, "${ac_default_prefix}/share/${PACKAGE}-${VERSION}", [PACKAGE_DATA_DIR])
 else
+  PACKAGE_DATA_DIR="${prefix}/share/${PACKAGE}-${VERSION}"
   AC_DEFINE_UNQUOTED(PACKAGE_DATA_DIR, "${prefix}/share/${PACKAGE}-${VERSION}", [PACKAGE_DATA_DIR])
 fi
+AC_SUBST(PACKAGE_DATA_DIR)
 
 dnl ***************************************************************************
 dnl Set PACKAGE_SOURCE_DIR in config.h.
@@ -328,11 +347,18 @@ AC_ARG_WITH([thread-pool-max],
             AS_HELP_STRING([--with-thread-pool-max=N],[Number of threads in the pool]), 
             [thread_pool_max='yes'], [thread_pool_max='no'])
 
+AC_MSG_CHECKING([Cheking for the number of threads in the global thread pool])
 if test "x$thread_pool_max" = "xyes"; then
+  AC_MSG_RESULT([$with_thread_pool_max])
   AC_DEFINE_UNQUOTED([NCM_THREAD_POOL_MAX],[$with_thread_pool_max], [Number of threads in the pool])
 else
+  AC_MSG_RESULT([not defined, using number of cores: $CPU_COUNT])
   AC_DEFINE_UNQUOTED([NCM_THREAD_POOL_MAX],[$CPU_COUNT], [Number of threads in the pool])  
 fi
+
+AX_OPENMP()
+AC_SUBST(OPENMP_CFLAGS)
+AC_SUBST(OPENMP_FCFLAGS)
 
 dnl ***************************************************************************
 dnl Check for backtrace support.
@@ -449,6 +475,7 @@ TEST_SHARED_CFLAGS="$TEST_SHARED_CFLAGS $GSL_CFLAGS"
 
 PKG_CHECK_EXISTS([gsl >= $GSL_GLF_REQUIRED_VERSION], [AC_DEFINE([HAVE_GSL_GLF],[1], [gsl support fixed gauss legendre rules])], [])
 PKG_CHECK_EXISTS([gsl >= $GSL_ODEIV2_REQUIRED_VERSION], [AC_DEFINE([HAVE_GSL_ODEIV2],[1], [gsl support odeiv2 ode algorightms])], [])
+PKG_CHECK_EXISTS([gsl >= 2.0], [AC_DEFINE([HAVE_GSL_2_0],[1], [gsl 2.0])], [])
 
 dnl ***************************************************************************
 dnl Check for gmp and mpfr
@@ -670,7 +697,7 @@ AM_CONDITIONAL([USE_INTERNAL_LIBCUBA], [test "x$cuba_missing" = "xyes"])
 AC_MSG_CHECKING([libcuba])
 if test "x$cuba_missing" = "xyes"; then
   have_cuba_support=""
-  AC_MSG_RESULT([internal v4.1])
+  AC_MSG_RESULT([internal v4.2])
   AC_DEFINE([HAVE_LIBCUBA_4_0],[1], [Have the libcuba >= 4.0])
 else
   AC_MSG_RESULT([external])
@@ -800,6 +827,21 @@ func (0, 0.0, (void *)0, (void *)0, (void *)0, (void *)0, (void *)0, (void *)0, 
 CFLAGS="$SAVED_CFLAGS"
 
 dnl ***************************************************************************
+dnl PLC
+dnl ***************************************************************************
+
+if test "x$lapack_mkl" = "xyesDISABLED"; then
+  PLC_DEFINES="$PLC_DEFINES -DHAS_MKL"
+elif test "x$have_clapack" != "xyes"; then
+  PLC_DEFINES="$PLC_DEFINES -DLAPACK_CLIK"
+fi
+
+PLC_DEFINES="$PLC_DEFINES -DNOHEALPIX -DCLIK_LENSING -DCAMSPEC_V1"
+PLC_DEFINES="$PLC_DEFINES -D 'CLIKSVNVERSION=\"6dc2a8cf3965\"'"
+
+AC_SUBST(PLC_DEFINES)
+
+dnl ***************************************************************************
 dnl Appending libs and setting up TEST_SHARED
 dnl ***************************************************************************
 
@@ -835,6 +877,8 @@ numcosmo/libcuba/cuhre/Makefile
 numcosmo/libcuba/divonne/Makefile
 numcosmo/libcuba/suave/Makefile
 numcosmo/libcuba/vegas/Makefile
+numcosmo/plc/Makefile
+numcosmo/class/Makefile
 tools/Makefile
 tests/Makefile
 docs/Makefile
@@ -883,4 +927,5 @@ fi
 echo "--------------------------------------------------------------------"
 echo "AM_CFLAGS = $AM_CFLAGS"
 echo "CFLAGS = $CFLAGS"
+echo "FCFLAGS = $FCFLAGS"
 echo "LIBS = $LIBS"

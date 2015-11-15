@@ -1,0 +1,14 @@
+! =============================================================================
+! Interface block for the routine(s) in 'read_archive_map.f90'
+! =============================================================================
+Interface
+Subroutine Read_Archive_Map (FileName, Temp, NObs, NPix, Status)
+!
+Character(*),                Intent(In)  :: FileName
+Integer (Kind=4),            Intent(Out) :: NPix
+Integer (Kind=4),            Intent(Out) :: Status
+Real (Kind=4), Dimension(:), Intent(Out) :: Temp
+Real (Kind=4), Dimension(:), Intent(Out) :: NObs
+!
+End Subroutine Read_Archive_Map
+End Interface

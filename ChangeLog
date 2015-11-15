@@ -3,6 +3,212 @@ CHANGELOG
 
 [Current]
 
+[v0.13.0]
+ * new NcHIprimAtan object (primordial spectrum power law x atan). New mset_gen
+     tool to generate .mset files. Added flag controling the tensor mode usage
+     in NcHIPertBotlzmannCBE. New references (to the atan models).
+
+ * Better error mensage when trying to de-serialize an invalid string.
+
+ * Fixed parameter name in NcHICosmoDE z_re -> tau_re. Fixed NcHICosmoBoltzmannCBE
+     to account correctly the lmax when using lensed Cls. Added free/fixed
+     parameter manipulation functions to NcmMSet.
+
+ * Missing HIPrim implementation PowerLaw (nc_hiprim_power_law).
+
+     Working in progress in the Planck+CLASS interface.
+
+ * New objects and support for primordial cosmology NumCosmo <=> CLASS.
+
+     New NcHIPrim object to deal with primordial cosmology. New NcHIPrimPowerLaw
+     object to implement simple power
+      law primordial spectra.
+
+     Organized main documentation page. Added support for external callback
+     function in CLASS so
+      it can call NumCosmo to get primordial spectra. Wired CLASS so it uses
+     NumCosmo NcHIPrim to get the
+      primordial spectra.
+
+     Testing results of NumCosmo + Planck + CLASS.
+
+ * First working version of the Planck+CLASS interface. Minor bug fixes.
+
+     New NcHICosmoDEReparamOk to better handle Omega_x -> Omega_k
+     reparametrization. Removed old code and updated NcmReparam. Moved precision
+     data for CLASS Backend CBE to NcCBEPrecision. Added tests to check
+     consistency of NcHICosmoDE. New parameters ENnu effective number of
+     neutrinos to NcHICosmoDE. New methods of NcmHICosmo nc_hicosmo_Omega_g and
+     nc_hicosmo_Omega_nu
+      to account for electromagnetic density and ultra-relativistic
+      neutrinos density.
+
+     Finished the interface NcHIPertBoltzmannCBE which uses CLASS
+      as backend for perturbative computation, needs polishing. Finished the
+     interface for Planck likelihood NcDataPlanckLKL.
+
+ * Working on the CLASS interface. All precision parameters mapped.
+
+ * Initial phase of the Class backend interface.
+
+     Modified ncm_cfg_get_data_filename so it also search in PACKAGE_SOURCE_DIR
+     for data files. That way a non-installed and non-configured numcosmo can
+     run using the data from the source directory.
+
+ * Added Class as backend. Documentation fixes. Renamed object NcPlanckFI_TT to
+     NcPlanckFICorTT.
+
+ * Missing files in the last commit.
+
+ * New NcPlanckFI objects.
+
+     New NcPlanckFI model type and one implementation NcPlanckFI_TT were
+     created. These models implement the necessary parameters to deal with the 
+     Planck likelihood.
+
+     Included the conection between NcPlanckFI* model and NcDataPlanckLKL
+     likelihoods.
+
+ * Updated test_nc_cluster_pseudo_counts.
+
+ * Bug fix and initial object development.
+
+     Added support for extra flags cheking in Fortran. Added new object
+     NcDataPlanckLKL, almost finished laking the
+      NcmData implementation.
+
+     Fixed two bugs in bflike_smw.f90, now it works with -O3 + gfortran.
+
+ * Fixed last steps for making releases.
+
+ * Added Planck likelihood 2.0 to the building system.
+
+     Organized the PLC likelihood nested in the NumCosmo building system. Added
+     the Fortran prerequisites in order to allow parallel compilation.
+
+ * Updated to internal libcuba 4.2.
+
+ * Resample function of nc_cluster_data_pseudo_counts is a work in progress. 
+     NcClusterPseudoCounts object has a new property: ncluster - number of
+     clusters.
+
+     NcClusterMass and NcClusterRedshift are no longer properties of
+     NcClusterAbundance. Examples still need to be update!
+
+ * Fixing minor bugs.
+
+ * Fixed bug .
+
+ * Support for more sundials 2.6.x versions.
+
+ * Fixed tests and removed debug prints.
+
+ * Testing new parametrizations in hipert_two_fluids.
+
+ * Deleted functions related to the 3-dimensional integral on
+     nc_cluster_pseudo_counts.c and renamed all functions of the new
+     3-dimensional computation removing the label "_new_variables".
+
+ * Functions to compute the 3-dimensional integral over the true, SZ and lensing
+     masses are working. There are two set of functions to compute it
+     (independently). The main diference between them is the set of integral
+     variables: 1) logarithm base e of the masses and  2) new variables (we
+     performed a change of variables). The later provides the best results and
+     it is in agreement with the 1+2 integral (integration over true mass and a
+     bidimensional integration over SZ and lensing masses) for any values of the
+     parameters.
+
+ * Cleaned the code
+
+ * Implemented limber approximation for cross-correlations and likelihood analysis
+
+ * Minor modifications: in progress!
+
+ * Added missing data file.
+
+ * Fixed typo. Working in progress...
+
+ * Several improvements. New sub-fit support.
+
+     Updated configure to detect new versions of SUNDIALS. All dependent code
+     updated accordingly.
+
+     New subsidiary fit support. Before each step in a fitting process, it will
+     fit a subsidiary likelihood using a subset of the parametric space.
+
+     Automatic convertion between variant vector of doubles and NcmVector and
+     variant matrix of doubles and NcmMatrix. It is no longer necessary to
+     manually convert NcmVector and NcmMatrix to variant when using it as object
+     property.
+
+     Updated all objects (but NcDataClusterPseudoCounts) to use
+     NcmVector/NcmMatrix directly as properties instead of their GVariant
+     versions.
+
+ * Documentation improvements (in progress): some NcClusterMass' children,
+     ncm_abc.c and ncm_lh_ratio1d.c.
+
+     Implemented bidimensional integrations [divonne function (libcuba)] using
+     and not using peakfinder. Idem for tridimensional integration with no
+     peakfinder.
+
+     Implemented functions to compute the integrand peaks in
+     nc_cluster_mass_plcl and nc_cluster_pseudo_counts: testing! Created
+     test_nc_cluster_pseudo_counts: in progress!
+
+ * Added support for new version of SUNDIALS.
+
+     Working on NcHIPertBoltzmann.
+
+ * Fixed bootstrap support in NcmDataDist1d
+
+ * Moved BAO data from hardcoded to serialized objects. New BAO data. Minor test
+     updates.
+
+     All BAO data now are included as serialized objects. New tests in
+     test_ncm_mset. New NcDataBaoDHrDAr object for (D_H/r_zd, D_A/r_zd) data. 
+     New field "long-desc" in NcmData to include detailed description of data. 
+     Removed old data BAO from NcmC.
+
+ * Fixed bugs in ncm_lh_ratio1d from last update in this object.
+
+     Added shallow copy to NcmMSet and its tests.
+
+ * Added more testing in test_ncm_mset, fixed minor bugs.
+
+ * New support for multples models of the same type in NcmMSet. Minor fixes and
+     updates.
+
+     Created test suit for NcmMSet.
+
+ * Documentation: improvements on nc_cluster_redshift, nc_cluster_mass and
+     nc_hicosmo.
+
+     Unstable version of nc_cluster_mass_plcl.
+
+ * Minor update.
+
+     Updated libcuba (4.1 => 4.2). Fixed typos and simple bugs. Added test for
+     NcmFuncEval. Added tests for finite values of m2lnL in ESMCMC.
+
+ * Added check for missing set/get functions in NcmModel.
+
+ * Pseudo cluster number counts: observable and data objects were created. 
+     Integral new function: function to compute tri-dimensional integral
+     implemented using cuhre function (libcuba). Documentation: improvement in
+     different files.
+
+ * Added support for jerk in DE models.
+
+ * Implementing Planck-CLASH mass function: in progress.
+
+     Documentation: nc_cluster_mass.
+
+ * Bumped to v0.12.2
+
+     Fixed typo in ncm_stats_dist1d.c. Updated Changelog
+
+
 [v0.12.2]
  * Bumped to v0.12.2
 

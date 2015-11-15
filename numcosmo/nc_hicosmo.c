@@ -25,7 +25,7 @@
 /**
  * SECTION:nc_hicosmo
  * @title: NcHICosmo
- * @short_description: Abstract class for implementing homogeneous and isotropic cosmological models. 
+ * @short_description: Abstract class for implementing homogeneous and isotropic cosmological models.
  *
  * FIXME
  *
@@ -64,47 +64,52 @@ nc_hicosmo_class_init (NcHICosmoClass *klass)
 {
   GObjectClass* object_class = G_OBJECT_CLASS (klass);
   NcmModelClass *model_class = NCM_MODEL_CLASS (klass);
-  
+
   object_class->finalize = nc_hicosmo_finalize;
 
+  ncm_model_class_set_name_nick (model_class, "Abstract class for HI cosmological models.", "NcHICosmo");
   ncm_model_class_add_params (model_class, 0, 0, 1);
-  
-  ncm_mset_model_register_id (model_class, 
+
+  ncm_mset_model_register_id (model_class,
                               "NcHICosmo",
                               "Homogeneous and isotropic cosmological models.",
                               NULL);
 
   ncm_model_class_check_params_info (model_class);
-  
+
   model_class->valid = &_nc_hicosmo_valid;
 
   klass->func_table   = g_array_new (FALSE, FALSE, sizeof (NcHICosmoFunc));
   klass->func_z_table = g_array_new (FALSE, FALSE, sizeof (NcHICosmoFuncZ));
   klass->func_hash    = g_hash_table_new (g_str_hash, g_str_equal);
   klass->func_z_hash  = g_hash_table_new (g_str_hash, g_str_equal);
-  
+
   {
-    NcHICosmoFunc func_table[] = 
+    NcHICosmoFunc func_table[] =
     {
-      {"H0",        "Hubble constant.",                           &nc_hicosmo_H0,        NC_HICOSMO_IMPL_H0},
-      {"Omega_b",   "Baryons density today.",                     &nc_hicosmo_Omega_b,   NC_HICOSMO_IMPL_Omega_b},
-      {"Omega_c",   "CDM density today.",                         &nc_hicosmo_Omega_c,   NC_HICOSMO_IMPL_Omega_c},
-      {"Omega_r",   "Radiation density today.",                   &nc_hicosmo_Omega_r,   NC_HICOSMO_IMPL_Omega_r},
-      {"Omega_t",   "Total energy density today.",                &nc_hicosmo_Omega_t,   NC_HICOSMO_IMPL_Omega_t},
-      {"T_gamma0",  "Photons temperature today.",                 &nc_hicosmo_T_gamma0,  NC_HICOSMO_IMPL_T_gamma0},
-      {"sigma_8",   "sigma_8.",                                   &nc_hicosmo_sigma_8,   NC_HICOSMO_IMPL_sigma_8},
-      {"z_lss",     "redshift at lss.",                           &nc_hicosmo_z_lss,     NC_HICOSMO_IMPL_z_lss},
-      {"as_drag",   "as_drag.",                                   &nc_hicosmo_as_drag,   NC_HICOSMO_IMPL_as_drag},
-      {"xb",        "Bounce scale.",                              &nc_hicosmo_xb,        NC_HICOSMO_IMPL_xb},
-      {"c_H0",      "Hubble radius.",                             &nc_hicosmo_c_H0,      NC_HICOSMO_IMPL_c_H0},
-      {"Omega_k",   "Curvature scale.",                           &nc_hicosmo_Omega_k,   NC_HICOSMO_IMPL_Omega_k},
-      {"Omega_m",   "Total cold matter density today.",           &nc_hicosmo_Omega_m,   NC_HICOSMO_IMPL_Omega_m},
-      {"h",         "Adimensional Hubble constant.",              &nc_hicosmo_h,         NC_HICOSMO_IMPL_h},
-      {"h2",        "Adimensional Hubble constant square.",       &nc_hicosmo_h2,        NC_HICOSMO_IMPL_h2},
-      {"Omega_bh2", "Baryons density today times h^2.",           &nc_hicosmo_Omega_bh2, NC_HICOSMO_IMPL_Omega_bh2},
-      {"Omega_ch2", "CDM density today times h^2.",               &nc_hicosmo_Omega_ch2, NC_HICOSMO_IMPL_Omega_ch2},
-      {"Omega_rh2", "Total radiation today times h^2.",           &nc_hicosmo_Omega_rh2, NC_HICOSMO_IMPL_Omega_rh2},
-      {"Omega_mh2", "Total cold matter density today times h^2.", &nc_hicosmo_Omega_mh2, NC_HICOSMO_IMPL_Omega_mh2},
+      {"H0",         "Hubble constant.",                           &nc_hicosmo_H0,         NC_HICOSMO_IMPL_H0},
+      {"Omega_b",    "Baryons density today.",                     &nc_hicosmo_Omega_b,    NC_HICOSMO_IMPL_Omega_b},
+      {"Omega_g",    "Photons density today.",                     &nc_hicosmo_Omega_g,    NC_HICOSMO_IMPL_Omega_g},
+      {"Omega_nu",   "Ultra-relativistic neutrino density today.", &nc_hicosmo_Omega_nu,   NC_HICOSMO_IMPL_Omega_nu},
+      {"Omega_c",    "CDM density today.",                         &nc_hicosmo_Omega_c,    NC_HICOSMO_IMPL_Omega_c},
+      {"Omega_r",    "Radiation density today.",                   &nc_hicosmo_Omega_r,    NC_HICOSMO_IMPL_Omega_r},
+      {"Omega_t",    "Total energy density today.",                &nc_hicosmo_Omega_t,    NC_HICOSMO_IMPL_Omega_t},
+      {"T_gamma0",   "Photons temperature today.",                 &nc_hicosmo_T_gamma0,   NC_HICOSMO_IMPL_T_gamma0},
+      {"sigma_8",    "sigma_8.",                                   &nc_hicosmo_sigma_8,    NC_HICOSMO_IMPL_sigma_8},
+      {"z_lss",      "redshift at lss.",                           &nc_hicosmo_z_lss,      NC_HICOSMO_IMPL_z_lss},
+      {"as_drag",    "as_drag.",                                   &nc_hicosmo_as_drag,    NC_HICOSMO_IMPL_as_drag},
+      {"xb",         "Bounce scale.",                              &nc_hicosmo_xb,         NC_HICOSMO_IMPL_xb},
+      {"c_H0",       "Hubble radius.",                             &nc_hicosmo_c_H0,       NC_HICOSMO_IMPL_c_H0},
+      {"Omega_k",    "Curvature scale.",                           &nc_hicosmo_Omega_k,    NC_HICOSMO_IMPL_Omega_k},
+      {"Omega_m",    "Total cold matter density today.",           &nc_hicosmo_Omega_m,    NC_HICOSMO_IMPL_Omega_m},
+      {"h",          "Adimensional Hubble constant.",              &nc_hicosmo_h,          NC_HICOSMO_IMPL_h},
+      {"h2",         "Adimensional Hubble constant square.",       &nc_hicosmo_h2,         NC_HICOSMO_IMPL_h2},
+      {"Omega_bh2",  "Baryons density today times h^2.",           &nc_hicosmo_Omega_bh2,  NC_HICOSMO_IMPL_Omega_bh2},
+      {"Omega_gh2",  "Photons density today times h^2.",           &nc_hicosmo_Omega_gh2,  NC_HICOSMO_IMPL_Omega_gh2},
+      {"Omega_nuh2", "UR Neutrinos density today times h^2.",      &nc_hicosmo_Omega_nuh2, NC_HICOSMO_IMPL_Omega_nuh2},
+      {"Omega_ch2",  "CDM density today times h^2.",               &nc_hicosmo_Omega_ch2,  NC_HICOSMO_IMPL_Omega_ch2},
+      {"Omega_rh2",  "Total radiation today times h^2.",           &nc_hicosmo_Omega_rh2,  NC_HICOSMO_IMPL_Omega_rh2},
+      {"Omega_mh2",  "Total cold matter density today times h^2.", &nc_hicosmo_Omega_mh2,  NC_HICOSMO_IMPL_Omega_mh2},
     };
     const guint nfuncs = sizeof (func_table) / sizeof (NcHICosmoFunc);
     guint i;
@@ -114,9 +119,9 @@ nc_hicosmo_class_init (NcHICosmoClass *klass)
       g_hash_table_insert (klass->func_hash, (gchar *)func_table[i].name, GINT_TO_POINTER (i + 1));
     }
   }
-  
+
   {
-    NcHICosmoFuncZ func_z_table[] = 
+    NcHICosmoFuncZ func_z_table[] =
     {
       {"H",        "Hubble function.",                            &nc_hicosmo_H,               NC_HICOSMO_IMPL_H},
       {"dH_dz",    "Derivative of the Hubble function.",          &nc_hicosmo_dH_dz,           NC_HICOSMO_IMPL_dH_dz},
@@ -139,16 +144,16 @@ nc_hicosmo_class_init (NcHICosmoClass *klass)
       g_hash_table_insert (klass->func_z_hash, (gchar *)func_z_table[i].name, GINT_TO_POINTER (i + 1));
     }
   }
-  
+
 }
 
-static gboolean 
+static gboolean
 _nc_hicosmo_valid (NcmModel *model)
 {
   if (!NCM_MODEL_CLASS (nc_hicosmo_parent_class)->valid (model))
     return FALSE;
   /* Chain up : start */
-  
+
   return (nc_hicosmo_E2 (NC_HICOSMO (model), 0) >= 0.0);
 }
 
@@ -183,13 +188,13 @@ _nc_hicosmo_log_all_models_go (GType model_type, guint n)
 void
 nc_hicosmo_log_all_models (GType parent)
 {
-  g_message ("# Registred NcHICosmos:%s are:\n", g_type_name (parent));
+  g_message ("# Registred NcHICosmo:%s are:\n", g_type_name (parent));
   _nc_hicosmo_log_all_models_go (parent, 0);
 }
 
 /**
  * nc_hicosmo_class_func_table:
- * 
+ *
  * Returns: (transfer container) (element-type NcHICosmoFunc): the function table.
  */
 GArray *
@@ -203,7 +208,7 @@ nc_hicosmo_class_func_table (void)
 
 /**
  * nc_hicosmo_class_func_z_table:
- * 
+ *
  * Returns: (transfer container) (element-type NcHICosmoFuncZ): the function table.
  */
 GArray *
@@ -218,7 +223,7 @@ nc_hicosmo_class_func_z_table (void)
 /**
  * nc_hicosmo_class_get_func:
  * @name: function name.
- * 
+ *
  * Returns: (transfer none): the function @name or null if not found.
  */
 NcHICosmoFunc *
@@ -235,7 +240,7 @@ nc_hicosmo_class_get_func (const gchar *name)
 /**
  * nc_hicosmo_class_get_func_z:
  * @name: function name.
- * 
+ *
  * Returns: (transfer none): the function @name or null if not found.
  */
 NcHICosmoFuncZ *
@@ -265,7 +270,7 @@ nc_hicosmo_new_from_name (GType parent_type, gchar *cosmo_name)
   GType model_type = G_OBJECT_TYPE (obj);
 
   if (!g_type_is_a (model_type, parent_type))
-	g_error ("nc_hicosmo_new_from_name: NcHICosmo %s do not descend from %s.", cosmo_name, g_type_name (parent_type));
+    g_error ("nc_hicosmo_new_from_name: NcHICosmo %s do not descend from %s.", cosmo_name, g_type_name (parent_type));
   return NC_HICOSMO (obj);
 }
 
@@ -303,7 +308,7 @@ nc_hicosmo_free (NcHICosmo *cosmo)
  * The reference count of @cosmo is decreased and the pointer is set to NULL.
  *
  */
-void 
+void
 nc_hicosmo_clear (NcHICosmo **cosmo)
 {
   g_clear_object (cosmo);
@@ -317,7 +322,7 @@ nc_hicosmo_clear (NcHICosmo **cosmo)
  * FIXME
  *
  */
-NCM_MODEL_SET_IMPL_FUNC(NC_HICOSMO,NcHICosmo,nc_hicosmo,NcmModelFunc0,H0)
+NCM_MODEL_SET_IMPL_FUNC(NC_HICOSMO,NcHICosmo,nc_hicosmo,NcHICosmoFunc0,H0)
 /**
  * nc_hicosmo_set_Omega_b_impl: (skip)
  * @model_class: FIXME
@@ -326,7 +331,25 @@ NCM_MODEL_SET_IMPL_FUNC(NC_HICOSMO,NcHICosmo,nc_hicosmo,NcmModelFunc0,H0)
  * FIXME
  *
  */
-NCM_MODEL_SET_IMPL_FUNC(NC_HICOSMO,NcHICosmo,nc_hicosmo,NcmModelFunc0,Omega_b)
+NCM_MODEL_SET_IMPL_FUNC(NC_HICOSMO,NcHICosmo,nc_hicosmo,NcHICosmoFunc0,Omega_b)
+/**
+ * nc_hicosmo_set_Omega_g_impl: (skip)
+ * @model_class: FIXME
+ * @f: FIXME
+ *
+ * FIXME
+ *
+ */
+NCM_MODEL_SET_IMPL_FUNC(NC_HICOSMO,NcHICosmo,nc_hicosmo,NcHICosmoFunc0,Omega_g)
+/**
+ * nc_hicosmo_set_Omega_nu_impl: (skip)
+ * @model_class: FIXME
+ * @f: FIXME
+ *
+ * FIXME
+ *
+ */
+NCM_MODEL_SET_IMPL_FUNC(NC_HICOSMO,NcHICosmo,nc_hicosmo,NcHICosmoFunc0,Omega_nu)
 /**
  * nc_hicosmo_set_Omega_r_impl: (skip)
  * @model_class: FIXME
@@ -335,7 +358,7 @@ NCM_MODEL_SET_IMPL_FUNC(NC_HICOSMO,NcHICosmo,nc_hicosmo,NcmModelFunc0,Omega_b)
  * FIXME
  *
  */
-NCM_MODEL_SET_IMPL_FUNC(NC_HICOSMO,NcHICosmo,nc_hicosmo,NcmModelFunc0,Omega_r)
+NCM_MODEL_SET_IMPL_FUNC(NC_HICOSMO,NcHICosmo,nc_hicosmo,NcHICosmoFunc0,Omega_r)
 /**
  * nc_hicosmo_set_Omega_c_impl: (skip)
  * @model_class: FIXME
@@ -344,7 +367,7 @@ NCM_MODEL_SET_IMPL_FUNC(NC_HICOSMO,NcHICosmo,nc_hicosmo,NcmModelFunc0,Omega_r)
  * FIXME
  *
  */
-NCM_MODEL_SET_IMPL_FUNC(NC_HICOSMO,NcHICosmo,nc_hicosmo,NcmModelFunc0,Omega_c)
+NCM_MODEL_SET_IMPL_FUNC(NC_HICOSMO,NcHICosmo,nc_hicosmo,NcHICosmoFunc0,Omega_c)
 /**
  * nc_hicosmo_set_Omega_t_impl: (skip)
  * @model_class: FIXME
@@ -353,7 +376,7 @@ NCM_MODEL_SET_IMPL_FUNC(NC_HICOSMO,NcHICosmo,nc_hicosmo,NcmModelFunc0,Omega_c)
  * FIXME
  *
  */
-NCM_MODEL_SET_IMPL_FUNC(NC_HICOSMO,NcHICosmo,nc_hicosmo,NcmModelFunc0,Omega_t)
+NCM_MODEL_SET_IMPL_FUNC(NC_HICOSMO,NcHICosmo,nc_hicosmo,NcHICosmoFunc0,Omega_t)
 /**
  * nc_hicosmo_set_sigma_8_impl: (skip)
  * @model_class: FIXME
@@ -362,7 +385,7 @@ NCM_MODEL_SET_IMPL_FUNC(NC_HICOSMO,NcHICosmo,nc_hicosmo,NcmModelFunc0,Omega_t)
  * FIXME
  *
  */
-NCM_MODEL_SET_IMPL_FUNC(NC_HICOSMO,NcHICosmo,nc_hicosmo,NcmModelFunc0,sigma_8)
+NCM_MODEL_SET_IMPL_FUNC(NC_HICOSMO,NcHICosmo,nc_hicosmo,NcHICosmoFunc0,sigma_8)
 /**
  * nc_hicosmo_set_T_gamma0_impl: (skip)
  * @model_class: FIXME
@@ -371,7 +394,7 @@ NCM_MODEL_SET_IMPL_FUNC(NC_HICOSMO,NcHICosmo,nc_hicosmo,NcmModelFunc0,sigma_8)
  * FIXME
  *
  */
-NCM_MODEL_SET_IMPL_FUNC(NC_HICOSMO,NcHICosmo,nc_hicosmo,NcmModelFunc0,T_gamma0)
+NCM_MODEL_SET_IMPL_FUNC(NC_HICOSMO,NcHICosmo,nc_hicosmo,NcHICosmoFunc0,T_gamma0)
 /**
  * nc_hicosmo_set_z_lss_impl: (skip)
  * @model_class: FIXME
@@ -380,7 +403,7 @@ NCM_MODEL_SET_IMPL_FUNC(NC_HICOSMO,NcHICosmo,nc_hicosmo,NcmModelFunc0,T_gamma0)
  * FIXME
  *
  */
-NCM_MODEL_SET_IMPL_FUNC(NC_HICOSMO,NcHICosmo,nc_hicosmo,NcmModelFunc0,z_lss)
+NCM_MODEL_SET_IMPL_FUNC(NC_HICOSMO,NcHICosmo,nc_hicosmo,NcHICosmoFunc0,z_lss)
 
 /**
  * nc_hicosmo_set_as_drag_impl: (skip)
@@ -390,7 +413,7 @@ NCM_MODEL_SET_IMPL_FUNC(NC_HICOSMO,NcHICosmo,nc_hicosmo,NcmModelFunc0,z_lss)
  * FIXME
  *
  */
-NCM_MODEL_SET_IMPL_FUNC(NC_HICOSMO,NcHICosmo,nc_hicosmo,NcmModelFunc0,as_drag)
+NCM_MODEL_SET_IMPL_FUNC(NC_HICOSMO,NcHICosmo,nc_hicosmo,NcHICosmoFunc0,as_drag)
 
 /**
  * nc_hicosmo_set_xb_impl: (skip)
@@ -400,7 +423,7 @@ NCM_MODEL_SET_IMPL_FUNC(NC_HICOSMO,NcHICosmo,nc_hicosmo,NcmModelFunc0,as_drag)
  * FIXME
  *
  */
-NCM_MODEL_SET_IMPL_FUNC(NC_HICOSMO,NcHICosmo,nc_hicosmo,NcmModelFunc0,xb)
+NCM_MODEL_SET_IMPL_FUNC(NC_HICOSMO,NcHICosmo,nc_hicosmo,NcHICosmoFunc0,xb)
 
 /**
  * nc_hicosmo_set_E2_impl: (skip)
@@ -410,7 +433,7 @@ NCM_MODEL_SET_IMPL_FUNC(NC_HICOSMO,NcHICosmo,nc_hicosmo,NcmModelFunc0,xb)
  * FIXME
  *
  */
-NCM_MODEL_SET_IMPL_FUNC(NC_HICOSMO,NcHICosmo,nc_hicosmo,NcmModelFunc1,E2)
+NCM_MODEL_SET_IMPL_FUNC(NC_HICOSMO,NcHICosmo,nc_hicosmo,NcHICosmoFunc1,E2)
 
 /**
  * nc_hicosmo_set_dE2_dz_impl: (skip)
@@ -420,7 +443,7 @@ NCM_MODEL_SET_IMPL_FUNC(NC_HICOSMO,NcHICosmo,nc_hicosmo,NcmModelFunc1,E2)
  * FIXME
  *
  */
-NCM_MODEL_SET_IMPL_FUNC(NC_HICOSMO,NcHICosmo,nc_hicosmo,NcmModelFunc1,dE2_dz)
+NCM_MODEL_SET_IMPL_FUNC(NC_HICOSMO,NcHICosmo,nc_hicosmo,NcHICosmoFunc1,dE2_dz)
 
 /**
  * nc_hicosmo_set_d2E2_dz2_impl: (skip)
@@ -430,7 +453,7 @@ NCM_MODEL_SET_IMPL_FUNC(NC_HICOSMO,NcHICosmo,nc_hicosmo,NcmModelFunc1,dE2_dz)
  * FIXME
  *
  */
-NCM_MODEL_SET_IMPL_FUNC(NC_HICOSMO,NcHICosmo,nc_hicosmo,NcmModelFunc1,d2E2_dz2)
+NCM_MODEL_SET_IMPL_FUNC(NC_HICOSMO,NcHICosmo,nc_hicosmo,NcHICosmoFunc1,d2E2_dz2)
 
 /**
  * nc_hicosmo_set_cs2_impl: (skip)
@@ -440,7 +463,7 @@ NCM_MODEL_SET_IMPL_FUNC(NC_HICOSMO,NcHICosmo,nc_hicosmo,NcmModelFunc1,d2E2_dz2)
  * FIXME
  *
  */
-NCM_MODEL_SET_IMPL_FUNC(NC_HICOSMO,NcHICosmo,nc_hicosmo,NcmModelFunc1,cs2)
+NCM_MODEL_SET_IMPL_FUNC(NC_HICOSMO,NcHICosmo,nc_hicosmo,NcHICosmoFunc1,cs2)
 
 /**
  * nc_hicosmo_set_rhopp_impl: (skip)
@@ -450,7 +473,7 @@ NCM_MODEL_SET_IMPL_FUNC(NC_HICOSMO,NcHICosmo,nc_hicosmo,NcmModelFunc1,cs2)
  * FIXME
  *
  */
-NCM_MODEL_SET_IMPL_FUNC(NC_HICOSMO,NcHICosmo,nc_hicosmo,NcmModelFunc1,rhopp)
+NCM_MODEL_SET_IMPL_FUNC(NC_HICOSMO,NcHICosmo,nc_hicosmo,NcHICosmoFunc1,rhopp)
 
 /**
  * nc_hicosmo_set_cd_impl: (skip)
@@ -461,7 +484,7 @@ NCM_MODEL_SET_IMPL_FUNC(NC_HICOSMO,NcHICosmo,nc_hicosmo,NcmModelFunc1,rhopp)
  *
  */
 
-NCM_MODEL_SET_IMPL_FUNC(NC_HICOSMO,NcHICosmo,nc_hicosmo,NcmModelFunc1,cd)
+NCM_MODEL_SET_IMPL_FUNC(NC_HICOSMO,NcHICosmo,nc_hicosmo,NcHICosmoFunc1,cd)
 
 /**
  * nc_hicosmo_set_powspec_impl: (skip)
@@ -471,7 +494,7 @@ NCM_MODEL_SET_IMPL_FUNC(NC_HICOSMO,NcHICosmo,nc_hicosmo,NcmModelFunc1,cd)
  * FIXME
  *
  */
-NCM_MODEL_SET_IMPL_FUNC(NC_HICOSMO,NcHICosmo,nc_hicosmo,NcmModelFunc1,powspec)
+NCM_MODEL_SET_IMPL_FUNC(NC_HICOSMO,NcHICosmo,nc_hicosmo,NcHICosmoFunc1,powspec)
 
 /*
  * Inlined functions
@@ -492,6 +515,22 @@ NCM_MODEL_SET_IMPL_FUNC(NC_HICOSMO,NcHICosmo,nc_hicosmo,NcmModelFunc1,powspec)
  * FIXME
  *
  * Returns: $\Omega_b$
+ */
+/**
+ * nc_hicosmo_Omega_g:
+ * @cosmo: a #NcHICosmo.
+ *
+ * FIXME
+ *
+ * Returns: $\Omega_\gamma$
+ */
+/**
+ * nc_hicosmo_Omega_nu:
+ * @cosmo: a #NcHICosmo.
+ *
+ * FIXME
+ *
+ * Returns: $\Omega_\nu$
  */
 /**
  * nc_hicosmo_Omega_r:
@@ -655,6 +694,22 @@ NCM_MODEL_SET_IMPL_FUNC(NC_HICOSMO,NcHICosmo,nc_hicosmo,NcmModelFunc1,powspec)
  */
 /**
  * nc_hicosmo_Omega_bh2:
+ * @cosmo: a #NcHICosmo
+ *
+ * FIXME
+ *
+ * Returns: FIXME
+ */
+/**
+ * nc_hicosmo_Omega_gh2:
+ * @cosmo: a #NcHICosmo
+ *
+ * FIXME
+ *
+ * Returns: FIXME
+ */
+/**
+ * nc_hicosmo_Omega_nuh2:
  * @cosmo: a #NcHICosmo
  *
  * FIXME

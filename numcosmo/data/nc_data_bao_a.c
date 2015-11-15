@@ -8,17 +8,17 @@
 /*
  * numcosmo
  * Copyright (C) 2012 Sandro Dias Pinto Vitenti <sandro@isoftware.com.br>
- * 
+ *
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * numcosmo is distributed in the hope that it will be useful, but
  * WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
  * See the GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License along
  * with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
@@ -28,12 +28,12 @@
  * @title: NcDataBaoA
  * @short_description: Baryon oscillation data -- acoustic scale $A$.
  *
- * The acoustic scale is defined as 
+ * The acoustic scale is defined as
  * $$ A \equiv D_V (z) \frac{\sqrt{\Omega_m H_0^2}}{z c},$$
- * where $\Omega_m$ is the matter density parameter [nc_hicosmo_Omega_m()], $c$ is the speed of light [ncm_c_c()], 
+ * where $\Omega_m$ is the matter density parameter [nc_hicosmo_Omega_m()], $c$ is the speed of light [ncm_c_c()],
  * $H_0$ is the Hubble parameter [nc_hicosmo_H0()] and $D_V(z)$ is the dilation scale [nc_distance_dilation_scale()].
- * See Section 4.5 from <link linkend="XEisenstein2005">Eisenstein et al. (2005)</link>.
- * 
+ * See Section 4.5 from [Eisenstein et al. (2005)][XEisenstein2005].
+ *
  */
 
 #ifdef HAVE_CONFIG_H
@@ -109,7 +109,7 @@ nc_data_bao_a_dispose (GObject *object)
 
   nc_distance_clear (&bao_a->dist);
   ncm_vector_clear (&bao_a->x);
-  
+
   /* Chain up : end */
   G_OBJECT_CLASS (nc_data_bao_a_parent_class)->dispose (object);
 }
@@ -153,7 +153,7 @@ nc_data_bao_a_class_init (NcDataBaoAClass *klass)
                                                         "Data redshift",
                                                         NCM_TYPE_VECTOR,
                                                         G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-  
+
   data_class->prepare   = &_nc_data_bao_a_prepare;
   diag_class->mean_func = &_nc_data_bao_a_mean_func;
   diag_class->set_size  = &_nc_data_bao_a_set_size;
@@ -167,13 +167,13 @@ _nc_data_bao_a_prepare (NcmData *data, NcmMSet *mset)
   nc_distance_prepare_if_needed (bao_a->dist, cosmo);
 }
 
-static void 
+static void
 _nc_data_bao_a_mean_func (NcmDataGaussDiag *diag, NcmMSet *mset, NcmVector *vp)
 {
   NcDataBaoA *bao_a = NC_DATA_BAO_A (diag);
   NcHICosmo *cosmo = NC_HICOSMO (ncm_mset_peek (mset, nc_hicosmo_id ()));
   guint i;
-  
+
   for (i = 0; i < diag->np; i++)
   {
     const gdouble z = ncm_vector_get (bao_a->x, i);
@@ -185,9 +185,9 @@ _nc_data_bao_a_mean_func (NcmDataGaussDiag *diag, NcmMSet *mset, NcmVector *vp)
 /**
  * nc_data_bao_a_new_from_file:
  * @filename: file containing a serialized #NcDataBaoA.
- * 
+ *
  * Creates a new #NcDataBaoA from @filename.
- * 
+ *
  * Returns: (transfer full): the newly created #NcDataBaoA.
  */
 NcDataBaoA *
@@ -213,7 +213,7 @@ nc_data_bao_a_new_from_id (NcDistance *dist, NcDataBaoId id)
 {
   NcDataBaoA *bao_a;
   gchar *filename;
-  
+
   switch (id)
   {
     case NC_DATA_BAO_A_EISENSTEIN2005:
@@ -231,7 +231,7 @@ nc_data_bao_a_new_from_id (NcDistance *dist, NcDataBaoId id)
   return bao_a;
 }
 
-static void 
+static void
 _nc_data_bao_a_set_size (NcmDataGaussDiag *diag, guint np)
 {
   NcDataBaoA *bao_a = NC_DATA_BAO_A (diag);
@@ -241,7 +241,7 @@ _nc_data_bao_a_set_size (NcmDataGaussDiag *diag, guint np)
 
   if ((np != 0) && (np != diag->np))
     bao_a->x = ncm_vector_new (np);
-  
+
   /* Chain up : end */
   NCM_DATA_GAUSS_DIAG_CLASS (nc_data_bao_a_parent_class)->set_size (diag, np);
 }
@@ -250,11 +250,11 @@ _nc_data_bao_a_set_size (NcmDataGaussDiag *diag, guint np)
  * nc_data_bao_a_set_dist:
  * @bao_a: a #NcDataBaoA
  * @dist: a #NcDistance
- * 
+ *
  * Sets the distance object.
- * 
+ *
  */
-void 
+void
 nc_data_bao_a_set_dist (NcDataBaoA *bao_a, NcDistance *dist)
 {
   nc_distance_clear (&bao_a->dist);

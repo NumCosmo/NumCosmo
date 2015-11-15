@@ -94,10 +94,18 @@ typedef gdouble (*NcmModelFunc2) (NcmModel *model, const gdouble x, const gdoubl
 
 GType ncm_model_get_type (void) G_GNUC_CONST;
 
+/*void ncm_model_class_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec);*/
+/*void ncm_model_class_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec);*/
+
 void ncm_model_class_add_params (NcmModelClass *model_class, guint sparam_len, guint vparam_len, guint nonparam_prop_len);
 void ncm_model_class_set_name_nick (NcmModelClass *model_class, const gchar *name, const gchar *nick);
+
+void ncm_model_class_set_sparam_obj (NcmModelClass *model_class, guint sparam_id, NcmSParam *sparam);
+void ncm_model_class_set_vparam_obj (NcmModelClass *model_class, guint vparam_id, NcmVParam *vparam);
+
 void ncm_model_class_set_sparam (NcmModelClass *model_class, guint sparam_id, const gchar *symbol, const gchar *name, gdouble lower_bound, gdouble upper_bound, gdouble scale, gdouble abstol, gdouble default_value, NcmParamType ppt);
 void ncm_model_class_set_vparam (NcmModelClass *model_class, guint vparam_id, guint default_length, const gchar *symbol, const gchar *name, gdouble lower_bound, gdouble upper_bound, gdouble scale, gdouble abstol, gdouble default_value, NcmParamType ppt);
+
 void ncm_model_class_check_params_info (NcmModelClass *model_class);
 
 NcmModel *ncm_model_dup (NcmModel *model, NcmSerialize *ser);
@@ -126,6 +134,8 @@ G_INLINE_FUNC gboolean ncm_model_params_finite (NcmModel *model);
 G_INLINE_FUNC gboolean ncm_model_param_finite (NcmModel *model, guint i);
 G_INLINE_FUNC void ncm_model_params_update (NcmModel *model);
 G_INLINE_FUNC void ncm_model_orig_params_update (NcmModel *model);
+G_INLINE_FUNC NcmVector *ncm_model_orig_params_peek_vector (NcmModel *model);
+void ncm_model_orig_params_log_all (NcmModel *model);
 
 G_INLINE_FUNC void ncm_model_param_set (NcmModel *model, guint n, gdouble val);
 G_INLINE_FUNC void ncm_model_param_set_default (NcmModel *model, guint n);
@@ -201,7 +211,7 @@ ns_name##_set_##name##_impl (NsName##Class *model_class, type f) \
 #define NCM_MODEL_FUNC0_IMPL(NS_NAME,NsName,ns_name,name) \
 G_INLINE_FUNC gdouble ns_name##_##name (NsName *m) \
 { \
-  return NS_NAME##_GET_CLASS (m)->name (NCM_MODEL (m)); \
+  return NS_NAME##_GET_CLASS (m)->name (NS_NAME (m)); \
 }
 
 /*
@@ -210,7 +220,7 @@ G_INLINE_FUNC gdouble ns_name##_##name (NsName *m) \
 #define NCM_MODEL_FUNC1_IMPL(NS_NAME,NsName,ns_name,name) \
 G_INLINE_FUNC gdouble ns_name##_##name (NsName *m, const gdouble x) \
 { \
-  return NS_NAME##_GET_CLASS (m)->name (NCM_MODEL (m), x); \
+  return NS_NAME##_GET_CLASS (m)->name (NS_NAME (m), x); \
 }
 
 /*
@@ -219,7 +229,7 @@ G_INLINE_FUNC gdouble ns_name##_##name (NsName *m, const gdouble x) \
 #define NCM_MODEL_FUNC2_IMPL(NS_NAME,NsName,ns_name,name) \
 G_INLINE_FUNC gdouble ns_name##_##name (NsName *m, const gdouble x, const gdouble y) \
 { \
-  return NS_NAME##_GET_CLASS (m)->name (NCM_MODEL (m), x, y); \
+  return NS_NAME##_GET_CLASS (m)->name (NS_NAME (m), x, y); \
 }
 
 G_END_DECLS
@@ -267,7 +277,7 @@ ncm_model_impl (NcmModel *model)
   return NCM_MODEL_GET_CLASS (model)->impl;
 }
 
-G_INLINE_FUNC gboolean 
+G_INLINE_FUNC gboolean
 ncm_model_check_impl (NcmModel *model, guint64 impl)
 {
   if (impl == 0)
@@ -347,7 +357,7 @@ G_INLINE_FUNC void
 ncm_model_params_update (NcmModel *model)
 {
   if (model->reparam)
-    ncm_reparam_new2old (model->reparam, model, model->reparam->new_params, model->params);
+    ncm_reparam_new2old (model->reparam, model);
   model->pkey++;
 }
 
@@ -355,8 +365,14 @@ G_INLINE_FUNC void
 ncm_model_orig_params_update (NcmModel *model)
 {
   if (model->reparam)
-    ncm_reparam_old2new (model->reparam, model, model->params, model->reparam->new_params);
+    ncm_reparam_old2new (model->reparam, model);
   model->pkey++;
+}
+
+G_INLINE_FUNC NcmVector *
+ncm_model_orig_params_peek_vector (NcmModel *model)
+{
+  return model->params;
 }
 
 G_INLINE_FUNC guint
@@ -395,11 +411,11 @@ ncm_model_orig_param_peek_desc (NcmModel *model, guint n)
 G_INLINE_FUNC NcmSParam *
 ncm_model_param_peek_desc (NcmModel *model, guint n)
 {
-  NcmReparam *reparam = ncm_model_peek_reparam (model); 
+  NcmReparam *reparam = ncm_model_peek_reparam (model);
   g_assert (n < model->total_len);
   if (reparam != NULL)
   {
-    NcmSParam *sp = ncm_reparam_peek_param_desc (reparam, n); 
+    NcmSParam *sp = ncm_reparam_peek_param_desc (reparam, n);
     if (sp != NULL)
       return sp;
   }

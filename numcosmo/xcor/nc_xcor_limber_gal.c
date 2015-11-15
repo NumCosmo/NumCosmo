@@ -8,17 +8,17 @@
 /*
  * numcosmo
  * Copyright (C) 2015 Cyrille Doux <cdoux@apc.in2p3.fr>
- * 
+ *
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * numcosmo is distributed in the hope that it will be useful, but
  * WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
  * See the GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License along
  * with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
@@ -202,8 +202,8 @@ nc_xcor_limber_gal_class_init (NcXcorLimberGalClass* klass)
 	model_class->set_property = &_nc_xcor_limber_gal_set_property;
 	model_class->get_property = &_nc_xcor_limber_gal_get_property;
 
-	ncm_model_class_add_params (model_class, 1, 0, PROP_SIZE);
 	ncm_model_class_set_name_nick (model_class, "Xcor quasar distribution", "Xcor-gal");
+	ncm_model_class_add_params (model_class, 1, 0, PROP_SIZE);
 
 	/**
   * NcXcorLimberGal:dN_dz:

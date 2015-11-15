@@ -13,12 +13,12 @@
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * numcosmo is distributed in the hope that it will be useful, but
  * WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
  * See the GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License along
  * with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
@@ -29,10 +29,13 @@
 #include <glib.h>
 #include <glib-object.h>
 #include <numcosmo/build_cfg.h>
+#include <numcosmo/math/ncm_model_ctrl.h>
+#include <numcosmo/nc_hiprim.h>
 #include <numcosmo/nc_hicosmo.h>
 #include <numcosmo/perturbations/nc_hipert.h>
 #include <numcosmo/nc_recomb.h>
 #include <numcosmo/scalefactor.h>
+#include <numcosmo/data/nc_data_cmb.h>
 
 G_BEGIN_DECLS
 
@@ -47,12 +50,14 @@ typedef struct _NcHIPertBoltzmannClass NcHIPertBoltzmannClass;
 typedef struct _NcHIPertBoltzmann NcHIPertBoltzmann;
 
 typedef void (*NcHIPertBoltzmannCreate) (NcHIPertBoltzmann *pb, NcHICosmo *cosmo);
+typedef void (*NcHIPertBoltzmannPrepare) (NcHIPertBoltzmann *pb, NcHIPrim *prim, NcHICosmo *cosmo);
 typedef void (*NcHIPertBoltzmannConf) (NcHIPertBoltzmann *pb);
 typedef void (*NcHIPertBoltzmannEvol) (NcHIPertBoltzmann *pb, gdouble g);
 typedef gboolean (*NcHIPertBoltzmannTest) (NcHIPertBoltzmann *pb);
 typedef void (*NcHIPertBoltzmannSources) (NcHIPertBoltzmann *pb, gdouble *S0, gdouble *S1, gdouble *S2);
 typedef gdouble (*NcHIPertBoltzmannGet) (NcHIPertBoltzmann *pb);
 typedef gdouble (*NcHIPertBoltzmannGetN) (NcHIPertBoltzmann *pb, guint n);
+typedef void (*NcHIPertBoltzmannGetCl) (NcHIPertBoltzmann *pb, NcmVector *Cls);
 
 struct _NcHIPertBoltzmannClass
 {
@@ -63,6 +68,8 @@ struct _NcHIPertBoltzmannClass
   NcHIPertBoltzmannConf reset;
   NcHIPertBoltzmannEvol evol_step;
   NcHIPertBoltzmannEvol evol;
+  NcHIPertBoltzmannPrepare prepare;
+  NcHIPertBoltzmannPrepare prepare_if_needed;
   NcHIPertBoltzmannSources get_sources;
   NcHIPertBoltzmannConf print_stats;
   NcHIPertBoltzmannGet get_z;
@@ -75,7 +82,13 @@ struct _NcHIPertBoltzmannClass
   NcHIPertBoltzmannGetN get_theta;
   NcHIPertBoltzmannGetN get_theta_p;
   NcHIPertBoltzmannGetN get_los_theta;
-	NcHIPertBoltzmannConf print_all;
+  NcHIPertBoltzmannGetCl get_TT_Cls;
+  NcHIPertBoltzmannGetCl get_EE_Cls;
+  NcHIPertBoltzmannGetCl get_BB_Cls;
+  NcHIPertBoltzmannGetCl get_TE_Cls;
+  NcHIPertBoltzmannGetCl get_TB_Cls;
+  NcHIPertBoltzmannGetCl get_EB_Cls;
+  NcHIPertBoltzmannConf print_all;
   gpointer data;
 };
 
@@ -139,20 +152,59 @@ struct _NcHIPertBoltzmann
   gdouble lambda_rec;
   gdouble lambda_rec_10m2_max[2];
   gdouble lambda;
-  guint lmax;
+  NcDataCMBDataType target_Cls;
+  gboolean calc_transfer;
+  gboolean use_lensed_Cls;
+  gboolean use_tensor;
+  guint TT_lmax, EE_lmax, BB_lmax, TE_lmax, TB_lmax, EB_lmax;
   gboolean tight_coupling;
+  NcmModelCtrl *ctrl_cosmo;
+  NcmModelCtrl *ctrl_prim;
 };
 
 GType nc_hipert_boltzmann_get_type (void) G_GNUC_CONST;
 
-NcHIPertBoltzmann *nc_hipert_boltzmann_new (void);
 NcHIPertBoltzmann *nc_hipert_boltzmann_ref (NcHIPertBoltzmann *pb);
 void nc_hipert_boltzmann_free (NcHIPertBoltzmann *pb);
 void nc_hipert_boltzmann_clear (NcHIPertBoltzmann **pb);
 
 void nc_hipert_boltzmann_set_recomb (NcHIPertBoltzmann *pb, NcRecomb *recomb);
-void nc_hipert_boltzmann_set_lmax (NcHIPertBoltzmann *pb, guint lmax);
-void nc_hipert_boltzmann_prepare (NcHIPertBoltzmann *pb, NcHICosmo *cosmo);
+
+void nc_hipert_boltzmann_set_target_Cls (NcHIPertBoltzmann *pb, NcDataCMBDataType tCls);
+NcDataCMBDataType nc_hipert_boltzmann_get_target_Cls (NcHIPertBoltzmann *pb);
+
+void nc_hipert_boltzmann_set_calc_transfer (NcHIPertBoltzmann *pb, gboolean calc_transfer);
+gboolean nc_hipert_boltzmann_get_calc_transfer (NcHIPertBoltzmann *pb);
+
+void nc_hipert_boltzmann_set_lensed_Cls (NcHIPertBoltzmann *pb, gboolean use_lensed_Cls);
+gboolean nc_hipert_boltzmann_lensed_Cls (NcHIPertBoltzmann *pb);
+
+void nc_hipert_boltzmann_set_tensor (NcHIPertBoltzmann *pb, gboolean use_tensor);
+gboolean nc_hipert_boltzmann_tensor (NcHIPertBoltzmann *pb);
+
+void nc_hipert_boltzmann_set_TT_lmax (NcHIPertBoltzmann *pb, guint lmax);
+void nc_hipert_boltzmann_set_EE_lmax (NcHIPertBoltzmann *pb, guint lmax);
+void nc_hipert_boltzmann_set_BB_lmax (NcHIPertBoltzmann *pb, guint lmax);
+void nc_hipert_boltzmann_set_TE_lmax (NcHIPertBoltzmann *pb, guint lmax);
+void nc_hipert_boltzmann_set_TB_lmax (NcHIPertBoltzmann *pb, guint lmax);
+void nc_hipert_boltzmann_set_EB_lmax (NcHIPertBoltzmann *pb, guint lmax);
+
+guint nc_hipert_boltzmann_get_TT_lmax (NcHIPertBoltzmann *pb);
+guint nc_hipert_boltzmann_get_EE_lmax (NcHIPertBoltzmann *pb);
+guint nc_hipert_boltzmann_get_BB_lmax (NcHIPertBoltzmann *pb);
+guint nc_hipert_boltzmann_get_TE_lmax (NcHIPertBoltzmann *pb);
+guint nc_hipert_boltzmann_get_TB_lmax (NcHIPertBoltzmann *pb);
+guint nc_hipert_boltzmann_get_EB_lmax (NcHIPertBoltzmann *pb);
+
+void nc_hipert_boltzmann_prepare (NcHIPertBoltzmann *pb, NcHIPrim *prim, NcHICosmo *cosmo);
+void nc_hipert_boltzmann_prepare_if_needed (NcHIPertBoltzmann *pb, NcHIPrim *prim, NcHICosmo *cosmo);
+
+void nc_hipert_boltzmann_get_TT_Cls (NcHIPertBoltzmann *pb, NcmVector *Cls);
+void nc_hipert_boltzmann_get_EE_Cls (NcHIPertBoltzmann *pb, NcmVector *Cls);
+void nc_hipert_boltzmann_get_BB_Cls (NcHIPertBoltzmann *pb, NcmVector *Cls);
+void nc_hipert_boltzmann_get_TE_Cls (NcHIPertBoltzmann *pb, NcmVector *Cls);
+void nc_hipert_boltzmann_get_TB_Cls (NcHIPertBoltzmann *pb, NcmVector *Cls);
+void nc_hipert_boltzmann_get_EB_Cls (NcHIPertBoltzmann *pb, NcmVector *Cls);
 
 #define NC_HIPERT_BOLTZMANN_LAMBDA2X(lambda) (exp (-(lambda)))
 #define NC_HIPERT_BOLTZMANN_X2LAMBDA(x) (-log (x))

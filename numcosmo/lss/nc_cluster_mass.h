@@ -7,7 +7,7 @@
  ****************************************************************************/
 /*
  * numcosmo
- * Copyright (C) Mariana Penna Lima 2012 <pennalima@gmail.com> 
+ * Copyright (C) Mariana Penna Lima 2012 <pennalima@gmail.com>
  * Sandro Dias Pinto Vitenti 2012 <sandro@isoftware.com.br>
  *
  * numcosmo is free software: you can redistribute it and/or modify it
@@ -49,14 +49,14 @@ typedef struct _NcClusterMass NcClusterMass;
  * NcClusterMassImpl:
  * @NC_CLUSTER_MASS_P: probability density function of the true-observable cluster masses
  * @NC_CLUSTER_MASS_INTP: probability distribution (integration over the observable mass(es))
- * @NC_CLUSTER_MASS_RESAMPLE: resample function to generate the cluster masses following 
+ * @NC_CLUSTER_MASS_RESAMPLE: resample function to generate the cluster masses following
  * the underlying cluster mass distribution.
  * @NC_CLUSTER_MASS_P_LIMITS: function to set the lower and upper limits of the to compute
  * the integral of the cluster mass distribution.
- * @NC_CLUSTER_MASS_N_LIMITS: function to set the lower and upper thresholds of 
- * the observable cluster mass to compute the normalization of the cluster mass distribution. 
- * 
- */ 
+ * @NC_CLUSTER_MASS_N_LIMITS: function to set the lower and upper thresholds of
+ * the observable cluster mass to compute the normalization of the cluster mass distribution.
+ *
+ */
 typedef enum _NcClusterMassImpl
 {
   NC_CLUSTER_MASS_P        = 1 << 0,
@@ -109,7 +109,6 @@ void nc_cluster_mass_p_limits (NcClusterMass *clusterm, NcHICosmo *cosmo, const 
 void nc_cluster_mass_n_limits (NcClusterMass *clusterm, NcHICosmo *cosmo, gdouble *lnM_lower, gdouble *lnM_upper);
 
 void nc_cluster_mass_log_all_models (void);
-
 
 G_END_DECLS
 

@@ -27,8 +27,8 @@
  * @title: NcHICosmoDEPad
  * @short_description: Dark Energy -- Jassal-Bagla-Padmanabhan of state parametrization.
  *
- * See <link linkend="XJassal2005">Jassal et al. (2005)</link>.
- * 
+ * See [Jassal et al. (2005)][XJassal2005].
+ *
  */
 
 #ifdef HAVE_CONFIG_H
@@ -40,13 +40,13 @@
 
 G_DEFINE_TYPE (NcHICosmoDEPad, nc_hicosmo_de_pad, NC_TYPE_HICOSMO_DE);
 
-#define VECTOR  (model->params)
+#define VECTOR  (NCM_MODEL (cosmo_de)->params)
 #define OMEGA_X (ncm_vector_get (VECTOR, NC_HICOSMO_DE_OMEGA_X))
 #define OMEGA_0 (ncm_vector_get (VECTOR, NC_HICOSMO_DE_PAD_W0))
 #define OMEGA_1 (ncm_vector_get (VECTOR, NC_HICOSMO_DE_PAD_W1))
 
 static gdouble
-_nc_hicosmo_de_pad_weff (NcmModel *model, gdouble z)
+_nc_hicosmo_de_pad_weff (NcHICosmoDE *cosmo_de, gdouble z)
 {
   gdouble x = 1.0 + z;
   gdouble lnx = log1p (z);
@@ -54,7 +54,7 @@ _nc_hicosmo_de_pad_weff (NcmModel *model, gdouble z)
 }
 
 static gdouble
-_nc_hicosmo_de_pad_dweff_dz (NcmModel *model, gdouble z)
+_nc_hicosmo_de_pad_dweff_dz (NcHICosmoDE *cosmo_de, gdouble z)
 {
   const gdouble x = 1.0 + z;
   const gdouble x3 = gsl_pow_3 (x);

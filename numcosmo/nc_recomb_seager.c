@@ -29,10 +29,10 @@
  * @short_description: Cosmic recombination implementing Seager (1999).
  * @include: numcosmo/nc_recomb_seager.h
  *
- * Cosmic recobination as describe in <link linkend="XSeager1999">Seager (1999)</link>.
+ * Cosmic recobination as describe in [Seager (1999)][XSeager1999].
  * It uses nc_recomb_HeII_ion_saha_x_by_HeIII_He () to obtain the value of $\lambda$
- * where the numerical integration will start. 
- * 
+ * where the numerical integration will start.
+ *
  */
 
 #ifdef HAVE_CONFIG_H
@@ -52,7 +52,7 @@
 static gdouble nc_recomb_seager_HII_ion_rate (NcHICosmo *cosmo, gdouble XHII, gdouble Tm, gdouble XHeII, gdouble x);
 static gdouble nc_recomb_seager_HeII_ion_rate (NcHICosmo *cosmo, gdouble XHII, gdouble Tm, gdouble XHeII, gdouble x);
 static gdouble nc_recomb_seager_Tm_dx (NcHICosmo *cosmo, gdouble XHII, gdouble Tm, gdouble XHeII, gdouble x);
-               
+
 static void nc_recomb_seager_HII_ion_rate_grad (NcHICosmo *cosmo, gdouble XHII, gdouble Tm, gdouble XHeII, gdouble x, gdouble *grad);
 static void nc_recomb_seager_HeII_ion_rate_grad (NcHICosmo *cosmo, gdouble XHII, gdouble Tm, gdouble XHeII, gdouble x, gdouble *grad);
 static void nc_recomb_seager_Tm_dx_grad (NcHICosmo *cosmo, gdouble XHII, gdouble Tm, gdouble XHeII, gdouble x, gdouble *grad);
@@ -71,7 +71,7 @@ H_ion_full_f (realtype lambda, N_Vector y, N_Vector ydot, gpointer f_data)
   NV_Ith_S (ydot, 0) = -x * nc_recomb_seager_HII_ion_rate (cosmo, XHII, Tm, XHeII, x);
   NV_Ith_S (ydot, 1) = -x * nc_recomb_seager_Tm_dx (cosmo, XHII, Tm, XHeII, x);
   NV_Ith_S (ydot, 2) = -x * nc_recomb_seager_HeII_ion_rate (cosmo, XHII, Tm, XHeII, x);
-	
+
   return GSL_SUCCESS;
 }
 
@@ -84,13 +84,13 @@ H_ion_full_J (_NCM_SUNDIALS_INT_TYPE N, realtype lambda, N_Vector y, N_Vector fy
   gdouble Tm    = NV_Ith_S (y, 1);
   gdouble XHeII = NV_Ith_S (y, 2);
   gdouble grad[3];
-  
+
   NCM_UNUSED (N);
   NCM_UNUSED (fy);
   NCM_UNUSED (tmp1);
   NCM_UNUSED (tmp2);
   NCM_UNUSED (tmp3);
-  
+
   nc_recomb_seager_HII_ion_rate_grad (cosmo, XHII, Tm, XHeII, x, grad);
   DENSE_ELEM (J, 0, 0) = -x * grad[0];
   DENSE_ELEM (J, 0, 1) = -x * grad[1];
@@ -129,14 +129,14 @@ nc_recomb_seager_prepare (NcRecomb *recomb, NcHICosmo *cosmo)
 	F.function = &_nc_recomb_He_fully_ionized_Xe;
   F.params   = cosmo;
 
-	ncm_spline_set_func (recomb->Xe_s, NCM_SPLINE_FUNCTION_SPLINE, 
+	ncm_spline_set_func (recomb->Xe_s, NCM_SPLINE_FUNCTION_SPLINE,
 	                     &F, lambdai, lambda_HeIII, 0, recomb->prec);
 
-  /***************************************************************************** 
+  /*****************************************************************************
 	 * Assuming hydrogen is completly ionized and no more double ionized helium
 	 * i.e., $X_\HeIII = 0$.
 	 ****************************************************************************/
-	{	
+	{
 		const gdouble T0 = nc_hicosmo_T_gamma0 (cosmo);
 		const gdouble XHII = 1.0;
 		gdouble XHeII, Tm, XeXHeII_XHeI;
@@ -169,7 +169,7 @@ nc_recomb_seager_prepare (NcRecomb *recomb, NcHICosmo *cosmo)
 		NV_Ith_S (recomb_seager->abstol, 0) = GSL_MIN (reltol, recomb->prec * 1e-5);
 		NV_Ith_S (recomb_seager->abstol, 2) = GSL_MIN (reltol, recomb->prec * 1e-5);
 		NV_Ith_S (recomb_seager->abstol, 1) = 0.0;
-		
+
 		flag = CVodeSVtolerances (recomb_seager->cvode, reltol, recomb_seager->abstol);
 		NCM_CVODE_CHECK (&flag, "CVodeSStolerances", 1, );
 
@@ -252,7 +252,7 @@ nc_recomb_seager_prepare (NcRecomb *recomb, NcHICosmo *cosmo)
 
 	recomb->tau_s          = ncm_spline_copy_empty (recomb->Xe_s);
 	recomb->dtau_dlambda_s = ncm_spline_copy_empty (recomb->Xe_s);
-	
+
 	_nc_recomb_prepare_tau_splines (recomb, cosmo);
 }
 
@@ -263,7 +263,7 @@ nc_recomb_seager_init (NcRecombSeager *recomb_seager)
   recomb_seager->cvode = CVodeCreate (CV_BDF, CV_NEWTON);
   NCM_CVODE_CHECK ((void *)recomb_seager->cvode, "CVodeCreate", 0, );
 	recomb_seager->init = FALSE;
-	
+
 	recomb_seager->ion   = &H_ion_full_f;
 	recomb_seager->ion_J = &H_ion_full_J;
 
@@ -290,13 +290,13 @@ static void
 nc_recomb_seager_finalize (GObject *object)
 {
 	NcRecombSeager *recomb_seager = NC_RECOMB_SEAGER (object);
-	
+
 	N_VDestroy (recomb_seager->y);
 	N_VDestroy (recomb_seager->y0);
 	N_VDestroy (recomb_seager->abstol);
 
 	CVodeFree (&recomb_seager->cvode);
-	
+
 	/* Chain up : end */
   G_OBJECT_CLASS (nc_recomb_seager_parent_class)->finalize (object);
 }
@@ -525,8 +525,8 @@ nc_recomb_seager_new (void)
 NcRecomb *
 nc_recomb_seager_new_full (gdouble init_frac, gdouble zi, gdouble prec)
 {
-  return g_object_new (NC_TYPE_RECOMB_SEAGER, 
-                       "init-frac", init_frac, 
+  return g_object_new (NC_TYPE_RECOMB_SEAGER,
+                       "init-frac", init_frac,
                        "zi", zi,
                        "prec", prec,
                        NULL);

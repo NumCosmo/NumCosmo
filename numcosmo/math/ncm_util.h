@@ -195,11 +195,14 @@ G_STMT_START { \
 
 #define NCM_UNUSED(x) (void)(x)
 
+void _ncm_util_set_destroyed (gpointer b);
+
 #define NCM_TEST_FREE(cmd,obj) \
 G_STMT_START { \
-  g_object_add_weak_pointer (G_OBJECT (obj), (gpointer *)&obj); \
+  gboolean destroyed = FALSE; \
+  g_object_set_data_full (G_OBJECT (obj), "test-destroy", &destroyed, _ncm_util_set_destroyed); \
   cmd (obj); \
-  g_assert (obj == NULL); \
+  g_assert (destroyed); \
 } G_STMT_END
 
 /* Minumum version here is 2.38 but it segfault during tests so we start at 2.40. */

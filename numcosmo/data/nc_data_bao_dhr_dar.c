@@ -13,12 +13,12 @@
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * numcosmo is distributed in the hope that it will be useful, but
  * WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
  * See the GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License along
  * with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
@@ -28,12 +28,12 @@
  * @title: NcDataBaoDHrDAr
  * @short_description: Baryon Oscillation Data -- $(D_H/r,\; D_A/r)$ data.
  *
- * See: <link linkend="XFont-Ribera2014">Font-Ribera et al. (2014)</link>, 
- * <link linkend="XDelubac2015">Delubac et al. (2015)</link> and
- * <link linkend="XAubourg2014">Aubourg et al. (2014)</link>.
- * 
+ * See: [Font-Ribera et al. (2014)][XFont-Ribera2014],
+ * [Delubac et al. (2015)][XDelubac2015] and
+ * [Aubourg et al. (2014)][XAubourg2014].
+ *
  * FIXME
- * 
+ *
  */
 
 #ifdef HAVE_CONFIG_H
@@ -109,7 +109,7 @@ nc_data_bao_dhr_dar_dispose (GObject *object)
 
   nc_distance_clear (&dhda->dist);
   ncm_vector_clear (&dhda->x);
-  
+
   /* Chain up : end */
   G_OBJECT_CLASS (nc_data_bao_dhr_dar_parent_class)->dispose (object);
 }
@@ -153,7 +153,7 @@ nc_data_bao_dhr_dar_class_init (NcDataBaoDHrDArClass *klass)
                                                         "Data redshift",
                                                         NCM_TYPE_VECTOR,
                                                         G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-  
+
   data_class->prepare    = &_nc_data_bao_dhr_dar_prepare;
   gauss_class->mean_func = &_nc_data_bao_dhr_dar_mean_func;
   gauss_class->set_size  = &_nc_data_bao_dhr_dar_set_size;
@@ -167,12 +167,12 @@ _nc_data_bao_dhr_dar_prepare (NcmData *data, NcmMSet *mset)
   nc_distance_prepare_if_needed (dhda->dist, cosmo);
 }
 
-static void 
+static void
 _nc_data_bao_dhr_dar_mean_func (NcmDataGaussCov *gauss, NcmMSet *mset, NcmVector *vp)
 {
   NcDataBaoDHrDAr *dhda = NC_DATA_BAO_DHR_DAR (gauss);
   NcHICosmo *cosmo      = NC_HICOSMO (ncm_mset_peek (mset, nc_hicosmo_id ()));
-  
+
   const gdouble z1      = ncm_vector_get (dhda->x, 0);
   const gdouble z2      = ncm_vector_get (dhda->x, 1);
   const gdouble DH_r    = nc_distance_DH_r (dhda->dist, cosmo, z1);
@@ -182,7 +182,7 @@ _nc_data_bao_dhr_dar_mean_func (NcmDataGaussCov *gauss, NcmMSet *mset, NcmVector
   ncm_vector_set (vp, 1, DA_r);
 }
 
-static void 
+static void
 _nc_data_bao_dhr_dar_set_size (NcmDataGaussCov *gauss, guint np)
 {
   NcDataBaoDHrDAr *dhda = NC_DATA_BAO_DHR_DAR (gauss);
@@ -192,7 +192,7 @@ _nc_data_bao_dhr_dar_set_size (NcmDataGaussCov *gauss, guint np)
 
   if ((np != 0) && (np != gauss->np))
     dhda->x = ncm_vector_new (np);
-  
+
   /* Chain up : end */
   NCM_DATA_GAUSS_COV_CLASS (nc_data_bao_dhr_dar_parent_class)->set_size (gauss, np);
 }
@@ -200,9 +200,9 @@ _nc_data_bao_dhr_dar_set_size (NcmDataGaussCov *gauss, guint np)
 /**
  * nc_data_bao_dhr_dar_new_from_file:
  * @filename: file containing a serialized #NcDataBaoDHrDAr.
- * 
+ *
  * Creates a new #NcDataBaoDHrDAr from @filename.
- * 
+ *
  * Returns: (transfer full): the newly created #NcDataBaoDHrDAr.
  */
 NcDataBaoDHrDAr *
@@ -227,7 +227,7 @@ nc_data_bao_dhr_dar_new_from_id (NcDistance *dist, NcDataBaoId id)
 {
   NcDataBaoDHrDAr *dhda;
   gchar *filename;
-  
+
   switch (id)
   {
     case NC_DATA_BAO_DHR_DAR_SDSS_DR11_2015:
@@ -248,11 +248,11 @@ nc_data_bao_dhr_dar_new_from_id (NcDistance *dist, NcDataBaoId id)
  * nc_data_bao_dhr_dar_set_dist:
  * @dhda: a #NcDataBaoDHrDAr
  * @dist: a #NcDistance
- * 
+ *
  * Sets the distance object.
- * 
+ *
  */
-void 
+void
 nc_data_bao_dhr_dar_set_dist (NcDataBaoDHrDAr *dhda, NcDistance *dist)
 {
   nc_distance_clear (&dhda->dist);

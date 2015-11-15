@@ -8,17 +8,17 @@
 /*
  * numcosmo
  * Copyright (C) 2012 Sandro Dias Pinto Vitenti <sandro@isoftware.com.br>
- * 
+ *
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * numcosmo is distributed in the hope that it will be useful, but
  * WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
  * See the GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License along
  * with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
@@ -28,8 +28,8 @@
  * @title: NcDataBaoDV
  * @short_description: Baryon oscillation data -- volume mean $D_V$.
  *
- * See <link linkend="XEisenstein2005">Eisenstein et al. (2005)</link>.
- * 
+ * See [Eisenstein et al. (2005)][XEisenstein2005].
+ *
  */
 
 #ifdef HAVE_CONFIG_H
@@ -69,7 +69,7 @@ nc_data_bao_dv_set_property (GObject *object, guint prop_id, const GValue *value
     case PROP_DIST:
       nc_data_bao_dv_set_dist (bao_dv, g_value_get_object (value));
       break;
-    case PROP_Z:      
+    case PROP_Z:
       ncm_vector_substitute (&bao_dv->x, g_value_get_object (value), TRUE);
       break;
     default:
@@ -105,7 +105,7 @@ nc_data_bao_dv_dispose (GObject *object)
 
   nc_distance_clear (&bao_dv->dist);
   ncm_vector_clear (&bao_dv->x);
-  
+
   /* Chain up : end */
   G_OBJECT_CLASS (nc_data_bao_dv_parent_class)->dispose (object);
 }
@@ -149,7 +149,7 @@ nc_data_bao_dv_class_init (NcDataBaoDVClass *klass)
                                                         "Data redshift",
                                                         NCM_TYPE_VECTOR,
                                                         G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-  
+
   data_class->prepare   = &_nc_data_bao_dv_prepare;
   diag_class->mean_func = &_nc_data_bao_dv_mean_func;
   diag_class->set_size  = &_nc_data_bao_dv_set_size;
@@ -163,7 +163,7 @@ _nc_data_bao_dv_prepare (NcmData *data, NcmMSet *mset)
   nc_distance_prepare_if_needed (bao_dv->dist, cosmo);
 }
 
-static void 
+static void
 _nc_data_bao_dv_mean_func (NcmDataGaussDiag *diag, NcmMSet *mset, NcmVector *vp)
 {
   NcDataBaoDV *bao_dv = NC_DATA_BAO_DV (diag);
@@ -196,9 +196,9 @@ _nc_data_bao_dv_set_size (NcmDataGaussDiag *diag, guint np)
 /**
  * nc_data_bao_dv_new_from_file:
  * @filename: file containing a serialized #NcDataBaoDV.
- * 
+ *
  * Creates a new #NcDataBaoDV from @filename.
- * 
+ *
  * Returns: (transfer full): the newly created #NcDataBaoDV.
  */
 NcDataBaoDV *
@@ -224,7 +224,7 @@ nc_data_bao_dv_new_from_id (NcDistance *dist, NcDataBaoId id)
 {
   NcDataBaoDV *bao_dv;
   gchar *filename;
-  
+
   switch (id)
   {
     case NC_DATA_BAO_DV_EISENSTEIN2005:
@@ -246,11 +246,11 @@ nc_data_bao_dv_new_from_id (NcDistance *dist, NcDataBaoId id)
  * nc_data_bao_dv_set_dist:
  * @bao_dv: a #NcDataBaoDV
  * @dist: a #NcDistance
- * 
+ *
  * Sets the distance object.
- * 
+ *
  */
-void 
+void
 nc_data_bao_dv_set_dist (NcDataBaoDV *bao_dv, NcDistance *dist)
 {
   nc_distance_clear (&bao_dv->dist);

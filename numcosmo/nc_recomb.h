@@ -137,7 +137,7 @@ G_INLINE_FUNC void
 nc_recomb_prepare_if_needed (NcRecomb *recomb, NcHICosmo *cosmo)
 {
   if (ncm_model_ctrl_update (recomb->ctrl, NCM_MODEL (cosmo)))
-	nc_recomb_prepare (recomb, cosmo);
+    nc_recomb_prepare (recomb, cosmo);
 }
 
 G_INLINE_FUNC gdouble

@@ -192,8 +192,8 @@ nc_transfer_func_eh_class_init (NcTransferFuncEHClass *klass)
   GObjectClass* object_class = G_OBJECT_CLASS (klass);
   NcTransferFuncClass* parent_class = NC_TRANSFER_FUNC_CLASS (klass);
 
-  parent_class->prepare = &_nc_transfer_func_eh_prepare;
-  parent_class->calc = &_nc_transfer_func_eh_calc;
+  parent_class->prepare       = &_nc_transfer_func_eh_prepare;
+  parent_class->calc          = &_nc_transfer_func_eh_calc;
   parent_class->calc_matter_P = &_nc_transfer_func_eh_calc_matter_P;
 
   object_class->finalize = nc_transfer_func_eh_finalize;

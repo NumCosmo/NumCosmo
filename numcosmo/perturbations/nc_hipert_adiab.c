@@ -13,12 +13,12 @@
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * numcosmo is distributed in the hope that it will be useful, but
  * WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
  * See the GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License along
  * with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
@@ -26,17 +26,17 @@
 /**
  * SECTION:nc_hipert_adiab
  * @title: NcHIPertAdiab
- * @short_description: Perturbation object for adiabatic mode only. 
+ * @short_description: Perturbation object for adiabatic mode only.
  *
- * This object provides the computation of the adiabatic mode for the cosmological 
+ * This object provides the computation of the adiabatic mode for the cosmological
  * perturbations. It solves the equation of motion for the gauge invariant variable
- * (see <link linkend="XVitenti2013">Vitenti (2013)</link> for notation and details)
+ * (see [Vitenti (2013)][XVitenti2013] for notation and details)
  * $$\zeta \equiv \Psi - \frac{2\bar{K}}{\kappa(\bar{\rho} + \bar{p})} + H\mathcal{V}.$$
  * Its conjugated momentum is give by
  * \begin{split}
  * P_\zeta &= \frac{2\bar{D}^2_\bar{K}\Psi}{x^3H},
  * \end{split}
- * 
+ *
  * The equations of motion in their first order form are
  * \begin{align}
  * \zeta^\prime &= \frac{P_\zeta}{m_\zeta}, \\\\
@@ -51,7 +51,7 @@
  * $E^2 = H^2/H_0^2$ is the adimensional Hubble function squared (nc_hicosmo_E2()), $c_s^2$ the speed of sound (nc_hicosmo_cs2()),
  * $N$ is the lapse function that in this case (using $\alpha$ as time variable) is $N \equiv \vert{}E\vert^{-1}$, $\rho_\text{crit0}$
  * is the critical density today defined by $\rho_\text{crit0} \equiv 3H_0^2/\kappa$ and $$\Delta_\bar{K} \equiv \frac{k^2}{k^2 + \Omega_k}.$$
- * 
+ *
  */
 
 #ifdef HAVE_CONFIG_H
@@ -66,7 +66,7 @@
 #include <cvodes/cvodes.h>
 #include <cvodes/cvodes_dense.h>
 #include <cvodes/cvodes_band.h>
-#include <nvector/nvector_serial.h> 
+#include <nvector/nvector_serial.h>
 #include <gsl/gsl_roots.h>
 
 G_DEFINE_TYPE (NcHIPertAdiab, nc_hipert_adiab, NC_TYPE_HIPERT);
@@ -85,7 +85,7 @@ typedef struct _NcHIPertAdiabArg
 static void
 nc_hipert_adiab_init (NcHIPertAdiab *pa)
 {
-  pa->wkb = nc_hipert_wkb_new (NC_TYPE_HIPERT_IADIAB, 
+  pa->wkb = nc_hipert_wkb_new (NC_TYPE_HIPERT_IADIAB,
                                (NcHIPertWKBFunc) &nc_hipert_iadiab_nuA2,
                                (NcHIPertWKBFunc) &nc_hipert_iadiab_VA,
                                (NcHIPertWKBFunc) &nc_hipert_iadiab_dmzetanuA_nuA,
@@ -126,7 +126,7 @@ nc_hipert_adiab_dispose (GObject *object)
   NcHIPertAdiab *pa = NC_HIPERT_ADIAB (object);
 
   nc_hipert_wkb_clear (&pa->wkb);
-  
+
   /* Chain up : end */
   G_OBJECT_CLASS (nc_hipert_adiab_parent_class)->dispose (object);
 }
@@ -141,7 +141,7 @@ nc_hipert_adiab_finalize (GObject *object)
 
 static void _nc_hipert_adiab_set_mode_k (NcHIPert *pert, gdouble k);
 static void _nc_hipert_adiab_set_abstol (NcHIPert *pert, gdouble abstol);
-static void _nc_hipert_adiab_set_reltol (NcHIPert *pert, gdouble reltol); 
+static void _nc_hipert_adiab_set_reltol (NcHIPert *pert, gdouble reltol);
 
 static void
 nc_hipert_adiab_class_init (NcHIPertAdiabClass *klass)
@@ -155,11 +155,11 @@ nc_hipert_adiab_class_init (NcHIPertAdiabClass *klass)
 
   NC_HIPERT_CLASS (klass)->set_mode_k = &_nc_hipert_adiab_set_mode_k;
   NC_HIPERT_CLASS (klass)->set_abstol = &_nc_hipert_adiab_set_abstol;
-  NC_HIPERT_CLASS (klass)->set_reltol = &_nc_hipert_adiab_set_reltol;  
+  NC_HIPERT_CLASS (klass)->set_reltol = &_nc_hipert_adiab_set_reltol;
 }
 
-static void 
-_nc_hipert_adiab_set_mode_k (NcHIPert *pert, gdouble k) 
+static void
+_nc_hipert_adiab_set_mode_k (NcHIPert *pert, gdouble k)
 {
   NC_HIPERT_CLASS (nc_hipert_adiab_parent_class)->set_mode_k (pert, k);
   /* Chain up : start */
@@ -170,8 +170,8 @@ _nc_hipert_adiab_set_mode_k (NcHIPert *pert, gdouble k)
   }
 }
 
-static void 
-_nc_hipert_adiab_set_abstol (NcHIPert *pert, gdouble abstol) 
+static void
+_nc_hipert_adiab_set_abstol (NcHIPert *pert, gdouble abstol)
 {
   NC_HIPERT_CLASS (nc_hipert_adiab_parent_class)->set_abstol (pert, abstol);
   /* Chain up : start */
@@ -182,8 +182,8 @@ _nc_hipert_adiab_set_abstol (NcHIPert *pert, gdouble abstol)
   }
 }
 
-static void 
-_nc_hipert_adiab_set_reltol (NcHIPert *pert, gdouble reltol) 
+static void
+_nc_hipert_adiab_set_reltol (NcHIPert *pert, gdouble reltol)
 {
   NC_HIPERT_CLASS (nc_hipert_adiab_parent_class)->set_reltol (pert, reltol);
   /* Chain up : start */
@@ -196,9 +196,9 @@ _nc_hipert_adiab_set_reltol (NcHIPert *pert, gdouble reltol)
 
 /**
  * nc_hipert_adiab_new:
- * 
+ *
  * Creates a new #NcHIPertAdiab object.
- * 
+ *
  * Returns: (transfer full): a new #NcHIPertAdiab.
  */
 NcHIPertAdiab *
@@ -214,10 +214,10 @@ nc_hipert_adiab_new (void)
 /**
  * nc_hipert_adiab_ref:
  * @pa: a #NcHIPertAdiab.
- * 
+ *
  * Increases the reference count of @pa.
- * 
- * Returns: (transfer full): @pa. 
+ *
+ * Returns: (transfer full): @pa.
  */
 NcHIPertAdiab *
 nc_hipert_adiab_ref (NcHIPertAdiab *pa)
@@ -228,11 +228,11 @@ nc_hipert_adiab_ref (NcHIPertAdiab *pa)
 /**
  * nc_hipert_adiab_free:
  * @pa: a #NcHIPertAdiab.
- * 
+ *
  * Decreases the reference count of @pa.
- * 
+ *
  */
-void 
+void
 nc_hipert_adiab_free (NcHIPertAdiab *pa)
 {
   g_object_unref (pa);
@@ -241,11 +241,11 @@ nc_hipert_adiab_free (NcHIPertAdiab *pa)
 /**
  * nc_hipert_adiab_clear:
  * @pa: a #NcHIPertAdiab.
- * 
+ *
  * Decreases the reference count of *@pa and sets *@pa to NULL.
- * 
+ *
  */
-void 
+void
 nc_hipert_adiab_clear (NcHIPertAdiab **pa)
 {
   g_clear_object (pa);
@@ -258,11 +258,11 @@ nc_hipert_adiab_clear (NcHIPertAdiab **pa)
  * @prec: Required precision.
  * @alpha_i: initial log-redshift time.
  * @alpha_f: final log-redshift time.
- * 
+ *
  * Prepare the object for WKB calculations using the cosmology @cosmo.
- * 
+ *
  */
-void 
+void
 nc_hipert_adiab_prepare_wkb (NcHIPertAdiab *pa, NcHICosmo *cosmo, gdouble prec, gdouble alpha_i, gdouble alpha_f)
 {
   nc_hipert_wkb_prepare (pa->wkb, G_OBJECT (cosmo), prec, alpha_i, alpha_f);
@@ -275,9 +275,9 @@ nc_hipert_adiab_prepare_wkb (NcHIPertAdiab *pa, NcHICosmo *cosmo, gdouble prec, 
  * @alpha: the log-redshift time.
  * @Re_zeta: (out caller-allocates): Real part of the wkb solution.
  * @Im_zeta: (out caller-allocates): Imaginary part of the wkb solution.
- * 
- * Computes the WKB solution $\zeta_\text{WKB}$ for the mode $k$ at the time $\alpha$. 
- * 
+ *
+ * Computes the WKB solution $\zeta_\text{WKB}$ for the mode $k$ at the time $\alpha$.
+ *
  */
 void
 nc_hipert_adiab_wkb_zeta (NcHIPertAdiab *pa, NcHICosmo *cosmo, gdouble alpha, gdouble *Re_zeta, gdouble *Im_zeta)
@@ -294,9 +294,9 @@ nc_hipert_adiab_wkb_zeta (NcHIPertAdiab *pa, NcHICosmo *cosmo, gdouble alpha, gd
  * @Im_zeta: (out caller-allocates): Imaginary part of the wkb solution.
  * @Re_Pzeta: (out caller-allocates): Real part of the wkb solution momentum.
  * @Im_Pzeta: (out caller-allocates): Imaginary part of the wkb solution momentum.
- * 
- * Computes the WKB solution $\zeta_\text{WKB}$ and its momentum for the mode $k$ at the time $\alpha$. 
- * 
+ *
+ * Computes the WKB solution $\zeta_\text{WKB}$ and its momentum for the mode $k$ at the time $\alpha$.
+ *
  */
 void
 nc_hipert_adiab_wkb_zeta_Pzeta (NcHIPertAdiab *pa, NcHICosmo *cosmo, gdouble alpha, gdouble *Re_zeta, gdouble *Im_zeta, gdouble *Re_Pzeta, gdouble *Im_Pzeta)
@@ -310,12 +310,12 @@ nc_hipert_adiab_wkb_zeta_Pzeta (NcHIPertAdiab *pa, NcHICosmo *cosmo, gdouble alp
  * @cosmo: a #NcHICosmo.
  * @alpha0: the initial log-redshift time.
  * @alpha1: the final log-redshift time.
- * 
- * Search for the root of $\nu_A^2$ between $\alpha_0$ and $\alpha_1$. 
- * 
+ *
+ * Search for the root of $\nu_A^2$ between $\alpha_0$ and $\alpha_1$.
+ *
  * Returns: the root of $\nu_A^2$ between $\alpha_0$ and $\alpha_1$ or NaN if not found.
  */
-gdouble 
+gdouble
 nc_hipert_adiab_wkb_maxtime (NcHIPertAdiab *pa, NcHICosmo *cosmo, gdouble alpha0, gdouble alpha1)
 {
   return nc_hipert_wkb_maxtime (pa->wkb, G_OBJECT (cosmo), alpha0, alpha1);
@@ -329,12 +329,12 @@ nc_hipert_adiab_wkb_maxtime (NcHIPertAdiab *pa, NcHICosmo *cosmo, gdouble alpha0
  * @prec: Required precision.
  * @alpha0: the initial log-redshift time.
  * @alpha1: the final log-redshift time.
- * 
- * Search for the instant at which the WKB approximation starts to fails within the asked precision. 
- * 
+ *
+ * Search for the instant at which the WKB approximation starts to fails within the asked precision.
+ *
  * Returns: the instant $\alpha$ between $\alpha_0$ and $\alpha_1$ or NaN if not found.
  */
-gdouble 
+gdouble
 nc_hipert_adiab_wkb_maxtime_prec (NcHIPertAdiab *pa, NcHICosmo *cosmo, NcHIPertWKBCmp cmp, gdouble prec, gdouble alpha0, gdouble alpha1)
 {
   return nc_hipert_wkb_maxtime_prec (pa->wkb, G_OBJECT (cosmo), cmp, prec, alpha0, alpha1);
@@ -345,7 +345,7 @@ _nc_hipert_adiab_f (realtype alpha, N_Vector y, N_Vector ydot, gpointer f_data)
 {
   NcHIPertAdiabArg *arg = (NcHIPertAdiabArg *) f_data;
   NcHIPertIAdiabEOM *eom = nc_hipert_iadiab_eom (NC_HIPERT_IADIAB (arg->cosmo), alpha, NC_HIPERT (arg->pa)->k);
-  
+
   NV_Ith_S (ydot, NC_HIPERT_ADIAB_RE_ZETA) = NV_Ith_S (y, NC_HIPERT_ADIAB_RE_PZETA) / eom->m;
   NV_Ith_S (ydot, NC_HIPERT_ADIAB_IM_ZETA) = NV_Ith_S (y, NC_HIPERT_ADIAB_IM_PZETA) / eom->m;
 
@@ -378,11 +378,11 @@ _nc_hipert_adiab_J (_NCM_SUNDIALS_INT_TYPE N, realtype alpha, N_Vector y, N_Vect
  * @Im_zeta: Imaginary part of the wkb solution.
  * @Re_Pzeta: Real part of the wkb solution momentum.
  * @Im_Pzeta: Imaginary part of the wkb solution momentum.
- * 
- * Sets the initial conditions for the zeta evolution. 
- * 
+ *
+ * Sets the initial conditions for the zeta evolution.
+ *
  */
-void 
+void
 nc_hipert_adiab_set_init_cond (NcHIPertAdiab *pa, NcHICosmo *cosmo, gdouble alpha_i, gdouble Re_zeta, gdouble Im_zeta, gdouble Re_Pzeta, gdouble Im_Pzeta)
 {
   NcHIPert *pert = NC_HIPERT (pa);
@@ -417,7 +417,7 @@ nc_hipert_adiab_set_init_cond (NcHIPertAdiab *pa, NcHICosmo *cosmo, gdouble alph
   NCM_CVODE_CHECK (&flag, "CVDense", 1, );
 
   flag = CVDlsSetDenseJacFn (pert->cvode, &_nc_hipert_adiab_J);
-  NCM_CVODE_CHECK (&flag, "CVDlsSetDenseJacFn", 1, );  
+  NCM_CVODE_CHECK (&flag, "CVDlsSetDenseJacFn", 1, );
 }
 
 /**
@@ -425,11 +425,11 @@ nc_hipert_adiab_set_init_cond (NcHIPertAdiab *pa, NcHICosmo *cosmo, gdouble alph
  * @pa: a #NcHIPertAdiab.
  * @cosmo: a #NcHICosmo.
  * @alpha_i: the log-redshift time.
- * 
- * Sets the initial conditions for the zeta evolution using the value of the WKB solution at @alpha_i. 
- * 
+ *
+ * Sets the initial conditions for the zeta evolution using the value of the WKB solution at @alpha_i.
+ *
  */
-void 
+void
 nc_hipert_adiab_set_init_cond_wkb (NcHIPertAdiab *pa, NcHICosmo *cosmo, gdouble alpha_i)
 {
   gdouble Re_zeta, Im_zeta, Re_Pzeta, Im_Pzeta;
@@ -443,18 +443,18 @@ nc_hipert_adiab_set_init_cond_wkb (NcHIPertAdiab *pa, NcHICosmo *cosmo, gdouble 
  * @pa: a #NcHIPertAdiab.
  * @cosmo: a #NcHICosmo.
  * @alphaf: the final log-redshift time.
- * 
+ *
  * Evolve the system until @alphaf.
- * 
+ *
  */
-void 
+void
 nc_hipert_adiab_evolve (NcHIPertAdiab *pa, NcHICosmo *cosmo, gdouble alphaf)
 {
   NcHIPert *pert = NC_HIPERT (pa);
   NcHIPertAdiabArg arg;
   gdouble alpha_i = 0.0;
   gint flag;
-  
+
   arg.cosmo = cosmo;
   arg.pa = pa;
 
@@ -475,15 +475,15 @@ nc_hipert_adiab_evolve (NcHIPertAdiab *pa, NcHICosmo *cosmo, gdouble alphaf)
  * @Im_zeta: (out caller-allocates): Imaginary part of the solution.
  * @Re_Pzeta: (out caller-allocates): Real part of the solution momentum.
  * @Im_Pzeta: (out caller-allocates): Imaginary part of the solution momentum.
- * 
+ *
  * Get the current time and values of the numerical solution.
- * 
+ *
  */
 void
 nc_hipert_adiab_get_values (NcHIPertAdiab *pa, gdouble *alpha_i, gdouble *Re_zeta, gdouble *Im_zeta, gdouble *Re_Pzeta, gdouble *Im_Pzeta)
 {
   NcHIPert *pert = NC_HIPERT (pa);
-  
+
   *alpha_i = pert->alpha0;
   *Re_zeta  = NV_Ith_S (pert->y, NC_HIPERT_ADIAB_RE_ZETA);
   *Im_zeta  = NV_Ith_S (pert->y, NC_HIPERT_ADIAB_IM_ZETA);

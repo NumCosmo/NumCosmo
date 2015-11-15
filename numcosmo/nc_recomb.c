@@ -28,7 +28,7 @@
  * @title: NcRecomb
  * @short_description: Abstract class for cosmic recombination.
  * @include: numcosmo/nc_recomb.h
- * 
+ *
  * $
  *  \newcommand{\He}{\text{He}}
  *  \newcommand{\HeI}{\text{HeI}}
@@ -39,25 +39,25 @@
  *  \newcommand{\HyII}{\text{HII}}
  *  \newcommand{\e}{{\text{e}^-}}
  * $
- * 
+ *
  * The #NcRecomb abstract object describe a general recombination process.
  * To describe the functions we have the following definitions,
- * more details in <link linkend="XWeinberg2008">Weinberg (2008)</link>.
- * 
- * We refer to the total number of hydrogen nucleus (ionized or not) as 
- * $n_{\Hy}$, the neutral hydrogen atoms as $n_{\HyI}$ and ionized hydrogen as 
- * $n_{\HyII}$ and therefore $n_{\HyI} + n_{\HyII} = n_{\Hy}$. In the same way 
- * for the helium the number of helium nuclei is $n_{\He}$ and the neutral, 
- * single and double ionized as $n_{\HeI}$, $n_{\HeII}$ and $n_{\HeIII}$ 
+ * more details in [Weinberg (2008)][XWeinberg2008].
+ *
+ * We refer to the total number of hydrogen nucleus (ionized or not) as
+ * $n_{\Hy}$, the neutral hydrogen atoms as $n_{\HyI}$ and ionized hydrogen as
+ * $n_{\HyII}$ and therefore $n_{\HyI} + n_{\HyII} = n_{\Hy}$. In the same way
+ * for the helium the number of helium nuclei is $n_{\He}$ and the neutral,
+ * single and double ionized as $n_{\HeI}$, $n_{\HeII}$ and $n_{\HeIII}$
  * respectively.
- * 
- * We also define the helium primordial abundance as the ratio of the helium 
+ *
+ * We also define the helium primordial abundance as the ratio of the helium
  * mass to the total baryonic mass, i.e.,
  * \begin{align}\label{def:Yp}
  * Y_p = \frac{n_{\He} m_{\He}}{(n_{\He} m_{\He} + n_{\Hy} m_{\Hy})},
  * \end{align}
  * where $m_{\Hy}$ and $m_{\He}$ are the hydrogen and helium mass.
- * 
+ *
  * The element abundances are define as the ratio of the element by the total
  * number of free protons $n_p \equiv n_\Hy$:
  * \begin{align}
@@ -65,7 +65,7 @@
  * \end{align}
  * where $f$ is any one of the elements describe above and $\e$ represent
  * the number of free electrons.
- * 
+ *
  * These fractions have the following properties:
  * \begin{align}\label{eq:Hy:add}
  * X_\HyI + X_{\HyII} &= 1, \\\\ \label{eq:He:add}
@@ -77,9 +77,9 @@
  * \begin{equation}\label{eq:def:Xe}
  * X_\e = X_{\HyII} + X_{\HeII} + 2X_{\HeIII}.
  * \end{equation}
- * 
+ *
  * <bridgehead>Equilibrium fractions</bridgehead>
- * 
+ *
  * Equilibrium ratio $X_{\HyII}X_\e / X_\Hy$ through Saha equation, i.e.,
  * \begin{equation}\label{eq:saha:HyI}
  * \frac{X_{\HyII}X_\e}{X_\HyI} = \frac{e^{-\HyI_{1s}/(k_BT)}}{n_{\Hy}\lambda_{\e}^3},
@@ -89,12 +89,12 @@
  * \begin{equation}
  * \lambda_{\e} = \sqrt{\frac{2\pi\hbar^2}{m_\e{}k_BT}},
  * \end{equation}
- * $k_K$ is the Boltzmann constant ncm_c_kb (), m_\e the electron mass and 
+ * $k_K$ is the Boltzmann constant ncm_c_kb (), m_\e the electron mass and
  * $\hbar$ is the Planck constant ncm_c_hbar ().
- * 
+ *
  * This calculation is done using the Saha equation as in
- * <link linkend="XWeinberg2008">Weinberg (2008)</link>.
- * 
+ * [Weinberg (2008)][XWeinberg2008].
+ *
  * The equilibrium single/non-ionized helium ratio $X_{\HeII}X_\e/X_{\HeI}$
  * through Saha equation, i.e.,
  * \begin{equation}\label{eq:saha:HeI}
@@ -102,8 +102,8 @@
  * \end{equation}
  * where $\HeI_{1s}$ is the helium I $1s$ binding energy ncm_c_HeI_bind_1s ().
  * This calculation is done using the Saha equation as in
- * <link linkend="XSeager2000">Seager (2000)</link>
- * 
+ * [Seager (2000)][XSeager2000].
+ *
  * The equilibrium double/single-ionized helium ratio $X_{\HeIII}X_\e/X_{\HeII}$
  * through Saha equation, i.e.,
  * \begin{equation}\label{eq:saha:HeII}
@@ -111,14 +111,14 @@
  * \end{equation}
  * where $\HeII_{1s}$ is the helium II $1s$ binding energy ncm_c_HeII_bind_1s ().
  * This calculation is done using the Saha equation as in
- * <link linkend="XSeager2000">Seager (2000)</link>
- * 
+ * [Seager (2000)][XSeager2000].
+ *
  * The default value of the helium primordial abundance
  * is given by ncm_c_prim_He_Yp ().
  * The primordial helium fraction is define by ncm_c_prim_XHe ().
- * 
+ *
  * <bridgehead>Optical depth and visibility function</bridgehead>
- * 
+ *
  * The derivative of the optical depth $\tau$ with respect to the redshift
  * time $\lambda \equiv -\log(x) = -\log(1 + z)$ is
  * \begin{equation}\label{eq:def:dtaudlambda}
@@ -135,7 +135,7 @@
  * \begin{equation}\label{eq:def:vtau}
  * v_\tau = \frac{d\tau}{d\lambda}e^{-\tau}.
  * \end{equation}
- * 
+ *
  */
 
 #ifdef HAVE_CONFIG_H
@@ -229,7 +229,7 @@ nc_recomb_set_property (GObject *object, guint prop_id, const GValue *value, GPa
     case PROP_PREC:
       recomb->prec    = g_value_get_double (value);
       ncm_model_ctrl_force_update (recomb->ctrl);
-      break;			
+      break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
       break;
@@ -273,8 +273,8 @@ nc_recomb_class_init (NcRecombClass *klass)
    * NcRecomb:init_frac:
    *
    * $\HeIII/\He$ fraction to consider $\HeIII$ completly combined.
-   * 
-   */  
+   *
+   */
   g_object_class_install_property (object_class,
                                    PROP_INIT_FRAC,
                                    g_param_spec_double ("init-frac",
@@ -286,8 +286,8 @@ nc_recomb_class_init (NcRecombClass *klass)
    * NcRecomb:zi:
    *
    * Initial redshift to prepare the recombination functions.
-   * 
-   */  
+   *
+   */
   g_object_class_install_property (object_class,
                                    PROP_ZI,
                                    g_param_spec_double ("zi",
@@ -299,8 +299,8 @@ nc_recomb_class_init (NcRecombClass *klass)
    * NcRecomb:prec:
    *
    * The precision used in the calculations.
-   * 
-   */  
+   *
+   */
   g_object_class_install_property (object_class,
                                    PROP_PREC,
                                    g_param_spec_double ("prec",
@@ -367,8 +367,8 @@ nc_recomb_HeI_ion_saha (NcHICosmo *cosmo, gdouble x)
  * nc_recomb_HeII_ion_saha:
  * @cosmo: a #NcHICosmo.
  * @x: redshift factor $x$.
- * 
- * Calculate the equilibrium double/single ionized helium ratio 
+ *
+ * Calculate the equilibrium double/single ionized helium ratio
  * ($X_{\HeIII}X_\e/X_{\HeII}$). See Eq. \eqref{eq:saha:HeII}.
  *
  * Returns: the ratio $X_{\HeIII}X_\e/X_{\HeII}$
@@ -394,7 +394,7 @@ nc_recomb_HeII_ion_saha (NcHICosmo *cosmo, gdouble x)
  * @f: $X_{\HeIII}X_\e/X_{\HeII}$
  *
  * Calculate the redshift where the ratio $$X_{\HeIII}X_\e/X_{\HeII} = f.$$
- *  
+ *
  * This calculation is done by finding the value of $x$ where
  * $$\frac{e^{-\HeII_{1s}/(k_BT)}}{4n_{\Hy}\lambda_{\e}^3} = f.$$
  *
@@ -421,14 +421,14 @@ nc_recomb_HeII_ion_saha_x (NcHICosmo *cosmo, gdouble f)
  * @f: value of $X_{\HeIII}/X_{\He}$
  *
  * Calculate the redshift where the ratio $$X_{\HeIII}/X_{\He} = f.$$
- *  
+ *
  * This calculation is done assuming that hydrogen and helium are
  * fully ionized, i.e., $\HyI = 0 = \HeI$. In this case
- * $$\frac{X_{\HeIII}X_\e}{X_{\HeII}} = 
+ * $$\frac{X_{\HeIII}X_\e}{X_{\HeII}} =
  * \frac{f}{1-f}\left[1 + X_\He(1+f)\right].$$
- * 
+ *
  * Returns: the value of $x$ where the ratio @f occur.
- * 
+ *
  */
 gdouble
 nc_recomb_HeII_ion_saha_x_by_HeIII_He (NcHICosmo *cosmo, gdouble f)
@@ -442,14 +442,14 @@ nc_recomb_HeII_ion_saha_x_by_HeIII_He (NcHICosmo *cosmo, gdouble f)
  * @cosmo: a #NcHICosmo.
  * @x: redshift factor $x$.
  *
- * Assuming that all helium is single or double ionized and all hydrogen is 
- * ionized we have $$X_\e = 1 + X_\HeII + 2X_\HeIII,\quad X_\He = X_\HeII + 
- * X_\HeIII,$$ thus, $$X_\HeIII = X_\e-X_\He-1,\quad X_\HeII = 1 + 2X_\He - 
+ * Assuming that all helium is single or double ionized and all hydrogen is
+ * ionized we have $$X_\e = 1 + X_\HeII + 2X_\HeIII,\quad X_\He = X_\HeII +
+ * X_\HeIII,$$ thus, $$X_\HeIII = X_\e-X_\He-1,\quad X_\HeII = 1 + 2X_\He -
  * X_\e.$$ Using nc_recomb_HeII_ion_saha () and ncm_c_prim_XHe () we obtain
- * $X_\e$. 
- * 
+ * $X_\e$.
+ *
  * Returns: $X_\e$.
- * 
+ *
  */
 gdouble
 nc_recomb_He_fully_ionized_Xe (NcHICosmo *cosmo, gdouble x)
@@ -476,8 +476,8 @@ _nc_recomb_XHe_XHII (gdouble XHII, gpointer p)
   const gdouble fHI   = XHe_p->fHI;
   const gdouble fHeI  = XHe_p->fHeI;
   const gdouble fHeII = XHe_p->fHeII;
-  const gdouble XHe   = ((fHI * (-1.0 + XHII) + gsl_pow_2 (XHII)) * (gsl_pow_2 (fHI) * gsl_pow_2 (-1.0 + XHII) - 
-   fHeI * fHI * (-1.0 + XHII) * XHII + 
+  const gdouble XHe   = ((fHI * (-1.0 + XHII) + gsl_pow_2 (XHII)) * (gsl_pow_2 (fHI) * gsl_pow_2 (-1.0 + XHII) -
+   fHeI * fHI * (-1.0 + XHII) * XHII +
    fHeI * fHeII * gsl_pow_2 (XHII))) / (fHeI * gsl_pow_2 (XHII) * (fHI * (-1.0 + XHII) - 2.0 * fHeII * XHII));
 
   return XHe - XHe_p->XHe;
@@ -490,8 +490,8 @@ _nc_recomb_XHe_XHI (gdouble XHI, gpointer p)
   const gdouble fHI   = XHe_p->fHI;
   const gdouble fHeI  = XHe_p->fHeI;
   const gdouble fHeII = XHe_p->fHeII;
-  const gdouble XHe   = ((-fHI * XHI + gsl_pow_2 (1.0 - XHI)) * (gsl_pow_2 (fHI) * gsl_pow_2 (XHI) + 
-   fHeI * fHI * XHI * (1.0 - XHI) + 
+  const gdouble XHe   = ((-fHI * XHI + gsl_pow_2 (1.0 - XHI)) * (gsl_pow_2 (fHI) * gsl_pow_2 (XHI) +
+   fHeI * fHI * XHI * (1.0 - XHI) +
    fHeI * fHeII * gsl_pow_2 (1.0 - XHI))) / (fHeI * gsl_pow_2 (1.0 - XHI) * (-fHI * XHI - 2.0 * fHeII * (1.0 - XHI)));
 
   return XHe - XHe_p->XHe;
@@ -503,15 +503,15 @@ _nc_recomb_XHe_XHI (gdouble XHI, gpointer p)
  * @recomb: a #NcRecomb.
  * @cosmo: a #NcHICosmo.
  * @x: $x$.
- * 
+ *
  * Calculates the ionization fraction $X_\e$ assuming equilibrium at all times.
  * It solves the system containing all Saha's equations Eqs \eqref{eq:saha:HyI},
- * \eqref{eq:saha:HeI} and \eqref{eq:saha:HeII} and the constraints Eq 
+ * \eqref{eq:saha:HeI} and \eqref{eq:saha:HeII} and the constraints Eq
  * \eqref{eq:Hy:add}, \eqref{eq:He:add} and \eqref{eq:def:Xe}.
  *
  * Returns: $X_\e$.
  */
-gdouble 
+gdouble
 nc_recomb_equilibrium_Xe (NcRecomb *recomb, NcHICosmo *cosmo, const gdouble x)
 {
    _nc_recomb_XHe_params XHe_p;
@@ -529,7 +529,7 @@ nc_recomb_equilibrium_Xe (NcRecomb *recomb, NcHICosmo *cosmo, const gdouble x)
   {
     return 0.5 * (sqrt (XHe_p.fHI * (4.0 + XHe_p.fHI)) - XHe_p.fHI);
   }
-  
+
   if (XHe_p.fHI < 1.0e3)
   {
     F.function = &_nc_recomb_XHe_XHII;
@@ -546,27 +546,27 @@ nc_recomb_equilibrium_Xe (NcRecomb *recomb, NcHICosmo *cosmo, const gdouble x)
       return XHe_p.fHI * XHI / (1.0 - XHI);
     }
   }
-    
+
 }
 
 /**
  * nc_recomb_dtau_dlambda_Xe:
  * @cosmo: a #NcHICosmo.
  * @lambda: $\lambda$.
- * 
+ *
  * The derivative of the optical depth [Eq. \eqref{eq:def:dtaudlambda}] over
  * the ionization fraction $X_\e$ [Eq. \eqref{eq:def:Xe}].
- * 
+ *
  * Returns: $X_\e^{-1}d\tau/d\lambda$.
  */
 /**
  * nc_recomb_He_fully_ionized_dtau_dlambda:
  * @cosmo: a #NcHICosmo.
  * @lambda: $\lambda$.
- * 
+ *
  * The derivative of the optical depth [Eq. \eqref{eq:def:dtaudlambda}], considering
- * fully ionized helium and hydrogen [nc_recomb_He_fully_ionized_Xe ()]. 
- * 
+ * fully ionized helium and hydrogen [nc_recomb_He_fully_ionized_Xe ()].
+ *
  * Returns: $d\tau/d\lambda$.
  */
 /**
@@ -577,7 +577,7 @@ nc_recomb_equilibrium_Xe (NcRecomb *recomb, NcHICosmo *cosmo, const gdouble x)
  * The case B $\HyII$ recombination coefficient.
  *
  * The fitting formula of the case B recombination coefficient for $\HyII$ as
- * in <link linkend="XPequignot1991">Pequignot (1991)</link>.
+ * in [Pequignot (1991)][XPequignot1991].
  *
  * Returns: the value of the case B recombination coefficient for
  * $\HyII$, $\alpha_H$ .
@@ -602,7 +602,7 @@ nc_recomb_equilibrium_Xe (NcRecomb *recomb, NcHICosmo *cosmo, const gdouble x)
  * The case B $\HeII$ recombination coefficient.
  *
  * The fitting formula of the case B recombination coefficient for $\HeII$ as
- * in <link linkend="XHummer1998">Hummer (1998)</link>.
+ * in [Hummer (1998)][XHummer1998].
  *
  * Returns: the value of the case B recombination coefficient for $\HeII$, $\alpha_H$ .
  */
@@ -637,7 +637,7 @@ nc_recomb_equilibrium_Xe (NcRecomb *recomb, NcHICosmo *cosmo, const gdouble x)
  * @recomb_name: a string representing a #NcRecomb object.
  *
  * FIXME
- * 
+ *
  * Returns: a new #NcRecomb.
  */
 NcRecomb *
@@ -654,9 +654,9 @@ nc_recomb_new_from_name (const gchar *recomb_name)
 /**
  * nc_recomb_ref:
  * @recomb: a #NcRecomb.
- * 
+ *
  * Increases the reference count of @recomb.
- * 
+ *
  * Returns: (transfer full): @recomb.
  */
 NcRecomb *
@@ -668,9 +668,9 @@ nc_recomb_ref (NcRecomb *recomb)
 /**
  * nc_recomb_free:
  * @recomb: a #NcRecomb.
- * 
+ *
  * Decreases the reference count of @recomb.
- * 
+ *
  */
 void
 nc_recomb_free (NcRecomb *recomb)
@@ -681,10 +681,10 @@ nc_recomb_free (NcRecomb *recomb)
 /**
  * nc_recomb_clear:
  * @recomb: a #NcRecomb.
- * 
+ *
  * Decreases the reference count of *@recomb if
  * *@recomb is not NULL, then sets *@recomb to NULL.
- * 
+ *
  */
 void
 nc_recomb_clear (NcRecomb **recomb)
@@ -696,9 +696,9 @@ nc_recomb_clear (NcRecomb **recomb)
  * nc_recomb_prepare:
  * @recomb: a #NcRecomb.
  * @cosmo: a #NcHICosmo.
- * 
+ *
  * Prepare the object using the model @cosmo.
- * 
+ *
  */
 void
 nc_recomb_prepare (NcRecomb *recomb, NcHICosmo *cosmo)
@@ -711,14 +711,14 @@ nc_recomb_prepare (NcRecomb *recomb, NcHICosmo *cosmo)
  * @recomb: a #NcRecomb
  * @cosmo: a #NcHICosmo.
  * @lambda: $\lambda$.
- * 
+ *
  * Calculates the value of $X_\e$ at $x$.
- * 
+ *
  * Returns: $X_\e$.
  */
-gdouble 
+gdouble
 nc_recomb_Xe (NcRecomb *recomb, NcHICosmo *cosmo, const gdouble lambda)
-{ 
+{
   NCM_UNUSED (cosmo);
   return ncm_spline_eval (recomb->Xe_s, lambda);
 }
@@ -728,9 +728,9 @@ nc_recomb_Xe (NcRecomb *recomb, NcHICosmo *cosmo, const gdouble lambda)
  * @recomb: a #NcRecomb.
  * @cosmo: a #NcHICosmo.
  * @lambda: $\lambda$.
- * 
+ *
  * FIXME
- * 
+ *
  * Returns: $d\tau/dx$.
  */
 gdouble
@@ -745,9 +745,9 @@ nc_recomb_dtau_dx (NcRecomb *recomb, NcHICosmo *cosmo, const gdouble lambda)
  * @recomb: a #NcRecomb.
  * @cosmo: a #NcHICosmo.
  * @lambda: $\lambda$.
- * 
+ *
  * FIXME
- * 
+ *
  * Returns: $d\tau/d\lambda$.
  */
 gdouble
@@ -823,7 +823,7 @@ gdouble
 nc_recomb_tau_lambda0_lambda1 (NcRecomb *recomb, NcHICosmo *cosmo, const gdouble lambda0, const gdouble lambda1)
 {
   NCM_UNUSED (cosmo);
-  return ncm_spline_eval (recomb->tau_s, lambda1) - 
+  return ncm_spline_eval (recomb->tau_s, lambda1) -
     ncm_spline_eval (recomb->tau_s, lambda0);
 }
 
@@ -837,7 +837,7 @@ nc_recomb_tau_lambda0_lambda1 (NcRecomb *recomb, NcHICosmo *cosmo, const gdouble
  *
  * Returns: $\log(v_\tau)$.
  */
-gdouble 
+gdouble
 nc_recomb_log_v_tau (NcRecomb *recomb, NcHICosmo *cosmo, const gdouble lambda)
 {
   const gdouble tau = nc_recomb_tau (recomb, cosmo, lambda);
@@ -856,7 +856,7 @@ nc_recomb_log_v_tau (NcRecomb *recomb, NcHICosmo *cosmo, const gdouble lambda)
  *
  * Returns: $v_\tau$.
  */
-gdouble 
+gdouble
 nc_recomb_v_tau (NcRecomb *recomb, NcHICosmo *cosmo, const gdouble lambda)
 {
   const gdouble tau = nc_recomb_tau (recomb, cosmo, lambda);
@@ -874,7 +874,7 @@ nc_recomb_v_tau (NcRecomb *recomb, NcHICosmo *cosmo, const gdouble lambda)
  *
  * Returns: $dv_\tau/d\lambda$.
  */
-gdouble 
+gdouble
 nc_recomb_dv_tau_dlambda (NcRecomb *recomb, NcHICosmo *cosmo, const gdouble lambda)
 {
   const gdouble tau = nc_recomb_tau (recomb, cosmo, lambda);
@@ -893,14 +893,14 @@ nc_recomb_dv_tau_dlambda (NcRecomb *recomb, NcHICosmo *cosmo, const gdouble lamb
  *
  * Returns: $d2v_\tau/d\lambda^2$.
  */
-gdouble 
+gdouble
 nc_recomb_d2v_tau_dlambda2 (NcRecomb *recomb, NcHICosmo *cosmo, const gdouble lambda)
 {
   const gdouble tau = nc_recomb_tau (recomb, cosmo, lambda);
   const gdouble dtau_dlambda = nc_recomb_dtau_dlambda (recomb, cosmo, lambda);
   const gdouble d2tau_dlambda2 = nc_recomb_d2tau_dlambda2 (recomb, cosmo, lambda);
   const gdouble d3tau_dlambda3 = nc_recomb_d3tau_dlambda3 (recomb, cosmo, lambda);
-  return gsl_sf_exp_mult (-tau, (gsl_pow_3 (dtau_dlambda) + d3tau_dlambda3 
+  return gsl_sf_exp_mult (-tau, (gsl_pow_3 (dtau_dlambda) + d3tau_dlambda3
                                  - 3.0 * dtau_dlambda * d2tau_dlambda2));
 }
 
@@ -987,12 +987,12 @@ _nc_recomb_v_tau_min (gdouble lambda, gpointer params)
  * @cosmo: a #NcHICosmo.
  *
  * Calculate the maximum of the visibility function [Eq \eqref{eq:def:vtau}],
- * the value of $\lambda_\text{max}$ where 
+ * the value of $\lambda_\text{max}$ where
  * $dv_\tau(\lambda_\text{max})/d\lambda = 0$.
  *
- * Returns: $\lambda_\text{max}$. 
+ * Returns: $\lambda_\text{max}$.
  */
-gdouble 
+gdouble
 nc_recomb_v_tau_lambda_mode (NcRecomb *recomb, NcHICosmo *cosmo)
 {
   _nc_recomb_func func;
@@ -1026,11 +1026,11 @@ _nc_recomb_v_tau_features (gdouble lambda, gpointer params)
  * @lambda_u: (out): $\lambda_u$
  *
  * Calculate the maximum of the visibility function [Eq \eqref{eq:def:vtau}], i.e,
- * the value of $\lambda_\text{max}$ where 
- * $dv_\tau(\lambda_\text{max})/d\lambda = 0$, and the values where the 
- * visibility drop to $v_\tau(\lambda_\text{max})e^{-\text{logref}}$ to the left 
+ * the value of $\lambda_\text{max}$ where
+ * $dv_\tau(\lambda_\text{max})/d\lambda = 0$, and the values where the
+ * visibility drop to $v_\tau(\lambda_\text{max})e^{-\text{logref}}$ to the left
  * $\lambda_l$ and to the right $\lambda_u$ of $\lambda_\text{max}$.
- * 
+ *
  */
 void
 nc_recomb_v_tau_lambda_features (NcRecomb *recomb, NcHICosmo *cosmo, gdouble logref, gdouble *lambda_max, gdouble *lambda_l, gdouble *lambda_u)
@@ -1074,12 +1074,12 @@ _nc_recomb_tau_ref (gdouble lambda, gpointer params)
  * @recomb: a #NcRecomb.
  * @cosmo: a #NcHICosmo.
  *
- * Calculate the value of $\lambda$ where the optical depth 
+ * Calculate the value of $\lambda$ where the optical depth
  * [Eq \eqref{eq:def:tau}] is equal to one, i.e., $\tau(\lambda^\star) = 1$.
  *
- * Returns: $\lambda^\star$. 
+ * Returns: $\lambda^\star$.
  */
-gdouble 
+gdouble
 nc_recomb_tau_zstar (NcRecomb *recomb, NcHICosmo *cosmo)
 {
   _nc_recomb_func func;
@@ -1092,8 +1092,8 @@ nc_recomb_tau_zstar (NcRecomb *recomb, NcHICosmo *cosmo)
   func.cosmo  = cosmo;
   func.ref    = 1.0;
 
-  return _nc_recomb_root (recomb, &F, 
-                          -log (10.0 * ncm_c_wmap5_cmb_z () + 10.0), 
+  return _nc_recomb_root (recomb, &F,
+                          -log (10.0 * ncm_c_wmap5_cmb_z () + 10.0),
                           recomb->lambdaf);
 }
 
@@ -1101,15 +1101,15 @@ nc_recomb_tau_zstar (NcRecomb *recomb, NcHICosmo *cosmo)
  * nc_recomb_tau_cutoff:
  * @recomb: a #NcRecomb.
  * @cosmo: a #NcHICosmo.
- * 
- * Calculate the value of $\lambda$ where the optical depth 
- * [Eq \eqref{eq:def:tau}] attains a value such that 
- * $e^{-\tau(\lambda_\text{cutoff})} = \epsilon_\text{double}$, i.e.,  
+ *
+ * Calculate the value of $\lambda$ where the optical depth
+ * [Eq \eqref{eq:def:tau}] attains a value such that
+ * $e^{-\tau(\lambda_\text{cutoff})} = \epsilon_\text{double}$, i.e.,
  * is equal to the minimum value of a double which add to one.
- * 
+ *
  * Returns: $\lambda_\text{cutoff}$.
  */
-gdouble 
+gdouble
 nc_recomb_tau_cutoff (NcRecomb *recomb, NcHICosmo *cosmo)
 {
   _nc_recomb_func func;
@@ -1122,8 +1122,8 @@ nc_recomb_tau_cutoff (NcRecomb *recomb, NcHICosmo *cosmo)
   func.cosmo  = cosmo;
   func.ref    = -GSL_LOG_DBL_EPSILON;
 
-  return _nc_recomb_root (recomb, &F, 
-                          recomb->lambdai, 
+  return _nc_recomb_root (recomb, &F,
+                          recomb->lambdai,
                           recomb->lambdaf);
 }
 
@@ -1131,12 +1131,12 @@ nc_recomb_tau_cutoff (NcRecomb *recomb, NcHICosmo *cosmo)
  * nc_recomb_tau_zdrag:
  * @recomb: a #NcRecomb.
  * @cosmo: a #NcHICosmo.
- * 
+ *
  * FIXME
  *
- * Returns: FIXME. 
+ * Returns: FIXME.
  */
-gdouble 
+gdouble
 nc_recomb_tau_zdrag (NcRecomb *recomb, NcHICosmo *cosmo)
 {
   NCM_UNUSED (recomb);
@@ -1149,7 +1149,7 @@ _nc_recomb_dtau_dlambda (gdouble lambda, gpointer p)
 {
   _nc_recomb_func *func = (_nc_recomb_func *) p;
 
-  return ncm_spline_eval (func->recomb->Xe_s, lambda) * 
+  return ncm_spline_eval (func->recomb->Xe_s, lambda) *
     nc_recomb_dtau_dlambda_Xe (func->cosmo, lambda);
 }
 
@@ -1161,7 +1161,7 @@ _nc_recomb_tau (gdouble lambda, gpointer p)
   return -ncm_spline_eval_integ (func->recomb->dtau_dlambda_s, lambda, func->recomb->lambdaf);
 }
 
-void 
+void
 _nc_recomb_prepare_tau_splines (NcRecomb *recomb, NcHICosmo *cosmo)
 {
   _nc_recomb_func func;
@@ -1178,7 +1178,7 @@ _nc_recomb_prepare_tau_splines (NcRecomb *recomb, NcHICosmo *cosmo)
   F.params   = &func;
 
   F.function = &_nc_recomb_dtau_dlambda;
-  ncm_spline_set_func (recomb->dtau_dlambda_s, NCM_SPLINE_FUNCTION_SPLINE, 
+  ncm_spline_set_func (recomb->dtau_dlambda_s, NCM_SPLINE_FUNCTION_SPLINE,
                        &F, recomb->lambdai, recomb->lambdaf, 0, recomb->prec);
 
   if (TRUE)
@@ -1203,7 +1203,7 @@ _nc_recomb_prepare_tau_splines (NcRecomb *recomb, NcHICosmo *cosmo)
   else
   {
     F.function = &_nc_recomb_tau;
-    ncm_spline_set_func (recomb->tau_s, NCM_SPLINE_FUNCTION_SPLINE, 
+    ncm_spline_set_func (recomb->tau_s, NCM_SPLINE_FUNCTION_SPLINE,
                          &F, recomb->lambdai, recomb->lambdaf, 0, recomb->prec);
   }
 }

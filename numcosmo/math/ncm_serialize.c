@@ -13,12 +13,12 @@
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * numcosmo is distributed in the hope that it will be useful, but
  * WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
  * See the GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License along
  * with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
@@ -27,9 +27,9 @@
  * SECTION:ncm_serialize
  * @title: NcmSerialize
  * @short_description: Serialization, deserialization and duplication object.
- * 
+ *
  * FIXME
- * 
+ *
  */
 
 #ifdef HAVE_CONFIG_H
@@ -59,17 +59,17 @@ static void
 ncm_serialize_init (NcmSerialize *ser)
 {
   GError *error = NULL;
-  
-  ser->name_ptr = g_hash_table_new_full (&g_str_hash, &g_str_equal, &g_free, 
+
+  ser->name_ptr = g_hash_table_new_full (&g_str_hash, &g_str_equal, &g_free,
                                          &g_object_unref);
-  ser->ptr_name = g_hash_table_new_full (&g_direct_hash, &g_direct_equal, &g_object_unref, 
+  ser->ptr_name = g_hash_table_new_full (&g_direct_hash, &g_direct_equal, &g_object_unref,
                                          &g_free);
 
-  ser->saved_ptr_name = g_hash_table_new_full (&g_direct_hash, &g_direct_equal, &g_object_unref, 
+  ser->saved_ptr_name = g_hash_table_new_full (&g_direct_hash, &g_direct_equal, &g_object_unref,
                                                &g_free);
-  ser->saved_name_ser = g_hash_table_new_full (&g_str_hash, &g_str_equal, &g_free, 
+  ser->saved_name_ser = g_hash_table_new_full (&g_str_hash, &g_str_equal, &g_free,
                                                (GDestroyNotify)&g_variant_unref);
-  
+
   ser->is_named_regex  = g_regex_new ("^\\s*[A-Z][A-Za-z0-9]+\\s*\\[([A-Za-z0-9\\:]+)\\]\\s*$", 0, 0, &error);
   ser->parse_obj_regex = g_regex_new ("^\\s*([A-Z][A-Za-z0-9]+)\\s*([\\{]?.*[\\}]?)\\s*$", 0, 0, &error);
   ser->autosave_count = 0;
@@ -124,8 +124,8 @@ _ncm_serialize_finalize (GObject *object)
   g_hash_table_unref (ser->ptr_name);
 
   g_hash_table_unref (ser->saved_ptr_name);
-  g_hash_table_unref (ser->saved_name_ser);  
-  
+  g_hash_table_unref (ser->saved_name_ser);
+
   g_regex_unref (ser->is_named_regex);
   g_regex_unref (ser->parse_obj_regex);
 
@@ -146,7 +146,7 @@ ncm_serialize_class_init (NcmSerializeClass *klass)
    * NcmSerialize:options:
    *
    * Serialization options.
-   * 
+   *
    */
   g_object_class_install_property (object_class,
                                    PROP_OPTS,
@@ -160,15 +160,15 @@ ncm_serialize_class_init (NcmSerializeClass *klass)
 /**
  * ncm_serialize_new:
  * @sopt: a set of options from #NcmSerializeOpt.
- * 
+ *
  * Creates a new #NcmSerialize object.
- * 
+ *
  * Returns: a new #NcmSerialize.
  */
 NcmSerialize *
 ncm_serialize_new (NcmSerializeOpt sopt)
 {
-  NcmSerialize *ser = g_object_new (NCM_TYPE_SERIALIZE, 
+  NcmSerialize *ser = g_object_new (NCM_TYPE_SERIALIZE,
                                     "options", sopt,
                                     NULL);
   return ser;
@@ -177,9 +177,9 @@ ncm_serialize_new (NcmSerializeOpt sopt)
 /**
  * ncm_serialize_ref:
  * @ser: a #NcmSerialize.
- * 
+ *
  * Increases the reference count of @ser by one.
- * 
+ *
  * Returns: (transfer full): @ser.
  */
 NcmSerialize *
@@ -191,11 +191,11 @@ ncm_serialize_ref (NcmSerialize *ser)
 /**
  * ncm_serialize_free:
  * @ser: a #NcmSerialize.
- * 
+ *
  * Decreases the reference count of @ser by one.
- * 
+ *
  */
-void 
+void
 ncm_serialize_free (NcmSerialize *ser)
 {
   g_object_unref (ser);
@@ -204,9 +204,9 @@ ncm_serialize_free (NcmSerialize *ser)
 /**
  * ncm_serialize_unref:
  * @ser: a #NcmSerialize.
- * 
+ *
  * Same as ncm_serialize_free().
- * 
+ *
  */
 void
 ncm_serialize_unref (NcmSerialize *ser)
@@ -217,11 +217,11 @@ ncm_serialize_unref (NcmSerialize *ser)
 /**
  * ncm_serialize_clear:
  * @ser: a #NcmSerialize.
- * 
+ *
  * Decreases the reference count of *@ser by one, and sets *@ser to NULL.
- * 
+ *
  */
-void 
+void
 ncm_serialize_clear (NcmSerialize **ser)
 {
   g_clear_object (ser);
@@ -230,12 +230,12 @@ ncm_serialize_clear (NcmSerialize **ser)
 /**
  * ncm_serialize_reset:
  * @ser: a #NcmSerialize.
- * 
+ *
  * Releases all objects in @ser and erase all serialized
  * objects.
- * 
+ *
  */
-void 
+void
 ncm_serialize_reset (NcmSerialize *ser)
 {
   ncm_serialize_clear_instances (ser);
@@ -248,11 +248,11 @@ ncm_serialize_reset (NcmSerialize *ser)
 /**
  * ncm_serialize_clear_instances:
  * @ser: a #NcmSerialize.
- * 
+ *
  * Releases all objects in @ser.
- * 
+ *
  */
-void 
+void
 ncm_serialize_clear_instances (NcmSerialize *ser)
 {
   g_hash_table_remove_all (ser->name_ptr);
@@ -262,30 +262,30 @@ ncm_serialize_clear_instances (NcmSerialize *ser)
 /**
  * ncm_serialize_log_stats:
  * @ser: a #NcmSerialize.
- * 
+ *
  * Releases all objects in @ser.
- * 
+ *
  */
-void 
+void
 ncm_serialize_log_stats (NcmSerialize *ser)
 {
   g_message ("# NcmSerialize: autosaved object %u\n", ser->autosave_count);
   g_message ("# NcmSerialize: name_ptr         %u\n", g_hash_table_size (ser->name_ptr));
   g_message ("# NcmSerialize: ptr_name         %u\n", g_hash_table_size (ser->ptr_name));
   g_message ("# NcmSerialize: saved_ptr_name   %u\n", g_hash_table_size (ser->saved_ptr_name));
-  g_message ("# NcmSerialize: saved_name_ser   %u\n", g_hash_table_size (ser->saved_name_ser));  
+  g_message ("# NcmSerialize: saved_name_ser   %u\n", g_hash_table_size (ser->saved_name_ser));
 }
 
 /**
  * ncm_serialize_contain_instance:
  * @ser: a #NcmSerialize.
  * @obj: (type GObject): a #GObject.
- * 
+ *
  * Checks if the #GObject instance @obj is contained in @ser.
- * 
+ *
  * Returns: if @obj is already in @ser.
  */
-gboolean 
+gboolean
 ncm_serialize_contain_instance (NcmSerialize *ser, gpointer obj)
 {
   g_assert (G_IS_OBJECT (obj));
@@ -296,12 +296,12 @@ ncm_serialize_contain_instance (NcmSerialize *ser, gpointer obj)
  * ncm_serialize_contain_name:
  * @ser: a #NcmSerialize.
  * @name: an instance name.
- * 
+ *
  * Checks if there is an instance named @name in @ser.
- * 
+ *
  * Returns: if there is instance named @name in @ser.
  */
-gboolean 
+gboolean
 ncm_serialize_contain_name (NcmSerialize *ser, const gchar *name)
 {
   g_assert (name != NULL);
@@ -311,12 +311,12 @@ ncm_serialize_contain_name (NcmSerialize *ser, const gchar *name)
 /**
  * ncm_serialize_count_instances:
  * @ser: a #NcmSerialize.
- * 
+ *
  * Counts the number of instances registered in @ser.
- * 
+ *
  * Returns: the number of instances in @ser.
  */
-guint 
+guint
 ncm_serialize_count_instances (NcmSerialize *ser)
 {
   return g_hash_table_size (ser->name_ptr);
@@ -326,12 +326,12 @@ ncm_serialize_count_instances (NcmSerialize *ser)
  * ncm_serialize_get_by_name:
  * @ser: a #NcmSerialize.
  * @name: an instance name.
- * 
+ *
  * Gets a new reference for the instance @name or null if there isn't a instance named @name.
- * 
+ *
  * Returns: (transfer full) (type GObject): Gets the instance named @name or NULL.
  */
-gpointer 
+gpointer
 ncm_serialize_get_by_name (NcmSerialize *ser, const gchar *name)
 {
   g_assert (name != NULL);
@@ -348,10 +348,10 @@ ncm_serialize_get_by_name (NcmSerialize *ser, const gchar *name)
  * ncm_serialize_peek_name:
  * @ser: a #NcmSerialize.
  * @obj: (type GObject): a #GObject.
- * 
+ *
  * Gets the named associated to the instance @obj, it is an error to call this function
  * when the @obj is not contained in @ser.
- * 
+ *
  * Returns: (transfer none): the name of @obj.
  */
 gchar *
@@ -370,11 +370,11 @@ ncm_serialize_peek_name (NcmSerialize *ser, gpointer obj)
  * @obj: (type GObject): a #GObject.
  * @name: the @obj name.
  * @overwrite: whether to overwrite if there is already an object named @name.
- * 
+ *
  * Adds the object @obj to @ser using @name.
- * 
+ *
  */
-void 
+void
 ncm_serialize_set (NcmSerialize *ser, gpointer obj, const gchar *name, gboolean overwrite)
 {
   g_assert (G_IS_OBJECT (obj));
@@ -392,14 +392,14 @@ ncm_serialize_set (NcmSerialize *ser, gpointer obj, const gchar *name, gboolean 
         return;
       }
     }
-    g_hash_table_insert (ser->name_ptr, 
+    g_hash_table_insert (ser->name_ptr,
                          g_strdup (name), g_object_ref (obj));
-    g_hash_table_insert (ser->ptr_name, 
+    g_hash_table_insert (ser->ptr_name,
                          g_object_ref (obj), g_strdup (name));
-  }  
+  }
 }
 
-static void 
+static void
 _ncm_serialize_save_ser (NcmSerialize *ser, gchar *name, gpointer obj, GVariant *ser_var)
 {
   g_assert (G_IS_OBJECT (obj));
@@ -412,12 +412,12 @@ _ncm_serialize_save_ser (NcmSerialize *ser, gchar *name, gpointer obj, GVariant 
     g_error ("_ncm_serialize_save_ser: instance already saved.");
 
   /*printf ("Saving: ``%s'' <=> %s\n", name, g_variant_print (ser_var, TRUE));*/
-  
-  g_hash_table_insert (ser->saved_ptr_name, 
+
+  g_hash_table_insert (ser->saved_ptr_name,
                        g_object_ref (obj), g_strdup (name));
-  g_hash_table_insert (ser->saved_name_ser, 
+  g_hash_table_insert (ser->saved_name_ser,
                        g_strdup (name), g_variant_ref_sink (ser_var));
-  
+
   ser->autosave_count++;
 }
 
@@ -425,14 +425,14 @@ _ncm_serialize_save_ser (NcmSerialize *ser, gchar *name, gpointer obj, GVariant 
  * ncm_serialize_is_named:
  * @ser: a #NcmSerialize.
  * @serobj: serialized object.
- * @name: (allow-none) (out) (transfer full): object name. 
- * 
+ * @name: (allow-none) (out) (transfer full): object name.
+ *
  * Checks if @serobj is a named serialized object, if so sets its name in @name
  * and returns TRUE.
- * 
+ *
  * Returns: whether @serobj is a named serialized object.
  */
-gboolean 
+gboolean
 ncm_serialize_is_named (NcmSerialize *ser, const gchar *serobj, gchar **name)
 {
   GError *error = NULL;
@@ -440,7 +440,7 @@ ncm_serialize_is_named (NcmSerialize *ser, const gchar *serobj, gchar **name)
   GVariant *var_obj = NULL;
   GVariant *obj_name = NULL;
   GVariant *params = NULL;
-  
+
   var_obj = g_variant_parse (G_VARIANT_TYPE (NCM_SERIALIZE_OBJECT_TYPE), serobj, NULL, NULL, &error);
   g_clear_error (&error);
 
@@ -458,7 +458,7 @@ ncm_serialize_is_named (NcmSerialize *ser, const gchar *serobj, gchar **name)
     g_match_info_free (match_info);
 
     if (params != NULL && g_variant_n_children (params) > 0)
-      g_error ("ncm_serialize_is_named: Invalid named object ``%s'', named objects cannot have properties ``%s''.", 
+      g_error ("ncm_serialize_is_named: Invalid named object ``%s'', named objects cannot have properties ``%s''.",
                serobj, g_variant_print (params, TRUE));
 
     if (obj_name != NULL)
@@ -580,7 +580,7 @@ g_dbus_gvariant_to_gvalue (GVariant *value, GValue *out_gvalue)
       g_value_init (out_gvalue, G_TYPE_STRING);
       g_value_set_string (out_gvalue, g_variant_get_string (value, NULL));
       break;
-      
+
     case G_VARIANT_CLASS_ARRAY:
     {
       type = g_variant_get_type (value);
@@ -590,13 +590,13 @@ g_dbus_gvariant_to_gvalue (GVariant *value, GValue *out_gvalue)
           g_value_init (out_gvalue, G_TYPE_STRING);
           g_value_set_string (out_gvalue, g_variant_get_bytestring (value));
           break;
-          
+
         case G_VARIANT_CLASS_STRING:
           g_value_init (out_gvalue, G_TYPE_STRV);
           array = g_variant_dup_strv (value, NULL);
           g_value_take_boxed (out_gvalue, array);
           break;
-          
+
         case G_VARIANT_CLASS_ARRAY:
         {
           switch (g_variant_type_peek_string (type)[2])
@@ -606,7 +606,7 @@ g_dbus_gvariant_to_gvalue (GVariant *value, GValue *out_gvalue)
               array = g_variant_dup_bytestring_array (value, NULL);
               g_value_take_boxed (out_gvalue, array);
               break;
-              
+
             default:
               g_value_init (out_gvalue, G_TYPE_VARIANT);
               g_value_set_variant (out_gvalue, value);
@@ -782,21 +782,21 @@ g_dbus_gvalue_to_gvariant (const GValue *gvalue, const GVariantType *type)
  * ncm_serialize_set_property:
  * @ser: a #NcmSerialize.
  * @obj: a #GObject.
- * @prop_str: a string containing the parameters to set. 
+ * @prop_str: a string containing the parameters to set.
  *
- * Deserialize the set of object properties in @params and sets the @obj. 
+ * Deserialize the set of object properties in @params and sets the @obj.
  *
  */
-void 
+void
 ncm_serialize_set_property (NcmSerialize *ser, GObject *obj, const gchar *prop_str)
 {
   GError *error = NULL;
-  GVariant *params = g_variant_parse (G_VARIANT_TYPE (NCM_SERIALIZE_PROPERTIES_TYPE), 
+  GVariant *params = g_variant_parse (G_VARIANT_TYPE (NCM_SERIALIZE_PROPERTIES_TYPE),
                                       prop_str, NULL, NULL, &error);
   if (params == NULL)
-    g_error ("ncm_serialize_set_property: cannot parse prop_str %s: %s.", 
+    g_error ("ncm_serialize_set_property: cannot parse prop_str %s: %s.",
              prop_str, error->message);
-  
+
   g_assert (g_variant_is_of_type (params, G_VARIANT_TYPE (NCM_SERIALIZE_PROPERTIES_TYPE)));
 
   {
@@ -843,6 +843,73 @@ ncm_serialize_set_property (NcmSerialize *ser, GObject *obj, const gchar *prop_s
 }
 
 /**
+ * ncm_serialize_set_property_from_key_file:
+ * @ser: a #NcmSerialize.
+ * @obj: a #GObject.
+ * @prop_file: a GKeyFile file containing the parameters to set.
+ *
+ * Deserializes the set of object properties in @prop_file and sets the @obj.
+ *
+ */
+void
+ncm_serialize_set_property_from_key_file (NcmSerialize *ser, GObject *obj, const gchar *prop_file)
+{
+  GKeyFile *key_file = g_key_file_new ();
+  GError *error = NULL;
+  GString *prop_ser = g_string_sized_new (200);
+
+  if (!g_key_file_load_from_file (key_file, prop_file, G_KEY_FILE_KEEP_COMMENTS | G_KEY_FILE_KEEP_TRANSLATIONS, &error))
+  {
+    gchar *contents;
+    gsize length = 0;
+
+    /* If it does not posses a group add one. */
+    g_clear_error (&error);
+    if (!g_file_get_contents (prop_file, &contents, &length, &error))
+    {
+      g_error ("ncm_serialize_set_property_from_key_file: Invalid mset configuration file: %s %s", prop_file, error->message);
+      return;
+    }
+    else
+    {
+      gchar *gcontents = g_strconcat ("[Precision Parameters]\n\n\n", contents, NULL);
+      g_free (contents);
+      if (!g_key_file_load_from_data (key_file, gcontents, strlen (gcontents), G_KEY_FILE_KEEP_COMMENTS | G_KEY_FILE_KEEP_TRANSLATIONS, &error))
+      {
+        g_error ("ncm_serialize_set_property_from_key_file: Invalid mset configuration file: %s %s", prop_file, error->message);
+        return;
+      }
+      g_free (gcontents);
+    }
+  }
+
+  g_string_append_printf (prop_ser, "@a{sv} {");
+  {
+    gsize nkeys = 0;
+    gchar **keys = g_key_file_get_keys (key_file, "Precision Parameters", &nkeys, &error);
+    guint i;
+    if (error != NULL)
+      g_error ("ncm_serialize_set_property_from_key_file: %s", error->message);
+    for (i = 0; i < nkeys; i++)
+    {
+      gchar *propval = g_key_file_get_value (key_file, "Precision Parameters", keys[i], &error);
+      if (error != NULL)
+        g_error ("ncm_serialize_set_property_from_key_file: %s", error->message);
+      g_string_append_printf (prop_ser, "\'%s\':<%s>", keys[i], propval);
+      g_free (propval);
+      if (i + 1 != nkeys)
+        g_string_append (prop_ser, ", ");
+    }
+    g_string_append (prop_ser, "}");
+    g_strfreev (keys);
+  }
+
+  ncm_serialize_set_property (ser, obj, prop_ser->str);
+  g_key_file_unref (key_file);
+  g_string_free (prop_ser, TRUE);
+}
+
+/**
  * ncm_serialize_from_variant:
  * @ser: a #NcmSerialize.
  * @var_obj: A #GVariant containing the serialized version of the object.
@@ -878,9 +945,9 @@ _ncm_serialize_from_saved_or_named (NcmSerialize *ser, const gchar *obj_ser, GVa
   {
     GVariant *var_obj;
     if (params != NULL && g_variant_n_children (params) > 0)
-      g_error ("_ncm_serialize_from_saved_or_named: Invalid named object parameters ``%s'', named objects cannot have properties.", 
+      g_error ("_ncm_serialize_from_saved_or_named: Invalid named object parameters ``%s'', named objects cannot have properties.",
                g_variant_print (params, TRUE));
-    
+
     if (ncm_serialize_contain_name (ser, ni_name))
     {
       obj = ncm_serialize_get_by_name (ser, ni_name);
@@ -898,10 +965,10 @@ _ncm_serialize_from_saved_or_named (NcmSerialize *ser, const gchar *obj_ser, GVa
       return obj;
     }
     else
-      g_error ("_ncm_serialize_from_saved_or_named: Creating object from ``%s'', depending object ``%s'' not found.", 
-               obj_ser, ni_name);    
+      g_error ("_ncm_serialize_from_saved_or_named: Creating object from ``%s'', depending object ``%s'' not found.",
+               obj_ser, ni_name);
   }
-  
+
   return obj;
 }
 
@@ -921,11 +988,14 @@ ncm_serialize_from_string (NcmSerialize *ser, const gchar *obj_ser)
   GMatchInfo *match_info = NULL;
   GVariant *var_obj = NULL;
   GObject *obj = _ncm_serialize_from_saved_or_named (ser, obj_ser, NULL);
+  gchar *error_msg = NULL;
 
   if (obj != NULL)
     return obj;
 
   var_obj = g_variant_parse (G_VARIANT_TYPE (NCM_SERIALIZE_OBJECT_TYPE), obj_ser, NULL, NULL, &error);
+  if (error != NULL)
+    error_msg = g_strdup (error->message);
   g_clear_error (&error);
   if (var_obj != NULL)
   {
@@ -938,9 +1008,10 @@ ncm_serialize_from_string (NcmSerialize *ser, const gchar *obj_ser)
     gchar *obj_prop = g_match_info_fetch (match_info, 2);
     GVariant *params = NULL;
 
+    g_free (error_msg);
     if (obj_prop != NULL && strlen (obj_prop) > 0)
     {
-      params = g_variant_parse (G_VARIANT_TYPE (NCM_SERIALIZE_PROPERTIES_TYPE), 
+      params = g_variant_parse (G_VARIANT_TYPE (NCM_SERIALIZE_PROPERTIES_TYPE),
                                 obj_prop, NULL, NULL, &error);
       if (error != NULL)
       {
@@ -960,7 +1031,11 @@ ncm_serialize_from_string (NcmSerialize *ser, const gchar *obj_ser)
   else
   {
     g_match_info_free (match_info);
-    g_error ("ncm_serialize_from_string: cannot indentify object (%s) in string '%s'.", NCM_SERIALIZE_OBJECT_TYPE, obj_ser);
+    g_error ("ncm_serialize_from_string: cannot indentify object (%s) in string '%s', variant error `%s'.",
+             NCM_SERIALIZE_OBJECT_TYPE,
+             obj_ser,
+             error_msg);
+    g_free (error_msg);
   }
 
   return obj;
@@ -982,7 +1057,7 @@ ncm_serialize_from_file (NcmSerialize *ser, const gchar *filename)
   gchar *file = NULL;
   gsize length = 0;
   GObject *obj = NULL;
-  
+
   g_assert (filename != NULL);
   if (!g_file_get_contents (filename, &file, &length, &error))
     g_error ("_nc_data_snia_cov_load_matrix: cannot open file %s: %s",
@@ -993,7 +1068,7 @@ ncm_serialize_from_file (NcmSerialize *ser, const gchar *filename)
   obj = ncm_serialize_from_string (ser, file);
 
   g_free (file);
-  
+
   return obj;
 }
 
@@ -1002,9 +1077,9 @@ ncm_serialize_from_file (NcmSerialize *ser, const gchar *filename)
  * @ser: a #NcmSerialize.
  * @obj_name: string containing the object name.
  * @params: a #GVariant containing the object parameters.
- * 
+ *
  * Parses the serialized parameters and returns the newly created object using them.
- * 
+ *
  * Returns: (transfer full): A new #GObject.
  */
 GObject *
@@ -1270,7 +1345,7 @@ ncm_serialize_gvalue_to_gvariant (NcmSerialize *ser, GValue *val)
             var = g_variant_ref_sink (g_variant_new_strv (strv, -1));
         }
         else
-          g_error ("Cannot convert GValue '%s' to GVariant.", g_type_name (t));  
+          g_error ("Cannot convert GValue '%s' to GVariant.", g_type_name (t));
         break;
       }
       default:
@@ -1294,7 +1369,7 @@ _ncm_serialize_to_variant (NcmSerialize *ser, GObject *obj)
   GVariant *ser_var;
   const gchar *obj_name = G_OBJECT_TYPE_NAME (obj);
   gchar *saved_name = NULL;
-  
+
   if (ncm_serialize_contain_instance (ser, obj))
   {
     gchar *ni_name = ncm_serialize_peek_name (ser, obj);
@@ -1340,7 +1415,7 @@ _ncm_serialize_to_variant (NcmSerialize *ser, GObject *obj)
         g_object_get_property (obj, prop[i]->name, &val);
 
         var = ncm_serialize_gvalue_to_gvariant (ser, &val);
-        
+
         if (var == NULL)
         {
           g_value_unset (&val);
@@ -1363,7 +1438,7 @@ _ncm_serialize_to_variant (NcmSerialize *ser, GObject *obj)
     if (ser->opts & NCM_SERIALIZE_OPT_AUTOSAVE_SER)
     {
       gchar *name = g_strdup_printf (NCM_SERIALIZE_AUTOSAVE_NAME NCM_SERIALIZE_AUTOSAVE_NFORMAT, ser->autosave_count);
-      _ncm_serialize_save_ser (ser, name, obj, ser_var);      
+      _ncm_serialize_save_ser (ser, name, obj, ser_var);
       g_free (name);
       g_variant_unref (ser_var);
       ser_var = _ncm_serialize_to_variant (ser, obj);
@@ -1389,12 +1464,12 @@ ncm_serialize_to_variant (NcmSerialize *ser, GObject *obj)
     GVariant *cser_var = _ncm_serialize_to_variant (ser, obj);
     gchar *name = g_hash_table_lookup (ser->saved_ptr_name, obj);
     GVariant *ser_var = g_hash_table_lookup (ser->saved_name_ser, name);
-  
+
     g_assert (name != NULL);
     g_assert (ser_var != NULL);
 
     g_variant_unref (cser_var);
-    
+
     return g_variant_ref_sink (ser_var);
   }
   else
@@ -1433,7 +1508,7 @@ ncm_serialize_to_string (NcmSerialize *ser, GObject *obj, gboolean valid_variant
     {
       params_str = g_variant_print (params, TRUE);
       serstr = g_strdup_printf ("%s%s", obj_name, params_str);
-      g_free (params_str);  
+      g_free (params_str);
     }
     g_free (obj_name);
     g_variant_unref (params);
@@ -1483,12 +1558,12 @@ ncm_serialize_global (void)
 
 /**
  * ncm_serialize_global_reset:
- * 
+ *
  * Releases all objects in global #NcmSerialize and erase
  * all serialized objects.
- * 
+ *
  */
-void 
+void
 ncm_serialize_global_reset (void)
 {
   NcmSerialize *ser = ncm_serialize_global ();
@@ -1498,11 +1573,11 @@ ncm_serialize_global_reset (void)
 
 /**
  * ncm_serialize_global_clear_instances:
- * 
+ *
  * Releases all objects in global #NcmSerialize.
- * 
+ *
  */
-void 
+void
 ncm_serialize_global_clear_instances (void)
 {
   NcmSerialize *ser = ncm_serialize_global ();
@@ -1512,11 +1587,11 @@ ncm_serialize_global_clear_instances (void)
 
 /**
  * ncm_serialize_global_log_stats:
- * 
+ *
  * Releases all objects in global #NcmSerialize.
- * 
+ *
  */
-void 
+void
 ncm_serialize_global_log_stats (void)
 {
   NcmSerialize *ser = ncm_serialize_global ();
@@ -1527,12 +1602,12 @@ ncm_serialize_global_log_stats (void)
 /**
  * ncm_serialize_global_contain_instance:
  * @obj: (type GObject): a #GObject.
- * 
+ *
  * Global version of ncm_serialize_contain_instance().
- * 
+ *
  * Returns: if @obj is already in @ser.
  */
-gboolean 
+gboolean
 ncm_serialize_global_contain_instance (gpointer obj)
 {
   NcmSerialize *ser = ncm_serialize_global ();
@@ -1544,12 +1619,12 @@ ncm_serialize_global_contain_instance (gpointer obj)
 /**
  * ncm_serialize_global_contain_name:
  * @name: an instance name.
- * 
+ *
  * Global version of ncm_serialize_contain_name().
- * 
+ *
  * Returns: if there is instance named @name in @ser.
  */
-gboolean 
+gboolean
 ncm_serialize_global_contain_name (const gchar *name)
 {
   NcmSerialize *ser = ncm_serialize_global ();
@@ -1560,12 +1635,12 @@ ncm_serialize_global_contain_name (const gchar *name)
 
 /**
  * ncm_serialize_global_count_instances:
- * 
+ *
  * Global version of ncm_serialize_count_instances().
- * 
+ *
  * Returns: the number of instances in @ser.
  */
-guint 
+guint
 ncm_serialize_global_count_instances (void)
 {
   NcmSerialize *ser = ncm_serialize_global ();
@@ -1577,12 +1652,12 @@ ncm_serialize_global_count_instances (void)
 /**
  * ncm_serialize_global_get_by_name:
  * @name: an instance name.
- * 
+ *
  * Global version of ncm_serialize_get_by_name().
- * 
+ *
  * Returns: (transfer full) (type GObject): Gets the instance named @name or NULL.
  */
-gpointer 
+gpointer
 ncm_serialize_global_get_by_name (const gchar *name)
 {
   NcmSerialize *ser = ncm_serialize_global ();
@@ -1594,9 +1669,9 @@ ncm_serialize_global_get_by_name (const gchar *name)
 /**
  * ncm_serialize_global_peek_name:
  * @obj: (type GObject): a #GObject.
- * 
+ *
  * Global version of ncm_serialize_peek_name().
- * 
+ *
  * Returns: (transfer none): the name of @obj.
  */
 gchar *
@@ -1613,11 +1688,11 @@ ncm_serialize_global_peek_name (gpointer obj)
  * @obj: (type GObject): a #GObject.
  * @name: the @obj name.
  * @overwrite: whether to overwrite if there is already an object named @name.
- * 
+ *
  * Global version of ncm_serialize_set().
- * 
+ *
  */
-void 
+void
 ncm_serialize_global_set (gpointer obj, const gchar *name, gboolean overwrite)
 {
   NcmSerialize *ser = ncm_serialize_global ();
@@ -1628,13 +1703,13 @@ ncm_serialize_global_set (gpointer obj, const gchar *name, gboolean overwrite)
 /**
  * ncm_serialize_global_is_named:
  * @serobj: serialized object.
- * @name: (out) (transfer full): object name. 
- * 
+ * @name: (out) (transfer full): object name.
+ *
  * Global version of ncm_serialize_is_named().
- * 
+ *
  * Returns: whether @serobj is a named serialized object.
  */
-gboolean 
+gboolean
 ncm_serialize_global_is_named (const gchar *serobj, gchar **name)
 {
   NcmSerialize *ser = ncm_serialize_global ();
@@ -1646,12 +1721,12 @@ ncm_serialize_global_is_named (const gchar *serobj, gchar **name)
 /**
  * ncm_serialize_global_set_property:
  * @obj: a #GObject.
- * @prop_str: a string containing the parameters to set. 
+ * @prop_str: a string containing the parameters to set.
  *
  * Global version of ncm_serialize_set_property().
  *
  */
-void 
+void
 ncm_serialize_global_set_property (GObject *obj, const gchar *prop_str)
 {
   NcmSerialize *ser = ncm_serialize_global ();
@@ -1660,8 +1735,24 @@ ncm_serialize_global_set_property (GObject *obj, const gchar *prop_str)
 }
 
 /**
+ * ncm_serialize_global_set_property_from_key_file:
+ * @obj: a #GObject.
+ * @prop_file: a #GKeyFile containing the parameters to set.
+ *
+ * Global version of ncm_serialize_set_property().
+ *
+ */
+void
+ncm_serialize_global_set_property_from_key_file (GObject *obj, const gchar *prop_file)
+{
+  NcmSerialize *ser = ncm_serialize_global ();
+  ncm_serialize_set_property_from_key_file (ser, obj, prop_file);
+  ncm_serialize_unref (ser);
+}
+
+/**
  * ncm_serialize_global_from_variant:
- * @var_obj: A #GVariant containing the serialized version of the object. 
+ * @var_obj: A #GVariant containing the serialized version of the object.
  *
  * Global version of ncm_serialize_from_variant().
  *
@@ -1715,9 +1806,9 @@ ncm_serialize_global_from_file (const gchar *filename)
  * ncm_serialize_global_from_name_params:
  * @obj_name: string containing the object name.
  * @params: a #GVariant containing the object parameters.
- * 
+ *
  * Global version of ncm_serialize_from_name_params().
- * 
+ *
  * Returns: (transfer full): A new #GObject.
  */
 GObject *

@@ -13,12 +13,12 @@
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * numcosmo is distributed in the hope that it will be useful, but
  * WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
  * See the GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License along
  * with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
@@ -49,9 +49,9 @@ typedef struct _NcmSerializePrivate NcmSerializePrivate;
  * @NCM_SERIALIZE_OPT_AUTOSAVE_SER: Whether to automatically save objects serializations.
  * @NCM_SERIALIZE_OPT_AUTONAME_SER: Whether to automatically include objects created from saved serialization in the named instances.
  * @NCM_SERIALIZE_OPT_CLEAN_DUP: Combination of NCM_SERIALIZE_OPT_AUTOSAVE_SER and NCM_SERIALIZE_OPT_AUTONAME_SER
- * 
+ *
  * Options for serialization.
- * 
+ *
  */
 typedef enum _NcmSerializeOpt
 {
@@ -102,6 +102,8 @@ void ncm_serialize_set (NcmSerialize *ser, gpointer obj, const gchar *name, gboo
 gboolean ncm_serialize_is_named (NcmSerialize *ser, const gchar *serobj, gchar **name);
 
 void ncm_serialize_set_property (NcmSerialize *ser, GObject *obj, const gchar *prop_str);
+void ncm_serialize_set_property_from_key_file (NcmSerialize *ser, GObject *obj, const gchar *prop_file);
+
 GObject *ncm_serialize_from_variant (NcmSerialize *ser, GVariant *var_obj);
 GObject *ncm_serialize_from_name_params (NcmSerialize *ser, const gchar *obj_name, GVariant *params);
 GObject *ncm_serialize_from_string (NcmSerialize *ser, const gchar *obj_ser);
@@ -128,6 +130,8 @@ void ncm_serialize_global_set (gpointer obj, const gchar *name, gboolean overwri
 gboolean ncm_serialize_global_is_named (const gchar *serobj, gchar **name);
 
 void ncm_serialize_global_set_property (GObject *obj, const gchar *prop_str);
+void ncm_serialize_global_set_property_from_key_file (GObject *obj, const gchar *prop_file);
+
 GObject *ncm_serialize_global_from_variant (GVariant *var_obj);
 GObject *ncm_serialize_global_from_name_params (const gchar *obj_name, GVariant *params);
 GObject *ncm_serialize_global_from_string (const gchar *obj_ser);
@@ -137,7 +141,7 @@ GVariant *ncm_serialize_global_to_variant (GObject *obj);
 gchar *ncm_serialize_global_to_string (GObject *obj, gboolean valid_variant);
 GObject *ncm_serialize_global_dup_obj (GObject *obj);
 
-#define NCM_SERIALIZE_PROPERTY_TYPE "{sv}"  
+#define NCM_SERIALIZE_PROPERTY_TYPE "{sv}"
 #define NCM_SERIALIZE_PROPERTIES_TYPE "a"NCM_SERIALIZE_PROPERTY_TYPE
 #define NCM_SERIALIZE_OBJECT_TYPE "{s"NCM_SERIALIZE_PROPERTIES_TYPE"}"
 #define NCM_SERIALIZE_OBJECT_FORMAT "{s@"NCM_SERIALIZE_PROPERTIES_TYPE"}"
@@ -145,7 +149,7 @@ GObject *ncm_serialize_global_dup_obj (GObject *obj);
 #define NCM_SERIALIZE_MATRIX_TYPE "aad"
 #define NCM_SERIALIZE_STRV_TYPE "as"
 #define NCM_SERIALIZE_AUTOSAVE_NAME "auto:saved:"
-#define NCM_SERIALIZE_AUTOSAVE_NFORMAT "%04u" 
+#define NCM_SERIALIZE_AUTOSAVE_NFORMAT "%04u"
 
 G_END_DECLS
 

@@ -126,6 +126,7 @@ G_INLINE_FUNC void ncm_vector_fast_addto (NcmVector *cv, const guint i, const gd
 G_INLINE_FUNC void ncm_vector_subfrom (NcmVector *cv, const guint i, const gdouble val);
 G_INLINE_FUNC void ncm_vector_fast_subfrom (NcmVector *cv, const guint i, const gdouble val);
 G_INLINE_FUNC void ncm_vector_set_all (NcmVector *cv, const gdouble val);
+G_INLINE_FUNC void ncm_vector_set_array (NcmVector *cv, const gdouble *array);
 G_INLINE_FUNC void ncm_vector_scale (NcmVector *cv, const gdouble val);
 G_INLINE_FUNC void ncm_vector_div (NcmVector *cv1, const NcmVector *cv2);
 G_INLINE_FUNC void ncm_vector_add (NcmVector *cv1, const NcmVector *cv2);
@@ -240,6 +241,15 @@ ncm_vector_set_all (NcmVector *cv, const gdouble val)
 }
 
 G_INLINE_FUNC void
+ncm_vector_set_array (NcmVector *cv, const gdouble *array)
+{
+  register guint i;
+  const guint size = ncm_vector_len (cv);
+  for (i = 0; i < size; i++)
+    ncm_vector_set (cv, i, array[i]);
+}
+
+G_INLINE_FUNC void
 ncm_vector_scale (NcmVector *cv, const gdouble val)
 {
   gsl_vector_scale (ncm_vector_gsl (cv), val);
@@ -285,7 +295,7 @@ G_INLINE_FUNC GArray *
 ncm_vector_get_array (NcmVector *cv)
 {
   g_assert (cv->type == NCM_VECTOR_ARRAY);
-  return g_array_ref (cv->pdata); 
+  return g_array_ref (cv->pdata);
 }
 
 G_INLINE_FUNC GArray *

@@ -62,7 +62,9 @@ GType ncm_vparam_get_type (void) G_GNUC_CONST;
 
 NcmVParam *ncm_vparam_new (guint len, NcmSParam *default_param);
 NcmVParam *ncm_vparam_full_new (guint len, const gchar *name, const gchar *symbol, gdouble lower_bound, gdouble upper_bound, gdouble scale, gdouble abstol, gdouble default_val, NcmParamType ftype);
+NcmVParam *ncm_vparam_ref (NcmVParam *vparam);
 NcmVParam *ncm_vparam_copy (NcmVParam *vparam);
+
 void ncm_vparam_free (NcmVParam *vparam);
 void ncm_vparam_clear (NcmVParam **vparam);
 
@@ -80,12 +82,16 @@ void ncm_vparam_set_absolute_tolerance (NcmVParam *vparam, guint n, const gdoubl
 void ncm_vparam_set_default_value (NcmVParam *vparam, guint n, const gdouble default_val);
 void ncm_vparam_set_fit_type (NcmVParam *vparam, guint n, const NcmParamType ftype);
 
+const gchar *ncm_vparam_name (const NcmVParam *vparam);
+const gchar *ncm_vparam_symbol (const NcmVParam *vparam);
+
 gdouble ncm_vparam_get_lower_bound (const NcmVParam *vparam, guint n);
 gdouble ncm_vparam_get_upper_bound (const NcmVParam *vparam, guint n);
 gdouble ncm_vparam_get_scale (const NcmVParam *vparam, guint n);
 gdouble ncm_vparam_get_absolute_tolerance (const NcmVParam *vparam, guint n);
 gdouble ncm_vparam_get_default_value (const NcmVParam *vparam, guint n);
 NcmParamType ncm_vparam_get_fit_type (const NcmVParam *vparam, guint n);
+guint ncm_vparam_len (const NcmVParam *vparam);
 
 G_END_DECLS
 

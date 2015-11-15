@@ -28,7 +28,7 @@
  * @short_description: Linear deceleration parameter kinetic model.
  *
  * FIXME
- * 
+ *
  */
 
 #ifdef HAVE_CONFIG_H
@@ -44,7 +44,7 @@
 
 G_DEFINE_TYPE (NcHICosmoQLinear, nc_hicosmo_qlinear, NC_TYPE_HICOSMO);
 
-#define VECTOR   (model->params)
+#define VECTOR   (NCM_MODEL (cosmo)->params)
 #define MACRO_H0 (ncm_vector_get (VECTOR, NC_HICOSMO_QLINEAR_H0))
 #define OMEGA_T  (ncm_vector_get (VECTOR, NC_HICOSMO_QLINEAR_OMEGA_T))
 #define QLIN_CD  (ncm_vector_get (VECTOR, NC_HICOSMO_QLINEAR_CD))
@@ -90,7 +90,7 @@ cd_th_int (gdouble z2, gdouble z1, gdouble E, gdouble q, gdouble qp)
  * Comoving Distance
  ****************************************************************************/
 static gdouble
-_nc_hicosmo_qlinear_cd (NcmModel *model, gdouble z)
+_nc_hicosmo_qlinear_cd (NcHICosmo *cosmo, gdouble z)
 {
   if (QLIN_Z1 == z)
 	return QLIN_CD;
@@ -121,8 +121,8 @@ nc_hicosmo_qlinear_dE (gdouble z2, gdouble z1, gdouble q, gdouble qp)
 /****************************************************************************
  * Hubble constant
  ****************************************************************************/
-static gdouble _nc_hicosmo_qlinear_H0 (NcmModel *model) { return MACRO_H0; }
-static gdouble _nc_hicosmo_qlinear_Omega_t (NcmModel *model) { return OMEGA_T; }
+static gdouble _nc_hicosmo_qlinear_H0 (NcHICosmo *cosmo) { return MACRO_H0; }
+static gdouble _nc_hicosmo_qlinear_Omega_t (NcHICosmo *cosmo) { return OMEGA_T; }
 
 /**
  * nc_hicosmo_qlinear_new:

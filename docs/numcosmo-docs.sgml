@@ -8,7 +8,7 @@
   <bookinfo>
     <title>NumCosmo Reference Manual</title>
     <releaseinfo>
-      for NumCosmo 0.12.2.
+      for NumCosmo 0.13.0.
       The latest version of this documentation can be found on-line at
       <ulink role="online-location" url="http://www.nongnu.org/numcosmo/manual/index.html">http://www.nongnu.org/numcosmo/manual/index.html</ulink>.
     </releaseinfo>
@@ -75,6 +75,7 @@
       <xi:include href="xml/ncm_sparam.xml"/>
       <xi:include href="xml/ncm_vparam.xml"/>
       <xi:include href="xml/ncm_model_ctrl.xml"/>
+      <xi:include href="xml/ncm_model_builder.xml"/>
       <xi:include href="xml/ncm_mset.xml"/>
       <xi:include href="xml/ncm_mset_func.xml"/>
     </section>
@@ -134,13 +135,14 @@
   </chapter>
 
   <chapter>
-    <title>Models</title>
+    <title>Cosmological Models</title>
     <xi:include href="xml/nc_hicosmo.xml"/>
     <xi:include href="xml/nc_hicosmo_priors.xml"/>
     <xi:include href="xml/nc_hicosmo_lcdm.xml"/>
     <section>
       <title>Darkenergy</title>
       <xi:include href="xml/nc_hicosmo_de.xml"/>
+      <xi:include href="xml/nc_hicosmo_de_reparam_ok.xml"/>
       <xi:include href="xml/nc_hicosmo_de_xcdm.xml"/>
       <xi:include href="xml/nc_hicosmo_de_linder.xml"/>
       <xi:include href="xml/nc_hicosmo_de_pad.xml"/>
@@ -160,14 +162,36 @@
   </chapter>
 
   <chapter>
-    <title>Cosmological Functions</title>
+    <title>Primordial Cosmology Models</title>
+    <xi:include href="xml/nc_hiprim.xml"/>
+    <section>
+      <title>Inflationary</title>
+      <xi:include href="xml/nc_hiprim_power_law.xml"/>
+      <xi:include href="xml/nc_hiprim_atan.xml"/>
+    </section>
+  </chapter>
+
+  <chapter>
+    <title>Observational Cosmology Models</title>
+    <section>
+      <title>Planck Foreground and Instrument Models</title>
+      <xi:include href="xml/nc_planck_fi.xml"/>
+      <xi:include href="xml/nc_planck_fi_cor_tt.xml"/>
+    </section>
+    <section>
+      <title>Supernova Covariance Models</title>      
+      <xi:include href="xml/nc_snia_dist_cov.xml"/>
+    </section>
+  </chapter>
+
+  <chapter>
+    <title>Cosmological Calculators</title>
     <xi:include href="xml/nc_distance.xml"/>
     <xi:include href="xml/nc_recomb.xml"/>
     <xi:include href="xml/nc_recomb_seager.xml"/>
-    <xi:include href="xml/nc_snia_dist_cov.xml"/>
     <xi:include href="xml/scalefactor.xml"/>
   </chapter>
-  
+
   <chapter>
     <title>Perturbations</title>
     <xi:include href="xml/linear.xml"/>
@@ -178,6 +202,11 @@
     <xi:include href="xml/nc_hipert_two_fluids.xml"/>
     <xi:include href="xml/nc_hipert_boltzmann.xml"/>
     <xi:include href="xml/nc_hipert_boltzmann_std.xml"/>
+    <section>
+      <title>CLASS Backend</title>
+        <xi:include href="xml/nc_cbe_precision.xml"/>
+        <xi:include href="xml/nc_hipert_boltzmann_cbe.xml"/>
+     </section>
     <section>
       <title>Perturbation Interfaces</title>
       <xi:include href="xml/nc_hipert_iadiab.xml"/>
@@ -281,6 +310,7 @@
     <xi:include href="xml/nc_data_cluster_ncount.xml"/>
     <xi:include href="xml/nc_data_cluster_poisson.xml"/>
     <xi:include href="xml/nc_data_cluster_pseudo_counts.xml"/>
+    <xi:include href="xml/nc_data_planck_lkl.xml"/>
     <section>
       <title>ABC analysis</title>
         <xi:include href="xml/nc_abc_cluster_ncount.xml"/>

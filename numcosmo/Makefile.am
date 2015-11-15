@@ -8,6 +8,8 @@ else
   
 endif
 
+PLC_DIR = $(top_srcdir)/numcosmo/plc
+
 MY_CFLAGS = \
 	 -DG_LOG_DOMAIN=\"NUMCOSMO\" \
 	 $(GLIB_CFLAGS)     \
@@ -17,13 +19,17 @@ MY_CFLAGS = \
 	 $(CFITSIO_CFLAGS)  \
 	 $(NLOPT_CFLAGS)    \
 	 $(LIBCUBA_INCDIR)  \
+	 -I$(PLC_DIR)         \
+	 -I$(PLC_DIR)/cldf    \
+	 -I$(PLC_DIR)/minipmc \
+	 -I$(PLC_DIR)/plik    \
 	 -I$(top_srcdir)
 
 AM_CFLAGS = \
 	 -Wall \
 	 $(MY_CFLAGS)
 
-SUBDIRS = $(MAYBE_LIBCUBA) levmar .
+SUBDIRS = $(MAYBE_LIBCUBA) levmar plc class .
 
 lib_LTLIBRARIES = libnumcosmo.la
 
@@ -36,7 +42,9 @@ libnumcosmo_la_LIBADD =     \
 	$(SQLITE3_LIBS)     \
 	$(CFITSIO_LIBS)     \
 	$(LIBCUBA_PLACE)    \
-	levmar/liblevmar.la
+	plc/libclik.la      \
+	levmar/liblevmar.la \
+	class/libclass.la
 
 ncm_sources = \
 	ncm_build_inline.c                 \
@@ -77,6 +85,7 @@ ncm_sources = \
 	math/ncm_vparam.c                  \
 	math/ncm_model.c                   \
 	math/ncm_model_ctrl.c              \
+	math/ncm_model_builder.c           \
 	math/ncm_mset.c                    \
 	math/ncm_mset_func.c               \
 	math/ncm_ode_spline.c              \
@@ -161,6 +170,7 @@ ncm_headers = \
 	math/ncm_vparam.h                \
 	math/ncm_model.h                 \
 	math/ncm_model_ctrl.h            \
+	math/ncm_model_builder.h         \
 	math/ncm_mset.h                  \
 	math/ncm_mset_func.h             \
 	math/ncm_ode_spline.h            \
@@ -211,12 +221,17 @@ ncm_headers_internal =
 
 nc_headers = \
 	nc_hicosmo.h                  \
+	nc_hiprim.h                   \
 	nc_distance.h                 \
 	nc_hicosmo_priors.h           \
 	nc_recomb.h                   \
 	nc_recomb_seager.h            \
 	nc_snia_dist_cov.h            \
+	nc_planck_fi.h                \
+	nc_planck_fi_cor_tt.h         \
+	nc_cbe_precision.h            \
 	model/nc_hicosmo_de.h         \
+	model/nc_hicosmo_de_reparam_ok.h \
 	model/nc_hicosmo_de_linder.h  \
 	model/nc_hicosmo_de_pad.h     \
 	model/nc_hicosmo_de_qe.h      \
@@ -226,6 +241,8 @@ nc_headers = \
 	model/nc_hicosmo_qlinear.h    \
 	model/nc_hicosmo_qspline.h    \
 	model/nc_hicosmo_qgrw.h       \
+	model/nc_hiprim_power_law.h   \
+	model/nc_hiprim_atan.h        \
 	lss/nc_window.h               \
 	lss/nc_window_tophat.h        \
 	lss/nc_window_gaussian.h      \
@@ -287,6 +304,7 @@ nc_headers = \
 	data/nc_data_cluster_ncount.h          \
 	data/nc_data_cluster_poisson.h         \
 	data/nc_data_cluster_pseudo_counts.h   \
+	data/nc_data_planck_lkl.h              \
 	abc/nc_abc_cluster_ncount.h            \
 	scalefactor.h                          \
 	model/quantum_gravity.h                \
@@ -298,6 +316,7 @@ nc_headers = \
 	perturbations/nc_hipert_two_fluids.h   \
 	perturbations/nc_hipert_boltzmann.h    \
 	perturbations/nc_hipert_boltzmann_std.h \
+	perturbations/nc_hipert_boltzmann_cbe.h \
 	perturbations/linear.h                  \
 	perturbations/covariance.h              \
 	perturbations/linear_internal.h        \
@@ -310,12 +329,17 @@ nc_headers = \
 
 nc_sources = \
 	nc_hicosmo.c                 \
+	nc_hiprim.c                  \
 	nc_distance.c                \
 	nc_hicosmo_priors.c          \
 	nc_recomb.c                  \
 	nc_recomb_seager.c           \
 	nc_snia_dist_cov.c           \
+	nc_planck_fi.c               \
+	nc_planck_fi_cor_tt.c        \
+	nc_cbe_precision.c           \
 	model/nc_hicosmo_de.c        \
+	model/nc_hicosmo_de_reparam_ok.c \
 	model/nc_hicosmo_de_linder.c \
 	model/nc_hicosmo_de_pad.c    \
 	model/nc_hicosmo_de_qe.c     \
@@ -325,6 +349,8 @@ nc_sources = \
 	model/nc_hicosmo_qlinear.c   \
 	model/nc_hicosmo_qspline.c   \
 	model/nc_hicosmo_qgrw.c      \
+	model/nc_hiprim_power_law.c  \
+	model/nc_hiprim_atan.c       \
 	lss/nc_window.c              \
 	lss/nc_window_tophat.c       \
 	lss/nc_window_gaussian.c     \
@@ -386,6 +412,7 @@ nc_sources = \
 	data/nc_data_cluster_ncount.c          \
 	data/nc_data_cluster_poisson.c         \
 	data/nc_data_cluster_pseudo_counts.c   \
+	data/nc_data_planck_lkl.c              \
 	abc/nc_abc_cluster_ncount.c            \
 	scalefactor.c                          \
 	model/quantum_gravity.c                \
@@ -397,6 +424,7 @@ nc_sources = \
 	perturbations/nc_hipert_two_fluids.c   \
 	perturbations/nc_hipert_boltzmann.c    \
 	perturbations/nc_hipert_boltzmann_std.c \
+	perturbations/nc_hipert_boltzmann_cbe.c \
 	perturbations/linear.c                  \
 	perturbations/covariance.c              \
 	perturbations/linear_cvodes.c           \

@@ -13,12 +13,12 @@
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * numcosmo is distributed in the hope that it will be useful, but
  * WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
  * See the GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License along
  * with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
@@ -26,10 +26,10 @@
 /**
  * SECTION:nc_hipert
  * @title: NcHIPert
- * @short_description: Abstract class for perturbation in homogeneous and isotropic cosmologies. 
+ * @short_description: Abstract class for perturbation in homogeneous and isotropic cosmologies.
  *
  * FIXME
- * 
+ *
  */
 
 #ifdef HAVE_CONFIG_H
@@ -42,7 +42,7 @@
 #include <cvodes/cvodes.h>
 #include <cvodes/cvodes_dense.h>
 #include <cvodes/cvodes_band.h>
-#include <nvector/nvector_serial.h> 
+#include <nvector/nvector_serial.h>
 
 enum {
   PROP_0,
@@ -86,13 +86,13 @@ nc_hipert_set_property (GObject *object, guint prop_id, const GValue *value, GPa
       break;
     case PROP_RELTOL:
       nc_hipert_set_reltol (pert, g_value_get_double (value));
-      break;    
+      break;
     case PROP_ABSTOL:
       nc_hipert_set_abstol (pert, g_value_get_double (value));
-      break;    
+      break;
     case PROP_ALPHAI:
       pert->alpha0 = g_value_get_double (value);
-      break;    
+      break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
       break;
@@ -138,7 +138,7 @@ nc_hipert_finalize (GObject *object)
     CVodeFree (&pert->cvode);
     pert->cvode = NULL;
   }
-  
+
   if (pert->y != NULL)
   {
     N_VDestroy (pert->y);
@@ -211,14 +211,13 @@ nc_hipert_class_init (NcHIPertClass *klass)
  * nc_hipert_set_mode_k:
  * @pert: a #NcHIPert.
  * @k: the mode value.
- * 
+ *
  * Sets the value of the mode to be computed.
- * 
+ *
  */
-static void 
+static void
 _nc_hipert_set_mode_k (NcHIPert *pert, gdouble k)
 {
-printf ("setting k % 20.15g % 20.15g\n", k, pert->k);
   if (pert->k != k)
   {
     pert->k        = k;
@@ -230,14 +229,13 @@ printf ("setting k % 20.15g % 20.15g\n", k, pert->k);
  * nc_hipert_set_sys_size:
  * @pert: a #NcHIPert.
  * @sys_size: the system size.
- * 
+ *
  * Sets the system size.
- * 
+ *
  */
-void 
+void
 nc_hipert_set_sys_size (NcHIPert *pert, guint sys_size)
 {
-  printf ("# Setting sys_size %u %u %p %p\n", pert->sys_size, sys_size, pert->y, pert->vec_abstol);
   if (pert->sys_size != sys_size)
   {
     if (pert->y != NULL)
@@ -250,7 +248,7 @@ nc_hipert_set_sys_size (NcHIPert *pert, guint sys_size)
       N_VDestroy (pert->vec_abstol);
       pert->vec_abstol = NULL;
     }
-    
+
     pert->sys_size = sys_size;
     if (pert->sys_size > 0)
     {
@@ -259,18 +257,17 @@ nc_hipert_set_sys_size (NcHIPert *pert, guint sys_size)
     }
     pert->prepared = FALSE;
   }
-  printf ("# Setting sys_size %u %u %p %p\n", pert->sys_size, sys_size, pert->y, pert->vec_abstol);
 }
 
 /**
  * nc_hipert_set_stiff_solver:
  * @pert: a #NcHIPert.
  * @stiff: whenever to enable or disable a stiff solver.
- * 
+ *
  * Sets the ode algorithm to use.
- * 
+ *
  */
-void 
+void
 nc_hipert_set_stiff_solver (NcHIPert *pert, gboolean stiff)
 {
   guint a = stiff ? 1 : 0;
@@ -288,7 +285,7 @@ nc_hipert_set_stiff_solver (NcHIPert *pert, gboolean stiff)
       pert->cvode = CVodeCreate (CV_BDF, CV_NEWTON);
     else
       pert->cvode = CVodeCreate (CV_ADAMS, CV_FUNCTIONAL);
-    
+
     pert->cvode_init = FALSE;
   }
 }
@@ -298,11 +295,11 @@ nc_hipert_set_stiff_solver (NcHIPert *pert, gboolean stiff)
  * nc_hipert_set_reltol:
  * @pert: a #NcHIPert.
  * @reltol: the relative tolarance.
- * 
+ *
  * Sets the value of the relative tolerance.
- * 
+ *
  */
-static void 
+static void
 _nc_hipert_set_reltol (NcHIPert *pert, gdouble reltol)
 {
   if (pert->reltol != reltol)
@@ -316,11 +313,11 @@ _nc_hipert_set_reltol (NcHIPert *pert, gdouble reltol)
  * nc_hipert_set_abstol:
  * @pert: a #NcHIPert.
  * @abstol: the absolute tolarance.
- * 
+ *
  * Sets the value of the absolute tolerance.
- * 
+ *
  */
-static void 
+static void
 _nc_hipert_set_abstol (NcHIPert *pert, gdouble abstol)
 {
   if (pert->abstol != abstol)
@@ -333,12 +330,12 @@ _nc_hipert_set_abstol (NcHIPert *pert, gdouble abstol)
 /**
  * nc_hipert_get_reltol:
  * @pert: a #NcHIPert.
- * 
+ *
  * Gets the value of the relative tolerance.
- * 
+ *
  * Returns: reltol
  */
-gdouble 
+gdouble
 nc_hipert_get_reltol (NcHIPert *pert)
 {
   return pert->reltol;
@@ -347,9 +344,9 @@ nc_hipert_get_reltol (NcHIPert *pert)
 /**
  * nc_hipert_get_abstol:
  * @pert: a #NcHIPert.
- * 
+ *
  * Gets the value of the relative tolerance.
- * 
+ *
  */
 gdouble
 nc_hipert_get_abstol (NcHIPert *pert)

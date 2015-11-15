@@ -7,7 +7,7 @@
  ****************************************************************************/
 /*
  * numcosmo
- * Copyright (C) Mariana Penna Lima 2012 <pennalima@gmail.com> 
+ * Copyright (C) Mariana Penna Lima 2012 <pennalima@gmail.com>
  * Sandro Dias Pinto Vitenti 2012 <sandro@isoftware.com.br>
  *
  * numcosmo is free software: you can redistribute it and/or modify it
@@ -29,10 +29,10 @@
  * @title: NcClusterMass
  * @short_description: Abstract class for cluster mass distributions.
  *
- * NcClusterMass is the abstract class designed to abrigde the functions 
- * that any cluster mass distribution should implement, see NcClusterMassImpl. 
- * Its parent_class is NcmModel. 
- * 
+ * NcClusterMass is the abstract class designed to abrigde the functions
+ * that any cluster mass distribution should implement, see NcClusterMassImpl.
+ * Its parent_class is NcmModel.
+ *
  */
 
 #ifdef HAVE_CONFIG_H
@@ -47,7 +47,7 @@
 G_DEFINE_ABSTRACT_TYPE (NcClusterMass, nc_cluster_mass, NCM_TYPE_MODEL);
 
 /**
- * nc_cluster_mass_new_from_name: 
+ * nc_cluster_mass_new_from_name:
  * @mass_name: string which specifies the type of the mass distribution.
  *
  * This function returns a new #NcClusterMass whose type is defined by @mass_name.
@@ -110,10 +110,10 @@ nc_cluster_mass_clear (NcClusterMass **clusterm)
  * @clusterm: a #NcClusterMass
  *
  * FIXME
- * 
+ *
  * Returns: FIXME
  */
-NcClusterMassImpl 
+NcClusterMassImpl
 nc_cluster_mass_impl (NcClusterMass *clusterm)
 {
   return NC_CLUSTER_MASS_GET_CLASS (clusterm)->impl;
@@ -130,7 +130,7 @@ nc_cluster_mass_impl (NcClusterMass *clusterm)
  * 1 - Lensing mass,
  * 2 - SZ and X-ray masses,
  * 3 - SZ, X-ray and lensing masses.
- * 
+ *
  * Returns: The number of observable masses.
  */
 guint
@@ -143,7 +143,7 @@ nc_cluster_mass_obs_len (NcClusterMass *clusterm)
  * nc_cluster_mass_obs_params_len:
  * @clusterm: a #NcClusterMass
  *
- * The number of parameters related to the observable masses of each cluster, e.g., 
+ * The number of parameters related to the observable masses of each cluster, e.g.,
  * 1 - error of the SZ mass,
  * 1 - error of the X-ray mass,
  * 2 - errors of SZ and X-ray masses.
@@ -165,8 +165,8 @@ nc_cluster_mass_obs_params_len (NcClusterMass *clusterm)
  * @lnM_obs: (array) (element-type double): logarithm base e of the observed mass
  * @lnM_obs_params: (array) (element-type double): observed mass paramaters
  *
- * It computes the probability density function (pdf) of the cluster mass distribution @clusterm 
- * given @cosmo, @lnM, @z and the observable cluster mass (or just the observable). 
+ * It computes the probability density function (pdf) of the cluster mass distribution @clusterm
+ * given @cosmo, @lnM, @z and the observable cluster mass (or just the observable).
  *
  * Returns: The pdf of @clusterm.
 */
@@ -182,8 +182,8 @@ nc_cluster_mass_p (NcClusterMass *clusterm, NcHICosmo *cosmo, gdouble lnM, gdoub
  * @cosmo: a #NcHICosmo
  * @z: true redshift
  * @lnM: logarithm base e of the true mass
- * 
- * It computes the @clusterm probability distribution of @lnM lying  
+ *
+ * It computes the @clusterm probability distribution of @lnM lying
  * in the range $[]$, namely,
  * $$ intp = \int_{\ln M^{obs}_{min}}^{\ln M^{obs}_{max}} p \, d\ln M^{obs},$$
  * where $p$ is [nc_cluster_mass_p()].
@@ -199,7 +199,7 @@ nc_cluster_mass_intp (NcClusterMass *clusterm, NcHICosmo *cosmo, gdouble lnM, gd
 /**
  * nc_cluster_mass_resample:
  * @clusterm: a #NcClusterMass.
- * @cosmo: a #NcHICosmo. 
+ * @cosmo: a #NcHICosmo.
  * @z: true redshift.
  * @lnM: logarithm base e of the true mass.
  * @lnM_obs: (out): logarithm base e of the observed mass.
@@ -207,7 +207,7 @@ nc_cluster_mass_intp (NcClusterMass *clusterm, NcHICosmo *cosmo, gdouble lnM, gd
  * @rng: a #NcmRNG.
  *
  * FIXME
- * 
+ *
  * Returns: FIXME
  */
 gboolean
@@ -219,7 +219,7 @@ nc_cluster_mass_resample (NcClusterMass *clusterm, NcHICosmo *cosmo, gdouble lnM
 /**
  * nc_cluster_mass_p_limits:
  * @clusterm: a #NcClusterMass.
- * @cosmo: a #NcHICosmo. 
+ * @cosmo: a #NcHICosmo.
  * @lnM_obs: observed mass.
  * @lnM_obs_params: observed mass params.
  * @lnM_lower: (out): pointer to the lower limit of the real mass integration.
@@ -237,7 +237,7 @@ nc_cluster_mass_p_limits (NcClusterMass *clusterm, NcHICosmo *cosmo, const gdoub
 /**
  * nc_cluster_mass_n_limits:
  * @clusterm: a #NcClusterMass.
- * @cosmo: a #NcHICosmo. 
+ * @cosmo: a #NcHICosmo.
  * @lnM_lower: (out): lower limit of the logarithm base e of the true mass.
  * @lnM_upper: (out): upper limit of the lgarithm base e of the true mass.
  *
@@ -293,7 +293,7 @@ nc_cluster_mass_init (NcClusterMass *nc_cluster_mass)
 static void
 nc_cluster_mass_finalize (GObject *object)
 {
-  
+
   /* Chain up : end */
   G_OBJECT_CLASS (nc_cluster_mass_parent_class)->finalize (object);
 }
@@ -304,12 +304,14 @@ static void
 nc_cluster_mass_class_init (NcClusterMassClass *klass)
 {
   GObjectClass* object_class = G_OBJECT_CLASS (klass);
+  NcmModelClass *model_class = NCM_MODEL_CLASS (klass);
 
   object_class->finalize = nc_cluster_mass_finalize;
 
-  ncm_model_class_add_params (NCM_MODEL_CLASS (klass), 0, 0, 1);
-  
-  ncm_mset_model_register_id (NCM_MODEL_CLASS (klass), 
+  ncm_model_class_set_name_nick (model_class, "Cluster mass abstract class", "NcClusterMass");
+  ncm_model_class_add_params (model_class, 0, 0, 1);
+
+  ncm_mset_model_register_id (model_class,
                               "NcClusterMass",
                               "Cluster mass observable relation models.",
                               NULL);

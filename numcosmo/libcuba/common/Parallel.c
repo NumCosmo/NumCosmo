@@ -3,7 +3,7 @@
 		the parallel sampling routine
 		for the C versions of the Cuba routines
 		by Thomas Hahn
-		last modified 26 Aug 14 th
+		last modified 23 Apr 15 th
 */
 
 #include "sock.h"
@@ -33,7 +33,8 @@ static inline void DoSampleParallel(This *t, number n, creal *x, real *f
   char out[128];
   Slice slice, rslice;
   fd_set ready;
-  int core, abort, running = 0, *pfd;
+  int core, abort, running = 0;
+  const fdpid *pfp;
   Spin *spin = t->spin;
   cint paccel = spin->spec.paccel;
   cint naccel = IMin(spin->spec.naccel, (n + paccel - 1)/IMax(paccel, 1));
@@ -103,9 +104,9 @@ static inline void DoSampleParallel(This *t, number n, creal *x, real *f
 } while( 0 )
 
   ++pcores;
-  pfd = spin->fd;
+  pfp = spin->fp;
   for( core = -naccel; n && core < ncores; ++core ) {
-    cint fd = *pfd++;
+    cint fd = pfp++->fd;
     pcores -= (core == nx);
     slice.n = (core < 0) ? paccel : pcores;
     PutSamples(fd);
@@ -117,17 +118,17 @@ static inline void DoSampleParallel(This *t, number n, creal *x, real *f
     int fdmax = 0;
 
     FD_ZERO(&ready);
-    pfd = spin->fd;
+    pfp = spin->fp;
     for( core = -naccel; core < ncores; ++core ) {
-      cint fd = *pfd++;
+      cint fd = pfp++->fd;
       FD_SET(fd, &ready);
       fdmax = IMax(fdmax, fd);
     }
     fdmax = select(fdmax + 1, &ready, NULL, NULL, NULL);
 
-    pfd = spin->fd;
+    pfp = spin->fp;
     for( core = -naccel; core < ncores; ++core ) {
-      cint fd = *pfd++;
+      cint fd = pfp++->fd;
       if( FD_ISSET(fd, &ready) ) {
         GetSamples(fd);
         if( abort ) break;
@@ -185,14 +186,14 @@ static inline int ExploreParallel(This *t, cint iregion)
 
     FD_ZERO(&ready);
     for( core = 0; core < cores; ++core ) {
-      fd = spin->fd[core];
+      fd = spin->fp[core].fd;
       FD_SET(fd, &ready);
       fdmax = IMax(fd, fdmax);
     }
     select(fdmax + 1, &ready, NULL, NULL, NULL);
 
     for( core = 0; core < cores; ++core ) {
-      fd = spin->fd[core];
+      fd = spin->fp[core].fd;
       if( FD_ISSET(fd, &ready) ) break;
     }
 
@@ -231,7 +232,7 @@ static inline int ExploreParallel(This *t, cint iregion)
 
   if( iregion >= 0 ) {
     Slice slice;
-    cint fd = spin->fd[core];
+    cint fd = spin->fp[core].fd;
     slice.n = 0;
     slice.i = iregion;
     slice.phase = t->phase;
@@ -397,7 +398,8 @@ static void Worker(This *t, const size_t alloc, cint core, cint fd)
 static inline void ForkCores(This *t)
 {
   dispatch d;
-  int *pfd, ncores, core;
+  const fdpid *pfp;
+  int ncores, core;
 
   DIV_ONLY(t->running = 0;)
 
@@ -411,10 +413,10 @@ static inline void ForkCores(This *t)
     d.thissize = 0;
   }
 
-  pfd = t->spin->fd;
+  pfp = t->spin->fp;
   ncores = t->spin->spec.ncores;
   for( core = -t->spin->spec.naccel; core < ncores; ++core ) {
-    cint fd = *pfd++;
+    cint fd = pfp++->fd;
     writesock(fd, &d, sizeof d);
     if( d.thissize ) writesock(fd, t, d.thissize);
   }
@@ -428,10 +430,10 @@ static inline void WaitCores(This *t, Spin **pspin)
   else {
     Slice slice = { .n = -1 };
     cint cores = t->spin->spec.naccel + t->spin->spec.ncores;
-    cint *pfd = t->spin->fd;
+    const fdpid *pfp = t->spin->fp;
     int core;
     for( core = 0; core < cores; ++core )
-      writesock(pfd[core], &slice, sizeof slice);
+      writesock(pfp[core].fd, &slice, sizeof slice);
     *pspin = t->spin;
     MasterExit();
   }

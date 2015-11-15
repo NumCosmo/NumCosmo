@@ -106,10 +106,10 @@ nc_cluster_redshift_clear (NcClusterRedshift **clusterz)
  * @clusterz: a #NcClusterRedshift
  *
  * FIXME
- * 
+ *
  * Returns: a #NcClusterRedshiftImpl
  */
-NcClusterRedshiftImpl 
+NcClusterRedshiftImpl
 nc_cluster_redshift_impl (NcClusterRedshift *clusterz)
 {
   return NC_CLUSTER_REDSHIFT_GET_CLASS (clusterz)->impl;
@@ -123,7 +123,7 @@ nc_cluster_redshift_impl (NcClusterRedshift *clusterz)
  * 1 - only photometric redshift,
  * 1 - only spectroscopic redshift,
  * 2 - both photometric and spectroscopic redshifts.
- * 
+ *
  * Returns: The number of observable redshifts.
  */
 guint
@@ -136,9 +136,9 @@ nc_cluster_redshift_obs_len (NcClusterRedshift *clusterz)
  * nc_cluster_redshift_obs_params_len:
  * @clusterz: a #NcClusterRedshift
  *
- * The number of parameters related to the observable redshifts of each cluster, e.g., 
+ * The number of parameters related to the observable redshifts of each cluster, e.g.,
  * 1 - measured error of the photometric redshift.
- * 
+ *
  * Returns: The number of parameters related to the observable redshifts.
  */
 guint
@@ -155,7 +155,7 @@ nc_cluster_redshift_obs_params_len (NcClusterRedshift *clusterz)
  * @z_obs: measured redshift
  * @z_obs_params: measured redshift params
  *
- * It computes the probability density function (pdf) of the cluster redshift distribution @clusterz 
+ * It computes the probability density function (pdf) of the cluster redshift distribution @clusterz
  * given @z, @lnM and the measured redshit @z_obs and its parameter(s) @z_obs_params.
  *
  * Returns: The pdf of @clusterz.
@@ -172,7 +172,7 @@ nc_cluster_redshift_p (NcClusterRedshift *clusterz, gdouble lnM, gdouble z, gdou
  * @z: true redshift
  * @lnM: true mass
  *
- * It computes the @clusterz probability distribution of @z lying  
+ * It computes the @clusterz probability distribution of @z lying
  * in the range $[z^{obs}_{min}, z^{obs}_{max}]$, namely,
  * $$ intp = \int_{z^{obs}_{min}}^{z^{obs}_{max}} p \, dz^{obs},$$
  * where $p$ is [nc_cluster_redshift_p()].
@@ -260,7 +260,7 @@ _nc_cluster_redshift_log_all_models_go (GType model_type, guint n)
 /**
  * nc_cluster_redshift_log_all_models:
  *
- * This function lists all implemented models of cluster redshift distributions. 
+ * This function lists all implemented models of cluster redshift distributions.
  *
  */
 void
@@ -290,13 +290,15 @@ static void
 nc_cluster_redshift_class_init (NcClusterRedshiftClass *klass)
 {
   GObjectClass* object_class = G_OBJECT_CLASS (klass);
+  NcmModelClass *model_class = NCM_MODEL_CLASS (klass);
   //GObjectClass* parent_class = G_OBJECT_CLASS (klass);
 
   object_class->finalize = _nc_cluster_redshift_finalize;
 
-  ncm_model_class_add_params (NCM_MODEL_CLASS (klass), 0, 0, 1);
-  
-  ncm_mset_model_register_id (NCM_MODEL_CLASS (klass),
+  ncm_model_class_set_name_nick (model_class, "Cluster redshift abstract class", "NcClusterRedshift");
+  ncm_model_class_add_params (model_class, 0, 0, 1);
+
+  ncm_mset_model_register_id (model_class,
                               "NcClusterRedshift",
                               "Cluster redshift observable models.",
                               NULL);

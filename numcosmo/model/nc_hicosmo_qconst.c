@@ -41,7 +41,7 @@
 
 G_DEFINE_TYPE (NcHICosmoQConst, nc_hicosmo_qconst, NC_TYPE_HICOSMO);
 
-#define VECTOR   (model->params)
+#define VECTOR   (NCM_MODEL (cosmo)->params)
 #define MACRO_H0 (ncm_vector_get (VECTOR, NC_HICOSMO_QCONST_H0))
 #define OMEGA_T  (ncm_vector_get (VECTOR, NC_HICOSMO_QCONST_OMEGA_T))
 #define CD       (ncm_vector_get (VECTOR, NC_HICOSMO_QCONST_CD))
@@ -50,7 +50,7 @@ G_DEFINE_TYPE (NcHICosmoQConst, nc_hicosmo_qconst, NC_TYPE_HICOSMO);
 #define Z1       (ncm_vector_get (VECTOR, NC_HICOSMO_QCONST_Z1))
 
 static gdouble
-_nc_hicosmo_qconst_cd (NcmModel *model, gdouble z)
+_nc_hicosmo_qconst_cd (NcHICosmo *cosmo, gdouble z)
 {
   gdouble x1, x, ln_x_x1;
   x1 = 1.0 + Z1;
@@ -66,8 +66,8 @@ _nc_hicosmo_qconst_cd (NcmModel *model, gdouble z)
 /****************************************************************************
  * Hubble constant
  ****************************************************************************/
-static gdouble _nc_hicosmo_qconst_H0 (NcmModel *model) { return MACRO_H0; }
-static gdouble _nc_hicosmo_qconst_Omega_t (NcmModel *model) { return OMEGA_T; }
+static gdouble _nc_hicosmo_qconst_H0 (NcHICosmo *cosmo) { return MACRO_H0; }
+static gdouble _nc_hicosmo_qconst_Omega_t (NcHICosmo *cosmo) { return OMEGA_T; }
 
 /**
  * nc_hicosmo_qconst_new:

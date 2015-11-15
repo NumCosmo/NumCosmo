@@ -1,0 +1,67 @@
+! ============================================================================
+! Interface block for the routines in read_fits.f90
+! ============================================================================
+Interface
+Subroutine Read_FITS_Real_2D (FileName, Arr, Status, Dim1, Dim2, IndFmt)
+!
+Character(*),               Intent(In)  :: FileName
+Real (Kind=4),  Pointer, Dimension(:,:) :: Arr
+Integer (Kind=4),           Intent(Out) :: Status
+Integer (Kind=4), Optional, Intent(Out) :: Dim1
+Integer (Kind=4), Optional, Intent(Out) :: Dim2
+Integer (Kind=4), Optional, Intent(In)  :: IndFmt
+!
+End Subroutine Read_FITS_Real_2D
+End Interface
+Interface
+Subroutine Read_FITS_Double_2D (FileName, Arr, Status, Dim1, Dim2, IndFmt)
+!
+Character(*),               Intent(In)  :: FileName
+Real (Kind=8),  Pointer, Dimension(:,:) :: Arr
+Integer (Kind=4),           Intent(Out) :: Status
+Integer (Kind=4), Optional, Intent(Out) :: Dim1
+Integer (Kind=4), Optional, Intent(Out) :: Dim2
+Integer (Kind=4), Optional, Intent(In)  :: IndFmt
+!
+End Subroutine Read_FITS_Double_2D
+End Interface
+! ============================================================================
+Interface
+Subroutine Read_FITS_Real_3D (FileName, Arr, Status, Dim1, Dim2, Dim3, IndFmt)
+!
+Character(*),                Intent(In)  :: FileName
+Real (Kind=4), Pointer, Dimension(:,:,:) :: Arr
+Integer (Kind=4),            Intent(Out) :: Status
+Integer (Kind=4),  Optional, Intent(Out) :: Dim1
+Integer (Kind=4),  Optional, Intent(Out) :: Dim2
+Integer (Kind=4),  Optional, Intent(Out) :: Dim3
+Integer (Kind=4),  Optional, Intent(In)  :: IndFmt
+!
+End Subroutine Read_FITS_Real_3D
+End Interface
+! ============================================================================
+Interface
+Subroutine Read_FITS_Complex_2D (FileName, Arr, Status, Dim1, Dim2, IndFmt)
+!
+Character(*),                 Intent(In)  :: FileName
+Complex (Kind=4), Pointer, Dimension(:,:) :: Arr
+Integer (Kind=4),             Intent(Out) :: Status
+Integer (Kind=4),   Optional, Intent(Out) :: Dim1
+Integer (Kind=4),   Optional, Intent(Out) :: Dim2
+Integer (Kind=4),   Optional, Intent(In)  :: IndFmt
+!
+End Subroutine Read_FITS_Complex_2D
+End Interface
+! ============================================================================
+Interface
+Subroutine Read_FITS_Complex_2D_LM (FileName, Arr, Status, Dim1, Dim2, IndFmt)
+!
+Character(*),                 Intent(In)  :: FileName
+Complex (Kind=4), Pointer, Dimension(:,:) :: Arr
+Integer (Kind=4),             Intent(Out) :: Status
+Integer (Kind=4),   Optional, Intent(Out) :: Dim1
+Integer (Kind=4),   Optional, Intent(Out) :: Dim2
+Integer (Kind=4),   Optional, Intent(In)  :: IndFmt
+!
+End Subroutine Read_FITS_Complex_2D_LM
+End Interface

@@ -59,15 +59,19 @@ typedef enum _NcHICosmoDEImpl
   NC_HICOSMO_DE_IMPL_LAST       = NC_HICOSMO_IMPL_LAST << 3, /*< skip >*/
 } NcHICosmoDEImpl;
 
+typedef gdouble (*NcHICosmoDEFunc1) (NcHICosmoDE *cosmo_de, gdouble x);
+
 /**
  * NcHICosmoDEParams:
  * @NC_HICOSMO_DE_H0: FIXME
  * @NC_HICOSMO_DE_OMEGA_C: FIXME
  * @NC_HICOSMO_DE_OMEGA_X: FIXME
  * @NC_HICOSMO_DE_T_GAMMA0: FIXME
+ * @NC_HICOSMO_DE_ENNU: FIXME
  * @NC_HICOSMO_DE_OMEGA_B: FIXME
  * @NC_HICOSMO_DE_SPECINDEX: FIXME
  * @NC_HICOSMO_DE_SIGMA8: FIXME
+ * @NC_HICOSMO_DE_TAU_RE: FIXME
  *
  * FIXME
  */
@@ -77,9 +81,11 @@ typedef enum _NcHICosmoDEParams
   NC_HICOSMO_DE_OMEGA_C,
   NC_HICOSMO_DE_OMEGA_X,
   NC_HICOSMO_DE_T_GAMMA0,
+  NC_HICOSMO_DE_ENNU,
   NC_HICOSMO_DE_OMEGA_B,
   NC_HICOSMO_DE_SPECINDEX,
-  NC_HICOSMO_DE_SIGMA8,     /*< private >*/
+  NC_HICOSMO_DE_SIGMA8,
+  NC_HICOSMO_DE_TAU_RE,       /*< private >*/
   NC_HICOSMO_DE_SPARAM_LEN, /*< skip >*/
 } NcHICosmoDEParams;
 
@@ -88,8 +94,11 @@ typedef enum _NcHICosmoDEParams
 #define NC_HICOSMO_DE_DEFAULT_OMEGA_X   (0.70)
 #define NC_HICOSMO_DE_DEFAULT_OMEGA_B   (0.0432)
 #define NC_HICOSMO_DE_DEFAULT_T_GAMMA0  (2.7245)
+#define NC_HICOSMO_DE_DEFAULT_ENNU      (3.046)
 #define NC_HICOSMO_DE_DEFAULT_SPECINDEX (1.0)
 #define NC_HICOSMO_DE_DEFAULT_SIGMA8    (0.9)
+#define NC_HICOSMO_DE_DEFAULT_TAU_RE    (0.1)
+/*(11.357)*/
 
 struct _NcHICosmoDE
 {
@@ -101,9 +110,9 @@ struct _NcHICosmoDEClass
 {
   /*< private >*/
   NcHICosmoClass parent_class;
-  NcmModelFunc1 weff;
-  NcmModelFunc1 dweff_dz;
-  NcmModelFunc1 d2weff_dz2;
+  NcHICosmoDEFunc1 weff;
+  NcHICosmoDEFunc1 dweff_dz;
+  NcHICosmoDEFunc1 d2weff_dz2;
 };
 
 GType nc_hicosmo_de_get_type (void) G_GNUC_CONST;
@@ -112,9 +121,9 @@ void nc_hicosmo_de_set_wmap5_params (NcHICosmoDE *cosmo_de);
 void nc_hicosmo_de_omega_x2omega_k (NcHICosmoDE *cosmo_de);
 gboolean nc_hicosmo_de_new_add_bbn (NcmLikelihood *lh);
 
-void nc_hicosmo_de_set_weff_impl (NcHICosmoDEClass *cosmo_de_class, NcmModelFunc1 f);
-void nc_hicosmo_de_set_dweff_dz_impl (NcHICosmoDEClass *cosmo_de_class, NcmModelFunc1 f);
-void nc_hicosmo_de_set_d2weff_dz2_impl (NcHICosmoDEClass *cosmo_de_class, NcmModelFunc1 f);
+void nc_hicosmo_de_set_weff_impl (NcHICosmoDEClass *cosmo_de_class, NcHICosmoDEFunc1 f);
+void nc_hicosmo_de_set_dweff_dz_impl (NcHICosmoDEClass *cosmo_de_class, NcHICosmoDEFunc1 f);
+void nc_hicosmo_de_set_d2weff_dz2_impl (NcHICosmoDEClass *cosmo_de_class, NcHICosmoDEFunc1 f);
 
 G_INLINE_FUNC gdouble nc_hicosmo_de_weff (NcHICosmoDE *cosmo, gdouble x);
 G_INLINE_FUNC gdouble nc_hicosmo_de_dweff_dz (NcHICosmoDE *cosmo, gdouble x);
