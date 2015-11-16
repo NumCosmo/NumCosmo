@@ -50,7 +50,7 @@ cbe.set_target_Cls (Nc.DataCMBDataType.TT)
 cbe.set_lensed_Cls (True)
 
 #
-# Makes sure that cbe constain the default values
+# Makes sure that cbe contain the default values
 #
 #cbe.props.precision.assert_default ()
 

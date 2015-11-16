@@ -26,10 +26,10 @@
  * SECTION:nc_hicosmo_de_qe
  * @title: NcHICosmoDEQe
  * @short_description: Dark Energy -- quintessence (inspired).
- * 
- * 
+ *
+ *
  * FIXME
- * 
+ *
  */
 
 #ifdef HAVE_CONFIG_H
@@ -42,13 +42,13 @@
 
 G_DEFINE_TYPE (NcHICosmoDEQe, nc_hicosmo_de_qe, NC_TYPE_HICOSMO_DE);
 
-#define VECTOR  (model->params)
+#define VECTOR  (NCM_MODEL (cosmo_de)->params)
 #define OMEGA_X (ncm_vector_get (VECTOR, NC_HICOSMO_DE_OMEGA_X))
 #define OMEGA_0 (ncm_vector_get (VECTOR, NC_HICOSMO_DE_QE_W0))
 #define OMEGA_1 (ncm_vector_get (VECTOR, NC_HICOSMO_DE_QE_W1))
 
 static gdouble
-_nc_hicosmo_de_qe_weff (NcmModel *model, gdouble z)
+_nc_hicosmo_de_qe_weff (NcHICosmoDE *cosmo_de, gdouble z)
 {
   gdouble x = 1.0 + z;
   gdouble lnx = log1p(z);
@@ -56,7 +56,7 @@ _nc_hicosmo_de_qe_weff (NcmModel *model, gdouble z)
 }
 
 static gdouble
-_nc_hicosmo_de_qe_dweff_dz (NcmModel *model, gdouble z)
+_nc_hicosmo_de_qe_dweff_dz (NcHICosmoDE *cosmo_de, gdouble z)
 {
   const gdouble x = 1.0 + z;
   const gdouble lnx = log1p (z);
