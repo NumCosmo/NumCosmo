@@ -830,11 +830,15 @@ dnl ***************************************************************************
 dnl PLC
 dnl ***************************************************************************
 
-if test "x$lapack_mkl" = "xyesDISABLED"; then
-  PLC_DEFINES="$PLC_DEFINES -DHAS_MKL"
-elif test "x$have_clapack" != "xyes"; then
+dnl ***************************************************************************
+dnl Using -DLAPACK_CLIK as default (avoid problems with some broken clapack.h)
+dnl ***************************************************************************
+
+dnl if test "x$lapack_mkl" = "xyes"; then
+dnl   PLC_DEFINES="$PLC_DEFINES -DHAS_MKL"
+dnl elif test "x$have_clapack" != "xyes"; then
   PLC_DEFINES="$PLC_DEFINES -DLAPACK_CLIK"
-fi
+dnl fi
 
 PLC_DEFINES="$PLC_DEFINES -DNOHEALPIX -DCLIK_LENSING -DCAMSPEC_V1"
 PLC_DEFINES="$PLC_DEFINES -D 'CLIKSVNVERSION=\"6dc2a8cf3965\"'"
