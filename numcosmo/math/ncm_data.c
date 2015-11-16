@@ -344,8 +344,8 @@ ncm_data_get_dof (NcmData *data)
 
 /**
  * ncm_data_set_init:
- * @data: a #NcmData.
- * @state: a boolean.
+ * @data: a #NcmData
+ * @state: a boolean
  *
  * Sets the @data to initialized or not @state. 
  * 
@@ -463,9 +463,9 @@ ncm_data_prepare (NcmData *data, NcmMSet *mset)
 
 /**
  * ncm_data_resample: (virtual resample)
- * @data: a #NcmData.
- * @mset: a #NcmMSet.
- * @rng: a #NcmRNG.
+ * @data: a #NcmData
+ * @mset: a #NcmMSet
+ * @rng: a #NcmRNG
  *
  * Resample data in @data from the models contained in @mset.
  * 

@@ -320,7 +320,7 @@ static void ncm_fit_mc_intern_skip (NcmFitMC *mc, guint n);
 /**
  * ncm_fit_mc_set_data_file:
  * @mc: a #NcmFitMC
- * @filename: a filename.
+ * @filename: a filename
  *
  * FIXME
  *
@@ -471,7 +471,7 @@ ncm_fit_mc_set_fiducial (NcmFitMC *mc, NcmMSet *fiduc)
 /**
  * ncm_fit_mc_set_rng:
  * @mc: a #NcmFitMC
- * @rng: FIXME
+ * @rng: a #NcmRNG
  *
  * FIXME
  *
