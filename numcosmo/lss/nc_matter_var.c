@@ -1551,8 +1551,8 @@ nc_matter_var_spectral_moment_over_growth2_gaussian (NcMatterVar *vp, NcHICosmo 
 
 /**
  * nc_matter_var_spectral_moment_over_growth2_tophat:
- * @vp: a #NcMatterVar.
- * @model: a #NcHICosmo.
+ * @vp: a #NcMatterVar
+ * @model: a #NcHICosmo
  * @n: FIXME
  *
  * FIXME
