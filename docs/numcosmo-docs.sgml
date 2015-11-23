@@ -189,6 +189,7 @@
     <xi:include href="xml/nc_distance.xml"/>
     <xi:include href="xml/nc_recomb.xml"/>
     <xi:include href="xml/nc_recomb_seager.xml"/>
+    <xi:include href="xml/nc_recomb_cbe.xml"/>
     <xi:include href="xml/scalefactor.xml"/>
   </chapter>
 
@@ -205,6 +206,7 @@
     <section>
       <title>CLASS Backend</title>
         <xi:include href="xml/nc_cbe_precision.xml"/>
+        <xi:include href="xml/nc_cbe.xml"/>
         <xi:include href="xml/nc_hipert_boltzmann_cbe.xml"/>
      </section>
     <section>

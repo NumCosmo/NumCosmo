@@ -30,7 +30,7 @@
 #include <glib-object.h>
 #include <numcosmo/build_cfg.h>
 #include <numcosmo/nc_hicosmo.h>
-#include <numcosmo/nc_cbe_precision.h>
+#include <numcosmo/nc_cbe.h>
 #include <numcosmo/perturbations/nc_hipert_boltzmann.h>
 
 G_BEGIN_DECLS
@@ -44,7 +44,6 @@ G_BEGIN_DECLS
 
 typedef struct _NcHIPertBoltzmannCBEClass NcHIPertBoltzmannCBEClass;
 typedef struct _NcHIPertBoltzmannCBE NcHIPertBoltzmannCBE;
-typedef struct _NcHIPertBoltzmannCBEPrivate NcHIPertBoltzmannCBEPrivate;
 
 struct _NcHIPertBoltzmannCBEClass
 {
@@ -56,17 +55,7 @@ struct _NcHIPertBoltzmannCBE
 {
   /*< private >*/
   NcHIPertBoltzmann parent_instance;
-  NcCBEPrecision *prec;
-  NcHIPertBoltzmannCBEPrivate *priv;
-  guint bg_verbose;
-  guint thermo_verbose;
-  guint pert_verbose;
-  guint transfer_verbose;
-  guint prim_verbose;
-  guint spectra_verbose;
-  guint nonlin_verbose;
-  guint lensing_verbose;
-  guint lmax;
+  NcCBE *cbe;
   NcmVector *TT_Cls;
   NcmVector *EE_Cls;
   NcmVector *BB_Cls;
@@ -78,11 +67,10 @@ struct _NcHIPertBoltzmannCBE
 GType nc_hipert_boltzmann_cbe_get_type (void) G_GNUC_CONST;
 
 NcHIPertBoltzmannCBE *nc_hipert_boltzmann_cbe_new (void);
-NcHIPertBoltzmannCBE *nc_hipert_boltzmann_cbe_prec_new (NcCBEPrecision *cbe_prec);
-NcHIPertBoltzmannCBE *nc_hipert_boltzmann_cbe_prec_file_new (gchar *prec_filename);
-NcHIPertBoltzmannCBE *nc_hipert_boltzmann_cbe_ref (NcHIPertBoltzmannCBE *cbe);
-void nc_hipert_boltzmann_cbe_free (NcHIPertBoltzmannCBE *cbe);
-void nc_hipert_boltzmann_cbe_clear (NcHIPertBoltzmannCBE **cbe);
+NcHIPertBoltzmannCBE *nc_hipert_boltzmann_cbe_full_new (NcCBE *cbe);
+NcHIPertBoltzmannCBE *nc_hipert_boltzmann_cbe_ref (NcHIPertBoltzmannCBE *boltzmann_cbe);
+void nc_hipert_boltzmann_cbe_free (NcHIPertBoltzmannCBE *boltzmann_cbe);
+void nc_hipert_boltzmann_cbe_clear (NcHIPertBoltzmannCBE **boltzmann_cbe);
 
 G_END_DECLS
 

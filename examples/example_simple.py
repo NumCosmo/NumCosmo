@@ -17,7 +17,6 @@ Ncm.cfg_init ()
 #  New homogeneous and isotropic cosmological model NcHICosmoDEXcdm 
 #
 cosmo = Nc.HICosmo.new_from_name (Nc.HICosmo, "NcHICosmoDEXcdm")
-
 #
 #  New cosmological distance objects optimizied to perform calculations
 #  up to redshift 2.0.

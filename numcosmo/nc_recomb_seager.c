@@ -49,6 +49,69 @@
 #include <nvector/nvector_serial.h>
 #include <gsl/gsl_sf_exp.h>
 
+G_DEFINE_TYPE (NcRecombSeager, nc_recomb_seager, NC_TYPE_RECOMB);
+
+static gint H_ion_full_f (realtype lambda, N_Vector y, N_Vector ydot, gpointer f_data);
+static gint H_ion_full_J (_NCM_SUNDIALS_INT_TYPE N, realtype lambda, N_Vector y, N_Vector fy, DlsMat J, gpointer jac_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3);
+
+static void
+nc_recomb_seager_init (NcRecombSeager *recomb_seager)
+{
+	NcRecomb *recomb = NC_RECOMB (recomb_seager);
+  recomb_seager->cvode = CVodeCreate (CV_BDF, CV_NEWTON);
+  NCM_CVODE_CHECK ((void *)recomb_seager->cvode, "CVodeCreate", 0, );
+	recomb_seager->init = FALSE;
+
+	recomb_seager->ion   = &H_ion_full_f;
+	recomb_seager->ion_J = &H_ion_full_J;
+
+	recomb_seager->n = 3;
+
+	recomb_seager->y0     = N_VNew_Serial(recomb_seager->n);
+  recomb_seager->y      = N_VNew_Serial(recomb_seager->n);
+  recomb_seager->abstol = N_VNew_Serial(recomb_seager->n);
+
+	recomb->Xe_s = ncm_spline_cubic_notaknot_new ();
+}
+
+static void
+nc_recomb_seager_constructed (GObject *object)
+{
+	/* Chain up : start */
+  G_OBJECT_CLASS (nc_recomb_seager_parent_class)->constructed (object);
+	{
+	}
+}
+
+static void
+nc_recomb_seager_finalize (GObject *object)
+{
+	NcRecombSeager *recomb_seager = NC_RECOMB_SEAGER (object);
+
+	N_VDestroy (recomb_seager->y);
+	N_VDestroy (recomb_seager->y0);
+	N_VDestroy (recomb_seager->abstol);
+
+	CVodeFree (&recomb_seager->cvode);
+
+	/* Chain up : end */
+  G_OBJECT_CLASS (nc_recomb_seager_parent_class)->finalize (object);
+}
+
+static void nc_recomb_seager_prepare (NcRecomb *recomb, NcHICosmo *cosmo);
+
+static void
+nc_recomb_seager_class_init (NcRecombSeagerClass *klass)
+{
+  GObjectClass* object_class = G_OBJECT_CLASS (klass);
+	NcRecombClass *recomb_class = NC_RECOMB_CLASS (klass);
+
+  object_class->constructed = nc_recomb_seager_constructed;
+	object_class->finalize = nc_recomb_seager_finalize;
+
+	recomb_class->prepare = &nc_recomb_seager_prepare;
+}
+
 static gdouble nc_recomb_seager_HII_ion_rate (NcHICosmo *cosmo, gdouble XHII, gdouble Tm, gdouble XHeII, gdouble x);
 static gdouble nc_recomb_seager_HeII_ion_rate (NcHICosmo *cosmo, gdouble XHII, gdouble Tm, gdouble XHeII, gdouble x);
 static gdouble nc_recomb_seager_Tm_dx (NcHICosmo *cosmo, gdouble XHII, gdouble Tm, gdouble XHeII, gdouble x);
@@ -56,8 +119,6 @@ static gdouble nc_recomb_seager_Tm_dx (NcHICosmo *cosmo, gdouble XHII, gdouble T
 static void nc_recomb_seager_HII_ion_rate_grad (NcHICosmo *cosmo, gdouble XHII, gdouble Tm, gdouble XHeII, gdouble x, gdouble *grad);
 static void nc_recomb_seager_HeII_ion_rate_grad (NcHICosmo *cosmo, gdouble XHII, gdouble Tm, gdouble XHeII, gdouble x, gdouble *grad);
 static void nc_recomb_seager_Tm_dx_grad (NcHICosmo *cosmo, gdouble XHII, gdouble Tm, gdouble XHeII, gdouble x, gdouble *grad);
-
-G_DEFINE_TYPE (NcRecombSeager, nc_recomb_seager, NC_TYPE_RECOMB);
 
 static gint
 H_ion_full_f (realtype lambda, N_Vector y, N_Vector ydot, gpointer f_data)
@@ -254,63 +315,6 @@ nc_recomb_seager_prepare (NcRecomb *recomb, NcHICosmo *cosmo)
 	recomb->dtau_dlambda_s = ncm_spline_copy_empty (recomb->Xe_s);
 
 	_nc_recomb_prepare_tau_splines (recomb, cosmo);
-}
-
-static void
-nc_recomb_seager_init (NcRecombSeager *recomb_seager)
-{
-	NcRecomb *recomb = NC_RECOMB (recomb_seager);
-  recomb_seager->cvode = CVodeCreate (CV_BDF, CV_NEWTON);
-  NCM_CVODE_CHECK ((void *)recomb_seager->cvode, "CVodeCreate", 0, );
-	recomb_seager->init = FALSE;
-
-	recomb_seager->ion   = &H_ion_full_f;
-	recomb_seager->ion_J = &H_ion_full_J;
-
-	recomb_seager->n = 3;
-
-	recomb_seager->y0     = N_VNew_Serial(recomb_seager->n);
-  recomb_seager->y      = N_VNew_Serial(recomb_seager->n);
-  recomb_seager->abstol = N_VNew_Serial(recomb_seager->n);
-
-	recomb->Xe_s = ncm_spline_cubic_notaknot_new ();
-}
-
-static void
-nc_recomb_seager_constructed (GObject *object)
-{
-	/* Chain up : start */
-  G_OBJECT_CLASS (nc_recomb_seager_parent_class)->constructed (object);
-	{
-	}
-}
-
-
-static void
-nc_recomb_seager_finalize (GObject *object)
-{
-	NcRecombSeager *recomb_seager = NC_RECOMB_SEAGER (object);
-
-	N_VDestroy (recomb_seager->y);
-	N_VDestroy (recomb_seager->y0);
-	N_VDestroy (recomb_seager->abstol);
-
-	CVodeFree (&recomb_seager->cvode);
-
-	/* Chain up : end */
-  G_OBJECT_CLASS (nc_recomb_seager_parent_class)->finalize (object);
-}
-
-static void
-nc_recomb_seager_class_init (NcRecombSeagerClass *klass)
-{
-  GObjectClass* object_class = G_OBJECT_CLASS (klass);
-	NcRecombClass *recomb_class = NC_RECOMB_CLASS (klass);
-
-  object_class->constructed = nc_recomb_seager_constructed;
-	object_class->finalize = nc_recomb_seager_finalize;
-
-	recomb_class->prepare = &nc_recomb_seager_prepare;
 }
 
 static gdouble
@@ -515,14 +519,31 @@ nc_recomb_seager_Tm_dx_grad (NcHICosmo *cosmo, gdouble XHII, gdouble Tm, gdouble
   return;
 }
 
-NcRecomb *
+/**
+ * nc_recomb_seager_new:
+ * 
+ * Creates a new #NcRecombSeager using default properties.
+ * 
+ * Returns: (transfer full): a new #NcRecombSeager.
+ */
+NcRecombSeager *
 nc_recomb_seager_new (void)
 {
   return g_object_new (NC_TYPE_RECOMB_SEAGER,
                        NULL);
 }
 
-NcRecomb *
+/**
+ * nc_recomb_seager_new_full:
+ * @init_frac: inital fraction of $X_{\HeIII}/X_{\He}$ where to start numerical integration
+ * @zi: inital redshift
+ * @prec: integration precision
+ * 
+ * Creates a new #NcRecombSeager using @init_frac, @zi and @prec.
+ * 
+ * Returns: (transfer full): a new #NcRecombSeager.
+ */
+NcRecombSeager *
 nc_recomb_seager_new_full (gdouble init_frac, gdouble zi, gdouble prec)
 {
   return g_object_new (NC_TYPE_RECOMB_SEAGER,
@@ -530,4 +551,45 @@ nc_recomb_seager_new_full (gdouble init_frac, gdouble zi, gdouble prec)
                        "zi", zi,
                        "prec", prec,
                        NULL);
+}
+
+/**
+ * nc_recomb_seager_ref:
+ * @recomb_seager: a #NcRecombSeager.
+ *
+ * Increases the reference count of @recomb_seager.
+ *
+ * Returns: (transfer full): @recomb_seager.
+ */
+NcRecombSeager *
+nc_recomb_seager_ref (NcRecombSeager *recomb_seager)
+{
+  return NC_RECOMB_SEAGER (g_object_ref (recomb_seager));
+}
+
+/**
+ * nc_recomb_seager_free:
+ * @recomb_seager: a #NcRecombSeager.
+ *
+ * Decreases the reference count of @recomb_seager.
+ *
+ */
+void
+nc_recomb_seager_free (NcRecombSeager *recomb_seager)
+{
+  g_object_unref (recomb_seager);
+}
+
+/**
+ * nc_recomb_seager_clear:
+ * @recomb_seager: a #NcRecombSeager.
+ *
+ * Decreases the reference count of *@recomb_seager if
+ * *@recomb_seager is not NULL, then sets *@recomb_seager to NULL.
+ *
+ */
+void
+nc_recomb_seager_clear (NcRecombSeager **recomb_seager)
+{
+  g_clear_object (recomb_seager);
 }

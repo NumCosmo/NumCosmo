@@ -226,10 +226,12 @@ nc_headers = \
 	nc_hicosmo_priors.h           \
 	nc_recomb.h                   \
 	nc_recomb_seager.h            \
+	nc_recomb_cbe.h               \
 	nc_snia_dist_cov.h            \
 	nc_planck_fi.h                \
 	nc_planck_fi_cor_tt.h         \
 	nc_cbe_precision.h            \
+	nc_cbe.h                      \
 	model/nc_hicosmo_de.h         \
 	model/nc_hicosmo_de_reparam_ok.h \
 	model/nc_hicosmo_de_linder.h  \
@@ -334,10 +336,12 @@ nc_sources = \
 	nc_hicosmo_priors.c          \
 	nc_recomb.c                  \
 	nc_recomb_seager.c           \
+	nc_recomb_cbe.c              \
 	nc_snia_dist_cov.c           \
 	nc_planck_fi.c               \
 	nc_planck_fi_cor_tt.c        \
 	nc_cbe_precision.c           \
+	nc_cbe.c                     \
 	model/nc_hicosmo_de.c        \
 	model/nc_hicosmo_de_reparam_ok.c \
 	model/nc_hicosmo_de_linder.c \

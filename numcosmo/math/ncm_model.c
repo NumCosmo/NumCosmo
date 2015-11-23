@@ -737,7 +737,7 @@ ncm_model_class_set_property (GObject *object, guint prop_id, const GValue *valu
   const guint sparam_fit_id = vparam_len_id	- model_class->vparam_len + model_class->parent_sparam_len;
   const guint vparam_fit_id = sparam_fit_id	- model_class->sparam_len + model_class->parent_vparam_len;
 
-  //printf ("[%u %u] [%u %u] [%u %u] [%u %u] [%u %u] [%u %u]\n", prop_id, model_class->nonparam_prop_len, sparam_id, model_class->sparam_len, vparam_id, model_class->vparam_len, vparam_len_id, model_class->vparam_len, sparam_fit_id, model_class->sparam_len, vparam_fit_id, model_class->vparam_len);
+  /*printf ("[%u %u] [%u %u] [%u %u] [%u %u] [%u %u] [%u %u]\n", prop_id, model_class->nonparam_prop_len, sparam_id, model_class->sparam_len, vparam_id, model_class->vparam_len, vparam_len_id, model_class->vparam_len, sparam_fit_id, model_class->sparam_len, vparam_fit_id, model_class->vparam_len);*/
 
   if (prop_id < model_class->nonparam_prop_len && model_class->set_property)
   {

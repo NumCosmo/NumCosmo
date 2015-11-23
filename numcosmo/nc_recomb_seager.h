@@ -65,8 +65,11 @@ struct _NcRecombSeagerClass
 
 GType nc_recomb_seager_get_type (void) G_GNUC_CONST;
 
-NcRecomb *nc_recomb_seager_new (void);
-NcRecomb *nc_recomb_seager_new_full (gdouble init_frac, gdouble zi, gdouble prec);
+NcRecombSeager *nc_recomb_seager_new (void);
+NcRecombSeager *nc_recomb_seager_new_full (gdouble init_frac, gdouble zi, gdouble prec);
+NcRecombSeager *nc_recomb_seager_ref (NcRecombSeager *recomb_seager);
+void nc_recomb_seager_free (NcRecombSeager *recomb_seager);
+void nc_recomb_seager_clear (NcRecombSeager **recomb_seager);
 
 G_END_DECLS
 
