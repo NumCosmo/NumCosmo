@@ -148,7 +148,7 @@ nc_cluster_mass_plcl_class_init (NcClusterMassPlCLClass *klass)
                                    g_param_spec_double ("M0",
                                                         NULL,
                                                         "Reference mass",
-                                                        1.0e13, G_MAXDOUBLE, 1.0e14,
+                                                        1.0e13, G_MAXDOUBLE, 5.7e14,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY |G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   /**
@@ -158,7 +158,7 @@ nc_cluster_mass_plcl_class_init (NcClusterMassPlCLClass *klass)
    * FIXME Set correct values (limits)
    */
   ncm_model_class_set_sparam (model_class, NC_CLUSTER_MASS_PLCL_A_SZ, "\\alpha_{SZ}", "Asz",
-                              0.8, 1.2, 0.05, //0.5,  2.0, 1.0e-1,
+                              0.5, 1.5, 0.1,
                               NC_CLUSTER_MASS_PLCL_DEFAULT_PARAMS_ABSTOL, NC_CLUSTER_MASS_PLCL_DEFAULT_A_SZ,
                               NCM_PARAM_TYPE_FIXED);
 
@@ -169,7 +169,7 @@ nc_cluster_mass_plcl_class_init (NcClusterMassPlCLClass *klass)
    * FIXME Set correct values (limits)
    */
   ncm_model_class_set_sparam (model_class, NC_CLUSTER_MASS_PLCL_B_SZ, "b_{SZ}", "Bsz",
-                              -2.0,  0.9999, 2.0e-2,
+                              -1.0,  0.9999, 2.0e-2,
                               NC_CLUSTER_MASS_PLCL_DEFAULT_PARAMS_ABSTOL, NC_CLUSTER_MASS_PLCL_DEFAULT_B_SZ,
                               NCM_PARAM_TYPE_FIXED);
 
@@ -190,7 +190,7 @@ nc_cluster_mass_plcl_class_init (NcClusterMassPlCLClass *klass)
    * FIXME Set correct values (limits)
    */
   ncm_model_class_set_sparam (model_class, NC_CLUSTER_MASS_PLCL_A_L, "\\alpha_{L}", "Al",
-                              0.8, 1.2, 0.05, //0.5,  1.5, 1.0e-1,
+                              0.5,  1.5, 1.0e-1,
                               NC_CLUSTER_MASS_PLCL_DEFAULT_PARAMS_ABSTOL, NC_CLUSTER_MASS_PLCL_DEFAULT_A_L,
                               NCM_PARAM_TYPE_FIXED);
 
@@ -201,7 +201,7 @@ nc_cluster_mass_plcl_class_init (NcClusterMassPlCLClass *klass)
    * FIXME Set correct values (limits)
    */
   ncm_model_class_set_sparam (model_class, NC_CLUSTER_MASS_PLCL_B_L, "b_{L}", "Bl",
-                              -2.0,  0.9999, 2.0e-2,
+                              -1.0,  0.9999, 2.0e-2,
                               NC_CLUSTER_MASS_PLCL_DEFAULT_PARAMS_ABSTOL, NC_CLUSTER_MASS_PLCL_DEFAULT_B_L,
                               NCM_PARAM_TYPE_FIXED);
 
