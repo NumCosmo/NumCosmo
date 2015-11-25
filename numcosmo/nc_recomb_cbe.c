@@ -173,6 +173,7 @@ nc_recomb_cbe_new (void)
 
 /**
  * nc_recomb_cbe_full_new:
+ * @cbe: a #NcCBE object
  * 
  * Creates a new #NcRecombCBE using default properties
  * and @cbe as the Class backend object #NcCBE.

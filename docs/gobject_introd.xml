@@ -31,27 +31,140 @@
     <refname>GObject</refname>
     <refpurpose>A brief description of the GObject system</refpurpose>
 </refnamediv>
-<refsect1 id="overview">
+<refsect1 id="GObject:overview">
 <title>Overview</title>
 <simpara>
-The GLib Object System, or GObject, is a free software library providing a portable object system and transparent cross-language interoperability. GObject is designed for use both directly in C programs to provide object-oriented C-based APIs and through bindings to other languages to provide transparent cross-language interoperability, e.g. PyGObject. 
-We present here a summarized description of this framework. For details see:
+The GLib Object System, or GObject, is a free software library providing a
+portable object system and transparent cross-language interoperability. GObject
+is designed for use both directly in C programs to provide object-oriented
+C-based APIs and through bindings to other languages to provide transparent
+cross-language interoperability, e.g. PyGObject. We present here a summarized
+description of this framework. For details see:
 <simplelist type="inline">
 <member><ulink url="https://developer.gnome.org/gobject/stable/">GObject Manual</ulink></member>
 <member><ulink url="https://en.wikipedia.org/wiki/GObject">GObject Wikipedia</ulink></member>
 </simplelist>
 </simpara>
 <simpara>
-All objects must implement the following functions:
+<para>
+In this section we discuss the GObject framework as it is used inside NumCosmo.
+</para>
+<para>
+  The library is divided in two main name-spaces, Ncm (NumCosmoMath) where all
+  generic mathematical and statistical objects and functions are defined, Nc 
+  (NumCosmo) where all cosmological related object and function are defined.
+  All types must be labeled using the 
+  <ulink url="https://en.wikipedia.org/wiki/CamelCase">camel-case</ulink>, 
+  and start with the respective name-space. For example, 
+  <link linkend="NcmSpline"><type>NcmSpline</type></link> is the type used
+  to store instances of the Spline object which lives in the NumCosmoMath
+  name-space. Similarly, <link linkend="NcHICosmo"><type>NcHICosmo</type></link>
+  is the type used for the abstract object defining homogeneous and isotropic
+  models (HICosmo).
+</para>
+<para>
+  Functions and method must be lower case and the terms separated by underscores,
+  e.g., a method of NcmSpline must be called ncm_spline_method_name. It is 
+  acceptable for the method_name to have upper case letters when necessary.
+  For example, <link linkend="nc-hicosmo-Omega-m">nc_hicosmo_Omega_m</link>
+  uses the capital Omega to avoid confusion with lowercase omega_m which has
+  a different meaning in the cosmological literature.
+</para>
+<para>
+  Macros, enumerator and flags labels should be in uppercase and separated by 
+  underscores. See for example <link linkend="NcHICosmoImpl">NcHICosmoImpl</link>
+  for a flag type. The flag type itself NcHICosmoImpl must be in camel-case
+  but its labels are underscore separated uppercase.  
+</para>
+<para>
+  An full example of a GObject implementation inside NumCosmo can be found
+  <link linkend="NcmModel.description">here</link>.
+</para>
+<para>
+  All objects must implement a set of functions, for example an object named
+  NcObjectName must implement:
+</para>
 <itemizedlist>
-<listitem><para>nc_objectname_class_init - the methods (virtual functions) and properties are defined here. This is the first function to be called, and it must be done just *once* in the whole program lifetime.</para></listitem>
-<listitem><para>nc_objectname_init - this is the first function to be called when (and everytime) a new instance is created. This function receives an *uninitialized* instance struct and there one must initialize all members of the structure to null values (0 for integer, 0.0 for doubles, NULL for pointers, etc). Sometimes, when a given member of the instance structure is not related to a property, you must initialized it at this point (for example, NcmModelCtrl members are usually initialized at _init).</para></listitem>
-<listitem><para>nc_objectname_set_property - the next step of the GObject system is to call this function for *every* property with G_PARAM_CONSTRUCT or G_PARAM_CONSTRUCT_ONLY options. If the user calls the nc_objectname_new function with some properties set to specific values, then these values will be passed to nc_objectname_set_property. However, for those properties not passed in the nc_objectname_new function, the default values will be used. In short, the _CONSTRUCT properties are always initialized by nc_objectname_set_property calls. The _CONSTRUCT_ONLY variables are only set during this phase and cannot be set afterwards. Any other properties passed in the _new function, which are not CONSTRUCT, will be set *only* through the nc_gobjectname_set_property function.  They will not be set to the default values, these values are useless for non-CONSTRUCT properties.</para></listitem>
-<listitem><para>nc_objectname_constructed - this function is called after the _CONSTRUCT properties are set. IMPROVE: This function is sometimes necessary since in some cases we must do some work after knowing the values of the _CONSTRUCT variables.</para></listitem>
-<listitem><para>nc_gobjectname_ref - At this point the object's construction is finished and it is returned to the user with ref_count = 1. Every time we call a _ref function the ref_count is increased by one.</para></listitem>
-<listitem><para>nc_gobjectname_clear (..._free) - every time a _free or _clear function is called the ref_count is decreased by one. The only difference between _free and _clear functions is that _clear will check if the variable is NULL. If so, _clear does nothing, otherwise it decreases ref_count by one *and* sets the variable to NULL. When a reference to some object is given to you, you never know if anyone else also has a reference to it. So when you no longer need it, you just decrease the reference count by one. However, if you make a mistake and decrease the ref_count twice, you may destroy the object that could still be used by other parts of the code. That is why _clear function is so useful, when you call it a second time, the pointer will be null and _clear will do nothing.</para></listitem>
-<listitem><para>nc_gobjectname_dispose - this function is called everytime the object has its ref_count decreased to 0. It may be called more than once trying to break a reference count cycle (something out of the scope but sometimes very important). That is why we must release all references to objects in _dispose using _clear functions.</para></listitem>
-<listitem><para>nc_gobjectname_finish - this function is called after nc_gobjectname_dispose. Here we must release any allocated memory not related to the GObject system.</para></listitem>
+  <listitem>
+    <para>
+      nc_object_name_class_init - the methods (virtual functions) and properties are
+      defined here. This is the first function to be called, and it must be done just
+      <emphasis>once</emphasis> in the whole program lifetime.
+    </para>
+  </listitem>
+  <listitem>
+    <para>
+      nc_object_name_init - this is the first function to be called when (and
+      every time) a new instance is created. This function receives an 
+      <emphasis>uninitialized</emphasis>
+      instance struct and there one must initialize all members of the structure to
+      null values (0 for integer, 0.0 for doubles, NULL for pointers, etc). Sometimes,
+      when a given member of the instance structure is not related to a property, you
+      must initialized it at this point (for example, NcmModelCtrl members are usually
+      initialized at _init).
+    </para>
+  </listitem>
+  <listitem>
+    <para> 
+      nc_object_name_set_property - the next step of the GObject system is to call
+      this function for <emphasis>every</emphasis> property with G_PARAM_CONSTRUCT or
+      G_PARAM_CONSTRUCT_ONLY options. If the user calls the nc_object_name_new
+      function with some properties set to specific values, then these values will be
+      passed to nc_object_name_set_property. However, for those properties not passed
+      in the nc_object_name_new function, the default values will be used. In short,
+      the _CONSTRUCT properties are always initialized by nc_object_name_set_property
+      calls. The _CONSTRUCT_ONLY variables are only set during this phase and cannot
+      be set afterwards. Any other properties passed in the _new function, which are
+      not CONSTRUCT, will be set <emphasis>only</emphasis> through the 
+      nc_object_name_set_property function. They will not be set to the default values, 
+      these values are useless for non-CONSTRUCT properties.
+    </para>
+  </listitem>
+  <listitem>
+    <para>
+      nc_object_name_constructed - this function is called after the _CONSTRUCT
+      properties are set. IMPROVE: This function is sometimes necessary since in some
+      cases we must do some work after knowing the values of the _CONSTRUCT variables.
+    </para>
+  </listitem>
+  <listitem>
+    <para>
+      nc_object_name_ref - At this point the object's construction is finished and it
+      is returned to the user with ref_count = 1. Every time we call a _ref function
+      the ref_count is increased by one.
+    </para>
+  </listitem>
+  <listitem>
+    <para>
+      nc_object_name_clear (..._free) - every time a _free or _clear function is
+      called the ref_count is decreased by one. The only difference between _free and
+      _clear functions is that _clear will check if the variable is NULL. If so,
+      _clear does nothing, otherwise it decreases ref_count by one 
+      <emphasis>and</emphasis> sets the
+      variable to NULL. When a reference to some object is given to you, you never
+      know if anyone else also has a reference to it. So when you no longer need it,
+      you just decrease the reference count by one. However, if you make a mistake and
+      decrease the ref_count twice, you may destroy the object that could still be
+      used by other parts of the code. That is why _clear function is so useful, when
+      you call it a second time, the pointer will be null and _clear will do nothing.
+    </para>
+  </listitem>
+  <listitem>
+    <para>
+      nc_object_name_dispose - this function is called every time the object has its
+      ref_count decreased to 0. It may be called more than once trying to break a
+      reference count cycle (something out of the scope of this document, see 
+      <ulink url="https://developer.gnome.org/gobject/stable/gobject-memory.html">this document</ulink>
+      for more details). That is why we must release all references to objects in 
+      _dispose using _clear functions.
+    </para>
+  </listitem>
+  <listitem>
+    <para>
+      nc_object_name_finish - this function is called after nc_object_name_dispose.
+      Here we must release any allocated memory not related to the GObject system.     
+    </para>
+  </listitem>
 </itemizedlist>
 </simpara>
 </refsect1>
