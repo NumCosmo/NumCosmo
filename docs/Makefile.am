@@ -7,7 +7,8 @@ XML_FILES=dependencies.xml \
           references.xml   \
           darkenergy.xml   \
           gdarkenergy.xml  \
-          refs.xml
+          refs.xml         \
+          gobject_introd.xml
 
 # We require automake 1.6 at least.
 AUTOMAKE_OPTIONS = 1.6
