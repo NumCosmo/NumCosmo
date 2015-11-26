@@ -49,13 +49,13 @@ main (gint argc, gchar *argv[])
 void
 test_nc_recomb_seager_new ()
 {
-  NcRecomb *recomb = nc_recomb_seager_new ();
+  NcRecomb *recomb = NC_RECOMB (nc_recomb_seager_new ());
   g_assert (NC_IS_RECOMB (recomb));
   g_assert (NC_IS_RECOMB_SEAGER (recomb));
 
   NCM_TEST_FREE (nc_recomb_free, recomb);
 
-  recomb = nc_recomb_seager_new_full (1e-10, 2.2e9, 1e-5);
+  recomb = NC_RECOMB (nc_recomb_seager_new_full (1e-10, 2.2e9, 1e-5));
   g_assert (NC_IS_RECOMB (recomb));
   g_assert (NC_IS_RECOMB_SEAGER (recomb));
 
@@ -82,7 +82,7 @@ test_nc_recomb_seager_new ()
 void
 test_nc_recomb_seager_wmap_zstar (void)
 {
-  NcRecomb *recomb = nc_recomb_seager_new ();
+  NcRecomb *recomb = NC_RECOMB (nc_recomb_seager_new ());
   NcHICosmo *cosmo = nc_hicosmo_new_from_name (NC_TYPE_HICOSMO, "NcHICosmoDEXcdm");
 
   nc_hicosmo_de_set_wmap5_params (NC_HICOSMO_DE (cosmo));
@@ -107,7 +107,7 @@ test_nc_recomb_seager_wmap_zstar (void)
 void 
 test_nc_recomb_seager_Xe_ini (void)
 {
-  NcRecomb *recomb = nc_recomb_seager_new ();
+  NcRecomb *recomb = NC_RECOMB (nc_recomb_seager_new ());
   NcHICosmo *cosmo = nc_hicosmo_new_from_name (NC_TYPE_HICOSMO, "NcHICosmoDEXcdm");
 
   nc_recomb_prepare_if_needed (recomb, cosmo);
