@@ -137,6 +137,8 @@ GTKDOC_LIBS=$(top_builddir)/numcosmo/libnumcosmo.la
 # This includes the standard gtk-doc make rules, copied by gtkdocize.
 include $(top_srcdir)/gtk-doc.make
 
+setup-build.stamp: $(DOC_MAIN_SGML_FILE) $(content_files) $(expand_content_files) $(DOC_MODULE).types
+
 # Other files to distribute
 # e.g. EXTRA_DIST += version.xml.in
 EXTRA_DIST += $(XML_FILES) references.bib container.css addmathjax.pl xmltogtk.pl
