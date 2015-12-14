@@ -227,6 +227,8 @@ nc_headers = \
 	nc_recomb.h                   \
 	nc_recomb_seager.h            \
 	nc_recomb_cbe.h               \
+	nc_hireion.h                  \
+	nc_hireion_camb.h             \
 	nc_snia_dist_cov.h            \
 	nc_planck_fi.h                \
 	nc_planck_fi_cor_tt.h         \
@@ -337,6 +339,8 @@ nc_sources = \
 	nc_recomb.c                  \
 	nc_recomb_seager.c           \
 	nc_recomb_cbe.c              \
+	nc_hireion.c                 \
+	nc_hireion_camb.c            \
 	nc_snia_dist_cov.c           \
 	nc_planck_fi.c               \
 	nc_planck_fi_cor_tt.c        \

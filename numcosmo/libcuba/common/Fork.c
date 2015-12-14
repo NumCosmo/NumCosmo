@@ -17,7 +17,7 @@
 
 #define MINCORES 1
 
-coreinit cubafun_;
+extern coreinit cubafun_;
 extern int cubaverb_;
 extern corespec cubaworkers_;
 

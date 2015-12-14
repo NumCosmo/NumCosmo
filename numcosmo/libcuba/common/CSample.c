@@ -6,8 +6,7 @@
 		last modified 9 Oct 14 th
 */
 
-
-coreinit cubafun_;
+extern coreinit cubafun_;
 extern int cubaverb_;
 extern corespec cubaworkers_;
 

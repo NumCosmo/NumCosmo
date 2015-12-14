@@ -58,7 +58,7 @@
  * \end{align}
  * where $m_{\Hy}$ and $m_{\He}$ are the hydrogen and helium mass.
  *
- * The element abundances are define as the ratio of the element by the total
+ * The element abundances are defined as the ratio of the element by the total
  * number of free protons $n_p \equiv n_\Hy$:
  * \begin{align}
  * X_{f} = \frac{n_{f}}{n_p},
@@ -398,7 +398,7 @@ nc_recomb_HeII_ion_saha (NcHICosmo *cosmo, gdouble x)
  * This calculation is done by finding the value of $x$ where
  * $$\frac{e^{-\HeII_{1s}/(k_BT)}}{4n_{\Hy}\lambda_{\e}^3} = f.$$
  *
- * Returns: the value of $x$ where the ratio @frac occur.
+ * Returns: the value of $x$ where the ratio @f occur.
  */
 gdouble
 nc_recomb_HeII_ion_saha_x (NcHICosmo *cosmo, gdouble f)
@@ -568,68 +568,6 @@ nc_recomb_equilibrium_Xe (NcRecomb *recomb, NcHICosmo *cosmo, const gdouble x)
  * fully ionized helium and hydrogen [nc_recomb_He_fully_ionized_Xe ()].
  *
  * Returns: $d\tau/d\lambda$.
- */
-/**
- * nc_recomb_pequignot_HI_case_B:
- * @cosmo: a #NcHICosmo.
- * @Tm: the matter (baryons) temperature $T_m$
- *
- * The case B $\HyII$ recombination coefficient.
- *
- * The fitting formula of the case B recombination coefficient for $\HyII$ as
- * in [Pequignot (1991)][XPequignot1991].
- *
- * Returns: the value of the case B recombination coefficient for
- * $\HyII$, $\alpha_H$ .
- */
-/**
- * nc_recomb_pequignot_HI_case_B_dTm:
- * @cosmo: a #NcHICosmo.
- * @Tm: the matter (baryons) temperature $T_m$
- *
- * The case B $\HyII$ recombination coefficient derivative with respect to $T_m$.
- *
- * The derivative of the fitting formula of the case B recombination coefficient for $\HyII$
- * nc_recomb_pequignot_HI_case_B ().
- *
- * Returns: the value of the case B recombination coefficient for $\HyII$, $d\alpha_H/dT_m$.
- */
-/**
- * nc_recomb_hummer_HeI_case_B:
- * @cosmo: a #NcHICosmo.
- * @Tm: the matter (baryons) temperature $T_m$
- *
- * The case B $\HeII$ recombination coefficient.
- *
- * The fitting formula of the case B recombination coefficient for $\HeII$ as
- * in [Hummer (1998)][XHummer1998].
- *
- * Returns: the value of the case B recombination coefficient for $\HeII$, $\alpha_H$ .
- */
-/**
- * nc_recomb_hummer_HeI_case_B_dTm:
- * @cosmo: a #NcHICosmo.
- * @Tm: the matter (baryons) temperature $T_m$
- *
- * The case B $\HeII$ recombination coefficient derivative with respect to Tm.
- *
- * The derivative of the fitting formula of the case B recombination coefficient for $\HeII$
- * nc_recomb_hummer_HeI_case_B ().
- *
- * Returns: the value of the case B recombination coefficient for $\HeII$, $d\alpha_H/dT_m$.
- */
-
-/**
- * nc_recomb_weinberg_HII_ion_rate:
- * @cosmo: a #NcHICosmo.
- * @XHII: FIXME
- * @Tm: FIXME
- * @XHeII: FIXME
- * @x: normalized scale factor inverse $x = 1 + z = a_0/a$
- *
- * $dX_\e/dx$ implemented using Weinbergs book
- *
- * Returns: FIXME
  */
 
 /**
@@ -917,7 +855,7 @@ _nc_recomb_root (NcRecomb *recomb, gsl_function *F, gdouble x0, gdouble x1)
     iter++;
     status = gsl_root_fsolver_iterate (recomb->fsol);
     if (status)
-      g_error ("_nc_recomb_root_brent:Cannot find root (%s)", gsl_strerror (status));
+      g_error ("_nc_recomb_root_brent: Cannot find root (%s)", gsl_strerror (status));
 
     x = gsl_root_fsolver_root (recomb->fsol);
     x0 = gsl_root_fsolver_x_lower (recomb->fsol);
@@ -943,7 +881,7 @@ _nc_recomb_min (NcRecomb *recomb, gsl_function *F, gdouble x0, gdouble x1, gdoub
     iter++;
     status = gsl_min_fminimizer_iterate (recomb->fmin);
     if (status)
-      g_error ("_nc_recomb_min:Cannot find minimum (%s)", gsl_strerror (status));
+      g_error ("_nc_recomb_min: Cannot find minimum (%s)", gsl_strerror (status));
 
     x  = gsl_min_fminimizer_x_minimum (recomb->fmin);
     x0 = gsl_min_fminimizer_x_lower (recomb->fmin);

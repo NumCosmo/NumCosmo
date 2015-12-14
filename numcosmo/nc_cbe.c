@@ -968,7 +968,7 @@ _nc_cbe_set_thermo (NcCBE *cbe, NcHICosmo *cosmo)
   cbe->priv->pth.YHe                      = /*_BBN_*/ncm_c_prim_He_Yp ();
   cbe->priv->pth.recombination            = recfast;
   cbe->priv->pth.reio_parametrization     = reio_camb;
-  cbe->priv->pth.reio_z_or_tau            = reio_tau;
+  cbe->priv->pth.reio_z_or_tau            = reio_none/*reio_tau*/;
   cbe->priv->pth.z_reio                   = 13.0;
   cbe->priv->pth.tau_reio                 = ncm_model_orig_param_get (NCM_MODEL (cosmo), NC_HICOSMO_DE_TAU_RE);
   cbe->priv->pth.reionization_exponent    = 1.5;
