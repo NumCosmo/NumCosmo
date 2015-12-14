@@ -120,7 +120,7 @@ guint _nc_cluster_mass_plcl_obs_len (NcClusterMass *clusterm) { NCM_UNUSED (clus
 guint _nc_cluster_mass_plcl_obs_params_len (NcClusterMass *clusterm) { NCM_UNUSED (clusterm); return 2; }
 static gdouble _nc_cluster_mass_plcl_Msz_Ml_M500_p (NcClusterMass *clusterm, NcHICosmo *cosmo, gdouble lnM, gdouble z, const gdouble *Mobs, const gdouble *Mobs_params);
 static gdouble _nc_cluster_mass_plcl_intp (NcClusterMass *clusterm, NcHICosmo *cosmo, gdouble lnM, gdouble z);
-static gboolean _nc_cluster_mass_plcl_resample (NcClusterMass *clusterm, NcHICosmo *cosmo, gdouble lnM, gdouble z, gdouble *lnMobs, gdouble *lnMobs_params, NcmRNG *rng);
+static gboolean _nc_cluster_mass_plcl_resample (NcClusterMass *clusterm, NcHICosmo *cosmo, gdouble lnM, gdouble z, gdouble *lnMobs, const gdouble *lnMobs_params, NcmRNG *rng);
 static void _nc_cluster_mass_plcl_n_limits (NcClusterMass *clusterm, NcHICosmo *cosmo, gdouble *lnM_lower, gdouble *lnM_upper);
 
 static void
@@ -918,12 +918,11 @@ _nc_cluster_mass_plcl_intp (NcClusterMass *clusterm, NcHICosmo *cosmo, gdouble l
 }
 
 static gboolean
-_nc_cluster_mass_plcl_resample (NcClusterMass *clusterm, NcHICosmo *cosmo, gdouble lnM, gdouble z, gdouble *lnMobs, gdouble *lnMobs_params, NcmRNG *rng)
+_nc_cluster_mass_plcl_resample (NcClusterMass *clusterm, NcHICosmo *cosmo, gdouble lnM, gdouble z, gdouble *lnMobs, const gdouble *lnMobs_params, NcmRNG *rng)
 {
   NcClusterMassPlCL *mszl = NC_CLUSTER_MASS_PLCL (clusterm);
   gdouble r_SZ, r_L, sz_ran, l_ran, M_pl_M0, M_cl_M0;
   gdouble lnM_SZ_ran, lnM_L_ran, M_SZ_ran, M_L_ran;
-  gdouble sd_PL, sd_CL;
   const gdouble lnM_SZ = _SZ_lnmass_mean (mszl, lnM);
   const gdouble lnM_L = _Lens_lnmass_mean (mszl, lnM);
 
@@ -940,29 +939,13 @@ _nc_cluster_mass_plcl_resample (NcClusterMass *clusterm, NcHICosmo *cosmo, gdoub
   M_SZ_ran = exp (lnM_SZ_ran); /* M is in units of M0, i.e., M -> M/M0 */
   M_L_ran = exp (lnM_L_ran);
   
-  //printf ("lnM_true = %.5g\n", lnM);
-  //printf ("SZ = %.5g rsz = %.5g SZr = %.5g || L = %.5g rl = %.5g Lr = %.5g\n", lnM_SZ, r_SZ, lnM_SZ_ran, lnM_L, r_L, lnM_L_ran);
-  //printf ("rsz = %.5g M_sz_ran = %.5g rl = %.5g M_L_ran = %.5g\n", r_SZ, M_SZ_ran, r_L, M_L_ran);
-
-
-  ncm_rng_lock (rng);
-  sd_PL =  gsl_ran_gamma (rng->r, 10.0, 0.5) / 10.0; /* This choice is suitable for the Planck catalog, logarithm (e) scale*/
-  ncm_rng_unlock (rng);
-  
-  ncm_rng_lock (rng);
-  sd_CL = (1.8 + gsl_ran_rayleigh (rng->r, 3.5)) / 10.0; /* This choice is suitable for the CLASH catalog, logarithm (e) scale*/
-  ncm_rng_unlock (rng);
-  
   ncm_rng_lock (rng);
   do {
-    sz_ran  = gsl_ran_gaussian (rng->r, sd_PL);
+    sz_ran  = gsl_ran_gaussian (rng->r, lnMobs_params[0]);
     M_pl_M0 = M_SZ_ran + sz_ran;
   } while (M_pl_M0 < 0.0);
-  ncm_rng_unlock (rng);
-
-  ncm_rng_lock (rng);
   do {
-    l_ran   = gsl_ran_gaussian (rng->r, sd_CL);
+    l_ran   = gsl_ran_gaussian (rng->r, lnMobs_params[1]);
     M_cl_M0 = M_L_ran + l_ran;
   } while (M_cl_M0 < 0.0);
   ncm_rng_unlock (rng);
@@ -970,16 +953,11 @@ _nc_cluster_mass_plcl_resample (NcClusterMass *clusterm, NcHICosmo *cosmo, gdoub
   lnMobs[NC_CLUSTER_MASS_PLCL_MPL] = log (M_pl_M0) + log (mszl->M0);  
   lnMobs[NC_CLUSTER_MASS_PLCL_MCL] = log (M_cl_M0) + log (mszl->M0);
 
-  lnMobs_params[NC_CLUSTER_MASS_PLCL_SD_PL] = sd_PL;
-  lnMobs_params[NC_CLUSTER_MASS_PLCL_SD_CL] = sd_CL;
-
-  //printf ("M0 = %.3e\n", mszl->M0);
-  //printf ("sz_ran = %.5g M_sz_ran = %.5g lnMo_pl = %.5g sd_pl = %.5g\n", sz_ran, M_SZ_ran, lnMobs[NC_CLUSTER_MASS_PLCL_MPL], sd_PL);
-  //printf ("M_l_ran = %.5g lnMo_cl = %.5g sd_cl = %.5g\n", M_L_ran, lnMobs[NC_CLUSTER_MASS_PLCL_MCL], sd_CL);
-  //printf ("sd_pl = %.5g sd_cl = %.5g\n", sd_PL, sd_CL);
-  
-  return TRUE; /* Information to select these masses are not implemented here. The selection function is in nc_cluster_pseudo_counts */
-  //return (lnMobs[NC_CLUSTER_MASS_PLCL_MPL] >= mszl->lnMobs_min) && (lnMobs[NC_CLUSTER_MASS_PLCL_MCL] >= mszl->lnMobs_min); 
+  return TRUE; 
+  /* Information to select these masses are not implemented here. 
+   * The selection function is in nc_cluster_pseudo_counts
+   * return (lnMobs[NC_CLUSTER_MASS_PLCL_MPL] >= mszl->lnMobs_min) && (lnMobs[NC_CLUSTER_MASS_PLCL_MCL] >= mszl->lnMobs_min);
+   */
 }
 
 /*
