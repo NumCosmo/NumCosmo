@@ -281,7 +281,7 @@ _nc_hireion_camb_get_Xe (NcHIReion *reion, NcHICosmo *cosmo, const gdouble lambd
  * 
  * FIXME
  * 
- * Returns: a newly created #NcHIRecombCamb.
+ * Returns: a newly created #NcHIReionCamb.
  */
 NcHIReionCamb *
 nc_hireion_camb_new (void)
