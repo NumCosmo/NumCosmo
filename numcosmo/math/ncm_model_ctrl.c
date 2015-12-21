@@ -123,18 +123,26 @@ ncm_model_ctrl_copy (NcmModelCtrl *ctrl)
  * Returns: FIXME
  */
 /**
+ * ncm_model_ctrl_peek_model:
+ * @ctrl: FIXME
+ *
+ * FIXME
+ *
+ * Returns: (transfer none): FIXME
+ */
+/**
  * ncm_model_ctrl_get_model:
  * @ctrl: FIXME
  *
  * FIXME
  *
  * Returns: (transfer full): FIXME
-   */
+ */
 NcmModel *
 ncm_model_ctrl_get_model (NcmModelCtrl *ctrl)
 {
   if (ctrl->model)
-	g_object_ref (ctrl->model);
+    ncm_model_ref (ctrl->model);
   return ctrl->model;
 }
 

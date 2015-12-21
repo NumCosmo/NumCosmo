@@ -28,6 +28,7 @@
 
 #include <glib-object.h>
 #include <numcosmo/build_cfg.h>
+#include <numcosmo/math/ncm_model_ctrl.h>
 #include <numcosmo/nc_hireion.h>
 
 G_BEGIN_DECLS
@@ -74,11 +75,16 @@ struct _NcHIReionCamb
   gdouble HII_HeII_reion_delta_eff;
   gdouble HII_HeII_reion_x_pow_expo;
   gboolean HEII_reionized;
+  gsl_root_fsolver *fsol;
+  NcmModelCtrl *tau_ctrl;
 };
 
 GType nc_hireion_camb_get_type (void) G_GNUC_CONST;
 
 NcHIReionCamb *nc_hireion_camb_new (void);
+gdouble nc_hireion_camb_calc_z_from_tau (NcHIReionCamb *reion_camb, NcHICosmo *cosmo, const gdouble tau);
+void nc_hireion_camb_set_z_from_tau (NcHIReionCamb *reion_camb, NcHICosmo *cosmo, const gdouble tau);
+void nc_hireion_camb_z_to_tau (NcHIReionCamb *reion_camb, NcHICosmo *cosmo);
 
 #define NC_HIREION_CAMB_DEFAULT_HII_HEII_REION_DELTA (0.5)
 #define NC_HIREION_CAMB_DEFAULT_HEIII_REION_DELTA    (0.5)

@@ -40,6 +40,7 @@
 #include "build_cfg.h"
 
 #include "nc_hireion_camb.h"
+#include "nc_hireion_camb_reparam_tau.h"
 
 enum
 {
@@ -55,7 +56,7 @@ G_DEFINE_TYPE (NcHIReionCamb, nc_hireion_camb, NC_TYPE_HIREION);
 
 #define VECTOR     (NCM_MODEL (reion)->params)
 #define HII_HEII_Z (ncm_vector_get (VECTOR, NC_HIREION_CAMB_HII_HEII_Z))
-#define HEIII_Z    (ncm_vector_get (VECTOR, NC_HICOSMO_CAMB_HEIII_Z))
+#define HEIII_Z    (ncm_vector_get (VECTOR, NC_HIREION_CAMB_HEIII_Z))
 
 static void
 nc_hireion_camb_init (NcHIReionCamb *reion_camb)
@@ -66,11 +67,27 @@ nc_hireion_camb_init (NcHIReionCamb *reion_camb)
   reion_camb->HII_HeII_reion_delta_eff  = 0.0;
   reion_camb->HII_HeII_reion_x_pow_expo = 0.0;
   reion_camb->HEII_reionized            = FALSE;
+  reion_camb->fsol                      = gsl_root_fsolver_alloc (gsl_root_fsolver_brent);
+  reion_camb->tau_ctrl                  = ncm_model_ctrl_new (NULL);
+}
+
+static void
+nc_hireion_camb_dispose (GObject *object)
+{
+  NcHIReionCamb *reion_camb = NC_HIREION_CAMB (object);
+
+  ncm_model_ctrl_clear (&reion_camb->tau_ctrl);
+
+  /* Chain up : end */
+  G_OBJECT_CLASS (nc_hireion_camb_parent_class)->dispose (object);
 }
 
 static void
 nc_hireion_camb_finalize (GObject *object)
 {
+  NcHIReionCamb *reion_camb = NC_HIREION_CAMB (object);
+
+  gsl_root_fsolver_free (reion_camb->fsol);
 
   /* Chain up : end */
   G_OBJECT_CLASS (nc_hireion_camb_parent_class)->finalize (object);
@@ -128,7 +145,8 @@ nc_hireion_camb_get_property (GObject *object, guint prop_id, GValue *value, GPa
   }
 }
 
-static void _nc_hireion_camb_update_Xe (NcHIReion *reion, NcRecomb *recomb);
+static gdouble _nc_hireion_camb_get_init_x (NcHIReion *reion, NcHICosmo *cosmo);
+static gdouble _nc_hireion_camb_get_Xe (NcHIReion *reion, NcHICosmo *cosmo, const gdouble lambda, const gdouble Xe_recomb);
 
 static void
 nc_hireion_camb_class_init (NcHIReionCambClass *klass)
@@ -137,6 +155,7 @@ nc_hireion_camb_class_init (NcHIReionCambClass *klass)
   NcmModelClass *model_class  = NCM_MODEL_CLASS (klass);
   NcHIReionClass *reion_class = NC_HIREION_CLASS (klass);
 
+  object_class->dispose     = nc_hireion_camb_dispose;
   object_class->finalize    = nc_hireion_camb_finalize;
 
   model_class->set_property = &nc_hireion_camb_set_property;
@@ -186,18 +205,18 @@ nc_hireion_camb_class_init (NcHIReionCambClass *klass)
                                                          "Whether HeIII is reionized",
                                                          TRUE,
                                                          G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-  
 
-  reion_class->update_Xe = &_nc_hireion_camb_update_Xe;
+  reion_class->get_init_x = &_nc_hireion_camb_get_init_x;
+  reion_class->get_Xe     = &_nc_hireion_camb_get_Xe;
 }
 
-
-
 static void 
-_nc_hireion_camb_update_Xe (NcHIReion *reion, NcRecomb *recomb)
+_nc_hireion_camb_prepare_if_needed (NcHIReion *reion, NcHICosmo *cosmo)
 {
   NcHIReionCamb *reion_camb = NC_HIREION_CAMB (reion);
-  if (!ncm_model_state_is_update (NCM_MODEL (reion)))
+  gboolean need_update      = !ncm_model_state_is_update (NCM_MODEL (reion));
+
+  if (need_update)
   {
     const gdouble xre = 1.0 + HII_HEII_Z;
 
@@ -208,10 +227,62 @@ _nc_hireion_camb_update_Xe (NcHIReion *reion, NcRecomb *recomb)
       reion_camb->HII_HeII_reion_delta / xre;
     ncm_model_state_set_update (NCM_MODEL (reion));
   }
-
-  
 }
 
+static gdouble 
+_nc_hireion_camb_get_init_x (NcHIReion *reion, NcHICosmo *cosmo)
+{ 
+  NcHIReionCamb *reion_camb = NC_HIREION_CAMB (reion);
+  _nc_hireion_camb_prepare_if_needed (reion, cosmo);
+  return pow (reion_camb->HII_HeII_reion_x_pow_expo - reion_camb->HII_HeII_reion_delta_eff * GSL_LOG_DBL_EPSILON, 1.0 / reion_camb->HII_HeII_reion_expo);
+}
+
+static gdouble 
+_nc_hireion_camb_get_Xe (NcHIReion *reion, NcHICosmo *cosmo, const gdouble lambda, const gdouble Xe_recomb)
+{
+  NcHIReionCamb *reion_camb = NC_HIREION_CAMB (reion);
+  const gdouble XHe = nc_hicosmo_XHe (cosmo);
+  const gdouble XH_XHe = 1.0 + XHe;
+  gdouble Xe = 0.0;
+
+  _nc_hireion_camb_prepare_if_needed (reion, cosmo);
+
+  if (reion_camb->HEII_reionized)
+  {
+    const gdouble x       = exp (-lambda);
+    const gdouble x_HEIII = 1.0 + HEIII_Z;
+    const gdouble arg = 2.0 * (x - x_HEIII) / reion_camb->HeIII_reion_delta;
+    
+    if (arg < GSL_LOG_DBL_EPSILON)
+      Xe = XHe;
+    else
+      Xe = XHe / (1.0 + exp (arg));
+  }
+
+  {
+    const gdouble x_pow_expo = exp (-reion_camb->HII_HeII_reion_expo * lambda);
+    const gdouble arg        = 2.0 * (x_pow_expo - reion_camb->HII_HeII_reion_x_pow_expo) / reion_camb->HII_HeII_reion_delta_eff;
+    const gdouble exp_arg    = exp (arg);
+    
+    if (arg < GSL_LOG_DBL_EPSILON)
+      Xe += XH_XHe;
+    else
+      Xe += XH_XHe / (1.0 + exp_arg);
+
+    if (Xe_recomb != 0.0)
+      Xe += Xe_recomb / (1.0 + 1.0 / exp_arg);
+  }
+  
+  return Xe;
+}
+
+/**
+ * nc_hireion_camb_new:
+ * 
+ * FIXME
+ * 
+ * Returns: a newly created #NcHIRecombCamb.
+ */
 NcHIReionCamb *
 nc_hireion_camb_new (void)
 {
@@ -221,3 +292,127 @@ nc_hireion_camb_new (void)
   return reion_camb;
 }
 
+typedef struct _NcHIReionCambTauToZ
+{
+  NcHIReionCamb *reion_camb;
+  NcHICosmo *cosmo;
+  gdouble tau;
+} NcHIReionCambTauToZ;
+
+static gdouble
+_nc_hireion_camb_set_tau_m_tau (gdouble z_re, gpointer data)
+{
+  NcHIReionCambTauToZ *params = (NcHIReionCambTauToZ *) data;
+
+  ncm_model_orig_param_set (NCM_MODEL (params->reion_camb), NC_HIREION_CAMB_HII_HEII_Z, z_re);
+  
+  return nc_hireion_get_tau (NC_HIREION (params->reion_camb), params->cosmo) / params->tau - 1.0;
+}
+
+static gdouble
+_nc_hireion_camb_with_reparam_set_tau_m_tau (gdouble z_re, gpointer data)
+{
+  NcHIReionCambTauToZ *params = (NcHIReionCambTauToZ *) data;
+
+  ncm_model_orig_param_set (NCM_MODEL (params->reion_camb), NC_HIREION_CAMB_HII_HEII_Z, z_re);
+  
+  return ncm_model_param_get (NCM_MODEL (params->reion_camb), NC_HIREION_CAMB_HII_HEII_Z) / params->tau - 1.0;
+}
+
+/**
+ * nc_hireion_camb_calc_z_from_tau:
+ * @reion_camb: a #NcHIReionCamb
+ * @cosmo: a #NcHICosmo
+ * @tau: reionization optical depth
+ * 
+ * Calculates the reionization redshift from the value of the reionization
+ * optical depth and the cosmological model @cosmo.
+ * 
+ * Returns: $z_\mathrm{reion}$.
+ */
+gdouble 
+nc_hireion_camb_calc_z_from_tau (NcHIReionCamb *reion_camb, NcHICosmo *cosmo, const gdouble tau)
+{
+  gint status;
+  gint iter = 0, max_iter = 1000000;
+  gdouble z_reion = 0.0;
+  gdouble z_reion_l = 0.0, z_reion_u = 0.0;
+  const gdouble prec = GSL_MIN (NC_HIREION (reion_camb)->prec, 1e-1);
+  gsl_function F;
+  NcHIReionCambTauToZ params = {reion_camb, cosmo, tau};
+
+  if (NC_IS_HIREION_CAMB_REPARAM_TAU (ncm_model_peek_reparam (NCM_MODEL (reion_camb))))
+    F.function = &_nc_hireion_camb_with_reparam_set_tau_m_tau;
+  else
+    F.function = &_nc_hireion_camb_set_tau_m_tau;
+  F.params   = &params;
+
+  if (F.function (0.0, &params) < 0.0)
+  {
+    do {
+      z_reion_u += 20.0;
+    } while (F.function (z_reion_u, &params) < 0.0);
+    
+    gsl_root_fsolver_set (reion_camb->fsol, &F, z_reion_l, z_reion_u);
+    do {
+      iter++;
+      status = gsl_root_fsolver_iterate (reion_camb->fsol);
+      if (status)
+        g_error ("nc_hireion_camb_set_z_from_tau: Cannot find root (%s)", gsl_strerror (status));
+
+      z_reion   = gsl_root_fsolver_root (reion_camb->fsol);
+      z_reion_l = gsl_root_fsolver_x_lower (reion_camb->fsol);
+      z_reion_u = gsl_root_fsolver_x_upper (reion_camb->fsol);
+
+      status = gsl_root_test_interval (z_reion_l, z_reion_u, 0, prec);
+    } while (status == GSL_CONTINUE && iter < max_iter);
+  }
+
+  return z_reion;
+}
+
+/**
+ * nc_hireion_camb_set_z_from_tau:
+ * @reion_camb: a #NcHIReionCamb
+ * @cosmo: a #NcHICosmo
+ * @tau: reionization optical depth
+ * 
+ * Sets the reionization redshift from the value of the reionization
+ * optical depth and the cosmological model @cosmo.
+ * 
+ */
+void 
+nc_hireion_camb_set_z_from_tau (NcHIReionCamb *reion_camb, NcHICosmo *cosmo, const gdouble tau)
+{
+  NcmModel *model = NCM_MODEL (reion_camb);
+  if (NC_IS_HIREION_CAMB_REPARAM_TAU (ncm_model_peek_reparam (model)))
+  {
+    ncm_model_param_set (model, NC_HIREION_CAMB_HII_HEII_Z, tau);
+  }
+  else
+  {
+    const gdouble z_reion = nc_hireion_camb_calc_z_from_tau (reion_camb, cosmo, tau);
+    ncm_model_orig_param_set (NCM_MODEL (reion_camb), NC_HIREION_CAMB_HII_HEII_Z, z_reion);
+    return;
+  }
+}
+
+/**
+ * nc_hireion_camb_z_to_tau:
+ * @reion_camb: a #NcHIReionCamb
+ * @cosmo: a #NcHICosmo
+ * 
+ * Changes the parametrization to use $\tau_\mathrm{reion}$ intead of $z_\mathrm{reion}$.
+ * 
+ */
+void 
+nc_hireion_camb_z_to_tau (NcHIReionCamb *reion_camb, NcHICosmo *cosmo)
+{
+  NcHIReionCambReparamTau *reparam_tau = nc_hireion_camb_reparam_tau_new (ncm_model_len (NCM_MODEL (reion_camb)), cosmo);
+  NcmReparam *reparam = NCM_REPARAM (reparam_tau);
+  
+  ncm_model_set_reparam (NCM_MODEL (reion_camb), reparam);
+  ncm_reparam_clear (&reparam);
+
+  return;
+}

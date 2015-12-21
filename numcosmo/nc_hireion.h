@@ -50,18 +50,25 @@ struct _NcHIReionClass
 {
   /*< private >*/
   NcmModelClass parent_class;
-  void (*update_Xe) (NcHIReion *reion, NcRecomb *recomb);
+  gdouble (*get_init_x) (NcHIReion *reion, NcHICosmo *cosmo);
+  gdouble (*get_Xe) (NcHIReion *reion, NcHICosmo *cosmo, const gdouble lambda, const gdouble Xe_recomb);
+  gdouble (*get_tau) (NcHIReion *reion, NcHICosmo *cosmo);
 };
 
 struct _NcHIReion
 {
   /*< private >*/
   NcmModel parent_instance;
+  gdouble prec;
 };
 
 GType nc_hireion_get_type (void) G_GNUC_CONST;
 
 NCM_MSET_MODEL_DECLARE_ID (nc_hireion);
+
+gdouble nc_hireion_get_init_x (NcHIReion *reion, NcHICosmo *cosmo);
+gdouble nc_hireion_get_Xe (NcHIReion *reion, NcHICosmo *cosmo, const gdouble lambda, const gdouble Xe_recomb);
+gdouble nc_hireion_get_tau (NcHIReion *reion, NcHICosmo *cosmo);
 
 #define NC_HIREION_DEFAULT_PARAMS_ABSTOL (0.0)
 

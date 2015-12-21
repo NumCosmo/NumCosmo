@@ -114,8 +114,8 @@
  * [Seager (2000)][XSeager2000].
  *
  * The default value of the helium primordial abundance
- * is given by ncm_c_prim_He_Yp ().
- * The primordial helium fraction is define by ncm_c_prim_XHe ().
+ * is given by nc_hicosmo_He_Yp ().
+ * The primordial Helium fraction is define by nc_hicosmo_XHe().
  *
  * <bridgehead>Optical depth and visibility function</bridgehead>
  *
@@ -185,18 +185,6 @@ nc_recomb_init (NcRecomb *recomb)
 }
 
 static void
-nc_recomb_finalize (GObject *object)
-{
-  NcRecomb *recomb = NC_RECOMB (object);
-
-  gsl_root_fsolver_free (recomb->fsol);
-  gsl_min_fminimizer_free (recomb->fmin);
-
-  /* Chain up : end */
-  G_OBJECT_CLASS (nc_recomb_parent_class)->finalize (object);
-}
-
-static void
 nc_recomb_dispose (GObject *object)
 {
   NcRecomb *recomb = NC_RECOMB (object);
@@ -207,6 +195,18 @@ nc_recomb_dispose (GObject *object)
 
   /* Chain up : end */
   G_OBJECT_CLASS (nc_recomb_parent_class)->dispose (object);
+}
+
+static void
+nc_recomb_finalize (GObject *object)
+{
+  NcRecomb *recomb = NC_RECOMB (object);
+
+  gsl_root_fsolver_free (recomb->fsol);
+  gsl_min_fminimizer_free (recomb->fmin);
+
+  /* Chain up : end */
+  G_OBJECT_CLASS (nc_recomb_parent_class)->finalize (object);
 }
 
 static void
@@ -333,7 +333,7 @@ nc_recomb_HI_ion_saha (NcHICosmo *cosmo, gdouble x)
   const gdouble h2 = nc_hicosmo_h2 (cosmo);
   const gdouble Omega_b = nc_hicosmo_Omega_b (cosmo);
   const gdouble lambda_e3 = gsl_pow_3 (ncm_c_thermal_wl_e () / sqrt (T));
-  const gdouble n_H = ncm_c_prim_H_Yp () * Omega_b * x3 * (ncm_c_crit_density () * h2) / ncm_c_rest_energy_p ();
+  const gdouble n_H = nc_hicosmo_H_Yp (cosmo) * Omega_b * x3 * (ncm_c_crit_density () * h2) / ncm_c_rest_energy_p ();
 
   return gsl_sf_exp_mult (-ncm_c_H_bind_1s () / kbT, 1.0 / (n_H * lambda_e3));
 }
@@ -358,7 +358,7 @@ nc_recomb_HeI_ion_saha (NcHICosmo *cosmo, gdouble x)
   const gdouble h2 = nc_hicosmo_h2 (cosmo);
   const gdouble Omega_b = nc_hicosmo_Omega_b (cosmo);
   const gdouble lambda_e3 = gsl_pow_3 (ncm_c_thermal_wl_e () / sqrt(T));
-  const gdouble n_H = ncm_c_prim_H_Yp () * Omega_b * x3 * (ncm_c_crit_density () * h2) / ncm_c_rest_energy_p ();
+  const gdouble n_H = nc_hicosmo_H_Yp (cosmo) * Omega_b * x3 * (ncm_c_crit_density () * h2) / ncm_c_rest_energy_p ();
 
   return gsl_sf_exp_mult (-ncm_c_HeI_bind_1s () / kbT, 4.0 / (n_H * lambda_e3));
 }
@@ -383,7 +383,7 @@ nc_recomb_HeII_ion_saha (NcHICosmo *cosmo, gdouble x)
   const gdouble h2 = nc_hicosmo_h2 (cosmo);
   const gdouble Omega_b = nc_hicosmo_Omega_b (cosmo);
   const gdouble lambda_e3 = gsl_pow_3 (ncm_c_thermal_wl_e () / sqrt(T0)) / sqrt(x3);
-  const gdouble n_H = ncm_c_prim_H_Yp () * Omega_b * x3 * (ncm_c_crit_density () * h2) / ncm_c_rest_energy_p ();
+  const gdouble n_H = nc_hicosmo_H_Yp (cosmo) * Omega_b * x3 * (ncm_c_crit_density () * h2) / ncm_c_rest_energy_p ();
 
   return gsl_sf_exp_mult (-ncm_c_HeII_bind_1s () / kbT, 1.0 / (n_H * lambda_e3));
 }
@@ -409,7 +409,7 @@ nc_recomb_HeII_ion_saha_x (NcHICosmo *cosmo, gdouble f)
   const gdouble lambda_e3_0 = gsl_pow_3 (ncm_c_thermal_wl_e () / sqrt (T0));
   const gdouble h2 = nc_hicosmo_h2 (cosmo);
   const gdouble Omega_b = nc_hicosmo_Omega_b (cosmo);
-  const gdouble n_H0 = ncm_c_prim_H_Yp () * Omega_b * (ncm_c_crit_density () * h2) / ncm_c_rest_energy_p ();
+  const gdouble n_H0 = nc_hicosmo_H_Yp (cosmo) * Omega_b * (ncm_c_crit_density () * h2) / ncm_c_rest_energy_p ();
   const gdouble y = 3.0 / 2.0 * gsl_sf_lambert_Wm1 (2.0 / 3.0 * mE_kbT0 * cbrt (gsl_pow_2 (lambda_e3_0 * n_H0 * f))) / mE_kbT0;
 
   return (1.0 / y);
@@ -433,7 +433,8 @@ nc_recomb_HeII_ion_saha_x (NcHICosmo *cosmo, gdouble f)
 gdouble
 nc_recomb_HeII_ion_saha_x_by_HeIII_He (NcHICosmo *cosmo, gdouble f)
 {
-  const gdouble ratio = f * (1.0 + ncm_c_prim_XHe () * (1.0 + f)) / (1.0 - f);
+  const gdouble XHe = nc_hicosmo_XHe (cosmo);
+  const gdouble ratio = f * (1.0 + XHe * (1.0 + f)) / (1.0 - f);
   return nc_recomb_HeII_ion_saha_x (cosmo, ratio);
 }
 
@@ -445,7 +446,7 @@ nc_recomb_HeII_ion_saha_x_by_HeIII_He (NcHICosmo *cosmo, gdouble f)
  * Assuming that all helium is single or double ionized and all hydrogen is
  * ionized we have $$X_\e = 1 + X_\HeII + 2X_\HeIII,\quad X_\He = X_\HeII +
  * X_\HeIII,$$ thus, $$X_\HeIII = X_\e-X_\He-1,\quad X_\HeII = 1 + 2X_\He -
- * X_\e.$$ Using nc_recomb_HeII_ion_saha () and ncm_c_prim_XHe () we obtain
+ * X_\e.$$ Using nc_recomb_HeII_ion_saha() and nc_hicosmo_XHe() we obtain
  * $X_\e$.
  *
  * Returns: $X_\e$.
@@ -454,9 +455,10 @@ nc_recomb_HeII_ion_saha_x_by_HeIII_He (NcHICosmo *cosmo, gdouble f)
 gdouble
 nc_recomb_He_fully_ionized_Xe (NcHICosmo *cosmo, gdouble x)
 {
+  const gdouble XHe = nc_hicosmo_XHe (cosmo);
   const gdouble XHeIIIXe_XHeII = nc_recomb_HeII_ion_saha (cosmo, x);
-  const gdouble arg = ncm_c_prim_XHe () * (ncm_c_prim_XHe () + (2.0 + 6.0 * XHeIIIXe_XHeII)) / ((1.0 + XHeIIIXe_XHeII) * (1.0 + XHeIIIXe_XHeII));
-  const gdouble Xe = (2.0 + ncm_c_prim_XHe () + (1.0 + XHeIIIXe_XHeII) * ncm_sqrt1px_m1 (arg)) / 2.0;
+  const gdouble arg = XHe * (XHe + (2.0 + 6.0 * XHeIIIXe_XHeII)) / ((1.0 + XHeIIIXe_XHeII) * (1.0 + XHeIIIXe_XHeII));
+  const gdouble Xe = (2.0 + XHe + (1.0 + XHeIIIXe_XHeII) * ncm_sqrt1px_m1 (arg)) / 2.0;
   return Xe;
 }
 
@@ -523,7 +525,7 @@ nc_recomb_equilibrium_Xe (NcRecomb *recomb, NcHICosmo *cosmo, const gdouble x)
   XHe_p.fHI    = nc_recomb_HI_ion_saha (cosmo, x);
   XHe_p.fHeI   = nc_recomb_HeI_ion_saha (cosmo, x);
   XHe_p.fHeII  = nc_recomb_HeII_ion_saha (cosmo, x);
-  XHe_p.XHe    = ncm_c_prim_XHe ();
+  XHe_p.XHe    = nc_hicosmo_XHe (cosmo);
 
   if (XHe_p.fHeII < 1e-30)
   {
@@ -1060,7 +1062,7 @@ nc_recomb_tau_cutoff (NcRecomb *recomb, NcHICosmo *cosmo)
   func.cosmo  = cosmo;
   func.ref    = -GSL_LOG_DBL_EPSILON;
 
-  return _nc_recomb_root (recomb, &F,
+  return _nc_recomb_root (recomb, &F, 
                           recomb->lambdai,
                           recomb->lambdaf);
 }

@@ -229,6 +229,7 @@ nc_headers = \
 	nc_recomb_cbe.h               \
 	nc_hireion.h                  \
 	nc_hireion_camb.h             \
+	nc_hireion_camb_reparam_tau.h \
 	nc_snia_dist_cov.h            \
 	nc_planck_fi.h                \
 	nc_planck_fi_cor_tt.h         \
@@ -332,47 +333,48 @@ nc_headers = \
 	
 
 nc_sources = \
-	nc_hicosmo.c                 \
-	nc_hiprim.c                  \
-	nc_distance.c                \
-	nc_hicosmo_priors.c          \
-	nc_recomb.c                  \
-	nc_recomb_seager.c           \
-	nc_recomb_cbe.c              \
-	nc_hireion.c                 \
-	nc_hireion_camb.c            \
-	nc_snia_dist_cov.c           \
-	nc_planck_fi.c               \
-	nc_planck_fi_cor_tt.c        \
-	nc_cbe_precision.c           \
-	nc_cbe.c                     \
-	model/nc_hicosmo_de.c        \
+	nc_hicosmo.c                  \
+	nc_hiprim.c                   \
+	nc_distance.c                 \
+	nc_hicosmo_priors.c           \
+	nc_recomb.c                   \
+	nc_recomb_seager.c            \
+	nc_recomb_cbe.c               \
+	nc_hireion.c                  \
+	nc_hireion_camb.c             \
+	nc_hireion_camb_reparam_tau.c \
+	nc_snia_dist_cov.c            \
+	nc_planck_fi.c                \
+	nc_planck_fi_cor_tt.c         \
+	nc_cbe_precision.c            \
+	nc_cbe.c                      \
+	model/nc_hicosmo_de.c         \
 	model/nc_hicosmo_de_reparam_ok.c \
-	model/nc_hicosmo_de_linder.c \
-	model/nc_hicosmo_de_pad.c    \
-	model/nc_hicosmo_de_qe.c     \
-	model/nc_hicosmo_de_xcdm.c   \
-	model/nc_hicosmo_lcdm.c      \
-	model/nc_hicosmo_qconst.c    \
-	model/nc_hicosmo_qlinear.c   \
-	model/nc_hicosmo_qspline.c   \
-	model/nc_hicosmo_qgrw.c      \
-	model/nc_hiprim_power_law.c  \
-	model/nc_hiprim_atan.c       \
-	lss/nc_window.c              \
-	lss/nc_window_tophat.c       \
-	lss/nc_window_gaussian.c     \
-	lss/nc_transfer_func.c       \
-	lss/nc_transfer_func_bbks.c  \
-	lss/nc_transfer_func_eh.c    \
-	lss/nc_transfer_func_camb.c  \
-	lss/nc_transfer_func_pert.c  \
-	lss/nc_growth_func.c         \
-	lss/nc_matter_var.c          \
-	lss/nc_density_profile.c     \
-	lss/nc_density_profile_nfw.c \
-	lss/nc_galaxy_acf.c          \
-	lss/nc_multiplicity_func.c   \
+	model/nc_hicosmo_de_linder.c  \
+	model/nc_hicosmo_de_pad.c     \
+	model/nc_hicosmo_de_qe.c      \
+	model/nc_hicosmo_de_xcdm.c    \
+	model/nc_hicosmo_lcdm.c       \
+	model/nc_hicosmo_qconst.c     \
+	model/nc_hicosmo_qlinear.c    \
+	model/nc_hicosmo_qspline.c    \
+	model/nc_hicosmo_qgrw.c       \
+	model/nc_hiprim_power_law.c   \
+	model/nc_hiprim_atan.c        \
+	lss/nc_window.c               \
+	lss/nc_window_tophat.c        \
+	lss/nc_window_gaussian.c      \
+	lss/nc_transfer_func.c        \
+	lss/nc_transfer_func_bbks.c   \
+	lss/nc_transfer_func_eh.c     \
+	lss/nc_transfer_func_camb.c   \
+	lss/nc_transfer_func_pert.c   \
+	lss/nc_growth_func.c          \
+	lss/nc_matter_var.c           \
+	lss/nc_density_profile.c      \
+	lss/nc_density_profile_nfw.c  \
+	lss/nc_galaxy_acf.c           \
+	lss/nc_multiplicity_func.c    \
 	lss/nc_multiplicity_func_ps.c          \
 	lss/nc_multiplicity_func_st.c          \
 	lss/nc_multiplicity_func_jenkins.c     \

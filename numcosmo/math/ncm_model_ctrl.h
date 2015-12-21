@@ -66,6 +66,7 @@ void ncm_model_ctrl_force_update (NcmModelCtrl *ctrl);
 void ncm_model_ctrl_free (NcmModelCtrl *ctrl);
 void ncm_model_ctrl_clear (NcmModelCtrl **ctrl);
 
+G_INLINE_FUNC NcmModel *ncm_model_ctrl_peek_model (NcmModelCtrl *ctrl);
 G_INLINE_FUNC gboolean ncm_model_ctrl_update (NcmModelCtrl *ctrl, NcmModel *model);
 G_INLINE_FUNC gboolean ncm_model_ctrl_model_update (NcmModelCtrl *ctrl, NcmModel *model);
 
@@ -78,6 +79,12 @@ G_END_DECLS
 #ifdef NUMCOSMO_HAVE_INLINE
 
 G_BEGIN_DECLS
+
+G_INLINE_FUNC NcmModel *
+ncm_model_ctrl_peek_model (NcmModelCtrl *ctrl)
+{
+  return ctrl->model;
+}
 
 G_INLINE_FUNC gboolean
 ncm_model_ctrl_update (NcmModelCtrl *ctrl, NcmModel *model)
