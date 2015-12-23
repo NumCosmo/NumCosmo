@@ -67,13 +67,13 @@ typedef enum _NcClusterMassPlCLParams
   NC_CLUSTER_MASS_PLCL_SPARAM_LEN, /*< skip >*/
 } NcClusterMassPlCLParams;
 
-#define NC_CLUSTER_MASS_PLCL_DEFAULT_A_SZ  (1.041)
-#define NC_CLUSTER_MASS_PLCL_DEFAULT_B_SZ  (0.17)
-#define NC_CLUSTER_MASS_PLCL_DEFAULT_SD_SZ (0.234)
-#define NC_CLUSTER_MASS_PLCL_DEFAULT_A_L  (0.9737)
+#define NC_CLUSTER_MASS_PLCL_DEFAULT_A_SZ  (1.0)
+#define NC_CLUSTER_MASS_PLCL_DEFAULT_B_SZ  (0.2)
+#define NC_CLUSTER_MASS_PLCL_DEFAULT_SD_SZ (0.3)
+#define NC_CLUSTER_MASS_PLCL_DEFAULT_A_L  (0.9)
 #define NC_CLUSTER_MASS_PLCL_DEFAULT_B_L  (0.0)
-#define NC_CLUSTER_MASS_PLCL_DEFAULT_SD_L (0.4)
-#define NC_CLUSTER_MASS_PLCL_DEFAULT_COR  (0.488)
+#define NC_CLUSTER_MASS_PLCL_DEFAULT_SD_L (0.2)
+#define NC_CLUSTER_MASS_PLCL_DEFAULT_COR  (0.5)
 
 #define NC_CLUSTER_MASS_PLCL_DEFAULT_PARAMS_ABSTOL (0.0)
 
@@ -103,6 +103,7 @@ void nc_cluster_mass_plcl_levmar_f_new_variables (gdouble *p, gdouble *hx, gint 
 void nc_cluster_mass_plcl_levmar_J_new_variables (gdouble *p, gdouble *j, gint m, gint n, NcClusterMassPlCL *mszl, gdouble lnM_M0, const gdouble *Mobs, const gdouble *Mobs_params);
 void nc_cluster_mass_plcl_peak_new_variables (gdouble N, gdouble *lb, gdouble *ub, NcClusterMassPlCL *mszl, gdouble lnM, const gdouble *Mobs, const gdouble *Mobs_params);
 gdouble nc_cluster_mass_plcl_pdf (NcClusterMass *clusterm, gdouble lnM_M0, gdouble w1, gdouble w2, const gdouble *Mobs, const gdouble *Mobs_params);
+gdouble nc_cluster_mass_plcl_Msz_Ml_p_ndetone (NcClusterMass *clusterm, gdouble lnMcut, const gdouble z, const gdouble Mpl, const gdouble Mcl, const gdouble sigma_pl, const gdouble sigma_cl);
 
 G_END_DECLS
 

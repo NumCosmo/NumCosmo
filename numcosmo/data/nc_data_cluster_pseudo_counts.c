@@ -51,6 +51,7 @@ enum
   PROP_NP,
   PROP_OBS,
   PROP_TRUE_DATA,
+  PROP_M_Z_FLAT_PRIOR, 
   PROP_SIZE,
 };
 
@@ -59,10 +60,11 @@ G_DEFINE_TYPE (NcDataClusterPseudoCounts, nc_data_cluster_pseudo_counts, NCM_TYP
 static void
 nc_data_cluster_pseudo_counts_init (NcDataClusterPseudoCounts *dcpc)
 {
-  dcpc->cad       = NULL;
-  dcpc->obs       = NULL;
-  dcpc->true_data = NULL;
-  dcpc->np        = 0;
+  dcpc->cad           = NULL;
+  dcpc->obs           = NULL;
+  dcpc->true_data     = NULL;
+  dcpc->np            = 0;
+  dcpc->M_Z_FlatPrior = FALSE;
 }
 
 static void
@@ -85,6 +87,9 @@ nc_data_cluster_pseudo_counts_set_property (GObject *object, guint prop_id, cons
       break;
     case PROP_TRUE_DATA:
       nc_data_cluster_pseudo_counts_set_true_data (dcpc, g_value_get_object (value));
+      break;
+    case PROP_M_Z_FLAT_PRIOR:
+      dcpc->M_Z_FlatPrior = g_value_get_boolean (value);
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -111,6 +116,9 @@ nc_data_cluster_pseudo_counts_get_property (GObject *object, guint prop_id, GVal
       break;
     case PROP_TRUE_DATA:
       g_value_set_object (value, dcpc->true_data);
+      break;
+    case PROP_M_Z_FLAT_PRIOR:
+      g_value_set_boolean (value, dcpc->M_Z_FlatPrior);
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -183,6 +191,13 @@ nc_data_cluster_pseudo_counts_class_init (NcDataClusterPseudoCountsClass *klass)
                                                          "Cluster (halo) true data (redshift and mass)",
                                                          NCM_TYPE_MATRIX,
                                                          G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  g_object_class_install_property (object_class,
+                                   PROP_M_Z_FLAT_PRIOR,
+                                   g_param_spec_boolean ("M-z-flat-prior",
+                                                         NULL,
+                                                         "Flat priors for halo mass and selection functions.",
+                                                         FALSE,
+                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
   
   data_class->m2lnL_val  = &_nc_data_cluster_pseudo_counts_m2lnL_val;
   data_class->get_length = &_nc_data_cluster_pseudo_counts_get_len;
@@ -356,43 +371,65 @@ _nc_data_cluster_pseudo_counts_m2lnL_val (NcmData *data, NcmMSet *mset, gdouble 
   NcClusterPseudoCounts *cpc = NC_CLUSTER_PSEUDO_COUNTS (ncm_mset_peek (mset, nc_cluster_pseudo_counts_id ()));
 
   g_assert (cosmo != NULL && clusterm != NULL && cpc != NULL);
-  
-  gdouble Ndet = nc_cluster_pseudo_counts_ndet (cpc, cosmo);
-  gdouble lnNdet = log (Ndet);
-  gint i;
-  *m2lnL = 0.0;
-  if (Ndet < 1.0)
+
+  if (dcpc->M_Z_FlatPrior)
   {
-    *m2lnL = GSL_POSINF;
-    return;
+    /* ndet = 1, i.e., no-physical case: selection function and mass function equal to one (flat prior). */
+    gint i;
+    for (i = 0; i < dcpc->np; i++)
+    {
+      const gdouble z = ncm_matrix_get (dcpc->obs, i, NC_DATA_CLUSTER_PSEUDO_COUNTS_Z);
+      const gdouble *M = ncm_matrix_ptr (dcpc->obs, i, NC_DATA_CLUSTER_PSEUDO_COUNTS_MPL);
+      const gdouble *M_params = ncm_matrix_ptr (dcpc->obs, i, NC_DATA_CLUSTER_PSEUDO_COUNTS_SD_MPL);
+      const gdouble m2lnL_i = log (nc_cluster_pseudo_counts_posterior_ndetone (cpc, clusterm, z, M[0], M[1], M_params[0], M_params[1]));
+
+      if (!gsl_finite (m2lnL_i))
+      {
+        *m2lnL += m2lnL_i;
+        break;
+      }
+      else
+      {
+        *m2lnL += m2lnL_i;
+      }
+    }
   }
   else
-    *m2lnL = 0.0;
-
-  //printf ("# Ndet % 20.15g\n", Ndet);
-  for (i = 0; i < dcpc->np; i++)
   {
-    const gdouble z = ncm_matrix_get (dcpc->obs, i, NC_DATA_CLUSTER_PSEUDO_COUNTS_Z);
-    const gdouble *M = ncm_matrix_ptr (dcpc->obs, i, NC_DATA_CLUSTER_PSEUDO_COUNTS_MPL);
-    const gdouble *M_params = ncm_matrix_ptr (dcpc->obs, i, NC_DATA_CLUSTER_PSEUDO_COUNTS_SD_MPL);
-    //const gdouble m2lnL_i = log (nc_cluster_pseudo_counts_posterior_numerator (cpc, clusterm, cosmo, z, M, M_params));
-    const gdouble m2lnL_i = log (nc_cluster_pseudo_counts_posterior_numerator_plcl (cpc, clusterm, cosmo, z, M[0], M[1], M_params[0], M_params[1]));
-
-    //printf ("MPL = %.5g MCL = %.5g sd_pl = %.5g sd_cl = %.5g\n", M[0], M[1], M_params[0], M_params[1]);
-    //printf ("%d % 20.15g % 20.15g % 20.15g % 20.15g\n", i, m2lnL_i, m2lnL_i - log (Ndet), log (Ndet), Ndet);
-    if (!gsl_finite (m2lnL_i))
+    gdouble Ndet = nc_cluster_pseudo_counts_ndet (cpc, cosmo);
+    gdouble lnNdet = log (Ndet);
+    gint i;
+    *m2lnL = 0.0;
+    if (Ndet < 1.0)
     {
-      *m2lnL += m2lnL_i;
-      break;
+      *m2lnL = GSL_POSINF;
+      return;
     }
     else
+      *m2lnL = 0.0;
+
+    for (i = 0; i < dcpc->np; i++)
     {
-      *m2lnL += m2lnL_i;
+      const gdouble z = ncm_matrix_get (dcpc->obs, i, NC_DATA_CLUSTER_PSEUDO_COUNTS_Z);
+      const gdouble *M = ncm_matrix_ptr (dcpc->obs, i, NC_DATA_CLUSTER_PSEUDO_COUNTS_MPL);
+      const gdouble *M_params = ncm_matrix_ptr (dcpc->obs, i, NC_DATA_CLUSTER_PSEUDO_COUNTS_SD_MPL);
+      //const gdouble m2lnL_i = log (nc_cluster_pseudo_counts_posterior_numerator (cpc, clusterm, cosmo, z, M, M_params));
+      const gdouble m2lnL_i = log (nc_cluster_pseudo_counts_posterior_numerator_plcl (cpc, clusterm, cosmo, z, M[0], M[1], M_params[0], M_params[1]));
+
+      if (!gsl_finite (m2lnL_i))
+      {
+        *m2lnL += m2lnL_i;
+        break;
+      }
+      else
+      {
+        *m2lnL += m2lnL_i;
+      }
     }
+
+    *m2lnL -= dcpc->np * lnNdet;
   }
-
-  *m2lnL -= dcpc->np * lnNdet;
-
+  
   *m2lnL = -2.0 * (*m2lnL);
   return;
 }

@@ -255,6 +255,12 @@ typedef struct _integrand_data
   gdouble Mcut;
   gdouble peak[2];
   gdouble func_peak; /* function computed at the peak*/
+  gdouble c1;
+  gdouble c2;
+  gdouble erf_Mlow;
+  gdouble erf_Mup;
+  gdouble erf_const_Msz;
+  gdouble erf_const_Ml;
 } integrand_data;
 
 static gdouble
@@ -831,6 +837,119 @@ _nc_cluster_mass_plcl_Msz_Ml_M500_p (NcClusterMass *clusterm, NcHICosmo *cosmo, 
   return P;
 }
 
+/* Functions to compute the integrand and the 2D integral over ln(M_SZ/M0) and ln(M_L/M0) when ndet = 1.  See paper! */
+
+static gdouble
+_nc_cluster_mass_plcl_Msz_Ml_p_ndetone_integrand (gdouble lnMsz_M0, gdouble lnMl_M0, gpointer userdata)
+{
+  integrand_data *data = (integrand_data *) userdata;
+  NcClusterMassPlCL *mszl = data->mszl;  
+  const gdouble Msz_M0 = exp (lnMsz_M0);
+  const gdouble Ml_M0  = exp (lnMl_M0);
+  const gdouble lnMsz_mlnBsz = lnMsz_M0 - log1p (- B_SZ);
+  const gdouble lnMl_mlnBl   = lnMl_M0 - log1p (- B_L);
+  
+  const gdouble M_Pl_M0  = data->mobs[NC_CLUSTER_MASS_PLCL_MPL];
+  const gdouble sd_Pl_M0 = data->mobs_params[NC_CLUSTER_MASS_PLCL_SD_PL];
+  const gdouble M_CL_M0  = data->mobs[NC_CLUSTER_MASS_PLCL_MCL];
+  const gdouble sd_CL_M0 = data->mobs_params[NC_CLUSTER_MASS_PLCL_SD_CL];
+  
+  const gdouble ysz     = (M_Pl_M0 - Msz_M0) / sd_Pl_M0;
+  const gdouble arg_ysz = ysz * ysz / 2.0;
+  const gdouble yl      = (M_CL_M0 - Ml_M0) / sd_CL_M0;
+  const gdouble arg_yl  = yl * yl / 2.0;
+  
+  const gdouble xsz       = A_L * lnMsz_mlnBsz;
+  const gdouble xl        =  A_SZ * lnMl_mlnBl;
+  const gdouble diff_xl_xsz = xl - xsz;
+  const gdouble diff_szl2    = diff_xl_xsz * diff_xl_xsz;
+  const gdouble arg_xszl = diff_szl2 / data->c1;
+
+  const gdouble exp_arg = - arg_ysz - arg_yl - arg_xszl;
+
+  const gdouble erf_arg     = data->erf_const_Msz * lnMsz_mlnBsz + data->erf_const_Ml * lnMl_mlnBl;
+  const gdouble erf_arg_low = (erf_arg + data->erf_Mlow) / data->c2;
+  const gdouble erf_arg_up  = (erf_arg + data->erf_Mup) / data->c2; 
+
+  //printf ("%20.15g %20.15g %20.15g %20.15g\n", lnMsz, lnMl, exp_arg, exp (exp_arg - data->lnnorma_p));
+  //printf ("Massas: %8.5g %8.5g %8.5e %8.5e %8.5g %8.5g %8.5e %8.5e\n", lnMsz, data->mu_sz, M_Pl, Msz, lnMl, data->mu_l, M_CL, Ml);
+  if (exp_arg < GSL_LOG_DBL_MIN)
+    return exp (-200.0);
+  else
+  {
+    const gdouble result = exp (exp_arg - data->lnnorma_p) * (erf(erf_arg_up) - erf (erf_arg_low)) + exp (-200.0);
+    //printf ("===> %12.8g %12.8g %12.8g %12.8g\n", data->lnM, lnMsz, lnMl, result);
+    return result;
+  }
+}
+
+/**
+ * nc_cluster_mass_plcl_Msz_Ml_p_ndetone:
+ * @clusterm: a #NcClusterMass
+ * @lnMcut: lower threshold of the true mass
+ * @z: redshift
+ * @Mpl: Planck cluster mass
+ * @Mcl: CLASH cluster mass
+ * @sigma_pl: Planck mass error
+ * @sigma_cl: CLASH mass error
+ *
+ * This function computes the i-th term of the posterior given flat priors for 
+ * the selection function and mass function. See function nc_cluster_pseudo_counts_posterior_ndetone().
+ *
+ * Returns: FIXME
+*/
+gdouble
+nc_cluster_mass_plcl_Msz_Ml_p_ndetone (NcClusterMass *clusterm, gdouble lnMcut, const gdouble z, const gdouble Mpl, const gdouble Mcl, const gdouble sigma_pl, const gdouble sigma_cl)
+{
+  integrand_data data;
+  NcClusterMassPlCL *mszl = NC_CLUSTER_MASS_PLCL (clusterm);
+  const gdouble AszSDl = A_SZ * SD_L;
+  const gdouble AlSDsz = A_L * SD_SZ;
+  const gdouble term1 = AszSDl * AszSDl + AlSDsz * AlSDsz - 2.0 * AszSDl * AlSDsz * COR;
+  const gdouble norma_factor = 2.0 * M_SQRT2 * M_SQRTPI * sqrt (term1);
+  const gdouble c1 = 2.0 * term1;
+  const gdouble c2 = SD_SZ * SD_L * sqrt(1.0 - COR * COR) * sqrt (c1);
+  const gdouble erf_Mlow = term1 * (lnMcut - log(mszl->M0));
+  const gdouble erf_Mup = term1 * log(1.0e16 / mszl->M0);
+  const gdouble erf_const_Msz = (AlSDsz * COR - AszSDl) * SD_L;
+  const gdouble erf_const_Ml = (AszSDl * COR - AlSDsz) * SD_SZ;
+  const gdouble Mobs[] = {Mpl / mszl->M0, Mcl / mszl->M0};
+  const gdouble Mobs_params[] = {sigma_pl / mszl->M0, sigma_cl / mszl->M0};
+  /* Normalization of the prior of the selection function: true mass top-hat function between Mcut and 10^{16} h^{-1} Msun. */
+  const gdouble norm_Mtrue = 16.0 * M_LN10 - lnMcut; 
+  gdouble sd_Pl, sd_CL;
+  gdouble P, err;
+  NcmIntegrand2dim integ;
+
+  data.mszl          = mszl;
+  data.mobs          = Mobs;
+  data.mobs_params   = Mobs_params;
+  data.c1            = c1;
+  data.c2            = c2;
+  data.erf_Mlow      = erf_Mlow;
+  data.erf_Mup       = erf_Mup;
+  data.erf_const_Msz = erf_const_Msz;
+  data.erf_const_Ml  = erf_const_Ml;
+
+  sd_Pl = data.mobs_params[NC_CLUSTER_MASS_PLCL_SD_PL];
+  sd_CL = data.mobs_params[NC_CLUSTER_MASS_PLCL_SD_CL];
+  
+  data.lnnorma_p = log (2.0 * M_PI * norma_factor * sd_Pl * sd_CL);
+    
+  integ.f = _nc_cluster_mass_plcl_Msz_Ml_p_ndetone_integrand;
+  integ.userdata = &data;
+
+  NCM_UNUSED (z);
+
+  gdouble a_sz, a_l, b_sz, b_l;
+  a_sz = a_l = log(1.0e12 / mszl->M0);
+  b_sz = b_l = log(1.0e16 / mszl->M0); 
+  ncm_integrate_2dim (&integ, a_sz, a_l, b_sz, b_l, NCM_DEFAULT_PRECISION, 0.0, &P, &err);
+    
+  return P / norm_Mtrue;
+  
+}
+
 // integrand to compute 
 static gdouble
 _nc_cluster_mass_plcl_int_Mobs_cut_inf (gdouble Msz_l, gdouble Mcut, gdouble sigma_Mobs)
@@ -897,8 +1016,7 @@ _nc_cluster_mass_plcl_intp (NcClusterMass *clusterm, NcHICosmo *cosmo, gdouble l
   data.sd_sz2 =          SD_SZ * SD_SZ;
   data.sd_l2 =           SD_L * SD_L;
   data.lnnorma_p =       log ((2.0 * M_PI *  norma_factor));
-  data.Mcut =            5.0e14; /* implement Mcut as a property of this object */
-
+  
   //sd_Pl = data.mobs_params[NC_CLUSTER_MASS_PLCL_SD_PL];
   //sd_CL = data.mobs_params[NC_CLUSTER_MASS_PLCL_SD_CL];
   

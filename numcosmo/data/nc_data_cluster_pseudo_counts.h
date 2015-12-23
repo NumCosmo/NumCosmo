@@ -79,6 +79,7 @@ struct _NcDataClusterPseudoCounts
   NcmMatrix *obs;
   NcmMatrix *true_data;
   guint np;
+  gboolean M_Z_FlatPrior;
   gchar *rnd_name;
 };
 

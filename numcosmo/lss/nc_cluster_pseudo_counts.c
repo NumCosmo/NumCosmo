@@ -317,6 +317,32 @@ typedef struct _integrand_data
   gdouble lnM0;
 } integrand_data;
 
+/**
+ * nc_cluster_pseudo_counts_posterior_ndetone:
+ * @cpc: a #NcClusterPseudoCounts
+ * @clusterm: a #NcClusterMass
+ * @z: redshift
+ * @Mpl: Planck cluster mass
+ * @Mcl: CLASH cluster mass
+ * @sigma_pl: Planck mass error
+ * @sigma_cl: CLASH mass error
+ *
+ * This function computes the i-th term of the posterior given flat priors for 
+ * the selection function and mass function. FIXME (include equations)
+ *
+ * Warning!!! The normalization factor of the true redshift prior has to be included in this function 
+ * if $z_{min}$ and or $z_max$ will be fitted. FIXME Include equations.
+ * 
+ * Returns: FIXME
+*/
+gdouble
+nc_cluster_pseudo_counts_posterior_ndetone (NcClusterPseudoCounts *cpc, NcClusterMass *clusterm, gdouble z, gdouble Mpl, gdouble Mcl, gdouble sigma_pl, gdouble sigma_cl)
+{
+  g_assert (NC_IS_CLUSTER_MASS_PLCL (clusterm));
+  
+  return nc_cluster_mass_plcl_Msz_Ml_p_ndetone (clusterm, LNMCUT, z, Mpl, Mcl, sigma_pl, sigma_cl);
+}
+
 static gdouble
 _selection_function (NcClusterPseudoCounts *cpc, gdouble lnM500)
 {

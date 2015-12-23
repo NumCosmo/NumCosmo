@@ -67,7 +67,7 @@ typedef enum _NcClusterPseudoCountsParams
   NC_CLUSTER_PSEUDO_COUNTS_SPARAM_LEN, /*< skip >*/
 } NcClusterPseudoCountsParams;
 
-#define NC_CLUSTER_PSEUDO_COUNTS_DEFAULT_LNMCUT  (34.862)
+#define NC_CLUSTER_PSEUDO_COUNTS_DEFAULT_LNMCUT  (33.0)
 #define NC_CLUSTER_PSEUDO_COUNTS_DEFAULT_SD_MCUT (0.206)
 #define NC_CLUSTER_PSEUDO_COUNTS_DEFAULT_ZMIN (0.188)
 #define NC_CLUSTER_PSEUDO_COUNTS_DEFAULT_DELTAZ (0.99)
@@ -100,6 +100,7 @@ NcClusterPseudoCounts *nc_cluster_pseudo_counts_ref (NcClusterPseudoCounts *cpc)
 void nc_cluster_pseudo_counts_free (NcClusterPseudoCounts *cpc);
 void nc_cluster_pseudo_counts_clear (NcClusterPseudoCounts **cpc);
 
+gdouble nc_cluster_pseudo_counts_posterior_ndetone (NcClusterPseudoCounts *cpc, NcClusterMass *clusterm, gdouble z, gdouble Mpl, gdouble Mcl, gdouble sigma_pl, gdouble sigma_cl);
 gdouble nc_cluster_pseudo_counts_selection_function (NcClusterPseudoCounts *cpc, gdouble lnM);
 gdouble nc_cluster_pseudo_counts_ndet_no_z_integral (NcClusterPseudoCounts *cpc, NcHICosmo *cosmo, gdouble z);
 gdouble nc_cluster_pseudo_counts_ndet (NcClusterPseudoCounts *cpc, NcHICosmo *cosmo);
