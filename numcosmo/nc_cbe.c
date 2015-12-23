@@ -965,7 +965,7 @@ _nc_cbe_set_thermo (NcCBE *cbe, NcHICosmo *cosmo)
 {
   struct precision *ppr = (struct precision *)cbe->prec->priv;
 
-  cbe->priv->pth.YHe                      = /*_BBN_*/ncm_c_prim_He_Yp ();
+  cbe->priv->pth.YHe                      = nc_hicosmo_He_Yp (cosmo);
   cbe->priv->pth.recombination            = recfast;
   cbe->priv->pth.reio_parametrization     = reio_camb;
   cbe->priv->pth.reio_z_or_tau            = reio_tau;

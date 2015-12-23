@@ -44,6 +44,8 @@
 /* Cosmic thermodynamics */
 #include <numcosmo/nc_recomb.h>
 #include <numcosmo/nc_recomb_seager.h>
+#include <numcosmo/nc_hireion.h>
+#include <numcosmo/nc_hireion_camb.h>
 
 /* Perturbations */
 #include <numcosmo/perturbations/linear.h>

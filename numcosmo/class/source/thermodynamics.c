@@ -2854,7 +2854,6 @@ int thermodynamics_recombination_with_recfast(
     /* 	    *(preco->recombination_table+(Nz-i-1)*preco->re_size+preco->index_re_cb2), */
     /* 	    *(preco->recombination_table+(Nz-i-1)*preco->re_size+preco->index_re_dkappadtau) */
     /* 	    ); */
-
   }
 
   /** - cleanup generic integrator with cleanup_generic_integrator() */
@@ -3058,7 +3057,7 @@ int thermodynamics_derivs_with_recfast(
     /* Peebles' coefficient (approximated as one when the Hydrogen
        ionisation fraction is very close to one) */
     if (x_H < ppr->recfast_x_H0_trigger2) {
-      C = (1. + K*_Lambda_*n*(1.-x_H))/(1./preco->fu+K*_Lambda_*n*(1.-x)/preco->fu +K*Rup*n*(1.-x));
+      C = (1. + K*_Lambda_*n*(1.-x_H))/(1./preco->fu+K*_Lambda_*n*(1.-x_H)/preco->fu +K*Rup*n*(1.-x_H));
     }
     else {
       C = 1.;
@@ -3118,7 +3117,7 @@ int thermodynamics_derivs_with_recfast(
 
   }
 
-  if (timeTh < preco->H_frac*timeH) {
+  if (timeTh < preco->H_frac*timeH && 0) {
     /*   dy[2]=Tmat/(1.+z); */
     /* v 1.5: like in camb, add here a smoothing term as suggested by Adam Moss */
     dHdz=-pvecback[pba->index_bg_H_prime]/pvecback[pba->index_bg_H]/pba->a_today* _c_ / _Mpc_over_m_;
@@ -3138,9 +3137,8 @@ int thermodynamics_derivs_with_recfast(
       chi_heat = 1.;
 
     dy[2]= preco->CT * pow(Trad,4) * x / (1.+x+preco->fHe) * (Tmat-Trad) / (Hz*(1.+z)) + 2.*Tmat/(1.+z)
-      -2./(3.*_k_B_)*energy_rate*chi_heat/n/(1.+preco->fHe+x)/(Hz*(1.+z)); /* energy injection */
+      -2./(3.*_k_B_)*0.0*energy_rate*chi_heat/n/(1.+preco->fHe+x)/(Hz*(1.+z)); /* energy injection */
   }
-
   return _SUCCESS_;
 }
 

@@ -356,17 +356,17 @@ ncm_model_params_finite (NcmModel *model)
 G_INLINE_FUNC void
 ncm_model_params_update (NcmModel *model)
 {
+  model->pkey++;
   if (model->reparam)
     ncm_reparam_new2old (model->reparam, model);
-  model->pkey++;
 }
 
 G_INLINE_FUNC void
 ncm_model_orig_params_update (NcmModel *model)
 {
+  model->pkey++;
   if (model->reparam)
     ncm_reparam_old2new (model->reparam, model);
-  model->pkey++;
 }
 
 G_INLINE_FUNC NcmVector *

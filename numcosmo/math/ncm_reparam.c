@@ -415,7 +415,7 @@ ncm_reparam_set_param_desc (NcmReparam *reparam, guint i, NcmSParam *sp)
 NcmSParam *
 ncm_reparam_peek_param_desc (NcmReparam *reparam, guint i)
 {
-  g_assert (i < reparam->sparams->len);
+  g_assert_cmpuint (i, <, reparam->sparams->len);
   return g_ptr_array_index (reparam->sparams, i);
 }
 

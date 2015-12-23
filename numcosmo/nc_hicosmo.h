@@ -53,6 +53,7 @@ G_BEGIN_DECLS
  * @NC_HICOSMO_IMPL_Omega_t: Total density today $\Omega_t$
  * @NC_HICOSMO_IMPL_sigma_8: Standard deviation of the matter density contrast at scale $R = 8h^{-1} \text{Mpc}$, $\sigma_8$
  * @NC_HICOSMO_IMPL_T_gamma0: Radiation temperature today
+ * @NC_HICOSMO_IMPL_He_Yp: Primordial Helium mass fraction 
  * @NC_HICOSMO_IMPL_z_lss: Redshift of the last scatering surface
  * @NC_HICOSMO_IMPL_as_drag: Acoustic Scale at drag redshift
  * @NC_HICOSMO_IMPL_xb: Maximum redshift
@@ -77,16 +78,17 @@ typedef enum _NcHICosmoImpl
   NC_HICOSMO_IMPL_Omega_t         = 1 << 6,
   NC_HICOSMO_IMPL_sigma_8         = 1 << 7,
   NC_HICOSMO_IMPL_T_gamma0        = 1 << 8,
-  NC_HICOSMO_IMPL_z_lss           = 1 << 9,
-  NC_HICOSMO_IMPL_as_drag         = 1 << 10,
-  NC_HICOSMO_IMPL_xb              = 1 << 11,
-  NC_HICOSMO_IMPL_E2              = 1 << 12,
-  NC_HICOSMO_IMPL_dE2_dz          = 1 << 13,
-  NC_HICOSMO_IMPL_d2E2_dz2        = 1 << 14,
-  NC_HICOSMO_IMPL_cs2             = 1 << 15,
-  NC_HICOSMO_IMPL_rhopp           = 1 << 16,
-  NC_HICOSMO_IMPL_cd              = 1 << 17,
-  NC_HICOSMO_IMPL_powspec         = 1 << 18, /*< private >*/
+  NC_HICOSMO_IMPL_He_Yp           = 1 << 9,
+  NC_HICOSMO_IMPL_z_lss           = 1 << 10,
+  NC_HICOSMO_IMPL_as_drag         = 1 << 11,
+  NC_HICOSMO_IMPL_xb              = 1 << 12,
+  NC_HICOSMO_IMPL_E2              = 1 << 13,
+  NC_HICOSMO_IMPL_dE2_dz          = 1 << 14,
+  NC_HICOSMO_IMPL_d2E2_dz2        = 1 << 15,
+  NC_HICOSMO_IMPL_cs2             = 1 << 16,
+  NC_HICOSMO_IMPL_rhopp           = 1 << 17,
+  NC_HICOSMO_IMPL_cd              = 1 << 18,
+  NC_HICOSMO_IMPL_powspec         = 1 << 19, /*< private >*/
   NC_HICOSMO_IMPL_LAST            = 1 << 23, /*< skip >*/
 } NcHICosmoImpl;
 
@@ -101,6 +103,8 @@ typedef enum _NcHICosmoImpl
 #define NC_HICOSMO_IMPL_Omega_ch2 (NC_HICOSMO_IMPL_Omega_c | NC_HICOSMO_IMPL_h2)
 #define NC_HICOSMO_IMPL_Omega_rh2 (NC_HICOSMO_IMPL_Omega_r | NC_HICOSMO_IMPL_h2)
 #define NC_HICOSMO_IMPL_Omega_mh2 (NC_HICOSMO_IMPL_Omega_m | NC_HICOSMO_IMPL_h2)
+#define NC_HICOSMO_IMPL_H_Yp (NC_HICOSMO_IMPL_He_Yp)
+#define NC_HICOSMO_IMPL_XHe (NC_HICOSMO_IMPL_He_Yp)
 
 #define NC_HICOSMO_IMPL_H (NC_HICOSMO_IMPL_H0 | NC_HICOSMO_IMPL_E2)
 #define NC_HICOSMO_IMPL_dH_dz (NC_HICOSMO_IMPL_H0 | NC_HICOSMO_IMPL_E2 | NC_HICOSMO_IMPL_dE2_dz)
@@ -159,6 +163,7 @@ struct _NcHICosmoClass
   NcHICosmoFunc0 Omega_t;
   NcHICosmoFunc0 sigma_8;
   NcHICosmoFunc0 T_gamma0;
+  NcHICosmoFunc0 He_Yp;
   NcHICosmoFunc0 z_lss;
   NcHICosmoFunc0 as_drag;
   NcHICosmoFunc0 xb;
@@ -190,6 +195,7 @@ G_INLINE_FUNC gdouble nc_hicosmo_Omega_r (NcHICosmo *cosmo);
 G_INLINE_FUNC gdouble nc_hicosmo_Omega_c (NcHICosmo *cosmo);
 G_INLINE_FUNC gdouble nc_hicosmo_Omega_t (NcHICosmo *cosmo);
 G_INLINE_FUNC gdouble nc_hicosmo_T_gamma0 (NcHICosmo *cosmo);
+G_INLINE_FUNC gdouble nc_hicosmo_He_Yp (NcHICosmo *cosmo);
 G_INLINE_FUNC gdouble nc_hicosmo_sigma_8 (NcHICosmo *cosmo);
 G_INLINE_FUNC gdouble nc_hicosmo_z_lss (NcHICosmo *cosmo);
 G_INLINE_FUNC gdouble nc_hicosmo_as_drag (NcHICosmo *cosmo);
@@ -212,6 +218,8 @@ G_INLINE_FUNC gdouble nc_hicosmo_Omega_nuh2 (NcHICosmo *cosmo);
 G_INLINE_FUNC gdouble nc_hicosmo_Omega_ch2 (NcHICosmo *cosmo);
 G_INLINE_FUNC gdouble nc_hicosmo_Omega_rh2 (NcHICosmo *cosmo);
 G_INLINE_FUNC gdouble nc_hicosmo_Omega_mh2 (NcHICosmo *cosmo);
+G_INLINE_FUNC gdouble nc_hicosmo_H_Yp (NcHICosmo *cosmo);
+G_INLINE_FUNC gdouble nc_hicosmo_XHe (NcHICosmo *cosmo);
 G_INLINE_FUNC gdouble nc_hicosmo_E (NcHICosmo *cosmo, gdouble z);
 G_INLINE_FUNC gdouble nc_hicosmo_Em2 (NcHICosmo *cosmo, gdouble z);
 G_INLINE_FUNC gdouble nc_hicosmo_H (NcHICosmo *cosmo, gdouble z);
@@ -249,6 +257,7 @@ void nc_hicosmo_set_Omega_c_impl (NcHICosmoClass *model_class, NcHICosmoFunc0 f)
 void nc_hicosmo_set_Omega_t_impl (NcHICosmoClass *model_class, NcHICosmoFunc0 f);
 void nc_hicosmo_set_sigma_8_impl (NcHICosmoClass *model_class, NcHICosmoFunc0 f);
 void nc_hicosmo_set_T_gamma0_impl (NcHICosmoClass *model_class, NcHICosmoFunc0 f);
+void nc_hicosmo_set_He_Yp_impl (NcHICosmoClass *model_class, NcHICosmoFunc0 f);
 void nc_hicosmo_set_z_lss_impl (NcHICosmoClass *model_class, NcHICosmoFunc0 f);
 void nc_hicosmo_set_as_drag_impl (NcHICosmoClass *model_class, NcHICosmoFunc0 f);
 void nc_hicosmo_set_xb_impl (NcHICosmoClass *model_class, NcHICosmoFunc0 f);
@@ -282,6 +291,7 @@ NCM_MODEL_FUNC0_IMPL (NC_HICOSMO,NcHICosmo,nc_hicosmo,Omega_r)
 NCM_MODEL_FUNC0_IMPL (NC_HICOSMO,NcHICosmo,nc_hicosmo,Omega_c)
 NCM_MODEL_FUNC0_IMPL (NC_HICOSMO,NcHICosmo,nc_hicosmo,Omega_t)
 NCM_MODEL_FUNC0_IMPL (NC_HICOSMO,NcHICosmo,nc_hicosmo,T_gamma0)
+NCM_MODEL_FUNC0_IMPL (NC_HICOSMO,NcHICosmo,nc_hicosmo,He_Yp)
 NCM_MODEL_FUNC0_IMPL (NC_HICOSMO,NcHICosmo,nc_hicosmo,sigma_8)
 NCM_MODEL_FUNC0_IMPL (NC_HICOSMO,NcHICosmo,nc_hicosmo,z_lss)
 NCM_MODEL_FUNC0_IMPL (NC_HICOSMO,NcHICosmo,nc_hicosmo,as_drag)
@@ -365,6 +375,18 @@ G_INLINE_FUNC gdouble
 nc_hicosmo_Omega_mh2 (NcHICosmo *cosmo)
 {
   return nc_hicosmo_h2 (cosmo) * nc_hicosmo_Omega_m (cosmo);
+}
+
+G_INLINE_FUNC gdouble
+nc_hicosmo_H_Yp (NcHICosmo *cosmo)
+{
+  return 1.0 - nc_hicosmo_He_Yp (cosmo);
+}
+
+G_INLINE_FUNC gdouble
+nc_hicosmo_XHe (NcHICosmo *cosmo)
+{
+  return nc_hicosmo_He_Yp (cosmo) / (ncm_c_mass_ratio_alpha_p () * nc_hicosmo_H_Yp (cosmo));
 }
 
 G_INLINE_FUNC gdouble

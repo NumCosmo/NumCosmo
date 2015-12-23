@@ -45,6 +45,7 @@ G_DEFINE_ABSTRACT_TYPE (NcHICosmoDE, nc_hicosmo_de, NC_TYPE_HICOSMO);
 #define OMEGA_C   (ncm_vector_get (VECTOR, NC_HICOSMO_DE_OMEGA_C))
 #define OMEGA_X   (ncm_vector_get (VECTOR, NC_HICOSMO_DE_OMEGA_X))
 #define T_GAMMA0  (ncm_vector_get (VECTOR, NC_HICOSMO_DE_T_GAMMA0))
+#define HE_YP     (ncm_vector_get (VECTOR, NC_HICOSMO_DE_HE_YP))
 #define ENNU      (ncm_vector_get (VECTOR, NC_HICOSMO_DE_ENNU))
 #define OMEGA_R   nc_hicosmo_Omega_r (NC_HICOSMO (cosmo))
 #define OMEGA_B   (ncm_vector_get (VECTOR, NC_HICOSMO_DE_OMEGA_B))
@@ -106,6 +107,7 @@ static gdouble _nc_hicosmo_de_H0 (NcHICosmo *cosmo) { return MACRO_H0; }
 static gdouble _nc_hicosmo_de_Omega_t (NcHICosmo *cosmo) { return OMEGA_M + OMEGA_X + OMEGA_R; }
 static gdouble _nc_hicosmo_de_Omega_c (NcHICosmo *cosmo) { return OMEGA_C; }
 static gdouble _nc_hicosmo_de_T_gamma0 (NcHICosmo *cosmo) { return T_GAMMA0; }
+static gdouble _nc_hicosmo_de_He_Yp (NcHICosmo *cosmo) { return HE_YP; }
 static gdouble _nc_hicosmo_de_Omega_g (NcHICosmo *cosmo)
 {
   const gdouble h = MACRO_H0 / 100.0;
@@ -238,6 +240,11 @@ nc_hicosmo_de_class_init (NcHICosmoDEClass *klass)
                               2.0,  3.0, 1.0e-2,
                               NC_HICOSMO_DEFAULT_PARAMS_ABSTOL, NC_HICOSMO_DE_DEFAULT_T_GAMMA0,
                               NCM_PARAM_TYPE_FIXED);
+  /* Set He Yp param info */
+  ncm_model_class_set_sparam (model_class, NC_HICOSMO_DE_HE_YP, "Y_p", "Yp",
+                              0.0,  1.0, 1.0e-2,
+                              NC_HICOSMO_DEFAULT_PARAMS_ABSTOL, NC_HICOSMO_DE_DEFAULT_HE_YP,
+                              NCM_PARAM_TYPE_FIXED);
   /* Set ENnu param info */
   ncm_model_class_set_sparam (model_class, NC_HICOSMO_DE_ENNU, "N_\\nu", "ENnu",
                               0.0,  4.0, 1.0e-2,
@@ -276,6 +283,7 @@ nc_hicosmo_de_class_init (NcHICosmoDEClass *klass)
   nc_hicosmo_set_Omega_t_impl   (parent_class, &_nc_hicosmo_de_Omega_t);
   nc_hicosmo_set_sigma_8_impl   (parent_class, &_nc_hicosmo_de_sigma_8);
   nc_hicosmo_set_T_gamma0_impl  (parent_class, &_nc_hicosmo_de_T_gamma0);
+  nc_hicosmo_set_He_Yp_impl     (parent_class, &_nc_hicosmo_de_He_Yp);
   nc_hicosmo_set_dE2_dz_impl    (parent_class, &_nc_hicosmo_de_dE2_dz);
   nc_hicosmo_set_d2E2_dz2_impl  (parent_class, &_nc_hicosmo_de_d2E2_dz2);
   nc_hicosmo_set_powspec_impl   (parent_class, &_nc_hicosmo_de_powspec);

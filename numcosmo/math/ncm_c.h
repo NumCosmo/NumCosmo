@@ -188,9 +188,6 @@ G_INLINE_FUNC gdouble ncm_c_hubble_cte_wmap (void) G_GNUC_CONST;
 G_INLINE_FUNC gdouble ncm_c_hubble_cte_hst (void) G_GNUC_CONST;
 G_INLINE_FUNC gdouble ncm_c_hubble_cte_msa (void) G_GNUC_CONST;
 G_INLINE_FUNC gdouble ncm_c_neutrino_n_eff (void) G_GNUC_CONST;
-G_INLINE_FUNC gdouble ncm_c_prim_He_Yp (void) ;
-G_INLINE_FUNC gdouble ncm_c_prim_H_Yp (void) G_GNUC_CONST;
-G_INLINE_FUNC gdouble ncm_c_prim_XHe (void) G_GNUC_CONST;
 G_INLINE_FUNC gdouble ncm_c_hubble_radius (void) ;
 G_INLINE_FUNC gdouble ncm_c_hubble_radius_planck (void) G_GNUC_CONST;
 G_INLINE_FUNC gdouble ncm_c_crit_density (void) G_GNUC_CONST;
@@ -549,15 +546,6 @@ G_INLINE_FUNC gdouble ncm_c_hubble_cte_msa (void)
 
 G_INLINE_FUNC gdouble ncm_c_neutrino_n_eff (void)
 { return 3.04; }
-
-G_INLINE_FUNC gdouble ncm_c_prim_He_Yp (void)
-{ return 0.24; }
-
-G_INLINE_FUNC gdouble ncm_c_prim_H_Yp (void)
-{ return 1.0 - ncm_c_prim_He_Yp (); }
-
-G_INLINE_FUNC gdouble ncm_c_prim_XHe (void)
-{ return ncm_c_prim_He_Yp () / (ncm_c_mass_ratio_alpha_p () * ncm_c_prim_H_Yp ()); }
 
 G_INLINE_FUNC gdouble ncm_c_hubble_radius (void)
 { return ncm_c_c () / (100.0e3); }

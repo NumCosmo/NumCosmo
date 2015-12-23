@@ -95,6 +95,9 @@ nc_hicosmo_class_init (NcHICosmoClass *klass)
       {"Omega_r",    "Radiation density today.",                   &nc_hicosmo_Omega_r,    NC_HICOSMO_IMPL_Omega_r},
       {"Omega_t",    "Total energy density today.",                &nc_hicosmo_Omega_t,    NC_HICOSMO_IMPL_Omega_t},
       {"T_gamma0",   "Photons temperature today.",                 &nc_hicosmo_T_gamma0,   NC_HICOSMO_IMPL_T_gamma0},
+      {"He_Yp",      "Primordial Helium mass fraction.",           &nc_hicosmo_He_Yp,      NC_HICOSMO_IMPL_He_Yp},
+      {"H_Yp",       "Primordial Hydrogen mass fraction.",         &nc_hicosmo_H_Yp,       NC_HICOSMO_IMPL_H_Yp},
+      {"XHe",        "Primordial Helium abundance.",               &nc_hicosmo_XHe,        NC_HICOSMO_IMPL_XHe},
       {"sigma_8",    "sigma_8.",                                   &nc_hicosmo_sigma_8,    NC_HICOSMO_IMPL_sigma_8},
       {"z_lss",      "redshift at lss.",                           &nc_hicosmo_z_lss,      NC_HICOSMO_IMPL_z_lss},
       {"as_drag",    "as_drag.",                                   &nc_hicosmo_as_drag,    NC_HICOSMO_IMPL_as_drag},
@@ -396,6 +399,15 @@ NCM_MODEL_SET_IMPL_FUNC(NC_HICOSMO,NcHICosmo,nc_hicosmo,NcHICosmoFunc0,sigma_8)
  */
 NCM_MODEL_SET_IMPL_FUNC(NC_HICOSMO,NcHICosmo,nc_hicosmo,NcHICosmoFunc0,T_gamma0)
 /**
+ * nc_hicosmo_set_He_Yp_impl: (skip)
+ * @model_class: FIXME
+ * @f: FIXME
+ *
+ * FIXME
+ *
+ */
+NCM_MODEL_SET_IMPL_FUNC(NC_HICOSMO,NcHICosmo,nc_hicosmo,NcHICosmoFunc0,He_Yp)
+/**
  * nc_hicosmo_set_z_lss_impl: (skip)
  * @model_class: FIXME
  * @f: FIXME
@@ -560,9 +572,17 @@ NCM_MODEL_SET_IMPL_FUNC(NC_HICOSMO,NcHICosmo,nc_hicosmo,NcHICosmoFunc1,powspec)
  * nc_hicosmo_T_gamma0:
  * @cosmo: a #NcHICosmo.
  *
- * FIXME
+ * Gets the cosmic microwave background radiation temperature today.
  *
  * Returns: $T_{\gamma0}$
+ */
+/**
+ * nc_hicosmo_He_Yp:
+ * @cosmo: a #NcHICosmo.
+ *
+ * Gets the primordiak Helium mass fraction. 
+ *
+ * Returns: $Y_p$.
  */
 /**
  * nc_hicosmo_sigma_8:
@@ -733,12 +753,28 @@ NCM_MODEL_SET_IMPL_FUNC(NC_HICOSMO,NcHICosmo,nc_hicosmo,NcHICosmoFunc1,powspec)
  * Returns: FIXME
  */
 /**
- * nc_hicosmo_grad_h2:
+ * nc_hicosmo_Omega_mh2:
  * @cosmo: a #NcHICosmo
- * @pt: a #NcmFitParams
- * @grad: a #NcmVector
  *
  * FIXME
+ *
+ * Returns: FIXME
+ */
+/**
+ * nc_hicosmo_H_Yp:
+ * @cosmo: a #NcHICosmo
+ *
+ * FIXME
+ *
+ * Returns: FIXME
+ */
+/**
+ * nc_hicosmo_XHe:
+ * @cosmo: a #NcHICosmo
+ *
+ * FIXME
+ *
+ * Returns: FIXME
  */
 /**
  * nc_hicosmo_E:

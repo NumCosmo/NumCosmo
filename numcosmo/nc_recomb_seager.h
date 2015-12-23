@@ -43,24 +43,46 @@ G_BEGIN_DECLS
 typedef struct _NcRecombSeagerClass NcRecombSeagerClass;
 typedef struct _NcRecombSeager NcRecombSeager;
 
+struct _NcRecombSeagerClass
+{
+  /*< private >*/
+  NcRecombClass parent_class;
+};
+
+/**
+ * NcRecombSeagerOpt:
+ * @NC_RECOM_SEAGER_OPT_FUDGE: Whether to use fudge factor in the case_B recombination fitting formulas.
+ * @NC_RECOM_SEAGER_OPT_FUDGE_GAUSS_COR: Whether to use gaussian correction in the case_B recombination fitting formulas.
+ * @NC_RECOM_SEAGER_OPT_ALL: All options.
+ * 
+ * FIXME
+ * 
+ */
+typedef enum _NcRecombSeagerOpt
+{
+  NC_RECOM_SEAGER_OPT_FUDGE           = 1 << 0,
+  NC_RECOM_SEAGER_OPT_FUDGE_GAUSS_COR = 1 << 1,
+  NC_RECOM_SEAGER_OPT_ALL = (1 << 2) - 1, /*< private >*/
+  NC_RECOM_SEAGER_OPT_LEN,                /*< skip >*/
+} NcRecombSeagerOpt;
+
 struct _NcRecombSeager
 {
   /*< private >*/
   NcRecomb parent_instance;
+  NcRecombSeagerOpt opts;
+  gdouble H_fudge;
+  gdouble AGauss1, AGauss2;
+  gdouble zGauss1, zGauss2;
+  gdouble wGauss1, wGauss2;
   gpointer cvode;
   gboolean init;
   CVRhsFn ion;
   CVDlsDenseJacFn ion_J;
   N_Vector y0;
   N_Vector y;
-  N_Vector abstol;	
+  N_Vector abstol;
   guint n;
-};
-
-struct _NcRecombSeagerClass
-{
-  /*< private >*/
-  NcRecombClass parent_class;
 };
 
 GType nc_recomb_seager_get_type (void) G_GNUC_CONST;
@@ -70,6 +92,14 @@ NcRecombSeager *nc_recomb_seager_new_full (gdouble init_frac, gdouble zi, gdoubl
 NcRecombSeager *nc_recomb_seager_ref (NcRecombSeager *recomb_seager);
 void nc_recomb_seager_free (NcRecombSeager *recomb_seager);
 void nc_recomb_seager_clear (NcRecombSeager **recomb_seager);
+
+void nc_recomb_seager_set_options (NcRecombSeager *recomb_seager, NcRecombSeagerOpt opts);
+NcRecombSeagerOpt nc_recomb_seager_get_options (NcRecombSeager *recomb_seager);
+
+gdouble nc_recomb_seager_pequignot_HI_case_B (NcRecombSeager *recomb_seager, NcHICosmo *cosmo, const gdouble Tm);
+gdouble nc_recomb_seager_pequignot_HI_case_B_dTm (NcRecombSeager *recomb_seager, NcHICosmo *cosmo, const gdouble Tm);
+gdouble nc_recomb_seager_hummer_HeI_case_B (NcRecombSeager *recomb_seager, NcHICosmo *cosmo, const gdouble Tm);
+gdouble nc_recomb_seager_hummer_HeI_case_B_dTm (NcRecombSeager *recomb_seager, NcHICosmo *cosmo, const gdouble Tm);
 
 G_END_DECLS
 
