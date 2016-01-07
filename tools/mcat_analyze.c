@@ -2,13 +2,13 @@
  *            mcat_analyze.c
  *
  *  Mon March 16 11:04:23 2015
- *  Copyright  2015  Sandro Dias Pinto Vitenti
- *  <sandro@iaoftware.com.br>
+ *  Copyright  2015  Sandro Dias Pinto Vitenti & Mariana Penna Lima (January 4th 2016)
+ *  <sandro@iaoftware.com.br>, <pennalima@gmail.com>
  ****************************************************************************/
 /*
  * mcat_analyze.c
  *
- * Copyright (C) 2015 - Sandro Dias Pinto Vitenti
+ * Copyright (C) 2015 - Sandro Dias Pinto Vitenti & Mariana Penna Lima
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -36,6 +36,44 @@ typedef enum _NcMCatFunc {
   NC_MCAT_FUNC_DIST,
 } NcMCatFunc;
 
+void
+_nc_mode_error (NcmStatsDist1d *sd1, gdouble Pa, gdouble *mode, gdouble *lb, gdouble *ub)
+{
+  gdouble P_mode, Pa_2;
+  mode[0] = ncm_stats_dist1d_eval_mode (sd1);
+  P_mode  = ncm_stats_dist1d_eval_pdf (sd1, mode[0]);
+  Pa_2    = Pa * 0.5;
+
+  if (P_mode < Pa_2)
+  {
+    ncm_message ("# Right-skewed distribution - mode close to the minimum value: maximum left tail correspond to %6.2f%% confidence interval (CI), where the required probability (right and left) was %6.2f%% CI.\n", 
+                 P_mode * 100.0, Pa_2 * 100.0);
+    ncm_message ("# The lower and upper error bounds correspond to %6.2f%% and %6.2f%% CI, respectively.\n", 
+                 P_mode * 100.0, (Pa - P_mode) * 100.0);
+    
+    lb[0] = sd1->xi;
+    ub[0] = ncm_stats_dist1d_eval_inv_pdf (sd1, Pa);
+  }
+  else if (P_mode > 1.0 - Pa_2)
+  {
+    ncm_message ("# Left-skewed distribution - mode close to the maximum value: maximum right tail correspond to %6.2f%% confidence interval (CI), where the required probability (right and left) was %6.2f%% CI.\n", 
+                 (1.0 - P_mode) * 100.0, Pa_2 * 100.0);
+    ncm_message ("# The lower and upper error bounds correspond to %6.2f%% and %6.2f%% CI, respectively.\n", 
+                 (Pa - 1.0 + P_mode) * 100.0, (1.0 - P_mode) * 100.0);
+    lb[0] = ncm_stats_dist1d_eval_inv_pdf_tail (sd1, Pa);
+    ub[0] = sd1->xf;
+  }
+  else
+  {
+    lb[0] = ncm_stats_dist1d_eval_inv_pdf (sd1, P_mode - Pa_2);
+    ub[0] = ncm_stats_dist1d_eval_inv_pdf (sd1, P_mode + Pa_2);
+  }
+
+  lb[0] = mode[0] - lb[0];
+  ub[0] = ub[0] - mode[0];
+  
+}
+
 gint
 main (gint argc, gchar *argv[])
 {
@@ -54,6 +92,8 @@ main (gint argc, gchar *argv[])
   gchar **funcs = NULL;
   gchar **distribs = NULL;
   gchar **params = NULL;
+  gchar **mode_errors = NULL;
+  gchar **median_errors = NULL;
   guint i;
   
   GError *error = NULL;
@@ -75,6 +115,8 @@ main (gint argc, gchar *argv[])
     { "function",       'f', 0, G_OPTION_ARG_STRING_ARRAY, &funcs,          "Redshift functions to be analyzed.", NULL},
     { "distribution",   'd', 0, G_OPTION_ARG_STRING_ARRAY, &distribs,       "Function distributions to be analyzed.", NULL},
     { "parameter",      'p', 0, G_OPTION_ARG_STRING_ARRAY, &params,         "Model parameters' to be analyzed.", NULL},
+    { "mode-error",     'o', 0, G_OPTION_ARG_STRING_ARRAY, &mode_errors,    "Print mode and 1-3 sigma asymmetric error bars of the model parameters' to be analyzed.", NULL},
+    { "median-error",   'e', 0, G_OPTION_ARG_STRING_ARRAY, &median_errors,  "Print median and 1-3 sigma asymmetric error bars of the model parameters' to be analyzed.", NULL},
     { NULL }
   };
 
@@ -390,9 +432,123 @@ main (gint argc, gchar *argv[])
       }
     }
     
+   /*********************************************************************************************************
+     * 
+     * Parameters - Mode and error bars
+     * 
+     *********************************************************************************************************/
+    if (mode_errors != NULL)
+    {
+      guint nparams = g_strv_length (mode_errors);
+      gdouble Pa1 = gsl_cdf_chisq_P (1.0, 1.0);
+      gdouble Pa2 = gsl_cdf_chisq_P (4.0, 1.0);
+      gdouble Pa3 = gsl_cdf_chisq_P (9.0, 1.0);
+      ncm_message ("# Computing mode and 1-3 sigma asymmetric error bars - lower (l) and upper (u) bounds, respectively.\n");
+
+      for (i = 0; i < nparams; i++)
+      {
+        const NcmMSetPIndex *pi = ncm_mset_fparam_get_pi_by_name (mset, mode_errors[i]);
+        gchar *end_ptr = NULL;
+        glong add_param = strtol (mode_errors[i], &end_ptr, 10);
+        ncm_message ("# Parameter `%s'| mode | 1l 1u | 2l 2u | 3l 3u\n", mode_errors[i]);
+
+        if (pi == NULL && (params[i] == end_ptr))
+        {
+          g_warning ("# Parameter `%s' not found, skipping...\n", mode_errors[i]);
+          continue;
+        }
+
+        {
+          NcmStatsDist1d *sd1;
+          if (pi != NULL)
+            sd1 = ncm_mset_catalog_calc_param_distrib (mcat, burnin, pi, NCM_FIT_RUN_MSGS_SIMPLE);
+          else
+            sd1 = ncm_mset_catalog_calc_add_param_distrib (mcat, burnin, add_param, NCM_FIT_RUN_MSGS_SIMPLE);
+
+          {
+            gdouble mode = 0.0;
+            gdouble x_l1 = 0.0, x_u1 = 0.0;
+            gdouble x_l2 = 0.0, x_u2 = 0.0;
+            gdouble x_l3 = 0.0, x_u3 = 0.0;
+                            
+            _nc_mode_error (sd1, Pa1, &mode, &x_l1, &x_u1);
+            _nc_mode_error (sd1, Pa2, &mode, &x_l2, &x_u2);
+            _nc_mode_error (sd1, Pa3, &mode, &x_l3, &x_u3);
+            
+              ncm_message (" % 20.15g % 20.15g % 20.15g % 20.15g % 20.15g % 20.15g % 20.15g\n",
+                           mode, x_l1, x_u1, x_l2, x_u2, x_l3, x_u3);
+        }
+
+          ncm_stats_dist1d_free (sd1);
+        }
+        ncm_message ("\n\n");
+      }
+    }
+
+    /*********************************************************************************************************
+     * 
+     * Parameters - Median and error bars
+     * 
+     *********************************************************************************************************/
+    if (median_errors != NULL)
+    {
+      guint nparams = g_strv_length (median_errors);
+      gdouble v1 = (1.0 - gsl_cdf_chisq_P (1.0, 1.0)) * 0.5;
+      gdouble v2 = (1.0 - gsl_cdf_chisq_P (4.0, 1.0)) * 0.5;
+      gdouble v3 = (1.0 - gsl_cdf_chisq_P (9.0, 1.0)) * 0.5;
+      printf ("%.5g %.5g %.5g\n", v1, v2, v3);
+      ncm_message ("# Computing median and 1-3 sigma asymmetric error bars - lower (l) and upper (u) bounds, respectively.\n");
+
+      for (i = 0; i < nparams; i++)
+      {
+        const NcmMSetPIndex *pi = ncm_mset_fparam_get_pi_by_name (mset, median_errors[i]);
+        gchar *end_ptr = NULL;
+        glong add_param = strtol (median_errors[i], &end_ptr, 10);
+        ncm_message ("# Parameter `%s' | 1l 1u | 2l 2u | 3l 3u\n", median_errors[i]);
+
+        if (pi == NULL && (params[i] == end_ptr))
+        {
+          g_warning ("# Parameter `%s' not found, skipping...\n", median_errors[i]);
+          continue;
+        }
+
+        {
+          NcmStatsDist1d *sd1;
+          if (pi != NULL)
+            sd1 = ncm_mset_catalog_calc_param_distrib (mcat, burnin, pi, NCM_FIT_RUN_MSGS_SIMPLE);
+          else
+            sd1 = ncm_mset_catalog_calc_add_param_distrib (mcat, burnin, add_param, NCM_FIT_RUN_MSGS_SIMPLE);
+
+          {
+              const gdouble median   = ncm_stats_dist1d_eval_inv_pdf (sd1, 0.5);
+                            
+              const gdouble l1 = ncm_stats_dist1d_eval_inv_pdf (sd1, v1);
+              const gdouble u1 = ncm_stats_dist1d_eval_inv_pdf_tail (sd1, v1);
+              const gdouble l2 = ncm_stats_dist1d_eval_inv_pdf (sd1, v2);
+              const gdouble u2 = ncm_stats_dist1d_eval_inv_pdf_tail (sd1, v2);
+              const gdouble l3 = ncm_stats_dist1d_eval_inv_pdf (sd1, v3);
+              const gdouble u3 = ncm_stats_dist1d_eval_inv_pdf_tail (sd1, v3);
+              
+              const gdouble x_l1   = median - l1;
+              const gdouble x_u1   = - median + u1;
+              const gdouble x_l2   = median - l2;
+              const gdouble x_u2   = - median + u2;
+              const gdouble x_l3   = median - l3;
+              const gdouble x_u3   = - median + u3;
+
+              ncm_message (" % 20.15g % 20.15g % 20.15g % 20.15g % 20.15g % 20.15g % 20.15g\n",
+                           median, x_l1, x_u1, x_l2, x_u2, x_l3, x_u3);
+            }
+
+          ncm_stats_dist1d_free (sd1);
+        }
+        ncm_message ("\n\n");
+      }
+    }
+
     ncm_mset_clear (&mset);
     ncm_mset_catalog_clear (&mcat);
   }
-  
+
   return 0;
 }
