@@ -43,13 +43,13 @@ _nc_mode_error (NcmStatsDist1d *sd1, gdouble Pa, gdouble *mode, gdouble *lb, gdo
   mode[0] = ncm_stats_dist1d_eval_mode (sd1);
   P_mode  = ncm_stats_dist1d_eval_pdf (sd1, mode[0]);
   Pa_2    = Pa * 0.5;
-
+  
   if (P_mode < Pa_2)
   {
     ncm_message ("# Right-skewed distribution - mode close to the minimum value: maximum left tail correspond to %6.2f%% confidence interval (CI), where the required probability (right and left) was %6.2f%% CI.\n", 
                  P_mode * 100.0, Pa_2 * 100.0);
-    ncm_message ("# The lower and upper error bounds correspond to %6.2f%% and %6.2f%% CI, respectively.\n", 
-                 P_mode * 100.0, (Pa - P_mode) * 100.0);
+    ncm_message ("# The lower and upper error bounds correspond to %6.2f%% and %6.2f%% CI, respectively. Total = %6.2f%%.\n", 
+                 P_mode * 100.0, (Pa - P_mode) * 100.0, Pa * 100.0);
     
     lb[0] = sd1->xi;
     ub[0] = ncm_stats_dist1d_eval_inv_pdf (sd1, Pa);
@@ -58,8 +58,8 @@ _nc_mode_error (NcmStatsDist1d *sd1, gdouble Pa, gdouble *mode, gdouble *lb, gdo
   {
     ncm_message ("# Left-skewed distribution - mode close to the maximum value: maximum right tail correspond to %6.2f%% confidence interval (CI), where the required probability (right and left) was %6.2f%% CI.\n", 
                  (1.0 - P_mode) * 100.0, Pa_2 * 100.0);
-    ncm_message ("# The lower and upper error bounds correspond to %6.2f%% and %6.2f%% CI, respectively.\n", 
-                 (Pa - 1.0 + P_mode) * 100.0, (1.0 - P_mode) * 100.0);
+    ncm_message ("# The lower and upper error bounds correspond to %6.2f%% and %6.2f%% CI, respectively. Total = %6.2f%%.\n", 
+                 (Pa - 1.0 + P_mode) * 100.0, (1.0 - P_mode) * 100.0, Pa * 100.0);
     lb[0] = ncm_stats_dist1d_eval_inv_pdf_tail (sd1, Pa);
     ub[0] = sd1->xf;
   }
