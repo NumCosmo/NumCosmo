@@ -29,7 +29,9 @@
 #include <glib.h>
 #include <glib-object.h>
 #include <numcosmo/build_cfg.h>
+#include <numcosmo/math/ncm_util.h>
 #include <gsl/gsl_const_num.h>
+#include <gsl/gsl_math.h>
 #include <math.h>
 
 G_BEGIN_DECLS
@@ -76,7 +78,7 @@ G_INLINE_FUNC gdouble ncm_c_radian_0_2pi (const gdouble r) G_GNUC_CONST;
 G_INLINE_FUNC gdouble ncm_c_sign_sin (const gdouble r) G_GNUC_CONST;
 
 /*******************************************************************************
- * START: 2006 CODATA recommended values (see end of file)
+ * START: 2014 CODATA recommended values (see end of file)
  *******************************************************************************/
 
 G_INLINE_FUNC gdouble ncm_c_c (void) G_GNUC_CONST;
@@ -88,14 +90,15 @@ G_INLINE_FUNC gdouble ncm_c_G (void) G_GNUC_CONST;
 G_INLINE_FUNC gdouble ncm_c_planck_length (void) G_GNUC_CONST;
 G_INLINE_FUNC gdouble ncm_c_thomson_cs (void) G_GNUC_CONST;
 G_INLINE_FUNC gdouble ncm_c_stefan_boltzmann (void) G_GNUC_CONST;
+G_INLINE_FUNC gdouble ncm_c_mass_atomic (void) G_GNUC_CONST;
 G_INLINE_FUNC gdouble ncm_c_mass_e (void) G_GNUC_CONST;
 G_INLINE_FUNC gdouble ncm_c_mass_p (void) G_GNUC_CONST;
 G_INLINE_FUNC gdouble ncm_c_mass_n (void) G_GNUC_CONST;
 G_INLINE_FUNC gdouble ncm_c_mass_ratio_alpha_p (void) G_GNUC_CONST;
-
-/*******************************************************************************
- * END: 2006 CODATA recommended values
- *******************************************************************************/
+G_INLINE_FUNC gdouble ncm_c_mass_ratio_e_p (void) G_GNUC_CONST;
+G_INLINE_FUNC gdouble ncm_c_Rinf (void) G_GNUC_CONST;
+G_INLINE_FUNC gdouble ncm_c_Ry (void) G_GNUC_CONST;
+G_INLINE_FUNC gdouble ncm_c_eV (void) G_GNUC_CONST;
 
 /*******************************************************************************
  * Derived constants
@@ -103,71 +106,218 @@ G_INLINE_FUNC gdouble ncm_c_mass_ratio_alpha_p (void) G_GNUC_CONST;
 
 G_INLINE_FUNC gdouble ncm_c_hc (void) G_GNUC_CONST;
 G_INLINE_FUNC gdouble ncm_c_fine_struct_square (void) G_GNUC_CONST;
-G_INLINE_FUNC gdouble ncm_c_kpc (void) G_GNUC_CONST;
-G_INLINE_FUNC gdouble ncm_c_Mpc (void) G_GNUC_CONST;
 G_INLINE_FUNC gdouble ncm_c_AR (void) G_GNUC_CONST;
 G_INLINE_FUNC gdouble ncm_c_c2 (void) G_GNUC_CONST;
 G_INLINE_FUNC gdouble ncm_c_planck_length2 (void) G_GNUC_CONST;
+G_INLINE_FUNC gdouble ncm_c_rest_energy_atomic (void) G_GNUC_CONST;
 G_INLINE_FUNC gdouble ncm_c_rest_energy_e (void) G_GNUC_CONST;
 G_INLINE_FUNC gdouble ncm_c_rest_energy_p (void) G_GNUC_CONST;
 G_INLINE_FUNC gdouble ncm_c_rest_energy_n (void) G_GNUC_CONST;
-
-/*******************************************************************************
- * Constants from other places
- *******************************************************************************/
-
-G_INLINE_FUNC gdouble ncm_c_decay_H_rate_2s_1s (void) G_GNUC_CONST;
-G_INLINE_FUNC gdouble ncm_c_decay_He_rate_2s_1s (void) G_GNUC_CONST;
-G_INLINE_FUNC gdouble ncm_c_HeI_bind_1s (void) G_GNUC_CONST;
-G_INLINE_FUNC gdouble ncm_c_HeII_bind_1s (void) G_GNUC_CONST;
-G_INLINE_FUNC gdouble ncm_c_HeI_Lyman_2s (void) G_GNUC_CONST;
-G_INLINE_FUNC gdouble ncm_c_HeI_Lyman_2p (void) G_GNUC_CONST;
-G_INLINE_FUNC gdouble ncm_c_HeI_Lyman_2s_wl (void) G_GNUC_CONST;
-G_INLINE_FUNC gdouble ncm_c_HeI_Lyman_2p_wl (void) G_GNUC_CONST;
-G_INLINE_FUNC gdouble ncm_c_HeI_bind_2s (void) G_GNUC_CONST;
-G_INLINE_FUNC gdouble ncm_c_HeI_bind_2p (void) G_GNUC_CONST;
-G_INLINE_FUNC gdouble ncm_c_HeI_2s_m_2p (void) G_GNUC_CONST;
-G_INLINE_FUNC gdouble ncm_c_HeI_2s_m_2p_kb (void) G_GNUC_CONST;
-G_INLINE_FUNC gdouble ncm_c_HeI_Lyman_2s_wl3_8pi (void) G_GNUC_CONST;
-G_INLINE_FUNC gdouble ncm_c_HeI_Lyman_2p_wl3_8pi (void) G_GNUC_CONST;
-G_INLINE_FUNC gdouble ncm_c_H_reduced_mass (void) G_GNUC_CONST;
-G_INLINE_FUNC gdouble ncm_c_H_reduced_energy (void) G_GNUC_CONST;
-G_INLINE_FUNC gdouble ncm_c_H_bind (const gdouble n, const gdouble j) G_GNUC_CONST;
-G_INLINE_FUNC gdouble ncm_c_H_bind_1s (void) G_GNUC_CONST;
-G_INLINE_FUNC gdouble ncm_c_H_bind_2s (void) G_GNUC_CONST;
-G_INLINE_FUNC gdouble ncm_c_H_bind_2p (void) G_GNUC_CONST;
-G_INLINE_FUNC gdouble ncm_c_H_Lyman_series (const gdouble n, const gdouble j) G_GNUC_CONST;
-G_INLINE_FUNC gdouble ncm_c_H_Lyman_2s (void) G_GNUC_CONST;
-G_INLINE_FUNC gdouble ncm_c_H_Lyman_2p (void) G_GNUC_CONST;
-G_INLINE_FUNC gdouble ncm_c_H_Lyman_series_wl (const gdouble n, const gdouble j) G_GNUC_CONST;
-G_INLINE_FUNC gdouble ncm_c_H_Lyman_2s_wl (void) G_GNUC_CONST;
-G_INLINE_FUNC gdouble ncm_c_H_Lyman_2p_wl (void) G_GNUC_CONST;
-G_INLINE_FUNC gdouble ncm_c_H_Lyman_2s_wl3_8pi (void) G_GNUC_CONST;
-G_INLINE_FUNC gdouble ncm_c_H_Lyman_2p_wl3_8pi (void) G_GNUC_CONST;
 G_INLINE_FUNC gdouble ncm_c_thermal_wl_e (void) G_GNUC_CONST;
 G_INLINE_FUNC gdouble ncm_c_thermal_wl_p (void) G_GNUC_CONST;
 G_INLINE_FUNC gdouble ncm_c_thermal_wl_n (void) G_GNUC_CONST;
 G_INLINE_FUNC gdouble ncm_c_thermal_wn_e (void) G_GNUC_CONST;
 G_INLINE_FUNC gdouble ncm_c_thermal_wn_p (void) G_GNUC_CONST;
 G_INLINE_FUNC gdouble ncm_c_thermal_wn_n (void) G_GNUC_CONST;
-G_INLINE_FUNC gdouble ncm_c_boltzmann_factor_H_1s (const gdouble T) G_GNUC_CONST;
-G_INLINE_FUNC gdouble ncm_c_boltzmann_factor_H_2s (const gdouble T) G_GNUC_CONST;
-G_INLINE_FUNC gdouble ncm_c_boltzmann_factor_H_2p (const gdouble T) G_GNUC_CONST;
-G_INLINE_FUNC gdouble ncm_c_boltzmann_factor_HeI_1s (const gdouble T) G_GNUC_CONST;
-G_INLINE_FUNC gdouble ncm_c_boltzmann_factor_HeI_2s (const gdouble T) G_GNUC_CONST;
-G_INLINE_FUNC gdouble ncm_c_boltzmann_factor_HeI_2p (const gdouble T) G_GNUC_CONST;
-G_INLINE_FUNC gdouble ncm_c_AU (void) G_GNUC_CONST;
+G_INLINE_FUNC gdouble ncm_c_H_reduced_mass (void) G_GNUC_CONST;
+G_INLINE_FUNC gdouble ncm_c_H_reduced_energy (void) G_GNUC_CONST;
+G_INLINE_FUNC gdouble ncm_c_H_bind (const gdouble n, const gdouble j) G_GNUC_CONST;
+
+/*******************************************************************************
+ * END: 2014 CODATA recommended values
+ *******************************************************************************/
+
+/*******************************************************************************
+ * START: IUPAC related constants
+ *******************************************************************************/
+
+G_INLINE_FUNC gdouble ncm_c_mass_1H_u (void) G_GNUC_CONST;
+G_INLINE_FUNC gdouble ncm_c_mass_2H_u (void) G_GNUC_CONST;
+G_INLINE_FUNC gdouble ncm_c_mass_3H_u (void) G_GNUC_CONST;
+G_INLINE_FUNC gdouble ncm_c_mass_3He_u (void) G_GNUC_CONST;
+G_INLINE_FUNC gdouble ncm_c_mass_4He_u (void) G_GNUC_CONST;
+
+/*******************************************************************************
+ * Derived constants
+ *******************************************************************************/
+
+G_INLINE_FUNC gdouble ncm_c_mass_1H (void) G_GNUC_CONST;
+G_INLINE_FUNC gdouble ncm_c_mass_2H (void) G_GNUC_CONST;
+G_INLINE_FUNC gdouble ncm_c_mass_3H (void) G_GNUC_CONST;
+G_INLINE_FUNC gdouble ncm_c_mass_3He (void) G_GNUC_CONST;
+G_INLINE_FUNC gdouble ncm_c_mass_4He (void) G_GNUC_CONST;
+
+/*******************************************************************************
+ * Derived constants
+ *******************************************************************************/
+
+G_INLINE_FUNC gdouble ncm_c_rest_energy_1H (void) G_GNUC_CONST;
+G_INLINE_FUNC gdouble ncm_c_rest_energy_2H (void) G_GNUC_CONST;
+G_INLINE_FUNC gdouble ncm_c_rest_energy_3H (void) G_GNUC_CONST;
+G_INLINE_FUNC gdouble ncm_c_rest_energy_3He (void) G_GNUC_CONST;
+G_INLINE_FUNC gdouble ncm_c_rest_energy_4He (void) G_GNUC_CONST;
+
+G_INLINE_FUNC gdouble ncm_c_mass_ratio_4He_1H (void) G_GNUC_CONST;
+
+/*******************************************************************************
+ * END: IUPAC related constants
+ *******************************************************************************/
+
+/*******************************************************************************
+ * START: IAU related constants
+ *******************************************************************************/
+
+G_INLINE_FUNC gdouble ncm_c_au (void) G_GNUC_CONST;
 G_INLINE_FUNC gdouble ncm_c_pc (void) G_GNUC_CONST;
+G_INLINE_FUNC gdouble ncm_c_kpc (void) G_GNUC_CONST;
+G_INLINE_FUNC gdouble ncm_c_Mpc (void) G_GNUC_CONST;
+G_INLINE_FUNC gdouble ncm_c_G_mass_solar (void) G_GNUC_CONST;
 G_INLINE_FUNC gdouble ncm_c_mass_solar (void) G_GNUC_CONST;
 
-/* Statistics */
+/*******************************************************************************
+ * END: IAU related constants
+ *******************************************************************************/
+
+/*******************************************************************************
+ * START: NIST Atomic Spectra database
+ *******************************************************************************/
+/*******************************************************************************
+ * -- START: Hydrogen I
+ *******************************************************************************/
+/* Ionization energy wavenumber: wn */
+
+G_INLINE_FUNC gdouble ncm_c_H_ion_wn_1s_2S0_5 (void) G_GNUC_CONST;
+G_INLINE_FUNC gdouble ncm_c_H_ion_wn_2s_2S0_5 (void) G_GNUC_CONST;
+G_INLINE_FUNC gdouble ncm_c_H_ion_wn_2p_2P0_5 (void) G_GNUC_CONST;
+G_INLINE_FUNC gdouble ncm_c_H_ion_wn_2p_2P3_5 (void) G_GNUC_CONST;
+G_INLINE_FUNC gdouble ncm_c_H_ion_wn_2p_2Pmean (void) G_GNUC_CONST;
+
+/* Ionization energy: E */
+
+G_INLINE_FUNC gdouble ncm_c_H_ion_E_1s_2S0_5 (void) G_GNUC_CONST;
+G_INLINE_FUNC gdouble ncm_c_H_ion_E_2s_2S0_5 (void) G_GNUC_CONST;
+G_INLINE_FUNC gdouble ncm_c_H_ion_E_2p_2P0_5 (void) G_GNUC_CONST;
+G_INLINE_FUNC gdouble ncm_c_H_ion_E_2p_2P3_5 (void) G_GNUC_CONST;
+G_INLINE_FUNC gdouble ncm_c_H_ion_E_2p_2Pmean (void) G_GNUC_CONST;
+
+/* Lyman series wavenumber: wn */
+
+G_INLINE_FUNC gdouble ncm_c_H_Lyman_wn_2s_2S0_5 (void) G_GNUC_CONST;
+G_INLINE_FUNC gdouble ncm_c_H_Lyman_wn_2p_2P0_5 (void) G_GNUC_CONST;
+G_INLINE_FUNC gdouble ncm_c_H_Lyman_wn_2p_2P3_5 (void) G_GNUC_CONST;
+G_INLINE_FUNC gdouble ncm_c_H_Lyman_wn_2p_2Pmean (void) G_GNUC_CONST;
+
+/* Lyman series wavelength: wl */
+
+G_INLINE_FUNC gdouble ncm_c_H_Lyman_wl_2s_2S0_5 (void) G_GNUC_CONST;
+G_INLINE_FUNC gdouble ncm_c_H_Lyman_wl_2p_2P0_5 (void) G_GNUC_CONST;
+G_INLINE_FUNC gdouble ncm_c_H_Lyman_wl_2p_2P3_5 (void) G_GNUC_CONST;
+G_INLINE_FUNC gdouble ncm_c_H_Lyman_wl_2p_2Pmean (void) G_GNUC_CONST;
+
+/* Lyman series factor: wl^3 / (8pi) */
+
+G_INLINE_FUNC gdouble ncm_c_H_Lyman_wl3_8pi_2s_2S0_5 (void) G_GNUC_CONST;
+G_INLINE_FUNC gdouble ncm_c_H_Lyman_wl3_8pi_2p_2P0_5 (void) G_GNUC_CONST;
+G_INLINE_FUNC gdouble ncm_c_H_Lyman_wl3_8pi_2p_2P3_5 (void) G_GNUC_CONST;
+G_INLINE_FUNC gdouble ncm_c_H_Lyman_wl3_8pi_2p_2Pmean (void) G_GNUC_CONST;
+
+/* Boltzmann factor */
+
+G_INLINE_FUNC gdouble ncm_c_boltzmann_factor_H_1s_2S0_5 (const gdouble T) G_GNUC_CONST;
+G_INLINE_FUNC gdouble ncm_c_boltzmann_factor_H_2s_2S0_5 (const gdouble T) G_GNUC_CONST;
+G_INLINE_FUNC gdouble ncm_c_boltzmann_factor_H_2p_2P0_5 (const gdouble T) G_GNUC_CONST;
+G_INLINE_FUNC gdouble ncm_c_boltzmann_factor_H_2p_2P3_5 (const gdouble T) G_GNUC_CONST;
+G_INLINE_FUNC gdouble ncm_c_boltzmann_factor_H_2p_2Pmean (const gdouble T) G_GNUC_CONST;
+
+/*******************************************************************************
+ * -- END: Hydrogen I
+ *******************************************************************************/
+/*******************************************************************************
+ * -- START: Helium I
+ *******************************************************************************/
+/* Ionization energy wavenumber: wn */
+
+G_INLINE_FUNC gdouble ncm_c_HeI_ion_wn_1s_1S0 (void) G_GNUC_CONST;
+G_INLINE_FUNC gdouble ncm_c_HeI_ion_wn_2s_1S0 (void) G_GNUC_CONST;
+G_INLINE_FUNC gdouble ncm_c_HeI_ion_wn_2p_1P1 (void) G_GNUC_CONST;
+
+/* Ionization energy: E */
+
+G_INLINE_FUNC gdouble ncm_c_HeI_ion_E_1s_1S0 (void) G_GNUC_CONST;
+G_INLINE_FUNC gdouble ncm_c_HeI_ion_E_2s_1S0 (void) G_GNUC_CONST;
+G_INLINE_FUNC gdouble ncm_c_HeI_ion_E_2p_1P1 (void) G_GNUC_CONST;
+
+/* Lyman series wavenumber: wn */
+
+G_INLINE_FUNC gdouble ncm_c_HeI_Lyman_wn_2s_1S0 (void) G_GNUC_CONST;
+G_INLINE_FUNC gdouble ncm_c_HeI_Lyman_wn_2p_1P1 (void) G_GNUC_CONST;
+
+/* Lyman series wavelength: wl */
+
+G_INLINE_FUNC gdouble ncm_c_HeI_Lyman_wl_2s_1S0 (void) G_GNUC_CONST;
+G_INLINE_FUNC gdouble ncm_c_HeI_Lyman_wl_2p_1P1 (void) G_GNUC_CONST;
+
+/* Lyman series factor: wl^3 / (8pi) */
+
+G_INLINE_FUNC gdouble ncm_c_HeI_Lyman_wl3_8pi_2s_1S0 (void) G_GNUC_CONST;
+G_INLINE_FUNC gdouble ncm_c_HeI_Lyman_wl3_8pi_2p_1P1 (void) G_GNUC_CONST;
+
+/* Boltzmann factor */
+
+G_INLINE_FUNC gdouble ncm_c_boltzmann_factor_HeI_1s_1S0 (const gdouble T) G_GNUC_CONST;
+G_INLINE_FUNC gdouble ncm_c_boltzmann_factor_HeI_2s_1S0 (const gdouble T) G_GNUC_CONST;
+G_INLINE_FUNC gdouble ncm_c_boltzmann_factor_HeI_2p_1P1 (const gdouble T) G_GNUC_CONST;
+
+/* Balmer series wavenumber: wn */
+
+G_INLINE_FUNC gdouble ncm_c_HeI_Balmer_wn_2p_1P1 (void) G_GNUC_CONST;
+
+/* Balmer series: E / k_B */
+
+G_INLINE_FUNC gdouble ncm_c_HeI_Balmer_E_kb_2p_1P1 (void) G_GNUC_CONST;
+
+/*******************************************************************************
+ * -- END: Helium I
+ *******************************************************************************/
+/*******************************************************************************
+ * -- START: Helium II
+ *******************************************************************************/
+/* Ionization energy wavenumber: wn */
+
+G_INLINE_FUNC gdouble ncm_c_HeII_ion_wn_1s_2S0_5 (void) G_GNUC_CONST;
+
+/* Ionization energy: E */
+
+G_INLINE_FUNC gdouble ncm_c_HeII_ion_E_1s_2S0_5 (void) G_GNUC_CONST;
+
+/*******************************************************************************
+ * -- END: Helium II
+ *******************************************************************************/
+/*******************************************************************************
+ * END: NIST Atomic Spectra database
+ *******************************************************************************/
+
+/*******************************************************************************
+ * Constants from other sources
+ *******************************************************************************/
+
+G_INLINE_FUNC gdouble ncm_c_decay_H_rate_2s_1s (void) G_GNUC_CONST;
+G_INLINE_FUNC gdouble ncm_c_decay_He_rate_2s_1s (void) G_GNUC_CONST;
+
+/*******************************************************************************
+ * START: Statistics
+ *******************************************************************************/
 
 G_INLINE_FUNC long double ncm_c_stats_1sigma (void) G_GNUC_CONST;
 G_INLINE_FUNC long double ncm_c_stats_2sigma (void) G_GNUC_CONST;
 G_INLINE_FUNC long double ncm_c_stats_3sigma (void) G_GNUC_CONST;
 
 /*******************************************************************************
- * Observational data
+ * END: Statistics
+ *******************************************************************************/
+
+/*******************************************************************************
+ * START: Observational data
  *******************************************************************************/
 
 G_INLINE_FUNC gdouble ncm_c_wmap3_cmb_z (void) G_GNUC_CONST;
@@ -190,14 +340,18 @@ G_INLINE_FUNC gdouble ncm_c_hubble_cte_msa (void) G_GNUC_CONST;
 G_INLINE_FUNC gdouble ncm_c_neutrino_n_eff (void) G_GNUC_CONST;
 G_INLINE_FUNC gdouble ncm_c_hubble_radius (void) ;
 G_INLINE_FUNC gdouble ncm_c_hubble_radius_planck (void) G_GNUC_CONST;
-G_INLINE_FUNC gdouble ncm_c_crit_density (void) G_GNUC_CONST;
-G_INLINE_FUNC gdouble ncm_c_crit_mass_density (void) G_GNUC_CONST;
-G_INLINE_FUNC gdouble ncm_c_crit_mass_density_solar_Mpc (void) G_GNUC_CONST;
+G_INLINE_FUNC gdouble ncm_c_crit_density_h2 (void) G_GNUC_CONST;
+G_INLINE_FUNC gdouble ncm_c_crit_mass_density_h2 (void) G_GNUC_CONST;
+G_INLINE_FUNC gdouble ncm_c_crit_mass_density_h2_solar_mass_Mpc3 (void) G_GNUC_CONST;
 G_INLINE_FUNC gdouble ncm_c_crit_number_density_p (void) G_GNUC_CONST;
 G_INLINE_FUNC gdouble ncm_c_crit_number_density_n (void) G_GNUC_CONST;
 G_INLINE_FUNC gdouble ncm_c_blackbody_energy_density (void) G_GNUC_CONST;
 G_INLINE_FUNC gdouble ncm_c_radiation_temp_to_h2omega_r (const gdouble T) G_GNUC_CONST;
 G_INLINE_FUNC gdouble ncm_c_radiation_h2Omega_r_to_temp (const gdouble omr) G_GNUC_CONST;
+
+/*******************************************************************************
+ * END: Observational data
+ *******************************************************************************/
 
 G_END_DECLS
 
@@ -234,7 +388,6 @@ G_INLINE_FUNC long double ncm_c_pi (void)
 G_INLINE_FUNC long double ncm_c_tan_1arcsec (void)
 { return 4.8481368111333441675396429478852853e-6L; }
 
-
 G_INLINE_FUNC gdouble ncm_c_degree_to_radian (const gdouble d)
 { return d * M_PI / 180.0; }
 
@@ -248,51 +401,62 @@ G_INLINE_FUNC gdouble ncm_c_sign_sin (const gdouble r)
 { return ncm_c_radian_0_2pi (r) < M_PI ? 1.0 : -1.0; }
 
 /*******************************************************************************
- * START: 2006 CODATA recommended values (see end of file)
+ * START: 2014 CODATA recommended values (see constants.txt)
  *******************************************************************************/
 
 G_INLINE_FUNC gdouble ncm_c_c (void)
 { return 299792458.0; }
 
 G_INLINE_FUNC gdouble ncm_c_h (void)
-{ return 6.62606896e-34; }
-
+{ return 6.626070040e-34; }
+         
 G_INLINE_FUNC gdouble ncm_c_hbar (void)
-{ return 1.054571628e-34; }
-
+{ return 1.054571800e-34; }
+         
 G_INLINE_FUNC gdouble ncm_c_fine_struct (void)
-{ return 7.2973525376e-3; }
+{ return 7.2973525664e-3; }
 
 G_INLINE_FUNC gdouble ncm_c_kb (void)
-{ return 1.3806504e-23; }
+{ return 1.38064852e-23; }
 
 G_INLINE_FUNC gdouble ncm_c_G (void)
-{ return 6.67428e-11; }
+{ return 6.67408e-11; }
 
 G_INLINE_FUNC gdouble ncm_c_planck_length (void)
-{ return 1.616252e-35; }
+{ return 1.616229e-35; }
 
 G_INLINE_FUNC gdouble ncm_c_thomson_cs (void)
-{ return 0.6652458558e-28; }
+{ return 0.66524587158e-28; }
 
 G_INLINE_FUNC gdouble ncm_c_stefan_boltzmann (void)
-{ return 5.670400e-8; }
+{ return 5.670367e-8; }
+
+G_INLINE_FUNC gdouble ncm_c_mass_atomic (void)
+{ return 1.660539040e-27; }
 
 G_INLINE_FUNC gdouble ncm_c_mass_e (void)
-{ return 9.10938215e-31; }
-
+{ return 9.10938356e-31; }
+         
 G_INLINE_FUNC gdouble ncm_c_mass_p (void)
-{ return 1.672621637e-27; }
+{ return 1.672621898e-27; }
 
 G_INLINE_FUNC gdouble ncm_c_mass_n (void)
-{ return 1.674927211e-27; }
+{ return 1.674927471e-27; }
 
 G_INLINE_FUNC gdouble ncm_c_mass_ratio_alpha_p (void)
-{ return 3.97259968951; }
+{ return 3.97259968907; }
 
-/*******************************************************************************
- * END: 2006 CODATA recommended values
- *******************************************************************************/
+G_INLINE_FUNC gdouble ncm_c_mass_ratio_e_p (void)
+{ return 5.44617021352e-4; }
+
+G_INLINE_FUNC gdouble ncm_c_Rinf (void)
+{ return 10973731.568508; }
+
+G_INLINE_FUNC gdouble ncm_c_Ry (void)
+{ return 2.179872325e-18; }
+
+G_INLINE_FUNC gdouble ncm_c_eV (void)
+{ return 1.6021766208e-19; }
 
 /*******************************************************************************
  * Derived constants
@@ -304,12 +468,6 @@ G_INLINE_FUNC gdouble ncm_c_hc (void)
 G_INLINE_FUNC gdouble ncm_c_fine_struct_square (void)
 { return ncm_c_fine_struct () * ncm_c_fine_struct (); }
 
-G_INLINE_FUNC gdouble ncm_c_kpc (void)
-{ return GSL_CONST_NUM_KILO * ncm_c_pc (); }
-
-G_INLINE_FUNC gdouble ncm_c_Mpc (void)
-{ return GSL_CONST_NUM_MEGA * ncm_c_pc (); }
-
 G_INLINE_FUNC gdouble ncm_c_AR (void)
 { return 4.0 * ncm_c_stefan_boltzmann () / ncm_c_c (); }
 
@@ -318,6 +476,9 @@ G_INLINE_FUNC gdouble ncm_c_c2 (void)
 
 G_INLINE_FUNC gdouble ncm_c_planck_length2 (void)
 { return ncm_c_planck_length () * ncm_c_planck_length (); }
+
+G_INLINE_FUNC gdouble ncm_c_rest_energy_atomic (void)
+{ return ncm_c_mass_atomic () * ncm_c_c2 (); }
 
 G_INLINE_FUNC gdouble ncm_c_rest_energy_e (void)
 { return ncm_c_mass_e () * ncm_c_c2 (); }
@@ -328,101 +489,8 @@ G_INLINE_FUNC gdouble ncm_c_rest_energy_p (void)
 G_INLINE_FUNC gdouble ncm_c_rest_energy_n (void)
 { return ncm_c_mass_n () * ncm_c_c2 (); }
 
-/*******************************************************************************
- * Constants from other places
- *******************************************************************************/
-
-G_INLINE_FUNC gdouble ncm_c_decay_H_rate_2s_1s (void)
-{ return 8.22458; }
-
-G_INLINE_FUNC gdouble ncm_c_decay_He_rate_2s_1s (void)
-{ return 51.3; }
-
-G_INLINE_FUNC gdouble ncm_c_HeI_bind_1s (void)
-{ return 1.98310772e7 * ncm_c_hc (); }
-
-G_INLINE_FUNC gdouble ncm_c_HeII_bind_1s (void)
-{ return 4.389088863e7 * ncm_c_hc (); }
-
-G_INLINE_FUNC gdouble ncm_c_HeI_Lyman_2s (void)
-{ return 1.66277434e7 * ncm_c_hc (); }
-
-G_INLINE_FUNC gdouble ncm_c_HeI_Lyman_2p (void)
-{ return 1.71134891e7 * ncm_c_hc (); }
-
-G_INLINE_FUNC gdouble ncm_c_HeI_Lyman_2s_wl (void)
-{ return 1.0 / 1.66277434e7; }
-
-G_INLINE_FUNC gdouble ncm_c_HeI_Lyman_2p_wl (void)
-{ return 1.0 / 1.71134891e7; }
-
-G_INLINE_FUNC gdouble ncm_c_HeI_bind_2s (void)
-{ return 3.2033338e6 * ncm_c_hc (); }
-
-G_INLINE_FUNC gdouble ncm_c_HeI_bind_2p (void)
-{ return 2.7175881e6 * ncm_c_hc (); }
-
-G_INLINE_FUNC gdouble ncm_c_HeI_2s_m_2p (void)
-{ return (3.2033338e6 - 2.7175881e6) * ncm_c_hc (); }
-
-G_INLINE_FUNC gdouble ncm_c_HeI_2s_m_2p_kb (void)
-{ return (3.2033338e6 - 2.7175881e6) * ncm_c_hc () / ncm_c_kb (); }
-
-G_INLINE_FUNC gdouble ncm_c_HeI_Lyman_2s_wl3_8pi (void)
-{ return ncm_c_HeI_Lyman_2s_wl() * ncm_c_HeI_Lyman_2s_wl () *
-	ncm_c_HeI_Lyman_2s_wl () / (8.0 * M_PI); }
-
-G_INLINE_FUNC gdouble ncm_c_HeI_Lyman_2p_wl3_8pi (void)
-{ return ncm_c_HeI_Lyman_2p_wl() * ncm_c_HeI_Lyman_2p_wl () *
-	ncm_c_HeI_Lyman_2p_wl () / (8.0 * M_PI); }
-
 G_INLINE_FUNC gdouble ncm_c_H_reduced_mass (void)
-{ return ncm_c_mass_e () / (1.0 + ncm_c_mass_e () / ncm_c_mass_p ()); }
-
-G_INLINE_FUNC gdouble ncm_c_H_reduced_energy (void)
-{ return ncm_c_H_reduced_mass () * ncm_c_c2 (); }
-
-G_INLINE_FUNC gdouble ncm_c_H_bind (const gdouble n, const gdouble j)
-{ return ncm_c_H_reduced_energy () *
-	(1.0 - 1.0 / sqrt (1.0 + ncm_c_fine_struct_square () /
-	                   pow (n - j - 0.5 + sqrt(pow(j + 0.5, 2.0) -
-	                                           ncm_c_fine_struct_square () ),
-	                        2.0) )); }
-
-G_INLINE_FUNC gdouble ncm_c_H_bind_1s (void)
-{ return ncm_c_H_bind (1.0, 0.5); }
-
-G_INLINE_FUNC gdouble ncm_c_H_bind_2s (void)
-{ return ncm_c_H_bind (2.0, 0.5); }
-
-G_INLINE_FUNC gdouble ncm_c_H_bind_2p (void)
-{ return ncm_c_H_bind (2.0, 1.5); }
-
-G_INLINE_FUNC gdouble ncm_c_H_Lyman_series (const gdouble n, const gdouble j)
-{ return ncm_c_H_bind_1s () - ncm_c_H_bind (n,j); }
-
-G_INLINE_FUNC gdouble ncm_c_H_Lyman_2s (void)
-{ return ncm_c_H_Lyman_series (2, 0.5); }
-
-G_INLINE_FUNC gdouble ncm_c_H_Lyman_2p (void)
-{ return ncm_c_H_Lyman_series (2, 1.5); }
-
-G_INLINE_FUNC gdouble ncm_c_H_Lyman_series_wl (const gdouble n, const gdouble j)
-{ return ncm_c_hc () / ncm_c_H_Lyman_series (n,j); }
-
-G_INLINE_FUNC gdouble ncm_c_H_Lyman_2s_wl (void)
-{ return ncm_c_H_Lyman_series_wl (2, 0.5); }
-
-G_INLINE_FUNC gdouble ncm_c_H_Lyman_2p_wl (void)
-{ return ncm_c_H_Lyman_series_wl (2, 1.5); }
-
-G_INLINE_FUNC gdouble ncm_c_H_Lyman_2s_wl3_8pi (void)
-{ return ncm_c_H_Lyman_2s_wl () * ncm_c_H_Lyman_2s_wl () *
-	ncm_c_H_Lyman_2s_wl () / (8.0 * M_PI); }
-
-G_INLINE_FUNC gdouble ncm_c_H_Lyman_2p_wl3_8pi (void)
-{ return ncm_c_H_Lyman_2p_wl () * ncm_c_H_Lyman_2p_wl () *
-	ncm_c_H_Lyman_2p_wl () / (8.0 * M_PI); }
+{ return ncm_c_mass_e () / (1.0 + ncm_c_mass_ratio_e_p ()); }
 
 G_INLINE_FUNC gdouble ncm_c_thermal_wl_e (void)
 { return sqrt ((2.0 * M_PI * ncm_c_hbar () * ncm_c_hbar () ) /
@@ -445,40 +513,333 @@ G_INLINE_FUNC gdouble ncm_c_thermal_wn_p (void)
 G_INLINE_FUNC gdouble ncm_c_thermal_wn_n (void)
 { return 1.0 / ncm_c_thermal_wl_n (); }
 
-G_INLINE_FUNC gdouble ncm_c_boltzmann_factor_H_1s (const gdouble T)
-{ return pow(ncm_c_thermal_wn_e (), 3.0) *
- exp(- ncm_c_H_bind_1s () / (ncm_c_kb () * T)); }
+G_INLINE_FUNC gdouble ncm_c_H_reduced_energy (void)
+{ return ncm_c_H_reduced_mass () * ncm_c_c2 (); }
 
-G_INLINE_FUNC gdouble ncm_c_boltzmann_factor_H_2s (const gdouble T)
-{ return pow(ncm_c_thermal_wn_e (), 3.0) *
- exp(- ncm_c_H_bind_2s () / (ncm_c_kb () * T)); }
+G_INLINE_FUNC gdouble ncm_c_H_bind (const gdouble n, const gdouble j)
+{ 
+  const gdouble j_1_2            = j + 0.5;
+  const gdouble j_1_2_pow_2      = gsl_pow_2 (j_1_2);
+  const gdouble alpha2           = ncm_c_fine_struct_square ();
+  const gdouble d_j              = j_1_2 * (- ncm_sqrt1px_m1 (- alpha2 / j_1_2_pow_2)); /*(1.0 - sqrt (1.0 - alpha2 / j_1_2_pow_2))*/
+  const gdouble f_arg            = ncm_c_fine_struct_square () / gsl_pow_2 (n - d_j);
+  const gdouble f_nj_m_one       = -ncm_sqrt1px_m1 (f_arg) / sqrt (1.0 + f_arg); /*(1.0 - sqrt (1.0 + f_arg))*/
+  const gdouble r                = ncm_c_mass_ratio_e_p ();
+  const gdouble E_binding        = ncm_c_H_reduced_energy () * f_nj_m_one * (1.0 - 0.5 * f_nj_m_one * r / gsl_pow_2 (1.0 + r)); 
+  return - E_binding;
+}
 
-G_INLINE_FUNC gdouble ncm_c_boltzmann_factor_H_2p (const gdouble T)
-{ return pow(ncm_c_thermal_wn_e (), 3.0) *
- exp(- ncm_c_H_bind_2p () / (ncm_c_kb () * T)); }
+/*******************************************************************************
+ * END: 2014 CODATA recommended values
+ *******************************************************************************/
 
-G_INLINE_FUNC gdouble ncm_c_boltzmann_factor_HeI_1s (const gdouble T)
-{ return pow(ncm_c_thermal_wn_e (), 3.0) *
- exp(- ncm_c_HeI_bind_1s () / (ncm_c_kb () * T)); }
+/*******************************************************************************
+ * START: IUPAC related constants
+ *******************************************************************************/
 
-G_INLINE_FUNC gdouble ncm_c_boltzmann_factor_HeI_2s (const gdouble T)
-{ return pow(ncm_c_thermal_wn_e (), 3.0) *
- exp(- ncm_c_HeI_bind_2s () / (ncm_c_kb () * T)); }
+G_INLINE_FUNC gdouble ncm_c_mass_1H_u (void)
+{ return 1.00782503223; }
 
-G_INLINE_FUNC gdouble ncm_c_boltzmann_factor_HeI_2p (const gdouble T)
-{ return pow(ncm_c_thermal_wn_e (), 3.0) *
- exp(- ncm_c_HeI_bind_2p () / (ncm_c_kb () * T)); }
+G_INLINE_FUNC gdouble ncm_c_mass_2H_u (void)
+{ return 2.01410177812; }
 
-G_INLINE_FUNC gdouble ncm_c_AU (void)
-{ return 1.49597870691e11; }
+G_INLINE_FUNC gdouble ncm_c_mass_3H_u (void)
+{ return 3.0160492779; }
+
+G_INLINE_FUNC gdouble ncm_c_mass_3He_u (void)
+{ return 3.0160293201; }
+
+G_INLINE_FUNC gdouble ncm_c_mass_4He_u (void)
+{ return 4.00260325413; }
+
+/*******************************************************************************
+ * Derived constants
+ *******************************************************************************/
+
+G_INLINE_FUNC gdouble ncm_c_mass_1H (void)
+{ return ncm_c_mass_1H_u () * ncm_c_mass_atomic (); }
+
+G_INLINE_FUNC gdouble ncm_c_mass_2H (void)
+{ return ncm_c_mass_2H_u () * ncm_c_mass_atomic (); }
+
+G_INLINE_FUNC gdouble ncm_c_mass_3H (void)
+{ return ncm_c_mass_3H_u () * ncm_c_mass_atomic (); }
+
+G_INLINE_FUNC gdouble ncm_c_mass_3He (void)
+{ return ncm_c_mass_3He_u () * ncm_c_mass_atomic (); }
+
+G_INLINE_FUNC gdouble ncm_c_mass_4He (void)
+{ return ncm_c_mass_4He_u () * ncm_c_mass_atomic (); }
+
+G_INLINE_FUNC gdouble ncm_c_rest_energy_1H (void)
+{ return ncm_c_mass_1H_u () * ncm_c_rest_energy_atomic (); }
+
+G_INLINE_FUNC gdouble ncm_c_rest_energy_2H (void)
+{ return ncm_c_mass_2H_u () * ncm_c_rest_energy_atomic (); }
+
+G_INLINE_FUNC gdouble ncm_c_rest_energy_3H (void)
+{ return ncm_c_mass_3H_u () * ncm_c_rest_energy_atomic (); }
+
+G_INLINE_FUNC gdouble ncm_c_rest_energy_3He (void)
+{ return ncm_c_mass_3He_u () * ncm_c_rest_energy_atomic (); }
+
+G_INLINE_FUNC gdouble ncm_c_rest_energy_4He (void)
+{ return ncm_c_mass_4He_u () * ncm_c_rest_energy_atomic (); }
+
+/*******************************************************************************
+ * Derived constants
+ *******************************************************************************/
+
+G_INLINE_FUNC gdouble ncm_c_mass_ratio_4He_1H (void)
+{ return ncm_c_mass_4He_u () / ncm_c_mass_1H_u (); }
+
+/*******************************************************************************
+ * END: IUPAC related constants
+ *******************************************************************************/
+
+/*******************************************************************************
+ * START: IAU related constants
+ *******************************************************************************/
+
+G_INLINE_FUNC gdouble ncm_c_au (void)
+{ return 1.49597870700e11; }
 
 G_INLINE_FUNC gdouble ncm_c_pc (void)
-{ return 3.085678e16; }
+{ return 3.0856775814913672789139379577965e16L; }
+
+G_INLINE_FUNC gdouble ncm_c_kpc (void)
+{ return GSL_CONST_NUM_KILO * ncm_c_pc (); }
+
+G_INLINE_FUNC gdouble ncm_c_Mpc (void)
+{ return GSL_CONST_NUM_MEGA * ncm_c_pc (); }
+
+G_INLINE_FUNC gdouble ncm_c_G_mass_solar (void)
+{ return 1.3271244e20; }
 
 G_INLINE_FUNC gdouble ncm_c_mass_solar (void)
 { return 1.98892e30; }
 
-/* Statistics */
+/*******************************************************************************
+ * END: IAU related constants
+ *******************************************************************************/
+
+/*******************************************************************************
+ * START: NIST Atomic Spectra database
+ *******************************************************************************/
+/*******************************************************************************
+ * -- START: Hydrogen I
+ *******************************************************************************/
+/* Ionization energy wavenumber: wn */
+
+G_INLINE_FUNC gdouble ncm_c_H_ion_wn_1s_2S0_5 (void)
+{ return 1.0967877174307e7; }
+
+G_INLINE_FUNC gdouble ncm_c_H_ion_wn_2s_2S0_5 (void)
+{ return ncm_c_H_ion_wn_1s_2S0_5 () - ncm_c_H_Lyman_wn_2s_2S0_5 (); }
+
+G_INLINE_FUNC gdouble ncm_c_H_ion_wn_2p_2P0_5 (void)
+{ return ncm_c_H_ion_wn_1s_2S0_5 () - ncm_c_H_Lyman_wn_2p_2P0_5 (); }
+
+G_INLINE_FUNC gdouble ncm_c_H_ion_wn_2p_2P3_5 (void)
+{ return ncm_c_H_ion_wn_1s_2S0_5 () - ncm_c_H_Lyman_wn_2p_2P3_5 (); }
+
+G_INLINE_FUNC gdouble ncm_c_H_ion_wn_2p_2Pmean (void)
+{ return 0.5 * (ncm_c_H_ion_wn_2p_2P0_5 () + ncm_c_H_ion_wn_2p_2P3_5 ()); }
+
+/* Ionization energy: E */
+
+G_INLINE_FUNC gdouble ncm_c_H_ion_E_1s_2S0_5 (void)
+{ return ncm_c_H_ion_wn_1s_2S0_5 () * ncm_c_hc (); }
+
+G_INLINE_FUNC gdouble ncm_c_H_ion_E_2s_2S0_5 (void)
+{ return ncm_c_H_ion_wn_2s_2S0_5 () * ncm_c_hc (); }
+
+G_INLINE_FUNC gdouble ncm_c_H_ion_E_2p_2P0_5 (void)
+{ return ncm_c_H_ion_wn_2p_2P0_5 () * ncm_c_hc (); }
+
+G_INLINE_FUNC gdouble ncm_c_H_ion_E_2p_2P3_5 (void) 
+{ return ncm_c_H_ion_wn_2p_2P3_5 () * ncm_c_hc (); }
+
+G_INLINE_FUNC gdouble ncm_c_H_ion_E_2p_2Pmean (void) 
+{ return ncm_c_H_ion_wn_2p_2Pmean () * ncm_c_hc (); }
+
+/* Lyman series wavenumber: wn */
+
+G_INLINE_FUNC gdouble ncm_c_H_Lyman_wn_2s_2S0_5 (void)
+{ return 8.22589543992821e6; }
+
+G_INLINE_FUNC gdouble ncm_c_H_Lyman_wn_2p_2P0_5 (void)
+{ return 8.22589191133e6; }
+
+G_INLINE_FUNC gdouble ncm_c_H_Lyman_wn_2p_2P3_5 (void)
+{ return 8.22592850014e6; }
+
+G_INLINE_FUNC gdouble ncm_c_H_Lyman_wn_2p_2Pmean (void)
+{ return 0.5 * (ncm_c_H_Lyman_wn_2p_2P0_5 () + ncm_c_H_Lyman_wn_2p_2P3_5 ()); }
+
+/* Lyman series wavelength: wl */
+
+G_INLINE_FUNC gdouble ncm_c_H_Lyman_wl_2s_2S0_5 (void)
+{ return 1.0 / ncm_c_H_Lyman_wn_2s_2S0_5 (); }
+
+G_INLINE_FUNC gdouble ncm_c_H_Lyman_wl_2p_2P0_5 (void)
+{ return 1.0 / ncm_c_H_Lyman_wn_2p_2P0_5 (); }
+
+G_INLINE_FUNC gdouble ncm_c_H_Lyman_wl_2p_2P3_5 (void)
+{ return 1.0 / ncm_c_H_Lyman_wn_2p_2P3_5 (); }
+
+G_INLINE_FUNC gdouble ncm_c_H_Lyman_wl_2p_2Pmean (void)
+{ return 1.0 / ncm_c_H_Lyman_wn_2p_2Pmean (); }
+
+/* Lyman series factor: wl^3 / (8pi) */
+
+G_INLINE_FUNC gdouble ncm_c_H_Lyman_wl3_8pi_2s_2S0_5 (void)
+{ return gsl_pow_3 (ncm_c_H_Lyman_wl_2s_2S0_5 ()) / (8.0 * M_PI); }
+
+G_INLINE_FUNC gdouble ncm_c_H_Lyman_wl3_8pi_2p_2P0_5 (void)
+{ return gsl_pow_3 (ncm_c_H_Lyman_wl_2p_2P0_5 ()) / (8.0 * M_PI); }
+
+G_INLINE_FUNC gdouble ncm_c_H_Lyman_wl3_8pi_2p_2P3_5 (void)
+{ return gsl_pow_3 (ncm_c_H_Lyman_wl_2p_2P3_5 ()) / (8.0 * M_PI); }
+
+G_INLINE_FUNC gdouble ncm_c_H_Lyman_wl3_8pi_2p_2Pmean (void)
+{ return gsl_pow_3 (ncm_c_H_Lyman_wl_2p_2Pmean ()) / (8.0 * M_PI); }
+
+/* Boltzmann factor */
+
+G_INLINE_FUNC gdouble ncm_c_boltzmann_factor_H_1s_2S0_5 (const gdouble T)
+{ return gsl_pow_3 (ncm_c_thermal_wn_e ()) *
+ exp(- ncm_c_H_ion_E_1s_2S0_5 () / (ncm_c_kb () * T)); }
+
+G_INLINE_FUNC gdouble ncm_c_boltzmann_factor_H_2s_2S0_5 (const gdouble T)
+{ return gsl_pow_3 (ncm_c_thermal_wn_e ()) *
+ exp(- ncm_c_H_ion_E_2s_2S0_5 () / (ncm_c_kb () * T)); }
+
+G_INLINE_FUNC gdouble ncm_c_boltzmann_factor_H_2p_2P0_5 (const gdouble T)
+{ return gsl_pow_3 (ncm_c_thermal_wn_e ()) *
+ exp(- ncm_c_H_ion_E_2p_2P0_5 () / (ncm_c_kb () * T)); }
+
+G_INLINE_FUNC gdouble ncm_c_boltzmann_factor_H_2p_2P3_5 (const gdouble T)
+{ return gsl_pow_3 (ncm_c_thermal_wn_e ()) *
+ exp(- ncm_c_H_ion_E_2p_2P3_5 () / (ncm_c_kb () * T)); }
+
+G_INLINE_FUNC gdouble ncm_c_boltzmann_factor_H_2p_2Pmean (const gdouble T)
+{ return gsl_pow_3 (ncm_c_thermal_wn_e ()) *
+ exp(- ncm_c_H_ion_E_2p_2Pmean () / (ncm_c_kb () * T)); }
+
+/*******************************************************************************
+ * -- END: Hydrogen I
+ *******************************************************************************/
+/*******************************************************************************
+ * -- START: Helium I
+ *******************************************************************************/
+/* Ionization energy wavenumber: wn */
+
+G_INLINE_FUNC gdouble ncm_c_HeI_ion_wn_1s_1S0 (void)
+{ return 1.9831066637e7; }
+
+G_INLINE_FUNC gdouble ncm_c_HeI_ion_wn_2s_1S0 (void)
+{ return ncm_c_HeI_ion_wn_1s_1S0 () - ncm_c_HeI_Lyman_wn_2s_1S0 (); }
+
+G_INLINE_FUNC gdouble ncm_c_HeI_ion_wn_2p_1P1 (void)
+{ return ncm_c_HeI_ion_wn_1s_1S0 () - ncm_c_HeI_Lyman_wn_2p_1P1 (); }
+
+/* Ionization energy: E */
+
+G_INLINE_FUNC gdouble ncm_c_HeI_ion_E_1s_1S0 (void)
+{ return ncm_c_HeI_ion_wn_1s_1S0 () * ncm_c_hc (); }
+
+G_INLINE_FUNC gdouble ncm_c_HeI_ion_E_2s_1S0 (void)
+{ return  ncm_c_HeI_ion_wn_2s_1S0 () * ncm_c_hc (); }
+
+G_INLINE_FUNC gdouble ncm_c_HeI_ion_E_2p_1P1 (void)
+{ return  ncm_c_HeI_ion_wn_2p_1P1 () * ncm_c_hc (); }
+
+/* Lyman series wavenumber: wn */
+
+G_INLINE_FUNC gdouble ncm_c_HeI_Lyman_wn_2s_1S0 (void)
+{ return 1.66277440141e7; }
+
+G_INLINE_FUNC gdouble ncm_c_HeI_Lyman_wn_2p_1P1 (void)
+{ return 1.71134896946e7; }
+
+/* Lyman series wavelength: wl */
+
+G_INLINE_FUNC gdouble ncm_c_HeI_Lyman_wl_2s_1S0 (void)
+{ return 1.0 / ncm_c_HeI_Lyman_wn_2s_1S0 (); }
+
+G_INLINE_FUNC gdouble ncm_c_HeI_Lyman_wl_2p_1P1 (void)
+{ return 1.0 / ncm_c_HeI_Lyman_wn_2p_1P1 (); }
+
+/* Lyman series factor: wl^3 / (8pi) */
+
+G_INLINE_FUNC gdouble ncm_c_HeI_Lyman_wl3_8pi_2s_1S0 (void)
+{ return gsl_pow_3 (ncm_c_HeI_Lyman_wl_2s_1S0 ()) / (8.0 * M_PI); }
+
+G_INLINE_FUNC gdouble ncm_c_HeI_Lyman_wl3_8pi_2p_1P1 (void)
+{ return gsl_pow_3 (ncm_c_HeI_Lyman_wl_2p_1P1 ()) / (8.0 * M_PI); }
+
+/* Boltzmann factor */
+
+G_INLINE_FUNC gdouble ncm_c_boltzmann_factor_HeI_1s_1S0 (const gdouble T)
+{ return gsl_pow_3 (ncm_c_thermal_wn_e ()) *
+ exp (- ncm_c_HeI_ion_E_1s_1S0 () / (ncm_c_kb () * T)); }
+
+G_INLINE_FUNC gdouble ncm_c_boltzmann_factor_HeI_2s_1S0 (const gdouble T)
+{ return gsl_pow_3 (ncm_c_thermal_wn_e ()) *
+ exp (- ncm_c_HeI_ion_E_2s_1S0 () / (ncm_c_kb () * T)); }
+
+G_INLINE_FUNC gdouble ncm_c_boltzmann_factor_HeI_2p_1P1 (const gdouble T)
+{ return gsl_pow_3 (ncm_c_thermal_wn_e ()) *
+ exp (- ncm_c_HeI_ion_E_2p_1P1 () / (ncm_c_kb () * T)); } 
+
+/* Balmer series wavenumber: wn */
+
+G_INLINE_FUNC gdouble ncm_c_HeI_Balmer_wn_2p_1P1 (void)
+{ return ncm_c_HeI_Lyman_wn_2p_1P1 () - ncm_c_HeI_Lyman_wn_2s_1S0 (); }
+
+/* Balmer series: E / k_B */
+
+G_INLINE_FUNC gdouble ncm_c_HeI_Balmer_E_kb_2p_1P1 (void)
+{ return ncm_c_HeI_Balmer_wn_2p_1P1 () * ncm_c_hc () / ncm_c_kb (); }
+
+/*******************************************************************************
+ * -- END: Helium I
+ *******************************************************************************/
+/*******************************************************************************
+ * -- START: Helium II
+ *******************************************************************************/
+
+/* Ionization energy wavenumber: wn */
+
+G_INLINE_FUNC gdouble ncm_c_HeII_ion_wn_1s_2S0_5 (void)
+{ return 4.389088785e7; }
+
+/* Ionization energy: E */
+
+G_INLINE_FUNC gdouble ncm_c_HeII_ion_E_1s_2S0_5 (void)
+{ return ncm_c_HeII_ion_wn_1s_2S0_5 () * ncm_c_hc (); }
+
+/*******************************************************************************
+ * -- END: Helium II
+ *******************************************************************************/
+/*******************************************************************************
+ * END: NIST Atomic Spectra database
+ *******************************************************************************/
+
+/*******************************************************************************
+ * Constants from other sources
+ *******************************************************************************/
+
+G_INLINE_FUNC gdouble ncm_c_decay_H_rate_2s_1s (void)
+{ return 8.2245809; }
+
+G_INLINE_FUNC gdouble ncm_c_decay_He_rate_2s_1s (void)
+{ return 51.3; }
+
+/*******************************************************************************
+ * START: Statistics
+ *******************************************************************************/
 
 G_INLINE_FUNC long double ncm_c_stats_1sigma (void)
 { return 0.6826894921370858971704650912640758449558L; }
@@ -490,7 +851,11 @@ G_INLINE_FUNC long double ncm_c_stats_3sigma (void)
 { return 0.9973002039367398109466963704648100452443L; }
 
 /*******************************************************************************
- * Observational data
+ * END: Statistics
+ *******************************************************************************/
+
+/*******************************************************************************
+ * START: Observational data
  *******************************************************************************/
 
 G_INLINE_FUNC gdouble ncm_c_wmap3_cmb_z (void)
@@ -553,29 +918,33 @@ G_INLINE_FUNC gdouble ncm_c_hubble_radius (void)
 G_INLINE_FUNC gdouble ncm_c_hubble_radius_planck (void)
 { return ncm_c_hubble_radius () * ncm_c_Mpc () / ncm_c_planck_length (); }
 
-G_INLINE_FUNC gdouble ncm_c_crit_density (void)
+G_INLINE_FUNC gdouble ncm_c_crit_density_h2 (void)
 { return 3.0 * pow (ncm_c_c () / (10.0 * ncm_c_pc ()), 2.0) / (8.0 * M_PI * ncm_c_G ()); }
 
-G_INLINE_FUNC gdouble ncm_c_crit_mass_density (void)
+G_INLINE_FUNC gdouble ncm_c_crit_mass_density_h2 (void)
 { return 3.0 * pow (1.0 / (10.0 * ncm_c_pc ()), 2.0) / (8.0 * M_PI * ncm_c_G ()); }
 
-G_INLINE_FUNC gdouble ncm_c_crit_mass_density_solar_Mpc (void)
-{ return ncm_c_crit_mass_density () / ncm_c_mass_solar () * pow (ncm_c_Mpc (), 3.0); }
+G_INLINE_FUNC gdouble ncm_c_crit_mass_density_h2_solar_mass_Mpc3 (void)
+{ return ncm_c_crit_mass_density_h2 () / ncm_c_mass_solar () * gsl_pow_3 (ncm_c_Mpc ()); }
 
 G_INLINE_FUNC gdouble ncm_c_crit_number_density_p (void)
-{ return ncm_c_crit_density () / ncm_c_rest_energy_p (); }
+{ return ncm_c_crit_density_h2 () / ncm_c_rest_energy_p (); }
 
 G_INLINE_FUNC gdouble ncm_c_crit_number_density_n (void)
-{ return ncm_c_crit_density () / ncm_c_rest_energy_n (); }
+{ return ncm_c_crit_density_h2 () / ncm_c_rest_energy_n (); }
 
 G_INLINE_FUNC gdouble ncm_c_blackbody_energy_density (void)
 { return 4.0 * ncm_c_stefan_boltzmann () / ncm_c_c (); }
 
 G_INLINE_FUNC gdouble ncm_c_radiation_temp_to_h2omega_r (const gdouble T)
-{ return ncm_c_blackbody_energy_density () * ((T * T) * (T * T)) / ncm_c_crit_density (); }
+{ return ncm_c_blackbody_energy_density () * ((T * T) * (T * T)) / ncm_c_crit_density_h2 (); }
 
 G_INLINE_FUNC gdouble ncm_c_radiation_h2Omega_r_to_temp (const gdouble omr)
-{ return pow(ncm_c_crit_density () * omr / ncm_c_blackbody_energy_density (), 0.25); }
+{ return pow (ncm_c_crit_density_h2 () * omr / ncm_c_blackbody_energy_density (), 0.25); }
+
+/*******************************************************************************
+ * END: Observational data
+ *******************************************************************************/
 
 G_END_DECLS
 

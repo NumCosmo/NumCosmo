@@ -53,7 +53,7 @@ G_BEGIN_DECLS
  * @NC_HICOSMO_IMPL_Omega_t: Total density today $\Omega_t$
  * @NC_HICOSMO_IMPL_sigma_8: Standard deviation of the matter density contrast at scale $R = 8h^{-1} \text{Mpc}$, $\sigma_8$
  * @NC_HICOSMO_IMPL_T_gamma0: Radiation temperature today
- * @NC_HICOSMO_IMPL_He_Yp: Primordial Helium mass fraction 
+ * @NC_HICOSMO_IMPL_Yp_4He: Primordial Helium mass fraction 
  * @NC_HICOSMO_IMPL_z_lss: Redshift of the last scatering surface
  * @NC_HICOSMO_IMPL_as_drag: Acoustic Scale at drag redshift
  * @NC_HICOSMO_IMPL_xb: Maximum redshift
@@ -78,7 +78,7 @@ typedef enum _NcHICosmoImpl
   NC_HICOSMO_IMPL_Omega_t         = 1 << 6,
   NC_HICOSMO_IMPL_sigma_8         = 1 << 7,
   NC_HICOSMO_IMPL_T_gamma0        = 1 << 8,
-  NC_HICOSMO_IMPL_He_Yp           = 1 << 9,
+  NC_HICOSMO_IMPL_Yp_4He           = 1 << 9,
   NC_HICOSMO_IMPL_z_lss           = 1 << 10,
   NC_HICOSMO_IMPL_as_drag         = 1 << 11,
   NC_HICOSMO_IMPL_xb              = 1 << 12,
@@ -103,8 +103,8 @@ typedef enum _NcHICosmoImpl
 #define NC_HICOSMO_IMPL_Omega_ch2 (NC_HICOSMO_IMPL_Omega_c | NC_HICOSMO_IMPL_h2)
 #define NC_HICOSMO_IMPL_Omega_rh2 (NC_HICOSMO_IMPL_Omega_r | NC_HICOSMO_IMPL_h2)
 #define NC_HICOSMO_IMPL_Omega_mh2 (NC_HICOSMO_IMPL_Omega_m | NC_HICOSMO_IMPL_h2)
-#define NC_HICOSMO_IMPL_H_Yp (NC_HICOSMO_IMPL_He_Yp)
-#define NC_HICOSMO_IMPL_XHe (NC_HICOSMO_IMPL_He_Yp)
+#define NC_HICOSMO_IMPL_H_Yp (NC_HICOSMO_IMPL_Yp_4He)
+#define NC_HICOSMO_IMPL_XHe (NC_HICOSMO_IMPL_Yp_4He)
 
 #define NC_HICOSMO_IMPL_H (NC_HICOSMO_IMPL_H0 | NC_HICOSMO_IMPL_E2)
 #define NC_HICOSMO_IMPL_dH_dz (NC_HICOSMO_IMPL_H0 | NC_HICOSMO_IMPL_E2 | NC_HICOSMO_IMPL_dE2_dz)
@@ -163,7 +163,7 @@ struct _NcHICosmoClass
   NcHICosmoFunc0 Omega_t;
   NcHICosmoFunc0 sigma_8;
   NcHICosmoFunc0 T_gamma0;
-  NcHICosmoFunc0 He_Yp;
+  NcHICosmoFunc0 Yp_4He;
   NcHICosmoFunc0 z_lss;
   NcHICosmoFunc0 as_drag;
   NcHICosmoFunc0 xb;
@@ -195,7 +195,7 @@ G_INLINE_FUNC gdouble nc_hicosmo_Omega_r (NcHICosmo *cosmo);
 G_INLINE_FUNC gdouble nc_hicosmo_Omega_c (NcHICosmo *cosmo);
 G_INLINE_FUNC gdouble nc_hicosmo_Omega_t (NcHICosmo *cosmo);
 G_INLINE_FUNC gdouble nc_hicosmo_T_gamma0 (NcHICosmo *cosmo);
-G_INLINE_FUNC gdouble nc_hicosmo_He_Yp (NcHICosmo *cosmo);
+G_INLINE_FUNC gdouble nc_hicosmo_Yp_4He (NcHICosmo *cosmo);
 G_INLINE_FUNC gdouble nc_hicosmo_sigma_8 (NcHICosmo *cosmo);
 G_INLINE_FUNC gdouble nc_hicosmo_z_lss (NcHICosmo *cosmo);
 G_INLINE_FUNC gdouble nc_hicosmo_as_drag (NcHICosmo *cosmo);
@@ -218,8 +218,13 @@ G_INLINE_FUNC gdouble nc_hicosmo_Omega_nuh2 (NcHICosmo *cosmo);
 G_INLINE_FUNC gdouble nc_hicosmo_Omega_ch2 (NcHICosmo *cosmo);
 G_INLINE_FUNC gdouble nc_hicosmo_Omega_rh2 (NcHICosmo *cosmo);
 G_INLINE_FUNC gdouble nc_hicosmo_Omega_mh2 (NcHICosmo *cosmo);
-G_INLINE_FUNC gdouble nc_hicosmo_H_Yp (NcHICosmo *cosmo);
+G_INLINE_FUNC gdouble nc_hicosmo_Yp_1H (NcHICosmo *cosmo);
 G_INLINE_FUNC gdouble nc_hicosmo_XHe (NcHICosmo *cosmo);
+G_INLINE_FUNC gdouble nc_hicosmo_crit_density (NcHICosmo *cosmo);
+G_INLINE_FUNC gdouble nc_hicosmo_baryon_density (NcHICosmo *cosmo);
+G_INLINE_FUNC gdouble nc_hicosmo_He_number_density (NcHICosmo *cosmo);
+G_INLINE_FUNC gdouble nc_hicosmo_H_number_density (NcHICosmo *cosmo);
+
 G_INLINE_FUNC gdouble nc_hicosmo_E (NcHICosmo *cosmo, gdouble z);
 G_INLINE_FUNC gdouble nc_hicosmo_Em2 (NcHICosmo *cosmo, gdouble z);
 G_INLINE_FUNC gdouble nc_hicosmo_H (NcHICosmo *cosmo, gdouble z);
@@ -257,7 +262,7 @@ void nc_hicosmo_set_Omega_c_impl (NcHICosmoClass *model_class, NcHICosmoFunc0 f)
 void nc_hicosmo_set_Omega_t_impl (NcHICosmoClass *model_class, NcHICosmoFunc0 f);
 void nc_hicosmo_set_sigma_8_impl (NcHICosmoClass *model_class, NcHICosmoFunc0 f);
 void nc_hicosmo_set_T_gamma0_impl (NcHICosmoClass *model_class, NcHICosmoFunc0 f);
-void nc_hicosmo_set_He_Yp_impl (NcHICosmoClass *model_class, NcHICosmoFunc0 f);
+void nc_hicosmo_set_Yp_4He_impl (NcHICosmoClass *model_class, NcHICosmoFunc0 f);
 void nc_hicosmo_set_z_lss_impl (NcHICosmoClass *model_class, NcHICosmoFunc0 f);
 void nc_hicosmo_set_as_drag_impl (NcHICosmoClass *model_class, NcHICosmoFunc0 f);
 void nc_hicosmo_set_xb_impl (NcHICosmoClass *model_class, NcHICosmoFunc0 f);
@@ -291,7 +296,7 @@ NCM_MODEL_FUNC0_IMPL (NC_HICOSMO,NcHICosmo,nc_hicosmo,Omega_r)
 NCM_MODEL_FUNC0_IMPL (NC_HICOSMO,NcHICosmo,nc_hicosmo,Omega_c)
 NCM_MODEL_FUNC0_IMPL (NC_HICOSMO,NcHICosmo,nc_hicosmo,Omega_t)
 NCM_MODEL_FUNC0_IMPL (NC_HICOSMO,NcHICosmo,nc_hicosmo,T_gamma0)
-NCM_MODEL_FUNC0_IMPL (NC_HICOSMO,NcHICosmo,nc_hicosmo,He_Yp)
+NCM_MODEL_FUNC0_IMPL (NC_HICOSMO,NcHICosmo,nc_hicosmo,Yp_4He)
 NCM_MODEL_FUNC0_IMPL (NC_HICOSMO,NcHICosmo,nc_hicosmo,sigma_8)
 NCM_MODEL_FUNC0_IMPL (NC_HICOSMO,NcHICosmo,nc_hicosmo,z_lss)
 NCM_MODEL_FUNC0_IMPL (NC_HICOSMO,NcHICosmo,nc_hicosmo,as_drag)
@@ -378,15 +383,52 @@ nc_hicosmo_Omega_mh2 (NcHICosmo *cosmo)
 }
 
 G_INLINE_FUNC gdouble
-nc_hicosmo_H_Yp (NcHICosmo *cosmo)
+nc_hicosmo_Yp_1H (NcHICosmo *cosmo)
 {
-  return 1.0 - nc_hicosmo_He_Yp (cosmo);
+  return 1.0 - nc_hicosmo_Yp_4He (cosmo);
 }
 
 G_INLINE_FUNC gdouble
 nc_hicosmo_XHe (NcHICosmo *cosmo)
 {
-  return nc_hicosmo_He_Yp (cosmo) / (ncm_c_mass_ratio_alpha_p () * nc_hicosmo_H_Yp (cosmo));
+  return nc_hicosmo_Yp_4He (cosmo) / (ncm_c_mass_ratio_4He_1H () * nc_hicosmo_Yp_1H (cosmo));
+}
+
+G_INLINE_FUNC gdouble 
+nc_hicosmo_crit_density (NcHICosmo *cosmo)
+{
+  const gdouble h2 = nc_hicosmo_h2 (cosmo);
+  return ncm_c_crit_density_h2 () * h2;
+}
+
+G_INLINE_FUNC gdouble 
+nc_hicosmo_baryon_density (NcHICosmo *cosmo)
+{
+  const gdouble rho_crit = nc_hicosmo_crit_density (cosmo);
+  const gdouble Omega_b  = nc_hicosmo_Omega_b (cosmo);
+  const gdouble rho_b0   = Omega_b * rho_crit;
+
+  return rho_b0;
+}
+
+G_INLINE_FUNC gdouble 
+nc_hicosmo_He_number_density (NcHICosmo *cosmo)
+{
+  const gdouble rho_b0 = nc_hicosmo_baryon_density (cosmo);
+  const gdouble Yp_4He  = nc_hicosmo_Yp_4He (cosmo);
+  const gdouble E_4He  = ncm_c_rest_energy_4He ();
+
+  return Yp_4He * rho_b0 / E_4He;
+}
+
+G_INLINE_FUNC gdouble 
+nc_hicosmo_H_number_density (NcHICosmo *cosmo)
+{
+  const gdouble rho_b0 = nc_hicosmo_baryon_density (cosmo);
+  const gdouble Yp_1H  = nc_hicosmo_Yp_1H (cosmo);
+  const gdouble E_1H   = ncm_c_rest_energy_1H ();
+
+  return Yp_1H * rho_b0 / E_1H;
 }
 
 G_INLINE_FUNC gdouble

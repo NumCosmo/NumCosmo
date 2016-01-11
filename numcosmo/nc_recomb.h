@@ -143,7 +143,7 @@ nc_recomb_dtau_dlambda_Xe (NcHICosmo *cosmo, const gdouble lambda)
   const gdouble h2      = nc_hicosmo_h2 (cosmo);
   const gdouble Omega_b = nc_hicosmo_Omega_b (cosmo);
   const gdouble n_b0    = Omega_b * ncm_c_crit_number_density_p () * h2;
-  const gdouble n_0     = nc_hicosmo_H_Yp (cosmo) * n_b0;
+  const gdouble n_0     = nc_hicosmo_Yp_1H (cosmo) * n_b0;
   const gdouble H       = nc_hicosmo_H (cosmo, x - 1.0) / (ncm_c_kpc ());
 
   return -ncm_c_c () * ncm_c_thomson_cs () * n_0 * x3 / H;
@@ -157,7 +157,7 @@ nc_recomb_He_fully_ionized_dtau_dlambda (NcHICosmo *cosmo, const gdouble lambda)
 	const gdouble h2 = nc_hicosmo_h2 (cosmo);
 	const gdouble Omega_b = nc_hicosmo_Omega_b (cosmo);
 	const gdouble n_b0 = Omega_b * ncm_c_crit_number_density_p () * h2;
-	const gdouble n_0 = nc_hicosmo_H_Yp (cosmo) * n_b0;
+	const gdouble n_0 = nc_hicosmo_Yp_1H (cosmo) * n_b0;
   const gdouble H = nc_hicosmo_H (cosmo, x - 1.0) / (ncm_c_kpc ());
   const gdouble Xe = nc_recomb_He_fully_ionized_Xe (cosmo, x);
 

@@ -4,11 +4,13 @@
 XML_FILES=dependencies.xml \
           compiling.xml    \
           introduction.xml \
-          references.xml   \
           darkenergy.xml   \
           gdarkenergy.xml  \
           refs.xml         \
           gobject_introd.xml
+
+# Generated xml files
+XML_GEN_FILES=references.xml
 
 # We require automake 1.6 at least.
 AUTOMAKE_OPTIONS = 1.6
@@ -119,7 +121,7 @@ HTML_IMAGES=
 
 # Extra SGML files that are included by $(DOC_MAIN_SGML_FILE).
 # e.g. content_files=running.sgml building.sgml changes-2.0.sgml
-content_files=$(XML_FILES) references.bib container.css
+content_files=$(XML_FILES) $(XML_GEN_FILES) references.bib container.css
 
 # SGML files where gtk-doc abbrevations (#GtkWidget) are expanded
 # These files must be listed here *and* in content_files
@@ -141,7 +143,7 @@ setup-build.stamp: $(DOC_MAIN_SGML_FILE) $(content_files) $(expand_content_files
 
 # Other files to distribute
 # e.g. EXTRA_DIST += version.xml.in
-EXTRA_DIST += $(XML_FILES) references.bib container.css addmathjax.pl xmltogtk.pl
+EXTRA_DIST += $(XML_FILES) $(XML_GEN_FILES) references.bib container.css addmathjax.pl xmltogtk.pl
 
 # Files not to distribute
 # for --rebuild-types in $(SCAN_OPTIONS), e.g. $(DOC_MODULE).types
@@ -192,24 +194,33 @@ dist-hook-local: dist-local-check-mans-enabled numcosmo-docs-clean all-local
 numcosmo-docs-clean: clean
 	cd $(srcdir) && rm -rf xml html
 
+bibfile.stamp: $(top_srcdir)/docs/references.bib
+	-$(GTK_DOC_V_SETUP)if test "$(abs_srcdir)" != "$(abs_builddir)" ; then \
+	    cp -pu $(top_srcdir)/docs/references.bib $(DOC_TARGET_DIR); \
+	fi
+	$(AM_V_at)touch bibfile.stamp
+
+references.tex: bibfile.stamp
+
 .tex.xml:
-	@echo "  DOC   Building XML from $(@F)"
-	@latex --interaction=nonstopmode $< >  $(@F).htlatex.log 2>&1
-	@bibtex8 $*                         >> $(@F).htlatex.log 2>&1
-	@latex --interaction=nonstopmode $< >> $(@F).htlatex.log 2>&1
-	@latex --interaction=nonstopmode $< >> $(@F).htlatex.log 2>&1
-	@htlatex $< "xhtml,docbook" " -cunihtf" "-cdocbk" "--interaction=nonstopmode" >> $(@F).htlatex.log 2>&1
-	@$(top_srcdir)/docs/xmltogtk.pl $(DOC_TARGET_DIR)/$(@F) > $(@F).xmltogtk.log 2>&1
-	@if test ! "$(DOC_TARGET_DIR)/$(@F)" -ef "$(<D)/$(@F)"; then cp $(DOC_TARGET_DIR)/$(@F) $(<D)/$(@F); fi
+	$(AM_V_at)echo "  DOC   Building XML $@ from $<"
+	$(AM_V_at)rm -f $*.aux $*.bbl 
+	$(AM_V_at)latex --interaction=nonstopmode $< >  $(@F).htlatex.log 2>&1
+	$(AM_V_at)bibtex8 $*                         >> $(@F).htlatex.log 2>&1
+	$(AM_V_at)latex --interaction=nonstopmode $< >> $(@F).htlatex.log 2>&1
+	$(AM_V_at)latex --interaction=nonstopmode $< >> $(@F).htlatex.log 2>&1
+	$(AM_V_at)htlatex $< "xhtml,docbook" " -cunihtf" "-cdocbk" "--interaction=nonstopmode" >> $(@F).htlatex.log 2>&1
+	$(AM_V_at)$(top_srcdir)/docs/xmltogtk.pl $(DOC_TARGET_DIR)/$(@F) > $(@F).xmltogtk.log 2>&1
+	$(AM_V_at)if test ! "$(DOC_TARGET_DIR)/$(@F)" -ef "$(<D)/$(@F)"; then cp $(DOC_TARGET_DIR)/$(@F) $(<D)/$(@F); fi
 
 if ENABLE_GTK_DOC
 HTML_BUILD_STAMP += addmathjax.stamp
 endif
 
 addmathjax.stamp: html-build.stamp
-	@echo "  DOC   Adding support to MathJax"
-	@$(top_srcdir)/docs/addmathjax.pl $(DOC_TARGET_DIR)/html/*.html > $(@F).addmathjax.log 2>&1
-	@cp -pu $(top_srcdir)/docs/container.css $(DOC_TARGET_DIR)/html/
-	@touch addmathjax.stamp
+	$(AM_V_at)echo "  DOC   Adding support to MathJax"
+	$(AM_V_at)$(top_srcdir)/docs/addmathjax.pl $(DOC_TARGET_DIR)/html/*.html > $(@F).addmathjax.log 2>&1
+	$(AM_V_at)cp -pu $(top_srcdir)/docs/container.css $(DOC_TARGET_DIR)/html/
+	$(AM_V_at)touch addmathjax.stamp
 
 -include $(top_srcdir)/git.mk

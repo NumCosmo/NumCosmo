@@ -95,8 +95,8 @@ nc_hicosmo_class_init (NcHICosmoClass *klass)
       {"Omega_r",    "Radiation density today.",                   &nc_hicosmo_Omega_r,    NC_HICOSMO_IMPL_Omega_r},
       {"Omega_t",    "Total energy density today.",                &nc_hicosmo_Omega_t,    NC_HICOSMO_IMPL_Omega_t},
       {"T_gamma0",   "Photons temperature today.",                 &nc_hicosmo_T_gamma0,   NC_HICOSMO_IMPL_T_gamma0},
-      {"He_Yp",      "Primordial Helium mass fraction.",           &nc_hicosmo_He_Yp,      NC_HICOSMO_IMPL_He_Yp},
-      {"H_Yp",       "Primordial Hydrogen mass fraction.",         &nc_hicosmo_H_Yp,       NC_HICOSMO_IMPL_H_Yp},
+      {"Yp_4He",     "Primordial Helium mass fraction.",           &nc_hicosmo_Yp_4He,     NC_HICOSMO_IMPL_Yp_4He},
+      {"H_Yp",       "Primordial Hydrogen mass fraction.",         &nc_hicosmo_Yp_1H,      NC_HICOSMO_IMPL_H_Yp},
       {"XHe",        "Primordial Helium abundance.",               &nc_hicosmo_XHe,        NC_HICOSMO_IMPL_XHe},
       {"sigma_8",    "sigma_8.",                                   &nc_hicosmo_sigma_8,    NC_HICOSMO_IMPL_sigma_8},
       {"z_lss",      "redshift at lss.",                           &nc_hicosmo_z_lss,      NC_HICOSMO_IMPL_z_lss},
@@ -399,14 +399,14 @@ NCM_MODEL_SET_IMPL_FUNC(NC_HICOSMO,NcHICosmo,nc_hicosmo,NcHICosmoFunc0,sigma_8)
  */
 NCM_MODEL_SET_IMPL_FUNC(NC_HICOSMO,NcHICosmo,nc_hicosmo,NcHICosmoFunc0,T_gamma0)
 /**
- * nc_hicosmo_set_He_Yp_impl: (skip)
+ * nc_hicosmo_set_Yp_4He_impl: (skip)
  * @model_class: FIXME
  * @f: FIXME
  *
  * FIXME
  *
  */
-NCM_MODEL_SET_IMPL_FUNC(NC_HICOSMO,NcHICosmo,nc_hicosmo,NcHICosmoFunc0,He_Yp)
+NCM_MODEL_SET_IMPL_FUNC(NC_HICOSMO,NcHICosmo,nc_hicosmo,NcHICosmoFunc0,Yp_4He)
 /**
  * nc_hicosmo_set_z_lss_impl: (skip)
  * @model_class: FIXME
@@ -577,10 +577,14 @@ NCM_MODEL_SET_IMPL_FUNC(NC_HICOSMO,NcHICosmo,nc_hicosmo,NcHICosmoFunc1,powspec)
  * Returns: $T_{\gamma0}$
  */
 /**
- * nc_hicosmo_He_Yp:
+ * nc_hicosmo_Yp_4He:
  * @cosmo: a #NcHICosmo.
  *
- * Gets the primordiak Helium mass fraction. 
+ * Gets the primordial Helium mass fraction, i.e., 
+ * $$Y_p = \frac{m_\mathrm{He}n_\mathrm{He}}
+ * {m_\mathrm{He}n_\mathrm{He}+m_\mathrm{H}n_\mathrm{H}},$$ where $m_\mathrm{He}$, 
+ * n_\mathrm{He}, m_\mathrm{H} and m_\mathrm{H} are respectively Helium-4 mass and 
+ * number density and Hydrogen-1 mass and number density.
  *
  * Returns: $Y_p$.
  */
@@ -761,20 +765,59 @@ NCM_MODEL_SET_IMPL_FUNC(NC_HICOSMO,NcHICosmo,nc_hicosmo,NcHICosmoFunc1,powspec)
  * Returns: FIXME
  */
 /**
- * nc_hicosmo_H_Yp:
+ * nc_hicosmo_Yp_1H:
  * @cosmo: a #NcHICosmo
  *
- * FIXME
+ * The primordial hydrogen mass fraction $$Y_{\text{1H}p} = 1 - Y_p,$$
+ * where $Y_p$ is the helium mass fraction, see nc_hicosmo_Yp_4He().
  *
- * Returns: FIXME
+ * Returns: $Y_{\text{1H}p}$.
  */
 /**
  * nc_hicosmo_XHe:
  * @cosmo: a #NcHICosmo
  *
- * FIXME
+ * The primordial Helium to Hydrogen ratio $$X_\text{He} = 
+ * \frac{n_\text{He}}{n_\text{H}} = \frac{m_\text{1H}}{m_\text{4He}}
+ * \frac{Y_p}{Y_{\text{1H}p}},$$ see nc_hicosmo_Yp_1H() and nc_hicosmo_Yp_4He().
+ * 
+ * Returns: The primordial Helium to Hydrogen ratio $X_\text{He}$.
+ */
+/**
+ * nc_hicosmo_crit_density:
+ * @cosmo: a #NcHICosmo
  *
- * Returns: FIXME
+ * Calculares the critical density $\rho_\mathrm{crit}$ using 
+ * ncm_c_crit_density_h2() $\times$ nc_hicosmo_h2().
+ * 
+ * Returns: The critical density $\rho_\mathrm{crit}$.
+ */
+/**
+ * nc_hicosmo_baryon_density:
+ * @cosmo: a #NcHICosmo
+ *
+ * Calculares the baryon density $\rho_\mathrm{b} = \rho_\mathrm{crit} \Omega_\mathrm{b}$ 
+ * using nc_hicosmo_crit_density() $\times$ nc_hicosmo_Omega_b().
+ * 
+ * Returns: The baryon density $\rho_\mathrm{b}$.
+ */
+/**
+ * nc_hicosmo_He_number_density:
+ * @cosmo: a #NcHICosmo
+ *
+ * Calculares the Helium-4 number density $n_\mathrm{4He} = Y_p n_\mathrm{b} / m_\mathrm{4He}$
+ * using nc_hicosmo_Yp_4He() $\times$ nc_hicosmo_baryon_density() / ncm_c_mass_4He().
+ * 
+ * Returns: The baryon density $n_\mathrm{4He}$.
+ */
+/**
+ * nc_hicosmo_H_number_density:
+ * @cosmo: a #NcHICosmo
+ *
+ * Calculares the Hydrogen-1 number density $n_\mathrm{1H} = Y_{\mathrm{1H}p} n_\mathrm{b} / m_\mathrm{1H}$
+ * using nc_hicosmo_Yp_1H() $\times$ nc_hicosmo_baryon_density() / ncm_c_mass_1H().
+ * 
+ * Returns: The baryon density $n_\mathrm{1H}$.
  */
 /**
  * nc_hicosmo_E:

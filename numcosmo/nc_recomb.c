@@ -84,7 +84,7 @@
  * \begin{equation}\label{eq:saha:HyI}
  * \frac{X_{\HyII}X_\e}{X_\HyI} = \frac{e^{-\HyI_{1s}/(k_BT)}}{n_{\Hy}\lambda_{\e}^3},
  * \end{equation}
- * where $\HyI_{1s}$ is the hydrogen $1s$ binding energy ncm_c_H_bind_1s (),
+ * where $\HyI_{1s}$ is the hydrogen $1s$ binding energy ncm_c_H_ion_E_1s_2S0_5(),
  * $\lambda_{\e}$ is the electron thermal wavelength, i.e.,
  * \begin{equation}
  * \lambda_{\e} = \sqrt{\frac{2\pi\hbar^2}{m_\e{}k_BT}},
@@ -100,7 +100,7 @@
  * \begin{equation}\label{eq:saha:HeI}
  * \frac{X_{\HeII}X_\e}{X_{\HeI}} = \frac{e^{-\HeI_{1s}/(k_BT)}}{4n_{\Hy}\lambda_{\e}^3},
  * \end{equation}
- * where $\HeI_{1s}$ is the helium I $1s$ binding energy ncm_c_HeI_bind_1s ().
+ * where $\HeI_{1s}$ is the helium I $1s$ binding energy ncm_c_HeI_ion_E_1s_1S0().
  * This calculation is done using the Saha equation as in
  * [Seager (2000)][XSeager2000].
  *
@@ -109,12 +109,12 @@
  * \begin{equation}\label{eq:saha:HeII}
  * \frac{X_{\HeII}X_\e}{X_{\HeI}} = \frac{e^{-\HeII_{1s}/(k_BT)}}{4n_{\Hy}\lambda_{\e}^3},
  * \end{equation}
- * where $\HeII_{1s}$ is the helium II $1s$ binding energy ncm_c_HeII_bind_1s ().
+ * where $\HeII_{1s}$ is the helium II $1s$ binding energy ncm_c_HeII_ion_E_1s_2S0_5().
  * This calculation is done using the Saha equation as in
  * [Seager (2000)][XSeager2000].
  *
  * The default value of the helium primordial abundance
- * is given by nc_hicosmo_He_Yp ().
+ * is given by nc_hicosmo_Yp_4He().
  * The primordial Helium fraction is define by nc_hicosmo_XHe().
  *
  * <bridgehead>Optical depth and visibility function</bridgehead>
@@ -330,12 +330,11 @@ nc_recomb_HI_ion_saha (NcHICosmo *cosmo, gdouble x)
   const gdouble T = T0 * x;
   const gdouble kbT = ncm_c_kb () * T;
   const gdouble x3 = gsl_pow_3 (x);
-  const gdouble h2 = nc_hicosmo_h2 (cosmo);
-  const gdouble Omega_b = nc_hicosmo_Omega_b (cosmo);
   const gdouble lambda_e3 = gsl_pow_3 (ncm_c_thermal_wl_e () / sqrt (T));
-  const gdouble n_H = nc_hicosmo_H_Yp (cosmo) * Omega_b * x3 * (ncm_c_crit_density () * h2) / ncm_c_rest_energy_p ();
+  const gdouble n_H0 = nc_hicosmo_H_number_density (cosmo);
+  const gdouble n_H  = n_H0 * x3;
 
-  return gsl_sf_exp_mult (-ncm_c_H_bind_1s () / kbT, 1.0 / (n_H * lambda_e3));
+  return gsl_sf_exp_mult (-ncm_c_H_ion_E_1s_2S0_5 () / kbT, 1.0 / (n_H * lambda_e3));
 }
 
 /**
@@ -355,12 +354,11 @@ nc_recomb_HeI_ion_saha (NcHICosmo *cosmo, gdouble x)
   const gdouble T = T0 * x;
   const gdouble kbT = ncm_c_kb () * (T);
   const gdouble x3 = gsl_pow_3 (x);
-  const gdouble h2 = nc_hicosmo_h2 (cosmo);
-  const gdouble Omega_b = nc_hicosmo_Omega_b (cosmo);
   const gdouble lambda_e3 = gsl_pow_3 (ncm_c_thermal_wl_e () / sqrt(T));
-  const gdouble n_H = nc_hicosmo_H_Yp (cosmo) * Omega_b * x3 * (ncm_c_crit_density () * h2) / ncm_c_rest_energy_p ();
+  const gdouble n_H0 = nc_hicosmo_H_number_density (cosmo);
+  const gdouble n_H  = n_H0 * x3;
 
-  return gsl_sf_exp_mult (-ncm_c_HeI_bind_1s () / kbT, 4.0 / (n_H * lambda_e3));
+  return gsl_sf_exp_mult (-ncm_c_HeI_ion_E_1s_1S0 () / kbT, 4.0 / (n_H * lambda_e3));
 }
 
 /**
@@ -380,12 +378,11 @@ nc_recomb_HeII_ion_saha (NcHICosmo *cosmo, gdouble x)
   const gdouble T = T0 * x;
   const gdouble kbT = ncm_c_kb () * T;
   const gdouble x3 = gsl_pow_3 (x);
-  const gdouble h2 = nc_hicosmo_h2 (cosmo);
-  const gdouble Omega_b = nc_hicosmo_Omega_b (cosmo);
   const gdouble lambda_e3 = gsl_pow_3 (ncm_c_thermal_wl_e () / sqrt(T0)) / sqrt(x3);
-  const gdouble n_H = nc_hicosmo_H_Yp (cosmo) * Omega_b * x3 * (ncm_c_crit_density () * h2) / ncm_c_rest_energy_p ();
+  const gdouble n_H0 = nc_hicosmo_H_number_density (cosmo);
+  const gdouble n_H  = n_H0 * x3;
 
-  return gsl_sf_exp_mult (-ncm_c_HeII_bind_1s () / kbT, 1.0 / (n_H * lambda_e3));
+  return gsl_sf_exp_mult (-ncm_c_HeII_ion_E_1s_2S0_5 () / kbT, 1.0 / (n_H * lambda_e3));
 }
 
 /**
@@ -405,11 +402,10 @@ nc_recomb_HeII_ion_saha_x (NcHICosmo *cosmo, gdouble f)
 {
   const gdouble T0 = nc_hicosmo_T_gamma0 (cosmo);
   const gdouble kbT0 = ncm_c_kb () * T0;
-  const gdouble mE_kbT0 = -ncm_c_HeII_bind_1s () / kbT0;
+  const gdouble mE_kbT0 = -ncm_c_HeII_ion_E_1s_2S0_5 () / kbT0;
   const gdouble lambda_e3_0 = gsl_pow_3 (ncm_c_thermal_wl_e () / sqrt (T0));
-  const gdouble h2 = nc_hicosmo_h2 (cosmo);
-  const gdouble Omega_b = nc_hicosmo_Omega_b (cosmo);
-  const gdouble n_H0 = nc_hicosmo_H_Yp (cosmo) * Omega_b * (ncm_c_crit_density () * h2) / ncm_c_rest_energy_p ();
+  const gdouble n_H0 = nc_hicosmo_H_number_density (cosmo);
+
   const gdouble y = 3.0 / 2.0 * gsl_sf_lambert_Wm1 (2.0 / 3.0 * mE_kbT0 * cbrt (gsl_pow_2 (lambda_e3_0 * n_H0 * f))) / mE_kbT0;
 
   return (1.0 / y);

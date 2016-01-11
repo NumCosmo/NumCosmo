@@ -122,7 +122,7 @@ _integrand_powspec_1h (gdouble lnM, gpointer userdata)
   gdouble M = exp(lnM);
   gdouble dn_dlnM = nc_mass_function_dn_dlnm (int_data->cad->mfp, int_data->model, lnM, int_data->z);
   gdouble u = nc_density_profile_eval_fourier (int_data->dp, int_data->model, int_data->k, M, int_data->z);
-  gdouble rho_mz = pow (1.0 + int_data->z, 3.0) * nc_hicosmo_Omega_m (int_data->model) * ncm_c_crit_mass_density_solar_Mpc ();
+  gdouble rho_mz = pow (1.0 + int_data->z, 3.0) * nc_hicosmo_Omega_m (int_data->model) * ncm_c_crit_mass_density_h2_solar_mass_Mpc3 ();
   //gdouble integrand_powspec_1h = M * dn_dlnM * u; //* nc_cluster_mass_intp (int_data->cad->m, int_data->model, lnM, int_data->z);
   gdouble integrand_powspec_1h = (M / rho_mz) * (M / rho_mz) * dn_dlnM * u * u;
   //printf("M = %.5e, rho = %.5g, n = %.5g, u = %.5g\n", M, rho_mz, dn_dlnM, u);
@@ -209,7 +209,7 @@ _integrand_redshift_1h (gdouble z, gpointer userdata)
   //printf("l = %4.d k = %.5g kdim = %.5g\n", int_data->l, int_data->k, int_data->k * 1.0e5 / ncm_c_c());
   gdouble dcdec_m_dc = int_data->dc_zdec - int_data->dc_z;
   gdouble ds = int_data->dc_z * dcdec_m_dc / int_data->dc_zdec;
-  gdouble rho_mz = pow (1.0 + z, 3.0) * nc_hicosmo_Omega_m (int_data->model) * ncm_c_crit_mass_density_solar_Mpc ();
+  gdouble rho_mz = pow (1.0 + z, 3.0) * nc_hicosmo_Omega_m (int_data->model) * ncm_c_crit_mass_density_h2_solar_mass_Mpc3 ();
   gdouble integral_mass = nc_cor_cluster_cmb_lens_limber_oneh_int_mass (int_data->cccll, int_data->cad, int_data->clusterm, int_data->model, int_data->dp, int_data->k, z, int_data->lnM_obs, int_data->lnM_obs_params);
   //printf("int_mass= %.5g\n", integral_mass);
   gdouble integrand_z_1h = (1.0 + z) * ds / (nc_hicosmo_E (int_data->model, z) * rho_mz) * integral_mass;
@@ -362,7 +362,7 @@ _integrand_powspec_2h (gdouble lnM, gpointer userdata)
 {
   integrand_data_2h_mass2 *int_data = (integrand_data_2h_mass2 *) userdata;
   //gdouble M = exp (lnM);
-  //gdouble rho_mz = pow (1.0 + int_data->z, 3.0) * nc_hicosmo_Omega_m (int_data->model) * ncm_c_crit_mass_density_solar_Mpc ();
+  //gdouble rho_mz = pow (1.0 + int_data->z, 3.0) * nc_hicosmo_Omega_m (int_data->model) * ncm_c_crit_mass_density_h2_solar_mass_Mpc3 ();
   gdouble lnR = nc_matter_var_lnM_to_lnR (int_data->hbf->mfp->vp, int_data->model, lnM);
   gdouble R = exp (lnR);
   gdouble M_rho = nc_window_volume (int_data->hbf->mfp->vp->wp) * gsl_pow_3(R);
@@ -537,7 +537,7 @@ _integrand_redshift_2h (gdouble z, gpointer userdata)
   gdouble ds = dc_z * dcdec_m_dc / int_data->dc_zdec;
   gdouble growth = nc_growth_func_eval (int_data->hbf->mfp->gf, int_data->model, z);
   gdouble k = int_data->l / (dc_z * ncm_c_hubble_radius ()); /* in units of h Mpc^-1 */
-  gdouble rho_mz = pow (1.0 + z, 3.0) * nc_hicosmo_Omega_m (int_data->model) * ncm_c_crit_mass_density_solar_Mpc ();
+  gdouble rho_mz = pow (1.0 + z, 3.0) * nc_hicosmo_Omega_m (int_data->model) * ncm_c_crit_mass_density_h2_solar_mass_Mpc3 ();
   gdouble transfer_primordial_ps = nc_transfer_func_matter_powerspectrum (int_data->hbf->mfp->vp->tf, int_data->model, k);
   gdouble ps_sqrt_norma = nc_matter_var_sigma8_sqrtvar0 (int_data->hbf->mfp->vp, int_data->model);
   gdouble ps_linear = ps_sqrt_norma * ps_sqrt_norma * growth * growth * transfer_primordial_ps;

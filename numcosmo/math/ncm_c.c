@@ -30,9 +30,26 @@
  *
  * Mathematical and physical constants and constants manipulation
  * functions.
- * Using 2006 CODATA recommended values, see constants.txt distributed with
- * sources.
+ * 
+ * The sources are:
+ * 
+ * - High precision mathematical constants obtained from [MPFR](http://www.mpfr.org/). 
+ * 
+ * - Fundamental constants: 2014 [CODATA](http://physics.nist.gov/cuu/Constants/index.html)
+ * recommended values, see constants.txt distributed with NumCosmo sources. 
+ * 
+ * - The atomic weights: Commission on Isotopic Abundances and Atomic Weights 
+ * ([CIAAW](http://www.ciaaw.org/atomic-weights.htm)) of the 
+ * International Union of Pure and Applied Chemistry (IUPAC). See also from the 
+ * [NIST compilation](http://www.nist.gov/pml/data/comp.cfm). 
+ * 
+ * - Astronomical constants: [IAU 2015](https://www.iau.org/administration/resolutions/general_assemblies/) 
+ * resolutions for the astronomical unit ncm_c_au(), parsec ncm_c_pc() and derived constants.
+ * See also [Luzum 2011][XLuzum2011].
  *
+ * - Atomic Specra: National Institute of Standards and Technology (NIST) [Atomic Spectra](http://www.nist.gov/pml/data/asd.cfm)
+ * database - Version 5 (January 2016).
+ * 
  */
 
 #ifdef HAVE_CONFIG_H
@@ -75,165 +92,193 @@ ncm_c_class_init (NcmCClass *klass)
 /**
  * ncm_c_sqrt_1_4pi:
  *
- * Returns: sqrt (1 / (4 * pi))
- *
+ * Returns: $\sqrt{1 / (4 \pi)}$.
  */
 /**
  * ncm_c_sqrt_2pi:
  *
- * Returns: sqrt (2 * pi)
- *
+ * Returns: $\sqrt{2 \pi}$.
  */
 /**
  * ncm_c_sqrt_3_4pi:
  *
- * Returns: sqrt (3 / (4 * pi))
- *
+ * Returns: $\sqrt{3 / (4 \pi)}$.
  */
 /**
  * ncm_c_lnpi_4:
  *
- * Returns: ln (pi) / 4
- * 1.8378770664093454835606594728112352797227949472755668256343
+ * Returns: $\ln(\pi) / 4$.
  */
 /**
  * ncm_c_ln2pi:
  *
- * Returns: ln (2pi)
- * 
+ * Returns: $\ln(2\pi)$.
  */
 /**
  * ncm_c_pi:
  *
- * Returns: pi
- *
+ * Returns: $\pi$.
  */
 /**
  * ncm_c_tan_1arcsec:
  *
- * Returns: tan (2 * pi/ (360 * 60 * 60))
- *
+ * Returns: $\tan(2 \pi/ (360 \times 60 \times 60))$.
  */
 
 /**
  * ncm_c_degree_to_radian:
- * @d: anle in degrees.
+ * @d: angle in degrees.
  *
- * Returns: d * pi / 180
- *
+ * Returns: $d \times \pi / 180$.
  */
 /**
  * ncm_c_radian_to_degree:
  * @r: angle in radians 
  *
- * Returns: r * 180 / pi
- *
+ * Returns: $r \times 180 / \pi$.
  */
 /**
  * ncm_c_radian_0_2pi:
  * @r: angle in radians
  *
- * Returns: the angle in the interval [0, 2pi]
- *
+ * Returns: the angle in the interval $[0, 2\pi]$.
  */
 /**
  * ncm_c_sign_sin:
  * @r: angle in radias
  *
- * Returns: the sign of the value of sin(d).
- *
+ * Returns: the sign of the value of $\sin(r)$.
  */
 
 /*******************************************************************************
- * START: 2006 CODATA recommended values (see end of file)
+ * START: 2014 CODATA recommended values (see constants.txt)
  *******************************************************************************/
 
 /**
  * ncm_c_c:
+ * 
+ * Using CODATA values, see [description][NcmC.description].
  *
- * Returns: Speed of light $\left[ \frac{m}{s} \right]$.
+ * Returns: Speed of light $c = 299792458 \,\left[\mathrm{m}\mathrm{s}^{-1}\right]$.
  *
  */
 /**
  * ncm_c_h:
  *
- * Returns: Planck constant.
+ * Using CODATA values, see [description][NcmC.description].
  *
+ * Returns: Planck constant $h = 6.626070040 \times 10^{-34} \,\left[\mathrm{J}\,\mathrm{s}^{-1}\right]$.
  */
 /**
  * ncm_c_hbar:
  *
- * Returns: Planck constant over 2 pi.
+ * Using CODATA values, see [description][NcmC.description].
  *
+ * Returns: Planck constant over $2\pi$, $\hbar \equiv h / (2\pi) = 1.054571800 \times 10^{-34} \,\left[\mathrm{J}\,\mathrm{s}^{-1}\right]$.
  */
 /**
  * ncm_c_fine_struct:
  *
- * Returns: Fine structure constant.
+ * Using CODATA values, see [description][NcmC.description].
  *
+ * Returns: Fine structure constant $\alpha = 7.2973525664 \times 10^{-3} $.
  */
 /**
  * ncm_c_kb:
  *
- * Returns: Boltzmann constant.
+ * Using CODATA values, see [description][NcmC.description].
  *
+ * Returns: Boltzmann constant $k_\mathrm{B} = 1.38064852 \times 10^{-23} \,\left[\mathrm{J}\,\mathrm{K}^{-1}\right]$.
  */
 /**
  * ncm_c_G:
  *
- * \begin{equation}
- * G = 6.67428 \times 10^{-11} \, \frac{\text{m}^3}{\text{kg} \, \text{s}^2} 
- * \end{equation}
+ * Using CODATA values, see [description][NcmC.description].
  * 
- * Returns: Newton's (or gravitational) constant $G$.
- *
+ * Returns: Newton's (or gravitational) constant $\mathrm{G} = 6.67408 \times 10^{-11} \,\left[\mathrm{m}^3\,\mathrm{kg}^{-1}\,\mathrm{s}^{-2}\right]$.
  */
 /**
  * ncm_c_planck_length:
  *
- * Returns: Planck length.
- *
+ * Returns: Planck length $l_\mathrm{P} = 1.616229 \times 10^{-35} \,\left[\mathrm{m}\right]$.
  */
 /**
  * ncm_c_thomson_cs:
  *
- * Returns: Thomson cross section.
- *
+ * Using CODATA values, see [description][NcmC.description].
+ * 
+ * Returns: Thomson cross section $\sigma_\mathrm{T} = 0.66524587158 \times 10^{-28} \,\left[\mathrm{m}^2\right]$.
  */
 /**
  * ncm_c_stefan_boltzmann:
  *
- * Returns: Stefan Boltzmann constant.
+ * Using CODATA values, see [description][NcmC.description].
+ * 
+ * Returns: Stefan Boltzmann constant $\sigma_\mathrm{SB} = 5.670367 \times 10^{-8} \,\left[\mathrm{W}\,\mathrm{m}^{-2}\,\mathrm{K}^{-4}\right]$.
+ */
+/**
+ * ncm_c_mass_atomic:
  *
+ * Using CODATA values, see [description][NcmC.description].
+ * 
+ * Returns: Atomic mass constant $m_\mathrm{A} = 1.660539040 \times 10^{-27} \,\left[\mathrm{kg}\right]$.
  */
 /**
  * ncm_c_mass_e:
  *
- * Returns: Electron mass.
- *
+ * Using CODATA values, see [description][NcmC.description].
+ * 
+ * Returns: Electron mass $m_\mathrm{e} = 9.10938356 \times 10^{-31} \,\left[\mathrm{kg}\right]$.
  */
 /**
  * ncm_c_mass_p:
  *
- * Returns: Proton mass.
- *
+ * Using CODATA values, see [description][NcmC.description].
+ * 
+ * Returns: Proton mass $m_\mathrm{p} = 1.672621898 \times 10^{-27} \,\left[\mathrm{kg}\right]$.
  */
 /**
  * ncm_c_mass_n:
  *
- * Returns: Neuton mass.
- *
+ * Using CODATA values, see [description][NcmC.description].
+ * 
+ * Returns: Neuton mass $m_\mathrm{n} = 1.674927471 \times 10^{-27} \,\left[\mathrm{kg}\right]$.
  */
 /**
  * ncm_c_mass_ratio_alpha_p:
  *
- * Returns: The proton and alpha particle (helium-4) mass ratio.
- *
+ * Using CODATA values, see [description][NcmC.description].
+ * 
+ * Returns: The proton and alpha particle (Helium-4 III) mass ratio $m_\alpha / m_\mathrm{p} = 3.97259968907$.
  */
-
-/*******************************************************************************
- * END: 2006 CODATA recommended values
- *******************************************************************************/
+/**
+ * ncm_c_mass_ratio_e_p:
+ *
+ * Using CODATA values, see [description][NcmC.description].
+ * 
+ * Returns: The electron and proton mass ratio $m_\mathrm{e} / m_\mathrm{p} = 5.44617021352 \times 10^{-4}$.
+ */
+/**
+ * ncm_c_Rinf:
+ *
+ * Using CODATA values, see [description][NcmC.description].
+ * 
+ * Returns: The Rydberg constant $\mathrm{R}_\infty = 1.0973731568508 \times 10^{7} \,\left[\mathrm{m}^{-1}\right]$.
+ */
+/**
+ * ncm_c_Ry:
+ *
+ * Using CODATA values, see [description][NcmC.description].
+ * 
+ * Returns: The Rydberg unity of energy $\mathrm{Ry} = hc\mathrm{R}_\infty = 2.179872325 \times 10^{-18} \,\left[\mathrm{J}\right]$.
+ */
+/**
+ * ncm_c_eV:
+ *
+ * Using CODATA values, see [description][NcmC.description].
+ * 
+ * Returns: The value of one electron volt $\mathrm{eV} = 1.6021766208 \times 10^{-19} \,\left[\mathrm{J}\right]$.
+ */
 
 /*******************************************************************************
  * Derived constants
@@ -241,429 +286,945 @@ ncm_c_class_init (NcmCClass *klass)
 
 /**
  * ncm_c_hc:
- *
- * Returns: Planck constant times the speed of light.
- *
+ * 
+ * Derived from CODATA values, see [description][NcmC.description].
+ * 
+ * Returns: Planck constant times the speed of light $hc \,\left[\mathrm{kg}\,\mathrm{m}^3\,\mathrm{s}^{-2}\right]$.
  */
 /**
  * ncm_c_fine_struct_square:
  *
- * Returns: The square of the fine struct constant.
- *
- */
-/**
- * ncm_c_kpc:
- *
- * Returns: One kilo parsec.
- *
- */
-/**
- * ncm_c_Mpc:
- *
- * Returns: One mega parsec.
- *
+ * Derived from CODATA values, see [description][NcmC.description].
+ * 
+ * Returns: The square of the fine struct constant $\alpha^2$.
  */
 /**
  * ncm_c_AR:
  *
+ * Derived from CODATA values, see [description][NcmC.description].
+ * 
  * Returns: Radiation constant AR.
- *
  */
 /**
  * ncm_c_c2:
  *
- * Returns: Square of the speed of light.
- *
+ * Derived from CODATA values, see [description][NcmC.description].
+ * 
+ * Returns: Square of the speed of light $c^2 \,\left[\mathrm{m}^2\,\mathrm{s}^{-2}\right]$.
  */
 /**
  * ncm_c_planck_length2:
  *
- * Returns: Square of the Planck length.
+ * Derived from CODATA values, see [description][NcmC.description].
+ * 
+ * Returns: Square of the Planck length $l_\mathrm{P}^2 \,\left[\mathrm{m}^2\right]$.
+ */
+/**
+ * ncm_c_rest_energy_atomic:
  *
+ * Derived from CODATA values, see [description][NcmC.description].
+ * 
+ * Returns: Rest energy of one atomic mass $m_\mathrm{A}c^2 \,\left[\mathrm{J}\right]$.
  */
 /**
  * ncm_c_rest_energy_e:
  *
- * Returns: Electron's rest energy.
- *
+ * Derived from CODATA values, see [description][NcmC.description].
+ * 
+ * Returns: Electron's rest energy $m_\mathrm{e}c^2 \,\left[\mathrm{J}\right]$.
  */
 /**
  * ncm_c_rest_energy_p:
  *
- * Returns: Proton's rest energy.
- *
+ * Derived from CODATA values, see [description][NcmC.description].
+ * 
+ * Returns: Proton's rest energy $m_\mathrm{p}c^2 \,\left[\mathrm{J}\right]$.
  */
 /**
  * ncm_c_rest_energy_n:
  *
- * Returns: Neutron's rest energy.
+ * Derived from CODATA values, see [description][NcmC.description].
+ * 
+ * Returns: Neutron's rest energy $m_\mathrm{n}c^2 \,\left[\mathrm{J}\right]$.
+ */
+/**
+ * ncm_c_H_reduced_mass:
  *
+ * Derived from CODATA values, see [description][NcmC.description].
+ *
+ * Reduced mass for the electron in Hydrogen binding energy calculation, i.e.,
+ * $m_\mathrm{r} = m_\mathrm{e} / (1 + m_\mathrm{e}/m_\mathrm{p})$
+ *
+ * Returns: Electron reduced mass $m_\mathrm{r} \,\left[\mathrm{kg}\right]$.
+ */
+/**
+ * ncm_c_thermal_wl_e:
+ *
+ * Derived from CODATA values, see [description][NcmC.description].
+ * 
+ * The electron termal wavelength is $\lambda_\mathrm{e} = \sqrt{2\pi\hbar^2/(m_\mathrm{e}k_\mathrm{B}T)} \,\left[\mathrm{m}\right]$.
+ * 
+ * Returns: Thermal electron wavelength times the temperature $\lambda_\mathrm{e}\sqrt{T}$.
+ */
+/**
+ * ncm_c_thermal_wl_p:
+ *
+ * Derived from CODATA values, see [description][NcmC.description].
+ * 
+ * The proton termal wavelength is $\lambda_\mathrm{p} = \sqrt{2\pi\hbar^2/(m_\mathrm{p}k_\mathrm{B}T)} \,\left[\mathrm{m}\right]$.
+ * 
+ * Returns: Thermal electron wavelength times the temperature $\lambda_\mathrm{p}\sqrt{T}$.
+ */
+/**
+ * ncm_c_thermal_wl_n:
+ *
+ * Derived from CODATA values, see [description][NcmC.description].
+ * 
+ * The neutron termal wavelength is $\lambda_\mathrm{n} = \sqrt{2\pi\hbar^2/(m_\mathrm{n}k_\mathrm{B}T)} \,\left[\mathrm{m}\right]$.
+ * 
+ * Returns: Thermal electron wavelength times the temperature $\lambda_\mathrm{n}\sqrt{T}$.
+ */
+/**
+ * ncm_c_thermal_wn_e:
+ *
+ * Derived from CODATA values, see [description][NcmC.description].
+ * 
+ * The electron termal wavenumber is $k_\mathrm{e} = 1/\lambda_\mathrm{e}$,
+ * see ncm_c_thermal_wl_e().
+ * 
+ * Returns: Thermal eletron wavenumber $k_\mathrm{e}/\sqrt{T}$.
+ */
+/**
+ * ncm_c_thermal_wn_p:
+ *
+ * Derived from CODATA values, see [description][NcmC.description].
+ * 
+ * The proton termal wavenumber is $k_\mathrm{p} = 1/\lambda_\mathrm{p}$,
+ * see ncm_c_thermal_wl_p().
+ * 
+ * Returns: Thermal proton wavenumber $k_\mathrm{e}/\sqrt{T}$.
+ */
+/**
+ * ncm_c_thermal_wn_n:
+ *
+ * Derived from CODATA values, see [description][NcmC.description].
+ * 
+ * The neutron termal wavenumber is $k_\mathrm{n} = 1/\lambda_\mathrm{n}$,
+ * see ncm_c_thermal_wl_n().
+ * 
+ * Returns: Thermal neutron wavenumber $k_\mathrm{e}/\sqrt{T}$.
+ */
+/**
+ * ncm_c_H_reduced_energy:
+ *
+ * Reduced mass times $c^2$, $m_\mathrm{r}c^2$, see ncm_c_H_reduced_mass().
+ *
+ * Returns: $m_\mathrm{r}c^2 \,\left[\mathrm{J}\right]$.
+ */
+/**
+ * ncm_c_H_bind:
+ * @n: Principal quantum number
+ * @j: Total angular momentum
+ * 
+ * Energy difference from unbounded state to state $(n,\,j)$, i.e., minus the
+ * binding energy of the state $(n,\,j)$, calculated from 
+ * \begin{equation}
+ * E^\mathrm{H}_{n,j} = m_\mathrm{e}c^2\left[1 - f(n,j)\right],
+ * \end{equation}
+ * where
+ * \begin{align}
+ * f(n, j)   &= \left[1+\left(\frac{\alpha}{n - \delta(j)}\right)^2\right]^{-\frac{1}{2}}, \\\\
+ * \delta(j) &= j+\frac{1}{2} + \sqrt{\left(j+1/2\right)^2 - \alpha^2}.
+ * \end{align}
+ *
+ * Returns: Hydrogen binding energy $E^\mathrm{H}_{n,j}$.
  */
 
 /*******************************************************************************
- * Constants from other places
+ * END: 2014 CODATA recommended values
+ *******************************************************************************/
+
+/*******************************************************************************
+ * START: IUPAC related constants
+ *******************************************************************************/
+
+/**
+ * ncm_c_mass_1H_u:
+ *
+ * Obtained from CIAAW commission of IUPAC, see [description][NcmC.description].
+ * 
+ * Returns: Hydrogen-1's mass over one atomic mass $m_\mathrm{1H}/m_\mathrm{A} = 1.00782503223$.
+ */
+/**
+ * ncm_c_mass_2H_u:
+ *
+ * Obtained from CIAAW commission of IUPAC, see [description][NcmC.description].
+ * 
+ * Returns: Hydrogen-2's mass over one atomic mass $m_\mathrm{2H}/m_\mathrm{A} = 2.01410177812$.
+ */
+/**
+ * ncm_c_mass_3H_u:
+ *
+ * Obtained from CIAAW commission of IUPAC, see [description][NcmC.description].
+ * 
+ * Returns: Hydrogen-3's mass over one atomic mass $m_\mathrm{3H}/m_\mathrm{A} = 3.0160492779$.
+ */
+
+/**
+ * ncm_c_mass_3He_u:
+ *
+ * Obtained from CIAAW commission of IUPAC, see [description][NcmC.description].
+ * 
+ * Returns: Helium-3's mass over one atomic mass $m_\mathrm{3He}/m_\mathrm{A} = 3.0160293201$.
+ */
+/**
+ * ncm_c_mass_4He_u:
+ *
+ * Obtained from CIAAW commission of IUPAC, see [description][NcmC.description].
+ * 
+ * Returns: Helium-4's mass over one atomic mass $m_\mathrm{4He}/m_\mathrm{A} = 4.00260325413$.
+ */
+
+/**
+ * ncm_c_mass_1H:
+ *
+ * Obtained from CIAAW commission of IUPAC, see [description][NcmC.description].
+ * Calculated using ncm_c_mass_1H_u() $\times$ ncm_c_mass_atomic(). 
+ * 
+ * Returns: Hydrogen-1's mass $m_\mathrm{1H} \,\left[\mathrm{kg}\right]$.
+ */
+/**
+ * ncm_c_mass_2H:
+ *
+ * Obtained from CIAAW commission of IUPAC, see [description][NcmC.description].
+ * Calculated using ncm_c_mass_2H_u() $\times$ ncm_c_mass_atomic(). 
+ * 
+ * Returns: Hydrogen-2's mass $m_\mathrm{2H} \,\left[\mathrm{kg}\right]$.
+ */
+/**
+ * ncm_c_mass_3H:
+ *
+ * Obtained from CIAAW commission of IUPAC, see [description][NcmC.description].
+ * Calculated using ncm_c_mass_3H_u() $\times$ ncm_c_mass_atomic(). 
+ * 
+ * Returns: Hydrogen-3's mass $m_\mathrm{3H} \,\left[\mathrm{kg}\right]$.
+ */
+
+/**
+ * ncm_c_mass_3He:
+ *
+ * Obtained from CIAAW commission of IUPAC, see [description][NcmC.description].
+ * Calculated using ncm_c_mass_3He_u() $\times$ ncm_c_mass_atomic(). 
+ * 
+ * Returns: Helium-3's mass $m_\mathrm{3He} \,\left[\mathrm{kg}\right]$.
+ */
+/**
+ * ncm_c_mass_4He:
+ *
+ * Obtained from CIAAW commission of IUPAC, see [description][NcmC.description].
+ * Calculated using ncm_c_mass_4He_u() $\times$ ncm_c_mass_atomic(). 
+ * 
+ * Returns: Helium-4's mass $m_\mathrm{4He} \,\left[\mathrm{kg}\right]$.
+ */
+
+/**
+ * ncm_c_rest_energy_1H:
+ *
+ * Obtained from CIAAW commission of IUPAC, see [description][NcmC.description].
+ * Calculated using ncm_c_mass_1H_u() $\times$ ncm_c_rest_energy_atomic(). 
+ * 
+ * Returns: Hydrogen-1's rest energy $m_\mathrm{1H}c^2 \,\left[\mathrm{J}\right]$.
+ */
+/**
+ * ncm_c_rest_energy_2H:
+ *
+ * Obtained from CIAAW commission of IUPAC, see [description][NcmC.description].
+ * Calculated using ncm_c_mass_2H_u() $\times$ ncm_c_rest_energy_atomic(). 
+ * 
+ * Returns: Hydrogen-2's rest energy $m_\mathrm{2H}c^2 \,\left[\mathrm{J}\right]$.
+ */
+/**
+ * ncm_c_rest_energy_3H:
+ *
+ * Obtained from CIAAW commission of IUPAC, see [description][NcmC.description].
+ * Calculated using ncm_c_mass_3H_u() $\times$ ncm_c_rest_energy_atomic(). 
+ * 
+ * Returns: Hydrogen-3's rest energy $m_\mathrm{3H}c^2 \,\left[\mathrm{J}\right]$.
+ */
+
+/**
+ * ncm_c_rest_energy_3He:
+ *
+ * Obtained from CIAAW commission of IUPAC, see [description][NcmC.description].
+ * Calculated using ncm_c_mass_3He_u() $\times$ ncm_c_rest_energy_atomic(). 
+ * 
+ * Returns: Helium-3's rest energy $m_\mathrm{3He}c^2 \,\left[\mathrm{J}\right]$.
+ */
+/**
+ * ncm_c_rest_energy_4He:
+ *
+ * Obtained from CIAAW commission of IUPAC, see [description][NcmC.description].
+ * Calculated using ncm_c_mass_4He_u() $\times$ ncm_c_rest_energy_atomic(). 
+ * 
+ * Returns: Helium-4's rest energy $m_\mathrm{4He}c^2 \,\left[\mathrm{J}\right]$.
+ */
+
+/*******************************************************************************
+ * Derived constants
+ *******************************************************************************/
+
+/**
+ * ncm_c_mass_ratio_4He_1H:
+ *
+ * Obtained from CIAAW commission of IUPAC, see [description][NcmC.description].
+ * Calculated using ncm_c_mass_4He_u() / ncm_c_mass_1H_u(). 
+ * 
+ * Returns: Helium-4 / Hydrogen-1 mass ratio $m_\mathrm{4He} / m_\mathrm{1H}$.
+ */
+
+/*******************************************************************************
+ * END: IUPAC related constants
+ *******************************************************************************/
+
+/*******************************************************************************
+ * START: IAU related constants
+ *******************************************************************************/
+
+/**
+ * ncm_c_au:
+ * 
+ * Using IAU 2015 recommendation see [description][NcmC.description],
+ * compatible with [NASA JPL](http://ssd.jpl.nasa.gov/?constants) recommendations
+ * (as in 5 January 2016).
+ *
+ * Returns: One astronomical unit in meters $\mathrm{au} = 1.49597870700 \times 10^{11} \,\left[\mathrm{m}\right]$.
+ */
+/**
+ * ncm_c_pc:
+ * 
+ * Using IAU 2015 recommendation see [description][NcmC.description].
+ *
+ * Returns: One parsec in meters $\mathrm{pc} = 648000 \mathrm{au} / \pi = 3.0856775814913672789139379577965 \times 10^{16} \,\left[\mathrm{m}\right]$.
+ */
+/**
+ * ncm_c_kpc:
+ *
+ * Using IAU 2015 recommendation see [description][NcmC.description].
+ *
+ * Returns: One kilo parsec $\mathrm{kpc} = 10^3 \mathrm{pc}$.
+ */
+/**
+ * ncm_c_Mpc:
+ *
+ * Using IAU 2015 recommendation see [description][NcmC.description].
+ * 
+ * Returns: One mega parsec $\mathrm{Mpc} = 10^6 \mathrm{pc}$.
+ */
+/**
+ * ncm_c_G_mass_solar:
+ *
+ * Using IAU 2015 recommendation see [description][NcmC.description].
+ * 
+ * IAU recomends the use of a fixed value for the gravitational constant 
+ * times the solar mass.
+ * 
+ * Returns: One solar mass times the gravitational constant $(\mathcal{GM})_\odot = 1.3271244 \times 10^{20} \,\left[\mathrm{m}^3\,\mathrm{s}^{-2}\right]$.
+ */
+/**
+ * ncm_c_mass_solar:
+ * 
+ * Using IAU 2015 recommendation see [description][NcmC.description].
+ * 
+ * As in the recomendation above $\mathrm{M}_\odot = (\mathcal{GM})_\odot / \mathrm{G}$.
+ * Here we use the CODATA 2014 value for $G$, see ncm_c_G().
+ *
+ * Returns: One solar mass $\mathrm{M}_\odot = 1.9884754 \times 10^{30} \,\left[\mathrm{kg}\right]$.
+ */
+
+/*******************************************************************************
+ * END: IAU related constants
+ *******************************************************************************/
+
+/*******************************************************************************
+ * START: NIST Atomic Spectra database
+ *******************************************************************************/
+/*******************************************************************************
+ * -- START: Hydrogen I
+ *******************************************************************************/
+/* Ionization energy wavenumber: wn */
+
+/**
+ * ncm_c_H_ion_wn_1s_2S0_5:
+ *
+ * NIST compilation of atomic spectra see [description][NcmC.description].
+ * 
+ * Ionization energy wavenumber for H-I $1s\,{}^2\\!S_{1/2}$ state, i.e., $k_{1s\,{}^2\\!S_{1/2}}$.
+ * 
+ * Returns: Hydrogen $1s\,{}^2\\!S_{1/2}$ ionization energy wavelength, $k_{1s\,{}^2\\!S_{1/2}} = 1.0967877174307 \times 10^{7} \,\left[\mathrm{m}^{-1}\right]$.
+ */
+/**
+ * ncm_c_H_ion_wn_2s_2S0_5:
+ *
+ * NIST compilation of atomic spectra see [description][NcmC.description].
+ * 
+ * Ionization energy wavenumber for H-I $2s\,{}^2\\!S_{1/2}$ state calculated 
+ * from the difference between the first state and the corresponding Lyman
+ * wavenumber, i.e., $k_{2s\,{}^2\\!S_{1/2}} = k_{1s\,{}^2\\!S_{1/2}} - k_{2s\,{}^2\\!S_{1/2}}^\mathrm{Ly}$,
+ * see ncm_c_H_Lyman_wn_2s_2S0_5().
+ * 
+ * Returns: Hydrogen $2s\,{}^2\\!S_{1/2}$ ionization energy wavelength, $k_{2s\,{}^2\\!S_{1/2}} \,\left[\mathrm{m}^{-1}\right]$.
+ */
+/**
+ * ncm_c_H_ion_wn_2p_2P0_5:
+ *
+ * NIST compilation of atomic spectra see [description][NcmC.description].
+ * 
+ * Ionization energy wavenumber for H-I $2p\,{}^2\\!P_{1/2}$ state calculated 
+ * from the difference between the first state and the corresponding Lyman
+ * wavenumber, i.e., $k_{2p\,{}^2\\!P_{1/2}} = k_{1s\,{}^2\\!S_{1/2}} - k_{2p\,{}^2\\!P_{1/2}}^\mathrm{Ly}$,
+ * see ncm_c_H_Lyman_wn_2p_2P0_5().
+ * 
+ * Returns: Hydrogen $2p\,{}^2\\!P_{1/2}$ ionization energy wavelength, $k_{2p\,{}^2\\!P_{1/2}} \,\left[\mathrm{m}^{-1}\right]$.
+ */
+/**
+ * ncm_c_H_ion_wn_2p_2P3_5:
+ *
+ * NIST compilation of atomic spectra see [description][NcmC.description].
+ * 
+ * Ionization energy wavenumber for H-I $2p\,{}^2\\!P_{3/2}$ state calculated 
+ * from the difference between the first state and the corresponding Lyman
+ * wavenumber, i.e., $k_{2p\,{}^2\\!P_{3/2}} = k_{1s\,{}^2\\!S_{3/2}} - k_{2p\,{}^2\\!P_{3/2}}^\mathrm{Ly}$,
+ * see ncm_c_H_Lyman_wn_2p_2P3_5().
+ * 
+ * Returns: Hydrogen $2p\,{}^2\\!P_{3/2}$ ionization energy wavelength, $k_{2p\,{}^2\\!P_{3/2}} \,\left[\mathrm{m}^{-1}\right]$.
+ */
+/**
+ * ncm_c_H_ion_wn_2p_2Pmean:
+ *
+ * NIST compilation of atomic spectra see [description][NcmC.description].
+ * 
+ * The mean ionization energy wavenumber for H-I $2p\,{}^2\\!P_{1/2}$ and 
+ * $2p\,{}^2\\!P_{3/2}$ states , i.e., $k_{2p\,{}^2\\!P_\mathrm{mean}} = (k_{2p\,{}^2\\!P_{1/2}} + k_{2p\,{}^2\\!P_{3/2}}) / 2$,
+ * see ncm_c_H_Lyman_wn_2p_2Pmean().
+ * 
+ * Returns: Hydrogen states $2p\,{}^2\\!P_{1/2}$ and $2p\,{}^2\\!P_{3/2}$ mean ionization energy wavelength, $k_{2p\,{}^2\\!P_\mathrm{mean}} \,\left[\mathrm{m}^{-1}\right]$.
+ */
+
+/* Ionization energy: E */
+
+/**
+ * ncm_c_H_ion_E_1s_2S0_5:
+ *
+ * NIST compilation of atomic spectra see [description][NcmC.description].
+ * 
+ * Ionization energy calculated from the wavenumber $k_{1s\,{}^2\\!S_{1/2}}$,
+ * see ncm_c_H_ion_wn_1s_2S0_5().
+ * 
+ * Returns: Hydrogen $1s\,{}^2\\!S_{1/2}$ ionization energy, $E_{1s\,{}^2\\!S_{1/2}} = hc\times{}k_{1s\,{}^2\\!S_{1/2}} \,\left[\mathrm{J}\right]$.
+ */
+/**
+ * ncm_c_H_ion_E_2s_2S0_5:
+ *
+ * NIST compilation of atomic spectra see [description][NcmC.description].
+ *
+ * Ionization energy calculated from the wavenumber $k_{2s\,{}^2\\!S_{1/2}}$,
+ * see ncm_c_H_ion_wn_2s_2S0_5().
+ * 
+ * Returns: Hydrogen $2s\,{}^2\\!S_{1/2}$ ionization energy, $E_{2s\,{}^2\\!S_{1/2}} = hc\times{}k_{2s\,{}^2\\!S_{1/2}} \,\left[\mathrm{J}\right]$.
+ */
+/**
+ * ncm_c_H_ion_E_2p_2P0_5:
+ *
+ * NIST compilation of atomic spectra see [description][NcmC.description].
+ * 
+ * Ionization energy calculated from the wavenumber $k_{2p\,{}^2\\!P_{1/2}}$,
+ * see ncm_c_H_ion_wn_2p_2P0_5().
+ *
+ * Returns: Hydrogen $2p\,{}^2\\!P_{1/2}$ ionization energy, $E_{2p\,{}^2\\!P_{1/2}} = hc\times{}k_{2p\,{}^2\\!P_{1/2}} \,\left[\mathrm{J}\right]$.
+ */
+/**
+ * ncm_c_H_ion_E_2p_2P3_5:
+ *
+ * NIST compilation of atomic spectra see [description][NcmC.description].
+ * 
+ * Ionization energy calculated from the wavenumber $k_{2p\,{}^2\\!P_{3/2}}$,
+ * see ncm_c_H_ion_wn_2p_2P3_5().
+ *
+ * Returns: Hydrogen $2p\,{}^2\\!P_{3/2}$ ionization energy, $E_{2p\,{}^2\\!P_{3/2}} = hc\times{}k_{2p\,{}^2\\!P_{3/2}} \,\left[\mathrm{J}\right]$.
+ */
+/**
+ * ncm_c_H_ion_E_2p_2Pmean:
+ *
+ * NIST compilation of atomic spectra see [description][NcmC.description].
+ * 
+ * Ionization energy calculated from the wavenumber $k_{2p\,{}^2\\!P_\mathrm{mean}}$,
+ * see ncm_c_H_ion_wn_2p_2Pmean().
+ *
+ * Returns: Hydrogen $2p\,{}^2\\!P_\mathrm{mean}$ ionization energy, $E_{2p\,{}^2\\!P_\mathrm{mean}} = hc\times{}k_{2p\,{}^2\\!P_\mathrm{mean}} \,\left[\mathrm{J}\right]$.
+ */
+
+/* Lyman series wavenumber: wn */
+
+/**
+ * ncm_c_H_Lyman_wn_2s_2S0_5:
+ *
+ * NIST compilation of atomic spectra see [description][NcmC.description].
+ * 
+ * Lyman emission wavenumber for the $2s\,{}^2\\!S_{1/2} \to 1s\,{}^2\\!S_{1/2}$ transition $k_{2s\,{}^2\\!S_{1/2}}^\mathrm{Ly}$.  
+ * 
+ * Returns: $k_{2s\,{}^2\\!S_{1/2}}^\mathrm{Ly} = 8.22589543992821 \times 10^6 \,\left[\mathrm{m}^{-1}\right]$.
+ */
+/**
+ * ncm_c_H_Lyman_wn_2p_2P0_5:
+ *
+ * NIST compilation of atomic spectra see [description][NcmC.description].
+ * 
+ * Lyman emission wavenumber for the $2p\,{}^2\\!P_{1/2} \to 1s\,{}^2\\!S_{1/2}$ transition $k_{2p\,{}^2\\!P_{1/2}}^\mathrm{Ly}$.  
+ * 
+ * Returns: $k_{2p\,{}^2\\!P_{1/2}}^\mathrm{Ly} = 8.22589191133 \times 10^6 \,\left[\mathrm{m}^{-1}\right]$.
+ */
+/**
+ * ncm_c_H_Lyman_wn_2p_2P3_5:
+ *
+ * NIST compilation of atomic spectra see [description][NcmC.description].
+ * 
+ * Lyman emission wavenumber for the $2p\,{}^2\\!P_{3/2} \to 1s\,{}^2\\!S_{1/2}$ transition $k_{2p\,{}^2\\!P_{3/2}}^\mathrm{Ly}$.  
+ * 
+ * Returns: $k_{2p\,{}^2\\!P_{3/2}}^\mathrm{Ly} = 8.22592850014 \times 10^6 \,\left[\mathrm{m}^{-1}\right]$.
+ */
+/**
+ * ncm_c_H_Lyman_wn_2p_2Pmean:
+ *
+ * NIST compilation of atomic spectra see [description][NcmC.description].
+ * 
+ * Mean Lyman emission wavenumber for the $2p\,{}^2\\!P_{1/2}$ and $2p\,{}^2\\!P_{3/2}$
+ * states, $k_{2p\,{}^2\\!P_{mean}^\mathrm{Ly}} = (k_{2p\,{}^2\\!P_{1/2}}^\mathrm{Ly} + k_{2p\,{}^2\\!P_{3/2}}^\mathrm{Ly}) / 2$.  
+ * 
+ * Returns: $k_{2p\,{}^2\\!P_{mean}}^\mathrm{Ly} \,\left[\mathrm{m}^{-1}\right]$.
+ */
+
+/* Lyman series wavelength: wl */
+
+/**
+ * ncm_c_H_Lyman_wl_2s_2S0_5:
+ *
+ * NIST compilation of atomic spectra see [description][NcmC.description].
+ * 
+ * Wavelength for the $2s\,{}^2\\!S_{1/2} \to 1s\,{}^2\\!S_{1/2}$ transition 
+ * $\lambda_{2s\,{}^2\\!S_{1/2}}^\mathrm{Ly} = \left(k_{2s\,{}^2\\!S_{1/2}}^\mathrm{Ly}\right)^{-1}$,
+ * see ncm_c_H_Lyman_wn_2s_2S0_5().
+ *
+ * Returns: Wavelength for the $2s\,{}^2\\!S_{1/2} \to 1s\,{}^2\\!S_{1/2}$ transition, $\lambda_{2s\,{}^2\\!S_{1/2}}^\mathrm{Ly} \,\left[\mathrm{m}\right]$.
+ */
+/**
+ * ncm_c_H_Lyman_wl_2p_2P0_5:
+ *
+ * NIST compilation of atomic spectra see [description][NcmC.description].
+ * 
+ * Wavelength for the $2p\,{}^2\\!P_{1/2} \to 1s\,{}^2\\!S_{1/2}$ transition 
+ * $\lambda_{2p\,{}^2\\!P_{1/2}}^\mathrm{Ly} = \left(k_{2p\,{}^2\\!P_{1/2}}^\mathrm{Ly}\right)^{-1}$,
+ * see ncm_c_H_Lyman_wn_2p_2P0_5().
+ *
+ * Returns: Wavelength for the $2p\,{}^2\\!P_{1/2} \to 1s\,{}^2\\!S_{1/2}$ transition, $\lambda_{2p\,{}^2\\!P_{1/2}}^\mathrm{Ly} \,\left[\mathrm{m}\right]$.
+ */
+/**
+ * ncm_c_H_Lyman_wl_2p_2P3_5:
+ *
+ * NIST compilation of atomic spectra see [description][NcmC.description].
+ * 
+ * Wavelength for the $2p\,{}^2\\!P_{3/2} \to 1s\,{}^2\\!S_{1/2}$ transition 
+ * $\lambda_{2p\,{}^2\\!P_{3/2}}^\mathrm{Ly} = \left(k_{2p\,{}^2\\!P_{3/2}}^\mathrm{Ly}\right)^{-1}$,
+ * see ncm_c_H_Lyman_wn_2p_2P3_5().
+ *
+ * Returns: Wavelength for the $2p\,{}^2\\!P_{3/2} \to 1s\,{}^2\\!S_{1/2}$ transition, $\lambda_{2p\,{}^2\\!P_{3/2}}^\mathrm{Ly} \,\left[\mathrm{m}\right]$.
+ */
+/**
+ * ncm_c_H_Lyman_wl_2p_2Pmean:
+ *
+ * NIST compilation of atomic spectra see [description][NcmC.description].
+ * 
+ * Wavelength for the $2p\,{}^2\\!P_\mathrm{mean} \to 1s\,{}^2\\!S_{1/2}$ transition 
+ * $\lambda_{2p\,{}^2\\!P_\mathrm{mean}}^\mathrm{Ly} = \left(k_{2p\,{}^2\\!P_\mathrm{mean}}^\mathrm{Ly}\right)^{-1}$,
+ * see ncm_c_H_Lyman_wn_2p_2Pmean().
+ *
+ * Returns: Wavelength for the $2p\,{}^2\\!P_\mathrm{mean} \to 1s\,{}^2\\!S_{1/2}$ transition, $\lambda_{2p\,{}^2\\!P_\mathrm{mean}}^\mathrm{Ly} \,\left[\mathrm{m}\right]$.
+ */
+
+/* Lyman series factor: wl^3 / (8pi) */
+
+/**
+ * ncm_c_H_Lyman_wl3_8pi_2s_2S0_5:
+ *
+ * NIST compilation of atomic spectra see [description][NcmC.description].
+ * 
+ * Effective volume of the Lyman wavelength $V^\mathrm{Ly}_{2s\,{}^2\\!S_{1/2}} = \left(\lambda_{2s\,{}^2\\!S_{1/2}}^\mathrm{Ly}\right)^{3} / (8\pi)$,
+ * see ncm_c_H_Lyman_wl_2s_2S0_5().
+ *
+ * Returns: Effective volume $V^\mathrm{Ly}_{2s\,{}^2\\!S_{1/2}} \,\left[\mathrm{m}^3\right]$.
+ */
+/**
+ * ncm_c_H_Lyman_wl3_8pi_2p_2P0_5:
+ *
+ * NIST compilation of atomic spectra see [description][NcmC.description].
+ * 
+ * Effective volume of the Lyman wavelength $V^\mathrm{Ly}_{2p\,{}^2\\!P_{1/2}} = \left(\lambda_{2p\,{}^2\\!P_{1/2}}^\mathrm{Ly}\right)^{3} / (8\pi)$,
+ * see ncm_c_H_Lyman_wl_2p_2P0_5().
+ *
+ * Returns: Effective volume $V^\mathrm{Ly}_{2p\,{}^2\\!P_{1/2}} \,\left[\mathrm{m}^3\right]$.
+ */
+/**
+ * ncm_c_H_Lyman_wl3_8pi_2p_2P3_5:
+ *
+ * NIST compilation of atomic spectra see [description][NcmC.description].
+ * 
+ * Effective volume of the Lyman wavelength $V^\mathrm{Ly}_{2p\,{}^2\\!P_{3/2}} = \left(\lambda_{2p\,{}^2\\!P_{3/2}}^\mathrm{Ly}\right)^{3} / (8\pi)$,
+ * see ncm_c_H_Lyman_wl_2p_2P3_5().
+ *
+ * Returns: Effective volume $V^\mathrm{Ly}_{2p\,{}^2\\!P_{3/2}} \,\left[\mathrm{m}^3\right]$.
+ */
+/**
+ * ncm_c_H_Lyman_wl3_8pi_2p_2Pmean:
+ *
+ * NIST compilation of atomic spectra see [description][NcmC.description].
+ * 
+ * Effective volume of the Lyman wavelength $V^\mathrm{Ly}_{2p\,{}^2\\!P_\mathrm{mean}} = \left(\lambda_{2p\,{}^2\\!P_\mathrm{mean}}^\mathrm{Ly}\right)^{3} / (8\pi)$,
+ * see ncm_c_H_Lyman_wl_2p_2Pmean().
+ *
+ * Returns: Effective volume $V^\mathrm{Ly}_{2p\,{}^2\\!P_\mathrm{mean}} \,\left[\mathrm{m}^3\right]$.
+ */
+
+/* Boltzmann factor */
+
+/**
+ * ncm_c_boltzmann_factor_H_1s_2S0_5:
+ * @T: temperature $T$
+ *
+ * NIST compilation of atomic spectra see [description][NcmC.description].
+ * 
+ * Calculates the Boltzmann factor $B_{1s\,{}^2\\!S_{1/2}}(T) = k_\mathrm{e}^3 T^{-3/2}\,\exp\left[-E_{1s\,{}^2\\!S_{1/2}} / (k_\mathrm{B}T)\right]$,
+ * for the $1s\,{}^2\\!S_{1/2}$ hydrogen energy level, see 
+ * ncm_c_H_ion_E_1s_2S0_5() and ncm_c_thermal_wn_e().
+ * 
+ * Returns: Boltzmann factor $B_{1s\,{}^2\\!S_{1/2}}(T) \,\left[\mathrm{m}^3\,\mathrm{K}^{-3/2}\right]$.
+ */
+/**
+ * ncm_c_boltzmann_factor_H_2s_2S0_5:
+ * @T: temperature $T$
+ *
+ * NIST compilation of atomic spectra see [description][NcmC.description].
+ * 
+ * Calculates the Boltzmann factor $B_{2s\,{}^2\\!S_{1/2}}(T) = k_\mathrm{e}^3 T^{-3/2}\,\exp\left[-E_{2s\,{}^2\\!S_{1/2}} / (k_\mathrm{B}T)\right]$,
+ * for the $2s\,{}^2\\!S_{1/2}$ hydrogen energy level, see 
+ * ncm_c_H_ion_E_2s_2S0_5() and ncm_c_thermal_wn_e().
+ * 
+ * Returns: Boltzmann factor $B_{2s\,{}^2\\!S_{1/2}}(T) \,\left[\mathrm{m}^3\,\mathrm{K}^{-3/2}\right]$.
+ */
+/**
+ * ncm_c_boltzmann_factor_H_2p_2P0_5:
+ * @T: temperature $T$
+ *
+ * NIST compilation of atomic spectra see [description][NcmC.description].
+ * 
+ * Calculates the Boltzmann factor $B_{2p\,{}^2\\!P_{1/2}}(T) = k_\mathrm{e}^3 T^{-3/2}\,\exp\left[-E_{2p\,{}^2\\!P_{1/2}} / (k_\mathrm{B}T)\right]$,
+ * for the $2p\,{}^2\\!P_{1/2}$ hydrogen energy level, see 
+ * ncm_c_H_ion_E_2p_2P0_5() and ncm_c_thermal_wn_e().
+ * 
+ * Returns: Boltzmann factor $B_{2p\,{}^2\\!P_{1/2}}(T) \,\left[\mathrm{m}^3\,\mathrm{K}^{-3/2}\right]$.
+ */
+/**
+ * ncm_c_boltzmann_factor_H_2p_2P3_5:
+ * @T: temperature $T$
+ *
+ * NIST compilation of atomic spectra see [description][NcmC.description].
+ * 
+ * Calculates the Boltzmann factor $B_{2p\,{}^2\\!P_{3/2}}(T) = k_\mathrm{e}^3 T^{-3/2}\,\exp\left[-E_{2p\,{}^2\\!P_{3/2}} / (k_\mathrm{B}T)\right]$,
+ * for the $2p\,{}^2\\!P_{3/2}$ hydrogen energy level, see 
+ * ncm_c_H_ion_E_2p_2P3_5() and ncm_c_thermal_wn_e().
+ * 
+ * Returns: Boltzmann factor $B_{2p\,{}^2\\!P_{3/2}}(T) \,\left[\mathrm{m}^3\,\mathrm{K}^{-3/2}\right]$.
+ */
+/**
+ * ncm_c_boltzmann_factor_H_2p_2Pmean:
+ * @T: temperature $T$
+ *
+ * NIST compilation of atomic spectra see [description][NcmC.description].
+ * 
+ * Calculates the Boltzmann factor $B_{2p\,{}^2\\!P_\mathrm{mean}}(T) = k_\mathrm{e}^3 T^{-3/2}\,\exp\left[-E_{2p\,{}^2\\!P_\mathrm{mean}} / (k_\mathrm{B}T)\right]$,
+ * for the $2p\,{}^2\\!P_\mathrm{mean}$ hydrogen energy level, see 
+ * ncm_c_H_ion_E_2p_2Pmean() and ncm_c_thermal_wn_e().
+ * 
+ * Returns: Boltzmann factor $B_{2p\,{}^2\\!P_\mathrm{mean}}(T) \,\left[\mathrm{m}^3\,\mathrm{K}^{-3/2}\right]$.
+ */
+/*******************************************************************************
+ * -- END: Hydrogen I
+ *******************************************************************************/
+/*******************************************************************************
+ * -- START: Helium I
+ *******************************************************************************/
+/* Ionization energy wavenumber: wn */
+
+/**
+ * ncm_c_HeI_ion_wn_1s_1S0:
+ *
+ * NIST compilation of atomic spectra see [description][NcmC.description].
+ * 
+ * Ionization energy wavenumber for He-I $1s\,{}^1\\!S_{0}$ state, i.e., $k_{1s\,{}^1\\!S_{0}}$.
+ * 
+ * Returns: Helium-I $1s\,{}^1\\!S_{0}$ ionization energy wavelength, $k_{1s\,{}^1\\!S_{0}} = 1.9831066637 \times 10^{7} \,\left[\mathrm{m}^{-1}\right]$.
+ */
+/**
+ * ncm_c_HeI_ion_wn_2s_1S0:
+ *
+ * NIST compilation of atomic spectra see [description][NcmC.description].
+ * 
+ * Ionization energy wavenumber for He-I $2s\,{}^1\\!S_{0}$ state calculated 
+ * from the difference between the first state and the corresponding Lyman
+ * wavenumber, i.e., $k_{2s\,{}^1\\!S_{0}} = k_{1s\,{}^1\\!S_{0}} - k_{2s\,{}^1\\!S_{0}}^\mathrm{Ly}$,
+ * see ncm_c_HeI_Lyman_wn_2s_1S0().
+ * 
+ * Returns: Helium-I $2s\,{}^1\\!S_{0}$ ionization energy wavelength, $k_{2s\,{}^1\\!S_{0}} \,\left[\mathrm{m}^{-1}\right]$.
+ */
+/**
+ * ncm_c_HeI_ion_wn_2p_1P1:
+ *
+ * NIST compilation of atomic spectra see [description][NcmC.description].
+ * 
+ * Ionization energy wavenumber for He-I $2p\,{}^1\\!P_{1}$ state calculated 
+ * from the difference between the first state and the corresponding Lyman
+ * wavenumber, i.e., $k_{2p\,{}^1\\!P_{1}} = k_{1s\,{}^1\\!S_{0}} - k_{2p\,{}^1\\!P_{1}}^\mathrm{Ly}$,
+ * see ncm_c_HeI_Lyman_wn_2p_1P1().
+ * 
+ * Returns: Helium-I $2p\,{}^1\\!P_{1}$ ionization energy wavelength, $k_{2p\,{}^1\\!P_{1}} \,\left[\mathrm{m}^{-1}\right]$.
+ */
+
+/* Ionization energy: E */
+
+/**
+ * ncm_c_HeI_ion_E_1s_1S0:
+ *
+ * NIST compilation of atomic spectra see [description][NcmC.description].
+ * 
+ * Ionization energy calculated from the wavenumber $k_{1s\,{}^1\\!S_{0}}$,
+ * see ncm_c_HeI_ion_wn_1s_1S0().
+ * 
+ * Returns: Helium-I $1s\,{}^1\\!S_{0}$ ionization energy, $E_{1s\,{}^1\\!S_{0}} = hc\times{}k_{1s\,{}^1\\!S_{0}} \,\left[\mathrm{J}\right]$.
+ */
+/**
+ * ncm_c_HeI_ion_E_2s_1S0:
+ *
+ * NIST compilation of atomic spectra see [description][NcmC.description].
+ * 
+ * Ionization energy calculated from the wavenumber $k_{2s\,{}^1\\!S_{0}}$,
+ * see ncm_c_HeI_ion_wn_2s_1S0().
+ * 
+ * Returns: Helium-I $2s\,{}^1\\!S_{0}$ ionization energy, $E_{2s\,{}^1\\!S_{0}} = hc\times{}k_{2s\,{}^1\\!S_{0}} \,\left[\mathrm{J}\right]$.
+ */
+/**
+ * ncm_c_HeI_ion_E_2p_1P1:
+ *
+ * NIST compilation of atomic spectra see [description][NcmC.description].
+ * 
+ * Ionization energy calculated from the wavenumber $k_{2p\,{}^1\\!P_{1}}$,
+ * see ncm_c_HeI_ion_wn_2p_1P1().
+ * 
+ * Returns: Helium-I $2p\,{}^1\\!P_{1}$ ionization energy, $E_{2p\,{}^1\\!P_{1}} = hc\times{}k_{2p\,{}^1\\!P_{1}} \,\left[\mathrm{J}\right]$.
+ */
+
+/* Lyman series wavenumber: wn */
+
+/**
+ * ncm_c_HeI_Lyman_wn_2s_1S0:
+ *
+ * NIST compilation of atomic spectra see [description][NcmC.description].
+ * 
+ * Lyman emission wavenumber for the $2s\,{}^1\\!S_{0} \to 1s\,{}^1\\!S_{0}$ transition $k_{2s\,{}^1\\!S_{0}}^\mathrm{Ly}$.  
+ * 
+ * Returns: $k_{2s\,{}^1\\!S_{0}}^\mathrm{Ly} = 1.66277440141 \times 10^7 \,\left[\mathrm{m}^{-1}\right]$.
+ */
+/**
+ * ncm_c_HeI_Lyman_wn_2p_1P1:
+ *
+ * NIST compilation of atomic spectra see [description][NcmC.description].
+ * 
+ * Lyman emission wavenumber for the $2p\,{}^1\\!P_{1} \to 1s\,{}^1\\!S_{0}$ transition $k_{2p\,{}^1\\!P_{1}}^\mathrm{Ly}$.  
+ * 
+ * Returns: $k_{2p\,{}^1\\!P_{1}}^\mathrm{Ly} = 1.71134896946 \times 10^7 \,\left[\mathrm{m}^{-1}\right]$.
+ */
+
+/* Lyman series wavelength: wl */
+
+/**
+ * ncm_c_HeI_Lyman_wl_2s_1S0:
+ *
+ * NIST compilation of atomic spectra see [description][NcmC.description].
+ * 
+ * Wavelength for the $2s\,{}^1\\!S_{0} \to 1s\,{}^1\\!S_{0}$ transition 
+ * $\lambda_{2s\,{}^1\\!S_{0}}^\mathrm{Ly} = \left(k_{2s\,{}^1\\!S_{0}}^\mathrm{Ly}\right)^{-1}$,
+ * see ncm_c_HeI_Lyman_wn_2s_1S0().
+ *
+ * Returns: Wavelength for the $2s\,{}^1\\!S_{0} \to 1s\,{}^1\\!S_{0}$ transition, $\lambda_{2s\,{}^1\\!S_{0}}^\mathrm{Ly} \,\left[\mathrm{m}\right]$.
+ */
+/**
+ * ncm_c_HeI_Lyman_wl_2p_1P1:
+ *
+ * NIST compilation of atomic spectra see [description][NcmC.description].
+ * 
+ * Wavelength for the $2p\,{}^1\\!P_{1} \to 1s\,{}^1\\!S_{0}$ transition 
+ * $\lambda_{2p\,{}^1\\!P_{1}}^\mathrm{Ly} = \left(k_{2p\,{}^1\\!P_{1}}^\mathrm{Ly}\right)^{-1}$,
+ * see ncm_c_HeI_Lyman_wn_2p_1P1().
+ *
+ * Returns: Wavelength for the $2p\,{}^1\\!P_{1} \to 1s\,{}^1\\!S_{0}$ transition, $\lambda_{2p\,{}^1\\!P_{1}}^\mathrm{Ly} \,\left[\mathrm{m}\right]$.
+ */
+
+/* Lyman series factor: wl^3 / (8pi) */
+
+/**
+ * ncm_c_HeI_Lyman_wl3_8pi_2s_1S0:
+ *
+ * NIST compilation of atomic spectra see [description][NcmC.description].
+ * 
+ * Effective volume of the Lyman wavelength $V^\mathrm{Ly}_{2s\,{}^1\\!S_{0}} = \left(\lambda_{2s\,{}^1\\!S_{0}}^\mathrm{Ly}\right)^{3} / (8\pi)$,
+ * see ncm_c_HeI_Lyman_wl_2s_1S0().
+ *
+ * Returns: Effective volume $V^\mathrm{Ly}_{2s\,{}^1\\!S_{0}} \,\left[\mathrm{m}^3\right]$.
+ */
+/**
+ * ncm_c_HeI_Lyman_wl3_8pi_2p_1P1:
+ *
+ * NIST compilation of atomic spectra see [description][NcmC.description].
+ * 
+ * Effective volume of the Lyman wavelength $V^\mathrm{Ly}_{2p\,{}^1\\!P_{1}} = \left(\lambda_{2p\,{}^1\\!P_{1}}^\mathrm{Ly}\right)^{3} / (8\pi)$,
+ * see ncm_c_HeI_Lyman_wl_2p_1P1().
+ *
+ * Returns: Effective volume $V^\mathrm{Ly}_{2p\,{}^1\\!P_{1}} \,\left[\mathrm{m}^3\right]$.
+ */
+
+/* Boltzmann factor */
+
+/**
+ * ncm_c_boltzmann_factor_HeI_1s_1S0:
+ * @T: temperature $T$
+ *
+ * NIST compilation of atomic spectra see [description][NcmC.description].
+ * 
+ * Calculates the Boltzmann factor $B_{1s\,{}^1\\!S_{0}}(T) = k_\mathrm{e}^3 T^{-3/2}\,\exp\left[-E_{1s\,{}^1\\!S_{0}} / (k_\mathrm{B}T)\right]$,
+ * for the $1s\,{}^1\\!S_{0}$ helium energy level, see 
+ * ncm_c_HeI_ion_E_1s_1S0() and ncm_c_thermal_wn_e().
+ * 
+ * Returns: Boltzmann factor $B_{1s\,{}^1\\!S_{0}}(T) \,\left[\mathrm{m}^3\,\mathrm{K}^{-3/2}\right]$.
+ */
+/**
+ * ncm_c_boltzmann_factor_HeI_2s_1S0:
+ * @T: temperature $T$
+ *
+ * NIST compilation of atomic spectra see [description][NcmC.description].
+ * 
+ * Calculates the Boltzmann factor $B_{2s\,{}^1\\!S_{0}}(T) = k_\mathrm{e}^3 T^{-3/2}\,\exp\left[-E_{2s\,{}^1\\!S_{0}} / (k_\mathrm{B}T)\right]$,
+ * for the $2s\,{}^1\\!S_{0}$ helium energy level, see 
+ * ncm_c_HeI_ion_E_2s_1S0() and ncm_c_thermal_wn_e().
+ * 
+ * Returns: Boltzmann factor $B_{2s\,{}^1\\!S_{0}}(T) \,\left[\mathrm{m}^3\,\mathrm{K}^{-3/2}\right]$.
+ */
+/**
+ * ncm_c_boltzmann_factor_HeI_2p_1P1:
+ * @T: temperature $T$
+ *
+ * NIST compilation of atomic spectra see [description][NcmC.description].
+ * 
+ * Calculates the Boltzmann factor $B_{2p\,{}^1\\!P_{1}}(T) = k_\mathrm{e}^3 T^{-3/2}\,\exp\left[-E_{2p\,{}^1\\!P_{1}} / (k_\mathrm{B}T)\right]$,
+ * for the $2p\,{}^1\\!P_{1}$ helium energy level, see 
+ * ncm_c_HeI_ion_E_2p_1P1() and ncm_c_thermal_wn_e().
+ * 
+ * Returns: Boltzmann factor $B_{2p\,{}^1\\!P_{1}}(T) \,\left[\mathrm{m}^3\,\mathrm{K}^{-3/2}\right]$.
+ */
+
+/* Balmer series wavenumber: wn */
+
+/**
+ * ncm_c_HeI_Balmer_wn_2p_1P1:
+ *
+ * NIST compilation of atomic spectra see [description][NcmC.description].
+ * 
+ * Balmer emission wavenumber for the $2p\,{}^1\\!P_{1} \to 2s\,{}^1\\!S_{0}$ transition $k_{2p\,{}^1\\!P_{1}}^\mathrm{Ba}$,
+ * calculated from the difference between the Lyman lines $2s\,{}^1\\!S_{0}$ state and the 
+ * corresponding Lyman wavenumber, i.e., 
+ * $k_{2p\,{}^1\\!P_{1}}^\mathrm{Ba} = k_{2p\,{}^1\\!P_{1}}^\mathrm{Ly} - k_{2s\,{}^1\\!S_{0}}^\mathrm{Ly}$.
+ * 
+ * Returns: $k_{2p\,{}^1\\!P_{1}}^\mathrm{Ba} \,\left[\mathrm{m}^{-1}\right]$.
+ */
+
+/* Balmer series: E / k_B */
+
+/**
+ * ncm_c_HeI_Balmer_E_kb_2p_1P1:
+ *
+ * NIST compilation of atomic spectra see [description][NcmC.description].
+ * 
+ * Balmer emission energy $E_{2p\,{}^1\\!P_{1}}^\mathrm{Ba} = hc\times{}k_{2p\,{}^1\\!P_{1}}^\mathrm{Ba}$
+ * over $k_\mathrm{B}$.
+ *
+ * Returns: $E_{2p\,{}^1\\!P_{1}}^\mathrm{Ba} / k_\mathrm{B}$.
+ */
+
+/*******************************************************************************
+ * -- END: Helium I
+ *******************************************************************************/
+/*******************************************************************************
+ * -- START: Helium II
+ *******************************************************************************/
+/* Ionization energy wavenumber: wn */
+
+/**
+ * ncm_c_HeII_ion_wn_1s_2S0_5:
+ *
+ * NIST compilation of atomic spectra see [description][NcmC.description].
+ * 
+ * Ionization energy wavenumber for He-II $1s\,{}^2\\!S_{1/2}$ state, i.e., $k_{1s\,{}^2\\!S_{1/2}}$.
+ * 
+ * Returns: Helium-II $1s\,{}^2\\!S_{1/2}$ ionization energy wavelength, $k_{1s\,{}^2\\!S_{1/2}} = 1.0967877174307 \times 10^{7} \,\left[\mathrm{m}^{-1}\right]$.
+ */
+
+/* Ionization energy: E */
+
+/**
+ * ncm_c_HeII_ion_E_1s_2S0_5:
+ *
+ * Ionization energy for He-II $1s\,{}^2\\!S_{1/2}$ state, i.e., $E_{1s\,{}^2\\!S_{1/2}} = hc \times k_{1s\,{}^2\\!S_{1/2}}$.
+ * 
+ * Returns: Helium-II $1s\,{}^2\\!S_{1/2}$ ionization energy $E_{1s\,{}^2\\!S_{1/2}} \,\left[\mathrm{J}\right]$.
+ */
+
+/*******************************************************************************
+ * -- END: Helium II
+ *******************************************************************************/
+/*******************************************************************************
+ * END: NIST Atomic Spectra database
+ *******************************************************************************/
+
+/*******************************************************************************
+ * Constants from other sources
  *******************************************************************************/
 
 /**
  * ncm_c_decay_H_rate_2s_1s:
  *
- * FIXME: Cite source.
+ * Theoretical value for the two photons decay rate for Hydrogen 
+ * $2\mathrm{s} \to 1\mathrm{s}$ states [Goldman 1989][XGoldman1989].
  *
- * Returns: Decay rate of Hydrogen from 2s -> 1s.
- *
+ * Returns: Decay rate of Hydrogen from $\Lambda_{2\mathrm{s} \to 1\mathrm{s}} = 8.2245809 \,\left[\mathrm{s}^{-1}\right]$.
  */
 /**
  * ncm_c_decay_He_rate_2s_1s:
  *
- * FIXME: Cite source.
+ * Theoretical value for the two photons decay rate for Helium 
+ * $2\mathrm{s} \to 1\mathrm{s}$ states [Drake 1969][XDrake1969].
  *
- * Returns: Decay rate of Helium from 2s -> 1s.
- *
- */
-/**
- * ncm_c_HeI_bind_1s:
- *
- * FIXME: Cite source.
- *
- * Returns: HeI binding energy 1s.
- *
- */
-/**
- * ncm_c_HeII_bind_1s:
- *
- * FIXME: Cite source.
- *
- * Returns: HeII binding energy 1s.
- *
- */
-/**
- * ncm_c_HeI_Lyman_2s:
- *
- * FIXME: Cite source.
- *
- * Returns: HeI Lyman 2s energy.
- *
- */
-/**
- * ncm_c_HeI_Lyman_2p:
- *
- * FIXME: Cite source.
- *
- * Returns: HeI Lyman 2p energy.
- *
- */
-/**
- * ncm_c_HeI_Lyman_2s_wl:
- *
- * FIXME: Cite source.
- *
- * Returns: HeI Lyman 2s wave length.
- *
- */
-/**
- * ncm_c_HeI_Lyman_2p_wl:
- *
- * FIXME: Cite source.
- *
- * Returns: HeI Lyman 2p wave length.
- *
- */
-/**
- * ncm_c_HeI_bind_2s:
- *
- * FIXME: Cite source.
- *
- * Returns: HeI binding energy 2s.
- *
- */
-/**
- * ncm_c_HeI_bind_2p:
- *
- * FIXME: Cite source.
- *
- * Returns: HeI binding energy 2p.
- *
- */
-/**
- * ncm_c_HeI_2s_m_2p:
- *
- * FIXME: Cite source.
- *
- * Returns: HeI energy difference between states 2s and 2p.
- *
- */
-/**
- * ncm_c_HeI_2s_m_2p_kb:
- *
- * FIXME: Cite source.
- *
- * Returns: HeI energy difference between states 2s and 2p divided by Boltzmann constant.
- *
- */
-/**
- * ncm_c_HeI_Lyman_2s_wl3_8pi:
- *
- * FIXME: Cite source.
- *
- * Returns: Cubic power of HeI Lyman 2s wave length divided by (8 * pi).
- *
- */
-/**
- * ncm_c_HeI_Lyman_2p_wl3_8pi:
- *
- * FIXME: Cite source.
- *
- * Returns: Cubic power of HeI Lyman 2p wave length divided by (8 * pi).
- *
- */
-/**
- * ncm_c_H_reduced_mass:
- *
- * FIXME: Cite source.
- *
- * Returns: Hydrogen reduced mass.
- *
- */
-/**
- * ncm_c_H_reduced_energy:
- *
- * FIXME: Cite source.
- *
- * Returns: Hydrogen reduced energy.
- *
- */
-/**
- * ncm_c_H_bind:
- * @n: FIXME
- * @j: FIXME
- * FIXME: Cite source.
- *
- * Returns: Hydrogen binding energy.
- *
- */
-/**
- * ncm_c_H_bind_1s:
- *
- * FIXME: Cite source.
- *
- * Returns: Hydrogen 1s binding energy.
- *
- */
-/**
- * ncm_c_H_bind_2s:
- *
- * FIXME: Cite source.
- *
- * Returns: Hydrogen 2s binding energy.
- *
- */
-/**
- * ncm_c_H_bind_2p:
- *
- * FIXME: Cite source.
- *
- * Returns: Hydrogen 2p binding energy.
- *
- */
-/**
- * ncm_c_H_Lyman_series:
- * @n: FIXME
- * @j: FIXME
- *
- * Energy difference between levels 1s and n,j.
- * FIXME: Cite source.
- *
- * Returns: Hydrogen Lyman series.
- *
- */
-/**
- * ncm_c_H_Lyman_2s:
- *
- * FIXME: Cite source.
- *
- * Returns: Energy difference between levels 1s and 2s.
- *
- */
-/**
- * ncm_c_H_Lyman_2p:
- *
- * FIXME: Cite source.
- *
- * Returns: Energy difference between levels 1s and 2p.
- *
- */
-/**
- * ncm_c_H_Lyman_series_wl:
- * @n: FIXME
- * @j: FIXME
- *
- * FIXME: Cite source.
- *
- * Returns: Wavelenght relative to the energy difference between levels 1s and n,j.
- *
- */
-/**
- * ncm_c_H_Lyman_2s_wl:
- *
- * FIXME: Cite source.
- *
- * Returns: Wavelenght relative to the energy difference between levels 1s and 2s.
- *
- */
-/**
- * ncm_c_H_Lyman_2p_wl:
- *
- * FIXME: Cite source.
- *
- * Returns: Wavelenght relative to the energy difference between levels 1s and 2s.
- *
- */
-/**
- * ncm_c_H_Lyman_2s_wl3_8pi:
- *
- * FIXME: Cite source.
- *
- * Returns: Cubic power of the Wavelenght relative to the energy difference between levels 1s and 2s divided by (8*pi).
- *
- */
-/**
- * ncm_c_H_Lyman_2p_wl3_8pi:
- *
- * FIXME: Cite source.
- *
- * Returns: Cubic power of the wavelenght relative to the energy difference between levels 1s and 2p divided by (8*pi).
- *
- */
-/**
- * ncm_c_thermal_wl_e:
- *
- * FIXME: Cite source.
- *
- * Returns: Thermal electron wavelenght.
- *
- */
-/**
- * ncm_c_thermal_wl_p:
- *
- * FIXME: Cite source.
- *
- * Returns: Thermal proton wavelenght.
- *
- */
-/**
- * ncm_c_thermal_wl_n:
- *
- * FIXME: Cite source.
- *
- * Returns: Thermal neutron wavelenght.
- *
- */
-/**
- * ncm_c_thermal_wn_e:
- *
- * FIXME: Cite source.
- *
- * Returns: Thermal eletron wavenumber.
- *
- */
-/**
- * ncm_c_thermal_wn_p:
- *
- * FIXME: Cite source.
- *
- * Returns: Thermal proton wavenumber.
- *
- */
-/**
- * ncm_c_thermal_wn_n:
- *
- * FIXME: Cite source.
- *
- * Returns: Thermal neutron wavenumber.
- *
- */
-/**
- * ncm_c_boltzmann_factor_H_1s:
- * @T: temperature.
- *
- * FIXME: Cite source.
- *
- * Returns: Boltzmann factor for Hydrogen 1s level.
- *
- */
-/**
- * ncm_c_boltzmann_factor_H_2s:
- * @T: temperature.
- *
- * FIXME: Cite source.
- *
- * Returns: Boltzmann factor for Hydrogen 2s level.
- *
- */
-/**
- * ncm_c_boltzmann_factor_H_2p:
- * @T: temperature.
- *
- * FIXME: Cite source.
- *
- * Returns: Boltzmann factor for Hydrogen 2p level.
- *
- */
-/**
- * ncm_c_boltzmann_factor_HeI_1s:
- * @T: temperature.
- *
- * FIXME: Cite source.
- *
- * Returns: Boltzmann factor for HeI 1s level.
- *
- */
-/**
- * ncm_c_boltzmann_factor_HeI_2s:
- * @T: temperature.
- *
- * FIXME: Cite source.
- *
- * Returns: Boltzmann factor for HeI 2s level.
- *
- */
-/**
- * ncm_c_boltzmann_factor_HeI_2p:
- * @T: temperature.
- *
- * FIXME: Cite source.
- *
- * Returns: Boltzmann factor for HeI 2p level.
- *
- */
-/**
- * ncm_c_AU:
- *
- * Returns: Astronomical unit (http://ssd.jpl.nasa.gov/?constants).
- *
- */
-/**
- * ncm_c_pc:
- *
- * \begin{equation}
- * 1 \text{pc} = 3.085678 \times 10^{16} \, \text{m}
- * \end{equation}
- * 
- * Returns: Parsec unit 1 AU / tan (1 arcsec) - Copied from CAMB/constants.f90 to facilitate comparison.
- *
- */
-/**
- * ncm_c_mass_solar:
- *
- * \begin{equation}
- * 1 M_\odot = 1.98892 \times 10^{30} \, \text{kg} 
- * \end{equation}
- *
- * Returns: One solar mass.
- *
+ * Returns: Decay rate of Helium from $\Lambda_{2\mathrm{s} \to 1\mathrm{s}} = 51.3 \,\left[\mathrm{s}^{-1}\right]$.
  */
 
-/* Statistics */
+/*******************************************************************************
+ * START: Statistics
+ *******************************************************************************/
 
 /**
  * ncm_c_stats_1sigma:
@@ -694,7 +1255,11 @@ ncm_c_class_init (NcmCClass *klass)
  */
 
 /*******************************************************************************
- * Observational data
+ * END: Statistics
+ *******************************************************************************/
+
+/*******************************************************************************
+ * START: Observational data
  *******************************************************************************/
 
 /**
@@ -796,43 +1361,11 @@ ncm_c_class_init (NcmCClass *klass)
  *
  */
 /**
- * ncm_c_prim_He_Yp:
- *
- * The primoridial helium mass fraction 
- * $$Y_p = \frac{m_\text{He}n_\text{He}}
- * {m_\text{He}n_\text{He}+m_\text{H}n_\text{H}},$$ where $m_\text{He}$, 
- * n_\text{He}, m_\text{H} and m_\text{H} are respectively helium mass and 
- * number density and hydrogen mass and number density.
- *
- * Returns: The primordial helium mass abundance.
- *
- */
-/**
- * ncm_c_prim_H_Yp:
- *
- * The primordial hydrogen mass fraction $$Y_{\text{H}p} = 1 - Y_p,$$
- * where $Y_p$ is the helium mass fraction, see ncm_c_prim_He_Yp ().
- *
- * Returns: The primordial hydrogen mass abundance.
- *
- */
-/**
- * ncm_c_prim_XHe:
- * 
- * The primordial helium to hydrogen ratio $$X_\text{He} = 
- * \frac{n_\text{He}}{n_\text{H}} = \frac{m_\text{H}}{m_\text{He}}
- * \frac{Y_p}{Y_{\text{H}p}},$$ see ncm_c_prim_H_Yp () and ncm_c_prim_He_Yp ().
- * 
- * Returns: The primordial helium to hydrogen ratio.
- *
- */
-/**
  * ncm_c_hubble_radius:
  *
  * FIXME
  *
  * Returns: Hubble radius
- *
  */
 /**
  * ncm_c_hubble_radius_planck:
@@ -840,10 +1373,9 @@ ncm_c_class_init (NcmCClass *klass)
  * FIXME
  *
  * Returns: Hubble radius
- *
  */
 /**
- * ncm_c_crit_density:
+ * ncm_c_crit_density_h2:
  *
  * The critical density is defined as
  * \begin{equation}
@@ -851,10 +1383,9 @@ ncm_c_class_init (NcmCClass *klass)
  * \end{equation}
  * where $G$ is the gravitational constant (#ncm_c_G()), $c$ is the speed of light 
  * (#ncm_c_c()) and $H_0$ is the Hubble parameter,
- * $$H_0 = 100 \times h \, \frac{\text{km}}{\text{s} \, \text{Mpc}}.$$
+ * $$H_0 = 100 \times \mathsf{h} \,\left[\text{km}\,\text{s}^{-1}\,\text{Mpc}^{-1}\right.$$
  * 
- * Returns: Critical density, $$\left[\rho^h_{crit}\right] = \frac{\left[\rho^h_{crit}\right]}{h^2} = \frac{\text{kg}}{\text{m}^3} \frac{\text{m}^2}{\text{s}^2}.$$
- *
+ * Returns: Critical density over $\mathsf{h}^2$, $$\frac{\rho_{crit}}{\mathsf{h}^2} \left[\frac{\text{kg}}{\text{m}^3} \frac{\text{m}^2}{\text{s}^2}\right].$$
  */
 /**
  * ncm_c_crit_mass_density:
@@ -865,21 +1396,16 @@ ncm_c_class_init (NcmCClass *klass)
  * \end{equation}
  * where $G$ is the gravitational constant (#ncm_c_G()), $c$ is the speed of light 
  * (#ncm_c_c()) and $H_0$ is the Hubble parameter,
- * $$H_0 = 100 \times h \, \frac{\text{km}}{\text{s} \, \text{Mpc}}.$$
+ * $$H_0 = 100 \times \mathsf{h} \,\left[\text{km}\,\text{s}^{-1}\,\text{Mpc}^{-1}\right.$$
  *
- * Returns: Critical mass density, $$\left[\rho_{crit}\right] = \frac{\text{kg}}{\text{m}^3}.$$
- *
+ * Returns: Critical mass density over $\mathsf{h}^2$, $$\frac{\rho_{crit}}{c^2\mathsf{h}^2} \,\left[\frac{\text{kg}}{\text{m}^3}\right].$$
  */
 /**
- * ncm_c_crit_mass_density_solar_Mpc:
+ * ncm_c_crit_mass_density_h2_solar_mass_Mpc3:
  *
- * This function computes the critical mass density in units of solar mass $M_\odot$ and Mpc, i.e., 
- * \begin{equation}
- * \frac{\rho_{crit}}{1.98892 \times 10^{30}} \left(10^6 \times 3.085678 \times 10^{16} \right)^3.
- * \end{equation}
+ * This function computes the critical mass density in units of solar mass $M_\odot$ and Mpc.
  * 
- * Returns: Critical mass density in $M_\odot$ and Mpc units.
- *
+ * Returns: Critical mass density in $M_\odot$ and Mpc units $\frac{\rho_{crit}}{\mathsf{h}^2 M_\odot} \left(1 \mathrm{Mpc}\right)^3$.
  */
 /**
  * ncm_c_crit_number_density_p:
@@ -924,3 +1450,6 @@ ncm_c_class_init (NcmCClass *klass)
  *
  */
 
+/*******************************************************************************
+ * END: Observational data
+ *******************************************************************************/

@@ -1465,17 +1465,19 @@ int thermodynamics_get_xe_before_reionization(
                                               double * xe
                                               ) {
 
-  int i;
+  int last_index=0;
 
-  i=0;
-  while (preco->recombination_table[i*preco->re_size+preco->index_re_z] < z) {
-    i++;
-    class_test(i == ppr->recfast_Nz0,
-               pth->error_message,
-               "z = %e > largest redshift in thermodynamics table \n",ppr->reionization_z_start_max);
-  }
-
-  *xe = preco->recombination_table[i*preco->re_size+preco->index_re_xe];
+  class_call(array_interpolate_one_growing_closeby(preco->recombination_table,
+                                                   preco->re_size,
+                                                   preco->rt_size,
+                                                   preco->index_re_z,
+                                                   z,
+                                                   &last_index,
+                                                   preco->index_re_xe,
+                                                   xe,
+                                                   pth->error_message),
+             pth->error_message,
+             pth->error_message);
 
   return _SUCCESS_;
 
@@ -2854,6 +2856,7 @@ int thermodynamics_recombination_with_recfast(
     /* 	    *(preco->recombination_table+(Nz-i-1)*preco->re_size+preco->index_re_cb2), */
     /* 	    *(preco->recombination_table+(Nz-i-1)*preco->re_size+preco->index_re_dkappadtau) */
     /* 	    ); */
+
   }
 
   /** - cleanup generic integrator with cleanup_generic_integrator() */
@@ -3117,7 +3120,7 @@ int thermodynamics_derivs_with_recfast(
 
   }
 
-  if (timeTh < preco->H_frac*timeH && 0) {
+  if (timeTh < preco->H_frac*timeH) {
     /*   dy[2]=Tmat/(1.+z); */
     /* v 1.5: like in camb, add here a smoothing term as suggested by Adam Moss */
     dHdz=-pvecback[pba->index_bg_H_prime]/pvecback[pba->index_bg_H]/pba->a_today* _c_ / _Mpc_over_m_;
@@ -3137,8 +3140,9 @@ int thermodynamics_derivs_with_recfast(
       chi_heat = 1.;
 
     dy[2]= preco->CT * pow(Trad,4) * x / (1.+x+preco->fHe) * (Tmat-Trad) / (Hz*(1.+z)) + 2.*Tmat/(1.+z)
-      -2./(3.*_k_B_)*0.0*energy_rate*chi_heat/n/(1.+preco->fHe+x)/(Hz*(1.+z)); /* energy injection */
+      -2./(3.*_k_B_)*energy_rate*chi_heat/n/(1.+preco->fHe+x)/(Hz*(1.+z)); /* energy injection */
   }
+
   return _SUCCESS_;
 }
 
