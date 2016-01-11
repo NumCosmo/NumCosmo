@@ -37,40 +37,39 @@ typedef enum _NcMCatFunc {
 } NcMCatFunc;
 
 void
-_nc_mode_error (NcmStatsDist1d *sd1, gdouble Pa, gdouble *mode, gdouble *lb, gdouble *ub)
+_nc_bestfit_error (NcmStatsDist1d *sd1, gdouble Pa, gdouble center, gchar *center_desc, gdouble *lb, gdouble *ub)
 {
-  gdouble P_mode, Pa_2;
-  mode[0] = ncm_stats_dist1d_eval_mode (sd1);
-  P_mode  = ncm_stats_dist1d_eval_pdf (sd1, mode[0]);
-  Pa_2    = Pa * 0.5;
+  gdouble P_bf, Pa_2;
+  P_bf = ncm_stats_dist1d_eval_pdf (sd1, center);
+  Pa_2 = Pa * 0.5;
   
-  if (P_mode < Pa_2)
+  if (P_bf < Pa_2)
   {
-    ncm_message ("# Right-skewed distribution - mode close to the minimum value: maximum left tail correspond to %6.2f%% confidence interval (CI), where the required probability (right and left) was %6.2f%% CI.\n", 
-                 P_mode * 100.0, Pa_2 * 100.0);
-    ncm_message ("# The lower and upper error bounds correspond to %6.2f%% and %6.2f%% CI, respectively. Total = %6.2f%%.\n", 
-                 P_mode * 100.0, (Pa - P_mode) * 100.0, Pa * 100.0);
+    ncm_message ("# Right-skewed distribution - %s close to the minimum value: maximum left tail correspond to %6.2f%% confidence interval (CI), where the required probability (right and left) was %6.2f%% CI.\n", 
+                 center_desc, P_bf * 100.0, Pa_2 * 100.0);
+    ncm_message ("# The lower and upper error bounds correspond to %6.2f%% and %6.2f%% CI, respectively. Total = %6.2f%% (%5.2f-sigma).\n", 
+                 P_bf * 100.0, (Pa - P_bf) * 100.0, Pa * 100.0, sqrt (gsl_cdf_chisq_Pinv (Pa, 1.0)));
     
     lb[0] = sd1->xi;
     ub[0] = ncm_stats_dist1d_eval_inv_pdf (sd1, Pa);
   }
-  else if (P_mode > 1.0 - Pa_2)
+  else if (P_bf > 1.0 - Pa_2)
   {
-    ncm_message ("# Left-skewed distribution - mode close to the maximum value: maximum right tail correspond to %6.2f%% confidence interval (CI), where the required probability (right and left) was %6.2f%% CI.\n", 
-                 (1.0 - P_mode) * 100.0, Pa_2 * 100.0);
-    ncm_message ("# The lower and upper error bounds correspond to %6.2f%% and %6.2f%% CI, respectively. Total = %6.2f%%.\n", 
-                 (Pa - 1.0 + P_mode) * 100.0, (1.0 - P_mode) * 100.0, Pa * 100.0);
+    ncm_message ("# Left-skewed distribution - %s close to the maximum value: maximum right tail correspond to %6.2f%% confidence interval (CI), where the required probability (right and left) was %6.2f%% CI.\n", 
+                 center_desc, (1.0 - P_bf) * 100.0, Pa_2 * 100.0);
+    ncm_message ("# The lower and upper error bounds correspond to %6.2f%% and %6.2f%% CI, respectively. Total = %6.2f%% (%5.2f-sigma).\n", 
+                 (Pa - 1.0 + P_bf) * 100.0, (1.0 - P_bf) * 100.0, Pa * 100.0, sqrt (gsl_cdf_chisq_Pinv (Pa, 1.0)));
     lb[0] = ncm_stats_dist1d_eval_inv_pdf_tail (sd1, Pa);
     ub[0] = sd1->xf;
   }
   else
   {
-    lb[0] = ncm_stats_dist1d_eval_inv_pdf (sd1, P_mode - Pa_2);
-    ub[0] = ncm_stats_dist1d_eval_inv_pdf (sd1, P_mode + Pa_2);
+    lb[0] = ncm_stats_dist1d_eval_inv_pdf (sd1, P_bf - Pa_2);
+    ub[0] = ncm_stats_dist1d_eval_inv_pdf (sd1, P_bf + Pa_2);
   }
 
-  lb[0] = mode[0] - lb[0];
-  ub[0] = ub[0] - mode[0];
+  lb[0] = center - lb[0];
+  ub[0] = ub[0] - center;
   
 }
 
@@ -94,6 +93,7 @@ main (gint argc, gchar *argv[])
   gchar **params = NULL;
   gchar **mode_errors = NULL;
   gchar **median_errors = NULL;
+  gchar **bestfit_errors = NULL;
   guint i;
   
   GError *error = NULL;
@@ -117,6 +117,7 @@ main (gint argc, gchar *argv[])
     { "parameter",      'p', 0, G_OPTION_ARG_STRING_ARRAY, &params,         "Model parameters' to be analyzed.", NULL},
     { "mode-error",     'o', 0, G_OPTION_ARG_STRING_ARRAY, &mode_errors,    "Print mode and 1-3 sigma asymmetric error bars of the model parameters' to be analyzed.", NULL},
     { "median-error",   'e', 0, G_OPTION_ARG_STRING_ARRAY, &median_errors,  "Print median and 1-3 sigma asymmetric error bars of the model parameters' to be analyzed.", NULL},
+    { "bestfit-error",  's', 0, G_OPTION_ARG_STRING_ARRAY, &bestfit_errors,  "Print best fit and 1-3 sigma asymmetric error bars of the model parameters' to be analyzed.", NULL},
     { NULL }
   };
 
@@ -466,14 +467,14 @@ main (gint argc, gchar *argv[])
             sd1 = ncm_mset_catalog_calc_add_param_distrib (mcat, burnin, add_param, NCM_FIT_RUN_MSGS_SIMPLE);
 
           {
-            gdouble mode = 0.0;
+            gdouble mode = ncm_stats_dist1d_eval_mode (sd1);
             gdouble x_l1 = 0.0, x_u1 = 0.0;
             gdouble x_l2 = 0.0, x_u2 = 0.0;
             gdouble x_l3 = 0.0, x_u3 = 0.0;
                             
-            _nc_mode_error (sd1, Pa1, &mode, &x_l1, &x_u1);
-            _nc_mode_error (sd1, Pa2, &mode, &x_l2, &x_u2);
-            _nc_mode_error (sd1, Pa3, &mode, &x_l3, &x_u3);
+            _nc_bestfit_error (sd1, Pa1, mode, "mode", &x_l1, &x_u1);
+            _nc_bestfit_error (sd1, Pa2, mode, "mode", &x_l2, &x_u2);
+            _nc_bestfit_error (sd1, Pa3, mode, "mode", &x_l3, &x_u3);
             
               ncm_message (" % 20.15g % 20.15g % 20.15g % 20.15g % 20.15g % 20.15g % 20.15g\n",
                            mode, x_l1, x_u1, x_l2, x_u2, x_l3, x_u3);
@@ -546,6 +547,78 @@ main (gint argc, gchar *argv[])
       }
     }
 
+    /*********************************************************************************************************
+     * 
+     * Parameters - best fit and error bars
+     * 
+     *********************************************************************************************************/
+    if (bestfit_errors != NULL)
+    {
+      guint nparams = g_strv_length (bestfit_errors);
+      gdouble Pa1 = gsl_cdf_chisq_P (1.0, 1.0);
+      gdouble Pa2 = gsl_cdf_chisq_P (4.0, 1.0);
+      gdouble Pa3 = gsl_cdf_chisq_P (9.0, 1.0);
+      ncm_message ("# Best-fit and 1-3 sigma asymmetric error bars - lower (l) and upper (u) bounds, respectively.\n");
+
+      for (i = 0; i < nparams; i++)
+      {
+        gchar **name_val = g_strsplit (bestfit_errors[i], "=", 2);
+        guint n_name_val = g_strv_length (name_val);
+        if (n_name_val != 2)
+        {
+          g_error ("bestfit_errors: String not valid");
+        }
+        else
+        {
+          gchar *name = g_strstrip (name_val[0]);
+          gchar *val  = g_strstrip (name_val[1]);
+          gchar *endptr = NULL;
+          gdouble bestfit = g_ascii_strtod (val, &endptr);
+          if (endptr == val)
+          {
+            g_error ("Convertion to double failed for string `%s'", val);
+          }
+          else
+          {
+            const NcmMSetPIndex *pi = ncm_mset_fparam_get_pi_by_name (mset, name);
+            gchar *end_ptr = NULL;
+            glong add_param = strtol (name, &end_ptr, 10);
+            ncm_message ("# Parameter `%s'| best fit | 1l 1u | 2l 2u | 3l 3u\n", name);
+
+            if (pi == NULL && (params[i] == end_ptr))
+            {
+              g_warning ("# Parameter `%s' not found, skipping...\n", name);
+              continue;
+            }
+
+            {
+              NcmStatsDist1d *sd1;
+              if (pi != NULL)
+                sd1 = ncm_mset_catalog_calc_param_distrib (mcat, burnin, pi, NCM_FIT_RUN_MSGS_SIMPLE);
+              else
+                sd1 = ncm_mset_catalog_calc_add_param_distrib (mcat, burnin, add_param, NCM_FIT_RUN_MSGS_SIMPLE);
+
+              {
+                  gdouble x_l1 = 0.0, x_u1 = 0.0;
+                  gdouble x_l2 = 0.0, x_u2 = 0.0;
+                  gdouble x_l3 = 0.0, x_u3 = 0.0;
+
+                  _nc_bestfit_error (sd1, Pa1, bestfit, "best fit", &x_l1, &x_u1);
+                  _nc_bestfit_error (sd1, Pa2, bestfit, "best fit", &x_l2, &x_u2);
+                  _nc_bestfit_error (sd1, Pa3, bestfit, "best fit", &x_l3, &x_u3);
+
+                  ncm_message (" % 20.15g % 20.15g % 20.15g % 20.15g % 20.15g % 20.15g % 20.15g\n",
+                               bestfit, x_l1, x_u1, x_l2, x_u2, x_l3, x_u3);
+                }
+
+              ncm_stats_dist1d_free (sd1);
+            }
+            ncm_message ("\n\n");
+          }
+        }
+      }
+    }
+    
     ncm_mset_clear (&mset);
     ncm_mset_catalog_clear (&mcat);
   }
