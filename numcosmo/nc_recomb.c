@@ -107,7 +107,7 @@
  * The equilibrium double/single-ionized helium ratio $X_{\HeIII}X_\e/X_{\HeII}$
  * through Saha equation, i.e.,
  * \begin{equation}\label{eq:saha:HeII}
- * \frac{X_{\HeII}X_\e}{X_{\HeI}} = \frac{e^{-\HeII_{1s}/(k_BT)}}{4n_{\Hy}\lambda_{\e}^3},
+ * \frac{X_{\HeIII}X_\e}{X_{\HeII}} = \frac{e^{-\HeII_{1s}/(k_BT)}}{4n_{\Hy}\lambda_{\e}^3},
  * \end{equation}
  * where $\HeII_{1s}$ is the helium II $1s$ binding energy ncm_c_HeII_ion_E_1s_2S0_5().
  * This calculation is done using the Saha equation as in
@@ -545,6 +545,139 @@ nc_recomb_equilibrium_Xe (NcRecomb *recomb, NcHICosmo *cosmo, const gdouble x)
     }
   }
 
+}
+
+/**
+ * nc_recomb_equilibrium_XHI:
+ * @recomb: a #NcRecomb.
+ * @cosmo: a #NcHICosmo.
+ * @x: $x$.
+ *
+ * Calculates the hydrogen-I fraction $X_\HyI$ assuming equilibrium at all times.
+ * It solves the system containing all Saha's equations Eqs \eqref{eq:saha:HyI},
+ * \eqref{eq:saha:HeI} and \eqref{eq:saha:HeII} and the constraints Eq
+ * \eqref{eq:Hy:add}, \eqref{eq:He:add} and \eqref{eq:def:Xe}.
+ *
+ * Returns: $X_\HyI$.
+ */
+gdouble
+nc_recomb_equilibrium_XHI (NcRecomb *recomb, NcHICosmo *cosmo, const gdouble x)
+{
+  const gdouble saha_XHII_Xe_XHI = nc_recomb_HI_ion_saha (cosmo, x);
+  if (saha_XHII_Xe_XHI == 0.0)
+  {
+    return 1.0;
+  }
+  else
+  {
+    const gdouble Xe = nc_recomb_equilibrium_Xe (recomb, cosmo, x);
+    const gdouble f  = saha_XHII_Xe_XHI / Xe;
+    return 1.0 / (1.0 + f);
+  }
+}
+
+/**
+ * nc_recomb_equilibrium_XHII:
+ * @recomb: a #NcRecomb.
+ * @cosmo: a #NcHICosmo.
+ * @x: $x$.
+ *
+ * Calculates the hydrogen-II fraction $X_\HyII$ assuming equilibrium at all times.
+ * It solves the system containing all Saha's equations Eqs \eqref{eq:saha:HyI},
+ * \eqref{eq:saha:HeI} and \eqref{eq:saha:HeII} and the constraints Eq
+ * \eqref{eq:Hy:add}, \eqref{eq:He:add} and \eqref{eq:def:Xe}.
+ *
+ * Returns: $X_\HyII$.
+ */
+gdouble
+nc_recomb_equilibrium_XHII (NcRecomb *recomb, NcHICosmo *cosmo, const gdouble x)
+{
+  const gdouble saha_XHII_Xe_XHI = nc_recomb_HI_ion_saha (cosmo, x);
+  if (saha_XHII_Xe_XHI == 0.0)
+  {
+    return 0.0;
+  }
+  else
+  {
+    const gdouble Xe = nc_recomb_equilibrium_Xe (recomb, cosmo, x);
+    const gdouble f  = saha_XHII_Xe_XHI / Xe;
+    return f / (1.0 + f);
+  }
+}
+
+/**
+ * nc_recomb_equilibrium_XHeI:
+ * @recomb: a #NcRecomb.
+ * @cosmo: a #NcHICosmo.
+ * @x: $x$.
+ *
+ * Calculates the helium-I fraction $X_\HeI$ assuming equilibrium at all times.
+ * It solves the system containing all Saha's equations Eqs \eqref{eq:saha:HyI},
+ * \eqref{eq:saha:HeI} and \eqref{eq:saha:HeII} and the constraints Eq
+ * \eqref{eq:Hy:add}, \eqref{eq:He:add} and \eqref{eq:def:Xe}.
+ *
+ * Returns: $X_\HyII$.
+ */
+gdouble
+nc_recomb_equilibrium_XHeI (NcRecomb *recomb, NcHICosmo *cosmo, const gdouble x)
+{
+  const gdouble saha_XHeIII_Xe_XHeII = nc_recomb_HeII_ion_saha (cosmo, x);
+  const gdouble saha_XHeII_Xe_XHeI   = nc_recomb_HeI_ion_saha (cosmo, x);
+  const gdouble Xe                   = nc_recomb_equilibrium_Xe (recomb, cosmo, x);
+  const gdouble f1                   = saha_XHeIII_Xe_XHeII / Xe;
+  const gdouble f2                   = saha_XHeII_Xe_XHeI / Xe;
+
+  return nc_hicosmo_XHe (cosmo) / (1.0 + f2 + f1 * f2);
+}
+
+/**
+ * nc_recomb_equilibrium_XHeII:
+ * @recomb: a #NcRecomb.
+ * @cosmo: a #NcHICosmo.
+ * @x: $x$.
+ *
+ * Calculates the helium-II fraction $X_\HeII$ assuming equilibrium at all times.
+ * It solves the system containing all Saha's equations Eqs \eqref{eq:saha:HyI},
+ * \eqref{eq:saha:HeI} and \eqref{eq:saha:HeII} and the constraints Eq
+ * \eqref{eq:Hy:add}, \eqref{eq:He:add} and \eqref{eq:def:Xe}.
+ *
+ * Returns: $X_\HyII$.
+ */
+gdouble
+nc_recomb_equilibrium_XHeII (NcRecomb *recomb, NcHICosmo *cosmo, const gdouble x)
+{
+  const gdouble saha_XHeIII_Xe_XHeII = nc_recomb_HeII_ion_saha (cosmo, x);
+  const gdouble saha_XHeII_Xe_XHeI   = nc_recomb_HeI_ion_saha (cosmo, x);
+  const gdouble Xe                   = nc_recomb_equilibrium_Xe (recomb, cosmo, x);
+  const gdouble f1                   = saha_XHeIII_Xe_XHeII / Xe;
+  const gdouble f2                   = saha_XHeII_Xe_XHeI / Xe;
+
+  return f2 * nc_hicosmo_XHe (cosmo) / (1.0 + f2 + f1 * f2);
+}
+
+/**
+ * nc_recomb_equilibrium_XHeIII:
+ * @recomb: a #NcRecomb.
+ * @cosmo: a #NcHICosmo.
+ * @x: $x$.
+ *
+ * Calculates the helium-III fraction $X_\HeIII$ assuming equilibrium at all times.
+ * It solves the system containing all Saha's equations Eqs \eqref{eq:saha:HyI},
+ * \eqref{eq:saha:HeI} and \eqref{eq:saha:HeII} and the constraints Eq
+ * \eqref{eq:Hy:add}, \eqref{eq:He:add} and \eqref{eq:def:Xe}.
+ *
+ * Returns: $X_\HyII$.
+ */
+gdouble
+nc_recomb_equilibrium_XHeIII (NcRecomb *recomb, NcHICosmo *cosmo, const gdouble x)
+{
+  const gdouble saha_XHeIII_Xe_XHeII = nc_recomb_HeII_ion_saha (cosmo, x);
+  const gdouble saha_XHeII_Xe_XHeI   = nc_recomb_HeI_ion_saha (cosmo, x);
+  const gdouble Xe                   = nc_recomb_equilibrium_Xe (recomb, cosmo, x);
+  const gdouble f1                   = saha_XHeIII_Xe_XHeII / Xe;
+  const gdouble f2                   = saha_XHeII_Xe_XHeI / Xe;
+
+  return f1 * f2 * nc_hicosmo_XHe (cosmo) / (1.0 + f2 + f1 * f2);
 }
 
 /**

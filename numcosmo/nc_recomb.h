@@ -92,6 +92,11 @@ gdouble nc_recomb_HeII_ion_saha_x (NcHICosmo *cosmo, const gdouble f);
 gdouble nc_recomb_HeII_ion_saha_x_by_HeIII_He (NcHICosmo *cosmo, const gdouble f);
 gdouble nc_recomb_He_fully_ionized_Xe (NcHICosmo *cosmo, const gdouble x);
 gdouble nc_recomb_equilibrium_Xe (NcRecomb *recomb, NcHICosmo *cosmo, const gdouble x);
+gdouble nc_recomb_equilibrium_XHI (NcRecomb *recomb, NcHICosmo *cosmo, const gdouble x);
+gdouble nc_recomb_equilibrium_XHII (NcRecomb *recomb, NcHICosmo *cosmo, const gdouble x);
+gdouble nc_recomb_equilibrium_XHeI (NcRecomb *recomb, NcHICosmo *cosmo, const gdouble x);
+gdouble nc_recomb_equilibrium_XHeII (NcRecomb *recomb, NcHICosmo *cosmo, const gdouble x);
+gdouble nc_recomb_equilibrium_XHeIII (NcRecomb *recomb, NcHICosmo *cosmo, const gdouble x);
 
 gdouble nc_recomb_Xe (NcRecomb *recomb, NcHICosmo *cosmo, const gdouble lambda);
 gdouble nc_recomb_dtau_dx (NcRecomb *recomb, NcHICosmo *cosmo, const gdouble lambda);

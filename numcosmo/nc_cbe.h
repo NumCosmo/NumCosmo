@@ -54,6 +54,9 @@ struct _NcCBEClass
   GObjectClass parent_class;
 };
 
+typedef void (*NcCBECall) (NcCBE *cbe, NcHIPrim *prim, NcHICosmo *cosmo);
+typedef void (*NcCBEFree) (NcCBE *cbe);
+
 struct _NcCBE
 {
   /*< private >*/
@@ -78,8 +81,8 @@ struct _NcCBE
   guint tensor_lmax;
   NcmModelCtrl *ctrl_cosmo;
   NcmModelCtrl *ctrl_prim;
-  void (*call) (NcCBE *cbe, NcHIPrim *prim, NcHICosmo *cosmo);
-  void (*free) (NcCBE *cbe);
+  NcCBECall call;
+  NcCBEFree free;
   gboolean allocated;
   gboolean thermodyn_prepared;
 };

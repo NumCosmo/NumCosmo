@@ -51,8 +51,8 @@ struct _NcRecombSeagerClass
 
 /**
  * NcRecombSeagerOpt:
- * @NC_RECOM_SEAGER_OPT_FUDGE: Whether to use fudge factor in the case_B recombination fitting formulas.
- * @NC_RECOM_SEAGER_OPT_FUDGE_GAUSS_COR: Whether to use gaussian correction in the case_B recombination fitting formulas.
+ * @NC_RECOM_SEAGER_OPT_HII_FUDGE: Whether to use fudge factor in the case_B recombination fitting formulas.
+ * @NC_RECOM_SEAGER_OPT_HII_FUDGE_GAUSS_COR: Whether to use gaussian correction in the case_B recombination fitting formulas.
  * @NC_RECOM_SEAGER_OPT_ALL: All options.
  * 
  * FIXME
@@ -60,25 +60,39 @@ struct _NcRecombSeagerClass
  */
 typedef enum _NcRecombSeagerOpt
 {
-  NC_RECOM_SEAGER_OPT_FUDGE           = 1 << 0,
-  NC_RECOM_SEAGER_OPT_FUDGE_GAUSS_COR = 1 << 1,
-  NC_RECOM_SEAGER_OPT_ALL = (1 << 2) - 1, /*< private >*/
-  NC_RECOM_SEAGER_OPT_LEN,                /*< skip >*/
+  NC_RECOM_SEAGER_OPT_HII_FUDGE           = 1 << 0,
+  NC_RECOM_SEAGER_OPT_HII_FUDGE_GAUSS_COR = 1 << 1,
+  NC_RECOM_SEAGER_OPT_HEII_SOBOLEV_1P_1S  = 1 << 2,
+  NC_RECOM_SEAGER_OPT_HEII_CONT_H         = 1 << 3,
+  NC_RECOM_SEAGER_OPT_HEII_TRIPLETS       = 1 << 4,
+  NC_RECOM_SEAGER_OPT_ALL                 = (1 << 5) - 1, /*< private >*/
+  NC_RECOM_SEAGER_OPT_LEN,                                /*< skip >*/
 } NcRecombSeagerOpt;
+
+typedef gdouble (*NcRecombSeagerKHI2p2Pmean) (NcRecombSeager *recomb_seager, NcHICosmo *cosmo, const gdouble x, const gdouble H);
+typedef gdouble (*NcRecombSeagerKHeI2p1P1) (NcRecombSeager *recomb_seager, NcHICosmo *cosmo, const gdouble x, const gdouble XHI, const gdouble T, const gdouble XHeI, const gdouble H, const gdouble n_H);
+typedef void (*NcRecombSeagerKHeI2p1P1Grad) (NcRecombSeager *recomb_seager, NcHICosmo *cosmo, const gdouble x, const gdouble XHI, const gdouble T, const gdouble XHeI, const gdouble H, const gdouble n_H, gdouble grad[3]);
 
 struct _NcRecombSeager
 {
   /*< private >*/
   NcRecomb parent_instance;
   NcRecombSeagerOpt opts;
+  NcRecombSeagerKHI2p2Pmean K_HI_2p_2Pmean;
+  NcRecombSeagerKHeI2p1P1 KX_HeI_2p_1P1;
+  NcRecombSeagerKHeI2p1P1Grad KX_HeI_2p_1P1_grad;
   gdouble H_fudge;
   gdouble AGauss1, AGauss2;
   gdouble zGauss1, zGauss2;
   gdouble wGauss1, wGauss2;
+  gdouble A2P_s;
+  gdouble A2P_t;
+  gdouble sigma_He_2P_s;
+  gdouble sigma_He_2P_t;
+  gdouble Pb;
+  gdouble Qb;
   gpointer cvode;
   gboolean init;
-  CVRhsFn ion;
-  CVDlsDenseJacFn ion_J;
   N_Vector y0;
   N_Vector y;
   N_Vector abstol;

@@ -982,5 +982,42 @@ main (gint argc, gchar *argv[])
   nc_distance_free (dist);
   g_free (full_cmd_line);
 
+  if (FALSE) /* Several unimportant leaks */
+  {
+    g_clear_pointer (&de_model.model_name, g_free);
+
+    g_clear_pointer (&de_data_simple.snia_id,     g_free);
+    g_clear_pointer (&de_data_simple.snia_objser, g_free);
+    g_clear_pointer (&de_data_simple.cmb_id,      g_free);
+    g_clear_pointer (&de_data_simple.cluster_id,  g_free);
+
+    g_clear_pointer (&de_data_simple.bao_id,       g_strfreev);
+    g_clear_pointer (&de_data_simple.H_id,         g_strfreev);
+    g_clear_pointer (&de_data_simple.H_BAO_id,     g_strfreev);
+    g_clear_pointer (&de_data_simple.priors_gauss, g_strfreev);
+    g_clear_pointer (&de_data_simple.data_files,   g_strfreev);
+
+    g_clear_pointer (&de_data_cluster.window_name,       g_free);
+    g_clear_pointer (&de_data_cluster.transfer_name,     g_free);
+    g_clear_pointer (&de_data_cluster.multiplicity_name, g_free);
+    g_clear_pointer (&de_data_cluster.clusterm_ser,      g_free);
+    g_clear_pointer (&de_data_cluster.clusterz_ser,      g_free);
+    g_clear_pointer (&de_data_cluster.save_cata,         g_free);
+
+    g_clear_pointer (&de_data_cluster.cata_file, g_strfreev);
+
+    g_clear_pointer (&de_fit.file_out,    g_free);
+    g_clear_pointer (&de_fit.fit_type,    g_free);
+    g_clear_pointer (&de_fit.fit_diff,    g_free);
+    g_clear_pointer (&de_fit.fit_algo,    g_free);
+    g_clear_pointer (&de_fit.bidim_cr[0], g_free);
+    g_clear_pointer (&de_fit.bidim_cr[1], g_free);
+    g_clear_pointer (&de_fit.fiducial,    g_free);
+    g_clear_pointer (&de_fit.mc_data,     g_free);
+    g_clear_pointer (&de_fit.save_mset,   g_free);
+    
+    g_clear_pointer (&de_fit.onedim_cr, g_strfreev);
+  }
+  
   return 0;
 }
