@@ -239,42 +239,74 @@ G_INLINE_FUNC gdouble ncm_c_boltzmann_factor_H_2p_2Pmean (const gdouble T) G_GNU
 
 G_INLINE_FUNC gdouble ncm_c_HeI_ion_wn_1s_1S0 (void) G_GNUC_CONST;
 G_INLINE_FUNC gdouble ncm_c_HeI_ion_wn_2s_1S0 (void) G_GNUC_CONST;
+G_INLINE_FUNC gdouble ncm_c_HeI_ion_wn_2s_3S1 (void) G_GNUC_CONST;
 G_INLINE_FUNC gdouble ncm_c_HeI_ion_wn_2p_1P1 (void) G_GNUC_CONST;
+G_INLINE_FUNC gdouble ncm_c_HeI_ion_wn_2p_3P0 (void) G_GNUC_CONST;
+G_INLINE_FUNC gdouble ncm_c_HeI_ion_wn_2p_3P1 (void) G_GNUC_CONST;
+G_INLINE_FUNC gdouble ncm_c_HeI_ion_wn_2p_3P2 (void) G_GNUC_CONST;
+G_INLINE_FUNC gdouble ncm_c_HeI_ion_wn_2p_3Pmean (void) G_GNUC_CONST;
 
 /* Ionization energy: E */
 
 G_INLINE_FUNC gdouble ncm_c_HeI_ion_E_1s_1S0 (void) G_GNUC_CONST;
 G_INLINE_FUNC gdouble ncm_c_HeI_ion_E_2s_1S0 (void) G_GNUC_CONST;
+G_INLINE_FUNC gdouble ncm_c_HeI_ion_E_2s_3S1 (void) G_GNUC_CONST;
 G_INLINE_FUNC gdouble ncm_c_HeI_ion_E_2p_1P1 (void) G_GNUC_CONST;
+G_INLINE_FUNC gdouble ncm_c_HeI_ion_E_2p_3P0 (void) G_GNUC_CONST;
+G_INLINE_FUNC gdouble ncm_c_HeI_ion_E_2p_3P1 (void) G_GNUC_CONST;
+G_INLINE_FUNC gdouble ncm_c_HeI_ion_E_2p_3P2 (void) G_GNUC_CONST;
+G_INLINE_FUNC gdouble ncm_c_HeI_ion_E_2p_3Pmean (void) G_GNUC_CONST;
 
 /* Lyman series wavenumber: wn */
 
 G_INLINE_FUNC gdouble ncm_c_HeI_Lyman_wn_2s_1S0 (void) G_GNUC_CONST;
+G_INLINE_FUNC gdouble ncm_c_HeI_Lyman_wn_2s_3S1 (void) G_GNUC_CONST;
 G_INLINE_FUNC gdouble ncm_c_HeI_Lyman_wn_2p_1P1 (void) G_GNUC_CONST;
+G_INLINE_FUNC gdouble ncm_c_HeI_Lyman_wn_2p_3P0 (void) G_GNUC_CONST;
+G_INLINE_FUNC gdouble ncm_c_HeI_Lyman_wn_2p_3P1 (void) G_GNUC_CONST;
+G_INLINE_FUNC gdouble ncm_c_HeI_Lyman_wn_2p_3P2 (void) G_GNUC_CONST;
+G_INLINE_FUNC gdouble ncm_c_HeI_Lyman_wn_2p_3Pmean (void) G_GNUC_CONST;
 
 /* Lyman series wavelength: wl */
 
 G_INLINE_FUNC gdouble ncm_c_HeI_Lyman_wl_2s_1S0 (void) G_GNUC_CONST;
+G_INLINE_FUNC gdouble ncm_c_HeI_Lyman_wl_2s_3S1 (void) G_GNUC_CONST;
 G_INLINE_FUNC gdouble ncm_c_HeI_Lyman_wl_2p_1P1 (void) G_GNUC_CONST;
+G_INLINE_FUNC gdouble ncm_c_HeI_Lyman_wl_2p_3P0 (void) G_GNUC_CONST;
+G_INLINE_FUNC gdouble ncm_c_HeI_Lyman_wl_2p_3P1 (void) G_GNUC_CONST;
+G_INLINE_FUNC gdouble ncm_c_HeI_Lyman_wl_2p_3P2 (void) G_GNUC_CONST;
+G_INLINE_FUNC gdouble ncm_c_HeI_Lyman_wl_2p_3Pmean (void) G_GNUC_CONST;
 
 /* Lyman series factor: wl^3 / (8pi) */
 
 G_INLINE_FUNC gdouble ncm_c_HeI_Lyman_wl3_8pi_2s_1S0 (void) G_GNUC_CONST;
+G_INLINE_FUNC gdouble ncm_c_HeI_Lyman_wl3_8pi_2s_3S1 (void) G_GNUC_CONST;
 G_INLINE_FUNC gdouble ncm_c_HeI_Lyman_wl3_8pi_2p_1P1 (void) G_GNUC_CONST;
+G_INLINE_FUNC gdouble ncm_c_HeI_Lyman_wl3_8pi_2p_3P0 (void) G_GNUC_CONST;
+G_INLINE_FUNC gdouble ncm_c_HeI_Lyman_wl3_8pi_2p_3P1 (void) G_GNUC_CONST;
+G_INLINE_FUNC gdouble ncm_c_HeI_Lyman_wl3_8pi_2p_3P2 (void) G_GNUC_CONST;
+G_INLINE_FUNC gdouble ncm_c_HeI_Lyman_wl3_8pi_2p_3Pmean (void) G_GNUC_CONST;
 
 /* Boltzmann factor */
 
 G_INLINE_FUNC gdouble ncm_c_boltzmann_factor_HeI_1s_1S0 (const gdouble T) G_GNUC_CONST;
 G_INLINE_FUNC gdouble ncm_c_boltzmann_factor_HeI_2s_1S0 (const gdouble T) G_GNUC_CONST;
+G_INLINE_FUNC gdouble ncm_c_boltzmann_factor_HeI_2s_3S1 (const gdouble T) G_GNUC_CONST;
 G_INLINE_FUNC gdouble ncm_c_boltzmann_factor_HeI_2p_1P1 (const gdouble T) G_GNUC_CONST;
+G_INLINE_FUNC gdouble ncm_c_boltzmann_factor_HeI_2p_3P0 (const gdouble T) G_GNUC_CONST;
+G_INLINE_FUNC gdouble ncm_c_boltzmann_factor_HeI_2p_3P1 (const gdouble T) G_GNUC_CONST;
+G_INLINE_FUNC gdouble ncm_c_boltzmann_factor_HeI_2p_3P2 (const gdouble T) G_GNUC_CONST;
+G_INLINE_FUNC gdouble ncm_c_boltzmann_factor_HeI_2p_3Pmean (const gdouble T) G_GNUC_CONST;
 
 /* Balmer series wavenumber: wn */
 
-G_INLINE_FUNC gdouble ncm_c_HeI_Balmer_wn_2p_1P1 (void) G_GNUC_CONST;
+G_INLINE_FUNC gdouble ncm_c_HeI_Balmer_wn_2p_1P1_2s_1S0 (void) G_GNUC_CONST;
+G_INLINE_FUNC gdouble ncm_c_HeI_Balmer_wn_2p_3Pmean_2s_3S1 (void) G_GNUC_CONST;
 
 /* Balmer series: E / k_B */
 
-G_INLINE_FUNC gdouble ncm_c_HeI_Balmer_E_kb_2p_1P1 (void) G_GNUC_CONST;
+G_INLINE_FUNC gdouble ncm_c_HeI_Balmer_E_kb_2p_1P1_2s_1S0 (void) G_GNUC_CONST;
+G_INLINE_FUNC gdouble ncm_c_HeI_Balmer_E_kb_2p_3Pmean_2s_3S1 (void) G_GNUC_CONST;
 
 /*******************************************************************************
  * -- END: Helium I
@@ -741,8 +773,23 @@ G_INLINE_FUNC gdouble ncm_c_HeI_ion_wn_1s_1S0 (void)
 G_INLINE_FUNC gdouble ncm_c_HeI_ion_wn_2s_1S0 (void)
 { return ncm_c_HeI_ion_wn_1s_1S0 () - ncm_c_HeI_Lyman_wn_2s_1S0 (); }
 
+G_INLINE_FUNC gdouble ncm_c_HeI_ion_wn_2s_3S1 (void)
+{ return ncm_c_HeI_ion_wn_1s_1S0 () - ncm_c_HeI_Lyman_wn_2s_3S1 (); }
+
 G_INLINE_FUNC gdouble ncm_c_HeI_ion_wn_2p_1P1 (void)
 { return ncm_c_HeI_ion_wn_1s_1S0 () - ncm_c_HeI_Lyman_wn_2p_1P1 (); }
+
+G_INLINE_FUNC gdouble ncm_c_HeI_ion_wn_2p_3P0 (void)
+{ return ncm_c_HeI_ion_wn_1s_1S0 () - ncm_c_HeI_Lyman_wn_2p_3P0 (); }
+
+G_INLINE_FUNC gdouble ncm_c_HeI_ion_wn_2p_3P1 (void)
+{ return ncm_c_HeI_ion_wn_1s_1S0 () - ncm_c_HeI_Lyman_wn_2p_3P1 (); }
+
+G_INLINE_FUNC gdouble ncm_c_HeI_ion_wn_2p_3P2 (void)
+{ return ncm_c_HeI_ion_wn_1s_1S0 () - ncm_c_HeI_Lyman_wn_2p_3P2 (); }
+
+G_INLINE_FUNC gdouble ncm_c_HeI_ion_wn_2p_3Pmean (void)
+{ return ncm_c_HeI_ion_wn_1s_1S0 () - ncm_c_HeI_Lyman_wn_2p_3Pmean (); }
 
 /* Ionization energy: E */
 
@@ -752,32 +799,94 @@ G_INLINE_FUNC gdouble ncm_c_HeI_ion_E_1s_1S0 (void)
 G_INLINE_FUNC gdouble ncm_c_HeI_ion_E_2s_1S0 (void)
 { return  ncm_c_HeI_ion_wn_2s_1S0 () * ncm_c_hc (); }
 
+G_INLINE_FUNC gdouble ncm_c_HeI_ion_E_2s_3S1 (void)
+{ return  ncm_c_HeI_ion_wn_2s_3S1 () * ncm_c_hc (); }
+
 G_INLINE_FUNC gdouble ncm_c_HeI_ion_E_2p_1P1 (void)
 { return  ncm_c_HeI_ion_wn_2p_1P1 () * ncm_c_hc (); }
+
+G_INLINE_FUNC gdouble ncm_c_HeI_ion_E_2p_3P0 (void)
+{ return  ncm_c_HeI_ion_wn_2p_3P0 () * ncm_c_hc (); }
+
+G_INLINE_FUNC gdouble ncm_c_HeI_ion_E_2p_3P1 (void)
+{ return  ncm_c_HeI_ion_wn_2p_3P1 () * ncm_c_hc (); }
+
+G_INLINE_FUNC gdouble ncm_c_HeI_ion_E_2p_3P2 (void)
+{ return  ncm_c_HeI_ion_wn_2p_3P2 () * ncm_c_hc (); }
+
+G_INLINE_FUNC gdouble ncm_c_HeI_ion_E_2p_3Pmean (void)
+{ return  ncm_c_HeI_ion_wn_2p_3Pmean () * ncm_c_hc (); }
 
 /* Lyman series wavenumber: wn */
 
 G_INLINE_FUNC gdouble ncm_c_HeI_Lyman_wn_2s_1S0 (void)
 { return 1.66277440141e7; }
 
+G_INLINE_FUNC gdouble ncm_c_HeI_Lyman_wn_2s_3S1 (void)
+{ return 1.598559743297e7; }
+
 G_INLINE_FUNC gdouble ncm_c_HeI_Lyman_wn_2p_1P1 (void)
 { return 1.71134896946e7; }
+
+G_INLINE_FUNC gdouble ncm_c_HeI_Lyman_wn_2p_3P0 (void)
+{ return 1.690878308131e7; }
+
+G_INLINE_FUNC gdouble ncm_c_HeI_Lyman_wn_2p_3P1 (void)
+{ return 1.690868428979e7; }
+
+G_INLINE_FUNC gdouble ncm_c_HeI_Lyman_wn_2p_3P2 (void)
+{ return 1.690867664725e7; }
+
+G_INLINE_FUNC gdouble ncm_c_HeI_Lyman_wn_2p_3Pmean (void)
+{ return (ncm_c_HeI_Lyman_wn_2p_3P0 () + 
+          ncm_c_HeI_Lyman_wn_2p_3P1 () + 
+          ncm_c_HeI_Lyman_wn_2p_3P2 ()) / 3.0; }
 
 /* Lyman series wavelength: wl */
 
 G_INLINE_FUNC gdouble ncm_c_HeI_Lyman_wl_2s_1S0 (void)
 { return 1.0 / ncm_c_HeI_Lyman_wn_2s_1S0 (); }
 
+G_INLINE_FUNC gdouble ncm_c_HeI_Lyman_wl_2s_3S1 (void)
+{ return 1.0 / ncm_c_HeI_Lyman_wn_2s_3S1 (); }
+
 G_INLINE_FUNC gdouble ncm_c_HeI_Lyman_wl_2p_1P1 (void)
 { return 1.0 / ncm_c_HeI_Lyman_wn_2p_1P1 (); }
+
+G_INLINE_FUNC gdouble ncm_c_HeI_Lyman_wl_2p_3P0 (void)
+{ return 1.0 / ncm_c_HeI_Lyman_wn_2p_3P0 (); }
+
+G_INLINE_FUNC gdouble ncm_c_HeI_Lyman_wl_2p_3P1 (void)
+{ return 1.0 / ncm_c_HeI_Lyman_wn_2p_3P1 (); }
+
+G_INLINE_FUNC gdouble ncm_c_HeI_Lyman_wl_2p_3P2 (void)
+{ return 1.0 / ncm_c_HeI_Lyman_wn_2p_3P2 (); }
+
+G_INLINE_FUNC gdouble ncm_c_HeI_Lyman_wl_2p_3Pmean (void)
+{ return 1.0 / ncm_c_HeI_Lyman_wn_2p_3Pmean (); }
 
 /* Lyman series factor: wl^3 / (8pi) */
 
 G_INLINE_FUNC gdouble ncm_c_HeI_Lyman_wl3_8pi_2s_1S0 (void)
 { return gsl_pow_3 (ncm_c_HeI_Lyman_wl_2s_1S0 ()) / (8.0 * M_PI); }
 
+G_INLINE_FUNC gdouble ncm_c_HeI_Lyman_wl3_8pi_2s_3S1 (void)
+{ return gsl_pow_3 (ncm_c_HeI_Lyman_wl_2s_3S1 ()) / (8.0 * M_PI); }
+
 G_INLINE_FUNC gdouble ncm_c_HeI_Lyman_wl3_8pi_2p_1P1 (void)
 { return gsl_pow_3 (ncm_c_HeI_Lyman_wl_2p_1P1 ()) / (8.0 * M_PI); }
+
+G_INLINE_FUNC gdouble ncm_c_HeI_Lyman_wl3_8pi_2p_3P0 (void)
+{ return gsl_pow_3 (ncm_c_HeI_Lyman_wl_2p_3P0 ()) / (8.0 * M_PI); }
+
+G_INLINE_FUNC gdouble ncm_c_HeI_Lyman_wl3_8pi_2p_3P1 (void)
+{ return gsl_pow_3 (ncm_c_HeI_Lyman_wl_2p_3P1 ()) / (8.0 * M_PI); }
+
+G_INLINE_FUNC gdouble ncm_c_HeI_Lyman_wl3_8pi_2p_3P2 (void)
+{ return gsl_pow_3 (ncm_c_HeI_Lyman_wl_2p_3P2 ()) / (8.0 * M_PI); }
+
+G_INLINE_FUNC gdouble ncm_c_HeI_Lyman_wl3_8pi_2p_3Pmean (void)
+{ return gsl_pow_3 (ncm_c_HeI_Lyman_wl_2p_3Pmean ()) / (8.0 * M_PI); }
 
 /* Boltzmann factor */
 
@@ -789,19 +898,45 @@ G_INLINE_FUNC gdouble ncm_c_boltzmann_factor_HeI_2s_1S0 (const gdouble T)
 { return gsl_pow_3 (ncm_c_thermal_wn_e ()) *
  exp (- ncm_c_HeI_ion_E_2s_1S0 () / (ncm_c_kb () * T)); }
 
+G_INLINE_FUNC gdouble ncm_c_boltzmann_factor_HeI_2s_3S1 (const gdouble T)
+{ return gsl_pow_3 (ncm_c_thermal_wn_e ()) *
+ exp (- ncm_c_HeI_ion_E_2s_3S1 () / (ncm_c_kb () * T)); }
+
 G_INLINE_FUNC gdouble ncm_c_boltzmann_factor_HeI_2p_1P1 (const gdouble T)
 { return gsl_pow_3 (ncm_c_thermal_wn_e ()) *
  exp (- ncm_c_HeI_ion_E_2p_1P1 () / (ncm_c_kb () * T)); } 
 
+G_INLINE_FUNC gdouble ncm_c_boltzmann_factor_HeI_2p_3P0 (const gdouble T)
+{ return gsl_pow_3 (ncm_c_thermal_wn_e ()) *
+ exp (- ncm_c_HeI_ion_E_2p_3P0 () / (ncm_c_kb () * T)); } 
+
+G_INLINE_FUNC gdouble ncm_c_boltzmann_factor_HeI_2p_3P1 (const gdouble T)
+{ return gsl_pow_3 (ncm_c_thermal_wn_e ()) *
+ exp (- ncm_c_HeI_ion_E_2p_3P1 () / (ncm_c_kb () * T)); } 
+
+G_INLINE_FUNC gdouble ncm_c_boltzmann_factor_HeI_2p_3P2 (const gdouble T)
+{ return gsl_pow_3 (ncm_c_thermal_wn_e ()) *
+ exp (- ncm_c_HeI_ion_E_2p_3P2 () / (ncm_c_kb () * T)); } 
+
+G_INLINE_FUNC gdouble ncm_c_boltzmann_factor_HeI_2p_3Pmean (const gdouble T)
+{ return gsl_pow_3 (ncm_c_thermal_wn_e ()) *
+ exp (- ncm_c_HeI_ion_E_2p_3Pmean () / (ncm_c_kb () * T)); } 
+
 /* Balmer series wavenumber: wn */
 
-G_INLINE_FUNC gdouble ncm_c_HeI_Balmer_wn_2p_1P1 (void)
+G_INLINE_FUNC gdouble ncm_c_HeI_Balmer_wn_2p_1P1_2s_1S0 (void)
 { return ncm_c_HeI_Lyman_wn_2p_1P1 () - ncm_c_HeI_Lyman_wn_2s_1S0 (); }
+
+G_INLINE_FUNC gdouble ncm_c_HeI_Balmer_wn_2p_3Pmean_2s_3S1 (void)
+{ return ncm_c_HeI_Lyman_wn_2p_3Pmean () - ncm_c_HeI_Lyman_wn_2s_3S1 (); }
 
 /* Balmer series: E / k_B */
 
-G_INLINE_FUNC gdouble ncm_c_HeI_Balmer_E_kb_2p_1P1 (void)
-{ return ncm_c_HeI_Balmer_wn_2p_1P1 () * ncm_c_hc () / ncm_c_kb (); }
+G_INLINE_FUNC gdouble ncm_c_HeI_Balmer_E_kb_2p_1P1_2s_1S0 (void)
+{ return ncm_c_HeI_Balmer_wn_2p_1P1_2s_1S0 () * ncm_c_hc () / ncm_c_kb (); }
+
+G_INLINE_FUNC gdouble ncm_c_HeI_Balmer_E_kb_2p_3Pmean_2s_3S1 (void)
+{ return ncm_c_HeI_Balmer_wn_2p_3Pmean_2s_3S1 () * ncm_c_hc () / ncm_c_kb (); }
 
 /*******************************************************************************
  * -- END: Helium I

@@ -985,6 +985,18 @@ ncm_c_class_init (NcmCClass *klass)
  * Returns: Helium-I $2s\,{}^1\\!S_{0}$ ionization energy wavelength, $k_{2s\,{}^1\\!S_{0}} \,\left[\mathrm{m}^{-1}\right]$.
  */
 /**
+ * ncm_c_HeI_ion_wn_2s_3S1:
+ *
+ * NIST compilation of atomic spectra see [description][NcmC.description].
+ * 
+ * Ionization energy wavenumber for He-I $2s\,{}^3\\!S_{1}$ state calculated 
+ * from the difference between the first state and the corresponding Lyman
+ * wavenumber, i.e., $k_{2s\,{}^3\\!S_{1}} = k_{1s\,{}^1\\!S_{0}} - k_{2s\,{}^3\\!S_{1}}^\mathrm{Ly}$,
+ * see ncm_c_HeI_Lyman_wn_2s_3S1().
+ * 
+ * Returns: Helium-I $2s\,{}^3\\!S_{1}$ ionization energy wavelength, $k_{2s\,{}^3\\!S_{1}} \,\left[\mathrm{m}^{-1}\right]$.
+ */
+/**
  * ncm_c_HeI_ion_wn_2p_1P1:
  *
  * NIST compilation of atomic spectra see [description][NcmC.description].
@@ -995,6 +1007,54 @@ ncm_c_class_init (NcmCClass *klass)
  * see ncm_c_HeI_Lyman_wn_2p_1P1().
  * 
  * Returns: Helium-I $2p\,{}^1\\!P_{1}$ ionization energy wavelength, $k_{2p\,{}^1\\!P_{1}} \,\left[\mathrm{m}^{-1}\right]$.
+ */
+/**
+ * ncm_c_HeI_ion_wn_2p_3P0:
+ *
+ * NIST compilation of atomic spectra see [description][NcmC.description].
+ * 
+ * Ionization energy wavenumber for He-I $2p\,{}^3\\!P_{0}$ state calculated 
+ * from the difference between the first state and the corresponding Lyman
+ * wavenumber, i.e., $k_{2p\,{}^3\\!P_{0}} = k_{1s\,{}^1\\!S_{0}} - k_{2p\,{}^3\\!P_{0}}^\mathrm{Ly}$,
+ * see ncm_c_HeI_Lyman_wn_2p_3P0().
+ * 
+ * Returns: Helium-I $2p\,{}^3\\!P_{0}$ ionization energy wavelength, $k_{2p\,{}^3\\!P_{0}} \,\left[\mathrm{m}^{-1}\right]$.
+ */
+/**
+ * ncm_c_HeI_ion_wn_2p_3P1:
+ *
+ * NIST compilation of atomic spectra see [description][NcmC.description].
+ * 
+ * Ionization energy wavenumber for He-I $2p\,{}^3\\!P_{1}$ state calculated 
+ * from the difference between the first state and the corresponding Lyman
+ * wavenumber, i.e., $k_{2p\,{}^3\\!P_{1}} = k_{1s\,{}^1\\!S_{0}} - k_{2p\,{}^3\\!P_{1}}^\mathrm{Ly}$,
+ * see ncm_c_HeI_Lyman_wn_2p_3P1().
+ * 
+ * Returns: Helium-I $2p\,{}^3\\!P_{1}$ ionization energy wavelength, $k_{2p\,{}^3\\!P_{1}} \,\left[\mathrm{m}^{-1}\right]$.
+ */
+/**
+ * ncm_c_HeI_ion_wn_2p_3P2:
+ *
+ * NIST compilation of atomic spectra see [description][NcmC.description].
+ * 
+ * Ionization energy wavenumber for He-I $2p\,{}^3\\!P_{2}$ state calculated 
+ * from the difference between the first state and the corresponding Lyman
+ * wavenumber, i.e., $k_{2p\,{}^3\\!P_{2}} = k_{1s\,{}^1\\!S_{0}} - k_{2p\,{}^3\\!P_{2}}^\mathrm{Ly}$,
+ * see ncm_c_HeI_Lyman_wn_2p_3P2().
+ * 
+ * Returns: Helium-I $2p\,{}^3\\!P_{2}$ ionization energy wavelength, $k_{2p\,{}^3\\!P_{2}} \,\left[\mathrm{m}^{-1}\right]$.
+ */
+/**
+ * ncm_c_HeI_ion_wn_2p_3Pmean:
+ *
+ * NIST compilation of atomic spectra see [description][NcmC.description].
+ * 
+ * Ionization energy wavenumber for He-I $2p\,{}^3\\!P_\mathrm{mean}$ state calculated 
+ * from the difference between the first state and the corresponding Lyman
+ * wavenumber, i.e., $k_{2p\,{}^3\\!P_{0}} = k_{1s\,{}^1\\!S_{0}} - k_{2p\,{}^3\\!P_\mathrm{mean}}^\mathrm{Ly}$,
+ * see ncm_c_HeI_Lyman_wn_2p_3Pmean().
+ * 
+ * Returns: Helium-I $2p\,{}^3\\!P_\mathrm{mean}$ ionization energy wavelength, $k_{2p\,{}^3\\!P_\mathrm{mean}} \,\left[\mathrm{m}^{-1}\right]$.
  */
 
 /* Ionization energy: E */
@@ -1020,6 +1080,16 @@ ncm_c_class_init (NcmCClass *klass)
  * Returns: Helium-I $2s\,{}^1\\!S_{0}$ ionization energy, $E_{2s\,{}^1\\!S_{0}} = hc\times{}k_{2s\,{}^1\\!S_{0}} \,\left[\mathrm{J}\right]$.
  */
 /**
+ * ncm_c_HeI_ion_E_2s_3S1:
+ *
+ * NIST compilation of atomic spectra see [description][NcmC.description].
+ * 
+ * Ionization energy calculated from the wavenumber $k_{2s\,{}^3\\!S_{1}}$,
+ * see ncm_c_HeI_ion_wn_2s_3S1().
+ * 
+ * Returns: Helium-I $2s\,{}^3\\!S_{1}$ ionization energy, $E_{2s\,{}^3\\!S_{1}} = hc\times{}k_{2s\,{}^3\\!S_{1}} \,\left[\mathrm{J}\right]$.
+ */
+/**
  * ncm_c_HeI_ion_E_2p_1P1:
  *
  * NIST compilation of atomic spectra see [description][NcmC.description].
@@ -1028,6 +1098,46 @@ ncm_c_class_init (NcmCClass *klass)
  * see ncm_c_HeI_ion_wn_2p_1P1().
  * 
  * Returns: Helium-I $2p\,{}^1\\!P_{1}$ ionization energy, $E_{2p\,{}^1\\!P_{1}} = hc\times{}k_{2p\,{}^1\\!P_{1}} \,\left[\mathrm{J}\right]$.
+ */
+/**
+ * ncm_c_HeI_ion_E_2p_3P0:
+ *
+ * NIST compilation of atomic spectra see [description][NcmC.description].
+ * 
+ * Ionization energy calculated from the wavenumber $k_{2p\,{}^3\\!P_{0}}$,
+ * see ncm_c_HeI_ion_wn_2p_3P0().
+ * 
+ * Returns: Helium-I $2p\,{}^3\\!P_{0}$ ionization energy, $E_{2p\,{}^3\\!P_{0}} = hc\times{}k_{2p\,{}^3\\!P_{0}} \,\left[\mathrm{J}\right]$.
+ */
+/**
+ * ncm_c_HeI_ion_E_2p_3P1:
+ *
+ * NIST compilation of atomic spectra see [description][NcmC.description].
+ * 
+ * Ionization energy calculated from the wavenumber $k_{2p\,{}^3\\!P_{1}}$,
+ * see ncm_c_HeI_ion_wn_2p_3P1().
+ * 
+ * Returns: Helium-I $2p\,{}^3\\!P_{1}$ ionization energy, $E_{2p\,{}^3\\!P_{1}} = hc\times{}k_{2p\,{}^3\\!P_{1}} \,\left[\mathrm{J}\right]$.
+ */
+/**
+ * ncm_c_HeI_ion_E_2p_3P2:
+ *
+ * NIST compilation of atomic spectra see [description][NcmC.description].
+ * 
+ * Ionization energy calculated from the wavenumber $k_{2p\,{}^3\\!P_{2}}$,
+ * see ncm_c_HeI_ion_wn_2p_3P2().
+ * 
+ * Returns: Helium-I $2p\,{}^3\\!P_{2}$ ionization energy, $E_{2p\,{}^3\\!P_{2}} = hc\times{}k_{2p\,{}^3\\!P_{2}} \,\left[\mathrm{J}\right]$.
+ */
+/**
+ * ncm_c_HeI_ion_E_2p_3Pmean:
+ *
+ * NIST compilation of atomic spectra see [description][NcmC.description].
+ * 
+ * Ionization energy calculated from the wavenumber $k_{2p\,{}^3\\!P_\mathrm{mean}}$,
+ * see ncm_c_HeI_ion_wn_2p_3Pmean().
+ * 
+ * Returns: Helium-I $2p\,{}^3\\!P_\mathrm{mean}$ ionization energy, $E_{2p\,{}^3\\!P_\mathrm{mean}} = hc\times{}k_{2p\,{}^3\\!P_\mathrm{m}} \,\left[\mathrm{J}\right]$.
  */
 
 /* Lyman series wavenumber: wn */
@@ -1042,6 +1152,15 @@ ncm_c_class_init (NcmCClass *klass)
  * Returns: $k_{2s\,{}^1\\!S_{0}}^\mathrm{Ly} = 1.66277440141 \times 10^7 \,\left[\mathrm{m}^{-1}\right]$.
  */
 /**
+ * ncm_c_HeI_Lyman_wn_2s_3S1:
+ *
+ * NIST compilation of atomic spectra see [description][NcmC.description].
+ * 
+ * Lyman emission wavenumber for the $2s\,{}^3\\!S_{1} \to 1s\,{}^1\\!S_{0}$ transition $k_{2s\,{}^3\\!S_{1}}^\mathrm{Ly}$.  
+ * 
+ * Returns: $k_{2s\,{}^3\\!S_{1}}^\mathrm{Ly} = 1.598559743297 \times 10^7 \,\left[\mathrm{m}^{-1}\right]$.
+ */
+/**
  * ncm_c_HeI_Lyman_wn_2p_1P1:
  *
  * NIST compilation of atomic spectra see [description][NcmC.description].
@@ -1049,6 +1168,44 @@ ncm_c_class_init (NcmCClass *klass)
  * Lyman emission wavenumber for the $2p\,{}^1\\!P_{1} \to 1s\,{}^1\\!S_{0}$ transition $k_{2p\,{}^1\\!P_{1}}^\mathrm{Ly}$.  
  * 
  * Returns: $k_{2p\,{}^1\\!P_{1}}^\mathrm{Ly} = 1.71134896946 \times 10^7 \,\left[\mathrm{m}^{-1}\right]$.
+ */
+/**
+ * ncm_c_HeI_Lyman_wn_2p_3P0:
+ *
+ * NIST compilation of atomic spectra see [description][NcmC.description].
+ * 
+ * Lyman emission wavenumber for the $2p\,{}^3\\!P_{0} \to 1s\,{}^1\\!S_{0}$ transition $k_{2p\,{}^3\\!P_{0}}^\mathrm{Ly}$.  
+ * 
+ * Returns: $k_{2p\,{}^3\\!P_{0}}^\mathrm{Ly} = 1.690878308131 \times 10^7 \,\left[\mathrm{m}^{-1}\right]$.
+ */
+/**
+ * ncm_c_HeI_Lyman_wn_2p_3P1:
+ *
+ * NIST compilation of atomic spectra see [description][NcmC.description].
+ * 
+ * Lyman emission wavenumber for the $2p\,{}^3\\!P_{1} \to 1s\,{}^1\\!S_{0}$ transition $k_{2p\,{}^3\\!P_{1}}^\mathrm{Ly}$.  
+ * 
+ * Returns: $k_{2p\,{}^3\\!P_{1}}^\mathrm{Ly} = 1.690868428979 \times 10^7 \,\left[\mathrm{m}^{-1}\right]$.
+ */
+/**
+ * ncm_c_HeI_Lyman_wn_2p_3P2:
+ *
+ * NIST compilation of atomic spectra see [description][NcmC.description].
+ * 
+ * Lyman emission wavenumber for the $2p\,{}^3\\!P_{2} \to 1s\,{}^1\\!S_{0}$ transition $k_{2p\,{}^3\\!P_{2}}^\mathrm{Ly}$.  
+ * 
+ * Returns: $k_{2p\,{}^3\\!P_{2}}^\mathrm{Ly} = 1.690867664725 \times 10^7 \,\left[\mathrm{m}^{-1}\right]$.
+ */
+/**
+ * ncm_c_HeI_Lyman_wn_2p_3Pmean:
+ *
+ * NIST compilation of atomic spectra see [description][NcmC.description].
+ * 
+ * Mean Lyman emission wavenumber for the $2p\,{}^3\\!P_{*}$, i.e., 
+ * $k_{2p\,{}^3\\!P_\mathrm{mean}}^\mathrm{Ly} = \left(k_{2p\,{}^3\\!P_{0}}^\mathrm{Ly} + k_{2p\,{}^3\\!P_{1}}^\mathrm{Ly} + k_{2p\,{}^3\\!P_{2}}^\mathrm{Ly}\right) / 3$.
+ * See ncm_c_HeI_Lyman_wn_2p_3P0(), ncm_c_HeI_Lyman_wn_2p_3P1() and ncm_c_HeI_Lyman_wn_2p_3P2(). 
+ * 
+ * Returns: $k_{2p\,{}^3\\!P_\mathrm{mean}}^\mathrm{Ly} \,\left[\mathrm{m}^{-1}\right]$.
  */
 
 /* Lyman series wavelength: wl */
@@ -1065,6 +1222,17 @@ ncm_c_class_init (NcmCClass *klass)
  * Returns: Wavelength for the $2s\,{}^1\\!S_{0} \to 1s\,{}^1\\!S_{0}$ transition, $\lambda_{2s\,{}^1\\!S_{0}}^\mathrm{Ly} \,\left[\mathrm{m}\right]$.
  */
 /**
+ * ncm_c_HeI_Lyman_wl_2s_3S1:
+ *
+ * NIST compilation of atomic spectra see [description][NcmC.description].
+ * 
+ * Wavelength for the $2s\,{}^3\\!S_{1} \to 1s\,{}^1\\!S_{0}$ transition 
+ * $\lambda_{2s\,{}^3\\!S_{1}}^\mathrm{Ly} = \left(k_{2s\,{}^3\\!S_{1}}^\mathrm{Ly}\right)^{-1}$,
+ * see ncm_c_HeI_Lyman_wn_2s_3S1().
+ *
+ * Returns: Wavelength for the $2s\,{}^3\\!S_{1} \to 1s\,{}^1\\!S_{0}$ transition, $\lambda_{2s\,{}^3\\!S_{1}}^\mathrm{Ly} \,\left[\mathrm{m}\right]$.
+ */
+/**
  * ncm_c_HeI_Lyman_wl_2p_1P1:
  *
  * NIST compilation of atomic spectra see [description][NcmC.description].
@@ -1074,6 +1242,50 @@ ncm_c_class_init (NcmCClass *klass)
  * see ncm_c_HeI_Lyman_wn_2p_1P1().
  *
  * Returns: Wavelength for the $2p\,{}^1\\!P_{1} \to 1s\,{}^1\\!S_{0}$ transition, $\lambda_{2p\,{}^1\\!P_{1}}^\mathrm{Ly} \,\left[\mathrm{m}\right]$.
+ */
+/**
+ * ncm_c_HeI_Lyman_wl_2p_3P0:
+ *
+ * NIST compilation of atomic spectra see [description][NcmC.description].
+ * 
+ * Wavelength for the $2p\,{}^3\\!P_{0} \to 1s\,{}^1\\!S_{0}$ transition 
+ * $\lambda_{2p\,{}^3\\!P_{0}}^\mathrm{Ly} = \left(k_{2p\,{}^3\\!P_{0}}^\mathrm{Ly}\right)^{-1}$,
+ * see ncm_c_HeI_Lyman_wn_2p_3P0().
+ *
+ * Returns: Wavelength for the $2p\,{}^3\\!P_{0} \to 1s\,{}^1\\!S_{0}$ transition, $\lambda_{2p\,{}^3\\!P_{0}}^\mathrm{Ly} \,\left[\mathrm{m}\right]$.
+ */
+/**
+ * ncm_c_HeI_Lyman_wl_2p_3P1:
+ *
+ * NIST compilation of atomic spectra see [description][NcmC.description].
+ * 
+ * Wavelength for the $2p\,{}^3\\!P_{1} \to 1s\,{}^1\\!S_{0}$ transition 
+ * $\lambda_{2p\,{}^3\\!P_{1}}^\mathrm{Ly} = \left(k_{2p\,{}^3\\!P_{1}}^\mathrm{Ly}\right)^{-1}$,
+ * see ncm_c_HeI_Lyman_wn_2p_3P1().
+ *
+ * Returns: Wavelength for the $2p\,{}^3\\!P_{1} \to 1s\,{}^1\\!S_{0}$ transition, $\lambda_{2p\,{}^3\\!P_{1}}^\mathrm{Ly} \,\left[\mathrm{m}\right]$.
+ */
+/**
+ * ncm_c_HeI_Lyman_wl_2p_3P2:
+ *
+ * NIST compilation of atomic spectra see [description][NcmC.description].
+ * 
+ * Wavelength for the $2p\,{}^3\\!P_{2} \to 1s\,{}^1\\!S_{0}$ transition 
+ * $\lambda_{2p\,{}^3\\!P_{2}}^\mathrm{Ly} = \left(k_{2p\,{}^3\\!P_{2}}^\mathrm{Ly}\right)^{-1}$,
+ * see ncm_c_HeI_Lyman_wn_2p_3P2().
+ *
+ * Returns: Wavelength for the $2p\,{}^3\\!P_{2} \to 1s\,{}^1\\!S_{0}$ transition, $\lambda_{2p\,{}^3\\!P_{2}}^\mathrm{Ly} \,\left[\mathrm{m}\right]$.
+ */
+/**
+ * ncm_c_HeI_Lyman_wl_2p_3Pmean:
+ *
+ * NIST compilation of atomic spectra see [description][NcmC.description].
+ * 
+ * Wavelength for the $2p\,{}^3\\!P_\mathrm{mean} \to 1s\,{}^1\\!S_{0}$ transition 
+ * $\lambda_{2p\,{}^3\\!P_\mathrm{mean}}^\mathrm{Ly} = \left(k_{2p\,{}^3\\!P_\mathrm{mean}}^\mathrm{Ly}\right)^{-1}$,
+ * see ncm_c_HeI_Lyman_wn_2p_3Pmean().
+ *
+ * Returns: Wavelength for the $2p\,{}^3\\!P_\mathrm{mean} \to 1s\,{}^1\\!S_{0}$ transition, $\lambda_{2p\,{}^3\\!P_\mathrm{mean}}^\mathrm{Ly} \,\left[\mathrm{m}\right]$.
  */
 
 /* Lyman series factor: wl^3 / (8pi) */
@@ -1089,6 +1301,16 @@ ncm_c_class_init (NcmCClass *klass)
  * Returns: Effective volume $V^\mathrm{Ly}_{2s\,{}^1\\!S_{0}} \,\left[\mathrm{m}^3\right]$.
  */
 /**
+ * ncm_c_HeI_Lyman_wl3_8pi_2s_3S1:
+ *
+ * NIST compilation of atomic spectra see [description][NcmC.description].
+ * 
+ * Effective volume of the Lyman wavelength $V^\mathrm{Ly}_{2s\,{}^3\\!S_{1}} = \left(\lambda_{2s\,{}^3\\!S_{1}}^\mathrm{Ly}\right)^{3} / (8\pi)$,
+ * see ncm_c_HeI_Lyman_wl_2s_3S1().
+ *
+ * Returns: Effective volume $V^\mathrm{Ly}_{2s\,{}^3\\!S_{1}} \,\left[\mathrm{m}^3\right]$.
+ */
+/**
  * ncm_c_HeI_Lyman_wl3_8pi_2p_1P1:
  *
  * NIST compilation of atomic spectra see [description][NcmC.description].
@@ -1097,6 +1319,46 @@ ncm_c_class_init (NcmCClass *klass)
  * see ncm_c_HeI_Lyman_wl_2p_1P1().
  *
  * Returns: Effective volume $V^\mathrm{Ly}_{2p\,{}^1\\!P_{1}} \,\left[\mathrm{m}^3\right]$.
+ */
+/**
+ * ncm_c_HeI_Lyman_wl3_8pi_2p_3P0:
+ *
+ * NIST compilation of atomic spectra see [description][NcmC.description].
+ * 
+ * Effective volume of the Lyman wavelength $V^\mathrm{Ly}_{2p\,{}^3\\!P_{0}} = \left(\lambda_{2p\,{}^3\\!P_{0}}^\mathrm{Ly}\right)^{3} / (8\pi)$,
+ * see ncm_c_HeI_Lyman_wl_2p_3P0().
+ *
+ * Returns: Effective volume $V^\mathrm{Ly}_{2p\,{}^3\\!P_{0}} \,\left[\mathrm{m}^3\right]$.
+ */
+/**
+ * ncm_c_HeI_Lyman_wl3_8pi_2p_3P1:
+ *
+ * NIST compilation of atomic spectra see [description][NcmC.description].
+ * 
+ * Effective volume of the Lyman wavelength $V^\mathrm{Ly}_{2p\,{}^3\\!P_{1}} = \left(\lambda_{2p\,{}^3\\!P_{1}}^\mathrm{Ly}\right)^{3} / (8\pi)$,
+ * see ncm_c_HeI_Lyman_wl_2p_3P1().
+ *
+ * Returns: Effective volume $V^\mathrm{Ly}_{2p\,{}^3\\!P_{1}} \,\left[\mathrm{m}^3\right]$.
+ */
+/**
+ * ncm_c_HeI_Lyman_wl3_8pi_2p_3P2:
+ *
+ * NIST compilation of atomic spectra see [description][NcmC.description].
+ * 
+ * Effective volume of the Lyman wavelength $V^\mathrm{Ly}_{2p\,{}^3\\!P_{2}} = \left(\lambda_{2p\,{}^3\\!P_{2}}^\mathrm{Ly}\right)^{3} / (8\pi)$,
+ * see ncm_c_HeI_Lyman_wl_2p_3P2().
+ *
+ * Returns: Effective volume $V^\mathrm{Ly}_{2p\,{}^3\\!P_{2}} \,\left[\mathrm{m}^3\right]$.
+ */
+/**
+ * ncm_c_HeI_Lyman_wl3_8pi_2p_3Pmean:
+ *
+ * NIST compilation of atomic spectra see [description][NcmC.description].
+ * 
+ * Effective volume of the Lyman wavelength $V^\mathrm{Ly}_{2p\,{}^3\\!P_\mathrm{mean}} = \left(\lambda_{2p\,{}^3\\!P_\mathrm{mean}}^\mathrm{Ly}\right)^{3} / (8\pi)$,
+ * see ncm_c_HeI_Lyman_wl_2p_3Pmean().
+ *
+ * Returns: Effective volume $V^\mathrm{Ly}_{2p\,{}^3\\!P_\mathrm{mean}} \,\left[\mathrm{m}^3\right]$.
  */
 
 /* Boltzmann factor */
@@ -1126,6 +1388,18 @@ ncm_c_class_init (NcmCClass *klass)
  * Returns: Boltzmann factor $B_{2s\,{}^1\\!S_{0}}(T) \,\left[\mathrm{m}^3\,\mathrm{K}^{-3/2}\right]$.
  */
 /**
+ * ncm_c_boltzmann_factor_HeI_2s_3S1:
+ * @T: temperature $T$
+ *
+ * NIST compilation of atomic spectra see [description][NcmC.description].
+ * 
+ * Calculates the Boltzmann factor $B_{2s\,{}^3\\!S_{1}}(T) = k_\mathrm{e}^3 T^{-3/2}\,\exp\left[-E_{2s\,{}^3\\!S_{1}} / (k_\mathrm{B}T)\right]$,
+ * for the $2s\,{}^3\\!S_{1}$ helium energy level, see 
+ * ncm_c_HeI_ion_E_2s_3S1() and ncm_c_thermal_wn_e().
+ * 
+ * Returns: Boltzmann factor $B_{2s\,{}^3\\!S_{1}}(T) \,\left[\mathrm{m}^3\,\mathrm{K}^{-3/2}\right]$.
+ */
+/**
  * ncm_c_boltzmann_factor_HeI_2p_1P1:
  * @T: temperature $T$
  *
@@ -1137,33 +1411,103 @@ ncm_c_class_init (NcmCClass *klass)
  * 
  * Returns: Boltzmann factor $B_{2p\,{}^1\\!P_{1}}(T) \,\left[\mathrm{m}^3\,\mathrm{K}^{-3/2}\right]$.
  */
+/**
+ * ncm_c_boltzmann_factor_HeI_2p_3P0:
+ * @T: temperature $T$
+ *
+ * NIST compilation of atomic spectra see [description][NcmC.description].
+ * 
+ * Calculates the Boltzmann factor $B_{2p\,{}^3\\!P_{0}}(T) = k_\mathrm{e}^3 T^{-3/2}\,\exp\left[-E_{2p\,{}^3\\!P_{0}} / (k_\mathrm{B}T)\right]$,
+ * for the $2p\,{}^3\\!P_{0}$ helium energy level, see 
+ * ncm_c_HeI_ion_E_2p_3P0() and ncm_c_thermal_wn_e().
+ * 
+ * Returns: Boltzmann factor $B_{2p\,{}^3\\!P_{0}}(T) \,\left[\mathrm{m}^3\,\mathrm{K}^{-3/2}\right]$.
+ */
+/**
+ * ncm_c_boltzmann_factor_HeI_2p_3P1:
+ * @T: temperature $T$
+ *
+ * NIST compilation of atomic spectra see [description][NcmC.description].
+ * 
+ * Calculates the Boltzmann factor $B_{2p\,{}^3\\!P_{1}}(T) = k_\mathrm{e}^3 T^{-3/2}\,\exp\left[-E_{2p\,{}^3\\!P_{1}} / (k_\mathrm{B}T)\right]$,
+ * for the $2p\,{}^3\\!P_{1}$ helium energy level, see 
+ * ncm_c_HeI_ion_E_2p_3P1() and ncm_c_thermal_wn_e().
+ * 
+ * Returns: Boltzmann factor $B_{2p\,{}^3\\!P_{1}}(T) \,\left[\mathrm{m}^3\,\mathrm{K}^{-3/2}\right]$.
+ */
+/**
+ * ncm_c_boltzmann_factor_HeI_2p_3P2:
+ * @T: temperature $T$
+ *
+ * NIST compilation of atomic spectra see [description][NcmC.description].
+ * 
+ * Calculates the Boltzmann factor $B_{2p\,{}^3\\!P_{2}}(T) = k_\mathrm{e}^3 T^{-3/2}\,\exp\left[-E_{2p\,{}^3\\!P_{2}} / (k_\mathrm{B}T)\right]$,
+ * for the $2p\,{}^3\\!P_{2}$ helium energy level, see 
+ * ncm_c_HeI_ion_E_2p_3P2() and ncm_c_thermal_wn_e().
+ * 
+ * Returns: Boltzmann factor $B_{2p\,{}^3\\!P_{2}}(T) \,\left[\mathrm{m}^3\,\mathrm{K}^{-3/2}\right]$.
+ */
+/**
+ * ncm_c_boltzmann_factor_HeI_2p_3Pmean:
+ * @T: temperature $T$
+ *
+ * NIST compilation of atomic spectra see [description][NcmC.description].
+ * 
+ * Calculates the Boltzmann factor $B_{2p\,{}^3\\!P_\mathrm{mean}}(T) = k_\mathrm{e}^3 T^{-3/2}\,\exp\left[-E_{2p\,{}^3\\!P_\mathrm{mean}} / (k_\mathrm{B}T)\right]$,
+ * for the $2p\,{}^3\\!P_\mathrm{mean}$ helium energy level, see 
+ * ncm_c_HeI_ion_E_2p_3Pmean() and ncm_c_thermal_wn_e().
+ * 
+ * Returns: Boltzmann factor $B_{2p\,{}^3\\!P_\mathrm{mean}}(T) \,\left[\mathrm{m}^3\,\mathrm{K}^{-3/2}\right]$.
+ */
 
 /* Balmer series wavenumber: wn */
 
 /**
- * ncm_c_HeI_Balmer_wn_2p_1P1:
+ * ncm_c_HeI_Balmer_wn_2p_1P1_2s_1S0:
  *
  * NIST compilation of atomic spectra see [description][NcmC.description].
  * 
- * Balmer emission wavenumber for the $2p\,{}^1\\!P_{1} \to 2s\,{}^1\\!S_{0}$ transition $k_{2p\,{}^1\\!P_{1}}^\mathrm{Ba}$,
+ * Balmer emission wavenumber for the $2p\,{}^1\\!P_{1} \to 2s\,{}^1\\!S_{0}$ transition $k_{2p\,{}^1\\!P_{1}}^{2s\,{}^1\\!S_{0}}$,
  * calculated from the difference between the Lyman lines $2s\,{}^1\\!S_{0}$ state and the 
  * corresponding Lyman wavenumber, i.e., 
- * $k_{2p\,{}^1\\!P_{1}}^\mathrm{Ba} = k_{2p\,{}^1\\!P_{1}}^\mathrm{Ly} - k_{2s\,{}^1\\!S_{0}}^\mathrm{Ly}$.
+ * $k_{2p\,{}^1\\!P_{1}}^{2s\,{}^1\\!S_{0}} = k_{2p\,{}^1\\!P_{1}}^\mathrm{Ly} - k_{2s\,{}^1\\!S_{0}}^\mathrm{Ly}$.
  * 
- * Returns: $k_{2p\,{}^1\\!P_{1}}^\mathrm{Ba} \,\left[\mathrm{m}^{-1}\right]$.
+ * Returns: $k_{2p\,{}^1\\!P_{1}}^{2s\,{}^1\\!S_{0}} \,\left[\mathrm{m}^{-1}\right]$.
+ */
+/**
+ * ncm_c_HeI_Balmer_wn_2p_3Pmean_2s_3S1:
+ *
+ * NIST compilation of atomic spectra see [description][NcmC.description].
+ * 
+ * Balmer emission wavenumber for the $2p\,{}^3\\!P_\mathrm{mean} \to 2s\,{}^3\\!S_{1}$ transition $k_{2p\,{}^3\\!P_\mathrm{mean}}^{2s\,{}^3\\!S_{1}}$,
+ * calculated from the difference between the Lyman lines $2s\,{}^1\\!S_{0}$ state and the 
+ * corresponding Lyman wavenumber, i.e., 
+ * $k_{2p\,{}^3\\!P_\mathrm{mean}}^{2s\,{}^3\\!S_{1}} = k_{2p\,{}^3\\!P_\mathrm{mean}}^\mathrm{Ly} - k_{2s\,{}^3\\!S_{1}}^\mathrm{Ly}$.
+ * 
+ * Returns: $k_{2p\,{}^3\\!P_\mathrm{mean}}^{2s\,{}^3\\!S_{1}} \,\left[\mathrm{m}^{-1}\right]$.
  */
 
 /* Balmer series: E / k_B */
 
 /**
- * ncm_c_HeI_Balmer_E_kb_2p_1P1:
+ * ncm_c_HeI_Balmer_E_kb_2p_1P1_2s_1S0:
  *
  * NIST compilation of atomic spectra see [description][NcmC.description].
  * 
- * Balmer emission energy $E_{2p\,{}^1\\!P_{1}}^\mathrm{Ba} = hc\times{}k_{2p\,{}^1\\!P_{1}}^\mathrm{Ba}$
+ * Balmer emission energy $E_{2p\,{}^1\\!P_{1}}^{2s\,{}^1\\!S_{0}} = hc\times{}k_{2p\,{}^1\\!P_{1}}^{2s\,{}^1\\!S_{0}}$
  * over $k_\mathrm{B}$.
  *
- * Returns: $E_{2p\,{}^1\\!P_{1}}^\mathrm{Ba} / k_\mathrm{B}$.
+ * Returns: $E_{2p\,{}^1\\!P_{1}}^{2s\,{}^1\\!S_{0}} / k_\mathrm{B}$.
+ */
+/**
+ * ncm_c_HeI_Balmer_E_kb_2p_3Pmean_2s_3S1:
+ *
+ * NIST compilation of atomic spectra see [description][NcmC.description].
+ * 
+ * Balmer emission energy $E_{2p\,{}^3\\!P_\mathrm{mean}}^{2s\,{}^3\\!S_{1}} = hc\times{}k_{2p\,{}^3\\!P_\mathrm{mean}}^{2s\,{}^3\\!S_{1}}$
+ * over $k_\mathrm{B}$.
+ *
+ * Returns: $E_{2p\,{}^3\\!P_\mathrm{mean}}^{2s\,{}^3\\!S_{1}} / k_\mathrm{B}$.
  */
 
 /*******************************************************************************
