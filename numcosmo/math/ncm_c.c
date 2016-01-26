@@ -654,7 +654,7 @@ ncm_c_class_init (NcmCClass *klass)
 /* Ionization energy wavenumber: wn */
 
 /**
- * ncm_c_H_ion_wn_1s_2S0_5:
+ * ncm_c_HI_ion_wn_1s_2S0_5:
  *
  * NIST compilation of atomic spectra see [description][NcmC.description].
  * 
@@ -663,49 +663,49 @@ ncm_c_class_init (NcmCClass *klass)
  * Returns: Hydrogen $1s\,{}^2\\!S_{1/2}$ ionization energy wavelength, $k_{1s\,{}^2\\!S_{1/2}} = 1.0967877174307 \times 10^{7} \,\left[\mathrm{m}^{-1}\right]$.
  */
 /**
- * ncm_c_H_ion_wn_2s_2S0_5:
+ * ncm_c_HI_ion_wn_2s_2S0_5:
  *
  * NIST compilation of atomic spectra see [description][NcmC.description].
  * 
  * Ionization energy wavenumber for H-I $2s\,{}^2\\!S_{1/2}$ state calculated 
  * from the difference between the first state and the corresponding Lyman
  * wavenumber, i.e., $k_{2s\,{}^2\\!S_{1/2}} = k_{1s\,{}^2\\!S_{1/2}} - k_{2s\,{}^2\\!S_{1/2}}^\mathrm{Ly}$,
- * see ncm_c_H_Lyman_wn_2s_2S0_5().
+ * see ncm_c_HI_Lyman_wn_2s_2S0_5().
  * 
  * Returns: Hydrogen $2s\,{}^2\\!S_{1/2}$ ionization energy wavelength, $k_{2s\,{}^2\\!S_{1/2}} \,\left[\mathrm{m}^{-1}\right]$.
  */
 /**
- * ncm_c_H_ion_wn_2p_2P0_5:
+ * ncm_c_HI_ion_wn_2p_2P0_5:
  *
  * NIST compilation of atomic spectra see [description][NcmC.description].
  * 
  * Ionization energy wavenumber for H-I $2p\,{}^2\\!P_{1/2}$ state calculated 
  * from the difference between the first state and the corresponding Lyman
  * wavenumber, i.e., $k_{2p\,{}^2\\!P_{1/2}} = k_{1s\,{}^2\\!S_{1/2}} - k_{2p\,{}^2\\!P_{1/2}}^\mathrm{Ly}$,
- * see ncm_c_H_Lyman_wn_2p_2P0_5().
+ * see ncm_c_HI_Lyman_wn_2p_2P0_5().
  * 
  * Returns: Hydrogen $2p\,{}^2\\!P_{1/2}$ ionization energy wavelength, $k_{2p\,{}^2\\!P_{1/2}} \,\left[\mathrm{m}^{-1}\right]$.
  */
 /**
- * ncm_c_H_ion_wn_2p_2P3_5:
+ * ncm_c_HI_ion_wn_2p_2P3_5:
  *
  * NIST compilation of atomic spectra see [description][NcmC.description].
  * 
  * Ionization energy wavenumber for H-I $2p\,{}^2\\!P_{3/2}$ state calculated 
  * from the difference between the first state and the corresponding Lyman
  * wavenumber, i.e., $k_{2p\,{}^2\\!P_{3/2}} = k_{1s\,{}^2\\!S_{3/2}} - k_{2p\,{}^2\\!P_{3/2}}^\mathrm{Ly}$,
- * see ncm_c_H_Lyman_wn_2p_2P3_5().
+ * see ncm_c_HI_Lyman_wn_2p_2P3_5().
  * 
  * Returns: Hydrogen $2p\,{}^2\\!P_{3/2}$ ionization energy wavelength, $k_{2p\,{}^2\\!P_{3/2}} \,\left[\mathrm{m}^{-1}\right]$.
  */
 /**
- * ncm_c_H_ion_wn_2p_2Pmean:
+ * ncm_c_HI_ion_wn_2p_2Pmean:
  *
  * NIST compilation of atomic spectra see [description][NcmC.description].
  * 
  * The mean ionization energy wavenumber for H-I $2p\,{}^2\\!P_{1/2}$ and 
  * $2p\,{}^2\\!P_{3/2}$ states , i.e., $k_{2p\,{}^2\\!P_\mathrm{mean}} = (k_{2p\,{}^2\\!P_{1/2}} + k_{2p\,{}^2\\!P_{3/2}}) / 2$,
- * see ncm_c_H_Lyman_wn_2p_2Pmean().
+ * see ncm_c_HI_Lyman_wn_2p_2Pmean().
  * 
  * Returns: Hydrogen states $2p\,{}^2\\!P_{1/2}$ and $2p\,{}^2\\!P_{3/2}$ mean ionization energy wavelength, $k_{2p\,{}^2\\!P_\mathrm{mean}} \,\left[\mathrm{m}^{-1}\right]$.
  */
@@ -713,52 +713,52 @@ ncm_c_class_init (NcmCClass *klass)
 /* Ionization energy: E */
 
 /**
- * ncm_c_H_ion_E_1s_2S0_5:
+ * ncm_c_HI_ion_E_1s_2S0_5:
  *
  * NIST compilation of atomic spectra see [description][NcmC.description].
  * 
  * Ionization energy calculated from the wavenumber $k_{1s\,{}^2\\!S_{1/2}}$,
- * see ncm_c_H_ion_wn_1s_2S0_5().
+ * see ncm_c_HI_ion_wn_1s_2S0_5().
  * 
  * Returns: Hydrogen $1s\,{}^2\\!S_{1/2}$ ionization energy, $E_{1s\,{}^2\\!S_{1/2}} = hc\times{}k_{1s\,{}^2\\!S_{1/2}} \,\left[\mathrm{J}\right]$.
  */
 /**
- * ncm_c_H_ion_E_2s_2S0_5:
+ * ncm_c_HI_ion_E_2s_2S0_5:
  *
  * NIST compilation of atomic spectra see [description][NcmC.description].
  *
  * Ionization energy calculated from the wavenumber $k_{2s\,{}^2\\!S_{1/2}}$,
- * see ncm_c_H_ion_wn_2s_2S0_5().
+ * see ncm_c_HI_ion_wn_2s_2S0_5().
  * 
  * Returns: Hydrogen $2s\,{}^2\\!S_{1/2}$ ionization energy, $E_{2s\,{}^2\\!S_{1/2}} = hc\times{}k_{2s\,{}^2\\!S_{1/2}} \,\left[\mathrm{J}\right]$.
  */
 /**
- * ncm_c_H_ion_E_2p_2P0_5:
+ * ncm_c_HI_ion_E_2p_2P0_5:
  *
  * NIST compilation of atomic spectra see [description][NcmC.description].
  * 
  * Ionization energy calculated from the wavenumber $k_{2p\,{}^2\\!P_{1/2}}$,
- * see ncm_c_H_ion_wn_2p_2P0_5().
+ * see ncm_c_HI_ion_wn_2p_2P0_5().
  *
  * Returns: Hydrogen $2p\,{}^2\\!P_{1/2}$ ionization energy, $E_{2p\,{}^2\\!P_{1/2}} = hc\times{}k_{2p\,{}^2\\!P_{1/2}} \,\left[\mathrm{J}\right]$.
  */
 /**
- * ncm_c_H_ion_E_2p_2P3_5:
+ * ncm_c_HI_ion_E_2p_2P3_5:
  *
  * NIST compilation of atomic spectra see [description][NcmC.description].
  * 
  * Ionization energy calculated from the wavenumber $k_{2p\,{}^2\\!P_{3/2}}$,
- * see ncm_c_H_ion_wn_2p_2P3_5().
+ * see ncm_c_HI_ion_wn_2p_2P3_5().
  *
  * Returns: Hydrogen $2p\,{}^2\\!P_{3/2}$ ionization energy, $E_{2p\,{}^2\\!P_{3/2}} = hc\times{}k_{2p\,{}^2\\!P_{3/2}} \,\left[\mathrm{J}\right]$.
  */
 /**
- * ncm_c_H_ion_E_2p_2Pmean:
+ * ncm_c_HI_ion_E_2p_2Pmean:
  *
  * NIST compilation of atomic spectra see [description][NcmC.description].
  * 
  * Ionization energy calculated from the wavenumber $k_{2p\,{}^2\\!P_\mathrm{mean}}$,
- * see ncm_c_H_ion_wn_2p_2Pmean().
+ * see ncm_c_HI_ion_wn_2p_2Pmean().
  *
  * Returns: Hydrogen $2p\,{}^2\\!P_\mathrm{mean}$ ionization energy, $E_{2p\,{}^2\\!P_\mathrm{mean}} = hc\times{}k_{2p\,{}^2\\!P_\mathrm{mean}} \,\left[\mathrm{J}\right]$.
  */
@@ -766,7 +766,7 @@ ncm_c_class_init (NcmCClass *klass)
 /* Lyman series wavenumber: wn */
 
 /**
- * ncm_c_H_Lyman_wn_2s_2S0_5:
+ * ncm_c_HI_Lyman_wn_2s_2S0_5:
  *
  * NIST compilation of atomic spectra see [description][NcmC.description].
  * 
@@ -775,7 +775,7 @@ ncm_c_class_init (NcmCClass *klass)
  * Returns: $k_{2s\,{}^2\\!S_{1/2}}^\mathrm{Ly} = 8.22589543992821 \times 10^6 \,\left[\mathrm{m}^{-1}\right]$.
  */
 /**
- * ncm_c_H_Lyman_wn_2p_2P0_5:
+ * ncm_c_HI_Lyman_wn_2p_2P0_5:
  *
  * NIST compilation of atomic spectra see [description][NcmC.description].
  * 
@@ -784,7 +784,7 @@ ncm_c_class_init (NcmCClass *klass)
  * Returns: $k_{2p\,{}^2\\!P_{1/2}}^\mathrm{Ly} = 8.22589191133 \times 10^6 \,\left[\mathrm{m}^{-1}\right]$.
  */
 /**
- * ncm_c_H_Lyman_wn_2p_2P3_5:
+ * ncm_c_HI_Lyman_wn_2p_2P3_5:
  *
  * NIST compilation of atomic spectra see [description][NcmC.description].
  * 
@@ -793,7 +793,7 @@ ncm_c_class_init (NcmCClass *klass)
  * Returns: $k_{2p\,{}^2\\!P_{3/2}}^\mathrm{Ly} = 8.22592850014 \times 10^6 \,\left[\mathrm{m}^{-1}\right]$.
  */
 /**
- * ncm_c_H_Lyman_wn_2p_2Pmean:
+ * ncm_c_HI_Lyman_wn_2p_2Pmean:
  *
  * NIST compilation of atomic spectra see [description][NcmC.description].
  * 
@@ -806,46 +806,46 @@ ncm_c_class_init (NcmCClass *klass)
 /* Lyman series wavelength: wl */
 
 /**
- * ncm_c_H_Lyman_wl_2s_2S0_5:
+ * ncm_c_HI_Lyman_wl_2s_2S0_5:
  *
  * NIST compilation of atomic spectra see [description][NcmC.description].
  * 
  * Wavelength for the $2s\,{}^2\\!S_{1/2} \to 1s\,{}^2\\!S_{1/2}$ transition 
  * $\lambda_{2s\,{}^2\\!S_{1/2}}^\mathrm{Ly} = \left(k_{2s\,{}^2\\!S_{1/2}}^\mathrm{Ly}\right)^{-1}$,
- * see ncm_c_H_Lyman_wn_2s_2S0_5().
+ * see ncm_c_HI_Lyman_wn_2s_2S0_5().
  *
  * Returns: Wavelength for the $2s\,{}^2\\!S_{1/2} \to 1s\,{}^2\\!S_{1/2}$ transition, $\lambda_{2s\,{}^2\\!S_{1/2}}^\mathrm{Ly} \,\left[\mathrm{m}\right]$.
  */
 /**
- * ncm_c_H_Lyman_wl_2p_2P0_5:
+ * ncm_c_HI_Lyman_wl_2p_2P0_5:
  *
  * NIST compilation of atomic spectra see [description][NcmC.description].
  * 
  * Wavelength for the $2p\,{}^2\\!P_{1/2} \to 1s\,{}^2\\!S_{1/2}$ transition 
  * $\lambda_{2p\,{}^2\\!P_{1/2}}^\mathrm{Ly} = \left(k_{2p\,{}^2\\!P_{1/2}}^\mathrm{Ly}\right)^{-1}$,
- * see ncm_c_H_Lyman_wn_2p_2P0_5().
+ * see ncm_c_HI_Lyman_wn_2p_2P0_5().
  *
  * Returns: Wavelength for the $2p\,{}^2\\!P_{1/2} \to 1s\,{}^2\\!S_{1/2}$ transition, $\lambda_{2p\,{}^2\\!P_{1/2}}^\mathrm{Ly} \,\left[\mathrm{m}\right]$.
  */
 /**
- * ncm_c_H_Lyman_wl_2p_2P3_5:
+ * ncm_c_HI_Lyman_wl_2p_2P3_5:
  *
  * NIST compilation of atomic spectra see [description][NcmC.description].
  * 
  * Wavelength for the $2p\,{}^2\\!P_{3/2} \to 1s\,{}^2\\!S_{1/2}$ transition 
  * $\lambda_{2p\,{}^2\\!P_{3/2}}^\mathrm{Ly} = \left(k_{2p\,{}^2\\!P_{3/2}}^\mathrm{Ly}\right)^{-1}$,
- * see ncm_c_H_Lyman_wn_2p_2P3_5().
+ * see ncm_c_HI_Lyman_wn_2p_2P3_5().
  *
  * Returns: Wavelength for the $2p\,{}^2\\!P_{3/2} \to 1s\,{}^2\\!S_{1/2}$ transition, $\lambda_{2p\,{}^2\\!P_{3/2}}^\mathrm{Ly} \,\left[\mathrm{m}\right]$.
  */
 /**
- * ncm_c_H_Lyman_wl_2p_2Pmean:
+ * ncm_c_HI_Lyman_wl_2p_2Pmean:
  *
  * NIST compilation of atomic spectra see [description][NcmC.description].
  * 
  * Wavelength for the $2p\,{}^2\\!P_\mathrm{mean} \to 1s\,{}^2\\!S_{1/2}$ transition 
  * $\lambda_{2p\,{}^2\\!P_\mathrm{mean}}^\mathrm{Ly} = \left(k_{2p\,{}^2\\!P_\mathrm{mean}}^\mathrm{Ly}\right)^{-1}$,
- * see ncm_c_H_Lyman_wn_2p_2Pmean().
+ * see ncm_c_HI_Lyman_wn_2p_2Pmean().
  *
  * Returns: Wavelength for the $2p\,{}^2\\!P_\mathrm{mean} \to 1s\,{}^2\\!S_{1/2}$ transition, $\lambda_{2p\,{}^2\\!P_\mathrm{mean}}^\mathrm{Ly} \,\left[\mathrm{m}\right]$.
  */
@@ -853,42 +853,42 @@ ncm_c_class_init (NcmCClass *klass)
 /* Lyman series factor: wl^3 / (8pi) */
 
 /**
- * ncm_c_H_Lyman_wl3_8pi_2s_2S0_5:
+ * ncm_c_HI_Lyman_wl3_8pi_2s_2S0_5:
  *
  * NIST compilation of atomic spectra see [description][NcmC.description].
  * 
  * Effective volume of the Lyman wavelength $V^\mathrm{Ly}_{2s\,{}^2\\!S_{1/2}} = \left(\lambda_{2s\,{}^2\\!S_{1/2}}^\mathrm{Ly}\right)^{3} / (8\pi)$,
- * see ncm_c_H_Lyman_wl_2s_2S0_5().
+ * see ncm_c_HI_Lyman_wl_2s_2S0_5().
  *
  * Returns: Effective volume $V^\mathrm{Ly}_{2s\,{}^2\\!S_{1/2}} \,\left[\mathrm{m}^3\right]$.
  */
 /**
- * ncm_c_H_Lyman_wl3_8pi_2p_2P0_5:
+ * ncm_c_HI_Lyman_wl3_8pi_2p_2P0_5:
  *
  * NIST compilation of atomic spectra see [description][NcmC.description].
  * 
  * Effective volume of the Lyman wavelength $V^\mathrm{Ly}_{2p\,{}^2\\!P_{1/2}} = \left(\lambda_{2p\,{}^2\\!P_{1/2}}^\mathrm{Ly}\right)^{3} / (8\pi)$,
- * see ncm_c_H_Lyman_wl_2p_2P0_5().
+ * see ncm_c_HI_Lyman_wl_2p_2P0_5().
  *
  * Returns: Effective volume $V^\mathrm{Ly}_{2p\,{}^2\\!P_{1/2}} \,\left[\mathrm{m}^3\right]$.
  */
 /**
- * ncm_c_H_Lyman_wl3_8pi_2p_2P3_5:
+ * ncm_c_HI_Lyman_wl3_8pi_2p_2P3_5:
  *
  * NIST compilation of atomic spectra see [description][NcmC.description].
  * 
  * Effective volume of the Lyman wavelength $V^\mathrm{Ly}_{2p\,{}^2\\!P_{3/2}} = \left(\lambda_{2p\,{}^2\\!P_{3/2}}^\mathrm{Ly}\right)^{3} / (8\pi)$,
- * see ncm_c_H_Lyman_wl_2p_2P3_5().
+ * see ncm_c_HI_Lyman_wl_2p_2P3_5().
  *
  * Returns: Effective volume $V^\mathrm{Ly}_{2p\,{}^2\\!P_{3/2}} \,\left[\mathrm{m}^3\right]$.
  */
 /**
- * ncm_c_H_Lyman_wl3_8pi_2p_2Pmean:
+ * ncm_c_HI_Lyman_wl3_8pi_2p_2Pmean:
  *
  * NIST compilation of atomic spectra see [description][NcmC.description].
  * 
  * Effective volume of the Lyman wavelength $V^\mathrm{Ly}_{2p\,{}^2\\!P_\mathrm{mean}} = \left(\lambda_{2p\,{}^2\\!P_\mathrm{mean}}^\mathrm{Ly}\right)^{3} / (8\pi)$,
- * see ncm_c_H_Lyman_wl_2p_2Pmean().
+ * see ncm_c_HI_Lyman_wl_2p_2Pmean().
  *
  * Returns: Effective volume $V^\mathrm{Ly}_{2p\,{}^2\\!P_\mathrm{mean}} \,\left[\mathrm{m}^3\right]$.
  */
@@ -896,62 +896,62 @@ ncm_c_class_init (NcmCClass *klass)
 /* Boltzmann factor */
 
 /**
- * ncm_c_boltzmann_factor_H_1s_2S0_5:
+ * ncm_c_boltzmann_factor_HI_1s_2S0_5:
  * @T: temperature $T$
  *
  * NIST compilation of atomic spectra see [description][NcmC.description].
  * 
  * Calculates the Boltzmann factor $B_{1s\,{}^2\\!S_{1/2}}(T) = k_\mathrm{e}^3 T^{-3/2}\,\exp\left[-E_{1s\,{}^2\\!S_{1/2}} / (k_\mathrm{B}T)\right]$,
  * for the $1s\,{}^2\\!S_{1/2}$ hydrogen energy level, see 
- * ncm_c_H_ion_E_1s_2S0_5() and ncm_c_thermal_wn_e().
+ * ncm_c_HI_ion_E_1s_2S0_5() and ncm_c_thermal_wn_e().
  * 
  * Returns: Boltzmann factor $B_{1s\,{}^2\\!S_{1/2}}(T) \,\left[\mathrm{m}^3\,\mathrm{K}^{-3/2}\right]$.
  */
 /**
- * ncm_c_boltzmann_factor_H_2s_2S0_5:
+ * ncm_c_boltzmann_factor_HI_2s_2S0_5:
  * @T: temperature $T$
  *
  * NIST compilation of atomic spectra see [description][NcmC.description].
  * 
  * Calculates the Boltzmann factor $B_{2s\,{}^2\\!S_{1/2}}(T) = k_\mathrm{e}^3 T^{-3/2}\,\exp\left[-E_{2s\,{}^2\\!S_{1/2}} / (k_\mathrm{B}T)\right]$,
  * for the $2s\,{}^2\\!S_{1/2}$ hydrogen energy level, see 
- * ncm_c_H_ion_E_2s_2S0_5() and ncm_c_thermal_wn_e().
+ * ncm_c_HI_ion_E_2s_2S0_5() and ncm_c_thermal_wn_e().
  * 
  * Returns: Boltzmann factor $B_{2s\,{}^2\\!S_{1/2}}(T) \,\left[\mathrm{m}^3\,\mathrm{K}^{-3/2}\right]$.
  */
 /**
- * ncm_c_boltzmann_factor_H_2p_2P0_5:
+ * ncm_c_boltzmann_factor_HI_2p_2P0_5:
  * @T: temperature $T$
  *
  * NIST compilation of atomic spectra see [description][NcmC.description].
  * 
  * Calculates the Boltzmann factor $B_{2p\,{}^2\\!P_{1/2}}(T) = k_\mathrm{e}^3 T^{-3/2}\,\exp\left[-E_{2p\,{}^2\\!P_{1/2}} / (k_\mathrm{B}T)\right]$,
  * for the $2p\,{}^2\\!P_{1/2}$ hydrogen energy level, see 
- * ncm_c_H_ion_E_2p_2P0_5() and ncm_c_thermal_wn_e().
+ * ncm_c_HI_ion_E_2p_2P0_5() and ncm_c_thermal_wn_e().
  * 
  * Returns: Boltzmann factor $B_{2p\,{}^2\\!P_{1/2}}(T) \,\left[\mathrm{m}^3\,\mathrm{K}^{-3/2}\right]$.
  */
 /**
- * ncm_c_boltzmann_factor_H_2p_2P3_5:
+ * ncm_c_boltzmann_factor_HI_2p_2P3_5:
  * @T: temperature $T$
  *
  * NIST compilation of atomic spectra see [description][NcmC.description].
  * 
  * Calculates the Boltzmann factor $B_{2p\,{}^2\\!P_{3/2}}(T) = k_\mathrm{e}^3 T^{-3/2}\,\exp\left[-E_{2p\,{}^2\\!P_{3/2}} / (k_\mathrm{B}T)\right]$,
  * for the $2p\,{}^2\\!P_{3/2}$ hydrogen energy level, see 
- * ncm_c_H_ion_E_2p_2P3_5() and ncm_c_thermal_wn_e().
+ * ncm_c_HI_ion_E_2p_2P3_5() and ncm_c_thermal_wn_e().
  * 
  * Returns: Boltzmann factor $B_{2p\,{}^2\\!P_{3/2}}(T) \,\left[\mathrm{m}^3\,\mathrm{K}^{-3/2}\right]$.
  */
 /**
- * ncm_c_boltzmann_factor_H_2p_2Pmean:
+ * ncm_c_boltzmann_factor_HI_2p_2Pmean:
  * @T: temperature $T$
  *
  * NIST compilation of atomic spectra see [description][NcmC.description].
  * 
  * Calculates the Boltzmann factor $B_{2p\,{}^2\\!P_\mathrm{mean}}(T) = k_\mathrm{e}^3 T^{-3/2}\,\exp\left[-E_{2p\,{}^2\\!P_\mathrm{mean}} / (k_\mathrm{B}T)\right]$,
  * for the $2p\,{}^2\\!P_\mathrm{mean}$ hydrogen energy level, see 
- * ncm_c_H_ion_E_2p_2Pmean() and ncm_c_thermal_wn_e().
+ * ncm_c_HI_ion_E_2p_2Pmean() and ncm_c_thermal_wn_e().
  * 
  * Returns: Boltzmann factor $B_{2p\,{}^2\\!P_\mathrm{mean}}(T) \,\left[\mathrm{m}^3\,\mathrm{K}^{-3/2}\right]$.
  */

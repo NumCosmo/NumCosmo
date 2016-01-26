@@ -359,7 +359,7 @@ nc_cbe_init (NcCBE *cbe)
   cbe->priv->ple.lensing_verbose        = 0;
 
   {
-    guint verbosity = 1;
+    guint verbosity = 0;
     cbe->bg_verbose       = verbosity;
     cbe->thermo_verbose   = verbosity;
     cbe->pert_verbose     = verbosity;
@@ -1508,7 +1508,7 @@ nc_cbe_prepare (NcCBE *cbe, NcHIPrim *prim, NcHICosmo *cosmo)
 
   _nc_cbe_call_thermo (cbe, cosmo);
   cbe->thermodyn_prepared = TRUE;
-  
+
   if (cbe->call != NULL)
   {
     cbe->call (cbe, prim, cosmo);

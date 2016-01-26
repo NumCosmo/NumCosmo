@@ -186,48 +186,48 @@ G_INLINE_FUNC gdouble ncm_c_mass_solar (void) G_GNUC_CONST;
  *******************************************************************************/
 /* Ionization energy wavenumber: wn */
 
-G_INLINE_FUNC gdouble ncm_c_H_ion_wn_1s_2S0_5 (void) G_GNUC_CONST;
-G_INLINE_FUNC gdouble ncm_c_H_ion_wn_2s_2S0_5 (void) G_GNUC_CONST;
-G_INLINE_FUNC gdouble ncm_c_H_ion_wn_2p_2P0_5 (void) G_GNUC_CONST;
-G_INLINE_FUNC gdouble ncm_c_H_ion_wn_2p_2P3_5 (void) G_GNUC_CONST;
-G_INLINE_FUNC gdouble ncm_c_H_ion_wn_2p_2Pmean (void) G_GNUC_CONST;
+G_INLINE_FUNC gdouble ncm_c_HI_ion_wn_1s_2S0_5 (void) G_GNUC_CONST;
+G_INLINE_FUNC gdouble ncm_c_HI_ion_wn_2s_2S0_5 (void) G_GNUC_CONST;
+G_INLINE_FUNC gdouble ncm_c_HI_ion_wn_2p_2P0_5 (void) G_GNUC_CONST;
+G_INLINE_FUNC gdouble ncm_c_HI_ion_wn_2p_2P3_5 (void) G_GNUC_CONST;
+G_INLINE_FUNC gdouble ncm_c_HI_ion_wn_2p_2Pmean (void) G_GNUC_CONST;
 
 /* Ionization energy: E */
 
-G_INLINE_FUNC gdouble ncm_c_H_ion_E_1s_2S0_5 (void) G_GNUC_CONST;
-G_INLINE_FUNC gdouble ncm_c_H_ion_E_2s_2S0_5 (void) G_GNUC_CONST;
-G_INLINE_FUNC gdouble ncm_c_H_ion_E_2p_2P0_5 (void) G_GNUC_CONST;
-G_INLINE_FUNC gdouble ncm_c_H_ion_E_2p_2P3_5 (void) G_GNUC_CONST;
-G_INLINE_FUNC gdouble ncm_c_H_ion_E_2p_2Pmean (void) G_GNUC_CONST;
+G_INLINE_FUNC gdouble ncm_c_HI_ion_E_1s_2S0_5 (void) G_GNUC_CONST;
+G_INLINE_FUNC gdouble ncm_c_HI_ion_E_2s_2S0_5 (void) G_GNUC_CONST;
+G_INLINE_FUNC gdouble ncm_c_HI_ion_E_2p_2P0_5 (void) G_GNUC_CONST;
+G_INLINE_FUNC gdouble ncm_c_HI_ion_E_2p_2P3_5 (void) G_GNUC_CONST;
+G_INLINE_FUNC gdouble ncm_c_HI_ion_E_2p_2Pmean (void) G_GNUC_CONST;
 
 /* Lyman series wavenumber: wn */
 
-G_INLINE_FUNC gdouble ncm_c_H_Lyman_wn_2s_2S0_5 (void) G_GNUC_CONST;
-G_INLINE_FUNC gdouble ncm_c_H_Lyman_wn_2p_2P0_5 (void) G_GNUC_CONST;
-G_INLINE_FUNC gdouble ncm_c_H_Lyman_wn_2p_2P3_5 (void) G_GNUC_CONST;
-G_INLINE_FUNC gdouble ncm_c_H_Lyman_wn_2p_2Pmean (void) G_GNUC_CONST;
+G_INLINE_FUNC gdouble ncm_c_HI_Lyman_wn_2s_2S0_5 (void) G_GNUC_CONST;
+G_INLINE_FUNC gdouble ncm_c_HI_Lyman_wn_2p_2P0_5 (void) G_GNUC_CONST;
+G_INLINE_FUNC gdouble ncm_c_HI_Lyman_wn_2p_2P3_5 (void) G_GNUC_CONST;
+G_INLINE_FUNC gdouble ncm_c_HI_Lyman_wn_2p_2Pmean (void) G_GNUC_CONST;
 
 /* Lyman series wavelength: wl */
 
-G_INLINE_FUNC gdouble ncm_c_H_Lyman_wl_2s_2S0_5 (void) G_GNUC_CONST;
-G_INLINE_FUNC gdouble ncm_c_H_Lyman_wl_2p_2P0_5 (void) G_GNUC_CONST;
-G_INLINE_FUNC gdouble ncm_c_H_Lyman_wl_2p_2P3_5 (void) G_GNUC_CONST;
-G_INLINE_FUNC gdouble ncm_c_H_Lyman_wl_2p_2Pmean (void) G_GNUC_CONST;
+G_INLINE_FUNC gdouble ncm_c_HI_Lyman_wl_2s_2S0_5 (void) G_GNUC_CONST;
+G_INLINE_FUNC gdouble ncm_c_HI_Lyman_wl_2p_2P0_5 (void) G_GNUC_CONST;
+G_INLINE_FUNC gdouble ncm_c_HI_Lyman_wl_2p_2P3_5 (void) G_GNUC_CONST;
+G_INLINE_FUNC gdouble ncm_c_HI_Lyman_wl_2p_2Pmean (void) G_GNUC_CONST;
 
 /* Lyman series factor: wl^3 / (8pi) */
 
-G_INLINE_FUNC gdouble ncm_c_H_Lyman_wl3_8pi_2s_2S0_5 (void) G_GNUC_CONST;
-G_INLINE_FUNC gdouble ncm_c_H_Lyman_wl3_8pi_2p_2P0_5 (void) G_GNUC_CONST;
-G_INLINE_FUNC gdouble ncm_c_H_Lyman_wl3_8pi_2p_2P3_5 (void) G_GNUC_CONST;
-G_INLINE_FUNC gdouble ncm_c_H_Lyman_wl3_8pi_2p_2Pmean (void) G_GNUC_CONST;
+G_INLINE_FUNC gdouble ncm_c_HI_Lyman_wl3_8pi_2s_2S0_5 (void) G_GNUC_CONST;
+G_INLINE_FUNC gdouble ncm_c_HI_Lyman_wl3_8pi_2p_2P0_5 (void) G_GNUC_CONST;
+G_INLINE_FUNC gdouble ncm_c_HI_Lyman_wl3_8pi_2p_2P3_5 (void) G_GNUC_CONST;
+G_INLINE_FUNC gdouble ncm_c_HI_Lyman_wl3_8pi_2p_2Pmean (void) G_GNUC_CONST;
 
 /* Boltzmann factor */
 
-G_INLINE_FUNC gdouble ncm_c_boltzmann_factor_H_1s_2S0_5 (const gdouble T) G_GNUC_CONST;
-G_INLINE_FUNC gdouble ncm_c_boltzmann_factor_H_2s_2S0_5 (const gdouble T) G_GNUC_CONST;
-G_INLINE_FUNC gdouble ncm_c_boltzmann_factor_H_2p_2P0_5 (const gdouble T) G_GNUC_CONST;
-G_INLINE_FUNC gdouble ncm_c_boltzmann_factor_H_2p_2P3_5 (const gdouble T) G_GNUC_CONST;
-G_INLINE_FUNC gdouble ncm_c_boltzmann_factor_H_2p_2Pmean (const gdouble T) G_GNUC_CONST;
+G_INLINE_FUNC gdouble ncm_c_boltzmann_factor_HI_1s_2S0_5 (const gdouble T) G_GNUC_CONST;
+G_INLINE_FUNC gdouble ncm_c_boltzmann_factor_HI_2s_2S0_5 (const gdouble T) G_GNUC_CONST;
+G_INLINE_FUNC gdouble ncm_c_boltzmann_factor_HI_2p_2P0_5 (const gdouble T) G_GNUC_CONST;
+G_INLINE_FUNC gdouble ncm_c_boltzmann_factor_HI_2p_2P3_5 (const gdouble T) G_GNUC_CONST;
+G_INLINE_FUNC gdouble ncm_c_boltzmann_factor_HI_2p_2Pmean (const gdouble T) G_GNUC_CONST;
 
 /*******************************************************************************
  * -- END: Hydrogen I
@@ -601,7 +601,7 @@ G_INLINE_FUNC gdouble ncm_c_mass_3He (void)
 { return ncm_c_mass_3He_u () * ncm_c_mass_atomic (); }
 
 G_INLINE_FUNC gdouble ncm_c_mass_4He (void)
-{ return ncm_c_mass_4He_u () * ncm_c_mass_atomic (); }
+{ return ncm_c_mass_4He_u () * ncm_c_mass_atomic ();}
 
 G_INLINE_FUNC gdouble ncm_c_rest_energy_1H (void)
 { return ncm_c_mass_1H_u () * ncm_c_rest_energy_atomic (); }
@@ -663,101 +663,101 @@ G_INLINE_FUNC gdouble ncm_c_mass_solar (void)
  *******************************************************************************/
 /* Ionization energy wavenumber: wn */
 
-G_INLINE_FUNC gdouble ncm_c_H_ion_wn_1s_2S0_5 (void)
+G_INLINE_FUNC gdouble ncm_c_HI_ion_wn_1s_2S0_5 (void)
 { return 1.0967877174307e7; }
 
-G_INLINE_FUNC gdouble ncm_c_H_ion_wn_2s_2S0_5 (void)
-{ return ncm_c_H_ion_wn_1s_2S0_5 () - ncm_c_H_Lyman_wn_2s_2S0_5 (); }
+G_INLINE_FUNC gdouble ncm_c_HI_ion_wn_2s_2S0_5 (void)
+{ return ncm_c_HI_ion_wn_1s_2S0_5 () - ncm_c_HI_Lyman_wn_2s_2S0_5 (); }
 
-G_INLINE_FUNC gdouble ncm_c_H_ion_wn_2p_2P0_5 (void)
-{ return ncm_c_H_ion_wn_1s_2S0_5 () - ncm_c_H_Lyman_wn_2p_2P0_5 (); }
+G_INLINE_FUNC gdouble ncm_c_HI_ion_wn_2p_2P0_5 (void)
+{ return ncm_c_HI_ion_wn_1s_2S0_5 () - ncm_c_HI_Lyman_wn_2p_2P0_5 (); }
 
-G_INLINE_FUNC gdouble ncm_c_H_ion_wn_2p_2P3_5 (void)
-{ return ncm_c_H_ion_wn_1s_2S0_5 () - ncm_c_H_Lyman_wn_2p_2P3_5 (); }
+G_INLINE_FUNC gdouble ncm_c_HI_ion_wn_2p_2P3_5 (void)
+{ return ncm_c_HI_ion_wn_1s_2S0_5 () - ncm_c_HI_Lyman_wn_2p_2P3_5 (); }
 
-G_INLINE_FUNC gdouble ncm_c_H_ion_wn_2p_2Pmean (void)
-{ return 0.5 * (ncm_c_H_ion_wn_2p_2P0_5 () + ncm_c_H_ion_wn_2p_2P3_5 ()); }
+G_INLINE_FUNC gdouble ncm_c_HI_ion_wn_2p_2Pmean (void)
+{ return 0.5 * (ncm_c_HI_ion_wn_2p_2P0_5 () + ncm_c_HI_ion_wn_2p_2P3_5 ()); }
 
 /* Ionization energy: E */
 
-G_INLINE_FUNC gdouble ncm_c_H_ion_E_1s_2S0_5 (void)
-{ return ncm_c_H_ion_wn_1s_2S0_5 () * ncm_c_hc (); }
+G_INLINE_FUNC gdouble ncm_c_HI_ion_E_1s_2S0_5 (void)
+{ return ncm_c_HI_ion_wn_1s_2S0_5 () * ncm_c_hc (); }
 
-G_INLINE_FUNC gdouble ncm_c_H_ion_E_2s_2S0_5 (void)
-{ return ncm_c_H_ion_wn_2s_2S0_5 () * ncm_c_hc (); }
+G_INLINE_FUNC gdouble ncm_c_HI_ion_E_2s_2S0_5 (void)
+{ return ncm_c_HI_ion_wn_2s_2S0_5 () * ncm_c_hc (); }
 
-G_INLINE_FUNC gdouble ncm_c_H_ion_E_2p_2P0_5 (void)
-{ return ncm_c_H_ion_wn_2p_2P0_5 () * ncm_c_hc (); }
+G_INLINE_FUNC gdouble ncm_c_HI_ion_E_2p_2P0_5 (void)
+{ return ncm_c_HI_ion_wn_2p_2P0_5 () * ncm_c_hc (); }
 
-G_INLINE_FUNC gdouble ncm_c_H_ion_E_2p_2P3_5 (void) 
-{ return ncm_c_H_ion_wn_2p_2P3_5 () * ncm_c_hc (); }
+G_INLINE_FUNC gdouble ncm_c_HI_ion_E_2p_2P3_5 (void) 
+{ return ncm_c_HI_ion_wn_2p_2P3_5 () * ncm_c_hc (); }
 
-G_INLINE_FUNC gdouble ncm_c_H_ion_E_2p_2Pmean (void) 
-{ return ncm_c_H_ion_wn_2p_2Pmean () * ncm_c_hc (); }
+G_INLINE_FUNC gdouble ncm_c_HI_ion_E_2p_2Pmean (void) 
+{ return ncm_c_HI_ion_wn_2p_2Pmean () * ncm_c_hc (); }
 
 /* Lyman series wavenumber: wn */
 
-G_INLINE_FUNC gdouble ncm_c_H_Lyman_wn_2s_2S0_5 (void)
+G_INLINE_FUNC gdouble ncm_c_HI_Lyman_wn_2s_2S0_5 (void)
 { return 8.22589543992821e6; }
 
-G_INLINE_FUNC gdouble ncm_c_H_Lyman_wn_2p_2P0_5 (void)
+G_INLINE_FUNC gdouble ncm_c_HI_Lyman_wn_2p_2P0_5 (void)
 { return 8.22589191133e6; }
 
-G_INLINE_FUNC gdouble ncm_c_H_Lyman_wn_2p_2P3_5 (void)
+G_INLINE_FUNC gdouble ncm_c_HI_Lyman_wn_2p_2P3_5 (void)
 { return 8.22592850014e6; }
 
-G_INLINE_FUNC gdouble ncm_c_H_Lyman_wn_2p_2Pmean (void)
-{ return 0.5 * (ncm_c_H_Lyman_wn_2p_2P0_5 () + ncm_c_H_Lyman_wn_2p_2P3_5 ()); }
+G_INLINE_FUNC gdouble ncm_c_HI_Lyman_wn_2p_2Pmean (void)
+{ return 0.5 * (ncm_c_HI_Lyman_wn_2p_2P0_5 () + ncm_c_HI_Lyman_wn_2p_2P3_5 ()); }
 
 /* Lyman series wavelength: wl */
 
-G_INLINE_FUNC gdouble ncm_c_H_Lyman_wl_2s_2S0_5 (void)
-{ return 1.0 / ncm_c_H_Lyman_wn_2s_2S0_5 (); }
+G_INLINE_FUNC gdouble ncm_c_HI_Lyman_wl_2s_2S0_5 (void)
+{ return 1.0 / ncm_c_HI_Lyman_wn_2s_2S0_5 (); }
 
-G_INLINE_FUNC gdouble ncm_c_H_Lyman_wl_2p_2P0_5 (void)
-{ return 1.0 / ncm_c_H_Lyman_wn_2p_2P0_5 (); }
+G_INLINE_FUNC gdouble ncm_c_HI_Lyman_wl_2p_2P0_5 (void)
+{ return 1.0 / ncm_c_HI_Lyman_wn_2p_2P0_5 (); }
 
-G_INLINE_FUNC gdouble ncm_c_H_Lyman_wl_2p_2P3_5 (void)
-{ return 1.0 / ncm_c_H_Lyman_wn_2p_2P3_5 (); }
+G_INLINE_FUNC gdouble ncm_c_HI_Lyman_wl_2p_2P3_5 (void)
+{ return 1.0 / ncm_c_HI_Lyman_wn_2p_2P3_5 (); }
 
-G_INLINE_FUNC gdouble ncm_c_H_Lyman_wl_2p_2Pmean (void)
-{ return 1.0 / ncm_c_H_Lyman_wn_2p_2Pmean (); }
+G_INLINE_FUNC gdouble ncm_c_HI_Lyman_wl_2p_2Pmean (void)
+{ return 1.0 / ncm_c_HI_Lyman_wn_2p_2Pmean (); }
 
 /* Lyman series factor: wl^3 / (8pi) */
 
-G_INLINE_FUNC gdouble ncm_c_H_Lyman_wl3_8pi_2s_2S0_5 (void)
-{ return gsl_pow_3 (ncm_c_H_Lyman_wl_2s_2S0_5 ()) / (8.0 * M_PI); }
+G_INLINE_FUNC gdouble ncm_c_HI_Lyman_wl3_8pi_2s_2S0_5 (void)
+{ return gsl_pow_3 (ncm_c_HI_Lyman_wl_2s_2S0_5 ()) / (8.0 * M_PI); }
 
-G_INLINE_FUNC gdouble ncm_c_H_Lyman_wl3_8pi_2p_2P0_5 (void)
-{ return gsl_pow_3 (ncm_c_H_Lyman_wl_2p_2P0_5 ()) / (8.0 * M_PI); }
+G_INLINE_FUNC gdouble ncm_c_HI_Lyman_wl3_8pi_2p_2P0_5 (void)
+{ return gsl_pow_3 (ncm_c_HI_Lyman_wl_2p_2P0_5 ()) / (8.0 * M_PI); }
 
-G_INLINE_FUNC gdouble ncm_c_H_Lyman_wl3_8pi_2p_2P3_5 (void)
-{ return gsl_pow_3 (ncm_c_H_Lyman_wl_2p_2P3_5 ()) / (8.0 * M_PI); }
+G_INLINE_FUNC gdouble ncm_c_HI_Lyman_wl3_8pi_2p_2P3_5 (void)
+{ return gsl_pow_3 (ncm_c_HI_Lyman_wl_2p_2P3_5 ()) / (8.0 * M_PI); }
 
-G_INLINE_FUNC gdouble ncm_c_H_Lyman_wl3_8pi_2p_2Pmean (void)
-{ return gsl_pow_3 (ncm_c_H_Lyman_wl_2p_2Pmean ()) / (8.0 * M_PI); }
+G_INLINE_FUNC gdouble ncm_c_HI_Lyman_wl3_8pi_2p_2Pmean (void)
+{ return gsl_pow_3 (ncm_c_HI_Lyman_wl_2p_2Pmean ()) / (8.0 * M_PI); }
 
 /* Boltzmann factor */
 
-G_INLINE_FUNC gdouble ncm_c_boltzmann_factor_H_1s_2S0_5 (const gdouble T)
+G_INLINE_FUNC gdouble ncm_c_boltzmann_factor_HI_1s_2S0_5 (const gdouble T)
 { return gsl_pow_3 (ncm_c_thermal_wn_e ()) *
- exp(- ncm_c_H_ion_E_1s_2S0_5 () / (ncm_c_kb () * T)); }
+ exp(- ncm_c_HI_ion_E_1s_2S0_5 () / (ncm_c_kb () * T)); }
 
-G_INLINE_FUNC gdouble ncm_c_boltzmann_factor_H_2s_2S0_5 (const gdouble T)
+G_INLINE_FUNC gdouble ncm_c_boltzmann_factor_HI_2s_2S0_5 (const gdouble T)
 { return gsl_pow_3 (ncm_c_thermal_wn_e ()) *
- exp(- ncm_c_H_ion_E_2s_2S0_5 () / (ncm_c_kb () * T)); }
+ exp(- ncm_c_HI_ion_E_2s_2S0_5 () / (ncm_c_kb () * T)); }
 
-G_INLINE_FUNC gdouble ncm_c_boltzmann_factor_H_2p_2P0_5 (const gdouble T)
+G_INLINE_FUNC gdouble ncm_c_boltzmann_factor_HI_2p_2P0_5 (const gdouble T)
 { return gsl_pow_3 (ncm_c_thermal_wn_e ()) *
- exp(- ncm_c_H_ion_E_2p_2P0_5 () / (ncm_c_kb () * T)); }
+ exp(- ncm_c_HI_ion_E_2p_2P0_5 () / (ncm_c_kb () * T)); }
 
-G_INLINE_FUNC gdouble ncm_c_boltzmann_factor_H_2p_2P3_5 (const gdouble T)
+G_INLINE_FUNC gdouble ncm_c_boltzmann_factor_HI_2p_2P3_5 (const gdouble T)
 { return gsl_pow_3 (ncm_c_thermal_wn_e ()) *
- exp(- ncm_c_H_ion_E_2p_2P3_5 () / (ncm_c_kb () * T)); }
+ exp(- ncm_c_HI_ion_E_2p_2P3_5 () / (ncm_c_kb () * T)); }
 
-G_INLINE_FUNC gdouble ncm_c_boltzmann_factor_H_2p_2Pmean (const gdouble T)
+G_INLINE_FUNC gdouble ncm_c_boltzmann_factor_HI_2p_2Pmean (const gdouble T)
 { return gsl_pow_3 (ncm_c_thermal_wn_e ()) *
- exp(- ncm_c_H_ion_E_2p_2Pmean () / (ncm_c_kb () * T)); }
+ exp(- ncm_c_HI_ion_E_2p_2Pmean () / (ncm_c_kb () * T)); }
 
 /*******************************************************************************
  * -- END: Hydrogen I

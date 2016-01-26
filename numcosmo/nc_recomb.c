@@ -84,7 +84,7 @@
  * \begin{equation}\label{eq:saha:HyI}
  * \frac{X_{\HyII}X_\e}{X_\HyI} = \frac{e^{-\HyI_{1s}/(k_BT)}}{n_{\Hy}\lambda_{\e}^3},
  * \end{equation}
- * where $\HyI_{1s}$ is the hydrogen $1s$ binding energy ncm_c_H_ion_E_1s_2S0_5(),
+ * where $\HyI_{1s}$ is the hydrogen $1s$ binding energy ncm_c_HI_ion_E_1s_2S0_5(),
  * $\lambda_{\e}$ is the electron thermal wavelength, i.e.,
  * \begin{equation}
  * \lambda_{\e} = \sqrt{\frac{2\pi\hbar^2}{m_\e{}k_BT}},
@@ -334,7 +334,7 @@ nc_recomb_HI_ion_saha (NcHICosmo *cosmo, gdouble x)
   const gdouble n_H0 = nc_hicosmo_H_number_density (cosmo);
   const gdouble n_H  = n_H0 * x3;
 
-  return gsl_sf_exp_mult (-ncm_c_H_ion_E_1s_2S0_5 () / kbT, 1.0 / (n_H * lambda_e3));
+  return gsl_sf_exp_mult (-ncm_c_HI_ion_E_1s_2S0_5 () / kbT, 1.0 / (n_H * lambda_e3));
 }
 
 /**

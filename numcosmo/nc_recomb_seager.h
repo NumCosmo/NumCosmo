@@ -51,11 +51,12 @@ struct _NcRecombSeagerClass
 
 /**
  * NcRecombSeagerOpt:
- * @NC_RECOM_SEAGER_OPT_HII_FUDGE: Whether to use fudge factor in the case_B recombination fitting formulas.
- * @NC_RECOM_SEAGER_OPT_HII_FUDGE_GAUSS_COR: Whether to use gaussian correction in the case_B recombination fitting formulas.
- * @NC_RECOM_SEAGER_OPT_HEII_SOBOLEV_1P_1S: Sobolev scape probability.
- * @NC_RECOM_SEAGER_OPT_HEII_CONT_H: Continum H spectrum.
- * @NC_RECOM_SEAGER_OPT_HEII_TRIPLETS: Whether to include decaying through triplets.
+ * @NC_RECOM_SEAGER_OPT_HII_FUDGE: Includes fudge factor in the case_B recombination fitting formulas.
+ * @NC_RECOM_SEAGER_OPT_HII_FUDGE_GAUSS_COR: Includes gaussian correction in the case_B recombination fitting formulas.
+ * @NC_RECOM_SEAGER_OPT_HEII_SOBOLEV_1P1: Includes Sobolev scape probability for the $2p\,{}^1\\!P_{1} \to 1s\,{}^1\\!S_{0}$.
+ * @NC_RECOM_SEAGER_OPT_HEII_SOBOLEV_1P1_CO: Also includes the continum opacity effect due to H.
+ * @NC_RECOM_SEAGER_OPT_HEII_SOBOLEV_3P012: Includes Sobolev scape probability for the $2p\,{}^3\\!P_{0,1,2} \to 1s\,{}^1\\!S_{0}$.
+ * @NC_RECOM_SEAGER_OPT_HEII_SOBOLEV_3P012_CO: Also includes the continum opacity effect due to H.
  * @NC_RECOM_SEAGER_OPT_ALL: All options.
  * 
  * FIXME
@@ -63,14 +64,14 @@ struct _NcRecombSeagerClass
  */
 typedef enum _NcRecombSeagerOpt
 {
-  NC_RECOM_SEAGER_OPT_HII_FUDGE           = 1 << 0,
-  NC_RECOM_SEAGER_OPT_HII_FUDGE_GAUSS_COR = 1 << 1,
-  NC_RECOM_SEAGER_OPT_HEII_SOBOLEV_1P_1S  = 1 << 2,
-  NC_RECOM_SEAGER_OPT_HEII_CONT_H         = 1 << 3,
-  NC_RECOM_SEAGER_OPT_HEII_TRIPLETS       = 1 << 4,
-  NC_RECOM_SEAGER_OPT_HEII_TRIPLETS_CONT  = 1 << 5,
-  NC_RECOM_SEAGER_OPT_ALL                 = (1 << 6) - 1, /*< private >*/
-  NC_RECOM_SEAGER_OPT_LEN,                                /*< skip >*/
+  NC_RECOM_SEAGER_OPT_HII_FUDGE             = 1 << 0,
+  NC_RECOM_SEAGER_OPT_HII_FUDGE_GAUSS_COR   = 1 << 1,
+  NC_RECOM_SEAGER_OPT_HEII_SOBOLEV_1P1      = 1 << 2,
+  NC_RECOM_SEAGER_OPT_HEII_SOBOLEV_1P1_CO   = 1 << 3,
+  NC_RECOM_SEAGER_OPT_HEII_SOBOLEV_3P012    = 1 << 4,
+  NC_RECOM_SEAGER_OPT_HEII_SOBOLEV_3P012_CO = 1 << 5,
+  NC_RECOM_SEAGER_OPT_ALL                   = (1 << 6) - 1, /*< private >*/
+  NC_RECOM_SEAGER_OPT_LEN,                                  /*< skip >*/
 } NcRecombSeagerOpt;
 
 typedef gdouble (*NcRecombSeagerKHI2p2Pmean) (NcRecombSeager *recomb_seager, NcHICosmo *cosmo, const gdouble x, const gdouble H);
