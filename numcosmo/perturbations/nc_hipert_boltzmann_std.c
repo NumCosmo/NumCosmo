@@ -442,11 +442,11 @@ _nc_hipert_boltzmann_std_step (realtype lambda, N_Vector y, N_Vector ydot, gpoin
   NcHIPert *pert = NC_HIPERT (pb);
   NcHICosmo *cosmo = pb->cosmo;
   const guint lmax = pb->TT_lmax;
-  const gdouble Omega_r = nc_hicosmo_Omega_r (cosmo);
-  const gdouble Omega_b = nc_hicosmo_Omega_b (cosmo);
-  const gdouble Omega_c = nc_hicosmo_Omega_c (cosmo);
-  const gdouble Omega_m = nc_hicosmo_Omega_m (cosmo);
-  const gdouble R0 = 4.0 * Omega_r / (3.0 * Omega_b);
+  const gdouble Omega_r0 = nc_hicosmo_Omega_r0 (cosmo);
+  const gdouble Omega_b0 = nc_hicosmo_Omega_b0 (cosmo);
+  const gdouble Omega_c0 = nc_hicosmo_Omega_c0 (cosmo);
+  const gdouble Omega_m0 = nc_hicosmo_Omega_m0 (cosmo);
+  const gdouble R0 = 4.0 * Omega_r0 / (3.0 * Omega_b0);
   const gdouble x = NC_HIPERT_BOLTZMANN_LAMBDA2X (lambda);
   const gdouble R = R0 * x;
   const gdouble x2 = x * x;
@@ -461,9 +461,9 @@ _nc_hipert_boltzmann_std_step (realtype lambda, N_Vector y, N_Vector ydot, gpoin
   const gdouble k2x_3E = k * kx_3E;
   const gdouble k2x_3E2 = k2x_3E / E;
   const gdouble k2x2_3E2 = x * k2x_3E2;
-  const gdouble psi = -_NC_PHI - 12.0 * x2 / k2 * Omega_r * _NC_THETA2;
+  const gdouble psi = -_NC_PHI - 12.0 * x2 / k2 * Omega_r0 * _NC_THETA2;
   const gdouble PI = _NC_THETA2 + _NC_THETA_P0 + _NC_THETA_P2;
-  const gdouble dErm2_dx = (3.0 * Omega_m * x2 + 4.0 * Omega_r * x3);
+  const gdouble dErm2_dx = (3.0 * Omega_m0 * x2 + 4.0 * Omega_r0 * x3);
   const gdouble taubar = nc_recomb_dtau_dlambda (pb->recomb, cosmo, lambda);
   guint i;
 
@@ -472,14 +472,14 @@ _nc_hipert_boltzmann_std_step (realtype lambda, N_Vector y, N_Vector ydot, gpoin
     _NC_DPHI = psi - k2x2_3E2 * _NC_PHI - x / (2.0 * E2) *
       (
         dErm2_dx * (_NC_PHI - _NC_C0)
-        -(3.0 * Omega_b * _NC_dB0 * x2 + 4.0 * Omega_r * x3 * _NC_dTHETA0)
+        -(3.0 * Omega_b0 * _NC_dB0 * x2 + 4.0 * Omega_r0 * x3 * _NC_dTHETA0)
         );
 
     _NC_DC0 = -kx_E * _NC_V + k2x2_3E2 * (_NC_C0 - _NC_PHI);
     _NC_DdTHETA0 = -kx_E * (R * _NC_U + _NC_T) / (R + 1.0);
     _NC_DdB0 = -kx_E * R * (_NC_U - _NC_T) / (R + 1.0);
 
-    _NC_DV = -_NC_V - kx_3E * (kx_E * _NC_V - k2x2_3E2 * _NC_C0 + x3 * (3.0 * Omega_b * _NC_dB0 + 4.0 * Omega_r * x * _NC_dTHETA0) / (2.0 * E2));
+    _NC_DV = -_NC_V - kx_3E * (kx_E * _NC_V - k2x2_3E2 * _NC_C0 + x3 * (3.0 * Omega_b0 * _NC_dB0 + 4.0 * Omega_r0 * x * _NC_dTHETA0) / (2.0 * E2));
     _NC_DU = kx_3E * (_NC_dTHETA0 - 2.0 * _NC_THETA2) + _NC_V;
     _NC_DT = kx_3E * (_NC_dTHETA0 - 2.0 * _NC_THETA2) + _NC_V + R * (_NC_U - _NC_T) / (R + 1.0) + taubar * (1.0 + R) * _NC_T;
 
@@ -491,7 +491,7 @@ _nc_hipert_boltzmann_std_step (realtype lambda, N_Vector y, N_Vector ydot, gpoin
 
     _NC_DPHI = psi - k2x2_3E2 * _NC_PHI + x / (2.0 * E2) *
       (
-        (3.0 * (Omega_c * _NC_C0 * x2 + Omega_b * _NC_B0 * x2) + 4.0 * Omega_r * x3 * _NC_THETA0)
+        (3.0 * (Omega_c0 * _NC_C0 * x2 + Omega_b0 * _NC_B0 * x2) + 4.0 * Omega_r0 * x3 * _NC_THETA0)
         -dErm2_dx * _NC_PHI
         );
 
@@ -611,11 +611,11 @@ _nc_hipert_boltzmann_std_band_J (_NCM_SUNDIALS_INT_TYPE N, _NCM_SUNDIALS_INT_TYP
   NcHIPert *pert = NC_HIPERT (pb);
   NcHICosmo *cosmo = pb->cosmo;
   const guint lmax = pb->TT_lmax;
-  const gdouble Omega_r = nc_hicosmo_Omega_r (cosmo);
-  const gdouble Omega_b = nc_hicosmo_Omega_b (cosmo);
-  const gdouble Omega_c = nc_hicosmo_Omega_c (cosmo);
-  const gdouble Omega_m = nc_hicosmo_Omega_m (cosmo);
-  const gdouble R0 = 4.0 * Omega_r / (3.0 * Omega_b);
+  const gdouble Omega_r0 = nc_hicosmo_Omega_r0 (cosmo);
+  const gdouble Omega_b0 = nc_hicosmo_Omega_b0 (cosmo);
+  const gdouble Omega_c0 = nc_hicosmo_Omega_c0 (cosmo);
+  const gdouble Omega_m0 = nc_hicosmo_Omega_m0 (cosmo);
+  const gdouble R0 = 4.0 * Omega_r0 / (3.0 * Omega_b0);
   const gdouble x = NC_HIPERT_BOLTZMANN_LAMBDA2X (lambda);
   const gdouble x2 = x * x;
   const gdouble x3 = x2 * x;
@@ -630,15 +630,15 @@ _nc_hipert_boltzmann_std_band_J (_NCM_SUNDIALS_INT_TYPE N, _NCM_SUNDIALS_INT_TYP
   const gdouble k2x_3E = k * kx_3E;
   const gdouble k2x_3E2 = k2x_3E / E;
   const gdouble k2x2_3E2 = x * k2x_3E2;
-  const gdouble dErm2_dx = (3.0 * Omega_m * x2 + 4.0 * Omega_r * x3);
+  const gdouble dErm2_dx = (3.0 * Omega_m0 * x2 + 4.0 * Omega_r0 * x3);
   const gdouble taubar = nc_recomb_dtau_dlambda (pb->recomb, cosmo, lambda);
   guint i;
 
   _NC_BAND_ELEM (J, NC_HIPERT_BOLTZMANN_PHI, NC_HIPERT_BOLTZMANN_PHI)         = -1.0 - k2x2_3E2 - x * dErm2_dx / (2.0 * E2);
-  _NC_BAND_ELEM (J, NC_HIPERT_BOLTZMANN_PHI, NC_HIPERT_BOLTZMANN_C0)          = 3.0 * Omega_c * x3 / (2.0 * E2);
-  _NC_BAND_ELEM (J, NC_HIPERT_BOLTZMANN_PHI, NC_HIPERT_BOLTZMANN_B0)          = 3.0 * Omega_b * x3 / (2.0 * E2);
-  _NC_BAND_ELEM (J, NC_HIPERT_BOLTZMANN_PHI, NC_HIPERT_BOLTZMANN_THETA0)      = 2.0 * x4 * Omega_r / E2;
-  _NC_BAND_ELEM (J, NC_HIPERT_BOLTZMANN_PHI, NC_HIPERT_BOLTZMANN_THETA2)      = -12.0 * x2 / k2 * Omega_r;
+  _NC_BAND_ELEM (J, NC_HIPERT_BOLTZMANN_PHI, NC_HIPERT_BOLTZMANN_C0)          = 3.0 * Omega_c0 * x3 / (2.0 * E2);
+  _NC_BAND_ELEM (J, NC_HIPERT_BOLTZMANN_PHI, NC_HIPERT_BOLTZMANN_B0)          = 3.0 * Omega_b0 * x3 / (2.0 * E2);
+  _NC_BAND_ELEM (J, NC_HIPERT_BOLTZMANN_PHI, NC_HIPERT_BOLTZMANN_THETA0)      = 2.0 * x4 * Omega_r0 / E2;
+  _NC_BAND_ELEM (J, NC_HIPERT_BOLTZMANN_PHI, NC_HIPERT_BOLTZMANN_THETA2)      = -12.0 * x2 / k2 * Omega_r0;
 
   _NC_BAND_ELEM (J, NC_HIPERT_BOLTZMANN_C0, NC_HIPERT_BOLTZMANN_C1)           = -kx_E;
 
@@ -647,19 +647,19 @@ _nc_hipert_boltzmann_std_band_J (_NCM_SUNDIALS_INT_TYPE N, _NCM_SUNDIALS_INT_TYP
   _NC_BAND_ELEM (J, NC_HIPERT_BOLTZMANN_THETA0, NC_HIPERT_BOLTZMANN_THETA1)   = -kx_E;
 
   _NC_BAND_ELEM (J, NC_HIPERT_BOLTZMANN_C1, NC_HIPERT_BOLTZMANN_PHI)          = -kx_3E;
-  _NC_BAND_ELEM (J, NC_HIPERT_BOLTZMANN_C1, NC_HIPERT_BOLTZMANN_THETA2)       = -12.0 * x3 / (E*k) * Omega_r;
+  _NC_BAND_ELEM (J, NC_HIPERT_BOLTZMANN_C1, NC_HIPERT_BOLTZMANN_THETA2)       = -12.0 * x3 / (E*k) * Omega_r0;
   _NC_BAND_ELEM (J, NC_HIPERT_BOLTZMANN_C1, NC_HIPERT_BOLTZMANN_C1)           = -1.0;
 
   _NC_BAND_ELEM (J, NC_HIPERT_BOLTZMANN_B1, NC_HIPERT_BOLTZMANN_PHI)          = -kx_3E;
   _NC_BAND_ELEM (J, NC_HIPERT_BOLTZMANN_B1, NC_HIPERT_BOLTZMANN_THETA1)       = -taubar * R0 * x;
-  _NC_BAND_ELEM (J, NC_HIPERT_BOLTZMANN_B1, NC_HIPERT_BOLTZMANN_THETA2)       = -12.0 * x3 / (E*k) * Omega_r;
+  _NC_BAND_ELEM (J, NC_HIPERT_BOLTZMANN_B1, NC_HIPERT_BOLTZMANN_THETA2)       = -12.0 * x3 / (E*k) * Omega_r0;
   _NC_BAND_ELEM (J, NC_HIPERT_BOLTZMANN_B1, NC_HIPERT_BOLTZMANN_B1)           = -1.0 + taubar * R0 * x;
 
   _NC_BAND_ELEM (J, NC_HIPERT_BOLTZMANN_THETA1, NC_HIPERT_BOLTZMANN_PHI)      = -2.0 * kx_E / 3.0;
   _NC_BAND_ELEM (J, NC_HIPERT_BOLTZMANN_THETA1, NC_HIPERT_BOLTZMANN_THETA0)   = kx_E / 3.0;
   _NC_BAND_ELEM (J, NC_HIPERT_BOLTZMANN_THETA1, NC_HIPERT_BOLTZMANN_B1)       = -taubar;
   _NC_BAND_ELEM (J, NC_HIPERT_BOLTZMANN_THETA1, NC_HIPERT_BOLTZMANN_THETA1)   = taubar;
-  _NC_BAND_ELEM (J, NC_HIPERT_BOLTZMANN_THETA1, NC_HIPERT_BOLTZMANN_THETA2)   = -2.0 * kx_E / 3.0 - 4.0 * x3 / (E*k) * Omega_r;
+  _NC_BAND_ELEM (J, NC_HIPERT_BOLTZMANN_THETA1, NC_HIPERT_BOLTZMANN_THETA2)   = -2.0 * kx_E / 3.0 - 4.0 * x3 / (E*k) * Omega_r0;
 
   /* _NC_DTHETA_P2 = kx_E * (2.0 * _NC_THETA_P1 - 3.0 * _NC_THETA_P(3)) / 5.0 + taubar * (_NC_THETA_P2 - PI / 10.0); */
   _NC_BAND_ELEM (J, NC_HIPERT_BOLTZMANN_THETA2, NC_HIPERT_BOLTZMANN_THETA1)   = 2.0 * kx_E / 5.0;

@@ -59,7 +59,7 @@ typedef enum _NcHICosmoDEImpl
   NC_HICOSMO_DE_IMPL_LAST       = NC_HICOSMO_IMPL_LAST << 3, /*< skip >*/
 } NcHICosmoDEImpl;
 
-typedef gdouble (*NcHICosmoDEFunc1) (NcHICosmoDE *cosmo_de, gdouble x);
+typedef gdouble (*NcHICosmoDEFunc1) (NcHICosmoDE *cosmo_de, gdouble z);
 
 /**
  * NcHICosmoDEParams:
@@ -124,9 +124,9 @@ void nc_hicosmo_de_set_weff_impl (NcHICosmoDEClass *cosmo_de_class, NcHICosmoDEF
 void nc_hicosmo_de_set_dweff_dz_impl (NcHICosmoDEClass *cosmo_de_class, NcHICosmoDEFunc1 f);
 void nc_hicosmo_de_set_d2weff_dz2_impl (NcHICosmoDEClass *cosmo_de_class, NcHICosmoDEFunc1 f);
 
-G_INLINE_FUNC gdouble nc_hicosmo_de_weff (NcHICosmoDE *cosmo, gdouble x);
-G_INLINE_FUNC gdouble nc_hicosmo_de_dweff_dz (NcHICosmoDE *cosmo, gdouble x);
-G_INLINE_FUNC gdouble nc_hicosmo_de_d2weff_dz2 (NcHICosmoDE *cosmo, gdouble x);
+G_INLINE_FUNC gdouble nc_hicosmo_de_weff (NcHICosmoDE *cosmo_de, gdouble z);
+G_INLINE_FUNC gdouble nc_hicosmo_de_dweff_dz (NcHICosmoDE *cosmo_de, gdouble z);
+G_INLINE_FUNC gdouble nc_hicosmo_de_d2weff_dz2 (NcHICosmoDE *cosmo_de, gdouble z);
 
 G_END_DECLS
 
@@ -138,9 +138,9 @@ G_END_DECLS
 
 G_BEGIN_DECLS
 
-NCM_MODEL_FUNC1_IMPL (NC_HICOSMO_DE,NcHICosmoDE,nc_hicosmo_de,weff)
-NCM_MODEL_FUNC1_IMPL (NC_HICOSMO_DE,NcHICosmoDE,nc_hicosmo_de,dweff_dz)
-NCM_MODEL_FUNC1_IMPL (NC_HICOSMO_DE,NcHICosmoDE,nc_hicosmo_de,d2weff_dz2)
+NCM_MODEL_FUNC1_IMPL (NC_HICOSMO_DE,NcHICosmoDE,nc_hicosmo_de,weff,z)
+NCM_MODEL_FUNC1_IMPL (NC_HICOSMO_DE,NcHICosmoDE,nc_hicosmo_de,dweff_dz,z)
+NCM_MODEL_FUNC1_IMPL (NC_HICOSMO_DE,NcHICosmoDE,nc_hicosmo_de,d2weff_dz2,z)
 
 G_END_DECLS
 

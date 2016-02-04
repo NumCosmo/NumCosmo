@@ -75,14 +75,14 @@ typedef enum _NcHICosmoQGRWParams
 /**
  * NC_HICOSMO_QGRW_DEFAULT_OMEGA_R: (value 1.0e-5)
  * 
- * Default $\Omega_r$.
+ * Default $\Omega_{r0}$.
  */
 #define NC_HICOSMO_QGRW_DEFAULT_OMEGA_R (1.0e-5)
 
 /**
  * NC_HICOSMO_QGRW_DEFAULT_OMEGA_W: (value 0.99999)
  * 
- * Default $\Omega_w$.
+ * Default $\Omega_{w0}$.
  */
 #define NC_HICOSMO_QGRW_DEFAULT_OMEGA_W (1.0 - NC_HICOSMO_QGRW_DEFAULT_OMEGA_R)
 

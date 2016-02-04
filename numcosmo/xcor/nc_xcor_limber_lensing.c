@@ -65,7 +65,7 @@ static void _nc_xcor_limber_lensing_prepare (NcXcorLimber* xcl, NcHICosmo* cosmo
 
 	nc_distance_prepare_if_needed (xcll->dist, cosmo);
 
-	xcl->cons_factor = (3.0 * nc_hicosmo_Omega_m (cosmo)) / 2.0;
+	xcl->cons_factor = (3.0 * nc_hicosmo_Omega_m0 (cosmo)) / 2.0;
 }
 
 static gdouble _nc_xcor_limber_lensing_noise_spec (NcXcorLimber* xcl, guint l)

@@ -63,11 +63,11 @@ _nc_transfer_func_eh_prepare (NcTransferFunc *tf, NcHIReion *reion, NcHICosmo *c
   const gdouble c2 = T_0 / 2.7;    /* \theta = 2.725/2.7 where 2.725 is the CMB temperature */
   const gdouble h = nc_hicosmo_h (cosmo);
   const gdouble h2 = h * h;
-  const gdouble wm = nc_hicosmo_Omega_m (cosmo) * h2;
-  const gdouble wb = nc_hicosmo_Omega_b (cosmo) * h2;
-  const gdouble wc = nc_hicosmo_Omega_c (cosmo) * h2;
-  const gdouble wb_wm = wb/wm;     /* \frac{\Omega_b}{\Omega_m} */
-  const gdouble wc_wm = wc/wm;    /* \frac{\Omega_c}{\Omega_m} */
+  const gdouble wm = nc_hicosmo_Omega_m0 (cosmo) * h2;
+  const gdouble wb = nc_hicosmo_Omega_b0 (cosmo) * h2;
+  const gdouble wc = nc_hicosmo_Omega_c0 (cosmo) * h2;
+  const gdouble wb_wm = wb/wm;     /* \frac{\Omega_{b0}}{\Omega_{m0}} */
+  const gdouble wc_wm = wc/wm;    /* \frac{\Omega_{c0}}{\Omega_{m0}} */
 
   const gdouble a1 = pow (46.9 * wm, 0.670) * (1.0 + pow(32.1 * wm, -0.532));
   const gdouble a2 = pow (12.0 * wm, 0.424) * (1.0 + pow(45.0 * wm, -0.582));
@@ -99,7 +99,7 @@ _nc_transfer_func_eh_prepare (NcTransferFunc *tf, NcHIReion *reion, NcHICosmo *c
   const gdouble ab = 2.07 * keq * s * pow (1.0 + Rd, -0.75) * y * (-6.0 * y1 + (2.0 + 3.0 * y) * log((y1 + 1.0)/(y1 - 1.0)));  /* \alpha_b */
   const gdouble bb = 0.5 + wb_wm + (3.0 - 2.0 * wb_wm) * sqrt(1.0 + gsl_pow_2 (17.2 * wm));    /* \beta_b */
   const gdouble bb3 = gsl_pow_3(bb);
-  const gdouble wb_wm3 = wb_wm * wb_wm * wb_wm;    /* {\frac{\Omega_b}{\Omega_m}}^3 */
+  const gdouble wb_wm3 = wb_wm * wb_wm * wb_wm;    /* {\frac{\Omega_{b0}}{\Omega_{m0}}}^3 */
   const gdouble ac = pow(a1, -wb_wm) * pow(a2, -wb_wm3);  /* \alpha_c */
   const gdouble ac_142 = 14.2 / ac;
   const gdouble bc = 1.0/(1.0 + b3 * (pow(wc_wm, b4) - 1.0));  /* \beta_c */

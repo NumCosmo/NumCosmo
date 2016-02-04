@@ -50,7 +50,7 @@ G_DEFINE_TYPE (NcHICosmoQConst, nc_hicosmo_qconst, NC_TYPE_HICOSMO);
 #define Z1       (ncm_vector_get (VECTOR, NC_HICOSMO_QCONST_Z1))
 
 static gdouble
-_nc_hicosmo_qconst_cd (NcHICosmo *cosmo, gdouble z)
+_nc_hicosmo_qconst_Dc (NcHICosmo *cosmo, gdouble z)
 {
   gdouble x1, x, ln_x_x1;
   x1 = 1.0 + Z1;
@@ -67,7 +67,7 @@ _nc_hicosmo_qconst_cd (NcHICosmo *cosmo, gdouble z)
  * Hubble constant
  ****************************************************************************/
 static gdouble _nc_hicosmo_qconst_H0 (NcHICosmo *cosmo) { return MACRO_H0; }
-static gdouble _nc_hicosmo_qconst_Omega_t (NcHICosmo *cosmo) { return OMEGA_T; }
+static gdouble _nc_hicosmo_qconst_Omega_t0 (NcHICosmo *cosmo) { return OMEGA_T; }
 
 /**
  * nc_hicosmo_qconst_new:
@@ -119,12 +119,12 @@ nc_hicosmo_qconst_class_init (NcHICosmoQConstClass *klass)
                                NC_HICOSMO_DEFAULT_PARAMS_ABSTOL, NC_HICOSMO_QCONST_DEFAULT_H0,
                                NCM_PARAM_TYPE_FIXED);
 
-  ncm_model_class_set_sparam (model_class, NC_HICOSMO_QCONST_OMEGA_T, "\\Omega_t", "Omegat",
+  ncm_model_class_set_sparam (model_class, NC_HICOSMO_QCONST_OMEGA_T, "\\Omega_{t0}", "Omegat",
                                -5.0, 5.0, 1.0e-1,
                                NC_HICOSMO_DEFAULT_PARAMS_ABSTOL, NC_HICOSMO_QCONST_DEFAULT_OMEGA_T,
                                NCM_PARAM_TYPE_FIXED);
 
-  ncm_model_class_set_sparam (model_class, NC_HICOSMO_QCONST_CD, "d_c", "cd",
+  ncm_model_class_set_sparam (model_class, NC_HICOSMO_QCONST_CD, "D_c", "Dc",
                                -50.0, 50.0, 1.0e-1,
                                NC_HICOSMO_DEFAULT_PARAMS_ABSTOL, NC_HICOSMO_QCONST_DEFAULT_CD,
                                NCM_PARAM_TYPE_FIXED);
@@ -148,6 +148,6 @@ nc_hicosmo_qconst_class_init (NcHICosmoQConstClass *klass)
   ncm_model_class_check_params_info (model_class);
 
   nc_hicosmo_set_H0_impl (parent_class, &_nc_hicosmo_qconst_H0);
-  nc_hicosmo_set_cd_impl (parent_class, &_nc_hicosmo_qconst_cd);
-  nc_hicosmo_set_Omega_t_impl (parent_class, &_nc_hicosmo_qconst_Omega_t);
+  nc_hicosmo_set_Dc_impl (parent_class, &_nc_hicosmo_qconst_Dc);
+  nc_hicosmo_set_Omega_t0_impl (parent_class, &_nc_hicosmo_qconst_Omega_t0);
 }

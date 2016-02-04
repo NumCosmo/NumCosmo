@@ -65,7 +65,7 @@ _nc_transfer_func_bbks_prepare (NcTransferFunc *tf, NcHIReion *reion, NcHICosmo 
   const gdouble c5 = gsl_pow_2 (T_0 / 2.7);   /* CMB: (T_0/2.7)^2 = (2.725/2.7)^2 */
   const gdouble h = nc_hicosmo_h (cosmo);
   const gdouble h2 = h * h;
-  const gdouble wm = nc_hicosmo_Omega_m (cosmo) * h2;
+  const gdouble wm = nc_hicosmo_Omega_m0 (cosmo) * h2;
 
   tf_BBKS->c1    = c1;
   tf_BBKS->c2    = c2;

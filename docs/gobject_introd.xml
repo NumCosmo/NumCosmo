@@ -66,8 +66,8 @@ In this section we discuss the GObject framework as it is used inside NumCosmo.
   Functions and method must be lower case and the terms separated by underscores,
   e.g., a method of NcmSpline must be called ncm_spline_method_name. It is 
   acceptable for the method_name to have upper case letters when necessary.
-  For example, <link linkend="nc-hicosmo-Omega-m">nc_hicosmo_Omega_m</link>
-  uses the capital Omega to avoid confusion with lowercase omega_m which has
+  For example, <link linkend="nc-hicosmo-Omega-m0">nc_hicosmo_Omega_m0</link>
+  uses the capital Omega to avoid confusion with lowercase omega_m0 which has
   a different meaning in the cosmological literature.
 </para>
 <para>

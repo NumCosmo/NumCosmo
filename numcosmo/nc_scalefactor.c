@@ -28,10 +28,10 @@
  * @short_description: Scale factor as a function of the conformal time.
  *
  * Integrates the first order Friedmann equation, 
- * $$E^2 = \frac{\rho}{\rho_{\mathrm{crit}0}} + \Omega_k x^2.$$ Where 
+ * $$E^2 = \frac{\rho}{\rho_{\mathrm{crit}0}} + \Omega_{k0} x^2.$$ Where 
  * ${\mathrm{crit}0}$ is the critical density today [nc_hicosmo_crit_density()],  
  * $E = H / H_0$ is the dimensionless Hubble function [nc_hicosmo_E()] 
- * and $\Omega_k$ is the curvature parameter today [nc_hicosmo_Omega_k()].
+ * and $\Omega_{k0}$ is the curvature parameter today [nc_hicosmo_Omega_k0()].
  * 
  * 
  * 
@@ -460,21 +460,21 @@ static void nc_scalefactor_init_cvode (NcScalefactor *a, NcHICosmo *cosmo);
 static void
 _nc_scalefactor_init (NcScalefactor *a, NcHICosmo *cosmo)
 {
-  const gdouble Omega_k = nc_hicosmo_Omega_k (cosmo);
+  const gdouble Omega_k0 = nc_hicosmo_Omega_k0 (cosmo);
 
   NV_Ith_S (a->y, 0) = a->zf;
 
   a->eta_i = nc_distance_conformal_time (a->dist, cosmo, a->zf);
   a->eta_f = nc_distance_conformal_time (a->dist, cosmo, 0.0);
   
-  if (fabs (Omega_k) < NC_SCALEFACTOR_OMEGA_K_ZERO)
+  if (fabs (Omega_k0) < NC_SCALEFACTOR_OMEGA_K_ZERO)
   {
     a->a0 = 1.0;
   }
   else
   {
     const gdouble RH_Mpc = nc_hicosmo_RH_Mpc (cosmo);
-    a->a0 = RH_Mpc / sqrt (fabs (Omega_k));
+    a->a0 = RH_Mpc / sqrt (fabs (Omega_k0));
   }
 
   nc_scalefactor_init_cvode (a, cosmo);

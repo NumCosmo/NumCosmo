@@ -86,9 +86,9 @@ _nc_multiplicity_func_tinker_mean_eval (NcMultiplicityFunc *mulf, NcHICosmo *mod
 {
   /* This function is a copy of the nc_multiplicity_function_tinker_critical, adapted to mean matter density.*/
   NcMultiplicityFuncTinkerMean *mulf_tinker_mean = NC_MULTIPLICITY_FUNC_TINKER_MEAN (mulf);
-  //const gdouble Omega_m = nc_hicosmo_Omega_m (NC_HICOSMO (model));
+  //const gdouble Omega_m0 = nc_hicosmo_Omega_m0 (NC_HICOSMO (model));
   //const gdouble E2 = nc_hicosmo_E2 (NC_HICOSMO (model), z);
-  //const gdouble Delta_z = mulf_tinker_mean->Delta * E2 / (Omega_m * gsl_pow_3 (1.0 + z));
+  //const gdouble Delta_z = mulf_tinker_mean->Delta * E2 / (Omega_m0 * gsl_pow_3 (1.0 + z));
   const gdouble Delta = mulf_tinker_mean->Delta;
   const gdouble log10_Delta = log10 (Delta);
   const gdouble log10_200 = log10 (200.0);
@@ -166,7 +166,7 @@ _nc_multiplicity_func_tinker_mean_eval (NcMultiplicityFunc *mulf, NcHICosmo *mod
     const gdouble b = b0 * pow(1.0 + z, -alpha);
     const gdouble f_Tinker_mean = A * (pow(sigma / b, -a) + 1.0) * exp(-c / (sigma * sigma));
 
-    //printf ("NEW % 5.5g % 5.5g % 20.15g % 20.15g % 20.15g % 20.15g\n", z, mulf_tinker_mean->Delta, Delta_z, E2, Omega_m, gsl_pow_3 (1.0 + z));
+    //printf ("NEW % 5.5g % 5.5g % 20.15g % 20.15g % 20.15g % 20.15g\n", z, mulf_tinker_mean->Delta, Delta_z, E2, Omega_m0, gsl_pow_3 (1.0 + z));
 
     return f_Tinker_mean;
   }

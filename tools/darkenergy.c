@@ -422,9 +422,9 @@ main (gint argc, gchar *argv[])
 
   if (de_data_simple.BBN_Ob)
   {
-    NcmMSetFunc *Omega_bh2 = nc_hicosmo_create_mset_func0 (&nc_hicosmo_Omega_bh2);
-    ncm_prior_add_gaussian_const_func (lh, Omega_bh2, 0.022, 0.002);
-    ncm_mset_func_free (Omega_bh2);
+    NcmMSetFunc *Omega_b0h2 = nc_hicosmo_create_mset_func0 (&nc_hicosmo_Omega_b0h2);
+    ncm_prior_add_gaussian_const_func (lh, Omega_b0h2, 0.022, 0.002);
+    ncm_mset_func_free (Omega_b0h2);
   }
 
   if (de_fit.qspline_cp && TRUE)

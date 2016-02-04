@@ -1697,14 +1697,6 @@ ncm_c_class_init (NcmCClass *klass)
  *
  */
 /**
- * ncm_c_neutrino_n_eff:
- *
- * FIXME
- *
- * Returns: FIXME
- *
- */
-/**
  * ncm_c_hubble_radius:
  *
  * FIXME
@@ -1776,7 +1768,7 @@ ncm_c_class_init (NcmCClass *klass)
  *
  */
 /**
- * ncm_c_radiation_temp_to_h2Omega_r:
+ * ncm_c_radiation_temp_to_h2Omega_r0:
  * @T: FIXME
  *
  * FIXME
@@ -1785,7 +1777,7 @@ ncm_c_class_init (NcmCClass *klass)
  *
  */
 /**
- * ncm_c_radiation_h2Omega_r_to_temp:
+ * ncm_c_radiation_h2Omega_r0_to_temp:
  * @omr: FIXME
  *
  * FIXME

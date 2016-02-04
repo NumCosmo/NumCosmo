@@ -29,8 +29,8 @@
  * @short_description: Baryon oscillation data -- acoustic scale $A$.
  *
  * The acoustic scale is defined as
- * $$ A \equiv D_V (z) \frac{\sqrt{\Omega_m H_0^2}}{z c},$$
- * where $\Omega_m$ is the matter density parameter [nc_hicosmo_Omega_m()], $c$ is the speed of light [ncm_c_c()],
+ * $$ A \equiv D_V (z) \frac{\sqrt{\Omega_{m0} H_0^2}}{z c},$$
+ * where $\Omega_{m0}$ is the matter density parameter [nc_hicosmo_Omega_m0()], $c$ is the speed of light [ncm_c_c()],
  * $H_0$ is the Hubble parameter [nc_hicosmo_H0()] and $D_V(z)$ is the dilation scale [nc_distance_dilation_scale()].
  * See Section 4.5 from [Eisenstein et al. (2005)][XEisenstein2005].
  *

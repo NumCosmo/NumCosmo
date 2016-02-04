@@ -30,12 +30,12 @@ LINEAR_NAME_SUFFIX (init) (NcLinearPert *pert)
   const gdouble z = x - 1.0;
   const gdouble E2 = nc_hicosmo_E2 (pert->cosmo, z);
   const gdouble E = sqrt (E2);
-  const gdouble Omega_r = nc_hicosmo_Omega_r (pert->cosmo);
-  const gdouble Omega_b = nc_hicosmo_Omega_b (pert->cosmo);
-  const gdouble R0 = 4.0 * Omega_r / (3.0 * Omega_b);
+  const gdouble Omega_r0 = nc_hicosmo_Omega_r0 (pert->cosmo);
+  const gdouble Omega_b0 = nc_hicosmo_Omega_b0 (pert->cosmo);
+  const gdouble R0 = 4.0 * Omega_r0 / (3.0 * Omega_b0);
   const gdouble taubar = nc_recomb_dtau_dlambda (pert->recomb, pert->cosmo, pert->lambdai);
   const gdouble taudot = E / x * taubar;
-  const gdouble keta = pert->pws->k / (sqrt (Omega_r) * x);
+  const gdouble keta = pert->pws->k / (sqrt (Omega_r0) * x);
   const gdouble keta3 = gsl_pow_3 (keta);
   const gdouble k_taudot = pert->pws->k / taudot;
   gdouble theta1;
@@ -124,9 +124,9 @@ LINEAR_NAME_SUFFIX (end_tight_coupling) (NcLinearPert *pert)
 {
   LINEAR_VECTOR_PREPARE;
   const gdouble x = NC_PERTURBATIONS_LAMBDA2X (pert->pws->lambda);
-  const gdouble Omega_r = nc_hicosmo_Omega_r (pert->cosmo);
-  const gdouble Omega_b = nc_hicosmo_Omega_b (pert->cosmo);
-  const gdouble R0 = 4.0 * Omega_r / (3.0 * Omega_b);
+  const gdouble Omega_r0 = nc_hicosmo_Omega_r0 (pert->cosmo);
+  const gdouble Omega_b0 = nc_hicosmo_Omega_b0 (pert->cosmo);
+  const gdouble R0 = 4.0 * Omega_r0 / (3.0 * Omega_b0);
   const gdouble R = R0 * x;
   const gdouble E2 = nc_hicosmo_E2 (pert->cosmo, x-1.0);
   const gdouble kx_3E = pert->pws->k * x / (3.0 * sqrt (E2));
@@ -265,9 +265,9 @@ LINEAR_NAME_SUFFIX (get_b1) (NcLinearPert *pert)
   if (pert->pws->tight_coupling)
   {
     const gdouble x = NC_PERTURBATIONS_LAMBDA2X (pert->pws->lambda);
-    const gdouble Omega_r = nc_hicosmo_Omega_r (pert->cosmo);
-    const gdouble Omega_b = nc_hicosmo_Omega_b (pert->cosmo);
-    const gdouble R0 = 4.0 * Omega_r / (3.0 * Omega_b);
+    const gdouble Omega_r0 = nc_hicosmo_Omega_r0 (pert->cosmo);
+    const gdouble Omega_b0 = nc_hicosmo_Omega_b0 (pert->cosmo);
+    const gdouble R0 = 4.0 * Omega_r0 / (3.0 * Omega_b0);
     const gdouble R = R0 * x;
     const gdouble E2 = nc_hicosmo_E2 (pert->cosmo, x-1.0);
     const gdouble kx_3E = pert->pws->k * x / (3.0 * sqrt (E2));
@@ -292,9 +292,9 @@ LINEAR_NAME_SUFFIX (get_theta) (NcLinearPert *pert, guint l)
   if (pert->pws->tight_coupling && l < 2)
   {
     const gdouble x = NC_PERTURBATIONS_LAMBDA2X (pert->pws->lambda);
-    const gdouble Omega_r = nc_hicosmo_Omega_r (pert->cosmo);
-    const gdouble Omega_b = nc_hicosmo_Omega_b (pert->cosmo);
-    const gdouble R0 = 4.0 * Omega_r / (3.0 * Omega_b);
+    const gdouble Omega_r0 = nc_hicosmo_Omega_r0 (pert->cosmo);
+    const gdouble Omega_b0 = nc_hicosmo_Omega_b0 (pert->cosmo);
+    const gdouble R0 = 4.0 * Omega_r0 / (3.0 * Omega_b0);
     const gdouble R = R0 * x;
     const gdouble E2 = nc_hicosmo_E2 (pert->cosmo, x-1.0);
     const gdouble kx_3E = pert->pws->k * x / (3.0 * sqrt (E2));
@@ -351,10 +351,10 @@ LINEAR_NAME_SUFFIX (get_sources) (NcLinearPert *pert, gdouble *S0, gdouble *S1, 
 
   if (tau_log_abs_taubar > GSL_LOG_DBL_MIN + 0.01)
   {
-    const gdouble Omega_r = nc_hicosmo_Omega_r (pert->cosmo);
-    const gdouble Omega_b = nc_hicosmo_Omega_b (pert->cosmo);
-    const gdouble Omega_c = nc_hicosmo_Omega_c (pert->cosmo);
-    const gdouble Omega_m = nc_hicosmo_Omega_m (pert->cosmo);
+    const gdouble Omega_r0 = nc_hicosmo_Omega_r0 (pert->cosmo);
+    const gdouble Omega_b0 = nc_hicosmo_Omega_b0 (pert->cosmo);
+    const gdouble Omega_c0 = nc_hicosmo_Omega_c0 (pert->cosmo);
+    const gdouble Omega_m0 = nc_hicosmo_Omega_m0 (pert->cosmo);
     const gdouble x2 = x*x;
     const gdouble x3 = x2*x;
     const gdouble k = pert->pws->k;
@@ -367,12 +367,12 @@ LINEAR_NAME_SUFFIX (get_sources) (NcLinearPert *pert, gdouble *S0, gdouble *S1, 
     const gdouble k2x_3E = k * kx_3E;
     const gdouble k2x_3E2 = k2x_3E / E;
     const gdouble k2x2_3E2 = x * k2x_3E2;
-    const gdouble dErm2_dx = (3.0 * Omega_m * x2 + 4.0 * Omega_r * x3);
-    const gdouble psi = -_NC_PHI - 12.0 * x2 / k2 * Omega_r * _NC_THETA2;
+    const gdouble dErm2_dx = (3.0 * Omega_m0 * x2 + 4.0 * Omega_r0 * x3);
+    const gdouble psi = -_NC_PHI - 12.0 * x2 / k2 * Omega_r0 * _NC_THETA2;
     const gdouble PI = _NC_THETA2 + _NC_THETA_P0 + _NC_THETA_P2;
     const gdouble exp_tau = exp (-opt);
     const gdouble taubar_exp_tau = GSL_SIGN(taubar) * exp(tau_log_abs_taubar);
-    const gdouble R0 = 4.0 * Omega_r / (3.0 * Omega_b);
+    const gdouble R0 = 4.0 * Omega_r0 / (3.0 * Omega_b0);
     const gdouble R = R0 * x;
     gdouble dphi, b1, theta0;
 
@@ -381,7 +381,7 @@ LINEAR_NAME_SUFFIX (get_sources) (NcLinearPert *pert, gdouble *S0, gdouble *S1, 
       dphi = psi - k2x2_3E2 * _NC_PHI - x / (2.0 * E2) *
       (
         dErm2_dx * (_NC_PHI - _NC_C0)
-        -(3.0 * Omega_b * _NC_dB0 * x2 + 4.0 * Omega_r * x3 * _NC_dTHETA0)
+        -(3.0 * Omega_b0 * _NC_dB0 * x2 + 4.0 * Omega_r0 * x3 * _NC_dTHETA0)
         );
       theta0 = _NC_dTHETA0 + (_NC_C0 - _NC_PHI);
       b1 = (R * (_NC_U - _NC_T)) / (R + 1.0) + _NC_V - kx_3E * (_NC_C0 - _NC_PHI);
@@ -391,7 +391,7 @@ LINEAR_NAME_SUFFIX (get_sources) (NcLinearPert *pert, gdouble *S0, gdouble *S1, 
       dphi = psi - k2x2_3E2 * _NC_PHI - x / (2.0 * E2) *
       (
         dErm2_dx * _NC_PHI
-        -(3.0 * (Omega_c * _NC_C0 * x2 + Omega_b * _NC_B0 * x2) + 4.0 * Omega_r * x3 * _NC_THETA0)
+        -(3.0 * (Omega_c0 * _NC_C0 * x2 + Omega_b0 * _NC_B0 * x2) + 4.0 * Omega_r0 * x3 * _NC_THETA0)
         );
       theta0 = _NC_THETA0 - _NC_PHI;
       b1 = _NC_B1;
@@ -412,11 +412,11 @@ LINEAR_NAME_SUFFIX (step) (LINEAR_STEP_PARAMS)
 {
   NcLinearPert *pert = NC_LINEAR_PERTURBATIONS (user_data);
   const guint lmax = pert->lmax;
-  const gdouble Omega_r = nc_hicosmo_Omega_r (pert->cosmo);
-  const gdouble Omega_b = nc_hicosmo_Omega_b (pert->cosmo);
-  const gdouble Omega_c = nc_hicosmo_Omega_c (pert->cosmo);
-  const gdouble Omega_m = nc_hicosmo_Omega_m (pert->cosmo);
-  const gdouble R0 = 4.0 * Omega_r / (3.0 * Omega_b);
+  const gdouble Omega_r0 = nc_hicosmo_Omega_r0 (pert->cosmo);
+  const gdouble Omega_b0 = nc_hicosmo_Omega_b0 (pert->cosmo);
+  const gdouble Omega_c0 = nc_hicosmo_Omega_c0 (pert->cosmo);
+  const gdouble Omega_m0 = nc_hicosmo_Omega_m0 (pert->cosmo);
+  const gdouble R0 = 4.0 * Omega_r0 / (3.0 * Omega_b0);
   const gdouble x = NC_PERTURBATIONS_LAMBDA2X (lambda);
   const gdouble R = R0 * x;
   const gdouble x2 = x*x;
@@ -431,9 +431,9 @@ LINEAR_NAME_SUFFIX (step) (LINEAR_STEP_PARAMS)
   const gdouble k2x_3E = k * kx_3E;
   const gdouble k2x_3E2 = k2x_3E / E;
   const gdouble k2x2_3E2 = x * k2x_3E2;
-  const gdouble psi = -_NC_PHI - 12.0 * x2 / k2 * Omega_r * _NC_THETA2;
+  const gdouble psi = -_NC_PHI - 12.0 * x2 / k2 * Omega_r0 * _NC_THETA2;
   const gdouble PI = _NC_THETA2 + _NC_THETA_P0 + _NC_THETA_P2;
-  const gdouble dErm2_dx = (3.0 * Omega_m * x2 + 4.0 * Omega_r * x3);
+  const gdouble dErm2_dx = (3.0 * Omega_m0 * x2 + 4.0 * Omega_r0 * x3);
   const gdouble taubar = nc_recomb_dtau_dlambda (pert->recomb, pert->cosmo, lambda);
   guint i;
 
@@ -445,14 +445,14 @@ LINEAR_NAME_SUFFIX (step) (LINEAR_STEP_PARAMS)
     _NC_DPHI = psi - k2x2_3E2 * _NC_PHI - x / (2.0 * E2) *
       (
         dErm2_dx * (_NC_PHI - _NC_C0)
-        -(3.0 * Omega_b * _NC_dB0 * x2 + 4.0 * Omega_r * x3 * _NC_dTHETA0)
+        -(3.0 * Omega_b0 * _NC_dB0 * x2 + 4.0 * Omega_r0 * x3 * _NC_dTHETA0)
         );
 
     _NC_DC0 = -kx_E * _NC_V + k2x2_3E2 * (_NC_C0 - _NC_PHI);
     _NC_DdTHETA0 = -kx_E * (R * _NC_U + _NC_T) / (R + 1.0);
     _NC_DdB0 = -kx_E * R * (_NC_U - _NC_T) / (R + 1.0);
 
-    _NC_DV = -_NC_V - kx_3E * (kx_E * _NC_V - k2x2_3E2 * _NC_C0 + x3 * (3.0 * Omega_b * _NC_dB0 + 4.0 * Omega_r * x * _NC_dTHETA0) / (2.0 * E2));
+    _NC_DV = -_NC_V - kx_3E * (kx_E * _NC_V - k2x2_3E2 * _NC_C0 + x3 * (3.0 * Omega_b0 * _NC_dB0 + 4.0 * Omega_r0 * x * _NC_dTHETA0) / (2.0 * E2));
     _NC_DU = kx_3E * (_NC_dTHETA0 - 2.0 * _NC_THETA2) + _NC_V;
     _NC_DT = kx_3E * (_NC_dTHETA0 - 2.0 * _NC_THETA2) + _NC_V + R * (_NC_U - _NC_T) / (R + 1.0) + taubar * (1.0 + R) * _NC_T;
 
@@ -462,7 +462,7 @@ LINEAR_NAME_SUFFIX (step) (LINEAR_STEP_PARAMS)
   {
     _NC_DPHI = psi - k2x2_3E2 * _NC_PHI + x / (2.0 * E2) *
       (
-        (3.0 * (Omega_c * _NC_C0 * x2 + Omega_b * _NC_B0 * x2) + 4.0 * Omega_r * x3 * _NC_THETA0)
+        (3.0 * (Omega_c0 * _NC_C0 * x2 + Omega_b0 * _NC_B0 * x2) + 4.0 * Omega_r0 * x3 * _NC_THETA0)
         -dErm2_dx * _NC_PHI
         );
 
@@ -484,7 +484,7 @@ LINEAR_NAME_SUFFIX (step) (LINEAR_STEP_PARAMS)
       
     _NC_DPHI = psi - k2x2_3E2 * _NC_PHI + x / (2.0 * E2) *
       (
-        (3.0 * (Omega_c * _NC_C0 * x2 + Omega_b * _NC_B0 * x2) + 4.0 * Omega_r * x3 * theta0)
+        (3.0 * (Omega_c0 * _NC_C0 * x2 + Omega_b0 * _NC_B0 * x2) + 4.0 * Omega_r0 * x3 * theta0)
         -dErm2_dx * _NC_PHI
         );
 
@@ -604,11 +604,11 @@ LINEAR_NAME_SUFFIX (band_J) (LINEAR_JAC_PARAMS)
 {
   NcLinearPert *pert = (NcLinearPert *)user_data;
   const guint lmax = pert->lmax;
-  const gdouble Omega_r = nc_hicosmo_Omega_r (pert->cosmo);
-  const gdouble Omega_b = nc_hicosmo_Omega_b (pert->cosmo);
-  const gdouble Omega_c = nc_hicosmo_Omega_c (pert->cosmo);
-  const gdouble Omega_m = nc_hicosmo_Omega_m (pert->cosmo);
-  const gdouble R0 = 4.0 * Omega_r / (3.0 * Omega_b);
+  const gdouble Omega_r0 = nc_hicosmo_Omega_r0 (pert->cosmo);
+  const gdouble Omega_b0 = nc_hicosmo_Omega_b0 (pert->cosmo);
+  const gdouble Omega_c0 = nc_hicosmo_Omega_c0 (pert->cosmo);
+  const gdouble Omega_m0 = nc_hicosmo_Omega_m0 (pert->cosmo);
+  const gdouble R0 = 4.0 * Omega_r0 / (3.0 * Omega_b0);
   const gdouble x = NC_PERTURBATIONS_LAMBDA2X (lambda);
   const gdouble R = R0 * x;
   const gdouble x2 = x*x;
@@ -624,7 +624,7 @@ LINEAR_NAME_SUFFIX (band_J) (LINEAR_JAC_PARAMS)
   const gdouble k2x_3E = k * kx_3E;
   const gdouble k2x_3E2 = k2x_3E / E;
   const gdouble k2x2_3E2 = x * k2x_3E2;
-  const gdouble dErm2_dx = (3.0 * Omega_m * x2 + 4.0 * Omega_r * x3);
+  const gdouble dErm2_dx = (3.0 * Omega_m0 * x2 + 4.0 * Omega_r0 * x3);
   const gdouble taubar = nc_recomb_dtau_dlambda (pert->recomb, pert->cosmo, lambda);
   guint i;
 
@@ -633,18 +633,18 @@ LINEAR_NAME_SUFFIX (band_J) (LINEAR_JAC_PARAMS)
   if (pert->pws->tight_coupling)
   {
     /*
-     * const gdouble psi = -_NC_PHI - 12.0 * x2 / k2 * Omega_r * _NC_THETA2;
+     * const gdouble psi = -_NC_PHI - 12.0 * x2 / k2 * Omega_r0 * _NC_THETA2;
      * _NC_DPHI = psi - k2x2_3E2 * _NC_PHI - x / (2.0 * E2) *
      *  (
        *    dErm2_dx * (_NC_PHI - _NC_C0)
-     *   -(3.0 * Omega_b * _NC_dB0 * x2 + 4.0 * Omega_r * x3 * _NC_dTHETA0)
+     *   -(3.0 * Omega_b0 * _NC_dB0 * x2 + 4.0 * Omega_r0 * x3 * _NC_dTHETA0)
      *   );
      */
     LINEAR_MATRIX_E (J, NC_PERT_PHI, NC_PERT_PHI)      = -1.0 - k2x2_3E2 - x * dErm2_dx / (2.0 * E2);
     LINEAR_MATRIX_E (J, NC_PERT_PHI, NC_PERT_C0)       = +x * dErm2_dx / (2.0 * E2);
-    LINEAR_MATRIX_E (J, NC_PERT_PHI, NC_PERT_dB0)      = +3.0 * Omega_b * x3 / (2.0 * E2);
-    LINEAR_MATRIX_E (J, NC_PERT_PHI, NC_PERT_dTHETA0)  = +2.0 * x4 * Omega_r / E2;
-    LINEAR_MATRIX_E (J, NC_PERT_PHI, NC_PERT_THETA2)   = -12.0 * x2 / k2 * Omega_r;
+    LINEAR_MATRIX_E (J, NC_PERT_PHI, NC_PERT_dB0)      = +3.0 * Omega_b0 * x3 / (2.0 * E2);
+    LINEAR_MATRIX_E (J, NC_PERT_PHI, NC_PERT_dTHETA0)  = +2.0 * x4 * Omega_r0 / E2;
+    LINEAR_MATRIX_E (J, NC_PERT_PHI, NC_PERT_THETA2)   = -12.0 * x2 / k2 * Omega_r0;
 
     /* _NC_DC0 = -kx_E * _NC_V + k2x2_3E2 * (_NC_C0 - _NC_PHI); */
     LINEAR_MATRIX_E (J, NC_PERT_C0, NC_PERT_PHI)       = -k2x2_3E2;
@@ -659,9 +659,9 @@ LINEAR_NAME_SUFFIX (band_J) (LINEAR_JAC_PARAMS)
     LINEAR_MATRIX_E (J, NC_PERT_dTHETA0, NC_PERT_U)    = -kx_E * R / (R + 1.0);
     LINEAR_MATRIX_E (J, NC_PERT_dTHETA0, NC_PERT_T)    = -kx_E / (R + 1.0);
 
-    /* _NC_DV = -_NC_V - kx_3E * (kx_E * _NC_V - k2x2_3E2 * _NC_C0 + x3 * (3.0 * Omega_b * _NC_dB0 + 4.0 * Omega_r * x * _NC_dTHETA0) / (2.0 * E2)); */
-    LINEAR_MATRIX_E (J, NC_PERT_V, NC_PERT_dB0)        = -kx_E * x3 *  Omega_b / (2.0 * E2);
-    LINEAR_MATRIX_E (J, NC_PERT_V, NC_PERT_dTHETA0)    = -kx_3E * x4 * 2.0 * Omega_r / E2;
+    /* _NC_DV = -_NC_V - kx_3E * (kx_E * _NC_V - k2x2_3E2 * _NC_C0 + x3 * (3.0 * Omega_b0 * _NC_dB0 + 4.0 * Omega_r0 * x * _NC_dTHETA0) / (2.0 * E2)); */
+    LINEAR_MATRIX_E (J, NC_PERT_V, NC_PERT_dB0)        = -kx_E * x3 *  Omega_b0 / (2.0 * E2);
+    LINEAR_MATRIX_E (J, NC_PERT_V, NC_PERT_dTHETA0)    = -kx_3E * x4 * 2.0 * Omega_r0 / E2;
     LINEAR_MATRIX_E (J, NC_PERT_V, NC_PERT_C0)         = +kx_3E * k2x2_3E2;
     LINEAR_MATRIX_E (J, NC_PERT_V, NC_PERT_V)          = -1.0 - k2x2_3E2;
 
@@ -695,10 +695,10 @@ LINEAR_NAME_SUFFIX (band_J) (LINEAR_JAC_PARAMS)
   else
   {
     LINEAR_MATRIX_E (J, NC_PERT_PHI, NC_PERT_PHI)         = -1.0 - k2x2_3E2 - x * dErm2_dx / (2.0 * E2);
-    LINEAR_MATRIX_E (J, NC_PERT_PHI, NC_PERT_C0)          = 3.0 * Omega_c * x3 / (2.0 * E2);
-    LINEAR_MATRIX_E (J, NC_PERT_PHI, NC_PERT_B0)          = 3.0 * Omega_b * x3 / (2.0 * E2);
-    LINEAR_MATRIX_E (J, NC_PERT_PHI, NC_PERT_THETA0)      = 2.0 * x4 * Omega_r / E2;
-    LINEAR_MATRIX_E (J, NC_PERT_PHI, NC_PERT_THETA2)      = -12.0 * x2 / k2 * Omega_r;
+    LINEAR_MATRIX_E (J, NC_PERT_PHI, NC_PERT_C0)          = 3.0 * Omega_c0 * x3 / (2.0 * E2);
+    LINEAR_MATRIX_E (J, NC_PERT_PHI, NC_PERT_B0)          = 3.0 * Omega_b0 * x3 / (2.0 * E2);
+    LINEAR_MATRIX_E (J, NC_PERT_PHI, NC_PERT_THETA0)      = 2.0 * x4 * Omega_r0 / E2;
+    LINEAR_MATRIX_E (J, NC_PERT_PHI, NC_PERT_THETA2)      = -12.0 * x2 / k2 * Omega_r0;
 
     LINEAR_MATRIX_E (J, NC_PERT_C0, NC_PERT_C1)           = -kx_E;
 
@@ -707,19 +707,19 @@ LINEAR_NAME_SUFFIX (band_J) (LINEAR_JAC_PARAMS)
     LINEAR_MATRIX_E (J, NC_PERT_THETA0, NC_PERT_THETA1)   = -kx_E;
 
     LINEAR_MATRIX_E (J, NC_PERT_C1, NC_PERT_PHI)          = -kx_3E;
-    LINEAR_MATRIX_E (J, NC_PERT_C1, NC_PERT_THETA2)       = -12.0 * x3 / (E*k) * Omega_r;
+    LINEAR_MATRIX_E (J, NC_PERT_C1, NC_PERT_THETA2)       = -12.0 * x3 / (E*k) * Omega_r0;
     LINEAR_MATRIX_E (J, NC_PERT_C1, NC_PERT_C1)           = -1.0;
 
     LINEAR_MATRIX_E (J, NC_PERT_B1, NC_PERT_PHI)          = -kx_3E;
     LINEAR_MATRIX_E (J, NC_PERT_B1, NC_PERT_THETA1)       = -taubar * R0 * x;
-    LINEAR_MATRIX_E (J, NC_PERT_B1, NC_PERT_THETA2)       = -12.0 * x3 / (E*k) * Omega_r;
+    LINEAR_MATRIX_E (J, NC_PERT_B1, NC_PERT_THETA2)       = -12.0 * x3 / (E*k) * Omega_r0;
     LINEAR_MATRIX_E (J, NC_PERT_B1, NC_PERT_B1)           = -1.0 + taubar * R0 * x;
 
     LINEAR_MATRIX_E (J, NC_PERT_THETA1, NC_PERT_PHI)      = -2.0 * kx_E / 3.0;
     LINEAR_MATRIX_E (J, NC_PERT_THETA1, NC_PERT_THETA0)   = kx_E / 3.0;
     LINEAR_MATRIX_E (J, NC_PERT_THETA1, NC_PERT_B1)       = -taubar;
     LINEAR_MATRIX_E (J, NC_PERT_THETA1, NC_PERT_THETA1)   = taubar;
-    LINEAR_MATRIX_E (J, NC_PERT_THETA1, NC_PERT_THETA2)   = -2.0 * kx_E / 3.0 - 4.0 * x3 / (E*k) * Omega_r;
+    LINEAR_MATRIX_E (J, NC_PERT_THETA1, NC_PERT_THETA2)   = -2.0 * kx_E / 3.0 - 4.0 * x3 / (E*k) * Omega_r0;
 
     /* _NC_DTHETA_P2 = kx_E * (2.0 * _NC_THETA_P1 - 3.0 * _NC_THETA_P(3)) / 5.0 + taubar * (_NC_THETA_P2 - PI / 10.0); */
     LINEAR_MATRIX_E (J, NC_PERT_THETA2, NC_PERT_THETA1)   = 2.0 * kx_E / 5.0;

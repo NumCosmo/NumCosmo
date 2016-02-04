@@ -534,10 +534,10 @@ cvodes_lineofsight (realtype lambda, N_Vector y, N_Vector yQdot, gpointer user_d
   if (tau_log_abs_taubar > GSL_LOG_DBL_MIN + 0.01)
   {
     gint i;
-    const gdouble Omega_r = params->model->Omega_r.f (params, NC_FUNCTION_CONST);
-    const gdouble Omega_m = params->model->Omega_m.f (params, NC_FUNCTION_CONST); /* FIXME */
-    const gdouble Omega_b = params->model->Omega_b.f (params, NC_FUNCTION_CONST);
-    const gdouble Omega_c = Omega_m - Omega_b;
+    const gdouble Omega_r0 = params->model->Omega_r0.f (params, NC_FUNCTION_CONST);
+    const gdouble Omega_m0 = params->model->Omega_m0.f (params, NC_FUNCTION_CONST); /* FIXME */
+    const gdouble Omega_b0 = params->model->Omega_b0.f (params, NC_FUNCTION_CONST);
+    const gdouble Omega_c0 = Omega_m0 - Omega_b0;
     const gdouble x2 = x*x;
     const gdouble x3 = x2*x;
     const gdouble k = pert->pws->k;
@@ -550,12 +550,12 @@ cvodes_lineofsight (realtype lambda, N_Vector y, N_Vector yQdot, gpointer user_d
     const gdouble k2x_3E = k * kx_3E;
     const gdouble k2x_3E2 = k2x_3E / E;
     const gdouble k2x2_3E2 = x * k2x_3E2;
-    const gdouble dErm2_dx = (3.0 * Omega_m * x2 + 4.0 * Omega_r * x3);
-    const gdouble psi = -PHI - 12.0 * x2 / k2 * Omega_r * THETA2;
+    const gdouble dErm2_dx = (3.0 * Omega_m0 * x2 + 4.0 * Omega_r0 * x3);
+    const gdouble psi = -PHI - 12.0 * x2 / k2 * Omega_r0 * THETA2;
     const gdouble PI = THETA2 + THETA_P0 + THETA_P2;
     const gdouble exp_tau = exp (-opt);
     const gdouble taubar_exp_tau = GSL_SIGN(taubar) * exp(tau_log_abs_taubar);
-    const gdouble R0 = 4.0 * Omega_r / (3.0 * Omega_b);
+    const gdouble R0 = 4.0 * Omega_r0 / (3.0 * Omega_b0);
     const gdouble R = R0 * x;
     gdouble dphi, b1, theta0;
 
@@ -564,7 +564,7 @@ cvodes_lineofsight (realtype lambda, N_Vector y, N_Vector yQdot, gpointer user_d
       dphi = psi - k2x2_3E2 * PHI - x / (2.0 * E2) *
       (
         dErm2_dx * (PHI - C0)
-        -(3.0 * Omega_b * dB0 * x2 + 4.0 * Omega_r * x3 * dTHETA0)
+        -(3.0 * Omega_b0 * dB0 * x2 + 4.0 * Omega_r0 * x3 * dTHETA0)
         );
       theta0 = dTHETA0 + (C0 - PHI);
       b1 = (R * (U - T)) / (R + 1.0) + V - kx_3E * (C0 - PHI);
@@ -574,7 +574,7 @@ cvodes_lineofsight (realtype lambda, N_Vector y, N_Vector yQdot, gpointer user_d
       dphi = psi - k2x2_3E2 * PHI - x / (2.0 * E2) *
       (
         dErm2_dx * PHI
-        -(3.0 * (Omega_c * C0 * x2 + Omega_b * B0 * x2) + 4.0 * Omega_r * x3 * THETA0)
+        -(3.0 * (Omega_c0 * C0 * x2 + Omega_b0 * B0 * x2) + 4.0 * Omega_r0 * x3 * THETA0)
         );
       theta0 = THETA0 - PHI;
       b1 = B1;

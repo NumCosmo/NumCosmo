@@ -913,10 +913,10 @@ _nc_cbe_set_bg (NcCBE *cbe, NcHICosmo *cosmo)
   cbe->priv->pba.h                   = nc_hicosmo_h (cosmo);
   cbe->priv->pba.H0                  = cbe->priv->pba.h * 1.0e5 / ncm_c_c ();
   cbe->priv->pba.T_cmb               = nc_hicosmo_T_gamma0 (cosmo);
-  cbe->priv->pba.Omega0_g            = nc_hicosmo_Omega_g (cosmo);
-  cbe->priv->pba.Omega0_ur           = nc_hicosmo_Omega_nu (cosmo);
-  cbe->priv->pba.Omega0_b            = nc_hicosmo_Omega_b (cosmo);
-  cbe->priv->pba.Omega0_cdm          = nc_hicosmo_Omega_c (cosmo);
+  cbe->priv->pba.Omega0_g            = nc_hicosmo_Omega_g0 (cosmo);
+  cbe->priv->pba.Omega0_ur           = nc_hicosmo_Omega_nu0 (cosmo);
+  cbe->priv->pba.Omega0_b            = nc_hicosmo_Omega_b0 (cosmo);
+  cbe->priv->pba.Omega0_cdm          = nc_hicosmo_Omega_c0 (cosmo);
   cbe->priv->pba.Omega0_dcdmdr       = 0.0;
   cbe->priv->pba.Omega0_dcdm         = 0.0;
   cbe->priv->pba.Gamma_dcdm          = 0.0;
@@ -939,7 +939,7 @@ _nc_cbe_set_bg (NcCBE *cbe, NcHICosmo *cosmo)
   cbe->priv->pba.phi_ini_scf         = 1;
   cbe->priv->pba.phi_prime_ini_scf   = 1;
 
-  cbe->priv->pba.Omega0_k            = nc_hicosmo_Omega_k (cosmo);
+  cbe->priv->pba.Omega0_k            = nc_hicosmo_Omega_k0 (cosmo);
   if (fabs (cbe->priv->pba.Omega0_k) > 1.0e-13)
   {
     cbe->priv->pba.K                   = -GSL_SIGN (cbe->priv->pba.Omega0_k);
@@ -1299,13 +1299,13 @@ _nc_cbe_call_bg (NcCBE *cbe, NcHICosmo *cosmo)
       const gdouble RH_pow_m2 = 1.0 / (RH * RH);
       const gdouble H_prime   = - 0.5 * nc_hicosmo_dE2_dz (cosmo, z) * RH_pow_m2;
 
-      const gdouble rho_g      = nc_hicosmo_Omega_g (cosmo) * RH_pow_m2 * x4;
-      const gdouble rho_ur     = nc_hicosmo_Omega_nu (cosmo) * RH_pow_m2 * x4;
-      const gdouble rho_b      = nc_hicosmo_Omega_b (cosmo) * RH_pow_m2 * x3;
-      const gdouble rho_cdm    = nc_hicosmo_Omega_c (cosmo) * RH_pow_m2 * x3;
+      const gdouble rho_g      = nc_hicosmo_Omega_g0 (cosmo) * RH_pow_m2 * x4;
+      const gdouble rho_ur     = nc_hicosmo_Omega_nu0 (cosmo) * RH_pow_m2 * x4;
+      const gdouble rho_b      = nc_hicosmo_Omega_b0 (cosmo) * RH_pow_m2 * x3;
+      const gdouble rho_cdm    = nc_hicosmo_Omega_c0 (cosmo) * RH_pow_m2 * x3;
       const gdouble rho_Lambda = ncm_model_orig_param_get (NCM_MODEL (cosmo), NC_HICOSMO_DE_OMEGA_X) * RH_pow_m2;
 
-      const gdouble Omega_r    = nc_hicosmo_Omega_r (cosmo) * x4 / E2;
+      const gdouble Omega_r0   = nc_hicosmo_Omega_r0 (cosmo) * x4 / E2;
 
       const gdouble rho_crit   = E2 * RH_pow_m2;
 
@@ -1328,13 +1328,13 @@ _nc_cbe_call_bg (NcCBE *cbe, NcHICosmo *cosmo)
         const gdouble rho_cdm_diff    = fabs (rho_cdm / pvecback[pba->index_bg_rho_cdm] - 1.0);
         const gdouble rho_Lambda_diff = fabs (rho_Lambda / pvecback[pba->index_bg_rho_lambda] - 1.0);
 
-        const gdouble Omega_r_diff    = fabs (Omega_r / pvecback[pba->index_bg_Omega_r] - 1.0);
+        const gdouble Omega_r0_diff   = fabs (Omega_r0 / pvecback[pba->index_bg_Omega_r] - 1.0);
 
         const gdouble rho_crit_diff   = fabs (rho_crit / pvecback[pba->index_bg_rho_crit] - 1.0);
         
         printf ("# eta = % 20.15g | % 10.5e % 10.5e % 10.5e % 10.5e % 10.5e % 10.5e % 10.5e % 10.5e % 10.5e % 10.5e\n", eta,
                 a_diff, H_diff, Hprime_diff, rho_g_diff, rho_ur_diff, rho_b_diff, rho_cdm_diff, rho_Lambda_diff,
-                Omega_r_diff, rho_crit_diff
+                Omega_r0_diff, rho_crit_diff
                 );
       }
     }

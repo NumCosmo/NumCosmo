@@ -137,7 +137,7 @@ nc_hicosmo_qg_beta (NcmModel *model, gdouble x, gpointer userdata)
 }
 
 gdouble
-nc_hicosmo_qg_Omega_x2 (NcmModel *model, gdouble x, gpointer userdata)
+nc_hicosmo_qg_Omega_x02 (NcmModel *model, gdouble x, gpointer userdata)
 {
   gdouble x3w = pow (x, 3.0 * W);
   NCM_UNUSED (userdata);
@@ -145,7 +145,7 @@ nc_hicosmo_qg_Omega_x2 (NcmModel *model, gdouble x, gpointer userdata)
 }
 
 gdouble
-nc_hicosmo_qg_dOmega_x2 (NcmModel *model, gdouble x, gpointer userdata)
+nc_hicosmo_qg_dOmega_x02 (NcmModel *model, gdouble x, gpointer userdata)
 {
   gdouble x3w = pow (x, 3.0 * W);
   NCM_UNUSED (userdata);
@@ -521,13 +521,13 @@ nc_hicosmo_qg_V (NcmModel *model, gdouble x, gpointer userdata)
 gdouble
 nc_hicosmo_qg_lambda_x (NcmModel *model, gdouble x, gpointer userdata)
 {
-  gdouble sqrt_Omega_r = sqrt(OMEGA_R);
-  gdouble sqrt_Omega_m = sqrt(OMEGA_M);
+  gdouble sqrt_Omega_r0 = sqrt(OMEGA_R);
+  gdouble sqrt_Omega_m0 = sqrt(OMEGA_M);
   gdouble one_m3omega = (1.0 - 3.0 * W);
 
   NCM_UNUSED (userdata);
   
-  return 2.0 * asinh (pow(x, one_m3omega / 2.0) * sqrt_Omega_r / sqrt_Omega_m) / (one_m3omega * sqrt_Omega_r);
+  return 2.0 * asinh (pow(x, one_m3omega / 2.0) * sqrt_Omega_r0 / sqrt_Omega_m0) / (one_m3omega * sqrt_Omega_r0);
 }
 
 /**
@@ -704,12 +704,12 @@ nc_hicosmo_qg_R_dust_sol (NcHICosmoQGMode *qgmode, gdouble x, gdouble *R)
 {
   NcmModel *model = qgmode->model;
   const gdouble E0 = NC_C_Hb_H0;
-  const gdouble sqrt_Omega_m = sqrt (OMEGA_M);
-  const gdouble A = sqrt (M_PI / (E0 * (1.0 + 3.0 * W) * sqrt_Omega_m) * (2.0 * W) / (3.0 * (1.0 + W)));
+  const gdouble sqrt_Omega_m0 = sqrt (OMEGA_M);
+  const gdouble A = sqrt (M_PI / (E0 * (1.0 + 3.0 * W) * sqrt_Omega_m0) * (2.0 * W) / (3.0 * (1.0 + W)));
   const gdouble alpha = 3.0 * (1.0 - W) / (2.0 * (1.0 + 3.0 * W));
   const gdouble nu_malpha = pow (x, 3.0 * (1.0 - W) / 4.0);
   const gdouble nu = pow (x, -(1.0 + 3.0 * W) / 2.0);
-  const gdouble u = 2.0 * qgmode->k * sqrt(W) * nu / (E0 * (1.0 + 3.0 * W) * sqrt_Omega_m);
+  const gdouble u = 2.0 * qgmode->k * sqrt(W) * nu / (E0 * (1.0 + 3.0 * W) * sqrt_Omega_m0);
   const gdouble dnu_dx = - (1.0 + 3.0 * W) / 2.0 * pow (x, -3.0 * (1.0 + W) / 2.0);
 
   R[0] = A * nu_malpha * gsl_sf_bessel_Jnu (alpha, u);
@@ -1513,7 +1513,7 @@ nc_hicosmo_qg_pert_evolve (NcHICosmoQGMode *qgmode)
 {
   NcHICosmoQG *qgint = (NcHICosmoQG *)qgmode->cp->model->private_data;
   gint flag;
-  gdouble xeq = NC_HICOSMO_Omega_m (qgmode->cp) / NC_HICOSMO_Omega_r (qgmode->cp);
+  gdouble xeq = NC_HICOSMO_Omega_m0 (qgmode->cp) / NC_HICOSMO_Omega_r0 (qgmode->cp);
   gdouble alpha_eq = log (xeq);
   gdouble lambda_eq;
   gdouble alpha, last_alpha, x, tmp[4], lambda, delta_phi, zeta;

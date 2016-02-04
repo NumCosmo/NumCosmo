@@ -47,7 +47,7 @@ G_DEFINE_ABSTRACT_TYPE (NcHICosmoDE, nc_hicosmo_de, NC_TYPE_HICOSMO);
 #define T_GAMMA0  (ncm_vector_get (VECTOR, NC_HICOSMO_DE_T_GAMMA0))
 #define HE_YP     (ncm_vector_get (VECTOR, NC_HICOSMO_DE_HE_YP))
 #define ENNU      (ncm_vector_get (VECTOR, NC_HICOSMO_DE_ENNU))
-#define OMEGA_R   nc_hicosmo_Omega_r (NC_HICOSMO (cosmo))
+#define OMEGA_R   nc_hicosmo_Omega_r0 (NC_HICOSMO (cosmo))
 #define OMEGA_B   (ncm_vector_get (VECTOR, NC_HICOSMO_DE_OMEGA_B))
 #define SPECINDEX (ncm_vector_get (VECTOR, NC_HICOSMO_DE_SPECINDEX))
 #define SIGMA8    (ncm_vector_get (VECTOR, NC_HICOSMO_DE_SIGMA8))
@@ -104,14 +104,14 @@ _nc_hicosmo_de_d2E2_dz2 (NcHICosmo *cosmo, gdouble z)
  * Simple functions
  ****************************************************************************/
 static gdouble _nc_hicosmo_de_H0 (NcHICosmo *cosmo) { return MACRO_H0; }
-static gdouble _nc_hicosmo_de_Omega_t (NcHICosmo *cosmo) { return OMEGA_M + OMEGA_X + OMEGA_R; }
-static gdouble _nc_hicosmo_de_Omega_c (NcHICosmo *cosmo) { return OMEGA_C; }
+static gdouble _nc_hicosmo_de_Omega_t0 (NcHICosmo *cosmo) { return OMEGA_M + OMEGA_X + OMEGA_R; }
+static gdouble _nc_hicosmo_de_Omega_c0 (NcHICosmo *cosmo) { return OMEGA_C; }
 static gdouble _nc_hicosmo_de_T_gamma0 (NcHICosmo *cosmo) { return T_GAMMA0; }
 
 static gdouble 
 _nc_hicosmo_de_Yp_4He (NcHICosmo *cosmo) 
 { 
-  const gdouble wb     = nc_hicosmo_Omega_bh2 (cosmo);
+  const gdouble wb     = nc_hicosmo_Omega_b0h2 (cosmo);
   const gdouble wb2    = wb * wb;
   const gdouble DENNU  = ENNU - 3.046;
   const gdouble DENNU2 = DENNU * DENNU;
@@ -123,25 +123,36 @@ _nc_hicosmo_de_Yp_4He (NcHICosmo *cosmo)
   return Yp;
 }
 
-static gdouble _nc_hicosmo_de_Omega_g (NcHICosmo *cosmo)
+static gdouble _nc_hicosmo_de_Omega_g0 (NcHICosmo *cosmo)
 {
   const gdouble h = MACRO_H0 / 100.0;
   const gdouble h2 = h * h;
   return ncm_c_radiation_temp_to_h2omega_r (T_GAMMA0) / h2;
 }
 static gdouble
-_nc_hicosmo_de_Omega_nu (NcHICosmo *cosmo)
+_nc_hicosmo_de_Omega_nu0 (NcHICosmo *cosmo)
 {
   const gdouble conv = 7.0 / 8.0 * pow (4.0 / 11.0, 4.0 / 3.0);
-  return ENNU * conv * _nc_hicosmo_de_Omega_g (cosmo);
+  return ENNU * conv * _nc_hicosmo_de_Omega_g0 (cosmo);
 }
 static gdouble
-_nc_hicosmo_de_Omega_r (NcHICosmo *cosmo)
+_nc_hicosmo_de_Omega_r0 (NcHICosmo *cosmo)
 {
   const gdouble conv = 7.0 / 8.0 * pow (4.0 / 11.0, 4.0 / 3.0);
-  return (1.0 + ENNU * conv) * _nc_hicosmo_de_Omega_g (cosmo);
+  return (1.0 + ENNU * conv) * _nc_hicosmo_de_Omega_g0 (cosmo);
 }
-static gdouble _nc_hicosmo_de_Omega_b (NcHICosmo *cosmo) { return OMEGA_B; }
+static gdouble _nc_hicosmo_de_Omega_b0 (NcHICosmo *cosmo) { return OMEGA_B; }
+static gdouble
+_nc_hicosmo_de_bgp_cs2 (NcHICosmo *cosmo, gdouble z)
+{
+  const gdouble x        = 1.0 + z;
+  const gdouble Omega_g0 = _nc_hicosmo_de_Omega_g0 (cosmo);
+  const gdouble Omega_b0 = _nc_hicosmo_de_Omega_b0 (cosmo);
+  const gdouble nine_4   = 9.0 / 4.0;
+  
+  return 1.0 / (3.0 + nine_4 * Omega_b0 / (Omega_g0 * x));
+}
+
 static gdouble _nc_hicosmo_de_sigma_8 (NcHICosmo *cosmo) { return SIGMA8; }
 static gdouble _nc_hicosmo_de_powspec (NcHICosmo *cosmo, gdouble k) { return pow (k, SPECINDEX); }
 
@@ -240,13 +251,13 @@ nc_hicosmo_de_class_init (NcHICosmoDEClass *klass)
                               40.0, 120.0, 1.0,
                               NC_HICOSMO_DEFAULT_PARAMS_ABSTOL, NC_HICOSMO_DE_DEFAULT_H0,
                               NCM_PARAM_TYPE_FIXED);
-  /* Set Omega_c param info */
-  ncm_model_class_set_sparam (model_class, NC_HICOSMO_DE_OMEGA_C, "\\Omega_c", "Omegac",
+  /* Set Omega_c0 param info */
+  ncm_model_class_set_sparam (model_class, NC_HICOSMO_DE_OMEGA_C, "\\Omega_{c0}", "Omegac",
                               1e-8,  1.2, 1.0e-2,
                               NC_HICOSMO_DEFAULT_PARAMS_ABSTOL, NC_HICOSMO_DE_DEFAULT_OMEGA_C,
                               NCM_PARAM_TYPE_FREE);
-  /* Set Omega_x param info */
-  ncm_model_class_set_sparam (model_class, NC_HICOSMO_DE_OMEGA_X, "\\Omega_x", "Omegax",
+  /* Set Omega_x0 param info */
+  ncm_model_class_set_sparam (model_class, NC_HICOSMO_DE_OMEGA_X, "\\Omega_{x0}", "Omegax",
                               1e-8,  2.0, 1.0e-2,
                               NC_HICOSMO_DEFAULT_PARAMS_ABSTOL, NC_HICOSMO_DE_DEFAULT_OMEGA_X,
                               NCM_PARAM_TYPE_FREE);
@@ -265,8 +276,8 @@ nc_hicosmo_de_class_init (NcHICosmoDEClass *klass)
                               0.0,  4.0, 1.0e-2,
                               NC_HICOSMO_DEFAULT_PARAMS_ABSTOL, NC_HICOSMO_DE_DEFAULT_ENNU,
                               NCM_PARAM_TYPE_FIXED);
-  /* Set Omega_b param info */
-  ncm_model_class_set_sparam (model_class, NC_HICOSMO_DE_OMEGA_B, "\\Omega_b", "Omegab",
+  /* Set Omega_b0 param info */
+  ncm_model_class_set_sparam (model_class, NC_HICOSMO_DE_OMEGA_B, "\\Omega_{b0}", "Omegab",
                               0.03,  0.05, 5.0e-4,
                               NC_HICOSMO_DEFAULT_PARAMS_ABSTOL, NC_HICOSMO_DE_DEFAULT_OMEGA_B,
                               NCM_PARAM_TYPE_FIXED);
@@ -285,17 +296,18 @@ nc_hicosmo_de_class_init (NcHICosmoDEClass *klass)
 
   nc_hicosmo_set_H0_impl        (parent_class, &_nc_hicosmo_de_H0);
   nc_hicosmo_set_E2_impl        (parent_class, &_nc_hicosmo_de_E2);
-  nc_hicosmo_set_Omega_c_impl   (parent_class, &_nc_hicosmo_de_Omega_c);
-  nc_hicosmo_set_Omega_r_impl   (parent_class, &_nc_hicosmo_de_Omega_r);
-  nc_hicosmo_set_Omega_b_impl   (parent_class, &_nc_hicosmo_de_Omega_b);
-  nc_hicosmo_set_Omega_g_impl   (parent_class, &_nc_hicosmo_de_Omega_g);
-  nc_hicosmo_set_Omega_nu_impl  (parent_class, &_nc_hicosmo_de_Omega_nu);
-  nc_hicosmo_set_Omega_t_impl   (parent_class, &_nc_hicosmo_de_Omega_t);
+  nc_hicosmo_set_Omega_c0_impl  (parent_class, &_nc_hicosmo_de_Omega_c0);
+  nc_hicosmo_set_Omega_r0_impl  (parent_class, &_nc_hicosmo_de_Omega_r0);
+  nc_hicosmo_set_Omega_b0_impl  (parent_class, &_nc_hicosmo_de_Omega_b0);
+  nc_hicosmo_set_Omega_g0_impl  (parent_class, &_nc_hicosmo_de_Omega_g0);
+  nc_hicosmo_set_Omega_nu0_impl (parent_class, &_nc_hicosmo_de_Omega_nu0);
+  nc_hicosmo_set_Omega_t0_impl  (parent_class, &_nc_hicosmo_de_Omega_t0);
   nc_hicosmo_set_sigma_8_impl   (parent_class, &_nc_hicosmo_de_sigma_8);
   nc_hicosmo_set_T_gamma0_impl  (parent_class, &_nc_hicosmo_de_T_gamma0);
   nc_hicosmo_set_Yp_4He_impl    (parent_class, &_nc_hicosmo_de_Yp_4He);
   nc_hicosmo_set_dE2_dz_impl    (parent_class, &_nc_hicosmo_de_dE2_dz);
   nc_hicosmo_set_d2E2_dz2_impl  (parent_class, &_nc_hicosmo_de_d2E2_dz2);
+  nc_hicosmo_set_bgp_cs2_impl   (parent_class, &_nc_hicosmo_de_bgp_cs2);
   nc_hicosmo_set_powspec_impl   (parent_class, &_nc_hicosmo_de_powspec);
 }
 
@@ -340,8 +352,8 @@ NCM_MODEL_SET_IMPL_FUNC(NC_HICOSMO_DE,NcHICosmoDE,nc_hicosmo_de,NcHICosmoDEFunc1
 NCM_MODEL_SET_IMPL_FUNC(NC_HICOSMO_DE,NcHICosmoDE,nc_hicosmo_de,NcHICosmoDEFunc1,d2weff_dz2)
 /**
  * nc_hicosmo_weff:
- * @cosmo: FIXME
- * @x: FIXME
+ * @cosmo_de: a #NcHICosmoDE
+ * @z: redshift $z$
  *
  * FIXME
  *
@@ -349,8 +361,8 @@ NCM_MODEL_SET_IMPL_FUNC(NC_HICOSMO_DE,NcHICosmoDE,nc_hicosmo_de,NcHICosmoDEFunc1
  */
 /**
  * nc_hicosmo_dweff_dz:
- * @cosmo: FIXME
- * @x: FIXME
+ * @cosmo_de: a #NcHICosmoDE
+ * @z: redshift $z$
  *
  * FIXME
  *
@@ -358,8 +370,8 @@ NCM_MODEL_SET_IMPL_FUNC(NC_HICOSMO_DE,NcHICosmoDE,nc_hicosmo_de,NcHICosmoDEFunc1
  */
 /**
  * nc_hicosmo_d2weff_dz2:
- * @cosmo: FIXME
- * @x: FIXME
+ * @cosmo_de: a #NcHICosmoDE
+ * @z: redshift $z$
  *
  * FIXME
  *

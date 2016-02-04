@@ -621,8 +621,8 @@ nc_matter_var_dlnvar0_dlnR (NcMatterVar *vp, NcHICosmo *cosmo, gdouble lnR)
 gdouble
 nc_matter_var_mass_to_R (NcMatterVar *vp, NcHICosmo *cosmo, gdouble M)
 {
-  const gdouble Omega_m = nc_hicosmo_Omega_m (cosmo);
-  return cbrt (M / (Omega_m * nc_window_volume(vp->wp) * ncm_c_crit_mass_density_h2_solar_mass_Mpc3 ()));
+  const gdouble Omega_m0 = nc_hicosmo_Omega_m0 (cosmo);
+  return cbrt (M / (Omega_m0 * nc_window_volume(vp->wp) * ncm_c_crit_mass_density_h2_solar_mass_Mpc3 ()));
 }
 
 /**
@@ -638,8 +638,8 @@ nc_matter_var_mass_to_R (NcMatterVar *vp, NcHICosmo *cosmo, gdouble M)
 gdouble
 nc_matter_var_R_to_mass (NcMatterVar *vp, NcHICosmo *cosmo, gdouble R)
 {
-  const gdouble Omega_m = nc_hicosmo_Omega_m (cosmo);
-  return gsl_pow_3(R) * Omega_m * nc_window_volume(vp->wp) * ncm_c_crit_mass_density_h2_solar_mass_Mpc3 ();
+  const gdouble Omega_m0 = nc_hicosmo_Omega_m0 (cosmo);
+  return gsl_pow_3(R) * Omega_m0 * nc_window_volume(vp->wp) * ncm_c_crit_mass_density_h2_solar_mass_Mpc3 ();
 }
 
 /**
@@ -655,8 +655,8 @@ nc_matter_var_R_to_mass (NcMatterVar *vp, NcHICosmo *cosmo, gdouble R)
 gdouble
 nc_matter_var_lnM_to_lnR (NcMatterVar *vp, NcHICosmo *cosmo, gdouble lnM)
 {
-  const gdouble Omega_m = nc_hicosmo_Omega_m (cosmo);
-  return (lnM - log (Omega_m * nc_window_volume(vp->wp) * ncm_c_crit_mass_density_h2_solar_mass_Mpc3 ())) / 3.0;
+  const gdouble Omega_m0 = nc_hicosmo_Omega_m0 (cosmo);
+  return (lnM - log (Omega_m0 * nc_window_volume(vp->wp) * ncm_c_crit_mass_density_h2_solar_mass_Mpc3 ())) / 3.0;
 }
 
 /**
@@ -672,8 +672,8 @@ nc_matter_var_lnM_to_lnR (NcMatterVar *vp, NcHICosmo *cosmo, gdouble lnM)
 gdouble
 nc_matter_var_lnR_to_lnM (NcMatterVar *vp, NcHICosmo *cosmo, gdouble lnR)
 {
-  const gdouble Omega_m = nc_hicosmo_Omega_m (cosmo);
-  return (3.0 * lnR + log (Omega_m * nc_window_volume(vp->wp) * ncm_c_crit_mass_density_h2_solar_mass_Mpc3 ()));
+  const gdouble Omega_m0 = nc_hicosmo_Omega_m0 (cosmo);
+  return (3.0 * lnR + log (Omega_m0 * nc_window_volume(vp->wp) * ncm_c_crit_mass_density_h2_solar_mass_Mpc3 ()));
 }
 
 /**
