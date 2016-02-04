@@ -806,7 +806,7 @@ ncm_vector_set_from_variant (NcmVector *cv, GVariant *var)
 
 /**
  * ncm_vector_dnrm2: 
- * @cv: a @NcmVector.
+ * @cv: a @NcmVector
  * 
  * Calculates the Euclidean norm of the vector @cv, i.e.,
  * $\vert\text{cv}\vert_2$.
@@ -820,6 +820,16 @@ ncm_vector_dnrm2 (const NcmVector *cv)
                       ncm_vector_const_ptr (cv, 0), 
                       ncm_vector_stride (cv));
 }
+
+/**
+ * ncm_vector_sum_cpts: 
+ * @cv: a @NcmVector
+ * 
+ * Calculates the sum of the components.
+ * 
+ * Returns: the sum of the vector @cv components.
+ */
+
 
 static void
 _ncm_vector_dispose (GObject *object)

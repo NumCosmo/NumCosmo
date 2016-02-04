@@ -763,16 +763,17 @@ nc_recomb_clear (NcRecomb **recomb)
 
 /**
  * nc_recomb_prepare:
- * @recomb: a #NcRecomb.
- * @cosmo: a #NcHICosmo.
+ * @recomb: a #NcRecomb
+ * @reion: a #NcHIReion
+ * @cosmo: a #NcHICosmo
  *
  * Prepare the object using the model @cosmo.
  *
  */
 void
-nc_recomb_prepare (NcRecomb *recomb, NcHICosmo *cosmo)
+nc_recomb_prepare (NcRecomb *recomb, NcHIReion *reion, NcHICosmo *cosmo)
 {
-  NC_RECOMB_GET_CLASS (recomb)->prepare (recomb, cosmo);
+  NC_RECOMB_GET_CLASS (recomb)->prepare (recomb, reion, cosmo);
 }
 
 /**

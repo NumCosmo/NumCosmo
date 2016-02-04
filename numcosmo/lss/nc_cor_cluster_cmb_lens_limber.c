@@ -86,7 +86,7 @@ typedef struct _integrand_data_1h_m
 {
   NcCorClusterCmbLensLimber *cccll;
   NcClusterAbundance *cad;
-  NcHICosmo *model;
+  NcHICosmo *cosmo;
   NcDistance *dist;
   NcHaloBiasFunc *hbf;
   NcDensityProfile *dp;
@@ -104,12 +104,12 @@ _integrand_mass_1h (gdouble lnM, gpointer userdata)
 {
   integrand_data_1h_m *int_data = (integrand_data_1h_m *) userdata;
   gdouble M = exp(lnM);
-  gdouble dn_dlnM = nc_mass_function_dn_dlnm (int_data->cad->mfp, int_data->model, lnM, int_data->z);
+  gdouble dn_dlnM = nc_mass_function_dn_dlnm (int_data->cad->mfp, int_data->cosmo, lnM, int_data->z);
   //printf("integrando mass, k = %.5g M = %.5e dndM = %.5g \n", int_data->k, M, dn_dlnM);
-  gdouble u = nc_density_profile_eval_fourier (int_data->dp, int_data->model, int_data->k, M, int_data->z);
+  gdouble u = nc_density_profile_eval_fourier (int_data->dp, int_data->cosmo, int_data->k, M, int_data->z);
   //printf("integrando mass, u = %.15g\n", u);
-  gdouble integrand_mass_1h = M * dn_dlnM * u * nc_cluster_mass_intp (int_data->cad->m, int_data->model, lnM, int_data->z);
-  //printf("integrando mass, lognormal = %.15g\n", nc_cluster_mass_intp (int_data->cad->m, int_data->model, lnM, int_data->z));
+  gdouble integrand_mass_1h = M * dn_dlnM * u * nc_cluster_mass_intp (int_data->cad->m, int_data->cosmo, lnM, int_data->z);
+  //printf("integrando mass, lognormal = %.15g\n", nc_cluster_mass_intp (int_data->cad->m, int_data->cosmo, lnM, int_data->z));
 
   return integrand_mass_1h;
 }
@@ -120,14 +120,14 @@ _integrand_powspec_1h (gdouble lnM, gpointer userdata)
 {
   integrand_data_1h_m *int_data = (integrand_data_1h_m *) userdata;
   gdouble M = exp(lnM);
-  gdouble dn_dlnM = nc_mass_function_dn_dlnm (int_data->cad->mfp, int_data->model, lnM, int_data->z);
-  gdouble u = nc_density_profile_eval_fourier (int_data->dp, int_data->model, int_data->k, M, int_data->z);
-  gdouble rho_mz = pow (1.0 + int_data->z, 3.0) * nc_hicosmo_Omega_m (int_data->model) * ncm_c_crit_mass_density_h2_solar_mass_Mpc3 ();
-  //gdouble integrand_powspec_1h = M * dn_dlnM * u; //* nc_cluster_mass_intp (int_data->cad->m, int_data->model, lnM, int_data->z);
+  gdouble dn_dlnM = nc_mass_function_dn_dlnm (int_data->cad->mfp, int_data->cosmo, lnM, int_data->z);
+  gdouble u = nc_density_profile_eval_fourier (int_data->dp, int_data->cosmo, int_data->k, M, int_data->z);
+  gdouble rho_mz = pow (1.0 + int_data->z, 3.0) * nc_hicosmo_Omega_m (int_data->cosmo) * ncm_c_crit_mass_density_h2_solar_mass_Mpc3 ();
+  //gdouble integrand_powspec_1h = M * dn_dlnM * u; //* nc_cluster_mass_intp (int_data->cad->m, int_data->cosmo, lnM, int_data->z);
   gdouble integrand_powspec_1h = (M / rho_mz) * (M / rho_mz) * dn_dlnM * u * u;
   //printf("M = %.5e, rho = %.5g, n = %.5g, u = %.5g\n", M, rho_mz, dn_dlnM, u);
   //printf("M = %.5e\n", M);
-  //printf("integrando mass, lognormal = %.15g\n", nc_cluster_mass_intp (int_data->cad->m, int_data->model, lnM, int_data->z));
+  //printf("integrando mass, lognormal = %.15g\n", nc_cluster_mass_intp (int_data->cad->m, int_data->cosmo, lnM, int_data->z));
 
   return integrand_powspec_1h;
 }
@@ -137,7 +137,7 @@ _integrand_powspec_1h (gdouble lnM, gpointer userdata)
  * @cccll: a #NcCorClusterCmbLensLimber
  * @cad: a #NcClusterAbundance
  * @clusterm: a #NcClusterMass
- * @model: a #NcHICosmo
+ * @cosmo: a #NcHICosmo
  * @dp: a #NcDensityProfile
  * @k: mode
  * @z: redshift
@@ -149,7 +149,7 @@ _integrand_powspec_1h (gdouble lnM, gpointer userdata)
  * Returns: FIXME
  */
 gdouble 
-nc_cor_cluster_cmb_lens_limber_oneh_int_mass (NcCorClusterCmbLensLimber *cccll, NcClusterAbundance *cad, NcClusterMass *clusterm, NcHICosmo *model, NcDensityProfile *dp, gdouble k, gdouble z, gdouble *lnM_obs, gdouble *lnM_obs_params)
+nc_cor_cluster_cmb_lens_limber_oneh_int_mass (NcCorClusterCmbLensLimber *cccll, NcClusterAbundance *cad, NcClusterMass *clusterm, NcHICosmo *cosmo, NcDensityProfile *dp, gdouble k, gdouble z, gdouble *lnM_obs, gdouble *lnM_obs_params)
 {
   integrand_data_1h_m int_data;
   gdouble int_mass_1h, err, lnMl, lnMu;
@@ -158,7 +158,7 @@ nc_cor_cluster_cmb_lens_limber_oneh_int_mass (NcCorClusterCmbLensLimber *cccll, 
   
   int_data.cad            = cad;
   int_data.clusterm       = clusterm;
-  int_data.model          = model;
+  int_data.cosmo          = cosmo;
   int_data.z              = z;
   int_data.lnM_obs        = lnM_obs;
   int_data.lnM_obs_params = lnM_obs_params;
@@ -169,7 +169,7 @@ nc_cor_cluster_cmb_lens_limber_oneh_int_mass (NcCorClusterCmbLensLimber *cccll, 
   F.function = &_integrand_powspec_1h;
   F.params = &int_data;
 
-  nc_cluster_mass_n_limits (clusterm, model, &lnMl, &lnMu);
+  nc_cluster_mass_n_limits (clusterm, cosmo, &lnMl, &lnMu);
 
   //printf("z = %.5g lnMl = %.5g lnMu = %.5g lnMobs0 = %.5g lnMobs1 = %.5g\n", z, lnMl, lnMu, lnM_obs_params[0], lnM_obs_params[1]);
   //gsl_integration_qag (&F, lnMl, lnMu, 0.0, NCM_DEFAULT_PRECISION, NCM_INTEGRAL_PARTITION, _NC_CLUSTER_ABUNDANCE_DEFAULT_INT_KEY, *w, &int_mass_1h, &err);
@@ -185,7 +185,7 @@ typedef struct _integrand_data_1h_z
   NcCorClusterCmbLensLimber *cccll;
   NcClusterAbundance *cad;
   NcClusterMass *clusterm;
-  NcHICosmo *model;
+  NcHICosmo *cosmo;
   NcDistance *dist;
   NcHaloBiasFunc *hbf;
   NcDensityProfile *dp;
@@ -203,16 +203,16 @@ static gdouble
 _integrand_redshift_1h (gdouble z, gpointer userdata)
 {
   integrand_data_1h_z *int_data = (integrand_data_1h_z *) userdata;
-  int_data->dc_z = nc_distance_comoving (int_data->dist, int_data->model, z);
-  //int_data->k = int_data->l / int_data->dc_z; /* adimensional */
+  int_data->dc_z = nc_distance_comoving (int_data->dist, int_data->cosmo, z);
+  //int_data->k = int_data->l / int_data->dc_z; /* dimensionless */
   int_data->k = int_data->l / (int_data->dc_z * ncm_c_hubble_radius ()); /* in units of h Mpc^-1 */
   //printf("l = %4.d k = %.5g kdim = %.5g\n", int_data->l, int_data->k, int_data->k * 1.0e5 / ncm_c_c());
   gdouble dcdec_m_dc = int_data->dc_zdec - int_data->dc_z;
   gdouble ds = int_data->dc_z * dcdec_m_dc / int_data->dc_zdec;
-  gdouble rho_mz = pow (1.0 + z, 3.0) * nc_hicosmo_Omega_m (int_data->model) * ncm_c_crit_mass_density_h2_solar_mass_Mpc3 ();
-  gdouble integral_mass = nc_cor_cluster_cmb_lens_limber_oneh_int_mass (int_data->cccll, int_data->cad, int_data->clusterm, int_data->model, int_data->dp, int_data->k, z, int_data->lnM_obs, int_data->lnM_obs_params);
+  gdouble rho_mz = pow (1.0 + z, 3.0) * nc_hicosmo_Omega_m (int_data->cosmo) * ncm_c_crit_mass_density_h2_solar_mass_Mpc3 ();
+  gdouble integral_mass = nc_cor_cluster_cmb_lens_limber_oneh_int_mass (int_data->cccll, int_data->cad, int_data->clusterm, int_data->cosmo, int_data->dp, int_data->k, z, int_data->lnM_obs, int_data->lnM_obs_params);
   //printf("int_mass= %.5g\n", integral_mass);
-  gdouble integrand_z_1h = (1.0 + z) * ds / (nc_hicosmo_E (int_data->model, z) * rho_mz) * integral_mass;
+  gdouble integrand_z_1h = (1.0 + z) * ds / (nc_hicosmo_E (int_data->cosmo, z) * rho_mz) * integral_mass;
 
   return integrand_z_1h;
 }
@@ -221,7 +221,7 @@ _integrand_redshift_1h (gdouble z, gpointer userdata)
  * nc_cor_cluster_cmb_lens_limber_oneh_term:
  * @cccll: a #NcCorClusterCmbLensLimber
  * @cad: a #NcClusterAbundance
- * @model: a #NcHICosmo
+ * @cosmo: a #NcHICosmo
  * @dist: a #NcDistance
  * @dp: a #NcDensityProfile
  * @l: spherical harmonis index 
@@ -241,7 +241,7 @@ _integrand_redshift_1h (gdouble z, gpointer userdata)
  * Returns: $\left(C_l^{cl \psi} \right)_{1h}$
  */
 gdouble
-nc_cor_cluster_cmb_lens_limber_oneh_term (NcCorClusterCmbLensLimber *cccll, NcClusterAbundance *cad, NcHICosmo *model, NcDistance *dist, NcDensityProfile *dp, gint l, gdouble *lnM_obs, gdouble *lnM_obs_params, gdouble *z_obs, gdouble *z_obs_params)
+nc_cor_cluster_cmb_lens_limber_oneh_term (NcCorClusterCmbLensLimber *cccll, NcClusterAbundance *cad, NcHICosmo *cosmo, NcDistance *dist, NcDensityProfile *dp, gint l, gdouble *lnM_obs, gdouble *lnM_obs_params, gdouble *z_obs, gdouble *z_obs_params)
 {
   gdouble cor_1h, ll, cons_factor, zl, zu, err;
   integrand_data_1h_z int_data;
@@ -250,7 +250,7 @@ nc_cor_cluster_cmb_lens_limber_oneh_term (NcCorClusterCmbLensLimber *cccll, NcCl
 
   int_data.cccll = cccll;
   int_data.cad   = cad;
-  int_data.model = model;
+  int_data.cosmo = cosmo;
   int_data.dist  = dist;
   int_data.dp    = dp;
   int_data.l     = l; 
@@ -265,8 +265,8 @@ nc_cor_cluster_cmb_lens_limber_oneh_term (NcCorClusterCmbLensLimber *cccll, NcCl
   //printf("zl = %.5g zu = %.5g\n", zl, zu);
 
   ll = l * l; 
-  cons_factor      = - 3.0 * nc_hicosmo_Omega_m (model) / ll; 
-  int_data.dc_zdec = nc_distance_comoving_lss (dist, model);
+  cons_factor      = - 3.0 * nc_hicosmo_Omega_m (cosmo) / ll; 
+  int_data.dc_zdec = nc_distance_comoving_lss (dist, cosmo);
 
   gsl_integration_qag (&F, zl, zu, 0.0, NCM_DEFAULT_PRECISION, NCM_INTEGRAL_PARTITION, _NC_CLUSTER_ABUNDANCE_DEFAULT_INT_KEY, *w, &cor_1h, &err);
 
@@ -286,7 +286,7 @@ typedef struct _integrand_data_2h_mass1
   NcCorClusterCmbLensLimber *cccll;
   NcClusterAbundance *cad;
   NcClusterMass *clusterm;
-  NcHICosmo *model;
+  NcHICosmo *cosmo;
   NcHaloBiasFunc *hbf;
   gdouble *lnMobs_params;
   gdouble z;
@@ -296,8 +296,8 @@ static gdouble
 _integrand_mass_2h_first (gdouble lnM, gpointer userdata)
 {
   integrand_data_2h_mass1 *int_data = (integrand_data_2h_mass1 *) userdata;
-  gdouble dn_dlnM_times_b = nc_halo_bias_func_integrand (int_data->hbf, int_data->model, lnM, int_data->z);
-  gdouble integrand_mass_2h_first = dn_dlnM_times_b * nc_cluster_mass_intp (int_data->clusterm, int_data->model, lnM, int_data->z);
+  gdouble dn_dlnM_times_b = nc_halo_bias_func_integrand (int_data->hbf, int_data->cosmo, lnM, int_data->z);
+  gdouble integrand_mass_2h_first = dn_dlnM_times_b * nc_cluster_mass_intp (int_data->clusterm, int_data->cosmo, lnM, int_data->z);
 
   return integrand_mass_2h_first;
 }
@@ -307,7 +307,7 @@ _integrand_mass_2h_first (gdouble lnM, gpointer userdata)
  * @cccll: a #NcCorClusterCmbLensLimber
  * @cad: a #NcClusterAbundance
  * @clusterm: a #NcClusterMass
- * @model: a #NcHICosmo
+ * @cosmo: a #NcHICosmo
  * @z: redshift
  *
  * This function computes the first integral on mass of the 2-halo term of the cluster and CMB lensing potential 
@@ -316,7 +316,7 @@ _integrand_mass_2h_first (gdouble lnM, gpointer userdata)
  * Returns: FIXME
  */
 gdouble 
-nc_cor_cluster_cmb_lens_limber_twoh_int_mass1 (NcCorClusterCmbLensLimber *cccll, NcClusterAbundance *cad, NcClusterMass *clusterm, NcHICosmo *model, gdouble z)
+nc_cor_cluster_cmb_lens_limber_twoh_int_mass1 (NcCorClusterCmbLensLimber *cccll, NcClusterAbundance *cad, NcClusterMass *clusterm, NcHICosmo *cosmo, gdouble z)
 {
   integrand_data_2h_mass1 int_data;
   gdouble int_mass_2h_first, err, lnMl, lnMu;
@@ -327,13 +327,13 @@ nc_cor_cluster_cmb_lens_limber_twoh_int_mass1 (NcCorClusterCmbLensLimber *cccll,
   int_data.cad            = cad;
   int_data.clusterm       = clusterm;
   int_data.hbf            = cad->mbiasf;
-  int_data.model          = model;
+  int_data.cosmo          = cosmo;
   int_data.z              = z;
   
   F.function = &_integrand_mass_2h_first;
   F.params = &int_data;
 
-  nc_cluster_mass_n_limits (clusterm, model, &lnMl, &lnMu);
+  nc_cluster_mass_n_limits (clusterm, cosmo, &lnMl, &lnMu);
 
   //printf("z = %.5g lnMl = %.5g lnMu = %.5g\n", z, lnMl, lnMu);
 
@@ -349,7 +349,7 @@ typedef struct _integrand_data_2h_mass2
   NcCorClusterCmbLensLimber *cccll;
   NcClusterAbundance *cad;
   NcClusterMass *clusterm;
-  NcHICosmo *model;
+  NcHICosmo *cosmo;
   NcHaloBiasFunc *hbf;
   NcDensityProfile *dp;
   gdouble z;
@@ -362,12 +362,12 @@ _integrand_powspec_2h (gdouble lnM, gpointer userdata)
 {
   integrand_data_2h_mass2 *int_data = (integrand_data_2h_mass2 *) userdata;
   //gdouble M = exp (lnM);
-  //gdouble rho_mz = pow (1.0 + int_data->z, 3.0) * nc_hicosmo_Omega_m (int_data->model) * ncm_c_crit_mass_density_h2_solar_mass_Mpc3 ();
-  gdouble lnR = nc_matter_var_lnM_to_lnR (int_data->hbf->mfp->vp, int_data->model, lnM);
+  //gdouble rho_mz = pow (1.0 + int_data->z, 3.0) * nc_hicosmo_Omega_m (int_data->cosmo) * ncm_c_crit_mass_density_h2_solar_mass_Mpc3 ();
+  gdouble lnR = nc_matter_var_lnM_to_lnR (int_data->hbf->mfp->vp, int_data->cosmo, lnM);
   gdouble R = exp (lnR);
   gdouble M_rho = nc_window_volume (int_data->hbf->mfp->vp->wp) * gsl_pow_3(R);
-  gdouble dn_dlnM_times_b = nc_halo_bias_func_integrand (int_data->hbf, int_data->model, lnM, int_data->z);
-  //gdouble u = nc_density_profile_eval_fourier (int_data->dp, int_data->model, int_data->k, M, int_data->z);
+  gdouble dn_dlnM_times_b = nc_halo_bias_func_integrand (int_data->hbf, int_data->cosmo, lnM, int_data->z);
+  //gdouble u = nc_density_profile_eval_fourier (int_data->dp, int_data->cosmo, int_data->k, M, int_data->z);
   //gdouble integrand_powspec_2h = (M / rho_mz) * dn_dlnM_times_b * u;
   //gdouble integrand_powspec_2h = (M / rho_mz) * dn_dlnM_times_b;
   gdouble integrand_powspec_2h = M_rho * dn_dlnM_times_b;
@@ -382,7 +382,8 @@ _integrand_powspec_2h (gdouble lnM, gpointer userdata)
  * nc_cor_cluster_cmb_lens_limber_twoh_int_mm:
  * @cccll: a #NcCorClusterCmbLensLimber
  * @cad: a #NcClusterAbundance
- * @model: a #NcHICosmo
+ * @reion: a #NcHIReion
+ * @cosmo: a #NcHICosmo
  * @dp: a #NcDensityProfile
  * @k: mode
  * @z: redshift
@@ -392,7 +393,7 @@ _integrand_powspec_2h (gdouble lnM, gpointer userdata)
  * Returns: FIXME
  */
 gdouble 
-nc_cor_cluster_cmb_lens_limber_twoh_int_mm (NcCorClusterCmbLensLimber *cccll, NcClusterAbundance *cad, NcHICosmo *model, NcDensityProfile *dp, gdouble k, gdouble z)
+nc_cor_cluster_cmb_lens_limber_twoh_int_mm (NcCorClusterCmbLensLimber *cccll, NcClusterAbundance *cad, NcHIReion *reion, NcHICosmo *cosmo, NcDensityProfile *dp, gdouble k, gdouble z)
 {
   integrand_data_2h_mass2 int_data;
   gdouble ps_2h_mm, err;
@@ -404,11 +405,13 @@ nc_cor_cluster_cmb_lens_limber_twoh_int_mm (NcCorClusterCmbLensLimber *cccll, Nc
   gboolean conv1 = FALSE;
   gboolean conv2 = FALSE;
   const gdouble step = 2.0;
+
+  nc_transfer_func_prepare (int_data.hbf->mfp->vp->tf, reion, cosmo);
   
   int_data.cccll          = cccll;
   int_data.cad            = cad;
   int_data.hbf            = cad->mbiasf;
-  int_data.model          = model;
+  int_data.cosmo          = cosmo;
   int_data.dp             = dp;
   int_data.k              = k;
   int_data.z              = z;
@@ -416,9 +419,9 @@ nc_cor_cluster_cmb_lens_limber_twoh_int_mm (NcCorClusterCmbLensLimber *cccll, Nc
   F.function = &_integrand_powspec_2h;
   F.params = &int_data;
 
-  ps_sqrt_norma = nc_matter_var_sigma8_sqrtvar0 (int_data.hbf->mfp->vp, int_data.model);
-  growth = nc_growth_func_eval (int_data.hbf->mfp->gf, int_data.model, int_data.z);
-  transfer_primordial_ps = nc_transfer_func_matter_powerspectrum (int_data.hbf->mfp->vp->tf, int_data.model, int_data.k);
+  ps_sqrt_norma = nc_matter_var_sigma8_sqrtvar0 (int_data.hbf->mfp->vp, int_data.cosmo);
+  growth = nc_growth_func_eval (int_data.hbf->mfp->gf, int_data.cosmo, int_data.z);
+  transfer_primordial_ps = nc_transfer_func_matter_powerspectrum (int_data.hbf->mfp->vp->tf, int_data.cosmo, int_data.k);
   ps_linear = ps_sqrt_norma * ps_sqrt_norma * growth * growth * transfer_primordial_ps;
   //ps_linear = transfer_primordial_ps;
 
@@ -461,8 +464,8 @@ _integrand_mass_2h_second (gdouble lnM, gpointer userdata)
 {
   integrand_data_2h_mass2 *int_data = (integrand_data_2h_mass2 *) userdata;
   gdouble M = exp(lnM);
-  gdouble dn_dlnM_times_b = nc_halo_bias_func_integrand (int_data->hbf, int_data->model, lnM, int_data->z);
-  gdouble u = nc_density_profile_eval_fourier (int_data->dp, int_data->model, int_data->k, M, int_data->z);
+  gdouble dn_dlnM_times_b = nc_halo_bias_func_integrand (int_data->hbf, int_data->cosmo, lnM, int_data->z);
+  gdouble u = nc_density_profile_eval_fourier (int_data->dp, int_data->cosmo, int_data->k, M, int_data->z);
   gdouble integrand_mass_2h_second = M * dn_dlnM_times_b * u;
 
   return integrand_mass_2h_second;
@@ -473,7 +476,7 @@ _integrand_mass_2h_second (gdouble lnM, gpointer userdata)
  * @cccll: a #NcCorClusterCmbLensLimber
  * @cad: a #NcClusterAbundance
  * @clusterm: a #NcClusterMass
- * @model: a #NcHICosmo
+ * @cosmo: a #NcHICosmo
  * @dp: a #NcDensityProfile
  * @k: mode
  * @z: redshift
@@ -484,7 +487,7 @@ _integrand_mass_2h_second (gdouble lnM, gpointer userdata)
  * Returns: FIXME
  */
 gdouble 
-nc_cor_cluster_cmb_lens_limber_twoh_int_mass2 (NcCorClusterCmbLensLimber *cccll, NcClusterAbundance *cad, NcClusterMass *clusterm, NcHICosmo *model, NcDensityProfile *dp, gdouble k, gdouble z)
+nc_cor_cluster_cmb_lens_limber_twoh_int_mass2 (NcCorClusterCmbLensLimber *cccll, NcClusterAbundance *cad, NcClusterMass *clusterm, NcHICosmo *cosmo, NcDensityProfile *dp, gdouble k, gdouble z)
 {
   integrand_data_2h_mass2 int_data;
   gdouble int_mass_2h_second, err, lnMl, lnMu;
@@ -495,7 +498,7 @@ nc_cor_cluster_cmb_lens_limber_twoh_int_mass2 (NcCorClusterCmbLensLimber *cccll,
   int_data.cad            = cad;
   int_data.clusterm       = clusterm;
   int_data.hbf            = cad->mbiasf;
-  int_data.model          = model;
+  int_data.cosmo          = cosmo;
   int_data.dp             = dp;
   int_data.k              = k;
   int_data.z              = z;
@@ -503,7 +506,7 @@ nc_cor_cluster_cmb_lens_limber_twoh_int_mass2 (NcCorClusterCmbLensLimber *cccll,
   F.function = &_integrand_mass_2h_second;
   F.params = &int_data;
 
-  nc_cluster_mass_n_limits (clusterm, model, &lnMl, &lnMu);
+  nc_cluster_mass_n_limits (clusterm, cosmo, &lnMl, &lnMu);
 
   //printf("z = %.5g lnMl = %.5g lnMu = %.5g\n", z, lnMl, lnMu);
 
@@ -520,7 +523,7 @@ typedef struct _integrand_data_2hz
   NcCorClusterCmbLensLimber *cccll;
   NcClusterAbundance *cad;
   NcClusterMass *clusterm;
-  NcHICosmo *model;
+  NcHICosmo *cosmo;
   NcDistance *dist;
   NcHaloBiasFunc *hbf;
   NcDensityProfile *dp;
@@ -532,18 +535,18 @@ static gdouble
 _integrand_redshift_2h (gdouble z, gpointer userdata)
 {
   integrand_data_2hz *int_data = (integrand_data_2hz *) userdata;
-  gdouble dc_z = nc_distance_comoving (int_data->dist, int_data->model, z);
+  gdouble dc_z = nc_distance_comoving (int_data->dist, int_data->cosmo, z);
   gdouble dcdec_m_dc = int_data->dc_zdec - dc_z;
   gdouble ds = dc_z * dcdec_m_dc / int_data->dc_zdec;
-  gdouble growth = nc_growth_func_eval (int_data->hbf->mfp->gf, int_data->model, z);
+  gdouble growth = nc_growth_func_eval (int_data->hbf->mfp->gf, int_data->cosmo, z);
   gdouble k = int_data->l / (dc_z * ncm_c_hubble_radius ()); /* in units of h Mpc^-1 */
-  gdouble rho_mz = pow (1.0 + z, 3.0) * nc_hicosmo_Omega_m (int_data->model) * ncm_c_crit_mass_density_h2_solar_mass_Mpc3 ();
-  gdouble transfer_primordial_ps = nc_transfer_func_matter_powerspectrum (int_data->hbf->mfp->vp->tf, int_data->model, k);
-  gdouble ps_sqrt_norma = nc_matter_var_sigma8_sqrtvar0 (int_data->hbf->mfp->vp, int_data->model);
+  gdouble rho_mz = pow (1.0 + z, 3.0) * nc_hicosmo_Omega_m (int_data->cosmo) * ncm_c_crit_mass_density_h2_solar_mass_Mpc3 ();
+  gdouble transfer_primordial_ps = nc_transfer_func_matter_powerspectrum (int_data->hbf->mfp->vp->tf, int_data->cosmo, k);
+  gdouble ps_sqrt_norma = nc_matter_var_sigma8_sqrtvar0 (int_data->hbf->mfp->vp, int_data->cosmo);
   gdouble ps_linear = ps_sqrt_norma * ps_sqrt_norma * growth * growth * transfer_primordial_ps;
-  gdouble integral_mass1 = nc_cor_cluster_cmb_lens_limber_twoh_int_mass1 (int_data->cccll, int_data->cad, int_data->clusterm, int_data->model, z);
-  gdouble integral_mass2 = nc_cor_cluster_cmb_lens_limber_twoh_int_mass2 (int_data->cccll, int_data->cad, int_data->clusterm, int_data->model, int_data->dp, k, z);
-  gdouble integrand_z_2h = (1.0 + z) * ds / (nc_hicosmo_E (int_data->model, z) * rho_mz) * ps_linear 
+  gdouble integral_mass1 = nc_cor_cluster_cmb_lens_limber_twoh_int_mass1 (int_data->cccll, int_data->cad, int_data->clusterm, int_data->cosmo, z);
+  gdouble integral_mass2 = nc_cor_cluster_cmb_lens_limber_twoh_int_mass2 (int_data->cccll, int_data->cad, int_data->clusterm, int_data->cosmo, int_data->dp, k, z);
+  gdouble integrand_z_2h = (1.0 + z) * ds / (nc_hicosmo_E (int_data->cosmo, z) * rho_mz) * ps_linear 
                            * integral_mass1 * integral_mass2; 
 
   return integrand_z_2h;
@@ -553,7 +556,8 @@ _integrand_redshift_2h (gdouble z, gpointer userdata)
  * nc_cor_cluster_cmb_lens_limber_twoh_term:
  * @cccll: a #NcCorClusterCmbLensLimber
  * @cad: a #NcClusterAbundance
- * @model: a #NcHICosmo
+ * @reion: a #NcHIReion
+ * @cosmo: a #NcHICosmo
  * @dist: a #NcDistance
  * @dp: a #NcDensityProfile
  * @l: spherical harmonis index 
@@ -571,7 +575,7 @@ _integrand_redshift_2h (gdouble z, gpointer userdata)
  * Returns: $\left(C_l^{cl \psi} \right)_{2h}$
  */
 gdouble
-nc_cor_cluster_cmb_lens_limber_twoh_term (NcCorClusterCmbLensLimber *cccll, NcClusterAbundance *cad, NcHICosmo *model, NcDistance *dist, NcDensityProfile *dp, gint l, gdouble *z_obs, gdouble *z_obs_params)
+nc_cor_cluster_cmb_lens_limber_twoh_term (NcCorClusterCmbLensLimber *cccll, NcClusterAbundance *cad, NcHIReion *reion, NcHICosmo *cosmo, NcDistance *dist, NcDensityProfile *dp, gint l, gdouble *z_obs, gdouble *z_obs_params)
 {
   gdouble cor_2h, ll, cons_factor, zl, zu, err;
   integrand_data_2hz int_data;
@@ -580,11 +584,13 @@ nc_cor_cluster_cmb_lens_limber_twoh_term (NcCorClusterCmbLensLimber *cccll, NcCl
 
   int_data.cccll = cccll;
   int_data.cad   = cad;
-  int_data.model = model;
+  int_data.cosmo = cosmo;
   int_data.dist  = dist;
   int_data.hbf   = cad->mbiasf;
   int_data.dp    = dp;
   int_data.l     = l; 
+
+  nc_transfer_func_prepare (cad->mbiasf->mfp->vp->tf, reion, cosmo);
   
   F.function = &_integrand_redshift_2h;
   F.params = &int_data;
@@ -594,8 +600,8 @@ nc_cor_cluster_cmb_lens_limber_twoh_term (NcCorClusterCmbLensLimber *cccll, NcCl
   //printf("zl = %.5g zu = %.5g\n", zl, zu);
 
   ll               = l * l; 
-  cons_factor      = - 3.0 * nc_hicosmo_Omega_m (model) / ll; 
-  int_data.dc_zdec = nc_distance_comoving_lss (dist, model);
+  cons_factor      = - 3.0 * nc_hicosmo_Omega_m (cosmo) / ll; 
+  int_data.dc_zdec = nc_distance_comoving_lss (dist, cosmo);
 
   gsl_integration_qag (&F, zl, zu, 0.0, NCM_DEFAULT_PRECISION, NCM_INTEGRAL_PARTITION, _NC_CLUSTER_ABUNDANCE_DEFAULT_INT_KEY, *w, &cor_2h, &err);
 

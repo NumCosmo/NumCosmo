@@ -30,6 +30,7 @@
 #include <glib-object.h>
 #include <numcosmo/build_cfg.h>
 #include <numcosmo/nc_hicosmo.h>
+#include <numcosmo/nc_hireion.h>
 #include <numcosmo/math/ncm_util.h>
 #include <numcosmo/math/ncm_model_ctrl.h>
 #include <numcosmo/math/ncm_spline.h>
@@ -72,7 +73,7 @@ struct _NcRecombClass
 {
   /*< private >*/
   GObjectClass parent_class;
-  void (*prepare) (NcRecomb *recomb, NcHICosmo *cosmo);
+  void (*prepare) (NcRecomb *recomb, NcHIReion *reion, NcHICosmo *cosmo);
 };
 
 GType nc_recomb_get_type (void) G_GNUC_CONST;
@@ -81,8 +82,8 @@ NcRecomb *nc_recomb_new_from_name (const gchar *recomb_name);
 NcRecomb *nc_recomb_ref (NcRecomb *recomb);
 void nc_recomb_free (NcRecomb *recomb);
 void nc_recomb_clear (NcRecomb **recomb);
-void nc_recomb_prepare (NcRecomb *recomb, NcHICosmo *cosmo);
-G_INLINE_FUNC void nc_recomb_prepare_if_needed (NcRecomb *recomb, NcHICosmo *cosmo);
+void nc_recomb_prepare (NcRecomb *recomb, NcHIReion *reion, NcHICosmo *cosmo);
+G_INLINE_FUNC void nc_recomb_prepare_if_needed (NcRecomb *recomb, NcHIReion *reion, NcHICosmo *cosmo);
 
 gdouble nc_recomb_HI_ion_saha (NcHICosmo *cosmo, const gdouble x);
 gdouble nc_recomb_HeI_ion_saha (NcHICosmo *cosmo, const gdouble x);
@@ -134,10 +135,10 @@ G_END_DECLS
 G_BEGIN_DECLS
 
 G_INLINE_FUNC void
-nc_recomb_prepare_if_needed (NcRecomb *recomb, NcHICosmo *cosmo)
+nc_recomb_prepare_if_needed (NcRecomb *recomb, NcHIReion *reion, NcHICosmo *cosmo)
 {
   if (ncm_model_ctrl_update (recomb->ctrl, NCM_MODEL (cosmo)))
-    nc_recomb_prepare (recomb, cosmo);
+    nc_recomb_prepare (recomb, reion, cosmo);
 }
 
 G_INLINE_FUNC gdouble

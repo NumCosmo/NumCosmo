@@ -58,8 +58,8 @@ G_BEGIN_DECLS
  * @NC_HICOSMO_IMPL_as_drag: Acoustic Scale at drag redshift
  * @NC_HICOSMO_IMPL_xb: Maximum redshift
  * @NC_HICOSMO_IMPL_E2: Adimensional Hubble function squared
- * @NC_HICOSMO_IMPL_dE2_dz: Derivative of the adimensional Hubble function squared.
- * @NC_HICOSMO_IMPL_d2E2_dz2: Second derivative of the adimensional Hubble function squared.
+ * @NC_HICOSMO_IMPL_dE2_dz: Derivative of the dimensionless Hubble function squared.
+ * @NC_HICOSMO_IMPL_d2E2_dz2: Second derivative of the dimensionless Hubble function squared.
  * @NC_HICOSMO_IMPL_cs2: Speed of sound squared.
  * @NC_HICOSMO_IMPL_rhopp: energy density plus pressure.
  * @NC_HICOSMO_IMPL_cd: Comoving distance
@@ -92,7 +92,7 @@ typedef enum _NcHICosmoImpl
   NC_HICOSMO_IMPL_LAST            = 1 << 23, /*< skip >*/
 } NcHICosmoImpl;
 
-#define NC_HICOSMO_IMPL_c_H0 (NC_HICOSMO_IMPL_H0)
+#define NC_HICOSMO_IMPL_RH_Mpc (NC_HICOSMO_IMPL_H0)
 #define NC_HICOSMO_IMPL_Omega_k (NC_HICOSMO_IMPL_Omega_t)
 #define NC_HICOSMO_IMPL_Omega_m (NC_HICOSMO_IMPL_Omega_c | NC_HICOSMO_IMPL_Omega_b)
 #define NC_HICOSMO_IMPL_h (NC_HICOSMO_IMPL_H0)
@@ -207,7 +207,7 @@ G_INLINE_FUNC gdouble nc_hicosmo_cs2 (NcHICosmo *cosmo, gdouble x);
 G_INLINE_FUNC gdouble nc_hicosmo_rhopp (NcHICosmo *cosmo, gdouble x);
 G_INLINE_FUNC gdouble nc_hicosmo_cd (NcHICosmo *cosmo, gdouble x);
 G_INLINE_FUNC gdouble nc_hicosmo_powspec (NcHICosmo *cosmo, gdouble x);
-G_INLINE_FUNC gdouble nc_hicosmo_c_H0 (NcHICosmo *cosmo);
+G_INLINE_FUNC gdouble nc_hicosmo_RH_Mpc (NcHICosmo *cosmo);
 G_INLINE_FUNC gdouble nc_hicosmo_Omega_k (NcHICosmo *cosmo);
 G_INLINE_FUNC gdouble nc_hicosmo_Omega_m (NcHICosmo *cosmo);
 G_INLINE_FUNC gdouble nc_hicosmo_h (NcHICosmo *cosmo);
@@ -311,9 +311,9 @@ NCM_MODEL_FUNC1_IMPL (NC_HICOSMO,NcHICosmo,nc_hicosmo,cd)
 NCM_MODEL_FUNC1_IMPL (NC_HICOSMO,NcHICosmo,nc_hicosmo,powspec)
 
 G_INLINE_FUNC gdouble
-nc_hicosmo_c_H0 (NcHICosmo *cosmo)
+nc_hicosmo_RH_Mpc (NcHICosmo *cosmo)
 {
-  return (ncm_c_c () / nc_hicosmo_H0 (cosmo));
+  return (ncm_c_c () / (1.0e3 * nc_hicosmo_H0 (cosmo)));
 }
 
 G_INLINE_FUNC gdouble

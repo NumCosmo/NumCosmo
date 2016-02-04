@@ -238,7 +238,7 @@ nc_recomb_seager_finalize (GObject *object)
   G_OBJECT_CLASS (nc_recomb_seager_parent_class)->finalize (object);
 }
 
-static void nc_recomb_seager_prepare (NcRecomb *recomb, NcHICosmo *cosmo);
+static void nc_recomb_seager_prepare (NcRecomb *recomb, NcHIReion *reion, NcHICosmo *cosmo);
 
 static void
 nc_recomb_seager_class_init (NcRecombSeagerClass *klass)
@@ -524,7 +524,7 @@ _nc_recomb_He_fully_ionized_Xe (gdouble lambda, gpointer p)
 }
 
 static void
-nc_recomb_seager_prepare (NcRecomb *recomb, NcHICosmo *cosmo)
+nc_recomb_seager_prepare (NcRecomb *recomb, NcHIReion *reion, NcHICosmo *cosmo)
 {
 	NcRecombSeager *recomb_seager = NC_RECOMB_SEAGER (recomb);
   const gdouble XHe = nc_hicosmo_XHe (cosmo);

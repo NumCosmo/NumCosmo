@@ -39,7 +39,7 @@
 #include <numcosmo/nc_snia_dist_cov.h>
 #include <numcosmo/nc_planck_fi.h>
 #include <numcosmo/nc_planck_fi_cor_tt.h>
-#include <numcosmo/scalefactor.h>
+#include <numcosmo/nc_scalefactor.h>
 #include <numcosmo/nc_cbe_precision.h>
 /* Cosmic thermodynamics */
 #include <numcosmo/nc_recomb.h>

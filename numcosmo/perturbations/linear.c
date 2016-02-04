@@ -120,7 +120,8 @@ nc_pert_linear_workspace_new (NcLinearPert *pert)
 
 /**
  * nc_pert_linear_new: (skip)
- * @cosmo: a #NcHICosmo.
+ * @cosmo: a #NcHICosmo
+ * @reion: a #NcHIReion
  * @recomb: FIXME
  * @lmax: FIXME
  * @tc_reltol: FIXME
@@ -133,7 +134,7 @@ nc_pert_linear_workspace_new (NcLinearPert *pert)
  * Returns: FIXME
  */
 NcLinearPert *
-nc_pert_linear_new (NcHICosmo *cosmo, NcRecomb *recomb, guint lmax, gdouble tc_reltol, gdouble reltol, gdouble tc_abstol, gdouble abstol)
+nc_pert_linear_new (NcHICosmo *cosmo, NcHIReion *reion, NcRecomb *recomb, guint lmax, gdouble tc_reltol, gdouble reltol, gdouble tc_abstol, gdouble abstol)
 {
   NcLinearPert *pert = g_slice_new (NcLinearPert);
 
@@ -141,10 +142,10 @@ nc_pert_linear_new (NcHICosmo *cosmo, NcRecomb *recomb, guint lmax, gdouble tc_r
 
   pert->cosmo = cosmo;
   pert->recomb = nc_recomb_ref (recomb);
-  pert->a = nc_scale_factor_new (NC_TIME_CONFORMAL, NC_PERTURBATION_START_X - 1.0);
+  pert->a = nc_scalefactor_new (0, NC_PERTURBATION_START_X - 1.0, NULL);
 
-  nc_recomb_prepare_if_needed (pert->recomb, cosmo);
-  nc_scale_factor_prepare_if_needed (pert->a, cosmo);
+  nc_recomb_prepare_if_needed (pert->recomb, reion, cosmo);
+  nc_scalefactor_prepare_if_needed (pert->a, cosmo);
 
   pert->lambdai = NC_PERTURBATIONS_X2LAMBDA (NC_PERTURBATION_START_X);
   pert->lambdaf = NC_PERTURBATIONS_X2LAMBDA (1.0);
@@ -155,7 +156,7 @@ nc_pert_linear_new (NcHICosmo *cosmo, NcRecomb *recomb, guint lmax, gdouble tc_r
                                    &pert->lambda_rec_10m2_max[1]);
   pert->lambda_opt_cutoff = nc_recomb_tau_cutoff (pert->recomb, cosmo);
   
-  pert->eta0 = nc_scale_factor_t_z (pert->a, 0.0);
+  pert->eta0 = nc_scalefactor_eta_z (pert->a, 0.0);
 
   pert->lmax = lmax;
 
@@ -433,14 +434,14 @@ _nc_pert_linear_prepare_deta_grid (NcLinearPert *pert, gdouble *deta_grid, glong
   for (i = 0; i < ni; i++)
   {
     gdouble x_i = x_opt_cutoff + (x_rec_10m2_max1 - x_opt_cutoff) / (ni - 1.0) * i;
-    gdouble deta_i = pert->eta0 - nc_scale_factor_t_x (pert->a, x_i);
+    gdouble deta_i = pert->eta0 - nc_scalefactor_eta_x (pert->a, x_i);
     deta_grid[n - 1 - i] = deta_i;
   }
 
   for (i = 0; i < nc; i++)
   {
     gdouble x_i = x_rec_10m2_max1 + (x_rec_10m2_max0 - x_rec_10m2_max1) / (nc * 1.0) * (i + 1.0);
-    gdouble deta_i = pert->eta0 - nc_scale_factor_t_x (pert->a, x_i);
+    gdouble deta_i = pert->eta0 - nc_scalefactor_eta_x (pert->a, x_i);
     deta_grid[n - 1 - (i + ni)] = deta_i;
   }
   last_eta = deta_grid[n - nc - ni];
@@ -558,7 +559,7 @@ nc_pert_linear_prepare_splines (NcLinearPertSplines *pspline)
         gdouble S0, S1, S2;
         gint jj = pspline->n_deta - 1 - j;
         gdouble detaj = ncm_vector_get (pspline->ga, jj);
-        gdouble xj = nc_scale_factor_z_t (pert->a, pert->eta0 - detaj) + 1.0;
+        gdouble xj = nc_scalefactor_z_eta (pert->a, pert->eta0 - detaj) + 1.0;
         gdouble lambdaj = -log(xj);
 
         pert->solver->evol (pert, lambdaj);

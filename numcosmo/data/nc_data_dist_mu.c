@@ -202,9 +202,9 @@ _nc_data_dist_mu_mean_func (NcmDataGaussDiag *diag, NcmMSet *mset, NcmVector *vp
 
   for (i = 0; i < diag->np; i++)
   {
-    const gdouble z  = ncm_vector_get (dist_mu->x, i);
-    const gdouble mu = nc_distance_modulus (dist_mu->dist, cosmo, z);
-    ncm_vector_set (vp, i, mu);
+    const gdouble z   = ncm_vector_get (dist_mu->x, i);
+    const gdouble dmu = nc_distance_dmodulus (dist_mu->dist, cosmo, z);
+    ncm_vector_set (vp, i, dmu);
   }
 }
 

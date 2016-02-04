@@ -107,7 +107,22 @@ static gdouble _nc_hicosmo_de_H0 (NcHICosmo *cosmo) { return MACRO_H0; }
 static gdouble _nc_hicosmo_de_Omega_t (NcHICosmo *cosmo) { return OMEGA_M + OMEGA_X + OMEGA_R; }
 static gdouble _nc_hicosmo_de_Omega_c (NcHICosmo *cosmo) { return OMEGA_C; }
 static gdouble _nc_hicosmo_de_T_gamma0 (NcHICosmo *cosmo) { return T_GAMMA0; }
-static gdouble _nc_hicosmo_de_Yp_4He (NcHICosmo *cosmo) { return HE_YP; }
+
+static gdouble 
+_nc_hicosmo_de_Yp_4He (NcHICosmo *cosmo) 
+{ 
+  const gdouble wb     = nc_hicosmo_Omega_bh2 (cosmo);
+  const gdouble wb2    = wb * wb;
+  const gdouble DENNU  = ENNU - 3.046;
+  const gdouble DENNU2 = DENNU * DENNU;
+
+  const gdouble Yp = 0.2311 + 0.9502 * wb - 11.27 * wb2 + 
+    DENNU * (0.01356 + 0.008581 * wb - 0.1810 * wb2) +
+    DENNU2 * (-0.0009795 - 0.001370 * wb + 0.01746 * wb2);
+
+  return Yp;
+}
+
 static gdouble _nc_hicosmo_de_Omega_g (NcHICosmo *cosmo)
 {
   const gdouble h = MACRO_H0 / 100.0;
@@ -264,11 +279,6 @@ nc_hicosmo_de_class_init (NcHICosmoDEClass *klass)
   ncm_model_class_set_sparam (model_class, NC_HICOSMO_DE_SIGMA8, "\\sigma_8", "sigma8",
                               0.2,   1.8, 1.0e-2,
                               NC_HICOSMO_DEFAULT_PARAMS_ABSTOL, NC_HICOSMO_DE_DEFAULT_SIGMA8,
-                              NCM_PARAM_TYPE_FIXED);
-  /* Set tau_re param info */
-  ncm_model_class_set_sparam (model_class, NC_HICOSMO_DE_TAU_RE, "\\tau_{re}", "tau_re",
-                              0.0, 1.0, 1.0e-2,
-                              NC_HICOSMO_DEFAULT_PARAMS_ABSTOL, NC_HICOSMO_DE_DEFAULT_TAU_RE,
                               NCM_PARAM_TYPE_FIXED);
   /* Check for errors in parameters initialization */
   ncm_model_class_check_params_info (model_class);

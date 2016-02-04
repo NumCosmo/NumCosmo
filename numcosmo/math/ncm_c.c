@@ -1723,33 +1723,33 @@ ncm_c_class_init (NcmCClass *klass)
  *
  * The critical density is defined as
  * \begin{equation}
- * \rho_{crit} = \frac{3 c^2 H_0^2}{8\pi G},
+ * \rho_{\mathrm{crit}0} = \frac{3 c^2 H_0^2}{8\pi G},
  * \end{equation}
  * where $G$ is the gravitational constant (#ncm_c_G()), $c$ is the speed of light 
  * (#ncm_c_c()) and $H_0$ is the Hubble parameter,
  * $$H_0 = 100 \times \mathsf{h} \,\left[\text{km}\,\text{s}^{-1}\,\text{Mpc}^{-1}\right.$$
  * 
- * Returns: Critical density over $\mathsf{h}^2$, $$\frac{\rho_{crit}}{\mathsf{h}^2} \left[\frac{\text{kg}}{\text{m}^3} \frac{\text{m}^2}{\text{s}^2}\right].$$
+ * Returns: Critical density over $\mathsf{h}^2$, $$\frac{\rho_{\mathrm{crit}0}}{\mathsf{h}^2} \left[\frac{\text{kg}}{\text{m}^3} \frac{\text{m}^2}{\text{s}^2}\right].$$
  */
 /**
  * ncm_c_crit_mass_density:
  *
  * The critical mass density is defined as
  * \begin{equation}
- * \rho_{crit} = \frac{3 H_0^2}{8\pi G},
+ * \rho_{\mathrm{crit}0} = \frac{3 H_0^2}{8\pi G},
  * \end{equation}
  * where $G$ is the gravitational constant (#ncm_c_G()), $c$ is the speed of light 
  * (#ncm_c_c()) and $H_0$ is the Hubble parameter,
  * $$H_0 = 100 \times \mathsf{h} \,\left[\text{km}\,\text{s}^{-1}\,\text{Mpc}^{-1}\right.$$
  *
- * Returns: Critical mass density over $\mathsf{h}^2$, $$\frac{\rho_{crit}}{c^2\mathsf{h}^2} \,\left[\frac{\text{kg}}{\text{m}^3}\right].$$
+ * Returns: Critical mass density over $\mathsf{h}^2$, $$\frac{\rho_{\mathrm{crit}0}}{c^2\mathsf{h}^2} \,\left[\frac{\text{kg}}{\text{m}^3}\right].$$
  */
 /**
  * ncm_c_crit_mass_density_h2_solar_mass_Mpc3:
  *
  * This function computes the critical mass density in units of solar mass $M_\odot$ and Mpc.
  * 
- * Returns: Critical mass density in $M_\odot$ and Mpc units $\frac{\rho_{crit}}{\mathsf{h}^2 M_\odot} \left(1 \mathrm{Mpc}\right)^3$.
+ * Returns: Critical mass density in $M_\odot$ and Mpc units $\frac{\rho_{\mathrm{crit}0}}{\mathsf{h}^2 M_\odot} \left(1 \mathrm{Mpc}\right)^3$.
  */
 /**
  * ncm_c_crit_number_density_p:

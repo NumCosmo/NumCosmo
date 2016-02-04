@@ -305,7 +305,7 @@ nc_cluster_mass_plcl_pdf (NcClusterMass *clusterm, gdouble lnM_M0, gdouble w1, g
 {
   NcClusterMassPlCL *mszl = NC_CLUSTER_MASS_PLCL (clusterm);
   
-  /* These four variables are adimensional */
+  /* These four variables are dimensionless */
   const gdouble M_Pl  = Mobs[NC_CLUSTER_MASS_PLCL_MPL];
   const gdouble sd_Pl = Mobs_params[NC_CLUSTER_MASS_PLCL_SD_PL];
   const gdouble M_CL  = Mobs[NC_CLUSTER_MASS_PLCL_MCL];
@@ -779,7 +779,7 @@ _nc_cluster_mass_plcl_Msz_Ml_M500_p (NcClusterMass *clusterm, NcHICosmo *cosmo, 
   sd_Pl = data.mobs_params[NC_CLUSTER_MASS_PLCL_SD_PL];
   sd_CL = data.mobs_params[NC_CLUSTER_MASS_PLCL_SD_CL];
   
-  // Dividing norma by mszl->M0 in order to have adimensional 
+  // Dividing norma by mszl->M0 in order to have dimensionless 
   // sd_PL and sd_CL, since they are given in units of 10^{14} h^{-1} M_solar, and given that 
   // P(M_PL, M_CL; M500) dM_PL dM_CL and, therefore, the units are canceled.
   data.lnnorma_p = log (four_pi2 * norma_factor * sd_Pl * sd_CL / (mszl->M0 * mszl->M0));

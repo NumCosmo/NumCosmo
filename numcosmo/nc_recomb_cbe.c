@@ -113,7 +113,7 @@ nc_recomb_cbe_get_property (GObject *object, guint prop_id, GValue *value, GPara
   }
 }
 
-static void nc_recomb_cbe_prepare (NcRecomb *recomb, NcHICosmo *cosmo);
+static void nc_recomb_cbe_prepare (NcRecomb *recomb, NcHIReion *reion, NcHICosmo *cosmo);
 
 static void
 nc_recomb_cbe_class_init (NcRecombCBEClass *klass)
@@ -138,11 +138,11 @@ nc_recomb_cbe_class_init (NcRecombCBEClass *klass)
 }
 
 static void
-nc_recomb_cbe_prepare (NcRecomb *recomb, NcHICosmo *cosmo)
+nc_recomb_cbe_prepare (NcRecomb *recomb, NcHIReion *reion, NcHICosmo *cosmo)
 {
   NcRecombCBE *recomb_cbe = NC_RECOMB_CBE (recomb);
 
-  nc_cbe_thermodyn_prepare (recomb_cbe->cbe, cosmo);
+  nc_cbe_thermodyn_prepare (recomb_cbe->cbe, reion, cosmo);
 
   ncm_spline_clear (&recomb->Xe_s);
   ncm_spline_clear (&recomb->tau_s);

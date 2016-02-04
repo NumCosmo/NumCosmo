@@ -29,7 +29,7 @@
 #include <glib.h>
 #include <glib-object.h>
 #include <numcosmo/build_cfg.h>
-#include <numcosmo/nc_recomb.h>
+#include <numcosmo/nc_hicosmo.h>
 #include <numcosmo/math/ncm_c.h>
 #include <numcosmo/math/ncm_model.h>
 #include <numcosmo/math/ncm_mset.h>

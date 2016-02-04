@@ -102,7 +102,7 @@ nc_hicosmo_class_init (NcHICosmoClass *klass)
       {"z_lss",      "redshift at lss.",                           &nc_hicosmo_z_lss,      NC_HICOSMO_IMPL_z_lss},
       {"as_drag",    "as_drag.",                                   &nc_hicosmo_as_drag,    NC_HICOSMO_IMPL_as_drag},
       {"xb",         "Bounce scale.",                              &nc_hicosmo_xb,         NC_HICOSMO_IMPL_xb},
-      {"c_H0",       "Hubble radius.",                             &nc_hicosmo_c_H0,       NC_HICOSMO_IMPL_c_H0},
+      {"RH_Mpc",     "Hubble radius today in Mpc.",                &nc_hicosmo_RH_Mpc,     NC_HICOSMO_IMPL_RH_Mpc},
       {"Omega_k",    "Curvature scale.",                           &nc_hicosmo_Omega_k,    NC_HICOSMO_IMPL_Omega_k},
       {"Omega_m",    "Total cold matter density today.",           &nc_hicosmo_Omega_m,    NC_HICOSMO_IMPL_Omega_m},
       {"h",          "Adimensional Hubble constant.",              &nc_hicosmo_h,          NC_HICOSMO_IMPL_h},
@@ -659,12 +659,13 @@ NCM_MODEL_SET_IMPL_FUNC(NC_HICOSMO,NcHICosmo,nc_hicosmo,NcHICosmoFunc1,powspec)
  * Returns: FIXME
  */
 /**
- * nc_hicosmo_c_H0:
+ * nc_hicosmo_RH_Mpc:
  * @cosmo: a #NcHICosmo.
  *
- * FIXME
+ * Calculates the Hubble radius in unit of
+ * Mpc, i.e., $R_H = (c / (H_0 * 1 \mathrm{Mpc}))$. 
  *
- * Returns: FIXME
+ * Returns: $R_H$.
  */
 /**
  * nc_hicosmo_Omega_k:
@@ -790,7 +791,7 @@ NCM_MODEL_SET_IMPL_FUNC(NC_HICOSMO,NcHICosmo,nc_hicosmo,NcHICosmoFunc1,powspec)
  * Calculares the critical density $\rho_\mathrm{crit}$ using 
  * ncm_c_crit_density_h2() $\times$ nc_hicosmo_h2().
  * 
- * Returns: The critical density $\rho_\mathrm{crit}$.
+ * Returns: The critical density $\rho_{\mathrm{crit}0}$.
  */
 /**
  * nc_hicosmo_baryon_density:

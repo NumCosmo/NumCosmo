@@ -67,12 +67,12 @@ GType nc_cor_cluster_cmb_lens_limber_get_type (void) G_GNUC_CONST;
 
 NcCorClusterCmbLensLimber *nc_cor_cluster_cmb_lens_limber_new (void);
 
-gdouble nc_cor_cluster_cmb_lens_limber_oneh_int_mass (NcCorClusterCmbLensLimber *cccll, NcClusterAbundance *cad, NcClusterMass *clusterm, NcHICosmo *model, NcDensityProfile *dp, gdouble k, gdouble z, gdouble *lnM_obs, gdouble *lnM_obs_params);
-gdouble nc_cor_cluster_cmb_lens_limber_oneh_term (NcCorClusterCmbLensLimber *cccll, NcClusterAbundance *cad, NcHICosmo *model, NcDistance *dist, NcDensityProfile *dp, gint l, gdouble *lnM_obs, gdouble *lnM_obs_params, gdouble *z_obs, gdouble *z_obs_params);
-gdouble nc_cor_cluster_cmb_lens_limber_twoh_int_mass1 (NcCorClusterCmbLensLimber *cccll, NcClusterAbundance *cad, NcClusterMass *clusterm, NcHICosmo *model, gdouble z);
-gdouble nc_cor_cluster_cmb_lens_limber_twoh_int_mm (NcCorClusterCmbLensLimber *cccll, NcClusterAbundance *cad, NcHICosmo *model, NcDensityProfile *dp, gdouble k, gdouble z);
-gdouble nc_cor_cluster_cmb_lens_limber_twoh_int_mass2 (NcCorClusterCmbLensLimber *cccll, NcClusterAbundance *cad, NcClusterMass *clusterm, NcHICosmo *model, NcDensityProfile *dp, gdouble k, gdouble z);
-gdouble nc_cor_cluster_cmb_lens_limber_twoh_term (NcCorClusterCmbLensLimber *cccll, NcClusterAbundance *cad, NcHICosmo *model, NcDistance *dist, NcDensityProfile *dp, gint l, gdouble *z_obs, gdouble *z_obs_params);
+gdouble nc_cor_cluster_cmb_lens_limber_oneh_int_mass (NcCorClusterCmbLensLimber *cccll, NcClusterAbundance *cad, NcClusterMass *clusterm, NcHICosmo *cosmo, NcDensityProfile *dp, gdouble k, gdouble z, gdouble *lnM_obs, gdouble *lnM_obs_params);
+gdouble nc_cor_cluster_cmb_lens_limber_oneh_term (NcCorClusterCmbLensLimber *cccll, NcClusterAbundance *cad, NcHICosmo *cosmo, NcDistance *dist, NcDensityProfile *dp, gint l, gdouble *lnM_obs, gdouble *lnM_obs_params, gdouble *z_obs, gdouble *z_obs_params);
+gdouble nc_cor_cluster_cmb_lens_limber_twoh_int_mass1 (NcCorClusterCmbLensLimber *cccll, NcClusterAbundance *cad, NcClusterMass *clusterm, NcHICosmo *cosmo, gdouble z);
+gdouble nc_cor_cluster_cmb_lens_limber_twoh_int_mm (NcCorClusterCmbLensLimber *cccll, NcClusterAbundance *cad, NcHIReion *reion, NcHICosmo *cosmo, NcDensityProfile *dp, gdouble k, gdouble z);
+gdouble nc_cor_cluster_cmb_lens_limber_twoh_int_mass2 (NcCorClusterCmbLensLimber *cccll, NcClusterAbundance *cad, NcClusterMass *clusterm, NcHICosmo *cosmo, NcDensityProfile *dp, gdouble k, gdouble z);
+gdouble nc_cor_cluster_cmb_lens_limber_twoh_term (NcCorClusterCmbLensLimber *cccll, NcClusterAbundance *cad, NcHIReion *reion, NcHICosmo *cosmo, NcDistance *dist, NcDensityProfile *dp, gint l, gdouble *z_obs, gdouble *z_obs_params);
 
 G_END_DECLS
 

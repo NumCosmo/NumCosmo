@@ -58,7 +58,7 @@ nc_transfer_func_camb_new ()
 }
 
 static void
-_nc_transfer_func_camb_prepare (NcTransferFunc *tf, NcHICosmo *model)
+_nc_transfer_func_camb_prepare (NcTransferFunc *tf, NcHIReion *reion, NcHICosmo *cosmo)
 {
   NcTransferFuncCAMB *tf_CAMB = NC_TRANSFER_FUNC_CAMB (tf);
   FILE *camb_tf;
@@ -66,7 +66,7 @@ _nc_transfer_func_camb_prepare (NcTransferFunc *tf, NcHICosmo *model)
   GArray *x;
   GArray *y;
 
-  NCM_UNUSED (model);
+  NCM_UNUSED (cosmo);
 
   if (tf_CAMB->init)
   {
@@ -119,12 +119,12 @@ _nc_transfer_func_camb_calc (NcTransferFunc *tf, gdouble kh)
 }
 
 static gdouble
-_nc_transfer_func_camb_calc_matter_P (NcTransferFunc *tf, NcHICosmo *model, gdouble kh)
+_nc_transfer_func_camb_calc_matter_P (NcTransferFunc *tf, NcHICosmo *cosmo, gdouble kh)
 {
   NcTransferFuncCAMB *tf_camb = NC_TRANSFER_FUNC_CAMB (tf);
   gdouble result;
 
-  NCM_UNUSED (model);
+  NCM_UNUSED (cosmo);
   
   if (kh == 0)
     return 0.0;

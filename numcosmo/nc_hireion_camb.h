@@ -30,6 +30,8 @@
 #include <numcosmo/build_cfg.h>
 #include <numcosmo/math/ncm_model_ctrl.h>
 #include <numcosmo/nc_hireion.h>
+#include <gsl/gsl_min.h>
+#include <gsl/gsl_roots.h>
 
 G_BEGIN_DECLS
 

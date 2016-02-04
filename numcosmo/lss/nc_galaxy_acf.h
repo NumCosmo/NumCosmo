@@ -67,8 +67,8 @@ struct _NcGalaxyAcfClass
 GType nc_galaxy_acf_get_type (void) G_GNUC_CONST;
 
 NcGalaxyAcf *nc_galaxy_acf_new (NcGrowthFunc *gf, NcDistance *dist, NcTransferFunc *tf);
-gdouble nc_galaxy_acf_psi (NcGalaxyAcf *acf, NcHICosmo *model, gdouble k, guint l);
-void nc_galaxy_acf_prepare_psi (NcGalaxyAcf *acf, NcHICosmo *model, guint l);
+gdouble nc_galaxy_acf_psi (NcGalaxyAcf *acf, NcHICosmo *cosmo, gdouble k, guint l);
+void nc_galaxy_acf_prepare_psi (NcGalaxyAcf *acf, NcHIReion *reion, NcHICosmo *cosmo, guint l);
 
 
 G_END_DECLS

@@ -55,17 +55,17 @@ nc_transfer_func_eh_new ()
 }
 
 static void
-_nc_transfer_func_eh_prepare (NcTransferFunc *tf, NcHICosmo *model)
+_nc_transfer_func_eh_prepare (NcTransferFunc *tf, NcHIReion *reion, NcHICosmo *cosmo)
 {
   NcTransferFuncEH *tf_EH = NC_TRANSFER_FUNC_EH (tf);
-  const gdouble T_0 = nc_hicosmo_T_gamma0 (model);
+  const gdouble T_0 = nc_hicosmo_T_gamma0 (cosmo);
   const gdouble c1 = sqrt(6);
   const gdouble c2 = T_0 / 2.7;    /* \theta = 2.725/2.7 where 2.725 is the CMB temperature */
-  const gdouble h = nc_hicosmo_h (model);
+  const gdouble h = nc_hicosmo_h (cosmo);
   const gdouble h2 = h * h;
-  const gdouble wm = nc_hicosmo_Omega_m (model) * h2;
-  const gdouble wb = nc_hicosmo_Omega_b (model) * h2;
-  const gdouble wc = nc_hicosmo_Omega_c (model) * h2;
+  const gdouble wm = nc_hicosmo_Omega_m (cosmo) * h2;
+  const gdouble wb = nc_hicosmo_Omega_b (cosmo) * h2;
+  const gdouble wc = nc_hicosmo_Omega_c (cosmo) * h2;
   const gdouble wb_wm = wb/wm;     /* \frac{\Omega_b}{\Omega_m} */
   const gdouble wc_wm = wc/wm;    /* \frac{\Omega_c}{\Omega_m} */
 
@@ -154,10 +154,10 @@ _nc_transfer_func_eh_calc (NcTransferFunc *tf, gdouble kh)
 }
 
 static gdouble
-_nc_transfer_func_eh_calc_matter_P (NcTransferFunc *tf, NcHICosmo *model, gdouble kh)
+_nc_transfer_func_eh_calc_matter_P (NcTransferFunc *tf, NcHICosmo *cosmo, gdouble kh)
 {
   gdouble T = _nc_transfer_func_eh_calc (tf, kh);
-  return T * T * nc_hicosmo_powspec (model, kh);
+  return T * T * nc_hicosmo_powspec (cosmo, kh);
 }
 
 static void

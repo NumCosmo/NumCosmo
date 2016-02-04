@@ -188,13 +188,13 @@
   <chapter>
     <title>Cosmological Calculators</title>
     <xi:include href="xml/nc_distance.xml"/>
+    <xi:include href="xml/nc_scalefactor.xml"/>
     <xi:include href="xml/nc_recomb.xml"/>
     <xi:include href="xml/nc_recomb_seager.xml"/>
     <xi:include href="xml/nc_recomb_cbe.xml"/>
     <xi:include href="xml/nc_hireion.xml"/>
     <xi:include href="xml/nc_hireion_camb.xml"/>
     <xi:include href="xml/nc_hireion_camb_reparam_tau.xml"/>
-    <xi:include href="xml/scalefactor.xml"/>
   </chapter>
 
   <chapter>

@@ -29,30 +29,52 @@
  *
  * This object implements several distances used in cosmology, here we have
  * the following definitions.
- *
- * The Hubble scale is simply defined as the inverse of the Hubble function $H(z)$ [nc_hicosmo_H()],
- * \begin{equation}\label{eq:def:DH}
- * D_H(z) = \frac{c}{H(z)}, \qquad D_{H0} = \frac{c}{H_0}.
+ * 
+ * $
+ *  \newcommand{\RH}{{R_H}}
+ *  \newcommand{\RHc}{{R^\mathrm{c}_H}}
+ * $
+ * 
+ * The Hubble radius (or scale) is defined as the inverse of the Hubble 
+ * function $H(z)$ [nc_hicosmo_H()],
+ * \begin{equation}\label{eq:def:RHc}
+ * \RH = \frac{c}{H(z)}, \qquad \RH_0 = \frac{c}{H_0},
  * \end{equation}
- * where $c$ is the speed of light [ncm_c_c()], $z$ is the redshift
- * and $H_0 \equiv H(0)$ is the Hubble parameter [nc_hicosmo_H0()]. The comoving distance $D_c$ is
- * defined as
- * \begin{equation}\label{eq:def:Dc}
- * D_c(z) = \int_0^z \frac{dz^\prime}{E (z^\prime)},
+ * where $c$ is the speed of light [ncm_c_c()], $z$ is the redshift and 
+ * $H_0 \equiv H(0)$ is the Hubble parameter [nc_hicosmo_H0()]. Similarly, 
+ * we also define the comoving Hubble radius as 
+ * \begin{equation}\label{eq:def:DH}
+ * \RHc(z) = \frac{c}{aH(z)} = \frac{c(1+z)}{a_0H(z)}, \qquad \RHc_0 = \frac{c}{a_0H_0}
+ * \end{equation}
+ * where ${}_0$ subscript means that the function is calculated at the 
+ * present time and the redshift $z$ is defined by the expression
+ * $$1 + z = \frac{a_0}{a}.$$
+ * 
+ * The comoving distance $D_c$ is defined as
+ * \begin{equation}\label{eq:def:dc}
+ * d_c(z) = \RHc_0\int_0^z \frac{dz^\prime}{E (z^\prime)},
  * \end{equation}
  * where $E(z)$ is the normalized Hubble function [nc_hicosmo_E()], i.e.,
  * \begin{equation}\label{eq:def:Ez}
  * E(z) \equiv \frac{H(z)}{H_0}.
  * \end{equation}
- * Note that both quantities are
- * adimensional, in other words, one can think them as in units of the Hubble
- * scale today.
+ * 
+ * In this object we will compute the dimensionless version of the distances,
+ * for the comoving distance we define
+ * \begin{equation}\label{eq:def:Dc}
+ * D_c(z) \equiv \frac{d_c(z)}{\RHc_0}.
+ * \end{equation}
+ * note, however, that $D_c(z)$ coincides with the proper distance today 
+ * $r(z) \equiv a_0 d_c(z)$ in unit of the Hubble radius, i.e., 
+ * $D_c(z) = r(z) / \RH_0$. Therefore, both the comoving distance and 
+ * the proper distance today can be obtained by multiplying $D_c(z)$
+ * by $\RHc_0$ and $\RH_0$ respectively.
  *
- * The transverse comoving distance $D_t$ and its derivative with respect to $z$ are
- * given by
+ * The transverse comoving distance $D_t$ and its derivative with respect to 
+ * $z$ are given by
  * \begin{equation}\label{eq:def:Dt}
- * D_t(z) = \frac{\sinh\left(\sqrt{\Omega_{k0}}D_c(z)\right)}{\sqrt{\Omega_{k0}}},
- * \qquad \frac{dD_t}{dz}(z) = \frac{\cosh\left(\sqrt{\Omega_{k0}}D_c(z)\right)}{E(z)},
+ * D_t(z) = \frac{\sinh\left[\sqrt{\Omega_{k0}}D_c(z)\right]}{\sqrt{\Omega_{k0}}},
+ * \qquad \frac{dD_t}{dz}(z) = \frac{\cosh\left[\sqrt{\Omega_{k0}}D_c(z)\right]}{E(z)},
  * \end{equation}
  * where $\Omega_{k0}$ is the value of the curvature today [nc_hicosmo_Omega_k()].
  * Using the definition above we have that the luminosity and angular diameter distances
@@ -61,15 +83,15 @@
  * D_l = (1 + z)D_t(z), \qquad D_A = D_t (z) / (1 + z),
  * \end{equation}
  * and the distance modulus is given by
- * \begin{equation}\label{eq:def:mu}
- * \mu(z) = 5\log_{10}(D_l(z)) + 25,
+ * \begin{equation}\label{eq:def:dmu}
+ * \delta\mu(z) = 5\log_{10}(D_l(z)) + 25.
  * \end{equation}
- * where $\log_{10}$ represents the logarithm in the decimal base. Note that
- * the distance modulus is usually defined as
- * $$5\log_{10}(D_{H0}D_l(z)/\text{pc}) - 5,$$
- * where $\text{pc}$ is parsec [ncm_c_pc()]. Thus, this differs from our
- * definition by a factor of $5\log_{10}(D_{H0}/\text{Mpc})$, where $\text{Mpc}$
- * is megaparsec [ncm_c_Mpc()].
+ * Note that the distance modulus is defined as
+ * $$\mu(z) = 5\log_{10}[\RH_0D_l(z)/(1\,\text{Mpc})] + 25.$$
+ * Thus, this differs from our definition by a factor of 
+ * $5\log_{10}[\RH_0/(1\,\text{Mpc})]$, i.e., 
+ * $$\mu(z) = \delta\mu(z) + 5\log_{10}[\RH_0/(1\,\text{Mpc})],$$ 
+ * where $\text{Mpc}$ is megaparsec [ncm_c_Mpc()].
  *
  *
  */
@@ -223,7 +245,7 @@ nc_distance_class_init (NcDistanceClass *klass)
       {"d_t",      "Transverse distance.",       &nc_distance_transverse,       NC_HICOSMO_IMPL_E2},
       {"d_l",      "Luminosity distance.",       &nc_distance_luminosity,       NC_HICOSMO_IMPL_E2},
       {"d_A",      "Angular diameter distance.", &nc_distance_angular_diameter, NC_HICOSMO_IMPL_E2},
-      {"mu",       "Distance modulus.",          &nc_distance_modulus,          NC_HICOSMO_IMPL_E2},
+      {"dmu",      "delta-Distance modulus.",    &nc_distance_dmodulus,         NC_HICOSMO_IMPL_E2},
       {"D_A",      "Dilation scale.",            &nc_distance_dilation_scale,   NC_HICOSMO_IMPL_E2},
       {"BAO_A",    "BAO A scale.",               &nc_distance_bao_A_scale,      NC_HICOSMO_IMPL_E2 | NC_HICOSMO_IMPL_Omega_m},
       {"r_Dv",     "BAO r_Dv.",                  &nc_distance_bao_r_Dv,         NC_HICOSMO_IMPL_E2},
@@ -616,17 +638,17 @@ nc_distance_angular_diameter (NcDistance *dist, NcHICosmo *cosmo, gdouble z)
 }
 
 /**
- * nc_distance_modulus:
+ * nc_distance_dmodulus:
  * @dist: a #NcDistance
  * @cosmo: a #NcHICosmo
  * @z: redshift $z$
  *
- * Compute the distance modulus $\mu(z)$ defined in Eq. $\eqref{eq:def:mu}$.
+ * Compute the distance modulus $\delta\mu(z)$ defined in Eq. $\eqref{eq:def:dmu}$.
  *
- * Returns: $\mu(z)$
+ * Returns: $\delta\mu(z)$
  */
 gdouble
-nc_distance_modulus (NcDistance *dist, NcHICosmo *cosmo, gdouble z)
+nc_distance_dmodulus (NcDistance *dist, NcHICosmo *cosmo, gdouble z)
 {
   const gdouble Dl = nc_distance_luminosity (dist, cosmo, z);
   if (!gsl_finite (Dl))
@@ -655,19 +677,19 @@ nc_distance_luminosity_hef (NcDistance *dist, NcHICosmo *cosmo, gdouble z_he, gd
 }
 
 /**
- * nc_distance_modulus_hef:
+ * nc_distance_dmodulus_hef:
  * @dist: a #NcDistance
  * @cosmo: a #NcHICosmo
  * @z_he: redshift $z_{he}$ in our local frame
  * @z_cmb: redshift $z_{CMB}$ in the CMB frame
  *
- * Calculate the distance modulus using the frame corrected luminosity distance
- * [nc_distance_luminosity_hef()].
+ * Calculate the distance modulus [Eq. $\eqref{eq:def:dmu}$] using the frame corrected luminosity 
+ * distance [nc_distance_luminosity_hef()].
  *
- * Returns: $\mu(z_{hef},z_{CMB})$
+ * Returns: $\delta\mu(z_{hef},z_{CMB})$
  */
 gdouble
-nc_distance_modulus_hef (NcDistance *dist, NcHICosmo *cosmo, gdouble z_he, gdouble z_cmb)
+nc_distance_dmodulus_hef (NcDistance *dist, NcHICosmo *cosmo, gdouble z_he, gdouble z_cmb)
 {
   const gdouble Dl = nc_distance_luminosity_hef (dist, cosmo, z_he, z_cmb);
   if (!gsl_finite (Dl))
@@ -953,7 +975,7 @@ nc_distance_drag_redshift (NcDistance *dist, NcHICosmo *cosmo)
  * [ncm_c_c()] and $H(z)$ is the Hubble function [nc_hicosmo_H()].
  * See [Eisenstein et al. (2005)][XEisenstein2005].
  *
- * This function computes the adimensional dilation scale:
+ * This function computes the dimensionless dilation scale:
  * $$D_V^\star(z) = \left[D_t(z)^2 \frac{z}{E(z)} \right]^{1/3} = \frac{D_V(z)}{D_{H_0}},$$
  * where $E(z)$ is the normalized Hubble function [nc_hicosmo_E2()].
  *

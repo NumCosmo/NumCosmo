@@ -493,8 +493,8 @@ nc_snia_dist_cov_mean (NcSNIADistCov *dcov, NcHICosmo *cosmo, NcDataSNIACov *sni
       const gdouble width    = ncm_vector_get (snia_cov->width, i);
       const gdouble colour   = ncm_vector_get (snia_cov->colour, i);
       const gdouble thirdpar = ncm_vector_get (snia_cov->thirdpar, i);
-      const gdouble mu       = nc_distance_modulus_hef (dcov->dist, cosmo, z_he, z_cmb);
-      const gdouble mag_th   = mu - alpha * (width - 1.0) + beta * colour + ((thirdpar < 10.0) ? Mcal1 : Mcal2);
+      const gdouble dmu      = nc_distance_dmodulus_hef (dcov->dist, cosmo, z_he, z_cmb);
+      const gdouble mag_th   = dmu - alpha * (width - 1.0) + beta * colour + ((thirdpar < 10.0) ? Mcal1 : Mcal2);
       const gdouble y_i      = mag_th;
 
       ncm_vector_set (y, i, y_i);
@@ -530,8 +530,8 @@ nc_snia_dist_cov_mag (NcSNIADistCov *dcov, NcHICosmo *cosmo, NcDataSNIACov *snia
     const gdouble z_cmb    = ncm_vector_get (snia_cov->z_cmb, i);
     const gdouble z_he     = ncm_vector_get (snia_cov->z_he, i);
     const gdouble thirdpar = ncm_vector_get (snia_cov->thirdpar, i);
-    const gdouble mu       = nc_distance_modulus_hef (dcov->dist, cosmo, z_he, z_cmb);
-    const gdouble mag_th   = mu - alpha * (width_th - 1.0) + beta * colour_th + ((thirdpar < 10.0) ? Mcal1 : Mcal2);
+    const gdouble dmu      = nc_distance_dmodulus_hef (dcov->dist, cosmo, z_he, z_cmb);
+    const gdouble mag_th   = dmu - alpha * (width_th - 1.0) + beta * colour_th + ((thirdpar < 10.0) ? Mcal1 : Mcal2);
 
     return mag_th;
   }
@@ -577,13 +577,13 @@ nc_snia_dist_cov_mag_to_width_colour (NcSNIADistCov *dcov, NcHICosmo *cosmo, NcD
       const gdouble z_cmb    = ncm_vector_get (snia_cov->z_cmb, i);
       const gdouble z_he     = ncm_vector_get (snia_cov->z_he, i);
       const gdouble thirdpar = ncm_vector_get (snia_cov->thirdpar, i);
-      const gdouble mu       = nc_distance_modulus_hef (dcov->dist, cosmo, z_he, z_cmb);
+      const gdouble dmu      = nc_distance_dmodulus_hef (dcov->dist, cosmo, z_he, z_cmb);
       const gdouble M        = ((thirdpar < 10.0) ? Mcal1 : Mcal2);
       const gdouble m_obs_i  = ncm_vector_get (snia_cov->mag, i);
       const gdouble w_obs_i  = ncm_vector_get (snia_cov->width, i);
       const gdouble c_obs_i  = ncm_vector_get (snia_cov->colour, i);
 
-      ncm_vector_set (obs, i + 0 * mu_len, m_obs_i - mu - alpha - M);
+      ncm_vector_set (obs, i + 0 * mu_len, m_obs_i - dmu - alpha - M);
       ncm_vector_set (obs, i + 1 * mu_len, w_obs_i);
       ncm_vector_set (obs, i + 2 * mu_len, c_obs_i);
 
@@ -600,13 +600,13 @@ nc_snia_dist_cov_mag_to_width_colour (NcSNIADistCov *dcov, NcHICosmo *cosmo, NcD
       const gdouble z_cmb    = ncm_vector_get (snia_cov->z_cmb, i);
       const gdouble z_he     = ncm_vector_get (snia_cov->z_he, i);
       const gdouble thirdpar = ncm_vector_get (snia_cov->thirdpar, i);
-      const gdouble mu       = nc_distance_modulus_hef (dcov->dist, cosmo, z_he, z_cmb);
+      const gdouble dmu      = nc_distance_dmodulus_hef (dcov->dist, cosmo, z_he, z_cmb);
       const gdouble M        = ((thirdpar < 10.0) ? Mcal1 : Mcal2);
       const gdouble m_obs_i  = ncm_vector_get (snia_cov->mag, i);
       const gdouble w_obs_i  = ncm_vector_get (snia_cov->width, i);
       const gdouble c_obs_i  = ncm_vector_get (snia_cov->colour, i);
 
-      ncm_vector_set (obs, i + 0 * mu_len, m_obs_i - mu - alpha - M);
+      ncm_vector_set (obs, i + 0 * mu_len, m_obs_i - dmu - alpha - M);
       ncm_vector_set (obs, i + 1 * mu_len, w_obs_i);
       ncm_vector_set (obs, i + 2 * mu_len, c_obs_i);
 

@@ -283,33 +283,35 @@ nc_matter_var_class_init (NcMatterVarClass *klass)
                                                         | G_PARAM_STATIC_BLURB));
 }
 
-static void _nc_matter_var_prepare_numint (NcMatterVar *vp, NcHICosmo *model);
-static void _nc_matter_var_prepare_splineint (NcMatterVar *vp, NcHICosmo *model);
+static void _nc_matter_var_prepare_numint (NcMatterVar *vp, NcHICosmo *cosmo);
+static void _nc_matter_var_prepare_splineint (NcMatterVar *vp, NcHICosmo *cosmo);
 #ifdef NUMCOSMO_HAVE_FFTW3
-static void _nc_matter_var_prepare_fft (NcMatterVar *vp, NcHICosmo *model);
+static void _nc_matter_var_prepare_fft (NcMatterVar *vp, NcHICosmo *cosmo);
 #endif /* NUMCOSMO_HAVE_FFTW3 */
 
 /**
  * nc_matter_var_prepare:
- * @vp: a #NcMatterVar.
- * @model: a #NcHICosmo.
+ * @vp: a #NcMatterVar
+ * @reion: a #NcHIReion
+ * @cosmo: a #NcHICosmo
  *
  * FIXME
  */
 void
-nc_matter_var_prepare (NcMatterVar *vp, NcHICosmo *model)
+nc_matter_var_prepare (NcMatterVar *vp, NcHIReion *reion, NcHICosmo *cosmo)
 {
+  nc_transfer_func_prepare (vp->tf, reion, cosmo);
   switch (vp->vs)
   {
     case NC_MATTER_VAR_NUMINT:
-      _nc_matter_var_prepare_numint (vp, model);
+      _nc_matter_var_prepare_numint (vp, cosmo);
       break;
     case NC_MATTER_VAR_SPLINEINT:
-      _nc_matter_var_prepare_splineint (vp, model);
+      _nc_matter_var_prepare_splineint (vp, cosmo);
       break;
     case NC_MATTER_VAR_FFT:
 #ifdef NUMCOSMO_HAVE_FFTW3
-      _nc_matter_var_prepare_fft (vp, model);
+      _nc_matter_var_prepare_fft (vp, cosmo);
 #else
       g_error ("nc_matter_var_prepare: Cannot use NC_MATTER_VAR_FFT: fftw not installed.");
 #endif
@@ -324,7 +326,7 @@ typedef struct _int_temp_stc
   int j;
   gdouble R;
   NcMatterVar *vp;
-  NcHICosmo *model;
+  NcHICosmo *cosmo;
 } int_temp_stc;
 
 static gdouble
@@ -334,7 +336,7 @@ _nc_matter_var_integrand_gaussian (gdouble kR, gpointer params)     /* integrand
   NcMatterVar *vp = ts->vp; //(NcVariance *) params;
   gdouble k = kR / ts->R;        /* por causa da integracao, para altos valores de R temos problema */
   const gdouble c1 = 2.0 * M_PI * M_PI;    /* 2\pi^2 */
-  gdouble matter_P = nc_transfer_func_matter_powerspectrum (vp->tf, ts->model, k);
+  gdouble matter_P = nc_transfer_func_matter_powerspectrum (vp->tf, ts->cosmo, k);
   gdouble W = nc_window_eval_fourier (vp->wp, k, ts->R);
   gdouble k2 = k*k;
   gdouble v_integrand = matter_P * k2 * gsl_pow_int (k2, ts->j) * W * W / (c1 * ts->R);  /* O termo 1/R é para a transformacao de variavel k -> kR. A integral eh feita em kR. */
@@ -345,7 +347,7 @@ _nc_matter_var_integrand_gaussian (gdouble kR, gpointer params)     /* integrand
 }
 
 static gdouble
-_nc_matter_var_over_growth2_gaussian (NcMatterVar *vp, NcHICosmo *model, gdouble lnR)     /* \frac{\sigma^2}{D^2} */
+_nc_matter_var_over_growth2_gaussian (NcMatterVar *vp, NcHICosmo *cosmo, gdouble lnR)     /* \frac{\sigma^2}{D^2} */
 {
   gdouble v_over_growth2_gaussian, error;
   static gsl_integration_workspace *w = NULL; //gsl_integration_workspace_alloc (INT_PARTITION);
@@ -355,7 +357,7 @@ _nc_matter_var_over_growth2_gaussian (NcMatterVar *vp, NcHICosmo *model, gdouble
   ts.j = 0;
   ts.R = exp (lnR);
   ts.vp = vp;
-  ts.model = model;
+  ts.cosmo = cosmo;
 
   if (w == NULL)
     w = gsl_integration_workspace_alloc (NCM_INTEGRAL_PARTITION);
@@ -376,7 +378,7 @@ _nc_matter_var_integrand_tophat_ksmall (gdouble kR, gpointer params)    /* integ
   NcMatterVar *vp = ts->vp;
   gdouble k = kR / ts->R;
   const gdouble c1 = 2.0 * M_PI * M_PI;
-  gdouble matter_P = nc_transfer_func_matter_powerspectrum (vp->tf, ts->model, k);
+  gdouble matter_P = nc_transfer_func_matter_powerspectrum (vp->tf, ts->cosmo, k);
   gdouble W = nc_window_eval_fourier (vp->wp, k, ts->R);
   gdouble k2 = k*k;
   gdouble v_integrand = matter_P * k2 * gsl_pow_int (k2, ts->j) * W * W / (c1 * ts->R);  /* O termo 1/R X para a transformacao de variavel k -> kR. */
@@ -391,7 +393,7 @@ _nc_matter_var_integrand_tophat_one (gdouble kR, gpointer params)     /* integra
   NcMatterVar *vp = ts->vp;
   gdouble k = kR / ts->R;
   const gdouble c1 = 2.0 * M_PI * M_PI;
-  gdouble matter_P = nc_transfer_func_matter_powerspectrum (vp->tf, ts->model, k);
+  gdouble matter_P = nc_transfer_func_matter_powerspectrum (vp->tf, ts->cosmo, k);
   gdouble k2 = k * k;
   gdouble k4 = k2 * k2;
   gdouble v_integrand_one = 4.5 * matter_P * gsl_pow_int (k2, ts->j) * (1.0 + k2 * ts->R * ts->R) / (gsl_pow_6(ts->R) * k4 * c1 * ts->R);
@@ -406,7 +408,7 @@ _nc_matter_var_integrand_tophat_cosine (gdouble kR, gpointer params)     /* inte
   NcMatterVar *vp = ts->vp;
   gdouble k = kR / ts->R;
   const gdouble c1 = 2.0 * M_PI * M_PI;
-  gdouble matter_P = nc_transfer_func_matter_powerspectrum (vp->tf, ts->model, k);
+  gdouble matter_P = nc_transfer_func_matter_powerspectrum (vp->tf, ts->cosmo, k);
   gdouble k2 = k*k;
   gdouble k4 = k2*k2;
   gdouble v_integrand_2 = 4.5 * matter_P * gsl_pow_int (k2, ts->j) * (-1.0 + k2*ts->R*ts->R)/ (gsl_pow_6(ts->R) * k4 * c1 * ts->R);  /* *cos(2kR) */
@@ -421,7 +423,7 @@ _nc_matter_var_integrand_tophat_sine (gdouble kR, gpointer params)     /* integr
   NcMatterVar *vp = ts->vp;
   gdouble k = kR / ts->R;
   const gdouble c1 = 2.0 * M_PI * M_PI;
-  gdouble matter_P = nc_transfer_func_matter_powerspectrum (vp->tf, ts->model, k);
+  gdouble matter_P = nc_transfer_func_matter_powerspectrum (vp->tf, ts->cosmo, k);
   gdouble k2 = k*k;
   gdouble k3 = k2*k;
   gdouble v_integrand_3 = -9.0 * matter_P * gsl_pow_int (k2, ts->j) / (gsl_pow_5(ts->R) * k3 * c1 * ts->R);   /* *sin(2kR) */
@@ -432,7 +434,7 @@ _nc_matter_var_integrand_tophat_sine (gdouble kR, gpointer params)     /* integr
 #define _NC_LSTEP2 5.0
 
 static gdouble
-_nc_matter_var_over_growth2_tophat_old (NcMatterVar *vp, NcHICosmo *model, gdouble lnR)     /* \frac{\sigma^2}{D^2} */
+_nc_matter_var_over_growth2_tophat_old (NcMatterVar *vp, NcHICosmo *cosmo, gdouble lnR)     /* \frac{\sigma^2}{D^2} */
 {
   gdouble v_over_growth2_ksmall = 0.0, v_over_growth2_one = 0.0, v_over_growth2_osc = 0.0;
   gdouble error, error_1, error_cos, error_sin, step, pres, result = 0.0;
@@ -448,7 +450,7 @@ _nc_matter_var_over_growth2_tophat_old (NcMatterVar *vp, NcHICosmo *model, gdoub
   ts.j = 0;
   ts.R = exp (lnR);
   ts.vp = vp;
-  ts.model = model;
+  ts.cosmo = cosmo;
 
   if (w == NULL)
     w = gsl_integration_workspace_alloc (NCM_INTEGRAL_PARTITION);
@@ -504,19 +506,17 @@ _nc_matter_var_over_growth2_tophat_old (NcMatterVar *vp, NcHICosmo *model, gdoub
   return result;
 }
 
-typedef gdouble (* _NcMatterVarVar0) (NcMatterVar *vp, NcHICosmo *model, gdouble lnR);
-typedef gdouble (* _NcMatterVardVar0dR) (NcMatterVar *vp, NcHICosmo *model, gdouble lnR);
-static gdouble _nc_matter_var_over_growth2_tophat_old (NcMatterVar *vp, NcHICosmo *model, gdouble lnR);
-static gdouble _nc_matter_var_dvariance_over_growth2_dR_tophat (NcMatterVar *vp, NcHICosmo *model, gdouble lnR); /* Check if it is R or lnR*/
-static gdouble _nc_matter_var_over_growth2_gaussian (NcMatterVar *vp, NcHICosmo *model, gdouble lnR);
-static gdouble _nc_matter_var_dvariance_over_growth2_dR_gaussian (NcMatterVar *vp, NcHICosmo *model, gdouble lnR);
+typedef gdouble (* _NcMatterVarVar0) (NcMatterVar *vp, NcHICosmo *cosmo, gdouble lnR);
+typedef gdouble (* _NcMatterVardVar0dR) (NcMatterVar *vp, NcHICosmo *cosmo, gdouble lnR);
+static gdouble _nc_matter_var_over_growth2_tophat_old (NcMatterVar *vp, NcHICosmo *cosmo, gdouble lnR);
+static gdouble _nc_matter_var_dvariance_over_growth2_dR_tophat (NcMatterVar *vp, NcHICosmo *cosmo, gdouble lnR); /* Check if it is R or lnR*/
+static gdouble _nc_matter_var_over_growth2_gaussian (NcMatterVar *vp, NcHICosmo *cosmo, gdouble lnR);
+static gdouble _nc_matter_var_dvariance_over_growth2_dR_gaussian (NcMatterVar *vp, NcHICosmo *cosmo, gdouble lnR);
 
 static void
-_nc_matter_var_prepare_numint (NcMatterVar *vp, NcHICosmo *model)
+_nc_matter_var_prepare_numint (NcMatterVar *vp, NcHICosmo *cosmo)
 {
   gint i;
-
-  nc_transfer_func_prepare (vp->tf, model);
 
   {
     _NcMatterVarVar0 var0 = NULL;
@@ -541,8 +541,8 @@ _nc_matter_var_prepare_numint (NcMatterVar *vp, NcHICosmo *model)
       gdouble lnR = log (0.1) + log (10000.0) / (NC_MATTER_VAR_SIGMA2_NP - 1.0) * i;
       //gdouble R = exp (lnR);
       gdouble sigma2_0, deriv_sigma2_0; /* variance over growth2 */
-      sigma2_0 = var0 (vp, model, lnR);
-      deriv_sigma2_0 = dvar0dR (vp, model, lnR);
+      sigma2_0 = var0 (vp, cosmo, lnR);
+      deriv_sigma2_0 = dvar0dR (vp, cosmo, lnR);
 
       ncm_vector_set (vp->sigma2_over_growth->xv, i, lnR);
       ncm_vector_set (vp->sigma2_over_growth->yv, i, log(sigma2_0));
@@ -562,27 +562,24 @@ static void _top_hat_cubic_spline_integration_rule_taylor (gdouble xa, gdouble x
 
 /**
  * nc_matter_var_var0:
- * @vp: a #NcMatterVar.
- * @model: a #NcHICosmo.
- * @lnR: logarithm base e of the radius.
+ * @vp: a #NcMatterVar
+ * @cosmo: a #NcHICosmo
+ * @lnR: logarithm base e of the radius
  *
- * This function returns the variance of the density contrast at redshift \f$ z = 0 \f$ computed at scale R FIXME
+ * This function returns the variance of the density contrast at redshift $ z = 0 $ computed at scale R FIXME
  *
- * Returns: a gdouble which is the variance \f$ \sigma^2 (R, z = 0) \f$.
+ * Returns: a gdouble which is the variance $ \sigma^2 (R, z = 0) $.
  */
 gdouble
-nc_matter_var_var0 (NcMatterVar *vp, NcHICosmo *model, gdouble lnR)
+nc_matter_var_var0 (NcMatterVar *vp, NcHICosmo *cosmo, gdouble lnR)
 {
-  //const gdouble lnR = log (R);
-  if (ncm_model_ctrl_update (vp->ctrl, NCM_MODEL(model)))
-    nc_matter_var_prepare (vp, model);
   return exp (ncm_spline_eval (vp->sigma2_over_growth, lnR));
 }
 
 /**
  * nc_matter_var_dlnvar0_dR:
  * @vp: a #NcMatterVar.
- * @model: a #NcHICosmo.
+ * @cosmo: a #NcHICosmo.
  * @lnR: logarithm base e of the radius.
  *
  * FIXME
@@ -590,18 +587,15 @@ nc_matter_var_var0 (NcMatterVar *vp, NcHICosmo *model, gdouble lnR)
  * Returns: FIXME
  */
 gdouble
-nc_matter_var_dlnvar0_dR (NcMatterVar *vp, NcHICosmo *model, gdouble lnR)
+nc_matter_var_dlnvar0_dR (NcMatterVar *vp, NcHICosmo *cosmo, gdouble lnR)
 {
-  //const gdouble lnR = log (R);
-  if (ncm_model_ctrl_update (vp->ctrl, NCM_MODEL(model)))
-    nc_matter_var_prepare (vp, model);
   return ncm_spline_eval (vp->deriv_sigma2_over_growth, lnR) / exp(lnR);
 }
 
 /**
  * nc_matter_var_dlnvar0_dlnR:
  * @vp: a #NcMatterVar.
- * @model: a #NcHICosmo.
+ * @cosmo: a #NcHICosmo.
  * @lnR: logarithm base e of the radius.
  *
  * FIXME
@@ -609,17 +603,15 @@ nc_matter_var_dlnvar0_dR (NcMatterVar *vp, NcHICosmo *model, gdouble lnR)
  * Returns: FIXME
  */
 gdouble
-nc_matter_var_dlnvar0_dlnR (NcMatterVar *vp, NcHICosmo *model, gdouble lnR)
+nc_matter_var_dlnvar0_dlnR (NcMatterVar *vp, NcHICosmo *cosmo, gdouble lnR)
 {
-  if (ncm_model_ctrl_update (vp->ctrl, NCM_MODEL(model)))
-    nc_matter_var_prepare (vp, model);
   return ncm_spline_eval (vp->deriv_sigma2_over_growth, lnR);
 }
 
 /**
  * nc_matter_var_mass_to_R:
  * @vp: a #NcMatterVar.
- * @model: a #NcHICosmo.
+ * @cosmo: a #NcHICosmo.
  * @M: mass enclosed in the volume specified by the window function.
  *
  * FIXME
@@ -627,16 +619,16 @@ nc_matter_var_dlnvar0_dlnR (NcMatterVar *vp, NcHICosmo *model, gdouble lnR)
  * Returns: FIXME
  */
 gdouble
-nc_matter_var_mass_to_R (NcMatterVar *vp, NcHICosmo *model, gdouble M)
+nc_matter_var_mass_to_R (NcMatterVar *vp, NcHICosmo *cosmo, gdouble M)
 {
-  const gdouble Omega_m = nc_hicosmo_Omega_m (model);
+  const gdouble Omega_m = nc_hicosmo_Omega_m (cosmo);
   return cbrt (M / (Omega_m * nc_window_volume(vp->wp) * ncm_c_crit_mass_density_h2_solar_mass_Mpc3 ()));
 }
 
 /**
  * nc_matter_var_R_to_mass:
  * @vp: a #NcMatterVar.
- * @model: a #NcHICosmo.
+ * @cosmo: a #NcHICosmo.
  * @R: radius.
  *
  * FIXME mass enclosed in the volume specified by the window function
@@ -644,16 +636,16 @@ nc_matter_var_mass_to_R (NcMatterVar *vp, NcHICosmo *model, gdouble M)
  * Returns: FIXME
  */
 gdouble
-nc_matter_var_R_to_mass (NcMatterVar *vp, NcHICosmo *model, gdouble R)
+nc_matter_var_R_to_mass (NcMatterVar *vp, NcHICosmo *cosmo, gdouble R)
 {
-  const gdouble Omega_m = nc_hicosmo_Omega_m (model);
+  const gdouble Omega_m = nc_hicosmo_Omega_m (cosmo);
   return gsl_pow_3(R) * Omega_m * nc_window_volume(vp->wp) * ncm_c_crit_mass_density_h2_solar_mass_Mpc3 ();
 }
 
 /**
  * nc_matter_var_lnM_to_lnR:
  * @vp: a #NcMatterVar.
- * @model: a #NcHICosmo.
+ * @cosmo: a #NcHICosmo.
  * @lnM: logarithm base e of the mass enclosed in the volume specified by the window function.
  *
  * FIXME
@@ -661,16 +653,16 @@ nc_matter_var_R_to_mass (NcMatterVar *vp, NcHICosmo *model, gdouble R)
  * Returns: FIXME
  */
 gdouble
-nc_matter_var_lnM_to_lnR (NcMatterVar *vp, NcHICosmo *model, gdouble lnM)
+nc_matter_var_lnM_to_lnR (NcMatterVar *vp, NcHICosmo *cosmo, gdouble lnM)
 {
-  const gdouble Omega_m = nc_hicosmo_Omega_m (model);
+  const gdouble Omega_m = nc_hicosmo_Omega_m (cosmo);
   return (lnM - log (Omega_m * nc_window_volume(vp->wp) * ncm_c_crit_mass_density_h2_solar_mass_Mpc3 ())) / 3.0;
 }
 
 /**
  * nc_matter_var_lnR_to_lnM:
  * @vp: a #NcMatterVar.
- * @model: a #NcHICosmo.
+ * @cosmo: a #NcHICosmo.
  * @lnR: logarithm base e of the radius.
  *
  * FIXME mass enclosed in the volume specified by the window function
@@ -678,16 +670,16 @@ nc_matter_var_lnM_to_lnR (NcMatterVar *vp, NcHICosmo *model, gdouble lnM)
  * Returns: FIXME
  */
 gdouble
-nc_matter_var_lnR_to_lnM (NcMatterVar *vp, NcHICosmo *model, gdouble lnR)
+nc_matter_var_lnR_to_lnM (NcMatterVar *vp, NcHICosmo *cosmo, gdouble lnR)
 {
-  const gdouble Omega_m = nc_hicosmo_Omega_m (model);
+  const gdouble Omega_m = nc_hicosmo_Omega_m (cosmo);
   return (3.0 * lnR + log (Omega_m * nc_window_volume(vp->wp) * ncm_c_crit_mass_density_h2_solar_mass_Mpc3 ()));
 }
 
 /**
  * nc_matter_var_integrand_over_window2:
  * @vp: a #NcMatterVar.
- * @model: a #NcHICosmo.
+ * @cosmo: a #NcHICosmo.
  * @k: FIXME
  *
  * FIXME
@@ -695,11 +687,11 @@ nc_matter_var_lnR_to_lnM (NcMatterVar *vp, NcHICosmo *model, gdouble lnR)
  * Returns: FIXME
  */
 gdouble
-nc_matter_var_integrand_over_window2 (NcMatterVar *vp, NcHICosmo *model, gdouble k)
+nc_matter_var_integrand_over_window2 (NcMatterVar *vp, NcHICosmo *cosmo, gdouble k)
 {
   gdouble k2, integrand_overw2;
   k2 = k * k;
-  gdouble matter_P = nc_transfer_func_matter_powerspectrum (vp->tf, model, k);
+  gdouble matter_P = nc_transfer_func_matter_powerspectrum (vp->tf, cosmo, k);
   integrand_overw2 = k2 * matter_P / (2.0 * M_PI * M_PI);
 
   return integrand_overw2;
@@ -712,7 +704,7 @@ static void nc_matter_var_deriv_shift_scale_rule (gdouble *rules_a, gdouble *rul
 typedef struct __NcMatterVarIntegOverW2
 {
   NcMatterVar *vp;
-  NcHICosmo *model;
+  NcHICosmo *cosmo;
 } _NcMatterVarIntegOverW2;
 
 static gdouble
@@ -721,7 +713,7 @@ _nc_matter_var_integrand_over_window2 (gdouble k, gpointer data)
   _NcMatterVarIntegOverW2 *vpd = (_NcMatterVarIntegOverW2 *) data;
   gdouble k2, integrand_overw2;
   k2 = k * k;
-  gdouble matter_P = nc_transfer_func_matter_powerspectrum (vpd->vp->tf, vpd->model, k);
+  gdouble matter_P = nc_transfer_func_matter_powerspectrum (vpd->vp->tf, vpd->cosmo, k);
   integrand_overw2 = k2 * matter_P / (2.0 * M_PI * M_PI);
 
   return integrand_overw2;
@@ -729,20 +721,20 @@ _nc_matter_var_integrand_over_window2 (gdouble k, gpointer data)
 
 /**
  * nc_matter_var_integrand_prepare_spline:
- * @vp: a #NcMatterVar.
- * @model: a #NcHICosmo.
+ * @vp: a #NcMatterVar
+ * @cosmo: a #NcHICosmo
  *
- * This function prepares the spline for \f$ k^2 P(k) T^2(k)\f$, where P(k) is the power spectrum and T(k) is the
-   * transfer function. Given this spline, we optimize the computation of the variance of the density contrast (comparing
-                                                                                                                * to nc_matter_var_over_growth2_tophat, for example). The variance with the gaussian window funtion is given by
-     * \f$ \sigma^2(R, z) = A \left(\frac{D(z)}{D(0)}\right)^2 \int_0^\infty \frac{dk}{2\pi^2} k^2 P(k) T^2(k) \exp(-(kR)^2) \f$,
-     * where \f$ A \f$ is the power spectrum normalization and \f$ D(z) \f$ is the growth function at redshift \f$ z \f$.
-       * The variance for the top hat window function takes the form
- * \f$ \sigma^2(R, z) = A \left(\frac{D(z)}{D(0)}\right)^2 \int_0^\infty dk \frac{9}{2\pi^2(kR)^2} k^2 P(k) T^2(k) (j_1(kR))^2 \f$,
- * where \f$ j_1(kR) \f$ is the spherical Bessel function of the first kind.
-   */
+ * This function prepares the spline for $ k^2 P(k) T^2(k)$, where P(k) is the power spectrum and T(k) is the
+ * transfer function. Given this spline, we optimize the computation of the variance of the density contrast (comparing
+ * to nc_matter_var_over_growth2_tophat, for example). The variance with the gaussian window funtion is given by
+ * $ \sigma^2(R, z) = A \left(\frac{D(z)}{D(0)}\right)^2 \int_0^\infty \frac{dk}{2\pi^2} k^2 P(k) T^2(k) \exp(-(kR)^2) $,
+ * where $ A $ is the power spectrum normalization and $ D(z) $ is the growth function at redshift $ z $.
+ * The variance for the top hat window function takes the form
+ * $ \sigma^2(R, z) = A \left(\frac{D(z)}{D(0)}\right)^2 \int_0^\infty dk \frac{9}{2\pi^2(kR)^2} k^2 P(k) T^2(k) (j_1(kR))^2 $,
+ * where $ j_1(kR) $ is the spherical Bessel function of the first kind.
+ */
 static void
-_nc_matter_var_prepare_splineint (NcMatterVar *vp, NcHICosmo *model)
+_nc_matter_var_prepare_splineint (NcMatterVar *vp, NcHICosmo *cosmo)
 {
   gint i;
   //  GTimer *bench = g_timer_new ();
@@ -769,13 +761,11 @@ _nc_matter_var_prepare_splineint (NcMatterVar *vp, NcHICosmo *model)
 
     vp->spline_init = TRUE;
 
-    nc_transfer_func_prepare (vp->tf, model);
-
     for (i = 0; i < 17; i++)
     {
       const gdouble k = first_k[i];
       ncm_vector_set (vp->integrand_overw2_spline->xv, i, k);
-      ncm_vector_set (vp->integrand_overw2_spline->yv, i, nc_matter_var_integrand_over_window2 (vp, model, k));
+      ncm_vector_set (vp->integrand_overw2_spline->yv, i, nc_matter_var_integrand_over_window2 (vp, cosmo, k));
     }
     last_i = i;
 
@@ -783,7 +773,7 @@ _nc_matter_var_prepare_splineint (NcMatterVar *vp, NcHICosmo *model)
     {
       const gdouble k = 4e-2 / (66.0 - 1.0) * (i - last_i) + 2.0e-5;
       ncm_vector_set (vp->integrand_overw2_spline->xv, i, k);
-      ncm_vector_set (vp->integrand_overw2_spline->yv, i, nc_matter_var_integrand_over_window2 (vp, model, k));
+      ncm_vector_set (vp->integrand_overw2_spline->yv, i, nc_matter_var_integrand_over_window2 (vp, cosmo, k));
     }
     last_i = i;
 
@@ -791,7 +781,7 @@ _nc_matter_var_prepare_splineint (NcMatterVar *vp, NcHICosmo *model)
     {
       const gdouble k = 0.75 / (76.0 - 1.0) * (i - last_i) + 5e-2;
       ncm_vector_set (vp->integrand_overw2_spline->xv, i, k);
-      ncm_vector_set (vp->integrand_overw2_spline->yv, i, nc_matter_var_integrand_over_window2 (vp, model, k));
+      ncm_vector_set (vp->integrand_overw2_spline->yv, i, nc_matter_var_integrand_over_window2 (vp, cosmo, k));
     }
     last_i = i;
 
@@ -799,7 +789,7 @@ _nc_matter_var_prepare_splineint (NcMatterVar *vp, NcHICosmo *model)
     {
       const gdouble k = exp (log(0.85) + (log(400.0) - log(0.85)) * (i - last_i) / 50.0);
       ncm_vector_set (vp->integrand_overw2_spline->xv, i, k);
-      ncm_vector_set (vp->integrand_overw2_spline->yv, i, nc_matter_var_integrand_over_window2 (vp, model, k));
+      ncm_vector_set (vp->integrand_overw2_spline->yv, i, nc_matter_var_integrand_over_window2 (vp, cosmo, k));
     }
     last_i = i;
 
@@ -807,7 +797,7 @@ _nc_matter_var_prepare_splineint (NcMatterVar *vp, NcHICosmo *model)
     {
       const gdouble k = 400.0 / (10.0 - 1.0) * (i - last_i) + 450.0;
       ncm_vector_set (vp->integrand_overw2_spline->xv, i, k);
-      ncm_vector_set (vp->integrand_overw2_spline->yv, i, nc_matter_var_integrand_over_window2 (vp, model, k));
+      ncm_vector_set (vp->integrand_overw2_spline->yv, i, nc_matter_var_integrand_over_window2 (vp, cosmo, k));
     }
     last_i = i;
 
@@ -815,7 +805,7 @@ _nc_matter_var_prepare_splineint (NcMatterVar *vp, NcHICosmo *model)
     {
       const gdouble k = 100.0 / (10.0 - 1.0) * (i - last_i) + 900.0;
       ncm_vector_set (vp->integrand_overw2_spline->xv, i, k);
-      ncm_vector_set (vp->integrand_overw2_spline->yv, i, nc_matter_var_integrand_over_window2 (vp, model, k));
+      ncm_vector_set (vp->integrand_overw2_spline->yv, i, nc_matter_var_integrand_over_window2 (vp, cosmo, k));
     }
 
     /* last_i = i; */
@@ -824,7 +814,7 @@ _nc_matter_var_prepare_splineint (NcMatterVar *vp, NcHICosmo *model)
   else if (FALSE)
   {
     gsl_function F;
-    _NcMatterVarIntegOverW2 vpd = {vp, model};
+    _NcMatterVarIntegOverW2 vpd = {vp, cosmo};
     F.function = &_nc_matter_var_integrand_over_window2;
     F.params = &vpd;
     vp->integrand_overw2_spline = ncm_spline_cubic_notaknot_new ();
@@ -839,7 +829,7 @@ _nc_matter_var_prepare_splineint (NcMatterVar *vp, NcHICosmo *model)
     for (i = 0; i <= 10000; i++)
     {
       gdouble k = pow (10.0, -3.0 + 6.0 / (10000.0) * i);
-      gdouble f = nc_matter_var_integrand_over_window2 (vp, model, k);
+      gdouble f = nc_matter_var_integrand_over_window2 (vp, cosmo, k);
       gdouble fs = ncm_spline_eval (vp->integrand_overw2_spline, k);
       gdouble err = fabs ((f-fs) / f);
       max_err = GSL_MAX (err, max_err);
@@ -853,8 +843,8 @@ _nc_matter_var_prepare_splineint (NcMatterVar *vp, NcHICosmo *model)
     gdouble R = exp (lnR);
     gdouble sigma2_0, deriv_sigma2_0; /* variance over growth2 */
 
-    //gdouble sigma2_0_exact = nc_matter_var_over_growth2_tophat_old (vp, model, lnR);
-    //gdouble deriv_sigma2_0_exact = _nc_matter_var_dvariance_over_growth2_dR_tophat (vp, model, R);
+    //gdouble sigma2_0_exact = nc_matter_var_over_growth2_tophat_old (vp, cosmo, lnR);
+    //gdouble deriv_sigma2_0_exact = _nc_matter_var_dvariance_over_growth2_dR_tophat (vp, cosmo, R);
 
     sigma2_0 = nc_matter_var_integrate_spline (vp, vp->integrand_overw2_spline, &_top_hat_cubic_spline_integration_rule, nc_matter_var_shift_scale_rule, &_top_hat_cubic_spline_integration_rule_taylor, R);
     deriv_sigma2_0 = nc_matter_var_integrate_spline (vp, vp->integrand_overw2_spline, &_derivative_top_hat_cubic_spline_integration_rule, &nc_matter_var_deriv_shift_scale_rule, NULL, R);
@@ -866,7 +856,7 @@ _nc_matter_var_prepare_splineint (NcMatterVar *vp, NcHICosmo *model)
 
     //printf ("%d % 20.15g % 20.15g % 20.15g\n", i, lnR, exp(lnR) * sigma2_0, 0.0);
     //printf("% 20.15g % 20.15g % 20.15g\n", sigma2_0_exact, sigma2_0, (sigma2_0_exact - sigma2_0) / sigma2_0_exact);
-    //printf("% 20.5e % 20.15g % 20.15g % 20.15g\n", nc_matter_var_R_to_mass (vp, model, R), deriv_sigma2_0_exact, deriv_sigma2_0, (deriv_sigma2_0_exact - deriv_sigma2_0) / deriv_sigma2_0_exact);
+    //printf("% 20.5e % 20.15g % 20.15g % 20.15g\n", nc_matter_var_R_to_mass (vp, cosmo, R), deriv_sigma2_0_exact, deriv_sigma2_0, (deriv_sigma2_0_exact - deriv_sigma2_0) / deriv_sigma2_0_exact);
   }
   ncm_spline_prepare (vp->sigma2_over_growth);
   ncm_spline_prepare (vp->deriv_sigma2_over_growth);
@@ -879,7 +869,7 @@ _nc_matter_var_prepare_splineint (NcMatterVar *vp, NcHICosmo *model)
 typedef struct _NcMatterVarFftlog
 {
   NcMatterVar *vp;
-  NcHICosmo *model;
+  NcHICosmo *cosmo;
 } NcMatterVarFftlog;
 
 /*
@@ -889,14 +879,14 @@ _powspec_k2 (gdouble k, gpointer userdata)
   NcMatterVarFftlog *arg = (NcMatterVarFftlog *) userdata;
   const gdouble c1 = 2.0 * M_PI * M_PI;
   const gdouble k2 = k * k;
-  const gdouble matter_P = nc_transfer_func_matter_powerspectrum (arg->vp->tf, arg->model, k);
+  const gdouble matter_P = nc_transfer_func_matter_powerspectrum (arg->vp->tf, arg->cosmo, k);
   const gdouble f = matter_P * k2 / c1;
   return f;
 }
 */
 
 static void
-_nc_matter_var_prepare_fft (NcMatterVar *vp, NcHICosmo *model)
+_nc_matter_var_prepare_fft (NcMatterVar *vp, NcHICosmo *cosmo)
 {
   _NCM_STATIC_MUTEX_DECL (prepare_fft_lock);
   _NCM_MUTEX_LOCK (&prepare_fft_lock);
@@ -945,7 +935,7 @@ _nc_matter_var_prepare_fft (NcMatterVar *vp, NcHICosmo *model)
     const gdouble mu = dr * i;
     const gdouble k = exp (lnk0 + mu);
     const gdouble k2 = k * k;
-    const gdouble matter_P = nc_transfer_func_matter_powerspectrum (vp->tf, model, k);
+    const gdouble matter_P = nc_transfer_func_matter_powerspectrum (vp->tf, cosmo, k);
     const gdouble f = matter_P * k2 / c1;
     in[ii] = f;
   }
@@ -997,7 +987,7 @@ _nc_matter_var_prepare_fft (NcMatterVar *vp, NcHICosmo *model)
     
     /*
      const gdouble R = exp (r);
-     const gdouble Rsigma2_old = R * nc_matter_var_over_growth2_tophat_old (vp, model, r);
+     const gdouble Rsigma2_old = R * nc_matter_var_over_growth2_tophat_old (vp, cosmo, r);
      const gdouble Rsigma2_spline = R * exp(ncm_spline_eval (vp->sigma2_over_growth, r));
      const gdouble err_spline = fabs((Rsigma2_old - Rsigma2_spline) / Rsigma2_old);
      const gdouble err_fft = fabs((Rsigma2_old - creal(Rsigma2)) / Rsigma2_old);
@@ -1040,7 +1030,7 @@ _nc_matter_var_prepare_fft (NcMatterVar *vp, NcHICosmo *model)
     //vp->fftlog = ncm_fftlog_j1pow2_new (exp (-6.0 * M_LN10), exp (6.0 * M_LN10), 22.0 * M_LN10, 3500);
     vp->fftlog = ncm_fftlog_j1pow2_new (exp (-6.0 * M_LN10), exp (6.0 * M_LN10), 24.0 * M_LN10, 3500);
     arg.vp     = vp;
-    arg.model  = model;
+    arg.cosmo  = cosmo;
     F.function = &_powspec_k2;
     F.params   = &arg;
 
@@ -1491,24 +1481,24 @@ nc_matter_var_integrate_spline (NcMatterVar *vp, NcmSpline *s, void (*calc_rule)
 /**
  * nc_matter_var_spectral_moment_over_growth2:
  * @vp: a #NcMatterVar.
- * @model: a #NcHICosmo.
+ * @cosmo: a #NcHICosmo.
  * @n: FIXME
  *
  * FIXME
- * \frac{\sigma^2}{D^2}
+ * $\frac{\sigma^2}{D^2}$
  *
  * Returns: FIXME
  */
 gdouble
-nc_matter_var_spectral_moment_over_growth2 (NcMatterVar *vp, NcHICosmo *model, gint n)
+nc_matter_var_spectral_moment_over_growth2 (NcMatterVar *vp, NcHICosmo *cosmo, gint n)
 {
   if (NC_IS_WINDOW_TOPHAT (vp->wp))
   {
-    return nc_matter_var_spectral_moment_over_growth2_tophat (vp, model, n);
+    return nc_matter_var_spectral_moment_over_growth2_tophat (vp, cosmo, n);
   }
   else if (NC_IS_WINDOW_GAUSSIAN (vp->wp))
   {
-    return nc_matter_var_spectral_moment_over_growth2_gaussian (vp, model, n);
+    return nc_matter_var_spectral_moment_over_growth2_gaussian (vp, cosmo, n);
   }
   else
     g_assert_not_reached ();
@@ -1519,7 +1509,7 @@ nc_matter_var_spectral_moment_over_growth2 (NcMatterVar *vp, NcHICosmo *model, g
 /**
  * nc_matter_var_spectral_moment_over_growth2_gaussian:
  * @vp: a #NcMatterVar.
- * @model: a #NcHICosmo.
+ * @cosmo: a #NcHICosmo.
  * @n: FIXME
  *
  * FIXME
@@ -1527,7 +1517,7 @@ nc_matter_var_spectral_moment_over_growth2 (NcMatterVar *vp, NcHICosmo *model, g
  * Returns: FIXME
  */
 gdouble
-nc_matter_var_spectral_moment_over_growth2_gaussian (NcMatterVar *vp, NcHICosmo *model, gint n)     /* \frac{\sigma_j^2}{D^2} */
+nc_matter_var_spectral_moment_over_growth2_gaussian (NcMatterVar *vp, NcHICosmo *cosmo, gint n)     /* \frac{\sigma_j^2}{D^2} */
 {
   gdouble sm_over_growth2, error;
   static gsl_integration_workspace *w = NULL; //gsl_integration_workspace_alloc (INT_PARTITION);
@@ -1536,7 +1526,7 @@ nc_matter_var_spectral_moment_over_growth2_gaussian (NcMatterVar *vp, NcHICosmo 
 
   ts.j = n;
   ts.vp = vp;
-  ts.model = model;
+  ts.cosmo = cosmo;
 
   if (w == NULL)
     w = gsl_integration_workspace_alloc (NCM_INTEGRAL_PARTITION);
@@ -1552,7 +1542,7 @@ nc_matter_var_spectral_moment_over_growth2_gaussian (NcMatterVar *vp, NcHICosmo 
 /**
  * nc_matter_var_spectral_moment_over_growth2_tophat:
  * @vp: a #NcMatterVar
- * @model: a #NcHICosmo
+ * @cosmo: a #NcHICosmo
  * @n: FIXME
  *
  * FIXME
@@ -1560,7 +1550,7 @@ nc_matter_var_spectral_moment_over_growth2_gaussian (NcMatterVar *vp, NcHICosmo 
  * Returns: FIXME
  */
 gdouble
-nc_matter_var_spectral_moment_over_growth2_tophat (NcMatterVar *vp, NcHICosmo *model, gint n)     /* \frac{\sigma_j^2}{D^2} */
+nc_matter_var_spectral_moment_over_growth2_tophat (NcMatterVar *vp, NcHICosmo *cosmo, gint n)     /* \frac{\sigma_j^2}{D^2} */
 {
   gdouble sm_over_growth2_ksmall = 0.0, sm_over_growth2_one = 0.0, sm_over_growth2_osc = 0.0;
   gdouble error, error_1, error_cos, error_sin, step, pres, result = 0.0;
@@ -1572,7 +1562,7 @@ nc_matter_var_spectral_moment_over_growth2_tophat (NcMatterVar *vp, NcHICosmo *m
 
   ts.j = n;
   ts.vp = vp;
-  ts.model = model;
+  ts.cosmo = cosmo;
 
   if (w == NULL)
     w = gsl_integration_workspace_alloc (NCM_INTEGRAL_PARTITION);
@@ -1630,7 +1620,7 @@ nc_matter_var_deriv_variance_over_growth2_integrand_gaussian (gdouble kR, gpoint
   NcMatterVar *vp = ts->vp;
   gdouble k = kR / ts->R;
   gdouble c1 = 2.0 * M_PI * M_PI;
-  gdouble matter_P = nc_transfer_func_matter_powerspectrum (vp->tf, ts->model, k);
+  gdouble matter_P = nc_transfer_func_matter_powerspectrum (vp->tf, ts->cosmo, k);
   gdouble W = nc_window_eval_fourier (vp->wp, k, ts->R);
   gdouble dW = nc_window_deriv_fourier (vp->wp, k, ts->R);
   gdouble k2 = k*k;
@@ -1640,7 +1630,7 @@ nc_matter_var_deriv_variance_over_growth2_integrand_gaussian (gdouble kR, gpoint
 }
 
 static gdouble
-_nc_matter_var_dvariance_over_growth2_dR_gaussian (NcMatterVar *vp, NcHICosmo *model, gdouble R)
+_nc_matter_var_dvariance_over_growth2_dR_gaussian (NcMatterVar *vp, NcHICosmo *cosmo, gdouble R)
 {
   static gsl_integration_workspace *w = NULL;
   gsl_function F;
@@ -1650,7 +1640,7 @@ _nc_matter_var_dvariance_over_growth2_dR_gaussian (NcMatterVar *vp, NcHICosmo *m
   ts.j = 0;
   ts.R = R;
   ts.vp = vp;
-  ts.model = model;
+  ts.cosmo = cosmo;
 
   if (w == NULL)
     w = gsl_integration_workspace_alloc (NCM_INTEGRAL_PARTITION);
@@ -1670,7 +1660,7 @@ _nc_matter_var_deriv_variance_over_growth2_integrand_tophat_ksmall (gdouble kR, 
   NcMatterVar *vp = ts->vp;
   gdouble k = kR / ts->R;
   gdouble c1 = 2.0 * M_PI * M_PI;
-  gdouble matter_P = nc_transfer_func_matter_powerspectrum (vp->tf, ts->model, k);
+  gdouble matter_P = nc_transfer_func_matter_powerspectrum (vp->tf, ts->cosmo, k);
   gdouble W = nc_window_eval_fourier (vp->wp, k, ts->R);
   gdouble dW = nc_window_deriv_fourier (vp->wp, k, ts->R);
   gdouble k2 = k*k;
@@ -1686,7 +1676,7 @@ _nc_matter_var_deriv_variance_over_growth2_integrand_tophat_one (gdouble kR, gpo
   NcMatterVar *vp = ts->vp;
   gdouble k = kR / ts->R;
   gdouble c1 = 2.0 * M_PI * M_PI;
-  gdouble matter_P = nc_transfer_func_matter_powerspectrum (vp->tf, ts->model, k);
+  gdouble matter_P = nc_transfer_func_matter_powerspectrum (vp->tf, ts->cosmo, k);
   gdouble k2 = k*k;
   gdouble dv_integrand = - matter_P * (18.0 + 27.0/(k2 * ts->R * ts->R)) / (c1 * k2 * gsl_pow_5(ts->R) * ts->R);
 
@@ -1700,7 +1690,7 @@ _nc_matter_var_deriv_variance_over_growth2_integrand_tophat_cosine (gdouble kR, 
   NcMatterVar *vp = ts->vp;
   gdouble k = kR / ts->R;
   gdouble c1 = 2.0 * M_PI * M_PI;
-  gdouble matter_P = nc_transfer_func_matter_powerspectrum (vp->tf, ts->model, k);
+  gdouble matter_P = nc_transfer_func_matter_powerspectrum (vp->tf, ts->cosmo, k);
   gdouble k2 = k*k;
   gdouble dv_integrand = matter_P * (27.0/(k2 * ts->R * ts->R) - 36.0) / (c1 * k2 * gsl_pow_5(ts->R) * ts->R);
 
@@ -1714,7 +1704,7 @@ _nc_matter_var_deriv_variance_over_growth2_integrand_tophat_sine (gdouble kR, gp
   NcMatterVar *vp = ts->vp;
   gdouble k = kR / ts->R;
   gdouble c1 = 2.0 * M_PI * M_PI;
-  gdouble matter_P = nc_transfer_func_matter_powerspectrum (vp->tf, ts->model, k);
+  gdouble matter_P = nc_transfer_func_matter_powerspectrum (vp->tf, ts->cosmo, k);
   gdouble k2 = k*k;
   gdouble dv_integrand = matter_P * (54.0/(k2 * ts->R * ts->R) - 9.0) / (c1 * k * gsl_pow_4(ts->R) * ts->R);
 
@@ -1724,7 +1714,7 @@ _nc_matter_var_deriv_variance_over_growth2_integrand_tophat_sine (gdouble kR, gp
 #define _NC_LSTEP2 5.0
 
 static gdouble
-_nc_matter_var_dvariance_over_growth2_dR_tophat (NcMatterVar *vp, NcHICosmo *model, gdouble R)     /* \frac{d\sigma^2}{D^2dR} */
+_nc_matter_var_dvariance_over_growth2_dR_tophat (NcMatterVar *vp, NcHICosmo *cosmo, gdouble R)     /* \frac{d\sigma^2}{D^2dR} */
 {
   gdouble dv_over_growth2_ksmall = 0.0, dv_over_growth2_one = 0.0, dv_over_growth2_osc = 0.0;
   gdouble error, error_1, error_cos, error_sin, step, pres, result = 0.0;
@@ -1737,7 +1727,7 @@ _nc_matter_var_dvariance_over_growth2_dR_tophat (NcMatterVar *vp, NcHICosmo *mod
   ts.j = 0;
   ts.R = R;
   ts.vp = vp;
-  ts.model = model;
+  ts.cosmo = cosmo;
 
   if (w == NULL)
     w = gsl_integration_workspace_alloc (NCM_INTEGRAL_PARTITION);
@@ -1791,7 +1781,7 @@ _nc_matter_var_dvariance_over_growth2_dR_tophat (NcMatterVar *vp, NcHICosmo *mod
 /**
  * nc_matter_var_dsigma_over_growth_dR:
  * @vp: a #NcMatterVar.
- * @model: a #NcHICosmo.
+ * @cosmo: a #NcHICosmo.
  * @lnR: logarithm base e of the radius.
  *
  * FIXME
@@ -1799,10 +1789,10 @@ _nc_matter_var_dvariance_over_growth2_dR_tophat (NcMatterVar *vp, NcHICosmo *mod
  * Returns: FIXME
  */
 gdouble
-nc_matter_var_dsigma0_dR (NcMatterVar *vp, NcHICosmo *model, gdouble lnR)
+nc_matter_var_dsigma0_dR (NcMatterVar *vp, NcHICosmo *cosmo, gdouble lnR)
 {
-  gdouble dlnvar0_dR = nc_matter_var_dlnvar0_dR (vp, model, lnR);
-  gdouble var0 = nc_matter_var_var0 (vp, model, lnR);
+  gdouble dlnvar0_dR = nc_matter_var_dlnvar0_dR (vp, cosmo, lnR);
+  gdouble var0 = nc_matter_var_var0 (vp, cosmo, lnR);
   gdouble sigma0 = sqrt(var0);
   gdouble dsigma0_dR = sigma0 * dlnvar0_dR / 2.0;
 
@@ -1814,14 +1804,14 @@ nc_matter_var_dsigma0_dR (NcMatterVar *vp, NcHICosmo *model, gdouble lnR)
 /**
  * nc_matter_var_sigma8_sqrtvar0:
  * @vp: a #NcMatterVar.
- * @model: a #NcHICosmo.
+ * @cosmo: a #NcHICosmo.
  *
  * FIXME
  *
  * Returns: FIXME
  */
 gdouble
-nc_matter_var_sigma8_sqrtvar0 (NcMatterVar *vp, NcHICosmo *model)    /* eh calculada usando a integracao para funcoes oscilatorias */
+nc_matter_var_sigma8_sqrtvar0 (NcMatterVar *vp, NcHICosmo *cosmo)    /* eh calculada usando a integracao para funcoes oscilatorias */
 {
   gdouble sigma0;
   gdouble sigma0_norma;
@@ -1829,18 +1819,13 @@ nc_matter_var_sigma8_sqrtvar0 (NcMatterVar *vp, NcHICosmo *model)    /* eh calcu
 
   if (!NC_IS_WINDOW_TOPHAT (vp->wp))
   {
-    NcWindow *temp = vp->wp;
-    vp->wp = nc_window_tophat_new (); /* Normalizacao sempre com tophat */
-    nc_matter_var_prepare (vp, model);
-    sigma0 = sqrt(nc_matter_var_var0 (vp, model, ln8));
-    nc_window_free (vp->wp);
-    vp->wp = temp;
-    nc_matter_var_prepare (vp, model);
+    g_error ("nc_matter_var_sigma8_sqrtvar0: sigma8 is defined for tophat window function, this objects uses: `%s'.", 
+             G_OBJECT_TYPE_NAME (vp->wp));
   }
   else
-    sigma0 = sqrt(nc_matter_var_var0 (vp, model, ln8));
+    sigma0 = sqrt (nc_matter_var_var0 (vp, cosmo, ln8));
 
-  sigma0_norma = nc_hicosmo_sigma_8 (model) / sigma0;
+  sigma0_norma = nc_hicosmo_sigma_8 (cosmo) / sigma0;
  
   return sigma0_norma;
 }

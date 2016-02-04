@@ -51,6 +51,7 @@
 #include "build_cfg.h"
 
 #include "nc_hiprim.h"
+#include "nc_hireion_camb.h"
 #include "model/nc_hicosmo_de.h"
 #include "nc_cbe.h"
 #include "nc_enum_types.h"
@@ -92,6 +93,7 @@ nc_cbe_init (NcCBE *cbe)
   cbe->prec           = NULL;
   cbe->ctrl_cosmo     = ncm_model_ctrl_new (NULL);
   cbe->ctrl_prim      = ncm_model_ctrl_new (NULL);
+  cbe->a              = NULL;
 
   cbe->target_Cls     = 0;
   cbe->calc_transfer  = FALSE;
@@ -159,7 +161,7 @@ nc_cbe_init (NcCBE *cbe)
   cbe->priv->pth.binned_reio_num            = 0;
   cbe->priv->pth.binned_reio_z              = NULL;
   cbe->priv->pth.binned_reio_xe             = NULL;
-  cbe->priv->pth.binned_reio_step_sharpness = 0.3;
+  cbe->priv->pth.binned_reio_step_sharpness = 0.0;
 
   cbe->priv->pth.annihilation           = 0.0;
   cbe->priv->pth.decay                  = 0.0;
@@ -459,6 +461,7 @@ nc_cbe_dispose (GObject *object)
   NcCBE *cbe = NC_CBE (object);
 
   nc_cbe_precision_clear (&cbe->prec);
+  nc_scalefactor_clear (&cbe->a);
   ncm_model_ctrl_clear (&cbe->ctrl_cosmo);
   ncm_model_ctrl_clear (&cbe->ctrl_prim);
 
@@ -961,16 +964,25 @@ _nc_cbe_set_bg (NcCBE *cbe, NcHICosmo *cosmo)
 }
 
 static void
-_nc_cbe_set_thermo (NcCBE *cbe, NcHICosmo *cosmo)
+_nc_cbe_set_thermo (NcCBE *cbe, NcHIReion *reion, NcHICosmo *cosmo)
 {
   struct precision *ppr = (struct precision *)cbe->prec->priv;
 
   cbe->priv->pth.YHe                      = nc_hicosmo_Yp_4He (cosmo);
   cbe->priv->pth.recombination            = recfast;
-  cbe->priv->pth.reio_parametrization     = /*reio_camb*/ reio_none;
-  cbe->priv->pth.reio_z_or_tau            = reio_tau;
-  cbe->priv->pth.z_reio                   = 13.0;
-  cbe->priv->pth.tau_reio                 = ncm_model_orig_param_get (NCM_MODEL (cosmo), NC_HICOSMO_DE_TAU_RE);
+  cbe->priv->pth.reio_parametrization     = reion == NULL ? reio_none : reio_camb;
+  if (NC_IS_HIREION_CAMB (reion))
+  {
+    cbe->priv->pth.reio_z_or_tau            = reio_z;
+    cbe->priv->pth.z_reio                   = ncm_model_orig_param_get (NCM_MODEL (reion), NC_HIREION_CAMB_HII_HEII_Z);
+    cbe->priv->pth.tau_reio                 = nc_hireion_get_tau (reion, cosmo);
+  }
+  else
+  {
+    cbe->priv->pth.reio_z_or_tau            = reio_tau;
+    cbe->priv->pth.z_reio                   = 13.0;
+    cbe->priv->pth.tau_reio                 = nc_hireion_get_tau (reion, cosmo);
+  }
   cbe->priv->pth.reionization_exponent    = 1.5;
   cbe->priv->pth.reionization_width       = 0.5;
   cbe->priv->pth.helium_fullreio_redshift = 3.5;
@@ -1255,22 +1267,96 @@ _nc_cbe_call_bg (NcCBE *cbe, NcHICosmo *cosmo)
   _nc_cbe_set_bg (cbe, cosmo);
   if (background_init (ppr, &cbe->priv->pba) == _FAILURE_)
     g_error ("_nc_cbe_call_bg: Error running background_init `%s'\n", cbe->priv->pba.error_message);
+
+  if (TRUE)
+  {
+    const gdouble RH = nc_hicosmo_RH_Mpc (cosmo);
+    gdouble zf = 1.0 / ppr->a_ini_over_a_today_default;
+    struct background *pba = &cbe->priv->pba;
+    gdouble pvecback[pba->bg_size];
+    
+    if (cbe->a == NULL)
+      cbe->a = nc_scalefactor_new (NC_SCALEFACTOR_TIME_TYPE_COSMIC, zf, NULL);
+    else
+      nc_scalefactor_set_zf (cbe->a, zf);
+
+    nc_scalefactor_prepare_if_needed (cbe->a, cosmo);
+
+    guint i;
+
+    for (i = 0; i < pba->bt_size; i++)
+    {
+      gint last_index = 0;
+      const gdouble eta       = pba->tau_table[i] / RH;
+      const gdouble z         = nc_scalefactor_z_eta (cbe->a, eta);
+      const gdouble x         = 1.0 + z;
+      const gdouble x2        = x * x;
+      const gdouble x3        = x2 * x;
+      const gdouble x4        = x2 * x2;
+      const gdouble E2        = nc_hicosmo_E2 (cosmo, z);
+      const gdouble E         = sqrt (E2);
+      const gdouble H         = E / RH;
+      const gdouble RH_pow_m2 = 1.0 / (RH * RH);
+      const gdouble H_prime   = - 0.5 * nc_hicosmo_dE2_dz (cosmo, z) * RH_pow_m2;
+
+      const gdouble rho_g      = nc_hicosmo_Omega_g (cosmo) * RH_pow_m2 * x4;
+      const gdouble rho_ur     = nc_hicosmo_Omega_nu (cosmo) * RH_pow_m2 * x4;
+      const gdouble rho_b      = nc_hicosmo_Omega_b (cosmo) * RH_pow_m2 * x3;
+      const gdouble rho_cdm    = nc_hicosmo_Omega_c (cosmo) * RH_pow_m2 * x3;
+      const gdouble rho_Lambda = ncm_model_orig_param_get (NCM_MODEL (cosmo), NC_HICOSMO_DE_OMEGA_X) * RH_pow_m2;
+
+      const gdouble Omega_r    = nc_hicosmo_Omega_r (cosmo) * x4 / E2;
+
+      const gdouble rho_crit   = E2 * RH_pow_m2;
+
+      background_at_tau (pba,
+                         pba->tau_table[i],
+                         pba->long_info,
+                         pba->inter_normal,
+                         &last_index,
+                         pvecback);
+
+      {
+        
+        const gdouble a_diff      = fabs (nc_scalefactor_a_eta (cbe->a, eta) / pvecback[pba->index_bg_a] - 1.0);
+        const gdouble H_diff      = fabs (H / pvecback[pba->index_bg_H] - 1.0);
+        const gdouble Hprime_diff = fabs (H_prime / pvecback[pba->index_bg_H_prime] - 1.0);
+
+        const gdouble rho_g_diff      = fabs (rho_g / pvecback[pba->index_bg_rho_g] - 1.0);
+        const gdouble rho_ur_diff     = fabs (rho_ur / pvecback[pba->index_bg_rho_ur] - 1.0);
+        const gdouble rho_b_diff      = fabs (rho_b / pvecback[pba->index_bg_rho_b] - 1.0);
+        const gdouble rho_cdm_diff    = fabs (rho_cdm / pvecback[pba->index_bg_rho_cdm] - 1.0);
+        const gdouble rho_Lambda_diff = fabs (rho_Lambda / pvecback[pba->index_bg_rho_lambda] - 1.0);
+
+        const gdouble Omega_r_diff    = fabs (Omega_r / pvecback[pba->index_bg_Omega_r] - 1.0);
+
+        const gdouble rho_crit_diff   = fabs (rho_crit / pvecback[pba->index_bg_rho_crit] - 1.0);
+        
+        printf ("# eta = % 20.15g | % 10.5e % 10.5e % 10.5e % 10.5e % 10.5e % 10.5e % 10.5e % 10.5e % 10.5e % 10.5e\n", eta,
+                a_diff, H_diff, Hprime_diff, rho_g_diff, rho_ur_diff, rho_b_diff, rho_cdm_diff, rho_Lambda_diff,
+                Omega_r_diff, rho_crit_diff
+                );
+      }
+    }
+    
+  }
+  
 }
 
 static void
-_nc_cbe_call_thermo (NcCBE *cbe, NcHICosmo *cosmo)
+_nc_cbe_call_thermo (NcCBE *cbe, NcHIReion *reion, NcHICosmo *cosmo)
 {
   struct precision *ppr = (struct precision *)cbe->prec->priv;
 
   _nc_cbe_call_bg (cbe, cosmo);
   
-  _nc_cbe_set_thermo (cbe, cosmo);
+  _nc_cbe_set_thermo (cbe, reion, cosmo);
   if (thermodynamics_init (ppr, &cbe->priv->pba, &cbe->priv->pth) == _FAILURE_)
     g_error ("_nc_cbe_call_thermo: Error running thermodynamics_init `%s'\n", cbe->priv->pth.error_message);
 }
 
 static void
-_nc_cbe_call_pert (NcCBE *cbe, NcHIPrim *prim, NcHICosmo *cosmo)
+_nc_cbe_call_pert (NcCBE *cbe, NcHIPrim *prim, NcHIReion *reion, NcHICosmo *cosmo)
 {
   struct precision *ppr = (struct precision *)cbe->prec->priv;
 
@@ -1283,11 +1369,11 @@ _nc_cbe_call_pert (NcCBE *cbe, NcHIPrim *prim, NcHICosmo *cosmo)
 }
 
 static void
-_nc_cbe_call_prim (NcCBE *cbe, NcHIPrim *prim, NcHICosmo *cosmo)
+_nc_cbe_call_prim (NcCBE *cbe, NcHIPrim *prim, NcHIReion *reion, NcHICosmo *cosmo)
 {
   struct precision *ppr = (struct precision *)cbe->prec->priv;
 
-  _nc_cbe_call_pert (cbe, prim, cosmo);
+  _nc_cbe_call_pert (cbe, prim, reion, cosmo);
   cbe->free = &_nc_cbe_free_prim;
 
   _nc_cbe_set_prim (cbe, prim, cosmo);
@@ -1296,11 +1382,11 @@ _nc_cbe_call_prim (NcCBE *cbe, NcHIPrim *prim, NcHICosmo *cosmo)
 }
 
 static void
-_nc_cbe_call_nonlin (NcCBE *cbe, NcHIPrim *prim, NcHICosmo *cosmo)
+_nc_cbe_call_nonlin (NcCBE *cbe, NcHIPrim *prim, NcHIReion *reion, NcHICosmo *cosmo)
 {
   struct precision *ppr = (struct precision *)cbe->prec->priv;
 
-  _nc_cbe_call_prim (cbe, prim, cosmo);
+  _nc_cbe_call_prim (cbe, prim, reion, cosmo);
   cbe->free = &_nc_cbe_free_nonlin;
 
   _nc_cbe_set_nonlin (cbe, cosmo);
@@ -1309,11 +1395,11 @@ _nc_cbe_call_nonlin (NcCBE *cbe, NcHIPrim *prim, NcHICosmo *cosmo)
 }
 
 static void
-_nc_cbe_call_transfer (NcCBE *cbe, NcHIPrim *prim, NcHICosmo *cosmo)
+_nc_cbe_call_transfer (NcCBE *cbe, NcHIPrim *prim, NcHIReion *reion, NcHICosmo *cosmo)
 {
   struct precision *ppr = (struct precision *)cbe->prec->priv;
 
-  _nc_cbe_call_nonlin (cbe, prim, cosmo);
+  _nc_cbe_call_nonlin (cbe, prim, reion, cosmo);
   cbe->free = &_nc_cbe_free_transfer;
 
   _nc_cbe_set_transfer (cbe, cosmo);
@@ -1322,11 +1408,11 @@ _nc_cbe_call_transfer (NcCBE *cbe, NcHIPrim *prim, NcHICosmo *cosmo)
 }
 
 static void
-_nc_cbe_call_spectra (NcCBE *cbe, NcHIPrim *prim, NcHICosmo *cosmo)
+_nc_cbe_call_spectra (NcCBE *cbe, NcHIPrim *prim, NcHIReion *reion, NcHICosmo *cosmo)
 {
   struct precision *ppr = (struct precision *)cbe->prec->priv;
 
-  _nc_cbe_call_transfer (cbe, prim, cosmo);
+  _nc_cbe_call_transfer (cbe, prim, reion, cosmo);
   cbe->free = &_nc_cbe_free_spectra;
 
   _nc_cbe_set_spectra (cbe, cosmo);
@@ -1335,11 +1421,11 @@ _nc_cbe_call_spectra (NcCBE *cbe, NcHIPrim *prim, NcHICosmo *cosmo)
 }
 
 static void
-_nc_cbe_call_lensing (NcCBE *cbe, NcHIPrim *prim, NcHICosmo *cosmo)
+_nc_cbe_call_lensing (NcCBE *cbe, NcHIPrim *prim, NcHIReion *reion, NcHICosmo *cosmo)
 {
   struct precision *ppr = (struct precision *)cbe->prec->priv;
 
-  _nc_cbe_call_spectra (cbe, prim, cosmo);
+  _nc_cbe_call_spectra (cbe, prim, reion, cosmo);
   cbe->free = &_nc_cbe_free_lensing;
 
   _nc_cbe_set_lensing (cbe, cosmo);
@@ -1445,13 +1531,14 @@ _nc_cbe_update_callbacks (NcCBE *cbe)
 /**
  * nc_cbe_thermodyn_prepare:
  * @cbe: a #NcCBE
+ * @reion: a #NcHIReion
  * @cosmo: a #NcHICosmo
  * 
  * Prepares the thermodynamic Class structure.
  * 
  */
 void
-nc_cbe_thermodyn_prepare (NcCBE *cbe, NcHICosmo *cosmo)
+nc_cbe_thermodyn_prepare (NcCBE *cbe, NcHIReion *reion, NcHICosmo *cosmo)
 {
   if (cbe->thermodyn_prepared)
   {
@@ -1459,24 +1546,25 @@ nc_cbe_thermodyn_prepare (NcCBE *cbe, NcHICosmo *cosmo)
     cbe->thermodyn_prepared = FALSE;
   }
 
-  _nc_cbe_call_thermo (cbe, cosmo);
+  _nc_cbe_call_thermo (cbe, reion, cosmo);
   cbe->thermodyn_prepared = TRUE;
 }
 
 /**
  * nc_cbe_thermodyn_prepare_if_needed:
  * @cbe: a #NcCBE
+ * @reion: a #NcHIReion
  * @cosmo: a #NcHICosmo
  * 
  * Prepares the thermodynamic Class structure.
  * 
  */
 void
-nc_cbe_thermodyn_prepare_if_needed (NcCBE *cbe, NcHICosmo *cosmo)
+nc_cbe_thermodyn_prepare_if_needed (NcCBE *cbe, NcHIReion *reion, NcHICosmo *cosmo)
 {
   if (ncm_model_ctrl_update (cbe->ctrl_cosmo, NCM_MODEL (cosmo)))
   {
-    nc_cbe_thermodyn_prepare (cbe, cosmo);
+    nc_cbe_thermodyn_prepare (cbe, reion, cosmo);
     ncm_model_ctrl_force_update (cbe->ctrl_prim);
   }
 }
@@ -1485,13 +1573,14 @@ nc_cbe_thermodyn_prepare_if_needed (NcCBE *cbe, NcHICosmo *cosmo)
  * nc_cbe_prepare:
  * @cbe: a #NcCBE
  * @prim: a #NcHIPrim
+ * @reion: a #NcHIReion
  * @cosmo: a #NcHICosmo
  * 
  * Prepares all necessary Class structures.
  * 
  */
 void
-nc_cbe_prepare (NcCBE *cbe, NcHIPrim *prim, NcHICosmo *cosmo)
+nc_cbe_prepare (NcCBE *cbe, NcHIPrim *prim, NcHIReion *reion, NcHICosmo *cosmo)
 {
   if (cbe->allocated)
   {
@@ -1506,12 +1595,12 @@ nc_cbe_prepare (NcCBE *cbe, NcHIPrim *prim, NcHICosmo *cosmo)
     cbe->thermodyn_prepared = FALSE;
   }
 
-  _nc_cbe_call_thermo (cbe, cosmo);
+  _nc_cbe_call_thermo (cbe, reion, cosmo);
   cbe->thermodyn_prepared = TRUE;
 
   if (cbe->call != NULL)
   {
-    cbe->call (cbe, prim, cosmo);
+    cbe->call (cbe, prim, reion, cosmo);
     cbe->allocated = TRUE;
   }
 }
@@ -1520,20 +1609,21 @@ nc_cbe_prepare (NcCBE *cbe, NcHIPrim *prim, NcHICosmo *cosmo)
  * nc_cbe_prepare_if_needed:
  * @cbe: a #NcCBE
  * @prim: a #NcHIPrim
+ * @reion: a #NcHIReion
  * @cosmo: a #NcHICosmo
  * 
  * Prepares all necessary Class structures.
  * 
  */
 void
-nc_cbe_prepare_if_needed (NcCBE *cbe, NcHIPrim *prim, NcHICosmo *cosmo)
+nc_cbe_prepare_if_needed (NcCBE *cbe, NcHIPrim *prim, NcHIReion *reion, NcHICosmo *cosmo)
 {
   gboolean cosmo_up = ncm_model_ctrl_update (cbe->ctrl_cosmo, NCM_MODEL (cosmo));
   gboolean prim_up = ncm_model_ctrl_update (cbe->ctrl_cosmo, NCM_MODEL (prim));
 
   if (cosmo_up)
   {    
-    nc_cbe_prepare (cbe, prim, cosmo);
+    nc_cbe_prepare (cbe, prim, reion, cosmo);
   }
   else if (prim_up)
   {
@@ -1545,7 +1635,7 @@ nc_cbe_prepare_if_needed (NcCBE *cbe, NcHIPrim *prim, NcHICosmo *cosmo)
     }
     if (cbe->call != NULL)
     {
-      cbe->call (cbe, prim, cosmo);
+      cbe->call (cbe, prim, reion, cosmo);
       cbe->allocated = TRUE;
     }
   }

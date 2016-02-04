@@ -196,7 +196,7 @@ _nc_hipert_boltzmann_dispose (GObject *object)
 
   nc_recomb_clear (&pb->recomb);
   nc_hicosmo_clear (&pb->cosmo);
-  nc_scale_factor_clear (&pb->a);
+  nc_scalefactor_clear (&pb->a);
 
   ncm_model_ctrl_clear (&pb->ctrl_cosmo);
   ncm_model_ctrl_clear (&pb->ctrl_prim);
@@ -216,8 +216,8 @@ _nc_hipert_boltzmann_finalize (GObject *object)
 static void _nc_hipert_boltzmann_set_mode_k (NcHIPert *pert, gdouble k);
 static void _nc_hipert_boltzmann_set_abstol (NcHIPert *pert, gdouble abstol);
 static void _nc_hipert_boltzmann_set_reltol (NcHIPert *pert, gdouble reltol);
-static void _nc_hipert_boltzmann_prepare (NcHIPertBoltzmann *pb, NcHIPrim *prim, NcHICosmo *cosmo);
-static void _nc_hipert_boltzmann_prepare_if_needed (NcHIPertBoltzmann *pb, NcHIPrim *prim, NcHICosmo *cosmo);
+static void _nc_hipert_boltzmann_prepare (NcHIPertBoltzmann *pb, NcHIPrim *prim, NcHIReion *reion, NcHICosmo *cosmo);
+static void _nc_hipert_boltzmann_prepare_if_needed (NcHIPertBoltzmann *pb, NcHIPrim *prim, NcHIReion *reion, NcHICosmo *cosmo);
 
 static void
 nc_hipert_boltzmann_class_init (NcHIPertBoltzmannClass *klass)
@@ -355,9 +355,9 @@ _nc_hipert_boltzmann_set_reltol (NcHIPert *pert, gdouble reltol)
 }
 
 static void
-_nc_hipert_boltzmann_prepare (NcHIPertBoltzmann *pb, NcHIPrim *prim, NcHICosmo *cosmo)
+_nc_hipert_boltzmann_prepare (NcHIPertBoltzmann *pb, NcHIPrim *prim, NcHIReion *reion, NcHICosmo *cosmo)
 {
-  nc_recomb_prepare_if_needed (pb->recomb, cosmo);
+  nc_recomb_prepare_if_needed (pb->recomb, reion, cosmo);
 
   NC_HIPERT_BOLTZMANN_GET_CLASS (pb)->init (pb, cosmo);
   NC_HIPERT_BOLTZMANN_GET_CLASS (pb)->reset (pb);
@@ -366,13 +366,13 @@ _nc_hipert_boltzmann_prepare (NcHIPertBoltzmann *pb, NcHIPrim *prim, NcHICosmo *
 }
 
 static void
-_nc_hipert_boltzmann_prepare_if_needed (NcHIPertBoltzmann *pb, NcHIPrim *prim, NcHICosmo *cosmo)
+_nc_hipert_boltzmann_prepare_if_needed (NcHIPertBoltzmann *pb, NcHIPrim *prim, NcHIReion *reion, NcHICosmo *cosmo)
 {
   gboolean cosmo_up = ncm_model_ctrl_update (pb->ctrl_cosmo, NCM_MODEL (cosmo));
   gboolean prim_up = ncm_model_ctrl_update (pb->ctrl_prim, NCM_MODEL (prim));
 
   if (cosmo_up || prim_up)
-    nc_hipert_boltzmann_prepare (pb, prim, cosmo);
+    nc_hipert_boltzmann_prepare (pb, prim, reion, cosmo);
 }
 
 /**
@@ -708,30 +708,32 @@ nc_hipert_boltzmann_set_recomb (NcHIPertBoltzmann *pb, NcRecomb *recomb)
  * nc_hipert_boltzmann_prepare: (virtual prepare)
  * @pb: a #NcHIPertBoltzmann
  * @prim: a #NcHIPrim
+ * @reion: a #NcHIReion
  * @cosmo: a NcHICosmo
  *
  * Prepares the #NcHIPertBoltzmann object.
  *
  */
 void
-nc_hipert_boltzmann_prepare (NcHIPertBoltzmann *pb, NcHIPrim *prim, NcHICosmo *cosmo)
+nc_hipert_boltzmann_prepare (NcHIPertBoltzmann *pb, NcHIPrim *prim, NcHIReion *reion, NcHICosmo *cosmo)
 {
-  NC_HIPERT_BOLTZMANN_GET_CLASS (pb)->prepare (pb, prim, cosmo);
+  NC_HIPERT_BOLTZMANN_GET_CLASS (pb)->prepare (pb, prim, reion, cosmo);
 }
 
 /**
  * nc_hipert_boltzmann_prepare_if_needed: (virtual prepare_if_needed)
  * @pb: a #NcHIPertBoltzmann
  * @prim: a #NcHIPrim
- * @cosmo: a NcHICosmo
+ * @reion: a #NcHIReion
+ * @cosmo: a #NcHICosmo
  *
  * Prepares the #NcHIPertBoltzmann object if not prepared for @cosmo.
  *
  */
 void
-nc_hipert_boltzmann_prepare_if_needed (NcHIPertBoltzmann *pb, NcHIPrim *prim, NcHICosmo *cosmo)
+nc_hipert_boltzmann_prepare_if_needed (NcHIPertBoltzmann *pb, NcHIPrim *prim, NcHIReion *reion, NcHICosmo *cosmo)
 {
-  NC_HIPERT_BOLTZMANN_GET_CLASS (pb)->prepare_if_needed (pb, prim, cosmo);
+  NC_HIPERT_BOLTZMANN_GET_CLASS (pb)->prepare_if_needed (pb, prim, reion, cosmo);
 }
 
 /**
