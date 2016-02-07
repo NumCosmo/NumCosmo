@@ -25,7 +25,7 @@
 
 /**
  * SECTION:nc_data_planck_lkl
- * @title: NcDataPlankLKL
+ * @title: NcDataPlanckLKL
  * @short_description: Planck Likelihood interface.
  *
  * FIXME

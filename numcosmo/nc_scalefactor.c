@@ -52,6 +52,8 @@ enum
 {
   PROP_0,
   PROP_ZI,
+  PROP_A0,
+  PROP_A0_CONF_NORM,
   PROP_DIST,
   PROP_RELTOL,
   PROP_ABSTOL,
@@ -72,6 +74,9 @@ nc_scalefactor_init (NcScalefactor *a)
 	a->dist        = NULL;
 	a->ctrl        = ncm_model_ctrl_new (NULL);
 	a->zf          = 0.0;
+	a->a0          = 0.0;
+
+  a->sets_conf_norm = FALSE;
 
   a->cvode       = CVodeCreate (CV_BDF, CV_NEWTON);
   NCM_CVODE_CHECK ((void *)a->cvode, "CVodeCreate", 0, );
@@ -126,6 +131,12 @@ nc_scalefactor_set_property (GObject *object, guint prop_id, const GValue *value
     case PROP_ZI:
       nc_scalefactor_set_zf (a, g_value_get_double (value));
       break;
+    case PROP_A0:
+      nc_scalefactor_set_a0 (a, g_value_get_double (value));
+      break;
+    case PROP_A0_CONF_NORM:
+      nc_scalefactor_set_a0_conformal_normal (a, g_value_get_boolean (value));
+      break;
     case PROP_DIST:
       a->dist = g_value_dup_object (value);
       break;
@@ -154,6 +165,12 @@ nc_scalefactor_get_property (GObject *object, guint prop_id, GValue *value, GPar
   {
     case PROP_ZI:
       g_value_set_double (value, nc_scalefactor_get_zf (a));
+      break;
+    case PROP_A0:
+      g_value_set_double (value, nc_scalefactor_get_a0 (a));
+      break;
+    case PROP_A0_CONF_NORM:
+      g_value_set_boolean (value, a->sets_conf_norm);
       break;
     case PROP_DIST:
       g_value_set_object (value, a->dist);
@@ -190,6 +207,20 @@ nc_scalefactor_class_init (NcScalefactorClass *klass)
                                                         "Initial redshift",
                                                         0.0, G_MAXDOUBLE, NC_SCALEFACTOR_DEFAULT_ZF,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  g_object_class_install_property (object_class,
+                                   PROP_A0,
+                                   g_param_spec_double ("a0",
+                                                        NULL,
+                                                        "Scale factor today a_0",
+                                                        0.0, G_MAXDOUBLE, NC_SCALEFACTOR_DEFAULT_A0,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  g_object_class_install_property (object_class,
+                                   PROP_A0_CONF_NORM,
+                                   g_param_spec_boolean ("a0-conformal-normal",
+                                                         NULL,
+                                                         "Scale factor today a_0 from normalized curvature radius",
+                                                         FALSE,
+                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
   g_object_class_install_property (object_class,
                                    PROP_DIST,
                                    g_param_spec_object ("dist",
@@ -306,6 +337,8 @@ static void _nc_scalefactor_calc_spline (NcScalefactor *a, NcHICosmo *cosmo);
 void
 nc_scalefactor_prepare (NcScalefactor *a, NcHICosmo *cosmo)
 {
+  nc_distance_prepare_if_needed (a->dist, cosmo);
+  
 	_nc_scalefactor_init (a, cosmo);
 	_nc_scalefactor_calc_spline (a, cosmo);
 	ncm_model_ctrl_update (a->ctrl, NCM_MODEL (cosmo));
@@ -341,6 +374,24 @@ nc_scalefactor_set_zf (NcScalefactor *a, const gdouble zf)
   if (a->zf != zf)
   {
     a->zf = zf;
+    ncm_model_ctrl_force_update (a->ctrl);
+  }
+}
+
+/**
+ * nc_scalefactor_set_a0:
+ * @a: a #NcScalefactor
+ * @a0: scale factor today $a_0$
+ * 
+ * Sets the value of the scale factor today.
+ * 
+ */
+void 
+nc_scalefactor_set_a0 (NcScalefactor *a, const gdouble a0)
+{
+  if (a->a0 != a0)
+  {
+    a->a0 = a0;
     ncm_model_ctrl_force_update (a->ctrl);
   }
 }
@@ -400,6 +451,28 @@ nc_scalefactor_set_time_type (NcScalefactor *a, NcScalefactorTimeType ttype)
 }
 
 /**
+ * nc_scalefactor_set_a0_conformal_normal:
+ * @a: a #NcScalefactor
+ * @enable: a boolean
+ * 
+ * When @enable is TRUE, it sets the value of the scale factor 
+ * today $a_0$, assuming that the conformal hypersurface 
+ *  the spatial hypersurface where ($a=1$) hascurvature
+ * equals to 1Mpc, i.e., $1/\sqrt{K} = 1\,\mathrm{Mpc}$.
+ * If @enable is FALSE it lets $a_0$ untouched.   * 
+ * 
+ */
+void 
+nc_scalefactor_set_a0_conformal_normal (NcScalefactor *a, gboolean enable) 
+{
+  if ((!a->sets_conf_norm && enable) || (a->sets_conf_norm && !enable))
+  {
+    a->sets_conf_norm = enable;
+    ncm_model_ctrl_force_update (a->ctrl);
+  }
+}
+
+/**
  * nc_scalefactor_get_zf:
  * @a: a #NcScalefactor
  * 
@@ -411,6 +484,20 @@ gdouble
 nc_scalefactor_get_zf (NcScalefactor *a)
 {
   return a->zf;
+}
+
+/**
+ * nc_scalefactor_get_a0:
+ * @a: a #NcScalefactor
+ * 
+ * Gets the current value of the scale factor today $a_0$.
+ * 
+ * Returns: $a_0$.
+ */
+gdouble 
+nc_scalefactor_get_a0 (NcScalefactor *a)
+{
+  return a->a0;
 }
 
 /**
@@ -466,17 +553,19 @@ _nc_scalefactor_init (NcScalefactor *a, NcHICosmo *cosmo)
 
   a->eta_i = nc_distance_conformal_time (a->dist, cosmo, a->zf);
   a->eta_f = nc_distance_conformal_time (a->dist, cosmo, 0.0);
-  
-  if (fabs (Omega_k0) < NC_SCALEFACTOR_OMEGA_K_ZERO)
-  {
-    a->a0 = 1.0;
-  }
-  else
-  {
-    const gdouble RH_Mpc = nc_hicosmo_RH_Mpc (cosmo);
-    a->a0 = RH_Mpc / sqrt (fabs (Omega_k0));
-  }
 
+  if (a->sets_conf_norm)
+  {
+    if (fabs (Omega_k0) < NC_SCALEFACTOR_OMEGA_K_ZERO)
+    {
+      a->a0 = 1.0;
+    }
+    else
+    {
+      const gdouble RH_Mpc = nc_hicosmo_RH_Mpc (cosmo);
+      a->a0 = RH_Mpc / sqrt (fabs (Omega_k0));
+    }
+  }
   nc_scalefactor_init_cvode (a, cosmo);
 
   return;
@@ -622,7 +711,7 @@ static void
 _nc_scalefactor_calc_spline (NcScalefactor *a, NcHICosmo *cosmo)
 {
   GArray *eta_a, *mz_a, *t_a = NULL;
-  gdouble eta, mzi;
+  gdouble eta, mzi, last_eta;
   gint flag;
   gboolean int_t = (a->ttype & NC_SCALEFACTOR_TIME_TYPE_COSMIC);
 
@@ -639,14 +728,15 @@ _nc_scalefactor_calc_spline (NcScalefactor *a, NcHICosmo *cosmo)
 		mz_a  = g_array_sized_new (FALSE, FALSE, sizeof(gdouble), 1000);
 	}
 
-  mzi = -a->zf;
+  last_eta = a->eta_i;
+  mzi      = -a->zf;
   g_array_append_val (eta_a, a->eta_i);
   g_array_append_val (mz_a, mzi);
 
   if (int_t)
   {
     const gdouble ti = nc_distance_cosmic_time (a->dist, cosmo, a->zf);
-    NV_Ith_S (a->y, 0) = ti;
+    NV_Ith_S (a->yQ, 0) = ti;
 
     if (a->quad_init)
     {
@@ -661,7 +751,10 @@ _nc_scalefactor_calc_spline (NcScalefactor *a, NcHICosmo *cosmo)
     }
 
     if (!ncm_spline_is_empty (a->t_eta))
-      t_a = ncm_vector_get_array (a->a_eta->xv);
+    {
+      t_a = ncm_vector_get_array (a->t_eta->yv);
+      g_array_set_size (t_a, 0);
+    }
     else
       t_a = g_array_sized_new (FALSE, FALSE, sizeof(gdouble), 1000);
 
@@ -682,13 +775,17 @@ _nc_scalefactor_calc_spline (NcScalefactor *a, NcHICosmo *cosmo)
       flag = CVode (a->cvode, a->eta_f, a->y, &eta, CV_ONE_STEP);
       NCM_CVODE_CHECK (&flag, "_nc_scalefactor_calc_spline[CVode]", 1, );
       flag = CVodeGetQuad (a->cvode, &eta_quad, a->yQ);
-      
-      mzi = - NV_Ith_S (a->y, 0);
-      t = NV_Ith_S (a->yQ, 0);
 
-      g_array_append_val (eta_a, eta);
-      g_array_append_val (mz_a, mzi);
-      g_array_append_val (t_a, t);
+      if ((eta - last_eta) / last_eta > NC_SCALEFACTOR_MIN_ETA_STEP)
+      {
+        mzi = - NV_Ith_S (a->y, 0);
+        t   = NV_Ith_S (a->yQ, 0);
+
+        g_array_append_val (eta_a, eta);
+        g_array_append_val (mz_a, mzi);
+        g_array_append_val (t_a, t);
+        last_eta = eta;
+      }
       
       if (a->eta_f == eta)
         break;
@@ -701,10 +798,15 @@ _nc_scalefactor_calc_spline (NcScalefactor *a, NcHICosmo *cosmo)
       flag = CVode (a->cvode, a->eta_f, a->y, &eta, CV_ONE_STEP);
       NCM_CVODE_CHECK (&flag, "_nc_scalefactor_calc_spline[CVode]", 1, );
 
-      mzi = - NV_Ith_S (a->y, 0);
-      
-      g_array_append_val (eta_a, eta);
-      g_array_append_val (mz_a, mzi);
+      if ((eta - last_eta) / last_eta > NC_SCALEFACTOR_MIN_ETA_STEP)
+      {
+        mzi = - NV_Ith_S (a->y, 0);
+
+        g_array_append_val (eta_a, eta);
+        g_array_append_val (mz_a, mzi);
+
+        last_eta = eta;
+      }
       
       if (a->eta_f == eta)
         break;

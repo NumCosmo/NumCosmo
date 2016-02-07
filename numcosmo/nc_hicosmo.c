@@ -764,6 +764,16 @@ nc_hicosmo_class_get_func_z (const gchar *name)
  */
 
 /**
+ * nc_hicosmo_E2Omega_t:
+ * @cosmo: a #NcHICosmo
+ * @z: redshift $z$
+ *
+ * The value of the normalized Hubble function square times
+ * the total dimensionless density $\Omega_t$.
+ *
+ * Returns: $E^2\Omega_t$.
+ */
+/**
  * nc_hicosmo_H:
  * @cosmo: a #NcHICosmo
  * @z: redshift $z$

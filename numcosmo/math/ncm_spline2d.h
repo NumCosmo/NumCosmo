@@ -49,6 +49,7 @@ struct _NcmSpline2d
   GObject parent_instance;
   gboolean empty;
   gboolean init;
+  gboolean to_init;
   NcmSpline *s;
   NcmVector *xv;
   NcmVector *yv;

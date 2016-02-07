@@ -110,17 +110,39 @@ static gdouble _nc_hicosmo_de_T_gamma0 (NcHICosmo *cosmo) { return T_GAMMA0; }
 
 static gdouble 
 _nc_hicosmo_de_Yp_4He (NcHICosmo *cosmo) 
-{ 
-  const gdouble wb     = nc_hicosmo_Omega_b0h2 (cosmo);
-  const gdouble wb2    = wb * wb;
-  const gdouble DENNU  = ENNU - 3.046;
-  const gdouble DENNU2 = DENNU * DENNU;
+{
+  NcmModel *model       = NCM_MODEL (cosmo);
+  NcHICosmoDE *cosmo_de = NC_HICOSMO_DE (cosmo);
+  if (ncm_model_param_get_ftype (model, NC_HICOSMO_DE_DEFAULT_HE_YP) == NCM_PARAM_TYPE_FIXED)
+  {
+    const gdouble wb     = nc_hicosmo_Omega_b0h2 (cosmo);
+    const gdouble DENNU  = ENNU - 3.046;
 
-  const gdouble Yp = 0.2311 + 0.9502 * wb - 11.27 * wb2 + 
-    DENNU * (0.01356 + 0.008581 * wb - 0.1810 * wb2) +
-    DENNU2 * (-0.0009795 - 0.001370 * wb + 0.01746 * wb2);
+    if (FALSE)
+    {
+      const gdouble wb2    = wb * wb;
+      const gdouble DENNU2 = DENNU * DENNU;
 
-  return Yp;
+      const gdouble Yp = 0.2311 + 0.9502 * wb - 11.27 * wb2 + 
+        DENNU * (0.01356 + 0.008581 * wb - 0.1810 * wb2) +
+        DENNU2 * (-0.0009795 - 0.001370 * wb + 0.01746 * wb2);
+
+      return Yp;
+    }
+    else
+    {
+      
+      if (model->pkey != cosmo_de->HE4_Yp_key)
+      {
+        const gdouble Yp = ncm_spline2d_eval (NC_HICOSMO_DE (cosmo)->BBN_spline2d, wb, DENNU);
+        ncm_vector_set (VECTOR, NC_HICOSMO_DE_HE_YP, Yp);
+        cosmo_de->HE4_Yp_key = model->pkey;
+        /*printf ("# omega_b % 20.15g DeltaNnu % 20.15g Yp % 20.15g\n",  wb, DENNU, Yp);*/
+      }
+    }
+  }
+  
+  return HE_YP;
 }
 
 static gdouble _nc_hicosmo_de_Omega_g0 (NcHICosmo *cosmo)
@@ -222,9 +244,28 @@ enum {
 };
 
 static void
-nc_hicosmo_de_init (NcHICosmoDE *object)
+nc_hicosmo_de_init (NcHICosmoDE *cosmo_de)
 {
-  NCM_UNUSED (object);
+  NcmSerialize *ser = ncm_serialize_new (NCM_SERIALIZE_OPT_NONE);
+  gchar *filename = ncm_cfg_get_data_filename ("BBN_spline2d.obj", TRUE);
+
+  cosmo_de->BBN_spline2d = NCM_SPLINE2D (ncm_serialize_from_file (ser, filename));
+  g_assert (NCM_IS_SPLINE2D (cosmo_de->BBN_spline2d));
+
+  ncm_serialize_clear (&ser);
+
+  cosmo_de->HE4_Yp_key = NCM_MODEL (cosmo_de)->pkey - 1;
+}
+
+static void
+nc_hicosmo_de_dispose (GObject *object)
+{
+  NcHICosmoDE *cosmo_de = NC_HICOSMO_DE (object);
+
+  ncm_spline2d_clear (&cosmo_de->BBN_spline2d);
+  
+  /* Chain up : end */
+  G_OBJECT_CLASS (nc_hicosmo_de_parent_class)->finalize (object);
 }
 
 static void
@@ -238,10 +279,11 @@ nc_hicosmo_de_finalize (GObject *object)
 static void
 nc_hicosmo_de_class_init (NcHICosmoDEClass *klass)
 {
-  GObjectClass* object_class = G_OBJECT_CLASS (klass);
+  GObjectClass* object_class   = G_OBJECT_CLASS (klass);
   NcHICosmoClass* parent_class = NC_HICOSMO_CLASS (klass);
-  NcmModelClass *model_class = NCM_MODEL_CLASS (klass);
+  NcmModelClass *model_class   = NCM_MODEL_CLASS (klass);
 
+  object_class->dispose      = &nc_hicosmo_de_dispose;
   object_class->finalize     = &nc_hicosmo_de_finalize;
 
   ncm_model_class_set_name_nick (model_class, "Darkenergy models abstract class", "NcHICosmoDE");

@@ -108,7 +108,7 @@ nc_planck_fi_class_init (NcPlanckFIClass *klass)
   model_class->get_property = nc_planck_fi_get_property;
   object_class->finalize = nc_planck_fi_finalize;
 
-  ncm_model_class_set_name_nick (model_class, "Planck Foreground and Instument Abstract Class", "PlanckFI");
+  ncm_model_class_set_name_nick (model_class, "Planck Foreground and Instrument Abstract Class", "PlanckFI");
   ncm_model_class_add_params (NCM_MODEL_CLASS (klass), 0, 0, PROP_SIZE);
 
   ncm_mset_model_register_id (NCM_MODEL_CLASS (klass),

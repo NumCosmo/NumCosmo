@@ -30,6 +30,7 @@
 #include <numcosmo/build_cfg.h>
 #include <numcosmo/nc_hicosmo.h>
 #include <numcosmo/math/ncm_likelihood.h>
+#include <numcosmo/math/ncm_spline2d.h>
 
 G_BEGIN_DECLS
 
@@ -103,6 +104,8 @@ struct _NcHICosmoDE
 {
   /*< private >*/
   NcHICosmo parent_instance;
+  NcmSpline2d *BBN_spline2d;
+  guint64 HE4_Yp_key;
 };
 
 struct _NcHICosmoDEClass

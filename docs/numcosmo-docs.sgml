@@ -46,11 +46,8 @@
       <title>Splines 1D</title>
       <xi:include href="xml/ncm_spline.xml"/>
       <xi:include href="xml/ncm_spline_gsl.xml"/>
-      <section>
-        <title>Cubic Splines</title>
-        <xi:include href="xml/ncm_spline_cubic.xml"/>
-        <xi:include href="xml/ncm_spline_cubic_notaknot.xml"/>
-      </section>
+      <xi:include href="xml/ncm_spline_cubic.xml"/>
+      <xi:include href="xml/ncm_spline_cubic_notaknot.xml"/>
       <xi:include href="xml/ncm_spline_func.xml"/>
       <xi:include href="xml/ncm_ode_spline.xml"/>
     </section>

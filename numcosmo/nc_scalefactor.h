@@ -81,6 +81,7 @@ struct _NcScalefactor
   gdouble zf;
   gdouble eta_i;
   gdouble eta_f;
+  gboolean sets_conf_norm;
   gboolean spline_init;
   gboolean cvode_init;
   gboolean quad_init;
@@ -101,11 +102,15 @@ void nc_scalefactor_prepare (NcScalefactor *a, NcHICosmo *cosmo);
 void nc_scalefactor_prepare_if_needed (NcScalefactor *a, NcHICosmo *cosmo);
 
 void nc_scalefactor_set_zf (NcScalefactor *a, const gdouble zf);
+void nc_scalefactor_set_a0 (NcScalefactor *a, const gdouble a0);
 void nc_scalefactor_set_reltol (NcScalefactor *a, const gdouble reltol);
 void nc_scalefactor_set_abstol (NcScalefactor *a, const gdouble abstol);
 void nc_scalefactor_set_time_type (NcScalefactor *a, NcScalefactorTimeType ttype);
 
+void nc_scalefactor_set_a0_conformal_normal (NcScalefactor *a, gboolean enable);
+
 gdouble nc_scalefactor_get_zf (NcScalefactor *a);
+gdouble nc_scalefactor_get_a0 (NcScalefactor *a);
 gdouble nc_scalefactor_get_reltol (NcScalefactor *a);
 gdouble nc_scalefactor_get_abstol (NcScalefactor *a);
 NcScalefactorTimeType nc_scalefactor_get_time_type (NcScalefactor *a);
@@ -120,9 +125,11 @@ gdouble nc_scalefactor_t_eta (NcScalefactor *a, const gdouble eta);
 gdouble nc_scalefactor_eta_t (NcScalefactor *a, const gdouble t);
 
 #define NC_SCALEFACTOR_DEFAULT_ZF (1.0e14)
+#define NC_SCALEFACTOR_DEFAULT_A0 (1.0)
 #define NC_SCALEFACTOR_DEFAULT_RELTOL (1.0e-13)
 #define NC_SCALEFACTOR_DEFAULT_ABSTOL (0.0)
 #define NC_SCALEFACTOR_OMEGA_K_ZERO (1.0e-14)
+#define NC_SCALEFACTOR_MIN_ETA_STEP (1.0e-11)
 
 G_END_DECLS
 

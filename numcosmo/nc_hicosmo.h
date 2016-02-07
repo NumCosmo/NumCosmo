@@ -71,10 +71,10 @@ typedef enum _NcHICosmoImpl
 {
   NC_HICOSMO_IMPL_H0        = 1 << 0,
   NC_HICOSMO_IMPL_Omega_b0  = 1 << 1,
-  NC_HICOSMO_IMPL_Omega_g0  = 1 << 2,
-  NC_HICOSMO_IMPL_Omega_nu0 = 1 << 3,
-  NC_HICOSMO_IMPL_Omega_r0  = 1 << 4,
-  NC_HICOSMO_IMPL_Omega_c0  = 1 << 5,
+  NC_HICOSMO_IMPL_Omega_c0  = 1 << 2,
+  NC_HICOSMO_IMPL_Omega_g0  = 1 << 3,
+  NC_HICOSMO_IMPL_Omega_nu0 = 1 << 4,
+  NC_HICOSMO_IMPL_Omega_r0  = 1 << 5,
   NC_HICOSMO_IMPL_Omega_t0  = 1 << 6,
   NC_HICOSMO_IMPL_sigma_8   = 1 << 7,
   NC_HICOSMO_IMPL_T_gamma0  = 1 << 8,
@@ -105,6 +105,7 @@ typedef enum _NcHICosmoImpl
 #define NC_HICOSMO_IMPL_H_Yp (NC_HICOSMO_IMPL_Yp_4He)
 #define NC_HICOSMO_IMPL_XHe (NC_HICOSMO_IMPL_Yp_4He)
 
+#define NC_HICOSMO_IMPL_E2Omega_t (NC_HICOSMO_IMPL_E2 | NC_HICOSMO_IMPL_Omega_k0)
 #define NC_HICOSMO_IMPL_H (NC_HICOSMO_IMPL_H0 | NC_HICOSMO_IMPL_E2)
 #define NC_HICOSMO_IMPL_dH_dz (NC_HICOSMO_IMPL_H0 | NC_HICOSMO_IMPL_E2 | NC_HICOSMO_IMPL_dE2_dz)
 #define NC_HICOSMO_IMPL_E (NC_HICOSMO_IMPL_E2)
@@ -247,6 +248,7 @@ G_INLINE_FUNC gdouble nc_hicosmo_z_lss (NcHICosmo *cosmo);
 G_INLINE_FUNC gdouble nc_hicosmo_as_drag (NcHICosmo *cosmo);
 G_INLINE_FUNC gdouble nc_hicosmo_xb (NcHICosmo *cosmo);
 
+G_INLINE_FUNC gdouble nc_hicosmo_E2Omega_t (NcHICosmo *cosmo, gdouble z);
 G_INLINE_FUNC gdouble nc_hicosmo_H (NcHICosmo *cosmo, gdouble z);
 G_INLINE_FUNC gdouble nc_hicosmo_dH_dz (NcHICosmo *cosmo, gdouble z);
 G_INLINE_FUNC gdouble nc_hicosmo_E (NcHICosmo *cosmo, gdouble z);
@@ -328,6 +330,14 @@ G_INLINE_FUNC gdouble
 nc_hicosmo_Omega_m0 (NcHICosmo *cosmo)
 {
   return (nc_hicosmo_Omega_b0 (cosmo) + nc_hicosmo_Omega_c0 (cosmo));
+}
+
+G_INLINE_FUNC gdouble
+nc_hicosmo_E2Omega_t (NcHICosmo *cosmo, gdouble z)
+{
+  const gdouble Omega_k0 = nc_hicosmo_Omega_k0 (cosmo);
+  const gdouble x2       = gsl_pow_2 (1.0 + z);
+  return nc_hicosmo_E2 (cosmo, z) - Omega_k0 * x2;
 }
 
 G_INLINE_FUNC gdouble

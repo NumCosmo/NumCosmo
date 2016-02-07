@@ -942,9 +942,9 @@ _nc_cbe_set_bg (NcCBE *cbe, NcHICosmo *cosmo)
   cbe->priv->pba.Omega0_k            = nc_hicosmo_Omega_k0 (cosmo);
   if (fabs (cbe->priv->pba.Omega0_k) > 1.0e-13)
   {
-    cbe->priv->pba.K                   = -GSL_SIGN (cbe->priv->pba.Omega0_k);
-    cbe->priv->pba.sgnK                = cbe->priv->pba.K;
-    cbe->priv->pba.a_today             = sqrt (1.0 / fabs (cbe->priv->pba.Omega0_k)) / cbe->priv->pba.H0;
+    cbe->priv->pba.a_today             = 1.0;
+    cbe->priv->pba.K                   = - cbe->priv->pba.Omega0_k * gsl_pow_2 (cbe->priv->pba.a_today * cbe->priv->pba.H0);
+    cbe->priv->pba.sgnK                = GSL_SIGN (cbe->priv->pba.K);
   }
   else
   {
@@ -1268,13 +1268,14 @@ _nc_cbe_call_bg (NcCBE *cbe, NcHICosmo *cosmo)
   if (background_init (ppr, &cbe->priv->pba) == _FAILURE_)
     g_error ("_nc_cbe_call_bg: Error running background_init `%s'\n", cbe->priv->pba.error_message);
 
-  if (TRUE)
+  if (FALSE)
   {
     const gdouble RH = nc_hicosmo_RH_Mpc (cosmo);
     gdouble zf = 1.0 / ppr->a_ini_over_a_today_default;
     struct background *pba = &cbe->priv->pba;
     gdouble pvecback[pba->bg_size];
-    
+    gdouble err = 0.0;
+
     if (cbe->a == NULL)
       cbe->a = nc_scalefactor_new (NC_SCALEFACTOR_TIME_TYPE_COSMIC, zf, NULL);
     else
@@ -1305,7 +1306,9 @@ _nc_cbe_call_bg (NcCBE *cbe, NcHICosmo *cosmo)
       const gdouble rho_cdm    = nc_hicosmo_Omega_c0 (cosmo) * RH_pow_m2 * x3;
       const gdouble rho_Lambda = ncm_model_orig_param_get (NCM_MODEL (cosmo), NC_HICOSMO_DE_OMEGA_X) * RH_pow_m2;
 
-      const gdouble Omega_r0   = nc_hicosmo_Omega_r0 (cosmo) * x4 / E2;
+      const gdouble E2Omega_t  = nc_hicosmo_E2Omega_t (cosmo, z);
+      const gdouble Omega_r    = nc_hicosmo_Omega_r0 (cosmo) * x4 / E2Omega_t;
+      const gdouble Omega_m    = nc_hicosmo_Omega_m0 (cosmo) * x3 / E2Omega_t;
 
       const gdouble rho_crit   = E2 * RH_pow_m2;
 
@@ -1328,19 +1331,31 @@ _nc_cbe_call_bg (NcCBE *cbe, NcHICosmo *cosmo)
         const gdouble rho_cdm_diff    = fabs (rho_cdm / pvecback[pba->index_bg_rho_cdm] - 1.0);
         const gdouble rho_Lambda_diff = fabs (rho_Lambda / pvecback[pba->index_bg_rho_lambda] - 1.0);
 
-        const gdouble Omega_r0_diff   = fabs (Omega_r0 / pvecback[pba->index_bg_Omega_r] - 1.0);
+        const gdouble Omega_m0_diff   = fabs (Omega_m / pvecback[pba->index_bg_Omega_m] - 1.0);
+        const gdouble Omega_r0_diff   = fabs (Omega_r / pvecback[pba->index_bg_Omega_r] - 1.0);
 
         const gdouble rho_crit_diff   = fabs (rho_crit / pvecback[pba->index_bg_rho_crit] - 1.0);
+
+        err = GSL_MAX (err, a_diff);
+        err = GSL_MAX (err, H_diff);
+        err = GSL_MAX (err, Hprime_diff);
+        err = GSL_MAX (err, rho_g_diff);
+        err = GSL_MAX (err, rho_ur_diff);
+        err = GSL_MAX (err, rho_b_diff);
+        err = GSL_MAX (err, rho_cdm_diff);
+        err = GSL_MAX (err, rho_Lambda_diff);
+        err = GSL_MAX (err, Omega_r0_diff);
+        err = GSL_MAX (err, rho_crit_diff);
         
-        printf ("# eta = % 20.15g | % 10.5e % 10.5e % 10.5e % 10.5e % 10.5e % 10.5e % 10.5e % 10.5e % 10.5e % 10.5e\n", eta,
-                a_diff, H_diff, Hprime_diff, rho_g_diff, rho_ur_diff, rho_b_diff, rho_cdm_diff, rho_Lambda_diff,
-                Omega_r0_diff, rho_crit_diff
+        printf ("# eta = % 20.15g | % 10.5e % 10.5e % 10.5e % 10.5e % 10.5e % 10.5e % 10.5e % 10.5e % 10.5e % 10.5e % 10.5e % 10.5e\n", eta,
+                pvecback[pba->index_bg_a], a_diff, H_diff, Hprime_diff, rho_g_diff, rho_ur_diff, rho_b_diff, rho_cdm_diff, rho_Lambda_diff,
+                Omega_r0_diff, Omega_m0_diff, rho_crit_diff
                 );
+
       }
     }
-    
-  }
-  
+    printf ("# worst % 10.5e\n", err);
+  }  
 }
 
 static void
