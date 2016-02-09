@@ -114,7 +114,8 @@ nc_planck_fi_class_init (NcPlanckFIClass *klass)
   ncm_mset_model_register_id (NCM_MODEL_CLASS (klass),
                               "NcPlanckFI",
                               "Planck Foreground and Instrument models.",
-                              NULL);
+                              NULL,
+                              FALSE);
 
   g_object_class_install_property (object_class,
                                    PROP_VERSION,

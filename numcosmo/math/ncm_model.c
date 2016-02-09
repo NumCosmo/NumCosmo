@@ -586,6 +586,7 @@ ncm_model_class_init (NcmModelClass *klass)
   klass->get_property = NULL;
 
   klass->model_id          = -1;
+  klass->can_stack         = FALSE;
   klass->name              = NULL;
   klass->nick              = NULL;
   klass->nonparam_prop_len = 0;

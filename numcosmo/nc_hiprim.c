@@ -117,7 +117,8 @@ nc_hiprim_class_init (NcHIPrimClass *klass)
   ncm_mset_model_register_id (model_class,
                               "NcHIPrim",
                               "Homogeneous and isotropic primordial cosmological models.",
-                              NULL);
+                              NULL,
+                              FALSE);
 
   ncm_model_class_check_params_info (model_class);
 

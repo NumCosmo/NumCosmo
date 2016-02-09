@@ -83,24 +83,27 @@ void
 test_nc_recomb_seager_wmap_zstar (void)
 {
   NcRecomb *recomb = NC_RECOMB (nc_recomb_seager_new ());
+  NcHIReion *reion = NC_HIREION (nc_hireion_camb_new ());
   NcHICosmo *cosmo = nc_hicosmo_new_from_name (NC_TYPE_HICOSMO, "NcHICosmoDEXcdm");
 
   nc_hicosmo_de_set_wmap5_params (NC_HICOSMO_DE (cosmo));
   ncm_model_orig_param_set (NCM_MODEL (cosmo), NC_HICOSMO_DE_XCDM_W,  -1.0);
 
-  nc_recomb_prepare_if_needed (recomb, cosmo);
+  nc_recomb_prepare_if_needed (recomb, reion, cosmo);
   {
     const gdouble zstar = exp (-nc_recomb_tau_zstar (recomb, cosmo)) - 1.0;
-    ncm_assert_cmpdouble_e (zstar, ==, 1088.9, 1e-4);
+    ncm_assert_cmpdouble_e (zstar, ==, 1088.76, 1e-4);
   }
 
   ncm_model_orig_param_set (NCM_MODEL (cosmo), NC_HICOSMO_DE_T_GAMMA0,  2.2250);
-  nc_recomb_prepare_if_needed (recomb, cosmo);
+  nc_recomb_prepare_if_needed (recomb, reion, cosmo);
   {
     const gdouble zstar = exp (-nc_recomb_tau_zstar (recomb, cosmo)) - 1.0;
-    ncm_assert_cmpdouble_e (zstar, ==, 1323.2, 1e-4);
+    ncm_assert_cmpdouble_e (zstar, ==, 1325.06, 1e-4);
   }
 
+  nc_hireion_free (reion);
+  nc_hicosmo_free (cosmo);
   nc_recomb_free (recomb);
 }
 
@@ -108,14 +111,17 @@ void
 test_nc_recomb_seager_Xe_ini (void)
 {
   NcRecomb *recomb = NC_RECOMB (nc_recomb_seager_new ());
+  NcHIReion *reion = NC_HIREION (nc_hireion_camb_new ());
   NcHICosmo *cosmo = nc_hicosmo_new_from_name (NC_TYPE_HICOSMO, "NcHICosmoDEXcdm");
 
-  nc_recomb_prepare_if_needed (recomb, cosmo);
+  nc_recomb_prepare_if_needed (recomb, reion, cosmo);
 
   {
     const gdouble Xe_ini = nc_recomb_Xe (recomb, cosmo, recomb->lambdai);
-    ncm_assert_cmpdouble_e (Xe_ini, == , 1.0 + 2.0 * ncm_c_prim_XHe (), recomb->prec * 1.0e2);
+    ncm_assert_cmpdouble_e (Xe_ini, == , 1.0 + 2.0 * nc_hicosmo_XHe (cosmo), recomb->prec * 1.0e2);
   }
   
+  nc_hireion_free (reion);
+  nc_hicosmo_free (cosmo);
   nc_recomb_free (recomb);
 }

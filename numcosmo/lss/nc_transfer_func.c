@@ -59,7 +59,10 @@ nc_transfer_func_new_from_name (gchar *transfer_name)
   GType transfer_type = G_OBJECT_TYPE (obj);
 
   if (!g_type_is_a (transfer_type, NC_TYPE_TRANSFER_FUNC))
-	g_error ("nc_transfer_func_new_from_name: NcTransferFunc %s do not descend from %s.", transfer_name, g_type_name (NC_TYPE_TRANSFER_FUNC));
+    g_error ("nc_transfer_func_new_from_name: NcTransferFunc %s do not descend from %s.", 
+             transfer_name, 
+             g_type_name (NC_TYPE_TRANSFER_FUNC));
+
   return NC_TRANSFER_FUNC (obj);
 }
 
@@ -76,6 +79,7 @@ void
 nc_transfer_func_prepare (NcTransferFunc *tf, NcHIReion *reion, NcHICosmo *cosmo)
 {
   NC_TRANSFER_FUNC_GET_CLASS (tf)->prepare (tf, reion, cosmo);
+  tf->prepared = TRUE;
 }
 
 /**
@@ -92,7 +96,7 @@ nc_transfer_func_prepare_if_needed (NcTransferFunc *tf, NcHIReion *reion, NcHICo
 {
   gboolean cosmo_up = ncm_model_ctrl_update (tf->ctrl_cosmo, NCM_MODEL (cosmo));
   gboolean reion_up = ncm_model_ctrl_update (tf->ctrl_reion, NCM_MODEL (reion));
-  
+
   if (cosmo_up || reion_up)
     NC_TRANSFER_FUNC_GET_CLASS (tf)->prepare (tf, reion, cosmo);
 }
@@ -110,6 +114,7 @@ nc_transfer_func_prepare_if_needed (NcTransferFunc *tf, NcHIReion *reion, NcHICo
 gdouble
 nc_transfer_func_eval (NcTransferFunc *tf, NcHICosmo *cosmo, gdouble kh)
 {
+  NCM_CHECK_PREPARED (tf, nc_transfer_func_eval);
   return NC_TRANSFER_FUNC_GET_CLASS (tf)->calc (tf, kh);
 }
 

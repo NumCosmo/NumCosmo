@@ -153,13 +153,13 @@ growth_J (_NCM_SUNDIALS_INT_TYPE N, realtype z, N_Vector y, N_Vector fy, DlsMat 
 /**
  * nc_growth_func_prepare:
  * @gf: a #NcGrowthFunc
- * @model: a #NcHICosmo
+ * @cosmo: a #NcHICosmo
  *
  * FIXME
  *
  */
 void
-nc_growth_func_prepare (NcGrowthFunc *gf, NcHICosmo *model)
+nc_growth_func_prepare (NcGrowthFunc *gf, NcHICosmo *cosmo)
 {
   gdouble zf, z;
   gint i = _NC_MAX_SPLINE_POINTS - 1;
@@ -200,7 +200,7 @@ nc_growth_func_prepare (NcGrowthFunc *gf, NcHICosmo *model)
 
   CVodeSStolerances (gf->cvode, 1e-13, 0.0);
   CVodeSetMaxNumSteps (gf->cvode, 50000);
-  CVodeSetUserData (gf->cvode, model);
+  CVodeSetUserData (gf->cvode, cosmo);
   CVodeSetStopTime (gf->cvode, 0.0);
 
   g_array_index (y_array, gdouble, i) = 1.0 / _NC_START_Z;
@@ -260,8 +260,8 @@ nc_growth_func_prepare (NcGrowthFunc *gf, NcHICosmo *model)
 /**
  * nc_growth_func_eval:
  * @gf: a #NcGrowthFunc
- * @model: a #NcHICosmo
- * @z: redshift
+ * @cosmo: a #NcHICosmo
+ * @z: redshift $z$
  *
  * FIXME
  *
@@ -270,8 +270,8 @@ nc_growth_func_prepare (NcGrowthFunc *gf, NcHICosmo *model)
 /**
  * nc_growth_func_eval_deriv:
  * @gf: a #NcGrowthFunc
- * @model: a #NcHICosmo
- * @z: redshift
+ * @cosmo: a #NcHICosmo
+ * @z: redshift $z$
  *
  * FIXME
  *
@@ -280,8 +280,8 @@ nc_growth_func_prepare (NcGrowthFunc *gf, NcHICosmo *model)
 /**
  * nc_growth_func_eval_both:
  * @gf: a #NcGrowthFunc
- * @model: a #NcHICosmo
- * @z: redshift
+ * @cosmo: a #NcHICosmo
+ * @z: redshift $z$
  * @d: Growth function
  * @f: Growth function derivative
  *

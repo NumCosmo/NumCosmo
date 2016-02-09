@@ -310,12 +310,13 @@ G_LOCK_DEFINE_STATIC (last_model_id);
  * @ns: model namespace
  * @desc: short description
  * @long_desc: long description
+ * @can_stack: whether the models can stack in a #NcmMSet
  *
  * FIXME
  *
  */
 void
-ncm_mset_model_register_id (NcmModelClass *model_class, const gchar *ns, const gchar *desc, const gchar *long_desc)
+ncm_mset_model_register_id (NcmModelClass *model_class, const gchar *ns, const gchar *desc, const gchar *long_desc, gboolean can_stack)
 {
   if (model_class->model_id < 0)
   {
@@ -323,6 +324,8 @@ ncm_mset_model_register_id (NcmModelClass *model_class, const gchar *ns, const g
     guint id;
     NcmMSetClass *mset_class = g_type_class_ref (NCM_TYPE_MSET);
     G_LOCK (last_model_id);
+
+    model_class->can_stack = can_stack;
 
     model_class->model_id = last_model_id * NCM_MSET_MAX_SUBMODEL;
     id = last_model_id;
@@ -385,7 +388,7 @@ ncm_mset_empty_new (void)
  * Returns: FIXME
  */
 NcmMSet *
-ncm_mset_new (NcmModel *model0, ...)
+ncm_mset_new (gpointer model0, ...)
 {
   NcmMSet *mset;
   va_list ap;
@@ -407,7 +410,7 @@ ncm_mset_new (NcmModel *model0, ...)
  * Returns: (transfer full): FIXME
  */
 NcmMSet *
-ncm_mset_newv (NcmModel *model0, va_list ap)
+ncm_mset_newv (gpointer model0, va_list ap)
 {
   NcmMSet *mset = ncm_mset_empty_new ();
   NcmModel *model = NULL;
@@ -679,6 +682,9 @@ ncm_mset_set_pos (NcmMSet *mset, NcmModel *model, guint submodel_id)
     GArray *fpi_array;
     NcmMSetItem *item0;
     guint i;
+
+    if (submodel_id > 0 && !(NCM_MODEL_CLASS (model)->can_stack))
+      g_error ("ncm_mset_set_pos: cannot stack object in NcmMSet, type not allowed.");
 
     ncm_mset_remove (mset, mid);
 

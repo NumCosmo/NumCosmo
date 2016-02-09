@@ -135,7 +135,7 @@ _nc_hicosmo_de_Yp_4He (NcHICosmo *cosmo)
       if (model->pkey != cosmo_de->HE4_Yp_key)
       {
         const gdouble Yp = ncm_spline2d_eval (NC_HICOSMO_DE (cosmo)->BBN_spline2d, wb, DENNU);
-        ncm_vector_set (VECTOR, NC_HICOSMO_DE_HE_YP, Yp);
+        ncm_model_orig_param_set (model, NC_HICOSMO_DE_HE_YP, Yp);
         cosmo_de->HE4_Yp_key = model->pkey;
         /*printf ("# omega_b % 20.15g DeltaNnu % 20.15g Yp % 20.15g\n",  wb, DENNU, Yp);*/
       }

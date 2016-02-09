@@ -142,9 +142,11 @@ static void
 nc_recomb_seager_init (NcRecombSeager *recomb_seager)
 {
 	NcRecomb *recomb = NC_RECOMB (recomb_seager);
+
   recomb_seager->cvode = CVodeCreate (CV_BDF, CV_NEWTON);
   NCM_CVODE_CHECK ((void *)recomb_seager->cvode, "CVodeCreate", 0, );
-	recomb_seager->init    = FALSE;
+
+  recomb_seager->init    = FALSE;
   recomb_seager->opts    = 0;
   recomb_seager->H_fudge = 0.0;
   recomb_seager->AGauss1 = -0.140;

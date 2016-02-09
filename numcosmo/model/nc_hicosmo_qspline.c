@@ -731,7 +731,8 @@ nc_hicosmo_qspline_cont_prior_class_init (NcHICosmoQSplineContPriorClass *klass)
   ncm_mset_model_register_id (model_class,
                               "NcHICosmoQSplineContPrior",
                               "NcHICosmoQSplineContPrior.",
-                              NULL);
+                              NULL,
+                              FALSE);
 
   model_class->valid = &_nc_hicosmo_qspline_cont_prior_valid;
 

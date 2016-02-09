@@ -68,10 +68,10 @@ NcGrowthFunc * nc_growth_func_new (void);
 NcGrowthFunc * nc_growth_func_copy (NcGrowthFunc *gf);
 void nc_growth_func_free (NcGrowthFunc *gf);
 void nc_growth_func_clear (NcGrowthFunc **gf);
-void nc_growth_func_prepare (NcGrowthFunc * gf, NcHICosmo * model);
-G_INLINE_FUNC gdouble nc_growth_func_eval (NcGrowthFunc *gf, NcHICosmo *model, gdouble z);
-G_INLINE_FUNC gdouble nc_growth_func_eval_deriv (NcGrowthFunc *gf, NcHICosmo *model, gdouble z);
-G_INLINE_FUNC void nc_growth_func_eval_both (NcGrowthFunc *gf, NcHICosmo *model, gdouble z, gdouble *d, gdouble *f);
+void nc_growth_func_prepare (NcGrowthFunc * gf, NcHICosmo *cosmo);
+G_INLINE_FUNC gdouble nc_growth_func_eval (NcGrowthFunc *gf, NcHICosmo *cosmo, gdouble z);
+G_INLINE_FUNC gdouble nc_growth_func_eval_deriv (NcGrowthFunc *gf, NcHICosmo *cosmo, gdouble z);
+G_INLINE_FUNC void nc_growth_func_eval_both (NcGrowthFunc *gf, NcHICosmo *cosmo, gdouble z, gdouble *d, gdouble *f);
 
 G_END_DECLS
 
@@ -87,27 +87,27 @@ G_END_DECLS
 G_BEGIN_DECLS
 
 G_INLINE_FUNC gdouble
-nc_growth_func_eval (NcGrowthFunc *gf, NcHICosmo *model, gdouble z)
+nc_growth_func_eval (NcGrowthFunc *gf, NcHICosmo *cosmo, gdouble z)
 {
-  if (ncm_model_ctrl_update (gf->ctrl, NCM_MODEL(model)))
-    nc_growth_func_prepare (gf, model);
+  if (ncm_model_ctrl_update (gf->ctrl, NCM_MODEL (cosmo)))
+    nc_growth_func_prepare (gf, cosmo);
 
   return ncm_spline_eval (gf->s, z);
 }
 
 G_INLINE_FUNC gdouble
-nc_growth_func_eval_deriv (NcGrowthFunc *gf, NcHICosmo *model, gdouble z)
+nc_growth_func_eval_deriv (NcGrowthFunc *gf, NcHICosmo *cosmo, gdouble z)
 {
-  if (ncm_model_ctrl_update (gf->ctrl, NCM_MODEL(model)))
-    nc_growth_func_prepare (gf, model);
+  if (ncm_model_ctrl_update (gf->ctrl, NCM_MODEL (cosmo)))
+    nc_growth_func_prepare (gf, cosmo);
   return ncm_spline_eval_deriv (gf->s, z);
 }
 
 G_INLINE_FUNC void
-nc_growth_func_eval_both (NcGrowthFunc *gf, NcHICosmo *model, gdouble z, gdouble *d, gdouble *f)
+nc_growth_func_eval_both (NcGrowthFunc *gf, NcHICosmo *cosmo, gdouble z, gdouble *d, gdouble *f)
 {
-  if (ncm_model_ctrl_update (gf->ctrl, NCM_MODEL(model)))
-    nc_growth_func_prepare (gf, model);
+  if (ncm_model_ctrl_update (gf->ctrl, NCM_MODEL (cosmo)))
+    nc_growth_func_prepare (gf, cosmo);
   *d = ncm_spline_eval (gf->s, z);
   *f = ncm_spline_eval_deriv (gf->s, z);
 }

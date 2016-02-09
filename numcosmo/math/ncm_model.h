@@ -76,6 +76,7 @@ struct _NcmModelClass
   void (*set_property) (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec);
   gboolean (*valid) (NcmModel *model);
   NcmModelID model_id;
+  gboolean can_stack;
   gchar *name;
   gchar *nick;
   guint64 impl;

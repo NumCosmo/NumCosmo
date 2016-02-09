@@ -120,7 +120,7 @@ _ncm_fit_esmcmc_constructed (GObject *object)
   for (k = 0; k < esmcmc->nwalkers; k++)
   {
     NcmFit *fit = ncm_fit_dup (esmcmc->fit, esmcmc->ser);
-    
+
     NcmVector *theta_k = ncm_vector_new (esmcmc->fparam_len);
     NcmVector *theta_j = ncm_vector_new (esmcmc->fparam_len);
     NcmVector *thetastar = ncm_vector_new (esmcmc->fparam_len);

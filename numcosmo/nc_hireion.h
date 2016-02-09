@@ -66,6 +66,9 @@ GType nc_hireion_get_type (void) G_GNUC_CONST;
 
 NCM_MSET_MODEL_DECLARE_ID (nc_hireion);
 
+void nc_hireion_free (NcHIReion *reion);
+void nc_hireion_clear (NcHIReion **reion);
+
 gdouble nc_hireion_get_init_x (NcHIReion *reion, NcHICosmo *cosmo);
 gdouble nc_hireion_get_Xe (NcHIReion *reion, NcHICosmo *cosmo, const gdouble lambda, const gdouble Xe_recomb);
 gdouble nc_hireion_get_tau (NcHIReion *reion, NcHICosmo *cosmo);

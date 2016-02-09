@@ -116,6 +116,16 @@ extern guint fftw_default_flags;
 
 #define NCM_CFG_DATA_DIR_ENV "NUMCOSMO_DATA_DIR"
 
+#ifdef NUMCOSMO_CHECK_PREPARE
+#define NCM_CHECK_PREPARED(obj,name) \
+G_STMT_START { \
+  if (!obj->prepared) \
+    g_error ("calling method %s on an unprepared instance.", #name); \
+} G_STMT_END
+#else /* NUMCOSMO_CHECK_PREPARE */
+#define NCM_CHECK_PREPARED(obj,name)
+#endif /* NUMCOSMO_CHECK_PREPARE */
+
 #if (GLIB_MAJOR_VERSION == 2) && (GLIB_MINOR_VERSION < 32)
 #define _NCM_MUTEX_LOCK(l) g_static_mutex_lock (l)
 #define _NCM_MUTEX_UNLOCK(l) g_static_mutex_unlock (l)

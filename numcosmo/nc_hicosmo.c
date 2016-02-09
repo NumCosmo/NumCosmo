@@ -73,7 +73,8 @@ nc_hicosmo_class_init (NcHICosmoClass *klass)
   ncm_mset_model_register_id (model_class,
                               "NcHICosmo",
                               "Homogeneous and isotropic cosmological models.",
-                              NULL);
+                              NULL,
+                              FALSE);
 
   ncm_model_class_check_params_info (model_class);
 

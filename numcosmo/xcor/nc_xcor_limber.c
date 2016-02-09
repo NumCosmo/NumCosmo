@@ -244,9 +244,12 @@ static void nc_xcor_limber_class_init (NcXcorLimberClass* klass)
 	ncm_model_class_set_name_nick (model_class, "Xcor limber", "Xcor-limber");
 	ncm_model_class_add_params (model_class, 0, 0, 1);
 
-	ncm_mset_model_register_id (model_class, "NcXcorLimber", "Cluster mass observable relation models (this at "
-                                                           "line 297 of nc_cor_limber.c, to be modified "
-	                                                         "accordingly).",
-	                            NULL);
+	ncm_mset_model_register_id (model_class, 
+                              "NcXcorLimber", 
+                              "Cluster mass observable relation models (this at "
+                              "line 297 of nc_cor_limber.c, to be modified "
+                              "accordingly).",
+                              NULL,
+                              TRUE);
 	ncm_model_class_check_params_info (NCM_MODEL_CLASS (klass));
 }

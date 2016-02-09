@@ -51,6 +51,7 @@ struct _NcTransferFunc
   GObject parent_instance;
   NcmModelCtrl *ctrl_cosmo;
   NcmModelCtrl *ctrl_reion;
+  gboolean prepared;
 };
 
 struct _NcTransferFuncClass
