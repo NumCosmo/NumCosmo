@@ -177,37 +177,6 @@ _nc_data_hubble_mean_func (NcmDataGaussDiag *diag, NcmMSet *mset, NcmVector *vp)
   }
 }
 
-#ifdef NUMCOSMO_HAVE_SQLITE3
-static const gchar *_nc_data_hubble_function_query[] =
-{
-  "Simon 2005 H(z) sample", "SELECT z,p,s FROM kinematics WHERE param='Hz_Simon2005' ORDER BY z",
-  "Cabre sample", "SELECT z,p,s FROM kinematics WHERE param='H_CABRE' ORDER BY z",
-  "Stern 2009 H(z) sample", "SELECT z,p,s FROM kinematics WHERE param='Hz_Stern2009' ORDER BY z",
-  "Moresco 2012 H(z) BC03  sample", "SELECT z,p,s FROM kinematics WHERE param='BC03_Moresco2012' ORDER BY z",
-  "Moresco 2012 H(z) MaStro sample", "SELECT z,p,s FROM kinematics WHERE param='MaStro_Moresco2012' ORDER BY z",
-  "Busca 2013 H(z) BAO+WMAP sample", "SELECT z,p,s FROM kinematics WHERE param='BAO+WMAP_Busca2013' ORDER BY z",
-  "Riess 2008 HST Project sample", "SELECT z,p,s FROM kinematics WHERE param='HST_Riess2008' ORDER BY z",
-  "Zhang 2012 Sloan sample", "SELECT z,p,s FROM kinematics WHERE param='SloanDR7_Zhang2012' ORDER BY z",
-};
-#endif
-
-/**
- * nc_data_hubble_new:
- * @id: FIXME
- *
- * FIXME
- *
- * Returns: FIXME
- */
-NcmData *
-nc_data_hubble_new (NcDataHubbleId id)
-{
-  NcmData *data = g_object_new (NC_TYPE_DATA_HUBBLE,
-                                NULL);
-  nc_data_hubble_set_sample (NC_DATA_HUBBLE (data), id);
-  return data;
-}
-
 void 
 _nc_data_hubble_set_size (NcmDataGaussDiag *diag, guint np)
 {
@@ -224,58 +193,83 @@ _nc_data_hubble_set_size (NcmDataGaussDiag *diag, guint np)
 }
 
 /**
- * nc_data_hubble_set_sample:
- * @hubble: a #NcDataHubble.
- * @id: FIXME
+ * nc_data_hubble_new_empty:
  *
  * FIXME
  *
+ * Returns: FIXME
  */
-void
-nc_data_hubble_set_sample (NcDataHubble *hubble, NcDataHubbleId id)
+NcDataHubble *
+nc_data_hubble_new_empty (void)
 {
-#ifdef NUMCOSMO_HAVE_SQLITE3
-  NcmData *data = NCM_DATA (hubble);
-  NcmDataGaussDiag *diag = NCM_DATA_GAUSS_DIAG (hubble);
-  
-  g_assert (id < NC_DATA_HUBBLE_NSAMPLES);
+  NcDataHubble *hubble = g_object_new (NC_TYPE_DATA_HUBBLE,
+                                       NULL);
+  return hubble;
+}
 
+/**
+ * nc_data_hubble_new_from_file:
+ * @filename: file containing a serialized #NcDataHubble
+ * 
+ * Creates a new #NcDataHubble from @filename.
+ * 
+ * Returns: (transfer full): the newly created #NcDataHubble.
+ */
+NcDataHubble *
+nc_data_hubble_new_from_file (const gchar *filename)
+{
+  NcDataHubble *hubble = NC_DATA_HUBBLE (ncm_serialize_global_from_file (filename));
+  g_assert (NC_IS_DATA_HUBBLE (hubble));
+
+  return hubble;
+}
+
+/**
+ * nc_data_hubble_new_from_id:
+ * @id: a #NcDataHubbleId
+ *
+ * FIXME
+ *
+ * Returns: FIXME
+ */
+NcDataHubble *
+nc_data_hubble_new_from_id (NcDataHubbleId id)
+{
+  NcDataHubble *hubble;
+  gchar *filename;
+  switch (id)
   {
-    const gchar *query = _nc_data_hubble_function_query[id * 2 + 1];
-    gint i, nrow, qncol, ret;
-    gchar **res;
-    gchar *err_str;
-
-    sqlite3 *db = ncm_cfg_get_default_sqlite3 ();
-
-    ncm_data_set_desc (data, _nc_data_hubble_function_query[id * 2]);    
-
-    g_assert (db != NULL);  
-
-    ret = sqlite3_get_table (db, query, &res, &nrow, &qncol, &err_str);
-    if (ret != SQLITE_OK)
-    {
-      sqlite3_free_table (res);
-      g_error ("nc_data_hubble_set_sample: Query error: %s", err_str);
-    }
-
-    g_assert_cmpint (nrow, >, 0);
-
-    ncm_data_gauss_diag_set_size (diag, nrow);
-
-    for (i = 0; i < nrow; i++)
-    {
-      gint j = 0;
-      ncm_vector_set (hubble->x,   i, atof (res[(i + 1) * qncol + j++]));
-      ncm_vector_set (diag->y,     i, atof (res[(i + 1) * qncol + j++]));  
-      ncm_vector_set (diag->sigma, i, atof (res[(i + 1) * qncol + j++]));
-    }
-
-    sqlite3_free_table (res);
-
-    ncm_data_set_init (data, TRUE);
+    case NC_DATA_HUBBLE_SIMON2005:
+      filename = ncm_cfg_get_data_filename ("nc_data_hubble_simon2005.obj", TRUE);
+      break;
+    case NC_DATA_HUBBLE_CABRE:
+      filename = ncm_cfg_get_data_filename ("nc_data_hubble_cabre.obj", TRUE);
+      break;
+    case NC_DATA_HUBBLE_STERN2009:
+      filename = ncm_cfg_get_data_filename ("nc_data_hubble_stern2009.obj", TRUE);
+      break;
+    case NC_DATA_HUBBLE_MORESCO2012_BC03:
+      filename = ncm_cfg_get_data_filename ("nc_data_hubble_moresco2012_bc03.obj", TRUE);
+      break;
+    case NC_DATA_HUBBLE_MORESCO2012_MASTRO:
+      filename = ncm_cfg_get_data_filename ("nc_data_hubble_moresco2012_mastro.obj", TRUE);
+      break;
+    case NC_DATA_HUBBLE_BUSCA2013_BAO_WMAP:
+      filename = ncm_cfg_get_data_filename ("nc_data_hubble_busca2013_bao_wmap.obj", TRUE);
+      break;
+    case NC_DATA_HUBBLE_RIESS2008_HST:
+      filename = ncm_cfg_get_data_filename ("nc_data_hubble_riess2008_hst.obj", TRUE);
+      break;
+    case NC_DATA_HUBBLE_ZHANG2012:
+      filename = ncm_cfg_get_data_filename ("nc_data_hubble_zhang2012.obj", TRUE);
+      break;
+    default:
+      g_error ("nc_data_hubble_new_from_id: id %d not recognized.", id);
+      break;
   }
-#else
-  g_error (PACKAGE_NAME" compiled without support for sqlite3, Hubble data not avaliable.");
-#endif
+
+  hubble = nc_data_hubble_new_from_file (filename);
+  g_free (filename);
+
+  return hubble;
 }

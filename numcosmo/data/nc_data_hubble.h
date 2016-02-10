@@ -84,10 +84,12 @@ struct _NcDataHubbleClass
 
 GType nc_data_hubble_get_type (void) G_GNUC_CONST;
 
-NcmData *nc_data_hubble_new (NcDataHubbleId id);
+NcDataHubble *nc_data_hubble_new_empty (void);
+NcDataHubble *nc_data_hubble_new_from_file (const gchar *filename);
+NcDataHubble *nc_data_hubble_new_from_id (NcDataHubbleId id);
+
 void nc_data_hubble_set_sample (NcDataHubble *hubble, NcDataHubbleId id);
 
 G_END_DECLS
 
 #endif /* _NC_DATA_HUBBLE_H_ */
-

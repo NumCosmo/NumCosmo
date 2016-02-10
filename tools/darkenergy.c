@@ -353,9 +353,9 @@ main (gint argc, gchar *argv[])
       const GEnumValue *H_id = ncm_cfg_get_enum_by_id_name_nick (NC_TYPE_DATA_HUBBLE_ID, H_id_i);
       if (H_id != NULL)
       {
-        NcmData *H_data = nc_data_hubble_new (H_id->value);
-        ncm_dataset_append_data (dset, H_data);
-        ncm_data_free (H_data);
+        NcDataHubble *H_data = nc_data_hubble_new_from_id (H_id->value);
+        ncm_dataset_append_data (dset, NCM_DATA (H_data));
+        ncm_data_free (NCM_DATA (H_data));
       }
       else
         g_error ("Hubble sample '%s' not found run --H-list to list the available options", H_id_i);

@@ -23,6 +23,14 @@ data_observational_DATA = \
 	nc_data_cmb_wmap5_dist_priors.obj      \
 	nc_data_cmb_wmap7_dist_priors.obj      \
 	nc_data_cmb_wmap9_dist_priors.obj      \
+	nc_data_hubble_busca2013_bao_wmap.obj  \
+	nc_data_hubble_cabre.obj               \
+	nc_data_hubble_moresco2012_bc03.obj    \
+	nc_data_hubble_moresco2012_mastro.obj  \
+	nc_data_hubble_riess2008_hst.obj       \
+	nc_data_hubble_stern2009.obj           \
+	nc_data_hubble_simon2005.obj           \
+	nc_data_hubble_zhang2012.obj           \
 	nc_data_snia_diag_cfa3.obj             \
 	nc_data_snia_diag_essence.obj          \
 	nc_data_snia_diag_gold_157.obj         \

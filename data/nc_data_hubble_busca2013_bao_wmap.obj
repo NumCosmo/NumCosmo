@@ -1,0 +1,13 @@
+{
+  'NcDataHubble', 
+  {
+    'desc':      <'Busca 2013 H(z) BAO+WMAP sample'>, 
+    'long-desc': <''>, 
+    'init':      <true>, 
+    'n-points':  <uint32 1>, 
+    'w-mean':    <false>, 
+    'mean':      <[223.74]>, 
+    'sigma':     <[  7.92]>, 
+    'z':         <[  2.3 ]>
+  }
+}
