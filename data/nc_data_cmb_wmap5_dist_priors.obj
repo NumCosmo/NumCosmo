@@ -1,0 +1,13 @@
+{
+  'NcDataCMBDistPriors', 
+  {
+    'desc':      <'WMAP5 distance priors'>, 
+    'long-desc': <'WMAP5 Distance priors data (arXiv:0803.0547), (astro-ph/0604051)'>, 
+    'init':      <true>, 
+    'n-points':  <uint32 3>, 
+    'mean':      <[  302.1  ,    1.71 , 1090.04 ]>, 
+    'inv-cov':   <[[   1.8  ,   27.968,   -1.103], 
+                   [  27.968, 5667.577,  -92.263], 
+                   [  -1.103, -92.263 ,    2.923]]>
+  }
+}

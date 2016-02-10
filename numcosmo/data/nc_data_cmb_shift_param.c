@@ -243,13 +243,13 @@ nc_data_cmb_shift_param_new_from_id (NcDistance *dist, NcDataCMBId id)
   switch (id)
   {
     case NC_DATA_CMB_SHIFT_PARAM_WMAP3:
-      filename = ncm_cfg_get_data_filename ("nc_data_cmb_wmap3_shift_parameter.obj", TRUE);
+      filename = ncm_cfg_get_data_filename ("nc_data_cmb_wmap3_shift_param.obj", TRUE);
       break;
     case NC_DATA_CMB_SHIFT_PARAM_WMAP5:
-      filename = ncm_cfg_get_data_filename ("nc_data_cmb_wmap5_shift_parameter.obj", TRUE);
+      filename = ncm_cfg_get_data_filename ("nc_data_cmb_wmap5_shift_param.obj", TRUE);
       break;
     case NC_DATA_CMB_SHIFT_PARAM_WMAP7:
-      filename = ncm_cfg_get_data_filename ("nc_data_cmb_wmap7_shift_parameter.obj", TRUE);
+      filename = ncm_cfg_get_data_filename ("nc_data_cmb_wmap7_shift_param.obj", TRUE);
       break;
     default:
       g_error ("nc_data_cmb_shift_param_new_from_id: id %d not recognized.", id);
