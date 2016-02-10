@@ -70,8 +70,7 @@ nc_data_cmb_dist_priors_set_property (GObject *object, guint prop_id, const GVal
   switch (prop_id)
   {
     case PROP_DIST:
-      nc_distance_clear (&cmb_dist_priors->dist);
-      cmb_dist_priors->dist = g_value_dup_object (value);
+      nc_data_cmb_dist_priors_set_dist (cmb_dist_priors, g_value_get_object (value));
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -199,7 +198,6 @@ nc_data_cmb_dist_priors_new_from_file (const gchar *filename)
 
   return cmb_dist_priors;
 }
-
 
 /**
  * nc_data_cmb_dist_priors_new_from_id:

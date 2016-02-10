@@ -278,9 +278,9 @@ main (gint argc, gchar *argv[])
 
     if (snia_id->value >= NC_DATA_SNIA_SIMPLE_START && snia_id->value <= NC_DATA_SNIA_SIMPLE_END)
     {
-      NcmData *snia = nc_data_dist_mu_new (dist, snia_id->value);
-      ncm_dataset_append_data (dset, snia);
-      ncm_data_free (snia);
+      NcDataDistMu *dist_mu = nc_data_dist_mu_new_from_id (dist, snia_id->value);
+      ncm_dataset_append_data (dset, NCM_DATA (dist_mu));
+      ncm_data_free (NCM_DATA (dist_mu));
     }
     else if (snia_id->value >= NC_DATA_SNIA_COV_START && snia_id->value <= NC_DATA_SNIA_COV_END)
     {
