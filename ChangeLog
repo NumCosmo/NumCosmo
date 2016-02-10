@@ -2,6 +2,159 @@ CHANGELOG
 ----------------------
 
 [Current]
+ * Bumped to v0.13.1
+
+ * Now using ax_cc_maxopt to detect the best optimization flags (removing
+     fast-math if included).
+
+ * Removed dependency in Sqlite3.
+
+ * Moved all Hubble data from sqlite3 to .boj files.
+
+ * Moved all SNIa data from SQLite to obj files.
+
+ * Fixed names of nc_data_cmb_wmap?_shift_param.obj files. Moved all distance
+     priors data to obj files.
+
+ * Moved shift parameter data to obj files. Fixed bug in NcmLikelihood. Removed
+     old shift parameter constants in NcmC.
+
+ * Added stackable and nonstackable models option.
+
+ * Fixed doc not including NcmSplineCubic*. Finished support for NcmSpline2d
+     serialization. Fixed typo in NcPlanckFI. Advanced in the class background.c
+     replacement. Added 4He Yp from BBN interpolation table in NcHICosmoDE
+     models.
+
+ * Reorganized functions names in NcHICosmo, mostly for documentation reasons.
+
+ * Internal reorganization.
+
+ * Fixed typo in nc_recomb_seager.c (missing 1/3 factor).
+
+ * Added more doc in NcRecombSeager and removed old code.
+
+ * Finished all He switches in NcRecombSeager. (Working in progress)
+
+ * Updating recombination code to match the theory used in recfast 1.5.2.
+
+ * Updating constants in NcmC namespace.
+
+     Updated CODATA constants from the last release of 2014. Included concise
+     atomic weights from IUPAC. Organized astronomical constants using IAU
+     recommendations. Included concise atomic spectra from NIST database. 
+     Included references for the constants. Updated constants.txt to reflect the
+     2014 CODATA release.
+
+     Updated/added documentation for most functions in NcmC.
+
+     Updated all objects to conform to the new names for the constants in NcmC.
+
+     Updated CLASS thermodynamics.c, arrays.h and arrays.c.
+
+     Working in progress in joining/comparing CLASS thermodynamics and NcRecomb.
+
+ * Implemented function to compute 1-3 sigma error bars for the best fit.
+
+ * Added message to be print when mode_error (mcat_analyze) is called.
+
+ * mcat_analyze: implemented options mode_errors and median_errors. They provide
+     the mode (median) and the 1-3 sigma error bars of a parameter.
+
+ * Implemented functions to perform Planck-CLASH analyses considering flat priors 
+     for the selection and mass functions.
+
+ * Fixed typo.
+
+ * New NcHIReion* objects. Moved Yp to the cosmological model NcHICosmo.
+
+     Added new NcHIReion* objects to implement reionization models. Included
+     CAMB like reionization NcHIReionCamb. The reparametrization object
+     NcHIReionCambReparamTau permits the
+      usage of tau_reion as the parameter for NcHIReionCamb.
+
+ * New reionization objects (in development). Fixed minor bugs (including bugs in
+     libcuba). Unstable boltzmann codes (in development).
+
+ * Fixed sampling function of nc_data_cluster_pseudo_counts (and
+     nc_cluster_mass_plcl).
+
+ * Script to perform ESMCMC analysis of the Planck-CLASH clusters.
+
+ * Added build hook to copy modified doc files to the building directory.
+
+ * Fixed types in test_nc_recomb.c.
+
+ * Missing file.
+
+ * Missing files.
+
+ * Improved documentation.
+
+ * Documentation about GObject (basic concepts).
+
+ * Updating recombination code.
+
+ * Documentation
+
+ * Removing support for clapack usage (some headers are broken).
+
+ * Fixed minor bugs,
+
+ * Fixed typos on README.md file. Imrpoved documentation. Function
+     nc_data_cluster_pseudo_counts_init_from_sampling created. Sampling of
+     cluster pseudo counts is working.
+
+ * Better organization of Bolztmann code options and NcHIPrim implementation
+     example.
+
+ * Fixed all virtual functions in abstract classes to be recognized as such by the
+     GObject introspection. Created new NcmModelBuilder to create NcmModel from
+     binded language. Added a new example for this new feature.
+
+ * Made gtkdoc optional (testing).
+
+ * Improved NcmDataGaussCov tests.
+
+ * Added support to GSL-2.0.
+
+ * Removed spurious print from NcmModelTest. Added control on OPENMP in
+     ncm_cfg_init.
+
+ * Fixed parameter name in NcCBEPrecision.
+
+ * Fixed memory leaks and vector parameter allocation in NcmMSet (very obscure
+     bugs only active in weird cases). Added name and nick for every Model for
+     debug purposes.
+
+ * Fixed leak in numcosmo/nc_cbe_precision.c. And improved tests.
+
+ * Updated macro NCM_TEST_FREE to use a safer method.
+
+ * Add VERBOSE = 1 in make check.
+
+ * New function ncm_mset_trans_kern_gauss_set_cov_from_rescale.
+
+ * Fixed reallocation problem.
+
+ * Added gi.require_version in python examples. Fixed opendir leak in libclik
+     (plc-2.0).
+
+ * Fixed typo.
+
+ * Fixed return statement in clik_get_check_param.
+
+ * Fixed fprintf usage in class.
+
+ * Removed data repetition.
+
+ * Fixed reference.
+
+ * new NcHIprimAtan object (primordial spectrum power law x atan). New mset_gen
+     tool to generate .mset files. Added flag controling the tensor mode usage
+     in NcHIPertBotlzmannCBE. New references (to the atan models). Bumped to
+     version 0.13.0.
+
 
 [v0.13.0]
  * new NcHIprimAtan object (primordial spectrum power law x atan). New mset_gen
