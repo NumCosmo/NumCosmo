@@ -352,15 +352,6 @@ G_INLINE_FUNC long double ncm_c_stats_3sigma (void) G_GNUC_CONST;
  * START: Observational data
  *******************************************************************************/
 
-G_INLINE_FUNC gdouble ncm_c_wmap3_cmb_z (void) G_GNUC_CONST;
-G_INLINE_FUNC gdouble ncm_c_wmap3_cmb_R (void) G_GNUC_CONST;
-G_INLINE_FUNC gdouble ncm_c_wmap3_cmb_sigma_R (void) G_GNUC_CONST;
-G_INLINE_FUNC gdouble ncm_c_wmap5_cmb_z (void) G_GNUC_CONST;
-G_INLINE_FUNC gdouble ncm_c_wmap5_cmb_R (void) G_GNUC_CONST;
-G_INLINE_FUNC gdouble ncm_c_wmap5_cmb_sigma_R (void) G_GNUC_CONST;
-G_INLINE_FUNC gdouble ncm_c_wmap7_cmb_z (void) G_GNUC_CONST;
-G_INLINE_FUNC gdouble ncm_c_wmap7_cmb_R (void) G_GNUC_CONST;
-G_INLINE_FUNC gdouble ncm_c_wmap7_cmb_sigma_R (void) G_GNUC_CONST;
 G_INLINE_FUNC gdouble ncm_c_wmap5_coadded_I_K (void) G_GNUC_CONST;
 G_INLINE_FUNC gdouble ncm_c_wmap5_coadded_I_Ka (void) G_GNUC_CONST;
 G_INLINE_FUNC gdouble ncm_c_wmap5_coadded_I_Q (void) G_GNUC_CONST;
@@ -991,33 +982,6 @@ G_INLINE_FUNC long double ncm_c_stats_3sigma (void)
 /*******************************************************************************
  * START: Observational data
  *******************************************************************************/
-
-G_INLINE_FUNC gdouble ncm_c_wmap3_cmb_z (void)
-{ return 1089.0; }
-
-G_INLINE_FUNC gdouble ncm_c_wmap3_cmb_R (void)
-{ return 1.70; }
-
-G_INLINE_FUNC gdouble ncm_c_wmap3_cmb_sigma_R (void)
-{ return 0.03; }
-
-G_INLINE_FUNC gdouble ncm_c_wmap5_cmb_z (void)
-{ return 1090.0; }
-
-G_INLINE_FUNC gdouble ncm_c_wmap5_cmb_R (void)
-{ return 1.71; }
-
-G_INLINE_FUNC gdouble ncm_c_wmap5_cmb_sigma_R (void)
-{ return 0.019; }
-
-G_INLINE_FUNC gdouble ncm_c_wmap7_cmb_z (void)
-{ return 1091.3; }
-
-G_INLINE_FUNC gdouble ncm_c_wmap7_cmb_R (void)
-{ return 1.725; }
-
-G_INLINE_FUNC gdouble ncm_c_wmap7_cmb_sigma_R (void)
-{ return 0.018; }
 
 G_INLINE_FUNC gdouble ncm_c_wmap5_coadded_I_K (void)
 { return 1.436; }

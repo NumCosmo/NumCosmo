@@ -1067,8 +1067,9 @@ nc_recomb_v_tau_lambda_mode (NcRecomb *recomb, NcHICosmo *cosmo)
 {
   _nc_recomb_func func;
   gsl_function F;
-  const gdouble lambda_ref = -log (10.0 * ncm_c_wmap5_cmb_z () + 10.0);
-  const gdouble lambda_try = -log (ncm_c_wmap5_cmb_z () + 1.0);
+  const gdouble cmb_ref_z = 1090.0;
+  const gdouble lambda_ref = -log (10.0 * cmb_ref_z + 10.0);
+  const gdouble lambda_try = -log (cmb_ref_z + 1.0);
 
   F.function = &_nc_recomb_v_tau_min;
   F.params = &func;
@@ -1109,8 +1110,9 @@ nc_recomb_v_tau_lambda_features (NcRecomb *recomb, NcHICosmo *cosmo, gdouble log
   gsl_function F;
   gdouble log_v_tau_max;
   gdouble log_v_tau_f;
-  const gdouble lambda_ref = -log (10.0 * ncm_c_wmap5_cmb_z () + 10.0);
-  const gdouble lambda_try = -log (ncm_c_wmap5_cmb_z () + 1.0);
+  const gdouble cmb_ref_z = 1090.0;
+  const gdouble lambda_ref = -log (10.0 * cmb_ref_z + 10.0);
+  const gdouble lambda_try = -log (cmb_ref_z + 1.0);
 
   F.function = &_nc_recomb_v_tau_min;
   F.params = &func;
@@ -1154,6 +1156,7 @@ nc_recomb_tau_zstar (NcRecomb *recomb, NcHICosmo *cosmo)
 {
   _nc_recomb_func func;
   gsl_function F;
+  const gdouble cmb_ref_z = 1090.0;
 
   F.function = &_nc_recomb_tau_ref;
   F.params = &func;
@@ -1163,7 +1166,7 @@ nc_recomb_tau_zstar (NcRecomb *recomb, NcHICosmo *cosmo)
   func.ref    = 1.0;
 
   return _nc_recomb_root (recomb, &F,
-                          -log (10.0 * ncm_c_wmap5_cmb_z () + 10.0),
+                          -log (10.0 * cmb_ref_z + 10.0),
                           recomb->lambdaf);
 }
 

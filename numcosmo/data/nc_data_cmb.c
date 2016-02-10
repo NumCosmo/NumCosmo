@@ -59,8 +59,11 @@ nc_data_cmb_create (NcDistance *dist, NcDataCMBId id)
     case NC_DATA_CMB_SHIFT_PARAM_WMAP3:
     case NC_DATA_CMB_SHIFT_PARAM_WMAP5:
     case NC_DATA_CMB_SHIFT_PARAM_WMAP7:
-      return nc_data_cmb_shift_param_new (dist, id);
+    {
+      NcDataCMBShiftParam *cmb_dist_prior = nc_data_cmb_shift_param_new_from_id (dist, id);
+      return NCM_DATA (cmb_dist_prior);
       break;
+    }
     case NC_DATA_CMB_DIST_PRIORS_WMAP5:
     case NC_DATA_CMB_DIST_PRIORS_WMAP7:
     case NC_DATA_CMB_DIST_PRIORS_WMAP9:

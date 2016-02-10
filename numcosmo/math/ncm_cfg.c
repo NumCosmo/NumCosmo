@@ -120,6 +120,8 @@
 #include "data/nc_data_bao_empirical_fit.h"
 #include "data/nc_data_bao_dhr_dar.h"
 #include "data/nc_data_cluster_pseudo_counts.h"
+#include "data/nc_data_cmb_shift_param.h"
+#include "data/nc_data_cmb_dist_priors.h"
 #include "xcor/nc_xcor.h"
 #include "xcor/nc_xcor_limber.h"
 #include "xcor/nc_xcor_limber_gal.h"
@@ -384,6 +386,9 @@ ncm_cfg_init (void)
   ncm_cfg_register_obj (NC_TYPE_DATA_BAO_DHR_DAR);
 
   ncm_cfg_register_obj (NC_TYPE_DATA_CLUSTER_PSEUDO_COUNTS);
+
+  ncm_cfg_register_obj (NC_TYPE_DATA_CMB_SHIFT_PARAM);
+  ncm_cfg_register_obj (NC_TYPE_DATA_CMB_DIST_PRIORS);
 
   ncm_cfg_register_obj (NC_TYPE_XCOR);
   ncm_cfg_register_obj (NC_TYPE_XCOR_LIMBER);

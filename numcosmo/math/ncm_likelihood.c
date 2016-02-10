@@ -613,6 +613,10 @@ ncm_likelihood_m2lnL_val (NcmLikelihood *lh, NcmMSet *mset, gdouble *m2lnL)
     ncm_likelihood_priors_m2lnL_vec (lh, mset, priors_m2lnL_v);
     ncm_vector_free (priors_m2lnL_v);
   }
+  else
+  {
+    ncm_dataset_m2lnL_vec (lh->dset, mset, lh->m2lnL_v);
+  }
 
   *m2lnL = ncm_vector_sum_cpts (lh->m2lnL_v);
   return;

@@ -1607,42 +1607,6 @@ ncm_c_class_init (NcmCClass *klass)
  *******************************************************************************/
 
 /**
- * ncm_c_wmap3_cmb_z:
- *
- * Returns: Wmap3 last scatering redshift.
- *
- */
-/**
- * ncm_c_wmap3_cmb_R:
- *
- * Returns: Wmap3 last scatering shift parameter.
- *
- */
-/**
- * ncm_c_wmap3_cmb_sigma_R:
- *
- * Returns: Wmap3 last scatering shift parameter standard deviation.
- *
- */
-/**
- * ncm_c_wmap5_cmb_z:
- *
- * Returns: Wmap5 last scatering redshift.
- *
- */
-/**
- * ncm_c_wmap5_cmb_R:
- *
- * Returns: Wmap5 last scatering shift parameter.
- *
- */
-/**
- * ncm_c_wmap5_cmb_sigma_R:
- *
- * Returns: Wmap5 last scatering shift parameter standard deviation.
- *
- */
-/**
  * ncm_c_wmap5_coadded_I_K:
  *
  * Returns: FIXME
