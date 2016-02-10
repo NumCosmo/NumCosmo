@@ -37,9 +37,6 @@
 #ifndef NUMCOSMO_GIR_SCAN
 #include <gmp.h>
 #endif /* NUMCOSMO_GIR_SCAN */
-#ifdef NUMCOSMO_HAVE_SQLITE3
-#include <sqlite3.h>
-#endif
 #include <numcosmo/math/ncm_spline.h>
 
 G_BEGIN_DECLS
@@ -91,10 +88,6 @@ LOAD_SAVE_VECTOR_MATRIX_DEF(float)
 LOAD_SAVE_VECTOR_MATRIX_DEF(complex)
 
 gchar *ncm_cfg_get_data_filename (const gchar *filename, gboolean must_exist);
-
-#ifdef NUMCOSMO_HAVE_SQLITE3
-sqlite3 *ncm_cfg_get_default_sqlite3 (void);
-#endif
 
 typedef union _NcmDoubleInt64
 {
@@ -158,8 +151,6 @@ G_STMT_START { \
 #ifndef mpz_clears
 #define mpz_clears ncm_mpz_clears
 #endif /* mpz_inits */
-
-#define NCM_CFG_DEFAULT_SQLITE3_FILENAME "data_observation.sqlite3"
 
 /* Workaround on g_clear_pointer */
 #if ((GLIB_MAJOR_VERSION == 2) && (GLIB_MINOR_VERSION < 34))

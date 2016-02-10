@@ -39,7 +39,6 @@ libnumcosmo_la_LIBADD =     \
 	$(GLIB_LIBS)        \
 	$(NLOPT_LIBS)       \
 	$(GSL_LIBS)         \
-	$(SQLITE3_LIBS)     \
 	$(CFITSIO_LIBS)     \
 	$(LIBCUBA_PLACE)    \
 	plc/libclik.la      \

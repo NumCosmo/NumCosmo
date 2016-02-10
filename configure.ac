@@ -250,7 +250,6 @@ GLIB_REQUIRED_VERSION=2.24.0
 GSL_REQUIRED_VERSION=1.13
 GSL_GLF_REQUIRED_VERSION=1.15
 GSL_ODEIV2_REQUIRED_VERSION=1.15
-SQLITE3_REQUIRED_VERSION=3.6.10
 FFTW3_REQUIRED_VERSION=3.1.2
 FFTW3_ALLOC_VERSION=3.3.2
 
@@ -483,20 +482,6 @@ dnl ***************************************************************************
 
 AC_CHECK_FUNC([__gmpz_init],[],[AC_CHECK_LIB([gmp], [__gmpz_init],,[AC_MSG_ERROR([GMP not found. See README.])])])
 AC_CHECK_FUNC([mpfr_init],[],[AC_CHECK_LIB([mpfr], [mpfr_init],,[AC_MSG_ERROR([MPFR not found. See README.])])])
-
-dnl ***************************************************************************
-dnl Check for sqlite3
-dnl ***************************************************************************
-
-PKG_CHECK_MODULES(SQLITE3, [sqlite3 >= $SQLITE3_REQUIRED_VERSION],[
-  AC_DEFINE([HAVE_SQLITE3],[1], [Have the sqlite database])
-  have_sqlite3_support="#define NUMCOSMO_HAVE_SQLITE3 1"],[
-  have_sqlite3_support=""])
-AC_SUBST(SQLITE3_CFLAGS)
-AC_SUBST(SQLITE3_LIBS)
-AC_SUBST(have_sqlite3_support)
-TEST_SHARED_LIBS="$TEST_SHARED_LIBS $SQLITE3_LIBS"
-TEST_SHARED_CFLAGS="$TEST_SHARED_CFLAGS $SQLITE3_CFLAGS"
 
 dnl ***************************************************************************
 dnl Check for fftw3
@@ -897,12 +882,6 @@ echo " "
 echo "--------------------------------------------------------------------"
 echo " Optional packages:"
 echo "--------------------------------------------------------------------"
-if [ test "x$have_sqlite3_support" != x ]; then
-       echo "Building with SQLite3 support: ..................................YES"
-else
-       echo "Building  with SQLite3 support: ..................................NO"
-       echo "        Requires SQLite3 (>= $SQLITE3_REQUIRED_VERSION)"
-fi
 if [ test "x$have_fftw3_support" != x ]; then
        echo "Building with FFTW3 support: ....................................YES"
 else

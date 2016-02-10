@@ -1491,35 +1491,6 @@ ncm_cfg_get_data_filename (const gchar *filename, gboolean must_exist)
   return full_filename;
 }
 
-#ifdef NUMCOSMO_HAVE_SQLITE3
-/**
- * ncm_cfg_get_default_sqlite3: (skip)
- *
- * FIXME
- *
- * Returns: FIXME
- */
-sqlite3 *
-ncm_cfg_get_default_sqlite3 (void)
-{
-  static sqlite3 *db = NULL;
-  if (db == NULL)
-  {
-    gchar *filename = ncm_cfg_get_data_filename (NCM_CFG_DEFAULT_SQLITE3_FILENAME, TRUE);
-    gint ret;
-
-    ret = sqlite3_open (filename, &db);
-    if (ret  != SQLITE_OK)
-      g_error ("Connection to database failed: %s", sqlite3_errmsg (db));
-
-    g_free (filename);
-
-  }
-
-  return db;
-}
-#endif
-
 /**
  * ncm_cfg_command_line:
  * @argv: FIXME

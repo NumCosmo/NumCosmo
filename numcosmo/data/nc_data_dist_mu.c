@@ -42,10 +42,6 @@
 #include "math/ncm_cfg.h"
 #include "nc_enum_types.h"
 
-#ifdef NUMCOSMO_HAVE_SQLITE3
-#include <sqlite3.h>
-#endif
-
 enum
 {
   PROP_0,
