@@ -139,22 +139,24 @@ dnl ***************************************************************************
 dnl Compiler flags for C
 dnl ***************************************************************************
 NC_CFLAGS="$CFLAGS"
-AC_ARG_ENABLE([opt-compiler-flags], 
-  [  --enable-opt-compiler-flags  Enable all safe and useful speedups compiler flags (change any -O? to -O3 from CFLAGS)], 
+AC_ARG_ENABLE([opt-cflags], 
+  [  --enable-opt-cflags  Enable all safe and useful speedups compiler flags (change any -O? to -O3 from CFLAGS)], 
   [enable_comp_flags="yes"],[])
 if test x$enable_comp_flags = "xyes"; then
+  NC_CFLAGS=$CFLAGS
   NC_CFLAGS=`echo $NC_CFLAGS | $SED 's/\-O[[0123456789]][[ ]]*//g'`
 dnl  NC_CFLAGS=`echo $NC_CFLAGS | $SED 's/\-g[[ ]]*//g'`
-  AX_GCC_ARCHFLAG([no],[nc_march_flag="$ax_cv_gcc_archflag"],[nc_march_flag="-march=native"])
-  AX_CHECK_COMPILE_FLAG([$nc_march_flag],[NC_CFLAGS="$NC_CFLAGS $nc_march_flag"])
-  AX_CHECK_COMPILE_FLAG([-O3],[NC_CFLAGS="$NC_CFLAGS -O3"])
-  AX_CHECK_COMPILE_FLAG([-funroll-loops],[NC_CFLAGS="$NC_CFLAGS -funroll-loops"])
-  AX_CHECK_COMPILE_FLAG([-fno-math-errno],[NC_CFLAGS="$NC_CFLAGS -fno-math-errno"])
-  AX_CHECK_COMPILE_FLAG([-mfpmath=sse],[NC_CFLAGS="$NC_CFLAGS -mfpmath=sse"])
+  CFLAGS=""
+  ac_test_CFLAGS_old=$ac_test_CFLAGS
+  ac_test_CFLAGS=""
+  AX_CC_MAXOPT()
+  CFLAGS="$NC_CFLAGS $CFLAGS"
+  CFLAGS=`echo $CFLAGS | $SED 's/\-ffast-math[[ ]]*//g'`
+  ac_test_CFLAGS=$ac_test_CFLAGS_old
 fi
 
-AC_ARG_ENABLE([warn-compiler-flags], 
-  [  --enable-warn-compiler-flags  Enable all useful warning compiler flags], 
+AC_ARG_ENABLE([warn-cflags], 
+  [  --enable-warn-cflags  Enable all useful warning compiler flags], 
   [enable_warn_flags="yes"],[])
 if test x$enable_warn_flags = "xyes"; then
   NC_CFLAGS=`echo $NC_CFLAGS | $SED 's/\-Wall//g'`
@@ -850,7 +852,7 @@ dnl AC_LINK_IFELSE([int main(){}],[],[])
 dnl LIBS="$SAVE_LIBS"
 dnl CFLAGS="$SAVE_CFLAGS"
 dnl LDFLAGS="SAVE_LDFLAGS"
-CFLAGS="$NC_CFLAGS"
+dnl CFLAGS="$CFLAGS $NC_CFLAGS"
 
 dnl ***************************************************************************
 dnl Setting up
