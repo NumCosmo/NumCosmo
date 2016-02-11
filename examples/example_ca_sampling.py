@@ -3,6 +3,10 @@
 from math import *
 from gi.repository import GObject
 import matplotlib.pyplot as plt
+
+import gi
+gi.require_version('NumCosmo', '1.0')
+gi.require_version('NumCosmoMath', '1.0')
 from gi.repository import NumCosmo as Nc
 from gi.repository import NumCosmoMath as Ncm
 
@@ -16,6 +20,11 @@ Ncm.cfg_init ()
 #  New homogeneous and isotropic cosmological model NcHICosmoDEXcdm 
 #
 cosmo = Nc.HICosmo.new_from_name (Nc.HICosmo, "NcHICosmoDEXcdm")
+
+#
+#  New homogeneous and isotropic reionization object.
+#
+reion = Nc.HIReionCamb.new ()
 
 #
 #  New cosmological distance objects optimizied to perform calculations
@@ -68,7 +77,7 @@ cluster_z = Nc.ClusterRedshift.new_from_name ("NcClusterPhotozGaussGlobal{'pz-mi
 #
 # New Cluster abundance object that uses all objects above
 #
-cad = Nc.ClusterAbundance.new (mf, None, cluster_z, cluster_m)
+cad = Nc.ClusterAbundance.new (mf, None)
 
 #
 # New NcmData object for number count calculations
@@ -80,7 +89,9 @@ ncdata = Nc.DataClusterNCount.new (cad)
 #  and cluster_m as the distribution of the mass-observable relation
 #
 mset = Ncm.MSet ()
+mset.set (reion)
 mset.set (cosmo)
+mset.set (cluster_z)
 mset.set (cluster_m)
 
 #

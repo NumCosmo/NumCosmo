@@ -1083,7 +1083,7 @@ nc_recomb_seager_set_options (NcRecombSeager *recomb_seager, NcRecombSeagerOpt o
       recomb_seager->KX_HeI_2p_3Pmean_grad = NULL;
     }
 
-    ncm_model_ctrl_force_update (recomb->ctrl);
+    ncm_model_ctrl_force_update (recomb->ctrl_cosmo);
     recomb_seager->opts = opts;
   }
 }

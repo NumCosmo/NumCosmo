@@ -62,46 +62,6 @@ G_DEFINE_TYPE (NcClusterAbundance, nc_cluster_abundance, G_TYPE_OBJECT);
 static gdouble _intp_d2N (NcClusterAbundance *cad, NcHICosmo *cosmo, NcClusterRedshift *clusterz, NcClusterMass *clusterm, gdouble lnM, gdouble z) { NCM_UNUSED (cad); NCM_UNUSED (cosmo); NCM_UNUSED (lnM); NCM_UNUSED (z); g_error ("Function d2NdzdlnM_val not implemented or cad not prepared."); return 0.0;};
 static gdouble _N (NcClusterAbundance *cad, NcHICosmo *cosmo, NcClusterRedshift *clusterz, NcClusterMass *clusterm) { NCM_UNUSED (cad); NCM_UNUSED (cosmo); g_error ("Function N_val not implemented or cad not prepared."); return 0.0;};
 
-/**
- * nc_cluster_abundance_new:
- * @mfp: a #NcMassFunction
- * @mbiasf: (allow-none): a #NcHaloBiasFunc
- *
- * This function allocates memory for a new #NcClusterAbundance object and sets its properties to the values from
- * the input arguments.
- *
- * Returns: A new #NcClusterAbundance.
- */
-NcClusterAbundance *
-nc_cluster_abundance_new (NcMassFunction *mfp, NcHaloBiasFunc *mbiasf)
-{
-  NcClusterAbundance *cad = g_object_new (NC_TYPE_CLUSTER_ABUNDANCE,
-                                          "mass-function",    mfp,
-                                          "mean-bias",        mbiasf,
-                                          NULL);
-  return cad;
-}
-
-/**
- * nc_cluster_abundance_nodist_new:
- * @mfp: a #NcMassFunction.
- * @mbiasf: (allow-none): a #NcHaloBiasFunc.
-   *
- * This function allocates memory for a new #NcClusterAbundance object and sets its properties to the values from
- * the input arguments.
- *
- * Returns: A new #NcClusterAbundance.
- */
-NcClusterAbundance *
-nc_cluster_abundance_nodist_new (NcMassFunction *mfp, NcHaloBiasFunc *mbiasf)
-{
-  NcClusterAbundance *cad = g_object_new (NC_TYPE_CLUSTER_ABUNDANCE,
-                                          "mass-function",    mfp,
-                                          "mean-bias",        mbiasf,
-                                          NULL);
-  return cad;
-}
-
 static void
 nc_cluster_abundance_init (NcClusterAbundance *cad)
 {
@@ -121,8 +81,6 @@ nc_cluster_abundance_init (NcClusterAbundance *cad)
   cad->norma = 0.0;
   cad->log_norma = 0.0;
   cad->completeness_factor = 1.0; //0.874737945; (work with Camila and Alex)
-  cad->prepared = FALSE;
-  cad->optimize = TRUE;
 
 #define D2NDZDLNM_Z(cad) ((cad)->d2NdzdlnM->yv)
 #define D2NDZDLNM_LNM(cad) ((cad)->d2NdzdlnM->xv)
@@ -151,64 +109,9 @@ nc_cluster_abundance_init (NcClusterAbundance *cad)
   ncm_matrix_free (integ_lnM_z_knots);
 
   cad->ctrl_cosmo = ncm_model_ctrl_new (NULL);
-  cad->ctrl_z = ncm_model_ctrl_new (NULL);
-  cad->ctrl_m = ncm_model_ctrl_new (NULL);
-}
-
-/**
- * nc_cluster_abundance_copy:
- * @cad: a #NcClusterAbundance.
- *
- * Duplicates the #NcClusterAbundance object setting the same values of the original propertities.
- *
- * Returns: (transfer full): A new #NcClusterAbundance.
-   */
-NcClusterAbundance *
-nc_cluster_abundance_copy (NcClusterAbundance *cad)
-{
-  return nc_cluster_abundance_new (cad->mfp, cad->mbiasf);
-}
-
-/**
- * nc_cluster_abundance_ref:
- * @cad: a #NcClusterAbundance
- *
- * Increases the reference count of @cad by one.
- *
- * Returns: (transfer full): @cad
-   */
-NcClusterAbundance *
-nc_cluster_abundance_ref (NcClusterAbundance *cad)
-{
-  return g_object_ref (cad);
-}
-
-/**
- * nc_cluster_abundance_free:
- * @cad: a #NcClusterAbundance
- *
- * Atomically decrements the reference count of @cad by one. If the reference count drops to 0,
- * all memory allocated by @cad is released.
- *
- */
-void
-nc_cluster_abundance_free (NcClusterAbundance *cad)
-{
-  g_object_unref (cad);
-}
-
-/**
- * nc_cluster_abundance_clear:
- * @cad: a #NcClusterAbundance
- *
- * Atomically decrements the reference count of @cad by one. If the reference count drops to 0,
- * all memory allocated by @cad is released.
- *
- */
-void
-nc_cluster_abundance_clear (NcClusterAbundance **cad)
-{
-  g_clear_object (cad);
+  cad->ctrl_reion = ncm_model_ctrl_new (NULL);
+  cad->ctrl_z     = ncm_model_ctrl_new (NULL);
+  cad->ctrl_m     = ncm_model_ctrl_new (NULL);
 }
 
 static void
@@ -225,6 +128,7 @@ _nc_cluster_abundance_dispose (GObject *object)
   ncm_spline2d_clear (&cad->inv_lnM_z);
 
   ncm_model_ctrl_clear (&cad->ctrl_cosmo);
+  ncm_model_ctrl_clear (&cad->ctrl_reion);
   ncm_model_ctrl_clear (&cad->ctrl_z);
   ncm_model_ctrl_clear (&cad->ctrl_m);
 
@@ -316,6 +220,88 @@ nc_cluster_abundance_class_init (NcClusterAbundanceClass *klass)
 
 }
 
+/**
+ * nc_cluster_abundance_new:
+ * @mfp: a #NcMassFunction
+ * @mbiasf: (allow-none): a #NcHaloBiasFunc
+ *
+ * This function allocates memory for a new #NcClusterAbundance object and sets its properties to the values from
+ * the input arguments.
+ *
+ * Returns: A new #NcClusterAbundance.
+ */
+NcClusterAbundance *
+nc_cluster_abundance_new (NcMassFunction *mfp, NcHaloBiasFunc *mbiasf)
+{
+  NcClusterAbundance *cad = g_object_new (NC_TYPE_CLUSTER_ABUNDANCE,
+                                          "mass-function",    mfp,
+                                          "mean-bias",        mbiasf,
+                                          NULL);
+  return cad;
+}
+
+/**
+ * nc_cluster_abundance_nodist_new:
+ * @mfp: a #NcMassFunction.
+ * @mbiasf: (allow-none): a #NcHaloBiasFunc.
+   *
+ * This function allocates memory for a new #NcClusterAbundance object and sets its properties to the values from
+ * the input arguments.
+ *
+ * Returns: A new #NcClusterAbundance.
+ */
+NcClusterAbundance *
+nc_cluster_abundance_nodist_new (NcMassFunction *mfp, NcHaloBiasFunc *mbiasf)
+{
+  NcClusterAbundance *cad = g_object_new (NC_TYPE_CLUSTER_ABUNDANCE,
+                                          "mass-function",    mfp,
+                                          "mean-bias",        mbiasf,
+                                          NULL);
+  return cad;
+}
+
+/**
+ * nc_cluster_abundance_ref:
+ * @cad: a #NcClusterAbundance
+ *
+ * Increases the reference count of @cad by one.
+ *
+ * Returns: (transfer full): @cad
+   */
+NcClusterAbundance *
+nc_cluster_abundance_ref (NcClusterAbundance *cad)
+{
+  return g_object_ref (cad);
+}
+
+/**
+ * nc_cluster_abundance_free:
+ * @cad: a #NcClusterAbundance
+ *
+ * Atomically decrements the reference count of @cad by one. If the reference count drops to 0,
+ * all memory allocated by @cad is released.
+ *
+ */
+void
+nc_cluster_abundance_free (NcClusterAbundance *cad)
+{
+  g_object_unref (cad);
+}
+
+/**
+ * nc_cluster_abundance_clear:
+ * @cad: a #NcClusterAbundance
+ *
+ * Atomically decrements the reference count of @cad by one. If the reference count drops to 0,
+ * all memory allocated by @cad is released.
+ *
+ */
+void
+nc_cluster_abundance_clear (NcClusterAbundance **cad)
+{
+  g_clear_object (cad);
+}
+
 typedef struct _observables_integrand_data
 {
   NcClusterAbundance *cad;
@@ -366,7 +352,6 @@ nc_cluster_abundance_z_p_lnm_p_d2n (NcClusterAbundance *cad, NcHICosmo *cosmo, N
   gdouble d2N, zl, zu, lnMl, lnMu, err;
   observables_integrand_data obs_data;
   NcmIntegrand2dim integ;
-  g_assert (cad->prepared);
 
   obs_data.cad            = cad;
   obs_data.cosmo          = cosmo;
@@ -423,7 +408,6 @@ nc_cluster_abundance_z_p_d2n (NcClusterAbundance *cad, NcHICosmo *cosmo, NcClust
   gdouble d2N, zl, zu, err;
   gsl_function F;
   gsl_integration_workspace **w = ncm_integral_get_workspace ();
-  g_assert (cad->prepared);
 
   obs_data.cad            = cad;
   obs_data.cosmo          = cosmo;
@@ -493,7 +477,6 @@ nc_cluster_abundance_lnm_p_d2n (NcClusterAbundance *cad, NcHICosmo *cosmo, NcClu
   gdouble d2N, lnMl, lnMu, err;
   gsl_function F;
   gsl_integration_workspace **w = ncm_integral_get_workspace ();
-  g_assert (cad->prepared);
 
   obs_data.cad            = cad;
   obs_data.cosmo          = cosmo;
@@ -554,7 +537,6 @@ if (FALSE)
 gdouble
 nc_cluster_abundance_d2n (NcClusterAbundance *cad, NcHICosmo *cosmo, NcClusterRedshift *clusterz, NcClusterMass *clusterm, gdouble lnM, gdouble z)
 {
-  g_assert (cad->prepared);
   NCM_UNUSED (clusterz);
   NCM_UNUSED (clusterm);
   return nc_mass_function_d2n_dzdlnm (cad->mfp, cosmo, lnM, z);
@@ -718,26 +700,24 @@ _nc_cluster_abundance_funcs (NcClusterAbundance *cad, NcClusterRedshift *cluster
  *
  */
 void
-nc_cluster_abundance_prepare (NcClusterAbundance *cad, NcHICosmo *cosmo, NcClusterRedshift *clusterz, NcClusterMass *clusterm)
+nc_cluster_abundance_prepare (NcClusterAbundance *cad, NcHIReion *reion, NcHICosmo *cosmo, NcClusterRedshift *clusterz, NcClusterMass *clusterm)
 {
   _nc_cluster_abundance_funcs (cad, clusterz, clusterm);
   nc_cluster_redshift_n_limits (clusterz, &cad->zi, &cad->zf);
   nc_cluster_mass_n_limits (clusterm, cosmo, &cad->lnMi, &cad->lnMf);
+  nc_mass_function_set_eval_limits (cad->mfp, cosmo, cad->lnMi, cad->lnMf, cad->zi, cad->zf);
+  nc_mass_function_prepare_if_needed (cad->mfp, reion, cosmo);
 
   if (cad->zi == 0.0)
     cad->zi = 1.0e-6;
 
-  if (cad->optimize)
-    nc_mass_function_set_eval_limits (cad->mfp, cosmo, cad->lnMi, cad->lnMf, cad->zi, cad->zf);
-
-  nc_mass_function_prepare (cad->mfp, cosmo);
   cad->norma = nc_cluster_abundance_true_n (cad, cosmo, clusterz, clusterm);
   cad->log_norma = log (cad->norma);
 
   ncm_model_ctrl_update (cad->ctrl_cosmo, NCM_MODEL (cosmo));
+  ncm_model_ctrl_update (cad->ctrl_reion, NCM_MODEL (reion));
   ncm_model_ctrl_update (cad->ctrl_z, NCM_MODEL (clusterz));
   ncm_model_ctrl_update (cad->ctrl_m, NCM_MODEL (clusterm));
-  cad->prepared = TRUE;
 }
 
 gdouble
@@ -770,7 +750,6 @@ nc_cluster_abundance_prepare_inv_dNdz (NcClusterAbundance *cad, NcHICosmo *cosmo
   NcMassFunctionSplineOptimize sp_optimize = NC_MASS_FUNCTION_SPLINE_Z;
   const gdouble delta_z = (cad->zf - cad->zi) / (cad->inv_z->len - 1.0);
   const gdouble delta_lnM = (cad->lnMf - cad->lnMi) / (cad->inv_lnM->len - 1.0);
-  g_assert (cad->prepared);
   g_assert (cad->zi != 0);
 
   {    
@@ -879,7 +858,7 @@ nc_cluster_abundance_prepare_inv_dNdlnM_z (NcClusterAbundance *cad, NcHICosmo *c
   gdouble Delta;
   const gdouble dlnM = (cad->lnMf - cad->lnMi) / (cad->inv_lnM->len - 1.0);
   guint i;
-  g_assert (cad->prepared);
+
   g_assert (z > 0.0);
 
   ncm_vector_set (cad->inv_lnM->xv, 0, f);
@@ -947,7 +926,6 @@ nc_cluster_abundance_true_n (NcClusterAbundance *cad, NcHICosmo *cosmo, NcCluste
 gdouble
 nc_cluster_abundance_n (NcClusterAbundance *cad, NcHICosmo *cosmo, NcClusterRedshift *clusterz, NcClusterMass *clusterm)
 {
-  g_assert (cad->prepared);
   return cad->N (cad, cosmo, clusterz, clusterm);
 }
 
@@ -967,7 +945,6 @@ nc_cluster_abundance_n (NcClusterAbundance *cad, NcHICosmo *cosmo, NcClusterReds
 gdouble
 nc_cluster_abundance_intp_d2n (NcClusterAbundance *cad, NcHICosmo *cosmo, NcClusterRedshift *clusterz, NcClusterMass *clusterm, gdouble lnM, gdouble z)
 {
-  g_assert(cad->prepared);
   return cad->intp_d2N (cad, cosmo, clusterz, clusterm, lnM, z);
 }
 
@@ -1103,7 +1080,6 @@ nc_ca_mean_bias_numerator (NcClusterAbundance *cad, NcHICosmo *cosmo, gdouble ln
   gsl_function F;
   obs_data.cad = cad;
   obs_data.cosmo = cosmo;
-  g_assert (cad->prepared);
 
   F.function = &_nc_ca_mean_bias_numerator_integrand;
   F.params = &obs_data;
@@ -1146,7 +1122,6 @@ nc_ca_mean_bias_denominator (NcClusterAbundance *cad, NcHICosmo *cosmo, gdouble 
   gsl_function F;
   obs_data.cad = cad;
   obs_data.cosmo = cosmo;
-  g_assert (cad->prepared);
 
   F.function = &_nc_ca_mean_bias_denominator_integrand;
   F.params = &obs_data;
@@ -1203,7 +1178,6 @@ nc_ca_mean_bias_Mobs_numerator (NcClusterAbundance *cad, NcHICosmo *cosmo, gdoub
   gsl_function F;
   obs_data.cad = cad;
   obs_data.cosmo = cosmo;
-  g_assert (cad->prepared);
 
   F.function = &_nc_ca_mean_bias_Mobs_numerator_integrand;
   F.params = &obs_data;
@@ -1255,7 +1229,6 @@ nc_ca_mean_bias_Mobs_denominator (NcClusterAbundance *cad, NcHICosmo *cosmo, gdo
   gsl_function F;
   obs_data.cad = cad;
   obs_data.cosmo = cosmo;
-  g_assert (cad->prepared);
   
   F.function = &_nc_ca_mean_bias_Mobs_denominator_integrand;
   F.params = &obs_data;

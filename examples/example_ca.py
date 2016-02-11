@@ -22,6 +22,11 @@ Ncm.cfg_init ()
 cosmo = Nc.HICosmo.new_from_name (Nc.HICosmo, "NcHICosmoDEXcdm")
 
 #
+#  New homogeneous and isotropic reionization object.
+#
+reion = Nc.HIReionCamb.new ()
+
+#
 #  New cosmological distance objects optimizied to perform calculations
 #  up to redshift 2.0.
 #
@@ -126,7 +131,7 @@ kha = []
 Ta = []
 Pma = []
 
-tf.prepare (cosmo)
+tf.prepare (reion, cosmo)
 
 for i in range (0, np):
   lnkh = log (1e-4) +  log (1e7) * divfac * i
@@ -158,7 +163,7 @@ plt.clf ()
 # amplitude from the sigma8 parameter.
 #
 
-vp.prepare (cosmo)
+vp.prepare (reion, cosmo)
 
 Dz = gf.eval (cosmo, 0.3)
 A  = vp.sigma8_sqrtvar0 (cosmo)

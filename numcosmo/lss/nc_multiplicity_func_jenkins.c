@@ -81,7 +81,7 @@ nc_multiplicity_func_jenkins_new (gdouble A, gdouble A_tCDM, gdouble B, gdouble 
 /* Simulacao SO(200): A = 0.22, B = 0.73, epsilon = 3.86. Ref. The Astrophys. Journal, 573:7-36, 2002 July 1. */
 
 static gdouble
-_nc_multiplicity_func_jenkins_eval (NcMultiplicityFunc *mulf, NcHICosmo *model, gdouble sigma, gdouble z)
+_nc_multiplicity_func_jenkins_eval (NcMultiplicityFunc *mulf, NcHICosmo *cosmo, gdouble sigma, gdouble z)
 {
   NcMultiplicityFuncJenkins *mulf_jenkins = NC_MULTIPLICITY_FUNC_JENKINS (mulf);
   
@@ -107,7 +107,7 @@ _nc_multiplicity_func_jenkins_eval (NcMultiplicityFunc *mulf, NcHICosmo *model, 
 
   gdouble f_Jenkins = mulf_jenkins->A * exp(-pow(fabs(-log(sigma) + mulf_jenkins->B), mulf_jenkins->epsilon));
 
-  NCM_UNUSED (model);
+  NCM_UNUSED (cosmo);
   NCM_UNUSED (z);
   
   return f_Jenkins;

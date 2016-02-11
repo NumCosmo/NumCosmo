@@ -63,7 +63,7 @@ dist = Nc.Distance (zf = 2.0)
 #  A new Data object from distance modulus catalogs.
 #  A new Data object from BAO catalogs.
 #
-snia = Nc.DataDistMu.new (dist, Nc.DataSNIAId.SIMPLE_UNION2_1)
+snia = Nc.DataDistMu.new_from_id (dist, Nc.DataSNIAId.SIMPLE_UNION2_1)
 bao = Nc.data_bao_create (dist, Nc.DataBaoId.A_EISENSTEIN2005)
 
 #
@@ -113,7 +113,7 @@ fit.log_covar ()
 p1 = Ncm.MSetPIndex.new (cosmo.id (), Nc.HICosmoDEParams.OMEGA_C)
 p2 = Ncm.MSetPIndex.new (cosmo.id (), Nc.HICosmoDEXCDMParams.W)
 
-lhr2d = Ncm.LHRatio2d.new (fit, p1, p2)
+lhr2d = Ncm.LHRatio2d.new (fit, p1, p2, 1.0e-3)
 
 #
 #  Calculating the confidence region using the Likelihood ratio test.

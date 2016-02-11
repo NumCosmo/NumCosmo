@@ -181,7 +181,8 @@ nc_recomb_init (NcRecomb *recomb)
   recomb->Xe_s           = NULL;
   recomb->dtau_dlambda_s = NULL;
   recomb->tau_s          = NULL;
-  recomb->ctrl = ncm_model_ctrl_new (NULL);
+  recomb->ctrl_cosmo     = ncm_model_ctrl_new (NULL);
+  recomb->ctrl_reion     = ncm_model_ctrl_new (NULL);
 }
 
 static void
@@ -192,6 +193,9 @@ nc_recomb_dispose (GObject *object)
   ncm_spline_clear (&recomb->Xe_s);
   ncm_spline_clear (&recomb->dtau_dlambda_s);
   ncm_spline_clear (&recomb->tau_s);
+
+  ncm_model_ctrl_clear (&recomb->ctrl_cosmo);
+  ncm_model_ctrl_clear (&recomb->ctrl_reion);
 
   /* Chain up : end */
   G_OBJECT_CLASS (nc_recomb_parent_class)->dispose (object);
@@ -219,16 +223,16 @@ nc_recomb_set_property (GObject *object, guint prop_id, const GValue *value, GPa
   {
     case PROP_INIT_FRAC:
       recomb->init_frac = g_value_get_double (value);
-      ncm_model_ctrl_force_update (recomb->ctrl);
+      ncm_model_ctrl_force_update (recomb->ctrl_cosmo);
       break;
     case PROP_ZI:
       recomb->zi      = g_value_get_double (value);
       recomb->lambdai = -log (1.0 + recomb->zi);
-      ncm_model_ctrl_force_update (recomb->ctrl);
+      ncm_model_ctrl_force_update (recomb->ctrl_cosmo);
       break;
     case PROP_PREC:
       recomb->prec    = g_value_get_double (value);
-      ncm_model_ctrl_force_update (recomb->ctrl);
+      ncm_model_ctrl_force_update (recomb->ctrl_cosmo);
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -774,6 +778,9 @@ void
 nc_recomb_prepare (NcRecomb *recomb, NcHIReion *reion, NcHICosmo *cosmo)
 {
   NC_RECOMB_GET_CLASS (recomb)->prepare (recomb, reion, cosmo);
+
+  ncm_model_ctrl_update (recomb->ctrl_cosmo, NCM_MODEL (cosmo));
+  ncm_model_ctrl_update (recomb->ctrl_reion, NCM_MODEL (reion));
 }
 
 /**

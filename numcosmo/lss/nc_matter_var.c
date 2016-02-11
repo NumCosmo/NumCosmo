@@ -156,7 +156,8 @@ nc_matter_var_init (NcMatterVar *vp)
 
   vp->fftlog = NULL;
   
-  vp->ctrl = ncm_model_ctrl_new (NULL);
+  vp->ctrl_cosmo = ncm_model_ctrl_new (NULL);
+  vp->ctrl_reion = ncm_model_ctrl_new (NULL);
 }
 
 static void
@@ -166,7 +167,10 @@ _nc_matter_var_dispose (GObject * object)
 
   nc_window_clear (&vp->wp);
   nc_transfer_func_clear (&vp->tf);
-  ncm_model_ctrl_clear (&vp->ctrl);
+
+  ncm_model_ctrl_clear (&vp->ctrl_cosmo);
+  ncm_model_ctrl_clear (&vp->ctrl_reion);
+
   ncm_spline_clear (&vp->integrand_overw2_spline);
   ncm_spline_clear (&vp->sigma2_over_growth);
   ncm_spline_clear (&vp->deriv_sigma2_over_growth);
@@ -317,6 +321,27 @@ nc_matter_var_prepare (NcMatterVar *vp, NcHIReion *reion, NcHICosmo *cosmo)
 #endif
       break;
   }
+
+  ncm_model_ctrl_update (vp->ctrl_cosmo, NCM_MODEL (cosmo));
+  ncm_model_ctrl_update (vp->ctrl_reion, NCM_MODEL (reion));  
+}
+
+/**
+ * nc_matter_var_prepare_if_needed:
+ * @vp: a #NcMatterVar
+ * @reion: a #NcHIReion
+ * @cosmo: a #NcHICosmo
+ *
+ * FIXME
+ */
+void 
+nc_matter_var_prepare_if_needed (NcMatterVar *vp, NcHIReion *reion, NcHICosmo *cosmo)
+{
+  gboolean cosmo_up = ncm_model_ctrl_update (vp->ctrl_cosmo, NCM_MODEL (cosmo));
+  gboolean reion_up = ncm_model_ctrl_update (vp->ctrl_reion, NCM_MODEL (reion));
+
+  if (cosmo_up || reion_up)
+    nc_matter_var_prepare (vp, reion, cosmo);
 }
 
 /* Estrutura criada para podermos calcular todos os momentos espectrais, a variancia eh o momento para j=0. */

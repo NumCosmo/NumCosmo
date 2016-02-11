@@ -68,7 +68,8 @@ nc_mass_function_init (NcMassFunction *mfp)
   mfp->growth      = 0.0;
   mfp->d2NdzdlnM   = NULL;
   mfp->prec        = 0.0;
-  mfp->ctrl        = ncm_model_ctrl_new (NULL);
+  mfp->ctrl_cosmo  = ncm_model_ctrl_new (NULL);
+  mfp->ctrl_reion  = ncm_model_ctrl_new (NULL);
 }
 
 static void
@@ -80,7 +81,10 @@ _nc_mass_function_dispose (GObject *object)
   nc_matter_var_clear (&mfp->vp);
   nc_growth_func_clear (&mfp->gf);
   nc_multiplicity_func_clear (&mfp->mulf);
-  ncm_model_ctrl_clear (&mfp->ctrl);
+
+  ncm_model_ctrl_clear (&mfp->ctrl_cosmo);
+  ncm_model_ctrl_clear (&mfp->ctrl_reion);
+
   ncm_spline2d_clear (&mfp->d2NdzdlnM);
 
   /* Chain up : end */
@@ -622,9 +626,6 @@ nc_mass_function_set_eval_limits (NcMassFunction *mfp, NcHICosmo *cosmo, gdouble
     mfp->zf = zf;
     ncm_spline2d_clear (&mfp->d2NdzdlnM);
   }
-
-  if (mfp->d2NdzdlnM == NULL)
-    _nc_mass_function_generate_2Dspline_knots (mfp, cosmo, mfp->prec);
 }
 
 /**
@@ -636,14 +637,17 @@ nc_mass_function_set_eval_limits (NcMassFunction *mfp, NcHICosmo *cosmo, gdouble
  *
  */
 void
-nc_mass_function_prepare (NcMassFunction *mfp, NcHICosmo *cosmo)
+nc_mass_function_prepare (NcMassFunction *mfp, NcHIReion *reion, NcHICosmo *cosmo)
 {
   guint i, j;
+
+  nc_distance_prepare_if_needed (mfp->dist, cosmo);
+  nc_matter_var_prepare_if_needed (mfp->vp, reion, cosmo);
+  nc_growth_func_prepare_if_needed (mfp->gf, cosmo);
+  
   if (mfp->d2NdzdlnM == NULL)
-  {
-    g_error ("nc_mass_function_prepare: called without a previous call of nc_mass_function_set_eval_limits");
-    return;
-  }
+    _nc_mass_function_generate_2Dspline_knots (mfp, cosmo, mfp->prec);
+
 #define D2NDZDLNM_Z(cad) ((cad)->d2NdzdlnM->yv)
 #define D2NDZDLNM_LNM(cad) ((cad)->d2NdzdlnM->xv)
 #define D2NDZDLNM_VAL(cad) ((cad)->d2NdzdlnM->zm)
@@ -663,7 +667,8 @@ nc_mass_function_prepare (NcMassFunction *mfp, NcHICosmo *cosmo)
   }
   ncm_spline2d_prepare (mfp->d2NdzdlnM);
 
-  ncm_model_ctrl_update (mfp->ctrl, NCM_MODEL (cosmo));
+  ncm_model_ctrl_update (mfp->ctrl_cosmo, NCM_MODEL (cosmo));
+  ncm_model_ctrl_update (mfp->ctrl_reion, NCM_MODEL (reion));
 }
 
 /**
@@ -683,8 +688,6 @@ gdouble
 nc_mass_function_dn_dz (NcMassFunction *mfp, NcHICosmo *cosmo, gdouble lnMl, gdouble lnMu, gdouble z, gboolean spline)
 {
   gdouble dN_dz;
-
-  nc_mass_function_prepare_if_needed (mfp, cosmo);
 
   if (spline)
     dN_dz = ncm_spline2d_integ_dx_spline_val (mfp->d2NdzdlnM, lnMl, lnMu, z);
@@ -712,8 +715,6 @@ gdouble
 nc_mass_function_n (NcMassFunction *mfp, NcHICosmo *cosmo, gdouble lnMl, gdouble lnMu, gdouble zl, gdouble zu, NcMassFunctionSplineOptimize spline)
 {
   gdouble N;
-
-  nc_mass_function_prepare_if_needed (mfp, cosmo);
 
   switch (spline)
   {

@@ -77,7 +77,8 @@ struct _NcMatterVar
   NcmSpline *sigma2_over_growth; 
   NcmSpline *deriv_sigma2_over_growth;
   NcmFftlog *fftlog;
-  NcmModelCtrl *ctrl;
+  NcmModelCtrl *ctrl_cosmo;
+  NcmModelCtrl *ctrl_reion;
 };
 
 struct _NcMatterVarClass
@@ -93,6 +94,7 @@ NcMatterVar *nc_matter_var_copy (NcMatterVar *vp);
 void nc_matter_var_free (NcMatterVar *vp);
 void nc_matter_var_clear (NcMatterVar **vp);
 void nc_matter_var_prepare (NcMatterVar *vp, NcHIReion *reion, NcHICosmo *cosmo);
+void nc_matter_var_prepare_if_needed (NcMatterVar *vp, NcHIReion *reion, NcHICosmo *cosmo);
 gdouble nc_matter_var_var0 (NcMatterVar *vp, NcHICosmo *cosmo, gdouble lnR);
 gdouble nc_matter_var_dlnvar0_dR (NcMatterVar *vp, NcHICosmo *cosmo, gdouble lnR);
 gdouble nc_matter_var_dlnvar0_dlnR (NcMatterVar *vp, NcHICosmo *cosmo, gdouble lnR); 

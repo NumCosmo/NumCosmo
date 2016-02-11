@@ -73,12 +73,12 @@ nc_multiplicity_func_warren_new (gdouble A, gdouble a, gdouble b, gdouble c)
 }
 
 static gdouble
-_nc_multiplicity_func_warren_eval (NcMultiplicityFunc *mulf, NcHICosmo *model, gdouble sigma, gdouble z)   /* $f(\sigma)$ Warren: astro-ph/0506395 */
+_nc_multiplicity_func_warren_eval (NcMultiplicityFunc *mulf, NcHICosmo *cosmo, gdouble sigma, gdouble z)   /* $f(\sigma)$ Warren: astro-ph/0506395 */
 {
   NcMultiplicityFuncWarren *mulf_warren = NC_MULTIPLICITY_FUNC_WARREN (mulf);
   gdouble f_Warren = mulf_warren->A * (pow(sigma, - mulf_warren->a) + mulf_warren->b) * exp(-(mulf_warren->c)/ (sigma * sigma) );
 
-  NCM_UNUSED (model);
+  NCM_UNUSED (cosmo);
   NCM_UNUSED (z);
   
   return f_Warren;

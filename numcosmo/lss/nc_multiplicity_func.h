@@ -53,13 +53,13 @@ struct _NcMultiplicityFuncClass
 {
   /*< private >*/
   GObjectClass parent_class;
-  gdouble (*eval) (NcMultiplicityFunc *mulf, NcHICosmo *model, gdouble sigma, gdouble z);
+  gdouble (*eval) (NcMultiplicityFunc *mulf, NcHICosmo *cosmo, gdouble sigma, gdouble z);
 };
 
 GType nc_multiplicity_func_get_type (void) G_GNUC_CONST;
 
 NcMultiplicityFunc *nc_multiplicity_func_new_from_name (gchar *multiplicity_name);
-gdouble nc_multiplicity_func_eval (NcMultiplicityFunc *mulf, NcHICosmo *model, gdouble sigma, gdouble z);
+gdouble nc_multiplicity_func_eval (NcMultiplicityFunc *mulf, NcHICosmo *cosmo, gdouble sigma, gdouble z);
 void nc_multiplicity_func_free (NcMultiplicityFunc *mulf);
 void nc_multiplicity_func_clear (NcMultiplicityFunc **mulf);
 

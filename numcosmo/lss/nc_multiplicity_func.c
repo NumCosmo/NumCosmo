@@ -63,7 +63,7 @@ nc_multiplicity_func_new_from_name (gchar *multiplicity_name)
 /**
  * nc_multiplicity_func_eval:
  * @mulf: a #NcMultiplicityFunc.
- * @model: a #NcHICosmo.
+ * @cosmo: a #NcHICosmo.
  * @sigma: FIXME
  * @z: redshift.
  *
@@ -72,9 +72,9 @@ nc_multiplicity_func_new_from_name (gchar *multiplicity_name)
  * Returns: FIXME
 */
 gdouble
-nc_multiplicity_func_eval (NcMultiplicityFunc *mulf, NcHICosmo *model, gdouble sigma, gdouble z)
+nc_multiplicity_func_eval (NcMultiplicityFunc *mulf, NcHICosmo *cosmo, gdouble sigma, gdouble z)
 {
-  return NC_MULTIPLICITY_FUNC_GET_CLASS (mulf)->eval (mulf, model, sigma, z);
+  return NC_MULTIPLICITY_FUNC_GET_CLASS (mulf)->eval (mulf, cosmo, sigma, z);
 }
 
 /**

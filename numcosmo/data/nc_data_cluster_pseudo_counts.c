@@ -150,6 +150,7 @@ nc_data_cluster_pseudo_counts_finalize (GObject *object)
 
 static void _nc_data_cluster_pseudo_counts_m2lnL_val (NcmData *data, NcmMSet *mset, gdouble *m2lnL);
 static guint _nc_data_cluster_pseudo_counts_get_len (NcmData *data) { return NC_DATA_CLUSTER_PSEUDO_COUNTS (data)->np; }
+static void _nc_data_cluster_pseudo_counts_prepare (NcmData *data, NcmMSet *mset);
 static void _nc_data_cluster_pseudo_counts_resample (NcmData *data, NcmMSet *mset, NcmRNG *rng);
 
 static void
@@ -201,7 +202,157 @@ nc_data_cluster_pseudo_counts_class_init (NcDataClusterPseudoCountsClass *klass)
   
   data_class->m2lnL_val  = &_nc_data_cluster_pseudo_counts_m2lnL_val;
   data_class->get_length = &_nc_data_cluster_pseudo_counts_get_len;
+  data_class->prepare    = &_nc_data_cluster_pseudo_counts_prepare;
   data_class->resample   = &_nc_data_cluster_pseudo_counts_resample;
+}
+
+static void
+_nc_data_cluster_pseudo_counts_m2lnL_val (NcmData *data, NcmMSet *mset, gdouble *m2lnL)
+{
+  NcDataClusterPseudoCounts *dcpc = NC_DATA_CLUSTER_PSEUDO_COUNTS (data);
+  NcHICosmo *cosmo = NC_HICOSMO (ncm_mset_peek (mset, nc_hicosmo_id ()));
+  NcClusterMass *clusterm = NC_CLUSTER_MASS (ncm_mset_peek (mset, nc_cluster_mass_id ()));
+  NcClusterPseudoCounts *cpc = NC_CLUSTER_PSEUDO_COUNTS (ncm_mset_peek (mset, nc_cluster_pseudo_counts_id ()));
+
+  g_assert (cosmo != NULL && clusterm != NULL && cpc != NULL);
+
+  if (dcpc->M_Z_FlatPrior)
+  {
+    /* ndet = 1, i.e., no-physical case: selection function and mass function equal to one (flat prior). */
+    gint i;
+    for (i = 0; i < dcpc->np; i++)
+    {
+      const gdouble z = ncm_matrix_get (dcpc->obs, i, NC_DATA_CLUSTER_PSEUDO_COUNTS_Z);
+      const gdouble *M = ncm_matrix_ptr (dcpc->obs, i, NC_DATA_CLUSTER_PSEUDO_COUNTS_MPL);
+      const gdouble *M_params = ncm_matrix_ptr (dcpc->obs, i, NC_DATA_CLUSTER_PSEUDO_COUNTS_SD_MPL);
+      const gdouble m2lnL_i = log (nc_cluster_pseudo_counts_posterior_ndetone (cpc, clusterm, z, M[0], M[1], M_params[0], M_params[1]));
+
+      if (!gsl_finite (m2lnL_i))
+      {
+        *m2lnL += m2lnL_i;
+        break;
+      }
+      else
+      {
+        *m2lnL += m2lnL_i;
+      }
+    }
+  }
+  else
+  {
+    gdouble Ndet = nc_cluster_pseudo_counts_ndet (cpc, cosmo);
+    gdouble lnNdet = log (Ndet);
+    gint i;
+    *m2lnL = 0.0;
+    if (Ndet < 1.0)
+    {
+      *m2lnL = GSL_POSINF;
+      return;
+    }
+    else
+      *m2lnL = 0.0;
+
+    for (i = 0; i < dcpc->np; i++)
+    {
+      const gdouble z = ncm_matrix_get (dcpc->obs, i, NC_DATA_CLUSTER_PSEUDO_COUNTS_Z);
+      const gdouble *M = ncm_matrix_ptr (dcpc->obs, i, NC_DATA_CLUSTER_PSEUDO_COUNTS_MPL);
+      const gdouble *M_params = ncm_matrix_ptr (dcpc->obs, i, NC_DATA_CLUSTER_PSEUDO_COUNTS_SD_MPL);
+      //const gdouble m2lnL_i = log (nc_cluster_pseudo_counts_posterior_numerator (cpc, clusterm, cosmo, z, M, M_params));
+      const gdouble m2lnL_i = log (nc_cluster_pseudo_counts_posterior_numerator_plcl (cpc, clusterm, cosmo, z, M[0], M[1], M_params[0], M_params[1]));
+
+      if (!gsl_finite (m2lnL_i))
+      {
+        *m2lnL += m2lnL_i;
+        break;
+      }
+      else
+      {
+        *m2lnL += m2lnL_i;
+      }
+    }
+
+    *m2lnL -= dcpc->np * lnNdet;
+  }
+  
+  *m2lnL = -2.0 * (*m2lnL);
+  return;
+}
+
+static void 
+_nc_data_cluster_pseudo_counts_prepare (NcmData *data, NcmMSet *mset)
+{
+  NcDataClusterPseudoCounts *dcpc = NC_DATA_CLUSTER_PSEUDO_COUNTS (data);
+  NcHICosmo *cosmo            = NC_HICOSMO (ncm_mset_peek (mset, nc_hicosmo_id ()));
+  NcHIReion *reion            = NC_HIREION (ncm_mset_peek (mset, nc_hireion_id ()));
+  NcClusterRedshift *clusterz = NC_CLUSTER_REDSHIFT (ncm_mset_peek (mset, nc_cluster_redshift_id ())); 
+  NcClusterMass *clusterm     = NC_CLUSTER_MASS (ncm_mset_peek (mset, nc_cluster_mass_id ()));
+  NcClusterPseudoCounts *cpc  = NC_CLUSTER_PSEUDO_COUNTS (ncm_mset_peek (mset, nc_cluster_pseudo_counts_id ()));
+
+  g_assert ((cosmo != NULL) && (reion != NULL) && (clusterz != NULL) && (clusterm != NULL) && (cpc != NULL));
+
+  nc_cluster_abundance_prepare_if_needed (dcpc->cad, reion, cosmo, clusterz, clusterm);  
+}
+
+static void
+_nc_data_cluster_pseudo_counts_resample (NcmData *data, NcmMSet *mset, NcmRNG *rng)
+{
+  NcDataClusterPseudoCounts *dcpc = NC_DATA_CLUSTER_PSEUDO_COUNTS (data);
+  NcHICosmo *cosmo            = NC_HICOSMO (ncm_mset_peek (mset, nc_hicosmo_id ()));
+  NcClusterRedshift *clusterz = NC_CLUSTER_REDSHIFT (ncm_mset_peek (mset, nc_cluster_redshift_id ())); 
+  NcClusterMass *clusterm     = NC_CLUSTER_MASS (ncm_mset_peek (mset, nc_cluster_mass_id ()));
+  NcClusterPseudoCounts *cpc  = NC_CLUSTER_PSEUDO_COUNTS (ncm_mset_peek (mset, nc_cluster_pseudo_counts_id ()));
+  guint i;
+  
+  g_assert (clusterz != NULL && clusterm != NULL && cosmo != NULL && cpc != NULL);
+  g_assert (NC_IS_CLUSTER_MASS_PLCL (clusterm));
+  g_assert_cmpuint (nc_cluster_redshift_obs_params_len (clusterz), ==, 0);
+
+  nc_cluster_abundance_prepare_inv_dNdz (dcpc->cad, NC_HICOSMO (ncm_mset_peek (mset, nc_hicosmo_id ())));
+
+  for (i = 0; i < dcpc->np;)
+  {
+    ncm_rng_lock (rng);
+    {
+      const gdouble u1       = _nc_cad_inv_dNdz_convergence_f (gsl_rng_uniform_pos (rng->r), dcpc->cad->z_epsilon);
+      const gdouble u2       = _nc_cad_inv_dNdz_convergence_f (gsl_rng_uniform_pos (rng->r), dcpc->cad->lnM_epsilon);
+      const gdouble z_true   = ncm_spline_eval (dcpc->cad->inv_z, u1);
+      const gdouble lnM_true = ncm_spline2d_eval (dcpc->cad->inv_lnM_z, u2, z_true);
+      gdouble *zi_obs          = ncm_matrix_ptr (dcpc->obs, i, NC_DATA_CLUSTER_PSEUDO_COUNTS_Z);
+      gdouble *lnMi_obs        = ncm_matrix_ptr (dcpc->obs, i, NC_DATA_CLUSTER_PSEUDO_COUNTS_MPL);
+      gdouble *lnMi_obs_params = ncm_matrix_ptr (dcpc->obs, i, NC_DATA_CLUSTER_PSEUDO_COUNTS_SD_MPL);
+      gdouble val_sel = nc_cluster_pseudo_counts_selection_function (cpc, lnM_true);
+      gdouble sel_u   = gsl_rng_uniform_pos (rng->r);
+
+      ncm_rng_unlock (rng);
+
+      if (sel_u >= val_sel)
+        continue;
+
+      if ( nc_cluster_redshift_resample (clusterz, lnM_true, z_true, zi_obs, NULL, rng) &&
+          nc_cluster_mass_resample (clusterm, cosmo, lnM_true, z_true, lnMi_obs, lnMi_obs_params, rng) )
+      {
+        ncm_matrix_set (dcpc->true_data, i, 0, z_true);      
+        ncm_matrix_set (dcpc->true_data, i, 1, lnM_true);
+        ncm_matrix_set (dcpc->obs, i, NC_DATA_CLUSTER_PSEUDO_COUNTS_Z, zi_obs[0]);
+        ncm_matrix_set (dcpc->obs, i, NC_DATA_CLUSTER_PSEUDO_COUNTS_MPL, lnMi_obs[0]);
+        ncm_matrix_set (dcpc->obs, i, NC_DATA_CLUSTER_PSEUDO_COUNTS_MCL, lnMi_obs[1]);
+        ncm_matrix_set (dcpc->obs, i, NC_DATA_CLUSTER_PSEUDO_COUNTS_SD_MPL, lnMi_obs_params[0]);
+        ncm_matrix_set (dcpc->obs, i, NC_DATA_CLUSTER_PSEUDO_COUNTS_SD_MCL, lnMi_obs_params[1]);
+        //printf ("i = %d sel_u = %.5g val_sel = %.5g zi = %.5g Miobs = %.5g\n", i, sel_u, val_sel, *zi_obs, *lnMi_obs);
+        printf("                [%.3g, %.8g, %.8g, %.8g, %.8g],\n", *zi_obs, exp(lnMi_obs[0]), exp(lnMi_obs[1]), lnMi_obs_params[0] * 1.0e14, lnMi_obs_params[1] * 1.0e14);
+      }
+      else
+        continue;
+      i++; 
+    }
+  }
+
+  {
+    gchar *desc = g_strdup_printf ("Pseudo Counts Resample: Sample generated with n = %u clusters.", dcpc->np);
+    ncm_data_take_desc (data, desc/*_nc_data_cluster_ncount_desc (ncount, cosmo)*/);
+    g_free (desc);
+  }
+  
 }
 
 /**
@@ -362,77 +513,6 @@ nc_data_cluster_pseudo_counts_set_true_data (NcDataClusterPseudoCounts *dcpc, co
   ncm_matrix_memcpy (dcpc->true_data, m);
 }
 
-static void
-_nc_data_cluster_pseudo_counts_m2lnL_val (NcmData *data, NcmMSet *mset, gdouble *m2lnL)
-{
-  NcDataClusterPseudoCounts *dcpc = NC_DATA_CLUSTER_PSEUDO_COUNTS (data);
-  NcHICosmo *cosmo = NC_HICOSMO (ncm_mset_peek (mset, nc_hicosmo_id ()));
-  NcClusterMass *clusterm = NC_CLUSTER_MASS (ncm_mset_peek (mset, nc_cluster_mass_id ()));
-  NcClusterPseudoCounts *cpc = NC_CLUSTER_PSEUDO_COUNTS (ncm_mset_peek (mset, nc_cluster_pseudo_counts_id ()));
-
-  g_assert (cosmo != NULL && clusterm != NULL && cpc != NULL);
-
-  if (dcpc->M_Z_FlatPrior)
-  {
-    /* ndet = 1, i.e., no-physical case: selection function and mass function equal to one (flat prior). */
-    gint i;
-    for (i = 0; i < dcpc->np; i++)
-    {
-      const gdouble z = ncm_matrix_get (dcpc->obs, i, NC_DATA_CLUSTER_PSEUDO_COUNTS_Z);
-      const gdouble *M = ncm_matrix_ptr (dcpc->obs, i, NC_DATA_CLUSTER_PSEUDO_COUNTS_MPL);
-      const gdouble *M_params = ncm_matrix_ptr (dcpc->obs, i, NC_DATA_CLUSTER_PSEUDO_COUNTS_SD_MPL);
-      const gdouble m2lnL_i = log (nc_cluster_pseudo_counts_posterior_ndetone (cpc, clusterm, z, M[0], M[1], M_params[0], M_params[1]));
-
-      if (!gsl_finite (m2lnL_i))
-      {
-        *m2lnL += m2lnL_i;
-        break;
-      }
-      else
-      {
-        *m2lnL += m2lnL_i;
-      }
-    }
-  }
-  else
-  {
-    gdouble Ndet = nc_cluster_pseudo_counts_ndet (cpc, cosmo);
-    gdouble lnNdet = log (Ndet);
-    gint i;
-    *m2lnL = 0.0;
-    if (Ndet < 1.0)
-    {
-      *m2lnL = GSL_POSINF;
-      return;
-    }
-    else
-      *m2lnL = 0.0;
-
-    for (i = 0; i < dcpc->np; i++)
-    {
-      const gdouble z = ncm_matrix_get (dcpc->obs, i, NC_DATA_CLUSTER_PSEUDO_COUNTS_Z);
-      const gdouble *M = ncm_matrix_ptr (dcpc->obs, i, NC_DATA_CLUSTER_PSEUDO_COUNTS_MPL);
-      const gdouble *M_params = ncm_matrix_ptr (dcpc->obs, i, NC_DATA_CLUSTER_PSEUDO_COUNTS_SD_MPL);
-      //const gdouble m2lnL_i = log (nc_cluster_pseudo_counts_posterior_numerator (cpc, clusterm, cosmo, z, M, M_params));
-      const gdouble m2lnL_i = log (nc_cluster_pseudo_counts_posterior_numerator_plcl (cpc, clusterm, cosmo, z, M[0], M[1], M_params[0], M_params[1]));
-
-      if (!gsl_finite (m2lnL_i))
-      {
-        *m2lnL += m2lnL_i;
-        break;
-      }
-      else
-      {
-        *m2lnL += m2lnL_i;
-      }
-    }
-
-    *m2lnL -= dcpc->np * lnNdet;
-  }
-  
-  *m2lnL = -2.0 * (*m2lnL);
-  return;
-}
 
 /**
  * nc_data_cluster_pseudo_counts_init_from_sampling:
@@ -465,67 +545,3 @@ nc_data_cluster_pseudo_counts_init_from_sampling (NcDataClusterPseudoCounts *dcp
 
   ncm_data_resample (NCM_DATA (dcpc), mset, rng);
 }
-
-static void
-_nc_data_cluster_pseudo_counts_resample (NcmData *data, NcmMSet *mset, NcmRNG *rng)
-{
-  NcDataClusterPseudoCounts *dcpc = NC_DATA_CLUSTER_PSEUDO_COUNTS (data);
-  NcHICosmo *cosmo = NC_HICOSMO (ncm_mset_peek (mset, nc_hicosmo_id ()));
-  NcClusterRedshift *clusterz = NC_CLUSTER_REDSHIFT (ncm_mset_peek (mset, nc_cluster_redshift_id ())); 
-  NcClusterMass *clusterm = NC_CLUSTER_MASS (ncm_mset_peek (mset, nc_cluster_mass_id ()));
-  NcClusterPseudoCounts *cpc = NC_CLUSTER_PSEUDO_COUNTS (ncm_mset_peek (mset, nc_cluster_pseudo_counts_id ()));
-  guint i;
-  
-  g_assert (clusterz != NULL && clusterm != NULL && cosmo != NULL && cpc != NULL);
-  g_assert (NC_IS_CLUSTER_MASS_PLCL (clusterm));
-  g_assert_cmpuint (nc_cluster_redshift_obs_params_len (clusterz), ==, 0);
-
-  nc_cluster_abundance_prepare (dcpc->cad, cosmo, clusterz, clusterm); 
-  nc_cluster_abundance_prepare_inv_dNdz (dcpc->cad, NC_HICOSMO (ncm_mset_peek (mset, nc_hicosmo_id ())));
-
-  for (i = 0; i < dcpc->np;)
-  {
-    ncm_rng_lock (rng);
-    {
-      const gdouble u1       = _nc_cad_inv_dNdz_convergence_f (gsl_rng_uniform_pos (rng->r), dcpc->cad->z_epsilon);
-      const gdouble u2       = _nc_cad_inv_dNdz_convergence_f (gsl_rng_uniform_pos (rng->r), dcpc->cad->lnM_epsilon);
-      const gdouble z_true   = ncm_spline_eval (dcpc->cad->inv_z, u1);
-      const gdouble lnM_true = ncm_spline2d_eval (dcpc->cad->inv_lnM_z, u2, z_true);
-      gdouble *zi_obs          = ncm_matrix_ptr (dcpc->obs, i, NC_DATA_CLUSTER_PSEUDO_COUNTS_Z);
-      gdouble *lnMi_obs        = ncm_matrix_ptr (dcpc->obs, i, NC_DATA_CLUSTER_PSEUDO_COUNTS_MPL);
-      gdouble *lnMi_obs_params = ncm_matrix_ptr (dcpc->obs, i, NC_DATA_CLUSTER_PSEUDO_COUNTS_SD_MPL);
-      gdouble val_sel = nc_cluster_pseudo_counts_selection_function (cpc, lnM_true);
-      gdouble sel_u   = gsl_rng_uniform_pos (rng->r);
-
-      ncm_rng_unlock (rng);
-
-      if (sel_u >= val_sel)
-        continue;
-
-      if ( nc_cluster_redshift_resample (clusterz, lnM_true, z_true, zi_obs, NULL, rng) &&
-          nc_cluster_mass_resample (clusterm, cosmo, lnM_true, z_true, lnMi_obs, lnMi_obs_params, rng) )
-      {
-        ncm_matrix_set (dcpc->true_data, i, 0, z_true);      
-        ncm_matrix_set (dcpc->true_data, i, 1, lnM_true);
-        ncm_matrix_set (dcpc->obs, i, NC_DATA_CLUSTER_PSEUDO_COUNTS_Z, zi_obs[0]);
-        ncm_matrix_set (dcpc->obs, i, NC_DATA_CLUSTER_PSEUDO_COUNTS_MPL, lnMi_obs[0]);
-        ncm_matrix_set (dcpc->obs, i, NC_DATA_CLUSTER_PSEUDO_COUNTS_MCL, lnMi_obs[1]);
-        ncm_matrix_set (dcpc->obs, i, NC_DATA_CLUSTER_PSEUDO_COUNTS_SD_MPL, lnMi_obs_params[0]);
-        ncm_matrix_set (dcpc->obs, i, NC_DATA_CLUSTER_PSEUDO_COUNTS_SD_MCL, lnMi_obs_params[1]);
-        //printf ("i = %d sel_u = %.5g val_sel = %.5g zi = %.5g Miobs = %.5g\n", i, sel_u, val_sel, *zi_obs, *lnMi_obs);
-        printf("                [%.3g, %.8g, %.8g, %.8g, %.8g],\n", *zi_obs, exp(lnMi_obs[0]), exp(lnMi_obs[1]), lnMi_obs_params[0] * 1.0e14, lnMi_obs_params[1] * 1.0e14);
-      }
-      else
-        continue;
-      i++; 
-    }
-  }
-
-  {
-    gchar *desc = g_strdup_printf ("Pseudo Counts Resample: Sample generated with n = %u clusters.", dcpc->np);
-    ncm_data_take_desc (data, desc/*_nc_data_cluster_ncount_desc (ncount, cosmo)*/);
-    g_free (desc);
-  }
-  
-}
-

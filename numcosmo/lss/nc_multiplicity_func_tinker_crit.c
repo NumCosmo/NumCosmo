@@ -81,11 +81,11 @@ calc_polynomial (const gdouble *d, gdouble x)
 }
 
 static gdouble
-_nc_multiplicity_func_tinker_crit_eval (NcMultiplicityFunc *mulf, NcHICosmo *model, gdouble sigma, gdouble z)   /* $f(\sigma)$ Tinker: astro-ph/0803.2706 */
+_nc_multiplicity_func_tinker_crit_eval (NcMultiplicityFunc *mulf, NcHICosmo *cosmo, gdouble sigma, gdouble z)   /* $f(\sigma)$ Tinker: astro-ph/0803.2706 */
 {
   NcMultiplicityFuncTinkerCrit *mulf_tinker_crit = NC_MULTIPLICITY_FUNC_TINKER_CRIT (mulf);
-  const gdouble Omega_m0 = nc_hicosmo_Omega_m0 (model);
-  const gdouble E2 = nc_hicosmo_E2 (model, z);
+  const gdouble Omega_m0 = nc_hicosmo_Omega_m0 (cosmo);
+  const gdouble E2 = nc_hicosmo_E2 (cosmo, z);
   const gdouble Delta_z = mulf_tinker_crit->Delta * E2 / (Omega_m0 * gsl_pow_3 (1.0 + z));
   const gdouble log10_Delta_z = log10 (Delta_z);
 /*

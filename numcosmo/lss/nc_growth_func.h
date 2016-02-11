@@ -53,7 +53,7 @@ struct _NcGrowthFunc
   gpointer cvode;
   N_Vector yv;
   gdouble zf;
-  NcmModelCtrl *ctrl;
+  NcmModelCtrl *ctrl_cosmo;
 };
 
 struct _NcGrowthFuncClass
@@ -68,7 +68,10 @@ NcGrowthFunc * nc_growth_func_new (void);
 NcGrowthFunc * nc_growth_func_copy (NcGrowthFunc *gf);
 void nc_growth_func_free (NcGrowthFunc *gf);
 void nc_growth_func_clear (NcGrowthFunc **gf);
+
 void nc_growth_func_prepare (NcGrowthFunc * gf, NcHICosmo *cosmo);
+void nc_growth_func_prepare_if_needed (NcGrowthFunc *gf, NcHICosmo *cosmo);
+
 G_INLINE_FUNC gdouble nc_growth_func_eval (NcGrowthFunc *gf, NcHICosmo *cosmo, gdouble z);
 G_INLINE_FUNC gdouble nc_growth_func_eval_deriv (NcGrowthFunc *gf, NcHICosmo *cosmo, gdouble z);
 G_INLINE_FUNC void nc_growth_func_eval_both (NcGrowthFunc *gf, NcHICosmo *cosmo, gdouble z, gdouble *d, gdouble *f);
@@ -89,25 +92,18 @@ G_BEGIN_DECLS
 G_INLINE_FUNC gdouble
 nc_growth_func_eval (NcGrowthFunc *gf, NcHICosmo *cosmo, gdouble z)
 {
-  if (ncm_model_ctrl_update (gf->ctrl, NCM_MODEL (cosmo)))
-    nc_growth_func_prepare (gf, cosmo);
-
   return ncm_spline_eval (gf->s, z);
 }
 
 G_INLINE_FUNC gdouble
 nc_growth_func_eval_deriv (NcGrowthFunc *gf, NcHICosmo *cosmo, gdouble z)
 {
-  if (ncm_model_ctrl_update (gf->ctrl, NCM_MODEL (cosmo)))
-    nc_growth_func_prepare (gf, cosmo);
   return ncm_spline_eval_deriv (gf->s, z);
 }
 
 G_INLINE_FUNC void
 nc_growth_func_eval_both (NcGrowthFunc *gf, NcHICosmo *cosmo, gdouble z, gdouble *d, gdouble *f)
 {
-  if (ncm_model_ctrl_update (gf->ctrl, NCM_MODEL (cosmo)))
-    nc_growth_func_prepare (gf, cosmo);
   *d = ncm_spline_eval (gf->s, z);
   *f = ncm_spline_eval_deriv (gf->s, z);
 }

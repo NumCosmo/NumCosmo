@@ -73,13 +73,13 @@ nc_multiplicity_func_st_new (gdouble A, gdouble b, gdouble p, gdouble delta_c)
 }
 
 static gdouble
-_nc_multiplicity_func_st_eval (NcMultiplicityFunc *mulf, NcHICosmo *model, gdouble sigma, gdouble z)          /* f(\sigma) - Sheth \& Tormen (ST) */
+_nc_multiplicity_func_st_eval (NcMultiplicityFunc *mulf, NcHICosmo *cosmo, gdouble sigma, gdouble z)          /* f(\sigma) - Sheth \& Tormen (ST) */
 {
   NcMultiplicityFuncST *mulf_st = NC_MULTIPLICITY_FUNC_ST (mulf);
 //  const gdouble bc1 = sqrt(b/(2.0 * M_PI));
   const gdouble A = mulf_st->A;
   const gdouble b = mulf_st->b;
-  const gdouble bc1 = sqrt(2.0 * b / M_PI);
+  const gdouble bc1 = sqrt (2.0 * b / M_PI);
   const gdouble p = mulf_st->p;
   gdouble x = mulf_st->delta_c / sigma;
   gdouble x2 = x * x;
@@ -87,7 +87,7 @@ _nc_multiplicity_func_st_eval (NcMultiplicityFunc *mulf, NcHICosmo *model, gdoub
   //gdouble f_ST = A * bc1 * (1.0 + pow(x2 * b, -p)) * exp(-(b * x2) / 2.0) * x; // Jenkin's paper
   gdouble f_ST = A * bc1 * (1.0 + pow(x * b, -p)) * exp(-(b2 * x2) / 2.0) * x; // Evrard' s paper
 
-  NCM_UNUSED (model);
+  NCM_UNUSED (cosmo);
   NCM_UNUSED (z);
  //  printf ("A = %.5g, b=%.5g, p=%.5g, delta_c= %.5g\n", A, b, p, mulf_st->delta_c);
 

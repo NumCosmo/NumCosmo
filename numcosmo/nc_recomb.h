@@ -66,7 +66,8 @@ struct _NcRecomb
   NcmSpline *Xe_s;
   NcmSpline *dtau_dlambda_s;
   NcmSpline *tau_s;
-  NcmModelCtrl *ctrl;
+  NcmModelCtrl *ctrl_cosmo;
+  NcmModelCtrl *ctrl_reion;
 };
 
 struct _NcRecombClass
@@ -137,7 +138,10 @@ G_BEGIN_DECLS
 G_INLINE_FUNC void
 nc_recomb_prepare_if_needed (NcRecomb *recomb, NcHIReion *reion, NcHICosmo *cosmo)
 {
-  if (ncm_model_ctrl_update (recomb->ctrl, NCM_MODEL (cosmo)))
+  gboolean cosmo_up = ncm_model_ctrl_update (recomb->ctrl_cosmo, NCM_MODEL (cosmo));
+  gboolean reion_up = ncm_model_ctrl_update (recomb->ctrl_reion, NCM_MODEL (reion));
+
+  if (cosmo_up || reion_up)
     nc_recomb_prepare (recomb, reion, cosmo);
 }
 

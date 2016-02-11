@@ -79,7 +79,9 @@ void
 nc_transfer_func_prepare (NcTransferFunc *tf, NcHIReion *reion, NcHICosmo *cosmo)
 {
   NC_TRANSFER_FUNC_GET_CLASS (tf)->prepare (tf, reion, cosmo);
-  tf->prepared = TRUE;
+
+  ncm_model_ctrl_update (tf->ctrl_cosmo, NCM_MODEL (cosmo));
+  ncm_model_ctrl_update (tf->ctrl_reion, NCM_MODEL (reion));
 }
 
 /**
@@ -90,7 +92,7 @@ nc_transfer_func_prepare (NcTransferFunc *tf, NcHIReion *reion, NcHICosmo *cosmo
  *
  * FIXME
  *
-*/
+ */
 void
 nc_transfer_func_prepare_if_needed (NcTransferFunc *tf, NcHIReion *reion, NcHICosmo *cosmo)
 {

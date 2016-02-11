@@ -63,15 +63,15 @@ nc_multiplicity_func_ps_new (gdouble delta_c)
 }
 
 static gdouble
-_nc_multiplicity_func_ps_eval (NcMultiplicityFunc *mulf, NcHICosmo *model, gdouble sigma, gdouble z)       /* f(\sigma) - Press \& Schechter (PS) */
+_nc_multiplicity_func_ps_eval (NcMultiplicityFunc *mulf, NcHICosmo *cosmo, gdouble sigma, gdouble z)       /* f(\sigma) - Press \& Schechter (PS) */
 {
   NcMultiplicityFuncPS *mulf_ps = NC_MULTIPLICITY_FUNC_PS (mulf);
-  const gdouble c1 = sqrt(2.0/M_PI);               /* c1 = \sqrt{\frac{2}{\pi}} */
+  const gdouble c1 = sqrt (2.0 / M_PI);               /* c1 = \sqrt{\frac{2}{\pi}} */
   gdouble x = mulf_ps->delta_c / sigma;        /* \delta_c \sigma^{-1} */
   gdouble x2 = x * x;
   gdouble f_PS = c1 * x * exp(-x2 / 2.0);
 
-  NCM_UNUSED (model);
+  NCM_UNUSED (cosmo);
   NCM_UNUSED (z);
   
   return f_PS;

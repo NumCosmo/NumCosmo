@@ -527,34 +527,43 @@ ncm_lh_ratio2d_f (gdouble x, gpointer ptr)
 {
   NcmLHRatio2d *lhr2d = NCM_LH_RATIO2D (ptr);
   gdouble p[2];
+  gdouble res;
   gboolean skip = FALSE;
+
   if (lhr2d->angular)
     lhr2d->theta = x;
   else
     lhr2d->r = x;
 
   ncm_lh_ratio2d_tofparam (lhr2d, &p[0], &p[1]);
-  if (lhr2d->mtype > NCM_FIT_RUN_MSGS_SIMPLE)
-    g_message ("#  stepping to [% 12.8g % 12.8g]:\n", p[0], p[1]);
   
   skip = skip || !_ncm_lh_ratio2d_inside_interval (&p[0], lhr2d->lb[0], lhr2d->ub[0], 1e-4);
   skip = skip || !_ncm_lh_ratio2d_inside_interval (&p[1], lhr2d->lb[1], lhr2d->ub[1], 1e-4);
 
   if (skip)
-    return HUGE_VAL;
-
-  ncm_mset_param_set_pi (lhr2d->constrained->mset, lhr2d->pi, p, 2);
-  ncm_fit_run (lhr2d->constrained, NCM_FIT_RUN_MSGS_NONE);
-
-  lhr2d->niter     += lhr2d->constrained->fstate->niter;
-  lhr2d->func_eval += lhr2d->constrained->fstate->func_eval;
-  lhr2d->grad_eval += lhr2d->constrained->fstate->grad_eval;
-
   {
-    const gdouble m2lnL_const = ncm_fit_state_get_m2lnL_curval (lhr2d->constrained->fstate);
-    const gdouble m2lnL = ncm_fit_state_get_m2lnL_curval (lhr2d->fit->fstate);
-    return m2lnL_const - (m2lnL + lhr2d->chisquare);
+    res = 1.0e5;
   }
+  else
+  {
+    ncm_mset_param_set_pi (lhr2d->constrained->mset, lhr2d->pi, p, 2);
+    ncm_fit_run (lhr2d->constrained, NCM_FIT_RUN_MSGS_NONE);
+
+    lhr2d->niter     += lhr2d->constrained->fstate->niter;
+    lhr2d->func_eval += lhr2d->constrained->fstate->func_eval;
+    lhr2d->grad_eval += lhr2d->constrained->fstate->grad_eval;
+
+    {
+      const gdouble m2lnL_const = ncm_fit_state_get_m2lnL_curval (lhr2d->constrained->fstate);
+      const gdouble m2lnL = ncm_fit_state_get_m2lnL_curval (lhr2d->fit->fstate);
+      res = m2lnL_const - (m2lnL + lhr2d->chisquare);
+    }
+  }
+
+  if (lhr2d->mtype > NCM_FIT_RUN_MSGS_SIMPLE)
+    g_message ("#  stepping to r = % 12.8g [% 12.8g % 12.8g] DeltaChi = % 12.8g:\n", x, p[0], p[1], res);
+  
+  return res;
 }
 
 static gdouble
@@ -575,7 +584,7 @@ ncm_lh_ratio2d_root_brent (NcmLHRatio2d *lhr2d, gdouble x0, gdouble x)
   gsl_root_fsolver_set (s, &F, x0, x1);
 
   ncm_lh_ratio2d_log_root_start (lhr2d, x0, x);
-
+  
   do
   {
     iter++;
@@ -586,7 +595,7 @@ ncm_lh_ratio2d_root_brent (NcmLHRatio2d *lhr2d, gdouble x0, gdouble x)
       gsl_root_fsolver_free (s);
       return GSL_NAN;
     }
-
+    
     x = gsl_root_fsolver_root (s);
     x0 = gsl_root_fsolver_x_lower (s);
     x1 = gsl_root_fsolver_x_upper (s);

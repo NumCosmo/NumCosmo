@@ -72,7 +72,6 @@ struct _NcClusterAbundance
   gdouble lnMi, lnMf, zi, zf;
   gdouble completeness_factor;
   gdouble lnM_epsilon, z_epsilon;
-  gboolean prepared;
   gboolean optimize;
   gsl_histogram2d *completeness;
   gsl_histogram2d *purity;
@@ -83,6 +82,7 @@ struct _NcClusterAbundance
   NcmSpline2d *inv_lnM_z;
   gsl_rng *rng;
   NcmModelCtrl *ctrl_cosmo;
+  NcmModelCtrl *ctrl_reion;
   NcmModelCtrl *ctrl_z;
   NcmModelCtrl *ctrl_m;
 };
@@ -97,12 +97,14 @@ GType nc_cluster_abundance_get_type (void) G_GNUC_CONST;
 
 NcClusterAbundance *nc_cluster_abundance_new (NcMassFunction *mfp, NcHaloBiasFunc *mbiasf);
 NcClusterAbundance *nc_cluster_abundance_nodist_new (NcMassFunction *mfp, NcHaloBiasFunc *mbiasf);
-NcClusterAbundance *nc_cluster_abundance_copy (NcClusterAbundance *cad);
 NcClusterAbundance *nc_cluster_abundance_ref (NcClusterAbundance *cad);
+
 void nc_cluster_abundance_free (NcClusterAbundance *cad);
 void nc_cluster_abundance_clear (NcClusterAbundance **cad);
 
-void nc_cluster_abundance_prepare (NcClusterAbundance *cad, NcHICosmo *cosmo, NcClusterRedshift *clusterz, NcClusterMass *clusterm);
+void nc_cluster_abundance_prepare (NcClusterAbundance *cad, NcHIReion *reion, NcHICosmo *cosmo, NcClusterRedshift *clusterz, NcClusterMass *clusterm);
+G_INLINE_FUNC void nc_cluster_abundance_prepare_if_needed (NcClusterAbundance *cad, NcHIReion *reion, NcHICosmo *cosmo, NcClusterRedshift *clusterz, NcClusterMass *clusterm);
+
 void nc_cluster_abundance_prepare_inv_dNdz (NcClusterAbundance *cad, NcHICosmo *cosmo);
 void nc_cluster_abundance_prepare_inv_dNdlnM_z (NcClusterAbundance *cad, NcHICosmo *cosmo, gdouble z);
 
@@ -157,14 +159,15 @@ G_END_DECLS
 G_BEGIN_DECLS
 
 G_INLINE_FUNC void
-nc_cluster_abundance_prepare_if_needed (NcClusterAbundance *cad, NcHICosmo *cosmo, NcClusterRedshift *clusterz, NcClusterMass *clusterm)
+nc_cluster_abundance_prepare_if_needed (NcClusterAbundance *cad, NcHIReion *reion, NcHICosmo *cosmo, NcClusterRedshift *clusterz, NcClusterMass *clusterm)
 {
-  const gboolean cosmo_update = ncm_model_ctrl_update (cad->ctrl_cosmo, NCM_MODEL (cosmo));
-  const gboolean clusterz_update = ncm_model_ctrl_model_update (cad->ctrl_z, NCM_MODEL (clusterz));
-  const gboolean clusterm_update = ncm_model_ctrl_model_update (cad->ctrl_m, NCM_MODEL (clusterm));
+  const gboolean cosmo_up    = ncm_model_ctrl_update (cad->ctrl_cosmo, NCM_MODEL (cosmo));
+  const gboolean reion_up    = ncm_model_ctrl_update (cad->ctrl_reion, NCM_MODEL (reion));
+  const gboolean clusterz_up = ncm_model_ctrl_model_update (cad->ctrl_z, NCM_MODEL (clusterz));
+  const gboolean clusterm_up = ncm_model_ctrl_model_update (cad->ctrl_m, NCM_MODEL (clusterm));
 
-  if (cosmo_update || clusterz_update || clusterm_update)
-    nc_cluster_abundance_prepare (cad, cosmo, clusterz, clusterm);
+  if (cosmo_up || reion_up || clusterz_up || clusterm_up)
+    nc_cluster_abundance_prepare (cad, reion, cosmo, clusterz, clusterm);
 }
 
 G_END_DECLS

@@ -22,6 +22,11 @@ Ncm.cfg_init ()
 cosmo = Nc.HICosmo.new_from_name (Nc.HICosmo, "NcHICosmoDEXcdm")
 
 #
+#  New homogeneous and isotropic reionization object.
+#
+reion = Nc.HIReionCamb.new ()
+
+#
 #  New recombination object configured to calculate up to redshift 
 #  10^9 and precision 10^-7.
 #
@@ -60,7 +65,7 @@ cosmo.props.w       = -1.0
 #
 #  Preparing recomb with cosmo.
 #
-recomb.prepare (cosmo)
+recomb.prepare (reion, cosmo)
 
 #
 #  Calculating Xe, equilibrium Xe, v_tau and its derivatives.

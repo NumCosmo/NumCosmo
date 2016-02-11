@@ -959,15 +959,16 @@ _nc_data_cluster_ncount_prepare (NcmData *data, NcmMSet *mset)
 {
   NcDataClusterNCount *ncount = NC_DATA_CLUSTER_NCOUNT (data);
   NcHICosmo *cosmo            = NC_HICOSMO (ncm_mset_peek (mset, nc_hicosmo_id ()));
+  NcHIReion *reion            = NC_HIREION (ncm_mset_peek (mset, nc_hireion_id ()));
   NcClusterRedshift *clusterz = NC_CLUSTER_REDSHIFT (ncm_mset_peek (mset, nc_cluster_redshift_id ()));
   NcClusterMass *clusterm     = NC_CLUSTER_MASS (ncm_mset_peek (mset, nc_cluster_mass_id ()));
 
-  g_assert ((cosmo != NULL) && (clusterz != NULL) && (clusterm != NULL));
+  g_assert ((cosmo != NULL) && (reion != NULL) && (clusterz != NULL) && (clusterm != NULL));
   
   g_assert (ncount->z == NULL || g_type_is_a (G_OBJECT_TYPE (clusterz), G_OBJECT_TYPE (ncount->z)));
   g_assert (ncount->m == NULL || g_type_is_a (G_OBJECT_TYPE (clusterm), G_OBJECT_TYPE (ncount->m)));
     
-  nc_cluster_abundance_prepare_if_needed (ncount->cad, cosmo, clusterz, clusterm);
+  nc_cluster_abundance_prepare_if_needed (ncount->cad, reion, cosmo, clusterz, clusterm);
 }
 
 static gchar *
@@ -997,19 +998,21 @@ static void
 _nc_data_cluster_ncount_resample (NcmData *data, NcmMSet *mset, NcmRNG *rng)
 {
   NcDataClusterNCount *ncount = NC_DATA_CLUSTER_NCOUNT (data);
-  NcClusterAbundance *cad = ncount->cad;
-  NcHICosmo *cosmo = NC_HICOSMO (ncm_mset_peek (mset, nc_hicosmo_id ()));
+  NcClusterAbundance *cad     = ncount->cad;
+  NcHICosmo *cosmo            = NC_HICOSMO (ncm_mset_peek (mset, nc_hicosmo_id ()));
   NcClusterRedshift *clusterz = NC_CLUSTER_REDSHIFT (ncm_mset_peek (mset, nc_cluster_redshift_id ()));
   NcClusterMass *clusterm     = NC_CLUSTER_MASS (ncm_mset_peek (mset, nc_cluster_mass_id ()));
-  guint z_obs_len = nc_cluster_redshift_obs_len (clusterz);
-  guint z_obs_params_len = nc_cluster_redshift_obs_params_len (clusterz);
-  guint lnM_obs_len = nc_cluster_mass_obs_len (clusterm);
+
+  guint z_obs_len          = nc_cluster_redshift_obs_len (clusterz);
+  guint z_obs_params_len   = nc_cluster_redshift_obs_params_len (clusterz);
+  guint lnM_obs_len        = nc_cluster_mass_obs_len (clusterm);
   guint lnM_obs_params_len = nc_cluster_mass_obs_params_len (clusterm);
-  GArray *lnM_true_array = NULL;
-  GArray *z_true_array = NULL;
-  GArray *z_obs_array = NULL;
-  GArray *z_obs_params_array = NULL;
-  GArray *lnM_obs_array = NULL;
+
+  GArray *lnM_true_array       = NULL;
+  GArray *z_true_array         = NULL;
+  GArray *z_obs_array          = NULL;
+  GArray *z_obs_params_array   = NULL;
+  GArray *lnM_obs_array        = NULL;
   GArray *lnM_obs_params_array = NULL;
   guint total_np;
   guint i;
@@ -1023,6 +1026,8 @@ _nc_data_cluster_ncount_resample (NcmData *data, NcmMSet *mset, NcmRNG *rng)
   total_np = gsl_ran_poisson (rng->r, cad->norma);
   ncm_rng_unlock (rng);
 
+printf ("# first np %u [%20.15g]\n", total_np, cad->norma);
+  
   if (total_np == 0)
   {
     ncount->np = 0;

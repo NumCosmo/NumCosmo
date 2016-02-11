@@ -82,7 +82,7 @@ calc_polynomial (const gdouble *d, gdouble x)
 }
 
 static gdouble
-_nc_multiplicity_func_tinker_mean_eval (NcMultiplicityFunc *mulf, NcHICosmo *model, gdouble sigma, gdouble z)   /* $f(\sigma)$ Tinker: astro-ph/0803.2706 */
+_nc_multiplicity_func_tinker_mean_eval (NcMultiplicityFunc *mulf, NcHICosmo *cosmo, gdouble sigma, gdouble z)   /* $f(\sigma)$ Tinker: astro-ph/0803.2706 */
 {
   /* This function is a copy of the nc_multiplicity_function_tinker_critical, adapted to mean matter density.*/
   NcMultiplicityFuncTinkerMean *mulf_tinker_mean = NC_MULTIPLICITY_FUNC_TINKER_MEAN (mulf);
@@ -142,7 +142,7 @@ _nc_multiplicity_func_tinker_mean_eval (NcMultiplicityFunc *mulf, NcHICosmo *mod
 
   g_assert (Delta <= 3200.0);
 
-  NCM_UNUSED (model);
+  NCM_UNUSED (cosmo);
 
   for (i = 0; i < 8; i++)
   {

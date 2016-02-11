@@ -66,13 +66,13 @@ nc_multiplicity_func_tinker_mean_normalized_new (gdouble Delta)
 }
 
 static gdouble
-_nc_multiplicity_func_tinker_mean_normalized_eval (NcMultiplicityFunc *mulf, NcHICosmo *model, gdouble sigma, gdouble z)   /* $g(\sigma) = \nu x f(\nu)$ Tinker: Eq. 8 1001.3162 */
+_nc_multiplicity_func_tinker_mean_normalized_eval (NcMultiplicityFunc *mulf, NcHICosmo *cosmo, gdouble sigma, gdouble z)   /* $g(\sigma) = \nu x f(\nu)$ Tinker: Eq. 8 1001.3162 */
 {
   NcMultiplicityFuncTinkerMeanNormalized *mtmn = NC_MULTIPLICITY_FUNC_TINKER_MEAN_NORMALIZED (mulf);
   const gdouble nu = 1.686 / sigma;
   gdouble f_Tinker_mean_normalized;
   
-  NCM_UNUSED (model);
+  NCM_UNUSED (cosmo);
 
   if (mtmn->Delta == 200.0)
   {

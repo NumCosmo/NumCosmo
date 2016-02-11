@@ -75,7 +75,7 @@ nc_multiplicity_func_tinker_new (gdouble A0, gdouble a0, gdouble b0, gdouble c, 
 }
 
 static gdouble
-_nc_multiplicity_func_tinker_eval (NcMultiplicityFunc *mulf, NcHICosmo *model, gdouble sigma, gdouble z)   /* $f(\sigma)$ Tinker: astro-ph/0803.2706 */
+_nc_multiplicity_func_tinker_eval (NcMultiplicityFunc *mulf, NcHICosmo *cosmo, gdouble sigma, gdouble z)   /* $f(\sigma)$ Tinker: astro-ph/0803.2706 */
 {
   NcMultiplicityFuncTinker *mulf_tinker = NC_MULTIPLICITY_FUNC_TINKER (mulf);
   const gdouble A = mulf_tinker->A0 * pow(1.0 + z, -0.14);
@@ -85,7 +85,7 @@ _nc_multiplicity_func_tinker_eval (NcMultiplicityFunc *mulf, NcHICosmo *model, g
   const gdouble b = mulf_tinker->b0 * pow(1.0 + z, -alpha);
   const gdouble f_Tinker = A * (pow(sigma/b, -a) + 1.0) * exp(-(mulf_tinker->c) / (sigma * sigma));
 
-  NCM_UNUSED (model);
+  NCM_UNUSED (cosmo);
   
   //	printf ("%.15g %.15g %.15g %.15g | %.15g %.15g %.15g %.15g\n", mulf_tinker->A0, mulf_tinker->a0, mulf_tinker->b0, mulf_tinker->c,
   //	        A, a, b, mulf_tinker->c);

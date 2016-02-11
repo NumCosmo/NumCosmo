@@ -61,7 +61,7 @@ dist = Nc.Distance (zf = 2.0)
 #
 #  Creating a new Data object from distance modulus catalogs.
 #
-snia = Nc.DataDistMu.new (dist, Nc.DataSNIAId.SIMPLE_UNION2_1)
+snia = Nc.DataDistMu.new_from_id (dist, Nc.DataSNIAId.SIMPLE_UNION2_1)
 
 #
 #  Creating a new Dataset and add snia to it.
