@@ -54,18 +54,18 @@ nc_transfer_func_bbks_new ()
 }
 
 static void
-_nc_transfer_func_bbks_prepare (NcTransferFunc *tf, NcHICosmo *model)
+_nc_transfer_func_bbks_prepare (NcTransferFunc *tf, NcHIReion *reion, NcHICosmo *cosmo)
 {
   NcTransferFuncBBKS *tf_BBKS = NC_TRANSFER_FUNC_BBKS (tf);
-  const gdouble T_0 = nc_hicosmo_T_gamma0 (model);
+  const gdouble T_0 = nc_hicosmo_T_gamma0 (cosmo);
   const gdouble c1 = 3.89;
   const gdouble c2 = gsl_pow_2 (16.1);
   const gdouble c3 = gsl_pow_3 (5.46);
   const gdouble c4 = gsl_pow_4 (6.71);
-  const gdouble c5 = gsl_pow_2 (T_0/2.7);   /* CMB: (T_0/2.7)^2 = (2.725/2.7)^2 */
-  const gdouble h = nc_hicosmo_h (model);
+  const gdouble c5 = gsl_pow_2 (T_0 / 2.7);   /* CMB: (T_0/2.7)^2 = (2.725/2.7)^2 */
+  const gdouble h = nc_hicosmo_h (cosmo);
   const gdouble h2 = h * h;
-  const gdouble wm = nc_hicosmo_Omega_m (model) * h2;
+  const gdouble wm = nc_hicosmo_Omega_m0 (cosmo) * h2;
 
   tf_BBKS->c1    = c1;
   tf_BBKS->c2    = c2;
@@ -90,10 +90,10 @@ _nc_transfer_func_bbks_calc (NcTransferFunc *tf, gdouble kh)
 }
 
 static gdouble
-_nc_transfer_func_bbks_calc_matter_P (NcTransferFunc *tf, NcHICosmo *model, gdouble kh)
+_nc_transfer_func_bbks_calc_matter_P (NcTransferFunc *tf, NcHICosmo *cosmo, gdouble kh)
 {
   gdouble T = _nc_transfer_func_bbks_calc (tf, kh);
-  return T * T * nc_hicosmo_powspec (model, kh);
+  return T * T * nc_hicosmo_powspec (cosmo, kh);
 }
 
 static void

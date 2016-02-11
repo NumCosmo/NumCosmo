@@ -102,9 +102,9 @@ ncm_magnus_iserles_ode_step (NcmMIOde *mi_ode, long double h)
   gdouble D_data[4];
   gsl_matrix_view D_view = gsl_matrix_view_array (D_data, 2, 2);
   gsl_matrix *D = &D_view.matrix;
-  gdouble expOmega_m1_data[4];
-  gsl_matrix_view expOmega_m1_view = gsl_matrix_view_array (expOmega_m1_data, 2, 2);
-  gsl_matrix *expOmega_m1 = &expOmega_m1_view.matrix;
+  gdouble expOmega_m01_data[4];
+  gsl_matrix_view expOmega_m01_view = gsl_matrix_view_array (expOmega_m01_data, 2, 2);
+  gsl_matrix *expOmega_m01 = &expOmega_m01_view.matrix;
   gint ret;
 */
   mi_ode->h = h;
@@ -192,7 +192,7 @@ printf ("I: (% .15Lg, % .15Lg, % .15Lg)\n", Icos, Isin, I1);
   }
 /*  
   gsl_matrix_memcpy (C, mi_ode->exp_A);  
-  ret = gsl_blas_dgemm (CblasNoTrans, CblasNoTrans, 1.0, mi_ode->exp_A, expOmega_m1, 1.0, C);
+  ret = gsl_blas_dgemm (CblasNoTrans, CblasNoTrans, 1.0, mi_ode->exp_A, expOmega_m01, 1.0, C);
   NCM_TEST_GSL_RESULT("ncm_magnus_iserles_ode_step", ret);
   {
     gdouble temp_u;

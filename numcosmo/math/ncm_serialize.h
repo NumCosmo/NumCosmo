@@ -111,6 +111,7 @@ GObject *ncm_serialize_from_file (NcmSerialize *ser, const gchar *filename);
 GVariant *ncm_serialize_gvalue_to_gvariant (NcmSerialize *ser, GValue *val);
 GVariant *ncm_serialize_to_variant (NcmSerialize *ser, GObject *obj);
 gchar *ncm_serialize_to_string (NcmSerialize *ser, GObject *obj, gboolean valid_variant);
+void ncm_serialize_to_file (NcmSerialize *ser, GObject *obj, const gchar *filename);
 GObject *ncm_serialize_dup_obj (NcmSerialize *ser, GObject *obj);
 
 /* Global NcmSerialize object */
@@ -139,6 +140,7 @@ GObject *ncm_serialize_global_from_file (const gchar *filename);
 GVariant *ncm_serialize_global_gvalue_to_gvariant (GValue *val);
 GVariant *ncm_serialize_global_to_variant (GObject *obj);
 gchar *ncm_serialize_global_to_string (GObject *obj, gboolean valid_variant);
+void ncm_serialize_global_to_file (GObject *obj, const gchar *filename);
 GObject *ncm_serialize_global_dup_obj (GObject *obj);
 
 #define NCM_SERIALIZE_PROPERTY_TYPE "{sv}"

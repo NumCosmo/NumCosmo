@@ -97,7 +97,7 @@ struct _NcmMSetPIndex
 GType ncm_mset_get_type (void) G_GNUC_CONST;
 GType ncm_mset_pindex_get_type (void) G_GNUC_CONST;
 
-void ncm_mset_model_register_id (NcmModelClass *model_class, const gchar *ns, const gchar *desc, const gchar *long_desc);
+void ncm_mset_model_register_id (NcmModelClass *model_class, const gchar *ns, const gchar *desc, const gchar *long_desc, gboolean can_stack);
 
 /**
  * NCM_MSET_MODEL_ID_FUNC: (skip)
@@ -143,8 +143,8 @@ NcmMSetPIndex *ncm_mset_pindex_dup (NcmMSetPIndex *pi);
 void ncm_mset_pindex_free (NcmMSetPIndex *pi);
 
 NcmMSet *ncm_mset_empty_new (void);
-NcmMSet *ncm_mset_new (NcmModel *model0, ...);
-NcmMSet *ncm_mset_newv (NcmModel *model0, va_list ap);
+NcmMSet *ncm_mset_new (gpointer model0, ...);
+NcmMSet *ncm_mset_newv (gpointer model0, va_list ap);
 NcmMSet *ncm_mset_new_array (NcmModel **model);
 NcmMSet *ncm_mset_ref (NcmMSet *mset);
 NcmMSet *ncm_mset_dup (NcmMSet *mset, NcmSerialize *ser);

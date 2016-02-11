@@ -76,6 +76,7 @@ struct _NcmModelClass
   void (*set_property) (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec);
   gboolean (*valid) (NcmModel *model);
   NcmModelID model_id;
+  gboolean can_stack;
   gchar *name;
   gchar *nick;
   guint64 impl;
@@ -217,10 +218,10 @@ G_INLINE_FUNC gdouble ns_name##_##name (NsName *m) \
 /*
  * Model functions call
  */
-#define NCM_MODEL_FUNC1_IMPL(NS_NAME,NsName,ns_name,name) \
-G_INLINE_FUNC gdouble ns_name##_##name (NsName *m, const gdouble x) \
+#define NCM_MODEL_FUNC1_IMPL(NS_NAME,NsName,ns_name,name,var) \
+G_INLINE_FUNC gdouble ns_name##_##name (NsName *m, const gdouble var) \
 { \
-  return NS_NAME##_GET_CLASS (m)->name (NS_NAME (m), x); \
+  return NS_NAME##_GET_CLASS (m)->name (NS_NAME (m), var); \
 }
 
 /*

@@ -34,7 +34,7 @@
 #include <numcosmo/nc_hicosmo.h>
 #include <numcosmo/perturbations/nc_hipert.h>
 #include <numcosmo/nc_recomb.h>
-#include <numcosmo/scalefactor.h>
+#include <numcosmo/nc_scalefactor.h>
 #include <numcosmo/data/nc_data_cmb.h>
 
 G_BEGIN_DECLS
@@ -50,7 +50,7 @@ typedef struct _NcHIPertBoltzmannClass NcHIPertBoltzmannClass;
 typedef struct _NcHIPertBoltzmann NcHIPertBoltzmann;
 
 typedef void (*NcHIPertBoltzmannCreate) (NcHIPertBoltzmann *pb, NcHICosmo *cosmo);
-typedef void (*NcHIPertBoltzmannPrepare) (NcHIPertBoltzmann *pb, NcHIPrim *prim, NcHICosmo *cosmo);
+typedef void (*NcHIPertBoltzmannPrepare) (NcHIPertBoltzmann *pb, NcHIPrim *prim, NcHIReion *reion, NcHICosmo *cosmo);
 typedef void (*NcHIPertBoltzmannConf) (NcHIPertBoltzmann *pb);
 typedef void (*NcHIPertBoltzmannEvol) (NcHIPertBoltzmann *pb, gdouble g);
 typedef gboolean (*NcHIPertBoltzmannTest) (NcHIPertBoltzmann *pb);
@@ -144,7 +144,7 @@ struct _NcHIPertBoltzmann
   NcHIPert parent_instance;
   NcRecomb *recomb;
   NcHICosmo *cosmo;
-  NcScaleFactor *a;
+  NcScalefactor *a;
   gdouble eta0;
   gdouble lambdai;
   gdouble lambdaf;
@@ -196,8 +196,8 @@ guint nc_hipert_boltzmann_get_TE_lmax (NcHIPertBoltzmann *pb);
 guint nc_hipert_boltzmann_get_TB_lmax (NcHIPertBoltzmann *pb);
 guint nc_hipert_boltzmann_get_EB_lmax (NcHIPertBoltzmann *pb);
 
-void nc_hipert_boltzmann_prepare (NcHIPertBoltzmann *pb, NcHIPrim *prim, NcHICosmo *cosmo);
-void nc_hipert_boltzmann_prepare_if_needed (NcHIPertBoltzmann *pb, NcHIPrim *prim, NcHICosmo *cosmo);
+void nc_hipert_boltzmann_prepare (NcHIPertBoltzmann *pb, NcHIPrim *prim, NcHIReion *reion, NcHICosmo *cosmo);
+void nc_hipert_boltzmann_prepare_if_needed (NcHIPertBoltzmann *pb, NcHIPrim *prim, NcHIReion *reion, NcHICosmo *cosmo);
 
 void nc_hipert_boltzmann_get_TT_Cls (NcHIPertBoltzmann *pb, NcmVector *Cls);
 void nc_hipert_boltzmann_get_EE_Cls (NcHIPertBoltzmann *pb, NcmVector *Cls);

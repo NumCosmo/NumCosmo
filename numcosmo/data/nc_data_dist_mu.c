@@ -42,10 +42,6 @@
 #include "math/ncm_cfg.h"
 #include "nc_enum_types.h"
 
-#ifdef NUMCOSMO_HAVE_SQLITE3
-#include <sqlite3.h>
-#endif
-
 enum
 {
   PROP_0,
@@ -79,8 +75,7 @@ nc_data_dist_mu_set_property (GObject *object, guint prop_id, const GValue *valu
   switch (prop_id)
   {
     case PROP_DIST:
-      nc_distance_clear (&dist_mu->dist);
-      dist_mu->dist = g_value_dup_object (value);
+      nc_data_dist_mu_set_dist (dist_mu, g_value_get_object (value));
       break;
     case PROP_Z:
       ncm_vector_substitute (&dist_mu->x, g_value_get_object (value), TRUE);
@@ -154,7 +149,7 @@ nc_data_dist_mu_class_init (NcDataDistMuClass *klass)
                                                         NULL,
                                                         "Distance object",
                                                         NC_TYPE_DISTANCE,
-                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+                                                        G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
   g_object_class_install_property (object_class,
                                    PROP_Z,
                                    g_param_spec_object ("z",
@@ -177,22 +172,6 @@ _nc_data_dist_mu_prepare (NcmData *data, NcmMSet *mset)
   nc_distance_prepare_if_needed (dist_mu->dist, cosmo);
 }
 
-#ifdef NUMCOSMO_HAVE_SQLITE3
-static const gchar *_nc_data_snia_query[] =
-{
-  "Gold sample 157", "SELECT z,mu-0.32 AS muc,s FROM supernovae WHERE quality='Gold-2004' ORDER BY z",
-  "Gold sample 182 - removed low redshift", "SELECT z,mu-0.32 AS muc,s FROM supernovae WHERE quality='Gold' AND z >= 0.0233 ORDER BY z",
-  "Gold sample 182", "SELECT z,mu-0.32 AS muc,s FROM supernovae WHERE quality='Gold' ORDER BY z",
-  "ESSENCE sample",  "SELECT z,mu,s FROM supernovae WHERE quality='ESSENCE' ORDER BY z",
-  "Legacy sample",   "SELECT z,mu+19.308,s FROM supernovae WHERE quality='LEGACY' ORDER BY z",
-  "Union sample",    "SELECT z,mu,s FROM supernovae WHERE quality='UNION' ORDER BY z",
-  "CfA3 sample",     "SELECT z,mu,s FROM supernovae WHERE quality='CfA3' ORDER BY z",
-  "Union2 sample",   "SELECT z,mu,s FROM supernovae WHERE quality='Union2' ORDER BY z",
-  "Union2.1 sample", "SELECT z,mu,s FROM supernovae WHERE quality='Union2.1' ORDER BY z",
-  "SDSS sample by Emille", "SELECT z,mu,s FROM supernovae WHERE quality='SDSS-Emille' ORDER BY z",
-};
-#endif
-
 static void 
 _nc_data_dist_mu_mean_func (NcmDataGaussDiag *diag, NcmMSet *mset, NcmVector *vp)
 {
@@ -202,30 +181,10 @@ _nc_data_dist_mu_mean_func (NcmDataGaussDiag *diag, NcmMSet *mset, NcmVector *vp
 
   for (i = 0; i < diag->np; i++)
   {
-    const gdouble z  = ncm_vector_get (dist_mu->x, i);
-    const gdouble mu = nc_distance_modulus (dist_mu->dist, cosmo, z);
-    ncm_vector_set (vp, i, mu);
+    const gdouble z   = ncm_vector_get (dist_mu->x, i);
+    const gdouble dmu = nc_distance_dmodulus (dist_mu->dist, cosmo, z);
+    ncm_vector_set (vp, i, dmu);
   }
-}
-
-/**
- * nc_data_dist_mu_new:
- * @dist: FIXME
- * @id: FIXME
- *
- * FIXME
- *
- * Returns: FIXME
- */
-NcmData *
-nc_data_dist_mu_new (NcDistance *dist, NcDataSNIAId id)
-{
-  NcmData *data = g_object_new (NC_TYPE_DATA_DIST_MU,
-                                "dist", dist,
-                                "w-mean", TRUE,
-                                NULL);
-  nc_data_dist_mu_set_sample (NC_DATA_DIST_MU (data), id);
-  return data;
 }
 
 static void 
@@ -244,58 +203,110 @@ _nc_data_dist_mu_set_size (NcmDataGaussDiag *diag, guint np)
 }
 
 /**
- * nc_data_dist_mu_set_sample:
- * @dist_mu: a #NcDataDistMu.
- * @id: FIXME
+ * nc_data_dist_mu_new_empty:
+ * @dist: FIXME
  *
  * FIXME
  *
+ * Returns: FIXME
  */
-void
-nc_data_dist_mu_set_sample (NcDataDistMu *dist_mu, NcDataSNIAId id)
+NcDataDistMu *
+nc_data_dist_mu_new_empty (NcDistance *dist)
 {
-#ifdef NUMCOSMO_HAVE_SQLITE3
-  NcmData *data = NCM_DATA (dist_mu);
-  NcmDataGaussDiag *diag = NCM_DATA_GAUSS_DIAG (dist_mu);
+  NcDataDistMu *dist_mu = g_object_new (NC_TYPE_DATA_DIST_MU,
+                                        "dist", dist,
+                                        "w-mean", TRUE,
+                                        NULL);
+  return dist_mu;
+}
 
-  g_assert (id <= NC_DATA_SNIA_SIMPLE_END && id >= NC_DATA_SNIA_SIMPLE_START);
-  id -= NC_DATA_SNIA_SIMPLE_START;
+/**
+ * nc_data_dist_mu_new_from_file:
+ * @filename: file containing a serialized #NcDataDistMu
+ * 
+ * Creates a new #NcDataDistMu from @filename.
+ * 
+ * Returns: (transfer full): the newly created #NcDataDistMu.
+ */
+NcDataDistMu *
+nc_data_dist_mu_new_from_file (const gchar *filename)
+{
+  NcDataDistMu *dist_mu = NC_DATA_DIST_MU (ncm_serialize_global_from_file (filename));
+  g_assert (NC_IS_DATA_DIST_MU (dist_mu));
 
+  return dist_mu;
+}
+
+/**
+ * nc_data_dist_mu_new_from_id:
+ * @dist: a #NcDistance
+ * @id: a #NcDataSNIAId
+ *
+ * FIXME
+ *
+ * Returns: FIXME
+ */
+NcDataDistMu *
+nc_data_dist_mu_new_from_id (NcDistance *dist, NcDataSNIAId id)
+{
+  NcDataDistMu *dist_mu;
+  gchar *filename;
+
+  switch (id)
   {
-    const gchar *query = _nc_data_snia_query[id * 2 + 1];
-    gint i, nrow, qncol, ret;
-    gchar **res;
-    gchar *err_str;
-
-    sqlite3 *db = ncm_cfg_get_default_sqlite3 ();
-
-    ncm_data_set_desc (data, _nc_data_snia_query[id * 2]);
-
-    g_assert (db != NULL);  
-
-    ret = sqlite3_get_table (db, query, &res, &nrow, &qncol, &err_str);
-    if (ret != SQLITE_OK)
-    {
-      sqlite3_free_table (res);
-      g_error ("nc_data_dist_mu_set_sample: Query error: %s", err_str);
-    }
-
-    ncm_data_gauss_diag_set_size (diag, nrow);
-
-    for (i = 0; i < nrow; i++)
-    {
-      gint j = 0;
-      ncm_vector_set (dist_mu->x,  i, atof (res[(i + 1) * qncol + j++]));
-      ncm_vector_set (diag->y,     i, atof (res[(i + 1) * qncol + j++]));  
-      ncm_vector_set (diag->sigma, i, atof (res[(i + 1) * qncol + j++]));
-    }
-
-    sqlite3_free_table (res);
-
-    ncm_data_set_init (data, TRUE);
+    case NC_DATA_SNIA_SIMPLE_GOLD_157:
+      filename = ncm_cfg_get_data_filename ("nc_data_snia_diag_gold_157.obj", TRUE);
+      break;
+    case NC_DATA_SNIA_SIMPLE_GOLD_182:
+      filename = ncm_cfg_get_data_filename ("nc_data_snia_diag_gold_182.obj", TRUE);
+      break;
+    case NC_DATA_SNIA_SIMPLE_GOLD_182_FULL:
+      filename = ncm_cfg_get_data_filename ("nc_data_snia_diag_gold_206.obj", TRUE);
+      break;
+    case NC_DATA_SNIA_SIMPLE_ESSENCE:
+      filename = ncm_cfg_get_data_filename ("nc_data_snia_diag_essence.obj", TRUE);
+      break;
+    case NC_DATA_SNIA_SIMPLE_LEGACY:
+      filename = ncm_cfg_get_data_filename ("nc_data_snia_diag_legacy.obj", TRUE);
+      break;
+    case NC_DATA_SNIA_SIMPLE_UNION:
+      filename = ncm_cfg_get_data_filename ("nc_data_snia_diag_union.obj", TRUE);
+      break;
+    case NC_DATA_SNIA_SIMPLE_CfA3:
+      filename = ncm_cfg_get_data_filename ("nc_data_snia_diag_cfa3.obj", TRUE);
+      break;
+    case NC_DATA_SNIA_SIMPLE_UNION2:
+      filename = ncm_cfg_get_data_filename ("nc_data_snia_diag_union2.obj", TRUE);
+      break;
+    case NC_DATA_SNIA_SIMPLE_UNION2_1:
+      filename = ncm_cfg_get_data_filename ("nc_data_snia_diag_union2_1.obj", TRUE);
+      break;
+    case NC_DATA_SNIA_SIMPLE_SDSS_EMILLE:
+      filename = ncm_cfg_get_data_filename ("nc_data_snia_diag_sdss_emille.obj", TRUE);
+      break;
+    default:
+      g_error ("nc_data_dist_mu_new_from_id: id %d not recognized.", id);
+      break;
   }
-#else
-  g_error (PACKAGE_NAME" compiled without support for sqlite3, SN Ia data not avaliable.");
-#endif
 
+  dist_mu = nc_data_dist_mu_new_from_file (filename);
+  nc_data_dist_mu_set_dist (dist_mu, dist);
+  g_free (filename);
+
+  return dist_mu;
+}
+
+/**
+ * nc_data_dist_mu_set_dist:
+ * @dist_mu: a #NcDataDistMu
+ * @dist: a #NcDistance
+ * 
+ * Sets the distance object.
+ * 
+ */
+void 
+nc_data_dist_mu_set_dist (NcDataDistMu *dist_mu, NcDistance *dist)
+{
+  nc_distance_clear (&dist_mu->dist);
+  dist_mu->dist = nc_distance_ref (dist);
 }

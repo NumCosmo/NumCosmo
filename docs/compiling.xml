@@ -31,7 +31,7 @@
 <listitem>
 <simpara>
 For most systems the following packages can be found in the main repositories:
-<emphasis>gobject-introspection, gir1.2-glib-2.0, libgirepository1.0-dev, gcc, pkg-config, libglib2.0-dev, libgmp3-dev, libmpfr-dev, libgsl0-dev, libsqlite3-dev, libfftw3-dev.</emphasis>
+<emphasis>gobject-introspection, gir1.2-glib-2.0, libgirepository1.0-dev, gcc, pkg-config, libglib2.0-dev, libgmp3-dev, libmpfr-dev, libgsl0-dev, libfftw3-dev.</emphasis>
 </simpara>
 <simpara>If you want to build from the repository you also need: <emphasis>autotools-dev, libtool, gtk-doc-tools.</emphasis></simpara>
 </listitem>
@@ -64,7 +64,7 @@ The other packages sometimes can be found with the following package names: <emp
 <listitem>
 <simpara>
 For most systems the following packages can be found in the main repositories:
-<emphasis>pkg-config, gobject-introspection-devel, glib2-devel, gsl-devel, gmp-devel, mpfr-devel, fftw3-devel, sqlite3-devel.</emphasis>
+<emphasis>pkg-config, gobject-introspection-devel, glib2-devel, gsl-devel, gmp-devel, mpfr-devel, fftw3-devel.</emphasis>
 </simpara>
 <simpara>If you want to build from the repository you also need: <emphasis>autoconf, automake, libtool, gtk-doc.</emphasis></simpara>
 </listitem>

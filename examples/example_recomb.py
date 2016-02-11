@@ -65,10 +65,16 @@ recomb.prepare (cosmo)
 #
 #  Calculating Xe, equilibrium Xe, v_tau and its derivatives.
 #
-x_a = []
+x_a      = []
 x_dtau_a = []
-Xe_a = []
-Xefi_a = []
+Xe_a     = []
+Xefi_a   = []
+XHI_a    = []
+XHII_a   = []
+XHeI_a   = []
+XHeII_a  = []
+XHeIII_a = []
+
 dtau_dlambda_a = []
 x_E_a = []
 x_Etaub_a = []
@@ -80,7 +86,14 @@ for i in range (10000):
   alpha = -log (1.0e4) + (log (1.0e4) - log (1.0e2)) / 9999.0 * i
   Xe = recomb.Xe (cosmo, alpha)
   x = exp (-alpha)
-  Xefi = recomb.equilibrium_Xe (cosmo, x)
+  Xefi     = recomb.equilibrium_Xe (cosmo, x)
+
+  XHI_i    = recomb.equilibrium_XHI (cosmo, x)
+  XHII_i   = recomb.equilibrium_XHII (cosmo, x)
+  XHeI_i   = recomb.equilibrium_XHeI (cosmo, x)
+  XHeII_i  = recomb.equilibrium_XHeII (cosmo, x)
+  XHeIII_i = recomb.equilibrium_XHeIII (cosmo, x)
+
   v_tau = recomb.v_tau (cosmo, alpha)
   dv_tau_dlambda = recomb.dv_tau_dlambda (cosmo, alpha)
   d2v_tau_dlambda2 = recomb.d2v_tau_dlambda2 (cosmo, alpha)
@@ -88,6 +101,13 @@ for i in range (10000):
   x_a.append (x)
   Xe_a.append (Xe)
   Xefi_a.append (Xefi)
+
+  XHI_a.append (XHI_i)
+  XHII_a.append (XHII_i)
+  XHeI_a.append (XHeI_i)
+  XHeII_a.append (XHeII_i)
+  XHeIII_a.append (XHeIII_i)
+
   v_tau_a.append (-v_tau)
   dv_tau_dlambda_a.append (-dv_tau_dlambda / 10.0)
   d2v_tau_dlambda2_a.append (-d2v_tau_dlambda2 / 200.0)
@@ -120,11 +140,32 @@ plt.savefig ("recomb_Xe.png")
 
 plt.clf ()
 
-(lambdam, lambdal, lambdau) = recomb.v_tau_lambda_features (cosmo, 2.0 * log (10.0))
+#
+#  Ploting all components history.
+#
+
+plt.title ("Fractions Equilibrium History")
+plt.xscale('log')
+plt.plot (x_a, XHI_a, 'r', label=r'$X_\mathrm{HI}$')
+plt.plot (x_a, XHII_a, 'g', label=r'$X_\mathrm{HII}$')
+plt.plot (x_a, XHeI_a, 'b', label=r'$X_\mathrm{HeI}$')
+plt.plot (x_a, XHeII_a, 'y', label=r'$X_\mathrm{HeII}$')
+plt.plot (x_a, XHeIII_a, 'm', label=r'$X_\mathrm{HeIII}$')
+plt.xlabel(r'$x$')
+plt.ylabel(r'$X_*$')
+plt.legend(loc=6)
+
+plt.ylim([-0.1,1.1])
+
+plt.savefig ("recomb_eq_fractions.png")
+
+plt.clf ()
 
 #
 #  Ploting visibility function and derivatives.
 #
+
+(lambdam, lambdal, lambdau) = recomb.v_tau_lambda_features (cosmo, 2.0 * log (10.0))
 
 plt.title ("Visibility Function and Derivatives")
 plt.xscale('log')

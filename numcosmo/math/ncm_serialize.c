@@ -1518,6 +1518,32 @@ ncm_serialize_to_string (NcmSerialize *ser, GObject *obj, gboolean valid_variant
 }
 
 /**
+ * ncm_serialize_to_file:
+ * @ser: a #NcmSerialize
+ * @obj: a #GObject
+ * @filename: File where to save the serialized version of the object
+ * 
+ * Serializes @obj and saves the string in @filename.
+ * 
+ */
+void
+ncm_serialize_to_file (NcmSerialize *ser, GObject *obj, const gchar *filename)
+{
+  GError *error  = NULL;
+  gchar *obj_ser = ncm_serialize_to_string (ser, obj, TRUE);
+  gsize length   = strlen (obj_ser);
+
+  g_assert (filename != NULL);
+
+  if (!g_file_set_contents (filename, obj_ser, length, &error))
+    g_error ("ncm_serialize_to_file: cannot save to file %s: %s",
+             filename, error->message);
+
+  g_free (obj_ser);
+}
+
+
+/**
  * ncm_serialize_dup_obj:
  * @ser: a #NcmSerialize.
  * @obj: a #GObject.
@@ -1870,6 +1896,22 @@ ncm_serialize_global_to_string (GObject *obj, gboolean valid_variant)
   gchar *ret = ncm_serialize_to_string (ser, obj, valid_variant);
   ncm_serialize_unref (ser);
   return ret;
+}
+
+/**
+ * ncm_serialize_global_to_file:
+ * @obj: a #GObject.
+ * @filename: File where to save the serialized version of the object
+ * 
+ * Global version of ncm_serialize_to_file().
+ * 
+ */
+void
+ncm_serialize_global_to_file (GObject *obj, const gchar *filename)
+{
+  NcmSerialize *ser = ncm_serialize_global ();
+  ncm_serialize_to_file (ser, obj, filename);
+  ncm_serialize_unref (ser);
 }
 
 /**

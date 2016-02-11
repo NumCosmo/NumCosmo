@@ -4,6 +4,7 @@
 gint
 main (gint argc, gchar *argv[])
 {
+  NcHIReion *reion;
   NcHICosmo *cosmo;
   NcDistance *dist;
   NcWindow *wp;
@@ -25,6 +26,11 @@ main (gint argc, gchar *argv[])
    * New homogeneous and isotropic cosmological model NcHICosmoDEXcdm.
    ****************************************************************************/  
   cosmo = nc_hicosmo_new_from_name (NC_TYPE_HICOSMO, "NcHICosmoDEXcdm");
+
+  /**************************************************************************** 
+   * New homogeneous and isotropic reionization object.
+   ****************************************************************************/  
+  reion = NC_HIREION (nc_hireion_camb_new ());
 
   /**************************************************************************** 
    * New cosmological distance objects optimizied to perform calculations
@@ -69,14 +75,14 @@ main (gint argc, gchar *argv[])
    * default values. Remeber to use the _orig_ version to set the original
    * parameters in case when a reparametrization is used.
    ****************************************************************************/ 
-  ncm_model_orig_param_set (NCM_MODEL (cosmo), NC_HICOSMO_DE_H0, 70.0);
-  ncm_model_orig_param_set (NCM_MODEL (cosmo), NC_HICOSMO_DE_OMEGA_C, 0.25);
-  ncm_model_orig_param_set (NCM_MODEL (cosmo), NC_HICOSMO_DE_OMEGA_X, 0.7);
-  ncm_model_orig_param_set (NCM_MODEL (cosmo), NC_HICOSMO_DE_T_GAMMA0, 1.0);
-  ncm_model_orig_param_set (NCM_MODEL (cosmo), NC_HICOSMO_DE_OMEGA_B, 0.05);
-  ncm_model_orig_param_set (NCM_MODEL (cosmo), NC_HICOSMO_DE_SPECINDEX, 1.0);
-  ncm_model_orig_param_set (NCM_MODEL (cosmo), NC_HICOSMO_DE_SIGMA8, 0.9);
-  ncm_model_orig_param_set (NCM_MODEL (cosmo), NC_HICOSMO_DE_XCDM_W, -1.1);
+  ncm_model_orig_param_set (NCM_MODEL (cosmo), NC_HICOSMO_DE_H0,        70.0);
+  ncm_model_orig_param_set (NCM_MODEL (cosmo), NC_HICOSMO_DE_OMEGA_C,    0.25);
+  ncm_model_orig_param_set (NCM_MODEL (cosmo), NC_HICOSMO_DE_OMEGA_X,    0.7);
+  ncm_model_orig_param_set (NCM_MODEL (cosmo), NC_HICOSMO_DE_T_GAMMA0,   1.0);
+  ncm_model_orig_param_set (NCM_MODEL (cosmo), NC_HICOSMO_DE_OMEGA_B,    0.05);
+  ncm_model_orig_param_set (NCM_MODEL (cosmo), NC_HICOSMO_DE_SPECINDEX,  1.0);
+  ncm_model_orig_param_set (NCM_MODEL (cosmo), NC_HICOSMO_DE_SIGMA8,     0.9);
+  ncm_model_orig_param_set (NCM_MODEL (cosmo), NC_HICOSMO_DE_XCDM_W,    -1.1);
 
   /**************************************************************************** 
    * Printing the parameters used.
@@ -103,7 +109,7 @@ main (gint argc, gchar *argv[])
    * Printing the transfer function and the matter power spectrum in the 
    * kh (in unities of h/Mpc) interval [1e-3, 1e3] 
    ****************************************************************************/
-  nc_transfer_func_prepare (tf, cosmo);
+  nc_transfer_func_prepare (tf, reion, cosmo);
 
   for (i = 0; i < np; i++)
   {
@@ -120,7 +126,7 @@ main (gint argc, gchar *argv[])
    * First calculates the growth function at z = 0.3 and then the spectrum
    * amplitude from the sigma8 parameter.
    ****************************************************************************/
-  nc_matter_var_prepare (vp, cosmo);
+  nc_matter_var_prepare (vp, reion, cosmo);
   {
     gdouble Dz = nc_growth_func_eval (gf, cosmo, 0.3);
     gdouble A = nc_matter_var_sigma8_sqrtvar0 (vp, cosmo);
@@ -141,7 +147,7 @@ main (gint argc, gchar *argv[])
    * for the redhshifts in the interval [0, 2.0] and area 200 squared degree.
    ****************************************************************************/
   nc_mass_function_set_area_sd (mf, 200.0);
-  nc_mass_function_set_eval_limits (mf, cosmo, log(1e14), log(1e16), 0.0, 2.0);
+  nc_mass_function_set_eval_limits (mf, cosmo, log (1e14), log (1e16), 0.0, 2.0);
   nc_mass_function_prepare (mf, cosmo);
 
   for (i = 0; i < np; i++)
@@ -158,6 +164,7 @@ main (gint argc, gchar *argv[])
    ****************************************************************************/ 
   nc_distance_free (dist);
   ncm_model_free (NCM_MODEL (cosmo));
+  nc_hireion_free (reion);
   nc_window_free (wp);
   nc_transfer_func_free (tf);
   nc_matter_var_free (vp);

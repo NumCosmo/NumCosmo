@@ -1,0 +1,13 @@
+{
+  'NcDataHubble', 
+  {
+    'desc':      <'Riess 2008 HST Project sample'>, 
+    'long-desc': <''>, 
+    'init':      <true>, 
+    'n-points':  <uint32 1>, 
+    'w-mean':    <false>, 
+    'mean':      <[73.8]>, 
+    'sigma':     <[ 2.4]>, 
+    'z':         <[ 0.0]>
+  }
+}

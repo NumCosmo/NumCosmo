@@ -84,7 +84,7 @@
  * \begin{equation}\label{eq:saha:HyI}
  * \frac{X_{\HyII}X_\e}{X_\HyI} = \frac{e^{-\HyI_{1s}/(k_BT)}}{n_{\Hy}\lambda_{\e}^3},
  * \end{equation}
- * where $\HyI_{1s}$ is the hydrogen $1s$ binding energy ncm_c_H_ion_E_1s_2S0_5(),
+ * where $\HyI_{1s}$ is the hydrogen $1s$ binding energy ncm_c_HI_ion_E_1s_2S0_5(),
  * $\lambda_{\e}$ is the electron thermal wavelength, i.e.,
  * \begin{equation}
  * \lambda_{\e} = \sqrt{\frac{2\pi\hbar^2}{m_\e{}k_BT}},
@@ -107,7 +107,7 @@
  * The equilibrium double/single-ionized helium ratio $X_{\HeIII}X_\e/X_{\HeII}$
  * through Saha equation, i.e.,
  * \begin{equation}\label{eq:saha:HeII}
- * \frac{X_{\HeII}X_\e}{X_{\HeI}} = \frac{e^{-\HeII_{1s}/(k_BT)}}{4n_{\Hy}\lambda_{\e}^3},
+ * \frac{X_{\HeIII}X_\e}{X_{\HeII}} = \frac{e^{-\HeII_{1s}/(k_BT)}}{4n_{\Hy}\lambda_{\e}^3},
  * \end{equation}
  * where $\HeII_{1s}$ is the helium II $1s$ binding energy ncm_c_HeII_ion_E_1s_2S0_5().
  * This calculation is done using the Saha equation as in
@@ -334,7 +334,7 @@ nc_recomb_HI_ion_saha (NcHICosmo *cosmo, gdouble x)
   const gdouble n_H0 = nc_hicosmo_H_number_density (cosmo);
   const gdouble n_H  = n_H0 * x3;
 
-  return gsl_sf_exp_mult (-ncm_c_H_ion_E_1s_2S0_5 () / kbT, 1.0 / (n_H * lambda_e3));
+  return gsl_sf_exp_mult (-ncm_c_HI_ion_E_1s_2S0_5 () / kbT, 1.0 / (n_H * lambda_e3));
 }
 
 /**
@@ -548,6 +548,139 @@ nc_recomb_equilibrium_Xe (NcRecomb *recomb, NcHICosmo *cosmo, const gdouble x)
 }
 
 /**
+ * nc_recomb_equilibrium_XHI:
+ * @recomb: a #NcRecomb.
+ * @cosmo: a #NcHICosmo.
+ * @x: $x$.
+ *
+ * Calculates the hydrogen-I fraction $X_\HyI$ assuming equilibrium at all times.
+ * It solves the system containing all Saha's equations Eqs \eqref{eq:saha:HyI},
+ * \eqref{eq:saha:HeI} and \eqref{eq:saha:HeII} and the constraints Eq
+ * \eqref{eq:Hy:add}, \eqref{eq:He:add} and \eqref{eq:def:Xe}.
+ *
+ * Returns: $X_\HyI$.
+ */
+gdouble
+nc_recomb_equilibrium_XHI (NcRecomb *recomb, NcHICosmo *cosmo, const gdouble x)
+{
+  const gdouble saha_XHII_Xe_XHI = nc_recomb_HI_ion_saha (cosmo, x);
+  if (saha_XHII_Xe_XHI == 0.0)
+  {
+    return 1.0;
+  }
+  else
+  {
+    const gdouble Xe = nc_recomb_equilibrium_Xe (recomb, cosmo, x);
+    const gdouble f  = saha_XHII_Xe_XHI / Xe;
+    return 1.0 / (1.0 + f);
+  }
+}
+
+/**
+ * nc_recomb_equilibrium_XHII:
+ * @recomb: a #NcRecomb.
+ * @cosmo: a #NcHICosmo.
+ * @x: $x$.
+ *
+ * Calculates the hydrogen-II fraction $X_\HyII$ assuming equilibrium at all times.
+ * It solves the system containing all Saha's equations Eqs \eqref{eq:saha:HyI},
+ * \eqref{eq:saha:HeI} and \eqref{eq:saha:HeII} and the constraints Eq
+ * \eqref{eq:Hy:add}, \eqref{eq:He:add} and \eqref{eq:def:Xe}.
+ *
+ * Returns: $X_\HyII$.
+ */
+gdouble
+nc_recomb_equilibrium_XHII (NcRecomb *recomb, NcHICosmo *cosmo, const gdouble x)
+{
+  const gdouble saha_XHII_Xe_XHI = nc_recomb_HI_ion_saha (cosmo, x);
+  if (saha_XHII_Xe_XHI == 0.0)
+  {
+    return 0.0;
+  }
+  else
+  {
+    const gdouble Xe = nc_recomb_equilibrium_Xe (recomb, cosmo, x);
+    const gdouble f  = saha_XHII_Xe_XHI / Xe;
+    return f / (1.0 + f);
+  }
+}
+
+/**
+ * nc_recomb_equilibrium_XHeI:
+ * @recomb: a #NcRecomb.
+ * @cosmo: a #NcHICosmo.
+ * @x: $x$.
+ *
+ * Calculates the helium-I fraction $X_\HeI$ assuming equilibrium at all times.
+ * It solves the system containing all Saha's equations Eqs \eqref{eq:saha:HyI},
+ * \eqref{eq:saha:HeI} and \eqref{eq:saha:HeII} and the constraints Eq
+ * \eqref{eq:Hy:add}, \eqref{eq:He:add} and \eqref{eq:def:Xe}.
+ *
+ * Returns: $X_\HyII$.
+ */
+gdouble
+nc_recomb_equilibrium_XHeI (NcRecomb *recomb, NcHICosmo *cosmo, const gdouble x)
+{
+  const gdouble saha_XHeIII_Xe_XHeII = nc_recomb_HeII_ion_saha (cosmo, x);
+  const gdouble saha_XHeII_Xe_XHeI   = nc_recomb_HeI_ion_saha (cosmo, x);
+  const gdouble Xe                   = nc_recomb_equilibrium_Xe (recomb, cosmo, x);
+  const gdouble f1                   = saha_XHeIII_Xe_XHeII / Xe;
+  const gdouble f2                   = saha_XHeII_Xe_XHeI / Xe;
+
+  return nc_hicosmo_XHe (cosmo) / (1.0 + f2 + f1 * f2);
+}
+
+/**
+ * nc_recomb_equilibrium_XHeII:
+ * @recomb: a #NcRecomb.
+ * @cosmo: a #NcHICosmo.
+ * @x: $x$.
+ *
+ * Calculates the helium-II fraction $X_\HeII$ assuming equilibrium at all times.
+ * It solves the system containing all Saha's equations Eqs \eqref{eq:saha:HyI},
+ * \eqref{eq:saha:HeI} and \eqref{eq:saha:HeII} and the constraints Eq
+ * \eqref{eq:Hy:add}, \eqref{eq:He:add} and \eqref{eq:def:Xe}.
+ *
+ * Returns: $X_\HyII$.
+ */
+gdouble
+nc_recomb_equilibrium_XHeII (NcRecomb *recomb, NcHICosmo *cosmo, const gdouble x)
+{
+  const gdouble saha_XHeIII_Xe_XHeII = nc_recomb_HeII_ion_saha (cosmo, x);
+  const gdouble saha_XHeII_Xe_XHeI   = nc_recomb_HeI_ion_saha (cosmo, x);
+  const gdouble Xe                   = nc_recomb_equilibrium_Xe (recomb, cosmo, x);
+  const gdouble f1                   = saha_XHeIII_Xe_XHeII / Xe;
+  const gdouble f2                   = saha_XHeII_Xe_XHeI / Xe;
+
+  return f2 * nc_hicosmo_XHe (cosmo) / (1.0 + f2 + f1 * f2);
+}
+
+/**
+ * nc_recomb_equilibrium_XHeIII:
+ * @recomb: a #NcRecomb.
+ * @cosmo: a #NcHICosmo.
+ * @x: $x$.
+ *
+ * Calculates the helium-III fraction $X_\HeIII$ assuming equilibrium at all times.
+ * It solves the system containing all Saha's equations Eqs \eqref{eq:saha:HyI},
+ * \eqref{eq:saha:HeI} and \eqref{eq:saha:HeII} and the constraints Eq
+ * \eqref{eq:Hy:add}, \eqref{eq:He:add} and \eqref{eq:def:Xe}.
+ *
+ * Returns: $X_\HyII$.
+ */
+gdouble
+nc_recomb_equilibrium_XHeIII (NcRecomb *recomb, NcHICosmo *cosmo, const gdouble x)
+{
+  const gdouble saha_XHeIII_Xe_XHeII = nc_recomb_HeII_ion_saha (cosmo, x);
+  const gdouble saha_XHeII_Xe_XHeI   = nc_recomb_HeI_ion_saha (cosmo, x);
+  const gdouble Xe                   = nc_recomb_equilibrium_Xe (recomb, cosmo, x);
+  const gdouble f1                   = saha_XHeIII_Xe_XHeII / Xe;
+  const gdouble f2                   = saha_XHeII_Xe_XHeI / Xe;
+
+  return f1 * f2 * nc_hicosmo_XHe (cosmo) / (1.0 + f2 + f1 * f2);
+}
+
+/**
  * nc_recomb_dtau_dlambda_Xe:
  * @cosmo: a #NcHICosmo.
  * @lambda: $\lambda$.
@@ -630,16 +763,17 @@ nc_recomb_clear (NcRecomb **recomb)
 
 /**
  * nc_recomb_prepare:
- * @recomb: a #NcRecomb.
- * @cosmo: a #NcHICosmo.
+ * @recomb: a #NcRecomb
+ * @reion: a #NcHIReion
+ * @cosmo: a #NcHICosmo
  *
  * Prepare the object using the model @cosmo.
  *
  */
 void
-nc_recomb_prepare (NcRecomb *recomb, NcHICosmo *cosmo)
+nc_recomb_prepare (NcRecomb *recomb, NcHIReion *reion, NcHICosmo *cosmo)
 {
-  NC_RECOMB_GET_CLASS (recomb)->prepare (recomb, cosmo);
+  NC_RECOMB_GET_CLASS (recomb)->prepare (recomb, reion, cosmo);
 }
 
 /**
@@ -933,8 +1067,9 @@ nc_recomb_v_tau_lambda_mode (NcRecomb *recomb, NcHICosmo *cosmo)
 {
   _nc_recomb_func func;
   gsl_function F;
-  const gdouble lambda_ref = -log (10.0 * ncm_c_wmap5_cmb_z () + 10.0);
-  const gdouble lambda_try = -log (ncm_c_wmap5_cmb_z () + 1.0);
+  const gdouble cmb_ref_z = 1090.0;
+  const gdouble lambda_ref = -log (10.0 * cmb_ref_z + 10.0);
+  const gdouble lambda_try = -log (cmb_ref_z + 1.0);
 
   F.function = &_nc_recomb_v_tau_min;
   F.params = &func;
@@ -975,8 +1110,9 @@ nc_recomb_v_tau_lambda_features (NcRecomb *recomb, NcHICosmo *cosmo, gdouble log
   gsl_function F;
   gdouble log_v_tau_max;
   gdouble log_v_tau_f;
-  const gdouble lambda_ref = -log (10.0 * ncm_c_wmap5_cmb_z () + 10.0);
-  const gdouble lambda_try = -log (ncm_c_wmap5_cmb_z () + 1.0);
+  const gdouble cmb_ref_z = 1090.0;
+  const gdouble lambda_ref = -log (10.0 * cmb_ref_z + 10.0);
+  const gdouble lambda_try = -log (cmb_ref_z + 1.0);
 
   F.function = &_nc_recomb_v_tau_min;
   F.params = &func;
@@ -1020,6 +1156,7 @@ nc_recomb_tau_zstar (NcRecomb *recomb, NcHICosmo *cosmo)
 {
   _nc_recomb_func func;
   gsl_function F;
+  const gdouble cmb_ref_z = 1090.0;
 
   F.function = &_nc_recomb_tau_ref;
   F.params = &func;
@@ -1029,7 +1166,7 @@ nc_recomb_tau_zstar (NcRecomb *recomb, NcHICosmo *cosmo)
   func.ref    = 1.0;
 
   return _nc_recomb_root (recomb, &F,
-                          -log (10.0 * ncm_c_wmap5_cmb_z () + 10.0),
+                          -log (10.0 * cmb_ref_z + 10.0),
                           recomb->lambdaf);
 }
 

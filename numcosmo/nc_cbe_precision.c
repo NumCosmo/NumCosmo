@@ -1997,7 +1997,7 @@ nc_cbe_precision_class_init (NcCBEPrecisionClass *klass)
                                    PROP_Q_LOGSTEP_OPEN,
                                    g_param_spec_double ("q-logstep-open",
                                                         NULL,
-                                                        "in open models, the value of q_logstep_spline must be decreased according to curvature. Increasing this number will make the calculation more accurate for large positive Omega_k",
+                                                        "in open models, the value of q_logstep_spline must be decreased according to curvature. Increasing this number will make the calculation more accurate for large positive Omega_k0",
                                                         0.0, G_MAXDOUBLE, 6.0,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
   g_object_class_install_property (object_class,

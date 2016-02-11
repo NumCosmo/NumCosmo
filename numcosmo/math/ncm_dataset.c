@@ -947,6 +947,40 @@ ncm_dataset_m2lnL_val (NcmDataset *dset, NcmMSet *mset, gdouble *m2lnL)
 }
 
 /**
+ * ncm_dataset_m2lnL_vec:
+ * @dset: a #NcmLikelihood.
+ * @mset: a #NcmMSet.
+ * @m2lnL_v: a #NcmVector
+ *
+ * FIXME
+ * 
+ */
+void
+ncm_dataset_m2lnL_vec (NcmDataset *dset, NcmMSet *mset, NcmVector *m2lnL_v)
+{
+  guint i;
+
+  g_assert (ncm_vector_len (m2lnL_v) >= dset->oa->len);
+
+  for (i = 0; i < dset->oa->len; i++)
+  {
+    NcmData *data = ncm_dataset_peek_data (dset, i);
+
+    if (!NCM_DATA_GET_CLASS (data)->m2lnL_val)
+      g_error ("ncm_dataset_m2lnL_val: %s dont implement m2lnL", G_OBJECT_TYPE_NAME (data));
+    else
+    {
+      gdouble m2lnL_i;
+      ncm_data_prepare (data, mset);
+      NCM_DATA_GET_CLASS (data)->m2lnL_val (data, mset, &m2lnL_i);
+      ncm_vector_set (m2lnL_v, i, m2lnL_i);
+    }
+  }
+
+  return;
+}
+
+/**
  * ncm_dataset_m2lnL_i_val:
  * @dset: a #NcmLikelihood
  * @mset: a #NcmMSet

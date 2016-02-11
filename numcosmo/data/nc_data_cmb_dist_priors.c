@@ -70,8 +70,7 @@ nc_data_cmb_dist_priors_set_property (GObject *object, guint prop_id, const GVal
   switch (prop_id)
   {
     case PROP_DIST:
-      nc_distance_clear (&cmb_dist_priors->dist);
-      cmb_dist_priors->dist = g_value_dup_object (value);
+      nc_data_cmb_dist_priors_set_dist (cmb_dist_priors, g_value_get_object (value));
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -167,123 +166,88 @@ _nc_data_cmb_dist_priors_mean_func (NcmDataGauss *gauss, NcmMSet *mset, NcmVecto
 }
 
 /**
- * nc_data_cmb_dist_priors_new:
- * @dist: a #NcDistance.
- * @id: a #NcDataCMBId.
+ * nc_data_cmb_dist_priors_new_empty:
+ * @dist: a #NcDistance
  *
- * This function allocates memory for a new #NcmData object and sets its properties to the values from
- * the input arguments.
+ * This function allocates an empty #NcDataCMBDistPriors object.
  *
- * Returns: A #NcmData.
+ * Returns: A #NcDataCMBDistPriors.
  */
-NcmData *
-nc_data_cmb_dist_priors_new (NcDistance *dist, NcDataCMBId id)
+NcDataCMBDistPriors *
+nc_data_cmb_dist_priors_new_empty (NcDistance *dist)
 {
-  NcmData *data = g_object_new (NC_TYPE_DATA_CMB_DIST_PRIORS,
-                                "dist", dist,
-                                NULL);
-
-  nc_data_cmb_dist_priors_set_sample (NC_DATA_CMB_DIST_PRIORS (data), id);
-  
-  return data;
+  NcDataCMBDistPriors *cmb_dist_priors = g_object_new (NC_TYPE_DATA_CMB_DIST_PRIORS,
+                                                       "dist", dist,
+                                                       NULL);
+  return cmb_dist_priors;
 }
 
-/***************************************************************************
- * WMAP5 Distance priors data (arXiv:0803.0547), (astro-ph/0604051)
- *
- ****************************************************************************/
+/**
+ * nc_data_cmb_dist_priors_new_from_file:
+ * @filename: file containing a serialized #NcDataCMBDistPriors
+ * 
+ * Creates a new #NcDataCMBDistPriors from @filename.
+ * 
+ * Returns: (transfer full): the newly created #NcDataCMBDistPriors.
+ */
+NcDataCMBDistPriors *
+nc_data_cmb_dist_priors_new_from_file (const gchar *filename)
+{
+  NcDataCMBDistPriors *cmb_dist_priors = NC_DATA_CMB_DIST_PRIORS (ncm_serialize_global_from_file (filename));
+  g_assert (NC_IS_DATA_CMB_DIST_PRIORS (cmb_dist_priors));
 
-static gdouble nc_cmb_dist_priors_wmap5_bestfit[] = { 302.1000, 1.710, 1090.04000 };
-static gdouble nc_cmb_dist_priors_wmap5_inv_cov[][3] =
-{ { 1.8000,   27.968,   -1.10300 },
-  { 27.968, 5667.577,  -92.26300 },
-  { -1.103,  -92.263,    2.92300 } 
-};
-
-/***************************************************************************
- * WMAP7 Distance priors data (arXiv:1001.4538): tables 9 and 10
- *
- ****************************************************************************/
-
-static gdouble nc_cmb_dist_priors_wmap7_bestfit[] = { 302.0900, 1.725, 1091.30000 };
-static gdouble nc_cmb_dist_priors_wmap7_inv_cov[][3] =
-{ { 2.3050,   29.698,   -1.333 },
-  { 29.698, 6825.270,  -113.18 },
-  { -1.333,  -113.18,    3.414 } };
-
-/***************************************************************************
- * WMAP9 Distance priors data (arXiv:1212.5226): table 11
- *
- ****************************************************************************/
-
-static gdouble nc_cmb_dist_priors_wmap9_bestfit[] = { 302.4, 1.7246, 1090.88 };
-static gdouble nc_cmb_dist_priors_wmap9_inv_cov[][3] =
-{ {  3.182,    18.253,   -1.429 },
-  { 18.253, 11887.879, -193.808 },
-  { -1.429,  -193.808,    4.556 } };
-
+  return cmb_dist_priors;
+}
 
 /**
- * nc_data_cmb_dist_priors_set_sample:
- * @cmb_dist_priors: a #NcDataCMBDistPriors.
- * @id: a #NcDataCMBId.
+ * nc_data_cmb_dist_priors_new_from_id:
+ * @dist: a #NcDistance
+ * @id: a #NcDataCMBId
  *
- * This function sets the elements of both a vector and a matrix to the best-fit and the inverse covariance matrix 
- * values, respectively, of the CMB distance priors sample specified by @id.    
+ * FIXME
  *
+ * Returns: FIXME
  */
-void
-nc_data_cmb_dist_priors_set_sample (NcDataCMBDistPriors *cmb_dist_priors, NcDataCMBId id)
+NcDataCMBDistPriors *
+nc_data_cmb_dist_priors_new_from_id (NcDistance *dist, NcDataCMBId id)
 {
-  NcmData *data = NCM_DATA (cmb_dist_priors);
-  NcmDataGauss *gauss = NCM_DATA_GAUSS (cmb_dist_priors);
-  gint i, j;
-  
-  g_assert (id < NC_DATA_CMB_NSAMPLES);
-
-  ncm_data_gauss_set_size (gauss, 3);
+  NcDataCMBDistPriors *cmb_dist_priors;
+  gchar *filename;
 
   switch (id)
   {
     case NC_DATA_CMB_DIST_PRIORS_WMAP5:
-    {
-      ncm_data_set_desc (data, "WMAP5 distance priors");
-      for (i = 0; i < 3; i++)
-      {
-        ncm_vector_set (gauss->y, i, nc_cmb_dist_priors_wmap5_bestfit[i]);
-        for (j = 0; j < 3; j++)
-          ncm_matrix_set (gauss->inv_cov, i, j, 
-                          nc_cmb_dist_priors_wmap5_inv_cov[i][j]);
-      }
+      filename = ncm_cfg_get_data_filename ("nc_data_cmb_wmap5_dist_priors.obj", TRUE);
       break;
-    }
     case NC_DATA_CMB_DIST_PRIORS_WMAP7:
-    {
-      ncm_data_set_desc (data, "WMAP7 distance priors");
-      for (i = 0; i < 3; i++)
-      {
-        ncm_vector_set (gauss->y, i, nc_cmb_dist_priors_wmap7_bestfit[i]);
-        for (j = 0; j < 3; j++)
-          ncm_matrix_set (gauss->inv_cov, i, j, 
-                          nc_cmb_dist_priors_wmap7_inv_cov[i][j]);
-      }
+      filename = ncm_cfg_get_data_filename ("nc_data_cmb_wmap7_dist_priors.obj", TRUE);
       break;
-    }
     case NC_DATA_CMB_DIST_PRIORS_WMAP9:
-    {
-      ncm_data_set_desc (data, "WMAP9 distance priors");
-      for (i = 0; i < 3; i++)
-      {
-        ncm_vector_set (gauss->y, i, nc_cmb_dist_priors_wmap9_bestfit[i]);
-        for (j = 0; j < 3; j++)
-          ncm_matrix_set (gauss->inv_cov, i, j, 
-                          nc_cmb_dist_priors_wmap9_inv_cov[i][j]);
-      }
+      filename = ncm_cfg_get_data_filename ("nc_data_cmb_wmap9_dist_priors.obj", TRUE);
       break;
-    }
     default:
-      g_assert_not_reached ();
+      g_error ("nc_data_cmb_dist_priors_new_from_id: id %d not recognized.", id);
+      break;
   }
 
-  ncm_data_set_init (data, TRUE);
+  cmb_dist_priors = nc_data_cmb_dist_priors_new_from_file (filename);
+  nc_data_cmb_dist_priors_set_dist (cmb_dist_priors, dist);
+  g_free (filename);
+
+  return cmb_dist_priors;
+}
+
+/**
+ * nc_data_cmb_dist_priors_set_dist:
+ * @cmb_dist_priors: a #NcDataCMBDistPriors
+ * @dist: a #NcDistance
+ * 
+ * Sets the distance object.
+ * 
+ */
+void 
+nc_data_cmb_dist_priors_set_dist (NcDataCMBDistPriors *cmb_dist_priors, NcDistance *dist)
+{
+  nc_distance_clear (&cmb_dist_priors->dist);
+  cmb_dist_priors->dist = nc_distance_ref (dist);
 }

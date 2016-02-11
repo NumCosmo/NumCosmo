@@ -29,7 +29,7 @@
 #include <glib.h>
 #include <glib-object.h>
 #include <numcosmo/build_cfg.h>
-#include <numcosmo/nc_recomb.h>
+#include <numcosmo/nc_hicosmo.h>
 #include <numcosmo/math/ncm_c.h>
 #include <numcosmo/math/ncm_model.h>
 #include <numcosmo/math/ncm_mset.h>
@@ -65,6 +65,9 @@ struct _NcHIReion
 GType nc_hireion_get_type (void) G_GNUC_CONST;
 
 NCM_MSET_MODEL_DECLARE_ID (nc_hireion);
+
+void nc_hireion_free (NcHIReion *reion);
+void nc_hireion_clear (NcHIReion **reion);
 
 gdouble nc_hireion_get_init_x (NcHIReion *reion, NcHICosmo *cosmo);
 gdouble nc_hireion_get_Xe (NcHIReion *reion, NcHICosmo *cosmo, const gdouble lambda, const gdouble Xe_recomb);

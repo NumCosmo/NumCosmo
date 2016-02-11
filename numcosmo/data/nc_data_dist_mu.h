@@ -61,9 +61,11 @@ struct _NcDataDistMuClass
 
 GType nc_data_dist_mu_get_type (void) G_GNUC_CONST;
 
-NcmData *nc_data_dist_mu_new (NcDistance *dist, NcDataSNIAId id);
+NcDataDistMu *nc_data_dist_mu_new_empty (NcDistance *dist);
+NcDataDistMu *nc_data_dist_mu_new_from_file (const gchar *filename);
+NcDataDistMu *nc_data_dist_mu_new_from_id (NcDistance *dist, NcDataSNIAId id);
 
-void nc_data_dist_mu_set_sample (NcDataDistMu *dist_mu, NcDataSNIAId id);
+void nc_data_dist_mu_set_dist (NcDataDistMu *dist_mu, NcDistance *dist);
 
 G_END_DECLS
 

@@ -31,7 +31,9 @@
 #include <numcosmo/build_cfg.h>
 #include <numcosmo/math/ncm_model_ctrl.h>
 #include <numcosmo/nc_hicosmo.h>
+#include <numcosmo/nc_hireion.h>
 #include <numcosmo/nc_hiprim.h>
+#include <numcosmo/nc_scalefactor.h>
 #include <numcosmo/nc_cbe_precision.h>
 #include <numcosmo/data/nc_data_cmb.h>
 
@@ -54,12 +56,16 @@ struct _NcCBEClass
   GObjectClass parent_class;
 };
 
+typedef void (*NcCBECall) (NcCBE *cbe, NcHIPrim *prim, NcHIReion *reion, NcHICosmo *cosmo);
+typedef void (*NcCBEFree) (NcCBE *cbe);
+
 struct _NcCBE
 {
   /*< private >*/
   GObject parent_instance;
   NcCBEPrecision *prec;
   NcCBEPrivate *priv;
+  NcScalefactor *a;
   guint bg_verbose;
   guint thermo_verbose;
   guint pert_verbose;
@@ -78,8 +84,8 @@ struct _NcCBE
   guint tensor_lmax;
   NcmModelCtrl *ctrl_cosmo;
   NcmModelCtrl *ctrl_prim;
-  void (*call) (NcCBE *cbe, NcHIPrim *prim, NcHICosmo *cosmo);
-  void (*free) (NcCBE *cbe);
+  NcCBECall call;
+  NcCBEFree free;
   gboolean allocated;
   gboolean thermodyn_prepared;
 };
@@ -113,10 +119,10 @@ guint nc_cbe_get_scalar_lmax (NcCBE *cbe);
 guint nc_cbe_get_vector_lmax (NcCBE *cbe);
 guint nc_cbe_get_tensor_lmax (NcCBE *cbe);
 
-void nc_cbe_thermodyn_prepare (NcCBE *cbe, NcHICosmo *cosmo);
-void nc_cbe_thermodyn_prepare_if_needed (NcCBE *cbe, NcHICosmo *cosmo);
-void nc_cbe_prepare (NcCBE *cbe, NcHIPrim *prim, NcHICosmo *cosmo);
-void nc_cbe_prepare_if_needed (NcCBE *cbe, NcHIPrim *prim, NcHICosmo *cosmo);
+void nc_cbe_thermodyn_prepare (NcCBE *cbe, NcHIReion *reion, NcHICosmo *cosmo);
+void nc_cbe_thermodyn_prepare_if_needed (NcCBE *cbe, NcHIReion *reion, NcHICosmo *cosmo);
+void nc_cbe_prepare (NcCBE *cbe, NcHIPrim *prim, NcHIReion *reion, NcHICosmo *cosmo);
+void nc_cbe_prepare_if_needed (NcCBE *cbe, NcHIPrim *prim, NcHIReion *reion, NcHICosmo *cosmo);
 
 NcmSpline *nc_cbe_thermodyn_get_Xe (NcCBE *cbe);
 

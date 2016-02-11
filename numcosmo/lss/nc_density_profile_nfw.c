@@ -87,11 +87,11 @@ nc_density_profile_nfw_new ()
 static gdouble
 _nc_density_profile_nfw_scale_radius (NcHICosmo *model, const gdouble M, const gdouble z, const gdouble Delta)
 {
-  const gdouble Omega_m = nc_hicosmo_Omega_m (model);
+  const gdouble Omega_m0 = nc_hicosmo_Omega_m0 (model);
   const gdouble v = 4.0 * M_PI / 3.0;
-  gdouble rs_mnfw = cbrt (M / (Omega_m * v * Delta * ncm_c_crit_mass_density_h2_solar_mass_Mpc3 ())) / (1.0 + z);
-  //printf("Delta = %.5g den_crit = %.5g omegam = %.5g M = %.5g\n", Delta, ncm_c_crit_mass_density_h2_solar_mass_Mpc3(), Omega_m, M);
-  //printf ("M = %.5g\n", 969.6 * Omega_m * Delta * ncm_c_crit_mass_density_h2_solar_mass_Mpc3 ());
+  gdouble rs_mnfw = cbrt (M / (Omega_m0 * v * Delta * ncm_c_crit_mass_density_h2_solar_mass_Mpc3 ())) / (1.0 + z);
+  //printf("Delta = %.5g den_crit = %.5g omegam = %.5g M = %.5g\n", Delta, ncm_c_crit_mass_density_h2_solar_mass_Mpc3(), Omega_m0, M);
+  //printf ("M = %.5g\n", 969.6 * Omega_m0 * Delta * ncm_c_crit_mass_density_h2_solar_mass_Mpc3 ());
   return rs_mnfw;
 }
 

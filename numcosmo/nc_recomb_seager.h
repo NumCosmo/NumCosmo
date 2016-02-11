@@ -51,8 +51,12 @@ struct _NcRecombSeagerClass
 
 /**
  * NcRecombSeagerOpt:
- * @NC_RECOM_SEAGER_OPT_FUDGE: Whether to use fudge factor in the case_B recombination fitting formulas.
- * @NC_RECOM_SEAGER_OPT_FUDGE_GAUSS_COR: Whether to use gaussian correction in the case_B recombination fitting formulas.
+ * @NC_RECOM_SEAGER_OPT_HII_FUDGE: Includes fudge factor in the case_B recombination fitting formulas.
+ * @NC_RECOM_SEAGER_OPT_HII_FUDGE_GAUSS_COR: Includes gaussian correction in the case_B recombination fitting formulas.
+ * @NC_RECOM_SEAGER_OPT_HEII_SOBOLEV_1P1: Includes Sobolev scape probability for the $2p\,{}^1\\!P_{1} \to 1s\,{}^1\\!S_{0}$.
+ * @NC_RECOM_SEAGER_OPT_HEII_SOBOLEV_1P1_CO: Also includes the continum opacity effect due to H.
+ * @NC_RECOM_SEAGER_OPT_HEII_SOBOLEV_3P012: Includes Sobolev scape probability for the $2p\,{}^3\\!P_{0,1,2} \to 1s\,{}^1\\!S_{0}$.
+ * @NC_RECOM_SEAGER_OPT_HEII_SOBOLEV_3P012_CO: Also includes the continum opacity effect due to H.
  * @NC_RECOM_SEAGER_OPT_ALL: All options.
  * 
  * FIXME
@@ -60,25 +64,42 @@ struct _NcRecombSeagerClass
  */
 typedef enum _NcRecombSeagerOpt
 {
-  NC_RECOM_SEAGER_OPT_FUDGE           = 1 << 0,
-  NC_RECOM_SEAGER_OPT_FUDGE_GAUSS_COR = 1 << 1,
-  NC_RECOM_SEAGER_OPT_ALL = (1 << 2) - 1, /*< private >*/
-  NC_RECOM_SEAGER_OPT_LEN,                /*< skip >*/
+  NC_RECOM_SEAGER_OPT_HII_FUDGE             = 1 << 0,
+  NC_RECOM_SEAGER_OPT_HII_FUDGE_GAUSS_COR   = 1 << 1,
+  NC_RECOM_SEAGER_OPT_HEII_SOBOLEV_1P1      = 1 << 2,
+  NC_RECOM_SEAGER_OPT_HEII_SOBOLEV_1P1_CO   = 1 << 3,
+  NC_RECOM_SEAGER_OPT_HEII_SOBOLEV_3P012    = 1 << 4,
+  NC_RECOM_SEAGER_OPT_HEII_SOBOLEV_3P012_CO = 1 << 5,
+  NC_RECOM_SEAGER_OPT_ALL                   = (1 << 6) - 1, /*< private >*/
+  NC_RECOM_SEAGER_OPT_LEN,                                  /*< skip >*/
 } NcRecombSeagerOpt;
+
+typedef gdouble (*NcRecombSeagerKHI2p2Pmean) (NcRecombSeager *recomb_seager, NcHICosmo *cosmo, const gdouble x, const gdouble H);
+typedef gdouble (*NcRecombSeagerKHeI2p) (NcRecombSeager *recomb_seager, NcHICosmo *cosmo, const gdouble x, const gdouble XHI, const gdouble T, const gdouble XHeI, const gdouble H, const gdouble n_H);
+typedef void (*NcRecombSeagerKHeI2pGrad) (NcRecombSeager *recomb_seager, NcHICosmo *cosmo, const gdouble x, const gdouble XHI, const gdouble T, const gdouble XHeI, const gdouble H, const gdouble n_H, gdouble grad[3]);
 
 struct _NcRecombSeager
 {
   /*< private >*/
   NcRecomb parent_instance;
   NcRecombSeagerOpt opts;
+  NcRecombSeagerKHI2p2Pmean K_HI_2p_2Pmean;
+  NcRecombSeagerKHeI2p KX_HeI_2p_1P1;
+  NcRecombSeagerKHeI2p KX_HeI_2p_3Pmean;
+  NcRecombSeagerKHeI2pGrad KX_HeI_2p_1P1_grad;
+  NcRecombSeagerKHeI2pGrad KX_HeI_2p_3Pmean_grad;
   gdouble H_fudge;
   gdouble AGauss1, AGauss2;
   gdouble zGauss1, zGauss2;
   gdouble wGauss1, wGauss2;
+  gdouble A2P_s;
+  gdouble A2P_t;
+  gdouble sigma_He_2P_s;
+  gdouble sigma_He_2P_t;
+  gdouble Pb, Pb_t;
+  gdouble Qb, Qb_t;
   gpointer cvode;
   gboolean init;
-  CVRhsFn ion;
-  CVDlsDenseJacFn ion_J;
   N_Vector y0;
   N_Vector y;
   N_Vector abstol;
@@ -94,12 +115,22 @@ void nc_recomb_seager_free (NcRecombSeager *recomb_seager);
 void nc_recomb_seager_clear (NcRecombSeager **recomb_seager);
 
 void nc_recomb_seager_set_options (NcRecombSeager *recomb_seager, NcRecombSeagerOpt opts);
+void nc_recomb_seager_set_switch (NcRecombSeager *recomb_seager, guint H_switch, guint He_switch);
 NcRecombSeagerOpt nc_recomb_seager_get_options (NcRecombSeager *recomb_seager);
 
 gdouble nc_recomb_seager_pequignot_HI_case_B (NcRecombSeager *recomb_seager, NcHICosmo *cosmo, const gdouble Tm);
 gdouble nc_recomb_seager_pequignot_HI_case_B_dTm (NcRecombSeager *recomb_seager, NcHICosmo *cosmo, const gdouble Tm);
 gdouble nc_recomb_seager_hummer_HeI_case_B (NcRecombSeager *recomb_seager, NcHICosmo *cosmo, const gdouble Tm);
 gdouble nc_recomb_seager_hummer_HeI_case_B_dTm (NcRecombSeager *recomb_seager, NcHICosmo *cosmo, const gdouble Tm);
+gdouble nc_recomb_seager_hummer_HeI_case_B_trip (NcRecombSeager *recomb_seager, NcHICosmo *cosmo, const gdouble Tm);
+gdouble nc_recomb_seager_hummer_HeI_case_B_trip_dTm (NcRecombSeager *recomb_seager, NcHICosmo *cosmo, const gdouble Tm);
+
+#define NC_RECOMB_SEAGER_HUMMER_HEI_CASE_B_T1 (pow (10.0, 5.114))
+#define NC_RECOMB_SEAGER_HUMMER_HEI_CASE_B_T2 (pow (10.0, 0.477121))
+#define NC_RECOMB_SEAGER_HUMMER_HEI_CASE_B_P (0.711)
+#define NC_RECOMB_SEAGER_HUMMER_HEI_CASE_B_Q (pow (10.0, -16.744))
+#define NC_RECOMB_SEAGER_HUMMER_HEI_CASE_B_P_TRIP (0.761)
+#define NC_RECOMB_SEAGER_HUMMER_HEI_CASE_B_Q_TRIP (pow (10.0, -16.306))
 
 G_END_DECLS
 

@@ -46,11 +46,8 @@
       <title>Splines 1D</title>
       <xi:include href="xml/ncm_spline.xml"/>
       <xi:include href="xml/ncm_spline_gsl.xml"/>
-      <section>
-        <title>Cubic Splines</title>
-        <xi:include href="xml/ncm_spline_cubic.xml"/>
-        <xi:include href="xml/ncm_spline_cubic_notaknot.xml"/>
-      </section>
+      <xi:include href="xml/ncm_spline_cubic.xml"/>
+      <xi:include href="xml/ncm_spline_cubic_notaknot.xml"/>
       <xi:include href="xml/ncm_spline_func.xml"/>
       <xi:include href="xml/ncm_ode_spline.xml"/>
     </section>
@@ -188,13 +185,13 @@
   <chapter>
     <title>Cosmological Calculators</title>
     <xi:include href="xml/nc_distance.xml"/>
+    <xi:include href="xml/nc_scalefactor.xml"/>
     <xi:include href="xml/nc_recomb.xml"/>
     <xi:include href="xml/nc_recomb_seager.xml"/>
     <xi:include href="xml/nc_recomb_cbe.xml"/>
     <xi:include href="xml/nc_hireion.xml"/>
     <xi:include href="xml/nc_hireion_camb.xml"/>
     <xi:include href="xml/nc_hireion_camb_reparam_tau.xml"/>
-    <xi:include href="xml/scalefactor.xml"/>
   </chapter>
 
   <chapter>

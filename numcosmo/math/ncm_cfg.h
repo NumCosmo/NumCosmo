@@ -37,9 +37,6 @@
 #ifndef NUMCOSMO_GIR_SCAN
 #include <gmp.h>
 #endif /* NUMCOSMO_GIR_SCAN */
-#ifdef NUMCOSMO_HAVE_SQLITE3
-#include <sqlite3.h>
-#endif
 #include <numcosmo/math/ncm_spline.h>
 
 G_BEGIN_DECLS
@@ -92,10 +89,6 @@ LOAD_SAVE_VECTOR_MATRIX_DEF(complex)
 
 gchar *ncm_cfg_get_data_filename (const gchar *filename, gboolean must_exist);
 
-#ifdef NUMCOSMO_HAVE_SQLITE3
-sqlite3 *ncm_cfg_get_default_sqlite3 (void);
-#endif
-
 typedef union _NcmDoubleInt64
 {
   gint64 i;
@@ -115,6 +108,16 @@ extern guint fftw_default_flags;
 /* Macros */
 
 #define NCM_CFG_DATA_DIR_ENV "NUMCOSMO_DATA_DIR"
+
+#ifdef NUMCOSMO_CHECK_PREPARE
+#define NCM_CHECK_PREPARED(obj,name) \
+G_STMT_START { \
+  if (!obj->prepared) \
+    g_error ("calling method %s on an unprepared instance.", #name); \
+} G_STMT_END
+#else /* NUMCOSMO_CHECK_PREPARE */
+#define NCM_CHECK_PREPARED(obj,name)
+#endif /* NUMCOSMO_CHECK_PREPARE */
 
 #if (GLIB_MAJOR_VERSION == 2) && (GLIB_MINOR_VERSION < 32)
 #define _NCM_MUTEX_LOCK(l) g_static_mutex_lock (l)
@@ -148,8 +151,6 @@ extern guint fftw_default_flags;
 #ifndef mpz_clears
 #define mpz_clears ncm_mpz_clears
 #endif /* mpz_inits */
-
-#define NCM_CFG_DEFAULT_SQLITE3_FILENAME "data_observation.sqlite3"
 
 /* Workaround on g_clear_pointer */
 #if ((GLIB_MAJOR_VERSION == 2) && (GLIB_MINOR_VERSION < 34))

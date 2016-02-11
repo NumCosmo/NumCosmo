@@ -1,0 +1,13 @@
+{
+  'NcDataCMBDistPriors', 
+  {
+    'desc':      <'WMAP7 distance priors'>, 
+    'long-desc': <'WMAP7 Distance priors data (arXiv:1001.4538): tables 9 and 10'>, 
+    'init':      <true>, 
+    'n-points':  <uint32 3>, 
+    'mean':      <[302.09 ,    1.725, 1091.3  ]>, 
+    'inv-cov':   <[[2.305 ,   29.698,   -1.333], 
+                   [29.698, 6825.27 , -113.18 ], 
+                   [-1.333, -113.18 ,    3.414]]>
+  }
+}

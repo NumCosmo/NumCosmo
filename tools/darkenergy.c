@@ -278,9 +278,9 @@ main (gint argc, gchar *argv[])
 
     if (snia_id->value >= NC_DATA_SNIA_SIMPLE_START && snia_id->value <= NC_DATA_SNIA_SIMPLE_END)
     {
-      NcmData *snia = nc_data_dist_mu_new (dist, snia_id->value);
-      ncm_dataset_append_data (dset, snia);
-      ncm_data_free (snia);
+      NcDataDistMu *dist_mu = nc_data_dist_mu_new_from_id (dist, snia_id->value);
+      ncm_dataset_append_data (dset, NCM_DATA (dist_mu));
+      ncm_data_free (NCM_DATA (dist_mu));
     }
     else if (snia_id->value >= NC_DATA_SNIA_COV_START && snia_id->value <= NC_DATA_SNIA_COV_END)
     {
@@ -353,9 +353,9 @@ main (gint argc, gchar *argv[])
       const GEnumValue *H_id = ncm_cfg_get_enum_by_id_name_nick (NC_TYPE_DATA_HUBBLE_ID, H_id_i);
       if (H_id != NULL)
       {
-        NcmData *H_data = nc_data_hubble_new (H_id->value);
-        ncm_dataset_append_data (dset, H_data);
-        ncm_data_free (H_data);
+        NcDataHubble *H_data = nc_data_hubble_new_from_id (H_id->value);
+        ncm_dataset_append_data (dset, NCM_DATA (H_data));
+        ncm_data_free (NCM_DATA (H_data));
       }
       else
         g_error ("Hubble sample '%s' not found run --H-list to list the available options", H_id_i);
@@ -422,9 +422,9 @@ main (gint argc, gchar *argv[])
 
   if (de_data_simple.BBN_Ob)
   {
-    NcmMSetFunc *Omega_bh2 = nc_hicosmo_create_mset_func0 (&nc_hicosmo_Omega_bh2);
-    ncm_prior_add_gaussian_const_func (lh, Omega_bh2, 0.022, 0.002);
-    ncm_mset_func_free (Omega_bh2);
+    NcmMSetFunc *Omega_b0h2 = nc_hicosmo_create_mset_func0 (&nc_hicosmo_Omega_b0h2);
+    ncm_prior_add_gaussian_const_func (lh, Omega_b0h2, 0.022, 0.002);
+    ncm_mset_func_free (Omega_b0h2);
   }
 
   if (de_fit.qspline_cp && TRUE)
@@ -982,5 +982,42 @@ main (gint argc, gchar *argv[])
   nc_distance_free (dist);
   g_free (full_cmd_line);
 
+  if (FALSE) /* Several unimportant leaks */
+  {
+    g_clear_pointer (&de_model.model_name, g_free);
+
+    g_clear_pointer (&de_data_simple.snia_id,     g_free);
+    g_clear_pointer (&de_data_simple.snia_objser, g_free);
+    g_clear_pointer (&de_data_simple.cmb_id,      g_free);
+    g_clear_pointer (&de_data_simple.cluster_id,  g_free);
+
+    g_clear_pointer (&de_data_simple.bao_id,       g_strfreev);
+    g_clear_pointer (&de_data_simple.H_id,         g_strfreev);
+    g_clear_pointer (&de_data_simple.H_BAO_id,     g_strfreev);
+    g_clear_pointer (&de_data_simple.priors_gauss, g_strfreev);
+    g_clear_pointer (&de_data_simple.data_files,   g_strfreev);
+
+    g_clear_pointer (&de_data_cluster.window_name,       g_free);
+    g_clear_pointer (&de_data_cluster.transfer_name,     g_free);
+    g_clear_pointer (&de_data_cluster.multiplicity_name, g_free);
+    g_clear_pointer (&de_data_cluster.clusterm_ser,      g_free);
+    g_clear_pointer (&de_data_cluster.clusterz_ser,      g_free);
+    g_clear_pointer (&de_data_cluster.save_cata,         g_free);
+
+    g_clear_pointer (&de_data_cluster.cata_file, g_strfreev);
+
+    g_clear_pointer (&de_fit.file_out,    g_free);
+    g_clear_pointer (&de_fit.fit_type,    g_free);
+    g_clear_pointer (&de_fit.fit_diff,    g_free);
+    g_clear_pointer (&de_fit.fit_algo,    g_free);
+    g_clear_pointer (&de_fit.bidim_cr[0], g_free);
+    g_clear_pointer (&de_fit.bidim_cr[1], g_free);
+    g_clear_pointer (&de_fit.fiducial,    g_free);
+    g_clear_pointer (&de_fit.mc_data,     g_free);
+    g_clear_pointer (&de_fit.save_mset,   g_free);
+    
+    g_clear_pointer (&de_fit.onedim_cr, g_strfreev);
+  }
+  
   return 0;
 }

@@ -113,6 +113,7 @@ void ncm_vector_set_from_variant (NcmVector *cv, GVariant *var);
 
 gdouble ncm_vector_dnrm2 (const NcmVector *cv);
 
+G_INLINE_FUNC gdouble ncm_vector_sum_cpts (const NcmVector *cv);
 G_INLINE_FUNC const NcmVector *ncm_vector_const_new_gsl (const gsl_vector *v);
 G_INLINE_FUNC gdouble ncm_vector_get (const NcmVector *cv, const guint i);
 G_INLINE_FUNC gdouble ncm_vector_fast_get (const NcmVector *cv, const guint i);
@@ -161,6 +162,16 @@ G_END_DECLS
 #ifdef NUMCOSMO_HAVE_INLINE
 
 G_BEGIN_DECLS
+
+G_INLINE_FUNC gdouble 
+ncm_vector_sum_cpts (const NcmVector *cv)
+{
+  guint i;
+  gdouble sum = 0.0;
+  for (i = 0; i < ncm_vector_len (cv); i++)
+    sum += ncm_vector_get (cv, i);
+  return sum;
+}
 
 G_INLINE_FUNC const NcmVector *
 ncm_vector_const_new_gsl (const gsl_vector *v)

@@ -39,7 +39,6 @@ libnumcosmo_la_LIBADD =     \
 	$(GLIB_LIBS)        \
 	$(NLOPT_LIBS)       \
 	$(GSL_LIBS)         \
-	$(SQLITE3_LIBS)     \
 	$(CFITSIO_LIBS)     \
 	$(LIBCUBA_PLACE)    \
 	plc/libclik.la      \
@@ -223,6 +222,7 @@ nc_headers = \
 	nc_hicosmo.h                  \
 	nc_hiprim.h                   \
 	nc_distance.h                 \
+	nc_scalefactor.h              \
 	nc_hicosmo_priors.h           \
 	nc_recomb.h                   \
 	nc_recomb_seager.h            \
@@ -311,7 +311,6 @@ nc_headers = \
 	data/nc_data_cluster_pseudo_counts.h   \
 	data/nc_data_planck_lkl.h              \
 	abc/nc_abc_cluster_ncount.h            \
-	scalefactor.h                          \
 	model/quantum_gravity.h                \
 	perturbations/nc_hipert.h              \
 	perturbations/nc_hipert_wkb.h          \
@@ -336,6 +335,7 @@ nc_sources = \
 	nc_hicosmo.c                  \
 	nc_hiprim.c                   \
 	nc_distance.c                 \
+	nc_scalefactor.c              \
 	nc_hicosmo_priors.c           \
 	nc_recomb.c                   \
 	nc_recomb_seager.c            \
@@ -424,7 +424,6 @@ nc_sources = \
 	data/nc_data_cluster_pseudo_counts.c   \
 	data/nc_data_planck_lkl.c              \
 	abc/nc_abc_cluster_ncount.c            \
-	scalefactor.c                          \
 	model/quantum_gravity.c                \
 	perturbations/nc_hipert.c              \
 	perturbations/nc_hipert_wkb.c          \

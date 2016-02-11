@@ -143,7 +143,7 @@ _nc_hicosmo_qspline_d2E2_dz2 (NcHICosmo *cosmo, gdouble z)
  * Hubble constant
  ****************************************************************************/
 static gdouble _nc_hicosmo_qspline_H0 (NcHICosmo *cosmo) { return QSPLINE_H0; }
-static gdouble _nc_hicosmo_qspline_Omega_t (NcHICosmo *cosmo) { return OMEGA_T; }
+static gdouble _nc_hicosmo_qspline_Omega_t0 (NcHICosmo *cosmo) { return OMEGA_T; }
 static gdouble _nc_hicosmo_qspline_as_drag (NcHICosmo *cosmo) { return AS_DRAG; }
 
 /**
@@ -532,7 +532,7 @@ nc_hicosmo_qspline_class_init (NcHICosmoQSplineClass *klass)
    *
    * FIXME
    */
-  ncm_model_class_set_sparam (model_class, NC_HICOSMO_QSPLINE_OMEGA_T, "Omega_t", "Omegat",
+  ncm_model_class_set_sparam (model_class, NC_HICOSMO_QSPLINE_OMEGA_T, "Omega_t0", "Omegat",
                               0.05, 2.0, 1.0e-1,
                               NC_HICOSMO_DEFAULT_PARAMS_ABSTOL, NC_HICOSMO_QSPLINE_DEFAULT_OMEGA_T,
                               NCM_PARAM_TYPE_FIXED);
@@ -593,7 +593,7 @@ nc_hicosmo_qspline_class_init (NcHICosmoQSplineClass *klass)
   nc_hicosmo_set_E2_impl       (parent_class, &_nc_hicosmo_qspline_E2);
   nc_hicosmo_set_dE2_dz_impl   (parent_class, &_nc_hicosmo_qspline_dE2_dz);
   nc_hicosmo_set_d2E2_dz2_impl (parent_class, &_nc_hicosmo_qspline_d2E2_dz2);
-  nc_hicosmo_set_Omega_t_impl  (parent_class, &_nc_hicosmo_qspline_Omega_t);
+  nc_hicosmo_set_Omega_t0_impl  (parent_class, &_nc_hicosmo_qspline_Omega_t0);
   nc_hicosmo_set_as_drag_impl  (parent_class, &_nc_hicosmo_qspline_as_drag);
 }
 
@@ -731,7 +731,8 @@ nc_hicosmo_qspline_cont_prior_class_init (NcHICosmoQSplineContPriorClass *klass)
   ncm_mset_model_register_id (model_class,
                               "NcHICosmoQSplineContPrior",
                               "NcHICosmoQSplineContPrior.",
-                              NULL);
+                              NULL,
+                              FALSE);
 
   model_class->valid = &_nc_hicosmo_qspline_cont_prior_valid;
 

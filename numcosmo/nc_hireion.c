@@ -51,6 +51,7 @@
 #include "build_cfg.h"
 
 #include "nc_hireion.h"
+#include "nc_recomb.h"
 #include "math/ncm_serialize.h"
 #include "math/ncm_cfg.h"
 #include "math/integral.h"
@@ -138,7 +139,8 @@ nc_hireion_class_init (NcHIReionClass *klass)
   ncm_mset_model_register_id (model_class,
                               "NcHIReion",
                               "Homogeneous and isotropic reionization models.",
-                              NULL);
+                              NULL,
+                              FALSE);
 
   g_object_class_install_property (object_class,
                                    PROP_PREC,
@@ -174,6 +176,33 @@ _nc_hireion_get_Xe (NcHIReion *reion, NcHICosmo *cosmo, const gdouble lambda, co
   g_error ("_nc_hireion_get_Xe: error object `%s' do not implement this virtual function.", 
            g_type_name (G_OBJECT_TYPE (reion)));
   return 0.0;
+}
+
+/**
+ * nc_hireion_free:
+ * @reion: a #NcHIReion
+ * 
+ * Decreses the reference count of @reion by one.
+ * 
+ */
+void 
+nc_hireion_free (NcHIReion *reion)
+{
+  g_object_unref (reion);
+}
+
+/**
+ * nc_hireion_clear:
+ * @reion: a #NcHIReion
+ * 
+ * If @reion is different from NULL, decreses the reference 
+ * count of *@reion by one and sets *reion to NULL.
+ * 
+ */
+void 
+nc_hireion_clear (NcHIReion **reion)
+{
+  g_clear_object (reion);
 }
 
 /**

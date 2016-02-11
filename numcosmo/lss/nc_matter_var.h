@@ -92,22 +92,22 @@ NcMatterVar *nc_matter_var_new (NcMatterVarStrategy vs, NcWindow *wp, NcTransfer
 NcMatterVar *nc_matter_var_copy (NcMatterVar *vp);
 void nc_matter_var_free (NcMatterVar *vp);
 void nc_matter_var_clear (NcMatterVar **vp);
-void nc_matter_var_prepare (NcMatterVar *vp, NcHICosmo *model);
-gdouble nc_matter_var_var0 (NcMatterVar *vp, NcHICosmo *model, gdouble lnR);
-gdouble nc_matter_var_dlnvar0_dR (NcMatterVar *vp, NcHICosmo *model, gdouble lnR);
-gdouble nc_matter_var_dlnvar0_dlnR (NcMatterVar *vp, NcHICosmo *model, gdouble lnR); 
-gdouble nc_matter_var_mass_to_R (NcMatterVar *vp, NcHICosmo *model, gdouble M);
-gdouble nc_matter_var_R_to_mass (NcMatterVar *vp, NcHICosmo *model, gdouble R);
-gdouble nc_matter_var_lnM_to_lnR (NcMatterVar *vp, NcHICosmo *model, gdouble lnM);
-gdouble nc_matter_var_lnR_to_lnM (NcMatterVar *vp, NcHICosmo *model, gdouble lnR);
-gdouble nc_matter_var_integrand_over_window2 (NcMatterVar *vp, NcHICosmo *model, gdouble k);
+void nc_matter_var_prepare (NcMatterVar *vp, NcHIReion *reion, NcHICosmo *cosmo);
+gdouble nc_matter_var_var0 (NcMatterVar *vp, NcHICosmo *cosmo, gdouble lnR);
+gdouble nc_matter_var_dlnvar0_dR (NcMatterVar *vp, NcHICosmo *cosmo, gdouble lnR);
+gdouble nc_matter_var_dlnvar0_dlnR (NcMatterVar *vp, NcHICosmo *cosmo, gdouble lnR); 
+gdouble nc_matter_var_mass_to_R (NcMatterVar *vp, NcHICosmo *cosmo, gdouble M);
+gdouble nc_matter_var_R_to_mass (NcMatterVar *vp, NcHICosmo *cosmo, gdouble R);
+gdouble nc_matter_var_lnM_to_lnR (NcMatterVar *vp, NcHICosmo *cosmo, gdouble lnM);
+gdouble nc_matter_var_lnR_to_lnM (NcMatterVar *vp, NcHICosmo *cosmo, gdouble lnR);
+gdouble nc_matter_var_integrand_over_window2 (NcMatterVar *vp, NcHICosmo *cosmo, gdouble k);
 
-gdouble nc_matter_var_spectral_moment_over_growth2 (NcMatterVar *vp, NcHICosmo *model, gint n);
-gdouble nc_matter_var_spectral_moment_over_growth2_tophat (NcMatterVar *vp, NcHICosmo *model, gint n);
-gdouble nc_matter_var_spectral_moment_over_growth2_gaussian (NcMatterVar *vp, NcHICosmo *model, gint n);
+gdouble nc_matter_var_spectral_moment_over_growth2 (NcMatterVar *vp, NcHICosmo *cosmo, gint n);
+gdouble nc_matter_var_spectral_moment_over_growth2_tophat (NcMatterVar *vp, NcHICosmo *cosmo, gint n);
+gdouble nc_matter_var_spectral_moment_over_growth2_gaussian (NcMatterVar *vp, NcHICosmo *cosmo, gint n);
 
-gdouble nc_matter_var_dsigma0_dR (NcMatterVar *vp, NcHICosmo *model, gdouble lnR);
-gdouble nc_matter_var_sigma8_sqrtvar0 (NcMatterVar *vp, NcHICosmo *model);
+gdouble nc_matter_var_dsigma0_dR (NcMatterVar *vp, NcHICosmo *cosmo, gdouble lnR);
+gdouble nc_matter_var_sigma8_sqrtvar0 (NcMatterVar *vp, NcHICosmo *cosmo);
 /*
 NcmFunc *nc_matter_var_new_variance_over_growth2 (NcMatterVar *vp);
 NcmFunc *nc_matter_var_new_dvariance_over_growth2_dR (NcMatterVar *vp);

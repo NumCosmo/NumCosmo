@@ -61,9 +61,11 @@ struct _NcDataCMBShiftParamClass
 
 GType nc_data_cmb_shift_param_get_type (void) G_GNUC_CONST;
 
-NcmData *nc_data_cmb_shift_param_new (NcDistance *dist, NcDataCMBId id);
+NcDataCMBShiftParam *nc_data_cmb_shift_param_new_empty (NcDistance *dist);
+NcDataCMBShiftParam *nc_data_cmb_shift_param_new_from_file (const gchar *filename);
+NcDataCMBShiftParam *nc_data_cmb_shift_param_new_from_id (NcDistance *dist, NcDataCMBId id);
 
-void nc_data_cmb_shift_param_set_sample (NcDataCMBShiftParam *cmb_shift_param, NcDataCMBId id);
+void nc_data_cmb_shift_param_set_dist (NcDataCMBShiftParam *cmb_shift_param, NcDistance *dist);
 
 G_END_DECLS
 

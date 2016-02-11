@@ -38,6 +38,7 @@ typedef struct _TestNcClusterPseudoCounts
 {
   NcClusterPseudoCounts *cpc;
   NcClusterMass *clusterm;
+  NcHIReion *reion;
   NcHICosmo *cosmo;
   NcMatterVar *vp;
   NcDataClusterPseudoCounts *dcpc;
@@ -82,6 +83,7 @@ test_nc_cluster_pseudo_counts_free (TestNcClusterPseudoCounts *test, gconstpoint
   NcClusterPseudoCounts *cpc = NC_CLUSTER_PSEUDO_COUNTS (test->cpc);
 
   nc_matter_var_free (test->vp);
+  nc_hireion_free (test->reion);
   nc_hicosmo_free (test->cosmo);
   nc_cluster_mass_free (test->clusterm);
   nc_data_cluster_pseudo_counts_free (test->dcpc);
@@ -94,6 +96,7 @@ void
 test_nc_cluster_pseudo_counts_new (TestNcClusterPseudoCounts *test, gconstpointer pdata)
 {
   NcHICosmo *cosmo                = nc_hicosmo_new_from_name (NC_TYPE_HICOSMO, "NcHICosmoDEXcdm");
+  NcHIReion *reion                = NC_HIREION (nc_hireion_camb_new ());
   NcDistance *dist                = nc_distance_new (3.0);
   NcWindow *wf                    = nc_window_new_from_name ("NcWindowTophat");
   NcTransferFunc *tf              = nc_transfer_func_new_from_name ("NcTransferFuncEH");
@@ -123,6 +126,7 @@ test_nc_cluster_pseudo_counts_new (TestNcClusterPseudoCounts *test, gconstpointe
   g_assert (cpc != NULL);
   g_assert (clusterm != NULL);
   test->cosmo     = cosmo;
+  test->reion     = reion;
   test->vp        = vp;
   test->cpc       = NC_CLUSTER_PSEUDO_COUNTS (cpc);
   test->clusterm  = clusterm;
@@ -154,10 +158,10 @@ test_nc_cluster_pseudo_counts_new (TestNcClusterPseudoCounts *test, gconstpointe
   ncm_model_param_set_ftype (NCM_MODEL (clusterm), 5, NCM_PARAM_TYPE_FREE);
   ncm_model_param_set_ftype (NCM_MODEL (clusterm), 6, NCM_PARAM_TYPE_FREE);
 
-  ncm_model_param_set_by_name (NCM_MODEL (test->cpc), "lnMcut", 34.5);
-  ncm_model_param_set_by_name (NCM_MODEL (test->cpc), "sigma_Mcut", 0.05);
-  ncm_model_param_set_by_name (NCM_MODEL (test->cpc), "zmin", 0.188);
-  ncm_model_param_set_by_name (NCM_MODEL (test->cpc), "Deltaz", 0.72);
+  ncm_model_param_set_by_name (NCM_MODEL (test->cpc), "lnMcut",     34.5);
+  ncm_model_param_set_by_name (NCM_MODEL (test->cpc), "sigma_Mcut",  0.05);
+  ncm_model_param_set_by_name (NCM_MODEL (test->cpc), "zmin",        0.188);
+  ncm_model_param_set_by_name (NCM_MODEL (test->cpc), "Deltaz",      0.72);
 
   ncm_model_param_set_ftype (NCM_MODEL (test->cpc), 0, NCM_PARAM_TYPE_FREE);
   ncm_model_param_set_ftype (NCM_MODEL (test->cpc), 1, NCM_PARAM_TYPE_FREE);
@@ -170,6 +174,7 @@ test_nc_cluster_pseudo_counts_new (TestNcClusterPseudoCounts *test, gconstpointe
   ncm_matrix_set (m, 0, 3, test->Mobs_params[0]);
   ncm_matrix_set (m, 0, 4, test->Mobs_params[1]);
 
+  nc_data_cluster_pseudo_counts_set_nclusters (dcpc, 1);
   nc_data_cluster_pseudo_counts_set_obs (dcpc, m);
   test->dcpc = dcpc;
   ncm_dataset_append_data (dset, NCM_DATA (test->dcpc));
@@ -203,7 +208,7 @@ test_nc_cluster_pseudo_counts_1p2_integral (TestNcClusterPseudoCounts *test, gco
   //ncm_model_params_log_all (NCM_MODEL (clusterm));
   //ncm_model_params_log_all (NCM_MODEL (cpc));
 
-  nc_matter_var_prepare (test->vp, test->cosmo);
+  nc_matter_var_prepare (test->vp, test->reion, test->cosmo);
 
   printf ("Integral 1p2\n");
   nc_cluster_pseudo_counts_posterior_numerator (cpc, clusterm, cosmo, test->z, test->Mobs, test->Mobs_params);
@@ -221,7 +226,7 @@ test_nc_cluster_pseudo_counts_3d_integral (TestNcClusterPseudoCounts *test, gcon
   //ncm_model_params_log_all (NCM_MODEL (clusterm));
   //ncm_model_params_log_all (NCM_MODEL (cpc));
 
-  nc_matter_var_prepare (test->vp, test->cosmo);
+  nc_matter_var_prepare (test->vp, test->reion, test->cosmo);
 
   printf ("Integral 3dnew variables\n");
   nc_cluster_pseudo_counts_posterior_numerator_plcl (cpc, clusterm, cosmo, test->z, test->Mobs[0], test->Mobs[1], test->Mobs_params[0], test->Mobs_params[1]);
@@ -237,7 +242,7 @@ test_nc_cluster_pseudo_counts_m2lnL (TestNcClusterPseudoCounts *test, gconstpoin
   //ncm_model_params_log_all (NCM_MODEL (clusterm));
   //ncm_model_params_log_all (NCM_MODEL (cpc));
 
-  nc_matter_var_prepare (test->vp, test->cosmo);
+  nc_matter_var_prepare (test->vp, test->reion, test->cosmo);
 
   printf ("Test m2lnL\n");
   ncm_fit_set_params_reltol (test->fit, 1.0e-5);

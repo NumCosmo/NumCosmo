@@ -1592,6 +1592,7 @@ nc_data_snia_cov_load_V0 (NcDataSNIACov *snia_cov, fitsfile *fptr)
           break;
       }
     }
+    ncm_matrix_free (cov);
   }
 
   ncm_vector_free (sigma_mag);

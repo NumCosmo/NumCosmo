@@ -25,7 +25,7 @@
 
 /**
  * SECTION:nc_data_planck_lkl
- * @title: NcDataPlankLKL
+ * @title: NcDataPlanckLKL
  * @short_description: Planck Likelihood interface.
  *
  * FIXME
@@ -275,8 +275,10 @@ static void
 _nc_data_planck_lkl_prepare (NcmData *data, NcmMSet *mset)
 {
   NcDataPlanckLKL *clik = NC_DATA_PLANCK_LKL (data);
+  NcHIReion *reion = NC_HIREION (ncm_mset_peek (mset, nc_hireion_id ()));
   NcHICosmo *cosmo = NC_HICOSMO (ncm_mset_peek (mset, nc_hicosmo_id ()));
-  NcHIPrim *prim = NC_HIPRIM (ncm_mset_peek (mset, nc_hiprim_id ()));
+  NcHIPrim *prim   = NC_HIPRIM (ncm_mset_peek (mset, nc_hiprim_id ()));
+
   if (clik->pb == NULL)
     g_error ("_nc_data_planck_lkl_prepare: cannot prepare without a #NcHIPertBoltzmann object. Use nc_data_planck_lkl_set_hipert_boltzmann to set the perturbations object.");
   if (cosmo == NULL)
@@ -284,7 +286,7 @@ _nc_data_planck_lkl_prepare (NcmData *data, NcmMSet *mset)
   if (prim == NULL)
     g_error ("_nc_data_planck_lkl_prepare: cannot prepare without a #NcHIPrim object. Add one to the #NcmMSet.");
 
-  nc_hipert_boltzmann_prepare_if_needed (clik->pb, prim, cosmo);
+  nc_hipert_boltzmann_prepare_if_needed (clik->pb, prim, reion, cosmo);
 }
 
 /*static void

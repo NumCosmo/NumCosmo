@@ -30,11 +30,11 @@
  *
  * In this model the adiabatic mode $\zeta$ has its mass, speed of sound square $c_s^2$ and frequency square $\nu_\zeta^2$ given by
  * \begin{align}
- * m_\zeta &= 3 \Delta_\bar{K}\sqrt{\Omega_w} x^{-3(1-w)/2}\frac{(1 + w) +  4R/3}{c_s^2}\frac{1}{\sqrt{(1-exp(-2\vert\alpha\vert)) + (1-exp(-3(1-w)\vert\alpha\vert))}}, \\\\
+ * m_\zeta &= 3 \Delta_\bar{K}\sqrt{\Omega_{w0}} x^{-3(1-w)/2}\frac{(1 + w) +  4R/3}{c_s^2}\frac{1}{\sqrt{(1-exp(-2\vert\alpha\vert)) + (1-exp(-3(1-w)\vert\alpha\vert))}}, \\\\
  * c_s^2 &= \frac{w (1 + w) + 4R/9}{(1+w) + 4R/3}, \\\\
- * \nu_\zeta^2 &= \frac {c_s^2 k^2}{\Omega_w x^{1+3w} ((1-exp(-2\vert\alpha\vert)) + (1-exp(-3(1-w)\vert\alpha\vert)))},
+ * \nu_\zeta^2 &= \frac {c_s^2 k^2}{\Omega_{w0} x^{1+3w} ((1-exp(-2\vert\alpha\vert)) + (1-exp(-3(1-w)\vert\alpha\vert)))},
  * \end{align}
- * where $$R \equiv \frac{\Omega_r x}{\Omega_w x^{3w}}.$$
+ * where $$R \equiv \frac{\Omega_{r0} x}{\Omega_{w0} x^{3w}}.$$
  *
  */
 
@@ -80,12 +80,11 @@ static gdouble _nc_hicosmo_qgrw_E2 (NcHICosmo *cosmo, gdouble z);
 static gdouble _nc_hicosmo_qgrw_dE2_dz (NcHICosmo *cosmo, gdouble z);
 static gdouble _nc_hicosmo_qgrw_E2 (NcHICosmo *cosmo, gdouble z);
 static gdouble _nc_hicosmo_qgrw_d2E2_dz2 (NcHICosmo *cosmo, gdouble z);
-static gdouble _nc_hicosmo_qgrw_cs2 (NcHICosmo *cosmo, gdouble z);
-static gdouble _nc_hicosmo_qgrw_rhopp (NcHICosmo *cosmo, gdouble z);
+static gdouble _nc_hicosmo_qgrw_bgp_cs2 (NcHICosmo *cosmo, gdouble z);
 
 static gdouble _nc_hicosmo_qgrw_H0 (NcHICosmo *cosmo);
-static gdouble _nc_hicosmo_qgrw_Omega_t (NcHICosmo *cosmo);
-static gdouble _nc_hicosmo_qgrw_Omega_c (NcHICosmo *cosmo);
+static gdouble _nc_hicosmo_qgrw_Omega_t0 (NcHICosmo *cosmo);
+static gdouble _nc_hicosmo_qgrw_Omega_c0 (NcHICosmo *cosmo);
 static gdouble _nc_hicosmo_qgrw_xb (NcHICosmo *cosmo);
 
 static gdouble _nc_hipert_iadiab_nuA2 (NcHIPertIAdiab *iadiab, gdouble alpha, gdouble k);
@@ -118,13 +117,13 @@ nc_hicosmo_qgrw_class_init (NcHICosmoQGRWClass *klass)
                                10.0, 500.0, 1.0,
                                NC_HICOSMO_DEFAULT_PARAMS_ABSTOL, NC_HICOSMO_QGRW_DEFAULT_H0,
                                NCM_PARAM_TYPE_FIXED);
-  /* Set Omega_r param info */
-  ncm_model_class_set_sparam (model_class, NC_HICOSMO_QGRW_OMEGA_R, "\\Omega_r", "Omegar",
+  /* Set Omega_r0 param info */
+  ncm_model_class_set_sparam (model_class, NC_HICOSMO_QGRW_OMEGA_R, "\\Omega_{r0}", "Omegar",
                                1e-8,  10.0, 1.0e-2,
                                NC_HICOSMO_DEFAULT_PARAMS_ABSTOL, NC_HICOSMO_QGRW_DEFAULT_OMEGA_R,
                                NCM_PARAM_TYPE_FREE);
-  /* Set Omega_x param info */
-  ncm_model_class_set_sparam (model_class, NC_HICOSMO_QGRW_OMEGA_W, "\\Omega_w", "Omegaw",
+  /* Set Omega_x0 param info */
+  ncm_model_class_set_sparam (model_class, NC_HICOSMO_QGRW_OMEGA_W, "\\Omega_{w0}", "Omegaw",
                                1e-8,  10.0, 1.0e-2,
                                NC_HICOSMO_DEFAULT_PARAMS_ABSTOL, NC_HICOSMO_QGRW_DEFAULT_OMEGA_W,
                                NCM_PARAM_TYPE_FREE);
@@ -144,13 +143,12 @@ nc_hicosmo_qgrw_class_init (NcHICosmoQGRWClass *klass)
 
   nc_hicosmo_set_H0_impl        (parent_class, &_nc_hicosmo_qgrw_H0);
   nc_hicosmo_set_E2_impl        (parent_class, &_nc_hicosmo_qgrw_E2);
-  nc_hicosmo_set_Omega_c_impl   (parent_class, &_nc_hicosmo_qgrw_Omega_c);
-  nc_hicosmo_set_Omega_t_impl   (parent_class, &_nc_hicosmo_qgrw_Omega_t);
+  nc_hicosmo_set_Omega_c0_impl  (parent_class, &_nc_hicosmo_qgrw_Omega_c0);
+  nc_hicosmo_set_Omega_t0_impl  (parent_class, &_nc_hicosmo_qgrw_Omega_t0);
   nc_hicosmo_set_xb_impl        (parent_class, &_nc_hicosmo_qgrw_xb);
   nc_hicosmo_set_dE2_dz_impl    (parent_class, &_nc_hicosmo_qgrw_dE2_dz);
   nc_hicosmo_set_d2E2_dz2_impl  (parent_class, &_nc_hicosmo_qgrw_d2E2_dz2);
-  nc_hicosmo_set_cs2_impl       (parent_class, &_nc_hicosmo_qgrw_cs2);
-  nc_hicosmo_set_rhopp_impl     (parent_class, &_nc_hicosmo_qgrw_rhopp);
+  nc_hicosmo_set_bgp_cs2_impl   (parent_class, &_nc_hicosmo_qgrw_bgp_cs2);
 
   object_class->finalize = nc_hicosmo_qgrw_finalize;
 }
@@ -271,7 +269,7 @@ _nc_hicosmo_qgrw_d2E2_dz2 (NcHICosmo *cosmo, gdouble z)
  * Speed of sound squared
  ****************************************************************************/
 static gdouble
-_nc_hicosmo_qgrw_cs2 (NcHICosmo *cosmo, gdouble z)
+_nc_hicosmo_qgrw_bgp_cs2 (NcHICosmo *cosmo, gdouble z)
 {
   const gdouble x = 1.0 + z;
   const gdouble x2 = x * x;
@@ -284,27 +282,11 @@ _nc_hicosmo_qgrw_cs2 (NcHICosmo *cosmo, gdouble z)
 }
 
 /****************************************************************************
- * rho plus p
- ****************************************************************************/
-static gdouble
-_nc_hicosmo_qgrw_rhopp (NcHICosmo *cosmo, gdouble z)
-{
-  const gdouble x = 1.0 + z;
-  const gdouble x2 = x * x;
-  const gdouble x3 = x2 * x;
-  const gdouble x4 = x2 * x2;
-  const gdouble w  = W;
-  const gdouble x3w = pow (x3, w);
-
-  return (1.0 + w) * OMEGA_W * x3 * x3w + (4.0 / 3.0) * OMEGA_R * x4;
-}
-
-/****************************************************************************
  * Simple functions
  ****************************************************************************/
 static gdouble _nc_hicosmo_qgrw_H0 (NcHICosmo *cosmo) { return MACRO_H0 * (OMEGA_R + OMEGA_W); }
-static gdouble _nc_hicosmo_qgrw_Omega_t (NcHICosmo *cosmo) { return 1.0; }
-static gdouble _nc_hicosmo_qgrw_Omega_c (NcHICosmo *cosmo) { return OMEGA_W; }
+static gdouble _nc_hicosmo_qgrw_Omega_t0 (NcHICosmo *cosmo) { return 1.0; }
+static gdouble _nc_hicosmo_qgrw_Omega_c0 (NcHICosmo *cosmo) { return OMEGA_W; }
 static gdouble _nc_hicosmo_qgrw_xb (NcHICosmo *cosmo) { return X_B; }
 
 /****************************************************************************

@@ -46,6 +46,7 @@ enum
   PROP_DATASET,
   PROP_PRIORS_M2LNL,
   PROP_PRIORS_F,
+  PROP_M2LNL_V,
   PROP_SIZE,
 };
 
@@ -54,9 +55,11 @@ G_DEFINE_TYPE (NcmLikelihood, ncm_likelihood, G_TYPE_OBJECT);
 static void
 ncm_likelihood_init (NcmLikelihood *lh)
 {
-  lh->dset   = NULL;
-  lh->priors_f = g_ptr_array_sized_new (10);
+  lh->dset         = NULL;
+  lh->m2lnL_v      = NULL;
+  lh->priors_f     = g_ptr_array_sized_new (10);
   lh->priors_m2lnL = g_ptr_array_sized_new (10);
+  
   g_ptr_array_set_free_func (lh->priors_f, (GDestroyNotify) &ncm_mset_func_free);
   g_ptr_array_set_free_func (lh->priors_m2lnL, (GDestroyNotify) &ncm_mset_func_free);
 }
@@ -97,6 +100,16 @@ ncm_likelihood_set_property (GObject *object, guint prop_id, const GValue *value
       }
       break;
     }
+    case PROP_M2LNL_V:
+    {
+      NcmVector *m2lnL_v = g_value_get_object (value);
+      if (m2lnL_v != NULL)
+      {
+        ncm_vector_clear (&lh->m2lnL_v);
+        lh->m2lnL_v = ncm_vector_ref (m2lnL_v);
+      }
+      break;
+    }
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
       break;
@@ -120,6 +133,9 @@ ncm_likelihood_get_property (GObject *object, guint prop_id, GValue *value, GPar
     case PROP_PRIORS_F:
       g_value_set_int64 (value, GPOINTER_TO_SIZE (lh->priors_f));
       break;
+    case PROP_M2LNL_V:
+      g_value_set_object (value, lh->m2lnL_v);
+      break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
       break;
@@ -131,17 +147,10 @@ ncm_likelihood_dispose (GObject *object)
 {
   NcmLikelihood *lh = NCM_LIKELIHOOD (object);
 
-  if (lh->priors_f != NULL)
-  {
-    g_ptr_array_unref (lh->priors_f);
-    lh->priors_f = NULL;
-  }
-  if (lh->priors_m2lnL != NULL)
-  {
-    g_ptr_array_unref (lh->priors_m2lnL);
-    lh->priors_m2lnL = NULL;
-  }
+  g_clear_pointer (&lh->priors_f, g_ptr_array_unref);
+  g_clear_pointer (&lh->priors_m2lnL, g_ptr_array_unref);
 
+  ncm_vector_clear (&lh->m2lnL_v);  
   ncm_dataset_clear (&lh->dset);
 
   /* Chain up : end */
@@ -187,6 +196,13 @@ ncm_likelihood_class_init (NcmLikelihoodClass *klass)
                                                        "Priors f pointer",
                                                        G_MININT64, G_MAXINT64, 0,
                                                        G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  g_object_class_install_property (object_class,
+                                   PROP_PRIORS_F,
+                                   g_param_spec_object ("m2lnL-v",
+                                                        NULL,
+                                                        "m2lnL vector",
+                                                        NCM_TYPE_VECTOR,
+                                                        G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 }
 
 /**
@@ -528,6 +544,40 @@ ncm_likelihood_priors_m2lnL_val (NcmLikelihood *lh, NcmMSet *mset, gdouble *prio
 }
 
 /**
+ * ncm_likelihood_priors_m2lnL_vec:
+ * @lh: a #NcmLikelihood.
+ * @mset: a #NcmMSet.
+ * @priors_m2lnL_v: a #NcmVector
+ * 
+ * FIXME
+ */
+void
+ncm_likelihood_priors_m2lnL_vec (NcmLikelihood *lh, NcmMSet *mset, NcmVector *priors_m2lnL_v)
+{
+  guint i = 0, j = 0;
+
+  g_assert_cmpuint (ncm_vector_len (priors_m2lnL_v), >=, lh->priors_f->len + lh->priors_m2lnL->len);
+
+  for (i = 0; i < lh->priors_f->len; i++)
+  {
+    NcmMSetFunc *func = NCM_MSET_FUNC (g_ptr_array_index (lh->priors_f, i));
+    const gdouble prior = ncm_mset_func_eval0 (func, mset);
+    ncm_vector_set (priors_m2lnL_v, j, prior * prior);
+    j++;
+  }
+
+  for (i = 0; i < lh->priors_m2lnL->len; i++)
+  {
+    NcmMSetFunc *func = NCM_MSET_FUNC (g_ptr_array_index (lh->priors_m2lnL, i));
+    const gdouble prior = ncm_mset_func_eval0 (func, mset);
+    ncm_vector_set (priors_m2lnL_v, j, prior * prior);
+    j++;
+  }
+
+  return;
+}
+
+/**
  * ncm_likelihood_m2lnL_val:
  * @lh: a #NcmLikelihood.
  * @mset: a #NcmMSet.
@@ -539,13 +589,36 @@ ncm_likelihood_priors_m2lnL_val (NcmLikelihood *lh, NcmMSet *mset, gdouble *prio
 void
 ncm_likelihood_m2lnL_val (NcmLikelihood *lh, NcmMSet *mset, gdouble *m2lnL)
 {
-  gdouble data_m2lnL = 0.0;
-  gdouble priors_m2lnL = 0.0;
-  
-  ncm_dataset_m2lnL_val (lh->dset, mset, &data_m2lnL);
-  ncm_likelihood_priors_m2lnL_val (lh, mset, &priors_m2lnL);
+  const guint data_length  = ncm_dataset_get_length (lh->dset);
+  const guint prior_length = lh->priors_f->len + lh->priors_m2lnL->len;
+  const guint v_size       = prior_length + data_length;
 
-  *m2lnL = data_m2lnL + priors_m2lnL;
+  if (lh->m2lnL_v != NULL)
+  {
+    if (ncm_vector_len (lh->m2lnL_v) != v_size)
+    {
+      ncm_vector_clear (&lh->m2lnL_v);
+      lh->m2lnL_v = ncm_vector_new (v_size);
+    }
+  }
+  else
+  {
+    lh->m2lnL_v = ncm_vector_new (v_size);
+  }
+
+  if (prior_length > 0)
+  {
+    NcmVector *priors_m2lnL_v = ncm_vector_get_subvector (lh->m2lnL_v, data_length, prior_length);
+    ncm_dataset_m2lnL_vec (lh->dset, mset, lh->m2lnL_v);
+    ncm_likelihood_priors_m2lnL_vec (lh, mset, priors_m2lnL_v);
+    ncm_vector_free (priors_m2lnL_v);
+  }
+  else
+  {
+    ncm_dataset_m2lnL_vec (lh->dset, mset, lh->m2lnL_v);
+  }
+
+  *m2lnL = ncm_vector_sum_cpts (lh->m2lnL_v);
   return;
 }
 

@@ -120,8 +120,8 @@ G_END_DECLS
 
 G_BEGIN_DECLS
 
-NCM_MODEL_FUNC1_IMPL (NC_HIPRIM,NcHIPrim,nc_hiprim,lnSA_powspec_lnk)
-NCM_MODEL_FUNC1_IMPL (NC_HIPRIM,NcHIPrim,nc_hiprim,lnT_powspec_lnk)
+NCM_MODEL_FUNC1_IMPL (NC_HIPRIM,NcHIPrim,nc_hiprim,lnSA_powspec_lnk,lnk)
+NCM_MODEL_FUNC1_IMPL (NC_HIPRIM,NcHIPrim,nc_hiprim,lnT_powspec_lnk,lnk)
 
 G_INLINE_FUNC gdouble
 nc_hiprim_SA_powspec_k (NcHIPrim *prim, const gdouble k)

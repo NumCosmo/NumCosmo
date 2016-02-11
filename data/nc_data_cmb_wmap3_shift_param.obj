@@ -1,0 +1,13 @@
+{
+  'NcDataCMBShiftParam', 
+  {
+    'desc':      <'WMAP3 shift parameter'>, 
+    'long-desc': <''>, 
+    'init':      <true>, 
+    'n-points':  <uint32 1>, 
+    'w-mean':    <false>, 
+    'mean':      <[1.7]>, 
+    'sigma':     <[0.03]>, 
+    'z':         <[1089.0]>
+  }
+}

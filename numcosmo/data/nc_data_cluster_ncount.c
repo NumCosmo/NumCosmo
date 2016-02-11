@@ -103,7 +103,6 @@ nc_data_cluster_ncount_init (NcDataClusterNCount *ncount)
   ncount->fiducial       = FALSE;
   ncount->seed           = 0;
   ncount->rnd_name       = NULL;
-
 }
 
 static void

@@ -54,7 +54,7 @@ G_DEFINE_TYPE (NcHICosmoQLinear, nc_hicosmo_qlinear, NC_TYPE_HICOSMO);
 #define QLIN_Z1  (ncm_vector_get (VECTOR, NC_HICOSMO_QLINEAR_Z1))
 
 static gdouble
-cd_th_int_integrand (gdouble z, gpointer p)
+Dc_th_int_integrand (gdouble z, gpointer p)
 {
   gdouble *params = (gdouble *)p;
   gdouble z1 = params[0];
@@ -69,14 +69,14 @@ cd_th_int_integrand (gdouble z, gpointer p)
 }
 
 static gdouble
-cd_th_int (gdouble z2, gdouble z1, gdouble E, gdouble q, gdouble qp)
+Dc_th_int (gdouble z2, gdouble z1, gdouble E, gdouble q, gdouble qp)
 {
   gsl_integration_workspace **w;
   gsl_function F;
   gdouble res, err;
   gdouble p[] = {z1, q, qp};
 
-  F.function = &cd_th_int_integrand;
+  F.function = &Dc_th_int_integrand;
   F.params = p;
 
   w = ncm_integral_get_workspace ();
@@ -90,11 +90,11 @@ cd_th_int (gdouble z2, gdouble z1, gdouble E, gdouble q, gdouble qp)
  * Comoving Distance
  ****************************************************************************/
 static gdouble
-_nc_hicosmo_qlinear_cd (NcHICosmo *cosmo, gdouble z)
+_nc_hicosmo_qlinear_Dc (NcHICosmo *cosmo, gdouble z)
 {
   if (QLIN_Z1 == z)
 	return QLIN_CD;
-  return QLIN_CD + cd_th_int (z, QLIN_Z1, QLIN_E, QLIN_Q, QLIN_QP);
+  return QLIN_CD + Dc_th_int (z, QLIN_Z1, QLIN_E, QLIN_Q, QLIN_QP);
 }
 
 /**
@@ -122,7 +122,7 @@ nc_hicosmo_qlinear_dE (gdouble z2, gdouble z1, gdouble q, gdouble qp)
  * Hubble constant
  ****************************************************************************/
 static gdouble _nc_hicosmo_qlinear_H0 (NcHICosmo *cosmo) { return MACRO_H0; }
-static gdouble _nc_hicosmo_qlinear_Omega_t (NcHICosmo *cosmo) { return OMEGA_T; }
+static gdouble _nc_hicosmo_qlinear_Omega_t0 (NcHICosmo *cosmo) { return OMEGA_T; }
 
 /**
  * nc_hicosmo_qlinear_new:
@@ -174,12 +174,12 @@ nc_hicosmo_qlinear_class_init (NcHICosmoQLinearClass *klass)
                                NC_HICOSMO_DEFAULT_PARAMS_ABSTOL, NC_HICOSMO_QLINEAR_DEFAULT_H0,
                                NCM_PARAM_TYPE_FIXED);
 
-  ncm_model_class_set_sparam (model_class, NC_HICOSMO_QLINEAR_OMEGA_T, "\\Omega_t", "Omegat",
+  ncm_model_class_set_sparam (model_class, NC_HICOSMO_QLINEAR_OMEGA_T, "\\Omega_{t0}", "Omegat",
                                -5.0, 5.0, 1.0e-1,
                                NC_HICOSMO_DEFAULT_PARAMS_ABSTOL, NC_HICOSMO_QLINEAR_DEFAULT_OMEGA_T,
                                NCM_PARAM_TYPE_FIXED);
 
-  ncm_model_class_set_sparam (model_class, NC_HICOSMO_QLINEAR_CD, "d_c", "cd",
+  ncm_model_class_set_sparam (model_class, NC_HICOSMO_QLINEAR_CD, "D_c", "Dc",
                                -50.0, 50.0, 1.0e-1,
                                NC_HICOSMO_DEFAULT_PARAMS_ABSTOL, NC_HICOSMO_QLINEAR_DEFAULT_CD,
                                NCM_PARAM_TYPE_FIXED);
@@ -208,6 +208,6 @@ nc_hicosmo_qlinear_class_init (NcHICosmoQLinearClass *klass)
   ncm_model_class_check_params_info (model_class);
 
   nc_hicosmo_set_H0_impl (parent_class, &_nc_hicosmo_qlinear_H0);
-  nc_hicosmo_set_cd_impl (parent_class, &_nc_hicosmo_qlinear_cd);
-  nc_hicosmo_set_Omega_t_impl (parent_class, &_nc_hicosmo_qlinear_Omega_t);
+  nc_hicosmo_set_Dc_impl (parent_class, &_nc_hicosmo_qlinear_Dc);
+  nc_hicosmo_set_Omega_t0_impl (parent_class, &_nc_hicosmo_qlinear_Omega_t0);
 }

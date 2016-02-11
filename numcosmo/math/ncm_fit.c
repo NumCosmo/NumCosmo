@@ -1279,8 +1279,18 @@ ncm_fit_log_state (NcmFit *fit)
     g_message ("#  function evaluations [%06d]\n", fit->fstate->func_eval);
     g_message ("#  gradient evaluations [%06d]\n", fit->fstate->grad_eval);
     g_message ("#  degrees of freedom   [%06d]\n", fit->fstate->dof);
-    g_message ("#  m2lnL     = % 20.15g\n", ncm_fit_state_get_m2lnL_curval (fit->fstate));
-
+    if (fit->lh->m2lnL_v != NULL)
+    {
+      g_message ("#  m2lnL     = % 20.15g ( ", ncm_fit_state_get_m2lnL_curval (fit->fstate));
+      for (i = 0; i < ncm_vector_len (fit->lh->m2lnL_v); i++)
+      {
+        g_message ("% 11.5g ", ncm_vector_get (fit->lh->m2lnL_v, i));
+      }
+      g_message (")\n");
+    }
+    else
+      g_message ("#  m2lnL     = % 20.15g\n", ncm_fit_state_get_m2lnL_curval (fit->fstate));
+    
     g_message ("#  Fit parameters:\n#    ");
     for (i = 0; i < ncm_mset_fparam_len (fit->mset); i++)
       g_message ("% -20.15g ", ncm_mset_fparam_get (fit->mset, i));

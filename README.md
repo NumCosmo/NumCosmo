@@ -80,10 +80,6 @@ NumCosmo, provides it own internal version of Levmar and Cuba for a full version
 of the original libraries visit their website linked below. It is, therefore,
 *not* necessary to install them.
 
-  - SQLite3 >= 3.6.10
-    Standalone database used to store several observation data (SN Ia, BAO
-    Dv, etc), some data are already included in numcosmo.
-    * http://www.sqlite.org/
   - FFTW3 >= 3.1.2
     Needed to build the spherical harmonic decomposition of CMB data.
     * http://www.fftw.org/

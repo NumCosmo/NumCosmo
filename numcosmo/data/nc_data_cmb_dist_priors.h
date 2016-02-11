@@ -61,8 +61,10 @@ struct _NcDataCMBDistPriorsClass
 GType nc_data_cmb_dist_priors_get_type (void) G_GNUC_CONST;
 
 NcmData *nc_data_cmb_dist_priors_new (NcDistance *dist, NcDataCMBId id);
+NcDataCMBDistPriors *nc_data_cmb_dist_priors_new_from_file (const gchar *filename);
+NcDataCMBDistPriors *nc_data_cmb_dist_priors_new_from_id (NcDistance *dist, NcDataCMBId id);
 
-void nc_data_cmb_dist_priors_set_sample (NcDataCMBDistPriors *cmb_dist_priors, NcDataCMBId id);
+void nc_data_cmb_dist_priors_set_dist (NcDataCMBDistPriors *cmb_dist_priors, NcDistance *dist);
 
 G_END_DECLS
 

@@ -59,32 +59,52 @@ nc_transfer_func_new_from_name (gchar *transfer_name)
   GType transfer_type = G_OBJECT_TYPE (obj);
 
   if (!g_type_is_a (transfer_type, NC_TYPE_TRANSFER_FUNC))
-	g_error ("nc_transfer_func_new_from_name: NcTransferFunc %s do not descend from %s.", transfer_name, g_type_name (NC_TYPE_TRANSFER_FUNC));
+    g_error ("nc_transfer_func_new_from_name: NcTransferFunc %s do not descend from %s.", 
+             transfer_name, 
+             g_type_name (NC_TYPE_TRANSFER_FUNC));
+
   return NC_TRANSFER_FUNC (obj);
 }
 
 /**
  * nc_transfer_func_prepare:
- * @tf: a #NcTransferFunc.
- * @model: a #NcHICosmo.
+ * @tf: a #NcTransferFunc
+ * @reion: a #NcHIReion
+ * @cosmo: a #NcHICosmo
  *
  * FIXME
  *
 */
 void
-nc_transfer_func_prepare (NcTransferFunc *tf, NcHICosmo *model)
+nc_transfer_func_prepare (NcTransferFunc *tf, NcHIReion *reion, NcHICosmo *cosmo)
 {
-  if (tf->ctrl == NULL)
-    g_error ("You should allocate a new tf using transfer_func_new_from_name(...)");
+  NC_TRANSFER_FUNC_GET_CLASS (tf)->prepare (tf, reion, cosmo);
+  tf->prepared = TRUE;
+}
 
-  if (ncm_model_ctrl_update (tf->ctrl, NCM_MODEL(model)))
-    NC_TRANSFER_FUNC_GET_CLASS (tf)->prepare (tf, model);
+/**
+ * nc_transfer_func_prepare_if_needed:
+ * @tf: a #NcTransferFunc
+ * @reion: a #NcHIReion
+ * @cosmo: a #NcHICosmo
+ *
+ * FIXME
+ *
+*/
+void
+nc_transfer_func_prepare_if_needed (NcTransferFunc *tf, NcHIReion *reion, NcHICosmo *cosmo)
+{
+  gboolean cosmo_up = ncm_model_ctrl_update (tf->ctrl_cosmo, NCM_MODEL (cosmo));
+  gboolean reion_up = ncm_model_ctrl_update (tf->ctrl_reion, NCM_MODEL (reion));
+
+  if (cosmo_up || reion_up)
+    NC_TRANSFER_FUNC_GET_CLASS (tf)->prepare (tf, reion, cosmo);
 }
 
 /**
  * nc_transfer_func_eval:
  * @tf: a #NcTransferFunc.
- * @model: a #NcHICosmo.
+ * @cosmo: a #NcHICosmo.
  * @kh: FIXME
  *
  * FIXME
@@ -92,21 +112,16 @@ nc_transfer_func_prepare (NcTransferFunc *tf, NcHICosmo *model)
  * Returns: FIXME
 */
 gdouble
-nc_transfer_func_eval (NcTransferFunc *tf, NcHICosmo *model, gdouble kh)
+nc_transfer_func_eval (NcTransferFunc *tf, NcHICosmo *cosmo, gdouble kh)
 {
-  if (tf->ctrl == NULL)
-    g_error ("You should allocate a new tf using transfer_func_new_from_name(...)");
-
-  if (ncm_model_ctrl_update (tf->ctrl, NCM_MODEL(model)))
-    NC_TRANSFER_FUNC_GET_CLASS (tf)->prepare (tf, model);
-
+  NCM_CHECK_PREPARED (tf, nc_transfer_func_eval);
   return NC_TRANSFER_FUNC_GET_CLASS (tf)->calc (tf, kh);
 }
 
 /**
  * nc_transfer_func_matter_powerspectrum:
  * @tf: a #NcTransferFunc.
- * @model: a #NcHICosmo.
+ * @cosmo: a #NcHICosmo.
  * @kh: FIXME
  *
  * FIXME
@@ -114,15 +129,9 @@ nc_transfer_func_eval (NcTransferFunc *tf, NcHICosmo *model, gdouble kh)
  * Returns: FIXME
 */
 gdouble
-nc_transfer_func_matter_powerspectrum (NcTransferFunc *tf, NcHICosmo *model, gdouble kh)
+nc_transfer_func_matter_powerspectrum (NcTransferFunc *tf, NcHICosmo *cosmo, gdouble kh)
 {
-  if (tf->ctrl == NULL)
-    g_error ("You should allocate a new tf using transfer_func_new_from_name(...)");
-
-  if (ncm_model_ctrl_update (tf->ctrl, NCM_MODEL(model)))
-    NC_TRANSFER_FUNC_GET_CLASS (tf)->prepare (tf, model);
-
-  return NC_TRANSFER_FUNC_GET_CLASS (tf)->calc_matter_P (tf, model, kh);
+  return NC_TRANSFER_FUNC_GET_CLASS (tf)->calc_matter_P (tf, cosmo, kh);
 }
 
 /**
@@ -156,8 +165,8 @@ nc_transfer_func_clear (NcTransferFunc **tf)
 static void
 nc_transfer_func_init (NcTransferFunc *tf)
 {
-  /* TODO: Add initialization code here */
-  tf->ctrl = ncm_model_ctrl_new (NULL);
+  tf->ctrl_cosmo = ncm_model_ctrl_new (NULL);
+  tf->ctrl_reion = ncm_model_ctrl_new (NULL);
 }
 
 static void
@@ -165,7 +174,8 @@ _nc_transfer_func_dispose (GObject * object)
 {
   NcTransferFunc *tf = NC_TRANSFER_FUNC (object);
 
-  ncm_model_ctrl_clear (&tf->ctrl);
+  ncm_model_ctrl_clear (&tf->ctrl_cosmo);
+  ncm_model_ctrl_clear (&tf->ctrl_reion);
 
   /* Chain up : end */
   G_OBJECT_CLASS (nc_transfer_func_parent_class)->dispose (object);

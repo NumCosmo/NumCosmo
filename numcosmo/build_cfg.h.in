@@ -31,7 +31,6 @@
 @have_fftw3_support@
 @have_cfitsio_support@
 
-@have_sqlite3_support@
 @have_nlopt_support@
 /*
 @have_atlas_support@

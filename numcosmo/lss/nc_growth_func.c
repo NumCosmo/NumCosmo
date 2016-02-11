@@ -111,13 +111,13 @@ growth_f (realtype z, N_Vector y, N_Vector ydot, gpointer f_data)
   gdouble E2 = nc_hicosmo_E2 (NC_HICOSMO (model), z);
   gdouble dE2dz = nc_hicosmo_dE2_dz (NC_HICOSMO (model), z);
   gdouble x = 1.0 + z;
-  gdouble Omega_m = nc_hicosmo_Omega_m (NC_HICOSMO (model));
+  gdouble Omega_m0 = nc_hicosmo_Omega_m0 (NC_HICOSMO (model));
 
   NV_Ith_S (ydot, 0) = NV_Ith_S (y, 1);
   NV_Ith_S (ydot, 1) =
-    (1.0 / x - dE2dz / (2.0 * E2)) * NV_Ith_S (y, 1) + 3.0 * Omega_m * x * NV_Ith_S (y, 0) / (2.0 * E2);
+    (1.0 / x - dE2dz / (2.0 * E2)) * NV_Ith_S (y, 1) + 3.0 * Omega_m0 * x * NV_Ith_S (y, 0) / (2.0 * E2);
 
-  //printf ("res = % 20.15g y1 = % 20.15g y0 = % 20.15g E2 = % 20.15g dE2dz = % 20.15g xOm = % 20.15g 1/x = % 20.15g\n", NV_Ith_S (ydot, 1), NV_Ith_S (y, 1), NV_Ith_S (y, 0), E2, dE2dz, x * Omega_m, 1/x);
+  //printf ("res = % 20.15g y1 = % 20.15g y0 = % 20.15g E2 = % 20.15g dE2dz = % 20.15g xOm = % 20.15g 1/x = % 20.15g\n", NV_Ith_S (ydot, 1), NV_Ith_S (y, 1), NV_Ith_S (y, 0), E2, dE2dz, x * Omega_m0, 1/x);
   return 0;
 }
 
@@ -129,7 +129,7 @@ growth_J (_NCM_SUNDIALS_INT_TYPE N, realtype z, N_Vector y, N_Vector fy, DlsMat 
   gdouble E2 = nc_hicosmo_E2 (NC_HICOSMO (model), z);
   gdouble dE2dz = nc_hicosmo_dE2_dz (NC_HICOSMO (model), z);
   gdouble x = 1.0 + z;
-  gdouble Omega_m = nc_hicosmo_Omega_m (NC_HICOSMO (model));
+  gdouble Omega_m0 = nc_hicosmo_Omega_m0 (NC_HICOSMO (model));
 
   NCM_UNUSED (N);
   NCM_UNUSED (y);
@@ -141,7 +141,7 @@ growth_J (_NCM_SUNDIALS_INT_TYPE N, realtype z, N_Vector y, N_Vector fy, DlsMat 
   DENSE_ELEM (J, 0, 0) = 0.0;
   DENSE_ELEM (J, 0, 1) = 1.0;
 
-  DENSE_ELEM (J, 1, 0) = 3.0 * Omega_m * x / (2.0 * E2);
+  DENSE_ELEM (J, 1, 0) = 3.0 * Omega_m0 * x / (2.0 * E2);
   DENSE_ELEM (J, 1, 1) = (1.0 / x - dE2dz / (2.0 * E2));
 
   return 0;
@@ -153,13 +153,13 @@ growth_J (_NCM_SUNDIALS_INT_TYPE N, realtype z, N_Vector y, N_Vector fy, DlsMat 
 /**
  * nc_growth_func_prepare:
  * @gf: a #NcGrowthFunc
- * @model: a #NcHICosmo
+ * @cosmo: a #NcHICosmo
  *
  * FIXME
  *
  */
 void
-nc_growth_func_prepare (NcGrowthFunc *gf, NcHICosmo *model)
+nc_growth_func_prepare (NcGrowthFunc *gf, NcHICosmo *cosmo)
 {
   gdouble zf, z;
   gint i = _NC_MAX_SPLINE_POINTS - 1;
@@ -200,7 +200,7 @@ nc_growth_func_prepare (NcGrowthFunc *gf, NcHICosmo *model)
 
   CVodeSStolerances (gf->cvode, 1e-13, 0.0);
   CVodeSetMaxNumSteps (gf->cvode, 50000);
-  CVodeSetUserData (gf->cvode, model);
+  CVodeSetUserData (gf->cvode, cosmo);
   CVodeSetStopTime (gf->cvode, 0.0);
 
   g_array_index (y_array, gdouble, i) = 1.0 / _NC_START_Z;
@@ -260,8 +260,8 @@ nc_growth_func_prepare (NcGrowthFunc *gf, NcHICosmo *model)
 /**
  * nc_growth_func_eval:
  * @gf: a #NcGrowthFunc
- * @model: a #NcHICosmo
- * @z: redshift
+ * @cosmo: a #NcHICosmo
+ * @z: redshift $z$
  *
  * FIXME
  *
@@ -270,8 +270,8 @@ nc_growth_func_prepare (NcGrowthFunc *gf, NcHICosmo *model)
 /**
  * nc_growth_func_eval_deriv:
  * @gf: a #NcGrowthFunc
- * @model: a #NcHICosmo
- * @z: redshift
+ * @cosmo: a #NcHICosmo
+ * @z: redshift $z$
  *
  * FIXME
  *
@@ -280,8 +280,8 @@ nc_growth_func_prepare (NcGrowthFunc *gf, NcHICosmo *model)
 /**
  * nc_growth_func_eval_both:
  * @gf: a #NcGrowthFunc
- * @model: a #NcHICosmo
- * @z: redshift
+ * @cosmo: a #NcHICosmo
+ * @z: redshift $z$
  * @d: Growth function
  * @f: Growth function derivative
  *
