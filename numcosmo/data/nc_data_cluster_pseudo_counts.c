@@ -460,9 +460,11 @@ nc_data_cluster_pseudo_counts_init_from_sampling (NcDataClusterPseudoCounts *dcp
     ncm_matrix_set (dcpc->obs, i, NC_DATA_CLUSTER_PSEUDO_COUNTS_SD_MPL, sd_PL);
     ncm_matrix_set (dcpc->obs, i, NC_DATA_CLUSTER_PSEUDO_COUNTS_SD_MCL, sd_CL);
   }
-
+  
   ncm_rng_unlock (rng);  
 
+  ncm_data_set_init (NCM_DATA (dcpc), TRUE);
+  
   ncm_data_resample (NCM_DATA (dcpc), mset, rng);
 }
 
