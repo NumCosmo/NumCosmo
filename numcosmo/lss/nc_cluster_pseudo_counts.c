@@ -392,6 +392,7 @@ _Ndet_integrand (gdouble lnM500, gdouble z, gpointer userdata)
 /**
  * nc_cluster_pseudo_counts_ndet:
  * @cpc: a #NcClusterPseudoCounts
+ * @mfp: a #NcMassFunction
  * @cosmo: a #NcHICosmo 
  *
  * FIXME

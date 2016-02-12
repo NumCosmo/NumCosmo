@@ -692,6 +692,7 @@ _nc_cluster_abundance_funcs (NcClusterAbundance *cad, NcClusterRedshift *cluster
 /**
  * nc_cluster_abundance_prepare:
  * @cad: a #NcClusterAbundance
+ * @reion: a #NcHIReion
  * @cosmo: a #NcHICosmo
  * @clusterz: a #NcClusterRedshift
  * @clusterm: a #NcClusterMass
@@ -1261,6 +1262,7 @@ nc_ca_mean_bias_Mobs_denominator (NcClusterAbundance *cad, NcHICosmo *cosmo, gdo
 /**
  * nc_cluster_abundance_prepare_if_needed:
  * @cad: a #NcClusterAbundance
+ * @reion: a #NcHIReion
  * @cosmo: a #NcHICosmo
  * @clusterz: a #NcClusterRedshift
  * @clusterm: a #NcClusterMass

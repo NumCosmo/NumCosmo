@@ -631,6 +631,7 @@ nc_mass_function_set_eval_limits (NcMassFunction *mfp, NcHICosmo *cosmo, gdouble
 /**
  * nc_mass_function_prepare:
  * @mfp: a #NcMassFunction
+ * @reion: a #NcHIReion
  * @cosmo: a #NcHICosmo
  *
  * FIXME
@@ -792,6 +793,7 @@ _nc_mass_function_generate_2Dspline_knots (NcMassFunction *mfp, NcHICosmo *cosmo
 /**
  * nc_mass_function_prepare_if_needed:
  * @mfp: a #NcMassFunction
+ * @reion: a #NcHIReion
  * @cosmo: a #NcHICosmo
  *
  * FIXME

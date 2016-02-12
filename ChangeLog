@@ -2,6 +2,17 @@ CHANGELOG
 ----------------------
 
 [Current]
+ * Updated and improved PseudoCount related objects. Updated of all examples
+     finished. Fixed NcmMSet typo. Added accelerated bsearch option for
+     NcmSpline2d.
+
+ * Updating examples and organizing prepare calls in calc objects.
+
+ * Bug fixed: ncm_data_set_init(...) was included in
+     nc_data_cluster_pseudo_counts_init_from_sampling().
+
+ * Updated ChangeLog
+
  * Bumped to v0.13.1
 
  * Now using ax_cc_maxopt to detect the best optimization flags (removing
