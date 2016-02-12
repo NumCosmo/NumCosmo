@@ -288,6 +288,9 @@ _nc_data_cluster_pseudo_counts_prepare (NcmData *data, NcmMSet *mset)
   NcClusterMass *clusterm     = NC_CLUSTER_MASS (ncm_mset_peek (mset, nc_cluster_mass_id ()));
   NcClusterPseudoCounts *cpc  = NC_CLUSTER_PSEUDO_COUNTS (ncm_mset_peek (mset, nc_cluster_pseudo_counts_id ()));
 
+  if (dcpc->cad == NULL)
+    g_error ("_nc_data_cluster_pseudo_counts_prepare: NcClusterAbundance not set, call _l");
+  
   g_assert ((cosmo != NULL) && (reion != NULL) && (clusterz != NULL) && (clusterm != NULL) && (cpc != NULL));
 
   nc_cluster_abundance_prepare_if_needed (dcpc->cad, reion, cosmo, clusterz, clusterm);  
@@ -431,6 +434,21 @@ void
 nc_data_cluster_pseudo_counts_clear (NcDataClusterPseudoCounts **dcpc)
 {
   g_clear_object (dcpc);
+}
+
+/**
+ * nc_data_cluster_pseudo_counts_set_cad:
+ * @dcpc: a #NcDataClusterPseudoCounts
+ * @cad: a #NcClusterAbundance
+ *
+ * Sets the #NcClusterAbundance object @cad to be used.
+ * 
+ */
+void 
+nc_data_cluster_pseudo_counts_set_cad (NcDataClusterPseudoCounts *dcpc, NcClusterAbundance *cad)
+{
+  nc_cluster_abundance_clear (&dcpc->cad);
+  dcpc->cad = nc_cluster_abundance_ref (cad);
 }
 
 /**
