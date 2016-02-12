@@ -427,6 +427,30 @@ ncm_mset_newv (gpointer model0, va_list ap)
 }
 
 /**
+ * ncm_mset_new_array:
+ * @model_array: (array) (element-type NcmModel): a #GPtrArray of #NcmModel.
+ *
+ * FIXME
+ *
+ * Returns: (transfer full): FIXME
+ */
+NcmMSet *
+ncm_mset_new_array (GPtrArray *model_array)
+{
+  NcmMSet *mset = ncm_mset_empty_new ();
+  guint i;
+
+  for (i = 0; i < model_array->len; i++)
+  {
+    NcmModel *model = NCM_MODEL (g_ptr_array_index (model_array, i));
+    g_assert (NCM_IS_MODEL (model));
+    ncm_mset_push (mset, model);
+  }
+
+  return mset;
+}
+
+/**
  * ncm_mset_ref:
  * @mset: a #NcmMSet
  *
@@ -683,8 +707,9 @@ ncm_mset_set_pos (NcmMSet *mset, NcmModel *model, guint submodel_id)
     NcmMSetItem *item0;
     guint i;
 
-    if (submodel_id > 0 && !(NCM_MODEL_CLASS (model)->can_stack))
-      g_error ("ncm_mset_set_pos: cannot stack object in NcmMSet, type not allowed.");
+    if (submodel_id > 0 && !(NCM_MODEL_GET_CLASS (model)->can_stack))
+      g_error ("ncm_mset_set_pos: cannot stack object in position %u NcmMSet, type `%s' not allowed.", 
+               submodel_id, G_OBJECT_TYPE_NAME (model));
 
     ncm_mset_remove (mset, mid);
 
@@ -854,6 +879,7 @@ ncm_mset_prepare_fparam_map (NcmMSet *mset)
   for (i = 0; i < mset->model_array->len; i++)
   {
     NcmMSetItem *item = g_ptr_array_index (mset->model_array, i);
+    
     if (item->dup)
       continue;
     else

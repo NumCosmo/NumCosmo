@@ -451,7 +451,7 @@ _ncm_model_constructed (GObject *object)
       model->total_len += g_array_index (model->vparam_len, guint, i);
     }
 
-    model->params = ncm_vector_new (model->total_len);
+    model->params = ncm_vector_new (model->total_len == 0 ? 1 : model->total_len);
     model->p      = ncm_vector_ref (model->params);
     g_array_set_size (model->ptypes, model->total_len);
     _ncm_model_set_sparams (model);
@@ -1171,7 +1171,7 @@ ncm_model_is_equal (NcmModel *model1, NcmModel *model2)
 {
   if (G_OBJECT_TYPE (model1) != G_OBJECT_TYPE (model2))
     return FALSE;
-  if (ncm_vector_len (model1->params) != ncm_vector_len (model2->params))
+  if (model1->total_len != model2->total_len)
     return FALSE;
   if (model1->reparam)
   {
@@ -1302,7 +1302,7 @@ ncm_model_params_set_all (NcmModel *model, ...)
   va_list ap;
   va_start(ap, model);
 
-  for (i = 0; i < ncm_vector_len (model->p); i++)
+  for (i = 0; i < model->total_len; i++)
     ncm_vector_set (model->p, i, va_arg (ap, gdouble));
 
   va_end(ap);
@@ -1325,7 +1325,7 @@ ncm_model_params_set_all_data (NcmModel *model, gdouble *data)
 {
   guint i;
 
-  for (i = 0; i < ncm_vector_len (model->p); i++)
+  for (i = 0; i < model->total_len; i++)
     ncm_vector_set (model->p, i, data[i]);
 
   ncm_model_params_update (model);
@@ -1374,7 +1374,7 @@ void
 ncm_model_params_print_all (NcmModel *model, FILE *out)
 {
   guint i;
-  for (i = 0; i < ncm_vector_len (model->p); i++)
+  for (i = 0; i < model->total_len; i++)
     fprintf (out, "  % 20.16g", ncm_vector_get (model->p, i));
   fprintf (out, "\n");
   fflush (out);
@@ -1392,7 +1392,7 @@ void
 ncm_model_orig_params_log_all (NcmModel *model)
 {
   guint i;
-  for (i = 0; i < ncm_vector_len (model->params); i++)
+  for (i = 0; i < model->total_len; i++)
     g_message ("  % 20.16g", ncm_vector_get (model->params, i));
   g_message ("\n");
   return;
@@ -1409,7 +1409,7 @@ void
 ncm_model_params_log_all (NcmModel *model)
 {
   guint i;
-  for (i = 0; i < ncm_vector_len (model->p); i++)
+  for (i = 0; i < model->total_len; i++)
     g_message ("  % 20.16g", ncm_vector_get (model->p, i));
   g_message ("\n");
   return;

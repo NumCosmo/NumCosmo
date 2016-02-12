@@ -54,6 +54,10 @@ struct _NcmSpline2d
   NcmVector *xv;
   NcmVector *yv;
   NcmMatrix *zm;
+  gsl_interp_accel *acc_x;
+  gsl_interp_accel *acc_y;
+  gboolean use_acc;
+  gboolean no_stride;
 };
 
 struct _NcmSpline2dClass
@@ -90,6 +94,8 @@ NcmSpline2d *ncm_spline2d_new (const NcmSpline2d *s2d, NcmVector *xv, NcmVector 
 
 void ncm_spline2d_free (NcmSpline2d *s2d);
 void ncm_spline2d_clear (NcmSpline2d **s2d);
+
+void ncm_spline2d_use_acc (NcmSpline2d *s2d, gboolean use_acc);
 
 G_INLINE_FUNC gdouble ncm_spline2d_eval (NcmSpline2d *s2d, gdouble x, gdouble y);
 gdouble ncm_spline2d_integ_dx (NcmSpline2d *s2d, gdouble xl, gdouble xu, gdouble y);

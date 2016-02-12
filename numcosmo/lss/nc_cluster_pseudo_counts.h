@@ -78,9 +78,7 @@ struct _NcClusterPseudoCounts
 {
   /*< private >*/
   NcmModel parent_instance;
-  NcMassFunction *mfp;
-  NcClusterAbundance *cad;
-  gdouble nclusters;
+  guint nclusters;
   gdouble *workz;
 };
 
@@ -94,18 +92,17 @@ GType nc_cluster_pseudo_counts_get_type (void) G_GNUC_CONST;
 
 NCM_MSET_MODEL_DECLARE_ID (nc_cluster_pseudo_counts);
 
-NcClusterPseudoCounts *nc_cluster_pseudo_counts_new (NcMassFunction *mfp, gdouble nclusters);
-NcClusterPseudoCounts *nc_cluster_pseudo_counts_copy (NcClusterPseudoCounts *cpc);
+NcClusterPseudoCounts *nc_cluster_pseudo_counts_new (guint nclusters);
 NcClusterPseudoCounts *nc_cluster_pseudo_counts_ref (NcClusterPseudoCounts *cpc);
 void nc_cluster_pseudo_counts_free (NcClusterPseudoCounts *cpc);
 void nc_cluster_pseudo_counts_clear (NcClusterPseudoCounts **cpc);
 
-gdouble nc_cluster_pseudo_counts_posterior_ndetone (NcClusterPseudoCounts *cpc, NcClusterMass *clusterm, gdouble z, gdouble Mpl, gdouble Mcl, gdouble sigma_pl, gdouble sigma_cl);
+gdouble nc_cluster_pseudo_counts_posterior_ndetone (NcClusterPseudoCounts *cpc, NcMassFunction *mfp, NcClusterMass *clusterm, gdouble z, gdouble Mpl, gdouble Mcl, gdouble sigma_pl, gdouble sigma_cl);
 gdouble nc_cluster_pseudo_counts_selection_function (NcClusterPseudoCounts *cpc, gdouble lnM);
 gdouble nc_cluster_pseudo_counts_ndet_no_z_integral (NcClusterPseudoCounts *cpc, NcHICosmo *cosmo, gdouble z);
-gdouble nc_cluster_pseudo_counts_ndet (NcClusterPseudoCounts *cpc, NcHICosmo *cosmo);
-gdouble nc_cluster_pseudo_counts_posterior_numerator (NcClusterPseudoCounts *cpc, NcClusterMass *clusterm, NcHICosmo *cosmo, const gdouble z, const gdouble *Mobs, const gdouble *Mobs_params);
-gdouble nc_cluster_pseudo_counts_posterior_numerator_plcl (NcClusterPseudoCounts *cpc, NcClusterMass *clusterm, NcHICosmo *cosmo, const gdouble z, const gdouble Mpl, const gdouble Mcl, const gdouble sigma_pl, const gdouble sigma_cl);
+gdouble nc_cluster_pseudo_counts_ndet (NcClusterPseudoCounts *cpc, NcMassFunction *mfp, NcHICosmo *cosmo);
+gdouble nc_cluster_pseudo_counts_posterior_numerator (NcClusterPseudoCounts *cpc, NcMassFunction *mfp, NcClusterMass *clusterm, NcHICosmo *cosmo, const gdouble z, const gdouble *Mobs, const gdouble *Mobs_params);
+gdouble nc_cluster_pseudo_counts_posterior_numerator_plcl (NcClusterPseudoCounts *cpc, NcMassFunction *mfp, NcClusterMass *clusterm, NcHICosmo *cosmo, const gdouble z, const gdouble Mpl, const gdouble Mcl, const gdouble sigma_pl, const gdouble sigma_cl);
 
 G_END_DECLS
 

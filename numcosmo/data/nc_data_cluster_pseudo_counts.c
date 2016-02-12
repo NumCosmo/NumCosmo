@@ -210,9 +210,9 @@ static void
 _nc_data_cluster_pseudo_counts_m2lnL_val (NcmData *data, NcmMSet *mset, gdouble *m2lnL)
 {
   NcDataClusterPseudoCounts *dcpc = NC_DATA_CLUSTER_PSEUDO_COUNTS (data);
-  NcHICosmo *cosmo = NC_HICOSMO (ncm_mset_peek (mset, nc_hicosmo_id ()));
-  NcClusterMass *clusterm = NC_CLUSTER_MASS (ncm_mset_peek (mset, nc_cluster_mass_id ()));
-  NcClusterPseudoCounts *cpc = NC_CLUSTER_PSEUDO_COUNTS (ncm_mset_peek (mset, nc_cluster_pseudo_counts_id ()));
+  NcHICosmo *cosmo                = NC_HICOSMO (ncm_mset_peek (mset, nc_hicosmo_id ()));
+  NcClusterMass *clusterm         = NC_CLUSTER_MASS (ncm_mset_peek (mset, nc_cluster_mass_id ()));
+  NcClusterPseudoCounts *cpc      = NC_CLUSTER_PSEUDO_COUNTS (ncm_mset_peek (mset, nc_cluster_pseudo_counts_id ()));
 
   g_assert (cosmo != NULL && clusterm != NULL && cpc != NULL);
 
@@ -225,7 +225,7 @@ _nc_data_cluster_pseudo_counts_m2lnL_val (NcmData *data, NcmMSet *mset, gdouble 
       const gdouble z = ncm_matrix_get (dcpc->obs, i, NC_DATA_CLUSTER_PSEUDO_COUNTS_Z);
       const gdouble *M = ncm_matrix_ptr (dcpc->obs, i, NC_DATA_CLUSTER_PSEUDO_COUNTS_MPL);
       const gdouble *M_params = ncm_matrix_ptr (dcpc->obs, i, NC_DATA_CLUSTER_PSEUDO_COUNTS_SD_MPL);
-      const gdouble m2lnL_i = log (nc_cluster_pseudo_counts_posterior_ndetone (cpc, clusterm, z, M[0], M[1], M_params[0], M_params[1]));
+      const gdouble m2lnL_i = log (nc_cluster_pseudo_counts_posterior_ndetone (cpc, dcpc->cad->mfp, clusterm, z, M[0], M[1], M_params[0], M_params[1]));
 
       if (!gsl_finite (m2lnL_i))
       {
@@ -240,7 +240,7 @@ _nc_data_cluster_pseudo_counts_m2lnL_val (NcmData *data, NcmMSet *mset, gdouble 
   }
   else
   {
-    gdouble Ndet = nc_cluster_pseudo_counts_ndet (cpc, cosmo);
+    gdouble Ndet = nc_cluster_pseudo_counts_ndet (cpc, dcpc->cad->mfp, cosmo);
     gdouble lnNdet = log (Ndet);
     gint i;
     *m2lnL = 0.0;
@@ -258,7 +258,7 @@ _nc_data_cluster_pseudo_counts_m2lnL_val (NcmData *data, NcmMSet *mset, gdouble 
       const gdouble *M = ncm_matrix_ptr (dcpc->obs, i, NC_DATA_CLUSTER_PSEUDO_COUNTS_MPL);
       const gdouble *M_params = ncm_matrix_ptr (dcpc->obs, i, NC_DATA_CLUSTER_PSEUDO_COUNTS_SD_MPL);
       //const gdouble m2lnL_i = log (nc_cluster_pseudo_counts_posterior_numerator (cpc, clusterm, cosmo, z, M, M_params));
-      const gdouble m2lnL_i = log (nc_cluster_pseudo_counts_posterior_numerator_plcl (cpc, clusterm, cosmo, z, M[0], M[1], M_params[0], M_params[1]));
+      const gdouble m2lnL_i = log (nc_cluster_pseudo_counts_posterior_numerator_plcl (cpc, dcpc->cad->mfp, clusterm, cosmo, z, M[0], M[1], M_params[0], M_params[1]));
 
       if (!gsl_finite (m2lnL_i))
       {

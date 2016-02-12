@@ -52,6 +52,7 @@ void test_ncm_mset_saveload (TestNcmMSet *test, gconstpointer pdata);
 
 void test_ncm_mset_traps (TestNcmMSet *test, gconstpointer pdata);
 void test_ncm_mset_invalid_get (TestNcmMSet *test, gconstpointer pdata);
+void test_ncm_mset_invalid_stack (TestNcmMSet *test, gconstpointer pdata);
 
 gint
 main (gint argc, gchar *argv[])
@@ -104,6 +105,10 @@ main (gint argc, gchar *argv[])
               &test_ncm_mset_new, 
               &test_ncm_mset_invalid_get, 
               &test_ncm_mset_free);
+  g_test_add ("/numcosmo/ncm_mset/invalid/stack/subprocess", TestNcmMSet, NULL, 
+              &test_ncm_mset_new, 
+              &test_ncm_mset_invalid_stack, 
+              &test_ncm_mset_free);
 #endif 
   g_test_run ();
 }
@@ -126,7 +131,6 @@ test_ncm_mset_new (TestNcmMSet *test, gconstpointer pdata)
     
     ncm_mset_set (test->mset, NCM_MODEL (cosmo));
     ncm_mset_set (test->mset, NCM_MODEL (cosmo));
-    ncm_mset_set_pos (test->mset, NCM_MODEL (cosmo), 1);
 
     g_ptr_array_add (test->ma, cosmo);
     g_array_append_val (test->ma_destroyed, f);
@@ -185,8 +189,8 @@ test_ncm_mset_setpeek (TestNcmMSet *test, gconstpointer pdata)
 {
   NcClusterMass *mass = nc_cluster_mass_new_from_name ("NcClusterMassLnnormal");
   gboolean f = FALSE;
-
   ncm_mset_set (test->mset, NCM_MODEL (mass));
+
   g_ptr_array_add (test->ma, mass);
   g_array_append_val (test->ma_destroyed, f);
 
@@ -202,6 +206,7 @@ test_ncm_mset_setpospeek (TestNcmMSet *test, gconstpointer pdata)
   gboolean f = FALSE;
 
   ncm_mset_set_pos (test->mset, NCM_MODEL (mass), 5);
+
   g_ptr_array_add (test->ma, mass);
   g_array_append_val (test->ma_destroyed, f);
 
@@ -510,6 +515,9 @@ test_ncm_mset_traps (TestNcmMSet *test, gconstpointer pdata)
 #if !((GLIB_MAJOR_VERSION == 2) && (GLIB_MINOR_VERSION < 38))
   g_test_trap_subprocess ("/numcosmo/ncm_mset/invalid/get/subprocess", 0, 0);
   g_test_trap_assert_failed ();
+
+  g_test_trap_subprocess ("/numcosmo/ncm_mset/invalid/stack/subprocess", 0, 0);
+  g_test_trap_assert_failed ();
 #endif
 }
 
@@ -517,4 +525,14 @@ void
 test_ncm_mset_invalid_get (TestNcmMSet *test, gconstpointer pdata)
 {
   g_assert (ncm_mset_get (test->mset, 34 * NCM_MSET_MAX_SUBMODEL + 5) != NULL);
+}
+
+void
+test_ncm_mset_invalid_stack (TestNcmMSet *test, gconstpointer pdata)
+{
+  NcHICosmoLCDM *cosmo = nc_hicosmo_lcdm_new ();
+
+  ncm_mset_push (test->mset, NCM_MODEL (cosmo));
+
+  nc_hicosmo_free (NC_HICOSMO (cosmo));
 }

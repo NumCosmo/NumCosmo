@@ -705,6 +705,7 @@ nc_cluster_abundance_prepare (NcClusterAbundance *cad, NcHIReion *reion, NcHICos
   _nc_cluster_abundance_funcs (cad, clusterz, clusterm);
   nc_cluster_redshift_n_limits (clusterz, &cad->zi, &cad->zf);
   nc_cluster_mass_n_limits (clusterm, cosmo, &cad->lnMi, &cad->lnMf);
+
   nc_mass_function_set_eval_limits (cad->mfp, cosmo, cad->lnMi, cad->lnMf, cad->zi, cad->zf);
   nc_mass_function_prepare_if_needed (cad->mfp, reion, cosmo);
 

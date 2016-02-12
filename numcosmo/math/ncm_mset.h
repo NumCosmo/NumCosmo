@@ -145,7 +145,7 @@ void ncm_mset_pindex_free (NcmMSetPIndex *pi);
 NcmMSet *ncm_mset_empty_new (void);
 NcmMSet *ncm_mset_new (gpointer model0, ...);
 NcmMSet *ncm_mset_newv (gpointer model0, va_list ap);
-NcmMSet *ncm_mset_new_array (NcmModel **model);
+NcmMSet *ncm_mset_new_array (GPtrArray *model_array);
 NcmMSet *ncm_mset_ref (NcmMSet *mset);
 NcmMSet *ncm_mset_dup (NcmMSet *mset, NcmSerialize *ser);
 NcmMSet *ncm_mset_shallow_copy (NcmMSet *mset);

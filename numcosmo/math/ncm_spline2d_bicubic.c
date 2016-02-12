@@ -42,6 +42,94 @@
 
 G_DEFINE_TYPE (NcmSpline2dBicubic, ncm_spline2d_bicubic, NCM_TYPE_SPLINE2D);
 
+static void
+ncm_spline2d_bicubic_init (NcmSpline2dBicubic *object)
+{
+  NcmSpline2dBicubic *s2dbc = NCM_SPLINE2D_BICUBIC (object);
+  s2dbc->z_x = NULL;
+  s2dbc->dzdy_x = NULL;
+  s2dbc->z_y = NULL;
+  s2dbc->bicoeff = NULL;
+
+  s2dbc->optimize_dx.l = GSL_NAN;
+  s2dbc->optimize_dx.u = GSL_NAN;
+  s2dbc->optimize_dx.init = FALSE;
+  s2dbc->optimize_dx.s = NULL;
+
+  s2dbc->optimize_dy.l = GSL_NAN;
+  s2dbc->optimize_dy.u = GSL_NAN;
+  s2dbc->optimize_dy.init = FALSE;
+  s2dbc->optimize_dy.s = NULL;
+
+}
+
+static void _ncm_spline2d_bicubic_clear (NcmSpline2dBicubic *s2dbc);
+
+static void
+_ncm_spline2d_bicubic_dispose (GObject *object)
+{
+  NcmSpline2d *s2d = NCM_SPLINE2D (object);
+  NcmSpline2dBicubic *s2dbc = NCM_SPLINE2D_BICUBIC (object);
+
+  _ncm_spline2d_bicubic_clear (s2dbc);
+  s2d->init = FALSE;
+
+  /* Chain up : end */
+  G_OBJECT_CLASS (ncm_spline2d_bicubic_parent_class)->dispose (object);
+}
+
+static void
+_ncm_spline2d_bicubic_finalize (GObject *object)
+{
+  NcmSpline2dBicubic *s2dbc = NCM_SPLINE2D_BICUBIC (object);
+
+  g_clear_pointer (&s2dbc->bicoeff, g_free);
+  
+  /* Chain up : end */
+  G_OBJECT_CLASS (ncm_spline2d_bicubic_parent_class)->finalize (object);
+}
+
+static NcmSpline2d *_ncm_spline2d_bicubic_copy_empty (const NcmSpline2d *s2d);
+static void _ncm_spline2d_bicubic_alloc (NcmSpline2dBicubic *s2dbc);
+static void _ncm_spline2d_bicubic_reset (NcmSpline2d *s2d);
+static void _ncm_spline2d_bicubic_prepare (NcmSpline2d *s2d);
+static gdouble _ncm_spline2d_bicubic_eval (NcmSpline2d *s2d, gdouble x, gdouble y);
+static gdouble _ncm_spline2d_bicubic_dzdx (NcmSpline2d *s2d, gdouble x, gdouble y);
+static gdouble _ncm_spline2d_bicubic_dzdy (NcmSpline2d *s2d, gdouble x, gdouble y);
+static gdouble _ncm_spline2d_bicubic_d2zdx2 (NcmSpline2d *s2d, gdouble x, gdouble y);
+static gdouble _ncm_spline2d_bicubic_d2zdy2 (NcmSpline2d *s2d, gdouble x, gdouble y);
+static gdouble _ncm_spline2d_bicubic_d2zdxy (NcmSpline2d *s2d, gdouble x, gdouble y);
+static gdouble _ncm_spline2d_bicubic_int_dx (NcmSpline2d *s2d, gdouble xl, gdouble xu, gdouble y);
+static gdouble _ncm_spline2d_bicubic_int_dy (NcmSpline2d *s2d, gdouble x, gdouble yl, gdouble yu);
+static gdouble _ncm_spline2d_bicubic_int_dxdy (NcmSpline2d *s2d, gdouble xl, gdouble xu, gdouble yl, gdouble yu);
+static NcmSpline *_ncm_spline2d_bicubic_int_dx_spline (NcmSpline2d *s2d, gdouble xl, gdouble xu);
+static NcmSpline *_ncm_spline2d_bicubic_int_dy_spline (NcmSpline2d *s2d, gdouble yl, gdouble yu);
+
+static void
+ncm_spline2d_bicubic_class_init (NcmSpline2dBicubicClass *klass)
+{
+  GObjectClass* object_class = G_OBJECT_CLASS (klass);
+  NcmSpline2dClass* parent_class = NCM_SPLINE2D_CLASS (klass);
+
+  parent_class->copy_empty    = &_ncm_spline2d_bicubic_copy_empty;
+  parent_class->reset         = &_ncm_spline2d_bicubic_reset;
+  parent_class->prepare       = &_ncm_spline2d_bicubic_prepare;
+  parent_class->eval          = &_ncm_spline2d_bicubic_eval;
+  parent_class->dzdx          = &_ncm_spline2d_bicubic_dzdx;
+  parent_class->dzdy          = &_ncm_spline2d_bicubic_dzdy;
+  parent_class->d2zdxy        = &_ncm_spline2d_bicubic_d2zdxy;
+  parent_class->d2zdx2        = &_ncm_spline2d_bicubic_d2zdx2;
+  parent_class->d2zdy2        = &_ncm_spline2d_bicubic_d2zdy2;
+  parent_class->int_dx        = &_ncm_spline2d_bicubic_int_dx;
+  parent_class->int_dy        = &_ncm_spline2d_bicubic_int_dy;
+  parent_class->int_dxdy      = &_ncm_spline2d_bicubic_int_dxdy;
+  parent_class->int_dx_spline = &_ncm_spline2d_bicubic_int_dx_spline;
+  parent_class->int_dy_spline = &_ncm_spline2d_bicubic_int_dy_spline;
+
+  object_class->dispose  = &_ncm_spline2d_bicubic_dispose;
+  object_class->finalize = &_ncm_spline2d_bicubic_finalize;
+}
+
 /**
  * ncm_spline2d_bicubic_new:
  * @s: a #NcmSplineCubic derived #NcmSpline.
@@ -64,7 +152,7 @@ ncm_spline2d_bicubic_new (NcmSpline *s)
 
 /**
  * ncm_spline2d_bicubic_notaknot_new:
- *
+ * 
  * This function initializes a #NcmSpline2d of bicubic notaknot type.
  *
  * Returns: A new #NcmSpline2d.
@@ -80,7 +168,7 @@ ncm_spline2d_bicubic_notaknot_new ()
   return s2d;
 }
 
-NcmSpline2d *
+static NcmSpline2d *
 _ncm_spline2d_bicubic_copy_empty (const NcmSpline2d *s2d)
 {
   return ncm_spline2d_bicubic_new (s2d->s);
@@ -467,12 +555,24 @@ _ncm_spline2d_bicubic_eval (NcmSpline2d *s2d, gdouble x, gdouble y)
 {
   NcmSpline2dBicubic *s2dbc = NCM_SPLINE2D_BICUBIC (s2d);
 
-  gsize j = gsl_interp_bsearch (ncm_vector_ptr (s2d->xv, 0), x, 0, ncm_vector_len (s2d->xv) - 1);
-  gsize i = gsl_interp_bsearch (ncm_vector_ptr (s2d->yv, 0), y, 0, ncm_vector_len (s2d->yv) - 1);
-  const gdouble x0 = ncm_vector_get (s2d->xv, j);
-  const gdouble y0 = ncm_vector_get (s2d->yv, i);
+  if (!s2d->use_acc)
+  {
+    const gsize j = gsl_interp_bsearch (ncm_vector_ptr (s2d->xv, 0), x, 0, ncm_vector_len (s2d->xv) - 1);
+    const gsize i = gsl_interp_bsearch (ncm_vector_ptr (s2d->yv, 0), y, 0, ncm_vector_len (s2d->yv) - 1);
+    const gdouble x0 = ncm_vector_get (s2d->xv, j);
+    const gdouble y0 = ncm_vector_get (s2d->yv, i);
 
-  return ncm_spline2d_bicubic_eval_poly (&NCM_SPLINE2D_BICUBIC_STRUCT (s2dbc, i, j), x-x0, y-y0);
+    return ncm_spline2d_bicubic_eval_poly (&NCM_SPLINE2D_BICUBIC_STRUCT (s2dbc, i, j), x - x0, y - y0);
+  }
+  else
+  {
+    const gsize j    = gsl_interp_accel_find (s2d->acc_x, ncm_vector_ptr (s2d->xv, 0), ncm_vector_len (s2d->xv), x);
+    const gsize i    = gsl_interp_accel_find (s2d->acc_y, ncm_vector_ptr (s2d->yv, 0), ncm_vector_len (s2d->yv), y);
+    const gdouble x0 = ncm_vector_fast_get (s2d->xv, j);
+    const gdouble y0 = ncm_vector_fast_get (s2d->yv, i);
+
+    return ncm_spline2d_bicubic_eval_poly (&NCM_SPLINE2D_BICUBIC_STRUCT (s2dbc, i, j), x - x0, y - y0);
+  }
 }
 
 static gdouble _ncm_spline2d_bicubic_dzdx (NcmSpline2d *s2d, gdouble x, gdouble y) { NCM_UNUSED (s2d); NCM_UNUSED (x); NCM_UNUSED (y); g_error ("bicubic does not implement dzdx"); return 0.0; }
@@ -795,7 +895,8 @@ _ncm_spline2d_bicubic_int_dy_spline (NcmSpline2d *s2d, gdouble yl, gdouble yu)
   return s2dbc->optimize_dy.s;
 }
 
-static gdouble _ncm_spline2d_bicubic_int_dxdy (NcmSpline2d *s2d, gdouble xl, gdouble xu, gdouble yl, gdouble yu)
+static gdouble 
+_ncm_spline2d_bicubic_int_dxdy (NcmSpline2d *s2d, gdouble xl, gdouble xu, gdouble yl, gdouble yu)
 {
   NcmSpline2dBicubic *s2dbc = NCM_SPLINE2D_BICUBIC (s2d);
 
@@ -911,77 +1012,4 @@ static gdouble _ncm_spline2d_bicubic_int_dxdy (NcmSpline2d *s2d, gdouble xl, gdo
   }
 
   return result;
-}
-
-static void
-ncm_spline2d_bicubic_init (NcmSpline2dBicubic *object)
-{
-  NcmSpline2dBicubic *s2dbc = NCM_SPLINE2D_BICUBIC (object);
-  s2dbc->z_x = NULL;
-  s2dbc->dzdy_x = NULL;
-  s2dbc->z_y = NULL;
-  s2dbc->bicoeff = NULL;
-
-  s2dbc->optimize_dx.l = GSL_NAN;
-  s2dbc->optimize_dx.u = GSL_NAN;
-  s2dbc->optimize_dx.init = FALSE;
-  s2dbc->optimize_dx.s = NULL;
-
-  s2dbc->optimize_dy.l = GSL_NAN;
-  s2dbc->optimize_dy.u = GSL_NAN;
-  s2dbc->optimize_dy.init = FALSE;
-  s2dbc->optimize_dy.s = NULL;
-}
-
-static void
-_ncm_spline2d_bicubic_dispose (GObject *object)
-{
-  NcmSpline2d *s2d = NCM_SPLINE2D (object);
-  NcmSpline2dBicubic *s2dbc = NCM_SPLINE2D_BICUBIC (object);
-
-  _ncm_spline2d_bicubic_clear (s2dbc);
-  s2d->init = FALSE;
-
-  /* Chain up : end */
-  G_OBJECT_CLASS (ncm_spline2d_bicubic_parent_class)->dispose (object);
-}
-
-static void
-_ncm_spline2d_bicubic_finalize (GObject *object)
-{
-  NcmSpline2dBicubic *s2dbc = NCM_SPLINE2D_BICUBIC (object);
-
-  if (s2dbc->bicoeff != NULL)
-  {
-    g_free (s2dbc->bicoeff);
-    s2dbc->bicoeff = NULL;
-  }
-  
-  /* Chain up : end */
-  G_OBJECT_CLASS (ncm_spline2d_bicubic_parent_class)->finalize (object);
-}
-
-static void
-ncm_spline2d_bicubic_class_init (NcmSpline2dBicubicClass *klass)
-{
-  GObjectClass* object_class = G_OBJECT_CLASS (klass);
-  NcmSpline2dClass* parent_class = NCM_SPLINE2D_CLASS (klass);
-
-  parent_class->copy_empty = &_ncm_spline2d_bicubic_copy_empty;
-  parent_class->reset = &_ncm_spline2d_bicubic_reset;
-  parent_class->prepare = &_ncm_spline2d_bicubic_prepare;
-  parent_class->eval = &_ncm_spline2d_bicubic_eval;
-  parent_class->dzdx = &_ncm_spline2d_bicubic_dzdx;
-  parent_class->dzdy = &_ncm_spline2d_bicubic_dzdy;
-  parent_class->d2zdxy = &_ncm_spline2d_bicubic_d2zdxy;
-  parent_class->d2zdx2 = &_ncm_spline2d_bicubic_d2zdx2;
-  parent_class->d2zdy2 = &_ncm_spline2d_bicubic_d2zdy2;
-  parent_class->int_dx = &_ncm_spline2d_bicubic_int_dx;
-  parent_class->int_dy = &_ncm_spline2d_bicubic_int_dy;
-  parent_class->int_dxdy = &_ncm_spline2d_bicubic_int_dxdy;
-  parent_class->int_dx_spline = &_ncm_spline2d_bicubic_int_dx_spline;
-  parent_class->int_dy_spline = &_ncm_spline2d_bicubic_int_dy_spline;
-
-  object_class->dispose = _ncm_spline2d_bicubic_dispose;
-  object_class->finalize = _ncm_spline2d_bicubic_finalize;
 }

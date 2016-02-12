@@ -158,8 +158,7 @@ ncm_spline_finalize (GObject *object)
 {
   NcmSpline *s = NCM_SPLINE (object);
 
-  if (s->acc)
-    gsl_interp_accel_free (s->acc);
+  g_clear_pointer (&s->acc, gsl_interp_accel_free);
 
   /* Chain up : end */
   G_OBJECT_CLASS (ncm_spline_parent_class)->finalize (object);

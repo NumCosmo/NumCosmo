@@ -1026,8 +1026,6 @@ _nc_data_cluster_ncount_resample (NcmData *data, NcmMSet *mset, NcmRNG *rng)
   total_np = gsl_ran_poisson (rng->r, cad->norma);
   ncm_rng_unlock (rng);
 
-printf ("# first np %u [%20.15g]\n", total_np, cad->norma);
-  
   if (total_np == 0)
   {
     ncount->np = 0;

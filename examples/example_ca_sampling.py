@@ -67,12 +67,16 @@ mf = Nc.MassFunction.new (dist, vp, gf, mulf)
 #
 # New Cluster Mass object using Log normal distribution
 #
-cluster_m = Nc.ClusterMass.new_from_name ("NcClusterMassLnnormal{'lnMobs-min':<31.5430441213567>, 'lnMobs-max':<33.6224856630365>}")
+lnMobs_min = log (1.0e14)
+lnMobs_max = log (1.0e16)
+cluster_m = Nc.ClusterMass.new_from_name ("NcClusterMassLnnormal{'lnMobs-min':<%20.15e>, 'lnMobs-max':<%20.15e>}" % (lnMobs_min, lnMobs_max))
 
 #
 # New Cluster Redshift object using a global gaussian distribution
 #
-cluster_z = Nc.ClusterRedshift.new_from_name ("NcClusterPhotozGaussGlobal{'pz-min':<0.0>, 'pz-max':<1.0>, 'z-bias':<0.0>, 'sigma0':<0.03>}")
+z_min = 0.0
+z_max = 0.7
+cluster_z = Nc.ClusterRedshift.new_from_name ("NcClusterPhotozGaussGlobal{'pz-min':<%20.15e>, 'pz-max':<%20.15e>, 'z-bias':<0.0>, 'sigma0':<0.03>}" % (z_min, z_max))
 
 #
 # New Cluster abundance object that uses all objects above
@@ -88,11 +92,7 @@ ncdata = Nc.DataClusterNCount.new (cad)
 #  Creating a new Modelset and set cosmo as the HICosmo model to be used
 #  and cluster_m as the distribution of the mass-observable relation
 #
-mset = Ncm.MSet ()
-mset.set (reion)
-mset.set (cosmo)
-mset.set (cluster_z)
-mset.set (cluster_m)
+mset = Ncm.MSet.new_array ([reion, cosmo, cluster_z, cluster_m])
 
 #
 #  Setting values for the cosmological model, those not set stay in the
@@ -129,7 +129,7 @@ rng = Ncm.RNG.pool_get ("example_ca_sampling");
 # Since ncdata is currently empty, run init_from_sampling
 # using the objects above and an survey area of 300degsq^2
 #
-ncdata.init_from_sampling (mset, cluster_z, cluster_m, 300 * (pi / 180.0)**2, rng)
+ncdata.init_from_sampling (mset, cluster_z, cluster_m, 270 * (pi / 180.0)**2, rng)
 
 #
 # Save to a fits file

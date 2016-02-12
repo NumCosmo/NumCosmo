@@ -48,6 +48,7 @@ enum
   PROP_YV,
   PROP_ZM,
   PROP_INIT,
+  PROP_USE_ACC,
 };
 
 G_DEFINE_ABSTRACT_TYPE (NcmSpline2d, ncm_spline2d, G_TYPE_OBJECT);
@@ -55,37 +56,17 @@ G_DEFINE_ABSTRACT_TYPE (NcmSpline2d, ncm_spline2d, G_TYPE_OBJECT);
 static void
 ncm_spline2d_init (NcmSpline2d *s2d)
 {
-  s2d->xv      = NULL;
-  s2d->yv      = NULL;
-  s2d->zm      = NULL;
-  s2d->s       = NULL;
-  s2d->empty   = TRUE;
-  s2d->init    = FALSE;
-  s2d->to_init = FALSE;
-}
-
-static void
-ncm_spline2d_dispose (GObject *object)
-{
-  NcmSpline2d *s2d = NCM_SPLINE2D (object);
-
-  ncm_vector_clear (&s2d->xv);
-  ncm_vector_clear (&s2d->yv);
-  ncm_matrix_clear (&s2d->zm);
-  ncm_spline_clear (&s2d->s);
-
-  s2d->empty = TRUE;
-
-  /* Chain up : end */
-  G_OBJECT_CLASS (ncm_spline2d_parent_class)->dispose (object);
-}
-
-static void
-ncm_spline2d_finalize (GObject *object)
-{
-
-  /* Chain up : end */
-  G_OBJECT_CLASS (ncm_spline2d_parent_class)->finalize (object);
+  s2d->xv        = NULL;
+  s2d->yv        = NULL;
+  s2d->zm        = NULL;
+  s2d->s         = NULL;
+  s2d->empty     = TRUE;
+  s2d->init      = FALSE;
+  s2d->to_init   = FALSE;
+  s2d->acc_x     = gsl_interp_accel_alloc ();
+  s2d->acc_y     = gsl_interp_accel_alloc ();
+  s2d->use_acc   = FALSE;
+  s2d->no_stride = FALSE;
 }
 
 static void _ncm_spline2d_makeup (NcmSpline2d *s2d);
@@ -114,8 +95,16 @@ _ncm_spline2d_set_property (GObject *object, guint prop_id, const GValue *value,
       _ncm_spline2d_makeup (s2d);
       break;
     case PROP_INIT:
+    {
       s2d->to_init = g_value_get_boolean (value);
-      _ncm_spline2d_makeup (s2d);
+      if (s2d->to_init && (s2d->xv != NULL) && (s2d->yv != NULL) && (s2d->zm != NULL))
+      {
+        ncm_spline2d_prepare (s2d);
+      }
+      break;
+    }
+    case PROP_USE_ACC:
+      ncm_spline2d_use_acc (s2d, g_value_get_boolean (value));
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -146,10 +135,41 @@ _ncm_spline2d_get_property (GObject *object, guint prop_id, GValue *value, GPara
     case PROP_INIT:
       g_value_set_boolean (value, s2d->init);
       break;
+    case PROP_USE_ACC:
+      g_value_set_boolean (value, s2d->use_acc);
+      break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
       break;
   }
+}
+
+static void
+ncm_spline2d_dispose (GObject *object)
+{
+  NcmSpline2d *s2d = NCM_SPLINE2D (object);
+
+  ncm_vector_clear (&s2d->xv);
+  ncm_vector_clear (&s2d->yv);
+  ncm_matrix_clear (&s2d->zm);
+  ncm_spline_clear (&s2d->s);
+
+  s2d->empty = TRUE;
+
+  /* Chain up : end */
+  G_OBJECT_CLASS (ncm_spline2d_parent_class)->dispose (object);
+}
+
+static void
+ncm_spline2d_finalize (GObject *object)
+{
+  NcmSpline2d *s2d = NCM_SPLINE2D (object);
+
+  g_clear_pointer (&s2d->acc_x, gsl_interp_accel_free);
+  g_clear_pointer (&s2d->acc_y, gsl_interp_accel_free);
+  
+  /* Chain up : end */
+  G_OBJECT_CLASS (ncm_spline2d_parent_class)->finalize (object);
 }
 
 static void
@@ -162,18 +182,18 @@ ncm_spline2d_class_init (NcmSpline2dClass *klass)
   object_class->dispose      = &ncm_spline2d_dispose;
   object_class->finalize     = &ncm_spline2d_finalize;
 
-  klass->copy_empty = NULL;
-  klass->reset = NULL;
-  klass->prepare = NULL;
-  klass->eval = NULL;
-  klass->dzdx = NULL;
-  klass->dzdy = NULL;
-  klass->d2zdxy = NULL;
-  klass->d2zdx2 = NULL;
-  klass->d2zdy2 = NULL;
-  klass->int_dx = NULL;
-  klass->int_dy = NULL;
-  klass->int_dxdy = NULL;
+  klass->copy_empty    = NULL;
+  klass->reset         = NULL;
+  klass->prepare       = NULL;
+  klass->eval          = NULL;
+  klass->dzdx          = NULL;
+  klass->dzdy          = NULL;
+  klass->d2zdxy        = NULL;
+  klass->d2zdx2        = NULL;
+  klass->d2zdy2        = NULL;
+  klass->int_dx        = NULL;
+  klass->int_dy        = NULL;
+  klass->int_dxdy      = NULL;
   klass->int_dx_spline = NULL;
   klass->int_dy_spline = NULL;
 
@@ -238,6 +258,18 @@ ncm_spline2d_class_init (NcmSpline2dClass *klass)
                                                          FALSE,
                                                          G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
   
+  /**
+   * NcmSpline2d:use_acc:
+   *
+   * boolean whether to use acc 
+   */
+  g_object_class_install_property (object_class,
+                                   PROP_USE_ACC,
+                                   g_param_spec_boolean ("use-acc",
+                                                         NULL,
+                                                         "Use accelerated bsearch",
+                                                         FALSE,
+                                                         G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 }
 
 static void
@@ -251,6 +283,17 @@ _ncm_spline2d_makeup (NcmSpline2d *s2d)
     g_assert_cmpuint (ncm_vector_len (s2d->yv), >=, ncm_spline2d_min_size (s2d));
 
     s2d->empty = FALSE;
+
+    if ((ncm_vector_stride (s2d->xv) == 1) && (ncm_vector_stride (s2d->yv) == 1))
+      s2d->no_stride = TRUE;
+    else
+      s2d->no_stride = FALSE;
+
+    if (s2d->use_acc && !s2d->no_stride)
+    {
+      g_warning ("_ncm_spline2d_makeup: use-acc true but strided knots vectors, disabling use-add.");
+      s2d->use_acc = FALSE;
+    }
 
     NCM_SPLINE2D_GET_CLASS (s2d)->reset (s2d);
 
@@ -397,6 +440,30 @@ void
 ncm_spline2d_clear (NcmSpline2d **s2d)
 {
   g_clear_object (s2d);
+}
+
+/**
+ * ncm_spline2d_use_acc:
+ * @s2d: a #NcmSpline2d
+ * @use_acc: a boolean
+ * 
+ * Whether to use accelerated bsearch to find the
+ * right knots. When enabled evalulation functions
+ * are not reentrant.
+ * 
+ */
+void 
+ncm_spline2d_use_acc (NcmSpline2d *s2d, gboolean use_acc)
+{
+  s2d->use_acc = use_acc;
+  if ((s2d->xv != NULL) && (s2d->yv != NULL) && (s2d->zm != NULL))
+  {
+    if (s2d->use_acc && !s2d->no_stride)
+    {
+      g_warning ("ncm_spline2d_use_acc: use-acc true but strided knots vectors, disabling use-add.");
+      s2d->use_acc = FALSE;
+    }
+  }
 }
 
 /**

@@ -290,7 +290,7 @@ ncm_model_check_impl (NcmModel *model, guint64 impl)
 G_INLINE_FUNC guint
 ncm_model_len (NcmModel *model)
 {
-  return ncm_vector_len (model->params);
+  return model->total_len;
 }
 
 G_INLINE_FUNC gboolean
