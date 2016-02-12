@@ -2,6 +2,10 @@ CHANGELOG
 ----------------------
 
 [Current]
+ * Last updates in examples.
+
+ * Fixed docs and updated ChangeLog.
+
  * Updated and improved PseudoCount related objects. Updated of all examples
      finished. Fixed NcmMSet typo. Added accelerated bsearch option for
      NcmSpline2d.

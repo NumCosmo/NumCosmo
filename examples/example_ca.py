@@ -202,6 +202,7 @@ plt.clf ()
 
 mf.set_area_sd (200.0)
 mf.set_eval_limits (cosmo, log (1e14), log(1e16), 0.0, 2.0)
+mf.prepare (reion, cosmo)
 
 dndza = []
 

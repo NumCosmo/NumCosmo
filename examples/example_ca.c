@@ -148,7 +148,7 @@ main (gint argc, gchar *argv[])
    ****************************************************************************/
   nc_mass_function_set_area_sd (mf, 200.0);
   nc_mass_function_set_eval_limits (mf, cosmo, log (1e14), log (1e16), 0.0, 2.0);
-  nc_mass_function_prepare (mf, cosmo);
+  nc_mass_function_prepare (mf, reion, cosmo);
 
   for (i = 0; i < np; i++)
   {
