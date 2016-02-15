@@ -100,6 +100,8 @@ void nc_data_cluster_pseudo_counts_set_true_data (NcDataClusterPseudoCounts *dcp
 
 void nc_data_cluster_pseudo_counts_init_from_sampling (NcDataClusterPseudoCounts *dcpc, NcmMSet *mset, NcmRNG *rng, const gint np);
 
+#define NC_DATA_CLUSTER_PSEUDO_COUNTS_RESAMPLE_MAX_TRIES 100000
+
 G_END_DECLS
 
 #endif /* _NC_DATA_CLUSTER_PSEUDO_COUNTS_H_ */

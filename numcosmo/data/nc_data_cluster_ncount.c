@@ -96,7 +96,6 @@ nc_data_cluster_ncount_init (NcDataClusterNCount *ncount)
   ncount->binned         = FALSE;
   ncount->z_nodes        = NULL;
   ncount->lnM_nodes      = NULL;
-  ncount->completeness   = NULL;
   ncount->purity         = NULL;
   ncount->sd_lnM         = NULL;
   ncount->z_lnM          = NULL;
@@ -280,7 +279,6 @@ nc_data_cluster_ncount_finalize (GObject *object)
   NcDataClusterNCount *ncount = NC_DATA_CLUSTER_NCOUNT (object);
 
   g_clear_pointer (&ncount->rnd_name, g_free);
-  g_clear_pointer (&ncount->completeness, gsl_histogram2d_free);
   g_clear_pointer (&ncount->purity, gsl_histogram2d_free);
   g_clear_pointer (&ncount->sd_lnM, gsl_histogram2d_free);
   g_clear_pointer (&ncount->z_lnM, gsl_histogram2d_free);
@@ -947,7 +945,6 @@ _nc_data_cluster_ncount_model_init (NcDataClusterNCount *ncount)
 {
   NcClusterAbundance *cad = ncount->cad;
 
-  cad->completeness  = ncount->completeness;
   cad->purity        = ncount->purity;
   cad->sd_lnM        = ncount->sd_lnM;
 
@@ -1056,7 +1053,8 @@ _nc_data_cluster_ncount_resample (NcmData *data, NcmMSet *mset, NcmRNG *rng)
   if (lnM_obs_params_len > 0)
     lnM_obs_params_array = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), total_np * lnM_obs_params_len);
 
-  nc_cluster_abundance_prepare_inv_dNdz (cad, NC_HICOSMO (ncm_mset_peek (mset, nc_hicosmo_id ())));
+  nc_cluster_abundance_prepare_inv_dNdz (cad, NC_HICOSMO (ncm_mset_peek (mset, nc_hicosmo_id ())),
+                                         cad->lnMi);
 
   for (i = 0; i < total_np; i++)
   {
@@ -1587,8 +1585,6 @@ nc_data_cluster_ncount_set_bin_by_minmax (NcDataClusterNCount *ncount, guint z_n
   lnM_min = lnM_min + (lnM_min > 0.0 ? -0.5 * lnM_min : 0.5 * lnM_min);
   lnM_max = lnM_max + (lnM_max > 0.0 ? 0.5 * lnM_min : - 0.5 * lnM_min);
 
-  /*printf ("% 20.15g % 20.15g % 20.15g % 20.15g\n", z_min, z_max, lnM_min, lnM_max);*/
-  
   gsl_histogram2d_set_ranges_uniform (ncount->z_lnM, z_min, z_max, lnM_min, lnM_max);
   _nc_data_cluster_ncount_bin_data (ncount);
   ncount->binned = TRUE;

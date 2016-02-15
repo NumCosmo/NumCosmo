@@ -85,7 +85,6 @@ struct _NcDataClusterNCount
   gboolean binned;
   NcmVector *z_nodes;
   NcmVector *lnM_nodes;
-  gsl_histogram2d *completeness;
   gsl_histogram2d *purity;
   gsl_histogram2d *sd_lnM;
   gsl_histogram2d *z_lnM;

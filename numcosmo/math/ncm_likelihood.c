@@ -619,6 +619,7 @@ ncm_likelihood_m2lnL_val (NcmLikelihood *lh, NcmMSet *mset, gdouble *m2lnL)
   }
 
   *m2lnL = ncm_vector_sum_cpts (lh->m2lnL_v);
+
   return;
 }
 

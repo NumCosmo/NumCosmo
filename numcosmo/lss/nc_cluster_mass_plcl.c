@@ -268,7 +268,6 @@ _SZ_lnmass_mean (NcClusterMassPlCL *mszl,  gdouble lnM)
 {
   const gdouble lnM0 = log (mszl->M0);
   const gdouble lnMsz_M0_mean = log1p (- B_SZ) + A_SZ * (lnM - lnM0);
-
   return lnMsz_M0_mean;
 }
 
@@ -318,7 +317,7 @@ nc_cluster_mass_plcl_pdf (NcClusterMass *clusterm, gdouble lnM_M0, gdouble w1, g
   const gdouble arg_gauss = (w1 * w1 + w2 * w2) / 2.0;
   
   const gdouble exp_arg = - arg_ysz - arg_yl - arg_gauss;
-  
+
   if (exp_arg < GSL_LOG_DBL_MIN)
     return exp (-200.0);
   else
@@ -353,7 +352,7 @@ _nc_cluster_mass_plcl_Msz_Ml_M500_p_integrand (gdouble lnMsz, gdouble lnMl, gpoi
   
   const gdouble xsz       = diff_Msz / SD_SZ;
   const gdouble arg_xsz   = xsz * xsz;
-  const gdouble xl        =  diff_Ml / SD_L;
+  const gdouble xl        = diff_Ml / SD_L;
   const gdouble arg_xl    = xl * xl;
   const gdouble arg_x_szl = data->twocor_sdsz_sdl * diff_Msz * diff_Ml;
 
@@ -490,6 +489,8 @@ nc_cluster_mass_plcl_levmar_f_new_variables (gdouble *p, gdouble *hx, gint m, gi
   hx[1] = w2;
   hx[2] = dw1;
   hx[3] = dw2;
+
+  /*printf ("Calling! % 20.15g % 20.15g % 20.15g % 20.15g\n", w1, w2, dw1, dw2);*/
   
   //printf ("levmarf h0 = %.5g h1 = %.5g h2 = %.5g h3 = %.5g\n", hx[0], hx[1], hx[2], hx[3]);
   NCM_UNUSED (m);
@@ -771,8 +772,6 @@ _nc_cluster_mass_plcl_Msz_Ml_M500_p (NcClusterMass *clusterm, NcHICosmo *cosmo, 
   data.mu_l =            _Lens_lnmass_mean (data.mszl, lnM);
   data.twocor_sdsz_sdl = 2.0 * COR / sdsz_sdl;
 
-
-
   data.sd_sz2 =          SD_SZ * SD_SZ;
   data.sd_l2 =           SD_L * SD_L;
 
@@ -1027,8 +1026,8 @@ _nc_cluster_mass_plcl_intp (NcClusterMass *clusterm, NcHICosmo *cosmo, gdouble l
   NCM_UNUSED (z);
 
   gdouble a_sz, a_l, b_sz, b_l;
-  a_sz = a_l = log(1.0e10);
-  b_sz = b_l = log(1.0e17); 
+  a_sz = a_l = log (1.0e10);
+  b_sz = b_l = log (1.0e17); 
   ncm_integrate_2dim (&integ, a_sz, a_l, b_sz, b_l, NCM_DEFAULT_PRECISION, 0.0, &P, &err);
     
   return P;
@@ -1039,7 +1038,7 @@ static gboolean
 _nc_cluster_mass_plcl_resample (NcClusterMass *clusterm, NcHICosmo *cosmo, gdouble lnM, gdouble z, gdouble *lnMobs, const gdouble *lnMobs_params, NcmRNG *rng)
 {
   NcClusterMassPlCL *mszl = NC_CLUSTER_MASS_PLCL (clusterm);
-  gdouble r_SZ, r_L, sz_ran, l_ran, M_pl_M0, M_cl_M0;
+  gdouble r_SZ, r_L, sz_ran, l_ran, M_pl, M_cl;
   gdouble lnM_SZ_ran, lnM_L_ran, M_SZ_ran, M_L_ran;
   const gdouble lnM_SZ = _SZ_lnmass_mean (mszl, lnM);
   const gdouble lnM_L = _Lens_lnmass_mean (mszl, lnM);
@@ -1054,22 +1053,24 @@ _nc_cluster_mass_plcl_resample (NcClusterMass *clusterm, NcHICosmo *cosmo, gdoub
   lnM_L_ran  = lnM_L + r_L;
   ncm_rng_unlock (rng);
 
-  M_SZ_ran = exp (lnM_SZ_ran); /* M is in units of M0, i.e., M -> M/M0 */
-  M_L_ran = exp (lnM_L_ran);
+  M_SZ_ran = exp (lnM_SZ_ran) * mszl->M0; /* M is in units of M0, i.e., M -> M/M0 */
+  M_L_ran = exp (lnM_L_ran) * mszl->M0;
   
   ncm_rng_lock (rng);
   do {
     sz_ran  = gsl_ran_gaussian (rng->r, lnMobs_params[0]);
-    M_pl_M0 = M_SZ_ran + sz_ran;
-  } while (M_pl_M0 < 0.0);
+    M_pl = M_SZ_ran + sz_ran;
+  } while (M_pl < 0.0);
+  /*printf ("%8.5f % 20.15e % 20.15e % 20.15f\n", z, M_SZ_ran, sz_ran, 100.0 * fabs (sz_ran / M_SZ_ran));*/
   do {
     l_ran   = gsl_ran_gaussian (rng->r, lnMobs_params[1]);
-    M_cl_M0 = M_L_ran + l_ran;
-  } while (M_cl_M0 < 0.0);
+    M_cl = M_L_ran + l_ran;
+  } while (M_cl < 0.0);
+  /*printf ("%8.5f % 20.15e % 20.15e % 20.15f\n", z, M_L_ran, l_ran, 100.0 * fabs (l_ran / M_L_ran));*/
   ncm_rng_unlock (rng);
   
-  lnMobs[NC_CLUSTER_MASS_PLCL_MPL] = log (M_pl_M0) + log (mszl->M0);  
-  lnMobs[NC_CLUSTER_MASS_PLCL_MCL] = log (M_cl_M0) + log (mszl->M0);
+  lnMobs[NC_CLUSTER_MASS_PLCL_MPL] = M_pl;  
+  lnMobs[NC_CLUSTER_MASS_PLCL_MCL] = M_cl;
 
   return TRUE; 
   /* Information to select these masses are not implemented here. 

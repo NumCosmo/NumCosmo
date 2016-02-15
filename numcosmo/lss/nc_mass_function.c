@@ -663,7 +663,6 @@ nc_mass_function_prepare (NcMassFunction *mfp, NcHIReion *reion, NcHICosmo *cosm
       const gdouble lnM = ncm_vector_get (D2NDZDLNM_LNM (mfp), j);
       const gdouble d2NdzdlnM_ij = (dVdz * nc_mass_function_dn_dlnm (mfp, cosmo, lnM, z));
       ncm_matrix_set (D2NDZDLNM_VAL (mfp), i, j, d2NdzdlnM_ij);
-      /*printf ("prep matrix % 20.15g % 20.15g % 20.15g\n", z, lnM, d2NdzdlnM_ij);*/
     }
   }
   ncm_spline2d_prepare (mfp->d2NdzdlnM);
@@ -694,7 +693,6 @@ nc_mass_function_dn_dz (NcMassFunction *mfp, NcHICosmo *cosmo, gdouble lnMl, gdo
     dN_dz = ncm_spline2d_integ_dx_spline_val (mfp->d2NdzdlnM, lnMl, lnMu, z);
   else
     dN_dz = ncm_spline2d_integ_dx (mfp->d2NdzdlnM, lnMl, lnMu, z);
-
   return dN_dz;
 }
 

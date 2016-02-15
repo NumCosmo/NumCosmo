@@ -157,7 +157,9 @@ _nc_data_cluster_poisson_resample (NcmData *data, NcmMSet *mset, NcmRNG *rng)
 
   ncm_data_resample (NCM_DATA (cpoisson->ncount), mset, rng);
   
-  nc_cluster_abundance_prepare_inv_dNdz (cad, NC_HICOSMO (ncm_mset_peek (mset, nc_hicosmo_id ())));
+  nc_cluster_abundance_prepare_inv_dNdz (cad, NC_HICOSMO (ncm_mset_peek (mset, nc_hicosmo_id ())),
+                                         cad->lnMi);
+
   gsl_histogram_reset (poisson->h);
 
   for (i = 0; i < ncount->np; i++)

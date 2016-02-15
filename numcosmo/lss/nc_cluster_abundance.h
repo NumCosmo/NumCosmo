@@ -70,10 +70,8 @@ struct _NcClusterAbundance
   NcClusterAbundanceIntPd2N intp_d2N;
   gdouble norma, log_norma;
   gdouble lnMi, lnMf, zi, zf;
-  gdouble completeness_factor;
   gdouble lnM_epsilon, z_epsilon;
   gboolean optimize;
-  gsl_histogram2d *completeness;
   gsl_histogram2d *purity;
   gsl_histogram2d *sd_lnM;
   NcmSpline2d *dbdlnM;    /* To compute the mean bias. FIXME*/
@@ -105,8 +103,8 @@ void nc_cluster_abundance_clear (NcClusterAbundance **cad);
 void nc_cluster_abundance_prepare (NcClusterAbundance *cad, NcHIReion *reion, NcHICosmo *cosmo, NcClusterRedshift *clusterz, NcClusterMass *clusterm);
 G_INLINE_FUNC void nc_cluster_abundance_prepare_if_needed (NcClusterAbundance *cad, NcHIReion *reion, NcHICosmo *cosmo, NcClusterRedshift *clusterz, NcClusterMass *clusterm);
 
-void nc_cluster_abundance_prepare_inv_dNdz (NcClusterAbundance *cad, NcHICosmo *cosmo);
-void nc_cluster_abundance_prepare_inv_dNdlnM_z (NcClusterAbundance *cad, NcHICosmo *cosmo, gdouble z);
+void nc_cluster_abundance_prepare_inv_dNdz (NcClusterAbundance *cad, NcHICosmo *cosmo, const gdouble lnMi);
+void nc_cluster_abundance_prepare_inv_dNdlnM_z (NcClusterAbundance *cad, NcHICosmo *cosmo, const gdouble lnMi, gdouble z);
 
 gdouble nc_cluster_abundance_z_p_lnm_p_d2n (NcClusterAbundance *cad, NcHICosmo *cosmo, NcClusterRedshift *clusterz, NcClusterMass *clusterm, gdouble *lnM_obs, gdouble *lnM_obs_params, gdouble *z_obs, gdouble *z_obs_params);
 gdouble nc_cluster_abundance_z_p_d2n (NcClusterAbundance *cad, NcHICosmo *cosmo, NcClusterRedshift *clusterz, NcClusterMass *clusterm, gdouble lnM, gdouble *z_obs, gdouble *z_obs_params);

@@ -75,12 +75,10 @@ nc_cluster_abundance_init (NcClusterAbundance *cad)
   cad->N        = &_N;
   cad->intp_d2N = &_intp_d2N;
 
-  cad->completeness = NULL;
-  cad->purity = NULL;
-  cad->sd_lnM = NULL;
-  cad->norma = 0.0;
-  cad->log_norma = 0.0;
-  cad->completeness_factor = 1.0; //0.874737945; (work with Camila and Alex)
+  cad->purity       = NULL;
+  cad->sd_lnM       = NULL;
+  cad->norma        = 0.0;
+  cad->log_norma    = 0.0;
 
 #define D2NDZDLNM_Z(cad) ((cad)->d2NdzdlnM->yv)
 #define D2NDZDLNM_LNM(cad) ((cad)->d2NdzdlnM->xv)
@@ -448,8 +446,6 @@ _nc_cluster_abundance_lnm_p_d2n_integrand (gdouble lnM, gpointer params)
   const gdouble p_M_Mobs = nc_cluster_mass_p (obs_data->clusterm, obs_data->cosmo, lnM, obs_data->z, obs_data->lnM_obs, obs_data->lnM_obs_params);
   const gdouble d2NdzdlnM = nc_mass_function_d2n_dzdlnm (cad->mfp, obs_data->cosmo, lnM, obs_data->z);
 
-  //printf ("pM = % 20.8g d2NdzdlnM = % 20.8g res = % 20.8g\n", p_M_Mobs, d2NdzdlnM, p_M_Mobs * d2NdzdlnM);
-
   return p_M_Mobs * d2NdzdlnM;
 }
 
@@ -713,7 +709,7 @@ nc_cluster_abundance_prepare (NcClusterAbundance *cad, NcHIReion *reion, NcHICos
   if (cad->zi == 0.0)
     cad->zi = 1.0e-6;
 
-  cad->norma = nc_cluster_abundance_true_n (cad, cosmo, clusterz, clusterm);
+  cad->norma     = nc_cluster_abundance_true_n (cad, cosmo, clusterz, clusterm);
   cad->log_norma = log (cad->norma);
 
   ncm_model_ctrl_update (cad->ctrl_cosmo, NCM_MODEL (cosmo));
@@ -743,33 +739,35 @@ _nc_cad_inv_dNdz_convergence_f_onemn (gdouble onemn, gdouble epsilon)
  *
  */
 void
-nc_cluster_abundance_prepare_inv_dNdz (NcClusterAbundance *cad, NcHICosmo *cosmo)
+nc_cluster_abundance_prepare_inv_dNdz (NcClusterAbundance *cad, NcHICosmo *cosmo, const gdouble lnMi)
 {
-  guint i, j;
-  gdouble z0 = cad->zi;
-  guint middle = cad->inv_z->len / 2;
-  gboolean use_spline = FALSE;
   NcMassFunctionSplineOptimize sp_optimize = NC_MASS_FUNCTION_SPLINE_Z;
-  const gdouble delta_z = (cad->zf - cad->zi) / (cad->inv_z->len - 1.0);
-  const gdouble delta_lnM = (cad->lnMf - cad->lnMi) / (cad->inv_lnM->len - 1.0);
+  const gdouble delta_z   = (cad->zf - cad->zi) / (cad->inv_z->len - 1.0);
+  const gdouble delta_lnM = (cad->lnMf - lnMi) / (cad->inv_lnM->len - 1.0);
+  const gdouble norma     = nc_mass_function_n (cad->mfp, cosmo, lnMi, cad->lnMf, cad->zi, cad->zf, NC_MASS_FUNCTION_SPLINE_LNM);
+  gboolean use_spline = FALSE;
+  guint middle = cad->inv_z->len / 2;
+  gdouble z0   = cad->zi;
+  guint i, j;
+
   g_assert (cad->zi != 0);
 
   {    
-    const gdouble zfm1 = cad->zf - delta_z;
+    const gdouble zfm1   = cad->zf - delta_z;
     const gdouble lnMfm1 = cad->lnMf - delta_lnM;
     
-    cad->z_epsilon = nc_mass_function_n (cad->mfp, cosmo, cad->lnMi, cad->lnMf, zfm1, cad->zf, sp_optimize) / cad->norma;   
-    cad->lnM_epsilon = nc_mass_function_dn_dz (cad->mfp, cosmo, lnMfm1, cad->lnMf, cad->zf, use_spline) /
-      nc_mass_function_dn_dz (cad->mfp, cosmo, cad->lnMi, cad->lnMf, cad->zf, use_spline);
+    cad->z_epsilon   = fabs (nc_mass_function_n (cad->mfp, cosmo, lnMi, cad->lnMf, zfm1, cad->zf, sp_optimize) / norma);   
+    cad->lnM_epsilon = fabs (nc_mass_function_dn_dz (cad->mfp, cosmo, lnMfm1, cad->lnMf, cad->zf, use_spline) /
+      nc_mass_function_dn_dz (cad->mfp, cosmo, lnMi, cad->lnMf, cad->zf, use_spline));
   }
 
   {
     gdouble zm = cad->zi + delta_z * middle;
-    nc_cluster_abundance_prepare_inv_dNdlnM_z (cad, cosmo, zm);
+    nc_cluster_abundance_prepare_inv_dNdlnM_z (cad, cosmo, lnMi, zm);
 
     ncm_vector_set (cad->inv_lnM_z->xv, 0, _nc_cad_inv_dNdz_convergence_f (0.0, cad->lnM_epsilon));
-    ncm_matrix_set (cad->inv_lnM_z->zm, middle, 0, cad->lnMi);
-    
+    ncm_matrix_set (cad->inv_lnM_z->zm, middle, 0, lnMi);
+
     for (j = 1; j < ncm_vector_len (cad->inv_lnM_z->xv) - 1; j++)
     {
       gdouble u2 = ncm_vector_get (cad->inv_lnM->xv, j);
@@ -780,8 +778,8 @@ nc_cluster_abundance_prepare_inv_dNdz (NcClusterAbundance *cad, NcHICosmo *cosmo
     ncm_matrix_set (cad->inv_lnM_z->zm, middle, j, cad->lnMf);
   }
 
-  nc_cluster_abundance_prepare_inv_dNdlnM_z (cad, cosmo, z0);
-  ncm_matrix_set (cad->inv_lnM_z->zm, 0, 0, cad->lnMi);
+  nc_cluster_abundance_prepare_inv_dNdlnM_z (cad, cosmo, lnMi, z0);
+  ncm_matrix_set (cad->inv_lnM_z->zm, 0, 0, lnMi);
 
   for (j = 1; j < ncm_vector_len(cad->inv_lnM_z->xv) - 1; j++)
   {
@@ -801,13 +799,13 @@ nc_cluster_abundance_prepare_inv_dNdz (NcClusterAbundance *cad, NcHICosmo *cosmo
       gdouble z1 = cad->zi + delta_z * i;
       if (nztot < 0.99)
       {
-        gdouble delta = nc_mass_function_n (cad->mfp, cosmo, cad->lnMi, cad->lnMf, z0, z1, sp_optimize) / cad->norma;
+        gdouble delta = nc_mass_function_n (cad->mfp, cosmo, lnMi, cad->lnMf, z0, z1, sp_optimize) / norma;
         nztot += fabs (delta);
         f = _nc_cad_inv_dNdz_convergence_f (nztot, cad->z_epsilon);
       }
       else
       {
-        gdouble onemn = nc_mass_function_n (cad->mfp, cosmo, cad->lnMi, cad->lnMf, z1, cad->zf, sp_optimize) / cad->norma;
+        gdouble onemn = nc_mass_function_n (cad->mfp, cosmo, lnMi, cad->lnMf, z1, cad->zf, sp_optimize) / norma;
         gdouble f_try = _nc_cad_inv_dNdz_convergence_f_onemn (onemn, cad->z_epsilon);
         if (f_try < f)
           f = f * (1.0 + GSL_SIGN (f) * 0.01);
@@ -821,9 +819,9 @@ nc_cluster_abundance_prepare_inv_dNdz (NcClusterAbundance *cad, NcHICosmo *cosmo
       if (i == middle)
         continue;
 
-      nc_cluster_abundance_prepare_inv_dNdlnM_z (cad, cosmo, z1);
+      nc_cluster_abundance_prepare_inv_dNdlnM_z (cad, cosmo, lnMi, z1);
 
-      ncm_matrix_set (cad->inv_lnM_z->zm, i, 0, cad->lnMi);
+      ncm_matrix_set (cad->inv_lnM_z->zm, i, 0, lnMi);
       for (j = 1; j < ncm_vector_len(cad->inv_lnM_z->xv) - 1; j++)
       {
         gdouble u2 = ncm_vector_get (cad->inv_lnM_z->xv, j);
@@ -850,15 +848,14 @@ nc_cluster_abundance_prepare_inv_dNdz (NcClusterAbundance *cad, NcHICosmo *cosmo
  *
  */
 void
-nc_cluster_abundance_prepare_inv_dNdlnM_z (NcClusterAbundance *cad, NcHICosmo *cosmo, gdouble z)
+nc_cluster_abundance_prepare_inv_dNdlnM_z (NcClusterAbundance *cad, NcHICosmo *cosmo, const gdouble lnMi, gdouble z)
 {
   gboolean use_spline = FALSE;
-  gdouble dNdz = nc_mass_function_dn_dz (cad->mfp, cosmo, cad->lnMi, cad->lnMf, z, use_spline);
-  gdouble lnM0 = cad->lnMi;
+  gdouble dNdz = nc_mass_function_dn_dz (cad->mfp, cosmo, lnMi, cad->lnMf, z, use_spline);
+  gdouble lnM0 = lnMi;
   gdouble ntot = 0.0;
   gdouble f = _nc_cad_inv_dNdz_convergence_f (0.0, cad->lnM_epsilon);
-  gdouble Delta;
-  const gdouble dlnM = (cad->lnMf - cad->lnMi) / (cad->inv_lnM->len - 1.0);
+  const gdouble dlnM = (cad->lnMf - lnMi) / (cad->inv_lnM->len - 1.0);
   guint i;
 
   g_assert (z > 0.0);
@@ -868,17 +865,18 @@ nc_cluster_abundance_prepare_inv_dNdlnM_z (NcClusterAbundance *cad, NcHICosmo *c
 
   for (i = 1; i < cad->inv_lnM->len; i++)
   {
-    gdouble lnM1 = cad->lnMi + dlnM * i;
+    const gdouble lnM1 = lnMi + dlnM * i;
     if (ntot < 0.99)
     {
-      Delta = nc_mass_function_dn_dz (cad->mfp, cosmo, lnM0, lnM1, z, use_spline) / dNdz;
+      const gdouble Delta = nc_mass_function_dn_dz (cad->mfp, cosmo, lnM0, lnM1, z, use_spline) / dNdz;
       ntot += fabs (Delta);
       f = _nc_cad_inv_dNdz_convergence_f (ntot, cad->lnM_epsilon);
     }
     else
     {
-      gdouble onemn = nc_mass_function_dn_dz (cad->mfp, cosmo, lnM1, cad->lnMf, z, use_spline) / dNdz;
-      gdouble f_try = _nc_cad_inv_dNdz_convergence_f_onemn (fabs (onemn), cad->lnM_epsilon);
+      const gdouble onemn = nc_mass_function_dn_dz (cad->mfp, cosmo, lnM1, cad->lnMf, z, use_spline) / dNdz;
+      const gdouble f_try = _nc_cad_inv_dNdz_convergence_f_onemn (fabs (onemn), cad->lnM_epsilon);
+
       if (f_try < f)
         f = f * (1.0 + GSL_SIGN (f) * 0.01);
       else
@@ -1133,8 +1131,6 @@ nc_ca_mean_bias_denominator (NcClusterAbundance *cad, NcHICosmo *cosmo, gdouble 
     gdouble lnMf = cad->lnMf;
     obs_data.z = z;
     obs_data.lnM = lnM;
-    //printf ("%5.5e, %5.5e\n", exp(lnM), exp(lnMf));
-
     {
       gsl_integration_workspace **w = ncm_integral_get_workspace ();
       gsl_integration_qag (&F, lnM, lnMf, 0.0, NCM_DEFAULT_PRECISION, NCM_INTEGRAL_PARTITION, _NC_CLUSTER_ABUNDANCE_DEFAULT_INT_KEY, *w, &res, &err);
@@ -1149,12 +1145,10 @@ nc_ca_mean_bias_denominator (NcClusterAbundance *cad, NcHICosmo *cosmo, gdouble 
 gdouble
 nc_ca_mean_bias (NcClusterAbundance *cad, NcHICosmo *cosmo, gdouble lnM, gdouble z)
 {
-  //gdouble M1 = exp(lnM);
   gdouble numerator = nc_ca_mean_bias_numerator (cad, cosmo, lnM, z);
   gdouble denominator = nc_ca_mean_bias_denominator (cad, cosmo, lnM, z);
   gdouble mean_bias = numerator / denominator;
 
-  //printf ("M1 = %5.5e num = %10.5g den = %10.5g\n", M1, numerator, denominator);
   return mean_bias;
 }
 
@@ -1168,7 +1162,7 @@ _nc_ca_mean_bias_Mobs_numerator_integrand (gdouble lnMobs, gpointer params)
   gdouble p_M_Mobs = 0.0;//_nc_cluster_abundance_lognormal_mass_dist (obs_data, lnMobs);
   gdouble dbdlnM = nc_halo_bias_func_integrand (cad->mbiasf, obs_data->cosmo, lnMobs, obs_data->z);
   g_assert_not_reached ();
-  //printf ("% 20.8e % 20.8g % 20.15g % 20.15g % 20.15g\n", obs_data->lnMobs, obs_data->zp, p_M_Mobs, dbdlnM, p_M_Mobs * dbdlnM);
+
   return dbdlnM * p_M_Mobs;
 }
 
@@ -1219,7 +1213,6 @@ _nc_ca_mean_bias_Mobs_denominator_integrand (gdouble lnMobs, gpointer params)
   gdouble n = nc_mass_function_dn_dlnm (cad->mfp, obs_data->cosmo, lnMobs, obs_data->z);
   g_assert_not_reached ();
 
-  //printf ("% 20.8e % 20.8g % 20.15g\n", obs_data->lnMobs, obs_data->zp, n * p_M_Mobs);
   return n * p_M_Mobs;
 }
 

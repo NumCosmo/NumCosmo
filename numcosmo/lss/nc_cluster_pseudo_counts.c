@@ -307,11 +307,12 @@ nc_cluster_pseudo_counts_posterior_ndetone (NcClusterPseudoCounts *cpc, NcMassFu
 static gdouble
 _selection_function (NcClusterPseudoCounts *cpc, gdouble lnM500)
 {
-  const gdouble sqrt2_sdcut = sqrt(2) * SD_MCUT;
+  const gdouble sqrt2       = sqrt (2.0);
+  const gdouble sqrt2_sdcut = sqrt2 * SD_MCUT;
   const gdouble difM = lnM500 - LNMCUT;
 
   if (difM < 0.0)
-    return 0.5 * erfc (fabs(difM) / sqrt2_sdcut);
+    return 0.5 * erfc (fabs (difM) / sqrt2_sdcut);
   else
     return 0.5 * (1.0 + erf (difM / sqrt2_sdcut));
 }
@@ -320,15 +321,33 @@ _selection_function (NcClusterPseudoCounts *cpc, gdouble lnM500)
  * nc_cluster_pseudo_counts_selection_function:
  * @cpc: a #NcClusterPseudoCounts
  * @lnM: logarithm base e of the true mass 
+ * @z: true redshift
  *
  * This function computes the selection function (include equation). FIXME 
  *
  * Returns: FIXME
-*/
+ */
 gdouble 
-nc_cluster_pseudo_counts_selection_function (NcClusterPseudoCounts *cpc, gdouble lnM)
+nc_cluster_pseudo_counts_selection_function (NcClusterPseudoCounts *cpc, gdouble lnM, gdouble z)
 {
-  return _selection_function (cpc, lnM);
+  if (z < ZMIN || z > (ZMIN + DELTAZ))
+    return 0.0;
+  else
+    return _selection_function (cpc, lnM);
+}
+
+/**
+ * nc_cluster_pseudo_counts_selection_function_lnMi:
+ * @cpc: a #NcClusterPseudoCounts
+ *
+ * Calculates an reasonable lower mass threshold compatible with the selection function.  
+ *
+ * Returns: FIXME
+ */
+gdouble 
+nc_cluster_pseudo_counts_selection_function_lnMi (NcClusterPseudoCounts *cpc)
+{
+  return LNMCUT - 6.0 * SD_MCUT;
 }
 
 static gdouble
@@ -508,7 +527,7 @@ _nc_cluster_pseudo_counts_levmar_f (gdouble *p, gdouble *hx, gint m, gint n, gpo
   NcClusterMassPlCL *mszl = NC_CLUSTER_MASS_PLCL (clusterm);
   const gint m1 = m;
   const gint n1 = n;
-  
+
   nc_cluster_mass_plcl_levmar_f_new_variables (p, hx, m1, n1, mszl, data->lnM_M0, data->Mobs, data->Mobs_params);
 }
 
@@ -546,7 +565,10 @@ peakfinder (gdouble lnM_M0, gdouble p0[], const gint *ndim, const gdouble bounds
   opts[1] = 1.0e-7; 
   opts[2] = 1.0e-7;
   opts[3] = 1.0e-7;
-  
+
+  /*printf ("% 20.15g % 20.15g\n", data->Mobs[NC_CLUSTER_MASS_PLCL_MPL], data->Mobs[NC_CLUSTER_MASS_PLCL_MCL]);*/
+  /*printf ("% 20.15g % 20.15g % 20.15g % 20.15g % 20.15g % 20.15g\n", p0[0], p0[1], lb[0], lb[1], ub[0], ub[1]);*/
+
   p0[0] = GSL_MAX (p0[0], lb[0]);
   p0[1] = GSL_MAX (p0[1], lb[1]);
   p0[0] = GSL_MIN (p0[0], ub[0]);
@@ -559,7 +581,7 @@ peakfinder (gdouble lnM_M0, gdouble p0[], const gint *ndim, const gdouble bounds
                      );
   
   if (ret < 0)
-    g_error ("error: NcClusterPseudoCounts peakfinder function.\n");
+    g_error ("error: NcClusterPseudoCounts peakfinder function [%d].\n", ret);
 
   x[0] = p0[0];
   x[1] = p0[1];
@@ -576,7 +598,7 @@ _posterior_numerator_integrand_plcl (gdouble w1, gdouble w2, gdouble lnM_M0, gpo
   const gdouble sf    = _selection_function (cpc, lnM);
   const gdouble small = exp (-200.0);
   gdouble res;
-    
+
   if (sf == 0.0)
     res = small;
   else
@@ -615,7 +637,10 @@ nc_cluster_pseudo_counts_posterior_numerator_plcl (NcClusterPseudoCounts *cpc, N
   const gdouble M0 = 5.7e14; //1.0e14;
   const gdouble Mobs[] = {Mpl / M0, Mcl / M0};
   const gdouble Mobs_params[] = {sigma_pl / M0, sigma_cl / M0};
-  
+
+  /*printf ("% 20.15g % 20.15g % 20.15g\n", z, ZMIN, ZMIN + DELTAZ);*/
+  /*printf ("% 20.15g % 20.15g\n", Mpl, Mcl);*/
+
   if (z < ZMIN || z > (ZMIN + DELTAZ))
     return 0.0;
   else
@@ -630,13 +655,13 @@ nc_cluster_pseudo_counts_posterior_numerator_plcl (NcClusterPseudoCounts *cpc, N
     data.Mobs        = Mobs;
     data.Mobs_params = Mobs_params;
     data.lnM0        = log (M0);
-
+ 
     integ.f = _posterior_numerator_integrand_plcl;
     integ.userdata = &data;
 
     {
-      gint n = 1;
-      gint ndim = 3;
+      gint n    = 1;
+      const gint ndim = 3;
       gdouble a_w1, a_w2, b_w1, b_w2, a_true, b_true;
       gdouble lb[3], ub[3]; 
       gdouble bounds[ndim * 2], x1[ndim], p0[ndim];

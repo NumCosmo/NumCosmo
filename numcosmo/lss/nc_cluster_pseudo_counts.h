@@ -98,7 +98,8 @@ void nc_cluster_pseudo_counts_free (NcClusterPseudoCounts *cpc);
 void nc_cluster_pseudo_counts_clear (NcClusterPseudoCounts **cpc);
 
 gdouble nc_cluster_pseudo_counts_posterior_ndetone (NcClusterPseudoCounts *cpc, NcMassFunction *mfp, NcClusterMass *clusterm, gdouble z, gdouble Mpl, gdouble Mcl, gdouble sigma_pl, gdouble sigma_cl);
-gdouble nc_cluster_pseudo_counts_selection_function (NcClusterPseudoCounts *cpc, gdouble lnM);
+gdouble nc_cluster_pseudo_counts_selection_function (NcClusterPseudoCounts *cpc, gdouble lnM, gdouble z);
+gdouble nc_cluster_pseudo_counts_selection_function_lnMi (NcClusterPseudoCounts *cpc);
 gdouble nc_cluster_pseudo_counts_ndet_no_z_integral (NcClusterPseudoCounts *cpc, NcHICosmo *cosmo, gdouble z);
 gdouble nc_cluster_pseudo_counts_ndet (NcClusterPseudoCounts *cpc, NcMassFunction *mfp, NcHICosmo *cosmo);
 gdouble nc_cluster_pseudo_counts_posterior_numerator (NcClusterPseudoCounts *cpc, NcMassFunction *mfp, NcClusterMass *clusterm, NcHICosmo *cosmo, const gdouble z, const gdouble *Mobs, const gdouble *Mobs_params);
