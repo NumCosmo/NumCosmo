@@ -250,6 +250,7 @@ static void nc_xcor_limber_class_init (NcXcorLimberClass* klass)
                               "line 297 of nc_cor_limber.c, to be modified "
                               "accordingly).",
                               NULL,
-                              TRUE);
+                              TRUE,
+                              NCM_MSET_MODEL_MAIN);
 	ncm_model_class_check_params_info (NCM_MODEL_CLASS (klass));
 }

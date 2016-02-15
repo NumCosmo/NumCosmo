@@ -302,6 +302,8 @@ nc_cluster_redshift_class_init (NcClusterRedshiftClass *klass)
                               "NcClusterRedshift",
                               "Cluster redshift observable models.",
                               NULL,
-                              TRUE);
+                              TRUE,
+                              NCM_MSET_MODEL_MAIN);
+
   ncm_model_class_check_params_info (NCM_MODEL_CLASS (klass));
 }

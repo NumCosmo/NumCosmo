@@ -50,16 +50,19 @@ G_DEFINE_TYPE (NcmModelCtrl, ncm_model_ctrl, G_TYPE_OBJECT);
 static void
 ncm_model_ctrl_init (NcmModelCtrl *ctrl)
 {
+#ifdef NCM_MODEL_CTRL_USE_WEAKREF
+  g_weak_ref_init (&ctrl->model_wf, NULL);
+#else
   ctrl->model = NULL;
+#endif
   ctrl->pkey = 0;
 }
 
 static void
 ncm_model_ctrl_dispose (GObject *object)
 {
-  NcmModelCtrl *ctrl = NCM_MODEL_CTRL (object);
-
-  ncm_model_clear (&ctrl->model);
+  /*NcmModelCtrl *ctrl = NCM_MODEL_CTRL (object);*/
+  /*ncm_model_clear (&ctrl->model);*/
 
   /* Chain up : end */
   G_OBJECT_CLASS (ncm_model_ctrl_parent_class)->dispose (object);
@@ -68,134 +71,16 @@ ncm_model_ctrl_dispose (GObject *object)
 static void
 ncm_model_ctrl_finalize (GObject *object)
 {
+  NcmModelCtrl *ctrl = NCM_MODEL_CTRL (object);
+  
+#ifdef NCM_MODEL_CTRL_USE_WEAKREF
+  g_weak_ref_clear (&ctrl->model_wf);
+#else
+  ctrl->model = NULL;
+#endif
+
   /* Chain up : end */
   G_OBJECT_CLASS (ncm_model_ctrl_parent_class)->finalize (object);
-}
-
-/**
- * ncm_model_ctrl_new:
- * @model: (allow-none): FIXME
-   *
- * FIXME
- *
- * Returns: FIXME
- */
-NcmModelCtrl *
-ncm_model_ctrl_new (NcmModel *model)
-{
-  if (model)
-    return g_object_new (NCM_TYPE_MODEL_CTRL, "model", model, NULL);
-  else
-    return g_object_new (NCM_TYPE_MODEL_CTRL, NULL);
-}
-
-/**
- * ncm_model_ctrl_copy:
- * @ctrl: FIXME
- *
- * FIXME
- *
- * Returns: (transfer full): FIXME
-   */
-NcmModelCtrl *
-ncm_model_ctrl_copy (NcmModelCtrl *ctrl)
-{
-  NcmModelCtrl *ctrl_copy = ncm_model_ctrl_new (ctrl->model);
-  return ctrl_copy;
-}
-
-/**
- * ncm_model_ctrl_update:
- * @ctrl: FIXME
- * @model: FIXME
- *
- * FIXME
- *
- * Returns: FIXME
- */
-/**
- * ncm_model_ctrl_model_update:
- * @ctrl: FIXME
- * @model: FIXME
- *
- * FIXME
- *
- * Returns: FIXME
- */
-/**
- * ncm_model_ctrl_peek_model:
- * @ctrl: FIXME
- *
- * FIXME
- *
- * Returns: (transfer none): FIXME
- */
-/**
- * ncm_model_ctrl_get_model:
- * @ctrl: FIXME
- *
- * FIXME
- *
- * Returns: (transfer full): FIXME
- */
-NcmModel *
-ncm_model_ctrl_get_model (NcmModelCtrl *ctrl)
-{
-  if (ctrl->model)
-    ncm_model_ref (ctrl->model);
-  return ctrl->model;
-}
-
-/**
- * ncm_model_ctrl_set_model:
- * @ctrl: FIXME
- * @model: FIXME
- *
- * FIXME
- *
- * Returns: FIXME
- */
-gboolean
-ncm_model_ctrl_set_model (NcmModelCtrl *ctrl, NcmModel *model)
-{
-  if (model != ctrl->model)
-  {
-    ncm_model_clear (&ctrl->model);
-    ctrl->model = ncm_model_ref (model);
-    ctrl->pkey = model->pkey;
-    return TRUE;
-  }
-  return FALSE;
-}
-
-/**
- * ncm_model_ctrl_has_model:
- * @ctrl: FIXME
- * @model: FIXME
- *
- * FIXME
- *
- * Returns: FIXME
- */
-gboolean
-ncm_model_ctrl_has_model (NcmModelCtrl *ctrl, NcmModel *model)
-{
-  return (model == ctrl->model);
-}
-
-/**
- * ncm_model_ctrl_force_update:
- * @ctrl: FIXME
- *
- * FIXME
- *
- * Returns: FIXME
- */
-void
-ncm_model_ctrl_force_update (NcmModelCtrl *ctrl)
-{
-  ncm_model_clear (&ctrl->model);
-  return;
 }
 
 static void
@@ -223,12 +108,16 @@ ncm_model_get_property (GObject *object, guint prop_id, GValue *value, GParamSpe
 
   switch (prop_id)
   {
-	case PROP_MODEL:
-	  g_value_set_object (value, ctrl->model);
-	  break;
-	default:
-	  G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-	  break;
+    case PROP_MODEL:
+#ifdef NCM_MODEL_CTRL_USE_WEAKREF
+      g_value_take_object (value, g_weak_ref_get (&ctrl->model_wf));
+#else      
+      g_value_set_object (value, ctrl->model);
+#endif
+      break;
+    default:
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
+      break;
   }
 }
 
@@ -240,6 +129,8 @@ ncm_model_ctrl_class_init (NcmModelCtrlClass *klass)
 
   object_class->set_property = ncm_model_set_property;
   object_class->get_property = ncm_model_get_property;
+  object_class->dispose      = ncm_model_ctrl_dispose;
+  object_class->finalize     = ncm_model_ctrl_finalize;
 
   g_object_class_install_property (object_class,
                                    PROP_MODEL,
@@ -248,16 +139,140 @@ ncm_model_ctrl_class_init (NcmModelCtrlClass *klass)
                                                         "Last Model used",
                                                         NCM_TYPE_MODEL,
                                                         G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-  object_class->dispose = ncm_model_ctrl_dispose;
-  object_class->finalize = ncm_model_ctrl_finalize;
 }
 
+/**
+ * ncm_model_ctrl_new:
+ * @model: (allow-none): FIXME
+   *
+ * FIXME
+ *
+ * Returns: FIXME
+ */
+NcmModelCtrl *
+ncm_model_ctrl_new (NcmModel *model)
+{
+  if (model)
+    return g_object_new (NCM_TYPE_MODEL_CTRL, "model", model, NULL);
+  else
+    return g_object_new (NCM_TYPE_MODEL_CTRL, NULL);
+}
+
+/**
+ * ncm_model_ctrl_update:
+ * @ctrl: a #NcmModelCtrl
+ * @model: FIXME
+ *
+ * FIXME
+ *
+ * Returns: FIXME
+ */
+/**
+ * ncm_model_ctrl_model_update:
+ * @ctrl: a #NcmModelCtrl
+ * @model: FIXME
+ *
+ * FIXME
+ *
+ * Returns: FIXME
+ */
+/**
+ * ncm_model_ctrl_get_model:
+ * @ctrl: a #NcmModelCtrl
+ *
+ * FIXME
+ *
+ * Returns: (transfer full): FIXME
+ */
+
+/**
+ * ncm_model_ctrl_set_model:
+ * @ctrl: a #NcmModelCtrl
+ * @model: FIXME
+ *
+ * FIXME
+ *
+ * Returns: FIXME
+ */
+gboolean
+ncm_model_ctrl_set_model (NcmModelCtrl *ctrl, NcmModel *model)
+{
+  gboolean up = FALSE;
+  NcmModel *ctrl_model = ncm_model_ctrl_get_model (ctrl);
+  if (model != ctrl_model)
+  {
+#ifdef NCM_MODEL_CTRL_USE_WEAKREF
+    g_weak_ref_set (&ctrl->model_wf, model);
+#else
+    ctrl->model = model;
+    g_object_add_weak_pointer (model, &ctrl->model);
+#endif
+    ctrl->pkey  = model->pkey;
+    up          = TRUE;
+  }
+  ncm_model_clear (&ctrl_model);
+  return up;
+}
+
+/**
+ * ncm_model_ctrl_has_model:
+ * @ctrl: a #NcmModelCtrl
+ * @model: FIXME
+ *
+ * FIXME
+ *
+ * Returns: FIXME
+ */
+gboolean
+ncm_model_ctrl_has_model (NcmModelCtrl *ctrl, NcmModel *model)
+{
+  NcmModel *ctrl_model = ncm_model_ctrl_get_model (ctrl);
+  gboolean is_model = (model == ctrl_model);
+
+  ncm_model_clear (&ctrl_model);
+
+  return is_model;
+}
+
+/**
+ * ncm_model_ctrl_force_update:
+ * @ctrl: a #NcmModelCtrl
+ *
+ * FIXME
+ *
+ * Returns: FIXME
+ */
+void
+ncm_model_ctrl_force_update (NcmModelCtrl *ctrl)
+{
+#ifdef NCM_MODEL_CTRL_USE_WEAKREF
+  g_weak_ref_set (&ctrl->model_wf, NULL);
+#else
+  ctrl->model = NULL;
+#endif
+  return;
+}
+
+/**
+ * ncm_model_ctrl_free:
+ * @ctrl: a #NcmModelCtrl
+ *
+ * FIXME
+ *
+ */
 void
 ncm_model_ctrl_free (NcmModelCtrl *ctrl)
 {
   g_object_unref (ctrl);
 }
 
+/**
+ * ncm_model_ctrl_clear:
+ * @ctrl: a #NcmModelCtrl
+ *
+ * FIXME
+ *
+ */
 void
 ncm_model_ctrl_clear (NcmModelCtrl **ctrl)
 {

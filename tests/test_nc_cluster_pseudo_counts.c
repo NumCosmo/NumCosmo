@@ -91,8 +91,8 @@ test_nc_cluster_pseudo_counts_free (TestNcClusterPseudoCounts *test, gconstpoint
   NCM_TEST_FREE (nc_cluster_mass_free, test->clusterm);
   NCM_TEST_FREE (nc_cluster_redshift_free, test->clusterz);
   
-  NCM_TEST_FREE (nc_hireion_free, test->reion);
   NCM_TEST_FREE (nc_hicosmo_free, test->cosmo);
+  NCM_TEST_FREE (nc_hireion_free, test->reion);
 }
 
 void
@@ -112,7 +112,7 @@ test_nc_cluster_pseudo_counts_new (TestNcClusterPseudoCounts *test, gconstpointe
   NcClusterRedshift *clusterz     = NC_CLUSTER_REDSHIFT (nc_cluster_redshift_new_from_name ("NcClusterRedshiftNodist{'z-min':<0.1>, 'z-max':<1.0>}"));
   NcClusterAbundance *cad         = nc_cluster_abundance_new (mfp, NULL);
   NcDataClusterPseudoCounts *dcpc = nc_data_cluster_pseudo_counts_new (cad);
-  NcmMSet *mset                   = ncm_mset_new (cosmo, reion, clusterz, clusterm, cpc, NULL);
+  NcmMSet *mset                   = ncm_mset_new (cosmo, clusterz, clusterm, cpc, NULL);
   NcmDataset *dset                = ncm_dataset_new ();
   NcmMatrix *m                    = ncm_matrix_new (1, 5);
   gdouble z                       = g_test_rand_double_range (0.188, 0.890);
@@ -120,6 +120,8 @@ test_nc_cluster_pseudo_counts_new (TestNcClusterPseudoCounts *test, gconstpointe
   NcmFit *fit;
   gdouble m1, m2;
 
+  ncm_model_add_submodel (NCM_MODEL (cosmo), NCM_MODEL (reion));
+  
   m1 = g_test_rand_double_range (1.235, 2.496); /* ln(M/M0), M0 = 10^14 h^-1 M_sun */
   m2 = m1 + 0.4;
   test->Mobs[0]        = exp (m1) * 1.0e14;

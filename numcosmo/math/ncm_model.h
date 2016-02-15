@@ -63,10 +63,14 @@ struct _NcmModel
   GArray *vparam_len;
   GArray *ptypes;
   GHashTable *sparams_name_id;
+  GHashTable *submodel_mid_pos;
+  GPtrArray *submodel_array;
   guint total_len;
   guint64 pkey;
   guint64 skey;
 };
+
+typedef void (*NcmModelAddSubmodel) (NcmModel *model, NcmModel *submodel);
 
 struct _NcmModelClass
 {
@@ -74,9 +78,12 @@ struct _NcmModelClass
   GObjectClass parent_class;
   void (*get_property) (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec);
   void (*set_property) (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec);
+  NcmModelAddSubmodel add_submodel;
   gboolean (*valid) (NcmModel *model);
   NcmModelID model_id;
   gboolean can_stack;
+  NcmModelID main_model_id;
+  gboolean is_submodel;
   gchar *name;
   gchar *nick;
   guint64 impl;
@@ -194,6 +201,11 @@ void ncm_model_param_set_ftype (NcmModel *model, guint n, const NcmParamType pty
 
 void ncm_model_reparam_df (NcmModel *model, NcmVector *fv, NcmVector *v);
 void ncm_model_reparam_J (NcmModel *model, NcmMatrix *fJ, NcmMatrix *J);
+
+void ncm_model_add_submodel (NcmModel *model, NcmModel *submodel);
+guint ncm_model_get_submodel_len (NcmModel *model);
+NcmModel *ncm_model_peek_submodel (NcmModel *model, guint i);
+NcmModel *ncm_model_peek_submodel_by_mid (NcmModel *model, NcmModelID mid);
 
 /*
  * Model set functions

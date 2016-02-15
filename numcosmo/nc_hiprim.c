@@ -38,6 +38,7 @@
 #include "build_cfg.h"
 
 #include "math/ncm_serialize.h"
+#include "nc_hicosmo.h"
 #include "nc_hiprim.h"
 
 enum
@@ -118,7 +119,8 @@ nc_hiprim_class_init (NcHIPrimClass *klass)
                               "NcHIPrim",
                               "Homogeneous and isotropic primordial cosmological models.",
                               NULL,
-                              FALSE);
+                              FALSE,
+                              nc_hicosmo_id ());
 
   ncm_model_class_check_params_info (model_class);
 

@@ -66,6 +66,7 @@ GType nc_hireion_get_type (void) G_GNUC_CONST;
 
 NCM_MSET_MODEL_DECLARE_ID (nc_hireion);
 
+NcHIReion *nc_hireion_ref (NcHIReion *reion);
 void nc_hireion_free (NcHIReion *reion);
 void nc_hireion_clear (NcHIReion **reion);
 

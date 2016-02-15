@@ -245,7 +245,8 @@ nc_snia_dist_cov_class_init (NcSNIADistCovClass *klass)
                               "NcSNIADistCov",
                               "Supernovae distance models with errors covariance.",
                               NULL,
-                              FALSE);
+                              FALSE,
+                              NCM_MSET_MODEL_MAIN);
 
 }
 

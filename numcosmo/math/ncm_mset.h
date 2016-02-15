@@ -97,7 +97,15 @@ struct _NcmMSetPIndex
 GType ncm_mset_get_type (void) G_GNUC_CONST;
 GType ncm_mset_pindex_get_type (void) G_GNUC_CONST;
 
-void ncm_mset_model_register_id (NcmModelClass *model_class, const gchar *ns, const gchar *desc, const gchar *long_desc, gboolean can_stack);
+void ncm_mset_model_register_id (NcmModelClass *model_class, const gchar *ns, const gchar *desc, const gchar *long_desc, gboolean can_stack, NcmModelID main_model_id);
+
+/**
+ * NCM_MSET_MODEL_MAIN: (skip)
+ *
+ * FIXME
+ *
+ */
+#define NCM_MSET_MODEL_MAIN (-1)
 
 /**
  * NCM_MSET_MODEL_ID_FUNC: (skip)
@@ -167,6 +175,7 @@ gboolean ncm_mset_exists_pos (NcmMSet *mset, NcmModel *model, guint stackpos_id)
 gboolean ncm_mset_is_subset (NcmMSet *mset, NcmMSet *sub_mset);
 
 gint ncm_mset_get_id_by_ns (const gchar *ns);
+const gchar *ncm_mset_get_ns_by_id (gint id);
 
 void ncm_mset_set_fmap (NcmMSet *mset, const gchar *const *fmap, gboolean update_models);
 gchar **ncm_mset_get_fmap (NcmMSet *mset);

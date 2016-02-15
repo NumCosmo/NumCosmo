@@ -130,7 +130,8 @@ _ncm_mset_get_property (GObject *object, guint prop_id, GValue *value, GParamSpe
       for (i = 0; i < mset->model_array->len; i++)
       {
         NcmMSetItem *item = g_ptr_array_index (mset->model_array, i);
-        ncm_obj_array_add (oa, G_OBJECT (item->model));
+        if (!NCM_MODEL_GET_CLASS (item->model)->is_submodel)
+          ncm_obj_array_add (oa, G_OBJECT (item->model));
       }
       g_value_take_boxed (value, oa);
       break;
@@ -172,7 +173,11 @@ _ncm_mset_set_property (GObject *object, guint prop_id, const GValue *value, GPa
         guint i;
         for (i = 0; i < oa->len; i++)
         {
-          ncm_mset_push (mset, NCM_MODEL (ncm_obj_array_peek (oa, i)));
+          NcmModel *model = NCM_MODEL (ncm_obj_array_peek (oa, i));
+          if (NCM_MODEL_GET_CLASS (model)->is_submodel)
+            g_error ("_ncm_mset_set_property: NcmMSet model array cannot contain submodels `%s'.",
+                     G_OBJECT_TYPE_NAME (model));
+          ncm_mset_push (mset, model);
         }
       }
       break;
@@ -316,7 +321,7 @@ G_LOCK_DEFINE_STATIC (last_model_id);
  *
  */
 void
-ncm_mset_model_register_id (NcmModelClass *model_class, const gchar *ns, const gchar *desc, const gchar *long_desc, gboolean can_stack)
+ncm_mset_model_register_id (NcmModelClass *model_class, const gchar *ns, const gchar *desc, const gchar *long_desc, gboolean can_stack, NcmModelID main_model_id)
 {
   if (model_class->model_id < 0)
   {
@@ -326,6 +331,12 @@ ncm_mset_model_register_id (NcmModelClass *model_class, const gchar *ns, const g
     G_LOCK (last_model_id);
 
     model_class->can_stack = can_stack;
+
+    if (main_model_id > -1)
+    {
+      model_class->is_submodel   = TRUE;
+      model_class->main_model_id = main_model_id;
+    }
 
     model_class->model_id = last_model_id * NCM_MSET_MAX_STACKSIZE;
     id = last_model_id;
@@ -686,6 +697,8 @@ ncm_mset_push (NcmMSet *mset, NcmModel *model)
   }
 }
 
+static void _ncm_mset_set_pos_intern (NcmMSet *mset, NcmModel *model, guint stackpos_id);
+
 /**
  * ncm_mset_set_pos:
  * @mset: a #NcmMSet
@@ -697,6 +710,20 @@ ncm_mset_push (NcmMSet *mset, NcmModel *model)
  */
 void
 ncm_mset_set_pos (NcmMSet *mset, NcmModel *model, guint stackpos_id)
+{
+  NcmModelClass *model_class = NCM_MODEL_GET_CLASS (model);
+  
+  if (model_class->is_submodel)
+    g_error ("ncm_mset_set_pos: cannot add model `%s' directly to a NcmMSet.\n"
+             "                  This model is a submodel of `%s' and it should"
+             " be added to it instead of directly to a NcmMSet", 
+             G_OBJECT_TYPE_NAME (model), ncm_mset_get_ns_by_id (model_class->main_model_id));
+  else
+    _ncm_mset_set_pos_intern (mset, model, stackpos_id);
+}
+  
+static void
+_ncm_mset_set_pos_intern (NcmMSet *mset, NcmModel *model, guint stackpos_id)
 {
   g_assert (model != NULL);
   {
@@ -748,6 +775,12 @@ ncm_mset_set_pos (NcmMSet *mset, NcmModel *model, guint stackpos_id)
 
     if (mset->valid_map)
       ncm_mset_prepare_fparam_map (mset);
+
+    for (i = 0; i < ncm_model_get_submodel_len (model); i++)
+    {
+      NcmModel *submodel = ncm_model_peek_submodel (model, i);
+      _ncm_mset_set_pos_intern (mset, submodel, 0);
+    }
   }
 }
 

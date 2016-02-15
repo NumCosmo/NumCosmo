@@ -140,7 +140,8 @@ nc_hireion_class_init (NcHIReionClass *klass)
                               "NcHIReion",
                               "Homogeneous and isotropic reionization models.",
                               NULL,
-                              FALSE);
+                              FALSE,
+                              nc_hicosmo_id ());
 
   g_object_class_install_property (object_class,
                                    PROP_PREC,
@@ -176,6 +177,20 @@ _nc_hireion_get_Xe (NcHIReion *reion, NcHICosmo *cosmo, const gdouble lambda, co
   g_error ("_nc_hireion_get_Xe: error object `%s' do not implement this virtual function.", 
            g_type_name (G_OBJECT_TYPE (reion)));
   return 0.0;
+}
+
+/**
+ * nc_hireion_ref:
+ * @reion: a #NcHIReion
+ * 
+ * Increses the reference count of @reion by one.
+ * 
+ * Returns: (transfer full): @reion.
+ */
+NcHIReion *
+nc_hireion_ref (NcHIReion *reion)
+{
+  return g_object_ref (reion);
 }
 
 /**

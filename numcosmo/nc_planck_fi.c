@@ -115,7 +115,8 @@ nc_planck_fi_class_init (NcPlanckFIClass *klass)
                               "NcPlanckFI",
                               "Planck Foreground and Instrument models.",
                               NULL,
-                              FALSE);
+                              FALSE,
+                              NCM_MSET_MODEL_MAIN);
 
   g_object_class_install_property (object_class,
                                    PROP_VERSION,

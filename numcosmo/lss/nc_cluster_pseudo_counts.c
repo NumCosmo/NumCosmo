@@ -198,7 +198,8 @@ nc_cluster_pseudo_counts_class_init (NcClusterPseudoCountsClass *klass)
                               "NcClusterPseudoCounts",
                               "Galaxy cluster observable: pseudo number counts.",
                               NULL,
-                              FALSE);
+                              FALSE,
+                              NCM_MSET_MODEL_MAIN);
 }
 
 /**

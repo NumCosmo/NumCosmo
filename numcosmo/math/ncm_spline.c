@@ -150,7 +150,7 @@ ncm_spline_dispose (GObject *object)
 	s->empty = TRUE;
 
   /* Chain up : end */
-  G_OBJECT_CLASS (ncm_spline_parent_class)->finalize (object);
+  G_OBJECT_CLASS (ncm_spline_parent_class)->dispose (object);
 }
 
 static void

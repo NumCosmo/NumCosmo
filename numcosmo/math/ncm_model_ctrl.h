@@ -42,11 +42,19 @@ G_BEGIN_DECLS
 typedef struct _NcmModelCtrlClass NcmModelCtrlClass;
 typedef struct _NcmModelCtrl NcmModelCtrl;
 
+#if !((GLIB_MAJOR_VERSION == 2) && (GLIB_MINOR_VERSION < 32))
+#define NCM_MODEL_CTRL_USE_WEAKREF 1
+#endif
+
 struct _NcmModelCtrl
 {
   /*< private >*/
   GObject parent_instance;
+#ifdef NCM_MODEL_CTRL_USE_WEAKREF
+  GWeakRef model_wf;
+#else /* NCM_MODEL_CTRL_USE_WEAKREF */
   NcmModel *model;
+#endif  /* NCM_MODEL_CTRL_USE_WEAKREF */
   gulong pkey;
 };
 
@@ -59,14 +67,12 @@ struct _NcmModelCtrlClass
 GType ncm_model_ctrl_get_type (void) G_GNUC_CONST;
 
 NcmModelCtrl *ncm_model_ctrl_new (NcmModel *model);
-NcmModelCtrl *ncm_model_ctrl_copy (NcmModelCtrl *ctrl);
 gboolean ncm_model_ctrl_set_model (NcmModelCtrl *ctrl, NcmModel *model);
-NcmModel *ncm_model_ctrl_get_model (NcmModelCtrl *ctrl);
 void ncm_model_ctrl_force_update (NcmModelCtrl *ctrl);
 void ncm_model_ctrl_free (NcmModelCtrl *ctrl);
 void ncm_model_ctrl_clear (NcmModelCtrl **ctrl);
 
-G_INLINE_FUNC NcmModel *ncm_model_ctrl_peek_model (NcmModelCtrl *ctrl);
+G_INLINE_FUNC NcmModel *ncm_model_ctrl_get_model (NcmModelCtrl *ctrl);
 G_INLINE_FUNC gboolean ncm_model_ctrl_update (NcmModelCtrl *ctrl, NcmModel *model);
 G_INLINE_FUNC gboolean ncm_model_ctrl_model_update (NcmModelCtrl *ctrl, NcmModel *model);
 
@@ -81,38 +87,47 @@ G_END_DECLS
 G_BEGIN_DECLS
 
 G_INLINE_FUNC NcmModel *
-ncm_model_ctrl_peek_model (NcmModelCtrl *ctrl)
+ncm_model_ctrl_get_model (NcmModelCtrl *ctrl)
 {
-  return ctrl->model;
+#ifdef NCM_MODEL_CTRL_USE_WEAKREF
+  return g_weak_ref_get (&ctrl->model_wf);
+#else
+  return ncm_model_ref (ctrl->model);
+#endif
 }
 
 G_INLINE_FUNC gboolean
 ncm_model_ctrl_update (NcmModelCtrl *ctrl, NcmModel *model)
 {
-  if (ctrl->model != model)
+  gboolean up = FALSE;
+  NcmModel *ctrl_model = ncm_model_ctrl_get_model (ctrl);
+  if (ctrl_model != model)
   {
     ncm_model_ctrl_set_model (ctrl, model);
-    return TRUE;
+    up = TRUE;
   }
   else if (ctrl->pkey != model->pkey)
   {
     ctrl->pkey = model->pkey;
-    return TRUE;
+    up = TRUE;
   }
-  return FALSE;
+  ncm_model_clear (&ctrl_model);  
+  return up;
 }
 
 G_INLINE_FUNC gboolean
 ncm_model_ctrl_model_update (NcmModelCtrl *ctrl, NcmModel *model)
 {
-  if (ctrl->model != model)
+  gboolean up = FALSE;
+  NcmModel *ctrl_model = ncm_model_ctrl_get_model (ctrl);
+  if (ctrl_model != model)
   {
     ncm_model_ctrl_set_model (ctrl, model);
-    return TRUE;
+    up = TRUE;
   }
-  return FALSE;
+  ncm_model_clear (&ctrl_model);  
+  return up;
 }
-
 
 G_END_DECLS
 
