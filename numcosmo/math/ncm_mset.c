@@ -316,6 +316,7 @@ G_LOCK_DEFINE_STATIC (last_model_id);
  * @desc: short description
  * @long_desc: long description
  * @can_stack: whether the models can stack in a #NcmMSet
+ * @main_model_id: main model id, use -1 if this is a main model
  *
  * FIXME
  *

@@ -730,8 +730,9 @@ _nc_cad_inv_dNdz_convergence_f_onemn (gdouble onemn, gdouble epsilon)
 
 /**
  * nc_cluster_abundance_prepare_inv_dNdz:
- * @cad: a #NcClusterAbundance.
- * @cosmo: a #NcHICosmo.
+ * @cad: a #NcClusterAbundance
+ * @cosmo: a #NcHICosmo
+ * @lnMi: initial mass logarithm
  *
  * This function prepares a bidimensional spline...
  *
@@ -838,6 +839,7 @@ nc_cluster_abundance_prepare_inv_dNdz (NcClusterAbundance *cad, NcHICosmo *cosmo
  * @cad: a #NcClusterAbundance.
  * @cosmo: a #NcHICosmo.
  * @z: redshift.
+ * @lnMi: initial mass logarithm
  *
  * This function prepares a spline where the x array corresponds to the value
  * of $\int_{\ln M_0} ^{\ln M_1} d^2N/dzd\ln M dM/ \int_lnMi^lnMf dN/dz dM$ given a redshift $z$

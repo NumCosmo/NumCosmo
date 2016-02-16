@@ -235,6 +235,7 @@ nc_headers = \
 	nc_planck_fi_cor_tt.h         \
 	nc_cbe_precision.h            \
 	nc_cbe.h                      \
+	nc_power_spectrum.h           \
 	model/nc_hicosmo_de.h         \
 	model/nc_hicosmo_de_reparam_ok.h \
 	model/nc_hicosmo_de_linder.h  \
@@ -348,6 +349,7 @@ nc_sources = \
 	nc_planck_fi_cor_tt.c         \
 	nc_cbe_precision.c            \
 	nc_cbe.c                      \
+	nc_power_spectrum.c           \
 	model/nc_hicosmo_de.c         \
 	model/nc_hicosmo_de_reparam_ok.c \
 	model/nc_hicosmo_de_linder.c  \

@@ -41,6 +41,7 @@
 #include <numcosmo/nc_planck_fi_cor_tt.h>
 #include <numcosmo/nc_scalefactor.h>
 #include <numcosmo/nc_cbe_precision.h>
+#include <numcosmo/nc_power_spectrum.h>
 /* Cosmic thermodynamics */
 #include <numcosmo/nc_recomb.h>
 #include <numcosmo/nc_recomb_seager.h>

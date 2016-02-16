@@ -782,6 +782,16 @@ nc_recomb_prepare (NcRecomb *recomb, NcHICosmo *cosmo)
 }
 
 /**
+ * nc_recomb_prepare_if_needed:
+ * @recomb: a #NcRecomb
+ * @cosmo: a #NcHICosmo
+ *
+ * Prepare the object using the model @cosmo if it was changed
+ * since last preparation.
+ *
+ */
+
+/**
  * nc_recomb_Xe:
  * @recomb: a #NcRecomb
  * @cosmo: a #NcHICosmo.

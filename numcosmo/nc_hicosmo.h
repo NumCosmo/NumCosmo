@@ -122,8 +122,10 @@ typedef gdouble (*NcHICosmoFunc0) (NcHICosmo *cosmo);
 typedef gdouble (*NcHICosmoFunc1Z) (NcHICosmo *cosmo, gdouble z);
 typedef gdouble (*NcHICosmoFunc1K) (NcHICosmo *cosmo, gdouble k);
 
+#ifndef __GTK_DOC_IGNORE__
 typedef struct _NcHIPrim NcHIPrim;
 typedef struct _NcHIReion NcHIReion;
+#endif
 
 /**
  * NcHICosmo:

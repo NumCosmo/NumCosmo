@@ -192,6 +192,7 @@
     <xi:include href="xml/nc_hireion.xml"/>
     <xi:include href="xml/nc_hireion_camb.xml"/>
     <xi:include href="xml/nc_hireion_camb_reparam_tau.xml"/>
+    <xi:include href="xml/nc_power_spectrum.xml"/>    
   </chapter>
 
   <chapter>
