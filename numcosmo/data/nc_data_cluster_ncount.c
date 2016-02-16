@@ -965,7 +965,7 @@ _nc_data_cluster_ncount_prepare (NcmData *data, NcmMSet *mset)
   g_assert (ncount->z == NULL || g_type_is_a (G_OBJECT_TYPE (clusterz), G_OBJECT_TYPE (ncount->z)));
   g_assert (ncount->m == NULL || g_type_is_a (G_OBJECT_TYPE (clusterm), G_OBJECT_TYPE (ncount->m)));
     
-  nc_cluster_abundance_prepare_if_needed (ncount->cad, reion, cosmo, clusterz, clusterm);
+  nc_cluster_abundance_prepare_if_needed (ncount->cad, cosmo, clusterz, clusterm);
 }
 
 static gchar *

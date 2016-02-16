@@ -631,19 +631,18 @@ nc_mass_function_set_eval_limits (NcMassFunction *mfp, NcHICosmo *cosmo, gdouble
 /**
  * nc_mass_function_prepare:
  * @mfp: a #NcMassFunction
- * @reion: a #NcHIReion
  * @cosmo: a #NcHICosmo
  *
  * FIXME
  *
  */
 void
-nc_mass_function_prepare (NcMassFunction *mfp, NcHIReion *reion, NcHICosmo *cosmo)
+nc_mass_function_prepare (NcMassFunction *mfp, NcHICosmo *cosmo)
 {
   guint i, j;
 
   nc_distance_prepare_if_needed (mfp->dist, cosmo);
-  nc_matter_var_prepare_if_needed (mfp->vp, reion, cosmo);
+  nc_matter_var_prepare_if_needed (mfp->vp, cosmo);
   nc_growth_func_prepare_if_needed (mfp->gf, cosmo);
   
   if (mfp->d2NdzdlnM == NULL)
@@ -668,7 +667,6 @@ nc_mass_function_prepare (NcMassFunction *mfp, NcHIReion *reion, NcHICosmo *cosm
   ncm_spline2d_prepare (mfp->d2NdzdlnM);
 
   ncm_model_ctrl_update (mfp->ctrl_cosmo, NCM_MODEL (cosmo));
-  ncm_model_ctrl_update (mfp->ctrl_reion, NCM_MODEL (reion));
 }
 
 /**
@@ -791,7 +789,6 @@ _nc_mass_function_generate_2Dspline_knots (NcMassFunction *mfp, NcHICosmo *cosmo
 /**
  * nc_mass_function_prepare_if_needed:
  * @mfp: a #NcMassFunction
- * @reion: a #NcHIReion
  * @cosmo: a #NcHICosmo
  *
  * FIXME

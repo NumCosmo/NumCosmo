@@ -196,7 +196,7 @@ test_nc_cluster_pseudo_counts_new (TestNcClusterPseudoCounts *test, gconstpointe
   fit       = ncm_fit_new (NCM_FIT_TYPE_NLOPT, "ln-neldermead", lh, mset, NCM_FIT_GRAD_NUMDIFF_CENTRAL);
   test->fit = fit;
 
-  nc_cluster_abundance_prepare_if_needed (cad, reion, cosmo, clusterz, clusterm);
+  nc_cluster_abundance_prepare_if_needed (cad, cosmo, clusterz, clusterm);
 
   nc_distance_free (dist);
   nc_window_free (wf);

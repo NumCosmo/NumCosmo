@@ -382,7 +382,6 @@ _integrand_powspec_2h (gdouble lnM, gpointer userdata)
  * nc_cor_cluster_cmb_lens_limber_twoh_int_mm:
  * @cccll: a #NcCorClusterCmbLensLimber
  * @cad: a #NcClusterAbundance
- * @reion: a #NcHIReion
  * @cosmo: a #NcHICosmo
  * @dp: a #NcDensityProfile
  * @k: mode
@@ -393,7 +392,7 @@ _integrand_powspec_2h (gdouble lnM, gpointer userdata)
  * Returns: FIXME
  */
 gdouble 
-nc_cor_cluster_cmb_lens_limber_twoh_int_mm (NcCorClusterCmbLensLimber *cccll, NcClusterAbundance *cad, NcHIReion *reion, NcHICosmo *cosmo, NcDensityProfile *dp, gdouble k, gdouble z)
+nc_cor_cluster_cmb_lens_limber_twoh_int_mm (NcCorClusterCmbLensLimber *cccll, NcClusterAbundance *cad, NcHICosmo *cosmo, NcDensityProfile *dp, gdouble k, gdouble z)
 {
   integrand_data_2h_mass2 int_data;
   gdouble ps_2h_mm, err;
@@ -406,7 +405,7 @@ nc_cor_cluster_cmb_lens_limber_twoh_int_mm (NcCorClusterCmbLensLimber *cccll, Nc
   gboolean conv2 = FALSE;
   const gdouble step = 2.0;
 
-  nc_transfer_func_prepare (int_data.hbf->mfp->vp->tf, reion, cosmo);
+  nc_transfer_func_prepare (int_data.hbf->mfp->vp->tf, cosmo);
   
   int_data.cccll          = cccll;
   int_data.cad            = cad;
@@ -556,7 +555,6 @@ _integrand_redshift_2h (gdouble z, gpointer userdata)
  * nc_cor_cluster_cmb_lens_limber_twoh_term:
  * @cccll: a #NcCorClusterCmbLensLimber
  * @cad: a #NcClusterAbundance
- * @reion: a #NcHIReion
  * @cosmo: a #NcHICosmo
  * @dist: a #NcDistance
  * @dp: a #NcDensityProfile
@@ -575,7 +573,7 @@ _integrand_redshift_2h (gdouble z, gpointer userdata)
  * Returns: $\left(C_l^{cl \psi} \right)_{2h}$
  */
 gdouble
-nc_cor_cluster_cmb_lens_limber_twoh_term (NcCorClusterCmbLensLimber *cccll, NcClusterAbundance *cad, NcHIReion *reion, NcHICosmo *cosmo, NcDistance *dist, NcDensityProfile *dp, gint l, gdouble *z_obs, gdouble *z_obs_params)
+nc_cor_cluster_cmb_lens_limber_twoh_term (NcCorClusterCmbLensLimber *cccll, NcClusterAbundance *cad, NcHICosmo *cosmo, NcDistance *dist, NcDensityProfile *dp, gint l, gdouble *z_obs, gdouble *z_obs_params)
 {
   gdouble cor_2h, ll, cons_factor, zl, zu, err;
   integrand_data_2hz int_data;
@@ -590,7 +588,7 @@ nc_cor_cluster_cmb_lens_limber_twoh_term (NcCorClusterCmbLensLimber *cccll, NcCl
   int_data.dp    = dp;
   int_data.l     = l; 
 
-  nc_transfer_func_prepare (cad->mbiasf->mfp->vp->tf, reion, cosmo);
+  nc_transfer_func_prepare (cad->mbiasf->mfp->vp->tf, cosmo);
   
   F.function = &_integrand_redshift_2h;
   F.params = &int_data;

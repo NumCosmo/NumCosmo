@@ -310,13 +310,12 @@ _nc_data_xcor_prepare (NcmData* data, NcmMSet* mset)
 {
 	NcDataXcor* xcdata = NC_DATA_XCOR (data);
 	NcHICosmo* cosmo = NC_HICOSMO (ncm_mset_peek (mset, nc_hicosmo_id ()));
-	NcHIReion* reion = NC_HIREION (ncm_mset_peek (mset, nc_hireion_id ()));
 
 	gboolean doprep = ncm_model_ctrl_update (xcdata->cosmo_ctrl, NCM_MODEL (cosmo)); /*if any xcl or cosmo has been updated */
 
 	if (doprep)
 	{
-		nc_xcor_prepare (xcdata->xc, reion, cosmo);
+		nc_xcor_prepare (xcdata->xc, cosmo);
 	}
 
 	guint i;
@@ -343,7 +342,6 @@ static void
 _nc_data_xcor_compute_cl (NcDataXcor* xcdata, NcmMSet* mset)
 {
 	NcHICosmo* cosmo = NC_HICOSMO (ncm_mset_peek (mset, nc_hicosmo_id ()));
-  NcHIReion* reion = NC_HIREION (ncm_mset_peek (mset, nc_hireion_id ()));
 	NcXcor* xc = xcdata->xc;
 	guint nell = xcdata->nell;
 
@@ -360,7 +358,7 @@ _nc_data_xcor_compute_cl (NcDataXcor* xcdata, NcmMSet* mset)
 	{
 		NcXcorLimber* xcl = NC_XCOR_LIMBER (ncm_mset_peek_pos (mset, nc_xcor_limber_id (), obs));
 
-		nc_xcor_limber_auto_cl (xc, xcl, reion, cosmo, xcdata->ell, clpure, 0, TRUE); //NcDistance* dist, NcTransferFunc* tf, NcGrowthFunc* gf,
+		nc_xcor_limber_auto_cl (xc, xcl, cosmo, xcdata->ell, clpure, 0, TRUE); //NcDistance* dist, NcTransferFunc* tf, NcGrowthFunc* gf,
 		NcmMatrix* sub_mixing = ncm_matrix_get_submatrix (xcdata->mixing, 0, pos_ell, nell, nell);
 		ret = gsl_blas_dgemv (CblasNoTrans, 1.0, ncm_matrix_gsl (sub_mixing), ncm_vector_gsl (clpure), 0.0, ncm_vector_gsl (clmixed));
 		if (ret != 0)
@@ -385,7 +383,7 @@ _nc_data_xcor_compute_cl (NcDataXcor* xcdata, NcmMSet* mset)
 				NcXcorLimber* xcl2 = NC_XCOR_LIMBER (ncm_mset_peek_pos (mset, nc_xcor_limber_id (), diag + k));
 
 
-				nc_xcor_limber_cross_cl (xc, xcl1, xcl2, reion, cosmo, xcdata->ell, clpure, 0);
+				nc_xcor_limber_cross_cl (xc, xcl1, xcl2, cosmo, xcdata->ell, clpure, 0);
 				NcmMatrix* sub_mixing = ncm_matrix_get_submatrix (xcdata->mixing, 0, pos_ell, nell, nell);
 				ret = gsl_blas_dgemv (CblasNoTrans, 1.0, ncm_matrix_gsl (sub_mixing), ncm_vector_gsl (clpure), 0.0, ncm_vector_gsl (clmixed));
 				if (ret != 0)

@@ -236,7 +236,7 @@ struct _NcLinearPertTF
   NcmSpline *logPhi_logk;
 };
 
-NcLinearPert *nc_pert_linear_new (NcHICosmo *cosmo, NcHIReion *reion, NcRecomb *recomb, guint lmax, gdouble tc_reltol, gdouble reltol, gdouble tc_abstol, gdouble abstol);
+NcLinearPert *nc_pert_linear_new (NcHICosmo *cosmo, NcRecomb *recomb, guint lmax, gdouble tc_reltol, gdouble reltol, gdouble tc_abstol, gdouble abstol);
 NcLinearPertSplines *nc_pert_linear_splines_new (NcLinearPert *pert, NcLinearPertSplineTypes types, gulong n_deta, gulong n_evol, gdouble k0, gdouble k1);
 void nc_pert_linear_prepare_splines (NcLinearPertSplines *pspline);
 

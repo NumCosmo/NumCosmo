@@ -51,18 +51,32 @@ static void
 ncm_model_ctrl_init (NcmModelCtrl *ctrl)
 {
 #ifdef NCM_MODEL_CTRL_USE_WEAKREF
-  g_weak_ref_init (&ctrl->model_wf, NULL);
+  g_weak_ref_init (&ctrl->model_wr, NULL);
 #else
   ctrl->model = NULL;
 #endif
   ctrl->pkey = 0;
+
+  ctrl->submodel_ctrl = g_ptr_array_new ();
+  g_ptr_array_set_free_func (ctrl->submodel_ctrl, (GDestroyNotify) ncm_model_ctrl_free);
+
+  ctrl->submodel_last_update = g_array_new (TRUE, TRUE, sizeof (gboolean));
 }
 
 static void
 ncm_model_ctrl_dispose (GObject *object)
 {
-  /*NcmModelCtrl *ctrl = NCM_MODEL_CTRL (object);*/
-  /*ncm_model_clear (&ctrl->model);*/
+  NcmModelCtrl *ctrl = NCM_MODEL_CTRL (object);
+
+#ifdef NCM_MODEL_CTRL_USE_WEAKREF
+  g_weak_ref_clear (&ctrl->model_wr);
+#else
+  g_object_remove_weak_pointer (model, &ctrl->model);
+  ctrl->model = NULL;
+#endif
+
+  g_clear_pointer (&ctrl->submodel_ctrl, g_ptr_array_unref);
+  g_clear_pointer (&ctrl->submodel_last_update, g_array_unref);
 
   /* Chain up : end */
   G_OBJECT_CLASS (ncm_model_ctrl_parent_class)->dispose (object);
@@ -71,14 +85,8 @@ ncm_model_ctrl_dispose (GObject *object)
 static void
 ncm_model_ctrl_finalize (GObject *object)
 {
-  NcmModelCtrl *ctrl = NCM_MODEL_CTRL (object);
+  /*NcmModelCtrl *ctrl = NCM_MODEL_CTRL (object);*/
   
-#ifdef NCM_MODEL_CTRL_USE_WEAKREF
-  g_weak_ref_clear (&ctrl->model_wf);
-#else
-  ctrl->model = NULL;
-#endif
-
   /* Chain up : end */
   G_OBJECT_CLASS (ncm_model_ctrl_parent_class)->finalize (object);
 }
@@ -91,12 +99,12 @@ ncm_model_set_property (GObject *object, guint prop_id, const GValue *value, GPa
 
   switch (prop_id)
   {
-	case PROP_MODEL:
-	  ncm_model_ctrl_set_model (ctrl, g_value_get_object (value));
-	  break;
-	default:
-	  G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-	  break;
+    case PROP_MODEL:
+      ncm_model_ctrl_set_model (ctrl, g_value_get_object (value));
+      break;
+    default:
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
+      break;
   }
 }
 
@@ -110,7 +118,7 @@ ncm_model_get_property (GObject *object, guint prop_id, GValue *value, GParamSpe
   {
     case PROP_MODEL:
 #ifdef NCM_MODEL_CTRL_USE_WEAKREF
-      g_value_take_object (value, g_weak_ref_get (&ctrl->model_wf));
+      g_value_take_object (value, g_weak_ref_get (&ctrl->model_wr));
 #else      
       g_value_set_object (value, ctrl->model);
 #endif
@@ -184,6 +192,35 @@ ncm_model_ctrl_new (NcmModel *model)
  *
  * Returns: (transfer full): FIXME
  */
+/**
+ * ncm_model_ctrl_model_last_update:
+ * @ctrl: a #NcmModelCtrl
+ * 
+ * Checks if the main model was updated during the last call to
+ * ncm_model_ctrl_update().
+ * 
+ * Returns: TRUE if the main model was updated.
+ */
+/**
+ * ncm_model_ctrl_model_has_submodel:
+ * @ctrl: a #NcmModelCtrl
+ * @mid: a @NcmModelID
+ * 
+ * Checks if there is a submode inside ctrl model, it is an
+ * error to call this function in an empty @ctrl.
+ *
+ * Returns: TRUE if there is a submodel with @mid inside the ctrl model.
+ */
+/**
+ * ncm_model_ctrl_submodel_last_update:
+ * @ctrl: a #NcmModelCtrl
+ * @mid: a @NcmModelID
+ *
+ * Checks if the submodel @mid was updated during the last call to
+ * ncm_model_ctrl_update().
+ *
+ * Returns: TRUE if the submodel with @mid inside the ctrl model was updated.
+ */
 
 /**
  * ncm_model_ctrl_set_model:
@@ -199,10 +236,11 @@ ncm_model_ctrl_set_model (NcmModelCtrl *ctrl, NcmModel *model)
 {
   gboolean up = FALSE;
   NcmModel *ctrl_model = ncm_model_ctrl_get_model (ctrl);
+
   if (model != ctrl_model)
   {
 #ifdef NCM_MODEL_CTRL_USE_WEAKREF
-    g_weak_ref_set (&ctrl->model_wf, model);
+    g_weak_ref_set (&ctrl->model_wr, model);
 #else
     ctrl->model = model;
     g_object_add_weak_pointer (model, &ctrl->model);
@@ -210,6 +248,31 @@ ncm_model_ctrl_set_model (NcmModelCtrl *ctrl, NcmModel *model)
     ctrl->pkey  = model->pkey;
     up          = TRUE;
   }
+
+  {
+    const guint n = ncm_model_get_submodel_len (model);
+    guint i;
+    for (i = 0; i < n; i++)
+    {
+      NcmModel *submodel = ncm_model_peek_submodel (model, i);
+      if (i >= ctrl->submodel_ctrl->len)
+      {
+        NcmModelCtrl *sub_ctrl = ncm_model_ctrl_new (submodel);
+        g_ptr_array_add (ctrl->submodel_ctrl, sub_ctrl);
+        up = TRUE;
+      }
+      else
+      {
+        NcmModelCtrl *sub_ctrl = g_ptr_array_index (ctrl->submodel_ctrl, i);
+        if (ncm_model_ctrl_set_model (sub_ctrl, submodel))
+        {
+          up = TRUE;
+        }
+      }
+    }
+    g_ptr_array_set_size (ctrl->submodel_ctrl, n);
+  }
+  
   ncm_model_clear (&ctrl_model);
   return up;
 }
@@ -246,10 +309,12 @@ void
 ncm_model_ctrl_force_update (NcmModelCtrl *ctrl)
 {
 #ifdef NCM_MODEL_CTRL_USE_WEAKREF
-  g_weak_ref_set (&ctrl->model_wf, NULL);
+  g_weak_ref_set (&ctrl->model_wr, NULL);
 #else
   ctrl->model = NULL;
 #endif
+  g_ptr_array_set_size (ctrl->submodel_ctrl, 0);
+  g_array_set_size (ctrl->submodel_last_update, 0);
   return;
 }
 

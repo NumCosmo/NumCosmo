@@ -76,14 +76,14 @@ struct _NcXcorClass
 GType nc_xcor_get_type (void) G_GNUC_CONST;
 
 
-void nc_xcor_prepare (NcXcor *xc, NcHIReion *reion, NcHICosmo *model);
+void nc_xcor_prepare (NcXcor *xc, NcHICosmo *model);
 NcXcor* nc_xcor_new (NcDistance* dist, NcTransferFunc* tf, NcGrowthFunc* gf, gdouble zl, gdouble zu);
 NcXcor* nc_xcor_ref (NcXcor* xcl);
 void nc_xcor_free (NcXcor* xcl);
 void nc_xcor_clear (NcXcor** xcl);
 
-void nc_xcor_limber_cross_cl (NcXcor* xc, NcXcorLimber* xcl1, NcXcorLimber* xcl2, NcHIReion *reion, NcHICosmo* cosmo, NcmVector* ell, NcmVector* vp, guint lmin_idx);
-void nc_xcor_limber_auto_cl (NcXcor* xc, NcXcorLimber* xcl, NcHIReion *reion, NcHICosmo* cosmo, NcmVector* ell, NcmVector* vp, guint lmin_idx, gboolean withnoise);
+void nc_xcor_limber_cross_cl (NcXcor* xc, NcXcorLimber* xcl1, NcXcorLimber* xcl2, NcHICosmo* cosmo, NcmVector* ell, NcmVector* vp, guint lmin_idx);
+void nc_xcor_limber_auto_cl (NcXcor* xc, NcXcorLimber* xcl, NcHICosmo* cosmo, NcmVector* ell, NcmVector* vp, guint lmin_idx, gboolean withnoise);
 
 
 G_END_DECLS

@@ -296,15 +296,14 @@ static void _nc_matter_var_prepare_fft (NcMatterVar *vp, NcHICosmo *cosmo);
 /**
  * nc_matter_var_prepare:
  * @vp: a #NcMatterVar
- * @reion: a #NcHIReion
  * @cosmo: a #NcHICosmo
  *
  * FIXME
  */
 void
-nc_matter_var_prepare (NcMatterVar *vp, NcHIReion *reion, NcHICosmo *cosmo)
+nc_matter_var_prepare (NcMatterVar *vp, NcHICosmo *cosmo)
 {
-  nc_transfer_func_prepare (vp->tf, reion, cosmo);
+  nc_transfer_func_prepare (vp->tf, cosmo);
   switch (vp->vs)
   {
     case NC_MATTER_VAR_NUMINT:
@@ -323,25 +322,22 @@ nc_matter_var_prepare (NcMatterVar *vp, NcHIReion *reion, NcHICosmo *cosmo)
   }
 
   ncm_model_ctrl_update (vp->ctrl_cosmo, NCM_MODEL (cosmo));
-  ncm_model_ctrl_update (vp->ctrl_reion, NCM_MODEL (reion));  
 }
 
 /**
  * nc_matter_var_prepare_if_needed:
  * @vp: a #NcMatterVar
- * @reion: a #NcHIReion
  * @cosmo: a #NcHICosmo
  *
  * FIXME
  */
 void 
-nc_matter_var_prepare_if_needed (NcMatterVar *vp, NcHIReion *reion, NcHICosmo *cosmo)
+nc_matter_var_prepare_if_needed (NcMatterVar *vp, NcHICosmo *cosmo)
 {
   gboolean cosmo_up = ncm_model_ctrl_update (vp->ctrl_cosmo, NCM_MODEL (cosmo));
-  gboolean reion_up = ncm_model_ctrl_update (vp->ctrl_reion, NCM_MODEL (reion));
 
-  if (cosmo_up || reion_up)
-    nc_matter_var_prepare (vp, reion, cosmo);
+  if (cosmo_up)
+    nc_matter_var_prepare (vp, cosmo);
 }
 
 /* Estrutura criada para podermos calcular todos os momentos espectrais, a variancia eh o momento para j=0. */

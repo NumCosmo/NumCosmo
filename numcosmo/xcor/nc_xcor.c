@@ -111,9 +111,9 @@ void nc_xcor_clear (NcXcor** xcl)
 	g_clear_object (xcl);
 }
 
-void nc_xcor_prepare (NcXcor *xc, NcHIReion *reion, NcHICosmo *cosmo)
+void nc_xcor_prepare (NcXcor *xc, NcHICosmo *cosmo)
 {
-	nc_transfer_func_prepare (xc->tf, reion, cosmo);
+	nc_transfer_func_prepare (xc->tf, cosmo);
 	nc_growth_func_prepare (xc->gf, cosmo);
 	nc_distance_prepare_if_needed (xc->dist, cosmo);
 
@@ -163,7 +163,6 @@ static gdouble _xcor_limber_cross_cl_int_z (gdouble z, gpointer ptr)
  * @xc: a #NcXcor
  * @xcl1: a #NcXcorLimber
  * @xcl2: a #NcXcorLimber
- * @reion: a #NcHIReion
  * @cosmo: a #NcHICosmo
  * @ell: a #NcmVector
  * @vp: a #NcmVector
@@ -175,7 +174,7 @@ static gdouble _xcor_limber_cross_cl_int_z (gdouble z, gpointer ptr)
  *
 */
 void 
-nc_xcor_limber_cross_cl (NcXcor* xc, NcXcorLimber* xcl1, NcXcorLimber* xcl2, NcHIReion *reion, NcHICosmo* cosmo, NcmVector* ell, NcmVector* vp, guint lmin_idx)
+nc_xcor_limber_cross_cl (NcXcor* xc, NcXcorLimber* xcl1, NcXcorLimber* xcl2, NcHICosmo* cosmo, NcmVector* ell, NcmVector* vp, guint lmin_idx)
 {
 	guint nell = ncm_vector_len (ell);
 	guint nvp = ncm_vector_len (vp);
@@ -192,7 +191,7 @@ nc_xcor_limber_cross_cl (NcXcor* xc, NcXcorLimber* xcl1, NcXcorLimber* xcl2, NcH
 	{
 		nc_xcor_limber_prepare (xcl1, cosmo);
 		nc_xcor_limber_prepare (xcl2, cosmo);
-		nc_xcor_prepare (xc, reion, cosmo);
+		nc_xcor_prepare (xc, cosmo);
 	}
 
 	gdouble cl, cons_factor, err;
@@ -265,7 +264,6 @@ static gdouble _xcor_limber_auto_cl_int_z (gdouble z, gpointer ptr)
  * nc_xcor_limber_auto_cl:
  * @xc: a #NcXcor
  * @xcl: a #NcXcorLimber
- * @reion: a #NcHIReion
  * @cosmo: a #NcHICosmo
  * @ell: a #NcmVector
  * @vp: a #NcmVector
@@ -278,7 +276,7 @@ static gdouble _xcor_limber_auto_cl_int_z (gdouble z, gpointer ptr)
  *
 */
 void 
-nc_xcor_limber_auto_cl (NcXcor* xc, NcXcorLimber* xcl, NcHIReion *reion, NcHICosmo* cosmo, NcmVector* ell, NcmVector* vp, guint lmin_idx, gboolean withnoise)
+nc_xcor_limber_auto_cl (NcXcor* xc, NcXcorLimber* xcl, NcHICosmo* cosmo, NcmVector* ell, NcmVector* vp, guint lmin_idx, gboolean withnoise)
 {
 	guint nell = ncm_vector_len (ell);
 	guint nvp = ncm_vector_len (vp);
@@ -293,7 +291,7 @@ nc_xcor_limber_auto_cl (NcXcor* xc, NcXcorLimber* xcl, NcHIReion *reion, NcHICos
 	if (xcl_up || cosmo_up)
 	{
 		nc_xcor_limber_prepare (xcl, cosmo);
-		nc_xcor_prepare (xc, reion, cosmo);
+		nc_xcor_prepare (xc, cosmo);
 	}
 
 	gdouble cl, cons_factor, err;

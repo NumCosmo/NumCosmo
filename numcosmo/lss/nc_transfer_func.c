@@ -69,38 +69,34 @@ nc_transfer_func_new_from_name (gchar *transfer_name)
 /**
  * nc_transfer_func_prepare:
  * @tf: a #NcTransferFunc
- * @reion: a #NcHIReion
  * @cosmo: a #NcHICosmo
  *
  * FIXME
  *
 */
 void
-nc_transfer_func_prepare (NcTransferFunc *tf, NcHIReion *reion, NcHICosmo *cosmo)
+nc_transfer_func_prepare (NcTransferFunc *tf, NcHICosmo *cosmo)
 {
-  NC_TRANSFER_FUNC_GET_CLASS (tf)->prepare (tf, reion, cosmo);
+  NC_TRANSFER_FUNC_GET_CLASS (tf)->prepare (tf, cosmo);
 
   ncm_model_ctrl_update (tf->ctrl_cosmo, NCM_MODEL (cosmo));
-  ncm_model_ctrl_update (tf->ctrl_reion, NCM_MODEL (reion));
 }
 
 /**
  * nc_transfer_func_prepare_if_needed:
  * @tf: a #NcTransferFunc
- * @reion: a #NcHIReion
  * @cosmo: a #NcHICosmo
  *
  * FIXME
  *
  */
 void
-nc_transfer_func_prepare_if_needed (NcTransferFunc *tf, NcHIReion *reion, NcHICosmo *cosmo)
+nc_transfer_func_prepare_if_needed (NcTransferFunc *tf, NcHICosmo *cosmo)
 {
   gboolean cosmo_up = ncm_model_ctrl_update (tf->ctrl_cosmo, NCM_MODEL (cosmo));
-  gboolean reion_up = ncm_model_ctrl_update (tf->ctrl_reion, NCM_MODEL (reion));
 
-  if (cosmo_up || reion_up)
-    NC_TRANSFER_FUNC_GET_CLASS (tf)->prepare (tf, reion, cosmo);
+  if (cosmo_up)
+    NC_TRANSFER_FUNC_GET_CLASS (tf)->prepare (tf, cosmo);
 }
 
 /**

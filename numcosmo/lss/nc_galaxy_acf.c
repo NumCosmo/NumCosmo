@@ -162,7 +162,7 @@ printf ("% 20.15g % 20.15g\n", mu, psi * psi);
 }
 
 void
-nc_galaxy_acf_prepare_psi (NcGalaxyAcf *acf, NcHIReion *reion, NcHICosmo *cosmo, guint l)
+nc_galaxy_acf_prepare_psi (NcGalaxyAcf *acf, NcHICosmo *cosmo, guint l)
 {
   NcmGalaxyAcfPsiKernel psi_kernel;
   gsl_function F;
@@ -176,7 +176,7 @@ nc_galaxy_acf_prepare_psi (NcGalaxyAcf *acf, NcHIReion *reion, NcHICosmo *cosmo,
   psi_kernel.acf = acf;
   psi_kernel.cosmo = cosmo;
 
-  nc_transfer_func_prepare (acf->tf, reion, cosmo);
+  nc_transfer_func_prepare (acf->tf, cosmo);
   
   {
     gdouble res, err;

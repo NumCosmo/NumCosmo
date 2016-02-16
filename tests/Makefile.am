@@ -40,6 +40,9 @@ test_ncm_model_SOURCES =  \
 	ncm_model_test.c \
 	ncm_model_test.h
 
+test_ncm_model_ctrl_SOURCES =  \
+        test_ncm_model_ctrl.c
+
 test_ncm_mset_SOURCES = \
 	test_ncm_mset.c
 
@@ -87,6 +90,7 @@ check_PROGRAMS =  \
 	test_ncm_spline2d             \
 	test_ncm_sf_sbessel           \
 	test_ncm_model                \
+	test_ncm_model_ctrl           \
 	test_ncm_mset                 \
 	test_ncm_serialize            \
 	test_ncm_data_gauss_cov       \
@@ -117,6 +121,8 @@ test_ncm_spline2d_LDADD = $(top_builddir)/numcosmo/libnumcosmo.la
 test_ncm_sf_sbessel_LDADD = $(top_builddir)/numcosmo/libnumcosmo.la
 
 test_ncm_model_LDADD = $(top_builddir)/numcosmo/libnumcosmo.la
+
+test_ncm_model_ctrl_LDADD = $(top_builddir)/numcosmo/libnumcosmo.la
 
 test_ncm_mset_LDADD = $(top_builddir)/numcosmo/libnumcosmo.la
 

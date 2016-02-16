@@ -2251,3 +2251,28 @@ ncm_model_peek_submodel_by_mid (NcmModel *model, NcmModelID mid)
   else
     return NULL;
 }
+
+/**
+ * ncm_model_peek_submodel_pos_by_mid:
+ * @model: a #NcmModel
+ * @mid: a #NcmModelID
+ *
+ * Gets the submodel type #NcmModelID @mid position.
+ *
+ * Returns: (transfer none): the @mid position or -1 if not found.
+ */
+gint
+ncm_model_peek_submodel_pos_by_mid (NcmModel *model, NcmModelID mid)
+{
+  gpointer pos_ptr, orig_key;
+  if (g_hash_table_lookup_extended (model->submodel_mid_pos, GINT_TO_POINTER (mid), &orig_key, &pos_ptr))
+  {
+    gint pos = GPOINTER_TO_INT (pos_ptr);
+    g_assert_cmpint (pos, >, -1);
+    g_assert_cmpint (pos, <, model->submodel_array->len);
+    
+    return pos;
+  }
+  else
+    return -1;
+}

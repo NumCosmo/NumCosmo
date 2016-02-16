@@ -74,7 +74,7 @@ struct _NcRecombClass
 {
   /*< private >*/
   GObjectClass parent_class;
-  void (*prepare) (NcRecomb *recomb, NcHIReion *reion, NcHICosmo *cosmo);
+  void (*prepare) (NcRecomb *recomb, NcHICosmo *cosmo);
 };
 
 GType nc_recomb_get_type (void) G_GNUC_CONST;
@@ -83,8 +83,8 @@ NcRecomb *nc_recomb_new_from_name (const gchar *recomb_name);
 NcRecomb *nc_recomb_ref (NcRecomb *recomb);
 void nc_recomb_free (NcRecomb *recomb);
 void nc_recomb_clear (NcRecomb **recomb);
-void nc_recomb_prepare (NcRecomb *recomb, NcHIReion *reion, NcHICosmo *cosmo);
-G_INLINE_FUNC void nc_recomb_prepare_if_needed (NcRecomb *recomb, NcHIReion *reion, NcHICosmo *cosmo);
+void nc_recomb_prepare (NcRecomb *recomb, NcHICosmo *cosmo);
+G_INLINE_FUNC void nc_recomb_prepare_if_needed (NcRecomb *recomb, NcHICosmo *cosmo);
 
 gdouble nc_recomb_HI_ion_saha (NcHICosmo *cosmo, const gdouble x);
 gdouble nc_recomb_HeI_ion_saha (NcHICosmo *cosmo, const gdouble x);
@@ -136,13 +136,12 @@ G_END_DECLS
 G_BEGIN_DECLS
 
 G_INLINE_FUNC void
-nc_recomb_prepare_if_needed (NcRecomb *recomb, NcHIReion *reion, NcHICosmo *cosmo)
+nc_recomb_prepare_if_needed (NcRecomb *recomb, NcHICosmo *cosmo)
 {
   gboolean cosmo_up = ncm_model_ctrl_update (recomb->ctrl_cosmo, NCM_MODEL (cosmo));
-  gboolean reion_up = ncm_model_ctrl_update (recomb->ctrl_reion, NCM_MODEL (reion));
 
-  if (cosmo_up || reion_up)
-    nc_recomb_prepare (recomb, reion, cosmo);
+  if (cosmo_up)
+    nc_recomb_prepare (recomb, cosmo);
 }
 
 G_INLINE_FUNC gdouble

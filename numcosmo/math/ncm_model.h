@@ -206,6 +206,7 @@ void ncm_model_add_submodel (NcmModel *model, NcmModel *submodel);
 guint ncm_model_get_submodel_len (NcmModel *model);
 NcmModel *ncm_model_peek_submodel (NcmModel *model, guint i);
 NcmModel *ncm_model_peek_submodel_by_mid (NcmModel *model, NcmModelID mid);
+gint ncm_model_peek_submodel_pos_by_mid (NcmModel *model, NcmModelID mid);
 
 /*
  * Model set functions

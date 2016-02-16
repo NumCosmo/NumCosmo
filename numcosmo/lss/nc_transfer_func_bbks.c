@@ -54,7 +54,7 @@ nc_transfer_func_bbks_new ()
 }
 
 static void
-_nc_transfer_func_bbks_prepare (NcTransferFunc *tf, NcHIReion *reion, NcHICosmo *cosmo)
+_nc_transfer_func_bbks_prepare (NcTransferFunc *tf, NcHICosmo *cosmo)
 {
   NcTransferFuncBBKS *tf_BBKS = NC_TRANSFER_FUNC_BBKS (tf);
   const gdouble T_0 = nc_hicosmo_T_gamma0 (cosmo);
