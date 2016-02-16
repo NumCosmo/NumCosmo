@@ -8,6 +8,10 @@ Profiling/*
 *.in
 !numcosmo.pc.in
 configure
+compile
+config.guess
+config.sub
+depcomp
 autom4te.cache/*
 aclocal.m4
 genchangelog.sh
@@ -16,4 +20,11 @@ examples/*.pdf
 examples/*.dat
 examples/*.fits
 examples/*.pyc
-
+docs/gtkdoc-check.trs
+docs/numcosmo-overrides.txt
+docs/numcosmo.types
+docs/references.aux
+docs/references.dvi
+docs/references.log
+docs/references.out
+docs/references.xml
