@@ -177,7 +177,7 @@ z_obs_params = ncdata.get_z_obs_params ()
 nobjects = ncdata.get_len ()
 print "# There are ", nobjects, " objects in the catalog (%d, %d)" % (lnM_obs.col_len (), z_obs.col_len ())
 
-f = open ('ca_data.txt', 'w')
+f = open ('ca_data.dat', 'w')
 
 for i in range (0, nobjects):
   row = "%d " % (i)
