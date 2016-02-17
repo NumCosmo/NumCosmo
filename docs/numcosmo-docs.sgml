@@ -59,6 +59,10 @@
       <xi:include href="xml/ncm_spline2d_gsl.xml"/>
     </section>
     <section>
+      <title>Two-point functions</title>
+      <xi:include href="xml/ncm_powspec.xml"/>
+    </section>
+    <section>
       <title>Special Functions</title>
       <xi:include href="xml/ncm_mpsf_trig_int.xml"/>
       <xi:include href="xml/ncm_mpsf_0F1.xml"/>
@@ -192,7 +196,6 @@
     <xi:include href="xml/nc_hireion.xml"/>
     <xi:include href="xml/nc_hireion_camb.xml"/>
     <xi:include href="xml/nc_hireion_camb_reparam_tau.xml"/>
-    <xi:include href="xml/nc_power_spectrum.xml"/>    
   </chapter>
 
   <chapter>

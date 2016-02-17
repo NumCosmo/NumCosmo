@@ -71,6 +71,7 @@ ncm_sources = \
 	math/ncm_spline2d_spline.c         \
 	math/ncm_spline2d_gsl.c            \
 	math/ncm_spline2d_bicubic.c        \
+	math/ncm_powspec.c                 \
 	math/ncm_func_eval.c               \
 	math/ncm_mpsf_trig_int.c           \
 	math/ncm_mpsf_sbessel.c            \
@@ -156,6 +157,7 @@ ncm_headers = \
 	math/ncm_spline2d_spline.h       \
 	math/ncm_spline2d_gsl.h          \
 	math/ncm_spline2d_bicubic.h      \
+	math/ncm_powspec.h               \
 	math/ncm_func_eval.h             \
 	math/ncm_mpsf_trig_int.h         \
 	math/ncm_mpsf_sbessel.h          \
@@ -235,7 +237,6 @@ nc_headers = \
 	nc_planck_fi_cor_tt.h         \
 	nc_cbe_precision.h            \
 	nc_cbe.h                      \
-	nc_power_spectrum.h           \
 	model/nc_hicosmo_de.h         \
 	model/nc_hicosmo_de_reparam_ok.h \
 	model/nc_hicosmo_de_linder.h  \
@@ -349,7 +350,6 @@ nc_sources = \
 	nc_planck_fi_cor_tt.c         \
 	nc_cbe_precision.c            \
 	nc_cbe.c                      \
-	nc_power_spectrum.c           \
 	model/nc_hicosmo_de.c         \
 	model/nc_hicosmo_de_reparam_ok.c \
 	model/nc_hicosmo_de_linder.c  \

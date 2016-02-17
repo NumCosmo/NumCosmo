@@ -1,12 +1,12 @@
 /***************************************************************************
- *            nc_power_spectrum.c
+ *            ncm_powspec.c
  *
  *  Tue February 16 17:00:52 2016
  *  Copyright  2016  Sandro Dias Pinto Vitenti
  *  <sandro@isoftware.com.br>
  ****************************************************************************/
 /*
- * nc_power_spectrum.c
+ * ncm_powspec.c
  * Copyright (C) 2016 Sandro Dias Pinto Vitenti <sandro@isoftware.com.br>
  *
  * numcosmo is free software: you can redistribute it and/or modify it
@@ -24,8 +24,8 @@
  */
 
 /**
- * SECTION:nc_power_spectrum
- * @title: NcPowerSpectrum
+ * SECTION:ncm_powspec
+ * @title: NcmPowspec
  * @short_description: Abstrac class for power spectrum implementation.
  *
  * This module comprises the set of functions to compute a power spectrum and
@@ -38,7 +38,7 @@
 #endif /* HAVE_CONFIG_H */
 #include "build_cfg.h"
 
-#include "nc_power_spectrum.h"
+#include "math/ncm_powspec.h"
 #include "math/ncm_serialize.h"
 #include "math/ncm_cfg.h"
 
@@ -51,10 +51,10 @@ enum
   PROP_KMAX
 };
 
-G_DEFINE_ABSTRACT_TYPE (NcPowerSpectrum, nc_power_spectrum, G_TYPE_OBJECT);
+G_DEFINE_ABSTRACT_TYPE (NcmPowspec, ncm_powspec, G_TYPE_OBJECT);
 
 static void
-nc_power_spectrum_init (NcPowerSpectrum *powspec)
+ncm_powspec_init (NcmPowspec *powspec)
 {
   powspec->zi   = 0.0;
   powspec->zf   = 0.0;
@@ -65,43 +65,43 @@ nc_power_spectrum_init (NcPowerSpectrum *powspec)
 }
 
 static void
-nc_power_spectrum_dispose (GObject *object)
+ncm_powspec_dispose (GObject *object)
 {
-  NcPowerSpectrum *powspec = NC_POWER_SPECTRUM (object);
+  NcmPowspec *powspec = NCM_POWSPEC (object);
 
   ncm_model_ctrl_clear (&powspec->ctrl_cosmo);
 
   /* Chain up : end */
-  G_OBJECT_CLASS (nc_power_spectrum_parent_class)->dispose (object);
+  G_OBJECT_CLASS (ncm_powspec_parent_class)->dispose (object);
 }
 
 static void
-nc_power_spectrum_finalize (GObject *object)
+ncm_powspec_finalize (GObject *object)
 {
 
   /* Chain up : end */
-  G_OBJECT_CLASS (nc_power_spectrum_parent_class)->finalize (object);
+  G_OBJECT_CLASS (ncm_powspec_parent_class)->finalize (object);
 }
 
 static void
-nc_power_spectrum_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
+ncm_powspec_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
 {
-  NcPowerSpectrum *powspec = NC_POWER_SPECTRUM (object);
-  g_return_if_fail (NC_IS_POWER_SPECTRUM (object));
+  NcmPowspec *powspec = NCM_POWSPEC (object);
+  g_return_if_fail (NCM_IS_POWSPEC (object));
 
   switch (prop_id)
   {
     case PROP_ZI:
-      nc_power_spectrum_set_zi (powspec, g_value_get_double (value));
+      ncm_powspec_set_zi (powspec, g_value_get_double (value));
       break;
     case PROP_ZF:
-      nc_power_spectrum_set_zf (powspec, g_value_get_double (value));
+      ncm_powspec_set_zf (powspec, g_value_get_double (value));
       break;
     case PROP_KMIN:
-      nc_power_spectrum_set_kmin (powspec, g_value_get_double (value));
+      ncm_powspec_set_kmin (powspec, g_value_get_double (value));
       break;
     case PROP_KMAX:
-      nc_power_spectrum_set_kmax (powspec, g_value_get_double (value));
+      ncm_powspec_set_kmax (powspec, g_value_get_double (value));
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -110,10 +110,10 @@ nc_power_spectrum_set_property (GObject *object, guint prop_id, const GValue *va
 }
 
 static void
-nc_power_spectrum_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
+ncm_powspec_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
 {
-  NcPowerSpectrum *powspec = NC_POWER_SPECTRUM (object);
-  g_return_if_fail (NC_IS_POWER_SPECTRUM (object));
+  NcmPowspec *powspec = NCM_POWSPEC (object);
+  g_return_if_fail (NCM_IS_POWSPEC (object));
 
   switch (prop_id)
   {
@@ -135,19 +135,19 @@ nc_power_spectrum_get_property (GObject *object, guint prop_id, GValue *value, G
   }
 }
 
-static void _nc_power_spectrum_prepare (NcPowerSpectrum *powspec, NcHICosmo *cosmo) { g_error ("_nc_power_spectrum_prepare: no default implementation, all children must implement it."); } 
-static gdouble _nc_power_spectrum_eval (NcPowerSpectrum *powspec, NcHICosmo *cosmo, const gdouble z, const gdouble k) { g_error ("_nc_power_spectrum_eval: no default implementation, all children must implement it."); return 0.0; }
+static void _ncm_powspec_prepare (NcmPowspec *powspec, NcHICosmo *cosmo) { g_error ("_ncm_powspec_prepare: no default implementation, all children must implement it."); } 
+static gdouble _ncm_powspec_eval (NcmPowspec *powspec, NcHICosmo *cosmo, const gdouble z, const gdouble k) { g_error ("_ncm_powspec_eval: no default implementation, all children must implement it."); return 0.0; }
 
 static void
-nc_power_spectrum_class_init (NcPowerSpectrumClass *klass)
+ncm_powspec_class_init (NcmPowspecClass *klass)
 {
   GObjectClass* object_class = G_OBJECT_CLASS (klass);
 
-  object_class->set_property = nc_power_spectrum_set_property;
-  object_class->get_property = nc_power_spectrum_get_property;
+  object_class->set_property = ncm_powspec_set_property;
+  object_class->get_property = ncm_powspec_get_property;
 
-  object_class->dispose      = nc_power_spectrum_dispose;
-  object_class->finalize     = nc_power_spectrum_finalize;
+  object_class->dispose      = ncm_powspec_dispose;
+  object_class->finalize     = ncm_powspec_finalize;
 
   g_object_class_install_property (object_class,
                                    PROP_ZI,
@@ -181,118 +181,118 @@ nc_power_spectrum_class_init (NcPowerSpectrumClass *klass)
                                                         0.0, G_MAXDOUBLE, 1.0e5,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
-  klass->prepare = &_nc_power_spectrum_prepare;
-  klass->eval    = &_nc_power_spectrum_eval;
+  klass->prepare = &_ncm_powspec_prepare;
+  klass->eval    = &_ncm_powspec_eval;
 }
 
 /**
- * nc_power_spectrum_ref:
- * @powspec: a #NcPowerSpectrum
+ * ncm_powspec_ref:
+ * @powspec: a #NcmPowspec
  *
  * Increases the reference count of @powspec by one.
  *
  * Returns: (transfer full): @powspec.
  */
-NcPowerSpectrum *
-nc_power_spectrum_ref (NcPowerSpectrum *powspec)
+NcmPowspec *
+ncm_powspec_ref (NcmPowspec *powspec)
 {
   return g_object_ref (powspec);
 }
 
 /**
- * nc_power_spectrum_free:
- * @powspec: a #NcPowerSpectrum
+ * ncm_powspec_free:
+ * @powspec: a #NcmPowspec
  *
  * Decreases the reference count of @powspec by one.
  *
  */
 void 
-nc_power_spectrum_free (NcPowerSpectrum *powspec)
+ncm_powspec_free (NcmPowspec *powspec)
 {
   g_object_unref (powspec);
 }
 
 /**
- * nc_power_spectrum_clear:
- * @powspec: a #NcPowerSpectrum
+ * ncm_powspec_clear:
+ * @powspec: a #NcmPowspec
  *
  * If *@powspec is different from NULL, decreases the reference count of 
  * *@powspec by one and sets *@powspec to NULL.
  *
  */
 void 
-nc_power_spectrum_clear (NcPowerSpectrum **powspec)
+ncm_powspec_clear (NcmPowspec **powspec)
 {
   g_clear_object (powspec);
 }
 
 /**
- * nc_power_spectrum_set_zi:
- * @powspec: a #NcPowerSpectrum
+ * ncm_powspec_set_zi:
+ * @powspec: a #NcmPowspec
  * @zi: initial redshift $z_i$
  * 
  * Sets the initial redshift $z_i$.
  *
  */
 void 
-nc_power_spectrum_set_zi (NcPowerSpectrum *powspec, const gdouble zi)
+ncm_powspec_set_zi (NcmPowspec *powspec, const gdouble zi)
 {
   powspec->zi = zi;
 }
 
 /**
- * nc_power_spectrum_set_zf:
- * @powspec: a #NcPowerSpectrum
+ * ncm_powspec_set_zf:
+ * @powspec: a #NcmPowspec
  * @zf: minimum redshift $z_f$
  * 
  * Sets the final redshift $z_i$.
  *
  */
 void 
-nc_power_spectrum_set_zf (NcPowerSpectrum *powspec, const gdouble zf)
+ncm_powspec_set_zf (NcmPowspec *powspec, const gdouble zf)
 {
   powspec->zf = zf;
 }
 
 /**
- * nc_power_spectrum_set_kmin:
- * @powspec: a #NcPowerSpectrum
+ * ncm_powspec_set_kmin:
+ * @powspec: a #NcmPowspec
  * @kmin: minimum mode $k_\mathrm{min}$
  * 
  * Sets the minimum mode value $k_\mathrm{min}$.
  *
  */
 void 
-nc_power_spectrum_set_kmin (NcPowerSpectrum *powspec, const gdouble kmin)
+ncm_powspec_set_kmin (NcmPowspec *powspec, const gdouble kmin)
 {
   powspec->kmin = kmin;
 }
 
 /**
- * nc_power_spectrum_set_kmax:
- * @powspec: a #NcPowerSpectrum
+ * ncm_powspec_set_kmax:
+ * @powspec: a #NcmPowspec
  * @kmax: maxmimum mode $k_\mathrm{max}$
  * 
  * Sets the maximum mode value $k_\mathrm{max}$.
  *
  */
 void 
-nc_power_spectrum_set_kmax (NcPowerSpectrum *powspec, const gdouble kmax)
+ncm_powspec_set_kmax (NcmPowspec *powspec, const gdouble kmax)
 {
   powspec->kmax = kmax;
 }
 
 /**
- * nc_power_spectrum_prepare:
- * @powspec: a #NcPowerSpectrum
+ * ncm_powspec_prepare:
+ * @powspec: a #NcmPowspec
  * @cosmo: a #NcHICosmo
  * 
  * Prepares the power spectrum @powspec using the cosmology @cosmo.
  * 
  */
 /**
- * nc_power_spectrum_prepare_if_needed:
- * @powspec: a #NcPowerSpectrum
+ * ncm_powspec_prepare_if_needed:
+ * @powspec: a #NcmPowspec
  * @cosmo: a #NcHICosmo
  *
  * Prepare the object using the model @cosmo if it was changed
@@ -300,8 +300,8 @@ nc_power_spectrum_set_kmax (NcPowerSpectrum *powspec, const gdouble kmax)
  *
  */
 /**
- * nc_power_spectrum_eval:
- * @powspec: a #NcPowerSpectrum
+ * ncm_powspec_eval:
+ * @powspec: a #NcmPowspec
  * @cosmo: a #NcHICosmo
  * @z: redshift $z$
  * @k: mode $k$
