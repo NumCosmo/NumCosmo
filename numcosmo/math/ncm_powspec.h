@@ -34,24 +34,24 @@
 G_BEGIN_DECLS
 
 #define NCM_TYPE_POWSPEC             (ncm_powspec_get_type ())
-#define NCM_POWSPEC(obj)             (G_TYPE_CHECK_INSTANCE_CAST ((obj), NCM_TYPE_POWSPEC, NcPowerSpectrum))
-#define NCM_POWSPEC_CLASS(klass)     (G_TYPE_CHECK_CLASS_CAST ((klass), NCM_TYPE_POWSPEC, NcPowerSpectrumClass))
+#define NCM_POWSPEC(obj)             (G_TYPE_CHECK_INSTANCE_CAST ((obj), NCM_TYPE_POWSPEC, NcmPowspec))
+#define NCM_POWSPEC_CLASS(klass)     (G_TYPE_CHECK_CLASS_CAST ((klass), NCM_TYPE_POWSPEC, NcmPowspecClass))
 #define NCM_IS_POWSPEC(obj)          (G_TYPE_CHECK_INSTANCE_TYPE ((obj), NCM_TYPE_POWSPEC))
 #define NCM_IS_POWSPEC_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE ((klass), NCM_TYPE_POWSPEC))
-#define NCM_POWSPEC_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS ((obj), NCM_TYPE_POWSPEC, NcPowerSpectrumClass))
+#define NCM_POWSPEC_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS ((obj), NCM_TYPE_POWSPEC, NcmPowspecClass))
 
-typedef struct _NcPowerSpectrumClass NcPowerSpectrumClass;
-typedef struct _NcPowerSpectrum NcPowerSpectrum;
+typedef struct _NcmPowspecClass NcmPowspecClass;
+typedef struct _NcmPowspec NcmPowspec;
 
-struct _NcPowerSpectrumClass
+struct _NcmPowspecClass
 {
   /*< private > */
   GObjectClass parent_class;
-  void (*prepare) (NcPowerSpectrum *powspec, NcHICosmo *cosmo);
-  gdouble (*eval) (NcPowerSpectrum *powspec, NcHICosmo *cosmo, const gdouble z, const gdouble k);
+  void (*prepare) (NcmPowspec *powspec, NcmModel *model);
+  gdouble (*eval) (NcmPowspec *powspec, NcmModel *model, const gdouble z, const gdouble k);
 };
 
-struct _NcPowerSpectrum
+struct _NcmPowspec
 {
   /*< private > */
   GObject parent_instance;
@@ -59,24 +59,24 @@ struct _NcPowerSpectrum
   gdouble zf;
   gdouble kmin;
   gdouble kmax;
-  NcmModelCtrl *ctrl_cosmo;
+  NcmModelCtrl *ctrl;
 };
 
 GType ncm_powspec_get_type (void) G_GNUC_CONST;
 
-NcPowerSpectrum *ncm_powspec_ref (NcPowerSpectrum *powspec);
-void ncm_powspec_free (NcPowerSpectrum *powspec);
-void ncm_powspec_clear (NcPowerSpectrum **powspec);
+NcmPowspec *ncm_powspec_ref (NcmPowspec *powspec);
+void ncm_powspec_free (NcmPowspec *powspec);
+void ncm_powspec_clear (NcmPowspec **powspec);
 
-void ncm_powspec_set_zi (NcPowerSpectrum *powspec, const gdouble zi);
-void ncm_powspec_set_zf (NcPowerSpectrum *powspec, const gdouble zf);
+void ncm_powspec_set_zi (NcmPowspec *powspec, const gdouble zi);
+void ncm_powspec_set_zf (NcmPowspec *powspec, const gdouble zf);
 
-void ncm_powspec_set_kmin (NcPowerSpectrum *powspec, const gdouble kmin);
-void ncm_powspec_set_kmax (NcPowerSpectrum *powspec, const gdouble kmax);
+void ncm_powspec_set_kmin (NcmPowspec *powspec, const gdouble kmin);
+void ncm_powspec_set_kmax (NcmPowspec *powspec, const gdouble kmax);
 
-G_INLINE_FUNC void ncm_powspec_prepare (NcPowerSpectrum *powspec, NcHICosmo *cosmo);
-G_INLINE_FUNC void ncm_powspec_prepare_if_needed (NcPowerSpectrum *powspec, NcHICosmo *cosmo);
-G_INLINE_FUNC gdouble ncm_powspec_eval (NcPowerSpectrum *powspec, NcHICosmo *cosmo, const gdouble z, const gdouble k);
+G_INLINE_FUNC void ncm_powspec_prepare (NcmPowspec *powspec, NcmModel *model);
+G_INLINE_FUNC void ncm_powspec_prepare_if_needed (NcmPowspec *powspec, NcmModel *model);
+G_INLINE_FUNC gdouble ncm_powspec_eval (NcmPowspec *powspec, NcmModel *model, const gdouble z, const gdouble k);
 
 G_END_DECLS
 
@@ -90,25 +90,25 @@ G_END_DECLS
 G_BEGIN_DECLS
 
 G_INLINE_FUNC void 
-ncm_powspec_prepare (NcPowerSpectrum *powspec, NcHICosmo *cosmo)
+ncm_powspec_prepare (NcmPowspec *powspec, NcmModel *model)
 {
-  NCM_POWSPEC_GET_CLASS (powspec)->prepare (powspec, cosmo);
+  NCM_POWSPEC_GET_CLASS (powspec)->prepare (powspec, model);
 }
 
 G_INLINE_FUNC void
-ncm_powspec_prepare_if_needed (NcPowerSpectrum *powspec, NcHICosmo *cosmo)
+ncm_powspec_prepare_if_needed (NcmPowspec *powspec, NcmModel *model)
 {
-  gboolean cosmo_up = ncm_model_ctrl_update (powspec->ctrl_cosmo, NCM_MODEL (cosmo));
+  gboolean model_up = ncm_model_ctrl_update (powspec->ctrl, NCM_MODEL (model));
 
-  if (cosmo_up)
-    ncm_powspec_prepare (powspec, cosmo);
+  if (model_up)
+    ncm_powspec_prepare (powspec, model);
 }
 
 
 G_INLINE_FUNC gdouble 
-ncm_powspec_eval (NcPowerSpectrum *powspec, NcHICosmo *cosmo, const gdouble z, const gdouble k)
+ncm_powspec_eval (NcmPowspec *powspec, NcmModel *model, const gdouble z, const gdouble k)
 {
-  return NCM_POWSPEC_GET_CLASS (powspec)->eval (powspec, cosmo, z, k);
+  return NCM_POWSPEC_GET_CLASS (powspec)->eval (powspec, model, z, k);
 }
 
 G_END_DECLS

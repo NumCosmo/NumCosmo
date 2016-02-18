@@ -25,6 +25,7 @@ cosmo = Nc.HICosmo.new_from_name (Nc.HICosmo, "NcHICosmoDEXcdm")
 #  New homogeneous and isotropic reionization object.
 #
 reion = Nc.HIReionCamb.new ()
+cosmo.add_submodel (reion)
 
 #
 #  New cosmological distance objects optimizied to perform calculations
@@ -92,7 +93,7 @@ ncdata = Nc.DataClusterNCount.new (cad)
 #  Creating a new Modelset and set cosmo as the HICosmo model to be used
 #  and cluster_m as the distribution of the mass-observable relation
 #
-mset = Ncm.MSet.new_array ([reion, cosmo, cluster_z, cluster_m])
+mset = Ncm.MSet.new_array ([cosmo, cluster_z, cluster_m])
 
 #
 #  Setting values for the cosmological model, those not set stay in the

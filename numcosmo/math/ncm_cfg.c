@@ -44,6 +44,7 @@
 #include "math/ncm_spline2d_bicubic.h"
 #include "math/ncm_spline2d_gsl.h"
 #include "math/ncm_spline2d_spline.h"
+#include "math/ncm_powspec.h"
 #include "math/ncm_model.h"
 #include "math/ncm_model_ctrl.h"
 #include "math/ncm_model_builder.h"
@@ -113,7 +114,6 @@
 #include "nc_snia_dist_cov.h"
 #include "nc_planck_fi.h"
 #include "nc_planck_fi_cor_tt.h"
-#include "nc_power_spectrum.h"
 #include "data/nc_data_bao_a.h"
 #include "data/nc_data_bao_dv.h"
 #include "data/nc_data_bao_dvdv.h"
@@ -283,6 +283,8 @@ ncm_cfg_init (void)
   ncm_cfg_register_obj (NCM_TYPE_SPLINE2D_GSL);
   ncm_cfg_register_obj (NCM_TYPE_SPLINE2D_SPLINE);
 
+  ncm_cfg_register_obj (NCM_TYPE_POWSPEC);
+  
   ncm_cfg_register_obj (NCM_TYPE_MODEL);
   ncm_cfg_register_obj (NCM_TYPE_MODEL_CTRL);
   ncm_cfg_register_obj (NCM_TYPE_MODEL_BUILDER);
@@ -309,8 +311,6 @@ ncm_cfg_init (void)
   ncm_cfg_register_obj (NC_TYPE_HIPRIM_ATAN);
 
   ncm_cfg_register_obj (NC_TYPE_CBE_PRECISION);
-
-  ncm_cfg_register_obj (NC_TYPE_POWER_SPECTRUM);
 
   ncm_cfg_register_obj (NC_TYPE_WINDOW);
   ncm_cfg_register_obj (NC_TYPE_WINDOW_TOPHAT);

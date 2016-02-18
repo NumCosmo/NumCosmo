@@ -24,7 +24,8 @@ cosmo = Nc.HICosmo.new_from_name (Nc.HICosmo, "NcHICosmoDEXcdm")
 #
 #  New homogeneous and isotropic reionization object.
 #
-reion = Nc.HIReionCamb.new ()
+reion = Nc.HIReionCamb.new () 
+cosmo.add_submodel (reion)
 
 #
 #  New cosmological distance objects optimizied to perform calculations
@@ -131,7 +132,7 @@ kha = []
 Ta = []
 Pma = []
 
-tf.prepare (reion, cosmo)
+tf.prepare (cosmo)
 
 for i in range (0, np):
   lnkh = log (1e-4) +  log (1e7) * divfac * i
@@ -163,7 +164,7 @@ plt.clf ()
 # amplitude from the sigma8 parameter.
 #
 
-vp.prepare (reion, cosmo)
+vp.prepare (cosmo)
 
 Dz = gf.eval (cosmo, 0.3)
 A  = vp.sigma8_sqrtvar0 (cosmo)
@@ -202,7 +203,7 @@ plt.clf ()
 
 mf.set_area_sd (200.0)
 mf.set_eval_limits (cosmo, log (1e14), log(1e16), 0.0, 2.0)
-mf.prepare (reion, cosmo)
+mf.prepare (cosmo)
 
 dndza = []
 

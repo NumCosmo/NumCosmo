@@ -61,7 +61,7 @@ ncm_powspec_init (NcmPowspec *powspec)
   powspec->kmin = 0.0;
   powspec->kmax = 0.0;
 
-  powspec->ctrl_cosmo = ncm_model_ctrl_new (NULL);
+  powspec->ctrl = ncm_model_ctrl_new (NULL);
 }
 
 static void
@@ -69,7 +69,7 @@ ncm_powspec_dispose (GObject *object)
 {
   NcmPowspec *powspec = NCM_POWSPEC (object);
 
-  ncm_model_ctrl_clear (&powspec->ctrl_cosmo);
+  ncm_model_ctrl_clear (&powspec->ctrl);
 
   /* Chain up : end */
   G_OBJECT_CLASS (ncm_powspec_parent_class)->dispose (object);
@@ -135,8 +135,8 @@ ncm_powspec_get_property (GObject *object, guint prop_id, GValue *value, GParamS
   }
 }
 
-static void _ncm_powspec_prepare (NcmPowspec *powspec, NcHICosmo *cosmo) { g_error ("_ncm_powspec_prepare: no default implementation, all children must implement it."); } 
-static gdouble _ncm_powspec_eval (NcmPowspec *powspec, NcHICosmo *cosmo, const gdouble z, const gdouble k) { g_error ("_ncm_powspec_eval: no default implementation, all children must implement it."); return 0.0; }
+static void _ncm_powspec_prepare (NcmPowspec *powspec, NcmModel *model) { g_error ("_ncm_powspec_prepare: no default implementation, all children must implement it."); } 
+static gdouble _ncm_powspec_eval (NcmPowspec *powspec, NcmModel *model, const gdouble z, const gdouble k) { g_error ("_ncm_powspec_eval: no default implementation, all children must implement it."); return 0.0; }
 
 static void
 ncm_powspec_class_init (NcmPowspecClass *klass)
