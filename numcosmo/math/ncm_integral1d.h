@@ -60,6 +60,7 @@ struct _NcmIntegral1d
   gdouble abstol;
   guint rule;
   gsl_integration_workspace *ws;
+  gsl_integration_cquad_workspace *cquad_ws;
 };
 
 GType ncm_integral1d_get_type (void) G_GNUC_CONST;
@@ -81,6 +82,8 @@ gdouble ncm_integral1d_get_reltol (NcmIntegral1d *int1d);
 gdouble ncm_integral1d_get_abstol (NcmIntegral1d *int1d);
 
 gdouble ncm_integral1d_eval (NcmIntegral1d *int1d, gdouble xi, gdouble xf, gpointer userdata, gdouble *err);
+gdouble ncm_integral1d_eval_gauss_hermite_p (NcmIntegral1d *int1d, gpointer userdata, gdouble *err);
+gdouble ncm_integral1d_eval_gauss_hermite (NcmIntegral1d *int1d, gpointer userdata, gdouble *err);
 
 #define NCM_INTEGRAL1D_DEFAULT_PARTITION 100000
 #define NCM_INTEGRAL1D_DEFAULT_ALG 6
