@@ -309,6 +309,7 @@
 #include "math/ncm_mset.h"
 #include "math/ncm_serialize.h"
 #include "math/ncm_cfg.h"
+#include "math/ncm_obj_array.h"
 
 enum
 {
@@ -320,52 +321,10 @@ enum
   PROP_IMPLEMENTATION,
   PROP_PTYPES,
   PROP_REPARAM,
+  PROP_SUBMODEL_ARRAY,
 };
 
 G_DEFINE_ABSTRACT_TYPE (NcmModel, ncm_model, G_TYPE_OBJECT);
-
-/**
- * ncm_model_dup:
- * @model: a #NcmModel
- * @ser: a #NcmSerialize
- *
- * Duplicates @model by serializing and deserializing it.
- *
- * Returns: (transfer full): a duplicate of @model.
- */
-NcmModel *
-ncm_model_dup (NcmModel *model, NcmSerialize *ser)
-{
-  return NCM_MODEL (ncm_serialize_dup_obj (ser, G_OBJECT (model)));
-}
-
-/**
- * ncm_model_free:
- * @model: a #NcmModel
- *
- * Atomically decrements the reference count of @model by one. If the reference count drops to 0,
- * all memory allocated by @model is released.
- *
- */
-void
-ncm_model_free (NcmModel *model)
-{
-  g_object_unref (model);
-}
-
-/**
- * ncm_model_clear:
- * @model: a #NcmModel
- *
- * Atomically decrements the reference count of @model by one. If the reference count drops to 0,
- * all memory allocated by @model is released. Set pointer to NULL.
- *
- */
-void
-ncm_model_clear (NcmModel **model)
-{
-  g_clear_object (model);
-}
 
 static void
 ncm_model_init (NcmModel *model)
@@ -382,6 +341,11 @@ ncm_model_init (NcmModel *model)
   model->skey    = 0;
   model->reparam = NULL;
   model->ptypes  = g_array_new (FALSE, TRUE, sizeof (NcmParamType));
+
+  model->submodel_array   = g_ptr_array_new ();
+  model->submodel_mid_pos = g_hash_table_new_full (g_direct_hash, g_direct_equal, NULL, NULL);
+
+  g_ptr_array_set_free_func (model->submodel_array, (GDestroyNotify) ncm_model_free);
 }
 
 static void
@@ -469,35 +433,14 @@ _ncm_model_dispose (GObject *object)
 
   ncm_reparam_clear (&model->reparam);
 
-  if (model->vparam_len != NULL)
-  {
-    g_array_unref (model->vparam_len);
-    model->vparam_len = NULL;
-  }
+  g_clear_pointer (&model->vparam_len,       g_array_unref);
+  g_clear_pointer (&model->vparam_pos,       g_array_unref);
+  g_clear_pointer (&model->ptypes,           g_array_unref);
+  g_clear_pointer (&model->sparams,          g_ptr_array_unref);
+  g_clear_pointer (&model->sparams_name_id,  g_hash_table_unref);
 
-  if (model->vparam_pos != NULL)
-  {
-    g_array_unref (model->vparam_pos);
-    model->vparam_pos = NULL;
-  }
-
-  if (model->ptypes != NULL)
-  {
-    g_array_unref (model->ptypes);
-    model->ptypes = NULL;
-  }
-
-  if (model->sparams != NULL)
-  {
-    g_ptr_array_unref (model->sparams);
-    model->sparams = NULL;
-  }
-
-  if (model->sparams_name_id != NULL)
-  {
-    g_hash_table_unref (model->sparams_name_id);
-    model->sparams_name_id = NULL;
-  }
+  g_clear_pointer (&model->submodel_array,   g_ptr_array_unref);
+  g_clear_pointer (&model->submodel_mid_pos, g_hash_table_unref);
 
   /* Chain up : end */
   G_OBJECT_CLASS (ncm_model_parent_class)->dispose (object);
@@ -506,6 +449,7 @@ _ncm_model_dispose (GObject *object)
 static void
 _ncm_model_finalize (GObject *object)
 {
+
   /* Chain up : end */
   G_OBJECT_CLASS (ncm_model_parent_class)->finalize (object);
 }
@@ -521,6 +465,23 @@ _ncm_model_set_property (GObject *object, guint prop_id, const GValue *value, GP
     case PROP_REPARAM:
       ncm_model_set_reparam (model, g_value_get_object (value));
       break;
+    case PROP_SUBMODEL_ARRAY:
+    {
+      NcmObjArray *oa = (NcmObjArray *) g_value_get_boxed (value);
+      if (oa != NULL)
+      {
+        guint i;
+        for (i = 0; i < oa->len; i++)
+        {
+          NcmModel *submodel = NCM_MODEL (ncm_obj_array_peek (oa, i));
+          if (!NCM_MODEL_GET_CLASS (submodel)->is_submodel)
+            g_error ("_ncm_model_set_property: NcmModel submodel array can only contain submodels `%s'.",
+                     G_OBJECT_TYPE_NAME (submodel));
+          ncm_model_add_submodel (model, submodel);
+        }
+      }
+      break;
+    }
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
       break;
@@ -558,6 +519,20 @@ _ncm_model_get_property (GObject *object, guint prop_id, GValue *value, GParamSp
     case PROP_PTYPES:
       g_value_set_boxed (value, model->ptypes);
       break;
+    case PROP_SUBMODEL_ARRAY:
+    {
+      NcmObjArray *oa = ncm_obj_array_new ();
+      guint i;
+
+      for (i = 0; i < model->submodel_array->len; i++)
+      {
+        NcmModel *submodel = g_ptr_array_index (model->submodel_array, i);
+        ncm_obj_array_add (oa, G_OBJECT (submodel));
+      }
+
+      g_value_take_boxed (value, oa);
+      break;
+    }
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
       break;
@@ -570,6 +545,8 @@ _ncm_model_valid (NcmModel *model)
   NCM_UNUSED (model);
   return TRUE;
 }
+
+static void _ncm_model_add_submodel (NcmModel *model, NcmModel *submodel);
 
 static void
 ncm_model_class_init (NcmModelClass *klass)
@@ -587,6 +564,8 @@ ncm_model_class_init (NcmModelClass *klass)
 
   klass->model_id          = -1;
   klass->can_stack         = FALSE;
+  klass->main_model_id     = -1;
+  klass->is_submodel       = FALSE;
   klass->name              = NULL;
   klass->nick              = NULL;
   klass->nonparam_prop_len = 0;
@@ -648,6 +627,15 @@ ncm_model_class_init (NcmModelClass *klass)
                                                          "Model reparametrization",
                                                          NCM_TYPE_REPARAM,
                                                          G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
+  g_object_class_install_property (object_class,
+                                   PROP_SUBMODEL_ARRAY,
+                                   g_param_spec_boxed ("submodel-array",
+                                                       NULL,
+                                                       "NcmModel array of submodels",
+                                                       NCM_TYPE_OBJ_ARRAY,
+                                                       G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  klass->add_submodel = &_ncm_model_add_submodel;
 }
 
 /*
@@ -1125,6 +1113,49 @@ ncm_model_class_check_params_info (NcmModelClass *model_class)
         g_error ("Class (%s) uses non parameter properties but does not set model_class->get_property.", model_class->name ? model_class->name : "no-name");
     }
   }
+}
+
+/**
+ * ncm_model_dup:
+ * @model: a #NcmModel
+ * @ser: a #NcmSerialize
+ *
+ * Duplicates @model by serializing and deserializing it.
+ *
+ * Returns: (transfer full): a duplicate of @model.
+ */
+NcmModel *
+ncm_model_dup (NcmModel *model, NcmSerialize *ser)
+{
+  return NCM_MODEL (ncm_serialize_dup_obj (ser, G_OBJECT (model)));
+}
+
+/**
+ * ncm_model_free:
+ * @model: a #NcmModel
+ *
+ * Atomically decrements the reference count of @model by one. If the reference count drops to 0,
+ * all memory allocated by @model is released.
+ *
+ */
+void
+ncm_model_free (NcmModel *model)
+{
+  g_object_unref (model);
+}
+
+/**
+ * ncm_model_clear:
+ * @model: a #NcmModel
+ *
+ * Atomically decrements the reference count of @model by one. If the reference count drops to 0,
+ * all memory allocated by @model is released. Set pointer to NULL.
+ *
+ */
+void
+ncm_model_clear (NcmModel **model)
+{
+  g_clear_object (model);
 }
 
 /**
@@ -2113,8 +2144,135 @@ ncm_model_param_get_by_name (NcmModel *model, const gchar *param_name)
 gdouble
 ncm_model_orig_param_get_by_name (NcmModel *model, const gchar *param_name)
 {
-  guint i;
+  guint i = 0;
   gboolean has_param = ncm_model_orig_param_index_from_name (model, param_name, &i);
   g_assert (has_param);
+
   return ncm_model_orig_param_get (model, i);
+}
+
+/**
+ * ncm_model_add_submodel: (virtual add_submodel)
+ * @model: a #NcmModel
+ * @submodel: a #NcmModel
+ *
+ * Adds the @submodel to the @model submodels.
+ * 
+ */
+void 
+ncm_model_add_submodel (NcmModel *model, NcmModel *submodel)
+{
+  NCM_MODEL_GET_CLASS (model)->add_submodel (model, submodel);
+}
+
+static void 
+_ncm_model_add_submodel (NcmModel *model, NcmModel *submodel)
+{
+  NcmModelClass *submodel_class = NCM_MODEL_GET_CLASS (submodel);
+  const NcmModelID main_model_id = submodel_class->main_model_id;
+  const gboolean is_submodel     = submodel_class->is_submodel;
+  const NcmModelID submodel_mid  = ncm_model_id (submodel);
+  gpointer pos_ptr, orig_key;
+
+  g_assert (is_submodel);
+  g_assert_cmpint (main_model_id, ==, ncm_model_id (model));
+
+  if (g_hash_table_lookup_extended (model->submodel_mid_pos, GINT_TO_POINTER (submodel_mid), &orig_key, &pos_ptr))
+  {
+    const gint pos = GPOINTER_TO_INT (pos_ptr);
+    g_assert_cmpint (pos, >, -1);
+    g_assert_cmpint (pos, <, model->submodel_array->len);
+    {
+      NcmModel *old_submodel = g_ptr_array_index (model->submodel_array, pos);
+      g_ptr_array_index (model->submodel_array, pos) = ncm_model_ref (submodel);
+      ncm_model_free (old_submodel);
+    }
+  }
+  else
+  {
+    gint pos = model->submodel_array->len;
+    ncm_model_ref (submodel);
+    g_ptr_array_add (model->submodel_array, submodel);
+    g_hash_table_insert (model->submodel_mid_pos, GINT_TO_POINTER (submodel_mid), GINT_TO_POINTER (pos));
+  }
+}
+
+/**
+ * ncm_model_get_submodel_len:
+ * @model: a #NcmModel
+ *
+ * Gets the number of submodels set in @model.
+ *
+ * Returns: the number of submodels set in @model.
+ */
+guint 
+ncm_model_get_submodel_len (NcmModel *model)
+{
+  return model->submodel_array->len;
+}
+
+/**
+ * ncm_model_peek_submodel:
+ * @model: a #NcmModel
+ * @i: submodel position
+ *
+ * Gets the @i-th submodel.
+ *
+ * Returns: (transfer none): a #NcmModel.
+ */
+NcmModel *
+ncm_model_peek_submodel (NcmModel *model, guint i)
+{
+  g_assert_cmpuint (i, <, ncm_model_get_submodel_len (model));
+  return g_ptr_array_index (model->submodel_array, i);
+}
+
+/**
+ * ncm_model_peek_submodel_by_mid:
+ * @model: a #NcmModel
+ * @mid: a #NcmModelID
+ *
+ * Gets the submodel if type #NcmModelID @mid.
+ *
+ * Returns: (transfer none): a #NcmModel.
+ */
+NcmModel *
+ncm_model_peek_submodel_by_mid (NcmModel *model, NcmModelID mid)
+{
+  gpointer pos_ptr, orig_key;
+  if (g_hash_table_lookup_extended (model->submodel_mid_pos, GINT_TO_POINTER (mid), &orig_key, &pos_ptr))
+  {
+    gint pos = GPOINTER_TO_INT (pos_ptr);
+    g_assert_cmpint (pos, >, -1);
+    g_assert_cmpint (pos, <, model->submodel_array->len);
+    
+    return g_ptr_array_index (model->submodel_array, pos);
+  }
+  else
+    return NULL;
+}
+
+/**
+ * ncm_model_peek_submodel_pos_by_mid:
+ * @model: a #NcmModel
+ * @mid: a #NcmModelID
+ *
+ * Gets the submodel type #NcmModelID @mid position.
+ *
+ * Returns: (transfer none): the @mid position or -1 if not found.
+ */
+gint
+ncm_model_peek_submodel_pos_by_mid (NcmModel *model, NcmModelID mid)
+{
+  gpointer pos_ptr, orig_key;
+  if (g_hash_table_lookup_extended (model->submodel_mid_pos, GINT_TO_POINTER (mid), &orig_key, &pos_ptr))
+  {
+    gint pos = GPOINTER_TO_INT (pos_ptr);
+    g_assert_cmpint (pos, >, -1);
+    g_assert_cmpint (pos, <, model->submodel_array->len);
+    
+    return pos;
+  }
+  else
+    return -1;
 }

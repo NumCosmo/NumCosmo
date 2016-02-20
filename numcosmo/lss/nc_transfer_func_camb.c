@@ -58,7 +58,7 @@ nc_transfer_func_camb_new ()
 }
 
 static void
-_nc_transfer_func_camb_prepare (NcTransferFunc *tf, NcHIReion *reion, NcHICosmo *cosmo)
+_nc_transfer_func_camb_prepare (NcTransferFunc *tf, NcHICosmo *cosmo)
 {
   NcTransferFuncCAMB *tf_CAMB = NC_TRANSFER_FUNC_CAMB (tf);
   FILE *camb_tf;

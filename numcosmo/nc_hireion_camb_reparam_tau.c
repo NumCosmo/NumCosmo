@@ -91,7 +91,7 @@ nc_hireion_camb_reparam_tau_get_property (GObject *object, guint prop_id, GValue
   switch (prop_id)
   {
     case PROP_COSMO:
-      g_value_set_object (value, ncm_model_ctrl_peek_model (reparam_tau->ctrl));
+      g_value_take_object (value, ncm_model_ctrl_get_model (reparam_tau->ctrl));
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -151,7 +151,7 @@ nc_hireion_camb_reparam_tau_class_init (NcHIReionCambReparamTauClass *klass)
 static gboolean
 _nc_hireion_camb_reparam_tau_old2new (NcmReparam *reparam, NcmModel *model)
 {
-  NcHICosmo *cosmo = NC_HICOSMO (ncm_model_ctrl_peek_model (NC_HIREION_CAMB_REPARAM_TAU (reparam)->ctrl));
+  NcHICosmo *cosmo = NC_HICOSMO (ncm_model_ctrl_get_model (NC_HIREION_CAMB_REPARAM_TAU (reparam)->ctrl));
   NcmVector *params = ncm_model_orig_params_peek_vector (model);
 
   ncm_vector_memcpy (reparam->new_params, params);
@@ -159,14 +159,15 @@ _nc_hireion_camb_reparam_tau_old2new (NcmReparam *reparam, NcmModel *model)
     const gdouble tau = nc_hireion_get_tau (NC_HIREION (model), cosmo);
     ncm_vector_set (reparam->new_params, NC_HIREION_CAMB_HII_HEII_Z, tau);
   }
-  
+
+  nc_hicosmo_free (cosmo);
   return TRUE;
 }
 
 static gboolean
 _nc_hireion_camb_reparam_tau_new2old (NcmReparam *reparam, NcmModel *model)
 {
-  NcHICosmo *cosmo = NC_HICOSMO (ncm_model_ctrl_peek_model (NC_HIREION_CAMB_REPARAM_TAU (reparam)->ctrl));
+  NcHICosmo *cosmo = NC_HICOSMO (ncm_model_ctrl_get_model (NC_HIREION_CAMB_REPARAM_TAU (reparam)->ctrl));
   NcmVector *params = ncm_model_orig_params_peek_vector (model);
 
   ncm_vector_memcpy (params, reparam->new_params);
@@ -177,7 +178,8 @@ _nc_hireion_camb_reparam_tau_new2old (NcmReparam *reparam, NcmModel *model)
     
     ncm_vector_set (params, NC_HIREION_CAMB_HII_HEII_Z, z_reion);
   }
-  
+
+  nc_hicosmo_free (cosmo);
   return TRUE;
 }
 

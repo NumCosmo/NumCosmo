@@ -93,8 +93,8 @@ NcMatterVar *nc_matter_var_new (NcMatterVarStrategy vs, NcWindow *wp, NcTransfer
 NcMatterVar *nc_matter_var_copy (NcMatterVar *vp);
 void nc_matter_var_free (NcMatterVar *vp);
 void nc_matter_var_clear (NcMatterVar **vp);
-void nc_matter_var_prepare (NcMatterVar *vp, NcHIReion *reion, NcHICosmo *cosmo);
-void nc_matter_var_prepare_if_needed (NcMatterVar *vp, NcHIReion *reion, NcHICosmo *cosmo);
+void nc_matter_var_prepare (NcMatterVar *vp, NcHICosmo *cosmo);
+void nc_matter_var_prepare_if_needed (NcMatterVar *vp, NcHICosmo *cosmo);
 gdouble nc_matter_var_var0 (NcMatterVar *vp, NcHICosmo *cosmo, gdouble lnR);
 gdouble nc_matter_var_dlnvar0_dR (NcMatterVar *vp, NcHICosmo *cosmo, gdouble lnR);
 gdouble nc_matter_var_dlnvar0_dlnR (NcMatterVar *vp, NcHICosmo *cosmo, gdouble lnR); 

@@ -100,8 +100,8 @@ NcClusterAbundance *nc_cluster_abundance_ref (NcClusterAbundance *cad);
 void nc_cluster_abundance_free (NcClusterAbundance *cad);
 void nc_cluster_abundance_clear (NcClusterAbundance **cad);
 
-void nc_cluster_abundance_prepare (NcClusterAbundance *cad, NcHIReion *reion, NcHICosmo *cosmo, NcClusterRedshift *clusterz, NcClusterMass *clusterm);
-G_INLINE_FUNC void nc_cluster_abundance_prepare_if_needed (NcClusterAbundance *cad, NcHIReion *reion, NcHICosmo *cosmo, NcClusterRedshift *clusterz, NcClusterMass *clusterm);
+void nc_cluster_abundance_prepare (NcClusterAbundance *cad, NcHICosmo *cosmo, NcClusterRedshift *clusterz, NcClusterMass *clusterm);
+G_INLINE_FUNC void nc_cluster_abundance_prepare_if_needed (NcClusterAbundance *cad, NcHICosmo *cosmo, NcClusterRedshift *clusterz, NcClusterMass *clusterm);
 
 void nc_cluster_abundance_prepare_inv_dNdz (NcClusterAbundance *cad, NcHICosmo *cosmo, const gdouble lnMi);
 void nc_cluster_abundance_prepare_inv_dNdlnM_z (NcClusterAbundance *cad, NcHICosmo *cosmo, const gdouble lnMi, gdouble z);
@@ -157,15 +157,14 @@ G_END_DECLS
 G_BEGIN_DECLS
 
 G_INLINE_FUNC void
-nc_cluster_abundance_prepare_if_needed (NcClusterAbundance *cad, NcHIReion *reion, NcHICosmo *cosmo, NcClusterRedshift *clusterz, NcClusterMass *clusterm)
+nc_cluster_abundance_prepare_if_needed (NcClusterAbundance *cad, NcHICosmo *cosmo, NcClusterRedshift *clusterz, NcClusterMass *clusterm)
 {
   const gboolean cosmo_up    = ncm_model_ctrl_update (cad->ctrl_cosmo, NCM_MODEL (cosmo));
-  const gboolean reion_up    = ncm_model_ctrl_update (cad->ctrl_reion, NCM_MODEL (reion));
   const gboolean clusterz_up = ncm_model_ctrl_model_update (cad->ctrl_z, NCM_MODEL (clusterz));
   const gboolean clusterm_up = ncm_model_ctrl_model_update (cad->ctrl_m, NCM_MODEL (clusterm));
 
-  if (cosmo_up || reion_up || clusterz_up || clusterm_up)
-    nc_cluster_abundance_prepare (cad, reion, cosmo, clusterz, clusterm);
+  if (cosmo_up || clusterz_up || clusterm_up)
+    nc_cluster_abundance_prepare (cad, cosmo, clusterz, clusterm);
 }
 
 G_END_DECLS

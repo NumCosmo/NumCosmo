@@ -688,7 +688,6 @@ _nc_cluster_abundance_funcs (NcClusterAbundance *cad, NcClusterRedshift *cluster
 /**
  * nc_cluster_abundance_prepare:
  * @cad: a #NcClusterAbundance
- * @reion: a #NcHIReion
  * @cosmo: a #NcHICosmo
  * @clusterz: a #NcClusterRedshift
  * @clusterm: a #NcClusterMass
@@ -697,14 +696,14 @@ _nc_cluster_abundance_funcs (NcClusterAbundance *cad, NcClusterRedshift *cluster
  *
  */
 void
-nc_cluster_abundance_prepare (NcClusterAbundance *cad, NcHIReion *reion, NcHICosmo *cosmo, NcClusterRedshift *clusterz, NcClusterMass *clusterm)
+nc_cluster_abundance_prepare (NcClusterAbundance *cad, NcHICosmo *cosmo, NcClusterRedshift *clusterz, NcClusterMass *clusterm)
 {
   _nc_cluster_abundance_funcs (cad, clusterz, clusterm);
   nc_cluster_redshift_n_limits (clusterz, &cad->zi, &cad->zf);
   nc_cluster_mass_n_limits (clusterm, cosmo, &cad->lnMi, &cad->lnMf);
 
   nc_mass_function_set_eval_limits (cad->mfp, cosmo, cad->lnMi, cad->lnMf, cad->zi, cad->zf);
-  nc_mass_function_prepare_if_needed (cad->mfp, reion, cosmo);
+  nc_mass_function_prepare_if_needed (cad->mfp, cosmo);
 
   if (cad->zi == 0.0)
     cad->zi = 1.0e-6;
@@ -713,7 +712,6 @@ nc_cluster_abundance_prepare (NcClusterAbundance *cad, NcHIReion *reion, NcHICos
   cad->log_norma = log (cad->norma);
 
   ncm_model_ctrl_update (cad->ctrl_cosmo, NCM_MODEL (cosmo));
-  ncm_model_ctrl_update (cad->ctrl_reion, NCM_MODEL (reion));
   ncm_model_ctrl_update (cad->ctrl_z, NCM_MODEL (clusterz));
   ncm_model_ctrl_update (cad->ctrl_m, NCM_MODEL (clusterm));
 }
@@ -1255,7 +1253,6 @@ nc_ca_mean_bias_Mobs_denominator (NcClusterAbundance *cad, NcHICosmo *cosmo, gdo
 /**
  * nc_cluster_abundance_prepare_if_needed:
  * @cad: a #NcClusterAbundance
- * @reion: a #NcHIReion
  * @cosmo: a #NcHICosmo
  * @clusterz: a #NcClusterRedshift
  * @clusterm: a #NcClusterMass

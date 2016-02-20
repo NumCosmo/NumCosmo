@@ -122,6 +122,9 @@ typedef gdouble (*NcHICosmoFunc0) (NcHICosmo *cosmo);
 typedef gdouble (*NcHICosmoFunc1Z) (NcHICosmo *cosmo, gdouble z);
 typedef gdouble (*NcHICosmoFunc1K) (NcHICosmo *cosmo, gdouble k);
 
+typedef struct _NcHIPrim NcHIPrim;
+typedef struct _NcHIReion NcHIReion;
+
 /**
  * NcHICosmo:
  *
@@ -133,6 +136,8 @@ struct _NcHICosmo
   /*< private >*/
   NcmModel parent_instance;
   gboolean is_eternal;
+  NcHIPrim *prim;
+  NcHIReion *reion;
 };
 
 typedef struct _NcHICosmoFuncZ
@@ -269,6 +274,9 @@ G_INLINE_FUNC gdouble nc_hicosmo_j (NcHICosmo *cosmo, gdouble z);
 
 G_INLINE_FUNC gdouble nc_hicosmo_abs_alpha (NcHICosmo *cosmo, gdouble z);
 G_INLINE_FUNC gdouble nc_hicosmo_x_alpha (NcHICosmo *cosmo, gdouble alpha);
+
+G_INLINE_FUNC NcHIPrim *nc_hicosmo_peek_prim (NcHICosmo *cosmo);
+G_INLINE_FUNC NcHIReion *nc_hicosmo_peek_reion (NcHICosmo *cosmo);
 
 GArray *nc_hicosmo_class_func_table (void);
 GArray *nc_hicosmo_class_func_z_table (void);
@@ -529,6 +537,18 @@ nc_hicosmo_abs_alpha (NcHICosmo *cosmo, gdouble z)
   const gdouble x  = 1.0 + z;
   const gdouble xb = nc_hicosmo_xb (cosmo);
   return sqrt (2.0 * log (xb / x));
+}
+
+G_INLINE_FUNC NcHIPrim *
+nc_hicosmo_peek_prim (NcHICosmo *cosmo)
+{
+  return cosmo->prim;
+}
+
+G_INLINE_FUNC NcHIReion *
+nc_hicosmo_peek_reion (NcHICosmo *cosmo)
+{
+  return cosmo->reion;
 }
 
 G_END_DECLS

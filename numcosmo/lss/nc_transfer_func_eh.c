@@ -55,7 +55,7 @@ nc_transfer_func_eh_new ()
 }
 
 static void
-_nc_transfer_func_eh_prepare (NcTransferFunc *tf, NcHIReion *reion, NcHICosmo *cosmo)
+_nc_transfer_func_eh_prepare (NcTransferFunc *tf, NcHICosmo *cosmo)
 {
   NcTransferFuncEH *tf_EH = NC_TRANSFER_FUNC_EH (tf);
   const gdouble T_0 = nc_hicosmo_T_gamma0 (cosmo);

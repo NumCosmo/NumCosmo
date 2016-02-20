@@ -265,7 +265,7 @@ nc_hicosmo_de_dispose (GObject *object)
   ncm_spline2d_clear (&cosmo_de->BBN_spline2d);
   
   /* Chain up : end */
-  G_OBJECT_CLASS (nc_hicosmo_de_parent_class)->finalize (object);
+  G_OBJECT_CLASS (nc_hicosmo_de_parent_class)->dispose (object);
 }
 
 static void

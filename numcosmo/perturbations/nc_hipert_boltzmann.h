@@ -50,7 +50,7 @@ typedef struct _NcHIPertBoltzmannClass NcHIPertBoltzmannClass;
 typedef struct _NcHIPertBoltzmann NcHIPertBoltzmann;
 
 typedef void (*NcHIPertBoltzmannCreate) (NcHIPertBoltzmann *pb, NcHICosmo *cosmo);
-typedef void (*NcHIPertBoltzmannPrepare) (NcHIPertBoltzmann *pb, NcHIPrim *prim, NcHIReion *reion, NcHICosmo *cosmo);
+typedef void (*NcHIPertBoltzmannPrepare) (NcHIPertBoltzmann *pb, NcHICosmo *cosmo);
 typedef void (*NcHIPertBoltzmannConf) (NcHIPertBoltzmann *pb);
 typedef void (*NcHIPertBoltzmannEvol) (NcHIPertBoltzmann *pb, gdouble g);
 typedef gboolean (*NcHIPertBoltzmannTest) (NcHIPertBoltzmann *pb);
@@ -196,8 +196,8 @@ guint nc_hipert_boltzmann_get_TE_lmax (NcHIPertBoltzmann *pb);
 guint nc_hipert_boltzmann_get_TB_lmax (NcHIPertBoltzmann *pb);
 guint nc_hipert_boltzmann_get_EB_lmax (NcHIPertBoltzmann *pb);
 
-void nc_hipert_boltzmann_prepare (NcHIPertBoltzmann *pb, NcHIPrim *prim, NcHIReion *reion, NcHICosmo *cosmo);
-void nc_hipert_boltzmann_prepare_if_needed (NcHIPertBoltzmann *pb, NcHIPrim *prim, NcHIReion *reion, NcHICosmo *cosmo);
+void nc_hipert_boltzmann_prepare (NcHIPertBoltzmann *pb, NcHICosmo *cosmo);
+void nc_hipert_boltzmann_prepare_if_needed (NcHIPertBoltzmann *pb, NcHICosmo *cosmo);
 
 void nc_hipert_boltzmann_get_TT_Cls (NcHIPertBoltzmann *pb, NcmVector *Cls);
 void nc_hipert_boltzmann_get_EE_Cls (NcHIPertBoltzmann *pb, NcmVector *Cls);

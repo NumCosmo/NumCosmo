@@ -99,8 +99,8 @@ void nc_mass_function_set_area (NcMassFunction *mfp, gdouble area);
 void nc_mass_function_set_prec (NcMassFunction *mfp, gdouble prec);
 void nc_mass_function_set_area_sd (NcMassFunction *mfp, gdouble area_sd);
 void nc_mass_function_set_eval_limits (NcMassFunction *mfp, NcHICosmo *cosmo, gdouble lnMi, gdouble lnMf, gdouble zi, gdouble zf);
-void nc_mass_function_prepare (NcMassFunction *mfp, NcHIReion *reion, NcHICosmo *cosmo);
-G_INLINE_FUNC void nc_mass_function_prepare_if_needed (NcMassFunction *mfp, NcHIReion *reion, NcHICosmo *cosmo);
+void nc_mass_function_prepare (NcMassFunction *mfp, NcHICosmo *cosmo);
+G_INLINE_FUNC void nc_mass_function_prepare_if_needed (NcMassFunction *mfp, NcHICosmo *cosmo);
 
 gdouble nc_mass_function_dn_dlnm (NcMassFunction *mfp, NcHICosmo *cosmo, gdouble lnM, gdouble z);
 gdouble nc_mass_function_dv_dzdomega (NcMassFunction *mfp, NcHICosmo *cosmo, gdouble z);
@@ -125,13 +125,12 @@ G_END_DECLS
 G_BEGIN_DECLS
 
 G_INLINE_FUNC void
-nc_mass_function_prepare_if_needed (NcMassFunction *mfp, NcHIReion *reion, NcHICosmo *cosmo)
+nc_mass_function_prepare_if_needed (NcMassFunction *mfp, NcHICosmo *cosmo)
 {
   gboolean cosmo_up = ncm_model_ctrl_update (mfp->ctrl_cosmo, NCM_MODEL (cosmo));
-  gboolean reion_up = ncm_model_ctrl_update (mfp->ctrl_reion, NCM_MODEL (reion));
   
-  if (cosmo_up || reion_up)
-	  nc_mass_function_prepare (mfp, reion, cosmo);
+  if (cosmo_up)
+	  nc_mass_function_prepare (mfp, cosmo);
 }
 
 G_INLINE_FUNC gdouble

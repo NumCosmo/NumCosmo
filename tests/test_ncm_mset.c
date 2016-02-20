@@ -524,7 +524,7 @@ test_ncm_mset_traps (TestNcmMSet *test, gconstpointer pdata)
 void
 test_ncm_mset_invalid_get (TestNcmMSet *test, gconstpointer pdata)
 {
-  g_assert (ncm_mset_get (test->mset, 34 * NCM_MSET_MAX_SUBMODEL + 5) != NULL);
+  g_assert (ncm_mset_get (test->mset, 34 * NCM_MSET_MAX_STACKSIZE + 5) != NULL);
 }
 
 void

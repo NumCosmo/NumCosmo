@@ -49,9 +49,9 @@ typedef struct _NcmMSet NcmMSet;
 typedef struct _NcmMSetPIndex NcmMSetPIndex;
 typedef struct _NcmMSetModelDesc NcmMSetModelDesc;
 
-#define NCM_MSET_MAX_SUBMODEL 1000
+#define NCM_MSET_MAX_STACKSIZE 1000
 #define NCM_MSET_INIT_MARRAY 32
-#define NCM_MSET_GET_BASE_MID(mid) (mid / NCM_MSET_MAX_SUBMODEL)
+#define NCM_MSET_GET_BASE_MID(mid) (mid / NCM_MSET_MAX_STACKSIZE)
 #define NCM_MSET_MID(id,pos) ((id) + pos)
 
 struct _NcmMSetModelDesc
@@ -97,7 +97,15 @@ struct _NcmMSetPIndex
 GType ncm_mset_get_type (void) G_GNUC_CONST;
 GType ncm_mset_pindex_get_type (void) G_GNUC_CONST;
 
-void ncm_mset_model_register_id (NcmModelClass *model_class, const gchar *ns, const gchar *desc, const gchar *long_desc, gboolean can_stack);
+void ncm_mset_model_register_id (NcmModelClass *model_class, const gchar *ns, const gchar *desc, const gchar *long_desc, gboolean can_stack, NcmModelID main_model_id);
+
+/**
+ * NCM_MSET_MODEL_MAIN: (skip)
+ *
+ * FIXME
+ *
+ */
+#define NCM_MSET_MODEL_MAIN (-1)
 
 /**
  * NCM_MSET_MODEL_ID_FUNC: (skip)
@@ -154,19 +162,20 @@ void ncm_mset_free (NcmMSet *mset);
 void ncm_mset_clear (NcmMSet **mset);
 
 NcmModel *ncm_mset_peek (NcmMSet *mset, NcmModelID mid);
-NcmModel *ncm_mset_peek_pos (NcmMSet *mset, NcmModelID base_mid, guint submodel_id);
+NcmModel *ncm_mset_peek_pos (NcmMSet *mset, NcmModelID base_mid, guint stackpos_id);
 NcmModel *ncm_mset_get (NcmMSet *mset, NcmModelID mid);
 NcmModel *ncm_mset_peek_array_pos (NcmMSet *mset, guint i);
 NcmModelID ncm_mset_get_mid_array_pos (NcmMSet *mset, guint i);
 void ncm_mset_remove (NcmMSet *mset, NcmModelID mid);
 void ncm_mset_set (NcmMSet *mset, NcmModel *model);
 void ncm_mset_push (NcmMSet *mset, NcmModel *model);
-void ncm_mset_set_pos (NcmMSet *mset, NcmModel *model, guint submodel_id);
+void ncm_mset_set_pos (NcmMSet *mset, NcmModel *model, guint stackpos_id);
 gboolean ncm_mset_exists (NcmMSet *mset, NcmModel *model);
-gboolean ncm_mset_exists_pos (NcmMSet *mset, NcmModel *model, guint submodel_id);
+gboolean ncm_mset_exists_pos (NcmMSet *mset, NcmModel *model, guint stackpos_id);
 gboolean ncm_mset_is_subset (NcmMSet *mset, NcmMSet *sub_mset);
 
 gint ncm_mset_get_id_by_ns (const gchar *ns);
+const gchar *ncm_mset_get_ns_by_id (gint id);
 
 void ncm_mset_set_fmap (NcmMSet *mset, const gchar *const *fmap, gboolean update_models);
 gchar **ncm_mset_get_fmap (NcmMSet *mset);

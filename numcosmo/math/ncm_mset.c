@@ -130,7 +130,8 @@ _ncm_mset_get_property (GObject *object, guint prop_id, GValue *value, GParamSpe
       for (i = 0; i < mset->model_array->len; i++)
       {
         NcmMSetItem *item = g_ptr_array_index (mset->model_array, i);
-        ncm_obj_array_add (oa, G_OBJECT (item->model));
+        if (!NCM_MODEL_GET_CLASS (item->model)->is_submodel)
+          ncm_obj_array_add (oa, G_OBJECT (item->model));
       }
       g_value_take_boxed (value, oa);
       break;
@@ -172,7 +173,11 @@ _ncm_mset_set_property (GObject *object, guint prop_id, const GValue *value, GPa
         guint i;
         for (i = 0; i < oa->len; i++)
         {
-          ncm_mset_push (mset, NCM_MODEL (ncm_obj_array_peek (oa, i)));
+          NcmModel *model = NCM_MODEL (ncm_obj_array_peek (oa, i));
+          if (NCM_MODEL_GET_CLASS (model)->is_submodel)
+            g_error ("_ncm_mset_set_property: NcmMSet model array cannot contain submodels `%s'.",
+                     G_OBJECT_TYPE_NAME (model));
+          ncm_mset_push (mset, model);
         }
       }
       break;
@@ -316,7 +321,7 @@ G_LOCK_DEFINE_STATIC (last_model_id);
  *
  */
 void
-ncm_mset_model_register_id (NcmModelClass *model_class, const gchar *ns, const gchar *desc, const gchar *long_desc, gboolean can_stack)
+ncm_mset_model_register_id (NcmModelClass *model_class, const gchar *ns, const gchar *desc, const gchar *long_desc, gboolean can_stack, NcmModelID main_model_id)
 {
   if (model_class->model_id < 0)
   {
@@ -327,7 +332,13 @@ ncm_mset_model_register_id (NcmModelClass *model_class, const gchar *ns, const g
 
     model_class->can_stack = can_stack;
 
-    model_class->model_id = last_model_id * NCM_MSET_MAX_SUBMODEL;
+    if (main_model_id > -1)
+    {
+      model_class->is_submodel   = TRUE;
+      model_class->main_model_id = main_model_id;
+    }
+
+    model_class->model_id = last_model_id * NCM_MSET_MAX_STACKSIZE;
     id = last_model_id;
     last_model_id++;
     g_array_set_size (mset_class->model_desc_array, last_model_id);
@@ -554,16 +565,16 @@ ncm_mset_peek (NcmMSet *mset, NcmModelID mid)
  * ncm_mset_peek_pos:
  * @mset: a #NcmMSet
  * @base_mid: a #NcmModelID
- * @submodel_id: FIXME
+ * @stackpos_id: FIXME
  *
  * FIXME
  *
  * Returns: (transfer none): FIXME
  */
 NcmModel *
-ncm_mset_peek_pos (NcmMSet *mset, NcmModelID base_mid, guint submodel_id)
+ncm_mset_peek_pos (NcmMSet *mset, NcmModelID base_mid, guint stackpos_id)
 {
-  NcmModelID mid = base_mid + submodel_id;
+  NcmModelID mid = base_mid + stackpos_id;
   return ncm_mset_peek (mset, mid);
 }
 
@@ -672,44 +683,60 @@ ncm_mset_push (NcmMSet *mset, NcmModel *model)
   g_assert (model != NULL);
   {
     NcmModelID base_mid  = ncm_model_id (model);
-    guint submodel_id = 0;
+    guint stackpos_id = 0;
     while (TRUE)
     {
-      NcmModelID mid = base_mid + submodel_id;
+      NcmModelID mid = base_mid + stackpos_id;
       if (g_hash_table_lookup (mset->mid_item_hash, GINT_TO_POINTER (mid)) == NULL)
       {
-        ncm_mset_set_pos (mset, model, submodel_id);
+        ncm_mset_set_pos (mset, model, stackpos_id);
         break;
       }
-      submodel_id++;
+      stackpos_id++;
     }
   }
 }
+
+static void _ncm_mset_set_pos_intern (NcmMSet *mset, NcmModel *model, guint stackpos_id);
 
 /**
  * ncm_mset_set_pos:
  * @mset: a #NcmMSet
  * @model: a #NcmModel
- * @submodel_id: FIXME
+ * @stackpos_id: FIXME
  *
  * FIXME
  *
  */
 void
-ncm_mset_set_pos (NcmMSet *mset, NcmModel *model, guint submodel_id)
+ncm_mset_set_pos (NcmMSet *mset, NcmModel *model, guint stackpos_id)
+{
+  NcmModelClass *model_class = NCM_MODEL_GET_CLASS (model);
+  
+  if (model_class->is_submodel)
+    g_error ("ncm_mset_set_pos: cannot add model `%s' directly to a NcmMSet.\n"
+             "                  This model is a submodel of `%s' and it should"
+             " be added to it instead of directly to a NcmMSet", 
+             G_OBJECT_TYPE_NAME (model), ncm_mset_get_ns_by_id (model_class->main_model_id));
+  else
+    _ncm_mset_set_pos_intern (mset, model, stackpos_id);
+}
+  
+static void
+_ncm_mset_set_pos_intern (NcmMSet *mset, NcmModel *model, guint stackpos_id)
 {
   g_assert (model != NULL);
   {
-    NcmModelID mid  = ncm_model_id (model) + submodel_id;
+    NcmModelID mid  = ncm_model_id (model) + stackpos_id;
     guint model_len = ncm_model_len (model);
     NcmMSetItem *item = _ncm_mset_item_new (model, mid);
     GArray *fpi_array;
     NcmMSetItem *item0;
     guint i;
 
-    if (submodel_id > 0 && !(NCM_MODEL_GET_CLASS (model)->can_stack))
+    if (stackpos_id > 0 && !(NCM_MODEL_GET_CLASS (model)->can_stack))
       g_error ("ncm_mset_set_pos: cannot stack object in position %u NcmMSet, type `%s' not allowed.", 
-               submodel_id, G_OBJECT_TYPE_NAME (model));
+               stackpos_id, G_OBJECT_TYPE_NAME (model));
 
     ncm_mset_remove (mset, mid);
 
@@ -748,6 +775,12 @@ ncm_mset_set_pos (NcmMSet *mset, NcmModel *model, guint submodel_id)
 
     if (mset->valid_map)
       ncm_mset_prepare_fparam_map (mset);
+
+    for (i = 0; i < ncm_model_get_submodel_len (model); i++)
+    {
+      NcmModel *submodel = ncm_model_peek_submodel (model, i);
+      _ncm_mset_set_pos_intern (mset, submodel, 0);
+    }
   }
 }
 
@@ -775,16 +808,16 @@ ncm_mset_exists (NcmMSet *mset, NcmModel *model)
  * ncm_mset_exists_pos:
  * @mset: a #NcmMSet
  * @model: a #NcmModel
- * @submodel_id: FIXME
+ * @stackpos_id: FIXME
  *
  * FIXME
  *
  * Returns: FIXME
  */
 gboolean
-ncm_mset_exists_pos (NcmMSet *mset, NcmModel *model, guint submodel_id)
+ncm_mset_exists_pos (NcmMSet *mset, NcmModel *model, guint stackpos_id)
 {
-  NcmModelID mid = NCM_MSET_MID (ncm_model_id (model), submodel_id);
+  NcmModelID mid = NCM_MSET_MID (ncm_model_id (model), stackpos_id);
   if (ncm_mset_peek (mset, mid) != NULL)
     return TRUE;
   else
@@ -850,7 +883,7 @@ const gchar *
 ncm_mset_get_ns_by_id (gint id)
 {
   NcmMSetClass *mset_class = g_type_class_ref (NCM_TYPE_MSET);
-  guint base_mid = id / NCM_MSET_MAX_SUBMODEL;
+  guint base_mid = id / NCM_MSET_MAX_STACKSIZE;
 
   g_assert_cmpint (base_mid, <, mset_class->model_desc_array->len);
   {
@@ -2034,10 +2067,10 @@ ncm_mset_fparam_full_name (NcmMSet *mset, guint n)
     NcmMSetPIndex pi = g_array_index (mset->pi_array, NcmMSetPIndex, n);
     const gchar *model_ns = ncm_mset_get_ns_by_id (pi.mid); /* ncm_model_nick (ncm_mset_peek (mset, pi.mid));*/
     const gchar *pname = ncm_mset_param_name (mset, pi.mid, pi.pid);
-    const guint submodel_id = pi.mid % NCM_MSET_MAX_SUBMODEL;
+    const guint stackpos_id = pi.mid % NCM_MSET_MAX_STACKSIZE;
 
-    if (submodel_id > 0)
-      fullname = g_strdup_printf ("%s:%02u:%s", model_ns, submodel_id, pname);
+    if (stackpos_id > 0)
+      fullname = g_strdup_printf ("%s:%02u:%s", model_ns, stackpos_id, pname);
     else
       fullname = g_strdup_printf ("%s:%s", model_ns, pname);
 
@@ -2065,33 +2098,33 @@ ncm_mset_param_get_by_full_name (NcmMSet *mset, const gchar *fullname)
   {
     gint nm = g_match_info_get_match_count (match_info);
     gchar *ns         = NULL;
-    gchar *submodel_s = NULL;
+    gchar *stackpos_s = NULL;
     gchar *pid_s      = NULL;
     gchar *endptr     = NULL;
     guint pid      = 0;
-    guint submodel = 0;
+    guint stackpos = 0;
     NcmModelID mid;
     NcmModel *model;
 
     g_assert_cmpint (nm, ==, 4);
 
     ns         = g_match_info_fetch (match_info, 1);
-    submodel_s = g_match_info_fetch (match_info, 2);
+    stackpos_s = g_match_info_fetch (match_info, 2);
     pid_s      = g_match_info_fetch (match_info, 3);
 
     mid = ncm_mset_get_id_by_ns (ns);
     if (mid < 0)
       g_error ("ncm_mset_param_get_by_full_name: namespace `%s' not found.", ns);
 
-    if (*submodel_s != '\0')
+    if (*stackpos_s != '\0')
     {
-      submodel = g_ascii_strtoll (submodel_s, &endptr, 10);
+      stackpos = g_ascii_strtoll (stackpos_s, &endptr, 10);
       if (*endptr != '\0')
-        g_error ("ncm_mset_param_get_by_full_name: invalid submodel number `%s'.", submodel_s);
+        g_error ("ncm_mset_param_get_by_full_name: invalid stackpos number `%s'.", stackpos_s);
     }
-    g_free (submodel_s);
+    g_free (stackpos_s);
 
-    mid += submodel;
+    mid += stackpos;
     model = ncm_mset_peek (mset, mid);
     if (model != NULL)
     {
@@ -2413,14 +2446,14 @@ ncm_mset_save (NcmMSet *mset, NcmSerialize *ser, const gchar *filename, gboolean
   for (i = 0; i < mset->model_array->len; i++)
   {
     NcmMSetItem *item       = g_ptr_array_index (mset->model_array, i);
-    NcmModelID mid_base     = item->mid / NCM_MSET_MAX_SUBMODEL;
-    const guint submodel_id = item->mid % NCM_MSET_MAX_SUBMODEL;
+    NcmModelID mid_base     = item->mid / NCM_MSET_MAX_STACKSIZE;
+    const guint stackpos_id = item->mid % NCM_MSET_MAX_STACKSIZE;
     const gchar *ns = g_array_index (mset_class->model_desc_array, NcmMSetModelDesc, mid_base).ns;
     GError *error = NULL;
     gchar *group;
 
-    if (submodel_id > 0)
-      group = g_strdup_printf ("%s:%02u", ns, submodel_id);
+    if (stackpos_id > 0)
+      group = g_strdup_printf ("%s:%02u", ns, stackpos_id);
     else
       group = g_strdup_printf ("%s", ns);
 
@@ -2429,7 +2462,7 @@ ncm_mset_save (NcmMSet *mset, NcmSerialize *ser, const gchar *filename, gboolean
       NcmMSetItem *item0 = g_hash_table_lookup (mset->model_item_hash, item->model);
       g_assert (item0 != NULL);
 
-      g_key_file_set_uint64 (msetfile, group, ns, item0->mid % NCM_MSET_MAX_SUBMODEL);
+      g_key_file_set_uint64 (msetfile, group, ns, item0->mid % NCM_MSET_MAX_STACKSIZE);
       if (save_comment)
       {
         gchar *model_desc = ncm_cfg_string_to_comment (g_array_index (mset_class->model_desc_array, NcmMSetModelDesc, mid_base).desc);
@@ -2554,12 +2587,12 @@ ncm_mset_load (const gchar *filename, NcmSerialize *ser)
     GString *obj_ser = g_string_sized_new (200);
     gchar *ns = g_strdup (groups[i]);
     gchar *twopoints = g_strrstr (ns, ":");
-    guint submodel = 0;
+    guint stackpos = 0;
 
     if (twopoints != NULL)
     {
       *twopoints = '\0';
-      submodel = atoi(++twopoints);
+      stackpos = atoi(++twopoints);
     }
 
     if (!g_key_file_has_key (msetfile, groups[i], ns, &error))
@@ -2575,7 +2608,7 @@ ncm_mset_load (const gchar *filename, NcmSerialize *ser)
       if (strlen (obj_type) < 5)
       {
         gchar *endptr = NULL;
-        guint submodel_orig = g_ascii_strtoll (obj_type, &endptr, 10);
+        guint stackpos_orig = g_ascii_strtoll (obj_type, &endptr, 10);
 
         g_assert (endptr != NULL);
 
@@ -2584,9 +2617,9 @@ ncm_mset_load (const gchar *filename, NcmSerialize *ser)
           NcmModelID id = ncm_mset_get_id_by_ns (ns);
           g_assert_cmpint (id, >, -1);
           {
-            NcmModel *model = ncm_mset_peek_pos (mset, id, submodel_orig);
+            NcmModel *model = ncm_mset_peek_pos (mset, id, stackpos_orig);
             g_assert (model != NULL);
-            ncm_mset_set_pos (mset, model, submodel);
+            ncm_mset_set_pos (mset, model, stackpos);
           }
           continue;
         }
@@ -2622,9 +2655,9 @@ ncm_mset_load (const gchar *filename, NcmSerialize *ser)
     {
       GObject *obj = ncm_serialize_from_string (ser, obj_ser->str);
       g_assert (NCM_IS_MODEL (obj));
-      if (ncm_mset_exists_pos (mset, NCM_MODEL (obj), submodel))
+      if (ncm_mset_exists_pos (mset, NCM_MODEL (obj), stackpos))
         g_error ("ncm_mset_load: a model ``%s'' already exists in NcmMSet.", obj_ser->str);
-      ncm_mset_set_pos (mset, NCM_MODEL (obj), submodel);
+      ncm_mset_set_pos (mset, NCM_MODEL (obj), stackpos);
       ncm_model_free (NCM_MODEL (obj));
     }
     g_string_free (obj_ser, TRUE);

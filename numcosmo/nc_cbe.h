@@ -56,7 +56,7 @@ struct _NcCBEClass
   GObjectClass parent_class;
 };
 
-typedef void (*NcCBECall) (NcCBE *cbe, NcHIPrim *prim, NcHIReion *reion, NcHICosmo *cosmo);
+typedef void (*NcCBECall) (NcCBE *cbe, NcHICosmo *cosmo);
 typedef void (*NcCBEFree) (NcCBE *cbe);
 
 struct _NcCBE
@@ -119,10 +119,10 @@ guint nc_cbe_get_scalar_lmax (NcCBE *cbe);
 guint nc_cbe_get_vector_lmax (NcCBE *cbe);
 guint nc_cbe_get_tensor_lmax (NcCBE *cbe);
 
-void nc_cbe_thermodyn_prepare (NcCBE *cbe, NcHIReion *reion, NcHICosmo *cosmo);
-void nc_cbe_thermodyn_prepare_if_needed (NcCBE *cbe, NcHIReion *reion, NcHICosmo *cosmo);
-void nc_cbe_prepare (NcCBE *cbe, NcHIPrim *prim, NcHIReion *reion, NcHICosmo *cosmo);
-void nc_cbe_prepare_if_needed (NcCBE *cbe, NcHIPrim *prim, NcHIReion *reion, NcHICosmo *cosmo);
+void nc_cbe_thermodyn_prepare (NcCBE *cbe, NcHICosmo *cosmo);
+void nc_cbe_thermodyn_prepare_if_needed (NcCBE *cbe, NcHICosmo *cosmo);
+void nc_cbe_prepare (NcCBE *cbe, NcHICosmo *cosmo);
+void nc_cbe_prepare_if_needed (NcCBE *cbe, NcHICosmo *cosmo);
 
 NcmSpline *nc_cbe_thermodyn_get_Xe (NcCBE *cbe);
 

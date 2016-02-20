@@ -89,14 +89,14 @@ test_nc_recomb_seager_wmap_zstar (void)
   nc_hicosmo_de_set_wmap5_params (NC_HICOSMO_DE (cosmo));
   ncm_model_orig_param_set (NCM_MODEL (cosmo), NC_HICOSMO_DE_XCDM_W,  -1.0);
 
-  nc_recomb_prepare_if_needed (recomb, reion, cosmo);
+  nc_recomb_prepare_if_needed (recomb, cosmo);
   {
     const gdouble zstar = exp (-nc_recomb_tau_zstar (recomb, cosmo)) - 1.0;
     ncm_assert_cmpdouble_e (zstar, ==, 1088.76, 1e-4);
   }
 
   ncm_model_orig_param_set (NCM_MODEL (cosmo), NC_HICOSMO_DE_T_GAMMA0,  2.2250);
-  nc_recomb_prepare_if_needed (recomb, reion, cosmo);
+  nc_recomb_prepare_if_needed (recomb, cosmo);
   {
     const gdouble zstar = exp (-nc_recomb_tau_zstar (recomb, cosmo)) - 1.0;
     ncm_assert_cmpdouble_e (zstar, ==, 1325.06, 1e-4);
@@ -114,7 +114,7 @@ test_nc_recomb_seager_Xe_ini (void)
   NcHIReion *reion = NC_HIREION (nc_hireion_camb_new ());
   NcHICosmo *cosmo = nc_hicosmo_new_from_name (NC_TYPE_HICOSMO, "NcHICosmoDEXcdm");
 
-  nc_recomb_prepare_if_needed (recomb, reion, cosmo);
+  nc_recomb_prepare_if_needed (recomb, cosmo);
 
   {
     const gdouble Xe_ini = nc_recomb_Xe (recomb, cosmo, recomb->lambdai);

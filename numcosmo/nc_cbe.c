@@ -964,8 +964,9 @@ _nc_cbe_set_bg (NcCBE *cbe, NcHICosmo *cosmo)
 }
 
 static void
-_nc_cbe_set_thermo (NcCBE *cbe, NcHIReion *reion, NcHICosmo *cosmo)
+_nc_cbe_set_thermo (NcCBE *cbe, NcHICosmo *cosmo)
 {
+  NcHIReion *reion = nc_hicosmo_peek_reion (cosmo);
   struct precision *ppr = (struct precision *)cbe->prec->priv;
 
   cbe->priv->pth.YHe                      = nc_hicosmo_Yp_4He (cosmo);
@@ -1120,9 +1121,10 @@ _external_Pk_callback_pkt (const double lnk, gpointer data)
 }
 
 static void
-_nc_cbe_set_prim (NcCBE *cbe, NcHIPrim *prim, NcHICosmo *cosmo)
+_nc_cbe_set_prim (NcCBE *cbe, NcHICosmo *cosmo)
 {
-
+  NcHIPrim *prim = nc_hicosmo_peek_prim (cosmo);
+  
   cbe->priv->ppm.primordial_spec_type = external_Pk_callback;
   /*cbe->priv->ppm.primordial_spec_type = analytic_Pk;*/
   cbe->priv->ppm.external_Pk_callback_pks  = &_external_Pk_callback_pks;
@@ -1359,19 +1361,19 @@ _nc_cbe_call_bg (NcCBE *cbe, NcHICosmo *cosmo)
 }
 
 static void
-_nc_cbe_call_thermo (NcCBE *cbe, NcHIReion *reion, NcHICosmo *cosmo)
+_nc_cbe_call_thermo (NcCBE *cbe, NcHICosmo *cosmo)
 {
   struct precision *ppr = (struct precision *)cbe->prec->priv;
 
   _nc_cbe_call_bg (cbe, cosmo);
   
-  _nc_cbe_set_thermo (cbe, reion, cosmo);
+  _nc_cbe_set_thermo (cbe, cosmo);
   if (thermodynamics_init (ppr, &cbe->priv->pba, &cbe->priv->pth) == _FAILURE_)
     g_error ("_nc_cbe_call_thermo: Error running thermodynamics_init `%s'\n", cbe->priv->pth.error_message);
 }
 
 static void
-_nc_cbe_call_pert (NcCBE *cbe, NcHIPrim *prim, NcHIReion *reion, NcHICosmo *cosmo)
+_nc_cbe_call_pert (NcCBE *cbe, NcHICosmo *cosmo)
 {
   struct precision *ppr = (struct precision *)cbe->prec->priv;
 
@@ -1384,24 +1386,24 @@ _nc_cbe_call_pert (NcCBE *cbe, NcHIPrim *prim, NcHIReion *reion, NcHICosmo *cosm
 }
 
 static void
-_nc_cbe_call_prim (NcCBE *cbe, NcHIPrim *prim, NcHIReion *reion, NcHICosmo *cosmo)
+_nc_cbe_call_prim (NcCBE *cbe, NcHICosmo *cosmo)
 {
   struct precision *ppr = (struct precision *)cbe->prec->priv;
 
-  _nc_cbe_call_pert (cbe, prim, reion, cosmo);
+  _nc_cbe_call_pert (cbe, cosmo);
   cbe->free = &_nc_cbe_free_prim;
 
-  _nc_cbe_set_prim (cbe, prim, cosmo);
+  _nc_cbe_set_prim (cbe, cosmo);
   if (primordial_init (ppr, &cbe->priv->ppt, &cbe->priv->ppm) == _FAILURE_)
     g_error ("_nc_cbe_call_prim: Error running primordial_init `%s'\n", cbe->priv->ppm.error_message);  
 }
 
 static void
-_nc_cbe_call_nonlin (NcCBE *cbe, NcHIPrim *prim, NcHIReion *reion, NcHICosmo *cosmo)
+_nc_cbe_call_nonlin (NcCBE *cbe, NcHICosmo *cosmo)
 {
   struct precision *ppr = (struct precision *)cbe->prec->priv;
 
-  _nc_cbe_call_prim (cbe, prim, reion, cosmo);
+  _nc_cbe_call_prim (cbe, cosmo);
   cbe->free = &_nc_cbe_free_nonlin;
 
   _nc_cbe_set_nonlin (cbe, cosmo);
@@ -1410,11 +1412,11 @@ _nc_cbe_call_nonlin (NcCBE *cbe, NcHIPrim *prim, NcHIReion *reion, NcHICosmo *co
 }
 
 static void
-_nc_cbe_call_transfer (NcCBE *cbe, NcHIPrim *prim, NcHIReion *reion, NcHICosmo *cosmo)
+_nc_cbe_call_transfer (NcCBE *cbe, NcHICosmo *cosmo)
 {
   struct precision *ppr = (struct precision *)cbe->prec->priv;
 
-  _nc_cbe_call_nonlin (cbe, prim, reion, cosmo);
+  _nc_cbe_call_nonlin (cbe, cosmo);
   cbe->free = &_nc_cbe_free_transfer;
 
   _nc_cbe_set_transfer (cbe, cosmo);
@@ -1423,11 +1425,11 @@ _nc_cbe_call_transfer (NcCBE *cbe, NcHIPrim *prim, NcHIReion *reion, NcHICosmo *
 }
 
 static void
-_nc_cbe_call_spectra (NcCBE *cbe, NcHIPrim *prim, NcHIReion *reion, NcHICosmo *cosmo)
+_nc_cbe_call_spectra (NcCBE *cbe, NcHICosmo *cosmo)
 {
   struct precision *ppr = (struct precision *)cbe->prec->priv;
 
-  _nc_cbe_call_transfer (cbe, prim, reion, cosmo);
+  _nc_cbe_call_transfer (cbe, cosmo);
   cbe->free = &_nc_cbe_free_spectra;
 
   _nc_cbe_set_spectra (cbe, cosmo);
@@ -1436,11 +1438,11 @@ _nc_cbe_call_spectra (NcCBE *cbe, NcHIPrim *prim, NcHIReion *reion, NcHICosmo *c
 }
 
 static void
-_nc_cbe_call_lensing (NcCBE *cbe, NcHIPrim *prim, NcHIReion *reion, NcHICosmo *cosmo)
+_nc_cbe_call_lensing (NcCBE *cbe, NcHICosmo *cosmo)
 {
   struct precision *ppr = (struct precision *)cbe->prec->priv;
 
-  _nc_cbe_call_spectra (cbe, prim, reion, cosmo);
+  _nc_cbe_call_spectra (cbe, cosmo);
   cbe->free = &_nc_cbe_free_lensing;
 
   _nc_cbe_set_lensing (cbe, cosmo);
@@ -1546,14 +1548,13 @@ _nc_cbe_update_callbacks (NcCBE *cbe)
 /**
  * nc_cbe_thermodyn_prepare:
  * @cbe: a #NcCBE
- * @reion: a #NcHIReion
  * @cosmo: a #NcHICosmo
  * 
  * Prepares the thermodynamic Class structure.
  * 
  */
 void
-nc_cbe_thermodyn_prepare (NcCBE *cbe, NcHIReion *reion, NcHICosmo *cosmo)
+nc_cbe_thermodyn_prepare (NcCBE *cbe, NcHICosmo *cosmo)
 {
   if (cbe->thermodyn_prepared)
   {
@@ -1561,25 +1562,24 @@ nc_cbe_thermodyn_prepare (NcCBE *cbe, NcHIReion *reion, NcHICosmo *cosmo)
     cbe->thermodyn_prepared = FALSE;
   }
 
-  _nc_cbe_call_thermo (cbe, reion, cosmo);
+  _nc_cbe_call_thermo (cbe, cosmo);
   cbe->thermodyn_prepared = TRUE;
 }
 
 /**
  * nc_cbe_thermodyn_prepare_if_needed:
  * @cbe: a #NcCBE
- * @reion: a #NcHIReion
  * @cosmo: a #NcHICosmo
  * 
  * Prepares the thermodynamic Class structure.
  * 
  */
 void
-nc_cbe_thermodyn_prepare_if_needed (NcCBE *cbe, NcHIReion *reion, NcHICosmo *cosmo)
+nc_cbe_thermodyn_prepare_if_needed (NcCBE *cbe, NcHICosmo *cosmo)
 {
   if (ncm_model_ctrl_update (cbe->ctrl_cosmo, NCM_MODEL (cosmo)))
   {
-    nc_cbe_thermodyn_prepare (cbe, reion, cosmo);
+    nc_cbe_thermodyn_prepare (cbe, cosmo);
     ncm_model_ctrl_force_update (cbe->ctrl_prim);
   }
 }
@@ -1587,15 +1587,13 @@ nc_cbe_thermodyn_prepare_if_needed (NcCBE *cbe, NcHIReion *reion, NcHICosmo *cos
 /**
  * nc_cbe_prepare:
  * @cbe: a #NcCBE
- * @prim: a #NcHIPrim
- * @reion: a #NcHIReion
  * @cosmo: a #NcHICosmo
  * 
  * Prepares all necessary Class structures.
  * 
  */
 void
-nc_cbe_prepare (NcCBE *cbe, NcHIPrim *prim, NcHIReion *reion, NcHICosmo *cosmo)
+nc_cbe_prepare (NcCBE *cbe, NcHICosmo *cosmo)
 {
   if (cbe->allocated)
   {
@@ -1610,12 +1608,12 @@ nc_cbe_prepare (NcCBE *cbe, NcHIPrim *prim, NcHIReion *reion, NcHICosmo *cosmo)
     cbe->thermodyn_prepared = FALSE;
   }
 
-  _nc_cbe_call_thermo (cbe, reion, cosmo);
+  _nc_cbe_call_thermo (cbe, cosmo);
   cbe->thermodyn_prepared = TRUE;
 
   if (cbe->call != NULL)
   {
-    cbe->call (cbe, prim, reion, cosmo);
+    cbe->call (cbe, cosmo);
     cbe->allocated = TRUE;
   }
 }
@@ -1623,35 +1621,41 @@ nc_cbe_prepare (NcCBE *cbe, NcHIPrim *prim, NcHIReion *reion, NcHICosmo *cosmo)
 /**
  * nc_cbe_prepare_if_needed:
  * @cbe: a #NcCBE
- * @prim: a #NcHIPrim
- * @reion: a #NcHIReion
  * @cosmo: a #NcHICosmo
  * 
  * Prepares all necessary Class structures.
  * 
  */
 void
-nc_cbe_prepare_if_needed (NcCBE *cbe, NcHIPrim *prim, NcHIReion *reion, NcHICosmo *cosmo)
+nc_cbe_prepare_if_needed (NcCBE *cbe, NcHICosmo *cosmo)
 {
-  gboolean cosmo_up = ncm_model_ctrl_update (cbe->ctrl_cosmo, NCM_MODEL (cosmo));
-  gboolean prim_up = ncm_model_ctrl_update (cbe->ctrl_cosmo, NCM_MODEL (prim));
-
-  if (cosmo_up)
-  {    
-    nc_cbe_prepare (cbe, prim, reion, cosmo);
-  }
-  else if (prim_up)
+  ncm_model_ctrl_update (cbe->ctrl_cosmo, NCM_MODEL (cosmo));
+  if (!ncm_model_ctrl_model_has_submodel (cbe->ctrl_cosmo, nc_hiprim_id ()))
   {
-    if (cbe->allocated)
-    {
-      g_assert (cbe->free != NULL);
-      cbe->free (cbe);
-      cbe->allocated = FALSE;
+    g_error ("nc_cbe_prepare_if_needed: cosmo model must contain a NcHIPrim submodel.");
+  }
+  else
+  {
+    gboolean cosmo_up = ncm_model_ctrl_model_last_update (cbe->ctrl_cosmo);
+    gboolean prim_up  = ncm_model_ctrl_submodel_last_update (cbe->ctrl_cosmo, nc_hiprim_id ());
+    
+    if (cosmo_up)
+    {    
+      nc_cbe_prepare (cbe, cosmo);
     }
-    if (cbe->call != NULL)
+    else if (prim_up)
     {
-      cbe->call (cbe, prim, reion, cosmo);
-      cbe->allocated = TRUE;
+      if (cbe->allocated)
+      {
+        g_assert (cbe->free != NULL);
+        cbe->free (cbe);
+        cbe->allocated = FALSE;
+      }
+      if (cbe->call != NULL)
+      {
+        cbe->call (cbe, cosmo);
+        cbe->allocated = TRUE;
+      }
     }
   }
 }

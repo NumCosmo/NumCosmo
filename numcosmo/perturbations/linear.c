@@ -121,7 +121,6 @@ nc_pert_linear_workspace_new (NcLinearPert *pert)
 /**
  * nc_pert_linear_new: (skip)
  * @cosmo: a #NcHICosmo
- * @reion: a #NcHIReion
  * @recomb: FIXME
  * @lmax: FIXME
  * @tc_reltol: FIXME
@@ -134,7 +133,7 @@ nc_pert_linear_workspace_new (NcLinearPert *pert)
  * Returns: FIXME
  */
 NcLinearPert *
-nc_pert_linear_new (NcHICosmo *cosmo, NcHIReion *reion, NcRecomb *recomb, guint lmax, gdouble tc_reltol, gdouble reltol, gdouble tc_abstol, gdouble abstol)
+nc_pert_linear_new (NcHICosmo *cosmo, NcRecomb *recomb, guint lmax, gdouble tc_reltol, gdouble reltol, gdouble tc_abstol, gdouble abstol)
 {
   NcLinearPert *pert = g_slice_new (NcLinearPert);
 
@@ -144,7 +143,7 @@ nc_pert_linear_new (NcHICosmo *cosmo, NcHIReion *reion, NcRecomb *recomb, guint 
   pert->recomb = nc_recomb_ref (recomb);
   pert->a = nc_scalefactor_new (0, NC_PERTURBATION_START_X - 1.0, NULL);
 
-  nc_recomb_prepare_if_needed (pert->recomb, reion, cosmo);
+  nc_recomb_prepare_if_needed (pert->recomb, cosmo);
   nc_scalefactor_prepare_if_needed (pert->a, cosmo);
 
   pert->lambdai = NC_PERTURBATIONS_X2LAMBDA (NC_PERTURBATION_START_X);

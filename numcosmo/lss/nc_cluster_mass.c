@@ -318,7 +318,8 @@ nc_cluster_mass_class_init (NcClusterMassClass *klass)
                               "NcClusterMass",
                               "Cluster mass observable relation models.",
                               NULL,
-                              TRUE);
+                              TRUE,
+                              NCM_MSET_MODEL_MAIN);
   ncm_model_class_check_params_info (NCM_MODEL_CLASS (klass));
 }
 

@@ -37,15 +37,30 @@
 #include "build_cfg.h"
 
 #include "nc_hicosmo.h"
+#include "nc_hiprim.h"
+#include "nc_hireion.h"
 #include "math/ncm_serialize.h"
 #include "math/ncm_cfg.h"
 
 G_DEFINE_ABSTRACT_TYPE (NcHICosmo, nc_hicosmo, NCM_TYPE_MODEL);
 
 static void
-nc_hicosmo_init (NcHICosmo *object)
+nc_hicosmo_init (NcHICosmo *cosmo)
 {
-  NCM_UNUSED (object);
+  cosmo->prim  = NULL;
+  cosmo->reion = NULL;
+}
+
+static void
+nc_hicosmo_dispose (GObject *object)
+{
+  NcHICosmo *cosmo = NC_HICOSMO (object);
+
+  nc_hiprim_clear (&cosmo->prim);
+  nc_hireion_clear (&cosmo->reion);
+
+  /* Chain up : end */
+  G_OBJECT_CLASS (nc_hicosmo_parent_class)->dispose (object);
 }
 
 static void
@@ -58,6 +73,7 @@ nc_hicosmo_finalize (GObject *object)
 
 static gboolean _nc_hicosmo_valid (NcmModel *model);
 NCM_MSET_MODEL_REGISTER_ID (nc_hicosmo, NC_TYPE_HICOSMO);
+static void _nc_hicosmo_add_submodel (NcmModel *model, NcmModel *submodel);
 
 static void
 nc_hicosmo_class_init (NcHICosmoClass *klass)
@@ -65,7 +81,8 @@ nc_hicosmo_class_init (NcHICosmoClass *klass)
   GObjectClass* object_class = G_OBJECT_CLASS (klass);
   NcmModelClass *model_class = NCM_MODEL_CLASS (klass);
 
-  object_class->finalize = nc_hicosmo_finalize;
+  object_class->dispose  = &nc_hicosmo_dispose;
+  object_class->finalize = &nc_hicosmo_finalize;
 
   ncm_model_class_set_name_nick (model_class, "Abstract class for HI cosmological models.", "NcHICosmo");
   ncm_model_class_add_params (model_class, 0, 0, 1);
@@ -74,17 +91,20 @@ nc_hicosmo_class_init (NcHICosmoClass *klass)
                               "NcHICosmo",
                               "Homogeneous and isotropic cosmological models.",
                               NULL,
-                              FALSE);
+                              FALSE,
+                              NCM_MSET_MODEL_MAIN);
 
   ncm_model_class_check_params_info (model_class);
 
-  model_class->valid = &_nc_hicosmo_valid;
-
+  model_class->valid        = &_nc_hicosmo_valid;
+  model_class->add_submodel = &_nc_hicosmo_add_submodel;
+  
   klass->func_table   = g_array_new (FALSE, FALSE, sizeof (NcHICosmoFunc));
   klass->func_z_table = g_array_new (FALSE, FALSE, sizeof (NcHICosmoFuncZ));
   klass->func_hash    = g_hash_table_new (g_str_hash, g_str_equal);
   klass->func_z_hash  = g_hash_table_new (g_str_hash, g_str_equal);
 
+  
   {
     NcHICosmoFunc func_table[] =
     {
@@ -158,6 +178,27 @@ _nc_hicosmo_valid (NcmModel *model)
   /* Chain up : start */
 
   return (nc_hicosmo_E2 (NC_HICOSMO (model), 0.0) >= 0.0);
+}
+
+static void 
+_nc_hicosmo_add_submodel (NcmModel *model, NcmModel *submodel)
+{
+  /* Chain up : start */
+  NCM_MODEL_CLASS (nc_hicosmo_parent_class)->add_submodel (model, submodel);
+  {
+    NcHICosmo *cosmo = NC_HICOSMO (model);
+
+    if (ncm_model_id (submodel) == nc_hiprim_id ())
+    {
+      nc_hiprim_clear (&cosmo->prim);
+      cosmo->prim = nc_hiprim_ref (NC_HIPRIM (submodel));
+    }
+    else if (ncm_model_id (submodel) == nc_hireion_id ())
+    {
+      nc_hireion_clear (&cosmo->reion);
+      cosmo->reion = nc_hireion_ref (NC_HIREION (submodel));
+    }
+  }
 }
 
 /**
@@ -931,6 +972,23 @@ nc_hicosmo_class_get_func_z (const gchar *name)
  * FIXME
  *
  * Returns: FIXME
+ */
+
+/**
+ * nc_hicosmo_peek_prim:
+ * @cosmo: a #NcHICosmo
+ *
+ * FIXME
+ *
+ * Returns: (transfer none): the #NcHIPrim submodel.
+ */
+/**
+ * nc_hicosmo_peek_reion:
+ * @cosmo: a #NcHICosmo
+ *
+ * FIXME
+ *
+ * Returns: (transfer none): the #NcHIReion submodel.
  */
 
 static void
