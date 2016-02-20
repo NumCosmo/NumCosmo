@@ -712,7 +712,8 @@ nc_cluster_pseudo_counts_posterior_numerator_plcl (NcClusterPseudoCounts *cpc, N
       ncm_integrate_3dim_divonne (&integ, lb[0], lb[1], lb[2], ub[0], ub[1], ub[2], 1e-5, 0.0, ngiven, ldxgiven, x, &P, &err);
       ncm_spline2d_use_acc (mfp->d2NdzdlnM, FALSE);
       
-      norma_p = 4.0 * M_PI * M_PI * (Mobs_params[NC_CLUSTER_MASS_PLCL_MPL] * Mobs_params[NC_CLUSTER_MASS_PLCL_MCL]);
+      //norma_p = 4.0 * M_PI * M_PI * (Mobs_params[NC_CLUSTER_MASS_PLCL_MPL] * Mobs_params[NC_CLUSTER_MASS_PLCL_MCL]);
+      norma_p = M_PI * M_PI * (Mobs_params[NC_CLUSTER_MASS_PLCL_MPL] * Mobs_params[NC_CLUSTER_MASS_PLCL_MCL]);
     }
 
     /*printf ("P = %.8g err = %.8e\n", P / norma_p, err / P);*/

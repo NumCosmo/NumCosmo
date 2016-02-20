@@ -294,7 +294,7 @@ _Lens_lnmass_mean (NcClusterMassPlCL *mszl, gdouble lnM)
  * are written in terms of the dimensionless quantities $M_{Pl}/M_0$, $M_{CL}/M_0$, $\sigma_{Pl}/M_0$ 
  * and $\sigma_{CL}/M_0$. 
  * 
- * This distribution is non-normalized. Normalization factor is included 
+ * This distribution is "partially" normalized. The constant normalization factor is included 
  * only in nc_cluster_pseudo_counts_posterior_numerator_plcl().
  *
  * Returns: FIXME
@@ -310,9 +310,11 @@ nc_cluster_mass_plcl_pdf (NcClusterMass *clusterm, gdouble lnM_M0, gdouble w1, g
   const gdouble M_CL  = Mobs[NC_CLUSTER_MASS_PLCL_MCL];
   const gdouble sd_CL = Mobs_params[NC_CLUSTER_MASS_PLCL_SD_CL];
 
-  const gdouble ysz       = (M_Pl - (1.0 - B_SZ) * exp (A_SZ * lnM_M0 + (sqrt (1.0 - COR * COR) * w1 + COR * w2) * SD_SZ)) / sd_Pl;
+  const gdouble M1_mean   = (1.0 - B_SZ) * exp (A_SZ * lnM_M0 + (sqrt (1.0 - COR * COR) * w1 + COR * w2) * SD_SZ);
+  const gdouble M2_mean   = (1.0 - B_L) * exp (A_L * lnM_M0 + w2 * SD_L);
+  const gdouble ysz       = (M_Pl - M1_mean) / sd_Pl;
   const gdouble arg_ysz   = ysz * ysz / 2.0;
-  const gdouble yl        = (M_CL - (1.0 - B_L) * exp (A_L * lnM_M0 + w2 * SD_L)) / sd_CL;
+  const gdouble yl        = (M_CL - M2_mean) / sd_CL;
   const gdouble arg_yl    = yl * yl / 2.0;
   const gdouble arg_gauss = (w1 * w1 + w2 * w2) / 2.0;
   
@@ -322,11 +324,14 @@ nc_cluster_mass_plcl_pdf (NcClusterMass *clusterm, gdouble lnM_M0, gdouble w1, g
     return exp (-200.0);
   else
   {
+    const gdouble norma_partial = (1.0 + erf(M1_mean/(M_SQRT2 * sd_Pl))) * (1.0 + erf(M2_mean/(M_SQRT2 * sd_CL)));   
     const gdouble result = exp (exp_arg) + exp (-200.0);
     //printf ("Msz = %.8g Ml = %.8g m_dist = %.8g\n", Msz, Ml, result);
     //printf ("M0 = %.2e lnM_M0 = %.5g\n", mszl->M0, lnM_M0);
     //printf ("Mpl = %.8g sd_pl = %.8g Mcl = %.8g sd_cl = %.8g\n", M_Pl, sd_Pl, M_CL, sd_CL);
-    return result;
+    //printf ("mean1 = %.8g mean2 = %.8g\n", M1_mean/(M_SQRT2 * sd_Pl), M2_mean/(M_SQRT2 * sd_CL));
+    //printf ("norma_partial = %.10g\n", norma_partial);
+    return result / norma_partial;
   }
 }
 
