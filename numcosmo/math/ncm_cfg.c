@@ -111,6 +111,7 @@
 #include "nc_recomb_seager.h"
 #include "nc_hireion.h"
 #include "nc_hireion_camb.h"
+#include "nc_powspec_ml.h"
 #include "nc_snia_dist_cov.h"
 #include "nc_planck_fi.h"
 #include "nc_planck_fi_cor_tt.h"
@@ -378,6 +379,8 @@ ncm_cfg_init (void)
   ncm_cfg_register_obj (NC_TYPE_HIREION);
   ncm_cfg_register_obj (NC_TYPE_HIREION_CAMB);
 
+  ncm_cfg_register_obj (NC_TYPE_POWSPEC_ML);
+  
   ncm_cfg_register_obj (NC_TYPE_SNIA_DIST_COV);
 
   ncm_cfg_register_obj (NC_TYPE_PLANCK_FI);

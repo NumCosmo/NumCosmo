@@ -285,24 +285,24 @@ ncm_powspec_set_kmax (NcmPowspec *powspec, const gdouble kmax)
 /**
  * ncm_powspec_prepare:
  * @powspec: a #NcmPowspec
- * @cosmo: a #NcHICosmo
+ * @model: a #NcmModel
  * 
- * Prepares the power spectrum @powspec using the cosmology @cosmo.
+ * Prepares the power spectrum @powspec using the model @model.
  * 
  */
 /**
  * ncm_powspec_prepare_if_needed:
  * @powspec: a #NcmPowspec
- * @cosmo: a #NcHICosmo
+ * @model: a #NcmModel
  *
- * Prepare the object using the model @cosmo if it was changed
+ * Prepare the object using the model @model if it was changed
  * since last preparation.
  *
  */
 /**
  * ncm_powspec_eval:
  * @powspec: a #NcmPowspec
- * @cosmo: a #NcHICosmo
+ * @model: a #NcmModel
  * @z: redshift $z$
  * @k: mode $k$
  * 

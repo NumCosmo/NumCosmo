@@ -37,6 +37,7 @@
 #include <numcosmo/math/ncm_matrix.h>
 #include <numcosmo/math/ncm_serialize.h>
 #include <numcosmo/math/ncm_obj_array.h>
+#include <numcosmo/math/ncm_integral1d.h>
 #include <numcosmo/math/ncm_rng.h>
 #include <numcosmo/math/ncm_stats_vec.h>
 #include <numcosmo/math/ncm_stats_dist1d.h>

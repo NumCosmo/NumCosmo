@@ -56,6 +56,7 @@ ncm_sources = \
 	math/ncm_matrix.c                  \
 	math/ncm_serialize.c               \
 	math/ncm_obj_array.c               \
+	math/ncm_integral1d.c              \
 	math/ncm_rng.c                     \
 	math/ncm_stats_vec.c               \
 	math/ncm_stats_dist1d.c            \
@@ -142,6 +143,7 @@ ncm_headers = \
 	math/ncm_matrix.h                \
 	math/ncm_serialize.h             \
 	math/ncm_obj_array.h             \
+	math/ncm_integral1d.h            \
 	math/ncm_rng.h                   \
 	math/ncm_stats_vec.h             \
 	math/ncm_stats_dist1d.h          \
@@ -232,6 +234,7 @@ nc_headers = \
 	nc_hireion.h                  \
 	nc_hireion_camb.h             \
 	nc_hireion_camb_reparam_tau.h \
+	nc_powspec_ml.h               \
 	nc_snia_dist_cov.h            \
 	nc_planck_fi.h                \
 	nc_planck_fi_cor_tt.h         \
@@ -345,6 +348,7 @@ nc_sources = \
 	nc_hireion.c                  \
 	nc_hireion_camb.c             \
 	nc_hireion_camb_reparam_tau.c \
+	nc_powspec_ml.c               \
 	nc_snia_dist_cov.c            \
 	nc_planck_fi.c                \
 	nc_planck_fi_cor_tt.c         \

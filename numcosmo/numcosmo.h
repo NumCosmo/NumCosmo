@@ -36,6 +36,7 @@
 #include <numcosmo/nc_hiprim.h>
 #include <numcosmo/nc_distance.h>
 #include <numcosmo/nc_hicosmo_priors.h>
+#include <numcosmo/nc_powspec_ml.h>
 #include <numcosmo/nc_snia_dist_cov.h>
 #include <numcosmo/nc_planck_fi.h>
 #include <numcosmo/nc_planck_fi_cor_tt.h>
