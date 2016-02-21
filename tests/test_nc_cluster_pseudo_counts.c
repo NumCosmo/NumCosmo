@@ -255,9 +255,9 @@ test_nc_cluster_pseudo_counts_m2lnL (TestNcClusterPseudoCounts *test, gconstpoin
 
   g_assert (gsl_finite (m2lnL));
 
-  
+/*  
   ncm_fit_run (test->fit, NCM_FIT_RUN_MSGS_FULL);
   printf ("m2lnL = % 20.15g\n", m2lnL);
-
+*/
   ncm_rng_clear (&rng);  
 }

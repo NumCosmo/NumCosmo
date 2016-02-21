@@ -3,7 +3,7 @@
  *
  *  Tue February 16 14:02:12 2016
  *  Copyright  2016  Sandro Dias Pinto Vitenti
- *  <andro@isoftware.com.br>
+ *  <sandro@isoftware.com.br>
  ****************************************************************************/
 /*
  * numcosmo

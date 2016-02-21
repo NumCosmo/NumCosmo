@@ -82,8 +82,14 @@ gdouble ncm_integral1d_get_reltol (NcmIntegral1d *int1d);
 gdouble ncm_integral1d_get_abstol (NcmIntegral1d *int1d);
 
 gdouble ncm_integral1d_eval (NcmIntegral1d *int1d, gdouble xi, gdouble xf, gpointer userdata, gdouble *err);
+
 gdouble ncm_integral1d_eval_gauss_hermite_p (NcmIntegral1d *int1d, gpointer userdata, gdouble *err);
 gdouble ncm_integral1d_eval_gauss_hermite (NcmIntegral1d *int1d, gpointer userdata, gdouble *err);
+gdouble ncm_integral1d_eval_gauss_hermite_r_p (NcmIntegral1d *int1d, gdouble r, gpointer userdata, gdouble *err);
+gdouble ncm_integral1d_eval_gauss_hermite_mur (NcmIntegral1d *int1d, gdouble r, gdouble mu, gpointer userdata, gdouble *err);
+
+gdouble ncm_integral1d_eval_gauss_laguerre (NcmIntegral1d *int1d, gpointer userdata, gdouble *err);
+gdouble ncm_integral1d_eval_gauss_laguerre_r (NcmIntegral1d *int1d, gdouble r, gpointer userdata, gdouble *err);
 
 #define NCM_INTEGRAL1D_DEFAULT_PARTITION 100000
 #define NCM_INTEGRAL1D_DEFAULT_ALG 6

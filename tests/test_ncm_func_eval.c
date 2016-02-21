@@ -71,7 +71,7 @@ test_ncm_func_eval_free (TestNcmSparam *test, gconstpointer pdata)
 void 
 test_ncm_func_eval_run_func (glong i, glong f, gpointer data)
 {
-  _NCM_STATIC_MUTEX_DECL (save_data);
+  G_LOCK_DEFINE_STATIC (save_data);
   glong k;
   gdouble *res = (gdouble *)data;
   gdouble part = 0.0;
@@ -84,9 +84,9 @@ test_ncm_func_eval_run_func (glong i, glong f, gpointer data)
     v = exp (log (fabs (part)) * 0.9);
     part += v;
   }
-  _NCM_MUTEX_LOCK (&save_data);
+  G_LOCK (save_data);
   *res += part;
-  _NCM_MUTEX_UNLOCK (&save_data);
+  G_UNLOCK (save_data);
 }
 
 void
