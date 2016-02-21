@@ -990,6 +990,7 @@ ncm_mset_set_fmap (NcmMSet *mset, const gchar *const *fmap, gboolean update_mode
         g_array_append_val (mset->pi_array, *pi);
         g_array_index (fpi_array, gint, pi->pid) = i;
       }
+      ncm_mset_pindex_free (pi);
     }
 
     g_ptr_array_set_size (mset->fullname_parray, mset->fparam_len);
@@ -2147,6 +2148,8 @@ ncm_mset_param_get_by_full_name (NcmMSet *mset, const gchar *fullname)
   }
   else
     g_error ("ncm_mset_param_get_by_full_name: invalid full name `%s'.",  fullname);
+
+  g_match_info_free (match_info);
 
   return pi;
 }

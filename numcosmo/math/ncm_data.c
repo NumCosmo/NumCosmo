@@ -137,6 +137,7 @@ ncm_data_finalize (GObject *object)
   NcmData *data = NCM_DATA (object);
 
   g_clear_pointer (&data->desc, g_free);
+  g_clear_pointer (&data->long_desc, g_free);
 
   ncm_bootstrap_clear (&data->bstrap);
   

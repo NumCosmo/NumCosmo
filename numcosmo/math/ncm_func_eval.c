@@ -43,12 +43,8 @@
 typedef struct _NcmFuncEvalCtrl
 {
   gint active_threads;
-  GMutex *update;
-  GCond *finish;
-#if !((GLIB_MAJOR_VERSION == 2) && (GLIB_MINOR_VERSION < 32))
-  GMutex update_m;
-  GCond finish_c;
-#endif
+  GMutex update;
+  GCond finish;
 } NcmFuncEvalCtrl;
 
 typedef struct _NcmFuncEvalLoopEval
@@ -71,13 +67,13 @@ func (gpointer data, gpointer empty)
   arg->lfunc (arg->i, arg->f, arg->data);
   g_slice_free (NcmFuncEvalLoopEval, arg);
 
-  g_mutex_lock (ctrl->update);
+  g_mutex_lock (&ctrl->update);
 
   ctrl->active_threads--;
   if (ctrl->active_threads == 0)
-    g_cond_signal (ctrl->finish);
+    g_cond_signal (&ctrl->finish);
 
-  g_mutex_unlock (ctrl->update);
+  g_mutex_unlock (&ctrl->update);
 
   return;
 }
@@ -93,18 +89,18 @@ func (gpointer data, gpointer empty)
 GThreadPool *
 ncm_func_eval_get_pool (void)
 {
-  _NCM_STATIC_MUTEX_DECL (create_lock);
+  G_LOCK_DEFINE_STATIC (create_lock);
   GError *err = NULL;
 
-  _NCM_MUTEX_LOCK (&create_lock);
+  G_LOCK (create_lock);
   if (_function_thread_pool == NULL)
   {
-    _function_thread_pool = g_thread_pool_new (func, NULL, NCM_THREAD_POOL_MAX, TRUE, &err);
+    _function_thread_pool = g_thread_pool_new (func, NULL, NCM_THREAD_POOL_MAX, FALSE, &err);
     if (err != NULL)
       g_error ("ncm_func_eval_get_pool: %s", err->message);
     g_clear_error (&err);
   }
-  _NCM_MUTEX_UNLOCK (&create_lock);
+  G_UNLOCK (create_lock);
 
   return _function_thread_pool;
 }
@@ -143,24 +139,13 @@ ncm_func_eval_set_max_threads (gint mt)
 void
 ncm_func_eval_threaded_loop_nw (NcmFuncEvalLoop lfunc, glong i, glong f, gpointer data, guint nworkers)
 {
-  NcmFuncEvalCtrl ctrl = {0, NULL, NULL, 
-#if !((GLIB_MAJOR_VERSION == 2) && (GLIB_MINOR_VERSION < 32))
-    {NULL},
-    {NULL},
-#endif
-  };
+  NcmFuncEvalCtrl ctrl = {0, {NULL}, {NULL}, };
   guint delta, res;
 
   ncm_func_eval_get_pool ();
-#if (GLIB_MAJOR_VERSION == 2) && (GLIB_MINOR_VERSION < 32)
-  ctrl.update = g_mutex_new ();
-  ctrl.finish = g_cond_new ();
-#else
-  g_mutex_init (&ctrl.update_m);
-  g_cond_init (&ctrl.finish_c);
-  ctrl.update = &ctrl.update_m;
-  ctrl.finish = &ctrl.finish_c;
-#endif
+  
+  g_mutex_init (&ctrl.update);
+  g_cond_init (&ctrl.finish);
 
   g_assert_cmpuint (f, >, i);
   g_assert_cmpuint (f - i, >, nworkers);
@@ -193,18 +178,13 @@ ncm_func_eval_threaded_loop_nw (NcmFuncEvalLoop lfunc, glong i, glong f, gpointe
     } while (--nworkers);
   }
 
-  g_mutex_lock (ctrl.update);
+  g_mutex_lock (&ctrl.update);
   while (ctrl.active_threads != 0)
-    g_cond_wait (ctrl.finish, ctrl.update);
-  g_mutex_unlock (ctrl.update);
+    g_cond_wait (&ctrl.finish, &ctrl.update);
+  g_mutex_unlock (&ctrl.update);
 
-#if (GLIB_MAJOR_VERSION == 2) && (GLIB_MINOR_VERSION < 32)
-  g_mutex_free (ctrl.update);
-  g_cond_free (ctrl.finish);
-#else
-  g_mutex_clear (ctrl.update);
-  g_cond_clear (ctrl.finish);
-#endif
+  g_mutex_clear (&ctrl.update);
+  g_cond_clear (&ctrl.finish);
 }
 #else
 void
@@ -248,23 +228,11 @@ ncm_func_eval_threaded_loop (NcmFuncEvalLoop lfunc, glong i, glong f, gpointer d
 void
 ncm_func_eval_threaded_loop_full (NcmFuncEvalLoop lfunc, glong i, glong f, gpointer data)
 {
-  NcmFuncEvalCtrl ctrl = {0, NULL, NULL, 
-#if !((GLIB_MAJOR_VERSION == 2) && (GLIB_MINOR_VERSION < 32))
-    {NULL},
-    {NULL},
-#endif
-  };
+  NcmFuncEvalCtrl ctrl = {0, {NULL}, {NULL}, };
 
   ncm_func_eval_get_pool ();
-#if (GLIB_MAJOR_VERSION == 2) && (GLIB_MINOR_VERSION < 32)
-  ctrl.update = g_mutex_new ();
-  ctrl.finish = g_cond_new ();
-#else
-  g_mutex_init (&ctrl.update_m);
-  g_cond_init (&ctrl.finish_c);
-  ctrl.update = &ctrl.update_m;
-  ctrl.finish = &ctrl.finish_c;
-#endif
+  g_mutex_init (&ctrl.update);
+  g_cond_init (&ctrl.finish);
 
   g_assert_cmpuint (f, >, i);
 
@@ -277,26 +245,21 @@ ncm_func_eval_threaded_loop_full (NcmFuncEvalLoop lfunc, glong i, glong f, gpoin
     {
       NcmFuncEvalLoopEval *arg = g_slice_new (NcmFuncEvalLoopEval);
       arg->lfunc = lfunc;
-      arg->i = l;
-      arg->f = l + 1;
-      arg->data = data;
-      arg->ctrl = &ctrl;
+      arg->i     = l;
+      arg->f     = l + 1;
+      arg->data  = data;
+      arg->ctrl  = &ctrl;
       g_thread_pool_push (_function_thread_pool, arg, &err);
     }
   }
 
-  g_mutex_lock (ctrl.update);
+  g_mutex_lock (&ctrl.update);
   while (ctrl.active_threads != 0)
-    g_cond_wait (ctrl.finish, ctrl.update);
-  g_mutex_unlock (ctrl.update);
+    g_cond_wait (&ctrl.finish, &ctrl.update);
+  g_mutex_unlock (&ctrl.update);
 
-#if (GLIB_MAJOR_VERSION == 2) && (GLIB_MINOR_VERSION < 32)
-  g_mutex_free (ctrl.update);
-  g_cond_free (ctrl.finish);
-#else
-  g_mutex_clear (ctrl.update);
-  g_cond_clear (ctrl.finish);
-#endif
+  g_mutex_clear (&ctrl.update);
+  g_cond_clear (&ctrl.finish);
 }
 #else
 void

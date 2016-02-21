@@ -90,14 +90,10 @@ struct _NcmFitMC
   gint cur_sample_id;
   gint first_sample_id;
   gboolean started;
-  GMutex *dup_fit;
-  GMutex *resample_lock;
-  GCond *write_cond;
-#if !((GLIB_MAJOR_VERSION == 2) && (GLIB_MINOR_VERSION < 32))
-  GMutex dup_fit_m;
-  GMutex resample_lock_m;
-  GCond write_cond_m;
-#endif
+  GMutex dup_fit;
+  GMutex resample_lock;
+  GMutex update_lock;
+  GCond write_cond;
 };
 
 struct _NcmFitMCClass

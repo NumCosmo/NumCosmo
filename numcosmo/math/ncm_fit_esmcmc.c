@@ -90,20 +90,11 @@ ncm_fit_esmcmc_init (NcmFitESMCMC *esmcmc)
   esmcmc->naccepted       = 0;
   esmcmc->write_index     = 0;
   esmcmc->started         = FALSE;
-#if (GLIB_MAJOR_VERSION == 2) && (GLIB_MINOR_VERSION < 32)
-  esmcmc->dup_fit         = g_mutex_new ();
-  esmcmc->resample_lock   = g_mutex_new ();
-  esmcmc->write_cond      = g_cond_new ();
-#else
-  g_mutex_init (&esmcmc->dup_fit_m);
-  esmcmc->dup_fit = &esmcmc->dup_fit_m;
 
-  g_mutex_init (&esmcmc->resample_lock_m);
-  esmcmc->resample_lock = &esmcmc->resample_lock_m;
-
-  g_cond_init (&esmcmc->write_cond_m);
-  esmcmc->write_cond = &esmcmc->write_cond_m;
-#endif
+  g_mutex_init (&esmcmc->dup_fit);
+  g_mutex_init (&esmcmc->resample_lock);
+  g_mutex_init (&esmcmc->update_lock);
+  g_cond_init (&esmcmc->write_cond);
 }
 
 static void
@@ -239,15 +230,10 @@ ncm_fit_esmcmc_finalize (GObject *object)
 {
   NcmFitESMCMC *esmcmc = NCM_FIT_ESMCMC (object);
 
-#if (GLIB_MAJOR_VERSION == 2) && (GLIB_MINOR_VERSION < 32)
-  g_mutex_free (esmcmc->dup_fit);
-  g_mutex_free (esmcmc->resample_lock);
-  g_cond_free (esmcmc->write_cond);
-#else
-  g_mutex_clear (esmcmc->dup_fit);
-  g_mutex_clear (esmcmc->resample_lock);
-  g_cond_clear (esmcmc->write_cond);
-#endif
+  g_mutex_clear (&esmcmc->dup_fit);
+  g_mutex_clear (&esmcmc->resample_lock);
+  g_mutex_clear (&esmcmc->update_lock);
+  g_cond_clear (&esmcmc->write_cond);
   
   /* Chain up : end */
   G_OBJECT_CLASS (ncm_fit_esmcmc_parent_class)->finalize (object);
@@ -581,7 +567,6 @@ static void ncm_fit_esmcmc_intern_skip (NcmFitESMCMC *esmcmc, guint n);
 static void 
 _ncm_fit_esmcmc_gen_init_points_mt_eval (glong i, glong f, gpointer data)
 {
-  _NCM_STATIC_MUTEX_DECL (update_lock);
   NcmFitESMCMC *esmcmc = NCM_FIT_ESMCMC (data);
   glong k;
   
@@ -593,9 +578,9 @@ _ncm_fit_esmcmc_gen_init_points_mt_eval (glong i, glong f, gpointer data)
 
     while (TRUE)
     {
-      g_mutex_lock (esmcmc->resample_lock);
+      g_mutex_lock (&esmcmc->resample_lock);
       ncm_mset_trans_kern_prior_sample (esmcmc->sampler, thetastar, esmcmc->mcat->rng);
-      g_mutex_unlock (esmcmc->resample_lock);
+      g_mutex_unlock (&esmcmc->resample_lock);
 
       ncm_mset_fparams_set_vector (fit_k->mset, thetastar);
       ncm_fit_m2lnL_val (fit_k, &m2lnL);
@@ -606,17 +591,17 @@ _ncm_fit_esmcmc_gen_init_points_mt_eval (glong i, glong f, gpointer data)
     
     ncm_fit_state_set_m2lnL_curval (fit_k->fstate, m2lnL);
 
-    _NCM_MUTEX_LOCK (&update_lock);
+    g_mutex_lock (&esmcmc->update_lock);
     while (esmcmc->write_index != k)
-      g_cond_wait (esmcmc->write_cond, &update_lock);
+      g_cond_wait (&esmcmc->write_cond, &esmcmc->update_lock);
 
     esmcmc->ntotal++;
     esmcmc->naccepted++;
     _ncm_fit_esmcmc_update (esmcmc, fit_k, k);
     esmcmc->write_index++;
     
-    g_cond_broadcast (esmcmc->write_cond);
-    _NCM_MUTEX_UNLOCK (&update_lock);
+    g_cond_broadcast (&esmcmc->write_cond);
+    g_mutex_unlock (&esmcmc->update_lock);
   }
 }
 
@@ -1007,7 +992,6 @@ _ncm_fit_esmcmc_run_single (NcmFitESMCMC *esmcmc)
 static void 
 _ncm_fit_esmcmc_mt_eval (glong i, glong f, gpointer data)
 {
-  _NCM_STATIC_MUTEX_DECL (update_lock);
   NcmFitESMCMC *esmcmc = NCM_FIT_ESMCMC (data);
   const guint nwalkers_2  = esmcmc->nwalkers / 2;
   const guint subensemble = (i < nwalkers_2) ? nwalkers_2 : 0;
@@ -1025,11 +1009,11 @@ _ncm_fit_esmcmc_mt_eval (glong i, glong f, gpointer data)
     gulong j;
     gboolean accepted = TRUE;
 
-    g_mutex_lock (esmcmc->resample_lock);
+    g_mutex_lock (&esmcmc->resample_lock);
     jump = gsl_rng_uniform (esmcmc->mcat->rng->r);
     u    = gsl_rng_uniform (esmcmc->mcat->rng->r);
     j    = gsl_rng_uniform_int (esmcmc->mcat->rng->r, nwalkers_2);
-    g_mutex_unlock (esmcmc->resample_lock);
+    g_mutex_unlock (&esmcmc->resample_lock);
 
     z    = gsl_pow_2 (1.0 + (esmcmc->a - 1.0) * u) / esmcmc->a;
     j   += subensemble;
@@ -1069,9 +1053,9 @@ _ncm_fit_esmcmc_mt_eval (glong i, glong f, gpointer data)
       }
     }
     
-    _NCM_MUTEX_LOCK (&update_lock);    
+    g_mutex_lock (&esmcmc->update_lock);    
     while (esmcmc->write_index != k)
-      g_cond_wait (esmcmc->write_cond, &update_lock);
+      g_cond_wait (&esmcmc->write_cond, &esmcmc->update_lock);
 
     esmcmc->ntotal++;
     if (accepted)
@@ -1079,9 +1063,9 @@ _ncm_fit_esmcmc_mt_eval (glong i, glong f, gpointer data)
 
     _ncm_fit_esmcmc_update (esmcmc, fit_k, k);
     esmcmc->write_index++;
-    g_cond_broadcast (esmcmc->write_cond);
+    g_cond_broadcast (&esmcmc->write_cond);
 
-    _NCM_MUTEX_UNLOCK (&update_lock);
+    g_mutex_unlock (&esmcmc->update_lock);
     k++;
   }
 }

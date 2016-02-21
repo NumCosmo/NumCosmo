@@ -197,7 +197,7 @@ ncm_likelihood_class_init (NcmLikelihoodClass *klass)
                                                        G_MININT64, G_MAXINT64, 0,
                                                        G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
   g_object_class_install_property (object_class,
-                                   PROP_PRIORS_F,
+                                   PROP_M2LNL_V,
                                    g_param_spec_object ("m2lnL-v",
                                                         NULL,
                                                         "m2lnL vector",

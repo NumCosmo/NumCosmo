@@ -934,11 +934,11 @@ typedef struct _NcmABCThread
 static gpointer
 _ncm_abc_dup_thread (gpointer userdata)
 {
-  _NCM_STATIC_MUTEX_DECL (dup_thread);
+  G_LOCK_DEFINE_STATIC (dup_thread);
   NcmABC *abc = NCM_ABC (userdata);
   NcmABCThread *abct = g_new (NcmABCThread, 1);
 
-  _NCM_MUTEX_LOCK (&dup_thread);
+  G_LOCK (dup_thread);
   {
     abct->mset      = ncm_mset_dup (abc->mcat->mset, abc->ser);
     abct->dset      = ncm_dataset_dup (abc->dset, abc->ser);
@@ -949,7 +949,7 @@ _ncm_abc_dup_thread (gpointer userdata)
 
     ncm_serialize_clear_instances (abc->ser);
 
-    _NCM_MUTEX_UNLOCK (&dup_thread);
+    G_UNLOCK (dup_thread);
     return abct;
   }
 }
@@ -969,7 +969,7 @@ _ncm_abc_free_thread (gpointer data)
 static void 
 _ncm_abc_thread_eval (glong i, glong f, gpointer data)
 {
-  _NCM_STATIC_MUTEX_DECL (update_lock);
+  G_LOCK_DEFINE_STATIC (update_lock);
   NcmABC *abc = NCM_ABC (data);
   NcmABCThread **abct_ptr = ncm_memory_pool_get (abc->mp);
   NcmABCThread *abct = *abct_ptr;
@@ -986,17 +986,17 @@ _ncm_abc_thread_eval (glong i, glong f, gpointer data)
     dist = ncm_abc_mock_distance (abc, abct->dset, abct->thetastar, abct->thetastar, abct->rng);
     prob = ncm_abc_distance_prob (abc, dist);
 
-    _NCM_MUTEX_LOCK (&update_lock);
+    G_LOCK (update_lock);
     abc->ntotal++;
-    _NCM_MUTEX_UNLOCK (&update_lock);
+    G_UNLOCK (update_lock);
     if (prob == 1.0 || (prob != 0.0 && gsl_rng_uniform (abct->rng->r) < prob))
     {
-      _NCM_MUTEX_LOCK (&update_lock);
+      G_LOCK (update_lock);
       abc->cur_sample_id++;
       abc->naccepted++;
       _ncm_abc_update (abc, abct->mset, dist, 1.0);
       j++;
-      _NCM_MUTEX_UNLOCK (&update_lock);
+      G_UNLOCK (update_lock);
     }
   }
 
@@ -1335,7 +1335,7 @@ _ncm_abc_update_single (NcmABC *abc)
 static void 
 _ncm_abc_thread_update_eval (glong i, glong f, gpointer data)
 {
-  _NCM_STATIC_MUTEX_DECL (update_lock);
+  G_LOCK_DEFINE_STATIC (update_lock);
   NcmABC *abc = NCM_ABC (data);
   NcmABCThread **abct_ptr = ncm_memory_pool_get (abc->mp);
   NcmABCThread *abct = *abct_ptr;
@@ -1357,18 +1357,18 @@ _ncm_abc_thread_update_eval (glong i, glong f, gpointer data)
     dist = ncm_abc_mock_distance (abc, abct->dset, theta, abct->thetastar, abct->rng);
     prob = ncm_abc_distance_prob (abc, dist);
 /*
-    _NCM_MUTEX_LOCK (&update_lock);
+    G_LOCK (update_lock);
     printf ("# choice %zu\n", np);
     ncm_vector_log_vals (theta,           "# v_choice = ", "% 20.15g");
     ncm_vector_log_vals (abct->thetastar, "# v_tkern  = ", "% 20.15g");
     printf ("# dist % 20.15g prob % 20.15g\n", dist, prob);
-    _NCM_MUTEX_UNLOCK (&update_lock);
+    G_UNLOCK (update_lock);
 */
     ncm_vector_free (theta);
     
-    _NCM_MUTEX_LOCK (&update_lock);
+    G_LOCK (update_lock);
     abc->ntotal++;
-    _NCM_MUTEX_UNLOCK (&update_lock);
+    G_UNLOCK (update_lock);
     
     if (prob == 1.0 || (prob != 0.0 && gsl_rng_uniform (abct->rng->r) < prob))
     {
@@ -1384,12 +1384,12 @@ _ncm_abc_thread_update_eval (glong i, glong f, gpointer data)
       }
       new_weight = new_weight / denom; 
 
-      _NCM_MUTEX_LOCK (&update_lock);
+      G_LOCK (update_lock);
       abc->cur_sample_id++;
       abc->naccepted++;
       _ncm_abc_update (abc, abct->mset, dist, new_weight);
       j++;
-      _NCM_MUTEX_UNLOCK (&update_lock);
+      G_UNLOCK (update_lock);
     }
   }
 

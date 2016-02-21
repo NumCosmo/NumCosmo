@@ -76,20 +76,11 @@ ncm_fit_mcmc_init (NcmFitMCMC *mcmc)
   mcmc->ntotal          = 0;
   mcmc->write_index     = 0;
   mcmc->started         = FALSE;
-#if (GLIB_MAJOR_VERSION == 2) && (GLIB_MINOR_VERSION < 32)
-  mcmc->dup_fit         = g_mutex_new ();
-  mcmc->resample_lock   = g_mutex_new ();
-  mcmc->write_cond      = g_cond_new ();
-#else
-  g_mutex_init (&mcmc->dup_fit_m);
-  mcmc->dup_fit = &mcmc->dup_fit_m;
 
-  g_mutex_init (&mcmc->resample_lock_m);
-  mcmc->resample_lock = &mcmc->resample_lock_m;
-
-  g_cond_init (&mcmc->write_cond_m);
-  mcmc->write_cond = &mcmc->write_cond_m;
-#endif
+  g_mutex_init (&mcmc->dup_fit);
+  g_mutex_init (&mcmc->resample_lock);
+  g_mutex_init (&mcmc->update_lock);
+  g_cond_init (&mcmc->write_cond);
 }
 
 static void _ncm_fit_mcmc_set_fit_obj (NcmFitMCMC *mcmc, NcmFit *fit);
@@ -180,15 +171,10 @@ ncm_fit_mcmc_finalize (GObject *object)
 {
   NcmFitMCMC *mcmc = NCM_FIT_MCMC (object);
 
-#if (GLIB_MAJOR_VERSION == 2) && (GLIB_MINOR_VERSION < 32)
-  g_mutex_free (mcmc->dup_fit);
-  g_mutex_free (mcmc->resample_lock);
-  g_cond_free (mcmc->write_cond);
-#else
-  g_mutex_clear (mcmc->dup_fit);
-  g_mutex_clear (mcmc->resample_lock);
-  g_cond_clear (mcmc->write_cond);
-#endif
+  g_mutex_clear (&mcmc->dup_fit);
+  g_mutex_clear (&mcmc->resample_lock);
+  g_mutex_clear (&mcmc->update_lock);
+  g_cond_clear (&mcmc->write_cond);
   
   /* Chain up : end */
   G_OBJECT_CLASS (ncm_fit_mcmc_parent_class)->finalize (object);
@@ -737,11 +723,11 @@ static gpointer
 _ncm_fit_mcmc_dup_fit (gpointer userdata)
 {
   NcmFitMCMC *mcmc = NCM_FIT_MCMC (userdata);
-  g_mutex_lock (mcmc->dup_fit);
+  g_mutex_lock (&mcmc->dup_fit);
   {
     NcmFit *fit = ncm_fit_dup (mcmc->fit, mcmc->ser);
     ncm_serialize_clear_instances (mcmc->ser);
-    g_mutex_unlock (mcmc->dup_fit);
+    g_mutex_unlock (&mcmc->dup_fit);
     return fit;
   }
 }
@@ -749,7 +735,6 @@ _ncm_fit_mcmc_dup_fit (gpointer userdata)
 static void 
 _ncm_fit_mcmc_mt_eval (glong i, glong f, gpointer data)
 {
-  _NCM_STATIC_MUTEX_DECL (update_lock);
   NcmFitMCMC *mcmc = NCM_FIT_MCMC (data);
   NcmFit **fit_ptr = ncm_memory_pool_get (mcmc->mp);
   NcmFit *fit = *fit_ptr;
@@ -763,22 +748,22 @@ _ncm_fit_mcmc_mt_eval (glong i, glong f, gpointer data)
 
 //    ncm_mset_param_set_vector (fit->mset, mcmc->bf);
 
-    g_mutex_lock (mcmc->resample_lock);
+    g_mutex_lock (&mcmc->resample_lock);
 //    sample_index = _ncm_fit_mcmc_resample (mc, fit);
     sample_index = 0;
-    g_mutex_unlock (mcmc->resample_lock);
+    g_mutex_unlock (&mcmc->resample_lock);
 
     ncm_fit_run (fit, NCM_FIT_RUN_MSGS_NONE);
 
-    _NCM_MUTEX_LOCK (&update_lock);    
+    g_mutex_lock (&mcmc->update_lock);    
     while (mcmc->write_index != sample_index)
-      g_cond_wait (mcmc->write_cond, &update_lock);
+      g_cond_wait (&mcmc->write_cond, &mcmc->update_lock);
 
     _ncm_fit_mcmc_update (mcmc, fit);
     mcmc->write_index++;
-    g_cond_broadcast (mcmc->write_cond);
+    g_cond_broadcast (&mcmc->write_cond);
 
-    _NCM_MUTEX_UNLOCK (&update_lock);
+    g_mutex_unlock (&mcmc->update_lock);
   }
 
   ncm_memory_pool_return (fit_ptr);

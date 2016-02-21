@@ -51,10 +51,7 @@ struct _NcmRNG
   gsl_rng *r;
   gulong seed_val;
   gboolean seed_set;
-  GMutex *lock;
-#if !((GLIB_MAJOR_VERSION == 2) && (GLIB_MINOR_VERSION < 32))
-  GMutex lock_m;
-#endif
+  GMutex lock;
 };
 
 struct _NcmRNGClass
@@ -90,4 +87,3 @@ NcmRNG *ncm_rng_pool_get (const gchar *name);
 G_END_DECLS
 
 #endif /* _NCM_RNG_H_ */
-

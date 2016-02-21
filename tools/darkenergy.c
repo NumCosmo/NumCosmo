@@ -745,7 +745,8 @@ main (gint argc, gchar *argv[])
     ncm_mset_catalog_clear (&mcat);
     mcat = ncm_fit_esmcmc_get_catalog (esmcmc);
 
-    ncm_fit_esmcmc_clear (&esmcmc);    
+    ncm_fit_esmcmc_clear (&esmcmc);
+    ncm_mset_trans_kern_free (NCM_MSET_TRANS_KERN (init_sampler));
   }
 
   if (de_fit.onedim_cr != NULL)

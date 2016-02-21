@@ -129,20 +129,6 @@ _BIVec_free (gpointer mem)
   g_slice_free (_BIVec, mem);
 }
 
-#if (GLIB_MAJOR_VERSION < 2) || (GLIB_MINOR_VERSION < 28)
-static void g_list_free_full (GList *list, GDestroyNotify free_func)
-{
-  GList *first = g_list_first (list);
-  GList *wl = first;
-  while (wl != NULL)
-  {
-    free_func (wl->data);
-    wl = g_list_next (wl);
-  }
-  g_list_free (first);
-}
-#endif /* (GLIB_MAJOR_VERSION < 2) || (GLIB_MINOR_VERSION < 28)  */
-
 static void
 ncm_spline_new_function_4 (NcmSpline *s, gsl_function *F, gdouble xi, gdouble xf, gsize max_nodes, gdouble rel_error)
 {

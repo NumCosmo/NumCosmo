@@ -72,13 +72,13 @@ _integral_ws_free (gpointer p)
 gsl_integration_workspace **
 ncm_integral_get_workspace ()
 {
-  _NCM_STATIC_MUTEX_DECL (create_lock);
+  G_LOCK_DEFINE_STATIC (create_lock);
   static NcmMemoryPool *mp = NULL;
 
-  _NCM_MUTEX_LOCK (&create_lock);
+  G_LOCK (create_lock);
   if (mp == NULL)
     mp = ncm_memory_pool_new (_integral_ws_alloc, NULL, _integral_ws_free);
-  _NCM_MUTEX_UNLOCK (&create_lock);
+  G_UNLOCK (create_lock);
 
   return ncm_memory_pool_get (mp);
 }

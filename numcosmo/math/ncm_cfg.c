@@ -255,12 +255,9 @@ ncm_cfg_init (void)
 #endif
 
   gsl_err = gsl_set_error_handler_off ();
-#if (GLIB_MAJOR_VERSION == 2) && (GLIB_MINOR_VERSION < 32)
-  g_thread_init (NULL);
-#endif
 
 #if (GLIB_MAJOR_VERSION == 2) && (GLIB_MINOR_VERSION < 36)
-  g_type_init();
+  g_type_init ();
 #endif
 
   _log_stream = stdout;
@@ -435,7 +432,7 @@ static uint nreg_model = 0;
 void
 ncm_cfg_register_obj (GType obj)
 {
-#if !((GLIB_MAJOR_VERSION == 2) && (GLIB_MINOR_VERSION < 33))
+#if !((GLIB_MAJOR_VERSION == 2) && (GLIB_MINOR_VERSION < 34))
   g_type_ensure (obj);
 #endif /* GLIB >= 2.34*/
   gpointer obj_class = g_type_class_ref (obj);
@@ -747,12 +744,8 @@ ncm_cfg_entries_to_keyfile (GKeyFile *kfile, const gchar *group_name, GOptionEnt
       }
       case G_OPTION_ARG_INT64:
       {
-#if !((GLIB_MAJOR_VERSION == 2) && (GLIB_MINOR_VERSION < 26))
         gint64 arg_l = ((gint64 *)entries[i].arg_data)[0];
         g_key_file_set_int64 (kfile, group_name, entries[i].long_name, arg_l);
-#else
-        g_error ("ncm_cfg_entries_to_keyfile: gint64 not supported, recompile "PACKAGE_NAME" with glib >= 2.26");
-#endif
         break;
       }
       case G_OPTION_ARG_DOUBLE:

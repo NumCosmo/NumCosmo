@@ -67,7 +67,9 @@ ncm_function_cache_new (guint n, gdouble abstol, gdouble reltol)
 {
   NcmFunctionCache *cache = g_slice_new (NcmFunctionCache);
   cache->tree = g_tree_new_full (&gdouble_compare, NULL, &gdouble_free, (GDestroyNotify)&gsl_vector_free);
-  _NCM_MUTEX_INIT (&cache->lock);
+
+  g_mutex_init (&cache->lock);
+
   cache->clear = FALSE;
   cache->n = n;
   cache->abstol = abstol;
@@ -86,7 +88,7 @@ ncm_function_cache_new (guint n, gdouble abstol, gdouble reltol)
 void
 ncm_function_cache_free (NcmFunctionCache *cache)
 {
-  _NCM_MUTEX_CLEAR (&cache->lock);
+  g_mutex_clear (&cache->lock);
   g_tree_destroy (cache->tree);
   g_slice_free (NcmFunctionCache, cache);
   return;
@@ -121,10 +123,10 @@ ncm_function_cache_insert_vector (NcmFunctionCache *cache, gdouble x, gsl_vector
   g_assert (cache->n == p->size);
 
   *x_ptr = x;
-  _NCM_MUTEX_LOCK (&cache->lock);
+  g_mutex_lock (&cache->lock);
   cache_clean (cache);
   g_tree_insert (cache->tree, x_ptr, p);
-  _NCM_MUTEX_UNLOCK (&cache->lock);
+  g_mutex_unlock (&cache->lock);
 }
 
 void
@@ -134,12 +136,12 @@ ncm_function_cache_insert (NcmFunctionCache *cache, gdouble x, ...)
   gsl_vector *v;
   guint i;
   va_list ap;
-  _NCM_MUTEX_LOCK (&cache->lock);
+  g_mutex_lock (&cache->lock);
   cache_clean (cache);
 
   if (g_tree_lookup (cache->tree, &x) != NULL)
   {
-    _NCM_MUTEX_UNLOCK (&cache->lock);
+    g_mutex_unlock (&cache->lock);
     return;
   }
 
@@ -153,7 +155,7 @@ ncm_function_cache_insert (NcmFunctionCache *cache, gdouble x, ...)
   *x_ptr = x;
 
   g_tree_insert (cache->tree, x_ptr, v);
-  _NCM_MUTEX_UNLOCK (&cache->lock);
+  g_mutex_unlock (&cache->lock);
 }
 
 typedef struct _NcParamsCacheSearch
@@ -182,12 +184,12 @@ ncm_function_cache_get_near (NcmFunctionCache *cache, gdouble x, gdouble *x_foun
   NcParamsCacheSearch search = {FALSE, x, 0.0, GSL_POSINF, 0, NC_FUNCTION_CACHE_SEARCH_BOTH};
   gsl_vector *res = NULL;
 
-  _NCM_MUTEX_LOCK (&cache->lock);
+  g_mutex_lock (&cache->lock);
   search.type = type;
 
   if (cache_clean (cache))
   {
-    _NCM_MUTEX_UNLOCK (&cache->lock);
+      g_mutex_unlock (&cache->lock);
     return FALSE;
   }
 
@@ -200,12 +202,12 @@ ncm_function_cache_get_near (NcmFunctionCache *cache, gdouble x, gdouble *x_foun
   }
   if (res == NULL)
   {
-    _NCM_MUTEX_UNLOCK (&cache->lock);
+      g_mutex_unlock (&cache->lock);
     return FALSE;
   }
   *v = res;
 
-  _NCM_MUTEX_UNLOCK (&cache->lock);
+    g_mutex_unlock (&cache->lock);
   return TRUE;
 }
 
@@ -224,22 +226,22 @@ ncm_function_cache_get (NcmFunctionCache *cache, gdouble *x_ptr, gsl_vector **v)
 {
   gsl_vector *res;
 
-  _NCM_MUTEX_LOCK (&cache->lock);
+  g_mutex_lock (&cache->lock);
 
   if (cache_clean (cache))
   {
-    _NCM_MUTEX_UNLOCK (&cache->lock);
+    g_mutex_unlock (&cache->lock);
     return FALSE;
   }
   res = g_tree_lookup (cache->tree, x_ptr);
   if (res == NULL)
   {
-    _NCM_MUTEX_UNLOCK (&cache->lock);
+    g_mutex_unlock (&cache->lock);
     return FALSE;
   }
 
   *v = res;
-  _NCM_MUTEX_UNLOCK (&cache->lock);
+  g_mutex_unlock (&cache->lock);
   return TRUE;
 }
 

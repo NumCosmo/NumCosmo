@@ -54,7 +54,7 @@ struct _NcmFunctionCache
 {
   /*< private >*/
   GTree *tree;
-  _NCM_MUTEX_TYPE lock;
+  GMutex lock;
   gboolean clear;
   guint n;
   gdouble abstol;

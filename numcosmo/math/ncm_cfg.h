@@ -119,24 +119,6 @@ G_STMT_START { \
 #define NCM_CHECK_PREPARED(obj,name)
 #endif /* NUMCOSMO_CHECK_PREPARE */
 
-#if (GLIB_MAJOR_VERSION == 2) && (GLIB_MINOR_VERSION < 32)
-#define _NCM_MUTEX_LOCK(l) g_static_mutex_lock (l)
-#define _NCM_MUTEX_UNLOCK(l) g_static_mutex_unlock (l)
-#define _NCM_MUTEX_TRYLOCK(l) g_static_mutex_trylock (l)
-#define _NCM_MUTEX_TYPE GStaticMutex
-#define _NCM_STATIC_MUTEX_DECL(l) static GStaticMutex l = G_STATIC_MUTEX_INIT
-#define _NCM_MUTEX_INIT(l) g_static_mutex_init (l)
-#define _NCM_MUTEX_CLEAR(l) g_static_mutex_free (l)
-#else
-#define _NCM_MUTEX_LOCK(l) g_mutex_lock (l)
-#define _NCM_MUTEX_UNLOCK(l) g_mutex_unlock (l)
-#define _NCM_MUTEX_TRYLOCK(l) g_mutex_trylock (l)
-#define _NCM_MUTEX_TYPE GMutex
-#define _NCM_STATIC_MUTEX_DECL(l) static GMutex l
-#define _NCM_MUTEX_INIT(l) g_mutex_init (l)
-#define _NCM_MUTEX_CLEAR(l) g_mutex_clear (l)
-#endif
-
 #define NCM_ZERO_LIMIT 1e-13
 #define NCM_DEFAULT_PRECISION 1e-7
 
@@ -151,23 +133,6 @@ G_STMT_START { \
 #ifndef mpz_clears
 #define mpz_clears ncm_mpz_clears
 #endif /* mpz_inits */
-
-/* Workaround on g_clear_pointer */
-#if ((GLIB_MAJOR_VERSION == 2) && (GLIB_MINOR_VERSION < 34))
-#define g_clear_pointer(ptr,freefunc) \
-G_STMT_START { \
-  if (*(ptr) != NULL) \
-  { \
-    freefunc (*(ptr)); \
-    *(ptr) = NULL; \
-  } \
-} G_STMT_END
-#endif /* Glib version < 2.34 */
-
-/* Workaround on g_clear_object. */
-#if ((GLIB_MAJOR_VERSION == 2) && (GLIB_MINOR_VERSION < 28))
-#define g_clear_object(obj) g_clear_pointer(ptr,g_object_unref)
-#endif /* Glib version < 2.28 */
 
 #define NCM_FITS_ERROR(status) \
 G_STMT_START { \

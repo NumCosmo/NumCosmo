@@ -76,20 +76,10 @@ ncm_fit_mc_init (NcmFitMC *mc)
   mc->cur_sample_id   = -1; /* Represents that no samples were calculated yet. */
   mc->write_index     = 0;
   mc->started         = FALSE;
-#if (GLIB_MAJOR_VERSION == 2) && (GLIB_MINOR_VERSION < 32)
-  mc->dup_fit         = g_mutex_new ();
-  mc->resample_lock   = g_mutex_new ();
-  mc->write_cond      = g_cond_new ();
-#else
-  g_mutex_init (&mc->dup_fit_m);
-  mc->dup_fit = &mc->dup_fit_m;
-
-  g_mutex_init (&mc->resample_lock_m);
-  mc->resample_lock = &mc->resample_lock_m;
-
-  g_cond_init (&mc->write_cond_m);
-  mc->write_cond = &mc->write_cond_m;
-#endif
+  g_mutex_init (&mc->dup_fit);
+  g_mutex_init (&mc->resample_lock);
+  g_mutex_init (&mc->update_lock);
+  g_cond_init (&mc->write_cond);
 }
 
 static void _ncm_fit_mc_set_fit_obj (NcmFitMC *mc, NcmFit *fit);
@@ -191,15 +181,10 @@ ncm_fit_mc_finalize (GObject *object)
 {
   NcmFitMC *mc = NCM_FIT_MC (object);
 
-#if (GLIB_MAJOR_VERSION == 2) && (GLIB_MINOR_VERSION < 32)
-  g_mutex_free (mc->dup_fit);
-  g_mutex_free (mc->resample_lock);
-  g_cond_free (mc->write_cond);
-#else
-  g_mutex_clear (mc->dup_fit);
-  g_mutex_clear (mc->resample_lock);
-  g_cond_clear (mc->write_cond);
-#endif
+  g_mutex_clear (&mc->dup_fit);
+  g_mutex_clear (&mc->resample_lock);
+  g_mutex_clear (&mc->update_lock);
+  g_cond_clear (&mc->write_cond);
   
   /* Chain up : end */
   G_OBJECT_CLASS (ncm_fit_mc_parent_class)->finalize (object);
@@ -783,11 +768,11 @@ static gpointer
 _ncm_fit_mc_dup_fit (gpointer userdata)
 {
   NcmFitMC *mc = NCM_FIT_MC (userdata);
-  g_mutex_lock (mc->dup_fit);
+  g_mutex_lock (&mc->dup_fit);
   {
     NcmFit *fit = ncm_fit_dup (mc->fit, mc->ser);
     ncm_serialize_clear_instances (mc->ser);
-    g_mutex_unlock (mc->dup_fit);
+    g_mutex_unlock (&mc->dup_fit);
     return fit;
   }
 }
@@ -795,7 +780,6 @@ _ncm_fit_mc_dup_fit (gpointer userdata)
 static void 
 _ncm_fit_mc_mt_eval_keep_order (glong i, glong f, gpointer data)
 {
-  _NCM_STATIC_MUTEX_DECL (update_lock);
   NcmFitMC *mc = NCM_FIT_MC (data);
   NcmFit **fit_ptr = ncm_memory_pool_get (mc->mp);
   NcmFit *fit = *fit_ptr;
@@ -807,21 +791,21 @@ _ncm_fit_mc_mt_eval_keep_order (glong i, glong f, gpointer data)
 
     ncm_mset_param_set_vector (fit->mset, mc->bf);
 
-    g_mutex_lock (mc->resample_lock);
+    g_mutex_lock (&mc->resample_lock);
     sample_index = _ncm_fit_mc_resample (mc, fit);
-    g_mutex_unlock (mc->resample_lock);
+    g_mutex_unlock (&mc->resample_lock);
 
     ncm_fit_run (fit, NCM_FIT_RUN_MSGS_NONE);
 
-    _NCM_MUTEX_LOCK (&update_lock);    
+    g_mutex_lock (&mc->update_lock);    
     while (mc->write_index != sample_index)
-      g_cond_wait (mc->write_cond, &update_lock);
+      g_cond_wait (&mc->write_cond, &mc->update_lock);
 
     _ncm_fit_mc_update (mc, fit);
     mc->write_index++;
-    g_cond_broadcast (mc->write_cond);
+    g_cond_broadcast (&mc->write_cond);
 
-    _NCM_MUTEX_UNLOCK (&update_lock);
+    g_mutex_unlock (&mc->update_lock);    
   }
 
   ncm_memory_pool_return (fit_ptr);
@@ -831,7 +815,7 @@ _ncm_fit_mc_mt_eval_keep_order (glong i, glong f, gpointer data)
 static void 
 _ncm_fit_mc_mt_eval (glong i, glong f, gpointer data)
 {
-  _NCM_STATIC_MUTEX_DECL (update_lock);
+  G_LOCK_DEFINE_STATIC (update_lock);
   NcmFitMC *mc = NCM_FIT_MC (data);
   NcmFit **fit_ptr = ncm_memory_pool_get (mc->mp);
   NcmFit *fit = *fit_ptr;
@@ -841,16 +825,16 @@ _ncm_fit_mc_mt_eval (glong i, glong f, gpointer data)
   {
     ncm_mset_param_set_vector (fit->mset, mc->bf);
 
-    g_mutex_lock (mc->resample_lock);
+    g_mutex_lock (&mc->resample_lock);
     _ncm_fit_mc_resample (mc, fit);
-    g_mutex_unlock (mc->resample_lock);
+    g_mutex_unlock (&mc->resample_lock);
 
     ncm_fit_run (fit, NCM_FIT_RUN_MSGS_NONE);
 
-    _NCM_MUTEX_LOCK (&update_lock);    
+    G_LOCK (update_lock);    
     _ncm_fit_mc_update (mc, fit);
     mc->write_index++;
-    _NCM_MUTEX_UNLOCK (&update_lock);
+    G_UNLOCK (update_lock);
   }
 
   ncm_memory_pool_return (fit_ptr);

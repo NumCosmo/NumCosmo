@@ -909,8 +909,8 @@ _powspec_k2 (gdouble k, gpointer userdata)
 static void
 _nc_matter_var_prepare_fft (NcMatterVar *vp, NcHICosmo *cosmo)
 {
-  _NCM_STATIC_MUTEX_DECL (prepare_fft_lock);
-  _NCM_MUTEX_LOCK (&prepare_fft_lock);
+  G_LOCK_DEFINE_STATIC (prepare_fft_lock);
+  G_LOCK (prepare_fft_lock);
   {
   const gint N = 500 + 1;
   const gint N_2 = 250;
@@ -1076,7 +1076,7 @@ _nc_matter_var_prepare_fft (NcMatterVar *vp, NcHICosmo *cosmo)
  */
 
   }
-  _NCM_MUTEX_UNLOCK (&prepare_fft_lock);
+  G_UNLOCK (prepare_fft_lock);
 
   ncm_spline_prepare (vp->sigma2_over_growth);
   ncm_spline_prepare (vp->deriv_sigma2_over_growth);

@@ -43,19 +43,11 @@ G_BEGIN_DECLS
 typedef struct _NcmModelCtrlClass NcmModelCtrlClass;
 typedef struct _NcmModelCtrl NcmModelCtrl;
 
-#if !((GLIB_MAJOR_VERSION == 2) && (GLIB_MINOR_VERSION < 32))
-#define NCM_MODEL_CTRL_USE_WEAKREF 1
-#endif
-
 struct _NcmModelCtrl
 {
   /*< private >*/
   GObject parent_instance;
-#ifdef NCM_MODEL_CTRL_USE_WEAKREF
   GWeakRef model_wr;
-#else /* NCM_MODEL_CTRL_USE_WEAKREF */
-  NcmModel *model;
-#endif  /* NCM_MODEL_CTRL_USE_WEAKREF */
   gulong pkey;
   gboolean last_update;
   GPtrArray *submodel_ctrl;
@@ -97,11 +89,7 @@ G_BEGIN_DECLS
 G_INLINE_FUNC NcmModel *
 ncm_model_ctrl_get_model (NcmModelCtrl *ctrl)
 {
-#ifdef NCM_MODEL_CTRL_USE_WEAKREF
   return g_weak_ref_get (&ctrl->model_wr);
-#else
-  return ncm_model_ref (ctrl->model);
-#endif
 }
 
 G_INLINE_FUNC gboolean
