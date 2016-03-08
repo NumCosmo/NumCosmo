@@ -93,6 +93,7 @@ struct _NcmStatsVec
   NcmMatrix *cov;
   NcmMatrix *real_cov;
   GPtrArray *saved_x;
+  GPtrArray *q_array;
 #ifdef NUMCOSMO_HAVE_FFTW3
   guint fft_size;
   guint fft_plan_size;
@@ -123,6 +124,11 @@ void ncm_stats_vec_append (NcmStatsVec *svec, NcmVector *x, gboolean dup);
 void ncm_stats_vec_prepend (NcmStatsVec *svec, NcmVector *x, gboolean dup);
 void ncm_stats_vec_append_data (NcmStatsVec *svec, GPtrArray *data, gboolean dup);
 void ncm_stats_vec_prepend_data (NcmStatsVec *svec, GPtrArray *data, gboolean dup);
+
+void ncm_stats_vec_enable_quantile (NcmStatsVec *svec, gdouble p);
+void ncm_stats_vec_disable_quantile (NcmStatsVec *svec);
+gdouble ncm_stats_vec_get_quantile (NcmStatsVec *svec, guint i);
+gdouble ncm_stats_vec_get_quantile_spread (NcmStatsVec *svec, guint i);
 
 NcmVector *ncm_stats_vec_get_autocorr (NcmStatsVec *svec, guint p);
 NcmVector *ncm_stats_vec_get_subsample_autocorr (NcmStatsVec *svec, guint p, guint subsample);

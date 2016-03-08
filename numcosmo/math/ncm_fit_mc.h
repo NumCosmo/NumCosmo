@@ -127,7 +127,7 @@ void ncm_fit_mc_mean_covar (NcmFitMC *mc);
 
 NcmMSetCatalog *ncm_fit_mc_get_catalog (NcmFitMC *mc);
 
-#define NCM_FIT_MC_MIN_FLUSH_INTERVAL (10.0)
+#define NCM_FIT_MC_MIN_SYNC_INTERVAL (10.0)
 
 G_END_DECLS
 

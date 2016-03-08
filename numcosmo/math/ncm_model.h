@@ -202,6 +202,8 @@ void ncm_model_param_set_ftype (NcmModel *model, guint n, const NcmParamType pty
 void ncm_model_reparam_df (NcmModel *model, NcmVector *fv, NcmVector *v);
 void ncm_model_reparam_J (NcmModel *model, NcmMatrix *fJ, NcmMatrix *J);
 
+gboolean ncm_model_is_submodel (NcmModel *model);
+NcmModelID ncm_model_main_model (NcmModel *model);
 void ncm_model_add_submodel (NcmModel *model, NcmModel *submodel);
 guint ncm_model_get_submodel_len (NcmModel *model);
 NcmModel *ncm_model_peek_submodel (NcmModel *model, guint i);

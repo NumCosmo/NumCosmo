@@ -57,11 +57,14 @@ nc_de_opt_get_model_group (NcDEModelEntries *de_model, GOptionEntry **de_model_e
 {
   GOptionEntry model_entries[] =
   {
-    { "model",     'm', 0, G_OPTION_ARG_STRING, &de_model->model_name,  "Name of the darkenergy model to be used.",                    NULL },
-    { "pos_Omega_x", 0, 0, G_OPTION_ARG_NONE,   &de_model->pos_Omega_x, "Positivity prior on Omega_x.",                                NULL },
-    { "Omega_k",     0, 0, G_OPTION_ARG_NONE,   &de_model->Omega_k,     "Change variable Omega_x -> Omega_k.",                         NULL },
-    { "flat",        0, 0, G_OPTION_ARG_NONE,   &de_model->flat,        "Change variable Omega_x -> Omega_k and set Omega_k to zero.", NULL },
-    { "help-names",  0, 0, G_OPTION_ARG_NONE,   &de_model->help_names,  "Print the parameters names of the chosen model", NULL },
+    { "mset-file",   'M', 0, G_OPTION_ARG_STRING, &de_model->mset_file,   "Name of the mset file to be used, models inside this mset takes precedence over any other model definition.", NULL },
+    { "model",       'm', 0, G_OPTION_ARG_STRING, &de_model->model_name,  "Name of the darkenergy model to be used.",                    NULL },
+    { "model-reion",   0, 0, G_OPTION_ARG_STRING, &de_model->model_reion, "Name of the reionization model to be used.",                  NULL },
+    { "model-prim",    0, 0, G_OPTION_ARG_STRING, &de_model->model_prim,  "Name of the primordial model to be used.",                    NULL },
+    { "pos_Omega_x",   0, 0, G_OPTION_ARG_NONE,   &de_model->pos_Omega_x, "Positivity prior on Omega_x.",                                NULL },
+    { "Omega_k",       0, 0, G_OPTION_ARG_NONE,   &de_model->Omega_k,     "Change variable Omega_x -> Omega_k.",                         NULL },
+    { "flat",          0, 0, G_OPTION_ARG_NONE,   &de_model->flat,        "Change variable Omega_x -> Omega_k and set Omega_k to zero.", NULL },
+    { "help-names",    0, 0, G_OPTION_ARG_NONE,   &de_model->help_names,  "Print the parameters names of the chosen model", NULL },
     { NULL }
   };
   GOptionGroup *model_group = g_option_group_new ("model", " - Dark energy model options", "Show help options related to dark energy model", NULL, NULL);
@@ -134,9 +137,12 @@ nc_de_opt_get_data_simple_group (NcDEDataSimpleEntries *de_data_simple, GOptionE
     { "cmb-id",       'C',                    0, G_OPTION_ARG_STRING,       &de_data_simple->cmb_id,       "ID of the CMB sample to use",           NULL },
     { "H-id",         'E',                    0, G_OPTION_ARG_STRING_ARRAY, &de_data_simple->H_id,         "Use the H(z) data sample",              NULL },
     { "H-BAO-id",     'F',                    0, G_OPTION_ARG_STRING_ARRAY, &de_data_simple->H_BAO_id,     "Use the H(z)r_s/(1 + z) data sample",   NULL },
-    { "cluster-id",   'U',                    0, G_OPTION_ARG_STRING,       &de_data_simple->cluster_id,   "Use cluster abundance data",                              NULL },
-    { "BBN",          'N',                    0, G_OPTION_ARG_NONE,         &de_data_simple->BBN,          "Use BBN Prior",                                           NULL },
-    { "BBN-Omega_b",    0,                    0, G_OPTION_ARG_NONE,         &de_data_simple->BBN_Ob,       "Use BBN Omega_b * h2 Prior = 0.022 +/- 0.002",            NULL },
+    { "cluster-id",   'U',                    0, G_OPTION_ARG_STRING,       &de_data_simple->cluster_id,   "Use cluster abundance data",            NULL },
+    { "planck-data",  'P',                    0, G_OPTION_ARG_STRING_ARRAY, &de_data_simple->Planck,       "Planck likelihoods",                    NULL },
+    { "planck-model",   0,                    0, G_OPTION_ARG_STRING,       &de_data_simple->PlanckFI,     "Planck likelihood FI Model",            NULL },
+    { "planck-priors",  0,                    0, G_OPTION_ARG_NONE,         &de_data_simple->PlanckPriors, "Enable Planck default priors",          NULL },
+    { "BBN",          'N',                    0, G_OPTION_ARG_NONE,         &de_data_simple->BBN,          "Use BBN Prior",                         NULL },
+    { "BBN-Omega_b",    0,                    0, G_OPTION_ARG_NONE,         &de_data_simple->BBN_Ob,       "Use BBN Omega_b * h2 Prior = 0.022 +/- 0.002", NULL },
     { "priors-gauss",   0,                    0, G_OPTION_ARG_STRING_ARRAY, &de_data_simple->priors_gauss, "Add a gaussian prior to a model",       NULL },
     { "data-file",      0,                    0, G_OPTION_ARG_STRING_ARRAY, &de_data_simple->data_files,   "File containing a serialized version of a NcmData object",   NULL },
     { NULL }

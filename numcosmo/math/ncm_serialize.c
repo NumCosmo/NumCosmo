@@ -1168,8 +1168,8 @@ ncm_serialize_to_variant (NcmSerialize *ser, GObject *obj)
   if (ser->opts & NCM_SERIALIZE_OPT_AUTOSAVE_SER)
   {
     GVariant *cser_var = _ncm_serialize_to_variant (ser, obj);
-    gchar *name = g_hash_table_lookup (ser->saved_ptr_name, obj);
-    GVariant *ser_var = g_hash_table_lookup (ser->saved_name_ser, name);
+    gchar *name        = g_hash_table_lookup (ser->saved_ptr_name, obj);
+    GVariant *ser_var  = g_hash_table_lookup (ser->saved_name_ser, name);
 
     g_assert (name != NULL);
     g_assert (ser_var != NULL);

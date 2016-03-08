@@ -198,7 +198,7 @@ main (gint argc, gchar *argv[])
   }
   else
   {
-    NcmMSetCatalog *mcat = ncm_mset_catalog_new_from_file (cat_filename);
+    NcmMSetCatalog *mcat = ncm_mset_catalog_new_from_file_ro (cat_filename);
     NcmMSet *mset = ncm_mset_catalog_get_mset (mcat);
     
     if (info)

@@ -427,13 +427,6 @@ _ncm_fit_mcmc_update (NcmFitMCMC *mcmc, NcmFit *fit)
       ncm_timer_task_log_end_datetime (mcmc->nt);
       break;      
   }
-
-  if ((mcmc->mcat->fmode != NCM_MSET_CATALOG_FLUSH_TIMED) &&
-      (ncm_timer_task_mean_time (mcmc->nt) < NCM_FIT_MCMC_MIN_FLUSH_INTERVAL))
-  {
-    ncm_mset_catalog_set_flush_mode (mcmc->mcat, NCM_MSET_CATALOG_FLUSH_TIMED);
-    ncm_mset_catalog_set_flush_interval (mcmc->mcat, NCM_FIT_MCMC_MIN_FLUSH_INTERVAL);
-  }
 }
 
 static void ncm_fit_mcmc_intern_skip (NcmFitMCMC *mcmc, guint n);
@@ -480,7 +473,7 @@ ncm_fit_mcmc_start_run (NcmFitMCMC *mcmc)
   }
 
   mcmc->started = TRUE;
-
+  
   {
     guint fparam_len = ncm_mset_fparam_len (mcmc->fit->mset);
     if (mcmc->theta != NULL)
@@ -495,6 +488,9 @@ ncm_fit_mcmc_start_run (NcmFitMCMC *mcmc)
   mcmc->naccepted = 0;
   mcmc->ntotal = 0;
   
+  ncm_mset_catalog_set_sync_mode (mcmc->mcat, NCM_MSET_CATALOG_SYNC_TIMED);
+  ncm_mset_catalog_set_sync_interval (mcmc->mcat, NCM_FIT_MCMC_MIN_SYNC_INTERVAL);
+
   ncm_mset_catalog_sync (mcmc->mcat, TRUE);
   if (mcmc->mcat->cur_id > mcmc->cur_sample_id)
   {

@@ -71,8 +71,9 @@ enum
   PROP_RNG,
   PROP_FILE,
   PROP_RUN_TYPE_STR,
-  PROP_FLUSH_MODE,
-  PROP_FLUSH_INTERVAL,
+  PROP_SYNC_MODE,
+  PROP_SYNC_INTERVAL,
+  PROP_READONLY,
 };
 
 static void
@@ -82,7 +83,8 @@ ncm_mset_catalog_init (NcmMSetCatalog *mcat)
   mcat->nadd_vals      = 0;
   mcat->add_vals_names = g_ptr_array_new_with_free_func (g_free);
   mcat->pstats         = NULL;
-  mcat->fmode          = NCM_MSET_CATALOG_FLUSH_LEN;
+  mcat->smode          = NCM_MSET_CATALOG_SYNC_LEN;
+  mcat->readonly       = FALSE;
   mcat->rng            = NULL;
   mcat->weighted       = FALSE;
   mcat->first_flush    = FALSE;
@@ -100,7 +102,7 @@ ncm_mset_catalog_init (NcmMSetCatalog *mcat)
 
   mcat->rng_inis       = NULL;
   mcat->rng_stat       = NULL;
-  mcat->flush_timer    = g_timer_new ();
+  mcat->sync_timer    = g_timer_new ();
   mcat->cur_id         = -1; /* Represents that no elements in the catalog. */
   mcat->first_id       = 0;  /* The element to be in the catalog will be the one with index == 0 */
   mcat->file_cur_id    = -1; /* Represents that no elements in the catalog file. */
@@ -175,7 +177,6 @@ _ncm_mset_catalog_constructed (GObject *object)
     if (mcat->mset == NULL)
     {
 #ifdef NUMCOSMO_HAVE_CFITSIO
-      gint status = 0;
       if (mcat->mset_file == NULL)
       {
         g_error ("_ncm_mset_catalog_constructed: cannot create catalog without mset.");
@@ -202,11 +203,6 @@ _ncm_mset_catalog_constructed (GObject *object)
       _ncm_mset_catalog_constructed_alloc_chains (mcat);
 
       ncm_mset_catalog_sync (mcat, TRUE);
-
-      _ncm_mset_catalog_flush_file (mcat);
-
-      fits_flush_file (mcat->fptr, &status);
-      NCM_FITS_ERROR (status);
 #else
       g_error ("_ncm_mset_catalog_constructed: cannot create catalog without mset.");
 #endif /* NUMCOSMO_HAVE_CFITSIO */
@@ -267,11 +263,14 @@ _ncm_mset_catalog_set_property (GObject *object, guint prop_id, const GValue *va
     case PROP_RUN_TYPE_STR:
       ncm_mset_catalog_set_run_type (mcat, g_value_get_string (value));
       break;
-    case PROP_FLUSH_MODE:
-      ncm_mset_catalog_set_flush_mode (mcat, g_value_get_enum (value));
+    case PROP_SYNC_MODE:
+      ncm_mset_catalog_set_sync_mode (mcat, g_value_get_enum (value));
       break;
-    case PROP_FLUSH_INTERVAL:
-      ncm_mset_catalog_set_flush_interval (mcat, g_value_get_double (value));
+    case PROP_SYNC_INTERVAL:
+      ncm_mset_catalog_set_sync_interval (mcat, g_value_get_double (value));
+      break;
+    case PROP_READONLY:
+      mcat->readonly = g_value_get_boolean (value);
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -308,11 +307,14 @@ _ncm_mset_catalog_get_property (GObject *object, guint prop_id, GValue *value, G
     case PROP_RUN_TYPE_STR:
       g_value_set_string (value, mcat->rtype_str);
       break;
-    case PROP_FLUSH_MODE:
-      g_value_set_enum (value, mcat->fmode);
+    case PROP_SYNC_MODE:
+      g_value_set_enum (value, mcat->smode);
       break;
-    case PROP_FLUSH_INTERVAL:
-      g_value_set_double (value, mcat->flush_interval);
+    case PROP_SYNC_INTERVAL:
+      g_value_set_double (value, mcat->sync_interval);
+      break;
+    case PROP_READONLY:
+      g_value_set_boolean (value, mcat->readonly);
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -373,7 +375,7 @@ _ncm_mset_catalog_finalize (GObject *object)
   g_clear_pointer (&mcat->rtype_str, g_free);
 
   g_array_unref (mcat->porder);
-  g_timer_destroy (mcat->flush_timer);
+  g_timer_destroy (mcat->sync_timer);
 
   g_ptr_array_unref (mcat->add_vals_names);
 
@@ -439,11 +441,11 @@ ncm_mset_catalog_class_init (NcmMSetCatalogClass *klass)
                                                         G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   g_object_class_install_property (object_class,
-                                   PROP_FLUSH_MODE,
-                                   g_param_spec_enum ("fmode",
+                                   PROP_SYNC_MODE,
+                                   g_param_spec_enum ("smode",
                                                       NULL,
-                                                      "Catalog flush mode",
-                                                      NCM_TYPE_MSET_CATALOG_FLUSH, NCM_MSET_CATALOG_FLUSH_AUTO,
+                                                      "Catalog sync mode",
+                                                      NCM_TYPE_MSET_CATALOG_SYNC, NCM_MSET_CATALOG_SYNC_AUTO,
                                                       G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
   g_object_class_install_property (object_class,
                                    PROP_FILE,
@@ -460,13 +462,19 @@ ncm_mset_catalog_class_init (NcmMSetCatalogClass *klass)
                                                         NCM_MSET_CATALOG_RTYPE_UNDEFINED,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
   g_object_class_install_property (object_class,
-                                   PROP_FLUSH_INTERVAL,
-                                   g_param_spec_double ("flush-interval",
+                                   PROP_SYNC_INTERVAL,
+                                   g_param_spec_double ("sync-interval",
                                                         NULL,
-                                                        "Data flush interval",
+                                                        "Data sync interval",
                                                         0.0, 1.0e3, 10.0,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-
+  g_object_class_install_property (object_class,
+                                   PROP_READONLY,
+                                   g_param_spec_boolean ("read-only",
+                                                         NULL,
+                                                         "If the fits catalogue must be open in the readonly mode",
+                                                         FALSE,
+                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 }
 
 /**
@@ -530,6 +538,26 @@ ncm_mset_catalog_new_from_file (const gchar *filename)
   return mcat;
 }
 
+/**
+ * ncm_mset_catalog_new_from_file_ro:
+ * @filename: filename of the catalog fits
+ *
+ * Creates a new #NcmMSetCatalog from the catalog in the file @file.
+ * The @file is opened in a read-only fashion.
+ * It will use also the mset file (same name but with .mset extension).
+ *
+ *
+ * Returns: (transfer full): a new #NcmMSetCatalog
+ */
+NcmMSetCatalog *
+ncm_mset_catalog_new_from_file_ro (const gchar *filename)
+{
+  NcmMSetCatalog *mcat = g_object_new (NCM_TYPE_MSET_CATALOG,
+                                       "filename", filename,
+                                       "read-only", TRUE,
+                                       NULL);
+  return mcat;
+}
 
 /**
  * ncm_mset_catalog_ref:
@@ -575,6 +603,198 @@ ncm_mset_catalog_clear (NcmMSetCatalog **mcat)
 }
 
 #ifdef NUMCOSMO_HAVE_CFITSIO
+
+static void
+_ncm_fits_update_key_str (fitsfile *fptr, gchar *keyname, gchar *value, gchar *comment, gboolean overwrite)
+{
+  gint status = 0;
+  if (overwrite)
+  {
+    fits_update_key_str (fptr, keyname, value, comment, &status);
+    NCM_FITS_ERROR (status);
+  }
+  else
+  {
+    gchar key_text[FLEN_VALUE];
+    gchar comment_text[FLEN_COMMENT];
+    fits_read_key_str (fptr, keyname, key_text, comment_text, &status);
+
+    if (status == 0)
+    {
+      g_assert_cmpstr (key_text, ==, value);
+      if (comment != NULL)
+        g_assert_cmpstr (comment_text, ==, comment);
+    }
+    else if (status == KEY_NO_EXIST)
+    {
+      status = 0;
+      fits_update_key_str (fptr, keyname, value, comment, &status);
+      NCM_FITS_ERROR (status);
+    }
+    else
+    {
+      NCM_FITS_ERROR (status);
+    }
+  }
+}
+
+static void
+_ncm_fits_update_key_longstr (fitsfile *fptr, gchar *keyname, gchar *value, gchar *comment, gboolean overwrite)
+{
+  gint status = 0;
+  if (overwrite)
+  {
+    fits_update_key_longstr (fptr, keyname, value, comment, &status);
+    NCM_FITS_ERROR (status);
+  }
+  else
+  {
+    gchar *key_text;
+    gchar comment_text[FLEN_COMMENT];
+    fits_read_key_longstr (fptr, keyname, &key_text, comment_text, &status);
+
+    if (status == 0)
+    {
+      g_assert_cmpstr (key_text, ==, value);
+      if (comment != NULL)
+        g_assert_cmpstr (comment_text, ==, comment);
+    }
+    else if (status == KEY_NO_EXIST)
+    {
+      status = 0;
+      fits_update_key_longstr (fptr, keyname, value, comment, &status);
+      NCM_FITS_ERROR (status);
+    }
+    else
+    {
+      NCM_FITS_ERROR (status);
+    }
+
+    fits_free_memory (key_text, &status);
+    NCM_FITS_ERROR (status);
+  }
+}
+
+static void
+_ncm_fits_update_key_int (fitsfile *fptr, gchar *keyname, gint value, gchar *comment, gboolean overwrite)
+{
+  gint status = 0;
+  if (overwrite)
+  {
+    fits_update_key_log (fptr, keyname, value, comment, &status);
+    NCM_FITS_ERROR (status);
+  }
+  else
+  {
+    gint key_value;
+    gchar comment_text[FLEN_COMMENT];
+    fits_read_key_log (fptr, keyname, &key_value, comment_text, &status);
+
+    if (status == 0)
+    {
+      g_assert_cmpint (key_value, ==, value);
+      if (comment != NULL)
+        g_assert_cmpstr (comment_text, ==, comment);
+    }
+    else if (status == KEY_NO_EXIST)
+    {
+      status = 0;
+      fits_update_key_log (fptr, keyname, value, comment, &status);
+      NCM_FITS_ERROR (status);
+    }
+    else
+    {
+      NCM_FITS_ERROR (status);
+    }
+  }
+}
+
+static void
+_ncm_fits_update_key_ulong (fitsfile *fptr, gchar *keyname, gulong value, gchar *comment, gboolean overwrite)
+{
+  gint status = 0;
+  if (overwrite)
+  {
+    fits_update_key_lng (fptr, keyname, value, comment, &status);
+    NCM_FITS_ERROR (status);
+  }
+  else
+  {
+    glong key_value;
+    gchar comment_text[FLEN_COMMENT];
+    fits_read_key_lng (fptr, keyname, &key_value, comment_text, &status);
+
+    if (status == 0)
+    {
+      g_assert_cmpint (key_value, ==, value);
+      if (comment != NULL)
+        g_assert_cmpstr (comment_text, ==, comment);
+    }
+    else if (status == KEY_NO_EXIST)
+    {
+      status = 0;
+      fits_update_key_lng (fptr, keyname, value, comment, &status);
+      NCM_FITS_ERROR (status);
+    }
+    else
+    {
+      NCM_FITS_ERROR (status);
+    }
+  }
+}
+
+static void
+_ncm_mset_catalog_sync_rng (NcmMSetCatalog *mcat)
+{
+  gchar key_text[FLEN_VALUE];
+  gint status = 0;
+
+  fits_read_key_str (mcat->fptr, NCM_MSET_CATALOG_RNG_ALGO_LABEL,
+                     key_text, NULL, &status);
+  if (status == 0)
+  {
+    glong seed = 0;
+    gchar *inis = NULL;
+    fits_read_key_lng (mcat->fptr, NCM_MSET_CATALOG_RNG_SEED_LABEL,
+                   &seed, NULL, &status);
+    NCM_FITS_ERROR (status);
+
+    fits_read_key_longstr (mcat->fptr, NCM_MSET_CATALOG_RNG_INIS_LABEL, &inis, NULL, &status);
+    NCM_FITS_ERROR (status);
+
+    if (mcat->rng != NULL)
+    {
+      const gchar *cat_algo = ncm_rng_get_algo (mcat->rng);
+      g_assert_cmpstr (cat_algo, ==, key_text);
+      g_assert_cmpstr (inis, ==, mcat->rng_inis);
+    }
+    else
+    {
+      NcmRNG *rng = ncm_rng_new (key_text);
+      ncm_rng_set_state (rng, inis);
+      ncm_mset_catalog_set_rng (mcat, rng);
+      ncm_rng_free (rng);
+    }
+
+    fits_free_memory (inis, &status);
+    NCM_FITS_ERROR (status);
+  }
+  else if (status == KEY_NO_EXIST)
+  {
+    status = 0;
+    if (mcat->rng != NULL)
+    {
+      gulong seed = ncm_rng_get_seed (mcat->rng);
+
+      _ncm_fits_update_key_str (mcat->fptr, NCM_MSET_CATALOG_RNG_ALGO_LABEL, (gchar *)ncm_rng_get_algo (mcat->rng), "RNG Algorithm name.", FALSE);
+      _ncm_fits_update_key_longstr (mcat->fptr, NCM_MSET_CATALOG_RNG_INIS_LABEL, mcat->rng_inis, NULL, FALSE);
+      _ncm_fits_update_key_ulong (mcat->fptr, NCM_MSET_CATALOG_RNG_SEED_LABEL, seed, "RNG Algorithm seed.", FALSE);
+    }
+  }
+  else
+    NCM_FITS_ERROR (status);
+}
+
 static void
 _ncm_mset_catalog_open_create_file (NcmMSetCatalog *mcat, gboolean load_from_cat)
 {
@@ -593,8 +813,16 @@ _ncm_mset_catalog_open_create_file (NcmMSetCatalog *mcat, gboolean load_from_cat
     gint nadd_vals = 0;
     glong nrows;
 
-    fits_open_file (&mcat->fptr, mcat->file, READWRITE, &status);
-    NCM_FITS_ERROR (status);
+    if (mcat->readonly)
+    {
+      fits_open_file (&mcat->fptr, mcat->file, READONLY, &status);
+      NCM_FITS_ERROR (status);      
+    }
+    else
+    {
+      fits_open_file (&mcat->fptr, mcat->file, READWRITE, &status);
+      NCM_FITS_ERROR (status);
+    }
 
     fits_movnam_hdu (mcat->fptr, BINARY_TBL, NCM_MSET_CATALOG_EXTNAME, 0, &status);
     NCM_FITS_ERROR (status);
@@ -782,63 +1010,20 @@ _ncm_mset_catalog_open_create_file (NcmMSetCatalog *mcat, gboolean load_from_cat
 
     mcat->file_first_id = 0;
     mcat->file_cur_id   = -1;
+
+    g_ptr_array_unref (ttype_array);
+    g_ptr_array_unref (tform_array);
   }
 
-  fits_read_key (mcat->fptr, TSTRING, NCM_MSET_CATALOG_RNG_ALGO_LABEL,
-                 key_text, NULL, &status);
-  if (status == 0)
+  _ncm_mset_catalog_sync_rng (mcat);  
+
+  _ncm_fits_update_key_int (mcat->fptr, NCM_MSET_CATALOG_FIRST_ID_LABEL, mcat->file_first_id, "Id of the first element.", !mcat->readonly);
+  
+  if (!mcat->readonly)
   {
-    gulong seed = 0;
-    gchar *inis = NULL;
-    fits_read_key (mcat->fptr, TULONG, NCM_MSET_CATALOG_RNG_SEED_LABEL,
-                   &seed, NULL, &status);
-    NCM_FITS_ERROR (status);
-
-    fits_read_key_longstr (mcat->fptr, NCM_MSET_CATALOG_RNG_INIS_LABEL, &inis, NULL, &status);
-    NCM_FITS_ERROR (status);
-
-    if (mcat->rng != NULL)
-    {
-      const gchar *cat_algo = ncm_rng_get_algo (mcat->rng);
-      g_assert_cmpstr (cat_algo, ==, key_text);
-      g_assert_cmpstr (inis, ==, mcat->rng_inis);
-    }
-    else
-    {
-      NcmRNG *rng = ncm_rng_new (key_text);
-      ncm_rng_set_state (rng, inis);
-      ncm_mset_catalog_set_rng (mcat, rng);
-      ncm_rng_free (rng);
-    }
-
-    fits_free_memory (inis, &status);
+    fits_flush_file (mcat->fptr, &status);
     NCM_FITS_ERROR (status);
   }
-  else if (status == KEY_NO_EXIST)
-  {
-    status = 0;
-    if (mcat->rng != NULL)
-    {
-      gulong seed = ncm_rng_get_seed (mcat->rng);
-
-      fits_update_key (mcat->fptr, TSTRING, NCM_MSET_CATALOG_RNG_ALGO_LABEL, (gchar *)ncm_rng_get_algo (mcat->rng), "RNG Algorithm name.", &status);
-      NCM_FITS_ERROR (status);
-
-      fits_update_key (mcat->fptr, TULONG, NCM_MSET_CATALOG_RNG_SEED_LABEL, &seed, "RNG Algorithm seed.", &status);
-      NCM_FITS_ERROR (status);
-
-      fits_update_key_longstr (mcat->fptr, NCM_MSET_CATALOG_RNG_INIS_LABEL, mcat->rng_inis, NULL, &status);
-      NCM_FITS_ERROR (status);
-    }
-  }
-  else
-    NCM_FITS_ERROR (status);
-
-  fits_update_key (mcat->fptr, TINT, NCM_MSET_CATALOG_FIRST_ID_LABEL, &mcat->file_first_id, "Id of the first element.", &status);
-  NCM_FITS_ERROR (status);
-
-  fits_flush_file (mcat->fptr, &status);
-  NCM_FITS_ERROR (status);
 
   {
     NcmSerialize *ser = ncm_serialize_new (NCM_SERIALIZE_OPT_NONE);
@@ -878,7 +1063,6 @@ void
 ncm_mset_catalog_set_file (NcmMSetCatalog *mcat, const gchar *filename)
 {
 #ifdef NUMCOSMO_HAVE_CFITSIO
-  gint status = 0;
   if (mcat->file != NULL && strcmp (mcat->file, filename) == 0)
     return;
 
@@ -914,11 +1098,6 @@ ncm_mset_catalog_set_file (NcmMSetCatalog *mcat, const gchar *filename)
   {
     _ncm_mset_catalog_open_create_file (mcat, FALSE);
     ncm_mset_catalog_sync (mcat, TRUE);
-
-    _ncm_mset_catalog_flush_file (mcat);
-
-    fits_flush_file (mcat->fptr, &status);
-    NCM_FITS_ERROR (status);
   }
 #else
   g_error ("ncm_mset_catalog_set_file: cannot set file without cfitsio.");
@@ -928,31 +1107,31 @@ ncm_mset_catalog_set_file (NcmMSetCatalog *mcat, const gchar *filename)
 }
 
 /**
- * ncm_mset_catalog_set_flush_mode:
+ * ncm_mset_catalog_set_sync_mode:
  * @mcat: a #NcmMSetCatalog
- * @fmode: flush mode
+ * @smode: sync mode
  *
- * Sets the flush mode to @fmode.
+ * Sets the sync mode to @smode.
  *
  */
 void
-ncm_mset_catalog_set_flush_mode (NcmMSetCatalog *mcat, NcmMSetCatalogFlush fmode)
+ncm_mset_catalog_set_sync_mode (NcmMSetCatalog *mcat, NcmMSetCatalogSync smode)
 {
-  mcat->fmode = fmode;
+  mcat->smode = smode;
 }
 
 /**
- * ncm_mset_catalog_set_flush_interval:
+ * ncm_mset_catalog_set_sync_interval:
  * @mcat: a #NcmMSetCatalog
- * @interval: Minimum time interval between flushs
+ * @interval: Minimum time interval between syncs
  *
- * Sets the minimum time interval between flushs.
+ * Sets the minimum time interval between syncs.
  *
  */
 void
-ncm_mset_catalog_set_flush_interval (NcmMSetCatalog *mcat, gdouble interval)
+ncm_mset_catalog_set_sync_interval (NcmMSetCatalog *mcat, gdouble interval)
 {
-  mcat->flush_interval = interval;
+  mcat->sync_interval = interval;
 }
 
 /**
@@ -984,9 +1163,7 @@ ncm_mset_catalog_set_first_id (NcmMSetCatalog *mcat, gint first_id)
 #ifdef NUMCOSMO_HAVE_CFITSIO
   if (mcat->fptr != NULL)
   {
-    gint status = 0;
-    fits_update_key (mcat->fptr, TINT, NCM_MSET_CATALOG_FIRST_ID_LABEL, &mcat->file_first_id, "Id of the first element.", &status);
-    NCM_FITS_ERROR (status);
+    _ncm_fits_update_key_int (mcat->fptr, NCM_MSET_CATALOG_FIRST_ID_LABEL, mcat->file_first_id, "Id of the first element.", !mcat->readonly);
     ncm_mset_catalog_sync (mcat, TRUE);
   }
 #endif /* NUMCOSMO_HAVE_CFITSIO */
@@ -1025,9 +1202,7 @@ ncm_mset_catalog_set_run_type (NcmMSetCatalog *mcat, const gchar *rtype_str)
 #ifdef NUMCOSMO_HAVE_CFITSIO
   if (mcat->fptr != NULL)
   {
-    gint status = 0;
-    fits_update_key (mcat->fptr, TSTRING, NCM_MSET_CATALOG_RTYPE_LABEL, mcat->rtype_str, NULL, &status);
-    NCM_FITS_ERROR (status);
+    _ncm_fits_update_key_str (mcat->fptr, NCM_MSET_CATALOG_RTYPE_LABEL, mcat->rtype_str, NULL, !mcat->readonly);
   }
 #endif /* NUMCOSMO_HAVE_CFITSIO */
 }
@@ -1043,62 +1218,42 @@ ncm_mset_catalog_set_run_type (NcmMSetCatalog *mcat, const gchar *rtype_str)
 void
 ncm_mset_catalog_set_rng (NcmMSetCatalog *mcat, NcmRNG *rng)
 {
-  g_assert (rng != NULL);
-
-  if (mcat->rng != NULL)
-  {
-    g_error ("ncm_mset_catalog_set_rng: random number generator alread set.");
-  }
-
   if (mcat->cur_id + 1 != mcat->first_id)
     g_warning ("ncm_mset_catalog_set_rng: setting RNG in a non-empty catalog, catalog first id: %d, catalog current id: %d.",
              mcat->first_id, mcat->cur_id);
 
   mcat->rng = ncm_rng_ref (rng);
 
+  g_clear_pointer (&mcat->rng_inis, g_free);
+  g_clear_pointer (&mcat->rng_stat, g_free);
+  
   mcat->rng_inis = ncm_rng_get_state (rng);
   mcat->rng_stat = g_strdup (mcat->rng_inis);
 #ifdef NUMCOSMO_HAVE_CFITSIO
-  if (mcat->file != NULL)
+  if (mcat->fptr != NULL)
   {
-    gint status = 0;
-    gulong seed = ncm_rng_get_seed (rng);
+    _ncm_mset_catalog_sync_rng (mcat);
 
-    fits_update_key (mcat->fptr, TSTRING, NCM_MSET_CATALOG_RNG_ALGO_LABEL, (gchar *)ncm_rng_get_algo (rng), "RNG Algorithm name.", &status);
-    NCM_FITS_ERROR (status);
-
-    fits_update_key (mcat->fptr, TULONG, NCM_MSET_CATALOG_RNG_SEED_LABEL, &seed, "RNG Algorithm seed.", &status);
-    NCM_FITS_ERROR (status);
-
-    fits_update_key (mcat->fptr, TINT, NCM_MSET_CATALOG_FIRST_ID_LABEL, &mcat->file_first_id, "Id of the first element.", &status);
-    NCM_FITS_ERROR (status);
-
-    fits_update_key_longstr (mcat->fptr, NCM_MSET_CATALOG_RNG_INIS_LABEL, mcat->rng_inis, NULL, &status);
-    NCM_FITS_ERROR (status);
-
-    fits_flush_file (mcat->fptr, &status);
-    NCM_FITS_ERROR (status);
+    if (!mcat->readonly)
+    {
+      gint status = 0;
+      fits_flush_file (mcat->fptr, &status);
+      NCM_FITS_ERROR (status);
+    }
   }
 #endif /* NUMCOSMO_HAVE_CFITSIO */
 }
+
 #ifdef NUMCOSMO_HAVE_CFITSIO
 static void
 _ncm_mset_catalog_flush_file (NcmMSetCatalog *mcat)
 {
   gint status = 0;
-  gint64 nrows = mcat->file_cur_id - mcat->file_first_id + 1;
+  /*gint64 nrows = mcat->file_cur_id - mcat->file_first_id + 1;*/
 
-  fits_update_key (mcat->fptr, TLONGLONG, NCM_MSET_CATALOG_NROWS_LABEL, &nrows, NULL, &status);
-  NCM_FITS_ERROR (status);
-
-  if (mcat->rng != NULL)
-  {
-    g_clear_pointer (&mcat->rng_stat, g_free);
-    mcat->rng_stat = ncm_rng_get_state (mcat->rng);
-
-    fits_update_key_longstr (mcat->fptr, NCM_MSET_CATALOG_RNG_STAT_LABEL, mcat->rng_stat, NULL, &status);
-    NCM_FITS_ERROR (status);
-  }
+  /*printf ("# Flush: Updating to %ld nrows AXIS2!\n", nrows);*/
+  /*fits_update_key (mcat->fptr, TLONGLONG, NCM_MSET_CATALOG_NROWS_LABEL, &nrows, NULL, &status);*/
+  /*NCM_FITS_ERROR (status);*/
 
   if (G_UNLIKELY (mcat->first_flush))
   {
@@ -1119,7 +1274,7 @@ _ncm_mset_catalog_close_file (NcmMSetCatalog *mcat)
   gint status = 0;
   if (mcat->fptr != NULL)
   {
-    _ncm_mset_catalog_flush_file (mcat);
+    ncm_mset_catalog_sync (mcat, FALSE);
     fits_close_file (mcat->fptr, &status);
     NCM_FITS_ERROR (status);
     mcat->fptr = NULL;
@@ -1131,11 +1286,14 @@ _ncm_mset_catalog_write_row (NcmMSetCatalog *mcat, NcmVector *row, guint row_ind
 {
   guint i;
   gint status = 0;
-
+  
+  /*printf ("Writting %u\n", row_index);*/
+  
   for (i = 0; i < ncm_vector_len (row); i++)
   {
-    fits_write_col (mcat->fptr, TDOUBLE, g_array_index (mcat->porder, gint, i), row_index,
-                    1, 1, ncm_vector_ptr (row, i), &status);
+    fits_write_col_dbl (mcat->fptr, g_array_index (mcat->porder, gint, i), row_index,
+                        1, 1, ncm_vector_ptr (row, i), &status);
+    /*printf ("writting[%d]... %u %u == % 20.15g\n", g_array_index (mcat->porder, gint, i), i, row_index, ncm_vector_get (row, i));*/
     NCM_FITS_ERROR (status);
   }
 }
@@ -1145,11 +1303,15 @@ _ncm_mset_catalog_read_row (NcmMSetCatalog *mcat, NcmVector *row, guint row_inde
 {
   guint i;
   gint status = 0;
+  const gdouble dnull = 0.0;
 
+  /*printf ("Reading size: row %ld\n", row_index);*/
+  
   for (i = 0; i < ncm_vector_len (row); i++)
   {
-    fits_read_col (mcat->fptr, TDOUBLE, g_array_index (mcat->porder, gint, i), row_index,
-                   1, 1, NULL, ncm_vector_ptr (row, i), NULL, &status);
+    fits_read_col_dbl (mcat->fptr, g_array_index (mcat->porder, gint, i), row_index, 
+                       1, 1, dnull, ncm_vector_ptr (row, i), NULL, &status);
+    /*printf ("reading[%d]... %u %u == % 20.15g <%d>\n", g_array_index (mcat->porder, gint, i), i, row_index, ncm_vector_get (row, i), status);*/
     NCM_FITS_ERROR (status);
   }
 }
@@ -1169,12 +1331,16 @@ ncm_mset_catalog_sync (NcmMSetCatalog *mcat, gboolean check)
 #ifdef NUMCOSMO_HAVE_CFITSIO
   gint status = 0;
   guint i;
+  gboolean need_flush = FALSE;
+
+  /*printf ("# Sync: start!\n");*/
 
   if (mcat->file == NULL)
     return;
 
   g_assert (mcat->fptr != NULL);
 
+  /*printf ("# Sync: check %d\n", check);*/
   if (check)
   {
     gchar fptr_filename[FLEN_FILENAME];
@@ -1190,6 +1356,7 @@ ncm_mset_catalog_sync (NcmMSetCatalog *mcat, gboolean check)
                mcat->first_id, mcat->cur_id);
   }
 
+  /*printf ("# Sync: file_first_id != mcat->first_id %d != %d\n", mcat->file_first_id, mcat->first_id);*/
   if (mcat->file_first_id != mcat->first_id)
   {
     if (mcat->file_first_id > mcat->first_id)
@@ -1213,6 +1380,8 @@ ncm_mset_catalog_sync (NcmMSetCatalog *mcat, gboolean check)
 
       fits_update_key (mcat->fptr, TINT, NCM_MSET_CATALOG_FIRST_ID_LABEL, &mcat->file_first_id, "Id of the first element.", &status);
       NCM_FITS_ERROR (status);
+
+      need_flush = TRUE;
     }
     else if (mcat->file_first_id < mcat->first_id)
     {
@@ -1257,12 +1426,17 @@ ncm_mset_catalog_sync (NcmMSetCatalog *mcat, gboolean check)
     g_assert_cmpint (mcat->file_first_id, ==, mcat->first_id);
   }
 
+  /*printf ("# Sync: mcat->file_cur_id != mcat->cur_id %d != %d\n", mcat->file_cur_id, mcat->cur_id);*/
   if (mcat->file_cur_id != mcat->cur_id)
   {
     if (mcat->file_cur_id < mcat->cur_id)
     {
       guint rows_to_add = mcat->cur_id - mcat->file_cur_id;
       guint offset = mcat->file_cur_id + 1 - mcat->file_first_id;
+
+      /*printf ("Adding %u rows after %u\n", rows_to_add, offset);*/
+      fits_insert_rows (mcat->fptr, offset, rows_to_add, &status);
+      NCM_FITS_ERROR (status);
 
       for (i = 0; i < rows_to_add; i++)
       {
@@ -1279,6 +1453,7 @@ ncm_mset_catalog_sync (NcmMSetCatalog *mcat, gboolean check)
         fits_update_key_longstr (mcat->fptr, NCM_MSET_CATALOG_RNG_STAT_LABEL, mcat->rng_stat, NULL, &status);
         NCM_FITS_ERROR (status);
       }
+      need_flush = TRUE;
     }
     else if (mcat->file_cur_id > mcat->cur_id)
     {
@@ -1288,6 +1463,7 @@ ncm_mset_catalog_sync (NcmMSetCatalog *mcat, gboolean check)
       gchar *stat = NULL;
 
       g_ptr_array_set_size (rows, rows_to_add);
+      g_ptr_array_set_free_func (rows, (GDestroyNotify) ncm_vector_free);
 
       for (i = 0; i < rows_to_add; i++)
       {
@@ -1327,27 +1503,31 @@ ncm_mset_catalog_sync (NcmMSetCatalog *mcat, gboolean check)
     }
   }
 
-  switch (mcat->fmode)
-  {
-    case NCM_MSET_CATALOG_FLUSH_DISABLE:
-      break;
-    case NCM_MSET_CATALOG_FLUSH_AUTO:
-      _ncm_mset_catalog_flush_file (mcat);
-      break;
-    case NCM_MSET_CATALOG_FLUSH_TIMED:
-    {
-      if (g_timer_elapsed (mcat->flush_timer, NULL) > mcat->flush_interval)
-      {
-        g_timer_start (mcat->flush_timer);
-        _ncm_mset_catalog_flush_file (mcat);
-      }
-      break;
-    }
-    default:
-      g_assert_not_reached ();
-      break;
-  }
+  /*printf ("# Sync: status %d %d, %d %d\n", mcat->file_first_id, mcat->first_id, mcat->file_cur_id, mcat->cur_id);*/
+  /*printf ("# Sync: need flush %d\n", need_flush);*/
+  if (need_flush)
+    _ncm_mset_catalog_flush_file (mcat);
 #endif /* NUMCOSMO_HAVE_CFITSIO */
+}
+
+/**
+ * ncm_mset_catalog_timed_sync:
+ * @mcat: a #NcmMSetCatalog
+ * @check: whether to check consistence between file and memory data
+ *
+ * Synchronize memory and data file if enough time was passed after
+ * the last sync, see ncm_mset_catalog_set_sync_interval(). If no 
+ * file was defined, it simply returns.
+ *
+ */
+void
+ncm_mset_catalog_timed_sync (NcmMSetCatalog *mcat, gboolean check)
+{
+  if (g_timer_elapsed (mcat->sync_timer, NULL) > mcat->sync_interval)
+  {
+    g_timer_start (mcat->sync_timer);
+    ncm_mset_catalog_sync (mcat, check);
+  }
 }
 
 /**
@@ -1406,6 +1586,7 @@ ncm_mset_catalog_reset (NcmMSetCatalog *mcat)
 
   mcat->cur_id    = mcat->first_id - 1;
 #ifdef NUMCOSMO_HAVE_CFITSIO
+  mcat->file_cur_id = mcat->file_first_id - 1;
   _ncm_mset_catalog_close_file (mcat);
 #endif /* NUMCOSMO_HAVE_CFITSIO */
 }
@@ -1595,7 +1776,20 @@ _ncm_mset_catalog_post_update (NcmMSetCatalog *mcat)
 
   mcat->cur_id++;
 
-  ncm_mset_catalog_sync (mcat, FALSE);
+  switch (mcat->smode)
+  {
+    case NCM_MSET_CATALOG_SYNC_DISABLE:
+      break;
+    case NCM_MSET_CATALOG_SYNC_AUTO:
+      ncm_mset_catalog_sync (mcat, FALSE);
+      break;
+    case NCM_MSET_CATALOG_SYNC_TIMED:
+      ncm_mset_catalog_timed_sync (mcat, FALSE);
+      break;
+    default:
+      g_assert_not_reached ();
+      break;
+  }
 }
 
 /**
@@ -1979,41 +2173,36 @@ ncm_mset_catalog_get_shrink_factor (NcmMSetCatalog *mcat)
 */
     if (gsl_finite (ncm_matrix_get (mcat->chain_cov, 0, 0)))
     {
-      gdouble lev = 0.0;
-
-      ret = ncm_matrix_cholesky_decomp (mcat->chain_cov, 'U');
-      if (ret != 0)
-        g_error ("ncm_mset_catalog_get_shrink_factor[ncm_matrix_cholesky_decomp]: %d.", ret);
-      ret = ncm_matrix_cholesky_inverse (mcat->chain_cov, 'U');
-      if (ret != 0)
-        g_error ("ncm_mset_catalog_get_shrink_factor[ncm_matrix_cholesky_inverse]: %d.", ret);
-      //ncm_matrix_copy_triangle (mcat->chain_cov, 'U');
-
-      ncm_matrix_dsymm (mcat->chain_cov, 'U', 1.0, cov, 0.0, mcat->chain_sM);
-/*
-      ncm_matrix_log_vals (mcat->chain_cov, "# mean inv_cov", "% 10.5g");
-      ncm_matrix_log_vals (mcat->chain_sM, "# sM ", "% 10.5g");
-*/
-      gsl_eigen_nonsymm_params (0, 0, mcat->chain_sM_ws);
-      gsl_eigen_nonsymm (ncm_matrix_gsl (mcat->chain_sM), mcat->chain_sM_ev, mcat->chain_sM_ws);
-
-      for (i = 0; i < free_params_len; i++)
+      do 
       {
-        lev = GSL_MAX (lev, GSL_VECTOR_REAL (mcat->chain_sM_ev, i));
+        gdouble lev = 0.0;
 
-        if (GSL_VECTOR_IMAG (mcat->chain_sM_ev, i) != 0.0)
-          g_warning ("ncm_mset_catalog_get_shrink_factor: complex eigenvalue in SM matrix, unreliable shrink factor, try using more chains.");
+        ret = ncm_matrix_cholesky_decomp (mcat->chain_cov, 'U');
+        if (ret != 0)
+          break;
 
-        /*printf ("(% 20.15g, % 20.15g)\n", GSL_VECTOR_REAL (mcat->chain_sM_ev, i), GSL_VECTOR_IMAG (mcat->chain_sM_ev, i));*/
-      }
-      shrink_factor = sqrt ((n - 1.0) / (1.0 * n) + (mcat->nchains + 1.0) * lev / (mcat->nchains * 1.0));
+        ret = ncm_matrix_cholesky_inverse (mcat->chain_cov, 'U');
+        if (ret != 0)
+          break;
+
+        ncm_matrix_dsymm (mcat->chain_cov, 'U', 1.0, cov, 0.0, mcat->chain_sM);
+
+        gsl_eigen_nonsymm_params (0, 0, mcat->chain_sM_ws);
+        gsl_eigen_nonsymm (ncm_matrix_gsl (mcat->chain_sM), mcat->chain_sM_ev, mcat->chain_sM_ws);
+
+        for (i = 0; i < free_params_len; i++)
+        {
+          lev = GSL_MAX (lev, GSL_VECTOR_REAL (mcat->chain_sM_ev, i));
+
+          if (GSL_VECTOR_IMAG (mcat->chain_sM_ev, i) != 0.0)
+            g_warning ("ncm_mset_catalog_get_shrink_factor: complex eigenvalue in SM matrix, unreliable shrink factor, try using more chains.");
+        }
+        shrink_factor = sqrt ((n - 1.0) / (1.0 * n) + (mcat->nchains + 1.0) * lev / (mcat->nchains * 1.0));
+      } while (FALSE);
     }
   }
-  /*printf ("# shrink_factor % 20.15g\n", shrink_factor);*/
   return shrink_factor;
 }
-
-
 
 /**
  * ncm_mset_catalog_param_pdf:

@@ -567,7 +567,9 @@ EXTRA_DIST = \
 	nc_enum_types.h.template        \
 	nc_enum_types.c.template        \
 	ncm_gir_scan.h                  \
-	ncm_fit_nlopt_enum_meta.c
+	ncm_fit_nlopt_enum_meta.c       \
+	math/rquantile.c                \
+	math/gsl_rstat.h
 
 CLEANFILES = $(BUILT_SOURCES)
 

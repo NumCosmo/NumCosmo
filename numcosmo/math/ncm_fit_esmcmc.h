@@ -127,7 +127,9 @@ void ncm_fit_esmcmc_mean_covar (NcmFitESMCMC *esmcmc);
 
 NcmMSetCatalog *ncm_fit_esmcmc_get_catalog (NcmFitESMCMC *esmcmc);
 
-#define NCM_FIT_ESMCMC_MIN_FLUSH_INTERVAL (10.0)
+gboolean ncm_fit_esmcmc_validate (NcmFitESMCMC *esmcmc, gulong pi, gulong pf);
+
+#define NCM_FIT_ESMCMC_MIN_SYNC_INTERVAL (10.0)
 #define NCM_FIT_ESMCMC_NADD_VALS (1)
 #define NCM_FIT_ESMCMC_M2LNL_ID (0)
 

@@ -509,7 +509,8 @@ ncm_mset_shallow_copy (NcmMSet *mset)
   for (i = 0; i < nmodels; i++)
   {
     NcmModel *model = ncm_mset_peek_array_pos (mset, i);
-    ncm_mset_push (mset_sc, model);
+    if (!ncm_model_is_submodel (model))
+      ncm_mset_push (mset_sc, model);
   }
   if (mset->valid_map)
     ncm_mset_prepare_fparam_map (mset_sc);
@@ -2504,26 +2505,36 @@ ncm_mset_save (NcmMSet *mset, NcmSerialize *ser, const gchar *filename, gboolean
         g_variant_iter_init (&iter, params);
         while (g_variant_iter_next (&iter, "{sv}", &key, &value))
         {
-          GParamSpec *param_spec = g_object_class_find_property (oclass, key);
-          gchar *param_str = g_variant_print (value, TRUE);
-          if (param_spec == NULL)
-            g_error ("ncm_mset_save: property `%s' not found in object `%s'.", key, obj_name);
-
-          g_key_file_set_value (msetfile, group, key, param_str);
-          if (save_comment)
+          if (strcmp (key, "submodel-array") == 0)
           {
-            gchar *desc = ncm_cfg_string_to_comment (g_param_spec_get_blurb (param_spec));
-            if (!g_key_file_set_comment (msetfile, group, key, desc, &error))
-              g_error ("ncm_mset_save: %s", error->message);
-            g_free (desc);
+            g_variant_unref (value);
+            g_free (key);
+            continue;
           }
+          else
+          {
+            GParamSpec *param_spec = g_object_class_find_property (oclass, key);
+            gchar *param_str = g_variant_print (value, TRUE);
+            if (param_spec == NULL)
+              g_error ("ncm_mset_save: property `%s' not found in object `%s'.", key, obj_name);
 
-          g_variant_unref (value);
-          g_free (key);
-          g_free (param_str);
+            g_key_file_set_value (msetfile, group, key, param_str);
+            if (save_comment)
+            {
+              gchar *desc = ncm_cfg_string_to_comment (g_param_spec_get_blurb (param_spec));
+              if (!g_key_file_set_comment (msetfile, group, key, desc, &error))
+                g_error ("ncm_mset_save: %s", error->message);
+              g_free (desc);
+            }
+
+            g_variant_unref (value);
+            g_free (key);
+            g_free (param_str);
+          }
         }
       }
 
+      g_free (obj_name);
       g_variant_unref (params);
       g_variant_unref (model_var);
     }
@@ -2544,6 +2555,7 @@ ncm_mset_save (NcmMSet *mset, NcmSerialize *ser, const gchar *filename, gboolean
   }
 }
 
+
 /**
  * ncm_mset_load:
  * @filename: mset filename
@@ -2562,7 +2574,10 @@ ncm_mset_load (const gchar *filename, NcmSerialize *ser)
   gchar **groups = NULL;
   gsize ngroups = 0;
   gboolean valid_map = FALSE;
+  GPtrArray *submodel_array = g_ptr_array_new ();
   guint i;
+
+  g_ptr_array_set_free_func (submodel_array, (GDestroyNotify) ncm_model_free);
 
   if (!g_key_file_load_from_file (msetfile, filename, G_KEY_FILE_KEEP_COMMENTS | G_KEY_FILE_KEEP_TRANSLATIONS, &error))
   {
@@ -2596,7 +2611,7 @@ ncm_mset_load (const gchar *filename, NcmSerialize *ser)
     if (twopoints != NULL)
     {
       *twopoints = '\0';
-      stackpos = atoi(++twopoints);
+      stackpos = atoi (++twopoints);
     }
 
     if (!g_key_file_has_key (msetfile, groups[i], ns, &error))
@@ -2644,13 +2659,20 @@ ncm_mset_load (const gchar *filename, NcmSerialize *ser)
         g_error ("ncm_mset_load: %s", error->message);
       for (j = 0; j < nkeys; j++)
       {
-        gchar *propval = g_key_file_get_value (msetfile, groups[i], keys[j], &error);
-        if (error != NULL)
-          g_error ("ncm_mset_load: %s", error->message);
-        g_string_append_printf (obj_ser, "\'%s\':<%s>", keys[j], propval);
-        g_free (propval);
-        if (j + 1 != nkeys)
-          g_string_append (obj_ser, ", ");
+        if (strcmp (keys[j], "submodel-array") == 0)
+        {
+          g_error ("ncm_mset_load: serialized version of mset models cannot contain the submodel-array property.");
+        }
+        else
+        {
+          gchar *propval = g_key_file_get_value (msetfile, groups[i], keys[j], &error);
+          if (error != NULL)
+            g_error ("ncm_mset_load: %s", error->message);
+          g_string_append_printf (obj_ser, "\'%s\':<%s>", keys[j], propval);
+          g_free (propval);
+          if (j + 1 != nkeys)
+            g_string_append (obj_ser, ", ");
+        }
       }
       g_string_append (obj_ser, "}}");
       g_strfreev (keys);
@@ -2661,16 +2683,46 @@ ncm_mset_load (const gchar *filename, NcmSerialize *ser)
       g_assert (NCM_IS_MODEL (obj));
       if (ncm_mset_exists_pos (mset, NCM_MODEL (obj), stackpos))
         g_error ("ncm_mset_load: a model ``%s'' already exists in NcmMSet.", obj_ser->str);
-      ncm_mset_set_pos (mset, NCM_MODEL (obj), stackpos);
+      if (ncm_model_is_submodel (NCM_MODEL (obj)))
+      {
+        NcmModel *submodel = ncm_model_ref (NCM_MODEL (obj));
+        g_ptr_array_add (submodel_array, submodel);
+      }
+      else
+      {
+        ncm_mset_set_pos (mset, NCM_MODEL (obj), stackpos);
+      }
       ncm_model_free (NCM_MODEL (obj));
     }
     g_string_free (obj_ser, TRUE);
+    g_free (ns);
   }
 
+  for (i = 0; i < submodel_array->len; i++)
+  {
+    NcmModel *submodel = g_ptr_array_index (submodel_array, i);
+    NcmModelID mid = ncm_model_main_model (submodel);
+    NcmModel *mainmodel = ncm_mset_peek (mset, mid);
+
+    g_assert_cmpint (mid, >=, 0);
+    if (mainmodel == NULL)
+    {
+      g_error ("ncm_mset_load: cannot add submodel `%s', main model `%s' not found.", 
+               G_OBJECT_TYPE_NAME (submodel),
+               ncm_mset_get_ns_by_id (mid));
+    }
+    else
+    {
+      ncm_model_add_submodel (mainmodel, submodel);
+      _ncm_mset_set_pos_intern (mset, submodel, 0);
+    }
+  }
+  
   g_key_file_unref (msetfile);
   g_strfreev (groups);
   if (valid_map)
     ncm_mset_prepare_fparam_map (mset);
 
+  g_ptr_array_unref (submodel_array);
   return mset;
 }

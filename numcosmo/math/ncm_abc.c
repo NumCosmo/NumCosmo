@@ -638,13 +638,6 @@ _ncm_abc_update (NcmABC *abc, NcmMSet *mset, gdouble dist, gdouble weight)
       ncm_cfg_logfile_flush_now ();
       break;      
   }
-
-  if ((abc->mcat->fmode != NCM_ABC_MIN_FLUSH_INTERVAL) &&
-      (ncm_timer_task_mean_time (abc->nt) < NCM_ABC_MIN_FLUSH_INTERVAL))
-  {
-    ncm_mset_catalog_set_flush_mode (abc->mcat, NCM_MSET_CATALOG_FLUSH_TIMED);
-    ncm_mset_catalog_set_flush_interval (abc->mcat, NCM_ABC_MIN_FLUSH_INTERVAL);
-  }
 }
 
 static void ncm_abc_intern_skip (NcmABC *abc, guint n);
@@ -705,7 +698,10 @@ ncm_abc_start_run (NcmABC *abc)
     abc->thetastar = ncm_vector_new (fparam_len);
     abc->covar     = ncm_matrix_new (fparam_len, fparam_len);
   }
-  
+
+  ncm_mset_catalog_set_sync_mode (abc->mcat, NCM_MSET_CATALOG_SYNC_TIMED);
+  ncm_mset_catalog_set_sync_interval (abc->mcat, NCM_ABC_MIN_SYNC_INTERVAL);
+
   ncm_mset_catalog_sync (abc->mcat, TRUE);
   if (abc->mcat->cur_id > abc->cur_sample_id)
   {

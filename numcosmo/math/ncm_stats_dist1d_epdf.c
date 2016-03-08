@@ -52,6 +52,8 @@ enum
 
 G_DEFINE_TYPE (NcmStatsDist1dEPDF, ncm_stats_dist1d_epdf, NCM_TYPE_STATS_DIST1D);
 
+#define _NCM_STATS_DIST1D_SROT(sd,R,n) (0.9 * GSL_MIN ((sd), ((R) / 1.34)) * pow (n * 1.0, -1.0 / 5.0))
+
 gint 
 _ncm_stats_dist1d_epdf_cmp_double (gconstpointer a,
                                    gconstpointer b)
@@ -67,7 +69,11 @@ typedef struct _NcmStatsDist1dEPDFObs
 {
   gdouble x;
   gdouble w;
+  gdouble n;
 } NcmStatsDist1dEPDFObs;
+
+#define _NCM_STATS_DIST1D_EPDF_OBS_N(obs,epdf1d,sd) \
+0.5 * (erf (((obs)->x - (epdf1d)->min) / (M_SQRT2 * (sd))) + erf (((epdf1d)->max - (obs)->x) / (M_SQRT2 * (sd))))
 
 static void
 _ncm_stats_dist1d_epdf_compact_obs (NcmStatsDist1dEPDF *epdf1d)
@@ -77,54 +83,64 @@ _ncm_stats_dist1d_epdf_compact_obs (NcmStatsDist1dEPDF *epdf1d)
 
   if (epdf1d->list_sorted)
     return;
-
+  
   g_array_sort (epdf1d->obs, _ncm_stats_dist1d_epdf_cmp_double);
   j = 0;
 
   {
-    NcmStatsDist1dEPDFObs *obs_c = &g_array_index (epdf1d->obs, NcmStatsDist1dEPDFObs, j);
-    const gdouble min_dist = ncm_stats_vec_get_sd (epdf1d->obs_stats, 0) * epdf1d->sd_min_scale;
-    
+    NcmStatsDist1dEPDFObs *obs_j = &g_array_index (epdf1d->obs, NcmStatsDist1dEPDFObs, j);
+    const gdouble sd_e     = ncm_stats_vec_get_sd (epdf1d->obs_stats, 0);
+    const gdouble min_dist = sd_e * epdf1d->sd_min_scale;
+    const gdouble R_e      = ncm_stats_vec_get_quantile_spread (epdf1d->obs_stats, 0);
+    const gdouble sd       = _NCM_STATS_DIST1D_SROT (sd_e, R_e, epdf1d->n_obs);
+
     for (i = 1; i < epdf1d->obs->len; i++)
     {
-      NcmStatsDist1dEPDFObs *obs_n = &g_array_index (epdf1d->obs, NcmStatsDist1dEPDFObs, i);
-      if (fabs (obs_c->x - obs_n->x) < min_dist)
+      NcmStatsDist1dEPDFObs *obs_i = &g_array_index (epdf1d->obs, NcmStatsDist1dEPDFObs, i);
+      
+      if (fabs (obs_j->x - obs_i->x) < min_dist)
       {
 #ifdef _NCM_STATS_DIST1D_EPDF_GROUPING_ALL  
-        gdouble wx = (obs_c->x * obs_c->w + obs_n->x * obs_n->w);
-        gdouble w  = obs_n->w + obs_c->w;
+        gdouble wx = (obs_j->x * obs_j->w + obs_i->x * obs_i->w);
+        gdouble w  = obs_i->w + obs_j->w;
         guint k;
         obs_len--;
         for (k = i + 1; k < epdf1d->obs->len; k++)
         {
-          NcmStatsDist1dEPDFObs *obs_nk = &g_array_index (epdf1d->obs, NcmStatsDist1dEPDFObs, k);
-          if (fabs (obs_nk->x - obs_n->x) < min_dist)
+          NcmStatsDist1dEPDFObs *obs_ik = &g_array_index (epdf1d->obs, NcmStatsDist1dEPDFObs, k);
+          if (fabs (obs_ik->x - obs_i->x) < min_dist)
           {
-            wx += obs_nk->x * obs_nk->w;
-            w  += obs_nk->w;
+            wx += obs_ik->x * obs_ik->w;
+            w  += obs_ik->w;
             obs_len--;
             i++;
-            obs_n = obs_nk;
+            obs_i = obs_ik;
           }
           else
             break;
         }
-        obs_c->x = wx / w;
-        obs_c->w = w;
+        obs_j->x = wx / w;
+        obs_j->w = w;
 #else
-        obs_c->x = (obs_c->x * obs_c->w + obs_n->x * obs_n->w) / (obs_n->w + obs_c->w);
-        obs_c->w = obs_n->w + obs_c->w;
+        obs_j->x = (obs_j->x * obs_j->w + obs_i->x * obs_i->w) / (obs_i->w + obs_j->w);
+        obs_j->w = obs_i->w + obs_j->w;
+
+        obs_j->n = _NCM_STATS_DIST1D_EPDF_OBS_N (obs_j, epdf1d, sd);
+        
         obs_len--;
 #endif /* _NCM_STATS_DIST1D_EPDF_GROUPING_ALL */
       }
       else
       {
         j++;
+        
+        obs_i->n = _NCM_STATS_DIST1D_EPDF_OBS_N (obs_i, epdf1d, sd);        
+
         if (i != j)
         {
-          g_array_index (epdf1d->obs, NcmStatsDist1dEPDFObs, j) = g_array_index (epdf1d->obs, NcmStatsDist1dEPDFObs, i); 
+          g_array_index (epdf1d->obs, NcmStatsDist1dEPDFObs, j) = *obs_i; 
         }
-        obs_c = &g_array_index (epdf1d->obs, NcmStatsDist1dEPDFObs, j);
+        obs_j = &g_array_index (epdf1d->obs, NcmStatsDist1dEPDFObs, j);
       }
     }
   }
@@ -193,6 +209,8 @@ ncm_stats_dist1d_epdf_init (NcmStatsDist1dEPDF *epdf1d)
   epdf1d->obs                = NULL;
   epdf1d->min                = GSL_POSINF;
   epdf1d->max                = GSL_NEGINF;
+
+  ncm_stats_vec_enable_quantile (epdf1d->obs_stats, 0.5);
 }
 
 static void
@@ -356,7 +374,9 @@ static gdouble
 ncm_stats_dist1d_epdf_p_gk (NcmStatsDist1dEPDF *epdf1d, gdouble x)
 {
   NcmStatsDist1d *sd1 = NCM_STATS_DIST1D (epdf1d);
-  const gdouble sd = ncm_stats_vec_get_sd (epdf1d->obs_stats, 0) * epdf1d->sd_scale;
+  const gdouble sd_e  = ncm_stats_vec_get_sd (epdf1d->obs_stats, 0);
+  const gdouble R_e   = ncm_stats_vec_get_quantile_spread (epdf1d->obs_stats, 0);
+  const gdouble sd    = _NCM_STATS_DIST1D_SROT (sd_e, R_e, epdf1d->n_obs);
   gdouble res = 0.0;
   gint i;
 
@@ -373,7 +393,8 @@ ncm_stats_dist1d_epdf_p_gk (NcmStatsDist1dEPDF *epdf1d, gdouble x)
       const gdouble de_i  = (x - x_i) / sd;
       const gdouble de2_i = de_i * de_i;
       const gdouble exp_i = obs->w * exp (-0.5 * de2_i);
-      res += exp_i;
+      res += exp_i / obs->n;
+      /*printf ("% 20.15g % 20.15g % 20.15g [% 20.15g % 20.15g] % 20.15g\n", x_i, obs->w, obs->n, epdf1d->min, epdf1d->max, x);*/
       if (exp_i / res < GSL_DBL_EPSILON)
         break;
     }
@@ -384,10 +405,12 @@ ncm_stats_dist1d_epdf_p_gk (NcmStatsDist1dEPDF *epdf1d, gdouble x)
       const gdouble de_i  = (x - x_i) / sd;
       const gdouble de2_i = de_i * de_i;
       const gdouble exp_i = obs->w * exp (-0.5 * de2_i);
-      res += exp_i;
+      res += exp_i / obs->n;
+      /*printf ("% 20.15g % 20.15g % 20.15g [% 20.15g % 20.15g] % 20.15g\n", x_i, obs->w, obs->n, epdf1d->min, epdf1d->max, x);*/
       if (exp_i / res < GSL_DBL_EPSILON)
         break;
     }
+    /*printf ("#----------------------------------------------------------------------------------------#\n");*/
   }
 #else   
   for (i = 0; i < epdf1d->obs->len; i++)
@@ -397,7 +420,7 @@ ncm_stats_dist1d_epdf_p_gk (NcmStatsDist1dEPDF *epdf1d, gdouble x)
     const gdouble de_i  = (x - x_i) / sd;
     const gdouble de2_i = de_i * de_i;
     const gdouble exp_i = obs->w * exp (-0.5 * de2_i);
-    res += exp_i;
+    res += exp_i / obs->n;
   }
 #endif /* _NCM_STATS_DIST1D_EPDF_DIRECT */
 
@@ -421,8 +444,9 @@ static void
 ncm_stats_dist1d_epdf_update_limits (NcmStatsDist1dEPDF *epdf1d)
 {
   NcmStatsDist1d *sd1 = NCM_STATS_DIST1D (epdf1d);
-  const gdouble obs_sd   = ncm_stats_vec_get_sd (epdf1d->obs_stats, 0);
-  const gdouble sd       = obs_sd * epdf1d->sd_scale;
+  const gdouble sd_e = ncm_stats_vec_get_sd (epdf1d->obs_stats, 0);
+  const gdouble R_e  = ncm_stats_vec_get_quantile_spread (epdf1d->obs_stats, 0);
+  const gdouble sd = _NCM_STATS_DIST1D_SROT (sd_e, R_e, epdf1d->n_obs);
   const gdouble lnNorma2 = 2.0 * log (1.0 * epdf1d->n_obs) + log (2.0 * M_PI) + 2.0 * log (sd);
   const gdouble exp_b    = -2.0 * NCM_STATS_DIST1D (epdf1d)->reltol - lnNorma2;
   /*const gdouble exp_b    = -2.0 * GSL_LOG_DBL_EPSILON - lnNorma2;*/
@@ -502,7 +526,7 @@ ncm_stats_dist1d_epdf_new (guint max_obs, gdouble sd_scale, gdouble sd_min_scale
 void
 ncm_stats_dist1d_epdf_add_obs (NcmStatsDist1dEPDF *epdf1d, gdouble x)
 {
-  const NcmStatsDist1dEPDFObs obs = {x, 1.0};
+  const NcmStatsDist1dEPDFObs obs = {x, 1.0, 1.0};
   const gdouble new_max = GSL_MAX (epdf1d->max, x);
   const gdouble new_min = GSL_MIN (epdf1d->min, x);
 
