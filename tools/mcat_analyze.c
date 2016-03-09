@@ -453,7 +453,7 @@ main (gint argc, gchar *argv[])
         glong add_param = strtol (mode_errors[i], &end_ptr, 10);
         ncm_message ("# Parameter `%s'| mode | 1l 1u | 2l 2u | 3l 3u\n", mode_errors[i]);
 
-        if (pi == NULL && (params[i] == end_ptr))
+        if (pi == NULL && (mode_errors[i] == end_ptr))
         {
           g_warning ("# Parameter `%s' not found, skipping...\n", mode_errors[i]);
           continue;
@@ -507,7 +507,7 @@ main (gint argc, gchar *argv[])
         glong add_param = strtol (median_errors[i], &end_ptr, 10);
         ncm_message ("# Parameter `%s' | 1l 1u | 2l 2u | 3l 3u\n", median_errors[i]);
 
-        if (pi == NULL && (params[i] == end_ptr))
+        if (pi == NULL && (median_errors[i] == end_ptr))
         {
           g_warning ("# Parameter `%s' not found, skipping...\n", median_errors[i]);
           continue;
@@ -585,7 +585,7 @@ main (gint argc, gchar *argv[])
             glong add_param = strtol (name, &end_ptr, 10);
             ncm_message ("# Parameter `%s'| best fit | 1l 1u | 2l 2u | 3l 3u\n", name);
 
-            if (pi == NULL && (params[i] == end_ptr))
+            if (pi == NULL && (bestfit_errors[i] == end_ptr))
             {
               g_warning ("# Parameter `%s' not found, skipping...\n", name);
               continue;
