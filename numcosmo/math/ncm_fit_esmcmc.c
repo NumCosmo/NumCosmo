@@ -935,7 +935,8 @@ _ncm_fit_esmcmc_run_single (NcmFitESMCMC *esmcmc)
       NcmVector *thetastar = g_ptr_array_index (esmcmc->thetastar, k);
 
       gdouble m2lnL_cur = ncm_fit_state_get_m2lnL_curval (fit_k->fstate);
-      gdouble m2lnL_star, prob, jump, z, u;
+      gdouble m2lnL_star, jump, z, u;
+      gdouble prob = 0.0;
       gulong j;
 
       jump = gsl_rng_uniform (esmcmc->mcat->rng->r);
@@ -955,30 +956,21 @@ _ncm_fit_esmcmc_run_single (NcmFitESMCMC *esmcmc)
       ncm_vector_log_vals (theta_j, "# theta_j  ", "% 20.15g");
       ncm_vector_log_vals (thetastar, "# thetastar", "% 20.15g");
 */
-      if (!ncm_mset_fparam_valid_bounds (fit_k->mset, thetastar))
-        continue;
-      
-      ncm_mset_fparams_set_vector (fit_k->mset, thetastar);
+      if (ncm_mset_fparam_valid_bounds (fit_k->mset, thetastar))
+      {
+        ncm_mset_fparams_set_vector (fit_k->mset, thetastar);
+        ncm_fit_m2lnL_val (fit_k, &m2lnL_star);
 
-      if (!ncm_mset_params_valid_bounds (fit_k->mset))
+        if (gsl_finite (m2lnL_star))
+        {
+          prob = pow (z, esmcmc->fparam_len - 1.0) * exp ((m2lnL_cur - m2lnL_star) * 0.5);
+          prob = GSL_MIN (prob, 1.0);
+          ncm_fit_state_set_m2lnL_curval (fit_k->fstate, m2lnL_star);
+        }
+      }
 
-      ncm_fit_m2lnL_val (fit_k, &m2lnL_star);
       esmcmc->ntotal++;
       esmcmc->naccepted++;
-      /*
-       ncm_vector_log_vals (esmcmc->theta, "# Theta  : ", "% 8.5g");
-       ncm_vector_log_vals (esmcmc->thetastar, "# Theta* : ", "% 8.5g");
-       */
-      if (gsl_finite (m2lnL_star))
-      {
-        prob = pow (z, esmcmc->fparam_len - 1.0) * exp ((m2lnL_cur - m2lnL_star) * 0.5);
-        prob = GSL_MIN (prob, 1.0);
-        ncm_fit_state_set_m2lnL_curval (fit_k->fstate, m2lnL_star);
-      }
-      else
-        prob = 0.0;
-
-      /*printf ("# Prob %e [% 21.16g % 21.16g] % 21.16g\n", prob, m2lnL_cur, m2lnL_star, m2lnL_cur - m2lnL_star);*/    
 
       if (prob != 1.0)
       {
@@ -1037,11 +1029,6 @@ _ncm_fit_esmcmc_mt_eval (glong i, glong f, gpointer data)
       ncm_mset_fparams_set_vector (fit_k->mset, thetastar);
       ncm_fit_m2lnL_val (fit_k, &m2lnL_star);
 
-/*
-       ncm_vector_log_vals (theta_k, "# Theta  : ", "% 8.5g");
-       ncm_vector_log_vals (theta_j, "# Theta  : ", "% 8.5g");
-       ncm_vector_log_vals (thetastar, "# Theta* : ", "% 8.5g");
-*/       
       if (gsl_finite (m2lnL_star))
       {
         prob = pow (z, esmcmc->fparam_len - 1.0) * exp ((m2lnL_cur - m2lnL_star) * 0.5);
