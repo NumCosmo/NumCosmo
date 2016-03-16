@@ -50,8 +50,7 @@ enum
   PROP_FIT,
   PROP_NWALKERS,
   PROP_SAMPLER,
-  PROP_MOVE_TYPE,
-  PROP_A,
+  PROP_WALKER,
   PROP_MTYPE,
   PROP_NTHREADS,
   PROP_DATA_FILE,
@@ -59,28 +58,30 @@ enum
 
 G_DEFINE_TYPE (NcmFitESMCMC, ncm_fit_esmcmc, G_TYPE_OBJECT);
 
+static gpointer _ncm_fit_esmcmc_dup_fit (gpointer userdata);
+
 static void
 ncm_fit_esmcmc_init (NcmFitESMCMC *esmcmc)
 {
   esmcmc->fit             = NULL;
-  esmcmc->walker_fits     = g_ptr_array_new ();
-  g_ptr_array_set_free_func (esmcmc->walker_fits, (GDestroyNotify) &ncm_fit_free);
+  esmcmc->walker_pool     = ncm_memory_pool_new (&_ncm_fit_esmcmc_dup_fit, esmcmc, 
+                                                 (GDestroyNotify) &ncm_fit_free);
 
   esmcmc->sampler         = NULL;
   esmcmc->mcat            = NULL;
   esmcmc->mtype           = NCM_FIT_RUN_MSGS_NONE;
   esmcmc->nt              = ncm_timer_new ();
   esmcmc->ser             = ncm_serialize_new (NCM_SERIALIZE_OPT_CLEAN_DUP);
-  esmcmc->mt              = NCM_FIT_ESMCMC_MOVE_TYPE_LEN;
-  esmcmc->a               = 0.0;
+  esmcmc->walker          = NULL;
   esmcmc->fparam_len      = 0;
 
-  esmcmc->theta_k         = g_ptr_array_new ();
-  esmcmc->theta_j         = g_ptr_array_new ();
+  esmcmc->theta           = g_ptr_array_new ();
   esmcmc->thetastar       = g_ptr_array_new ();
-  g_ptr_array_set_free_func (esmcmc->theta_k, (GDestroyNotify) &ncm_vector_free);
-  g_ptr_array_set_free_func (esmcmc->theta_j, (GDestroyNotify) &ncm_vector_free);
+  g_ptr_array_set_free_func (esmcmc->theta, (GDestroyNotify) &ncm_vector_free);
   g_ptr_array_set_free_func (esmcmc->thetastar, (GDestroyNotify) &ncm_vector_free);
+
+  esmcmc->jumps           = NULL;
+  esmcmc->accepted        = g_array_new (TRUE, TRUE, sizeof (gboolean));
   
   esmcmc->nthreads        = 0;
   esmcmc->n               = 0;
@@ -88,7 +89,6 @@ ncm_fit_esmcmc_init (NcmFitESMCMC *esmcmc)
   esmcmc->cur_sample_id   = -1; /* Represents that no samples were calculated yet. */
   esmcmc->ntotal          = 0;
   esmcmc->naccepted       = 0;
-  esmcmc->write_index     = 0;
   esmcmc->started         = FALSE;
 
   g_mutex_init (&esmcmc->dup_fit);
@@ -101,29 +101,32 @@ static void
 _ncm_fit_esmcmc_constructed (GObject *object)
 {
   NcmFitESMCMC *esmcmc = NCM_FIT_ESMCMC (object);
+  guint theta_len;
   guint k;
+  
   g_assert_cmpint (esmcmc->nwalkers, >, 0);
   esmcmc->fparam_len = ncm_mset_fparam_len (esmcmc->fit->mset);
+  theta_len = esmcmc->fparam_len + NCM_FIT_ESMCMC_NADD_VALS;
 
   esmcmc->mcat = ncm_mset_catalog_new (esmcmc->fit->mset, 1, esmcmc->nwalkers, FALSE, NCM_MSET_CATALOG_M2LNL_COLNAME);
   ncm_mset_catalog_set_run_type (esmcmc->mcat, "Ensemble Sampler MCMC -- Stretch Move");
-  
+
   for (k = 0; k < esmcmc->nwalkers; k++)
   {
-    NcmFit *fit = ncm_fit_dup (esmcmc->fit, esmcmc->ser);
+    NcmVector *theta_k     = ncm_vector_new (theta_len);
+    NcmVector *thetastar_k = ncm_vector_new (theta_len);
 
-    NcmVector *theta_k = ncm_vector_new (esmcmc->fparam_len);
-    NcmVector *theta_j = ncm_vector_new (esmcmc->fparam_len);
-    NcmVector *thetastar = ncm_vector_new (esmcmc->fparam_len);
-     
-    ncm_serialize_clear_instances (esmcmc->ser);
-
-    g_ptr_array_add (esmcmc->theta_k, theta_k);
-    g_ptr_array_add (esmcmc->theta_j, theta_j);
-    g_ptr_array_add (esmcmc->thetastar, thetastar);
-    
-    g_ptr_array_add (esmcmc->walker_fits, fit);
+    g_ptr_array_add (esmcmc->theta, theta_k);
+    g_ptr_array_add (esmcmc->thetastar, thetastar_k);
   }
+
+  esmcmc->jumps = ncm_vector_new (esmcmc->nwalkers);
+  g_array_set_size (esmcmc->accepted, esmcmc->nwalkers);
+
+  if (esmcmc->walker == NULL)
+    esmcmc->walker = ncm_fit_esmcmc_walker_new_from_name ("NcmFitESMCMCWalkerStretch");
+  
+  ncm_fit_esmcmc_walker_set_size (esmcmc->walker, esmcmc->nwalkers);
 }
 
 static void _ncm_fit_esmcmc_set_fit_obj (NcmFitESMCMC *esmcmc, NcmFit *fit);
@@ -145,11 +148,8 @@ ncm_fit_esmcmc_set_property (GObject *object, guint prop_id, const GValue *value
     case PROP_SAMPLER:
       ncm_fit_esmcmc_set_sampler (esmcmc, g_value_get_object (value));
       break;      
-    case PROP_MOVE_TYPE:
-      ncm_fit_esmcmc_set_move_type (esmcmc, g_value_get_enum (value));
-      break;
-    case PROP_A:
-      ncm_fit_esmcmc_set_move_scale (esmcmc, g_value_get_double (value));
+    case PROP_WALKER:
+      esmcmc->walker = g_value_dup_object (value);
       break;
     case PROP_MTYPE:
       ncm_fit_esmcmc_set_mtype (esmcmc, g_value_get_enum (value));
@@ -183,11 +183,8 @@ ncm_fit_esmcmc_get_property (GObject *object, guint prop_id, GValue *value, GPar
     case PROP_SAMPLER:
       g_value_set_object (value, esmcmc->sampler);
       break;      
-    case PROP_MOVE_TYPE:
-      g_value_set_enum (value, esmcmc->mt);
-      break;
-    case PROP_A:
-      g_value_set_double (value, esmcmc->a);
+    case PROP_WALKER:
+      g_value_set_object (value, esmcmc->walker);
       break;
     case PROP_MTYPE:
       g_value_set_enum (value, esmcmc->mtype);
@@ -215,12 +212,15 @@ ncm_fit_esmcmc_dispose (GObject *object)
   ncm_serialize_clear (&esmcmc->ser);
   ncm_mset_catalog_clear (&esmcmc->mcat);
 
-  g_clear_pointer (&esmcmc->theta_k, g_ptr_array_unref);
-  g_clear_pointer (&esmcmc->theta_j, g_ptr_array_unref);
-  g_clear_pointer (&esmcmc->thetastar, g_ptr_array_unref);
-  
-  g_clear_pointer (&esmcmc->walker_fits, g_ptr_array_unref);
+  ncm_fit_esmcmc_walker_clear (&esmcmc->walker);
 
+  ncm_vector_clear (&esmcmc->jumps);
+
+  g_clear_pointer (&esmcmc->theta, g_ptr_array_unref);
+  g_clear_pointer (&esmcmc->thetastar, g_ptr_array_unref);
+
+  g_clear_pointer (&esmcmc->accepted, g_array_unref);
+  
   /* Chain up : end */
   G_OBJECT_CLASS (ncm_fit_esmcmc_parent_class)->dispose (object);
 }
@@ -274,21 +274,12 @@ ncm_fit_esmcmc_class_init (NcmFitESMCMCClass *klass)
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
   
   g_object_class_install_property (object_class,
-                                   PROP_MOVE_TYPE,
-                                   g_param_spec_enum ("move-type",
-                                                      NULL,
-                                                      "Move type",
-                                                      NCM_TYPE_FIT_ESMCMC_MOVE_TYPE, NCM_FIT_ESMCMC_MOVE_TYPE_STRETCH,
-                                                      G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-
-  g_object_class_install_property (object_class,
-                                   PROP_A,
-                                   g_param_spec_double ("move-scale",
-                                                      NULL,
-                                                      "Move scale (a)",
-                                                      1.0, G_MAXDOUBLE, 2.0,
-                                                      G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-
+                                   PROP_WALKER,
+                                   g_param_spec_object ("walker",
+                                                        NULL,
+                                                        "Walker object",
+                                                        NCM_TYPE_FIT_ESMCMC_WALKER,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
   g_object_class_install_property (object_class,
                                    PROP_MTYPE,
                                    g_param_spec_enum ("mtype",
@@ -305,6 +296,22 @@ ncm_fit_esmcmc_class_init (NcmFitESMCMCClass *klass)
                                                       G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 }
 
+static gpointer
+_ncm_fit_esmcmc_dup_fit (gpointer userdata)
+{
+  G_LOCK_DEFINE_STATIC (dup_thread);
+  NcmFitESMCMC *esmcmc = NCM_FIT_ESMCMC (userdata);
+
+  G_LOCK (dup_thread);
+  {
+    NcmFit *fit= ncm_fit_dup (esmcmc->fit, esmcmc->ser);
+    ncm_serialize_clear_instances (esmcmc->ser);
+    
+    G_UNLOCK (dup_thread);
+    return fit;
+  }
+}
+
 static void 
 _ncm_fit_esmcmc_set_fit_obj (NcmFitESMCMC *esmcmc, NcmFit *fit)
 {
@@ -314,10 +321,10 @@ _ncm_fit_esmcmc_set_fit_obj (NcmFitESMCMC *esmcmc, NcmFit *fit)
 
 /**
  * ncm_fit_esmcmc_new:
- * @fit: a #NcmFit.
- * @nwalkers: number of walkers.
- * @sampler: inital points sampler #NcmMSetTransKern.
- * @mt: move type from #NcmFitESMCMCMoveType.
+ * @fit: a #NcmFit
+ * @nwalkers: number of walkers
+ * @sampler: inital points sampler #NcmMSetTransKern
+ * @walker: (allow-none): a #NcmFitESMCMCWalker
  * @mtype: FIXME
  *
  * FIXME
@@ -325,13 +332,13 @@ _ncm_fit_esmcmc_set_fit_obj (NcmFitESMCMC *esmcmc, NcmFit *fit)
  * Returns: FIXME
  */
 NcmFitESMCMC *
-ncm_fit_esmcmc_new (NcmFit *fit, gint nwalkers, NcmMSetTransKern *sampler, NcmFitESMCMCMoveType mt, NcmFitRunMsgs mtype)
+ncm_fit_esmcmc_new (NcmFit *fit, gint nwalkers, NcmMSetTransKern *sampler, NcmFitESMCMCWalker *walker, NcmFitRunMsgs mtype)
 {
   NcmFitESMCMC *esmcmc = g_object_new (NCM_TYPE_FIT_ESMCMC, 
                                 "fit", fit,
                                 "nwalkers", nwalkers,
                                 "sampler", sampler,
-                                "move-type", mt,
+                                "walker", walker,
                                 "mtype", mtype,
                                 NULL);
   return esmcmc;
@@ -401,35 +408,6 @@ ncm_fit_esmcmc_set_mtype (NcmFitESMCMC *esmcmc, NcmFitRunMsgs mtype)
 {
   esmcmc->mtype = mtype;
 }
-
-/**
- * ncm_fit_esmcmc_set_move_type:
- * @esmcmc: a #NcmFitESMCMC.
- * @mt: a #NcmFitESMCMCMoveType.
- *
- * FIXME
- *
- */
-void 
-ncm_fit_esmcmc_set_move_type (NcmFitESMCMC *esmcmc, NcmFitESMCMCMoveType mt)
-{
-  esmcmc->mt = mt;
-}
-
-/**
- * ncm_fit_esmcmc_set_move_scale:
- * @esmcmc: a #NcmFitESMCMC
- * @a: a double given the move scale (>1.0).
- *
- * FIXME
- *
- */
-void 
-ncm_fit_esmcmc_set_move_scale (NcmFitESMCMC *esmcmc, gdouble a)
-{
-  esmcmc->a = a;
-}
-
 
 /**
  * ncm_fit_esmcmc_set_trans_kern:
@@ -502,14 +480,31 @@ ncm_fit_esmcmc_get_accept_ratio (NcmFitESMCMC *esmcmc)
 }
 
 void
-_ncm_fit_esmcmc_update (NcmFitESMCMC *esmcmc, NcmFit *fit, guint k)
+_ncm_fit_esmcmc_update (NcmFitESMCMC *esmcmc, guint ki, guint kf)
 {
   const guint part = 5;
   const guint step = esmcmc->nwalkers * ((esmcmc->n / part) == 0 ? 1 : (esmcmc->n / part));
+  guint k;
 
-  ncm_mset_catalog_add_from_mset (esmcmc->mcat, fit->mset, ncm_fit_state_get_m2lnL_curval (fit->fstate));
-  esmcmc->cur_sample_id++;
-  ncm_timer_task_increment (esmcmc->nt);
+  g_assert_cmpuint (ki, <, kf);
+  g_assert_cmpuint (kf, <=, esmcmc->nwalkers);
+  
+  for (k = ki; k < kf; k++)
+  {
+    NcmVector *theta_k = g_ptr_array_index (esmcmc->theta, k);
+
+    ncm_mset_catalog_add_from_vector (esmcmc->mcat, theta_k);
+
+    esmcmc->cur_sample_id++;
+    ncm_timer_task_increment (esmcmc->nt);
+
+    esmcmc->ntotal++;
+    if (g_array_index (esmcmc->accepted, gboolean, k))
+    {
+      esmcmc->naccepted++;
+      g_array_index (esmcmc->accepted, gboolean, k) = FALSE;
+    }
+  }
 
   switch (esmcmc->mtype)
   {
@@ -540,9 +535,9 @@ _ncm_fit_esmcmc_update (NcmFitESMCMC *esmcmc, NcmFit *fit, guint k)
     {
       if ((esmcmc->cur_sample_id + 1) % esmcmc->nwalkers == 0)
       {
-        fit->mtype = esmcmc->mtype;
-        ncm_fit_log_start (fit);
-        ncm_fit_log_end (fit);
+        esmcmc->fit->mtype = esmcmc->mtype;
+        ncm_fit_log_start (esmcmc->fit);
+        ncm_fit_log_end (esmcmc->fit);
         ncm_mset_catalog_log_current_stats (esmcmc->mcat);
         ncm_mset_catalog_log_current_chain_stats (esmcmc->mcat);
         g_message ("# NcmFitESMCMC:acceptance ratio %7.4f%%.\n", ncm_fit_esmcmc_get_accept_ratio (esmcmc) * 100.0);
@@ -563,43 +558,33 @@ static void
 _ncm_fit_esmcmc_gen_init_points_mt_eval (glong i, glong f, gpointer data)
 {
   NcmFitESMCMC *esmcmc = NCM_FIT_ESMCMC (data);
+  NcmFit **fit_k_ptr = ncm_memory_pool_get (esmcmc->walker_pool);
+  NcmFit *fit_k      = *fit_k_ptr;
   glong k;
   
   for (k = i; k < f; k++)
   {
-    gdouble m2lnL = 0.0;
-    NcmFit *fit_k = g_ptr_array_index (esmcmc->walker_fits, k);
-    NcmVector *thetastar = g_ptr_array_index (esmcmc->thetastar, k);
+    NcmVector *theta_k = g_ptr_array_index (esmcmc->theta, k);
+    NcmVector *params_theta_k = ncm_vector_get_subvector (theta_k, NCM_FIT_ESMCMC_NADD_VALS, esmcmc->fparam_len);
+    gdouble *m2lnL = ncm_vector_ptr (theta_k, NCM_FIT_ESMCMC_M2LNL_ID);
 
-    while (TRUE)
+    do
     {
       g_mutex_lock (&esmcmc->resample_lock);
-      ncm_mset_trans_kern_prior_sample (esmcmc->sampler, thetastar, esmcmc->mcat->rng);
+      ncm_mset_trans_kern_prior_sample (esmcmc->sampler, params_theta_k, esmcmc->mcat->rng);
       g_mutex_unlock (&esmcmc->resample_lock);
 
-      ncm_mset_fparams_set_vector (fit_k->mset, thetastar);
-      ncm_fit_m2lnL_val (fit_k, &m2lnL);
+      ncm_mset_fparams_set_vector (fit_k->mset, params_theta_k);
+      ncm_fit_m2lnL_val (fit_k, m2lnL);
 
-      if (gsl_finite (m2lnL))
-        break;
-    }
-    
-    ncm_fit_state_set_m2lnL_curval (fit_k->fstate, m2lnL);
+    } while (!gsl_finite (m2lnL[0]));
 
-    g_mutex_lock (&esmcmc->update_lock);
-    while (esmcmc->write_index != k)
-      g_cond_wait (&esmcmc->write_cond, &esmcmc->update_lock);
-
-    esmcmc->ntotal++;
-    esmcmc->naccepted++;
-    _ncm_fit_esmcmc_update (esmcmc, fit_k, k);
-    esmcmc->write_index++;
-    
-    g_cond_broadcast (&esmcmc->write_cond);
-    g_mutex_unlock (&esmcmc->update_lock);
+    g_array_index (esmcmc->accepted, gboolean, k) = TRUE;
+    ncm_vector_free (params_theta_k);
   }
-}
 
+  ncm_memory_pool_return (fit_k_ptr);
+}
 
 static void 
 _ncm_fit_esmcmc_gen_init_points (NcmFitESMCMC *esmcmc)
@@ -613,36 +598,15 @@ _ncm_fit_esmcmc_gen_init_points (NcmFitESMCMC *esmcmc)
   {
     ncm_mset_catalog_set_sync_mode (esmcmc->mcat, NCM_MSET_CATALOG_SYNC_DISABLE);
     ncm_func_eval_threaded_loop_full (&_ncm_fit_esmcmc_gen_init_points_mt_eval, esmcmc->cur_sample_id + 1, esmcmc->nwalkers, esmcmc);
-    ncm_mset_catalog_sync (esmcmc->mcat, FALSE);
-    /*printf ("Synced!\n");*/
   }
   else
   {
-    gint k;
+    ncm_mset_catalog_set_sync_mode (esmcmc->mcat, NCM_MSET_CATALOG_SYNC_DISABLE);
+    _ncm_fit_esmcmc_gen_init_points_mt_eval (esmcmc->cur_sample_id + 1, esmcmc->nwalkers, esmcmc);
+  }
 
-    for (k = esmcmc->cur_sample_id + 1; k < esmcmc->nwalkers; k++)
-    {
-      NcmFit *fit_k = g_ptr_array_index (esmcmc->walker_fits, k);
-      NcmVector *thetastar = g_ptr_array_index (esmcmc->thetastar, k);
-      gdouble m2lnL = 0.0;
-
-      while (TRUE)
-      {
-        ncm_mset_trans_kern_prior_sample (esmcmc->sampler, thetastar, esmcmc->mcat->rng);
-        ncm_mset_fparams_set_vector (fit_k->mset, thetastar);
-
-        ncm_fit_m2lnL_val (fit_k, &m2lnL);
-        if (gsl_finite (m2lnL))
-          break;
-      }
-      ncm_fit_state_set_m2lnL_curval (fit_k->fstate, m2lnL);
-      esmcmc->ntotal++;
-      esmcmc->naccepted++;
-      _ncm_fit_esmcmc_update (esmcmc, fit_k, k);
-      esmcmc->write_index++;
-    }
-    ncm_mset_catalog_sync (esmcmc->mcat, FALSE);
-  }    
+  _ncm_fit_esmcmc_update (esmcmc, esmcmc->cur_sample_id + 1, esmcmc->nwalkers); 
+  ncm_mset_catalog_sync (esmcmc->mcat, FALSE);
 }
 
 /**
@@ -718,18 +682,18 @@ ncm_fit_esmcmc_start_run (NcmFitESMCMC *esmcmc)
     init_point_task = TRUE;
   }
 
-  if (esmcmc->cur_sample_id + 1 <= esmcmc->nwalkers)
+  if (esmcmc->cur_sample_id + 1 < esmcmc->nwalkers)
   {
     gint k;
+
     for (k = 0; k <= esmcmc->cur_sample_id; k++)
     {
       NcmVector *cur_row = ncm_mset_catalog_peek_row (esmcmc->mcat, k);
-      NcmFit *fit_k = g_ptr_array_index (esmcmc->walker_fits, k);
+      NcmVector *theta_k = g_ptr_array_index (esmcmc->theta, k);
       g_assert (cur_row != NULL);
-      ncm_mset_fparams_set_vector_offset (fit_k->mset, cur_row, NCM_FIT_ESMCMC_NADD_VALS);
-      ncm_fit_state_set_m2lnL_curval (fit_k->fstate, ncm_vector_get (cur_row, NCM_FIT_ESMCMC_M2LNL_ID));
+      
+      ncm_vector_memcpy (theta_k, cur_row);
     }
-    esmcmc->write_index = k;
     _ncm_fit_esmcmc_gen_init_points (esmcmc);
 
     g_mutex_lock (&esmcmc->update_lock);
@@ -747,21 +711,20 @@ ncm_fit_esmcmc_start_run (NcmFitESMCMC *esmcmc)
     for (k = 0; k < ki; k++)
     {
       NcmVector *cur_row = ncm_mset_catalog_peek_row (esmcmc->mcat, esmcmc->nwalkers * t + k);
-      NcmFit *fit_k = g_ptr_array_index (esmcmc->walker_fits, k);
+      NcmVector *theta_k = g_ptr_array_index (esmcmc->theta, k);
       g_assert (cur_row != NULL);
-      ncm_mset_fparams_set_vector_offset (fit_k->mset, cur_row, NCM_FIT_ESMCMC_NADD_VALS);
-      ncm_fit_state_set_m2lnL_curval (fit_k->fstate, ncm_vector_get (cur_row, NCM_FIT_ESMCMC_M2LNL_ID));
+
+      ncm_vector_memcpy (theta_k, cur_row);
     }
 
     for (k = ki; k < esmcmc->nwalkers; k++)
     {
       NcmVector *cur_row = ncm_mset_catalog_peek_row (esmcmc->mcat, esmcmc->nwalkers * tm1 + k);
-      NcmFit *fit_k = g_ptr_array_index (esmcmc->walker_fits, k);
+      NcmVector *theta_k = g_ptr_array_index (esmcmc->theta, k);
       g_assert (cur_row != NULL);
-      ncm_mset_fparams_set_vector_offset (fit_k->mset, cur_row, NCM_FIT_ESMCMC_NADD_VALS);
-      ncm_fit_state_set_m2lnL_curval (fit_k->fstate, ncm_vector_get (cur_row, NCM_FIT_ESMCMC_M2LNL_ID));
+
+      ncm_vector_memcpy (theta_k, cur_row);
     }
-    esmcmc->write_index = k;
   }
 
   if (init_point_task)
@@ -800,7 +763,6 @@ ncm_fit_esmcmc_reset (NcmFitESMCMC *esmcmc)
   esmcmc->cur_sample_id   = -1;
   esmcmc->ntotal          = 0;
   esmcmc->naccepted       = 0;
-  esmcmc->write_index     = 0;
   esmcmc->started         = FALSE;  
   ncm_mset_catalog_reset (esmcmc->mcat);
 }
@@ -825,11 +787,9 @@ ncm_fit_esmcmc_intern_skip (NcmFitESMCMC *esmcmc, guint n)
   }
 
   esmcmc->cur_sample_id += n;
-  esmcmc->write_index = esmcmc->cur_sample_id + 1;
 }
 
-static void _ncm_fit_esmcmc_run_single (NcmFitESMCMC *esmcmc);
-static void _ncm_fit_esmcmc_run_mt (NcmFitESMCMC *esmcmc);
+static void _ncm_fit_esmcmc_run (NcmFitESMCMC *esmcmc);
 
 /**
  * ncm_fit_esmcmc_run:
@@ -868,14 +828,8 @@ ncm_fit_esmcmc_run (NcmFitESMCMC *esmcmc, guint n)
     case NCM_FIT_RUN_MSGS_SIMPLE:
     {
       ncm_cfg_msg_sepa ();
-      switch (esmcmc->mt)
-      {
-        case NCM_FIT_ESMCMC_MOVE_TYPE_STRETCH:
-        g_message ("# NcmFitESMCMC: Calculating [%06d] Ensemble Sampler Markov Chain Monte Carlo runs [Stretch Move]\n", esmcmc->n);
-          break;
-        default:
-          g_assert_not_reached ();
-      }
+      g_message ("# NcmFitESMCMC: Calculating [%06d] Ensemble Sampler Markov Chain Monte Carlo runs [%s]\n", 
+                 esmcmc->n, ncm_fit_esmcmc_walker_desc (esmcmc->walker));
     }
     case NCM_FIT_RUN_MSGS_NONE:
       break;
@@ -894,191 +848,74 @@ ncm_fit_esmcmc_run (NcmFitESMCMC *esmcmc, guint n)
   if (esmcmc->mtype > NCM_FIT_RUN_MSGS_NONE)
     ncm_timer_task_log_start_datetime (esmcmc->nt);
 
-  if (esmcmc->nthreads <= 1)
-    _ncm_fit_esmcmc_run_single (esmcmc);
-  else
-    _ncm_fit_esmcmc_run_mt (esmcmc);
+  _ncm_fit_esmcmc_run (esmcmc);
 
   ncm_timer_task_pause (esmcmc->nt);
-}
-
-static void
-ncm_fit_esmcmc_move_try (NcmFitESMCMC *esmcmc, gdouble z, NcmVector *theta_k, NcmVector *theta_j, NcmVector *thetastar)
-{
-  const guint len = ncm_vector_len (theta_k);
-  guint i;
-
-  for (i = 0; i < len; i++)
-  {
-    const gdouble theta_j_i = ncm_vector_get (theta_j, i);
-    const gdouble theta_k_i = ncm_vector_get (theta_k, i);
-    
-    ncm_vector_set (thetastar, i, theta_j_i + z * (theta_k_i - theta_j_i));
-  }
-}
-
-static void 
-_ncm_fit_esmcmc_run_single (NcmFitESMCMC *esmcmc)
-{
-  guint i = 0, k;
-  guint ki = (esmcmc->cur_sample_id + 1) % esmcmc->nwalkers;
-
-  for (i = 0; i < esmcmc->n; i++)
-  {
-    k = ki;
-    while (k < esmcmc->nwalkers)
-    {
-      NcmFit *fit_k = g_ptr_array_index (esmcmc->walker_fits, k);
-
-      NcmVector *theta_k = g_ptr_array_index (esmcmc->theta_k, k);
-      NcmVector *theta_j = g_ptr_array_index (esmcmc->theta_j, k);
-      NcmVector *thetastar = g_ptr_array_index (esmcmc->thetastar, k);
-
-      gdouble m2lnL_cur = ncm_fit_state_get_m2lnL_curval (fit_k->fstate);
-      gdouble m2lnL_star, jump, z, u;
-      gdouble prob = 0.0;
-      gulong j;
-
-      jump = gsl_rng_uniform (esmcmc->mcat->rng->r);
-      u    = gsl_rng_uniform (esmcmc->mcat->rng->r);
-      z    = gsl_pow_2 (1.0 + (esmcmc->a - 1.0) * u) / esmcmc->a;
-      j    = gsl_rng_uniform_int (esmcmc->mcat->rng->r, esmcmc->nwalkers - 1);
-
-      if (j >= k)
-        j++;
-
-      ncm_mset_fparams_get_vector (fit_k->mset, theta_k);
-      ncm_mset_fparams_get_vector (NCM_FIT (g_ptr_array_index (esmcmc->walker_fits, j))->mset, theta_j);
-
-      ncm_fit_esmcmc_move_try (esmcmc, z, theta_k, theta_j, thetastar);
-/*
-      ncm_vector_log_vals (theta_k, "# theta_k  ", "% 20.15g");
-      ncm_vector_log_vals (theta_j, "# theta_j  ", "% 20.15g");
-      ncm_vector_log_vals (thetastar, "# thetastar", "% 20.15g");
-*/
-      if (ncm_mset_fparam_valid_bounds (fit_k->mset, thetastar))
-      {
-        ncm_mset_fparams_set_vector (fit_k->mset, thetastar);
-        ncm_fit_m2lnL_val (fit_k, &m2lnL_star);
-
-        if (gsl_finite (m2lnL_star))
-        {
-          prob = pow (z, esmcmc->fparam_len - 1.0) * exp ((m2lnL_cur - m2lnL_star) * 0.5);
-          prob = GSL_MIN (prob, 1.0);
-          ncm_fit_state_set_m2lnL_curval (fit_k->fstate, m2lnL_star);
-        }
-      }
-
-      esmcmc->ntotal++;
-      esmcmc->naccepted++;
-
-      if (prob != 1.0)
-      {
-        if (jump > prob)
-        {
-          ncm_mset_fparams_set_vector (fit_k->mset, theta_k);
-          ncm_fit_state_set_m2lnL_curval (fit_k->fstate, m2lnL_cur);
-          esmcmc->naccepted--;
-        }
-      }
-
-      _ncm_fit_esmcmc_update (esmcmc, fit_k, k);
-      esmcmc->write_index++;
-      k++;
-    }
-    ki = 0;
-  }
 }
 
 static void 
 _ncm_fit_esmcmc_mt_eval (glong i, glong f, gpointer data)
 {
   NcmFitESMCMC *esmcmc = NCM_FIT_ESMCMC (data);
-  const guint nwalkers_2  = esmcmc->nwalkers / 2;
-  const guint subensemble = (i < nwalkers_2) ? nwalkers_2 : 0;
+  NcmFit **fit_k_ptr = ncm_memory_pool_get (esmcmc->walker_pool);
+  NcmFit *fit_k      = *fit_k_ptr;
   guint k = i;
 
   while (k < f)
   {
-    NcmFit *fit_k = g_ptr_array_index (esmcmc->walker_fits, k);
-    NcmVector *theta_k = g_ptr_array_index (esmcmc->theta_k, k);
-    NcmVector *theta_j = g_ptr_array_index (esmcmc->theta_j, k);
     NcmVector *thetastar = g_ptr_array_index (esmcmc->thetastar, k);
+    NcmVector *theta_k   = g_ptr_array_index (esmcmc->theta, k);
 
-    gdouble m2lnL_cur = ncm_fit_state_get_m2lnL_curval (fit_k->fstate);
-    gdouble m2lnL_star, jump, z, u;
+    gdouble *m2lnL_cur  = ncm_vector_ptr (theta_k, NCM_FIT_ESMCMC_M2LNL_ID);
+    gdouble *m2lnL_star = ncm_vector_ptr (thetastar, NCM_FIT_ESMCMC_M2LNL_ID);
+    gdouble jump        = ncm_vector_get (esmcmc->jumps, k);
     gdouble prob = 0.0;
-    gulong j;
-    gboolean accepted = TRUE;
 
-    g_mutex_lock (&esmcmc->resample_lock);
-    jump = gsl_rng_uniform (esmcmc->mcat->rng->r);
-    u    = gsl_rng_uniform (esmcmc->mcat->rng->r);
-    j    = gsl_rng_uniform_int (esmcmc->mcat->rng->r, nwalkers_2);
-    g_mutex_unlock (&esmcmc->resample_lock);
+    ncm_fit_esmcmc_walker_step (esmcmc->walker, esmcmc->theta, thetastar, k);
 
-    z    = gsl_pow_2 (1.0 + (esmcmc->a - 1.0) * u) / esmcmc->a;
-    j   += subensemble;
-
-    ncm_mset_fparams_get_vector (fit_k->mset, theta_k);
-    ncm_mset_fparams_get_vector (NCM_FIT (g_ptr_array_index (esmcmc->walker_fits, j))->mset, theta_j);
-
-    ncm_fit_esmcmc_move_try (esmcmc, z, theta_k, theta_j, thetastar);
-    if (ncm_mset_fparam_valid_bounds (fit_k->mset, thetastar))
+    if (ncm_mset_fparam_valid_bounds_offset (fit_k->mset, thetastar, NCM_FIT_ESMCMC_NADD_VALS))
     {
-      ncm_mset_fparams_set_vector (fit_k->mset, thetastar);
-      ncm_fit_m2lnL_val (fit_k, &m2lnL_star);
+      ncm_mset_fparams_set_vector_offset (fit_k->mset, thetastar, NCM_FIT_ESMCMC_NADD_VALS);
+      ncm_fit_m2lnL_val (fit_k, m2lnL_star);
 
-      if (gsl_finite (m2lnL_star))
+      if (gsl_finite (m2lnL_star[0]))
       {
-        prob = pow (z, esmcmc->fparam_len - 1.0) * exp ((m2lnL_cur - m2lnL_star) * 0.5);
+        prob = ncm_fit_esmcmc_walker_prob (esmcmc->walker, esmcmc->theta, thetastar, k, m2lnL_cur[0], m2lnL_star[0]);
         prob = GSL_MIN (prob, 1.0);
-        ncm_fit_state_set_m2lnL_curval (fit_k->fstate, m2lnL_star);
       }
     }
     
-    /*printf ("# Prob %e [% 21.16g % 21.16g] % 21.16g\n", prob, m2lnL_cur, m2lnL_star, m2lnL_cur - m2lnL_star);*/    
-
-    if (prob != 1.0)
+    if (jump < prob)
     {
-      if (jump > prob)
-      {
-        ncm_mset_fparams_set_vector (fit_k->mset, theta_k);
-        ncm_fit_state_set_m2lnL_curval (fit_k->fstate, m2lnL_cur);
-        accepted = FALSE;
-      }
+      ncm_vector_memcpy (theta_k, thetastar);
+      g_array_index (esmcmc->accepted, gboolean, k) = TRUE;
     }
-    
-    g_mutex_lock (&esmcmc->update_lock);    
-    while (esmcmc->write_index != k)
-      g_cond_wait (&esmcmc->write_cond, &esmcmc->update_lock);
-
-    esmcmc->ntotal++;
-    if (accepted)
-      esmcmc->naccepted++;
-
-    _ncm_fit_esmcmc_update (esmcmc, fit_k, k);
-    esmcmc->write_index++;
-    g_cond_broadcast (&esmcmc->write_cond);
-
-    g_mutex_unlock (&esmcmc->update_lock);
     k++;
   }
+
+  ncm_memory_pool_return (fit_k_ptr);
 }
 
 static void
-_ncm_fit_esmcmc_run_mt (NcmFitESMCMC *esmcmc)
+_ncm_fit_esmcmc_get_jumps (NcmFitESMCMC *esmcmc, guint ki, guint kf)
+{
+  guint k;
+  
+  for (k = ki; k < kf; k++)
+  {
+    const gdouble jump = gsl_rng_uniform (esmcmc->mcat->rng->r);; 
+    ncm_vector_set (esmcmc->jumps, k, jump);
+  }
+}
+
+
+static void
+_ncm_fit_esmcmc_run (NcmFitESMCMC *esmcmc)
 {
   guint i;
+  gboolean mthread = (esmcmc->nthreads > 1);
 
-  if (esmcmc->nthreads <= 1)
-  {
-    _ncm_fit_esmcmc_run_single (esmcmc);
-    return;
-  }
-
-  g_assert_cmpuint (esmcmc->nthreads, >, 1);
-
+  if (mthread)
   {
     const guint nwalkers_2 = esmcmc->nwalkers / 2;
     guint ki = (esmcmc->cur_sample_id + 1) % esmcmc->nwalkers;
@@ -1086,7 +923,9 @@ _ncm_fit_esmcmc_run_mt (NcmFitESMCMC *esmcmc)
     ncm_mset_catalog_set_sync_mode (esmcmc->mcat, NCM_MSET_CATALOG_SYNC_DISABLE);
     if (esmcmc->n > 0)
     {
-      esmcmc->write_index = ki;
+      _ncm_fit_esmcmc_get_jumps (esmcmc, ki, esmcmc->nwalkers);
+      ncm_fit_esmcmc_walker_setup (esmcmc->walker, esmcmc->theta, ki, esmcmc->nwalkers, esmcmc->mcat->rng);
+      
       if (ki < nwalkers_2)
       {
         ncm_func_eval_threaded_loop_full (&_ncm_fit_esmcmc_mt_eval, ki, nwalkers_2, esmcmc);
@@ -1096,13 +935,64 @@ _ncm_fit_esmcmc_run_mt (NcmFitESMCMC *esmcmc)
       {
         ncm_func_eval_threaded_loop_full (&_ncm_fit_esmcmc_mt_eval, ki, esmcmc->nwalkers, esmcmc);
       }
+
+      ncm_fit_esmcmc_walker_clean (esmcmc->walker, ki, esmcmc->nwalkers);
+
+      _ncm_fit_esmcmc_update (esmcmc, ki, esmcmc->nwalkers);
       ncm_mset_catalog_timed_sync (esmcmc->mcat, FALSE);
 
       for (i = 1; i < esmcmc->n; i++)
       {
-        esmcmc->write_index = 0;
+        _ncm_fit_esmcmc_get_jumps (esmcmc, 0, esmcmc->nwalkers);
+        ncm_fit_esmcmc_walker_setup (esmcmc->walker, esmcmc->theta, 0, esmcmc->nwalkers, esmcmc->mcat->rng);
+        
         ncm_func_eval_threaded_loop_full (&_ncm_fit_esmcmc_mt_eval, 0, nwalkers_2, esmcmc);
         ncm_func_eval_threaded_loop_full (&_ncm_fit_esmcmc_mt_eval, nwalkers_2, esmcmc->nwalkers, esmcmc);
+
+        ncm_fit_esmcmc_walker_clean (esmcmc->walker, 0, esmcmc->nwalkers);
+
+        _ncm_fit_esmcmc_update (esmcmc, 0, esmcmc->nwalkers);
+        ncm_mset_catalog_timed_sync (esmcmc->mcat, FALSE);
+      }
+    }
+  }
+  else
+  {
+    const guint nwalkers_2 = esmcmc->nwalkers / 2;
+    guint ki = (esmcmc->cur_sample_id + 1) % esmcmc->nwalkers;
+
+    ncm_mset_catalog_set_sync_mode (esmcmc->mcat, NCM_MSET_CATALOG_SYNC_DISABLE);
+    if (esmcmc->n > 0)
+    {
+      _ncm_fit_esmcmc_get_jumps (esmcmc, ki, esmcmc->nwalkers);
+      ncm_fit_esmcmc_walker_setup (esmcmc->walker, esmcmc->theta, ki, esmcmc->nwalkers, esmcmc->mcat->rng);
+      
+      if (ki < nwalkers_2)
+      {
+        _ncm_fit_esmcmc_mt_eval (ki, nwalkers_2, esmcmc);
+        _ncm_fit_esmcmc_mt_eval (nwalkers_2, esmcmc->nwalkers, esmcmc);
+      }
+      else
+      {
+        _ncm_fit_esmcmc_mt_eval (ki, esmcmc->nwalkers, esmcmc);
+      }
+      
+      ncm_fit_esmcmc_walker_clean (esmcmc->walker, ki, esmcmc->nwalkers);
+
+      _ncm_fit_esmcmc_update (esmcmc, ki, esmcmc->nwalkers);
+      ncm_mset_catalog_timed_sync (esmcmc->mcat, FALSE);
+
+      for (i = 1; i < esmcmc->n; i++)
+      {
+        _ncm_fit_esmcmc_get_jumps (esmcmc, 0, esmcmc->nwalkers);
+        ncm_fit_esmcmc_walker_setup (esmcmc->walker, esmcmc->theta, 0, esmcmc->nwalkers, esmcmc->mcat->rng);
+
+        _ncm_fit_esmcmc_mt_eval (0, nwalkers_2, esmcmc);
+        _ncm_fit_esmcmc_mt_eval (nwalkers_2, esmcmc->nwalkers, esmcmc);
+
+        ncm_fit_esmcmc_walker_clean (esmcmc->walker, 0, esmcmc->nwalkers);
+        
+        _ncm_fit_esmcmc_update (esmcmc, 0, esmcmc->nwalkers);
         ncm_mset_catalog_timed_sync (esmcmc->mcat, FALSE);
       }
     }
@@ -1123,12 +1013,11 @@ ncm_fit_esmcmc_run_lre (NcmFitESMCMC *esmcmc, guint prerun, gdouble lre)
 {
   gdouble lerror;
   const gdouble lre2 = lre * lre;
-  const guint fparam_len = ncm_mset_fparam_len (esmcmc->fit->mset);
   const guint catlen = ncm_mset_catalog_len (esmcmc->mcat) / esmcmc->nwalkers;
 
   g_assert_cmpfloat (lre, >, 0.0);
 
-  prerun = GSL_MAX (prerun, fparam_len * 100);
+  prerun = GSL_MAX (prerun, 100);
 
   if (catlen < prerun)
   {

@@ -200,6 +200,7 @@ main (gint argc, gchar *argv[])
   {
     NcmMSetCatalog *mcat = ncm_mset_catalog_new_from_file_ro (cat_filename);
     NcmMSet *mset = ncm_mset_catalog_get_mset (mcat);
+    ncm_mset_catalog_estimate_autocorrelation_tau (mcat);
     
     if (info)
     {

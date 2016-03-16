@@ -50,6 +50,7 @@
 #include "math/ncm_model_builder.h"
 #include "math/ncm_reparam_linear.h"
 #include "math/ncm_stats_vec.h"
+#include "math/ncm_fit_esmcmc_walker_stretch.h"
 #include "nc_hicosmo.h"
 #include "nc_cbe_precision.h"
 #include "perturbations/nc_hipert_iadiab.h"
@@ -292,6 +293,8 @@ ncm_cfg_init (void)
 
   ncm_cfg_register_obj (NCM_TYPE_BOOTSTRAP);
   ncm_cfg_register_obj (NCM_TYPE_STATS_VEC);
+
+  ncm_cfg_register_obj (NCM_TYPE_FIT_ESMCMC_WALKER_STRETCH);
 
   ncm_cfg_register_obj (NC_TYPE_HICOSMO_QCONST);
   ncm_cfg_register_obj (NC_TYPE_HICOSMO_QLINEAR);

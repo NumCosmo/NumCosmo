@@ -1900,7 +1900,7 @@ ncm_mset_fparams_get_vector (NcmMSet *mset, NcmVector *x)
  * ncm_mset_fparams_get_vector_offset:
  * @mset: a #NcmMSet
  * @x: a #NcmVector
- * @offset: FIXME
+ * @offset: starting index
  *
  * FIXME
  *
@@ -2262,7 +2262,8 @@ ncm_mset_fparam_set_scale (NcmMSet *mset, guint n, gdouble scale)
 gboolean
 ncm_mset_fparam_valid_bounds (NcmMSet *mset, NcmVector *theta)
 {
-  g_assert (mset->valid_map && ncm_vector_len (theta) == mset->fparam_len);
+  g_assert (mset->valid_map);
+  g_assert_cmpuint (ncm_vector_len (theta), ==, mset->fparam_len);
   {
     guint i;
     for (i = 0; i < mset->fparam_len; i++)
@@ -2270,6 +2271,35 @@ ncm_mset_fparam_valid_bounds (NcmMSet *mset, NcmVector *theta)
       const gdouble lb  = ncm_mset_fparam_get_lower_bound (mset, i);
       const gdouble ub  = ncm_mset_fparam_get_upper_bound (mset, i);
       const gdouble val = ncm_vector_get (theta, i);
+      if (val < lb || val > ub)
+        return FALSE;
+    }
+    return TRUE;
+  }
+}
+
+/**
+ * ncm_mset_fparam_valid_bounds_offset:
+ * @mset: a #NcmMSet
+ * @theta: free parameters vector
+ * @offset: starting index
+ *
+ * FIXME
+ *
+ * Returns: whether @theta contain values respecting the parameter bounds.
+ */
+gboolean
+ncm_mset_fparam_valid_bounds_offset (NcmMSet *mset, NcmVector *theta, guint offset)
+{
+  g_assert (mset->valid_map);
+  g_assert_cmpuint (ncm_vector_len (theta), ==, mset->fparam_len + offset);
+  {
+    guint i;
+    for (i = 0; i < mset->fparam_len; i++)
+    {
+      const gdouble lb  = ncm_mset_fparam_get_lower_bound (mset, i);
+      const gdouble ub  = ncm_mset_fparam_get_upper_bound (mset, i);
+      const gdouble val = ncm_vector_get (theta, i + offset);
       if (val < lb || val > ub)
         return FALSE;
     }

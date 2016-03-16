@@ -766,7 +766,7 @@ main (gint argc, gchar *argv[])
     NcmFitESMCMC *esmcmc = ncm_fit_esmcmc_new (fit, 
                                                de_fit.mc_nwalkers, 
                                                NCM_MSET_TRANS_KERN (init_sampler), 
-                                               NCM_FIT_ESMCMC_MOVE_TYPE_STRETCH, 
+                                               NULL,
                                                de_fit.msg_level);
 
     ncm_mset_trans_kern_set_mset (NCM_MSET_TRANS_KERN (init_sampler), mset);
@@ -784,7 +784,7 @@ main (gint argc, gchar *argv[])
     }
     else
     {
-      ncm_mset_trans_kern_gauss_set_cov_from_scale (init_sampler);
+      ncm_mset_trans_kern_gauss_set_cov_from_rescale (init_sampler, 0.01);
     }
 
     if (de_fit.mc_seed > -1)
