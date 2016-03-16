@@ -264,6 +264,7 @@ ncm_fit_esmcmc_walker_stretch_new (guint nwalkers)
 /**
  * ncm_fit_esmcmc_walker_stretch_set_scale:
  * @stretch: a #NcmFitESMCMCWalkerStretch
+ * @a: new scale $a > 1$
  * 
  * Sets the value of the scale $a > 1$.
  * 

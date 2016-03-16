@@ -220,6 +220,12 @@ ncm_fit_esmcmc_dispose (GObject *object)
   g_clear_pointer (&esmcmc->thetastar, g_ptr_array_unref);
 
   g_clear_pointer (&esmcmc->accepted, g_array_unref);
+
+  if (esmcmc->walker_pool != NULL)
+  {
+    ncm_memory_pool_free (esmcmc->walker_pool, TRUE);
+    esmcmc->walker_pool = NULL;
+  }
   
   /* Chain up : end */
   G_OBJECT_CLASS (ncm_fit_esmcmc_parent_class)->dispose (object);

@@ -106,6 +106,8 @@ endif
 IGNORE_HFILES=linear_internal.h         \
               config.h                  \
               ncm_fit_nlopt_enum_meta.h \
+              gsl_rstat.h               \
+              rquantile.c               \
               $(ignore_nlopt)           \
               levmar                    \
               libcuba                   \
