@@ -48,6 +48,49 @@
 
 G_DEFINE_TYPE (NcGrowthFunc, nc_growth_func, G_TYPE_OBJECT);
 
+static void
+nc_growth_func_init (NcGrowthFunc *gf)
+{
+  gf->s          = NULL;
+  gf->cvode      = NULL;
+  gf->yv         = N_VNew_Serial (2);
+  gf->zf         = 0.0;
+  gf->ctrl_cosmo = ncm_model_ctrl_new (NULL);
+}
+
+static void
+_nc_growth_func_dispose (GObject * object)
+{
+  NcGrowthFunc *gf = NC_GROWTH_FUNC (object);
+
+  ncm_spline_clear (&gf->s);
+  ncm_model_ctrl_clear (&gf->ctrl_cosmo);
+
+  /* Chain up : end */
+  G_OBJECT_CLASS (nc_growth_func_parent_class)->dispose (object);
+}
+
+static void
+_nc_growth_func_finalize (GObject *object)
+{
+  NcGrowthFunc *gf = NC_GROWTH_FUNC (object);
+
+  CVodeFree (&gf->cvode);
+  N_VDestroy (gf->yv);
+
+  /* Chain up : end */
+  G_OBJECT_CLASS (nc_growth_func_parent_class)->finalize (object);
+}
+
+static void
+nc_growth_func_class_init (NcGrowthFuncClass *klass)
+{
+  GObjectClass* object_class = G_OBJECT_CLASS (klass);
+
+  object_class->dispose = _nc_growth_func_dispose;
+  object_class->finalize = _nc_growth_func_finalize;
+}
+
 /**
  * nc_growth_func_new:
  *
@@ -62,18 +105,17 @@ nc_growth_func_new (void)
 }
 
 /**
- * nc_growth_func_copy:
+ * nc_growth_func_ref:
  * @gf: a #NcGrowthFunc
  *
- * This function duplicates @gf.
+ * Increases the reference count of @gf atomically.
  *
- * Returns: (transfer full): A #NcGrowthFunc.
+ * Returns: (transfer full): @gf.
    */
 NcGrowthFunc *
-nc_growth_func_copy (NcGrowthFunc *gf)
+nc_growth_func_ref (NcGrowthFunc *gf)
 {
-  NCM_UNUSED (gf);
-  return nc_growth_func_new ();
+  return g_object_ref (gf);
 }
 
 /**
@@ -307,47 +349,3 @@ nc_growth_func_prepare_if_needed (NcGrowthFunc *gf, NcHICosmo *cosmo)
  *
  * Returns: FIXME
  */
-
-static void
-nc_growth_func_init (NcGrowthFunc *gf)
-{
-  gf->s          = NULL;
-  gf->cvode      = NULL;
-  gf->yv         = N_VNew_Serial (2);
-  gf->zf         = 0.0;
-  gf->ctrl_cosmo = ncm_model_ctrl_new (NULL);
-}
-
-static void
-_nc_growth_func_dispose (GObject * object)
-{
-  NcGrowthFunc *gf = NC_GROWTH_FUNC (object);
-
-  ncm_spline_clear (&gf->s);
-  ncm_model_ctrl_clear (&gf->ctrl_cosmo);
-
-  /* Chain up : end */
-  G_OBJECT_CLASS (nc_growth_func_parent_class)->dispose (object);
-}
-
-static void
-_nc_growth_func_finalize (GObject *object)
-{
-  NcGrowthFunc *gf = NC_GROWTH_FUNC (object);
-
-  CVodeFree (&gf->cvode);
-  N_VDestroy (gf->yv);
-
-  /* Chain up : end */
-  G_OBJECT_CLASS (nc_growth_func_parent_class)->finalize (object);
-}
-
-static void
-nc_growth_func_class_init (NcGrowthFuncClass *klass)
-{
-  GObjectClass* object_class = G_OBJECT_CLASS (klass);
-
-  object_class->dispose = _nc_growth_func_dispose;
-  object_class->finalize = _nc_growth_func_finalize;
-}
-

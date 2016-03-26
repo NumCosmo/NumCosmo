@@ -2152,6 +2152,50 @@ ncm_model_orig_param_get_by_name (NcmModel *model, const gchar *param_name)
 }
 
 /**
+ * ncm_model_type_is_submodel:
+ * @model_type: a #GType
+ *
+ * 
+ * Returns: TRUE if @model_type is a submodel of other model class.
+ */
+gboolean 
+ncm_model_type_is_submodel (GType model_type)
+{
+  g_assert (g_type_is_a (model_type, NCM_TYPE_MODEL));
+  {
+    NcmModelClass *model_class = g_type_class_ref (model_type);
+    gboolean is_submodel       = model_class->is_submodel;
+
+    g_type_class_unref (model_class);
+
+    return is_submodel;
+  }
+}
+
+/**
+ * ncm_model_type_main_model:
+ * @model_type: a #GType
+ *
+ * If @model_type is a submodel returns the #NcmModelID of its
+ * main model, otherwise returns -1.
+ * 
+ * Returns: main model #NcmModelID or -1.
+ */
+NcmModelID 
+ncm_model_type_main_model (GType model_type)
+{
+  g_assert (g_type_is_a (model_type, NCM_TYPE_MODEL));
+  {
+    NcmModelClass *model_class = g_type_class_ref (model_type);
+    NcmModelID main_model_id   = model_class->main_model_id;
+
+    g_type_class_unref (model_class);
+
+    return main_model_id;
+  }
+}
+
+/**
  * ncm_model_is_submodel:
  * @model: a #NcmModel
  *

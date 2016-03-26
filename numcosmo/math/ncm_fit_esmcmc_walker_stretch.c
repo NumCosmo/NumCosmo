@@ -183,6 +183,8 @@ static void
 _ncm_fit_esmcmc_walker_stretch_setup (NcmFitESMCMCWalker *walker, GPtrArray *theta, guint ki, guint kf, NcmRNG *rng)
 {
   NcmFitESMCMCWalkerStretch *stretch = NCM_FIT_ESMCMC_WALKER_STRETCH (walker);
+  /*const guint len = ncm_vector_len (g_ptr_array_index (theta, 0));*/
+  /*const gint nvar = len - NCM_FIT_ESMCMC_NADD_VALS;*/
   guint k;
 
   for (k = ki; k < kf; k++)
@@ -190,6 +192,7 @@ _ncm_fit_esmcmc_walker_stretch_setup (NcmFitESMCMCWalker *walker, GPtrArray *the
     const guint subensemble = (k < stretch->size_2) ? stretch->size_2 : 0;
     const gdouble u         = gsl_rng_uniform (rng->r);
     const gdouble z         = gsl_pow_2 (1.0 + (stretch->a - 1.0) * u) / stretch->a;
+    /*const gdouble z         = pow (1.0 + (pow (stretch->a, nvar) - 1.0) * u, 2.0 / nvar) / stretch->a;*/
     const guint j           = gsl_rng_uniform_int (rng->r, stretch->size_2) + subensemble;
 
     /*printf ("# Walker %u using z = % 20.15g and other walker %u to move.\n", k, z, j);*/
@@ -228,6 +231,7 @@ _ncm_fit_esmcmc_walker_stretch_prob (NcmFitESMCMCWalker *walker, GPtrArray *thet
   const gint nvar = len - NCM_FIT_ESMCMC_NADD_VALS;
 
   return pow (z, nvar - 1.0) * exp ((m2lnL_cur - m2lnL_star) * 0.5);
+  /*return exp ((m2lnL_cur - m2lnL_star) * 0.5);*/
 }
 
 static void 

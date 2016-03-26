@@ -216,9 +216,13 @@ ncm_stats_dist1d_epdf_init (NcmStatsDist1dEPDF *epdf1d)
 static void
 ncm_stats_dist1d_epdf_constructed (GObject *object)
 {
-  /*NcmStatsDist1d *sd1 = NCM_STATS_DIST1D (object);*/
-  NcmStatsDist1dEPDF *epdf1d = NCM_STATS_DIST1D_EPDF (object);
-  epdf1d->obs = g_array_sized_new (FALSE, FALSE, sizeof (NcmStatsDist1dEPDFObs), epdf1d->max_obs);
+  /* Chain up : start */
+  G_OBJECT_CLASS (ncm_stats_dist1d_epdf_parent_class)->constructed (object);
+  {
+    /*NcmStatsDist1d *sd1 = NCM_STATS_DIST1D (object);*/
+    NcmStatsDist1dEPDF *epdf1d = NCM_STATS_DIST1D_EPDF (object);
+    epdf1d->obs = g_array_sized_new (FALSE, FALSE, sizeof (NcmStatsDist1dEPDFObs), epdf1d->max_obs);
+  }
 }
 
 static void
@@ -568,8 +572,12 @@ void
 ncm_stats_dist1d_epdf_reset (NcmStatsDist1dEPDF *epdf1d)
 {
   ncm_stats_vec_reset (epdf1d->obs_stats, TRUE);
-  epdf1d->n_obs = 0;
+  g_array_set_size (epdf1d->obs, 0);
+  
+  epdf1d->n_obs  = 0;
   epdf1d->np_obs = 0;
+  epdf1d->min    = GSL_POSINF;
+  epdf1d->max    = GSL_NEGINF;
 }
 
 /**

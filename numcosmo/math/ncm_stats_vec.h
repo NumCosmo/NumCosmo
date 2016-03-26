@@ -120,6 +120,9 @@ void ncm_stats_vec_clear (NcmStatsVec **svec);
 void ncm_stats_vec_reset (NcmStatsVec *svec, gboolean rm_saved);
 void ncm_stats_vec_update_weight (NcmStatsVec *svec, gdouble w);
 
+void ncm_stats_vec_append_weight (NcmStatsVec *svec, NcmVector *x, gdouble w, gboolean dup);
+void ncm_stats_vec_prepend_weight (NcmStatsVec *svec, NcmVector *x, gdouble w, gboolean dup);
+
 void ncm_stats_vec_append (NcmStatsVec *svec, NcmVector *x, gboolean dup);
 void ncm_stats_vec_prepend (NcmStatsVec *svec, NcmVector *x, gboolean dup);
 void ncm_stats_vec_append_data (NcmStatsVec *svec, GPtrArray *data, gboolean dup);
@@ -146,6 +149,7 @@ G_INLINE_FUNC gdouble ncm_stats_vec_get_cov (NcmStatsVec *svec, guint i, guint j
 G_INLINE_FUNC gdouble ncm_stats_vec_get_cor (NcmStatsVec *svec, guint i, guint j);
 G_INLINE_FUNC gdouble ncm_stats_vec_get_weight (NcmStatsVec *svec);
 G_INLINE_FUNC void ncm_stats_vec_get_mean_vector (NcmStatsVec *svec, NcmVector *mean, guint offset);
+G_INLINE_FUNC NcmVector *ncm_stats_vec_peek_mean (NcmStatsVec *svec);
 G_INLINE_FUNC void ncm_stats_vec_get_cov_matrix (NcmStatsVec *svec, NcmMatrix *m, guint offset);
 G_INLINE_FUNC NcmMatrix *ncm_stats_vec_peek_cov_matrix (NcmStatsVec *svec, guint offset);
 G_INLINE_FUNC guint ncm_stats_vec_nrows (NcmStatsVec *svec);
@@ -236,6 +240,12 @@ ncm_stats_vec_get_mean_vector (NcmStatsVec *svec, NcmVector *x, guint offset)
   g_assert (x != NULL);
   g_assert_cmpint (offset, <, svec->len);
   ncm_vector_memcpy2 (x, svec->mean, 0, offset, svec->len - offset);
+}
+
+G_INLINE_FUNC NcmVector *
+ncm_stats_vec_peek_mean (NcmStatsVec *svec)
+{
+  return svec->mean;
 }
 
 G_INLINE_FUNC void 

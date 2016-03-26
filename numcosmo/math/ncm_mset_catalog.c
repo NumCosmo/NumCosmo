@@ -68,6 +68,7 @@ enum
   PROP_NADD_VALS,
   PROP_WEIGHTED,
   PROP_NCHAINS,
+  PROP_BURNIN,
   PROP_RNG,
   PROP_FILE,
   PROP_RUN_TYPE_STR,
@@ -92,6 +93,11 @@ ncm_mset_catalog_init (NcmMSetCatalog *mcat)
   mcat->chain_pstats   = g_ptr_array_new ();
   g_ptr_array_set_free_func (mcat->chain_pstats, (GDestroyNotify) &ncm_stats_vec_free);
   mcat->mean_pstats    = NULL;
+  mcat->e_mean_array   = g_ptr_array_new ();
+  g_ptr_array_set_free_func (mcat->e_mean_array, (GDestroyNotify) &ncm_vector_free);
+  mcat->e_var_array    = g_ptr_array_new ();
+  g_ptr_array_set_free_func (mcat->e_var_array, (GDestroyNotify) &ncm_vector_free);
+  mcat->e_stats        = NULL;
   mcat->chain_means    = NULL;
   mcat->chain_vars     = NULL;
   mcat->chain_cov      = NULL;
@@ -107,6 +113,7 @@ ncm_mset_catalog_init (NcmMSetCatalog *mcat)
   mcat->first_id       = 0;  /* The element to be in the catalog will be the one with index == 0 */
   mcat->file_cur_id    = -1; /* Represents that no elements in the catalog file. */
   mcat->file_first_id  = 0;  /* The element to be in the catalog file will be the one with index == 0 */
+  mcat->burnin         = 0;  /* Number of elements to ignore when reading a catalog */
   mcat->file           = NULL;
   mcat->mset_file      = NULL;
   mcat->rtype_str      = NULL;
@@ -120,6 +127,8 @@ ncm_mset_catalog_init (NcmMSetCatalog *mcat)
   mcat->h_pdf          = NULL;
   mcat->params_max     = NULL;
   mcat->params_min     = NULL;
+
+  mcat->constructed    = FALSE;
 }
 
 #ifdef NUMCOSMO_HAVE_CFITSIO
@@ -155,6 +164,8 @@ _ncm_mset_catalog_constructed_alloc_chains (NcmMSetCatalog *mcat)
       g_ptr_array_add (mcat->chain_pstats, pstats);
     }
     mcat->mean_pstats   = ncm_stats_vec_new (free_params_len, NCM_STATS_VEC_COV, FALSE);
+    mcat->e_stats       = ncm_stats_vec_new (total, NCM_STATS_VEC_VAR, FALSE);
+    
     mcat->chain_means   = ncm_vector_new (mcat->nchains);
     mcat->chain_vars    = ncm_vector_new (mcat->nchains);
     mcat->chain_cov     = ncm_matrix_new (free_params_len, free_params_len);
@@ -173,6 +184,16 @@ _ncm_mset_catalog_constructed (GObject *object)
   G_OBJECT_CLASS (ncm_mset_catalog_parent_class)->constructed (object);
   {
     NcmMSetCatalog *mcat = NCM_MSET_CATALOG (object);
+
+    mcat->constructed = TRUE;
+    if (mcat->file != NULL)
+    {
+      gchar *file = mcat->file;
+      mcat->file = NULL;
+      ncm_mset_catalog_set_file (mcat, file);
+
+      g_free (file);
+    }
 
     if (mcat->mset == NULL)
     {
@@ -254,6 +275,9 @@ _ncm_mset_catalog_set_property (GObject *object, guint prop_id, const GValue *va
     case PROP_NCHAINS:
       mcat->nchains = g_value_get_uint (value);
       break;
+    case PROP_BURNIN:
+      ncm_mset_catalog_set_burnin (mcat, g_value_get_long (value));
+      break;
     case PROP_RNG:
       ncm_mset_catalog_set_rng (mcat, g_value_get_object (value));
       break;
@@ -298,6 +322,9 @@ _ncm_mset_catalog_get_property (GObject *object, guint prop_id, GValue *value, G
     case PROP_NCHAINS:
       g_value_set_uint (value, mcat->nchains);
       break;
+    case PROP_BURNIN:
+      g_value_set_long (value, ncm_mset_catalog_get_burnin (mcat));
+      break;
     case PROP_RNG:
       g_value_set_object (value, mcat->rng);
       break;
@@ -341,6 +368,11 @@ _ncm_mset_catalog_dispose (GObject *object)
 
   g_clear_pointer (&mcat->chain_pstats, g_ptr_array_unref);
   ncm_stats_vec_clear (&mcat->mean_pstats);
+  ncm_stats_vec_clear (&mcat->e_stats);
+
+  g_clear_pointer (&mcat->e_mean_array, g_ptr_array_unref);
+  g_clear_pointer (&mcat->e_var_array, g_ptr_array_unref);
+  
   ncm_vector_clear (&mcat->chain_means);
   ncm_vector_clear (&mcat->chain_vars);
   ncm_matrix_clear (&mcat->chain_cov);
@@ -433,6 +465,14 @@ ncm_mset_catalog_class_init (NcmMSetCatalogClass *klass)
                                                       G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   g_object_class_install_property (object_class,
+                                   PROP_BURNIN,
+                                   g_param_spec_long ("burnin",
+                                                      NULL,
+                                                      "Burn-in size",
+                                                      0, G_MAXINT64, 0,
+                                                      G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  
+  g_object_class_install_property (object_class,
                                    PROP_RNG,
                                    g_param_spec_object ("rng",
                                                         NULL,
@@ -522,6 +562,7 @@ ncm_mset_catalog_new (NcmMSet *mset, guint nadd_vals, guint nchains, gboolean we
 /**
  * ncm_mset_catalog_new_from_file:
  * @filename: filename of the catalog fits
+ * @burnin: Burn-in size
  *
  * Creates a new #NcmMSetCatalog from the catalog in the file @file.
  * It will use also the mset file (same name but with .mset extension).
@@ -530,10 +571,11 @@ ncm_mset_catalog_new (NcmMSet *mset, guint nadd_vals, guint nchains, gboolean we
  * Returns: (transfer full): a new #NcmMSetCatalog
  */
 NcmMSetCatalog *
-ncm_mset_catalog_new_from_file (const gchar *filename)
+ncm_mset_catalog_new_from_file (const gchar *filename, glong burnin)
 {
   NcmMSetCatalog *mcat = g_object_new (NCM_TYPE_MSET_CATALOG,
                                        "filename", filename,
+                                       "burnin", burnin,
                                        NULL);
   return mcat;
 }
@@ -541,6 +583,7 @@ ncm_mset_catalog_new_from_file (const gchar *filename)
 /**
  * ncm_mset_catalog_new_from_file_ro:
  * @filename: filename of the catalog fits
+ * @burnin: Burn-in size
  *
  * Creates a new #NcmMSetCatalog from the catalog in the file @file.
  * The @file is opened in a read-only fashion.
@@ -550,11 +593,12 @@ ncm_mset_catalog_new_from_file (const gchar *filename)
  * Returns: (transfer full): a new #NcmMSetCatalog
  */
 NcmMSetCatalog *
-ncm_mset_catalog_new_from_file_ro (const gchar *filename)
+ncm_mset_catalog_new_from_file_ro (const gchar *filename, glong burnin)
 {
   NcmMSetCatalog *mcat = g_object_new (NCM_TYPE_MSET_CATALOG,
                                        "filename", filename,
                                        "read-only", TRUE,
+                                       "burnin", burnin,
                                        NULL);
   return mcat;
 }
@@ -882,6 +926,16 @@ _ncm_mset_catalog_open_create_file (NcmMSetCatalog *mcat, gboolean load_from_cat
     fits_get_num_rows (mcat->fptr, &nrows, &status);
     NCM_FITS_ERROR (status);
 
+    if (nrows < mcat->burnin)
+    {
+      g_error ("_ncm_mset_catalog_open_create_file: burnin larger than the catalogue size %ld <=> %ld",
+               mcat->burnin, nrows);
+    }
+    else
+    {
+      nrows -= mcat->burnin;
+    }
+
     if (mcat->file_first_id != mcat->first_id)
     {
       if (nrows == 0)
@@ -1063,6 +1117,13 @@ void
 ncm_mset_catalog_set_file (NcmMSetCatalog *mcat, const gchar *filename)
 {
 #ifdef NUMCOSMO_HAVE_CFITSIO
+  if (!mcat->constructed)
+  {
+    if (mcat->file != NULL)
+      g_error ("ncm_mset_catalog_set_file: Unknown error.");
+    mcat->file = g_strdup (filename);
+  }
+  
   if (mcat->file != NULL && strcmp (mcat->file, filename) == 0)
     return;
 
@@ -1291,7 +1352,7 @@ _ncm_mset_catalog_write_row (NcmMSetCatalog *mcat, NcmVector *row, guint row_ind
   
   for (i = 0; i < ncm_vector_len (row); i++)
   {
-    fits_write_col_dbl (mcat->fptr, g_array_index (mcat->porder, gint, i), row_index,
+    fits_write_col_dbl (mcat->fptr, g_array_index (mcat->porder, gint, i), row_index + mcat->burnin,
                         1, 1, ncm_vector_ptr (row, i), &status);
     /*printf ("writting[%d]... %u %u == % 20.15g\n", g_array_index (mcat->porder, gint, i), i, row_index, ncm_vector_get (row, i));*/
     NCM_FITS_ERROR (status);
@@ -1309,13 +1370,15 @@ _ncm_mset_catalog_read_row (NcmMSetCatalog *mcat, NcmVector *row, guint row_inde
   
   for (i = 0; i < ncm_vector_len (row); i++)
   {
-    fits_read_col_dbl (mcat->fptr, g_array_index (mcat->porder, gint, i), row_index, 
+    fits_read_col_dbl (mcat->fptr, g_array_index (mcat->porder, gint, i), row_index + mcat->burnin, 
                        1, 1, dnull, ncm_vector_ptr (row, i), NULL, &status);
     /*printf ("reading[%d]... %u %u == % 20.15g <%d>\n", g_array_index (mcat->porder, gint, i), i, row_index, ncm_vector_get (row, i), status);*/
     NCM_FITS_ERROR (status);
   }
 }
 #endif /* NUMCOSMO_HAVE_CFITSIO */
+
+static void _ncm_mset_catalog_post_update (NcmMSetCatalog *mcat);
 
 /**
  * ncm_mset_catalog_sync:
@@ -1459,33 +1522,19 @@ ncm_mset_catalog_sync (NcmMSetCatalog *mcat, gboolean check)
     {
       guint rows_to_add = mcat->file_cur_id - mcat->cur_id;
       guint offset = mcat->cur_id + 1 - mcat->first_id;
-      GPtrArray *rows = g_ptr_array_new ();
       gchar *stat = NULL;
+      NcmMSetCatalogSync smode = mcat->smode;
 
-      g_ptr_array_set_size (rows, rows_to_add);
-      g_ptr_array_set_free_func (rows, (GDestroyNotify) ncm_vector_free);
-
+      mcat->smode = NCM_MSET_CATALOG_SYNC_DISABLE;
       for (i = 0; i < rows_to_add; i++)
       {
-        NcmVector *row = ncm_vector_dup (ncm_stats_vec_peek_x (mcat->pstats));
+        NcmVector *row = ncm_stats_vec_peek_x (mcat->pstats);
         _ncm_mset_catalog_read_row (mcat, row, offset + i + 1);
-        g_ptr_array_index (rows, i) = row;
+        _ncm_mset_catalog_post_update (mcat);
       }
-      ncm_stats_vec_append_data (mcat->pstats, rows, FALSE);
-      if (mcat->nchains > 1)
-      {
-        for (i = 0; i < rows->len; i++)
-        {
-          NcmVector *x = g_ptr_array_index (rows, i);
-          guint chain_id = (mcat->cur_id + 1 + i) % mcat->nchains;
-          NcmStatsVec *pstats = g_ptr_array_index (mcat->chain_pstats, chain_id);
-          ncm_stats_vec_append (pstats, x, FALSE);
-        }
-      }
-
-      mcat->cur_id = mcat->file_cur_id;
-
-      g_ptr_array_unref (rows);
+      mcat->smode = smode;
+      
+      g_assert_cmpint (mcat->cur_id, ==, mcat->file_cur_id);
 
       if (mcat->rng != NULL)
       {
@@ -1550,6 +1599,7 @@ ncm_mset_catalog_reset_stats (NcmMSetCatalog *mcat)
       ncm_stats_vec_reset (pstats, FALSE);
     }
     ncm_stats_vec_reset (mcat->mean_pstats, FALSE);
+    ncm_stats_vec_reset (mcat->e_stats, FALSE);
   }
   ncm_vector_set_all (mcat->params_max, GSL_NEGINF);
   ncm_vector_set_all (mcat->params_min, GSL_POSINF);
@@ -1579,6 +1629,7 @@ ncm_mset_catalog_reset (NcmMSetCatalog *mcat)
       ncm_stats_vec_reset (pstats, TRUE);
     }
     ncm_stats_vec_reset (mcat->mean_pstats, TRUE);
+    ncm_stats_vec_reset (mcat->e_stats, FALSE);
   }
 
   ncm_vector_set_all (mcat->params_max, GSL_NEGINF);
@@ -1734,6 +1785,57 @@ ncm_mset_catalog_len (NcmMSetCatalog *mcat)
   return mcat->pstats->nitens;
 }
 
+/**
+ * ncm_mset_catalog_max_time:
+ * @mcat: a #NcmMSetCatalog
+ *
+ * Number of itens in the catalog divided by the number
+ * of chains.
+ *
+ * Returns: number of itens in the catalog.
+ */
+guint
+ncm_mset_catalog_max_time (NcmMSetCatalog *mcat)
+{
+  return mcat->e_mean_array->len;
+}
+
+/**
+ * ncm_mset_catalog_set_burnin:
+ * @mcat: a #NcmMSetCatalog
+ * @burnin: number of elements to ignore
+ * 
+ * Sets the number of elements to ignore when reading from
+ * a catalogue, it must be set before loading data from 
+ * a file. 
+ * 
+ * It will not affect a catalogue in any other context,
+ * only when reading data from a file. It is recommended
+ * to be used only when analysing a catalogue.
+ *
+ */
+void 
+ncm_mset_catalog_set_burnin (NcmMSetCatalog *mcat, glong burnin)
+{
+  if (mcat->fptr != NULL)
+    g_error ("ncm_mset_catalog_set_burnin: cannot set burnin with an already loaded catalog");
+  mcat->burnin = burnin;
+}
+
+/**
+ * ncm_mset_catalog_get_burnin:
+ * @mcat: a #NcmMSetCatalog
+ * 
+ * Gets the burn-in size, see ncm_mset_catalog_set_burnin().
+ *
+ * Returns: the burn-in.
+ */
+glong 
+ncm_mset_catalog_get_burnin (NcmMSetCatalog *mcat)
+{
+  return mcat->burnin;
+}
+
 static void
 _ncm_mset_catalog_post_update (NcmMSetCatalog *mcat)
 {
@@ -1759,6 +1861,7 @@ _ncm_mset_catalog_post_update (NcmMSetCatalog *mcat)
       NcmStatsVec *pstats = g_ptr_array_index (mcat->chain_pstats, chain_id);
       ncm_vector_memcpy (ncm_stats_vec_peek_x (pstats), x);
       ncm_stats_vec_update_weight (pstats, ncm_vector_get (x, mcat->nadd_vals - 1));
+      ncm_stats_vec_append_weight (mcat->e_stats, x, ncm_vector_get (x, mcat->nadd_vals - 1), FALSE);
     }
     ncm_stats_vec_update_weight (mcat->pstats, ncm_vector_get (x, mcat->nadd_vals - 1));
   }
@@ -1770,12 +1873,32 @@ _ncm_mset_catalog_post_update (NcmMSetCatalog *mcat)
       NcmStatsVec *pstats = g_ptr_array_index (mcat->chain_pstats, chain_id);
       ncm_vector_memcpy (ncm_stats_vec_peek_x (pstats), x);
       ncm_stats_vec_update (pstats);
+      ncm_stats_vec_append (mcat->e_stats, x, FALSE);
     }
     ncm_stats_vec_update (mcat->pstats);
   }
 
   mcat->cur_id++;
+  if (mcat->nchains > 1)
+  {
+    if ((mcat->cur_id + 1) % mcat->nchains + 1 == mcat->nchains)
+    {
+      NcmVector *e_mean = ncm_vector_dup (ncm_stats_vec_peek_mean (mcat->e_stats));
+      const guint len = ncm_vector_len (e_mean);
+      NcmVector *e_var  = ncm_vector_new (len);
+      guint i;
+      for (i = 0; i < len; i++)
+      {
+        ncm_vector_set (e_var, i, ncm_stats_vec_get_var (mcat->e_stats, i));
+      }
 
+      g_ptr_array_add (mcat->e_mean_array, e_mean);
+      g_ptr_array_add (mcat->e_var_array, e_var);
+
+      ncm_stats_vec_reset (mcat->e_stats, FALSE);
+    }
+  }
+  
   switch (mcat->smode)
   {
     case NCM_MSET_CATALOG_SYNC_DISABLE:
@@ -1995,6 +2118,76 @@ ncm_mset_catalog_peek_current_row (NcmMSetCatalog *mcat)
 }
 
 /**
+ * ncm_mset_catalog_peek_current_e_mean:
+ * @mcat: a #NcmMSetCatalog
+ *
+ * Gets the last ensemble mean.
+ *
+ * Returns: (transfer none): last added ensemble mean or NULL if empty.
+ */
+NcmVector *
+ncm_mset_catalog_peek_current_e_mean (NcmMSetCatalog *mcat)
+{
+  if (mcat->e_mean_array->len > 0)
+  {
+    return g_ptr_array_index (mcat->e_mean_array, mcat->e_mean_array->len - 1);
+  }
+  else
+    return NULL;
+}
+
+/**
+ * ncm_mset_catalog_peek_current_e_var:
+ * @mcat: a #NcmMSetCatalog
+ *
+ * Gets the last ensemble variance.
+ *
+ * Returns: (transfer none): last added ensemble variance or NULL if empty.
+ */
+NcmVector *
+ncm_mset_catalog_peek_current_e_var (NcmMSetCatalog *mcat)
+{
+  if (mcat->e_var_array->len > 0)
+  {
+    return g_ptr_array_index (mcat->e_var_array, mcat->e_var_array->len - 1);
+  }
+  else
+    return NULL;
+}
+
+/**
+ * ncm_mset_catalog_peek_e_mean_t:
+ * @mcat: a #NcmMSetCatalog
+ * @t: time
+ *
+ * Gets the mean of the @t-th ensemble.
+ *
+ * Returns: (transfer none): @t-th ensemble mean.
+ */
+NcmVector *
+ncm_mset_catalog_peek_e_mean_t (NcmMSetCatalog *mcat, guint t)
+{
+  g_assert_cmpuint (t, <, mcat->e_mean_array->len);
+  return g_ptr_array_index (mcat->e_mean_array, t);
+}
+
+/**
+ * ncm_mset_catalog_peek_e_var_t:
+ * @mcat: a #NcmMSetCatalog
+ * @t: time
+ *
+ * Gets the variance of the @t-th ensemble.
+ *
+ * Returns: (transfer none): @t-th ensemble variance.
+ */
+NcmVector *
+ncm_mset_catalog_peek_e_var_t (NcmMSetCatalog *mcat, guint t)
+{
+  g_assert_cmpuint (t, <, mcat->e_var_array->len);
+  return g_ptr_array_index (mcat->e_var_array, t);
+}
+
+/**
  * ncm_mset_catalog_get_mean:
  * @mcat: a #NcmMSetCatalog
  * @mean: (inout) (allow-none) (transfer full): a #NcmVector
@@ -2157,7 +2350,10 @@ ncm_mset_catalog_get_shrink_factor (NcmMSetCatalog *mcat)
     guint p;
 
     for (p = 0; p < free_params_len; p++)
+    {
       ncm_stats_vec_set (mcat->mean_pstats, p, ncm_stats_vec_get_mean (pstats, p + mcat->nadd_vals));
+      /*printf ("chain %u param %u mean % 20.15g\n", i, p, ncm_stats_vec_get_mean (pstats, p + mcat->nadd_vals));*/
+    }
 
     ncm_stats_vec_update (mcat->mean_pstats);
 
@@ -2291,7 +2487,6 @@ ncm_mset_catalog_param_pdf_pvalue (NcmMSetCatalog *mcat, gdouble pval, gboolean 
 /**
  * ncm_mset_catalog_calc_ci_direct:
  * @mcat: a #NcmMSetCatalog
- * @burnin: burn-in size
  * @func: a #NcmMSetFunc of type n-n
  * @x: (array) (element-type double): the argument of @func
  * @p_val: (element-type double): p-values for the confidence intervals
@@ -2318,25 +2513,23 @@ ncm_mset_catalog_param_pdf_pvalue (NcmMSetCatalog *mcat, gdouble pval, gboolean 
  * Returns: (transfer full): a #NcmVector containing the mean and lower/upper bound of the confidence interval for @func.
  */
 NcmMatrix *
-ncm_mset_catalog_calc_ci_direct (NcmMSetCatalog *mcat, guint burnin, NcmMSetFunc *func, gdouble *x, GArray *p_val)
+ncm_mset_catalog_calc_ci_direct (NcmMSetCatalog *mcat, NcmMSetFunc *func, gdouble *x, GArray *p_val)
 {
   guint dim = ncm_mset_func_get_dim (func);
   g_assert_cmpuint (p_val->len, >, 1);
-  g_assert_cmpuint (burnin, <, ncm_mset_catalog_len (mcat));
   {
     const guint nelem = p_val->len * 2 + 1;
     NcmMatrix *res = ncm_matrix_new (dim, nelem);
     NcmVector *save_params = ncm_vector_new (ncm_mset_fparams_len (mcat->mset));
     const guint cat_len = ncm_mset_catalog_len (mcat);
-    const guint acat_len = cat_len - burnin;
     guint i, j;
 
     ncm_mset_fparams_get_vector (mcat->mset, save_params);
 
     ncm_vector_clear (&mcat->quantile_ws);
-    mcat->quantile_ws = ncm_vector_new (acat_len * dim);
+    mcat->quantile_ws = ncm_vector_new (cat_len * dim);
 
-    for (i = burnin; i < cat_len; i++)
+    for (i = 0; i < cat_len; i++)
     {
       NcmVector *row = ncm_mset_catalog_peek_row (mcat, i);
       ncm_mset_fparams_set_vector_offset (mcat->mset, row, mcat->nadd_vals);
@@ -2347,8 +2540,8 @@ ncm_mset_catalog_calc_ci_direct (NcmMSetCatalog *mcat, guint burnin, NcmMSetFunc
     for (i = 0; i < dim; i++)
     {
       gdouble *ret_i = ncm_vector_ptr (mcat->quantile_ws, i);
-      gsl_sort (ret_i, dim, acat_len);
-      ncm_matrix_set (res, i, 0, gsl_stats_mean (ret_i, dim, acat_len));
+      gsl_sort (ret_i, dim, cat_len);
+      ncm_matrix_set (res, i, 0, gsl_stats_mean (ret_i, dim, cat_len));
     }
 
     for (j = 0; j < p_val->len; j++)
@@ -2361,8 +2554,8 @@ ncm_mset_catalog_calc_ci_direct (NcmMSetCatalog *mcat, guint burnin, NcmMSetFunc
         gdouble *ret_i = ncm_vector_ptr (mcat->quantile_ws, i);
         const gdouble lb_prob = (1.0 - p) / 2.0;
         const gdouble ub_prob = (1.0 + p) / 2.0;
-        const gdouble lb = gsl_stats_quantile_from_sorted_data (ret_i, dim, acat_len, lb_prob);
-        const gdouble ub = gsl_stats_quantile_from_sorted_data (ret_i, dim, acat_len, ub_prob);
+        const gdouble lb = gsl_stats_quantile_from_sorted_data (ret_i, dim, cat_len, lb_prob);
+        const gdouble ub = gsl_stats_quantile_from_sorted_data (ret_i, dim, cat_len, ub_prob);
         ncm_matrix_set (res, i, 1 + j * 2 + 0, lb);
         ncm_matrix_set (res, i, 1 + j * 2 + 1, ub);
       }
@@ -2378,7 +2571,6 @@ ncm_mset_catalog_calc_ci_direct (NcmMSetCatalog *mcat, guint burnin, NcmMSetFunc
 /**
  * ncm_mset_catalog_calc_ci_interp:
  * @mcat: a #NcmMSetCatalog
- * @burnin: burn-in size
  * @func: a #NcmMSetFunc of type n-n
  * @x: (array) (element-type double): the argument of @func
  * @p_val: (element-type double): p-values for the confidence intervals
@@ -2405,11 +2597,10 @@ ncm_mset_catalog_calc_ci_direct (NcmMSetCatalog *mcat, guint burnin, NcmMSetFunc
  * Returns: (transfer full): a #NcmVector containing the mean and lower/upper bound of the confidence interval for @func.
  */
 NcmMatrix *
-ncm_mset_catalog_calc_ci_interp (NcmMSetCatalog *mcat, guint burnin, NcmMSetFunc *func, gdouble *x, GArray *p_val, guint nodes, NcmFitRunMsgs mtype)
+ncm_mset_catalog_calc_ci_interp (NcmMSetCatalog *mcat, NcmMSetFunc *func, gdouble *x, GArray *p_val, guint nodes, NcmFitRunMsgs mtype)
 {
   guint dim = ncm_mset_func_get_dim (func);
   g_assert_cmpuint (p_val->len, >, 1);
-  g_assert_cmpuint (burnin, <, ncm_mset_catalog_len (mcat));
   {
     const guint nelem = p_val->len * 2 + 1;
     NcmMatrix *res = ncm_matrix_new (dim, nelem);
@@ -2445,17 +2636,7 @@ ncm_mset_catalog_calc_ci_interp (NcmMSetCatalog *mcat, guint burnin, NcmMSetFunc
       ncm_message ("|\n# - |");
     }
 
-    if (mtype > NCM_FIT_RUN_MSGS_NONE)
-    {
-      for (i = 0; i < burnin; i++)
-      {
-        if (i % (cat_len / 100) == 0)
-        {
-          ncm_message ("x");
-        }
-      }
-    }
-    for (i = burnin; i < cat_len; i++)
+    for (i = 0; i < cat_len; i++)
     {
       NcmVector *row = ncm_mset_catalog_peek_row (mcat, i);
       ncm_mset_fparams_set_vector_offset (mcat->mset, row, mcat->nadd_vals);
@@ -2518,7 +2699,6 @@ ncm_mset_catalog_calc_ci_interp (NcmMSetCatalog *mcat, guint burnin, NcmMSetFunc
 /**
  * ncm_mset_catalog_calc_distrib:
  * @mcat: a #NcmMSetCatalog
- * @burnin: burn-in size
  * @func: a #NcmMSetFunc of type 0-1
  * @mtype: #NcmFitRunMsgs log level
  *
@@ -2530,11 +2710,10 @@ ncm_mset_catalog_calc_ci_interp (NcmMSetCatalog *mcat, guint burnin, NcmMSetFunc
  * Returns: (transfer full): a #NcmStatsDist1d describing the distribution.
  */
 NcmStatsDist1d *
-ncm_mset_catalog_calc_distrib (NcmMSetCatalog *mcat, guint burnin, NcmMSetFunc *func, NcmFitRunMsgs mtype)
+ncm_mset_catalog_calc_distrib (NcmMSetCatalog *mcat, NcmMSetFunc *func, NcmFitRunMsgs mtype)
 {
   guint dim = ncm_mset_func_get_dim (func);
   g_assert_cmpuint (dim, ==, 1);
-  g_assert_cmpuint (burnin, <, ncm_mset_catalog_len (mcat));
   {
     NcmStatsDist1dEPDF *epdf1d = ncm_stats_dist1d_epdf_new (1000, 0.1, 0.01);
     NcmVector *save_params = ncm_vector_new (ncm_mset_fparams_len (mcat->mset));
@@ -2551,17 +2730,7 @@ ncm_mset_catalog_calc_distrib (NcmMSetCatalog *mcat, guint burnin, NcmMSetFunc *
       ncm_message ("|\n# - |");
     }
 
-    if (mtype > NCM_FIT_RUN_MSGS_NONE)
-    {
-      for (i = 0; i < burnin; i++)
-      {
-        if (i % (cat_len / 100) == 0)
-        {
-          ncm_message ("x");
-        }
-      }
-    }
-    for (i = burnin; i < cat_len; i++)
+    for (i = 0; i < cat_len; i++)
     {
       NcmVector *row = ncm_mset_catalog_peek_row (mcat, i);
       gdouble x;
@@ -2597,33 +2766,15 @@ ncm_mset_catalog_calc_distrib (NcmMSetCatalog *mcat, guint burnin, NcmMSetFunc *
   }
 }
 
-/**
- * ncm_mset_catalog_calc_param_distrib:
- * @mcat: a #NcmMSetCatalog
- * @burnin: burn-in size
- * @pi: a #NcmMSetPIndex
- * @mtype: #NcmFitRunMsgs log level
- *
- * Calculates the distribution of parameter @pi.
- *
- * This function creates an approximation of the distribution for each value of
- * the parameter @pi in @mcat.
- *
- * Returns: (transfer full): a #NcmStatsDist1d describing the distribution.
- */
-NcmStatsDist1d *
-ncm_mset_catalog_calc_param_distrib (NcmMSetCatalog *mcat, guint burnin, const NcmMSetPIndex *pi, NcmFitRunMsgs mtype)
+static NcmStatsDist1d *
+_ncm_mset_catalog_calc_distrib (NcmMSetCatalog *mcat, guint vi, NcmFitRunMsgs mtype)
 {
   NcmStatsDist1dEPDF *epdf1d = ncm_stats_dist1d_epdf_new (1000, 0.1, 0.01);
   NcmVector *save_params = ncm_vector_new (ncm_mset_fparams_len (mcat->mset));
   const guint cat_len = ncm_mset_catalog_len (mcat);
   guint i;
 
-  g_assert_cmpuint (burnin, <, cat_len);
-
   ncm_mset_fparams_get_vector (mcat->mset, save_params);
-
-  g_assert (ncm_mset_param_get_ftype (mcat->mset, pi->mid, pi->pid) == NCM_PARAM_TYPE_FREE);
 
   if (mtype > NCM_FIT_RUN_MSGS_NONE)
   {
@@ -2633,21 +2784,10 @@ ncm_mset_catalog_calc_param_distrib (NcmMSetCatalog *mcat, guint burnin, const N
     ncm_message ("|\n# - |");
   }
 
-  if (mtype > NCM_FIT_RUN_MSGS_NONE)
-  {
-    for (i = 0; i < burnin; i++)
-    {
-      if (i % (cat_len / 100) == 0)
-      {
-        ncm_message ("x");
-      }
-    }
-  }
-  for (i = burnin; i < cat_len; i++)
+  for (i = 0; i < cat_len; i++)
   {
     NcmVector *row = ncm_mset_catalog_peek_row (mcat, i);
-    guint fpi = ncm_mset_fparam_get_fpi (mcat->mset, pi->mid, pi->pid);
-    gdouble x = ncm_vector_get (row, mcat->nadd_vals + fpi);
+    gdouble x      = ncm_vector_get (row, vi);
 
     ncm_stats_dist1d_epdf_add_obs (epdf1d, x);
 
@@ -2677,10 +2817,32 @@ ncm_mset_catalog_calc_param_distrib (NcmMSetCatalog *mcat, guint burnin, const N
   return NCM_STATS_DIST1D (epdf1d);
 }
 
+
+/**
+ * ncm_mset_catalog_calc_param_distrib:
+ * @mcat: a #NcmMSetCatalog
+ * @pi: a #NcmMSetPIndex
+ * @mtype: #NcmFitRunMsgs log level
+ *
+ * Calculates the distribution of parameter @pi.
+ *
+ * This function creates an approximation of the distribution for each value of
+ * the parameter @pi in @mcat.
+ *
+ * Returns: (transfer full): a #NcmStatsDist1d describing the distribution.
+ */
+NcmStatsDist1d *
+ncm_mset_catalog_calc_param_distrib (NcmMSetCatalog *mcat, const NcmMSetPIndex *pi, NcmFitRunMsgs mtype)
+{
+  guint fpi = ncm_mset_fparam_get_fpi (mcat->mset, pi->mid, pi->pid);
+  g_assert (ncm_mset_param_get_ftype (mcat->mset, pi->mid, pi->pid) == NCM_PARAM_TYPE_FREE);
+  
+  return _ncm_mset_catalog_calc_distrib (mcat, fpi + mcat->nadd_vals, mtype);
+}
+
 /**
  * ncm_mset_catalog_calc_add_param_distrib:
  * @mcat: a #NcmMSetCatalog
- * @burnin: burn-in size
  * @add_param: additional parameter index
  * @mtype: #NcmFitRunMsgs log level
  *
@@ -2692,45 +2854,67 @@ ncm_mset_catalog_calc_param_distrib (NcmMSetCatalog *mcat, guint burnin, const N
  * Returns: (transfer full): a #NcmStatsDist1d describing the distribution.
  */
 NcmStatsDist1d *
-ncm_mset_catalog_calc_add_param_distrib (NcmMSetCatalog *mcat, guint burnin, guint add_param, NcmFitRunMsgs mtype)
+ncm_mset_catalog_calc_add_param_distrib (NcmMSetCatalog *mcat, guint add_param, NcmFitRunMsgs mtype)
+{
+  g_assert_cmpuint (add_param, <, mcat->nadd_vals);
+  return _ncm_mset_catalog_calc_distrib (mcat, add_param, mtype);
+}
+
+static void
+_ncm_mset_catalog_calc_ensemble_evol (NcmMSetCatalog *mcat, guint vi, guint nsteps, NcmFitRunMsgs mtype, NcmVector **pval, NcmMatrix **t_evol)
 {
   NcmStatsDist1dEPDF *epdf1d = ncm_stats_dist1d_epdf_new (1000, 0.1, 0.01);
+  NcmStatsDist1d *sd1        = NCM_STATS_DIST1D (epdf1d);
   NcmVector *save_params = ncm_vector_new (ncm_mset_fparams_len (mcat->mset));
-  const guint cat_len = ncm_mset_catalog_len (mcat);
-  guint i;
+  const guint max_t   = ncm_mset_catalog_max_time (mcat);
+  NcmMatrix *res      = ncm_matrix_new (max_t, nsteps);
+  NcmVector *pv       = ncm_vector_new (nsteps);
+  const gdouble pmin  = ncm_vector_get (mcat->params_min, vi);
+  const gdouble pmax  = ncm_vector_get (mcat->params_max, vi);
+  
+  guint i, t;
 
-  g_assert_cmpuint (burnin, <, cat_len);
+  *pval   = pv;
+  *t_evol = res;
 
   ncm_mset_fparams_get_vector (mcat->mset, save_params);
 
-  g_assert_cmpuint (add_param, <, mcat->nadd_vals);
+  g_assert_cmpuint (mcat->nchains, >, 1);
+
+  for (i = 0; i < nsteps; i++)
+  {
+    const gdouble pv_i = pmin + (pmax - pmin) / (nsteps - 1.0) * i;
+    ncm_vector_set (pv, i, pv_i);
+  }
 
   if (mtype > NCM_FIT_RUN_MSGS_NONE)
   {
-    ncm_message ("# Calculating %u models in catalog: \n# - |", cat_len);
+    ncm_message ("# Calculating evolution to time %u: \n# - |", max_t);
     for (i = 0; i < 100; i++)
       ncm_message ("-");
     ncm_message ("|\n# - |");
   }
 
-  if (mtype > NCM_FIT_RUN_MSGS_NONE)
+  for (t = 0; t < max_t; t++)
   {
-    for (i = 0; i < burnin; i++)
+    for (i = 0; i < mcat->nchains; i++)
     {
-      if (i % (cat_len / 100) == 0)
-      {
-        ncm_message ("x");
-      }
+      NcmVector *row = ncm_mset_catalog_peek_row (mcat, t * mcat->nchains + i);
+      gdouble x = ncm_vector_get (row, vi);
+      ncm_stats_dist1d_epdf_add_obs (epdf1d, x);
     }
-  }
-
-  for (i = burnin; i < cat_len; i++)
-  {
-    NcmVector *row = ncm_mset_catalog_peek_row (mcat, i);
-    gdouble x = ncm_vector_get (row, add_param);
-    ncm_stats_dist1d_epdf_add_obs (epdf1d, x);
-
-    if (i % (cat_len / 100) == 0)
+    
+    ncm_stats_dist1d_prepare (NCM_STATS_DIST1D (epdf1d));
+    
+    for (i = 0; i < nsteps; i++)
+    {
+      const gdouble pv_i = ncm_vector_get (pv, i);
+      const gdouble p_i = ncm_stats_dist1d_eval_p (sd1, pv_i);
+      ncm_matrix_set (res, t, i, p_i);
+    }
+    ncm_stats_dist1d_epdf_reset (epdf1d);
+    
+    if (t % (max_t / 100) == 0)
     {
       if (mtype > NCM_FIT_RUN_MSGS_NONE)
       {
@@ -2738,20 +2922,60 @@ ncm_mset_catalog_calc_add_param_distrib (NcmMSetCatalog *mcat, guint burnin, gui
       }
     }
   }
+
   if (mtype > NCM_FIT_RUN_MSGS_NONE)
   {
-    if (i % (cat_len / 100) != 0)
+    if (t % (max_t / 100) != 0)
       ncm_message ("=");
-    ncm_message ("|\n", cat_len);
-    ncm_message ("# - |", cat_len);
+    ncm_message ("|\n", max_t);
+    ncm_message ("# - |", max_t);
     for (i = 0; i < 100; i++)
       ncm_message ("-");
     ncm_message ("|\n");
   }
 
-  ncm_stats_dist1d_prepare (NCM_STATS_DIST1D (epdf1d));
+  ncm_stats_dist1d_free (NCM_STATS_DIST1D (epdf1d));
 
   ncm_mset_fparams_set_vector (mcat->mset, save_params);
   ncm_vector_free (save_params);
-  return NCM_STATS_DIST1D (epdf1d);
+}
+
+/**
+ * ncm_mset_catalog_calc_param_ensemble_evol:
+ * @mcat: a #NcmMSetCatalog
+ * @pi: a #NcmMSetPIndex
+ * @nsteps: number of steps to calculate the distribution
+ * @mtype: #NcmFitRunMsgs log level
+ * @pval: (out callee-allocates): output #NcmVector containing parameter values
+ * @t_evol: (out callee-allocates): output #NcmMatrix containing probability distribution evolution
+ *
+ * Calculates the time evolution of the  parameter @pi distribution.
+ *
+ */
+void
+ncm_mset_catalog_calc_param_ensemble_evol (NcmMSetCatalog *mcat, const NcmMSetPIndex *pi, guint nsteps, NcmFitRunMsgs mtype, NcmVector **pval, NcmMatrix **t_evol)
+{
+  guint fpi = ncm_mset_fparam_get_fpi (mcat->mset, pi->mid, pi->pid);
+  g_assert (ncm_mset_param_get_ftype (mcat->mset, pi->mid, pi->pid) == NCM_PARAM_TYPE_FREE);
+
+  _ncm_mset_catalog_calc_ensemble_evol (mcat, fpi + mcat->nadd_vals, nsteps, mtype, pval, t_evol);
+}
+
+/**
+ * ncm_mset_catalog_calc_add_param_ensemble_evol:
+ * @mcat: a #NcmMSetCatalog
+ * @add_param: additional parameter index
+ * @nsteps: number of steps to calculate the distribution
+ * @mtype: #NcmFitRunMsgs log level
+ * @pval: (out callee-allocates): output #NcmVector containing parameter values
+ * @t_evol: (out callee-allocates): output #NcmMatrix containing probability distribution evolution
+ *
+ * Calculates the time evolution of the  parameter @pi distribution.
+ *
+ */
+void
+ncm_mset_catalog_calc_add_param_ensemble_evol (NcmMSetCatalog *mcat, guint add_param, guint nsteps, NcmFitRunMsgs mtype, NcmVector **pval, NcmMatrix **t_evol)
+{
+  g_assert_cmpuint (add_param, <, mcat->nadd_vals);
+  _ncm_mset_catalog_calc_ensemble_evol (mcat, add_param, nsteps, mtype, pval, t_evol);
 }

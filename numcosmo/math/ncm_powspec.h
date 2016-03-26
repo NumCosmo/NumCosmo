@@ -104,7 +104,6 @@ ncm_powspec_prepare_if_needed (NcmPowspec *powspec, NcmModel *model)
     ncm_powspec_prepare (powspec, model);
 }
 
-
 G_INLINE_FUNC gdouble 
 ncm_powspec_eval (NcmPowspec *powspec, NcmModel *model, const gdouble z, const gdouble k)
 {

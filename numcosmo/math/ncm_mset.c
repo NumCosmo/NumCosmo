@@ -853,6 +853,33 @@ ncm_mset_is_subset (NcmMSet *mset, NcmMSet *sub_mset)
 }
 
 /**
+ * ncm_mset_get_id_by_type:
+ * @model_type: FIXME
+ *
+ * FIXME
+ *
+ * Returns: FIXME
+ */
+gint
+ncm_mset_get_id_by_type (GType model_type)
+{
+  g_assert (g_type_is_a (model_type, NCM_TYPE_MODEL));
+  {
+    NcmMSetClass *mset_class = g_type_class_ref (NCM_TYPE_MSET);
+    const gchar *ns = g_type_name (model_type);
+    gpointer model_id;
+    gboolean has = g_hash_table_lookup_extended (mset_class->ns_table, ns, NULL, &model_id);
+
+    g_type_class_unref (mset_class);
+
+    if (has)
+      return GPOINTER_TO_INT (model_id);
+    else
+      return -1;
+  }
+}
+
+/**
  * ncm_mset_get_id_by_ns:
  * @ns: FIXME
  *
@@ -892,6 +919,30 @@ ncm_mset_get_ns_by_id (gint id)
     const gchar *ns = g_array_index (mset_class->model_desc_array, NcmMSetModelDesc, base_mid).ns;
     g_type_class_unref (mset_class);
     return ns;
+  }
+}
+
+/**
+ * ncm_mset_get_type_by_id:
+ * @id: namespace id
+ *
+ * Returns: (transfer none): GType of model @id
+ */
+GType
+ncm_mset_get_type_by_id (gint id)
+{
+  NcmMSetClass *mset_class = g_type_class_ref (NCM_TYPE_MSET);
+  guint base_mid = id / NCM_MSET_MAX_STACKSIZE;
+
+  g_assert_cmpint (base_mid, <, mset_class->model_desc_array->len);
+  {
+    const gchar *ns = g_array_index (mset_class->model_desc_array, NcmMSetModelDesc, base_mid).ns;
+    GType t = g_type_from_name (ns);
+    g_type_class_unref (mset_class);
+
+    g_assert_cmpint (t, !=, 0);
+    
+    return t;
   }
 }
 

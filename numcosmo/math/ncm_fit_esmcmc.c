@@ -100,33 +100,37 @@ ncm_fit_esmcmc_init (NcmFitESMCMC *esmcmc)
 static void
 _ncm_fit_esmcmc_constructed (GObject *object)
 {
-  NcmFitESMCMC *esmcmc = NCM_FIT_ESMCMC (object);
-  guint theta_len;
-  guint k;
-  
-  g_assert_cmpint (esmcmc->nwalkers, >, 0);
-  esmcmc->fparam_len = ncm_mset_fparam_len (esmcmc->fit->mset);
-  theta_len = esmcmc->fparam_len + NCM_FIT_ESMCMC_NADD_VALS;
-
-  esmcmc->mcat = ncm_mset_catalog_new (esmcmc->fit->mset, 1, esmcmc->nwalkers, FALSE, NCM_MSET_CATALOG_M2LNL_COLNAME);
-  ncm_mset_catalog_set_run_type (esmcmc->mcat, "Ensemble Sampler MCMC -- Stretch Move");
-
-  for (k = 0; k < esmcmc->nwalkers; k++)
+  /* Chain up : start */
+  G_OBJECT_CLASS (ncm_fit_esmcmc_parent_class)->constructed (object);
   {
-    NcmVector *theta_k     = ncm_vector_new (theta_len);
-    NcmVector *thetastar_k = ncm_vector_new (theta_len);
+    NcmFitESMCMC *esmcmc = NCM_FIT_ESMCMC (object);
+    guint theta_len;
+    guint k;
 
-    g_ptr_array_add (esmcmc->theta, theta_k);
-    g_ptr_array_add (esmcmc->thetastar, thetastar_k);
+    g_assert_cmpint (esmcmc->nwalkers, >, 0);
+    esmcmc->fparam_len = ncm_mset_fparam_len (esmcmc->fit->mset);
+    theta_len = esmcmc->fparam_len + NCM_FIT_ESMCMC_NADD_VALS;
+
+    esmcmc->mcat = ncm_mset_catalog_new (esmcmc->fit->mset, 1, esmcmc->nwalkers, FALSE, NCM_MSET_CATALOG_M2LNL_COLNAME);
+    ncm_mset_catalog_set_run_type (esmcmc->mcat, "Ensemble Sampler MCMC -- Stretch Move");
+
+    for (k = 0; k < esmcmc->nwalkers; k++)
+    {
+      NcmVector *theta_k     = ncm_vector_new (theta_len);
+      NcmVector *thetastar_k = ncm_vector_new (theta_len);
+
+      g_ptr_array_add (esmcmc->theta, theta_k);
+      g_ptr_array_add (esmcmc->thetastar, thetastar_k);
+    }
+
+    esmcmc->jumps = ncm_vector_new (esmcmc->nwalkers);
+    g_array_set_size (esmcmc->accepted, esmcmc->nwalkers);
+
+    if (esmcmc->walker == NULL)
+      esmcmc->walker = ncm_fit_esmcmc_walker_new_from_name ("NcmFitESMCMCWalkerStretch");
+
+    ncm_fit_esmcmc_walker_set_size (esmcmc->walker, esmcmc->nwalkers);
   }
-
-  esmcmc->jumps = ncm_vector_new (esmcmc->nwalkers);
-  g_array_set_size (esmcmc->accepted, esmcmc->nwalkers);
-
-  if (esmcmc->walker == NULL)
-    esmcmc->walker = ncm_fit_esmcmc_walker_new_from_name ("NcmFitESMCMCWalkerStretch");
-  
-  ncm_fit_esmcmc_walker_set_size (esmcmc->walker, esmcmc->nwalkers);
 }
 
 static void _ncm_fit_esmcmc_set_fit_obj (NcmFitESMCMC *esmcmc, NcmFit *fit);
@@ -494,7 +498,7 @@ _ncm_fit_esmcmc_update (NcmFitESMCMC *esmcmc, guint ki, guint kf)
 
   g_assert_cmpuint (ki, <, kf);
   g_assert_cmpuint (kf, <=, esmcmc->nwalkers);
-  
+
   for (k = ki; k < kf; k++)
   {
     NcmVector *theta_k = g_ptr_array_index (esmcmc->theta, k);
@@ -541,7 +545,15 @@ _ncm_fit_esmcmc_update (NcmFitESMCMC *esmcmc, guint ki, guint kf)
     {
       if ((esmcmc->cur_sample_id + 1) % esmcmc->nwalkers == 0)
       {
+        NcmVector *e_mean = ncm_mset_catalog_peek_current_e_mean (esmcmc->mcat);
         esmcmc->fit->mtype = esmcmc->mtype;
+
+        if (e_mean != NULL)
+        {
+          ncm_mset_fparams_set_vector_offset (esmcmc->fit->mset, e_mean, NCM_FIT_ESMCMC_NADD_VALS);
+          ncm_fit_state_set_m2lnL_curval (esmcmc->fit->fstate, ncm_vector_get (e_mean, NCM_FIT_ESMCMC_M2LNL_ID));
+        }
+
         ncm_fit_log_start (esmcmc->fit);
         ncm_fit_log_end (esmcmc->fit);
         ncm_mset_catalog_log_current_stats (esmcmc->mcat);

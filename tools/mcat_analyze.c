@@ -78,6 +78,7 @@ main (gint argc, gchar *argv[])
 {
   gchar *cat_filename = NULL;
   gboolean info           = FALSE;
+  gboolean chain_evol     = FALSE;
   gboolean list_all       = FALSE;
   gboolean list_hicosmo   = FALSE;
   gboolean list_hicosmo_z = FALSE;
@@ -91,6 +92,7 @@ main (gint argc, gchar *argv[])
   gchar **funcs = NULL;
   gchar **distribs = NULL;
   gchar **params = NULL;
+  gchar **params_evol = NULL;
   gchar **mode_errors = NULL;
   gchar **median_errors = NULL;
   gchar **bestfit_errors = NULL;
@@ -102,6 +104,7 @@ main (gint argc, gchar *argv[])
   {
     { "catalog",        'c', 0, G_OPTION_ARG_FILENAME,     &cat_filename,   "Catalog filename.", NULL },
     { "info",           'i', 0, G_OPTION_ARG_NONE,         &info,           "Print catalog information.", NULL },
+    { "chain-evol",     'I', 0, G_OPTION_ARG_NONE,         &chain_evol,     "Print chain evolution.", NULL },
     { "list",           'l', 0, G_OPTION_ARG_NONE,         &list_all,       "Print all available functions.", NULL },
     { "list-hicosmo",     0, 0, G_OPTION_ARG_NONE,         &list_hicosmo,   "Print available constant functions from NcHICosmo.", NULL },
     { "list-hicosmo-z",   0, 0, G_OPTION_ARG_NONE,         &list_hicosmo_z, "Print available redshift functions from NcHICosmo.", NULL },
@@ -115,6 +118,7 @@ main (gint argc, gchar *argv[])
     { "function",       'f', 0, G_OPTION_ARG_STRING_ARRAY, &funcs,          "Redshift functions to be analyzed.", NULL},
     { "distribution",   'd', 0, G_OPTION_ARG_STRING_ARRAY, &distribs,       "Function distributions to be analyzed.", NULL},
     { "parameter",      'p', 0, G_OPTION_ARG_STRING_ARRAY, &params,         "Model parameters' to be analyzed.", NULL},
+    { "parameter-evol", 'P', 0, G_OPTION_ARG_STRING_ARRAY, &params_evol,    "Calculate the time evolution of the parameter.", NULL},
     { "mode-error",     'o', 0, G_OPTION_ARG_STRING_ARRAY, &mode_errors,    "Print mode and 1-3 sigma asymmetric error bars of the model parameters' to be analyzed.", NULL},
     { "median-error",   'e', 0, G_OPTION_ARG_STRING_ARRAY, &median_errors,  "Print median and 1-3 sigma asymmetric error bars of the model parameters' to be analyzed.", NULL},
     { "bestfit-error",  's', 0, G_OPTION_ARG_STRING_ARRAY, &bestfit_errors,  "Print best fit and 1-3 sigma asymmetric error bars of the model parameters' to be analyzed.", NULL},
@@ -198,7 +202,7 @@ main (gint argc, gchar *argv[])
   }
   else
   {
-    NcmMSetCatalog *mcat = ncm_mset_catalog_new_from_file_ro (cat_filename);
+    NcmMSetCatalog *mcat = ncm_mset_catalog_new_from_file_ro (cat_filename, burnin);
     NcmMSet *mset = ncm_mset_catalog_get_mset (mcat);
     ncm_mset_catalog_estimate_autocorrelation_tau (mcat);
     
@@ -220,8 +224,30 @@ main (gint argc, gchar *argv[])
       ncm_mset_fparams_log_covar (mset, cov);
       ncm_matrix_clear (&cov);
       ncm_mset_catalog_log_current_stats (mcat);
-
     }
+
+    if (chain_evol)
+    {
+      guint last_t = ncm_mset_catalog_max_time (mcat);
+      guint i;
+      
+      ncm_message ("# Chain evolution from 0 to %u\n", last_t);
+      for (i = 0; i < last_t; i++)
+      {
+        NcmVector *e_mean = ncm_mset_catalog_peek_e_mean_t (mcat, i);
+        NcmVector *e_var  = ncm_mset_catalog_peek_e_var_t (mcat, i);
+        const guint len = ncm_vector_len (e_mean);
+        guint j;
+        
+        ncm_message ("% 10u", i);
+        for (j = 0; j < len; j++)
+        {
+          ncm_message (" % 20.15g % 20.15g", ncm_vector_get (e_mean, j), sqrt (ncm_vector_get (e_var, j)));
+        }
+        ncm_message ("\n");
+      }
+    }
+    
     /*********************************************************************************************************
      * 
      * Functions
@@ -290,9 +316,9 @@ main (gint argc, gchar *argv[])
         }
 
         if (use_direct)
-          res = ncm_mset_catalog_calc_ci_direct (mcat, burnin, mset_func, ncm_vector_ptr (z_vec, 0), p_val);
+          res = ncm_mset_catalog_calc_ci_direct (mcat, mset_func, ncm_vector_ptr (z_vec, 0), p_val);
         else
-          res = ncm_mset_catalog_calc_ci_interp (mcat, burnin, mset_func, ncm_vector_ptr (z_vec, 0), p_val, 100, NCM_FIT_RUN_MSGS_SIMPLE);
+          res = ncm_mset_catalog_calc_ci_interp (mcat, mset_func, ncm_vector_ptr (z_vec, 0), p_val, 100, NCM_FIT_RUN_MSGS_SIMPLE);
 
         for (k = 0; k < nsteps; k++)
         {
@@ -366,7 +392,7 @@ main (gint argc, gchar *argv[])
         }
 
         {
-          NcmStatsDist1d *sd1 = ncm_mset_catalog_calc_distrib (mcat, burnin, mset_func, NCM_FIT_RUN_MSGS_SIMPLE);
+          NcmStatsDist1d *sd1 = ncm_mset_catalog_calc_distrib (mcat, mset_func, NCM_FIT_RUN_MSGS_SIMPLE);
           for (k = 0; k < nsteps; k++)
           {
             gdouble x = sd1->xi + (sd1->xf - sd1->xi) / (nsteps - 1.0) * k;
@@ -387,6 +413,7 @@ main (gint argc, gchar *argv[])
       }
       nc_distance_clear (&dist);
     }
+
     /*********************************************************************************************************
      * 
      * Parameters
@@ -412,9 +439,9 @@ main (gint argc, gchar *argv[])
         {
           NcmStatsDist1d *sd1;
           if (pi != NULL)
-            sd1 = ncm_mset_catalog_calc_param_distrib (mcat, burnin, pi, NCM_FIT_RUN_MSGS_SIMPLE);
+            sd1 = ncm_mset_catalog_calc_param_distrib (mcat, pi, NCM_FIT_RUN_MSGS_SIMPLE);
           else
-            sd1 = ncm_mset_catalog_calc_add_param_distrib (mcat, burnin, add_param, NCM_FIT_RUN_MSGS_SIMPLE);
+            sd1 = ncm_mset_catalog_calc_add_param_distrib (mcat, add_param, NCM_FIT_RUN_MSGS_SIMPLE);
           
           for (k = 0; k < nsteps; k++)
           {
@@ -431,6 +458,55 @@ main (gint argc, gchar *argv[])
           ncm_stats_dist1d_free (sd1);
         }
         ncm_message ("\n\n");
+      }
+    }
+    
+    /*********************************************************************************************************
+     * 
+     * Parameters evolution
+     * 
+     *********************************************************************************************************/
+    if (params_evol != NULL)
+    {
+      guint nparams = g_strv_length (params_evol);
+
+      for (i = 0; i < nparams; i++)
+      {
+        const NcmMSetPIndex *pi = ncm_mset_fparam_get_pi_by_name (mset, params_evol[i]);
+        gchar *end_ptr = NULL;
+        glong add_param = strtol (params_evol[i], &end_ptr, 10);
+        guint t, k;
+
+        if (pi == NULL && (params_evol[i] == end_ptr))
+        {
+          g_warning ("# Parameter `%s' not found, skipping...\n", params_evol[i]);
+          continue;
+        }
+
+        {
+          NcmVector *pv;
+          NcmMatrix *evol_t;
+          gchar *out_file = g_strdup_printf ("param_evol_%s.dat", params_evol[i]);
+          FILE *out = fopen (out_file, "w");
+          
+          if (pi != NULL)
+            ncm_mset_catalog_calc_param_ensemble_evol (mcat, pi, nsteps, NCM_FIT_RUN_MSGS_SIMPLE, &pv, &evol_t);
+          else
+            ncm_mset_catalog_calc_add_param_ensemble_evol (mcat, add_param, nsteps, NCM_FIT_RUN_MSGS_SIMPLE, &pv, &evol_t); 
+          
+          for (t = 0; t < ncm_matrix_nrows (evol_t); t++)
+          {
+            for (k = 0; k < ncm_matrix_ncols (evol_t); k++)
+            {
+              fprintf (out, "%u % 20.15g % 20.15g\n", t, ncm_vector_get (pv, k), ncm_matrix_get (evol_t, t, k));
+            }
+            fprintf (out, "\n\n");
+          }
+
+          fclose (out);
+          ncm_vector_free (pv);
+          ncm_matrix_free (evol_t);
+        }
       }
     }
     
@@ -463,9 +539,9 @@ main (gint argc, gchar *argv[])
         {
           NcmStatsDist1d *sd1;
           if (pi != NULL)
-            sd1 = ncm_mset_catalog_calc_param_distrib (mcat, burnin, pi, NCM_FIT_RUN_MSGS_SIMPLE);
+            sd1 = ncm_mset_catalog_calc_param_distrib (mcat, pi, NCM_FIT_RUN_MSGS_SIMPLE);
           else
-            sd1 = ncm_mset_catalog_calc_add_param_distrib (mcat, burnin, add_param, NCM_FIT_RUN_MSGS_SIMPLE);
+            sd1 = ncm_mset_catalog_calc_add_param_distrib (mcat, add_param, NCM_FIT_RUN_MSGS_SIMPLE);
 
           {
             gdouble mode = ncm_stats_dist1d_eval_mode (sd1);
@@ -517,9 +593,9 @@ main (gint argc, gchar *argv[])
         {
           NcmStatsDist1d *sd1;
           if (pi != NULL)
-            sd1 = ncm_mset_catalog_calc_param_distrib (mcat, burnin, pi, NCM_FIT_RUN_MSGS_SIMPLE);
+            sd1 = ncm_mset_catalog_calc_param_distrib (mcat, pi, NCM_FIT_RUN_MSGS_SIMPLE);
           else
-            sd1 = ncm_mset_catalog_calc_add_param_distrib (mcat, burnin, add_param, NCM_FIT_RUN_MSGS_SIMPLE);
+            sd1 = ncm_mset_catalog_calc_add_param_distrib (mcat, add_param, NCM_FIT_RUN_MSGS_SIMPLE);
 
           {
               const gdouble median   = ncm_stats_dist1d_eval_inv_pdf (sd1, 0.5);
@@ -595,9 +671,9 @@ main (gint argc, gchar *argv[])
             {
               NcmStatsDist1d *sd1;
               if (pi != NULL)
-                sd1 = ncm_mset_catalog_calc_param_distrib (mcat, burnin, pi, NCM_FIT_RUN_MSGS_SIMPLE);
+                sd1 = ncm_mset_catalog_calc_param_distrib (mcat, pi, NCM_FIT_RUN_MSGS_SIMPLE);
               else
-                sd1 = ncm_mset_catalog_calc_add_param_distrib (mcat, burnin, add_param, NCM_FIT_RUN_MSGS_SIMPLE);
+                sd1 = ncm_mset_catalog_calc_add_param_distrib (mcat, add_param, NCM_FIT_RUN_MSGS_SIMPLE);
 
               {
                   gdouble x_l1 = 0.0, x_u1 = 0.0;

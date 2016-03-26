@@ -174,8 +174,10 @@ gboolean ncm_mset_exists (NcmMSet *mset, NcmModel *model);
 gboolean ncm_mset_exists_pos (NcmMSet *mset, NcmModel *model, guint stackpos_id);
 gboolean ncm_mset_is_subset (NcmMSet *mset, NcmMSet *sub_mset);
 
+gint ncm_mset_get_id_by_type (GType model_type);
 gint ncm_mset_get_id_by_ns (const gchar *ns);
 const gchar *ncm_mset_get_ns_by_id (gint id);
+GType ncm_mset_get_type_by_id (gint id);
 
 void ncm_mset_set_fmap (NcmMSet *mset, const gchar *const *fmap, gboolean update_models);
 gchar **ncm_mset_get_fmap (NcmMSet *mset);

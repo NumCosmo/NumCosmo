@@ -70,12 +70,16 @@ nc_data_bao_empirical_fit_init (NcDataBaoEmpiricalFit *bao_ef)
 static void
 nc_data_bao_empirical_fit_constructed (GObject *object)
 {
-  NcDataBaoEmpiricalFit *bao_ef = NC_DATA_BAO_EMPIRICAL_FIT (object);
+  /* Chain up : start */
+  G_OBJECT_CLASS (nc_data_bao_empirical_fit_parent_class)->constructed (object);
+  {
+    NcDataBaoEmpiricalFit *bao_ef = NC_DATA_BAO_EMPIRICAL_FIT (object);
 
-  ncm_stats_dist1d_prepare (bao_ef->p);
-  bao_ef->p_mode = ncm_stats_dist1d_eval_mode (bao_ef->p);
+    ncm_stats_dist1d_prepare (bao_ef->p);
+    bao_ef->p_mode = ncm_stats_dist1d_eval_mode (bao_ef->p);
 
-  ncm_data_set_init (NCM_DATA (bao_ef), TRUE);
+    ncm_data_set_init (NCM_DATA (bao_ef), TRUE);
+  }
 }
 
 static void

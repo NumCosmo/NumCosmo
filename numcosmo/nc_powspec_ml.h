@@ -57,6 +57,11 @@ struct _NcPowspecML
 
 GType nc_powspec_ml_get_type (void) G_GNUC_CONST;
 
+NcPowspecML *nc_powspec_ml_new_from_name (const gchar *ps_ml_name);
+NcPowspecML *nc_powspec_ml_ref (NcPowspecML *ps_ml);
+void nc_powspec_ml_free (NcPowspecML *ps_ml);
+void nc_powspec_ml_clear (NcPowspecML **ps_ml);
+
 G_END_DECLS
 
 #endif /* _NC_POWSPEC_ML_H_ */

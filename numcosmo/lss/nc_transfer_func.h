@@ -66,14 +66,15 @@ struct _NcTransferFuncClass
 GType nc_transfer_func_get_type (void) G_GNUC_CONST;
 
 NcTransferFunc *nc_transfer_func_new_from_name (gchar *transfer_name); 
+NcTransferFunc *nc_transfer_func_ref (NcTransferFunc *tf);
+void nc_transfer_func_free (NcTransferFunc *tf);
+void nc_transfer_func_clear (NcTransferFunc **tf);
 
 void nc_transfer_func_prepare (NcTransferFunc *tf, NcHICosmo *cosmo);
 void nc_transfer_func_prepare_if_needed (NcTransferFunc *tf, NcHICosmo *cosmo);
 
 gdouble nc_transfer_func_eval (NcTransferFunc *tf, NcHICosmo *cosmo, gdouble kh);
 gdouble nc_transfer_func_matter_powerspectrum (NcTransferFunc *tf, NcHICosmo *cosmo, gdouble kh);
-void nc_transfer_func_free (NcTransferFunc *tf);
-void nc_transfer_func_clear (NcTransferFunc **tf);
 
 G_END_DECLS
 

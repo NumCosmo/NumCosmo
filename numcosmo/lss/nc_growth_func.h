@@ -65,7 +65,7 @@ struct _NcGrowthFuncClass
 GType nc_growth_func_get_type (void) G_GNUC_CONST;
 
 NcGrowthFunc * nc_growth_func_new (void);
-NcGrowthFunc * nc_growth_func_copy (NcGrowthFunc *gf);
+NcGrowthFunc * nc_growth_func_ref (NcGrowthFunc *gf);
 void nc_growth_func_free (NcGrowthFunc *gf);
 void nc_growth_func_clear (NcGrowthFunc **gf);
 

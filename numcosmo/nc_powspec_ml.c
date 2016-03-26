@@ -62,3 +62,62 @@ nc_powspec_ml_class_init (NcPowspecMLClass *klass)
 
   object_class->finalize = nc_powspec_ml_finalize;
 }
+
+/**
+ * nc_powspec_ml_new_from_name:
+ * @ps_ml_name: string which specifies the matter linear power spectrum object to be used
+ *
+ * This function returns a new #NcPowspecML whose type is defined by @ps_ml_name.
+ *
+ * Returns: A new #NcPowspecML.
+ */
+NcPowspecML *
+nc_powspec_ml_new_from_name (const gchar *ps_ml_name)
+{
+  GObject *obj = ncm_serialize_global_from_string (ps_ml_name);
+
+  if (!NC_IS_POWSPEC_ML (obj))
+    g_error ("nc_powspec_ml_new_from_name: NcPowspecML %s do not descend from %s.", ps_ml_name, g_type_name (NC_TYPE_POWSPEC_ML));
+
+  return NC_POWSPEC_ML (obj);
+}
+
+/**
+ * nc_powspec_ml_ref:
+ * @ps_ml: a #NcmMSetCatalog
+ *
+ * Increases the reference count of @ps_ml atomically.
+ *
+ * Returns: (transfer full): @ps_ml.
+ */
+NcPowspecML *
+nc_powspec_ml_ref (NcPowspecML *ps_ml)
+{
+  return g_object_ref (ps_ml);
+}
+
+/**
+ * nc_powspec_ml_free:
+ * @ps_ml: a #NcmMSetCatalog
+ *
+ * Decreases the reference count of @ps_ml atomically.
+ *
+ */
+void 
+nc_powspec_ml_free (NcPowspecML *ps_ml)
+{
+  g_object_unref (ps_ml);
+}
+
+/**
+ * nc_powspec_ml_clear:
+ * @ps_ml: a #NcmMSetCatalog
+ *
+ * Decrese the reference count of *@ps_ml atomically and sets the pointer *@ps_ml to null.
+ *
+ */
+void 
+nc_powspec_ml_clear (NcPowspecML **ps_ml)
+{
+  g_clear_object (ps_ml);
+}

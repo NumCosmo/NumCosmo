@@ -89,6 +89,7 @@ ncm_sources = \
 	math/ncm_model_builder.c           \
 	math/ncm_mset.c                    \
 	math/ncm_mset_func.c               \
+	math/ncm_calc.c                    \
 	math/ncm_ode_spline.c              \
 	math/ncm_reparam.c                 \
 	math/ncm_reparam_linear.c          \
@@ -178,6 +179,7 @@ ncm_headers = \
 	math/ncm_model_builder.h         \
 	math/ncm_mset.h                  \
 	math/ncm_mset_func.h             \
+	math/ncm_calc.h                  \
 	math/ncm_ode_spline.h            \
 	math/ncm_reparam.h               \
 	math/ncm_reparam_linear.h        \
@@ -239,6 +241,7 @@ nc_headers = \
 	nc_hireion_camb.h             \
 	nc_hireion_camb_reparam_tau.h \
 	nc_powspec_ml.h               \
+	nc_powspec_ml_transfer.h      \
 	nc_snia_dist_cov.h            \
 	nc_planck_fi.h                \
 	nc_planck_fi_cor_tt.h         \
@@ -353,6 +356,7 @@ nc_sources = \
 	nc_hireion_camb.c             \
 	nc_hireion_camb_reparam_tau.c \
 	nc_powspec_ml.c               \
+	nc_powspec_ml_transfer.c      \
 	nc_snia_dist_cov.c            \
 	nc_planck_fi.c                \
 	nc_planck_fi_cor_tt.c         \

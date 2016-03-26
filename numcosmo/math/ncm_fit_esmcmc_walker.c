@@ -119,7 +119,6 @@ ncm_fit_esmcmc_walker_class_init (NcmFitESMCMCWalkerClass *klass)
   klass->clean = NULL;
 }
 
-
 /**
  * ncm_fit_esmcmc_walker_new_from_name:
  * @walker_name: string which specifies the walker object to be used

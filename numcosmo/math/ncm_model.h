@@ -210,6 +210,9 @@ NcmModel *ncm_model_peek_submodel (NcmModel *model, guint i);
 NcmModel *ncm_model_peek_submodel_by_mid (NcmModel *model, NcmModelID mid);
 gint ncm_model_peek_submodel_pos_by_mid (NcmModel *model, NcmModelID mid);
 
+gboolean ncm_model_type_is_submodel (GType model_type);
+NcmModelID ncm_model_type_main_model (GType model_type);
+
 /*
  * Model set functions
  */

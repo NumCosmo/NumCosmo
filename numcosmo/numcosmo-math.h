@@ -73,6 +73,7 @@
 #include <numcosmo/math/ncm_model_builder.h>
 #include <numcosmo/math/ncm_mset.h>
 #include <numcosmo/math/ncm_mset_func.h>
+#include <numcosmo/math/ncm_calc.h>
 #include <numcosmo/math/ncm_ode_spline.h>
 #include <numcosmo/math/ncm_reparam_linear.h>
 #include <numcosmo/math/ncm_data.h>

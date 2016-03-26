@@ -44,13 +44,49 @@
 
 G_DEFINE_ABSTRACT_TYPE (NcTransferFunc, nc_transfer_func, G_TYPE_OBJECT);
 
+static void
+nc_transfer_func_init (NcTransferFunc *tf)
+{
+  tf->ctrl_cosmo = ncm_model_ctrl_new (NULL);
+  tf->ctrl_reion = ncm_model_ctrl_new (NULL);
+}
+
+static void
+_nc_transfer_func_dispose (GObject * object)
+{
+  NcTransferFunc *tf = NC_TRANSFER_FUNC (object);
+
+  ncm_model_ctrl_clear (&tf->ctrl_cosmo);
+  ncm_model_ctrl_clear (&tf->ctrl_reion);
+
+  /* Chain up : end */
+  G_OBJECT_CLASS (nc_transfer_func_parent_class)->dispose (object);
+}
+
+static void
+_nc_transfer_func_finalize (GObject *object)
+{
+
+  /* Chain up : end */
+  G_OBJECT_CLASS (nc_transfer_func_parent_class)->finalize (object);
+}
+
+static void
+nc_transfer_func_class_init (NcTransferFuncClass *klass)
+{
+  GObjectClass* object_class = G_OBJECT_CLASS (klass);
+
+  object_class->dispose = _nc_transfer_func_dispose;
+  object_class->finalize = _nc_transfer_func_finalize;
+}
+
 /**
  * nc_transfer_func_new_from_name:
  * @transfer_name: string which specifies the transfer function type.
  *
  * This function returns a new #NcTransferFunc whose type is defined by @transfer_name.
  *
- * Returns: A new #NcTransferFunc.
+ * Returns: (transfer full): A new #NcTransferFunc.
  */
 NcTransferFunc *
 nc_transfer_func_new_from_name (gchar *transfer_name)
@@ -64,6 +100,48 @@ nc_transfer_func_new_from_name (gchar *transfer_name)
              g_type_name (NC_TYPE_TRANSFER_FUNC));
 
   return NC_TRANSFER_FUNC (obj);
+}
+
+/**
+ * nc_transfer_func_ref:
+ * @tf: a #NcTransferFunc
+ *
+ * Increases the reference count of @tf atomically.
+ *
+ * Returns: (transfer full): @tf.
+ */
+NcTransferFunc *
+nc_transfer_func_ref (NcTransferFunc *tf)
+{
+  return g_object_ref (tf);
+}
+
+/**
+ * nc_transfer_func_free:
+ * @tf: a #NcTransferFunc.
+ *
+ * Atomically decrements the reference count of @tf by one. If the reference count drops to 0,
+ * all memory allocated by @tf is released.
+ *
+*/
+void
+nc_transfer_func_free (NcTransferFunc *tf)
+{
+  g_object_unref (tf);
+}
+
+/**
+ * nc_transfer_func_clear:
+ * @tf: a #NcTransferFunc.
+ *
+ * Atomically decrements the reference count of @tf by one. If the reference count drops to 0,
+ * all memory allocated by @tf is released. Set the pointer to NULL.
+ *
+*/
+void
+nc_transfer_func_clear (NcTransferFunc **tf)
+{
+  g_clear_object (tf);
 }
 
 /**
@@ -131,68 +209,3 @@ nc_transfer_func_matter_powerspectrum (NcTransferFunc *tf, NcHICosmo *cosmo, gdo
 {
   return NC_TRANSFER_FUNC_GET_CLASS (tf)->calc_matter_P (tf, cosmo, kh);
 }
-
-/**
- * nc_transfer_func_free:
- * @tf: a #NcTransferFunc.
- *
- * Atomically decrements the reference count of @tf by one. If the reference count drops to 0,
- * all memory allocated by @tf is released.
- *
-*/
-void
-nc_transfer_func_free (NcTransferFunc *tf)
-{
-  g_object_unref (tf);
-}
-
-/**
- * nc_transfer_func_clear:
- * @tf: a #NcTransferFunc.
- *
- * Atomically decrements the reference count of @tf by one. If the reference count drops to 0,
- * all memory allocated by @tf is released. Set the pointer to NULL.
- *
-*/
-void
-nc_transfer_func_clear (NcTransferFunc **tf)
-{
-  g_clear_object (tf);
-}
-
-static void
-nc_transfer_func_init (NcTransferFunc *tf)
-{
-  tf->ctrl_cosmo = ncm_model_ctrl_new (NULL);
-  tf->ctrl_reion = ncm_model_ctrl_new (NULL);
-}
-
-static void
-_nc_transfer_func_dispose (GObject * object)
-{
-  NcTransferFunc *tf = NC_TRANSFER_FUNC (object);
-
-  ncm_model_ctrl_clear (&tf->ctrl_cosmo);
-  ncm_model_ctrl_clear (&tf->ctrl_reion);
-
-  /* Chain up : end */
-  G_OBJECT_CLASS (nc_transfer_func_parent_class)->dispose (object);
-}
-
-static void
-_nc_transfer_func_finalize (GObject *object)
-{
-
-  /* Chain up : end */
-  G_OBJECT_CLASS (nc_transfer_func_parent_class)->finalize (object);
-}
-
-static void
-nc_transfer_func_class_init (NcTransferFuncClass *klass)
-{
-  GObjectClass* object_class = G_OBJECT_CLASS (klass);
-
-  object_class->dispose = _nc_transfer_func_dispose;
-  object_class->finalize = _nc_transfer_func_finalize;
-}
-

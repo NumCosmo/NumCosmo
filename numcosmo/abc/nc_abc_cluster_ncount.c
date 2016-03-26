@@ -86,12 +86,16 @@ nc_abc_cluster_ncount_init (NcABCClusterNCount *abcnc)
 static void
 _nc_abc_cluster_ncount_constructed (GObject *object)
 {
-  NcmABC *abc = NCM_ABC (object);
-  
-  NcmMSetTransKernGauss *tkerng = ncm_mset_trans_kern_gauss_new (0);
-  ncm_mset_trans_kern_set_mset (NCM_MSET_TRANS_KERN (tkerng), abc->mcat->mset);
-  ncm_mset_trans_kern_gauss_set_cov_from_scale (tkerng);
-  ncm_abc_set_trans_kern (abc, NCM_MSET_TRANS_KERN (tkerng));
+  /* Chain up : start */
+  G_OBJECT_CLASS (nc_abc_cluster_ncount_parent_class)->constructed (object);
+  {
+    NcmABC *abc = NCM_ABC (object);
+
+    NcmMSetTransKernGauss *tkerng = ncm_mset_trans_kern_gauss_new (0);
+    ncm_mset_trans_kern_set_mset (NCM_MSET_TRANS_KERN (tkerng), abc->mcat->mset);
+    ncm_mset_trans_kern_gauss_set_cov_from_scale (tkerng);
+    ncm_abc_set_trans_kern (abc, NCM_MSET_TRANS_KERN (tkerng));
+  }
 }
 
 static void

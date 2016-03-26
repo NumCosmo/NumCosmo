@@ -224,13 +224,16 @@ main (gint argc, gchar *argv[])
   ncm_message ("# NumCosmo Version -- "NUMCOSMO_VERSION"\n");
   ncm_message ("# Command Line: %s\n", full_cmd_line);
 
+  dist = nc_distance_new (2.0);
+  ncm_serialize_global_set (dist, "MainDist", FALSE);
+
   if (de_model.mset_file != NULL)
     mset = ncm_mset_load (de_model.mset_file, ser);
   else
     mset = ncm_mset_empty_new ();
 
   dset  = ncm_dataset_new ();
-  if ((cosmo = NC_HICOSMO (ncm_mset_peek (mset, nc_hicosmo_id ()))) == NULL)
+  if ((cosmo = NC_HICOSMO (ncm_mset_get (mset, nc_hicosmo_id ()))) == NULL)
     cosmo = nc_hicosmo_new_from_name (NC_TYPE_HICOSMO, de_model.model_name);
 
   if (de_model.model_reion != NULL && ncm_mset_peek (mset, nc_hireion_id ()) == NULL)
@@ -249,9 +252,6 @@ main (gint argc, gchar *argv[])
   
   if (ncm_mset_peek (mset, nc_hicosmo_id ()) == NULL)
     ncm_mset_push (mset, NCM_MODEL (cosmo));
-
-  dist = nc_distance_new (2.0);
-  ncm_serialize_global_set (dist, "MainDist", FALSE);
 
   if (g_type_is_a (G_OBJECT_TYPE (cosmo), NC_TYPE_HICOSMO_DE))
     is_de = TRUE;
@@ -719,7 +719,7 @@ main (gint argc, gchar *argv[])
     mcat = ncm_fit_mcbs_get_catalog (mcbs);
     ncm_fit_mcbs_clear (&mcbs);
   }
-
+  
   if (de_fit.mcmc)
   {
     NcmMSetTransKernGauss *mcsg = ncm_mset_trans_kern_gauss_new (0);
@@ -734,7 +734,7 @@ main (gint argc, gchar *argv[])
     }
     else
     {
-      ncm_mset_trans_kern_gauss_set_cov_from_scale (mcsg);
+      ncm_mset_trans_kern_gauss_set_cov_from_rescale (mcsg, 0.1);
     }
     
     if (de_fit.mc_seed > -1)

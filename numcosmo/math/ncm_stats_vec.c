@@ -318,9 +318,9 @@ ncm_stats_vec_class_init (NcmStatsVecClass *klass)
 
 /**
  * ncm_stats_vec_new:
- * @len: number of random variables.
- * @t: type of statistics to be calculated.
- * @save_x: whenever to save each vector x.
+ * @len: number of random variables
+ * @t: type of statistics to be calculated
+ * @save_x: whenever to save each vector x
  *
  * Creates a new #NcmStatsVec.
  *
@@ -339,7 +339,7 @@ ncm_stats_vec_new (guint len, NcmStatsVecType t, gboolean save_x)
 
 /**
  * ncm_stats_vec_ref:
- * @svec: a #NcmStatsVec.
+ * @svec: a #NcmStatsVec
  *
  * Increase the reference of @svec by one.
  *
@@ -353,7 +353,7 @@ ncm_stats_vec_ref (NcmStatsVec *svec)
 
 /**
  * ncm_stats_vec_free:
- * @svec: a #NcmStatsVec.
+ * @svec: a #NcmStatsVec
  *
  * Decrease the reference count of @svec by one.
  *
@@ -366,7 +366,7 @@ ncm_stats_vec_free (NcmStatsVec *svec)
 
 /**
  * ncm_stats_vec_clear:
- * @svec: a #NcmStatsVec.
+ * @svec: a #NcmStatsVec
  *
  * Decrease the reference count of @svec by one, and sets the pointer *svec to
  * NULL.
@@ -561,8 +561,8 @@ _ncm_stats_vec_update_from_vec_weight (NcmStatsVec *svec, const gdouble w, NcmVe
 
 /**
  * ncm_stats_vec_update_weight:
- * @svec: a #NcmStatsVec.
- * @w: The statistical weight.
+ * @svec: a #NcmStatsVec
+ * @w: The statistical weight
  *
  * Updates the statistics using @svec->x set in @svec and @weight, then reset
  * @svec->x to zero.
@@ -581,12 +581,13 @@ ncm_stats_vec_update_weight (NcmStatsVec *svec, const gdouble w)
 }
 
 /**
- * ncm_stats_vec_append:
- * @svec: a #NcmStatsVec.
- * @x: a #NcmVector to be added.
- * @dup: a #gboolean.
+ * ncm_stats_vec_append_weight:
+ * @svec: a #NcmStatsVec
+ * @x: a #NcmVector to be added
+ * @w: the weight of @x
+ * @dup: a boolean
  *
- * Appends and updates the statistics using the vector @x #NcmVector of same
+ * Appends and updates the statistics using weight @w for the vector @x #NcmVector of same
  * size #NcmStatsVec:length and with continuous allocation. i.e., NcmVector:stride == 1.
  *
  * If @svec was created with save_x TRUE, the paramenter @dup determines if the vector
@@ -594,9 +595,9 @@ ncm_stats_vec_update_weight (NcmStatsVec *svec, const gdouble w)
  *
  */
 void
-ncm_stats_vec_append (NcmStatsVec *svec, NcmVector *x, gboolean dup)
+ncm_stats_vec_append_weight (NcmStatsVec *svec, NcmVector *x, gdouble w, gboolean dup)
 {
-  _ncm_stats_vec_update_from_vec_weight (svec, 1.0, x);
+  _ncm_stats_vec_update_from_vec_weight (svec, w, x);
   if (svec->save_x)
   {
     if (dup)
@@ -607,12 +608,13 @@ ncm_stats_vec_append (NcmStatsVec *svec, NcmVector *x, gboolean dup)
 }
 
 /**
- * ncm_stats_vec_prepend:
- * @svec: a #NcmStatsVec.
- * @x: a #NcmVector to be added.
- * @dup: a boolean.
+ * ncm_stats_vec_prepend_weight:
+ * @svec: a #NcmStatsVec
+ * @x: a #NcmVector to be added
+ * @w: the weight of @x
+ * @dup: a boolean
  *
- * Prepends and updates the statistics using the vector @x and weight == 1.0.
+ * Prepends and updates the statistics using the vector @x and weight @w.
  * It assumes that #NcmVector is of same size #NcmStatsVec:length and
  * with continuous allocation. i.e., NcmVector:stride == 1.
  *
@@ -621,9 +623,9 @@ ncm_stats_vec_append (NcmStatsVec *svec, NcmVector *x, gboolean dup)
  *
  */
 void
-ncm_stats_vec_prepend (NcmStatsVec *svec, NcmVector *x, gboolean dup)
+ncm_stats_vec_prepend_weight (NcmStatsVec *svec, NcmVector *x, gdouble w, gboolean dup)
 {
-  _ncm_stats_vec_update_from_vec_weight (svec, 1.0, x);
+  _ncm_stats_vec_update_from_vec_weight (svec, w, x);
 
   if (svec->save_x)
   {
@@ -642,10 +644,49 @@ ncm_stats_vec_prepend (NcmStatsVec *svec, NcmVector *x, gboolean dup)
 }
 
 /**
+ * ncm_stats_vec_append:
+ * @svec: a #NcmStatsVec
+ * @x: a #NcmVector to be added
+ * @dup: a boolean
+ *
+ * Appends and updates the statistics using weight 1.0 for the vector @x #NcmVector of same
+ * size #NcmStatsVec:length and with continuous allocation. i.e., NcmVector:stride == 1.
+ *
+ * If @svec was created with save_x TRUE, the paramenter @dup determines if the vector
+ * @x will be duplicated or if just a reference for @x will be saved.
+ *
+ */
+void
+ncm_stats_vec_append (NcmStatsVec *svec, NcmVector *x, gboolean dup)
+{
+  ncm_stats_vec_append_weight (svec, x, 1.0, dup);
+}
+
+/**
+ * ncm_stats_vec_prepend:
+ * @svec: a #NcmStatsVec
+ * @x: a #NcmVector to be added
+ * @dup: a boolean
+ *
+ * Prepends and updates the statistics using the vector @x and weight 1.0.
+ * It assumes that #NcmVector is of same size #NcmStatsVec:length and
+ * with continuous allocation. i.e., NcmVector:stride == 1.
+ *
+ * If @svec was created with save_x TRUE, the paramenter @dup determines if the vector
+ * will be duplicated or if just a reference for @x will be saved.
+ *
+ */
+void
+ncm_stats_vec_prepend (NcmStatsVec *svec, NcmVector *x, gboolean dup)
+{
+  ncm_stats_vec_prepend_weight (svec, x, 1.0, dup);
+}
+
+/**
  * ncm_stats_vec_append_data:
- * @svec: a #NcmStatsVec.
- * @data: (element-type NcmVector): a #GPtrArray containing #NcmVector s to be added.
- * @dup: a #gboolean.
+ * @svec: a #NcmStatsVec
+ * @data: (element-type NcmVector): a #GPtrArray containing #NcmVector s to be added
+ * @dup: a boolean
  *
  * Appends and updates the statistics using the data contained in @data and weight == 1.0.
  * It assumes that each element of @data is a #NcmVector of same size #NcmStatsVec:length and
@@ -677,9 +718,9 @@ ncm_stats_vec_append_data (NcmStatsVec *svec, GPtrArray *data, gboolean dup)
 
 /**
  * ncm_stats_vec_prepend_data:
- * @svec: a #NcmStatsVec.
- * @data: (element-type NcmVector): a #GPtrArray containing #NcmVector s to be added.
- * @dup: a boolean.
+ * @svec: a #NcmStatsVec
+ * @data: (element-type NcmVector): a #GPtrArray containing #NcmVector s to be added
+ * @dup: a boolean
  *
  * Prepends and updates the statistics using the data contained in @data and weight == 1.0.
  * It assumes that each element of @data is a #NcmVector of same size #NcmStatsVec:length and
@@ -918,8 +959,8 @@ _ncm_stats_vec_get_autocov (NcmStatsVec *svec, guint p, guint subsample, guint p
 
 /**
  * ncm_stats_vec_get_autocorr:
- * @svec: a #NcmStatsVec.
- * @p: parameter id.
+ * @svec: a #NcmStatsVec
+ * @p: parameter id
  *
  * Calculates the autocorrelation vector, the j-th element represent
  * the selfcorrelation with lag-j.
@@ -947,9 +988,9 @@ ncm_stats_vec_get_autocorr (NcmStatsVec *svec, guint p)
 
 /**
  * ncm_stats_vec_get_subsample_autocorr:
- * @svec: a #NcmStatsVec.
- * @p: parameter id.
- * @subsample: size of the subsample (>0).
+ * @svec: a #NcmStatsVec
+ * @p: parameter id
+ * @subsample: size of the subsample ($>0$)
  *
  * Calculates the autocorrelation vector, the j-th element represent
  * the selfcorrelation with lag-j using the @subsample parameter.
@@ -978,10 +1019,10 @@ ncm_stats_vec_get_subsample_autocorr (NcmStatsVec *svec, guint p, guint subsampl
 
 /**
  * ncm_stats_vec_get_autocorr_tau:
- * @svec: a #NcmStatsVec.
- * @p: parameter id.
- * @max_lag: max lag in the computation.
- * @min_rho: minimum autocorrelation to be considered in the sum.
+ * @svec: a #NcmStatsVec
+ * @p: parameter id
+ * @max_lag: max lag in the computation
+ * @min_rho: minimum autocorrelation to be considered in the sum
  *
  * Calculates the integrated autocorrelation time for the parameter @p
  * using all rows of data.
@@ -1022,11 +1063,11 @@ ncm_stats_vec_get_autocorr_tau (NcmStatsVec *svec, guint p, guint max_lag, const
 
 /**
  * ncm_stats_vec_get_subsample_autocorr_tau:
- * @svec: a #NcmStatsVec.
- * @p: parameter id.
- * @subsample: size of the subsample (>0).
- * @max_lag: max lag in the computation.
- * @min_rho: minimum autocorrelation to be considered in the sum.
+ * @svec: a #NcmStatsVec
+ * @p: parameter id
+ * @subsample: size of the subsample ($>0$)
+ * @max_lag: max lag in the computation
+ * @min_rho: minimum autocorrelation to be considered in the sum
  *
  * Calculates the integrated autocorrelation time for the parameter @p
  * using the @subsample parameter.
@@ -1065,7 +1106,7 @@ ncm_stats_vec_get_subsample_autocorr_tau (NcmStatsVec *svec, guint p, guint subs
 
 /**
  * ncm_stats_vec_peek_x:
- * @svec: a #NcmStatsVec.
+ * @svec: a #NcmStatsVec
  *
  * Returns the vector containing the current value of the random variables.
  *
@@ -1073,17 +1114,17 @@ ncm_stats_vec_get_subsample_autocorr_tau (NcmStatsVec *svec, guint p, guint subs
  */
 /**
  * ncm_stats_vec_set:
- * @svec: a #NcmStatsVec.
- * @i: a variable index.
- * @x_i: the value of the @i-th variable.
+ * @svec: a #NcmStatsVec
+ * @i: a variable index
+ * @x_i: the value of the @i-th variable
  *
  * Sets the value of the current @i-th random variable to @x_i.
  *
  */
 /**
  * ncm_stats_vec_get:
- * @svec: a #NcmStatsVec.
- * @i: a variable index.
+ * @svec: a #NcmStatsVec
+ * @i: a variable index
  *
  * Returns the value of the current @i-th random variable.
  *
@@ -1098,8 +1139,8 @@ ncm_stats_vec_get_subsample_autocorr_tau (NcmStatsVec *svec, guint p, guint subs
  */
 /**
  * ncm_stats_vec_get_mean:
- * @svec: a #NcmStatsVec.
- * @i: a variable index.
+ * @svec: a #NcmStatsVec
+ * @i: a variable index
  *
  * Return the current value of the variable mean, i.e., $\bar{x}_n$.
  *
@@ -1107,8 +1148,8 @@ ncm_stats_vec_get_subsample_autocorr_tau (NcmStatsVec *svec, guint p, guint subs
  */
 /**
  * ncm_stats_vec_get_var:
- * @svec: a #NcmStatsVec.
- * @i: a variable index.
+ * @svec: a #NcmStatsVec
+ * @i: a variable index
  *
  * Return the current value of the variable variance, i.e., $Var_n$.
  *
@@ -1116,8 +1157,8 @@ ncm_stats_vec_get_subsample_autocorr_tau (NcmStatsVec *svec, guint p, guint subs
  */
 /**
  * ncm_stats_vec_get_sd:
- * @svec: a #NcmStatsVec.
- * @i: a variable index.
+ * @svec: a #NcmStatsVec
+ * @i: a variable index
  *
  * Return the current value of the variable standard deviation,
  * i.e., $\sigma_n \equiv sqrt (Var_n)$.
@@ -1126,9 +1167,9 @@ ncm_stats_vec_get_subsample_autocorr_tau (NcmStatsVec *svec, guint p, guint subs
  */
 /**
  * ncm_stats_vec_get_cov:
- * @svec: a #NcmStatsVec.
- * @i: a variable index.
- * @j: a variable index.
+ * @svec: a #NcmStatsVec
+ * @i: a variable index
+ * @j: a variable index
  *
  * Return the current value of the variance between the @i-th and the @j-th
  * variables, i.e., $Cov_{ij}$.
@@ -1137,9 +1178,9 @@ ncm_stats_vec_get_subsample_autocorr_tau (NcmStatsVec *svec, guint p, guint subs
  */
 /**
  * ncm_stats_vec_get_cor:
- * @svec: a #NcmStatsVec.
- * @i: a variable index.
- * @j: a variable index.
+ * @svec: a #NcmStatsVec
+ * @i: a variable index
+ * @j: a variable index
  *
  * Return the current value of the correlation between the @i-th and the @j-th
  * variables, i.e., $$Cor_{ij} \equiv \frac{Cov_{ij}}{\sigma_i\sigma_j}.$$
@@ -1148,7 +1189,7 @@ ncm_stats_vec_get_subsample_autocorr_tau (NcmStatsVec *svec, guint p, guint subs
  */
 /**
  * ncm_stats_vec_get_weight:
- * @svec: a #NcmStatsVec.
+ * @svec: a #NcmStatsVec
  *
  * Return the current value of the weight, for non-weighted means this is simply
  * the number of elements.
@@ -1157,18 +1198,26 @@ ncm_stats_vec_get_subsample_autocorr_tau (NcmStatsVec *svec, guint p, guint subs
  */
 /**
  * ncm_stats_vec_get_mean_vector:
- * @svec: a #NcmStatsVec.
- * @mean: a #NcmVector.
- * @offset: first parameter index.
+ * @svec: a #NcmStatsVec
+ * @mean: a #NcmVector
+ * @offset: first parameter index
  *
  * Copy the current value of the means to the vector @mean starting from parameter @offset.
  *
  */
 /**
+ * ncm_stats_vec_peek_mean:
+ * @svec: a #NcmStatsVec
+ * 
+ * Gets the local mean vector.
+ * 
+ * Returns: (transfer none): the internal mean #NcmVector.
+ */
+/**
  * ncm_stats_vec_get_cov_matrix:
- * @svec: a #NcmStatsVec.
- * @m: a #NcmMatrix.
- * @offset: first parameter index.
+ * @svec: a #NcmStatsVec
+ * @m: a #NcmMatrix
+ * @offset: first parameter index
  *
  * Copy the current value of the correlation between the variables to the
  * matrix @m starting from paramenter @offset.
@@ -1176,8 +1225,8 @@ ncm_stats_vec_get_subsample_autocorr_tau (NcmStatsVec *svec, guint p, guint subs
  */
 /**
  * ncm_stats_vec_peek_cov_matrix:
- * @svec: a #NcmStatsVec.
- * @offset: first parameter index.
+ * @svec: a #NcmStatsVec
+ * @offset: first parameter index
  *
  * Gets the internal covariance matrix starting from paramenter @offset.
  * This is the internal matrix of @svec and can change with further
@@ -1187,7 +1236,7 @@ ncm_stats_vec_get_subsample_autocorr_tau (NcmStatsVec *svec, guint p, guint subs
  */
 /**
  * ncm_stats_vec_nrows:
- * @svec: a #NcmStatsVec.
+ * @svec: a #NcmStatsVec
  *
  * Gets the number of saved rows, this function fails if the object
  * was not created with save_x == TRUE;
@@ -1196,8 +1245,8 @@ ncm_stats_vec_get_subsample_autocorr_tau (NcmStatsVec *svec, guint p, guint subs
  */
 /**
  * ncm_stats_vec_peek_row:
- * @svec: a #NcmStatsVec.
- * @i: the row's index.
+ * @svec: a #NcmStatsVec
+ * @i: the row's index
  *
  * The i-th data row used in the statistics, this function fails if the object
  * was not created with save_x == TRUE;
@@ -1206,9 +1255,9 @@ ncm_stats_vec_get_subsample_autocorr_tau (NcmStatsVec *svec, guint p, guint subs
  */
 /**
  * ncm_stats_vec_get_param_at:
- * @svec: a #NcmStatsVec.
- * @i: the row's index.
- * @p: the parameter's index.
+ * @svec: a #NcmStatsVec
+ * @i: the row's index
+ * @p: the parameter's index
  *
  * Gets the p-th parameter in the i-th data row used in the statistics, this
  * function fails if the object was not created with save_x == TRUE;
