@@ -189,7 +189,6 @@ nc_data_planck_lkl_finalize (GObject *object)
   }
 
   g_strfreev (plik->pnames);
-
   /* Chain up : end */
   G_OBJECT_CLASS (nc_data_planck_lkl_parent_class)->finalize (object);
 }

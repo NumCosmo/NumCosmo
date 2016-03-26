@@ -969,9 +969,11 @@ _nc_cbe_set_thermo (NcCBE *cbe, NcHICosmo *cosmo)
   NcHIReion *reion = nc_hicosmo_peek_reion (cosmo);
   struct precision *ppr = (struct precision *)cbe->prec->priv;
 
+  g_assert (reion != NULL);
+
   cbe->priv->pth.YHe                      = nc_hicosmo_Yp_4He (cosmo);
   cbe->priv->pth.recombination            = recfast;
-  cbe->priv->pth.reio_parametrization     = reion == NULL ? reio_none : reio_camb;
+  cbe->priv->pth.reio_parametrization     = reio_camb;
   if (NC_IS_HIREION_CAMB (reion))
   {
     cbe->priv->pth.reio_z_or_tau            = reio_z;

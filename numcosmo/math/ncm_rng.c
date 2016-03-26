@@ -57,12 +57,7 @@ ncm_rng_init (NcmRNG *rng)
   rng->r        = NULL;
   rng->seed_val = 0;
   rng->seed_set = FALSE;
-#if (GLIB_MAJOR_VERSION == 2) && (GLIB_MINOR_VERSION < 32)
-  rng->lock     = g_mutex_new ();
-#else
-  g_mutex_init (&rng->lock_m);
-  rng->lock     = &rng->lock_m;
-#endif
+  g_mutex_init (&rng->lock);
 }
 
 static void
@@ -127,17 +122,9 @@ static void
 _ncm_rng_finalize (GObject *object)
 {
   NcmRNG *rng = NCM_RNG (object);
-  if (rng->r != NULL)
-  {
-    gsl_rng_free (rng->r);
-    rng->r = NULL;
-  }
 
-#if (GLIB_MAJOR_VERSION == 2) && (GLIB_MINOR_VERSION < 32)
-  g_mutex_free (rng->lock);
-#else
-  g_mutex_clear (rng->lock);
-#endif
+  g_clear_pointer (&rng->r, gsl_rng_free);
+  g_mutex_clear (&rng->lock);
 
   /* Chain up : end */
   G_OBJECT_CLASS (ncm_rng_parent_class)->finalize (object);
@@ -276,7 +263,7 @@ ncm_rng_clear (NcmRNG **rng)
 void 
 ncm_rng_lock (NcmRNG *rng)
 {
-  g_mutex_lock (rng->lock);
+  g_mutex_lock (&rng->lock);
 }
 
 /**
@@ -289,7 +276,7 @@ ncm_rng_lock (NcmRNG *rng)
 void 
 ncm_rng_unlock (NcmRNG *rng)
 {
-  g_mutex_unlock (rng->lock);
+  g_mutex_unlock (&rng->lock);
 }
 
 /**
@@ -478,21 +465,21 @@ NcmRNG *
 ncm_rng_pool_get (const gchar *name)
 {
   NcmRNG *rng;
-  _NCM_STATIC_MUTEX_DECL (create_lock);
-  _NCM_STATIC_MUTEX_DECL (update_acess_lock);
+  G_LOCK_DEFINE_STATIC (create_lock);
+  G_LOCK_DEFINE_STATIC (update_acess_lock);
 
   if (rng_table == NULL)
   {
-    _NCM_MUTEX_LOCK (&create_lock);
+    G_LOCK (create_lock);
     if (rng_table == NULL)
     {
       rng_table = g_hash_table_new_full (g_str_hash, g_str_equal, 
                                          &g_free, (GDestroyNotify) &ncm_rng_free);
     }    
-    _NCM_MUTEX_UNLOCK (&create_lock);
+    G_UNLOCK (create_lock);
   }
 
-  _NCM_MUTEX_LOCK (&update_acess_lock);
+  G_LOCK (update_acess_lock);
   {
     rng = g_hash_table_lookup (rng_table, name);
     if (rng == NULL)
@@ -505,7 +492,7 @@ ncm_rng_pool_get (const gchar *name)
     else
       ncm_rng_ref (rng);
   }
-  _NCM_MUTEX_UNLOCK (&update_acess_lock);
+  G_UNLOCK (update_acess_lock);
 
   return rng;
 }

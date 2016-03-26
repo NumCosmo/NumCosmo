@@ -86,13 +86,13 @@ _besselj_bs_free (gpointer p)
 NcmBinSplit **
 _ncm_mpsf_0F1_get_bs (void)
 {
-  _NCM_STATIC_MUTEX_DECL (create_lock);
+  G_LOCK_DEFINE_STATIC (create_lock);
   static NcmMemoryPool *mp = NULL;
 
-  _NCM_MUTEX_LOCK (&create_lock);
+  G_LOCK (create_lock);
   if (mp == NULL)
 	mp = ncm_memory_pool_new (_besselj_bs_alloc, NULL, _besselj_bs_free);
-  _NCM_MUTEX_UNLOCK (&create_lock);
+  G_UNLOCK (create_lock);
 
   return ncm_memory_pool_get (mp);
 }

@@ -48,14 +48,17 @@ typedef struct _NcDEModelEntries NcDEModelEntries;
  */
 struct _NcDEModelEntries
 {
+  gchar *mset_file;
   gchar *model_name;
+  gchar *model_reion;
+  gchar *model_prim;
   gboolean flat;
   gboolean pos_Omega_x;
   gboolean Omega_k;
   gboolean help_names;
 };
 
-#define NC_DE_MODEL_ENTRIES {"NcHICosmoDEXcdm", FALSE, FALSE, FALSE, FALSE}
+#define NC_DE_MODEL_ENTRIES {NULL, "NcHICosmoDEXcdm", "NcHIReionCamb", "NcHIPrimPowerLaw", FALSE, FALSE, FALSE, FALSE}
 
 typedef struct _NcDEDataSimpleEntries NcDEDataSimpleEntries;
 
@@ -74,13 +77,16 @@ struct _NcDEDataSimpleEntries
   gchar **H_BAO_id;
   gchar *cluster_id;
   gchar **priors_gauss;
+  gchar **Planck;
+  gchar *PlanckFI;
+  gboolean PlanckPriors;
   gboolean BBN;
   gboolean BBN_Ob;
   gboolean snia_use_det;
   gchar **data_files;
 };
 
-#define NC_DE_DATA_SIMPLE_ENTRIES {NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, FALSE, FALSE, FALSE, NULL}
+#define NC_DE_DATA_SIMPLE_ENTRIES {NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, FALSE, FALSE, FALSE, FALSE, NULL}
 
 typedef struct _NcDEDataClusterEntries NcDEDataClusterEntries;
 

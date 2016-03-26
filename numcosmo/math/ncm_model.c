@@ -2152,6 +2152,34 @@ ncm_model_orig_param_get_by_name (NcmModel *model, const gchar *param_name)
 }
 
 /**
+ * ncm_model_is_submodel:
+ * @model: a #NcmModel
+ *
+ * 
+ * Returns: TRUE if @model is a submodel of other model class.
+ */
+gboolean 
+ncm_model_is_submodel (NcmModel *model)
+{
+  return NCM_MODEL_GET_CLASS (model)->is_submodel;
+}
+
+/**
+ * ncm_model_main_model:
+ * @model: a #NcmModel
+ *
+ * If @model is a submodel returns the #NcmModelID of its
+ * main model, otherwise returns -1.
+ * 
+ * Returns: main model #NcmModelID or -1.
+ */
+NcmModelID 
+ncm_model_main_model (NcmModel *model)
+{
+  return NCM_MODEL_GET_CLASS (model)->main_model_id;
+}
+
+/**
  * ncm_model_add_submodel: (virtual add_submodel)
  * @model: a #NcmModel
  * @submodel: a #NcmModel

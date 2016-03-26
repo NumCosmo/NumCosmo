@@ -672,7 +672,6 @@ ncm_timer_task_time_left_str (NcmTimer *nt)
 gchar *
 ncm_timer_task_start_datetime_str (NcmTimer *nt)
 {
-#if !((GLIB_MAJOR_VERSION == 2) && (GLIB_MINOR_VERSION < 26))
   GDateTime *dt_now = g_date_time_new_now_local ();
   const gdouble elap = ncm_timer_elapsed (nt);
   GDateTime *dt_start = g_date_time_add_seconds (dt_now, - elap);
@@ -686,10 +685,6 @@ ncm_timer_task_start_datetime_str (NcmTimer *nt)
   g_date_time_unref (dt_start);
   g_free (start_str);
   return nt->msg->str;
-#else
-  g_assert_not_reached ();
-  return NULL;
-#endif
 }
 
 /**
@@ -703,7 +698,6 @@ ncm_timer_task_start_datetime_str (NcmTimer *nt)
 gchar *
 ncm_timer_task_end_datetime_str (NcmTimer *nt)
 {
-#if !((GLIB_MAJOR_VERSION == 2) && (GLIB_MINOR_VERSION < 26))
   GDateTime *dt_now = g_date_time_new_now_local ();
   const gdouble mean_time = ncm_stats_vec_get_mean (nt->time_stats, 0);
   const gdouble sigma_time = ncm_stats_vec_get_sd (nt->time_stats, 0) / sqrt (nt->task_pos);
@@ -726,10 +720,6 @@ ncm_timer_task_end_datetime_str (NcmTimer *nt)
   g_date_time_unref (dt_end);
   g_free (end_str);
   return nt->msg->str;
-#else
-  g_assert_not_reached ();
-  return NULL;
-#endif
 }
 
 /**

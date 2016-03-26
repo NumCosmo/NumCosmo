@@ -255,6 +255,8 @@ nc_hicosmo_de_init (NcHICosmoDE *cosmo_de)
   ncm_serialize_clear (&ser);
 
   cosmo_de->HE4_Yp_key = NCM_MODEL (cosmo_de)->pkey - 1;
+
+  g_free (filename);
 }
 
 static void

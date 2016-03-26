@@ -32,6 +32,9 @@ test_ncm_spline_SOURCES =  \
 test_ncm_spline2d_SOURCES =  \
         test_ncm_spline2d.c
 
+test_ncm_integral1d_SOURCES =  \
+        test_ncm_integral1d.c
+
 test_ncm_sf_sbessel_SOURCES =  \
 	test_ncm_sf_sbessel.c
 
@@ -82,19 +85,20 @@ test_nc_cluster_pseudo_counts_SOURCES =  \
         test_nc_cluster_pseudo_counts.c
         
 check_PROGRAMS =  \
-	test_ncm_sparam               \
 	test_ncm_vector               \
 	test_ncm_matrix               \
 	test_ncm_stats_vec            \
 	test_ncm_spline               \
 	test_ncm_spline2d             \
+	test_ncm_integral1d           \
 	test_ncm_sf_sbessel           \
+	test_ncm_func_eval            \
+	test_ncm_sparam               \
 	test_ncm_model                \
 	test_ncm_model_ctrl           \
-	test_ncm_mset                 \
 	test_ncm_serialize            \
+	test_ncm_mset                 \
 	test_ncm_data_gauss_cov       \
-	test_ncm_func_eval            \
 	test_nc_hicosmo_de            \
 	test_nc_window                \
 	test_nc_transfer_func         \
@@ -117,6 +121,8 @@ test_ncm_stats_vec_LDADD = $(top_builddir)/numcosmo/libnumcosmo.la
 test_ncm_spline_LDADD = $(top_builddir)/numcosmo/libnumcosmo.la
 
 test_ncm_spline2d_LDADD = $(top_builddir)/numcosmo/libnumcosmo.la
+
+test_ncm_integral1d_LDADD = $(top_builddir)/numcosmo/libnumcosmo.la
 
 test_ncm_sf_sbessel_LDADD = $(top_builddir)/numcosmo/libnumcosmo.la
 

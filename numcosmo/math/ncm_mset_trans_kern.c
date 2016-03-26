@@ -61,6 +61,7 @@ ncm_mset_trans_kern_dispose (GObject *object)
   NcmMSetTransKern *tkern = NCM_MSET_TRANS_KERN (object);
 
   ncm_mset_clear (&tkern->mset);
+  ncm_vector_clear (&tkern->theta);
   
   /* Chain up : end */
   G_OBJECT_CLASS (ncm_mset_trans_kern_parent_class)->dispose (object);

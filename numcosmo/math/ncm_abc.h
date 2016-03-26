@@ -128,7 +128,7 @@ void ncm_abc_start_update (NcmABC *abc);
 void ncm_abc_end_update (NcmABC *abc);
 void ncm_abc_update (NcmABC *abc);
 
-#define NCM_ABC_MIN_FLUSH_INTERVAL (10.0)
+#define NCM_ABC_MIN_SYNC_INTERVAL (10.0)
 
 G_END_DECLS
 

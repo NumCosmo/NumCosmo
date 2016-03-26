@@ -44,12 +44,8 @@ typedef struct _NcmMemoryPool NcmMemoryPool;
 struct _NcmMemoryPool
 {
   /*< private >*/
-  GMutex *update;
-  GCond *finish;
-#if !((GLIB_MAJOR_VERSION == 2) && (GLIB_MINOR_VERSION < 32))
-  GMutex update_m;
-  GCond finish_c;
-#endif
+  GMutex update;
+  GCond finish;
   gint slices_in_use;
   GPtrArray *slices;
   NcmMemoryPoolAlloc alloc;

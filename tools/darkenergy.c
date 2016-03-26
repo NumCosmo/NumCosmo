@@ -40,7 +40,7 @@
 gint
 main (gint argc, gchar *argv[])
 {
-  NcHICosmo *model;
+  NcHICosmo *cosmo;
   NcmDataset *dset;
   NcmLikelihood *lh;
   NcmFit *fit;
@@ -205,11 +205,12 @@ main (gint argc, gchar *argv[])
   if (de_run.nthreads > 0)
     ncm_func_eval_set_max_threads (de_run.nthreads);
   
-  if (de_data_simple.snia_id == NULL &&
-      de_data_simple.cmb_id == NULL &&
-      de_data_simple.bao_id == NULL &&
-      de_data_simple.H_id == NULL &&
+  if (de_data_simple.snia_id    == NULL &&
+      de_data_simple.cmb_id     == NULL &&
+      de_data_simple.bao_id     == NULL &&
+      de_data_simple.H_id       == NULL &&
       de_data_simple.cluster_id == NULL &&
+      de_data_simple.Planck     == NULL &&
       de_data_simple.data_files == NULL)
   {
     printf ("No action or data were chosen.\n");
@@ -223,22 +224,44 @@ main (gint argc, gchar *argv[])
   ncm_message ("# NumCosmo Version -- "NUMCOSMO_VERSION"\n");
   ncm_message ("# Command Line: %s\n", full_cmd_line);
 
-  dset = ncm_dataset_new ();
-  model = nc_hicosmo_new_from_name (NC_TYPE_HICOSMO, de_model.model_name);
-  mset = ncm_mset_new (NCM_MODEL (model), NULL);
-  dist = nc_distance_new (2.0);
+  if (de_model.mset_file != NULL)
+    mset = ncm_mset_load (de_model.mset_file, ser);
+  else
+    mset = ncm_mset_empty_new ();
+
+  dset  = ncm_dataset_new ();
+  if ((cosmo = NC_HICOSMO (ncm_mset_peek (mset, nc_hicosmo_id ()))) == NULL)
+    cosmo = nc_hicosmo_new_from_name (NC_TYPE_HICOSMO, de_model.model_name);
+
+  if (de_model.model_reion != NULL && ncm_mset_peek (mset, nc_hireion_id ()) == NULL)
+  {
+    NcHIReion *reion = nc_hireion_new_from_name (NC_TYPE_HIREION, de_model.model_reion);
+    ncm_model_add_submodel (NCM_MODEL (cosmo), NCM_MODEL (reion));
+    nc_hireion_free (reion);
+  }
+
+  if (de_model.model_prim != NULL && ncm_mset_peek (mset, nc_hiprim_id ()) == NULL)
+  {
+    NcHIPrim *prim = nc_hiprim_new_from_name (NC_TYPE_HIPRIM, de_model.model_prim);
+    ncm_model_add_submodel (NCM_MODEL (cosmo), NCM_MODEL (prim));
+    nc_hiprim_free (prim);
+  }
   
+  if (ncm_mset_peek (mset, nc_hicosmo_id ()) == NULL)
+    ncm_mset_push (mset, NCM_MODEL (cosmo));
+
+  dist = nc_distance_new (2.0);
   ncm_serialize_global_set (dist, "MainDist", FALSE);
 
-  if (g_type_is_a (G_OBJECT_TYPE (model), NC_TYPE_HICOSMO_DE))
+  if (g_type_is_a (G_OBJECT_TYPE (cosmo), NC_TYPE_HICOSMO_DE))
     is_de = TRUE;
 
   if (de_model.help_names)
   {
     gint i;
-    ncm_message ("# Model name -- %s\n", ncm_model_name (NCM_MODEL (model)));
-    for (i = 0; i < ncm_model_len (NCM_MODEL (model)); i++)
-      ncm_message ("# Model parameter [%02d] = %s\n", i, ncm_model_param_name (NCM_MODEL (model), i));
+    ncm_message ("# Cosmological model name -- %s\n", ncm_model_name (NCM_MODEL (cosmo)));
+    for (i = 0; i < ncm_model_len (NCM_MODEL (cosmo)); i++)
+      ncm_message ("# Model parameter [%02d] = %s\n", i, ncm_model_param_name (NCM_MODEL (cosmo), i));
     return 0;
   }
 
@@ -248,15 +271,15 @@ main (gint argc, gchar *argv[])
   {
     if (!is_de)
       g_error ("flat option is valid only for darkenergy models");
-    nc_hicosmo_de_omega_x2omega_k (NC_HICOSMO_DE (model));
-    ncm_model_param_set (NCM_MODEL (model), NC_HICOSMO_DE_OMEGA_X, 0.0);
+    nc_hicosmo_de_omega_x2omega_k (NC_HICOSMO_DE (cosmo));
+    ncm_model_param_set (NCM_MODEL (cosmo), NC_HICOSMO_DE_OMEGA_X, 0.0);
     ncm_mset_param_set_ftype (mset, nc_hicosmo_id (), NC_HICOSMO_DE_OMEGA_X, NCM_PARAM_TYPE_FIXED);
   }
   else if (de_model.Omega_k)
   {
     if (!is_de)
       g_error ("omegak option is valid only for darkenergy models");
-    nc_hicosmo_de_omega_x2omega_k (NC_HICOSMO_DE (model));
+    nc_hicosmo_de_omega_x2omega_k (NC_HICOSMO_DE (cosmo));
     ncm_mset_param_set_ftype (mset, nc_hicosmo_id (), NC_HICOSMO_DE_OMEGA_X, NCM_PARAM_TYPE_FREE);
   }
 
@@ -284,7 +307,6 @@ main (gint argc, gchar *argv[])
     }
     else if (snia_id->value >= NC_DATA_SNIA_COV_START && snia_id->value <= NC_DATA_SNIA_COV_END)
     {
-      NcSNIADistCov *dcov;
       NcmData *data = nc_data_snia_cov_new (de_data_simple.snia_use_det);
       guint sigma_int_len;
       
@@ -292,23 +314,25 @@ main (gint argc, gchar *argv[])
 
       sigma_int_len = nc_data_snia_cov_sigma_int_len (NC_DATA_SNIA_COV (data));
 
-      if (de_data_simple.snia_objser == NULL)
-        dcov = nc_snia_dist_cov_new (dist, sigma_int_len);
-      else
-        dcov = NC_SNIA_DIST_COV (ncm_serialize_global_from_string (de_data_simple.snia_objser));
+      if (ncm_mset_peek (mset, nc_snia_dist_cov_id ()) == NULL)
+      {
+        NcSNIADistCov *dcov;
+        if (de_data_simple.snia_objser == NULL)
+          dcov = nc_snia_dist_cov_new (dist, sigma_int_len);
+        else
+          dcov = NC_SNIA_DIST_COV (ncm_serialize_global_from_string (de_data_simple.snia_objser));
 
-      g_assert (NC_IS_SNIA_DIST_COV (dcov));
-      
-      ncm_mset_set (mset, NCM_MODEL (dcov));
+        g_assert (NC_IS_SNIA_DIST_COV (dcov));
+        ncm_mset_set (mset, NCM_MODEL (dcov));
+        nc_snia_dist_cov_free (dcov);
+      }
       ncm_dataset_append_data (dset, data);
       ncm_data_free (data);
-      nc_snia_dist_cov_free (dcov);
     }
     else
       g_assert_not_reached ();
   }
 
- 
   if (de_data_simple.cmb_id != NULL)
   {
     const GEnumValue *cmb_id = ncm_cfg_get_enum_by_id_name_nick (NC_TYPE_DATA_CMB_ID,
@@ -395,6 +419,31 @@ main (gint argc, gchar *argv[])
 
   }
 
+  if (de_data_simple.Planck != NULL)
+  {
+    guint i;
+    guint nPlanck = g_strv_length (de_data_simple.Planck);
+    NcHIPertBoltzmannCBE *boltz = nc_hipert_boltzmann_cbe_new ();
+
+    if (ncm_mset_peek (mset, nc_planck_fi_id ()) == NULL)
+    {
+      NcPlanckFI *planck_fi = nc_planck_fi_new_from_name (de_data_simple.PlanckFI == NULL ? "NcPlanckFICorTT" : de_data_simple.PlanckFI);
+      ncm_mset_push (mset, NCM_MODEL (planck_fi));
+      nc_planck_fi_free (planck_fi);
+    }
+    
+    for (i = 0; i < nPlanck; i++)
+    {
+      gchar *Planck_i       = de_data_simple.Planck[i];
+      NcDataPlanckLKL *plik = nc_data_planck_lkl_full_new (Planck_i, NC_HIPERT_BOLTZMANN (boltz));
+      ncm_dataset_append_data (dset, NCM_DATA (plik));
+
+      ncm_data_free (NCM_DATA (plik));
+    }
+
+    nc_hipert_boltzmann_cbe_free (boltz);
+  }
+
   if (de_data_simple.data_files != NULL)
   {
     guint ndata_files = g_strv_length (de_data_simple.data_files);
@@ -429,13 +478,27 @@ main (gint argc, gchar *argv[])
 
   if (de_fit.qspline_cp && TRUE)
   {
-    if (!NC_IS_HICOSMO_QSPLINE (model))
+    if (!NC_IS_HICOSMO_QSPLINE (cosmo))
       g_error ("Continuity priors are only valid for NcHICosmoQSPline model");
     else
     {
       NcHICosmoQSplineContPrior *qspline_cp = 
-        nc_hicosmo_qspline_add_continuity_priors (NC_HICOSMO_QSPLINE (model), lh, 1.0e-10, de_fit.qspline_cp_sigma);
+        nc_hicosmo_qspline_add_continuity_priors (NC_HICOSMO_QSPLINE (cosmo), lh, 1.0e-10, de_fit.qspline_cp_sigma);
       nc_hicosmo_qspline_cont_prior_free (qspline_cp);
+    }
+  }
+
+  if (de_data_simple.PlanckPriors)
+  {
+    NcPlanckFI *planck_fi = NC_PLANCK_FI (ncm_mset_peek (mset, nc_planck_fi_id ()));
+    if (planck_fi == NULL)
+      g_warning ("Planck Priors enabled but not NcPlanckFI model set.");
+    else
+    {
+      if (NC_IS_PLANCK_FI_COR_TT (planck_fi))
+      {
+        nc_planck_fi_cor_tt_add_all_default_priors (lh);
+      }
     }
   }
 
@@ -459,12 +522,12 @@ main (gint argc, gchar *argv[])
 
   if (de_fit.qspline_cp && FALSE)
   {
-    if (!NC_IS_HICOSMO_QSPLINE (model))
+    if (!NC_IS_HICOSMO_QSPLINE (cosmo))
       g_error ("Continuity priors are only valid for NcHICosmoQSPline model");
     else
     {
       NcHICosmoQSplineContPrior *qspline_cp = 
-        nc_hicosmo_qspline_add_continuity_constraints (NC_HICOSMO_QSPLINE (model), fit, de_fit.qspline_cp_sigma);
+        nc_hicosmo_qspline_add_continuity_constraints (NC_HICOSMO_QSPLINE (cosmo), fit, de_fit.qspline_cp_sigma);
       nc_hicosmo_qspline_cont_prior_free (qspline_cp);
     }
   }
@@ -545,7 +608,7 @@ main (gint argc, gchar *argv[])
     FILE *f_bf;
     gchar *bfile = NULL;
 
-    f_bf = nc_de_open_dataout_file (model, "best_fit", &bfile);
+    f_bf = nc_de_open_dataout_file (cosmo, "best_fit", &bfile);
     ncm_mset_params_pretty_print (fit->mset, f_bf, full_cmd_line);
     fclose (f_bf);
 
@@ -564,7 +627,7 @@ main (gint argc, gchar *argv[])
       FILE *f_MF;
       gchar *mfile = NULL;
 
-      f_MF = nc_de_open_dataout_file (model, "MF", &mfile);
+      f_MF = nc_de_open_dataout_file (cosmo, "MF", &mfile);
       ncm_fit_fishermatrix_print (fit, f_MF, full_cmd_line);
       fclose (f_MF);
 
@@ -703,7 +766,7 @@ main (gint argc, gchar *argv[])
     NcmFitESMCMC *esmcmc = ncm_fit_esmcmc_new (fit, 
                                                de_fit.mc_nwalkers, 
                                                NCM_MSET_TRANS_KERN (init_sampler), 
-                                               NCM_FIT_ESMCMC_MOVE_TYPE_STRETCH, 
+                                               NULL,
                                                de_fit.msg_level);
 
     ncm_mset_trans_kern_set_mset (NCM_MSET_TRANS_KERN (init_sampler), mset);
@@ -721,7 +784,7 @@ main (gint argc, gchar *argv[])
     }
     else
     {
-      ncm_mset_trans_kern_gauss_set_cov_from_scale (init_sampler);
+      ncm_mset_trans_kern_gauss_set_cov_from_rescale (init_sampler, 0.01);
     }
 
     if (de_fit.mc_seed > -1)
@@ -745,7 +808,8 @@ main (gint argc, gchar *argv[])
     ncm_mset_catalog_clear (&mcat);
     mcat = ncm_fit_esmcmc_get_catalog (esmcmc);
 
-    ncm_fit_esmcmc_clear (&esmcmc);    
+    ncm_fit_esmcmc_clear (&esmcmc);
+    ncm_mset_trans_kern_free (NCM_MSET_TRANS_KERN (init_sampler));
   }
 
   if (de_fit.onedim_cr != NULL)
@@ -832,7 +896,7 @@ main (gint argc, gchar *argv[])
       FILE *f_PL;
       gchar *pfile = NULL;
 
-      f_PL = nc_de_open_dataout_file (model, "PL", &pfile);
+      f_PL = nc_de_open_dataout_file (cosmo, "PL", &pfile);
 
       fprintf (f_PL, "# %s\n", full_cmd_line);
       if (rg_1sigma != NULL)
@@ -901,7 +965,7 @@ main (gint argc, gchar *argv[])
       FILE *f_MFcr;
       gchar *mcrfile = NULL;
 
-      f_MFcr = nc_de_open_dataout_file (model, "MF_cr", &mcrfile);
+      f_MFcr = nc_de_open_dataout_file (cosmo, "MF_cr", &mcrfile);
 
       fprintf (f_MFcr, "# %s\n", full_cmd_line);
       if (rg_1sigma != NULL)
@@ -938,11 +1002,11 @@ main (gint argc, gchar *argv[])
     FILE *f_mf;
     gchar *mfile = NULL;
 
-    f_mf = nc_de_open_dataout_file (model, "MassFunction", &mfile);
+    f_mf = nc_de_open_dataout_file (cosmo, "MassFunction", &mfile);
     for (i = 0; i < ca_array->len; i++)
     {
       NcDataClusterNCount *dca_unbinned = g_ptr_array_index (ca_array, i);
-      nc_data_cluster_ncount_print (dca_unbinned, model, f_mf, full_cmd_line);
+      nc_data_cluster_ncount_print (dca_unbinned, cosmo, f_mf, full_cmd_line);
       fprintf (f_mf, "\n\n");
     }
     fclose (f_mf);
@@ -973,7 +1037,7 @@ main (gint argc, gchar *argv[])
   ncm_serialize_clear (&ser);
   ncm_mset_catalog_clear (&mcat);
   ncm_serialize_global_reset ();
-  ncm_model_free (NCM_MODEL (model));
+  ncm_model_free (NCM_MODEL (cosmo));
   ncm_mset_free (mset);
   ncm_fit_free (fit);
   ncm_likelihood_free (lh);

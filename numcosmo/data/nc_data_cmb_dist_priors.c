@@ -249,5 +249,6 @@ void
 nc_data_cmb_dist_priors_set_dist (NcDataCMBDistPriors *cmb_dist_priors, NcDistance *dist)
 {
   nc_distance_clear (&cmb_dist_priors->dist);
-  cmb_dist_priors->dist = nc_distance_ref (dist);
+  if (dist != NULL)  
+    cmb_dist_priors->dist = nc_distance_ref (dist);
 }

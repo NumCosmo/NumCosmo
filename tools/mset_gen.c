@@ -71,7 +71,7 @@ main (gint argc, gchar *argv[])
   else
   {
     NcmMSet *mset = ncm_mset_empty_new ();
-    NcmSerialize *ser = ncm_serialize_new (NCM_SERIALIZE_OPT_NONE);
+    NcmSerialize *ser = ncm_serialize_new (NCM_SERIALIZE_OPT_CLEAN_DUP);
     guint nmodels = g_strv_length (models);
     guint i;
     for (i = 0; i < nmodels; i++)

@@ -71,15 +71,15 @@ ncm_binsplit_alloc (gpointer userdata)
   mpz_set_ui (bs->B, 1);
 
   {
-    _NCM_STATIC_MUTEX_DECL (create_lock);
-    _NCM_MUTEX_LOCK (&create_lock);
+    G_LOCK_DEFINE_STATIC (create_lock);
+    G_LOCK (create_lock);
     if (!one_init)
     {
       mpz_init (NCM_BINSPLIT_ONE);
       mpz_set_ui (NCM_BINSPLIT_ONE, 1L);
       one_init = TRUE;
     }
-    _NCM_MUTEX_UNLOCK (&create_lock);
+    G_UNLOCK (create_lock);
   }
 
   return bs;

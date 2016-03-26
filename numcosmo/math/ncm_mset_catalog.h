@@ -52,21 +52,21 @@ typedef struct _NcmMSetCatalogClass NcmMSetCatalogClass;
 typedef struct _NcmMSetCatalog NcmMSetCatalog;
 
 /**
- * NcmMSetCatalogFlush:
- * @NCM_MSET_CATALOG_FLUSH_DISABLE: Catalog will flush only when closing the file.
- * @NCM_MSET_CATALOG_FLUSH_AUTO: Catalog will flush in every catalog addition.
- * @NCM_MSET_CATALOG_FLUSH_TIMED: Catalog will flush with a minimum time interval between flushs.
+ * NcmMSetCatalogSync:
+ * @NCM_MSET_CATALOG_SYNC_DISABLE: Catalog will be synchronized only when closing the file or with an explicit call of ncm_mset_catalog_sync().
+ * @NCM_MSET_CATALOG_SYNC_AUTO: Catalog will be synchronized in every catalog addition.
+ * @NCM_MSET_CATALOG_SYNC_TIMED: Catalog will be synchronized with a minimum time interval between syncs.
  * 
- * Catalog flush modes. 
+ * Catalog sync modes. 
  * 
  */
-typedef enum _NcmMSetCatalogFlush
+typedef enum _NcmMSetCatalogSync
 {
-  NCM_MSET_CATALOG_FLUSH_DISABLE,
-  NCM_MSET_CATALOG_FLUSH_AUTO,
-  NCM_MSET_CATALOG_FLUSH_TIMED, /*< private >*/
-  NCM_MSET_CATALOG_FLUSH_LEN,   /*< skip >*/
-} NcmMSetCatalogFlush;
+  NCM_MSET_CATALOG_SYNC_DISABLE,
+  NCM_MSET_CATALOG_SYNC_AUTO,
+  NCM_MSET_CATALOG_SYNC_TIMED, /*< private >*/
+  NCM_MSET_CATALOG_SYNC_LEN,   /*< skip >*/
+} NcmMSetCatalogSync;
 
 struct _NcmMSetCatalog
 {
@@ -76,7 +76,8 @@ struct _NcmMSetCatalog
   guint nadd_vals;
   GPtrArray *add_vals_names;
   NcmStatsVec *pstats;
-  NcmMSetCatalogFlush fmode;
+  NcmMSetCatalogSync smode;
+  gboolean readonly;
   NcmRNG *rng;
   gboolean weighted;
   gboolean first_flush;
@@ -92,8 +93,8 @@ struct _NcmMSetCatalog
   NcmVector *tau;
   gchar *rng_inis;
   gchar *rng_stat;
-  GTimer *flush_timer;
-  gdouble flush_interval;
+  GTimer *sync_timer;
+  gdouble sync_interval;
   gchar *file;
   gchar *mset_file;
   gchar *rtype_str;
@@ -123,18 +124,20 @@ GType ncm_mset_catalog_get_type (void) G_GNUC_CONST;
 
 NcmMSetCatalog *ncm_mset_catalog_new (NcmMSet *mset, guint nadd_vals, guint nchains, gboolean weighted, ...);
 NcmMSetCatalog *ncm_mset_catalog_new_from_file (const gchar *filename);
+NcmMSetCatalog *ncm_mset_catalog_new_from_file_ro (const gchar *filename);
 NcmMSetCatalog *ncm_mset_catalog_ref (NcmMSetCatalog *mcat);
 void ncm_mset_catalog_free (NcmMSetCatalog *mcat);
 void ncm_mset_catalog_clear (NcmMSetCatalog **mcat);
 
 void ncm_mset_catalog_set_add_val_name (NcmMSetCatalog *mcat, guint i, const gchar *name);
 void ncm_mset_catalog_set_file (NcmMSetCatalog *mcat, const gchar *filename);
-void ncm_mset_catalog_set_flush_mode (NcmMSetCatalog *mcat, NcmMSetCatalogFlush fmode);
-void ncm_mset_catalog_set_flush_interval (NcmMSetCatalog *mcat, gdouble interval);
+void ncm_mset_catalog_set_sync_mode (NcmMSetCatalog *mcat, NcmMSetCatalogSync smode);
+void ncm_mset_catalog_set_sync_interval (NcmMSetCatalog *mcat, gdouble interval);
 void ncm_mset_catalog_set_first_id (NcmMSetCatalog *mcat, gint first_id);
 void ncm_mset_catalog_set_run_type (NcmMSetCatalog *mcat, const gchar *rtype_str);
 void ncm_mset_catalog_set_rng (NcmMSetCatalog *mcat, NcmRNG *rng);
 void ncm_mset_catalog_sync (NcmMSetCatalog *mcat, gboolean check);
+void ncm_mset_catalog_timed_sync (NcmMSetCatalog *mcat, gboolean check);
 void ncm_mset_catalog_reset_stats (NcmMSetCatalog *mcat);
 void ncm_mset_catalog_reset (NcmMSetCatalog *mcat);
 void ncm_mset_catalog_erase_data (NcmMSetCatalog *mcat);

@@ -90,14 +90,10 @@ struct _NcmFitMC
   gint cur_sample_id;
   gint first_sample_id;
   gboolean started;
-  GMutex *dup_fit;
-  GMutex *resample_lock;
-  GCond *write_cond;
-#if !((GLIB_MAJOR_VERSION == 2) && (GLIB_MINOR_VERSION < 32))
-  GMutex dup_fit_m;
-  GMutex resample_lock_m;
-  GCond write_cond_m;
-#endif
+  GMutex dup_fit;
+  GMutex resample_lock;
+  GMutex update_lock;
+  GCond write_cond;
 };
 
 struct _NcmFitMCClass
@@ -131,7 +127,7 @@ void ncm_fit_mc_mean_covar (NcmFitMC *mc);
 
 NcmMSetCatalog *ncm_fit_mc_get_catalog (NcmFitMC *mc);
 
-#define NCM_FIT_MC_MIN_FLUSH_INTERVAL (10.0)
+#define NCM_FIT_MC_MIN_SYNC_INTERVAL (10.0)
 
 G_END_DECLS
 

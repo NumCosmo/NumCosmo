@@ -180,6 +180,26 @@ _nc_hireion_get_Xe (NcHIReion *reion, NcHICosmo *cosmo, const gdouble lambda, co
 }
 
 /**
+ * nc_hireion_new_from_name:
+ * @parent_type: FIXME
+ * @reion_name: FIXME
+ *
+ * FIXME
+ *
+ * Returns: FIXME
+ */
+NcHIReion *
+nc_hireion_new_from_name (GType parent_type, gchar *reion_name)
+{
+  GObject *obj = ncm_serialize_global_from_string (reion_name);
+  GType model_type = G_OBJECT_TYPE (obj);
+
+  if (!g_type_is_a (model_type, parent_type))
+    g_error ("nc_hireion_new_from_name: NcHIReion %s do not descend from %s.", reion_name, g_type_name (parent_type));
+  return NC_HIREION (obj);
+}
+
+/**
  * nc_hireion_ref:
  * @reion: a #NcHIReion
  * 

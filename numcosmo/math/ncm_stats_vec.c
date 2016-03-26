@@ -85,6 +85,9 @@
 #include <math.h>
 #include <gsl/gsl_math.h>
 
+#include "math/gsl_rstat.h"
+#include "math/rquantile.c"
+
 enum
 {
   PROP_0,
@@ -118,6 +121,9 @@ ncm_stats_vec_init (NcmStatsVec *svec)
   svec->saved_x  = NULL;
   svec->save_x   = FALSE;
 
+  svec->q_array  = g_ptr_array_new ();
+  g_ptr_array_set_free_func (svec->q_array, (GDestroyNotify) gsl_rstat_quantile_free);
+  
 #ifdef NUMCOSMO_HAVE_FFTW3
   svec->fft_size       = 0;
   svec->fft_plan_size  = 0;
@@ -137,12 +143,16 @@ _ncm_stats_vec_dispose (GObject *object)
   ncm_vector_clear (&svec->var);
   ncm_matrix_clear (&svec->cov);
   ncm_matrix_clear (&svec->real_cov);
+
   if (svec->saved_x != NULL)
   {
     g_ptr_array_unref (svec->saved_x);
     svec->saved_x = NULL;
     svec->save_x = FALSE;
   }
+
+  g_clear_pointer (&svec->q_array, g_ptr_array_unref);
+
   /* Chain up : end */
   G_OBJECT_CLASS (ncm_stats_vec_parent_class)->dispose (object);
 }
@@ -415,6 +425,20 @@ ncm_stats_vec_reset (NcmStatsVec *svec, gboolean rm_saved)
       g_assert_not_reached ();
       break;
   }
+
+  if (svec->q_array->len == svec->len)
+  {
+    guint i;
+    const gdouble p = ((gsl_rstat_quantile_workspace *)g_ptr_array_index (svec->q_array, 0))->p;
+
+    g_ptr_array_set_size (svec->q_array, 0);
+    
+    for (i = 0; i < svec->len; i++)
+    {
+      gsl_rstat_quantile_workspace *qws_i = gsl_rstat_quantile_alloc (p);
+      g_ptr_array_add (svec->q_array, qws_i);
+    }
+  }
 }
 
 static void
@@ -521,6 +545,18 @@ _ncm_stats_vec_update_from_vec_weight (NcmStatsVec *svec, const gdouble w, NcmVe
   svec->weight = curweight;
   svec->weight2 += w * w;
   svec->bias_wt = 1.0 / (svec->weight - svec->weight2 / svec->weight);
+
+  if (svec->q_array->len == svec->len)
+  {
+    guint i;
+
+    for (i = 0; i < svec->len; i++)
+    {
+      const gdouble x_i = ncm_vector_fast_get (x, i);
+      gsl_rstat_quantile_workspace *qws_i = g_ptr_array_index (svec->q_array, i);
+      gsl_rstat_quantile_add (x_i, qws_i);
+    }
+  }
 }
 
 /**
@@ -680,6 +716,113 @@ ncm_stats_vec_prepend_data (NcmStatsVec *svec, GPtrArray *data, gboolean dup)
       else
         g_ptr_array_index (svec->saved_x, i) = ncm_vector_ref (x);
     }
+  }
+}
+
+/**
+ * ncm_stats_vec_enable_quantile:
+ * @svec: a #NcmStatsVec
+ * @p: double $\in (0, 1)$
+ * 
+ * Enables quantile calculation, it will calculate the $p$
+ * quantile. Warning, it does not support weighted samples, the results
+ * will disconsider the weights.
+ * 
+ */
+void 
+ncm_stats_vec_enable_quantile (NcmStatsVec *svec, gdouble p)
+{
+  g_assert_cmpfloat (p, >, 0.0);
+  g_assert_cmpfloat (p, <, 1.0);
+
+  {
+    guint i;
+    g_ptr_array_set_size (svec->q_array, 0);
+    
+    for (i = 0; i < svec->len; i++)
+    {
+      gsl_rstat_quantile_workspace *qws_i = gsl_rstat_quantile_alloc (p);
+      g_ptr_array_add (svec->q_array, qws_i);
+    }
+  }
+
+  if (svec->nitens > 0)
+  {
+    if (!svec->save_x)
+    {
+      g_warning ("ncm_stats_vec_enable_quantile: Enabling quantile calculation in a non-empty NcmStatsVec,"
+                 " all previous data will be ignored in the quantile.");
+    }
+    else
+    {
+      guint i;
+      for (i = 0; i < svec->saved_x->len; i++)
+      {
+        NcmVector *x = g_ptr_array_index (svec->saved_x, i);
+        guint j;
+
+        for (j = 0; j < svec->len; j++)
+        {
+          const gdouble x_j = ncm_vector_fast_get (x, j);
+          gsl_rstat_quantile_workspace *qws_j = g_ptr_array_index (svec->q_array, j);
+          gsl_rstat_quantile_add (x_j, qws_j);
+        }
+      }
+    }
+  }
+}
+
+/**
+ * ncm_stats_vec_disable_quantile:
+ * @svec: a #NcmStatsVec
+ * 
+ * Disables quantile calculation.
+ * 
+ */
+void 
+ncm_stats_vec_disable_quantile (NcmStatsVec *svec)
+{
+  g_ptr_array_set_size (svec->q_array, 0);
+}
+
+/**
+ * ncm_stats_vec_get_quantile:
+ * @svec: a #NcmStatsVec
+ * @i: a variable index
+ * 
+ * Returns the current estimate of the quantile initialized
+ * through ncm_stats_vec_enable_quantile().
+ * 
+ * Returns: the current estimate of the quantile.
+ */
+gdouble
+ncm_stats_vec_get_quantile (NcmStatsVec *svec, guint i)
+{
+  g_assert_cmpuint (i, <, svec->q_array->len);
+  
+  return gsl_rstat_quantile_get (g_ptr_array_index (svec->q_array, i));
+}
+
+/**
+ * ncm_stats_vec_get_quantile_spread:
+ * @svec: a #NcmStatsVec
+ * @i: a variable index
+ * 
+ * Returns the current estimate of the quantile spread, from the
+ * probability $p$ initialized through ncm_stats_vec_enable_quantile(),
+ * i.e., it returns the difference between $(p + 1)/2$ quantile
+ * and the $p/2$. For example, if $p = 0.5$ then it returns the
+ * interquartile range.
+ * 
+ * Returns: the current estimate of the quantile spread.
+ */
+gdouble
+ncm_stats_vec_get_quantile_spread (NcmStatsVec *svec, guint i)
+{
+  g_assert_cmpuint (i, <, svec->q_array->len);
+  {
+    gsl_rstat_quantile_workspace *qws_i = g_ptr_array_index (svec->q_array, i);
+    return qws_i->q[3] - qws_i->q[1];
   }
 }
 

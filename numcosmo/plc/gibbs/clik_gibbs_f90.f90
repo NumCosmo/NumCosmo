@@ -3,7 +3,6 @@ MODULE GIBBS_EXTRA
 	IMPLICIT NONE
 
 	INTEGER,dimension(100):: CLIK_LMAX,CLIK_LMIN,clik_approx_chi2
-	real(8),dimension(2:1000) :: cltt
 	real(8),parameter:: PI    = 3.141592653589793238462643383279502884197
 
 END MODULE GIBBS_EXTRA
@@ -30,6 +29,7 @@ SUBROUTINE GIBBS_EXTRA_LKL(LKL,handle,CL)
 	REAL(8),INTENT(OUT)::LKL
 	INTEGER,intent(in)::handle
 	REAL(8),INTENT(IN),DIMENSION(0:CLIK_LMAX(handle)-CLIK_LMIN(handle))::CL
+	real(8),dimension(2:1000) :: cltt
 	INTEGER::i,cur
 
 	!TT
@@ -94,6 +94,7 @@ SUBROUTINE GIBBS_GAUSS_EXTRA_LKL(LKL,handle,CL)
 	REAL(8),INTENT(OUT)::LKL
 	INTEGER,intent(in)::handle
 	REAL(8),INTENT(IN),DIMENSION(0:CLIK_LMAX(handle)-CLIK_LMIN(handle))::CL
+	real(8),dimension(2:1000) :: cltt
 	INTEGER::i,cur
 
 	!TT

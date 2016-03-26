@@ -248,7 +248,7 @@ AC_DEFINE_UNQUOTED(PACKAGE_SOURCE_DIR, "${packagesrcdir}",[PACKAGE_SOURCE_DIR])
 dnl ***************************************************************************
 dnl Dependencies
 dnl ***************************************************************************
-GLIB_REQUIRED_VERSION=2.24.0
+GLIB_REQUIRED_VERSION=2.32.0
 GSL_REQUIRED_VERSION=1.13
 GSL_GLF_REQUIRED_VERSION=1.15
 GSL_ODEIV2_REQUIRED_VERSION=1.15

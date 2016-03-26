@@ -115,6 +115,8 @@ ncm_sources = \
 	math/ncm_fit_mcbs.c                \
 	math/ncm_fit_mcmc.c                \
 	math/ncm_fit_esmcmc.c              \
+	math/ncm_fit_esmcmc_walker.c       \
+	math/ncm_fit_esmcmc_walker_stretch.c \
 	math/ncm_lh_ratio1d.c              \
 	math/ncm_lh_ratio2d.c              \
 	math/ncm_abc.c                     \
@@ -202,6 +204,8 @@ ncm_headers = \
 	math/ncm_fit_mcbs.h              \
 	math/ncm_fit_mcmc.h              \
 	math/ncm_fit_esmcmc.h            \
+	math/ncm_fit_esmcmc_walker.h     \
+	math/ncm_fit_esmcmc_walker_stretch.h \
 	math/ncm_lh_ratio1d.h            \
 	math/ncm_lh_ratio2d.h            \
 	math/ncm_abc.h                   \
@@ -567,7 +571,9 @@ EXTRA_DIST = \
 	nc_enum_types.h.template        \
 	nc_enum_types.c.template        \
 	ncm_gir_scan.h                  \
-	ncm_fit_nlopt_enum_meta.c
+	ncm_fit_nlopt_enum_meta.c       \
+	math/rquantile.c                \
+	math/gsl_rstat.h
 
 CLEANFILES = $(BUILT_SOURCES)
 

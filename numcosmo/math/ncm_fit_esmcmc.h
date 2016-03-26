@@ -32,6 +32,7 @@
 #include <numcosmo/math/ncm_fit.h>
 #include <numcosmo/math/ncm_mset_catalog.h>
 #include <numcosmo/math/ncm_mset_trans_kern.h>
+#include <numcosmo/math/ncm_fit_esmcmc_walker.h>
 #include <numcosmo/math/ncm_timer.h>
 #include <numcosmo/math/memory_pool.h>
 #include <gsl/gsl_histogram.h>
@@ -51,52 +52,34 @@ G_BEGIN_DECLS
 typedef struct _NcmFitESMCMCClass NcmFitESMCMCClass;
 typedef struct _NcmFitESMCMC NcmFitESMCMC;
 
-/**
- * NcmFitESMCMCMoveType:
- * @NCM_FIT_ESMCMC_MOVE_TYPE_STRETCH: Stretch move.
- * 
- * Ensemble Sampler Move Type. 
- * 
- */
-typedef enum _NcmFitESMCMCMoveType
-{
-  NCM_FIT_ESMCMC_MOVE_TYPE_STRETCH,  /*< private >*/
-  NCM_FIT_ESMCMC_MOVE_TYPE_LEN,      /*< skip >*/
-} NcmFitESMCMCMoveType;
-
 struct _NcmFitESMCMC
 {
   /*< private >*/
   GObject parent_instance;
   NcmFit *fit;
-  GPtrArray *walker_fits;
+  NcmMemoryPool *walker_pool;
   NcmMSetTransKern *sampler;
   NcmMSetCatalog *mcat;
   NcmFitRunMsgs mtype;
   NcmTimer *nt;
   NcmSerialize *ser;
-  NcmFitESMCMCMoveType mt;
-  GPtrArray *theta_k;
-  GPtrArray *theta_j;
+  NcmFitESMCMCWalker *walker;
+  GPtrArray *theta;
   GPtrArray *thetastar;
-  gdouble a;
+  NcmVector *jumps;
+  GArray *accepted;
   guint fparam_len;
   guint nthreads;
   guint n;
   gint nwalkers;
-  gint write_index;
   gint cur_sample_id;
   guint ntotal;
   guint naccepted;
   gboolean started;
-  GMutex *dup_fit;
-  GMutex *resample_lock;
-  GCond *write_cond;
-#if !((GLIB_MAJOR_VERSION == 2) && (GLIB_MINOR_VERSION < 32))
-  GMutex dup_fit_m;
-  GMutex resample_lock_m;
-  GCond write_cond_m;
-#endif
+  GMutex dup_fit;
+  GMutex resample_lock;
+  GMutex update_lock;
+  GCond write_cond;
 };
 
 struct _NcmFitESMCMCClass
@@ -107,7 +90,7 @@ struct _NcmFitESMCMCClass
 
 GType ncm_fit_esmcmc_get_type (void) G_GNUC_CONST;
 
-NcmFitESMCMC *ncm_fit_esmcmc_new (NcmFit *fit, gint nwalkers, NcmMSetTransKern *sampler, NcmFitESMCMCMoveType mt, NcmFitRunMsgs mtype);
+NcmFitESMCMC *ncm_fit_esmcmc_new (NcmFit *fit, gint nwalkers, NcmMSetTransKern *sampler, NcmFitESMCMCWalker *walker, NcmFitRunMsgs mtype);
 void ncm_fit_esmcmc_free (NcmFitESMCMC *esmcmc);
 void ncm_fit_esmcmc_clear (NcmFitESMCMC **esmcmc);
 
@@ -115,8 +98,6 @@ void ncm_fit_esmcmc_set_data_file (NcmFitESMCMC *esmcmc, const gchar *filename);
 
 void ncm_fit_esmcmc_set_sampler (NcmFitESMCMC *esmcmc, NcmMSetTransKern *sampler);
 void ncm_fit_esmcmc_set_mtype (NcmFitESMCMC *esmcmc, NcmFitRunMsgs mtype);
-void ncm_fit_esmcmc_set_move_type (NcmFitESMCMC *esmcmc, NcmFitESMCMCMoveType mt);
-void ncm_fit_esmcmc_set_move_scale (NcmFitESMCMC *esmcmc, gdouble a);
 void ncm_fit_esmcmc_set_nthreads (NcmFitESMCMC *esmcmc, guint nthreads);
 void ncm_fit_esmcmc_set_rng (NcmFitESMCMC *esmcmc, NcmRNG *rng);
 
@@ -131,7 +112,9 @@ void ncm_fit_esmcmc_mean_covar (NcmFitESMCMC *esmcmc);
 
 NcmMSetCatalog *ncm_fit_esmcmc_get_catalog (NcmFitESMCMC *esmcmc);
 
-#define NCM_FIT_ESMCMC_MIN_FLUSH_INTERVAL (10.0)
+gboolean ncm_fit_esmcmc_validate (NcmFitESMCMC *esmcmc, gulong pi, gulong pf);
+
+#define NCM_FIT_ESMCMC_MIN_SYNC_INTERVAL (10.0)
 #define NCM_FIT_ESMCMC_NADD_VALS (1)
 #define NCM_FIT_ESMCMC_M2LNL_ID (0)
 

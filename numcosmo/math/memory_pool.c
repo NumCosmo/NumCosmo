@@ -54,15 +54,8 @@ NcmMemoryPool *
 ncm_memory_pool_new (NcmMemoryPoolAlloc mp_alloc, gpointer userdata, GDestroyNotify mp_free)
 {
   NcmMemoryPool *mp = g_slice_new (NcmMemoryPool);
-#if (GLIB_MAJOR_VERSION == 2) && (GLIB_MINOR_VERSION < 32)
-  mp->update = g_mutex_new ();
-  mp->finish = g_cond_new ();
-#else
-  g_mutex_init (&mp->update_m);
-  g_cond_init (&mp->finish_c);
-  mp->update = &mp->update_m;
-  mp->finish = &mp->finish_c;
-#endif
+  g_mutex_init (&mp->update);
+  g_cond_init (&mp->finish);
   mp->slices_in_use = 0;
   mp->slices        = g_ptr_array_new ();
   mp->alloc         = mp_alloc;
@@ -86,9 +79,9 @@ ncm_memory_pool_free (NcmMemoryPool *mp, gboolean free_slices)
 {
   guint i;
 
-  g_mutex_lock (mp->update);
+  g_mutex_lock (&mp->update);
   while (mp->slices_in_use != 0)
-    g_cond_wait (mp->finish, mp->update);
+    g_cond_wait (&mp->finish, &mp->update);
   
   for (i = 0; i < mp->slices->len; i++)
   {
@@ -100,15 +93,10 @@ ncm_memory_pool_free (NcmMemoryPool *mp, gboolean free_slices)
   g_ptr_array_free (mp->slices, TRUE);
   mp->slices = NULL;
 
-  g_mutex_unlock (mp->update);
+  g_mutex_unlock (&mp->update);
 
-#if (GLIB_MAJOR_VERSION == 2) && (GLIB_MINOR_VERSION < 32)
-  g_mutex_free (mp->update);
-  g_cond_free (mp->finish);
-#else
-  g_mutex_clear (mp->update);
-  g_cond_clear (mp->finish);
-#endif
+  g_mutex_clear (&mp->update);
+  g_cond_clear (&mp->finish);
 
   g_slice_free (NcmMemoryPool, mp);
 }
@@ -125,7 +113,7 @@ ncm_memory_pool_free (NcmMemoryPool *mp, gboolean free_slices)
 void
 ncm_memory_pool_set_min_size (NcmMemoryPool *mp, gsize n)
 {
-  g_mutex_lock (mp->update);
+  g_mutex_lock (&mp->update);
   while (mp->slices->len < n)
   {
     NcmMemoryPoolSlice *slice = g_slice_new (NcmMemoryPoolSlice);
@@ -134,7 +122,7 @@ ncm_memory_pool_set_min_size (NcmMemoryPool *mp, gsize n)
     slice->mp     = mp;
     g_ptr_array_add (mp->slices, slice);
   }
-  g_mutex_unlock (mp->update);
+  g_mutex_unlock (&mp->update);
 }
 
 /**
@@ -149,7 +137,7 @@ ncm_memory_pool_set_min_size (NcmMemoryPool *mp, gsize n)
 void
 ncm_memory_pool_add (NcmMemoryPool *mp, gpointer p)
 {
-  g_mutex_lock (mp->update);
+  g_mutex_lock (&mp->update);
   {
     NcmMemoryPoolSlice *slice = g_slice_new (NcmMemoryPoolSlice);
     slice->in_use = FALSE;
@@ -157,7 +145,7 @@ ncm_memory_pool_add (NcmMemoryPool *mp, gpointer p)
     slice->mp     = mp;
     g_ptr_array_add (mp->slices, slice);
   }
-  g_mutex_unlock (mp->update);
+  g_mutex_unlock (&mp->update);
 }
 
 /**
@@ -177,7 +165,7 @@ ncm_memory_pool_get (NcmMemoryPool *mp)
   guint i;
   NcmMemoryPoolSlice *slice = NULL;
 
-  g_mutex_lock (mp->update);
+  g_mutex_lock (&mp->update);
   for (i = 0; i < mp->slices->len; i++)
   {
     NcmMemoryPoolSlice *lslice = (NcmMemoryPoolSlice *)g_ptr_array_index (mp->slices, i);
@@ -197,7 +185,7 @@ ncm_memory_pool_get (NcmMemoryPool *mp)
     g_ptr_array_add (mp->slices, slice);
   }
   mp->slices_in_use++;
-  g_mutex_unlock (mp->update);
+  g_mutex_unlock (&mp->update);
 
   return slice;
 }
@@ -213,12 +201,12 @@ ncm_memory_pool_return (gpointer p)
 {
   NcmMemoryPoolSlice *slice = (NcmMemoryPoolSlice *)p;
 
-  g_mutex_lock (slice->mp->update);
+  g_mutex_lock (&slice->mp->update);
   slice->in_use = FALSE;
   slice->mp->slices_in_use--;
 
   if (slice->mp->slices_in_use == 0)
-    g_cond_signal (slice->mp->finish);
+    g_cond_signal (&slice->mp->finish);
 
-  g_mutex_unlock (slice->mp->update);
+  g_mutex_unlock (&slice->mp->update);
 }

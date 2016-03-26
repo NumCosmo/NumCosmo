@@ -50,11 +50,7 @@ G_DEFINE_TYPE (NcmModelCtrl, ncm_model_ctrl, G_TYPE_OBJECT);
 static void
 ncm_model_ctrl_init (NcmModelCtrl *ctrl)
 {
-#ifdef NCM_MODEL_CTRL_USE_WEAKREF
   g_weak_ref_init (&ctrl->model_wr, NULL);
-#else
-  ctrl->model = NULL;
-#endif
   ctrl->pkey = 0;
 
   ctrl->submodel_ctrl = g_ptr_array_new ();
@@ -68,12 +64,7 @@ ncm_model_ctrl_dispose (GObject *object)
 {
   NcmModelCtrl *ctrl = NCM_MODEL_CTRL (object);
 
-#ifdef NCM_MODEL_CTRL_USE_WEAKREF
   g_weak_ref_clear (&ctrl->model_wr);
-#else
-  g_object_remove_weak_pointer (model, &ctrl->model);
-  ctrl->model = NULL;
-#endif
 
   g_clear_pointer (&ctrl->submodel_ctrl, g_ptr_array_unref);
   g_clear_pointer (&ctrl->submodel_last_update, g_array_unref);
@@ -117,11 +108,7 @@ ncm_model_get_property (GObject *object, guint prop_id, GValue *value, GParamSpe
   switch (prop_id)
   {
     case PROP_MODEL:
-#ifdef NCM_MODEL_CTRL_USE_WEAKREF
       g_value_take_object (value, g_weak_ref_get (&ctrl->model_wr));
-#else      
-      g_value_set_object (value, ctrl->model);
-#endif
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -239,12 +226,7 @@ ncm_model_ctrl_set_model (NcmModelCtrl *ctrl, NcmModel *model)
 
   if (model != ctrl_model)
   {
-#ifdef NCM_MODEL_CTRL_USE_WEAKREF
     g_weak_ref_set (&ctrl->model_wr, model);
-#else
-    ctrl->model = model;
-    g_object_add_weak_pointer (model, &ctrl->model);
-#endif
     ctrl->pkey  = model->pkey;
     up          = TRUE;
   }
@@ -308,11 +290,7 @@ ncm_model_ctrl_has_model (NcmModelCtrl *ctrl, NcmModel *model)
 void
 ncm_model_ctrl_force_update (NcmModelCtrl *ctrl)
 {
-#ifdef NCM_MODEL_CTRL_USE_WEAKREF
   g_weak_ref_set (&ctrl->model_wr, NULL);
-#else
-  ctrl->model = NULL;
-#endif
   g_ptr_array_set_size (ctrl->submodel_ctrl, 0);
   g_array_set_size (ctrl->submodel_last_update, 0);
   return;

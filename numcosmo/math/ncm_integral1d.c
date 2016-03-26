@@ -40,6 +40,8 @@
 #include "build_cfg.h"
 
 #include "math/ncm_integral1d.h"
+#include "math/ncm_c.h"
+#include <gsl/gsl_cdf.h>
 
 G_DEFINE_TYPE (NcmIntegral1d, ncm_integral1d, G_TYPE_OBJECT);
 
@@ -62,6 +64,8 @@ ncm_integral1d_init (NcmIntegral1d *int1d)
   int1d->rule      = 0;
   int1d->reltol    = 0.0;
   int1d->abstol    = 0.0;
+  int1d->ws        = NULL;
+  int1d->cquad_ws  = NULL;
 }
 
 static void
@@ -128,6 +132,7 @@ ncm_integral1d_finalize (GObject *object)
   NcmIntegral1d *int1d = NCM_INTEGRAL1D (object);
 
   g_clear_pointer (&int1d->ws, gsl_integration_workspace_free);
+  g_clear_pointer (&int1d->cquad_ws, gsl_integration_cquad_workspace_free);
   
   /* Chain up : end */
   G_OBJECT_CLASS (ncm_integral1d_parent_class)->finalize (object);
@@ -376,7 +381,7 @@ ncm_integral1d_get_abstol (NcmIntegral1d *int1d)
  * @int1d: a #NcmIntegral1d
  * @xi: inferior integration limit $x_i$
  * @xf: superior integration limit $x_f$
- * @userdata: pointer to be passed to the integrand function
+ * @userdata: (allow-none): pointer to be passed to the integrand function
  * @err: (out): the error in the integration
  * 
  * Evaluated the integral $I_F(x_i, x_f) = \int_{x_i}^{x_f}F(x)\mathrm{d}x$.
@@ -400,3 +405,278 @@ ncm_integral1d_eval (NcmIntegral1d *int1d, gdouble xi, gdouble xf, gpointer user
   return result;
 }
 
+typedef struct _NcIntegral1dHermite
+{
+  gdouble mu;
+  gdouble r;
+  NcmIntegral1dF F;
+  gpointer userdata;
+} NcIntegral1dHermite;
+
+static gdouble 
+_ncm_integral1d_eval_gauss_hermite_p (gdouble alpha, gpointer userdata)
+{
+  NcIntegral1dHermite *int1d_H = (NcIntegral1dHermite *) userdata;
+  const gdouble x = gsl_cdf_ugaussian_Qinv (alpha);
+
+  return int1d_H->F (x, int1d_H->userdata);
+}
+
+static gdouble 
+_ncm_integral1d_eval_gauss_hermite_r_p (gdouble alpha, gpointer userdata)
+{
+  NcIntegral1dHermite *int1d_H = (NcIntegral1dHermite *) userdata;
+  const gdouble x = gsl_cdf_ugaussian_Qinv (alpha);
+
+  return int1d_H->F (x / int1d_H->r, int1d_H->userdata);
+}
+
+static gdouble 
+_ncm_integral1d_eval_gauss_hermite (gdouble alpha, gpointer userdata)
+{
+  NcIntegral1dHermite *int1d_H = (NcIntegral1dHermite *) userdata;
+  const gdouble x = gsl_cdf_ugaussian_Qinv (alpha);
+
+  return (int1d_H->F (x, int1d_H->userdata) + int1d_H->F (-x, int1d_H->userdata));
+}
+
+static gdouble 
+_ncm_integral1d_eval_gauss_hermite_mur (gdouble alpha, gpointer userdata)
+{
+  NcIntegral1dHermite *int1d_H = (NcIntegral1dHermite *) userdata;
+  const gdouble x = gsl_cdf_ugaussian_Qinv (alpha);
+  const gdouble y = x / int1d_H->r;
+
+  return (int1d_H->F (int1d_H->mu + y, int1d_H->userdata) + int1d_H->F (int1d_H->mu - y, int1d_H->userdata));
+}
+
+/**
+ * ncm_integral1d_eval_gauss_hermite_p:
+ * @int1d: a #NcmIntegral1d
+ * @userdata: (allow-none): pointer to be passed to the integrand function
+ * @err: (out): the error in the integration
+ * 
+ * Evaluated the integral $H^p_F = \int_{0}^{\infty}e^{-x^2/2}F(x)\mathrm{d}x$.
+ * 
+ * Returns: the value of the integral $H^p_F$.
+ */
+gdouble 
+ncm_integral1d_eval_gauss_hermite_p (NcmIntegral1d *int1d, gpointer userdata, gdouble *err)
+{
+  gsl_function F;
+  gdouble result = 0.0;
+  gint ret;
+  NcIntegral1dHermite int1d_H;
+
+  int1d_H.F        = int1d->F;
+  int1d_H.userdata = userdata;
+
+  F.function = &_ncm_integral1d_eval_gauss_hermite_p;
+  F.params   = &int1d_H;
+  
+  ret = gsl_integration_qag (&F, 0.0, 0.5, int1d->abstol, int1d->reltol, int1d->partition, int1d->rule, int1d->ws, &result, err);
+  if (ret != GSL_SUCCESS)
+    g_error ("ncm_integral1d_eval_gauss_hermite_p: %s.", gsl_strerror (ret));
+
+  result = ncm_c_sqrt_2pi () * result;
+  
+  return result;
+}
+
+/**
+ * ncm_integral1d_eval_gauss_hermite:
+ * @int1d: a #NcmIntegral1d
+ * @userdata: (allow-none): pointer to be passed to the integrand function
+ * @err: (out): the error in the integration
+ * 
+ * Evaluated the integral $H_F = \int_{-\infty}^{\infty}e^{-x^2/2}F(x)\mathrm{d}x$.
+ * 
+ * Returns: the value of the integral $H_F$.
+ */
+gdouble 
+ncm_integral1d_eval_gauss_hermite (NcmIntegral1d *int1d, gpointer userdata, gdouble *err)
+{
+  gsl_function F;
+  gdouble result = 0.0;
+  gint ret;
+  NcIntegral1dHermite int1d_H;
+
+  int1d_H.F        = int1d->F;
+  int1d_H.userdata = userdata;
+
+  F.function = &_ncm_integral1d_eval_gauss_hermite;
+  F.params   = &int1d_H;
+  
+  ret = gsl_integration_qag (&F, 0.0, 0.5, int1d->abstol, int1d->reltol, int1d->partition, int1d->rule, int1d->ws, &result, err);
+  if (ret != GSL_SUCCESS)
+    g_error ("ncm_integral1d_eval_gauss_hermite: %s.", gsl_strerror (ret));
+
+  result = ncm_c_sqrt_2pi () * result;
+  
+  return result;
+}
+
+/**
+ * ncm_integral1d_eval_gauss_hermite_r_p:
+ * @int1d: a #NcmIntegral1d
+ * @r: Gaussian scale $r$
+ * @userdata: (allow-none): pointer to be passed to the integrand function
+ * @err: (out): the error in the integration
+ * 
+ * Evaluated the integral $H^p_F = \int_{0}^{\infty}e^{-x^2r^2/2}F(x)\mathrm{d}x$.
+ * 
+ * Returns: the value of the integral $H^p_F$.
+ */
+gdouble 
+ncm_integral1d_eval_gauss_hermite_r_p (NcmIntegral1d *int1d, gdouble r, gpointer userdata, gdouble *err)
+{
+  gsl_function F;
+  gdouble result = 0.0;
+  gint ret;
+  NcIntegral1dHermite int1d_H;
+
+  g_assert_cmpfloat (r, >, 0.0);
+  
+  int1d_H.F        = int1d->F;
+  int1d_H.userdata = userdata;
+  int1d_H.r        = r;
+
+  F.function = &_ncm_integral1d_eval_gauss_hermite_r_p;
+  F.params   = &int1d_H;
+  
+  ret = gsl_integration_qag (&F, 0.0, 0.5, int1d->abstol, int1d->reltol, int1d->partition, int1d->rule, int1d->ws, &result, err);
+  if (ret != GSL_SUCCESS)
+    g_error ("ncm_integral1d_eval_gauss_hermite_r_p: %s.", gsl_strerror (ret));
+
+  result = ncm_c_sqrt_2pi () * result / r;
+  err[0] = ncm_c_sqrt_2pi () * err[0] / r;
+  
+  return result;
+}
+
+/**
+ * ncm_integral1d_eval_gauss_hermite_mur:
+ * @int1d: a #NcmIntegral1d
+ * @r: Gaussian scale $r$
+ * @mu: Gaussian mean $\mu$
+ * @userdata: (allow-none): pointer to be passed to the integrand function
+ * @err: (out): the error in the integration
+ * 
+ * Evaluated the integral $H_F = \int_{-\infty}^{\infty}e^{-(x-\mu)^2r^2/2}F(x)\mathrm{d}x$.
+ * 
+ * Returns: the value of the integral $H_F$.
+ */
+gdouble 
+ncm_integral1d_eval_gauss_hermite_mur (NcmIntegral1d *int1d, gdouble r, gdouble mu, gpointer userdata, gdouble *err)
+{
+  gsl_function F;
+  gdouble result = 0.0;
+  gint ret;
+  NcIntegral1dHermite int1d_H;
+
+  g_assert_cmpfloat (r, >, 0.0);
+
+  int1d_H.F        = int1d->F;
+  int1d_H.userdata = userdata;
+  int1d_H.r        = r;
+  int1d_H.mu       = mu;
+
+  F.function = &_ncm_integral1d_eval_gauss_hermite_mur;
+  F.params   = &int1d_H;
+  
+  ret = gsl_integration_qag (&F, 0.0, 0.5, int1d->abstol, int1d->reltol, int1d->partition, int1d->rule, int1d->ws, &result, err);
+  if (ret != GSL_SUCCESS)
+    g_error ("ncm_integral1d_eval: %s.", gsl_strerror (ret));
+
+  result = ncm_c_sqrt_2pi () * result / r;
+  err[0] = ncm_c_sqrt_2pi () * err[0] / r;
+  
+  return result;
+}
+
+static gdouble 
+_ncm_integral1d_eval_gauss_laguerre (gdouble alpha, gpointer userdata)
+{
+  NcIntegral1dHermite *int1d_H = (NcIntegral1dHermite *) userdata;
+  const gdouble x = - log (alpha);
+
+  return int1d_H->F (x, int1d_H->userdata);
+}
+
+static gdouble 
+_ncm_integral1d_eval_gauss_laguerre_r (gdouble alpha, gpointer userdata)
+{
+  NcIntegral1dHermite *int1d_H = (NcIntegral1dHermite *) userdata;
+  const gdouble x = - log (alpha);
+
+  return int1d_H->F (x / int1d_H->r, int1d_H->userdata);
+}
+
+/**
+ * ncm_integral1d_eval_gauss_laguerre:
+ * @int1d: a #NcmIntegral1d
+ * @userdata: (allow-none): pointer to be passed to the integrand function
+ * @err: (out): the error in the integration
+ * 
+ * Evaluated the integral $L_F = \int_{0}^{\infty}e^{-x}F(x)\mathrm{d}x$.
+ * 
+ * Returns: the value of the integral $L_F$.
+ */
+gdouble 
+ncm_integral1d_eval_gauss_laguerre (NcmIntegral1d *int1d, gpointer userdata, gdouble *err)
+{
+  gsl_function F;
+  gdouble result = 0.0;
+  gint ret;
+  NcIntegral1dHermite int1d_H;
+
+  int1d_H.F        = int1d->F;
+  int1d_H.userdata = userdata;
+
+  F.function = &_ncm_integral1d_eval_gauss_laguerre;
+  F.params   = &int1d_H;
+  
+  ret = gsl_integration_qag (&F, 0.0, 1.0, int1d->abstol, int1d->reltol, int1d->partition, int1d->rule, int1d->ws, &result, err);
+  if (ret != GSL_SUCCESS)
+    g_error ("ncm_integral1d_eval_gauss_laguerre: %s.", gsl_strerror (ret));
+  
+  return result;
+}
+
+/**
+ * ncm_integral1d_eval_gauss_laguerre_r:
+ * @int1d: a #NcmIntegral1d
+ * @r: exponential scale $r$
+ * @userdata: (allow-none): pointer to be passed to the integrand function
+ * @err: (out): the error in the integration
+ * 
+ * Evaluated the integral $L_F = \int_{0}^{\infty}e^{-xr}F(x)\mathrm{d}x$.
+ * 
+ * Returns: the value of the integral $L_F$.
+ */
+gdouble 
+ncm_integral1d_eval_gauss_laguerre_r (NcmIntegral1d *int1d, gdouble r, gpointer userdata, gdouble *err)
+{
+  gsl_function F;
+  gdouble result = 0.0;
+  gint ret;
+  NcIntegral1dHermite int1d_H;
+
+  g_assert_cmpfloat (r, >, 0.0);
+
+  int1d_H.F        = int1d->F;
+  int1d_H.userdata = userdata;
+  int1d_H.r        = r;
+
+  F.function = &_ncm_integral1d_eval_gauss_laguerre_r;
+  F.params   = &int1d_H;
+  
+  ret = gsl_integration_qag (&F, 0.0, 1.0, int1d->abstol, int1d->reltol, int1d->partition, int1d->rule, int1d->ws, &result, err);
+  if (ret != GSL_SUCCESS)
+    g_error ("ncm_integral1d_eval_gauss_laguerre_r: %s.", gsl_strerror (ret));
+
+  result = result / r;
+  err[0] = err[0] / r;
+  
+  return result;
+}
