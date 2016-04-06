@@ -68,6 +68,7 @@ struct _NcmFitESMCMC
   GPtrArray *thetastar;
   NcmVector *jumps;
   GArray *accepted;
+  GArray *offboard;
   guint fparam_len;
   guint nthreads;
   guint n;
@@ -75,6 +76,7 @@ struct _NcmFitESMCMC
   gint cur_sample_id;
   guint ntotal;
   guint naccepted;
+  guint noffboard;
   gboolean started;
   GMutex dup_fit;
   GMutex resample_lock;
@@ -102,6 +104,7 @@ void ncm_fit_esmcmc_set_nthreads (NcmFitESMCMC *esmcmc, guint nthreads);
 void ncm_fit_esmcmc_set_rng (NcmFitESMCMC *esmcmc, NcmRNG *rng);
 
 gdouble ncm_fit_esmcmc_get_accept_ratio (NcmFitESMCMC *esmcmc);
+gdouble ncm_fit_esmcmc_get_offboard_ratio (NcmFitESMCMC *esmcmc);
 
 void ncm_fit_esmcmc_start_run (NcmFitESMCMC *esmcmc);
 void ncm_fit_esmcmc_end_run (NcmFitESMCMC *esmcmc);

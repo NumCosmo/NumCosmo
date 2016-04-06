@@ -30,6 +30,7 @@
 #include <glib-object.h>
 #include <numcosmo/build_cfg.h>
 #include <numcosmo/math/ncm_model_ctrl.h>
+#include <numcosmo/math/ncm_spline2d.h>
 #include <numcosmo/nc_hicosmo.h>
 #include <numcosmo/nc_hireion.h>
 #include <numcosmo/nc_hiprim.h>
@@ -108,6 +109,7 @@ void nc_cbe_set_thermodyn (NcCBE *cbe, gboolean use_thermodyn);
 void nc_cbe_set_scalar_lmax (NcCBE *cbe, guint scalar_lmax);
 void nc_cbe_set_vector_lmax (NcCBE *cbe, guint vector_lmax);
 void nc_cbe_set_tensor_lmax (NcCBE *cbe, guint tensor_lmax);
+void nc_cbe_set_max_matter_pk_z (NcCBE *cbe, gdouble zmax);
 
 NcCBEPrecision *nc_cbe_peek_precision (NcCBE *cbe);
 NcDataCMBDataType nc_cbe_get_target_Cls (NcCBE *cbe);
@@ -125,6 +127,7 @@ void nc_cbe_prepare (NcCBE *cbe, NcHICosmo *cosmo);
 void nc_cbe_prepare_if_needed (NcCBE *cbe, NcHICosmo *cosmo);
 
 NcmSpline *nc_cbe_thermodyn_get_Xe (NcCBE *cbe);
+NcmSpline2d *nc_cbe_thermodyn_get_matter_ps (NcCBE *cbe);
 
 void nc_cbe_get_all_Cls (NcCBE *cbe, NcmVector *TT_Cls, NcmVector *EE_Cls, NcmVector *BB_Cls, NcmVector *TE_Cls);
 

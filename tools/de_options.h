@@ -156,6 +156,9 @@ struct _NcDEFitEntries
   gboolean mcbs;
   gboolean mcmc;
   gboolean esmcmc;
+  gboolean esmcmc_walk;
+  gboolean esmcmc_sbox;
+  gboolean esmcmc_ms;
   gboolean fisher;
   gboolean qspline_cp;
   gdouble qspline_cp_sigma;
@@ -165,9 +168,9 @@ struct _NcDEFitEntries
 };
 
 #ifdef NUMCOSMO_HAVE_NLOPT
-#define NC_DE_FIT_ENTRIES { NULL, "nlopt",   "numdiff-forward", NULL, 1e-8, 1e-5, -1, -1, {NULL, NULL}, NULL, 1.0e-5, NCM_FIT_DEFAULT_MAXITER, FALSE, NCM_FIT_RUN_MSGS_SIMPLE, NCM_FIT_MC_RESAMPLE_FROM_MODEL, 0, 0, -1, 100, 0, 100, 1.0e3, NULL, NULL, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, 1.0, FALSE, FALSE, NULL}
+#define NC_DE_FIT_ENTRIES { NULL, "nlopt",   "numdiff-forward", NULL, 1e-8, 1e-5, -1, -1, {NULL, NULL}, NULL, 1.0e-5, NCM_FIT_DEFAULT_MAXITER, FALSE, NCM_FIT_RUN_MSGS_SIMPLE, NCM_FIT_MC_RESAMPLE_FROM_MODEL, 0, 0, -1, 100, 0, 100, 1.0e3, NULL, NULL, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, 1.0, FALSE, FALSE, NULL}
 #else
-#define NC_DE_FIT_ENTRIES { NULL, "gsl-mms", "numdiff-forward", NULL, 1e-8, 1e-5, -1, -1, {NULL, NULL}, NULL, 1.0e-5, NCM_FIT_DEFAULT_MAXITER, FALSE, NCM_FIT_RUN_MSGS_SIMPLE, NCM_FIT_MC_RESAMPLE_FROM_MODEL, 0, 0, -1, 100, 0, 100, 1.0e3, NULL, NULL, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, 1.0, FALSE, FALSE, NULL}
+#define NC_DE_FIT_ENTRIES { NULL, "gsl-mms", "numdiff-forward", NULL, 1e-8, 1e-5, -1, -1, {NULL, NULL}, NULL, 1.0e-5, NCM_FIT_DEFAULT_MAXITER, FALSE, NCM_FIT_RUN_MSGS_SIMPLE, NCM_FIT_MC_RESAMPLE_FROM_MODEL, 0, 0, -1, 100, 0, 100, 1.0e3, NULL, NULL, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, 1.0, FALSE, FALSE, NULL}
 #endif
 
 GOptionGroup *nc_de_opt_get_run_group (NcDERunEntries *de_run);

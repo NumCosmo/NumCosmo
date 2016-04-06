@@ -763,11 +763,35 @@ main (gint argc, gchar *argv[])
   if (de_fit.esmcmc)
   {
     NcmMSetTransKernGauss *init_sampler = ncm_mset_trans_kern_gauss_new (0);
-    NcmFitESMCMC *esmcmc = ncm_fit_esmcmc_new (fit, 
-                                               de_fit.mc_nwalkers, 
-                                               NCM_MSET_TRANS_KERN (init_sampler), 
-                                               NULL,
-                                               de_fit.msg_level);
+    NcmFitESMCMC *esmcmc;
+
+    if (de_fit.esmcmc_walk)
+    {
+      NcmFitESMCMCWalkerWalk *walk = ncm_fit_esmcmc_walker_walk_new (de_fit.mc_nwalkers);
+      esmcmc = ncm_fit_esmcmc_new (fit, 
+                                   de_fit.mc_nwalkers, 
+                                   NCM_MSET_TRANS_KERN (init_sampler), 
+                                   NCM_FIT_ESMCMC_WALKER (walk),
+                                   de_fit.msg_level);
+      ncm_fit_esmcmc_walker_free (NCM_FIT_ESMCMC_WALKER (walk));
+    }
+    else
+    {
+      NcmFitESMCMCWalkerStretch *stretch = ncm_fit_esmcmc_walker_stretch_new (de_fit.mc_nwalkers, ncm_mset_fparams_len (mset));
+      esmcmc = ncm_fit_esmcmc_new (fit, 
+                                   de_fit.mc_nwalkers, 
+                                   NCM_MSET_TRANS_KERN (init_sampler), 
+                                   NCM_FIT_ESMCMC_WALKER (stretch),
+                                   de_fit.msg_level);
+
+      if (de_fit.esmcmc_sbox)
+      {
+        ncm_fit_esmcmc_walker_stretch_set_box_mset (stretch, mset);
+      }
+      ncm_fit_esmcmc_walker_stretch_multi (stretch, de_fit.esmcmc_ms);
+
+      ncm_fit_esmcmc_walker_free (NCM_FIT_ESMCMC_WALKER (stretch));
+    }
 
     ncm_mset_trans_kern_set_mset (NCM_MSET_TRANS_KERN (init_sampler), mset);
     ncm_mset_trans_kern_set_prior_from_mset (NCM_MSET_TRANS_KERN (init_sampler));

@@ -41,17 +41,46 @@
 
 G_DEFINE_TYPE (NcTransferFuncEH, nc_transfer_func_eh, NC_TYPE_TRANSFER_FUNC);
 
-/**
- * nc_transfer_func_eh_new:
- *
- * FIXME
- *
- * Returns: A new #NcTransferFunc.
- */
-NcTransferFunc *
-nc_transfer_func_eh_new ()
+static void
+nc_transfer_func_eh_init (NcTransferFuncEH *tf_eh)
 {
-  return g_object_new (NC_TYPE_TRANSFER_FUNC_EH, NULL);
+  tf_eh->h        = 0.0;
+  tf_eh->s        = 0.0;
+  tf_eh->keq_1341 = 0.0;
+  tf_eh->ksilk    = 0.0;
+  tf_eh->b_node3  = 0.0;
+  tf_eh->ab       = 0.0;
+  tf_eh->bc       = 0.0;
+  tf_eh->bb       = 0.0;
+  tf_eh->bb3      = 0.0;
+  tf_eh->ac_142   = 0.0;
+  tf_eh->wb_wm    = 0.0;
+  tf_eh->wc_wm    = 0.0;
+}
+
+static void
+nc_transfer_func_eh_finalize (GObject *object)
+{
+  
+  /* Chain up : end */
+  G_OBJECT_CLASS (nc_transfer_func_eh_parent_class)->finalize (object);
+}
+
+static void _nc_transfer_func_eh_prepare (NcTransferFunc *tf, NcHICosmo *cosmo);
+static gdouble _nc_transfer_func_eh_calc (NcTransferFunc *tf, gdouble kh);
+static gdouble _nc_transfer_func_eh_calc_matter_P (NcTransferFunc *tf, NcHICosmo *cosmo, gdouble kh);
+
+static void
+nc_transfer_func_eh_class_init (NcTransferFuncEHClass *klass)
+{
+  GObjectClass* object_class = G_OBJECT_CLASS (klass);
+  NcTransferFuncClass* parent_class = NC_TRANSFER_FUNC_CLASS (klass);
+
+  parent_class->prepare       = &_nc_transfer_func_eh_prepare;
+  parent_class->calc          = &_nc_transfer_func_eh_calc;
+  parent_class->calc_matter_P = &_nc_transfer_func_eh_calc_matter_P;
+
+  object_class->finalize = nc_transfer_func_eh_finalize;
 }
 
 static void
@@ -59,7 +88,7 @@ _nc_transfer_func_eh_prepare (NcTransferFunc *tf, NcHICosmo *cosmo)
 {
   NcTransferFuncEH *tf_EH = NC_TRANSFER_FUNC_EH (tf);
   const gdouble T_0 = nc_hicosmo_T_gamma0 (cosmo);
-  const gdouble c1 = sqrt(6);
+  const gdouble c1 = sqrt (6.0);
   const gdouble c2 = T_0 / 2.7;    /* \theta = 2.725/2.7 where 2.725 is the CMB temperature */
   const gdouble h = nc_hicosmo_h (cosmo);
   const gdouble h2 = h * h;
@@ -160,42 +189,15 @@ _nc_transfer_func_eh_calc_matter_P (NcTransferFunc *tf, NcHICosmo *cosmo, gdoubl
   return T * T * nc_hicosmo_powspec (cosmo, kh);
 }
 
-static void
-nc_transfer_func_eh_init (NcTransferFuncEH *tf_eh)
+/**
+ * nc_transfer_func_eh_new:
+ *
+ * FIXME
+ *
+ * Returns: A new #NcTransferFunc.
+ */
+NcTransferFunc *
+nc_transfer_func_eh_new ()
 {
-  /* TODO: Add initialization code here */
-  tf_eh->h = 0.0;
-  tf_eh->s = 0.0;
-  tf_eh->keq_1341 = 0.0;
-  tf_eh->ksilk = 0.0;
-  tf_eh->b_node3 = 0.0;
-  tf_eh->ab = 0.0;
-  tf_eh->bc = 0.0;
-  tf_eh->bb = 0.0;
-  tf_eh->bb3 = 0.0;
-  tf_eh->ac_142 = 0.0;
-  tf_eh->wb_wm = 0.0;
-  tf_eh->wc_wm = 0.0;
+  return g_object_new (NC_TYPE_TRANSFER_FUNC_EH, NULL);
 }
-
-static void
-nc_transfer_func_eh_finalize (GObject *object)
-{
-  /* TODO: Add deinitalization code here */
-
-  G_OBJECT_CLASS (nc_transfer_func_eh_parent_class)->finalize (object);
-}
-
-static void
-nc_transfer_func_eh_class_init (NcTransferFuncEHClass *klass)
-{
-  GObjectClass* object_class = G_OBJECT_CLASS (klass);
-  NcTransferFuncClass* parent_class = NC_TRANSFER_FUNC_CLASS (klass);
-
-  parent_class->prepare       = &_nc_transfer_func_eh_prepare;
-  parent_class->calc          = &_nc_transfer_func_eh_calc;
-  parent_class->calc_matter_P = &_nc_transfer_func_eh_calc_matter_P;
-
-  object_class->finalize = nc_transfer_func_eh_finalize;
-}
-

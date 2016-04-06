@@ -57,6 +57,7 @@ struct _NcPowspecMLTransfer
   NcPowspecML parent_instance;
   NcTransferFunc *tf;
   NcGrowthFunc *gf;
+  gdouble Pm_k2Pzeta;
 };
 
 GType nc_powspec_ml_transfer_get_type (void) G_GNUC_CONST;

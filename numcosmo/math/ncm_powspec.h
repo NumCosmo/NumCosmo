@@ -82,7 +82,6 @@ G_END_DECLS
 
 #endif /* _NCM_POWSPEC_H_ */
 
-
 #ifndef _NCM_POWSPEC_INLINE_H_
 #define _NCM_POWSPEC_INLINE_H_
 #ifdef NUMCOSMO_HAVE_INLINE

@@ -82,6 +82,7 @@ ncm_fit_esmcmc_init (NcmFitESMCMC *esmcmc)
 
   esmcmc->jumps           = NULL;
   esmcmc->accepted        = g_array_new (TRUE, TRUE, sizeof (gboolean));
+  esmcmc->offboard        = g_array_new (TRUE, TRUE, sizeof (gboolean));
   
   esmcmc->nthreads        = 0;
   esmcmc->n               = 0;
@@ -89,6 +90,7 @@ ncm_fit_esmcmc_init (NcmFitESMCMC *esmcmc)
   esmcmc->cur_sample_id   = -1; /* Represents that no samples were calculated yet. */
   esmcmc->ntotal          = 0;
   esmcmc->naccepted       = 0;
+  esmcmc->noffboard       = 0;
   esmcmc->started         = FALSE;
 
   g_mutex_init (&esmcmc->dup_fit);
@@ -112,7 +114,7 @@ _ncm_fit_esmcmc_constructed (GObject *object)
     theta_len = esmcmc->fparam_len + NCM_FIT_ESMCMC_NADD_VALS;
 
     esmcmc->mcat = ncm_mset_catalog_new (esmcmc->fit->mset, 1, esmcmc->nwalkers, FALSE, NCM_MSET_CATALOG_M2LNL_COLNAME);
-    ncm_mset_catalog_set_run_type (esmcmc->mcat, "Ensemble Sampler MCMC -- Stretch Move");
+    ncm_mset_catalog_set_run_type (esmcmc->mcat, "Ensemble Sampler MCMC");
 
     for (k = 0; k < esmcmc->nwalkers; k++)
     {
@@ -125,11 +127,13 @@ _ncm_fit_esmcmc_constructed (GObject *object)
 
     esmcmc->jumps = ncm_vector_new (esmcmc->nwalkers);
     g_array_set_size (esmcmc->accepted, esmcmc->nwalkers);
-
+    g_array_set_size (esmcmc->offboard, esmcmc->nwalkers);
+    
     if (esmcmc->walker == NULL)
       esmcmc->walker = ncm_fit_esmcmc_walker_new_from_name ("NcmFitESMCMCWalkerStretch");
 
     ncm_fit_esmcmc_walker_set_size (esmcmc->walker, esmcmc->nwalkers);
+    ncm_fit_esmcmc_walker_set_nparams (esmcmc->walker, esmcmc->fparam_len);
   }
 }
 
@@ -224,6 +228,7 @@ ncm_fit_esmcmc_dispose (GObject *object)
   g_clear_pointer (&esmcmc->thetastar, g_ptr_array_unref);
 
   g_clear_pointer (&esmcmc->accepted, g_array_unref);
+  g_clear_pointer (&esmcmc->offboard, g_array_unref);
 
   if (esmcmc->walker_pool != NULL)
   {
@@ -489,6 +494,22 @@ ncm_fit_esmcmc_get_accept_ratio (NcmFitESMCMC *esmcmc)
   return accept_ratio;
 }
 
+/**
+ * ncm_fit_esmcmc_get_offboard_ratio:
+ * @esmcmc: a #NcmFitESMCMC
+ *
+ * FIXME
+ * 
+ * Returns: FIXME
+ */
+gdouble 
+ncm_fit_esmcmc_get_offboard_ratio (NcmFitESMCMC *esmcmc)
+{
+  gdouble offboard_ratio;
+  offboard_ratio = esmcmc->noffboard * 1.0 / (esmcmc->ntotal * 1.0);
+  return offboard_ratio;
+}
+
 void
 _ncm_fit_esmcmc_update (NcmFitESMCMC *esmcmc, guint ki, guint kf)
 {
@@ -514,6 +535,12 @@ _ncm_fit_esmcmc_update (NcmFitESMCMC *esmcmc, guint ki, guint kf)
       esmcmc->naccepted++;
       g_array_index (esmcmc->accepted, gboolean, k) = FALSE;
     }
+    if (g_array_index (esmcmc->offboard, gboolean, k))
+    {
+      esmcmc->noffboard++;
+      g_array_index (esmcmc->offboard, gboolean, k) = FALSE;
+    }
+    
   }
 
   switch (esmcmc->mtype)
@@ -531,7 +558,9 @@ _ncm_fit_esmcmc_update (NcmFitESMCMC *esmcmc, guint ki, guint kf)
         /* guint acc = stepi == 0 ? step : stepi; */
         ncm_mset_catalog_log_current_stats (esmcmc->mcat);
         ncm_mset_catalog_log_current_chain_stats (esmcmc->mcat);
-        g_message ("# NcmFitESMCMC:acceptance ratio %7.4f%%.\n", ncm_fit_esmcmc_get_accept_ratio (esmcmc) * 100.0);
+        g_message ("# NcmFitESMCMC:acceptance ratio %7.4f%%, offboard ratio %7.4f%%.\n", 
+                   ncm_fit_esmcmc_get_accept_ratio (esmcmc) * 100.0,
+                   ncm_fit_esmcmc_get_offboard_ratio (esmcmc) * 100.0);
         /* ncm_timer_task_accumulate (esmcmc->nt, acc); */
         ncm_timer_task_log_elapsed (esmcmc->nt);
         ncm_timer_task_log_mean_time (esmcmc->nt);
@@ -558,7 +587,9 @@ _ncm_fit_esmcmc_update (NcmFitESMCMC *esmcmc, guint ki, guint kf)
         ncm_fit_log_end (esmcmc->fit);
         ncm_mset_catalog_log_current_stats (esmcmc->mcat);
         ncm_mset_catalog_log_current_chain_stats (esmcmc->mcat);
-        g_message ("# NcmFitESMCMC:acceptance ratio %7.4f%%.\n", ncm_fit_esmcmc_get_accept_ratio (esmcmc) * 100.0);
+        g_message ("# NcmFitESMCMC:acceptance ratio %7.4f%%, offboard ratio %7.4f%%.\n", 
+                   ncm_fit_esmcmc_get_accept_ratio (esmcmc) * 100.0,
+                   ncm_fit_esmcmc_get_offboard_ratio (esmcmc) * 100.0);
         /* ncm_timer_task_increment (esmcmc->nt); */
         ncm_timer_task_log_elapsed (esmcmc->nt);
         ncm_timer_task_log_mean_time (esmcmc->nt);
@@ -679,6 +710,7 @@ ncm_fit_esmcmc_start_run (NcmFitESMCMC *esmcmc)
   g_mutex_lock (&esmcmc->update_lock);
   esmcmc->ntotal    = 0;
   esmcmc->naccepted = 0;
+  esmcmc->noffboard = 0;
   g_mutex_unlock (&esmcmc->update_lock);
 
   if (esmcmc->mcat->first_id > 0)
@@ -717,6 +749,7 @@ ncm_fit_esmcmc_start_run (NcmFitESMCMC *esmcmc)
     g_mutex_lock (&esmcmc->update_lock);
     esmcmc->ntotal    = 0;
     esmcmc->naccepted = 0;
+    esmcmc->noffboard = 0;
     g_mutex_unlock (&esmcmc->update_lock);
   }
   else
@@ -781,6 +814,7 @@ ncm_fit_esmcmc_reset (NcmFitESMCMC *esmcmc)
   esmcmc->cur_sample_id   = -1;
   esmcmc->ntotal          = 0;
   esmcmc->naccepted       = 0;
+  esmcmc->noffboard       = 0;
   esmcmc->started         = FALSE;  
   ncm_mset_catalog_reset (esmcmc->mcat);
 }
@@ -901,6 +935,10 @@ _ncm_fit_esmcmc_mt_eval (glong i, glong f, gpointer data)
         prob = ncm_fit_esmcmc_walker_prob (esmcmc->walker, esmcmc->theta, thetastar, k, m2lnL_cur[0], m2lnL_star[0]);
         prob = GSL_MIN (prob, 1.0);
       }
+    }
+    else
+    {
+      g_array_index (esmcmc->offboard, gboolean, k) = TRUE;
     }
     
     if (jump < prob)

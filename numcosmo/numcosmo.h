@@ -38,6 +38,7 @@
 #include <numcosmo/nc_hicosmo_priors.h>
 #include <numcosmo/nc_powspec_ml.h>
 #include <numcosmo/nc_powspec_ml_transfer.h>
+#include <numcosmo/nc_powspec_ml_cbe.h>
 #include <numcosmo/nc_snia_dist_cov.h>
 #include <numcosmo/nc_planck_fi.h>
 #include <numcosmo/nc_planck_fi_cor_tt.h>

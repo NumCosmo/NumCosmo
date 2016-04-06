@@ -19,6 +19,10 @@ while len (sys.argv) > 2:
   padding_cols  = int (sys.argv.pop (0))
   burning_in    = int (sys.argv.pop (0))
   (prefix, ext) = os.path.splitext (fitsfile)
+  pindex = []
+  if (len (sys.argv) > 0):
+    pindex = map (int, sys.argv)
+    sys.argv = []
 
   print ("# Opening: %s." % fitsfile)
   hdulist = fits.open (fitsfile)
@@ -28,8 +32,10 @@ while len (sys.argv) > 2:
   col_symbols = []
   col_data = []
   print ("# Number of columns %d padding columns %d burning in %d." % (ncols, padding_cols, burning_in))
+  if (len (pindex) == 0):
+    pindex = range (ncols)
 
-  for i in range (ncols):
+  for i in pindex:
     col = hdulist[1].data.field (i)
     col = col[burning_in:]
     col_data.append (col)
@@ -66,7 +72,7 @@ while len (sys.argv) > 2:
   col_data = col_data[~np.all (np.abs (col_data) < 1e-6, axis=1)]
   print col_data.shape
   
-  files.append ({'fitsfile' : fitsfile, 'pad' : padding_cols, 'prefix' : prefix, 'ncols' : ncols, 'cols' : col_data, 'col_names' : col_names, 'col_symbols' : col_symbols})
+  files.append ({'fitsfile' : fitsfile, 'pad' : padding_cols, 'prefix' : prefix, 'ncols' : len (pindex), 'cols' : col_data, 'col_names' : col_names, 'col_symbols' : col_symbols})
   hdulist.close()
   del hdulist
   del fitsfile
@@ -93,9 +99,11 @@ for file in files:
   #print len (cols)
   #print len (col_symbols)
   #print len (params_range)
+  #print file['cols'].shape
+  #print params_range
   
-  #fig = corner.corner (file['cols'], labels = col_symbols, range = params_range, show_titles=True)
-  fig = plotCorner (cols, bins = 50, labels = col_symbols, label_size = 20, range = params_range)
+  fig = corner.corner (cols, labels = col_symbols, range = params_range, show_titles=True)
+  #fig = plotCorner (cols, bins = 50, labels = col_symbols, label_size = 20, range = params_range)
 
   figfile = "%s_corner.pdf" % (file['prefix'])
   print ("#  Saving figure: %s." % figfile)

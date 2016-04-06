@@ -110,6 +110,7 @@
 #include <numcosmo/math/ncm_fit_esmcmc.h>
 #include <numcosmo/math/ncm_fit_esmcmc_walker.h>
 #include <numcosmo/math/ncm_fit_esmcmc_walker_stretch.h>
+#include <numcosmo/math/ncm_fit_esmcmc_walker_walk.h>
 #include <numcosmo/math/ncm_lh_ratio1d.h>
 #include <numcosmo/math/ncm_lh_ratio2d.h>
 #include <numcosmo/math/ncm_abc.h>

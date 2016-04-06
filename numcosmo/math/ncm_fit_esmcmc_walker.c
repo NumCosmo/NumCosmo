@@ -43,7 +43,9 @@
 enum
 {
   PROP_0,
-  PROP_SIZE
+  PROP_SIZE,
+  PROP_NPARAMS,
+  
 };
 
 
@@ -73,6 +75,9 @@ ncm_fit_esmcmc_walker_set_property (GObject *object, guint prop_id, const GValue
     case PROP_SIZE:
       ncm_fit_esmcmc_walker_set_size (walker, g_value_get_uint (value));
       break;
+    case PROP_NPARAMS:
+      ncm_fit_esmcmc_walker_set_nparams (walker, g_value_get_uint (value));
+      break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
       break;
@@ -89,6 +94,9 @@ ncm_fit_esmcmc_walker_get_property (GObject *object, guint prop_id, GValue *valu
   {
     case PROP_SIZE:
       g_value_set_uint (value, ncm_fit_esmcmc_walker_get_size (walker));
+      break;
+    case PROP_NPARAMS:
+      g_value_set_uint (value, ncm_fit_esmcmc_walker_get_nparams (walker));
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -112,7 +120,14 @@ ncm_fit_esmcmc_walker_class_init (NcmFitESMCMCWalkerClass *klass)
                                                       NULL,
                                                       "Number of walkers",
                                                       1, G_MAXUINT, 100,
-                                                      G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+                                                      G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  g_object_class_install_property (object_class,
+                                   PROP_NPARAMS,
+                                   g_param_spec_uint ("nparams",
+                                                      NULL,
+                                                      "Number of parameters",
+                                                      1, G_MAXUINT, 1,
+                                                      G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   klass->setup = NULL;
   klass->step  = NULL;
@@ -203,6 +218,33 @@ guint
 ncm_fit_esmcmc_walker_get_size (NcmFitESMCMCWalker *walker)
 {
   return NCM_FIT_ESMCMC_WALKER_GET_CLASS (walker)->get_size (walker);
+}
+
+/**
+ * ncm_fit_esmcmc_walker_set_nparams: (virtual set_nparams)
+ * @walker: a #NcmMSetCatalog
+ * @nparams: number of parameters
+ * 
+ * Sets the number parameters of the walker.
+ *
+ */
+void
+ncm_fit_esmcmc_walker_set_nparams (NcmFitESMCMCWalker *walker, guint nparams)
+{
+  NCM_FIT_ESMCMC_WALKER_GET_CLASS (walker)->set_nparams (walker, nparams);
+}
+
+/**
+ * ncm_fit_esmcmc_walker_get_nparams: (virtual get_nparams)
+ * @walker: a #NcmMSetCatalog
+ *
+ * Returns: the nparams of the @walker.
+ *
+ */
+guint 
+ncm_fit_esmcmc_walker_get_nparams (NcmFitESMCMCWalker *walker)
+{
+  return NCM_FIT_ESMCMC_WALKER_GET_CLASS (walker)->get_nparams (walker);
 }
 
 /**

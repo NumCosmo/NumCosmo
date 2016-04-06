@@ -56,6 +56,7 @@
 #include "nc_cbe.h"
 #include "nc_enum_types.h"
 #include "math/ncm_spline_cubic_notaknot.h"
+#include "math/ncm_spline2d_bicubic.h"
 
 enum
 {
@@ -675,8 +676,11 @@ nc_cbe_set_target_Cls (NcCBE *cbe, NcDataCMBDataType target_Cls)
 void 
 nc_cbe_set_calc_transfer (NcCBE *cbe, gboolean calc_transfer)
 {
-  cbe->calc_transfer = calc_transfer;
-  _nc_cbe_update_callbacks (cbe);
+  if ((calc_transfer && !cbe->calc_transfer) || (!calc_transfer && cbe->calc_transfer))
+  {
+    cbe->calc_transfer = calc_transfer;
+    _nc_cbe_update_callbacks (cbe);
+  }
 }
 
 /**
@@ -774,6 +778,24 @@ nc_cbe_set_tensor_lmax (NcCBE *cbe, guint tensor_lmax)
   if (cbe->tensor_lmax != tensor_lmax)
   {
     cbe->tensor_lmax = tensor_lmax;
+    ncm_model_ctrl_force_update (cbe->ctrl_cosmo);
+  }
+}
+
+/**
+ * nc_cbe_set_max_matter_pk_z:
+ * @cbe: a #NcCBE
+ * @zmax: maximum redshift for $P_k$ evaluation
+ *
+ * Sets $z_\mathrm{max}$ the matter power spectrum.
+ *
+ */
+void 
+nc_cbe_set_max_matter_pk_z (NcCBE *cbe, gdouble zmax)
+{
+  if (cbe->priv->psp.z_max_pk != zmax)
+  {
+    cbe->priv->psp.z_max_pk = zmax;
     ncm_model_ctrl_force_update (cbe->ctrl_cosmo);
   }
 }
@@ -1234,7 +1256,7 @@ _nc_cbe_set_transfer (NcCBE *cbe, NcHICosmo *cosmo)
 static void
 _nc_cbe_set_spectra (NcCBE *cbe, NcHICosmo *cosmo)
 {
-  cbe->priv->psp.z_max_pk = 0.0;
+  /*cbe->priv->psp.z_max_pk = 0.0;*/
   cbe->priv->psp.non_diag = 0;
 
   cbe->priv->psp.spectra_verbose = cbe->spectra_verbose;
@@ -1540,11 +1562,8 @@ _nc_cbe_update_callbacks (NcCBE *cbe)
   
   if (has_Cls && cbe->use_lensed_Cls)
     cbe->call = _nc_cbe_call_lensing;
-  else if (has_Cls)
+  else if (has_Cls || cbe->calc_transfer)
     cbe->call = _nc_cbe_call_spectra;
-  else if (cbe->calc_transfer)
-    cbe->call = _nc_cbe_call_transfer;
-
 }
 
 /**
@@ -1694,6 +1713,55 @@ nc_cbe_thermodyn_get_Xe (NcCBE *cbe)
   ncm_spline_prepare (Xe_s);
 
   return Xe_s;
+}
+
+/**
+ * nc_cbe_thermodyn_get_matter_ps:
+ * @cbe: a #NcCBE
+ * 
+ * Gets the $\ln$ matter power spectrum as a function of the redshift $z$ and mode $\ln (k)$.
+ * 
+ * Returns: (transfer full): a #NcmSpline2d for the matter power spectrum.
+ */
+NcmSpline2d *
+nc_cbe_thermodyn_get_matter_ps (NcCBE *cbe)
+{
+  NcmVector *lnk_v = ncm_vector_new (cbe->priv->psp.ln_k_size);
+  NcmVector *z_v   = ncm_vector_new (cbe->priv->psp.ln_tau_size);
+  NcmMatrix *lnPk  = ncm_matrix_new (cbe->priv->psp.ln_tau_size, cbe->priv->psp.ln_k_size);
+  guint i;
+
+  for (i = 0; i < cbe->priv->psp.ln_k_size; i++)
+  {
+    ncm_vector_set (lnk_v, i, cbe->priv->psp.ln_k[i]);
+    /*printf ("lnk[%u] % 20.15g k % 20.15g\n", i, cbe->priv->psp.ln_k[i], exp (cbe->priv->psp.ln_k[i]));*/
+  }
+  
+  for (i = 0; i < cbe->priv->psp.ln_tau_size; i++)
+  {
+    const gdouble z_i = cbe->priv->psp.z_max_pk / (cbe->priv->psp.ln_tau_size - 1.0) * i;
+    ncm_vector_set (z_v, i, z_i);
+    spectra_pk_at_z (&cbe->priv->pba, &cbe->priv->psp, logarithmic, z_i, ncm_matrix_ptr (lnPk, i, 0), NULL);
+
+/*    printf ("z % 20.15g\n", z_i);
+    guint j;
+    for (j = 0; j < cbe->priv->psp.ln_k_size; j++)
+    {
+      printf ("lnPk[%u] % 20.15g % 20.15g\n", j, ncm_matrix_get (lnPk, i, j), exp (ncm_matrix_get (lnPk, i, j)));
+    }
+*/
+  }
+
+  {
+    NcmSpline2d *lnPk_s = ncm_spline2d_bicubic_notaknot_new ();
+    ncm_spline2d_set (lnPk_s, lnk_v, z_v, lnPk, TRUE);
+
+    ncm_vector_free (z_v);
+    ncm_vector_free (lnk_v);
+    ncm_matrix_free (lnPk);
+
+    return lnPk_s;
+  }
 }
 
 /**

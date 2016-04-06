@@ -4,6 +4,7 @@ import gi
 gi.require_version('NumCosmo', '1.0')
 gi.require_version('NumCosmoMath', '1.0')
 
+import numpy
 from math import *
 from gi.repository import GObject
 import matplotlib.pyplot as plt
@@ -102,7 +103,7 @@ dDa = []
 gf.prepare (cosmo)
 
 for i in range (0, np):
-  z = 2.0 * divfac * i
+  z = 1000.0 * divfac * i
   D = gf.eval (cosmo, z)
   dD = gf.eval_deriv (cosmo, z)
   za.append (z)
@@ -116,9 +117,10 @@ for i in range (0, np):
 
 plt.title ("Growth Function")
 plt.plot (za, Da, 'r', label="D")
-plt.plot (za, dDa, 'b--', label="dD/dz")
+plt.plot (za, numpy.abs (dDa), 'b--', label="dD/dz")
 plt.xlabel('$z$')
 plt.legend(loc=2)
+plt.yscale ('log')
 
 plt.savefig ("growth_func.png")
 plt.clf ()

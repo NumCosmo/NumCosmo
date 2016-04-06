@@ -30,6 +30,8 @@
 #include <glib-object.h>
 #include <numcosmo/build_cfg.h>
 #include <numcosmo/math/ncm_fit_esmcmc_walker.h>
+#include <numcosmo/math/ncm_matrix.h>
+#include <numcosmo/math/ncm_mset.h>
 
 G_BEGIN_DECLS
 
@@ -55,17 +57,29 @@ struct _NcmFitESMCMCWalkerStretch
   NcmFitESMCMCWalker parent_instance;
   guint size;
   guint size_2;
+  guint nparams;
   gdouble a;
-  NcmVector *z;
+  NcmMatrix *z;
+  NcmMatrix *box;
+  NcmVector *norm_box;
+  GArray *use_box;
   GArray *indices;
+  GArray *numbers;
+  gboolean multi;
+  gchar *desc;
 };
 
 GType ncm_fit_esmcmc_walker_stretch_get_type (void) G_GNUC_CONST;
 
-NcmFitESMCMCWalkerStretch *ncm_fit_esmcmc_walker_stretch_new (guint nwalkers);
+NcmFitESMCMCWalkerStretch *ncm_fit_esmcmc_walker_stretch_new (guint nwalkers, guint nparams);
 
 void ncm_fit_esmcmc_walker_stretch_set_scale (NcmFitESMCMCWalkerStretch *stretch, const gdouble a);
 gdouble ncm_fit_esmcmc_walker_stretch_get_scale (NcmFitESMCMCWalkerStretch *stretch);
+
+void ncm_fit_esmcmc_walker_stretch_set_box (NcmFitESMCMCWalkerStretch *stretch, guint n, const gdouble lb, const gdouble ub);
+void ncm_fit_esmcmc_walker_stretch_set_box_mset (NcmFitESMCMCWalkerStretch *stretch, NcmMSet *mset);
+
+void ncm_fit_esmcmc_walker_stretch_multi (NcmFitESMCMCWalkerStretch *stretch, gboolean multi);
 
 G_END_DECLS
 
