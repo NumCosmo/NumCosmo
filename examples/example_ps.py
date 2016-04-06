@@ -24,7 +24,7 @@ Ncm.cfg_init ()
 cosmo = Nc.HICosmo.new_from_name (Nc.HICosmo, "NcHICosmoDEXcdm")
 cosmo.omega_x2omega_k ()
 cosmo.param_set_by_name ("Omegak", 0.0)
-cosmo.param_set_by_name ("Omegac", 0.2)
+#cosmo.param_set_by_name ("Omegac", 0.2)
 
 reion = Nc.HIReionCamb.new ()
 prim  = Nc.HIPrimPowerLaw.new ()
