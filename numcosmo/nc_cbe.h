@@ -109,7 +109,11 @@ void nc_cbe_set_thermodyn (NcCBE *cbe, gboolean use_thermodyn);
 void nc_cbe_set_scalar_lmax (NcCBE *cbe, guint scalar_lmax);
 void nc_cbe_set_vector_lmax (NcCBE *cbe, guint vector_lmax);
 void nc_cbe_set_tensor_lmax (NcCBE *cbe, guint tensor_lmax);
+
 void nc_cbe_set_max_matter_pk_z (NcCBE *cbe, gdouble zmax);
+void nc_cbe_set_max_matter_pk_k (NcCBE *cbe, gdouble kmax);
+gdouble nc_cbe_get_max_matter_pk_z (NcCBE *cbe);
+gdouble nc_cbe_get_max_matter_pk_k (NcCBE *cbe);
 
 NcCBEPrecision *nc_cbe_peek_precision (NcCBE *cbe);
 NcDataCMBDataType nc_cbe_get_target_Cls (NcCBE *cbe);
