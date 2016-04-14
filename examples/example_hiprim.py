@@ -69,13 +69,16 @@ cosmo.param_set_by_name ("Omegak", 0.0)
 #
 #  New homogeneous and isotropic reionization object
 #
+
 reion = Nc.HIReionCamb.new ()
+cosmo.add_submodel (reion)
 #reion.z_to_tau (cosmo)
 
 #
 # Preparing the Class backend object
 #
-Bcbe.prepare (prim, reion, cosmo)
+#Bcbe.prepare (prim, reion, cosmo)
+Bcbe.prepare (cosmo)
 
 Cls1 = Ncm.Vector.new (lmax + 1)
 Cls2 = Ncm.Vector.new (lmax + 1)
@@ -83,7 +86,7 @@ Cls2 = Ncm.Vector.new (lmax + 1)
 Bcbe.get_TT_Cls (Cls1)
 
 prim.props.a = 0
-Bcbe.prepare (prim, reion, cosmo)
+Bcbe.prepare (cosmo)
 Bcbe.get_TT_Cls (Cls2)
 
 Cls1_a = Cls1.dup_array ()

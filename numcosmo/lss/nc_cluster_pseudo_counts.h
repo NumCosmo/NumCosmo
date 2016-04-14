@@ -51,8 +51,8 @@ typedef struct _NcClusterPseudoCounts NcClusterPseudoCounts;
 
 /**
  * NcClusterPseudoCountsParams:
- * @NC_CLUSTER_PSEUDO_COUNTS_LNMCUT: lower mass cut-off
- * @NC_CLUSTER_PSEUDO_COUNTS_SD_MCUT: standard deviation of the mass cut-off
+ * @NC_CLUSTER_PSEUDO_COUNTS_LNTX_STAR_CUT: lower X-ray temperature (times proportional constant, power 3/2) cut-off
+ * @NC_CLUSTER_PSEUDO_COUNTS_SD_MCUT: standard deviation of mass cut-off
  * @NC_CLUSTER_PSEUDO_COUNTS_ZMIN: minimum redshift
  * @NC_CLUSTER_PSEUDO_COUNTS_DELTAZ: redshift interval size
  * 
@@ -60,14 +60,14 @@ typedef struct _NcClusterPseudoCounts NcClusterPseudoCounts;
  */
 typedef enum _NcClusterPseudoCountsParams
 {
-  NC_CLUSTER_PSEUDO_COUNTS_LNMCUT = 0, 
+  NC_CLUSTER_PSEUDO_COUNTS_LNTX_STAR_CUT = 0, 
   NC_CLUSTER_PSEUDO_COUNTS_SD_MCUT, 
   NC_CLUSTER_PSEUDO_COUNTS_ZMIN, 
   NC_CLUSTER_PSEUDO_COUNTS_DELTAZ, /*< private >*/
   NC_CLUSTER_PSEUDO_COUNTS_SPARAM_LEN, /*< skip >*/
 } NcClusterPseudoCountsParams;
 
-#define NC_CLUSTER_PSEUDO_COUNTS_DEFAULT_LNMCUT  (33.0)
+#define NC_CLUSTER_PSEUDO_COUNTS_DEFAULT_LNTX_STAR_CUT  (33.0)
 #define NC_CLUSTER_PSEUDO_COUNTS_DEFAULT_SD_MCUT (0.206)
 #define NC_CLUSTER_PSEUDO_COUNTS_DEFAULT_ZMIN (0.188)
 #define NC_CLUSTER_PSEUDO_COUNTS_DEFAULT_DELTAZ (0.99)
@@ -97,9 +97,9 @@ NcClusterPseudoCounts *nc_cluster_pseudo_counts_ref (NcClusterPseudoCounts *cpc)
 void nc_cluster_pseudo_counts_free (NcClusterPseudoCounts *cpc);
 void nc_cluster_pseudo_counts_clear (NcClusterPseudoCounts **cpc);
 
-gdouble nc_cluster_pseudo_counts_posterior_ndetone (NcClusterPseudoCounts *cpc, NcMassFunction *mfp, NcClusterMass *clusterm, gdouble z, gdouble Mpl, gdouble Mcl, gdouble sigma_pl, gdouble sigma_cl);
-gdouble nc_cluster_pseudo_counts_selection_function (NcClusterPseudoCounts *cpc, gdouble lnM, gdouble z);
-gdouble nc_cluster_pseudo_counts_selection_function_lnMi (NcClusterPseudoCounts *cpc);
+gdouble nc_cluster_pseudo_counts_posterior_ndetone (NcClusterPseudoCounts *cpc, NcMassFunction *mfp, NcHICosmo *cosmo, NcClusterMass *clusterm, gdouble z, gdouble Mpl, gdouble Mcl, gdouble sigma_pl, gdouble sigma_cl);
+gdouble nc_cluster_pseudo_counts_selection_function (NcClusterPseudoCounts *cpc, gdouble lnM, gdouble z, gdouble lnEz);
+gdouble nc_cluster_pseudo_counts_selection_function_lnMi (NcClusterPseudoCounts *cpc, NcHICosmo *cosmo);
 gdouble nc_cluster_pseudo_counts_ndet_no_z_integral (NcClusterPseudoCounts *cpc, NcHICosmo *cosmo, gdouble z);
 gdouble nc_cluster_pseudo_counts_ndet (NcClusterPseudoCounts *cpc, NcMassFunction *mfp, NcHICosmo *cosmo);
 gdouble nc_cluster_pseudo_counts_posterior_numerator (NcClusterPseudoCounts *cpc, NcMassFunction *mfp, NcClusterMass *clusterm, NcHICosmo *cosmo, const gdouble z, const gdouble *Mobs, const gdouble *Mobs_params);
