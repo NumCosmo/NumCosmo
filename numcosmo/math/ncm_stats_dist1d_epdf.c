@@ -393,25 +393,27 @@ ncm_stats_dist1d_epdf_p_gk (NcmStatsDist1dEPDF *epdf1d, gdouble x)
     for (i = s; i < epdf1d->obs->len; i++)
     {
       NcmStatsDist1dEPDFObs *obs = &g_array_index (epdf1d->obs, NcmStatsDist1dEPDFObs, i);
-      const gdouble x_i   = obs->x;
-      const gdouble de_i  = (x - x_i) / sd;
-      const gdouble de2_i = de_i * de_i;
-      const gdouble exp_i = obs->w * exp (-0.5 * de2_i);
-      res += exp_i / obs->n;
+      const gdouble x_i      = obs->x;
+      const gdouble de_i     = (x - x_i) / sd;
+      const gdouble de2_i    = de_i * de_i;
+      const gdouble wexp_i   = obs->w * exp (-0.5 * de2_i);
+      const gdouble wexp_i_n = wexp_i / obs->n;
+      res += wexp_i_n;
       /*printf ("% 20.15g % 20.15g % 20.15g [% 20.15g % 20.15g] % 20.15g\n", x_i, obs->w, obs->n, epdf1d->min, epdf1d->max, x);*/
-      if (exp_i / res < GSL_DBL_EPSILON)
+      if (wexp_i_n / res < GSL_DBL_EPSILON)
         break;
     }
     for (i = s - 1; i >= 0; i--)
     {
       NcmStatsDist1dEPDFObs *obs = &g_array_index (epdf1d->obs, NcmStatsDist1dEPDFObs, i);
-      const gdouble x_i   = obs->x;
-      const gdouble de_i  = (x - x_i) / sd;
-      const gdouble de2_i = de_i * de_i;
-      const gdouble exp_i = obs->w * exp (-0.5 * de2_i);
-      res += exp_i / obs->n;
+      const gdouble x_i      = obs->x;
+      const gdouble de_i     = (x - x_i) / sd;
+      const gdouble de2_i    = de_i * de_i;
+      const gdouble wexp_i   = obs->w * exp (-0.5 * de2_i);
+      const gdouble wexp_i_n = wexp_i / obs->n;
+      res += wexp_i_n;
       /*printf ("% 20.15g % 20.15g % 20.15g [% 20.15g % 20.15g] % 20.15g\n", x_i, obs->w, obs->n, epdf1d->min, epdf1d->max, x);*/
-      if (exp_i / res < GSL_DBL_EPSILON)
+      if (wexp_i_n / res < GSL_DBL_EPSILON)
         break;
     }
     /*printf ("#----------------------------------------------------------------------------------------#\n");*/

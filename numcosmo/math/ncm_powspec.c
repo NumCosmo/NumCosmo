@@ -170,7 +170,7 @@ ncm_powspec_class_init (NcmPowspecClass *klass)
                                    g_param_spec_double ("kmin",
                                                         NULL,
                                                        "Minimum mode value",
-                                                        0.0, G_MAXDOUBLE, 0.0,
+                                                        0.0, G_MAXDOUBLE, 1.0e-5,
                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   g_object_class_install_property (object_class,
@@ -178,7 +178,7 @@ ncm_powspec_class_init (NcmPowspecClass *klass)
                                    g_param_spec_double ("kmax",
                                                         NULL,
                                                         "Maximum mode value",
-                                                        0.0, G_MAXDOUBLE, 1.0e5,
+                                                        0.0, G_MAXDOUBLE, 1.0,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   klass->prepare = &_ncm_powspec_prepare;

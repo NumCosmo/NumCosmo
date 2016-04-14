@@ -70,6 +70,8 @@ enum
   PROP_SCALAR_LMAX,
   PROP_VECTOR_LMAX,
   PROP_TENSOR_LMAX,
+  PROP_MATTER_PK_MAXZ,
+  PROP_MATTER_PK_MAXK,
 };
 
 struct _NcCBEPrivate
@@ -409,6 +411,12 @@ nc_cbe_set_property (GObject *object, guint prop_id, const GValue *value, GParam
     case PROP_TENSOR_LMAX:
       nc_cbe_set_tensor_lmax (cbe, g_value_get_uint (value));
       break;
+    case PROP_MATTER_PK_MAXZ:
+      nc_cbe_set_max_matter_pk_z (cbe, g_value_get_double (value));
+      break;
+    case PROP_MATTER_PK_MAXK:
+      nc_cbe_set_max_matter_pk_k (cbe, g_value_get_double (value));
+      break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
       break;
@@ -449,6 +457,12 @@ nc_cbe_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *
       break;
     case PROP_TENSOR_LMAX:
       g_value_set_uint (value, nc_cbe_get_tensor_lmax (cbe));
+      break;
+    case PROP_MATTER_PK_MAXZ:
+      g_value_set_double (value, nc_cbe_get_max_matter_pk_z (cbe));
+      break;
+    case PROP_MATTER_PK_MAXK:
+      g_value_set_double (value, nc_cbe_get_max_matter_pk_k (cbe));
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -553,6 +567,20 @@ nc_cbe_class_init (NcCBEClass *klass)
                                                       "Tensor modes l_max",
                                                       0, G_MAXUINT, 500,
                                                       G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  g_object_class_install_property (object_class,
+                                   PROP_MATTER_PK_MAXZ,
+                                   g_param_spec_double ("matter-pk-maxz",
+                                                        NULL,
+                                                        "Maximum redshift for matter Pk",
+                                                        0.0, G_MAXDOUBLE, 0.0,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  g_object_class_install_property (object_class,
+                                   PROP_MATTER_PK_MAXK,
+                                   g_param_spec_double ("matter-pk-maxk",
+                                                        NULL,
+                                                        "Maximum mode k for matter Pk",
+                                                        0.0, G_MAXDOUBLE, 0.1,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 }
 
 /**
@@ -798,6 +826,52 @@ nc_cbe_set_max_matter_pk_z (NcCBE *cbe, gdouble zmax)
     cbe->priv->psp.z_max_pk = zmax;
     ncm_model_ctrl_force_update (cbe->ctrl_cosmo);
   }
+}
+
+/**
+ * nc_cbe_get_max_matter_pk_z:
+ * @cbe: a #NcCBE
+ *
+ * Gets $z_\mathrm{max}$ the matter power spectrum.
+ * 
+ * Returns: $z_\mathrm{max}$.
+ */
+gdouble
+nc_cbe_get_max_matter_pk_z (NcCBE *cbe)
+{
+  return cbe->priv->psp.z_max_pk;
+}
+
+/**
+ * nc_cbe_set_max_matter_pk_k:
+ * @cbe: a #NcCBE
+ * @kmax: maximum mode $k$ for $P_k$ evaluation
+ *
+ * Sets $k_\mathrm{max}$ the matter power spectrum.
+ *
+ */
+void 
+nc_cbe_set_max_matter_pk_k (NcCBE *cbe, gdouble kmax)
+{
+  if (cbe->priv->ppt.k_max_for_pk != kmax)
+  {
+    cbe->priv->ppt.k_max_for_pk = kmax;
+    ncm_model_ctrl_force_update (cbe->ctrl_cosmo);
+  }
+}
+
+/**
+ * nc_cbe_get_max_matter_pk_k:
+ * @cbe: a #NcCBE
+ *
+ * Gets $k_\mathrm{max}$ the matter power spectrum.
+ * 
+ * Returns: $k_\mathrm{max}$.
+ */
+gdouble 
+nc_cbe_get_max_matter_pk_k (NcCBE *cbe)
+{
+  return cbe->priv->ppt.k_max_for_pk;
 }
 
 /**
@@ -1100,7 +1174,7 @@ _nc_cbe_set_pert (NcCBE *cbe, NcHICosmo *cosmo)
   cbe->priv->ppt.l_vector_max = cbe->vector_lmax;
   cbe->priv->ppt.l_tensor_max = cbe->tensor_lmax;
   cbe->priv->ppt.l_lss_max    = 300;
-  cbe->priv->ppt.k_max_for_pk = 0.1;
+  /*cbe->priv->ppt.k_max_for_pk = 0.1;*/
 
   cbe->priv->ppt.gauge = synchronous;
 
@@ -1293,7 +1367,7 @@ _nc_cbe_call_bg (NcCBE *cbe, NcHICosmo *cosmo)
   _nc_cbe_set_bg (cbe, cosmo);
   if (background_init (ppr, &cbe->priv->pba) == _FAILURE_)
     g_error ("_nc_cbe_call_bg: Error running background_init `%s'\n", cbe->priv->pba.error_message);
-
+  
   if (FALSE)
   {
     const gdouble RH = nc_hicosmo_RH_Mpc (cosmo);

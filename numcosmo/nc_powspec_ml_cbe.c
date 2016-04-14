@@ -161,6 +161,7 @@ _nc_powspec_ml_cbe_prepare (NcmPowspec *powspec, NcmModel *model)
 
   nc_cbe_set_calc_transfer (ps_cbe->cbe, TRUE);
   nc_cbe_set_max_matter_pk_z (ps_cbe->cbe, powspec->zf);
+  nc_cbe_set_max_matter_pk_k (ps_cbe->cbe, powspec->kmax);
 
   nc_cbe_prepare_if_needed (ps_cbe->cbe, cosmo);
 

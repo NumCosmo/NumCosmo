@@ -160,21 +160,21 @@ _nc_transfer_func_eh_calc (NcTransferFunc *tf, gdouble kh)
   const gdouble ks3 = ks2 * ks;
   const gdouble ks4 = ks3 * ks;
 
-  const gdouble q = k/(tf_EH->keq_1341);
+  const gdouble q = k / (tf_EH->keq_1341);
   const gdouble q2 = q * q;
-  const gdouble c4 = log(M_E + 1.8 * q);
-  const gdouble k_ksilk = pow(k/tf_EH->ksilk, 1.4);
-  const gdouble c5 = exp(-k_ksilk);                                                   /* pow(M_E, -k_ksilk); */
-  const gdouble s_tilda = tf_EH->s/cbrt(1.0 + tf_EH->b_node3/ks3);
+  const gdouble c4 = log (M_E + 1.8 * q);
+  const gdouble k_ksilk = pow (k / tf_EH->ksilk, 1.4);
+  const gdouble c5 = exp (-k_ksilk);                                                   /* pow(M_E, -k_ksilk); */
+  const gdouble s_tilda = tf_EH->s / cbrt (1.0 + tf_EH->b_node3 / ks3);
   const gdouble ks_tilda = k * s_tilda;
   const gdouble jo = gsl_sf_bessel_j0 (ks_tilda);                                     /* j0 = \sin(ks_tilda)/ks_tilda */
   const gdouble q_1_08 = pow (q, 1.08);
-  const gdouble C = 14.2 + 386.0/(1.0 + 69.9 * q_1_08);                               /* C com ac = 1 */
-  const gdouble To = c4/(c4 + C * q2);
-  const gdouble Tb = (To/(1.0 + ks2/27.04) + (tf_EH->ab * c5)/(1.0 + tf_EH->bb3/ks3)) * jo; /* 27.04 = 5.2^2*/
-  const gdouble f = 1.0/(1.0 + ks4/850.3056);                                         /* 850.3056 = 5.4^4 */
+  const gdouble C = 14.2 + 386.0 / (1.0 + 69.9 * q_1_08);                               /* C com ac = 1 */
+  const gdouble To = c4 / (c4 + C * q2);
+  const gdouble Tb = (To / (1.0 + ks2 / 27.04) + (tf_EH->ab * c5) / (1.0 + tf_EH->bb3/ks3)) * jo; /* 27.04 = 5.2^2*/
+  const gdouble f = 1.0 / (1.0 + ks4 / 850.3056);                                         /* 850.3056 = 5.4^4 */
   const gdouble c6 = log(M_E + 1.8 * tf_EH->bc * q);
-  const gdouble To1 = c6/(c6 + C * q2);
+  const gdouble To1 = c6 / (c6 + C * q2);
   const gdouble C_ac = tf_EH->ac_142 + 386.0/(1.0 + 69.9 * q_1_08);
   const gdouble To2 = c6/(c6 + C_ac * q2);
   const gdouble Tc = f * To1 + (1.0 - f) * To2;
