@@ -87,9 +87,7 @@ static gdouble _nc_xcor_limber_gal_noise_spec (NcXcorLimber* xcl, guint l)
  *
  * FIXME
  *
- * Returns: FIXME
- *
-*/
+ */
 void nc_xcor_limber_gal_set_dNdz (NcXcorLimberGal* xclg, GArray* z, GArray* dN_dz_array)
 {
 	ncm_spline_set_array (xclg->dN_dz, z, dN_dz_array, TRUE);

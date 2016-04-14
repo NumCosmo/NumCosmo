@@ -622,7 +622,7 @@ ncm_mset_peek_array_pos (NcmMSet *mset, guint i)
  *
  * FIXME
  *
- * Returns: (transfer none): FIXME
+ * Returns: FIXME
  */
 NcmModelID
 ncm_mset_get_mid_array_pos (NcmMSet *mset, guint i)
@@ -926,7 +926,7 @@ ncm_mset_get_ns_by_id (gint id)
  * ncm_mset_get_type_by_id:
  * @id: namespace id
  *
- * Returns: (transfer none): GType of model @id
+ * Returns: GType of model @id
  */
 GType
 ncm_mset_get_type_by_id (gint id)

@@ -347,5 +347,4 @@ nc_growth_func_prepare_if_needed (NcGrowthFunc *gf, NcHICosmo *cosmo)
  *
  * FIXME
  *
- * Returns: FIXME
  */

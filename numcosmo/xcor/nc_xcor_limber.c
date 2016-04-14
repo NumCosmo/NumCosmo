@@ -174,8 +174,7 @@ gdouble nc_xcor_limber_noise_spec (NcXcorLimber* xcl, guint l)
  *
  * FIXME
  *
- * Returns: FIXME
-*/
+ */
 void nc_xcor_limber_prepare (NcXcorLimber* xcl, NcHICosmo* cosmo)
 {
 	if (ncm_model_ctrl_update (xcl->cosmo_ctrl, NCM_MODEL (cosmo)))

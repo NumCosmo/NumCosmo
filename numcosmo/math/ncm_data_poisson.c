@@ -320,7 +320,6 @@ _ncm_data_poisson_get_size (NcmDataPoisson *poisson)
  *
  * FIXME
  *
- * Returns: FIXME
  */
 void
 ncm_data_poisson_init_from_vector (NcmData *data, NcmVector *nodes, gsl_vector_ulong *N)
@@ -347,7 +346,6 @@ ncm_data_poisson_init_from_vector (NcmData *data, NcmVector *nodes, gsl_vector_u
  *
  * FIXME
  *
- * Returns: FIXME
  */
 void
 ncm_data_poisson_init_from_histogram (NcmData *data, gsl_histogram *h)
@@ -367,7 +365,6 @@ ncm_data_poisson_init_from_histogram (NcmData *data, gsl_histogram *h)
  *
  * FIXME
  *
- * Returns: FIXME
  */
 void
 ncm_data_poisson_init_zero (NcmData *data, NcmVector *nodes)

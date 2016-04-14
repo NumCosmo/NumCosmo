@@ -332,7 +332,6 @@ static void _nc_scalefactor_calc_spline (NcScalefactor *a, NcHICosmo *cosmo);
  *
  * FIXME
  *
- * Returns: FIXME
  */
 void
 nc_scalefactor_prepare (NcScalefactor *a, NcHICosmo *cosmo)
@@ -351,7 +350,6 @@ nc_scalefactor_prepare (NcScalefactor *a, NcHICosmo *cosmo)
  *
  * FIXME
  *
- * Returns: FIXME
  */
 void
 nc_scalefactor_prepare_if_needed (NcScalefactor *a, NcHICosmo *cosmo)

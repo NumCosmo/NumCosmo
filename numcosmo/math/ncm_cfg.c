@@ -628,7 +628,6 @@ ncm_cfg_get_fullpath (const gchar *filename, ...)
  *
  * FIXME
  *
- * Returns: FIXME
  */
 void
 ncm_cfg_keyfile_to_arg (GKeyFile *kfile, const gchar *group_name, GOptionEntry *entries, gchar **argv, gint *argc)

@@ -285,7 +285,6 @@ ncm_model_ctrl_has_model (NcmModelCtrl *ctrl, NcmModel *model)
  *
  * FIXME
  *
- * Returns: FIXME
  */
 void
 ncm_model_ctrl_force_update (NcmModelCtrl *ctrl)

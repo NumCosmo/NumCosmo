@@ -2074,9 +2074,20 @@ ncm_mset_catalog_get_run_type (NcmMSetCatalog *mcat)
 void
 ncm_mset_catalog_log_current_chain_stats (NcmMSetCatalog *mcat)
 {
+  const guint fparams_len = ncm_mset_fparams_len (mcat->mset);
   if (mcat->nchains > 1)
   {
-    gdouble shrink_factor = ncm_mset_catalog_get_shrink_factor (mcat);
+    const gdouble shrink_factor = ncm_mset_catalog_get_shrink_factor (mcat);
+    guint i;
+
+    g_message ("# NcmMSetCatalog: Current skfac:");
+    for (i = 0; i < fparams_len + mcat->nadd_vals; i++)
+    {
+      const gdouble shrink_factor_i = ncm_mset_catalog_get_param_shrink_factor (mcat, i);
+      g_message (" % -12.5g", shrink_factor_i);
+    }
+    g_message ("\n");
+    
     g_message ("# NcmMSetCatalog: Maximal  Shrink factor = % 20.15g\n", shrink_factor);
   }
 }
@@ -2298,7 +2309,7 @@ ncm_mset_catalog_get_param_shrink_factor (NcmMSetCatalog *mcat, guint p)
   W   = gsl_stats_mean (ncm_vector_ptr (mcat->chain_vars, 0), ncm_vector_stride (mcat->chain_vars), ncm_vector_len (mcat->chain_vars));
   B_n = gsl_stats_variance (ncm_vector_ptr (mcat->chain_means, 0), ncm_vector_stride (mcat->chain_means), ncm_vector_len (mcat->chain_means));
 
-  shrink_factor = sqrt ((n - 1.0) /  (1.0 * n) + B_n / W);
+  shrink_factor = sqrt ((n - 1.0) /  (1.0 * n) + (mcat->nchains + 1.0) / (1.0 * mcat->nchains) * B_n / W);
 
   return shrink_factor;
 }
@@ -2340,6 +2351,8 @@ ncm_mset_catalog_get_shrink_factor (NcmMSetCatalog *mcat)
   if (n % mcat->nchains != 0)
     g_warning ("ncm_mset_catalog_get_shrink_factor: not all chains have the same size [%u %u] %u.", n, mcat->nchains, (n % mcat->nchains));
 
+  n = n / mcat->nchains;
+  
   ncm_stats_vec_reset (mcat->mean_pstats, TRUE);
   ncm_matrix_set_zero (mcat->chain_cov);
 

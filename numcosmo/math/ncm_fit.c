@@ -2276,7 +2276,6 @@ ncm_fit_prob (NcmFit *fit, NcmModelID mid, guint pid, gdouble a, gdouble b)
  *
  * FIXME
  *
- * Returns: FIXME
  */
 void
 ncm_fit_dprob (NcmFit *fit, NcmModelID mid, guint pid, gdouble a, gdouble b, gdouble step, gdouble norm)

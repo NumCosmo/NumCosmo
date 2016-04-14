@@ -194,7 +194,8 @@ ncm_memory_pool_get (NcmMemoryPool *mp)
  * ncm_memory_pool_return:
  * @p: slice to be returned to the pool
  *
- * Returns: the slice pointed by slice to the pool
+ * Returns the slice pointed by slice to the pool
+ * 
  */
 void
 ncm_memory_pool_return (gpointer p)

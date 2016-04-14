@@ -2331,7 +2331,7 @@ ncm_model_peek_submodel_by_mid (NcmModel *model, NcmModelID mid)
  *
  * Gets the submodel type #NcmModelID @mid position.
  *
- * Returns: (transfer none): the @mid position or -1 if not found.
+ * Returns: the @mid position or -1 if not found.
  */
 gint
 ncm_model_peek_submodel_pos_by_mid (NcmModel *model, NcmModelID mid)

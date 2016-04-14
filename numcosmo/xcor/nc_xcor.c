@@ -170,9 +170,7 @@ static gdouble _xcor_limber_cross_cl_int_z (gdouble z, gpointer ptr)
  *
  * FIXME
  *
- * Returns: FIXME
- *
-*/
+ */
 void 
 nc_xcor_limber_cross_cl (NcXcor* xc, NcXcorLimber* xcl1, NcXcorLimber* xcl2, NcHICosmo* cosmo, NcmVector* ell, NcmVector* vp, guint lmin_idx)
 {
@@ -272,9 +270,7 @@ static gdouble _xcor_limber_auto_cl_int_z (gdouble z, gpointer ptr)
  *
  * FIXME
  *
- * Returns: FIXME
- *
-*/
+ */
 void 
 nc_xcor_limber_auto_cl (NcXcor* xc, NcXcorLimber* xcl, NcHICosmo* cosmo, NcmVector* ell, NcmVector* vp, guint lmin_idx, gboolean withnoise)
 {

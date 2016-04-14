@@ -1150,7 +1150,7 @@ ncm_fit_esmcmc_get_catalog (NcmFitESMCMC *esmcmc)
  * is particularly useful to check if any problem occured
  * during a multithread evaluation of the likelihood.
  * 
- * Returns: (transfer full): Whether the validation was TRUE or FALSE.
+ * Returns: Whether the validation was TRUE or FALSE.
  */
 gboolean
 ncm_fit_esmcmc_validate (NcmFitESMCMC *esmcmc, gulong pi, gulong pf)
