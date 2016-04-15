@@ -432,6 +432,7 @@ _Ndet_integrand (gdouble lnM500, gdouble z, gpointer userdata)
 {
   integrand_data *data       = (integrand_data *) userdata;
   NcClusterPseudoCounts *cpc = data->cpc;
+  data->lnEz           = log (nc_hicosmo_E (data->cosmo, z));
   const gdouble sf     = nc_cluster_pseudo_counts_selection_function (cpc, lnM500, z, data->lnEz);
   const gdouble result = sf * nc_mass_function_d2n_dzdlnm (data->mfp, data->cosmo, lnM500, z);
   

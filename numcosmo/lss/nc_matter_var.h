@@ -79,6 +79,7 @@ struct _NcMatterVar
   NcmFftlog *fftlog;
   NcmModelCtrl *ctrl_cosmo;
   NcmModelCtrl *ctrl_reion;
+  gpointer fft;
 };
 
 struct _NcMatterVarClass

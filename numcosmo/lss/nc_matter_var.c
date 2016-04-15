@@ -158,6 +158,8 @@ nc_matter_var_init (NcMatterVar *vp)
   
   vp->ctrl_cosmo = ncm_model_ctrl_new (NULL);
   vp->ctrl_reion = ncm_model_ctrl_new (NULL);
+
+  vp->fft = NULL;
 }
 
 static void
@@ -906,48 +908,61 @@ _powspec_k2 (gdouble k, gpointer userdata)
 }
 */
 
+typedef struct _NcMatterVarFFT
+{
+  fftw_complex *in;
+  fftw_complex *out;
+  fftw_complex *u;
+  fftw_complex *fftRdsigma2_dr;
+  fftw_complex *Rdsigma2_dr;
+  fftw_complex *du;
+  fftw_plan p, p_Rsigma2, p_Rdsigma2_dr;
+  gboolean calc_u;
+} NcMatterVarFFT;
+
 static void
 _nc_matter_var_prepare_fft (NcMatterVar *vp, NcHICosmo *cosmo)
 {
-  G_LOCK_DEFINE_STATIC (prepare_fft_lock);
-  G_LOCK (prepare_fft_lock);
-  {
   const gint N = 500 + 1;
   const gint N_2 = 250;
   const gdouble L = 17.0 * M_LN10;
   const gdouble dr = L / (N * 1.0);
   const gdouble r0 = 3.0 * M_LN10; 
-  const gdouble lnk0 = -3.0 * M_LN10; 
-  static fftw_complex *in = NULL;
-  static fftw_complex *out = NULL;
-  static fftw_complex *u = NULL;
-  static fftw_complex *fftRdsigma2_dr = NULL;
-  static fftw_complex *Rdsigma2_dr = NULL;
-  static fftw_complex *du = NULL;
-  static fftw_plan p, p_Rsigma2, p_Rdsigma2_dr;
-  static gboolean planned = FALSE;
-  static gboolean calc_u = FALSE;
+  const gdouble lnk0 = -3.0 * M_LN10;
+  NcMatterVarFFT *fft;
   gint i, j;
   
   //fprintf (stderr, "# %d % 20.15g [% 20.15g]\n", N, dr, L);
-  if (!planned)
+  if (vp->fft == NULL)
   {
-    in             = (fftw_complex *) fftw_malloc (sizeof (fftw_complex) * N);
-    out            = (fftw_complex *) fftw_malloc (sizeof (fftw_complex) * N);
-    fftRdsigma2_dr = (fftw_complex *) fftw_malloc (sizeof (fftw_complex) * N);
-    Rdsigma2_dr    = (fftw_complex *) fftw_malloc (sizeof (fftw_complex) * N);
-
-    u  = (fftw_complex *) fftw_malloc (sizeof(fftw_complex) * N);
-    du = (fftw_complex *) fftw_malloc (sizeof(fftw_complex) * N);
-
-    ncm_cfg_load_fftw_wisdom ("nc_matter_var_wisdown.fftw3");
-    p = fftw_plan_dft_1d (N, in, out, FFTW_FORWARD, fftw_default_flags | FFTW_DESTROY_INPUT);
-    p_Rsigma2 = fftw_plan_dft_1d (N, out, in, FFTW_FORWARD, fftw_default_flags | FFTW_DESTROY_INPUT);
-    p_Rdsigma2_dr = fftw_plan_dft_1d (N, fftRdsigma2_dr, Rdsigma2_dr, FFTW_FORWARD, fftw_default_flags | FFTW_DESTROY_INPUT);
-    ncm_cfg_save_fftw_wisdom ("nc_matter_var_wisdown.fftw3");
+    fft = g_new (NcMatterVarFFT, 1);
+    vp->fft = fft;
     
-    planned = TRUE;
+    fft->in             = (fftw_complex *) fftw_malloc (sizeof (fftw_complex) * N);
+    fft->out            = (fftw_complex *) fftw_malloc (sizeof (fftw_complex) * N);
+    fft->fftRdsigma2_dr = (fftw_complex *) fftw_malloc (sizeof (fftw_complex) * N);
+    fft->Rdsigma2_dr    = (fftw_complex *) fftw_malloc (sizeof (fftw_complex) * N);
+
+    fft->u  = (fftw_complex *) fftw_malloc (sizeof(fftw_complex) * N);
+    fft->du = (fftw_complex *) fftw_malloc (sizeof(fftw_complex) * N);
+
+    fft->calc_u = FALSE;
+
+    {
+      G_LOCK_DEFINE_STATIC (prepare_fft_lock);
+      G_LOCK (prepare_fft_lock);
+      
+      ncm_cfg_load_fftw_wisdom ("nc_matter_var_wisdown.fftw3");
+      fft->p             = fftw_plan_dft_1d (N, fft->in, fft->out, FFTW_FORWARD, fftw_default_flags | FFTW_DESTROY_INPUT);
+      fft->p_Rsigma2     = fftw_plan_dft_1d (N, fft->out, fft->in, FFTW_FORWARD, fftw_default_flags | FFTW_DESTROY_INPUT);
+      fft->p_Rdsigma2_dr = fftw_plan_dft_1d (N, fft->fftRdsigma2_dr, fft->Rdsigma2_dr, FFTW_FORWARD, fftw_default_flags | FFTW_DESTROY_INPUT);
+      ncm_cfg_save_fftw_wisdom ("nc_matter_var_wisdown.fftw3");
+      
+      G_UNLOCK (prepare_fft_lock);
+    }
   }
+  else
+    fft = vp->fft;
 
   for (i = -N_2; i <= N_2; i++)
   {
@@ -958,11 +973,11 @@ _nc_matter_var_prepare_fft (NcMatterVar *vp, NcHICosmo *cosmo)
     const gdouble k2 = k * k;
     const gdouble matter_P = nc_transfer_func_matter_powerspectrum (vp->tf, cosmo, k);
     const gdouble f = matter_P * k2 / c1;
-    in[ii] = f;
+    fft->in[ii] = f;
   }
-  fftw_execute (p);
+  fftw_execute (fft->p);
  
-  if (!calc_u)
+  if (!fft->calc_u)
   {
     for (i = -N_2; i <= N_2; i++)
     {
@@ -975,24 +990,24 @@ _nc_matter_var_prepare_fft (NcMatterVar *vp, NcHICosmo *cosmo)
       gsl_sf_result arg;
       gsl_sf_lngamma_complex_e (-3.0, a, &lnr, &arg);
       U = (a != 0) ? U * sign_a * cexp (lnr.val + arg.val * I + gsl_sf_lnsinh (M_PI * abs_a * 0.5)) : 3.0 * M_PI / 5.0;
-      u[ii] = U * cexp (-2.0 * M_PI / L * i * I * (lnk0 + r0));
-      du[ii] = -(1.0 + I * a) * u[ii];
-      fftRdsigma2_dr[ii] = out[ii] * du[ii];
-      out[ii] *= u[ii];
+      fft->u[ii] = U * cexp (-2.0 * M_PI / L * i * I * (lnk0 + r0));
+      fft->du[ii] = -(1.0 + I * a) * fft->u[ii];
+      fft->fftRdsigma2_dr[ii] = fft->out[ii] * fft->du[ii];
+      fft->out[ii] *= fft->u[ii];
     }
-    calc_u = TRUE;
+    fft->calc_u = TRUE;
   }
   else
   {
     gint ii;
     for (ii = 0; ii < N; ii++)
     {
-      fftRdsigma2_dr[ii] = out[ii] * du[ii];
-      out[ii] *= u[ii];
+      fft->fftRdsigma2_dr[ii] = fft->out[ii] * fft->du[ii];
+      fft->out[ii] *= fft->u[ii];
     }
   }
-  fftw_execute (p_Rsigma2);
-  fftw_execute (p_Rdsigma2_dr);
+  fftw_execute (fft->p_Rsigma2);
+  fftw_execute (fft->p_Rdsigma2_dr);
 
   j = 0;
   
@@ -1000,9 +1015,9 @@ _nc_matter_var_prepare_fft (NcMatterVar *vp, NcHICosmo *cosmo)
   {
     const gint ii = (i < 0) ? i + N : i;
     const gdouble r = r0 + i * dr;
-    const complex double Rsigma2 = in[ii] / N;
+    const complex double Rsigma2 = fft->in[ii] / N;
     const complex double lnsigma2 = log (Rsigma2) - r;
-    const complex double dlnsigma2_dr = Rdsigma2_dr[ii] / (Rsigma2 * N);
+    const complex double dlnsigma2_dr = fft->Rdsigma2_dr[ii] / (Rsigma2 * N);
 
      //printf ("i = %d ii = %d lnr= %.5g lnsigma2 = % 20.15g dlnsigma2 = % 20.15g\n", i, ii, r, creal (lnsigma2), creal (dlnsigma2_dr));
     
@@ -1074,14 +1089,8 @@ _nc_matter_var_prepare_fft (NcMatterVar *vp, NcHICosmo *cosmo)
     ncm_vector_free (dlnGr_dlnr_vec);
   }
  */
-
-  }
-  G_UNLOCK (prepare_fft_lock);
-
   ncm_spline_prepare (vp->sigma2_over_growth);
   ncm_spline_prepare (vp->deriv_sigma2_over_growth);
-
-
 }
 #endif /* NUMCOSMO_HAVE_FFTW3 */
 

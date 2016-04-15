@@ -320,7 +320,12 @@ _ncm_fit_esmcmc_walker_stretch_theta_to_x (NcmFitESMCMCWalkerStretch *stretch, g
 
   return bsize / (2.0 * LAMBDA) * (tb - bt) / (tb * bt);
 */
-  return atanh (2.0 * tb / bsize - 1.0) / LAMBDA;
+  if (tb == 0.0)             
+    return -1.0e100;
+  else if (tb == bsize)        
+    return 1.0e100;
+  else
+    return atanh (2.0 * tb / bsize - 1.0) / LAMBDA;
 }
 
 static gdouble 

@@ -456,7 +456,10 @@ void
 nc_data_cluster_pseudo_counts_set_cad (NcDataClusterPseudoCounts *dcpc, NcClusterAbundance *cad)
 {
   nc_cluster_abundance_clear (&dcpc->cad);
-  dcpc->cad = nc_cluster_abundance_ref (cad);
+  if (cad != NULL)
+  {
+    dcpc->cad = nc_cluster_abundance_ref (cad);
+  }
 }
 
 /**
