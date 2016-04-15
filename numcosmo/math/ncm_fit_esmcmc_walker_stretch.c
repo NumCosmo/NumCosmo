@@ -306,26 +306,21 @@ _ncm_fit_esmcmc_walker_stretch_setup (NcmFitESMCMCWalker *walker, GPtrArray *the
   }
 }
 
-#define LAMBDA (100.0/* * bsize*/)
-
 static gdouble 
 _ncm_fit_esmcmc_walker_stretch_theta_to_x (NcmFitESMCMCWalkerStretch *stretch, guint i, const gdouble theta_i)
 {
-  const gdouble lb     = ncm_matrix_get (stretch->box, i, 0);
-  const gdouble ub     = ncm_matrix_get (stretch->box, i, 1);
-  const gdouble bsize  = ub - lb;
-  const gdouble tb     = theta_i - lb;
-/*  
-  const gdouble bt     = ub - theta_i;
+  const gdouble lb      = ncm_matrix_get (stretch->box, i, 0);
+  const gdouble ub      = ncm_matrix_get (stretch->box, i, 1);
+  const gdouble bsize   = ub - lb;
+  const gdouble tb      = theta_i - lb;
+  const gdouble maxatan = - 0.5 * log (GSL_DBL_EPSILON * 0.5);
 
-  return bsize / (2.0 * LAMBDA) * (tb - bt) / (tb * bt);
-*/
   if (tb == 0.0)             
-    return -1.0e100;
+    return -maxatan;
   else if (tb == bsize)        
-    return 1.0e100;
+    return maxatan;
   else
-    return atanh (2.0 * tb / bsize - 1.0) / LAMBDA;
+    return atanh (2.0 * tb / bsize - 1.0);
 }
 
 static gdouble 
@@ -336,8 +331,7 @@ _ncm_fit_esmcmc_walker_stretch_x_to_theta (NcmFitESMCMCWalkerStretch *stretch, g
   const gdouble bsize  = ub - lb;
   const gdouble middle = 0.5 * (ub + lb);
 
-  /*return middle + bsize * ncm_sqrt1px_m1 (gsl_pow_2 (LAMBDA * x_i)) / (2.0 * LAMBDA * x_i);*/
-  return middle + bsize * tanh (LAMBDA * x_i) * 0.5;
+  return middle + bsize * tanh (x_i) * 0.5;
 }
 
 static gdouble 
@@ -349,13 +343,6 @@ _ncm_fit_esmcmc_walker_stretch_norm (NcmFitESMCMCWalkerStretch *stretch, guint i
   const gdouble bt    = ub - theta_i;
   const gdouble tsb   = thetastar_i - lb;
   const gdouble bts   = ub - thetastar_i;
-/*
-  const gdouble tb2   = tb * tb;
-  const gdouble bt2   = bt * bt;
-  const gdouble tsb2  = tsb * tsb;
-  const gdouble bts2  = bts * bts;
-  const gdouble norm  = (tb2 + bt2) * bts2 * tsb2 / ((tsb2 + bts2) * bt2 * tb2);
-*/
   const gdouble norm  = tsb * bts / (tb * bt);
   
   return log (norm);

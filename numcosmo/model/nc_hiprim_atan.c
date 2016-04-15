@@ -146,12 +146,12 @@ _nc_hiprim_atan_lnSA_powespec_lnk (NcHIPrim *prim, const gdouble lnk)
   const gdouble c1 = C1;
   const gdouble c2 = C2;
   const gdouble c3 = C3;
-  const gdouble pi_2      = M_PI * 0.5;
+  const gdouble pi_2      = ncm_c_pi () * 0.5;
   const gdouble pi_2_m_c3 = pi_2 - c3;
   const gdouble tc2       = c2 + tan (pi_2_m_c3);
 
   const gdouble atan_fac    = atan2 (c1 * ka + tc2, 1.0) - pi_2_m_c3;
-  const gdouble ln_atan_fac = log (atan_fac);
+  const gdouble ln_atan_fac = log (atan_fac / c3);
 
   return (N_SA - 1.0) * ln_ka + LN10E10ASA - 10.0 * M_LN10 + ln_atan_fac;
 }
