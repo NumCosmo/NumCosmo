@@ -418,10 +418,11 @@ _ncm_fit_esmcmc_walker_stretch_step (NcmFitESMCMCWalker *walker, GPtrArray *thet
   for (i = NCM_FIT_ESMCMC_NADD_VALS; i < len; i++)
   {
     const guint pi = i - NCM_FIT_ESMCMC_NADD_VALS;
-    if (!g_array_index (stretch->use_box, gboolean, pi))
+    if (g_array_index (stretch->use_box, gboolean, pi))
     {
       const gdouble thetastar_i = ncm_vector_get (thetastar, i);
       const gdouble theta_k_i   = ncm_vector_get (theta_k, i);
+
       ncm_vector_addto (stretch->norm_box, k, 
                         _ncm_fit_esmcmc_walker_stretch_norm (stretch, pi, thetastar_i, theta_k_i));
     }
