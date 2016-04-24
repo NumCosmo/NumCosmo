@@ -416,8 +416,7 @@ _ncm_fit_mcmc_update (NcmFitMCMC *mcmc, NcmFit *fit)
     default:
     case NCM_FIT_RUN_MSGS_FULL:
       fit->mtype = mcmc->mtype;
-      ncm_fit_log_start (fit);
-      ncm_fit_log_end (fit);
+      ncm_fit_log_state (fit);
       ncm_mset_catalog_log_current_stats (mcmc->mcat);
       g_message ("# NcmFitMCMC:acceptance ratio %7.4f%%.\n", ncm_fit_mcmc_get_accept_ratio (mcmc) * 100.0);
       /* ncm_timer_task_increment (mcmc->nt); */

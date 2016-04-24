@@ -251,7 +251,7 @@ ncm_model_builder_add_vparam_obj (NcmModelBuilder *mb, NcmVParam *vparam)
  * @default_value: default value
  * @ppt: a #NcmParamType
  *
- * Creates a new #NcmSParams from arguments and add it to @mb.
+ * Creates a new #NcmSParam from arguments and add it to @mb.
  *
  */
 void
@@ -277,7 +277,7 @@ ncm_model_builder_add_sparam (NcmModelBuilder *mb, const gchar *symbol, const gc
  * @default_value: default value
  * @ppt: a #NcmParamType
  *
- * Creates a new #NcmVParams from arguments and add it to @mb.
+ * Creates a new #NcmVParam from arguments and add it to @mb.
  *
  */
 void

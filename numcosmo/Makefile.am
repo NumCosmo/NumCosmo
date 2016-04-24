@@ -248,6 +248,7 @@ nc_headers = \
 	nc_snia_dist_cov.h            \
 	nc_planck_fi.h                \
 	nc_planck_fi_cor_tt.h         \
+	nc_planck_fi_cor_ttteee.h     \
 	nc_cbe_precision.h            \
 	nc_cbe.h                      \
 	model/nc_hicosmo_de.h         \
@@ -365,6 +366,7 @@ nc_sources = \
 	nc_snia_dist_cov.c            \
 	nc_planck_fi.c                \
 	nc_planck_fi_cor_tt.c         \
+	nc_planck_fi_cor_ttteee.c     \
 	nc_cbe_precision.c            \
 	nc_cbe.c                      \
 	model/nc_hicosmo_de.c         \
