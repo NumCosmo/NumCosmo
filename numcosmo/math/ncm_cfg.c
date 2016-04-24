@@ -120,6 +120,7 @@
 #include "nc_snia_dist_cov.h"
 #include "nc_planck_fi.h"
 #include "nc_planck_fi_cor_tt.h"
+#include "nc_planck_fi_cor_ttteee.h"
 #include "data/nc_data_bao_a.h"
 #include "data/nc_data_bao_dv.h"
 #include "data/nc_data_bao_dvdv.h"
@@ -392,6 +393,7 @@ ncm_cfg_init (void)
 
   ncm_cfg_register_obj (NC_TYPE_PLANCK_FI);
   ncm_cfg_register_obj (NC_TYPE_PLANCK_FI_COR_TT);
+  ncm_cfg_register_obj (NC_TYPE_PLANCK_FI_COR_TTTEEE);
 
   ncm_cfg_register_obj (NC_TYPE_DATA_BAO_A);
   ncm_cfg_register_obj (NC_TYPE_DATA_BAO_DV);

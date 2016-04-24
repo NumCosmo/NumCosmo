@@ -6,7 +6,7 @@
  *  <sandro@isoftware.com.br>
  ****************************************************************************/
 /*
- * nc_planck_fi_cor_tt.c
+ * nc_planck_fi_cor_ttteee.c
  * Copyright (C) 2016 Sandro Dias Pinto Vitenti <sandro@isoftware.com.br>
  *
  * numcosmo is free software: you can redistribute it and/or modify it

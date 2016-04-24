@@ -425,8 +425,29 @@ nc_hipert_boltzmann_clear (NcHIPertBoltzmann **pb)
 void
 nc_hipert_boltzmann_set_target_Cls (NcHIPertBoltzmann *pb, NcDataCMBDataType tCls)
 {
-  pb->target_Cls = tCls;
-  ncm_model_ctrl_force_update (pb->ctrl_cosmo);
+  if (pb->target_Cls != tCls)
+  {
+    pb->target_Cls = tCls;
+    ncm_model_ctrl_force_update (pb->ctrl_cosmo);
+  }
+}
+
+/**
+ * nc_hipert_boltzmann_append_target_Cls:
+ * @pb: a #NcHIPertBoltzmann
+ * @tCls: Cls targets
+ *
+ * FIXME
+ *
+ */
+void
+nc_hipert_boltzmann_append_target_Cls (NcHIPertBoltzmann *pb, NcDataCMBDataType tCls)
+{
+  if (pb->target_Cls != tCls)
+  {
+    pb->target_Cls |= tCls;
+    ncm_model_ctrl_force_update (pb->ctrl_cosmo);
+  }
 }
 
 /**

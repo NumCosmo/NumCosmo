@@ -6,7 +6,7 @@
  *  <sandro@isoftware.com.br>
  ****************************************************************************/
 /*
- * nc_planck_fi_cor_tt.h
+ * nc_planck_fi_cor_ttteee.h
  * Copyright (C) 2016 Sandro Dias Pinto Vitenti <sandro@isoftware.com.br>
  *
  * numcosmo is free software: you can redistribute it and/or modify it
@@ -34,7 +34,7 @@
 
 G_BEGIN_DECLS
 
-#define NC_TYPE_PLANCK_FI_COR_TTTEEE             (nc_planck_fi_cor_tt_get_type ())
+#define NC_TYPE_PLANCK_FI_COR_TTTEEE             (nc_planck_fi_cor_ttteee_get_type ())
 #define NC_PLANCK_FI_COR_TTTEEE(obj)             (G_TYPE_CHECK_INSTANCE_CAST ((obj), NC_TYPE_PLANCK_FI_COR_TTTEEE, NcPlanckFICorTTTEEE))
 #define NC_PLANCK_FI_COR_TTTEEE_CLASS(klass)     (G_TYPE_CHECK_CLASS_CAST ((klass), NC_TYPE_PLANCK_FI_COR_TTTEEE, NcPlanckFICorTTTEEEClass))
 #define NC_IS_PLANCK_FI_COR_TTTEEE(obj)          (G_TYPE_CHECK_INSTANCE_TYPE ((obj), NC_TYPE_PLANCK_FI_COR_TTTEEE))

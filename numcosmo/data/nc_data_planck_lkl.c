@@ -633,7 +633,7 @@ nc_data_planck_lkl_set_hipert_boltzmann (NcDataPlanckLKL *plik, NcHIPertBoltzman
   nc_hipert_boltzmann_clear (&plik->pb);
   plik->pb = nc_hipert_boltzmann_ref (pb);
 
-  nc_hipert_boltzmann_set_target_Cls (plik->pb, plik->cmb_data);
+  nc_hipert_boltzmann_append_target_Cls (plik->pb, plik->cmb_data);
 
   if (plik->data_TT != NULL)
   {
@@ -645,13 +645,13 @@ nc_data_planck_lkl_set_hipert_boltzmann (NcDataPlanckLKL *plik, NcHIPertBoltzman
   {
     guint EE_lmax = ncm_vector_len (plik->data_EE) - 1;
     if (EE_lmax > nc_hipert_boltzmann_get_EE_lmax (plik->pb))
-      nc_hipert_boltzmann_set_TT_lmax (plik->pb, EE_lmax);
+      nc_hipert_boltzmann_set_EE_lmax (plik->pb, EE_lmax);
   }
   if (plik->data_BB != NULL)
   {
     guint BB_lmax = ncm_vector_len (plik->data_BB) - 1;
     if (BB_lmax > nc_hipert_boltzmann_get_BB_lmax (plik->pb))
-      nc_hipert_boltzmann_set_TT_lmax (plik->pb, BB_lmax);
+      nc_hipert_boltzmann_set_BB_lmax (plik->pb, BB_lmax);
   }
   if (plik->data_TE != NULL)
   {
