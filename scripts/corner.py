@@ -3,7 +3,7 @@
 from __future__ import print_function, absolute_import, unicode_literals
 
 __all__ = ["corner", "hist2d"]
-__version__ = "1.0.1"
+__version__ = "1.0.2"
 __author__ = "Dan Foreman-Mackey (danfm@nyu.edu)"
 __copyright__ = "Copyright 2013-2015 Daniel Foreman-Mackey"
 __contributors__ = [
@@ -210,7 +210,7 @@ def corner(xs, bins=20, range=None, weights=None, color="k",
 
     # Parse the bin specifications.
     try:
-        bins = [float(bins) for _ in range]
+        bins = [int(bins) for _ in range]
     except TypeError:
         if len(bins) != len(range):
             raise ValueError("Dimension mismatch between bins and range")
