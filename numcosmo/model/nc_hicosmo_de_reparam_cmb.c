@@ -151,8 +151,8 @@ _nc_hicosmo_de_reparam_cmb_jac (NcmReparam *reparam, NcmModel *model, NcmMatrix 
 NcHICosmoDEReparamCMB *
 nc_hicosmo_de_reparam_cmb_new (guint length)
 {
-  NcHICosmoDEReparamCMB *de_reparam_ok = g_object_new (NC_TYPE_HICOSMO_DE_REPARAM_CMB,
-                                                      "length", length,
-                                                      NULL);
-  return de_reparam_ok;
+  NcHICosmoDEReparamCMB *de_reparam_cmb = g_object_new (NC_TYPE_HICOSMO_DE_REPARAM_CMB,
+                                                        "length", length,
+                                                        NULL);
+  return de_reparam_cmb;
 }
