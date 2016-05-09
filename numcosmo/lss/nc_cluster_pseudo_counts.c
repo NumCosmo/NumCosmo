@@ -48,7 +48,7 @@
 G_DEFINE_TYPE (NcClusterPseudoCounts, nc_cluster_pseudo_counts, NCM_TYPE_MODEL);
 
 #define VECTOR  (NCM_MODEL (cpc)->params)
-#define LNTX_STAR_CUT  (ncm_vector_fast_get (VECTOR, NC_CLUSTER_PSEUDO_COUNTS_LNTX_STAR_CUT))
+#define LNMCUT  (ncm_vector_fast_get (VECTOR, NC_CLUSTER_PSEUDO_COUNTS_LNMCUT))
 #define SD_MCUT (ncm_vector_fast_get (VECTOR, NC_CLUSTER_PSEUDO_COUNTS_SD_MCUT))
 #define ZMIN    (ncm_vector_fast_get (VECTOR, NC_CLUSTER_PSEUDO_COUNTS_ZMIN))
 #define DELTAZ  (ncm_vector_fast_get (VECTOR, NC_CLUSTER_PSEUDO_COUNTS_DELTAZ))
@@ -148,23 +148,21 @@ nc_cluster_pseudo_counts_class_init (NcClusterPseudoCountsClass *klass)
                                                       G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
   
   /**
-   * NcClusterPseudoCounts:lnTxStarCut:
+   * NcClusterPseudoCounts:lnMCut:
    * 
-   * Logarithm base e of the lower X-ray temperature cut-off, 
-   * $\ln (T^{*}_{X_{CUT}}) \in [12.0 \ln(10), 16.0 \ln(10) + 1.5]$. The factor 1.5 corresponds to $\ln E(z) \sim \ln (300/70)$.
-   * Relation between mass cut-off and X-ray temperature: $M_{cut} = \frac{(AT_X)^{3/2}}{E(z)}$, 
-   * where $T^{*}_{X_{CUT}} = (AT_X)^{3/2}$. 
+   * Logarithm base e of the lower mass cut-off, 
+   * $\ln M_{CUT} \in [12.0 \ln(10), 16.0 \ln(10)]$. 
    *  
    */
   /**
-   * NcClusterPseudoCounts:lnTxStarCut-fit:
+   * NcClusterPseudoCounts:lnMCut-fit:
    * 
    * FIXME
    *  
    */
-  ncm_model_class_set_sparam (model_class, NC_CLUSTER_PSEUDO_COUNTS_LNTX_STAR_CUT, "\\ln(T^{*}_{X_{CUT}})^{3/2}", "lnTxStarCut",
-                              12.0 * M_LN10, (16.0 * M_LN10 + 1.5), 2.0,
-                              NC_CLUSTER_PSEUDO_COUNTS_DEFAULT_PARAMS_ABSTOL, NC_CLUSTER_PSEUDO_COUNTS_DEFAULT_LNTX_STAR_CUT,
+  ncm_model_class_set_sparam (model_class, NC_CLUSTER_PSEUDO_COUNTS_LNMCUT, "\\ln{M_{CUT}}", "lnMCut",
+                              12.0 * M_LN10, 16.0 * M_LN10, 2.0,
+                              NC_CLUSTER_PSEUDO_COUNTS_DEFAULT_PARAMS_ABSTOL, NC_CLUSTER_PSEUDO_COUNTS_DEFAULT_LNMCUT,
                               NCM_PARAM_TYPE_FIXED);
   /**
    * NcClusterPseudoCounts:sigma_Mcut:
@@ -273,7 +271,6 @@ typedef struct _integrand_data
   NcClusterMass *clusterm;
   NcHICosmo *cosmo;
   gdouble z;
-  gdouble lnEz;
   const gdouble *Mobs;
   const gdouble *Mobs_params;
   gdouble peak[3];
@@ -281,12 +278,6 @@ typedef struct _integrand_data
   gdouble lnM_M0;
   gdouble lnM0;
 } integrand_data;
-
-static gdouble
-_lnMcut_from_lnTstar_cut (gdouble lnTstar_cut, gdouble lnEz)
-{
-  return (lnTstar_cut - lnEz);
-}
 
 /**
  * nc_cluster_pseudo_counts_posterior_ndetone:
@@ -312,28 +303,18 @@ gdouble
 nc_cluster_pseudo_counts_posterior_ndetone (NcClusterPseudoCounts *cpc, NcMassFunction *mfp, NcHICosmo *cosmo, NcClusterMass *clusterm, gdouble z, gdouble Mpl, gdouble Mcl, gdouble sigma_pl, gdouble sigma_cl)
 {
   g_assert (NC_IS_CLUSTER_MASS_PLCL (clusterm));
-  gdouble lnEz = log (nc_hicosmo_E (cosmo, z));
-  gdouble lnMcut = _lnMcut_from_lnTstar_cut (LNTX_STAR_CUT, lnEz);
+  //gdouble lnEz = 0.0; //log (nc_hicosmo_E (cosmo, z));
+  //gdouble lnMcut = _lnMcut_from_lnTstar_cut (LNMCUT, lnEz);
   
-  return nc_cluster_mass_plcl_Msz_Ml_p_ndetone (clusterm, lnMcut, z, Mpl, Mcl, sigma_pl, sigma_cl);
+  return nc_cluster_mass_plcl_Msz_Ml_p_ndetone (clusterm, LNMCUT, z, Mpl, Mcl, sigma_pl, sigma_cl);
 }
 
 static gdouble
-_selection_function (NcClusterPseudoCounts *cpc, gdouble lnM500, gdouble lnEz)
+_selection_function (NcClusterPseudoCounts *cpc, gdouble lnM500)
 {
   const gdouble sqrt2       = sqrt (2.0);
   const gdouble sqrt2_sdcut = sqrt2 * SD_MCUT;
-  gdouble lnMcut = _lnMcut_from_lnTstar_cut (LNTX_STAR_CUT, lnEz);
-  const gdouble lnMcut_min = 12.0 * M_LN10;
-  const gdouble lnMcut_max = 16.0 * M_LN10;
-  gdouble difM;
-
-  if (lnMcut < lnMcut_min)
-    lnMcut = lnMcut_min; 
-  else if (lnMcut > lnMcut_max)
-    lnMcut = lnMcut_max; 
-
-  difM = lnM500 - lnMcut;
+  gdouble difM = lnM500 - LNMCUT;
 
   if (difM < 0.0)
     return 0.5 * erfc (fabs (difM) / sqrt2_sdcut);
@@ -346,19 +327,18 @@ _selection_function (NcClusterPseudoCounts *cpc, gdouble lnM500, gdouble lnEz)
  * @cpc: a #NcClusterPseudoCounts
  * @lnM: logarithm base e of the true mass 
  * @z: true redshift
- * @lnEz: logarithm base e of the normalized Hubble function at z
  *
  * This function computes the selection function (include equation). FIXME 
  *
  * Returns: FIXME
  */
 gdouble 
-nc_cluster_pseudo_counts_selection_function (NcClusterPseudoCounts *cpc, gdouble lnM, gdouble z, gdouble lnEz)
+nc_cluster_pseudo_counts_selection_function (NcClusterPseudoCounts *cpc, gdouble lnM, gdouble z)
 {
   if (z < ZMIN || z > (ZMIN + DELTAZ))
     return 0.0;
   else 
-    return _selection_function (cpc, lnM, lnEz);
+    return _selection_function (cpc, lnM);
 }
 
 /**
@@ -373,8 +353,7 @@ nc_cluster_pseudo_counts_selection_function (NcClusterPseudoCounts *cpc, gdouble
 gdouble
 nc_cluster_pseudo_counts_selection_function_lnMi (NcClusterPseudoCounts *cpc, NcHICosmo *cosmo)
 {
-  gdouble lnEz = nc_hicosmo_E (cosmo, ZMIN + DELTAZ);
-  gdouble lnMi = _lnMcut_from_lnTstar_cut (LNTX_STAR_CUT, lnEz) - 6.0 * SD_MCUT;
+  gdouble lnMi = LNMCUT - 6.0 * SD_MCUT;
 
   return lnMi;
 }
@@ -384,7 +363,7 @@ _Ndet_wout_volume_integrand (gdouble lnM500, gpointer userdata)
 {
   integrand_data *data = (integrand_data *) userdata;
   NcClusterPseudoCounts *cpc = data->cpc;
-  gdouble sf = nc_cluster_pseudo_counts_selection_function (cpc, lnM500, data->z, data->lnEz);
+  gdouble sf = nc_cluster_pseudo_counts_selection_function (cpc, lnM500, data->z);
   gdouble mf = nc_mass_function_dn_dlnm (data->mfp, data->cosmo, lnM500, data->z);
 
   gdouble result = sf * mf;
@@ -415,8 +394,7 @@ nc_cluster_pseudo_counts_ndet_no_z_integral (NcClusterPseudoCounts *cpc, NcHICos
   data.cpc   = cpc;
   data.cosmo = cosmo;
   data.z     = z;
-  data.lnEz  = log (nc_hicosmo_E (cosmo, z));
-
+  
   F.function = _Ndet_wout_volume_integrand;
   F.params = &data;
 
@@ -432,8 +410,7 @@ _Ndet_integrand (gdouble lnM500, gdouble z, gpointer userdata)
 {
   integrand_data *data       = (integrand_data *) userdata;
   NcClusterPseudoCounts *cpc = data->cpc;
-  data->lnEz           = log (nc_hicosmo_E (data->cosmo, z));
-  const gdouble sf     = nc_cluster_pseudo_counts_selection_function (cpc, lnM500, z, data->lnEz);
+  const gdouble sf     = nc_cluster_pseudo_counts_selection_function (cpc, lnM500, z);
   const gdouble result = sf * nc_mass_function_d2n_dzdlnm (data->mfp, data->cosmo, lnM500, z);
   
   return result;
@@ -481,7 +458,7 @@ _posterior_numerator_integrand (gdouble lnM, gpointer userdata)
 {
   integrand_data *data = (integrand_data *) userdata;
   NcClusterPseudoCounts *cpc = data->cpc;
-  const gdouble sf = nc_cluster_pseudo_counts_selection_function (cpc, lnM, data->z, data->lnEz);
+  const gdouble sf = nc_cluster_pseudo_counts_selection_function (cpc, lnM, data->z);
   const gdouble small = exp (-200.0);
   
   if (sf == 0.0)
@@ -528,7 +505,6 @@ nc_cluster_pseudo_counts_posterior_numerator (NcClusterPseudoCounts *cpc, NcMass
     data.clusterm    = clusterm;
     data.cosmo       = cosmo;
     data.z           = z;
-    data.lnEz        = log (nc_hicosmo_E (cosmo, z));
     data.Mobs        = Mobs;
     data.Mobs_params = Mobs_params;
 
@@ -626,7 +602,7 @@ _posterior_numerator_integrand_plcl (gdouble w1, gdouble w2, gdouble lnM_M0, gpo
   integrand_data *data = (integrand_data *) userdata;
   NcClusterPseudoCounts *cpc = data->cpc;   
   const gdouble lnM   = lnM_M0 + data->lnM0;
-  const gdouble sf    = nc_cluster_pseudo_counts_selection_function (cpc, lnM, data->z, data->lnEz);
+  const gdouble sf    = nc_cluster_pseudo_counts_selection_function (cpc, lnM, data->z);
   const gdouble small = exp (-200.0);
   gdouble res;
 
@@ -683,7 +659,6 @@ nc_cluster_pseudo_counts_posterior_numerator_plcl (NcClusterPseudoCounts *cpc, N
     data.clusterm    = clusterm;
     data.cosmo       = cosmo;
     data.z           = z;
-    data.lnEz        = log (nc_hicosmo_E (cosmo, z));
     data.Mobs        = Mobs;
     data.Mobs_params = Mobs_params;
     data.lnM0        = log (M0);

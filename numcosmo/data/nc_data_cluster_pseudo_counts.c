@@ -326,8 +326,7 @@ _nc_data_cluster_pseudo_counts_resample (NcmData *data, NcmMSet *mset, NcmRNG *r
       gdouble *zi_obs          = ncm_matrix_ptr (dcpc->obs, i, NC_DATA_CLUSTER_PSEUDO_COUNTS_Z);
       gdouble *lnMi_obs        = ncm_matrix_ptr (dcpc->obs, i, NC_DATA_CLUSTER_PSEUDO_COUNTS_MPL);
       gdouble *lnMi_obs_params = ncm_matrix_ptr (dcpc->obs, i, NC_DATA_CLUSTER_PSEUDO_COUNTS_SD_MPL);
-      gdouble lnEz             = log (nc_hicosmo_E (cosmo, z_true)); 
-      gdouble val_sel = nc_cluster_pseudo_counts_selection_function (cpc, lnM_true, z_true, lnEz);
+      gdouble val_sel = nc_cluster_pseudo_counts_selection_function (cpc, lnM_true, z_true);
       gdouble sel_u   = gsl_rng_uniform_pos (rng->r);
 
       ncm_rng_unlock (rng);
