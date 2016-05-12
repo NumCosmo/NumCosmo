@@ -68,6 +68,8 @@
 #include "model/nc_hicosmo_de_reparam_cmb.h"
 #include "model/nc_hiprim_power_law.h"
 #include "model/nc_hiprim_atan.h"
+#include "model/nc_hiprim_expc.h"
+#include "model/nc_hiprim_bpl.h"
 #include "lss/nc_window_tophat.h"
 #include "lss/nc_window_gaussian.h"
 #include "lss/nc_growth_func.h"
@@ -316,6 +318,8 @@ ncm_cfg_init (void)
 
   ncm_cfg_register_obj (NC_TYPE_HIPRIM_POWER_LAW);
   ncm_cfg_register_obj (NC_TYPE_HIPRIM_ATAN);
+  ncm_cfg_register_obj (NC_TYPE_HIPRIM_EXPC);
+  ncm_cfg_register_obj (NC_TYPE_HIPRIM_BPL);
 
   ncm_cfg_register_obj (NC_TYPE_CBE_PRECISION);
 

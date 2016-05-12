@@ -176,6 +176,8 @@
       <title>Inflationary</title>
       <xi:include href="xml/nc_hiprim_power_law.xml"/>
       <xi:include href="xml/nc_hiprim_atan.xml"/>
+      <xi:include href="xml/nc_hiprim_expc.xml"/>
+      <xi:include href="xml/nc_hiprim_bpl.xml"/>
     </section>
   </chapter>
 

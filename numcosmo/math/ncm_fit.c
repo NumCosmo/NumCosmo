@@ -1284,7 +1284,7 @@ ncm_fit_log_state (NcmFit *fit)
       g_message ("#  m2lnL     = % 20.15g ( ", ncm_fit_state_get_m2lnL_curval (fit->fstate));
       for (i = 0; i < ncm_vector_len (fit->lh->m2lnL_v); i++)
       {
-        g_message ("% 11.5g ", ncm_vector_get (fit->lh->m2lnL_v, i));
+        g_message ("% 13.8g ", ncm_vector_get (fit->lh->m2lnL_v, i));
       }
       g_message (")\n");
     }

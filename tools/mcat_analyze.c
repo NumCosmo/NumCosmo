@@ -229,6 +229,7 @@ main (gint argc, gchar *argv[])
     if (chain_evol)
     {
       guint last_t = ncm_mset_catalog_max_time (mcat);
+      const gdouble nchains = mcat->nchains;
       guint i;
       
       ncm_message ("# Chain evolution from 0 to %u\n", last_t);
@@ -244,9 +245,9 @@ main (gint argc, gchar *argv[])
         {
           const gdouble mean_j = ncm_stats_vec_get_mean (mcat->pstats, j);
           const gdouble var_j  = ncm_stats_vec_get_var (mcat->pstats, j);
-          const gdouble sd_j   = sqrt (var_j);
+          const gdouble sd_j   = sqrt (var_j / nchains);
           
-          ncm_message (" % 20.15g % 20.15g", (ncm_vector_get (e_mean, j) - mean_j) / sd_j, sqrt (ncm_vector_get (e_var, j)) / sd_j);
+          ncm_message (" % 20.15g % 20.15g", (ncm_vector_get (e_mean, j) - mean_j) / sd_j, sqrt (ncm_vector_get (e_var, j) / nchains) / sd_j);
         }
         ncm_message ("\n");
       }

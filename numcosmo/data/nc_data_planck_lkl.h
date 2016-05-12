@@ -76,6 +76,11 @@ struct _NcDataPlanckLKL
   NcmVector *data_EB;
   NcmVector *data_PHIPHI;
   NcmVector *params;
+  NcmModelCtrl *pfi_ctrl;
+  NcmModelCtrl *cosmo_ctrl;
+  gdouble cm2lnL;
+  gdouble A_planck;
+  GArray *param_map;
 };
 
 GType nc_data_planck_lkl_get_type (void) G_GNUC_CONST;

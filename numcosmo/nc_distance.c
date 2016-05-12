@@ -226,6 +226,7 @@ nc_distance_class_init (NcDistanceClass *klass)
       {"shift_parameter_lss",              "Shift parameter at lss.",           &nc_distance_shift_parameter_lss,               NC_HICOSMO_IMPL_Omega_m0h2 | NC_HICOSMO_IMPL_E2},
       {"comoving_lss",                     "Comoving scale of lss.",            &nc_distance_comoving_lss,                      NC_HICOSMO_IMPL_Omega_m0h2 | NC_HICOSMO_IMPL_E2},
       {"acoustic_scale",                   "Acoustic scale at lss.",            &nc_distance_acoustic_scale,                    NC_HICOSMO_IMPL_Omega_m0h2 | NC_HICOSMO_IMPL_E2},
+      {"theta100CMB",                      "CMB angular scale times 100.",      &nc_distance_theta100CMB,                       NC_HICOSMO_IMPL_Omega_m0h2 | NC_HICOSMO_IMPL_E2},
       {"angular_diameter_curvature_scale", "Angular diameter curvature scale.", &nc_distance_angular_diameter_curvature_scale,  NC_HICOSMO_IMPL_Omega_m0h2 | NC_HICOSMO_IMPL_E2},
       {"r_zd",                             "Sound horizon at drag redshift.",   &nc_distance_r_zd,                              NC_HICOSMO_IMPL_Omega_m0h2 | NC_HICOSMO_IMPL_E2},
     };
@@ -828,7 +829,7 @@ nc_distance_decoupling_redshift (NcDistance *dist, NcHICosmo *cosmo)
   }
 }
 
-static gdouble sound_horizon_integral_argument(gdouble z, gpointer p);
+static gdouble sound_horizon_integral_argument (gdouble z, gpointer p);
 
 /**
  * nc_distance_sound_horizon:
@@ -919,6 +920,32 @@ nc_distance_acoustic_scale (NcDistance *dist, NcHICosmo *cosmo)
   else
     return GSL_NAN;
 }
+
+/**
+ * nc_distance_theta100CMB:
+ * @dist: a #NcDistance
+ * @cosmo: a #NcHICosmo
+ *
+ * Compute the $100\theta_\mathrm{CMB}$ angle at $z_\star$ [nc_distance_decoupling_redshift()],
+ * \begin{equation}
+ * 100\theta_\mathrm{CMB} = 100 \times \frac{r_s (z_\star)}{D_t (z_\star)},
+ * \end{equation}
+ * where $D_t(z_\star)$ is the comoving transverse distance [nc_distance_transverse()]
+ * and $r_s(z_\star)$ is the sound horizon [nc_distance_sound_horizon()] both
+ * both computed at $z_\star$.
+ *
+ * Returns: $100\theta_\mathrm{CMB}$
+ */
+gdouble
+nc_distance_theta100CMB (NcDistance *dist, NcHICosmo *cosmo)
+{
+  gdouble z = nc_distance_decoupling_redshift (dist, cosmo);
+  if (gsl_finite (z))
+    return 100.0 * nc_distance_sound_horizon (dist, cosmo, z) / nc_distance_transverse (dist, cosmo, z);
+  else
+    return GSL_NAN;
+}
+
 
 /**
  * nc_distance_drag_redshift:

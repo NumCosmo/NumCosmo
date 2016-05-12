@@ -60,7 +60,7 @@ nc_hicosmo_de_reparam_cmb_constructed (GObject *object)
                                      NC_HICOSMO_DEFAULT_PARAMS_ABSTOL, 0.0, NCM_PARAM_TYPE_FIXED);
 
     ncm_reparam_set_param_desc_full (NCM_REPARAM (reparam_cmb), NC_HICOSMO_DE_OMEGA_X,
-                                     "Omegak","\\Omega_{k0}", -5.0e-1, 5.0e-1, 1.0e-2,
+                                     "Omegak","\\omega_{k0}", -5.0e-1, 5.0e-1, 1.0e-2,
                                      NC_HICOSMO_DEFAULT_PARAMS_ABSTOL, 0.0, NCM_PARAM_TYPE_FIXED);
 
     NCM_REPARAM (reparam_cmb)->compat_type = NC_TYPE_HICOSMO_DE;
@@ -96,11 +96,12 @@ nc_hicosmo_de_reparam_cmb_class_init (NcHICosmoDEReparamCMBClass *klass)
 static gboolean
 _nc_hicosmo_de_reparam_cmb_old2new (NcmReparam *reparam, NcmModel *model)
 {
+  NcHICosmo *cosmo  = NC_HICOSMO (model);
   NcmVector *params = ncm_model_orig_params_peek_vector (model);
 
-  const gdouble Omega_k0 = nc_hicosmo_Omega_k0 (NC_HICOSMO (model));
-  const gdouble omega_c0 = nc_hicosmo_Omega_c0h2 (NC_HICOSMO (model));
-  const gdouble omega_b0 = nc_hicosmo_Omega_b0h2 (NC_HICOSMO (model));
+  const gdouble Omega_k0 = nc_hicosmo_Omega_k0 (cosmo);
+  const gdouble omega_c0 = nc_hicosmo_Omega_c0h2 (cosmo);
+  const gdouble omega_b0 = nc_hicosmo_Omega_b0h2 (cosmo);
   
   ncm_vector_memcpy (reparam->new_params, params);
 
