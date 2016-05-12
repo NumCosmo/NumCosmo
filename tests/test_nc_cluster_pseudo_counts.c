@@ -170,7 +170,7 @@ test_nc_cluster_pseudo_counts_new (TestNcClusterPseudoCounts *test, gconstpointe
   ncm_model_param_set_ftype (NCM_MODEL (clusterm), 5, NCM_PARAM_TYPE_FREE);
   ncm_model_param_set_ftype (NCM_MODEL (clusterm), 6, NCM_PARAM_TYPE_FREE);
 */
-  ncm_model_param_set_by_name (NCM_MODEL (test->cpc), "lnMcut",     33.5);
+  ncm_model_param_set_by_name (NCM_MODEL (test->cpc), "lnTxStarCut",     33.5);
   ncm_model_param_set_by_name (NCM_MODEL (test->cpc), "sigma_Mcut",  0.05);
   ncm_model_param_set_by_name (NCM_MODEL (test->cpc), "zmin",        0.188);
   ncm_model_param_set_by_name (NCM_MODEL (test->cpc), "Deltaz",      0.72);

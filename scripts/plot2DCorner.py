@@ -93,7 +93,7 @@ def plotCorner (xs, bins=50, labels=None, label_size=9, range=None, fig=None, ma
 
     # Parse the bin specifications.
     try:
-        bins = [float(bins) for _ in range]
+        bins = [int(bins) for _ in range]
     except TypeError:
         if len(bins) != len(range):
             raise ValueError("Dimension mismatch between bins and range")                                                   
