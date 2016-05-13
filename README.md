@@ -43,14 +43,30 @@ The NumCosmo homepage is [here](http://www.nongnu.org/numcosmo/), it contains th
 Building from repository:
 -------------------------
 
-To build from the git repository first run ./autogen.sh to build the
-configure script. Note that this requires the autotools developer 
-enviroment (autoconf, automake, intltool, libtool, ...).
+To build from a release package, for which the configure script is ready, run: 
+  - ./configure (--help to see options)
+  - make
+  - make install
 
-To build from a release package (or after running ./autogen.sh), run: 
-./configure (--help to see options)
-make
-make install
+To build from the git repository, run:
+  - ./autogen.sh 
+    - The configure script is built at this point. 
+      Note that this requires the autotools developer enviroment (latest
+version): 
+      - autoconf 
+        * http://ftp.gnu.org/gnu/autoconf/ 
+      - automake
+        * http://ftp.gnu.org/gnu/automake/
+      - libtool
+        * http://ftp.gnu.org/gnu/libtool/
+      And also:
+      - gtk-doc
+        * http://www.gtk.org/gtk-doc/
+      - gobject-introspection
+        * https://wiki.gnome.org/action/show/Projects/GObjectIntrospection?action=show&redirect=GObjectIntrospection
+  - ./cofigure (--help to see options)
+  - make 
+  - make install 
 
 For a generic installation instructions, see INSTALL.
 
