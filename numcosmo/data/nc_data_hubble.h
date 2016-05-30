@@ -53,7 +53,8 @@ typedef struct _NcDataHubble NcDataHubble;
  * @NC_DATA_HUBBLE_BUSCA2013_BAO_WMAP: FIXME
  * @NC_DATA_HUBBLE_RIESS2008_HST: FIXME
  * @NC_DATA_HUBBLE_ZHANG2012: FIXME
- *
+ * @NC_DATA_HUBBLE_RIESS2016_HST_WFC3: FIXME
+ * 
  * FIXME
  */
 typedef enum _NcDataHubbleId
@@ -65,8 +66,9 @@ typedef enum _NcDataHubbleId
   NC_DATA_HUBBLE_MORESCO2012_MASTRO,
   NC_DATA_HUBBLE_BUSCA2013_BAO_WMAP, 
   NC_DATA_HUBBLE_RIESS2008_HST,
-  NC_DATA_HUBBLE_ZHANG2012,     /*< private >*/
-  NC_DATA_HUBBLE_NSAMPLES,      /*< skip >*/
+  NC_DATA_HUBBLE_ZHANG2012,
+  NC_DATA_HUBBLE_RIESS2016_HST_WFC3, /*< private >*/
+  NC_DATA_HUBBLE_NSAMPLES,           /*< skip >*/
 } NcDataHubbleId;
 
 struct _NcDataHubble
