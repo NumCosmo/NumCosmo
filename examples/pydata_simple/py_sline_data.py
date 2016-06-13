@@ -24,7 +24,7 @@ Ncm.cfg_init ()
 class PySLineData (Ncm.Data):
   def __init__ (self):
     Ncm.Data.__init__ (self)
-    self.len  = 2000
+    self.len  = 600
     self.dof  = self.len - 2
     self.data = []
 

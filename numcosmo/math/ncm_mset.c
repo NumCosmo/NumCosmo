@@ -2602,10 +2602,14 @@ ncm_mset_save (NcmMSet *mset, NcmSerialize *ser, const gchar *filename, gboolean
             g_key_file_set_value (msetfile, group, key, param_str);
             if (save_comment)
             {
-              gchar *desc = ncm_cfg_string_to_comment (g_param_spec_get_blurb (param_spec));
-              if (!g_key_file_set_comment (msetfile, group, key, desc, &error))
-                g_error ("ncm_mset_save: %s", error->message);
-              g_free (desc);
+              const gchar *blurb = g_param_spec_get_blurb (param_spec);
+              if (blurb != NULL && blurb[0] != 0)
+              {
+                gchar *desc = ncm_cfg_string_to_comment (blurb);
+                if (!g_key_file_set_comment (msetfile, group, key, desc, &error))
+                  g_error ("ncm_mset_save: %s", error->message);
+                g_free (desc);
+              }
             }
 
             g_variant_unref (value);
