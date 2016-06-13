@@ -138,6 +138,9 @@ ncm_sources = \
 	math/ncm_sphere_map.c     \
 	sphere/healpix.c
 
+ncm_sources_nogi = \
+	math/Faddeeva.c
+
 ncm_headers = \
 	math/ncm_c.h                     \
 	math/ncm_cfg.h                   \
@@ -228,6 +231,9 @@ ncm_headers = \
 	math/memory_pool.h        \
 	math/ncm_sphere_map.h     \
 	sphere/healpix.h
+
+ncm_headers_nogi = \
+	math/Faddeeva.h
 
 ncm_headers_internal = 
 
@@ -349,7 +355,6 @@ nc_headers = \
 	xcor/nc_xcor_limber_gal.h              \
 	xcor/nc_xcor_limber_lensing.h          \
 	xcor/nc_data_xcor.h
-	
 
 nc_sources = \
 	nc_hicosmo.c                  \
@@ -471,7 +476,6 @@ nc_sources = \
 	xcor/nc_xcor_limber_gal.c              \
 	xcor/nc_xcor_limber_lensing.c          \
 	xcor/nc_data_xcor.c
-	
 
 libnumcosmo_la_LDFLAGS = -version-info $(LT_CURRENT):$(LT_REVISION):$(LT_AGE)
 
@@ -549,6 +553,8 @@ nc_enum_types.c: $(nc_headers) nc_enum_types.c.template
 libnumcosmo_la_SOURCES = \
 	$(ncm_sources)          \
 	$(ncm_headers)          \
+	$(ncm_sources_nogi)     \
+	$(ncm_headers_nogi)     \
 	$(nc_sources)           \
 	$(nc_headers)           \
 	$(ncm_cond_sources)     \
@@ -565,6 +571,7 @@ nodist_libnumcosmo_la_SOURCES = \
 
 nobase_cosmo_include_HEADERS = \
 	$(ncm_headers)                 \
+	$(ncm_headers_nogi)            \
 	$(ncm_headers_internal)        \
 	$(nc_headers)                  \
 	$(ncm_cond_headers)            \

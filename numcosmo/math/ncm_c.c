@@ -110,6 +110,16 @@ ncm_c_class_init (NcmCClass *klass)
  * Returns: $\sqrt{3 / (4 \pi)}$.
  */
 /**
+ * ncm_c_ln2:
+ *
+ * Returns: $\ln(2)$.
+ */
+/**
+ * ncm_c_ln3:
+ *
+ * Returns: $\ln(3)$.
+ */
+/**
  * ncm_c_lnpi_4:
  *
  * Returns: $\ln(\pi) / 4$.
@@ -118,6 +128,11 @@ ncm_c_class_init (NcmCClass *klass)
  * ncm_c_ln2pi:
  *
  * Returns: $\ln(2\pi)$.
+ */
+/**
+ * ncm_c_lnpi:
+ *
+ * Returns: $\ln(\pi)$.
  */
 /**
  * ncm_c_pi:

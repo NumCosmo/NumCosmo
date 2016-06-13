@@ -40,6 +40,7 @@
 
 #include "math/ncm_model_builder.h"
 #include "math/ncm_model.h"
+#include "math/ncm_mset.h"
 
 enum
 {
@@ -192,6 +193,7 @@ ncm_model_builder_new (GType ptype, const gchar *name, const gchar *desc)
                                       "name",        name,
                                       "description", desc,
                                       NULL);
+
   return mb;
 }
 
@@ -296,6 +298,11 @@ _ncm_model_builder_class_init (gpointer g_class, gpointer class_data)
   NcmModelClass *model_class = NCM_MODEL_CLASS (g_class);
   NcmModelBuilder *mb = NCM_MODEL_BUILDER (class_data);
   guint i;
+
+  if (model_class->main_model_id == -1)
+  {
+    ncm_mset_model_register_id (model_class, mb->name, mb->desc, NULL, FALSE, -1);
+  }
 
   ncm_model_class_set_name_nick (model_class, mb->desc, mb->name);
   ncm_model_class_add_params (model_class, mb->sparams->len, mb->vparams->len, 1);

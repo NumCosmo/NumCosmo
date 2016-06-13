@@ -2634,10 +2634,10 @@ ncm_mset_catalog_calc_ci_interp (NcmMSetCatalog *mcat, NcmMSetFunc *func, gdoubl
       mcat->quantile_ws = ncm_vector_new (dim);
     }
 
-    g_ptr_array_set_free_func (epdf_a, (GDestroyNotify)ncm_stats_dist1d_free);
+    g_ptr_array_set_free_func (epdf_a, (GDestroyNotify) ncm_stats_dist1d_free);
     for (i = 0; i < dim; i++)
     {
-      NcmStatsDist1dEPDF *epdf = ncm_stats_dist1d_epdf_new (1000, 0.1, 0.01);
+      NcmStatsDist1dEPDF *epdf = ncm_stats_dist1d_epdf_new (NCM_MSET_CATALOG_DIST_EST_SD_SCALE);
       g_ptr_array_add (epdf_a, epdf);
     }
 
@@ -2728,7 +2728,7 @@ ncm_mset_catalog_calc_distrib (NcmMSetCatalog *mcat, NcmMSetFunc *func, NcmFitRu
   guint dim = ncm_mset_func_get_dim (func);
   g_assert_cmpuint (dim, ==, 1);
   {
-    NcmStatsDist1dEPDF *epdf1d = ncm_stats_dist1d_epdf_new (1000, 0.1, 0.01);
+    NcmStatsDist1dEPDF *epdf1d = ncm_stats_dist1d_epdf_new (NCM_MSET_CATALOG_DIST_EST_SD_SCALE);
     NcmVector *save_params = ncm_vector_new (ncm_mset_fparams_len (mcat->mset));
     const guint cat_len = ncm_mset_catalog_len (mcat);
     guint i;
@@ -2782,7 +2782,7 @@ ncm_mset_catalog_calc_distrib (NcmMSetCatalog *mcat, NcmMSetFunc *func, NcmFitRu
 static NcmStatsDist1d *
 _ncm_mset_catalog_calc_distrib (NcmMSetCatalog *mcat, guint vi, NcmFitRunMsgs mtype)
 {
-  NcmStatsDist1dEPDF *epdf1d = ncm_stats_dist1d_epdf_new (1000, 0.1, 0.01);
+  NcmStatsDist1dEPDF *epdf1d = ncm_stats_dist1d_epdf_new (NCM_MSET_CATALOG_DIST_EST_SD_SCALE);
   NcmVector *save_params = ncm_vector_new (ncm_mset_fparams_len (mcat->mset));
   const guint cat_len = ncm_mset_catalog_len (mcat);
   guint i;
@@ -2876,7 +2876,7 @@ ncm_mset_catalog_calc_add_param_distrib (NcmMSetCatalog *mcat, guint add_param, 
 static void
 _ncm_mset_catalog_calc_ensemble_evol (NcmMSetCatalog *mcat, guint vi, guint nsteps, NcmFitRunMsgs mtype, NcmVector **pval, NcmMatrix **t_evol)
 {
-  NcmStatsDist1dEPDF *epdf1d = ncm_stats_dist1d_epdf_new (1000, 0.1, 0.01);
+  NcmStatsDist1dEPDF *epdf1d = ncm_stats_dist1d_epdf_new (NCM_MSET_CATALOG_DIST_EST_SD_SCALE);
   NcmStatsDist1d *sd1        = NCM_STATS_DIST1D (epdf1d);
   NcmVector *save_params = ncm_vector_new (ncm_mset_fparams_len (mcat->mset));
   const guint max_t   = ncm_mset_catalog_max_time (mcat);
