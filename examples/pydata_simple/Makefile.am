@@ -10,7 +10,8 @@ examples_DATA = \
 	py_sline_model.py \
 	py_sline_data.py  \
 	example_fit.py    \
-	example_mcmc.py
+	example_mcmc.py   \
+	example_mc.py
 
 
 EXTRA_DIST = \

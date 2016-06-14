@@ -17,19 +17,21 @@ from py_sline_model import PySLineModel
 from py_sline_data import PySLineData
 
 #
-#
+# Instantiating a new empty SLine data object.
 #
 sld = PySLineData ()
 
 #
-#
+# Instantiating a new SLine model object and setting
+# some values for its parameters.
 #
 slm = PySLineModel ()
 slm.props.m = 0.9
 slm.props.b = 0.1
 
 #
-#
+# New Model set object including slm with parameters
+# set as free.
 #
 mset = Ncm.MSet.empty_new ()
 mset.set (slm)
@@ -37,7 +39,11 @@ mset.param_set_all_ftype (Ncm.ParamType.FREE)
 mset.prepare_fparam_map ()
 
 #
-#
+# Creating a new Serialization object, with a data
+# file does not exists, generate a new sample using
+# mset as fiducial model and save it to data_file.
+# 
+# If data_file already exists, reload sld from it.
 #
 ser = Ncm.Serialize.new (0)
 data_file = "example_data.obj"
@@ -49,19 +55,19 @@ else:
   sld = ser.from_file (data_file)
 
 #
-#
+# New data set object with sld added.
 #
 dset = Ncm.Dataset.new ()
 dset.append_data (sld)
 
 #
-#
+# New likelihood object using dset.
 #
 lh = Ncm.Likelihood.new (dset)
 
 #
 #  Creating a Fit object of type NLOPT using the fitting algorithm ln-neldermead to
-#  fit the Modelset mset using the Likelihood lh and using a numerical differentiation
+#  fit the model set mset using the Likelihood lh and using a numerical differentiation
 #  algorithm (NUMDIFF_FORWARD) to obtain the gradient (if needed).
 #
 fit = Ncm.Fit.new (Ncm.FitType.NLOPT, "ln-neldermead", lh, mset, Ncm.FitGradType.NUMDIFF_FORWARD)
