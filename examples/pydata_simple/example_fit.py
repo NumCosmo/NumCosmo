@@ -4,6 +4,7 @@ import gi
 import math
 import numpy as np
 import matplotlib.pyplot as plt
+import os.path
 
 gi.require_version('NumCosmo', '1.0')
 gi.require_version('NumCosmoMath', '1.0')
@@ -33,11 +34,19 @@ slm.props.b = 0.1
 mset = Ncm.MSet.empty_new ()
 mset.set (slm)
 mset.param_set_all_ftype (Ncm.ParamType.FREE)
+mset.prepare_fparam_map ()
 
 #
 #
 #
-sld.simulate_data (slm)
+ser = Ncm.Serialize.new (0)
+data_file = "example_data.obj"
+if not os.path.exists (data_file):
+  rng = Ncm.RNG.new ()
+  sld.resample (mset, rng)
+  ser.to_file (sld, data_file)
+else:
+  sld = ser.from_file (data_file)
 
 #
 #

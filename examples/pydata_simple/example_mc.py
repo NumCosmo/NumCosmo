@@ -89,26 +89,13 @@ fit.log_covar ()
 #
 #
 #
-init_sampler = Ncm.MSetTransKernGauss.new (0)
+mc = Ncm.FitMC.new (fit, Ncm.FitMCResampleType.FROM_MODEL, Ncm.FitRunMsgs.SIMPLE)
 
-#
-#
-#
-gtkern = Ncm.MSetTransKernGauss.new (0)
-mcmc   = Ncm.FitMCMC.new (fit, gtkern, Ncm.FitRunMsgs.SIMPLE)
-cov    = fit.fstate.covar.dup ()
+mc.set_data_file ("example_mc_out.fits")
 
-mcmc.set_data_file ("example_mcmc_out.fits")
+mc.start_run ()
+mc.run_lre (1000, 1.0e-3)
+mc.end_run ()
 
-cov.scale (2.0)
-gtkern.set_cov (cov)
-
-init_sampler.set_mset (mset)
-init_sampler.set_prior_from_mset ()
-
-mcmc.start_run ()
-mcmc.run_lre (1000, 1.0e-3)
-mcmc.end_run ()
-
-mcmc.mean_covar ()
+mc.mean_covar ()
 fit.log_covar ()

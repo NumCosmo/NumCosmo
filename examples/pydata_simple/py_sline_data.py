@@ -22,11 +22,15 @@ Ncm.cfg_init ()
 # Creating a new class implementing our object NcPySLineData
 #
 class PySLineData (Ncm.Data):
+  len  = GObject.Property (type = GObject.TYPE_UINT, default = 0, flags = GObject.PARAM_READWRITE)
+  dof  = GObject.Property (type = GObject.TYPE_UINT, default = 0, flags = GObject.PARAM_READWRITE)
+  data = GObject.Property (type = Ncm.Matrix, flags = GObject.PARAM_READWRITE)
+
   def __init__ (self):
     Ncm.Data.__init__ (self)
     self.len  = 600
     self.dof  = self.len - 2
-    self.data = []
+    self.data = Ncm.Matrix.new (self.len, 3)
 
   def do_get_length (self):
     return self.len
@@ -41,27 +45,31 @@ class PySLineData (Ncm.Data):
     self.dof  = self.len - mset.fparams_len ()
     return
   
+  def do_resample (self, mset, rng):
+    mid = mset.get_id_by_ns ("NcPySLineModel")
+    slm = mset.peek (mid)
+        
+    my_data = []
+
+    for i in range (self.len):
+      x = rng.uniform_gen (0.0, 10.0)
+      s = x * rng.uniform_gen (0.4, 0.5)
+      v = rng.gaussian_gen (slm.props.m * x + slm.props.b, s)
+
+      my_data.append ([x, v, s])
+
+    my_array = np.array (my_data).reshape (3 * self.len)
+    self.data = Ncm.Matrix.new_array (my_array, 3)
+    self.set_init (True)
+
   def do_m2lnL_val (self, mset):
     mid = mset.get_id_by_ns ("NcPySLineModel")
     slm = mset.peek (mid)
     
     m2lnL = 0.0
-    for d in self.data:
-      m2lnL += ((slm.props.m * d[0] + slm.props.b - d[1]) / d[2])**2
-    return m2lnL
-    
-  def simulate_data (self, sline):
-    assert (GObject.type_is_a (sline, PySLineModel))
-
-    self.data = []
-    
     for i in range (self.len):
-      x = np.random.uniform (0.0, 10.0)
-      s = x * np.random.uniform (0.4, 0.5)
-      v = np.random.normal (sline.props.m * x + sline.props.b, s)
-
-      self.data.append ([x, v, s])
-    self.set_init (True)
+      m2lnL += ((slm.props.m * self.data.get (i, 0) + slm.props.b - self.data.get (i, 1)) / self.data.get (i, 2))**2
+    return m2lnL
   
 #
 # Register our new Python class PySLineData
