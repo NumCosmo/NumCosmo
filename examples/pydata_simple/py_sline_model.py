@@ -56,8 +56,14 @@ class PySLineModel (NcPySLineModel):
   # All model parameters must be defined by the ModelBuilder.
   #
   some_property = GObject.Property (type = str)
+
+  #
+  # Calling the father's constructor
+  #  
+  def __init__ (self):
+    NcPySLineModel.__init__ (self)
   
 #
 # Register our new Python class PyNcPySLineModel
 #
-GObject.type_register (NcPySLineModel)
+GObject.type_register (PySLineModel)
