@@ -53,6 +53,11 @@
 #  endif
 #endif
 
+#include <complex.h>
+#ifdef NUMCOSMO_HAVE_FFTW3
+#include <fftw3.h>
+#endif /* NUMCOSMO_HAVE_FFTW3 */
+
 enum
 {
   PROP_0,
@@ -103,6 +108,25 @@ ncm_vector_new_full (gdouble *d, gsize size, gsize stride, gpointer pdata, GDest
   g_assert ((pdata == NULL) || (pdata != NULL && pfree != NULL));
   cv->pdata = pdata;
   cv->pfree = pfree;
+  return cv;
+}
+
+/**
+ * ncm_vector_new_fftw:
+ * @size: number of doubles allocated.
+ * 
+ * This function allocates memory for a new #NcmVector of double
+ * with @n components. It uses fftw_alloc_real in order to be used
+ * by fftw* functions.
+ *
+ * Returns: A new #NcmVector.
+ */
+NcmVector *
+ncm_vector_new_fftw (guint size)
+{
+  gdouble *d = fftw_alloc_real (size);
+  NcmVector *cv = ncm_vector_new_full (d, size, 1, d, (GDestroyNotify) fftw_free); 
+  cv->type = NCM_VECTOR_MALLOC;
   return cv;
 }
 

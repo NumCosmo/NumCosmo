@@ -269,14 +269,14 @@ ncm_matrix_new_gsl_static (gsl_matrix *gm)
 
 /**
  * ncm_matrix_new_array:
- * @a: (element-type double): GArray of doubles to be converted into a #NcmMatrix
+ * @a: (array) (element-type double): GArray of doubles to be converted into a #NcmMatrix
  * @ncols: number of columns
  * 
  * The number of rows is defined dividing the lenght of @a by @ncols.
  * This function saves @a internally and frees it when it is no longer necessary.
  * The GArray @a must not be freed.
  *
- * Returns: A new #NcmMatrix.
+ * Returns: (transfer full): A new #NcmMatrix.
  */
 NcmMatrix *
 ncm_matrix_new_array (GArray *a, guint ncols)

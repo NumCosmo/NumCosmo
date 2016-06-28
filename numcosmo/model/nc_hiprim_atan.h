@@ -48,20 +48,20 @@ typedef struct _NcHIPrimAtan NcHIPrimAtan;
  * NcHIPrimAtanParams:
  * @NC_HIPRIM_ATAN_LN10E10ASA: Amplitude of the adiabatic scalar mode $\ln(10^10A_{SA})$
  * @NC_HIPRIM_ATAN_N_SA: Adiabatic scalar spectral index
- * @NC_HIPRIM_ATAN_C1: Arctan parameter $c_1$
+ * @NC_HIPRIM_ATAN_LNKC: Arctan parameter $\ln(k_c)$
  * @NC_HIPRIM_ATAN_C2: Arctan parameter $c_2$
  * @NC_HIPRIM_ATAN_C3: Arctan parameter $c_3$
  *
- *
  * FIXME
+ * 
  */
 typedef enum _NcHIPrimAtanParams
 {
   NC_HIPRIM_ATAN_LN10E10ASA,
   NC_HIPRIM_ATAN_N_SA,
-  NC_HIPRIM_ATAN_C1,
+  NC_HIPRIM_ATAN_LNKC,
   NC_HIPRIM_ATAN_C2,
-  NC_HIPRIM_ATAN_C3, /*< private >*/
+  NC_HIPRIM_ATAN_C3,         /*< private >*/
   NC_HIPRIM_ATAN_SPARAM_LEN, /*< skip >*/
 } NcHIPrimAtanParams;
 
@@ -79,13 +79,13 @@ struct _NcHIPrimAtan
 
 GType nc_hiprim_atan_get_type (void) G_GNUC_CONST;
 
+NcHIPrimAtan *nc_hiprim_atan_new (void);
+
 #define NC_HIPRIM_ATAN_DEFAULT_LN10E10ASA (3.179)
 #define NC_HIPRIM_ATAN_DEFAULT_N_SA (0.9742)
-#define NC_HIPRIM_ATAN_DEFAULT_C1 (100.0)
-#define NC_HIPRIM_ATAN_DEFAULT_C2 (5.0)
+#define NC_HIPRIM_ATAN_DEFAULT_LNKC (-5.3)
+#define NC_HIPRIM_ATAN_DEFAULT_C2 (1.0)
 #define NC_HIPRIM_ATAN_DEFAULT_C3 (1.0)
-
-NcHIPrimAtan *nc_hiprim_atan_new (void);
 
 G_END_DECLS
 

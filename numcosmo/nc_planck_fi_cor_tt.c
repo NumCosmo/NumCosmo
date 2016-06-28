@@ -46,7 +46,6 @@
 enum
 {
   PROP_0,
-  PROP_CMP,
   PROP_SIZE
 };
 
@@ -55,36 +54,6 @@ G_DEFINE_TYPE (NcPlanckFICorTT, nc_planck_fi_cor_tt, NC_TYPE_PLANCK_FI);
 static void
 nc_planck_fi_cor_tt_init (NcPlanckFICorTT *nc_planck_fi_cor_tt)
 {
-}
-
-static void
-nc_planck_fi_cor_tt_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
-{
-  g_return_if_fail (NC_IS_PLANCK_FI_COR_TT (object));
-
-  switch (prop_id)
-  {
-    case PROP_CMP:
-      break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
-  }
-}
-
-static void
-nc_planck_fi_cor_tt_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
-{
-  g_return_if_fail (NC_IS_PLANCK_FI_COR_TT (object));
-
-  switch (prop_id)
-  {
-    case PROP_CMP:
-      break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
-  }
 }
 
 static void
@@ -101,20 +70,10 @@ nc_planck_fi_cor_tt_class_init (NcPlanckFICorTTClass *klass)
   GObjectClass* object_class = G_OBJECT_CLASS (klass);
   NcmModelClass *model_class = NCM_MODEL_CLASS (klass);
 
-  model_class->set_property = nc_planck_fi_cor_tt_set_property;
-  model_class->get_property = nc_planck_fi_cor_tt_get_property;
   object_class->finalize    = nc_planck_fi_cor_tt_finalize;
 
   ncm_model_class_set_name_nick (model_class, "Planck Foreground and Instument Model -- TT", "PlanckFICorTT");
   ncm_model_class_add_params (model_class, NC_PLANCK_FI_COR_TT_SPARAM_LEN, 0, PROP_SIZE);
-
-  g_object_class_install_property (object_class,
-                                   PROP_CMP,
-                                   g_param_spec_uint ("cmp",
-                                                      NULL,
-                                                      "mmm",
-                                                      0, G_MAXUINT, 0,
-                                                      G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   ncm_model_class_set_sparam (model_class, NC_PLANCK_FI_COR_TT_A_cib_217, "A^{\\mathrm{CIB}}_{217}", "A_cib_217",
                               0.0, 400.0, 5.0,
@@ -305,7 +264,7 @@ _nc_planck_fi_cor_tt_sz_prior_f (NcmMSet *mset, gpointer obj, const gdouble *x, 
 
   g_assert (NC_IS_PLANCK_FI_COR_TT (fi_cor_tt));
 
-  f[0] = (A_kSZ + tp->f_tSZ * A_tSZ - tp->mean) / tp->mean;
+  f[0] = (A_kSZ + tp->f_tSZ * A_tSZ - tp->mean) / tp->sigma;
 }
 
 static void

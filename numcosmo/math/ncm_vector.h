@@ -88,6 +88,7 @@ GType ncm_vector_get_type (void) G_GNUC_CONST;
 
 NcmVector *ncm_vector_new (gsize n);
 NcmVector *ncm_vector_new_full (gdouble *d, gsize size, gsize stride, gpointer pdata, GDestroyNotify pfree);
+NcmVector *ncm_vector_new_fftw (guint size);
 NcmVector *ncm_vector_new_gsl (gsl_vector *gv);
 NcmVector *ncm_vector_new_gsl_static (gsl_vector *gv);
 NcmVector *ncm_vector_new_array (GArray *a);
@@ -126,6 +127,8 @@ G_INLINE_FUNC void ncm_vector_addto (NcmVector *cv, const guint i, const gdouble
 G_INLINE_FUNC void ncm_vector_fast_addto (NcmVector *cv, const guint i, const gdouble val);
 G_INLINE_FUNC void ncm_vector_subfrom (NcmVector *cv, const guint i, const gdouble val);
 G_INLINE_FUNC void ncm_vector_fast_subfrom (NcmVector *cv, const guint i, const gdouble val);
+G_INLINE_FUNC void ncm_vector_mulby (NcmVector *cv, const guint i, const gdouble val);
+G_INLINE_FUNC void ncm_vector_fast_mulby (NcmVector *cv, const guint i, const gdouble val);
 G_INLINE_FUNC void ncm_vector_set_all (NcmVector *cv, const gdouble val);
 G_INLINE_FUNC void ncm_vector_set_array (NcmVector *cv, const gdouble *array);
 G_INLINE_FUNC void ncm_vector_scale (NcmVector *cv, const gdouble val);
@@ -243,6 +246,18 @@ G_INLINE_FUNC void
 ncm_vector_fast_subfrom (NcmVector *cv, const guint i, const gdouble val)
 {
   ncm_vector_gsl (cv)->data[i] = ncm_vector_gsl (cv)->data[i] - val;
+}
+
+G_INLINE_FUNC void
+ncm_vector_mulby (NcmVector *cv, const guint i, const gdouble val)
+{
+  gsl_vector_set (ncm_vector_gsl (cv), i, gsl_vector_get (ncm_vector_gsl (cv), i) * val);
+}
+
+G_INLINE_FUNC void
+ncm_vector_fast_mulby (NcmVector *cv, const guint i, const gdouble val)
+{
+  ncm_vector_gsl (cv)->data[i] *= val;
 }
 
 G_INLINE_FUNC void

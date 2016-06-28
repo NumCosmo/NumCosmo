@@ -19,6 +19,7 @@ MY_CFLAGS = \
 	 $(CFITSIO_CFLAGS)  \
 	 $(NLOPT_CFLAGS)    \
 	 $(LIBCUBA_INCDIR)  \
+	 $(OPENMP_CFLAGS)   \
 	 -I$(PLC_DIR)         \
 	 -I$(PLC_DIR)/cldf    \
 	 -I$(PLC_DIR)/minipmc \
@@ -137,6 +138,9 @@ ncm_sources = \
 	math/ncm_sphere_map.c     \
 	sphere/healpix.c
 
+ncm_sources_nogi = \
+	math/Faddeeva.c
+
 ncm_headers = \
 	math/ncm_c.h                     \
 	math/ncm_cfg.h                   \
@@ -228,6 +232,9 @@ ncm_headers = \
 	math/ncm_sphere_map.h     \
 	sphere/healpix.h
 
+ncm_headers_nogi = \
+	math/Faddeeva.h
+
 ncm_headers_internal = 
 
 nc_headers = \
@@ -248,6 +255,7 @@ nc_headers = \
 	nc_snia_dist_cov.h            \
 	nc_planck_fi.h                \
 	nc_planck_fi_cor_tt.h         \
+	nc_planck_fi_cor_ttteee.h     \
 	nc_cbe_precision.h            \
 	nc_cbe.h                      \
 	model/nc_hicosmo_de.h         \
@@ -264,6 +272,8 @@ nc_headers = \
 	model/nc_hicosmo_qgrw.h       \
 	model/nc_hiprim_power_law.h   \
 	model/nc_hiprim_atan.h        \
+	model/nc_hiprim_expc.h        \
+	model/nc_hiprim_bpl.h         \
 	lss/nc_window.h               \
 	lss/nc_window_tophat.h        \
 	lss/nc_window_gaussian.h      \
@@ -345,7 +355,6 @@ nc_headers = \
 	xcor/nc_xcor_limber_gal.h              \
 	xcor/nc_xcor_limber_lensing.h          \
 	xcor/nc_data_xcor.h
-	
 
 nc_sources = \
 	nc_hicosmo.c                  \
@@ -365,6 +374,7 @@ nc_sources = \
 	nc_snia_dist_cov.c            \
 	nc_planck_fi.c                \
 	nc_planck_fi_cor_tt.c         \
+	nc_planck_fi_cor_ttteee.c     \
 	nc_cbe_precision.c            \
 	nc_cbe.c                      \
 	model/nc_hicosmo_de.c         \
@@ -381,6 +391,8 @@ nc_sources = \
 	model/nc_hicosmo_qgrw.c       \
 	model/nc_hiprim_power_law.c   \
 	model/nc_hiprim_atan.c        \
+	model/nc_hiprim_expc.c        \
+	model/nc_hiprim_bpl.c         \
 	lss/nc_window.c               \
 	lss/nc_window_tophat.c        \
 	lss/nc_window_gaussian.c      \
@@ -464,7 +476,6 @@ nc_sources = \
 	xcor/nc_xcor_limber_gal.c              \
 	xcor/nc_xcor_limber_lensing.c          \
 	xcor/nc_data_xcor.c
-	
 
 libnumcosmo_la_LDFLAGS = -version-info $(LT_CURRENT):$(LT_REVISION):$(LT_AGE)
 
@@ -542,6 +553,8 @@ nc_enum_types.c: $(nc_headers) nc_enum_types.c.template
 libnumcosmo_la_SOURCES = \
 	$(ncm_sources)          \
 	$(ncm_headers)          \
+	$(ncm_sources_nogi)     \
+	$(ncm_headers_nogi)     \
 	$(nc_sources)           \
 	$(nc_headers)           \
 	$(ncm_cond_sources)     \
@@ -558,6 +571,7 @@ nodist_libnumcosmo_la_SOURCES = \
 
 nobase_cosmo_include_HEADERS = \
 	$(ncm_headers)                 \
+	$(ncm_headers_nogi)            \
 	$(ncm_headers_internal)        \
 	$(nc_headers)                  \
 	$(ncm_cond_headers)            \

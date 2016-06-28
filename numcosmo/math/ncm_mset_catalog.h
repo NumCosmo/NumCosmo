@@ -209,6 +209,7 @@ void ncm_mset_catalog_calc_add_param_ensemble_evol (NcmMSetCatalog *mcat, guint 
 #define NCM_MSET_CATALOG_RTYPE_BSTRAP_MEAN "bootstrap-mean"
 #define NCM_MSET_CATALOG_RTYPE_UNDEFINED "undefined-run"
 #define NCM_MSET_CATALOG_FSYMB_LABEL "FSYMB"
+#define NCM_MSET_CATALOG_DIST_EST_SD_SCALE (1.0e-3)
 
 G_END_DECLS
 

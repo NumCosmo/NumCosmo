@@ -50,6 +50,7 @@
 #include "math/ncm_model_ctrl.h"
 #include "math/ncm_model_builder.h"
 #include "math/ncm_reparam_linear.h"
+#include "math/ncm_data.h"
 #include "math/ncm_stats_vec.h"
 #include "math/ncm_fit_esmcmc_walker_stretch.h"
 #include "nc_hicosmo.h"
@@ -68,6 +69,8 @@
 #include "model/nc_hicosmo_de_reparam_cmb.h"
 #include "model/nc_hiprim_power_law.h"
 #include "model/nc_hiprim_atan.h"
+#include "model/nc_hiprim_expc.h"
+#include "model/nc_hiprim_bpl.h"
 #include "lss/nc_window_tophat.h"
 #include "lss/nc_window_gaussian.h"
 #include "lss/nc_growth_func.h"
@@ -120,6 +123,7 @@
 #include "nc_snia_dist_cov.h"
 #include "nc_planck_fi.h"
 #include "nc_planck_fi_cor_tt.h"
+#include "nc_planck_fi_cor_ttteee.h"
 #include "data/nc_data_bao_a.h"
 #include "data/nc_data_bao_dv.h"
 #include "data/nc_data_bao_dvdv.h"
@@ -300,6 +304,8 @@ ncm_cfg_init (void)
 
   ncm_cfg_register_obj (NCM_TYPE_FIT_ESMCMC_WALKER_STRETCH);
 
+  ncm_cfg_register_obj (NCM_TYPE_DATA);
+  
   ncm_cfg_register_obj (NC_TYPE_HICOSMO_QCONST);
   ncm_cfg_register_obj (NC_TYPE_HICOSMO_QLINEAR);
   ncm_cfg_register_obj (NC_TYPE_HICOSMO_QSPLINE);
@@ -315,6 +321,8 @@ ncm_cfg_init (void)
 
   ncm_cfg_register_obj (NC_TYPE_HIPRIM_POWER_LAW);
   ncm_cfg_register_obj (NC_TYPE_HIPRIM_ATAN);
+  ncm_cfg_register_obj (NC_TYPE_HIPRIM_EXPC);
+  ncm_cfg_register_obj (NC_TYPE_HIPRIM_BPL);
 
   ncm_cfg_register_obj (NC_TYPE_CBE_PRECISION);
 
@@ -392,6 +400,7 @@ ncm_cfg_init (void)
 
   ncm_cfg_register_obj (NC_TYPE_PLANCK_FI);
   ncm_cfg_register_obj (NC_TYPE_PLANCK_FI_COR_TT);
+  ncm_cfg_register_obj (NC_TYPE_PLANCK_FI_COR_TTTEEE);
 
   ncm_cfg_register_obj (NC_TYPE_DATA_BAO_A);
   ncm_cfg_register_obj (NC_TYPE_DATA_BAO_DV);

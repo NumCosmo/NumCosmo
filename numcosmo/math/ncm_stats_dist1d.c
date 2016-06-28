@@ -320,6 +320,7 @@ ncm_stats_dist1d_prepare (NcmStatsDist1d *sd1)
 
     ncm_ode_spline_prepare (sd1->inv_P, sd1);
     ncm_ode_spline_prepare (sd1->inv_Q, sd1);
+
   }
 }
 

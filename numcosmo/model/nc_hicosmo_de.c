@@ -37,6 +37,7 @@
 
 #include "model/nc_hicosmo_de.h"
 #include "model/nc_hicosmo_de_reparam_ok.h"
+#include "model/nc_hicosmo_de_reparam_cmb.h"
 
 G_DEFINE_ABSTRACT_TYPE (NcHICosmoDE, nc_hicosmo_de, NC_TYPE_HICOSMO);
 
@@ -207,6 +208,21 @@ nc_hicosmo_de_omega_x2omega_k (NcHICosmoDE *cosmo_de)
   return;
 }
 
+/**
+ * nc_hicosmo_de_cmb_params:
+ * @cosmo_de: FIXME
+ *
+ * FIXME
+ *
+ */
+void
+nc_hicosmo_de_cmb_params (NcHICosmoDE *cosmo_de)
+{
+  NcHICosmoDEReparamCMB *de_reparam_cmb = nc_hicosmo_de_reparam_cmb_new (ncm_model_len (NCM_MODEL (cosmo_de)));
+  ncm_model_set_reparam (NCM_MODEL (cosmo_de), NCM_REPARAM (de_reparam_cmb));
+  return;
+}
+
 static void
 bbn_prior (NcmMSet *mset, gpointer obj, const gdouble *x, gdouble *f)
 {
@@ -218,7 +234,7 @@ bbn_prior (NcmMSet *mset, gpointer obj, const gdouble *x, gdouble *f)
   NCM_UNUSED (x);
 
   a = nc_hicosmo_de_weff (cosmo_de, z_bbn) / nc_hicosmo_E2 (NC_HICOSMO (cosmo_de), z_bbn);
-  bbn = 1.0 / sqrt(1.0 - a);
+  bbn = 1.0 / sqrt (1.0 - a);
   f[0] = (bbn - 0.942) / 0.03;
 }
 

@@ -504,8 +504,7 @@ _ncm_fit_mc_update (NcmFitMC *mc, NcmFit *fit)
     default:
     case NCM_FIT_RUN_MSGS_FULL:
       fit->mtype = mc->mtype;
-      ncm_fit_log_start (fit);
-      ncm_fit_log_end (fit);
+      ncm_fit_log_state (fit);
       ncm_mset_catalog_log_current_stats (mc->mcat);
       /* ncm_timer_task_increment (mc->nt); */
       ncm_timer_task_log_elapsed (mc->nt);

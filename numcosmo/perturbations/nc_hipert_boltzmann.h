@@ -171,6 +171,7 @@ void nc_hipert_boltzmann_clear (NcHIPertBoltzmann **pb);
 void nc_hipert_boltzmann_set_recomb (NcHIPertBoltzmann *pb, NcRecomb *recomb);
 
 void nc_hipert_boltzmann_set_target_Cls (NcHIPertBoltzmann *pb, NcDataCMBDataType tCls);
+void nc_hipert_boltzmann_append_target_Cls (NcHIPertBoltzmann *pb, NcDataCMBDataType tCls);
 NcDataCMBDataType nc_hipert_boltzmann_get_target_Cls (NcHIPertBoltzmann *pb);
 
 void nc_hipert_boltzmann_set_calc_transfer (NcHIPertBoltzmann *pb, gboolean calc_transfer);

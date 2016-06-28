@@ -439,6 +439,20 @@ ncm_data_get_desc (NcmData *data)
   return g_strdup (ncm_data_peek_desc (data));
 }
 
+static void
+_ncm_data_prepare (NcmData *data, NcmMSet *mset)
+{
+  if (NCM_DATA_GET_CLASS (data)->begin != NULL && !data->begin)
+  {
+    NCM_DATA_GET_CLASS (data)->begin (data);
+    data->begin = TRUE;
+  }
+
+  if (NCM_DATA_GET_CLASS (data)->prepare != NULL)
+    NCM_DATA_GET_CLASS (data)->prepare (data, mset);
+}
+
+
 /**
  * ncm_data_prepare: (virtual prepare)
  * @data: a #NcmData.
@@ -451,15 +465,7 @@ void
 ncm_data_prepare (NcmData *data, NcmMSet *mset)
 {
   g_assert (data->init);
-
-  if (NCM_DATA_GET_CLASS (data)->begin != NULL && !data->begin)
-  {
-    NCM_DATA_GET_CLASS (data)->begin (data);
-    data->begin = TRUE;
-  }
-
-  if (NCM_DATA_GET_CLASS (data)->prepare != NULL)
-    NCM_DATA_GET_CLASS (data)->prepare (data, mset);
+  _ncm_data_prepare (data, mset);
 }
 
 /**
@@ -478,7 +484,7 @@ ncm_data_resample (NcmData *data, NcmMSet *mset, NcmRNG *rng)
     g_error ("ncm_data_resample: The data (%s) does not implement resample.", 
              ncm_data_get_desc (data));
 
-  ncm_data_prepare (data, mset);
+  _ncm_data_prepare (data, mset);
   
   NCM_DATA_GET_CLASS (data)->resample (data, mset, rng);
   data->begin = FALSE;

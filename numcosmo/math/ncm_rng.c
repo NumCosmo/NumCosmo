@@ -497,3 +497,55 @@ ncm_rng_pool_get (const gchar *name)
   return rng;
 }
 
+/**
+ * ncm_rng_uniform_gen:
+ * @rng: a #NcmRNG
+ * @xl: FIXME
+ * @xu: FIXME
+ * 
+ * FIXME
+ * 
+ */
+/**
+ * ncm_rng_gaussian_gen:
+ * @rng: a #NcmRNG
+ * @mu: FIXME
+ * @sigma: FIXME
+ * 
+ * FIXME
+ * 
+ */
+/**
+ * ncm_rng_gaussian_tail_gen:
+ * @rng: a #NcmRNG
+ * @a: FIXME
+ * @sigma: FIXME
+ * 
+ * FIXME
+ * 
+ */
+/**
+ * ncm_rng_exponential_gen:
+ * @rng: a #NcmRNG
+ * @mu: FIXME
+ * 
+ * FIXME
+ * 
+ */
+/**
+ * ncm_rng_laplace_gen:
+ * @rng: a #NcmRNG
+ * @a: FIXME
+ * 
+ * FIXME
+ * 
+ */
+/**
+ * ncm_rng_exppow_gen:
+ * @rng: a #NcmRNG
+ * @a: FIXME
+ * @b: FIXME
+ * 
+ * FIXME
+ * 
+ */

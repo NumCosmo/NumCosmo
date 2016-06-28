@@ -583,8 +583,7 @@ _ncm_fit_esmcmc_update (NcmFitESMCMC *esmcmc, guint ki, guint kf)
           ncm_fit_state_set_m2lnL_curval (esmcmc->fit->fstate, ncm_vector_get (e_mean, NCM_FIT_ESMCMC_M2LNL_ID));
         }
 
-        ncm_fit_log_start (esmcmc->fit);
-        ncm_fit_log_end (esmcmc->fit);
+        ncm_fit_log_state (esmcmc->fit);
         ncm_mset_catalog_log_current_stats (esmcmc->mcat);
         ncm_mset_catalog_log_current_chain_stats (esmcmc->mcat);
         g_message ("# NcmFitESMCMC:acceptance ratio %7.4f%%, offboard ratio %7.4f%%.\n", 

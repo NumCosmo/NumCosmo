@@ -176,6 +176,8 @@
       <title>Inflationary</title>
       <xi:include href="xml/nc_hiprim_power_law.xml"/>
       <xi:include href="xml/nc_hiprim_atan.xml"/>
+      <xi:include href="xml/nc_hiprim_expc.xml"/>
+      <xi:include href="xml/nc_hiprim_bpl.xml"/>
     </section>
   </chapter>
 
@@ -185,6 +187,7 @@
       <title>Planck Foreground and Instrument Models</title>
       <xi:include href="xml/nc_planck_fi.xml"/>
       <xi:include href="xml/nc_planck_fi_cor_tt.xml"/>
+      <xi:include href="xml/nc_planck_fi_cor_ttteee.xml"/>
     </section>
     <section>
       <title>Supernova Covariance Models</title>      

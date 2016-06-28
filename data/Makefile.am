@@ -31,6 +31,7 @@ data_observational_DATA = \
 	nc_data_hubble_stern2009.obj           \
 	nc_data_hubble_simon2005.obj           \
 	nc_data_hubble_zhang2012.obj           \
+	nc_data_hubble_riess2016.obj           \
 	nc_data_snia_diag_cfa3.obj             \
 	nc_data_snia_diag_essence.obj          \
 	nc_data_snia_diag_gold_157.obj         \

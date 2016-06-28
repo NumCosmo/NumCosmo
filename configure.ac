@@ -117,7 +117,7 @@ dnl ***************************************************************************
 dnl Checks for programs.
 dnl ***************************************************************************
 AC_LANG(C)
-AC_PROG_CC
+AC_PROG_CC_C99
 AC_PROG_F77
 AC_PROG_INSTALL   
 AC_PROG_LN_S
@@ -874,6 +874,7 @@ tools/Makefile
 tests/Makefile
 docs/Makefile
 examples/Makefile
+examples/pydata_simple/Makefile
 data/Makefile
 numcosmo/build_cfg.h
 ])

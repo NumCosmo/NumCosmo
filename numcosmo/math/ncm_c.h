@@ -68,8 +68,11 @@ G_INLINE_FUNC long double ncm_c_sqrt_1_4pi (void) G_GNUC_CONST;
 G_INLINE_FUNC long double ncm_c_sqrt_2pi (void) G_GNUC_CONST;
 G_INLINE_FUNC long double ncm_c_sqrt_pi_2 (void) G_GNUC_CONST;
 G_INLINE_FUNC long double ncm_c_sqrt_3_4pi (void) G_GNUC_CONST;
+G_INLINE_FUNC long double ncm_c_ln2 (void) G_GNUC_CONST;
+G_INLINE_FUNC long double ncm_c_ln3 (void) G_GNUC_CONST;
 G_INLINE_FUNC long double ncm_c_lnpi_4 (void) G_GNUC_CONST;
 G_INLINE_FUNC long double ncm_c_ln2pi (void) G_GNUC_CONST;
+G_INLINE_FUNC long double ncm_c_lnpi (void) G_GNUC_CONST;
 G_INLINE_FUNC long double ncm_c_pi (void) G_GNUC_CONST;
 G_INLINE_FUNC long double ncm_c_tan_1arcsec (void) G_GNUC_CONST;
 
@@ -402,11 +405,20 @@ G_INLINE_FUNC long double ncm_c_sqrt_pi_2 (void)
 G_INLINE_FUNC long double ncm_c_sqrt_3_4pi (void)
 { return 0.48860251190291992158638462283834700L; }
 
+G_INLINE_FUNC long double ncm_c_ln2 (void)
+{ return 0.69314718055994530941723212145817657L; }
+
+G_INLINE_FUNC long double ncm_c_ln3 (void)
+{ return 1.0986122886681096913952452369225257L; }
+
 G_INLINE_FUNC long double ncm_c_lnpi_4 (void)
 { return 0.28618247146235004353585683783826468L; }
 
 G_INLINE_FUNC long double ncm_c_ln2pi (void)
 { return 1.8378770664093454835606594728112353L; }
+
+G_INLINE_FUNC long double ncm_c_lnpi (void)
+{ return 1.1447298858494001741434273513530587L; }
 
 G_INLINE_FUNC long double ncm_c_pi (void)
 { return 3.1415926535897932384626433832795029L; }

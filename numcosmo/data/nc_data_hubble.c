@@ -259,6 +259,9 @@ nc_data_hubble_new_from_id (NcDataHubbleId id)
     case NC_DATA_HUBBLE_ZHANG2012:
       filename = ncm_cfg_get_data_filename ("nc_data_hubble_zhang2012.obj", TRUE);
       break;
+    case NC_DATA_HUBBLE_RIESS2016_HST_WFC3:
+      filename = ncm_cfg_get_data_filename ("nc_data_hubble_riess2016.obj", TRUE);
+      break;
     default:
       g_error ("nc_data_hubble_new_from_id: id %d not recognized.", id);
       break;

@@ -42,5 +42,5 @@ After these two steps just run the script:
 
 python2 ./example_simple.py
 
-Note that some examples depend on matplotlib.
+Note that some examples depend on matplotlib and/or other python modules.
 

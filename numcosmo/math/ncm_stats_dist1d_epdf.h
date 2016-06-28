@@ -50,29 +50,58 @@ struct _NcmStatsDist1dEPDFClass
   NcmStatsDist1dClass parent_class;
 };
 
+/**
+ * NcmStatsDist1dEPDFBw:
+ * @NCM_STATS_DIST1D_EPDF_BW_FIXED: Uses the given value of bandwidth.
+ * @NCM_STATS_DIST1D_EPDF_BW_RoT: Uses the Silverman's rule of thumb to determine the bandwidth.
+ * @NCM_STATS_DIST1D_EPDF_BW_AUTO: Uses Botev's et al method to automatically determine the best bandwidth.
+ * 
+ * Gaussian kernel bandwidth type.
+ * 
+ */
+typedef enum _NcmStatsDist1dEPDFBw
+{
+  NCM_STATS_DIST1D_EPDF_BW_FIXED = 0,
+  NCM_STATS_DIST1D_EPDF_BW_RoT,
+  NCM_STATS_DIST1D_EPDF_BW_AUTO, /*< private >*/
+  NCM_STATS_DIST1D_EPDF_BW_LEN,  /*< skip >*/
+} NcmStatsDist1dEPDFBw;
+
 struct _NcmStatsDist1dEPDF
 {
   /*< private >*/
   NcmStatsDist1d parent_instance;
   NcmStatsVec *obs_stats;
   guint max_obs;
-  guint min_knots;
-  guint max_knots;
-  gdouble sd_scale;
+  NcmStatsDist1dEPDFBw bw;
+  gdouble h_fixed;
   gdouble sd_min_scale;
   gdouble outliers_threshold;
-  gdouble sd;
+  gdouble h;
   guint n_obs;
   guint np_obs;
   GArray *obs;
   gdouble min;
   gdouble max;
   gboolean list_sorted;
+  guint fftsize;
+  NcmVector *Iv;
+  NcmVector *p_data;
+  NcmVector *p_tilde;
+  NcmVector *p_tilde2;
+  NcmVector *p_est;
+  NcmVector *xv;
+  NcmVector *pv;
+  gpointer fft_data_to_tilde; 
+  gpointer fft_tilde_to_est;
+  NcmSpline *p_spline;
+  gboolean bw_set;
 };
 
 GType ncm_stats_dist1d_epdf_get_type (void) G_GNUC_CONST;
 
-NcmStatsDist1dEPDF *ncm_stats_dist1d_epdf_new (guint max_obs, gdouble sd_scale, gdouble sd_min_scale);
+NcmStatsDist1dEPDF *ncm_stats_dist1d_epdf_new_full (guint max_obs, NcmStatsDist1dEPDFBw bw, gdouble h_fixed, gdouble sd_min_scale);
+NcmStatsDist1dEPDF *ncm_stats_dist1d_epdf_new (gdouble sd_min_scale);
 
 void ncm_stats_dist1d_epdf_add_obs (NcmStatsDist1dEPDF *epdf1d, gdouble x);
 void ncm_stats_dist1d_epdf_reset (NcmStatsDist1dEPDF *epdf1d);

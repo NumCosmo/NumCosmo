@@ -116,6 +116,7 @@ gdouble nc_distance_drag_redshift (NcDistance *dist, NcHICosmo *cosmo);
 gdouble nc_distance_shift_parameter_lss (NcDistance *dist, NcHICosmo *cosmo);
 gdouble nc_distance_comoving_lss (NcDistance *dist, NcHICosmo *cosmo);
 gdouble nc_distance_acoustic_scale (NcDistance *dist, NcHICosmo *cosmo);
+gdouble nc_distance_theta100CMB (NcDistance *dist, NcHICosmo *cosmo);
 gdouble nc_distance_Omega_k0 (NcDistance *dist, NcHICosmo *cosmo);
 gdouble nc_distance_angular_diameter_curvature_scale (NcDistance *dist, NcHICosmo *cosmo);
 gdouble nc_distance_r_zd (NcDistance *dist, NcHICosmo *cosmo);
