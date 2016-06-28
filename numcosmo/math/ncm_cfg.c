@@ -91,7 +91,7 @@
 #include "lss/nc_multiplicity_func_tinker_mean.h"
 #include "lss/nc_multiplicity_func_tinker_crit.h"
 #include "lss/nc_multiplicity_func_tinker_mean_normalized.h"
-#include "lss/nc_mass_function.h"
+#include "lss/nc_halo_mass_function.h"
 #include "lss/nc_galaxy_acf.h"
 #include "lss/nc_cluster_mass.h"
 #include "lss/nc_cluster_mass_nodist.h"
@@ -353,7 +353,7 @@ ncm_cfg_init (void)
   ncm_cfg_register_obj (NC_TYPE_MULTIPLICITY_FUNC_TINKER_CRIT);
   ncm_cfg_register_obj (NC_TYPE_MULTIPLICITY_FUNC_TINKER_MEAN_NORMALIZED);
 
-  ncm_cfg_register_obj (NC_TYPE_MASS_FUNCTION);
+  ncm_cfg_register_obj (NC_TYPE_HALO_MASS_FUNCTION);
 
   ncm_cfg_register_obj (NC_TYPE_GALAXY_ACF);
 

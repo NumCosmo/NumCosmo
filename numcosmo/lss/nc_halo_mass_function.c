@@ -1,5 +1,5 @@
 /***************************************************************************
- *            nc_mass_function.c
+ *            nc_halo_mass_function.c
  *
  *  Mon Jun 28 15:09:13 2010
  *  Copyright  2010  Mariana Penna Lima
@@ -23,7 +23,7 @@
  */
 
 /**
- * SECTION:nc_mass_function
+ * SECTION:nc_halo_mass_function
  * @title: NcMassFunction
  * @short_description: Clusters mass function.
  *
@@ -36,7 +36,7 @@
 #endif /* HAVE_CONFIG_H */
 #include "build_cfg.h"
 
-#include "lss/nc_mass_function.h"
+#include "lss/nc_halo_mass_function.h"
 #include "math/integral.h"
 #include "math/ncm_spline2d_bicubic.h"
 #include "math/ncm_cfg.h"
@@ -54,10 +54,10 @@ enum
   PROP_PREC,
 };
 
-G_DEFINE_TYPE (NcMassFunction, nc_mass_function, G_TYPE_OBJECT);
+G_DEFINE_TYPE (NcMassFunction, nc_halo_mass_function, G_TYPE_OBJECT);
 
 static void
-nc_mass_function_init (NcMassFunction *mfp)
+nc_halo_mass_function_init (NcMassFunction *mfp)
 {
   mfp->lnMi        = 0.0;
   mfp->lnMf        = 0.0;
@@ -73,9 +73,9 @@ nc_mass_function_init (NcMassFunction *mfp)
 }
 
 static void
-_nc_mass_function_dispose (GObject *object)
+_nc_halo_mass_function_dispose (GObject *object)
 {
-  NcMassFunction *mfp = NC_MASS_FUNCTION (object);
+  NcMassFunction *mfp = NC_HALO_MASS_FUNCTION (object);
 
   nc_distance_clear (&mfp->dist);
   nc_matter_var_clear (&mfp->vp);
@@ -88,22 +88,22 @@ _nc_mass_function_dispose (GObject *object)
   ncm_spline2d_clear (&mfp->d2NdzdlnM);
 
   /* Chain up : end */
-  G_OBJECT_CLASS (nc_mass_function_parent_class)->dispose (object);
+  G_OBJECT_CLASS (nc_halo_mass_function_parent_class)->dispose (object);
 }
 
 static void
-_nc_mass_function_finalize (GObject *object)
+_nc_halo_mass_function_finalize (GObject *object)
 {
 
   /* Chain up : end */
-  G_OBJECT_CLASS (nc_mass_function_parent_class)->finalize (object);
+  G_OBJECT_CLASS (nc_halo_mass_function_parent_class)->finalize (object);
 }
 
 static void
-_nc_mass_function_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
+_nc_halo_mass_function_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
 {
-  NcMassFunction *mfp = NC_MASS_FUNCTION (object);
-  g_return_if_fail (NC_IS_MASS_FUNCTION (object));
+  NcMassFunction *mfp = NC_HALO_MASS_FUNCTION (object);
+  g_return_if_fail (NC_IS_HALO_MASS_FUNCTION (object));
 
   switch (prop_id)
   {
@@ -120,10 +120,10 @@ _nc_mass_function_set_property (GObject *object, guint prop_id, const GValue *va
       mfp->mulf = g_value_dup_object (value);
       break;
     case PROP_AREA:
-      nc_mass_function_set_area (mfp, g_value_get_double (value));
+      nc_halo_mass_function_set_area (mfp, g_value_get_double (value));
       break;
     case PROP_PREC:
-      nc_mass_function_set_prec (mfp, g_value_get_double (value));
+      nc_halo_mass_function_set_prec (mfp, g_value_get_double (value));
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -132,10 +132,10 @@ _nc_mass_function_set_property (GObject *object, guint prop_id, const GValue *va
 }
 
 static void
-_nc_mass_function_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
+_nc_halo_mass_function_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
 {
-  NcMassFunction *mfp = NC_MASS_FUNCTION (object);
-  g_return_if_fail (NC_IS_MASS_FUNCTION (object));
+  NcMassFunction *mfp = NC_HALO_MASS_FUNCTION (object);
+  g_return_if_fail (NC_IS_HALO_MASS_FUNCTION (object));
 
   switch (prop_id)
   {
@@ -164,15 +164,15 @@ _nc_mass_function_get_property (GObject *object, guint prop_id, GValue *value, G
 }
 
 static void
-nc_mass_function_class_init (NcMassFunctionClass *klass)
+nc_halo_mass_function_class_init (NcMassFunctionClass *klass)
 {
   GObjectClass *object_class = G_OBJECT_CLASS (klass);
   //GObjectClass* parent_class = G_OBJECT_CLASS (klass);
 
-  object_class->dispose = _nc_mass_function_dispose;
-  object_class->finalize = _nc_mass_function_finalize;
-  object_class->set_property = _nc_mass_function_set_property;
-  object_class->get_property = _nc_mass_function_get_property;
+  object_class->dispose = _nc_halo_mass_function_dispose;
+  object_class->finalize = _nc_halo_mass_function_finalize;
+  object_class->set_property = _nc_halo_mass_function_set_property;
+  object_class->get_property = _nc_halo_mass_function_get_property;
 
   /**
    * NcMassFunction:distance:
@@ -259,7 +259,7 @@ nc_mass_function_class_init (NcMassFunctionClass *klass)
 
 
 /**
- * nc_mass_function_new:
+ * nc_halo_mass_function_new:
  * @dist: a #NcDistance sets to #NcMassFunction:distance
  * @vp: a #NcMatterVar sets to #NcMassFunction:variance
  * @gf: a #NcGrowthFunc sets to #NcMassFunction:growth
@@ -271,9 +271,9 @@ nc_mass_function_class_init (NcMassFunctionClass *klass)
  * Returns: A new #NcMassFunction.
  */
 NcMassFunction *
-nc_mass_function_new (NcDistance *dist, NcMatterVar *vp, NcGrowthFunc *gf, NcMultiplicityFunc *mulf)
+nc_halo_mass_function_new (NcDistance *dist, NcMatterVar *vp, NcGrowthFunc *gf, NcMultiplicityFunc *mulf)
 {
-  NcMassFunction *mfp = g_object_new (NC_TYPE_MASS_FUNCTION,
+  NcMassFunction *mfp = g_object_new (NC_TYPE_HALO_MASS_FUNCTION,
                                       "distance", dist,
                                       "variance", vp,
                                       "growth", gf,
@@ -283,7 +283,7 @@ nc_mass_function_new (NcDistance *dist, NcMatterVar *vp, NcGrowthFunc *gf, NcMul
 }
 
 /**
- * nc_mass_function_copy:
+ * nc_halo_mass_function_copy:
  * @mfp: a #NcMassFunction
  *
  * This function duplicates the #NcMassFunction object setting the same values of the original propertities.
@@ -291,13 +291,13 @@ nc_mass_function_new (NcDistance *dist, NcMatterVar *vp, NcGrowthFunc *gf, NcMul
  * Returns: (transfer full): A new #NcMassFunction.
    */
 NcMassFunction *
-nc_mass_function_copy (NcMassFunction *mfp)
+nc_halo_mass_function_copy (NcMassFunction *mfp)
 {
-  return nc_mass_function_new (mfp->dist, mfp->vp, mfp->gf, mfp->mulf);
+  return nc_halo_mass_function_new (mfp->dist, mfp->vp, mfp->gf, mfp->mulf);
 }
 
 /**
- * nc_mass_function_free:
+ * nc_halo_mass_function_free:
  * @mfp: a #NcMassFunction
  *
  * Atomically decrements the reference count of @mfp by one. If the reference count drops to 0,
@@ -305,13 +305,13 @@ nc_mass_function_copy (NcMassFunction *mfp)
  *
  */
 void
-nc_mass_function_free (NcMassFunction *mfp)
+nc_halo_mass_function_free (NcMassFunction *mfp)
 {
   g_object_unref (mfp);
 }
 
 /**
- * nc_mass_function_clear:
+ * nc_halo_mass_function_clear:
  * @mfp: a #NcMassFunction
  *
  * Atomically decrements the reference count of @mfp by one. If the reference count drops to 0,
@@ -319,14 +319,14 @@ nc_mass_function_free (NcMassFunction *mfp)
  *
  */
 void
-nc_mass_function_clear (NcMassFunction **mfp)
+nc_halo_mass_function_clear (NcMassFunction **mfp)
 {
   g_clear_object (mfp);
 }
 
 
 /**
- * nc_mass_function_dn_dlnm:
+ * nc_halo_mass_function_dn_dlnm:
  * @mfp: a #NcMassFunction
  * @cosmo: a #NcHICosmo
  * @lnM: logarithm base e of mass
@@ -338,7 +338,7 @@ nc_mass_function_clear (NcMassFunction **mfp)
  * Returns: $\frac{dn}{dlnM}$
  */
 gdouble
-nc_mass_function_dn_dlnm (NcMassFunction *mfp, NcHICosmo *cosmo, gdouble lnM, gdouble z)
+nc_halo_mass_function_dn_dlnm (NcMassFunction *mfp, NcHICosmo *cosmo, gdouble lnM, gdouble z)
 {
   gdouble lnR          = nc_matter_var_lnM_to_lnR (mfp->vp, cosmo, lnM);
   gdouble R            = exp (lnR);
@@ -354,7 +354,7 @@ nc_mass_function_dn_dlnm (NcMassFunction *mfp, NcHICosmo *cosmo, gdouble lnM, gd
 }
 
 /**
- * nc_mass_function_sigma:
+ * nc_halo_mass_function_sigma:
  * @mfp: a #NcMassFunction
  * @cosmo: a #NcHICosmo
  * @lnM: logarithm base e of mass
@@ -368,7 +368,7 @@ nc_mass_function_dn_dlnm (NcMassFunction *mfp, NcHICosmo *cosmo, gdouble lnM, gd
  *
  */
 void
-nc_mass_function_sigma (NcMassFunction *mfp, NcHICosmo *cosmo, gdouble lnM, gdouble z, gdouble *dn_dlnM_ptr, gdouble *sigma_ptr)
+nc_halo_mass_function_sigma (NcMassFunction *mfp, NcHICosmo *cosmo, gdouble lnM, gdouble z, gdouble *dn_dlnM_ptr, gdouble *sigma_ptr)
 {
   const gdouble lnR = nc_matter_var_lnM_to_lnR (mfp->vp, cosmo, lnM);
   const gdouble M_rho = nc_window_volume (mfp->vp->wp) * gsl_pow_3 (exp (lnR));	/* M/\rho comoving, rho independe de z */
@@ -387,7 +387,7 @@ nc_mass_function_sigma (NcMassFunction *mfp, NcHICosmo *cosmo, gdouble lnM, gdou
 
 /* A funcao abaixo foi feita para compararmos o nosso calculo com o resultado (equacao 9) do artigo astro-ph/0110246.*/
 /**
- * nc_mass_function_alpha_eff:
+ * nc_halo_mass_function_alpha_eff:
  * @vp: a #NcMatterVar
  * @cosmo: a #NcHICosmo
  * @lnM: logarithm base e of mass
@@ -397,7 +397,7 @@ nc_mass_function_sigma (NcMassFunction *mfp, NcHICosmo *cosmo, gdouble lnM, gdou
  *
  */
 void
-nc_mass_function_alpha_eff (NcMatterVar *vp, NcHICosmo *cosmo, gdouble lnM, gdouble *a_eff_ptr)
+nc_halo_mass_function_alpha_eff (NcMatterVar *vp, NcHICosmo *cosmo, gdouble lnM, gdouble *a_eff_ptr)
 {
   gdouble lnR = nc_matter_var_lnM_to_lnR (vp, cosmo, lnM);
   gdouble dlnvar0_dlnR = nc_matter_var_dlnvar0_dlnR (vp, cosmo, lnR);
@@ -414,7 +414,7 @@ typedef struct _nc_ca_integ
 } nc_ca_integ;
 
 /**
- * nc_mass_function_cluster_abundance_integrand:
+ * nc_halo_mass_function_cluster_abundance_integrand:
  * @R: FIXME
  * @params: FIXME
  * FIXME
@@ -422,7 +422,7 @@ typedef struct _nc_ca_integ
  * Returns: FIXME
  */
 gdouble
-nc_mass_function_cluster_abundance_integrand (gdouble R, gpointer params)
+nc_halo_mass_function_cluster_abundance_integrand (gdouble R, gpointer params)
 {
   nc_ca_integ *ca_integ = (nc_ca_integ *) params;
   NcHICosmo *cosmo = ca_integ->cosmo;
@@ -443,7 +443,7 @@ nc_mass_function_cluster_abundance_integrand (gdouble R, gpointer params)
 }
 
 /**
- * nc_mass_function_dcluster_abundance_dv:
+ * nc_halo_mass_function_dcluster_abundance_dv:
  * @mfp: a #NcMassFunction
  * @cosmo: a #NcHICosmo
  * @M: mass in units of h^{-1} * M_sun
@@ -454,7 +454,7 @@ nc_mass_function_cluster_abundance_integrand (gdouble R, gpointer params)
  * Returns: FIXME
  */
 gdouble
-nc_mass_function_dn_m_to_inf_dv (NcMassFunction *mfp, NcHICosmo *cosmo, gdouble M, gdouble z)	/* integracao em M. */
+nc_halo_mass_function_dn_m_to_inf_dv (NcMassFunction *mfp, NcHICosmo *cosmo, gdouble M, gdouble z)	/* integracao em M. */
 {
   static gsl_integration_workspace *w = NULL;
   gsl_function F;
@@ -464,7 +464,7 @@ nc_mass_function_dn_m_to_inf_dv (NcMassFunction *mfp, NcHICosmo *cosmo, gdouble 
   ca_integ.mfp = mfp;
   ca_integ.cosmo = cosmo;
   ca_integ.z = z;
-  F.function = &nc_mass_function_cluster_abundance_integrand;
+  F.function = &nc_halo_mass_function_cluster_abundance_integrand;
   F.params = &ca_integ;
 
   if (w == NULL)
@@ -490,7 +490,7 @@ nc_mass_function_dn_m_to_inf_dv (NcMassFunction *mfp, NcHICosmo *cosmo, gdouble 
 }
 
 /**
- * nc_mass_function_dn_m1_to_m2_dv:
+ * nc_halo_mass_function_dn_m1_to_m2_dv:
  * @mfp: a #NcMassFunction
  * @cosmo: a #NcHICosmo
  * @M1: mass in units of h^{-1} M_sun - lower limit of integration
@@ -502,7 +502,7 @@ nc_mass_function_dn_m_to_inf_dv (NcMassFunction *mfp, NcHICosmo *cosmo, gdouble 
  * Returns: FIXME
  */
 gdouble
-nc_mass_function_dn_m1_to_m2_dv (NcMassFunction *mfp, NcHICosmo *cosmo, gdouble M1, gdouble M2, gdouble z)	/* integracao em M. */
+nc_halo_mass_function_dn_m1_to_m2_dv (NcMassFunction *mfp, NcHICosmo *cosmo, gdouble M1, gdouble M2, gdouble z)	/* integracao em M. */
 {
   static gsl_integration_workspace *w = NULL;
   gsl_function F;
@@ -512,7 +512,7 @@ nc_mass_function_dn_m1_to_m2_dv (NcMassFunction *mfp, NcHICosmo *cosmo, gdouble 
   ca_integ.mfp = mfp;
   ca_integ.cosmo = cosmo;
   ca_integ.z = z;
-  F.function = &nc_mass_function_cluster_abundance_integrand;
+  F.function = &nc_halo_mass_function_cluster_abundance_integrand;
   F.params = &ca_integ;
 
   if (w == NULL)
@@ -530,7 +530,7 @@ nc_mass_function_dn_m1_to_m2_dv (NcMassFunction *mfp, NcHICosmo *cosmo, gdouble 
 }
 
 /**
- * nc_mass_function_dv_dzdomega:
+ * nc_halo_mass_function_dv_dzdomega:
  * @mfp: a #NcMassFunction
  * @cosmo: a #NcHICosmo
  * @z: redshift
@@ -542,7 +542,7 @@ nc_mass_function_dn_m1_to_m2_dv (NcMassFunction *mfp, NcHICosmo *cosmo, gdouble 
  * Returns: comoving volume element $d^2V / dzd\Omega$.
  */
 gdouble
-nc_mass_function_dv_dzdomega (NcMassFunction *mfp, NcHICosmo *cosmo, gdouble z)
+nc_halo_mass_function_dv_dzdomega (NcMassFunction *mfp, NcHICosmo *cosmo, gdouble z)
 {
   const gdouble E = sqrt (nc_hicosmo_E2 (cosmo, z));
   gdouble dc = ncm_c_hubble_radius () * nc_distance_comoving (mfp->dist, cosmo, z);
@@ -550,10 +550,10 @@ nc_mass_function_dv_dzdomega (NcMassFunction *mfp, NcHICosmo *cosmo, gdouble z)
   return dV_dzdOmega;
 }
 
-static void _nc_mass_function_generate_2Dspline_knots (NcMassFunction *mfp, NcHICosmo *cosmo, gdouble rel_error);
+static void _nc_halo_mass_function_generate_2Dspline_knots (NcMassFunction *mfp, NcHICosmo *cosmo, gdouble rel_error);
 
 /**
- * nc_mass_function_set_area:
+ * nc_halo_mass_function_set_area:
  * @mfp: a #NcMassFunction
  * @area: area in steradian
  *
@@ -561,7 +561,7 @@ static void _nc_mass_function_generate_2Dspline_knots (NcMassFunction *mfp, NcHI
  *
  */
 void
-nc_mass_function_set_area (NcMassFunction *mfp, gdouble area)
+nc_halo_mass_function_set_area (NcMassFunction *mfp, gdouble area)
 {
   if (mfp->area_survey != area)
   {
@@ -571,7 +571,7 @@ nc_mass_function_set_area (NcMassFunction *mfp, gdouble area)
 }
 
 /**
- * nc_mass_function_set_prec:
+ * nc_halo_mass_function_set_prec:
  * @mfp: a #NcMassFunction
  * @prec: precision
  *
@@ -579,7 +579,7 @@ nc_mass_function_set_area (NcMassFunction *mfp, gdouble area)
  *
  */
 void
-nc_mass_function_set_prec (NcMassFunction *mfp, gdouble prec)
+nc_halo_mass_function_set_prec (NcMassFunction *mfp, gdouble prec)
 {
   if (mfp->prec != prec)
   {
@@ -589,7 +589,7 @@ nc_mass_function_set_prec (NcMassFunction *mfp, gdouble prec)
 }
 
 /**
- * nc_mass_function_set_area_sd:
+ * nc_halo_mass_function_set_area_sd:
  * @mfp: a #NcMassFunction
  * @area_sd: area in square degree
  *
@@ -597,14 +597,14 @@ nc_mass_function_set_prec (NcMassFunction *mfp, gdouble prec)
  *
  */
 void
-nc_mass_function_set_area_sd (NcMassFunction *mfp, gdouble area_sd)
+nc_halo_mass_function_set_area_sd (NcMassFunction *mfp, gdouble area_sd)
 {
   const gdouble conversion_factor = M_PI * M_PI / (180.0 * 180.0);
-  nc_mass_function_set_area (mfp, area_sd * conversion_factor);
+  nc_halo_mass_function_set_area (mfp, area_sd * conversion_factor);
 }
 
 /**
- * nc_mass_function_set_eval_limits:
+ * nc_halo_mass_function_set_eval_limits:
  * @mfp: a #NcMassFunction
  * @cosmo: a #NcHICosmo
  * @lnMi: minimum logarithm base e of mass
@@ -616,7 +616,7 @@ nc_mass_function_set_area_sd (NcMassFunction *mfp, gdouble area_sd)
  *
  */
 void
-nc_mass_function_set_eval_limits (NcMassFunction *mfp, NcHICosmo *cosmo, gdouble lnMi, gdouble lnMf, gdouble zi, gdouble zf)
+nc_halo_mass_function_set_eval_limits (NcMassFunction *mfp, NcHICosmo *cosmo, gdouble lnMi, gdouble lnMf, gdouble zi, gdouble zf)
 {
   if (lnMi != mfp->lnMi || mfp->lnMf != lnMf || mfp->zi != zi || mfp->zf != zf)
   {
@@ -629,7 +629,7 @@ nc_mass_function_set_eval_limits (NcMassFunction *mfp, NcHICosmo *cosmo, gdouble
 }
 
 /**
- * nc_mass_function_prepare:
+ * nc_halo_mass_function_prepare:
  * @mfp: a #NcMassFunction
  * @cosmo: a #NcHICosmo
  *
@@ -637,7 +637,7 @@ nc_mass_function_set_eval_limits (NcMassFunction *mfp, NcHICosmo *cosmo, gdouble
  *
  */
 void
-nc_mass_function_prepare (NcMassFunction *mfp, NcHICosmo *cosmo)
+nc_halo_mass_function_prepare (NcMassFunction *mfp, NcHICosmo *cosmo)
 {
   guint i, j;
 
@@ -646,7 +646,7 @@ nc_mass_function_prepare (NcMassFunction *mfp, NcHICosmo *cosmo)
   nc_growth_func_prepare_if_needed (mfp->gf, cosmo);
   
   if (mfp->d2NdzdlnM == NULL)
-    _nc_mass_function_generate_2Dspline_knots (mfp, cosmo, mfp->prec);
+    _nc_halo_mass_function_generate_2Dspline_knots (mfp, cosmo, mfp->prec);
 
 #define D2NDZDLNM_Z(cad) ((cad)->d2NdzdlnM->yv)
 #define D2NDZDLNM_LNM(cad) ((cad)->d2NdzdlnM->xv)
@@ -655,12 +655,12 @@ nc_mass_function_prepare (NcMassFunction *mfp, NcHICosmo *cosmo)
   for (i = 0; i < ncm_vector_len (D2NDZDLNM_Z (mfp)); i++)
   {
     const gdouble z = ncm_vector_get (D2NDZDLNM_Z (mfp), i);
-    const gdouble dVdz = mfp->area_survey * nc_mass_function_dv_dzdomega (mfp, cosmo, z);
+    const gdouble dVdz = mfp->area_survey * nc_halo_mass_function_dv_dzdomega (mfp, cosmo, z);
 
     for (j = 0; j < ncm_vector_len (D2NDZDLNM_LNM (mfp)); j++)
     {
       const gdouble lnM = ncm_vector_get (D2NDZDLNM_LNM (mfp), j);
-      const gdouble d2NdzdlnM_ij = (dVdz * nc_mass_function_dn_dlnm (mfp, cosmo, lnM, z));
+      const gdouble d2NdzdlnM_ij = (dVdz * nc_halo_mass_function_dn_dlnm (mfp, cosmo, lnM, z));
       ncm_matrix_set (D2NDZDLNM_VAL (mfp), i, j, d2NdzdlnM_ij);
     }
   }
@@ -670,7 +670,7 @@ nc_mass_function_prepare (NcMassFunction *mfp, NcHICosmo *cosmo)
 }
 
 /**
- * nc_mass_function_dn_dz:
+ * nc_halo_mass_function_dn_dz:
  * @mfp: a #NcMassFunction
  * @cosmo: a #NcHICosmo
  * @lnMl: logarithm base e of mass, lower threshold
@@ -683,7 +683,7 @@ nc_mass_function_prepare (NcMassFunction *mfp, NcHICosmo *cosmo)
  * Returns: FIXME
  */
 gdouble
-nc_mass_function_dn_dz (NcMassFunction *mfp, NcHICosmo *cosmo, gdouble lnMl, gdouble lnMu, gdouble z, gboolean spline)
+nc_halo_mass_function_dn_dz (NcMassFunction *mfp, NcHICosmo *cosmo, gdouble lnMl, gdouble lnMu, gdouble z, gboolean spline)
 {
   gdouble dN_dz;
 
@@ -695,7 +695,7 @@ nc_mass_function_dn_dz (NcMassFunction *mfp, NcHICosmo *cosmo, gdouble lnMl, gdo
 }
 
 /**
- * nc_mass_function_n:
+ * nc_halo_mass_function_n:
  * @mfp: a #NcMassFunction
  * @cosmo: a #NcHICosmo
  * @lnMl: logarithm base e of mass, lower threshold
@@ -709,19 +709,19 @@ nc_mass_function_dn_dz (NcMassFunction *mfp, NcHICosmo *cosmo, gdouble lnMl, gdo
  * Returns: FIXME
  */
 gdouble
-nc_mass_function_n (NcMassFunction *mfp, NcHICosmo *cosmo, gdouble lnMl, gdouble lnMu, gdouble zl, gdouble zu, NcMassFunctionSplineOptimize spline)
+nc_halo_mass_function_n (NcMassFunction *mfp, NcHICosmo *cosmo, gdouble lnMl, gdouble lnMu, gdouble zl, gdouble zu, NcMassFunctionSplineOptimize spline)
 {
   gdouble N;
 
   switch (spline)
   {
-    case NC_MASS_FUNCTION_SPLINE_NONE:
+    case NC_HALO_MASS_FUNCTION_SPLINE_NONE:
       N = ncm_spline2d_integ_dxdy (mfp->d2NdzdlnM, lnMl, lnMu, zl, zu);
       break;
-    case NC_MASS_FUNCTION_SPLINE_LNM:
+    case NC_HALO_MASS_FUNCTION_SPLINE_LNM:
       N = ncm_spline2d_integ_dxdy_spline_x (mfp->d2NdzdlnM, lnMl, lnMu, zl, zu);
       break;
-    case NC_MASS_FUNCTION_SPLINE_Z:
+    case NC_HALO_MASS_FUNCTION_SPLINE_Z:
       N = ncm_spline2d_integ_dxdy_spline_y (mfp->d2NdzdlnM, lnMl, lnMu, zl, zu);
       break;
     default:
@@ -746,8 +746,8 @@ _encapsulated_z (gdouble z, gpointer p)
   _encapsulated_function_args *args = (_encapsulated_function_args *) p;
 
   gdouble A = args->mfp->area_survey *
-    nc_mass_function_dv_dzdomega (args->mfp, args->cosmo, z) *
-    nc_mass_function_dn_dlnm (args->mfp, args->cosmo, args->lnM, z);
+    nc_halo_mass_function_dv_dzdomega (args->mfp, args->cosmo, z) *
+    nc_halo_mass_function_dn_dlnm (args->mfp, args->cosmo, args->lnM, z);
 
   return A;
 }
@@ -757,13 +757,13 @@ _encapsulated_lnM (gdouble lnM, gpointer p)
 {
   _encapsulated_function_args *args = (_encapsulated_function_args *) p;
 
-  gdouble A = args->dVdz * nc_mass_function_dn_dlnm (args->mfp, args->cosmo, lnM, args->z);
+  gdouble A = args->dVdz * nc_halo_mass_function_dn_dlnm (args->mfp, args->cosmo, lnM, args->z);
 
   return A;
 }
 
 static void
-_nc_mass_function_generate_2Dspline_knots (NcMassFunction *mfp, NcHICosmo *cosmo, gdouble rel_error)
+_nc_halo_mass_function_generate_2Dspline_knots (NcMassFunction *mfp, NcHICosmo *cosmo, gdouble rel_error)
 {
   gsl_function Fx, Fy;
   _encapsulated_function_args args;
@@ -773,7 +773,7 @@ _nc_mass_function_generate_2Dspline_knots (NcMassFunction *mfp, NcHICosmo *cosmo
   args.cosmo = cosmo;
   args.z = (mfp->zf + mfp->zi) / 2.0;
   args.lnM = (mfp->lnMf + mfp->lnMi) / 2.0;
-  args.dVdz = mfp->area_survey * nc_mass_function_dv_dzdomega (mfp, cosmo, args.z);
+  args.dVdz = mfp->area_survey * nc_halo_mass_function_dv_dzdomega (mfp, cosmo, args.z);
 
   Fx.function = _encapsulated_lnM;
   Fx.params = &args;
@@ -787,7 +787,7 @@ _nc_mass_function_generate_2Dspline_knots (NcMassFunction *mfp, NcHICosmo *cosmo
 }
 
 /**
- * nc_mass_function_prepare_if_needed:
+ * nc_halo_mass_function_prepare_if_needed:
  * @mfp: a #NcMassFunction
  * @cosmo: a #NcHICosmo
  *
@@ -795,7 +795,7 @@ _nc_mass_function_generate_2Dspline_knots (NcMassFunction *mfp, NcHICosmo *cosmo
  *
  */
 /**
- * nc_mass_function_d2n_dzdlnm:
+ * nc_halo_mass_function_d2n_dzdlnm:
  * @mfp: a #NcMassFunction
  * @cosmo: a #NcHICosmo
  * @lnM: logarithm base e of mass

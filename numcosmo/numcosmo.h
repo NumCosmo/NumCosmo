@@ -106,7 +106,7 @@
 #include <numcosmo/lss/nc_multiplicity_func_tinker_mean.h>
 #include <numcosmo/lss/nc_multiplicity_func_tinker_crit.h>
 #include <numcosmo/lss/nc_multiplicity_func_tinker_mean_normalized.h>
-#include <numcosmo/lss/nc_mass_function.h>
+#include <numcosmo/lss/nc_halo_mass_function.h>
 #include <numcosmo/lss/nc_halo_bias_type.h>
 #include <numcosmo/lss/nc_halo_bias_type_ps.h>
 #include <numcosmo/lss/nc_halo_bias_type_st_spher.h>

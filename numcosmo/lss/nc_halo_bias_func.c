@@ -121,7 +121,7 @@ _nc_halo_bias_func_dispose (GObject *object)
 {
   NcHaloBiasFunc *mbiasf = NC_HALO_BIAS_FUNC (object);
   
-  nc_mass_function_clear (&mbiasf->mfp);
+  nc_halo_mass_function_clear (&mbiasf->mfp);
   nc_halo_bias_type_clear (&mbiasf->biasf);
 
   /* Chain up : end */
@@ -197,7 +197,7 @@ nc_halo_bias_func_class_init (NcHaloBiasFuncClass *klass)
                                    g_param_spec_object ("mass-function",
                                                         NULL,
                                                         "Mass Function.",
-                                                        NC_TYPE_MASS_FUNCTION,
+                                                        NC_TYPE_HALO_MASS_FUNCTION,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
   /*
    * NcHaloBiasFunc:bias-type:

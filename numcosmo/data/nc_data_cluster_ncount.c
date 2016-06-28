@@ -1436,7 +1436,7 @@ nc_data_cluster_ncount_print (NcDataClusterNCount *ncount, NcHICosmo *cosmo, FIL
     gsl_histogram2d_get_yrange (h, j, &zl, &zu);
     zm = (zu + zl) / 2.0;
     dz = (zu - zl);
-    V = nc_mass_function_dv_dzdomega (cad->mfp, cosmo, zm) * cad->mfp->area_survey * dz;
+    V = nc_halo_mass_function_dv_dzdomega (cad->mfp, cosmo, zm) * cad->mfp->area_survey * dz;
     for (i = 0; i < nbins_M; i++)
     {
       gdouble ln_ml, ln_mu, Mm, lnMm, log_mu, log_ml;
@@ -1447,7 +1447,7 @@ nc_data_cluster_ncount_print (NcDataClusterNCount *ncount, NcHICosmo *cosmo, FIL
       Mm = exp (lnMm);
       log_mu = log10 (exp(ln_mu));
       log_ml = log10 (exp(ln_ml));
-      dndlog10M = M_LN10 * nc_mass_function_dn_dlnm (cad->mfp, cosmo, lnMm, zm);
+      dndlog10M = M_LN10 * nc_halo_mass_function_dn_dlnm (cad->mfp, cosmo, lnMm, zm);
       ca_M = (log_mu - log_ml) * V * dndlog10M;
 
       //printf ("log-mu = %5.5g log-ml = %5.5g\n", log_mu, log_ml);

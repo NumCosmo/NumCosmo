@@ -104,7 +104,7 @@ _integrand_mass_1h (gdouble lnM, gpointer userdata)
 {
   integrand_data_1h_m *int_data = (integrand_data_1h_m *) userdata;
   gdouble M = exp(lnM);
-  gdouble dn_dlnM = nc_mass_function_dn_dlnm (int_data->cad->mfp, int_data->cosmo, lnM, int_data->z);
+  gdouble dn_dlnM = nc_halo_mass_function_dn_dlnm (int_data->cad->mfp, int_data->cosmo, lnM, int_data->z);
   //printf("integrando mass, k = %.5g M = %.5e dndM = %.5g \n", int_data->k, M, dn_dlnM);
   gdouble u = nc_density_profile_eval_fourier (int_data->dp, int_data->cosmo, int_data->k, M, int_data->z);
   //printf("integrando mass, u = %.15g\n", u);
@@ -120,7 +120,7 @@ _integrand_powspec_1h (gdouble lnM, gpointer userdata)
 {
   integrand_data_1h_m *int_data = (integrand_data_1h_m *) userdata;
   gdouble M = exp(lnM);
-  gdouble dn_dlnM = nc_mass_function_dn_dlnm (int_data->cad->mfp, int_data->cosmo, lnM, int_data->z);
+  gdouble dn_dlnM = nc_halo_mass_function_dn_dlnm (int_data->cad->mfp, int_data->cosmo, lnM, int_data->z);
   gdouble u = nc_density_profile_eval_fourier (int_data->dp, int_data->cosmo, int_data->k, M, int_data->z);
   gdouble rho_mz = pow (1.0 + int_data->z, 3.0) * nc_hicosmo_Omega_m0 (int_data->cosmo) * ncm_c_crit_mass_density_h2_solar_mass_Mpc3 ();
   //gdouble integrand_powspec_1h = M * dn_dlnM * u; //* nc_cluster_mass_intp (int_data->cad->m, int_data->cosmo, lnM, int_data->z);

@@ -31,7 +31,7 @@
 #include <numcosmo/build_cfg.h>
 #include <numcosmo/math/ncm_model.h>
 #include <numcosmo/nc_hicosmo.h>
-#include <numcosmo/lss/nc_mass_function.h>
+#include <numcosmo/lss/nc_halo_mass_function.h>
 #include <numcosmo/lss/nc_cluster_abundance.h>
 #include <numcosmo/lss/nc_cluster_mass.h>
 #include <numcosmo/lss/nc_cluster_mass_plcl.h>

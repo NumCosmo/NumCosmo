@@ -42,7 +42,7 @@ nc_de_data_cluster_new (NcDistance *dist, NcmMSet *mset, NcDEDataClusterEntries 
   NcMatterVar *vp = nc_matter_var_new (NC_MATTER_VAR_FFT, wp, tf);
   NcGrowthFunc *gf = nc_growth_func_new ();
   NcMultiplicityFunc *mulf = nc_multiplicity_func_new_from_name (de_data_cluster->multiplicity_name);
-  NcMassFunction *mfp = nc_mass_function_new (dist, vp, gf, mulf);
+  NcMassFunction *mfp = nc_halo_mass_function_new (dist, vp, gf, mulf);
 
   nc_window_free (wp);
   nc_transfer_func_free (tf);
@@ -133,7 +133,7 @@ nc_de_data_cluster_new (NcDistance *dist, NcmMSet *mset, NcDEDataClusterEntries 
       g_error ("The option --catalog-id must be between (0,2).");
   }
 
-  nc_mass_function_free (mfp);
+  nc_halo_mass_function_free (mfp);
 
   return ca_array;
 }
