@@ -280,6 +280,47 @@ _Lens_lnmass_mean (NcClusterMassPlCL *mszl, gdouble lnM)
 }
 
 /**
+ * nc_cluster_mass_plcl_pdf_only_lognormal:
+ * @clusterm: a #NcClusterMass
+ * @lnM:logarithm base e of the true mass
+ * @lnMsz_M0: logarithm base e of the SZ mass minus lnM0 (pivot mass)
+ * @lnMl_M0: logarithm base e of the lensing mass minus lnM0 (pivot mass)
+ *
+ *
+ * Returns: $P(\ln M_{SZ}, \ln M_L | M_{500})$
+*/
+gdouble 
+nc_cluster_mass_plcl_pdf_only_lognormal (NcClusterMass *clusterm, gdouble lnM, gdouble lnMsz_M0, gdouble lnMl_M0)
+{
+  NcClusterMassPlCL *mszl = NC_CLUSTER_MASS_PLCL (clusterm);
+
+  const gdouble cor2     = COR * COR;
+  const gdouble norma    = 2.0 * M_PI * SD_SZ * SD_L * sqrt (1 - cor2);
+  const gdouble Msz_mean = _SZ_lnmass_mean (mszl, lnM);
+  const gdouble Ml_mean  = _Lens_lnmass_mean (mszl, lnM);
+  const gdouble ysz      = (lnMsz_M0 - Msz_mean) / SD_SZ;
+  const gdouble arg_ysz  = ysz * ysz;
+  const gdouble yl       = (lnMl_M0 - Ml_mean) / SD_L;
+  const gdouble arg_yl   = yl * yl;
+  const gdouble arg_sz_l = 2.0 * COR * ysz * yl;
+  
+  const gdouble exp_arg = - (arg_ysz + arg_yl - arg_sz_l) / (2.0 * (1.0 - cor2));
+
+  if (exp_arg < GSL_LOG_DBL_MIN)
+    return exp (-200.0);
+  else
+  {
+    const gdouble result = exp (exp_arg) + exp (-200.0);
+    //printf ("Msz = %.8g Ml = %.8g m_dist = %.8g\n", Msz, Ml, result);
+    //printf ("M0 = %.2e lnM_M0 = %.5g\n", mszl->M0, lnM_M0);
+    //printf ("Mpl = %.8g sd_pl = %.8g Mcl = %.8g sd_cl = %.8g\n", M_Pl, sd_Pl, M_CL, sd_CL);
+    //printf ("mean1 = %.8g mean2 = %.8g\n", M1_mean/(M_SQRT2 * sd_Pl), M2_mean/(M_SQRT2 * sd_CL));
+    //printf ("norma_partial = %.10g\n", norma_partial);
+    return result / norma;
+  }
+}
+
+/**
  * nc_cluster_mass_plcl_pdf:
  * @clusterm: a #NcClusterMass
  * @lnM_M0:logarithm base e of the true mass minus lnM0 (pivot mass)
