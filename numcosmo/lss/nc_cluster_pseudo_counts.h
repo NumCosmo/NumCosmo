@@ -103,6 +103,7 @@ gdouble nc_cluster_pseudo_counts_selection_function_lnMi (NcClusterPseudoCounts 
 gdouble nc_cluster_pseudo_counts_ndet_no_z_integral (NcClusterPseudoCounts *cpc, NcHICosmo *cosmo, gdouble z);
 gdouble nc_cluster_pseudo_counts_ndet (NcClusterPseudoCounts *cpc, NcMassFunction *mfp, NcHICosmo *cosmo);
 gdouble nc_cluster_pseudo_counts_posterior_numerator (NcClusterPseudoCounts *cpc, NcMassFunction *mfp, NcClusterMass *clusterm, NcHICosmo *cosmo, const gdouble z, const gdouble *Mobs, const gdouble *Mobs_params);
+gdouble nc_cluster_pseudo_counts_mf_lognormal_integral (NcClusterPseudoCounts *cpc, NcMassFunction *mfp, NcClusterMass *clusterm, NcHICosmo *cosmo, const gdouble lnMsz, const gdouble lnMl, const gdouble z);
 gdouble nc_cluster_pseudo_counts_posterior_numerator_plcl (NcClusterPseudoCounts *cpc, NcMassFunction *mfp, NcClusterMass *clusterm, NcHICosmo *cosmo, const gdouble z, const gdouble Mpl, const gdouble Mcl, const gdouble sigma_pl, const gdouble sigma_cl);
 
 G_END_DECLS

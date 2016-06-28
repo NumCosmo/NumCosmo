@@ -276,6 +276,8 @@ typedef struct _integrand_data
   gdouble peak[3];
   gdouble func_peak;
   gdouble lnM_M0;
+  gdouble lnMsz_M0;
+  gdouble lnMl_M0;
   gdouble lnM0;
 } integrand_data;
 
@@ -524,6 +526,76 @@ nc_cluster_pseudo_counts_posterior_numerator (NcClusterPseudoCounts *cpc, NcMass
   }
 }
 
+static gdouble
+_massfunc_lognormal_integrand (gdouble lnM, gpointer userdata)
+{
+  integrand_data *data = (integrand_data *) userdata;
+  //NcClusterPseudoCounts *cpc = data->cpc;
+  //const gdouble sf = nc_cluster_pseudo_counts_selection_function (cpc, lnM, data->z);
+  const gdouble small = exp (-200.0);
+  
+  const gdouble mf = nc_mass_function_d2n_dzdlnm (data->mfp, data->cosmo, lnM, data->z);
+  const gdouble pdf_lognormal = nc_cluster_mass_plcl_pdf_only_lognormal (data->clusterm, lnM, data->lnMsz_M0, data->lnMl_M0);
+  const gdouble result = mf * pdf_lognormal + small; //sf * mf * pdf_Mobs_Mtrue + small;
+
+  return result;    
+   
+}
+
+/**
+ * nc_cluster_pseudo_counts_mf_lognormal_integral:
+ * @cpc: a #NcClusterPseudoCounts
+ * @mfp: a #NcMassFunction
+ * @clusterm: a #NcClusterMass
+ * @cosmo: a #NcHICosmo
+ * @lnMsz: logarithm base e of SZ mass
+ * @lnMl: logarithm base e of lensing mass
+ * @z: spectroscopic redshift
+ *
+ * FIXME
+ *
+ * Returns: FIXME
+*/
+gdouble
+nc_cluster_pseudo_counts_mf_lognormal_integral (NcClusterPseudoCounts *cpc, NcMassFunction *mfp, NcClusterMass *clusterm, NcHICosmo *cosmo, const gdouble lnMsz, const gdouble lnMl, const gdouble z)
+{
+  integrand_data data;
+  gdouble P, err;
+  const gdouble lnM0 = log (5.7e14);
+
+  if (z < ZMIN || z > (ZMIN + DELTAZ))
+    return 0.0;
+  else
+  {
+    gsl_function F;
+    gsl_integration_workspace **w = ncm_integral_get_workspace ();
+
+    data.cpc      = cpc;
+    data.mfp      = mfp;
+    data.clusterm = clusterm;
+    data.cosmo    = cosmo;
+    data.z        = z;
+    data.lnM0     = lnM0;
+    data.lnMsz_M0 = lnMsz - data.lnM0;
+    data.lnMl_M0  = lnMl - data.lnM0;
+
+    F.function = &_massfunc_lognormal_integrand;
+    F.params = &data;
+
+    //printf ("z = %.5g lnMsz = %.5g lnMsz_M0 = %.5g lnMl = %.5g lnMl_M0 = %.5g\n", data.z, lnMsz, data.lnMsz_M0, lnMl, data.lnMl_M0);
+    {
+      gdouble lnM_min, lnM_max;
+      lnM_min = log (1.0e12); //32.292; //    
+      lnM_max = log (1.0e16); //34.561; //log (1.0e16);     
+      gsl_integration_qag (&F, lnM_min, lnM_max, 0.0, 1.0e2 * NCM_DEFAULT_PRECISION, NCM_INTEGRAL_PARTITION, 6, *w, &P, &err);
+    }
+
+    ncm_memory_pool_return (w);
+    /*printf ("numerator = %.8g err = %.8g\n", P, err / P);*/
+    return P;
+  }
+}
+
 /* 3-dimensional integration: real, SZ and Lensing masses*/
 
 static void
@@ -641,7 +713,7 @@ nc_cluster_pseudo_counts_posterior_numerator_plcl (NcClusterPseudoCounts *cpc, N
   gdouble P, err;
   NcmIntegrand3dim integ;
   gdouble norma_p;
-  const gdouble M0 = 5.7e14; //1.0e14;
+  const gdouble M0 = 5.7e14;
   const gdouble Mobs[] = {Mpl / M0, Mcl / M0};
   const gdouble Mobs_params[] = {sigma_pl / M0, sigma_cl / M0};
 

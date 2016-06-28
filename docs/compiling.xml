@@ -8,10 +8,20 @@
     <author>
         <firstname>Sandro</firstname>
         <othername>Dias Pinto</othername>
-        <surname>Vitenti</surname>
+        <surname>Vitenti (main developer)</surname>
         <email>sandro@isoftware.com.br</email>
     </author>
     <authorinitials>SDV</authorinitials>
+    <author>
+        <firstname>Mariana</firstname>
+        <surname>Penna-Lima</surname>
+        <email>pennalima@gmail.com</email>
+    </author>
+    <author>
+        <firstname>Cyrille</firstname>
+        <surname>Doux</surname>
+        <email>doux.cyrille@gmail.com</email>
+    </author>
 </refentryinfo>
 <refmeta>
 <refentrytitle>Compiling and Installing</refentrytitle>
@@ -91,11 +101,11 @@ The other packages sometimes can be found with the following package names: <emp
 creates a local clone of the project repository. See also <ulink role="online-location" url="http://git.savannah.gnu.org/cgit/numcosmo.git/">http://git.savannah.gnu.org/cgit/numcosmo.git/</ulink>.
 </simpara>
 <simpara>
-For the version cloned from the repository it is necessary to first build the configure script, to do that, execute:
+For the version cloned from the repository, it is necessary to first build the configure script. For this, execute:
 <informalexample>
   <programlisting>NOCONFIGURE=yes ./autogen.sh</programlisting>
 </informalexample>
-this command requires additional dependencies cited above. Note that if you don't want to develop the library itself you probably want to get a release from the link above where the configure script is already built and, therefore, there is no need of additional dependencies.
+this command requires additional dependencies cited above. Note that, if you don't want to develop the library itself, you probably want to get a release from the link above where the configure script is already built and, therefore, there is no need of additional dependencies.
 </simpara>
 <simpara>
 To prepare the project for compilation one can run from the sources directory
