@@ -283,6 +283,74 @@ ncm_powspec_set_kmax (NcmPowspec *powspec, const gdouble kmax)
 }
 
 /**
+ * ncm_powspec_get_zi:
+ * @powspec: a #NcmPowspec
+ * 
+ * Gets the initial value $z_i$.
+ *
+ */
+gdouble 
+ncm_powspec_get_zi (NcmPowspec *powspec)
+{
+  return powspec->zi;
+}
+
+/**
+ * ncm_powspec_get_zf:
+ * @powspec: a #NcmPowspec
+ * 
+ * Gets the final value $z_f$.
+ *
+ */
+gdouble 
+ncm_powspec_get_zf (NcmPowspec *powspec)
+{
+  return powspec->zf;
+}
+
+
+/**
+ * ncm_powspec_get_kmin:
+ * @powspec: a #NcmPowspec
+ * 
+ * Gets the minimum mode value $k_\mathrm{min}$.
+ *
+ */
+gdouble 
+ncm_powspec_get_kmin (NcmPowspec *powspec)
+{
+  return powspec->kmin;
+}
+
+/**
+ * ncm_powspec_get_kmax:
+ * @powspec: a #NcmPowspec
+ * 
+ * Gets the maximum mode value $k_\mathrm{max}$.
+ *
+ */
+gdouble 
+ncm_powspec_get_kmax (NcmPowspec *powspec)
+{
+  return powspec->kmax;
+}
+
+/**
+ * ncm_powspec_get_nknots: (virtual get_nknots)
+ * @powspec: a #NcmPowspec
+ * @Nz: (out): number of knots in $z$
+ * @Nk: (out): number of knots in $k$
+ * 
+ * Gets the number of knots used to calculate the powerspectrum.
+ *
+ */
+void 
+ncm_powspec_get_nknots (NcmPowspec *powspec, guint *Nz, guint *Nk)
+{
+  NCM_POWSPEC_GET_CLASS (powspec)->get_nknots (powspec, Nz, Nk);
+}
+
+/**
  * ncm_powspec_prepare:
  * @powspec: a #NcmPowspec
  * @model: a #NcmModel

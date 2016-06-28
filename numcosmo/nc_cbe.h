@@ -131,7 +131,7 @@ void nc_cbe_prepare (NcCBE *cbe, NcHICosmo *cosmo);
 void nc_cbe_prepare_if_needed (NcCBE *cbe, NcHICosmo *cosmo);
 
 NcmSpline *nc_cbe_thermodyn_get_Xe (NcCBE *cbe);
-NcmSpline2d *nc_cbe_thermodyn_get_matter_ps (NcCBE *cbe);
+NcmSpline2d *nc_cbe_get_matter_ps (NcCBE *cbe);
 
 void nc_cbe_get_all_Cls (NcCBE *cbe, NcmVector *TT_Cls, NcmVector *EE_Cls, NcmVector *BB_Cls, NcmVector *TE_Cls);
 

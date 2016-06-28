@@ -49,6 +49,7 @@ struct _NcmPowspecClass
   GObjectClass parent_class;
   void (*prepare) (NcmPowspec *powspec, NcmModel *model);
   gdouble (*eval) (NcmPowspec *powspec, NcmModel *model, const gdouble z, const gdouble k);
+  void (*get_nknots) (NcmPowspec *powspec, guint *Nz, guint *Nk);
 };
 
 struct _NcmPowspec
@@ -73,6 +74,14 @@ void ncm_powspec_set_zf (NcmPowspec *powspec, const gdouble zf);
 
 void ncm_powspec_set_kmin (NcmPowspec *powspec, const gdouble kmin);
 void ncm_powspec_set_kmax (NcmPowspec *powspec, const gdouble kmax);
+
+gdouble ncm_powspec_get_zi (NcmPowspec *powspec);
+gdouble ncm_powspec_get_zf (NcmPowspec *powspec);
+
+gdouble ncm_powspec_get_kmin (NcmPowspec *powspec);
+gdouble ncm_powspec_get_kmax (NcmPowspec *powspec);
+
+void ncm_powspec_get_nknots (NcmPowspec *powspec, guint *Nz, guint *Nk);
 
 G_INLINE_FUNC void ncm_powspec_prepare (NcmPowspec *powspec, NcmModel *model);
 G_INLINE_FUNC void ncm_powspec_prepare_if_needed (NcmPowspec *powspec, NcmModel *model);

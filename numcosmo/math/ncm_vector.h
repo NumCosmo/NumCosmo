@@ -148,6 +148,9 @@ G_INLINE_FUNC const gsl_vector *ncm_vector_const_gsl (const NcmVector *cv);
 G_INLINE_FUNC guint ncm_vector_len (const NcmVector *cv);
 G_INLINE_FUNC guint ncm_vector_stride (const NcmVector *cv);
 
+void ncm_vector_get_minmax (const NcmVector *cv, gdouble *min, gdouble *max);
+void ncm_vector_get_absminmax (const NcmVector *cv, gdouble *absmin, gdouble *absmax);
+
 NcmVector *ncm_vector_dup (const NcmVector *cv);
 void ncm_vector_substitute (NcmVector **cv, NcmVector *nv, gboolean check_size);
 void ncm_vector_free (NcmVector *cv);

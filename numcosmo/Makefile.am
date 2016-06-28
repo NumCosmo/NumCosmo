@@ -74,6 +74,7 @@ ncm_sources = \
 	math/ncm_spline2d_gsl.c            \
 	math/ncm_spline2d_bicubic.c        \
 	math/ncm_powspec.c                 \
+	math/ncm_powspec_filter.c          \
 	math/ncm_func_eval.c               \
 	math/ncm_mpsf_trig_int.c           \
 	math/ncm_mpsf_sbessel.c            \
@@ -82,7 +83,8 @@ ncm_sources = \
 	math/ncm_mpsf_sbessel_int.c        \
 	math/ncm_mpsf_0F1.c                \
 	math/ncm_fftlog.c                  \
-	math/ncm_fftlog_j1pow2.c           \
+	math/ncm_fftlog_tophatwin2.c       \
+	math/ncm_fftlog_gausswin2.c        \
 	math/ncm_sparam.c                  \
 	math/ncm_vparam.c                  \
 	math/ncm_model.c                   \
@@ -168,6 +170,7 @@ ncm_headers = \
 	math/ncm_spline2d_gsl.h          \
 	math/ncm_spline2d_bicubic.h      \
 	math/ncm_powspec.h               \
+	math/ncm_powspec_filter.h        \
 	math/ncm_func_eval.h             \
 	math/ncm_mpsf_trig_int.h         \
 	math/ncm_mpsf_sbessel.h          \
@@ -176,7 +179,8 @@ ncm_headers = \
 	math/ncm_mpsf_sbessel_int.h      \
 	math/ncm_mpsf_0F1.h              \
 	math/ncm_fftlog.h                \
-	math/ncm_fftlog_j1pow2.h         \
+	math/ncm_fftlog_tophatwin2.h     \
+	math/ncm_fftlog_gausswin2.h      \
 	math/ncm_sparam.h                \
 	math/ncm_vparam.h                \
 	math/ncm_model.h                 \

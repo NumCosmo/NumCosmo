@@ -91,6 +91,7 @@ void ncm_spline_set_yv (NcmSpline *s, NcmVector *yv, gboolean init);
 void ncm_spline_set_array (NcmSpline *s, GArray *x, GArray *y, gboolean init);
 void ncm_spline_set_data_static (NcmSpline *s, gdouble *x, gdouble *y, gsize len, gboolean init);
 
+guint ncm_spline_get_len (NcmSpline *s);
 NcmVector *ncm_spline_get_xv (NcmSpline *s);
 NcmVector *ncm_spline_get_yv (NcmSpline *s);
 void ncm_spline_get_bounds (NcmSpline *s, gdouble *lb, gdouble *ub);

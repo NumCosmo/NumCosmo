@@ -1790,7 +1790,7 @@ nc_cbe_thermodyn_get_Xe (NcCBE *cbe)
 }
 
 /**
- * nc_cbe_thermodyn_get_matter_ps:
+ * nc_cbe_get_matter_ps:
  * @cbe: a #NcCBE
  * 
  * Gets the $\ln$ matter power spectrum as a function of the redshift $z$ and mode $\ln (k)$.
@@ -1798,7 +1798,7 @@ nc_cbe_thermodyn_get_Xe (NcCBE *cbe)
  * Returns: (transfer full): a #NcmSpline2d for the matter power spectrum.
  */
 NcmSpline2d *
-nc_cbe_thermodyn_get_matter_ps (NcCBE *cbe)
+nc_cbe_get_matter_ps (NcCBE *cbe)
 {
   NcmVector *lnk_v = ncm_vector_new (cbe->priv->psp.ln_k_size);
   NcmVector *z_v   = ncm_vector_new (cbe->priv->psp.ln_tau_size);
@@ -1810,7 +1810,7 @@ nc_cbe_thermodyn_get_matter_ps (NcCBE *cbe)
     ncm_vector_set (lnk_v, i, cbe->priv->psp.ln_k[i]);
     /*printf ("lnk[%u] % 20.15g k % 20.15g\n", i, cbe->priv->psp.ln_k[i], exp (cbe->priv->psp.ln_k[i]));*/
   }
-  
+
   for (i = 0; i < cbe->priv->psp.ln_tau_size; i++)
   {
     const gdouble z_i = cbe->priv->psp.z_max_pk / (cbe->priv->psp.ln_tau_size - 1.0) * i;

@@ -55,6 +55,7 @@
 #include <numcosmo/math/ncm_spline2d_gsl.h>
 #include <numcosmo/math/ncm_spline2d_bicubic.h>
 #include <numcosmo/math/ncm_powspec.h>
+#include <numcosmo/math/ncm_powspec_filter.h>
 #include <numcosmo/math/ncm_func_eval.h>
 #include <numcosmo/math/grid_one.h>
 #include <numcosmo/math/ncm_mpsf_trig_int.h>
@@ -64,7 +65,8 @@
 #include <numcosmo/math/ncm_sf_sbessel_int.h>
 #include <numcosmo/math/ncm_mpsf_0F1.h>
 #include <numcosmo/math/ncm_fftlog.h>
-#include <numcosmo/math/ncm_fftlog_j1pow2.h>
+#include <numcosmo/math/ncm_fftlog_tophatwin2.h>
+#include <numcosmo/math/ncm_fftlog_gausswin2.h>
 #include <numcosmo/math/ncm_sparam.h>
 #include <numcosmo/math/ncm_vparam.h>
 #include <numcosmo/math/ncm_reparam.h>

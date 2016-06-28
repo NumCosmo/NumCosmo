@@ -30,6 +30,7 @@
 #include <glib-object.h>
 #include <numcosmo/build_cfg.h>
 #include <numcosmo/math/ncm_vector.h>
+#include <numcosmo/math/ncm_spline.h>
 #include <gsl/gsl_math.h>
 #ifndef NUMCOSMO_GIR_SCAN
 #include <complex.h>
@@ -62,16 +63,22 @@ struct _NcmFftlog
 {
   /*< private >*/
   GObject parent_instance;
+  gint Nr;
   gint N;
   gint N_2;
+  gint Nf;
+  gint Nf_2;
+  guint pad;
   gdouble lnk0;
   gdouble lnr0;
   gdouble Lk;
   gdouble Lk_N;
+  gdouble pad_p;
   gboolean prepared;
   gboolean evaluated;
   NcmVector *lnr_vec;
   NcmVector **Gr_vec;
+  NcmSpline **Gr_s;
 #ifdef NUMCOSMO_HAVE_FFTW3
   fftw_complex *Fk;
   fftw_complex *Cm;
@@ -101,17 +108,111 @@ void ncm_fftlog_clear (NcmFftlog **fftlog);
 
 void ncm_fftlog_set_name (NcmFftlog *fftlog, const gchar *name);
 const gchar *ncm_fftlog_peek_name (NcmFftlog *fftlog);
+
+void ncm_fftlog_set_lnr0 (NcmFftlog *fftlog, const gdouble lnr0);
+gdouble ncm_fftlog_get_lnr0 (NcmFftlog *fftlog);
+
+void ncm_fftlog_set_lnk0 (NcmFftlog *fftlog, const gdouble lnk0);
+gdouble ncm_fftlog_get_lnk0 (NcmFftlog *fftlog);
+
 void ncm_fftlog_set_size (NcmFftlog *fftlog, guint n);
-guint ncm_fftlog_get_size (NcmFftlog *fftlog);
+
+void ncm_fftlog_set_padding (NcmFftlog *fftlog, gdouble pad_p);
+gdouble ncm_fftlog_get_padding (NcmFftlog *fftlog);
+
 void ncm_fftlog_set_length (NcmFftlog *fftlog, gdouble Lk);
-gdouble ncm_fftlog_get_length (NcmFftlog *fftlog);
 
 void ncm_fftlog_eval_by_vector (NcmFftlog *fftlog, NcmVector *Fk);
 void ncm_fftlog_eval_by_function (NcmFftlog *fftlog, gsl_function *Fk);
 
+void ncm_fftlog_prepare_splines (NcmFftlog *fftlog);
+
 NcmVector *ncm_fftlog_get_vector_lnr (NcmFftlog *fftlog);
 NcmVector *ncm_fftlog_get_vector_Gr (NcmFftlog *fftlog, guint comp);
+
+NcmSpline *ncm_fftlog_peek_spline_Gr (NcmFftlog *fftlog, guint comp);
+
+gdouble ncm_fftlog_eval_output (NcmFftlog *fftlog, guint comp, const gdouble lnr);
+
+void ncm_fftlog_calibrate_size (NcmFftlog *fftlog, gsl_function *Fk, gdouble reltol);
+
+G_INLINE_FUNC guint ncm_fftlog_get_size (NcmFftlog *fftlog);
+G_INLINE_FUNC gint ncm_fftlog_get_full_size (NcmFftlog *fftlog);
+G_INLINE_FUNC gdouble ncm_fftlog_get_norma (NcmFftlog *fftlog);
+G_INLINE_FUNC gdouble ncm_fftlog_get_length (NcmFftlog *fftlog);
+G_INLINE_FUNC gdouble ncm_fftlog_get_full_length (NcmFftlog *fftlog);
+
+G_INLINE_FUNC gint ncm_fftlog_get_mode_index (NcmFftlog *fftlog, gint i);
+G_INLINE_FUNC gint ncm_fftlog_get_variable_index (NcmFftlog *fftlog, gint i);
+G_INLINE_FUNC gint ncm_fftlog_get_output_index (NcmFftlog *fftlog, gint i);
+
+G_INLINE_FUNC NcmVector *ncm_fftlog_peek_output_vector (NcmFftlog *fftlog, guint comp);
 
 G_END_DECLS
 
 #endif /* _NCM_FFTLOG_H_ */
+
+#ifndef _NC_FFTLOG_INLINE_H_
+#define _NC_FFTLOG_INLINE_H_
+#ifdef NUMCOSMO_HAVE_INLINE
+
+G_BEGIN_DECLS
+
+G_INLINE_FUNC guint
+ncm_fftlog_get_size (NcmFftlog *fftlog)
+{
+  return fftlog->N;
+}
+
+G_INLINE_FUNC gint
+ncm_fftlog_get_full_size (NcmFftlog *fftlog)
+{
+  return fftlog->Nf;
+}
+
+G_INLINE_FUNC gdouble
+ncm_fftlog_get_norma (NcmFftlog *fftlog)
+{
+  return ncm_fftlog_get_full_size (fftlog);
+}
+
+G_INLINE_FUNC gdouble
+ncm_fftlog_get_length (NcmFftlog *fftlog)
+{
+  return fftlog->Lk;
+}
+
+G_INLINE_FUNC gdouble 
+ncm_fftlog_get_full_length (NcmFftlog *fftlog)
+{
+  return fftlog->Lk + 2.0 * fftlog->Lk_N * fftlog->pad;
+}
+
+G_INLINE_FUNC gint 
+ncm_fftlog_get_mode_index (NcmFftlog *fftlog, gint i)
+{
+  return (i > fftlog->Nf_2) ? i - fftlog->Nf : i;
+}
+
+G_INLINE_FUNC gint 
+ncm_fftlog_get_variable_index (NcmFftlog *fftlog, gint i)
+{
+  return (i > fftlog->N_2) ? i - fftlog->N : i;
+}
+
+G_INLINE_FUNC gint 
+ncm_fftlog_get_output_index (NcmFftlog *fftlog, gint i)
+{
+  return (i <= fftlog->N_2) ? (i + fftlog->N_2) : (i - (fftlog->N_2 + 1)); 
+}
+
+G_INLINE_FUNC NcmVector *
+ncm_fftlog_peek_output_vector (NcmFftlog *fftlog, guint comp)
+{
+  return fftlog->Gr_vec[comp];
+}
+
+G_END_DECLS
+
+#endif /* NUMCOSMO_HAVE_INLINE */
+#endif /* _NC_FFTLOG_INLINE_H_ */

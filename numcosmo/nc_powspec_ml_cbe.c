@@ -38,6 +38,8 @@
 #include "build_cfg.h"
 
 #include "nc_powspec_ml_cbe.h"
+#include "nc_powspec_ml_transfer.h"
+#include "lss/nc_transfer_func_eh.h"
 #include "nc_hiprim.h"
 
 enum
@@ -51,8 +53,12 @@ G_DEFINE_TYPE (NcPowspecMLCBE, nc_powspec_ml_cbe, NC_TYPE_POWSPEC_ML);
 static void
 nc_powspec_ml_cbe_init (NcPowspecMLCBE *ps_cbe)
 {
+  NcTransferFunc *tf = nc_transfer_func_eh_new ();
   ps_cbe->cbe  = NULL;
   ps_cbe->lnPk = NULL;
+  ps_cbe->eh   = NC_POWSPEC_ML (nc_powspec_ml_transfer_new (tf));
+
+  nc_transfer_func_free (tf);
 }
 
 static void
@@ -110,6 +116,7 @@ nc_powspec_ml_cbe_dispose (GObject *object)
 
   nc_cbe_clear (&ps_cbe->cbe);
   ncm_spline2d_clear (&ps_cbe->lnPk);
+  nc_powspec_ml_clear (&ps_cbe->eh);
   
   /* Chain up : end */
   G_OBJECT_CLASS (nc_powspec_ml_cbe_parent_class)->dispose (object);
@@ -125,6 +132,7 @@ nc_powspec_ml_cbe_finalize (GObject *object)
 
 void _nc_powspec_ml_cbe_prepare (NcmPowspec *powspec, NcmModel *model);
 gdouble _nc_powspec_ml_cbe_eval (NcmPowspec *powspec, NcmModel *model, const gdouble z, const gdouble k);
+void _nc_powspec_ml_cbe_get_nknots (NcmPowspec *powspec, guint *Nz, guint *Nk);
 
 static void
 nc_powspec_ml_cbe_class_init (NcPowspecMLCBEClass *klass)
@@ -147,8 +155,9 @@ nc_powspec_ml_cbe_class_init (NcPowspecMLCBEClass *klass)
                                                         NC_TYPE_CBE,
                                                         G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
   
-  powspec_class->prepare = &_nc_powspec_ml_cbe_prepare;
-  powspec_class->eval    = &_nc_powspec_ml_cbe_eval;
+  powspec_class->prepare    = &_nc_powspec_ml_cbe_prepare;
+  powspec_class->eval       = &_nc_powspec_ml_cbe_eval;
+  powspec_class->get_nknots = &_nc_powspec_ml_cbe_get_nknots;
 }
 
 void 
@@ -161,21 +170,48 @@ _nc_powspec_ml_cbe_prepare (NcmPowspec *powspec, NcmModel *model)
 
   nc_cbe_set_calc_transfer (ps_cbe->cbe, TRUE);
   nc_cbe_set_max_matter_pk_z (ps_cbe->cbe, powspec->zf);
-  nc_cbe_set_max_matter_pk_k (ps_cbe->cbe, powspec->kmax);
+  nc_cbe_set_max_matter_pk_k (ps_cbe->cbe, NC_POWSPEC_ML_CBE_INTERN_KMAX);
 
   nc_cbe_prepare_if_needed (ps_cbe->cbe, cosmo);
 
   ncm_spline2d_clear (&ps_cbe->lnPk);
 
-  ps_cbe->lnPk = nc_cbe_thermodyn_get_matter_ps (ps_cbe->cbe);
-  
+  ps_cbe->lnPk = nc_cbe_get_matter_ps (ps_cbe->cbe);
+
+  ncm_powspec_prepare_if_needed (NCM_POWSPEC (ps_cbe->eh), model);
 }
 
 gdouble 
 _nc_powspec_ml_cbe_eval (NcmPowspec *powspec, NcmModel *model, const gdouble z, const gdouble k)
 {
   NcPowspecMLCBE *ps_cbe = NC_POWSPEC_ML_CBE (powspec);
-  return exp (ncm_spline2d_eval (ps_cbe->lnPk, log (k), z));
+  if (k < NC_POWSPEC_ML_CBE_INTERN_KMIN)
+  {
+    const gdouble lnkmin = log (NC_POWSPEC_ML_CBE_INTERN_KMIN);
+    const gdouble match = exp (ncm_spline2d_eval (ps_cbe->lnPk, lnkmin, z)) / ncm_powspec_eval (NCM_POWSPEC (ps_cbe->eh), model, z, NC_POWSPEC_ML_CBE_INTERN_KMIN);
+    
+    return match * ncm_powspec_eval (NCM_POWSPEC (ps_cbe->eh), model, z, k);
+  }
+  else if (k > NC_POWSPEC_ML_CBE_INTERN_KMAX)
+  {
+    const gdouble lnkmax = log (NC_POWSPEC_ML_CBE_INTERN_KMAX);
+    const gdouble match = exp (ncm_spline2d_eval (ps_cbe->lnPk, lnkmax, z)) / ncm_powspec_eval (NCM_POWSPEC (ps_cbe->eh), model, z, NC_POWSPEC_ML_CBE_INTERN_KMAX);
+
+    return match * ncm_powspec_eval (NCM_POWSPEC (ps_cbe->eh), model, z, k);
+  }
+  else
+  {
+    return exp (ncm_spline2d_eval (ps_cbe->lnPk, log (k), z));
+  }
+}
+
+void 
+_nc_powspec_ml_cbe_get_nknots (NcmPowspec *powspec, guint *Nz, guint *Nk)
+{
+  NcPowspecMLCBE *ps_cbe = NC_POWSPEC_ML_CBE (powspec);
+
+  Nz[0] = ncm_vector_len (ps_cbe->lnPk->yv);
+  Nk[0] = ncm_vector_len (ps_cbe->lnPk->xv);
 }
 
 /**

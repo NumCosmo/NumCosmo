@@ -460,6 +460,20 @@ ncm_spline_set_len (NcmSpline *s, guint len)
 }
 
 /**
+ * ncm_spline_get_len:
+ * @s: a #NcmSpline.
+ *
+ * This function gets the length of the spline.
+ * 
+ * Returns: spline's size.
+ */
+guint
+ncm_spline_get_len (NcmSpline *s)
+{
+  return s->len;
+}
+
+/**
  * ncm_spline_set_xv:
  * @s: a #NcmSpline.
  * @xv: #NcmVector of knots.

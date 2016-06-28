@@ -32,7 +32,7 @@
 #include <numcosmo/nc_hicosmo.h>
 #include <numcosmo/math/ncm_model_ctrl.h>
 #include <numcosmo/math/ncm_spline.h>
-#include <numcosmo/math/ncm_fftlog_j1pow2.h>
+#include <numcosmo/math/ncm_fftlog_tophatwin2.h>
 #include <numcosmo/lss/nc_window.h>
 #include <numcosmo/lss/nc_transfer_func.h>
 

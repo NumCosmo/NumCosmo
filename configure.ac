@@ -394,7 +394,7 @@ dnl ***************************************************************************
 
 AC_CHECK_HEADERS(math.h,, AC_MSG_ERROR([math.h header files missing]))
 AC_CHECK_LIB([m],[cos])
-AC_CHECK_FUNCS([cos sin erf powl])
+AC_CHECK_FUNCS([cos sin erf powl exp10])
 
 dnl ***************************************************************************
 dnl Checks for internal libcuba

@@ -662,7 +662,7 @@ gdouble
 nc_matter_var_R_to_mass (NcMatterVar *vp, NcHICosmo *cosmo, gdouble R)
 {
   const gdouble Omega_m0 = nc_hicosmo_Omega_m0 (cosmo);
-  return gsl_pow_3(R) * Omega_m0 * nc_window_volume(vp->wp) * ncm_c_crit_mass_density_h2_solar_mass_Mpc3 ();
+  return gsl_pow_3 (R) * Omega_m0 * nc_window_volume(vp->wp) * ncm_c_crit_mass_density_h2_solar_mass_Mpc3 ();
 }
 
 /**
@@ -679,7 +679,7 @@ gdouble
 nc_matter_var_lnM_to_lnR (NcMatterVar *vp, NcHICosmo *cosmo, gdouble lnM)
 {
   const gdouble Omega_m0 = nc_hicosmo_Omega_m0 (cosmo);
-  return (lnM - log (Omega_m0 * nc_window_volume(vp->wp) * ncm_c_crit_mass_density_h2_solar_mass_Mpc3 ())) / 3.0;
+  return (lnM - log (Omega_m0 * nc_window_volume (vp->wp) * ncm_c_crit_mass_density_h2_solar_mass_Mpc3 ())) / 3.0;
 }
 
 /**
@@ -973,6 +973,7 @@ _nc_matter_var_prepare_fft (NcMatterVar *vp, NcHICosmo *cosmo)
     const gdouble k2 = k * k;
     const gdouble matter_P = nc_transfer_func_matter_powerspectrum (vp->tf, cosmo, k);
     const gdouble f = matter_P * k2 / c1;
+/*printf ("PSMV % 20.15g % 20.15g\n", k, f * 6.20571591018725e-29 / 5.18668436454954e-36);*/
     fft->in[ii] = f;
   }
   fftw_execute (fft->p);
@@ -992,8 +993,11 @@ _nc_matter_var_prepare_fft (NcMatterVar *vp, NcHICosmo *cosmo)
       U = (a != 0) ? U * sign_a * cexp (lnr.val + arg.val * I + gsl_sf_lnsinh (M_PI * abs_a * 0.5)) : 3.0 * M_PI / 5.0;
       fft->u[ii] = U * cexp (-2.0 * M_PI / L * i * I * (lnk0 + r0));
       fft->du[ii] = -(1.0 + I * a) * fft->u[ii];
+
       fft->fftRdsigma2_dr[ii] = fft->out[ii] * fft->du[ii];
       fft->out[ii] *= fft->u[ii];
+
+      /*printf ("# MV % 20.15g % 20.15g % 20.15g % 20.15g\n", creal (fft->u[ii]), cimag (fft->u[ii]), creal (fft->du[ii]), cimag (fft->du[ii]));*/
     }
     fft->calc_u = TRUE;
   }
@@ -1019,7 +1023,7 @@ _nc_matter_var_prepare_fft (NcMatterVar *vp, NcHICosmo *cosmo)
     const complex double lnsigma2 = log (Rsigma2) - r;
     const complex double dlnsigma2_dr = fft->Rdsigma2_dr[ii] / (Rsigma2 * N);
 
-     //printf ("i = %d ii = %d lnr= %.5g lnsigma2 = % 20.15g dlnsigma2 = % 20.15g\n", i, ii, r, creal (lnsigma2), creal (dlnsigma2_dr));
+     /*printf ("i = %d ii = %d lnr= %.5g lnsigma2 = % 20.15g dlnsigma2 = % 20.15g\n", i, ii, r, creal (lnsigma2), creal (dlnsigma2_dr));*/
     
     /*
      const gdouble R = exp (r);

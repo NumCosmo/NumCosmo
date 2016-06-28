@@ -133,6 +133,7 @@ nc_powspec_ml_transfer_finalize (GObject *object)
 
 void _nc_powspec_ml_transfer_prepare (NcmPowspec *powspec, NcmModel *model);
 gdouble _nc_powspec_ml_transfer_eval (NcmPowspec *powspec, NcmModel *model, const gdouble z, const gdouble k);
+void _nc_powspec_ml_transfer_get_nknots (NcmPowspec *powspec, guint *Nz, guint *Nk);
 
 static void
 nc_powspec_ml_transfer_class_init (NcPowspecMLTransferClass *klass)
@@ -198,6 +199,15 @@ _nc_powspec_ml_transfer_eval (NcmPowspec *powspec, NcmModel *model, const gdoubl
   const gdouble Delta_zeta_k  = nc_hiprim_SA_powspec_k (prim, k);
 
   return k * Delta_zeta_k * ps_mlt->Pm_k2Pzeta * tfz2;
+}
+
+void 
+_nc_powspec_ml_transfer_get_nknots (NcmPowspec *powspec, guint *Nz, guint *Nk)
+{
+  /*NcPowspecMLTransfer *ps_mlt = NC_POWSPEC_ML_TRANSFER (powspec);*/
+
+  Nz[0] = 1000;
+  Nk[0] = 1000;
 }
 
 /**

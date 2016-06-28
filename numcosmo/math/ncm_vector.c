@@ -789,6 +789,57 @@ ncm_vector_log_vals_func (const NcmVector *v, const gchar *prestr, const gchar *
  * Returns: FIXME
  */
 
+
+/**
+ * ncm_vector_get_minmax: 
+ * @cv: a @NcmVector.
+ * @min: (out): minimum component value of @cv
+ * @max: (out): maximum component value of @cv
+ * 
+ * Gets the minimum/maximum value of the vector components.
+ * 
+ */
+void 
+ncm_vector_get_minmax (const NcmVector *cv, gdouble *min, gdouble *max)
+{
+  guint size = ncm_vector_len (cv);
+  guint i;
+
+  *min = HUGE_VAL;
+  *max = -HUGE_VAL;
+  for (i = 0; i < size; i++)
+  {
+    const gdouble v = ncm_vector_get (cv, i);
+    *min = GSL_MIN (*min, v);
+    *max = GSL_MAX (*max, v);
+  }
+}
+
+/**
+ * ncm_vector_get_absminmax: 
+ * @cv: a @NcmVector.
+ * @absmin: (out): minimum component absolute value of @cv
+ * @absmax: (out): maximum component absolute value of @cv
+ * 
+ * Gets the minimum/maximum absolute value of the vector components.
+ * 
+ */
+void 
+ncm_vector_get_absminmax (const NcmVector *cv, gdouble *absmin, gdouble *absmax)
+{
+  guint size = ncm_vector_len (cv);
+  guint i;
+
+  *absmin = HUGE_VAL;
+  *absmax = 0.0;
+  for (i = 0; i < size; i++)
+  {
+    const gdouble v = fabs (ncm_vector_get (cv, i));
+    *absmin = GSL_MIN (*absmin, v);
+    *absmax = GSL_MAX (*absmax, v);
+  }
+}
+
 /**
  * ncm_vector_set_from_variant: 
  * @cv: a @NcmVector.

@@ -39,7 +39,8 @@
       <xi:include href="xml/ncm_lapack.xml"/>
       <xi:include href="xml/ncm_func_eval.xml"/>
       <xi:include href="xml/ncm_fftlog.xml"/>
-      <xi:include href="xml/ncm_fftlog_j1pow2.xml"/>
+      <xi:include href="xml/ncm_fftlog_tophatwin2.xml"/>
+      <xi:include href="xml/ncm_fftlog_gausswin2.xml"/>
       <xi:include href="xml/ncm_timer.xml"/>
       <xi:include href="xml/ncm_rng.xml"/>
     </section>
@@ -60,8 +61,9 @@
       <xi:include href="xml/ncm_spline2d_gsl.xml"/>
     </section>
     <section>
-      <title>Two-point functions</title>
+      <title>Power spectrum functions</title>
       <xi:include href="xml/ncm_powspec.xml"/>
+      <xi:include href="xml/ncm_powspec_filter.xml"/>
     </section>
     <section>
       <title>Special Functions</title>
