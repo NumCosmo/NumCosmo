@@ -31,6 +31,14 @@
  * This module comprises the set of functions to compute a power spectrum and
  * derived quantities.
  * 
+ * Given a field $\delta(\vec{x})$ at position $\vec{x}$, the power spectrum is 
+ * defined as the Fourier transform of the two-point correlation point, i.e., 
+ * $$\xi(\vec{x} - \vec{x}^\prime) = \int \frac{d^3 k}{(2 \pi)^3} e^{i \vec{k}.(\vec{x} - \vec{x}^\prime)} P(k),$$
+ * where $\langle \delta(\vec{k} - \vec{k}^\prime)\rangle = (2\pi)^3 \delta_D(\vec{k} - \vec{k}^\prime) P(k)$ 
+ * and $\delta_D$ is the Dirac's delta function. 
+ * The standard output is the dimensional power spectrum, not the dimensionless one $\Delta(k)^2$, 
+ * $$P(k) \equiv \frac{2 \pi^2 \Delta(k)^2}{k^3}.$$
+ * 
  */
 
 #ifdef HAVE_CONFIG_H
@@ -65,7 +73,7 @@ ncm_powspec_init (NcmPowspec *powspec)
 }
 
 static void
-ncm_powspec_dispose (GObject *object)
+_ncm_powspec_dispose (GObject *object)
 {
   NcmPowspec *powspec = NCM_POWSPEC (object);
 
@@ -76,7 +84,7 @@ ncm_powspec_dispose (GObject *object)
 }
 
 static void
-ncm_powspec_finalize (GObject *object)
+_ncm_powspec_finalize (GObject *object)
 {
 
   /* Chain up : end */
@@ -84,7 +92,7 @@ ncm_powspec_finalize (GObject *object)
 }
 
 static void
-ncm_powspec_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
+_ncm_powspec_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
 {
   NcmPowspec *powspec = NCM_POWSPEC (object);
   g_return_if_fail (NCM_IS_POWSPEC (object));
@@ -110,7 +118,7 @@ ncm_powspec_set_property (GObject *object, guint prop_id, const GValue *value, G
 }
 
 static void
-ncm_powspec_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
+_ncm_powspec_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
 {
   NcmPowspec *powspec = NCM_POWSPEC (object);
   g_return_if_fail (NCM_IS_POWSPEC (object));
@@ -143,11 +151,11 @@ ncm_powspec_class_init (NcmPowspecClass *klass)
 {
   GObjectClass* object_class = G_OBJECT_CLASS (klass);
 
-  object_class->set_property = ncm_powspec_set_property;
-  object_class->get_property = ncm_powspec_get_property;
+  object_class->set_property = &_ncm_powspec_set_property;
+  object_class->get_property = &_ncm_powspec_get_property;
 
-  object_class->dispose      = ncm_powspec_dispose;
-  object_class->finalize     = ncm_powspec_finalize;
+  object_class->dispose      = &_ncm_powspec_dispose;
+  object_class->finalize     = &_ncm_powspec_finalize;
 
   g_object_class_install_property (object_class,
                                    PROP_ZI,
@@ -216,8 +224,8 @@ ncm_powspec_free (NcmPowspec *powspec)
  * ncm_powspec_clear:
  * @powspec: a #NcmPowspec
  *
- * If *@powspec is different from NULL, decreases the reference count of 
- * *@powspec by one and sets *@powspec to NULL.
+ * If @powspec is different from NULL, decreases the reference count of 
+ * @powspec by one and sets @powspec to NULL.
  *
  */
 void 
@@ -243,9 +251,9 @@ ncm_powspec_set_zi (NcmPowspec *powspec, const gdouble zi)
 /**
  * ncm_powspec_set_zf:
  * @powspec: a #NcmPowspec
- * @zf: minimum redshift $z_f$
+ * @zf: final redshift $z_f$
  * 
- * Sets the final redshift $z_i$.
+ * Sets the final redshift $z_f$.
  *
  */
 void 
@@ -341,7 +349,7 @@ ncm_powspec_get_kmax (NcmPowspec *powspec)
  * @Nz: (out): number of knots in $z$
  * @Nk: (out): number of knots in $k$
  * 
- * Gets the number of knots used to calculate the powerspectrum.
+ * Gets the number of knots used to calculate the power spectrum.
  *
  */
 void 
@@ -363,7 +371,7 @@ ncm_powspec_get_nknots (NcmPowspec *powspec, guint *Nz, guint *Nk)
  * @powspec: a #NcmPowspec
  * @model: a #NcmModel
  *
- * Prepare the object using the model @model if it was changed
+ * Prepares the object @powspec using the model @model if it was changed
  * since last preparation.
  *
  */
@@ -374,7 +382,7 @@ ncm_powspec_get_nknots (NcmPowspec *powspec, guint *Nz, guint *Nk)
  * @z: redshift $z$
  * @k: mode $k$
  * 
- * Evaluate the power spectrum @powspec at $(z, k)$.
+ * Evaluates the power spectrum @powspec at $(z, k)$.
  * 
  * Returns: $P(z, k)$.
  */

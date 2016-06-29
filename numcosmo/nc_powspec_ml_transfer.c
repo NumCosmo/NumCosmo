@@ -28,7 +28,12 @@
  * @title: NcPowspecMLTransfer
  * @short_description: Class for linear matter power spectrum from a transfer function.
  * 
- * Provides a linear matter power spectrum using a transfer function #NcTransferFunc.
+ * Provides a linear matter power spectrum as a function of mode $k$ and redshift $z$ 
+ * using a transfer function $T(k)$ #NcTransferFunc and the growth function $D(z)$ #NcGrowthFunc, 
+ * $$P(k, z) = P_{\text{prim}} (k) T(k)^2 D(z)^2,$$ where $P_{\text{prim}} (k)$ is the primordial 
+ * power spectrum #NcHIPrim.
+ * 
+ * 
  * 
  */
 
@@ -58,7 +63,7 @@ nc_powspec_ml_transfer_init (NcPowspecMLTransfer *ps_mlt)
 }
 
 static void
-nc_powspec_ml_transfer_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
+_nc_powspec_ml_transfer_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
 {
   NcPowspecMLTransfer *ps_mlt = NC_POWSPEC_ML_TRANSFER (object);
   g_return_if_fail (NC_IS_POWSPEC_ML_TRANSFER (object));
@@ -78,7 +83,7 @@ nc_powspec_ml_transfer_set_property (GObject *object, guint prop_id, const GValu
 }
 
 static void
-nc_powspec_ml_transfer_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
+_nc_powspec_ml_transfer_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
 {
   NcPowspecMLTransfer *ps_mlt = NC_POWSPEC_ML_TRANSFER (object);
   g_return_if_fail (NC_IS_POWSPEC_ML_TRANSFER (object));
@@ -98,7 +103,7 @@ nc_powspec_ml_transfer_get_property (GObject *object, guint prop_id, GValue *val
 }
 
 static void
-nc_powspec_ml_transfer_constructed (GObject *object)
+_nc_powspec_ml_transfer_constructed (GObject *object)
 {
   /* Chain up : start */
   G_OBJECT_CLASS (nc_powspec_ml_transfer_parent_class)->constructed (object);
@@ -112,7 +117,7 @@ nc_powspec_ml_transfer_constructed (GObject *object)
 }
 
 static void
-nc_powspec_ml_transfer_dispose (GObject *object)
+_nc_powspec_ml_transfer_dispose (GObject *object)
 {
   NcPowspecMLTransfer *ps_mlt = NC_POWSPEC_ML_TRANSFER (object);
 
@@ -124,16 +129,16 @@ nc_powspec_ml_transfer_dispose (GObject *object)
 }
 
 static void
-nc_powspec_ml_transfer_finalize (GObject *object)
+_nc_powspec_ml_transfer_finalize (GObject *object)
 {
 
   /* Chain up : end */
   G_OBJECT_CLASS (nc_powspec_ml_transfer_parent_class)->finalize (object);
 }
 
-void _nc_powspec_ml_transfer_prepare (NcmPowspec *powspec, NcmModel *model);
-gdouble _nc_powspec_ml_transfer_eval (NcmPowspec *powspec, NcmModel *model, const gdouble z, const gdouble k);
-void _nc_powspec_ml_transfer_get_nknots (NcmPowspec *powspec, guint *Nz, guint *Nk);
+static void _nc_powspec_ml_transfer_prepare (NcmPowspec *powspec, NcmModel *model);
+static gdouble _nc_powspec_ml_transfer_eval (NcmPowspec *powspec, NcmModel *model, const gdouble z, const gdouble k);
+static void _nc_powspec_ml_transfer_get_nknots (NcmPowspec *powspec, guint *Nz, guint *Nk);
 
 static void
 nc_powspec_ml_transfer_class_init (NcPowspecMLTransferClass *klass)
@@ -141,12 +146,13 @@ nc_powspec_ml_transfer_class_init (NcPowspecMLTransferClass *klass)
   GObjectClass *object_class     = G_OBJECT_CLASS (klass);
   NcmPowspecClass *powspec_class = NCM_POWSPEC_CLASS (klass);
 
-  object_class->set_property = nc_powspec_ml_transfer_set_property;
-  object_class->get_property = nc_powspec_ml_transfer_get_property;
+  object_class->set_property = &_nc_powspec_ml_transfer_set_property;
+  object_class->get_property = &_nc_powspec_ml_transfer_get_property;
 
-  object_class->constructed  = nc_powspec_ml_transfer_constructed;
-  object_class->dispose      = nc_powspec_ml_transfer_dispose;
-  object_class->finalize     = nc_powspec_ml_transfer_finalize;
+  object_class->constructed  = &_nc_powspec_ml_transfer_constructed;
+  
+  object_class->dispose      = &_nc_powspec_ml_transfer_dispose;
+  object_class->finalize     = &_nc_powspec_ml_transfer_finalize;
 
   g_object_class_install_property (object_class,
                                    PROP_TRANSFER,
@@ -164,11 +170,12 @@ nc_powspec_ml_transfer_class_init (NcPowspecMLTransferClass *klass)
                                                         NC_TYPE_GROWTH_FUNC,
                                                         G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
-  powspec_class->prepare = &_nc_powspec_ml_transfer_prepare;
-  powspec_class->eval    = &_nc_powspec_ml_transfer_eval;
+  powspec_class->prepare    = &_nc_powspec_ml_transfer_prepare;
+  powspec_class->eval       = &_nc_powspec_ml_transfer_eval;
+  powspec_class->get_nknots = &_nc_powspec_ml_transfer_get_nknots;
 }
 
-void 
+static void 
 _nc_powspec_ml_transfer_prepare (NcmPowspec *powspec, NcmModel *model)
 {
   NcHICosmo *cosmo            = NC_HICOSMO (model);
@@ -185,7 +192,7 @@ _nc_powspec_ml_transfer_prepare (NcmPowspec *powspec, NcmModel *model)
   }
 }
 
-gdouble 
+static gdouble 
 _nc_powspec_ml_transfer_eval (NcmPowspec *powspec, NcmModel *model, const gdouble z, const gdouble k)
 {
   NcHICosmo *cosmo            = NC_HICOSMO (model);
@@ -201,7 +208,7 @@ _nc_powspec_ml_transfer_eval (NcmPowspec *powspec, NcmModel *model, const gdoubl
   return k * Delta_zeta_k * ps_mlt->Pm_k2Pzeta * tfz2;
 }
 
-void 
+static void 
 _nc_powspec_ml_transfer_get_nknots (NcmPowspec *powspec, guint *Nz, guint *Nk)
 {
   /*NcPowspecMLTransfer *ps_mlt = NC_POWSPEC_ML_TRANSFER (powspec);*/

@@ -377,7 +377,7 @@ nc_cbe_init (NcCBE *cbe)
 }
 
 static void
-nc_cbe_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
+_nc_cbe_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
 {
   NcCBE *cbe = NC_CBE (object);
   g_return_if_fail (NC_IS_CBE (object));
@@ -424,7 +424,7 @@ nc_cbe_set_property (GObject *object, guint prop_id, const GValue *value, GParam
 }
 
 static void
-nc_cbe_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
+_nc_cbe_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
 {
   NcCBE *cbe = NC_CBE (object);
   g_return_if_fail (NC_IS_CBE (object));
@@ -471,7 +471,7 @@ nc_cbe_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *
 }
 
 static void
-nc_cbe_dispose (GObject *object)
+_nc_cbe_dispose (GObject *object)
 {
   NcCBE *cbe = NC_CBE (object);
 
@@ -485,7 +485,7 @@ nc_cbe_dispose (GObject *object)
 }
 
 static void
-nc_cbe_finalize (GObject *object)
+_nc_cbe_finalize (GObject *object)
 {
 
   /* Chain up : end */
@@ -499,10 +499,10 @@ nc_cbe_class_init (NcCBEClass *klass)
 
   g_type_class_add_private (klass, sizeof (NcCBEPrivate));
 
-  object_class->set_property = nc_cbe_set_property;
-  object_class->get_property = nc_cbe_get_property;
-  object_class->dispose      = nc_cbe_dispose;
-  object_class->finalize     = nc_cbe_finalize;
+  object_class->set_property = &_nc_cbe_set_property;
+  object_class->get_property = &_nc_cbe_get_property;
+  object_class->dispose      = &_nc_cbe_dispose;
+  object_class->finalize     = &_nc_cbe_finalize;
 
   g_object_class_install_property (object_class,
                                    PROP_PREC,
@@ -619,7 +619,7 @@ nc_cbe_prec_new (NcCBEPrecision *cbe_prec)
 
 /**
  * nc_cbe_ref:
- * @cbe: a #NcCBE.
+ * @cbe: a #NcCBE
  *
  * Increases the reference count of @cbe.
  *
@@ -633,7 +633,7 @@ nc_cbe_ref (NcCBE *cbe)
 
 /**
  * nc_cbe_free:
- * @cbe: a #NcCBE.
+ * @cbe: a #NcCBE
  *
  * Decreases the reference count of @cbe.
  *
@@ -646,7 +646,7 @@ nc_cbe_free (NcCBE *cbe)
 
 /**
  * nc_cbe_clear:
- * @cbe: a #NcCBE.
+ * @cbe: a #NcCBE
  *
  * Decreases the reference count of *@cbe and sets *@cbe to NULL.
  *
@@ -660,7 +660,7 @@ nc_cbe_clear (NcCBE **cbe)
 /**
  * nc_cbe_set_precision:
  * @cbe: a #NcCBE
- * @cbe_prec: a #NcCBEPrecision.
+ * @cbe_prec: a #NcCBEPrecision
  *
  * Sets the @cbe_prec as the precision object.
  *
@@ -696,7 +696,7 @@ nc_cbe_set_target_Cls (NcCBE *cbe, NcDataCMBDataType target_Cls)
 /**
  * nc_cbe_set_calc_transfer:
  * @cbe: a #NcCBE
- * @calc_transfer: a boolean.
+ * @calc_transfer: a boolean
  *
  * Sets whether it should calculate the transfer function.
  *
@@ -716,7 +716,7 @@ nc_cbe_set_calc_transfer (NcCBE *cbe, gboolean calc_transfer)
  * @cbe: a #NcCBE
  * @use_lensed_Cls: a boolean.
  *
- * Sets whether it should use lensed Cls.
+ * Sets whether it should use lensed Cl's.
  *
  */
 void 
@@ -729,7 +729,7 @@ nc_cbe_set_lensed_Cls (NcCBE *cbe, gboolean use_lensed_Cls)
 /**
  * nc_cbe_set_tensor:
  * @cbe: a #NcCBE
- * @use_tensor: a boolean.
+ * @use_tensor: a boolean
  *
  * Sets whether it should use tensor contribution.
  *
@@ -744,7 +744,7 @@ nc_cbe_set_tensor (NcCBE *cbe, gboolean use_tensor)
 /**
  * nc_cbe_set_thermodyn:
  * @cbe: a #NcCBE
- * @use_thermodyn: a boolean.
+ * @use_thermodyn: a boolean
  *
  * Sets whether it should use the thermodynamics module.
  *
@@ -761,8 +761,9 @@ nc_cbe_set_thermodyn (NcCBE *cbe, gboolean use_thermodyn)
  * @cbe: a #NcCBE
  * @scalar_lmax: a guint
  *
- * Sets $\ell_\mathrm{max}$ for scalar modes.
- *
+ * Sets the maximum multipole $\ell_\textrm{max}$ at which the  
+ * angular power spectrum $C_{\ell}$ of the scalar mode is computed.
+ * 
  */
 void 
 nc_cbe_set_scalar_lmax (NcCBE *cbe, guint scalar_lmax)
@@ -779,7 +780,8 @@ nc_cbe_set_scalar_lmax (NcCBE *cbe, guint scalar_lmax)
  * @cbe: a #NcCBE
  * @vector_lmax: a guint
  *
- * Sets $\ell_\mathrm{max}$ for vector modes.
+ * Sets the maximum multipole $\ell_\textrm{max}$ at which the  
+ * angular power spectrum $C_{\ell}$ of the vector mode is computed.
  *
  */
 void 
@@ -797,7 +799,8 @@ nc_cbe_set_vector_lmax (NcCBE *cbe, guint vector_lmax)
  * @cbe: a #NcCBE
  * @tensor_lmax: a guint
  *
- * Sets $\ell_\mathrm{max}$ for tensor modes.
+ * Sets the maximum multipole $\ell_\textrm{max}$ at which the  
+ * angular power spectrum $C_{\ell}$ of the tensor mode is computed.
  *
  */
 void 
@@ -813,9 +816,9 @@ nc_cbe_set_tensor_lmax (NcCBE *cbe, guint tensor_lmax)
 /**
  * nc_cbe_set_max_matter_pk_z:
  * @cbe: a #NcCBE
- * @zmax: maximum redshift for $P_k$ evaluation
+ * @zmax: maximum redshift
  *
- * Sets $z_\mathrm{max}$ the matter power spectrum.
+ * Sets $z_\mathrm{max}$ for (until?) which the matter power spectrum $P(k, z)$ is evaluated.
  *
  */
 void 
@@ -832,7 +835,7 @@ nc_cbe_set_max_matter_pk_z (NcCBE *cbe, gdouble zmax)
  * nc_cbe_get_max_matter_pk_z:
  * @cbe: a #NcCBE
  *
- * Gets $z_\mathrm{max}$ the matter power spectrum.
+ * Gets the maximum redshift $z_\mathrm{max}$ for which the matter power spectrum $P(k, z)$ is evaluated.
  * 
  * Returns: $z_\mathrm{max}$.
  */
@@ -845,9 +848,9 @@ nc_cbe_get_max_matter_pk_z (NcCBE *cbe)
 /**
  * nc_cbe_set_max_matter_pk_k:
  * @cbe: a #NcCBE
- * @kmax: maximum mode $k$ for $P_k$ evaluation
+ * @kmax: maximum mode
  *
- * Sets $k_\mathrm{max}$ the matter power spectrum.
+ * Sets $k_\mathrm{max}$ for which the matter power spectrum $P (k, z)$ is evaluated.
  *
  */
 void 
@@ -864,7 +867,7 @@ nc_cbe_set_max_matter_pk_k (NcCBE *cbe, gdouble kmax)
  * nc_cbe_get_max_matter_pk_k:
  * @cbe: a #NcCBE
  *
- * Gets $k_\mathrm{max}$ the matter power spectrum.
+ * Gets the maximum mode $k_\mathrm{max}$ for which the matter power spectrum $P (k, z)$ is evaluated.
  * 
  * Returns: $k_\mathrm{max}$.
  */
@@ -920,7 +923,7 @@ nc_cbe_calc_transfer (NcCBE *cbe)
  * nc_cbe_lensed_Cls:
  * @cbe: a #NcCBE
  *
- * Gets whether it uses lensed Cls.
+ * Gets whether it uses lensed $C_{\ell}$'s.
  * 
  * Returns: a boolean.
  */
@@ -962,9 +965,10 @@ nc_cbe_thermodyn (NcCBE *cbe)
  * nc_cbe_get_scalar_lmax:
  * @cbe: a #NcCBE
  *
- * Gets the scalar $\ell_\textrm{max}$.
+ * Gets the maximum multipole $\ell_\textrm{max}$ at which the  
+ * angular power spectrum $C_{\ell}$ of the scalar mode is computed.
  * 
- * Returns: the scalar $\ell_\textrm{max}$.
+ * Returns: the maximum (scalar) multipole $\ell_\textrm{max}$.
  */
 guint 
 nc_cbe_get_scalar_lmax (NcCBE *cbe)
@@ -976,9 +980,10 @@ nc_cbe_get_scalar_lmax (NcCBE *cbe)
  * nc_cbe_get_vector_lmax:
  * @cbe: a #NcCBE
  *
- * Gets the vector $\ell_\textrm{max}$.
+ * Gets the maximum multipole $\ell_\textrm{max}$ at which the  
+ * angular power spectrum $C_{\ell}$ of the vector mode is computed.
  * 
- * Returns: the vector $\ell_\textrm{max}$.
+ * Returns: the maximum (vector) multipole $\ell_\textrm{max}$.
  */
 guint 
 nc_cbe_get_vector_lmax (NcCBE *cbe)
@@ -990,9 +995,10 @@ nc_cbe_get_vector_lmax (NcCBE *cbe)
  * nc_cbe_get_tensor_lmax:
  * @cbe: a #NcCBE
  *
- * Gets the tensor $\ell_\textrm{max}$.
+ * Gets the maximum multipole $\ell_\textrm{max}$ at which the  
+ * angular power spectrum $C_{\ell}$ of the tensor mode is computed.
  * 
- * Returns: the tensor $\ell_\textrm{max}$.
+ * Returns: the maximum (tensor) multipole $\ell_\textrm{max}$.
  */
 guint 
 nc_cbe_get_tensor_lmax (NcCBE *cbe)
@@ -1793,9 +1799,9 @@ nc_cbe_thermodyn_get_Xe (NcCBE *cbe)
  * nc_cbe_get_matter_ps:
  * @cbe: a #NcCBE
  * 
- * Gets the $\ln$ matter power spectrum as a function of the redshift $z$ and mode $\ln (k)$.
+ * Gets the logarithm base e of the matter power spectrum as a function of the redshift $z$ and mode $\ln (k)$.
  * 
- * Returns: (transfer full): a #NcmSpline2d for the matter power spectrum.
+ * Returns: (transfer full): a #NcmSpline2d for the logarithm base e of the matter power spectrum, $\ln P(\ln k, z)$.
  */
 NcmSpline2d *
 nc_cbe_get_matter_ps (NcCBE *cbe)
@@ -1846,8 +1852,8 @@ nc_cbe_get_matter_ps (NcCBE *cbe)
  * @BB_Cls: a #NcmVector
  * @TE_Cls: a #NcmVector
  * 
- * Gets and store the Cls calculated in the vectors @TT_Cls, @EE_Cls, 
- * @BB_Cls and @TE_Cls. If any of these vectors are NULL then it is
+ * Gets and store the angular power spectra $C_l$'s calculated in the vectors @TT_Cls, @EE_Cls, 
+ * @BB_Cls and @TE_Cls. If any of these vectors are NULL, then it is (they are)
  * ignored.
  * 
  */

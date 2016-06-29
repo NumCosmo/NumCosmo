@@ -221,7 +221,7 @@ _ncm_fftlog_free_all (NcmFftlog *fftlog)
 #endif /* NUMCOSMO_HAVE_FFTW3 */
 
 static void
-ncm_fftlog_finalize (GObject *object)
+_ncm_fftlog_finalize (GObject *object)
 {
 #ifdef NUMCOSMO_HAVE_FFTW3
   NcmFftlog *fftlog = NCM_FFTLOG (object);
@@ -249,7 +249,7 @@ ncm_fftlog_class_init (NcmFftlogClass *klass)
   object_class->constructed  = &_ncm_fftlog_constructed;
   object_class->set_property = &_ncm_fftlog_set_property;
   object_class->get_property = &_ncm_fftlog_get_property;
-  object_class->finalize     = &ncm_fftlog_finalize;
+  object_class->finalize     = &_ncm_fftlog_finalize;
 
   g_object_class_install_property (object_class,
                                    PROP_LNR0,
@@ -307,9 +307,9 @@ ncm_fftlog_class_init (NcmFftlogClass *klass)
  * ncm_fftlog_ref:
  * @fftlog: a #NcmFftlog
  * 
- * FIXME
+ * Increases the reference count of @fftlog by one.
  * 
- * Returns: (transfer full): FIXME
+ * Returns: (transfer full): @fftlog
  */
 NcmFftlog *ncm_fftlog_ref (NcmFftlog *fftlog)
 {
@@ -320,7 +320,7 @@ NcmFftlog *ncm_fftlog_ref (NcmFftlog *fftlog)
  * ncm_fftlog_free:
  * @fftlog: a #NcmFftlog
  * 
- * FIXME
+ * Decreases the reference count of @fftlog by one.
  * 
  */
 void 
@@ -333,7 +333,8 @@ ncm_fftlog_free (NcmFftlog *fftlog)
  * ncm_fftlog_clear:
  * @fftlog: a #NcmFftlog
  * 
- * FIXME
+ * If @fftlog is different from NULL, decreases the reference count of 
+ * @fftlog by one and sets @fftlog to NULL.
  * 
  */
 void 
@@ -346,9 +347,8 @@ ncm_fftlog_clear (NcmFftlog **fftlog)
  * ncm_fftlog_peek_name:
  * @fftlog: a #NcmFftlog
  * 
- * FIXME
  * 
- * Returns: (transfer none): FIXME
+ * Returns: (transfer none): The internal string describing #NcmFftlog.
  */
 const gchar *
 ncm_fftlog_peek_name (NcmFftlog *fftlog)

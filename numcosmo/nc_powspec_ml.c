@@ -28,8 +28,13 @@
  * @title: NcPowspecML
  * @short_description: Abstrac class for linear matter power spectrum implementation.
  *
- * This module comprises the set of functions to compute a power spectrum and
+ * This module comprises the set of functions to compute the linear matter power spectrum and
  * derived quantities.
+ * 
+ * Following the description presented in #NcmPowSpec, in this case we have that the field $\delta(\vec{x})$ 
+ * represents the matter density fluctuations, i.e.,
+ * $$\delta(\vec{x}) = \frac{\rho(\vec{x}) - \bar{\rho}}{\bar{\rho}},$$ 
+ * where $\rho$ is the cold matter density field and $\bar{\rho}$ its mean.
  * 
  */
 
@@ -48,7 +53,7 @@ nc_powspec_ml_init (NcPowspecML *nc_powspec_ml)
 }
 
 static void
-nc_powspec_ml_finalize (GObject *object)
+_nc_powspec_ml_finalize (GObject *object)
 {
 
   /* Chain up : end */
@@ -60,12 +65,12 @@ nc_powspec_ml_class_init (NcPowspecMLClass *klass)
 {
   GObjectClass* object_class = G_OBJECT_CLASS (klass);
 
-  object_class->finalize = nc_powspec_ml_finalize;
+  object_class->finalize = &_nc_powspec_ml_finalize;
 }
 
 /**
  * nc_powspec_ml_new_from_name:
- * @ps_ml_name: string which specifies the matter linear power spectrum object to be used
+ * @ps_ml_name: string which specifies the linear matter power spectrum object to be used
  *
  * This function returns a new #NcPowspecML whose type is defined by @ps_ml_name.
  *
@@ -84,7 +89,7 @@ nc_powspec_ml_new_from_name (const gchar *ps_ml_name)
 
 /**
  * nc_powspec_ml_ref:
- * @ps_ml: a #NcmMSetCatalog
+ * @ps_ml: a #NcPowspecML
  *
  * Increases the reference count of @ps_ml atomically.
  *
@@ -98,7 +103,7 @@ nc_powspec_ml_ref (NcPowspecML *ps_ml)
 
 /**
  * nc_powspec_ml_free:
- * @ps_ml: a #NcmMSetCatalog
+ * @ps_ml: a #NcPowspecML
  *
  * Decreases the reference count of @ps_ml atomically.
  *
@@ -111,9 +116,9 @@ nc_powspec_ml_free (NcPowspecML *ps_ml)
 
 /**
  * nc_powspec_ml_clear:
- * @ps_ml: a #NcmMSetCatalog
+ * @ps_ml: a #NcPowspecML
  *
- * Decrese the reference count of *@ps_ml atomically and sets the pointer *@ps_ml to null.
+ * Decreses the reference count of *@ps_ml atomically and sets the pointer *@ps_ml to null.
  *
  */
 void 
