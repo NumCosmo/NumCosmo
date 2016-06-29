@@ -64,7 +64,7 @@ struct _NcClusterAbundance
 {
   /*< private >*/
   GObject parent_instance;
-  NcMassFunction *mfp;
+  NcHaloMassFunction *mfp;
   NcHaloBiasFunc *mbiasf;    /* new FIXME */
   NcClusterAbundanceN N;
   NcClusterAbundanceIntPd2N intp_d2N;
@@ -93,8 +93,8 @@ struct _NcClusterAbundanceClass
 
 GType nc_cluster_abundance_get_type (void) G_GNUC_CONST;
 
-NcClusterAbundance *nc_cluster_abundance_new (NcMassFunction *mfp, NcHaloBiasFunc *mbiasf);
-NcClusterAbundance *nc_cluster_abundance_nodist_new (NcMassFunction *mfp, NcHaloBiasFunc *mbiasf);
+NcClusterAbundance *nc_cluster_abundance_new (NcHaloMassFunction *mfp, NcHaloBiasFunc *mbiasf);
+NcClusterAbundance *nc_cluster_abundance_nodist_new (NcHaloMassFunction *mfp, NcHaloBiasFunc *mbiasf);
 NcClusterAbundance *nc_cluster_abundance_ref (NcClusterAbundance *cad);
 
 void nc_cluster_abundance_free (NcClusterAbundance *cad);

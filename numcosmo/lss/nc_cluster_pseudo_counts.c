@@ -267,7 +267,7 @@ nc_cluster_pseudo_counts_clear (NcClusterPseudoCounts **cpc)
 typedef struct _integrand_data
 {
   NcClusterPseudoCounts *cpc;
-  NcMassFunction *mfp;
+  NcHaloMassFunction *mfp;
   NcClusterMass *clusterm;
   NcHICosmo *cosmo;
   gdouble z;
@@ -284,7 +284,7 @@ typedef struct _integrand_data
 /**
  * nc_cluster_pseudo_counts_posterior_ndetone:
  * @cpc: a #NcClusterPseudoCounts
- * @mfp: a @NcMassFunction
+ * @mfp: a @NcHaloMassFunction
  * @cosmo: a @NcHICosmo
  * @clusterm: a #NcClusterMass
  * @z: redshift
@@ -302,7 +302,7 @@ typedef struct _integrand_data
  * Returns: FIXME
 */
 gdouble
-nc_cluster_pseudo_counts_posterior_ndetone (NcClusterPseudoCounts *cpc, NcMassFunction *mfp, NcHICosmo *cosmo, NcClusterMass *clusterm, gdouble z, gdouble Mpl, gdouble Mcl, gdouble sigma_pl, gdouble sigma_cl)
+nc_cluster_pseudo_counts_posterior_ndetone (NcClusterPseudoCounts *cpc, NcHaloMassFunction *mfp, NcHICosmo *cosmo, NcClusterMass *clusterm, gdouble z, gdouble Mpl, gdouble Mcl, gdouble sigma_pl, gdouble sigma_cl)
 {
   g_assert (NC_IS_CLUSTER_MASS_PLCL (clusterm));
   //gdouble lnEz = 0.0; //log (nc_hicosmo_E (cosmo, z));
@@ -421,7 +421,7 @@ _Ndet_integrand (gdouble lnM500, gdouble z, gpointer userdata)
 /**
  * nc_cluster_pseudo_counts_ndet:
  * @cpc: a #NcClusterPseudoCounts
- * @mfp: a #NcMassFunction
+ * @mfp: a #NcHaloMassFunction
  * @cosmo: a #NcHICosmo 
  *
  * FIXME
@@ -429,7 +429,7 @@ _Ndet_integrand (gdouble lnM500, gdouble z, gpointer userdata)
  * Returns: FIXME
 */
 gdouble 
-nc_cluster_pseudo_counts_ndet (NcClusterPseudoCounts *cpc, NcMassFunction *mfp, NcHICosmo *cosmo)
+nc_cluster_pseudo_counts_ndet (NcClusterPseudoCounts *cpc, NcHaloMassFunction *mfp, NcHICosmo *cosmo)
 {
   integrand_data data;
   gdouble P, err;
@@ -478,7 +478,7 @@ _posterior_numerator_integrand (gdouble lnM, gpointer userdata)
 /**
  * nc_cluster_pseudo_counts_posterior_numerator:
  * @cpc: a #NcClusterPseudoCounts
- * @mfp: a #NcMassFunction
+ * @mfp: a #NcHaloMassFunction
  * @clusterm: a #NcClusterMass
  * @cosmo: a #NcHICosmo 
  * @z: spectroscopic redshift
@@ -490,7 +490,7 @@ _posterior_numerator_integrand (gdouble lnM, gpointer userdata)
  * Returns: FIXME
 */
 gdouble
-nc_cluster_pseudo_counts_posterior_numerator (NcClusterPseudoCounts *cpc, NcMassFunction *mfp, NcClusterMass *clusterm, NcHICosmo *cosmo, const gdouble z, const gdouble *Mobs, const gdouble *Mobs_params)
+nc_cluster_pseudo_counts_posterior_numerator (NcClusterPseudoCounts *cpc, NcHaloMassFunction *mfp, NcClusterMass *clusterm, NcHICosmo *cosmo, const gdouble z, const gdouble *Mobs, const gdouble *Mobs_params)
 {
   integrand_data data;
   gdouble P, err;
@@ -545,7 +545,7 @@ _massfunc_lognormal_integrand (gdouble lnM, gpointer userdata)
 /**
  * nc_cluster_pseudo_counts_mf_lognormal_integral:
  * @cpc: a #NcClusterPseudoCounts
- * @mfp: a #NcMassFunction
+ * @mfp: a #NcHaloMassFunction
  * @clusterm: a #NcClusterMass
  * @cosmo: a #NcHICosmo
  * @lnMsz: logarithm base e of SZ mass
@@ -557,7 +557,7 @@ _massfunc_lognormal_integrand (gdouble lnM, gpointer userdata)
  * Returns: FIXME
 */
 gdouble
-nc_cluster_pseudo_counts_mf_lognormal_integral (NcClusterPseudoCounts *cpc, NcMassFunction *mfp, NcClusterMass *clusterm, NcHICosmo *cosmo, const gdouble lnMsz, const gdouble lnMl, const gdouble z)
+nc_cluster_pseudo_counts_mf_lognormal_integral (NcClusterPseudoCounts *cpc, NcHaloMassFunction *mfp, NcClusterMass *clusterm, NcHICosmo *cosmo, const gdouble lnMsz, const gdouble lnMl, const gdouble z)
 {
   integrand_data data;
   gdouble P, err;
@@ -693,7 +693,7 @@ _posterior_numerator_integrand_plcl (gdouble w1, gdouble w2, gdouble lnM_M0, gpo
 /**
  * nc_cluster_pseudo_counts_posterior_numerator_plcl:
  * @cpc: a #NcClusterPseudoCounts
- * @mfp: a #NcMassFunction
+ * @mfp: a #NcHaloMassFunction
  * @clusterm: a #NcClusterMass
  * @cosmo: a #NcHICosmo 
  * @z: spectroscopic redshift
@@ -707,7 +707,7 @@ _posterior_numerator_integrand_plcl (gdouble w1, gdouble w2, gdouble lnM_M0, gpo
  * Returns: FIXME
 */
 gdouble
-nc_cluster_pseudo_counts_posterior_numerator_plcl (NcClusterPseudoCounts *cpc, NcMassFunction *mfp, NcClusterMass *clusterm, NcHICosmo *cosmo, const gdouble z, const gdouble Mpl, const gdouble Mcl, const gdouble sigma_pl, const gdouble sigma_cl)
+nc_cluster_pseudo_counts_posterior_numerator_plcl (NcClusterPseudoCounts *cpc, NcHaloMassFunction *mfp, NcClusterMass *clusterm, NcHICosmo *cosmo, const gdouble z, const gdouble Mpl, const gdouble Mcl, const gdouble sigma_pl, const gdouble sigma_cl)
 {
   integrand_data data;
   gdouble P, err;

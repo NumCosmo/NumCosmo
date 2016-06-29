@@ -216,6 +216,40 @@ ncm_powspec_filter_new (NcmPowspec *ps, NcmPowspecFilterType type)
   return psf;
 }
 
+/**
+ * ncm_powspec_filter_free:
+ * @psf: a #NcmPowspecFilter
+ * 
+ * FIXME
+ * 
+ */
+void
+ncm_powspec_filter_free (NcmPowspecFilter *psf)
+{
+  g_object_unref (psf);
+}
+
+/**
+ * ncm_powspec_filter_clear:
+ * @psf: a #NcmPowspecFilter
+ * 
+ * FIXME
+ * 
+ */
+void
+ncm_powspec_filter_clear (NcmPowspecFilter **psf)
+{
+  g_clear_object (psf);
+}
+
+/**
+ * ncm_powspec_filter_set_type:
+ * @psf: a #NcmPowspecFilter
+ * @type: a type from #NcmPowspecFilterType.
+ * 
+ * FIXME
+ * 
+ */
 void
 ncm_powspec_filter_set_type (NcmPowspecFilter *psf, NcmPowspecFilterType type)
 {
@@ -411,6 +445,22 @@ ncm_powspec_filter_eval_var (NcmPowspecFilter *psf, const gdouble z, const gdoub
 }
 
 /**
+ * ncm_powspec_filter_eval_sigma_lnr:
+ * @psf: a #NcmPowspecFilter
+ * @z: redshift $z$
+ * @lnr: FIXME
+ * 
+ * Evaluate the filtered variance at @lnr.
+ * 
+ * Returns: FIXME 
+ */
+gdouble
+ncm_powspec_filter_eval_sigma_lnr (NcmPowspecFilter *psf, const gdouble z, const gdouble lnr)
+{
+  return exp (0.5 * ncm_powspec_filter_eval_lnvar_lnr (psf, z, lnr));
+}
+
+/**
  * ncm_powspec_filter_eval_sigma:
  * @psf: a #NcmPowspecFilter
  * @z: redshift $z$
@@ -423,7 +473,7 @@ ncm_powspec_filter_eval_var (NcmPowspecFilter *psf, const gdouble z, const gdoub
 gdouble
 ncm_powspec_filter_eval_sigma (NcmPowspecFilter *psf, const gdouble z, const gdouble r)
 {
-  return exp (0.5 * ncm_powspec_filter_eval_lnvar_lnr (psf, z, log (r)));
+  return ncm_powspec_filter_eval_sigma_lnr (psf, z, log (r));
 }
 
 /**

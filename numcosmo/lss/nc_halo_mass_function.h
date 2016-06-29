@@ -29,30 +29,28 @@
 #include <glib-object.h>
 #include <numcosmo/build_cfg.h>
 #include <numcosmo/nc_distance.h>
-#include <numcosmo/lss/nc_matter_var.h>
-#include <numcosmo/lss/nc_growth_func.h>
 #include <numcosmo/lss/nc_multiplicity_func.h>
 #include <numcosmo/math/ncm_spline2d.h>
+#include <numcosmo/math/ncm_powspec_filter.h>
 
 G_BEGIN_DECLS
 
 #define NC_TYPE_HALO_MASS_FUNCTION             (nc_halo_mass_function_get_type ())
-#define NC_HALO_MASS_FUNCTION(obj)             (G_TYPE_CHECK_INSTANCE_CAST ((obj), NC_TYPE_HALO_MASS_FUNCTION, NcMassFunction))
-#define NC_HALO_MASS_FUNCTION_CLASS(klass)     (G_TYPE_CHECK_CLASS_CAST ((klass), NC_TYPE_HALO_MASS_FUNCTION, NcMassFunctionClass))
+#define NC_HALO_MASS_FUNCTION(obj)             (G_TYPE_CHECK_INSTANCE_CAST ((obj), NC_TYPE_HALO_MASS_FUNCTION, NcHaloMassFunction))
+#define NC_HALO_MASS_FUNCTION_CLASS(klass)     (G_TYPE_CHECK_CLASS_CAST ((klass), NC_TYPE_HALO_MASS_FUNCTION, NcHaloMassFunctionClass))
 #define NC_IS_HALO_MASS_FUNCTION(obj)          (G_TYPE_CHECK_INSTANCE_TYPE ((obj), NC_TYPE_HALO_MASS_FUNCTION))
 #define NC_IS_HALO_MASS_FUNCTION_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE ((klass), NC_TYPE_HALO_MASS_FUNCTION))
-#define NC_HALO_MASS_FUNCTION_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS ((obj), NC_TYPE_HALO_MASS_FUNCTION, NcMassFunctionClass))
-typedef struct _NcMassFunctionClass NcMassFunctionClass;
-typedef struct _NcMassFunction NcMassFunction;
+#define NC_HALO_MASS_FUNCTION_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS ((obj), NC_TYPE_HALO_MASS_FUNCTION, NcHaloMassFunctionClass))
+typedef struct _NcHaloMassFunctionClass NcHaloMassFunctionClass;
+typedef struct _NcHaloMassFunction NcHaloMassFunction;
 
-struct _NcMassFunction
+struct _NcHaloMassFunction
 {
   /*< private > */
   GObject parent_instance;
   NcDistance *dist;
-  NcMatterVar *vp;
-  NcGrowthFunc *gf;
   NcMultiplicityFunc *mulf;
+  NcmPowspecFilter *psf;
   gdouble area_survey;
   gdouble N_sigma;
   gdouble growth;		/* Internal use only */
@@ -66,14 +64,14 @@ struct _NcMassFunction
   NcmModelCtrl *ctrl_reion;
 };
 
-struct _NcMassFunctionClass
+struct _NcHaloMassFunctionClass
 {
   /*< private > */
   GObjectClass parent_class;
 };
 
 /**
- * NcMassFunctionSplineOptimize:
+ * NcHaloMassFunctionSplineOptimize:
  * @NC_HALO_MASS_FUNCTION_SPLINE_NONE: FIXME
  * @NC_HALO_MASS_FUNCTION_SPLINE_LNM: FIXME
  * @NC_HALO_MASS_FUNCTION_SPLINE_Z: FIXME
@@ -81,36 +79,36 @@ struct _NcMassFunctionClass
  * FIXME
  *
  */
-typedef enum _NcMassFunctionSplineOptimize
+typedef enum _NcHaloMassFunctionSplineOptimize
 {
   NC_HALO_MASS_FUNCTION_SPLINE_NONE = 0,
   NC_HALO_MASS_FUNCTION_SPLINE_LNM,
   NC_HALO_MASS_FUNCTION_SPLINE_Z,
-} NcMassFunctionSplineOptimize;
+} NcHaloMassFunctionSplineOptimize;
 
 GType nc_halo_mass_function_get_type (void) G_GNUC_CONST;
 
-NcMassFunction *nc_halo_mass_function_new (NcDistance *dist, NcMatterVar *vp, NcGrowthFunc *gf, NcMultiplicityFunc *mulf);
-NcMassFunction *nc_halo_mass_function_copy (NcMassFunction *mfp);
-void nc_halo_mass_function_free (NcMassFunction *mfp);
-void nc_halo_mass_function_clear (NcMassFunction **mfp);
+NcHaloMassFunction *nc_halo_mass_function_new (NcDistance *dist, NcmPowspecFilter *psf, NcMultiplicityFunc *mulf);
+void nc_halo_mass_function_free (NcHaloMassFunction *mfp);
+void nc_halo_mass_function_clear (NcHaloMassFunction **mfp);
 
-void nc_halo_mass_function_set_area (NcMassFunction *mfp, gdouble area);
-void nc_halo_mass_function_set_prec (NcMassFunction *mfp, gdouble prec);
-void nc_halo_mass_function_set_area_sd (NcMassFunction *mfp, gdouble area_sd);
-void nc_halo_mass_function_set_eval_limits (NcMassFunction *mfp, NcHICosmo *cosmo, gdouble lnMi, gdouble lnMf, gdouble zi, gdouble zf);
-void nc_halo_mass_function_prepare (NcMassFunction *mfp, NcHICosmo *cosmo);
-G_INLINE_FUNC void nc_halo_mass_function_prepare_if_needed (NcMassFunction *mfp, NcHICosmo *cosmo);
+void nc_halo_mass_function_set_area (NcHaloMassFunction *mfp, gdouble area);
+void nc_halo_mass_function_set_prec (NcHaloMassFunction *mfp, gdouble prec);
+void nc_halo_mass_function_set_area_sd (NcHaloMassFunction *mfp, gdouble area_sd);
+void nc_halo_mass_function_set_eval_limits (NcHaloMassFunction *mfp, NcHICosmo *cosmo, gdouble lnMi, gdouble lnMf, gdouble zi, gdouble zf);
+void nc_halo_mass_function_prepare (NcHaloMassFunction *mfp, NcHICosmo *cosmo);
+G_INLINE_FUNC void nc_halo_mass_function_prepare_if_needed (NcHaloMassFunction *mfp, NcHICosmo *cosmo);
 
-gdouble nc_halo_mass_function_dn_dlnm (NcMassFunction *mfp, NcHICosmo *cosmo, gdouble lnM, gdouble z);
-gdouble nc_halo_mass_function_dv_dzdomega (NcMassFunction *mfp, NcHICosmo *cosmo, gdouble z);
-G_INLINE_FUNC gdouble nc_halo_mass_function_d2n_dzdlnm (NcMassFunction *mfp, NcHICosmo *cosmo, gdouble lnM, gdouble z);
-gdouble nc_halo_mass_function_dn_dz (NcMassFunction *mfp, NcHICosmo *cosmo, gdouble lnMl, gdouble lnMu, gdouble z, gboolean spline);
-gdouble nc_halo_mass_function_n (NcMassFunction *mfp, NcHICosmo *cosmo, gdouble lnMl, gdouble lnMu, gdouble zl, gdouble zu, NcMassFunctionSplineOptimize spline);
-gdouble nc_halo_mass_function_dn_M_to_inf_dv (NcMassFunction *mfp, NcHICosmo *cosmo, gdouble M, gdouble z);
-gdouble nc_halo_mass_function_dn_M1_to_M2_dv (NcMassFunction *mfp, NcHICosmo *cosmo, gdouble M1, gdouble M2, gdouble z);
-void nc_halo_mass_function_sigma (NcMassFunction *mfp, NcHICosmo *cosmo, gdouble lnM, gdouble z, gdouble *dn_dlnM_ptr, gdouble *sigma_ptr);
-void nc_halo_mass_function_alpha_eff (NcMatterVar *vp, NcHICosmo *cosmo, gdouble lnM, gdouble *a_eff_ptr);
+gdouble nc_halo_mass_function_lnM_to_lnR (NcHaloMassFunction *mfp, NcHICosmo *cosmo, gdouble lnM);
+
+gdouble nc_halo_mass_function_dn_dlnm (NcHaloMassFunction *mfp, NcHICosmo *cosmo, gdouble lnM, gdouble z);
+gdouble nc_halo_mass_function_dv_dzdomega (NcHaloMassFunction *mfp, NcHICosmo *cosmo, gdouble z);
+G_INLINE_FUNC gdouble nc_halo_mass_function_d2n_dzdlnm (NcHaloMassFunction *mfp, NcHICosmo *cosmo, gdouble lnM, gdouble z);
+gdouble nc_halo_mass_function_dn_dz (NcHaloMassFunction *mfp, NcHICosmo *cosmo, gdouble lnMl, gdouble lnMu, gdouble z, gboolean spline);
+gdouble nc_halo_mass_function_n (NcHaloMassFunction *mfp, NcHICosmo *cosmo, gdouble lnMl, gdouble lnMu, gdouble zl, gdouble zu, NcHaloMassFunctionSplineOptimize spline);
+gdouble nc_halo_mass_function_dn_M_to_inf_dv (NcHaloMassFunction *mfp, NcHICosmo *cosmo, gdouble M, gdouble z);
+gdouble nc_halo_mass_function_dn_M1_to_M2_dv (NcHaloMassFunction *mfp, NcHICosmo *cosmo, gdouble M1, gdouble M2, gdouble z);
+void nc_halo_mass_function_sigma (NcHaloMassFunction *mfp, NcHICosmo *cosmo, gdouble lnM, gdouble z, gdouble *dn_dlnM_ptr, gdouble *sigma_ptr);
 
 G_END_DECLS
 
@@ -125,7 +123,7 @@ G_END_DECLS
 G_BEGIN_DECLS
 
 G_INLINE_FUNC void
-nc_halo_mass_function_prepare_if_needed (NcMassFunction *mfp, NcHICosmo *cosmo)
+nc_halo_mass_function_prepare_if_needed (NcHaloMassFunction *mfp, NcHICosmo *cosmo)
 {
   gboolean cosmo_up = ncm_model_ctrl_update (mfp->ctrl_cosmo, NCM_MODEL (cosmo));
   
@@ -134,7 +132,7 @@ nc_halo_mass_function_prepare_if_needed (NcMassFunction *mfp, NcHICosmo *cosmo)
 }
 
 G_INLINE_FUNC gdouble
-nc_halo_mass_function_d2n_dzdlnm (NcMassFunction *mfp, NcHICosmo *cosmo, gdouble lnM, gdouble z)
+nc_halo_mass_function_d2n_dzdlnm (NcHaloMassFunction *mfp, NcHICosmo *cosmo, gdouble lnM, gdouble z)
 {
   return ncm_spline2d_eval (mfp->d2NdzdlnM, lnM, z);
 }

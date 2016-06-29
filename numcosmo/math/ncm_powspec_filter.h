@@ -84,6 +84,9 @@ struct _NcmPowspecFilter
 GType ncm_powspec_filter_get_type (void) G_GNUC_CONST;
 
 NcmPowspecFilter *ncm_powspec_filter_new (NcmPowspec *ps, NcmPowspecFilterType type);
+void ncm_powspec_filter_free (NcmPowspecFilter *psf);
+void ncm_powspec_filter_clear (NcmPowspecFilter **psf);
+
 void ncm_powspec_filter_prepare (NcmPowspecFilter *psf, NcmModel *model);
 
 void ncm_powspec_filter_set_type (NcmPowspecFilter *psf, NcmPowspecFilterType type);
@@ -94,6 +97,7 @@ gdouble ncm_powspec_filter_get_r_max (NcmPowspecFilter *psf);
 
 gdouble ncm_powspec_filter_eval_lnvar_lnr (NcmPowspecFilter *psf, const gdouble z, const gdouble lnr);
 gdouble ncm_powspec_filter_eval_var (NcmPowspecFilter *psf, const gdouble z, const gdouble r);
+gdouble ncm_powspec_filter_eval_sigma_lnr (NcmPowspecFilter *psf, const gdouble z, const gdouble lnr);
 gdouble ncm_powspec_filter_eval_sigma (NcmPowspecFilter *psf, const gdouble z, const gdouble r);
 
 gdouble ncm_powspec_filter_eval_dlnvar_dlnr (NcmPowspecFilter *psf, const gdouble z, const gdouble lnr);

@@ -49,7 +49,7 @@ G_DEFINE_TYPE (NcHaloBiasFunc, nc_halo_bias_func, G_TYPE_OBJECT);
 
 /**
  * nc_halo_bias_func_new:
- * @mfp: a #NcMassFunction.
+ * @mfp: a #NcHaloMassFunction.
  * @biasf: (allow-none): a #NcHaloBiasType.
  *
  * This function allocates memory for a new #NcHaloBiasFunc object and sets its properties to the values from
@@ -58,7 +58,7 @@ G_DEFINE_TYPE (NcHaloBiasFunc, nc_halo_bias_func, G_TYPE_OBJECT);
  * Returns: A new #NcHaloBiasFunc.
  */
 NcHaloBiasFunc *
-nc_halo_bias_func_new (NcMassFunction *mfp, NcHaloBiasType *biasf)
+nc_halo_bias_func_new (NcHaloMassFunction *mfp, NcHaloBiasType *biasf)
 {
   NcHaloBiasFunc *mbiasf = g_object_new (NC_TYPE_HALO_BIAS_FUNC,
                                      "mass-function", mfp,

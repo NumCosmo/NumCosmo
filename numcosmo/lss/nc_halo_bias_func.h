@@ -48,7 +48,7 @@ struct _NcHaloBiasFunc
 {
   /*< private >*/
   GObject parent_instance;
-  NcMassFunction *mfp;
+  NcHaloMassFunction *mfp;
   NcHaloBiasType *biasf;
 };
 
@@ -60,7 +60,7 @@ struct _NcHaloBiasFuncClass
 
 GType nc_halo_bias_func_get_type (void) G_GNUC_CONST;
 
-NcHaloBiasFunc *nc_halo_bias_func_new (NcMassFunction *mfp, NcHaloBiasType *biasf);
+NcHaloBiasFunc *nc_halo_bias_func_new (NcHaloMassFunction *mfp, NcHaloBiasType *biasf);
 NcHaloBiasFunc *nc_halo_bias_func_copy (NcHaloBiasFunc *mbiasf);
 void nc_halo_bias_func_free (NcHaloBiasFunc *mbiasf);
 void nc_halo_bias_func_clear (NcHaloBiasFunc **mbiasf);
