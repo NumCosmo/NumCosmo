@@ -26,9 +26,9 @@
 /**
  * SECTION:nc_powspec_ml_cbe
  * @title: NcPowspecMLCBE
- * @short_description: Class for linear matter power spectrum from a transfer function.
+ * @short_description: linear matter power spectrum from CLASS backend.
  * 
- * Provides a linear matter power spectrum using a transfer function #NcTransferFunc.
+ * Provides the linear matter power spectrum using the CLASS backend #NcCBE.
  * 
  */
 
@@ -62,7 +62,7 @@ nc_powspec_ml_cbe_init (NcPowspecMLCBE *ps_cbe)
 }
 
 static void
-nc_powspec_ml_cbe_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
+_nc_powspec_ml_cbe_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
 {
   NcPowspecMLCBE *ps_cbe = NC_POWSPEC_ML_CBE (object);
   g_return_if_fail (NC_IS_POWSPEC_ML_CBE (object));
@@ -79,7 +79,7 @@ nc_powspec_ml_cbe_set_property (GObject *object, guint prop_id, const GValue *va
 }
 
 static void
-nc_powspec_ml_cbe_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
+_nc_powspec_ml_cbe_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
 {
   NcPowspecMLCBE *ps_cbe = NC_POWSPEC_ML_CBE (object);
   g_return_if_fail (NC_IS_POWSPEC_ML_CBE (object));
@@ -96,7 +96,7 @@ nc_powspec_ml_cbe_get_property (GObject *object, guint prop_id, GValue *value, G
 }
 
 static void
-nc_powspec_ml_cbe_constructed (GObject *object)
+_nc_powspec_ml_cbe_constructed (GObject *object)
 {
   /* Chain up : start */
   G_OBJECT_CLASS (nc_powspec_ml_cbe_parent_class)->constructed (object);
@@ -110,7 +110,7 @@ nc_powspec_ml_cbe_constructed (GObject *object)
 }
 
 static void
-nc_powspec_ml_cbe_dispose (GObject *object)
+_nc_powspec_ml_cbe_dispose (GObject *object)
 {
   NcPowspecMLCBE *ps_cbe = NC_POWSPEC_ML_CBE (object);
 
@@ -123,16 +123,16 @@ nc_powspec_ml_cbe_dispose (GObject *object)
 }
 
 static void
-nc_powspec_ml_cbe_finalize (GObject *object)
+_nc_powspec_ml_cbe_finalize (GObject *object)
 {
 
   /* Chain up : end */
   G_OBJECT_CLASS (nc_powspec_ml_cbe_parent_class)->finalize (object);
 }
 
-void _nc_powspec_ml_cbe_prepare (NcmPowspec *powspec, NcmModel *model);
-gdouble _nc_powspec_ml_cbe_eval (NcmPowspec *powspec, NcmModel *model, const gdouble z, const gdouble k);
-void _nc_powspec_ml_cbe_get_nknots (NcmPowspec *powspec, guint *Nz, guint *Nk);
+static void _nc_powspec_ml_cbe_prepare (NcmPowspec *powspec, NcmModel *model);
+static gdouble _nc_powspec_ml_cbe_eval (NcmPowspec *powspec, NcmModel *model, const gdouble z, const gdouble k);
+static void _nc_powspec_ml_cbe_get_nknots (NcmPowspec *powspec, guint *Nz, guint *Nk);
 
 static void
 nc_powspec_ml_cbe_class_init (NcPowspecMLCBEClass *klass)
@@ -140,12 +140,12 @@ nc_powspec_ml_cbe_class_init (NcPowspecMLCBEClass *klass)
   GObjectClass *object_class     = G_OBJECT_CLASS (klass);
   NcmPowspecClass *powspec_class = NCM_POWSPEC_CLASS (klass);
 
-  object_class->set_property = nc_powspec_ml_cbe_set_property;
-  object_class->get_property = nc_powspec_ml_cbe_get_property;
+  object_class->set_property = &_nc_powspec_ml_cbe_set_property;
+  object_class->get_property = &_nc_powspec_ml_cbe_get_property;
 
-  object_class->constructed  = nc_powspec_ml_cbe_constructed;
-  object_class->dispose      = nc_powspec_ml_cbe_dispose;
-  object_class->finalize     = nc_powspec_ml_cbe_finalize;
+  object_class->constructed  = &_nc_powspec_ml_cbe_constructed;
+  object_class->dispose      = &_nc_powspec_ml_cbe_dispose;
+  object_class->finalize     = &_nc_powspec_ml_cbe_finalize;
 
   g_object_class_install_property (object_class,
                                    PROP_CBE,
@@ -160,7 +160,7 @@ nc_powspec_ml_cbe_class_init (NcPowspecMLCBEClass *klass)
   powspec_class->get_nknots = &_nc_powspec_ml_cbe_get_nknots;
 }
 
-void 
+static void 
 _nc_powspec_ml_cbe_prepare (NcmPowspec *powspec, NcmModel *model)
 {
   NcHICosmo *cosmo       = NC_HICOSMO (model);
@@ -181,7 +181,7 @@ _nc_powspec_ml_cbe_prepare (NcmPowspec *powspec, NcmModel *model)
   ncm_powspec_prepare_if_needed (NCM_POWSPEC (ps_cbe->eh), model);
 }
 
-gdouble 
+static gdouble 
 _nc_powspec_ml_cbe_eval (NcmPowspec *powspec, NcmModel *model, const gdouble z, const gdouble k)
 {
   NcPowspecMLCBE *ps_cbe = NC_POWSPEC_ML_CBE (powspec);
@@ -205,7 +205,7 @@ _nc_powspec_ml_cbe_eval (NcmPowspec *powspec, NcmModel *model, const gdouble z, 
   }
 }
 
-void 
+static void 
 _nc_powspec_ml_cbe_get_nknots (NcmPowspec *powspec, guint *Nz, guint *Nk)
 {
   NcPowspecMLCBE *ps_cbe = NC_POWSPEC_ML_CBE (powspec);

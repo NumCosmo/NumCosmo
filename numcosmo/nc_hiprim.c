@@ -156,7 +156,7 @@ nc_hiprim_new_from_name (GType parent_type, gchar *prim_name)
 
 /**
  * nc_hiprim_ref:
- * @prim: a NcHIPrim
+ * @prim: a #NcHIPrim
  *
  * FIXME
  *
@@ -170,7 +170,7 @@ nc_hiprim_ref (NcHIPrim *prim)
 
 /**
  * nc_hiprim_free:
- * @prim: a NcHIPrim
+ * @prim: a #NcHIPrim
  *
  * FIXME
  *
@@ -183,7 +183,7 @@ nc_hiprim_free (NcHIPrim *prim)
 
 /**
  * nc_hiprim_clear:
- * @prim: a NcHIPrim
+ * @prim: a #NcHIPrim
  *
  * FIXME
  *
@@ -231,7 +231,7 @@ nc_hiprim_log_all_models (GType parent)
 
 /**
  * nc_hiprim_set_k_pivot:
- * @prim: a NcHIPrim
+ * @prim: a #NcHIPrim
  * @k_pivot: pivotal $k$ in units of $1/\mathrm{Mpc}$
  *
  * FIXME
@@ -247,7 +247,7 @@ nc_hiprim_set_k_pivot (NcHIPrim *prim, gdouble k_pivot)
 
 /**
  * nc_hiprim_get_k_pivot:
- * @prim: a NcHIPrim
+ * @prim: a #NcHIPrim
  *
  * Gets the value of the pivotal $k$.
  *
@@ -261,7 +261,7 @@ nc_hiprim_get_k_pivot (NcHIPrim *prim)
 
 /**
  * nc_hiprim_get_lnk_pivot:
- * @prim: a NcHIPrim
+ * @prim: a #NcHIPrim
  *
  * Gets the value of the pivotal $k$.
  *
