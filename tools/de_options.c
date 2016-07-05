@@ -162,8 +162,8 @@ nc_de_opt_get_data_cluster_group (NcDEDataClusterEntries *de_data_cluster, GOpti
 {
   GOptionEntry entries_cluster[] =
   {
-    { "window",        0, 0, G_OPTION_ARG_STRING,         &de_data_cluster->window_name,           "Which window to use", NULL },
-    { "transfer",      0, 0, G_OPTION_ARG_STRING,         &de_data_cluster->transfer_name,         "Which transfer function to use", NULL },
+    { "filter",        0, 0, G_OPTION_ARG_STRING,         &de_data_cluster->filter_type,           "Which filter to apply to the powerspectrum", NULL },
+    { "transfer",      0, 0, G_OPTION_ARG_STRING,         &de_data_cluster->ps_type,               "Which powerspectrum to use", NULL },
     { "multiplicity",  0, 0, G_OPTION_ARG_STRING,         &de_data_cluster->multiplicity_name,     "Which multiplicity function to use", NULL },
     { "cluster-m",     0, 0, G_OPTION_ARG_STRING,         &de_data_cluster->clusterm_ser,          "Which NcClusterMass object to use", NULL },
     { "cluster-z",     0, 0, G_OPTION_ARG_STRING,         &de_data_cluster->clusterz_ser,          "Which NcClusterRedshift object to use", NULL },

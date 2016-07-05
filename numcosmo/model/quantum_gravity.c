@@ -1686,7 +1686,7 @@ nc_hicosmo_qg_pert_powerspectrum (NcHICosmoQGMode *qgmode, gdouble x, gdouble *R
   const gdouble zeta = nc_hicosmo_qg_zeta (model, x, NULL);
 
   const gdouble gbar = sqrt(nc_hicosmo_qg_gbar2 (model, x));
-  const gdouble delta_phi = gsl_pow_3 (x) * gbar * zeta * zeta * Rp / (sqrt (qgmode->k * M_PI) * ncm_c_hubble_radius_planck ());
+  const gdouble delta_phi = gsl_pow_3 (x) * gbar * zeta * zeta * Rp / (sqrt (qgmode->k * M_PI) * ncm_c_hubble_radius_hm1_planck ());
 
   if (FALSE)
   {
@@ -1913,7 +1913,7 @@ nc_hicosmo_qg_modefunc_evolve (NcHICosmoQGMode *qgmode)
         gdouble F_x = nc_hicosmo_qg_xxbarzeta2 (model, x, NULL) / x;
         gdouble sqrt_x_F = sqrt (1.0 / F_x);
         gdouble R[4];
-        gdouble RFo = hypot (NV_Ith_S (qgmode->y, 0), NV_Ith_S (qgmode->y, 2)) / ncm_c_hubble_radius_planck ();
+        gdouble RFo = hypot (NV_Ith_S (qgmode->y, 0), NV_Ith_S (qgmode->y, 2)) / ncm_c_hubble_radius_hm1_planck ();
         //printf ("% .15g % .15g % .15g\n", exp (-x_i * x_i / 2.0 - G_B), x_i, gsl_pow_3 (qgmode->k) * gsl_pow_2(hypot (NV_Ith_S (qgmode->y, 0), NV_Ith_S (qgmode->y, 2))));
 
         nc_hicosmo_qg_h_dust_sol (qgmode, exp (x_i), 1e-20, h);

@@ -130,7 +130,6 @@ nc_hicosmo_class_init (NcHICosmoClass *klass)
       {"Yp_4He",      "Primordial Helium mass fraction.",           &nc_hicosmo_Yp_4He,      NC_HICOSMO_IMPL_Yp_4He},
       {"H_Yp",        "Primordial Hydrogen mass fraction.",         &nc_hicosmo_Yp_1H,       NC_HICOSMO_IMPL_H_Yp},
       {"XHe",         "Primordial Helium abundance.",               &nc_hicosmo_XHe,         NC_HICOSMO_IMPL_XHe},
-      {"sigma_8",     "sigma_8.",                                   &nc_hicosmo_sigma_8,     NC_HICOSMO_IMPL_sigma_8},
       {"z_lss",       "redshift at lss.",                           &nc_hicosmo_z_lss,       NC_HICOSMO_IMPL_z_lss},
       {"as_drag",     "as_drag.",                                   &nc_hicosmo_as_drag,     NC_HICOSMO_IMPL_as_drag},
       {"xb",          "Bounce scale.",                              &nc_hicosmo_xb,          NC_HICOSMO_IMPL_xb},
@@ -265,15 +264,6 @@ NCM_MODEL_SET_IMPL_FUNC(NC_HICOSMO,NcHICosmo,nc_hicosmo,NcHICosmoFunc0,Omega_c0)
  */
 NCM_MODEL_SET_IMPL_FUNC(NC_HICOSMO,NcHICosmo,nc_hicosmo,NcHICosmoFunc0,Omega_t0)
 /**
- * nc_hicosmo_set_sigma_8_impl: (skip)
- * @model_class: a #NcmModelClass
- * @f: FIXME
- *
- * FIXME
- *
- */
-NCM_MODEL_SET_IMPL_FUNC(NC_HICOSMO,NcHICosmo,nc_hicosmo,NcHICosmoFunc0,sigma_8)
-/**
  * nc_hicosmo_set_T_gamma0_impl: (skip)
  * @model_class: a #NcmModelClass
  * @f: FIXME
@@ -370,16 +360,6 @@ NCM_MODEL_SET_IMPL_FUNC(NC_HICOSMO,NcHICosmo,nc_hicosmo,NcHICosmoFunc1Z,bgp_cs2)
  *
  */
 NCM_MODEL_SET_IMPL_FUNC(NC_HICOSMO,NcHICosmo,nc_hicosmo,NcHICosmoFunc1Z,Dc)
-
-/**
- * nc_hicosmo_set_powspec_impl: (skip)
- * @model_class: a #NcmModelClass
- * @f: FIXME
- *
- * FIXME
- *
- */
-NCM_MODEL_SET_IMPL_FUNC(NC_HICOSMO,NcHICosmo,nc_hicosmo,NcHICosmoFunc1K,powspec)
 
 /**
  * nc_hicosmo_new_from_name:
@@ -772,14 +752,6 @@ nc_hicosmo_class_get_func_z (const gchar *name)
  * Returns: The baryon density $n_\mathrm{1H}$.
  */
 
-/**
- * nc_hicosmo_sigma_8: (virtual sigma_8)
- * @cosmo: a #NcHICosmo
- *
- * FIXME
- *
- * Returns: $\sigma_8$
- */
 /**
  * nc_hicosmo_z_lss: (virtual z_lss)
  * @cosmo: a #NcHICosmo

@@ -37,105 +37,109 @@ GPtrArray *
 nc_de_data_cluster_new (NcDistance *dist, NcmMSet *mset, NcDEDataClusterEntries *de_data_cluster, NcmDataset *dset, NcDataClusterAbundanceId id, NcmRNG *rng)
 {
   GPtrArray *ca_array = g_ptr_array_new ();
-  NcWindow *wp = nc_window_new_from_name (de_data_cluster->window_name);
-  NcTransferFunc *tf = nc_transfer_func_new_from_name (de_data_cluster->transfer_name);
-  NcMatterVar *vp = nc_matter_var_new (NC_MATTER_VAR_FFT, wp, tf);
-  NcGrowthFunc *gf = nc_growth_func_new ();
-  NcMultiplicityFunc *mulf = nc_multiplicity_func_new_from_name (de_data_cluster->multiplicity_name);
-  NcMassFunction *mfp = nc_halo_mass_function_new (dist, vp, gf, mulf);
+  gint filter_type;
 
-  nc_window_free (wp);
-  nc_transfer_func_free (tf);
-  nc_matter_var_free (vp);
-  nc_growth_func_free (gf);
-  nc_multiplicity_func_free (mulf);
-
-  switch (id)
+  if (de_data_cluster->filter_type != NULL)
   {
-#ifdef NUMCOSMO_HAVE_CFITSIO
-    case NC_DATA_CLUSTER_ABUNDANCE_FIT:
+    const GEnumValue *filter_type_id = ncm_cfg_get_enum_by_id_name_nick (NCM_TYPE_POWSPEC_FILTER_TYPE, de_data_cluster->filter_type);
+    if (filter_type_id == NULL)
     {
-    gint i = 0;
-    if (de_data_cluster->cata_file == NULL)
-      g_error ("For --cluster-id 0, you must specify a fit catalog via --catalog file.fit");
-    while (de_data_cluster->cata_file[i] != NULL)
-    {
-      NcClusterAbundance *cad = nc_cluster_abundance_nodist_new (mfp, NULL);
-      NcDataClusterNCount *ncount = nc_data_cluster_ncount_new (cad);
-      nc_cluster_abundance_free (cad);
-
-      nc_data_cluster_ncount_catalog_load (ncount, de_data_cluster->cata_file[i]);
-
-      ncm_mset_set (mset, NCM_MODEL (ncount->m));
-      ncm_mset_set (mset, NCM_MODEL (ncount->z));
-
-      nc_data_cluster_ncount_true_data (ncount, de_data_cluster->use_true_data);
-      _nc_de_data_cluster_append (de_data_cluster, NCM_DATA (ncount), dset);
-      g_ptr_array_add (ca_array, NCM_DATA (ncount));
-      if ((i == 0) && (de_data_cluster->save_cata != NULL))
-        nc_data_cluster_ncount_catalog_save (ncount, de_data_cluster->save_cata, TRUE);
-      i++;
+      g_message ("DataCluster: Filter type `%s' not found. Use one from the following list:", de_data_cluster->filter_type);
+      ncm_cfg_enum_print_all (NCM_TYPE_POWSPEC_FILTER_TYPE, "Powerspectrum filters");
+      g_error ("DataCluster: Giving up");
     }
+    filter_type = filter_type_id->value;
   }
-      break;
-    case NC_DATA_CLUSTER_ABUNDANCE_TXT:
-    {
-      gint i = 0;
-      if (de_data_cluster->cata_file == NULL)
-        g_error ("For --cluster-id 1, you must specify a fit catalog via --catalog filename");
-      while (de_data_cluster->cata_file[i] != NULL)
-      {
-        NcClusterAbundance *cad = nc_cluster_abundance_nodist_new (mfp, NULL);
-        NcDataClusterNCount *ncount = nc_data_cluster_ncount_new (cad);
-        nc_cluster_abundance_free (cad);
+  else
+    filter_type = NCM_POWSPEC_FILTER_TYPE_TOPHAT;
 
-        //nc_data_cluster_abundance_unbinned_init_from_text_file (dca_unbinned, de_data_cluster->cata_file[i], opt, de_data_cluster->area_survey * gsl_pow_2 (M_PI / 180.0), log(de_data_cluster->Mi), log(de_data_cluster->Mf), de_data_cluster->z_initial, de_data_cluster->z_final, de_data_cluster->photoz_sigma0, de_data_cluster->photoz_bias, de_data_cluster->lnM_sigma0, de_data_cluster->lnM_bias);
-        g_assert_not_reached ();
+  if (de_data_cluster->ps_type == NULL)
+  {
+    de_data_cluster->ps_type = g_strdup ("NcPowspecMLTransfer{'transfer' : <{'NcTransferFuncEH', @a{sv} {}}>}");
+  }
+
+  if (de_data_cluster->multiplicity_name == NULL)
+  {
+    de_data_cluster->multiplicity_name = g_strdup ("NcMultiplicityFuncTinkerMean");
+  }
+
+  if (de_data_cluster->clusterm_ser == NULL)
+  {
+    de_data_cluster->clusterm_ser = g_strdup ("NcClusterMassNodist");
+  }
+
+  if (de_data_cluster->clusterz_ser == NULL)
+  {
+    de_data_cluster->clusterz_ser = g_strdup ("NcClusterRedshiftNodist");
+  }
+
+  {
+    NcClusterMass *clusterm     = nc_cluster_mass_new_from_name (de_data_cluster->clusterm_ser);
+    NcClusterRedshift *clusterz = nc_cluster_redshift_new_from_name (de_data_cluster->clusterz_ser);
+    
+    ncm_mset_set (mset, NCM_MODEL (clusterm));
+    ncm_mset_set (mset, NCM_MODEL (clusterz));
+  }
+
+  {
+    NcmPowspec *ps              = NCM_POWSPEC (ncm_serialize_global_from_string (de_data_cluster->ps_type));
+    NcmPowspecFilter *psf       = ncm_powspec_filter_new (ps, filter_type);
+    NcMultiplicityFunc *mulf    = nc_multiplicity_func_new_from_name (de_data_cluster->multiplicity_name);
+    NcHaloMassFunction *mfp     = nc_halo_mass_function_new (dist, psf, mulf);
+    NcClusterAbundance *cad     = nc_cluster_abundance_nodist_new (mfp, NULL);
+    NcDataClusterNCount *ncount = nc_data_cluster_ncount_new (cad);
+    
+    ncm_powspec_clear (&ps);
+    ncm_powspec_filter_clear (&psf);
+    nc_multiplicity_func_free (mulf);
+    nc_cluster_abundance_free (cad);
+
+    switch (id)
+    {
+#ifdef NUMCOSMO_HAVE_CFITSIO
+      case NC_DATA_CLUSTER_ABUNDANCE_FIT:
+      {
+        gint i = 0;
+        if (de_data_cluster->cata_file == NULL)
+          g_error ("For --cluster-id 0, you must specify a fit catalog via --catalog file.fit");
+        while (de_data_cluster->cata_file[i] != NULL)
+        {
+
+          nc_data_cluster_ncount_catalog_load (ncount, de_data_cluster->cata_file[i]);
+          nc_data_cluster_ncount_true_data (ncount, de_data_cluster->use_true_data);
+
+          _nc_de_data_cluster_append (de_data_cluster, NCM_DATA (ncount), dset);
+          g_ptr_array_add (ca_array, NCM_DATA (ncount));
+          if ((i == 0) && (de_data_cluster->save_cata != NULL))
+            nc_data_cluster_ncount_catalog_save (ncount, de_data_cluster->save_cata, TRUE);
+          i++;
+        }
+        break;
+      }
+#endif /* HAVE_CONFIG_H */
+      case NC_DATA_CLUSTER_ABUNDANCE_SAMPLING:
+      {
+        nc_data_cluster_ncount_init_from_sampling (ncount, mset, de_data_cluster->area_survey * gsl_pow_2 (M_PI / 180.0), rng);
         nc_data_cluster_ncount_true_data (ncount, de_data_cluster->use_true_data);
 
+        if (de_data_cluster->save_cata != NULL)
+#ifdef NUMCOSMO_HAVE_CFITSIO
+          nc_data_cluster_ncount_catalog_save (ncount, de_data_cluster->save_cata, TRUE);
+#else
+          g_error ("darkenergy: cannot save file numcosmo built without support for fits files");
+#endif /* HAVE_CONFIG_H */
         _nc_de_data_cluster_append (de_data_cluster, NCM_DATA (ncount), dset);
         g_ptr_array_add (ca_array, NCM_DATA (ncount));
-        if ((i == 0) && (de_data_cluster->save_cata != NULL))
-          nc_data_cluster_ncount_catalog_save (ncount, de_data_cluster->save_cata, TRUE);
-        i++;
       }
+        break;
+      default:
+        g_error ("The option --catalog-id must be between (0,2).");
     }
-      break;
-#endif /* HAVE_CONFIG_H */
-    case NC_DATA_CLUSTER_ABUNDANCE_SAMPLING:
-    {
-      NcClusterMass *clusterm = nc_cluster_mass_new_from_name (de_data_cluster->clusterm_ser);
-      NcClusterRedshift *clusterz = nc_cluster_redshift_new_from_name (de_data_cluster->clusterz_ser);
-      NcClusterAbundance *cad = nc_cluster_abundance_new (mfp, NULL);
-      NcDataClusterNCount *ncount = nc_data_cluster_ncount_new (cad);
 
-      ncm_mset_set (mset, NCM_MODEL (clusterm));
-      ncm_mset_set (mset, NCM_MODEL (clusterz));
-      
-      nc_cluster_abundance_free (cad);
+    nc_halo_mass_function_free (mfp);
 
-      nc_data_cluster_ncount_init_from_sampling (ncount, mset, clusterz, clusterm, de_data_cluster->area_survey * gsl_pow_2 (M_PI / 180.0), rng);
-      nc_data_cluster_ncount_true_data (ncount, de_data_cluster->use_true_data);
-
-      if (de_data_cluster->save_cata != NULL)
-#ifdef NUMCOSMO_HAVE_CFITSIO
-        nc_data_cluster_ncount_catalog_save (ncount, de_data_cluster->save_cata, TRUE);
-#else
-      g_error ("darkenergy: cannot save file numcosmo built without support for fits files");
-#endif /* HAVE_CONFIG_H */
-      _nc_de_data_cluster_append (de_data_cluster, NCM_DATA (ncount), dset);
-      g_ptr_array_add (ca_array, NCM_DATA (ncount));
-      nc_cluster_mass_free (clusterm);
-      nc_cluster_redshift_free (clusterz);
-    }
-      break;
-    default:
-      g_error ("The option --catalog-id must be between (0,2).");
+    return ca_array;
   }
-
-  nc_halo_mass_function_free (mfp);
-
-  return ca_array;
 }
 
 static void

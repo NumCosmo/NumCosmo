@@ -104,7 +104,7 @@ _integrand_mass_1h (gdouble lnM, gpointer userdata)
 {
   integrand_data_1h_m *int_data = (integrand_data_1h_m *) userdata;
   gdouble M = exp(lnM);
-  gdouble dn_dlnM = nc_halo_mass_function_dn_dlnm (int_data->cad->mfp, int_data->cosmo, lnM, int_data->z);
+  gdouble dn_dlnM = nc_halo_mass_function_dn_dlnM (int_data->cad->mfp, int_data->cosmo, lnM, int_data->z);
   //printf("integrando mass, k = %.5g M = %.5e dndM = %.5g \n", int_data->k, M, dn_dlnM);
   gdouble u = nc_density_profile_eval_fourier (int_data->dp, int_data->cosmo, int_data->k, M, int_data->z);
   //printf("integrando mass, u = %.15g\n", u);
@@ -120,7 +120,7 @@ _integrand_powspec_1h (gdouble lnM, gpointer userdata)
 {
   integrand_data_1h_m *int_data = (integrand_data_1h_m *) userdata;
   gdouble M = exp(lnM);
-  gdouble dn_dlnM = nc_halo_mass_function_dn_dlnm (int_data->cad->mfp, int_data->cosmo, lnM, int_data->z);
+  gdouble dn_dlnM = nc_halo_mass_function_dn_dlnM (int_data->cad->mfp, int_data->cosmo, lnM, int_data->z);
   gdouble u = nc_density_profile_eval_fourier (int_data->dp, int_data->cosmo, int_data->k, M, int_data->z);
   gdouble rho_mz = pow (1.0 + int_data->z, 3.0) * nc_hicosmo_Omega_m0 (int_data->cosmo) * ncm_c_crit_mass_density_h2_solar_mass_Mpc3 ();
   //gdouble integrand_powspec_1h = M * dn_dlnM * u; //* nc_cluster_mass_intp (int_data->cad->m, int_data->cosmo, lnM, int_data->z);
@@ -205,7 +205,7 @@ _integrand_redshift_1h (gdouble z, gpointer userdata)
   integrand_data_1h_z *int_data = (integrand_data_1h_z *) userdata;
   int_data->dc_z = nc_distance_comoving (int_data->dist, int_data->cosmo, z);
   //int_data->k = int_data->l / int_data->dc_z; /* dimensionless */
-  int_data->k = int_data->l / (int_data->dc_z * ncm_c_hubble_radius ()); /* in units of h Mpc^-1 */
+  int_data->k = int_data->l / (int_data->dc_z * ncm_c_hubble_radius_hm1_Mpc ()); /* in units of h Mpc^-1 */
   //printf("l = %4.d k = %.5g kdim = %.5g\n", int_data->l, int_data->k, int_data->k * 1.0e5 / ncm_c_c());
   gdouble dcdec_m_dc = int_data->dc_zdec - int_data->dc_z;
   gdouble ds = int_data->dc_z * dcdec_m_dc / int_data->dc_zdec;
@@ -361,19 +361,11 @@ static gdouble
 _integrand_powspec_2h (gdouble lnM, gpointer userdata)
 {
   integrand_data_2h_mass2 *int_data = (integrand_data_2h_mass2 *) userdata;
-  //gdouble M = exp (lnM);
-  //gdouble rho_mz = pow (1.0 + int_data->z, 3.0) * nc_hicosmo_Omega_m0 (int_data->cosmo) * ncm_c_crit_mass_density_h2_solar_mass_Mpc3 ();
-  gdouble lnR = nc_matter_var_lnM_to_lnR (int_data->hbf->mfp->vp, int_data->cosmo, lnM);
-  gdouble R = exp (lnR);
-  gdouble M_rho = nc_window_volume (int_data->hbf->mfp->vp->wp) * gsl_pow_3(R);
-  gdouble dn_dlnM_times_b = nc_halo_bias_func_integrand (int_data->hbf, int_data->cosmo, lnM, int_data->z);
-  //gdouble u = nc_density_profile_eval_fourier (int_data->dp, int_data->cosmo, int_data->k, M, int_data->z);
-  //gdouble integrand_powspec_2h = (M / rho_mz) * dn_dlnM_times_b * u;
-  //gdouble integrand_powspec_2h = (M / rho_mz) * dn_dlnM_times_b;
-  gdouble integrand_powspec_2h = M_rho * dn_dlnM_times_b;
-  //gdouble integrand_powspec_2h = dn_dlnM_times_b;
-
-  //printf("M = %e lnR= %.5g M_rho = %.5g dnxb = %.5g\n", M, lnR, M_rho, dn_dlnM_times_b);
+  
+  const gdouble lnR                   = nc_halo_mass_function_lnM_to_lnR (int_data->hbf->mfp, int_data->cosmo, lnM);
+  const gdouble V                     = ncm_powspec_filter_volume_rm3 (int_data->hbf->mfp->psf) * exp (3.0 * lnR);
+  const gdouble dn_dlnM_times_b       = nc_halo_bias_func_integrand (int_data->hbf, int_data->cosmo, lnM, int_data->z);
+  const  gdouble integrand_powspec_2h = V * dn_dlnM_times_b;
 
   return integrand_powspec_2h;
 }
@@ -396,7 +388,6 @@ nc_cor_cluster_cmb_lens_limber_twoh_int_mm (NcCorClusterCmbLensLimber *cccll, Nc
 {
   integrand_data_2h_mass2 int_data;
   gdouble ps_2h_mm, err;
-  gdouble ps_sqrt_norma, growth, transfer_primordial_ps, ps_linear;
   gsl_function F;
   gsl_integration_workspace **w = ncm_integral_get_workspace ();
   gdouble int_powspec_mm_2h = 0.0;
@@ -405,7 +396,7 @@ nc_cor_cluster_cmb_lens_limber_twoh_int_mm (NcCorClusterCmbLensLimber *cccll, Nc
   gboolean conv2 = FALSE;
   const gdouble step = 2.0;
 
-  nc_transfer_func_prepare (int_data.hbf->mfp->vp->tf, cosmo);
+  nc_halo_mass_function_prepare_if_needed (int_data.hbf->mfp, cosmo);
   
   int_data.cccll          = cccll;
   int_data.cad            = cad;
@@ -418,23 +409,14 @@ nc_cor_cluster_cmb_lens_limber_twoh_int_mm (NcCorClusterCmbLensLimber *cccll, Nc
   F.function = &_integrand_powspec_2h;
   F.params = &int_data;
 
-  ps_sqrt_norma = nc_matter_var_sigma8_sqrtvar0 (int_data.hbf->mfp->vp, int_data.cosmo);
-  growth = nc_growth_func_eval (int_data.hbf->mfp->gf, int_data.cosmo, int_data.z);
-  transfer_primordial_ps = nc_transfer_func_matter_powerspectrum (int_data.hbf->mfp->vp->tf, int_data.cosmo, int_data.k);
-  ps_linear = ps_sqrt_norma * ps_sqrt_norma * growth * growth * transfer_primordial_ps;
-  //ps_linear = transfer_primordial_ps;
-
-  //printf("z = %.5g\n", z);
-
   do {
     gdouble res1 = 0.0;
     gdouble res2 = 0.0;
+
     if (!conv1)
       gsl_integration_qag (&F, a, a + step, 0.0, NCM_DEFAULT_PRECISION, NCM_INTEGRAL_PARTITION, _NC_CLUSTER_ABUNDANCE_DEFAULT_INT_KEY, *w, &res1, &err);
     if (!conv2)
       gsl_integration_qag (&F, b - step, b, 0.0, NCM_DEFAULT_PRECISION, NCM_INTEGRAL_PARTITION, _NC_CLUSTER_ABUNDANCE_DEFAULT_INT_KEY, *w, &res2, &err);
-
-    //printf("res1 = %.5g res2 = %.5g tota = %.5g totd = %.5g\n", res1, res2, int_powspec_mm_2h, int_powspec_mm_2h + res1 + res2);
     
     int_powspec_mm_2h += res1 + res2;
 
@@ -443,17 +425,14 @@ nc_cor_cluster_cmb_lens_limber_twoh_int_mm (NcCorClusterCmbLensLimber *cccll, Nc
     if (!conv2 && fabs (res2 / int_powspec_mm_2h) < NCM_DEFAULT_PRECISION)
       conv2 = TRUE;
     
-    
-    
     a += step;
     b -= step;
     
   } while (!conv1 || !conv2);
+
   ncm_memory_pool_return (w);
 
-  printf ("int_m = %.5g\n", int_powspec_mm_2h);
-  ps_2h_mm = int_powspec_mm_2h * int_powspec_mm_2h * ps_linear;
-  //ps_2h_mm = ps_linear;
+  ps_2h_mm = int_powspec_mm_2h * int_powspec_mm_2h * ncm_powspec_eval (cad->mbiasf->mfp->psf->ps, NCM_MODEL (cosmo), z, k);
 
   return ps_2h_mm;
 }
@@ -507,8 +486,6 @@ nc_cor_cluster_cmb_lens_limber_twoh_int_mass2 (NcCorClusterCmbLensLimber *cccll,
 
   nc_cluster_mass_n_limits (clusterm, cosmo, &lnMl, &lnMu);
 
-  //printf("z = %.5g lnMl = %.5g lnMu = %.5g\n", z, lnMl, lnMu);
-
   //gsl_integration_qag (&F, lnMl, lnMu, 0.0, NCM_DEFAULT_PRECISION, NCM_INTEGRAL_PARTITION, _NC_CLUSTER_ABUNDANCE_DEFAULT_INT_KEY, *w, &int_mass_2h_second, &err);
   gsl_integration_qag (&F, -50.0, 50.0, 0.0, NCM_DEFAULT_PRECISION, NCM_INTEGRAL_PARTITION, _NC_CLUSTER_ABUNDANCE_DEFAULT_INT_KEY, *w, &int_mass_2h_second, &err);
   
@@ -534,19 +511,18 @@ static gdouble
 _integrand_redshift_2h (gdouble z, gpointer userdata)
 {
   integrand_data_2hz *int_data = (integrand_data_2hz *) userdata;
-  gdouble dc_z = nc_distance_comoving (int_data->dist, int_data->cosmo, z);
-  gdouble dcdec_m_dc = int_data->dc_zdec - dc_z;
-  gdouble ds = dc_z * dcdec_m_dc / int_data->dc_zdec;
-  gdouble growth = nc_growth_func_eval (int_data->hbf->mfp->gf, int_data->cosmo, z);
-  gdouble k = int_data->l / (dc_z * ncm_c_hubble_radius ()); /* in units of h Mpc^-1 */
-  gdouble rho_mz = pow (1.0 + z, 3.0) * nc_hicosmo_Omega_m0 (int_data->cosmo) * ncm_c_crit_mass_density_h2_solar_mass_Mpc3 ();
-  gdouble transfer_primordial_ps = nc_transfer_func_matter_powerspectrum (int_data->hbf->mfp->vp->tf, int_data->cosmo, k);
-  gdouble ps_sqrt_norma = nc_matter_var_sigma8_sqrtvar0 (int_data->hbf->mfp->vp, int_data->cosmo);
-  gdouble ps_linear = ps_sqrt_norma * ps_sqrt_norma * growth * growth * transfer_primordial_ps;
-  gdouble integral_mass1 = nc_cor_cluster_cmb_lens_limber_twoh_int_mass1 (int_data->cccll, int_data->cad, int_data->clusterm, int_data->cosmo, z);
-  gdouble integral_mass2 = nc_cor_cluster_cmb_lens_limber_twoh_int_mass2 (int_data->cccll, int_data->cad, int_data->clusterm, int_data->cosmo, int_data->dp, k, z);
-  gdouble integrand_z_2h = (1.0 + z) * ds / (nc_hicosmo_E (int_data->cosmo, z) * rho_mz) * ps_linear 
-                           * integral_mass1 * integral_mass2; 
+  const gdouble dc_z       = nc_distance_comoving (int_data->dist, int_data->cosmo, z);
+  const gdouble dcdec_m_dc = int_data->dc_zdec - dc_z;
+  const gdouble ds         = dc_z * dcdec_m_dc / int_data->dc_zdec;
+  
+  const gdouble k         = int_data->l / (dc_z * ncm_c_hubble_radius_hm1_Mpc ()); /* in units of h Mpc^-1 */
+  const gdouble rho_mz    = gsl_pow_3 (1.0 + z) * nc_hicosmo_Omega_m0 (int_data->cosmo) * ncm_c_crit_mass_density_h2_solar_mass_Mpc3 ();
+  const gdouble ps_linear = ncm_powspec_eval (int_data->cad->mbiasf->mfp->psf->ps, NCM_MODEL (int_data->cosmo), z, k);
+
+  const gdouble integral_mass1 = nc_cor_cluster_cmb_lens_limber_twoh_int_mass1 (int_data->cccll, int_data->cad, int_data->clusterm, int_data->cosmo, z);
+  const gdouble integral_mass2 = nc_cor_cluster_cmb_lens_limber_twoh_int_mass2 (int_data->cccll, int_data->cad, int_data->clusterm, int_data->cosmo, int_data->dp, k, z);
+  const gdouble integrand_z_2h = (1.0 + z) * ds / (nc_hicosmo_E (int_data->cosmo, z) * rho_mz) * ps_linear 
+    * integral_mass1 * integral_mass2; 
 
   return integrand_z_2h;
 }
@@ -588,28 +564,21 @@ nc_cor_cluster_cmb_lens_limber_twoh_term (NcCorClusterCmbLensLimber *cccll, NcCl
   int_data.dp    = dp;
   int_data.l     = l; 
 
-  nc_transfer_func_prepare (cad->mbiasf->mfp->vp->tf, cosmo);
+  nc_halo_mass_function_prepare_if_needed (int_data.hbf->mfp, cosmo);
   
   F.function = &_integrand_redshift_2h;
-  F.params = &int_data;
+  F.params   = &int_data;
 
   zl = z_obs_params[0];
   zu = z_obs_params[1];
-  //printf("zl = %.5g zu = %.5g\n", zl, zu);
 
   ll               = l * l; 
   cons_factor      = - 3.0 * nc_hicosmo_Omega_m0 (cosmo) / ll; 
   int_data.dc_zdec = nc_distance_comoving_lss (dist, cosmo);
 
   gsl_integration_qag (&F, zl, zu, 0.0, NCM_DEFAULT_PRECISION, NCM_INTEGRAL_PARTITION, _NC_CLUSTER_ABUNDANCE_DEFAULT_INT_KEY, *w, &cor_2h, &err);
-
-//  ncm_spline_clear (&cccll->oneh_int_mass);
-//  cccll->oneh_int_mass = ncm_spline_cubic_notaknot_new ();
-//  ncm_spline_set_func (cccll->oneh_int_mass, NCM_SPLINE_FUNCTION_SPLINE, &F, zl, zu, 1000000, 1e-7);
   
   ncm_memory_pool_return (w);
-
-//  return ncm_spline_eval_integ (cccll->oneh_int_mass, zl, zu) * cons_factor;
 
   return cor_2h * cons_factor;
 }

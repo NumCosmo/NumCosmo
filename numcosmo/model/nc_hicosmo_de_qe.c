@@ -48,7 +48,7 @@ G_DEFINE_TYPE (NcHICosmoDEQe, nc_hicosmo_de_qe, NC_TYPE_HICOSMO_DE);
 #define OMEGA_1 (ncm_vector_get (VECTOR, NC_HICOSMO_DE_QE_W1))
 
 static gdouble
-_nc_hicosmo_de_qe_weff (NcHICosmoDE *cosmo_de, gdouble z)
+_nc_hicosmo_de_qe_E2Omega_de (NcHICosmoDE *cosmo_de, gdouble z)
 {
   gdouble x = 1.0 + z;
   gdouble lnx = log1p(z);
@@ -56,13 +56,13 @@ _nc_hicosmo_de_qe_weff (NcHICosmoDE *cosmo_de, gdouble z)
 }
 
 static gdouble
-_nc_hicosmo_de_qe_dweff_dz (NcHICosmoDE *cosmo_de, gdouble z)
+_nc_hicosmo_de_qe_dE2Omega_de_dz (NcHICosmoDE *cosmo_de, gdouble z)
 {
   const gdouble x = 1.0 + z;
   const gdouble lnx = log1p (z);
-  const gdouble weff = OMEGA_X * pow (x, 3.0 * (1.0 + OMEGA_0 / (1.0 + OMEGA_1 * lnx)));
+  const gdouble E2Omega_de = OMEGA_X * pow (x, 3.0 * (1.0 + OMEGA_0 / (1.0 + OMEGA_1 * lnx)));
 
-  return 3.0 * ((1.0 + OMEGA_0 / gsl_pow_2 (1.0 + OMEGA_1 * lnx)) / x) * weff;
+  return 3.0 * ((1.0 + OMEGA_0 / gsl_pow_2 (1.0 + OMEGA_1 * lnx)) / x) * E2Omega_de;
 }
 
 /**
@@ -107,8 +107,8 @@ nc_hicosmo_de_qe_class_init (NcHICosmoDEQeClass *klass)
 
   object_class->finalize     = &nc_hicosmo_de_qe_finalize;
 
-  nc_hicosmo_de_set_weff_impl (parent_class, &_nc_hicosmo_de_qe_weff);
-  nc_hicosmo_de_set_dweff_dz_impl (parent_class, &_nc_hicosmo_de_qe_dweff_dz);
+  nc_hicosmo_de_set_E2Omega_de_impl (parent_class, &_nc_hicosmo_de_qe_E2Omega_de);
+  nc_hicosmo_de_set_dE2Omega_de_dz_impl (parent_class, &_nc_hicosmo_de_qe_dE2Omega_de_dz);
 
   ncm_model_class_set_name_nick (model_class, "Quintessence-inspired parametrization", "Quintessence");
   ncm_model_class_add_params (model_class, 2, 0, PROP_SIZE);

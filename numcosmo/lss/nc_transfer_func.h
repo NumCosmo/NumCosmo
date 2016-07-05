@@ -60,7 +60,6 @@ struct _NcTransferFuncClass
   gpointer (*alloc)(void);
   void (*prepare)(NcTransferFunc *tf, NcHICosmo *cosmo);
   gdouble (*calc)(NcTransferFunc *tf, gdouble k);
-  gdouble (*calc_matter_P)(NcTransferFunc *tf, NcHICosmo *cosmo, gdouble k);
 };
 
 GType nc_transfer_func_get_type (void) G_GNUC_CONST;
@@ -74,7 +73,6 @@ void nc_transfer_func_prepare (NcTransferFunc *tf, NcHICosmo *cosmo);
 void nc_transfer_func_prepare_if_needed (NcTransferFunc *tf, NcHICosmo *cosmo);
 
 gdouble nc_transfer_func_eval (NcTransferFunc *tf, NcHICosmo *cosmo, gdouble kh);
-gdouble nc_transfer_func_matter_powerspectrum (NcTransferFunc *tf, NcHICosmo *cosmo, gdouble kh);
 
 G_END_DECLS
 

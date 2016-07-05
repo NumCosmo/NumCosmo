@@ -111,7 +111,7 @@ _ncm_fftlog_tophatwin2_get_Ym (NcmFftlog *fftlog)
 
     U *= - M_PI / 12.0;
 
-    fftlog->Ym[0][i] = U * cexp (- twopi_Lt * phys_i * I * (fftlog->lnk0 + fftlog->lnr0));
+    fftlog->Ym[0][i] = U * cexp (- a * (fftlog->lnk0 + fftlog->lnr0));
     fftlog->Ym[1][i] = -(1.0 + a) * fftlog->Ym[0][i];    
   }
   for (i = 1; i < Nf; i++)
@@ -127,7 +127,7 @@ _ncm_fftlog_tophatwin2_get_Ym (NcmFftlog *fftlog)
     gsl_sf_complex_logsin_e (creal (Api_2), cimag (Api_2), &lnsin_rho, &lnsin_theta);
     U *= cexp (lngamma_rho.val + lnsin_rho.val + I * (lngamma_theta.val + lnsin_theta.val));
 
-    fftlog->Ym[0][i] = U * cexp (- twopi_Lt * phys_i * I * (fftlog->lnk0 + fftlog->lnr0));
+    fftlog->Ym[0][i] = U * cexp (- a * (fftlog->lnk0 + fftlog->lnr0));
     fftlog->Ym[1][i] = -(1.0 + a) * fftlog->Ym[0][i];
   }
 #endif /* NUMCOSMO_HAVE_FFTW3 */

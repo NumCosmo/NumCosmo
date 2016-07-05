@@ -63,8 +63,6 @@ nc_halo_mass_function_init (NcHaloMassFunction *mfp)
   mfp->zi          = 0.0;
   mfp->zf          = 0.0;
   mfp->area_survey = 0.0;
-  mfp->N_sigma     = 0.0;
-  mfp->growth      = 0.0;
   mfp->dist        = NULL;
   mfp->mulf        = NULL;
   mfp->psf         = NULL;
@@ -304,9 +302,101 @@ nc_halo_mass_function_lnM_to_lnR (NcHaloMassFunction *mfp, NcHICosmo *cosmo, gdo
   return (lnM - log (omega_m0 * ncm_powspec_filter_volume_rm3 (mfp->psf) * ncm_c_crit_mass_density_h2_solar_mass_Mpc3 ())) / 3.0;
 }
 
+/**
+ * nc_halo_mass_function_lnR_to_lnM:
+ * @mfp: a #NcHaloMassFunction
+ * @cosmo: a #NcHICosmo
+ * @lnR: ln-radius of the related volume
+ *
+ * This function computes the ln-mass of the mass enclosed in the filter volume.
+ *
+ * Returns: $\ln(M / 1 M_\odot)$
+ */
+gdouble
+nc_halo_mass_function_lnR_to_lnM (NcHaloMassFunction *mfp, NcHICosmo *cosmo, gdouble lnR)
+{
+  const gdouble omega_m0 = nc_hicosmo_Omega_m0h2 (cosmo);
+  return (3.0 * lnR + log (omega_m0 * ncm_powspec_filter_volume_rm3 (mfp->psf) * ncm_c_crit_mass_density_h2_solar_mass_Mpc3 ()));
+}
 
 /**
- * nc_halo_mass_function_dn_dlnm:
+ * nc_halo_mass_function_dn_dlnR_sigma:
+ * @mfp: a #NcHaloMassFunction
+ * @cosmo: a #NcHICosmo
+ * @lnR: logarithm base e of the radius $R$
+ * @z: redshift
+ * @sigma_ptr: (out): matter variance for $\ln(R)$
+ * @dn_dlnR_ptr: (out): $\frac{\mathrm{d}n}{\mathrm{d}\ln(R)}$
+ *
+ * This function computes the comoving number density of dark matter halos per redshift @z and
+ * volume with ln-radius @lnR.
+ *
+ */
+void
+nc_halo_mass_function_dn_dlnR_sigma (NcHaloMassFunction *mfp, NcHICosmo *cosmo, gdouble lnR, gdouble z, gdouble *sigma_ptr, gdouble *dn_dlnR_ptr)
+{
+  const gdouble V           = ncm_powspec_filter_volume_rm3 (mfp->psf) * exp (3.0 * lnR);
+  const gdouble sigma       = ncm_powspec_filter_eval_sigma_lnr (mfp->psf, z, lnR);
+  const gdouble dlnvar_dlnR = ncm_powspec_filter_eval_dlnvar_dlnr (mfp->psf, z, lnR);
+  const gdouble f           = nc_multiplicity_func_eval (mfp->mulf, cosmo, sigma, z);
+  const gdouble dn_dlnR     = -(1.0 / V) * f * 0.5 * dlnvar_dlnR;
+
+  sigma_ptr[0]   = sigma;
+  dn_dlnR_ptr[0] = dn_dlnR;
+  
+  return;
+}
+
+/**
+ * nc_halo_mass_function_dn_dlnM_sigma:
+ * @mfp: a #NcHaloMassFunction
+ * @cosmo: a #NcHICosmo
+ * @lnM: logarithm base e of mass
+ * @z: redshift
+ * @sigma_ptr: (out): matter variance for $\ln(M)$
+ * @dn_dlnM_ptr: (out): $\frac{\mathrm{d}n}{\mathrm{d}\ln(M)}$
+ *
+ * This function computes the comoving number density of dark matter halos at redshift @z and
+ * mass M.
+ *
+ */
+void
+nc_halo_mass_function_dn_dlnM_sigma (NcHaloMassFunction *mfp, NcHICosmo *cosmo, gdouble lnM, gdouble z, gdouble *sigma_ptr, gdouble *dn_dlnM_ptr)
+{
+  const gdouble lnR = nc_halo_mass_function_lnM_to_lnR (mfp, cosmo, lnM);
+  nc_halo_mass_function_dn_dlnR_sigma (mfp, cosmo, lnR, z, sigma_ptr, dn_dlnM_ptr);
+
+  dn_dlnM_ptr[0] = dn_dlnM_ptr[0] / 3.0;
+
+  return;
+}
+
+/**
+ * nc_halo_mass_function_dn_dlnR:
+ * @mfp: a #NcHaloMassFunction
+ * @cosmo: a #NcHICosmo
+ * @lnR: logarithm base e of the radius $R$
+ * @z: redshift
+ *
+ * This function computes the comoving number density of dark matter halos per redshift @z and
+ * volume with ln-radius @lnR.
+ *
+ * Returns: $\frac{\mathrm{d}n}{\mathrm{d}\ln(R)}$.
+ */
+gdouble
+nc_halo_mass_function_dn_dlnR (NcHaloMassFunction *mfp, NcHICosmo *cosmo, gdouble lnR, gdouble z)
+{
+  const gdouble V           = ncm_powspec_filter_volume_rm3 (mfp->psf) * exp (3.0 * lnR);
+  const gdouble sigma       = ncm_powspec_filter_eval_sigma_lnr (mfp->psf, z, lnR);
+  const gdouble dlnvar_dlnR = ncm_powspec_filter_eval_dlnvar_dlnr (mfp->psf, z, lnR);
+  const gdouble f           = nc_multiplicity_func_eval (mfp->mulf, cosmo, sigma, z);
+  const gdouble dn_dlnR     = -(1.0 / V) * f * 0.5 * dlnvar_dlnR;
+  
+  return dn_dlnR;
+}
+
+/**
+ * nc_halo_mass_function_dn_dlnM:
  * @mfp: a #NcHaloMassFunction
  * @cosmo: a #NcHICosmo
  * @lnM: logarithm base e of mass
@@ -315,49 +405,16 @@ nc_halo_mass_function_lnM_to_lnR (NcHaloMassFunction *mfp, NcHICosmo *cosmo, gdo
  * This function computes the comoving number density of dark matter halos at redshift @z and
  * mass M.
  *
- * Returns: $\frac{dn}{dlnM}$
+ * Returns: $\frac{\mathrm{d}n}{\mathrm{d}\ln(M)}$.
  */
 gdouble
-nc_halo_mass_function_dn_dlnm (NcHaloMassFunction *mfp, NcHICosmo *cosmo, gdouble lnM, gdouble z)
+nc_halo_mass_function_dn_dlnM (NcHaloMassFunction *mfp, NcHICosmo *cosmo, gdouble lnM, gdouble z)
 {
   const gdouble lnR         = nc_halo_mass_function_lnM_to_lnR (mfp, cosmo, lnM);
-  const gdouble V           = ncm_powspec_filter_volume_rm3 (mfp->psf) * exp (3.0 * lnR);
-  const gdouble sigma       = ncm_powspec_filter_eval_sigma_lnr (mfp->psf, z, lnR);
-  const gdouble dlnvar_dlnR = ncm_powspec_filter_eval_dlnvar_dlnr (mfp->psf, z, lnR);
-  const gdouble f           = nc_multiplicity_func_eval (mfp->mulf, cosmo, sigma, z);
-  const gdouble dn_dlnM     = -(1.0 / (3.0 * V)) * f * 0.5 * dlnvar_dlnR;
-  
+  const gdouble dn_dlnR     = nc_halo_mass_function_dn_dlnR (mfp, cosmo, lnR, z);
+  const gdouble dn_dlnM     = dn_dlnR / 3.0;
+
   return dn_dlnM;
-}
-
-/**
- * nc_halo_mass_function_sigma:
- * @mfp: a #NcHaloMassFunction
- * @cosmo: a #NcHICosmo
- * @lnM: logarithm base e of mass
- * @z: redshift
- * @dn_dlnM_ptr: pointer to comoving number density of halos
- * @sigma_ptr: pointer to the standard deviation of the density contrast
- *
- * This function computes the standard deviation of density contrast of the matter fluctuations and
- * the the comoving number density of dark matter halos at redshift @z and mass M.
- * These values are stored in @sigma_ptr and @dn_dlnM_ptr, respectively.
- *
- */
-void
-nc_halo_mass_function_sigma (NcHaloMassFunction *mfp, NcHICosmo *cosmo, gdouble lnM, gdouble z, gdouble *dn_dlnM_ptr, gdouble *sigma_ptr)
-{
-  const gdouble lnR         = nc_halo_mass_function_lnM_to_lnR (mfp, cosmo, lnM);
-  const gdouble V           = ncm_powspec_filter_volume_rm3 (mfp->psf) * exp (3.0 * lnR);
-  const gdouble sigma       = ncm_powspec_filter_eval_sigma_lnr (mfp->psf, z, lnR);
-  const gdouble dlnvar_dlnR = ncm_powspec_filter_eval_dlnvar_dlnr (mfp->psf, z, lnR);
-  const gdouble f           = nc_multiplicity_func_eval (mfp->mulf, cosmo, sigma, z);
-  const gdouble dn_dlnM     = -(1.0 / (3.0 * V)) * f * 0.5 * dlnvar_dlnR;
-
-  *sigma_ptr   = sigma;
-  *dn_dlnM_ptr = dn_dlnM;
-
-  return;
 }
 
 typedef struct _nc_ca_integ
@@ -368,140 +425,25 @@ typedef struct _nc_ca_integ
 } nc_ca_integ;
 
 /**
- * nc_halo_mass_function_cluster_abundance_integrand:
- * @R: FIXME
- * @params: FIXME
- * 
- * FIXME
- *
- * Returns: FIXME
- */
-gdouble
-nc_halo_mass_function_cluster_abundance_integrand (gdouble R, gpointer params)
-{
-  nc_ca_integ *ca_integ   = (nc_ca_integ *) params;
-  NcHICosmo *cosmo        = ca_integ->cosmo;
-  NcHaloMassFunction *mfp = ca_integ->mfp;
-  const gdouble lnR       = log (R);
-  const gdouble z         = ca_integ->z;
-  
-  {
-    const gdouble V           = ncm_powspec_filter_volume_rm3 (mfp->psf) * exp (3.0 * lnR);
-    const gdouble sigma       = ncm_powspec_filter_eval_sigma_lnr (mfp->psf, z, lnR);
-    const gdouble dlnvar_dlnR = ncm_powspec_filter_eval_dlnvar_dlnr (mfp->psf, z, lnR);
-    const gdouble f           = nc_multiplicity_func_eval (mfp->mulf, cosmo, sigma, z);
-    const gdouble dn_dlnM     = -(1.0 / (3.0 * V)) * f * 0.5 * dlnvar_dlnR;
-    const gdouble dn_dR       = 3.0 * R * dn_dlnM; 
-
-    return dn_dR;
-  }
-}
-
-/**
- * nc_halo_mass_function_dcluster_abundance_dv:
- * @mfp: a #NcHaloMassFunction
- * @cosmo: a #NcHICosmo
- * @M: mass in units of h^{-1} * M_sun
- * @z: redshift
- *
- * FIXME
- *
- * Returns: FIXME
- */
-gdouble
-nc_halo_mass_function_dn_m_to_inf_dv (NcHaloMassFunction *mfp, NcHICosmo *cosmo, gdouble M, gdouble z)	/* integracao em M. */
-{
-  static gsl_integration_workspace *w = NULL;
-  gsl_function F;
-  gdouble n, n_part, error, R;
-  nc_ca_integ ca_integ;
-
-  ca_integ.mfp = mfp;
-  ca_integ.cosmo = cosmo;
-  ca_integ.z = z;
-  F.function = &nc_halo_mass_function_cluster_abundance_integrand;
-  F.params = &ca_integ;
-
-  if (w == NULL)
-    w = gsl_integration_workspace_alloc (NCM_INTEGRAL_PARTITION);
-
-  n = 0.0;
-  R = nc_matter_var_mass_to_R (mfp->vp, cosmo, M);
-  mfp->growth = nc_growth_func_eval (mfp->gf, cosmo, z);
-
-#define _NC_STEP 20.0
-
-  while (1)
-  {
-    gsl_integration_qag (&F, R, R + _NC_STEP, 0.0, NCM_DEFAULT_PRECISION, NCM_INTEGRAL_PARTITION, 1, w, &n_part, &error);
-    R += _NC_STEP;
-    n += n_part;
-
-    if (gsl_fcmp (n, n + n_part, NCM_DEFAULT_PRECISION * 1e-1) == 0)
-      break;
-  }
-
-  return n;
-}
-
-/**
- * nc_halo_mass_function_dn_m1_to_m2_dv:
- * @mfp: a #NcHaloMassFunction
- * @cosmo: a #NcHICosmo
- * @M1: mass in units of h^{-1} M_sun - lower limit of integration
- * @M2: mass in units of h^{-1} M_sun- upper limit of integration
- * @z: redshift
- *
- * FIXME
- *
- * Returns: FIXME
- */
-gdouble
-nc_halo_mass_function_dn_m1_to_m2_dv (NcHaloMassFunction *mfp, NcHICosmo *cosmo, gdouble M1, gdouble M2, gdouble z)	/* integracao em M. */
-{
-  static gsl_integration_workspace *w = NULL;
-  gsl_function F;
-  gdouble n, error, R1, R2;
-  nc_ca_integ ca_integ;
-
-  ca_integ.mfp = mfp;
-  ca_integ.cosmo = cosmo;
-  ca_integ.z = z;
-  F.function = &nc_halo_mass_function_cluster_abundance_integrand;
-  F.params = &ca_integ;
-
-  if (w == NULL)
-    w = gsl_integration_workspace_alloc (NCM_INTEGRAL_PARTITION);
-
-  n = 0.0;
-  R1 = nc_matter_var_mass_to_R (mfp->vp, cosmo, M1);
-  R2 = nc_matter_var_mass_to_R (mfp->vp, cosmo, M2);
-  mfp->growth = nc_growth_func_eval (mfp->gf, cosmo, z);
-
-  gsl_integration_qag (&F, R1, R2, 0.0, NCM_DEFAULT_PRECISION, NCM_INTEGRAL_PARTITION, 1, w, &n, &error);
-
-  /*printf ("R1 = %5.5g R2 = %5.5g z = %5.5g n = %5.5g\n", R1, R2, z, n);*/
-  return n;
-}
-
-/**
  * nc_halo_mass_function_dv_dzdomega:
  * @mfp: a #NcHaloMassFunction
  * @cosmo: a #NcHICosmo
  * @z: redshift
  *
  * This function computes the comoving volume (flat universe) element per unit solid angle $d\Omega$ 
- * given @z, namely, $$\frac{d^2V}{dzd\Omega} = \frac{c}{H(z)} D_c^2(z),$$
+ * given @z, namely, $$\frac{\mathrm{d}^2V}{\mathrm{d}z\mathrm{d}\Omega} = \frac{c}{H(z)} D_c^2(z),$$
  * where $H(z)$ is the Hubble function and $D_c$ is the comoving distance.
- *
- * Returns: comoving volume element $d^2V / dzd\Omega$.
+ * 
+ * Returns: comoving volume element $\frac{\mathrm{d}^2V}{\mathrm{d}z\mathrm{d}\Omega} \,\left[\mathrm{Mpc}^3\right]$.
  */
 gdouble
 nc_halo_mass_function_dv_dzdomega (NcHaloMassFunction *mfp, NcHICosmo *cosmo, gdouble z)
 {
-  const gdouble E = sqrt (nc_hicosmo_E2 (cosmo, z));
-  gdouble dc = ncm_c_hubble_radius () * nc_distance_comoving (mfp->dist, cosmo, z);
-  gdouble dV_dzdOmega = gsl_pow_2 (dc) * ncm_c_hubble_radius () / E;
+  const gdouble RH    = nc_hicosmo_RH_Mpc (cosmo);
+  const gdouble VH    = gsl_pow_3 (RH);
+  const gdouble E     = sqrt (nc_hicosmo_E2 (cosmo, z));
+  gdouble dc          = nc_distance_comoving (mfp->dist, cosmo, z);
+  gdouble dV_dzdOmega = VH * gsl_pow_2 (dc) / E;
   return dV_dzdOmega;
 }
 
@@ -577,8 +519,8 @@ nc_halo_mass_function_set_eval_limits (NcHaloMassFunction *mfp, NcHICosmo *cosmo
   {
     mfp->lnMi = lnMi;
     mfp->lnMf = lnMf;
-    mfp->zi = zi;
-    mfp->zf = zf;
+    mfp->zi   = zi;
+    mfp->zf   = zf;
     ncm_spline2d_clear (&mfp->d2NdzdlnM);
   }
 }
@@ -597,8 +539,7 @@ nc_halo_mass_function_prepare (NcHaloMassFunction *mfp, NcHICosmo *cosmo)
   guint i, j;
 
   nc_distance_prepare_if_needed (mfp->dist, cosmo);
-  nc_matter_var_prepare_if_needed (mfp->vp, cosmo);
-  nc_growth_func_prepare_if_needed (mfp->gf, cosmo);
+  ncm_powspec_filter_prepare_if_needed (mfp->psf, NCM_MODEL (cosmo));
   
   if (mfp->d2NdzdlnM == NULL)
     _nc_halo_mass_function_generate_2Dspline_knots (mfp, cosmo, mfp->prec);
@@ -615,7 +556,7 @@ nc_halo_mass_function_prepare (NcHaloMassFunction *mfp, NcHICosmo *cosmo)
     for (j = 0; j < ncm_vector_len (D2NDZDLNM_LNM (mfp)); j++)
     {
       const gdouble lnM = ncm_vector_get (D2NDZDLNM_LNM (mfp), j);
-      const gdouble d2NdzdlnM_ij = (dVdz * nc_halo_mass_function_dn_dlnm (mfp, cosmo, lnM, z));
+      const gdouble d2NdzdlnM_ij = (dVdz * nc_halo_mass_function_dn_dlnM (mfp, cosmo, lnM, z));
       ncm_matrix_set (D2NDZDLNM_VAL (mfp), i, j, d2NdzdlnM_ij);
     }
   }
@@ -702,7 +643,7 @@ _encapsulated_z (gdouble z, gpointer p)
 
   gdouble A = args->mfp->area_survey *
     nc_halo_mass_function_dv_dzdomega (args->mfp, args->cosmo, z) *
-    nc_halo_mass_function_dn_dlnm (args->mfp, args->cosmo, args->lnM, z);
+    nc_halo_mass_function_dn_dlnM (args->mfp, args->cosmo, args->lnM, z);
 
   return A;
 }
@@ -712,7 +653,7 @@ _encapsulated_lnM (gdouble lnM, gpointer p)
 {
   _encapsulated_function_args *args = (_encapsulated_function_args *) p;
 
-  gdouble A = args->dVdz * nc_halo_mass_function_dn_dlnm (args->mfp, args->cosmo, lnM, args->z);
+  gdouble A = args->dVdz * nc_halo_mass_function_dn_dlnM (args->mfp, args->cosmo, lnM, args->z);
 
   return A;
 }
@@ -750,7 +691,7 @@ _nc_halo_mass_function_generate_2Dspline_knots (NcHaloMassFunction *mfp, NcHICos
  *
  */
 /**
- * nc_halo_mass_function_d2n_dzdlnm:
+ * nc_halo_mass_function_d2n_dzdlnM:
  * @mfp: a #NcHaloMassFunction
  * @cosmo: a #NcHICosmo
  * @lnM: logarithm base e of mass

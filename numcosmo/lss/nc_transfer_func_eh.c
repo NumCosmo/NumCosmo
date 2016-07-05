@@ -68,7 +68,6 @@ nc_transfer_func_eh_finalize (GObject *object)
 
 static void _nc_transfer_func_eh_prepare (NcTransferFunc *tf, NcHICosmo *cosmo);
 static gdouble _nc_transfer_func_eh_calc (NcTransferFunc *tf, gdouble kh);
-static gdouble _nc_transfer_func_eh_calc_matter_P (NcTransferFunc *tf, NcHICosmo *cosmo, gdouble kh);
 
 static void
 nc_transfer_func_eh_class_init (NcTransferFuncEHClass *klass)
@@ -78,7 +77,6 @@ nc_transfer_func_eh_class_init (NcTransferFuncEHClass *klass)
 
   parent_class->prepare       = &_nc_transfer_func_eh_prepare;
   parent_class->calc          = &_nc_transfer_func_eh_calc;
-  parent_class->calc_matter_P = &_nc_transfer_func_eh_calc_matter_P;
 
   object_class->finalize = nc_transfer_func_eh_finalize;
 }
@@ -180,13 +178,6 @@ _nc_transfer_func_eh_calc (NcTransferFunc *tf, gdouble kh)
   const gdouble Tc = f * To1 + (1.0 - f) * To2;
 
   return tf_EH->wb_wm * Tb + tf_EH->wc_wm * Tc;
-}
-
-static gdouble
-_nc_transfer_func_eh_calc_matter_P (NcTransferFunc *tf, NcHICosmo *cosmo, gdouble kh)
-{
-  gdouble T = _nc_transfer_func_eh_calc (tf, kh);
-  return T * T * nc_hicosmo_powspec (cosmo, kh);
 }
 
 /**

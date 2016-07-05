@@ -57,7 +57,6 @@ nc_galaxy_acf_new (NcGrowthFunc *gf, NcDistance *dist, NcTransferFunc *tf)
   acf->s = ncm_spline_cubic_notaknot_new ();
   {
 	NcWindow *wp = nc_window_tophat_new ();
-	acf->vp = nc_matter_var_new (NC_MATTER_VAR_FFT, wp, tf);
 	nc_window_free (wp);
   }
   return acf;
@@ -77,7 +76,7 @@ static gdouble
 nc_galaxy_acf_psi_kernel_l (gdouble z, gpointer p)
 {
   NcmGalaxyAcfPsiKernel *apk = (NcmGalaxyAcfPsiKernel *) p;
-  const gdouble cd = ncm_c_hubble_radius () * nc_distance_comoving (apk->acf->dist, apk->cosmo, z);
+  const gdouble cd = ncm_c_hubble_radius_hm1_Mpc () * nc_distance_comoving (apk->acf->dist, apk->cosmo, z);
   const gdouble Dz = nc_growth_func_eval (apk->acf->gf, apk->cosmo, z);
   const gdouble fz = nc_growth_func_eval_deriv (apk->acf->gf, apk->cosmo, z);
   const gdouble x = apk->k * cd;
@@ -91,7 +90,7 @@ static gdouble
 nc_galaxy_acf_psi_kernel_lp1 (gdouble z, gpointer p)
 {
   NcmGalaxyAcfPsiKernel *apk = (NcmGalaxyAcfPsiKernel *) p;
-  const gdouble cd = ncm_c_hubble_radius () * nc_distance_comoving (apk->acf->dist, apk->cosmo, z);
+  const gdouble cd = ncm_c_hubble_radius_hm1_Mpc () * nc_distance_comoving (apk->acf->dist, apk->cosmo, z);
   const gdouble Dz = nc_growth_func_eval (apk->acf->gf, apk->cosmo, z);
   const gdouble fz = nc_growth_func_eval_deriv (apk->acf->gf, apk->cosmo, z);
   const gdouble x = apk->k * cd;
@@ -104,7 +103,7 @@ static gdouble
 nc_galaxy_acf_psi_kernel (gdouble z, gpointer p)
 {
   NcmGalaxyAcfPsiKernel *apk = (NcmGalaxyAcfPsiKernel *) p;
-  const gdouble cd = ncm_c_hubble_radius () * nc_distance_comoving (apk->acf->dist, apk->cosmo, z);
+  const gdouble cd = ncm_c_hubble_radius_hm1_Mpc () * nc_distance_comoving (apk->acf->dist, apk->cosmo, z);
   const gdouble x = apk->k * cd;
   const gdouble x2 = x * x;
   const gdouble sel_func = 1.0;
@@ -152,12 +151,15 @@ nc_galaxy_acf_psi_int (gdouble mu, gpointer p)
 //  static glong count = 0;
   NcmGalaxyAcfPsiKernel *apk = (NcmGalaxyAcfPsiKernel *) p;
   const gdouble k = exp (mu);
-  const gdouble Pk = nc_transfer_func_matter_powerspectrum (apk->acf->tf, apk->cosmo, k);
+  const gdouble Pk = 1.0;/*nc_transfer_func_matter_powerspectrum (apk->acf->tf, apk->cosmo, k);*/
   const gdouble psi = nc_galaxy_acf_psi (apk->acf, apk->cosmo, k, apk->l);
 printf ("% 20.15g % 20.15g\n", mu, psi * psi);
 //printf ("% 20.15g % 20.15g\n", mu, k * k * k * Pk * psi * psi);
   //if ((count++) % 200 == 0)
     //printf(".");fflush (stdout);
+
+  g_assert_not_reached ();
+  
   return k * k * k * Pk * psi * psi;
 }
 

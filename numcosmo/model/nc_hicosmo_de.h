@@ -46,18 +46,21 @@ typedef struct _NcHICosmoDE NcHICosmoDE;
 
 /**
  * NcHICosmoDEImpl:
- * @NC_HICOSMO_DE_IMPL_weff: FIXME
- * @NC_HICOSMO_DE_IMPL_dweff_dz: FIXME
- * @NC_HICOSMO_DE_IMPL_d2weff_dz2: FIXME
- *
+ * @NC_HICOSMO_DE_IMPL_E2Omega_de: FIXME
+ * @NC_HICOSMO_DE_IMPL_dE2Omega_de_dz: FIXME
+ * @NC_HICOSMO_DE_IMPL_d2E2Omega_de_dz2: FIXME
+ * @NC_HICOSMO_DE_IMPL_w_de: FIXME
+ * 
  * FIXME
+ * 
  */
 typedef enum _NcHICosmoDEImpl
 {
-  NC_HICOSMO_DE_IMPL_weff       = NC_HICOSMO_IMPL_LAST << 0,
-  NC_HICOSMO_DE_IMPL_dweff_dz   = NC_HICOSMO_IMPL_LAST << 1,
-  NC_HICOSMO_DE_IMPL_d2weff_dz2 = NC_HICOSMO_IMPL_LAST << 2, /*< private >*/
-  NC_HICOSMO_DE_IMPL_LAST       = NC_HICOSMO_IMPL_LAST << 3, /*< skip >*/
+  NC_HICOSMO_DE_IMPL_E2Omega_de       = NC_HICOSMO_IMPL_LAST << 0,
+  NC_HICOSMO_DE_IMPL_dE2Omega_de_dz   = NC_HICOSMO_IMPL_LAST << 1,
+  NC_HICOSMO_DE_IMPL_d2E2Omega_de_dz2 = NC_HICOSMO_IMPL_LAST << 2,
+  NC_HICOSMO_DE_IMPL_w_de             = NC_HICOSMO_IMPL_LAST << 3, /*< private >*/
+  NC_HICOSMO_DE_IMPL_LAST             = NC_HICOSMO_IMPL_LAST << 4, /*< skip >*/
 } NcHICosmoDEImpl;
 
 typedef gdouble (*NcHICosmoDEFunc1) (NcHICosmoDE *cosmo_de, gdouble z);
@@ -71,10 +74,9 @@ typedef gdouble (*NcHICosmoDEFunc1) (NcHICosmoDE *cosmo_de, gdouble z);
  * @NC_HICOSMO_DE_HE_YP: FIXME
  * @NC_HICOSMO_DE_ENNU: FIXME
  * @NC_HICOSMO_DE_OMEGA_B: FIXME
- * @NC_HICOSMO_DE_SPECINDEX: FIXME
- * @NC_HICOSMO_DE_SIGMA8: FIXME
  *
  * FIXME
+ * 
  */
 typedef enum _NcHICosmoDEParams
 {
@@ -84,9 +86,7 @@ typedef enum _NcHICosmoDEParams
   NC_HICOSMO_DE_T_GAMMA0,
   NC_HICOSMO_DE_HE_YP,
   NC_HICOSMO_DE_ENNU,
-  NC_HICOSMO_DE_OMEGA_B,
-  NC_HICOSMO_DE_SPECINDEX,
-  NC_HICOSMO_DE_SIGMA8,     /*< private >*/
+  NC_HICOSMO_DE_OMEGA_B,    /*< private >*/
   NC_HICOSMO_DE_SPARAM_LEN, /*< skip >*/
 } NcHICosmoDEParams;
 
@@ -97,8 +97,6 @@ typedef enum _NcHICosmoDEParams
 #define NC_HICOSMO_DE_DEFAULT_T_GAMMA0  (2.7245)
 #define NC_HICOSMO_DE_DEFAULT_HE_YP     (0.24)
 #define NC_HICOSMO_DE_DEFAULT_ENNU      (3.046)
-#define NC_HICOSMO_DE_DEFAULT_SPECINDEX (1.0)
-#define NC_HICOSMO_DE_DEFAULT_SIGMA8    (0.9)
 
 struct _NcHICosmoDE
 {
@@ -112,9 +110,10 @@ struct _NcHICosmoDEClass
 {
   /*< private >*/
   NcHICosmoClass parent_class;
-  NcHICosmoDEFunc1 weff;
-  NcHICosmoDEFunc1 dweff_dz;
-  NcHICosmoDEFunc1 d2weff_dz2;
+  NcHICosmoDEFunc1 E2Omega_de;
+  NcHICosmoDEFunc1 dE2Omega_de_dz;
+  NcHICosmoDEFunc1 d2E2Omega_de_dz2;
+  NcHICosmoDEFunc1 w_de;
 };
 
 GType nc_hicosmo_de_get_type (void) G_GNUC_CONST;
@@ -124,13 +123,16 @@ void nc_hicosmo_de_omega_x2omega_k (NcHICosmoDE *cosmo_de);
 void nc_hicosmo_de_cmb_params (NcHICosmoDE *cosmo_de);
 gboolean nc_hicosmo_de_new_add_bbn (NcmLikelihood *lh);
 
-void nc_hicosmo_de_set_weff_impl (NcHICosmoDEClass *cosmo_de_class, NcHICosmoDEFunc1 f);
-void nc_hicosmo_de_set_dweff_dz_impl (NcHICosmoDEClass *cosmo_de_class, NcHICosmoDEFunc1 f);
-void nc_hicosmo_de_set_d2weff_dz2_impl (NcHICosmoDEClass *cosmo_de_class, NcHICosmoDEFunc1 f);
+void nc_hicosmo_de_set_E2Omega_de_impl (NcHICosmoDEClass *cosmo_de_class, NcHICosmoDEFunc1 f);
+void nc_hicosmo_de_set_dE2Omega_de_dz_impl (NcHICosmoDEClass *cosmo_de_class, NcHICosmoDEFunc1 f);
+void nc_hicosmo_de_set_d2E2Omega_de_dz2_impl (NcHICosmoDEClass *cosmo_de_class, NcHICosmoDEFunc1 f);
+void nc_hicosmo_de_set_w_de_impl (NcHICosmoDEClass *cosmo_de_class, NcHICosmoDEFunc1 f);
 
-G_INLINE_FUNC gdouble nc_hicosmo_de_weff (NcHICosmoDE *cosmo_de, gdouble z);
-G_INLINE_FUNC gdouble nc_hicosmo_de_dweff_dz (NcHICosmoDE *cosmo_de, gdouble z);
-G_INLINE_FUNC gdouble nc_hicosmo_de_d2weff_dz2 (NcHICosmoDE *cosmo_de, gdouble z);
+G_INLINE_FUNC gdouble nc_hicosmo_de_E2Omega_de (NcHICosmoDE *cosmo_de, gdouble z);
+G_INLINE_FUNC gdouble nc_hicosmo_de_dE2Omega_de_dz (NcHICosmoDE *cosmo_de, gdouble z);
+G_INLINE_FUNC gdouble nc_hicosmo_de_d2E2Omega_de_dz2 (NcHICosmoDE *cosmo_de, gdouble z);
+G_INLINE_FUNC gdouble nc_hicosmo_de_w_de (NcHICosmoDE *cosmo_de, gdouble z);
+G_INLINE_FUNC gdouble nc_hicosmo_de_E2Omega_de_onepw (NcHICosmoDE *cosmo_de, gdouble z);
 
 G_END_DECLS
 
@@ -142,9 +144,16 @@ G_END_DECLS
 
 G_BEGIN_DECLS
 
-NCM_MODEL_FUNC1_IMPL (NC_HICOSMO_DE,NcHICosmoDE,nc_hicosmo_de,weff,z)
-NCM_MODEL_FUNC1_IMPL (NC_HICOSMO_DE,NcHICosmoDE,nc_hicosmo_de,dweff_dz,z)
-NCM_MODEL_FUNC1_IMPL (NC_HICOSMO_DE,NcHICosmoDE,nc_hicosmo_de,d2weff_dz2,z)
+NCM_MODEL_FUNC1_IMPL (NC_HICOSMO_DE,NcHICosmoDE,nc_hicosmo_de,E2Omega_de,z)
+NCM_MODEL_FUNC1_IMPL (NC_HICOSMO_DE,NcHICosmoDE,nc_hicosmo_de,dE2Omega_de_dz,z)
+NCM_MODEL_FUNC1_IMPL (NC_HICOSMO_DE,NcHICosmoDE,nc_hicosmo_de,d2E2Omega_de_dz2,z)
+NCM_MODEL_FUNC1_IMPL (NC_HICOSMO_DE,NcHICosmoDE,nc_hicosmo_de,w_de,z)
+
+G_INLINE_FUNC gdouble 
+nc_hicosmo_de_E2Omega_de_onepw (NcHICosmoDE *cosmo_de, gdouble z)
+{
+  return nc_hicosmo_de_E2Omega_de (cosmo_de, z) * (1.0 + nc_hicosmo_de_w_de (cosmo_de, z));
+}
 
 G_END_DECLS
 

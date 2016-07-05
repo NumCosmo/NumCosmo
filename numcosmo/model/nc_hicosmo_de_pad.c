@@ -46,21 +46,21 @@ G_DEFINE_TYPE (NcHICosmoDEPad, nc_hicosmo_de_pad, NC_TYPE_HICOSMO_DE);
 #define OMEGA_1 (ncm_vector_get (VECTOR, NC_HICOSMO_DE_PAD_W1))
 
 static gdouble
-_nc_hicosmo_de_pad_weff (NcHICosmoDE *cosmo_de, gdouble z)
+_nc_hicosmo_de_pad_E2Omega_de (NcHICosmoDE *cosmo_de, gdouble z)
 {
   gdouble x = 1.0 + z;
   gdouble lnx = log1p (z);
-  return OMEGA_X * exp(3.0/2.0 * OMEGA_1 * gsl_pow_2 (z / x) + 3.0 * (1 + OMEGA_0) * lnx);
+  return OMEGA_X * exp(3.0/2.0 * OMEGA_1 * gsl_pow_2 (z / x) + 3.0 * (1.0 + OMEGA_0) * lnx);
 }
 
 static gdouble
-_nc_hicosmo_de_pad_dweff_dz (NcHICosmoDE *cosmo_de, gdouble z)
+_nc_hicosmo_de_pad_dE2Omega_de_dz (NcHICosmoDE *cosmo_de, gdouble z)
 {
   const gdouble x = 1.0 + z;
   const gdouble x3 = gsl_pow_3 (x);
   const gdouble lnx = log1p (z);
-  const gdouble weff = OMEGA_X * exp(3.0/2.0 * OMEGA_1 * gsl_pow_2 (z / x) + 3.0 * (1 + OMEGA_0) * lnx);
-  return 3.0 * ((1.0 + OMEGA_0) / x + z * OMEGA_1 / x3) * weff;
+  const gdouble E2Omega_de = OMEGA_X * exp(3.0/2.0 * OMEGA_1 * gsl_pow_2 (z / x) + 3.0 * (1.0 + OMEGA_0) * lnx);
+  return 3.0 * ((1.0 + OMEGA_0) / x + z * OMEGA_1 / x3) * E2Omega_de;
 }
 
 /**
@@ -105,8 +105,8 @@ nc_hicosmo_de_pad_class_init (NcHICosmoDEPadClass *klass)
 
   object_class->finalize     = &nc_hicosmo_de_pad_finalize;
 
-  nc_hicosmo_de_set_weff_impl (parent_class, &_nc_hicosmo_de_pad_weff);
-  nc_hicosmo_de_set_dweff_dz_impl (parent_class, &_nc_hicosmo_de_pad_dweff_dz);
+  nc_hicosmo_de_set_E2Omega_de_impl (parent_class, &_nc_hicosmo_de_pad_E2Omega_de);
+  nc_hicosmo_de_set_dE2Omega_de_dz_impl (parent_class, &_nc_hicosmo_de_pad_dE2Omega_de_dz);
 
   ncm_model_class_set_name_nick (model_class, "Padmanabhan parametrization", "Padmanabhan");
   ncm_model_class_add_params (model_class, 2, 0, PROP_SIZE);

@@ -167,6 +167,7 @@ _nc_powspec_ml_cbe_prepare (NcmPowspec *powspec, NcmModel *model)
   NcPowspecMLCBE *ps_cbe = NC_POWSPEC_ML_CBE (powspec);
 
   g_assert (NC_IS_HICOSMO (model));
+  g_assert (ncm_model_peek_submodel_by_mid (model, nc_hiprim_id ()) != NULL);
 
   nc_cbe_set_calc_transfer (ps_cbe->cbe, TRUE);
   nc_cbe_set_max_matter_pk_z (ps_cbe->cbe, powspec->zf);

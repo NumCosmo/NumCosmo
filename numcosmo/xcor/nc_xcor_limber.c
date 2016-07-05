@@ -33,7 +33,6 @@
 #include "math/ncm_serialize.h"
 #include "math/ncm_cfg.h"
 #include "lss/nc_window_tophat.h"
-#include "lss/nc_matter_var.h"
 #include "xcor/nc_xcor_limber.h"
 
 G_DEFINE_ABSTRACT_TYPE (NcXcorLimber, nc_xcor_limber, NCM_TYPE_MODEL);

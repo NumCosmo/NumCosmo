@@ -9,9 +9,12 @@ import time
 from math import *
 import numpy as np
 from gi.repository import GObject
+import matplotlib
 import matplotlib.pyplot as plt
 from gi.repository import NumCosmo as Nc
 from gi.repository import NumCosmoMath as Ncm
+
+matplotlib.rcParams.update({'font.size': 11})
 
 #
 #  Initializing the library objects, this must be called before 
@@ -33,93 +36,132 @@ reion = Nc.HIReionCamb.new ()
 prim  = Nc.HIPrimPowerLaw.new ()
 
 cosmo.param_set_by_name ("H0", 67.31)
-cosmo.param_set_by_name ("ns", 0.9658)
 
 prim.param_set_by_name ("n_SA", 0.9658)
 prim.param_set_by_name ("ln10e10ASA", 3.0904)
 
-reion.param_set_by_name ("z_re", 9.999)
+reion.param_set_by_name ("z_re", 9.9999)
 
 cosmo.add_submodel (reion)
 cosmo.add_submodel (prim)
 
 ps_cbe  = Nc.PowspecMLCBE.new ()
 ps_eh   = Nc.PowspecMLTransfer.new (Nc.TransferFuncEH.new ())
-ps_bbks = Nc.PowspecMLTransfer.new (Nc.TransferFuncBBKS.new ())
 
-ps_cbe.set_kmax (1.0e1)
-ps_eh.set_kmax (1.0e1)
-ps_bbks.set_kmax (1.0e1)
+z_min = 0.0
+z_max = 1000.0
+zdiv  = 0.49999999999
+
+k_min = 1.0e-6
+k_max = 1.0e3
+
+nk = 2000
+nR = 2000
+Rh8 = 8.0 / cosmo.h ()
+
+ps_cbe.set_kmin (k_min)
+ps_eh.set_kmin (k_min)
+
+ps_cbe.set_kmax (k_max)
+ps_eh.set_kmax (k_max)
+
+ps_cbe.require_zi (z_min)
+ps_cbe.require_zf (z_max)
+
+ps_eh.require_zi (z_min)
+ps_eh.require_zf (z_max)
 
 ps_eh.prepare (cosmo)
-ps_bbks.prepare (cosmo)
 ps_cbe.prepare (cosmo)
 
-for z in np.arange (0.0, 1.1, 0.1):
+for z in np.arange (z_min, z_max, (z_max - z_min) * zdiv):
   k_a = []
-  Pk_a = []
-  Pk_bbks_a = []
+  Pk_eh_a = []
   Pk_cbe_a = []
-  for lnk in np.arange (log (ps_cbe.props.kmin), log (ps_cbe.props.kmax), log (1.0e2) / 100.0):
+  for lnk in np.arange (log (ps_cbe.props.kmin), log (ps_cbe.props.kmax), log (k_max / k_min) / nk):
     k = exp (lnk)
     k2 = k * k
     k3 = k2 * k
     k_a.append (k)
-    Pk_a.append (k3 * ps_eh.eval (cosmo, z, k))
-    Pk_bbks_a.append (k3 * ps_bbks.eval (cosmo, z, k))
     Pk_cbe_a.append (k3 * ps_cbe.eval (cosmo, z, k))
-    #print z, k, ps_eh.eval (cosmo, z, k), fac * ps_cbe.eval (cosmo, z, k)
+    Pk_eh_a.append (k3 * ps_eh.eval (cosmo, z, k))
+    print ps_eh.eval (cosmo, z, k) / ps_cbe.eval (cosmo, z, k)
   
-  plt.plot (k_a, Pk_a, label = "EH")
-  plt.plot (k_a, Pk_bbks_a, label = "BBKS")
-  plt.plot (k_a, Pk_cbe_a, label = "CLASS")
-  plt.legend (loc="lower right")
-  plt.xscale('log')
-  plt.yscale('log')
-  #plt.show()
+  plt.plot (k_a, Pk_cbe_a, label = r'CLASS $z = %.2f$' % (z))
+  plt.plot (k_a, Pk_eh_a, label  = r'EH    $z = %.2f$' % (z))
+
+plt.legend (loc="lower right")
+plt.xscale('log')
+plt.yscale('log')
+plt.savefig ("ps_cbe_eh.pdf")
+plt.clf ()
 
 #
 # Filtering 
 #
-psf = Ncm.PowspecFilter.new (ps_cbe, Ncm.PowspecFilterType.TOPHAT)
+psf_cbe = Ncm.PowspecFilter.new (ps_cbe, Ncm.PowspecFilterType.TOPHAT)
+psf_eh  = Ncm.PowspecFilter.new (ps_eh, Ncm.PowspecFilterType.TOPHAT)
 
-psf.prepare (cosmo)
+psf_cbe.set_best_lnr0 ()
+psf_eh.set_best_lnr0 ()
 
-wp =  Nc.Window.new_from_name ("NcWindowTophat")
-tf = Nc.TransferFunc.new_from_name ("NcTransferFuncEH")
-vp = Nc.MatterVar.new (Nc.MatterVarStrategy.FFT, wp, tf)
-vp.prepare (cosmo)
+psf_cbe.prepare (cosmo)
+psf_eh.prepare (cosmo)
 
-np = 2000
-divfac = 1.0 / (np - 1.0)
 
-factor = psf.eval_sigma (0.0, 8.0 / cosmo.h ()) / sqrt (vp.var0 (cosmo, log (8.0)))
-
-print "# sigma8 == % 20.15g" % (psf.eval_sigma (0.0, 8.0 / cosmo.h ()))
-print "# sigma8 == % 20.15g" % (factor * sqrt (vp.var0 (cosmo, log (8.0))))
-
+print "# CBE sigma8 = % 20.15g, EH sigma8 = % 20.15g" % (psf_cbe.eval_sigma (0.0, Rh8), psf_eh.eval_sigma (0.0, Rh8))
 print "# kmin % 20.15g kmax % 20.15g" % (ps_cbe.props.kmin, ps_cbe.props.kmax)
-print "# Rmin % 20.15g Rmax % 20.15g" % (psf.get_r_min (), psf.get_r_max ())
+print "# Rmin % 20.15g Rmax % 20.15g" % (psf_cbe.get_r_min (), psf_cbe.get_r_max ())
 
-lnRmin = log (psf.get_r_min () * cosmo.h ())
-lnRmax = log (psf.get_r_max () * cosmo.h ())
+lnRmin = log (psf_cbe.get_r_min ())
+lnRmax = log (psf_cbe.get_r_max ())
 
 print "# lnRmin % 20.15g lnRmax % 20.15g" % (exp (lnRmin), exp (lnRmax))
-z = 0.0
 
-for i in range (0, np):
-  lnRh = lnRmin +  (lnRmax - lnRmin) * divfac * i
-  Rh   = exp (lnRh)
-  R    = Rh / cosmo.h ()
-  lnR  = log (R)
-  
-  sigma2    = vp.var0 (cosmo, lnRh)
-  dlnsigma2 = vp.dlnvar0_dlnR (cosmo, lnRh)
-  
-  sigma_n     = psf.eval_sigma (z, R)
-  dlnsigma2_n = psf.eval_dlnvar_dlnr (z, lnR)
+for z in np.arange (z_min, z_max, (z_max - z_min) * zdiv):
+  Rh_a = []
+  sigma_eh_a  = []
+  sigma_cbe_a = []
+  for lnR in np.arange (lnRmin, lnRmax, (lnRmax - lnRmin) / nR):
+    R  = exp (lnR)
+    Rh = R * cosmo.h ()
+    
+    Rh_a.append (Rh)
+    sigma_cbe_a.append (psf_cbe.eval_sigma_lnr (z, lnR))
+    sigma_eh_a.append (psf_eh.eval_sigma_lnr (z, lnR))
 
-  print lnRh, Rh, factor * sqrt (sigma2), sigma_n, dlnsigma2_n
+  plt.plot (Rh_a, sigma_cbe_a, label = r'$\sigma$ CLASS $z = %.2f$' % (z))
+  plt.plot (Rh_a, sigma_cbe_a, label = r'$\sigma$ EH    $z = %.2f$' % (z))
 
-print "\n"
+plt.legend (loc="lower left")
+plt.xscale('log')
+plt.yscale('log')
+plt.savefig ("ps_var_cbe_eh.pdf")
+plt.clf ()
+
+for z in np.arange (z_min, z_max, (z_max - z_min) * zdiv):
+  Rh_a = []
+  dvar_eh_a   = []
+  dvar_cbe_a  = []
+  for lnR in np.arange (lnRmin, lnRmax, (lnRmax - lnRmin) / nR):
+    R  = exp (lnR)
+    Rh = R * cosmo.h ()
+    
+    Rh_a.append (Rh)
+    dvar_cbe_a.append (psf_cbe.eval_dlnvar_dlnr (z, lnR))
+    dvar_eh_a.append (psf_eh.eval_dlnvar_dlnr (z, lnR))
+
+  plt.plot (Rh_a, dvar_cbe_a, label  = r'$\frac{\mathrm{d}\ln\sigma^2}{\mathrm{d}\ln{}R}$ CLASS $z = %.2f$' % (z))
+  plt.plot (Rh_a, dvar_eh_a, label   = r'$\frac{\mathrm{d}\ln\sigma^2}{\mathrm{d}\ln{}R}$ EH    $z = %.2f$' % (z))
+
+plt.legend (loc="lower left")
+plt.xscale('log')
+plt.savefig ("ps_dvar_cbe_eh.pdf")
+plt.clf ()
+
+
+pshf = Nc.PowspecMNLHaloFit.new (ps_cbe, 10.0, 1.0e-3)
+
+pshf.prepare (cosmo)
+
 

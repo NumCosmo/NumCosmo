@@ -69,8 +69,6 @@ struct _NcDataClusterNCount
   /*< private >*/
   NcmData parent_instance;
   NcClusterAbundance *cad;
-  NcClusterRedshift *z;
-  NcClusterMass *m;
   NcmVector *lnM_true;
   NcmVector *z_true;
   NcmMatrix *z_obs;
@@ -80,6 +78,10 @@ struct _NcDataClusterNCount
   GArray *m2lnL_a;
   gdouble area_survey;
   guint np;
+  guint n_z_obs;
+  guint n_z_obs_params;
+  guint n_M_obs;
+  guint n_M_obs_params;
   gdouble log_np_fac;
   gboolean use_true_data;
   gboolean binned;
@@ -107,8 +109,11 @@ NcDataClusterNCount *nc_data_cluster_ncount_ref (NcDataClusterNCount *ncount);
 void nc_data_cluster_ncount_free (NcDataClusterNCount *ncount);
 void nc_data_cluster_ncount_clear (NcDataClusterNCount **ncount);
 
-void nc_data_cluster_ncount_set_mass (NcDataClusterNCount *ncount, NcClusterMass *m);
-void nc_data_cluster_ncount_set_redshift (NcDataClusterNCount *ncount, NcClusterRedshift *z);
+void nc_data_cluster_ncount_set_n_z_obs (NcDataClusterNCount *ncount, guint n_z_obs);
+void nc_data_cluster_ncount_set_n_z_obs_params (NcDataClusterNCount *ncount, guint n_z_obs_params);
+void nc_data_cluster_ncount_set_n_M_obs (NcDataClusterNCount *ncount, guint n_M_obs);
+void nc_data_cluster_ncount_set_n_M_obs_params (NcDataClusterNCount *ncount, guint n_M_obs_params);
+
 void nc_data_cluster_ncount_set_lnM_true (NcDataClusterNCount *ncount, const NcmVector *v);
 void nc_data_cluster_ncount_set_z_true (NcDataClusterNCount *ncount, const NcmVector *v);
 void nc_data_cluster_ncount_set_lnM_obs (NcDataClusterNCount *ncount, const NcmMatrix *m);
@@ -137,7 +142,7 @@ NcmMatrix *nc_data_cluster_ncount_get_z_obs_params (NcDataClusterNCount *ncount)
 
 void nc_data_cluster_ncount_true_data (NcDataClusterNCount *ncount, gboolean use_true_data);
 gboolean nc_data_cluster_ncount_using_true_data (NcDataClusterNCount *ncount);
-void nc_data_cluster_ncount_init_from_sampling (NcDataClusterNCount *ncount, NcmMSet *mset, NcClusterRedshift *clusterz, NcClusterMass *clusterm, gdouble area_survey, NcmRNG *rng);
+void nc_data_cluster_ncount_init_from_sampling (NcDataClusterNCount *ncount, NcmMSet *mset, gdouble area_survey, NcmRNG *rng);
 void nc_data_cluster_ncount_print (NcDataClusterNCount *ncount, NcHICosmo *cosmo, FILE *out, gchar *header);
 
 void nc_data_cluster_ncount_set_bin_by_nodes (NcDataClusterNCount *ncount, NcmVector *z_nodes, NcmVector *lnM_nodes);

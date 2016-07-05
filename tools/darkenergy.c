@@ -234,18 +234,35 @@ main (gint argc, gchar *argv[])
 
   dset  = ncm_dataset_new ();
   if ((cosmo = NC_HICOSMO (ncm_mset_get (mset, nc_hicosmo_id ()))) == NULL)
-    cosmo = nc_hicosmo_new_from_name (NC_TYPE_HICOSMO, de_model.model_name);
-
-  if (de_model.model_reion != NULL && ncm_mset_peek (mset, nc_hireion_id ()) == NULL)
   {
-    NcHIReion *reion = nc_hireion_new_from_name (NC_TYPE_HIREION, de_model.model_reion);
+    if (de_model.model_name != NULL)
+      cosmo = nc_hicosmo_new_from_name (NC_TYPE_HICOSMO, de_model.model_name);
+    else
+      cosmo = NC_HICOSMO (nc_hicosmo_de_xcdm_new ());
+  }
+
+  if (ncm_mset_peek (mset, nc_hireion_id ()) == NULL)
+  {
+    NcHIReion *reion;
+
+    if (de_model.model_reion != NULL)
+      reion = nc_hireion_new_from_name (NC_TYPE_HIREION, de_model.model_reion);
+    else
+      reion = NC_HIREION (nc_hireion_camb_new ());
+    
     ncm_model_add_submodel (NCM_MODEL (cosmo), NCM_MODEL (reion));
     nc_hireion_free (reion);
   }
 
-  if (de_model.model_prim != NULL && ncm_mset_peek (mset, nc_hiprim_id ()) == NULL)
+  if (ncm_mset_peek (mset, nc_hiprim_id ()) == NULL)
   {
-    NcHIPrim *prim = nc_hiprim_new_from_name (NC_TYPE_HIPRIM, de_model.model_prim);
+    NcHIPrim *prim;
+
+    if (de_model.model_prim != NULL)
+      prim = nc_hiprim_new_from_name (NC_TYPE_HIPRIM, de_model.model_prim);
+    else
+      prim = NC_HIPRIM (nc_hiprim_power_law_new ());
+    
     ncm_model_add_submodel (NCM_MODEL (cosmo), NCM_MODEL (prim));
     nc_hiprim_free (prim);
   }
@@ -507,11 +524,24 @@ main (gint argc, gchar *argv[])
   else
     fiduc = ncm_mset_ref (mset);
 
+  if (de_fit.fit_type == NULL)
+  {
+#ifdef NUMCOSMO_HAVE_NLOPT
+    de_fit.fit_type = g_strdup ("nlopt");
+#else
+    de_fit.fit_type = g_strdup ("gsl-mms");
+#endif
+  }
+  if (de_fit.fit_diff == NULL)
+    de_fit.fit_diff = g_strdup ("numdiff-forward");
+  
   {
     const GEnumValue *fit_type_id = ncm_cfg_get_enum_by_id_name_nick (NCM_TYPE_FIT_TYPE, de_fit.fit_type);
     const GEnumValue *fit_diff_id = ncm_cfg_get_enum_by_id_name_nick (NCM_TYPE_FIT_GRAD_TYPE, de_fit.fit_diff);
+
     if (fit_type_id == NULL)
       g_error ("Fit type '%s' not found run --fit-list to list the available options", de_fit.fit_type);
+
     if (fit_diff_id == NULL)
       g_error ("Fit type '%s' not found run --fit-list to list the available options", de_fit.fit_diff);
 
@@ -591,8 +621,8 @@ main (gint argc, gchar *argv[])
     ncm_dataset_resample (dset, fiduc, rng);
   }
 
-  de_fit.fisher = (de_fit.fisher || (de_fit.nsigma_fisher != -1) || (de_fit.nsigma != -1) || (de_fit.onedim_cr != NULL));
-  de_fit.fit = (de_fit.fit || de_fit.fisher);
+  de_fit.fisher        = (de_fit.fisher || (de_fit.nsigma_fisher != -1) || (de_fit.nsigma != -1) || (de_fit.onedim_cr != NULL));
+  de_fit.fit           = (de_fit.fit || de_fit.fisher);
   de_fit.save_best_fit = (de_fit.save_best_fit || de_fit.save_fisher);
 
   if (de_fit.fit)
@@ -1070,7 +1100,7 @@ main (gint argc, gchar *argv[])
   nc_distance_free (dist);
   g_free (full_cmd_line);
 
-  if (FALSE) /* Several unimportant leaks */
+  if (TRUE)
   {
     g_clear_pointer (&de_model.model_name, g_free);
 
@@ -1085,8 +1115,8 @@ main (gint argc, gchar *argv[])
     g_clear_pointer (&de_data_simple.priors_gauss, g_strfreev);
     g_clear_pointer (&de_data_simple.data_files,   g_strfreev);
 
-    g_clear_pointer (&de_data_cluster.window_name,       g_free);
-    g_clear_pointer (&de_data_cluster.transfer_name,     g_free);
+    g_clear_pointer (&de_data_cluster.filter_type,       g_free);
+    g_clear_pointer (&de_data_cluster.ps_type,           g_free);
     g_clear_pointer (&de_data_cluster.multiplicity_name, g_free);
     g_clear_pointer (&de_data_cluster.clusterm_ser,      g_free);
     g_clear_pointer (&de_data_cluster.clusterz_ser,      g_free);

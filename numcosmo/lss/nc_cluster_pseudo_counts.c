@@ -366,7 +366,7 @@ _Ndet_wout_volume_integrand (gdouble lnM500, gpointer userdata)
   integrand_data *data = (integrand_data *) userdata;
   NcClusterPseudoCounts *cpc = data->cpc;
   gdouble sf = nc_cluster_pseudo_counts_selection_function (cpc, lnM500, data->z);
-  gdouble mf = nc_halo_mass_function_dn_dlnm (data->mfp, data->cosmo, lnM500, data->z);
+  gdouble mf = nc_halo_mass_function_dn_dlnM (data->mfp, data->cosmo, lnM500, data->z);
 
   gdouble result = sf * mf;
   //printf("M = %.5g sf = %.5g mfp = %.5g result = %.5g\n", exp(lnM500), sf, mf, result);
@@ -413,7 +413,7 @@ _Ndet_integrand (gdouble lnM500, gdouble z, gpointer userdata)
   integrand_data *data       = (integrand_data *) userdata;
   NcClusterPseudoCounts *cpc = data->cpc;
   const gdouble sf     = nc_cluster_pseudo_counts_selection_function (cpc, lnM500, z);
-  const gdouble result = sf * nc_halo_mass_function_d2n_dzdlnm (data->mfp, data->cosmo, lnM500, z);
+  const gdouble result = sf * nc_halo_mass_function_d2n_dzdlnM (data->mfp, data->cosmo, lnM500, z);
   
   return result;
 }
@@ -467,7 +467,7 @@ _posterior_numerator_integrand (gdouble lnM, gpointer userdata)
     return small;
   else
   {
-    const gdouble mf = nc_halo_mass_function_d2n_dzdlnm (data->mfp, data->cosmo, lnM, data->z);
+    const gdouble mf = nc_halo_mass_function_d2n_dzdlnM (data->mfp, data->cosmo, lnM, data->z);
     const gdouble pdf_Mobs_Mtrue = nc_cluster_mass_p (data->clusterm, data->cosmo, lnM, data->z, data->Mobs, data->Mobs_params);
     const gdouble result = sf * mf * pdf_Mobs_Mtrue + small;
 
@@ -534,7 +534,7 @@ _massfunc_lognormal_integrand (gdouble lnM, gpointer userdata)
   //const gdouble sf = nc_cluster_pseudo_counts_selection_function (cpc, lnM, data->z);
   const gdouble small = exp (-200.0);
   
-  const gdouble mf = nc_halo_mass_function_d2n_dzdlnm (data->mfp, data->cosmo, lnM, data->z);
+  const gdouble mf = nc_halo_mass_function_d2n_dzdlnM (data->mfp, data->cosmo, lnM, data->z);
   const gdouble pdf_lognormal = nc_cluster_mass_plcl_pdf_only_lognormal (data->clusterm, lnM, data->lnMsz_M0, data->lnMl_M0);
   const gdouble result = mf * pdf_lognormal + small; //sf * mf * pdf_Mobs_Mtrue + small;
 
@@ -682,7 +682,7 @@ _posterior_numerator_integrand_plcl (gdouble w1, gdouble w2, gdouble lnM_M0, gpo
     res = small;
   else
   {
-    const gdouble mf             = nc_halo_mass_function_d2n_dzdlnm (data->mfp, data->cosmo, lnM, data->z);
+    const gdouble mf             = nc_halo_mass_function_d2n_dzdlnM (data->mfp, data->cosmo, lnM, data->z);
     const gdouble pdf_Mobs_Mtrue = nc_cluster_mass_plcl_pdf (data->clusterm, lnM_M0, w1, w2, data->Mobs, data->Mobs_params);
 
     res = sf * mf * pdf_Mobs_Mtrue + small; 

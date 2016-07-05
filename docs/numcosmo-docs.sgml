@@ -249,12 +249,13 @@
       <xi:include href="xml/nc_transfer_func_pert.xml"/>
     </section>
     <xi:include href="xml/nc_growth_func.xml"/>
-    <xi:include href="xml/nc_matter_var.xml"/>
     <section>
       <title>Matter Power Spectrum</title>
       <xi:include href="xml/nc_powspec_ml.xml"/>
       <xi:include href="xml/nc_powspec_ml_transfer.xml"/>
       <xi:include href="xml/nc_powspec_ml_cbe.xml"/>
+      <xi:include href="xml/nc_powspec_mnl.xml"/>
+      <xi:include href="xml/nc_powspec_mnl_halofit.xml"/>
     </section>
     <section>
       <title> Density Profile</title>

@@ -138,6 +138,7 @@ _nc_powspec_ml_transfer_finalize (GObject *object)
 
 static void _nc_powspec_ml_transfer_prepare (NcmPowspec *powspec, NcmModel *model);
 static gdouble _nc_powspec_ml_transfer_eval (NcmPowspec *powspec, NcmModel *model, const gdouble z, const gdouble k);
+static void _nc_powspec_ml_transfer_eval_vec (NcmPowspec* powspec, NcmModel* model, const gdouble z, NcmVector* k, NcmVector* Pk);
 static void _nc_powspec_ml_transfer_get_nknots (NcmPowspec *powspec, guint *Nz, guint *Nk);
 
 static void
@@ -172,6 +173,7 @@ nc_powspec_ml_transfer_class_init (NcPowspecMLTransferClass *klass)
 
   powspec_class->prepare    = &_nc_powspec_ml_transfer_prepare;
   powspec_class->eval       = &_nc_powspec_ml_transfer_eval;
+  powspec_class->eval_vec   = &_nc_powspec_ml_transfer_eval_vec;
   powspec_class->get_nknots = &_nc_powspec_ml_transfer_get_nknots;
 }
 
@@ -182,13 +184,15 @@ _nc_powspec_ml_transfer_prepare (NcmPowspec *powspec, NcmModel *model)
   NcPowspecMLTransfer *ps_mlt = NC_POWSPEC_ML_TRANSFER (powspec);
 
   g_assert (NC_IS_HICOSMO (model));
+  g_assert (ncm_model_peek_submodel_by_mid (model, nc_hiprim_id ()) != NULL);
 
   nc_growth_func_prepare_if_needed (ps_mlt->gf, cosmo);
   nc_transfer_func_prepare_if_needed (ps_mlt->tf, cosmo);
 
   {
-    const gdouble RH   = nc_hicosmo_RH_Mpc (cosmo);    
-    ps_mlt->Pm_k2Pzeta = (2.0 * M_PI * M_PI) * gsl_pow_2 ((9.0 / 10.0) / (2.0 * (3.0 / 2.0) * nc_hicosmo_Omega_m0 (cosmo))) * gsl_pow_4 (RH);
+    const gdouble RH   = nc_hicosmo_RH_Mpc (cosmo);
+printf ("G0 % 20.15g % 20.15g % 20.15g\n", nc_growth_func_eval (ps_mlt->gf, cosmo, 0.0), nc_growth_func_get_Da0 (ps_mlt->gf), 1.0 / nc_growth_func_eval (ps_mlt->gf, cosmo, 1.0e12));
+    ps_mlt->Pm_k2Pzeta = (2.0 * M_PI * M_PI) * gsl_pow_2 (1.0 / (1.5 * nc_hicosmo_Omega_m0 (cosmo))) * gsl_pow_4 (RH);
   }
 }
 
@@ -208,12 +212,38 @@ _nc_powspec_ml_transfer_eval (NcmPowspec *powspec, NcmModel *model, const gdoubl
   return k * Delta_zeta_k * ps_mlt->Pm_k2Pzeta * tfz2;
 }
 
+static void
+_nc_powspec_ml_transfer_eval_vec (NcmPowspec* powspec, NcmModel* model, const gdouble z, NcmVector* k, NcmVector* Pk)
+{
+  NcHICosmo *cosmo            = NC_HICOSMO (model);
+  NcHIPrim *prim              = NC_HIPRIM (ncm_model_peek_submodel_by_mid (model, nc_hiprim_id ()));
+  NcPowspecMLTransfer *ps_mlt = NC_POWSPEC_ML_TRANSFER (powspec);
+
+  const gdouble growth = nc_growth_func_eval (ps_mlt->gf, cosmo, z);
+  const gdouble gf2    = gsl_pow_2 (growth);
+  const guint len = ncm_vector_len(k);  
+  guint i;
+
+  for (i = 0; i < len; i++)
+  {
+    const gdouble ki = ncm_vector_get(k, i);
+
+    const gdouble khi = ki / nc_hicosmo_h (cosmo);
+    const gdouble tf = nc_transfer_func_eval (ps_mlt->tf, cosmo, khi);
+    const gdouble tf2 = tf * tf;
+
+    const gdouble Delta_zeta_k = nc_hiprim_SA_powspec_k (prim, ki);
+
+    ncm_vector_set (Pk, i, ki * Delta_zeta_k * ps_mlt->Pm_k2Pzeta * tf2 * gf2);
+  }
+}
+
 static void 
 _nc_powspec_ml_transfer_get_nknots (NcmPowspec *powspec, guint *Nz, guint *Nk)
 {
   /*NcPowspecMLTransfer *ps_mlt = NC_POWSPEC_ML_TRANSFER (powspec);*/
 
-  Nz[0] = 1000;
+  Nz[0] = 20;
   Nk[0] = 1000;
 }
 

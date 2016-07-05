@@ -75,10 +75,13 @@ struct _NcmPowspecFilter
   NcmPowspecFilterType type;
   NcmFftlog *fftlog;
   gdouble lnr0;
+  gdouble zi;
+  gdouble zf;
   gboolean calibrated;
   gdouble reltol;
   NcmSpline2d *var;
   NcmSpline2d *dvar;
+  NcmModelCtrl *ctrl;
 };
 
 GType ncm_powspec_filter_get_type (void) G_GNUC_CONST;
@@ -88,9 +91,14 @@ void ncm_powspec_filter_free (NcmPowspecFilter *psf);
 void ncm_powspec_filter_clear (NcmPowspecFilter **psf);
 
 void ncm_powspec_filter_prepare (NcmPowspecFilter *psf, NcmModel *model);
+void ncm_powspec_filter_prepare_if_needed (NcmPowspecFilter *psf, NcmModel *model);
 
 void ncm_powspec_filter_set_type (NcmPowspecFilter *psf, NcmPowspecFilterType type);
 void ncm_powspec_filter_set_lnr0 (NcmPowspecFilter *psf, gdouble lnr0);
+void ncm_powspec_filter_set_best_lnr0 (NcmPowspecFilter *psf);
+
+void ncm_powspec_filter_set_zi (NcmPowspecFilter *psf, gdouble zi);
+void ncm_powspec_filter_set_zf (NcmPowspecFilter *psf, gdouble zf);
 
 gdouble ncm_powspec_filter_get_r_min (NcmPowspecFilter *psf);
 gdouble ncm_powspec_filter_get_r_max (NcmPowspecFilter *psf);
