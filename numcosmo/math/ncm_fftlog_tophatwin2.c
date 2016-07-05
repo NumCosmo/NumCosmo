@@ -34,10 +34,18 @@
 /**
  * SECTION:ncm_fftlog_tophatwin2
  * @title: NcmFftlogTophatwin2
- * @short_description: Logarithm fast fourier transform for a kernel with a spherical bessel of order one squared.
+ * @short_description: Logarithm fast fourier transform for a kernel given by the square of the spherical Bessel function of order one.
  *
- * Kernel $(3j_1(x)/x)^2$.
- * 
+ *
+ * This object computes the function (see #NcmFftlog)
+ * $$Y_n = \int_0^\infty t^{\frac{2\pi i n}{L} K(t) dt,$$
+ * where the kernel is the square of the top hat window function in the Fourier space $K(t) = W(t)^2$,
+ * \begin{align}
+ * W(t) &= \frac{3}{t^3}(\sin t - t \cos t) \\
+ * &= \frac{3}{t} j_1(t),
+ * \end{align}
+ * and $j_\nu(t)$ is the spherical Bessel function of the first kind.
+ *  
  */
 
 #ifdef HAVE_CONFIG_H
@@ -62,15 +70,15 @@ ncm_fftlog_tophatwin2_init (NcmFftlogTophatwin2 *j1pow2)
 }
 
 static void
-ncm_fftlog_tophatwin2_finalize (GObject *object)
+_ncm_fftlog_tophatwin2_finalize (GObject *object)
 {
 
   /* Chain up : end */
   G_OBJECT_CLASS (ncm_fftlog_tophatwin2_parent_class)->finalize (object);
 }
 
-void _ncm_fftlog_tophatwin2_get_Ym (NcmFftlog *fftlog);
-void _ncm_fftlog_tophatwin2_generate_Gr (NcmFftlog *fftlog);
+static void _ncm_fftlog_tophatwin2_get_Ym (NcmFftlog *fftlog);
+static void _ncm_fftlog_tophatwin2_generate_Gr (NcmFftlog *fftlog);
 
 static void
 ncm_fftlog_tophatwin2_class_init (NcmFftlogTophatwin2Class *klass)
@@ -78,7 +86,7 @@ ncm_fftlog_tophatwin2_class_init (NcmFftlogTophatwin2Class *klass)
   GObjectClass* object_class   = G_OBJECT_CLASS (klass);
   NcmFftlogClass *fftlog_class = NCM_FFTLOG_CLASS (klass);
 
-  object_class->finalize = ncm_fftlog_tophatwin2_finalize;
+  object_class->finalize = &_ncm_fftlog_tophatwin2_finalize;
 
   fftlog_class->name        = "tophat_window_2";
   fftlog_class->ncomp       = 2;
@@ -86,7 +94,7 @@ ncm_fftlog_tophatwin2_class_init (NcmFftlogTophatwin2Class *klass)
   fftlog_class->generate_Gr = &_ncm_fftlog_tophatwin2_generate_Gr;
 }
 
-void 
+static void 
 _ncm_fftlog_tophatwin2_get_Ym (NcmFftlog *fftlog)
 {
   const gdouble twopi_Lt  = 2.0 * M_PI / ncm_fftlog_get_full_length (fftlog);
@@ -125,7 +133,7 @@ _ncm_fftlog_tophatwin2_get_Ym (NcmFftlog *fftlog)
 #endif /* NUMCOSMO_HAVE_FFTW3 */
 }
 
-void 
+static void 
 _ncm_fftlog_tophatwin2_generate_Gr (NcmFftlog *fftlog)
 {
 #ifdef NUMCOSMO_HAVE_FFTW3
@@ -157,7 +165,7 @@ _ncm_fftlog_tophatwin2_generate_Gr (NcmFftlog *fftlog)
  * @Lk: input/output interval size
  * @N: number of knots
  * 
- * Creates a new fftlog tophat window squared object.
+ * Creates a new fftlog top hat window squared object.
  * 
  * Returns: (transfer full): a new #NcmFftlogTophatwin2
  */

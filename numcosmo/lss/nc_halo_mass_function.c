@@ -165,10 +165,10 @@ nc_halo_mass_function_class_init (NcHaloMassFunctionClass *klass)
   GObjectClass *object_class = G_OBJECT_CLASS (klass);
   //GObjectClass* parent_class = G_OBJECT_CLASS (klass);
 
-  object_class->dispose = _nc_halo_mass_function_dispose;
-  object_class->finalize = _nc_halo_mass_function_finalize;
-  object_class->set_property = _nc_halo_mass_function_set_property;
-  object_class->get_property = _nc_halo_mass_function_get_property;
+  object_class->dispose = &_nc_halo_mass_function_dispose;
+  object_class->finalize = &_nc_halo_mass_function_finalize;
+  object_class->set_property = &_nc_halo_mass_function_set_property;
+  object_class->get_property = &_nc_halo_mass_function_get_property;
 
   /**
    * NcHaloMassFunction:distance:

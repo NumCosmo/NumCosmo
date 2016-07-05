@@ -143,8 +143,6 @@ G_INLINE_FUNC gdouble ncm_fftlog_get_length (NcmFftlog *fftlog);
 G_INLINE_FUNC gdouble ncm_fftlog_get_full_length (NcmFftlog *fftlog);
 
 G_INLINE_FUNC gint ncm_fftlog_get_mode_index (NcmFftlog *fftlog, gint i);
-G_INLINE_FUNC gint ncm_fftlog_get_variable_index (NcmFftlog *fftlog, gint i);
-G_INLINE_FUNC gint ncm_fftlog_get_output_index (NcmFftlog *fftlog, gint i);
 
 G_INLINE_FUNC NcmVector *ncm_fftlog_peek_output_vector (NcmFftlog *fftlog, guint comp);
 
@@ -192,18 +190,6 @@ G_INLINE_FUNC gint
 ncm_fftlog_get_mode_index (NcmFftlog *fftlog, gint i)
 {
   return (i > fftlog->Nf_2) ? i - fftlog->Nf : i;
-}
-
-G_INLINE_FUNC gint 
-ncm_fftlog_get_variable_index (NcmFftlog *fftlog, gint i)
-{
-  return (i > fftlog->N_2) ? i - fftlog->N : i;
-}
-
-G_INLINE_FUNC gint 
-ncm_fftlog_get_output_index (NcmFftlog *fftlog, gint i)
-{
-  return (i <= fftlog->N_2) ? (i + fftlog->N_2) : (i - (fftlog->N_2 + 1)); 
 }
 
 G_INLINE_FUNC NcmVector *

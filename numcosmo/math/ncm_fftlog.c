@@ -28,7 +28,50 @@
  * @title: NcmFftlog
  * @short_description: Abstract class for implementing logarithm fast fourier transform.
  *
- * FIXME
+ * This class provides the tools to compute the Fast Fourier Transform of any function, which is assumed to be a periodic 
+ * sequence of logarithmically spaced points. It is inspired on the approach [FFTLog][Hamilton2000], which we extended as described below.
+ * 
+ * A function $G(r)$ is written as 
+ * \begin{equation}\lable{eq:Gr} G(r) = \int_0^\infty F(k) \ K(kr) dk, \end{equation}
+ * where $F(k)$ is defined in the fundamental interval $[\ln k_0 - L/2, \ln k_0 + L/2]$, $L$ is the period, 
+ * $\ln k_0$ is the center value and $W(kr)$ is a kernel function. Assuming that $F(k)$ can be written in terms of the 
+ * $N$ lowest Fourier modes, we have 
+ *
+ * $$F(k) = \sum_{n} c_n e^{\frac{2\pi i n}{L} \ln\left(\frac{k}{k_0}\right)}.$$
+ * Substituting $F(k)$ in Eq. \eqref{eq:Gr} and changing the variable $k \rightarrow t = kr$, thus 
+ * \begin{eqnarray}\lable{eq:Gr_decomp}
+ * r G(r) &=& \sun_n c_n \int_0^\infty \frac{k}{k_0}^{\frac{2\pi i n}{L}} W(kr)^2 d(kr) \\
+ * &=& \sum_n c_n  \int_0^\infty \frac{t}{k_0 r}^{\frac{2\pi i n}{L}} K(t) dt \\
+ * &=& \sum_n c_n e^{-\frac{2\pi i n}{L} \ln\left(\frac{r}{r_0}\right)} e^{-\frac{2\pi i n}{L} \ln(k_0 r_0)} Y_n, 
+ * \end{eqnarray}
+ * where 
+ * $$Y_n = \int_0^\infty t^{\frac{2\pi i n}{L} K(t) dt,$$
+ * and the Fourier coefficients are
+ * $$c_n = \frac{1}{N} \sum_m F(k_m) e^{- \frac{2\pi i nm}{N}}.$$
+ * The total number of points $N$ corresponds to the number of knots in the fundamental interval, which is equally spaced.    
+ * 
+ * The user must provide the following input values: $\ln k_0$ - ncm_fftlog_set_lnk0(), $\ln r_0$ - ncm_fftlog_set_lnr0(), 
+ * $L$ - ncm_fftlog_set_length(), padding percentage - ncm_fftlog_set_padding(), $N$ - ncm_fftlog_set_size(), 
+ * $F(k)$ (or $F(k_m)$ -- see description below). 
+ * \begin{itemize}
+ * \item Since the algorithm assumes that the function to be decomposed is periodic, it is worth extending the interval in $\ln k$ such that 
+ * $F(k) \equiv 0$ in the intervals $\left[\ln k_0 -\frac{L_T}{2}, \ln k_0 - \frac{L}{2} \right)$ and 
+ * $ \left(\ln k_0 + \frac{L}{2}, \ln k_0 + \frac{L_T}{2}\right]$, where the total period $L_T$ is defined by the final 
+ * number of knots, i.e., $N_f = N (1 + \mathrm{padding})$. 
+ * \item $N$ knots are equally distributed in the fundamental interval and $N \times \mathrm{padding}$ knots are distributed in 
+ * in the two simetric intervals as mentioned above. 
+ * \item Due to optimization sake, the final number of points $N_f$ is substitute by the smallest number $N_f^\prime$ (bigger than $N_f$) 
+ * which can be decomposed as $N_f \leq N_f^\prime = N^\prime (1 + \mathrm{padding}) = 3^a 5^b 7^c$, where $a$, 
+ * $b$ and $c$ are positive integers. 
+ * \item The function $F(k)$ can be provided as:
+ * \begin{itemize} 
+ * \item a gsl_function - ncm_fftlog_eval_by_function() - whose values are computed at the knots 
+ * within the fundamental interval, and set to zero within the padding intervals. 
+ * \item as a vector - ncm_fftlog_eval_by_vector() - first one must get the vector of $\ln k$ knots, ncm_fftlog_get_vector_lnr(), 
+ * and then pass a vector containing the values of the function computed at each knot. 
+ * \end{itemize}
+ * \item Regarding $Y_n$, see the different implementations of #NcmFftlog, e.g., #NcmFftlogTophatwin2 and #NcmFftlogGausswin2.
+ * \end{itemize}
  * 
  */
 
@@ -409,7 +452,7 @@ ncm_fftlog_set_lnk0 (NcmFftlog *fftlog, const gdouble lnk0)
 }
 
 /**
- * ncm_fftlog_get_k0:
+ * ncm_fftlog_get_lnk0:
  * @fftlog: a #NcmFftlog
  * 
  * Gets the center of the transform input $\ln(k_0)$.
@@ -465,7 +508,8 @@ _ncm_fftlog_fact_size (gulong n)
  * @fftlog: a #NcmFftlog
  * @n: number of knots
  * 
- * Sets the number of knots where the integrated function is evaluated.
+ * Sets the number of knots $N_f^\prime$ where the integrated function is evaluated, 
+ * given the input number of knots @n, plus padding.  
  * 
  */
 void
@@ -564,7 +608,7 @@ ncm_fftlog_get_padding (NcmFftlog *fftlog)
  * @fftlog: a #NcmFftlog
  * @Lk: period in the logarithmic space
  * 
- * Sets the length of the period @Lk, where the function is periodic in logarithmic space log10 (r).  
+ * Sets the length of the period @Lk, where the function is periodic in logarithmic space $\ln k$.  
  * 
  */
 void
@@ -619,9 +663,9 @@ _ncm_fftlog_eval (NcmFftlog *fftlog)
 /**
  * ncm_fftlog_eval_by_vector:
  * @fftlog: a #NcmFftlog
- * @Fk: Fk function vector
+ * @Fk: a #NcmVector
  * 
- * FIXME
+ * @Fk is a vector which contains the values of the function at each knot $\ln k_m$.
  * 
  */
 void 
@@ -646,7 +690,7 @@ ncm_fftlog_eval_by_vector (NcmFftlog *fftlog, NcmVector *Fk)
  * @fftlog: a #NcmFftlog
  * @Fk: Fk function pointer
  * 
- * FIXME
+ * Evaluates the function @Fk at each knot $\ln k_m$.
  * 
  */
 void 
@@ -675,7 +719,8 @@ ncm_fftlog_eval_by_function (NcmFftlog *fftlog, gsl_function *Fk)
  * ncm_fftlog_prepare_splines:
  * @fftlog: a #NcmFftlog
  * 
- * FIXME
+ * Prepares the set of splines respective to the function $G(r)$ 
+ * and, if required, its n-order derivatives. 
  * 
  */
 void 
@@ -694,9 +739,9 @@ ncm_fftlog_prepare_splines (NcmFftlog *fftlog)
  * ncm_fftlog_get_vector_lnr:
  * @fftlog: a #NcmFftlog
  * 
- * FIXME
+ * Gets the vector $\ln r$.
  * 
- * Returns: (transfer full): FIXME
+ * Returns: (transfer full): 
  */
 NcmVector *
 ncm_fftlog_get_vector_lnr (NcmFftlog *fftlog)
@@ -709,9 +754,10 @@ ncm_fftlog_get_vector_lnr (NcmFftlog *fftlog)
  * @fftlog: a #NcmFftlog
  * @comp: component number
  * 
- * FIXME
+ * Gets the vector of the transformed function $G(r)$, @comp = 0, or 
+ * its @comp-th derivative with respect to $\ln r$. 
  * 
- * Returns: (transfer full): FIXME
+ * Returns: (transfer full): a vector of $G(r)$ values or its @comp-th derivative.
  */
 NcmVector *
 ncm_fftlog_get_vector_Gr (NcmFftlog *fftlog, guint comp)
@@ -725,9 +771,10 @@ ncm_fftlog_get_vector_Gr (NcmFftlog *fftlog, guint comp)
  * @fftlog: a #NcmFftlog
  * @comp: component number
  * 
- * FIXME
+ * Peeks the spline of $G(r)$, @comp = 0, 
+ * or the spline of the @comp-th derivative of $G(r)$.
  * 
- * Returns: (transfer none): FIXME
+ * Returns: (transfer none): the @comp component of the spline.
  */
 NcmSpline *
 ncm_fftlog_peek_spline_Gr (NcmFftlog *fftlog, guint comp)
@@ -740,11 +787,11 @@ ncm_fftlog_peek_spline_Gr (NcmFftlog *fftlog, guint comp)
  * ncm_fftlog_eval_output:
  * @fftlog: a #NcmFftlog
  * @comp: component number
- * @lnr: FIXME
+ * @lnr: logarithm base e of $r$
  * 
- * FIXME
+ * Evaluates the function $G(r)$ at the point @lnr.
  * 
- * Returns: FIXME
+ * Returns: $G(r)$ value computed at @lnr.
  */
 gdouble 
 ncm_fftlog_eval_output (NcmFftlog *fftlog, guint comp, const gdouble lnr)
@@ -755,10 +802,11 @@ ncm_fftlog_eval_output (NcmFftlog *fftlog, guint comp, const gdouble lnr)
 /**
  * ncm_fftlog_calibrate_size: (skip)
  * @fftlog: a #NcmFftlog
- * @Fk: FIXME
- * @reltol: FIXME
+ * @Fk: Fk function pointer
+ * @reltol: relative tolerance
  * 
- * FIXME
+ * Increases the original (input) number of knots until the $G(r)$ splines reach 
+ * the required precision @reltol.  
  * 
  */
 void 
@@ -814,76 +862,61 @@ ncm_fftlog_calibrate_size (NcmFftlog *fftlog, gsl_function *Fk, gdouble reltol)
  * ncm_fftlog_get_size:
  * @fftlog: a #NcmFftlog
  * 
- * Gets the number of knots N where the integrated function is evaluated.
+ * Gets the number of knots $N^\prime$ where the integrated function is evaluated.
  * 
- * Returns: the number of knots N.
+ * Returns: the number of knots $N^\prime$.
  */
 /**
  * ncm_fftlog_get_full_size:
  * @fftlog: a #NcmFftlog
  * 
- * Gets the number of knots N where the integrated function is evaluated
+ * Gets the number of knots $N_f^\prime$ where the integrated function is evaluated
  * plus padding.
  * 
- * Returns: the total number of knots Nf.
+ * Returns: the total number of knots $N_f^\prime$.
  */
 /**
  * ncm_fftlog_get_norma:
  * @fftlog: a #NcmFftlog
  * 
- * FIXME
+ * Gets the number of knots $N_f^\prime$ where the integrated function is evaluated
+ * plus padding.
  * 
- * Returns: FIXME
+ * Returns: the total number of knots $N_f^\prime$ (double).
  */
 /**
  * ncm_fftlog_get_length:
  * @fftlog: a #NcmFftlog
  * 
- * Gets the value of the period, where the function is periodic in logarithmic space $\ln(r)$.
+ * Gets the value of the ``physical'' period, i.e., period of the fundamental interval.
  * 
- * Returns: the period
+ * Returns: the period $L$.
  */
 /**
  * ncm_fftlog_get_full_length:
  * @fftlog: a #NcmFftlog
  * 
- * FIXME
+ * Gets the value of the total period, i.e., period defined by the fundamental interval plus the padding size.
  * 
- * Returns: FIXME
+ * Returns: the total period $L_T$.
  */
 /**
  * ncm_fftlog_get_mode_index:
  * @fftlog: a #NcmFftlog
- * @i: FIXME
+ * @i: index
  * 
- * FIXME
+ * Gets the index of the mode @i of the Fourier decomposition. This index corresponds 
+ * to the lable $n$ in Eq. \eqref{eq:Gr_decomp}.
  * 
- * Returns: FIXME
- */
-/**
- * ncm_fftlog_get_variable_index:
- * @fftlog: a #NcmFftlog
- * @i: FIXME
- * 
- * FIXME
- * 
- * Returns: FIXME
- */
-/**
- * ncm_fftlog_get_output_index:
- * @fftlog: a #NcmFftlog
- * @i: FIXME
- * 
- * FIXME
- * 
- * Returns: FIXME
+ * Returns: the index of the mode
  */
 /**
  * ncm_fftlog_peek_output_vector:
  * @fftlog: a #NcmFftlog
- * @comp: FIXME
+ * @comp: component number
  * 
- * FIXME
+ * Peeks the output vector respective to $G(r)$, @comp = 0, or 
+ * its @comp-th derivative. 
  * 
- * Returns: (transfer none): FIXME
+ * Returns: (transfer none): the output vector $G(r)$ or its @comp-th derivative.  
  */

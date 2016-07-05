@@ -34,10 +34,16 @@
 /**
  * SECTION:ncm_fftlog_gausswin2
  * @title: NcmFftlogGausswin2
- * @short_description: Logarithm fast fourier transform for a kernel with a spherical bessel of order one squared.
+ * @short_description: Logarithm fast fourier transform for a kernel given by the square of a Gaussian window function.
  *
- * Kernel $(\exp(-(kR)^2/2))^2$.
- * 
+ *
+ * This object computes the function (see #NcmFftlog)
+ * $$Y_n = \int_0^\infty t^{\frac{2\pi i n}{L} K(t) dt,$$
+ * where the kernel is the square of the Gaussian window function $K(t) = W(t)^2$,
+ * \begin{equation}
+ * W(t) = \exp \left( \frac{-t^2}{2} \right).
+ * \end{equation}
+ *  
  */
 
 #ifdef HAVE_CONFIG_H
@@ -61,15 +67,15 @@ ncm_fftlog_gausswin2_init (NcmFftlogGausswin2 *gwin2)
 }
 
 static void
-ncm_fftlog_gausswin2_finalize (GObject *object)
+_ncm_fftlog_gausswin2_finalize (GObject *object)
 {
 
   /* Chain up : end */
   G_OBJECT_CLASS (ncm_fftlog_gausswin2_parent_class)->finalize (object);
 }
 
-void _ncm_fftlog_gausswin2_get_Ym (NcmFftlog *fftlog);
-void _ncm_fftlog_gausswin2_generate_Gr (NcmFftlog *fftlog);
+static void _ncm_fftlog_gausswin2_get_Ym (NcmFftlog *fftlog);
+static void _ncm_fftlog_gausswin2_generate_Gr (NcmFftlog *fftlog);
 
 static void
 ncm_fftlog_gausswin2_class_init (NcmFftlogGausswin2Class *klass)
@@ -77,7 +83,7 @@ ncm_fftlog_gausswin2_class_init (NcmFftlogGausswin2Class *klass)
   GObjectClass* object_class   = G_OBJECT_CLASS (klass);
   NcmFftlogClass *fftlog_class = NCM_FFTLOG_CLASS (klass);
 
-  object_class->finalize = ncm_fftlog_gausswin2_finalize;
+  object_class->finalize = &_ncm_fftlog_gausswin2_finalize;
 
   fftlog_class->name        = "gaussian_window_2";
   fftlog_class->ncomp       = 2;
@@ -85,7 +91,7 @@ ncm_fftlog_gausswin2_class_init (NcmFftlogGausswin2Class *klass)
   fftlog_class->generate_Gr = &_ncm_fftlog_gausswin2_generate_Gr;
 }
 
-void 
+static void 
 _ncm_fftlog_gausswin2_get_Ym (NcmFftlog *fftlog)
 {
   const gdouble twopi_Lt  = 2.0 * M_PI / ncm_fftlog_get_full_length (fftlog);
@@ -111,7 +117,7 @@ _ncm_fftlog_gausswin2_get_Ym (NcmFftlog *fftlog)
 #endif /* NUMCOSMO_HAVE_FFTW3 */
 }
 
-void 
+static void 
 _ncm_fftlog_gausswin2_generate_Gr (NcmFftlog *fftlog)
 {
 #ifdef NUMCOSMO_HAVE_FFTW3
