@@ -31,7 +31,6 @@
 #include <numcosmo/build_cfg.h>
 #include <numcosmo/lss/nc_growth_func.h>
 #include <numcosmo/lss/nc_transfer_func.h>
-#include <numcosmo/lss/nc_matter_var.h>
 #include <numcosmo/nc_distance.h>
 
 G_BEGIN_DECLS
@@ -54,7 +53,6 @@ struct _NcGalaxyAcf
   NcDistance *dist;
   NcTransferFunc *tf;
   NcmSpline *s;
-  NcMatterVar *vp;
   gdouble b;
 };
 

@@ -41,7 +41,6 @@
 #include "math/ncm_serialize.h"
 #include "math/ncm_cfg.h"
 #include "lss/nc_window_tophat.h"
-#include "lss/nc_matter_var.h"
 #include "xcor/nc_xcor.h"
 
 enum
@@ -116,15 +115,7 @@ void nc_xcor_prepare (NcXcor *xc, NcHICosmo *cosmo)
 	nc_transfer_func_prepare (xc->tf, cosmo);
 	nc_growth_func_prepare (xc->gf, cosmo);
 	nc_distance_prepare_if_needed (xc->dist, cosmo);
-
-	NcWindow* wp = nc_window_tophat_new ();
-	NcMatterVar* var = nc_matter_var_new (NC_MATTER_VAR_FFT, wp, xc->tf);
-	gdouble ln8_hMpc = log (8.0);
-	gdouble sigma82_no_norm = nc_matter_var_var0 (var, cosmo, ln8_hMpc);
-	gdouble sigma82 = pow (nc_hicosmo_sigma_8 (cosmo), 2.0);
-	xc->normPS = sigma82 / sigma82_no_norm;
 }
-
 
 typedef struct _xcor_limber_cross_cl_int
 {
@@ -147,14 +138,16 @@ static gdouble _xcor_limber_cross_cl_int_z (gdouble z, gpointer ptr)
 	gdouble k2z = nc_xcor_limber_eval_kernel (xcli->xcl2, xcli->cosmo, z, xcli->l);
 
 	gdouble xi_z = nc_distance_comoving (xcli->dist, xcli->cosmo, z); // dimensionless, ie it's in unit of hubble radius
-	gdouble kh = xcli->l / (xi_z * ncm_c_hubble_radius ()); // in h Mpc-1, hubble
-	gdouble power_spec_init = nc_hicosmo_powspec (xcli->cosmo, kh); // k^ns
+	gdouble kh = xcli->l / (xi_z * ncm_c_hubble_radius_hm1_Mpc ()); // in h Mpc-1, hubble
+	gdouble power_spec_init = 1.0;/*nc_hicosmo_powspec (xcli->cosmo, kh);*/ // k^ns
 	gdouble t_k = nc_transfer_func_eval (xcli->tf, xcli->cosmo, kh);
 	gdouble D_z = nc_growth_func_eval (xcli->gf, xcli->cosmo, z);
 	gdouble power_spec = power_spec_init * t_k * t_k * D_z * D_z;
 
 	gdouble E_z = nc_hicosmo_E (xcli->cosmo, z);
 
+g_assert_not_reached ();
+  
 	return E_z * k1z * k2z * power_spec / (xi_z * xi_z);
 }
 
@@ -246,15 +239,17 @@ static gdouble _xcor_limber_auto_cl_int_z (gdouble z, gpointer ptr)
 	gdouble k1z = nc_xcor_limber_eval_kernel (xcli->xcl, xcli->cosmo, z, xcli->l);
 
 	gdouble xi_z = nc_distance_comoving (xcli->dist, xcli->cosmo, z); // dimensionless, ie it's in unit of hubble radius
-	gdouble kh = (xcli->l + 0.5) / (xi_z * ncm_c_hubble_radius ()); // in h Mpc-1, hubble
+	gdouble kh = (xcli->l + 0.5) / (xi_z * ncm_c_hubble_radius_hm1_Mpc ()); // in h Mpc-1, hubble
 	// radius = c[m/s] / (the +0.5 is not to be forgotten, cf. LoVerde, M., & Afshordi, N. (2008). Extended Limber approximation. Physical Review D, 78(1), 123506. http://doi.org/10.1103/PhysRevD.78.123506)
-	gdouble power_spec_init = nc_hicosmo_powspec (xcli->cosmo, kh); // k^ns
+	gdouble power_spec_init = 1.0;/*nc_hicosmo_powspec (xcli->cosmo, kh);*/ // k^ns
 	gdouble t_k = nc_transfer_func_eval (xcli->tf, xcli->cosmo, kh);
 	gdouble D_z = nc_growth_func_eval (xcli->gf, xcli->cosmo, z);
 	gdouble power_spec = power_spec_init * t_k * t_k * D_z * D_z;
 
 	gdouble E_z = nc_hicosmo_E (xcli->cosmo, z);
 
+g_assert_not_reached ();
+  
 	return E_z * k1z * k1z * power_spec / (xi_z * xi_z);
 }
 

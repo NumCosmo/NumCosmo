@@ -63,7 +63,7 @@ _nc_transfer_func_pert_prepare (NcTransferFunc *tf, NcHICosmo *cosmo)
 	{
 		NcRecomb *recomb = nc_recomb_new_from_name ("NcRecombSeager");
 		tf_pert->pert = nc_pert_linear_new (cosmo, recomb, 1 << 3, 1e-7, 1e-7, 1e-10, 1e-10);
-		tf_pert->pspline = nc_pert_linear_splines_new (tf_pert->pert, NC_LINEAR_PERTURBATIONS_SPLINE_PHI, 60, 220, 1.0e-2, ncm_c_hubble_radius () * 1000.0);
+		tf_pert->pspline = nc_pert_linear_splines_new (tf_pert->pert, NC_LINEAR_PERTURBATIONS_SPLINE_PHI, 60, 220, 1.0e-2, ncm_c_hubble_radius_hm1_Mpc () * 1000.0);
 		tf_pert->init = TRUE;
 		nc_recomb_free (recomb);
 	}
@@ -74,14 +74,7 @@ static gdouble
 _nc_transfer_func_pert_calc (NcTransferFunc *tf, gdouble kh)
 {
   NcTransferFuncPert *tf_pert = NC_TRANSFER_FUNC_PERT (tf);
-  return ncm_spline_eval (NC_LINEAR_PERTURBATIONS_GET_SPLINE (tf_pert->pspline, NC_PERT_PHI), kh * ncm_c_hubble_radius ());
-}
-
-static gdouble
-_nc_transfer_func_pert_calc_matter_P (NcTransferFunc *tf, NcHICosmo *model, gdouble kh)
-{
-  gdouble T = _nc_transfer_func_pert_calc (tf, kh);
-  return T * T * nc_hicosmo_powspec (model, kh);
+  return ncm_spline_eval (NC_LINEAR_PERTURBATIONS_GET_SPLINE (tf_pert->pspline, NC_PERT_PHI), kh * ncm_c_hubble_radius_hm1_Mpc ());
 }
 
 static void
@@ -121,7 +114,6 @@ nc_transfer_func_pert_class_init (NcTransferFuncPertClass *klass)
 
   parent_class->prepare = &_nc_transfer_func_pert_prepare;
   parent_class->calc = &_nc_transfer_func_pert_calc;
-  parent_class->calc_matter_P = &_nc_transfer_func_pert_calc_matter_P;
 
   object_class->dispose = _nc_transfer_func_pert_dispose;
   object_class->finalize = _nc_transfer_func_pert_finalize;

@@ -55,6 +55,7 @@ nc_growth_func_init (NcGrowthFunc *gf)
   gf->cvode      = NULL;
   gf->yv         = N_VNew_Serial (2);
   gf->zf         = 0.0;
+  gf->Da0        = 0.0;
   gf->ctrl_cosmo = ncm_model_ctrl_new (NULL);
 }
 
@@ -87,8 +88,8 @@ nc_growth_func_class_init (NcGrowthFuncClass *klass)
 {
   GObjectClass* object_class = G_OBJECT_CLASS (klass);
 
-  object_class->dispose = _nc_growth_func_dispose;
-  object_class->finalize = _nc_growth_func_finalize;
+  object_class->dispose  = &_nc_growth_func_dispose;
+  object_class->finalize = &_nc_growth_func_finalize;
 }
 
 /**
@@ -147,31 +148,35 @@ nc_growth_func_clear (NcGrowthFunc **gf)
 }
 
 static gint
-growth_f (realtype z, N_Vector y, N_Vector ydot, gpointer f_data)
+growth_f (realtype a, N_Vector y, N_Vector ydot, gpointer f_data)
 {
-  NcmModel *model = NCM_MODEL (f_data);
-  gdouble E2 = nc_hicosmo_E2 (NC_HICOSMO (model), z);
-  gdouble dE2dz = nc_hicosmo_dE2_dz (NC_HICOSMO (model), z);
-  gdouble x = 1.0 + z;
-  gdouble Omega_m0 = nc_hicosmo_Omega_m0 (NC_HICOSMO (model));
+  NcHICosmo *cosmo       = NC_HICOSMO (f_data);
+  const gdouble a2       = a * a;
+  const gdouble a5       = a2 * gsl_pow_3 (a);
+  const gdouble z        = 1.0 / a - 1.0;
+  const gdouble E2       = nc_hicosmo_E2 (cosmo, z);
+  const gdouble dE2dz    = nc_hicosmo_dE2_dz (cosmo, z);
+  
+  const gdouble Omega_m0 = nc_hicosmo_Omega_m0 (cosmo);
+  const gdouble D        = NV_Ith_S (y, 0);
+  const gdouble B        = NV_Ith_S (y, 1);
 
-  NV_Ith_S (ydot, 0) = NV_Ith_S (y, 1);
-  NV_Ith_S (ydot, 1) =
-    (1.0 / x - dE2dz / (2.0 * E2)) * NV_Ith_S (y, 1) + 3.0 * Omega_m0 * x * NV_Ith_S (y, 0) / (2.0 * E2);
+  NV_Ith_S (ydot, 0) = B;
+  NV_Ith_S (ydot, 1) = (dE2dz / (2.0 * a2 * E2) - 3.0 / a) * B + 3.0 * Omega_m0 * D / (2.0 * a5 * E2);
 
-  //printf ("res = % 20.15g y1 = % 20.15g y0 = % 20.15g E2 = % 20.15g dE2dz = % 20.15g xOm = % 20.15g 1/x = % 20.15g\n", NV_Ith_S (ydot, 1), NV_Ith_S (y, 1), NV_Ith_S (y, 0), E2, dE2dz, x * Omega_m0, 1/x);
   return 0;
 }
 
 static gint
-growth_J (_NCM_SUNDIALS_INT_TYPE N, realtype z, N_Vector y, N_Vector fy, DlsMat J, gpointer jac_data, N_Vector tmp1, N_Vector tmp2,
-          N_Vector tmp3)
+growth_J (_NCM_SUNDIALS_INT_TYPE N, realtype a, N_Vector y, N_Vector fy, DlsMat J, gpointer jac_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3)
 {
-  NcmModel *model = NCM_MODEL (jac_data);
-  gdouble E2 = nc_hicosmo_E2 (NC_HICOSMO (model), z);
-  gdouble dE2dz = nc_hicosmo_dE2_dz (NC_HICOSMO (model), z);
-  gdouble x = 1.0 + z;
-  gdouble Omega_m0 = nc_hicosmo_Omega_m0 (NC_HICOSMO (model));
+  NcHICosmo *cosmo       = NC_HICOSMO (jac_data);
+  const gdouble a2       = a * a;
+  const gdouble a5       = a2 * gsl_pow_3 (a);
+  const gdouble z        = 1.0 / a - 1.0;
+  const gdouble E2       = nc_hicosmo_E2 (cosmo, z);
+  const gdouble dE2dz    = nc_hicosmo_dE2_dz (cosmo, z);
+  const gdouble Omega_m0 = nc_hicosmo_Omega_m0 (cosmo);
 
   NCM_UNUSED (N);
   NCM_UNUSED (y);
@@ -183,14 +188,13 @@ growth_J (_NCM_SUNDIALS_INT_TYPE N, realtype z, N_Vector y, N_Vector fy, DlsMat 
   DENSE_ELEM (J, 0, 0) = 0.0;
   DENSE_ELEM (J, 0, 1) = 1.0;
 
-  DENSE_ELEM (J, 1, 0) = 3.0 * Omega_m0 * x / (2.0 * E2);
-  DENSE_ELEM (J, 1, 1) = (1.0 / x - dE2dz / (2.0 * E2));
+  DENSE_ELEM (J, 1, 0) = 3.0 * Omega_m0 / (2.0 * a5 * E2);
+  DENSE_ELEM (J, 1, 1) = (dE2dz / (2.0 * a2 * E2) - 3.0 / a);
 
   return 0;
 }
 
-#define _NC_START_Z (1000.0)
-#define _NC_MAX_SPLINE_POINTS 50000
+#define _NC_GROWTH_FUNC_START_A (1.0e-15)
 
 /**
  * nc_growth_func_prepare:
@@ -203,10 +207,11 @@ growth_J (_NCM_SUNDIALS_INT_TYPE N, realtype z, N_Vector y, N_Vector fy, DlsMat 
 void
 nc_growth_func_prepare (NcGrowthFunc *gf, NcHICosmo *cosmo)
 {
-  gdouble zf, z;
-  gint i = _NC_MAX_SPLINE_POINTS - 1;
-  gint ii = 0;
   GArray *x_array, *y_array;
+  gdouble ai, a;
+  gint flag;
+
+  ai = _NC_GROWTH_FUNC_START_A;
 
   if (gf->s != NULL)
   {
@@ -215,80 +220,75 @@ nc_growth_func_prepare (NcGrowthFunc *gf, NcHICosmo *cosmo)
   }
   else
   {
-    x_array = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), _NC_MAX_SPLINE_POINTS);
-    y_array = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), _NC_MAX_SPLINE_POINTS);
+    x_array = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), 1000);
+    y_array = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), 1000);
   }
 
-  g_array_set_size (x_array, _NC_MAX_SPLINE_POINTS);
-  g_array_set_size (y_array, _NC_MAX_SPLINE_POINTS);
+  g_array_set_size (x_array, 0);
+  g_array_set_size (y_array, 0);
 
-  NV_Ith_S (gf->yv, 0) = 1.0 / _NC_START_Z;
-  NV_Ith_S (gf->yv, 1) = -1.0 / gsl_pow_2 (_NC_START_Z);
+  NV_Ith_S (gf->yv, 0) = 1.0;
+  NV_Ith_S (gf->yv, 1) = 3.0 * nc_hicosmo_Omega_m0 (cosmo) / (2.0 * nc_hicosmo_Omega_r0 (cosmo));
 
   if (gf->cvode == NULL)
   {
-    gf->cvode = CVodeCreate (CV_ADAMS, CV_FUNCTIONAL);
-    CVodeInit (gf->cvode, &growth_f, _NC_START_Z, gf->yv);
-    if (FALSE)
-    {
-      CVDense (gf->cvode, 2);
-      CVDlsSetDenseJacFn (gf->cvode, &growth_J);
-    }
+    gf->cvode = CVodeCreate (CV_BDF, CV_NEWTON);
+
+    flag = CVodeInit (gf->cvode, &growth_f, ai, gf->yv);
+    NCM_CVODE_CHECK (&flag, "CVodeInit", 1, );
+
+    flag = CVDense (gf->cvode, 2);
+    NCM_CVODE_CHECK (&flag, "CVDense", 1, );
+
+    flag = CVDlsSetDenseJacFn (gf->cvode, &growth_J);
+    NCM_CVODE_CHECK (&flag, "CVDlsSetDenseJacFn", 1, );
   }
   else
   {
-    CVodeReInit (gf->cvode, _NC_START_Z, gf->yv);
+    flag = CVodeReInit (gf->cvode, ai, gf->yv);
+    NCM_CVODE_CHECK (&flag, "CVodeReInit", 1, );
   }
 
-  CVodeSStolerances (gf->cvode, 1e-13, 0.0);
-  CVodeSetMaxNumSteps (gf->cvode, 50000);
-  CVodeSetUserData (gf->cvode, cosmo);
-  CVodeSetStopTime (gf->cvode, 0.0);
+  flag = CVodeSStolerances (gf->cvode, 1e-13, 0.0);
+  NCM_CVODE_CHECK (&flag, "CVodeSStolerances", 1, );
+  
+  flag = CVodeSetMaxNumSteps (gf->cvode, 500000);
+  NCM_CVODE_CHECK (&flag, "CVodeSetMaxNumSteps", 1, );
+  
+  flag = CVodeSetUserData (gf->cvode, cosmo);
+  NCM_CVODE_CHECK (&flag, "CVodeSetUserData", 1, );
+  
+  flag = CVodeSetStopTime (gf->cvode, 1.0);
+  NCM_CVODE_CHECK (&flag, "CVodeSetStopTime", 1, );
 
-  g_array_index (y_array, gdouble, i) = 1.0 / _NC_START_Z;
-  g_array_index (x_array, gdouble, i) = _NC_START_Z;
-  i--;
+  g_array_append_val (x_array, ai);
+  g_array_append_val (y_array, NV_Ith_S (gf->yv, 0));
 
-  zf = _NC_START_Z;
   while (TRUE)
   {
-    gint flag = CVode (gf->cvode, 0.0, gf->yv, &z, CV_ONE_STEP);
+    gint flag = CVode (gf->cvode, 1.0, gf->yv, &a, CV_ONE_STEP);
     NCM_CVODE_CHECK (&flag, "CVode", 1, );
 
-    if (zf == z && ii++ > 10)
-      g_error ("nc_growth_func_prepare: cannot integrate function.");
-    zf = z;
-    
-    g_array_index (y_array, gdouble, i) = NV_Ith_S (gf->yv, 0);
-    g_array_index (x_array, gdouble, i) = zf;
+    g_array_append_val (x_array, a);
+    g_array_append_val (y_array, NV_Ith_S (gf->yv, 0));
 
-    if (zf == 0.0)
+    if (a == 1.0)
       break;
-
-    i--;
-    if (i < 0)
-    {
-      /* i = i + 101; */
-      for (i = 100; i >= 0; i--)
-      {
-        printf ("zf = %20.16g D = % 20.16g\n", g_array_index (x_array, gdouble, i), g_array_index (y_array, gdouble, i));
-      }
-      g_error ("Error: More than %d points to compute the growth spline.", _NC_MAX_SPLINE_POINTS);
-    }
-
   }
 
-  g_array_remove_range (y_array, 0, i);
-  g_array_remove_range (x_array, 0, i);
-
   if (gf->s == NULL)
+  {
     gf->s = ncm_spline_cubic_notaknot_new ();
+  }
 
   {
     NcmVector *xv = ncm_vector_new_array (x_array);
     NcmVector *yv = ncm_vector_new_array (y_array);
-    ncm_vector_scale (yv, 1.0 / ncm_vector_get (yv, 0));
+
+    gf->Da0 = ncm_vector_get (yv, y_array->len - 1);
+    ncm_vector_scale (yv, 1.0 / gf->Da0);
     ncm_spline_set (gf->s, xv, yv, TRUE);
+
     ncm_vector_free (xv);
     ncm_vector_free (yv);
   }
@@ -342,8 +342,15 @@ nc_growth_func_prepare_if_needed (NcGrowthFunc *gf, NcHICosmo *cosmo)
  * @gf: a #NcGrowthFunc
  * @cosmo: a #NcHICosmo
  * @z: redshift $z$
- * @d: Growth function
- * @f: Growth function derivative
+ * @d: (out): Growth function
+ * @f: (out): Growth function derivative
+ *
+ * FIXME
+ *
+ */
+/**
+ * nc_growth_func_get_Da0:
+ * @gf: a #NcGrowthFunc
  *
  * FIXME
  *

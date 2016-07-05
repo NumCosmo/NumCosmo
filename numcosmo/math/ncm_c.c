@@ -140,6 +140,11 @@ ncm_c_class_init (NcmCClass *klass)
  * Returns: $\pi$.
  */
 /**
+ * ncm_c_2_pi_2:
+ *
+ * Returns: $2\pi^2$.
+ */
+/**
  * ncm_c_tan_1arcsec:
  *
  * Returns: $\tan(2 \pi/ (360 \times 60 \times 60))$.
@@ -1681,18 +1686,18 @@ ncm_c_class_init (NcmCClass *klass)
  *
  */
 /**
- * ncm_c_hubble_radius:
+ * ncm_c_hubble_radius_hm1:
  *
  * FIXME
  *
- * Returns: Hubble radius
+ * Returns: Hubble radius $R_H h^{-1} \left[\text{Mpc}\right]$.
  */
 /**
  * ncm_c_hubble_radius_planck:
  *
  * FIXME
  *
- * Returns: Hubble radius
+ * Returns: Hubble radius $R_H h^{-1} \left[l_\text{p}\right]$.
  */
 /**
  * ncm_c_crit_density_h2:
@@ -1703,7 +1708,7 @@ ncm_c_class_init (NcmCClass *klass)
  * \end{equation}
  * where $G$ is the gravitational constant (#ncm_c_G()), $c$ is the speed of light 
  * (#ncm_c_c()) and $H_0$ is the Hubble parameter,
- * $$H_0 = 100 \times \mathsf{h} \,\left[\text{km}\,\text{s}^{-1}\,\text{Mpc}^{-1}\right.$$
+ * $$H_0 = 100 \times \mathsf{h} \,\left[\text{km}\,\text{s}^{-1}\,\text{Mpc}^{-1}\right].$$
  * 
  * Returns: Critical density over $\mathsf{h}^2$, $$\frac{\rho_{\mathrm{crit}0}}{\mathsf{h}^2} \left[\frac{\text{kg}}{\text{m}^3} \frac{\text{m}^2}{\text{s}^2}\right].$$
  */

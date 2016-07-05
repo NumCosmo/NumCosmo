@@ -61,7 +61,6 @@ nc_transfer_func_bbks_finalize (GObject *object)
 
 static void _nc_transfer_func_bbks_prepare (NcTransferFunc *tf, NcHICosmo *cosmo);
 static gdouble _nc_transfer_func_bbks_calc (NcTransferFunc *tf, gdouble kh);
-static gdouble _nc_transfer_func_bbks_calc_matter_P (NcTransferFunc *tf, NcHICosmo *cosmo, gdouble kh);
 
 static void
 nc_transfer_func_bbks_class_init (NcTransferFuncBBKSClass *klass)
@@ -71,7 +70,6 @@ nc_transfer_func_bbks_class_init (NcTransferFuncBBKSClass *klass)
 
   parent_class->prepare = &_nc_transfer_func_bbks_prepare;
   parent_class->calc = &_nc_transfer_func_bbks_calc;
-  parent_class->calc_matter_P = &_nc_transfer_func_bbks_calc_matter_P;
 
   object_class->finalize = nc_transfer_func_bbks_finalize;
 }
@@ -123,11 +121,4 @@ _nc_transfer_func_bbks_calc (NcTransferFunc *tf, gdouble kh)
   const gdouble q4 = q3 * q;
 
   return (q1 == 0.0 ? 1.0 : (log1p (q1) / q1)) * pow (1.0 + tf_BBKS->c1 * q + tf_BBKS->c2 * q2 + tf_BBKS->c3 * q3 + tf_BBKS->c4 * q4, -1.0 / 4.0);
-}
-
-static gdouble
-_nc_transfer_func_bbks_calc_matter_P (NcTransferFunc *tf, NcHICosmo *cosmo, gdouble kh)
-{
-  gdouble T = _nc_transfer_func_bbks_calc (tf, kh);
-  return T * T * nc_hicosmo_powspec (cosmo, kh);
 }

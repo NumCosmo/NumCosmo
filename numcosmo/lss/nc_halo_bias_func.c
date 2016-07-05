@@ -217,7 +217,7 @@ nc_halo_bias_func_class_init (NcHaloBiasFuncClass *klass)
 /**
  * nc_halo_bias_func_integrand:
  * @mbiasf: a #NcHaloBiasFunc.
- * @model: a #NcHICosmo.
+ * @cosmo: a #NcHICosmo.
  * @lnM: logarithm base e of the mass.
  * @z: redshift.
  *
@@ -230,26 +230,13 @@ nc_halo_bias_func_class_init (NcHaloBiasFuncClass *klass)
  * Returns: a double which corresponds to the mean bias integrand for lnM and at redshift z.
  */
 gdouble
-nc_halo_bias_func_integrand (NcHaloBiasFunc *mbiasf, NcHICosmo *model, gdouble lnM, gdouble z)
+nc_halo_bias_func_integrand (NcHaloBiasFunc *mbiasf, NcHICosmo *cosmo, gdouble lnM, gdouble z)
 {
-  gdouble lnR = nc_matter_var_lnM_to_lnR (mbiasf->mfp->vp, model, lnM);
-  gdouble R = exp (lnR);
-  gdouble M_rho = nc_window_volume (mbiasf->mfp->vp->wp) * gsl_pow_3(R);   /* M/\rho comoving, rho independe de z */
-  gdouble var0 = nc_matter_var_var0 (mbiasf->mfp->vp, model, lnR);
-  //printf("var0 = %.5g\n", var0);
-  gdouble dlnvar0_dlnR = nc_matter_var_dlnvar0_dlnR (mbiasf->mfp->vp, model, lnR);
-  //printf("dlnvar0_dlnR = %.5g\n", dlnvar0_dlnR);
-  gdouble growth = nc_growth_func_eval (mbiasf->mfp->gf, model, z);
-  //printf("growth = %.5g\n", growth);
-  gdouble sigma = nc_matter_var_sigma8_sqrtvar0 (mbiasf->mfp->vp, model) * sqrt(var0) * growth;
-  gdouble f = nc_multiplicity_func_eval (mbiasf->mfp->mulf, model, sigma, z);
-  gdouble dn_dlnM = -(1.0 / (3.0 * M_rho)) * f * 0.5 * dlnvar0_dlnR;  /* dn/dlnM = - (\rho/3M) * f * (R/\sigma)* dsigma_dR */
-  gdouble bias = nc_halo_bias_type_eval (mbiasf->biasf, sigma, z);
+  gdouble sigma, dn_dlnM, bias;
 
-  /*printf ("%.5g %.5g %.5g %.5g %.5g\n", lnM, lnR / M_LN10, -(1.0 / (3.0 * M_rho)), f, 0.5 * dlnvar0_dlnR);*/
-  /*printf("log_nu = %.5g sigma = %.5g f = %.5g n = %.5g log_b = %.5g\n", log10(1.686/sigma), sigma, f, dn_dlnM, log10(bias));*/
+  nc_halo_mass_function_dn_dlnM_sigma (mbiasf->mfp, cosmo, lnM, z, &sigma, &dn_dlnM);
 
-  /*printf("nu = %.5g logsigma = %.5g sigma = %.5g f = %.5g b = %.5g\n", log10(1.686/sigma), log10(sigma), sigma, f, bias);*/
+  bias = nc_halo_bias_type_eval (mbiasf->biasf, sigma, z);
 
   return dn_dlnM * bias;
 }

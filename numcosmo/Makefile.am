@@ -256,6 +256,8 @@ nc_headers = \
 	nc_powspec_ml.h               \
 	nc_powspec_ml_transfer.h      \
 	nc_powspec_ml_cbe.h           \
+	nc_powspec_mnl.h              \
+	nc_powspec_mnl_halofit.h      \
 	nc_snia_dist_cov.h            \
 	nc_planck_fi.h                \
 	nc_planck_fi_cor_tt.h         \
@@ -287,7 +289,6 @@ nc_headers = \
 	lss/nc_transfer_func_camb.h   \
 	lss/nc_transfer_func_pert.h   \
 	lss/nc_growth_func.h          \
-	lss/nc_matter_var.h           \
 	lss/nc_density_profile.h      \
 	lss/nc_density_profile_nfw.h  \
 	lss/nc_galaxy_acf.h           \
@@ -375,6 +376,8 @@ nc_sources = \
 	nc_powspec_ml.c               \
 	nc_powspec_ml_transfer.c      \
 	nc_powspec_ml_cbe.c           \
+	nc_powspec_mnl.c              \
+	nc_powspec_mnl_halofit.c      \
 	nc_snia_dist_cov.c            \
 	nc_planck_fi.c                \
 	nc_planck_fi_cor_tt.c         \
@@ -406,7 +409,6 @@ nc_sources = \
 	lss/nc_transfer_func_camb.c   \
 	lss/nc_transfer_func_pert.c   \
 	lss/nc_growth_func.c          \
-	lss/nc_matter_var.c           \
 	lss/nc_density_profile.c      \
 	lss/nc_density_profile_nfw.c  \
 	lss/nc_galaxy_acf.c           \

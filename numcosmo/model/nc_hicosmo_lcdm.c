@@ -50,8 +50,6 @@ G_DEFINE_TYPE (NcHICosmoLCDM, nc_hicosmo_lcdm, NC_TYPE_HICOSMO);
 #define ENNU      (ncm_vector_get (VECTOR, NC_HICOSMO_DE_ENNU))
 #define OMEGA_R   nc_hicosmo_Omega_r0 (cosmo)
 #define OMEGA_B   (ncm_vector_get (VECTOR, NC_HICOSMO_DE_OMEGA_B))
-#define SPECINDEX (ncm_vector_get (VECTOR, NC_HICOSMO_DE_SPECINDEX))
-#define SIGMA8    (ncm_vector_get (VECTOR, NC_HICOSMO_DE_SIGMA8))
 
 #define OMEGA_M (OMEGA_B + OMEGA_C)
 #define OMEGA_K (1.0 - (OMEGA_B + OMEGA_C + OMEGA_R + OMEGA_X))
@@ -138,8 +136,6 @@ _nc_hicosmo_lcdm_bgp_cs2 (NcHICosmo *cosmo, gdouble z)
   
   return 1.0 / (3.0 + nine_4 * Omega_b0 / (Omega_g0 * x));
 }
-static gdouble _nc_hicosmo_lcdm_sigma_8 (NcHICosmo *cosmo) { return SIGMA8; }
-static gdouble _nc_hicosmo_lcdm_powspec (NcHICosmo *cosmo, gdouble k) { return pow (k, SPECINDEX); }
 
 /**
  * nc_hicosmo_lcdm_new:
@@ -221,16 +217,6 @@ nc_hicosmo_lcdm_class_init (NcHICosmoLCDMClass *klass)
                                1e-8,  10.0, 1.0e-2,
                                NC_HICOSMO_DEFAULT_PARAMS_ABSTOL, NC_HICOSMO_DE_DEFAULT_OMEGA_B,
                                NCM_PARAM_TYPE_FIXED);
-  /* Set n_s param info */
-  ncm_model_class_set_sparam (model_class, NC_HICOSMO_DE_SPECINDEX, "n_s", "ns",
-                               0.5,   1.5, 1.0e-2,
-                               NC_HICOSMO_DEFAULT_PARAMS_ABSTOL, NC_HICOSMO_DE_DEFAULT_SPECINDEX,
-                               NCM_PARAM_TYPE_FIXED);
-  /* Set sigma_8 param info */
-  ncm_model_class_set_sparam (model_class, NC_HICOSMO_DE_SIGMA8, "\\sigma_8", "sigma8",
-                               0.2,   1.8, 1.0e-2,
-                               NC_HICOSMO_DEFAULT_PARAMS_ABSTOL, NC_HICOSMO_DE_DEFAULT_SIGMA8,
-                               NCM_PARAM_TYPE_FIXED);
   /* Check for errors in parameters initialization */
   ncm_model_class_check_params_info (model_class);
 
@@ -242,7 +228,6 @@ nc_hicosmo_lcdm_class_init (NcHICosmoLCDMClass *klass)
   nc_hicosmo_set_Omega_g0_impl   (parent_class, &_nc_hicosmo_lcdm_Omega_g0);
   nc_hicosmo_set_Omega_nu0_impl  (parent_class, &_nc_hicosmo_lcdm_Omega_nu0);
   nc_hicosmo_set_Omega_t0_impl   (parent_class, &_nc_hicosmo_lcdm_Omega_t0);
-  nc_hicosmo_set_sigma_8_impl   (parent_class, &_nc_hicosmo_lcdm_sigma_8);
   nc_hicosmo_set_T_gamma0_impl  (parent_class, &_nc_hicosmo_lcdm_T_gamma0);
   nc_hicosmo_set_Yp_4He_impl    (parent_class, &_nc_hicosmo_lcdm_Yp_4He);
 
@@ -250,5 +235,4 @@ nc_hicosmo_lcdm_class_init (NcHICosmoLCDMClass *klass)
   nc_hicosmo_set_d2E2_dz2_impl  (parent_class, &_nc_hicosmo_lcdm_d2E2_dz2);
 
   nc_hicosmo_set_bgp_cs2_impl   (parent_class, &_nc_hicosmo_lcdm_bgp_cs2);
-  nc_hicosmo_set_powspec_impl   (parent_class, &_nc_hicosmo_lcdm_powspec);
 }

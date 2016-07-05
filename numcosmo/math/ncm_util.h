@@ -96,6 +96,8 @@ gdouble ncm_complex_Im (NcmComplex *c);
 #define exp10(x) (exp ((x) * M_LN10))
 #endif /* HAVE_EXP10 */
 
+#define ncm_util_exp10(x) (exp ((x) * M_LN10))
+
 #define NCM_GARRAY_MEMCPY(dest,src) \
 G_STMT_START { \
 g_assert_cmpuint ((src)->len, ==, (dest)->len); \

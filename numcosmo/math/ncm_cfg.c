@@ -79,7 +79,6 @@
 #include "lss/nc_transfer_func_eh.h"
 #include "lss/nc_transfer_func_camb.h"
 #include "lss/nc_transfer_func_pert.h"
-#include "lss/nc_matter_var.h"
 #include "lss/nc_density_profile.h"
 #include "lss/nc_density_profile_nfw.h"
 #include "lss/nc_multiplicity_func.h"
@@ -337,8 +336,6 @@ ncm_cfg_init (void)
   ncm_cfg_register_obj (NC_TYPE_TRANSFER_FUNC_EH);
   ncm_cfg_register_obj (NC_TYPE_TRANSFER_FUNC_CAMB);
   ncm_cfg_register_obj (NC_TYPE_TRANSFER_FUNC_PERT);
-
-  ncm_cfg_register_obj (NC_TYPE_MATTER_VAR);
 
   ncm_cfg_register_obj (NC_TYPE_DENSITY_PROFILE);
   ncm_cfg_register_obj (NC_TYPE_DENSITY_PROFILE_NFW);

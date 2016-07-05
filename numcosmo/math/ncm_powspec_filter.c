@@ -62,6 +62,8 @@ enum
   PROP_0,
   PROP_TYPE,
   PROP_LNR0,
+  PROP_ZI,
+  PROP_ZF,
   PROP_RELTOL,
   PROP_POWERSPECTRUM
 };
@@ -73,12 +75,15 @@ ncm_powspec_filter_init (NcmPowspecFilter *psf)
 {
   psf->ps         = NULL;
   psf->lnr0       = 0.0;
+  psf->zi         = 0.0;
+  psf->zf         = 0.0;
   psf->reltol     = 0.0;
   psf->type       = NCM_POWSPEC_FILTER_TYPE_LEN;
   psf->fftlog     = NULL;
   psf->calibrated = FALSE;
   psf->var        = ncm_spline2d_bicubic_notaknot_new ();
   psf->dvar       = ncm_spline2d_bicubic_notaknot_new ();
+  psf->ctrl       = ncm_model_ctrl_new (NULL);
 }
 
 static void
@@ -95,11 +100,19 @@ ncm_powspec_filter_set_property (GObject *object, guint prop_id, const GValue *v
     case PROP_LNR0:
       ncm_powspec_filter_set_lnr0 (psf, g_value_get_double (value));
       break;
+    case PROP_ZI:
+      ncm_powspec_filter_set_zi (psf, g_value_get_double (value));
+      break;
+    case PROP_ZF:
+      ncm_powspec_filter_set_zf (psf, g_value_get_double (value));
+      break;
     case PROP_RELTOL:
       psf->reltol = g_value_get_double (value);
       break;
     case PROP_POWERSPECTRUM:
       psf->ps = g_value_dup_object (value);
+      psf->zi = ncm_powspec_get_zi (psf->ps);
+      psf->zf = ncm_powspec_get_zf (psf->ps);
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -120,6 +133,12 @@ ncm_powspec_filter_get_property (GObject *object, guint prop_id, GValue *value, 
       break;
     case PROP_LNR0:
       g_value_set_double (value, psf->lnr0);
+      break;
+    case PROP_ZI:
+      g_value_set_double (value, psf->zi);
+      break;
+    case PROP_ZF:
+      g_value_set_double (value, psf->zf);
       break;
     case PROP_RELTOL:
       g_value_set_double (value, psf->reltol);
@@ -143,6 +162,8 @@ ncm_powspec_filter_dispose (GObject *object)
 
   ncm_spline2d_clear (&psf->var);
   ncm_spline2d_clear (&psf->dvar);
+
+  ncm_model_ctrl_clear (&psf->ctrl);
   
   /* Chain up : end */
   G_OBJECT_CLASS (ncm_powspec_filter_parent_class)->dispose (object);
@@ -173,6 +194,20 @@ ncm_powspec_filter_class_init (NcmPowspecFilterClass *klass)
                                                         "Output center value",
                                                         -G_MAXDOUBLE, G_MAXDOUBLE, 0.0,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  g_object_class_install_property (object_class,
+                                   PROP_ZI,
+                                   g_param_spec_double ("zi",
+                                                        NULL,
+                                                        "Output initial time",
+                                                        -G_MAXDOUBLE, G_MAXDOUBLE, 0.0,
+                                                        G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  g_object_class_install_property (object_class,
+                                   PROP_ZF,
+                                   g_param_spec_double ("zf",
+                                                        NULL,
+                                                        "Output final time",
+                                                        -G_MAXDOUBLE, G_MAXDOUBLE, 1.0,
+                                                        G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
   g_object_class_install_property (object_class,
                                    PROP_RELTOL,
                                    g_param_spec_double ("reltol",
@@ -262,7 +297,6 @@ ncm_powspec_filter_set_type (NcmPowspecFilter *psf, NcmPowspecFilterType type)
 
     ncm_fftlog_clear (&psf->fftlog);
     psf->type = type;
-    psf->lnr0 = -lnk0;
 
     switch (psf->type)
     {
@@ -278,6 +312,8 @@ ncm_powspec_filter_set_type (NcmPowspecFilter *psf, NcmPowspecFilterType type)
     }
 
     ncm_fftlog_set_padding (psf->fftlog, 2.0);
+    ncm_model_ctrl_force_update (psf->ctrl);
+    psf->calibrated = FALSE;
   }
 }
 
@@ -334,6 +370,7 @@ ncm_powspec_filter_prepare (NcmPowspecFilter *psf, NcmModel *model)
     guint i;
 
     ncm_powspec_get_nknots (psf->ps, &N_z, &N_k);
+    
     ncm_fftlog_calibrate_size (psf->fftlog, &F, psf->reltol);
     N_k = ncm_fftlog_get_size (psf->fftlog);
 
@@ -368,6 +405,49 @@ ncm_powspec_filter_prepare (NcmPowspecFilter *psf, NcmModel *model)
     
     psf->calibrated = TRUE;
   }
+  else
+  {
+    NcmMatrix *lnvar  = psf->var->zm;
+    NcmMatrix *dlnvar = psf->dvar->zm;
+    
+    guint N_k = 0, N_z = 0;
+    guint i;
+
+    ncm_powspec_get_nknots (psf->ps, &N_z, &N_k);
+    N_k = ncm_fftlog_get_size (psf->fftlog);
+
+    for (i = 0; i < N_z; i++)
+    {
+      NcmVector *var_z  = ncm_matrix_get_row (lnvar, i);
+      NcmVector *dvar_z = ncm_matrix_get_row (dlnvar, i);
+
+      arg.z = ncm_vector_get (psf->var->yv, i);
+      ncm_fftlog_eval_by_function (psf->fftlog, &F);
+
+      ncm_vector_memcpy (var_z, ncm_fftlog_peek_output_vector (psf->fftlog, 0));
+      ncm_vector_memcpy (dvar_z, ncm_fftlog_peek_output_vector (psf->fftlog, 1));
+    }
+
+    ncm_spline2d_prepare (psf->var);
+    ncm_spline2d_prepare (psf->dvar);
+  }
+}
+
+/**
+ * ncm_powspec_filter_prepare_if_needed:
+ * @psf: a #NcmPowspecFilter
+ * @model: a #NcmModel
+ * 
+ * Prepares (if necessary) the object applying the filter to the powerspectrum.
+ * 
+ */
+void
+ncm_powspec_filter_prepare_if_needed (NcmPowspecFilter *psf, NcmModel *model)
+{
+  gboolean model_up = ncm_model_ctrl_update (psf->ctrl, model);
+
+  if (model_up)
+    ncm_powspec_filter_prepare (psf, model);
 }
 
 /**
@@ -381,7 +461,77 @@ ncm_powspec_filter_prepare (NcmPowspecFilter *psf, NcmModel *model)
 void 
 ncm_powspec_filter_set_lnr0 (NcmPowspecFilter *psf, gdouble lnr0)
 {
-  psf->lnr0 = lnr0;
+  if (psf->lnr0 != lnr0)
+  {
+    const gdouble lnk_min = log (psf->ps->kmin);
+    const gdouble lnk_max = log (psf->ps->kmax);
+    const gdouble lnk0    = 0.5 * (lnk_max + lnk_min);
+
+    psf->lnr0 = lnr0;
+    ncm_model_ctrl_force_update (psf->ctrl);
+    psf->calibrated = FALSE;
+    ncm_fftlog_set_lnr0 (psf->fftlog, psf->lnr0);
+
+    if (psf->lnr0 < -lnk0)
+      g_warning ("ncm_powspec_filter_set_lnr0: the requested center of the output does not satisfy r0k0 > 1.");
+  }
+}
+
+/**
+ * ncm_powspec_filter_set_best_lnr0:
+ * @psf: a #NcmPowspecFilter
+ * 
+ * FIXME
+ * 
+ */
+void 
+ncm_powspec_filter_set_best_lnr0 (NcmPowspecFilter *psf)
+{
+  const gdouble lnk_min = log (psf->ps->kmin);
+  const gdouble lnk_max = log (psf->ps->kmax);
+  const gdouble lnk0    = 0.5 * (lnk_max + lnk_min);
+
+  ncm_powspec_filter_set_lnr0 (psf, -lnk0);
+}
+
+/**
+ * ncm_powspec_filter_set_zi:
+ * @psf: a #NcmPowspecFilter
+ * @zi: the output initial time $z_i$
+ * 
+ * FIXME
+ * 
+ */
+void 
+ncm_powspec_filter_set_zi (NcmPowspecFilter *psf, gdouble zi)
+{
+  if (psf->zi != zi)
+  {
+    psf->zi = zi;
+    ncm_model_ctrl_force_update (psf->ctrl);
+    psf->calibrated = FALSE;
+    ncm_powspec_require_zi (psf->ps, zi);
+  }
+}
+
+/**
+ * ncm_powspec_filter_set_zf:
+ * @psf: a #NcmPowspecFilter
+ * @zf: the output final time $z_i$
+ * 
+ * FIXME
+ * 
+ */
+void 
+ncm_powspec_filter_set_zf (NcmPowspecFilter *psf, gdouble zf)
+{
+  if (psf->zf != zf)
+  {
+    psf->zf = zf;
+    ncm_model_ctrl_force_update (psf->ctrl);
+    psf->calibrated = FALSE;
+    ncm_powspec_require_zf (psf->ps, zf);
+  }
 }
 
 /**
@@ -521,6 +671,7 @@ ncm_powspec_filter_volume_rm3 (NcmPowspecFilter *psf)
 {
   const gdouble tophat_volumeRm3 = 4.0 * M_PI / 3.0;
   const gdouble gauss_volumeRm3  = sqrt (2.0 * M_PI) * sqrt(2.0 * M_PI) * sqrt(2.0 * M_PI);
+
   switch (psf->type)
   {
     case NCM_POWSPEC_FILTER_TYPE_TOPHAT:
@@ -531,8 +682,7 @@ ncm_powspec_filter_volume_rm3 (NcmPowspecFilter *psf)
       break;
     default:
       g_assert_not_reached ();
+      return 0.0;
       break;
   }
-  return 0.0;
 }
-

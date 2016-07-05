@@ -58,7 +58,7 @@ struct _NcDEModelEntries
   gboolean help_names;
 };
 
-#define NC_DE_MODEL_ENTRIES {NULL, "NcHICosmoDEXcdm", "NcHIReionCamb", "NcHIPrimPowerLaw", FALSE, FALSE, FALSE, FALSE}
+#define NC_DE_MODEL_ENTRIES {NULL, NULL, NULL, NULL, FALSE, FALSE, FALSE, FALSE}
 
 typedef struct _NcDEDataSimpleEntries NcDEDataSimpleEntries;
 
@@ -97,17 +97,17 @@ typedef struct _NcDEDataClusterEntries NcDEDataClusterEntries;
  */
 struct _NcDEDataClusterEntries
 {
-  gchar *window_name;
-  gchar *transfer_name;
+  gchar *filter_type;
+  gchar *ps_type;
   gchar *multiplicity_name;
   gchar *clusterm_ser;
   gchar *clusterz_ser;
-  gint mf_ds_index;    /* refers to the multiplicity function */
+  gint mf_ds_index;
   gboolean use_true_data;
   gboolean binned;
   gboolean binmass;
-  gboolean use_Mobs_local; /* sigma_lnM varies with z and lnM. (matching catalog)*/
-  gboolean use_selection; /* selection function = completeness / purity (matching catalog) */
+  gboolean use_Mobs_local;
+  gboolean use_selection;
   gdouble area_survey;
   gint n_bins;
   gchar **cata_file;
@@ -115,7 +115,7 @@ struct _NcDEDataClusterEntries
   gboolean print_mass_function;
 };
 
-#define NC_DE_DATA_CLUSTER_ENTRIES {"NcWindowTophat", "NcTransferFuncEH", "NcMultiplicityFuncTinkerMean", "NcClusterMassNodist", "NcClusterRedshiftNodist", 0, FALSE, FALSE, FALSE, FALSE, FALSE, 5000.0, 10, NULL, NULL, FALSE}
+#define NC_DE_DATA_CLUSTER_ENTRIES {NULL, NULL, NULL, NULL, NULL, 0, FALSE, FALSE, FALSE, FALSE, FALSE, 5000.0, 10, NULL, NULL, FALSE}
 
 typedef struct _NcDEFitEntries NcDEFitEntries;
 
@@ -167,11 +167,7 @@ struct _NcDEFitEntries
   gchar *save_mset;
 };
 
-#ifdef NUMCOSMO_HAVE_NLOPT
-#define NC_DE_FIT_ENTRIES { NULL, "nlopt",   "numdiff-forward", NULL, 1e-8, 1e-5, -1, -1, {NULL, NULL}, NULL, 1.0e-5, NCM_FIT_DEFAULT_MAXITER, FALSE, NCM_FIT_RUN_MSGS_SIMPLE, NCM_FIT_MC_RESAMPLE_FROM_MODEL, 0, 0, -1, 100, 0, 100, 1.0e3, NULL, NULL, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, 1.0, FALSE, FALSE, NULL}
-#else
-#define NC_DE_FIT_ENTRIES { NULL, "gsl-mms", "numdiff-forward", NULL, 1e-8, 1e-5, -1, -1, {NULL, NULL}, NULL, 1.0e-5, NCM_FIT_DEFAULT_MAXITER, FALSE, NCM_FIT_RUN_MSGS_SIMPLE, NCM_FIT_MC_RESAMPLE_FROM_MODEL, 0, 0, -1, 100, 0, 100, 1.0e3, NULL, NULL, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, 1.0, FALSE, FALSE, NULL}
-#endif
+#define NC_DE_FIT_ENTRIES { NULL, NULL, NULL, NULL, 1e-8, 1e-5, -1, -1, {NULL, NULL}, NULL, 1.0e-5, NCM_FIT_DEFAULT_MAXITER, FALSE, NCM_FIT_RUN_MSGS_SIMPLE, NCM_FIT_MC_RESAMPLE_FROM_MODEL, 0, 0, -1, 100, 0, 100, 1.0e3, NULL, NULL, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, 1.0, FALSE, FALSE, NULL}
 
 GOptionGroup *nc_de_opt_get_run_group (NcDERunEntries *de_run);
 GOptionGroup *nc_de_opt_get_model_group (NcDEModelEntries *de_model, GOptionEntry **de_model_entries);

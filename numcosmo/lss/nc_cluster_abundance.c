@@ -186,19 +186,19 @@ nc_cluster_abundance_class_init (NcClusterAbundanceClass *klass)
 {
   GObjectClass* object_class = G_OBJECT_CLASS (klass);
 
-  object_class->dispose = _nc_cluster_abundance_dispose;
-  object_class->finalize = _nc_cluster_abundance_finalize;
-  object_class->set_property = _nc_cluster_abundance_set_property;
-  object_class->get_property = _nc_cluster_abundance_get_property;
+  object_class->set_property = &_nc_cluster_abundance_set_property;
+  object_class->get_property = &_nc_cluster_abundance_get_property;
+  object_class->dispose      = &_nc_cluster_abundance_dispose;
+  object_class->finalize     = &_nc_cluster_abundance_finalize;
 
   /**
-   * NcClusterAbundance:mass-function:
+   * NcClusterAbundance:halo-mass-function:
    *
    * FIXME
    */
   g_object_class_install_property (object_class,
                                    PROP_MASS_FUNCTION,
-                                   g_param_spec_object ("mass-function",
+                                   g_param_spec_object ("halo-mass-function",
                                                         NULL,
                                                         "Mass Function",
                                                         NC_TYPE_HALO_MASS_FUNCTION,
@@ -220,7 +220,7 @@ nc_cluster_abundance_class_init (NcClusterAbundanceClass *klass)
 
 /**
  * nc_cluster_abundance_new:
- * @mfp: a #NcMassFunction
+ * @mfp: a #NcHaloMassFunction
  * @mbiasf: (allow-none): a #NcHaloBiasFunc
  *
  * This function allocates memory for a new #NcClusterAbundance object and sets its properties to the values from
@@ -229,31 +229,31 @@ nc_cluster_abundance_class_init (NcClusterAbundanceClass *klass)
  * Returns: A new #NcClusterAbundance.
  */
 NcClusterAbundance *
-nc_cluster_abundance_new (NcMassFunction *mfp, NcHaloBiasFunc *mbiasf)
+nc_cluster_abundance_new (NcHaloMassFunction *mfp, NcHaloBiasFunc *mbiasf)
 {
   NcClusterAbundance *cad = g_object_new (NC_TYPE_CLUSTER_ABUNDANCE,
-                                          "mass-function",    mfp,
-                                          "mean-bias",        mbiasf,
+                                          "halo-mass-function", mfp,
+                                          "mean-bias",          mbiasf,
                                           NULL);
   return cad;
 }
 
 /**
  * nc_cluster_abundance_nodist_new:
- * @mfp: a #NcMassFunction.
+ * @mfp: a #NcHaloMassFunction.
  * @mbiasf: (allow-none): a #NcHaloBiasFunc.
-   *
+ *
  * This function allocates memory for a new #NcClusterAbundance object and sets its properties to the values from
  * the input arguments.
  *
  * Returns: A new #NcClusterAbundance.
  */
 NcClusterAbundance *
-nc_cluster_abundance_nodist_new (NcMassFunction *mfp, NcHaloBiasFunc *mbiasf)
+nc_cluster_abundance_nodist_new (NcHaloMassFunction *mfp, NcHaloBiasFunc *mbiasf)
 {
   NcClusterAbundance *cad = g_object_new (NC_TYPE_CLUSTER_ABUNDANCE,
-                                          "mass-function",    mfp,
-                                          "mean-bias",        mbiasf,
+                                          "halo-mass-function", mfp,
+                                          "mean-bias",          mbiasf,
                                           NULL);
   return cad;
 }
@@ -315,19 +315,19 @@ typedef struct _observables_integrand_data
 } observables_integrand_data;
 
 static gdouble
-_nc_cluster_abundance_z_p_lnm_p_d2n_integrand (gdouble lnM, gdouble z, gpointer userdata)
+_nc_cluster_abundance_z_p_lnM_p_d2n_integrand (gdouble lnM, gdouble z, gpointer userdata)
 {
   observables_integrand_data *obs_data = (observables_integrand_data *) userdata;
   NcClusterAbundance *cad = obs_data->cad;
   const gdouble p_z_zr = nc_cluster_redshift_p (obs_data->clusterz, lnM, z, obs_data->z_obs, obs_data->z_obs_params);
   const gdouble p_M_Mobs = nc_cluster_mass_p (obs_data->clusterm, obs_data->cosmo, lnM, z, obs_data->lnM_obs, obs_data->lnM_obs_params);
-  gdouble d2NdzdlnM = nc_halo_mass_function_d2n_dzdlnm (cad->mfp, obs_data->cosmo, lnM, z);
+  gdouble d2NdzdlnM = nc_halo_mass_function_d2n_dzdlnM (cad->mfp, obs_data->cosmo, lnM, z);
 
   return p_z_zr * p_M_Mobs * d2NdzdlnM;
 }
 
 /**
- * nc_cluster_abundance_z_p_lnm_p_d2n:
+ * nc_cluster_abundance_z_p_lnM_p_d2n:
  * @cad: a #NcClusterAbundance
  * @cosmo: a #NcHICosmo
  * @clusterz: a #NcClusterRedshift
@@ -345,7 +345,7 @@ _nc_cluster_abundance_z_p_lnm_p_d2n_integrand (gdouble lnM, gdouble z, gpointer 
  * Returns: a gdouble which represents /f$ \frac{d^2N(\ln M^{obs}, z^{phot})}{dzd\lnM} /f$.
  */
 gdouble
-nc_cluster_abundance_z_p_lnm_p_d2n (NcClusterAbundance *cad, NcHICosmo *cosmo, NcClusterRedshift *clusterz, NcClusterMass *clusterm, gdouble *lnM_obs, gdouble *lnM_obs_params, gdouble *z_obs, gdouble *z_obs_params)
+nc_cluster_abundance_z_p_lnM_p_d2n (NcClusterAbundance *cad, NcHICosmo *cosmo, NcClusterRedshift *clusterz, NcClusterMass *clusterm, gdouble *lnM_obs, gdouble *lnM_obs_params, gdouble *z_obs, gdouble *z_obs_params)
 {
   gdouble d2N, zl, zu, lnMl, lnMu, err;
   observables_integrand_data obs_data;
@@ -360,7 +360,7 @@ nc_cluster_abundance_z_p_lnm_p_d2n (NcClusterAbundance *cad, NcHICosmo *cosmo, N
   obs_data.z_obs          = z_obs;
   obs_data.z_obs_params   = z_obs_params;
 
-  integ.f = _nc_cluster_abundance_z_p_lnm_p_d2n_integrand;
+  integ.f = _nc_cluster_abundance_z_p_lnM_p_d2n_integrand;
   integ.userdata = &obs_data;
 
   nc_cluster_redshift_p_limits (clusterz, z_obs, z_obs_params, &zl, &zu);
@@ -377,7 +377,7 @@ _nc_cluster_abundance_z_p_d2n_integrand (gdouble z, gpointer params)
   observables_integrand_data *obs_data = (observables_integrand_data *) params;
   NcClusterAbundance *cad = obs_data->cad;
   const gdouble p_z_zr = nc_cluster_redshift_p (obs_data->clusterz, obs_data->lnM, z, obs_data->z_obs, obs_data->z_obs_params);
-  const gdouble d2NdzdlnM = nc_halo_mass_function_d2n_dzdlnm (cad->mfp, obs_data->cosmo, obs_data->lnM, z);
+  const gdouble d2NdzdlnM = nc_halo_mass_function_d2n_dzdlnM (cad->mfp, obs_data->cosmo, obs_data->lnM, z);
 
   return p_z_zr * d2NdzdlnM;
 }
@@ -428,7 +428,7 @@ nc_cluster_abundance_z_p_d2n (NcClusterAbundance *cad, NcHICosmo *cosmo, NcClust
 }
 
 /**
- * _nc_cluster_abundance_lnm_p_d2n_integrand:
+ * _nc_cluster_abundance_lnM_p_d2n_integrand:
  * @lnM: logarithm base e of the mass
  * @params: a gpointer
  *
@@ -439,18 +439,18 @@ nc_cluster_abundance_z_p_d2n (NcClusterAbundance *cad, NcHICosmo *cosmo, NcClust
  * Returns: a gdouble which is the integrand value at lnM.
  */
 static gdouble
-_nc_cluster_abundance_lnm_p_d2n_integrand (gdouble lnM, gpointer params)
+_nc_cluster_abundance_lnM_p_d2n_integrand (gdouble lnM, gpointer params)
 {
   observables_integrand_data *obs_data = (observables_integrand_data *) params;
   NcClusterAbundance *cad = obs_data->cad;
   const gdouble p_M_Mobs = nc_cluster_mass_p (obs_data->clusterm, obs_data->cosmo, lnM, obs_data->z, obs_data->lnM_obs, obs_data->lnM_obs_params);
-  const gdouble d2NdzdlnM = nc_halo_mass_function_d2n_dzdlnm (cad->mfp, obs_data->cosmo, lnM, obs_data->z);
+  const gdouble d2NdzdlnM = nc_halo_mass_function_d2n_dzdlnM (cad->mfp, obs_data->cosmo, lnM, obs_data->z);
 
   return p_M_Mobs * d2NdzdlnM;
 }
 
 /**
- * nc_cluster_abundance_lnm_p_d2n:
+ * nc_cluster_abundance_lnM_p_d2n:
  * @cad: a #NcClusterAbundance
  * @cosmo: a #NcHICosmo
  * @clusterz: a #NcClusterRedshift
@@ -467,7 +467,7 @@ _nc_cluster_abundance_lnm_p_d2n_integrand (gdouble lnM, gpointer params)
  * \frac{d^2N}{dzdlnM} * P(\ln M^{obs}|\ln M) /f$.
  */
 gdouble
-nc_cluster_abundance_lnm_p_d2n (NcClusterAbundance *cad, NcHICosmo *cosmo, NcClusterRedshift *clusterz, NcClusterMass *clusterm, gdouble *lnM_obs, gdouble *lnM_obs_params, gdouble z)
+nc_cluster_abundance_lnM_p_d2n (NcClusterAbundance *cad, NcHICosmo *cosmo, NcClusterRedshift *clusterz, NcClusterMass *clusterm, gdouble *lnM_obs, gdouble *lnM_obs_params, gdouble z)
 {
   observables_integrand_data obs_data;
   gdouble d2N, lnMl, lnMu, err;
@@ -482,7 +482,7 @@ nc_cluster_abundance_lnm_p_d2n (NcClusterAbundance *cad, NcHICosmo *cosmo, NcClu
   obs_data.lnM_obs_params = lnM_obs_params;
   obs_data.z              = z;
 
-  F.function = &_nc_cluster_abundance_lnm_p_d2n_integrand;
+  F.function = &_nc_cluster_abundance_lnM_p_d2n_integrand;
   F.params = &obs_data;
 
   nc_cluster_mass_p_limits (clusterm, cosmo, lnM_obs, lnM_obs_params, &lnMl, &lnMu);
@@ -504,7 +504,7 @@ if (FALSE)
     const gdouble E = nc_hicosmo_E (cosmo, z);
     const gdouble lnzeta = log (zeta);
     const gdouble lnM = log (msz->M0) + (lnzeta - log (A_SZ) - C_SZ * log (E / E0)) / B_SZ;
-    const gdouble d2N_lnM = nc_halo_mass_function_d2n_dzdlnm (cad->mfp, cosmo, lnM, z);
+    const gdouble d2N_lnM = nc_halo_mass_function_d2n_dzdlnM (cad->mfp, cosmo, lnM, z);
 
     printf ("xi % 8.5g zeta % 8.5g M % 8.5g [% 8.5g % 8.5g] : d2N_lnM % 8.5g d2N_xi % 8.5g r % 8.5g m2lnL % 8.5g\n",
             xi, zeta, exp (lnM), exp (lnMl), exp (lnMu), d2N_lnM, d2N, d2N / d2N_lnM, -2.0 * log (d2N));
@@ -535,7 +535,7 @@ nc_cluster_abundance_d2n (NcClusterAbundance *cad, NcHICosmo *cosmo, NcClusterRe
 {
   NCM_UNUSED (clusterz);
   NCM_UNUSED (clusterm);
-  return nc_halo_mass_function_d2n_dzdlnm (cad->mfp, cosmo, lnM, z);
+  return nc_halo_mass_function_d2n_dzdlnM (cad->mfp, cosmo, lnM, z);
 }
 
 static gdouble
@@ -543,7 +543,7 @@ _nc_cluster_abundance_z_intp_lnM_intp_d2N (NcClusterAbundance *cad, NcHICosmo *c
 {
   const gdouble z_intp = nc_cluster_redshift_intp (clusterz, lnM, z);
   const gdouble lnM_intp = nc_cluster_mass_intp (clusterm, cosmo, lnM, z);
-  gdouble d2NdzdlnM = nc_halo_mass_function_d2n_dzdlnm (cad->mfp, cosmo, lnM, z);
+  gdouble d2NdzdlnM = nc_halo_mass_function_d2n_dzdlnM (cad->mfp, cosmo, lnM, z);
   return z_intp * lnM_intp * d2NdzdlnM;
 }
 
@@ -581,7 +581,7 @@ static gdouble
 _nc_cluster_abundance_z_intp_d2N (NcClusterAbundance *cad, NcHICosmo *cosmo, NcClusterRedshift *clusterz, NcClusterMass *clusterm, gdouble lnM, gdouble z)
 {
   const gdouble z_intp = nc_cluster_redshift_intp (clusterz, lnM, z);
-  gdouble d2NdzdlnM = nc_halo_mass_function_d2n_dzdlnm (cad->mfp, cosmo, lnM, z);
+  gdouble d2NdzdlnM = nc_halo_mass_function_d2n_dzdlnM (cad->mfp, cosmo, lnM, z);
   NCM_UNUSED (clusterm);
   return z_intp * d2NdzdlnM;
 }
@@ -620,7 +620,7 @@ static gdouble
 _nc_cluster_abundance_lnM_intp_d2N (NcClusterAbundance *cad, NcHICosmo *cosmo, NcClusterRedshift *clusterz, NcClusterMass *clusterm, gdouble lnM, gdouble z)
 {
   const gdouble lnM_intp = nc_cluster_mass_intp (clusterm, cosmo, lnM, z);
-  gdouble d2NdzdlnM = nc_halo_mass_function_d2n_dzdlnm (cad->mfp, cosmo, lnM, z);
+  gdouble d2NdzdlnM = nc_halo_mass_function_d2n_dzdlnM (cad->mfp, cosmo, lnM, z);
   NCM_UNUSED (clusterz);
   return lnM_intp * d2NdzdlnM;
 }
@@ -740,7 +740,7 @@ _nc_cad_inv_dNdz_convergence_f_onemn (gdouble onemn, gdouble epsilon)
 void
 nc_cluster_abundance_prepare_inv_dNdz (NcClusterAbundance *cad, NcHICosmo *cosmo, const gdouble lnMi)
 {
-  NcMassFunctionSplineOptimize sp_optimize = NC_HALO_MASS_FUNCTION_SPLINE_Z;
+  NcHaloMassFunctionSplineOptimize sp_optimize = NC_HALO_MASS_FUNCTION_SPLINE_Z;
   const gdouble delta_z   = (cad->zf - cad->zi) / (cad->inv_z->len - 1.0);
   const gdouble delta_lnM = (cad->lnMf - lnMi) / (cad->inv_lnM->len - 1.0);
   const gdouble norma     = nc_halo_mass_function_n (cad->mfp, cosmo, lnMi, cad->lnMf, cad->zi, cad->zf, NC_HALO_MASS_FUNCTION_SPLINE_LNM);
@@ -1108,7 +1108,7 @@ _nc_ca_mean_bias_denominator_integrand (gdouble lnM, gpointer params)
   observables_integrand_data *obs_data = (observables_integrand_data *) params;
   NcClusterAbundance *cad = obs_data->cad;
 
-  gdouble n = nc_halo_mass_function_dn_dlnm (cad->mfp, obs_data->cosmo, lnM, obs_data->z);
+  gdouble n = nc_halo_mass_function_dn_dlnM (cad->mfp, obs_data->cosmo, lnM, obs_data->z);
 
   //printf ("% 20.8e % 20.8g % 20.15g\n", obs_data->lnMobs, obs_data->zp, dbdlnM);
   return n;
@@ -1210,7 +1210,7 @@ _nc_ca_mean_bias_Mobs_denominator_integrand (gdouble lnMobs, gpointer params)
 
   /* In this case zp is the true redshift, i.e., without uncertainty. */
   gdouble p_M_Mobs = 0.0;//_nc_cluster_abundance_lognormal_mass_dist (obs_data, lnMobs);
-  gdouble n = nc_halo_mass_function_dn_dlnm (cad->mfp, obs_data->cosmo, lnMobs, obs_data->z);
+  gdouble n = nc_halo_mass_function_dn_dlnM (cad->mfp, obs_data->cosmo, lnMobs, obs_data->z);
   g_assert_not_reached ();
 
   return n * p_M_Mobs;

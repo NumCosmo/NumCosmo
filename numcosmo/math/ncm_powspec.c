@@ -145,6 +145,7 @@ _ncm_powspec_get_property (GObject *object, guint prop_id, GValue *value, GParam
 
 static void _ncm_powspec_prepare (NcmPowspec *powspec, NcmModel *model) { g_error ("_ncm_powspec_prepare: no default implementation, all children must implement it."); } 
 static gdouble _ncm_powspec_eval (NcmPowspec *powspec, NcmModel *model, const gdouble z, const gdouble k) { g_error ("_ncm_powspec_eval: no default implementation, all children must implement it."); return 0.0; }
+static void _ncm_powspec_eval_vec (NcmPowspec *powspec, NcmModel *model, const gdouble z, NcmVector *k, NcmVector *Pk);
 
 static void
 ncm_powspec_class_init (NcmPowspecClass *klass)
@@ -189,8 +190,23 @@ ncm_powspec_class_init (NcmPowspecClass *klass)
                                                         0.0, G_MAXDOUBLE, 1.0,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
-  klass->prepare = &_ncm_powspec_prepare;
-  klass->eval    = &_ncm_powspec_eval;
+  klass->prepare  = &_ncm_powspec_prepare;
+  klass->eval     = &_ncm_powspec_eval;
+  klass->eval_vec = &_ncm_powspec_eval_vec;
+}
+
+static void 
+_ncm_powspec_eval_vec (NcmPowspec *powspec, NcmModel *model, const gdouble z, NcmVector *k, NcmVector *Pk) 
+{ 
+  const guint len = ncm_vector_len (k);
+  guint i;
+  for (i = 0; i < len; i++)
+  {
+    const gdouble ki  = ncm_vector_get (k, i);
+    const gdouble Pki = ncm_powspec_eval (powspec, model, z, ki);
+    ncm_vector_set (Pk, i, Pki);
+  }
+  return;
 }
 
 /**
@@ -245,7 +261,11 @@ ncm_powspec_clear (NcmPowspec **powspec)
 void 
 ncm_powspec_set_zi (NcmPowspec *powspec, const gdouble zi)
 {
-  powspec->zi = zi;
+  if (powspec->zi != zi)
+  {
+    powspec->zi = zi;
+    ncm_model_ctrl_force_update (powspec->ctrl);
+  }
 }
 
 /**
@@ -259,7 +279,11 @@ ncm_powspec_set_zi (NcmPowspec *powspec, const gdouble zi)
 void 
 ncm_powspec_set_zf (NcmPowspec *powspec, const gdouble zf)
 {
-  powspec->zf = zf;
+  if (powspec->zf != zf)
+  {
+    powspec->zf = zf;
+    ncm_model_ctrl_force_update (powspec->ctrl);
+  }
 }
 
 /**
@@ -273,7 +297,11 @@ ncm_powspec_set_zf (NcmPowspec *powspec, const gdouble zf)
 void 
 ncm_powspec_set_kmin (NcmPowspec *powspec, const gdouble kmin)
 {
-  powspec->kmin = kmin;
+  if (powspec->kmin != kmin)
+  {
+    powspec->kmin = kmin;
+    ncm_model_ctrl_force_update (powspec->ctrl);
+  }
 }
 
 /**
@@ -287,7 +315,71 @@ ncm_powspec_set_kmin (NcmPowspec *powspec, const gdouble kmin)
 void 
 ncm_powspec_set_kmax (NcmPowspec *powspec, const gdouble kmax)
 {
-  powspec->kmax = kmax;
+  if (powspec->kmax != kmax)
+  {
+    powspec->kmax = kmax;
+    ncm_model_ctrl_force_update (powspec->ctrl);
+  }
+}
+
+/**
+ * ncm_powspec_require_zi:
+ * @powspec: a #NcmPowspec
+ * @zi: initial redshift $z_i$
+ * 
+ * Requires the initial redshift to be less or equal to $z_i$.
+ *
+ */
+void 
+ncm_powspec_require_zi (NcmPowspec *powspec, const gdouble zi)
+{
+  if (zi < powspec->zi)
+    ncm_powspec_set_zi (powspec, zi);
+}
+
+/**
+ * ncm_powspec_require_zf:
+ * @powspec: a #NcmPowspec
+ * @zf: final redshift $z_f$
+ * 
+ * Requires the final redshift to be greater or equal to $z_f$.
+ *
+ */
+void 
+ncm_powspec_require_zf (NcmPowspec *powspec, const gdouble zf)
+{
+  if (zf > powspec->zf)
+    ncm_powspec_set_zf (powspec, zf);
+}
+
+/**
+ * ncm_powspec_require_kmin:
+ * @powspec: a #NcmPowspec
+ * @kmin: minimum mode $k_\mathrm{min}$
+ * 
+ * Requires the minimum mode value to be less or equal to $k_\mathrm{min}$.
+ *
+ */
+void 
+ncm_powspec_require_kmin (NcmPowspec *powspec, const gdouble kmin)
+{
+  if (kmin < powspec->kmin)
+    ncm_powspec_set_kmin (powspec, kmin);
+}
+
+/**
+ * ncm_powspec_require_kmax:
+ * @powspec: a #NcmPowspec
+ * @kmax: maxmimum mode $k_\mathrm{max}$
+ * 
+ * Sets the maximum mode value $k_\mathrm{max}$.
+ *
+ */
+void 
+ncm_powspec_require_kmax (NcmPowspec *powspec, const gdouble kmax)
+{
+  if (kmax > powspec->kmax)
+    ncm_powspec_set_kmax (powspec, kmax);  
 }
 
 /**
@@ -385,4 +477,16 @@ ncm_powspec_get_nknots (NcmPowspec *powspec, guint *Nz, guint *Nk)
  * Evaluates the power spectrum @powspec at $(z, k)$.
  * 
  * Returns: $P(z, k)$.
+ */
+/**
+ * ncm_powspec_eval_vec:
+ * @powspec: a #NcmPowspec
+ * @model: a #NcmModel
+ * @z: redshift $z$
+ * @k: a #NcmVector
+ * @Pk: (out caller-allocates): a #NcmVector
+ * 
+ * Evaluates the power spectrum @powspec at $z$ and in the knots
+ * contained in @k and puts the result in @Pk.
+ * 
  */

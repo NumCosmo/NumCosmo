@@ -53,6 +53,7 @@ struct _NcGrowthFunc
   gpointer cvode;
   N_Vector yv;
   gdouble zf;
+  gdouble Da0;
   NcmModelCtrl *ctrl_cosmo;
 };
 
@@ -75,6 +76,7 @@ void nc_growth_func_prepare_if_needed (NcGrowthFunc *gf, NcHICosmo *cosmo);
 G_INLINE_FUNC gdouble nc_growth_func_eval (NcGrowthFunc *gf, NcHICosmo *cosmo, gdouble z);
 G_INLINE_FUNC gdouble nc_growth_func_eval_deriv (NcGrowthFunc *gf, NcHICosmo *cosmo, gdouble z);
 G_INLINE_FUNC void nc_growth_func_eval_both (NcGrowthFunc *gf, NcHICosmo *cosmo, gdouble z, gdouble *d, gdouble *f);
+G_INLINE_FUNC gdouble nc_growth_func_get_Da0 (NcGrowthFunc *gf);
 
 G_END_DECLS
 
@@ -92,20 +94,29 @@ G_BEGIN_DECLS
 G_INLINE_FUNC gdouble
 nc_growth_func_eval (NcGrowthFunc *gf, NcHICosmo *cosmo, gdouble z)
 {
-  return ncm_spline_eval (gf->s, z);
+  const gdouble a = 1.0 / (1.0 + z);
+  return ncm_spline_eval (gf->s, a);
 }
 
 G_INLINE_FUNC gdouble
 nc_growth_func_eval_deriv (NcGrowthFunc *gf, NcHICosmo *cosmo, gdouble z)
 {
-  return ncm_spline_eval_deriv (gf->s, z);
+  const gdouble a = 1.0 / (1.0 + z);
+  return - a * a * ncm_spline_eval_deriv (gf->s, a);
 }
 
 G_INLINE_FUNC void
 nc_growth_func_eval_both (NcGrowthFunc *gf, NcHICosmo *cosmo, gdouble z, gdouble *d, gdouble *f)
 {
-  *d = ncm_spline_eval (gf->s, z);
-  *f = ncm_spline_eval_deriv (gf->s, z);
+  const gdouble a = 1.0 / (1.0 + z);
+  *d = ncm_spline_eval (gf->s, a);
+  *f = - a * a * ncm_spline_eval_deriv (gf->s, a);
+}
+
+G_INLINE_FUNC gdouble 
+nc_growth_func_get_Da0 (NcGrowthFunc *gf)
+{
+  return gf->Da0;
 }
 
 G_END_DECLS

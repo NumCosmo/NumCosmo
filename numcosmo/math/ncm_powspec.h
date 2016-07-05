@@ -49,6 +49,7 @@ struct _NcmPowspecClass
   GObjectClass parent_class;
   void (*prepare) (NcmPowspec *powspec, NcmModel *model);
   gdouble (*eval) (NcmPowspec *powspec, NcmModel *model, const gdouble z, const gdouble k);
+  void (*eval_vec) (NcmPowspec *powspec, NcmModel *model, const gdouble z, NcmVector *k, NcmVector *Pk);
   void (*get_nknots) (NcmPowspec *powspec, guint *Nz, guint *Nk);
 };
 
@@ -71,9 +72,13 @@ void ncm_powspec_clear (NcmPowspec **powspec);
 
 void ncm_powspec_set_zi (NcmPowspec *powspec, const gdouble zi);
 void ncm_powspec_set_zf (NcmPowspec *powspec, const gdouble zf);
-
 void ncm_powspec_set_kmin (NcmPowspec *powspec, const gdouble kmin);
 void ncm_powspec_set_kmax (NcmPowspec *powspec, const gdouble kmax);
+
+void ncm_powspec_require_zi (NcmPowspec *powspec, const gdouble zi);
+void ncm_powspec_require_zf (NcmPowspec *powspec, const gdouble zf);
+void ncm_powspec_require_kmin (NcmPowspec *powspec, const gdouble kmin);
+void ncm_powspec_require_kmax (NcmPowspec *powspec, const gdouble kmax);
 
 gdouble ncm_powspec_get_zi (NcmPowspec *powspec);
 gdouble ncm_powspec_get_zf (NcmPowspec *powspec);
@@ -86,6 +91,7 @@ void ncm_powspec_get_nknots (NcmPowspec *powspec, guint *Nz, guint *Nk);
 G_INLINE_FUNC void ncm_powspec_prepare (NcmPowspec *powspec, NcmModel *model);
 G_INLINE_FUNC void ncm_powspec_prepare_if_needed (NcmPowspec *powspec, NcmModel *model);
 G_INLINE_FUNC gdouble ncm_powspec_eval (NcmPowspec *powspec, NcmModel *model, const gdouble z, const gdouble k);
+G_INLINE_FUNC void ncm_powspec_eval_vec (NcmPowspec *powspec, NcmModel *model, const gdouble z, NcmVector* k, NcmVector* Pk);
 
 G_END_DECLS
 
@@ -116,6 +122,12 @@ G_INLINE_FUNC gdouble
 ncm_powspec_eval (NcmPowspec *powspec, NcmModel *model, const gdouble z, const gdouble k)
 {
   return NCM_POWSPEC_GET_CLASS (powspec)->eval (powspec, model, z, k);
+}
+
+G_INLINE_FUNC void
+ncm_powspec_eval_vec (NcmPowspec *powspec, NcmModel *model, const gdouble z, NcmVector *k, NcmVector *Pk)
+{
+  return NCM_POWSPEC_GET_CLASS (powspec)->eval_vec (powspec, model, z, k, Pk);
 }
 
 G_END_DECLS

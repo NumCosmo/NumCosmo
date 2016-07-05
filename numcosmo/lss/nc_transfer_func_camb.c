@@ -118,26 +118,6 @@ _nc_transfer_func_camb_calc (NcTransferFunc *tf, gdouble kh)
   g_assert_not_reached ();
 }
 
-static gdouble
-_nc_transfer_func_camb_calc_matter_P (NcTransferFunc *tf, NcHICosmo *cosmo, gdouble kh)
-{
-  NcTransferFuncCAMB *tf_camb = NC_TRANSFER_FUNC_CAMB (tf);
-  gdouble result;
-
-  NCM_UNUSED (cosmo);
-  
-  if (kh == 0)
-    return 0.0;
-  else
-  {
-    gdouble log_kh = log(kh);
-    if (log_kh < ncm_vector_get (tf_camb->T_spline->xv, 0))
-      log_kh = ncm_vector_get (tf_camb->T_spline->xv, 0);
-    result = ncm_spline_eval (tf_camb->T_spline, log_kh);
-    return exp (result);
-  }
-}
-
 static void
 nc_transfer_func_camb_init (NcTransferFuncCAMB *tf_camb)
 {
@@ -173,7 +153,6 @@ nc_transfer_func_camb_class_init (NcTransferFuncCAMBClass *klass)
 
   parent_class->prepare = &_nc_transfer_func_camb_prepare;
   parent_class->calc = &_nc_transfer_func_camb_calc;
-  parent_class->calc_matter_P = &_nc_transfer_func_camb_calc_matter_P;
 
   object_class->dispose = _nc_transfer_func_camb_dispose;
   object_class->finalize = _nc_transfer_func_camb_finalize;

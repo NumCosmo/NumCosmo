@@ -39,6 +39,8 @@
 #include <numcosmo/nc_powspec_ml.h>
 #include <numcosmo/nc_powspec_ml_transfer.h>
 #include <numcosmo/nc_powspec_ml_cbe.h>
+#include <numcosmo/nc_powspec_mnl.h>
+#include <numcosmo/nc_powspec_mnl_halofit.h>
 #include <numcosmo/nc_snia_dist_cov.h>
 #include <numcosmo/nc_planck_fi.h>
 #include <numcosmo/nc_planck_fi_cor_tt.h>
@@ -93,7 +95,6 @@
 #include <numcosmo/lss/nc_transfer_func_camb.h>
 #include <numcosmo/lss/nc_transfer_func_pert.h>
 #include <numcosmo/lss/nc_growth_func.h>
-#include <numcosmo/lss/nc_matter_var.h>
 #include <numcosmo/lss/nc_density_profile.h>
 #include <numcosmo/lss/nc_density_profile_nfw.h>
 #include <numcosmo/lss/nc_galaxy_acf.h>

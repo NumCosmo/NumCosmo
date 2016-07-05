@@ -193,19 +193,3 @@ nc_transfer_func_eval (NcTransferFunc *tf, NcHICosmo *cosmo, gdouble kh)
   NCM_CHECK_PREPARED (tf, nc_transfer_func_eval);
   return NC_TRANSFER_FUNC_GET_CLASS (tf)->calc (tf, kh);
 }
-
-/**
- * nc_transfer_func_matter_powerspectrum:
- * @tf: a #NcTransferFunc.
- * @cosmo: a #NcHICosmo.
- * @kh: FIXME
- *
- * FIXME
- *
- * Returns: FIXME
-*/
-gdouble
-nc_transfer_func_matter_powerspectrum (NcTransferFunc *tf, NcHICosmo *cosmo, gdouble kh)
-{
-  return NC_TRANSFER_FUNC_GET_CLASS (tf)->calc_matter_P (tf, cosmo, kh);
-}

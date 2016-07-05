@@ -74,6 +74,7 @@ G_INLINE_FUNC long double ncm_c_lnpi_4 (void) G_GNUC_CONST;
 G_INLINE_FUNC long double ncm_c_ln2pi (void) G_GNUC_CONST;
 G_INLINE_FUNC long double ncm_c_lnpi (void) G_GNUC_CONST;
 G_INLINE_FUNC long double ncm_c_pi (void) G_GNUC_CONST;
+G_INLINE_FUNC long double ncm_c_2_pi_2 (void) G_GNUC_CONST;
 G_INLINE_FUNC long double ncm_c_tan_1arcsec (void) G_GNUC_CONST;
 
 G_INLINE_FUNC gdouble ncm_c_degree_to_radian (const gdouble d) G_GNUC_CONST;
@@ -364,8 +365,8 @@ G_INLINE_FUNC gdouble ncm_c_wmap5_coadded_I_W (void) G_GNUC_CONST;
 G_INLINE_FUNC gdouble ncm_c_hubble_cte_wmap (void) G_GNUC_CONST;
 G_INLINE_FUNC gdouble ncm_c_hubble_cte_hst (void) G_GNUC_CONST;
 G_INLINE_FUNC gdouble ncm_c_hubble_cte_msa (void) G_GNUC_CONST;
-G_INLINE_FUNC gdouble ncm_c_hubble_radius (void) ;
-G_INLINE_FUNC gdouble ncm_c_hubble_radius_planck (void) G_GNUC_CONST;
+G_INLINE_FUNC gdouble ncm_c_hubble_radius_hm1_Mpc (void) ;
+G_INLINE_FUNC gdouble ncm_c_hubble_radius_hm1_planck (void) G_GNUC_CONST;
 G_INLINE_FUNC gdouble ncm_c_crit_density_h2 (void) G_GNUC_CONST;
 G_INLINE_FUNC gdouble ncm_c_crit_mass_density_h2 (void) G_GNUC_CONST;
 G_INLINE_FUNC gdouble ncm_c_crit_mass_density_h2_solar_mass_Mpc3 (void) G_GNUC_CONST;
@@ -422,6 +423,9 @@ G_INLINE_FUNC long double ncm_c_lnpi (void)
 
 G_INLINE_FUNC long double ncm_c_pi (void)
 { return 3.1415926535897932384626433832795029L; }
+
+G_INLINE_FUNC long double ncm_c_2_pi_2 (void)
+{ return 19.739208802178717237668981999752302L; }
 
 G_INLINE_FUNC long double ncm_c_tan_1arcsec (void)
 { return 4.8481368111333441675396429478852853e-6L; }
@@ -1023,11 +1027,11 @@ G_INLINE_FUNC gdouble ncm_c_hubble_cte_hst (void)
 G_INLINE_FUNC gdouble ncm_c_hubble_cte_msa (void)
 { return 68.0; }
 
-G_INLINE_FUNC gdouble ncm_c_hubble_radius (void)
+G_INLINE_FUNC gdouble ncm_c_hubble_radius_hm1_Mpc (void)
 { return ncm_c_c () / (100.0e3); }
 
-G_INLINE_FUNC gdouble ncm_c_hubble_radius_planck (void)
-{ return ncm_c_hubble_radius () * ncm_c_Mpc () / ncm_c_planck_length (); }
+G_INLINE_FUNC gdouble ncm_c_hubble_radius_hm1_planck (void)
+{ return ncm_c_hubble_radius_hm1_Mpc () * ncm_c_Mpc () / ncm_c_planck_length (); }
 
 G_INLINE_FUNC gdouble ncm_c_crit_density_h2 (void)
 { return 3.0 * pow (ncm_c_c () / (10.0 * ncm_c_pc ()), 2.0) / (8.0 * M_PI * ncm_c_G ()); }

@@ -360,8 +360,8 @@ nc_pert_transfer_function_new (NcLinearPert *pert, gdouble k0, gdouble k1, gulon
   NcmVector *logkv = ncm_vector_new (np);
   NcmVector *logPhiv = ncm_vector_new (np);
 
-  perttf->logk0 = log (k0 * ncm_c_hubble_radius ());
-  perttf->logk1 = log (k1 * ncm_c_hubble_radius ());
+  perttf->logk0 = log (k0 * ncm_c_hubble_radius_hm1_Mpc ());
+  perttf->logk1 = log (k1 * ncm_c_hubble_radius_hm1_Mpc ());
   perttf->np = np;
   perttf->logPhi_logk = ncm_spline_cubic_notaknot_new_full (logkv, logPhiv, FALSE);
   perttf->pert = pert;
@@ -415,7 +415,7 @@ nc_pert_transfer_function_prepare (NcLinearPertTF *perttf)
 gdouble
 nc_pert_transfer_function_get (NcLinearPertTF *perttf, gdouble kh)
 {
-  const gdouble logk = log (kh * ncm_c_hubble_radius ());
+  const gdouble logk = log (kh * ncm_c_hubble_radius_hm1_Mpc ());
   const gdouble logPhi = ncm_spline_eval (perttf->logPhi_logk, logk);
   return exp (logPhi);
 }
