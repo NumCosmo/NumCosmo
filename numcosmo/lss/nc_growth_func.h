@@ -52,6 +52,7 @@ struct _NcGrowthFunc
   NcmSpline *s;
   gpointer cvode;
   N_Vector yv;
+  N_Vector yQ;
   gdouble zf;
   gdouble Da0;
   NcmModelCtrl *ctrl_cosmo;
@@ -76,7 +77,7 @@ void nc_growth_func_prepare_if_needed (NcGrowthFunc *gf, NcHICosmo *cosmo);
 G_INLINE_FUNC gdouble nc_growth_func_eval (NcGrowthFunc *gf, NcHICosmo *cosmo, gdouble z);
 G_INLINE_FUNC gdouble nc_growth_func_eval_deriv (NcGrowthFunc *gf, NcHICosmo *cosmo, gdouble z);
 G_INLINE_FUNC void nc_growth_func_eval_both (NcGrowthFunc *gf, NcHICosmo *cosmo, gdouble z, gdouble *d, gdouble *f);
-G_INLINE_FUNC gdouble nc_growth_func_get_Da0 (NcGrowthFunc *gf);
+G_INLINE_FUNC gdouble nc_growth_func_get_dust_norma_Da0 (NcGrowthFunc *gf);
 
 G_END_DECLS
 
@@ -114,7 +115,7 @@ nc_growth_func_eval_both (NcGrowthFunc *gf, NcHICosmo *cosmo, gdouble z, gdouble
 }
 
 G_INLINE_FUNC gdouble 
-nc_growth_func_get_Da0 (NcGrowthFunc *gf)
+nc_growth_func_get_dust_norma_Da0 (NcGrowthFunc *gf)
 {
   return gf->Da0;
 }
