@@ -85,7 +85,7 @@ for z in np.arange (z_min, z_max, (z_max - z_min) * zdiv):
     k_a.append (k)
     Pk_cbe_a.append (k3 * ps_cbe.eval (cosmo, z, k))
     Pk_eh_a.append (k3 * ps_eh.eval (cosmo, z, k))
-    print k, ps_eh.eval (cosmo, z, k) / ps_cbe.eval (cosmo, z, k)
+    #print k, ps_eh.eval (cosmo, z, k) / ps_cbe.eval (cosmo, z, k)
   
   plt.plot (k_a, Pk_cbe_a, label = r'CLASS $z = %.2f$' % (z))
   plt.plot (k_a, Pk_eh_a, label  = r'EH    $z = %.2f$' % (z))
