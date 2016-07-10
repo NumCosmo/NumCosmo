@@ -72,6 +72,8 @@ _nc_hicosmo_de_xcdm_d2E2Omega_de_dz2 (NcHICosmoDE *cosmo_de, gdouble z)
   return 3.0 * ( 1.0 + W ) * (2.0 + 3.0 * W) / x2 * E2Omega_de;
 }
 
+static gdouble _nc_hicosmo_de_xcdm_w_de (NcHICosmoDE *cosmo_de, gdouble z) { return W; }
+
 /**
  * nc_hicosmo_de_xcdm_new:
  *
@@ -117,6 +119,7 @@ nc_hicosmo_de_xcdm_class_init (NcHICosmoDEXcdmClass *klass)
   nc_hicosmo_de_set_E2Omega_de_impl (parent_class, &_nc_hicosmo_de_xcdm_E2Omega_de);
   nc_hicosmo_de_set_dE2Omega_de_dz_impl (parent_class, &_nc_hicosmo_de_xcdm_dE2Omega_de_dz);
   nc_hicosmo_de_set_d2E2Omega_de_dz2_impl (parent_class, &_nc_hicosmo_de_xcdm_d2E2Omega_de_dz2);
+  nc_hicosmo_de_set_w_de_impl (parent_class, &_nc_hicosmo_de_xcdm_w_de);
 
   ncm_model_class_set_name_nick (model_class, "XCDM - Constant EOS", "XCDM");
   ncm_model_class_add_params (model_class, 1, 0, PROP_SIZE);

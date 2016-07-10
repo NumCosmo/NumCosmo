@@ -484,10 +484,26 @@ _nc_cbe_dispose (GObject *object)
   G_OBJECT_CLASS (nc_cbe_parent_class)->dispose (object);
 }
 
+static void _nc_cbe_free_thermo (NcCBE *cbe);
+
 static void
 _nc_cbe_finalize (GObject *object)
 {
+  NcCBE *cbe = NC_CBE (object);
 
+  if (cbe->allocated)
+  {
+    g_assert (cbe->free != NULL);
+    cbe->free (cbe);
+    cbe->allocated = FALSE;
+  }
+
+  if (cbe->thermodyn_prepared)
+  {
+    _nc_cbe_free_thermo (cbe);
+    cbe->thermodyn_prepared = FALSE;
+  }
+  
   /* Chain up : end */
   G_OBJECT_CLASS (nc_cbe_parent_class)->finalize (object);
 }
@@ -597,6 +613,7 @@ nc_cbe_new (void)
   NcCBE *cbe = g_object_new (NC_TYPE_CBE,
                              "precision", prec,
                              NULL);
+  nc_cbe_precision_free (prec);
   return cbe;
 }
 

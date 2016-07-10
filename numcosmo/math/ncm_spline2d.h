@@ -108,12 +108,17 @@ gdouble ncm_spline2d_integ_dy_spline_val (NcmSpline2d *s2d, gdouble x, gdouble y
 gdouble ncm_spline2d_integ_dxdy_spline_x (NcmSpline2d *s2d, gdouble xl, gdouble xu, gdouble yl, gdouble yu);
 gdouble ncm_spline2d_integ_dxdy_spline_y (NcmSpline2d *s2d, gdouble xl, gdouble xu, gdouble yl, gdouble yu);
 
+G_INLINE_FUNC gdouble ncm_spline2d_deriv_dzdx (NcmSpline2d *s2d, gdouble x, gdouble y);
+G_INLINE_FUNC gdouble ncm_spline2d_deriv_dzdy (NcmSpline2d *s2d, gdouble x, gdouble y);
+G_INLINE_FUNC gdouble ncm_spline2d_deriv_d2zdxy (NcmSpline2d *s2d, gdouble x, gdouble y);
+G_INLINE_FUNC gdouble ncm_spline2d_deriv_d2zdx2 (NcmSpline2d *s2d, gdouble x, gdouble y);
+G_INLINE_FUNC gdouble ncm_spline2d_deriv_d2zdy2 (NcmSpline2d *s2d, gdouble x, gdouble y);
+
 G_INLINE_FUNC gdouble ncm_spline2dim_integ_total (NcmSpline2d *s2d);
 
 G_END_DECLS
 
 #endif /* _NCM_SPLINE2D_H_ */
-
 
 #ifndef _NCM_SPLINE2D_INLINE_H_
 #define _NCM_SPLINE2D_INLINE_H_
@@ -138,6 +143,46 @@ ncm_spline2dim_integ_total (NcmSpline2d *s2d)
 	                                ncm_vector_get (s2d->yv, 0),
 	                                ncm_vector_get (s2d->yv, ncm_vector_len (s2d->yv) - 1)
 	                                );
+}
+
+G_INLINE_FUNC gdouble 
+ncm_spline2d_deriv_dzdx (NcmSpline2d *s2d, gdouble x, gdouble y)
+{
+  if (!s2d->init)
+    ncm_spline2d_prepare (s2d);
+  return NCM_SPLINE2D_GET_CLASS (s2d)->dzdx (s2d, x, y);
+}
+
+G_INLINE_FUNC gdouble 
+ncm_spline2d_deriv_dzdy (NcmSpline2d *s2d, gdouble x, gdouble y)
+{
+  if (!s2d->init)
+    ncm_spline2d_prepare (s2d);
+  return NCM_SPLINE2D_GET_CLASS (s2d)->dzdy (s2d, x, y);
+}
+
+G_INLINE_FUNC gdouble 
+ncm_spline2d_deriv_d2zdxy (NcmSpline2d *s2d, gdouble x, gdouble y)
+{
+  if (!s2d->init)
+    ncm_spline2d_prepare (s2d);
+  return NCM_SPLINE2D_GET_CLASS (s2d)->d2zdxy (s2d, x, y);
+}
+
+G_INLINE_FUNC gdouble 
+ncm_spline2d_deriv_d2zdx2 (NcmSpline2d *s2d, gdouble x, gdouble y)
+{
+  if (!s2d->init)
+    ncm_spline2d_prepare (s2d);
+  return NCM_SPLINE2D_GET_CLASS (s2d)->d2zdx2 (s2d, x, y);
+}
+
+G_INLINE_FUNC gdouble 
+ncm_spline2d_deriv_d2zdy2 (NcmSpline2d *s2d, gdouble x, gdouble y)
+{
+  if (!s2d->init)
+    ncm_spline2d_prepare (s2d);
+  return NCM_SPLINE2D_GET_CLASS (s2d)->d2zdy2 (s2d, x, y);
 }
 
 G_END_DECLS

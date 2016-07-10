@@ -77,8 +77,7 @@ _ncm_fftlog_tophatwin2_finalize (GObject *object)
   G_OBJECT_CLASS (ncm_fftlog_tophatwin2_parent_class)->finalize (object);
 }
 
-static void _ncm_fftlog_tophatwin2_get_Ym (NcmFftlog *fftlog);
-static void _ncm_fftlog_tophatwin2_generate_Gr (NcmFftlog *fftlog);
+static void _ncm_fftlog_tophatwin2_get_Ym (NcmFftlog *fftlog, gpointer Ym_0);
 
 static void
 ncm_fftlog_tophatwin2_class_init (NcmFftlogTophatwin2Class *klass)
@@ -89,19 +88,18 @@ ncm_fftlog_tophatwin2_class_init (NcmFftlogTophatwin2Class *klass)
   object_class->finalize = &_ncm_fftlog_tophatwin2_finalize;
 
   fftlog_class->name        = "tophat_window_2";
-  fftlog_class->ncomp       = 2;
   fftlog_class->get_Ym      = &_ncm_fftlog_tophatwin2_get_Ym;
-  fftlog_class->generate_Gr = &_ncm_fftlog_tophatwin2_generate_Gr;
 }
 
 static void 
-_ncm_fftlog_tophatwin2_get_Ym (NcmFftlog *fftlog)
+_ncm_fftlog_tophatwin2_get_Ym (NcmFftlog *fftlog, gpointer Ym_0)
 {
   const gdouble twopi_Lt  = 2.0 * M_PI / ncm_fftlog_get_full_length (fftlog);
   const gint Nf           = ncm_fftlog_get_full_size (fftlog);
+#ifdef NUMCOSMO_HAVE_FFTW3
+  fftw_complex *Ym_base = (fftw_complex *) Ym_0;
   gint i;
 
-#ifdef NUMCOSMO_HAVE_FFTW3
   i = 0;
   {
     const gint phys_i          = ncm_fftlog_get_mode_index (fftlog, i);
@@ -111,8 +109,7 @@ _ncm_fftlog_tophatwin2_get_Ym (NcmFftlog *fftlog)
 
     U *= - M_PI / 12.0;
 
-    fftlog->Ym[0][i] = U * cexp (- a * (fftlog->lnk0 + fftlog->lnr0));
-    fftlog->Ym[1][i] = -(1.0 + a) * fftlog->Ym[0][i];    
+    Ym_base[i] = U;
   }
   for (i = 1; i < Nf; i++)
   {
@@ -127,34 +124,8 @@ _ncm_fftlog_tophatwin2_get_Ym (NcmFftlog *fftlog)
     gsl_sf_complex_logsin_e (creal (Api_2), cimag (Api_2), &lnsin_rho, &lnsin_theta);
     U *= cexp (lngamma_rho.val + lnsin_rho.val + I * (lngamma_theta.val + lnsin_theta.val));
 
-    fftlog->Ym[0][i] = U * cexp (- a * (fftlog->lnk0 + fftlog->lnr0));
-    fftlog->Ym[1][i] = -(1.0 + a) * fftlog->Ym[0][i];
+    Ym_base[i] = U;
   }
-#endif /* NUMCOSMO_HAVE_FFTW3 */
-}
-
-static void 
-_ncm_fftlog_tophatwin2_generate_Gr (NcmFftlog *fftlog)
-{
-#ifdef NUMCOSMO_HAVE_FFTW3
-  const gint N          = ncm_fftlog_get_size (fftlog);
-  const gdouble norma   = ncm_fftlog_get_norma (fftlog);
-  gint i;
-  
-  for (i = 0; i < N; i++)
-  {
-    const gint phys_i        = i - fftlog->N_2;
-    const gdouble lnr        = fftlog->lnr0 + phys_i * fftlog->Lk_N;
-
-    const gdouble rGr        = fabs (creal (fftlog->Gr[0][i + fftlog->pad]) / norma);
-    const gdouble lnGr       = log (rGr) - lnr;
-    const gdouble dlnGr_dlnr = creal (fftlog->Gr[1][i + fftlog->pad]) / (rGr * norma);
-
-    ncm_vector_set (fftlog->lnr_vec, i, lnr);
-    ncm_vector_set (fftlog->Gr_vec[0], i, lnGr);
-    ncm_vector_set (fftlog->Gr_vec[1], i, dlnGr_dlnr);
-  }
-
 #endif /* NUMCOSMO_HAVE_FFTW3 */
 }
 

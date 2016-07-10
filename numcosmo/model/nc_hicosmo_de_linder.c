@@ -79,6 +79,15 @@ _nc_hicosmo_de_linder_d2E2Omega_de_dz2 (NcHICosmoDE *cosmo_de, gdouble z)
   return (9.0 * w12 - 6.0 * w1 * (2.0 + 3.0 * w0 + 3.0 * w1) * x + 3.0 * (1.0 + w0 + w1) * (2.0 + 3.0 * w0 + 3.0 * w1) * x2) * E2Omega_de/ x4;
 }
 
+static gdouble
+_nc_hicosmo_de_linder_w_de (NcHICosmoDE *cosmo_de, gdouble z)
+{
+  const gdouble w0   = OMEGA_0;
+  const gdouble w1   = OMEGA_1;
+
+  return w0 + w1 * z / (1.0 + z);
+}
+
 /**
  * nc_hicosmo_de_linder_new:
  *
@@ -124,6 +133,7 @@ nc_hicosmo_de_linder_class_init (NcHICosmoDELinderClass *klass)
   nc_hicosmo_de_set_E2Omega_de_impl (parent_class, &_nc_hicosmo_de_linder_E2Omega_de);
   nc_hicosmo_de_set_dE2Omega_de_dz_impl (parent_class, &_nc_hicosmo_de_linder_dE2Omega_de_dz);
   nc_hicosmo_de_set_d2E2Omega_de_dz2_impl (parent_class, &_nc_hicosmo_de_linder_d2E2Omega_de_dz2);
+  nc_hicosmo_de_set_w_de_impl (parent_class, &_nc_hicosmo_de_linder_w_de);
 
   ncm_model_class_set_name_nick (model_class, "Chevalier-Polarski-Linder parametrization", "CPL");
   ncm_model_class_add_params (model_class, 2, 0, PROP_SIZE);
