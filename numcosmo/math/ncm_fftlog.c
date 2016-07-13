@@ -645,7 +645,7 @@ ncm_fftlog_set_length (NcmFftlog *fftlog, gdouble Lk)
   if (fftlog->Lk != Lk)
   {
     fftlog->Lk        = Lk;
-    fftlog->Lk_N      = fftlog->Lk / (1.0 * fftlog->N);
+    fftlog->Lk_N      = fftlog->Lk / (1.0 * fftlog->N - 1.0);
     fftlog->prepared  = FALSE;
     fftlog->evaluated = FALSE;
   }
@@ -686,6 +686,8 @@ _ncm_fftlog_eval (NcmFftlog *fftlog)
     fftlog->prepared = TRUE;
   }
 
+printf ("%d % 20.15g % 20.15g = % 20.15g\n", - fftlog->N_2, fftlog->lnr0, fftlog->Lk_N, fftlog->lnr0 - fftlog->N_2 * fftlog->Lk_N);
+  
   for (i = 0; i < fftlog->N; i++)
   {
     const gint phys_i      = i - fftlog->N_2;
@@ -717,11 +719,15 @@ _ncm_fftlog_eval (NcmFftlog *fftlog)
 
     fftw_execute (fftlog->p_CmYm2Gr);
 
+printf ("# => % 20.15g % 20.15g %20.15g %20.15g %u\n", fftlog->lnk0, fftlog->lnr0, fftlog->Lk, fftlog->Lk_N, fftlog->N);
+    
     for (i = 0; i < fftlog->N; i++)
     {
       const gdouble lnr      = ncm_vector_get (fftlog->lnr_vec, i);
       const gdouble rm1      = exp (-lnr);
       const gdouble Gr_nd_i  = creal (fftlog->Gr[i + fftlog->pad]) * rm1 / norma;
+
+printf ("% 20.15g % 20.15g\n", lnr, Gr_nd_i);
       ncm_vector_set (Gr_nd, i, Gr_nd_i);
     }
   }

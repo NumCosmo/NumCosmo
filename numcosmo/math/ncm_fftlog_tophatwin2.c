@@ -62,6 +62,10 @@
 #include <gsl/gsl_sf_gamma.h>
 #include <gsl/gsl_sf_trig.h>
 
+#ifdef HAVE_ACB_H
+#include <acb.h>
+#endif /* HAVE_ACB_H */
+
 G_DEFINE_TYPE (NcmFftlogTophatwin2, ncm_fftlog_tophatwin2, NCM_TYPE_FFTLOG);
 
 static void
@@ -94,38 +98,124 @@ ncm_fftlog_tophatwin2_class_init (NcmFftlogTophatwin2Class *klass)
 static void 
 _ncm_fftlog_tophatwin2_get_Ym (NcmFftlog *fftlog, gpointer Ym_0)
 {
-  const gdouble twopi_Lt  = 2.0 * M_PI / ncm_fftlog_get_full_length (fftlog);
-  const gint Nf           = ncm_fftlog_get_full_size (fftlog);
 #ifdef NUMCOSMO_HAVE_FFTW3
+#if defined (HAVE_ACB_H) && defined (NCM_FFTLOG_USE_ACB)
+  const guint prec      = 120;
+  const gint Nf         = ncm_fftlog_get_full_size (fftlog);
   fftw_complex *Ym_base = (fftw_complex *) Ym_0;
+  acb_t twopi_Lt, Lt, a_i, Un_i, Ud_i, pi, two_a_i, a_i_pi_2, a_i_m3;
   gint i;
 
+  acb_init (pi);
+  acb_init (Lt);
+  acb_init (twopi_Lt);
+  acb_init (a_i);
+  acb_init (Un_i);
+  acb_init (Ud_i);
+  acb_init (two_a_i);
+  acb_init (a_i_pi_2);
+  acb_init (a_i_m3);
+  
+  acb_set_d (Lt, ncm_fftlog_get_full_length (fftlog));
+
+  acb_const_pi (pi, prec);
+  
+  acb_set (twopi_Lt, pi);
+  acb_mul_ui (twopi_Lt, twopi_Lt, 2, prec);
+  acb_div (twopi_Lt, twopi_Lt, Lt, prec);
+
+  i = 0;
+  {
+    const gint phys_i = ncm_fftlog_get_mode_index (fftlog, i);
+    acb_mul_si (a_i, twopi_Lt, phys_i, prec); /* a_i = twopi_Lt * phys_i */
+    acb_mul_onei (a_i, a_i);                  /* a_i = a_i * I */
+
+    acb_sub_ui (Un_i, a_i, 1, prec);  /* Un_i = a_i - 1   */
+    acb_mul_si (Un_i, Un_i, 3, prec); /* Un_i = 3 * Un_i  */
+    acb_mul (Un_i, Un_i, pi, prec);   /* Un_i = pi * Un_i */
+
+    acb_sub_ui (Ud_i, a_i, 5, prec);       /* Ud_i    = a_i - 5 */
+    acb_set_ui (two_a_i, 2);               /* two_a_i = 2 */
+    acb_pow (two_a_i, two_a_i, a_i, prec); /* two_a_i = pow (two_a_i, a_i) */
+
+    acb_mul (Ud_i, Ud_i, two_a_i, prec); /* Ud_i = Ud_i * two_a_i */
+    acb_div (Un_i, Un_i, Ud_i, prec);    /* Un_i = Un_i / Ud_i */
+    
+    Ym_base[i] = ncm_acb_get_complex (Un_i);
+    /*printf ("%d % 20.15g % 20.15g\n", i, creal (Ym_base[i]), cimag (Ym_base[i]));*/
+  }
+  for (i = 1; i < Nf; i++)
+  {
+    const gint phys_i = ncm_fftlog_get_mode_index (fftlog, i);
+    acb_mul_si (a_i, twopi_Lt, phys_i, prec); /* a_i = twopi_Lt * phys_i */
+    acb_mul_onei (a_i, a_i);                  /* a_i = a_i * I */
+
+    acb_sub_ui (Un_i, a_i, 1, prec);    /* Un_i = a_i - 1   */
+    acb_mul_si (Un_i, Un_i, -36, prec); /* Un_i = -36 * Un_i  */
+
+    acb_sub_ui (Ud_i, a_i, 5, prec);       /* Ud_i    = a_i - 5 */
+    acb_set_ui (two_a_i, 2);               /* two_a_i = 2 */
+    acb_pow (two_a_i, two_a_i, a_i, prec); /* two_a_i = pow (two_a_i, a_i) */
+
+    acb_mul (Ud_i, Ud_i, two_a_i, prec); /* Ud_i = Ud_i * two_a_i */
+    acb_div (Un_i, Un_i, Ud_i, prec);    /* Un_i = Un_i / Ud_i */
+
+    acb_mul (a_i_pi_2, a_i, pi, prec);        /* a_i_pi_2 = a_i * pi */
+    acb_div_ui (a_i_pi_2, a_i_pi_2, 2, prec); /* a_i_pi_2 = a_i_pi_2 / 2 */
+    acb_sub_ui (a_i_m3, a_i, 3, prec);        /* a_i_m3   = a_i - 3 */
+
+    acb_sin (a_i_pi_2, a_i_pi_2, prec); /* a_i_pi_2 = sin (a_i_pi_2) */
+    acb_gamma (a_i_m3, a_i_m3, prec);   /* a_i_m3 = gamma (a_i_m3) */
+
+    acb_mul (Un_i, Un_i, a_i_pi_2, prec); /* Un_i = Un_i * a_i_pi_2 */
+    acb_mul (Un_i, Un_i, a_i_m3, prec);   /* Un_i = Un_i * a_i_m3 */
+    
+    Ym_base[i] = ncm_acb_get_complex (Un_i);
+    /*printf ("%d % 20.15g % 20.15g\n", i, creal (Ym_base[i]), cimag (Ym_base[i]));*/
+  }
+
+  acb_clear (pi);
+  acb_clear (Lt);
+  acb_clear (twopi_Lt);
+  acb_clear (a_i);
+  acb_clear (Un_i);
+  acb_clear (Ud_i);
+  acb_clear (two_a_i);
+  acb_clear (a_i_pi_2);
+  acb_clear (a_i_m3);
+
+#else /* HAVE_ACB_H */
+  const gdouble twopi_Lt  = 2.0 * M_PI / ncm_fftlog_get_full_length (fftlog);
+  const gint Nf           = ncm_fftlog_get_full_size (fftlog);
+  fftw_complex *Ym_base = (fftw_complex *) Ym_0;
+  gint i;
   i = 0;
   {
     const gint phys_i          = ncm_fftlog_get_mode_index (fftlog, i);
     const complex double a     = twopi_Lt * phys_i * I;
-    const complex double A     = a + 0.0/*fftlog->nu*/;
-    complex double U           = - 36.0 * (A - 1.0) / (cexp (M_LN2 * A) * (A - 5.0));
+    complex double U           = - 36.0 * (a - 1.0) / (cexp (M_LN2 * a) * (a - 5.0));
 
     U *= - M_PI / 12.0;
 
     Ym_base[i] = U;
+    /*printf ("%d % 20.15g % 20.15g\n", i, creal (Ym_base[i]), cimag (Ym_base[i]));*/
   }
   for (i = 1; i < Nf; i++)
   {
     const gint phys_i          = ncm_fftlog_get_mode_index (fftlog, i);
     const complex double a     = twopi_Lt * phys_i * I;
-    const complex double A     = a + 0.0/*fftlog->nu*/;
-    complex double U           = - 36.0 * (A - 1.0) / (cexp (M_LN2 * A) * (A - 5.0));
-    const complex double Api_2 = A * M_PI * 0.5;
+    complex double U           = - 36.0 * (a - 1.0) / (cexp (M_LN2 * a) * (a - 5.0));
+    const complex double Api_2 = a * M_PI * 0.5;
     gsl_sf_result lngamma_rho, lngamma_theta, lnsin_rho, lnsin_theta;
 
-    gsl_sf_lngamma_complex_e (creal (A) - 3.0, cimag (A), &lngamma_rho, &lngamma_theta);
+    gsl_sf_lngamma_complex_e (creal (a) - 3.0, cimag (a), &lngamma_rho, &lngamma_theta);
     gsl_sf_complex_logsin_e (creal (Api_2), cimag (Api_2), &lnsin_rho, &lnsin_theta);
     U *= cexp (lngamma_rho.val + lnsin_rho.val + I * (lngamma_theta.val + lnsin_theta.val));
 
     Ym_base[i] = U;
+    /*printf ("%d % 20.15g % 20.15g\n", i, creal (Ym_base[i]), cimag (Ym_base[i]));*/
   }
+#endif /* HAVE_ACB_H */
 #endif /* NUMCOSMO_HAVE_FFTW3 */
 }
 

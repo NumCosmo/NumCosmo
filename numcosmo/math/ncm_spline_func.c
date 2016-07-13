@@ -255,6 +255,7 @@ ncm_spline_new_function_spline (NcmSpline *s, gsl_function *F, gdouble xi, gdoub
   n = (n < 3) ? 3 : n;
   
   g_assert (xf > xi);
+
   if (max_nodes == 0)
     max_nodes = NCM_SPLINE_FUNC_DEFAULT_MAX_NODES;
 
@@ -263,15 +264,19 @@ ncm_spline_new_function_spline (NcmSpline *s, gsl_function *F, gdouble xi, gdoub
 
   for (i = 0; i < n; i++)
   {
-    gdouble x = xi + (xf - xi) / (n - 1.0) * i;
-    gdouble y = GSL_FN_EVAL (F, x);
+    const gdouble x = xi + (xf - xi) / (n - 1.0) * i;
+    /*const gdouble x = 0.5 * (xi + xf) - 0.5 * (xf - xi) * cos ((2.0 * i + 1.0) * M_PI / (2.0 * n));*/
+    const gdouble y = GSL_FN_EVAL (F, x);
+
     BIVEC_LIST_APPEND (nodes, x, y);
     BIVEC_LIST_OK (nodes) = 0;
+
     g_array_append_val (x_array, x);
     g_array_append_val (y_array, y);
     g_assert (gsl_finite (x));
     g_assert (gsl_finite (y));
   }
+
   ncm_spline_set_array (s, x_array, y_array, TRUE);
 
 #define TEST_CMP(a,b) ((a) != 0.0 ? fabs(((b)-(a))/(a)) : fabs((b)-(a)))
@@ -292,13 +297,13 @@ ncm_spline_new_function_spline (NcmSpline *s, gsl_function *F, gdouble xi, gdoub
         continue;
       else
       {
-        const gdouble x0 = BIVEC_LIST_X (wnodes);
-        const gdouble x1 = BIVEC_LIST_X (wnodes->next);
-        const gdouble y0 = BIVEC_LIST_Y (wnodes);
-        const gdouble y1 = BIVEC_LIST_Y (wnodes->next);
-        const gdouble x = (x0 + x1) / 2.0;
-        const gdouble y = GSL_FN_EVAL (F, x);
-        const gdouble ys = ncm_spline_eval (s, x);
+        const gdouble x0  = BIVEC_LIST_X (wnodes);
+        const gdouble x1  = BIVEC_LIST_X (wnodes->next);
+        const gdouble y0  = BIVEC_LIST_Y (wnodes);
+        const gdouble y1  = BIVEC_LIST_Y (wnodes->next);
+        const gdouble x   = (x0 + x1) / 2.0;
+        const gdouble y   = GSL_FN_EVAL (F, x);
+        const gdouble ys  = ncm_spline_eval (s, x);
         const gdouble Iyc = (x1 - x0) * (y1 + y0 + 4.0 * y) / 6.0;
         const gdouble Iys = ncm_spline_eval_integ (s, x0, x1);
         const gboolean test_p = (TEST_CMP(y, ys) < rel_error);
@@ -419,18 +424,18 @@ ncm_spline_new_function_spline_lnknot (NcmSpline *s, gsl_function *F, gdouble xi
         continue;
       else
       {
-        const gdouble x0 = BIVEC_LIST_X(wnodes);
-        const gdouble x1 = BIVEC_LIST_X(wnodes->next);
+        const gdouble x0   = BIVEC_LIST_X(wnodes);
+        const gdouble x1   = BIVEC_LIST_X(wnodes->next);
         const gdouble lnx0 = log (x0);
         const gdouble lnx1 = log (x1);
-        const gdouble y0 = BIVEC_LIST_Y(wnodes);
-        const gdouble y1 = BIVEC_LIST_Y(wnodes->next);
-        const gdouble lnx = (log(x0) + log(x1)) / 2.0;
-        const gdouble x = exp (lnx);
-        const gdouble y = GSL_FN_EVAL (F, x);
-        const gdouble ys = ncm_spline_eval (s, x);
-        const gdouble Iyc = (lnx1 - lnx0) * (x1 * y1 + x0 * y0 + 4.0 * x * y) / 6.0;
-        const gdouble Iys = ncm_spline_eval_integ (s, x0, x1);
+        const gdouble y0   = BIVEC_LIST_Y(wnodes);
+        const gdouble y1   = BIVEC_LIST_Y(wnodes->next);
+        const gdouble lnx  = (lnx0 + lnx1) / 2.0;
+        const gdouble x    = exp (lnx);
+        const gdouble y    = GSL_FN_EVAL (F, x);
+        const gdouble ys   = ncm_spline_eval (s, x);
+        const gdouble Iyc  = (x1 - x0) * (x1 * y1 + x0 * y0 + 4.0 * x * y) / 6.0;
+        const gdouble Iys  = ncm_spline_eval_integ (s, x0, x1);
         const gboolean test_p = (TEST_CMP(y, ys) < rel_error);
         const gboolean test_I = (TEST_CMP(Iyc, Iys) < rel_error);
 #ifdef _NCM_SPLINE_TEST_DIFF

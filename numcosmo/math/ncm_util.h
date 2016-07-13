@@ -96,6 +96,8 @@ gdouble ncm_complex_Im (NcmComplex *c);
 #define exp10(x) (exp ((x) * M_LN10))
 #endif /* HAVE_EXP10 */
 
+#define ncm_acb_get_complex(z) (arf_get_d (arb_midref (acb_realref (z)), ARF_RND_NEAR) + I * arf_get_d (arb_midref (acb_imagref (z)), ARF_RND_NEAR))
+
 #define ncm_util_exp10(x) (exp ((x) * M_LN10))
 
 #define NCM_GARRAY_MEMCPY(dest,src) \

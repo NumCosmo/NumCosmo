@@ -402,7 +402,7 @@ ncm_powspec_filter_prepare (NcmPowspecFilter *psf, NcmModel *model)
 
     ncm_powspec_get_nknots (psf->ps, &N_z, &N_k);
     
-    ncm_fftlog_calibrate_size (psf->fftlog, &F, psf->reltol);
+    ncm_fftlog_calibrate_size (psf->fftlog, &F, psf->reltol * 1.0e-2);
     N_k = ncm_fftlog_get_size (psf->fftlog);
 
     {
@@ -412,7 +412,7 @@ ncm_powspec_filter_prepare (NcmPowspecFilter *psf, NcmModel *model)
       Fdummy_z.function = &_ncm_powspec_filter_dummy_z;
       Fdummy_z.params   = &arg;
 
-      ncm_spline_set_func (dummy_z, NCM_SPLINE_FUNCTION_SPLINE, &Fdummy_z, psf->zi, psf->zf, 10000, psf->reltol);
+      ncm_spline_set_func (dummy_z, NCM_SPLINE_FUNCTION_SPLINE, &Fdummy_z, psf->zi, psf->zf, 0, psf->reltol * 1.0e-2);
 
       z_vec = ncm_spline_get_xv (dummy_z);
       N_z = ncm_vector_len (z_vec);
@@ -423,16 +423,16 @@ ncm_powspec_filter_prepare (NcmPowspecFilter *psf, NcmModel *model)
     g_assert_cmpuint (N_z, >, 0);
     g_assert_cmpuint (N_k, >, 0);
 
-    lnvar   = ncm_matrix_new (N_z, N_k);
-    dlnvar  = ncm_matrix_new (N_z, N_k);
-    lnr_vec = ncm_fftlog_get_vector_lnr (psf->fftlog);
-/*    
     printf ("# Calibrating in zmin % 20.15g zmax % 20.15g, rmin % 20.15g rmax % 20.15g, N_z = %u, N_k = %u\n",
             psf->zi, psf->zf, 
             ncm_powspec_filter_get_r_min (psf), 
             ncm_powspec_filter_get_r_max (psf), 
             N_z, N_k);
-*/    
+    
+    lnvar   = ncm_matrix_new (N_z, N_k);
+    dlnvar  = ncm_matrix_new (N_z, N_k);
+    lnr_vec = ncm_fftlog_get_vector_lnr (psf->fftlog);
+        
     for (i = 0; i < N_z; i++)
     {
       NcmVector *var_z  = ncm_matrix_get_row (lnvar, i);

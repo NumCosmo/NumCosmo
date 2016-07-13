@@ -486,6 +486,17 @@ AC_CHECK_FUNC([__gmpz_init],[],[AC_CHECK_LIB([gmp], [__gmpz_init],,[AC_MSG_ERROR
 AC_CHECK_FUNC([mpfr_init],[],[AC_CHECK_LIB([mpfr], [mpfr_init],,[AC_MSG_ERROR([MPFR not found. See README.])])])
 
 dnl ***************************************************************************
+dnl Check for arb library
+dnl ***************************************************************************
+
+AC_CHECK_HEADERS([arb.h acb.h])
+AC_CHECK_LIB([arb],[arb_set])
+
+if test "x$ac_cv_lib_arb_arb_set" != "x"; then
+  AC_CHECK_FUNCS([arb_set acb_set acb_lgamma acb_exp acb_sin])
+fi
+
+dnl ***************************************************************************
 dnl Check for fftw3
 dnl ***************************************************************************
 
