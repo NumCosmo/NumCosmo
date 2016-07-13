@@ -758,6 +758,7 @@ ncm_stats_dist1d_epdf_prepare (NcmStatsDist1d *sd1)
 /**
  * ncm_stats_dist1d_epdf_new_full:
  * @max_obs: maximum observations before compacting
+ * @bw: a #NcmStatsDist1dEPDFBw
  * @h_fixed: fixed bandwidth
  * @sd_min_scale: scale of the minimum distance 
  * 

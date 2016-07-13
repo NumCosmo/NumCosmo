@@ -5,7 +5,6 @@ XML_FILES=dependencies.xml \
           compiling.xml    \
           introduction.xml \
           darkenergy.xml   \
-          gdarkenergy.xml  \
           refs.xml         \
           gobject_introd.xml
 
@@ -109,6 +108,7 @@ IGNORE_HFILES=linear_internal.h         \
               gsl_rstat.h               \
               rquantile.c               \
               $(ignore_nlopt)           \
+              Faddeeva.h                \
               levmar                    \
               libcuba                   \
               plc			\
@@ -141,7 +141,7 @@ GTKDOC_LIBS=$(top_builddir)/numcosmo/libnumcosmo.la
 # This includes the standard gtk-doc make rules, copied by gtkdocize.
 include $(top_srcdir)/gtk-doc.make
 
-setup-build.stamp: $(DOC_MAIN_SGML_FILE) $(content_files) $(expand_content_files)
+setup-build.stamp: $(DOC_MAIN_SGML_FILE) $(addprefix $(top_srcdir)/docs/, $(content_files)) $(expand_content_files)
 
 # Other files to distribute
 # e.g. EXTRA_DIST += version.xml.in
@@ -164,13 +164,13 @@ endif
 
 ########################################################################
 
-man_MANS = darkenergy.1 gdarkenergy.1
+man_MANS := darkenergy.1
 
 EXTRA_DIST += $(man_MANS)
 
 if ENABLE_MAN
 
-.xml.1:
+%.1: %.xml
 	@@XSLTPROC@ -nonet http://docbook.sourceforge.net/release/xsl/current/manpages/docbook.xsl $<
 
 dist-local-check-mans-enabled:
@@ -191,6 +191,8 @@ MAINTAINERCLEANFILES = $(man_MANS) $(BUILT_SOURCES)
 
 BUILT_EXTRA_DIST = $(man_MANS)
 
+CLEANFILES += bibfile.stamp addmathjax.stamp
+
 dist-hook-local: dist-local-check-mans-enabled numcosmo-docs-clean all-local
 
 numcosmo-docs-clean: clean
@@ -202,13 +204,11 @@ bibfile.stamp: $(top_srcdir)/docs/references.bib
 	fi
 	$(AM_V_at)touch bibfile.stamp
 
-references.tex: bibfile.stamp
-
-.tex.xml:
+%.xml: %.tex bibfile.stamp
 	$(AM_V_at)echo "  DOC   Building XML $@ from $<"
 	$(AM_V_at)rm -f $*.aux $*.bbl 
 	$(AM_V_at)latex --interaction=nonstopmode $< >  $(@F).htlatex.log 2>&1
-	$(AM_V_at)bibtex8 $*                         >> $(@F).htlatex.log 2>&1
+	$(AM_V_at)bibtex8 $(*F)                      >> $(@F).htlatex.log 2>&1
 	$(AM_V_at)latex --interaction=nonstopmode $< >> $(@F).htlatex.log 2>&1
 	$(AM_V_at)latex --interaction=nonstopmode $< >> $(@F).htlatex.log 2>&1
 	$(AM_V_at)htlatex $< "xhtml,docbook" " -cunihtf" "-cdocbk" "--interaction=nonstopmode" >> $(@F).htlatex.log 2>&1

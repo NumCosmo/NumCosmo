@@ -46,7 +46,7 @@ GLib/GObject/GObject Introspection
 <ulink role="online-location" url="http://www.gtk.org/">http://www.gtk.org/</ulink>, 
 <ulink role="online-location" url="http://developer.gnome.org/glib/stable/">http://developer.gnome.org/glib/stable/</ulink>
 <ulink role="online-location" url="https://developer.gnome.org/gobject/stable/">https://developer.gnome.org/gobject/stable/</ulink>
-<ulink role="online-location" url="https://wiki.gnome.org/action/show/Projects/GObjectIntrospection?action=show&redirect=GObjectIntrospection">https://wiki.gnome.org/action/show/Projects/GObjectIntrospection?action=show&redirect=GObjectIntrospection</ulink>
+<ulink role="online-location" url="https://wiki.gnome.org/action/show/Projects/GObjectIntrospection?action=show&amp;redirect=GObjectIntrospection">https://wiki.gnome.org/action/show/Projects/GObjectIntrospection?action=show&amp;redirect=GObjectIntrospection</ulink>
 </simpara>
 </listitem>
 <listitem>
@@ -218,8 +218,6 @@ Common interface to several optimization (minimization) algorithms including glo
 </itemizedlist>
 </listitem>
 </itemizedlist>
-</listitem>
-</itemizedlist>
 </refsect1>
 <refsect1 id="int_dep">
 <title>Integrated Libraries</title>
@@ -282,5 +280,6 @@ Plik -  Planck (2015) CMB spectra and likelihood code
 </listitem>
 </itemizedlist>
 </listitem>
+</itemizedlist>
 </refsect1>
 </refentry>
