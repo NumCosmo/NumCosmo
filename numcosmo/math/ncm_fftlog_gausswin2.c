@@ -38,7 +38,7 @@
  *
  *
  * This object computes the function (see #NcmFftlog)
- * $$Y_n = \int_0^\infty t^{\frac{2\pi i n}{L} K(t) dt,$$
+ * $$Y_n = \int_0^\infty t^{\frac{2\pi i n}{L}} K(t) dt,$$
  * where the kernel is the square of the Gaussian window function $K(t) = W(t)^2$,
  * \begin{equation}
  * W(t) = \exp \left( \frac{-t^2}{2} \right).

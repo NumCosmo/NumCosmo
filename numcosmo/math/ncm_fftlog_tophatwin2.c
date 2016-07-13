@@ -38,12 +38,12 @@
  *
  *
  * This object computes the function (see #NcmFftlog)
- * $$Y_n = \int_0^\infty t^{\frac{2\pi i n}{L} K(t) dt,$$
+ * $$Y_n = \int_0^\infty t^{\frac{2\pi i n}{L}} K(t) dt,$$
  * where the kernel is the square of the top hat window function in the Fourier space $K(t) = W(t)^2$,
- * \begin{align}
- * W(t) &= \frac{3}{t^3}(\sin t - t \cos t) \\
- * &= \frac{3}{t} j_1(t),
- * \end{align}
+ * \begin{eqnarray}
+ * W(t) &=& \frac{3}{t^3}(\sin t - t \cos t) \\
+ * &=& \frac{3}{t} j_1(t),
+ * \end{eqnarray}
  * and $j_\nu(t)$ is the spherical Bessel function of the first kind.
  *  
  */
