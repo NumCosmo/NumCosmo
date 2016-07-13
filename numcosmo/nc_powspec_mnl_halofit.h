@@ -29,8 +29,10 @@
 #include <glib.h>
 #include <glib-object.h>
 #include <numcosmo/build_cfg.h>
+#include <numcosmo/math/ncm_powspec_filter.h>
 #include <numcosmo/nc_powspec_mnl.h>
 #include <numcosmo/nc_powspec_ml.h>
+
 
 G_BEGIN_DECLS
 
@@ -57,22 +59,24 @@ struct _NcPowspecMNLHaloFit
   NcPowspecMNL parent_instance;
   NcPowspecML* psml;
   gdouble zmaxnl;
-  gdouble prec;
+  gdouble reltol;
   NcmSpline *Rsigma;
   NcmSpline *neff;
   NcmSpline *Cur;
+  NcmPowspecFilter *psml_gauss;
   NcPowspecMNLHaloFitPrivate *priv;
 };
 
 GType nc_powspec_mnl_halofit_get_type (void) G_GNUC_CONST;
 
-NcPowspecMNLHaloFit* nc_powspec_mnl_halofit_new (NcPowspecML *psml, gdouble zmaxnl, gdouble prec);
+NcPowspecMNLHaloFit *nc_powspec_mnl_halofit_new (NcPowspecML *psml, gdouble zmaxnl, gdouble reltol);
+
+void nc_powspec_mnl_halofit_set_kbounds_from_ml (NcPowspecMNLHaloFit *pshf);
 
 #define NC_POWSPEC_MNL_HALOFIT_F1POW   (-0.0307)
 #define NC_POWSPEC_MNL_HALOFIT_F2POW   (-0.0585)
 #define NC_POWSPEC_MNL_HALOFIT_F3POW   (0.0743)
 #define NC_POWSPEC_MNL_HALOFIT_LOGRMIN (-35.0)
-#define NC_POWSPEC_MNL_HALOFIT_NKNOTS  (200)
 
 G_END_DECLS
 

@@ -54,6 +54,7 @@ nc_growth_func_init (NcGrowthFunc *gf)
   gf->s          = NULL;
   gf->cvode      = NULL;
   gf->yv         = N_VNew_Serial (2);
+  gf->yQ         = N_VNew_Serial (1);
   gf->zf         = 0.0;
   gf->Da0        = 0.0;
   gf->ctrl_cosmo = ncm_model_ctrl_new (NULL);
@@ -78,6 +79,7 @@ _nc_growth_func_finalize (GObject *object)
 
   CVodeFree (&gf->cvode);
   N_VDestroy (gf->yv);
+  N_VDestroy (gf->yQ);
 
   /* Chain up : end */
   G_OBJECT_CLASS (nc_growth_func_parent_class)->finalize (object);
@@ -194,7 +196,19 @@ growth_J (_NCM_SUNDIALS_INT_TYPE N, realtype a, N_Vector y, N_Vector fy, DlsMat 
   return 0;
 }
 
-#define _NC_GROWTH_FUNC_START_A (1.0e-15)
+static gint
+dust_norma (gdouble a, N_Vector y, N_Vector yQdot, gpointer fQ_data)
+{
+  NcHICosmo *cosmo       = NC_HICOSMO (fQ_data);
+  const gdouble z        = 1.0 / a - 1.0;
+  const gdouble E        = nc_hicosmo_E (cosmo, z);
+  
+  NV_Ith_S(yQdot, 0) = 1.0 / gsl_pow_3 (a * E);
+
+  return 0;
+}
+
+#define _NC_GROWTH_FUNC_START_A (1.0e-14)
 
 /**
  * nc_growth_func_prepare:
@@ -209,6 +223,8 @@ nc_growth_func_prepare (NcGrowthFunc *gf, NcHICosmo *cosmo)
 {
   GArray *x_array, *y_array;
   gdouble ai, a;
+  const gdouble Omega_m0 = nc_hicosmo_Omega_m0 (cosmo);
+  const gdouble Omega_r0 = nc_hicosmo_Omega_r0 (cosmo);
   gint flag;
 
   ai = _NC_GROWTH_FUNC_START_A;
@@ -228,7 +244,9 @@ nc_growth_func_prepare (NcGrowthFunc *gf, NcHICosmo *cosmo)
   g_array_set_size (y_array, 0);
 
   NV_Ith_S (gf->yv, 0) = 1.0;
-  NV_Ith_S (gf->yv, 1) = 3.0 * nc_hicosmo_Omega_m0 (cosmo) / (2.0 * nc_hicosmo_Omega_r0 (cosmo));
+  NV_Ith_S (gf->yv, 1) = (3.0 / 2.0) * Omega_m0 / Omega_r0;
+
+  NV_Ith_S (gf->yQ, 0) = 0.0;
 
   if (gf->cvode == NULL)
   {
@@ -236,6 +254,9 @@ nc_growth_func_prepare (NcGrowthFunc *gf, NcHICosmo *cosmo)
 
     flag = CVodeInit (gf->cvode, &growth_f, ai, gf->yv);
     NCM_CVODE_CHECK (&flag, "CVodeInit", 1, );
+
+    CVodeQuadInit (gf->cvode, &dust_norma, gf->yQ);
+    NCM_CVODE_CHECK (&flag, "CVodeQuadInit", 1, );    
 
     flag = CVDense (gf->cvode, 2);
     NCM_CVODE_CHECK (&flag, "CVDense", 1, );
@@ -247,6 +268,9 @@ nc_growth_func_prepare (NcGrowthFunc *gf, NcHICosmo *cosmo)
   {
     flag = CVodeReInit (gf->cvode, ai, gf->yv);
     NCM_CVODE_CHECK (&flag, "CVodeReInit", 1, );
+
+    flag = CVodeQuadReInit (gf->cvode, gf->yQ);
+    NCM_CVODE_CHECK (&flag, "CVodeQuadReInit", 1, );    
   }
 
   flag = CVodeSStolerances (gf->cvode, 1e-13, 0.0);
@@ -271,9 +295,20 @@ nc_growth_func_prepare (NcGrowthFunc *gf, NcHICosmo *cosmo)
 
     g_array_append_val (x_array, a);
     g_array_append_val (y_array, NV_Ith_S (gf->yv, 0));
-
+    
     if (a == 1.0)
       break;
+  }
+
+  {
+    gdouble aQ = 0.0;
+
+    flag = CVodeGetQuad (gf->cvode, &aQ, gf->yQ);
+    NCM_CVODE_CHECK (&flag, "CVodeGetQuad", 1, );
+
+    g_assert_cmpfloat (aQ, ==, 1.0);
+
+    gf->Da0 = 2.5 * Omega_m0 * NV_Ith_S (gf->yQ, 0);
   }
 
   if (gf->s == NULL)
@@ -285,8 +320,7 @@ nc_growth_func_prepare (NcGrowthFunc *gf, NcHICosmo *cosmo)
     NcmVector *xv = ncm_vector_new_array (x_array);
     NcmVector *yv = ncm_vector_new_array (y_array);
 
-    gf->Da0 = ncm_vector_get (yv, y_array->len - 1);
-    ncm_vector_scale (yv, 1.0 / gf->Da0);
+    ncm_vector_scale (yv, 1.0 / ncm_vector_get (yv, y_array->len - 1));
     ncm_spline_set (gf->s, xv, yv, TRUE);
 
     ncm_vector_free (xv);
@@ -349,7 +383,7 @@ nc_growth_func_prepare_if_needed (NcGrowthFunc *gf, NcHICosmo *cosmo)
  *
  */
 /**
- * nc_growth_func_get_Da0:
+ * nc_growth_func_get_dust_norma_Da0:
  * @gf: a #NcGrowthFunc
  *
  * FIXME

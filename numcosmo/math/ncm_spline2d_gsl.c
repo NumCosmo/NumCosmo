@@ -272,7 +272,8 @@ static gdouble _ncm_spline2d_gsl_dzdx (NcmSpline2d *s2d, gdouble x, gdouble y)
   return result;
 }
 
-static gdouble _ncm_spline2d_gsl_dzdy (NcmSpline2d *s2d, gdouble x, gdouble y)
+static gdouble 
+_ncm_spline2d_gsl_dzdy (NcmSpline2d *s2d, gdouble x, gdouble y)
 {
   NcmSpline2dGsl *s2dgsl = NCM_SPLINE2D_GSL (s2d);
 

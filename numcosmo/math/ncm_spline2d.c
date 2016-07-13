@@ -467,7 +467,7 @@ ncm_spline2d_use_acc (NcmSpline2d *s2d, gboolean use_acc)
 }
 
 /**
- * ncm_spline2d_integ_dx:
+ * ncm_spline2d_integ_dx: (virtual int_dx)
  * @s2d: a #NcmSpline2d
  * @xl: lower limit of integration
  * @xu: upper limit of integration
@@ -487,7 +487,7 @@ ncm_spline2d_integ_dx (NcmSpline2d *s2d, gdouble xl, gdouble xu, gdouble y)
 }
 
 /**
- * ncm_spline2d_integ_dy:
+ * ncm_spline2d_integ_dy: (virtual int_dy)
  * @s2d: a #NcmSpline2d
  * @x: x-coordinate value
  * @yl: lower limit of integration
@@ -507,7 +507,7 @@ ncm_spline2d_integ_dy (NcmSpline2d *s2d, gdouble x, gdouble yl, gdouble yu)
 }
 
 /**
- * ncm_spline2d_integ_dxdy:
+ * ncm_spline2d_integ_dxdy: (virtual int_dxdy)
  * @s2d: a #NcmSpline2d
  * @xl: lower limit of integration in the x-direction
  * @xu: upper limit of integration in the x-direction
@@ -657,6 +657,47 @@ ncm_spline2d_integ_dxdy_spline_y (NcmSpline2d *s2d, gdouble xl, gdouble xu, gdou
  *
  * Returns: The interpolated value of a function computed at the point (@x, @y).
  */
+/**
+ * ncm_spline2d_deriv_dzdx: (virtual dzdx)
+ * @s2d: a #NcmSpline2d
+ * @x: x-coordinate value
+ * @y: y-coordinate value
+ * 
+ * Returns: The interpolated derivative $\mathrm{d}z/\mathrm{d}x$ computed at the point (@x, @y).
+ */
+/**
+ * ncm_spline2d_deriv_dzdy: (virtual dzdy)
+ * @s2d: a #NcmSpline2d
+ * @x: x-coordinate value
+ * @y: y-coordinate value
+ * 
+ * Returns: The interpolated derivative $\mathrm{d}z/\mathrm{d}y$ computed at the point (@x, @y).
+ */
+/**
+ * ncm_spline2d_deriv_d2zdxy: (virtual d2zdxy)
+ * @s2d: a #NcmSpline2d
+ * @x: x-coordinate value
+ * @y: y-coordinate value
+ * 
+ * Returns: The interpolated derivative $\mathrm{d}^2z/\mathrm{d}x\mathrm{d}y$ computed at the point (@x, @y).
+ */
+/**
+ * ncm_spline2d_deriv_d2zdx2: (virtual d2zdx2)
+ * @s2d: a #NcmSpline2d
+ * @x: x-coordinate value
+ * @y: y-coordinate value
+ * 
+ * Returns: The interpolated derivative $\mathrm{d}^2z/\mathrm{d}x^2$ computed at the point (@x, @y).
+ */
+/**
+ * ncm_spline2d_deriv_d2zdy2: (virtual d2zdy2)
+ * @s2d: a #NcmSpline2d
+ * @x: x-coordinate value
+ * @y: y-coordinate value
+ * 
+ * Returns: The interpolated derivative $\mathrm{d}^2z/\mathrm{d}y^2$ computed at the point (@x, @y).
+ */
+
 /**
  * ncm_spline2dim_integ_total:
  * @s2d: a #NcmSpline2d

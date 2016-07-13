@@ -75,6 +75,8 @@ struct _NcmPowspecFilter
   NcmPowspecFilterType type;
   NcmFftlog *fftlog;
   gdouble lnr0;
+  gdouble lnk0;
+  gdouble Lk;
   gdouble zi;
   gdouble zf;
   gboolean calibrated;
@@ -105,11 +107,16 @@ gdouble ncm_powspec_filter_get_r_max (NcmPowspecFilter *psf);
 
 gdouble ncm_powspec_filter_eval_lnvar_lnr (NcmPowspecFilter *psf, const gdouble z, const gdouble lnr);
 gdouble ncm_powspec_filter_eval_var (NcmPowspecFilter *psf, const gdouble z, const gdouble r);
+gdouble ncm_powspec_filter_eval_var_lnr (NcmPowspecFilter *psf, const gdouble z, const gdouble lnr);
 gdouble ncm_powspec_filter_eval_sigma_lnr (NcmPowspecFilter *psf, const gdouble z, const gdouble lnr);
 gdouble ncm_powspec_filter_eval_sigma (NcmPowspecFilter *psf, const gdouble z, const gdouble r);
 
+gdouble ncm_powspec_filter_eval_dvar_dlnr (NcmPowspecFilter *psf, const gdouble z, const gdouble lnr);
 gdouble ncm_powspec_filter_eval_dlnvar_dlnr (NcmPowspecFilter *psf, const gdouble z, const gdouble lnr);
 gdouble ncm_powspec_filter_eval_dlnvar_dr (NcmPowspecFilter *psf, const gdouble z, const gdouble lnr);
+
+gdouble ncm_powspec_filter_eval_dnvar_dlnrn (NcmPowspecFilter *psf, const gdouble z, const gdouble lnr, guint n);
+gdouble ncm_powspec_filter_eval_dnlnvar_dlnrn (NcmPowspecFilter *psf, const gdouble z, const gdouble lnr, guint n);
 
 gdouble ncm_powspec_filter_volume_rm3 (NcmPowspecFilter *psf);
 

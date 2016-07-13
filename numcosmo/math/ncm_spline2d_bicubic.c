@@ -575,11 +575,130 @@ _ncm_spline2d_bicubic_eval (NcmSpline2d *s2d, gdouble x, gdouble y)
   }
 }
 
-static gdouble _ncm_spline2d_bicubic_dzdx (NcmSpline2d *s2d, gdouble x, gdouble y) { NCM_UNUSED (s2d); NCM_UNUSED (x); NCM_UNUSED (y); g_error ("bicubic does not implement dzdx"); return 0.0; }
-static gdouble _ncm_spline2d_bicubic_dzdy (NcmSpline2d *s2d, gdouble x, gdouble y) { NCM_UNUSED (s2d); NCM_UNUSED (x); NCM_UNUSED (y); g_error ("bicubic does not implement dzdy"); return 0.0; }
-static gdouble _ncm_spline2d_bicubic_d2zdx2 (NcmSpline2d *s2d, gdouble x, gdouble y) { NCM_UNUSED (s2d); NCM_UNUSED (x); NCM_UNUSED (y); g_error ("bicubic does not implement d2zdx2"); return 0.0; }
-static gdouble _ncm_spline2d_bicubic_d2zdy2 (NcmSpline2d *s2d, gdouble x, gdouble y) { NCM_UNUSED (s2d); NCM_UNUSED (x); NCM_UNUSED (y); g_error ("bicubic does not implement d2zdy2"); return 0.0; }
-static gdouble _ncm_spline2d_bicubic_d2zdxy (NcmSpline2d *s2d, gdouble x, gdouble y) { NCM_UNUSED (s2d); NCM_UNUSED (x); NCM_UNUSED (y); g_error ("bicubic does not implement d2zdxy"); return 0.0; }
+static gdouble 
+_ncm_spline2d_bicubic_dzdx (NcmSpline2d *s2d, gdouble x, gdouble y) 
+{ 
+  NcmSpline2dBicubic *s2dbc = NCM_SPLINE2D_BICUBIC (s2d);
+
+  if (!s2d->use_acc)
+  {
+    const gsize j = gsl_interp_bsearch (ncm_vector_ptr (s2d->xv, 0), x, 0, ncm_vector_len (s2d->xv) - 1);
+    const gsize i = gsl_interp_bsearch (ncm_vector_ptr (s2d->yv, 0), y, 0, ncm_vector_len (s2d->yv) - 1);
+    const gdouble x0 = ncm_vector_get (s2d->xv, j);
+    const gdouble y0 = ncm_vector_get (s2d->yv, i);
+
+    return ncm_spline2d_bicubic_eval_poly_dzdx (&NCM_SPLINE2D_BICUBIC_STRUCT (s2dbc, i, j), x - x0, y - y0);
+  }
+  else
+  {
+    const gsize j    = gsl_interp_accel_find (s2d->acc_x, ncm_vector_ptr (s2d->xv, 0), ncm_vector_len (s2d->xv), x);
+    const gsize i    = gsl_interp_accel_find (s2d->acc_y, ncm_vector_ptr (s2d->yv, 0), ncm_vector_len (s2d->yv), y);
+    const gdouble x0 = ncm_vector_fast_get (s2d->xv, j);
+    const gdouble y0 = ncm_vector_fast_get (s2d->yv, i);
+
+    return ncm_spline2d_bicubic_eval_poly_dzdx (&NCM_SPLINE2D_BICUBIC_STRUCT (s2dbc, i, j), x - x0, y - y0);
+  }
+}
+
+static gdouble 
+_ncm_spline2d_bicubic_dzdy (NcmSpline2d *s2d, gdouble x, gdouble y) 
+{ 
+  NcmSpline2dBicubic *s2dbc = NCM_SPLINE2D_BICUBIC (s2d);
+
+  if (!s2d->use_acc)
+  {
+    const gsize j = gsl_interp_bsearch (ncm_vector_ptr (s2d->xv, 0), x, 0, ncm_vector_len (s2d->xv) - 1);
+    const gsize i = gsl_interp_bsearch (ncm_vector_ptr (s2d->yv, 0), y, 0, ncm_vector_len (s2d->yv) - 1);
+    const gdouble x0 = ncm_vector_get (s2d->xv, j);
+    const gdouble y0 = ncm_vector_get (s2d->yv, i);
+
+    return ncm_spline2d_bicubic_eval_poly_dzdy (&NCM_SPLINE2D_BICUBIC_STRUCT (s2dbc, i, j), x - x0, y - y0);
+  }
+  else
+  {
+    const gsize j    = gsl_interp_accel_find (s2d->acc_x, ncm_vector_ptr (s2d->xv, 0), ncm_vector_len (s2d->xv), x);
+    const gsize i    = gsl_interp_accel_find (s2d->acc_y, ncm_vector_ptr (s2d->yv, 0), ncm_vector_len (s2d->yv), y);
+    const gdouble x0 = ncm_vector_fast_get (s2d->xv, j);
+    const gdouble y0 = ncm_vector_fast_get (s2d->yv, i);
+
+    return ncm_spline2d_bicubic_eval_poly_dzdy (&NCM_SPLINE2D_BICUBIC_STRUCT (s2dbc, i, j), x - x0, y - y0);
+  }
+}
+
+static gdouble 
+_ncm_spline2d_bicubic_d2zdx2 (NcmSpline2d *s2d, gdouble x, gdouble y) 
+{ 
+  NcmSpline2dBicubic *s2dbc = NCM_SPLINE2D_BICUBIC (s2d);
+
+  if (!s2d->use_acc)
+  {
+    const gsize j = gsl_interp_bsearch (ncm_vector_ptr (s2d->xv, 0), x, 0, ncm_vector_len (s2d->xv) - 1);
+    const gsize i = gsl_interp_bsearch (ncm_vector_ptr (s2d->yv, 0), y, 0, ncm_vector_len (s2d->yv) - 1);
+    const gdouble x0 = ncm_vector_get (s2d->xv, j);
+    const gdouble y0 = ncm_vector_get (s2d->yv, i);
+
+    return ncm_spline2d_bicubic_eval_poly_d2zdx2 (&NCM_SPLINE2D_BICUBIC_STRUCT (s2dbc, i, j), x - x0, y - y0);
+  }
+  else
+  {
+    const gsize j    = gsl_interp_accel_find (s2d->acc_x, ncm_vector_ptr (s2d->xv, 0), ncm_vector_len (s2d->xv), x);
+    const gsize i    = gsl_interp_accel_find (s2d->acc_y, ncm_vector_ptr (s2d->yv, 0), ncm_vector_len (s2d->yv), y);
+    const gdouble x0 = ncm_vector_fast_get (s2d->xv, j);
+    const gdouble y0 = ncm_vector_fast_get (s2d->yv, i);
+
+    return ncm_spline2d_bicubic_eval_poly_d2zdx2 (&NCM_SPLINE2D_BICUBIC_STRUCT (s2dbc, i, j), x - x0, y - y0);
+  }
+}
+
+static gdouble 
+_ncm_spline2d_bicubic_d2zdy2 (NcmSpline2d *s2d, gdouble x, gdouble y) 
+{ 
+  NcmSpline2dBicubic *s2dbc = NCM_SPLINE2D_BICUBIC (s2d);
+
+  if (!s2d->use_acc)
+  {
+    const gsize j = gsl_interp_bsearch (ncm_vector_ptr (s2d->xv, 0), x, 0, ncm_vector_len (s2d->xv) - 1);
+    const gsize i = gsl_interp_bsearch (ncm_vector_ptr (s2d->yv, 0), y, 0, ncm_vector_len (s2d->yv) - 1);
+    const gdouble x0 = ncm_vector_get (s2d->xv, j);
+    const gdouble y0 = ncm_vector_get (s2d->yv, i);
+
+    return ncm_spline2d_bicubic_eval_poly_d2zdy2 (&NCM_SPLINE2D_BICUBIC_STRUCT (s2dbc, i, j), x - x0, y - y0);
+  }
+  else
+  {
+    const gsize j    = gsl_interp_accel_find (s2d->acc_x, ncm_vector_ptr (s2d->xv, 0), ncm_vector_len (s2d->xv), x);
+    const gsize i    = gsl_interp_accel_find (s2d->acc_y, ncm_vector_ptr (s2d->yv, 0), ncm_vector_len (s2d->yv), y);
+    const gdouble x0 = ncm_vector_fast_get (s2d->xv, j);
+    const gdouble y0 = ncm_vector_fast_get (s2d->yv, i);
+
+    return ncm_spline2d_bicubic_eval_poly_d2zdy2 (&NCM_SPLINE2D_BICUBIC_STRUCT (s2dbc, i, j), x - x0, y - y0);
+  }
+}
+
+static gdouble 
+_ncm_spline2d_bicubic_d2zdxy (NcmSpline2d *s2d, gdouble x, gdouble y) 
+{ 
+  NcmSpline2dBicubic *s2dbc = NCM_SPLINE2D_BICUBIC (s2d);
+
+  if (!s2d->use_acc)
+  {
+    const gsize j = gsl_interp_bsearch (ncm_vector_ptr (s2d->xv, 0), x, 0, ncm_vector_len (s2d->xv) - 1);
+    const gsize i = gsl_interp_bsearch (ncm_vector_ptr (s2d->yv, 0), y, 0, ncm_vector_len (s2d->yv) - 1);
+    const gdouble x0 = ncm_vector_get (s2d->xv, j);
+    const gdouble y0 = ncm_vector_get (s2d->yv, i);
+
+    return ncm_spline2d_bicubic_eval_poly_d2zdxy (&NCM_SPLINE2D_BICUBIC_STRUCT (s2dbc, i, j), x - x0, y - y0);
+  }
+  else
+  {
+    const gsize j    = gsl_interp_accel_find (s2d->acc_x, ncm_vector_ptr (s2d->xv, 0), ncm_vector_len (s2d->xv), x);
+    const gsize i    = gsl_interp_accel_find (s2d->acc_y, ncm_vector_ptr (s2d->yv, 0), ncm_vector_len (s2d->yv), y);
+    const gdouble x0 = ncm_vector_fast_get (s2d->xv, j);
+    const gdouble y0 = ncm_vector_fast_get (s2d->yv, i);
+
+    return ncm_spline2d_bicubic_eval_poly_d2zdxy (&NCM_SPLINE2D_BICUBIC_STRUCT (s2dbc, i, j), x - x0, y - y0);
+  }
+}
 
 static gdouble
 _ncm_spline2d_bicubic_int_dx (NcmSpline2d *s2d, gdouble xl, gdouble xu, gdouble y)

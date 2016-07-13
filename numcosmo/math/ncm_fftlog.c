@@ -95,12 +95,12 @@
 enum
 {
   PROP_0,
+  PROP_NDERIV,
   PROP_LNR0,
   PROP_LNK0,
   PROP_LR,
   PROP_N,
   PROP_PAD,
-  PROP_NCOMP,
   PROP_NAME,
 };
 
@@ -124,17 +124,21 @@ ncm_fftlog_init (NcmFftlog *fftlog)
   fftlog->evaluated = FALSE;
 
   fftlog->lnr_vec = NULL;
-  fftlog->Gr_vec  = NULL;
-  fftlog->Gr_s    = NULL;
+  fftlog->Gr_vec  = g_ptr_array_new ();
+  fftlog->Gr_s    = g_ptr_array_new ();
 
+  g_ptr_array_set_free_func (fftlog->Gr_vec, (GDestroyNotify)ncm_vector_free);
+  g_ptr_array_set_free_func (fftlog->Gr_s, (GDestroyNotify)ncm_spline_free);
+    
 #ifdef NUMCOSMO_HAVE_FFTW3
   fftlog->Fk        = NULL;
   fftlog->Cm        = NULL;
   fftlog->Gr        = NULL;
-  fftlog->Ym        = NULL;
+  fftlog->Ym        = g_ptr_array_new ();
   fftlog->CmYm      = NULL;
   fftlog->p_Fk2Cm   = NULL;
   fftlog->p_CmYm2Gr = NULL;
+  g_ptr_array_set_free_func (fftlog->Ym, (GDestroyNotify)fftw_free);
 #endif /* NUMCOSMO_HAVE_FFTW3 */
 }
 
@@ -148,6 +152,9 @@ _ncm_fftlog_set_property (GObject *object, guint prop_id, const GValue *value, G
 
   switch (prop_id)
   {
+    case PROP_NDERIV:
+      ncm_fftlog_set_nderivs (fftlog, g_value_get_uint (value));
+      break;
     case PROP_LNR0:
       ncm_fftlog_set_lnr0 (fftlog, g_value_get_double (value));
       break;
@@ -162,9 +169,6 @@ _ncm_fftlog_set_property (GObject *object, guint prop_id, const GValue *value, G
       break;
     case PROP_PAD:
       ncm_fftlog_set_padding (fftlog, g_value_get_double (value));
-      break;
-    case PROP_NCOMP:
-      g_assert_not_reached ();
       break;
     case PROP_NAME:
       g_assert_not_reached ();
@@ -184,6 +188,9 @@ _ncm_fftlog_get_property (GObject *object, guint prop_id, GValue *value, GParamS
 
   switch (prop_id)
   {
+    case PROP_NDERIV:
+      g_value_set_uint (value, ncm_fftlog_get_nderivs (fftlog));
+      break;
     case PROP_LNR0:
       g_value_set_double (value, ncm_fftlog_get_lnr0 (fftlog));
       break;
@@ -202,37 +209,9 @@ _ncm_fftlog_get_property (GObject *object, guint prop_id, GValue *value, GParamS
     case PROP_NAME:
       g_value_set_string (value, NCM_FFTLOG_GET_CLASS (fftlog)->name);
       break;
-    case PROP_NCOMP:
-      g_value_set_uint (value, NCM_FFTLOG_GET_CLASS (fftlog)->ncomp);
-      break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
       break;
-  }
-}
-
-static void
-_ncm_fftlog_constructed (GObject *object)
-{
-  /* Chain up : start */
-  G_OBJECT_CLASS (ncm_fftlog_parent_class)->constructed (object);
-  {
-    NcmFftlog *fftlog = NCM_FFTLOG (object);
-    guint ncomp = NCM_FFTLOG_GET_CLASS (fftlog)->ncomp;
-
-    g_assert_cmpuint (ncomp, >, 0);
-
-    fftlog->Gr_vec    = g_new0 (NcmVector *, ncomp);
-    fftlog->Gr_s      = g_new0 (NcmSpline *, ncomp);
-
-#ifdef NUMCOSMO_HAVE_FFTW3
-    fftlog->Gr        = g_new0 (fftw_complex *, ncomp);
-    fftlog->Ym        = g_new0 (fftw_complex *, ncomp);
-    fftlog->CmYm      = g_new0 (fftw_complex *, ncomp);
-    fftlog->p_CmYm2Gr = g_new0 (fftw_plan, ncomp);
-#else
-    g_error ("Cannot construct FFTLog object, fftw3 library is not present, recompile numcosmo with fftw3 support.");
-#endif /* NUMCOSMO_HAVE_FFTW3 */
   }
 }
 
@@ -240,25 +219,19 @@ _ncm_fftlog_constructed (GObject *object)
 static void
 _ncm_fftlog_free_all (NcmFftlog *fftlog)
 {
-  guint ncomp = NCM_FFTLOG_GET_CLASS (fftlog)->ncomp;
-  guint i;
-
   g_clear_pointer (&fftlog->Fk, fftw_free);
   g_clear_pointer (&fftlog->Cm, fftw_free);
+  g_clear_pointer (&fftlog->CmYm, fftw_free);
+  g_clear_pointer (&fftlog->Gr, fftw_free);
+  
   g_clear_pointer (&fftlog->p_Fk2Cm, fftw_destroy_plan);
+  g_clear_pointer (&fftlog->p_CmYm2Gr, fftw_destroy_plan);
 
   ncm_vector_clear (&fftlog->lnr_vec);
-  
-  for (i = 0; i < ncomp; i++)
-  {
-    g_clear_pointer (&fftlog->Gr[i], fftw_free);
-    g_clear_pointer (&fftlog->Ym[i], fftw_free);
-    g_clear_pointer (&fftlog->CmYm[i], fftw_free);
-    
-    g_clear_pointer (&fftlog->p_CmYm2Gr[i], fftw_destroy_plan);
-    ncm_vector_clear (&fftlog->Gr_vec[i]);
-    ncm_spline_clear (&fftlog->Gr_s[i]);
-  }
+
+  g_ptr_array_set_size (fftlog->Gr_vec, 0);
+  g_ptr_array_set_size (fftlog->Gr_s, 0);
+  g_ptr_array_set_size (fftlog->Ym, 0);  
 }
 #endif /* NUMCOSMO_HAVE_FFTW3 */
 
@@ -269,14 +242,10 @@ _ncm_fftlog_finalize (GObject *object)
   NcmFftlog *fftlog = NCM_FFTLOG (object);
   _ncm_fftlog_free_all (fftlog);
 
-  g_free (fftlog->Gr_vec);
-  g_free (fftlog->Gr_s);
+  g_clear_pointer (&fftlog->Gr_vec, (GDestroyNotify)g_ptr_array_unref);
+  g_clear_pointer (&fftlog->Gr_s, (GDestroyNotify)g_ptr_array_unref);
+  g_clear_pointer (&fftlog->Ym, (GDestroyNotify)g_ptr_array_unref);
   
-  g_free (fftlog->Gr);
-  g_free (fftlog->Ym);
-  g_free (fftlog->CmYm);
-  g_free (fftlog->p_CmYm2Gr);
-
 #endif /* NUMCOSMO_HAVE_FFTW3 */
   
   /* Chain up : end */
@@ -288,11 +257,17 @@ ncm_fftlog_class_init (NcmFftlogClass *klass)
 {
   GObjectClass* object_class = G_OBJECT_CLASS (klass);
 
-  object_class->constructed  = &_ncm_fftlog_constructed;
   object_class->set_property = &_ncm_fftlog_set_property;
   object_class->get_property = &_ncm_fftlog_get_property;
   object_class->finalize     = &_ncm_fftlog_finalize;
 
+  g_object_class_install_property (object_class,
+                                   PROP_NDERIV,
+                                   g_param_spec_uint ("nderivs",
+                                                      NULL,
+                                                      "Number of derivatives",
+                                                      0, G_MAXUINT32, 0,
+                                                      G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
   g_object_class_install_property (object_class,
                                    PROP_LNR0,
                                    g_param_spec_double ("lnr0",
@@ -328,13 +303,6 @@ ncm_fftlog_class_init (NcmFftlogClass *klass)
                                                       "Padding percentage",
                                                       0, G_MAXDOUBLE, 1.0,
                                                       G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-  g_object_class_install_property (object_class,
-                                   PROP_NCOMP,
-                                   g_param_spec_string ("ncomp",
-                                                      NULL,
-                                                      "Number of components",
-                                                      0,
-                                                      G_PARAM_READABLE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
   g_object_class_install_property (object_class,
                                    PROP_NAME,
                                    g_param_spec_string ("name",
@@ -396,6 +364,65 @@ const gchar *
 ncm_fftlog_peek_name (NcmFftlog *fftlog)
 {
   return NCM_FFTLOG_GET_CLASS (fftlog)->name;
+}
+
+/**
+ * ncm_fftlog_set_nderivs:
+ * @fftlog: a #NcmFftlog
+ * @nderivs: the number of derivatives
+ * 
+ * Sets @nderivs as the number of derivatives to calculate.
+ * 
+ */
+void 
+ncm_fftlog_set_nderivs (NcmFftlog *fftlog, guint nderivs)
+{
+  if (fftlog->nderivs != nderivs)
+  {
+    if (nderivs < fftlog->nderivs)
+    {
+      g_ptr_array_set_size (fftlog->Gr_vec, nderivs + 1);
+      g_ptr_array_set_size (fftlog->Gr_s, nderivs + 1);
+      g_ptr_array_set_size (fftlog->Ym, nderivs + 1);
+    }
+    else
+    {
+      if (fftlog->N != 0)
+      {
+        guint i;
+        for (i = fftlog->nderivs + 1; i <= nderivs; i++)
+        {
+          NcmVector *Gr_vec_i = ncm_vector_new (fftlog->N);
+          NcmSpline *Gr_s_i   = ncm_spline_cubic_notaknot_new_full (fftlog->lnr_vec, Gr_vec_i, FALSE);
+          fftw_complex *Ym_i  = fftw_alloc_complex (fftlog->Nf);
+
+          g_ptr_array_add (fftlog->Gr_vec, Gr_vec_i);
+          g_ptr_array_add (fftlog->Gr_s, Gr_s_i);
+          g_ptr_array_add (fftlog->Ym, Ym_i);
+        }
+      }
+
+      fftlog->prepared  = FALSE;
+      fftlog->evaluated = FALSE;
+    }
+
+    fftlog->nderivs = nderivs;
+  }
+}
+
+/**
+ * ncm_fftlog_get_nderivs:
+ * @fftlog: a #NcmFftlog
+ * 
+ * Gets the number of derivatives the object is currently
+ * calculating.
+ * 
+ * Returns: the number of derivatives calculated.
+ */
+guint 
+ncm_fftlog_get_nderivs (NcmFftlog *fftlog)
+{
+  return fftlog->nderivs;
 }
 
 /**
@@ -501,7 +528,6 @@ _ncm_fftlog_fact_size (gulong n)
   }
 }
 
-
 /**
  * ncm_fftlog_set_size:
  * @fftlog: a #NcmFftlog
@@ -536,25 +562,27 @@ ncm_fftlog_set_size (NcmFftlog *fftlog, guint n)
 
     _ncm_fftlog_free_all (fftlog);
 
-    fftlog->Fk = fftw_alloc_complex (fftlog->Nf);
-    fftlog->Cm = fftw_alloc_complex (fftlog->Nf);
+    fftlog->Fk      = fftw_alloc_complex (fftlog->Nf);
+    fftlog->Cm      = fftw_alloc_complex (fftlog->Nf);
+    fftlog->CmYm    = fftw_alloc_complex (fftlog->Nf);
+    fftlog->Gr      = fftw_alloc_complex (fftlog->Nf);
 
     fftlog->lnr_vec = ncm_vector_new (fftlog->N);
 
     ncm_cfg_load_fftw_wisdom (NCM_FFTLOG_GET_CLASS (fftlog)->name);
     
-    fftlog->p_Fk2Cm = fftw_plan_dft_1d (fftlog->Nf, fftlog->Fk, fftlog->Cm, FFTW_FORWARD, fftw_default_flags | FFTW_DESTROY_INPUT);
+    fftlog->p_Fk2Cm   = fftw_plan_dft_1d (fftlog->Nf, fftlog->Fk, fftlog->Cm, FFTW_FORWARD, fftw_default_flags | FFTW_DESTROY_INPUT);
+    fftlog->p_CmYm2Gr = fftw_plan_dft_1d (fftlog->Nf, fftlog->CmYm, fftlog->Gr, FFTW_FORWARD, fftw_default_flags | FFTW_DESTROY_INPUT);
 
-    for (i = 0; i < NCM_FFTLOG_GET_CLASS (fftlog)->ncomp; i++)
+    for (i = 0; i <= fftlog->nderivs; i++)
     {
-      fftlog->Gr_vec[i] = ncm_vector_new (fftlog->N);
-      fftlog->Gr_s[i]   = ncm_spline_cubic_notaknot_new ();
-      
-      fftlog->CmYm[i]   = fftw_alloc_complex (fftlog->Nf);
-      fftlog->Gr[i]     = fftw_alloc_complex (fftlog->Nf);
-      fftlog->Ym[i]     = fftw_alloc_complex (fftlog->Nf);
-      
-      fftlog->p_CmYm2Gr[i] = fftw_plan_dft_1d (fftlog->Nf, fftlog->CmYm[i], fftlog->Gr[i], FFTW_FORWARD, fftw_default_flags | FFTW_DESTROY_INPUT);
+      NcmVector *Gr_vec_i = ncm_vector_new (fftlog->N);
+      NcmSpline *Gr_s_i   = ncm_spline_cubic_notaknot_new_full (fftlog->lnr_vec, Gr_vec_i, FALSE);
+      fftw_complex *Ym_i  = fftw_alloc_complex (fftlog->Nf);
+
+      g_ptr_array_add (fftlog->Gr_vec, Gr_vec_i);
+      g_ptr_array_add (fftlog->Gr_s, Gr_s_i);
+      g_ptr_array_add (fftlog->Ym, Ym_i);
     }
 
     ncm_cfg_save_fftw_wisdom (NCM_FFTLOG_GET_CLASS (fftlog)->name);
@@ -626,33 +654,75 @@ ncm_fftlog_set_length (NcmFftlog *fftlog, gdouble Lk)
 static void
 _ncm_fftlog_eval (NcmFftlog *fftlog)
 {
-  guint ncomp = NCM_FFTLOG_GET_CLASS (fftlog)->ncomp;
-  guint comp;
+  guint nd;
   gint i;
 
   fftw_execute (fftlog->p_Fk2Cm);
   
   if (!fftlog->prepared)
   {
-    NCM_FFTLOG_GET_CLASS (fftlog)->get_Ym (fftlog);
-    fftlog->prepared = TRUE;
-  }
-  
-  for (comp = 0; comp < ncomp; comp++)
-  {
+    const gdouble twopi_Lt = 2.0 * M_PI / ncm_fftlog_get_full_length (fftlog);
+    fftw_complex *Ym_0     = g_ptr_array_index (fftlog->Ym, 0);
+    fftw_complex *Ym_ndm1;
+    
+    NCM_FFTLOG_GET_CLASS (fftlog)->get_Ym (fftlog, Ym_0);
+
     for (i = 0; i < fftlog->Nf; i++)
     {
-      fftlog->CmYm[comp][i] = fftlog->Cm[i] * fftlog->Ym[comp][i]; 
-    }
+      const gint phys_i      = ncm_fftlog_get_mode_index (fftlog, i);
+      const complex double a = twopi_Lt * phys_i * I;
+      
+      Ym_0[i] *= cexp (- a * (fftlog->lnk0 + fftlog->lnr0));
 
-    fftw_execute (fftlog->p_CmYm2Gr[comp]);
+      Ym_ndm1 = Ym_0;
+      for (nd = 1; nd <= fftlog->nderivs; nd++)
+      {
+        fftw_complex *Ym_nd = g_ptr_array_index (fftlog->Ym, nd);
+        Ym_nd[i] = -(1.0 + a) * Ym_ndm1[i];
+        Ym_ndm1  = Ym_nd;
+      }
+    }
+    fftlog->prepared = TRUE;
   }
 
-  NCM_FFTLOG_GET_CLASS (fftlog)->generate_Gr (fftlog);
-
-  for (comp = 0; comp < ncomp; comp++)
+  for (i = 0; i < fftlog->N; i++)
   {
-    ncm_spline_set (fftlog->Gr_s[comp], fftlog->lnr_vec, fftlog->Gr_vec[comp], FALSE);
+    const gint phys_i      = i - fftlog->N_2;
+    const gdouble lnr      = fftlog->lnr0 + phys_i * fftlog->Lk_N;
+    
+    ncm_vector_set (fftlog->lnr_vec, i, lnr);
+  }
+  
+  for (nd = 0; nd <= fftlog->nderivs; nd++)
+  {
+    const gdouble norma = ncm_fftlog_get_norma (fftlog);
+    NcmVector *Gr_nd    = g_ptr_array_index (fftlog->Gr_vec, nd);
+    fftw_complex *Ym_nd = g_ptr_array_index (fftlog->Ym, nd);
+    
+    for (i = 0; i < fftlog->Nf; i++)
+    {
+      fftlog->CmYm[i] = fftlog->Cm[i] * Ym_nd[i]; 
+    }
+/*    
+    printf ("% 20.15g % 20.15g | % 20.15g % 20.15g\n", 
+            creal (fftlog->CmYm[fftlog->Nf_2]),
+            cimag (fftlog->CmYm[fftlog->Nf_2]),
+            creal (fftlog->CmYm[fftlog->Nf_2 + 1]),
+            cimag (fftlog->CmYm[fftlog->Nf_2 + 1])
+            );
+*/
+    fftlog->CmYm[fftlog->Nf_2]     = creal (fftlog->CmYm[fftlog->Nf_2]);
+    fftlog->CmYm[fftlog->Nf_2 + 1] = creal (fftlog->CmYm[fftlog->Nf_2 + 1]);
+
+    fftw_execute (fftlog->p_CmYm2Gr);
+
+    for (i = 0; i < fftlog->N; i++)
+    {
+      const gdouble lnr      = ncm_vector_get (fftlog->lnr_vec, i);
+      const gdouble rm1      = exp (-lnr);
+      const gdouble Gr_nd_i  = creal (fftlog->Gr[i + fftlog->pad]) * rm1 / norma;
+      ncm_vector_set (Gr_nd, i, Gr_nd_i);
+    }
   }
 
   fftlog->evaluated = TRUE;
@@ -725,20 +795,19 @@ ncm_fftlog_eval_by_function (NcmFftlog *fftlog, gsl_function *Fk)
 void 
 ncm_fftlog_prepare_splines (NcmFftlog *fftlog)
 {
-  guint ncomp = NCM_FFTLOG_GET_CLASS (fftlog)->ncomp;
-  guint comp;
+  guint nd;
 
   g_assert (fftlog->evaluated);
   
-  for (comp = 0; comp < ncomp; comp++)
-    ncm_spline_prepare (fftlog->Gr_s[comp]);
+  for (nd = 0; nd <= fftlog->nderivs; nd++)
+    ncm_spline_prepare (g_ptr_array_index (fftlog->Gr_s, nd));
 }
 
 /**
  * ncm_fftlog_get_vector_lnr:
  * @fftlog: a #NcmFftlog
  * 
- * Gets the vector $\ln r$.
+ * Gets the vector of the $\ln r$ knots.
  * 
  * Returns: (transfer full): 
  */
@@ -751,51 +820,53 @@ ncm_fftlog_get_vector_lnr (NcmFftlog *fftlog)
 /**
  * ncm_fftlog_get_vector_Gr:
  * @fftlog: a #NcmFftlog
- * @comp: component number
+ * @nderiv: derivative number
  * 
- * Gets the vector of the transformed function $G(r)$, @comp = 0, or 
- * its @comp-th derivative with respect to $\ln r$. 
+ * Gets the vector of the transformed function $G(r)$, @nderiv = 0, or 
+ * its @nderiv-th derivative with respect to $\ln r$. 
  * 
- * Returns: (transfer full): a vector of $G(r)$ values or its @comp-th derivative.
+ * Returns: (transfer full): a vector of $G(r)$ values or its @nderiv-th derivative.
  */
 NcmVector *
-ncm_fftlog_get_vector_Gr (NcmFftlog *fftlog, guint comp)
+ncm_fftlog_get_vector_Gr (NcmFftlog *fftlog, guint nderiv)
 {
   g_assert (fftlog->evaluated);
-  return ncm_vector_ref (fftlog->Gr_vec[comp]);
+  return ncm_vector_ref (g_ptr_array_index (fftlog->Gr_vec, nderiv));
 }
 
 /**
  * ncm_fftlog_peek_spline_Gr:
  * @fftlog: a #NcmFftlog
- * @comp: component number
+ * @nderiv: derivative number
  * 
- * Peeks the spline of $G(r)$, @comp = 0, 
- * or the spline of the @comp-th derivative of $G(r)$.
+ * Peeks the spline of $G(r)$, @nderiv = 0, 
+ * or the spline of the @nderiv-th derivative of $G(r)$ with 
+ * respect to $\ln r$.
  * 
- * Returns: (transfer none): the @comp component of the spline.
+ * Returns: (transfer none): the @nderiv component of the spline.
  */
 NcmSpline *
-ncm_fftlog_peek_spline_Gr (NcmFftlog *fftlog, guint comp)
+ncm_fftlog_peek_spline_Gr (NcmFftlog *fftlog, guint nderiv)
 {
   g_assert (fftlog->evaluated);
-  return fftlog->Gr_s[comp];
+  return g_ptr_array_index (fftlog->Gr_s, nderiv);
 }
 
 /**
  * ncm_fftlog_eval_output:
  * @fftlog: a #NcmFftlog
- * @comp: component number
+ * @nderiv: derivative number
  * @lnr: logarithm base e of $r$
  * 
- * Evaluates the function $G(r)$ at the point @lnr.
+ * Evaluates the function $G(r)$, or the @nderiv-th derivative, 
+ * at the point @lnr.
  * 
- * Returns: $G(r)$ value computed at @lnr.
+ * Returns: $\frac{\mathrm{d}^nG(r)}{\mathrm{d}\ln r}$ value computed at @lnr.
  */
 gdouble 
-ncm_fftlog_eval_output (NcmFftlog *fftlog, guint comp, const gdouble lnr)
+ncm_fftlog_eval_output (NcmFftlog *fftlog, guint nderiv, const gdouble lnr)
 {
-  return ncm_spline_eval (ncm_fftlog_peek_spline_Gr (fftlog, comp), lnr);
+  return ncm_spline_eval (ncm_fftlog_peek_spline_Gr (fftlog, nderiv), lnr);
 }
 
 /**
@@ -811,44 +882,47 @@ ncm_fftlog_eval_output (NcmFftlog *fftlog, guint comp, const gdouble lnr)
 void 
 ncm_fftlog_calibrate_size (NcmFftlog *fftlog, gsl_function *Fk, gdouble reltol)
 {
-  const guint ncomp = NCM_FFTLOG_GET_CLASS (fftlog)->ncomp;
-  NcmSpline **s = g_new0 (NcmSpline *, ncomp);
-  guint comp, size;
+  NcmSpline **s = g_new0 (NcmSpline *, fftlog->nderivs + 1);
+  guint nd, size;
   gdouble lreltol = 0.0;
 
   ncm_fftlog_eval_by_function (fftlog, Fk);
-  for (comp = 0; comp < ncomp; comp++)
+  ncm_fftlog_prepare_splines (fftlog);
+
+  for (nd = 0; nd <= fftlog->nderivs; nd++)
   {
-    s[comp] = fftlog->Gr_s[comp];
-    fftlog->Gr_s[comp] = ncm_spline_copy_empty (fftlog->Gr_s[comp]);
+    s[nd] = ncm_spline_ref (g_ptr_array_index (fftlog->Gr_s, nd));
   }
 
-  /*printf ("# Initial size %u.\n", fftlog->N);*/
+  /*printf ("# Initial size %u [%u].\n", fftlog->N, fftlog->pad);*/
   ncm_fftlog_set_size (fftlog, fftlog->N * 1.2);
-  /*printf ("# Trying size %u.\n", fftlog->N);*/
+  /*printf ("# Trying size %u [%u].\n", fftlog->N, fftlog->pad);*/
   ncm_fftlog_eval_by_function (fftlog, Fk);
+  ncm_fftlog_prepare_splines (fftlog);
 
-  size = ncm_spline_get_len (fftlog->Gr_s[0]);
-  for (comp = 0; comp < ncomp; comp++)
+  size = ncm_spline_get_len (g_ptr_array_index (fftlog->Gr_s, 0));
+  for (nd = 0; nd <= fftlog->nderivs; nd++)
   {
     guint i;
     gdouble absmin, absmax;
-    ncm_vector_get_absminmax (fftlog->Gr_vec[comp], &absmin, &absmax);
+    NcmVector *Gr_vec_nd = g_ptr_array_index (fftlog->Gr_vec, nd);
+    ncm_vector_get_absminmax (Gr_vec_nd, &absmin, &absmax);
     
-    /*printf ("# Testing component %u [% 20.15g, % 20.15g].\n", comp, absmin, absmax);*/
+    /*printf ("# Testing component %u [% 20.15g, % 20.15g].\n", nd, absmin, absmax);*/
     for (i = 0; i < size; i++)
     {
       const gdouble lnr_i = ncm_vector_get (fftlog->lnr_vec, i);
-      const gdouble lnG_i = ncm_vector_get (fftlog->Gr_vec[comp], i);
-      const gdouble lnS_i = ncm_spline_eval (s[comp], lnr_i);
+      const gdouble lnG_i = ncm_vector_get (Gr_vec_nd, i);
+      const gdouble lnS_i = ncm_spline_eval (s[nd], lnr_i);
       const gdouble lreltol_i = fabs ((lnG_i - lnS_i) / (fabs (lnG_i) + absmax));
       
-      /*printf ("% 20.15g % 20.15g % 20.15g | % 20.15e\n", lnr_i, lnG_i, lnS_i, lreltol_i);*/
+      /*printf ("% 20.15g% 20.15e % 20.15g % 20.15g | % 20.15e\n", lnr_i, exp (lnr_i), lnG_i, lnS_i, lreltol_i);*/
       lreltol = GSL_MAX (lreltol_i, lreltol);
     }
 
-    ncm_spline_clear (&s[comp]);
-    /*printf ("# Largest error up to component %u is %e.\n", comp, lreltol);*/
+    ncm_spline_clear (&s[nd]);
+    /*printf ("# Largest error up to component %u is %e.\n", nd, lreltol);*/
+    /*fflush (stdout);*/
   }
 
   g_clear_pointer (&s, g_free);
@@ -912,10 +986,10 @@ ncm_fftlog_calibrate_size (NcmFftlog *fftlog, gsl_function *Fk, gdouble reltol)
 /**
  * ncm_fftlog_peek_output_vector:
  * @fftlog: a #NcmFftlog
- * @comp: component number
+ * @nderiv: derivative number
  * 
- * Peeks the output vector respective to $G(r)$, @comp = 0, or 
- * its @comp-th derivative. 
+ * Peeks the output vector respective to $G(r)$, @nderiv = 0, or 
+ * its @comp-th derivative with respect to $\ln r$. 
  * 
  * Returns: (transfer none): the output vector $G(r)$ or its @comp-th derivative.  
  */

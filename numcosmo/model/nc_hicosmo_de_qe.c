@@ -51,7 +51,7 @@ static gdouble
 _nc_hicosmo_de_qe_E2Omega_de (NcHICosmoDE *cosmo_de, gdouble z)
 {
   gdouble x = 1.0 + z;
-  gdouble lnx = log1p(z);
+  gdouble lnx = log1p (z);
   return OMEGA_X * pow (x, 3.0 * (1.0 + OMEGA_0 / (1.0 + OMEGA_1 * lnx)));
 }
 

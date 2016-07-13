@@ -63,6 +63,15 @@ _nc_hicosmo_de_pad_dE2Omega_de_dz (NcHICosmoDE *cosmo_de, gdouble z)
   return 3.0 * ((1.0 + OMEGA_0) / x + z * OMEGA_1 / x3) * E2Omega_de;
 }
 
+static gdouble
+_nc_hicosmo_de_pad_w_de (NcHICosmoDE *cosmo_de, gdouble z)
+{
+  const gdouble w0   = OMEGA_0;
+  const gdouble w1   = OMEGA_1;
+
+  return w0 + w1 * z / gsl_pow_2 (1.0 + z);
+}
+
 /**
  * nc_hicosmo_de_pad_new:
  *
@@ -107,7 +116,8 @@ nc_hicosmo_de_pad_class_init (NcHICosmoDEPadClass *klass)
 
   nc_hicosmo_de_set_E2Omega_de_impl (parent_class, &_nc_hicosmo_de_pad_E2Omega_de);
   nc_hicosmo_de_set_dE2Omega_de_dz_impl (parent_class, &_nc_hicosmo_de_pad_dE2Omega_de_dz);
-
+  nc_hicosmo_de_set_w_de_impl (parent_class, &_nc_hicosmo_de_pad_w_de);
+  
   ncm_model_class_set_name_nick (model_class, "Padmanabhan parametrization", "Padmanabhan");
   ncm_model_class_add_params (model_class, 2, 0, PROP_SIZE);
   /* Set w_0 param info */

@@ -75,6 +75,8 @@ ncm_powspec_filter_init (NcmPowspecFilter *psf)
 {
   psf->ps         = NULL;
   psf->lnr0       = 0.0;
+  psf->lnk0       = 0.0;
+  psf->Lk         = 0.0;
   psf->zi         = 0.0;
   psf->zf         = 0.0;
   psf->reltol     = 0.0;
@@ -213,7 +215,7 @@ ncm_powspec_filter_class_init (NcmPowspecFilterClass *klass)
                                    g_param_spec_double ("reltol",
                                                         NULL,
                                                         "Relative tolerance for calibration",
-                                                        0, G_MAXDOUBLE, 1.0e-3,
+                                                        GSL_DBL_EPSILON, 1.0, 1.0e-3,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
   g_object_class_install_property (object_class,
                                    PROP_TYPE,
@@ -290,10 +292,11 @@ ncm_powspec_filter_set_type (NcmPowspecFilter *psf, NcmPowspecFilterType type)
 {
   if (type != psf->type)
   {
-    const gdouble lnk_min = log (psf->ps->kmin);
-    const gdouble lnk_max = log (psf->ps->kmax);
-    const gdouble lnk0    = 0.5 * (lnk_max + lnk_min);
-    const gdouble Lk0     = (lnk_max - lnk_min);
+    const gdouble lnk_min = log (ncm_powspec_get_kmin (psf->ps));
+    const gdouble lnk_max = log (ncm_powspec_get_kmax (psf->ps));
+
+    psf->lnk0 = 0.5 * (lnk_max + lnk_min);
+    psf->Lk   = (lnk_max - lnk_min);
 
     ncm_fftlog_clear (&psf->fftlog);
     psf->type = type;
@@ -301,17 +304,19 @@ ncm_powspec_filter_set_type (NcmPowspecFilter *psf, NcmPowspecFilterType type)
     switch (psf->type)
     {
       case NCM_POWSPEC_FILTER_TYPE_TOPHAT:
-        psf->fftlog = NCM_FFTLOG (ncm_fftlog_tophatwin2_new (psf->lnr0, lnk0, Lk0, 200));
+        psf->fftlog = NCM_FFTLOG (ncm_fftlog_tophatwin2_new (psf->lnr0, psf->lnk0, psf->Lk, 100));
         break;
       case NCM_POWSPEC_FILTER_TYPE_GAUSS:
-        psf->fftlog = NCM_FFTLOG (ncm_fftlog_gausswin2_new (psf->lnr0, lnk0, Lk0, 200));
+        psf->fftlog = NCM_FFTLOG (ncm_fftlog_gausswin2_new (psf->lnr0, psf->lnk0, psf->Lk, 100));
         break;
       default:
         g_assert_not_reached ();
         break;
     }
 
-    ncm_fftlog_set_padding (psf->fftlog, 2.0);
+    ncm_fftlog_set_padding (psf->fftlog, 1.0);
+    ncm_fftlog_set_nderivs (psf->fftlog, 1);
+
     ncm_model_ctrl_force_update (psf->ctrl);
     psf->calibrated = FALSE;
   }
@@ -335,6 +340,21 @@ _ncm_powspec_filter_k2Pk (gdouble k, gpointer userdata)
   return f;
 }
 
+static gdouble 
+_ncm_powspec_filter_dummy_z (gdouble z, gpointer userdata)
+{
+  NcmPowspecFilterArg *arg = (NcmPowspecFilterArg *) userdata;
+  gsl_function F;
+  
+  F.function = &_ncm_powspec_filter_k2Pk;
+  F.params   = arg;
+
+  arg->z = z;
+  ncm_fftlog_eval_by_function (arg->psf->fftlog, &F);
+  /*printf ("# z-knots % 20.15g % 20.15g\n", z, ncm_vector_get (ncm_fftlog_peek_output_vector (arg->psf->fftlog, 0), 0));*/
+  return ncm_vector_get (ncm_fftlog_peek_output_vector (arg->psf->fftlog, 0), 0);
+}
+
 /**
  * ncm_powspec_filter_prepare:
  * @psf: a #NcmPowspecFilter
@@ -348,8 +368,6 @@ ncm_powspec_filter_prepare (NcmPowspecFilter *psf, NcmModel *model)
 {
   NcmPowspecFilterArg arg;
   gsl_function F;
-  const gdouble zmin = psf->ps->zi;
-  const gdouble zmax = psf->ps->zf;
 
   F.function = &_ncm_powspec_filter_k2Pk;
   F.params   = &arg;
@@ -360,7 +378,20 @@ ncm_powspec_filter_prepare (NcmPowspecFilter *psf, NcmModel *model)
 
   ncm_powspec_prepare_if_needed (psf->ps, model);
 
-/*printf ("# zmin % 20.15g zmax % 20.15g\n", zmin, zmax);*/
+  {
+    const gdouble lnk_min = log (ncm_powspec_get_kmin (psf->ps));
+    const gdouble lnk_max = log (ncm_powspec_get_kmax (psf->ps));
+
+    psf->lnk0 = 0.5 * (lnk_max + lnk_min);
+    psf->Lk   = (lnk_max - lnk_min);
+
+    if ((psf->lnk0 != ncm_fftlog_get_lnk0 (psf->fftlog)) || (psf->Lk != ncm_fftlog_get_length (psf->fftlog)))
+    {
+      ncm_fftlog_set_lnk0 (psf->fftlog, psf->lnk0);
+      ncm_fftlog_set_length (psf->fftlog, psf->Lk);
+      psf->calibrated = FALSE;
+    }
+  }
   
   if (!psf->calibrated)
   {
@@ -374,25 +405,47 @@ ncm_powspec_filter_prepare (NcmPowspecFilter *psf, NcmModel *model)
     ncm_fftlog_calibrate_size (psf->fftlog, &F, psf->reltol);
     N_k = ncm_fftlog_get_size (psf->fftlog);
 
+    {
+      NcmSpline *dummy_z = ncm_spline_cubic_notaknot_new ();
+      gsl_function Fdummy_z;
+
+      Fdummy_z.function = &_ncm_powspec_filter_dummy_z;
+      Fdummy_z.params   = &arg;
+
+      ncm_spline_set_func (dummy_z, NCM_SPLINE_FUNCTION_SPLINE, &Fdummy_z, psf->zi, psf->zf, 10000, psf->reltol);
+
+      z_vec = ncm_spline_get_xv (dummy_z);
+      N_z = ncm_vector_len (z_vec);
+
+      ncm_spline_clear (&dummy_z);
+    }
+
     g_assert_cmpuint (N_z, >, 0);
     g_assert_cmpuint (N_k, >, 0);
-    
+
     lnvar   = ncm_matrix_new (N_z, N_k);
     dlnvar  = ncm_matrix_new (N_z, N_k);
-    z_vec   = ncm_vector_new (N_z);
     lnr_vec = ncm_fftlog_get_vector_lnr (psf->fftlog);
-
+/*    
+    printf ("# Calibrating in zmin % 20.15g zmax % 20.15g, rmin % 20.15g rmax % 20.15g, N_z = %u, N_k = %u\n",
+            psf->zi, psf->zf, 
+            ncm_powspec_filter_get_r_min (psf), 
+            ncm_powspec_filter_get_r_max (psf), 
+            N_z, N_k);
+*/    
     for (i = 0; i < N_z; i++)
     {
       NcmVector *var_z  = ncm_matrix_get_row (lnvar, i);
       NcmVector *dvar_z = ncm_matrix_get_row (dlnvar, i);
 
-      arg.z = zmin + i * (zmax - zmin) / (N_z - 1.0);
+      arg.z = ncm_vector_get (z_vec, i);
       ncm_fftlog_eval_by_function (psf->fftlog, &F);
 
-      ncm_vector_set (z_vec, i, arg.z);
       ncm_vector_memcpy (var_z, ncm_fftlog_peek_output_vector (psf->fftlog, 0));
       ncm_vector_memcpy (dvar_z, ncm_fftlog_peek_output_vector (psf->fftlog, 1));
+
+      ncm_vector_free (var_z);
+      ncm_vector_free (dvar_z);
     }
 
     ncm_spline2d_set (psf->var, lnr_vec, z_vec, lnvar, TRUE);
@@ -463,16 +516,21 @@ ncm_powspec_filter_set_lnr0 (NcmPowspecFilter *psf, gdouble lnr0)
 {
   if (psf->lnr0 != lnr0)
   {
-    const gdouble lnk_min = log (psf->ps->kmin);
-    const gdouble lnk_max = log (psf->ps->kmax);
-    const gdouble lnk0    = 0.5 * (lnk_max + lnk_min);
+    const gdouble lnk_min = log (ncm_powspec_get_kmin (psf->ps));
+    const gdouble lnk_max = log (ncm_powspec_get_kmax (psf->ps));
 
+    psf->lnk0 = 0.5 * (lnk_max + lnk_min);
+    psf->Lk   = (lnk_max - lnk_min);
+
+    ncm_fftlog_set_lnk0 (psf->fftlog, psf->lnk0);
+    ncm_fftlog_set_length (psf->fftlog, psf->Lk);
+    
     psf->lnr0 = lnr0;
     ncm_model_ctrl_force_update (psf->ctrl);
     psf->calibrated = FALSE;
     ncm_fftlog_set_lnr0 (psf->fftlog, psf->lnr0);
 
-    if (psf->lnr0 < -lnk0)
+    if (psf->lnr0 < -psf->lnk0)
       g_warning ("ncm_powspec_filter_set_lnr0: the requested center of the output does not satisfy r0k0 > 1.");
   }
 }
@@ -487,11 +545,16 @@ ncm_powspec_filter_set_lnr0 (NcmPowspecFilter *psf, gdouble lnr0)
 void 
 ncm_powspec_filter_set_best_lnr0 (NcmPowspecFilter *psf)
 {
-  const gdouble lnk_min = log (psf->ps->kmin);
-  const gdouble lnk_max = log (psf->ps->kmax);
-  const gdouble lnk0    = 0.5 * (lnk_max + lnk_min);
+  const gdouble lnk_min = log (ncm_powspec_get_kmin (psf->ps));
+  const gdouble lnk_max = log (ncm_powspec_get_kmax (psf->ps));
 
-  ncm_powspec_filter_set_lnr0 (psf, -lnk0);
+  psf->lnk0 = 0.5 * (lnk_max + lnk_min);
+  psf->Lk   = (lnk_max - lnk_min);
+
+  ncm_fftlog_set_lnk0 (psf->fftlog, psf->lnk0);
+  ncm_fftlog_set_length (psf->fftlog, psf->Lk);
+  
+  ncm_powspec_filter_set_lnr0 (psf, -psf->lnk0);
 }
 
 /**
@@ -545,7 +608,7 @@ ncm_powspec_filter_set_zf (NcmPowspecFilter *psf, gdouble zf)
 gdouble
 ncm_powspec_filter_get_r_min (NcmPowspecFilter *psf)
 {
-  return exp (psf->lnr0 - ncm_fftlog_get_length (psf->fftlog) * 0.5);
+  return exp (psf->lnr0 - psf->Lk * 0.5);
 }
 
 /**
@@ -559,7 +622,7 @@ ncm_powspec_filter_get_r_min (NcmPowspecFilter *psf)
 gdouble
 ncm_powspec_filter_get_r_max (NcmPowspecFilter *psf)
 {
-  return exp (psf->lnr0 + ncm_fftlog_get_length (psf->fftlog) * 0.5);
+  return exp (psf->lnr0 + psf->Lk * 0.5);
 }
 
 /**
@@ -574,6 +637,22 @@ ncm_powspec_filter_get_r_max (NcmPowspecFilter *psf)
  */
 gdouble
 ncm_powspec_filter_eval_lnvar_lnr (NcmPowspecFilter *psf, const gdouble z, const gdouble lnr)
+{
+  return log (ncm_spline2d_eval (psf->var, lnr, z));
+}
+
+/**
+ * ncm_powspec_filter_eval_var_lnr:
+ * @psf: a #NcmPowspecFilter
+ * @z: redshift $z$
+ * @lnr: FIXME
+ * 
+ * Evaluate the filtered variance at @r.
+ * 
+ * Returns: FIXME 
+ */
+gdouble
+ncm_powspec_filter_eval_var_lnr (NcmPowspecFilter *psf, const gdouble z, const gdouble lnr)
 {
   return ncm_spline2d_eval (psf->var, lnr, z);
 }
@@ -591,7 +670,7 @@ ncm_powspec_filter_eval_lnvar_lnr (NcmPowspecFilter *psf, const gdouble z, const
 gdouble
 ncm_powspec_filter_eval_var (NcmPowspecFilter *psf, const gdouble z, const gdouble r)
 {
-  return exp (ncm_powspec_filter_eval_lnvar_lnr (psf, z, log (r)));
+  return ncm_powspec_filter_eval_var_lnr (psf, z, log (r));
 }
 
 /**
@@ -607,7 +686,7 @@ ncm_powspec_filter_eval_var (NcmPowspecFilter *psf, const gdouble z, const gdoub
 gdouble
 ncm_powspec_filter_eval_sigma_lnr (NcmPowspecFilter *psf, const gdouble z, const gdouble lnr)
 {
-  return exp (0.5 * ncm_powspec_filter_eval_lnvar_lnr (psf, z, lnr));
+  return sqrt (ncm_powspec_filter_eval_var_lnr (psf, z, lnr));
 }
 
 /**
@@ -627,6 +706,22 @@ ncm_powspec_filter_eval_sigma (NcmPowspecFilter *psf, const gdouble z, const gdo
 }
 
 /**
+ * ncm_powspec_filter_eval_dvar_dlnr:
+ * @psf: a #NcmPowspecFilter
+ * @z: redshift $z$
+ * @lnr: FIXME
+ * 
+ * Evaluate the filtered variance at @lnr.
+ * 
+ * Returns: FIXME 
+ */
+gdouble
+ncm_powspec_filter_eval_dvar_dlnr (NcmPowspecFilter *psf, const gdouble z, const gdouble lnr)
+{
+  return ncm_spline2d_eval (psf->dvar, lnr, z);
+}
+
+/**
  * ncm_powspec_filter_eval_dlnvar_dlnr:
  * @psf: a #NcmPowspecFilter
  * @z: redshift $z$
@@ -639,7 +734,7 @@ ncm_powspec_filter_eval_sigma (NcmPowspecFilter *psf, const gdouble z, const gdo
 gdouble
 ncm_powspec_filter_eval_dlnvar_dlnr (NcmPowspecFilter *psf, const gdouble z, const gdouble lnr)
 {
-  return ncm_spline2d_eval (psf->dvar, lnr, z);
+  return ncm_spline2d_eval (psf->dvar, lnr, z) / ncm_spline2d_eval (psf->var, lnr, z);
 }
 
 /**
@@ -656,6 +751,81 @@ gdouble
 ncm_powspec_filter_eval_dlnvar_dr (NcmPowspecFilter *psf, const gdouble z, const gdouble lnr)
 {
   return ncm_powspec_filter_eval_dlnvar_dlnr (psf, z, lnr) * exp (-lnr);
+}
+
+/**
+ * ncm_powspec_filter_eval_dnvar_dlnrn:
+ * @psf: a #NcmPowspecFilter
+ * @z: redshift $z$
+ * @lnr: FIXME
+ * @n: number of derivatives
+ * 
+ * Evaluate the filtered variance at @lnr.
+ * 
+ * Returns: FIXME 
+ */
+gdouble 
+ncm_powspec_filter_eval_dnvar_dlnrn (NcmPowspecFilter *psf, const gdouble z, const gdouble lnr, guint n)
+{
+  switch (n)
+  {
+    case 0:
+      return ncm_spline2d_eval (psf->var, lnr, z);
+      break;
+    case 1:
+      return ncm_spline2d_eval (psf->dvar, lnr, z);
+      break;
+    case 2:
+      return ncm_spline2d_deriv_dzdx (psf->dvar, lnr, z);
+      break;
+    case 3:
+      return ncm_spline2d_deriv_d2zdx2 (psf->dvar, lnr, z);
+      break;
+    default:
+      g_error ("ncm_powspec_filter_eval_dnvar_dlnrn: %u derivative not implemented.", n);
+      return 0.0;
+      break;
+  }
+}
+
+/**
+ * ncm_powspec_filter_eval_dnlnvar_dlnrn:
+ * @psf: a #NcmPowspecFilter
+ * @z: redshift $z$
+ * @lnr: FIXME
+ * @n: number of derivatives
+ * 
+ * Evaluate the filtered variance at @lnr.
+ * 
+ * Returns: FIXME 
+ */
+gdouble 
+ncm_powspec_filter_eval_dnlnvar_dlnrn (NcmPowspecFilter *psf, const gdouble z, const gdouble lnr, guint n)
+{
+  switch (n)
+  {
+    case 0:
+      return ncm_powspec_filter_eval_lnvar_lnr (psf, z, lnr);
+      break;
+    case 1:
+      return ncm_powspec_filter_eval_dlnvar_dlnr (psf, z, lnr);
+      break;
+    case 2:
+    {
+      const gdouble var   = ncm_spline2d_eval (psf->var, lnr, z);
+      const gdouble dvar  = ncm_spline2d_eval (psf->dvar, lnr, z);
+      const gdouble d2var = ncm_spline2d_deriv_dzdx (psf->dvar, lnr, z);
+
+      const gdouble dlnvar = dvar / var;
+        
+      return d2var / var - dlnvar * dlnvar;
+      break;
+    }
+    default:
+      g_error ("ncm_powspec_filter_eval_dnlnvar_dlnrn: %u derivative not implemented.", n);
+      return 0.0;
+      break;
+  }
 }
 
 /**

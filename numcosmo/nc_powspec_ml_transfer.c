@@ -191,8 +191,7 @@ _nc_powspec_ml_transfer_prepare (NcmPowspec *powspec, NcmModel *model)
 
   {
     const gdouble RH   = nc_hicosmo_RH_Mpc (cosmo);
-printf ("G0 % 20.15g % 20.15g % 20.15g\n", nc_growth_func_eval (ps_mlt->gf, cosmo, 0.0), nc_growth_func_get_Da0 (ps_mlt->gf), 1.0 / nc_growth_func_eval (ps_mlt->gf, cosmo, 1.0e12));
-    ps_mlt->Pm_k2Pzeta = (2.0 * M_PI * M_PI) * gsl_pow_2 (1.0 / (1.5 * nc_hicosmo_Omega_m0 (cosmo))) * gsl_pow_4 (RH);
+    ps_mlt->Pm_k2Pzeta = (2.0 * M_PI * M_PI) * gsl_pow_2 ((2.0 / 5.0) * nc_growth_func_get_dust_norma_Da0 (ps_mlt->gf) / nc_hicosmo_Omega_m0 (cosmo)) * gsl_pow_4 (RH);
   }
 }
 
@@ -218,10 +217,9 @@ _nc_powspec_ml_transfer_eval_vec (NcmPowspec* powspec, NcmModel* model, const gd
   NcHICosmo *cosmo            = NC_HICOSMO (model);
   NcHIPrim *prim              = NC_HIPRIM (ncm_model_peek_submodel_by_mid (model, nc_hiprim_id ()));
   NcPowspecMLTransfer *ps_mlt = NC_POWSPEC_ML_TRANSFER (powspec);
-
-  const gdouble growth = nc_growth_func_eval (ps_mlt->gf, cosmo, z);
-  const gdouble gf2    = gsl_pow_2 (growth);
-  const guint len = ncm_vector_len(k);  
+  const gdouble growth        = nc_growth_func_eval (ps_mlt->gf, cosmo, z);
+  const gdouble gf2           = gsl_pow_2 (growth);
+  const guint len             = ncm_vector_len(k);  
   guint i;
 
   for (i = 0; i < len; i++)
