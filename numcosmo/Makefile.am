@@ -311,73 +311,74 @@ nc_headers = \
 	lss/nc_density_profile_nfw.h  \
 	lss/nc_galaxy_acf.h           \
 	lss/nc_multiplicity_func.h    \
-	lss/nc_multiplicity_func_ps.h          \
-	lss/nc_multiplicity_func_st.h          \
-	lss/nc_multiplicity_func_jenkins.h     \
-	lss/nc_multiplicity_func_warren.h      \
-	lss/nc_multiplicity_func_tinker.h      \
-	lss/nc_multiplicity_func_tinker_mean.h \
-	lss/nc_multiplicity_func_tinker_crit.h \
+	lss/nc_multiplicity_func_ps.h           \
+	lss/nc_multiplicity_func_st.h           \
+	lss/nc_multiplicity_func_jenkins.h      \
+	lss/nc_multiplicity_func_warren.h       \
+	lss/nc_multiplicity_func_tinker.h       \
+	lss/nc_multiplicity_func_tinker_mean.h  \
+	lss/nc_multiplicity_func_tinker_crit.h  \
 	lss/nc_multiplicity_func_tinker_mean_normalized.h \
-	lss/nc_halo_mass_function.h            \
-        lss/nc_halo_bias_type.h                \
-        lss/nc_halo_bias_type_ps.h             \
-        lss/nc_halo_bias_type_st_spher.h       \
-        lss/nc_halo_bias_type_st_ellip.h       \
-        lss/nc_halo_bias_type_tinker.h         \
-        lss/nc_halo_bias_func.h                \
-        lss/nc_cluster_redshift.h              \
-        lss/nc_cluster_redshift_nodist.h       \
-        lss/nc_cluster_photoz_gauss.h          \
-        lss/nc_cluster_photoz_gauss_global.h   \
-        lss/nc_cluster_mass.h                  \
-        lss/nc_cluster_mass_nodist.h           \
-        lss/nc_cluster_mass_lnnormal.h         \
-        lss/nc_cluster_mass_vanderlinde.h      \
-        lss/nc_cluster_mass_benson.h           \
-        lss/nc_cluster_mass_benson_xray.h      \
-        lss/nc_cluster_mass_plcl.h             \
-        lss/nc_cluster_abundance.h             \
-        lss/nc_cluster_pseudo_counts.h         \
-        lss/nc_cor_cluster_cmb_lens_limber.h   \
-	data/nc_data_snia.h                    \
-	data/nc_data_dist_mu.h                 \
-	data/nc_data_snia_cov.h                \
-	data/nc_data_hubble.h                  \
-	data/nc_data_hubble_bao.h              \
-	data/nc_data_bao_rdv.h                 \
-	data/nc_data_bao_dvdv.h                \
-	data/nc_data_bao_a.h                   \
-	data/nc_data_bao_dv.h                  \
-	data/nc_data_bao_empirical_fit.h       \
-	data/nc_data_bao_dhr_dar.h             \
-	data/nc_data_bao.h                     \
-	data/nc_data_cmb_shift_param.h         \
-	data/nc_data_cmb_dist_priors.h         \
-	data/nc_data_cmb.h                     \
-	data/nc_data_cluster_ncount.h          \
-	data/nc_data_cluster_poisson.h         \
-	data/nc_data_cluster_pseudo_counts.h   \
-	data/nc_data_planck_lkl.h              \
-	abc/nc_abc_cluster_ncount.h            \
-	model/quantum_gravity.h                \
-	perturbations/nc_hipert.h              \
-	perturbations/nc_hipert_wkb.h          \
-	perturbations/nc_hipert_iadiab.h       \
-	perturbations/nc_hipert_itwo_fluids.h  \
-	perturbations/nc_hipert_adiab.h        \
-	perturbations/nc_hipert_two_fluids.h   \
-	perturbations/nc_hipert_boltzmann.h    \
+	lss/nc_halo_mass_function.h             \
+        lss/nc_halo_bias_type.h                 \
+        lss/nc_halo_bias_type_ps.h              \
+        lss/nc_halo_bias_type_st_spher.h        \
+        lss/nc_halo_bias_type_st_ellip.h        \
+        lss/nc_halo_bias_type_tinker.h          \
+        lss/nc_halo_bias_func.h                 \
+        lss/nc_cluster_redshift.h               \
+        lss/nc_cluster_redshift_nodist.h        \
+        lss/nc_cluster_photoz_gauss.h           \
+        lss/nc_cluster_photoz_gauss_global.h    \
+        lss/nc_cluster_mass.h                   \
+        lss/nc_cluster_mass_nodist.h            \
+        lss/nc_cluster_mass_lnnormal.h          \
+        lss/nc_cluster_mass_vanderlinde.h       \
+        lss/nc_cluster_mass_benson.h            \
+        lss/nc_cluster_mass_benson_xray.h       \
+        lss/nc_cluster_mass_plcl.h              \
+        lss/nc_cluster_abundance.h              \
+        lss/nc_cluster_pseudo_counts.h          \
+        lss/nc_cor_cluster_cmb_lens_limber.h    \
+	data/nc_data_snia.h                     \
+	data/nc_data_dist_mu.h                  \
+	data/nc_data_snia_cov.h                 \
+	data/nc_data_hubble.h                   \
+	data/nc_data_hubble_bao.h               \
+	data/nc_data_bao_rdv.h                  \
+	data/nc_data_bao_dvdv.h                 \
+	data/nc_data_bao_a.h                    \
+	data/nc_data_bao_dv.h                   \
+	data/nc_data_bao_empirical_fit.h        \
+	data/nc_data_bao_dhr_dar.h              \
+	data/nc_data_bao.h                      \
+	data/nc_data_cmb_shift_param.h          \
+	data/nc_data_cmb_dist_priors.h          \
+	data/nc_data_cmb.h                      \
+	data/nc_data_cluster_ncount.h           \
+	data/nc_data_cluster_poisson.h          \
+	data/nc_data_cluster_pseudo_counts.h    \
+	data/nc_data_planck_lkl.h               \
+	data/nc_data_xcor.h                     \
+	abc/nc_abc_cluster_ncount.h             \
+	model/quantum_gravity.h                 \
+	perturbations/nc_hipert.h               \
+	perturbations/nc_hipert_wkb.h           \
+	perturbations/nc_hipert_iadiab.h        \
+	perturbations/nc_hipert_itwo_fluids.h   \
+	perturbations/nc_hipert_adiab.h         \
+	perturbations/nc_hipert_two_fluids.h    \
+	perturbations/nc_hipert_boltzmann.h     \
 	perturbations/nc_hipert_boltzmann_std.h \
 	perturbations/nc_hipert_boltzmann_cbe.h \
 	perturbations/linear.h                  \
 	perturbations/covariance.h              \
-	perturbations/linear_internal.h        \
-	xcor/nc_xcor.h                         \
-	xcor/nc_xcor_limber.h                  \
-	xcor/nc_xcor_limber_gal.h              \
-	xcor/nc_xcor_limber_lensing.h          \
-	xcor/nc_data_xcor.h
+	perturbations/linear_internal.h         \
+	xcor/nc_xcor.h                          \
+	xcor/nc_xcor_AB.h                       \
+	xcor/nc_xcor_limber_kernel.h            \
+	xcor/nc_xcor_limber_kernel_gal.h        \
+	xcor/nc_xcor_limber_kernel_lensing.h
 
 nc_sources = \
 	nc_hicosmo.c                  \
@@ -431,63 +432,64 @@ nc_sources = \
 	lss/nc_density_profile_nfw.c  \
 	lss/nc_galaxy_acf.c           \
 	lss/nc_multiplicity_func.c    \
-	lss/nc_multiplicity_func_ps.c          \
-	lss/nc_multiplicity_func_st.c          \
-	lss/nc_multiplicity_func_jenkins.c     \
-	lss/nc_multiplicity_func_warren.c      \
-	lss/nc_multiplicity_func_tinker.c      \
-	lss/nc_multiplicity_func_tinker_mean.c \
-	lss/nc_multiplicity_func_tinker_crit.c \
+	lss/nc_multiplicity_func_ps.c           \
+	lss/nc_multiplicity_func_st.c           \
+	lss/nc_multiplicity_func_jenkins.c      \
+	lss/nc_multiplicity_func_warren.c       \
+	lss/nc_multiplicity_func_tinker.c       \
+	lss/nc_multiplicity_func_tinker_mean.c  \
+	lss/nc_multiplicity_func_tinker_crit.c  \
 	lss/nc_multiplicity_func_tinker_mean_normalized.c \
-	lss/nc_halo_mass_function.c            \
-	lss/nc_halo_bias_type.c                \
-	lss/nc_halo_bias_type_ps.c             \
-	lss/nc_halo_bias_type_st_spher.c       \
-	lss/nc_halo_bias_type_st_ellip.c       \
-	lss/nc_halo_bias_type_tinker.c         \
-	lss/nc_halo_bias_func.c                \
-	lss/nc_cluster_redshift.c              \
-	lss/nc_cluster_redshift_nodist.c       \
-	lss/nc_cluster_photoz_gauss.c          \
-	lss/nc_cluster_photoz_gauss_global.c   \
-	lss/nc_cluster_mass.c                  \
-	lss/nc_cluster_mass_nodist.c           \
-	lss/nc_cluster_mass_lnnormal.c         \
-	lss/nc_cluster_mass_vanderlinde.c      \
-	lss/nc_cluster_mass_benson.c           \
-	lss/nc_cluster_mass_benson_xray.c      \
-	lss/nc_cluster_mass_plcl.c             \
-	lss/nc_cluster_abundance.c             \
-	lss/nc_cluster_pseudo_counts.c         \
-	lss/nc_cor_cluster_cmb_lens_limber.c   \
-	data/nc_data_snia.c                    \
-	data/nc_data_dist_mu.c                 \
-	data/nc_data_snia_cov.c                \
-	data/nc_data_hubble.c                  \
-	data/nc_data_hubble_bao.c              \
-	data/nc_data_bao_rdv.c                 \
-	data/nc_data_bao_dvdv.c                \
-	data/nc_data_bao_a.c                   \
-	data/nc_data_bao_dv.c                  \
-	data/nc_data_bao_empirical_fit.c       \
-	data/nc_data_bao_dhr_dar.c             \
-	data/nc_data_bao.c                     \
-	data/nc_data_cmb_shift_param.c         \
-	data/nc_data_cmb_dist_priors.c         \
-	data/nc_data_cmb.c                     \
-	data/nc_data_cluster_ncount.c          \
-	data/nc_data_cluster_poisson.c         \
-	data/nc_data_cluster_pseudo_counts.c   \
-	data/nc_data_planck_lkl.c              \
-	abc/nc_abc_cluster_ncount.c            \
-	model/quantum_gravity.c                \
-	perturbations/nc_hipert.c              \
-	perturbations/nc_hipert_wkb.c          \
-	perturbations/nc_hipert_iadiab.c       \
-	perturbations/nc_hipert_itwo_fluids.c  \
-	perturbations/nc_hipert_adiab.c        \
-	perturbations/nc_hipert_two_fluids.c   \
-	perturbations/nc_hipert_boltzmann.c    \
+	lss/nc_halo_mass_function.c             \
+	lss/nc_halo_bias_type.c                 \
+	lss/nc_halo_bias_type_ps.c              \
+	lss/nc_halo_bias_type_st_spher.c        \
+	lss/nc_halo_bias_type_st_ellip.c        \
+	lss/nc_halo_bias_type_tinker.c          \
+	lss/nc_halo_bias_func.c                 \
+	lss/nc_cluster_redshift.c               \
+	lss/nc_cluster_redshift_nodist.c        \
+	lss/nc_cluster_photoz_gauss.c           \
+	lss/nc_cluster_photoz_gauss_global.c    \
+	lss/nc_cluster_mass.c                   \
+	lss/nc_cluster_mass_nodist.c            \
+	lss/nc_cluster_mass_lnnormal.c          \
+	lss/nc_cluster_mass_vanderlinde.c       \
+	lss/nc_cluster_mass_benson.c            \
+	lss/nc_cluster_mass_benson_xray.c       \
+	lss/nc_cluster_mass_plcl.c              \
+	lss/nc_cluster_abundance.c              \
+	lss/nc_cluster_pseudo_counts.c          \
+	lss/nc_cor_cluster_cmb_lens_limber.c    \
+	data/nc_data_snia.c                     \
+	data/nc_data_dist_mu.c                  \
+	data/nc_data_snia_cov.c                 \
+	data/nc_data_hubble.c                   \
+	data/nc_data_hubble_bao.c               \
+	data/nc_data_bao_rdv.c                  \
+	data/nc_data_bao_dvdv.c                 \
+	data/nc_data_bao_a.c                    \
+	data/nc_data_bao_dv.c                   \
+	data/nc_data_bao_empirical_fit.c        \
+	data/nc_data_bao_dhr_dar.c              \
+	data/nc_data_bao.c                      \
+	data/nc_data_cmb_shift_param.c          \
+	data/nc_data_cmb_dist_priors.c          \
+	data/nc_data_cmb.c                      \
+	data/nc_data_cluster_ncount.c           \
+	data/nc_data_cluster_poisson.c          \
+	data/nc_data_cluster_pseudo_counts.c    \
+	data/nc_data_planck_lkl.c               \
+	data/nc_data_xcor.c                     \
+	abc/nc_abc_cluster_ncount.c             \
+	model/quantum_gravity.c                 \
+	perturbations/nc_hipert.c               \
+	perturbations/nc_hipert_wkb.c           \
+	perturbations/nc_hipert_iadiab.c        \
+	perturbations/nc_hipert_itwo_fluids.c   \
+	perturbations/nc_hipert_adiab.c         \
+	perturbations/nc_hipert_two_fluids.c    \
+	perturbations/nc_hipert_boltzmann.c     \
 	perturbations/nc_hipert_boltzmann_std.c \
 	perturbations/nc_hipert_boltzmann_cbe.c \
 	perturbations/linear.c                  \
@@ -495,11 +497,11 @@ nc_sources = \
 	perturbations/linear_cvodes.c           \
 	perturbations/linear_gsl_ode.c          \
 	perturbations/linear_gsl_ode2.c         \
-	xcor/nc_xcor.c                         \
-	xcor/nc_xcor_limber.c                  \
-	xcor/nc_xcor_limber_gal.c              \
-	xcor/nc_xcor_limber_lensing.c          \
-	xcor/nc_data_xcor.c
+	xcor/nc_xcor.c                          \
+	xcor/nc_xcor_AB.c                       \
+	xcor/nc_xcor_limber_kernel.c            \
+	xcor/nc_xcor_limber_kernel_gal.c        \
+	xcor/nc_xcor_limber_kernel_lensing.c
 
 libnumcosmo_la_LDFLAGS = -version-info $(LT_CURRENT):$(LT_REVISION):$(LT_AGE)
 

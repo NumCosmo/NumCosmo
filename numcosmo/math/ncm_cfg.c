@@ -136,11 +136,11 @@
 #include "data/nc_data_cmb_shift_param.h"
 #include "data/nc_data_cmb_dist_priors.h"
 #include "data/nc_data_hubble.h"
+#include "data/nc_data_xcor.h"
 #include "xcor/nc_xcor.h"
-#include "xcor/nc_xcor_limber.h"
-#include "xcor/nc_xcor_limber_gal.h"
-#include "xcor/nc_xcor_limber_lensing.h"
-#include "xcor/nc_data_xcor.h"
+#include "xcor/nc_xcor_limber_kernel.h"
+#include "xcor/nc_xcor_limber_kernel_gal.h"
+#include "xcor/nc_xcor_limber_kernel_lensing.h"
 
 #include <gio/gio.h>
 #ifdef NUMCOSMO_HAVE_FFTW3
@@ -427,9 +427,9 @@ ncm_cfg_init (void)
   ncm_cfg_register_obj (NC_TYPE_DATA_CMB_DIST_PRIORS);
 
   ncm_cfg_register_obj (NC_TYPE_XCOR);
-  ncm_cfg_register_obj (NC_TYPE_XCOR_LIMBER);
-  ncm_cfg_register_obj (NC_TYPE_XCOR_LIMBER_GAL);
-  ncm_cfg_register_obj (NC_TYPE_XCOR_LIMBER_LENSING);
+  ncm_cfg_register_obj (NC_TYPE_XCOR_LIMBER_KERNEL);
+  ncm_cfg_register_obj (NC_TYPE_XCOR_LIMBER_KERNEL_GAL);
+  ncm_cfg_register_obj (NC_TYPE_XCOR_LIMBER_KERNEL_LENSING);
   ncm_cfg_register_obj (NC_TYPE_DATA_XCOR);
 
   _nc_hicosmo_register_functions ();
