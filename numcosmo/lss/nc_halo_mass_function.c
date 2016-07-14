@@ -177,33 +177,35 @@ nc_halo_mass_function_class_init (NcHaloMassFunctionClass *klass)
                                    PROP_DISTANCE,
                                    g_param_spec_object ("distance",
                                                         NULL,
-                                                        "Distance.",
+                                                        "Distance",
                                                         NC_TYPE_DISTANCE,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME
                                                         | G_PARAM_STATIC_BLURB));
 
   /**
-   * NcHaloMassFunction:psf:
+   * NcHaloMassFunction:powerspectrum-filtered:
    *
    * This property keeps the filtered powerspectrum.
+   * 
    */
   g_object_class_install_property (object_class,
                                    PROP_PSF,
                                    g_param_spec_object ("powerspectrum-filtered",
                                                         NULL,
-                                                        "Growth function.",
+                                                        "Filtered power-spectrum",
                                                         NCM_TYPE_POWSPEC_FILTER,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
   /**
    * NcHaloMassFunction:multiplicity:
    *
    * This property keeps the multiplicity function object.
+   * 
    */
   g_object_class_install_property (object_class,
                                    PROP_MULTIPLICITY,
                                    g_param_spec_object ("multiplicity",
                                                         NULL,
-                                                        "Multiplicity function.",
+                                                        "Multiplicity function",
                                                         NC_TYPE_MULTIPLICITY_FUNC,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
@@ -211,6 +213,7 @@ nc_halo_mass_function_class_init (NcHaloMassFunctionClass *klass)
    * NcHaloMassFunction:area:
    *
    * This property sets the angular area in steradian.
+   * 
    */
   g_object_class_install_property (object_class,
                                    PROP_AREA,
@@ -224,13 +227,14 @@ nc_halo_mass_function_class_init (NcHaloMassFunctionClass *klass)
    * NcHaloMassFunction:prec:
    *
    * This property sets the precision.
+   * 
    */
   g_object_class_install_property (object_class,
                                    PROP_PREC,
                                    g_param_spec_double ("prec",
                                                         NULL,
                                                         "Precision",
-                                                        1.0e-15, 1.0, 1.0e-6,
+                                                        GSL_DBL_EPSILON, 1.0, 1.0e-6,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 }
 
@@ -238,7 +242,7 @@ nc_halo_mass_function_class_init (NcHaloMassFunctionClass *klass)
 /**
  * nc_halo_mass_function_new:
  * @dist: a #NcDistance sets to #NcHaloMassFunction:distance
- * @psf: a #NcmPowspecFilter sets to #NcHaloMassFunction:psf
+ * @psf: a #NcmPowspecFilter sets to #NcHaloMassFunction:powerspectrum-filtered
  * @mulf: a #NcMultiplicityFunc sets to #NcHaloMassFunction:multiplicity
  *
  * This function allocates memory for a new #NcHaloMassFunction object and sets its properties to the values from

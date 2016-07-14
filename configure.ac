@@ -797,6 +797,7 @@ AC_MSG_CHECKING([SUNDIALS version])
 
 SUNDIALS_VERSION_FOUND=none
 if test "xno" = "xyes"; then
+  AC_DEFINE([HAVE_SUNDIALS],[1],[SUNDIALS presence])
   AC_DEFINE([HAVE_SUNDIALS_2_5_0],[1],[SUNDIALS version])
   AC_DEFINE([HAVE_SUNDIALS_2_6_0],[1],[SUNDIALS version])
 fi
@@ -814,6 +815,7 @@ m4_foreach([SUNDIALS_VERSION_V], [[2.5.0, HAVE_SUNDIALS_2_5_0], [2.6.0, HAVE_SUN
           AC_MSG_ERROR([Cannot identify SUNDIALS version (2.5.x|2.6.x) double match])
         fi
         AC_MSG_RESULT([$SUNDIALS_VERSION])
+        AC_DEFINE([HAVE_SUNDIALS], [1], [SUNDIALS presence])
         AC_DEFINE_UNQUOTED([$SUNDIALS_DEFINE], [1], [SUNDIALS version])
         SUNDIALS_VERSION_FOUND=$SUNDIALS_VERSION
       ])
