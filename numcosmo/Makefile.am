@@ -12,21 +12,22 @@ PLC_DIR = $(top_srcdir)/numcosmo/plc
 
 MY_CFLAGS = \
 	 -DG_LOG_DOMAIN=\"NUMCOSMO\" \
-	 $(GLIB_CFLAGS)     \
-	 $(SUNDIALS_CFLAGS) \
-	 $(GSL_CFLAGS)      \
-	 $(FFTW3_CFLAGS)    \
-	 $(CFITSIO_CFLAGS)  \
-	 $(NLOPT_CFLAGS)    \
-	 $(LIBCUBA_INCDIR)  \
-	 $(OPENMP_CFLAGS)   \
+	 $(GLIB_CFLAGS)       \
+	 $(SUNDIALS_CFLAGS)   \
+	 $(GSL_CFLAGS)        \
+	 $(FFTW3_CFLAGS)      \
+	 $(FFTW3F_CFLAGS)     \
+	 $(CFITSIO_CFLAGS)    \
+	 $(NLOPT_CFLAGS)      \
+	 $(LIBCUBA_INCDIR)    \
+	 $(OPENMP_CFLAGS)     \
 	 -I$(PLC_DIR)         \
 	 -I$(PLC_DIR)/cldf    \
 	 -I$(PLC_DIR)/minipmc \
 	 -I$(PLC_DIR)/plik    \
 	 -I$(top_srcdir)
 
-AM_CFLAGS = \
+AM_CFLAGS =    \
 	 -Wall \
 	 $(MY_CFLAGS)
 
@@ -37,6 +38,7 @@ lib_LTLIBRARIES = libnumcosmo.la
 libnumcosmo_la_LIBADD =     \
 	$(SUNDIALS_LIBS)    \
 	$(FFTW3_LIBS)       \
+	$(FFTW3F_LIBS)      \
 	$(GLIB_LIBS)        \
 	$(NLOPT_LIBS)       \
 	$(GSL_LIBS)         \
@@ -47,88 +49,89 @@ libnumcosmo_la_LIBADD =     \
 	class/libclass.la
 
 ncm_sources = \
-	ncm_build_inline.c                 \
-	math/ncm_c.c                       \
-	math/ncm_cfg.c                     \
-	math/ncm_util.c                    \
-	math/ncm_timer.c                   \
-	math/ncm_lapack.c                  \
-	math/ncm_vector.c                  \
-	math/ncm_matrix.c                  \
-	math/ncm_serialize.c               \
-	math/ncm_obj_array.c               \
-	math/ncm_integral1d.c              \
-	math/ncm_rng.c                     \
-	math/ncm_stats_vec.c               \
-	math/ncm_stats_dist1d.c            \
-	math/ncm_stats_dist1d_spline.c     \
-	math/ncm_stats_dist1d_epdf.c       \
-	math/ncm_bootstrap.c               \
-	math/ncm_spline.c                  \
-	math/ncm_spline_gsl.c              \
-	math/ncm_spline_cubic.c            \
-	math/ncm_spline_cubic_notaknot.c   \
-	math/ncm_spline_func.c             \
-	math/ncm_spline2d.c                \
-	math/ncm_spline2d_spline.c         \
-	math/ncm_spline2d_gsl.c            \
-	math/ncm_spline2d_bicubic.c        \
-	math/ncm_powspec.c                 \
-	math/ncm_powspec_filter.c          \
-	math/ncm_func_eval.c               \
-	math/ncm_mpsf_trig_int.c           \
-	math/ncm_mpsf_sbessel.c            \
-	math/ncm_sf_sbessel.c              \
-	math/ncm_sf_sbessel_int.c          \
-	math/ncm_mpsf_sbessel_int.c        \
-	math/ncm_mpsf_0F1.c                \
-	math/ncm_fftlog.c                  \
-	math/ncm_fftlog_tophatwin2.c       \
-	math/ncm_fftlog_gausswin2.c        \
-	math/ncm_sparam.c                  \
-	math/ncm_vparam.c                  \
-	math/ncm_model.c                   \
-	math/ncm_model_ctrl.c              \
-	math/ncm_model_builder.c           \
-	math/ncm_mset.c                    \
-	math/ncm_mset_func.c               \
-	math/ncm_calc.c                    \
-	math/ncm_ode_spline.c              \
-	math/ncm_reparam.c                 \
-	math/ncm_reparam_linear.c          \
-	math/ncm_data.c                    \
-	math/ncm_data_dist1d.c             \
-	math/ncm_data_gauss.c              \
-	math/ncm_data_gauss_cov.c          \
-	math/ncm_data_gauss_diag.c         \
-	math/ncm_data_poisson.c            \
-	math/ncm_dataset.c                 \
-	math/ncm_likelihood.c              \
-	math/ncm_priors.c                  \
-	math/ncm_mset_trans_kern.c         \
-	math/ncm_mset_trans_kern_flat.c    \
-	math/ncm_mset_trans_kern_gauss.c   \
-	math/ncm_fit_state.c               \
-	math/ncm_fit.c                     \
-	math/ncm_fit_levmar.c              \
-	math/ncm_fit_gsl_ls.c              \
-	math/ncm_fit_gsl_mm.c              \
-	math/ncm_fit_gsl_mms.c             \
-	math/ncm_mset_catalog.c            \
-	math/ncm_fit_mc.c                  \
-	math/ncm_fit_mcbs.c                \
-	math/ncm_fit_mcmc.c                \
-	math/ncm_fit_esmcmc.c              \
-	math/ncm_fit_esmcmc_walker.c       \
+	ncm_build_inline.c                   \
+	math/ncm_c.c                         \
+	math/ncm_cfg.c                       \
+	math/ncm_util.c                      \
+	math/ncm_timer.c                     \
+	math/ncm_lapack.c                    \
+	math/ncm_vector.c                    \
+	math/ncm_matrix.c                    \
+	math/ncm_serialize.c                 \
+	math/ncm_obj_array.c                 \
+	math/ncm_integral1d.c                \
+	math/ncm_rng.c                       \
+	math/ncm_stats_vec.c                 \
+	math/ncm_stats_dist1d.c              \
+	math/ncm_stats_dist1d_spline.c       \
+	math/ncm_stats_dist1d_epdf.c         \
+	math/ncm_bootstrap.c                 \
+	math/ncm_spline.c                    \
+	math/ncm_spline_gsl.c                \
+	math/ncm_spline_cubic.c              \
+	math/ncm_spline_cubic_notaknot.c     \
+	math/ncm_spline_func.c               \
+	math/ncm_spline2d.c                  \
+	math/ncm_spline2d_spline.c           \
+	math/ncm_spline2d_gsl.c              \
+	math/ncm_spline2d_bicubic.c          \
+	math/ncm_powspec.c                   \
+	math/ncm_powspec_filter.c            \
+	math/ncm_func_eval.c                 \
+	math/ncm_mpsf_trig_int.c             \
+	math/ncm_mpsf_sbessel.c              \
+	math/ncm_sf_sbessel.c                \
+	math/ncm_sf_sbessel_int.c            \
+	math/ncm_mpsf_sbessel_int.c          \
+	math/ncm_mpsf_0F1.c                  \
+	math/ncm_fftlog.c                    \
+	math/ncm_fftlog_tophatwin2.c         \
+	math/ncm_fftlog_gausswin2.c          \
+	math/ncm_sparam.c                    \
+	math/ncm_vparam.c                    \
+	math/ncm_model.c                     \
+	math/ncm_model_ctrl.c                \
+	math/ncm_model_builder.c             \
+	math/ncm_mset.c                      \
+	math/ncm_mset_func.c                 \
+	math/ncm_calc.c                      \
+	math/ncm_ode_spline.c                \
+	math/ncm_reparam.c                   \
+	math/ncm_reparam_linear.c            \
+	math/ncm_data.c                      \
+	math/ncm_data_dist1d.c               \
+	math/ncm_data_gauss.c                \
+	math/ncm_data_gauss_cov.c            \
+	math/ncm_data_gauss_diag.c           \
+	math/ncm_data_poisson.c              \
+	math/ncm_dataset.c                   \
+	math/ncm_likelihood.c                \
+	math/ncm_priors.c                    \
+	math/ncm_mset_trans_kern.c           \
+	math/ncm_mset_trans_kern_flat.c      \
+	math/ncm_mset_trans_kern_gauss.c     \
+	math/ncm_fit_state.c                 \
+	math/ncm_fit.c                       \
+	math/ncm_fit_levmar.c                \
+	math/ncm_fit_gsl_ls.c                \
+	math/ncm_fit_gsl_mm.c                \
+	math/ncm_fit_gsl_mms.c               \
+	math/ncm_mset_catalog.c              \
+	math/ncm_fit_mc.c                    \
+	math/ncm_fit_mcbs.c                  \
+	math/ncm_fit_mcmc.c                  \
+	math/ncm_fit_esmcmc.c                \
+	math/ncm_fit_esmcmc_walker.c         \
 	math/ncm_fit_esmcmc_walker_stretch.c \
-	math/ncm_fit_esmcmc_walker_walk.c  \
-	math/ncm_lh_ratio1d.c              \
-	math/ncm_lh_ratio2d.c              \
-	math/ncm_abc.c                     \
+	math/ncm_fit_esmcmc_walker_walk.c    \
+	math/ncm_lh_ratio1d.c                \
+	math/ncm_lh_ratio2d.c                \
+	math/ncm_abc.c                       \
+	math/ncm_quaternion.c                \
+	math/ncm_sphere_map_pix.c            \
 	math/poly.c               \
 	math/integral.c           \
 	math/function_cache.c     \
-	math/quaternion.c         \
 	math/quadrature.c         \
 	math/matrix_exp.c         \
 	math/magnus_iserles_ode.c \
@@ -143,91 +146,92 @@ ncm_sources = \
 ncm_sources_nogi = \
 	math/Faddeeva.c
 
-ncm_headers = \
-	math/ncm_c.h                     \
-	math/ncm_cfg.h                   \
-	math/ncm_util.h                  \
-	math/ncm_timer.h                 \
-	math/ncm_lapack.h                \
-	math/ncm_vector.h                \
-	math/ncm_matrix.h                \
-	math/ncm_serialize.h             \
-	math/ncm_obj_array.h             \
-	math/ncm_integral1d.h            \
-	math/ncm_rng.h                   \
-	math/ncm_stats_vec.h             \
-	math/ncm_stats_dist1d.h          \
-	math/ncm_stats_dist1d_spline.h   \
-	math/ncm_stats_dist1d_epdf.h     \
-	math/ncm_bootstrap.h             \
-	math/ncm_spline.h                \
-	math/ncm_spline_gsl.h            \
-	math/ncm_spline_cubic.h          \
-	math/ncm_spline_cubic_notaknot.h \
-	math/ncm_spline_func.h           \
-	math/ncm_spline2d.h              \
-	math/ncm_spline2d_spline.h       \
-	math/ncm_spline2d_gsl.h          \
-	math/ncm_spline2d_bicubic.h      \
-	math/ncm_powspec.h               \
-	math/ncm_powspec_filter.h        \
-	math/ncm_func_eval.h             \
-	math/ncm_mpsf_trig_int.h         \
-	math/ncm_mpsf_sbessel.h          \
-	math/ncm_sf_sbessel.h            \
-	math/ncm_sf_sbessel_int.h        \
-	math/ncm_mpsf_sbessel_int.h      \
-	math/ncm_mpsf_0F1.h              \
-	math/ncm_fftlog.h                \
-	math/ncm_fftlog_tophatwin2.h     \
-	math/ncm_fftlog_gausswin2.h      \
-	math/ncm_sparam.h                \
-	math/ncm_vparam.h                \
-	math/ncm_model.h                 \
-	math/ncm_model_ctrl.h            \
-	math/ncm_model_builder.h         \
-	math/ncm_mset.h                  \
-	math/ncm_mset_func.h             \
-	math/ncm_calc.h                  \
-	math/ncm_ode_spline.h            \
-	math/ncm_reparam.h               \
-	math/ncm_reparam_linear.h        \
-	math/ncm_data.h                  \
-	math/ncm_data_dist1d.h           \
-	math/ncm_data_gauss.h            \
-	math/ncm_data_gauss_cov.h        \
-	math/ncm_data_gauss_diag.h       \
-	math/ncm_data_poisson.h          \
-	math/ncm_dataset.h               \
-	math/ncm_likelihood.h            \
-	math/ncm_mset_trans_kern.h       \
-	math/ncm_mset_trans_kern_flat.h  \
-	math/ncm_mset_trans_kern_gauss.h \
-	math/ncm_priors.h                \
-	math/ncm_fit_state.h             \
-	math/ncm_fit.h                   \
-	math/ncm_fit_levmar.h            \
-	math/ncm_fit_gsl_ls.h            \
-	math/ncm_fit_gsl_mm.h            \
-	math/ncm_fit_gsl_mms.h           \
-	math/ncm_mset_catalog.h          \
-	math/ncm_fit_mc.h                \
-	math/ncm_fit_mcbs.h              \
-	math/ncm_fit_mcmc.h              \
-	math/ncm_fit_esmcmc.h            \
-	math/ncm_fit_esmcmc_walker.h     \
+ncm_headers =                                \
+	math/ncm_c.h                         \
+	math/ncm_cfg.h                       \
+	math/ncm_util.h                      \
+	math/ncm_timer.h                     \
+	math/ncm_lapack.h                    \
+	math/ncm_vector.h                    \
+	math/ncm_matrix.h                    \
+	math/ncm_serialize.h                 \
+	math/ncm_obj_array.h                 \
+	math/ncm_integral1d.h                \
+	math/ncm_rng.h                       \
+	math/ncm_stats_vec.h                 \
+	math/ncm_stats_dist1d.h              \
+	math/ncm_stats_dist1d_spline.h       \
+	math/ncm_stats_dist1d_epdf.h         \
+	math/ncm_bootstrap.h                 \
+	math/ncm_spline.h                    \
+	math/ncm_spline_gsl.h                \
+	math/ncm_spline_cubic.h              \
+	math/ncm_spline_cubic_notaknot.h     \
+	math/ncm_spline_func.h               \
+	math/ncm_spline2d.h                  \
+	math/ncm_spline2d_spline.h           \
+	math/ncm_spline2d_gsl.h              \
+	math/ncm_spline2d_bicubic.h          \
+	math/ncm_powspec.h                   \
+	math/ncm_powspec_filter.h            \
+	math/ncm_func_eval.h                 \
+	math/ncm_mpsf_trig_int.h             \
+	math/ncm_mpsf_sbessel.h              \
+	math/ncm_sf_sbessel.h                \
+	math/ncm_sf_sbessel_int.h            \
+	math/ncm_mpsf_sbessel_int.h          \
+	math/ncm_mpsf_0F1.h                  \
+	math/ncm_fftlog.h                    \
+	math/ncm_fftlog_tophatwin2.h         \
+	math/ncm_fftlog_gausswin2.h          \
+	math/ncm_sparam.h                    \
+	math/ncm_vparam.h                    \
+	math/ncm_model.h                     \
+	math/ncm_model_ctrl.h                \
+	math/ncm_model_builder.h             \
+	math/ncm_mset.h                      \
+	math/ncm_mset_func.h                 \
+	math/ncm_calc.h                      \
+	math/ncm_ode_spline.h                \
+	math/ncm_reparam.h                   \
+	math/ncm_reparam_linear.h            \
+	math/ncm_data.h                      \
+	math/ncm_data_dist1d.h               \
+	math/ncm_data_gauss.h                \
+	math/ncm_data_gauss_cov.h            \
+	math/ncm_data_gauss_diag.h           \
+	math/ncm_data_poisson.h              \
+	math/ncm_dataset.h                   \
+	math/ncm_likelihood.h                \
+	math/ncm_mset_trans_kern.h           \
+	math/ncm_mset_trans_kern_flat.h      \
+	math/ncm_mset_trans_kern_gauss.h     \
+	math/ncm_priors.h                    \
+	math/ncm_fit_state.h                 \
+	math/ncm_fit.h                       \
+	math/ncm_fit_levmar.h                \
+	math/ncm_fit_gsl_ls.h                \
+	math/ncm_fit_gsl_mm.h                \
+	math/ncm_fit_gsl_mms.h               \
+	math/ncm_mset_catalog.h              \
+	math/ncm_fit_mc.h                    \
+	math/ncm_fit_mcbs.h                  \
+	math/ncm_fit_mcmc.h                  \
+	math/ncm_fit_esmcmc.h                \
+	math/ncm_fit_esmcmc_walker.h         \
 	math/ncm_fit_esmcmc_walker_stretch.h \
-	math/ncm_fit_esmcmc_walker_walk.h \
-	math/ncm_lh_ratio1d.h            \
-	math/ncm_lh_ratio2d.h            \
-	math/ncm_abc.h                   \
+	math/ncm_fit_esmcmc_walker_walk.h    \
+	math/ncm_lh_ratio1d.h                \
+	math/ncm_lh_ratio2d.h                \
+	math/ncm_abc.h                       \
+	math/ncm_quaternion.h                \
+	math/ncm_sphere_map_pix.h            \
 	math/function_cache.h     \
 	math/integral.h           \
 	math/magnus_iserles_ode.h \
 	math/matrix_exp.h         \
 	math/poly.h               \
 	math/quadrature.h         \
-	math/quaternion.h         \
 	math/binsplit.h           \
 	math/mpq_tree.h           \
 	math/grid_one.h           \

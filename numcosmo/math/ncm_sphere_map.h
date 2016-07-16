@@ -183,6 +183,7 @@ gboolean ncm_sphere_mapsht_alm2map_circle (NcmSphereMapSHT *mapsht, gint ring, g
 gboolean ncm_sphere_mapsht_map2alm (NcmSphereMapSHT *mapsht, gdouble cut);
 gboolean ncm_sphere_mapsht_alm2map (NcmSphereMapSHT *mapsht);
 #endif /* NUMCOSMO_HAVE_FFTW3 */
+
 gdouble ncm_sphere_map_homogenize_noise (NcmSphereMap *map, gdouble base_sigma);
 gdouble ncm_sphere_map_rotate_avg (NcmSphereMap *map, glong n);
 

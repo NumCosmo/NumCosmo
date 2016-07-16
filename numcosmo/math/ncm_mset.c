@@ -285,7 +285,7 @@ ncm_mset_pindex_new (NcmModelID mid, guint pid)
  *
  * FIXME
  *
- * Returns: FIXME
+ * Returns: (transfer full): FIXME
  */
 NcmMSetPIndex *
 ncm_mset_pindex_dup (NcmMSetPIndex *pi)

@@ -109,10 +109,10 @@ ncm_sphere_healpix_read_map (gchar *fits_file, NcmSphereMap *map)
 
   status = 0;
 
-  fits_open_file(&fptr, fits_file, READONLY, &status); 
+  fits_open_file (&fptr, fits_file, READONLY, &status); 
   NCM_FITS_ERROR (status);
    
-  fits_movabs_hdu(fptr, 2, &hdutype, &status); 
+  fits_movabs_hdu (fptr, 2, &hdutype, &status); 
   NCM_FITS_ERROR (status);
 
   if (hdutype != BINARY_TBL) 
@@ -449,51 +449,51 @@ _t_p_w_to_theta_phi (const gint nside, const gint tm1, const gint pm1, const gin
   const gint p = pm1 + 1;
   if (t < nside)
   {
-    *theta = acos((1.0 - t * t * 1.0 / (3.0 * nside * nside)));
-    *phi = (p - 0.5) * M_PI_2 / (1.0 * w);
+    *theta = acos ((1.0 - t * t * 1.0 / (3.0 * nside * nside)));
+    *phi   = (p - 0.5) * M_PI_2 / (1.0 * w);
   }
   else if (t > 3 * nside)
   {
     gint tt = 4 * nside - t;
+
     *theta = acos(-(1.0 - tt * tt * 1.0 / (3.0 * nside * nside)) );
-    *phi = (p - 0.5) * M_PI_2 / (1.0 * w);
+    *phi   = (p - 0.5) * M_PI_2 / (1.0 * w);
   }
   else
   {
     *theta = acos((2.0 * nside - t) * 2.0 / (3.0 * nside));
-    *phi = (p - ((t - nside) % 2 + 1.0) * 0.5) * M_PI_2 / (1.0 * w);
+    *phi   = (p - ((t - nside) % 2 + 1.0) * 0.5) * M_PI_2 / (1.0 * w);
   }
 }
 
 static void
-_t_p_w_to_vector (const gint nside, const gint tm1, const gint pm1, const gint w, NcmTriVector v)
+_t_p_w_to_vector (const gint nside, const gint tm1, const gint pm1, const gint w, NcmTriVec *vec)
 {
   const gint t = tm1 + 1;
   const gint p = pm1 + 1;
   gdouble phi, z, sin_theta;
 
-  NCM_UNUSED (v);
-  
   if (t < nside)
   {
     phi = (p - 0.5) * M_PI_2 / (1.0 * w);
-    z = (1.0 - t * t * 1.0 / (3.0 * nside * nside));
+    z   = (1.0 - t * t * 1.0 / (3.0 * nside * nside));
   }
   else if (t > 3 * nside)
   {
     const gint tt = 4 * nside - t;
     phi = (p - 0.5) * M_PI_2 / (1.0 * w);
-    z = -(1.0 - tt * tt * 1.0 / (3.0 * nside * nside));
+    z   = -(1.0 - tt * tt * 1.0 / (3.0 * nside * nside));
   }
   else
   {
     phi = (p - ((t - nside) % 2 + 1.0) * 0.5) * M_PI_2 / (1.0 * w);
     z = (2.0 * nside - t) * 2.0 / (3.0 * nside);
   }
+  
   sin_theta = sqrt (1.0 - z * z);
-  v.c[0] = sin_theta * cos (phi);
-  v.c[1] = sin_theta * sin (phi);
-  v.c[2] = z;
+  vec->c[0] = sin_theta * cos (phi);
+  vec->c[1] = sin_theta * sin (phi);
+  vec->c[2] = z;
 }
 
 /**
@@ -509,9 +509,9 @@ void
 ncm_sphere_healpix_pix2ang_nest (gint nside, glong nest_index, gdouble *theta, gdouble *phi)
 {
   glong npix = 12 * gsl_pow_2 (nside);
-  glong face_size = nside * nside;          /* Face size in pixels                                     */
-  gint f, h, v;                             /* Face number, horizontal coordinate, vertical coordinate */
-  gint t, p, s, pad, w, l;                  /* theta, phi, shift, padding, width, local index          */
+  glong face_size = nside * nside;     /* Face size in pixels                                     */
+  gint f, h, v;                        /* Face number, horizontal coordinate, vertical coordinate */
+  gint t, p, s, pad, w, l;             /* theta, phi, shift, padding, width, local index          */
   gint x, y;
   gint hf;
 
@@ -588,10 +588,10 @@ ncm_sphere_healpix_pix2ang_nest (gint nside, glong nest_index, gdouble *theta, g
 void
 ncm_sphere_healpix_pix2ang_ring (gint nside, glong ring_index, gdouble *theta, gdouble *phi)
 {
-  glong npix = 12 * gsl_pow_2 (nside);
-  gint middle_rings_size = 4 * nside;
-  glong cap_size = 2 * nside * (nside - 1); /* Cap size in pixels                                      */
-  gint t, p, w, l;                  /* theta, phi, shift, padding, width, local index          */
+  const glong npix             = 12 * gsl_pow_2 (nside);
+  const gint middle_rings_size = 4 * nside;
+  const glong cap_size         = 2 * nside * (nside - 1); /* Cap size in pixels                             */
+  gint t, p, w, l;                                        /* theta, phi, shift, padding, width, local index */
   
   g_assert (ring_index < npix);
 
@@ -622,17 +622,17 @@ ncm_sphere_healpix_pix2ang_ring (gint nside, glong ring_index, gdouble *theta, g
  * ncm_sphere_healpix_pix2vec_ring:
  * @nside: FIXME
  * @ring_index: FIXME
- * @v: a #NcmTriVector
+ * @vec: a #NcmTriVec
  *
  * FIXME 
 */
 void 
-ncm_sphere_healpix_pix2vec_ring (gint nside, glong ring_index, NcmTriVector v)
+ncm_sphere_healpix_pix2vec_ring (gint nside, glong ring_index, NcmTriVec *vec)
 {
-  glong npix = 12 * gsl_pow_2 (nside);
-  gint middle_rings_size = 4 * nside;
-  glong cap_size = 2 * nside * (nside - 1); /* Cap size in pixels                                      */
-  gint t, p, w, l;                  /* theta, phi, shift, padding, width, local index          */
+  const glong npix = 12 * gsl_pow_2 (nside);
+  const gint middle_rings_size = 4 * nside;
+  const glong cap_size = 2 * nside * (nside - 1); /* Cap size in pixels                             */
+  gint t, p, w, l;                                /* theta, phi, shift, padding, width, local index */
   
   g_assert (ring_index < npix);
 
@@ -656,24 +656,24 @@ ncm_sphere_healpix_pix2vec_ring (gint nside, glong ring_index, NcmTriVector v)
     w   = 4 * nside - t - 1;
     p   = l - (4 * nside * (t - 3 * nside + 1) - 2 * gsl_pow_2 (t - 3 * nside + 1) + 2 * (t - 3 * nside) + 2 - 4 * nside);
   }
-  _t_p_w_to_vector (nside, t, p, w, v);
+  _t_p_w_to_vector (nside, t, p, w, vec);
 }
 
 /**
  * ncm_sphere_healpix_pix2vec_nest:
  * @nside: FIXME
  * @nest_index: FIXME
- * @vec: a #NcmTriVector
+ * @vec: a #NcmTriVec
  *
  * FIXME 
 */
 void 
-ncm_sphere_healpix_pix2vec_nest (gint nside, glong nest_index, NcmTriVector vec)
+ncm_sphere_healpix_pix2vec_nest (gint nside, glong nest_index, NcmTriVec *vec)
 {
   glong npix = 12 * gsl_pow_2 (nside);
-  glong face_size = nside * nside;          /* Face size in pixels                                     */
-  gint f, h, v;                             /* Face number, horizontal coordinate, vertical coordinate */
-  gint t, p, s, pad, w, l;                  /* theta, phi, shift, padding, width, local index          */
+  glong face_size = nside * nside; /* Face size in pixels                                     */
+  gint f, h, v;                    /* Face number, horizontal coordinate, vertical coordinate */
+  gint t, p, s, pad, w, l;         /* theta, phi, shift, padding, width, local index          */
   gint x, y;
   gint hf;
 
@@ -741,16 +741,16 @@ ncm_sphere_healpix_pix2vec_nest (gint nside, glong nest_index, NcmTriVector vec)
 /**
  * ncm_sphere_healpix_vec2pix_ring:
  * @nside: FIXME
- * @v: a #NcmTriVector
+ * @vec: a #NcmTriVec
  * @i: FIXME 
  *
  * FIXME 
 */
 void 
-ncm_sphere_healpix_vec2pix_ring (gint nside, NcmTriVector v, glong *i)
+ncm_sphere_healpix_vec2pix_ring (gint nside, NcmTriVec *vec, glong *i)
 {
   NCM_UNUSED (nside);
-  NCM_UNUSED (v);
+  NCM_UNUSED (vec);
   NCM_UNUSED (i);
   g_assert_not_reached ();
 }

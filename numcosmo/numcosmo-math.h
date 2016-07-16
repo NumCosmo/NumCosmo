@@ -116,11 +116,11 @@
 #include <numcosmo/math/ncm_lh_ratio1d.h>
 #include <numcosmo/math/ncm_lh_ratio2d.h>
 #include <numcosmo/math/ncm_abc.h>
+#include <numcosmo/math/ncm_quaternion.h>
 
 /* Utilities */
 #include <numcosmo/math/memory_pool.h>
 #include <numcosmo/math/mpq_tree.h>
-#include <numcosmo/math/quaternion.h>
 #include <numcosmo/math/integral.h>
 #include <numcosmo/math/poly.h>
 #include <numcosmo/math/quadrature.h>
@@ -130,6 +130,7 @@
 #include <numcosmo/math/dividedifference.h>
 
 /* Spherical maps, HEALPIX implementation */
+#include <numcosmo/math/ncm_sphere_map_pix.h>
 #include <numcosmo/math/ncm_sphere_map.h>
 #include <numcosmo/sphere/healpix.h>
 

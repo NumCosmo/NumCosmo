@@ -29,6 +29,7 @@
 #define _CL_BUILD_CFG_H
 
 @have_fftw3_support@
+@have_fftw3f_support@
 @have_cfitsio_support@
 
 @have_nlopt_support@
