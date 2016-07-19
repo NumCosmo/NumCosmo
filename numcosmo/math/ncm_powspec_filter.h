@@ -54,10 +54,11 @@ struct _NcmPowspecFilterClass
 
 /**
  * NcmPowspecFilterType:
- * @NCM_POWSPEC_FILTER_TYPE_TOPHAT: Apply the tophat filter
+ * @NCM_POWSPEC_FILTER_TYPE_TOPHAT: Apply the top-hat filter
  * @NCM_POWSPEC_FILTER_TYPE_GAUSS: Apply the Gaussian filter
  *
- * Filter type to apply to the power spectrum
+ * Filter type to apply to the power spectrum. 
+ * See also #NcmFftlogTophatwin2 and #NcmFftlogGausswin2, for the top-hat and Gaussian filters, respectively. 
  * 
  */	
 typedef enum _NcmPowspecFilterType
@@ -89,6 +90,7 @@ struct _NcmPowspecFilter
 GType ncm_powspec_filter_get_type (void) G_GNUC_CONST;
 
 NcmPowspecFilter *ncm_powspec_filter_new (NcmPowspec *ps, NcmPowspecFilterType type);
+NcmPowspecFilter *ncm_powspec_filter_ref (NcmPowspecFilter *psf);
 void ncm_powspec_filter_free (NcmPowspecFilter *psf);
 void ncm_powspec_filter_clear (NcmPowspecFilter **psf);
 

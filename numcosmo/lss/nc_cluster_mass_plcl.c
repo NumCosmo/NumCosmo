@@ -42,7 +42,6 @@
 #include "math/integral.h"
 #include "math/memory_pool.h"
 #include "math/ncm_cfg.h"
-#include "levmar/levmar.h"
 
 #include <gsl/gsl_randist.h>
 #include <gsl/gsl_roots.h>
@@ -69,7 +68,8 @@ static void
 nc_cluster_mass_plcl_init (NcClusterMassPlCL *mszl)
 {
   mszl->M0 = 0.0;
-  mszl->workz = g_new0 (gdouble, LM_BC_DER_WORKSZ (2, 4));
+  mszl->T = gsl_multifit_fdfsolver_lmsder;
+  mszl->s = gsl_multifit_fdfsolver_alloc (mszl->T, 4, 2);
 }
 
 static void
@@ -110,8 +110,8 @@ static void
 _nc_cluster_mass_plcl_finalize (GObject *object)
 {
   NcClusterMassPlCL *mszl = NC_CLUSTER_MASS_PLCL (object);
-  g_clear_pointer (&mszl->workz, g_free);
-  
+  gsl_multifit_fdfsolver_free (mszl->s);
+    
   /* Chain up : end */
   G_OBJECT_CLASS (nc_cluster_mass_plcl_parent_class)->finalize (object);
 }
@@ -496,11 +496,9 @@ nc_cluster_mass_plcl_peak_new_variables (gdouble N, gdouble *lb, gdouble *ub, Nc
 }
 
 /**
- * nc_cluster_mass_plcl_levmar_f_new_variables:
+ * nc_cluster_mass_plcl_gsl_f_new_variables:
  * @p: FIXME
  * @hx: FIXME
- * @m: FIXME 
- * @n: FIXME 
  * @mszl: a #NcClusterMassPlCL
  * @lnM_M0: logarithm base e of the mass divided by the pivot mass
  * @Mobs: (array) (element-type double): observed mass
@@ -510,11 +508,11 @@ nc_cluster_mass_plcl_peak_new_variables (gdouble N, gdouble *lb, gdouble *ub, Nc
  *
 */
 void
-nc_cluster_mass_plcl_levmar_f_new_variables (gdouble *p, gdouble *hx, gint m, gint n, NcClusterMassPlCL *mszl, gdouble lnM_M0, const gdouble *Mobs, const gdouble *Mobs_params)
+nc_cluster_mass_plcl_gsl_f_new_variables (const gsl_vector *p, gsl_vector *hx, NcClusterMassPlCL *mszl, gdouble lnM_M0, const gdouble *Mobs, const gdouble *Mobs_params)
 {
   const gdouble onemcor2  = sqrt (1.0 - COR * COR);
-  const gdouble w1 = p[0];
-  const gdouble w2 = p[1];
+  const gdouble w1 = gsl_vector_get (p, 0); //p[0];
+  const gdouble w2 = gsl_vector_get (p, 1); //p[1];
   gdouble M_PL, M_CL, sd_PL, sd_CL, dw1, dw2;
 
   /* Both masses and errors are given in units of the pivot mass, i.e., M_PL -> M_PL / M0 */
@@ -526,28 +524,24 @@ nc_cluster_mass_plcl_levmar_f_new_variables (gdouble *p, gdouble *hx, gint m, gi
   dw1 = (M_PL - (1.0 - B_SZ) * exp (A_SZ * lnM_M0 + (onemcor2 * w1 + COR * w2) * SD_SZ)) / sd_PL;
   dw2 = (M_CL - (1.0 - B_L) * exp (A_L * lnM_M0 + w2 * SD_L)) / sd_CL;
   
-  //printf ("m = %d n = %d M0 = %.5g\n", m, n, mszl->M0);
   //printf ("p[0] = %.5g p[1] = %.5g\n", p[0], p[1]); 
   //printf ("Mpl = %.5g Mcl = %.5g sd_pl = %.5g sd_cl = %.5g\n", M_PL, M_CL, sd_PL, sd_CL);
   //printf ("lnMsz/M0 = %.5g lnMl/M0 = %.5g\n", lnMsz_M0, lnMl_M0);
   //printf ("% 20.15g % 20.15g % 20.15g % 20.15g % 20.15g\n", w1, w2, lnM_M0, (1.0 - B_SZ), exp ((onemcor2 * w1 + COR * w2) * SD_SZ));
-  hx[0] = w1;
-  hx[1] = w2;
-  hx[2] = dw1;
-  hx[3] = dw2;
+  gsl_vector_set (hx, 0, w1); //hx[0] = w1;
+  gsl_vector_set (hx, 1, w2); //hx[1] = w2;
+  gsl_vector_set (hx, 2, dw1); //hx[2] = dw1;
+  gsl_vector_set (hx, 3, dw2); //hx[3] = dw2;
 
   /*printf ("Calling! % 20.15g % 20.15g % 20.15g % 20.15g\n", w1, w2, dw1, dw2);*/
   
-  //printf ("levmarf h0 = %.5g h1 = %.5g h2 = %.5g h3 = %.5g\n", hx[0], hx[1], hx[2], hx[3]);
-  NCM_UNUSED (m);
+  //printf ("gsl_f h0 = %.5g h1 = %.5g h2 = %.5g h3 = %.5g\n", hx[0], hx[1], hx[2], hx[3]);
 }
 
 /**
- * nc_cluster_mass_plcl_levmar_J_new_variables:
+ * nc_cluster_mass_plcl_gsl_J_new_variables:
  * @p: FIXME
- * @j: FIXME
- * @m: FIXME 
- * @n: FIXME 
+ * @j: FIXME 
  * @mszl: a #NcClusterMassPlCL
  * @lnM_M0: logarithm base e of the mass divided by the pivot mass
  * @Mobs: (array) (element-type double): observed mass
@@ -557,11 +551,11 @@ nc_cluster_mass_plcl_levmar_f_new_variables (gdouble *p, gdouble *hx, gint m, gi
  *
 */
 void
-nc_cluster_mass_plcl_levmar_J_new_variables (gdouble *p, gdouble *j, gint m, gint n, NcClusterMassPlCL *mszl, gdouble lnM_M0, const gdouble *Mobs, const gdouble *Mobs_params)
+nc_cluster_mass_plcl_gsl_J_new_variables (const gsl_vector *p, gsl_matrix *j, NcClusterMassPlCL *mszl, gdouble lnM_M0, const gdouble *Mobs, const gdouble *Mobs_params)
 {
   const gdouble onemcor2  = sqrt (1.0 - COR * COR);
-  const gdouble w1 = p[0];
-  const gdouble w2 = p[1];
+  const gdouble w1 = gsl_vector_get (p, 0); //p[0];
+  const gdouble w2 = gsl_vector_get (p, 1); //p[1];
   gdouble sd_PL, sd_CL, kernel_w1, kernel_w2;
    
   sd_PL = Mobs_params[NC_CLUSTER_MASS_PLCL_SD_PL];
@@ -570,36 +564,35 @@ nc_cluster_mass_plcl_levmar_J_new_variables (gdouble *p, gdouble *j, gint m, gin
   kernel_w1 = (1.0 - B_SZ) * exp (A_SZ * lnM_M0 + (onemcor2 * w1 + COR * w2) * SD_SZ) / sd_PL;
   kernel_w2 = (1.0 - B_L) * exp (A_L * lnM_M0 + w2 * SD_L) / sd_CL;
   
-  j[0 * 2 + 0] = 1.0;
-  j[0 * 2 + 1] = 0.0;
-  j[1 * 2 + 0] = 0.0; 
-  j[1 * 2 + 1] = 1.0;
-  j[2 * 2 + 0] = - kernel_w1 * onemcor2 * SD_SZ;
-  j[2 * 2 + 1] = - kernel_w1 * COR * SD_SZ;
-  j[3 * 2 + 0] = 0.0;
-  j[3 * 2 + 1] = - kernel_w2 * SD_L;
+  gsl_matrix_set (j, 0, 0, 1.0); // j[0 * 2 + 0] = 1.0;
+  gsl_matrix_set (j, 0, 1, 0.0); //j[0 * 2 + 1] = 0.0;
+  gsl_matrix_set (j, 1, 0, 0.0); //j[1 * 2 + 0] = 0.0; 
+  gsl_matrix_set (j, 1, 1, 1.0); //j[1 * 2 + 1] = 1.0;
+  gsl_matrix_set (j, 2, 0, - kernel_w1 * onemcor2 * SD_SZ); //j[2 * 2 + 0] = - kernel_w1 * onemcor2 * SD_SZ;
+  gsl_matrix_set (j, 2, 1, - kernel_w1 * COR * SD_SZ); //j[2 * 2 + 1] = - kernel_w1 * COR * SD_SZ;
+  gsl_matrix_set (j, 3, 0, 0.0); //j[3 * 2 + 0] = 0.0;
+  gsl_matrix_set (j, 3, 1, - kernel_w2 * SD_L); //j[3 * 2 + 1] = - kernel_w2 * SD_L;
   
   //printf ("j0 = %.5g j1 = %.5g j2 = %.5g j3 = %.5g j4 = %.5g j5 = %.5g j6 = %.5g j7 = %.5g\n", j[0*2 + 0], j[0*2 + 1])
   
-  NCM_UNUSED (m);
 }
 
 /**
- * nc_cluster_mass_plcl_levmar_f:
- * @p: FIXME
- * @hx: FIXME
- * @m: FIXME 
- * @n: FIXME 
+ * nc_cluster_mass_plcl_gsl_f:
+ * @p: number of parameters 
+ * @hx: components of the $\chi^2$ 
+ * @n: number of elements of the $\chi^2$ 
  * @mszl: a #NcClusterMassPlCL
  * @lnM: logarithm base e of the mass divided by the pivot mass
  * @Mobs: (array) (element-type double): observed mass
  * @Mobs_params: (array) (element-type double): observed mass paramaters
  *
- * FIXME
+ * The $\chi^2$ is minimized with respect to the parameters $\ln\left(M_{SZ}/M_0\right)$ and 
+ *  $\ln\left(M_{L}/M_0\right)$, therefore @p = 2. FIXME
  *
 */
 void
-nc_cluster_mass_plcl_levmar_f (gdouble *p, gdouble *hx, gint m, gint n, NcClusterMassPlCL *mszl, gdouble lnM, const gdouble *Mobs, const gdouble *Mobs_params)
+nc_cluster_mass_plcl_gsl_f (const gdouble *p, gdouble *hx, gint n, NcClusterMassPlCL *mszl, gdouble lnM, const gdouble *Mobs, const gdouble *Mobs_params)
 {
   integrand_data data;
   const gdouble onemcor2  = sqrt (1.0 - COR * COR);
@@ -629,81 +622,85 @@ nc_cluster_mass_plcl_levmar_f (gdouble *p, gdouble *hx, gint m, gint n, NcCluste
   hx[2] = dMsz / data.mobs_params[NC_CLUSTER_MASS_PLCL_SD_PL];
   hx[3] = dMl / data.mobs_params[NC_CLUSTER_MASS_PLCL_SD_CL];
   
-  //printf ("levmarf h0 = %.5g h1 = %.5g h2 = %.5g h3 = %.5g\n", hx[0], hx[1], hx[2], hx[3]);
-  NCM_UNUSED (m);
+  //printf ("gsl_f h0 = %.5g h1 = %.5g h2 = %.5g h3 = %.5g\n", hx[0], hx[1], hx[2], hx[3]);
 }
 
-static void
-_internal_nc_cluster_mass_plcl_levmar_f (gdouble *p, gdouble *hx, gint m, gint n, gpointer adata)
+static gint
+_internal_nc_cluster_mass_plcl_gsl_f (const gsl_vector *p, gpointer adata, gsl_vector *hx) 
 {
   integrand_data *data = (integrand_data *) adata;
-  nc_cluster_mass_plcl_levmar_f (p, hx, m, n, data->mszl, data->lnM, data->mobs, data->mobs_params);
+  nc_cluster_mass_plcl_gsl_f (gsl_vector_const_ptr (p, 0), gsl_vector_ptr (hx, 0), 4, data->mszl, data->lnM, data->mobs, data->mobs_params);
+
+  return GSL_SUCCESS;
 }
 
-static void
-nc_cluster_mass_plcl_levmar_J (gdouble *p, gdouble *j, gint m, gint n, gpointer adata)
+static gint
+_nc_cluster_mass_plcl_gsl_J (const gsl_vector *p, gpointer adata, gsl_matrix *J)
 {
   integrand_data *data = (integrand_data *) adata;
   NcClusterMassPlCL *mszl = data->mszl;
   const gdouble onemcor2  = sqrt (1.0 - COR * COR);
-  const gdouble lnMsz_M0  = p[0];
-  const gdouble lnMl_M0   = p[1];
+  const gdouble lnMsz_M0  = gsl_vector_get (p, 0); 
+  const gdouble lnMl_M0   = gsl_vector_get (p, 1); 
   const gdouble Msz       = exp (lnMsz_M0) * mszl->M0;
   const gdouble Ml        = exp (lnMl_M0) * mszl->M0;
-  j[0 * 2 + 0] = COR / (SD_SZ * onemcor2);
-  j[0 * 2 + 1] = - 1.0 / (SD_L * onemcor2);
-  j[1 * 2 + 0] = 1.0 / SD_SZ; 
-  j[1 * 2 + 1] = 0.0;
-  j[2 * 2 + 0] = Msz / data->mobs_params[NC_CLUSTER_MASS_PLCL_SD_PL];
-  j[2 * 2 + 1] = 0.0;
-  j[3 * 2 + 0] = 0.0;
-  j[3 * 2 + 1] = Ml / data->mobs_params[NC_CLUSTER_MASS_PLCL_SD_CL];
+  gsl_matrix_set (J, 0, 0, COR / (SD_SZ * onemcor2)); 
+  gsl_matrix_set (J, 0, 1, - 1.0 / (SD_L * onemcor2)); 
+  gsl_matrix_set (J, 1, 0, 1.0 / SD_SZ);               
+  gsl_matrix_set (J, 1, 1, 0.0);                       
+  gsl_matrix_set (J, 2, 0, Msz / data->mobs_params[NC_CLUSTER_MASS_PLCL_SD_PL]); 
+  gsl_matrix_set (J, 2, 1, 0.0);                       
+  gsl_matrix_set (J, 3, 0, 0.0);                      
+  gsl_matrix_set (J, 3, 1, Ml / data->mobs_params[NC_CLUSTER_MASS_PLCL_SD_CL]); 
   
   //printf ("j0 = %.5g j1 = %.5g j2 = %.5g j3 = %.5g j4 = %.5g j5 = %.5g j6 = %.5g j7 = %.5g\n", j[0*2 + 0], j[0*2 + 1])
-  
-  NCM_UNUSED (m);
+
+  return GSL_SUCCESS;
 }
 
 static void
-peakfinder (const gint *ndim, const gdouble bounds[], gint *n, gdouble x[], void *userdata)
+_peakfinder (const gint *ndim, const gdouble bounds[], gint *n, gdouble x[], void *userdata)
 {
   integrand_data *data = (integrand_data *) userdata;
   NcClusterMassPlCL *mszl = data->mszl;
+  gsl_multifit_function_fdf f;
+  gint status, info;
+
   gdouble p0[] = {log (data->mobs[NC_CLUSTER_MASS_PLCL_MPL]/mszl->M0), log (data->mobs[NC_CLUSTER_MASS_PLCL_MCL]/mszl->M0)};
   gdouble lb[] = {bounds[0], bounds[2]};
   gdouble ub[] = {bounds[1], bounds[3]};
-  gdouble info[LM_INFO_SZ];
-  gdouble opts[LM_OPTS_SZ];
-  gint ret;
 
-  opts[0] = LM_INIT_MU; 
-  opts[1] = 1.0e-15; 
-  opts[2] = 1.0e-15;
-  opts[3] = 1.0e-20;
+  const gdouble xtol = 1e-11;
+  const gdouble gtol = 1e-11;
+  const gdouble ftol = 0.0;
   
   p0[0] = GSL_MAX (p0[0], lb[0]);
   p0[1] = GSL_MAX (p0[1], lb[1]);
   p0[0] = GSL_MIN (p0[0], ub[0]);
   p0[1] = GSL_MIN (p0[1], ub[1]);
 
-  //printf ("p0[0] = %.5g p0[1] = %.5g lb[0] = %.5g lb[1] = %.5g ub[0] = %.5g ub[1] = %.5g\n", p0[0], p0[1], lb[0], lb[1], ub[0], ub[1]);
-  ret = dlevmar_bc_der (
-                        &_internal_nc_cluster_mass_plcl_levmar_f, &nc_cluster_mass_plcl_levmar_J,
-                        p0, NULL, 2, 4, lb, ub, NULL, 1.0e5, opts, info, mszl->workz, 
-                        NULL, data
-                        );
-  if (ret < 0)
+  gsl_vector_view p0_vec = gsl_vector_view_array (p0, 2);
+  
+  f.f  = &_internal_nc_cluster_mass_plcl_gsl_f;
+  f.df = &_nc_cluster_mass_plcl_gsl_J; 
+  f.n = 4;
+  f.p = 2;
+  f.params = data;
+
+  /* initialize solver with starting point */
+  gsl_multifit_fdfsolver_set (mszl->s, &f, &p0_vec.vector);
+
+  /* solve the system with a maximum of 20 iterations */
+  status = gsl_multifit_fdfsolver_driver (mszl->s, 20000, xtol, gtol, ftol, &info);
+
+  if (status != GSL_SUCCESS)
     g_error ("error: NcClusterMassPlCL peakfinder function.\n");
 
-//  printf ("Min %g %g Max %g %g\n", lb[0], lb[1], ub[0], ub[1]);
-//  printf ("%g %g %g %g %g %g %g %g %g %g\n", 
-//          info[0], info[1], info[2], info[3], info[4], info[5],
-//          info[6], info[7], info[8], info[9]);
+  //printf ("Inicial: p0 = %.5g p1 = %.5g\n", p0[0], p0[1]);
+  //printf ("2d Minimo : p  = %.5g p  = %.5g\n", gsl_vector_get (mszl->s->x, 0), gsl_vector_get (mszl->s->x, 1));
+  x[0] = gsl_vector_get (mszl->s->x, 0);
+  x[1] = gsl_vector_get (mszl->s->x, 1);
 
-  //printf ("Minimo: p0 =%.5g p1 = %.5g\n", p0[0], p0[1]);
-  x[0] = p0[0];
-  x[1] = p0[1];
-  //printf ("Minimo: x0 = %.5g x1 = %.5g\n", x[0], x[1]);
   *n = 1;
 }
 
@@ -711,7 +708,9 @@ static gdouble
 _function_at (gdouble *p, integrand_data *data)
 {
   gdouble fp[4];
-  _internal_nc_cluster_mass_plcl_levmar_f (p, fp, 2, 4, data);
+  gsl_vector_view fp_vec = gsl_vector_view_array (fp, 4);
+  gsl_vector_view p_vec  = gsl_vector_view_array (p, 2);
+  _internal_nc_cluster_mass_plcl_gsl_f (&p_vec.vector, data, &fp_vec.vector);
   return (fp[0] * fp[0] + fp[1] * fp[1] + fp[2] * fp[2] + fp[3] * fp[3]) / 2.0;
 }
 
@@ -857,7 +856,7 @@ _nc_cluster_mass_plcl_Msz_Ml_M500_p (NcClusterMass *clusterm, NcHICosmo *cosmo, 
 
     //printf ("[%.5g %.5g] [%.8g %.8g]\n", a_sz, b_sz, a_l, b_l);
     //printf ("exp: asz = %.8g bsz = %.8g al = %.8g bl = %.8g\n", exp(a_sz), exp(b_sz), exp(a_l), exp(b_l));
-    peakfinder (&ndim, bounds, &n, x, &data);
+    _peakfinder (&ndim, bounds, &n, x, &data);
     //printf ("start %20.15g %20.15g [%20.15g %20.15g, %20.15g %20.15g]\n", x[0], x[1], a_sz, a_l, b_sz, b_l);
     
     data.peak[0] = x[0];

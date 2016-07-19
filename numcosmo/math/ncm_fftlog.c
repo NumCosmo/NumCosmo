@@ -321,7 +321,8 @@ ncm_fftlog_class_init (NcmFftlogClass *klass)
  * 
  * Returns: (transfer full): @fftlog
  */
-NcmFftlog *ncm_fftlog_ref (NcmFftlog *fftlog)
+NcmFftlog *
+ncm_fftlog_ref (NcmFftlog *fftlog)
 {
   return g_object_ref (fftlog);
 }

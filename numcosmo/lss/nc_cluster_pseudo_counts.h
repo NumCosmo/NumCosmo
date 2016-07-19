@@ -36,6 +36,7 @@
 #include <numcosmo/lss/nc_cluster_mass.h>
 #include <numcosmo/lss/nc_cluster_mass_plcl.h>
 #include <gsl/gsl_rng.h>
+#include <gsl/gsl_multifit_nlin.h>
 
 G_BEGIN_DECLS
 
@@ -79,6 +80,8 @@ struct _NcClusterPseudoCounts
   /*< private >*/
   NcmModel parent_instance;
   guint nclusters;
+  const gsl_multifit_fdfsolver_type *T;
+  gsl_multifit_fdfsolver *s;
   gdouble *workz;
 };
 

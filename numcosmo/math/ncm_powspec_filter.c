@@ -41,10 +41,15 @@
 /**
  * SECTION:ncm_powspec_filter
  * @title: NcmPowspecFilter
- * @short_description: Abstract class for implementing powerspectrum filters.
+ * @short_description: Class to compute filtered power spectrum
  * 
- * FIXME
- * 
+ * This class computes the filtered power spectrum, $\sigma^2(k, r)$, and its derivatives with respect to $\ln r$ 
+ * (#ncm_powspec_filter_eval_dnvar_dlnrn()) using the FFTLog approach (see #NcmFftlog),
+ * \begin{equation}\lable{eq:variance}
+ * \sigma^2(r, z) = \frac{1}{2\pi^2} \int_0^\infty k^2 \ P(k, z) \vert W(k,r) \vert^2 \ \mathrm{d}k, 
+ * \end{equation}
+ * where $P(k, z)$ is the power spectrum at mode $k$ and redshift $z$ and $W(k, r)$ is the filter (or window function).
+ *  
  */
 
 #ifdef HAVE_CONFIG_H
@@ -89,7 +94,7 @@ ncm_powspec_filter_init (NcmPowspecFilter *psf)
 }
 
 static void
-ncm_powspec_filter_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
+_ncm_powspec_filter_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
 {
   NcmPowspecFilter *psf = NCM_POWSPEC_FILTER (object);
   g_return_if_fail (NCM_IS_POWSPEC_FILTER (object));
@@ -123,7 +128,7 @@ ncm_powspec_filter_set_property (GObject *object, guint prop_id, const GValue *v
 }
 
 static void
-ncm_powspec_filter_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
+_ncm_powspec_filter_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
 {
   NcmPowspecFilter *psf = NCM_POWSPEC_FILTER (object);
   g_return_if_fail (NCM_IS_POWSPEC_FILTER (object));
@@ -155,7 +160,7 @@ ncm_powspec_filter_get_property (GObject *object, guint prop_id, GValue *value, 
 }
 
 static void
-ncm_powspec_filter_dispose (GObject *object)
+_ncm_powspec_filter_dispose (GObject *object)
 {
   NcmPowspecFilter *psf = NCM_POWSPEC_FILTER (object);
 
@@ -172,7 +177,7 @@ ncm_powspec_filter_dispose (GObject *object)
 }
 
 static void
-ncm_powspec_filter_finalize (GObject *object)
+_ncm_powspec_filter_finalize (GObject *object)
 {
 
   /* Chain up : end */
@@ -184,10 +189,10 @@ ncm_powspec_filter_class_init (NcmPowspecFilterClass *klass)
 {
   GObjectClass* object_class = G_OBJECT_CLASS (klass);
 
-  object_class->set_property = ncm_powspec_filter_set_property;
-  object_class->get_property = ncm_powspec_filter_get_property;
-  object_class->dispose      = ncm_powspec_filter_dispose;
-  object_class->finalize     = ncm_powspec_filter_finalize;
+  object_class->set_property = &_ncm_powspec_filter_set_property;
+  object_class->get_property = &_ncm_powspec_filter_get_property;
+  object_class->dispose      = &_ncm_powspec_filter_dispose;
+  object_class->finalize     = &_ncm_powspec_filter_finalize;
 
   g_object_class_install_property (object_class,
                                    PROP_LNR0,
@@ -236,11 +241,11 @@ ncm_powspec_filter_class_init (NcmPowspecFilterClass *klass)
 /**
  * ncm_powspec_filter_new:
  * @ps: a #NcmPowspec
- * @type: a type from #NcmPowspecFilterType.
+ * @type: a type from #NcmPowspecFilterType
  * 
- * Creates a new #NcPowspecFilter from the powerspectrum @ps. 
+ * Creates a new #NcmPowspecFilter from the power spectrum @ps. 
  * 
- * Returns: (transfer full): the newly created #NcPowspecFilter.
+ * Returns: (transfer full): the newly created #NcmPowspecFilter.
  */
 NcmPowspecFilter *
 ncm_powspec_filter_new (NcmPowspec *ps, NcmPowspecFilterType type)
@@ -254,10 +259,24 @@ ncm_powspec_filter_new (NcmPowspec *ps, NcmPowspecFilterType type)
 }
 
 /**
+ * ncm_powspec_filter_ref:
+ * @psf: a #NcmPowspecFilter
+ * 
+ * Increases the reference count of @psf by one.
+ * 
+ * Returns: (transfer full): @psf
+ */
+NcmPowspecFilter *
+ncm_powspec_filter_ref (NcmPowspecFilter *psf)
+{
+  return g_object_ref (psf);
+}
+
+/**
  * ncm_powspec_filter_free:
  * @psf: a #NcmPowspecFilter
  * 
- * FIXME
+ * Decreases the reference count of @psf by one.
  * 
  */
 void
@@ -270,7 +289,8 @@ ncm_powspec_filter_free (NcmPowspecFilter *psf)
  * ncm_powspec_filter_clear:
  * @psf: a #NcmPowspecFilter
  * 
- * FIXME
+ * If @psf is different from NULL, decreases the reference count of 
+ * @psf by one and sets @fftlog to NULL.
  * 
  */
 void
@@ -282,9 +302,9 @@ ncm_powspec_filter_clear (NcmPowspecFilter **psf)
 /**
  * ncm_powspec_filter_set_type:
  * @psf: a #NcmPowspecFilter
- * @type: a type from #NcmPowspecFilterType.
+ * @type: a type from #NcmPowspecFilterType
  * 
- * FIXME
+ * Sets the @type of the #NcmPowspecFilter to be used. 
  * 
  */
 void
@@ -360,7 +380,7 @@ _ncm_powspec_filter_dummy_z (gdouble z, gpointer userdata)
  * @psf: a #NcmPowspecFilter
  * @model: a #NcmModel
  * 
- * Prepares the object applying the filter to the powerspectrum.
+ * Prepares the object applying the filter to the power spectrum.
  * 
  */
 void
@@ -491,7 +511,7 @@ ncm_powspec_filter_prepare (NcmPowspecFilter *psf, NcmModel *model)
  * @psf: a #NcmPowspecFilter
  * @model: a #NcmModel
  * 
- * Prepares (if necessary) the object applying the filter to the powerspectrum.
+ * Prepares (if necessary) the object applying the filter to the power spectrum.
  * 
  */
 void
@@ -580,7 +600,7 @@ ncm_powspec_filter_set_zi (NcmPowspecFilter *psf, gdouble zi)
 /**
  * ncm_powspec_filter_set_zf:
  * @psf: a #NcmPowspecFilter
- * @zf: the output final time $z_i$
+ * @zf: the output final time $z_f$
  * 
  * FIXME
  * 
@@ -628,10 +648,10 @@ ncm_powspec_filter_get_r_max (NcmPowspecFilter *psf)
 /**
  * ncm_powspec_filter_eval_lnvar_lnr:
  * @psf: a #NcmPowspecFilter
- * @z: redshift $z$
- * @lnr: FIXME
+ * @z: redshift
+ * @lnr: logarithm base e of $r$
  * 
- * Evaluate the filtered variance at @lnr.
+ * Evaluates the logarithm base e of the filtered power spectrum at @lnr and @z.
  * 
  * Returns: FIXME 
  */
@@ -644,10 +664,10 @@ ncm_powspec_filter_eval_lnvar_lnr (NcmPowspecFilter *psf, const gdouble z, const
 /**
  * ncm_powspec_filter_eval_var_lnr:
  * @psf: a #NcmPowspecFilter
- * @z: redshift $z$
- * @lnr: FIXME
+ * @z: redshift
+ * @lnr: logarithm base e of $r$
  * 
- * Evaluate the filtered variance at @r.
+ * Evaluates the filtered power spectrum at @lnr and @z.
  * 
  * Returns: FIXME 
  */
@@ -660,7 +680,7 @@ ncm_powspec_filter_eval_var_lnr (NcmPowspecFilter *psf, const gdouble z, const g
 /**
  * ncm_powspec_filter_eval_var:
  * @psf: a #NcmPowspecFilter
- * @z: redshift $z$
+ * @z: redshift 
  * @r: FIXME
  * 
  * Evaluate the filtered variance at @r.
@@ -676,10 +696,10 @@ ncm_powspec_filter_eval_var (NcmPowspecFilter *psf, const gdouble z, const gdoub
 /**
  * ncm_powspec_filter_eval_sigma_lnr:
  * @psf: a #NcmPowspecFilter
- * @z: redshift $z$
- * @lnr: FIXME
+ * @z: redshift
+ * @lnr: logarithm base e of $r$
  * 
- * Evaluate the filtered variance at @lnr.
+ * Evaluate the suare root of the filtered power spectrum at @lnr and @z.
  * 
  * Returns: FIXME 
  */
@@ -692,10 +712,10 @@ ncm_powspec_filter_eval_sigma_lnr (NcmPowspecFilter *psf, const gdouble z, const
 /**
  * ncm_powspec_filter_eval_sigma:
  * @psf: a #NcmPowspecFilter
- * @z: redshift $z$
+ * @z: redshift
  * @r: FIXME
  * 
- * Evaluate the filtered variance at @r.
+ * Evaluates the filtered variance at @r.
  * 
  * Returns: FIXME 
  */
@@ -708,10 +728,10 @@ ncm_powspec_filter_eval_sigma (NcmPowspecFilter *psf, const gdouble z, const gdo
 /**
  * ncm_powspec_filter_eval_dvar_dlnr:
  * @psf: a #NcmPowspecFilter
- * @z: redshift $z$
- * @lnr: FIXME
+ * @z: redshift
+ * @lnr: logarithm base e of $r$
  * 
- * Evaluate the filtered variance at @lnr.
+ * Evaluates the filtered variance at @lnr.
  * 
  * Returns: FIXME 
  */
@@ -724,8 +744,8 @@ ncm_powspec_filter_eval_dvar_dlnr (NcmPowspecFilter *psf, const gdouble z, const
 /**
  * ncm_powspec_filter_eval_dlnvar_dlnr:
  * @psf: a #NcmPowspecFilter
- * @z: redshift $z$
- * @lnr: FIXME
+ * @z: redshift
+ * @lnr: logarithm base e of $r$
  * 
  * Evaluate the filtered variance at @lnr.
  * 
@@ -740,10 +760,10 @@ ncm_powspec_filter_eval_dlnvar_dlnr (NcmPowspecFilter *psf, const gdouble z, con
 /**
  * ncm_powspec_filter_eval_dlnvar_dr:
  * @psf: a #NcmPowspecFilter
- * @z: redshift $z$
- * @lnr: FIXME
+ * @z: redshift
+ * @lnr: logarithm base e of $r$
  * 
- * Evaluate the filtered variance at @lnr.
+ * Evaluates the filtered variance at @lnr.
  * 
  * Returns: FIXME 
  */
@@ -756,11 +776,15 @@ ncm_powspec_filter_eval_dlnvar_dr (NcmPowspecFilter *psf, const gdouble z, const
 /**
  * ncm_powspec_filter_eval_dnvar_dlnrn:
  * @psf: a #NcmPowspecFilter
- * @z: redshift $z$
- * @lnr: FIXME
+ * @z: redshift
+ * @lnr: logarithm base e of $r$
  * @n: number of derivatives
  * 
- * Evaluate the filtered variance at @lnr.
+ * Evaluates the derivative of the filtered variance at @lnr and @z, namely:
+ * - @n = 0: $\sigma(r, z)^2$,
+ * - @n = 1: $\frac{d\sigma^2}{d\ln r}$,
+ * - @n = 2: $\frac{d^2\sigma^2}{d(\ln r)^2}$,
+ * - @n = 3: $\frac{d^3\sigma^2}{d(\ln r)^3}$.
  * 
  * Returns: FIXME 
  */
@@ -791,11 +815,11 @@ ncm_powspec_filter_eval_dnvar_dlnrn (NcmPowspecFilter *psf, const gdouble z, con
 /**
  * ncm_powspec_filter_eval_dnlnvar_dlnrn:
  * @psf: a #NcmPowspecFilter
- * @z: redshift $z$
- * @lnr: FIXME
+ * @z: redshift
+ * @lnr: logarithm base e of $r$
  * @n: number of derivatives
  * 
- * Evaluate the filtered variance at @lnr.
+ * Evaluates the filtered variance at @lnr.
  * 
  * Returns: FIXME 
  */
