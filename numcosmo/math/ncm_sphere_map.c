@@ -332,7 +332,7 @@ ncm_sphere_mapalm_init (NcmSphereMapAlm *mapalm, gint lmax)
     gsl_vector_set (mapalm->lnpoch_m_1_2, m, 0.5 * last_lnpoch - ncm_c_lnpi_4 ());
 
     y_mm = ncm_c_sqrt_1_4pi () *
-      gsl_vector_get (mapalm->sqrt_int, 2 * m + 1) / gsl_vector_get(mapalm->sqrt_int, m) * sgn;
+      gsl_vector_get (mapalm->sqrt_int, 2 * m + 1) / gsl_vector_get (mapalm->sqrt_int, m) * sgn;
     gsl_vector_set (mapalm->sphPmm, m, y_mm);
 
     last_lnpoch += gsl_sf_log_1plusx ( 0.5 / ((gdouble)(m)) );
@@ -382,15 +382,15 @@ ncm_sphere_mapsht_new (NcmSphereMap *map, NcmSphereMapAlm *mapalm, guint fftw_fl
   NcmSphereMapSHT *mapsht = g_slice_new (NcmSphereMapSHT);
   gint i, j = 0;
 
-  mapsht->n_rings = NCM_MAP_N_RINGS (map->nside);
+  mapsht->n_rings       = NCM_MAP_N_RINGS (map->nside);
   mapsht->max_ring_size = NCM_MAP_MAX_RING_SIZE (map->nside);
-  mapsht->n_diff_rings = NCM_MAP_N_DIFFERENT_SIZED_RINGS (map->nside);
-  mapsht->map = map;
-  mapsht->mapalm = mapalm;
-  mapsht->ring = gsl_vector_alloc (mapsht->max_ring_size);
-  mapsht->fft_ring = gsl_matrix_complex_alloc (mapsht->n_rings, mapsht->max_ring_size);
-  mapsht->sphPl0 = gsl_vector_alloc (mapalm->lmax + 1);
-  mapsht->sphPlm = gsl_vector_complex_alloc (mapalm->alm_size);
+  mapsht->n_diff_rings  = NCM_MAP_N_DIFFERENT_SIZED_RINGS (map->nside);
+  mapsht->map           = map;
+  mapsht->mapalm        = mapalm;
+  mapsht->ring          = gsl_vector_alloc (mapsht->max_ring_size);
+  mapsht->fft_ring      = gsl_matrix_complex_alloc (mapsht->n_rings, mapsht->max_ring_size);
+  mapsht->sphPl0        = gsl_vector_alloc (mapalm->lmax + 1);
+  mapsht->sphPlm        = gsl_vector_complex_alloc (mapalm->alm_size);
   mapsht->sphPlm_upper_limit = gsl_vector_alloc (mapalm->lmax + 1);
 
   mapsht->save_wis = TRUE;
@@ -414,7 +414,7 @@ ncm_sphere_mapsht_new (NcmSphereMap *map, NcmSphereMapAlm *mapalm, guint fftw_fl
 
   for (i = 0; i < mapsht->n_rings; i++)
   {
-    gint ring_size = NCM_MAP_RING_SIZE(mapsht->map->nside, i);
+    gint ring_size = NCM_MAP_RING_SIZE (mapsht->map->nside, i);
     gsl_vector_complex_view fft_ring_view = gsl_matrix_complex_row (mapsht->fft_ring, i);
     gdouble theta, phi;
     ncm_sphere_healpix_pix2ang_ring (mapsht->map->nside, j, &theta, &phi);
@@ -450,13 +450,13 @@ ncm_sphere_mapsht_new (NcmSphereMap *map, NcmSphereMapAlm *mapalm, guint fftw_fl
 gboolean
 ncm_sphere_mapsht_map2alm (NcmSphereMapSHT *mapsht, gdouble cut)
 {
-  gint i, j = 0;
-  gint start_m = 0;
-  gint l_size = mapsht->mapalm->lmax;
-  gint lmax = mapsht->mapalm->lmax;
-  gint block_size = 1024 * 20; // 1024 => 1024 * 8 * 3 = 24kb
-  glong last_ring_pix = 0;
-  gboolean loop_ctl = TRUE;
+  gint i, j            = 0;
+  gint start_m         = 0;
+  gint l_size          = mapsht->mapalm->lmax;
+  gint lmax            = mapsht->mapalm->lmax;
+  gint block_size      = 1024 * 20; // 1024 => 1024 * 8 * 3 = 24kb
+  glong last_ring_pix  = 0;
+  gboolean loop_ctl    = TRUE;
   gdouble four_pi_npix = 4.0 * M_PI / mapsht->map->npix;
 
   g_assert (mapsht->map->order == NC_SPHERE_MAP_ORDER_RING);
@@ -477,7 +477,7 @@ ncm_sphere_mapsht_map2alm (NcmSphereMapSHT *mapsht, gdouble cut)
     gint end_m, mn = 0;
     while (((mn + l_size) < block_size) && (l_size > 0))
       mn += l_size--;
-    end_m = (lmax-l_size);
+    end_m = (lmax - l_size);
     if (l_size == 0)
       loop_ctl = FALSE;
     j = 0;
@@ -488,7 +488,7 @@ ncm_sphere_mapsht_map2alm (NcmSphereMapSHT *mapsht, gdouble cut)
       gdouble theta, phi;
       ncm_sphere_healpix_pix2ang_ring (mapsht->map->nside, j, &theta, &phi);
       j += ring_size;
-      if (fabs(theta - M_PI / 2.0) >= ncm_c_degree_to_radian (cut))
+      if (fabs (theta - M_PI / 2.0) >= ncm_c_degree_to_radian (cut))
         ncm_sphere_mapsht_map2alm_circle (mapsht, i, ring_size, four_pi_npix, theta, phi, start_m, end_m);
     }
     start_m = end_m + 1;
@@ -497,13 +497,13 @@ ncm_sphere_mapsht_map2alm (NcmSphereMapSHT *mapsht, gdouble cut)
   for (i = 0; i <= mapsht->mapalm->lmax; i++)
   {
     gdouble *Nc = gsl_vector_ptr (mapsht->mapalm->Nc, i);
-    *Nc = (gsl_pow_2 (GSL_REAL (gsl_vector_complex_get (mapsht->mapalm->alm, NCM_MAP_ALM_INDEX(mapsht->mapalm->lmax, i, 0))))
-        + gsl_pow_2 (GSL_IMAG (gsl_vector_complex_get (mapsht->mapalm->alm, NCM_MAP_ALM_INDEX(mapsht->mapalm->lmax, i, 0)))));
+    *Nc = (gsl_pow_2 (GSL_REAL (gsl_vector_complex_get (mapsht->mapalm->alm, NCM_MAP_ALM_INDEX (mapsht->mapalm->lmax, i, 0))))
+        + gsl_pow_2 (GSL_IMAG (gsl_vector_complex_get (mapsht->mapalm->alm, NCM_MAP_ALM_INDEX (mapsht->mapalm->lmax, i, 0)))));
     for (j = 1; j <= i; j++)
     {
       *Nc += 2.0 *
-        (gsl_pow_2 (GSL_REAL(gsl_vector_complex_get (mapsht->mapalm->alm, NCM_MAP_ALM_INDEX(mapsht->mapalm->lmax, i, j))))
-        + gsl_pow_2 (GSL_IMAG(gsl_vector_complex_get (mapsht->mapalm->alm, NCM_MAP_ALM_INDEX(mapsht->mapalm->lmax, i, j)))));
+        (gsl_pow_2 (GSL_REAL (gsl_vector_complex_get (mapsht->mapalm->alm, NCM_MAP_ALM_INDEX (mapsht->mapalm->lmax, i, j))))
+        + gsl_pow_2 (GSL_IMAG (gsl_vector_complex_get (mapsht->mapalm->alm, NCM_MAP_ALM_INDEX (mapsht->mapalm->lmax, i, j)))));
     }
     *Nc /= (2.0 * i + 1.0);
   }
@@ -535,75 +535,82 @@ ncm_sphere_mapsht_map2alm_circle (NcmSphereMapSHT *mapsht, gint ring, gint ring_
   gint m;
   gdouble y_mm;
   gdouble y_mmp1;
-  gdouble x = cos(theta);
-  gdouble lncirc = 0.5 * gsl_sf_log_1plusx (-x * x);
+  gdouble x               = cos (theta);
+  gdouble lncirc          = 0.5 * gsl_sf_log_1plusx (-x * x);
   gsl_vector_complex *alm = mapsht->mapalm->alm;
   gsl_complex exp_mphi;
   gsl_complex gphase;
-  gsl_complex *alm_data = (gsl_complex *)&alm->data[2*NCM_MAP_ALM_M_START(lmax, start_m)];
+  gsl_complex *alm_data = (gsl_complex *)&alm->data[2 * NCM_MAP_ALM_M_START (lmax, start_m)];
   gsl_vector_complex_view fft_ring_view = gsl_matrix_complex_row (mapsht->fft_ring, ring);
   gsl_vector_complex *fft_ring = &fft_ring_view.vector;
   GSL_SET_COMPLEX (&exp_mphi, cos(phi), -sin(phi));
-  GSL_SET_COMPLEX (&gphase, norma * cos(start_m * phi), - norma * sin (start_m * phi));
+  GSL_SET_COMPLEX (&gphase, norma * cos (start_m * phi), - norma * sin (start_m * phi));
 
   for (m = start_m; m <= lmax && m <= end_m; m++)
   {
-    gint start_index = NCM_MAP_ALM_M_START(lmax, m);
+    gint start_index    = NCM_MAP_ALM_M_START (lmax, m);
     gint fft_ring_index = m % ring_size;
-    gsl_complex phase = gphase;
-    if (gsl_vector_get (mapsht->sphPlm_upper_limit, m) < fabs(x))
+    gsl_complex phase   = gphase;
+    
+    if (gsl_vector_get (mapsht->sphPlm_upper_limit, m) < fabs (x))
       return TRUE;
-    NCM_COMPLEX_MUL(gphase, exp_mphi);
+    
+    NCM_COMPLEX_MUL (gphase, exp_mphi);
 
-    if (fft_ring_index <= ring_size/2)
+    if (fft_ring_index <= ring_size / 2)
       NCM_COMPLEX_MUL (phase, gsl_vector_complex_get (fft_ring, fft_ring_index));
     else
     {
-      fft_ring_index = ring_size-fft_ring_index;
+      fft_ring_index = ring_size - fft_ring_index;
       NCM_COMPLEX_MUL_CONJUGATE (phase, gsl_vector_complex_get (fft_ring, fft_ring_index));
     }
 
-    if(m == 0)
+    if (m == 0)
     {
-      y_mm   = ncm_c_sqrt_1_4pi ();          /* Y00 = 1/sqrt(4pi) */
+      y_mm   = ncm_c_sqrt_1_4pi ();     /* Y00 = 1/sqrt(4pi) */
       y_mmp1 = x * ncm_c_sqrt_3_4pi ();
     }
     else
     {
-      const gdouble lnpre = gsl_vector_get(mapsht->mapalm->lnpoch_m_1_2, m) + m*lncirc;
-      y_mm = gsl_vector_get (mapsht->mapalm->sphPmm, m) * exp(lnpre);
-      y_mmp1 = x * gsl_vector_get(mapsht->mapalm->sqrt_int, 2*m + 3) * y_mm;
+      const gdouble lnpre = gsl_vector_get (mapsht->mapalm->lnpoch_m_1_2, m) + m * lncirc;
+
+      y_mm   = gsl_vector_get (mapsht->mapalm->sphPmm, m) * exp (lnpre);
+      y_mmp1 = x * gsl_vector_get (mapsht->mapalm->sqrt_int, 2 * m + 3) * y_mm;
     }
 
-    if(lmax == m)
+    if (lmax == m)
     {
-      NCM_COMPLEX_INC_MUL_REAL(alm_data[0], phase, y_mm);
+      NCM_COMPLEX_INC_MUL_REAL (alm_data[0], phase, y_mm);
       alm_data = &alm_data[1];
     }
-    else if(lmax == m + 1)
+    else if (lmax == m + 1)
     {
-      NCM_COMPLEX_INC_MUL_REAL(alm_data[0], phase, y_mm);
-      NCM_COMPLEX_INC_MUL_REAL(alm_data[1], phase, y_mmp1);
+      NCM_COMPLEX_INC_MUL_REAL (alm_data[0], phase, y_mm);
+      NCM_COMPLEX_INC_MUL_REAL (alm_data[1], phase, y_mmp1);
       alm_data = &alm_data[2];
     }
     else
     {
       gdouble y_ell = 0.0;
       gint ell, rindex, lindex;
-      NCM_COMPLEX_INC_MUL_REAL(alm_data[0], phase, y_mm);
-      NCM_COMPLEX_INC_MUL_REAL(alm_data[1], phase, y_mmp1);
+
+      NCM_COMPLEX_INC_MUL_REAL (alm_data[0], phase, y_mm);
+      NCM_COMPLEX_INC_MUL_REAL (alm_data[1], phase, y_mmp1);
 
       /* Compute Y_l^m, l > m+1, upward recursion on l. */
       rindex = start_index + 2;
       lindex = 2;
+
       for (ell = m + 2; ell <= lmax; ell++)
       {
         const gdouble factor1 = gsl_vector_get (mapsht->mapalm->sphPlm_recur1, rindex);
         const gdouble factor2 = gsl_vector_get (mapsht->mapalm->sphPlm_recur2, rindex);
-        y_ell  = (x*y_mmp1*factor1 - y_mm*factor2);
+        y_ell  = (x * y_mmp1 * factor1 - y_mm * factor2);
         y_mm   = y_mmp1;
         y_mmp1 = y_ell;
-        NCM_COMPLEX_INC_MUL_REAL(alm_data[lindex], phase, y_ell);
+        
+        NCM_COMPLEX_INC_MUL_REAL (alm_data[lindex], phase, y_ell);
+
         rindex++;
         lindex++;
       }
@@ -688,7 +695,7 @@ ncm_sphere_mapsht_alm2map_circle (NcmSphereMapSHT *mapsht, gint ring,  gint ring
   gdouble y_mm;
   gdouble y_mmp1;
   gdouble x = cos(theta);
-  gdouble lncirc = 0.5*gsl_sf_log_1plusx(-x*x);
+  gdouble lncirc = 0.5 * gsl_sf_log_1plusx(- x * x);
   gsl_vector_complex *alm = mapsht->mapalm->alm;
   gsl_complex *alm_data = (gsl_complex *)&alm->data[0];
   gsl_complex exp_mphi;

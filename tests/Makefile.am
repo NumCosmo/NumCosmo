@@ -60,6 +60,9 @@ test_ncm_data_gauss_cov_SOURCES = \
 test_ncm_func_eval_SOURCES =  \
 	test_ncm_func_eval.c
 
+test_ncm_sphere_map_pix_SOURCES =  \
+	test_ncm_sphere_map_pix.c
+
 test_nc_hicosmo_de_SOURCES =  \
 	test_nc_hicosmo_de.c
 
@@ -99,6 +102,7 @@ check_PROGRAMS =  \
 	test_ncm_serialize            \
 	test_ncm_mset                 \
 	test_ncm_data_gauss_cov       \
+	test_ncm_sphere_map_pix       \
 	test_nc_hicosmo_de            \
 	test_nc_window                \
 	test_nc_transfer_func         \
@@ -137,6 +141,8 @@ test_ncm_serialize_LDADD = $(top_builddir)/numcosmo/libnumcosmo.la
 test_ncm_data_gauss_cov_LDADD = $(top_builddir)/numcosmo/libnumcosmo.la
 
 test_ncm_func_eval_LDADD = $(top_builddir)/numcosmo/libnumcosmo.la 
+
+test_ncm_sphere_map_pix_LDADD = $(top_builddir)/numcosmo/libnumcosmo.la 
 
 test_nc_hicosmo_de_LDADD = $(top_builddir)/numcosmo/libnumcosmo.la
 

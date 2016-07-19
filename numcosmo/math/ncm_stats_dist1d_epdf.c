@@ -503,12 +503,12 @@ _ncm_stats_dist1d_epdf_autobw (NcmStatsDist1dEPDF *epdf1d)
       G_LOCK_DEFINE_STATIC (prepare_fft_lock);
       G_LOCK (prepare_fft_lock);
 
-      ncm_cfg_load_fftw_wisdom ("ncm_stats_dist1d_wisdown.fftw3");
+      ncm_cfg_load_fftw_wisdom ("ncm_stats_dist1d_wisdown");
       epdf1d->fft_data_to_tilde = fftw_plan_r2r_1d (nbins, ncm_vector_data (epdf1d->p_data), ncm_vector_data (epdf1d->p_tilde),
                                                     FFTW_REDFT10, fftw_default_flags | FFTW_DESTROY_INPUT);
       epdf1d->fft_tilde_to_est  = fftw_plan_r2r_1d (nbins, ncm_vector_data (epdf1d->p_tilde), ncm_vector_data (epdf1d->p_est),
                                                     FFTW_REDFT01, fftw_default_flags | FFTW_DESTROY_INPUT);
-      ncm_cfg_save_fftw_wisdom ("ncm_stats_dist1d_wisdown.fftw3");
+      ncm_cfg_save_fftw_wisdom ("ncm_stats_dist1d_wisdown");
 
       G_UNLOCK (prepare_fft_lock);
     }

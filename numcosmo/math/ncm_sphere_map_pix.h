@@ -31,6 +31,9 @@
 #include <numcosmo/build_cfg.h>
 #include <numcosmo/math/ncm_quaternion.h>
 #include <gsl/gsl_vector_float.h>
+#ifndef NUMCOSMO_GIR_SCAN
+#include <complex.h>
+#endif /* NUMCOSMO_GIR_SCAN */
 
 G_BEGIN_DECLS
 
@@ -91,9 +94,15 @@ struct _NcmSphereMapPix
   gint64 face_size;
   gint64 middle_rings_size;
   gint64 cap_size;
+  gint64 middle_size;
+  gint64 nrings;
+  gint64 nrings_cap;
+  gint64 nrings_middle;
   NcmSphereMapPixOrder order;
   NcmSphereMapPixCoordSys coordsys;
-  gsl_vector_float *pvec;
+  gpointer pvec;
+  gpointer fft_pvec;
+  GPtrArray *fft_plan;
 };
 
 GType ncm_sphere_map_pix_get_type (void) G_GNUC_CONST;
@@ -106,6 +115,14 @@ void ncm_sphere_map_pix_clear (NcmSphereMapPix **pix);
 void ncm_sphere_map_pix_set_nside (NcmSphereMapPix *pix, gint64 nside);
 gint64 ncm_sphere_map_pix_get_nside (NcmSphereMapPix *pix);
 gint64 ncm_sphere_map_pix_get_npix (NcmSphereMapPix *pix);
+gint64 ncm_sphere_map_pix_get_cap_size (NcmSphereMapPix *pix);
+gint64 ncm_sphere_map_pix_get_middle_size (NcmSphereMapPix *pix);
+
+gint64 ncm_sphere_map_pix_get_nrings (NcmSphereMapPix *pix);
+gint64 ncm_sphere_map_pix_get_nrings_cap (NcmSphereMapPix *pix);
+gint64 ncm_sphere_map_pix_get_nrings_middle (NcmSphereMapPix *pix);
+gint64 ncm_sphere_map_pix_get_ring_size (NcmSphereMapPix *pix, gint64 r_i);
+gint64 ncm_sphere_map_pix_get_ring_first_index (NcmSphereMapPix *pix, gint64 r_i);
 
 void ncm_sphere_map_pix_set_order (NcmSphereMapPix *pix, NcmSphereMapPixOrder order);
 NcmSphereMapPixOrder ncm_sphere_map_pix_get_order (NcmSphereMapPix *pix);
@@ -114,9 +131,6 @@ void ncm_sphere_map_pix_set_coordsys (NcmSphereMapPix *pix, NcmSphereMapPixCoord
 NcmSphereMapPixCoordSys ncm_sphere_map_pix_get_coordsys (NcmSphereMapPix *pix);
 
 void ncm_sphere_map_pix_clear_pixels (NcmSphereMapPix *pix);
-
-void ncm_sphere_map_pix_add_to_vec (NcmSphereMapPix *pix, NcmTriVec *vec, const gdouble s);
-void ncm_sphere_map_pix_add_to_ang (NcmSphereMapPix *pix, const gdouble theta, const gdouble phi, const gdouble s);
 
 gint64 ncm_sphere_map_pix_nest2ring (NcmSphereMapPix *pix, const gint64 nest_index);
 gint64 ncm_sphere_map_pix_ring2nest (NcmSphereMapPix *pix, const gint64 ring_index);
@@ -130,13 +144,18 @@ void ncm_sphere_map_pix_ang2pix_ring (NcmSphereMapPix *pix, const gdouble theta,
 void ncm_sphere_map_pix_vec2pix_ring (NcmSphereMapPix *pix, NcmTriVec *vec, gint64 *ring_index);
 void ncm_sphere_map_pix_vec2pix_nest (NcmSphereMapPix *pix, NcmTriVec *vec, gint64 *nest_index);
 
+void ncm_sphere_map_pix_add_to_vec (NcmSphereMapPix *pix, NcmTriVec *vec, const gdouble s);
+void ncm_sphere_map_pix_add_to_ang (NcmSphereMapPix *pix, const gdouble theta, const gdouble phi, const gdouble s);
+
 void ncm_sphere_map_pix_load_fits (NcmSphereMapPix *pix, const gchar *fits_file, const gchar *signal_name);
 void ncm_sphere_map_pix_save_fits (NcmSphereMapPix *pix, const gchar *fits_file, const gchar *signal_name, gboolean overwrite);
 
 void ncm_sphere_map_pix_load_from_fits_catalog (NcmSphereMapPix *pix, const gchar *fits_file, const gchar *RA, const gchar *DEC, const gchar *S);
 
-#define NCM_SPHERE_MAX_PIX_N(nside) (12 * (nside) * (nside))
-#define NCM_SPHERE_MAX_PIX_INT_TO_XY(i,x,y) \
+void ncm_sphere_map_pix_get_alm (NcmSphereMapPix *pix);
+
+#define NCM_SPHERE_MAP_PIX_N(nside) (12 * (nside) * (nside))
+#define NCM_SPHERE_MAP_PIX_INT_TO_XY(i,x,y) \
 G_STMT_START { \
   gint shift = 0, shifted = i; \
   x = y = 0; \
@@ -147,7 +166,7 @@ G_STMT_START { \
   } while (shifted >>= 2); \
 } G_STMT_END
 
-#define NCM_SPHERE_MAX_PIX_XY_TO_INT(x,y,i) \
+#define NCM_SPHERE_MAP_PIX_XY_TO_INT(x,y,i) \
 G_STMT_START { \
   gint shift = 0, shifted_x = x, shifted_y = y; \
   g_assert (shifted_x >= 0 && shifted_y >= 0); \
@@ -159,8 +178,11 @@ G_STMT_START { \
   } while (shifted_x || shifted_y); \
 } G_STMT_END
 
-#define NCM_SPHERE_MAX_PIX_HEALPIX_NULLVAL (-1.6375e30)
-#define NCM_SPHERE_MAX_PIX_DEFAULT_SIGNAL "SIGNAL"
+#define NCM_SPHERE_MAP_PIX_HEALPIX_NULLVAL (-1.6375e30)
+#define NCM_SPHERE_MAP_PIX_DEFAULT_SIGNAL "SIGNAL"
+
+#define NCM_SPHERE_MAP_PIX_ALM_SIZE(lmax) (((lmax)*(lmax) + 3*(lmax) + 2)/2) 
+#define NCM_SPHERE_MAP_PIX_M_START(lmax,m) ((2*(lmax)*(m)-(m)*(m)+3*(m))/2)
 
 G_END_DECLS
 

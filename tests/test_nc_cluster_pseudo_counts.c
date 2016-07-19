@@ -37,12 +37,14 @@
 typedef struct _TestNcClusterPseudoCounts
 {
   NcClusterPseudoCounts *cpc;
-  NcMassFunction *mfp;
+  NcHaloMassFunction *mfp;
   NcClusterMass *clusterm;
   NcClusterRedshift *clusterz;
   NcHIReion *reion;
+  NcHIPrim *prim;
   NcHICosmo *cosmo;
-  NcMatterVar *vp;
+  NcPowspecML *ps_ml;
+  NcmPowspecFilter *psf;
   NcDataClusterPseudoCounts *dcpc;
   NcmFit *fit;
   gdouble z;
@@ -86,13 +88,15 @@ test_nc_cluster_pseudo_counts_free (TestNcClusterPseudoCounts *test, gconstpoint
   NCM_TEST_FREE (nc_data_cluster_pseudo_counts_free, test->dcpc);
   NCM_TEST_FREE (nc_cluster_pseudo_counts_free, test->cpc);
   
-  NCM_TEST_FREE (nc_mass_function_free, test->mfp);
-  NCM_TEST_FREE (nc_matter_var_free, test->vp);
+  NCM_TEST_FREE (nc_halo_mass_function_free, test->mfp);
+  NCM_TEST_FREE (ncm_powspec_filter_free, test->psf);
+  NCM_TEST_FREE (nc_powspec_ml_free, test->ps_ml);
   NCM_TEST_FREE (nc_cluster_mass_free, test->clusterm);
   NCM_TEST_FREE (nc_cluster_redshift_free, test->clusterz);
   
   NCM_TEST_FREE (nc_hicosmo_free, test->cosmo);
   NCM_TEST_FREE (nc_hireion_free, test->reion);
+  NCM_TEST_FREE (nc_hiprim_free, test->prim);
 }
 
 void
@@ -100,13 +104,14 @@ test_nc_cluster_pseudo_counts_new (TestNcClusterPseudoCounts *test, gconstpointe
 {
   NcHICosmo *cosmo                = nc_hicosmo_new_from_name (NC_TYPE_HICOSMO, "NcHICosmoDEXcdm");
   NcHIReion *reion                = NC_HIREION (nc_hireion_camb_new ());
+  NcHIPrim *prim                  = NC_HIPRIM (nc_hiprim_power_law_new ());
   NcDistance *dist                = nc_distance_new (3.0);
   NcWindow *wf                    = nc_window_new_from_name ("NcWindowTophat");
   NcTransferFunc *tf              = nc_transfer_func_new_from_name ("NcTransferFuncEH");
-  NcMatterVar *vp                 = nc_matter_var_new (NC_MATTER_VAR_FFT, wf, tf);
-  NcGrowthFunc *gf                = nc_growth_func_new ();
+  NcPowspecML *ps_ml              = NC_POWSPEC_ML (nc_powspec_ml_transfer_new (tf));
+  NcmPowspecFilter *psf           = ncm_powspec_filter_new (NCM_POWSPEC (ps_ml), NCM_POWSPEC_FILTER_TYPE_TOPHAT);
   NcMultiplicityFunc *mulf        = nc_multiplicity_func_new_from_name ("NcMultiplicityFuncTinkerCrit{'Delta':<500.0>}");
-  NcMassFunction *mfp             = nc_mass_function_new (dist, vp, gf, mulf);
+  NcHaloMassFunction *mfp         = nc_halo_mass_function_new (dist, psf, mulf);
   NcClusterPseudoCounts *cpc      = NC_CLUSTER_PSEUDO_COUNTS (nc_cluster_pseudo_counts_new (1));
   NcClusterMass *clusterm         = NC_CLUSTER_MASS (nc_cluster_mass_new_from_name ("NcClusterMassPlCL"));
   NcClusterRedshift *clusterz     = NC_CLUSTER_REDSHIFT (nc_cluster_redshift_new_from_name ("NcClusterRedshiftNodist{'z-min':<0.1>, 'z-max':<1.0>}"));
@@ -121,6 +126,7 @@ test_nc_cluster_pseudo_counts_new (TestNcClusterPseudoCounts *test, gconstpointe
   gdouble m1, m2;
 
   ncm_model_add_submodel (NCM_MODEL (cosmo), NCM_MODEL (reion));
+  ncm_model_add_submodel (NCM_MODEL (cosmo), NCM_MODEL (prim));
   
   m1 = g_test_rand_double_range (1.235, 2.496); /* ln(M/M0), M0 = 10^14 h^-1 M_sun */
   m2 = m1 + 0.4;
@@ -133,11 +139,13 @@ test_nc_cluster_pseudo_counts_new (TestNcClusterPseudoCounts *test, gconstpointe
   g_assert (clusterm != NULL);
   g_assert (clusterz != NULL);
 
-  nc_mass_function_set_area (mfp, 1.0);
+  nc_halo_mass_function_set_area (mfp, 1.0);
   
   test->cosmo     = cosmo;
   test->reion     = reion;
-  test->vp        = vp;
+  test->prim      = prim;
+  test->ps_ml     = ps_ml;
+  test->psf       = psf;
   test->cpc       = cpc;
   test->mfp       = mfp;
   test->clusterm  = clusterm;
@@ -150,9 +158,10 @@ test_nc_cluster_pseudo_counts_new (TestNcClusterPseudoCounts *test, gconstpointe
   ncm_model_orig_param_set (NCM_MODEL (test->cosmo), NC_HICOSMO_DE_OMEGA_X,   0.7);
   ncm_model_orig_param_set (NCM_MODEL (test->cosmo), NC_HICOSMO_DE_T_GAMMA0,  0.692);
   ncm_model_orig_param_set (NCM_MODEL (test->cosmo), NC_HICOSMO_DE_OMEGA_B,   0.0482);
-  ncm_model_orig_param_set (NCM_MODEL (test->cosmo), NC_HICOSMO_DE_SPECINDEX, 0.9608);
-  ncm_model_orig_param_set (NCM_MODEL (test->cosmo), NC_HICOSMO_DE_SIGMA8,    0.826);
   ncm_model_orig_param_set (NCM_MODEL (test->cosmo), NC_HICOSMO_DE_XCDM_W,   -1.0);
+
+  ncm_model_orig_param_set (NCM_MODEL (test->cosmo), NC_HIPRIM_POWER_LAW_N_SA,       0.9608);
+  ncm_model_orig_param_set (NCM_MODEL (test->cosmo), NC_HIPRIM_POWER_LAW_LN10E10ASA, 3.1);  
 
   ncm_model_param_set_by_name (NCM_MODEL (clusterm), "Asz", 0.7);  //1.0);
   ncm_model_param_set_by_name (NCM_MODEL (clusterm), "Bsz", 0.35); //0.2);
@@ -164,22 +173,13 @@ test_nc_cluster_pseudo_counts_new (TestNcClusterPseudoCounts *test, gconstpointe
 
   ncm_model_param_set_ftype (NCM_MODEL (clusterm), 0, NCM_PARAM_TYPE_FREE);
   ncm_model_param_set_ftype (NCM_MODEL (clusterm), 1, NCM_PARAM_TYPE_FREE);
- // ncm_model_param_set_ftype (NCM_MODEL (clusterm), 2, NCM_PARAM_TYPE_FREE);
   ncm_model_param_set_ftype (NCM_MODEL (clusterm), 3, NCM_PARAM_TYPE_FREE);
-/*  ncm_model_param_set_ftype (NCM_MODEL (clusterm), 4, NCM_PARAM_TYPE_FREE);
-  ncm_model_param_set_ftype (NCM_MODEL (clusterm), 5, NCM_PARAM_TYPE_FREE);
-  ncm_model_param_set_ftype (NCM_MODEL (clusterm), 6, NCM_PARAM_TYPE_FREE);
-*/
+
   ncm_model_param_set_by_name (NCM_MODEL (test->cpc), "lnMCut",     33.5);
   ncm_model_param_set_by_name (NCM_MODEL (test->cpc), "sigma_Mcut",  0.05);
   ncm_model_param_set_by_name (NCM_MODEL (test->cpc), "zmin",        0.188);
   ncm_model_param_set_by_name (NCM_MODEL (test->cpc), "Deltaz",      0.72);
 
-  //ncm_model_param_set_ftype (NCM_MODEL (test->cpc), 1, NCM_PARAM_TYPE_FREE);
-/*  ncm_model_param_set_ftype (NCM_MODEL (test->cpc), 1, NCM_PARAM_TYPE_FREE);
-  ncm_model_param_set_ftype (NCM_MODEL (test->cpc), 2, NCM_PARAM_TYPE_FREE);
-  ncm_model_param_set_ftype (NCM_MODEL (test->cpc), 3, NCM_PARAM_TYPE_FREE);
-*/
   ncm_matrix_set (m, 0, 0, test->z);
   ncm_matrix_set (m, 0, 1, test->Mobs[0]);
   ncm_matrix_set (m, 0, 2, test->Mobs[1]);
@@ -190,7 +190,6 @@ test_nc_cluster_pseudo_counts_new (TestNcClusterPseudoCounts *test, gconstpointe
   nc_data_cluster_pseudo_counts_set_obs (dcpc, m);
   test->dcpc = dcpc;
   ncm_dataset_append_data (dset, NCM_DATA (test->dcpc));
-  //printf ("rows = %d cols = %d np = %d dset = %d\n", ncm_matrix_nrows (m), ncm_matrix_ncols (m), test->dcpc->np, ncm_dataset_get_ndata (dset));
 
   lh        = ncm_likelihood_new (dset);
   fit       = ncm_fit_new (NCM_FIT_TYPE_NLOPT, "ln-neldermead", lh, mset, NCM_FIT_GRAD_NUMDIFF_CENTRAL);
@@ -201,7 +200,6 @@ test_nc_cluster_pseudo_counts_new (TestNcClusterPseudoCounts *test, gconstpointe
   nc_distance_free (dist);
   nc_window_free (wf);
   nc_transfer_func_free (tf);
-  nc_growth_func_free (gf);
   nc_multiplicity_func_free (mulf);
   nc_cluster_abundance_free (cad);
   ncm_mset_free (mset);
@@ -215,7 +213,7 @@ test_nc_cluster_pseudo_counts_1p2_integral (TestNcClusterPseudoCounts *test, gco
   NcHICosmo *cosmo           = test->cosmo;
   NcClusterMass *clusterm    = test->clusterm;
   NcClusterPseudoCounts *cpc = test->cpc;
-  NcMassFunction *mfp        = test->mfp;
+  NcHaloMassFunction *mfp    = test->mfp;
   gdouble I1p2, I3d;
 
   I1p2 = nc_cluster_pseudo_counts_posterior_numerator (cpc, mfp, clusterm, cosmo, test->z, test->Mobs, test->Mobs_params);
@@ -230,7 +228,7 @@ test_nc_cluster_pseudo_counts_3d_integral (TestNcClusterPseudoCounts *test, gcon
   NcHICosmo *cosmo           = test->cosmo;
   NcClusterMass *clusterm    = test->clusterm;
   NcClusterPseudoCounts *cpc = test->cpc;
-  NcMassFunction *mfp        = test->mfp;
+  NcHaloMassFunction *mfp    = test->mfp;
 
   gdouble I1p2, I3d;
 

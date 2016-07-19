@@ -89,14 +89,17 @@ test_ncm_serialize_global_from_string_params ()
 void
 test_ncm_serialize_global_from_string_nest ()
 {
-  GObject *obj = ncm_serialize_global_from_string ("NcMatterVar{'strategy':<2>,'window':<{'NcWindowTophat',@a{sv} {}}>,'transfer':<{'NcTransferFuncEH',@a{sv} {}}>}");
-  NcMatterVar *mv = NC_MATTER_VAR (obj);
-  gchar *obj_ser = ncm_serialize_global_to_string (obj, TRUE);
-  GObject *obj_new = ncm_serialize_global_from_string (obj_ser);
+  GObject *obj = ncm_serialize_global_from_string ("NcPowspecMLTransfer{'transfer':<{'NcTransferFuncEH',@a{sv} {}}>}");
+  
+  NcPowspecML *ps_ml = NC_POWSPEC_ML (obj);
+  
+  gchar *obj_ser     = ncm_serialize_global_to_string (obj, TRUE);
+  GObject *obj_new   = ncm_serialize_global_from_string (obj_ser);
   gchar *obj_new_ser = ncm_serialize_global_to_string (obj_new, TRUE);
 
   g_assert (G_OBJECT_TYPE (obj) == G_OBJECT_TYPE (obj_new));
   g_assert_cmpstr (obj_ser, ==, obj_new_ser);
+
   g_free (obj_ser);
   g_free (obj_new_ser);
 
@@ -107,9 +110,8 @@ test_ncm_serialize_global_from_string_nest ()
   g_free (obj_new_ser);
   g_object_unref (obj_new);
 
-  g_assert (NC_IS_WINDOW_TOPHAT (mv->wp));
-  g_assert (NC_IS_TRANSFER_FUNC_EH (mv->tf));
+  g_assert (NC_IS_TRANSFER_FUNC_EH (NC_POWSPEC_ML_TRANSFER (ps_ml)->tf));
 
-  NCM_TEST_FREE (nc_matter_var_free, mv);
+  NCM_TEST_FREE (nc_powspec_ml_free, ps_ml);
 }
 

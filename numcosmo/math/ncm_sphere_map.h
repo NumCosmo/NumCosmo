@@ -194,7 +194,7 @@ gdouble ncm_sphere_map_rotate_avg (NcmSphereMap *map, glong n);
 #define NCM_MAP_MAX_RING_SIZE(nside) (4*(nside))
 #define NCM_MAP_N_DIFFERENT_SIZED_RINGS(nside) (nside)
 #define NCM_MAP_RING_PLAN_INDEX(nside,ring_n) (((ring_n) < (nside)) ? (ring_n) : ((ring_n)>=(3*(nside)) ? (4*(nside)-(ring_n)-2) : ((nside)-1)))
-#define NCM_MAP_RING_SIZE(nside,ring_n) (4*(NCM_MAP_RING_PLAN_INDEX(nside,ring_n)+1))
+#define NCM_MAP_RING_SIZE(nside,ring_n) (4 * (NCM_MAP_RING_PLAN_INDEX (nside,ring_n) + 1))
 #define NCM_MAP_N_RINGS(nside) (4*(nside)-1)
 #define NCM_MAP_ALM_M_START(lmax,m) ((2*(lmax)*(m)-(m)*(m)+3*(m))/2)
 #define NCM_MAP_ALM_INDEX(lmax,l,m) (((l) >= (m)) ? (NCM_MAP_ALM_M_START(lmax,m) + (l) - (m)) : (-1))

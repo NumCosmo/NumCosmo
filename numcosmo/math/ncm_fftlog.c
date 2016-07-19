@@ -88,8 +88,8 @@
 #include <fftw3.h>
 #endif /* NUMCOSMO_HAVE_FFTW3 */
 #ifndef HAVE_FFTW3_ALLOC
-#define fftw_alloc_real(n) (double *) fftw_malloc(sizeof(double) * (n))
-#define fftw_alloc_complex(n) (fftw_complex *) fftw_malloc(sizeof(fftw_complex) * (n))
+#define fftw_alloc_real(n) (double *) fftw_malloc (sizeof (double) * (n))
+#define fftw_alloc_complex(n) (fftw_complex *) fftw_malloc (sizeof (fftw_complex) * (n))
 #endif /* HAVE_FFTW3_ALLOC */
 
 enum
@@ -569,7 +569,7 @@ ncm_fftlog_set_size (NcmFftlog *fftlog, guint n)
 
     fftlog->lnr_vec = ncm_vector_new (fftlog->N);
 
-    ncm_cfg_load_fftw_wisdom ("ncm_fftlog_%s.fftw", NCM_FFTLOG_GET_CLASS (fftlog)->name);
+    ncm_cfg_load_fftw_wisdom ("ncm_fftlog_%s", NCM_FFTLOG_GET_CLASS (fftlog)->name);
     
     fftlog->p_Fk2Cm   = fftw_plan_dft_1d (fftlog->Nf, fftlog->Fk, fftlog->Cm, FFTW_FORWARD, fftw_default_flags | FFTW_DESTROY_INPUT);
     fftlog->p_CmYm2Gr = fftw_plan_dft_1d (fftlog->Nf, fftlog->CmYm, fftlog->Gr, FFTW_FORWARD, fftw_default_flags | FFTW_DESTROY_INPUT);
@@ -585,7 +585,7 @@ ncm_fftlog_set_size (NcmFftlog *fftlog, guint n)
       g_ptr_array_add (fftlog->Ym, Ym_i);
     }
 
-    ncm_cfg_save_fftw_wisdom ("ncm_fftlog_%s.fftw", NCM_FFTLOG_GET_CLASS (fftlog)->name);
+    ncm_cfg_save_fftw_wisdom ("ncm_fftlog_%s", NCM_FFTLOG_GET_CLASS (fftlog)->name);
 
     fftlog->prepared  = FALSE;
     fftlog->evaluated = FALSE;

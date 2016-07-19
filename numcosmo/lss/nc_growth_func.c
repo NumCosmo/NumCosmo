@@ -208,7 +208,7 @@ dust_norma (gdouble a, N_Vector y, N_Vector yQdot, gpointer fQ_data)
   return 0;
 }
 
-#define _NC_GROWTH_FUNC_START_A (1.0e-14)
+#define _NC_GROWTH_FUNC_START_A (1.0e-12)
 
 /**
  * nc_growth_func_prepare:

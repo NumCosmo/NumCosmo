@@ -908,8 +908,7 @@ ncm_cfg_enum_print_all (GType enum_type, const gchar *header)
 gboolean
 ncm_cfg_load_fftw_wisdom (const gchar *filename, ...)
 {
-  FILE *wis;
-  gchar *file;
+  gchar *file, *file_ext;
   gchar *full_filename;
   va_list ap;
   gboolean ret = FALSE;
@@ -919,21 +918,31 @@ ncm_cfg_load_fftw_wisdom (const gchar *filename, ...)
   file = g_strdup_vprintf (filename, ap);
   va_end (ap);
 
-  full_filename = g_build_filename (numcosmo_path, file, NULL);
+  file_ext      = g_strdup_printf ("%s.fftw3", file);
+  full_filename = g_build_filename (numcosmo_path, file_ext, NULL);
 
   if (g_file_test (full_filename, G_FILE_TEST_EXISTS))
   {
-    wis = g_fopen (full_filename, "r");
-    if (wis == NULL)
-    {
-      g_error ("ncm_cfg_load_fftw_wisdom: cannot open wisdom file %s [%s].", full_filename, g_strerror (errno));
-    }
-
-    fftw_import_wisdom_from_file (wis);
-    fclose (wis);
+    fftw_import_wisdom_from_filename (full_filename);
     ret = TRUE;
   }
+
+#ifdef HAVE_FFTW3F
+  g_free (file_ext);
+  g_free (full_filename);
+  
+  file_ext      = g_strdup_printf ("%s.fftw3f", file);
+  full_filename = g_build_filename (numcosmo_path, file_ext, NULL);
+
+  if (g_file_test (full_filename, G_FILE_TEST_EXISTS))
+  {
+    fftwf_import_wisdom_from_filename (full_filename);
+    ret = TRUE;
+  }
+#endif
+
   g_free (file);
+  g_free (file_ext);
   g_free (full_filename);
   return ret;
 }
@@ -950,8 +959,7 @@ ncm_cfg_load_fftw_wisdom (const gchar *filename, ...)
 gboolean
 ncm_cfg_save_fftw_wisdom (const gchar *filename, ...)
 {
-  FILE *wis;
-  gchar *file;
+  gchar *file, *file_ext;
   gchar *full_filename;
   va_list ap;
 
@@ -960,17 +968,24 @@ ncm_cfg_save_fftw_wisdom (const gchar *filename, ...)
   va_start (ap, filename);
   file = g_strdup_vprintf (filename, ap);
   va_end (ap);
-  full_filename = g_build_filename (numcosmo_path, file, NULL);
 
-  wis = g_fopen (full_filename, "w");
-  if (wis == NULL)
-  {
-    g_error ("ncm_cfg_save_fftw_wisdom: cannot save wisdom file %s [%s].", full_filename, g_strerror (errno));
-  }
+  file_ext      = g_strdup_printf ("%s.fftw3", file);
+  full_filename = g_build_filename (numcosmo_path, file_ext, NULL);
 
-  fftw_export_wisdom_to_file(wis);
-  fclose (wis);
+  fftw_export_wisdom_to_filename (full_filename);
+
+#ifdef HAVE_FFTW3F
+  g_free (file_ext);
+  g_free (full_filename);
+  
+  file_ext      = g_strdup_printf ("%s.fftw3f", file);
+  full_filename = g_build_filename (numcosmo_path, file_ext, NULL);
+
+  fftwf_export_wisdom_to_filename (full_filename);
+#endif
+  
   g_free (file);
+  g_free (file_ext);
   g_free (full_filename);
   return TRUE;
 }

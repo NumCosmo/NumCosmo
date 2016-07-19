@@ -415,6 +415,7 @@ ncm_quaternion_norm (NcmQuaternion *q)
 /**
  * ncm_quaternion_set_random:
  * @q: FIXME
+ * @rng: a #NcmRNG
  *
  * FIXME
  *
