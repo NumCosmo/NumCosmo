@@ -510,7 +510,29 @@ AC_SUBST(have_fftw3_support)
 TEST_SHARED_LIBS="$TEST_SHARED_LIBS $FFTW3_LIBS"
 TEST_SHARED_CFLAGS="$TEST_SHARED_CFLAGS $FFTW3_CFLAGS"
 
-PKG_CHECK_EXISTS([fftw3 >= $FFTW3_ALLOC_VERSION], [AC_DEFINE([HAVE_FFTW3_ALLOC],[1], [fftw has alloc functions])], [])
+have_fftw3_alloc="no"
+AC_MSG_CHECKING([fftw3 alloc])
+PKG_CHECK_EXISTS([fftw3 >= $FFTW3_ALLOC_VERSION], [
+  AC_DEFINE([HAVE_FFTW3_ALLOC],[1], [fftw has alloc functions])
+  have_fftw3_alloc="yes"], [])
+AC_MSG_RESULT($have_fftw3_alloc)
+
+AC_MSG_CHECKING([fftw3 float])
+PKG_CHECK_EXISTS([fftw3f >= $FFTW3_REQUIRED_VERSION], [
+  AC_MSG_RESULT(yes)
+  PKG_CHECK_MODULES(FFTW3F, [fftw3f >= $FFTW3_REQUIRED_VERSION],[
+    AC_DEFINE([HAVE_FFTW3F],[1], [Have the fast fourier package (float)])
+    have_fftw3f_support="#define NUMCOSMO_HAVE_FFTW3F 1"],[
+    have_fftw3f_support=""
+    have_fftw3_float="yes"])
+  AC_SUBST(FFTW3F_CFLAGS)
+  AC_SUBST(FFTW3F_LIBS)
+  AC_SUBST(have_fftw3f_support)
+  TEST_SHARED_LIBS="$TEST_SHARED_LIBS $FFTW3F_LIBS"
+  TEST_SHARED_CFLAGS="$TEST_SHARED_CFLAGS $FFTW3F_CFLAGS"
+  ],[
+  AC_MSG_RESULT(no)
+  ])
 
 dnl ***************************************************************************
 dnl Check for BLAS

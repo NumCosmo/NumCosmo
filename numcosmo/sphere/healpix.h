@@ -28,26 +28,28 @@
 #include <glib.h>
 #include <glib-object.h>
 #include <numcosmo/build_cfg.h>
-#include <numcosmo/math/quaternion.h>
+#include <numcosmo/math/ncm_quaternion.h>
 #include <numcosmo/math/ncm_sphere_map.h>
 
 G_BEGIN_DECLS
 
 #ifdef NUMCOSMO_HAVE_CFITSIO
+
 NcmSphereMap *ncm_sphere_healpix_read_map (gchar *fits_file, NcmSphereMap *map);
 gboolean ncm_sphere_healpix_write_map (NcmSphereMap *map, gchar *filename, gboolean overwrite);
+
 #endif /* NUMCOSMO_HAVE_CFITSIO */
 glong ncm_sphere_healpix_nest2ring (gint nside, glong nest_index);
 glong ncm_sphere_healpix_ring2nest (gint nside, glong ring_index);
 void ncm_sphere_healpix_pix2ang_nest (gint nside, glong nest_index, gdouble *theta, gdouble *phi);
 void ncm_sphere_healpix_pix2ang_ring (gint nside, glong ring_index, gdouble *theta, gdouble *phi);
-void ncm_sphere_healpix_pix2vec_nest (gint nside, glong nest_index, NcmTriVector vec);
-void ncm_sphere_healpix_pix2vec_ring (gint nside, glong ring_index, NcmTriVector v);
-void ncm_sphere_healpix_vec2pix_ring (gint nside, NcmTriVector v, glong *i);
+void ncm_sphere_healpix_pix2vec_nest (gint nside, glong nest_index, NcmTriVec *vec);
+void ncm_sphere_healpix_pix2vec_ring (gint nside, glong ring_index, NcmTriVec *vec);
+void ncm_sphere_healpix_vec2pix_ring (gint nside, NcmTriVec *vec, glong *i);
 
 #define HEALPIX_NPIX(nside) (12*(nside)*(nside))
 #define HEALPIX_INT_TO_XY(i,x,y) \
-do { \
+G_STMT_START { \
   gint shift = 0, shifted = i; \
   x = y = 0; \
   do { \
@@ -55,10 +57,10 @@ do { \
     y |= (((shifted & 2) >> 1) << shift); \
     shift++; \
   } while (shifted >>= 2); \
-} while(FALSE)
+} G_STMT_END
 
 #define HEALPIX_XY_TO_INT(x,y,i) \
-do { \
+G_STMT_START { \
   gint shift = 0, shifted_x = x, shifted_y = y; \
   g_assert (shifted_x >= 0 && shifted_y >= 0); \
   i = 0; \
@@ -67,10 +69,10 @@ do { \
     i |= ((shifted_y & 1) << (shift + 1)); \
     shift += 2; shifted_x >>= 1; shifted_y >>= 1; \
   } while (shifted_x || shifted_y); \
-} while(FALSE)
+} G_STMT_END
 
 #ifndef NCM_HEALPIX_NULLVAL
-#define NCM_HEALPIX_NULLVAL (-1.6375e30) /* check if its ok to copy it here FIXME*/
+#define NCM_HEALPIX_NULLVAL (-1.6375e30)
 #endif /* NCM_HEALPIX_NULLVAL */
 
 G_END_DECLS

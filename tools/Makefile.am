@@ -2,12 +2,13 @@
 
 MY_CFLAGS = \
          -DG_LOG_DOMAIN=\"NUMCOSMO\" \
-         $(GLIB_CFLAGS) \
+         $(GLIB_CFLAGS)     \
          $(SUNDIALS_CFLAGS) \
-         $(GSL_CFLAGS) \
-         $(FFTW3_CFLAGS) \
-         $(CFITSIO_CFLAGS) \
-         $(NLOPT_CFLAGS) \
+         $(GSL_CFLAGS)      \
+         $(FFTW3_CFLAGS)    \
+         $(FFTW3F_CFLAGS)   \
+         $(CFITSIO_CFLAGS)  \
+         $(NLOPT_CFLAGS)    \
          -I$(top_srcdir)
 
 AM_CFLAGS = \
@@ -60,7 +61,3 @@ mset_gen_SOURCES =  \
 	mset_gen.c
 
 mset_gen_LDADD = $(top_builddir)/numcosmo/libnumcosmo.la 
-
-
-
-
