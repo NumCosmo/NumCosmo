@@ -280,6 +280,19 @@ Plik -  Planck (2015) CMB spectra and likelihood code
 </listitem>
 </itemizedlist>
 </listitem>
+<listitem>
+<simpara>
+ARB - C library for arbitrary-precision interval arithmetic
+</simpara>
+<itemizedlist>
+<listitem>
+<simpara>
+<ulink role="online-location" url="http://fredrikj.net/arb/">http://fredrikj.net/arb/</ulink>
+</simpara>
+</listitem><listitem>
+</listitem>
+</itemizedlist>
+</listitem>
 </itemizedlist>
 </refsect1>
 </refentry>

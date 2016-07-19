@@ -41,7 +41,6 @@
 #include "math/ncm_cfg.h"
 #include "math/integral.h"
 #include "math/memory_pool.h"
-#include "levmar/levmar.h"
 
 #include <gsl/gsl_roots.h>
 
@@ -64,7 +63,8 @@ static void
 nc_cluster_pseudo_counts_init (NcClusterPseudoCounts *cpc)
 {
   cpc->nclusters = 1;
-  cpc->workz     = g_new0 (gdouble, LM_BC_DER_WORKSZ (3, 5));
+  cpc->T = gsl_multifit_fdfsolver_lmsder;
+  cpc->s = gsl_multifit_fdfsolver_alloc (cpc->T, 4, 2);
 }
 
 static void
@@ -113,6 +113,8 @@ _nc_cluster_pseudo_counts_dispose (GObject *object)
 static void
 _nc_cluster_pseudo_counts_finalize (GObject *object)
 {
+  NcClusterPseudoCounts *cpc = NC_CLUSTER_PSEUDO_COUNTS (object);
+  gsl_multifit_fdfsolver_free (cpc->s);
   
   /* Chain up : end */
   G_OBJECT_CLASS (nc_cluster_pseudo_counts_parent_class)->finalize (object);
@@ -598,53 +600,52 @@ nc_cluster_pseudo_counts_mf_lognormal_integral (NcClusterPseudoCounts *cpc, NcHa
 
 /* 3-dimensional integration: real, SZ and Lensing masses*/
 
-static void
-_nc_cluster_pseudo_counts_levmar_f (gdouble *p, gdouble *hx, gint m, gint n, gpointer adata)
+static gint
+_nc_cluster_pseudo_counts_gsl_f (const gsl_vector *p, gpointer adata, gsl_vector *hx)
 {
   integrand_data *data    = (integrand_data *) adata;
   NcClusterMass *clusterm = data->clusterm;
   NcClusterMassPlCL *mszl = NC_CLUSTER_MASS_PLCL (clusterm);
-  const gint m1 = m;
-  const gint n1 = n;
 
-  nc_cluster_mass_plcl_levmar_f_new_variables (p, hx, m1, n1, mszl, data->lnM_M0, data->Mobs, data->Mobs_params);
+  nc_cluster_mass_plcl_gsl_f_new_variables ( p, hx, mszl, data->lnM_M0, data->Mobs, data->Mobs_params);
+  return GSL_SUCCESS;
 }
 
-static void
-_nc_cluster_pseudo_counts_levmar_J (gdouble *p, gdouble *J, gint m, gint n, gpointer adata)
+static gint
+_nc_cluster_pseudo_counts_gsl_J (const gsl_vector *p, void *adata, gsl_matrix *J)
 {
   integrand_data *data    = (integrand_data *) adata;
   NcClusterMass *clusterm = data->clusterm;
   NcClusterMassPlCL *mszl = NC_CLUSTER_MASS_PLCL (clusterm); 
-  const gint m1 = m;
-  const gint n1 = n;
   
-  nc_cluster_mass_plcl_levmar_J_new_variables (p, J, m1, n1, mszl, data->lnM_M0, data->Mobs, data->Mobs_params);
+  nc_cluster_mass_plcl_gsl_J_new_variables (p, J, mszl, data->lnM_M0, data->Mobs, data->Mobs_params);
+  return GSL_SUCCESS;
 }
 
+
 static void
-peakfinder (gdouble lnM_M0, gdouble p0[], const gint *ndim, const gdouble bounds[], gint *n, gdouble x[], void *userdata)
+_peakfinder (gdouble lnM_M0, gdouble p0[], const gint *ndim, const gdouble bounds[], gint *n, gdouble x[], void *userdata)
 {
   integrand_data *data = (integrand_data *) userdata;
   NcClusterPseudoCounts *cpc = data->cpc;
   NcClusterMass *clusterm = data->clusterm;
+  gsl_multifit_function_fdf f;
+  gint status, info;
+  
   gdouble lb[] = {bounds[0], bounds[2]};
   gdouble ub[] = {bounds[1], bounds[3]};
-  gdouble info[LM_INFO_SZ];
-  gdouble opts[LM_OPTS_SZ];
-  gint ret;
 
+  const gdouble xtol = 1e-8;
+  const gdouble gtol = 1e-8;
+  const gdouble ftol = 0.0;
+  
   p0[0] = log (data->Mobs[NC_CLUSTER_MASS_PLCL_MPL]);
   p0[1] = log (data->Mobs[NC_CLUSTER_MASS_PLCL_MCL]);
   
   data->lnM_M0 = lnM_M0;
   
   g_assert (NC_IS_CLUSTER_MASS_PLCL (clusterm));
-  opts[0] = LM_INIT_MU; 
-  opts[1] = 1.0e-7; 
-  opts[2] = 1.0e-7;
-  opts[3] = 1.0e-7;
-
+  
   /*printf ("% 20.15g % 20.15g\n", data->Mobs[NC_CLUSTER_MASS_PLCL_MPL], data->Mobs[NC_CLUSTER_MASS_PLCL_MCL]);*/
   /*printf ("% 20.15g % 20.15g % 20.15g % 20.15g % 20.15g % 20.15g\n", p0[0], p0[1], lb[0], lb[1], ub[0], ub[1]);*/
 
@@ -653,20 +654,32 @@ peakfinder (gdouble lnM_M0, gdouble p0[], const gint *ndim, const gdouble bounds
   p0[0] = GSL_MIN (p0[0], ub[0]);
   p0[1] = GSL_MIN (p0[1], ub[1]);
 
-  ret = dlevmar_der (
-                     &_nc_cluster_pseudo_counts_levmar_f, 
-                     &_nc_cluster_pseudo_counts_levmar_J,
-                     p0, NULL, 2, 4, 1.0e5, opts, info, cpc->workz, NULL, data
-                     );
+  gsl_vector_view p0_vec = gsl_vector_view_array (p0, 2);
   
-  if (ret < 0)
-    g_error ("error: NcClusterPseudoCounts peakfinder function [%d].\n", ret);
+  f.f  = &_nc_cluster_pseudo_counts_gsl_f;
+  f.df = &_nc_cluster_pseudo_counts_gsl_J; 
+  f.n = 4;
+  f.p = 2;
+  f.params = data;
 
-  x[0] = p0[0];
-  x[1] = p0[1];
-  x[2] = lnM_M0; 
+  /* initialize solver with starting point */
+  gsl_multifit_fdfsolver_set (cpc->s, &f, &p0_vec.vector);
+
+  /* solve the system with a maximum of 20 iterations */
+  status = gsl_multifit_fdfsolver_driver (cpc->s, 2.0e4, xtol, gtol, ftol, &info);
+
+  if (status != GSL_SUCCESS)
+    g_error ("error: NcClusterPseudoCounts peakfinder function.\n");
+
+  //printf ("Inicial: p0 = %.5g p1 = %.5g\n", p0[0], p0[1]);
+  //printf ("3d Minimo : p  = %.5g p  = %.5g\n", gsl_vector_get (cpc->s->x, 0), gsl_vector_get (cpc->s->x, 1));
+  x[0] = gsl_vector_get (cpc->s->x, 0);
+  x[1] = gsl_vector_get (cpc->s->x, 1);
+  x[2] = lnM_M0;
+  
   *n = 1;
 }
+
 
 static gdouble
 _posterior_numerator_integrand_plcl (gdouble w1, gdouble w2, gdouble lnM_M0, gpointer userdata)
@@ -779,7 +792,7 @@ nc_cluster_pseudo_counts_posterior_numerator_plcl (NcClusterPseudoCounts *cpc, N
       for (i = 0; i < ngiven; i++)
       {
         gdouble lnM_M0 = log (2.0e12) + (log (7.0e15) - log (2.0e12)) * i * 1.0 / (ngiven - 1.0) - data.lnM0;
-        peakfinder (lnM_M0, p0, &ndim, bounds, &n, x1, &data); 
+        _peakfinder (lnM_M0, p0, &ndim, bounds, &n, x1, &data); 
         x[i * ldxgiven + 0] = x1[0]; /* w1 */
         x[i * ldxgiven + 1] = x1[1]; /* w2 */
         x[i * ldxgiven + 2] = x1[2]; /* True mass */

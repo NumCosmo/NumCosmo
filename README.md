@@ -13,12 +13,12 @@ bindings for every language which supports GObject introspection (Perl,
 Python, etc. For a complete list see https://wiki.gnome.org/Projects/GObjectIntrospection/Users ).
 
 The available observables objects are:
-  - Type Ia Supernovae.
-  - Baryon Acoustic Oscillations.
-  - Cosmic Microwave Background (shift parameter and distance priors, full
-  analysis is on the way).
-  - Cluster Number counts.
-  - Hubble data H(z).
+  - Type Ia Supernovae
+  - Baryon Acoustic Oscillations
+  - Cosmic Microwave Background
+  - Cluster number counts
+  - Cluster pseudo number counts
+  - Hubble data H(z)
 
 Currently it has the following statistical tools:
   - Monte Carlo (NcmFitMC) -- resampling and fitting.
@@ -107,13 +107,13 @@ of the original libraries visit their website linked below. It is, therefore,
   - Lapack
     Linear Algebra PACKage    
     * http://www.netlib.org/lapack/
+  - Cuba 
+    A library for multidimensional numerical integration
+    * http://www.feynarts.de/cuba/
   - Extra (besides gsl's) minimization packages
     - Levmar
       Least squares minimization library.
       * http://www.ics.forth.gr/~lourakis/levmar/
-    - Cuba 
-      A library for multidimensional numerical integration
-      * http://www.feynarts.de/cuba/  
     - NLOpt
       Several general purpose minimization algorithms.
       * http://ab-initio.mit.edu/wiki/index.php/NLopt
@@ -124,3 +124,6 @@ of the original libraries visit their website linked below. It is, therefore,
   - gtk-doc
     GTK-Doc is used to generate API documentation from comments added to 
     C code, needed only to generate new releases.
+  - ARB
+    C library for arbitrary-precision interval arithmetic.
+    * http://fredrikj.net/arb/ 
