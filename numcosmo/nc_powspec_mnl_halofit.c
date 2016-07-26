@@ -26,9 +26,10 @@
 /**
  * SECTION:nc_powspec_mnl_halofit
  * @title: NcPowspecMNLHaloFit
- * @short_description: Class for linear matter power spectrum from a transfer function.
+ * @short_description: nonlinear matter power spectrum from Halofit model.
  *
- * Provides a linear matter power spectrum using a transfer function #NcTransferFunc.
+ * Provides the nonlinear matter power spectrum using Halofit model [Smith et al (2003)][XSmith2003] 
+ * and [Takahashi et al. (2012)][XTakahashi2012] FIXME.
  *
  */
 
