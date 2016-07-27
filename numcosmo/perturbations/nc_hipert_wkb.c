@@ -220,7 +220,7 @@ nc_hipert_wkb_class_init (NcHIPertWKBClass *klass)
                                    PROP_DMNUA_NUA,
                                    g_param_spec_pointer ("dmnuA-nuA",
                                                          NULL,
-                                                         "dm\nu_A/\nu_A",
+                                                         "dm\\nu_A/\\nu_A",
                                                          G_PARAM_WRITABLE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   g_object_class_install_property (object_class,
@@ -373,6 +373,7 @@ _nc_hipert_wkb_phase_f (realtype alpha, N_Vector y, N_Vector ydot, gpointer f_da
 {
   NcHIPertWKBArg *arg   = (NcHIPertWKBArg *) f_data;
   gdouble m = 0.0, nu2 = 0.0, dlnm = 0.0;
+
   arg->wkb->eom (arg->obj, alpha, NC_HIPERT (arg->wkb)->k, &nu2, &m, &dlnm);
   {
     const gdouble lnF     = NV_Ith_S (y, 0);
@@ -414,10 +415,10 @@ _nc_hipert_wkb_prepare_exact (NcHIPertWKB *wkb, GObject *obj, gdouble alpha_i, g
   gint flag;
   gdouble alpha = alpha_i;
   gdouble m = 0.0, nu2 = 0.0, dlnm = 0.0;
-  const gdouble nuA2 = wkb->nuA2 (obj, alpha, pert->k);
-  const gdouble nuA = sqrt (nuA2);
+  const gdouble nuA2      = wkb->nuA2 (obj, alpha, pert->k);
+  const gdouble nuA       = sqrt (nuA2);
   const gdouble dmnuA_nuA = wkb->dmnuA_nuA (obj, alpha, pert->k);
-  const gdouble dmnuA = dmnuA_nuA * nuA;
+  const gdouble dmnuA     = dmnuA_nuA * nuA;
   GArray *alpha_a;
   GArray *lnF;
   GArray *dlnF;
@@ -459,16 +460,16 @@ _nc_hipert_wkb_prepare_exact (NcHIPertWKB *wkb, GObject *obj, gdouble alpha_i, g
   }
   else
   {
-    alpha_a  = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), 1000);
-    lnF  = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), 1000);
-    dlnF = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), 1000);
+    alpha_a = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), 1000);
+    lnF     = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), 1000);
+    dlnF    = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), 1000);
   }
 
   if (pert->y == NULL)
     pert->y = N_VNew_Serial (2);
 
-  NV_Ith_S (pert->y, 0) = log (nuA * m);
-  NV_Ith_S (pert->y, 1) = dmnuA / (nuA * m);
+  NV_Ith_S (pert->y, 0) = log (m * nuA);
+  NV_Ith_S (pert->y, 1) = dmnuA / (m * nuA);
 
   g_array_append_val (alpha_a, alpha_i);
   g_array_append_val (lnF, NV_Ith_S (pert->y, 0));
@@ -571,7 +572,7 @@ nc_hipert_wkb_prepare (NcHIPertWKB *wkb, GObject *obj, gdouble prec, gdouble alp
     const gdouble nuA2_f = wkb->nuA2 (obj, alpha_f, pert->k);
     if (nuA2_i < 0.0)
     {
-      g_error ("nc_hipert_wkb_prepare_patched: cannot prepare wkb solution in the interval [% 7.5g % 7.5g], the WKB approximation is not valid at % 7.5g (nuA2_i = % 7.5g, nuA2_i = % 7.5g).",
+      g_error ("nc_hipert_wkb_prepare: cannot prepare wkb solution in the interval [% 7.5g % 7.5g], the WKB approximation is not valid at % 7.5g (nuA2_i = % 7.5g, nuA2_i = % 7.5g).",
                alpha_i, alpha_f, alpha_i, nuA2_i, nuA2_f);
     }
     else
@@ -582,7 +583,7 @@ nc_hipert_wkb_prepare (NcHIPertWKB *wkb, GObject *obj, gdouble prec, gdouble alp
       
       if (prec < fabs (V_i / nu2))
       {
-        g_error ("nc_hipert_wkb_prepare_patched: cannot prepare wkb solution in the interval [% 7.5g % 7.5g], this interval is beyond the desired precision [%7.5e].",
+        g_error ("nc_hipert_wkb_prepare: cannot prepare wkb solution in the interval [% 7.5g % 7.5g], this interval is beyond the desired precision [%7.5e].",
                  alpha_i, alpha_f, prec);
       }
       else
@@ -599,7 +600,7 @@ nc_hipert_wkb_prepare (NcHIPertWKB *wkb, GObject *obj, gdouble prec, gdouble alp
           const gdouble alpha_p = nc_hipert_wkb_maxtime_prec (wkb, obj, NC_HIPERT_WKB_CMP_POTENTIAL, prec, alpha_i, alpha_f);
           if (!gsl_finite (alpha_p))
           {
-            g_error ("nc_hipert_wkb_prepare_patched: cannot find the precision [%7.5e] point in the interval [% 7.5g % 7.5g].", 
+            g_error ("nc_hipert_wkb_prepare: cannot find the precision [%7.5e] point in the interval [% 7.5g % 7.5g].", 
                      prec, alpha_i, alpha_f);
           }
           else
@@ -945,8 +946,8 @@ nc_hipert_wkb_phase (NcHIPertWKB *wkb, GObject *obj, gdouble alpha)
   {
     gdouble alpha_i = wkb->alpha_phase;
     gdouble alpha_f = alpha;
-    gdouble sign = 1.0;
-    gdouble Dphase = 0.0;
+    gdouble sign    = 1.0;
+    gdouble Dphase  = 0.0;
     gdouble dphase, alpha_k;
     guint cur, tar, k;
 

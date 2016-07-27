@@ -390,8 +390,8 @@ nc_hipert_adiab_set_init_cond (NcHIPertAdiab *pa, NcHICosmo *cosmo, gdouble alph
 
   pert->alpha0 = alpha_i;
 
-  NV_Ith_S (pert->y, NC_HIPERT_ADIAB_RE_ZETA) = Re_zeta;
-  NV_Ith_S (pert->y, NC_HIPERT_ADIAB_IM_ZETA) = Im_zeta;
+  NV_Ith_S (pert->y, NC_HIPERT_ADIAB_RE_ZETA)  = Re_zeta;
+  NV_Ith_S (pert->y, NC_HIPERT_ADIAB_IM_ZETA)  = Im_zeta;
   NV_Ith_S (pert->y, NC_HIPERT_ADIAB_RE_PZETA) = Re_Pzeta;
   NV_Ith_S (pert->y, NC_HIPERT_ADIAB_IM_PZETA) = Im_Pzeta;
 

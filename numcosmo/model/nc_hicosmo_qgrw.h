@@ -112,6 +112,7 @@ struct _NcHICosmoQGRW
   /*< private >*/
   NcHIPertIAdiabEOM eom_adiab_zeta;
   NcHIPertITwoFluidsEOM eom_two_fluids;
+  NcHIPertITwoFluidsTV tv_two_fluids;
 };
 
 GType nc_hicosmo_qgrw_get_type (void) G_GNUC_CONST;

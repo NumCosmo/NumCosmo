@@ -28,6 +28,9 @@
 
 #include <glib.h>
 #include <glib-object.h>
+#ifndef NUMCOSMO_GIR_SCAN
+#include <complex.h>
+#endif /* NUMCOSMO_GIR_SCAN */
 #include <numcosmo/build_cfg.h>
 #include <numcosmo/math/ncm_ode_spline.h>
 #include <numcosmo/nc_hicosmo.h>
@@ -96,35 +99,9 @@ NcHIPertTwoFluids *nc_hipert_two_fluids_ref (NcHIPertTwoFluids *ptf);
 void nc_hipert_two_fluids_free (NcHIPertTwoFluids *ptf);
 void nc_hipert_two_fluids_clear (NcHIPertTwoFluids **ptf);
 
-void nc_hipert_two_fluids_prepare_wkb_zeta (NcHIPertTwoFluids *ptf, NcHICosmo *cosmo, gdouble prec, gdouble alpha_i, gdouble alpha_f);
-void nc_hipert_two_fluids_prepare_wkb_S (NcHIPertTwoFluids *ptf, NcHICosmo *cosmo, gdouble prec, gdouble alpha_i, gdouble alpha_f);
+void nc_hipert_two_fluids_eom (NcHIPertTwoFluids *ptf, NcHICosmo *cosmo, gdouble alpha, NcHIPertITwoFluidsEOM **eom);
 
-gdouble nc_hipert_two_fluids_nuA (NcHIPertTwoFluids *ptf, NcHICosmo *cosmo, gdouble alpha);
-gdouble nc_hipert_two_fluids_nuB (NcHIPertTwoFluids *ptf, NcHICosmo *cosmo, gdouble alpha);
-gdouble nc_hipert_two_fluids_YAB (NcHIPertTwoFluids *ptf, NcHICosmo *cosmo, gdouble alpha);
-gdouble nc_hipert_two_fluids_LA (NcHIPertTwoFluids *ptf, NcHICosmo *cosmo, gdouble alpha);
-gdouble nc_hipert_two_fluids_LB (NcHIPertTwoFluids *ptf, NcHICosmo *cosmo, gdouble alpha);
-gdouble nc_hipert_two_fluids_nuzeta2 (NcHIPertTwoFluids *ptf, NcHICosmo *cosmo, gdouble alpha);
-gdouble nc_hipert_two_fluids_nuS2 (NcHIPertTwoFluids *ptf, NcHICosmo *cosmo, gdouble alpha);
-gdouble nc_hipert_two_fluids_laq2 (NcHIPertTwoFluids *ptf, NcHICosmo *cosmo, gdouble alpha);
-gdouble nc_hipert_two_fluids_lazeta2 (NcHIPertTwoFluids *ptf, NcHICosmo *cosmo, gdouble alpha);
-gdouble nc_hipert_two_fluids_nuplus2 (NcHIPertTwoFluids *ptf, NcHICosmo *cosmo, gdouble alpha);
-gdouble nc_hipert_two_fluids_numinus2 (NcHIPertTwoFluids *ptf, NcHICosmo *cosmo, gdouble alpha);
-void nc_hipert_two_fluids_eom_full (NcHIPertTwoFluids *ptf, NcHICosmo *cosmo, gdouble alpha, NcHIPertITwoFluidsEOM **eom_full);
-
-void nc_hipert_two_fluids_wkb_zeta (NcHIPertTwoFluids *ptf, NcHICosmo *cosmo, gdouble alpha, gdouble *Re_zeta, gdouble *Im_zeta);
-void nc_hipert_two_fluids_wkb_zeta_Pzeta (NcHIPertTwoFluids *ptf, NcHICosmo *cosmo, gdouble alpha, gdouble *Re_zeta, gdouble *Im_zeta, gdouble *Re_Pzeta, gdouble *Im_Pzeta);
-
-void nc_hipert_two_fluids_wkb_Q (NcHIPertTwoFluids *ptf, NcHICosmo *cosmo, gdouble alpha, gdouble *Re_Q, gdouble *Im_Q);
-void nc_hipert_two_fluids_wkb_Q_PQ (NcHIPertTwoFluids *ptf, NcHICosmo *cosmo, gdouble alpha, gdouble *Re_Q, gdouble *Im_Q, gdouble *Re_PQ, gdouble *Im_PQ);
-
-void nc_hipert_two_fluids_wkb_full_zeta (NcHIPertTwoFluids *ptf, NcHICosmo *cosmo, gdouble alpha, gdouble **vars);
-void nc_hipert_two_fluids_wkb_full_Q (NcHIPertTwoFluids *ptf, NcHICosmo *cosmo, gdouble alpha, gdouble **vars);
-
-gdouble nc_hipert_two_fluids_wkb_zeta_maxtime (NcHIPertTwoFluids *ptf, NcHICosmo *cosmo, gdouble alpha0, gdouble alpha1);
-gdouble nc_hipert_two_fluids_wkb_S_maxtime (NcHIPertTwoFluids *ptf, NcHICosmo *cosmo, gdouble alpha0, gdouble alpha1);
-gdouble nc_hipert_two_fluids_wkb_zeta_maxtime_prec (NcHIPertTwoFluids *ptf, NcHICosmo *cosmo, NcHIPertWKBCmp cmp, gdouble prec, gdouble alpha0, gdouble alpha1);
-gdouble nc_hipert_two_fluids_wkb_S_maxtime_prec (NcHIPertTwoFluids *ptf, NcHICosmo *cosmo, NcHIPertWKBCmp cmp, gdouble prec, gdouble alpha0, gdouble alpha1);
+void nc_hipert_two_fluids_get_init_cond (NcHIPertTwoFluids *ptf, NcHICosmo *cosmo, gdouble alpha, guint main_mode, const gdouble beta_R, gdouble *state);
 
 void nc_hipert_two_fluids_set_init_cond (NcHIPertTwoFluids *ptf, NcHICosmo *cosmo, gdouble alphai, gdouble *vars);
 
@@ -132,8 +109,14 @@ void nc_hipert_two_fluids_set_init_cond_wkb_zeta (NcHIPertTwoFluids *ptf, NcHICo
 
 void nc_hipert_two_fluids_set_init_cond_wkb_Q (NcHIPertTwoFluids *ptf, NcHICosmo *cosmo, gdouble alphai);
 
+void nc_hipert_two_fluids_to_zeta_s (NcHIPertTwoFluids *ptf, NcHICosmo *cosmo, gdouble alpha, gdouble *state);
+
 void nc_hipert_two_fluids_evolve (NcHIPertTwoFluids *ptf, NcHICosmo *cosmo, gdouble alphaf);
 void nc_hipert_two_fluids_get_values (NcHIPertTwoFluids *ptf, gdouble *alphai, gdouble **vars);
+
+#define NC_HIPERT_TWO_FLUIDS_A2Q(Ai) (cimag (Ai)) 
+#define NC_HIPERT_TWO_FLUIDS_A2P(Ai) (creal (Ai)) 
+#define NC_HIPERT_TWO_FLUIDS_QP2A(Q,P) ((P) + I * (Q))
 
 G_END_DECLS
 

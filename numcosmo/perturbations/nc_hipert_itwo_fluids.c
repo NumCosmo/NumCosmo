@@ -41,15 +41,15 @@
 
 G_DEFINE_INTERFACE (NcHIPertITwoFluids, nc_hipert_itwo_fluids, 0);
 G_DEFINE_BOXED_TYPE (NcHIPertITwoFluidsEOM, nc_hipert_itwo_fluids_eom, nc_hipert_itwo_fluids_eom_dup, nc_hipert_itwo_fluids_eom_free);
+G_DEFINE_BOXED_TYPE (NcHIPertITwoFluidsTV, nc_hipert_itwo_fluids_tv, nc_hipert_itwo_fluids_tv_dup, nc_hipert_itwo_fluids_tv_free);
 
 static void
 nc_hipert_itwo_fluids_default_init (NcHIPertITwoFluidsInterface *iface)
 {
-  iface->nuA2          = NULL;
-  iface->dmzetanuA_nuA = NULL;
-  iface->nuB2          = NULL;
-  iface->dmSnuB_nuB    = NULL;
-  iface->eom           = NULL;
+  g_assert_cmpuint ((NC_HIPERT_ITWO_FLUIDS_VARS_LEN % 2), ==, 0);
+
+  iface->eom = NULL;
+  iface->tv  = NULL;
 }
 
 /**
@@ -80,4 +80,34 @@ void
 nc_hipert_itwo_fluids_eom_free (NcHIPertITwoFluidsEOM *tf_eom)
 {
   g_free (tf_eom);
+}
+
+/**
+ * nc_hipert_itwo_fluids_tv_dup:
+ * @tf_tv: a #NcHIPertITwoFluidsTV
+ *
+ * Duplicates @tf_tv.
+ * 
+ * Returns: (transfer full): a copy of @tf_tv.
+ */
+NcHIPertITwoFluidsTV *
+nc_hipert_itwo_fluids_tv_dup (NcHIPertITwoFluidsTV *tf_tv)
+{
+  NcHIPertITwoFluidsTV *tf_tv_dup = g_new (NcHIPertITwoFluidsTV, 1);
+  *tf_tv_dup = *tf_tv;
+
+  return tf_tv_dup;
+}
+
+/**
+ * nc_hipert_itwo_fluids_tv_free:
+ * @tf_tv: a #NcHIPertITwoFluidsTV.
+ *
+ * Frees @tf_tv.
+ * 
+ */
+void
+nc_hipert_itwo_fluids_tv_free (NcHIPertITwoFluidsTV *tf_tv)
+{
+  g_free (tf_tv);
 }

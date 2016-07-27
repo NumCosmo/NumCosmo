@@ -930,7 +930,7 @@ nc_hicosmo_class_get_func_z (const gchar *name)
 /**
  * nc_hicosmo_abs_alpha:
  * @cosmo: a #NcHICosmo
- * @z: redshift $z$
+ * @x: redshift variable $x = 1 + z$
  *
  * FIXME
  *
