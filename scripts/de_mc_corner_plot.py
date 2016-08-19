@@ -102,8 +102,8 @@ for file in files:
   #print file['cols'].shape
   #print params_range
   
-  fig = corner.corner (cols, labels = col_symbols, range = params_range, show_titles=True)
-  #fig = plotCorner (cols, bins = 50, labels = col_symbols, label_size = 20, range = params_range)
+  #fig = corner.corner (cols, labels = col_symbols, range = params_range, show_titles=True)
+  fig = plotCorner (cols, bins = 50, labels = col_symbols, label_size = 20, range = params_range)
 
   figfile = "%s_corner.pdf" % (file['prefix'])
   print ("#  Saving figure: %s." % figfile)

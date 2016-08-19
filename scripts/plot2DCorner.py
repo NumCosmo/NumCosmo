@@ -18,7 +18,7 @@ def plotCorner (xs, bins=50, labels=None, label_size=9, range=None, fig=None, ma
                 contourstyle={}, **styleArgs):
 
     """
-    Include citation to corner.py !!!
+    This script was created based on corner.py and plot2Ddist.py.
     
     Parameters
         ----------
