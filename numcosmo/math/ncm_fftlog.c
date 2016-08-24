@@ -29,7 +29,7 @@
  * @short_description: Abstract class for implementing logarithm fast fourier transform.
  *
  * This class provides the tools to compute the Fast Fourier Transform of any function, which is assumed to be a periodic 
- * sequence of logarithmically spaced points. It is inspired on the approach [FFTLog][Hamilton2000], which we extended as described below.
+ * sequence of logarithmically spaced points. It is inspired on the approach [FFTLog][XHamilton2000], which we extended as described below.
  * 
  * A function $G(r)$ is written as 
  * \begin{equation}\label{eq:Gr} G(r) = \int_0^\infty F(k) \ K(kr) dk, \end{equation}
