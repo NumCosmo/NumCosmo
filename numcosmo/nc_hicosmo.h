@@ -88,6 +88,7 @@ typedef enum _NcHICosmoImpl
 } NcHICosmoImpl;
 
 #define NC_HICOSMO_IMPL_RH_Mpc (NC_HICOSMO_IMPL_H0)
+#define NC_HICOSMO_IMPL_RH_planck (NC_HICOSMO_IMPL_H0)
 #define NC_HICOSMO_IMPL_Omega_k0 (NC_HICOSMO_IMPL_Omega_t0)
 #define NC_HICOSMO_IMPL_Omega_m0 (NC_HICOSMO_IMPL_Omega_c0 | NC_HICOSMO_IMPL_Omega_b0)
 #define NC_HICOSMO_IMPL_h (NC_HICOSMO_IMPL_H0)
@@ -175,10 +176,6 @@ struct _NcHICosmoClass
   NcHICosmoFunc1Z d2E2_dz2;
   NcHICosmoFunc1Z bgp_cs2;
   NcHICosmoFunc1Z Dc;
-  GArray *func_table;
-  GArray *func_z_table;
-  GHashTable *func_hash;
-  GHashTable *func_z_hash;
 };
 
 GType nc_hicosmo_get_type (void) G_GNUC_CONST;
@@ -216,6 +213,7 @@ void nc_hicosmo_log_all_models (GType parent);
  */
 G_INLINE_FUNC gdouble nc_hicosmo_H0 (NcHICosmo *cosmo);
 G_INLINE_FUNC gdouble nc_hicosmo_RH_Mpc (NcHICosmo *cosmo);
+G_INLINE_FUNC gdouble nc_hicosmo_RH_planck (NcHICosmo *cosmo);
 G_INLINE_FUNC gdouble nc_hicosmo_h (NcHICosmo *cosmo);
 G_INLINE_FUNC gdouble nc_hicosmo_h2 (NcHICosmo *cosmo);
 G_INLINE_FUNC gdouble nc_hicosmo_Omega_b0 (NcHICosmo *cosmo);
@@ -270,15 +268,6 @@ G_INLINE_FUNC gdouble nc_hicosmo_x_alpha (NcHICosmo *cosmo, gdouble alpha);
 G_INLINE_FUNC NcHIPrim *nc_hicosmo_peek_prim (NcHICosmo *cosmo);
 G_INLINE_FUNC NcHIReion *nc_hicosmo_peek_reion (NcHICosmo *cosmo);
 
-GArray *nc_hicosmo_class_func_table (void);
-GArray *nc_hicosmo_class_func_z_table (void);
-NcHICosmoFunc *nc_hicosmo_class_get_func (const gchar *name);
-NcHICosmoFuncZ *nc_hicosmo_class_get_func_z (const gchar *name);
-
-NcmMSetFunc *nc_hicosmo_create_mset_func0 (NcHICosmoFunc0 f0);
-NcmMSetFunc *nc_hicosmo_create_mset_func1 (NcHICosmoFunc1Z f1);
-NcmMSetFunc *nc_hicosmo_create_mset_arrayfunc1 (NcHICosmoFunc1Z f1, guint size);
-
 #define NC_HICOSMO_DEFAULT_PARAMS_RELTOL (1e-7)
 #define NC_HICOSMO_DEFAULT_PARAMS_ABSTOL (0.0)
 
@@ -316,6 +305,12 @@ G_INLINE_FUNC gdouble
 nc_hicosmo_RH_Mpc (NcHICosmo *cosmo)
 {
   return (ncm_c_c () / (1.0e3 * nc_hicosmo_H0 (cosmo)));
+}
+
+G_INLINE_FUNC gdouble
+nc_hicosmo_RH_planck (NcHICosmo *cosmo)
+{
+  return nc_hicosmo_RH_Mpc (cosmo) * ncm_c_Mpc () / ncm_c_planck_length ();
 }
 
 G_INLINE_FUNC gdouble

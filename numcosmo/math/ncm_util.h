@@ -49,6 +49,7 @@ gdouble ncm_numdiff_1 (gsl_function *F, const gdouble x, const gdouble ho, gdoub
 gdouble ncm_numdiff_2 (gsl_function *F, gdouble *ofx, const gdouble x, const gdouble ho, gdouble *err);
 gdouble ncm_numdiff_2_err (gsl_function *F, gdouble *ofx, const gdouble x, const gdouble ho, gdouble err, gdouble *ferr);
 gdouble ncm_sqrt1px_m1 (gdouble x);
+gdouble ncm_cmpdbl (const gdouble x, const gdouble y);
 
 gsize ncm_mpfr_out_raw (FILE *stream, mpfr_t op);
 gsize ncm_mpfr_inp_raw (mpfr_t rop, FILE *stream);
@@ -60,12 +61,14 @@ gulong ncm_random_seed (void);
 gint ncm_cmp (gdouble x, gdouble y, gdouble reltol);
 
 void ncm_rational_coarce_double (gdouble x, mpq_t q);
-void ncm_mpz_inits (mpz_t z, ...);
-void ncm_mpz_clears (mpz_t z, ...);
+void ncm_mpz_inits (mpz_t z, ...) G_GNUC_NULL_TERMINATED;
+void ncm_mpz_clears (mpz_t z, ...) G_GNUC_NULL_TERMINATED;
 void _ncm_assertion_message_cmpdouble (const gchar *domain, const gchar *file, gint line, const gchar *func, const gchar *expr, gdouble arg1, const gchar *cmp, gdouble arg2);
 
 gboolean ncm_util_cvode_check_flag (gpointer flagvalue, const gchar *funcname, gint opt);
 gboolean ncm_util_cvode_print_stats (gpointer cvode);
+
+gchar *ncm_util_basename_fits (const gchar *fits_filename); 
 
 typedef struct _NcmComplex NcmComplex;
 

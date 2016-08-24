@@ -49,6 +49,9 @@ test_ncm_model_ctrl_SOURCES =  \
 test_ncm_mset_SOURCES = \
 	test_ncm_mset.c
 
+test_ncm_obj_array_SOURCES = \
+	test_ncm_obj_array.c
+
 test_ncm_serialize_SOURCES = \
 	test_ncm_serialize.c
 
@@ -101,6 +104,7 @@ check_PROGRAMS =  \
 	test_ncm_model_ctrl           \
 	test_ncm_serialize            \
 	test_ncm_mset                 \
+	test_ncm_obj_array            \
 	test_ncm_data_gauss_cov       \
 	test_ncm_sphere_map_pix       \
 	test_nc_hicosmo_de            \
@@ -136,6 +140,8 @@ test_ncm_model_ctrl_LDADD = $(top_builddir)/numcosmo/libnumcosmo.la
 
 test_ncm_mset_LDADD = $(top_builddir)/numcosmo/libnumcosmo.la
 
+test_ncm_obj_array_LDADD = $(top_builddir)/numcosmo/libnumcosmo.la
+
 test_ncm_serialize_LDADD = $(top_builddir)/numcosmo/libnumcosmo.la
 
 test_ncm_data_gauss_cov_LDADD = $(top_builddir)/numcosmo/libnumcosmo.la
@@ -163,6 +169,3 @@ test_nc_cluster_pseudo_counts_LDADD = $(top_builddir)/numcosmo/libnumcosmo.la
 TESTS = $(check_PROGRAMS)
 
 export VERBOSE = 1
-
-
-

@@ -39,6 +39,10 @@
 
 #include "math/ncm_likelihood.h"
 #include "math/ncm_cfg.h"
+#include "math/ncm_prior_gauss_param.h"
+#include "math/ncm_prior_gauss_func.h"
+#include "math/ncm_prior_flat_param.h"
+#include "math/ncm_prior_flat_func.h"
 
 enum
 {
@@ -57,15 +61,12 @@ ncm_likelihood_init (NcmLikelihood *lh)
 {
   lh->dset         = NULL;
   lh->m2lnL_v      = NULL;
-  lh->priors_f     = g_ptr_array_sized_new (10);
-  lh->priors_m2lnL = g_ptr_array_sized_new (10);
-  
-  g_ptr_array_set_free_func (lh->priors_f, (GDestroyNotify) &ncm_mset_func_free);
-  g_ptr_array_set_free_func (lh->priors_m2lnL, (GDestroyNotify) &ncm_mset_func_free);
+  lh->priors_f     = ncm_obj_array_sized_new (10);
+  lh->priors_m2lnL = ncm_obj_array_sized_new (10);  
 }
 
 static void
-ncm_likelihood_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
+_ncm_likelihood_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
 {
   NcmLikelihood *lh = NCM_LIKELIHOOD (object);
   g_return_if_fail (NCM_IS_LIKELIHOOD (object));
@@ -78,26 +79,18 @@ ncm_likelihood_set_property (GObject *object, guint prop_id, const GValue *value
       break;
     case PROP_PRIORS_M2LNL:
     {
-      gint64 p = g_value_get_int64 (value);
-      GPtrArray *priors_m2lnL = GSIZE_TO_POINTER (p);
+      NcmObjArray *priors_m2lnL_old = lh->priors_m2lnL;
 
-      if (priors_m2lnL != lh->priors_m2lnL)
-      {
-        g_ptr_array_unref (lh->priors_m2lnL);
-        lh->priors_m2lnL = g_ptr_array_ref (priors_m2lnL);
-      }
+      lh->priors_m2lnL = ncm_obj_array_ref (g_value_get_boxed (value));
+      ncm_obj_array_unref (priors_m2lnL_old);
       break;
     }
     case PROP_PRIORS_F:
     {
-      gint64 p = g_value_get_int64 (value);
-      GPtrArray *priors_f = GSIZE_TO_POINTER (p);
+      NcmObjArray *priors_f_old = lh->priors_f;
 
-      if (priors_f != lh->priors_f)
-      {
-        g_ptr_array_unref (lh->priors_f);
-        lh->priors_f = g_ptr_array_ref (priors_f);
-      }
+      lh->priors_f = ncm_obj_array_ref (g_value_get_boxed (value));
+      ncm_obj_array_unref (priors_f_old);
       break;
     }
     case PROP_M2LNL_V:
@@ -117,7 +110,7 @@ ncm_likelihood_set_property (GObject *object, guint prop_id, const GValue *value
 }
 
 static void
-ncm_likelihood_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
+_ncm_likelihood_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
 {
   NcmLikelihood *lh = NCM_LIKELIHOOD (object);
   g_return_if_fail (NCM_IS_LIKELIHOOD (object));
@@ -128,10 +121,10 @@ ncm_likelihood_get_property (GObject *object, guint prop_id, GValue *value, GPar
       g_value_set_object (value, lh->dset);
       break;
     case PROP_PRIORS_M2LNL:
-      g_value_set_int64 (value, GPOINTER_TO_SIZE (lh->priors_m2lnL));
+      g_value_set_boxed (value, lh->priors_m2lnL);
       break;
     case PROP_PRIORS_F:
-      g_value_set_int64 (value, GPOINTER_TO_SIZE (lh->priors_f));
+      g_value_set_boxed (value, lh->priors_f);
       break;
     case PROP_M2LNL_V:
       g_value_set_object (value, lh->m2lnL_v);
@@ -143,12 +136,12 @@ ncm_likelihood_get_property (GObject *object, guint prop_id, GValue *value, GPar
 }
 
 static void
-ncm_likelihood_dispose (GObject *object)
+_ncm_likelihood_dispose (GObject *object)
 {
   NcmLikelihood *lh = NCM_LIKELIHOOD (object);
 
-  g_clear_pointer (&lh->priors_f, g_ptr_array_unref);
-  g_clear_pointer (&lh->priors_m2lnL, g_ptr_array_unref);
+  ncm_obj_array_clear (&lh->priors_f);
+  ncm_obj_array_clear (&lh->priors_m2lnL);
 
   ncm_vector_clear (&lh->m2lnL_v);  
   ncm_dataset_clear (&lh->dset);
@@ -158,7 +151,7 @@ ncm_likelihood_dispose (GObject *object)
 }
 
 static void
-ncm_likelihood_finalize (GObject *object)
+_ncm_likelihood_finalize (GObject *object)
 {
 
   /* Chain up : end */
@@ -170,10 +163,10 @@ ncm_likelihood_class_init (NcmLikelihoodClass *klass)
 {
   GObjectClass* object_class = G_OBJECT_CLASS (klass);
 
-  object_class->set_property = &ncm_likelihood_set_property;
-  object_class->get_property = &ncm_likelihood_get_property;
-  object_class->dispose      = &ncm_likelihood_dispose;
-  object_class->finalize     = &ncm_likelihood_finalize;
+  object_class->set_property = &_ncm_likelihood_set_property;
+  object_class->get_property = &_ncm_likelihood_get_property;
+  object_class->dispose      = &_ncm_likelihood_dispose;
+  object_class->finalize     = &_ncm_likelihood_finalize;
 
   g_object_class_install_property (object_class,
                                    PROP_DATASET,
@@ -184,17 +177,17 @@ ncm_likelihood_class_init (NcmLikelihoodClass *klass)
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
   g_object_class_install_property (object_class,
                                    PROP_PRIORS_M2LNL,
-                                   g_param_spec_int64 ("priors-m2lnL-ptr",
+                                   g_param_spec_boxed ("priors-m2lnL",
                                                        NULL,
-                                                       "Priors m2lnL pointer",
-                                                       G_MININT64, G_MAXINT64, 0,
+                                                       "Priors m2lnL array",
+                                                       NCM_TYPE_OBJ_ARRAY,
                                                        G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
   g_object_class_install_property (object_class,
                                    PROP_PRIORS_F,
-                                   g_param_spec_int64 ("priors-f-ptr",
+                                   g_param_spec_boxed ("priors-f",
                                                        NULL,
-                                                       "Priors f pointer",
-                                                       G_MININT64, G_MAXINT64, 0,
+                                                       "Priors f array",
+                                                       NCM_TYPE_OBJ_ARRAY,
                                                        G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
   g_object_class_install_property (object_class,
                                    PROP_M2LNL_V,
@@ -224,7 +217,7 @@ ncm_likelihood_new (NcmDataset *dset)
 
 /**
  * ncm_likelihood_ref:
- * @lh: FIXME
+ * @lh: a #NcmLikelihood
  *
  * FIXME
  *
@@ -252,42 +245,8 @@ ncm_likelihood_dup (NcmLikelihood *lh, NcmSerialize *ser)
 }
 
 /**
- * ncm_likelihood_copy:
- * @lh: a #NcmLikelihood.
- *
- * Duplicates the object and gets a reference for its content.
- *
- * Returns: (transfer full): A copy of @lh.
- */
-NcmLikelihood *
-ncm_likelihood_copy (NcmLikelihood *lh)
-{
-  NcmDataset *dset = ncm_dataset_copy (lh->dset);
-  NcmLikelihood *lh_ref = ncm_likelihood_new (dset);
-  guint i;
-  
-  ncm_dataset_free (dset);
-
-  g_ptr_array_set_size (lh_ref->priors_f, 0);
-  g_ptr_array_set_size (lh_ref->priors_m2lnL, 0);
-
-  for (i = 0; i < lh->priors_f->len; i++)
-  {
-    NcmMSetFunc *func = NCM_MSET_FUNC (g_ptr_array_index (lh->priors_f, i));
-    ncm_likelihood_priors_add (lh_ref, ncm_mset_func_ref (func), FALSE);
-  }
-  for (i = 0; i < lh->priors_m2lnL->len; i++)
-  {
-    NcmMSetFunc *func = NCM_MSET_FUNC (g_ptr_array_index (lh->priors_m2lnL, i));
-    ncm_likelihood_priors_add (lh_ref, ncm_mset_func_ref (func), TRUE);
-  }
-
-  return lh_ref;
-}
-
-/**
  * ncm_likelihood_free:
- * @lh: FIXME
+ * @lh: a #NcmLikelihood
  *
  * FIXME
  */
@@ -299,9 +258,10 @@ ncm_likelihood_free (NcmLikelihood *lh)
 
 /**
  * ncm_likelihood_clear:
- * @lh: FIXME
+ * @lh: a #NcmLikelihood
  *
  * FIXME
+ * 
  */
 void
 ncm_likelihood_clear (NcmLikelihood **lh)
@@ -311,31 +271,186 @@ ncm_likelihood_clear (NcmLikelihood **lh)
 
 /**
  * ncm_likelihood_priors_add:
- * @lh: FIXME
- * @prior: FIXME
- * @is_m2lnL: FIXME
+ * @lh: a #NcmLikelihood
+ * @prior: a #NcmPrior
  *
  * FIXME
+ * 
  */
 void
-ncm_likelihood_priors_add (NcmLikelihood *lh, NcmMSetFunc *prior, gboolean is_m2lnL)
+ncm_likelihood_priors_add (NcmLikelihood *lh, NcmPrior *prior)
 {
-  if (is_m2lnL)
-    g_ptr_array_add (lh->priors_m2lnL, ncm_mset_func_ref (prior));
+  if (ncm_prior_is_m2lnL (prior))
+    g_ptr_array_add (lh->priors_m2lnL, ncm_prior_ref (prior));
   else
-    g_ptr_array_add (lh->priors_f, ncm_mset_func_ref (prior));
+    g_ptr_array_add (lh->priors_f, ncm_prior_ref (prior));
 }
 
 /**
+ * ncm_likelihood_priors_add_gauss_param:
+ * @lh: a #NcmLikelihood
+ * @mid: FIXME
+ * @pid: FIXME
+ * @mu: FIXME
+ * @sigma: FIXME
+ *
+ * FIXME
+ * 
+ */
+void 
+ncm_likelihood_priors_add_gauss_param (NcmLikelihood *lh, NcmModelID mid, guint pid, gdouble mu, gdouble sigma)
+{
+  NcmPrior *prior = NCM_PRIOR (ncm_prior_gauss_param_new (mid, pid, mu, sigma));
+  ncm_likelihood_priors_add (lh, prior);
+  ncm_prior_clear (&prior);
+}
+
+/**
+ * ncm_likelihood_priors_add_gauss_param_pindex:
+ * @lh: a #NcmLikelihood
+ * @pi: FIXME
+ * @mu: FIXME
+ * @sigma: FIXME
+ *
+ * FIXME
+ * 
+ */
+void 
+ncm_likelihood_priors_add_gauss_param_pindex (NcmLikelihood *lh, const NcmMSetPIndex *pi, gdouble mu, gdouble sigma)
+{
+  NcmPrior *prior = NCM_PRIOR (ncm_prior_gauss_param_new_pindex (pi, mu, sigma));
+  ncm_likelihood_priors_add (lh, prior);
+  ncm_prior_clear (&prior);
+}
+
+/**
+ * ncm_likelihood_priors_add_gauss_param_name:
+ * @lh: a #NcmLikelihood
+ * @mset: FIXME
+ * @name: FIXME
+ * @mu: FIXME
+ * @sigma: FIXME
+ *
+ * FIXME
+ * 
+ */
+void 
+ncm_likelihood_priors_add_gauss_param_name (NcmLikelihood *lh, NcmMSet *mset, const gchar *name, gdouble mu, gdouble sigma)
+{
+  NcmPrior *prior = NCM_PRIOR (ncm_prior_gauss_param_new_name (mset, name, mu, sigma));
+  ncm_likelihood_priors_add (lh, prior);
+  ncm_prior_clear (&prior);
+}
+
+/**
+ * ncm_likelihood_priors_add_gauss_func:
+ * @lh: a #NcmLikelihood
+ * @mean_func: FIXME
+ * @mu: FIXME
+ * @sigma: FIXME
+ * @var: FIXME
+ *
+ * FIXME
+ * 
+ */
+void 
+ncm_likelihood_priors_add_gauss_func (NcmLikelihood *lh, NcmMSetFunc *mean_func, gdouble mu, gdouble sigma, gdouble var)
+{
+  NcmPrior *prior = NCM_PRIOR (ncm_prior_gauss_func_new (mean_func, mu, sigma, var));
+  ncm_likelihood_priors_add (lh, prior);
+  ncm_prior_clear (&prior);
+}
+
+/**
+ * ncm_likelihood_priors_add_flat_param:
+ * @lh: a #NcmLikelihood
+ * @mid: FIXME
+ * @pid: FIXME
+ * @x_low: FIXME
+ * @x_upp: FIXME
+ * @scale: FIXME
+ *
+ * FIXME
+ * 
+ */
+void 
+ncm_likelihood_priors_add_flat_param (NcmLikelihood *lh, NcmModelID mid, guint pid, gdouble x_low, gdouble x_upp, gdouble scale)
+{
+  NcmPrior *prior = NCM_PRIOR (ncm_prior_flat_param_new (mid, pid, x_low, x_upp, scale));
+  ncm_likelihood_priors_add (lh, prior);
+  ncm_prior_clear (&prior);
+}
+
+/**
+ * ncm_likelihood_priors_add_flat_param_pindex:
+ * @lh: a #NcmLikelihood
+ * @pi: FIXME
+ * @x_low: FIXME
+ * @x_upp: FIXME
+ * @scale: FIXME
+ *
+ * FIXME
+ * 
+ */
+void 
+ncm_likelihood_priors_add_flat_param_pindex (NcmLikelihood *lh, const NcmMSetPIndex *pi, gdouble x_low, gdouble x_upp, gdouble scale)
+{
+  NcmPrior *prior = NCM_PRIOR (ncm_prior_flat_param_new_pindex (pi, x_low, x_upp, scale));
+  ncm_likelihood_priors_add (lh, prior);
+  ncm_prior_clear (&prior);
+}
+
+/**
+ * ncm_likelihood_priors_add_flat_param_name:
+ * @lh: a #NcmLikelihood
+ * @mset: FIXME
+ * @name: FIXME
+ * @x_low: FIXME
+ * @x_upp: FIXME
+ * @scale: FIXME
+ *
+ * FIXME
+ * 
+ */
+void 
+ncm_likelihood_priors_add_flat_param_name (NcmLikelihood *lh, NcmMSet *mset, const gchar *name, gdouble x_low, gdouble x_upp, gdouble scale)
+{
+  NcmPrior *prior = NCM_PRIOR (ncm_prior_flat_param_new_name (mset, name, x_low, x_upp, scale));
+  ncm_likelihood_priors_add (lh, prior);
+  ncm_prior_clear (&prior);
+}
+
+/**
+ * ncm_likelihood_priors_add_flat_func:
+ * @lh: a #NcmLikelihood
+ * @mean_func: FIXME
+ * @x_low: FIXME
+ * @x_upp: FIXME
+ * @scale: FIXME
+ * @variable: FIXME
+ *
+ * FIXME
+ * 
+ */
+void 
+ncm_likelihood_priors_add_flat_func (NcmLikelihood *lh, NcmMSetFunc *mean_func, gdouble x_low, gdouble x_upp, gdouble scale, gdouble variable)
+{
+  NcmPrior *prior = NCM_PRIOR (ncm_prior_flat_func_new (mean_func, x_low, x_upp, scale, variable));
+  ncm_likelihood_priors_add (lh, prior);
+  ncm_prior_clear (&prior);
+}
+
+
+/**
  * ncm_likelihood_priors_peek_f:
- * @lh: FIXME
+ * @lh: a #NcmLikelihood
  * @i: FIXME
  *
  * FIXME
  * 
  * Returns: (transfer none): FIXME
  */
-NcmMSetFunc *
+NcmPrior *
 ncm_likelihood_priors_peek_f (NcmLikelihood *lh, guint i)
 {
   return g_ptr_array_index (lh->priors_f, i);
@@ -343,14 +458,14 @@ ncm_likelihood_priors_peek_f (NcmLikelihood *lh, guint i)
 
 /**
  * ncm_likelihood_priors_peek_m2lnL:
- * @lh: FIXME
+ * @lh: a #NcmLikelihood
  * @i: FIXME
  *
  * FIXME
  * 
  * Returns: (transfer none): FIXME
  */
-NcmMSetFunc *
+NcmPrior *
 ncm_likelihood_priors_peek_m2lnL (NcmLikelihood *lh, guint i)
 {
   return g_ptr_array_index (lh->priors_m2lnL, i);
@@ -358,7 +473,7 @@ ncm_likelihood_priors_peek_m2lnL (NcmLikelihood *lh, guint i)
 
 /**
  * ncm_likelihood_priors_length_f:
- * @lh: FIXME
+ * @lh: a #NcmLikelihood
  *
  * FIXME
  *
@@ -372,7 +487,7 @@ ncm_likelihood_priors_length_f (NcmLikelihood *lh)
 
 /**
  * ncm_likelihood_priors_length_m2lnL:
- * @lh: FIXME
+ * @lh: a #NcmLikelihood
  *
  * FIXME
  *
@@ -386,7 +501,7 @@ ncm_likelihood_priors_length_m2lnL (NcmLikelihood *lh)
 
 /**
  * ncm_likelihood_has_leastsquares_J:
- * @lh: FIXME
+ * @lh: a #NcmLikelihood
  *
  * FIXME
  *
@@ -403,7 +518,7 @@ ncm_likelihood_has_leastsquares_J (NcmLikelihood *lh)
 
 /**
  * ncm_likelihood_has_m2lnL_grad:
- * @lh: FIXME
+ * @lh: a #NcmLikelihood
  *
  * FIXME
  *
@@ -436,9 +551,9 @@ ncm_likelihood_priors_leastsquares_f (NcmLikelihood *lh, NcmMSet *mset, NcmVecto
   
   for (i = 0; i < lh->priors_f->len; i++)
   {
-    NcmMSetFunc *func = NCM_MSET_FUNC (g_ptr_array_index (lh->priors_f, i));
-    const gdouble prior = ncm_mset_func_eval0 (func, mset);
-    ncm_vector_set (priors_f, i, prior);
+    NcmPrior *prior = NCM_PRIOR (ncm_obj_array_peek (lh->priors_f, i));
+    const gdouble prior_val = ncm_mset_func_eval0 (NCM_MSET_FUNC (prior), mset);
+    ncm_vector_set (priors_f, i, prior_val);
   }
 
   return;
@@ -491,7 +606,9 @@ ncm_likelihood_leastsquares_f (NcmLikelihood *lh, NcmMSet *mset, NcmVector *f)
 void
 ncm_likelihood_leastsquares_J (NcmLikelihood *lh, NcmMSet *mset, NcmMatrix *J)
 {
-  g_assert (lh->priors_f->len == 0 && lh->priors_m2lnL->len == 0);
+  g_assert_cmpuint (lh->priors_f->len, ==, 0);
+  g_assert_cmpuint (lh->priors_m2lnL->len, ==, 0);
+
   ncm_dataset_leastsquares_J (lh->dset, mset, J);
 }
 
@@ -507,7 +624,9 @@ ncm_likelihood_leastsquares_J (NcmLikelihood *lh, NcmMSet *mset, NcmMatrix *J)
 void
 ncm_likelihood_leastsquares_f_J (NcmLikelihood *lh, NcmMSet *mset, NcmVector *f, NcmMatrix *J)
 {
-  g_assert (lh->priors_f->len == 0 && lh->priors_m2lnL->len == 0);
+  g_assert_cmpuint (lh->priors_f->len, ==, 0);
+  g_assert_cmpuint (lh->priors_m2lnL->len, ==, 0);
+
   ncm_dataset_leastsquares_f_J (lh->dset, mset, f, J);
 }
 
@@ -528,16 +647,16 @@ ncm_likelihood_priors_m2lnL_val (NcmLikelihood *lh, NcmMSet *mset, gdouble *prio
 
   for (i = 0; i < lh->priors_f->len; i++)
   {
-    NcmMSetFunc *func = NCM_MSET_FUNC (g_ptr_array_index (lh->priors_f, i));
-    const gdouble prior = ncm_mset_func_eval0 (func, mset);
-    *priors_m2lnL += prior * prior;
+    NcmPrior *prior = NCM_PRIOR (ncm_obj_array_peek (lh->priors_f, i));
+    const gdouble prior_val = ncm_mset_func_eval0 (NCM_MSET_FUNC (prior), mset);
+    *priors_m2lnL += prior_val * prior_val;
   }
 
   for (i = 0; i < lh->priors_m2lnL->len; i++)
   {
-    NcmMSetFunc *func = NCM_MSET_FUNC (g_ptr_array_index (lh->priors_m2lnL, i));
-    const gdouble prior = ncm_mset_func_eval0 (func, mset);
-    *priors_m2lnL += prior;
+    NcmPrior *prior = NCM_PRIOR (ncm_obj_array_peek (lh->priors_m2lnL, i));
+    const gdouble prior_val = ncm_mset_func_eval0 (NCM_MSET_FUNC (prior), mset);
+    *priors_m2lnL += prior_val;
   }
 
   return;
@@ -560,17 +679,17 @@ ncm_likelihood_priors_m2lnL_vec (NcmLikelihood *lh, NcmMSet *mset, NcmVector *pr
 
   for (i = 0; i < lh->priors_f->len; i++)
   {
-    NcmMSetFunc *func = NCM_MSET_FUNC (g_ptr_array_index (lh->priors_f, i));
-    const gdouble prior = ncm_mset_func_eval0 (func, mset);
-    ncm_vector_set (priors_m2lnL_v, j, prior * prior);
+    NcmPrior *prior = NCM_PRIOR (g_ptr_array_index (lh->priors_f, i));
+    const gdouble prior_val = ncm_mset_func_eval0 (NCM_MSET_FUNC (prior), mset);
+    ncm_vector_set (priors_m2lnL_v, j, prior_val * prior_val);
     j++;
   }
 
   for (i = 0; i < lh->priors_m2lnL->len; i++)
   {
-    NcmMSetFunc *func = NCM_MSET_FUNC (g_ptr_array_index (lh->priors_m2lnL, i));
-    const gdouble prior = ncm_mset_func_eval0 (func, mset);
-    ncm_vector_set (priors_m2lnL_v, j, prior * prior);
+    NcmPrior *prior = NCM_PRIOR (g_ptr_array_index (lh->priors_m2lnL, i));
+    const gdouble prior_val = ncm_mset_func_eval0 (NCM_MSET_FUNC (prior), mset);
+    ncm_vector_set (priors_m2lnL_v, j, prior_val);
     j++;
   }
 
@@ -634,7 +753,9 @@ ncm_likelihood_m2lnL_val (NcmLikelihood *lh, NcmMSet *mset, gdouble *m2lnL)
 void
 ncm_likelihood_m2lnL_grad (NcmLikelihood *lh, NcmMSet *mset, NcmVector *grad)
 {
-  g_assert (lh->priors_f->len == 0 && lh->priors_m2lnL->len == 0);
+  g_assert_cmpuint (lh->priors_f->len, ==, 0);
+  g_assert_cmpuint (lh->priors_m2lnL->len, ==, 0);
+
   ncm_dataset_m2lnL_grad (lh->dset, mset, grad);
 }
 
@@ -650,6 +771,8 @@ ncm_likelihood_m2lnL_grad (NcmLikelihood *lh, NcmMSet *mset, NcmVector *grad)
 void
 ncm_likelihood_m2lnL_val_grad (NcmLikelihood *lh, NcmMSet *mset, gdouble *m2lnL, NcmVector *grad)
 {
-  g_assert (lh->priors_f->len == 0 && lh->priors_m2lnL->len == 0);
+  g_assert_cmpuint (lh->priors_f->len, ==, 0);
+  g_assert_cmpuint (lh->priors_m2lnL->len, ==, 0);
+
   ncm_dataset_m2lnL_val_grad (lh->dset, mset, m2lnL, grad);
 }

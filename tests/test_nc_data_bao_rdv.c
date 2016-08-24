@@ -68,31 +68,31 @@ main (gint argc, gchar *argv[])
   ncm_cfg_init ();
   ncm_cfg_enable_gsl_err_handler ();
 
-  g_test_add ("/numcosmo/nc_data_bao_rdv/set_sample/percival2007", TestNcDataBaoRDV, NULL,
+  g_test_add ("/nc/data_bao_rdv/set_sample/percival2007", TestNcDataBaoRDV, NULL,
               &test_nc_data_bao_rdv_new_percival2007,
               &test_nc_data_bao_rdv_set_sample_percival2007,
               &test_nc_data_bao_rdv_free);
-  g_test_add ("/numcosmo/nc_data_bao_rdv/set_sample/percival2010", TestNcDataBaoRDV, NULL,
+  g_test_add ("/nc/data_bao_rdv/set_sample/percival2010", TestNcDataBaoRDV, NULL,
               &test_nc_data_bao_rdv_new_percival2010,
               &test_nc_data_bao_rdv_set_sample_percival2010,
               &test_nc_data_bao_rdv_free);
-  g_test_add ("/numcosmo/nc_data_bao_rdv/set_sample/beutler2011", TestNcDataBaoRDV, NULL,
+  g_test_add ("/nc/data_bao_rdv/set_sample/beutler2011", TestNcDataBaoRDV, NULL,
               &test_nc_data_bao_rdv_new_beutler2011,
               &test_nc_data_bao_rdv_set_sample_beutler2011,
               &test_nc_data_bao_rdv_free);
-  g_test_add ("/numcosmo/nc_data_bao_rdv/set_sample/padmanabhan2012", TestNcDataBaoRDV, NULL,
+  g_test_add ("/nc/data_bao_rdv/set_sample/padmanabhan2012", TestNcDataBaoRDV, NULL,
               &test_nc_data_bao_rdv_new_padmanabhan2012,
               &test_nc_data_bao_rdv_set_sample_padmanabhan2012,
               &test_nc_data_bao_rdv_free);
-  g_test_add ("/numcosmo/nc_data_bao_rdv/set_sample/anderson2012", TestNcDataBaoRDV, NULL,
+  g_test_add ("/nc/data_bao_rdv/set_sample/anderson2012", TestNcDataBaoRDV, NULL,
               &test_nc_data_bao_rdv_new_anderson2012,
               &test_nc_data_bao_rdv_set_sample_anderson2012,
               &test_nc_data_bao_rdv_free);
-  g_test_add ("/numcosmo/nc_data_bao_rdv/set_sample/blake2012", TestNcDataBaoRDV, NULL,
+  g_test_add ("/nc/data_bao_rdv/set_sample/blake2012", TestNcDataBaoRDV, NULL,
               &test_nc_data_bao_rdv_new_blake2012,
               &test_nc_data_bao_rdv_set_sample_blake2012,
               &test_nc_data_bao_rdv_free);
-  g_test_add ("/numcosmo/nc_data_bao_rdv/set_sample/kazin2014", TestNcDataBaoRDV, NULL,
+  g_test_add ("/nc/data_bao_rdv/set_sample/kazin2014", TestNcDataBaoRDV, NULL,
               &test_nc_data_bao_rdv_new_kazin2014,
               &test_nc_data_bao_rdv_set_sample_kazin2014,
               &test_nc_data_bao_rdv_free);

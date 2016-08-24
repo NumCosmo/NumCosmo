@@ -2805,6 +2805,7 @@ ncm_mset_load (const gchar *filename, NcmSerialize *ser)
   
   g_key_file_unref (msetfile);
   g_strfreev (groups);
+    
   if (valid_map)
     ncm_mset_prepare_fparam_map (mset);
 

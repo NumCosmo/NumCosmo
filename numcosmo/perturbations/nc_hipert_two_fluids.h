@@ -37,6 +37,7 @@
 #include <numcosmo/perturbations/nc_hipert.h>
 #include <numcosmo/perturbations/nc_hipert_wkb.h>
 #include <numcosmo/perturbations/nc_hipert_itwo_fluids.h>
+#include <gsl/gsl_odeiv2.h>
 
 G_BEGIN_DECLS
 
@@ -63,34 +64,29 @@ struct _NcHIPertTwoFluids
   NcHIPertWKB *wkb_zeta;
   NcHIPertWKB *wkb_S;
   N_Vector abstol;
+  gboolean useQP;
+  NcmVector *state;
+  gpointer arg;
+  gpointer arkode;
 };
 
 /**
- * NcHIPertTwoFluidsVars:
- * @NC_HIPERT_TWO_FLUIDS_RE_ZETA: $\text{Re}(\zeta)$
- * @NC_HIPERT_TWO_FLUIDS_IM_ZETA: $\text{Im}(\zeta)$
- * @NC_HIPERT_TWO_FLUIDS_RE_PZETA: $\text{Re}(P_\zeta)$
- * @NC_HIPERT_TWO_FLUIDS_IM_PZETA: $\text{Im}(P_\zeta)$
- * @NC_HIPERT_TWO_FLUIDS_RE_Q: $\text{Re}(Q)$
- * @NC_HIPERT_TWO_FLUIDS_IM_Q: $\text{Im}(Q)$
- * @NC_HIPERT_TWO_FLUIDS_RE_PQ: $\text{Re}(P_Q)$
- * @NC_HIPERT_TWO_FLUIDS_IM_PQ: $\text{Im}(P_Q)$
+ * NcHIPertTwoFluidsCross:
+ * @NC_HIPERT_TWO_FLUIDS_CROSS_MODE1MAIN: FIXME
+ * @NC_HIPERT_TWO_FLUIDS_CROSS_MODE2MAIN: FIXME
+ * @NC_HIPERT_TWO_FLUIDS_CROSS_MODE1SUB: FIXME
+ * @NC_HIPERT_TWO_FLUIDS_CROSS_MODE2SUB: FIXME
  * 
- * Perturbation variables enumerator.
+ * FIXME
  * 
  */
-typedef enum _NcHIPertTwoFluidsVars
+typedef enum _NcHIPertTwoFluidsCross
 {
-  NC_HIPERT_TWO_FLUIDS_RE_ZETA = 0,
-  NC_HIPERT_TWO_FLUIDS_IM_ZETA,
-  NC_HIPERT_TWO_FLUIDS_RE_PZETA,
-  NC_HIPERT_TWO_FLUIDS_IM_PZETA,
-  NC_HIPERT_TWO_FLUIDS_RE_Q,
-  NC_HIPERT_TWO_FLUIDS_IM_Q,
-  NC_HIPERT_TWO_FLUIDS_RE_PQ,
-  NC_HIPERT_TWO_FLUIDS_IM_PQ, /*< private >*/
-  NC_HIPERT_TWO_FLUIDS_LEN,   /*< skip >*/
-} NcHIPertTwoFluidsVars;
+  NC_HIPERT_TWO_FLUIDS_CROSS_MODE1MAIN = 0,
+  NC_HIPERT_TWO_FLUIDS_CROSS_MODE2MAIN ,
+  NC_HIPERT_TWO_FLUIDS_CROSS_MODE1SUB,
+  NC_HIPERT_TWO_FLUIDS_CROSS_MODE2SUB,
+} NcHIPertTwoFluidsCross;
 
 GType nc_hipert_two_fluids_get_type (void) G_GNUC_CONST;
 
@@ -101,18 +97,22 @@ void nc_hipert_two_fluids_clear (NcHIPertTwoFluids **ptf);
 
 void nc_hipert_two_fluids_eom (NcHIPertTwoFluids *ptf, NcHICosmo *cosmo, gdouble alpha, NcHIPertITwoFluidsEOM **eom);
 
-void nc_hipert_two_fluids_get_init_cond (NcHIPertTwoFluids *ptf, NcHICosmo *cosmo, gdouble alpha, guint main_mode, const gdouble beta_R, gdouble *state);
+void nc_hipert_two_fluids_get_init_cond_QP (NcHIPertTwoFluids *ptf, NcHICosmo *cosmo, gdouble alpha, guint main_mode, const gdouble beta_R, NcmVector *init_cond);
+void nc_hipert_two_fluids_get_init_cond_zetaS (NcHIPertTwoFluids *ptf, NcHICosmo *cosmo, gdouble alpha, guint main_mode, const gdouble beta_R, NcmVector *init_cond);
 
-void nc_hipert_two_fluids_set_init_cond (NcHIPertTwoFluids *ptf, NcHICosmo *cosmo, gdouble alphai, gdouble *vars);
+void nc_hipert_two_fluids_set_init_cond (NcHIPertTwoFluids *ptf, NcHICosmo *cosmo, gdouble alpha, guint main_mode, gboolean useQP, NcmVector *init_cond);
 
-void nc_hipert_two_fluids_set_init_cond_wkb_zeta (NcHIPertTwoFluids *ptf, NcHICosmo *cosmo, gdouble alphai);
-
-void nc_hipert_two_fluids_set_init_cond_wkb_Q (NcHIPertTwoFluids *ptf, NcHICosmo *cosmo, gdouble alphai);
-
-void nc_hipert_two_fluids_to_zeta_s (NcHIPertTwoFluids *ptf, NcHICosmo *cosmo, gdouble alpha, gdouble *state);
+void nc_hipert_two_fluids_to_zeta_s (NcHIPertTwoFluids *ptf, NcHICosmo *cosmo, gdouble alpha, NcmVector *state);
 
 void nc_hipert_two_fluids_evolve (NcHIPertTwoFluids *ptf, NcHICosmo *cosmo, gdouble alphaf);
-void nc_hipert_two_fluids_get_values (NcHIPertTwoFluids *ptf, gdouble *alphai, gdouble **vars);
+NcmVector *nc_hipert_two_fluids_peek_state (NcHIPertTwoFluids *ptf, NcHICosmo *cosmo, gdouble *alpha);
+
+void nc_hipert_two_fluids_set_init_cond_mode1sub (NcHIPertTwoFluids *ptf, NcHICosmo *cosmo, gdouble alpha, NcmVector *init_cond);
+void nc_hipert_two_fluids_evolve_mode1sub (NcHIPertTwoFluids *ptf, NcHICosmo *cosmo, gdouble alphaf);
+
+gdouble nc_hipert_two_fluids_get_state_mod (NcHIPertTwoFluids *ptf);
+
+gdouble nc_hipert_two_fluids_get_cross_time (NcHIPertTwoFluids *ptf, NcHICosmo *cosmo, NcHIPertTwoFluidsCross cross, gdouble alpha_i, gdouble prec);
 
 #define NC_HIPERT_TWO_FLUIDS_A2Q(Ai) (cimag (Ai)) 
 #define NC_HIPERT_TWO_FLUIDS_A2P(Ai) (creal (Ai)) 

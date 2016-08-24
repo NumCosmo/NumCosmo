@@ -30,6 +30,7 @@
 #include <glib-object.h>
 #include <numcosmo/build_cfg.h>
 #include <numcosmo/math/ncm_model.h>
+#include <numcosmo/math/ncm_obj_array.h>
 
 #include <stdio.h>
 
@@ -67,7 +68,7 @@ struct _NcmMSet
 {
   /*< private >*/
   GObject parent_instance;
-  GPtrArray *model_array;
+  NcmObjArray *model_array;
   GHashTable *mid_item_hash;
   GHashTable *model_item_hash;
   GHashTable *fpi_hash;
@@ -151,7 +152,7 @@ NcmMSetPIndex *ncm_mset_pindex_dup (NcmMSetPIndex *pi);
 void ncm_mset_pindex_free (NcmMSetPIndex *pi);
 
 NcmMSet *ncm_mset_empty_new (void);
-NcmMSet *ncm_mset_new (gpointer model0, ...);
+NcmMSet *ncm_mset_new (gpointer model0, ...) G_GNUC_NULL_TERMINATED;
 NcmMSet *ncm_mset_newv (gpointer model0, va_list ap);
 NcmMSet *ncm_mset_new_array (GPtrArray *model_array);
 NcmMSet *ncm_mset_ref (NcmMSet *mset);

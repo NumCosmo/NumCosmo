@@ -195,7 +195,7 @@ _test_ncm_spline_add_tests (void (*tnew) (TestNcmSpline *test, gconstpointer pda
 #if !((GLIB_MAJOR_VERSION == 2) && (GLIB_MINOR_VERSION < 38))
   for (i = 0; _test_ncm_spline_traps[i].func != NULL; i++)
   {
-    gchar *tname = g_strdup_printf ("/numcosmo/%s%s", name, _test_ncm_spline_traps[i].name);  
+    gchar *tname = g_strdup_printf ("/ncm/%s%s", name, _test_ncm_spline_traps[i].name);  
     g_test_add (tname, TestNcmSpline, NULL, tnew, _test_ncm_spline_traps[i].func, tfree);
     g_free (tname);
   }
@@ -203,7 +203,7 @@ _test_ncm_spline_add_tests (void (*tnew) (TestNcmSpline *test, gconstpointer pda
 
   for (i = 0; _test_ncm_spline_tests[i].func != NULL; i++)
   {
-    gchar *tname = g_strdup_printf ("/numcosmo/%s%s", name, _test_ncm_spline_tests[i].name);  
+    gchar *tname = g_strdup_printf ("/ncm/%s%s", name, _test_ncm_spline_tests[i].name);  
     g_test_add (tname, TestNcmSpline, NULL, tnew, _test_ncm_spline_tests[i].func, tfree);
     g_free (tname);
   }
@@ -218,10 +218,10 @@ main (gint argc, gchar *argv[])
 
   _test_ncm_spline_add_tests (&test_ncm_spline_cubic_notaknot_new_empty,
                               &test_ncm_spline_free_empty,
-                              "ncm_spline_cubic_notaknot");
+                              "spline_cubic_notaknot");
   _test_ncm_spline_add_tests (&test_ncm_spline_gsl_cspline_new_empty,
                               &test_ncm_spline_free_empty,
-                              "ncm_spline_gsl/cspline");  
+                              "spline_gsl/cspline");  
   g_test_run ();
 }
 
@@ -231,7 +231,7 @@ main (gint argc, gchar *argv[])
 void
 test_ncm_spline_cubic_notaknot_new_empty (TestNcmSpline *test, gconstpointer pdata)
 {
-  test->name     = "ncm_spline_cubic_notaknot";
+  test->name     = "spline_cubic_notaknot";
   test->deriv2   = TRUE;
   test->nknots   = g_test_rand_int_range (_NCM_SPLINE_TEST_NKNOTS, 2 * _NCM_SPLINE_TEST_NKNOTS);
   test->dx       = _NCM_SPLINE_TEST_DX;
@@ -264,7 +264,7 @@ test_ncm_spline_cubic_notaknot_new_empty (TestNcmSpline *test, gconstpointer pda
 void
 test_ncm_spline_gsl_cspline_new_empty (TestNcmSpline *test, gconstpointer pdata)
 {
-  test->name     = "ncm_spline_gsl/cspline";
+  test->name     = "spline_gsl/cspline";
   test->deriv2   = FALSE;
   test->nknots   = g_test_rand_int_range (_NCM_SPLINE_TEST_NKNOTS, 2 * _NCM_SPLINE_TEST_NKNOTS);
   test->dx       = _NCM_SPLINE_TEST_DX;
@@ -876,7 +876,7 @@ test_ncm_spline_traps (TestNcmSpline *test, gconstpointer pdata)
   guint i;
   for (i = 0; _test_ncm_spline_traps[i].func != NULL; i++)
   {
-    gchar *tname = g_strdup_printf ("/numcosmo/%s%s", test->name, _test_ncm_spline_traps[i].name);
+    gchar *tname = g_strdup_printf ("/ncm/%s%s", test->name, _test_ncm_spline_traps[i].name);
     g_test_trap_subprocess (tname, 0, 0);
     g_test_trap_assert_failed ();
     g_free (tname);

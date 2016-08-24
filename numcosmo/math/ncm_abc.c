@@ -103,7 +103,7 @@ _ncm_abc_set_property (GObject *object, guint prop_id, const GValue *value, GPar
       g_assert (abc->mcat == NULL);
       if (mset == NULL)
         g_error ("ncm_abc_new: mset (NcmMSet) cannot be NULL."); 
-      abc->mcat = ncm_mset_catalog_new (mset, 1, 1, TRUE, "NcmABC:Distance");
+      abc->mcat = ncm_mset_catalog_new (mset, 1, 1, TRUE, "NcmABC:Distance", "d", NULL);
       break;
     }
     case PROP_PRIOR:
@@ -595,7 +595,7 @@ _ncm_abc_update (NcmABC *abc, NcmMSet *mset, gdouble dist, gdouble weight)
   const guint step = (abc->n / part) == 0 ? 1 : (abc->n / part);
   const guint pindex = abc->cur_sample_id % abc->nparticles;
 
-  ncm_mset_catalog_add_from_mset (abc->mcat, mset, dist, weight);
+  ncm_mset_catalog_add_from_mset (abc->mcat, mset, dist, weight, NULL);
   ncm_timer_task_increment (abc->nt);
   g_array_index (abc->weights, gdouble, pindex) = weight;
   g_array_index (abc->dists,   gdouble, pindex) = dist;

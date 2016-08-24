@@ -60,57 +60,57 @@ main (gint argc, gchar *argv[])
   ncm_cfg_init ();
   ncm_cfg_enable_gsl_err_handler ();
 
-  g_test_add ("/numcosmo/ncm_sparam/setget/lower_bound", TestNcmSparam, NULL,
+  g_test_add ("/ncm/sparam/setget/lower_bound", TestNcmSparam, NULL,
               &test_ncm_sparam_new,
               &test_ncm_sparam_setget_lower_bound,
               &test_ncm_sparam_free);
 
-  g_test_add ("/numcosmo/ncm_sparam/setget/upper_bound", TestNcmSparam, NULL,
+  g_test_add ("/ncm/sparam/setget/upper_bound", TestNcmSparam, NULL,
               &test_ncm_sparam_new,
               &test_ncm_sparam_setget_upper_bound,
               &test_ncm_sparam_free);
 
-  g_test_add ("/numcosmo/ncm_sparam/setget/scale", TestNcmSparam, NULL,
+  g_test_add ("/ncm/sparam/setget/scale", TestNcmSparam, NULL,
               &test_ncm_sparam_new,
               &test_ncm_sparam_setget_scale,
               &test_ncm_sparam_free);
 
-  g_test_add ("/numcosmo/ncm_sparam/setget/abstol", TestNcmSparam, NULL,
+  g_test_add ("/ncm/sparam/setget/abstol", TestNcmSparam, NULL,
               &test_ncm_sparam_new,
               &test_ncm_sparam_setget_abstol,
               &test_ncm_sparam_free);
 
-  g_test_add ("/numcosmo/ncm_sparam/setget/default_value", TestNcmSparam, NULL,
+  g_test_add ("/ncm/sparam/setget/default_value", TestNcmSparam, NULL,
               &test_ncm_sparam_new,
               &test_ncm_sparam_setget_default_value,
               &test_ncm_sparam_free);
 
-  g_test_add ("/numcosmo/ncm_sparam/traps", TestNcmSparam, NULL,
+  g_test_add ("/ncm/sparam/traps", TestNcmSparam, NULL,
               &test_ncm_sparam_new,
               &test_ncm_sparam_traps,
               &test_ncm_sparam_free);
 #if !((GLIB_MAJOR_VERSION == 2) && (GLIB_MINOR_VERSION < 38))
-  g_test_add ("/numcosmo/ncm_sparam/invalid/lower_bound/subprocess", TestNcmSparam, NULL,
+  g_test_add ("/ncm/sparam/invalid/lower_bound/subprocess", TestNcmSparam, NULL,
               &test_ncm_sparam_new,
               &test_ncm_sparam_invalid_lower_bound,
               &test_ncm_sparam_free);
 
-  g_test_add ("/numcosmo/ncm_sparam/invalid/upper_bound/subprocess", TestNcmSparam, NULL,
+  g_test_add ("/ncm/sparam/invalid/upper_bound/subprocess", TestNcmSparam, NULL,
               &test_ncm_sparam_new,
               &test_ncm_sparam_invalid_upper_bound,
               &test_ncm_sparam_free);
 
-  g_test_add ("/numcosmo/ncm_sparam/invalid/scale/subprocess", TestNcmSparam, NULL,
+  g_test_add ("/ncm/sparam/invalid/scale/subprocess", TestNcmSparam, NULL,
               &test_ncm_sparam_new,
               &test_ncm_sparam_invalid_scale,
               &test_ncm_sparam_free);
 
-  g_test_add ("/numcosmo/ncm_sparam/invalid/abstol/subprocess", TestNcmSparam, NULL,
+  g_test_add ("/ncm/sparam/invalid/abstol/subprocess", TestNcmSparam, NULL,
               &test_ncm_sparam_new,
               &test_ncm_sparam_invalid_abstol,
               &test_ncm_sparam_free);
 
-  g_test_add ("/numcosmo/ncm_sparam/invalid/default_value/subprocess", TestNcmSparam, NULL,
+  g_test_add ("/ncm/sparam/invalid/default_value/subprocess", TestNcmSparam, NULL,
               &test_ncm_sparam_new,
               &test_ncm_sparam_invalid_default_value,
               &test_ncm_sparam_free);
@@ -296,19 +296,19 @@ void
 test_ncm_sparam_traps (TestNcmSparam *test, gconstpointer pdata)
 {
 #if !((GLIB_MAJOR_VERSION == 2) && (GLIB_MINOR_VERSION < 38))
-  g_test_trap_subprocess ("/numcosmo/ncm_sparam/invalid/lower_bound/subprocess", 0, 0);
+  g_test_trap_subprocess ("/ncm/sparam/invalid/lower_bound/subprocess", 0, 0);
   g_test_trap_assert_failed ();
 
-  g_test_trap_subprocess ("/numcosmo/ncm_sparam/invalid/upper_bound/subprocess", 0, 0);
+  g_test_trap_subprocess ("/ncm/sparam/invalid/upper_bound/subprocess", 0, 0);
   g_test_trap_assert_failed ();
 
-  g_test_trap_subprocess ("/numcosmo/ncm_sparam/invalid/scale/subprocess", 0, 0);
+  g_test_trap_subprocess ("/ncm/sparam/invalid/scale/subprocess", 0, 0);
   g_test_trap_assert_failed ();
 
-  g_test_trap_subprocess ("/numcosmo/ncm_sparam/invalid/abstol/subprocess", 0, 0);
+  g_test_trap_subprocess ("/ncm/sparam/invalid/abstol/subprocess", 0, 0);
   g_test_trap_assert_failed ();
 
-  g_test_trap_subprocess ("/numcosmo/ncm_sparam/invalid/default_value/subprocess", 0, 0);
+  g_test_trap_subprocess ("/ncm/sparam/invalid/default_value/subprocess", 0, 0);
   g_test_trap_assert_failed ();
 #endif
 }

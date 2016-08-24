@@ -46,8 +46,8 @@ typedef struct _NcmSerializePrivate NcmSerializePrivate;
 /**
  * NcmSerializeOpt:
  * @NCM_SERIALIZE_OPT_NONE: Use default serialization.
- * @NCM_SERIALIZE_OPT_AUTOSAVE_SER: Whether to automatically save objects serializations.
- * @NCM_SERIALIZE_OPT_AUTONAME_SER: Whether to automatically include objects created from saved serialization in the named instances.
+ * @NCM_SERIALIZE_OPT_AUTOSAVE_SER: Whether to automatically include named deserialized objects in the named instances.
+ * @NCM_SERIALIZE_OPT_AUTONAME_SER: Whether to automatically name objects on serialization.
  * @NCM_SERIALIZE_OPT_CLEAN_DUP: Combination of NCM_SERIALIZE_OPT_AUTOSAVE_SER and NCM_SERIALIZE_OPT_AUTONAME_SER
  *
  * Options for serialization.
@@ -96,7 +96,9 @@ void ncm_serialize_log_stats (NcmSerialize *ser);
 gboolean ncm_serialize_contain_instance (NcmSerialize *ser, gpointer obj);
 gboolean ncm_serialize_contain_name (NcmSerialize *ser, const gchar *name);
 guint ncm_serialize_count_instances (NcmSerialize *ser);
+gpointer ncm_serialize_peek_by_name (NcmSerialize *ser, const gchar *name);
 gpointer ncm_serialize_get_by_name (NcmSerialize *ser, const gchar *name);
+
 gchar *ncm_serialize_peek_name (NcmSerialize *ser, gpointer obj);
 void ncm_serialize_set (NcmSerialize *ser, gpointer obj, const gchar *name, gboolean overwrite);
 gboolean ncm_serialize_is_named (NcmSerialize *ser, const gchar *serobj, gchar **name);
@@ -150,8 +152,8 @@ GObject *ncm_serialize_global_dup_obj (GObject *obj);
 #define NCM_SERIALIZE_VECTOR_TYPE "ad"
 #define NCM_SERIALIZE_MATRIX_TYPE "aad"
 #define NCM_SERIALIZE_STRV_TYPE "as"
-#define NCM_SERIALIZE_AUTOSAVE_NAME "auto:saved:"
-#define NCM_SERIALIZE_AUTOSAVE_NFORMAT "%04u"
+#define NCM_SERIALIZE_AUTOSAVE_NAME "S"
+#define NCM_SERIALIZE_AUTOSAVE_NFORMAT "%u"
 
 G_END_DECLS
 

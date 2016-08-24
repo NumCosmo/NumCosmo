@@ -62,52 +62,52 @@ main (gint argc, gchar *argv[])
   ncm_cfg_init ();
   ncm_cfg_enable_gsl_err_handler ();
   
-  g_test_add ("/numcosmo/ncm_integral1d/sinx/eval", TestNcmIntegral1d, NULL, 
+  g_test_add ("/ncm/integral1d/sinx/eval", TestNcmIntegral1d, NULL, 
               &test_ncm_integral1d_new_sinx, 
               &test_ncm_integral1d_sinx_eval, 
               &test_ncm_integral1d_free);
 
-  g_test_add ("/numcosmo/ncm_integral1d/sinx/hermite_p", TestNcmIntegral1d, NULL, 
+  g_test_add ("/ncm/integral1d/sinx/hermite_p", TestNcmIntegral1d, NULL, 
               &test_ncm_integral1d_new_sinx, 
               &test_ncm_integral1d_sinx_hermite_p, 
               &test_ncm_integral1d_free);
 
-  g_test_add ("/numcosmo/ncm_integral1d/sinx/hermite", TestNcmIntegral1d, NULL, 
+  g_test_add ("/ncm/integral1d/sinx/hermite", TestNcmIntegral1d, NULL, 
               &test_ncm_integral1d_new_sinx, 
               &test_ncm_integral1d_sinx_hermite, 
               &test_ncm_integral1d_free);
 
-  g_test_add ("/numcosmo/ncm_integral1d/sinx/laguerre", TestNcmIntegral1d, NULL, 
+  g_test_add ("/ncm/integral1d/sinx/laguerre", TestNcmIntegral1d, NULL, 
               &test_ncm_integral1d_new_sinx, 
               &test_ncm_integral1d_sinx_laguerre, 
               &test_ncm_integral1d_free);
 
-  g_test_add ("/numcosmo/ncm_integral1d/x5_2_sinx/eval", TestNcmIntegral1d, NULL, 
+  g_test_add ("/ncm/integral1d/x5_2_sinx/eval", TestNcmIntegral1d, NULL, 
               &test_ncm_integral1d_new_x5_2_sinx, 
               &test_ncm_integral1d_x5_2_sinx_eval, 
               &test_ncm_integral1d_free);
 
-  g_test_add ("/numcosmo/ncm_integral1d/x5_2_sinx/hermite_p", TestNcmIntegral1d, NULL, 
+  g_test_add ("/ncm/integral1d/x5_2_sinx/hermite_p", TestNcmIntegral1d, NULL, 
               &test_ncm_integral1d_new_x5_2_sinx, 
               &test_ncm_integral1d_x5_2_sinx_hermite_p, 
               &test_ncm_integral1d_free);
 
-  g_test_add ("/numcosmo/ncm_integral1d/x5_2_sinx/hermite", TestNcmIntegral1d, NULL, 
+  g_test_add ("/ncm/integral1d/x5_2_sinx/hermite", TestNcmIntegral1d, NULL, 
               &test_ncm_integral1d_new_x5_2_sinx, 
               &test_ncm_integral1d_x5_2_sinx_hermite, 
               &test_ncm_integral1d_free);
 
-  g_test_add ("/numcosmo/ncm_integral1d/x5_2_sinx/laguerre", TestNcmIntegral1d, NULL, 
+  g_test_add ("/ncm/integral1d/x5_2_sinx/laguerre", TestNcmIntegral1d, NULL, 
               &test_ncm_integral1d_new_x5_2_sinx, 
               &test_ncm_integral1d_x5_2_sinx_laguerre, 
               &test_ncm_integral1d_free);
 
-  g_test_add ("/numcosmo/ncm_integral1d/traps", TestNcmIntegral1d, NULL,
+  g_test_add ("/ncm/integral1d/traps", TestNcmIntegral1d, NULL,
               &test_ncm_integral1d_new_sinx,
               &test_ncm_integral1d_traps,
               &test_ncm_integral1d_free);
 #if !((GLIB_MAJOR_VERSION == 2) && (GLIB_MINOR_VERSION < 38))
-  g_test_add ("/numcosmo/ncm_integral1d/invalid/test/subprocess", TestNcmIntegral1d, NULL, 
+  g_test_add ("/ncm/integral1d/invalid/test/subprocess", TestNcmIntegral1d, NULL, 
               &test_ncm_integral1d_new_sinx, 
               &test_ncm_integral1d_invalid_test, 
               &test_ncm_integral1d_free);
@@ -302,7 +302,7 @@ void
 test_ncm_integral1d_traps (TestNcmIntegral1d *test, gconstpointer pdata)
 {
 #if !((GLIB_MAJOR_VERSION == 2) && (GLIB_MINOR_VERSION < 38))
-  g_test_trap_subprocess ("/numcosmo/ncm_integral1d/invalid/test/subprocess", 0, 0);
+  g_test_trap_subprocess ("/ncm/integral1d/invalid/test/subprocess", 0, 0);
   g_test_trap_assert_failed ();
 #endif
 }

@@ -79,7 +79,7 @@ void ncm_calc_class_check (NcmCalcClass *calc_class);
 
 void ncm_calc_prepare_array (NcmCalc *calc, NcmModel **ma);
 void ncm_calc_prepare_if_needed_array (NcmCalc *calc, NcmModel **ma);
-void ncm_calc_prepare_if_needed_vargs (NcmCalc *calc, ...);
+void ncm_calc_prepare_if_needed_vargs (NcmCalc *calc, ...) G_GNUC_NULL_TERMINATED;
 
 void ncm_calc_set_reltol (NcmCalc *calc, const gdouble reltol);
 void ncm_calc_set_abstol (NcmCalc *calc, const gdouble abstol);

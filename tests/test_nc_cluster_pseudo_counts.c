@@ -65,15 +65,15 @@ main (gint argc, gchar *argv[])
   ncm_cfg_init ();
   ncm_cfg_enable_gsl_err_handler ();
 
-  g_test_add ("/numcosmo/nc_cluster_pseudo_counts/1p2_integral", TestNcClusterPseudoCounts, NULL,
+  g_test_add ("/nc/cluster_pseudo_counts/1p2_integral", TestNcClusterPseudoCounts, NULL,
               &test_nc_cluster_pseudo_counts_new,
               &test_nc_cluster_pseudo_counts_1p2_integral,
               &test_nc_cluster_pseudo_counts_free);
-  g_test_add ("/numcosmo/nc_cluster_pseudo_counts/3d_integral", TestNcClusterPseudoCounts, NULL,
+  g_test_add ("/nc/cluster_pseudo_counts/3d_integral", TestNcClusterPseudoCounts, NULL,
               &test_nc_cluster_pseudo_counts_new,
               &test_nc_cluster_pseudo_counts_3d_integral,
               &test_nc_cluster_pseudo_counts_free);
-  g_test_add ("/numcosmo/nc_cluster_pseudo_counts/m2lnL", TestNcClusterPseudoCounts, NULL,
+  g_test_add ("/nc/cluster_pseudo_counts/m2lnL", TestNcClusterPseudoCounts, NULL,
               &test_nc_cluster_pseudo_counts_new,
               &test_nc_cluster_pseudo_counts_m2lnL,
               &test_nc_cluster_pseudo_counts_free);

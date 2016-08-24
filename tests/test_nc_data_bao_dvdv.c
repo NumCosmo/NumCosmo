@@ -53,11 +53,11 @@ main (gint argc, gchar *argv[])
   ncm_cfg_init ();
   ncm_cfg_enable_gsl_err_handler ();
 
-  g_test_add ("/numcosmo/nc_data_bao_dvdv/set_sample/percival2007", TestNcDataBaoDVDV, NULL,
+  g_test_add ("/nc/data_bao_dvdv/set_sample/percival2007", TestNcDataBaoDVDV, NULL,
               &test_nc_data_bao_dvdv_new_percival2007,
               &test_nc_data_bao_dvdv_set_sample_percival2007,
               &test_nc_data_bao_dvdv_free);
-  g_test_add ("/numcosmo/nc_data_bao_dvdv/set_sample/percival2010", TestNcDataBaoDVDV, NULL,
+  g_test_add ("/nc/data_bao_dvdv/set_sample/percival2010", TestNcDataBaoDVDV, NULL,
               &test_nc_data_bao_dvdv_new_percival2010,
               &test_nc_data_bao_dvdv_set_sample_percival2010,
               &test_nc_data_bao_dvdv_free);

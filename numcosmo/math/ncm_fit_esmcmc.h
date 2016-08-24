@@ -64,11 +64,16 @@ struct _NcmFitESMCMC
   NcmTimer *nt;
   NcmSerialize *ser;
   NcmFitESMCMCWalker *walker;
+  GPtrArray *full_theta;
+  GPtrArray *full_thetastar;
   GPtrArray *theta;
   GPtrArray *thetastar;
   NcmVector *jumps;
   GArray *accepted;
   GArray *offboard;
+  NcmObjArray *funcs_oa;
+  gchar *funcs_oa_file;
+  guint nadd_vals;
   guint fparam_len;
   guint nthreads;
   guint n;
@@ -93,6 +98,8 @@ struct _NcmFitESMCMCClass
 GType ncm_fit_esmcmc_get_type (void) G_GNUC_CONST;
 
 NcmFitESMCMC *ncm_fit_esmcmc_new (NcmFit *fit, gint nwalkers, NcmMSetTransKern *sampler, NcmFitESMCMCWalker *walker, NcmFitRunMsgs mtype);
+NcmFitESMCMC *ncm_fit_esmcmc_new_funcs_array (NcmFit *fit, gint nwalkers, NcmMSetTransKern *sampler, NcmFitESMCMCWalker *walker, NcmFitRunMsgs mtype, NcmObjArray *funcs_array);
+
 void ncm_fit_esmcmc_free (NcmFitESMCMC *esmcmc);
 void ncm_fit_esmcmc_clear (NcmFitESMCMC **esmcmc);
 
@@ -118,7 +125,6 @@ NcmMSetCatalog *ncm_fit_esmcmc_get_catalog (NcmFitESMCMC *esmcmc);
 gboolean ncm_fit_esmcmc_validate (NcmFitESMCMC *esmcmc, gulong pi, gulong pf);
 
 #define NCM_FIT_ESMCMC_MIN_SYNC_INTERVAL (10.0)
-#define NCM_FIT_ESMCMC_NADD_VALS (1)
 #define NCM_FIT_ESMCMC_M2LNL_ID (0)
 
 G_END_DECLS

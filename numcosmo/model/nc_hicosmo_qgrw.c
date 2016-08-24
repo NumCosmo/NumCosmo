@@ -124,7 +124,7 @@ nc_hicosmo_qgrw_class_init (NcHICosmoQGRWClass *klass)
                                NCM_PARAM_TYPE_FREE);
   /* Set w param info */
   ncm_model_class_set_sparam (model_class, NC_HICOSMO_QGRW_W, "w", "w",
-                               1e-25,  1.0, 1.0e-8,
+                               1e-50,  1.0, 1.0e-8,
                                NC_HICOSMO_DEFAULT_PARAMS_ABSTOL, NC_HICOSMO_QGRW_DEFAULT_W,
                                NCM_PARAM_TYPE_FIXED);
   /* Set xb param info */

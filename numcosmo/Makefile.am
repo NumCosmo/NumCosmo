@@ -94,6 +94,7 @@ ncm_sources = \
 	math/ncm_model_builder.c             \
 	math/ncm_mset.c                      \
 	math/ncm_mset_func.c                 \
+	math/ncm_mset_func_list.c            \
 	math/ncm_calc.c                      \
 	math/ncm_ode_spline.c                \
 	math/ncm_reparam.c                   \
@@ -106,7 +107,13 @@ ncm_sources = \
 	math/ncm_data_poisson.c              \
 	math/ncm_dataset.c                   \
 	math/ncm_likelihood.c                \
-	math/ncm_priors.c                    \
+	math/ncm_prior.c                     \
+	math/ncm_prior_gauss.c               \
+	math/ncm_prior_gauss_param.c         \
+	math/ncm_prior_gauss_func.c          \
+	math/ncm_prior_flat.c                \
+	math/ncm_prior_flat_param.c          \
+	math/ncm_prior_flat_func.c           \
 	math/ncm_mset_trans_kern.c           \
 	math/ncm_mset_trans_kern_flat.c      \
 	math/ncm_mset_trans_kern_gauss.c     \
@@ -191,6 +198,7 @@ ncm_headers =                                \
 	math/ncm_model_builder.h             \
 	math/ncm_mset.h                      \
 	math/ncm_mset_func.h                 \
+	math/ncm_mset_func_list.h            \
 	math/ncm_calc.h                      \
 	math/ncm_ode_spline.h                \
 	math/ncm_reparam.h                   \
@@ -206,7 +214,13 @@ ncm_headers =                                \
 	math/ncm_mset_trans_kern.h           \
 	math/ncm_mset_trans_kern_flat.h      \
 	math/ncm_mset_trans_kern_gauss.h     \
-	math/ncm_priors.h                    \
+	math/ncm_prior.h                     \
+	math/ncm_prior_gauss.h               \
+	math/ncm_prior_gauss_param.h         \
+	math/ncm_prior_gauss_func.h          \
+	math/ncm_prior_flat.h                \
+	math/ncm_prior_flat_param.h          \
+	math/ncm_prior_flat_func.h           \
 	math/ncm_fit_state.h                 \
 	math/ncm_fit.h                       \
 	math/ncm_fit_levmar.h                \

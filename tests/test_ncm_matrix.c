@@ -52,18 +52,18 @@ main (gint argc, gchar *argv[])
   ncm_cfg_init ();
   ncm_cfg_enable_gsl_err_handler ();
 
-  g_test_add_func ("/numcosmo/ncm_matrix/new", &test_ncm_matrix_new);
-  g_test_add_func ("/numcosmo/ncm_matrix/new_gsl", &test_ncm_matrix_new_gsl);
-  g_test_add_func ("/numcosmo/ncm_matrix/new_array", &test_ncm_matrix_new_array);
-  g_test_add_func ("/numcosmo/ncm_matrix/new_data_slice", &test_ncm_matrix_new_data_slice);
-  g_test_add_func ("/numcosmo/ncm_matrix/new_data_malloc", &test_ncm_matrix_new_data_malloc);
-  g_test_add_func ("/numcosmo/ncm_matrix/new_data_static", &test_ncm_matrix_new_data_static);
-  g_test_add_func ("/numcosmo/ncm_matrix/new_data_static_tda", &test_ncm_matrix_new_data_static_tda);
-  g_test_add_func ("/numcosmo/ncm_matrix/operations", &test_ncm_matrix_operations);
-  g_test_add_func ("/numcosmo/ncm_matrix/add_mul", &test_ncm_matrix_add_mul);
-  g_test_add_func ("/numcosmo/ncm_matrix/submatrix", &test_ncm_matrix_submatrix);
-  g_test_add_func ("/numcosmo/ncm_matrix/serialization", &test_ncm_matrix_serialization);
-  g_test_add_func ("/numcosmo/ncm_matrix/free", &test_ncm_matrix_free);
+  g_test_add_func ("/ncm/matrix/new", &test_ncm_matrix_new);
+  g_test_add_func ("/ncm/matrix/new_gsl", &test_ncm_matrix_new_gsl);
+  g_test_add_func ("/ncm/matrix/new_array", &test_ncm_matrix_new_array);
+  g_test_add_func ("/ncm/matrix/new_data_slice", &test_ncm_matrix_new_data_slice);
+  g_test_add_func ("/ncm/matrix/new_data_malloc", &test_ncm_matrix_new_data_malloc);
+  g_test_add_func ("/ncm/matrix/new_data_static", &test_ncm_matrix_new_data_static);
+  g_test_add_func ("/ncm/matrix/new_data_static_tda", &test_ncm_matrix_new_data_static_tda);
+  g_test_add_func ("/ncm/matrix/operations", &test_ncm_matrix_operations);
+  g_test_add_func ("/ncm/matrix/add_mul", &test_ncm_matrix_add_mul);
+  g_test_add_func ("/ncm/matrix/submatrix", &test_ncm_matrix_submatrix);
+  g_test_add_func ("/ncm/matrix/serialization", &test_ncm_matrix_serialization);
+  g_test_add_func ("/ncm/matrix/free", &test_ncm_matrix_free);
 
   g_test_run ();
 }

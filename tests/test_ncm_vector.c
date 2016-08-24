@@ -73,164 +73,164 @@ main (gint argc, gchar *argv[])
 
   /* Default vector allocation */
 
-  g_test_add ("/numcosmo/ncm_vector/default/sanity", TestNcmVector, NULL, 
+  g_test_add ("/ncm/vector/default/sanity", TestNcmVector, NULL, 
               &test_ncm_vector_new, 
               &test_ncm_vector_sanity, 
               &test_ncm_vector_free);
 
-  g_test_add ("/numcosmo/ncm_vector/default/operations", TestNcmVector, NULL, 
+  g_test_add ("/ncm/vector/default/operations", TestNcmVector, NULL, 
               &test_ncm_vector_new, 
               &test_ncm_vector_operations, 
               &test_ncm_vector_free);
 
-  g_test_add ("/numcosmo/ncm_vector/default/subvector", TestNcmVector, NULL, 
+  g_test_add ("/ncm/vector/default/subvector", TestNcmVector, NULL, 
               &test_ncm_vector_new, 
               &test_ncm_vector_subvector,
               &test_ncm_vector_free);
 
-  g_test_add ("/numcosmo/ncm_vector/default/variant", TestNcmVector, NULL, 
+  g_test_add ("/ncm/vector/default/variant", TestNcmVector, NULL, 
               &test_ncm_vector_new, 
               &test_ncm_vector_variant,
               &test_ncm_vector_free);
 
-  g_test_add ("/numcosmo/ncm_vector/default/serialization", TestNcmVector, NULL, 
+  g_test_add ("/ncm/vector/default/serialization", TestNcmVector, NULL, 
               &test_ncm_vector_new, 
               &test_ncm_vector_serialization,
               &test_ncm_vector_free);
 
   /* GSL vector allocation */
 
-  g_test_add ("/numcosmo/ncm_vector/gsl/sanity", TestNcmVector, NULL, 
+  g_test_add ("/ncm/vector/gsl/sanity", TestNcmVector, NULL, 
               &test_ncm_vector_gsl_new, 
               &test_ncm_vector_sanity, 
               &test_ncm_vector_gsl_free);
   
-  g_test_add ("/numcosmo/ncm_vector/gsl/operations", TestNcmVector, NULL, 
+  g_test_add ("/ncm/vector/gsl/operations", TestNcmVector, NULL, 
               &test_ncm_vector_gsl_new, 
               &test_ncm_vector_operations, 
               &test_ncm_vector_gsl_free);
 
-  g_test_add ("/numcosmo/ncm_vector/gsl/subvector", TestNcmVector, NULL, 
+  g_test_add ("/ncm/vector/gsl/subvector", TestNcmVector, NULL, 
               &test_ncm_vector_gsl_new, 
               &test_ncm_vector_subvector,
               &test_ncm_vector_gsl_free);
 
-  g_test_add ("/numcosmo/ncm_vector/gsl/variant", TestNcmVector, NULL, 
+  g_test_add ("/ncm/vector/gsl/variant", TestNcmVector, NULL, 
               &test_ncm_vector_gsl_new, 
               &test_ncm_vector_variant,
               &test_ncm_vector_gsl_free);
 
-  g_test_add ("/numcosmo/ncm_vector/gsl/serialization", TestNcmVector, NULL, 
+  g_test_add ("/ncm/vector/gsl/serialization", TestNcmVector, NULL, 
               &test_ncm_vector_gsl_new, 
               &test_ncm_vector_serialization,
               &test_ncm_vector_gsl_free);
 
   /* Array vector allocation */
 
-  g_test_add ("/numcosmo/ncm_vector/array/sanity", TestNcmVector, NULL, 
+  g_test_add ("/ncm/vector/array/sanity", TestNcmVector, NULL, 
               &test_ncm_vector_array_new, 
               &test_ncm_vector_sanity, 
               &test_ncm_vector_array_free);
   
-  g_test_add ("/numcosmo/ncm_vector/array/operations", TestNcmVector, NULL, 
+  g_test_add ("/ncm/vector/array/operations", TestNcmVector, NULL, 
               &test_ncm_vector_array_new, 
               &test_ncm_vector_operations, 
               &test_ncm_vector_array_free);
 
-  g_test_add ("/numcosmo/ncm_vector/array/subvector", TestNcmVector, NULL, 
+  g_test_add ("/ncm/vector/array/subvector", TestNcmVector, NULL, 
               &test_ncm_vector_array_new, 
               &test_ncm_vector_subvector,
               &test_ncm_vector_array_free);
 
-  g_test_add ("/numcosmo/ncm_vector/array/variant", TestNcmVector, NULL, 
+  g_test_add ("/ncm/vector/array/variant", TestNcmVector, NULL, 
               &test_ncm_vector_array_new, 
               &test_ncm_vector_variant,
               &test_ncm_vector_array_free);
   
-  g_test_add ("/numcosmo/ncm_vector/array/serialization", TestNcmVector, NULL, 
+  g_test_add ("/ncm/vector/array/serialization", TestNcmVector, NULL, 
               &test_ncm_vector_array_new, 
               &test_ncm_vector_serialization,
               &test_ncm_vector_array_free);
 
   /* Data slice vector allocation */
 
-  g_test_add ("/numcosmo/ncm_vector/data_slice/sanity", TestNcmVector, NULL, 
+  g_test_add ("/ncm/vector/data_slice/sanity", TestNcmVector, NULL, 
               &test_ncm_vector_data_slice_new, 
               &test_ncm_vector_sanity, 
               &test_ncm_vector_data_slice_free);
   
-  g_test_add ("/numcosmo/ncm_vector/data_slice/operations", TestNcmVector, NULL, 
+  g_test_add ("/ncm/vector/data_slice/operations", TestNcmVector, NULL, 
               &test_ncm_vector_data_slice_new, 
               &test_ncm_vector_operations, 
               &test_ncm_vector_data_slice_free);
 
-  g_test_add ("/numcosmo/ncm_vector/data_slice/subvector", TestNcmVector, NULL, 
+  g_test_add ("/ncm/vector/data_slice/subvector", TestNcmVector, NULL, 
               &test_ncm_vector_data_slice_new, 
               &test_ncm_vector_subvector,
               &test_ncm_vector_data_slice_free);
 
-  g_test_add ("/numcosmo/ncm_vector/data_slice/variant", TestNcmVector, NULL, 
+  g_test_add ("/ncm/vector/data_slice/variant", TestNcmVector, NULL, 
               &test_ncm_vector_data_slice_new, 
               &test_ncm_vector_variant,
               &test_ncm_vector_data_slice_free);
   
-  g_test_add ("/numcosmo/ncm_vector/data_slice/serialization", TestNcmVector, NULL, 
+  g_test_add ("/ncm/vector/data_slice/serialization", TestNcmVector, NULL, 
               &test_ncm_vector_data_slice_new, 
               &test_ncm_vector_serialization,
               &test_ncm_vector_data_slice_free);
 
   /* Data malloc vector allocation */
 
-  g_test_add ("/numcosmo/ncm_vector/data_malloc/sanity", TestNcmVector, NULL, 
+  g_test_add ("/ncm/vector/data_malloc/sanity", TestNcmVector, NULL, 
               &test_ncm_vector_data_malloc_new, 
               &test_ncm_vector_sanity, 
               &test_ncm_vector_data_malloc_free);
   
-  g_test_add ("/numcosmo/ncm_vector/data_malloc/operations", TestNcmVector, NULL, 
+  g_test_add ("/ncm/vector/data_malloc/operations", TestNcmVector, NULL, 
               &test_ncm_vector_data_malloc_new, 
               &test_ncm_vector_operations, 
               &test_ncm_vector_data_malloc_free);
 
-  g_test_add ("/numcosmo/ncm_vector/data_malloc/subvector", TestNcmVector, NULL, 
+  g_test_add ("/ncm/vector/data_malloc/subvector", TestNcmVector, NULL, 
               &test_ncm_vector_data_malloc_new, 
               &test_ncm_vector_subvector,
               &test_ncm_vector_data_malloc_free);
 
-  g_test_add ("/numcosmo/ncm_vector/data_malloc/variant", TestNcmVector, NULL, 
+  g_test_add ("/ncm/vector/data_malloc/variant", TestNcmVector, NULL, 
               &test_ncm_vector_data_malloc_new, 
               &test_ncm_vector_variant,
               &test_ncm_vector_data_malloc_free);
 
   /* Data static vector allocation */
 
-  g_test_add ("/numcosmo/ncm_vector/data_static/sanity", TestNcmVector, NULL, 
+  g_test_add ("/ncm/vector/data_static/sanity", TestNcmVector, NULL, 
               &test_ncm_vector_data_static_new, 
               &test_ncm_vector_sanity, 
               &test_ncm_vector_data_static_free);
 
-  g_test_add ("/numcosmo/ncm_vector/data_static/operations", TestNcmVector, NULL, 
+  g_test_add ("/ncm/vector/data_static/operations", TestNcmVector, NULL, 
               &test_ncm_vector_data_static_new, 
               &test_ncm_vector_operations, 
               &test_ncm_vector_data_static_free);
 
-  g_test_add ("/numcosmo/ncm_vector/data_static/subvector", TestNcmVector, NULL, 
+  g_test_add ("/ncm/vector/data_static/subvector", TestNcmVector, NULL, 
               &test_ncm_vector_data_static_new, 
               &test_ncm_vector_subvector,
               &test_ncm_vector_data_static_free);
 
-  g_test_add ("/numcosmo/ncm_vector/data_static/variant", TestNcmVector, NULL, 
+  g_test_add ("/ncm/vector/data_static/variant", TestNcmVector, NULL, 
               &test_ncm_vector_data_static_new, 
               &test_ncm_vector_variant,
               &test_ncm_vector_data_static_free);
 
-  g_test_add ("/numcosmo/ncm_vector/data_static/serialization", TestNcmVector, NULL, 
+  g_test_add ("/ncm/vector/data_static/serialization", TestNcmVector, NULL, 
               &test_ncm_vector_data_static_new, 
               &test_ncm_vector_serialization,
               &test_ncm_vector_data_static_free);
 
   /* Data static vector allocation */
 
-  g_test_add ("/numcosmo/ncm_vector/data_const/sanity", TestNcmVector, NULL, 
+  g_test_add ("/ncm/vector/data_const/sanity", TestNcmVector, NULL, 
               &test_ncm_vector_data_const_new, 
               &test_ncm_vector_data_const_sanity, 
               &test_ncm_vector_data_const_free);

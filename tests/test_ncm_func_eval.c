@@ -49,7 +49,7 @@ main (gint argc, gchar *argv[])
   ncm_cfg_init ();
   ncm_cfg_enable_gsl_err_handler ();
   
-  g_test_add ("/numcosmo/ncm_func_eval/run", TestNcmSparam, NULL, 
+  g_test_add ("/ncm/func_eval/run", TestNcmSparam, NULL, 
               &test_ncm_func_eval_new, 
               &test_ncm_func_eval_run, 
               &test_ncm_func_eval_free);

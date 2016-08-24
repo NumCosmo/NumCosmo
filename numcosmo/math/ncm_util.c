@@ -866,6 +866,22 @@ ncm_sqrt1px_m1 (gdouble x)
 }
 
 /**
+ * ncm_cmpdbl:
+ * @x: a double.
+ * @y: a double.
+ *
+ * Returns: FIXME
+ */
+gdouble 
+ncm_cmpdbl (const gdouble x, const gdouble y)
+{
+  if (x == y)
+    return 0.0;
+  else
+    return fabs (2.0 * (x - y) / (x + y));
+}
+
+/**
  * ncm_cmp:
  * @x: a double.
  * @y: a double.
@@ -1088,6 +1104,37 @@ ncm_util_cvode_print_stats (gpointer cvode)
          nnonliniter, nconvfail, nerrortests, nrooteval, qcurorder, qlastorder);
 
   return TRUE;
+}
+
+/**
+ * ncm_util_basename_fits:
+ * @fits_filename: a fits filename
+ * 
+ * Extracts the extension .fits or .fit from @fits_filename and returns
+ * the prefix. If the extension is not found a copy of @fits_filename is
+ * returned.
+ * 
+ * Returns: (transfer full): prefix of @fits_filename.
+ */
+gchar *
+ncm_util_basename_fits (const gchar *fits_filename)
+{
+  GError *error          = NULL;
+  GRegex *fits_ext       = g_regex_new ("(.*)\\.[fF][iI][tT][sS]?$", 0, 0, &error);
+  GMatchInfo *match_info = NULL;
+  gchar *base_name       = NULL;
+
+  if (g_regex_match (fits_ext, fits_filename, 0, &match_info))
+  {
+    base_name = g_match_info_fetch (match_info, 1);
+  }
+  else
+    base_name = g_strdup (fits_filename);
+
+  g_match_info_free (match_info);
+  g_regex_unref (fits_ext);
+
+  return base_name;
 }
 
 void

@@ -17,7 +17,7 @@ Ncm.cfg_init ()
 #
 cosmo = Nc.HICosmo.new_from_name (Nc.HICosmo, "NcHICosmoQGRW")
 
-cosmo.props.w      = 1.0e-12
+cosmo.props.w      = 1.0e-16
 cosmo.props.Omegar = 1.0e-5
 cosmo.props.Omegaw = 1.0 - 1.0e-5
 
@@ -28,7 +28,7 @@ pert.set_mode_k (1.0);
 #wkb_prec = pert.reltol
 wkb_prec = 1.0e-10
 
-alpha_minf = -cosmo.abs_alpha (1.0e-26)
+alpha_minf = -cosmo.abs_alpha (1.0e-36)
 alphaf     = cosmo.abs_alpha (1.0e25)
 alphaf_wkb = pert.wkb_maxtime (cosmo, alpha_minf, -alphaf)
 alphai     = pert.wkb_maxtime_prec (cosmo, Nc.HIPertWKBCmp.POTENTIAL, wkb_prec, alpha_minf, -alphaf)

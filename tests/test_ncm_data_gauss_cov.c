@@ -50,12 +50,12 @@ main (gint argc, gchar *argv[])
   ncm_cfg_init ();
   ncm_cfg_enable_gsl_err_handler ();
 
-  g_test_add ("/numcosmo/ncm_data_gauss_cov_test/sanity", TestNcmDataGaussCovTest, NULL,
+  g_test_add ("/ncm/data_gauss_cov_test/sanity", TestNcmDataGaussCovTest, NULL,
               &test_ncm_data_gauss_cov_test_new,
               &test_ncm_data_gauss_cov_test_sanity,
               &test_ncm_data_gauss_cov_test_free);
 
-  g_test_add ("/numcosmo/ncm_data_gauss_cov_test/resample", TestNcmDataGaussCovTest, NULL,
+  g_test_add ("/ncm/data_gauss_cov_test/resample", TestNcmDataGaussCovTest, NULL,
               &test_ncm_data_gauss_cov_test_new,
               &test_ncm_data_gauss_cov_test_resample,
               &test_ncm_data_gauss_cov_test_free);

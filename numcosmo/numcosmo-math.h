@@ -75,6 +75,7 @@
 #include <numcosmo/math/ncm_model_builder.h>
 #include <numcosmo/math/ncm_mset.h>
 #include <numcosmo/math/ncm_mset_func.h>
+#include <numcosmo/math/ncm_mset_func_list.h>
 #include <numcosmo/math/ncm_calc.h>
 #include <numcosmo/math/ncm_ode_spline.h>
 #include <numcosmo/math/ncm_reparam_linear.h>
@@ -86,7 +87,13 @@
 #include <numcosmo/math/ncm_data_poisson.h>
 #include <numcosmo/math/ncm_dataset.h>
 #include <numcosmo/math/ncm_likelihood.h>
-#include <numcosmo/math/ncm_priors.h>
+#include <numcosmo/math/ncm_prior.h>
+#include <numcosmo/math/ncm_prior_gauss.h>
+#include <numcosmo/math/ncm_prior_gauss_param.h>
+#include <numcosmo/math/ncm_prior_gauss_func.h>
+#include <numcosmo/math/ncm_prior_flat.h>
+#include <numcosmo/math/ncm_prior_flat_param.h>
+#include <numcosmo/math/ncm_prior_flat_func.h>
 #include <numcosmo/math/function_cache.h>
 #include <numcosmo/math/ncm_cfg.h>
 #include <numcosmo/math/ncm_util.h>

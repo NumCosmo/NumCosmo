@@ -191,7 +191,7 @@ _ncm_fit_esmcmc_walker_walk_set_sys (NcmFitESMCMCWalker *walker, guint size, gui
     g_ptr_array_set_size (walk->thetabar, 0);
     for (i = 0; i < size; i++)
     {
-      NcmVector *thetabar_i = ncm_vector_new (nparams + NCM_FIT_ESMCMC_NADD_VALS);
+      NcmVector *thetabar_i = ncm_vector_new (nparams);
       g_ptr_array_add (walk->thetabar, thetabar_i);
     }
     
@@ -302,14 +302,14 @@ _ncm_fit_esmcmc_walker_walk_step (NcmFitESMCMCWalker *walker, GPtrArray *theta, 
   ncm_vector_scale (thetabar_k, 1.0 / (1.0 * walk->nparams));
 
   ncm_vector_memcpy (thetastar, theta_k);
-  for (i = NCM_FIT_ESMCMC_NADD_VALS; i < walk->nparams + NCM_FIT_ESMCMC_NADD_VALS; i++)
+  for (i = 0; i < walk->nparams; i++)
   {
     const gdouble z = ncm_matrix_get (walk->z, k, i);
     const guint j   = g_array_index (walk->indices, guint, k * walk->nparams + i);
     NcmVector *theta_j = g_ptr_array_index (theta, j);
     guint m;
     
-    for (m = NCM_FIT_ESMCMC_NADD_VALS; m < walk->nparams + NCM_FIT_ESMCMC_NADD_VALS; m++)
+    for (m = 0; m < walk->nparams; m++)
     {
       const gdouble thetabar_k_i = ncm_vector_get (thetabar_k, i);
       const gdouble theta_j_i    = ncm_vector_get (theta_j, i);

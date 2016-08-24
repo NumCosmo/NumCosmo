@@ -33,27 +33,6 @@
 
 G_BEGIN_DECLS
 
-typedef struct _NcHICosmoPriorTop NcHICosmoPriorTop;
-
-/**
- * NcHICosmoPriorTop:
- * 
- * FIXME
- */
-struct _NcHICosmoPriorTop
-{
-  /*< private >*/
-  NcDistance *dist;
-  gdouble z;
-  gdouble mean;
-  gdouble sigma;
-};
-
-NcHICosmoPriorTop *nc_hicosmo_prior_top_new (gdouble z, gdouble alpha, gdouble sigma_alpha, gint n);
-void nc_hicosmo_prior_top_free (NcHICosmoPriorTop *tp);
-void nc_hicosmo_prior_top_set (NcHICosmoPriorTop *tp, gdouble z, gdouble alpha, gdouble sigma_alpha, gint n);
-void nc_hicosmo_prior_top_add (NcmLikelihood *lh, gdouble z, gdouble alpha, gdouble sigma_alpha, gint n);
-
 G_END_DECLS
 
 #endif /* _NC_HICOSMO_PRIORS_H_ */

@@ -174,36 +174,36 @@ main (gint argc, gchar *argv[])
   ncm_cfg_init ();
   ncm_cfg_enable_gsl_err_handler ();
 
-  g_test_add_func ("/numcosmo/ncm_spline2d_bicubic/notaknot/new_empty", &test_ncm_spline2d_bicubic_notaknot_new_empty);
-  g_test_add_func ("/numcosmo/ncm_spline2d_bicubic/notaknot/new", &test_ncm_spline2d_new);
-  g_test_add_func ("/numcosmo/ncm_spline2d_bicubic/notaknot/copy_empty", &test_ncm_spline2d_copy_empty);
-  g_test_add_func ("/numcosmo/ncm_spline2d_bicubic/notaknot/copy", &test_ncm_spline2d_copy);
-  g_test_add_func ("/numcosmo/ncm_spline2d_bicubic/notaknot/eval", &test_ncm_spline2d_eval);
-  g_test_add_func ("/numcosmo/ncm_spline2d_bicubic/notaknot/eval_integ_dx", &test_ncm_spline2d_eval_integ_dx);
-  g_test_add_func ("/numcosmo/ncm_spline2d_bicubic/notaknot/eval_integ_dy", &test_ncm_spline2d_eval_integ_dy);
-  g_test_add_func ("/numcosmo/ncm_spline2d_bicubic/notaknot/eval_integ_dxdy", &test_ncm_spline2d_eval_integ_dxdy);
-  g_test_add_func ("/numcosmo/ncm_spline2d_bicubic/notaknot/eval_integ_spline", &test_ncm_spline2d_eval_integ_x_y_xy_spline);
-  g_test_add_func ("/numcosmo/ncm_spline2d_bicubic/notaknot/free_empty", &test_ncm_spline2d_free_empty);
+  g_test_add_func ("/ncm/spline2d_bicubic/notaknot/new_empty", &test_ncm_spline2d_bicubic_notaknot_new_empty);
+  g_test_add_func ("/ncm/spline2d_bicubic/notaknot/new", &test_ncm_spline2d_new);
+  g_test_add_func ("/ncm/spline2d_bicubic/notaknot/copy_empty", &test_ncm_spline2d_copy_empty);
+  g_test_add_func ("/ncm/spline2d_bicubic/notaknot/copy", &test_ncm_spline2d_copy);
+  g_test_add_func ("/ncm/spline2d_bicubic/notaknot/eval", &test_ncm_spline2d_eval);
+  g_test_add_func ("/ncm/spline2d_bicubic/notaknot/eval_integ_dx", &test_ncm_spline2d_eval_integ_dx);
+  g_test_add_func ("/ncm/spline2d_bicubic/notaknot/eval_integ_dy", &test_ncm_spline2d_eval_integ_dy);
+  g_test_add_func ("/ncm/spline2d_bicubic/notaknot/eval_integ_dxdy", &test_ncm_spline2d_eval_integ_dxdy);
+  g_test_add_func ("/ncm/spline2d_bicubic/notaknot/eval_integ_spline", &test_ncm_spline2d_eval_integ_x_y_xy_spline);
+  g_test_add_func ("/ncm/spline2d_bicubic/notaknot/free_empty", &test_ncm_spline2d_free_empty);
 
-  g_test_add_func ("/numcosmo/ncm_spline2d_gsl/cspline/new_empty", &test_ncm_spline2d_gsl_cspline_new_empty);
-  g_test_add_func ("/numcosmo/ncm_spline2d_gsl/cspline/new", &test_ncm_spline2d_new);
-  g_test_add_func ("/numcosmo/ncm_spline2d_gsl/cspline/copy_empty", &test_ncm_spline2d_copy_empty);
-  g_test_add_func ("/numcosmo/ncm_spline2d_gsl/cspline/copy", &test_ncm_spline2d_copy);
-  g_test_add_func ("/numcosmo/ncm_spline2d_gsl/cspline/eval", &test_ncm_spline2d_eval);
-  g_test_add_func ("/numcosmo/ncm_spline2d_gsl/cspline/eval_integ_dx", &test_ncm_spline2d_eval_integ_dx);
-  g_test_add_func ("/numcosmo/ncm_spline2d_gsl/cspline/eval_integ_dy", &test_ncm_spline2d_eval_integ_dy);
-  g_test_add_func ("/numcosmo/ncm_spline2d_gsl/cspline/eval_integ_dxdy", &test_ncm_spline2d_eval_integ_dxdy);
-  g_test_add_func ("/numcosmo/ncm_spline2d_gsl/cspline/free_empty", &test_ncm_spline2d_free_empty);
+  g_test_add_func ("/ncm/spline2d_gsl/cspline/new_empty", &test_ncm_spline2d_gsl_cspline_new_empty);
+  g_test_add_func ("/ncm/spline2d_gsl/cspline/new", &test_ncm_spline2d_new);
+  g_test_add_func ("/ncm/spline2d_gsl/cspline/copy_empty", &test_ncm_spline2d_copy_empty);
+  g_test_add_func ("/ncm/spline2d_gsl/cspline/copy", &test_ncm_spline2d_copy);
+  g_test_add_func ("/ncm/spline2d_gsl/cspline/eval", &test_ncm_spline2d_eval);
+  g_test_add_func ("/ncm/spline2d_gsl/cspline/eval_integ_dx", &test_ncm_spline2d_eval_integ_dx);
+  g_test_add_func ("/ncm/spline2d_gsl/cspline/eval_integ_dy", &test_ncm_spline2d_eval_integ_dy);
+  g_test_add_func ("/ncm/spline2d_gsl/cspline/eval_integ_dxdy", &test_ncm_spline2d_eval_integ_dxdy);
+  g_test_add_func ("/ncm/spline2d_gsl/cspline/free_empty", &test_ncm_spline2d_free_empty);
 
-  g_test_add_func ("/numcosmo/ncm_spline2d_spline/new_empty", &test_ncm_spline2d_spline_new_empty);
-  g_test_add_func ("/numcosmo/ncm_spline2d_spline/new", &test_ncm_spline2d_new);
-  g_test_add_func ("/numcosmo/ncm_spline2d_spline/copy_empty", &test_ncm_spline2d_copy_empty);
-  g_test_add_func ("/numcosmo/ncm_spline2d_spline/copy", &test_ncm_spline2d_copy);
-  g_test_add_func ("/numcosmo/ncm_spline2d_spline/eval", &test_ncm_spline2d_eval);
-  g_test_add_func ("/numcosmo/ncm_spline2d_spline/eval_integ_dx", &test_ncm_spline2d_eval_integ_dx);
-  g_test_add_func ("/numcosmo/ncm_spline2d_spline/eval_integ_dy", &test_ncm_spline2d_eval_integ_dy);
-  g_test_add_func ("/numcosmo/ncm_spline2d_spline/eval_integ_dxdy", &test_ncm_spline2d_eval_integ_dxdy);
-  g_test_add_func ("/numcosmo/ncm_spline2d_spline/free_empty", &test_ncm_spline2d_free_empty);
+  g_test_add_func ("/ncm/spline2d_spline/new_empty", &test_ncm_spline2d_spline_new_empty);
+  g_test_add_func ("/ncm/spline2d_spline/new", &test_ncm_spline2d_new);
+  g_test_add_func ("/ncm/spline2d_spline/copy_empty", &test_ncm_spline2d_copy_empty);
+  g_test_add_func ("/ncm/spline2d_spline/copy", &test_ncm_spline2d_copy);
+  g_test_add_func ("/ncm/spline2d_spline/eval", &test_ncm_spline2d_eval);
+  g_test_add_func ("/ncm/spline2d_spline/eval_integ_dx", &test_ncm_spline2d_eval_integ_dx);
+  g_test_add_func ("/ncm/spline2d_spline/eval_integ_dy", &test_ncm_spline2d_eval_integ_dy);
+  g_test_add_func ("/ncm/spline2d_spline/eval_integ_dxdy", &test_ncm_spline2d_eval_integ_dxdy);
+  g_test_add_func ("/ncm/spline2d_spline/free_empty", &test_ncm_spline2d_free_empty);
 
   g_test_run ();
 }

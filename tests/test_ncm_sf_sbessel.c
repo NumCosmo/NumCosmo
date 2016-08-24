@@ -48,7 +48,7 @@ main (gint argc, gchar *argv[])
 
     g_test_init (&argc, &argv, NULL);
     ncm_cfg_init ();
-    //ncm_cfg_enable_gsl_err_handler ();
+    //cfg_enable_gsl_err_handler ();
 
     for (j = 430; j <= L; j++)
     {

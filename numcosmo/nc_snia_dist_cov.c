@@ -212,7 +212,7 @@ nc_snia_dist_cov_class_init (NcSNIADistCovClass *klass)
                               NC_SNIA_DIST_COV_DEFAULT_PARAMS_ABSTOL, NC_SNIA_DIST_COV_DEFAULT_M1,
                               NCM_PARAM_TYPE_FIXED);
 
-  ncm_model_class_set_sparam (model_class, NC_SNIA_DIST_COV_M2, "\\mathcal{M}_1", "M2",
+  ncm_model_class_set_sparam (model_class, NC_SNIA_DIST_COV_M2, "\\mathcal{M}_2", "M2",
                               -30.0, -10.0, 1.0,
                               NC_SNIA_DIST_COV_DEFAULT_PARAMS_ABSTOL, NC_SNIA_DIST_COV_DEFAULT_M2,
                               NCM_PARAM_TYPE_FIXED);

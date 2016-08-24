@@ -39,9 +39,9 @@ main (gint argc, gchar *argv[])
   ncm_cfg_init ();
   /* ncm_cfg_enable_gsl_err_handler (); */
 
-  g_test_add_func ("/numcosmo/nc_recomb/seager/new", &test_nc_recomb_seager_new);
-  g_test_add_func ("/numcosmo/nc_recomb/seager/wmap/zstar", &test_nc_recomb_seager_wmap_zstar);
-  g_test_add_func ("/numcosmo/nc_recomb/seager/wmap/Xe_ini", &test_nc_recomb_seager_Xe_ini);
+  g_test_add_func ("/nc/recomb/seager/new", &test_nc_recomb_seager_new);
+  g_test_add_func ("/nc/recomb/seager/wmap/zstar", &test_nc_recomb_seager_wmap_zstar);
+  g_test_add_func ("/nc/recomb/seager/wmap/Xe_ini", &test_nc_recomb_seager_Xe_ini);
 
   g_test_run ();
 }

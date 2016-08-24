@@ -73,7 +73,9 @@ ncm_fit_mcbs_set_property (GObject *object, guint prop_id, const GValue *value, 
       mcbs->fit = g_value_dup_object (value);
       mcbs->mc_resample = ncm_fit_mc_new (mcbs->fit, NCM_FIT_MC_RESAMPLE_FROM_MODEL, NCM_FIT_RUN_MSGS_NONE);
       mcbs->mc_bstrap = ncm_fit_mc_new (mcbs->fit, NCM_FIT_MC_RESAMPLE_BOOTSTRAP_NOMIX, NCM_FIT_RUN_MSGS_NONE);
-      mcbs->mcat = ncm_mset_catalog_new (mcbs->fit->mset, 1, 1, FALSE, NCM_MSET_CATALOG_M2LNL_COLNAME);
+      mcbs->mcat = ncm_mset_catalog_new (mcbs->fit->mset, 1, 1, FALSE, 
+                                         NCM_MSET_CATALOG_M2LNL_COLNAME, NCM_MSET_CATALOG_M2LNL_SYMBOL, 
+                                         NULL);
       ncm_mset_catalog_set_run_type (mcbs->mcat, NCM_MSET_CATALOG_RTYPE_BSTRAP_MEAN);
       break;
     case PROP_FILE:

@@ -41,6 +41,7 @@
 #include "nc_hireion.h"
 #include "math/ncm_serialize.h"
 #include "math/ncm_cfg.h"
+#include "math/ncm_mset_func_list.h"
 
 G_DEFINE_ABSTRACT_TYPE (NcHICosmo, nc_hicosmo, NCM_TYPE_MODEL);
 
@@ -75,6 +76,25 @@ static gboolean _nc_hicosmo_valid (NcmModel *model);
 NCM_MSET_MODEL_REGISTER_ID (nc_hicosmo, NC_TYPE_HICOSMO);
 static void _nc_hicosmo_add_submodel (NcmModel *model, NcmModel *submodel);
 
+static gdouble _nc_hicosmo_H0 (NcHICosmo *cosmo);
+static gdouble _nc_hicosmo_Omega_b0 (NcHICosmo *cosmo);
+static gdouble _nc_hicosmo_Omega_g0 (NcHICosmo *cosmo);
+static gdouble _nc_hicosmo_Omega_nu0 (NcHICosmo *cosmo);
+static gdouble _nc_hicosmo_Omega_r0 (NcHICosmo *cosmo);
+static gdouble _nc_hicosmo_Omega_c0 (NcHICosmo *cosmo);
+static gdouble _nc_hicosmo_Omega_t0 (NcHICosmo *cosmo);
+static gdouble _nc_hicosmo_T_gamma0 (NcHICosmo *cosmo);
+static gdouble _nc_hicosmo_Yp_4He (NcHICosmo *cosmo);
+static gdouble _nc_hicosmo_z_lss (NcHICosmo *cosmo);
+static gdouble _nc_hicosmo_as_drag (NcHICosmo *cosmo);
+static gdouble _nc_hicosmo_xb (NcHICosmo *cosmo);
+
+static gdouble _nc_hicosmo_E2 (NcHICosmo *cosmo, gdouble z);
+static gdouble _nc_hicosmo_dE2_dz (NcHICosmo *cosmo, gdouble z);
+static gdouble _nc_hicosmo_d2E2_dz2 (NcHICosmo *cosmo, gdouble z);
+static gdouble _nc_hicosmo_bgp_cs2 (NcHICosmo *cosmo, gdouble z);
+static gdouble _nc_hicosmo_Dc (NcHICosmo *cosmo, gdouble z);
+
 static void
 nc_hicosmo_class_init (NcHICosmoClass *klass)
 {
@@ -98,76 +118,44 @@ nc_hicosmo_class_init (NcHICosmoClass *klass)
 
   model_class->valid        = &_nc_hicosmo_valid;
   model_class->add_submodel = &_nc_hicosmo_add_submodel;
-  
-  klass->func_table   = g_array_new (FALSE, FALSE, sizeof (NcHICosmoFunc));
-  klass->func_z_table = g_array_new (FALSE, FALSE, sizeof (NcHICosmoFuncZ));
-  klass->func_hash    = g_hash_table_new (g_str_hash, g_str_equal);
-  klass->func_z_hash  = g_hash_table_new (g_str_hash, g_str_equal);
 
-  
-  {
-    NcHICosmoFunc func_table[] =
-    {
-      {"H0",          "Hubble constant.",                           &nc_hicosmo_H0,          NC_HICOSMO_IMPL_H0},
-      {"RH_Mpc",      "Hubble radius today in Mpc.",                &nc_hicosmo_RH_Mpc,      NC_HICOSMO_IMPL_RH_Mpc},
-      {"h",           "Dimensionless Hubble constant.",             &nc_hicosmo_h,           NC_HICOSMO_IMPL_h},
-      {"h2",          "Dimensionless Hubble constant square.",      &nc_hicosmo_h2,          NC_HICOSMO_IMPL_h2},
-      {"Omega_b0",    "Baryons density today.",                     &nc_hicosmo_Omega_b0,    NC_HICOSMO_IMPL_Omega_b0},
-      {"Omega_c0",    "CDM density today.",                         &nc_hicosmo_Omega_c0,    NC_HICOSMO_IMPL_Omega_c0},
-      {"Omega_g0",    "Photons density today.",                     &nc_hicosmo_Omega_g0,    NC_HICOSMO_IMPL_Omega_g0},
-      {"Omega_nu0",   "Ultra-relativistic neutrino density today.", &nc_hicosmo_Omega_nu0,   NC_HICOSMO_IMPL_Omega_nu0},
-      {"Omega_m0",    "Total dust matter density today.",           &nc_hicosmo_Omega_m0,    NC_HICOSMO_IMPL_Omega_m0},
-      {"Omega_r0",    "Radiation density today.",                   &nc_hicosmo_Omega_r0,    NC_HICOSMO_IMPL_Omega_r0},
-      {"Omega_t0",    "Total energy density today.",                &nc_hicosmo_Omega_t0,    NC_HICOSMO_IMPL_Omega_t0},
-      {"Omega_k0",    "Curvature scale.",                           &nc_hicosmo_Omega_k0,    NC_HICOSMO_IMPL_Omega_k0},
-      {"Omega_b0h2",  "Baryons density today times h^2.",           &nc_hicosmo_Omega_b0h2,  NC_HICOSMO_IMPL_Omega_b0h2},
-      {"Omega_c0h2",  "CDM density today times h^2.",               &nc_hicosmo_Omega_c0h2,  NC_HICOSMO_IMPL_Omega_c0h2},
-      {"Omega_g0h2",  "Photons density today times h^2.",           &nc_hicosmo_Omega_g0h2,  NC_HICOSMO_IMPL_Omega_g0h2},
-      {"Omega_nu0h2", "UR Neutrinos density today times h^2.",      &nc_hicosmo_Omega_nu0h2, NC_HICOSMO_IMPL_Omega_nu0h2},
-      {"Omega_m0h2",  "Total dust matter density today times h^2.", &nc_hicosmo_Omega_m0h2,  NC_HICOSMO_IMPL_Omega_m0h2},
-      {"Omega_r0h2",  "Total radiation today times h^2.",           &nc_hicosmo_Omega_r0h2,  NC_HICOSMO_IMPL_Omega_r0h2},
-      {"T_gamma0",    "Photons temperature today.",                 &nc_hicosmo_T_gamma0,    NC_HICOSMO_IMPL_T_gamma0},
-      {"Yp_4He",      "Primordial Helium mass fraction.",           &nc_hicosmo_Yp_4He,      NC_HICOSMO_IMPL_Yp_4He},
-      {"H_Yp",        "Primordial Hydrogen mass fraction.",         &nc_hicosmo_Yp_1H,       NC_HICOSMO_IMPL_H_Yp},
-      {"XHe",         "Primordial Helium abundance.",               &nc_hicosmo_XHe,         NC_HICOSMO_IMPL_XHe},
-      {"z_lss",       "redshift at lss.",                           &nc_hicosmo_z_lss,       NC_HICOSMO_IMPL_z_lss},
-      {"as_drag",     "as_drag.",                                   &nc_hicosmo_as_drag,     NC_HICOSMO_IMPL_as_drag},
-      {"xb",          "Bounce scale.",                              &nc_hicosmo_xb,          NC_HICOSMO_IMPL_xb},
-    };
-    const guint nfuncs = sizeof (func_table) / sizeof (NcHICosmoFunc);
-    guint i;
-    for (i = 0; i < nfuncs; i++)
-    {
-      g_array_append_val (klass->func_table, func_table[i]);
-      g_hash_table_insert (klass->func_hash, (gchar *)func_table[i].name, GINT_TO_POINTER (i + 1));
-    }
-  }
-
-  {
-    NcHICosmoFuncZ func_z_table[] =
-    {
-      {"H",        "Hubble function.",                            &nc_hicosmo_H,               NC_HICOSMO_IMPL_H},
-      {"dH_dz",    "Derivative of the Hubble function.",          &nc_hicosmo_dH_dz,           NC_HICOSMO_IMPL_dH_dz},
-      {"E",        "Hubble function over H_0.",                   &nc_hicosmo_E,               NC_HICOSMO_IMPL_E},
-      {"E2",       "Hubble function over H_0 squared.",           &nc_hicosmo_E2,              NC_HICOSMO_IMPL_E2},
-      {"Em2",      "One over Hubble function over H_0 squared.",  &nc_hicosmo_Em2,             NC_HICOSMO_IMPL_Em2},
-      {"dE2_dz",   "Derivative of the E2 function.",              &nc_hicosmo_dE2_dz,          NC_HICOSMO_IMPL_dE2_dz},
-      {"d2E2_dz2", "Second derivative of the E2 function.",       &nc_hicosmo_d2E2_dz2,        NC_HICOSMO_IMPL_d2E2_dz2},
-      {"q",        "Deceleration function.",                      &nc_hicosmo_q,               NC_HICOSMO_IMPL_q},
-      {"dec",      "DEC violation function.",                     &nc_hicosmo_dec,             NC_HICOSMO_IMPL_dec},
-      {"wec",      "WEC violation function.",                     &nc_hicosmo_wec,             NC_HICOSMO_IMPL_wec},
-      {"qp",       "Derivative of the deceleration function.",    &nc_hicosmo_qp,              NC_HICOSMO_IMPL_j},
-      {"j",        "Jerk function.",                              &nc_hicosmo_j,               NC_HICOSMO_IMPL_j},
-    };
-    const guint nfuncs = sizeof (func_z_table) / sizeof (NcHICosmoFuncZ);
-    guint i;
-    for (i = 0; i < nfuncs; i++)
-    {
-      g_array_append_val (klass->func_z_table, func_z_table[i]);
-      g_hash_table_insert (klass->func_z_hash, (gchar *)func_z_table[i].name, GINT_TO_POINTER (i + 1));
-    }
-  }
+  klass->H0        = &_nc_hicosmo_H0;
+  klass->Omega_b0  = &_nc_hicosmo_Omega_b0;
+  klass->Omega_g0  = &_nc_hicosmo_Omega_g0;
+  klass->Omega_nu0 = &_nc_hicosmo_Omega_nu0;
+  klass->Omega_r0  = &_nc_hicosmo_Omega_r0;
+  klass->Omega_c0  = &_nc_hicosmo_Omega_c0;
+  klass->Omega_t0  = &_nc_hicosmo_Omega_t0;
+  klass->T_gamma0  = &_nc_hicosmo_T_gamma0;
+  klass->Yp_4He    = &_nc_hicosmo_Yp_4He;
+  klass->z_lss     = &_nc_hicosmo_z_lss;
+  klass->as_drag   = &_nc_hicosmo_as_drag;
+  klass->xb        = &_nc_hicosmo_xb;
+  klass->E2        = &_nc_hicosmo_E2;
+  klass->dE2_dz    = &_nc_hicosmo_dE2_dz;
+  klass->d2E2_dz2  = &_nc_hicosmo_d2E2_dz2;
+  klass->bgp_cs2   = &_nc_hicosmo_bgp_cs2;
+  klass->Dc        = &_nc_hicosmo_Dc;
 }
+
+static gdouble _nc_hicosmo_H0 (NcHICosmo *cosmo)        { g_error ("nc_hicosmo_H0: model `%s' does not implement this function.", G_OBJECT_TYPE_NAME (cosmo)); return 0.0; }
+static gdouble _nc_hicosmo_Omega_b0 (NcHICosmo *cosmo)  { g_error ("nc_hicosmo_Omega_b0: model `%s' does not implement this function.", G_OBJECT_TYPE_NAME (cosmo)); return 0.0;  }
+static gdouble _nc_hicosmo_Omega_g0 (NcHICosmo *cosmo)  { g_error ("nc_hicosmo_Omega_g0: model `%s' does not implement this function.", G_OBJECT_TYPE_NAME (cosmo)); return 0.0;  }
+static gdouble _nc_hicosmo_Omega_nu0 (NcHICosmo *cosmo) { g_error ("nc_hicosmo_Omega_nu0: model `%s' does not implement this function.", G_OBJECT_TYPE_NAME (cosmo)); return 0.0;  }
+static gdouble _nc_hicosmo_Omega_r0 (NcHICosmo *cosmo)  { g_error ("nc_hicosmo_Omega_r0: model `%s' does not implement this function.", G_OBJECT_TYPE_NAME (cosmo)); return 0.0;  }
+static gdouble _nc_hicosmo_Omega_c0 (NcHICosmo *cosmo)  { g_error ("nc_hicosmo_Omega_c0: model `%s' does not implement this function.", G_OBJECT_TYPE_NAME (cosmo)); return 0.0;  }
+static gdouble _nc_hicosmo_Omega_t0 (NcHICosmo *cosmo)  { g_error ("nc_hicosmo_Omega_t0: model `%s' does not implement this function.", G_OBJECT_TYPE_NAME (cosmo)); return 0.0;  }
+static gdouble _nc_hicosmo_T_gamma0 (NcHICosmo *cosmo)  { g_error ("nc_hicosmo_T_gamma0: model `%s' does not implement this function.", G_OBJECT_TYPE_NAME (cosmo)); return 0.0;  }
+static gdouble _nc_hicosmo_Yp_4He (NcHICosmo *cosmo)    { g_error ("nc_hicosmo_Yp_4He: model `%s' does not implement this function.", G_OBJECT_TYPE_NAME (cosmo)); return 0.0;  }
+static gdouble _nc_hicosmo_z_lss (NcHICosmo *cosmo)     { g_error ("nc_hicosmo_z_lss: model `%s' does not implement this function.", G_OBJECT_TYPE_NAME (cosmo)); return 0.0;  }
+static gdouble _nc_hicosmo_as_drag (NcHICosmo *cosmo)   { g_error ("nc_hicosmo_as_drag: model `%s' does not implement this function.", G_OBJECT_TYPE_NAME (cosmo)); return 0.0;  }
+static gdouble _nc_hicosmo_xb (NcHICosmo *cosmo)        { g_error ("nc_hicosmo_xb: model `%s' does not implement this function.", G_OBJECT_TYPE_NAME (cosmo)); return 0.0;  }
+
+static gdouble _nc_hicosmo_E2 (NcHICosmo *cosmo, gdouble z)       { g_error ("nc_hicosmo_E2: model `%s' does not implement this function.", G_OBJECT_TYPE_NAME (cosmo)); return 0.0;  }
+static gdouble _nc_hicosmo_dE2_dz (NcHICosmo *cosmo, gdouble z)   { g_error ("nc_hicosmo_dE2_dz: model `%s' does not implement this function.", G_OBJECT_TYPE_NAME (cosmo)); return 0.0;  }
+static gdouble _nc_hicosmo_d2E2_dz2 (NcHICosmo *cosmo, gdouble z) { g_error ("nc_hicosmo_d2E2_dz2: model `%s' does not implement this function.", G_OBJECT_TYPE_NAME (cosmo)); return 0.0;  }
+static gdouble _nc_hicosmo_bgp_cs2 (NcHICosmo *cosmo, gdouble z)  { g_error ("nc_hicosmo_bgp_cs2: model `%s' does not implement this function.", G_OBJECT_TYPE_NAME (cosmo)); return 0.0;  }
+static gdouble _nc_hicosmo_Dc (NcHICosmo *cosmo, gdouble z)       { g_error ("nc_hicosmo_Dc: model `%s' does not implement this function.", G_OBJECT_TYPE_NAME (cosmo)); return 0.0;  }
 
 static gboolean
 _nc_hicosmo_valid (NcmModel *model)
@@ -457,68 +445,6 @@ nc_hicosmo_log_all_models (GType parent)
   _nc_hicosmo_log_all_models_go (parent, 0);
 }
 
-/**
- * nc_hicosmo_class_func_table:
- *
- * Returns: (transfer container) (element-type NcHICosmoFunc): the function table.
- */
-GArray *
-nc_hicosmo_class_func_table (void)
-{
-  NcHICosmoClass *hicosmo_class = g_type_class_ref (NC_TYPE_HICOSMO);
-  GArray *func_table = g_array_ref (hicosmo_class->func_table);
-  g_type_class_unref (hicosmo_class);
-  return func_table;
-}
-
-/**
- * nc_hicosmo_class_func_z_table:
- *
- * Returns: (transfer container) (element-type NcHICosmoFuncZ): the function table.
- */
-GArray *
-nc_hicosmo_class_func_z_table (void)
-{
-  NcHICosmoClass *hicosmo_class = g_type_class_ref (NC_TYPE_HICOSMO);
-  GArray *func_z_table = g_array_ref (hicosmo_class->func_z_table);
-  g_type_class_unref (hicosmo_class);
-  return func_z_table;
-}
-
-/**
- * nc_hicosmo_class_get_func:
- * @name: function name.
- *
- * Returns: (transfer none): the function @name or null if not found.
- */
-NcHICosmoFunc *
-nc_hicosmo_class_get_func (const gchar *name)
-{
-  NcHICosmoClass *hicosmo_class = g_type_class_ref (NC_TYPE_HICOSMO);
-  gpointer f_i_ptr = g_hash_table_lookup (hicosmo_class->func_hash, name);
-  guint f_i = GPOINTER_TO_INT (f_i_ptr) - 1;
-  NcHICosmoFunc *f = (f_i_ptr != NULL) ? &g_array_index (hicosmo_class->func_table, NcHICosmoFunc, f_i) : NULL;
-  g_type_class_unref (hicosmo_class);
-  return f;
-}
-
-/**
- * nc_hicosmo_class_get_func_z:
- * @name: function name.
- *
- * Returns: (transfer none): the function @name or null if not found.
- */
-NcHICosmoFuncZ *
-nc_hicosmo_class_get_func_z (const gchar *name)
-{
-  NcHICosmoClass *hicosmo_class = g_type_class_ref (NC_TYPE_HICOSMO);
-  gpointer f_i_ptr = g_hash_table_lookup (hicosmo_class->func_z_hash, name);
-  guint f_i = GPOINTER_TO_INT (f_i_ptr) - 1;
-  NcHICosmoFuncZ *fz = (f_i_ptr != NULL) ? &g_array_index (hicosmo_class->func_z_table, NcHICosmoFuncZ, f_i) : NULL;
-  g_type_class_unref (hicosmo_class);
-  return fz;
-}
-
 /*
  * Inlined functions
  */
@@ -539,6 +465,16 @@ nc_hicosmo_class_get_func_z (const gchar *name)
  * Mpc, i.e., $R_H = (c / (H_0 \times 1\,\mathrm{Mpc}))$. 
  *
  * Returns: $R_H \left[\mathrm{Mpc}\right]$.
+ */
+/**
+ * nc_hicosmo_RH_planck:
+ * @cosmo: a #NcHICosmo
+ *
+ * Calculates the Hubble radius in unit of
+ * Mpc, i.e., $R_H = (c / (H_0 \times l_\mathrm{planck}))$.
+ * See ncm_c_planck_length().
+ *
+ * Returns: $R_H \left[l_\mathrm{planck}\right]$.
  */
 /**
  * nc_hicosmo_h:
@@ -963,78 +899,100 @@ nc_hicosmo_class_get_func_z (const gchar *name)
  * Returns: (transfer none): the #NcHIReion submodel.
  */
 
-static void
-_nc_hicosmo_func0 (NcmMSet *mset, gpointer obj, const gdouble *x, gdouble *f)
-{
-  NcHICosmoFunc0 f0 = (NcHICosmoFunc0) obj;
-  NCM_UNUSED (x);
-  f[0] = f0 (NC_HICOSMO (ncm_mset_peek (mset, nc_hicosmo_id ())));
+#define _NC_HICOSMO_FUNC0_TO_FLIST(fname) \
+static void _nc_hicosmo_flist_##fname (NcmMSetFuncList *flist, NcmMSet *mset, const gdouble *x, gdouble *res) \
+{ \
+ NcHICosmo *cosmo = NC_HICOSMO (ncm_mset_peek (mset, nc_hicosmo_id ())); \
+ res[0] = nc_hicosmo_##fname (cosmo); \
 }
 
-static void
-_nc_hicosmo_func1 (NcmMSet *mset, gpointer obj, const gdouble *x, gdouble *f)
-{
-  NcHICosmoFunc1Z f1 = (NcHICosmoFunc1Z) obj;
-  f[0] = f1 (NC_HICOSMO (ncm_mset_peek (mset, nc_hicosmo_id ())), x[0]);
+_NC_HICOSMO_FUNC0_TO_FLIST (H0)
+_NC_HICOSMO_FUNC0_TO_FLIST (RH_Mpc)
+_NC_HICOSMO_FUNC0_TO_FLIST (RH_planck)
+_NC_HICOSMO_FUNC0_TO_FLIST (h)
+_NC_HICOSMO_FUNC0_TO_FLIST (h2)
+_NC_HICOSMO_FUNC0_TO_FLIST (Omega_b0)
+_NC_HICOSMO_FUNC0_TO_FLIST (Omega_c0)
+_NC_HICOSMO_FUNC0_TO_FLIST (Omega_g0)
+_NC_HICOSMO_FUNC0_TO_FLIST (Omega_nu0)
+_NC_HICOSMO_FUNC0_TO_FLIST (Omega_m0)
+_NC_HICOSMO_FUNC0_TO_FLIST (Omega_r0)
+_NC_HICOSMO_FUNC0_TO_FLIST (Omega_t0)
+_NC_HICOSMO_FUNC0_TO_FLIST (Omega_k0)
+_NC_HICOSMO_FUNC0_TO_FLIST (Omega_b0h2)
+_NC_HICOSMO_FUNC0_TO_FLIST (Omega_c0h2)
+_NC_HICOSMO_FUNC0_TO_FLIST (Omega_g0h2)
+_NC_HICOSMO_FUNC0_TO_FLIST (Omega_nu0h2)
+_NC_HICOSMO_FUNC0_TO_FLIST (Omega_m0h2)
+_NC_HICOSMO_FUNC0_TO_FLIST (Omega_r0h2)
+_NC_HICOSMO_FUNC0_TO_FLIST (T_gamma0)
+_NC_HICOSMO_FUNC0_TO_FLIST (Yp_4He)
+_NC_HICOSMO_FUNC0_TO_FLIST (Yp_1H)
+_NC_HICOSMO_FUNC0_TO_FLIST (XHe)
+_NC_HICOSMO_FUNC0_TO_FLIST (z_lss)
+_NC_HICOSMO_FUNC0_TO_FLIST (as_drag)
+_NC_HICOSMO_FUNC0_TO_FLIST (xb)
+
+#define _NC_HICOSMO_FUNC1_TO_FLIST(fname) \
+static void _nc_hicosmo_flist_##fname (NcmMSetFuncList *flist, NcmMSet *mset, const gdouble *x, gdouble *res) \
+{ \
+ NcHICosmo *cosmo = NC_HICOSMO (ncm_mset_peek (mset, nc_hicosmo_id ())); \
+ res[0] = nc_hicosmo_##fname (cosmo, x[0]); \
 }
 
-/**
- * nc_hicosmo_create_mset_func0:
- * @f0: (scope notified): FIXME
- *
- * Returns: (transfer full): FIXME
- */
-NcmMSetFunc *
-nc_hicosmo_create_mset_func0 (NcHICosmoFunc0 f0)
+_NC_HICOSMO_FUNC1_TO_FLIST (H)
+_NC_HICOSMO_FUNC1_TO_FLIST (dH_dz)
+_NC_HICOSMO_FUNC1_TO_FLIST (E)
+_NC_HICOSMO_FUNC1_TO_FLIST (E2)
+_NC_HICOSMO_FUNC1_TO_FLIST (Em2)
+_NC_HICOSMO_FUNC1_TO_FLIST (dE2_dz)
+_NC_HICOSMO_FUNC1_TO_FLIST (d2E2_dz2)
+_NC_HICOSMO_FUNC1_TO_FLIST (q)
+_NC_HICOSMO_FUNC1_TO_FLIST (dec)
+_NC_HICOSMO_FUNC1_TO_FLIST (wec)
+_NC_HICOSMO_FUNC1_TO_FLIST (qp)
+_NC_HICOSMO_FUNC1_TO_FLIST (j)
+
+void
+_nc_hicosmo_register_functions (void)
 {
-  return ncm_mset_func_new (&_nc_hicosmo_func0, 0, 1, f0, NULL);
-}
+  ncm_mset_func_list_register ("H0",          "H_0",                        "NcHICosmo", "Hubble constant",                           G_TYPE_NONE, _nc_hicosmo_flist_H0,          0, 1);
+  ncm_mset_func_list_register ("RH_Mpc",      "R_{H} [\\mathrm{Mpc}]",      "NcHICosmo", "Hubble radius today in Mpc",                G_TYPE_NONE, _nc_hicosmo_flist_RH_Mpc,      0, 1);
+  ncm_mset_func_list_register ("RH_planck",   "R_{H} [l_\\mathrm{planck}]", "NcHICosmo", "Hubble radius today in l_planck",           G_TYPE_NONE, _nc_hicosmo_flist_RH_planck,   0, 1);
+  ncm_mset_func_list_register ("h",           "h",                          "NcHICosmo", "Dimensionless Hubble constant",             G_TYPE_NONE, _nc_hicosmo_flist_h,           0, 1);
+  ncm_mset_func_list_register ("h2",          "h^2",                        "NcHICosmo", "Dimensionless Hubble constant squared",     G_TYPE_NONE, _nc_hicosmo_flist_h2,          0, 1);
+  ncm_mset_func_list_register ("Omega_b0",    "\\Omega_{b0}",               "NcHICosmo", "Baryons density today",                     G_TYPE_NONE, _nc_hicosmo_flist_Omega_b0,    0, 1);
+  ncm_mset_func_list_register ("Omega_c0",    "\\Omega_{c0}",               "NcHICosmo", "CDM density today",                         G_TYPE_NONE, _nc_hicosmo_flist_Omega_c0,    0, 1);
+  ncm_mset_func_list_register ("Omega_g0",    "\\Omega_{\\gamma0}",         "NcHICosmo", "Photons density today",                     G_TYPE_NONE, _nc_hicosmo_flist_Omega_g0,    0, 1);
+  ncm_mset_func_list_register ("Omega_nu0",   "\\Omega_{\\nu0}",            "NcHICosmo", "Ultra-relativistic neutrino density today", G_TYPE_NONE, _nc_hicosmo_flist_Omega_nu0,   0, 1);
+  ncm_mset_func_list_register ("Omega_m0",    "\\Omega_{m0}",               "NcHICosmo", "Total dust matter density today",           G_TYPE_NONE, _nc_hicosmo_flist_Omega_m0,    0, 1);
+  ncm_mset_func_list_register ("Omega_r0",    "\\Omega_{r0}",               "NcHICosmo", "Total radiation density today",             G_TYPE_NONE, _nc_hicosmo_flist_Omega_r0,    0, 1);
+  ncm_mset_func_list_register ("Omega_t0",    "\\Omega_{t0}",               "NcHICosmo", "Total energy density today",                G_TYPE_NONE, _nc_hicosmo_flist_Omega_t0,    0, 1);
+  ncm_mset_func_list_register ("Omega_k0",    "\\Omega_{k0}",               "NcHICosmo", "Curvature scale today",                     G_TYPE_NONE, _nc_hicosmo_flist_Omega_k0,    0, 1);
+  ncm_mset_func_list_register ("Omega_b0h2",  "\\Omega_{b0}h^2",            "NcHICosmo", "Baryons density today times h^2",           G_TYPE_NONE, _nc_hicosmo_flist_Omega_b0h2,  0, 1);
+  ncm_mset_func_list_register ("Omega_c0h2",  "\\Omega_{c0}h^2",            "NcHICosmo", "CDM density today times h^2",               G_TYPE_NONE, _nc_hicosmo_flist_Omega_c0h2,  0, 1);
+  ncm_mset_func_list_register ("Omega_g0h2",  "\\Omega_{\\gamma0}h^2",      "NcHICosmo", "Photons density today times h^2",           G_TYPE_NONE, _nc_hicosmo_flist_Omega_g0h2,  0, 1);
+  ncm_mset_func_list_register ("Omega_nu0h2", "\\Omega_{\\mu0}h^2",         "NcHICosmo", "UR Neutrinos density today times h^2",      G_TYPE_NONE, _nc_hicosmo_flist_Omega_nu0h2, 0, 1);
+  ncm_mset_func_list_register ("Omega_m0h2",  "\\Omega_{m0}h^2",            "NcHICosmo", "Total dust matter density today times h^2", G_TYPE_NONE, _nc_hicosmo_flist_Omega_m0h2,  0, 1);
+  ncm_mset_func_list_register ("Omega_r0h2",  "\\Omega_{r0}h^2",            "NcHICosmo", "Total radiation density today times h^2",   G_TYPE_NONE, _nc_hicosmo_flist_Omega_r0h2,  0, 1);
+  ncm_mset_func_list_register ("T_gamma0",    "T_{\\gamma0}",               "NcHICosmo", "Photons temperature today",                 G_TYPE_NONE, _nc_hicosmo_flist_T_gamma0,    0, 1);
+  ncm_mset_func_list_register ("Yp_4He",      "Y_\\mathrm{p}",              "NcHICosmo", "Primordial Helium mass fraction",           G_TYPE_NONE, _nc_hicosmo_flist_Yp_4He,      0, 1);
+  ncm_mset_func_list_register ("Yp_1H",       "Y_{\\mathrm{1H}p}",          "NcHICosmo", "Primordial Hydrogen mass fraction",         G_TYPE_NONE, _nc_hicosmo_flist_Yp_1H,       0, 1);
+  ncm_mset_func_list_register ("XHe",         "X_\\mathrm{HeI}",            "NcHICosmo", "Primordial Helium abundance",               G_TYPE_NONE, _nc_hicosmo_flist_XHe,         0, 1);
+  ncm_mset_func_list_register ("z_lss",       "z_\\mathrm{lss}",            "NcHICosmo", "Redshift at lss",                           G_TYPE_NONE, _nc_hicosmo_flist_z_lss,       0, 1);
+  ncm_mset_func_list_register ("as_drag",     "r_\\mathrm{adrag}",          "NcHICosmo", "As_drag",                                   G_TYPE_NONE, _nc_hicosmo_flist_as_drag,     0, 1);
+  ncm_mset_func_list_register ("xb",          "x_b",                        "NcHICosmo", "Bounce scale",                              G_TYPE_NONE, _nc_hicosmo_flist_xb,          0, 1);
 
-/**
- * nc_hicosmo_create_mset_func1:
- * @f1: (scope notified): FIXME
- *
- * Returns: (transfer full): FIXME
- */
-NcmMSetFunc *
-nc_hicosmo_create_mset_func1 (NcHICosmoFunc1Z f1)
-{
-  return ncm_mset_func_new (&_nc_hicosmo_func1, 1, 1, f1, NULL);
-}
-
-typedef struct __NcHICosmoArrayFunc
-{
-  guint size;
-  NcHICosmoFunc1Z f1;
-} _NcHICosmoArrayFunc;
-
-static void
-_nc_hicosmo_arrayfunc1 (NcmMSet *mset, gpointer obj, const gdouble *x, gdouble *f)
-{
-  _NcHICosmoArrayFunc *af1 = (_NcHICosmoArrayFunc *) obj;
-  guint i;
-
-  for (i = 0; i < af1->size; i++)
-  {
-    f[i] = af1->f1 (NC_HICOSMO (ncm_mset_peek (mset, nc_hicosmo_id ())), x[i]);
-  }
-}
-
-/**
- * nc_hicosmo_create_mset_arrayfunc1:
- * @f1: (scope notified): FIXME
- * @size: function dimension
- *
- * Returns: (transfer full): FIXME
- */
-NcmMSetFunc *
-nc_hicosmo_create_mset_arrayfunc1 (NcHICosmoFunc1Z f1, guint size)
-{
-  g_assert_cmpuint (size, !=, 0);
-  _NcHICosmoArrayFunc *af1 = g_new (_NcHICosmoArrayFunc, 1);
-
-  af1->size = size;
-  af1->f1 = f1;
-
-  return ncm_mset_func_new (&_nc_hicosmo_arrayfunc1, size, size, af1, g_free);
+  ncm_mset_func_list_register ("H",           "H",                               "NcHICosmo", "Hubble function",                           G_TYPE_NONE, _nc_hicosmo_flist_H,        1, 1);
+  ncm_mset_func_list_register ("dH_dz",       "\\mathrm{d}H/\\mathrm{d}z",       "NcHICosmo", "Derivative of the Hubble function",         G_TYPE_NONE, _nc_hicosmo_flist_dH_dz,    1, 1);
+  ncm_mset_func_list_register ("E",           "E",                               "NcHICosmo", "Hubble function over H_0",                  G_TYPE_NONE, _nc_hicosmo_flist_E,        1, 1);
+  ncm_mset_func_list_register ("E2",          "E2",                              "NcHICosmo", "Hubble function over H_0 squared",          G_TYPE_NONE, _nc_hicosmo_flist_E2,       1, 1);
+  ncm_mset_func_list_register ("Em2",         "E^{-2}",                          "NcHICosmo", "One over Hubble function over H_0 squared", G_TYPE_NONE, _nc_hicosmo_flist_Em2,      1, 1);
+  ncm_mset_func_list_register ("dE2_dz",      "\\mathrm{d}E^2/\\mathrm{d}z",     "NcHICosmo", "First derivative of E2",                    G_TYPE_NONE, _nc_hicosmo_flist_dE2_dz,   1, 1);
+  ncm_mset_func_list_register ("d2E2_dz2",    "\\mathrm{d}^2E^2/\\mathrm{d}z^2", "NcHICosmo", "Second derivative of E2",                   G_TYPE_NONE, _nc_hicosmo_flist_d2E2_dz2, 1, 1);
+  ncm_mset_func_list_register ("q",           "q",                               "NcHICosmo", "Deceleration function",                     G_TYPE_NONE, _nc_hicosmo_flist_q,        1, 1);
+  ncm_mset_func_list_register ("dec",         "\\mathrm{dec}",                   "NcHICosmo", "DEC violation function",                    G_TYPE_NONE, _nc_hicosmo_flist_dec,      1, 1);
+  ncm_mset_func_list_register ("wec",         "\\mathrm{wec}",                   "NcHICosmo", "WEC violation function",                    G_TYPE_NONE, _nc_hicosmo_flist_wec,      1, 1);
+  ncm_mset_func_list_register ("qp",          "\\mathrm{d}q/\\mathrm{d}z",       "NcHICosmo", "Derivative of the deceleration function",   G_TYPE_NONE, _nc_hicosmo_flist_qp,       1, 1);
+  ncm_mset_func_list_register ("j",           "j",                               "NcHICosmo", "Jerk function",                             G_TYPE_NONE, _nc_hicosmo_flist_j,        1, 1);
 }

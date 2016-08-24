@@ -311,6 +311,7 @@ ncm_vector_set_zero (NcmVector *cv)
 G_INLINE_FUNC void
 ncm_vector_memcpy (NcmVector *cv1, const NcmVector *cv2)
 {
+  g_assert_cmpuint (ncm_vector_len (cv1), ==, ncm_vector_len (cv2));
   gsl_vector_memcpy (ncm_vector_gsl (cv1), ncm_vector_const_gsl (cv2));
 }
 

@@ -52,17 +52,17 @@ main (gint argc, gchar *argv[])
   ncm_cfg_init ();
   ncm_cfg_enable_gsl_err_handler ();
 
-  g_test_add_func ("/numcosmo/nc_window/tophat/new", &test_nc_window_new_tophat);
-  g_test_add_func ("/numcosmo/nc_window/tophat/eval_fourier", &test_nc_window_eval_fourier_tophat);
-  g_test_add_func ("/numcosmo/nc_window/tophat/deriv_fourier", &test_nc_window_deriv_fourier_tophat);
-  g_test_add_func ("/numcosmo/nc_window/tophat/eval_real", &test_nc_window_eval_real_tophat);
-  g_test_add_func ("/numcosmo/nc_window/tophat/free", &test_nc_window_free);
+  g_test_add_func ("/nc/window/tophat/new", &test_nc_window_new_tophat);
+  g_test_add_func ("/nc/window/tophat/eval_fourier", &test_nc_window_eval_fourier_tophat);
+  g_test_add_func ("/nc/window/tophat/deriv_fourier", &test_nc_window_deriv_fourier_tophat);
+  g_test_add_func ("/nc/window/tophat/eval_real", &test_nc_window_eval_real_tophat);
+  g_test_add_func ("/nc/window/tophat/free", &test_nc_window_free);
 
-  g_test_add_func ("/numcosmo/nc_window/gaussian/new", &test_nc_window_new_gaussian);
-  g_test_add_func ("/numcosmo/nc_window/gaussian/eval_fourier", &test_nc_window_eval_fourier_gaussian);
-  g_test_add_func ("/numcosmo/nc_window/gaussian/deriv_fourier", &test_nc_window_deriv_fourier_gaussian);
-  g_test_add_func ("/numcosmo/nc_window/gaussian/eval_real", &test_nc_window_eval_real_gaussian);
-  g_test_add_func ("/numcosmo/nc_window/gaussian/free", &test_nc_window_free); 
+  g_test_add_func ("/nc/window/gaussian/new", &test_nc_window_new_gaussian);
+  g_test_add_func ("/nc/window/gaussian/eval_fourier", &test_nc_window_eval_fourier_gaussian);
+  g_test_add_func ("/nc/window/gaussian/deriv_fourier", &test_nc_window_deriv_fourier_gaussian);
+  g_test_add_func ("/nc/window/gaussian/eval_real", &test_nc_window_eval_real_gaussian);
+  g_test_add_func ("/nc/window/gaussian/free", &test_nc_window_free); 
 
   g_test_run ();
 }

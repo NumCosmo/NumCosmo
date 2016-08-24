@@ -75,43 +75,43 @@ main (gint argc, gchar *argv[])
 
   /* Default vector allocation */
 
-  g_test_add ("/numcosmo/ncm_stats_vec/mean", TestNcmStatsVec, NULL, 
+  g_test_add ("/ncm/stats_vec/mean", TestNcmStatsVec, NULL, 
               &test_ncm_stats_vec_mean_new, 
               &test_ncm_stats_vec_mean_test, 
               &test_ncm_stats_vec_free);
-  g_test_add ("/numcosmo/ncm_stats_vec/var", TestNcmStatsVec, NULL, 
+  g_test_add ("/ncm/stats_vec/var", TestNcmStatsVec, NULL, 
               &test_ncm_stats_vec_var_new, 
               &test_ncm_stats_vec_var_test, 
               &test_ncm_stats_vec_free);
-  g_test_add ("/numcosmo/ncm_stats_vec/cov", TestNcmStatsVec, NULL, 
+  g_test_add ("/ncm/stats_vec/cov", TestNcmStatsVec, NULL, 
               &test_ncm_stats_vec_cov_new, 
               &test_ncm_stats_vec_cov_test, 
               &test_ncm_stats_vec_free);
-  g_test_add ("/numcosmo/ncm_stats_vec/autocorr", TestNcmStatsVec, NULL, 
+  g_test_add ("/ncm/stats_vec/autocorr", TestNcmStatsVec, NULL, 
               &test_ncm_stats_vec_autocorr_new, 
               &test_ncm_stats_vec_autocorr_test, 
               &test_ncm_stats_vec_free);
-  g_test_add ("/numcosmo/ncm_stats_vec/subsample_autocorr", TestNcmStatsVec, NULL, 
+  g_test_add ("/ncm/stats_vec/subsample_autocorr", TestNcmStatsVec, NULL, 
               &test_ncm_stats_vec_autocorr_new, 
               &test_ncm_stats_vec_subsample_autocorr_test, 
               &test_ncm_stats_vec_free);
   
 #if !((GLIB_MAJOR_VERSION == 2) && (GLIB_MINOR_VERSION < 38))
-  g_test_add ("/numcosmo/ncm_stats_vec/mean/get_var/subprocess", TestNcmStatsVec, NULL, 
+  g_test_add ("/ncm/stats_vec/mean/get_var/subprocess", TestNcmStatsVec, NULL, 
               &test_ncm_stats_vec_mean_new, 
               &test_ncm_stats_vec_invalid_get_var, 
               &test_ncm_stats_vec_free);
-  g_test_add ("/numcosmo/ncm_stats_vec/mean/get_cov/subprocess", TestNcmStatsVec, NULL, 
+  g_test_add ("/ncm/stats_vec/mean/get_cov/subprocess", TestNcmStatsVec, NULL, 
               &test_ncm_stats_vec_mean_new, 
               &test_ncm_stats_vec_invalid_get_cov, 
               &test_ncm_stats_vec_free);
-  g_test_add ("/numcosmo/ncm_stats_vec/var/get_cov/subprocess", TestNcmStatsVec, NULL, 
+  g_test_add ("/ncm/stats_vec/var/get_cov/subprocess", TestNcmStatsVec, NULL, 
               &test_ncm_stats_vec_var_new, 
               &test_ncm_stats_vec_invalid_get_cov,
               &test_ncm_stats_vec_free);
 #endif
   
-  g_test_add ("/numcosmo/ncm_stats_vec/traps", TestNcmStatsVec, NULL, 
+  g_test_add ("/ncm/stats_vec/traps", TestNcmStatsVec, NULL, 
               &test_ncm_stats_vec_var_new, 
               &test_ncm_stats_vec_traps, 
               &test_ncm_stats_vec_free);
@@ -471,13 +471,13 @@ void
 test_ncm_stats_vec_traps (TestNcmStatsVec *test, gconstpointer pdata)
 {
 #if !((GLIB_MAJOR_VERSION == 2) && (GLIB_MINOR_VERSION < 38))
-  g_test_trap_subprocess ("/numcosmo/ncm_stats_vec/mean/get_var/subprocess", 0, 0);
+  g_test_trap_subprocess ("/ncm/stats_vec/mean/get_var/subprocess", 0, 0);
   g_test_trap_assert_failed ();
   
-  g_test_trap_subprocess ("/numcosmo/ncm_stats_vec/mean/get_cov/subprocess", 0, 0);
+  g_test_trap_subprocess ("/ncm/stats_vec/mean/get_cov/subprocess", 0, 0);
   g_test_trap_assert_failed ();
   
-  g_test_trap_subprocess ("/numcosmo/ncm_stats_vec/var/get_cov/subprocess", 0, 0);
+  g_test_trap_subprocess ("/ncm/stats_vec/var/get_cov/subprocess", 0, 0);
   g_test_trap_assert_failed ();
 #endif
 }

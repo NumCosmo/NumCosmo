@@ -141,49 +141,49 @@ main (gint argc, gchar *argv[])
 
   if (list_hicosmo || list_all)
   {
-    GArray *func_table = nc_hicosmo_class_func_table ();
+    GArray *func_table = ncm_mset_func_list_select ("NcHICosmo", 0, 1); 
     ncm_cfg_msg_sepa ();
     g_message ("# Available constant functions from NcHICosmo models:\n");    
     for (i = 0; i < func_table->len; i++)
     {
-      NcHICosmoFunc *f = &g_array_index (func_table, NcHICosmoFunc, i);
-      g_message ("# - %32s: %s\n", f->name, f->desc);
+      NcmMSetFuncListStruct *fdata = &g_array_index (func_table, NcmMSetFuncListStruct, i);
+      g_message ("# - %32s: %s\n", fdata->name, fdata->desc);
     }
     g_array_unref (func_table);
   }
   if (list_hicosmo_z || list_all)
   {
-    GArray *func_z_table = nc_hicosmo_class_func_z_table ();
+    GArray *func_z_table = ncm_mset_func_list_select ("NcHICosmo", 1, 1); 
     ncm_cfg_msg_sepa ();
     g_message ("# Available redshift functions from NcHICosmo models:\n");    
     for (i = 0; i < func_z_table->len; i++)
     {
-      NcHICosmoFuncZ *fz = &g_array_index (func_z_table, NcHICosmoFuncZ, i);
-      g_message ("# - %32s: %s\n", fz->name, fz->desc);
+      NcmMSetFuncListStruct *fdata = &g_array_index (func_z_table, NcmMSetFuncListStruct, i);
+      g_message ("# - %32s: %s\n", fdata->name, fdata->desc);
     }
     g_array_unref (func_z_table);
   }
   if (list_dist || list_all)
   {
-    GArray *func_table = nc_distance_class_func_table ();
+    GArray *func_table = ncm_mset_func_list_select ("NcDistance", 0, 1); 
     ncm_cfg_msg_sepa ();
     g_message ("# Available constant functions from NcDistance:\n");    
     for (i = 0; i < func_table->len; i++)
     {
-      NcDistanceFunc *f = &g_array_index (func_table, NcDistanceFunc, i);
-      g_message ("# - %32s: %s\n", f->name, f->desc);
+      NcmMSetFuncListStruct *fdata = &g_array_index (func_table, NcmMSetFuncListStruct, i);
+      g_message ("# - %32s: %s\n", fdata->name, fdata->desc);
     }
     g_array_unref (func_table);
   }
   if (list_dist_z || list_all)
   {
-    GArray *func_z_table = nc_distance_class_func_z_table ();
+    GArray *func_z_table = ncm_mset_func_list_select ("NcDistance", 1, 1);
     ncm_cfg_msg_sepa ();
     g_message ("# Available redshift functions from NcDistance:\n");    
     for (i = 0; i < func_z_table->len; i++)
     {
-      NcDistanceFuncZ *fz = &g_array_index (func_z_table, NcDistanceFuncZ, i);
-      g_message ("# - %32s: %s\n", fz->name, fz->desc);
+      NcmMSetFuncListStruct *fdata = &g_array_index (func_z_table, NcmMSetFuncListStruct, i);
+      g_message ("# - %32s: %s\n", fdata->name, fdata->desc);
     }
     g_array_unref (func_z_table);
   }
@@ -284,34 +284,32 @@ main (gint argc, gchar *argv[])
 
         if (mset_func == NULL)
         {
-          NcHICosmoFuncZ *fz = nc_hicosmo_class_get_func_z (funcs[i]);
-          if (fz != NULL)
+          if (ncm_mset_func_list_has_ns_name ("NcHICosmo", funcs[i]))
           {
-            if (!ncm_model_check_impl (NCM_MODEL (ncm_mset_peek (mset, nc_hicosmo_id ())), fz->impl))
+            mset_func = NCM_MSET_FUNC (ncm_mset_func_list_new_ns_name ("NcHICosmo", funcs[i], NULL));
+            if (ncm_mset_func_get_dim (mset_func) != 1 || ncm_mset_func_get_nvar (mset_func) != 1)
             {
-              g_warning ("# function `%s' not supported by NcHICosmo `%s', skipping...", funcs[i],
-                         ncm_model_name (NCM_MODEL (ncm_mset_peek (mset, nc_hicosmo_id ()))));
+              g_warning ("# Function `%s' is not R => R, skipping.", ncm_mset_func_peek_name (mset_func));
+              ncm_mset_func_clear (&mset_func);
               continue;
             }
-            mset_func = nc_hicosmo_create_mset_arrayfunc1 (fz->f, nsteps);
             ncm_cfg_msg_sepa ();
-            g_message ("# Printing NcHICosmo z function: `%s' in [% 20.15g % 20.15g].\n", fz->desc, zi, zf);
+            g_message ("# Printing NcHICosmo z function: `%s' in [% 20.15g % 20.15g].\n", ncm_mset_func_peek_desc (mset_func), zi, zf);
           }
         }
         if (mset_func == NULL)
         {
-          NcDistanceFuncZ *fz = nc_distance_class_get_func_z (funcs[i]);
-          if (fz != NULL)
+          if (ncm_mset_func_list_has_ns_name ("NcDistance", funcs[i]))
           {
-            if (!ncm_model_check_impl (NCM_MODEL (ncm_mset_peek (mset, nc_hicosmo_id ())), fz->impl))
+            mset_func = NCM_MSET_FUNC (ncm_mset_func_list_new_ns_name ("NcDistance", funcs[i], dist));
+            if (ncm_mset_func_get_dim (mset_func) != 1 || ncm_mset_func_get_nvar (mset_func) != 1)
             {
-              g_warning ("# function `%s' not supported by NcHICosmo `%s', skipping...", funcs[i],
-                         ncm_model_name (NCM_MODEL (ncm_mset_peek (mset, nc_hicosmo_id ()))));
+              g_warning ("# Function `%s' is not R => R, skipping.", ncm_mset_func_peek_name (mset_func));
+              ncm_mset_func_clear (&mset_func);
               continue;
             }
-            mset_func = nc_distance_create_mset_arrayfunc1 (dist, fz->f, nsteps);
             ncm_cfg_msg_sepa ();
-            g_message ("# Printing NcDistance z function: `%s' in [% 20.15g % 20.15g].\n", fz->desc, zi, zf);
+            g_message ("# Printing NcDistance z function: `%s' in [% 20.15g % 20.15g].\n", ncm_mset_func_peek_desc (mset_func), zi, zf);
           }
         }
         if (mset_func == NULL)
@@ -321,9 +319,9 @@ main (gint argc, gchar *argv[])
         }
 
         if (use_direct)
-          res = ncm_mset_catalog_calc_ci_direct (mcat, mset_func, ncm_vector_ptr (z_vec, 0), p_val);
+          res = ncm_mset_catalog_calc_ci_direct (mcat, mset_func, z_vec, p_val);
         else
-          res = ncm_mset_catalog_calc_ci_interp (mcat, mset_func, ncm_vector_ptr (z_vec, 0), p_val, 100, NCM_FIT_RUN_MSGS_SIMPLE);
+          res = ncm_mset_catalog_calc_ci_interp (mcat, mset_func, z_vec, p_val, 100, NCM_FIT_RUN_MSGS_SIMPLE);
 
         for (k = 0; k < nsteps; k++)
         {
@@ -360,34 +358,32 @@ main (gint argc, gchar *argv[])
 
         if (mset_func == NULL)
         {
-          NcHICosmoFunc *f = nc_hicosmo_class_get_func (distribs[i]);
-          if (f != NULL)
+          if (ncm_mset_func_list_has_ns_name ("NcHICosmo", distribs[i]))
           {
-            if (!ncm_model_check_impl (NCM_MODEL (ncm_mset_peek (mset, nc_hicosmo_id ())), f->impl))
+            mset_func = NCM_MSET_FUNC (ncm_mset_func_list_new_ns_name ("NcHICosmo", distribs[i], NULL));
+            if (ncm_mset_func_get_dim (mset_func) != 1 || ncm_mset_func_get_nvar (mset_func) != 0)
             {
-              g_warning ("# function `%s' not supported by NcHICosmo `%s', skipping...", distribs[i],
-                         ncm_model_name (NCM_MODEL (ncm_mset_peek (mset, nc_hicosmo_id ()))));
+              g_warning ("# Function `%s' is not constant, skipping.", ncm_mset_func_peek_name (mset_func));
+              ncm_mset_func_clear (&mset_func);
               continue;
             }
-            mset_func = nc_hicosmo_create_mset_func0 (f->f);
             ncm_cfg_msg_sepa ();
-            g_message ("# Printing NcHICosmo function: `%s'.\n", f->desc);
+            g_message ("# Printing NcHICosmo function: `%s'.\n", ncm_mset_func_peek_desc (mset_func));
           }
         }
         if (mset_func == NULL)
         {
-          NcDistanceFunc *f = nc_distance_class_get_func (distribs[i]);
-          if (f != NULL)
+          if (ncm_mset_func_list_has_ns_name ("NcDistance", distribs[i]))
           {
-            if (!ncm_model_check_impl (NCM_MODEL (ncm_mset_peek (mset, nc_hicosmo_id ())), f->impl))
+            mset_func = NCM_MSET_FUNC (ncm_mset_func_list_new_ns_name ("NcDistance", distribs[i], dist));
+            if (ncm_mset_func_get_dim (mset_func) != 1 || ncm_mset_func_get_nvar (mset_func) != 0)
             {
-              g_warning ("# function `%s' not supported by NcHICosmo `%s', skipping...", distribs[i],
-                         ncm_model_name (NCM_MODEL (ncm_mset_peek (mset, nc_hicosmo_id ()))));
+              g_warning ("# Function `%s' is not constant, skipping.", ncm_mset_func_peek_name (mset_func));
+              ncm_mset_func_clear (&mset_func);
               continue;
             }
-            mset_func = nc_distance_func0_new (dist, f->f);
             ncm_cfg_msg_sepa ();
-            g_message ("# Printing NcDistance function: `%s'.\n", f->desc);
+            g_message ("# Printing NcDistance function: `%s'.\n", ncm_mset_func_peek_desc (mset_func));
           }
         }
         if (mset_func == NULL)

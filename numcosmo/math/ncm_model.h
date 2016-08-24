@@ -159,7 +159,7 @@ G_INLINE_FUNC NcmVector *ncm_model_orig_vparam_get_vector (NcmModel *model, guin
 void ncm_model_params_copyto (NcmModel *model, NcmModel *model_dest);
 void ncm_model_params_set_default (NcmModel *model);
 void ncm_model_params_save_as_default (NcmModel *model);
-void ncm_model_params_set_all (NcmModel *model, ...);
+void ncm_model_params_set_all (NcmModel *model, ...) G_GNUC_NULL_TERMINATED;
 void ncm_model_params_set_all_data (NcmModel *model, gdouble *data);
 void ncm_model_params_set_vector (NcmModel *model, NcmVector *v);
 void ncm_model_params_set_model (NcmModel *model, NcmModel *model_src);

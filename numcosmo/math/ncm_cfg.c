@@ -220,6 +220,11 @@ void clencurt_gen (int M);
 #include <omp.h>
 #endif /* HAVE_OPENMP */
 
+void _nc_hicosmo_register_functions (void);
+void _nc_hicosmo_de_register_functions (void);
+void _nc_distance_register_functions (void);
+void _nc_planck_fi_cor_tt_register_functions (void);
+
 /**
  * ncm_cfg_init:
  *
@@ -420,6 +425,11 @@ ncm_cfg_init (void)
   ncm_cfg_register_obj (NC_TYPE_XCOR_LIMBER_GAL);
   ncm_cfg_register_obj (NC_TYPE_XCOR_LIMBER_LENSING);
   ncm_cfg_register_obj (NC_TYPE_DATA_XCOR);
+
+  _nc_hicosmo_register_functions ();
+  _nc_hicosmo_de_register_functions ();
+  _nc_distance_register_functions ();
+  _nc_planck_fi_cor_tt_register_functions ();
 
   numcosmo_init = TRUE;
   return;
@@ -918,6 +928,9 @@ ncm_cfg_load_fftw_wisdom (const gchar *filename, ...)
   file = g_strdup_vprintf (filename, ap);
   va_end (ap);
 
+  g_free (file);
+  file = g_strdup ("ncm_cfg_wisdom"); /* overwrite, unifying wisdom */
+  
   file_ext      = g_strdup_printf ("%s.fftw3", file);
   full_filename = g_build_filename (numcosmo_path, file_ext, NULL);
 
@@ -968,6 +981,9 @@ ncm_cfg_save_fftw_wisdom (const gchar *filename, ...)
   va_start (ap, filename);
   file = g_strdup_vprintf (filename, ap);
   va_end (ap);
+
+  g_free (file);
+  file = g_strdup ("ncm_cfg_wisdom"); /* overwrite, unifying wisdom */
 
   file_ext      = g_strdup_printf ("%s.fftw3", file);
   full_filename = g_build_filename (numcosmo_path, file_ext, NULL);

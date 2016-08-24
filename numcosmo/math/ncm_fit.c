@@ -2457,7 +2457,7 @@ ncm_fit_function_error (NcmFit *fit, NcmMSetFunc *func, gdouble *x, gboolean pre
   if (ncm_mset_fparam_len (fit->mset) < 1)
   {
     g_warning ("ncm_fit_function_error: called but no free parameters were set in #NcmMSet.");
-    *f = ncm_mset_func_eval (func, fit->mset, x);
+    *f = ncm_mset_func_eval_nvar (func, fit->mset, x);
     *sigma_f = 0.0;
   }
   else
@@ -2475,7 +2475,7 @@ ncm_fit_function_error (NcmFit *fit, NcmMSetFunc *func, gdouble *x, gboolean pre
     ret = gsl_blas_ddot (ncm_vector_gsl (v), ncm_vector_gsl (tmp1), &result);
     NCM_TEST_GSL_RESULT("ncm_fit_function_error[v.covar.v]", ret);
 
-    *f = ncm_mset_func_eval (func, fit->mset, x);
+    *f = ncm_mset_func_eval_nvar (func, fit->mset, x);
     *sigma_f = sqrt(result);
     if (pretty_print)
       g_message ("# % -12.4g +/- % -12.4g\n", *f, *sigma_f);

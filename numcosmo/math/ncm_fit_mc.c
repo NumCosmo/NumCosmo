@@ -250,7 +250,9 @@ _ncm_fit_mc_set_fit_obj (NcmFitMC *mc, NcmFit *fit)
 {
   g_assert (mc->fit == NULL);
   mc->fit = ncm_fit_ref (fit);
-  mc->mcat = ncm_mset_catalog_new (fit->mset, 1, 1, FALSE, NCM_MSET_CATALOG_M2LNL_COLNAME);
+  mc->mcat = ncm_mset_catalog_new (fit->mset, 1, 1, FALSE, 
+                                   NCM_MSET_CATALOG_M2LNL_COLNAME, NCM_MSET_CATALOG_M2LNL_SYMBOL, 
+                                   NULL);
 }
 
 /**
@@ -476,7 +478,7 @@ _ncm_fit_mc_update (NcmFitMC *mc, NcmFit *fit)
   const guint part = 5;
   const guint step = (mc->n / part) == 0 ? 1 : (mc->n / part);
 
-  ncm_mset_catalog_add_from_mset (mc->mcat, fit->mset, ncm_fit_state_get_m2lnL_curval (fit->fstate));
+  ncm_mset_catalog_add_from_mset (mc->mcat, fit->mset, ncm_fit_state_get_m2lnL_curval (fit->fstate), NULL);
   ncm_timer_task_increment (mc->nt);
 
   switch (mc->mtype)

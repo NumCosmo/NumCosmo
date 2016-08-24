@@ -77,6 +77,7 @@ G_INLINE_FUNC void nc_hipert_set_abstol (NcHIPert *pert, gdouble abstol);
 
 void nc_hipert_set_sys_size (NcHIPert *pert, guint sys_size);
 void nc_hipert_set_stiff_solver (NcHIPert *pert, gboolean stiff);
+void nc_hipert_reset_solver (NcHIPert *pert);
 
 gdouble nc_hipert_get_reltol (NcHIPert *pert);
 gdouble nc_hipert_get_abstol (NcHIPert *pert);

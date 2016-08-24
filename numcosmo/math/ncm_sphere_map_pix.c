@@ -91,6 +91,7 @@ enum
   PROP_NSIDE,
   PROP_ORDER,
   PROP_COORDSYS,
+  PROP_LMAX,
 };
 
 G_DEFINE_TYPE (NcmSphereMapPix, ncm_sphere_map_pix, G_TYPE_OBJECT);
@@ -119,6 +120,9 @@ ncm_sphere_map_pix_init (NcmSphereMapPix *pix)
   g_ptr_array_set_free_func (pix->fft_plan, (GDestroyNotify)fftw_destroy_plan);
 #  endif
 #endif
+  pix->Ylm = NULL;
+  pix->alm = NULL;
+  pix->Cl  = NULL;
 }
 
 static void
@@ -137,6 +141,9 @@ _ncm_sphere_map_pix_set_property (GObject *object, guint prop_id, const GValue *
       break;
     case PROP_COORDSYS:
       ncm_sphere_map_pix_set_coordsys (pix, g_value_get_enum (value));
+      break;
+    case PROP_LMAX:
+      ncm_sphere_map_pix_set_lmax (pix, g_value_get_uint (value));    
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -161,10 +168,27 @@ _ncm_sphere_map_pix_get_property (GObject *object, guint prop_id, GValue *value,
     case PROP_COORDSYS:
       g_value_set_enum (value, ncm_sphere_map_pix_get_coordsys (pix));
       break;
+    case PROP_LMAX:
+      g_value_set_uint (value, ncm_sphere_map_pix_get_lmax (pix));
+      break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
       break;
   }
+}
+
+static void
+_ncm_sphere_map_pix_dispose (GObject *object)
+{
+  NcmSphereMapPix *pix = NCM_SPHERE_MAP_PIX (object);
+
+  ncm_vector_clear (&pix->Ylm);
+  ncm_vector_clear (&pix->alm);
+  ncm_vector_clear (&pix->Cl);
+  
+  
+  /* Chain up : end */
+  G_OBJECT_CLASS (ncm_sphere_map_pix_parent_class)->dispose (object);
 }
 
 static void
@@ -174,6 +198,12 @@ _ncm_sphere_map_pix_finalize (GObject *object)
 
   ncm_sphere_map_pix_set_nside (pix, 0);
   g_ptr_array_unref (pix->fft_plan);
+
+
+  ncm_vector_clear (&pix->Ylm);
+  ncm_vector_clear (&pix->alm);
+  ncm_vector_clear (&pix->Cl);
+  
   
   /* Chain up : end */
   G_OBJECT_CLASS (ncm_sphere_map_pix_parent_class)->finalize (object);
@@ -186,6 +216,7 @@ ncm_sphere_map_pix_class_init (NcmSphereMapPixClass *klass)
 
   object_class->set_property = &_ncm_sphere_map_pix_set_property;
   object_class->get_property = &_ncm_sphere_map_pix_get_property;
+  object_class->dispose      = &_ncm_sphere_map_pix_dispose;
   object_class->finalize     = &_ncm_sphere_map_pix_finalize;
 
   g_object_class_install_property (object_class,
@@ -209,7 +240,13 @@ ncm_sphere_map_pix_class_init (NcmSphereMapPixClass *klass)
                                                       "Map coordinate system",
                                                       NCM_TYPE_SPHERE_MAP_PIX_COORD_SYS, NCM_SPHERE_MAP_PIX_COORD_SYS_CELESTIAL,
                                                       G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-  
+  g_object_class_install_property (object_class,
+                                   PROP_LMAX,
+                                   g_param_spec_uint ("lmax",
+                                                      NULL,
+                                                      "max ell",
+                                                      0, G_MAXUINT32, 0,
+                                                      G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 }
 
 /**
@@ -570,6 +607,46 @@ NcmSphereMapPixCoordSys
 ncm_sphere_map_pix_get_coordsys (NcmSphereMapPix *pix)
 {
   return pix->coordsys;
+}
+
+/**
+ * ncm_sphere_map_pix_set_lmax:
+ * @pix: a #NcmSphereMapPix
+ * @lmax: max value of $\ell$
+ * 
+ * Prepare the object to calculate $a_{\ell{}m}$ and/or $C_\ell$,
+ * up to $\ell=$@lmax.
+ * 
+ */
+void 
+ncm_sphere_map_pix_set_lmax (NcmSphereMapPix *pix, guint lmax)
+{
+  if (pix->lmax != lmax)
+  {
+    ncm_vector_clear (&pix->Ylm);
+    ncm_vector_clear (&pix->alm);
+    ncm_vector_clear (&pix->Cl);
+    pix->lmax = lmax;
+    
+    if (pix->lmax > 0)
+    {
+      gsize Ylm_size  = gsl_sf_legendre_array_n (pix->lmax);
+
+      pix->Ylm = ncm_vector_new (Ylm_size);
+      pix->alm = ncm_vector_new (2 * NCM_SPHERE_MAP_PIX_ALM_SIZE (pix->lmax));
+      pix->Cl  = ncm_vector_new (pix->lmax + 1);
+
+      ncm_vector_set_zero (pix->Ylm);
+      ncm_vector_set_zero (pix->alm);
+      ncm_vector_set_zero (pix->Cl);
+    }
+  }
+}
+
+guint 
+ncm_sphere_map_pix_get_lmax (NcmSphereMapPix *pix)
+{
+  return pix->lmax;
 }
 
 /**
@@ -1596,14 +1673,13 @@ _ncm_sphere_map_pix_prepare_fft (NcmSphereMapPix *pix)
       gfloat *pvec               = pix->pvec;
       complex float *fft_pvec    = pix->fft_pvec;
 
-      
       fftwf_plan plan = fftwf_plan_many_dft_r2c (1, &ring_size, 2,
                                                  &pvec[ring_fi_north], NULL, 
                                                  1, dist,
                                                  &fft_pvec[ring_fi_north], NULL,
                                                  1, dist,
                                                  fftw_default_flags | FFTW_PRESERVE_INPUT);
-printf ("Preparing plan for %ld and %ld size %d | npix %ld | %p\n", ring_fi_north, ring_fi_south, ring_size, pix->npix, plan);
+      /*printf ("Preparing plan for %ld and %ld size %d | npix %ld | %p\n", ring_fi_north, ring_fi_south, ring_size, pix->npix, plan);*/
       g_ptr_array_add (pix->fft_plan, plan);
     }
     {
@@ -1621,7 +1697,7 @@ printf ("Preparing plan for %ld and %ld size %d | npix %ld | %p\n", ring_fi_nort
                                                  &fft_pvec[cap_size], NULL,
                                                  1, ring_size,
                                                  fftw_default_flags | FFTW_PRESERVE_INPUT);
-printf ("Preparing plan for %d and %d x %d | npix %ld | %p\n", cap_size, nrings_middle, ring_size, pix->npix, plan);
+      /*printf ("Preparing plan for %d and %d x %d | npix %ld | %p\n", cap_size, nrings_middle, ring_size, pix->npix, plan);*/
       g_ptr_array_add (pix->fft_plan, plan);
     }  
 
@@ -1670,14 +1746,12 @@ printf ("Preparing plan for %d and %d x %d | npix %ld | %p\n", cap_size, nrings_
 
 #ifdef NUMCOSMO_HAVE_FFTW3
 static void
-_ncm_sphere_map_pix_get_alm_from_circle (NcmSphereMapPix *pix, gint64 r_i, gint64 lmax, _fft_complex *alm)
+_ncm_sphere_map_pix_get_alm_from_circle (NcmSphereMapPix *pix, gint64 r_i, gboolean Cl_only)
 {
   const gint64 ring_size  = ncm_sphere_map_pix_get_ring_size (pix, r_i);
   const gint64 ring_fi    = ncm_sphere_map_pix_get_ring_first_index (pix, r_i);
   const _fft_complex *Fim = &((_fft_complex *)pix->fft_pvec)[ring_fi];
   const gdouble pix_area  = 4.0 * M_PI / pix->npix;
-  gsize Ylm_size  = gsl_sf_legendre_array_n (lmax);
-  static gdouble *Ylm    = NULL;
   gdouble theta_i = 0.0, phi_0 = 0.0, x = 0.0;
   gint64 m;
 
@@ -1685,44 +1759,70 @@ _ncm_sphere_map_pix_get_alm_from_circle (NcmSphereMapPix *pix, gint64 r_i, gint6
 
   x = cos (theta_i);
 
-  if (Ylm == NULL)
-    Ylm = g_new (gdouble, Ylm_size);
+  gsl_sf_legendre_array_e (GSL_SF_LEGENDRE_SPHARM, pix->lmax, x, -1.0, ncm_vector_data (pix->Ylm));
 
-  gsl_sf_legendre_array_e (GSL_SF_LEGENDRE_SPHARM, lmax, x, -1.0, Ylm);
-  
-  for (m = 0; m <= lmax; m++)
+  if (Cl_only)
   {
-    gint64 l;
-    gint fft_ring_index = m % ring_size;
-
-    _fft_complex phase = cexp (-I * phi_0 * m);
-    
-    if (fft_ring_index <= ring_size / 2)
-      phase *= Fim[fft_ring_index];
-    else
-      phase *= conj (Fim[ring_size - fft_ring_index]);
-
-    for (l = m; l <= lmax; l++)
+    for (m = 0; m <= pix->lmax; m++)
     {
-      gsize lm_index = gsl_sf_legendre_array_index (l, m);
-      alm[lm_index] += Ylm[lm_index] * phase * pix_area;
+      gint64 l;
+      gint fft_ring_index = m % ring_size;
 
-      /*printf ("Ylm[%ld, %ld](% 20.15g) = % 20.15g\n", l, m, x, Ylm[lm_index]);*/
-      
+      _fft_complex phase = cexp (-I * phi_0 * m);
+
+      if (fft_ring_index <= ring_size / 2)
+        phase *= Fim[fft_ring_index];
+      else
+        phase *= conj (Fim[ring_size - fft_ring_index]);
+
+      for (l = m; l <= pix->lmax; l++)
+      {
+        gsize lm_index = gsl_sf_legendre_array_index (l, m);
+        const complex double alm = ncm_vector_fast_get (pix->Ylm, lm_index) * phase * pix_area;        
+        ncm_vector_fast_addto (pix->Cl, l, creal (alm * conj (alm)));
+      }
+    }
+  }
+  else
+  {
+    for (m = 0; m <= pix->lmax; m++)
+    {
+      gint64 l;
+      gint fft_ring_index = m % ring_size;
+
+      _fft_complex phase = cexp (-I * phi_0 * m);
+
+      if (fft_ring_index <= ring_size / 2)
+        phase *= Fim[fft_ring_index];
+      else
+        phase *= conj (Fim[ring_size - fft_ring_index]);
+
+      for (l = m; l <= pix->lmax; l++)
+      {
+        gsize lm_index = gsl_sf_legendre_array_index (l, m);
+        const complex double alm = ncm_vector_fast_get (pix->Ylm, lm_index) * phase * pix_area;
+
+        ncm_vector_fast_addto (pix->alm, 2 * lm_index + 0, creal (alm));
+        ncm_vector_fast_addto (pix->alm, 2 * lm_index + 1, cimag (alm));
+
+        ncm_vector_fast_addto (pix->Cl, l, creal (alm * conj (alm)));
+      }
     }
   }
 }
 #endif
 
 /**
- * ncm_sphere_map_pix_get_alm:
+ * ncm_sphere_map_pix_prepare_alm:
  * @pix: a #NcmSphereMapPix
  *
- * FIXME 
+ * Calculates the $a_{\ell{}m}$ from the map @pix, using $\ell_\mathrm{max}$
+ * set by ncm_sphere_map_pix_set_lmax(). If $\ell_\mathrm{max} = 0$
+ * nothing is done.
  * 
  */
-void 
-ncm_sphere_map_pix_get_alm (NcmSphereMapPix *pix)
+void
+ncm_sphere_map_pix_prepare_alm (NcmSphereMapPix *pix)
 {
 #ifdef NUMCOSMO_HAVE_FFTW3
   gint i;
@@ -1737,68 +1837,98 @@ ncm_sphere_map_pix_get_alm (NcmSphereMapPix *pix)
 #  else
     fftw_execute (g_ptr_array_index (pix->fft_plan, i));
 #endif
-  }
-
-  if (FALSE)
+  } 
   {
-    gint64 r_i;
-    for (r_i = 0; r_i < pix->nrings; r_i++)
-    {
-      gint64 r_fi = ncm_sphere_map_pix_get_ring_first_index (pix, r_i);
-      gint64 r_s  = ncm_sphere_map_pix_get_ring_size (pix, r_i);
-      gint64 ir_i;
-      for (ir_i = 0; ir_i < r_s; ir_i++)
-      {
-        if (ir_i <= r_s / 2)
-        {
-          gint64 j = r_fi + ir_i;
-          printf ("r_i %4ld ir_i %4ld p_i %4ld IN % 20.15g OUT % 20.15g % 20.15g\n", 
-                  r_i, ir_i, r_fi + ir_i, 
-                  ((gfloat *)pix->pvec)[j], 
-                  crealf (((complex float *)pix->fft_pvec)[j]), cimagf (((complex float *)pix->fft_pvec)[j]));
-        }
-        else
-        {
-          gint64 j = r_fi + (r_s - ir_i);
-          printf ("r_i %4ld ir_i %4ld p_i %4ld IN % 20.15g OUT % 20.15g % 20.15g\n", 
-                  r_i, ir_i, r_fi + ir_i, 
-                  ((gfloat *)pix->pvec)[j], 
-                  crealf (((complex float *)pix->fft_pvec)[j]), -cimagf (((complex float *)pix->fft_pvec)[j]));
-        }
-      }
-    }
-  }
- 
-  {
-    const gint64 lmax   = 3 * pix->nside - 1;
     const gint64 nrings = ncm_sphere_map_pix_get_nrings (pix);
     gint64 r_i;
-    
-    _fft_complex *alm = _fft_vec_alloc_complex (NCM_SPHERE_MAP_PIX_ALM_SIZE (lmax));
-    memset (alm, 0, sizeof (_fft_complex) * NCM_SPHERE_MAP_PIX_ALM_SIZE (lmax));
+
+    ncm_vector_set_zero (pix->alm);
+    ncm_vector_set_zero (pix->Cl);
     
     for (r_i = 0; r_i < nrings; r_i++)
     {
-      _ncm_sphere_map_pix_get_alm_from_circle (pix, r_i, lmax, alm);
-    }
-
-    {
-      gint64 l, m;
-
-      for (m = 0; m <= lmax; m++)
-      {
-        for (l = m; l <= lmax; l++)
-        {
-          gsize lm_index = gsl_sf_legendre_array_index (l, m); 
-          printf ("alm[%.4ld, %.4ld] = % 20.15g + i % 20.15g\n", l, m, creal (alm[lm_index]), cimag (alm[lm_index]));
-        }
-      }
+      _ncm_sphere_map_pix_get_alm_from_circle (pix, r_i, FALSE);
     }
   }
-  
-  
 #else
-  g_error ("ncm_sphere_map_pix_get_alm: no fftw3 support, to use this function recompile NumCosmo with fftw.");
+  g_error ("ncm_sphere_map_pix_prepare_alm: no fftw3 support, to use this function recompile NumCosmo with fftw.");
 #endif
 }
 
+/**
+ * ncm_sphere_map_pix_prepare_Cl:
+ * @pix: a #NcmSphereMapPix
+ *
+ * Calculates the $C_{\ell}$ from the map @pix, using $\ell_\mathrm{max}$
+ * set by ncm_sphere_map_pix_set_lmax(). If $\ell_\mathrm{max} = 0$
+ * nothing is done. Note that this function will not save the values of $a_{\ell{}m}$.
+ * 
+ */
+void
+ncm_sphere_map_pix_prepare_Cl (NcmSphereMapPix *pix)
+{
+#ifdef NUMCOSMO_HAVE_FFTW3
+  gint i;
+  _ncm_sphere_map_pix_prepare_fft (pix);
+
+  ncm_sphere_map_pix_set_order (pix, NCM_SPHERE_MAP_PIX_ORDER_RING);
+  
+  for (i = 0; i < pix->fft_plan->len; i++)
+  {
+#  ifdef HAVE_FFTW3F
+    fftwf_execute (g_ptr_array_index (pix->fft_plan, i));    
+#  else
+    fftw_execute (g_ptr_array_index (pix->fft_plan, i));
+#endif
+  } 
+  {
+    const gint64 nrings = ncm_sphere_map_pix_get_nrings (pix);
+    gint64 r_i;
+
+    ncm_vector_set_zero (pix->Cl);
+    
+    for (r_i = 0; r_i < nrings; r_i++)
+    {
+      _ncm_sphere_map_pix_get_alm_from_circle (pix, r_i, TRUE);
+    }
+  }
+#else
+  g_error ("ncm_sphere_map_pix_prepare_Cl: no fftw3 support, to use this function recompile NumCosmo with fftw.");
+#endif
+}
+
+/**
+ * ncm_sphere_map_pix_get_alm:
+ * @pix: a #NcmSphereMapPix
+ * @l: value of $l < \ell_\mathrm{max}$
+ * @m: value of $m \leq l$.
+ * @Re_alm: (out): real part of $a_{lm}$
+ * @Im_alm: (out): imaginary part of $a_{lm}$
+ *
+ * Gets the value of $a_{lm}$ previously calculated by
+ * ncm_sphere_map_pix_prepare_alm(). 
+ * 
+ */
+void
+ncm_sphere_map_pix_get_alm (NcmSphereMapPix *pix, guint l, guint m, gdouble *Re_alm, gdouble *Im_alm)
+{
+  gsize lm_index = gsl_sf_legendre_array_index (l, m); 
+
+  Re_alm[0] = ncm_vector_fast_get (pix->alm, 2 * lm_index + 0);
+  Im_alm[0] = ncm_vector_fast_get (pix->alm, 2 * lm_index + 1);
+}
+
+/**
+ * ncm_sphere_map_pix_get_Cl:
+ * @pix: a #NcmSphereMapPix
+ * @l: value of $l < \ell_\mathrm{max}$
+ *
+ * Gets the value of $C_{\ell}$ previously calculated by
+ * ncm_sphere_map_pix_prepare_alm() or ncm_sphere_map_pix_prepare_Cl(). 
+ * 
+ */
+gdouble
+ncm_sphere_map_pix_get_Cl (NcmSphereMapPix *pix, guint l)
+{
+  return ncm_vector_fast_get (pix->Cl, l);
+}

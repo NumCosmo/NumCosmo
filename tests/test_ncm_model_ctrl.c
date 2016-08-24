@@ -57,27 +57,27 @@ main (gint argc, gchar *argv[])
   ncm_cfg_init ();
   ncm_cfg_enable_gsl_err_handler ();
   
-  g_test_add ("/numcosmo/ncm_model_ctrl/model_update", TestNcmModelCtrl, NULL, 
+  g_test_add ("/ncm/model_ctrl/model_update", TestNcmModelCtrl, NULL, 
               &test_ncm_model_ctrl_new, 
               &test_ncm_model_ctrl_model_update, 
               &test_ncm_model_ctrl_free);
 
-  g_test_add ("/numcosmo/ncm_model_ctrl/update", TestNcmModelCtrl, NULL, 
+  g_test_add ("/ncm/model_ctrl/update", TestNcmModelCtrl, NULL, 
               &test_ncm_model_ctrl_new, 
               &test_ncm_model_ctrl_update, 
               &test_ncm_model_ctrl_free);
 
-  g_test_add ("/numcosmo/ncm_model_ctrl/submodel_update", TestNcmModelCtrl, NULL, 
+  g_test_add ("/ncm/model_ctrl/submodel_update", TestNcmModelCtrl, NULL, 
               &test_ncm_model_ctrl_new, 
               &test_ncm_model_ctrl_submodel_update, 
               &test_ncm_model_ctrl_free);
 
-  g_test_add ("/numcosmo/ncm_model_ctrl/traps", TestNcmModelCtrl, NULL,
+  g_test_add ("/ncm/model_ctrl/traps", TestNcmModelCtrl, NULL,
               &test_ncm_model_ctrl_new,
               &test_ncm_model_ctrl_traps,
               &test_ncm_model_ctrl_free);
 #if !((GLIB_MAJOR_VERSION == 2) && (GLIB_MINOR_VERSION < 38))
-  g_test_add ("/numcosmo/ncm_model_ctrl/invalid/submodel_last_update/subprocess", TestNcmModelCtrl, NULL, 
+  g_test_add ("/ncm/model_ctrl/invalid/submodel_last_update/subprocess", TestNcmModelCtrl, NULL, 
               &test_ncm_model_ctrl_new, 
               &test_ncm_model_ctrl_invalid_submodel_last_update, 
               &test_ncm_model_ctrl_free);
@@ -288,7 +288,7 @@ void
 test_ncm_model_ctrl_traps (TestNcmModelCtrl *test, gconstpointer pdata)
 {
 #if !((GLIB_MAJOR_VERSION == 2) && (GLIB_MINOR_VERSION < 38))
-  g_test_trap_subprocess ("/numcosmo/ncm_model_ctrl/invalid/submodel_last_update/subprocess", 0, 0);
+  g_test_trap_subprocess ("/ncm/model_ctrl/invalid/submodel_last_update/subprocess", 0, 0);
   g_test_trap_assert_failed ();
 #endif
 }

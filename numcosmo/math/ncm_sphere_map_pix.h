@@ -29,6 +29,7 @@
 #include <glib.h>
 #include <glib-object.h>
 #include <numcosmo/build_cfg.h>
+#include <numcosmo/math/ncm_vector.h>
 #include <numcosmo/math/ncm_quaternion.h>
 #include <gsl/gsl_vector_float.h>
 #ifndef NUMCOSMO_GIR_SCAN
@@ -103,6 +104,10 @@ struct _NcmSphereMapPix
   gpointer pvec;
   gpointer fft_pvec;
   GPtrArray *fft_plan;
+  guint lmax;
+  NcmVector *Ylm;
+  NcmVector *alm;
+  NcmVector *Cl;
 };
 
 GType ncm_sphere_map_pix_get_type (void) G_GNUC_CONST;
@@ -130,6 +135,9 @@ NcmSphereMapPixOrder ncm_sphere_map_pix_get_order (NcmSphereMapPix *pix);
 void ncm_sphere_map_pix_set_coordsys (NcmSphereMapPix *pix, NcmSphereMapPixCoordSys coordsys);
 NcmSphereMapPixCoordSys ncm_sphere_map_pix_get_coordsys (NcmSphereMapPix *pix);
 
+void ncm_sphere_map_pix_set_lmax (NcmSphereMapPix *pix, guint lmax);
+guint ncm_sphere_map_pix_get_lmax (NcmSphereMapPix *pix);
+
 void ncm_sphere_map_pix_clear_pixels (NcmSphereMapPix *pix);
 
 gint64 ncm_sphere_map_pix_nest2ring (NcmSphereMapPix *pix, const gint64 nest_index);
@@ -152,7 +160,11 @@ void ncm_sphere_map_pix_save_fits (NcmSphereMapPix *pix, const gchar *fits_file,
 
 void ncm_sphere_map_pix_load_from_fits_catalog (NcmSphereMapPix *pix, const gchar *fits_file, const gchar *RA, const gchar *DEC, const gchar *S);
 
-void ncm_sphere_map_pix_get_alm (NcmSphereMapPix *pix);
+void ncm_sphere_map_pix_prepare_alm (NcmSphereMapPix *pix);
+void ncm_sphere_map_pix_prepare_Cl (NcmSphereMapPix *pix);
+
+void ncm_sphere_map_pix_get_alm (NcmSphereMapPix *pix, guint l, guint m, gdouble *Re_alm, gdouble *Im_alm);
+gdouble ncm_sphere_map_pix_get_Cl (NcmSphereMapPix *pix, guint l);
 
 #define NCM_SPHERE_MAP_PIX_N(nside) (12 * (nside) * (nside))
 #define NCM_SPHERE_MAP_PIX_INT_TO_XY(i,x,y) \

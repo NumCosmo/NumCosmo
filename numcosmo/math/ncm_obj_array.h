@@ -48,13 +48,19 @@ NcmObjArray *ncm_obj_array_ref (NcmObjArray *oa);
 void ncm_obj_array_unref (NcmObjArray *oa);
 void ncm_obj_array_clear (NcmObjArray **oa);
 GVariant *ncm_obj_array_ser (NcmObjArray *oa, NcmSerialize *ser);
+NcmObjArray *ncm_obj_array_dup (NcmObjArray *oa, NcmSerialize *ser);
 
 void ncm_obj_array_add (NcmObjArray *oa, GObject *obj);
 void ncm_obj_array_set (NcmObjArray *oa, guint i, GObject *obj);
 GObject *ncm_obj_array_get (NcmObjArray *oa, guint i);
 GObject *ncm_obj_array_peek (NcmObjArray *oa, guint i);
 
-#define NCM_OBJ_ARRAY_TYPE "a"NCM_SERIALIZE_OBJECT_TYPE
+void ncm_obj_array_save (NcmObjArray *oa, NcmSerialize *ser, const gchar *filename, gboolean save_comment);
+NcmObjArray *ncm_obj_array_load (const gchar *filename, NcmSerialize *ser);
+
+#define NCM_OBJ_ARRAY_TYPE         "a"NCM_SERIALIZE_OBJECT_TYPE
+#define NCM_OBJ_ARRAY_POS_STR      "ARRAY:ELEMENT"
+#define NCM_OBJ_ARRAY_OBJ_NAME_STR "OBJECT:NAME"
 
 G_END_DECLS
 

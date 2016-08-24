@@ -41,7 +41,9 @@
 #include "build_cfg.h"
 
 #include "nc_planck_fi_cor_tt.h"
-#include "math/ncm_priors.h"
+#include "math/ncm_prior_gauss_param.h"
+#include "math/ncm_prior_gauss_func.h"
+#include "math/ncm_mset_func_list.h"
 
 enum
 {
@@ -174,10 +176,10 @@ nc_planck_fi_cor_tt_add_gal_priors (NcmLikelihood *lh, NcmVector *mean, NcmVecto
   g_assert_cmpuint (ncm_vector_len (mean), ==, 4);
   g_assert_cmpuint (ncm_vector_len (sigma), ==, 4);
 
-  ncm_prior_add_gaussian_data (lh, nc_planck_fi_id (), NC_PLANCK_FI_COR_TT_gal545_A_100,     ncm_vector_get (mean, 0), ncm_vector_get (sigma, 0));
-  ncm_prior_add_gaussian_data (lh, nc_planck_fi_id (), NC_PLANCK_FI_COR_TT_gal545_A_143,     ncm_vector_get (mean, 1), ncm_vector_get (sigma, 1));
-  ncm_prior_add_gaussian_data (lh, nc_planck_fi_id (), NC_PLANCK_FI_COR_TT_gal545_A_143_217, ncm_vector_get (mean, 2), ncm_vector_get (sigma, 2));
-  ncm_prior_add_gaussian_data (lh, nc_planck_fi_id (), NC_PLANCK_FI_COR_TT_gal545_A_217,     ncm_vector_get (mean, 3), ncm_vector_get (sigma, 3));
+  ncm_likelihood_priors_add_gauss_param (lh, nc_planck_fi_id (), NC_PLANCK_FI_COR_TT_gal545_A_100,     ncm_vector_get (mean, 0), ncm_vector_get (sigma, 0));
+  ncm_likelihood_priors_add_gauss_param (lh, nc_planck_fi_id (), NC_PLANCK_FI_COR_TT_gal545_A_143,     ncm_vector_get (mean, 1), ncm_vector_get (sigma, 1));
+  ncm_likelihood_priors_add_gauss_param (lh, nc_planck_fi_id (), NC_PLANCK_FI_COR_TT_gal545_A_143_217, ncm_vector_get (mean, 2), ncm_vector_get (sigma, 2));
+  ncm_likelihood_priors_add_gauss_param (lh, nc_planck_fi_id (), NC_PLANCK_FI_COR_TT_gal545_A_217,     ncm_vector_get (mean, 3), ncm_vector_get (sigma, 3));
 }
 
 /**
@@ -217,9 +219,9 @@ nc_planck_fi_cor_tt_add_calib_priors (NcmLikelihood *lh, NcmVector *mean, NcmVec
   g_assert_cmpuint (ncm_vector_len (mean), ==, 3);
   g_assert_cmpuint (ncm_vector_len (sigma), ==, 3);
 
-  ncm_prior_add_gaussian_data (lh, nc_planck_fi_id (), NC_PLANCK_FI_COR_TT_calib_100T, ncm_vector_get (mean, 0), ncm_vector_get (sigma, 0));
-  ncm_prior_add_gaussian_data (lh, nc_planck_fi_id (), NC_PLANCK_FI_COR_TT_calib_217T, ncm_vector_get (mean, 1), ncm_vector_get (sigma, 1));
-  ncm_prior_add_gaussian_data (lh, nc_planck_fi_id (), NC_PLANCK_FI_COR_TT_A_planck, ncm_vector_get (mean, 2), ncm_vector_get (sigma, 2));
+  ncm_likelihood_priors_add_gauss_param (lh, nc_planck_fi_id (), NC_PLANCK_FI_COR_TT_calib_100T, ncm_vector_get (mean, 0), ncm_vector_get (sigma, 0));
+  ncm_likelihood_priors_add_gauss_param (lh, nc_planck_fi_id (), NC_PLANCK_FI_COR_TT_calib_217T, ncm_vector_get (mean, 1), ncm_vector_get (sigma, 1));
+  ncm_likelihood_priors_add_gauss_param (lh, nc_planck_fi_id (), NC_PLANCK_FI_COR_TT_A_planck,   ncm_vector_get (mean, 2), ncm_vector_get (sigma, 2));
 }
 
 /**
@@ -244,33 +246,16 @@ nc_planck_fi_cor_tt_add_default_calib_priors (NcmLikelihood *lh)
   ncm_vector_free (sigma_vec);
 }
 
-
-typedef struct _NcPlanckFICorSZPrior
-{
-  gdouble f_tSZ;
-  gdouble mean;
-  gdouble sigma;
-} NcPlanckFICorSZPrior;
-
 static void
-_nc_planck_fi_cor_tt_sz_prior_f (NcmMSet *mset, gpointer obj, const gdouble *x, gdouble *f)
+_nc_planck_fi_cor_tt_sz_prior_f (NcmMSetFuncList *flist, NcmMSet *mset, const gdouble *x, gdouble *f)
 {
-  NcPlanckFICorSZPrior *tp = (NcPlanckFICorSZPrior *)obj;
   NcPlanckFICorTT *fi_cor_tt = NC_PLANCK_FI_COR_TT (ncm_mset_peek (mset, nc_planck_fi_id ()));
   const gdouble A_tSZ = ncm_model_orig_param_get (NCM_MODEL (fi_cor_tt), NC_PLANCK_FI_COR_TT_A_sz);
   const gdouble A_kSZ = ncm_model_orig_param_get (NCM_MODEL (fi_cor_tt), NC_PLANCK_FI_COR_TT_ksz_norm);
 
-  NCM_UNUSED (x);
-
   g_assert (NC_IS_PLANCK_FI_COR_TT (fi_cor_tt));
 
-  f[0] = (A_kSZ + tp->f_tSZ * A_tSZ - tp->mean) / tp->sigma;
-}
-
-static void
-_nc_planck_fi_cor_tt_sz_prior_free (NcPlanckFICorSZPrior *tp)
-{
-  g_slice_free (NcPlanckFICorSZPrior, tp);
+  f[0] = A_kSZ + x[0] * A_tSZ;
 }
 
 /**
@@ -287,15 +272,13 @@ _nc_planck_fi_cor_tt_sz_prior_free (NcPlanckFICorSZPrior *tp)
 void
 nc_planck_fi_cor_tt_add_sz_prior (NcmLikelihood *lh, gdouble f_tSZ, gdouble mean, gdouble sigma)
 {
-  NcPlanckFICorSZPrior *tp = g_slice_new (NcPlanckFICorSZPrior);
-  NcmMSetFunc *prior = ncm_mset_func_new (&_nc_planck_fi_cor_tt_sz_prior_f, 0, 1, tp, (GDestroyNotify) _nc_planck_fi_cor_tt_sz_prior_free);
+  NcmMSetFunc *A_ktSZ    = NCM_MSET_FUNC (ncm_mset_func_list_new ("NcPlanckFICorTT:A_ktSZ", NULL));
+  NcmPriorGaussFunc *pgf = ncm_prior_gauss_func_new (A_ktSZ, mean, sigma, f_tSZ);
+  
+  ncm_likelihood_priors_add (lh, NCM_PRIOR (pgf));
 
-  tp->f_tSZ = f_tSZ;
-  tp->mean  = mean;
-  tp->sigma = sigma;
-
-  ncm_likelihood_priors_add (lh, prior, FALSE);
-  ncm_mset_func_free (prior);
+  ncm_mset_func_free (A_ktSZ);
+  ncm_prior_gauss_func_clear (&pgf);
 }
 
 /**
@@ -313,7 +296,6 @@ nc_planck_fi_cor_tt_add_default_sz_prior (NcmLikelihood *lh)
   nc_planck_fi_cor_tt_add_sz_prior (lh, 1.6, 9.5, 3.0);
 }
 
-
 /**
  * nc_planck_fi_cor_tt_add_all_default_priors:
  * @lh: a #NcmLikelihood
@@ -330,4 +312,10 @@ nc_planck_fi_cor_tt_add_all_default_priors (NcmLikelihood *lh)
   nc_planck_fi_cor_tt_add_default_gal_priors (lh);
   nc_planck_fi_cor_tt_add_default_calib_priors (lh);
   nc_planck_fi_cor_tt_add_default_sz_prior (lh);
+}
+
+void
+_nc_planck_fi_cor_tt_register_functions (void)
+{
+  ncm_mset_func_list_register ("A_ktSZ", "A_\\mathrm{kSZ} + f_\\mathrm{tSZ}A_\\mathrm{tSZ}", "NcPlanckFICorTT", "A SZ combination", G_TYPE_NONE, _nc_planck_fi_cor_tt_sz_prior_f, 1, 1);
 }

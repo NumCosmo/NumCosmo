@@ -76,43 +76,43 @@ main (gint argc, gchar *argv[])
   {
     gchar *d;
 
-    d = g_strdup_printf ("/numcosmo/%s/new", (gchar *) ccc[i][0]);
+    d = g_strdup_printf ("/ncm/%s/new", (gchar *) ccc[i][0]);
     g_test_add (d, TestNcmModel, NULL, ccc[i][1], &test_ncm_model_test_new, ccc[i][2]);
     g_free (d);
 
-    d = g_strdup_printf ("/numcosmo/%s/length", (gchar *) ccc[i][0]);
+    d = g_strdup_printf ("/ncm/%s/length", (gchar *) ccc[i][0]);
     g_test_add (d, TestNcmModel, NULL, ccc[i][1], &test_ncm_model_test_length, ccc[i][2]);
     g_free (d);
 
-    d = g_strdup_printf ("/numcosmo/%s/defval", (gchar *) ccc[i][0]);
+    d = g_strdup_printf ("/ncm/%s/defval", (gchar *) ccc[i][0]);
     g_test_add (d, TestNcmModel, NULL, ccc[i][1], &test_ncm_model_test_defval, ccc[i][2]);
     g_free (d);
 
-    d = g_strdup_printf ("/numcosmo/%s/name_symbol", (gchar *) ccc[i][0]);
+    d = g_strdup_printf ("/ncm/%s/name_symbol", (gchar *) ccc[i][0]);
     g_test_add (d, TestNcmModel, NULL, ccc[i][1], &test_ncm_model_test_name_symbol, ccc[i][2]);
     g_free (d);
 
-    d = g_strdup_printf ("/numcosmo/%s/setget", (gchar *) ccc[i][0]);
+    d = g_strdup_printf ("/ncm/%s/setget", (gchar *) ccc[i][0]);
     g_test_add (d, TestNcmModel, NULL, ccc[i][1], &test_ncm_model_test_setget, ccc[i][2]);
     g_free (d);
 
-    d = g_strdup_printf ("/numcosmo/%s/setget/prop", (gchar *) ccc[i][0]);
+    d = g_strdup_printf ("/ncm/%s/setget/prop", (gchar *) ccc[i][0]);
     g_test_add (d, TestNcmModel, NULL, ccc[i][1], &test_ncm_model_test_setget_prop, ccc[i][2]);
     g_free (d);
 
-    d = g_strdup_printf ("/numcosmo/%s/setget/vector", (gchar *) ccc[i][0]);
+    d = g_strdup_printf ("/ncm/%s/setget/vector", (gchar *) ccc[i][0]);
     g_test_add (d, TestNcmModel, NULL, ccc[i][1], &test_ncm_model_test_setget_vector, ccc[i][2]);
     g_free (d);
 
-    d = g_strdup_printf ("/numcosmo/%s/setget/model", (gchar *) ccc[i][0]);
+    d = g_strdup_printf ("/ncm/%s/setget/model", (gchar *) ccc[i][0]);
     g_test_add (d, TestNcmModel, NULL, ccc[i][1], &test_ncm_model_test_setget_model, ccc[i][2]);
     g_free (d);
 
-    d = g_strdup_printf ("/numcosmo/%s/name_index", (gchar *) ccc[i][0]);
+    d = g_strdup_printf ("/ncm/%s/name_index", (gchar *) ccc[i][0]);
     g_test_add (d, TestNcmModel, NULL, ccc[i][1], &test_ncm_model_test_name_index, ccc[i][2]);
     g_free (d);
 
-    d = g_strdup_printf ("/numcosmo/%s/dup", (gchar *) ccc[i][0]);
+    d = g_strdup_printf ("/ncm/%s/dup", (gchar *) ccc[i][0]);
     g_test_add (d, TestNcmModel, NULL, ccc[i][1], &test_ncm_model_test_dup, ccc[i][2]);
     g_free (d);
   }

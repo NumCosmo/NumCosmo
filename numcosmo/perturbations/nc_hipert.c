@@ -256,6 +256,8 @@ nc_hipert_set_sys_size (NcHIPert *pert, guint sys_size)
       pert->vec_abstol = N_VNew_Serial (sys_size);
     }
     pert->prepared = FALSE;
+
+    nc_hipert_reset_solver (pert);
   }
 }
 
@@ -290,6 +292,29 @@ nc_hipert_set_stiff_solver (NcHIPert *pert, gboolean stiff)
   }
 }
 
+/**
+ * nc_hipert_reset_solver:
+ * @pert: a #NcHIPert
+ *
+ * Destroy and recreates the solver.
+ *
+ */
+void
+nc_hipert_reset_solver (NcHIPert *pert)
+{
+  if (pert->cvode != NULL)
+  {
+    CVodeFree (&pert->cvode);
+    pert->cvode = NULL;
+  }
+
+  if (pert->cvode_stiff)
+    pert->cvode = CVodeCreate (CV_BDF, CV_NEWTON);
+  else
+    pert->cvode = CVodeCreate (CV_ADAMS, CV_FUNCTIONAL);
+
+  pert->cvode_init = FALSE;
+}
 
 /**
  * nc_hipert_set_reltol:

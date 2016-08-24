@@ -71,7 +71,7 @@ ncm_fit_esmcmc_walker_stretch_init (NcmFitESMCMCWalkerStretch *stretch)
 }
 
 static void
-ncm_fit_esmcmc_walker_stretch_dispose (GObject *object)
+_ncm_fit_esmcmc_walker_stretch_dispose (GObject *object)
 {
   NcmFitESMCMCWalkerStretch *stretch = NCM_FIT_ESMCMC_WALKER_STRETCH (object);
 
@@ -90,7 +90,7 @@ ncm_fit_esmcmc_walker_stretch_dispose (GObject *object)
 }
 
 static void
-ncm_fit_esmcmc_walker_stretch_finalize (GObject *object)
+_ncm_fit_esmcmc_walker_stretch_finalize (GObject *object)
 {
 
   /* Chain up : end */
@@ -98,7 +98,7 @@ ncm_fit_esmcmc_walker_stretch_finalize (GObject *object)
 }
 
 static void
-ncm_fit_esmcmc_walker_stretch_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
+_ncm_fit_esmcmc_walker_stretch_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
 {
   NcmFitESMCMCWalkerStretch *stretch = NCM_FIT_ESMCMC_WALKER_STRETCH (object);
   g_return_if_fail (NCM_IS_FIT_ESMCMC_WALKER_STRETCH (object));
@@ -118,7 +118,7 @@ ncm_fit_esmcmc_walker_stretch_set_property (GObject *object, guint prop_id, cons
 }
 
 static void
-ncm_fit_esmcmc_walker_stretch_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
+_ncm_fit_esmcmc_walker_stretch_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
 {
   NcmFitESMCMCWalkerStretch *stretch = NCM_FIT_ESMCMC_WALKER_STRETCH (object);
   g_return_if_fail (NCM_IS_FIT_ESMCMC_WALKER_STRETCH (object));
@@ -153,10 +153,10 @@ ncm_fit_esmcmc_walker_stretch_class_init (NcmFitESMCMCWalkerStretchClass *klass)
   GObjectClass* object_class = G_OBJECT_CLASS (klass);
   NcmFitESMCMCWalkerClass *walker_class = NCM_FIT_ESMCMC_WALKER_CLASS (klass);
 
-  object_class->set_property = ncm_fit_esmcmc_walker_stretch_set_property;
-  object_class->get_property = ncm_fit_esmcmc_walker_stretch_get_property;
-  object_class->dispose      = ncm_fit_esmcmc_walker_stretch_dispose;
-  object_class->finalize     = ncm_fit_esmcmc_walker_stretch_finalize;
+  object_class->set_property = _ncm_fit_esmcmc_walker_stretch_set_property;
+  object_class->get_property = _ncm_fit_esmcmc_walker_stretch_get_property;
+  object_class->dispose      = _ncm_fit_esmcmc_walker_stretch_dispose;
+  object_class->finalize     = _ncm_fit_esmcmc_walker_stretch_finalize;
 
   g_object_class_install_property (object_class,
                                    PROP_SCALE,
@@ -203,6 +203,7 @@ _ncm_fit_esmcmc_walker_stretch_set_sys (NcmFitESMCMCWalker *walker, guint size, 
 
     stretch->norm_box = ncm_vector_new (size);
     stretch->box      = ncm_matrix_new (nparams, 2);
+
     g_array_set_size (stretch->use_box, nparams);
 
     g_array_set_size (stretch->indices, size * nparams);
@@ -351,16 +352,14 @@ _ncm_fit_esmcmc_walker_stretch_norm (NcmFitESMCMCWalkerStretch *stretch, guint i
 static void
 _ncm_fit_esmcmc_walker_stretch_one_step (NcmFitESMCMCWalkerStretch *stretch, NcmVector *theta_k, NcmVector *theta_j, const gdouble z, NcmVector *thetastar)
 {
-  const guint len = ncm_vector_len (thetastar);
   guint i;
   
-  for (i = NCM_FIT_ESMCMC_NADD_VALS; i < len; i++)
+  for (i = 0; i < stretch->nparams; i++)
   {
-    const guint pi            = i - NCM_FIT_ESMCMC_NADD_VALS;
     const gdouble theta_k_i   = ncm_vector_get (theta_k, i);
     const gdouble theta_j_i   = ncm_vector_get (theta_j, i);
 
-    if (!g_array_index (stretch->use_box, gboolean, pi))
+    if (!g_array_index (stretch->use_box, gboolean, i))
     {
       const gdouble thetastar_i = theta_j_i + z * (theta_k_i - theta_j_i);
       
@@ -368,10 +367,10 @@ _ncm_fit_esmcmc_walker_stretch_one_step (NcmFitESMCMCWalkerStretch *stretch, Ncm
     }
     else
     {
-      const gdouble x_k_i       = _ncm_fit_esmcmc_walker_stretch_theta_to_x (stretch, pi, theta_k_i);
-      const gdouble x_j_i       = _ncm_fit_esmcmc_walker_stretch_theta_to_x (stretch, pi, theta_j_i);
+      const gdouble x_k_i       = _ncm_fit_esmcmc_walker_stretch_theta_to_x (stretch, i, theta_k_i);
+      const gdouble x_j_i       = _ncm_fit_esmcmc_walker_stretch_theta_to_x (stretch, i, theta_j_i);
       const gdouble xstar_i     = x_j_i + z * (x_k_i - x_j_i);
-      const gdouble thetastar_i = _ncm_fit_esmcmc_walker_stretch_x_to_theta (stretch, pi, xstar_i);
+      const gdouble thetastar_i = _ncm_fit_esmcmc_walker_stretch_x_to_theta (stretch, i, xstar_i);
       
       ncm_vector_set (thetastar, i, thetastar_i);
     }
@@ -382,7 +381,6 @@ static void
 _ncm_fit_esmcmc_walker_stretch_step (NcmFitESMCMCWalker *walker, GPtrArray *theta, NcmVector *thetastar, guint k)
 {
   NcmFitESMCMCWalkerStretch *stretch = NCM_FIT_ESMCMC_WALKER_STRETCH (walker);
-  const guint len = ncm_vector_len (thetastar);
   NcmVector *theta_k = g_ptr_array_index (theta, k);
   guint i;
 
@@ -415,16 +413,15 @@ _ncm_fit_esmcmc_walker_stretch_step (NcmFitESMCMCWalker *walker, GPtrArray *thet
     }
   }
 
-  for (i = NCM_FIT_ESMCMC_NADD_VALS; i < len; i++)
+  for (i = 0; i < stretch->nparams; i++)
   {
-    const guint pi = i - NCM_FIT_ESMCMC_NADD_VALS;
-    if (g_array_index (stretch->use_box, gboolean, pi))
+    if (g_array_index (stretch->use_box, gboolean, i))
     {
       const gdouble thetastar_i = ncm_vector_get (thetastar, i);
       const gdouble theta_k_i   = ncm_vector_get (theta_k, i);
 
       ncm_vector_addto (stretch->norm_box, k, 
-                        _ncm_fit_esmcmc_walker_stretch_norm (stretch, pi, thetastar_i, theta_k_i));
+                        _ncm_fit_esmcmc_walker_stretch_norm (stretch, i, thetastar_i, theta_k_i));
     }
   }
 }

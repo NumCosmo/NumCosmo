@@ -1,10 +1,22 @@
 #!/usr/bin/python2
 
+import math
+import gi
+gi.require_version('NumCosmo', '1.0')
+gi.require_version('NumCosmoMath', '1.0')
+
+from gi.repository import GObject
 from gi.repository import NumCosmo as Nc
 from gi.repository import NumCosmoMath as Ncm
+
+import scipy.stats as ss
+import numpy as np
 import matplotlib.pyplot as plt
+from matplotlib.animation import FuncAnimation
+from tqdm import tqdm
 import time
 import math
+import sys
 
 #
 #  Initializing the library objects, this must be called before 
@@ -17,100 +29,105 @@ Ncm.cfg_init ()
 #
 cosmo = Nc.HICosmo.new_from_name (Nc.HICosmo, "NcHICosmoQGRW")
 
-w        = 1.0e-8
-prec     = 1.0e-9
-k_min    = 1.0e-1
-k_max    = 1.0e4
-wkb_prec = prec
+if len (sys.argv) != 2:
+  print "%s w" % (sys.argv[0])
+  sys.exit (0)
+
+w      = float (sys.argv[1])
+prec   = 1.0e-7
 
 cosmo.props.w      = w
-cosmo.props.Omegar = 1.0e-5
-cosmo.props.Omegaw = 1.0 - 1.0e-5
+cosmo.props.Omegar = (1.0e-6) * 1.0
+cosmo.props.Omegaw = (1.0 - 1.0e-6) * 1.0
+cosmo.props.xb     = 1.e30
 
-pertZ = Nc.HIPertTwoFluids.new ()
-pertQ = Nc.HIPertTwoFluids.new ()
+pert = Nc.HIPertTwoFluids.new ()
 
-pertZ.props.reltol = prec
-pertQ.props.reltol = prec
+pert.props.reltol = prec
+#pert.set_stiff_solver (True)
 
-Delta_zeta_A = []
-Delta_zeta_B = []
-Delta_Q_A = []
-Delta_Q_B = []
+lnki  = math.log (1.0e-3)
+lnkf  = math.log (1.0e3)
+lnk_a = np.linspace (lnki, lnkf, 20)
 
-k_a = []
+ci = Ncm.Vector.new (8)
 
-alpha_minf      = -cosmo.abs_alpha (1.0e-27)
-alpha_end       = cosmo.abs_alpha (1.0e25)  
+k_a       = []
+Ps_zeta1  = []
+Ps_S1     = []
+Ps_zeta2  = []
+Ps_S2     = []
+Ps_Pzeta1 = []
+Ps_PS1    = []
+Ps_Pzeta2 = []
+Ps_PS2    = []
 
-for i in range (101):
-  mode_k = k_min * math.exp (math.log (k_max / k_min) * i / 100.0)
+out_file = f = open ('twofluids_spectrum_%e.dat' % (w), 'w')
+
+start_alpha1 = 1.0e-10
+start_alpha2 = 1.0e-14
+
+for lnk in tqdm (lnk_a):
+  k = math.exp (lnk)
+  pert.set_mode_k (k)
+  k_a.append (k)
+
+  alphaf = cosmo.abs_alpha (1.0e20)
+
+  #print "# Evolving mode %e from %f to %f" % (k, alphai, alphaf)
+
+  alphai = -cosmo.abs_alpha (start_alpha1 * k**2)
+  pert.get_init_cond_zetaS (cosmo, alphai, 1, 0.25 * math.pi, ci)
+  pert.set_init_cond (cosmo, alphai, False, ci)
   
-  k_a.append (mode_k)
+  print "# Mode 1 k % 21.15e, state module %f" % (k, pert.get_state_mod ())
 
-  pertZ.set_mode_k (mode_k);
-  pertQ.set_mode_k (mode_k);
+  pert.evolve (cosmo, alphaf)
+  v, alphac = pert.peek_state ()
 
-  alpha_zeta_wkb  = pertZ.wkb_zeta_maxtime (cosmo, alpha_minf, -alpha_end)
-  alpha_S_wkb     = pertZ.wkb_S_maxtime (cosmo, alpha_minf, -alpha_end)   
-  alpha_zeta_prec = pertZ.wkb_zeta_maxtime_prec (cosmo, wkb_prec, alpha_minf, -alpha_end)
-  alpha_S_prec    = pertZ.wkb_S_maxtime_prec (cosmo, wkb_prec, alpha_minf, -alpha_end)   
-  alphai          = -cosmo.abs_alpha (cosmo.x_alpha (min (alpha_S_prec, alpha_zeta_prec)) * 1.0e-1)
+  Delta_zeta1  = k**3 * math.hypot (v.get (Nc.HIPertITwoFluidsVars.ZETA_R),  v.get (Nc.HIPertITwoFluidsVars.ZETA_I))**2  / (2.0 * math.pi**2 * cosmo.RH_planck ()**2)
+  Delta_S1     = k**3 * math.hypot (v.get (Nc.HIPertITwoFluidsVars.S_R),     v.get (Nc.HIPertITwoFluidsVars.S_I))**2     / (2.0 * math.pi**2 * cosmo.RH_planck ()**2)
+  Delta_Pzeta1 = k**3 * math.hypot (v.get (Nc.HIPertITwoFluidsVars.PZETA_R), v.get (Nc.HIPertITwoFluidsVars.PZETA_I))**2 / (2.0 * math.pi**2 * cosmo.RH_planck ()**2)
+  Delta_PS1    = k**3 * math.hypot (v.get (Nc.HIPertITwoFluidsVars.PS_R),    v.get (Nc.HIPertITwoFluidsVars.PS_I))**2    / (2.0 * math.pi**2 * cosmo.RH_planck ()**2)
+    
+  Ps_zeta1.append (Delta_zeta1)
+  Ps_S1.append    (Delta_S1)
+  Ps_Pzeta1.append (Delta_Pzeta1)
+  Ps_PS1.append    (Delta_PS1)
+
+  alphai = -cosmo.abs_alpha (start_alpha2 * k**2)
+  pert.get_init_cond_zetaS (cosmo, alphai, 2, 0.25 * math.pi, ci)
+  pert.set_init_cond (cosmo, alphai, False, ci)
+
+  print "# Mode 2 k % 21.15e, state module %f" % (k, pert.get_state_mod ())
+
+  pert.evolve (cosmo, alphaf)
+  v, alphac = pert.peek_state ()
+
+  Delta_zeta2  = k**3 * math.hypot (v.get (Nc.HIPertITwoFluidsVars.ZETA_R),  v.get (Nc.HIPertITwoFluidsVars.ZETA_I))**2  / (2.0 * math.pi**2 * cosmo.RH_planck ()**2)
+  Delta_S2     = k**3 * math.hypot (v.get (Nc.HIPertITwoFluidsVars.S_R),     v.get (Nc.HIPertITwoFluidsVars.S_I))**2     / (2.0 * math.pi**2 * cosmo.RH_planck ()**2)
+  Delta_Pzeta2 = k**3 * math.hypot (v.get (Nc.HIPertITwoFluidsVars.PZETA_R), v.get (Nc.HIPertITwoFluidsVars.PZETA_I))**2 / (2.0 * math.pi**2 * cosmo.RH_planck ()**2)
+  Delta_PS2    = k**3 * math.hypot (v.get (Nc.HIPertITwoFluidsVars.PS_R),    v.get (Nc.HIPertITwoFluidsVars.PS_I))**2    / (2.0 * math.pi**2 * cosmo.RH_planck ()**2)
+
+  Ps_zeta2.append (Delta_zeta2)
+  Ps_S2.append    (Delta_S2)
+  Ps_zeta2.append (Delta_Pzeta2)
+  Ps_S2.append    (Delta_PS2)
   
-  print "# Mode[%d] k = %f, prec = %e" % (i, mode_k, prec)
-  print "# Maxtime wkb zeta: %f %e" % (alpha_zeta_wkb, cosmo.x_alpha (alpha_zeta_wkb))
-  print "# Maxtime wkb Q:    %f %e" % (alpha_S_wkb, cosmo.x_alpha (alpha_S_wkb))
-  print "# Prec    wkb zeta: %f %e" % (alpha_zeta_prec, cosmo.x_alpha (alpha_zeta_prec))
-  print "# Prec    wkb Q:    %f %e" % (alpha_S_prec, cosmo.x_alpha (alpha_S_prec))
-  print "# Inital time:      %f %e" % (alphai, cosmo.x_alpha (alphai))
+  out_file.write ("% 20.15e % 20.15e % 20.15e % 20.15e % 20.15e % 20.15e % 20.15e % 20.15e % 20.15e\n" % (k, Delta_zeta1, Delta_zeta2, Delta_S1, Delta_S2, Delta_Pzeta1, Delta_Pzeta2, Delta_PS1, Delta_PS2))
+  out_file.flush ()
 
-  pertZ.set_stiff_solver (True)
-  pertQ.set_stiff_solver (True)
+out_file.close ()
 
-  print "# Preparing zeta"
-  pertZ.prepare_patched_zeta (cosmo, wkb_prec, alphai, -alpha_end)
-  print "# Preparing Q"
-  pertZ.prepare_patched_S (cosmo, wkb_prec, alphai, -alpha_end)
-  
-  print "# Preparing zeta"
-  pertQ.prepare_patched_zeta (cosmo, wkb_prec, alphai, -alpha_end)
-  print "# Preparing Q"
-  pertQ.prepare_patched_S (cosmo, wkb_prec, alphai, -alpha_end)
+plt.plot (k_a, Ps_zeta1, label = r'$P^1_\zeta$')
+plt.plot (k_a, Ps_S1,    label = r'$P^1_S$')
+plt.plot (k_a, Ps_zeta2, label = r'$P^2_\zeta$')
+plt.plot (k_a, Ps_S2,    label = r'$P^2_S$')
 
-  alphai = -cosmo.abs_alpha (1.0e-18)
-  
-  print "# Setting inital conditions"
-  pertZ.set_init_cond_patched_zeta (cosmo, alphai)
-  pertQ.set_init_cond_patched_Q (cosmo, alphai)
-
-  varsZ = [1.234] * 8
-  varsQ = [1.234] * 8
-  varsZ_wkb = [1.234] * 8
-  varsQ_wkb = [1.234] * 8
-
-  pertZ.evolve (cosmo, alpha_end)
-  pertQ.evolve (cosmo, alpha_end)
-  (alphas, varsZ) = pertZ.get_values (varsZ)
-  (alphas, varsQ) = pertQ.get_values (varsQ)
-
-  Delta_zeta_A.append (mode_k**3 * math.hypot (varsZ[0], varsZ[1])**2)
-  Delta_zeta_B.append (mode_k**3 * math.hypot (varsQ[0], varsQ[1])**2)
-  Delta_Q_A.append (mode_k**3 * math.hypot (varsZ[4], varsZ[5])**2)
-  Delta_Q_B.append (mode_k**3 * math.hypot (varsQ[4], varsQ[5])**2)
-
-#
-# Plotting results
-#
-
-plt.title (r"Mode $\vert\zeta\vert^2$,  k = " + str (mode_k) + ",  w = " + str (w))
+plt.grid ()
+plt.legend (loc="upper left")
 plt.xscale('log')
 plt.yscale('log')
-plt.plot (k_a, Delta_zeta_A, 'r', label=r"$\Delta_{\zeta_A}$")
-plt.plot (k_a, Delta_zeta_B, 'b', label=r"$\Delta_{\zeta_B}$")
-plt.xlabel (r'$k$')
-plt.ylabel (r'$\Delta_\zeta$')
-plt.legend (loc='best')
 
-plt.savefig ("pspec_zeta_w_" + str (w) + ".pdf")
-
-
+plt.show ()
+plt.clf ()

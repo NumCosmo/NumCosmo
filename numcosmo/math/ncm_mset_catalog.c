@@ -66,6 +66,8 @@ enum
   PROP_0,
   PROP_MSET,
   PROP_NADD_VALS,
+  PROP_ADD_VAL_NAMES,
+  PROP_ADD_VAL_SYMBS,
   PROP_WEIGHTED,
   PROP_NCHAINS,
   PROP_BURNIN,
@@ -83,6 +85,7 @@ ncm_mset_catalog_init (NcmMSetCatalog *mcat)
   mcat->mset           = NULL;
   mcat->nadd_vals      = 0;
   mcat->add_vals_names = g_ptr_array_new_with_free_func (g_free);
+  mcat->add_vals_symbs = g_ptr_array_new_with_free_func (g_free);
   mcat->pstats         = NULL;
   mcat->smode          = NCM_MSET_CATALOG_SYNC_LEN;
   mcat->readonly       = FALSE;
@@ -137,16 +140,10 @@ static void _ncm_mset_catalog_flush_file (NcmMSetCatalog *mcat);
 #endif /* NUMCOSMO_HAVE_CFITSIO */
 
 static void
-_ncm_mset_catalog_constructed_reset_alloc (NcmMSetCatalog *mcat)
-{
-  g_ptr_array_set_size (mcat->add_vals_names, 0);
-}
-
-static void
 _ncm_mset_catalog_constructed_alloc_chains (NcmMSetCatalog *mcat)
 {
-  guint free_params_len = ncm_mset_fparams_len (mcat->mset);
-  guint total = free_params_len + mcat->nadd_vals + (mcat->weighted ? 1 : 0);
+  const guint free_params_len = ncm_mset_fparams_len (mcat->mset);
+  const guint total = free_params_len + mcat->nadd_vals + (mcat->weighted ? 1 : 0);
   guint i;
 
   mcat->pstats     = ncm_stats_vec_new (total, NCM_STATS_VEC_COV, TRUE);
@@ -185,11 +182,15 @@ _ncm_mset_catalog_constructed (GObject *object)
   {
     NcmMSetCatalog *mcat = NCM_MSET_CATALOG (object);
 
+    g_assert_cmpuint (mcat->add_vals_names->len, ==, mcat->add_vals_symbs->len);
+    g_assert_cmpuint (mcat->add_vals_names->len, ==, mcat->nadd_vals);
+
     mcat->constructed = TRUE;
     if (mcat->file != NULL)
     {
       gchar *file = mcat->file;
-      mcat->file = NULL;
+      mcat->file  = NULL;
+
       ncm_mset_catalog_set_file (mcat, file);
 
       g_free (file);
@@ -208,9 +209,10 @@ _ncm_mset_catalog_constructed (GObject *object)
         g_error ("_ncm_mset_catalog_constructed: cannot create catalog file `%s' not found.",
                  mcat->file);
       }
+
       if (!g_file_test (mcat->mset_file, G_FILE_TEST_EXISTS))
       {
-        g_error ("_ncm_mset_catalog_constructed: cannot create catalog file `%s' not found.",
+        g_error ("_ncm_mset_catalog_constructed: cannot create catalog mset file `%s' not found.",
                  mcat->mset_file);
       }
 
@@ -219,7 +221,7 @@ _ncm_mset_catalog_constructed (GObject *object)
         mcat->mset = ncm_mset_load (mcat->mset_file, ser);
         ncm_serialize_free (ser);
       }
-      _ncm_mset_catalog_constructed_reset_alloc (mcat);
+
       _ncm_mset_catalog_open_create_file (mcat, TRUE);
       _ncm_mset_catalog_constructed_alloc_chains (mcat);
 
@@ -230,30 +232,31 @@ _ncm_mset_catalog_constructed (GObject *object)
     }
     else
     {
-      guint free_params_len = ncm_mset_fparams_len (mcat->mset);
-      guint total = free_params_len + mcat->nadd_vals + (mcat->weighted ? 1 : 0);
-      guint i;
+      const guint free_params_len = ncm_mset_fparams_len (mcat->mset);
+      const guint total = free_params_len + mcat->nadd_vals + (mcat->weighted ? 1 : 0);
 
       g_array_set_size (mcat->porder, total);
-      _ncm_mset_catalog_constructed_reset_alloc (mcat);
       _ncm_mset_catalog_constructed_alloc_chains (mcat);
-
-      if (mcat->add_vals_names->len != 0 && (mcat->add_vals_names->len != mcat->nadd_vals))
-        g_error ("_ncm_mset_catalog_constructed: number of additional fields do not match %u vs %u.", mcat->add_vals_names->len, mcat->nadd_vals);
-
-      for (i = 0; i < mcat->nadd_vals; i++)
-      {
-        g_ptr_array_add (mcat->add_vals_names, g_strdup_printf ("NcmMSetCatalog:additional-param-%u", i + 1));
-      }
 
       if (mcat->weighted)
       {
         g_ptr_array_add (mcat->add_vals_names, g_strdup ("NcmMSetCatalog:Row-weights"));
+        g_ptr_array_add (mcat->add_vals_symbs, g_strdup ("W"));
         mcat->nadd_vals++;
       }
+
+      if (mcat->file != NULL)
+      {
+        _ncm_mset_catalog_open_create_file (mcat, FALSE);
+        ncm_mset_catalog_sync (mcat, TRUE);
+      }
+      
     }
   }
 }
+
+static void _ncm_mset_catalog_set_add_val_name_array (NcmMSetCatalog *mcat, gchar **names);
+static void _ncm_mset_catalog_set_add_val_symbol_array (NcmMSetCatalog *mcat, gchar **symbols);
 
 static void
 _ncm_mset_catalog_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
@@ -268,6 +271,12 @@ _ncm_mset_catalog_set_property (GObject *object, guint prop_id, const GValue *va
       break;
     case PROP_NADD_VALS:
       mcat->nadd_vals = g_value_get_uint (value);
+      break;
+    case PROP_ADD_VAL_NAMES:
+      _ncm_mset_catalog_set_add_val_name_array (mcat, g_value_get_boxed (value));
+      break;
+    case PROP_ADD_VAL_SYMBS:
+      _ncm_mset_catalog_set_add_val_symbol_array (mcat, g_value_get_boxed (value));
       break;
     case PROP_WEIGHTED:
       mcat->weighted = g_value_get_boolean (value);
@@ -316,6 +325,36 @@ _ncm_mset_catalog_get_property (GObject *object, guint prop_id, GValue *value, G
     case PROP_NADD_VALS:
       g_value_set_uint (value, mcat->nadd_vals);
       break;
+    case PROP_ADD_VAL_NAMES:
+    {
+      gchar **names = g_new (gchar *, mcat->add_vals_names->len + 1);
+      guint i;
+
+      for (i = 0; i < mcat->add_vals_names->len; i++)
+      {
+        names[i] = g_strdup (g_ptr_array_index (mcat->add_vals_names, i));
+      }
+      names[i] = NULL;
+
+      g_value_take_boxed (value, names);
+      
+      break;
+    }
+    case PROP_ADD_VAL_SYMBS:
+    {
+      gchar **symbs = g_new (gchar *, mcat->add_vals_symbs->len + 1);
+      guint i;
+      
+      for (i = 0; i < mcat->add_vals_symbs->len; i++)
+      {
+        symbs[i] = g_strdup (g_ptr_array_index (mcat->add_vals_symbs, i));
+      }
+      symbs[i] = NULL;
+
+      g_value_take_boxed (value, symbs);
+
+      break;
+    }
     case PROP_WEIGHTED:
       g_value_set_boolean (value, mcat->weighted);
       break;
@@ -410,6 +449,7 @@ _ncm_mset_catalog_finalize (GObject *object)
   g_timer_destroy (mcat->sync_timer);
 
   g_ptr_array_unref (mcat->add_vals_names);
+  g_ptr_array_unref (mcat->add_vals_symbs);
 
   g_clear_pointer (&mcat->rng_inis, g_free);
   g_clear_pointer (&mcat->rng_stat, g_free);
@@ -447,7 +487,20 @@ ncm_mset_catalog_class_init (NcmMSetCatalogClass *klass)
                                                       "Number of additional values",
                                                       1, G_MAXUINT32, 1,
                                                       G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-
+  g_object_class_install_property (object_class,
+                                   PROP_ADD_VAL_NAMES,
+                                   g_param_spec_boxed ("nadd-val-names",
+                                                       NULL,
+                                                       "Additional value names",
+                                                       G_TYPE_STRV,
+                                                       G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  g_object_class_install_property (object_class,
+                                   PROP_ADD_VAL_SYMBS,
+                                   g_param_spec_boxed ("nadd-val-symbols",
+                                                       NULL,
+                                                       "Additional value symbols",
+                                                       G_TYPE_STRV,
+                                                       G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));  
   g_object_class_install_property (object_class,
                                    PROP_WEIGHTED,
                                    g_param_spec_boolean ("weighted",
@@ -523,7 +576,7 @@ ncm_mset_catalog_class_init (NcmMSetCatalogClass *klass)
  * @nadd_vals: number of additional values
  * @nchains: number of different chains in the catalog (>=1)
  * @weighted: set to TRUE whenever the catalog is weighted
- * @...: additional values names
+ * @...: additional values name/symbol pairs
  *
  * Creates a new #NcmMSetCatalog based on the #NcmFit object @fit. The catalog assumes that
  * the @fit object will remain with the same set of free parameters during its whole lifetime.
@@ -537,26 +590,71 @@ NcmMSetCatalog *
 ncm_mset_catalog_new (NcmMSet *mset, guint nadd_vals, guint nchains, gboolean weighted, ...)
 {
   va_list ap;
-  NcmMSetCatalog *mcat = g_object_new (NCM_TYPE_MSET_CATALOG,
-                                       "mset", mset,
-                                       "nadd-vals", nadd_vals,
-                                       "nchains", nchains,
-                                       "weighted", weighted,
-                                       NULL);
+  gchar **names   = g_new (gchar *, nadd_vals + 1);
+  gchar **symbols = g_new (gchar *, nadd_vals + 1);
   guint i;
 
   va_start (ap, weighted);
-
   for (i = 0; i < nadd_vals; i++)
   {
-    gchar *name = va_arg (ap, gchar *);
-    g_assert (name != NULL);
-    ncm_mset_catalog_set_add_val_name (mcat, i, name);
-  }
+    gchar *name   = va_arg (ap, gchar *);
+    gchar *symbol = (name != NULL) ? va_arg (ap, gchar *) : NULL;
 
+    if (name == NULL || symbol == NULL)
+      g_error ("ncm_mset_catalog_new: missing %u-th name and or symbol.", i + 1);
+
+    names[i]   = name;
+    symbols[i] = symbol;
+  }
   va_end (ap);
 
-  return mcat;
+  names[i]   = NULL;
+  symbols[i] = NULL;
+  
+  {
+    NcmMSetCatalog *mcat = g_object_new (NCM_TYPE_MSET_CATALOG,
+                                         "mset",             mset,
+                                         "nadd-vals",        nadd_vals,
+                                         "nchains",          nchains,
+                                         "weighted",         weighted,
+                                         "nadd-val-names",   names,
+                                         "nadd-val-symbols", symbols,
+                                         NULL);
+
+    return mcat;
+  }
+}
+
+/**
+ * ncm_mset_catalog_new_array:
+ * @mset: a #NcmMSet
+ * @nadd_vals: number of additional values
+ * @nchains: number of different chains in the catalog (>=1)
+ * @weighted: set to TRUE whenever the catalog is weighted
+ * @names: (array zero-terminated=1): additional values name NULL-terminated array
+ * @symbols: (array zero-terminated=1): additional values symbol NULL-terminated array
+ * 
+ * Creates a new #NcmMSetCatalog based on the #NcmFit object @fit. The catalog assumes that
+ * the @fit object will remain with the same set of free parameters during its whole lifetime.
+ * 
+ * If @nchains is larger than one, the catalog will keep track of the statistics of each chain
+ * separately.
+ * 
+ * Returns: (transfer full): a new #NcmMSetCatalog
+ */
+NcmMSetCatalog *
+ncm_mset_catalog_new_array (NcmMSet *mset, guint nadd_vals, guint nchains, gboolean weighted, gchar **names, gchar **symbols)
+{
+  NcmMSetCatalog *mcat = g_object_new (NCM_TYPE_MSET_CATALOG,
+                                       "mset",             mset,
+                                       "nadd-vals",        nadd_vals,
+                                       "nchains",          nchains,
+                                       "weighted",         weighted,
+                                       "nadd-val-names",   names,
+                                       "nadd-val-symbols", symbols,
+                                       NULL);
+
+  return mcat;  
 }
 
 /**
@@ -970,8 +1068,32 @@ _ncm_mset_catalog_open_create_file (NcmMSetCatalog *mcat, gboolean load_from_cat
         gchar *d_colname = g_strdup (colname);
         g_assert_cmpint (i + 1, ==, cindex);
 
+        status = 0;
+
         g_ptr_array_add (mcat->add_vals_names, d_colname);
         g_array_index (mcat->porder, gint, i) = cindex;
+
+        {
+          gchar symbol_s[FLEN_VALUE];
+          gchar *symbol;
+          gchar *asymbi = g_strdup_printf ("%s%d", NCM_MSET_CATALOG_ASYMB_LABEL, i + 1);
+          
+          fits_read_key (mcat->fptr, TSTRING, asymbi, &symbol_s, NULL, &status);
+          if (status == KEY_NO_EXIST)
+          {
+            symbol = g_strdup ("no-symbol");
+            status = 0;
+          }
+          else
+          {
+            symbol = g_strdup (symbol_s);
+            NCM_FITS_ERROR (status);
+          }
+
+          g_ptr_array_add (mcat->add_vals_symbs, symbol);
+
+          g_free (asymbi);
+        }
 
         i++;
         if (i >= mcat->nadd_vals)
@@ -983,9 +1105,22 @@ _ncm_mset_catalog_open_create_file (NcmMSetCatalog *mcat, gboolean load_from_cat
     {
       for (i = 0; i < mcat->nadd_vals; i++)
       {
-        const gchar *cname = g_ptr_array_index (mcat->add_vals_names, i);
+        const gchar *cname   = g_ptr_array_index (mcat->add_vals_names, i);
+        const gchar *csymbol = g_ptr_array_index (mcat->add_vals_symbs, i);
+        gchar *asymbi      = g_strdup_printf ("%s%d", NCM_MSET_CATALOG_ASYMB_LABEL, i + 1);
+        gchar symbol_s[FLEN_VALUE];
         gint cindex = 0;
 
+        fits_read_key (mcat->fptr, TSTRING, asymbi, &symbol_s, NULL, &status);
+        if (status == KEY_NO_EXIST)
+        {
+          g_error ("_ncm_mset_catalog_open_create_file: symbol %s not found", asymbi);
+        }
+        else
+        {
+          g_assert_cmpstr (symbol_s, ==, csymbol);
+        }
+        
         if (fits_get_colnum (mcat->fptr, CASESEN, (gchar *)cname, &cindex, &status))
           g_error ("_ncm_mset_catalog_open_create_file: Additional column %s not found, invalid fits file.", cname);
 
@@ -1048,6 +1183,23 @@ _ncm_mset_catalog_open_create_file (NcmMSetCatalog *mcat, gboolean load_from_cat
     fits_update_key (mcat->fptr, TLOGICAL, NCM_MSET_CATALOG_WEIGHTED_LABEL, &mcat->weighted, "Whether the catalog is weighted.", &status);
     NCM_FITS_ERROR (status);
 
+    for (i = 0; i < mcat->nadd_vals; i++)
+    {
+      const gchar *aname = g_ptr_array_index (mcat->add_vals_names, i);
+      const gchar *asymb = g_ptr_array_index (mcat->add_vals_symbs, i);
+
+      gchar *asymbi     = g_strdup_printf ("%s%d", NCM_MSET_CATALOG_ASYMB_LABEL, i + 1);
+      gchar *asymb_desc = g_strdup_printf ("Symbol for additional value %s[%d]",
+                                           aname, 
+                                           i + 1);
+
+      fits_update_key (mcat->fptr, TSTRING, asymbi, (gchar *)asymb, asymb_desc, &status);
+      NCM_FITS_ERROR (status);
+
+      g_free (asymbi);
+      g_free (asymb_desc);
+    }
+
     for (i = 0; i < fparam_len; i++)
     {
       gchar *fsymbi = g_strdup_printf ("%s%d", NCM_MSET_CATALOG_FSYMB_LABEL, i + 1);
@@ -1058,6 +1210,7 @@ _ncm_mset_catalog_open_create_file (NcmMSetCatalog *mcat, gboolean load_from_cat
 
       fits_update_key (mcat->fptr, TSTRING, fsymbi, (gchar *)fsymb, fsymb_desc, &status);
       NCM_FITS_ERROR (status);
+
       g_free (fsymbi);
       g_free (fsymb_desc);
     }
@@ -1088,21 +1241,34 @@ _ncm_mset_catalog_open_create_file (NcmMSetCatalog *mcat, gboolean load_from_cat
 
 #endif /* NUMCOSMO_HAVE_CFITSIO */
 
-/**
- * ncm_mset_catalog_set_add_val_name:
- * @mcat: a #NcmMSetCatalog
- * @i: index of the additional value
- * @name: additional value name
- *
- * Sets the @i-th additional value name
- *
- */
-void
-ncm_mset_catalog_set_add_val_name (NcmMSetCatalog *mcat, guint i, const gchar *name)
+static void
+_ncm_mset_catalog_set_add_val_name_array (NcmMSetCatalog *mcat, gchar **names)
 {
-  g_assert_cmpuint (i, <, mcat->nadd_vals);
-  g_free (g_ptr_array_index (mcat->add_vals_names, i));
-  g_ptr_array_index (mcat->add_vals_names, i) = g_strdup (name);
+  const guint len = g_strv_length (names);
+  guint i;
+
+  g_ptr_array_set_size (mcat->add_vals_names, len);
+  
+  for (i = 0; i < len; i++)
+  {
+    g_clear_pointer (&g_ptr_array_index (mcat->add_vals_names, i), g_free);
+    g_ptr_array_index (mcat->add_vals_names, i) = g_strdup (names[i]);
+  }
+}
+
+static void
+_ncm_mset_catalog_set_add_val_symbol_array (NcmMSetCatalog *mcat, gchar **symbols)
+{
+  const guint len = g_strv_length (symbols);
+  guint i;
+
+  g_ptr_array_set_size (mcat->add_vals_symbs, len);
+  
+  for (i = 0; i < len; i++)
+  {
+    g_clear_pointer (&g_ptr_array_index (mcat->add_vals_symbs, i), g_free);
+    g_ptr_array_index (mcat->add_vals_symbs, i) = g_strdup (symbols[i]);
+  }
 }
 
 /**
@@ -1137,21 +1303,8 @@ ncm_mset_catalog_set_file (NcmMSetCatalog *mcat, const gchar *filename)
 
   mcat->file = g_strdup (filename);
   {
-    GError *error = NULL;
-    GMatchInfo *match_info = NULL;
-    GRegex *fits_ext = g_regex_new ("(.*)\\.[fF][iI][tT][sS]?$", 0, 0, &error);
-    gchar *base_name = NULL;
-
-    if (g_regex_match (fits_ext, mcat->file, 0, &match_info))
-    {
-      base_name = g_match_info_fetch (match_info, 1);
-      g_match_info_free (match_info);
-    }
-    else
-      base_name = g_strdup (filename);
-    g_regex_unref (fits_ext);
-
-    mcat->mset_file = g_strdup_printf ("%s.mset", base_name);
+    gchar *base_name = ncm_util_basename_fits (mcat->file);
+    mcat->mset_file  = g_strdup_printf ("%s.mset", base_name);
     g_free (base_name);
   }
 
@@ -2501,7 +2654,7 @@ ncm_mset_catalog_param_pdf_pvalue (NcmMSetCatalog *mcat, gdouble pval, gboolean 
  * ncm_mset_catalog_calc_ci_direct:
  * @mcat: a #NcmMSetCatalog
  * @func: a #NcmMSetFunc of type n-n
- * @x: (array) (element-type double): the argument of @func
+ * @x_v: #NcmVector of arguments of @func
  * @p_val: (element-type double): p-values for the confidence intervals
  *
  * Calculates the mean and the confidence interval (CI) for the value of @func
@@ -2526,9 +2679,10 @@ ncm_mset_catalog_param_pdf_pvalue (NcmMSetCatalog *mcat, gdouble pval, gboolean 
  * Returns: (transfer full): a #NcmVector containing the mean and lower/upper bound of the confidence interval for @func.
  */
 NcmMatrix *
-ncm_mset_catalog_calc_ci_direct (NcmMSetCatalog *mcat, NcmMSetFunc *func, gdouble *x, GArray *p_val)
+ncm_mset_catalog_calc_ci_direct (NcmMSetCatalog *mcat, NcmMSetFunc *func, NcmVector *x_v, GArray *p_val)
 {
-  guint dim = ncm_mset_func_get_dim (func);
+  const guint dim = ncm_vector_len (x_v);
+  
   g_assert_cmpuint (p_val->len, >, 1);
   {
     const guint nelem = p_val->len * 2 + 1;
@@ -2545,9 +2699,12 @@ ncm_mset_catalog_calc_ci_direct (NcmMSetCatalog *mcat, NcmMSetFunc *func, gdoubl
     for (i = 0; i < cat_len; i++)
     {
       NcmVector *row = ncm_mset_catalog_peek_row (mcat, i);
+      NcmVector *qws = ncm_vector_get_subvector (mcat->quantile_ws, i * dim, dim);
       ncm_mset_fparams_set_vector_offset (mcat->mset, row, mcat->nadd_vals);
 
-      ncm_mset_func_eval_direct (func, mcat->mset, x, ncm_vector_ptr (mcat->quantile_ws, i * dim));
+      ncm_mset_func_eval_vector (func, mcat->mset, x_v, qws);
+
+      ncm_vector_free (qws);
     }
 
     for (i = 0; i < dim; i++)
@@ -2585,7 +2742,7 @@ ncm_mset_catalog_calc_ci_direct (NcmMSetCatalog *mcat, NcmMSetFunc *func, gdoubl
  * ncm_mset_catalog_calc_ci_interp:
  * @mcat: a #NcmMSetCatalog
  * @func: a #NcmMSetFunc of type n-n
- * @x: (array) (element-type double): the argument of @func
+ * @x_v: #NcmVector of arguments of @func
  * @p_val: (element-type double): p-values for the confidence intervals
  * @nodes: number of nodes in the distribution approximations
  * @mtype: #NcmFitRunMsgs log level
@@ -2610,9 +2767,10 @@ ncm_mset_catalog_calc_ci_direct (NcmMSetCatalog *mcat, NcmMSetFunc *func, gdoubl
  * Returns: (transfer full): a #NcmVector containing the mean and lower/upper bound of the confidence interval for @func.
  */
 NcmMatrix *
-ncm_mset_catalog_calc_ci_interp (NcmMSetCatalog *mcat, NcmMSetFunc *func, gdouble *x, GArray *p_val, guint nodes, NcmFitRunMsgs mtype)
+ncm_mset_catalog_calc_ci_interp (NcmMSetCatalog *mcat, NcmMSetFunc *func, NcmVector *x_v, GArray *p_val, guint nodes, NcmFitRunMsgs mtype)
 {
-  guint dim = ncm_mset_func_get_dim (func);
+  const guint dim = ncm_vector_len (x_v);
+
   g_assert_cmpuint (p_val->len, >, 1);
   {
     const guint nelem = p_val->len * 2 + 1;
@@ -2652,8 +2810,10 @@ ncm_mset_catalog_calc_ci_interp (NcmMSetCatalog *mcat, NcmMSetFunc *func, gdoubl
     for (i = 0; i < cat_len; i++)
     {
       NcmVector *row = ncm_mset_catalog_peek_row (mcat, i);
+
       ncm_mset_fparams_set_vector_offset (mcat->mset, row, mcat->nadd_vals);
-      ncm_mset_func_eval_direct (func, mcat->mset, x, ncm_vector_data (mcat->quantile_ws));
+
+      ncm_mset_func_eval_vector (func, mcat->mset, x_v, mcat->quantile_ws);
 
       for (j = 0; j < dim; j++)
       {

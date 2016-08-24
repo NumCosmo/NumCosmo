@@ -61,51 +61,51 @@ main (gint argc, gchar *argv[])
   ncm_cfg_init ();
   ncm_cfg_enable_gsl_err_handler ();
   
-  g_test_add ("/numcosmo/ncm_mset/setpeek", TestNcmMSet, NULL, 
+  g_test_add ("/ncm/mset/setpeek", TestNcmMSet, NULL, 
               &test_ncm_mset_new, 
               &test_ncm_mset_setpeek, 
               &test_ncm_mset_free);
 
-  g_test_add ("/numcosmo/ncm_mset/setpospeek", TestNcmMSet, NULL, 
+  g_test_add ("/ncm/mset/setpospeek", TestNcmMSet, NULL, 
               &test_ncm_mset_new, 
               &test_ncm_mset_setpospeek, 
               &test_ncm_mset_free);
 
-  g_test_add ("/numcosmo/ncm_mset/pushpeek", TestNcmMSet, NULL, 
+  g_test_add ("/ncm/mset/pushpeek", TestNcmMSet, NULL, 
               &test_ncm_mset_new, 
               &test_ncm_mset_pushpeek, 
               &test_ncm_mset_free);
 
-  g_test_add ("/numcosmo/ncm_mset/fparams", TestNcmMSet, NULL, 
+  g_test_add ("/ncm/mset/fparams", TestNcmMSet, NULL, 
               &test_ncm_mset_new, 
               &test_ncm_mset_fparams, 
               &test_ncm_mset_free);
 
-  g_test_add ("/numcosmo/ncm_mset/dup", TestNcmMSet, NULL, 
+  g_test_add ("/ncm/mset/dup", TestNcmMSet, NULL, 
               &test_ncm_mset_new, 
               &test_ncm_mset_dup, 
               &test_ncm_mset_free);
 
-  g_test_add ("/numcosmo/ncm_mset/shallow_copy", TestNcmMSet, NULL, 
+  g_test_add ("/ncm/mset/shallow_copy", TestNcmMSet, NULL, 
               &test_ncm_mset_new, 
               &test_ncm_mset_shallow_copy, 
               &test_ncm_mset_free);
 
-  g_test_add ("/numcosmo/ncm_mset/saveload", TestNcmMSet, NULL, 
+  g_test_add ("/ncm/mset/saveload", TestNcmMSet, NULL, 
               &test_ncm_mset_new, 
               &test_ncm_mset_saveload,
               &test_ncm_mset_free);
 
-  g_test_add ("/numcosmo/ncm_mset/traps", TestNcmMSet, NULL, 
+  g_test_add ("/ncm/mset/traps", TestNcmMSet, NULL, 
               &test_ncm_mset_new, 
               &test_ncm_mset_traps, 
               &test_ncm_mset_free);
 #if !((GLIB_MAJOR_VERSION == 2) && (GLIB_MINOR_VERSION < 38))
-  g_test_add ("/numcosmo/ncm_mset/invalid/get/subprocess", TestNcmMSet, NULL, 
+  g_test_add ("/ncm/mset/invalid/get/subprocess", TestNcmMSet, NULL, 
               &test_ncm_mset_new, 
               &test_ncm_mset_invalid_get, 
               &test_ncm_mset_free);
-  g_test_add ("/numcosmo/ncm_mset/invalid/stack/subprocess", TestNcmMSet, NULL, 
+  g_test_add ("/ncm/mset/invalid/stack/subprocess", TestNcmMSet, NULL, 
               &test_ncm_mset_new, 
               &test_ncm_mset_invalid_stack, 
               &test_ncm_mset_free);
@@ -320,8 +320,8 @@ test_ncm_mset_dup (TestNcmMSet *test, gconstpointer pdata)
   
   {
     NcClusterMass *benson = nc_cluster_mass_new_from_name ("NcClusterMassBenson");
-    NcmSerialize *ser = ncm_serialize_new (NCM_SERIALIZE_OPT_CLEAN_DUP);
-    NcmMSet *mset_dup = ncm_mset_dup (test->mset, ser);
+    NcmSerialize *ser     = ncm_serialize_new (NCM_SERIALIZE_OPT_CLEAN_DUP);
+    NcmMSet *mset_dup     = ncm_mset_dup (test->mset, ser);
     
     g_assert (ncm_mset_cmp (test->mset, mset_dup, FALSE));
     g_assert (ncm_mset_cmp (test->mset, mset_dup, TRUE));
@@ -364,6 +364,13 @@ test_ncm_mset_dup (TestNcmMSet *test, gconstpointer pdata)
     
     {
       gboolean destroyed = FALSE;
+      g_object_set_data_full (G_OBJECT (ser), "test-destroy", &destroyed, _set_destroyed);
+      ncm_serialize_clear (&ser);
+      g_assert (destroyed);
+    }
+
+    {
+      gboolean destroyed = FALSE;
       g_object_set_data_full (G_OBJECT (mset_dup), "test-destroy", &destroyed, _set_destroyed);
       ncm_mset_clear (&mset_dup);
       g_assert (destroyed);
@@ -373,13 +380,6 @@ test_ncm_mset_dup (TestNcmMSet *test, gconstpointer pdata)
       gboolean destroyed = FALSE;
       g_object_set_data_full (G_OBJECT (benson), "test-destroy", &destroyed, _set_destroyed);
       nc_cluster_mass_free (benson);
-      g_assert (destroyed);
-    }
-
-    {
-      gboolean destroyed = FALSE;
-      g_object_set_data_full (G_OBJECT (ser), "test-destroy", &destroyed, _set_destroyed);
-      ncm_serialize_clear (&ser);
       g_assert (destroyed);
     }
   }
@@ -513,10 +513,10 @@ void
 test_ncm_mset_traps (TestNcmMSet *test, gconstpointer pdata)
 {
 #if !((GLIB_MAJOR_VERSION == 2) && (GLIB_MINOR_VERSION < 38))
-  g_test_trap_subprocess ("/numcosmo/ncm_mset/invalid/get/subprocess", 0, 0);
+  g_test_trap_subprocess ("/ncm/mset/invalid/get/subprocess", 0, 0);
   g_test_trap_assert_failed ();
 
-  g_test_trap_subprocess ("/numcosmo/ncm_mset/invalid/stack/subprocess", 0, 0);
+  g_test_trap_subprocess ("/ncm/mset/invalid/stack/subprocess", 0, 0);
   g_test_trap_assert_failed ();
 #endif
 }

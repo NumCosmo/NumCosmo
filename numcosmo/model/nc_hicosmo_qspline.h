@@ -101,13 +101,9 @@ GType nc_hicosmo_qspline_get_type (void) G_GNUC_CONST;
 
 NcHICosmoQSpline *nc_hicosmo_qspline_new (NcmSpline *s, gsize np, gdouble z_f);
 
-void nc_hicosmo_qspline_add_continuity_prior (NcHICosmoQSpline *qspline, NcmLikelihood *lh, guint knot, NcHICosmoQSplineContPrior *qspline_cp);
 NcHICosmoQSplineContPrior *nc_hicosmo_qspline_add_continuity_priors (NcHICosmoQSpline *qspline, NcmLikelihood *lh, gdouble sigma, gdouble abstol);
 
-void nc_hicosmo_qspline_add_continuity_constraint (NcHICosmoQSpline *qspline, NcmFit *fit, guint knot, NcHICosmoQSplineContPrior *qspline_cp);
-NcHICosmoQSplineContPrior *nc_hicosmo_qspline_add_continuity_constraints (NcHICosmoQSpline *qspline, NcmFit *fit, gdouble sigma);
-
-/****************************** Continuity Prior ******************************/
+/****************************** Continuity Prior Model ******************************/
 
 #define NC_TYPE_HICOSMO_QSPLINE_CONT_PRIOR             (nc_hicosmo_qspline_cont_prior_get_type ())
 #define NC_HICOSMO_QSPLINE_CONT_PRIOR(obj)             (G_TYPE_CHECK_INSTANCE_CAST ((obj), NC_TYPE_HICOSMO_QSPLINE_CONT_PRIOR, NcHICosmoQSplineContPrior))
@@ -144,6 +140,34 @@ gdouble nc_hicosmo_qspline_cont_prior_get_lnsigma (NcHICosmoQSplineContPrior *qs
 
 void nc_hicosmo_qspline_cont_prior_set_abstol (NcHICosmoQSplineContPrior *qspline_cp, gdouble abstol);
 gdouble nc_hicosmo_qspline_cont_prior_get_abstol (NcHICosmoQSplineContPrior *qspline_cp);
+
+/****************************** Continuity Prior ******************************/
+
+#define NC_TYPE_PRIOR_QSPLINE_CONT             (nc_prior_qspline_cont_get_type ())
+#define NC_PRIOR_QSPLINE_CONT(obj)             (G_TYPE_CHECK_INSTANCE_CAST ((obj), NC_TYPE_PRIOR_QSPLINE_CONT, NcPriorQSplineCont))
+#define NC_PRIOR_QSPLINE_CONT_CLASS(klass)     (G_TYPE_CHECK_CLASS_CAST ((klass), NC_TYPE_PRIOR_QSPLINE_CONT, NcPriorQSplineContClass))
+#define NC_IS_PRIOR_QSPLINE_CONT(obj)          (G_TYPE_CHECK_INSTANCE_TYPE ((obj), NC_TYPE_PRIOR_QSPLINE_CONT))
+#define NC_IS_PRIOR_QSPLINE_CONT_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE ((klass), NC_TYPE_PRIOR_QSPLINE_CONT))
+#define NC_PRIOR_QSPLINE_CONT_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS ((obj), NC_TYPE_PRIOR_QSPLINE_CONT, NcPriorQSplineContClass))
+
+typedef struct _NcPriorQSplineContClass NcPriorQSplineContClass;
+typedef struct _NcPriorQSplineCont NcPriorQSplineCont;
+
+struct _NcPriorQSplineContClass
+{
+  /*< private >*/
+  NcmPriorClass parent_class;
+};
+
+struct _NcPriorQSplineCont
+{
+  /*< private >*/
+  NcmPrior parent_instance;
+};
+
+GType nc_prior_qspline_cont_get_type (void) G_GNUC_CONST;
+
+NcPriorQSplineCont *nc_prior_qspline_cont_new (void);
 
 G_END_DECLS
 

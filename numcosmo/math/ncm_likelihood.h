@@ -30,6 +30,7 @@
 #include <glib-object.h>
 #include <numcosmo/build_cfg.h>
 #include <numcosmo/math/ncm_dataset.h>
+#include <numcosmo/math/ncm_prior.h>
 #include <numcosmo/math/ncm_mset_func.h>
 
 G_BEGIN_DECLS
@@ -49,8 +50,8 @@ struct _NcmLikelihood
   /*< private >*/
   GObject parent_instance;
   NcmDataset *dset;
-  GPtrArray *priors_f;
-  GPtrArray *priors_m2lnL;
+  NcmObjArray *priors_f;
+  NcmObjArray *priors_m2lnL;
   NcmVector *m2lnL_v;
 };
 
@@ -65,14 +66,25 @@ GType ncm_likelihood_get_type (void) G_GNUC_CONST;
 NcmLikelihood *ncm_likelihood_new (NcmDataset *dset);
 NcmLikelihood *ncm_likelihood_ref (NcmLikelihood *lh);
 NcmLikelihood *ncm_likelihood_dup (NcmLikelihood *lh, NcmSerialize *ser);
-NcmLikelihood *ncm_likelihood_copy (NcmLikelihood *lh);
+
 void ncm_likelihood_free (NcmLikelihood *lh);
 void ncm_likelihood_clear (NcmLikelihood **lh);
 
-void ncm_likelihood_priors_add (NcmLikelihood *lh, NcmMSetFunc *prior, gboolean is_m2lnL);
-NcmMSetFunc *ncm_likelihood_priors_peek_f (NcmLikelihood *lh, guint i);
+void ncm_likelihood_priors_add (NcmLikelihood *lh, NcmPrior *prior);
+
+void ncm_likelihood_priors_add_gauss_param (NcmLikelihood *lh, NcmModelID mid, guint pid, gdouble mu, gdouble sigma);
+void ncm_likelihood_priors_add_gauss_param_pindex (NcmLikelihood *lh, const NcmMSetPIndex *pi, gdouble mu, gdouble sigma);
+void ncm_likelihood_priors_add_gauss_param_name (NcmLikelihood *lh, NcmMSet *mset, const gchar *name, gdouble mu, gdouble sigma);
+void ncm_likelihood_priors_add_gauss_func (NcmLikelihood *lh, NcmMSetFunc *mean_func, gdouble mu, gdouble sigma, gdouble var);
+
+void ncm_likelihood_priors_add_flat_param (NcmLikelihood *lh, NcmModelID mid, guint pid, gdouble x_low, gdouble x_upp, gdouble scale);
+void ncm_likelihood_priors_add_flat_param_pindex (NcmLikelihood *lh, const NcmMSetPIndex *pi, gdouble x_low, gdouble x_upp, gdouble scale);
+void ncm_likelihood_priors_add_flat_param_name (NcmLikelihood *lh, NcmMSet *mset, const gchar *name, gdouble x_low, gdouble x_upp, gdouble scale);
+void ncm_likelihood_priors_add_flat_func (NcmLikelihood *lh, NcmMSetFunc *mean_func, gdouble x_low, gdouble x_upp, gdouble scale, gdouble variable);
+
+NcmPrior *ncm_likelihood_priors_peek_f (NcmLikelihood *lh, guint i);
 guint ncm_likelihood_priors_length_f (NcmLikelihood *lh);
-NcmMSetFunc *ncm_likelihood_priors_peek_m2lnL (NcmLikelihood *lh, guint i);
+NcmPrior *ncm_likelihood_priors_peek_m2lnL (NcmLikelihood *lh, guint i);
 guint ncm_likelihood_priors_length_m2lnL (NcmLikelihood *lh);
 
 gboolean ncm_likelihood_has_leastsquares_J (NcmLikelihood *lh);

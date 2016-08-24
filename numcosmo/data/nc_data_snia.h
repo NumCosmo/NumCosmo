@@ -47,8 +47,8 @@ G_BEGIN_DECLS
  * @NC_DATA_SNIA_SIMPLE_SDSS_EMILLE: FIXME
  * @NC_DATA_SNIA_COV_SNLS3_SYS_STAT: FIXME
  * @NC_DATA_SNIA_COV_SNLS3_STAT_ONLY: FIXME
- * @NC_DATA_SNIA_COV_JLA_SNLS3_SDSS_SYS_STAT: FIXME
- * @NC_DATA_SNIA_COV_JLA_SNLS3_SDSS_SYS_STAT_CMPL: FIXME
+ * @NC_DATA_SNIA_COV_JLA_SNLS3_SDSS_SYS_STAT: JLA SNIa compilation, already includes intrisic, redshift and peculiar velocity variances. 
+ * @NC_DATA_SNIA_COV_JLA_SNLS3_SDSS_SYS_STAT_CMPL: JLA SNIa compilation, complete covariance, does *not* include intrisic, redshift and peculiar velocity variances.
  * 
  * FIXME
  * 

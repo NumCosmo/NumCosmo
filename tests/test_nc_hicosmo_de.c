@@ -45,7 +45,7 @@ main (gint argc, gchar *argv[])
   ncm_cfg_init ();
   ncm_cfg_enable_gsl_err_handler ();
 
-  g_test_add ("/numcosmo/nc_hicosmo_de/omega_x2omega_k", TestNcHICosmoDE, NULL,
+  g_test_add ("/nc/hicosmo_de/omega_x2omega_k", TestNcHICosmoDE, NULL,
               &test_nc_hicosmo_de_xcdm_new,
               &test_nc_hicosmo_de_omega_x2omega_k,
               &test_nc_hicosmo_de_free);

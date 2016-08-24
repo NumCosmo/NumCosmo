@@ -84,6 +84,7 @@
       <xi:include href="xml/ncm_model_builder.xml"/>
       <xi:include href="xml/ncm_mset.xml"/>
       <xi:include href="xml/ncm_mset_func.xml"/>
+      <xi:include href="xml/ncm_mset_func_list.xml"/>
       <xi:include href="xml/ncm_calc.xml"/>
     </section>
     <section>
@@ -109,7 +110,13 @@
       <xi:include href="xml/ncm_stats_dist1d_epdf.xml"/>
       <xi:include href="xml/ncm_bootstrap.xml"/>
       <xi:include href="xml/ncm_likelihood.xml"/>
-      <xi:include href="xml/ncm_priors.xml"/>
+      <xi:include href="xml/ncm_prior.xml"/>
+      <xi:include href="xml/ncm_prior_gauss.xml"/>
+      <xi:include href="xml/ncm_prior_gauss_param.xml"/>
+      <xi:include href="xml/ncm_prior_gauss_func.xml"/>
+      <xi:include href="xml/ncm_prior_flat.xml"/>
+      <xi:include href="xml/ncm_prior_flat_param.xml"/>
+      <xi:include href="xml/ncm_prior_flat_func.xml"/>
       <xi:include href="xml/ncm_mset_catalog.xml"/>
       <xi:include href="xml/ncm_mset_trans_kern.xml"/>
       <xi:include href="xml/ncm_mset_trans_kern_flat.xml"/>

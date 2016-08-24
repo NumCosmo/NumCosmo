@@ -38,6 +38,8 @@
 #include "model/nc_hicosmo_de.h"
 #include "model/nc_hicosmo_de_reparam_ok.h"
 #include "model/nc_hicosmo_de_reparam_cmb.h"
+#include "math/ncm_mset_func_list.h"
+#include "math/ncm_prior_gauss_func.h"
 
 G_DEFINE_ABSTRACT_TYPE (NcHICosmoDE, nc_hicosmo_de, NC_TYPE_HICOSMO);
 
@@ -216,35 +218,23 @@ nc_hicosmo_de_cmb_params (NcHICosmoDE *cosmo_de)
   return;
 }
 
-static void
-bbn_prior (NcmMSet *mset, gpointer obj, const gdouble *x, gdouble *f)
-{
-  NcHICosmoDE *cosmo_de = NC_HICOSMO_DE (ncm_mset_peek (mset, nc_hicosmo_id ()));
-  gdouble z_bbn = 1.0e9;
-  gdouble bbn, a;
-
-  NCM_UNUSED (obj);
-  NCM_UNUSED (x);
-
-  a = nc_hicosmo_de_E2Omega_de (cosmo_de, z_bbn) / nc_hicosmo_E2 (NC_HICOSMO (cosmo_de), z_bbn);
-  bbn = 1.0 / sqrt (1.0 - a);
-  f[0] = (bbn - 0.942) / 0.03;
-}
-
 /**
  * nc_hicosmo_de_new_add_bbn:
  * @lh: FIXME
  *
  * FIXME
  *
- * Returns: FIXME
  */
-gboolean
+void
 nc_hicosmo_de_new_add_bbn (NcmLikelihood *lh)
 {
-  NcmMSetFunc *func = ncm_mset_func_new (bbn_prior, 0, 1, NULL, NULL);
-  ncm_likelihood_priors_add (lh, func, FALSE);
-  return TRUE;
+  NcmMSetFunc *bbn       = NCM_MSET_FUNC (ncm_mset_func_list_new ("NcHICosmoDE:BBN", NULL));
+  NcmPriorGaussFunc *pgf = ncm_prior_gauss_func_new (bbn, 0.942, 0.03, 0.0);
+  
+  ncm_likelihood_priors_add (lh, NCM_PRIOR (pgf));
+
+  ncm_mset_func_clear (&bbn);
+  ncm_prior_gauss_func_clear (&pgf);
 }
 
 enum {
@@ -286,6 +276,11 @@ nc_hicosmo_de_finalize (GObject *object)
   /* Chain up : end */
   G_OBJECT_CLASS (nc_hicosmo_de_parent_class)->finalize (object);
 }
+
+static gdouble _nc_hicosmo_de_E2Omega_de (NcHICosmoDE *cosmo_de, gdouble z);
+static gdouble _nc_hicosmo_de_dE2Omega_de_dz (NcHICosmoDE *cosmo_de, gdouble z);
+static gdouble _nc_hicosmo_de_d2E2Omega_de_dz2 (NcHICosmoDE *cosmo_de, gdouble z);
+static gdouble _nc_hicosmo_de_w_de (NcHICosmoDE *cosmo_de, gdouble z);
 
 static void
 nc_hicosmo_de_class_init (NcHICosmoDEClass *klass)
@@ -350,7 +345,17 @@ nc_hicosmo_de_class_init (NcHICosmoDEClass *klass)
   nc_hicosmo_set_dE2_dz_impl    (parent_class, &_nc_hicosmo_de_dE2_dz);
   nc_hicosmo_set_d2E2_dz2_impl  (parent_class, &_nc_hicosmo_de_d2E2_dz2);
   nc_hicosmo_set_bgp_cs2_impl   (parent_class, &_nc_hicosmo_de_bgp_cs2);
+
+  klass->E2Omega_de       = &_nc_hicosmo_de_E2Omega_de;
+  klass->dE2Omega_de_dz   = &_nc_hicosmo_de_dE2Omega_de_dz;
+  klass->d2E2Omega_de_dz2 = &_nc_hicosmo_de_d2E2Omega_de_dz2;
+  klass->w_de             = &_nc_hicosmo_de_w_de;
 }
+
+static gdouble _nc_hicosmo_de_E2Omega_de (NcHICosmoDE *cosmo_de, gdouble z)       { g_error ("nc_hicosmo_de_E2Omega_de: model `%s' does not implement this function.", G_OBJECT_TYPE_NAME (cosmo_de)); return 0.0;  }
+static gdouble _nc_hicosmo_de_dE2Omega_de_dz (NcHICosmoDE *cosmo_de, gdouble z)   { g_error ("nc_hicosmo_de_dE2Omega_de_dz: model `%s' does not implement this function.", G_OBJECT_TYPE_NAME (cosmo_de)); return 0.0;  }
+static gdouble _nc_hicosmo_de_d2E2Omega_de_dz2 (NcHICosmoDE *cosmo_de, gdouble z) { g_error ("nc_hicosmo_de_d2E2Omega_de_dz2: model `%s' does not implement this function.", G_OBJECT_TYPE_NAME (cosmo_de)); return 0.0;  }
+static gdouble _nc_hicosmo_de_w_de (NcHICosmoDE *cosmo_de, gdouble z)             { g_error ("nc_hicosmo_de_w_de: model `%s' does not implement this function.", G_OBJECT_TYPE_NAME (cosmo_de)); return 0.0;  }
 
 #define NC_HICOSMO_DE_SET_IMPL_FUNC(name) \
 void \
@@ -446,3 +451,36 @@ NCM_MODEL_SET_IMPL_FUNC(NC_HICOSMO_DE,NcHICosmoDE,nc_hicosmo_de,NcHICosmoDEFunc1
  *
  * Returns: FIXME
  */
+
+static void
+_nc_hicosmo_de_flist_w0 (NcmMSetFuncList *flist, NcmMSet *mset, const gdouble *x, gdouble *f)
+{
+  NcHICosmoDE *cosmo_de = NC_HICOSMO_DE (ncm_mset_peek (mset, nc_hicosmo_id ()));
+
+  g_assert (NC_IS_HICOSMO_DE (cosmo_de));
+  
+  f[0] = nc_hicosmo_de_w_de (cosmo_de, 0.0);
+}
+
+static void
+_nc_hicosmo_de_flist_BBN (NcmMSetFuncList *flist, NcmMSet *mset, const gdouble *x, gdouble *f)
+{
+  NcHICosmoDE *cosmo_de = NC_HICOSMO_DE (ncm_mset_peek (mset, nc_hicosmo_id ()));
+  gdouble z_bbn = 1.0e9;
+  gdouble Omega_de;
+
+  g_assert (NC_IS_HICOSMO_DE (cosmo_de));
+
+  NCM_UNUSED (x);
+
+  Omega_de = nc_hicosmo_de_E2Omega_de (cosmo_de, z_bbn) / nc_hicosmo_E2 (NC_HICOSMO (cosmo_de), z_bbn);
+
+  f[0] = 1.0 / sqrt (1.0 - Omega_de);
+}
+
+void
+_nc_hicosmo_de_register_functions (void)
+{
+  ncm_mset_func_list_register ("wDE", "\\omega_\\mathrm{de}", "NcHICosmoDE", "Darkenergy equation of state today", G_TYPE_NONE, _nc_hicosmo_de_flist_w0,  0, 1);
+  ncm_mset_func_list_register ("BBN", "BBN",                  "NcHICosmoDE", "BBN",                                G_TYPE_NONE, _nc_hicosmo_de_flist_BBN, 0, 1);
+}

@@ -41,7 +41,6 @@
 #include "build_cfg.h"
 
 #include "nc_planck_fi_cor_ttteee.h"
-#include "math/ncm_priors.h"
 
 enum
 {
@@ -447,18 +446,18 @@ nc_planck_fi_cor_ttteee_add_galf_priors (NcmLikelihood *lh, NcmVector *mean, Ncm
   g_assert_cmpuint (ncm_vector_len (mean), ==, 12);
   g_assert_cmpuint (ncm_vector_len (sigma), ==, 12);
 
-  ncm_prior_add_gaussian_data (lh, nc_planck_fi_id (), NC_PLANCK_FI_COR_TTTEEE_galf_EE_A_100,     ncm_vector_get (mean, 0),  ncm_vector_get (sigma, 0));
-  ncm_prior_add_gaussian_data (lh, nc_planck_fi_id (), NC_PLANCK_FI_COR_TTTEEE_galf_EE_A_100_143, ncm_vector_get (mean, 1),  ncm_vector_get (sigma, 1));
-  ncm_prior_add_gaussian_data (lh, nc_planck_fi_id (), NC_PLANCK_FI_COR_TTTEEE_galf_EE_A_100_217, ncm_vector_get (mean, 2),  ncm_vector_get (sigma, 2));
-  ncm_prior_add_gaussian_data (lh, nc_planck_fi_id (), NC_PLANCK_FI_COR_TTTEEE_galf_EE_A_143,     ncm_vector_get (mean, 3),  ncm_vector_get (sigma, 3));
-  ncm_prior_add_gaussian_data (lh, nc_planck_fi_id (), NC_PLANCK_FI_COR_TTTEEE_galf_EE_A_143_217, ncm_vector_get (mean, 4),  ncm_vector_get (sigma, 4));
-  ncm_prior_add_gaussian_data (lh, nc_planck_fi_id (), NC_PLANCK_FI_COR_TTTEEE_galf_EE_A_217,     ncm_vector_get (mean, 5),  ncm_vector_get (sigma, 5));
-  ncm_prior_add_gaussian_data (lh, nc_planck_fi_id (), NC_PLANCK_FI_COR_TTTEEE_galf_TE_A_100,     ncm_vector_get (mean, 6),  ncm_vector_get (sigma, 6));
-  ncm_prior_add_gaussian_data (lh, nc_planck_fi_id (), NC_PLANCK_FI_COR_TTTEEE_galf_TE_A_100_143, ncm_vector_get (mean, 7),  ncm_vector_get (sigma, 7));
-  ncm_prior_add_gaussian_data (lh, nc_planck_fi_id (), NC_PLANCK_FI_COR_TTTEEE_galf_TE_A_100_217, ncm_vector_get (mean, 8),  ncm_vector_get (sigma, 8));
-  ncm_prior_add_gaussian_data (lh, nc_planck_fi_id (), NC_PLANCK_FI_COR_TTTEEE_galf_TE_A_143,     ncm_vector_get (mean, 9),  ncm_vector_get (sigma, 9));
-  ncm_prior_add_gaussian_data (lh, nc_planck_fi_id (), NC_PLANCK_FI_COR_TTTEEE_galf_TE_A_143_217, ncm_vector_get (mean, 10), ncm_vector_get (sigma, 10));
-  ncm_prior_add_gaussian_data (lh, nc_planck_fi_id (), NC_PLANCK_FI_COR_TTTEEE_galf_TE_A_217,     ncm_vector_get (mean, 11), ncm_vector_get (sigma, 11));
+  ncm_likelihood_priors_add_gauss_param (lh, nc_planck_fi_id (), NC_PLANCK_FI_COR_TTTEEE_galf_EE_A_100,     ncm_vector_get (mean, 0),  ncm_vector_get (sigma, 0));
+  ncm_likelihood_priors_add_gauss_param (lh, nc_planck_fi_id (), NC_PLANCK_FI_COR_TTTEEE_galf_EE_A_100_143, ncm_vector_get (mean, 1),  ncm_vector_get (sigma, 1));
+  ncm_likelihood_priors_add_gauss_param (lh, nc_planck_fi_id (), NC_PLANCK_FI_COR_TTTEEE_galf_EE_A_100_217, ncm_vector_get (mean, 2),  ncm_vector_get (sigma, 2));
+  ncm_likelihood_priors_add_gauss_param (lh, nc_planck_fi_id (), NC_PLANCK_FI_COR_TTTEEE_galf_EE_A_143,     ncm_vector_get (mean, 3),  ncm_vector_get (sigma, 3));
+  ncm_likelihood_priors_add_gauss_param (lh, nc_planck_fi_id (), NC_PLANCK_FI_COR_TTTEEE_galf_EE_A_143_217, ncm_vector_get (mean, 4),  ncm_vector_get (sigma, 4));
+  ncm_likelihood_priors_add_gauss_param (lh, nc_planck_fi_id (), NC_PLANCK_FI_COR_TTTEEE_galf_EE_A_217,     ncm_vector_get (mean, 5),  ncm_vector_get (sigma, 5));
+  ncm_likelihood_priors_add_gauss_param (lh, nc_planck_fi_id (), NC_PLANCK_FI_COR_TTTEEE_galf_TE_A_100,     ncm_vector_get (mean, 6),  ncm_vector_get (sigma, 6));
+  ncm_likelihood_priors_add_gauss_param (lh, nc_planck_fi_id (), NC_PLANCK_FI_COR_TTTEEE_galf_TE_A_100_143, ncm_vector_get (mean, 7),  ncm_vector_get (sigma, 7));
+  ncm_likelihood_priors_add_gauss_param (lh, nc_planck_fi_id (), NC_PLANCK_FI_COR_TTTEEE_galf_TE_A_100_217, ncm_vector_get (mean, 8),  ncm_vector_get (sigma, 8));
+  ncm_likelihood_priors_add_gauss_param (lh, nc_planck_fi_id (), NC_PLANCK_FI_COR_TTTEEE_galf_TE_A_143,     ncm_vector_get (mean, 9),  ncm_vector_get (sigma, 9));
+  ncm_likelihood_priors_add_gauss_param (lh, nc_planck_fi_id (), NC_PLANCK_FI_COR_TTTEEE_galf_TE_A_143_217, ncm_vector_get (mean, 10), ncm_vector_get (sigma, 10));
+  ncm_likelihood_priors_add_gauss_param (lh, nc_planck_fi_id (), NC_PLANCK_FI_COR_TTTEEE_galf_TE_A_217,     ncm_vector_get (mean, 11), ncm_vector_get (sigma, 11));
 }
 
 /**

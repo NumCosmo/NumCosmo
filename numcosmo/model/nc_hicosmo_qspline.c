@@ -55,20 +55,9 @@ _nc_hicosmo_qspline_prepare (NcHICosmoQSpline *qs)
   if (!ncm_model_state_is_update (NCM_MODEL (qs)))
   {
     ncm_spline_prepare (qs->q_z);
-/*
-    if (!gsl_finite (ncm_spline_eval (qs->q_z, 0)))
-    {
-      guint i;
-      for (i = 0; i < ncm_vector_len (qs->q_z->xv); i++)
-      {
-        printf ("% 20.15g % 20.15g\n",
-                ncm_vector_get (qs->q_z->xv, i),
-                ncm_vector_get (qs->q_z->yv, i));
-      }
-    }
-*/
-    ncm_ode_spline_prepare (qs->E2_z, qs);
     ncm_model_state_set_update (NCM_MODEL (qs));
+    
+    ncm_ode_spline_prepare (qs->E2_z, qs);
   }
   else
     return;
@@ -94,7 +83,9 @@ static gdouble
 _nc_hicosmo_qspline_E2 (NcHICosmo *cosmo, gdouble z)
 {
   NcHICosmoQSpline *qs = NC_HICOSMO_QSPLINE (cosmo);
+
   _nc_hicosmo_qspline_prepare (qs);
+  
   if (z > qs->z_f)
   {
     gdouble q = ncm_spline_eval (qs->q_z, qs->z_f);
@@ -111,8 +102,9 @@ _nc_hicosmo_qspline_dE2_dz (NcHICosmo *cosmo, gdouble z)
   _nc_hicosmo_qspline_prepare (qs);
   if (z > qs->z_f)
   {
-    gdouble q = ncm_spline_eval (qs->q_z, qs->z_f);
-    gdouble x = 1.0 + z;
+    const gdouble q = ncm_spline_eval (qs->q_z, qs->z_f);
+    const gdouble x = 1.0 + z;
+    
     return ncm_spline_eval (qs->E2_z->s, qs->z_f) *
       pow (x / (1.0 + qs->z_f), 2.0 * (q + 1.0)) *
       2.0 * (q + 1.0) / x;
@@ -128,9 +120,10 @@ _nc_hicosmo_qspline_d2E2_dz2 (NcHICosmo *cosmo, gdouble z)
   _nc_hicosmo_qspline_prepare (qs);
   if (z > qs->z_f)
   {
-    gdouble q = ncm_spline_eval (qs->q_z, qs->z_f);
-    gdouble x = 1.0 + z;
-    gdouble x2 = x * x;
+    const gdouble q = ncm_spline_eval (qs->q_z, qs->z_f);
+    const gdouble x = 1.0 + z;
+    const gdouble x2 = x * x;
+    
     return ncm_spline_eval (qs->E2_z->s, qs->z_f) *
       pow (x / (1.0 + qs->z_f), 2.0 * (q + 1.0)) *
       2.0 * (q + 1.0) * (2.0 * q + 1.0) / x2;
@@ -167,117 +160,6 @@ nc_hicosmo_qspline_new (NcmSpline *s, gsize np, gdouble z_f)
   return qspline;
 }
 
-typedef struct _NcHICosmoQSplineContPriorKnot
-{
-  /*< private >*/
-  gint knot;
-  NcHICosmoQSplineContPrior *qspline_cp;
-} NcHICosmoQSplineContPriorKnot;
-
-/*
-static void
-continuity_prior_wlinear_5knots_f (NcmMSet *mset, gpointer obj, const gdouble *x, gdouble *f)
-{
-  NcHICosmoQSpline *qspline = NC_HICOSMO_QSPLINE (ncm_mset_peek (mset, nc_hicosmo_id ()));
-  NcHICosmoQSplineContPriorKnot *acp = (NcHICosmoQSplineContPriorKnot *) obj;
-  const gdouble sigma = exp (nc_hicosmo_qspline_cont_prior_get_lnsigma (acp->qspline_cp, acp->knot));
-  const gdouble abstol = nc_hicosmo_qspline_cont_prior_get_abstol (acp->qspline_cp);
-  const guint n = 5;
-  const gdouble zi = ncm_vector_get (qspline->q_z->xv, acp->knot);
-  const gdouble zip2 = ncm_vector_get (qspline->q_z->xv, acp->knot + 2);
-  gdouble x_ptr[n];
-  gdouble y_ptr[n];
-  gdouble w_ptr[n];
-  gdouble c0, c1, cov00, cov01, cov11, chisq;
-  guint i;
-
-  NCM_UNUSED (x);
-
-  for (i = 0; i < n; i++)
-  {
-    const gdouble z = zi + (zip2 - zi) / (n - 1.0) * i;
-    const gdouble qz = ncm_spline_eval (qspline->q_z, z);
-    const gdouble reltol = qz * sigma;
-    const gdouble qz_weight = 1.0 / GSL_MAX (reltol * reltol, abstol * abstol);
-    x_ptr[i] = z;
-    y_ptr[i] = qz;
-    w_ptr[i] = qz_weight;
-  }
-
-  gsl_fit_wlinear (x_ptr, 1, w_ptr, 1, y_ptr, 1, n, &c0, &c1, &cov00, &cov01, &cov11, &chisq);
-  f[0] = chisq / n;
-}
-*/
-/*
-static void
-continuity_prior_qppp_f (NcmMSet *mset, gpointer obj, const gdouble *x, gdouble *f)
-{
-  NcHICosmoQSpline *qspline = NC_HICOSMO_QSPLINE (ncm_mset_peek (mset, nc_hicosmo_id ()));
-  NcHICosmoQSplineContPriorKnot *acp = (NcHICosmoQSplineContPriorKnot *) obj;
-  const gdouble sigma = exp (nc_hicosmo_qspline_cont_prior_get_lnsigma (acp->qspline_cp, acp->knot));
-  const gdouble abstol = nc_hicosmo_qspline_cont_prior_get_abstol (acp->qspline_cp);
-  const gdouble zi = ncm_vector_get (qspline->q_z->xv, acp->knot);
-  const gdouble zip1 = ncm_vector_get (qspline->q_z->xv, acp->knot + 1);
-  const gdouble zip2 = ncm_vector_get (qspline->q_z->xv, acp->knot + 2);
-  const gdouble qppp1 = ncm_spline_eval_deriv_nmax (qspline->q_z, (zi + zip1) * 0.5);
-  const gdouble qppp2 = ncm_spline_eval_deriv_nmax (qspline->q_z, (zip1 + zip2) * 0.5);
-
-  NCM_UNUSED (x);
-
-  f[0] = gsl_pow_2 ((qppp1 - qppp2) / (abstol + (fabs (qppp1) + fabs (qppp2)) * 0.5 * sigma));
-}
-*/
-
-static void
-continuity_prior_q_f (NcmMSet *mset, gpointer obj, const gdouble *x, gdouble *f)
-{
-  NcHICosmoQSpline *qspline = NC_HICOSMO_QSPLINE (ncm_mset_peek (mset, nc_hicosmo_id ()));
-  NcHICosmoQSplineContPriorKnot *acp = (NcHICosmoQSplineContPriorKnot *) obj;
-  const gdouble sigma = exp (nc_hicosmo_qspline_cont_prior_get_lnsigma (acp->qspline_cp, acp->knot));
-  const gdouble abstol = nc_hicosmo_qspline_cont_prior_get_abstol (acp->qspline_cp);
-  const gdouble zi = ncm_vector_get (qspline->q_z->xv, acp->knot);
-  const gdouble zip1 = ncm_vector_get (qspline->q_z->xv, acp->knot + 1);
-  const gdouble zip2 = ncm_vector_get (qspline->q_z->xv, acp->knot + 2);
-  const gdouble q1 = ncm_spline_eval (qspline->q_z, zi);
-  const gdouble q2 = ncm_spline_eval (qspline->q_z, zip1);
-  const gdouble q3 = ncm_spline_eval (qspline->q_z, zip2);
-  const gdouble qmean = q1 + (q3 - q1) * (zip1 - zi) / (zip2 - zi);
-
-  NCM_UNUSED (x);
-
-  f[0] = gsl_pow_2 ((q2 - qmean) / (abstol + (fabs (q2) + fabs (qmean)) * 0.5 * sigma));
-}
-
-static void
-_nc_hicosmo_spline_continuity_prior_free (gpointer obj)
-{
-  NcHICosmoQSplineContPriorKnot *acp = (NcHICosmoQSplineContPriorKnot *) obj;
-  nc_hicosmo_qspline_cont_prior_free (acp->qspline_cp);
-  g_slice_free (NcHICosmoQSplineContPriorKnot, obj);
-}
-
-/**
- * nc_hicosmo_qspline_add_continuity_prior:
- * @qspline: a #NcHICosmoQSpline
- * @lh: a #NcmLikelihood
- * @knot: FIXME
- * @qspline_cp: FIXME
- *
- * FIXME
- *
- */
-void
-nc_hicosmo_qspline_add_continuity_prior (NcHICosmoQSpline *qspline, NcmLikelihood *lh, guint knot, NcHICosmoQSplineContPrior *qspline_cp)
-{
-  NcHICosmoQSplineContPriorKnot *cp = g_slice_new (NcHICosmoQSplineContPriorKnot);
-  NcmMSetFunc *func = ncm_mset_func_new (continuity_prior_q_f, 0, 1, cp, _nc_hicosmo_spline_continuity_prior_free);
-  g_assert (knot < qspline->nknots - 2);
-  cp->knot = knot;
-  cp->qspline_cp = nc_hicosmo_qspline_cont_prior_ref (qspline_cp);
-  ncm_likelihood_priors_add (lh, func, TRUE);
-  return;
-}
-
 /**
  * nc_hicosmo_qspline_add_continuity_priors:
  * @qspline: a #NcHICosmoQSpline
@@ -295,62 +177,15 @@ nc_hicosmo_qspline_add_continuity_priors (NcHICosmoQSpline *qspline, NcmLikeliho
   g_assert (sigma > 0 && qspline->nknots > 2);
   {
     NcHICosmoQSplineContPrior *qspline_cp = nc_hicosmo_qspline_cont_prior_new (qspline->nknots - 2);
-    guint i;
+    NcPriorQSplineCont *prior_qz_cont     = nc_prior_qspline_cont_new ();
 
     nc_hicosmo_qspline_cont_prior_set_all_lnsigma (qspline_cp, log (sigma));
     nc_hicosmo_qspline_cont_prior_set_abstol (qspline_cp, abstol);
 
-    for (i = 0; i < qspline->nknots - 2; i++)
-      nc_hicosmo_qspline_add_continuity_prior (qspline, lh, i, qspline_cp);
+    ncm_likelihood_priors_add (lh, NCM_PRIOR (prior_qz_cont));
 
     return qspline_cp;
   }
-}
-
-/**
- * nc_hicosmo_qspline_add_continuity_constraint:
- * @qspline: a #NcHICosmoQSpline
- * @fit: a #NcmFit
- * @knot: FIXME
- * @qspline_cp: FIXME
- *
- * FIXME
- *
- */
-void
-nc_hicosmo_qspline_add_continuity_constraint (NcHICosmoQSpline *qspline, NcmFit *fit, guint knot, NcHICosmoQSplineContPrior *qspline_cp)
-{
-  NcHICosmoQSplineContPriorKnot *cp = g_slice_new (NcHICosmoQSplineContPriorKnot);
-  NcmMSetFunc *func = ncm_mset_func_new (continuity_prior_q_f, 0, 1, cp, _nc_hicosmo_spline_continuity_prior_free);
-  g_assert (knot < qspline->nknots - 2);
-  cp->knot = knot;
-  cp->qspline_cp = nc_hicosmo_qspline_cont_prior_ref (qspline_cp);
-  ncm_fit_add_inequality_constraint (fit, func, 1.0);
-  return;
-}
-
-/**
- * nc_hicosmo_qspline_add_continuity_constraints:
- * @qspline: a #NcHICosmoQSpline
- * @fit: a #NcmFit
- * @sigma: FIXME
- *
- * FIXME
- *
- * Returns: (transfer full): FIXME
- */
-NcHICosmoQSplineContPrior *
-nc_hicosmo_qspline_add_continuity_constraints (NcHICosmoQSpline *qspline, NcmFit *fit, gdouble sigma)
-{
-  guint i;
-  NcHICosmoQSplineContPrior *qspline_cp = nc_hicosmo_qspline_cont_prior_new (qspline->nknots);
-  g_assert (sigma > 0);
-
-  nc_hicosmo_qspline_cont_prior_set_all_lnsigma (qspline_cp, log (sigma));
-  for (i = 0; i < qspline->nknots - 2; i++)
-    nc_hicosmo_qspline_add_continuity_constraint (qspline, fit, i, qspline_cp);
-
-  return qspline_cp;
 }
 
 enum {
@@ -547,7 +382,7 @@ nc_hicosmo_qspline_class_init (NcHICosmoQSplineClass *klass)
    *
    * FIXME
    */
-  ncm_model_class_set_sparam (model_class, NC_HICOSMO_QSPLINE_AS_DRAG, "A_s drag", "asdrag",
+  ncm_model_class_set_sparam (model_class, NC_HICOSMO_QSPLINE_AS_DRAG, "A_s", "asdrag",
                               1.0e-4, 1.0, 1.0e-3,
                               NC_HICOSMO_DEFAULT_PARAMS_ABSTOL, NC_HICOSMO_QSPLINE_DEFAULT_AS_DRAG,
                               NCM_PARAM_TYPE_FIXED);
@@ -567,7 +402,7 @@ nc_hicosmo_qspline_class_init (NcHICosmoQSplineClass *klass)
    *
    * FIXME
    */
-  ncm_model_class_set_vparam (model_class, NC_HICOSMO_QSPLINE_Q, NC_HICOSMO_QSPLINE_DEFAULT_Q_LEN, "qparam", "qparam",
+  ncm_model_class_set_vparam (model_class, NC_HICOSMO_QSPLINE_Q, NC_HICOSMO_QSPLINE_DEFAULT_Q_LEN, "q", "qparam",
                               -50.0, 50.0, 2.0e-1, NC_HICOSMO_DEFAULT_PARAMS_ABSTOL, NC_HICOSMO_QSPLINE_DEFAULT_Q,
                               NCM_PARAM_TYPE_FREE);
 
@@ -597,7 +432,7 @@ nc_hicosmo_qspline_class_init (NcHICosmoQSplineClass *klass)
   nc_hicosmo_set_as_drag_impl  (parent_class, &_nc_hicosmo_qspline_as_drag);
 }
 
-/****************************** Continuity Prior ******************************/
+/****************************** Continuity Prior Model ******************************/
 
 enum
 {
@@ -730,7 +565,7 @@ nc_hicosmo_qspline_cont_prior_class_init (NcHICosmoQSplineContPriorClass *klass)
 
   ncm_mset_model_register_id (model_class,
                               "NcHICosmoQSplineContPrior",
-                              "NcHICosmoQSplineContPrior.",
+                              "NcHICosmoQSplineContPrior",
                               NULL,
                               FALSE,
                               NCM_MSET_MODEL_MAIN);
@@ -806,9 +641,10 @@ void
 nc_hicosmo_qspline_cont_prior_set_lnsigma (NcHICosmoQSplineContPrior *qspline_cp, guint i, gdouble ln_sigma)
 {
   NcmModel *model = NCM_MODEL (qspline_cp);
-  guint npriors = ncm_model_vparam_len (model, 0);
+  guint npriors = ncm_model_vparam_len (model, NC_HICOSMO_QSPLINE_CONT_PRIOR_LNSIGMA);
   g_assert_cmpint (i, <, npriors);
-  ncm_model_orig_vparam_set (model, 0, i, ln_sigma);
+  
+  ncm_model_orig_vparam_set (model, NC_HICOSMO_QSPLINE_CONT_PRIOR_LNSIGMA, i, ln_sigma);
 }
 
 /**
@@ -823,11 +659,11 @@ void
 nc_hicosmo_qspline_cont_prior_set_all_lnsigma (NcHICosmoQSplineContPrior *qspline_cp, gdouble ln_sigma)
 {
   NcmModel *model = NCM_MODEL (qspline_cp);
-  guint npriors = ncm_model_vparam_len (model, 0);
+  guint npriors = ncm_model_vparam_len (model, NC_HICOSMO_QSPLINE_CONT_PRIOR_LNSIGMA);
   guint i;
 
   for (i = 0; i < npriors; i++)
-    ncm_model_orig_vparam_set (model, 0, i, ln_sigma);
+    ncm_model_orig_vparam_set (model, NC_HICOSMO_QSPLINE_CONT_PRIOR_LNSIGMA, i, ln_sigma);
 }
 
 /**
@@ -843,9 +679,11 @@ gdouble
 nc_hicosmo_qspline_cont_prior_get_lnsigma (NcHICosmoQSplineContPrior *qspline_cp, guint i)
 {
   NcmModel *model = NCM_MODEL (qspline_cp);
-  guint npriors = ncm_model_vparam_len (model, 0);
+  guint npriors = ncm_model_vparam_len (model, NC_HICOSMO_QSPLINE_CONT_PRIOR_LNSIGMA);
+
   g_assert_cmpint (i, <, npriors);
-  return ncm_model_orig_vparam_get (model, 0, i);
+  
+  return ncm_model_orig_vparam_get (model, NC_HICOSMO_QSPLINE_CONT_PRIOR_LNSIGMA, i);
 }
 
 /**
@@ -861,7 +699,7 @@ nc_hicosmo_qspline_cont_prior_set_abstol (NcHICosmoQSplineContPrior *qspline_cp,
 {
   NcmModel *model = NCM_MODEL (qspline_cp);
   g_assert_cmpfloat (abstol, >, 0.0);
-  ncm_model_orig_param_set (model, 0, abstol);
+  ncm_model_orig_param_set (model, NC_HICOSMO_QSPLINE_CONT_PRIOR_ABSTOL, abstol);
 }
 
 /**
@@ -876,5 +714,70 @@ gdouble
 nc_hicosmo_qspline_cont_prior_get_abstol (NcHICosmoQSplineContPrior *qspline_cp)
 {
   NcmModel *model = NCM_MODEL (qspline_cp);
-  return ncm_model_orig_param_get (model, 0);
+  return ncm_model_orig_param_get (model, NC_HICOSMO_QSPLINE_CONT_PRIOR_ABSTOL);
+}
+
+/****************************** Continuity Prior ******************************/
+
+G_DEFINE_TYPE (NcPriorQSplineCont, nc_prior_qspline_cont, NCM_TYPE_PRIOR);
+
+static void
+nc_prior_qspline_cont_init (NcPriorQSplineCont *nc_prior_qspline_cont)
+{
+}
+
+static void _nc_prior_qspline_cont_eval (NcmMSetFunc *func, NcmMSet *mset, const gdouble *x, gdouble *res);
+
+static void
+nc_prior_qspline_cont_class_init (NcPriorQSplineContClass *klass)
+{
+  NcmPriorClass *prior_class   = NCM_PRIOR_CLASS (klass);
+  NcmMSetFuncClass *func_class = NCM_MSET_FUNC_CLASS (klass);
+
+  prior_class->is_m2lnL = TRUE;
+  func_class->eval      = &_nc_prior_qspline_cont_eval;
+}
+
+static void
+_nc_prior_qspline_cont_eval (NcmMSetFunc *func, NcmMSet *mset, const gdouble *x, gdouble *res)
+{
+  NcHICosmoQSpline *qspline             = NC_HICOSMO_QSPLINE (ncm_mset_peek (mset, nc_hicosmo_id ()));
+  NcHICosmoQSplineContPrior *qspline_cp = NC_HICOSMO_QSPLINE_CONT_PRIOR (ncm_mset_peek (mset, nc_hicosmo_qspline_cont_prior_id ()));
+  guint knot;
+
+  NCM_UNUSED (x);
+
+  res[0] = 0.0;
+  
+  for (knot = 0; knot < qspline->nknots - 2; knot++)
+  {
+    const gdouble sigma  = exp (nc_hicosmo_qspline_cont_prior_get_lnsigma (qspline_cp, knot));
+    const gdouble abstol = nc_hicosmo_qspline_cont_prior_get_abstol (qspline_cp);
+    const gdouble zi     = ncm_vector_get (qspline->q_z->xv, knot + 0);
+    const gdouble zip1   = ncm_vector_get (qspline->q_z->xv, knot + 1);
+    const gdouble zip2   = ncm_vector_get (qspline->q_z->xv, knot + 2);
+    const gdouble q1     = ncm_spline_eval (qspline->q_z, zi);
+    const gdouble q2     = ncm_spline_eval (qspline->q_z, zip1);
+    const gdouble q3     = ncm_spline_eval (qspline->q_z, zip2);
+    const gdouble qmean  = q1 + (q3 - q1) * (zip1 - zi) / (zip2 - zi);
+
+    res[0] += gsl_pow_2 ((q2 - qmean) / (abstol + (fabs (q2) + fabs (qmean)) * 0.5 * sigma));
+    /*res[0] += gsl_pow_2 ((q2 - qmean) / (sigma + fabs (qmean) * abstol));*/
+  }
+}
+
+/**
+ * nc_prior_qspline_cont_new:
+ * 
+ * FIXME
+ * 
+ * Returns: (transfer full): the newly created #NcPriorQSplineCont.
+ */
+NcPriorQSplineCont *
+nc_prior_qspline_cont_new (void)
+{
+  NcPriorQSplineCont *prior_qz_cp = g_object_new (NC_TYPE_PRIOR_QSPLINE_CONT, 
+                                                  NULL);
+
+  return prior_qz_cp;
 }

@@ -53,15 +53,15 @@ main (gint argc, gchar *argv[])
   ncm_cfg_init ();
   ncm_cfg_enable_gsl_err_handler ();
 
-  g_test_add_func ("/numcosmo/nc_transfer_func/bbks/new", &test_nc_transfer_func_new_bbks);
-  //g_test_add_func ("/numcosmo/nc_transfer_func/bbks/eval", &test_nc_transfer_func_eval);
-  //g_test_add_func ("/numcosmo/nc_transfer_func/bbks/matter_power", &test_nc_transfer_func_matter_powerspectrum);
-  g_test_add_func ("/numcosmo/nc_transfer_func/bbks/free", &test_nc_transfer_func_free);
+  g_test_add_func ("/nc/transfer_func/bbks/new", &test_nc_transfer_func_new_bbks);
+  //g_test_add_func ("/nc/transfer_func/bbks/eval", &test_nc_transfer_func_eval);
+  //g_test_add_func ("/nc/transfer_func/bbks/matter_power", &test_nc_transfer_func_matter_powerspectrum);
+  g_test_add_func ("/nc/transfer_func/bbks/free", &test_nc_transfer_func_free);
 
-  g_test_add_func ("/numcosmo/nc_transfer_func/eh/new", &test_nc_transfer_func_new_eh);
-  //g_test_add_func ("/numcosmo/nc_transfer_func/eh/eval", &test_nc_transfer_func_eval);
-  //g_test_add_func ("/numcosmo/nc_transfer_func/eh/matter_power", &test_nc_transfer_func_matter_powerspectrum);
-  g_test_add_func ("/numcosmo/nc_transfer_func/eh/free", &test_nc_transfer_func_free);
+  g_test_add_func ("/nc/transfer_func/eh/new", &test_nc_transfer_func_new_eh);
+  //g_test_add_func ("/nc/transfer_func/eh/eval", &test_nc_transfer_func_eval);
+  //g_test_add_func ("/nc/transfer_func/eh/matter_power", &test_nc_transfer_func_matter_powerspectrum);
+  g_test_add_func ("/nc/transfer_func/eh/free", &test_nc_transfer_func_free);
 
   g_test_run ();
 }

@@ -81,14 +81,15 @@ main (gint argc, gchar *argv[])
     gint i;
     for (i = 0; i < argc; i++)
     {
-      if (strncmp (argv[i], "--runconf", 9) == 0 || strncmp (argv[i], "-c", 2) == 0)
+      if ((strncmp (argv[i], "--runconf", 9) == 0) || (strcmp (argv[i], "-c") == 0))
       {
-        if (strlen (argv[i]) == 9)
+        guint rc_size = strlen (argv[i]);
+        if ((rc_size == 9) || (rc_size == 2))
         {
           if (i + 1 == argc || argv[i + 1] == NULL)
           {
             gchar *msg = g_option_context_get_help (context, TRUE, NULL);
-            fprintf (stderr, "Invalid run options:\n");
+            fprintf (stderr, "Invalid run options: missing argument for `%s'\n", argv[i]);
             printf ("%s", msg);
             g_free (msg);
             g_option_context_free (context);
@@ -97,7 +98,7 @@ main (gint argc, gchar *argv[])
           else
             de_run.runconf = argv[i + 1];
         }
-        else if (argv[i][9] == '=')
+        else if ((rc_size > 10) && (argv[i][9] == '='))
         {
           de_run.runconf = &argv[i][10];
         }
@@ -304,7 +305,7 @@ main (gint argc, gchar *argv[])
   {
     if (!is_de)
       g_error ("omegak > 0 option is valid only for darkenergy models");
-    ncm_prior_add_positive (lh, nc_hicosmo_id (), NC_HICOSMO_DE_OMEGA_X);
+    ncm_likelihood_priors_add_flat_param (lh, nc_hicosmo_id (), NC_HICOSMO_DE_OMEGA_X, 0.0, HUGE_VAL, 1.0);
   }
   
   if (de_data_simple.snia_id != NULL)
@@ -488,12 +489,12 @@ main (gint argc, gchar *argv[])
 
   if (de_data_simple.BBN_Ob)
   {
-    NcmMSetFunc *Omega_b0h2 = nc_hicosmo_create_mset_func0 (&nc_hicosmo_Omega_b0h2);
-    ncm_prior_add_gaussian_const_func (lh, Omega_b0h2, 0.022, 0.002);
+    NcmMSetFunc *Omega_b0h2 = NCM_MSET_FUNC (ncm_mset_func_list_new ("NcHICosmo:Omega_b0h2", NULL));
+    ncm_likelihood_priors_add_gauss_func (lh, Omega_b0h2, 0.022, 0.002, 0.0);
     ncm_mset_func_free (Omega_b0h2);
   }
 
-  if (de_fit.qspline_cp && TRUE)
+  if (de_fit.qspline_cp)
   {
     if (!NC_IS_HICOSMO_QSPLINE (cosmo))
       g_error ("Continuity priors are only valid for NcHICosmoQSPline model");
@@ -501,6 +502,8 @@ main (gint argc, gchar *argv[])
     {
       NcHICosmoQSplineContPrior *qspline_cp = 
         nc_hicosmo_qspline_add_continuity_priors (NC_HICOSMO_QSPLINE (cosmo), lh, 1.0e-10, de_fit.qspline_cp_sigma);
+
+      ncm_mset_set (mset, NCM_MODEL (qspline_cp));
       nc_hicosmo_qspline_cont_prior_free (qspline_cp);
     }
   }
@@ -550,18 +553,6 @@ main (gint argc, gchar *argv[])
     ncm_fit_set_params_reltol (fit, de_fit.fit_params_reltol);
   }
 
-  if (de_fit.qspline_cp && FALSE)
-  {
-    if (!NC_IS_HICOSMO_QSPLINE (cosmo))
-      g_error ("Continuity priors are only valid for NcHICosmoQSPline model");
-    else
-    {
-      NcHICosmoQSplineContPrior *qspline_cp = 
-        nc_hicosmo_qspline_add_continuity_constraints (NC_HICOSMO_QSPLINE (cosmo), fit, de_fit.qspline_cp_sigma);
-      nc_hicosmo_qspline_cont_prior_free (qspline_cp);
-    }
-  }
-
   if (de_data_simple.priors_gauss != NULL)
   {
     guint i;
@@ -604,7 +595,7 @@ main (gint argc, gchar *argv[])
 
         g_assert_cmpfloat (sigma, >, 0.0);
 
-        ncm_prior_add_gaussian_data (lh, p_i.mid, p_i.pid, mu, sigma);
+        ncm_likelihood_priors_add_gauss_param (lh, p_i.mid, p_i.pid, mu, sigma);
         g_variant_unref (prior_hash);
         g_free (model_ns);
         g_free (p_name);
