@@ -57,11 +57,11 @@ enum
 G_DEFINE_TYPE (NcXcor, nc_xcor, G_TYPE_OBJECT);
 
 static void 
-nc_xcor_init (NcXcor* xc)
+nc_xcor_init (NcXcor *xc)
 {
-	xc->ps = NULL;
+	xc->ps   = NULL;
 	xc->dist = NULL;
-	xc->RH = 0.0;
+	xc->RH   = 0.0;
 }
 
 static void 

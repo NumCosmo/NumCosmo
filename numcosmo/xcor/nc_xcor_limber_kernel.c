@@ -246,7 +246,7 @@ guint nc_xcor_limber_kernel_obs_params_len (NcXcorLimberKernel* xclk)
 }
 
 /**
- * nc_xcor_limber_kernel_eval_kernel:
+ * nc_xcor_limber_kernel_eval:
  * @xclk: a #NcXcorLimberKernel
  * @cosmo: a #NcHICosmo
  * @z: a #gdouble
@@ -277,11 +277,10 @@ nc_xcor_limber_kernel_eval (NcXcorLimberKernel* xclk, NcHICosmo* cosmo, gdouble 
  *
  */
 void 
-nc_xcor_limber_kernel_add_noise (NcXcorLimberKernel* xclk, NcmVector* vp1, NcmVector* vp2, guint lmin)
+nc_xcor_limber_kernel_add_noise (NcXcorLimberKernel *xclk, NcmVector *vp1, NcmVector *vp2, guint lmin)
 {
-	NC_XCOR_LIMBER_KERNEL_GET_CLASS (xclk)-> add_noise(xclk, vp1, vp2, lmin);
+	NC_XCOR_LIMBER_KERNEL_GET_CLASS (xclk)-> add_noise (xclk, vp1, vp2, lmin);
 }
-
 
 /**
  * nc_xcor_limber_kernel_prepare:
@@ -292,7 +291,7 @@ nc_xcor_limber_kernel_add_noise (NcXcorLimberKernel* xclk, NcmVector* vp1, NcmVe
  *
  */
 void 
-nc_xcor_limber_kernel_prepare (NcXcorLimberKernel* xclk, NcHICosmo* cosmo)
+nc_xcor_limber_kernel_prepare (NcXcorLimberKernel *xclk, NcHICosmo *cosmo)
 {
 	return NC_XCOR_LIMBER_KERNEL_GET_CLASS (xclk)->prepare (xclk, cosmo);
 }
