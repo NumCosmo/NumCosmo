@@ -140,8 +140,8 @@ _ncm_fit_esmcmc_constructed (GObject *object)
           NcmMSetFunc *func = NCM_MSET_FUNC (ncm_obj_array_peek (esmcmc->funcs_oa, k));
           g_assert (NCM_IS_MSET_FUNC (func));
 
-          names[1 + k]   = g_strdup (ncm_mset_func_peek_name (func));
-          symbols[1 + k] = g_strdup (ncm_mset_func_peek_symbol (func));
+          names[1 + k]   = g_strdup (ncm_mset_func_peek_uname (func));
+          symbols[1 + k] = g_strdup (ncm_mset_func_peek_usymbol (func));
         }
         names[1 + k]   = NULL;
         symbols[1 + k] = NULL;
@@ -219,8 +219,21 @@ ncm_fit_esmcmc_set_property (GObject *object, guint prop_id, const GValue *value
       ncm_fit_esmcmc_set_data_file (esmcmc, g_value_get_string (value));
       break;
     case PROP_FUNCS_ARRAY:
+    {
       esmcmc->funcs_oa = g_value_dup_boxed (value);
+      if (esmcmc->funcs_oa != NULL)
+      {
+        guint i;
+        for (i = 0; i < esmcmc->funcs_oa->len; i++)
+        {
+          NcmMSetFunc *func = NCM_MSET_FUNC (ncm_obj_array_peek (esmcmc->funcs_oa, i));
+          g_assert (NCM_IS_MSET_FUNC (func));
+          g_assert (ncm_mset_func_is_scalar (func));
+          g_assert (ncm_mset_func_is_const (func));
+        }
+      }
       break;
+    }
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
       break;
@@ -724,7 +737,6 @@ _ncm_fit_esmcmc_update (NcmFitESMCMC *esmcmc, guint ki, guint kf)
         {
           ncm_mset_fparams_set_vector_offset (esmcmc->fit->mset, e_mean, esmcmc->nadd_vals);
           ncm_fit_state_set_m2lnL_curval (esmcmc->fit->fstate, ncm_vector_get (e_mean, NCM_FIT_ESMCMC_M2LNL_ID));
-          printf ("Current e-mean % 21.15g\n", ncm_vector_get (e_mean, NCM_FIT_ESMCMC_M2LNL_ID));
         }
 
         ncm_fit_log_state (esmcmc->fit);
@@ -778,6 +790,7 @@ _ncm_fit_esmcmc_gen_init_points_mt_eval (glong i, glong f, gpointer data)
       {
         NcmMSetFunc *func = NCM_MSET_FUNC (ncm_obj_array_peek (fk_ptr[0]->funcs_array, j));
         const gdouble a_j = ncm_mset_func_eval0 (func, fit_k->mset);
+
         ncm_vector_set (full_theta_k, j + 1, a_j);
       }
     }
@@ -1104,7 +1117,8 @@ _ncm_fit_esmcmc_mt_eval (glong i, glong f, gpointer data)
         {
           NcmMSetFunc *func = NCM_MSET_FUNC (ncm_obj_array_peek (fk_ptr[0]->funcs_array, j));
           const gdouble a_j = ncm_mset_func_eval0 (func, fit_k->mset);
-          ncm_vector_set (full_theta_k, j + 1, a_j);
+
+          ncm_vector_set (full_thetastar, j + 1, a_j);
         }
       }
 

@@ -51,10 +51,13 @@ struct _NcmMSetFunc
   GObject parent_instance;
   guint nvar;
   guint dim;
+  NcmVector *eval_x;
   gchar *name;
   gchar *symbol;
   gchar *ns;
   gchar *desc;
+  gchar *uname;
+  gchar *usymbol;
 };
 
 struct _NcmMSetFuncClass
@@ -62,10 +65,6 @@ struct _NcmMSetFuncClass
   /*< private >*/
   GObjectClass parent_class;
   NcmMSetFuncN eval;
-  const gchar *(*peek_name) (NcmMSetFunc *func);
-  const gchar *(*peek_symbol) (NcmMSetFunc *func);
-  const gchar *(*peek_ns) (NcmMSetFunc *func);
-  const gchar *(*peek_desc) (NcmMSetFunc *func);
 };
 
 GType ncm_mset_func_get_type (void) G_GNUC_CONST;
@@ -84,6 +83,8 @@ G_INLINE_FUNC gdouble ncm_mset_func_eval0 (NcmMSetFunc *func, NcmMSet *mset);
 G_INLINE_FUNC gdouble ncm_mset_func_eval1 (NcmMSetFunc *func, NcmMSet *mset, const gdouble x);
 G_INLINE_FUNC void ncm_mset_func_eval_vector (NcmMSetFunc *func, NcmMSet *mset, NcmVector *x_v, NcmVector *res_v);
 
+void ncm_mset_func_set_eval_x (NcmMSetFunc *func, gdouble *x, guint len);
+
 gboolean ncm_mset_func_is_scalar (NcmMSetFunc *func);
 gboolean ncm_mset_func_is_vector (NcmMSetFunc *func, guint dim);
 gboolean ncm_mset_func_is_const (NcmMSetFunc *func);
@@ -96,6 +97,9 @@ const gchar *ncm_mset_func_peek_name (NcmMSetFunc *func);
 const gchar *ncm_mset_func_peek_symbol (NcmMSetFunc *func);
 const gchar *ncm_mset_func_peek_ns (NcmMSetFunc *func);
 const gchar *ncm_mset_func_peek_desc (NcmMSetFunc *func);
+
+const gchar *ncm_mset_func_peek_uname (NcmMSetFunc *func);
+const gchar *ncm_mset_func_peek_usymbol (NcmMSetFunc *func);
 
 NcmVector *ncm_mset_func_numdiff_fparams (NcmMSetFunc *func, NcmMSet *mset, const gdouble *x, NcmVector *out);
 
@@ -129,9 +133,11 @@ ncm_mset_func_eval0 (NcmMSetFunc *func, NcmMSet *mset)
   gdouble res;
 #ifdef NCM_MSET_FUNC_CHECK_TYPE
   g_assert_cmpint (func->dim,  ==, 1);
-  g_assert_cmpint (func->nvar, ==, 0);
+  g_assert ((func->nvar == 0) || (func->eval_x != NULL));
 #endif
-  NCM_MSET_FUNC_GET_CLASS (func)->eval (func, mset, NULL, &res);
+  
+  NCM_MSET_FUNC_GET_CLASS (func)->eval (func, mset, (func->eval_x != NULL) ? ncm_vector_data (func->eval_x) : NULL, &res);
+
   return res;
 }
 

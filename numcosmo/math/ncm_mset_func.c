@@ -45,6 +45,7 @@ enum
   PROP_0,
   PROP_NVAR,
   PROP_DIM,
+  PROP_EVAL_X,
 };
 
 G_DEFINE_TYPE (NcmMSetFunc, ncm_mset_func, G_TYPE_OBJECT);
@@ -52,12 +53,15 @@ G_DEFINE_TYPE (NcmMSetFunc, ncm_mset_func, G_TYPE_OBJECT);
 static void
 ncm_mset_func_init (NcmMSetFunc *func)
 {
-  func->nvar   = 0;
-  func->dim    = 0;
-  func->name   = NULL;
-  func->symbol = NULL;
-  func->ns     = NULL;
-  func->desc   = NULL;
+  func->nvar    = 0;
+  func->dim     = 0;
+  func->eval_x  = NULL;
+  func->name    = NULL;
+  func->symbol  = NULL;
+  func->ns      = NULL;
+  func->desc    = NULL;
+  func->uname   = NULL;
+  func->usymbol = NULL;
 }
 
 static void
@@ -70,7 +74,11 @@ _ncm_mset_func_set_property (GObject *object, guint prop_id, const GValue *value
   {
     case PROP_DIM:
       func->dim = g_value_get_uint (value);
-      break;    
+      break;
+    case PROP_EVAL_X:
+      ncm_vector_clear (&func->eval_x);
+      func->eval_x = g_value_dup_object (value);
+      break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
       break;
@@ -91,6 +99,9 @@ _ncm_mset_func_get_property (GObject *object, guint prop_id, GValue *value, GPar
     case PROP_DIM:
       g_value_set_uint (value, ncm_mset_func_get_dim (func));
       break;
+    case PROP_EVAL_X:
+      g_value_set_object (value, func->eval_x);
+      break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
       break;
@@ -100,7 +111,9 @@ _ncm_mset_func_get_property (GObject *object, guint prop_id, GValue *value, GPar
 static void
 _ncm_mset_func_dispose (GObject *object)
 {
-  /* NcmMSetFunc *func = NCM_MSET_FUNC (object); */
+  NcmMSetFunc *func = NCM_MSET_FUNC (object);
+
+  ncm_vector_clear (&func->eval_x);
 
   /* Chain up : end */
   G_OBJECT_CLASS (ncm_mset_func_parent_class)->dispose (object);
@@ -111,20 +124,19 @@ _ncm_mset_func_finalize (GObject *object)
 {
   NcmMSetFunc *func = NCM_MSET_FUNC (object);
 
-  g_clear_pointer (&func->name,   g_free);
-  g_clear_pointer (&func->symbol, g_free);
-  g_clear_pointer (&func->ns,     g_free);
-  g_clear_pointer (&func->desc,   g_free);
-  
+  g_clear_pointer (&func->name,    g_free);
+  g_clear_pointer (&func->symbol,  g_free);
+  g_clear_pointer (&func->ns,      g_free);
+  g_clear_pointer (&func->desc,    g_free);
+
+  g_clear_pointer (&func->uname,   g_free);
+  g_clear_pointer (&func->usymbol, g_free);
+
   /* Chain up : end */
   G_OBJECT_CLASS (ncm_mset_func_parent_class)->finalize (object);
 }
 
 static void _ncm_mset_func_eval (NcmMSetFunc *func, NcmMSet *mset, const gdouble *x, gdouble *res);
-static const gchar *_ncm_mset_func_peek_name (NcmMSetFunc *func);
-static const gchar *_ncm_mset_func_peek_symbol (NcmMSetFunc *func);
-static const gchar *_ncm_mset_func_peek_ns (NcmMSetFunc *func);
-static const gchar *_ncm_mset_func_peek_desc (NcmMSetFunc *func);
 
 static void
 ncm_mset_func_class_init (NcmMSetFuncClass *klass)
@@ -150,62 +162,21 @@ ncm_mset_func_class_init (NcmMSetFuncClass *klass)
                                                       "Function dimension",
                                                       0, G_MAXUINT32, 0,
                                                       G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-
+  g_object_class_install_property (object_class,
+                                   PROP_EVAL_X,
+                                   g_param_spec_object ("eval-x",
+                                                        NULL,
+                                                        "Evaluation point x",
+                                                        NCM_TYPE_VECTOR,
+                                                        G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  
   klass->eval        = &_ncm_mset_func_eval;
-  klass->peek_name   = &_ncm_mset_func_peek_name;
-  klass->peek_symbol = &_ncm_mset_func_peek_symbol;
-  klass->peek_ns     = &_ncm_mset_func_peek_ns;
-  klass->peek_desc   = &_ncm_mset_func_peek_desc;
 }
 
 static void 
 _ncm_mset_func_eval (NcmMSetFunc *func, NcmMSet *mset, const gdouble *x, gdouble *res)
 {
   g_error ("_ncm_mset_func_eval: no eval function.");
-}
-
-static const gchar *
-_ncm_mset_func_peek_name (NcmMSetFunc *func)
-{
-  if (func->ns == NULL)
-    func->ns = g_strdup (g_type_name (G_OBJECT_TYPE (func)));
-  
-  if (func->name == NULL)
-    func->name = g_strdup_printf ("%s:no-name", func->ns);
-  
-  return func->name;
-}
-
-static const gchar *
-_ncm_mset_func_peek_symbol (NcmMSetFunc *func)
-{
-  if (func->ns == NULL)
-    func->ns = g_strdup (g_type_name (G_OBJECT_TYPE (func)));
-  
-  if (func->symbol == NULL)
-    func->symbol = g_strdup_printf ("%s:no-symbol", func->ns);
-
-  return func->symbol;
-}
-
-static const gchar *
-_ncm_mset_func_peek_ns (NcmMSetFunc *func)
-{
-  if (func->ns == NULL)
-    func->ns = g_strdup (g_type_name (G_OBJECT_TYPE (func)));
-  return func->ns;
-}
-
-static const gchar *
-_ncm_mset_func_peek_desc (NcmMSetFunc *func)
-{
-  if (func->ns == NULL)
-    func->ns = g_strdup (g_type_name (G_OBJECT_TYPE (func)));
-
-  if (func->desc == NULL)
-    func->desc = g_strdup_printf ("%s:no-desc", func->ns);
-
-  return func->desc;
 }
 
 /**
@@ -323,6 +294,68 @@ ncm_mset_func_array_new (void)
  *
  * Returns: FIXME
  */
+/**
+ * ncm_mset_func_eval_vector:
+ * @func: FIXME
+ * @mset: FIXME
+ * @x_v: FIXME
+ * @res_v: FIXME
+ *
+ * FIXME
+ *
+ */
+
+/**
+ * ncm_mset_func_set_eval_x:
+ * @func: FIXME
+ * @x: (in) (array length=len): FIXME
+ * @len: FIXME
+ *
+ * FIXME
+ *
+ */
+void 
+ncm_mset_func_set_eval_x (NcmMSetFunc *func, gdouble *x, guint len)
+{
+  ncm_vector_clear (&func->eval_x);
+  
+  g_assert_cmpuint (func->nvar, ==, len);
+
+  func->eval_x = ncm_vector_new_data_dup (x, func->nvar, 1);
+
+  ncm_mset_func_peek_name (func);
+  ncm_mset_func_peek_desc (func);
+  ncm_mset_func_peek_symbol (func);
+
+  {
+    GString *args_s = g_string_new ("(");
+    gchar *args;
+    guint i;
+
+    for (i = 0; i < len; i++)
+      g_string_append_printf (args_s, "%.15g", x[i]);
+    
+    g_string_append (args_s, ")");
+
+    args = g_string_free (args_s, FALSE);
+
+    g_clear_pointer (&func->usymbol, g_free);
+    g_clear_pointer (&func->uname,   g_free);
+
+    func->usymbol = g_strjoin (NULL, func->symbol, args, NULL);
+
+    {
+      GRegex *reg  = g_regex_new ("[^0-9]+", 0, 0, NULL);
+      gchar *nargs = g_regex_replace_literal (reg, args, -1, 0, "_", 0, NULL);
+
+      func->uname  = g_strjoin (NULL, func->name, nargs, NULL);
+      
+      g_regex_unref (reg);      
+    }
+    
+    g_free (args);
+  }
+}
 
 /**
  * ncm_mset_func_is_scalar:
@@ -364,7 +397,7 @@ ncm_mset_func_is_vector (NcmMSetFunc *func, guint dim)
 gboolean 
 ncm_mset_func_is_const (NcmMSetFunc *func)
 {
-  return (func->nvar == 0);
+  return ((func->nvar == 0) || (func->eval_x != NULL));
 }
 
 /**
@@ -476,7 +509,7 @@ ncm_mset_func_get_dim (NcmMSetFunc *func)
 }
 
 /**
- * ncm_mset_func_peek_name: (virtual peek_name)
+ * ncm_mset_func_peek_name:
  * @func: a #NcmMSetFunc
  * 
  * Returns: (transfer none): @func name.
@@ -484,11 +517,17 @@ ncm_mset_func_get_dim (NcmMSetFunc *func)
 const gchar *
 ncm_mset_func_peek_name (NcmMSetFunc *func)
 {
-  return NCM_MSET_FUNC_GET_CLASS (func)->peek_name (func);
+  if (func->ns == NULL)
+    func->ns = g_strdup (g_type_name (G_OBJECT_TYPE (func)));
+  
+  if (func->name == NULL)
+    func->name = g_strdup_printf ("%s:no-name", func->ns);
+  
+  return func->name;
 }
 
 /**
- * ncm_mset_func_peek_symbol: (virtual peek_symbol)
+ * ncm_mset_func_peek_symbol:
  * @func: a #NcmMSetFunc
  * 
  * Returns: (transfer none): @func symbol.
@@ -496,11 +535,17 @@ ncm_mset_func_peek_name (NcmMSetFunc *func)
 const gchar *
 ncm_mset_func_peek_symbol (NcmMSetFunc *func)
 {
-  return NCM_MSET_FUNC_GET_CLASS (func)->peek_symbol (func);
+  if (func->ns == NULL)
+    func->ns = g_strdup (g_type_name (G_OBJECT_TYPE (func)));
+  
+  if (func->symbol == NULL)
+    func->symbol = g_strdup_printf ("%s:no-symbol", func->ns);
+
+  return func->symbol;
 }
 
 /**
- * ncm_mset_func_peek_ns: (virtual peek_ns)
+ * ncm_mset_func_peek_ns:
  * @func: a #NcmMSetFunc
  * 
  * Returns: (transfer none): @func ns.
@@ -508,11 +553,13 @@ ncm_mset_func_peek_symbol (NcmMSetFunc *func)
 const gchar *
 ncm_mset_func_peek_ns (NcmMSetFunc *func)
 {
-  return NCM_MSET_FUNC_GET_CLASS (func)->peek_ns (func);
+  if (func->ns == NULL)
+    func->ns = g_strdup (g_type_name (G_OBJECT_TYPE (func)));
+  return func->ns;
 }
 
 /**
- * ncm_mset_func_peek_desc: (virtual peek_desc)
+ * ncm_mset_func_peek_desc:
  * @func: a #NcmMSetFunc
  * 
  * Returns: (transfer none): @func desc.
@@ -520,5 +567,45 @@ ncm_mset_func_peek_ns (NcmMSetFunc *func)
 const gchar *
 ncm_mset_func_peek_desc (NcmMSetFunc *func)
 {
-  return NCM_MSET_FUNC_GET_CLASS (func)->peek_desc (func);
+  if (func->ns == NULL)
+    func->ns = g_strdup (g_type_name (G_OBJECT_TYPE (func)));
+
+  if (func->desc == NULL)
+    func->desc = g_strdup_printf ("%s:no-desc", func->ns);
+
+  return func->desc;
+}
+
+/**
+ * ncm_mset_func_peek_uname:
+ * @func: a #NcmMSetFunc
+ * 
+ * Peeks unique name.
+ * 
+ * Returns: (transfer none): @func unique name.
+ */
+const gchar *
+ncm_mset_func_peek_uname (NcmMSetFunc *func)
+{
+  if (func->uname != NULL)
+    return func->uname;
+  else
+    return ncm_mset_func_peek_name (func);
+}
+
+/**
+ * ncm_mset_func_peek_usymbol:
+ * @func: a #NcmMSetFunc
+ * 
+ * Peeks unique symbol.
+ * 
+ * Returns: (transfer none): @func unique name.
+ */
+const gchar *
+ncm_mset_func_peek_usymbol (NcmMSetFunc *func)
+{
+  if (func->usymbol != NULL)
+    return func->usymbol;
+  else
+    return ncm_mset_func_peek_symbol (func);
 }

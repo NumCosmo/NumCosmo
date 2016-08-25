@@ -178,7 +178,7 @@ _ncm_mset_func_list_init_from_full_name (NcmMSetFuncList *flist, const gchar *fu
     NcmMSetFunc *func                 = NCM_MSET_FUNC (flist);
     NcmMSetFuncListClass *flist_class = g_type_class_ref (NCM_TYPE_MSET_FUNC_LIST);
 
-    gchar **ns_name = g_strsplit (full_name, ":", 2);
+    gchar **ns_name       = g_strsplit (full_name, ":", 2);
     GHashTable *func_hash = g_hash_table_lookup (flist_class->ns_hash, ns_name[0]);
 
     if (g_strv_length (ns_name) != 2)

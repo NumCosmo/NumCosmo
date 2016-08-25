@@ -313,6 +313,7 @@ ncm_cfg_init (void)
   ncm_cfg_register_obj (NC_TYPE_HICOSMO_QCONST);
   ncm_cfg_register_obj (NC_TYPE_HICOSMO_QLINEAR);
   ncm_cfg_register_obj (NC_TYPE_HICOSMO_QSPLINE);
+  ncm_cfg_register_obj (NC_TYPE_HICOSMO_QSPLINE_CONT_PRIOR);
   ncm_cfg_register_obj (NC_TYPE_HICOSMO_LCDM);
   ncm_cfg_register_obj (NC_TYPE_HICOSMO_DE_XCDM);
   ncm_cfg_register_obj (NC_TYPE_HICOSMO_DE_LINDER);

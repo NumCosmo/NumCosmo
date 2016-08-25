@@ -51,6 +51,7 @@ main (gint argc, gchar *argv[])
   NcDEFitEntries de_fit = NC_DE_FIT_ENTRIES;
   NcDistance *dist;
   NcmMSet *mset, *fiduc = NULL;
+  NcmObjArray *funcs_oa = NULL;
   GError *error = NULL;
   GOptionContext *context;
   GOptionEntry *de_model_entries = NULL;
@@ -660,6 +661,51 @@ main (gint argc, gchar *argv[])
     }
   }
 
+  if (de_fit.funcs != NULL)
+  {
+    const guint len = g_strv_length (de_fit.funcs);
+    guint i;
+
+    funcs_oa = ncm_obj_array_new ();
+
+    for (i = 0; i < len; i++)
+    {
+      NcmMSetFunc *func = NULL;
+      gdouble *x = NULL;
+      gchar *func_name;
+      guint len;
+
+      func_name = ncm_util_function_params (de_fit.funcs[i], &x, &len);
+      if (func_name == NULL)
+        g_error ("darkenergy: invalid function name: `%s'.", de_fit.funcs[i]);
+
+      if (ncm_mset_func_list_has_ns_name ("NcHICosmo", func_name))
+      {
+        func = NCM_MSET_FUNC (ncm_mset_func_list_new_ns_name ("NcHICosmo", func_name, NULL));
+      }
+      else if (ncm_mset_func_list_has_ns_name ("NcDistance", func_name))
+      {
+        func = NCM_MSET_FUNC (ncm_mset_func_list_new_ns_name ("NcDistance", func_name, dist));
+      }
+      else
+      {
+        g_warning ("darkenergy: function `%s' not found, skipping!", de_fit.funcs[i]);
+        func = NULL;
+        continue;
+      }
+
+      if (len > 0)
+        ncm_mset_func_set_eval_x (func, x, len);
+
+      g_clear_pointer (&x, g_free);
+
+      g_assert (ncm_mset_func_is_scalar (func));
+      g_assert (ncm_mset_func_is_const (func));
+
+      ncm_obj_array_add (funcs_oa, G_OBJECT (func));
+    }
+  }
+  
   if (de_fit.mc)
   {
     NcmFitMC *mc = ncm_fit_mc_new (fit, de_fit.mc_rtype, de_fit.msg_level);
@@ -789,22 +835,26 @@ main (gint argc, gchar *argv[])
     if (de_fit.esmcmc_walk)
     {
       NcmFitESMCMCWalkerWalk *walk = ncm_fit_esmcmc_walker_walk_new (de_fit.mc_nwalkers);
-      esmcmc = ncm_fit_esmcmc_new (fit, 
-                                   de_fit.mc_nwalkers, 
-                                   NCM_MSET_TRANS_KERN (init_sampler), 
-                                   NCM_FIT_ESMCMC_WALKER (walk),
-                                   de_fit.msg_level);
+      
+      esmcmc = ncm_fit_esmcmc_new_funcs_array (fit, 
+                                               de_fit.mc_nwalkers, 
+                                               NCM_MSET_TRANS_KERN (init_sampler), 
+                                               NCM_FIT_ESMCMC_WALKER (walk),
+                                               de_fit.msg_level,
+                                               funcs_oa);
+      
       ncm_fit_esmcmc_walker_free (NCM_FIT_ESMCMC_WALKER (walk));
     }
     else
     {
       NcmFitESMCMCWalkerStretch *stretch = ncm_fit_esmcmc_walker_stretch_new (de_fit.mc_nwalkers, ncm_mset_fparams_len (mset));
-      esmcmc = ncm_fit_esmcmc_new (fit, 
-                                   de_fit.mc_nwalkers, 
-                                   NCM_MSET_TRANS_KERN (init_sampler), 
-                                   NCM_FIT_ESMCMC_WALKER (stretch),
-                                   de_fit.msg_level);
-
+      esmcmc = ncm_fit_esmcmc_new_funcs_array (fit, 
+                                               de_fit.mc_nwalkers, 
+                                               NCM_MSET_TRANS_KERN (init_sampler), 
+                                               NCM_FIT_ESMCMC_WALKER (stretch),
+                                               de_fit.msg_level,
+                                               funcs_oa);
+      
       if (de_fit.esmcmc_sbox)
       {
         ncm_fit_esmcmc_walker_stretch_set_box_mset (stretch, mset);
@@ -1126,6 +1176,7 @@ main (gint argc, gchar *argv[])
     g_clear_pointer (&de_fit.save_mset,   g_free);
     
     g_clear_pointer (&de_fit.onedim_cr, g_strfreev);
+    g_clear_pointer (&de_fit.funcs, g_strfreev);
   }
   
   return 0;

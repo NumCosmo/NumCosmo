@@ -485,7 +485,7 @@ ncm_mset_catalog_class_init (NcmMSetCatalogClass *klass)
                                    g_param_spec_uint ("nadd-vals",
                                                       NULL,
                                                       "Number of additional values",
-                                                      1, G_MAXUINT32, 1,
+                                                      0, G_MAXUINT32, 0,
                                                       G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
   g_object_class_install_property (object_class,
                                    PROP_ADD_VAL_NAMES,
@@ -1095,6 +1095,8 @@ _ncm_mset_catalog_open_create_file (NcmMSetCatalog *mcat, gboolean load_from_cat
           g_free (asymbi);
         }
 
+        status = COL_NOT_UNIQUE;
+
         i++;
         if (i >= mcat->nadd_vals)
           break;
@@ -1110,6 +1112,9 @@ _ncm_mset_catalog_open_create_file (NcmMSetCatalog *mcat, gboolean load_from_cat
         gchar *asymbi      = g_strdup_printf ("%s%d", NCM_MSET_CATALOG_ASYMB_LABEL, i + 1);
         gchar symbol_s[FLEN_VALUE];
         gint cindex = 0;
+        
+        if (fits_get_colnum (mcat->fptr, CASESEN, (gchar *)cname, &cindex, &status))
+          g_error ("_ncm_mset_catalog_open_create_file: Additional column %s not found, invalid fits file.", cname);
 
         fits_read_key (mcat->fptr, TSTRING, asymbi, &symbol_s, NULL, &status);
         if (status == KEY_NO_EXIST)
@@ -1121,9 +1126,6 @@ _ncm_mset_catalog_open_create_file (NcmMSetCatalog *mcat, gboolean load_from_cat
           g_assert_cmpstr (symbol_s, ==, csymbol);
         }
         
-        if (fits_get_colnum (mcat->fptr, CASESEN, (gchar *)cname, &cindex, &status))
-          g_error ("_ncm_mset_catalog_open_create_file: Additional column %s not found, invalid fits file.", cname);
-
         if (cindex != i + 1)
         {
           g_error ("_ncm_mset_catalog_open_create_file: Additional column %s is not the %d-th column [%d], invalid fits file.",
@@ -1244,31 +1246,41 @@ _ncm_mset_catalog_open_create_file (NcmMSetCatalog *mcat, gboolean load_from_cat
 static void
 _ncm_mset_catalog_set_add_val_name_array (NcmMSetCatalog *mcat, gchar **names)
 {
-  const guint len = g_strv_length (names);
-  guint i;
-
-  g_ptr_array_set_size (mcat->add_vals_names, len);
-  
-  for (i = 0; i < len; i++)
+  if (names != NULL)
   {
-    g_clear_pointer (&g_ptr_array_index (mcat->add_vals_names, i), g_free);
-    g_ptr_array_index (mcat->add_vals_names, i) = g_strdup (names[i]);
+    const guint len = g_strv_length (names);
+    guint i;
+
+    g_ptr_array_set_size (mcat->add_vals_names, len);
+
+    for (i = 0; i < len; i++)
+    {
+      g_clear_pointer (&g_ptr_array_index (mcat->add_vals_names, i), g_free);
+      g_ptr_array_index (mcat->add_vals_names, i) = g_strdup (names[i]);
+    }
   }
+  else
+    g_ptr_array_set_size (mcat->add_vals_names, 0);
 }
 
 static void
 _ncm_mset_catalog_set_add_val_symbol_array (NcmMSetCatalog *mcat, gchar **symbols)
 {
-  const guint len = g_strv_length (symbols);
-  guint i;
-
-  g_ptr_array_set_size (mcat->add_vals_symbs, len);
-  
-  for (i = 0; i < len; i++)
+  if (symbols != NULL)
   {
-    g_clear_pointer (&g_ptr_array_index (mcat->add_vals_symbs, i), g_free);
-    g_ptr_array_index (mcat->add_vals_symbs, i) = g_strdup (symbols[i]);
+    const guint len = g_strv_length (symbols);
+    guint i;
+
+    g_ptr_array_set_size (mcat->add_vals_symbs, len);
+
+    for (i = 0; i < len; i++)
+    {
+      g_clear_pointer (&g_ptr_array_index (mcat->add_vals_symbs, i), g_free);
+      g_ptr_array_index (mcat->add_vals_symbs, i) = g_strdup (symbols[i]);
+    }
   }
+  else
+    g_ptr_array_set_size (mcat->add_vals_symbs, 0);
 }
 
 /**

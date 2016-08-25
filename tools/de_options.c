@@ -40,10 +40,10 @@ nc_de_opt_get_run_group (NcDERunEntries *de_run)
 {
   GOptionEntry run_entries[] =
   {
-    { "runconf",  'c', 0, G_OPTION_ARG_FILENAME, &de_run->runconf,   "Configuration file defining a run.",                          NULL },
-    { "save-run", 's', 0, G_OPTION_ARG_FILENAME, &de_run->saverun,   "Save run confuguration to file.",                             NULL },
-    { "main-seed",  0, 0, G_OPTION_ARG_INT64,    &de_run->main_seed, "Seed used to setup the main RNG.",                            NULL },
-    { "nthreads",   0, 0, G_OPTION_ARG_INT,      &de_run->nthreads,  "Max number of threads to be created by the pool.",            NULL },
+    { "runconf",  'c', 0, G_OPTION_ARG_FILENAME, &de_run->runconf,   "Configuration file defining a run",                          NULL },
+    { "save-run", 's', 0, G_OPTION_ARG_FILENAME, &de_run->saverun,   "Save run confuguration to file",                             NULL },
+    { "main-seed",  0, 0, G_OPTION_ARG_INT64,    &de_run->main_seed, "Seed used to setup the main RNG",                            NULL },
+    { "nthreads",   0, 0, G_OPTION_ARG_INT,      &de_run->nthreads,  "Max number of threads to be created by the pool",            NULL },
     { NULL }
   };
   GOptionGroup *run_group = g_option_group_new ("run", " - Run configuration options", "Show help options related to a run", NULL, NULL);
@@ -57,13 +57,13 @@ nc_de_opt_get_model_group (NcDEModelEntries *de_model, GOptionEntry **de_model_e
 {
   GOptionEntry model_entries[] =
   {
-    { "mset-file",   'M', 0, G_OPTION_ARG_STRING, &de_model->mset_file,   "Name of the mset file to be used, models inside this mset takes precedence over any other model definition.", NULL },
-    { "model",       'm', 0, G_OPTION_ARG_STRING, &de_model->model_name,  "Name of the darkenergy model to be used.",                    NULL },
-    { "model-reion",   0, 0, G_OPTION_ARG_STRING, &de_model->model_reion, "Name of the reionization model to be used.",                  NULL },
-    { "model-prim",    0, 0, G_OPTION_ARG_STRING, &de_model->model_prim,  "Name of the primordial model to be used.",                    NULL },
-    { "pos_Omega_x",   0, 0, G_OPTION_ARG_NONE,   &de_model->pos_Omega_x, "Positivity prior on Omega_x.",                                NULL },
-    { "Omega_k",       0, 0, G_OPTION_ARG_NONE,   &de_model->Omega_k,     "Change variable Omega_x -> Omega_k.",                         NULL },
-    { "flat",          0, 0, G_OPTION_ARG_NONE,   &de_model->flat,        "Change variable Omega_x -> Omega_k and set Omega_k to zero.", NULL },
+    { "mset-file",   'M', 0, G_OPTION_ARG_STRING, &de_model->mset_file,   "Name of the mset file to be used, models inside this mset takes precedence over any other model definition", NULL },
+    { "model",       'm', 0, G_OPTION_ARG_STRING, &de_model->model_name,  "Name of the darkenergy model to be used",                    NULL },
+    { "model-reion",   0, 0, G_OPTION_ARG_STRING, &de_model->model_reion, "Name of the reionization model to be used",                  NULL },
+    { "model-prim",    0, 0, G_OPTION_ARG_STRING, &de_model->model_prim,  "Name of the primordial model to be used",                    NULL },
+    { "pos_Omega_x",   0, 0, G_OPTION_ARG_NONE,   &de_model->pos_Omega_x, "Positivity prior on Omega_x",                                NULL },
+    { "Omega_k",       0, 0, G_OPTION_ARG_NONE,   &de_model->Omega_k,     "Change variable Omega_x -> Omega_k",                         NULL },
+    { "flat",          0, 0, G_OPTION_ARG_NONE,   &de_model->flat,        "Change variable Omega_x -> Omega_k and set Omega_k to zero", NULL },
     { "help-names",    0, 0, G_OPTION_ARG_NONE,   &de_model->help_names,  "Print the parameters names of the chosen model", NULL },
     { NULL }
   };
@@ -124,12 +124,12 @@ nc_de_opt_get_data_simple_group (NcDEDataSimpleEntries *de_data_simple, GOptionE
 {
   GOptionEntry data_simple_entries[] =
   {
-    { "snia-list",      0, G_OPTION_FLAG_NO_ARG, G_OPTION_ARG_CALLBACK,     &_nc_de_print_snia_list,       "Print all SNIa data avaliable.",        NULL },
-    { "bao-list",       0, G_OPTION_FLAG_NO_ARG, G_OPTION_ARG_CALLBACK,     &_nc_de_print_bao_list,        "Print all BAO data avaliable.",         NULL },
-    { "cmb-list",       0, G_OPTION_FLAG_NO_ARG, G_OPTION_ARG_CALLBACK,     &_nc_de_print_cmb_list,        "Print all CMB data avaliable.",         NULL },
-    { "H-list",         0, G_OPTION_FLAG_NO_ARG, G_OPTION_ARG_CALLBACK,     &_nc_de_print_H_list,          "Print all Hubble data avaliable.",      NULL },
-    { "H-BAO-list",     0, G_OPTION_FLAG_NO_ARG, G_OPTION_ARG_CALLBACK,     &_nc_de_print_H_BAO_list,      "Print all Hubble BAO data avaliable.",  NULL },
-    { "cluster-list",   0, G_OPTION_FLAG_NO_ARG, G_OPTION_ARG_CALLBACK,     &_nc_de_print_cluster_list,    "Print all Cluster data avaliable.",     NULL },
+    { "snia-list",      0, G_OPTION_FLAG_NO_ARG, G_OPTION_ARG_CALLBACK,     &_nc_de_print_snia_list,       "Print all SNIa data avaliable",        NULL },
+    { "bao-list",       0, G_OPTION_FLAG_NO_ARG, G_OPTION_ARG_CALLBACK,     &_nc_de_print_bao_list,        "Print all BAO data avaliable",         NULL },
+    { "cmb-list",       0, G_OPTION_FLAG_NO_ARG, G_OPTION_ARG_CALLBACK,     &_nc_de_print_cmb_list,        "Print all CMB data avaliable",         NULL },
+    { "H-list",         0, G_OPTION_FLAG_NO_ARG, G_OPTION_ARG_CALLBACK,     &_nc_de_print_H_list,          "Print all Hubble data avaliable",      NULL },
+    { "H-BAO-list",     0, G_OPTION_FLAG_NO_ARG, G_OPTION_ARG_CALLBACK,     &_nc_de_print_H_BAO_list,      "Print all Hubble BAO data avaliable",  NULL },
+    { "cluster-list",   0, G_OPTION_FLAG_NO_ARG, G_OPTION_ARG_CALLBACK,     &_nc_de_print_cluster_list,    "Print all Cluster data avaliable",     NULL },
     { "snia-id",      'S',                    0, G_OPTION_ARG_STRING,       &de_data_simple->snia_id,      "ID of the SNe Ia sample to use",        NULL },
     { "snia-objser",    0,                    0, G_OPTION_ARG_STRING,       &de_data_simple->snia_objser,  "The SNe Ia analysis object",            NULL },
     { "snia-use-det",   0,                    0, G_OPTION_ARG_NONE,         &de_data_simple->snia_use_det, "Whenever to use the normalized Likelihood when fitting SN Ia data", NULL },
@@ -147,7 +147,7 @@ nc_de_opt_get_data_simple_group (NcDEDataSimpleEntries *de_data_simple, GOptionE
     { "data-file",      0,                    0, G_OPTION_ARG_STRING_ARRAY, &de_data_simple->data_files,   "File containing a serialized version of a NcmData object",   NULL },
     { NULL }
   };
-  GOptionGroup *data_simple_group = g_option_group_new ("data", " - Cosmological data options", "Show help options related to the dataset to be used.", NULL, NULL);
+  GOptionGroup *data_simple_group = g_option_group_new ("data", " - Cosmological data options", "Show help options related to the dataset to be used", NULL, NULL);
 
   *de_data_simple_entries = g_new (GOptionEntry, G_N_ELEMENTS (data_simple_entries));
   memcpy (*de_data_simple_entries, data_simple_entries, sizeof (data_simple_entries));
@@ -167,15 +167,15 @@ nc_de_opt_get_data_cluster_group (NcDEDataClusterEntries *de_data_cluster, GOpti
     { "multiplicity",  0, 0, G_OPTION_ARG_STRING,         &de_data_cluster->multiplicity_name,     "Which multiplicity function to use", NULL },
     { "cluster-m",     0, 0, G_OPTION_ARG_STRING,         &de_data_cluster->clusterm_ser,          "Which NcClusterMass object to use", NULL },
     { "cluster-z",     0, 0, G_OPTION_ARG_STRING,         &de_data_cluster->clusterz_ser,          "Which NcClusterRedshift object to use", NULL },
-    { "mf_ds_index",   0, 0, G_OPTION_ARG_INT,            &de_data_cluster->mf_ds_index,           "Determines the coefficients of the multiplicity function.", NULL },
-    { "use-true-data", 0, 0, G_OPTION_ARG_NONE,           &de_data_cluster->use_true_data,         "Use true mass and redshift, must be avaliable.", NULL },
-    { "binned",        0, 0, G_OPTION_ARG_NONE,           &de_data_cluster->binned,                "Binned analyses.", NULL },
-    { "binmass",       0, 0, G_OPTION_ARG_NONE,           &de_data_cluster->binmass,               "Use dNdz integrating the full mass function in each z.", NULL },
-    { "area",          0, 0, G_OPTION_ARG_DOUBLE,         &de_data_cluster->area_survey,           "User must provide the area in square degree. The conversion to steradian is done internally.", NULL },
+    { "mf_ds_index",   0, 0, G_OPTION_ARG_INT,            &de_data_cluster->mf_ds_index,           "Determines the coefficients of the multiplicity function", NULL },
+    { "use-true-data", 0, 0, G_OPTION_ARG_NONE,           &de_data_cluster->use_true_data,         "Use true mass and redshift, must be avaliable", NULL },
+    { "binned",        0, 0, G_OPTION_ARG_NONE,           &de_data_cluster->binned,                "Binned analyses", NULL },
+    { "binmass",       0, 0, G_OPTION_ARG_NONE,           &de_data_cluster->binmass,               "Use dNdz integrating the full mass function in each z", NULL },
+    { "area",          0, 0, G_OPTION_ARG_DOUBLE,         &de_data_cluster->area_survey,           "User must provide the area in square degree. The conversion to steradian is done internally", NULL },
     { "n_bins",        0, 0, G_OPTION_ARG_INT,            &de_data_cluster->n_bins,                "Number of bins", NULL },
-    { "catalog",       0, 0, G_OPTION_ARG_FILENAME_ARRAY, &de_data_cluster->cata_file,             "Use the folowing catalog as the observational data. It can be used multiple times.", "catalog.dat"},
+    { "catalog",       0, 0, G_OPTION_ARG_FILENAME_ARRAY, &de_data_cluster->cata_file,             "Use the folowing catalog as the observational data. It can be used multiple times", "catalog.dat"},
     { "save-cat",      0, 0, G_OPTION_ARG_FILENAME,       &de_data_cluster->save_cata,             "Use this option to save the catalog used. (will overwrite)", NULL },
-    { "print_mf",      0, 0, G_OPTION_ARG_NONE,           &de_data_cluster->print_mass_function,   "Create a file and print the mass function from the used FITS catalog and the theoretical one.", NULL },
+    { "print_mf",      0, 0, G_OPTION_ARG_NONE,           &de_data_cluster->print_mass_function,   "Create a file and print the mass function from the used FITS catalog and the theoretical one", NULL },
     { NULL }
   };
   GOptionGroup *data_cluster_group = g_option_group_new ("cluster", " - Include cluster number counts\n\t - Use --cluster-id 0 and --catalog to use a fit file catalog\n\t - Use --cluster-id 1 and --catalog to use a text file catalog (plain two columns redshift and ln mass)\n\t - Use --cluster-id 2 to make a mock catalog from theory\n", "Show help options related to cluster", NULL, NULL);
@@ -207,47 +207,48 @@ nc_de_opt_get_fit_group (NcDEFitEntries *de_fit, GOptionEntry **de_fit_entries)
 {
   GOptionEntry fit_entries[] =
   {
-    { "out",              0, 0, G_OPTION_ARG_FILENAME,     &de_fit->file_out,         "Output filename.", "output.dat" },
-    { "fit",              0, 0, G_OPTION_ARG_NONE,         &de_fit->fit,              "Fit model using the selected data.", NULL},
-    { "mc",               0, 0, G_OPTION_ARG_NONE,         &de_fit->mc,               "Resample the original data 'Monte Carlo' times.", NULL},
-    { "mcbs",             0, 0, G_OPTION_ARG_NONE,         &de_fit->mcbs,             "Resample the original data 'Monte Carlo' times intercalating with mcbs bootstraps.", NULL},
-    { "mcmc",             0, 0, G_OPTION_ARG_NONE,         &de_fit->mcmc,             "Run a Markov Chain Monte Carlo analysis.", NULL},
-    { "esmcmc",           0, 0, G_OPTION_ARG_NONE,         &de_fit->esmcmc,           "Run a Ensemble Sampler Markov Chain Monte Carlo analysis.", NULL},
-    { "esmcmc-walk",      0, 0, G_OPTION_ARG_NONE,         &de_fit->esmcmc_walk,      "Uses walk move instead of stretch move in ESMCMC.", NULL},
-    { "esmcmc-sbox",      0, 0, G_OPTION_ARG_NONE,         &de_fit->esmcmc_sbox,      "Uses stretch move never leaving the bounding box.", NULL},
-    { "esmcmc-ms",        0, 0, G_OPTION_ARG_NONE,         &de_fit->esmcmc_ms,        "Uses multi-stretchs in one step.", NULL},
-    { "fisher",           0, 0, G_OPTION_ARG_NONE,         &de_fit->fisher,           "Calculated the Fisher matrix.", NULL},
-    { "fit-type",         0, 0, G_OPTION_ARG_STRING,       &de_fit->fit_type,         "Fitting object to be used.", NULL },
-    { "fit-diff",         0, 0, G_OPTION_ARG_STRING,       &de_fit->fit_diff,         "Fitting differentiation algorithim method.", NULL },
-    { "fit-algo",         0, 0, G_OPTION_ARG_STRING,       &de_fit->fit_algo,         "Fitting algorithim.", NULL },
-    { "fit-reltol",       0, 0, G_OPTION_ARG_DOUBLE,       &de_fit->fit_reltol,       "Fitting relative tolerance for the minimum.", NULL },
-    { "fit-params-reltol",0, 0, G_OPTION_ARG_DOUBLE,       &de_fit->fit_params_reltol,"Fitting relative tolerance for the parameters.", NULL },
-    { "fit-list",         0, G_OPTION_FLAG_NO_ARG, G_OPTION_ARG_CALLBACK, &_nc_de_print_fit_list,  "Print all the minimization/differentiation objects avaliable.", NULL },    
+    { "out",              0, 0, G_OPTION_ARG_FILENAME,     &de_fit->file_out,         "Output filename", "output.dat" },
+    { "fit",              0, 0, G_OPTION_ARG_NONE,         &de_fit->fit,              "Fit model using the selected data", NULL},
+    { "mc",               0, 0, G_OPTION_ARG_NONE,         &de_fit->mc,               "Resample the original data 'Monte Carlo' times", NULL},
+    { "mcbs",             0, 0, G_OPTION_ARG_NONE,         &de_fit->mcbs,             "Resample the original data 'Monte Carlo' times intercalating with mcbs bootstraps", NULL},
+    { "mcmc",             0, 0, G_OPTION_ARG_NONE,         &de_fit->mcmc,             "Run a Markov Chain Monte Carlo analysis", NULL},
+    { "esmcmc",           0, 0, G_OPTION_ARG_NONE,         &de_fit->esmcmc,           "Run a Ensemble Sampler Markov Chain Monte Carlo analysis", NULL},
+    { "esmcmc-walk",      0, 0, G_OPTION_ARG_NONE,         &de_fit->esmcmc_walk,      "Uses walk move instead of stretch move in ESMCMC", NULL},
+    { "esmcmc-sbox",      0, 0, G_OPTION_ARG_NONE,         &de_fit->esmcmc_sbox,      "Uses stretch move never leaving the bounding box", NULL},
+    { "esmcmc-ms",        0, 0, G_OPTION_ARG_NONE,         &de_fit->esmcmc_ms,        "Uses multi-stretchs in one step", NULL},
+    { "fisher",           0, 0, G_OPTION_ARG_NONE,         &de_fit->fisher,           "Calculated the Fisher matrix", NULL},
+    { "fit-type",         0, 0, G_OPTION_ARG_STRING,       &de_fit->fit_type,         "Fitting object to be used", NULL },
+    { "fit-diff",         0, 0, G_OPTION_ARG_STRING,       &de_fit->fit_diff,         "Fitting differentiation algorithim method", NULL },
+    { "fit-algo",         0, 0, G_OPTION_ARG_STRING,       &de_fit->fit_algo,         "Fitting algorithim", NULL },
+    { "fit-reltol",       0, 0, G_OPTION_ARG_DOUBLE,       &de_fit->fit_reltol,       "Fitting relative tolerance for the minimum", NULL },
+    { "fit-params-reltol",0, 0, G_OPTION_ARG_DOUBLE,       &de_fit->fit_params_reltol,"Fitting relative tolerance for the parameters", NULL },
+    { "fit-list",         0, G_OPTION_FLAG_NO_ARG, G_OPTION_ARG_CALLBACK, &_nc_de_print_fit_list,  "Print all the minimization/differentiation objects avaliable", NULL },    
     { "max-iter",         0, 0, G_OPTION_ARG_INT,          &de_fit->max_iter,         "Max number of iterations used by the minimization algorithms", NULL },
-    { "n-sigma",          0, 0, G_OPTION_ARG_INT,          &de_fit->nsigma,           "Confidence region probability 1, 2 or 3 sigmas. A zero value calculate all three confidence regions.", NULL },
-    { "n-sigma-fisher",   0, 0, G_OPTION_ARG_INT,          &de_fit->nsigma_fisher,    "Confidence region (Fisher matrix) probability 1, 2 or 3 sigmas. A zero value calculate all three confidence regions.", NULL },
+    { "n-sigma",          0, 0, G_OPTION_ARG_INT,          &de_fit->nsigma,           "Confidence region probability 1, 2 or 3 sigmas. A zero value calculate all three confidence regions", NULL },
+    { "n-sigma-fisher",   0, 0, G_OPTION_ARG_INT,          &de_fit->nsigma_fisher,    "Confidence region (Fisher matrix) probability 1, 2 or 3 sigmas. A zero value calculate all three confidence regions", NULL },
     { "cr-x",             0, 0, G_OPTION_ARG_STRING,       &de_fit->bidim_cr[0],      "Confidence region x parameter", NULL },
     { "cr-y",             0, 0, G_OPTION_ARG_STRING,       &de_fit->bidim_cr[1],      "Confidence region y parameter", NULL },
     { "lhr-prec",         0, 0, G_OPTION_ARG_DOUBLE,       &de_fit->lhr_prec,         "Confidence border precision", NULL },
     { "err-param",        0, 0, G_OPTION_ARG_STRING_ARRAY, &de_fit->onedim_cr,        "Calculate the one dimensional confidence region", NULL },
-    { "resample",         0, 0, G_OPTION_ARG_NONE,         &de_fit->resample,         "Resample model using fiducial model before any statistical analyzes.", NULL },
+    { "funcs",            0, 0, G_OPTION_ARG_STRING_ARRAY, &de_fit->funcs,            "List of scalar functions to include in the MC* analysis", NULL },
+    { "resample",         0, 0, G_OPTION_ARG_NONE,         &de_fit->resample,         "Resample model using fiducial model before any statistical analyzes", NULL },
     { "msg-level",        0, 0, G_OPTION_ARG_INT,          &de_fit->msg_level,        "Fit message level (0: no msg, 1: simple, 2: full)", NULL },
-    { "mc-rtype",         0, 0, G_OPTION_ARG_INT,          &de_fit->mc_rtype,         "Resample using rtype method.", NULL},
-    { "mc-ni",            0, 0, G_OPTION_ARG_INT,          &de_fit->mc_ni,            "Start the 'Monte Carlo' at the ni realization.", NULL},
-    { "mc-nthreads",      0, 0, G_OPTION_ARG_INT,          &de_fit->mc_nthreads,      "If larger than one it will run in mc-nthreads threads.", NULL},
-    { "mc-seed",          0, 0, G_OPTION_ARG_INT64,        &de_fit->mc_seed,          "Seed to be used by the Monte Carlo simulation.", NULL},
-    { "mc-lre",           0, 0, G_OPTION_ARG_DOUBLE,       &de_fit->mc_lre,           "Will run Monte Carlo until largest relative error lre is attained.", NULL},
-    { "mc-nwalkers",      0, 0, G_OPTION_ARG_INT   ,       &de_fit->mc_nwalkers,      "Number of walkers to use in the ESMCMC analysis, it must be even for a parallel analysis.", NULL},
-    { "mc-prerun",        0, 0, G_OPTION_ARG_INT   ,       &de_fit->mc_prerun,        "Minimum number of point to calculate in a MC, MCMC or ESMCMC analysis, set to zero to use the default values.", NULL},
-    { "mc-data",          0, 0, G_OPTION_ARG_FILENAME,     &de_fit->mc_data,          "Use file to keep Monte Carlo run data.", NULL},
-    { "mc-unordered",     0, 0, G_OPTION_ARG_NONE,         &de_fit->mc_unordered,     "Do not maintain the sample order in the catalog.", NULL},
-    { "mcbs-nbootstraps", 0, 0, G_OPTION_ARG_INT   ,       &de_fit->mcbs_nbootstraps, "Number of bootstraps per iteration of MCBS.", NULL},
-    { "fiducial",         0, 0, G_OPTION_ARG_STRING,       &de_fit->fiducial,         "Use the fiducial model to resample.", NULL},
-    { "qspline-cp",       0, 0, G_OPTION_ARG_NONE,         &de_fit->qspline_cp,       "Include the continuity priors on a NcHICosmoQSpline model.", NULL},
-    { "qspline-cp-sigma", 0, 0, G_OPTION_ARG_DOUBLE,       &de_fit->qspline_cp_sigma, "Value of sigma for the continuity priors.", NULL},
-    { "save-fisher",      0, 0, G_OPTION_ARG_NONE,         &de_fit->save_fisher,      "Create a file and print the Fisher matrix.", NULL},
-    { "save-best-fit",    0, 0, G_OPTION_ARG_NONE,         &de_fit->save_best_fit,    "Create a file and print the cosmological parameters (both best-fit and fixed ones).", NULL},
-    { "save-mset",        0, 0, G_OPTION_ARG_STRING,       &de_fit->save_mset,        "Save NcmMSet to a file for future usage.", NULL},
+    { "mc-rtype",         0, 0, G_OPTION_ARG_INT,          &de_fit->mc_rtype,         "Resample using rtype method", NULL},
+    { "mc-ni",            0, 0, G_OPTION_ARG_INT,          &de_fit->mc_ni,            "Start the 'Monte Carlo' at the ni realization", NULL},
+    { "mc-nthreads",      0, 0, G_OPTION_ARG_INT,          &de_fit->mc_nthreads,      "If larger than one it will run in mc-nthreads threads", NULL},
+    { "mc-seed",          0, 0, G_OPTION_ARG_INT64,        &de_fit->mc_seed,          "Seed to be used by the Monte Carlo simulation", NULL},
+    { "mc-lre",           0, 0, G_OPTION_ARG_DOUBLE,       &de_fit->mc_lre,           "Will run Monte Carlo until largest relative error lre is attained", NULL},
+    { "mc-nwalkers",      0, 0, G_OPTION_ARG_INT   ,       &de_fit->mc_nwalkers,      "Number of walkers to use in the ESMCMC analysis, it must be even for a parallel analysis", NULL},
+    { "mc-prerun",        0, 0, G_OPTION_ARG_INT   ,       &de_fit->mc_prerun,        "Minimum number of point to calculate in a MC, MCMC or ESMCMC analysis, set to zero to use the default values", NULL},
+    { "mc-data",          0, 0, G_OPTION_ARG_FILENAME,     &de_fit->mc_data,          "Use file to keep Monte Carlo run data", NULL},
+    { "mc-unordered",     0, 0, G_OPTION_ARG_NONE,         &de_fit->mc_unordered,     "Do not maintain the sample order in the catalog", NULL},
+    { "mcbs-nbootstraps", 0, 0, G_OPTION_ARG_INT   ,       &de_fit->mcbs_nbootstraps, "Number of bootstraps per iteration of MCBS", NULL},
+    { "fiducial",         0, 0, G_OPTION_ARG_STRING,       &de_fit->fiducial,         "Use the fiducial model to resample", NULL},
+    { "qspline-cp",       0, 0, G_OPTION_ARG_NONE,         &de_fit->qspline_cp,       "Include the continuity priors on a NcHICosmoQSpline model", NULL},
+    { "qspline-cp-sigma", 0, 0, G_OPTION_ARG_DOUBLE,       &de_fit->qspline_cp_sigma, "Value of sigma for the continuity priors", NULL},
+    { "save-fisher",      0, 0, G_OPTION_ARG_NONE,         &de_fit->save_fisher,      "Create a file and print the Fisher matrix", NULL},
+    { "save-best-fit",    0, 0, G_OPTION_ARG_NONE,         &de_fit->save_best_fit,    "Create a file and print the cosmological parameters (both best-fit and fixed ones)", NULL},
+    { "save-mset",        0, 0, G_OPTION_ARG_STRING,       &de_fit->save_mset,        "Save NcmMSet to a file for future usage", NULL},
     { NULL }
   };
   GOptionGroup *fit_group = g_option_group_new ("fit", " - Choices of statistical analysis", "Show help options related to model fitting", NULL, NULL);

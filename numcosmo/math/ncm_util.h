@@ -69,6 +69,7 @@ gboolean ncm_util_cvode_check_flag (gpointer flagvalue, const gchar *funcname, g
 gboolean ncm_util_cvode_print_stats (gpointer cvode);
 
 gchar *ncm_util_basename_fits (const gchar *fits_filename); 
+gchar *ncm_util_function_params (const gchar *func, gdouble **x, guint *len);
 
 typedef struct _NcmComplex NcmComplex;
 

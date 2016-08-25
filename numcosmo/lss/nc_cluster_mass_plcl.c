@@ -496,7 +496,7 @@ nc_cluster_mass_plcl_peak_new_variables (gdouble N, gdouble *lb, gdouble *ub, Nc
 }
 
 /**
- * nc_cluster_mass_plcl_gsl_f_new_variables:
+ * nc_cluster_mass_plcl_gsl_f_new_variables: (skip)
  * @p: FIXME
  * @hx: FIXME
  * @mszl: a #NcClusterMassPlCL
@@ -539,7 +539,7 @@ nc_cluster_mass_plcl_gsl_f_new_variables (const gsl_vector *p, gsl_vector *hx, N
 }
 
 /**
- * nc_cluster_mass_plcl_gsl_J_new_variables:
+ * nc_cluster_mass_plcl_gsl_J_new_variables: (skip)
  * @p: FIXME
  * @j: FIXME 
  * @mszl: a #NcClusterMassPlCL

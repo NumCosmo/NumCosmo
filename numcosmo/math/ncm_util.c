@@ -1137,6 +1137,68 @@ ncm_util_basename_fits (const gchar *fits_filename)
   return base_name;
 }
 
+/**
+ * ncm_util_function_params:
+ * @func: string representing function and its parameters
+ * @x: (out) (array) (element-type double): the parameters or NULL if none found
+ * @len: (out caller-allocates): number of parameters
+ * 
+ * Extracts the function name and its numerical parameters.
+ * 
+ * Returns: (transfer full): function name or NULL if it fails.
+ */
+gchar *
+ncm_util_function_params (const gchar *func, gdouble **x, guint *len)
+{
+  GError *error          = NULL;
+  GRegex *func_params    = g_regex_new ("^([A-Za-z][A-Za-z0-9\\_\\:]*)\\s*(?:\\(\\s*([0-9\\.,eE\\-\\+\\s]*?)\\s*\\))?\\s*$", 0, 0, &error);
+  GMatchInfo *match_info = NULL;
+  gchar *func_name       = NULL;
+
+  if (error != NULL)
+    g_error ("ncm_util_function_params: `%s'.", error->message);
+
+  func_name = NULL;
+  *x        = NULL;
+  *len      = 0;
+
+  if (g_regex_match (func_params, func, 0, &match_info))
+  {
+    gchar *fpa    = g_match_info_fetch (match_info, 2);
+    func_name     = g_match_info_fetch (match_info, 1);
+
+    if (fpa != NULL)
+    {
+      gchar **xs = g_regex_split_simple ("\\s*,\\s*", fpa, 0, 0);
+      *len       = g_strv_length (xs);
+      
+      if (*len > 0)
+      {
+        guint i;
+        *x = g_new0 (gdouble, *len);
+
+        for (i = 0; i < *len; i++)
+        {
+          gchar *endptr = NULL;
+          (*x)[i] = strtod (xs[i], &endptr);
+
+          if ((endptr == xs[i]) || (strlen (endptr) > 0))
+            g_error ("ncm_util_function_params: cannot identify double in string `%s'.", xs[i]);
+        }
+      }
+
+      g_strfreev (xs);
+      g_free (fpa);
+    }
+  }
+
+  g_match_info_free (match_info);
+  g_regex_unref (func_params);
+
+  return func_name;
+}
+
+
 void
 _ncm_util_set_destroyed (gpointer b)
 {
