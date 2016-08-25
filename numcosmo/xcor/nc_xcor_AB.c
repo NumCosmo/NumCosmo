@@ -25,10 +25,11 @@
 
 /**
  * SECTION:nc_xcor_AB
- * @title: Cross-correlations
- * @short_description: Cross-spectra using the Limber approximation
+ * @title: Cross-correlations Matrices
+ * @short_description: Cross-spectra Matrices
  *
  * FIXME
+ * 
  */
 
 #ifdef HAVE_CONFIG_H
@@ -179,10 +180,10 @@ nc_xcor_AB_class_init (NcXcorABClass* klass)
 	GObjectClass* object_class = G_OBJECT_CLASS (klass);
 	//GObjectClass* parent_class = G_OBJECT_CLASS (klass);
 
-	object_class->dispose = _nc_xcor_AB_dispose;
-	object_class->finalize = _nc_xcor_AB_finalize;
-	object_class->set_property = _nc_xcor_AB_set_property;
-	object_class->get_property = _nc_xcor_AB_get_property;
+	object_class->set_property = &_nc_xcor_AB_set_property;
+	object_class->get_property = &_nc_xcor_AB_get_property;
+	object_class->dispose      = &_nc_xcor_AB_dispose;
+	object_class->finalize     = &_nc_xcor_AB_finalize;
 
 	g_object_class_install_property (object_class,
 	                                 PROP_A,
@@ -259,8 +260,7 @@ nc_xcor_AB_class_init (NcXcorABClass* klass)
  *
  * FIXME
  *
- * Returns: FIXME
- *
+ * Returns: (transfer full): FIXME
  */
 NcXcorAB *
 nc_xcor_AB_new (guint a, guint b, guint ell_th_cut_off, guint ell_lik_min, guint ell_lik_max, const gchar *clobs_filename, const gchar *mixing_filename, const guint mixing_filelength)

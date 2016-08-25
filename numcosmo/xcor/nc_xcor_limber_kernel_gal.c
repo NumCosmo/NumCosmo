@@ -23,6 +23,15 @@
  * with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+/**
+ * SECTION:nc_xcor_limber_kernel_gal
+ * @title: Cross-correlations Galaxy Kernel
+ * @short_description: Galaxy implementation of NcNcXcorLimberKernel
+ * 
+ * FIXME
+ * 
+ */
+
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif /* HAVE_CONFIG_H */
@@ -189,21 +198,21 @@ _nc_xcor_limber_kernel_gal_constructed (GObject* object)
         xclkg->bias_spline = NULL;
         xclkg->bias = ncm_vector_ptr (bv, 0);
         break;
-
       case 2:
         ncm_vector_set (zv, 0, xclk->zmin);
         ncm_vector_set (zv, 1, xclk->zmax);
         xclkg->bias_spline = ncm_spline_gsl_new_full (gsl_interp_linear, zv, bv, FALSE);
         break;
-
       default:
-        for (i = 0; i < bz_size; i++)
       {
+        for (i = 0; i < bz_size; i++)
+        {
           gdouble zi = xclk->zmin + (xclk->zmax - xclk->zmin) / (bz_size - 1) * i;
           ncm_vector_set (zv, i, zi);
         }
         xclkg->bias_spline = ncm_spline_gsl_new_full (gsl_interp_polynomial, zv, bv, FALSE);
         break;
+      }
     }
     ncm_vector_free (bv);
     ncm_vector_free (zv);
@@ -316,9 +325,9 @@ nc_xcor_limber_kernel_gal_class_init (NcXcorLimberKernelGalClass* klass)
 	                                                      G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
 	/*
-	* Distribution's magnification bias: mag_bias.
-	* FIXME Set correct values (limits)
-	*/
+	 * Distribution's magnification bias: mag_bias.
+	 * FIXME Set correct values (limits)
+	 */
 	ncm_model_class_set_sparam (model_class, NC_XCOR_LIMBER_KERNEL_GAL_MAG_BIAS,
 	                            "mag_bias", "mag_bias",
 	                            -10., 10., 0.1,
