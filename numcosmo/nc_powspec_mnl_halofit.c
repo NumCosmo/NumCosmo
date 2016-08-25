@@ -383,8 +383,8 @@ _nc_powspec_mnl_halofit_prepare_nl (NcPowspecMNLHaloFit* pshf, NcmModel *model)
   pshf->priv->z = HUGE_VAL;
 
   ncm_powspec_require_zi (NCM_POWSPEC (pshf->psml), ncm_powspec_get_zi (NCM_POWSPEC (pshf)));
-  ncm_powspec_require_zf (NCM_POWSPEC (pshf->psml), pshf->zmaxnl);
-  
+  ncm_powspec_require_zf (NCM_POWSPEC (pshf->psml), ncm_powspec_get_zf (NCM_POWSPEC (pshf)));
+
   ncm_powspec_require_kmin (NCM_POWSPEC (pshf->psml), ncm_powspec_get_kmin (NCM_POWSPEC (pshf)));
   ncm_powspec_require_kmax (NCM_POWSPEC (pshf->psml), ncm_powspec_get_kmax (NCM_POWSPEC (pshf)));
   
