@@ -29,6 +29,7 @@
  * @short_description: Cross-spectra using the Limber approximation
  *
  * FIXME
+ * 
  */
 
 #ifdef HAVE_CONFIG_H
@@ -46,7 +47,6 @@
 #include <cvodes/cvodes.h>
 #include <nvector/nvector_serial.h>
 
-
 enum
 {
 	PROP_0,
@@ -62,26 +62,6 @@ nc_xcor_init (NcXcor *xc)
 	xc->ps   = NULL;
 	xc->dist = NULL;
 	xc->RH   = 0.0;
-}
-
-static void 
-_nc_xcor_dispose (GObject* object)
-{
-	NcXcor *xc = NC_XCOR (object);
-
-	nc_distance_clear (&xc->dist);
-	ncm_powspec_clear (&xc->ps);
-
-	/* Chain up : end */
-	G_OBJECT_CLASS (nc_xcor_parent_class)->dispose (object);
-}
-
-static void 
-_nc_xcor_finalize (GObject* object)
-{
-  
-	/* Chain up : end */
-	G_OBJECT_CLASS (nc_xcor_parent_class)->finalize (object);
 }
 
 static void
@@ -122,6 +102,26 @@ _nc_xcor_get_property (GObject* object, guint prop_id, GValue* value, GParamSpec
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
       break;
   }
+}
+
+static void 
+_nc_xcor_dispose (GObject* object)
+{
+	NcXcor *xc = NC_XCOR (object);
+
+	nc_distance_clear (&xc->dist);
+	ncm_powspec_clear (&xc->ps);
+
+	/* Chain up : end */
+	G_OBJECT_CLASS (nc_xcor_parent_class)->dispose (object);
+}
+
+static void 
+_nc_xcor_finalize (GObject* object)
+{
+  
+	/* Chain up : end */
+	G_OBJECT_CLASS (nc_xcor_parent_class)->finalize (object);
 }
 
 static void
