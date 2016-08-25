@@ -164,6 +164,7 @@ _nc_data_bao_a_prepare (NcmData *data, NcmMSet *mset)
 {
   NcDataBaoA *bao_a = NC_DATA_BAO_A (data);
   NcHICosmo *cosmo = NC_HICOSMO (ncm_mset_peek (mset, nc_hicosmo_id ()));
+
   nc_distance_prepare_if_needed (bao_a->dist, cosmo);
 }
 
