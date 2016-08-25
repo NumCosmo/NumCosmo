@@ -2396,6 +2396,91 @@ ncm_mset_catalog_get_covar (NcmMSetCatalog *mcat, NcmMatrix **cov)
 }
 
 /**
+ * ncm_mset_catalog_get_full_covar:
+ * @mcat: a #NcmMSetCatalog
+ * @cov: (inout) (allow-none) (transfer full): a #NcmMatrix
+ * 
+ * Gets the current full (including additional values) covariance matrix.
+ * 
+ */
+void
+ncm_mset_catalog_get_full_covar (NcmMSetCatalog *mcat, NcmMatrix **cov)
+{
+  if (*cov == NULL)
+    *cov = ncm_matrix_new (mcat->pstats->len, mcat->pstats->len);
+  ncm_stats_vec_get_cov_matrix (mcat->pstats, *cov, 0);
+}
+
+/**
+ * ncm_mset_catalog_log_full_covar:
+ * @mcat: a #NcmMSetCatalog
+ *
+ * FIXME
+ *
+ */
+void
+ncm_mset_catalog_log_full_covar (NcmMSetCatalog *mcat)
+{
+  const guint params_len = ncm_mset_fparam_len (mcat->mset) + mcat->nadd_vals;
+  const gchar *box       = "---------------";
+  guint name_size        = ncm_mset_max_fparam_name (mcat->mset);
+  gint i, j;
+
+  for (i = 0; i < mcat->add_vals_names->len; i++)
+  {
+    name_size = GSL_MAX (name_size, strlen (g_ptr_array_index (mcat->add_vals_names, i)));
+  }
+
+  ncm_cfg_msg_sepa ();
+  g_message ("# NcmMSetCatalog full covariance matrix\n");
+  g_message ("#                                            ");
+  for (i = 0; i < name_size; i++) g_message (" ");
+
+  for (i = 0; i < params_len; i++)
+    i ? g_message ("%s", box) : g_message ("-%s",box);
+  if (i)
+    g_message ("\n");
+
+  for (i = 0; i < params_len; i++)
+  {
+    if (i < mcat->nadd_vals)
+    {
+      const gchar *pname = g_ptr_array_index (mcat->add_vals_names, i);      
+      g_message ("# %*s[%05d:%02d] = % -12.4g +/- % -12.4g |",
+                 name_size, pname, 99999, i,
+                 ncm_stats_vec_get_mean (mcat->pstats, i),
+                 ncm_stats_vec_get_sd (mcat->pstats, i)
+                 );
+    }
+    else
+    {
+      const gint fpi          = i - mcat->nadd_vals;
+      const NcmMSetPIndex *pi = ncm_mset_fparam_get_pi (mcat->mset, fpi);
+      const gchar *pname      = ncm_mset_fparam_name (mcat->mset, fpi);
+      g_message ("# %*s[%05d:%02d] = % -12.4g +/- % -12.4g |",
+                 name_size, pname, pi->mid, pi->pid,
+                 ncm_stats_vec_get_mean (mcat->pstats, i),
+                 ncm_stats_vec_get_sd (mcat->pstats, i)
+                 );
+    }
+    for (j = 0; j < params_len; j++)
+    {
+      g_message (" % -12.4g |", ncm_stats_vec_get_cor (mcat->pstats, i, j));
+    }
+    g_message ("\n");
+  }  
+  g_message ("#                                            ");
+  for (i = 0; i < name_size; i++) g_message (" ");
+  for (i = 0; i < params_len; i++)
+    i ? g_message ("%s", box) : g_message ("-%s",box);
+  if (i)
+    g_message ("\n");
+
+  return;
+}
+
+
+/**
  * ncm_mset_catalog_estimate_autocorrelation_tau:
  * @mcat: a #NcmMSetCatalog
  *

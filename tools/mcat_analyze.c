@@ -208,7 +208,7 @@ main (gint argc, gchar *argv[])
     
     if (info)
     {
-      NcmMatrix *cov = NULL;
+      /*NcmMatrix *cov = NULL;*/
       const gchar *rtype_str = ncm_mset_catalog_get_run_type (mcat);
       ncm_cfg_msg_sepa ();
       g_message ("# Catalog run type: `%s'.\n", rtype_str);
@@ -220,9 +220,10 @@ main (gint argc, gchar *argv[])
       g_message ("#\n");
       
       ncm_mset_pretty_log (mset);
-      ncm_mset_catalog_get_covar (mcat, &cov);
-      ncm_mset_fparams_log_covar (mset, cov);
-      ncm_matrix_clear (&cov);
+      /*ncm_mset_catalog_get_covar (mcat, &cov);*/
+      /*ncm_mset_fparams_log_covar (mset, cov);*/
+      ncm_mset_catalog_log_full_covar (mcat);
+      /*ncm_matrix_clear (&cov);*/
       ncm_mset_catalog_log_current_stats (mcat);
     }
 

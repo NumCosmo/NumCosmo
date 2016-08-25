@@ -178,6 +178,8 @@ NcmVector *ncm_mset_catalog_peek_e_var_t (NcmMSetCatalog *mcat, guint t);
 
 void ncm_mset_catalog_get_mean (NcmMSetCatalog *mcat, NcmVector  **mean);
 void ncm_mset_catalog_get_covar (NcmMSetCatalog *mcat, NcmMatrix **cov);
+void ncm_mset_catalog_get_full_covar (NcmMSetCatalog *mcat, NcmMatrix **cov);
+void ncm_mset_catalog_log_full_covar (NcmMSetCatalog *mcat);
 
 void ncm_mset_catalog_estimate_autocorrelation_tau (NcmMSetCatalog *mcat);
 NcmVector *ncm_mset_catalog_peek_autocorrelation_tau (NcmMSetCatalog *mcat);
