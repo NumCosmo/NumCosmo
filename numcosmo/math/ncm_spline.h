@@ -43,18 +43,6 @@ G_BEGIN_DECLS
 typedef struct _NcmSplineClass NcmSplineClass;
 typedef struct _NcmSpline NcmSpline;
 
-struct _NcmSpline
-{
-  /*< private >*/
-  GObject parent_instance;
-  gsize len;
-  NcmVector *xv;
-  NcmVector *yv;
-  gsl_interp_accel *acc;
-  gboolean init;
-  gboolean empty;
-};
-
 struct _NcmSplineClass
 {
   /*< private >*/
@@ -70,6 +58,18 @@ struct _NcmSplineClass
   gdouble (*deriv_nmax) (const NcmSpline *s, const gdouble x);
   gdouble (*integ) (const NcmSpline *s, const gdouble xi, const gdouble xf);
   NcmSpline *(*copy_empty) (const NcmSpline *s);
+};
+
+struct _NcmSpline
+{
+  /*< private >*/
+  GObject parent_instance;
+  gsize len;
+  NcmVector *xv;
+  NcmVector *yv;
+  gsl_interp_accel *acc;
+  gboolean init;
+  gboolean empty;
 };
 
 GType ncm_spline_get_type (void) G_GNUC_CONST;

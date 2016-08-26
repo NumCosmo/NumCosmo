@@ -40,11 +40,13 @@ typedef struct _NcHIPertBoltzmannStd NcHIPertBoltzmannStd;
 
 struct _NcHIPertBoltzmannStdClass
 {
+  /*< private >*/
   NcHIPertBoltzmannClass parent_class;
 };
 
 struct _NcHIPertBoltzmannStd
 {
+  /*< private >*/
   NcHIPertBoltzmann parent_instance;
 };
 

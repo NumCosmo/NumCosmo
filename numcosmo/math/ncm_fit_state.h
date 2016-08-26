@@ -42,6 +42,12 @@ G_BEGIN_DECLS
 typedef struct _NcmFitStateClass NcmFitStateClass;
 typedef struct _NcmFitState NcmFitState;
 
+struct _NcmFitStateClass
+{
+  /*< private >*/
+  GObjectClass parent_class;
+};
+
 struct _NcmFitState
 {
   /*< private >*/
@@ -67,12 +73,6 @@ struct _NcmFitState
   gboolean is_best_fit;
   gboolean is_least_squares;
   gboolean has_covar;
-};
-
-struct _NcmFitStateClass
-{
-  /*< private >*/
-  GObjectClass parent_class;
 };
 
 GType ncm_fit_state_get_type (void) G_GNUC_CONST;

@@ -43,6 +43,12 @@ G_BEGIN_DECLS
 typedef struct _NcMultiplicityFuncJenkinsClass NcMultiplicityFuncJenkinsClass;
 typedef struct _NcMultiplicityFuncJenkins NcMultiplicityFuncJenkins;
 
+struct _NcMultiplicityFuncJenkinsClass
+{
+  /*< private >*/
+  NcMultiplicityFuncClass parent_class;
+};
+
 struct _NcMultiplicityFuncJenkins
 {
   /*< private >*/
@@ -53,12 +59,6 @@ struct _NcMultiplicityFuncJenkins
   gdouble B_tCDM;
   gdouble epsilon;
   gdouble epsilon_tCDM;
-};
-
-struct _NcMultiplicityFuncJenkinsClass
-{
-  /*< private >*/
-  NcMultiplicityFuncClass parent_class;
 };
 
 GType nc_multiplicity_func_jenkins_get_type (void) G_GNUC_CONST;

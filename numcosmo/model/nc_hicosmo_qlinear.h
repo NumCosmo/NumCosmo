@@ -72,16 +72,16 @@ typedef enum _NcHICosmoQLinearParams
 #define NC_HICOSMO_QLINEAR_DEFAULT_QP      ( 1.0)
 #define NC_HICOSMO_QLINEAR_DEFAULT_Z1      ( 0.0)
 
-struct _NcHICosmoQLinear
-{
-  /*< private >*/
-  NcHICosmo parent_instance;
-};
-
 struct _NcHICosmoQLinearClass
 {
   /*< private >*/
   NcHICosmoClass parent_class;
+};
+
+struct _NcHICosmoQLinear
+{
+  /*< private >*/
+  NcHICosmo parent_instance;
 };
 
 GType nc_hicosmo_qlinear_get_type (void) G_GNUC_CONST;

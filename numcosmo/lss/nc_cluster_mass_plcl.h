@@ -83,6 +83,12 @@ typedef enum _NcClusterMassPlCLParams
 #define NC_CLUSTER_MASS_PLCL_MCL (1)
 #define NC_CLUSTER_MASS_PLCL_SD_CL (1)
 
+struct _NcClusterMassPlCLClass
+{
+  /*< private >*/
+  NcClusterMassClass parent_class;
+};
+
 struct _NcClusterMassPlCL
 {
   /*< private >*/
@@ -90,12 +96,6 @@ struct _NcClusterMassPlCL
   gdouble M0;
   const gsl_multifit_fdfsolver_type *T;
   gsl_multifit_fdfsolver *s;
-};
-
-struct _NcClusterMassPlCLClass
-{
-  /*< private >*/
-  NcClusterMassClass parent_class;
 };
 
 GType nc_cluster_mass_plcl_get_type (void) G_GNUC_CONST;

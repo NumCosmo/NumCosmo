@@ -55,6 +55,13 @@ G_BEGIN_DECLS
 typedef struct _NcRecombClass NcRecombClass;
 typedef struct _NcRecomb NcRecomb;
 
+struct _NcRecombClass
+{
+  /*< private >*/
+  GObjectClass parent_class;
+  void (*prepare) (NcRecomb *recomb, NcHICosmo *cosmo);
+};
+
 struct _NcRecomb
 {
   /*< private >*/
@@ -68,13 +75,6 @@ struct _NcRecomb
   NcmSpline *tau_s;
   NcmModelCtrl *ctrl_cosmo;
   NcmModelCtrl *ctrl_reion;
-};
-
-struct _NcRecombClass
-{
-  /*< private >*/
-  GObjectClass parent_class;
-  void (*prepare) (NcRecomb *recomb, NcHICosmo *cosmo);
 };
 
 GType nc_recomb_get_type (void) G_GNUC_CONST;

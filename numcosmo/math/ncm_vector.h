@@ -44,6 +44,12 @@ G_BEGIN_DECLS
 typedef struct _NcmVectorClass NcmVectorClass;
 typedef struct _NcmVector NcmVector;
 
+struct _NcmVectorClass
+{
+  /*< private >*/
+  GObjectClass parent_class;
+};
+
 /**
  * NcmVectorInternal:
  * @NCM_VECTOR_SLICE: FIXME
@@ -72,12 +78,6 @@ struct _NcmVector
   gpointer pdata;
   GDestroyNotify pfree;
   NcmVectorInternal type;
-};
-
-struct _NcmVectorClass
-{
-  /*< private >*/
-  GObjectClass parent_class;
 };
 
 typedef gdouble (*NcmVectorCompFunc) (gdouble v_i, guint i, gpointer user_data);

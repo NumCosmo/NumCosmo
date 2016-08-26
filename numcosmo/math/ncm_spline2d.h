@@ -43,23 +43,6 @@ G_BEGIN_DECLS
 typedef struct _NcmSpline2dClass NcmSpline2dClass;
 typedef struct _NcmSpline2d NcmSpline2d;
 
-struct _NcmSpline2d
-{
-  /*< private >*/
-  GObject parent_instance;
-  gboolean empty;
-  gboolean init;
-  gboolean to_init;
-  NcmSpline *s;
-  NcmVector *xv;
-  NcmVector *yv;
-  NcmMatrix *zm;
-  gsl_interp_accel *acc_x;
-  gsl_interp_accel *acc_y;
-  gboolean use_acc;
-  gboolean no_stride;
-};
-
 struct _NcmSpline2dClass
 {
   /*< private >*/
@@ -78,6 +61,23 @@ struct _NcmSpline2dClass
   gdouble (*int_dxdy) (NcmSpline2d *s2d, gdouble xl, gdouble xu, gdouble yl, gdouble yu);
   NcmSpline *(*int_dx_spline) (NcmSpline2d *s2d, gdouble xl, gdouble xu);
   NcmSpline *(*int_dy_spline) (NcmSpline2d *s2d, gdouble yl, gdouble yu);
+};
+
+struct _NcmSpline2d
+{
+  /*< private >*/
+  GObject parent_instance;
+  gboolean empty;
+  gboolean init;
+  gboolean to_init;
+  NcmSpline *s;
+  NcmVector *xv;
+  NcmVector *yv;
+  NcmMatrix *zm;
+  gsl_interp_accel *acc_x;
+  gsl_interp_accel *acc_y;
+  gboolean use_acc;
+  gboolean no_stride;
 };
 
 GType ncm_spline2d_get_type (void) G_GNUC_CONST;

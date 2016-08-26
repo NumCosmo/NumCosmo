@@ -39,6 +39,7 @@ G_BEGIN_DECLS
 
 typedef struct _NcHIPertIAdiab NcHIPertIAdiab;
 typedef struct _NcHIPertIAdiabInterface NcHIPertIAdiabInterface;
+
 typedef struct _NcHIPertIAdiabEOM NcHIPertIAdiabEOM;
 
 typedef gdouble (*NcHIPertIAdiabFuncNuA2) (NcHIPertIAdiab *iadiab, gdouble alpha, gdouble k);

@@ -43,6 +43,12 @@ G_BEGIN_DECLS
 typedef struct _NcmModelCtrlClass NcmModelCtrlClass;
 typedef struct _NcmModelCtrl NcmModelCtrl;
 
+struct _NcmModelCtrlClass
+{
+  /*< private >*/
+  GObjectClass parent_class;
+};
+
 struct _NcmModelCtrl
 {
   /*< private >*/
@@ -52,12 +58,6 @@ struct _NcmModelCtrl
   gboolean last_update;
   GPtrArray *submodel_ctrl;
   GArray *submodel_last_update;
-};
-
-struct _NcmModelCtrlClass
-{
-  /*< private >*/
-  GObjectClass parent_class;
 };
 
 GType ncm_model_ctrl_get_type (void) G_GNUC_CONST;

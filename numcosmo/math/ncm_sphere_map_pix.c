@@ -544,7 +544,7 @@ ncm_sphere_map_pix_set_order (NcmSphereMapPix *pix, NcmSphereMapPixOrder order)
       {
         gfloat val = _fft_vec_idx (temp_pix, i);
         j = convert (pix, i);
-        printf ("%ld => %ld val % 20.15g | % 20.15g\n", i, j, val, _fft_vec_idx (pix->pvec, i));
+        /*printf ("%ld => %ld val % 20.15g | % 20.15g\n", i, j, val, _fft_vec_idx (pix->pvec, i));*/
         _fft_vec_idx (pix->pvec, j) = val;
       }
       
@@ -1657,12 +1657,15 @@ _ncm_sphere_map_pix_prepare_fft (NcmSphereMapPix *pix)
   {
     const gint64 npix      = ncm_sphere_map_pix_get_npix (pix);
     const gint64 nring_cap = ncm_sphere_map_pix_get_nrings_cap (pix);
+    gpointer temp_pix      = _fft_vec_alloc (pix->npix);
     gint r_i;
 
     ncm_cfg_load_fftw_wisdom ("ncm_sphere_map_pix_nside_%ld", ncm_sphere_map_pix_get_nside (pix));
 #  ifdef HAVE_FFTW3F
 
     pix->fft_pvec = fftwf_alloc_complex (npix);
+
+    _fft_vec_memcpy (temp_pix, pix->pvec, pix->npix);
 
     for (r_i = 0; r_i < nring_cap; r_i++)
     {
@@ -1678,7 +1681,7 @@ _ncm_sphere_map_pix_prepare_fft (NcmSphereMapPix *pix)
                                                  1, dist,
                                                  &fft_pvec[ring_fi_north], NULL,
                                                  1, dist,
-                                                 fftw_default_flags | FFTW_PRESERVE_INPUT);
+                                                 fftw_default_flags | FFTW_DESTROY_INPUT);
       /*printf ("Preparing plan for %ld and %ld size %d | npix %ld | %p\n", ring_fi_north, ring_fi_south, ring_size, pix->npix, plan);*/
       g_ptr_array_add (pix->fft_plan, plan);
     }
@@ -1696,7 +1699,7 @@ _ncm_sphere_map_pix_prepare_fft (NcmSphereMapPix *pix)
                                                  1, ring_size,
                                                  &fft_pvec[cap_size], NULL,
                                                  1, ring_size,
-                                                 fftw_default_flags | FFTW_PRESERVE_INPUT);
+                                                 fftw_default_flags | FFTW_DESTROY_INPUT);
       /*printf ("Preparing plan for %d and %d x %d | npix %ld | %p\n", cap_size, nrings_middle, ring_size, pix->npix, plan);*/
       g_ptr_array_add (pix->fft_plan, plan);
     }  
@@ -1739,6 +1742,10 @@ _ncm_sphere_map_pix_prepare_fft (NcmSphereMapPix *pix)
       g_ptr_array_add (pix->fft_plan, plan);
     }    
 #  endif
+
+    _fft_vec_memcpy (pix->pvec, temp_pix, pix->npix);
+    _fft_vec_free (temp_pix);
+
     ncm_cfg_save_fftw_wisdom ("ncm_sphere_map_pix_nside_%ld", ncm_sphere_map_pix_get_nside (pix));
   }
 #endif
@@ -1826,6 +1833,13 @@ ncm_sphere_map_pix_prepare_alm (NcmSphereMapPix *pix)
 {
 #ifdef NUMCOSMO_HAVE_FFTW3
   gint i;
+
+  if (pix->lmax == 0)
+  {
+    g_warning ("ncm_sphere_map_pix_prepare_alm: lmax equal to zero, returning...");
+    return;
+  }
+
   _ncm_sphere_map_pix_prepare_fft (pix);
 
   ncm_sphere_map_pix_set_order (pix, NCM_SPHERE_MAP_PIX_ORDER_RING);
@@ -1869,6 +1883,13 @@ ncm_sphere_map_pix_prepare_Cl (NcmSphereMapPix *pix)
 {
 #ifdef NUMCOSMO_HAVE_FFTW3
   gint i;
+
+  if (pix->lmax == 0)
+  {
+    g_warning ("ncm_sphere_map_pix_prepare_alm: lmax equal to zero, returning...");
+    return;
+  }
+
   _ncm_sphere_map_pix_prepare_fft (pix);
 
   ncm_sphere_map_pix_set_order (pix, NCM_SPHERE_MAP_PIX_ORDER_RING);
@@ -1931,4 +1952,29 @@ gdouble
 ncm_sphere_map_pix_get_Cl (NcmSphereMapPix *pix, guint l)
 {
   return ncm_vector_fast_get (pix->Cl, l);
+}
+
+/**
+ * ncm_sphere_map_pix_add_noise:
+ * @pix: a #NcmSphereMapPix
+ * @sd: noise standard deviation
+ * @rng: a #NcmRNG
+ * 
+ * Adds a Gaussian noise with $\sigma=$ @sd and zero mean to each pixel.
+ * 
+ */
+void
+ncm_sphere_map_pix_add_noise (NcmSphereMapPix *pix, const gdouble sd, NcmRNG *rng)
+{
+  guint i;
+
+  ncm_rng_lock (rng);
+  
+  for (i = 0; i < pix->npix; i++)
+  {
+    const gdouble n_i = gsl_ran_gaussian (rng->r, sd);
+    _fft_vec_idx (pix->pvec, i) += n_i;
+  }
+
+  ncm_rng_unlock (rng);
 }

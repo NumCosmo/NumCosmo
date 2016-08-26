@@ -45,6 +45,12 @@ G_BEGIN_DECLS
 typedef struct _NcmBootstrapClass NcmBootstrapClass;
 typedef struct _NcmBootstrap NcmBootstrap;
 
+struct _NcmBootstrapClass
+{
+  /*< private >*/
+  GObjectClass parent_class;
+};
+
 struct _NcmBootstrap
 {
   /*< private >*/
@@ -54,12 +60,6 @@ struct _NcmBootstrap
   GArray *bootstrap_index;
   GArray *increasing_index;
   gboolean init;
-};
-
-struct _NcmBootstrapClass
-{
-  /*< private >*/
-  GObjectClass parent_class;
 };
 
 GType ncm_bootstrap_get_type (void) G_GNUC_CONST;

@@ -43,7 +43,6 @@ G_BEGIN_DECLS
 typedef struct _NcMultiplicityFuncTinkerMeanNormalizedClass NcMultiplicityFuncTinkerMeanNormalizedClass;
 typedef struct _NcMultiplicityFuncTinkerMeanNormalized NcMultiplicityFuncTinkerMeanNormalized;
 
-
 struct _NcMultiplicityFuncTinkerMeanNormalizedClass
 {
   /*< private >*/
@@ -61,7 +60,6 @@ struct _NcMultiplicityFuncTinkerMeanNormalized
   gdouble phi;
   gdouble eta;
   gdouble gamma;
-      
 };
 
 GType nc_multiplicity_func_tinker_mean_normalized_get_type (void) G_GNUC_CONST;

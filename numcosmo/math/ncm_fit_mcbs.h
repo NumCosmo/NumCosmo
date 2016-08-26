@@ -44,6 +44,12 @@ G_BEGIN_DECLS
 typedef struct _NcmFitMCBSClass NcmFitMCBSClass;
 typedef struct _NcmFitMCBS NcmFitMCBS;
 
+struct _NcmFitMCBSClass
+{
+  /*< private >*/
+  GObjectClass parent_class;
+};
+
 struct _NcmFitMCBS
 {
   /*< private >*/
@@ -53,12 +59,6 @@ struct _NcmFitMCBS
   NcmFitMC *mc_bstrap;
   NcmMSetCatalog *mcat;
   gchar *base_name;
-};
-
-struct _NcmFitMCBSClass
-{
-  /*< private >*/
-  GObjectClass parent_class;
 };
 
 GType ncm_fit_mcbs_get_type (void) G_GNUC_CONST;

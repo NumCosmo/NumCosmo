@@ -46,6 +46,12 @@ G_BEGIN_DECLS
 typedef struct _NcmReparamLinearClass NcmReparamLinearClass;
 typedef struct _NcmReparamLinear NcmReparamLinear;
 
+struct _NcmReparamLinearClass
+{
+  /*< private >*/
+  NcmReparamClass parent_class;
+};
+
 struct _NcmReparamLinear
 {
   /*< private >*/
@@ -56,12 +62,6 @@ struct _NcmReparamLinear
   NcmMatrix *T_LU;
   gsl_permutation *p;
   gint signum;
-};
-
-struct _NcmReparamLinearClass
-{
-  /*< private >*/
-  NcmReparamClass parent_class;
 };
 
 GType ncm_reparam_linear_get_type (void) G_GNUC_CONST;

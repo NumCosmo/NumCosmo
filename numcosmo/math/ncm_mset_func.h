@@ -45,6 +45,13 @@ typedef struct _NcmMSetFunc NcmMSetFunc;
 
 typedef void (*NcmMSetFuncN) (NcmMSetFunc *func, NcmMSet *mset, const gdouble *x, gdouble *res);
 
+struct _NcmMSetFuncClass
+{
+  /*< private >*/
+  GObjectClass parent_class;
+  NcmMSetFuncN eval;
+};
+
 struct _NcmMSetFunc
 {
   /*< private >*/
@@ -58,13 +65,6 @@ struct _NcmMSetFunc
   gchar *desc;
   gchar *uname;
   gchar *usymbol;
-};
-
-struct _NcmMSetFuncClass
-{
-  /*< private >*/
-  GObjectClass parent_class;
-  NcmMSetFuncN eval;
 };
 
 GType ncm_mset_func_get_type (void) G_GNUC_CONST;

@@ -41,16 +41,16 @@ G_BEGIN_DECLS
 typedef struct _NcHICosmoLCDMClass NcHICosmoLCDMClass;
 typedef struct _NcHICosmoLCDM NcHICosmoLCDM;
 
-struct _NcHICosmoLCDM
-{
-  /*< private >*/
-  NcHICosmo parent_instance;
-};
-
 struct _NcHICosmoLCDMClass
 {
   /*< private >*/
   NcHICosmoClass parent_class;
+};
+
+struct _NcHICosmoLCDM
+{
+  /*< private >*/
+  NcHICosmo parent_instance;
 };
 
 GType nc_hicosmo_lcdm_get_type (void) G_GNUC_CONST;

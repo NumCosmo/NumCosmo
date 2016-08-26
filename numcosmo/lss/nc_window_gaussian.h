@@ -43,16 +43,16 @@ G_BEGIN_DECLS
 typedef struct _NcWindowGaussianClass NcWindowGaussianClass;
 typedef struct _NcWindowGaussian NcWindowGaussian;
 
-struct _NcWindowGaussian
-{
-  /*< private > */
-  NcWindow parent_instance;
-};
-
 struct _NcWindowGaussianClass
 {
   /*< private > */
   NcWindowClass parent_class;
+};
+
+struct _NcWindowGaussian
+{
+  /*< private > */
+  NcWindow parent_instance;
 };
 
 GType nc_window_gaussian_get_type (void) G_GNUC_CONST;

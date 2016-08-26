@@ -43,17 +43,17 @@ G_BEGIN_DECLS
 typedef struct _NcHaloBiasTypePSClass NcHaloBiasTypePSClass;
 typedef struct _NcHaloBiasTypePS NcHaloBiasTypePS;
 
+struct _NcHaloBiasTypePSClass
+{
+  /*< private >*/
+  NcHaloBiasTypeClass parent_class;
+};
+
 struct _NcHaloBiasTypePS
 {
   /*< private >*/
   NcHaloBiasType parent_instance;
   gdouble delta_c;
-};
-
-struct _NcHaloBiasTypePSClass
-{
-  /*< private >*/
-  NcHaloBiasTypeClass parent_class;
 };
 
 GType nc_halo_bias_type_ps_get_type (void) G_GNUC_CONST;

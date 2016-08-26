@@ -43,16 +43,16 @@ G_BEGIN_DECLS
 typedef struct _NcWindowTophatClass NcWindowTophatClass;
 typedef struct _NcWindowTophat NcWindowTophat;
 
-struct _NcWindowTophat
-{
-  /*< private > */
-  NcWindow parent_instance;
-};
-
 struct _NcWindowTophatClass
 {
   /*< private > */
   NcWindowClass parent_class;
+};
+
+struct _NcWindowTophat
+{
+  /*< private > */
+  NcWindow parent_instance;
 };
 
 GType nc_window_tophat_get_type (void) G_GNUC_CONST;

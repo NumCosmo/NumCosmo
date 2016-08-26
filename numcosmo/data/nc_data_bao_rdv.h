@@ -45,6 +45,12 @@ G_BEGIN_DECLS
 typedef struct _NcDataBaoRDVClass NcDataBaoRDVClass;
 typedef struct _NcDataBaoRDV NcDataBaoRDV;
 
+struct _NcDataBaoRDVClass
+{
+  /*< private >*/
+  NcmDataGaussClass parent_class;
+};
+
 struct _NcDataBaoRDV
 {
   /*< private >*/
@@ -52,12 +58,6 @@ struct _NcDataBaoRDV
   NcDistance *dist;
   NcmVector *x;
   gboolean r_DV;
-};
-
-struct _NcDataBaoRDVClass
-{
-  /*< private >*/
-  NcmDataGaussClass parent_class;
 };
 
 GType nc_data_bao_rdv_get_type (void) G_GNUC_CONST;

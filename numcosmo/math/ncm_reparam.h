@@ -66,6 +66,15 @@ typedef gboolean (*NcmReparamV) (NcmReparam *reparam, struct _NcmModel *model);
  */
 typedef gboolean (*NcmReparamJ) (NcmReparam *reparam, struct _NcmModel *model, NcmMatrix *jac);
 
+struct _NcmReparamClass
+{
+  /*< private >*/
+  GObjectClass parent_class;
+  NcmReparamV old2new;
+  NcmReparamV new2old;
+  NcmReparamJ jac;
+};
+
 struct _NcmReparam
 {
   /*< private >*/
@@ -75,15 +84,6 @@ struct _NcmReparam
   GPtrArray *sparams;
   GHashTable *sparams_name_id;
   GType compat_type;
-};
-
-struct _NcmReparamClass
-{
-  /*< private >*/
-  GObjectClass parent_class;
-  NcmReparamV old2new;
-  NcmReparamV new2old;
-  NcmReparamJ jac;
 };
 
 GType ncm_reparam_get_type (void) G_GNUC_CONST;

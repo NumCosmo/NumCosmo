@@ -43,6 +43,12 @@ typedef struct _NcmSerializeClass NcmSerializeClass;
 typedef struct _NcmSerialize NcmSerialize;
 typedef struct _NcmSerializePrivate NcmSerializePrivate;
 
+struct _NcmSerializeClass
+{
+  /*< private >*/
+  GObjectClass parent_class;
+};
+
 /**
  * NcmSerializeOpt:
  * @NCM_SERIALIZE_OPT_NONE: Use default serialization.
@@ -73,12 +79,6 @@ struct _NcmSerialize
   GRegex *parse_obj_regex;
   NcmSerializeOpt opts;
   guint autosave_count;
-};
-
-struct _NcmSerializeClass
-{
-  /*< private >*/
-  GObjectClass parent_class;
 };
 
 GType ncm_serialize_get_type (void) G_GNUC_CONST;

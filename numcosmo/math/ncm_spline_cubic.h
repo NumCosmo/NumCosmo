@@ -42,6 +42,12 @@ G_BEGIN_DECLS
 typedef struct _NcmSplineCubicClass NcmSplineCubicClass;
 typedef struct _NcmSplineCubic NcmSplineCubic;
 
+struct _NcmSplineCubicClass
+{
+  /*< private >*/
+  NcmSplineClass parent_class;
+};
+
 struct _NcmSplineCubic
 {
   /*< private >*/
@@ -54,12 +60,6 @@ struct _NcmSplineCubic
   NcmVector *offdiag;
   gboolean init;
   gsize len;
-};
-
-struct _NcmSplineCubicClass
-{
-  /*< private >*/
-  NcmSplineClass parent_class;
 };
 
 GType ncm_spline_cubic_get_type (void) G_GNUC_CONST;

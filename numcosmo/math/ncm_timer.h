@@ -42,6 +42,12 @@ G_BEGIN_DECLS
 typedef struct _NcmTimerClass NcmTimerClass;
 typedef struct _NcmTimer NcmTimer;
 
+struct _NcmTimerClass
+{
+  /*< private >*/
+  GObjectClass parent_class;
+};
+
 struct _NcmTimer
 {
   /*< private >*/
@@ -56,12 +62,6 @@ struct _NcmTimer
   GString *msg;
   GString *msg_tmp1;
   GString *msg_tmp2;
-};
-
-struct _NcmTimerClass
-{
-  /*< private >*/
-  GObjectClass parent_class;
 };
 
 GType ncm_timer_get_type (void) G_GNUC_CONST;

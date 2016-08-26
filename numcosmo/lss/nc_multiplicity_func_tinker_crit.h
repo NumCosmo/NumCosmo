@@ -43,17 +43,17 @@ G_BEGIN_DECLS
 typedef struct _NcMultiplicityFuncTinkerCritClass NcMultiplicityFuncTinkerCritClass;
 typedef struct _NcMultiplicityFuncTinkerCrit NcMultiplicityFuncTinkerCrit;
 
+struct _NcMultiplicityFuncTinkerCritClass
+{
+  /*< private >*/
+  NcMultiplicityFuncClass parent_class;
+};
+
 struct _NcMultiplicityFuncTinkerCrit
 {
   /*< private >*/
   NcMultiplicityFunc parent_instance;
   gdouble Delta;
-};
-
-struct _NcMultiplicityFuncTinkerCritClass
-{
-  /*< private >*/
-  NcMultiplicityFuncClass parent_class;
 };
 
 GType nc_multiplicity_func_tinker_crit_get_type (void) G_GNUC_CONST;

@@ -45,18 +45,18 @@ G_BEGIN_DECLS
 typedef struct _NcDataCMBShiftParamClass NcDataCMBShiftParamClass;
 typedef struct _NcDataCMBShiftParam NcDataCMBShiftParam;
 
+struct _NcDataCMBShiftParamClass
+{
+  /*< private >*/
+  NcmDataGaussDiagClass parent_class;
+};
+
 struct _NcDataCMBShiftParam
 {
   /*< private >*/
   NcmDataGaussDiag parent_instance;
   NcDistance *dist;
   NcmVector *x;
-};
-
-struct _NcDataCMBShiftParamClass
-{
-  /*< private >*/
-  NcmDataGaussDiagClass parent_class;
 };
 
 GType nc_data_cmb_shift_param_get_type (void) G_GNUC_CONST;

@@ -42,6 +42,12 @@ G_BEGIN_DECLS
 typedef struct _NcmSpline2dSplineClass NcmSpline2dSplineClass;
 typedef struct _NcmSpline2dSpline NcmSpline2dSpline;
 
+struct _NcmSpline2dSplineClass
+{
+  /*< private >*/
+  NcmSpline2dClass parent_class;
+};
+
 struct _NcmSpline2dSpline
 {
   /*< private >*/
@@ -59,12 +65,6 @@ struct _NcmSpline2dSpline
   NcmSpline *s_ver;
   NcmSpline *s_ver_integ;
   guint s_hor_len;
-};
-
-struct _NcmSpline2dSplineClass
-{
-  /*< private >*/
-  NcmSpline2dClass parent_class;
 };
 
 GType ncm_spline2d_spline_get_type (void) G_GNUC_CONST;

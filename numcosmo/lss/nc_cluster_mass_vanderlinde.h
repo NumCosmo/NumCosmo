@@ -68,6 +68,12 @@ typedef enum _NcClusterMassVanderlindeParams
 
 #define NC_CLUSTER_MASS_VANDERLINDE_DEFAULT_PARAMS_ABSTOL (0.0)
 
+struct _NcClusterMassVanderlindeClass
+{
+  /*< private >*/
+  NcClusterMassClass parent_class;
+};
+
 struct _NcClusterMassVanderlinde
 {
   /*< private >*/
@@ -76,12 +82,6 @@ struct _NcClusterMassVanderlinde
   gdouble signif_obs_max;  
   gdouble z0;
   gdouble M0;
-};
-
-struct _NcClusterMassVanderlindeClass
-{
-  /*< private >*/
-  NcClusterMassClass parent_class;
 };
 
 GType nc_cluster_mass_vanderlinde_get_type (void) G_GNUC_CONST;

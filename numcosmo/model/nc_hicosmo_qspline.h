@@ -80,6 +80,12 @@ typedef enum _NcHICosmoQSplineVParams
 #define NC_HICOSMO_QSPLINE_DEFAULT_Q       (-0.5)
 #define NC_HICOSMO_QSPLINE_DEFAULT_Q_LEN   (3)
 
+struct _NcHICosmoQSplineClass
+{
+  /*< private >*/
+  NcHICosmoClass parent_class;
+};
+
 struct _NcHICosmoQSpline
 {
   /*< private >*/
@@ -89,12 +95,6 @@ struct _NcHICosmoQSpline
   gdouble z_f;
   NcmSpline *q_z;
   NcmOdeSpline *E2_z;
-};
-
-struct _NcHICosmoQSplineClass
-{
-  /*< private >*/
-  NcHICosmoClass parent_class;
 };
 
 GType nc_hicosmo_qspline_get_type (void) G_GNUC_CONST;

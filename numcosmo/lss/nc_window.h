@@ -41,12 +41,6 @@ G_BEGIN_DECLS
 typedef struct _NcWindowClass NcWindowClass;
 typedef struct _NcWindow NcWindow;
 
-struct _NcWindow
-{
-  /*< private >*/
-  GObject parent_instance;
-};
-
 struct _NcWindowClass
 {
   /*< private > */
@@ -55,6 +49,12 @@ struct _NcWindowClass
   gdouble (*eval_fourier) (const NcWindow *wf, const gdouble k, const gdouble R);
   gdouble (*deriv_fourier) (const NcWindow *wf, const gdouble k, const gdouble R);
   gdouble (*eval_real) (const NcWindow *wf, const gdouble r, const gdouble R);
+};
+
+struct _NcWindow
+{
+  /*< private >*/
+  GObject parent_instance;
 };
 
 GType nc_window_get_type (void) G_GNUC_CONST;

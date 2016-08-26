@@ -49,6 +49,7 @@ G_BEGIN_DECLS
 
 typedef struct _NcCBEClass NcCBEClass;
 typedef struct _NcCBE NcCBE;
+
 typedef struct _NcCBEPrivate NcCBEPrivate;
 
 struct _NcCBEClass

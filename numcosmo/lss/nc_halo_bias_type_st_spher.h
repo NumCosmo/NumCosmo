@@ -43,6 +43,12 @@ G_BEGIN_DECLS
 typedef struct _NcHaloBiasTypeSTSpherClass NcHaloBiasTypeSTSpherClass;
 typedef struct _NcHaloBiasTypeSTSpher NcHaloBiasTypeSTSpher;
 
+struct _NcHaloBiasTypeSTSpherClass
+{
+  /*< private >*/
+  NcHaloBiasTypeClass parent_class;
+};
+
 struct _NcHaloBiasTypeSTSpher
 {
   /*< private >*/
@@ -50,12 +56,6 @@ struct _NcHaloBiasTypeSTSpher
   gdouble delta_c;
   gdouble a;
   gdouble p;
-};
-
-struct _NcHaloBiasTypeSTSpherClass
-{
-  /*< private >*/
-  NcHaloBiasTypeClass parent_class;
 };
 
 GType nc_halo_bias_type_st_spher_get_type (void) G_GNUC_CONST;

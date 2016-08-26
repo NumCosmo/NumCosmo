@@ -42,6 +42,12 @@ G_BEGIN_DECLS
 typedef struct _NcmSplineGslClass NcmSplineGslClass;
 typedef struct _NcmSplineGsl NcmSplineGsl;
 
+struct _NcmSplineGslClass
+{
+  /*< private >*/
+  NcmSplineClass parent_class;
+};
+
 /**
  * NcmSplineGslType:
  * @NCM_SPLINE_GSL_LINEAR: FIXME
@@ -72,12 +78,6 @@ struct _NcmSplineGsl
   NcmSplineGslType type_id;
   gchar *inst_name;
   const gsl_interp_type *type;
-};
-
-struct _NcmSplineGslClass
-{
-  /*< private >*/
-  NcmSplineClass parent_class;
 };
 
 GType ncm_spline_gsl_get_type (void) G_GNUC_CONST;

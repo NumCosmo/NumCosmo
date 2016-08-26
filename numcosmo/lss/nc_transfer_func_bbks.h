@@ -43,6 +43,12 @@ G_BEGIN_DECLS
 typedef struct _NcTransferFuncBBKSClass NcTransferFuncBBKSClass;
 typedef struct _NcTransferFuncBBKS NcTransferFuncBBKS;
 
+struct _NcTransferFuncBBKSClass
+{
+  /*< private >*/
+  NcTransferFuncClass parent_class;
+};
+
 struct _NcTransferFuncBBKS
 {
   /*< private >*/
@@ -53,12 +59,6 @@ struct _NcTransferFuncBBKS
   gdouble c4;
   gdouble c5_wm; /* c5_wm = c5/wm */
   gdouble h;  
-};
-
-struct _NcTransferFuncBBKSClass
-{
-  /*< private >*/
-  NcTransferFuncClass parent_class;
 };
 
 GType nc_transfer_func_bbks_get_type (void) G_GNUC_CONST;

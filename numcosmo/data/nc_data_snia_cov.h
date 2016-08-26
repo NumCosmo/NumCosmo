@@ -203,6 +203,12 @@ typedef enum _NcDataSNIACovOrder
   NC_DATA_SNIA_COV_ORDER_LENGTH,        /*< skip >*/
 } NcDataSNIACovOrder;
 
+struct _NcDataSNIACovClass
+{
+  /*< private >*/
+  NcmDataGaussCovClass parent_class;
+};
+
 struct _NcDataSNIACov
 {
   /*< private >*/
@@ -235,12 +241,6 @@ struct _NcDataSNIACov
   NcmModelCtrl *cosmo_resample_ctrl;
   NcmModelCtrl *dcov_resample_ctrl;
   NcmModelCtrl *dcov_cov_full_ctrl;
-};
-
-struct _NcDataSNIACovClass
-{
-  /*< private >*/
-  NcmDataGaussCovClass parent_class;
 };
 
 GType nc_data_snia_cov_get_type (void) G_GNUC_CONST;

@@ -51,6 +51,12 @@ G_BEGIN_DECLS
 typedef struct _NcmMSetCatalogClass NcmMSetCatalogClass;
 typedef struct _NcmMSetCatalog NcmMSetCatalog;
 
+struct _NcmMSetCatalogClass
+{
+  /*< private >*/
+  GObjectClass parent_class;
+};
+
 /**
  * NcmMSetCatalogSync:
  * @NCM_MSET_CATALOG_SYNC_DISABLE: Catalog will be synchronized only when closing the file or with an explicit call of ncm_mset_catalog_sync().
@@ -118,12 +124,6 @@ struct _NcmMSetCatalog
   gsl_histogram *h;
   gsl_histogram_pdf *h_pdf;
   gboolean constructed;
-};
-
-struct _NcmMSetCatalogClass
-{
-  /*< private >*/
-  GObjectClass parent_class;
 };
 
 GType ncm_mset_catalog_get_type (void) G_GNUC_CONST;

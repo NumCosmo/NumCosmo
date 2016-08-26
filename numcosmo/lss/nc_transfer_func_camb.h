@@ -44,18 +44,18 @@ G_BEGIN_DECLS
 typedef struct _NcTransferFuncCAMBClass NcTransferFuncCAMBClass;
 typedef struct _NcTransferFuncCAMB NcTransferFuncCAMB;
 
+struct _NcTransferFuncCAMBClass
+{
+  /*< private >*/
+  NcTransferFuncClass parent_class;
+};
+
 struct _NcTransferFuncCAMB
 {
   /*< private >*/
   NcTransferFunc parent_instance;
   NcmSpline *T_spline;
   gboolean init;
-};
-
-struct _NcTransferFuncCAMBClass
-{
-  /*< private >*/
-  NcTransferFuncClass parent_class;
 };
 
 GType nc_transfer_func_camb_get_type (void) G_GNUC_CONST;
