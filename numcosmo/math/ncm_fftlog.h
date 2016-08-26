@@ -61,12 +61,6 @@ struct _NcmFftlogClass
   void (*get_Ym) (NcmFftlog *fftlog, gpointer Ym_0);
 };
 
-/**
- * NcmFftlog:
- * 
- * FIXME
- *
- */
 struct _NcmFftlog
 {
   /*< private >*/
