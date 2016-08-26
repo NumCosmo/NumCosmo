@@ -506,6 +506,8 @@ libnumcosmo_la_LDFLAGS = -version-info $(LT_CURRENT):$(LT_REVISION):$(LT_AGE)
 cosmo_includedir = \
 	$(pkgincludedir)
 
+ncm_enum_types_built_headers =
+
 ncm_enum_types_headers = \
 	ncm_enum_types.h
 
