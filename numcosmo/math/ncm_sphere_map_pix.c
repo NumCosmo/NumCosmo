@@ -112,12 +112,15 @@ ncm_sphere_map_pix_init (NcmSphereMapPix *pix)
   pix->coordsys          = NCM_SPHERE_MAP_PIX_COORD_SYS_LEN;
   pix->pvec              = NULL;
   pix->fft_pvec          = NULL;
-  pix->fft_plan          = g_ptr_array_new ();
+  pix->fft_plan_r2c      = g_ptr_array_new ();
+  pix->fft_plan_c2r      = g_ptr_array_new ();
 #ifdef NUMCOSMO_HAVE_FFTW3
 #  ifdef HAVE_FFTW3F
-  g_ptr_array_set_free_func (pix->fft_plan, (GDestroyNotify)fftwf_destroy_plan);
+  g_ptr_array_set_free_func (pix->fft_plan_r2c, (GDestroyNotify)fftwf_destroy_plan);
+  g_ptr_array_set_free_func (pix->fft_plan_c2r, (GDestroyNotify)fftwf_destroy_plan);
 #  else
-  g_ptr_array_set_free_func (pix->fft_plan, (GDestroyNotify)fftw_destroy_plan);
+  g_ptr_array_set_free_func (pix->fft_plan_r2c, (GDestroyNotify)fftw_destroy_plan);
+  g_ptr_array_set_free_func (pix->fft_plan_c2r, (GDestroyNotify)fftw_destroy_plan);
 #  endif
 #endif
   pix->Ylm = NULL;
@@ -197,8 +200,8 @@ _ncm_sphere_map_pix_finalize (GObject *object)
   NcmSphereMapPix *pix = NCM_SPHERE_MAP_PIX (object);
 
   ncm_sphere_map_pix_set_nside (pix, 0);
-  g_ptr_array_unref (pix->fft_plan);
-
+  g_ptr_array_unref (pix->fft_plan_r2c);
+  g_ptr_array_unref (pix->fft_plan_c2r);
 
   ncm_vector_clear (&pix->Ylm);
   ncm_vector_clear (&pix->alm);
@@ -345,7 +348,8 @@ ncm_sphere_map_pix_set_nside (NcmSphereMapPix *pix, gint64 nside)
     g_clear_pointer (&pix->fft_pvec, (GDestroyNotify) fftw_free);
 #  endif
 #endif
-    g_ptr_array_set_size (pix->fft_plan, 0);
+    g_ptr_array_set_size (pix->fft_plan_r2c, 0);
+    g_ptr_array_set_size (pix->fft_plan_c2r, 0);
     
     if (nside > 0)
     {
@@ -1653,7 +1657,7 @@ static void
 _ncm_sphere_map_pix_prepare_fft (NcmSphereMapPix *pix)
 {
 #ifdef NUMCOSMO_HAVE_FFTW3
-  if (pix->fft_plan->len == 0)
+  if (pix->fft_plan_r2c->len == 0)
   {
     const gint64 npix      = ncm_sphere_map_pix_get_npix (pix);
     const gint64 nring_cap = ncm_sphere_map_pix_get_nrings_cap (pix);
@@ -1676,14 +1680,23 @@ _ncm_sphere_map_pix_prepare_fft (NcmSphereMapPix *pix)
       gfloat *pvec               = pix->pvec;
       complex float *fft_pvec    = pix->fft_pvec;
 
-      fftwf_plan plan = fftwf_plan_many_dft_r2c (1, &ring_size, 2,
-                                                 &pvec[ring_fi_north], NULL, 
-                                                 1, dist,
-                                                 &fft_pvec[ring_fi_north], NULL,
-                                                 1, dist,
-                                                 fftw_default_flags | FFTW_DESTROY_INPUT);
+      fftwf_plan plan_r2c = fftwf_plan_many_dft_r2c (1, &ring_size, 2,
+                                                     &pvec[ring_fi_north], NULL, 
+                                                     1, dist,
+                                                     &fft_pvec[ring_fi_north], NULL,
+                                                     1, dist,
+                                                     fftw_default_flags | FFTW_DESTROY_INPUT);
+
+      fftwf_plan plan_c2r = fftwf_plan_many_dft_c2r (1, &ring_size, 2,
+                                                     &fft_pvec[ring_fi_north], NULL,
+                                                     1, dist,
+                                                     &pvec[ring_fi_north], NULL,
+                                                     1, dist,
+                                                     fftw_default_flags | FFTW_DESTROY_INPUT);
+      
       /*printf ("Preparing plan for %ld and %ld size %d | npix %ld | %p\n", ring_fi_north, ring_fi_south, ring_size, pix->npix, plan);*/
-      g_ptr_array_add (pix->fft_plan, plan);
+      g_ptr_array_add (pix->fft_plan_r2c, plan_r2c);
+      g_ptr_array_add (pix->fft_plan_c2r, plan_c2r);
     }
     {
       const gint ring_size     = pix->middle_rings_size;
@@ -1693,15 +1706,22 @@ _ncm_sphere_map_pix_prepare_fft (NcmSphereMapPix *pix)
       gfloat *pvec               = pix->pvec;
       complex float *fft_pvec    = pix->fft_pvec;
 
+      fftwf_plan plan_r2c = fftwf_plan_many_dft_r2c (1, &ring_size, nrings_middle,
+                                                     &pvec[cap_size], NULL, 
+                                                     1, ring_size,
+                                                     &fft_pvec[cap_size], NULL,
+                                                     1, ring_size,
+                                                     fftw_default_flags | FFTW_DESTROY_INPUT);
 
-      fftwf_plan plan = fftwf_plan_many_dft_r2c (1, &ring_size, nrings_middle,
-                                                 &pvec[cap_size], NULL, 
-                                                 1, ring_size,
-                                                 &fft_pvec[cap_size], NULL,
-                                                 1, ring_size,
-                                                 fftw_default_flags | FFTW_DESTROY_INPUT);
+      fftwf_plan plan_c2r = fftwf_plan_many_dft_c2r (1, &ring_size, nrings_middle,
+                                                     &fft_pvec[cap_size], NULL,
+                                                     1, ring_size,
+                                                     &pvec[cap_size], NULL,
+                                                     1, ring_size,
+                                                     fftw_default_flags | FFTW_DESTROY_INPUT);
       /*printf ("Preparing plan for %d and %d x %d | npix %ld | %p\n", cap_size, nrings_middle, ring_size, pix->npix, plan);*/
-      g_ptr_array_add (pix->fft_plan, plan);
+      g_ptr_array_add (pix->fft_plan_r2c, plan_r2c);
+      g_ptr_array_add (pix->fft_plan_c2r, plan_c2r);
     }  
 
 #  else
@@ -1717,13 +1737,21 @@ _ncm_sphere_map_pix_prepare_fft (NcmSphereMapPix *pix)
       gdouble *pvec              = pix->pvec;
       complex double *fft_pvec   = pix->fft_pvec;
 
-      fftw_plan plan = fftw_plan_many_dft_r2c (1, &ring_size, 2,
-                                               &pvec[ring_fi_north], NULL, 
-                                               1, dist,
-                                               &fft_pvec[ring_fi_north], NULL,
-                                               1, dist,
-                                               fftw_default_flags | FFTW_DESTROY_INPUT);
-      g_ptr_array_add (pix->fft_plan, plan);
+      fftw_plan plan_r2c = fftw_plan_many_dft_r2c (1, &ring_size, 2,
+                                                   &pvec[ring_fi_north], NULL, 
+                                                   1, dist,
+                                                   &fft_pvec[ring_fi_north], NULL,
+                                                   1, dist,
+                                                   fftw_default_flags | FFTW_DESTROY_INPUT);
+      
+      fftw_plan plan_c2r = fftw_plan_many_dft_c2r (1, &ring_size, 2,
+                                                   &fft_pvec[ring_fi_north], NULL,
+                                                   1, dist,
+                                                   &pvec[ring_fi_north], NULL,
+                                                   1, dist,
+                                                   fftw_default_flags | FFTW_DESTROY_INPUT);
+      g_ptr_array_add (pix->fft_plan_r2c, plan_r2c);
+      g_ptr_array_add (pix->fft_plan_c2r, plan_c2r);
     }
     {
       const gint ring_size     = pix->middle_rings_size;
@@ -1733,13 +1761,21 @@ _ncm_sphere_map_pix_prepare_fft (NcmSphereMapPix *pix)
       gdouble *pvec               = pix->pvec;
       complex double *fft_pvec    = pix->fft_pvec;
 
-      fftw_plan plan = fftw_plan_many_dft_r2c (1, &ring_size, nrings_middle,
-                                               &pvec[cap_size], NULL, 
-                                               1, ring_size,
-                                               &fft_pvec[cap_size], NULL,
-                                               1, ring_size,
-                                               fftw_default_flags | FFTW_DESTROY_INPUT);
-      g_ptr_array_add (pix->fft_plan, plan);
+      fftw_plan plan_r2c = fftw_plan_many_dft_r2c (1, &ring_size, nrings_middle,
+                                                   &pvec[cap_size], NULL, 
+                                                   1, ring_size,
+                                                   &fft_pvec[cap_size], NULL,
+                                                   1, ring_size,
+                                                   fftw_default_flags | FFTW_DESTROY_INPUT);
+      fftw_plan plan_c2r = fftw_plan_many_dft_c2r (1, &ring_size, nrings_middle,
+                                                   &fft_pvec[cap_size], NULL,
+                                                   1, ring_size,
+                                                   &pvec[cap_size], NULL,
+                                                   1, ring_size,
+                                                   fftw_default_flags | FFTW_DESTROY_INPUT);
+
+      g_ptr_array_add (pix->fft_plan_r2c, plan_r2c);
+      g_ptr_array_add (pix->fft_plan_c2r, plan_c2r);
     }    
 #  endif
 
@@ -1844,12 +1880,12 @@ ncm_sphere_map_pix_prepare_alm (NcmSphereMapPix *pix)
 
   ncm_sphere_map_pix_set_order (pix, NCM_SPHERE_MAP_PIX_ORDER_RING);
   
-  for (i = 0; i < pix->fft_plan->len; i++)
+  for (i = 0; i < pix->fft_plan_r2c->len; i++)
   {
 #  ifdef HAVE_FFTW3F
-    fftwf_execute (g_ptr_array_index (pix->fft_plan, i));    
+    fftwf_execute (g_ptr_array_index (pix->fft_plan_r2c, i));    
 #  else
-    fftw_execute (g_ptr_array_index (pix->fft_plan, i));
+    fftw_execute (g_ptr_array_index (pix->fft_plan_r2c, i));
 #endif
   } 
   {
@@ -1894,12 +1930,12 @@ ncm_sphere_map_pix_prepare_Cl (NcmSphereMapPix *pix)
 
   ncm_sphere_map_pix_set_order (pix, NCM_SPHERE_MAP_PIX_ORDER_RING);
   
-  for (i = 0; i < pix->fft_plan->len; i++)
+  for (i = 0; i < pix->fft_plan_r2c->len; i++)
   {
 #  ifdef HAVE_FFTW3F
-    fftwf_execute (g_ptr_array_index (pix->fft_plan, i));    
+    fftwf_execute (g_ptr_array_index (pix->fft_plan_r2c, i));    
 #  else
-    fftw_execute (g_ptr_array_index (pix->fft_plan, i));
+    fftw_execute (g_ptr_array_index (pix->fft_plan_r2c, i));
 #endif
   } 
   {

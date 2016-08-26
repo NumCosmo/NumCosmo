@@ -103,7 +103,8 @@ struct _NcmSphereMapPix
   NcmSphereMapPixCoordSys coordsys;
   gpointer pvec;
   gpointer fft_pvec;
-  GPtrArray *fft_plan;
+  GPtrArray *fft_plan_r2c;
+  GPtrArray *fft_plan_c2r;
   guint lmax;
   NcmVector *Ylm;
   NcmVector *alm;
