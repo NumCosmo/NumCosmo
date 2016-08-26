@@ -535,12 +535,12 @@ ncm_fit_nlopt_enum_meta.h: ncm_fit_nlopt_enum_meta.c
 	$(AM_V_GEN)rm ncm_fit_nlopt_enum_meta.h.tmp1
 	$(AM_V_GEN)rm ncm_fit_nlopt_enum_meta.h.tmp2
 
-ncm_fit_nlopt_enum.h: ncm_fit_nlopt_enum_meta.h $(srcdir)/ncm_fit_nlopt_enum.h.template
-	$(AM_V_GEN) ( $(GLIB_MKENUMS) --template $(srcdir)/ncm_fit_nlopt_enum.h.template ncm_fit_nlopt_enum_meta.h ) > \
+ncm_fit_nlopt_enum.h: $(srcdir)/ncm_fit_nlopt_enum_meta.h $(srcdir)/ncm_fit_nlopt_enum.h.template
+	$(AM_V_GEN) ( $(GLIB_MKENUMS) --template $(srcdir)/ncm_fit_nlopt_enum.h.template $(srcdir)/ncm_fit_nlopt_enum_meta.h ) > \
 	  ncm_fit_nlopt_enum.h.tmp && mv ncm_fit_nlopt_enum.h.tmp $(srcdir)/ncm_fit_nlopt_enum.h
 
 ncm_fit_nlopt_enum.c: ncm_fit_nlopt_enum_meta.h $(srcdir)/ncm_fit_nlopt_enum.c.template
-	$(AM_V_GEN) ( $(GLIB_MKENUMS) --template $(srcdir)/ncm_fit_nlopt_enum.c.template ncm_fit_nlopt_enum_meta.h ) > \
+	$(AM_V_GEN) ( $(GLIB_MKENUMS) --template $(srcdir)/ncm_fit_nlopt_enum.c.template $(srcdir)/ncm_fit_nlopt_enum_meta.h ) > \
 	  ncm_fit_nlopt_enum.c.tmp && mv ncm_fit_nlopt_enum.c.tmp $(srcdir)/ncm_fit_nlopt_enum.c
 
 ncm_enum_types_built_headers += \
