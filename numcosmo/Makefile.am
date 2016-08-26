@@ -527,21 +527,21 @@ ncm_cond_headers =
 if HAVE_LIBNLOPT
 
 ncm_fit_nlopt_enum_meta.h: ncm_fit_nlopt_enum_meta.c
-	$(CPP) $(AM_CFLAGS) $(srcdir)/ncm_fit_nlopt_enum_meta.c -o ncm_fit_nlopt_enum_meta.h.tmp
-	$(GREP) -v '^#' ncm_fit_nlopt_enum_meta.h.tmp > ncm_fit_nlopt_enum_meta.h.tmp1
-	$(SED) 's/nlopt_algorithm/NcmFitNloptAlgorithm/' ncm_fit_nlopt_enum_meta.h.tmp1 > ncm_fit_nlopt_enum_meta.h.tmp2
-	$(SED) 's/nlopt_result/NcmFitNloptResult/' ncm_fit_nlopt_enum_meta.h.tmp2 > $(srcdir)/ncm_fit_nlopt_enum_meta.h
+	$(AM_V_GEN)$(CPP) $(AM_CFLAGS) $(srcdir)/ncm_fit_nlopt_enum_meta.c -o ncm_fit_nlopt_enum_meta.h.tmp
+	$(AM_V_GEN)$(GREP) -v '^#' ncm_fit_nlopt_enum_meta.h.tmp > ncm_fit_nlopt_enum_meta.h.tmp1
+	$(AM_V_GEN)$(SED) 's/nlopt_algorithm/NcmFitNloptAlgorithm/' ncm_fit_nlopt_enum_meta.h.tmp1 > ncm_fit_nlopt_enum_meta.h.tmp2
+	$(AM_V_GEN)$(SED) 's/nlopt_result/NcmFitNloptResult/' ncm_fit_nlopt_enum_meta.h.tmp2 > ncm_fit_nlopt_enum_meta.h
 	$(AM_V_GEN)rm ncm_fit_nlopt_enum_meta.h.tmp
 	$(AM_V_GEN)rm ncm_fit_nlopt_enum_meta.h.tmp1
 	$(AM_V_GEN)rm ncm_fit_nlopt_enum_meta.h.tmp2
 
-ncm_fit_nlopt_enum.h: $(srcdir)/ncm_fit_nlopt_enum_meta.h $(srcdir)/ncm_fit_nlopt_enum.h.template
-	$(AM_V_GEN) ( $(GLIB_MKENUMS) --template $(srcdir)/ncm_fit_nlopt_enum.h.template $(srcdir)/ncm_fit_nlopt_enum_meta.h ) > \
-	  ncm_fit_nlopt_enum.h.tmp && mv ncm_fit_nlopt_enum.h.tmp $(srcdir)/ncm_fit_nlopt_enum.h
+ncm_fit_nlopt_enum.h: ncm_fit_nlopt_enum_meta.h $(srcdir)/ncm_fit_nlopt_enum.h.template
+	$(AM_V_GEN) ( $(GLIB_MKENUMS) --template $(srcdir)/ncm_fit_nlopt_enum.h.template ncm_fit_nlopt_enum_meta.h ) > \
+	  ncm_fit_nlopt_enum.h.tmp && mv ncm_fit_nlopt_enum.h.tmp ncm_fit_nlopt_enum.h
 
 ncm_fit_nlopt_enum.c: ncm_fit_nlopt_enum_meta.h $(srcdir)/ncm_fit_nlopt_enum.c.template
-	$(AM_V_GEN) ( $(GLIB_MKENUMS) --template $(srcdir)/ncm_fit_nlopt_enum.c.template $(srcdir)/ncm_fit_nlopt_enum_meta.h ) > \
-	  ncm_fit_nlopt_enum.c.tmp && mv ncm_fit_nlopt_enum.c.tmp $(srcdir)/ncm_fit_nlopt_enum.c
+	$(AM_V_GEN) ( $(GLIB_MKENUMS) --template $(srcdir)/ncm_fit_nlopt_enum.c.template ncm_fit_nlopt_enum_meta.h ) > \
+	  ncm_fit_nlopt_enum.c.tmp && mv ncm_fit_nlopt_enum.c.tmp ncm_fit_nlopt_enum.c
 
 ncm_enum_types_built_headers += \
 	ncm_fit_nlopt_enum_meta.h
