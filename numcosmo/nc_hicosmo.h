@@ -32,6 +32,7 @@
 #include <numcosmo/math/ncm_model.h>
 #include <numcosmo/math/ncm_mset_func.h>
 #include <numcosmo/math/ncm_likelihood.h>
+#include <numcosmo/math/ncm_powspec_filter.h>
 
 G_BEGIN_DECLS
 
@@ -267,6 +268,8 @@ G_INLINE_FUNC gdouble nc_hicosmo_x_alpha (NcHICosmo *cosmo, gdouble alpha);
 
 G_INLINE_FUNC NcHIPrim *nc_hicosmo_peek_prim (NcHICosmo *cosmo);
 G_INLINE_FUNC NcHIReion *nc_hicosmo_peek_reion (NcHICosmo *cosmo);
+
+gdouble nc_hicosmo_sigma8 (NcHICosmo *cosmo, NcmPowspecFilter *psf);
 
 #define NC_HICOSMO_DEFAULT_PARAMS_RELTOL (1e-7)
 #define NC_HICOSMO_DEFAULT_PARAMS_ABSTOL (0.0)

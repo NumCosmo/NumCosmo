@@ -2121,9 +2121,9 @@ ncm_sphere_map_pix_alm2map (NcmSphereMapPix *pix)
 #ifdef NUMCOSMO_HAVE_FFTW3
   guint i;
 
-  gfloat *temp_pix = _fft_vec_alloc (pix->npix);
-  gfloat *pixels   = pix->pvec;
-  _fft_vec_memcpy (temp_pix, pix->pvec, pix->npix);
+  /*gfloat *temp_pix = _fft_vec_alloc (pix->npix);*/
+  /*gfloat *pixels   = pix->pvec;*/
+  /*_fft_vec_memcpy (temp_pix, pix->pvec, pix->npix);*/
   
   g_assert_cmpuint (pix->nside, >, 0);
   if (pix->lmax == 0)

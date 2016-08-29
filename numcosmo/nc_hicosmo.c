@@ -899,6 +899,25 @@ nc_hicosmo_log_all_models (GType parent)
  * Returns: (transfer none): the #NcHIReion submodel.
  */
 
+/*
+ * nc_hicosmo_sigma8:
+ * @cosmo: a #NcHICosmo
+ * @psf: a #NcmPowspecFilter
+ *
+ * Computes the variance of the power spectrum at $R = 8 / h$ Mpc at redshift 0.
+ *
+ * Returns: $\sigma_8$
+ *
+ */
+gdouble
+nc_hicosmo_sigma8 (NcHICosmo *cosmo, NcmPowspecFilter *psf)
+{
+  if (psf->type != NCM_POWSPEC_FILTER_TYPE_TOPHAT)
+    g_error ("nc_hicosmo_sigma8: sigma_8 is defined with a tophat filter, but psf is another type of filter.");
+
+  return ncm_powspec_filter_eval_sigma (psf, 0.0, 8.0 / nc_hicosmo_h (cosmo));
+}
+
 #define _NC_HICOSMO_FUNC0_TO_FLIST(fname) \
 static void _nc_hicosmo_flist_##fname (NcmMSetFuncList *flist, NcmMSet *mset, const gdouble *x, gdouble *res) \
 { \

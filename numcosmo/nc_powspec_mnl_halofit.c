@@ -338,6 +338,9 @@ _nc_powspec_mnl_halofit_linear_scale (NcPowspecMNLHaloFit *pshf, NcHICosmo* cosm
 
   gdouble lnR0 = 0.0;
   gdouble lnR  = (-z / 2.0 < NC_POWSPEC_MNL_HALOFIT_LOGRMIN) ? NC_POWSPEC_MNL_HALOFIT_LOGRMIN : -z / 2.0 + NCM_DEFAULT_PRECISION;
+  const gdouble reltol = pshf->reltol;
+  gdouble res = 0.0;
+  
   gsl_function_fdf FDF;
 
   var_params vps = {pshf, cosmo, z};
@@ -356,7 +359,11 @@ _nc_powspec_mnl_halofit_linear_scale (NcPowspecMNLHaloFit *pshf, NcHICosmo* cosm
 
     lnR0   = lnR;
     lnR    = gsl_root_fdfsolver_root (pshf->priv->linear_scale_solver);
-    status = gsl_root_test_delta (lnR, lnR0, 0.0, pshf->reltol); // Compare R vs R0 !
+
+    res    = gsl_expm1 (lnR0 - lnR);
+    
+    //status = gsl_root_test_delta (lnR, lnR0, 0.0, pshf->reltol); // Compare lnR vs lnR0 !
+    status = gsl_root_test_residual (res, reltol); //Compares R vs R0 !
 
   } while (status == GSL_CONTINUE && iter < max_iter);
 

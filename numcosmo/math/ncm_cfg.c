@@ -119,6 +119,8 @@
 #include "nc_powspec_ml.h"
 #include "nc_powspec_ml_transfer.h"
 #include "nc_powspec_ml_cbe.h"
+#include "nc_powspec_mnl.h"
+#include "nc_powspec_mnl_halofit.h"
 #include "nc_snia_dist_cov.h"
 #include "nc_planck_fi.h"
 #include "nc_planck_fi_cor_tt.h"
@@ -398,7 +400,10 @@ ncm_cfg_init (void)
   ncm_cfg_register_obj (NC_TYPE_POWSPEC_ML);
   ncm_cfg_register_obj (NC_TYPE_POWSPEC_ML_TRANSFER);
   ncm_cfg_register_obj (NC_TYPE_POWSPEC_ML_CBE);
-  
+
+  ncm_cfg_register_obj (NC_TYPE_POWSPEC_MNL);
+  ncm_cfg_register_obj (NC_TYPE_POWSPEC_MNL_HALOFIT);
+
   ncm_cfg_register_obj (NC_TYPE_SNIA_DIST_COV);
 
   ncm_cfg_register_obj (NC_TYPE_PLANCK_FI);

@@ -132,6 +132,7 @@ G_INLINE_FUNC void ncm_vector_fast_mulby (NcmVector *cv, const guint i, const gd
 G_INLINE_FUNC void ncm_vector_set_all (NcmVector *cv, const gdouble val);
 G_INLINE_FUNC void ncm_vector_set_array (NcmVector *cv, const gdouble *array);
 G_INLINE_FUNC void ncm_vector_scale (NcmVector *cv, const gdouble val);
+G_INLINE_FUNC void ncm_vector_add_constant (NcmVector *cv, const gdouble val);
 G_INLINE_FUNC void ncm_vector_div (NcmVector *cv1, const NcmVector *cv2);
 G_INLINE_FUNC void ncm_vector_add (NcmVector *cv1, const NcmVector *cv2);
 G_INLINE_FUNC void ncm_vector_sub (NcmVector *cv1, const NcmVector *cv2);
@@ -282,6 +283,12 @@ G_INLINE_FUNC void
 ncm_vector_scale (NcmVector *cv, const gdouble val)
 {
   gsl_vector_scale (ncm_vector_gsl (cv), val);
+}
+
+G_INLINE_FUNC void
+ncm_vector_add_constant (NcmVector *cv, const gdouble val)
+{
+  gsl_vector_add_constant (ncm_vector_gsl (cv), val);
 }
 
 G_INLINE_FUNC void
