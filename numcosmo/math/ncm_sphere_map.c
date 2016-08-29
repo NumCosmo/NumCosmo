@@ -695,7 +695,7 @@ ncm_sphere_mapsht_alm2map_circle (NcmSphereMapSHT *mapsht, gint ring,  gint ring
   gdouble y_mm;
   gdouble y_mmp1;
   gdouble x = cos(theta);
-  gdouble lncirc = 0.5 * gsl_sf_log_1plusx(- x * x);
+  gdouble lncirc = 0.5 * gsl_sf_log_1plusx (- x * x);
   gsl_vector_complex *alm = mapsht->mapalm->alm;
   gsl_complex *alm_data = (gsl_complex *)&alm->data[0];
   gsl_complex exp_mphi;

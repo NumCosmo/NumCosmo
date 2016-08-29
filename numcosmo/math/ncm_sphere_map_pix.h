@@ -169,6 +169,8 @@ gdouble ncm_sphere_map_pix_get_Cl (NcmSphereMapPix *pix, guint l);
 
 void ncm_sphere_map_pix_add_noise (NcmSphereMapPix *pix, const gdouble sd, NcmRNG *rng);
 
+void ncm_sphere_map_pix_alm2map (NcmSphereMapPix *pix);
+
 #define NCM_SPHERE_MAP_PIX_N(nside) (12 * (nside) * (nside))
 #define NCM_SPHERE_MAP_PIX_INT_TO_XY(i,x,y) \
 G_STMT_START { \
