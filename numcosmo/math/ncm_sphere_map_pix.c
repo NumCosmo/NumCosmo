@@ -40,6 +40,7 @@
 #include "math/ncm_util.h"
 #include "math/ncm_cfg.h"
 #include "math/ncm_c.h"
+#include "math/ncm_timer.h"
 #include "ncm_enum_types.h"
 
 #include <gsl/gsl_sf_legendre.h>
@@ -126,6 +127,7 @@ ncm_sphere_map_pix_init (NcmSphereMapPix *pix)
   pix->Ylm = NULL;
   pix->alm = NULL;
   pix->Cl  = NULL;
+  pix->t   = ncm_timer_new ();
 }
 
 static void
@@ -1694,7 +1696,7 @@ _ncm_sphere_map_pix_prepare_fft (NcmSphereMapPix *pix)
                                                      1, dist,
                                                      fftw_default_flags | FFTW_DESTROY_INPUT);
       
-      /*printf ("Preparing plan for %ld and %ld size %d | npix %ld | %p\n", ring_fi_north, ring_fi_south, ring_size, pix->npix, plan);*/
+      printf ("Preparing plan for %ld and %ld size %d | npix %ld | %p\n", ring_fi_north, ring_fi_south, ring_size, pix->npix, plan_r2c);
       g_ptr_array_add (pix->fft_plan_r2c, plan_r2c);
       g_ptr_array_add (pix->fft_plan_c2r, plan_c2r);
     }
@@ -1719,11 +1721,12 @@ _ncm_sphere_map_pix_prepare_fft (NcmSphereMapPix *pix)
                                                      &pvec[cap_size], NULL,
                                                      1, ring_size,
                                                      fftw_default_flags | FFTW_DESTROY_INPUT);
-      /*printf ("Preparing plan for %d and %d x %d | npix %ld | %p\n", cap_size, nrings_middle, ring_size, pix->npix, plan);*/
+      printf ("Preparing plan for %d and %d x %d | npix %ld | %p\n", cap_size, nrings_middle, ring_size, pix->npix, plan_r2c);
       g_ptr_array_add (pix->fft_plan_r2c, plan_r2c);
       g_ptr_array_add (pix->fft_plan_c2r, plan_c2r);
     }  
-
+    fflush (stdout);
+    
 #  else
 
     pix->fft_pvec = fftw_alloc_complex (npix);
@@ -1791,10 +1794,11 @@ _ncm_sphere_map_pix_prepare_fft (NcmSphereMapPix *pix)
 static void
 _ncm_sphere_map_pix_get_alm_from_circle (NcmSphereMapPix *pix, gint64 r_i, gboolean Cl_only)
 {
-  const gint64 ring_size  = ncm_sphere_map_pix_get_ring_size (pix, r_i);
-  const gint64 ring_fi    = ncm_sphere_map_pix_get_ring_first_index (pix, r_i);
-  const _fft_complex *Fim = &((_fft_complex *)pix->fft_pvec)[ring_fi];
-  const gdouble pix_area  = 4.0 * M_PI / pix->npix;
+  const gint64 ring_size   = ncm_sphere_map_pix_get_ring_size (pix, r_i);
+  const gint64 ring_size_2 = ring_size / 2;
+  const gint64 ring_fi     = ncm_sphere_map_pix_get_ring_first_index (pix, r_i);
+  const _fft_complex *Fim  = &((_fft_complex *)pix->fft_pvec)[ring_fi];
+  const gdouble pix_area   = 4.0 * M_PI / pix->npix;
   gdouble theta_i = 0.0, phi_0 = 0.0, x = 0.0;
   gint64 m;
 
@@ -1802,7 +1806,9 @@ _ncm_sphere_map_pix_get_alm_from_circle (NcmSphereMapPix *pix, gint64 r_i, gbool
 
   x = cos (theta_i);
 
+printf ("Legendre?!S % 21.15g\n", ncm_timer_elapsed (pix->t));fflush (stdout);
   gsl_sf_legendre_array_e (GSL_SF_LEGENDRE_SPHARM, pix->lmax, x, -1.0, ncm_vector_data (pix->Ylm));
+printf ("Legendre?!F % 21.15g\n", ncm_timer_elapsed (pix->t));fflush (stdout);
 
   if (Cl_only)
   {
@@ -1813,7 +1819,7 @@ _ncm_sphere_map_pix_get_alm_from_circle (NcmSphereMapPix *pix, gint64 r_i, gbool
 
       _fft_complex phase = cexp (-I * phi_0 * m);
 
-      if (fft_ring_index <= ring_size / 2)
+      if (fft_ring_index <= ring_size_2)
         phase *= Fim[fft_ring_index];
       else
         phase *= conj (Fim[ring_size - fft_ring_index]);
@@ -1828,29 +1834,38 @@ _ncm_sphere_map_pix_get_alm_from_circle (NcmSphereMapPix *pix, gint64 r_i, gbool
   }
   else
   {
+printf ("Loop?!S % 21.15g\n", ncm_timer_elapsed (pix->t));fflush (stdout);
+    _fft_complex emIphi_0 = cexp (-I * phi_0);
+    _fft_complex phase    = 1.0;
+    
     for (m = 0; m <= pix->lmax; m++)
     {
       gint64 l;
       gint fft_ring_index = m % ring_size;
+      _fft_complex Fim_i;
 
-      _fft_complex phase = cexp (-I * phi_0 * m);
-
-      if (fft_ring_index <= ring_size / 2)
-        phase *= Fim[fft_ring_index];
+      if (fft_ring_index <= ring_size_2)
+        Fim_i = Fim[fft_ring_index];
       else
-        phase *= conj (Fim[ring_size - fft_ring_index]);
+        Fim_i = conj (Fim[ring_size - fft_ring_index]);
 
       for (l = m; l <= pix->lmax; l++)
       {
         gsize lm_index = gsl_sf_legendre_array_index (l, m);
-        const complex double alm = ncm_vector_fast_get (pix->Ylm, lm_index) * phase * pix_area;
+
+        /*printf ("%ld %ld %ld\n", l, m, lm_index);*/
+        
+        const complex double alm = ncm_vector_fast_get (pix->Ylm, lm_index) * Fim_i * phase * pix_area;
 
         ncm_vector_fast_addto (pix->alm, 2 * lm_index + 0, creal (alm));
         ncm_vector_fast_addto (pix->alm, 2 * lm_index + 1, cimag (alm));
 
         ncm_vector_fast_addto (pix->Cl, l, creal (alm * conj (alm)));
       }
+
+      phase *= emIphi_0;
     }
+printf ("Loop?!F % 21.15g\n", ncm_timer_elapsed (pix->t));fflush (stdout);
   }
 }
 #endif
@@ -1888,7 +1903,10 @@ ncm_sphere_map_pix_prepare_alm (NcmSphereMapPix *pix)
   _ncm_sphere_map_pix_prepare_fft (pix);
 
   ncm_sphere_map_pix_set_order (pix, NCM_SPHERE_MAP_PIX_ORDER_RING);
-  
+
+  printf ("Peforming ffts!\n");
+  ncm_timer_start (pix->t);
+    
   for (i = 0; i < pix->fft_plan_r2c->len; i++)
   {
 #  ifdef HAVE_FFTW3F
@@ -1896,7 +1914,10 @@ ncm_sphere_map_pix_prepare_alm (NcmSphereMapPix *pix)
 #  else
     fftw_execute (g_ptr_array_index (pix->fft_plan_r2c, i));
 #endif
-  } 
+  }
+  printf ("Peforming ffts! Done!\n");
+  fflush (stdout);
+  
   {
     const gint64 nrings = ncm_sphere_map_pix_get_nrings (pix);
     gint64 r_i;
@@ -1906,7 +1927,10 @@ ncm_sphere_map_pix_prepare_alm (NcmSphereMapPix *pix)
     
     for (r_i = 0; r_i < nrings; r_i++)
     {
+      printf ("Calculating from ring %ld\n", r_i);fflush (stdout);
+printf ("Full?!S % 21.15g\n", ncm_timer_elapsed (pix->t));fflush (stdout);
       _ncm_sphere_map_pix_get_alm_from_circle (pix, r_i, FALSE);
+printf ("Full?!F % 21.15g\n", ncm_timer_elapsed (pix->t));fflush (stdout);
     }
   }
 #else

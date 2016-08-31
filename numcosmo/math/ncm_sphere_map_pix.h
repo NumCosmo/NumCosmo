@@ -31,6 +31,7 @@
 #include <numcosmo/build_cfg.h>
 #include <numcosmo/math/ncm_vector.h>
 #include <numcosmo/math/ncm_quaternion.h>
+#include <numcosmo/math/ncm_timer.h>
 #include <gsl/gsl_vector_float.h>
 #ifndef NUMCOSMO_GIR_SCAN
 #include <complex.h>
@@ -109,6 +110,7 @@ struct _NcmSphereMapPix
   NcmVector *Ylm;
   NcmVector *alm;
   NcmVector *Cl;
+  NcmTimer *t;
 };
 
 GType ncm_sphere_map_pix_get_type (void) G_GNUC_CONST;
