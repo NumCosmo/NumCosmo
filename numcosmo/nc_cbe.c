@@ -1823,31 +1823,71 @@ nc_cbe_thermodyn_get_Xe (NcCBE *cbe)
 NcmSpline2d *
 nc_cbe_get_matter_ps (NcCBE *cbe)
 {
+  const gint z_size  = cbe->priv->psp.ln_tau_size;
+  const gint partz   = 4;
+  const gint z_tsize = (z_size - 1) * partz + 1;
+  
   NcmVector *lnk_v = ncm_vector_new (cbe->priv->psp.ln_k_size);
-  NcmVector *z_v   = ncm_vector_new (cbe->priv->psp.ln_tau_size);
-  NcmMatrix *lnPk  = ncm_matrix_new (cbe->priv->psp.ln_tau_size, cbe->priv->psp.ln_k_size);
-  guint i;
-
+  NcmVector *z_v   = ncm_vector_new (z_tsize);
+  NcmMatrix *lnPk  = ncm_matrix_new (z_tsize, cbe->priv->psp.ln_k_size);
+  gdouble *pvecback = g_new (gdouble, cbe->priv->pba.bg_size_short);
+  gdouble z_i_a, z_i_b = 0.0;
+  guint i, m;
+  
   for (i = 0; i < cbe->priv->psp.ln_k_size; i++)
   {
     ncm_vector_set (lnk_v, i, cbe->priv->psp.ln_k[i]);
-    /*printf ("lnk[%u] % 20.15g k % 20.15g\n", i, cbe->priv->psp.ln_k[i], exp (cbe->priv->psp.ln_k[i]));*/
   }
 
-  for (i = 0; i < cbe->priv->psp.ln_tau_size; i++)
+  m = 0;
+  for (i = 0; i < z_size - 1; i++)
   {
-    const gdouble z_i = cbe->priv->psp.z_max_pk / (cbe->priv->psp.ln_tau_size - 1.0) * i;
-    ncm_vector_set (z_v, i, z_i);
-    spectra_pk_at_z (&cbe->priv->pba, &cbe->priv->psp, logarithmic, z_i, ncm_matrix_ptr (lnPk, i, 0), NULL);
-
-/*    printf ("z % 20.15g\n", z_i);
+    gdouble ln_tau_i;
+    gint last_index_back;
     guint j;
-    for (j = 0; j < cbe->priv->psp.ln_k_size; j++)
+
+    ln_tau_i = cbe->priv->psp.ln_tau[z_size - i - 1];
+    background_at_tau (&cbe->priv->pba,
+                       exp (ln_tau_i),
+                       cbe->priv->pba.short_info,
+                       cbe->priv->pba.inter_normal,
+                       &last_index_back,
+                       pvecback);
+    z_i_a = cbe->priv->pba.a_today / pvecback[cbe->priv->pba.index_bg_a] - 1.0;
+
+    ln_tau_i = cbe->priv->psp.ln_tau[z_size - i - 2];
+    background_at_tau (&cbe->priv->pba,
+                       exp (ln_tau_i),
+                       cbe->priv->pba.short_info,
+                       cbe->priv->pba.inter_normal,
+                       &last_index_back,
+                       pvecback);    
+    z_i_b = cbe->priv->pba.a_today / pvecback[cbe->priv->pba.index_bg_a] - 1.0;
+
+    for (j = 0; j < partz; j++)
     {
-      printf ("lnPk[%u] % 20.15g % 20.15g\n", j, ncm_matrix_get (lnPk, i, j), exp (ncm_matrix_get (lnPk, i, j)));
+      const gdouble z_i = z_i_a + (z_i_b - z_i_a) / (partz * 1.0) * j; 
+
+      ncm_vector_set (z_v, m, z_i);
+      spectra_pk_at_z (&cbe->priv->pba, &cbe->priv->psp, logarithmic, z_i, ncm_matrix_ptr (lnPk, m, 0), NULL);
+
+      /*printf ("Redshift %d[%d] : % 21.15g!\n", m, z_tsize, z_i);*/      
+      m++;
     }
-*/
+    
   }
+
+  {
+    const gdouble z_i = z_i_b;
+
+    ncm_vector_set (z_v, m, z_i);
+    spectra_pk_at_z (&cbe->priv->pba, &cbe->priv->psp, logarithmic, z_i, ncm_matrix_ptr (lnPk, m, 0), NULL);
+
+    /*printf ("Redshift %d[%d] : % 21.15g!\n", m, z_tsize, z_i);*/
+    m++;
+  }
+
+  g_free (pvecback);
 
   {
     NcmSpline2d *lnPk_s = ncm_spline2d_bicubic_notaknot_new ();

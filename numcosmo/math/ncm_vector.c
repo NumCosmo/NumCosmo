@@ -662,14 +662,6 @@ ncm_vector_log_vals_func (const NcmVector *v, const gchar *prestr, const gchar *
  * 
  */
 /**
- * ncm_vector_add_constant:
- * @cv: a #NcmVector
- * @val: a constant double
- * 
- * This function adds @val to all components of @cv.
- * 
- */
-/**
  * ncm_vector_set_all:
  * @cv: a #NcmVector
  * @val: a constant double

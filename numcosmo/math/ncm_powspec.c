@@ -162,7 +162,7 @@ ncm_powspec_class_init (NcmPowspecClass *klass)
                                    PROP_ZI,
                                    g_param_spec_double ("zi",
                                                         NULL,
-                                                        "Initial redshift",
+                                                        "Initial time",
                                                         0.0, G_MAXDOUBLE, 0.0,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
@@ -170,7 +170,7 @@ ncm_powspec_class_init (NcmPowspecClass *klass)
                                    PROP_ZF, 
                                    g_param_spec_double ("zf",
                                                         NULL,
-                                                        "Final redshift",
+                                                        "Final time",
                                                         0.0, G_MAXDOUBLE, 1.0,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
@@ -253,9 +253,9 @@ ncm_powspec_clear (NcmPowspec **powspec)
 /**
  * ncm_powspec_set_zi:
  * @powspec: a #NcmPowspec
- * @zi: initial redshift $z_i$
+ * @zi: initial time $z_i$
  * 
- * Sets the initial redshift $z_i$.
+ * Sets the initial time $z_i$.
  *
  */
 void 
@@ -271,9 +271,9 @@ ncm_powspec_set_zi (NcmPowspec *powspec, const gdouble zi)
 /**
  * ncm_powspec_set_zf:
  * @powspec: a #NcmPowspec
- * @zf: final redshift $z_f$
+ * @zf: final time $z_f$
  * 
- * Sets the final redshift $z_f$.
+ * Sets the final time $z_f$.
  *
  */
 void 
@@ -325,9 +325,9 @@ ncm_powspec_set_kmax (NcmPowspec *powspec, const gdouble kmax)
 /**
  * ncm_powspec_require_zi:
  * @powspec: a #NcmPowspec
- * @zi: initial redshift $z_i$
+ * @zi: initial time $z_i$
  * 
- * Requires the initial redshift to be less or equal to $z_i$.
+ * Requires the initial time to be less or equal to $z_i$.
  *
  */
 void 
@@ -340,9 +340,9 @@ ncm_powspec_require_zi (NcmPowspec *powspec, const gdouble zi)
 /**
  * ncm_powspec_require_zf:
  * @powspec: a #NcmPowspec
- * @zf: final redshift $z_f$
+ * @zf: final time $z_f$
  * 
- * Requires the final redshift to be greater or equal to $z_f$.
+ * Requires the final time to be greater or equal to $z_f$.
  *
  */
 void 
@@ -471,7 +471,7 @@ ncm_powspec_get_nknots (NcmPowspec *powspec, guint *Nz, guint *Nk)
  * ncm_powspec_eval:
  * @powspec: a #NcmPowspec
  * @model: a #NcmModel
- * @z: redshift $z$
+ * @z: time $z$
  * @k: mode $k$
  * 
  * Evaluates the power spectrum @powspec at $(z, k)$.
@@ -482,7 +482,7 @@ ncm_powspec_get_nknots (NcmPowspec *powspec, guint *Nz, guint *Nk)
  * ncm_powspec_eval_vec:
  * @powspec: a #NcmPowspec
  * @model: a #NcmModel
- * @z: redshift $z$
+ * @z: time $z$
  * @k: a #NcmVector
  * @Pk: (out caller-allocates): a #NcmVector
  * 
