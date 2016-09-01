@@ -659,7 +659,7 @@ ncm_vector_log_vals_func (const NcmVector *v, const gchar *prestr, const gchar *
  * @val: a constant double
  *
  * This function multiplies the @i-th component by @val assuming stride == 1.
- *
+ * 
  */
 /**
  * ncm_vector_set_all:
