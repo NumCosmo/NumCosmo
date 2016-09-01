@@ -256,7 +256,7 @@ _xcor_limber_cvode_int (realtype z, N_Vector y, N_Vector ydot, gpointer params)
 	const gdouble xi_z_phys = xi_z * xclc->xc->RH; // in Mpc
 	const gdouble E_z = nc_hicosmo_E (xclc->cosmo, z);
 	const gdouble k1z = nc_xcor_limber_kernel_eval (xclc->xclk1, xclc->cosmo, z, 0);
-	const guint nell = xclc->nell;
+	// const guint nell = xclc->nell;
 	// NcmVector* Pk = ncm_vector_new (nell);
 	// NcmVector* k = ncm_vector_new (nell);
 
@@ -273,15 +273,15 @@ _xcor_limber_cvode_int (realtype z, N_Vector y, N_Vector ydot, gpointer params)
 		geoW1W2 = E_z * k1z * k2z / (xi_z * xi_z);
 	}
 
-	for (i = 0; i < nell; i++)
+	for (i = 0; i < xclc->nell; i++)
 	{
 		l = i + xclc->lmin;
-		ncm_vector_set (xclc->k, i, (l + 0.5) / xi_z_phys);
+		ncm_vector_set (xclc->k, i, ((gdouble)l + 0.5) / xi_z_phys); // in Mpc-1
 	}
 
 	ncm_powspec_eval_vec (xclc->xc->ps, NCM_MODEL (xclc->cosmo), z, xclc->k, xclc->Pk);
 
-	for (i = 0; i < nell; i++)
+	for (i = 0; i < xclc->nell; i++)
 	{
 		NV_Ith_S (ydot, i) = ncm_vector_get (xclc->Pk, i) * geoW1W2;
 	}
@@ -306,6 +306,8 @@ _nc_xcor_limber_cvode (NcXcor* xc, NcXcorLimberKernel* xclk1, NcXcorLimberKernel
 	guint i;
 	NcmVector* k = ncm_vector_new (nell);
 	NcmVector* Pk = ncm_vector_new (nell);
+	ncm_vector_set_zero(k);
+	ncm_vector_set_zero(Pk);
 
 	for (i = 0; i < nell; i++)
 	{
@@ -315,11 +317,17 @@ _nc_xcor_limber_cvode (NcXcor* xc, NcXcorLimberKernel* xclk1, NcXcorLimberKernel
 	xcor_limber_cvode xclc = { isauto, lmin, lmax, nell, k, Pk, xc, xclk1, xclk2, cosmo }; //, cons_factor };
 
 	/* First integrate from zmid to zmin*/
-	CVodeInit (cvode, cvodefunc, zmid, yv);
+	flag = CVodeInit (cvode, cvodefunc, zmid, yv);
+	NCM_CVODE_CHECK (&flag, "CVodeInit", 1, );
 
-	CVodeSStolerances (cvode, NCM_DEFAULT_PRECISION, 0.0);
-	CVodeSetMaxNumSteps (cvode, 5000);
-	CVodeSetUserData (cvode, &xclc);
+	flag = CVodeSStolerances (cvode, NCM_DEFAULT_PRECISION, 0.0);
+	NCM_CVODE_CHECK (&flag, "CVodeSStolerances", 1, );
+
+	flag = CVodeSetMaxNumSteps (cvode, 5000);
+	NCM_CVODE_CHECK (&flag, "CVodeSetMaxNumSteps", 1, );
+
+	flag = CVodeSetUserData (cvode, &xclc);
+	NCM_CVODE_CHECK (&flag, "CVodeSetUserData", 1, );
 
 	flag = CVode (cvode, zmin, yv, &z, CV_NORMAL);
 	NCM_CVODE_CHECK (&flag, "CVode", 1, );
@@ -330,11 +338,8 @@ _nc_xcor_limber_cvode (NcXcor* xc, NcXcorLimberKernel* xclk1, NcXcorLimberKernel
 	}
 
 	/* Then integrate from zmid to zmax*/
-	CVodeInit (cvode, cvodefunc, zmid, yv);
-
-	CVodeSStolerances (cvode, NCM_DEFAULT_PRECISION, 0.0);
-	CVodeSetMaxNumSteps (cvode, 5000);
-	CVodeSetUserData (cvode, &xclc);
+	flag = CVodeReInit (cvode, zmid, yv);
+	NCM_CVODE_CHECK (&flag, "CVodeReInit", 1, );
 
 	flag = CVode (cvode, zmax, yv, &z, CV_NORMAL);
 	NCM_CVODE_CHECK (&flag, "CVode", 1, );
@@ -372,7 +377,7 @@ _xcor_limber_gsl_cross_int (gdouble z, gpointer ptr)
 {
 	xcor_limber_gsl* xclki = (xcor_limber_gsl*)ptr;
 	const gdouble xi_z = nc_distance_comoving (xclki->dist, xclki->cosmo, z); // in units of Hubble radius
-	const gdouble xi_z_phys = xi_z * xclki->RH; // in Mpc-1
+	const gdouble xi_z_phys = xi_z * xclki->RH; // in Mpc
 	const gdouble E_z = nc_hicosmo_E (xclki->cosmo, z);
 	const gdouble k = (xclki->l + 0.5) / (xi_z_phys); // in Mpc-1
 	const gdouble power_spec = ncm_powspec_eval (NCM_POWSPEC (xclki->ps), NCM_MODEL (xclki->cosmo), z, k);
@@ -388,7 +393,7 @@ _xcor_limber_gsl_auto_int (gdouble z, gpointer ptr)
 {
 	xcor_limber_gsl* xclki = (xcor_limber_gsl*)ptr;
 	const gdouble xi_z = nc_distance_comoving (xclki->dist, xclki->cosmo, z); // in units of Hubble radius
-	const gdouble xi_z_phys = xi_z * xclki->RH; // in Mpc-1
+	const gdouble xi_z_phys = xi_z * xclki->RH; // in Mpc
 	const gdouble E_z = nc_hicosmo_E (xclki->cosmo, z);
 	const gdouble k = (xclki->l + 0.5) / (xi_z_phys); // in Mpc-1
 	const gdouble power_spec = ncm_powspec_eval (NCM_POWSPEC (xclki->ps), NCM_MODEL (xclki->cosmo), z, k);
