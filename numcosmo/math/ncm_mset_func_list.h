@@ -53,8 +53,15 @@ struct _NcmMSetFuncListClass
   GHashTable *ns_hash;
 };
 
+/**
+ * NcmMSetFuncListStruct:
+ * 
+ * FIXME
+ * 
+ */
 typedef struct _NcmMSetFuncListStruct
 {
+  /*< private >*/
   gchar *name;
   gchar *symbol;
   gchar *ns;
