@@ -1878,7 +1878,6 @@ nc_cbe_get_matter_ps (NcCBE *cbe)
       /*printf ("Redshift %d[%d] : % 21.15g!\n", m, z_tsize, z_i);*/      
       m++;
     }
-    
   }
 
   {
