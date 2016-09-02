@@ -1842,9 +1842,38 @@ nc_cbe_get_matter_ps (NcCBE *cbe)
   {
     ncm_vector_set (lnk_v, i, cbe->priv->psp.ln_k[i]);
   }
-
+  
   m = 0;
-  for (i = 0; i < z_size - 1; i++)
+  i = 0;
+  {
+    gdouble ln_tau_i;
+    gint last_index_back;
+    guint j;
+
+    z_i_a = 0.0;
+
+    ln_tau_i = cbe->priv->psp.ln_tau[z_size - i - 2];
+    background_at_tau (&cbe->priv->pba,
+                       exp (ln_tau_i),
+                       cbe->priv->pba.short_info,
+                       cbe->priv->pba.inter_normal,
+                       &last_index_back,
+                       pvecback);    
+    z_i_b = cbe->priv->pba.a_today / pvecback[cbe->priv->pba.index_bg_a] - 1.0;
+
+    for (j = 0; j < partz; j++)
+    {
+      const gdouble z_i = z_i_a + (z_i_b - z_i_a) / (partz * 1.0) * j; 
+
+      ncm_vector_set (z_v, m, z_i);
+      spectra_pk_at_z (&cbe->priv->pba, &cbe->priv->psp, logarithmic, z_i, ncm_matrix_ptr (lnPk, m, 0), NULL);
+
+      /*printf ("Redshift %d[%d] : % 21.15g!\n", m, z_tsize, z_i);*/
+      m++;
+    }
+  }
+
+  for (i = 1; i < z_size - 1; i++)
   {
     gdouble ln_tau_i;
     gint last_index_back;
@@ -1875,7 +1904,7 @@ nc_cbe_get_matter_ps (NcCBE *cbe)
       ncm_vector_set (z_v, m, z_i);
       spectra_pk_at_z (&cbe->priv->pba, &cbe->priv->psp, logarithmic, z_i, ncm_matrix_ptr (lnPk, m, 0), NULL);
 
-      /*printf ("Redshift %d[%d] : % 21.15g!\n", m, z_tsize, z_i);*/      
+      /*printf ("Redshift %d[%d] : % 21.15g!\n", m, z_tsize, z_i);*/
       m++;
     }
   }

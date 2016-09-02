@@ -190,7 +190,7 @@ _nc_powspec_ml_cbe_eval (NcmPowspec *powspec, NcmModel *model, const gdouble z, 
   {
     const gdouble lnkmin = log (NC_POWSPEC_ML_CBE_INTERN_KMIN);
     const gdouble match = exp (ncm_spline2d_eval (ps_cbe->lnPk, lnkmin, z)) / ncm_powspec_eval (NCM_POWSPEC (ps_cbe->eh), model, z, NC_POWSPEC_ML_CBE_INTERN_KMIN);
-    
+
     return match * ncm_powspec_eval (NCM_POWSPEC (ps_cbe->eh), model, z, k);
   }
   else if (k > NC_POWSPEC_ML_CBE_INTERN_KMAX)
