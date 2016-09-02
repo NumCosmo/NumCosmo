@@ -57,23 +57,20 @@ enum
   PROP_EOM,
 };
 
-G_DEFINE_TYPE (NcHIPertWKB, nc_hipert_wkb, NC_TYPE_HIPERT);
+G_DEFINE_ABSTRACT_TYPE (NcHIPertWKB, nc_hipert_wkb, NC_TYPE_HIPERT);
 
 static gdouble _nc_hipert_wkb_phase (gdouble x, gpointer userdata);
 
 typedef struct _NcHIPertWKBArg
 {
-  GObject *obj;
+  NcmModel *model;
   NcHIPertWKB *wkb;
-  gdouble prec;
 } NcHIPertWKBArg;
 
 
 static void
 nc_hipert_wkb_init (NcHIPertWKB *wkb)
 {
-  wkb->impl_type   = G_TYPE_INVALID;
-  wkb->obj         = NULL;
   wkb->nuA         = ncm_spline_cubic_notaknot_new ();
 
   wkb->alpha_i     = 0.0;
@@ -101,14 +98,11 @@ nc_hipert_wkb_constructed (GObject *object)
 static void
 nc_hipert_wkb_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
 {
-  NcHIPertWKB *wkb = NC_HIPERT_WKB (object); 
+  /*NcHIPertWKB *wkb = NC_HIPERT_WKB (object);*/ 
   g_return_if_fail (NC_IS_HIPERT_WKB (object));
 
   switch (prop_id)
   {
-    case PROP_IMPL_TYPE:
-      wkb->impl_type = g_value_get_gtype (value);
-      break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
       break;
@@ -118,14 +112,11 @@ nc_hipert_wkb_set_property (GObject *object, guint prop_id, const GValue *value,
 static void
 nc_hipert_wkb_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
 {
-  NcHIPertWKB *wkb = NC_HIPERT_WKB (object);
+  /*NcHIPertWKB *wkb = NC_HIPERT_WKB (object);*/
   g_return_if_fail (NC_IS_HIPERT_WKB (object));
 
   switch (prop_id)
   {
-    case PROP_IMPL_TYPE:
-      g_value_set_gtype (value, wkb->impl_type);
-      break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
       break;
@@ -137,7 +128,6 @@ nc_hipert_wkb_dispose (GObject *object)
 {
   NcHIPertWKB *wkb = NC_HIPERT_WKB (object);
 
-  g_clear_object (&wkb->obj);
   ncm_spline_clear (&wkb->nuA);
 
   ncm_spline_clear (&wkb->lnF);
@@ -159,6 +149,12 @@ static void _nc_hipert_wkb_set_mode_k (NcHIPert *pert, gdouble k);
 static void _nc_hipert_wkb_set_abstol (NcHIPert *pert, gdouble abstol);
 static void _nc_hipert_wkb_set_reltol (NcHIPert *pert, gdouble reltol); 
 
+static void _nc_hipert_wkb_get_nu_V (NcHIPertWKB *wkb, NcmModel *model, gdouble alpha, gdouble k, gdouble *nu, gdouble *V) { g_error ("_nc_hipert_wkb_get_nu_V: not implemented by `%s'.", G_OBJECT_TYPE_NAME (wkb)); }
+static void _nc_hipert_wkb_get_mnu_dmnu (NcHIPertWKB *wkb, NcmModel *model, gdouble alpha, gdouble k, gdouble *mnu, gdouble *dmnu) { g_error ("_nc_hipert_wkb_get_mnu_dmnu: not implemented by `%s'.", G_OBJECT_TYPE_NAME (wkb)); }
+static gdouble _nc_hipert_wkb_get_m (NcHIPertWKB *wkb, NcmModel *model, gdouble alpha, gdouble k) { g_error ("_nc_hipert_wkb_get_m: not implemented by `%s'.", G_OBJECT_TYPE_NAME (wkb)); return 0.0; }
+static gdouble _nc_hipert_wkb_get_nu2 (NcHIPertWKB *wkb, NcmModel *model, gdouble alpha, gdouble k) { g_error ("_nc_hipert_wkb_get_nu2: not implemented by `%s'.", G_OBJECT_TYPE_NAME (wkb)); return 0.0; }
+static gdouble _nc_hipert_wkb_get_dVnu2 (NcHIPertWKB *wkb, NcmModel *model, gdouble alpha, gdouble k) { g_error ("_nc_hipert_wkb_get_dVnu2: not implemented by `%s'.", G_OBJECT_TYPE_NAME (wkb)); return 0.0; }
+
 static void
 nc_hipert_wkb_class_init (NcHIPertWKBClass *klass)
 {
@@ -169,46 +165,16 @@ nc_hipert_wkb_class_init (NcHIPertWKBClass *klass)
   object_class->get_property = nc_hipert_wkb_get_property;
   object_class->dispose      = nc_hipert_wkb_dispose;
   object_class->finalize     = nc_hipert_wkb_finalize;
-
-  g_object_class_install_property (object_class,
-                                   PROP_IMPL_TYPE,
-                                   g_param_spec_gtype ("impl-type",
-                                                       NULL,
-                                                       "Implementation GType",
-                                                       G_TYPE_NONE,
-                                                       G_PARAM_WRITABLE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
   
-  g_object_class_install_property (object_class,
-                                   PROP_NUA2,
-                                   g_param_spec_pointer ("nuA2",
-                                                         NULL,
-                                                         "nu_A^2",
-                                                         G_PARAM_WRITABLE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-
-  g_object_class_install_property (object_class,
-                                   PROP_V,
-                                   g_param_spec_pointer ("V",
-                                                         NULL,
-                                                         "Potential",
-                                                         G_PARAM_WRITABLE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-
-  g_object_class_install_property (object_class,
-                                   PROP_DMNUA_NUA,
-                                   g_param_spec_pointer ("dmnuA-nuA",
-                                                         NULL,
-                                                         "dm\\nu_A/\\nu_A",
-                                                         G_PARAM_WRITABLE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-
-  g_object_class_install_property (object_class,
-                                   PROP_EOM,
-                                   g_param_spec_pointer ("eom",
-                                                         NULL,
-                                                         "Equation of motion",
-                                                         G_PARAM_WRITABLE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-
   NC_HIPERT_CLASS (klass)->set_mode_k = &_nc_hipert_wkb_set_mode_k;
   NC_HIPERT_CLASS (klass)->set_abstol = &_nc_hipert_wkb_set_abstol;
   NC_HIPERT_CLASS (klass)->set_reltol = &_nc_hipert_wkb_set_reltol;
+
+  klass->get_nu_V                     = &_nc_hipert_wkb_get_nu_V;
+  klass->get_mnu_dmnu                 = &_nc_hipert_wkb_get_mnu_dmnu;
+  klass->get_m                        = &_nc_hipert_wkb_get_m;
+  klass->get_nu2                      = &_nc_hipert_wkb_get_nu2;
+  klass->get_dVnu2                    = &_nc_hipert_wkb_get_dVnu2;
 }
 
 static void 
@@ -255,27 +221,22 @@ _nc_hipert_wkb_set_reltol (NcHIPert *pert, gdouble reltol)
 
 /**
  * nc_hipert_wkb_new:
- * @impl_type: FIXME
- * @nuA2: (scope notified): FIXME
- * @V: (scope notified): FIXME
- * @dmnuA_nuA: (scope notified): FIXME 
- * @eom: (scope notified): FIXME
  * 
  * Creates a new #NcHIPertWKB object.
  * 
  * Returns: (transfer full): a new #NcHIPertWKB.
  */
 NcHIPertWKB *
-nc_hipert_wkb_new (GType impl_type, NcHIPertWKBFunc nuA2, NcHIPertWKBFunc V, NcHIPertWKBFunc dmnuA_nuA, NcHIPertWKBEom eom)
+nc_hipert_wkb_new_by_name (const gchar *wkb_name)
 {
-  NcHIPertWKB *wkb = g_object_new (NC_TYPE_HIPERT_WKB,
-                                   "impl-type", impl_type,
-                                   "nuA2", nuA2,
-                                   "V", V,
-                                   "dmnuA_nuA", dmnuA_nuA,
-                                   "eom", eom,
-                                   NULL);
-  return wkb;
+  GObject *obj = ncm_serialize_global_from_string (wkb_name);
+  
+  GType wkb_type = G_OBJECT_TYPE (obj);
+  
+  if (!g_type_is_a (wkb_type, NC_TYPE_HIPERT_WKB))
+    g_error ("nc_hipert_wkb_new_by_name: Object `%s' does not descend from %s.", wkb_name, g_type_name (NC_TYPE_HIPERT_WKB));
+
+  return NC_HIPERT_WKB (obj);
 }
 
 /**
@@ -318,33 +279,111 @@ nc_hipert_wkb_clear (NcHIPertWKB **wkb)
   g_clear_object (wkb);
 }
 
+/**
+ * nc_hipert_wkb_set_interval:
+ * @wkb: a #NcHIPertWKB
+ * @alpha_i: initial log-redshift time
+ * @alpha_f: final log-redshift time
+ * 
+ * Sets the interval to calculate the WKB modes to $(\alpha_i,\,\alpha_f)$.
+ * 
+ */
+void 
+nc_hipert_wkb_set_interval (NcHIPertWKB *wkb, gdouble alpha_i, gdouble alpha_f)
+{
+  if ((wkb->alpha_i != alpha_i) || (wkb->alpha_f != alpha_f))
+  {
+    g_assert_cmpfloat (alpha_f, >, alpha_i);
+
+    wkb->alpha_i = alpha_i;
+    wkb->alpha_f = alpha_f;
+
+    NC_HIPERT (wkb)->prepared = FALSE;
+  }
+}
+
+/**
+ * nc_hipert_wkb_get_nu_V: (virtual get_nu_V)
+ * @wkb: a #NcHIPertWKB
+ * @model: a #NcmModel
+ * @alpha: log-redshift time
+ * @k: mode $k$
+ * @nu: (out): frequency $\nu$
+ * @V: (out): WKB potential
+ * 
+ * FIXME
+ * 
+ */
+/**
+ * nc_hipert_wkb_get_mnu_dmnu: (virtual get_mnu_dmnu)
+ * @wkb: a #NcHIPertWKB
+ * @model: a #NcmModel
+ * @alpha: log-redshift time
+ * @k: mode $k$
+ * @mnu: (out): mass-frequency $m\nu$
+ * @dmnu: (out):  mass-frequency derivative $\mathrm{d}m\nu/\mathrm{d}\alpha$
+ * 
+ * FIXME
+ * 
+ */
+/**
+ * nc_hipert_wkb_get_m: (virtual get_m)
+ * @wkb: a #NcHIPertWKB
+ * @model: a #NcmModel
+ * @alpha: log-redshift time
+ * @k: mode $k$
+ * 
+ * FIXME
+ * 
+ * Returns: mass $m$.
+ */
+/**
+ * nc_hipert_wkb_get_nu2: (virtual get_nu2)
+ * @wkb: a #NcHIPertWKB
+ * @model: a #NcmModel
+ * @alpha: log-redshift time
+ * @k: mode $k$
+ * 
+ * FIXME
+ * 
+ * Returns: frequency squared $m^2$.
+ */
+/**
+ * nc_hipert_wkb_get_dVnu2: (virtual get_dVnu2)
+ * @wkb: a #NcHIPertWKB
+ * @model: a #NcmModel
+ * @alpha: log-redshift time
+ * @k: mode $k$
+ * 
+ * FIXME
+ * 
+ * Returns: derivative of the WKB potential $\mathrm{d}(V/\nu^2)/\mathrm{d}\alpha$.
+ */
+
 static gdouble 
 _nc_hipert_wkb_phase (gdouble alpha, gpointer userdata)
 {
   NcHIPertWKBArg *arg = (NcHIPertWKBArg *) userdata;
   gdouble nu, V;
 
-  nc_hipert_wkb_get_nu_V (arg->wkb, alpha, NC_HIPERT (arg->wkb)->k, &nu, &V);
+  nc_hipert_wkb_get_nu_V (arg->wkb, arg->model, alpha, NC_HIPERT (arg->wkb)->k, &nu, &V);
 
   return nu;
 }
 
 void 
-_nc_hipert_wkb_prepare_approx (NcHIPertWKB *wkb, GObject *obj, gdouble alpha_i, gdouble alpha_f)
+_nc_hipert_wkb_prepare_approx (NcHIPertWKB *wkb, NcmModel *model)
 {
   NcHIPertWKBArg arg;
   gsl_function F;
 
-  arg.obj = obj;
-  arg.wkb = wkb;
+  arg.model = model;
+  arg.wkb   = wkb;
 
   F.params = &arg;
   F.function = &_nc_hipert_wkb_phase;
 
-  ncm_spline_set_func (wkb->nuA, NCM_SPLINE_FUNCTION_SPLINE, &F, alpha_i, alpha_f, 1000000000, NC_HIPERT (wkb)->reltol);
-
-  wkb->alpha_i = alpha_i;
-  wkb->alpha_f = alpha_f;
+  ncm_spline_set_func (wkb->nuA, NCM_SPLINE_FUNCTION_SPLINE, &F, wkb->alpha_i, wkb->alpha_f, 1000000000, NC_HIPERT (wkb)->reltol);
 }
 
 static gint
@@ -353,7 +392,7 @@ _nc_hipert_wkb_phase_f (realtype alpha, N_Vector y, N_Vector ydot, gpointer f_da
   NcHIPertWKBArg *arg   = (NcHIPertWKBArg *) f_data;
   gdouble nu = 0.0, V = 0.0;
 
-  nc_hipert_wkb_get_nu_V (arg->wkb, alpha, NC_HIPERT (arg->wkb)->k, &nu, &V);
+  nc_hipert_wkb_get_nu_V (arg->wkb, arg->model, alpha, NC_HIPERT (arg->wkb)->k, &nu, &V);
   {
     const gdouble rnu   = NV_Ith_S (y, 0);
     const gdouble U     = NV_Ith_S (y, 1);
@@ -374,7 +413,7 @@ _nc_hipert_wkb_phase_J (_NCM_SUNDIALS_INT_TYPE N, realtype alpha, N_Vector y, N_
   NcHIPertWKBArg *arg  = (NcHIPertWKBArg *) jac_data;
   gdouble nu = 0.0, V = 0.0;
 
-  nc_hipert_wkb_get_nu_V (arg->wkb, alpha, NC_HIPERT (arg->wkb)->k, &nu, &V);
+  nc_hipert_wkb_get_nu_V (arg->wkb, arg->model, alpha, NC_HIPERT (arg->wkb)->k, &nu, &V);
   {
     const gdouble rnu   = NV_Ith_S (y, 0);
     const gdouble U     = NV_Ith_S (y, 1);
@@ -393,11 +432,11 @@ _nc_hipert_wkb_phase_J (_NCM_SUNDIALS_INT_TYPE N, realtype alpha, N_Vector y, N_
 }
 
 void 
-_nc_hipert_wkb_prepare_exact (NcHIPertWKB *wkb, GObject *obj, gdouble alpha_i, gdouble alpha_f)
+_nc_hipert_wkb_prepare_exact (NcHIPertWKB *wkb, NcmModel *model)
 {
   NcHIPert *pert = NC_HIPERT (wkb);
   gint flag;
-  gdouble alpha = alpha_i;
+  gdouble alpha = wkb->alpha_i;
   GArray *alpha_a;
   GArray *lnF;
   GArray *dlnF;
@@ -417,7 +456,7 @@ _nc_hipert_wkb_prepare_exact (NcHIPertWKB *wkb, GObject *obj, gdouble alpha_i, g
   nuA_a = ncm_vector_get_array (v);
   ncm_vector_free (v);
 
-  g_assert_cmpfloat (g_array_index (alpha_nuA_a, gdouble, alpha_nuA_a->len - 1), ==, alpha_i);
+  g_assert_cmpfloat (g_array_index (alpha_nuA_a, gdouble, alpha_nuA_a->len - 1), ==, wkb->alpha_i);
   
   if ((v = ncm_spline_get_xv (wkb->lnF)) != NULL)
   {
@@ -449,28 +488,28 @@ _nc_hipert_wkb_prepare_exact (NcHIPertWKB *wkb, GObject *obj, gdouble alpha_i, g
   {
     gdouble nu, nu2, V, dVnu2;
 
-    nc_hipert_wkb_get_nu_V (wkb, alpha, pert->k, &nu, &V);
+    nc_hipert_wkb_get_nu_V (wkb, model, alpha, pert->k, &nu, &V);
 
     nu2   = nu * nu;
-    dVnu2 = nc_hipert_wkb_get_dVnu2 (wkb, alpha, pert->k);
+    dVnu2 = nc_hipert_wkb_get_dVnu2 (wkb, model, alpha, pert->k);
       
     NV_Ith_S (pert->y, 0) = 0.25 * log1p (V / nu2);
     NV_Ith_S (pert->y, 1) = 0.25 * (dVnu2 / (1.0 + V / nu2));
   }
 
-  g_array_append_val (alpha_a, alpha_i);
+  g_array_append_val (alpha_a, wkb->alpha_i);
   g_array_append_val (lnF, NV_Ith_S (pert->y, 0));
   g_array_append_val (dlnF, NV_Ith_S (pert->y, 1));
 
   if (!pert->cvode_init)
   {
-    flag = CVodeInit (pert->cvode, &_nc_hipert_wkb_phase_f, alpha_i, pert->y);
+    flag = CVodeInit (pert->cvode, &_nc_hipert_wkb_phase_f, wkb->alpha_i, pert->y);
     NCM_CVODE_CHECK (&flag, "CVodeInit", 1, );
     pert->cvode_init = TRUE;
   }
   else
   {
-    flag = CVodeReInit (pert->cvode, alpha_i, pert->y);
+    flag = CVodeReInit (pert->cvode, wkb->alpha_i, pert->y);
     NCM_CVODE_CHECK (&flag, "CVodeReInit", 1, );
   }
 
@@ -487,33 +526,42 @@ _nc_hipert_wkb_prepare_exact (NcHIPertWKB *wkb, GObject *obj, gdouble alpha_i, g
   NCM_CVODE_CHECK (&flag, "CVDlsSetDenseJacFn", 1, );  
 
   {
-    gdouble last = alpha_i;
+    gdouble last = wkb->alpha_i;
     NcHIPertWKBArg arg;
-    arg.obj = obj;
-    arg.wkb = wkb;
+    arg.model = model;
+    arg.wkb   = wkb;
 
     flag = CVodeSetUserData (pert->cvode, &arg);
     NCM_CVODE_CHECK (&flag, "CVodeSetUserData", 1, );
 
-    while (alpha < alpha_f)
+    while (alpha < wkb->alpha_f)
     {
-      flag = CVode (pert->cvode, alpha_f, pert->y, &alpha, CV_ONE_STEP);
+      gdouble mnu, dmnu;
+      flag = CVode (pert->cvode, wkb->alpha_f, pert->y, &alpha, CV_ONE_STEP);
       NCM_CVODE_CHECK (&flag, "CVode[_nc_hipert_wkb_prepare_exact]", 1, );
 
       if (fabs (2.0 * (alpha - last) / (alpha + last)) > 1.0e-6)
       {
-        const gdouble m_i   = nc_hipert_wkb_get_m (wkb, alpha, pert->k);
-        const gdouble nu2_i = nc_hipert_wkb_get_nu2 (wkb, alpha, pert->k);
-        const gdouble nuA_i = exp (2.0 * NV_Ith_S (pert->y, 0)) * sqrt (nu2);
+        const gdouble rnu   = NV_Ith_S (pert->y, 0);
+        const gdouble Unu   = NV_Ith_S (pert->y, 1);
+        const gdouble Rnu   = exp (rnu);
+        const gdouble m_i   = nc_hipert_wkb_get_m (wkb, model, alpha, pert->k);
+        const gdouble nu_i  = sqrt (nc_hipert_wkb_get_nu2 (wkb, model, alpha, pert->k));
+        const gdouble nuA_i = Rnu * Rnu * nu_i;
 
-        const gdouble lnF_i = log (m_i * nuA_i);
+        const gdouble lnF_i  = log (m_i * nuA_i);
+        gdouble dlnF_i;
 
+        nc_hipert_wkb_get_mnu_dmnu (wkb, model, alpha, pert->k, &mnu, &dmnu);
+
+        dlnF_i = dmnu / mnu - 2.0 * Rnu * Unu / nu_i;
+        
         g_array_append_val (alpha_a, alpha);
-        g_array_append_val (lnF, NV_Ith_S (pert->y, 0));
-        g_array_append_val (dlnF, NV_Ith_S (pert->y, 1));
+        g_array_append_val (lnF, lnF_i);
+        g_array_append_val (dlnF, dlnF_i);
 
         g_array_append_val (alpha_nuA_a, alpha);
-        g_array_append_val (nuA_a, nuA_k);
+        g_array_append_val (nuA_a, nuA_i);
 
         last = alpha;
       }
@@ -533,140 +581,118 @@ _nc_hipert_wkb_prepare_exact (NcHIPertWKB *wkb, GObject *obj, gdouble alpha_i, g
 
 /**
  * nc_hipert_wkb_prepare:
- * @wkb: a #NcHIPertWKB.
- * @obj: the WKB implementation.
- * @prec: Required precision.
- * @alpha_i: initial log-redshift time.
- * @alpha_f: final log-redshift time.
+ * @wkb: a #NcHIPertWKB
+ * @model: a #NcmModel
  * 
- * Prepare the object for WKB calculations using the implementation @obj. It uses the wkb 
- * approximation until @prec is reached and then it solves the non-linear equation of motion 
+ * Prepare the object for WKB calculations using the model @model. It uses the wkb 
+ * approximation until @wkb->reltol is reached and then it solves the non-linear equation of motion 
  * for $\nu_A$ for the rest of the interval. 
  * 
  */
 void 
-nc_hipert_wkb_prepare (NcHIPertWKB *wkb, GObject *obj, gdouble prec, gdouble alpha_i, gdouble alpha_f)
+nc_hipert_wkb_prepare (NcHIPertWKB *wkb, NcmModel *model)
 {
   NcHIPert *pert = NC_HIPERT (wkb);
-  
-  if (wkb->obj != obj)
-  {
-    g_clear_object (&wkb->obj);
-    g_assert (g_type_is_a (G_OBJECT_TYPE (obj), wkb->impl_type));
-    wkb->obj = g_object_ref (obj);
-  }
+  const gdouble prec = nc_hipert_get_reltol (pert);
+  gdouble nu_i, V_i, nu_f, V_f;
 
-  if (!pert->prepared || (alpha_i != wkb->alpha_i || alpha_f != wkb->alpha_f))
+  if (!pert->prepared)
   {
-    const gdouble nuA2_i = wkb->nuA2 (obj, alpha_i, pert->k);
-    const gdouble nuA2_f = wkb->nuA2 (obj, alpha_f, pert->k);
-    if (nuA2_i < 0.0)
+    gdouble nu2_i, nu2_f;
+    nc_hipert_wkb_get_nu_V (wkb, model, wkb->alpha_i, pert->k, &nu_i, &V_i);
+    nc_hipert_wkb_get_nu_V (wkb, model, wkb->alpha_f, pert->k, &nu_f, &V_f);
+
+    nu2_i = nu_i * nu_i;
+    nu2_f = nu_f * nu_f;
+    
+    if (fabs (nu2_i / V_i) < 1.0)
     {
       g_error ("nc_hipert_wkb_prepare: cannot prepare wkb solution in the interval [% 7.5g % 7.5g], the WKB approximation is not valid at % 7.5g (nuA2_i = % 7.5g, nuA2_i = % 7.5g).",
-               alpha_i, alpha_f, alpha_i, nuA2_i, nuA2_f);
+               wkb->alpha_i, wkb->alpha_f, wkb->alpha_i, nu2_i, nu2_f);
     }
     else
     {
-      gdouble m = 0.0, nu2 = 0.0, dlnm = 0.0;
-      const gdouble V_i = wkb->V (obj, alpha_i, pert->k);
-      wkb->eom (obj, alpha_i, pert->k, &nu2, &m, &dlnm);
-      
-      if (prec < fabs (V_i / nu2))
+      if (prec < fabs (V_i / nu2_i))
       {
         g_error ("nc_hipert_wkb_prepare: cannot prepare wkb solution in the interval [% 7.5g % 7.5g], this interval is beyond the desired precision [%7.5e].",
-                 alpha_i, alpha_f, prec);
+                 wkb->alpha_i, wkb->alpha_f, prec);
       }
       else
       {
-        const gdouble V_f = wkb->V (obj, alpha_f, pert->k);
-        wkb->eom (obj, alpha_f, pert->k, &nu2, &m, &dlnm);
-        if (fabs (V_f / nu2) < prec)
+        if (fabs (V_f / nu2_f) < prec)
         {
-          _nc_hipert_wkb_prepare_approx (wkb, obj, alpha_i, alpha_f);
-          wkb->alpha_p = alpha_f;
+          _nc_hipert_wkb_prepare_approx (wkb, model);
+          wkb->alpha_p = wkb->alpha_f;
         }
         else
         {
-          const gdouble alpha_p = nc_hipert_wkb_maxtime_prec (wkb, obj, NC_HIPERT_WKB_CMP_POTENTIAL, prec, alpha_i, alpha_f);
+          const gdouble alpha_p = nc_hipert_wkb_maxtime_prec (wkb, model, NC_HIPERT_WKB_CMP_POTENTIAL, wkb->alpha_i, wkb->alpha_f);
           if (!gsl_finite (alpha_p))
           {
             g_error ("nc_hipert_wkb_prepare: cannot find the precision [%7.5e] point in the interval [% 7.5g % 7.5g].", 
-                     prec, alpha_i, alpha_f);
+                     prec, wkb->alpha_i, wkb->alpha_f);
           }
           else
           {
             wkb->alpha_p = alpha_p;
             /*printf ("# Preparing approx [% 21.16g % 21.16g]\n", alpha_i, alpha_p);*/
-            _nc_hipert_wkb_prepare_approx (wkb, obj, alpha_i, alpha_p);
+            _nc_hipert_wkb_prepare_approx (wkb, model);
             /*printf ("# Preparing exact [% 21.16g % 21.16g]\n", alpha_p, alpha_f);*/
-            _nc_hipert_wkb_prepare_exact (wkb, obj, alpha_p, alpha_f);
-            printf ("# Prepared [% 21.16g % 21.16g] %zu\n", alpha_i, alpha_f, wkb->nuA->len);
+            _nc_hipert_wkb_prepare_exact (wkb, model);
           }
         }
       }
       
     } 
 
-    wkb->alpha_phase = alpha_i;
+    wkb->alpha_phase = wkb->alpha_i;
     wkb->cur_phase   = M_PI * 0.25;
-    wkb->alpha_i     = alpha_i;
-    wkb->alpha_f     = alpha_f;
     pert->prepared   = TRUE;
   }
 }
 
 /**
  * nc_hipert_wkb_q:
- * @wkb: a #NcHIPertWKB.
- * @obj: the WKB implementation.
- * @alpha: the log-redshift time.
- * @Re_q: (out caller-allocates): Real part of the wkb solution.
- * @Im_q: (out caller-allocates): Imaginary part of the wkb solution.
+ * @wkb: a #NcHIPertWKB
+ * @model: a #NcmModel
+ * @alpha: the log-redshift time
+ * @Re_q: (out caller-allocates): Real part of the wkb solution
+ * @Im_q: (out caller-allocates): Imaginary part of the wkb solution
  * 
  * Computes the WKB solution $q_\text{WKB}$ for the mode $k$ at the time $\alpha$. 
  * 
  */
 void
-nc_hipert_wkb_q (NcHIPertWKB *wkb, GObject *obj, gdouble alpha, gdouble *Re_q, gdouble *Im_q)
+nc_hipert_wkb_q (NcHIPertWKB *wkb, NcmModel *model, gdouble alpha, gdouble *Re_q, gdouble *Im_q)
 {
-  if (wkb->obj != obj)
-  {
-    g_clear_object (&wkb->obj);
-    g_assert (g_type_is_a (G_OBJECT_TYPE (obj), wkb->impl_type));
-    wkb->obj = g_object_ref (obj);
-  }
-  
-  {
-    NcHIPert *pert = NC_HIPERT (wkb);
-    complex double q;
-    const gdouble int_nuA = nc_hipert_wkb_phase (wkb, obj, alpha);
-    
-    if (alpha < wkb->alpha_p)
-    {
-      const gdouble nuA = ncm_spline_eval (wkb->nuA, alpha); 
-      gdouble m = 0.0, nu2 = 0.0, dlnm = 0.0;
-      wkb->eom (obj, alpha, pert->k, &nu2, &m, &dlnm);
+  NcHIPert *pert = NC_HIPERT (wkb);
+  complex double q;
+  const gdouble int_nuA = nc_hipert_wkb_phase (wkb, model, alpha);
 
-      q = cexp (-I * int_nuA) / sqrt (2.0 * m * nuA);      
-    }
-    else
-    {
-      gdouble lnF;
-      const gdouble one_sqrt2 = 1.0 / sqrt (2.0);
-      lnF = ncm_spline_eval (wkb->lnF, alpha);
-      
-      q = cexp (-I * int_nuA - lnF * 0.5) * one_sqrt2;
-    }
+  if (alpha < wkb->alpha_p)
+  {
+    const gdouble nuA = ncm_spline_eval (wkb->nuA, alpha); 
+    gdouble m         = nc_hipert_wkb_get_m (wkb, model, alpha, pert->k);
 
-    *Re_q = creal (q);
-    *Im_q = cimag (q);
+    q = cexp (-I * int_nuA) / sqrt (2.0 * m * nuA);      
   }
+  else
+  {
+    gdouble lnF;
+    const gdouble one_sqrt2 = 1.0 / sqrt (2.0);
+    lnF = ncm_spline_eval (wkb->lnF, alpha);
+
+    q = cexp (-I * int_nuA - lnF * 0.5) * one_sqrt2;
+  }
+
+  *Re_q = creal (q);
+  *Im_q = cimag (q);
 }
 
 /**
  * nc_hipert_wkb_q_p:
  * @wkb: a #NcHIPertWKB.
- * @obj: the WKB implementation.
+ * @model: a #NcmModel
  * @alpha: the log-redshift time.
  * @Re_q: (out caller-allocates): Real part of the wkb solution.
  * @Im_q: (out caller-allocates): Imaginary part of the wkb solution.
@@ -677,82 +703,87 @@ nc_hipert_wkb_q (NcHIPertWKB *wkb, GObject *obj, gdouble alpha, gdouble *Re_q, g
  * 
  */
 void
-nc_hipert_wkb_q_p (NcHIPertWKB *wkb, GObject *obj, gdouble alpha, gdouble *Re_q, gdouble *Im_q, gdouble *Re_p, gdouble *Im_p)
+nc_hipert_wkb_q_p (NcHIPertWKB *wkb, NcmModel *model, gdouble alpha, gdouble *Re_q, gdouble *Im_q, gdouble *Re_p, gdouble *Im_p)
 {
-  if (wkb->obj != obj)
+  NcHIPert *pert = NC_HIPERT (wkb);
+  complex double q, p;
+  gdouble int_nuA = nc_hipert_wkb_phase (wkb, model, alpha);
+
+  if (alpha < wkb->alpha_p)
   {
-    g_clear_object (&wkb->obj);
-    g_assert (g_type_is_a (G_OBJECT_TYPE (obj), wkb->impl_type));
-    wkb->obj = g_object_ref (obj);
-  }
-  {
-    NcHIPert *pert = NC_HIPERT (wkb);
-    complex double q, p;
-    gdouble int_nuA = nc_hipert_wkb_phase (wkb, obj, alpha);
-    gdouble m = 0.0, nu2 = 0.0, dlnm = 0.0;
-    wkb->eom (obj, alpha, pert->k, &nu2, &m, &dlnm);
+    gdouble mnu, dmnu;
+    const gdouble nuA = ncm_spline_eval (wkb->nuA, alpha); 
+    const gdouble m   = nc_hipert_wkb_get_m (wkb, model, alpha, pert->k);
 
-    if (alpha < wkb->alpha_p)
-    {
-      const gdouble nuA2 = wkb->nuA2 (obj, alpha, pert->k);
-      const gdouble nuA = sqrt (nuA2); 
-      const gdouble dmnuA_nuA = wkb->dmnuA_nuA (obj, alpha, pert->k);
-
-      q = cexp (-I * int_nuA) / sqrt (2.0 * m * nuA);
-      p = -I * cexp (-I * int_nuA) * sqrt (0.5 * m * nuA) - 0.5 * dmnuA_nuA * q;
-    }
-    else
-    {
-      const gdouble lnF       = ncm_spline_eval (wkb->lnF, alpha);;
-      const gdouble dlnF      = ncm_spline_eval (wkb->dlnF, alpha);
-      const gdouble one_sqrt2 = 1.0 / sqrt (2.0);
-
-      q = cexp (-I * int_nuA - lnF * 0.5) * one_sqrt2;
-      p = -I * cexp (-I * int_nuA + lnF * 0.5) * one_sqrt2 - 0.5 * m * dlnF * q;
-    }
+    nc_hipert_wkb_get_mnu_dmnu (wkb, model, alpha, pert->k, &mnu, &dmnu);
     
-    *Re_q = creal (q);
-    *Im_q = cimag (q);
-
-    *Re_p = creal (p);
-    *Im_p = cimag (p);    
+    q = cexp (-I * int_nuA) / sqrt (2.0 * m * nuA);
+    p = -I * cexp (-I * int_nuA) * sqrt (0.5 * m * nuA) - 0.5 * m * (dmnu / mnu) * q;
   }
+  else
+  {
+    const gdouble m         = nc_hipert_wkb_get_m (wkb, model, alpha, pert->k);
+    const gdouble lnF       = ncm_spline_eval (wkb->lnF, alpha);;
+    const gdouble dlnF      = ncm_spline_eval (wkb->dlnF, alpha);
+    const gdouble one_sqrt2 = 1.0 / sqrt (2.0);
+
+    q = cexp (-I * int_nuA - lnF * 0.5) * one_sqrt2;
+    p = -I * cexp (-I * int_nuA + lnF * 0.5) * one_sqrt2 - 0.5 * m * dlnF * q;
+  }
+
+  *Re_q = creal (q);
+  *Im_q = cimag (q);
+
+  *Re_p = creal (p);
+  *Im_p = cimag (p);    
 }
 
 static gdouble 
 _nc_hipert_wkb_prec (gdouble alpha, gpointer userdata)
 {
   NcHIPertWKBArg *arg = (NcHIPertWKBArg *) userdata;
-  const gdouble nuA2 = arg->wkb->nuA2 (arg->obj, alpha, NC_HIPERT (arg->wkb)->k);
-  const gdouble V = arg->wkb->V (arg->obj, alpha, NC_HIPERT (arg->wkb)->k);
-  const gdouble test = log (fabs (nuA2 * arg->prec / V));
+  gdouble nu, V;
 
-  return test;
+  nc_hipert_wkb_get_nu_V (arg->wkb, arg->model, alpha, NC_HIPERT (arg->wkb)->k, &nu, &V);
+  {
+    const gdouble test  = log (fabs (nu * nu * nc_hipert_get_reltol (NC_HIPERT (arg->wkb)) / V));
+    return test;
+  }
 }
 
 static gdouble 
 _nc_hipert_wkb_prec_alpha2 (gdouble alpha, gpointer userdata)
 {
   NcHIPertWKBArg *arg = (NcHIPertWKBArg *) userdata;
-  const gdouble nuA2 = arg->wkb->nuA2 (arg->obj, alpha, NC_HIPERT (arg->wkb)->k);
-  const gdouble test = log (fabs (nuA2 * arg->prec / (alpha * alpha)));
+  gdouble nu, V;
 
-  return test;
+  nc_hipert_wkb_get_nu_V (arg->wkb, arg->model, alpha, NC_HIPERT (arg->wkb)->k, &nu, &V);
+
+  {
+    const gdouble nuA2 = nu * nu - V;
+    const gdouble test = log (fabs (nuA2 * nc_hipert_get_reltol (NC_HIPERT (arg->wkb)) / (alpha * alpha)));
+
+    return test;
+  }
 }
 
 static gdouble 
 _nc_hipert_wkb_nuA2 (gdouble alpha, gpointer userdata)
 {
   NcHIPertWKBArg *arg = (NcHIPertWKBArg *) userdata;
-  const gdouble nuA2 = arg->wkb->nuA2 (arg->obj, alpha, NC_HIPERT (arg->wkb)->k);
-  gdouble m = 0.0, nu2 = 0.0, dlnm = 0.0;
-  arg->wkb->eom (arg->obj, alpha, NC_HIPERT (arg->wkb)->k, &nu2, &m, &dlnm);
+  gdouble nu, V;
 
-  return nuA2 / nu2 - NC_HIPERT (arg->wkb)->reltol;
+  nc_hipert_wkb_get_nu_V (arg->wkb, arg->model, alpha, NC_HIPERT (arg->wkb)->k, &nu, &V);
+
+  {
+    const gdouble nu2  = nu * nu;
+    const gdouble nuA2 = nu2 - V;
+    return nuA2 / nu2 - NC_HIPERT (arg->wkb)->reltol;
+  }
 }
 
 static gint
-_nc_hipert_wkb_nu2_root (NcHIPertWKB *wkb, GObject *obj, gdouble alpha0, gdouble *alpha, gsl_function *F)
+_nc_hipert_wkb_nu2_root (NcHIPertWKB *wkb, NcmModel *model, gdouble alpha0, gdouble *alpha, gsl_function *F)
 {
   NcHIPert *pert = NC_HIPERT (wkb);
   gint status;
@@ -798,119 +829,99 @@ _nc_hipert_wkb_nu2_root (NcHIPertWKB *wkb, GObject *obj, gdouble alpha0, gdouble
 
 /**
  * nc_hipert_wkb_maxtime:
- * @wkb: a #NcHIPertWKB.
- * @obj: the WKB implementation.
- * @alpha0: the initial log-redshift time.
- * @alpha1: the final log-redshift time.
+ * @wkb: a #NcHIPertWKB
+ * @model: a #NcmModel
+ * @alpha0: the initial log-redshift time
+ * @alpha1: the final log-redshift time
  * 
  * Search for the root of $\nu_A^2$ between $\alpha_0$ and $\alpha_1$. 
  * 
  * Returns: the root of $\nu_A^2$ between $\alpha_0$ and $\alpha_1$ or NaN if not found.
  */
 gdouble 
-nc_hipert_wkb_maxtime (NcHIPertWKB *wkb, GObject *obj, gdouble alpha0, gdouble alpha1)
+nc_hipert_wkb_maxtime (NcHIPertWKB *wkb, NcmModel *model, gdouble alpha0, gdouble alpha1)
 {
-  if (wkb->obj != obj)
-  {
-    g_clear_object (&wkb->obj);
-    g_assert (g_type_is_a (G_OBJECT_TYPE (obj), wkb->impl_type));
-    wkb->obj = g_object_ref (obj);
-  }
-  {
-    gdouble alpha = alpha1;
-    gsl_function F;
-    NcHIPertWKBArg arg;
-    guint ret;
+  gdouble alpha = alpha1;
+  gsl_function F;
+  NcHIPertWKBArg arg;
+  guint ret;
 
-    arg.obj = obj;
-    arg.wkb = wkb;
+  arg.model = model;
+  arg.wkb   = wkb;
 
-    F.function = &_nc_hipert_wkb_nuA2;
-    F.params   = &arg;
-    
-    ret = _nc_hipert_wkb_nu2_root (wkb, obj, alpha0, &alpha, &F);
+  F.function = &_nc_hipert_wkb_nuA2;
+  F.params   = &arg;
 
-    if (ret == 0)
-      return alpha;
-    else
-      return GSL_NAN;
-  }
+  ret = _nc_hipert_wkb_nu2_root (wkb, model, alpha0, &alpha, &F);
+
+  if (ret == 0)
+    return alpha;
+  else
+    return GSL_NAN;
 }
 
 /**
  * nc_hipert_wkb_maxtime_prec:
- * @wkb: a #NcHIPertWKB.
- * @obj: the WKB implementation.
- * @cmp: Comparison type.
- * @prec: Required precision.
- * @alpha0: the initial log-redshift time.
- * @alpha1: the final log-redshift time.
+ * @wkb: a #NcHIPertWKB
+ * @model: a #NcmModel
+ * @cmp: Comparison type
  * 
  * Search for the instant at which the WKB approximation starts to fails within the asked precision. 
  * 
  * Returns: the instant $\alpha$ between $\alpha_0$ and $\alpha_1$ or NaN if not found.
  */
 gdouble 
-nc_hipert_wkb_maxtime_prec (NcHIPertWKB *wkb, GObject *obj, NcHIPertWKBCmp cmp, gdouble prec, gdouble alpha0, gdouble alpha1)
+nc_hipert_wkb_maxtime_prec (NcHIPertWKB *wkb, NcmModel *model, NcHIPertWKBCmp cmp, gdouble alpha0, gdouble alpha1)
 {
-  if (wkb->obj != obj)
+  gdouble alpha = alpha1;
+  gsl_function F;
+  NcHIPertWKBArg arg;
+  guint ret;
+
+  arg.model = model;
+  arg.wkb   = wkb;
+
+  F.function = &_nc_hipert_wkb_nuA2;
+  F.params   = &arg;
+
+  ret = _nc_hipert_wkb_nu2_root (wkb, model, alpha0, &alpha, &F);
+
+  if (ret == 0)
   {
-    g_clear_object (&wkb->obj);
-    g_assert (g_type_is_a (G_OBJECT_TYPE (obj), wkb->impl_type));
-    wkb->obj = g_object_ref (obj);
-  }
-  {  
-    gdouble alpha = alpha1;
-    gsl_function F;
-    NcHIPertWKBArg arg;
-    guint ret;
-
-    arg.obj  = obj;
-    arg.wkb  = wkb;
-    arg.prec = prec;
-
-    F.function = &_nc_hipert_wkb_nuA2;
-    F.params   = &arg;
-
-    ret = _nc_hipert_wkb_nu2_root (wkb, obj, alpha0, &alpha, &F);
-
-    if (ret == 0)
+    switch (cmp)
     {
-      switch (cmp)
-      {
-        case NC_HIPERT_WKB_CMP_POTENTIAL:
-          F.function = &_nc_hipert_wkb_prec;
-          break;
-        case NC_HIPERT_WKB_CMP_ALPHA2:
-          F.function = &_nc_hipert_wkb_prec_alpha2;
-          break;
-        default:
-          g_assert_not_reached ();
-          break;
-      }
-      ret = _nc_hipert_wkb_nu2_root (wkb, obj, alpha0, &alpha, &F);
-      if (ret == 0)
-        return alpha;
-      else
-        return GSL_NAN;
+      case NC_HIPERT_WKB_CMP_POTENTIAL:
+        F.function = &_nc_hipert_wkb_prec;
+        break;
+      case NC_HIPERT_WKB_CMP_ALPHA2:
+        F.function = &_nc_hipert_wkb_prec_alpha2;
+        break;
+      default:
+        g_assert_not_reached ();
+        break;
     }
+    ret = _nc_hipert_wkb_nu2_root (wkb, model, alpha0, &alpha, &F);
+    if (ret == 0)
+      return alpha;
     else
       return GSL_NAN;
   }
+  else
+    return GSL_NAN;
 }
 
 /**
  * nc_hipert_wkb_nuA:
- * @wkb: a #NcHIPertWKB.
- * @obj: the WKB implementation.
- * @alpha: the log-redshift time.
+ * @wkb: a #NcHIPertWKB
+ * @model: a #NcmModel
+ * @alpha: the log-redshift time
  * 
  * FIXME 
  * 
  * Returns: FIXME
  */
 gdouble 
-nc_hipert_wkb_nuA (NcHIPertWKB *wkb, GObject *obj, gdouble alpha)
+nc_hipert_wkb_nuA (NcHIPertWKB *wkb, NcmModel *model, gdouble alpha)
 {
   g_assert (NC_HIPERT (wkb)->prepared);
   return ncm_spline_eval (wkb->nuA, alpha);
@@ -918,16 +929,16 @@ nc_hipert_wkb_nuA (NcHIPertWKB *wkb, GObject *obj, gdouble alpha)
 
 /**
  * nc_hipert_wkb_phase:
- * @wkb: a #NcHIPertWKB.
- * @obj: the WKB implementation.
- * @alpha: the log-redshift time.
+ * @wkb: a #NcHIPertWKB
+ * @model: a #NcmModel
+ * @alpha: the log-redshift time
  * 
  * FIXME 
  * 
  * Returns: FIXME
  */
 gdouble 
-nc_hipert_wkb_phase (NcHIPertWKB *wkb, GObject *obj, gdouble alpha)
+nc_hipert_wkb_phase (NcHIPertWKB *wkb, NcmModel *model, gdouble alpha)
 {
   g_assert (NC_HIPERT (wkb)->prepared);
   if (alpha == wkb->alpha_phase)

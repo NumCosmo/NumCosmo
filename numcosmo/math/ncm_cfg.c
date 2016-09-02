@@ -46,6 +46,7 @@
 #include "math/ncm_spline2d_gsl.h"
 #include "math/ncm_spline2d_spline.h"
 #include "math/ncm_powspec.h"
+#include "math/ncm_powspec_filter.h"
 #include "math/ncm_model.h"
 #include "math/ncm_model_ctrl.h"
 #include "math/ncm_model_builder.h"
@@ -296,6 +297,7 @@ ncm_cfg_init (void)
   ncm_cfg_register_obj (NCM_TYPE_SPLINE2D_SPLINE);
 
   ncm_cfg_register_obj (NCM_TYPE_POWSPEC);
+  ncm_cfg_register_obj (NCM_TYPE_POWSPEC_FILTER);
   
   ncm_cfg_register_obj (NCM_TYPE_MODEL);
   ncm_cfg_register_obj (NCM_TYPE_MODEL_CTRL);

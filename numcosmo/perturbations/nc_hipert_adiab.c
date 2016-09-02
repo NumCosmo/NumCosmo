@@ -276,7 +276,7 @@ nc_hipert_adiab_prepare_wkb (NcHIPertAdiab *pa, NcHICosmo *cosmo, gdouble prec, 
 void
 nc_hipert_adiab_wkb_zeta (NcHIPertAdiab *pa, NcHICosmo *cosmo, gdouble alpha, gdouble *Re_zeta, gdouble *Im_zeta)
 {
-  nc_hipert_wkb_q (pa->wkb, G_OBJECT (cosmo), alpha, Re_zeta, Im_zeta);
+  nc_hipert_wkb_q (pa->wkb, NCM_MODEL (cosmo), alpha, Re_zeta, Im_zeta);
 }
 
 /**
@@ -295,7 +295,7 @@ nc_hipert_adiab_wkb_zeta (NcHIPertAdiab *pa, NcHICosmo *cosmo, gdouble alpha, gd
 void
 nc_hipert_adiab_wkb_zeta_Pzeta (NcHIPertAdiab *pa, NcHICosmo *cosmo, gdouble alpha, gdouble *Re_zeta, gdouble *Im_zeta, gdouble *Re_Pzeta, gdouble *Im_Pzeta)
 {
-  nc_hipert_wkb_q_p (pa->wkb, G_OBJECT (cosmo), alpha, Re_zeta, Im_zeta, Re_Pzeta, Im_Pzeta);
+  nc_hipert_wkb_q_p (pa->wkb, NCM_MODEL (cosmo), alpha, Re_zeta, Im_zeta, Re_Pzeta, Im_Pzeta);
 }
 
 /**
@@ -312,7 +312,7 @@ nc_hipert_adiab_wkb_zeta_Pzeta (NcHIPertAdiab *pa, NcHICosmo *cosmo, gdouble alp
 gdouble
 nc_hipert_adiab_wkb_maxtime (NcHIPertAdiab *pa, NcHICosmo *cosmo, gdouble alpha0, gdouble alpha1)
 {
-  return nc_hipert_wkb_maxtime (pa->wkb, G_OBJECT (cosmo), alpha0, alpha1);
+  return nc_hipert_wkb_maxtime (pa->wkb, NCM_MODEL (cosmo), alpha0, alpha1);
 }
 
 /**
@@ -331,7 +331,7 @@ nc_hipert_adiab_wkb_maxtime (NcHIPertAdiab *pa, NcHICosmo *cosmo, gdouble alpha0
 gdouble
 nc_hipert_adiab_wkb_maxtime_prec (NcHIPertAdiab *pa, NcHICosmo *cosmo, NcHIPertWKBCmp cmp, gdouble prec, gdouble alpha0, gdouble alpha1)
 {
-  return nc_hipert_wkb_maxtime_prec (pa->wkb, G_OBJECT (cosmo), cmp, prec, alpha0, alpha1);
+  return nc_hipert_wkb_maxtime_prec (pa->wkb, NCM_MODEL (cosmo), cmp, alpha0, alpha1);
 }
 
 static gint

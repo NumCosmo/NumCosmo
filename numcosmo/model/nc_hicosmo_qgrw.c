@@ -82,8 +82,6 @@ static gdouble _nc_hicosmo_qgrw_Omega_t0 (NcHICosmo *cosmo);
 static gdouble _nc_hicosmo_qgrw_Omega_c0 (NcHICosmo *cosmo);
 static gdouble _nc_hicosmo_qgrw_xb (NcHICosmo *cosmo);
 
-static void _nc_hipert_iadiab_wkb_eom (GObject *iadiab, gdouble alpha, gdouble k, gdouble *nu2, gdouble *m, gdouble *dlnm);
-
 static NcHIPertITwoFluidsEOM *_nc_hipert_itwo_fluids_eom (NcHIPertITwoFluids *itf, gdouble alpha, gdouble k);
 static NcHIPertITwoFluidsTV *_nc_hipert_itwo_fluids_tv (NcHIPertITwoFluids *itf, gdouble alpha, gdouble k);
 
@@ -420,27 +418,6 @@ static gdouble _nc_hicosmo_qgrw_xb (NcHICosmo *cosmo) { return X_B; }
  * Equations of motion
  ****************************************************************************/
 
-static void
-_nc_hipert_iadiab_wkb_eom (GObject *iadiab, gdouble alpha, gdouble k, gdouble *nu2, gdouble *m, gdouble *dlnm)
-{
-  NcHICosmo *cosmo = NC_HICOSMO (iadiab);
-  _NC_HICOSMO_QGRW_WKB_COMMON1;
-  _NC_HICOSMO_QGRW_WKB_COMMON2;
-  _NC_HICOSMO_QGRW_WKB_COMMON3;
-  _NC_HICOSMO_QGRW_WKB_COMMON33;
-  _NC_HICOSMO_QGRW_WKB_COMMON4;
-  _NC_HICOSMO_QGRW_WKB_COMMON5;
-  _NC_HICOSMO_QGRW_WKB_COMMON51;
-  _NC_HICOSMO_QGRW_WKB_NUZETA2;
-  _NC_HICOSMO_QGRW_WKB_MZETA;
-  _NC_HICOSMO_QGRW_WKB_DLNSQRTMZETANUZETA;
-  _NC_HICOSMO_QGRW_WKB_D1LNSQRTNUZETA;
-
-  *m    = mzeta;
-  *nu2  = nuzeta2;
-  *dlnm = - alpha * 2.0 * (d1lnsqrtmzetanuzeta - d1lnsqrtnuzeta);
-}
-
 static NcHIPertITwoFluidsEOM *
 _nc_hipert_itwo_fluids_eom (NcHIPertITwoFluids *itf, gdouble alpha, gdouble k)
 {
@@ -656,3 +633,60 @@ nc_hicosmo_qgrw_new (void)
   NcHICosmoQGRW *qgrw = g_object_new (NC_TYPE_HICOSMO_QGRW, NULL);
   return qgrw;
 }
+
+typedef NcHIPertWKB NcHIPertWKBQgrwZeta;
+typedef NcHIPertWKBClass NcHIPertWKBQgrwZetaClass;
+
+G_DEFINE_TYPE (NcHIPertWKBQgrwZeta, nc_hipert_wkb_qgrw_zeta, NC_TYPE_HIPERT_WKB);
+
+static void 
+nc_hipert_wkb_qgrw_zeta_init (NcHIPertWKBQgrwZeta *wkb_zeta)
+{
+
+}
+
+static void _nc_hipert_wkb_qgrw_zeta_get_nu_V (NcHIPertWKB *wkb, NcmModel *model, gdouble alpha, gdouble k, gdouble *nu, gdouble *V);
+static void _nc_hipert_wkb_qgrw_zeta_get_mnu_dmnu (NcHIPertWKB *wkb, NcmModel *model, gdouble alpha, gdouble k, gdouble *mnu, gdouble *dmnu);
+static gdouble _nc_hipert_wkb_qgrw_zeta_get_m (NcHIPertWKB *wkb, NcmModel *model, gdouble alpha, gdouble k);
+static gdouble _nc_hipert_wkb_qgrw_zeta_get_nu2 (NcHIPertWKB *wkb, NcmModel *model, gdouble alpha, gdouble k);
+static gdouble _nc_hipert_wkb_qgrw_zeta_get_dVnu2 (NcHIPertWKB *wkb, NcmModel *model, gdouble alpha, gdouble k);
+
+static void
+nc_hipert_wkb_qgrw_zeta_class_init (NcHIPertWKBQgrwZetaClass *klass)
+{
+  klass->get_nu_V     = &_nc_hipert_wkb_qgrw_zeta_get_nu_V;
+  klass->get_mnu_dmnu = &_nc_hipert_wkb_qgrw_zeta_get_mnu_dmnu;
+  klass->get_m        = &_nc_hipert_wkb_qgrw_zeta_get_m;
+  klass->get_nu2      = &_nc_hipert_wkb_qgrw_zeta_get_nu2;
+  klass->get_dVnu2    = &_nc_hipert_wkb_qgrw_zeta_get_dVnu2;
+}
+
+static void 
+_nc_hipert_wkb_qgrw_zeta_get_nu_V (NcHIPertWKB *wkb, NcmModel *model, gdouble alpha, gdouble k, gdouble *nu, gdouble *V)
+{
+
+  
+}
+
+static void 
+_nc_hipert_wkb_qgrw_zeta_get_mnu_dmnu (NcHIPertWKB *wkb, NcmModel *model, gdouble alpha, gdouble k, gdouble *mnu, gdouble *dmnu)
+{
+}
+
+static gdouble 
+_nc_hipert_wkb_qgrw_zeta_get_m (NcHIPertWKB *wkb, NcmModel *model, gdouble alpha, gdouble k)
+{
+}
+
+static gdouble 
+_nc_hipert_wkb_qgrw_zeta_get_nu2 (NcHIPertWKB *wkb, NcmModel *model, gdouble alpha, gdouble k)
+{
+}
+
+static gdouble 
+_nc_hipert_wkb_qgrw_zeta_get_dVnu2 (NcHIPertWKB *wkb, NcmModel *model, gdouble alpha, gdouble k)
+{
+}
+
+
+

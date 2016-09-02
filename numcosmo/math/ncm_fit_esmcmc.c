@@ -424,7 +424,7 @@ _ncm_fit_esmcmc_worker_dup (gpointer userdata)
     else
       fw->funcs_array = NULL;
 
-    ncm_serialize_clear_instances (esmcmc->ser);
+    ncm_serialize_reset (esmcmc->ser);
     
     G_UNLOCK (dup_thread);
 
