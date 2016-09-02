@@ -55,7 +55,6 @@
 #include "math/ncm_fit_esmcmc_walker_stretch.h"
 #include "nc_hicosmo.h"
 #include "nc_cbe_precision.h"
-#include "perturbations/nc_hipert_iadiab.h"
 #include "model/nc_hicosmo_qconst.h"
 #include "model/nc_hicosmo_qlinear.h"
 #include "model/nc_hicosmo_qspline.h"

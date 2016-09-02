@@ -109,18 +109,6 @@ nc_hipert_wkb_set_property (GObject *object, guint prop_id, const GValue *value,
     case PROP_IMPL_TYPE:
       wkb->impl_type = g_value_get_gtype (value);
       break;
-    case PROP_NUA2:
-      wkb->nuA2 = g_value_get_pointer (value);
-      break;
-    case PROP_V:
-      wkb->V = g_value_get_pointer (value);
-      break;
-    case PROP_DMNUA_NUA:
-      wkb->dmnuA_nuA = g_value_get_pointer (value);
-      break;
-    case PROP_EOM:
-      wkb->eom = g_value_get_pointer (value);
-      break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
       break;
@@ -137,18 +125,6 @@ nc_hipert_wkb_get_property (GObject *object, guint prop_id, GValue *value, GPara
   {
     case PROP_IMPL_TYPE:
       g_value_set_gtype (value, wkb->impl_type);
-      break;
-    case PROP_NUA2:
-      g_value_set_pointer (value, wkb->nuA2);
-      break;
-    case PROP_V:
-      g_value_set_pointer (value, wkb->V);
-      break;
-    case PROP_DMNUA_NUA:
-      g_value_set_pointer (value, wkb->dmnuA_nuA);
-      break;
-    case PROP_EOM:
-      g_value_set_pointer (value, wkb->eom);
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -346,8 +322,11 @@ static gdouble
 _nc_hipert_wkb_phase (gdouble alpha, gpointer userdata)
 {
   NcHIPertWKBArg *arg = (NcHIPertWKBArg *) userdata;
-  const gdouble nuA2 = arg->wkb->nuA2 (arg->obj, alpha, NC_HIPERT (arg->wkb)->k);
-  return sqrt (nuA2);
+  gdouble nu, V;
+
+  nc_hipert_wkb_get_nu_V (arg->wkb, alpha, NC_HIPERT (arg->wkb)->k, &nu, &V);
+
+  return nu;
 }
 
 void 
@@ -372,17 +351,18 @@ static gint
 _nc_hipert_wkb_phase_f (realtype alpha, N_Vector y, N_Vector ydot, gpointer f_data)
 {
   NcHIPertWKBArg *arg   = (NcHIPertWKBArg *) f_data;
-  gdouble m = 0.0, nu2 = 0.0, dlnm = 0.0;
+  gdouble nu = 0.0, V = 0.0;
 
-  arg->wkb->eom (arg->obj, alpha, NC_HIPERT (arg->wkb)->k, &nu2, &m, &dlnm);
+  nc_hipert_wkb_get_nu_V (arg->wkb, alpha, NC_HIPERT (arg->wkb)->k, &nu, &V);
   {
-    const gdouble lnF     = NV_Ith_S (y, 0);
-    const gdouble dlnF    = NV_Ith_S (y, 1);
-    const gdouble dlnF2   = dlnF * dlnF;
-    const gdouble m2      = m * m;
+    const gdouble rnu   = NV_Ith_S (y, 0);
+    const gdouble U     = NV_Ith_S (y, 1);
+    const gdouble Rnu   = exp (rnu);
+    const gdouble Rnunu = Rnu / nu;
+    const gdouble nu2   = nu * nu;
     
-    NV_Ith_S (ydot, 0) = dlnF;
-    NV_Ith_S (ydot, 1) = (0.5 * dlnF2 + 2.0 * (nu2 - exp (2.0 * lnF) / m2)) - dlnF * dlnm;
+    NV_Ith_S (ydot, 0) = - Rnunu * U;
+    NV_Ith_S (ydot, 1) = (1.0 / Rnunu) * (nu2 * expm1 (4.0 * rnu) + V);
 
     return 0;
   }
@@ -392,17 +372,21 @@ static gint
 _nc_hipert_wkb_phase_J (_NCM_SUNDIALS_INT_TYPE N, realtype alpha, N_Vector y, N_Vector fy, DlsMat J, gpointer jac_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3)
 {
   NcHIPertWKBArg *arg  = (NcHIPertWKBArg *) jac_data;
-  gdouble m = 0.0, nu2 = 0.0, dlnm = 0.0;
-  arg->wkb->eom (arg->obj, alpha, NC_HIPERT (arg->wkb)->k, &nu2, &m, &dlnm);
+  gdouble nu = 0.0, V = 0.0;
+
+  nc_hipert_wkb_get_nu_V (arg->wkb, alpha, NC_HIPERT (arg->wkb)->k, &nu, &V);
   {
-    const gdouble lnF     = NV_Ith_S (y, 0);
-    const gdouble dlnF    = NV_Ith_S (y, 1);
-    const gdouble m2      = m * m; 
+    const gdouble rnu   = NV_Ith_S (y, 0);
+    const gdouble U     = NV_Ith_S (y, 1);
+    const gdouble Rnu   = exp (rnu);
+    const gdouble Rnunu = Rnu / nu;
+    const gdouble nu2   = nu * nu;
 
-    DENSE_ELEM (J, 0, 1) = 1.0;
+    DENSE_ELEM (J, 0, 0) = - Rnunu * U;
+    DENSE_ELEM (J, 0, 1) = - Rnunu;
 
-    DENSE_ELEM (J, 1, 0) = - 4.0 * exp (2.0 * lnF) / m2;
-    DENSE_ELEM (J, 1, 1) = dlnF - dlnm;
+    DENSE_ELEM (J, 1, 0) = - (1.0 / Rnunu) * (nu2 * expm1 (4.0 * rnu) + V) + (4.0 * nu2 / Rnunu) * gsl_pow_4 (Rnu);
+    DENSE_ELEM (J, 1, 1) = 0.0;
     
     return 0;
   }
@@ -414,28 +398,22 @@ _nc_hipert_wkb_prepare_exact (NcHIPertWKB *wkb, GObject *obj, gdouble alpha_i, g
   NcHIPert *pert = NC_HIPERT (wkb);
   gint flag;
   gdouble alpha = alpha_i;
-  gdouble m = 0.0, nu2 = 0.0, dlnm = 0.0;
-  const gdouble nuA2      = wkb->nuA2 (obj, alpha, pert->k);
-  const gdouble nuA       = sqrt (nuA2);
-  const gdouble dmnuA_nuA = wkb->dmnuA_nuA (obj, alpha, pert->k);
-  const gdouble dmnuA     = dmnuA_nuA * nuA;
   GArray *alpha_a;
   GArray *lnF;
   GArray *dlnF;
   GArray *alpha_nuA_a;
   GArray *nuA_a;
-  
   NcmVector *v = NULL;
-
-  wkb->eom (obj, alpha, pert->k, &nu2, &m, &dlnm);
 
   v = ncm_spline_get_xv (wkb->nuA);
   g_assert (v != NULL);
+  
   alpha_nuA_a = ncm_vector_get_array (v);
   ncm_vector_free (v);
 
   v = ncm_spline_get_yv (wkb->nuA);
   g_assert (v != NULL);
+
   nuA_a = ncm_vector_get_array (v);
   ncm_vector_free (v);
 
@@ -468,8 +446,17 @@ _nc_hipert_wkb_prepare_exact (NcHIPertWKB *wkb, GObject *obj, gdouble alpha_i, g
   if (pert->y == NULL)
     pert->y = N_VNew_Serial (2);
 
-  NV_Ith_S (pert->y, 0) = log (m * nuA);
-  NV_Ith_S (pert->y, 1) = dmnuA / (m * nuA);
+  {
+    gdouble nu, nu2, V, dVnu2;
+
+    nc_hipert_wkb_get_nu_V (wkb, alpha, pert->k, &nu, &V);
+
+    nu2   = nu * nu;
+    dVnu2 = nc_hipert_wkb_get_dVnu2 (wkb, alpha, pert->k);
+      
+    NV_Ith_S (pert->y, 0) = 0.25 * log1p (V / nu2);
+    NV_Ith_S (pert->y, 1) = 0.25 * (dVnu2 / (1.0 + V / nu2));
+  }
 
   g_array_append_val (alpha_a, alpha_i);
   g_array_append_val (lnF, NV_Ith_S (pert->y, 0));
@@ -506,7 +493,7 @@ _nc_hipert_wkb_prepare_exact (NcHIPertWKB *wkb, GObject *obj, gdouble alpha_i, g
     arg.wkb = wkb;
 
     flag = CVodeSetUserData (pert->cvode, &arg);
-    NCM_CVODE_CHECK (&flag, "CVodeSetFdata", 1, );
+    NCM_CVODE_CHECK (&flag, "CVodeSetUserData", 1, );
 
     while (alpha < alpha_f)
     {
@@ -515,10 +502,12 @@ _nc_hipert_wkb_prepare_exact (NcHIPertWKB *wkb, GObject *obj, gdouble alpha_i, g
 
       if (fabs (2.0 * (alpha - last) / (alpha + last)) > 1.0e-6)
       {
-        gdouble nuA_k;
-        wkb->eom (obj, alpha, pert->k, &nu2, &m, &dlnm);
-        nuA_k = exp (NV_Ith_S (pert->y, 0)) / m;
-        
+        const gdouble m_i   = nc_hipert_wkb_get_m (wkb, alpha, pert->k);
+        const gdouble nu2_i = nc_hipert_wkb_get_nu2 (wkb, alpha, pert->k);
+        const gdouble nuA_i = exp (2.0 * NV_Ith_S (pert->y, 0)) * sqrt (nu2);
+
+        const gdouble lnF_i = log (m_i * nuA_i);
+
         g_array_append_val (alpha_a, alpha);
         g_array_append_val (lnF, NV_Ith_S (pert->y, 0));
         g_array_append_val (dlnF, NV_Ith_S (pert->y, 1));
@@ -559,6 +548,7 @@ void
 nc_hipert_wkb_prepare (NcHIPertWKB *wkb, GObject *obj, gdouble prec, gdouble alpha_i, gdouble alpha_f)
 {
   NcHIPert *pert = NC_HIPERT (wkb);
+  
   if (wkb->obj != obj)
   {
     g_clear_object (&wkb->obj);

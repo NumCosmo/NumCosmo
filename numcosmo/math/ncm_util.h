@@ -50,6 +50,10 @@ gdouble ncm_numdiff_2 (gsl_function *F, gdouble *ofx, const gdouble x, const gdo
 gdouble ncm_numdiff_2_err (gsl_function *F, gdouble *ofx, const gdouble x, const gdouble ho, gdouble err, gdouble *ferr);
 gdouble ncm_sqrt1px_m1 (gdouble x);
 gdouble ncm_cmpdbl (const gdouble x, const gdouble y);
+gdouble ncm_exprel (const gdouble x);
+gdouble ncm_d1exprel (const gdouble x);
+gdouble ncm_d2exprel (const gdouble x);
+gdouble ncm_d3exprel (const gdouble x);
 
 gsize ncm_mpfr_out_raw (FILE *stream, mpfr_t op);
 gsize ncm_mpfr_inp_raw (mpfr_t rop, FILE *stream);

@@ -45,10 +45,17 @@ G_BEGIN_DECLS
 typedef struct _NcHIPertWKBClass NcHIPertWKBClass;
 typedef struct _NcHIPertWKB NcHIPertWKB;
 
+typedef gdouble (*NcHIPertWKBFunc) (NcHIPertWKB *wkb, NcmModel *model, gdouble alpha, gdouble k);
+typedef void (*NcHIPertWKBEom) (NcHIPertWKB *wkb, NcmModel *model, gdouble alpha, gdouble k, gdouble *nu2, gdouble *m, gdouble *dlnm);
+
 struct _NcHIPertWKBClass
 {
   /*< private >*/
   NcHIPertClass parent_class;
+  NcHIPertWKBFunc V;
+  NcHIPertWKBFunc nuA2;
+  NcHIPertWKBFunc dmnuA_nuA;
+  NcHIPertWKBEom eom;
 };
 
 /**
@@ -83,9 +90,6 @@ typedef enum _NcHIPertWKBCmp
   NC_HIPERT_WKB_CMP_ALPHA2,
 } NcHIPertWKBCmp;
 
-typedef gdouble (*NcHIPertWKBFunc) (GObject *obj, gdouble alpha, gdouble k);
-typedef void (*NcHIPertWKBEom) (GObject *obj, gdouble alpha, gdouble k, gdouble *nu2, gdouble *m, gdouble *dlnm);
-
 struct _NcHIPertWKB
 {
   /*< private >*/
@@ -100,20 +104,23 @@ struct _NcHIPertWKB
   gdouble alpha_i;
   gdouble alpha_f;
   gdouble alpha_p;
-  NcHIPertWKBFunc V;
-  NcHIPertWKBFunc nuA2;
-  NcHIPertWKBFunc dmnuA_nuA;
-  NcHIPertWKBEom eom;
 };
 
 GType nc_hipert_wkb_get_type (void) G_GNUC_CONST;
 
-NcHIPertWKB *nc_hipert_wkb_new (GType impl_type, NcHIPertWKBFunc nuA2, NcHIPertWKBFunc V, NcHIPertWKBFunc dmnuA_nuA, NcHIPertWKBEom eom);
+NcHIPertWKB *nc_hipert_wkb_new_by_name (const gchar *wkb_name);
 NcHIPertWKB *nc_hipert_wkb_ref (NcHIPertWKB *wkb);
 void nc_hipert_wkb_free (NcHIPertWKB *wkb);
 void nc_hipert_wkb_clear (NcHIPertWKB **wkb);
 
-void nc_hipert_wkb_prepare (NcHIPertWKB *wkb, GObject *obj, gdouble prec, gdouble alpha_i, gdouble alpha_f);
+void nc_hipert_wkb_set_interval (NcHIPertWKB *wkb, gdouble alpha_i, gdouble alpha_f);
+
+void nc_hipert_wkb_get_nu_V (NcHIPertWKB *wkb, gdouble alpha, gdouble k, gdouble *nu, gdouble *V);
+void nc_hipert_wkb_get_mnu_dmnu (NcHIPertWKB *wkb, gdouble alpha, gdouble k, gdouble *mnu, gdouble *dmnu);
+gdouble nc_hipert_wkb_get_nu2 (NcHIPertWKB *wkb, gdouble alpha, gdouble k);
+gdouble nc_hipert_wkb_get_dVnu2 (NcHIPertWKB *wkb, gdouble alpha, gdouble k);
+
+void nc_hipert_wkb_prepare (NcHIPertWKB *wkb, NcmModel *model);
 
 void nc_hipert_wkb_q (NcHIPertWKB *wkb, GObject *obj, gdouble alpha, gdouble *Re_q, gdouble *Im_q);
 void nc_hipert_wkb_q_p (NcHIPertWKB *wkb, GObject *obj, gdouble alpha, gdouble *Re_q, gdouble *Im_q, gdouble *Re_p, gdouble *Im_p);
@@ -127,4 +134,3 @@ gdouble nc_hipert_wkb_maxtime_prec (NcHIPertWKB *wkb, GObject *obj, NcHIPertWKBC
 G_END_DECLS
 
 #endif /* _NC_HIPERT_WKB_H_ */
-
