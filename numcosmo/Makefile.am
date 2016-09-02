@@ -359,6 +359,7 @@ nc_headers = \
 	data/nc_data_cluster_poisson.h         \
 	data/nc_data_cluster_pseudo_counts.h   \
 	data/nc_data_planck_lkl.h              \
+	data/nc_data_xcor.h                    \
 	abc/nc_abc_cluster_ncount.h            \
 	model/quantum_gravity.h                \
 	perturbations/nc_hipert.h              \
@@ -478,6 +479,7 @@ nc_sources = \
 	data/nc_data_cluster_poisson.c         \
 	data/nc_data_cluster_pseudo_counts.c   \
 	data/nc_data_planck_lkl.c              \
+	data/nc_data_xcor.c                    \
 	abc/nc_abc_cluster_ncount.c            \
 	model/quantum_gravity.c                \
 	perturbations/nc_hipert.c              \
