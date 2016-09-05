@@ -138,7 +138,7 @@
 #include "data/nc_data_hubble.h"
 #include "data/nc_data_xcor.h"
 #include "xcor/nc_xcor.h"
-#include "xcor/nc_xcor_ab.h"
+#include "xcor/nc_xcor_AB.h"
 #include "xcor/nc_xcor_limber_kernel.h"
 #include "xcor/nc_xcor_limber_kernel_gal.h"
 #include "xcor/nc_xcor_limber_kernel_lensing.h"
