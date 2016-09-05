@@ -138,6 +138,7 @@
 #include "data/nc_data_hubble.h"
 #include "data/nc_data_xcor.h"
 #include "xcor/nc_xcor.h"
+#include "xcor/nc_xcor_ab.h"
 #include "xcor/nc_xcor_limber_kernel.h"
 #include "xcor/nc_xcor_limber_kernel_gal.h"
 #include "xcor/nc_xcor_limber_kernel_lensing.h"
@@ -297,7 +298,7 @@ ncm_cfg_init (void)
   ncm_cfg_register_obj (NCM_TYPE_SPLINE2D_SPLINE);
 
   ncm_cfg_register_obj (NCM_TYPE_POWSPEC);
-  
+
   ncm_cfg_register_obj (NCM_TYPE_MODEL);
   ncm_cfg_register_obj (NCM_TYPE_MODEL_CTRL);
   ncm_cfg_register_obj (NCM_TYPE_MODEL_BUILDER);
@@ -311,7 +312,7 @@ ncm_cfg_init (void)
   ncm_cfg_register_obj (NCM_TYPE_FIT_ESMCMC_WALKER_STRETCH);
 
   ncm_cfg_register_obj (NCM_TYPE_DATA);
-  
+
   ncm_cfg_register_obj (NC_TYPE_HICOSMO_QCONST);
   ncm_cfg_register_obj (NC_TYPE_HICOSMO_QLINEAR);
   ncm_cfg_register_obj (NC_TYPE_HICOSMO_QSPLINE);
@@ -431,6 +432,8 @@ ncm_cfg_init (void)
   ncm_cfg_register_obj (NC_TYPE_XCOR_LIMBER_KERNEL_GAL);
   ncm_cfg_register_obj (NC_TYPE_XCOR_LIMBER_KERNEL_LENSING);
   ncm_cfg_register_obj (NC_TYPE_DATA_XCOR);
+  ncm_cfg_register_obj (NC_TYPE_XCOR_AB);
+
 
   _nc_hicosmo_register_functions ();
   _nc_hicosmo_de_register_functions ();
@@ -936,7 +939,7 @@ ncm_cfg_load_fftw_wisdom (const gchar *filename, ...)
 
   g_free (file);
   file = g_strdup ("ncm_cfg_wisdom"); /* overwrite, unifying wisdom */
-  
+
   file_ext      = g_strdup_printf ("%s.fftw3", file);
   full_filename = g_build_filename (numcosmo_path, file_ext, NULL);
 
@@ -949,7 +952,7 @@ ncm_cfg_load_fftw_wisdom (const gchar *filename, ...)
 #ifdef HAVE_FFTW3F
   g_free (file_ext);
   g_free (full_filename);
-  
+
   file_ext      = g_strdup_printf ("%s.fftw3f", file);
   full_filename = g_build_filename (numcosmo_path, file_ext, NULL);
 
@@ -999,13 +1002,13 @@ ncm_cfg_save_fftw_wisdom (const gchar *filename, ...)
 #ifdef HAVE_FFTW3F
   g_free (file_ext);
   g_free (full_filename);
-  
+
   file_ext      = g_strdup_printf ("%s.fftw3f", file);
   full_filename = g_build_filename (numcosmo_path, file_ext, NULL);
 
   fftwf_export_wisdom_to_filename (full_filename);
 #endif
-  
+
   g_free (file);
   g_free (file_ext);
   g_free (full_filename);

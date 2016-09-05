@@ -296,7 +296,7 @@ static void
 _nc_xcor_limber_cvode (NcXcor* xc, NcXcorLimberKernel* xclk1, NcXcorLimberKernel* xclk2, NcHICosmo* cosmo, guint lmin, guint lmax, gdouble zmin, gdouble zmax, gboolean isauto, NcmVector* vp)
 {
 	const guint nell = lmax - lmin + 1;
-	const gdouble init = NCM_DEFAULT_PRECISION;
+	const gdouble init = 1e-10; //NCM_DEFAULT_PRECISION;
 	const gdouble zmid = exp ((log1p (zmin) + log1p (zmax)) / 2.0) - 1.0;
 	N_Vector yv = N_VNew_Serial (nell);
 	gpointer cvode = CVodeCreate (CV_ADAMS, CV_FUNCTIONAL);
@@ -322,10 +322,8 @@ _nc_xcor_limber_cvode (NcXcor* xc, NcXcorLimberKernel* xclk1, NcXcorLimberKernel
 
 	flag = CVodeSStolerances (cvode, NCM_DEFAULT_PRECISION, 0.0);
 	NCM_CVODE_CHECK (&flag, "CVodeSStolerances", 1, );
-
 	flag = CVodeSetMaxNumSteps (cvode, 5000);
 	NCM_CVODE_CHECK (&flag, "CVodeSetMaxNumSteps", 1, );
-
 	flag = CVodeSetUserData (cvode, &xclc);
 	NCM_CVODE_CHECK (&flag, "CVodeSetUserData", 1, );
 
@@ -340,6 +338,13 @@ _nc_xcor_limber_cvode (NcXcor* xc, NcXcorLimberKernel* xclk1, NcXcorLimberKernel
 	/* Then integrate from zmid to zmax*/
 	flag = CVodeReInit (cvode, zmid, yv);
 	NCM_CVODE_CHECK (&flag, "CVodeReInit", 1, );
+
+	flag = CVodeSStolerances (cvode, NCM_DEFAULT_PRECISION, 0.0);
+	NCM_CVODE_CHECK (&flag, "CVodeSStolerances", 1, );
+	flag = CVodeSetMaxNumSteps (cvode, 5000);
+	NCM_CVODE_CHECK (&flag, "CVodeSetMaxNumSteps", 1, );
+	flag = CVodeSetUserData (cvode, &xclc);
+	NCM_CVODE_CHECK (&flag, "CVodeSetUserData", 1, );
 
 	flag = CVode (cvode, zmax, yv, &z, CV_NORMAL);
 	NCM_CVODE_CHECK (&flag, "CVode", 1, );

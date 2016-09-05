@@ -157,6 +157,7 @@
 /* Cross-correlations */
 #include <numcosmo/xcor/nc_xcor.h>
 #include <numcosmo/xcor/nc_xcor_AB.h>
+#include <numcosmo/xcor/nc_xcor_limber_kernel.h>
 #include <numcosmo/xcor/nc_xcor_limber_kernel_gal.h>
 #include <numcosmo/xcor/nc_xcor_limber_kernel_lensing.h>
 
