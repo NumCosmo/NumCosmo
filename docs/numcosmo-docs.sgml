@@ -236,7 +236,6 @@
      </section>
     <section>
       <title>Perturbation Interfaces</title>
-      <xi:include href="xml/nc_hipert_iadiab.xml"/>
       <xi:include href="xml/nc_hipert_itwo_fluids.xml"/>
      </section>
   </chapter>

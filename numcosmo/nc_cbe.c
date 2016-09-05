@@ -1695,12 +1695,13 @@ void nc_cbe_thermodyn_prepare_if_needed (NcCBE* cbe, NcHICosmo* cosmo)
  */
 void nc_cbe_prepare (NcCBE* cbe, NcHICosmo* cosmo)
 {
-	if (cbe->allocated)
-	{
-		g_assert (cbe->free != NULL);
-		cbe->free (cbe);
-		cbe->allocated = FALSE;
-	}
+  /*printf ("Preparing CLASS!\n");*/
+  if (cbe->allocated)
+  {
+    g_assert (cbe->free != NULL);
+    cbe->free (cbe);
+    cbe->allocated = FALSE;
+  }
 
 	if (cbe->thermodyn_prepared)
 	{
@@ -1726,37 +1727,41 @@ void nc_cbe_prepare (NcCBE* cbe, NcHICosmo* cosmo)
  * Prepares all necessary Class structures.
  *
  */
-void nc_cbe_prepare_if_needed (NcCBE* cbe, NcHICosmo* cosmo)
+void
+nc_cbe_prepare_if_needed (NcCBE *cbe, NcHICosmo *cosmo)
 {
-	ncm_model_ctrl_update (cbe->ctrl_cosmo, NCM_MODEL (cosmo));
-	if (!ncm_model_ctrl_model_has_submodel (cbe->ctrl_cosmo, nc_hiprim_id ()))
-	{
-		g_error ("nc_cbe_prepare_if_needed: cosmo model must contain a NcHIPrim submodel.");
-	}
-	else
-	{
-		gboolean cosmo_up = ncm_model_ctrl_model_last_update (cbe->ctrl_cosmo);
-		gboolean prim_up = ncm_model_ctrl_submodel_last_update (cbe->ctrl_cosmo, nc_hiprim_id ());
+  ncm_model_ctrl_update (cbe->ctrl_cosmo, NCM_MODEL (cosmo));
 
-		if (cosmo_up)
-		{
-			nc_cbe_prepare (cbe, cosmo);
-		}
-		else if (prim_up)
-		{
-			if (cbe->allocated)
-			{
-				g_assert (cbe->free != NULL);
-				cbe->free (cbe);
-				cbe->allocated = FALSE;
-			}
-			if (cbe->call != NULL)
-			{
-				cbe->call (cbe, cosmo);
-				cbe->allocated = TRUE;
-			}
-		}
-	}
+  if (!ncm_model_ctrl_model_has_submodel (cbe->ctrl_cosmo, nc_hiprim_id ()))
+  {
+    g_error ("nc_cbe_prepare_if_needed: cosmo model must contain a NcHIPrim submodel.");
+  }
+  else
+  {
+    gboolean cosmo_up = ncm_model_ctrl_model_last_update (cbe->ctrl_cosmo);
+    gboolean prim_up  = ncm_model_ctrl_submodel_last_update (cbe->ctrl_cosmo, nc_hiprim_id ());
+
+    /*printf ("cosmo_up %d prim_up %d [%p]\n", cosmo_up, prim_up, cosmo);*/
+
+    if (cosmo_up)
+    {
+      nc_cbe_prepare (cbe, cosmo);
+    }
+    else if (prim_up)
+    {
+      if (cbe->allocated)
+      {
+        g_assert (cbe->free != NULL);
+        cbe->free (cbe);
+        cbe->allocated = FALSE;
+      }
+      if (cbe->call != NULL)
+      {
+        cbe->call (cbe, cosmo);
+        cbe->allocated = TRUE;
+      }
+    }
+  }
 }
 
 /**
@@ -1801,89 +1806,113 @@ nc_cbe_thermodyn_get_Xe (NcCBE* cbe)
  *
  * Returns: (transfer full): a #NcmSpline2d for the logarithm base e of the matter power spectrum, $\ln P(\ln k, z)$.
  */
-NcmSpline2d*
-nc_cbe_get_matter_ps (NcCBE* cbe)
+NcmSpline2d *
+nc_cbe_get_matter_ps (NcCBE *cbe)
 {
-	const gint z_size = cbe->priv->psp.ln_tau_size;
-	const gint partz = 4;
-	const gint z_tsize = (z_size - 1) * partz + 1;
+  const gint z_size  = cbe->priv->psp.ln_tau_size;
+  const gint partz   = 4;
+  const gint z_tsize = (z_size - 1) * partz + 1;
 
-	NcmVector* lnk_v = ncm_vector_new (cbe->priv->psp.ln_k_size);
-	NcmVector* z_v = ncm_vector_new (z_tsize);
-	NcmMatrix* lnPk = ncm_matrix_new (z_tsize, cbe->priv->psp.ln_k_size);
-	gdouble* pvecback = g_new (gdouble, cbe->priv->pba.bg_size_short);
-	gdouble z_i_a, z_i_b = 0.0;
-	guint i, m;
+  NcmVector *lnk_v = ncm_vector_new (cbe->priv->psp.ln_k_size);
+  NcmVector *z_v   = ncm_vector_new (z_tsize);
+  NcmMatrix *lnPk  = ncm_matrix_new (z_tsize, cbe->priv->psp.ln_k_size);
+  gdouble *pvecback = g_new (gdouble, cbe->priv->pba.bg_size_short);
+  gdouble z_i_a, z_i_b = 0.0;
+  guint i, m;
 
-	for (i = 0; i < cbe->priv->psp.ln_k_size; i++)
-	{
-		ncm_vector_set (lnk_v, i, cbe->priv->psp.ln_k[i]);
-	}
+  for (i = 0; i < cbe->priv->psp.ln_k_size; i++)
+  {
+    ncm_vector_set (lnk_v, i, cbe->priv->psp.ln_k[i]);
+  }
 
-	m = 0;
-	for (i = 0; i < z_size - 1; i++)
-	{
-		gdouble ln_tau_i;
-		gint last_index_back;
-		guint j;
+  m = 0;
+  i = 0;
+  {
+    gdouble ln_tau_i;
+    gint last_index_back;
+    guint j;
 
+    z_i_a = 0.0;
 
-		if (i < 1)
-			z_i_a = 0.0;
-		else
-		{
-			ln_tau_i = cbe->priv->psp.ln_tau[z_size - i - 1];
-			background_at_tau (&cbe->priv->pba,
-			                   exp (ln_tau_i),
-			                   cbe->priv->pba.short_info,
-			                   cbe->priv->pba.inter_normal,
-			                   &last_index_back,
-			                   pvecback);
-			z_i_a = cbe->priv->pba.a_today / pvecback[cbe->priv->pba.index_bg_a] - 1.0;
-		}
+    ln_tau_i = cbe->priv->psp.ln_tau[z_size - i - 2];
+    background_at_tau (&cbe->priv->pba,
+                       exp (ln_tau_i),
+                       cbe->priv->pba.short_info,
+                       cbe->priv->pba.inter_normal,
+                       &last_index_back,
+                       pvecback);
+    z_i_b = cbe->priv->pba.a_today / pvecback[cbe->priv->pba.index_bg_a] - 1.0;
 
-		ln_tau_i = cbe->priv->psp.ln_tau[z_size - i - 2];
-		background_at_tau (&cbe->priv->pba,
-		                   exp (ln_tau_i),
-		                   cbe->priv->pba.short_info,
-		                   cbe->priv->pba.inter_normal,
-		                   &last_index_back,
-		                   pvecback);
-		z_i_b = cbe->priv->pba.a_today / pvecback[cbe->priv->pba.index_bg_a] - 1.0;
+    for (j = 0; j < partz; j++)
+    {
+      const gdouble z_i = z_i_a + (z_i_b - z_i_a) / (partz * 1.0) * j;
 
+      ncm_vector_set (z_v, m, z_i);
+      spectra_pk_at_z (&cbe->priv->pba, &cbe->priv->psp, logarithmic, z_i, ncm_matrix_ptr (lnPk, m, 0), NULL);
 
-		for (j = 0; j < partz; j++)
-		{
-			const gdouble z_i = z_i_a + (z_i_b - z_i_a) / (partz * 1.0) * j;
+      /*printf ("Redshift %d[%d] : % 21.15g!\n", m, z_tsize, z_i);*/
+      m++;
+    }
+  }
 
-			ncm_vector_set (z_v, m, z_i);
-			spectra_pk_at_z (&cbe->priv->pba, &cbe->priv->psp, logarithmic, z_i, ncm_matrix_ptr (lnPk, m, 0), NULL);
+  for (i = 1; i < z_size - 1; i++)
+  {
+    gdouble ln_tau_i;
+    gint last_index_back;
+    guint j;
 
-			m++;
-		}
-	}
+    ln_tau_i = cbe->priv->psp.ln_tau[z_size - i - 1];
+    background_at_tau (&cbe->priv->pba,
+                       exp (ln_tau_i),
+                       cbe->priv->pba.short_info,
+                       cbe->priv->pba.inter_normal,
+                       &last_index_back,
+                       pvecback);
+    z_i_a = cbe->priv->pba.a_today / pvecback[cbe->priv->pba.index_bg_a] - 1.0;
 
-	{
-		const gdouble z_i = z_i_b;
+    ln_tau_i = cbe->priv->psp.ln_tau[z_size - i - 2];
+    background_at_tau (&cbe->priv->pba,
+                       exp (ln_tau_i),
+                       cbe->priv->pba.short_info,
+                       cbe->priv->pba.inter_normal,
+                       &last_index_back,
+                       pvecback);
+    z_i_b = cbe->priv->pba.a_today / pvecback[cbe->priv->pba.index_bg_a] - 1.0;
 
-		ncm_vector_set (z_v, m, z_i);
-		spectra_pk_at_z (&cbe->priv->pba, &cbe->priv->psp, logarithmic, z_i, ncm_matrix_ptr (lnPk, m, 0), NULL);
+    for (j = 0; j < partz; j++)
+    {
+      const gdouble z_i = z_i_a + (z_i_b - z_i_a) / (partz * 1.0) * j;
 
-		m++;
-	}
+      ncm_vector_set (z_v, m, z_i);
+      spectra_pk_at_z (&cbe->priv->pba, &cbe->priv->psp, logarithmic, z_i, ncm_matrix_ptr (lnPk, m, 0), NULL);
 
-	g_free (pvecback);
+      /*printf ("Redshift %d[%d] : % 21.15g!\n", m, z_tsize, z_i);*/
+      m++;
+    }
+  }
 
-	{
-		NcmSpline2d* lnPk_s = ncm_spline2d_bicubic_notaknot_new ();
-		ncm_spline2d_set (lnPk_s, lnk_v, z_v, lnPk, TRUE);
+  {
+    const gdouble z_i = z_i_b;
 
-		ncm_vector_free (z_v);
-		ncm_vector_free (lnk_v);
-		ncm_matrix_free (lnPk);
+    ncm_vector_set (z_v, m, z_i);
+    spectra_pk_at_z (&cbe->priv->pba, &cbe->priv->psp, logarithmic, z_i, ncm_matrix_ptr (lnPk, m, 0), NULL);
 
-		return lnPk_s;
-	}
+    /*printf ("Redshift %d[%d] : % 21.15g!\n", m, z_tsize, z_i);*/
+    m++;
+  }
+
+  g_free (pvecback);
+
+  {
+    NcmSpline2d *lnPk_s = ncm_spline2d_bicubic_notaknot_new ();
+    ncm_spline2d_set (lnPk_s, lnk_v, z_v, lnPk, TRUE);
+
+    ncm_vector_free (z_v);
+    ncm_vector_free (lnk_v);
+    ncm_matrix_free (lnPk);
+
+    return lnPk_s;
+  }
 }
 
 /**

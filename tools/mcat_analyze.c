@@ -302,7 +302,7 @@ main (gint argc, gchar *argv[])
         {
           if (ncm_mset_func_list_has_ns_name ("NcDistance", funcs[i]))
           {
-            mset_func = NCM_MSET_FUNC (ncm_mset_func_list_new_ns_name ("NcDistance", funcs[i], dist));
+            mset_func = NCM_MSET_FUNC (ncm_mset_func_list_new_ns_name ("NcDistance", funcs[i], G_OBJECT (dist)));
             if (ncm_mset_func_get_dim (mset_func) != 1 || ncm_mset_func_get_nvar (mset_func) != 1)
             {
               g_warning ("# Function `%s' is not R => R, skipping.", ncm_mset_func_peek_name (mset_func));
@@ -376,7 +376,7 @@ main (gint argc, gchar *argv[])
         {
           if (ncm_mset_func_list_has_ns_name ("NcDistance", distribs[i]))
           {
-            mset_func = NCM_MSET_FUNC (ncm_mset_func_list_new_ns_name ("NcDistance", distribs[i], dist));
+            mset_func = NCM_MSET_FUNC (ncm_mset_func_list_new_ns_name ("NcDistance", distribs[i], G_OBJECT (dist)));
             if (ncm_mset_func_get_dim (mset_func) != 1 || ncm_mset_func_get_nvar (mset_func) != 0)
             {
               g_warning ("# Function `%s' is not constant, skipping.", ncm_mset_func_peek_name (mset_func));

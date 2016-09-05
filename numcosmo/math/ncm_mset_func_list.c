@@ -240,6 +240,8 @@ _ncm_mset_func_list_eval (NcmMSetFunc *func, NcmMSet *mset, const gdouble *x, gd
  * @desc: function description
  * @obj_type: object type
  * @func: (scope notified): function pointer
+ * @nvar: number of parameters
+ * @dim: function dimension
  * 
  * Register a new function in the NcmMSetFuncList class.
  * 
@@ -335,7 +337,7 @@ ncm_mset_func_list_select (const gchar *ns, gint nvar, gint dim)
  * Returns: (transfer full): newly created #NcmMSetFuncList.
  */
 NcmMSetFuncList *
-ncm_mset_func_list_new (const gchar *full_name, gpointer obj)
+ncm_mset_func_list_new (const gchar *full_name, GObject *obj)
 {
   NcmMSetFuncList *flist = g_object_new (NCM_TYPE_MSET_FUNC_LIST,
                                          "full-name", full_name,
@@ -355,7 +357,7 @@ ncm_mset_func_list_new (const gchar *full_name, gpointer obj)
  * Returns: (transfer full): newly created #NcmMSetFuncList.
  */
 NcmMSetFuncList *
-ncm_mset_func_list_new_ns_name (const gchar *ns, const gchar *name, gpointer obj)
+ncm_mset_func_list_new_ns_name (const gchar *ns, const gchar *name, GObject *obj)
 {
   gchar *full_name = g_strdup_printf ("%s:%s", ns, name);
   NcmMSetFuncList *flist = g_object_new (NCM_TYPE_MSET_FUNC_LIST,

@@ -60,7 +60,6 @@
 #include "build_cfg.h"
 
 #include "math/ncm_spline_cubic_notaknot.h"
-#include "perturbations/nc_hipert_iadiab.h"
 #include "perturbations/nc_hipert_adiab.h"
 
 #include <cvodes/cvodes.h>
@@ -85,11 +84,6 @@ typedef struct _NcHIPertAdiabArg
 static void
 nc_hipert_adiab_init (NcHIPertAdiab *pa)
 {
-  pa->wkb = nc_hipert_wkb_new (NC_TYPE_HIPERT_IADIAB,
-                               (NcHIPertWKBFunc) &nc_hipert_iadiab_nuA2,
-                               (NcHIPertWKBFunc) &nc_hipert_iadiab_VA,
-                               (NcHIPertWKBFunc) &nc_hipert_iadiab_dmzetanuA_nuA,
-                               (NcHIPertWKBEom) &nc_hipert_iadiab_wkb_eom);
 }
 
 static void
@@ -265,7 +259,7 @@ nc_hipert_adiab_clear (NcHIPertAdiab **pa)
 void
 nc_hipert_adiab_prepare_wkb (NcHIPertAdiab *pa, NcHICosmo *cosmo, gdouble prec, gdouble alpha_i, gdouble alpha_f)
 {
-  nc_hipert_wkb_prepare (pa->wkb, G_OBJECT (cosmo), prec, alpha_i, alpha_f);
+  /*nc_hipert_wkb_prepare (pa->wkb, G_OBJECT (cosmo), prec, alpha_i, alpha_f);*/
 }
 
 /**
@@ -282,7 +276,7 @@ nc_hipert_adiab_prepare_wkb (NcHIPertAdiab *pa, NcHICosmo *cosmo, gdouble prec, 
 void
 nc_hipert_adiab_wkb_zeta (NcHIPertAdiab *pa, NcHICosmo *cosmo, gdouble alpha, gdouble *Re_zeta, gdouble *Im_zeta)
 {
-  nc_hipert_wkb_q (pa->wkb, G_OBJECT (cosmo), alpha, Re_zeta, Im_zeta);
+  nc_hipert_wkb_q (pa->wkb, NCM_MODEL (cosmo), alpha, Re_zeta, Im_zeta);
 }
 
 /**
@@ -301,7 +295,7 @@ nc_hipert_adiab_wkb_zeta (NcHIPertAdiab *pa, NcHICosmo *cosmo, gdouble alpha, gd
 void
 nc_hipert_adiab_wkb_zeta_Pzeta (NcHIPertAdiab *pa, NcHICosmo *cosmo, gdouble alpha, gdouble *Re_zeta, gdouble *Im_zeta, gdouble *Re_Pzeta, gdouble *Im_Pzeta)
 {
-  nc_hipert_wkb_q_p (pa->wkb, G_OBJECT (cosmo), alpha, Re_zeta, Im_zeta, Re_Pzeta, Im_Pzeta);
+  nc_hipert_wkb_q_p (pa->wkb, NCM_MODEL (cosmo), alpha, Re_zeta, Im_zeta, Re_Pzeta, Im_Pzeta);
 }
 
 /**
@@ -318,7 +312,7 @@ nc_hipert_adiab_wkb_zeta_Pzeta (NcHIPertAdiab *pa, NcHICosmo *cosmo, gdouble alp
 gdouble
 nc_hipert_adiab_wkb_maxtime (NcHIPertAdiab *pa, NcHICosmo *cosmo, gdouble alpha0, gdouble alpha1)
 {
-  return nc_hipert_wkb_maxtime (pa->wkb, G_OBJECT (cosmo), alpha0, alpha1);
+  return nc_hipert_wkb_maxtime (pa->wkb, NCM_MODEL (cosmo), alpha0, alpha1);
 }
 
 /**
@@ -337,20 +331,13 @@ nc_hipert_adiab_wkb_maxtime (NcHIPertAdiab *pa, NcHICosmo *cosmo, gdouble alpha0
 gdouble
 nc_hipert_adiab_wkb_maxtime_prec (NcHIPertAdiab *pa, NcHICosmo *cosmo, NcHIPertWKBCmp cmp, gdouble prec, gdouble alpha0, gdouble alpha1)
 {
-  return nc_hipert_wkb_maxtime_prec (pa->wkb, G_OBJECT (cosmo), cmp, prec, alpha0, alpha1);
+  return nc_hipert_wkb_maxtime_prec (pa->wkb, NCM_MODEL (cosmo), cmp, alpha0, alpha1);
 }
 
 static gint
 _nc_hipert_adiab_f (realtype alpha, N_Vector y, N_Vector ydot, gpointer f_data)
 {
-  NcHIPertAdiabArg *arg = (NcHIPertAdiabArg *) f_data;
-  NcHIPertIAdiabEOM *eom = nc_hipert_iadiab_eom (NC_HIPERT_IADIAB (arg->cosmo), alpha, NC_HIPERT (arg->pa)->k);
-
-  NV_Ith_S (ydot, NC_HIPERT_ADIAB_RE_ZETA) = NV_Ith_S (y, NC_HIPERT_ADIAB_RE_PZETA) / eom->m;
-  NV_Ith_S (ydot, NC_HIPERT_ADIAB_IM_ZETA) = NV_Ith_S (y, NC_HIPERT_ADIAB_IM_PZETA) / eom->m;
-
-  NV_Ith_S (ydot, NC_HIPERT_ADIAB_RE_PZETA) = - eom->m * eom->nu2 * NV_Ith_S (y, NC_HIPERT_ADIAB_RE_ZETA);
-  NV_Ith_S (ydot, NC_HIPERT_ADIAB_IM_PZETA) = - eom->m * eom->nu2 * NV_Ith_S (y, NC_HIPERT_ADIAB_IM_ZETA);
+  /*NcHIPertAdiabArg *arg = (NcHIPertAdiabArg *) f_data;*/
 
   return 0;
 }
@@ -358,13 +345,7 @@ _nc_hipert_adiab_f (realtype alpha, N_Vector y, N_Vector ydot, gpointer f_data)
 static gint
 _nc_hipert_adiab_J (_NCM_SUNDIALS_INT_TYPE N, realtype alpha, N_Vector y, N_Vector fy, DlsMat J, gpointer jac_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3)
 {
-  NcHIPertAdiabArg *arg = (NcHIPertAdiabArg *) jac_data;
-  NcHIPertIAdiabEOM *eom = nc_hipert_iadiab_eom (NC_HIPERT_IADIAB (arg->cosmo), alpha, NC_HIPERT (arg->pa)->k);
-
-  DENSE_ELEM (J, NC_HIPERT_ADIAB_RE_ZETA, NC_HIPERT_ADIAB_RE_PZETA) = 1.0 / eom->m;
-  DENSE_ELEM (J, NC_HIPERT_ADIAB_IM_ZETA, NC_HIPERT_ADIAB_IM_PZETA) = 1.0 / eom->m;
-  DENSE_ELEM (J, NC_HIPERT_ADIAB_RE_PZETA, NC_HIPERT_ADIAB_RE_ZETA) = - eom->m * eom->nu2;
-  DENSE_ELEM (J, NC_HIPERT_ADIAB_IM_PZETA, NC_HIPERT_ADIAB_IM_ZETA) = - eom->m * eom->nu2;
+  /*NcHIPertAdiabArg *arg = (NcHIPertAdiabArg *) jac_data;*/
 
   return 0;
 }

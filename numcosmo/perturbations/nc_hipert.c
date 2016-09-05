@@ -226,6 +226,58 @@ _nc_hipert_set_mode_k (NcHIPert *pert, gdouble k)
 }
 
 /**
+ * nc_hipert_set_reltol:
+ * @pert: a #NcHIPert.
+ * @reltol: the relative tolarance.
+ *
+ * Sets the value of the relative tolerance.
+ *
+ */
+static void
+_nc_hipert_set_reltol (NcHIPert *pert, gdouble reltol)
+{
+  if (pert->reltol != reltol)
+  {
+    pert->reltol   = reltol;
+    pert->prepared = FALSE;
+  }
+}
+
+/**
+ * nc_hipert_set_abstol:
+ * @pert: a #NcHIPert.
+ * @abstol: the absolute tolarance.
+ *
+ * Sets the value of the absolute tolerance.
+ *
+ */
+static void
+_nc_hipert_set_abstol (NcHIPert *pert, gdouble abstol)
+{
+  if (pert->abstol != abstol)
+  {
+    pert->abstol   = abstol;
+    pert->prepared = FALSE;
+  }
+}
+
+/**
+ * nc_hipert_get_reltol:
+ * @pert: a #NcHIPert.
+ *
+ * Gets the value of the relative tolerance.
+ *
+ * Returns: reltol
+ */
+/**
+ * nc_hipert_get_abstol:
+ * @pert: a #NcHIPert.
+ *
+ * Gets the value of the relative tolerance.
+ *
+ */
+
+/**
  * nc_hipert_set_sys_size:
  * @pert: a #NcHIPert.
  * @sys_size: the system size.
@@ -316,65 +368,3 @@ nc_hipert_reset_solver (NcHIPert *pert)
   pert->cvode_init = FALSE;
 }
 
-/**
- * nc_hipert_set_reltol:
- * @pert: a #NcHIPert.
- * @reltol: the relative tolarance.
- *
- * Sets the value of the relative tolerance.
- *
- */
-static void
-_nc_hipert_set_reltol (NcHIPert *pert, gdouble reltol)
-{
-  if (pert->reltol != reltol)
-  {
-    pert->reltol   = reltol;
-    pert->prepared = FALSE;
-  }
-}
-
-/**
- * nc_hipert_set_abstol:
- * @pert: a #NcHIPert.
- * @abstol: the absolute tolarance.
- *
- * Sets the value of the absolute tolerance.
- *
- */
-static void
-_nc_hipert_set_abstol (NcHIPert *pert, gdouble abstol)
-{
-  if (pert->abstol != abstol)
-  {
-    pert->abstol   = abstol;
-    pert->prepared = FALSE;
-  }
-}
-
-/**
- * nc_hipert_get_reltol:
- * @pert: a #NcHIPert.
- *
- * Gets the value of the relative tolerance.
- *
- * Returns: reltol
- */
-gdouble
-nc_hipert_get_reltol (NcHIPert *pert)
-{
-  return pert->reltol;
-}
-
-/**
- * nc_hipert_get_abstol:
- * @pert: a #NcHIPert.
- *
- * Gets the value of the relative tolerance.
- *
- */
-gdouble
-nc_hipert_get_abstol (NcHIPert *pert)
-{
-  return pert->abstol;
-}

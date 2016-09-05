@@ -75,12 +75,12 @@ G_INLINE_FUNC void nc_hipert_set_mode_k (NcHIPert *pert, gdouble k);
 G_INLINE_FUNC void nc_hipert_set_reltol (NcHIPert *pert, gdouble reltol);
 G_INLINE_FUNC void nc_hipert_set_abstol (NcHIPert *pert, gdouble abstol);
 
+G_INLINE_FUNC gdouble nc_hipert_get_reltol (NcHIPert *pert);
+G_INLINE_FUNC gdouble nc_hipert_get_abstol (NcHIPert *pert);
+
 void nc_hipert_set_sys_size (NcHIPert *pert, guint sys_size);
 void nc_hipert_set_stiff_solver (NcHIPert *pert, gboolean stiff);
 void nc_hipert_reset_solver (NcHIPert *pert);
-
-gdouble nc_hipert_get_reltol (NcHIPert *pert);
-gdouble nc_hipert_get_abstol (NcHIPert *pert);
 
 G_END_DECLS
 
@@ -108,6 +108,18 @@ G_INLINE_FUNC void
 nc_hipert_set_abstol (NcHIPert *pert, gdouble abstol)
 {
   NC_HIPERT_GET_CLASS (pert)->set_abstol (pert, abstol);
+}
+
+G_INLINE_FUNC gdouble 
+nc_hipert_get_reltol (NcHIPert *pert)
+{
+  return pert->reltol;
+}
+
+G_INLINE_FUNC gdouble 
+nc_hipert_get_abstol (NcHIPert *pert)
+{
+  return pert->abstol;
 }
 
 G_END_DECLS
