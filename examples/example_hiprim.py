@@ -72,6 +72,7 @@ cosmo.param_set_by_name ("Omegak", 0.0)
 
 reion = Nc.HIReionCamb.new ()
 cosmo.add_submodel (reion)
+
 #reion.z_to_tau (cosmo)
 
 #
