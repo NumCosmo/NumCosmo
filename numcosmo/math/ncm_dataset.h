@@ -59,6 +59,12 @@ typedef enum _NcmDatasetBStrapType
   NCM_DATASET_BSTRAP_LEN,   /*< skip >*/
 } NcmDatasetBStrapType;
 
+struct _NcmDatasetClass
+{
+  /*< private >*/
+  GObjectClass parent_class;
+};
+
 /**
  * NcmDataSet:
  *
@@ -72,12 +78,6 @@ struct _NcmDataset
   NcmDatasetBStrapType bstype;
   GArray *data_prob;
   GArray *bstrap;
-};
-
-struct _NcmDatasetClass
-{
-  /*< private >*/
-  GObjectClass parent_class;
 };
 
 GType ncm_dataset_get_type (void) G_GNUC_CONST;

@@ -46,6 +46,7 @@
 #include <gsl/gsl_complex_math.h>
 #include <gsl/gsl_statistics_double.h>
 #include <gsl/gsl_cdf.h>
+#include <gsl/gsl_sf_hyperg.h>
 #include <cvode/cvode.h>
 #include <cvode/cvode_dense.h>
 
@@ -172,7 +173,7 @@ gdouble
 ncm_topology_sigma_comoving_a0_lss (guint n, gdouble alpha, gdouble sigma_alpha)
 {
   gdouble sigma = sin (alpha) * tan (M_PI/n) / (cos (alpha) * cos (alpha) + tan (M_PI / n) * tan (M_PI / n));
-  sigma = sqrt(sigma * sigma * sigma_alpha * sigma_alpha);
+  sigma = sqrt (sigma * sigma * sigma_alpha * sigma_alpha);
   if (n == 2)
     sigma = sigma_alpha / alpha;
   return sigma;
@@ -879,6 +880,54 @@ ncm_cmpdbl (const gdouble x, const gdouble y)
     return 0.0;
   else
     return fabs (2.0 * (x - y) / (x + y));
+}
+
+/**
+ * ncm_exprel:
+ * @x: a double
+ *
+ * Returns: FIXME
+ */
+gdouble 
+ncm_exprel (const gdouble x)
+{
+  return gsl_sf_hyperg_1F1_int (1, 2, x);
+}
+
+/**
+ * ncm_d1exprel:
+ * @x: a double
+ *
+ * Returns: FIXME
+ */
+gdouble 
+ncm_d1exprel (const gdouble x)
+{
+  return 0.5 * gsl_sf_hyperg_1F1_int (2, 3, x);
+}
+
+/**
+ * ncm_d2exprel:
+ * @x: a double
+ *
+ * Returns: FIXME
+ */
+gdouble 
+ncm_d2exprel (const gdouble x)
+{
+  return gsl_sf_hyperg_1F1_int (3, 4, x) / 3.0;
+}
+
+/**
+ * ncm_d3exprel:
+ * @x: a double
+ *
+ * Returns: FIXME
+ */
+gdouble 
+ncm_d3exprel (const gdouble x)
+{
+  return 0.25 * gsl_sf_hyperg_1F1_int (4, 5, x);
 }
 
 /**

@@ -62,18 +62,18 @@ typedef enum _NcClusterMassLnnormalParams
 
 #define NC_CLUSTER_MASS_LNNORMAL_DEFAULT_PARAMS_ABSTOL (0.0)
 
+struct _NcClusterMassLnnormalClass
+{
+  /*< private >*/
+  NcClusterMassClass parent_class;
+};
+
 struct _NcClusterMassLnnormal
 {
   /*< private >*/
   NcClusterMass parent_instance;
   gdouble lnMobs_max;
   gdouble lnMobs_min;
-};
-
-struct _NcClusterMassLnnormalClass
-{
-  /*< private >*/
-  NcClusterMassClass parent_class;
 };
 
 GType nc_cluster_mass_lnnormal_get_type (void) G_GNUC_CONST;

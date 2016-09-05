@@ -42,7 +42,6 @@ G_BEGIN_DECLS
 typedef struct _NcDensityProfileClass NcDensityProfileClass;
 typedef struct _NcDensityProfile NcDensityProfile;
 
-
 struct _NcDensityProfileClass
 {
   /*< private >*/

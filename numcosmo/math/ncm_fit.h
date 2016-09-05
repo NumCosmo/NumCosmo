@@ -133,6 +133,17 @@ typedef enum _NcmFitRunMsgs
   NCM_FIT_RUN_MSGS_FULL,
 } NcmFitRunMsgs;
 
+struct _NcmFitClass
+{
+  /*< private >*/
+  GObjectClass parent_class;
+  NcmFit *(*copy_new) (NcmFit *fit, NcmLikelihood *lh, NcmMSet *mset, NcmFitGradType gtype);
+  void (*reset) (NcmFit *fit);
+  gboolean (*run) (NcmFit *fit, NcmFitRunMsgs mtype);
+  const gchar *(*get_desc) (NcmFit *fit);
+  gboolean is_least_squares;
+};
+
 struct _NcmFit
 {
   /*< private >*/
@@ -150,17 +161,6 @@ struct _NcmFit
   GPtrArray *equality_constraints;
   GPtrArray *inequality_constraints;
   NcmFit *sub_fit;
-};
-
-struct _NcmFitClass
-{
-  /*< private >*/
-  GObjectClass parent_class;
-  NcmFit *(*copy_new) (NcmFit *fit, NcmLikelihood *lh, NcmMSet *mset, NcmFitGradType gtype);
-  void (*reset) (NcmFit *fit);
-  gboolean (*run) (NcmFit *fit, NcmFitRunMsgs mtype);
-  const gchar *(*get_desc) (NcmFit *fit);
-  gboolean is_least_squares;
 };
 
 struct _NcmFitConstraint

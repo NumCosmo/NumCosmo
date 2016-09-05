@@ -29,7 +29,6 @@
 #include <glib-object.h>
 #include <numcosmo/build_cfg.h>
 #include <numcosmo/nc_hicosmo.h>
-#include <numcosmo/perturbations/nc_hipert_iadiab.h>
 #include <numcosmo/perturbations/nc_hipert_itwo_fluids.h>
 
 G_BEGIN_DECLS
@@ -40,6 +39,8 @@ G_BEGIN_DECLS
 #define NC_IS_HICOSMO_QGRW(obj)          (G_TYPE_CHECK_INSTANCE_TYPE ((obj), NC_TYPE_HICOSMO_QGRW))
 #define NC_IS_HICOSMO_QGRW_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE ((klass), NC_TYPE_HICOSMO_QGRW))
 #define NC_HICOSMO_QGRW_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS ((obj), NC_TYPE_HICOSMO_QGRW, NcHICosmoQGRWClass))
+
+#define NC_TYPE_HIPERT_WKB_QGRW_ZETA     (nc_hipert_wkb_qgrw_zeta_get_type ())
 
 typedef struct _NcHICosmoQGRWClass NcHICosmoQGRWClass;
 typedef struct _NcHICosmoQGRW NcHICosmoQGRW;
@@ -110,12 +111,12 @@ struct _NcHICosmoQGRW
 {
   NcHICosmo parent_instance;
   /*< private >*/
-  NcHIPertIAdiabEOM eom_adiab_zeta;
   NcHIPertITwoFluidsEOM eom_two_fluids;
   NcHIPertITwoFluidsTV tv_two_fluids;
 };
 
 GType nc_hicosmo_qgrw_get_type (void) G_GNUC_CONST;
+GType nc_hipert_wkb_qgrw_zeta_get_type (void) G_GNUC_CONST;
 
 NcHICosmoQGRW *nc_hicosmo_qgrw_new (void);
 

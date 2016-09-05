@@ -98,14 +98,6 @@ typedef enum _NcHICosmoDEParams
 #define NC_HICOSMO_DE_DEFAULT_HE_YP     (0.24)
 #define NC_HICOSMO_DE_DEFAULT_ENNU      (3.046)
 
-struct _NcHICosmoDE
-{
-  /*< private >*/
-  NcHICosmo parent_instance;
-  NcmSpline2d *BBN_spline2d;
-  guint64 HE4_Yp_key;
-};
-
 struct _NcHICosmoDEClass
 {
   /*< private >*/
@@ -114,6 +106,14 @@ struct _NcHICosmoDEClass
   NcHICosmoDEFunc1 dE2Omega_de_dz;
   NcHICosmoDEFunc1 d2E2Omega_de_dz2;
   NcHICosmoDEFunc1 w_de;
+};
+
+struct _NcHICosmoDE
+{
+  /*< private >*/
+  NcHICosmo parent_instance;
+  NcmSpline2d *BBN_spline2d;
+  guint64 HE4_Yp_key;
 };
 
 GType nc_hicosmo_de_get_type (void) G_GNUC_CONST;

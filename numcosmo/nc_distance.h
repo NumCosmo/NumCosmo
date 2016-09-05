@@ -47,6 +47,12 @@ typedef struct _NcDistance NcDistance;
 typedef gdouble (*NcDistanceFunc0) (NcDistance *dist, NcHICosmo *cosmo);
 typedef gdouble (*NcDistanceFunc1) (NcDistance *dist, NcHICosmo *cosmo, gdouble z);
 
+struct _NcDistanceClass
+{
+  /*< private >*/
+  GObjectClass parent_class;
+};
+
 struct _NcDistance
 {
   /*< private >*/
@@ -58,7 +64,7 @@ struct _NcDistance
   NcmFunctionCache *conformal_time_cache;
   NcmFunctionCache *sound_horizon_cache;
   NcmModelCtrl *ctrl;
-  gdouble z_f;
+  gdouble zf;
   gboolean use_cache;
 };
 
@@ -78,18 +84,16 @@ typedef struct _NcDistanceFuncZ
   NcHICosmoImpl impl;
 } NcDistanceFuncZ;
 
-struct _NcDistanceClass
-{
-  /*< private >*/
-  GObjectClass parent_class;
-};
-
 GType nc_distance_get_type (void) G_GNUC_CONST;
 
-NcDistance *nc_distance_new (gdouble z_f);
+NcDistance *nc_distance_new (gdouble zf);
 NcDistance *nc_distance_ref (NcDistance *dist);
+
+void nc_distance_require_zf (NcDistance *dist, const gdouble zf);
+
 void nc_distance_prepare (NcDistance *dist, NcHICosmo *cosmo);
 G_INLINE_FUNC void nc_distance_prepare_if_needed (NcDistance *dist, NcHICosmo *cosmo);
+
 void nc_distance_free (NcDistance *dist);
 void nc_distance_clear (NcDistance **dist);
 

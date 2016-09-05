@@ -40,6 +40,12 @@ G_BEGIN_DECLS
 typedef struct _NcmSParamClass NcmSParamClass;
 typedef struct _NcmSParam NcmSParam;
 
+struct _NcmSParamClass
+{
+  /*< private >*/
+  GObjectClass parent_class;
+};
+
 /**
  * NcmParamType:
  * @NCM_PARAM_TYPE_FREE: parameter to be fitted
@@ -67,12 +73,6 @@ struct _NcmSParam
   gdouble abstol;
   gdouble default_val;
   NcmParamType ftype;
-};
-
-struct _NcmSParamClass
-{
-  /*< private >*/
-  GObjectClass parent_class;
 };
 
 GType ncm_sparam_get_type (void) G_GNUC_CONST;

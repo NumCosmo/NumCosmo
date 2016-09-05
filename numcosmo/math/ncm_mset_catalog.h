@@ -51,6 +51,12 @@ G_BEGIN_DECLS
 typedef struct _NcmMSetCatalogClass NcmMSetCatalogClass;
 typedef struct _NcmMSetCatalog NcmMSetCatalog;
 
+struct _NcmMSetCatalogClass
+{
+  /*< private >*/
+  GObjectClass parent_class;
+};
+
 /**
  * NcmMSetCatalogSync:
  * @NCM_MSET_CATALOG_SYNC_DISABLE: Catalog will be synchronized only when closing the file or with an explicit call of ncm_mset_catalog_sync().
@@ -120,12 +126,6 @@ struct _NcmMSetCatalog
   gboolean constructed;
 };
 
-struct _NcmMSetCatalogClass
-{
-  /*< private >*/
-  GObjectClass parent_class;
-};
-
 GType ncm_mset_catalog_get_type (void) G_GNUC_CONST;
 
 NcmMSetCatalog *ncm_mset_catalog_new (NcmMSet *mset, guint nadd_vals, guint nchains, gboolean weighted, ...) G_GNUC_NULL_TERMINATED;
@@ -178,6 +178,8 @@ NcmVector *ncm_mset_catalog_peek_e_var_t (NcmMSetCatalog *mcat, guint t);
 
 void ncm_mset_catalog_get_mean (NcmMSetCatalog *mcat, NcmVector  **mean);
 void ncm_mset_catalog_get_covar (NcmMSetCatalog *mcat, NcmMatrix **cov);
+void ncm_mset_catalog_get_full_covar (NcmMSetCatalog *mcat, NcmMatrix **cov);
+void ncm_mset_catalog_log_full_covar (NcmMSetCatalog *mcat);
 
 void ncm_mset_catalog_estimate_autocorrelation_tau (NcmMSetCatalog *mcat);
 NcmVector *ncm_mset_catalog_peek_autocorrelation_tau (NcmMSetCatalog *mcat);

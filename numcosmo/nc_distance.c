@@ -167,7 +167,7 @@ nc_distance_set_property (GObject *object, guint prop_id, const GValue *value, G
   switch (prop_id)
   {
     case PROP_ZF:
-      dist->z_f = g_value_get_double (value);
+      dist->zf = g_value_get_double (value);
       ncm_model_ctrl_force_update (dist->ctrl);
       break;
     default:
@@ -185,7 +185,7 @@ nc_distance_get_property (GObject *object, guint prop_id, GValue *value, GParamS
   switch (prop_id)
   {
     case PROP_ZF:
-      g_value_set_double (value, dist->z_f);
+      g_value_set_double (value, dist->zf);
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -217,7 +217,7 @@ nc_distance_class_init (NcDistanceClass *klass)
 
 /**
  * nc_distance_new:
- * @z_f: final redshift $z_f$
+ * @zf: final redshift $z_f$
  *
  * Creates a new #NcDistance object optimized to perform distance calculations
  * to redshift up to $z_f$.
@@ -225,9 +225,9 @@ nc_distance_class_init (NcDistanceClass *klass)
  * Returns: a new #NcDistance
  */
 NcDistance *
-nc_distance_new (gdouble z_f)
+nc_distance_new (gdouble zf)
 {
-  return g_object_new (NC_TYPE_DISTANCE, "zf", z_f, NULL);
+  return g_object_new (NC_TYPE_DISTANCE, "zf", zf, NULL);
 }
 
 /**
@@ -270,6 +270,26 @@ nc_distance_clear (NcDistance **dist)
   g_clear_object (dist);
 }
 
+/**
+ * nc_distance_require_zf:
+ * @dist: a #NcDistance
+ * @zf: maximum redshift required
+ *
+ * Requires the final redshift of at least $z_f$ = @zf.
+ *
+ */
+void 
+nc_distance_require_zf (NcDistance *dist, const gdouble zf)
+{
+  if (zf > dist->zf)
+  {
+    ncm_ode_spline_clear (&dist->comoving_distance_spline);
+    dist->zf = zf;
+
+    ncm_model_ctrl_force_update (dist->ctrl);
+  }
+}
+
 static gdouble dcddz (gdouble y, gdouble x, gpointer userdata);
 
 /**
@@ -294,7 +314,7 @@ nc_distance_prepare (NcDistance *dist, NcHICosmo *cosmo)
   {
     NcmSpline *s = ncm_spline_cubic_notaknot_new ();
     dist->comoving_distance_spline =
-      ncm_ode_spline_new_full (s, dcddz, 0.0, 0.0, dist->z_f);
+      ncm_ode_spline_new_full (s, dcddz, 0.0, 0.0, dist->zf);
 
     ncm_spline_free (s);
   }
@@ -372,7 +392,7 @@ nc_distance_comoving (NcDistance *dist, NcHICosmo *cosmo, gdouble z)
   if (ncm_model_impl (NCM_MODEL (cosmo)) & NC_HICOSMO_IMPL_Dc)
     return nc_hicosmo_Dc (cosmo, z);
 
-  if (z <= dist->z_f)
+  if (z <= dist->zf)
     return ncm_spline_eval (dist->comoving_distance_spline->s, z);
 
   F.function = &comoving_distance_integral_argument;

@@ -71,17 +71,17 @@ typedef enum _NcDataHubbleId
   NC_DATA_HUBBLE_NSAMPLES,           /*< skip >*/
 } NcDataHubbleId;
 
+struct _NcDataHubbleClass
+{
+  /*< private >*/
+  NcmDataGaussDiagClass parent_class;
+};
+
 struct _NcDataHubble
 {
   /*< private >*/
   NcmDataGaussDiag parent_instance;
   NcmVector *x;
-};
-
-struct _NcDataHubbleClass
-{
-  /*< private >*/
-  NcmDataGaussDiagClass parent_class;
 };
 
 GType nc_data_hubble_get_type (void) G_GNUC_CONST;

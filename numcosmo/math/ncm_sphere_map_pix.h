@@ -31,6 +31,7 @@
 #include <numcosmo/build_cfg.h>
 #include <numcosmo/math/ncm_vector.h>
 #include <numcosmo/math/ncm_quaternion.h>
+#include <numcosmo/math/ncm_timer.h>
 #include <gsl/gsl_vector_float.h>
 #ifndef NUMCOSMO_GIR_SCAN
 #include <complex.h>
@@ -103,11 +104,13 @@ struct _NcmSphereMapPix
   NcmSphereMapPixCoordSys coordsys;
   gpointer pvec;
   gpointer fft_pvec;
-  GPtrArray *fft_plan;
+  GPtrArray *fft_plan_r2c;
+  GPtrArray *fft_plan_c2r;
   guint lmax;
   NcmVector *Ylm;
   NcmVector *alm;
   NcmVector *Cl;
+  NcmTimer *t;
 };
 
 GType ncm_sphere_map_pix_get_type (void) G_GNUC_CONST;
@@ -165,6 +168,10 @@ void ncm_sphere_map_pix_prepare_Cl (NcmSphereMapPix *pix);
 
 void ncm_sphere_map_pix_get_alm (NcmSphereMapPix *pix, guint l, guint m, gdouble *Re_alm, gdouble *Im_alm);
 gdouble ncm_sphere_map_pix_get_Cl (NcmSphereMapPix *pix, guint l);
+
+void ncm_sphere_map_pix_add_noise (NcmSphereMapPix *pix, const gdouble sd, NcmRNG *rng);
+
+void ncm_sphere_map_pix_alm2map (NcmSphereMapPix *pix);
 
 #define NCM_SPHERE_MAP_PIX_N(nside) (12 * (nside) * (nside))
 #define NCM_SPHERE_MAP_PIX_INT_TO_XY(i,x,y) \

@@ -45,6 +45,12 @@ G_BEGIN_DECLS
 typedef struct _NcmLikelihoodClass NcmLikelihoodClass;
 typedef struct _NcmLikelihood NcmLikelihood;
 
+struct _NcmLikelihoodClass
+{
+  /*< private >*/
+  GObjectClass parent_class;
+};
+
 struct _NcmLikelihood
 {
   /*< private >*/
@@ -53,12 +59,6 @@ struct _NcmLikelihood
   NcmObjArray *priors_f;
   NcmObjArray *priors_m2lnL;
   NcmVector *m2lnL_v;
-};
-
-struct _NcmLikelihoodClass
-{
-  /*< private >*/
-  GObjectClass parent_class;
 };
 
 GType ncm_likelihood_get_type (void) G_GNUC_CONST;

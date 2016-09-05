@@ -45,14 +45,6 @@ G_BEGIN_DECLS
 typedef struct _NcTransferFuncClass NcTransferFuncClass;
 typedef struct _NcTransferFunc NcTransferFunc;
 
-struct _NcTransferFunc
-{
-  /*< private > */
-  GObject parent_instance;
-  NcmModelCtrl *ctrl_cosmo;
-  NcmModelCtrl *ctrl_reion;
-};
-
 struct _NcTransferFuncClass
 {
   /*< private > */
@@ -60,6 +52,14 @@ struct _NcTransferFuncClass
   gpointer (*alloc)(void);
   void (*prepare)(NcTransferFunc *tf, NcHICosmo *cosmo);
   gdouble (*calc)(NcTransferFunc *tf, gdouble k);
+};
+
+struct _NcTransferFunc
+{
+  /*< private > */
+  GObject parent_instance;
+  NcmModelCtrl *ctrl_cosmo;
+  NcmModelCtrl *ctrl_reion;
 };
 
 GType nc_transfer_func_get_type (void) G_GNUC_CONST;

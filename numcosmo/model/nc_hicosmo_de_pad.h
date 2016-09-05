@@ -60,16 +60,16 @@ typedef enum _NcHICosmoDEPadParams
 
 #define NC_HICOSMO_DE_PM_N (NC_HICOSMO_DE_PAD_W1 + 1 - NC_HICOSMO_DE_BASE_N
 
-struct _NcHICosmoDEPad
-{
-  /*< private >*/
-  NcHICosmoDE parent_instance;
-};
-
 struct _NcHICosmoDEPadClass
 {
   /*< private >*/
   NcHICosmoDEClass parent_class;
+};
+
+struct _NcHICosmoDEPad
+{
+  /*< private >*/
+  NcHICosmoDE parent_instance;
 };
 
 GType nc_hicosmo_de_pad_get_type (void) G_GNUC_CONST;

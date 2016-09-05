@@ -363,7 +363,6 @@ nc_headers = \
 	model/quantum_gravity.h                \
 	perturbations/nc_hipert.h              \
 	perturbations/nc_hipert_wkb.h          \
-	perturbations/nc_hipert_iadiab.h       \
 	perturbations/nc_hipert_itwo_fluids.h  \
 	perturbations/nc_hipert_adiab.h        \
 	perturbations/nc_hipert_two_fluids.h   \
@@ -483,7 +482,6 @@ nc_sources = \
 	model/quantum_gravity.c                \
 	perturbations/nc_hipert.c              \
 	perturbations/nc_hipert_wkb.c          \
-	perturbations/nc_hipert_iadiab.c       \
 	perturbations/nc_hipert_itwo_fluids.c  \
 	perturbations/nc_hipert_adiab.c        \
 	perturbations/nc_hipert_two_fluids.c   \
@@ -506,6 +504,8 @@ libnumcosmo_la_LDFLAGS = -version-info $(LT_CURRENT):$(LT_REVISION):$(LT_AGE)
 cosmo_includedir = \
 	$(pkgincludedir)
 
+ncm_enum_types_built_headers =
+
 ncm_enum_types_headers = \
 	ncm_enum_types.h
 
@@ -525,10 +525,13 @@ ncm_cond_headers =
 if HAVE_LIBNLOPT
 
 ncm_fit_nlopt_enum_meta.h: ncm_fit_nlopt_enum_meta.c
-	$(CPP) $(AM_CFLAGS) $(srcdir)/ncm_fit_nlopt_enum_meta.c -o ncm_fit_nlopt_enum_meta.h.tmp
-	$(GREP) -v '^#' ncm_fit_nlopt_enum_meta.h.tmp > ncm_fit_nlopt_enum_meta.h.tmp1
-	$(SED) 's/nlopt_algorithm/NcmFitNloptAlgorithm/' ncm_fit_nlopt_enum_meta.h.tmp1 > ncm_fit_nlopt_enum_meta.h.tmp2
-	$(SED) 's/nlopt_result/NcmFitNloptResult/' ncm_fit_nlopt_enum_meta.h.tmp2 > ncm_fit_nlopt_enum_meta.h
+	$(AM_V_GEN)$(CPP) $(AM_CFLAGS) $(srcdir)/ncm_fit_nlopt_enum_meta.c -o ncm_fit_nlopt_enum_meta.h.tmp
+	$(AM_V_GEN)$(GREP) -v '^#' ncm_fit_nlopt_enum_meta.h.tmp > ncm_fit_nlopt_enum_meta.h.tmp1
+	$(AM_V_GEN)$(SED) 's/nlopt_algorithm/NcmFitNloptAlgorithm/' ncm_fit_nlopt_enum_meta.h.tmp1 > ncm_fit_nlopt_enum_meta.h.tmp2
+	$(AM_V_GEN)$(SED) 's/nlopt_result/NcmFitNloptResult/' ncm_fit_nlopt_enum_meta.h.tmp2 > ncm_fit_nlopt_enum_meta.h
+	$(AM_V_GEN)rm ncm_fit_nlopt_enum_meta.h.tmp
+	$(AM_V_GEN)rm ncm_fit_nlopt_enum_meta.h.tmp1
+	$(AM_V_GEN)rm ncm_fit_nlopt_enum_meta.h.tmp2
 
 ncm_fit_nlopt_enum.h: ncm_fit_nlopt_enum_meta.h $(srcdir)/ncm_fit_nlopt_enum.h.template
 	$(AM_V_GEN) ( $(GLIB_MKENUMS) --template $(srcdir)/ncm_fit_nlopt_enum.h.template ncm_fit_nlopt_enum_meta.h ) > \
@@ -537,6 +540,9 @@ ncm_fit_nlopt_enum.h: ncm_fit_nlopt_enum_meta.h $(srcdir)/ncm_fit_nlopt_enum.h.t
 ncm_fit_nlopt_enum.c: ncm_fit_nlopt_enum_meta.h $(srcdir)/ncm_fit_nlopt_enum.c.template
 	$(AM_V_GEN) ( $(GLIB_MKENUMS) --template $(srcdir)/ncm_fit_nlopt_enum.c.template ncm_fit_nlopt_enum_meta.h ) > \
 	  ncm_fit_nlopt_enum.c.tmp && mv ncm_fit_nlopt_enum.c.tmp ncm_fit_nlopt_enum.c
+
+ncm_enum_types_built_headers += \
+	ncm_fit_nlopt_enum_meta.h
 
 ncm_enum_types_sources += \
 	ncm_fit_nlopt_enum.c
@@ -556,7 +562,8 @@ BUILT_SOURCES = \
 	$(ncm_enum_types_headers) \
 	$(ncm_enum_types_sources) \
 	$(nc_enum_types_headers)  \
-	$(nc_enum_types_sources)
+	$(nc_enum_types_sources)  \
+	$(ncm_enum_types_built_headers)
 
 ncm_enum_types.h: $(ncm_headers) ncm_enum_types.h.template
 	$(AM_V_GEN) ( cd $(srcdir) && $(GLIB_MKENUMS) --template ncm_enum_types.h.template $(ncm_headers) $(ncm_cond_headers) ) > \

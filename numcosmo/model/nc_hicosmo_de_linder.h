@@ -60,16 +60,16 @@ typedef enum _NcHICosmoDELinderParams
 
 #define NC_HICOSMO_DE_LINDER_N (NC_HICOSMO_DE_LINDER_W1 + 1 - NC_HICOSMO_DE_BASE_N)
 
-struct _NcHICosmoDELinder
-{
-  /*< private >*/
-  NcHICosmoDE parent_instance;
-};
-
 struct _NcHICosmoDELinderClass
 {
   /*< private >*/
   NcHICosmoDEClass parent_class;
+};
+
+struct _NcHICosmoDELinder
+{
+  /*< private >*/
+  NcHICosmoDE parent_instance;
 };
 
 GType nc_hicosmo_de_linder_get_type (void) G_GNUC_CONST;

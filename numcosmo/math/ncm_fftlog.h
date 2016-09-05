@@ -53,12 +53,14 @@ G_BEGIN_DECLS
 typedef struct _NcmFftlogClass NcmFftlogClass;
 typedef struct _NcmFftlog NcmFftlog;
 
-/**
- * NcmFftlog:
- * 
- * FIXME
- *
- */
+struct _NcmFftlogClass
+{
+  /*< private >*/
+  GObjectClass parent_class;
+  const gchar *name;
+  void (*get_Ym) (NcmFftlog *fftlog, gpointer Ym_0);
+};
+
 struct _NcmFftlog
 {
   /*< private >*/
@@ -89,14 +91,6 @@ struct _NcmFftlog
   fftw_plan p_Fk2Cm;
   fftw_plan p_CmYm2Gr;
 #endif /* NUMCOSMO_HAVE_FFTW3 */
-};
-
-struct _NcmFftlogClass
-{
-  /*< private >*/
-  GObjectClass parent_class;
-  const gchar *name;
-  void (*get_Ym) (NcmFftlog *fftlog, gpointer Ym_0);
 };
 
 GType ncm_fftlog_get_type (void) G_GNUC_CONST;

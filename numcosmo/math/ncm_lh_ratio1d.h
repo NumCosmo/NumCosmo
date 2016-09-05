@@ -55,6 +55,12 @@ typedef enum _NcmLHRatio1dRoot
   NCM_LH_RATIO1D_ROOT_NUMDIFF,
 } NcmLHRatio1dRoot;
 
+struct _NcmLHRatio1dClass
+{
+  /*< private >*/
+  GObjectClass parent_class;
+};
+
 struct _NcmLHRatio1d
 {
   /*< private >*/
@@ -72,12 +78,6 @@ struct _NcmLHRatio1d
   guint niter;
   guint func_eval;
   guint grad_eval;
-};
-
-struct _NcmLHRatio1dClass
-{
-  /*< private >*/
-  GObjectClass parent_class;
 };
 
 GType ncm_lh_ratio1d_get_type (void) G_GNUC_CONST;

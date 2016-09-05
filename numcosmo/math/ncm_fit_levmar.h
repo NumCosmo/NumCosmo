@@ -62,6 +62,12 @@ typedef enum _NcmFitLevmarAlgos
   NCM_FIT_LEVMAR_NUM_ALGOS, /*< skip >*/
 } NcmFitLevmarAlgos;
 
+struct _NcmFitLevmarClass
+{
+  /*< private >*/
+  NcmFitClass parent_class;
+};
+
 struct _NcmFitLevmar
 {
   /*< private >*/
@@ -72,12 +78,6 @@ struct _NcmFitLevmar
   NcmVector *lb;
   NcmVector *ub;
   NcmFitLevmarAlgos algo;
-};
-
-struct _NcmFitLevmarClass
-{
-  /*< private >*/
-  NcmFitClass parent_class;
 };
 
 GType ncm_fit_levmar_get_type (void) G_GNUC_CONST;

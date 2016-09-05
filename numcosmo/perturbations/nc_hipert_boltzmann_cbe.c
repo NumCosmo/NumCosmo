@@ -327,7 +327,7 @@ G_STMT_START { \
 
   nc_cbe_set_scalar_lmax (boltzmann_cbe->cbe, scalar_lmax);
 
-  nc_cbe_prepare (boltzmann_cbe->cbe, cosmo);
+  nc_cbe_prepare_if_needed (boltzmann_cbe->cbe, cosmo);
   nc_cbe_get_all_Cls (boltzmann_cbe->cbe, 
                       boltzmann_cbe->TT_Cls, 
                       boltzmann_cbe->EE_Cls, 

@@ -45,6 +45,12 @@ G_BEGIN_DECLS
 typedef struct _NcGrowthFuncClass NcGrowthFuncClass;
 typedef struct _NcGrowthFunc NcGrowthFunc;
 
+struct _NcGrowthFuncClass
+{
+  /*< private >*/
+  GObjectClass parent_class;
+};
+
 struct _NcGrowthFunc
 {
   /*< private >*/
@@ -56,12 +62,6 @@ struct _NcGrowthFunc
   gdouble zf;
   gdouble Da0;
   NcmModelCtrl *ctrl_cosmo;
-};
-
-struct _NcGrowthFuncClass
-{
-  /*< private >*/
-  GObjectClass parent_class;
 };
 
 GType nc_growth_func_get_type (void) G_GNUC_CONST;

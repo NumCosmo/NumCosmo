@@ -51,14 +51,15 @@ G_BEGIN_DECLS
 typedef struct _NcCorClusterCmbLensLimberClass NcCorClusterCmbLensLimberClass;
 typedef struct _NcCorClusterCmbLensLimber NcCorClusterCmbLensLimber;
 
-
 struct _NcCorClusterCmbLensLimberClass
 {
+  /*< private >*/
   GObjectClass parent_class;
 };
 
 struct _NcCorClusterCmbLensLimber
 {
+  /*< private >*/
   GObject parent_instance;
   NcmSpline *oneh_int_mass_spline;
 };

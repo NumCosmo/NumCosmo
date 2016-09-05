@@ -47,6 +47,7 @@ G_BEGIN_DECLS
 
 typedef struct _NcClusterAbundanceClass NcClusterAbundanceClass;
 typedef struct _NcClusterAbundance NcClusterAbundance;
+
 typedef struct _NcClusterAbundanceDataP NcClusterAbundanceDataP;
 typedef struct _NcClusterAbundanceDataBinz NcClusterAbundanceDataBinZ;
 typedef struct _NcClusterAbundanceDataBinM NcClusterAbundanceDataBinM;
@@ -59,6 +60,12 @@ typedef gdouble (*NcClusterAbundanceIntPd2N) (NcClusterAbundance *cad, NcHICosmo
 #define nc_cluster_abundance_dNdz_val(cad,cp,lnMl,lnMu,z) (cad)->dNdz_val(cad,cp,lnMl,lnMu,z)
 #define nc_cluster_abundance_dNdlnM_val(cad,cp,lnM,zl,zu) (cad)->dNdlnM_val(cad,cp,lnM,zl,zu)
 #define nc_cluster_abundance_N_val(cad,cp,lnMl,lnMu,zl,zu) (cad)->N_val(cad,cp,lnMl,lnMu,zl,zu)
+
+struct _NcClusterAbundanceClass
+{
+  /*< private >*/
+  GObjectClass parent_class;
+};
 
 struct _NcClusterAbundance
 {
@@ -83,12 +90,6 @@ struct _NcClusterAbundance
   NcmModelCtrl *ctrl_reion;
   NcmModelCtrl *ctrl_z;
   NcmModelCtrl *ctrl_m;
-};
-
-struct _NcClusterAbundanceClass
-{
-  /*< private >*/
-  GObjectClass parent_class;
 };
 
 GType nc_cluster_abundance_get_type (void) G_GNUC_CONST;

@@ -1713,6 +1713,7 @@ nc_cbe_thermodyn_prepare_if_needed (NcCBE *cbe, NcHICosmo *cosmo)
 void
 nc_cbe_prepare (NcCBE *cbe, NcHICosmo *cosmo)
 {
+  /*printf ("Preparing CLASS!\n");*/
   if (cbe->allocated)
   {
     g_assert (cbe->free != NULL);
@@ -1748,6 +1749,7 @@ void
 nc_cbe_prepare_if_needed (NcCBE *cbe, NcHICosmo *cosmo)
 {
   ncm_model_ctrl_update (cbe->ctrl_cosmo, NCM_MODEL (cosmo));
+
   if (!ncm_model_ctrl_model_has_submodel (cbe->ctrl_cosmo, nc_hiprim_id ()))
   {
     g_error ("nc_cbe_prepare_if_needed: cosmo model must contain a NcHIPrim submodel.");
@@ -1756,6 +1758,8 @@ nc_cbe_prepare_if_needed (NcCBE *cbe, NcHICosmo *cosmo)
   {
     gboolean cosmo_up = ncm_model_ctrl_model_last_update (cbe->ctrl_cosmo);
     gboolean prim_up  = ncm_model_ctrl_submodel_last_update (cbe->ctrl_cosmo, nc_hiprim_id ());
+
+    /*printf ("cosmo_up %d prim_up %d [%p]\n", cosmo_up, prim_up, cosmo);*/
     
     if (cosmo_up)
     {    

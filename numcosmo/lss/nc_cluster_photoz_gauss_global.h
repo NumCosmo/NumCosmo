@@ -56,18 +56,18 @@ typedef enum _NcClusterPhotozGaussGlobalParams
   NC_CLUSTER_PHOTOZ_GAUSS_GLOBAL_SPARAM_LEN, /*< skip >*/
 } NcClusterPhotozGaussGlobalParams;
 
+struct _NcClusterPhotozGaussGlobalClass
+{
+  /*< private >*/
+  NcClusterRedshiftClass parent_class;
+};
+
 struct _NcClusterPhotozGaussGlobal
 {
   /*< private >*/
   NcClusterRedshift parent_instance;
   gdouble pz_min;
   gdouble pz_max;
-};
-
-struct _NcClusterPhotozGaussGlobalClass
-{
-  /*< private >*/
-  NcClusterRedshiftClass parent_class;
 };
 
 GType nc_cluster_photoz_gauss_global_get_type (void) G_GNUC_CONST;

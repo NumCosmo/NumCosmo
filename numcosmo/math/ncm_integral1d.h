@@ -48,11 +48,13 @@ typedef gdouble (*NcmIntegral1dF) (const gdouble x, gpointer userdata);
 
 struct _NcmIntegral1dClass
 {
+  /*< private >*/
   GObjectClass parent_class;
 };
 
 struct _NcmIntegral1d
 {
+  /*< private >*/
   GObject parent_instance;
   NcmIntegral1dF F;
   guint partition;

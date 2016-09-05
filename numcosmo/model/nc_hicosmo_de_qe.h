@@ -60,16 +60,16 @@ typedef enum _NcHICosmoDEQEParams
 
 #define NC_HICOSMO_DE_QE_N (NC_HICOSMO_DE_QE_W1 + 1 - NC_HICOSMO_DE_BASE_N)
 
-struct _NcHICosmoDEQe
-{
-  /*< private >*/
-  NcHICosmoDE parent_instance;
-};
-
 struct _NcHICosmoDEQeClass
 {
   /*< private >*/
   NcHICosmoDEClass parent_class;
+};
+
+struct _NcHICosmoDEQe
+{
+  /*< private >*/
+  NcHICosmoDE parent_instance;
 };
 
 GType nc_hicosmo_de_qe_get_type (void) G_GNUC_CONST;

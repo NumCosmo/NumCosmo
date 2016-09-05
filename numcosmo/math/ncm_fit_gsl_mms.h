@@ -59,6 +59,12 @@ typedef enum _NcmFitGSLMMSAlgos
   NCM_FIT_GSL_MMS_NUM_ALGOS,      /*< skip >*/
 } NcmFitGSLMMSAlgos;
 
+struct _NcmFitGSLMMSClass
+{
+  /*< private >*/
+  NcmFitClass parent_class;
+};
+
 struct _NcmFitGSLMMS
 {
   /*< private >*/
@@ -68,12 +74,6 @@ struct _NcmFitGSLMMS
   NcmFitGSLMMSAlgos algo;
   gchar *desc;
   NcmVector *ss;
-};
-
-struct _NcmFitGSLMMSClass
-{
-  /*< private >*/
-  NcmFitClass parent_class;
 };
 
 GType ncm_fit_gsl_mms_get_type (void) G_GNUC_CONST;

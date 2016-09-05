@@ -44,6 +44,18 @@ G_BEGIN_DECLS
 typedef struct _NcmDataGaussCovClass NcmDataGaussCovClass;
 typedef struct _NcmDataGaussCov NcmDataGaussCov;
 
+struct _NcmDataGaussCovClass
+{
+  /*< private >*/
+  NcmDataClass parent_class;
+  void (*mean_func) (NcmDataGaussCov *gauss, NcmMSet *mset, NcmVector *vp);
+  gboolean (*cov_func) (NcmDataGaussCov *gauss, NcmMSet *mset, NcmMatrix *cov);
+  void (*lnNorma2) (NcmDataGaussCov *gauss, NcmMSet *mset, gdouble *m2lnL);
+  void (*lnNorma2_bs) (NcmDataGaussCov *gauss, NcmMSet *mset, NcmBootstrap *bstrap, gdouble *m2lnL);
+  void (*set_size) (NcmDataGaussCov *gauss, guint np);
+  guint (*get_size) (NcmDataGaussCov *gauss);
+};
+
 struct _NcmDataGaussCov
 {
   /*< private >*/
@@ -55,18 +67,6 @@ struct _NcmDataGaussCov
   NcmMatrix *LLT;
   gboolean prepared_LLT;
   gboolean use_norma;
-};
-
-struct _NcmDataGaussCovClass
-{
-  /*< private >*/
-  NcmDataClass parent_class;
-  void (*mean_func) (NcmDataGaussCov *gauss, NcmMSet *mset, NcmVector *vp);
-  gboolean (*cov_func) (NcmDataGaussCov *gauss, NcmMSet *mset, NcmMatrix *cov);
-  void (*lnNorma2) (NcmDataGaussCov *gauss, NcmMSet *mset, gdouble *m2lnL);
-  void (*lnNorma2_bs) (NcmDataGaussCov *gauss, NcmMSet *mset, NcmBootstrap *bstrap, gdouble *m2lnL);
-  void (*set_size) (NcmDataGaussCov *gauss, guint np);
-  guint (*get_size) (NcmDataGaussCov *gauss);
 };
 
 GType ncm_data_gauss_cov_get_type (void) G_GNUC_CONST;

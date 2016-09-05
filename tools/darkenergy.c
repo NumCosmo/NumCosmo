@@ -685,7 +685,7 @@ main (gint argc, gchar *argv[])
       }
       else if (ncm_mset_func_list_has_ns_name ("NcDistance", func_name))
       {
-        func = NCM_MSET_FUNC (ncm_mset_func_list_new_ns_name ("NcDistance", func_name, dist));
+        func = NCM_MSET_FUNC (ncm_mset_func_list_new_ns_name ("NcDistance", func_name, G_OBJECT (dist)));
       }
       else
       {

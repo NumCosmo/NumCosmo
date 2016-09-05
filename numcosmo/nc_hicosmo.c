@@ -891,13 +891,32 @@ nc_hicosmo_log_all_models (GType parent)
  * Returns: (transfer none): the #NcHIPrim submodel.
  */
 /**
- * nc_hicosmo_peek_reion:
+ * nc_hicosmo_peek_reion: 
  * @cosmo: a #NcHICosmo
  *
  * FIXME
  *
  * Returns: (transfer none): the #NcHIReion submodel.
  */
+
+/*
+ * nc_hicosmo_sigma8:
+ * @cosmo: a #NcHICosmo
+ * @psf: a #NcmPowspecFilter
+ *
+ * Computes the variance of the power spectrum at $R = 8 / h$ Mpc at redshift 0.
+ *
+ * Returns: $\sigma_8$
+ *
+ */
+gdouble
+nc_hicosmo_sigma8 (NcHICosmo *cosmo, NcmPowspecFilter *psf)
+{
+  if (psf->type != NCM_POWSPEC_FILTER_TYPE_TOPHAT)
+    g_error ("nc_hicosmo_sigma8: sigma_8 is defined with a tophat filter, but psf is another type of filter.");
+
+  return ncm_powspec_filter_eval_sigma (psf, 0.0, 8.0 / nc_hicosmo_h (cosmo));
+}
 
 #define _NC_HICOSMO_FUNC0_TO_FLIST(fname) \
 static void _nc_hicosmo_flist_##fname (NcmMSetFuncList *flist, NcmMSet *mset, const gdouble *x, gdouble *res) \
@@ -932,6 +951,16 @@ _NC_HICOSMO_FUNC0_TO_FLIST (XHe)
 _NC_HICOSMO_FUNC0_TO_FLIST (z_lss)
 _NC_HICOSMO_FUNC0_TO_FLIST (as_drag)
 _NC_HICOSMO_FUNC0_TO_FLIST (xb)
+
+static void 
+_nc_hicosmo_flist_sigma8 (NcmMSetFuncList *flist, NcmMSet *mset, const gdouble *x, gdouble *res) \
+{
+  NcHICosmo *cosmo = NC_HICOSMO (ncm_mset_peek (mset, nc_hicosmo_id ()));
+
+  ncm_powspec_filter_prepare_if_needed (NCM_POWSPEC_FILTER (flist->obj), NCM_MODEL (cosmo));
+  
+  res[0] = nc_hicosmo_sigma8 (cosmo, NCM_POWSPEC_FILTER (flist->obj));
+}
 
 #define _NC_HICOSMO_FUNC1_TO_FLIST(fname) \
 static void _nc_hicosmo_flist_##fname (NcmMSetFuncList *flist, NcmMSet *mset, const gdouble *x, gdouble *res) \
@@ -983,6 +1012,8 @@ _nc_hicosmo_register_functions (void)
   ncm_mset_func_list_register ("as_drag",     "r_\\mathrm{adrag}",          "NcHICosmo", "As_drag",                                   G_TYPE_NONE, _nc_hicosmo_flist_as_drag,     0, 1);
   ncm_mset_func_list_register ("xb",          "x_b",                        "NcHICosmo", "Bounce scale",                              G_TYPE_NONE, _nc_hicosmo_flist_xb,          0, 1);
 
+  ncm_mset_func_list_register ("sigma8",      "\\sigma_8",                  "NcHICosmo", "sigma8",                                    NCM_TYPE_POWSPEC_FILTER, _nc_hicosmo_flist_sigma8,  0, 1);
+  
   ncm_mset_func_list_register ("H",           "H",                               "NcHICosmo", "Hubble function",                           G_TYPE_NONE, _nc_hicosmo_flist_H,        1, 1);
   ncm_mset_func_list_register ("dH_dz",       "\\mathrm{d}H/\\mathrm{d}z",       "NcHICosmo", "Derivative of the Hubble function",         G_TYPE_NONE, _nc_hicosmo_flist_dH_dz,    1, 1);
   ncm_mset_func_list_register ("E",           "E",                               "NcHICosmo", "Hubble function over H_0",                  G_TYPE_NONE, _nc_hicosmo_flist_E,        1, 1);

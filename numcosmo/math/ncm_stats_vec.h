@@ -54,6 +54,12 @@ G_BEGIN_DECLS
 typedef struct _NcmStatsVecClass NcmStatsVecClass;
 typedef struct _NcmStatsVec NcmStatsVec;
 
+struct _NcmStatsVecClass
+{
+  /*< private >*/
+  GObjectClass parent_class;
+};
+
 /**
  * NcmStatsVecType:
  * @NCM_STATS_VEC_MEAN: Calculates mean only.
@@ -102,12 +108,6 @@ struct _NcmStatsVec
   fftw_plan param_r2c;
   fftw_plan param_c2r;
 #endif /* NUMCOSMO_HAVE_FFTW3 */
-};
-
-struct _NcmStatsVecClass
-{
-  /*< private >*/
-  GObjectClass parent_class;
 };
 
 GType ncm_stats_vec_get_type (void) G_GNUC_CONST;

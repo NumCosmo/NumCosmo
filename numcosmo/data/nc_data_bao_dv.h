@@ -45,18 +45,18 @@ G_BEGIN_DECLS
 typedef struct _NcDataBaoDVClass NcDataBaoDVClass;
 typedef struct _NcDataBaoDV NcDataBaoDV;
 
+struct _NcDataBaoDVClass
+{
+  /*< private >*/
+  NcmDataGaussDiagClass parent_class;
+};
+
 struct _NcDataBaoDV
 {
   /*< private >*/
   NcmDataGaussDiag parent_instance;
   NcDistance *dist;
   NcmVector *x;
-};
-
-struct _NcDataBaoDVClass
-{
-  /*< private >*/
-  NcmDataGaussDiagClass parent_class;
 };
 
 GType nc_data_bao_dv_get_type (void) G_GNUC_CONST;

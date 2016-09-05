@@ -52,6 +52,12 @@ G_BEGIN_DECLS
 typedef struct _NcmFitESMCMCClass NcmFitESMCMCClass;
 typedef struct _NcmFitESMCMC NcmFitESMCMC;
 
+struct _NcmFitESMCMCClass
+{
+  /*< private >*/
+  GObjectClass parent_class;
+};
+
 struct _NcmFitESMCMC
 {
   /*< private >*/
@@ -87,12 +93,6 @@ struct _NcmFitESMCMC
   GMutex resample_lock;
   GMutex update_lock;
   GCond write_cond;
-};
-
-struct _NcmFitESMCMCClass
-{
-  /*< private >*/
-  GObjectClass parent_class;
 };
 
 GType ncm_fit_esmcmc_get_type (void) G_GNUC_CONST;

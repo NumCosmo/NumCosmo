@@ -47,17 +47,6 @@ G_BEGIN_DECLS
 typedef struct _NcmDataClass NcmDataClass;
 typedef struct _NcmData NcmData;
 
-struct _NcmData
-{
-  /*< private >*/
-  GObject parent_instance;
-  gchar *desc;
-  gchar *long_desc;
-  gboolean init;
-  gboolean begin;
-  NcmBootstrap *bstrap;
-};
-
 /**
  * NcmDataClass:
  * @bootstrap: sets whenever the #NcmData implementations supports bootstrap.
@@ -100,6 +89,17 @@ struct _NcmDataClass
   void (*m2lnL_val) (NcmData *data, NcmMSet *mset, gdouble *m2lnL);
   void (*m2lnL_grad) (NcmData *data, NcmMSet *mset, NcmVector *grad);
   void (*m2lnL_val_grad) (NcmData *data, NcmMSet *mset, gdouble *m2lnL, NcmVector *grad);
+};
+
+struct _NcmData
+{
+  /*< private >*/
+  GObject parent_instance;
+  gchar *desc;
+  gchar *long_desc;
+  gboolean init;
+  gboolean begin;
+  NcmBootstrap *bstrap;
 };
 
 GType ncm_data_get_type (void) G_GNUC_CONST;

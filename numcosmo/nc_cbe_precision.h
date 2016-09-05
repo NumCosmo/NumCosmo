@@ -41,6 +41,7 @@ G_BEGIN_DECLS
 
 typedef struct _NcCBEPrecisionClass NcCBEPrecisionClass;
 typedef struct _NcCBEPrecision NcCBEPrecision;
+
 typedef struct _NcCBEPrecisionPrivate NcCBEPrecisionPrivate;
 
 struct _NcCBEPrecisionClass

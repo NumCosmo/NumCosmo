@@ -43,6 +43,12 @@ G_BEGIN_DECLS
 typedef struct _NcmFitGSLLSClass NcmFitGSLLSClass;
 typedef struct _NcmFitGSLLS NcmFitGSLLS;
 
+struct _NcmFitGSLLSClass
+{
+  /*< private >*/
+  NcmFitClass parent_class;
+};
+
 struct _NcmFitGSLLS
 {
   /*< private >*/
@@ -50,12 +56,6 @@ struct _NcmFitGSLLS
   gsl_multifit_fdfsolver *ls;
   gsl_multifit_function_fdf f;
   const gsl_multifit_fdfsolver_type *T;
-};
-
-struct _NcmFitGSLLSClass
-{
-  /*< private >*/
-  NcmFitClass parent_class;
 };
 
 GType ncm_fit_gsl_ls_get_type (void) G_GNUC_CONST;

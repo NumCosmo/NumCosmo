@@ -44,14 +44,6 @@ G_BEGIN_DECLS
 typedef struct _NcmMSetTransKernClass NcmMSetTransKernClass;
 typedef struct _NcmMSetTransKern NcmMSetTransKern;
 
-struct _NcmMSetTransKern
-{
-  /*< private >*/
-  GObject parent_instance;
-  NcmMSet *mset;
-  NcmVector *theta;
-};
-
 struct _NcmMSetTransKernClass
 {
   /*< private >*/
@@ -61,6 +53,14 @@ struct _NcmMSetTransKernClass
   void (*generate) (NcmMSetTransKern *tkern, NcmVector *theta, NcmVector *thetastar, NcmRNG *rng);
   gdouble (*pdf) (NcmMSetTransKern *tkern, NcmVector *theta, NcmVector *thetastar);
   const gchar *(*get_name) (NcmMSetTransKern *tkern);
+};
+
+struct _NcmMSetTransKern
+{
+  /*< private >*/
+  GObject parent_instance;
+  NcmMSet *mset;
+  NcmVector *theta;
 };
 
 GType ncm_mset_trans_kern_get_type (void) G_GNUC_CONST;

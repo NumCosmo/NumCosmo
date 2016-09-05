@@ -80,8 +80,8 @@ GType ncm_mset_func_list_get_type (void) G_GNUC_CONST;
 void ncm_mset_func_list_register (const gchar *name, const gchar *symbol, const gchar *ns, const gchar *desc, GType obj_type, NcmMSetFuncListN func, guint nvar, guint dim);
 GArray *ncm_mset_func_list_select (const gchar *ns, gint nvar, gint dim);
 
-NcmMSetFuncList *ncm_mset_func_list_new (const gchar *full_name, gpointer obj);
-NcmMSetFuncList *ncm_mset_func_list_new_ns_name (const gchar *ns, const gchar *name, gpointer obj);
+NcmMSetFuncList *ncm_mset_func_list_new (const gchar *full_name, GObject *obj);
+NcmMSetFuncList *ncm_mset_func_list_new_ns_name (const gchar *ns, const gchar *name, GObject *obj);
 
 gboolean ncm_mset_func_list_has_ns_name (const gchar *ns, const gchar *name);
 gboolean ncm_mset_func_list_has_full_name (const gchar *full_name);

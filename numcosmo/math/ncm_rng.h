@@ -44,6 +44,14 @@ G_BEGIN_DECLS
 typedef struct _NcmRNGClass NcmRNGClass;
 typedef struct _NcmRNG NcmRNG;
 
+struct _NcmRNGClass
+{
+  /*< private >*/
+  GObjectClass parent_class;
+  GRand *seed_gen;
+  GHashTable *seed_hash;
+};
+
 struct _NcmRNG
 {
   /*< private >*/
@@ -52,14 +60,6 @@ struct _NcmRNG
   gulong seed_val;
   gboolean seed_set;
   GMutex lock;
-};
-
-struct _NcmRNGClass
-{
-  /*< private >*/
-  GObjectClass parent_class;
-  GRand *seed_gen;
-  GHashTable *seed_hash;
 };
 
 GType ncm_rng_get_type (void) G_GNUC_CONST;

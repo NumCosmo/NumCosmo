@@ -208,7 +208,7 @@ main (gint argc, gchar *argv[])
     
     if (info)
     {
-      NcmMatrix *cov = NULL;
+      /*NcmMatrix *cov = NULL;*/
       const gchar *rtype_str = ncm_mset_catalog_get_run_type (mcat);
       ncm_cfg_msg_sepa ();
       g_message ("# Catalog run type: `%s'.\n", rtype_str);
@@ -220,9 +220,10 @@ main (gint argc, gchar *argv[])
       g_message ("#\n");
       
       ncm_mset_pretty_log (mset);
-      ncm_mset_catalog_get_covar (mcat, &cov);
-      ncm_mset_fparams_log_covar (mset, cov);
-      ncm_matrix_clear (&cov);
+      /*ncm_mset_catalog_get_covar (mcat, &cov);*/
+      /*ncm_mset_fparams_log_covar (mset, cov);*/
+      ncm_mset_catalog_log_full_covar (mcat);
+      /*ncm_matrix_clear (&cov);*/
       ncm_mset_catalog_log_current_stats (mcat);
     }
 
@@ -301,7 +302,7 @@ main (gint argc, gchar *argv[])
         {
           if (ncm_mset_func_list_has_ns_name ("NcDistance", funcs[i]))
           {
-            mset_func = NCM_MSET_FUNC (ncm_mset_func_list_new_ns_name ("NcDistance", funcs[i], dist));
+            mset_func = NCM_MSET_FUNC (ncm_mset_func_list_new_ns_name ("NcDistance", funcs[i], G_OBJECT (dist)));
             if (ncm_mset_func_get_dim (mset_func) != 1 || ncm_mset_func_get_nvar (mset_func) != 1)
             {
               g_warning ("# Function `%s' is not R => R, skipping.", ncm_mset_func_peek_name (mset_func));
@@ -375,7 +376,7 @@ main (gint argc, gchar *argv[])
         {
           if (ncm_mset_func_list_has_ns_name ("NcDistance", distribs[i]))
           {
-            mset_func = NCM_MSET_FUNC (ncm_mset_func_list_new_ns_name ("NcDistance", distribs[i], dist));
+            mset_func = NCM_MSET_FUNC (ncm_mset_func_list_new_ns_name ("NcDistance", distribs[i], G_OBJECT (dist)));
             if (ncm_mset_func_get_dim (mset_func) != 1 || ncm_mset_func_get_nvar (mset_func) != 0)
             {
               g_warning ("# Function `%s' is not constant, skipping.", ncm_mset_func_peek_name (mset_func));

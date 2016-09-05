@@ -32,6 +32,7 @@
 #include <numcosmo/math/ncm_model.h>
 #include <numcosmo/math/ncm_mset_func.h>
 #include <numcosmo/math/ncm_likelihood.h>
+#include <numcosmo/math/ncm_powspec_filter.h>
 
 G_BEGIN_DECLS
 
@@ -124,21 +125,6 @@ typedef struct _NcHIPrim NcHIPrim;
 typedef struct _NcHIReion NcHIReion;
 #endif
 
-/**
- * NcHICosmo:
- *
- * FIXME
- *
- */
-struct _NcHICosmo
-{
-  /*< private >*/
-  NcmModel parent_instance;
-  gboolean is_eternal;
-  NcHIPrim *prim;
-  NcHIReion *reion;
-};
-
 typedef struct _NcHICosmoFuncZ
 {
   const gchar *name;
@@ -176,6 +162,21 @@ struct _NcHICosmoClass
   NcHICosmoFunc1Z d2E2_dz2;
   NcHICosmoFunc1Z bgp_cs2;
   NcHICosmoFunc1Z Dc;
+};
+
+/**
+ * NcHICosmo:
+ *
+ * FIXME
+ *
+ */
+struct _NcHICosmo
+{
+  /*< private >*/
+  NcmModel parent_instance;
+  gboolean is_eternal;
+  NcHIPrim *prim;
+  NcHIReion *reion;
 };
 
 GType nc_hicosmo_get_type (void) G_GNUC_CONST;
@@ -267,6 +268,8 @@ G_INLINE_FUNC gdouble nc_hicosmo_x_alpha (NcHICosmo *cosmo, gdouble alpha);
 
 G_INLINE_FUNC NcHIPrim *nc_hicosmo_peek_prim (NcHICosmo *cosmo);
 G_INLINE_FUNC NcHIReion *nc_hicosmo_peek_reion (NcHICosmo *cosmo);
+
+gdouble nc_hicosmo_sigma8 (NcHICosmo *cosmo, NcmPowspecFilter *psf);
 
 #define NC_HICOSMO_DEFAULT_PARAMS_RELTOL (1e-7)
 #define NC_HICOSMO_DEFAULT_PARAMS_ABSTOL (0.0)

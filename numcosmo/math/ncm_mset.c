@@ -1365,10 +1365,11 @@ ncm_mset_params_print_vals (NcmMSet *mset, FILE *out)
 void
 ncm_mset_fparams_log_covar (NcmMSet *mset, NcmMatrix *covar)
 {
+  const guint name_size       = ncm_mset_max_fparam_name (mset);
+  const guint free_params_len = ncm_mset_fparam_len (mset);
+  const gchar *box            = "---------------";
   guint i, j;
-  guint name_size = ncm_mset_max_fparam_name (mset);
-  guint free_params_len = ncm_mset_fparam_len (mset);
-  const gchar *box = "---------------";
+
   g_assert (covar != NULL);
 
   ncm_cfg_msg_sepa ();

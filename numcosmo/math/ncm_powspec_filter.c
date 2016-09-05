@@ -397,7 +397,7 @@ ncm_powspec_filter_prepare (NcmPowspecFilter *psf, NcmModel *model)
   arg.z     = 0.0;
 
   ncm_powspec_prepare_if_needed (psf->ps, model);
-
+  
   {
     const gdouble lnk_min = log (ncm_powspec_get_kmin (psf->ps));
     const gdouble lnk_max = log (ncm_powspec_get_kmax (psf->ps));
@@ -412,7 +412,7 @@ ncm_powspec_filter_prepare (NcmPowspecFilter *psf, NcmModel *model)
       psf->calibrated = FALSE;
     }
   }
-  
+
   if (!psf->calibrated)
   {
     NcmMatrix *lnvar, *dlnvar;
@@ -483,11 +483,8 @@ ncm_powspec_filter_prepare (NcmPowspecFilter *psf, NcmModel *model)
     NcmMatrix *lnvar  = psf->var->zm;
     NcmMatrix *dlnvar = psf->dvar->zm;
     
-    guint N_k = 0, N_z = 0;
+    guint N_z = ncm_matrix_nrows (lnvar);
     guint i;
-
-    ncm_powspec_get_nknots (psf->ps, &N_z, &N_k);
-    N_k = ncm_fftlog_get_size (psf->fftlog);
 
     for (i = 0; i < N_z; i++)
     {

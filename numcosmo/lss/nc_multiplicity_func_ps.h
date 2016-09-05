@@ -43,17 +43,17 @@ G_BEGIN_DECLS
 typedef struct _NcMultiplicityFuncPSClass NcMultiplicityFuncPSClass;
 typedef struct _NcMultiplicityFuncPS NcMultiplicityFuncPS;
 
+struct _NcMultiplicityFuncPSClass
+{
+  /*< private >*/
+  NcMultiplicityFuncClass parent_class;
+};
+
 struct _NcMultiplicityFuncPS
 {
   /*< private >*/
   NcMultiplicityFunc parent_instance; 
   gdouble delta_c;
-};
-
-struct _NcMultiplicityFuncPSClass
-{
-  /*< private >*/
-  NcMultiplicityFuncClass parent_class;
 };
 
 GType nc_multiplicity_func_ps_get_type (void) G_GNUC_CONST;

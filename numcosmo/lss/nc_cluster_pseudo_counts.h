@@ -75,6 +75,12 @@ typedef enum _NcClusterPseudoCountsParams
 
 #define NC_CLUSTER_PSEUDO_COUNTS_DEFAULT_PARAMS_ABSTOL (0.0)
 
+struct _NcClusterPseudoCountsClass
+{
+  /*< private >*/
+  NcmModelClass parent_class;
+};
+
 struct _NcClusterPseudoCounts
 {
   /*< private >*/
@@ -83,12 +89,6 @@ struct _NcClusterPseudoCounts
   const gsl_multifit_fdfsolver_type *T;
   gsl_multifit_fdfsolver *s;
   gdouble *workz;
-};
-
-struct _NcClusterPseudoCountsClass
-{
-  /*< private >*/
-  NcmModelClass parent_class;
 };
 
 GType nc_cluster_pseudo_counts_get_type (void) G_GNUC_CONST;

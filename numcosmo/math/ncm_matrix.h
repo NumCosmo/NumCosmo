@@ -65,6 +65,12 @@ typedef enum _NcmMatrixInternal
   NCM_MATRIX_DERIVED,
 } NcmMatrixInternal;
 
+struct _NcmMatrixClass
+{
+  /*< private >*/
+  GObjectClass parent_class;
+};
+
 /**
  * NcmMatrix:
  *
@@ -78,12 +84,6 @@ struct _NcmMatrix
   gpointer pdata;
   GDestroyNotify pfree;
   NcmMatrixInternal type;
-};
-
-struct _NcmMatrixClass
-{
-  /*< private >*/
-  GObjectClass parent_class;
 };
 
 GType ncm_matrix_get_type (void) G_GNUC_CONST;

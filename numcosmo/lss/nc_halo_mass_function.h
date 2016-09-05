@@ -44,6 +44,12 @@ G_BEGIN_DECLS
 typedef struct _NcHaloMassFunctionClass NcHaloMassFunctionClass;
 typedef struct _NcHaloMassFunction NcHaloMassFunction;
 
+struct _NcHaloMassFunctionClass
+{
+  /*< private > */
+  GObjectClass parent_class;
+};
+
 struct _NcHaloMassFunction
 {
   /*< private > */
@@ -60,12 +66,6 @@ struct _NcHaloMassFunction
   gdouble prec;
   NcmModelCtrl *ctrl_cosmo;
   NcmModelCtrl *ctrl_reion;
-};
-
-struct _NcHaloMassFunctionClass
-{
-  /*< private > */
-  GObjectClass parent_class;
 };
 
 /**

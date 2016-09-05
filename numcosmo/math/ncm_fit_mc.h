@@ -69,6 +69,12 @@ typedef enum _NcmFitMCResampleType
 
 typedef void (*NcmFitMCResample) (NcmDataset *dset, NcmMSet *mset, NcmRNG *rng);
 
+struct _NcmFitMCClass
+{
+  /*< private >*/
+  GObjectClass parent_class;
+};
+
 struct _NcmFitMC
 {
   /*< private >*/
@@ -94,12 +100,6 @@ struct _NcmFitMC
   GMutex resample_lock;
   GMutex update_lock;
   GCond write_cond;
-};
-
-struct _NcmFitMCClass
-{
-  /*< private >*/
-  GObjectClass parent_class;
 };
 
 GType ncm_fit_mc_get_type (void) G_GNUC_CONST;

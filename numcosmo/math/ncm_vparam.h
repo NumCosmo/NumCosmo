@@ -43,6 +43,12 @@ G_BEGIN_DECLS
 typedef struct _NcmVParamClass NcmVParamClass;
 typedef struct _NcmVParam NcmVParam;
 
+struct _NcmVParamClass
+{
+  /*< private >*/
+  GObjectClass parent_class;
+};
+
 struct _NcmVParam
 {
   /*< private >*/
@@ -50,12 +56,6 @@ struct _NcmVParam
   guint len;
   NcmSParam *default_sparam;
   GPtrArray *sparam;
-};
-
-struct _NcmVParamClass
-{
-  /*< private >*/
-  GObjectClass parent_class;
 };
 
 GType ncm_vparam_get_type (void) G_GNUC_CONST;
