@@ -46,7 +46,6 @@
 
 #include <string.h>
 #include <gsl/gsl_vector.h>
-#include <gsl/gsl_linalg.h>
 
 #ifdef HAVE_BLAS
 #  ifdef HAVE_MKL_CBLAS_H
@@ -55,6 +54,7 @@
 #    include <cblas.h>
 #  else
 #    include <gsl/gsl_cblas.h>
+#    include <gsl/gsl_linalg.h>
 #  endif
 #endif
 
