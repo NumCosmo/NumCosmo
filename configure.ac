@@ -392,9 +392,19 @@ dnl ***************************************************************************
 dnl Check for math.h
 dnl ***************************************************************************
 
-AC_CHECK_HEADERS(math.h,, AC_MSG_ERROR([math.h header files missing]))
+AC_CHECK_HEADERS([math.h],, AC_MSG_ERROR([math.h header files missing]))
 AC_CHECK_LIB([m],[cos])
 AC_CHECK_FUNCS([cos sin erf powl exp10])
+
+dnl ***************************************************************************
+dnl Check for dlfcn.h
+dnl ***************************************************************************
+
+AC_CHECK_HEADERS([dlfcn.h],, AC_MSG_ERROR([dlfcn.h header files missing]))
+AC_CHECK_DECL([RTLD_DEFAULT],
+	[has_RTLD_DEFAULT="yes"],
+	[has_RTLD_DEFAULT="no"],
+	[#include <dlfcn.h>])
 
 dnl ***************************************************************************
 dnl Checks for internal libcuba
@@ -864,6 +874,10 @@ dnl fi
 
 PLC_DEFINES="$PLC_DEFINES -DNOHEALPIX -DCLIK_LENSING -DCAMSPEC_V1"
 PLC_DEFINES="$PLC_DEFINES -D 'CLIKSVNVERSION=\"6dc2a8cf3965\"'"
+
+if test "x$has_RTLD_DEFAULT" = "xyes"; then
+  PLC_DEFINES="$PLC_DEFINES -DHAS_RTLD_DEFAULT"
+fi
 
 AC_SUBST(PLC_DEFINES)
 
