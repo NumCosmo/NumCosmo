@@ -571,7 +571,9 @@ ncm_fftlog_set_size (NcmFftlog *fftlog, guint n)
     fftlog->lnr_vec = ncm_vector_new (fftlog->N);
 
     ncm_cfg_load_fftw_wisdom ("ncm_fftlog_%s", NCM_FFTLOG_GET_CLASS (fftlog)->name);
-    
+
+    ncm_cfg_lock_plan_fftw ();
+
     fftlog->p_Fk2Cm   = fftw_plan_dft_1d (fftlog->Nf, fftlog->Fk, fftlog->Cm, FFTW_FORWARD, fftw_default_flags | FFTW_DESTROY_INPUT);
     fftlog->p_CmYm2Gr = fftw_plan_dft_1d (fftlog->Nf, fftlog->CmYm, fftlog->Gr, FFTW_FORWARD, fftw_default_flags | FFTW_DESTROY_INPUT);
 
@@ -585,6 +587,8 @@ ncm_fftlog_set_size (NcmFftlog *fftlog, guint n)
       g_ptr_array_add (fftlog->Gr_s, Gr_s_i);
       g_ptr_array_add (fftlog->Ym, Ym_i);
     }
+
+    ncm_cfg_unlock_plan_fftw ();
 
     ncm_cfg_save_fftw_wisdom ("ncm_fftlog_%s", NCM_FFTLOG_GET_CLASS (fftlog)->name);
 

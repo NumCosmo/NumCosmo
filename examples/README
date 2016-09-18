@@ -11,6 +11,7 @@ in: /home/[username]/numcosmo
 If you have libtool you can compile directly with:
 
 export NUMCOSMO_DATA_DIR=/home/[username]/numcosmo
+export LD_LIBRARY_PATH="${LD_LIBRARY_PATH}:/home/[username]/numcosmo/numcosmo/.libs/"
 
 libtool --tag=CC --mode=link gcc example_simple.c -o example_simple \
 /home/[username]/numcosmo/numcosmo/libnumcosmo.la \
@@ -35,8 +36,8 @@ for the missing header and add the corresponding pkg-config lib or -I
 All examples assumes that you are using python 2.* 
 
 export NUMCOSMO_DATA_DIR=/home/[username]/numcosmo
-export LD_LIBRARY_PATH=/home/[username]/numcosmo/numcosmo/.libs/
-export GI_TYPELIB_PATH=/home/[username]/numcosmo/numcosmo
+export LD_LIBRARY_PATH="${LD_LIBRARY_PATH}:/home/[username]/numcosmo/numcosmo/.libs/"
+export GI_TYPELIB_PATH="${GI_TYPELIB_PATH}:/home/[username]/numcosmo/numcosmo"
 
 After these two steps just run the script:
 

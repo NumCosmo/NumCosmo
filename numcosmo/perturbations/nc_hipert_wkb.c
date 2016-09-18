@@ -392,7 +392,7 @@ _nc_hipert_wkb_phase_f (realtype alpha, N_Vector y, N_Vector ydot, gpointer f_da
   NcHIPertWKBArg *arg   = (NcHIPertWKBArg *) f_data;
   gdouble nu = 0.0, V = 0.0;
 
-  nc_hipert_wkb_get_nu_V (arg->wkb, arg->model, alpha, NC_HIPERT (arg->wkb)->k, &nu, &V);
+  //nc_hipert_wkb_get_nu_V (arg->wkb, arg->model, alpha, NC_HIPERT (arg->wkb)->k, &nu, &dnu_nu, &V);
   {
     const gdouble rnu   = NV_Ith_S (y, 0);
     const gdouble U     = NV_Ith_S (y, 1);
@@ -400,8 +400,8 @@ _nc_hipert_wkb_phase_f (realtype alpha, N_Vector y, N_Vector ydot, gpointer f_da
     const gdouble Rnunu = Rnu / nu;
     const gdouble nu2   = nu * nu;
     
-    NV_Ith_S (ydot, 0) = - Rnunu * U;
-    NV_Ith_S (ydot, 1) = (1.0 / Rnunu) * (nu2 * expm1 (4.0 * rnu) + V);
+    NV_Ith_S (ydot, 0) = U;
+    NV_Ith_S (ydot, 1) = U * U ;
 
     return 0;
   }
