@@ -261,6 +261,9 @@ nc_cbe_precision_set_property (GObject *object, guint prop_id, const GValue *val
       const gchar *sBBN_file = g_value_get_string (value);
       const guint sBBN_file_len = strlen (sBBN_file);
       g_assert_cmpuint (sBBN_file_len, <= ,_FILENAMESIZE_);
+
+      g_assert (g_file_test (sBBN_file, G_FILE_TEST_EXISTS));
+        
       memcpy (cbe_prec->priv->ppr.sBBN_file, sBBN_file, sBBN_file_len);
       break;
     }
@@ -350,6 +353,9 @@ nc_cbe_precision_set_property (GObject *object, guint prop_id, const GValue *val
       const gchar *Alpha_inf_file = g_value_get_string (value);
       const guint Alpha_inf_file_len = strlen (Alpha_inf_file);
       g_assert_cmpuint (Alpha_inf_file_len, <= ,_FILENAMESIZE_);
+
+      g_assert (g_file_test (Alpha_inf_file, G_FILE_TEST_EXISTS));
+        
       memcpy (cbe_prec->priv->ppr.hyrec_Alpha_inf_file, Alpha_inf_file, Alpha_inf_file_len);
       break;
     }
@@ -358,6 +364,9 @@ nc_cbe_precision_set_property (GObject *object, guint prop_id, const GValue *val
       const gchar *R_inf_file = g_value_get_string (value);
       const guint R_inf_file_len = strlen (R_inf_file);
       g_assert_cmpuint (R_inf_file_len, <= ,_FILENAMESIZE_);
+
+      g_assert (g_file_test (R_inf_file, G_FILE_TEST_EXISTS));
+
       memcpy (cbe_prec->priv->ppr.hyrec_R_inf_file, R_inf_file, R_inf_file_len);
       break;
     }
@@ -366,6 +375,9 @@ nc_cbe_precision_set_property (GObject *object, guint prop_id, const GValue *val
       const gchar *two_photon_tables_file = g_value_get_string (value);
       const guint two_photon_tables_file_len = strlen (two_photon_tables_file);
       g_assert_cmpuint (two_photon_tables_file_len, <= ,_FILENAMESIZE_);
+
+      g_assert (g_file_test (two_photon_tables_file, G_FILE_TEST_EXISTS));
+      
       memcpy (cbe_prec->priv->ppr.hyrec_two_photon_tables_file, two_photon_tables_file, two_photon_tables_file_len);
       break;
     }
