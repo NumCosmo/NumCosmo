@@ -895,8 +895,12 @@ _ncm_stats_vec_get_autocorr_alloc (NcmStatsVec *svec, guint size)
 
     /*g_debug ("# _ncm_stats_vec_get_autocorr_alloc: calculating wisdown %u\n", effsize);*/
     ncm_cfg_load_fftw_wisdom ("ncm_stats_vec_autocorr_%u", effsize);
+
+    ncm_cfg_lock_plan_fftw ();
     svec->param_r2c = fftw_plan_dft_r2c_1d (effsize, svec->param_data, svec->param_fft, fftw_default_flags | FFTW_DESTROY_INPUT);
     svec->param_c2r = fftw_plan_dft_c2r_1d (effsize, svec->param_fft, svec->param_data, fftw_default_flags | FFTW_DESTROY_INPUT);
+    ncm_cfg_unlock_plan_fftw ();
+
     ncm_cfg_save_fftw_wisdom ("ncm_stats_vec_autocorr_%u", effsize);
     svec->fft_plan_size = effsize;
     /*g_debug ("# _ncm_stats_vec_get_autocorr_alloc: calculated  wisdown %u\n", effsize);*/

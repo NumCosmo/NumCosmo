@@ -52,6 +52,8 @@ const GEnumValue *ncm_cfg_get_enum_by_id_name_nick (GType enum_type, const gchar
 const GEnumValue *ncm_cfg_enum_get_value (GType enum_type, guint n);
 void ncm_cfg_enum_print_all (GType enum_type, const gchar *header);
 
+void ncm_cfg_lock_plan_fftw (void);
+void ncm_cfg_unlock_plan_fftw (void);
 gboolean ncm_cfg_load_fftw_wisdom (const gchar *filename, ...);
 gboolean ncm_cfg_save_fftw_wisdom (const gchar *filename, ...);
 gboolean ncm_cfg_exists (const gchar *filename, ...);
