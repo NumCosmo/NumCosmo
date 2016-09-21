@@ -414,6 +414,46 @@ ncm_serialize_set (NcmSerialize *ser, gpointer obj, const gchar *name, gboolean 
   }
 }
 
+/**
+ * ncm_serialize_unset:
+ * @ser: a #NcmSerialize.
+ * @obj: (type GObject): a #GObject.
+ *
+ * Removes the object @obj to @ser using @name, it does nothing
+ * if the instance @obj is not present in @ser.
+ *
+ */
+void
+ncm_serialize_unset (NcmSerialize *ser, gpointer obj)
+{
+  if (ncm_serialize_contain_instance (ser, obj))
+  {
+    const gchar *name = ncm_serialize_peek_name (ser, obj);
+    g_hash_table_remove (ser->name_ptr, name);
+    g_hash_table_remove (ser->ptr_name, obj);
+  }
+}
+
+/**
+ * ncm_serialize_unset:
+ * @ser: a #NcmSerialize.
+ * @obj: (type GObject): a #GObject.
+ *
+ * Removes the object @obj to @ser using @name, it does nothing
+ * if the instance @obj is not present in @ser.
+ *
+ */
+void
+ncm_serialize_remove_ser (NcmSerialize *ser, gpointer obj)
+{
+  gchar *saved_name = NULL;
+  if (g_hash_table_lookup_extended (ser->saved_ptr_name, obj, NULL, (gpointer *)&saved_name))
+  {
+    g_hash_table_remove (ser->saved_ptr_name, obj);
+    g_hash_table_remove (ser->saved_name_ser, saved_name);
+  }
+}
+
 static void
 _ncm_serialize_save_ser (NcmSerialize *ser, gchar *name, gpointer obj, GVariant *ser_var)
 {
@@ -1423,6 +1463,36 @@ ncm_serialize_global_set (gpointer obj, const gchar *name, gboolean overwrite)
 {
   NcmSerialize *ser = ncm_serialize_global ();
   ncm_serialize_set (ser, obj, name, overwrite);
+  ncm_serialize_unref (ser);
+}
+
+/**
+ * ncm_serialize_global_unset:
+ * @obj: (type GObject): a #GObject.
+ *
+ * Global version of ncm_serialize_unset().
+ *
+ */
+void
+ncm_serialize_global_unset (gpointer obj)
+{
+  NcmSerialize *ser = ncm_serialize_global ();
+  ncm_serialize_unset (ser, obj);
+  ncm_serialize_unref (ser);
+}
+
+/**
+ * ncm_serialize_global_remove_ser:
+ * @obj: (type GObject): a #GObject.
+ *
+ * Global version of ncm_serialize_remove_ser().
+ *
+ */
+void
+ncm_serialize_global_remove_ser (gpointer obj)
+{
+  NcmSerialize *ser = ncm_serialize_global ();
+  ncm_serialize_remove_ser (ser, obj);
   ncm_serialize_unref (ser);
 }
 
