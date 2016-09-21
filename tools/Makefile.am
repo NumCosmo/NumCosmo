@@ -57,7 +57,8 @@ darkenergy_SOURCES = \
 	savedata.h
 
 darkenergy_LDADD = \
-        $(top_builddir)/numcosmo/libnumcosmo.la
+        $(top_builddir)/numcosmo/libnumcosmo.la \
+        $(GLIB_LIBS)
 
 AM_CPPFLAGS = 
 
