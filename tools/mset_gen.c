@@ -74,11 +74,28 @@ main (gint argc, gchar *argv[])
     NcmSerialize *ser = ncm_serialize_new (NCM_SERIALIZE_OPT_CLEAN_DUP);
     guint nmodels = g_strv_length (models);
     guint i;
+
     for (i = 0; i < nmodels; i++)
     {
       NcmModel *model = NCM_MODEL (ncm_serialize_from_string (ser, models[i]));
       g_assert (NCM_IS_MODEL (model));
-      ncm_mset_set (mset, model);
+
+      if (ncm_model_is_submodel (model))
+      {
+        NcmModelID mid = ncm_model_main_model (model);
+        NcmModel *main_model = ncm_mset_peek (mset, mid);
+
+        if (main_model == NULL)
+          g_error ("Cannot add submodel `%s', main model `%s' not present.", models[i], ncm_mset_get_ns_by_id (mid));
+
+        ncm_model_add_submodel (main_model, model);
+
+        ncm_mset_set (mset, main_model);
+      }
+      else
+      {
+        ncm_mset_set (mset, model);
+      }
     }
 
     outfile = outfile != NULL ? outfile : "models.mset";

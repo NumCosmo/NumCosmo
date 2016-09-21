@@ -59,7 +59,8 @@ darkenergy_SOURCES = \
 
 darkenergy_LDADD = \
         $(top_builddir)/numcosmo/libnumcosmo.la \
-        $(GLIB_LIBS)
+        $(GLIB_LIBS) \
+        $(GSL_LIBS)
 
 AM_CPPFLAGS = 
 
