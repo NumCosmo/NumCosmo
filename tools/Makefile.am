@@ -38,7 +38,8 @@ mcat_analyze_SOURCES = \
 
 mcat_analyze_LDADD = \
 	$(top_builddir)/numcosmo/libnumcosmo.la  \
-	$(GLIB_LIBS)
+	$(GLIB_LIBS) \
+	$(GSL_LIBS)
 
 mset_gen_SOURCES =  \
 	mset_gen.c
