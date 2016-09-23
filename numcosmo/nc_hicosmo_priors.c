@@ -39,4 +39,7 @@
 
 #include "nc_hicosmo_priors.h"
 
-
+void
+nc_hicosmo_prior_stub (void)
+{
+}

@@ -106,7 +106,9 @@ nc_hipert_two_fluids_init (NcHIPertTwoFluids *ptf)
 
   ptf->arg = g_new0 (NcHIPertTwoFluidsArg, 1);
 
+#ifdef HAVE_SUNDIALS_ARKODE
   ptf->arkode = ARKodeCreate ();
+#endif /* HAVE_SUNDIALS_ARKODE */
 }
 
 static void
@@ -127,11 +129,13 @@ nc_hipert_two_fluids_finalize (GObject *object)
 {
   NcHIPertTwoFluids *ptf = NC_HIPERT_TWO_FLUIDS (object);
 
+#ifdef HAVE_SUNDIALS_ARKODE
   if (ptf->arkode != NULL)
   {
     ARKodeFree (&ptf->arkode);
     ptf->arkode = NULL;
   }
+#endif /* HAVE_SUNDIALS_ARKODE */
   
   g_free (ptf->arg);
     
@@ -541,6 +545,8 @@ _nc_hipert_two_fluids_f_QP (realtype alpha, N_Vector y, N_Vector ydot, gpointer 
   return 0;
 }
 
+#ifdef HAVE_SUNDIALS_ARKODE
+
 static gint
 _nc_hipert_two_fluids_f_QP_mode1 (realtype alpha, N_Vector y, N_Vector ydot, gpointer f_data)
 {
@@ -620,6 +626,8 @@ _nc_hipert_two_fluids_f_QP_mode2 (realtype alpha, N_Vector y, N_Vector ydot, gpo
   return 0;
 }
 
+#endif /* HAVE_SUNDIALS_ARKODE */
+
 static gint
 _nc_hipert_two_fluids_f_QP_mode1sub (realtype alpha, N_Vector y, N_Vector ydot, gpointer f_data)
 {
@@ -696,6 +704,8 @@ _nc_hipert_two_fluids_f_zetaS (realtype alpha, N_Vector y, N_Vector ydot, gpoint
   return 0;
 }
 
+#ifdef HAVE_SUNDIALS_ARKODE
+
 static gint
 _nc_hipert_two_fluids_f_zetaS_zeta (realtype alpha, N_Vector y, N_Vector ydot, gpointer f_data)
 {
@@ -747,6 +757,8 @@ _nc_hipert_two_fluids_f_zetaS_S (realtype alpha, N_Vector y, N_Vector ydot, gpoi
 
   return 0;
 }
+
+#endif /* HAVE_SUNDIALS_ARKODE */
 
 static gint
 _nc_hipert_two_fluids_J_QP (_NCM_SUNDIALS_INT_TYPE N, realtype alpha, N_Vector y, N_Vector fy, DlsMat J, gpointer jac_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3)
@@ -826,6 +838,8 @@ _nc_hipert_two_fluids_J_QP (_NCM_SUNDIALS_INT_TYPE N, realtype alpha, N_Vector y
   
   return 0;
 }
+
+#ifdef HAVE_SUNDIALS_ARKODE
 
 static gint
 _nc_hipert_two_fluids_J_QP_mode1 (_NCM_SUNDIALS_INT_TYPE N, realtype alpha, N_Vector y, N_Vector fy, DlsMat J, gpointer jac_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3)
@@ -983,6 +997,8 @@ _nc_hipert_two_fluids_J_QP_mode2 (_NCM_SUNDIALS_INT_TYPE N, realtype alpha, N_Ve
   return 0;
 }
 
+#endif /* HAVE_SUNDIALS_ARKODE */
+
 static gint
 _nc_hipert_two_fluids_J_zetaS (_NCM_SUNDIALS_INT_TYPE N, realtype alpha, N_Vector y, N_Vector fy, DlsMat J, gpointer jac_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3)
 {
@@ -1041,6 +1057,7 @@ _nc_hipert_two_fluids_J_zetaS (_NCM_SUNDIALS_INT_TYPE N, realtype alpha, N_Vecto
   return 0;
 }
 
+#ifdef HAVE_SUNDIALS_ARKODE
 static gint
 _nc_hipert_two_fluids_J_zetaS_zeta (_NCM_SUNDIALS_INT_TYPE N, realtype alpha, N_Vector y, N_Vector fy, DlsMat J, gpointer jac_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3)
 {
@@ -1156,6 +1173,7 @@ _nc_hipert_two_fluids_J_zetaS_S (_NCM_SUNDIALS_INT_TYPE N, realtype alpha, N_Vec
   
   return 0;
 }
+#endif /* HAVE_SUNDIALS_ARKODE */
 
 /**
  * nc_hipert_two_fluids_set_init_cond:
@@ -1177,9 +1195,11 @@ nc_hipert_two_fluids_set_init_cond (NcHIPertTwoFluids *ptf, NcHICosmo *cosmo, gd
   gint c_vtype   = ptf->useQP ? 1 : 0;
   gint flag;
   guint i;
+#ifdef HAVE_SUNDIALS_ARKODE
   ARKRhsFn fE, fI;
   ARKDlsDenseJacFn dfI_dy;
-
+#endif /* HAVE_SUNDIALS_ARKODE */
+  
   if (vtype != c_vtype)
     nc_hipert_reset_solver (pert);
 
@@ -1187,6 +1207,7 @@ nc_hipert_two_fluids_set_init_cond (NcHIPertTwoFluids *ptf, NcHICosmo *cosmo, gd
   
   pert->alpha0 = alpha;
 
+#ifdef HAVE_SUNDIALS_ARKODE
   if (useQP)
   {
     switch (main_mode)
@@ -1245,6 +1266,7 @@ nc_hipert_two_fluids_set_init_cond (NcHIPertTwoFluids *ptf, NcHICosmo *cosmo, gd
         break;
     }
   }
+#endif /* HAVE_SUNDIALS_ARKODE */
 
   for (i = 0; i < NC_HIPERT_ITWO_FLUIDS_VARS_LEN; i++)
   {
@@ -1253,9 +1275,11 @@ nc_hipert_two_fluids_set_init_cond (NcHIPertTwoFluids *ptf, NcHICosmo *cosmo, gd
  
   if (!pert->cvode_init)
   {
+#ifdef HAVE_SUNDIALS_ARKODE
     flag = ARKodeInit (ptf->arkode, fE, fI, alpha, pert->y);
     NCM_CVODE_CHECK (&flag, "ARKodeInit", 1, );
-    
+#endif /* HAVE_SUNDIALS_ARKODE */
+
     if (useQP)
     {
       flag = CVodeInit (pert->cvode, &_nc_hipert_two_fluids_f_QP, alpha, pert->y);
@@ -1276,8 +1300,10 @@ nc_hipert_two_fluids_set_init_cond (NcHIPertTwoFluids *ptf, NcHICosmo *cosmo, gd
     flag = CVodeReInit (pert->cvode, alpha, pert->y);
     NCM_CVODE_CHECK (&flag, "CVodeReInit", 1, );
 
+#ifdef HAVE_SUNDIALS_ARKODE
     flag = ARKodeReInit (ptf->arkode, fE, fI, alpha, pert->y);
     NCM_CVODE_CHECK (&flag, "CVodeReInit", 1, );
+#endif /* HAVE_SUNDIALS_ARKODE */
   }
 /*
   flag = CVodeSetMaxStep (pert->cvode, 1.0);
@@ -1287,14 +1313,18 @@ nc_hipert_two_fluids_set_init_cond (NcHIPertTwoFluids *ptf, NcHICosmo *cosmo, gd
   flag = CVodeSStolerances (pert->cvode, pert->reltol, 0.0);
   NCM_CVODE_CHECK (&flag, "CVodeSStolerances", 1,);
 
+#ifdef HAVE_SUNDIALS_ARKODE
   flag = ARKodeSStolerances (ptf->arkode, pert->reltol, 0.0);
   NCM_CVODE_CHECK (&flag, "ARKodeSStolerances", 1,);
+#endif /* HAVE_SUNDIALS_ARKODE */
   
   flag = CVodeSetMaxNumSteps (pert->cvode, G_MAXUINT32);
   NCM_CVODE_CHECK (&flag, "CVodeSetMaxNumSteps", 1, );
 
+#ifdef HAVE_SUNDIALS_ARKODE
   flag = ARKodeSetMaxNumSteps (ptf->arkode, G_MAXUINT32);
   NCM_CVODE_CHECK (&flag, "ARKodeSetMaxNumSteps", 1, );
+#endif /* HAVE_SUNDIALS_ARKODE */
 
   flag = CVDense (pert->cvode, NC_HIPERT_ITWO_FLUIDS_VARS_LEN);
   NCM_CVODE_CHECK (&flag, "CVDense", 1, );
@@ -1302,11 +1332,15 @@ nc_hipert_two_fluids_set_init_cond (NcHIPertTwoFluids *ptf, NcHICosmo *cosmo, gd
   flag = ARKDense (ptf->arkode, NC_HIPERT_ITWO_FLUIDS_VARS_LEN);
   NCM_CVODE_CHECK (&flag, "ARKDense", 1, );
 
+#ifdef HAVE_SUNDIALS_ARKODE
   flag = ARKodeSetLinear (ptf->arkode, 1);
   NCM_CVODE_CHECK (&flag, "ARKodeSetLinear", 1, );
+#endif /* HAVE_SUNDIALS_ARKODE */
   
+#ifdef HAVE_SUNDIALS_ARKODE
   flag = ARKDlsSetDenseJacFn (ptf->arkode, dfI_dy);
   NCM_CVODE_CHECK (&flag, "ARKDlsSetDenseJacFn", 1, );
+#endif /* HAVE_SUNDIALS_ARKODE */
   
   if (useQP)
   {
@@ -1319,6 +1353,7 @@ nc_hipert_two_fluids_set_init_cond (NcHIPertTwoFluids *ptf, NcHICosmo *cosmo, gd
     NCM_CVODE_CHECK (&flag, "CVDlsSetDenseJacFn", 1, );
   }
 
+#ifdef HAVE_SUNDIALS_ARKODE
   switch (main_mode)
   {
     case 1:
@@ -1353,6 +1388,7 @@ nc_hipert_two_fluids_set_init_cond (NcHIPertTwoFluids *ptf, NcHICosmo *cosmo, gd
       g_error ("nc_hipert_two_fluids_set_init_cond: Unknown main mode %u.", main_mode);
       break;
   }
+#endif /* HAVE_SUNDIALS_ARKODE */
   
 //  ARKodeSetAdaptivityMethod (ptf->arkode, 5, 1, 0, NULL);
 //  NCM_CVODE_CHECK (&flag, "ARKodeSetAdaptivityMethod", 1, );
@@ -1384,8 +1420,10 @@ nc_hipert_two_fluids_evolve (NcHIPertTwoFluids *ptf, NcHICosmo *cosmo, gdouble a
   if (NV_LENGTH_S (pert->y) != NC_HIPERT_ITWO_FLUIDS_VARS_LEN)
     g_error ("nc_hipert_two_fluids_evolve: cannot evolve subsidiary approximated system, use the appropriated evolve function.");
   
+#ifdef HAVE_SUNDIALS_ARKODE
   if (TRUE)
   {
+
     flag = ARKodeSetUserData (ptf->arkode, arg);
     NCM_CVODE_CHECK (&flag, "ARKodeSetUserData", 1, );
 
@@ -1397,6 +1435,7 @@ nc_hipert_two_fluids_evolve (NcHIPertTwoFluids *ptf, NcHICosmo *cosmo, gdouble a
     pert->alpha0 = alpha_i;
   }
   else
+#endif /* HAVE_SUNDIALS_ARKODE */
   {
     flag = CVodeSetUserData (pert->cvode, arg);
     NCM_CVODE_CHECK (&flag, "CVodeSetUserData", 1, );

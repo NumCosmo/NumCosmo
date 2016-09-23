@@ -33,6 +33,9 @@
 
 G_BEGIN_DECLS
 
+void
+nc_hicosmo_prior_stub (void);
+
 G_END_DECLS
 
 #endif /* _NC_HICOSMO_PRIORS_H_ */

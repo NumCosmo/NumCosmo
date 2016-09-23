@@ -113,6 +113,7 @@
 #include <numcosmo/math/ncm_mset_trans_kern.h>
 #include <numcosmo/math/ncm_mset_trans_kern_flat.h>
 #include <numcosmo/math/ncm_mset_trans_kern_gauss.h>
+#include <numcosmo/math/ncm_mset_trans_kern_cat.h>
 #include <numcosmo/math/ncm_fit_mc.h>
 #include <numcosmo/math/ncm_fit_mcbs.h>
 #include <numcosmo/math/ncm_fit_mcmc.h>

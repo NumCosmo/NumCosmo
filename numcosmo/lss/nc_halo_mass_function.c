@@ -183,7 +183,7 @@ nc_halo_mass_function_class_init (NcHaloMassFunctionClass *klass)
                                                         | G_PARAM_STATIC_BLURB));
 
   /**
-   * NcHaloMassFunction:psf:
+   * NcHaloMassFunction:powerspectrum-filtered:
    *
    * This property keeps the filtered powerspectrum.
    */

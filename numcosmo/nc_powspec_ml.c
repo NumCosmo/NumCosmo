@@ -31,7 +31,7 @@
  * This module comprises the set of functions to compute the linear matter power spectrum and
  * derived quantities.
  * 
- * Following the description presented in #NcmPowSpec, in this case we have that the field $\delta(\vec{x})$ 
+ * Following the description presented in #NcmPowspec, in this case we have that the field $\delta(\vec{x})$ 
  * represents the matter density fluctuations, i.e.,
  * $$\delta(\vec{x}) = \frac{\rho(\vec{x}) - \bar{\rho}}{\bar{\rho}},$$ 
  * where $\rho$ is the cold matter density field and $\bar{\rho}$ its mean.
