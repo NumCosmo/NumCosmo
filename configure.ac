@@ -487,6 +487,7 @@ TEST_SHARED_CFLAGS="$TEST_SHARED_CFLAGS $GSL_CFLAGS"
 PKG_CHECK_EXISTS([gsl >= $GSL_GLF_REQUIRED_VERSION], [AC_DEFINE([HAVE_GSL_GLF],[1], [gsl support fixed gauss legendre rules])], [])
 PKG_CHECK_EXISTS([gsl >= $GSL_ODEIV2_REQUIRED_VERSION], [AC_DEFINE([HAVE_GSL_ODEIV2],[1], [gsl support odeiv2 ode algorightms])], [])
 PKG_CHECK_EXISTS([gsl >= 2.0], [AC_DEFINE([HAVE_GSL_2_0],[1], [gsl 2.0])], [])
+PKG_CHECK_EXISTS([gsl >= 2.2], [AC_DEFINE([HAVE_GSL_2_2],[1], [gsl 2.2])], [])
 
 dnl ***************************************************************************
 dnl Check for gmp and mpfr
