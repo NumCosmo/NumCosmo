@@ -117,6 +117,7 @@ ncm_sources = \
 	math/ncm_mset_trans_kern.c           \
 	math/ncm_mset_trans_kern_flat.c      \
 	math/ncm_mset_trans_kern_gauss.c     \
+	math/ncm_mset_trans_kern_cat.c       \
 	math/ncm_fit_state.c                 \
 	math/ncm_fit.c                       \
 	math/ncm_fit_levmar.c                \
@@ -214,6 +215,7 @@ ncm_headers =                                \
 	math/ncm_mset_trans_kern.h           \
 	math/ncm_mset_trans_kern_flat.h      \
 	math/ncm_mset_trans_kern_gauss.h     \
+	math/ncm_mset_trans_kern_cat.h       \
 	math/ncm_prior.h                     \
 	math/ncm_prior_gauss.h               \
 	math/ncm_prior_gauss_param.h         \

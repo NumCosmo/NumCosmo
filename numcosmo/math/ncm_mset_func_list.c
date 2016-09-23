@@ -240,7 +240,7 @@ _ncm_mset_func_list_eval (NcmMSetFunc *func, NcmMSet *mset, const gdouble *x, gd
  * @desc: function description
  * @obj_type: object type
  * @func: (scope notified): function pointer
- * @nvar: number of parameters
+ * @nvar: number of variables
  * @dim: function dimension
  * 
  * Register a new function in the NcmMSetFuncList class.
