@@ -33,12 +33,7 @@
 
 G_BEGIN_DECLS
 
-<<<<<<< HEAD
 void nc_hicosmo_priors_stub (void);
-=======
-void
-nc_hicosmo_prior_stub (void);
->>>>>>> master
 
 G_END_DECLS
 

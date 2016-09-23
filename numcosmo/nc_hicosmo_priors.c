@@ -39,7 +39,6 @@
 
 #include "nc_hicosmo_priors.h"
 
-<<<<<<< HEAD
 /**
  * nc_hicosmo_priors_stub:
  * 
@@ -47,9 +46,5 @@
  */
 void 
 nc_hicosmo_priors_stub (void)
-=======
-void
-nc_hicosmo_prior_stub (void)
->>>>>>> master
 {
 }
