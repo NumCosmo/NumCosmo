@@ -258,13 +258,24 @@ nc_cbe_precision_set_property (GObject *object, guint prop_id, const GValue *val
       break;
     case PROP_SBBN_FILE:
     {
-      const gchar *sBBN_file = g_value_get_string (value);
-      const guint sBBN_file_len = strlen (sBBN_file);
+      gchar *sBBN_file    = g_value_dup_string (value);
+      guint sBBN_file_len = strlen (sBBN_file);
+
       g_assert_cmpuint (sBBN_file_len, <= ,_FILENAMESIZE_);
 
-      g_assert (g_file_test (sBBN_file, G_FILE_TEST_EXISTS));
-        
+      if (!g_file_test (sBBN_file, G_FILE_TEST_EXISTS))
+      {
+        g_warning ("nc_cbe_precision_set_property: file `%s' not found, using default.", sBBN_file);
+        g_free (sBBN_file);
+
+        sBBN_file     = ncm_cfg_get_data_filename ("class_data"G_DIR_SEPARATOR_S"bbn"G_DIR_SEPARATOR_S"sBBN.dat", TRUE);
+        sBBN_file_len = strlen (sBBN_file);
+        g_assert_cmpuint (sBBN_file_len, <= ,_FILENAMESIZE_);
+      }
+
       memcpy (cbe_prec->priv->ppr.sBBN_file, sBBN_file, sBBN_file_len);
+      g_free (sBBN_file);
+
       break;
     }
     case PROP_RECFAST_Z_INI:
@@ -350,35 +361,70 @@ nc_cbe_precision_set_property (GObject *object, guint prop_id, const GValue *val
       break;
     case PROP_HYREC_ALPHA_INF_FILE:
     {
-      const gchar *Alpha_inf_file = g_value_get_string (value);
-      const guint Alpha_inf_file_len = strlen (Alpha_inf_file);
+      gchar *Alpha_inf_file    = g_value_dup_string (value);
+      guint Alpha_inf_file_len = strlen (Alpha_inf_file);
+
       g_assert_cmpuint (Alpha_inf_file_len, <= ,_FILENAMESIZE_);
 
-      g_assert (g_file_test (Alpha_inf_file, G_FILE_TEST_EXISTS));
+      if (!g_file_test (Alpha_inf_file, G_FILE_TEST_EXISTS))
+      {
+        g_warning ("nc_cbe_precision_set_property: file `%s' not found, using default.", Alpha_inf_file);
+        g_free (Alpha_inf_file);
         
+        Alpha_inf_file = ncm_cfg_get_data_filename ("class_data"G_DIR_SEPARATOR_S"hyrec"G_DIR_SEPARATOR_S"Alpha_inf.dat", TRUE);
+        Alpha_inf_file_len   = strlen (Alpha_inf_file);
+        g_assert_cmpuint (Alpha_inf_file_len, <= ,_FILENAMESIZE_);
+      }
+
       memcpy (cbe_prec->priv->ppr.hyrec_Alpha_inf_file, Alpha_inf_file, Alpha_inf_file_len);
+      g_free (Alpha_inf_file);
+
       break;
     }
     case PROP_HYREC_R_INF_FILE:
     {
-      const gchar *R_inf_file = g_value_get_string (value);
-      const guint R_inf_file_len = strlen (R_inf_file);
+      gchar *R_inf_file    = g_value_dup_string (value);
+      guint R_inf_file_len = strlen (R_inf_file);
+
       g_assert_cmpuint (R_inf_file_len, <= ,_FILENAMESIZE_);
 
-      g_assert (g_file_test (R_inf_file, G_FILE_TEST_EXISTS));
+      if (!g_file_test (R_inf_file, G_FILE_TEST_EXISTS))
+      {
+        g_warning ("nc_cbe_precision_set_property: file `%s' not found, using default.", R_inf_file);
+        g_free (R_inf_file);
+        
+        R_inf_file = ncm_cfg_get_data_filename ("class_data"G_DIR_SEPARATOR_S"hyrec"G_DIR_SEPARATOR_S"R_inf.dat", TRUE);
+        R_inf_file_len   = strlen (R_inf_file);
+        
+        g_assert_cmpuint (R_inf_file_len, <= ,_FILENAMESIZE_);
+      }
 
       memcpy (cbe_prec->priv->ppr.hyrec_R_inf_file, R_inf_file, R_inf_file_len);
+      g_free (R_inf_file);
+
       break;
     }
     case PROP_HYREC_TWO_PHOTON_TABLES_FILE:
     {
-      const gchar *two_photon_tables_file = g_value_get_string (value);
-      const guint two_photon_tables_file_len = strlen (two_photon_tables_file);
+      gchar *two_photon_tables_file    = g_value_dup_string (value);
+      guint two_photon_tables_file_len = strlen (two_photon_tables_file);
+
       g_assert_cmpuint (two_photon_tables_file_len, <= ,_FILENAMESIZE_);
 
-      g_assert (g_file_test (two_photon_tables_file, G_FILE_TEST_EXISTS));
+      if (!g_file_test (two_photon_tables_file, G_FILE_TEST_EXISTS))
+      {
+        g_warning ("nc_cbe_precision_set_property: file `%s' not found, using default.", two_photon_tables_file);
+        g_free (two_photon_tables_file);
+
+        two_photon_tables_file = ncm_cfg_get_data_filename ("class_data"G_DIR_SEPARATOR_S"hyrec"G_DIR_SEPARATOR_S"two_photon_tables.dat", TRUE);
+        two_photon_tables_file_len   = strlen (two_photon_tables_file);
+        
+        g_assert_cmpuint (two_photon_tables_file_len, <= ,_FILENAMESIZE_);
+      }
       
       memcpy (cbe_prec->priv->ppr.hyrec_two_photon_tables_file, two_photon_tables_file, two_photon_tables_file_len);
+
+      g_free (two_photon_tables_file);
       break;
     }
     case PROP_REION_Z_START_MAX:
