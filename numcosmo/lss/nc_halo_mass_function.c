@@ -238,7 +238,7 @@ nc_halo_mass_function_class_init (NcHaloMassFunctionClass *klass)
 /**
  * nc_halo_mass_function_new:
  * @dist: a #NcDistance sets to #NcHaloMassFunction:distance
- * @psf: a #NcmPowspecFilter sets to #NcHaloMassFunction:psf
+ * @psf: a #NcmPowspecFilter sets to #NcHaloMassFunction:powerspectrum-filtered
  * @mulf: a #NcMultiplicityFunc sets to #NcHaloMassFunction:multiplicity
  *
  * This function allocates memory for a new #NcHaloMassFunction object and sets its properties to the values from
