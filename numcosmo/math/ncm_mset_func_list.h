@@ -55,17 +55,21 @@ struct _NcmMSetFuncListClass
 
 /**
  * NcmMSetFuncListStruct:
+ * @name: FIXME
+ * @symbol: FIXME
+ * @ns: FIXME
+ * @desc: FIXME
  * 
  * FIXME
  * 
  */
 typedef struct _NcmMSetFuncListStruct
 {
-  /*< private >*/
   gchar *name;
   gchar *symbol;
   gchar *ns;
   gchar *desc;
+  /*< private >*/
   GType obj_type;
   NcmMSetFuncListN func;
   guint nvar;
