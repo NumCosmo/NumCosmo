@@ -916,6 +916,34 @@ ncm_cfg_enum_print_all (GType enum_type, const gchar *header)
 }
 
 #ifdef NUMCOSMO_HAVE_FFTW3
+
+G_LOCK_DEFINE_STATIC (fftw_saveload_lock);
+G_LOCK_DEFINE_STATIC (fftw_plan_lock);
+
+/**
+ * ncm_cfg_lock_plan_fftw:
+ *
+ * FIXME
+ *
+ */
+void 
+ncm_cfg_lock_plan_fftw (void)
+{
+  G_LOCK (fftw_plan_lock);  
+}
+
+/**
+ * ncm_cfg_unlock_plan_fftw:
+ *
+ * FIXME
+ *
+ */
+void 
+ncm_cfg_unlock_plan_fftw (void)
+{
+  G_UNLOCK (fftw_plan_lock);  
+}
+
 /**
  * ncm_cfg_load_fftw_wisdom:
  * @filename: FIXME
@@ -934,6 +962,8 @@ ncm_cfg_load_fftw_wisdom (const gchar *filename, ...)
   gboolean ret = FALSE;
   g_assert (numcosmo_init);
 
+  G_LOCK (fftw_saveload_lock);
+  
   va_start (ap, filename);
   file = g_strdup_vprintf (filename, ap);
   va_end (ap);
@@ -967,6 +997,9 @@ ncm_cfg_load_fftw_wisdom (const gchar *filename, ...)
   g_free (file);
   g_free (file_ext);
   g_free (full_filename);
+
+  G_UNLOCK (fftw_saveload_lock);
+  
   return ret;
 }
 
@@ -987,6 +1020,8 @@ ncm_cfg_save_fftw_wisdom (const gchar *filename, ...)
   va_list ap;
 
   g_assert (numcosmo_init);
+
+G_LOCK (fftw_saveload_lock);
 
   va_start (ap, filename);
   file = g_strdup_vprintf (filename, ap);
@@ -1013,6 +1048,9 @@ ncm_cfg_save_fftw_wisdom (const gchar *filename, ...)
   g_free (file);
   g_free (file_ext);
   g_free (full_filename);
+
+  G_UNLOCK (fftw_saveload_lock);
+  
   return TRUE;
 }
 #endif /* NUMCOSMO_HAVE_FFTW3 */

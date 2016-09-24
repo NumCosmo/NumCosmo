@@ -33,12 +33,20 @@ gobj_itest_LDADD = \
 	$(top_builddir)/numcosmo/libnumcosmo.la \
 	$(GLIB_LIBS)
 
-AM_CPPFLAGS = 
+mcat_analyze_SOURCES = \
+	mcat_analyze.c
 
-bin_PROGRAMS = \
-	darkenergy   \
-	mcat_analyze \
-	mset_gen
+mcat_analyze_LDADD = \
+	$(top_builddir)/numcosmo/libnumcosmo.la  \
+	$(GLIB_LIBS) \
+	$(GSL_LIBS)
+
+mset_gen_SOURCES =  \
+	mset_gen.c
+
+mset_gen_LDADD = \
+	$(top_builddir)/numcosmo/libnumcosmo.la \
+	$(GLIB_LIBS)
 
 darkenergy_SOURCES = \
 	darkenergy.c\
@@ -50,14 +58,14 @@ darkenergy_SOURCES = \
 	savedata.h
 
 darkenergy_LDADD = \
-        $(top_builddir)/numcosmo/libnumcosmo.la
+        $(top_builddir)/numcosmo/libnumcosmo.la \
+        $(GLIB_LIBS) \
+        $(GSL_LIBS)
 
-mcat_analyze_SOURCES =  \
-	mcat_analyze.c
+AM_CPPFLAGS = 
 
-mcat_analyze_LDADD = $(top_builddir)/numcosmo/libnumcosmo.la 
+bin_PROGRAMS = \
+	darkenergy   \
+	mcat_analyze \
+	mset_gen
 
-mset_gen_SOURCES =  \
-	mset_gen.c
-
-mset_gen_LDADD = $(top_builddir)/numcosmo/libnumcosmo.la 

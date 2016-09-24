@@ -140,7 +140,7 @@ dnl Compiler flags for C
 dnl ***************************************************************************
 NC_CFLAGS="$CFLAGS"
 AC_ARG_ENABLE([opt-cflags], 
-  [  --enable-opt-cflags  Enable all safe and useful speedups compiler flags (change any -O? to -O3 from CFLAGS)], 
+  [AS_HELP_STRING([--enable-opt-cflags  Enable all safe and useful speedups compiler flags (change any -O? to -O3 from CFLAGS)])], 
   [enable_comp_flags="yes"],[])
 if test x$enable_comp_flags = "xyes"; then
   NC_CFLAGS=$CFLAGS
@@ -156,7 +156,7 @@ dnl  NC_CFLAGS=`echo $NC_CFLAGS | $SED 's/\-g[[ ]]*//g'`
 fi
 
 AC_ARG_ENABLE([warn-cflags], 
-  [  --enable-warn-cflags  Enable all useful warning compiler flags], 
+  [AS_HELP_STRING([--enable-warn-cflags  Enable all useful warning compiler flags])], 
   [enable_warn_flags="yes"],[])
 if test x$enable_warn_flags = "xyes"; then
   NC_CFLAGS=`echo $NC_CFLAGS | $SED 's/\-Wall//g'`
@@ -964,3 +964,4 @@ echo "AM_CFLAGS = $AM_CFLAGS"
 echo "CFLAGS = $CFLAGS"
 echo "FCFLAGS = $FCFLAGS"
 echo "LIBS = $LIBS"
+echo "PLC_DEFINES = $PLC_DEFINES"

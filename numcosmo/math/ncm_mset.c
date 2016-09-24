@@ -2563,9 +2563,10 @@ ncm_mset_save (NcmMSet *mset, NcmSerialize *ser, const gchar *filename, gboolean
       NcmModelClass *model_class = NCM_MODEL_GET_CLASS (item->model);
       GObjectClass *oclass       = G_OBJECT_CLASS (model_class);
       GVariant *model_var        = ncm_serialize_to_variant (ser, G_OBJECT (item->model));
+      guint nsubmodels           = ncm_model_get_submodel_len (item->model);
       GVariant *params = NULL;
       gchar *obj_name = NULL;
-      guint nparams;
+      guint nparams, j;
 
       g_variant_get (model_var, "{s@a{sv}}", &obj_name, &params);
       nparams = g_variant_n_children (params);
@@ -2577,6 +2578,13 @@ ncm_mset_save (NcmMSet *mset, NcmSerialize *ser, const gchar *filename, gboolean
         if (!g_key_file_set_comment (msetfile, group, NULL, model_desc, &error))
           g_error ("ncm_mset_save: %s", error->message);
         g_free (model_desc);
+      }
+
+      for (j = 0; j < nsubmodels; j++)
+      {
+        NcmModel *submodel = ncm_model_peek_submodel (item->model, j);
+        ncm_serialize_unset (ser, submodel);
+        ncm_serialize_remove_ser (ser, submodel);
       }
 
       if (nparams != 0)

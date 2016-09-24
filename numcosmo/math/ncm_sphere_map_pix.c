@@ -1673,6 +1673,8 @@ _ncm_sphere_map_pix_prepare_fft (NcmSphereMapPix *pix)
 
     _fft_vec_memcpy (temp_pix, pix->pvec, pix->npix);
 
+    ncm_cfg_lock_plan_fftw ();
+
     for (r_i = 0; r_i < nring_cap; r_i++)
     {
       const gint ring_size       = ncm_sphere_map_pix_get_ring_size (pix, r_i);
@@ -1726,11 +1728,15 @@ _ncm_sphere_map_pix_prepare_fft (NcmSphereMapPix *pix)
       g_ptr_array_add (pix->fft_plan_c2r, plan_c2r);
     }  
     fflush (stdout);
+
+    ncm_cfg_unlock_plan_fftw ();
     
 #  else
 
     pix->fft_pvec = fftw_alloc_complex (npix);
 
+    ncm_cfg_lock_plan_fftw ();
+    
     for (r_i = 0; r_i < nring_cap; r_i++)
     {
       const gint ring_size       = ncm_sphere_map_pix_get_ring_size (pix, r_i);
@@ -1780,6 +1786,9 @@ _ncm_sphere_map_pix_prepare_fft (NcmSphereMapPix *pix)
       g_ptr_array_add (pix->fft_plan_r2c, plan_r2c);
       g_ptr_array_add (pix->fft_plan_c2r, plan_c2r);
     }    
+
+    ncm_cfg_unlock_plan_fftw ();
+
 #  endif
 
     _fft_vec_memcpy (pix->pvec, temp_pix, pix->npix);
