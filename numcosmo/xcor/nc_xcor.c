@@ -322,7 +322,7 @@ _nc_xcor_limber_cvode (NcXcor* xc, NcXcorLimberKernel* xclk1, NcXcorLimberKernel
 
 	flag = CVodeSStolerances (cvode, NCM_DEFAULT_PRECISION, 0.0);
 	NCM_CVODE_CHECK (&flag, "CVodeSStolerances", 1, );
-	flag = CVodeSetMaxNumSteps (cvode, 5000);
+	flag = CVodeSetMaxNumSteps (cvode, G_MAXUINT32);
 	NCM_CVODE_CHECK (&flag, "CVodeSetMaxNumSteps", 1, );
 	flag = CVodeSetUserData (cvode, &xclc);
 	NCM_CVODE_CHECK (&flag, "CVodeSetUserData", 1, );
@@ -341,7 +341,7 @@ _nc_xcor_limber_cvode (NcXcor* xc, NcXcorLimberKernel* xclk1, NcXcorLimberKernel
 
 	flag = CVodeSStolerances (cvode, NCM_DEFAULT_PRECISION, 0.0);
 	NCM_CVODE_CHECK (&flag, "CVodeSStolerances", 1, );
-	flag = CVodeSetMaxNumSteps (cvode, 5000);
+	flag = CVodeSetMaxNumSteps (cvode, G_MAXUINT32);
 	NCM_CVODE_CHECK (&flag, "CVodeSetMaxNumSteps", 1, );
 	flag = CVodeSetUserData (cvode, &xclc);
 	NCM_CVODE_CHECK (&flag, "CVodeSetUserData", 1, );
@@ -484,12 +484,15 @@ void nc_xcor_limber (NcXcor* xc, NcXcorLimberKernel* xclk1, NcXcorLimberKernel* 
 	{
 		switch (meth)
 		{
-		case NC_XCOR_LIMBER_METHOD_CVODE:
-			_nc_xcor_limber_cvode (xc, xclk1, xclk2, cosmo, lmin, lmax, zmin, zmax, isauto, vp);
-			break;
-		case NC_XCOR_LIMBER_METHOD_GSL:
-			_nc_xcor_limber_gsl (xc, xclk1, xclk2, cosmo, lmin, lmax, zmin, zmax, isauto, vp);
-			break;
+		  case NC_XCOR_LIMBER_METHOD_CVODE:
+			  _nc_xcor_limber_cvode (xc, xclk1, xclk2, cosmo, lmin, lmax, zmin, zmax, isauto, vp);
+			  break;
+		  case NC_XCOR_LIMBER_METHOD_GSL:
+			  _nc_xcor_limber_gsl (xc, xclk1, xclk2, cosmo, lmin, lmax, zmin, zmax, isauto, vp);
+			  break;
+      default:
+        g_assert_not_reached ();
+        break;
 		}
 		ncm_vector_scale (vp, cons_factor);
 	}
