@@ -273,7 +273,7 @@ nc_cbe_precision_set_property (GObject *object, guint prop_id, const GValue *val
         g_assert_cmpuint (sBBN_file_len, <= ,_FILENAMESIZE_);
       }
 
-      memcpy (cbe_prec->priv->ppr.sBBN_file, sBBN_file, sBBN_file_len);
+      memcpy (cbe_prec->priv->ppr.sBBN_file, sBBN_file, sBBN_file_len + 1);
       g_free (sBBN_file);
 
       break;
@@ -376,7 +376,7 @@ nc_cbe_precision_set_property (GObject *object, guint prop_id, const GValue *val
         g_assert_cmpuint (Alpha_inf_file_len, <= ,_FILENAMESIZE_);
       }
 
-      memcpy (cbe_prec->priv->ppr.hyrec_Alpha_inf_file, Alpha_inf_file, Alpha_inf_file_len);
+      memcpy (cbe_prec->priv->ppr.hyrec_Alpha_inf_file, Alpha_inf_file, Alpha_inf_file_len + 1);
       g_free (Alpha_inf_file);
 
       break;
@@ -399,7 +399,7 @@ nc_cbe_precision_set_property (GObject *object, guint prop_id, const GValue *val
         g_assert_cmpuint (R_inf_file_len, <= ,_FILENAMESIZE_);
       }
 
-      memcpy (cbe_prec->priv->ppr.hyrec_R_inf_file, R_inf_file, R_inf_file_len);
+      memcpy (cbe_prec->priv->ppr.hyrec_R_inf_file, R_inf_file, R_inf_file_len + 1);
       g_free (R_inf_file);
 
       break;
@@ -422,7 +422,7 @@ nc_cbe_precision_set_property (GObject *object, guint prop_id, const GValue *val
         g_assert_cmpuint (two_photon_tables_file_len, <= ,_FILENAMESIZE_);
       }
       
-      memcpy (cbe_prec->priv->ppr.hyrec_two_photon_tables_file, two_photon_tables_file, two_photon_tables_file_len);
+      memcpy (cbe_prec->priv->ppr.hyrec_two_photon_tables_file, two_photon_tables_file, two_photon_tables_file_len + 1);
 
       g_free (two_photon_tables_file);
       break;
