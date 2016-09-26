@@ -371,8 +371,8 @@ nc_cbe_precision_set_property (GObject *object, guint prop_id, const GValue *val
         g_warning ("nc_cbe_precision_set_property: file `%s' not found, using default.", Alpha_inf_file);
         g_free (Alpha_inf_file);
         
-        Alpha_inf_file = ncm_cfg_get_data_filename ("class_data"G_DIR_SEPARATOR_S"hyrec"G_DIR_SEPARATOR_S"Alpha_inf.dat", TRUE);
-        Alpha_inf_file_len   = strlen (Alpha_inf_file);
+        Alpha_inf_file     = ncm_cfg_get_data_filename ("class_data"G_DIR_SEPARATOR_S"hyrec"G_DIR_SEPARATOR_S"Alpha_inf.dat", TRUE);
+        Alpha_inf_file_len = strlen (Alpha_inf_file);
         g_assert_cmpuint (Alpha_inf_file_len, <= ,_FILENAMESIZE_);
       }
 
@@ -393,8 +393,8 @@ nc_cbe_precision_set_property (GObject *object, guint prop_id, const GValue *val
         g_warning ("nc_cbe_precision_set_property: file `%s' not found, using default.", R_inf_file);
         g_free (R_inf_file);
         
-        R_inf_file = ncm_cfg_get_data_filename ("class_data"G_DIR_SEPARATOR_S"hyrec"G_DIR_SEPARATOR_S"R_inf.dat", TRUE);
-        R_inf_file_len   = strlen (R_inf_file);
+        R_inf_file     = ncm_cfg_get_data_filename ("class_data"G_DIR_SEPARATOR_S"hyrec"G_DIR_SEPARATOR_S"R_inf.dat", TRUE);
+        R_inf_file_len = strlen (R_inf_file);
         
         g_assert_cmpuint (R_inf_file_len, <= ,_FILENAMESIZE_);
       }
@@ -416,8 +416,8 @@ nc_cbe_precision_set_property (GObject *object, guint prop_id, const GValue *val
         g_warning ("nc_cbe_precision_set_property: file `%s' not found, using default.", two_photon_tables_file);
         g_free (two_photon_tables_file);
 
-        two_photon_tables_file = ncm_cfg_get_data_filename ("class_data"G_DIR_SEPARATOR_S"hyrec"G_DIR_SEPARATOR_S"two_photon_tables.dat", TRUE);
-        two_photon_tables_file_len   = strlen (two_photon_tables_file);
+        two_photon_tables_file     = ncm_cfg_get_data_filename ("class_data"G_DIR_SEPARATOR_S"hyrec"G_DIR_SEPARATOR_S"two_photon_tables.dat", TRUE);
+        two_photon_tables_file_len = strlen (two_photon_tables_file);
         
         g_assert_cmpuint (two_photon_tables_file_len, <= ,_FILENAMESIZE_);
       }
