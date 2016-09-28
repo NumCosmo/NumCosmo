@@ -24,8 +24,18 @@ cosmo = Nc.HICosmo.new_from_name (Nc.HICosmo, "NcHICosmoDEXcdm")
 #
 #  New homogeneous and isotropic reionization object.
 #
-reion = Nc.HIReionCamb.new ()
+reion = Nc.HIReionCamb.new () 
+
+#
+#  New homogeneous and isotropic primordial object.
+#
+prim = Nc.HIPrimPowerLaw.new () 
+
+#
+# Adding submodels to the main cosmological model.
+#
 cosmo.add_submodel (reion)
+cosmo.add_submodel (prim)
 
 #
 #  New cosmological distance objects optimizied to perform calculations
@@ -34,26 +44,23 @@ cosmo.add_submodel (reion)
 dist = Nc.Distance.new (2.0)
 
 #
-# New windown function 'NcWindowTophat'
-#
-wp =  Nc.Window.new_from_name ("NcWindowTophat")
-
-#
 # New transfer function 'NcTransferFuncEH' using the Einsenstein, Hu
 # fitting formula.
 #
 tf = Nc.TransferFunc.new_from_name ("NcTransferFuncEH")
 
 #
-# New matter variance object using FFT method for internal calculations and
-# the window and transfer functions defined above.
-#
-vp = Nc.MatterVar.new (Nc.MatterVarStrategy.FFT, wp, tf)
+# New linear matter power spectrum object based of the EH transfer function.
+# 
+psml = Nc.PowspecMLTransfer.new (tf)
+psml.require_kmin (1.0e-3)
+psml.require_kmax (1.0e3)
 
 #
-# New growth function
+# Apply a tophat filter to the psml object, set best output interval.
 #
-gf = Nc.GrowthFunc.new ()
+psf = Ncm.PowspecFilter.new (psml, Ncm.PowspecFilterType.TOPHAT)
+psf.set_best_lnr0 ()
 
 #
 # New multiplicity function 'NcMultiplicityFuncTinkerMean'
@@ -63,7 +70,7 @@ mulf = Nc.MultiplicityFunc.new_from_name ("NcMultiplicityFuncTinkerMean")
 #
 # New mass function object using the objects defined above.
 #
-mf = Nc.MassFunction.new (dist, vp, gf, mulf)
+mf = Nc.HaloMassFunction.new (dist, psf, mulf)
 
 #
 # New Cluster Mass object using Log normal distribution
@@ -105,8 +112,6 @@ cosmo.props.Omegab  = 0.05
 cosmo.props.Omegac  = 0.25
 cosmo.props.Omegax  = 0.70
 cosmo.props.Tgamma0 = 2.72
-cosmo.props.ns      = 1.0
-cosmo.props.sigma8  = 0.9
 cosmo.props.w       = -1.0
 
 #
@@ -130,7 +135,7 @@ rng = Ncm.RNG.pool_get ("example_ca_sampling");
 # Since ncdata is currently empty, run init_from_sampling
 # using the objects above and an survey area of 300degsq^2
 #
-ncdata.init_from_sampling (mset, cluster_z, cluster_m, 270 * (pi / 180.0)**2, rng)
+ncdata.init_from_sampling (mset, 270 * (pi / 180.0)**2, rng)
 
 #
 # Save to a fits file

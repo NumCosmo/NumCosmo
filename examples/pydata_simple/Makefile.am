@@ -11,6 +11,7 @@ examples_DATA = \
 	py_sline_data.py  \
 	example_fit.py    \
 	example_mcmc.py   \
+	example_esmcmc.py \
 	example_mc.py
 
 

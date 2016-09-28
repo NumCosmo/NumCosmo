@@ -35,8 +35,6 @@ main (gint argc, gchar *argv[])
   ncm_model_orig_param_set (NCM_MODEL (cosmo), NC_HICOSMO_DE_OMEGA_X,   0.70);
   ncm_model_orig_param_set (NCM_MODEL (cosmo), NC_HICOSMO_DE_T_GAMMA0,  2.72);
   ncm_model_orig_param_set (NCM_MODEL (cosmo), NC_HICOSMO_DE_OMEGA_B,   0.05);
-  ncm_model_orig_param_set (NCM_MODEL (cosmo), NC_HICOSMO_DE_SPECINDEX, 1.00);
-  ncm_model_orig_param_set (NCM_MODEL (cosmo), NC_HICOSMO_DE_SIGMA8,    0.90);
   ncm_model_orig_param_set (NCM_MODEL (cosmo), NC_HICOSMO_DE_XCDM_W,   -1.10);
 
   /**************************************************************************** 
@@ -51,7 +49,7 @@ main (gint argc, gchar *argv[])
   for (i = 0; i < 10; i++)
   {
     gdouble z = 1.0 / 9.0 * i;
-    gdouble cd = ncm_c_hubble_radius () * nc_distance_comoving (dist, cosmo, z);
+    gdouble cd = nc_hicosmo_RH_Mpc (cosmo) * nc_distance_comoving (dist, cosmo, z);
     printf ("% 10.8f % 20.15g\n", z, cd);
   }
 
