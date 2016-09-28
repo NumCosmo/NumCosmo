@@ -49,7 +49,7 @@ ps_cbe  = Nc.PowspecMLCBE.new ()
 ps_eh   = Nc.PowspecMLTransfer.new (Nc.TransferFuncEH.new ())
 
 z_min = 0.0
-z_max = 1000.0
+z_max = 2.0
 zdiv  = 0.49999999999
 
 k_min = 1.0e-5
@@ -94,6 +94,27 @@ plt.legend (loc="lower right")
 plt.xscale('log')
 plt.yscale('log')
 plt.savefig ("ps_cbe_eh.pdf")
+plt.clf ()
+
+for z in np.arange (z_min, z_max, (z_max - z_min) * zdiv * 0.5):
+  k_a = []
+  Pk_eh_a = []
+  Pk_cbe_a = []
+  for lnk in np.arange (log (ps_cbe.props.kmin), log (ps_cbe.props.kmax), log (k_max / k_min) / nk):
+    k = exp (lnk)
+    k2 = k * k
+    k3 = k2 * k
+    k_a.append (k)
+    Pk_cbe_a.append (k3 * ps_cbe.eval (cosmo, z, k))
+    Pk_eh_a.append (k3 * ps_eh.eval (cosmo, z, k))
+    #print k, ps_eh.eval (cosmo, z, k) / ps_cbe.eval (cosmo, z, k)
+  
+  plt.plot (k_a, np.abs (1.0 - np.array (Pk_eh_a) / np.array (Pk_cbe_a)), label = r'CLASS EH cmp $z = %.2f$' % (z))
+
+plt.legend (loc="lower right")
+plt.xscale('log')
+plt.yscale('log')
+plt.savefig ("ps_diff_cbe_eh.pdf")
 plt.clf ()
 
 #
