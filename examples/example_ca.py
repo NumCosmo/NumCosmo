@@ -109,7 +109,7 @@ gf = psml.peek_gf ()
 gf.prepare (cosmo)
 
 for i in range (0, np):
-  z = 1000.0 * divfac * i
+  z = 2.0 * divfac * i
   D = gf.eval (cosmo, z)
   dD = gf.eval_deriv (cosmo, z)
   za.append (z)
@@ -123,10 +123,10 @@ for i in range (0, np):
 
 plt.title ("Growth Function")
 plt.plot (za, Da, 'r', label="D")
-plt.plot (za, numpy.abs (dDa), 'b--', label="dD/dz")
+plt.plot (za, dDa, 'b--', label="dD/dz")
 plt.xlabel('$z$')
 plt.legend(loc=2)
-plt.yscale ('log')
+#plt.yscale ('log')
 
 plt.savefig ("growth_func.png")
 plt.clf ()
@@ -211,7 +211,7 @@ mf.prepare (cosmo)
 dndza = []
 
 for i in range (0, np):
-  dndz = mf.dn_dz (cosmo, log(1e14), log(1e16), za[i], True)
+  dndz = mf.dn_dz (cosmo, log (1.0e14), log (1.0e16), za[i], True)
   dndza.append (dndz)
 
 #
