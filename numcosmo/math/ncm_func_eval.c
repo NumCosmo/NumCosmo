@@ -7,7 +7,7 @@
  ****************************************************************************/
 /*
  * numcosmo
- * Copyright (C) Sandro Dias Pinto Vitenti 2012 <sandro@lapsandro>
+ * Copyright (C) Sandro Dias Pinto Vitenti 2012 <sandro@isoftware.com.br>
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
@@ -135,7 +135,6 @@ ncm_func_eval_set_max_threads (gint mt)
  * Using the thread pool, evaluate @fl in each value of (@f-@i)/@nwork.
  *
  */
-#if NCM_THREAD_POOL_MAX > 1
 void
 ncm_func_eval_threaded_loop_nw (NcmFuncEvalLoop lfunc, glong i, glong f, gpointer data, guint nworkers)
 {
@@ -186,13 +185,6 @@ ncm_func_eval_threaded_loop_nw (NcmFuncEvalLoop lfunc, glong i, glong f, gpointe
   g_mutex_clear (&ctrl.update);
   g_cond_clear (&ctrl.finish);
 }
-#else
-void
-ncm_func_eval_threaded_loop_nw (NcmFuncEvalLoop lfunc, glong i, glong f, gpointer data, guint nworkers)
-{
-  lfunc (i, f, data);
-}
-#endif
 
 /**
  * ncm_func_eval_threaded_loop:
