@@ -27,6 +27,11 @@ cosmo = Nc.HICosmo.new_from_name (Nc.HICosmo, "NcHICosmoDEXcdm")
 reion = Nc.HIReionCamb.new ()
 
 #
+# Adding submodels to the main cosmological model.
+#
+cosmo.add_submodel (reion)
+
+#
 #  New recombination object configured to calculate up to redshift 
 #  10^9 and precision 10^-7.
 #
@@ -46,8 +51,6 @@ cosmo.orig_param_set (Nc.HICosmoDEParams.OMEGA_C,   0.25)
 cosmo.orig_param_set (Nc.HICosmoDEParams.OMEGA_X,   0.70)
 cosmo.orig_param_set (Nc.HICosmoDEParams.T_GAMMA0,  2.72)
 cosmo.orig_param_set (Nc.HICosmoDEParams.OMEGA_B,   0.05)
-cosmo.orig_param_set (Nc.HICosmoDEParams.SPECINDEX, 1.00)
-cosmo.orig_param_set (Nc.HICosmoDEParams.SIGMA8,    0.90)
 cosmo.orig_param_set (Nc.HICosmoDEXCDMParams.W,    -1.00)
 
 #
@@ -58,14 +61,12 @@ cosmo.props.Omegab  = 0.05
 cosmo.props.Omegac  = 0.25
 cosmo.props.Omegax  = 0.70
 cosmo.props.Tgamma0 = 2.72
-cosmo.props.ns      = 1.0
-cosmo.props.sigma8  = 0.9
 cosmo.props.w       = -1.0
 
 #
 #  Preparing recomb with cosmo.
 #
-recomb.prepare (reion, cosmo)
+recomb.prepare (cosmo)
 
 #
 #  Calculating Xe, equilibrium Xe, v_tau and its derivatives.
@@ -219,12 +220,12 @@ plt.clf ()
 #  Ploting dtau_dlambda
 #
 
-plt.title (r'dtau_dlambda')
+plt.title (r'$d\tau/d\lambda$')
 plt.xscale('log')
 plt.yscale('log')
 plt.plot (x_dtau_a, dtau_dlambda_a, 'r', label=r'$\vert\mathrm{d}\tau/\mathrm{d}\lambda\vert$')
 plt.plot (x_dtau_a, x_E_a, 'b', label=r'$x/E$')
-plt.plot (x_dtau_a, (x_Etaub_a), 'b', label=r'$x/(E\bar{\tau})$')
+plt.plot (x_dtau_a, (x_Etaub_a), 'g', label=r'$x/(E\bar{\tau})$')
 
 plt.legend()
 plt.legend(loc=2)

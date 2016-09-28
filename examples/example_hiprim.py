@@ -69,10 +69,13 @@ cosmo.param_set_by_name ("Omegak", 0.0)
 #
 #  New homogeneous and isotropic reionization object
 #
-
 reion = Nc.HIReionCamb.new ()
+
+#
+# Adding submodels to the main cosmological model.
+#
 cosmo.add_submodel (reion)
-#reion.z_to_tau (cosmo)
+cosmo.add_submodel (prim)
 
 #
 # Preparing the Class backend object

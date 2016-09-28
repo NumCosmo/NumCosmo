@@ -93,7 +93,7 @@ for z in np.arange (z_min, z_max, (z_max - z_min) * zdiv):
 plt.legend (loc="lower right")
 plt.xscale('log')
 plt.yscale('log')
-plt.savefig ("ps_cbe_eh.pdf")
+plt.savefig ("ps_cbe_eh.png")
 plt.clf ()
 
 for z in np.arange (z_min, z_max, (z_max - z_min) * zdiv * 0.5):
@@ -114,7 +114,7 @@ for z in np.arange (z_min, z_max, (z_max - z_min) * zdiv * 0.5):
 plt.legend (loc="lower right")
 plt.xscale('log')
 plt.yscale('log')
-plt.savefig ("ps_diff_cbe_eh.pdf")
+plt.savefig ("ps_diff_cbe_eh.png")
 plt.clf ()
 
 #
@@ -155,7 +155,7 @@ for z in np.arange (z_min, z_max, (z_max - z_min) * zdiv):
 plt.legend (loc="lower left")
 plt.xscale('log')
 plt.yscale('log')
-plt.savefig ("ps_var_cbe_eh.pdf")
+plt.savefig ("ps_var_cbe_eh.png")
 plt.clf ()
 
 for z in np.arange (z_min, z_max, (z_max - z_min) * zdiv):
@@ -175,7 +175,7 @@ for z in np.arange (z_min, z_max, (z_max - z_min) * zdiv):
 
 plt.legend (loc="lower left")
 plt.xscale('log')
-plt.savefig ("ps_dvar_cbe_eh.pdf")
+plt.savefig ("ps_dvar_cbe_eh.png")
 plt.clf ()
 
 zmaxnl = 10.0
@@ -207,7 +207,7 @@ for z in np.arange (z_min, z_max, (z_max - z_min) * zdiv):
 plt.legend (loc="lower right")
 plt.xscale('log')
 plt.yscale('log')
-plt.savefig ("ps_cbe_halofit.pdf")
+plt.savefig ("ps_cbe_halofit.png")
 plt.clf ()
 
 psf_cbenl = Ncm.PowspecFilter.new (pshf, Ncm.PowspecFilterType.TOPHAT)

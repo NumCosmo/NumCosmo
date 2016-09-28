@@ -40,8 +40,6 @@ cosmo.orig_param_set (Nc.HICosmoDEParams.OMEGA_C,   0.25)
 cosmo.orig_param_set (Nc.HICosmoDEParams.OMEGA_X,   0.70)
 cosmo.orig_param_set (Nc.HICosmoDEParams.T_GAMMA0,  2.72)
 cosmo.orig_param_set (Nc.HICosmoDEParams.OMEGA_B,   0.05)
-cosmo.orig_param_set (Nc.HICosmoDEParams.SPECINDEX, 1.00)
-cosmo.orig_param_set (Nc.HICosmoDEParams.SIGMA8,    0.90)
 cosmo.orig_param_set (Nc.HICosmoDEXCDMParams.W,    -1.10)
 
 #
@@ -52,8 +50,6 @@ cosmo.props.Omegab  =  0.04
 cosmo.props.Omegac  =  0.25
 cosmo.props.Omegax  =  0.70
 cosmo.props.Tgamma0 =  2.72
-cosmo.props.ns      =  1.00
-cosmo.props.sigma8  =  0.90
 cosmo.props.w       = -1.10
 
 #
@@ -66,10 +62,9 @@ cosmo.params_log_all ()
 #  Printing some distances up to redshift 1.0.
 #
 for i in range (0, 10):
-  z = 1.0 / 9.0 * i
-  cd = Ncm.C.hubble_radius () * dist.comoving (cosmo, z)
+  z  = 1.0 / 9.0 * i
+  cd = cosmo.RH_Mpc () * dist.comoving (cosmo, z)
   print "% 10.8f % 20.15g" % (z, cd)
-
 
 dist = Nc.Distance.new (2000.0)
 
