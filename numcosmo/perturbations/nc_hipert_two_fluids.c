@@ -82,9 +82,10 @@
 #include <gsl/gsl_roots.h>
 #include <gsl/gsl_odeiv2.h>
 
+#ifdef HAVE_SUNDIALS_ARKODE
 #include <arkode/arkode.h>
 #include <arkode/arkode_dense.h>
-
+#endif /* HAVE_SUNDIALS_ARKODE */
 
 G_DEFINE_TYPE (NcHIPertTwoFluids, nc_hipert_two_fluids, NC_TYPE_HIPERT);
 
