@@ -46,13 +46,12 @@ Building from repository:
 To build from a release package, for which the configure script is ready, run: 
   - ./configure (--help to see options)
   - make
-  - make install
+  - make install ([optional step](http://www.nongnu.org/numcosmo/manual/compiling.html))
 
 To build from the git repository, run:
   - ./autogen.sh 
     - The configure script is built at this point. 
-      Note that this requires the autotools developer enviroment (latest
-version): 
+      Note that this requires the autotools developer enviroment (latest version): 
       - autoconf 
         * http://ftp.gnu.org/gnu/autoconf/ 
       - automake
@@ -66,9 +65,14 @@ version):
         * https://wiki.gnome.org/action/show/Projects/GObjectIntrospection?action=show&redirect=GObjectIntrospection
   - ./cofigure (--help to see options)
   - make 
-  - make install 
+  - make install ([optional step](http://www.nongnu.org/numcosmo/manual/compiling.html))
 
 For a generic installation instructions, see INSTALL.
+
+The requirements below can be found on most Linux distribution, see [here](http://www.nongnu.org/numcosmo/manual/compiling.html)
+for a list of packages names for some distributions. 
+
+A pre-compiled version of NumCosmo can be found [here](https://build.opensuse.org/package/show/home:vitenti/numcosmo)
 
 Requirements:
 -------------
@@ -92,10 +96,6 @@ Requirements:
 Optional packages:
 ------------------
 
-NumCosmo, provides it own internal version of Levmar and Cuba for a full version 
-of the original libraries visit their website linked below. It is, therefore,
-*not* necessary to install them.
-
   - FFTW3 >= 3.1.2
     Needed to build the spherical harmonic decomposition of CMB data.
     * http://www.fftw.org/
@@ -107,13 +107,7 @@ of the original libraries visit their website linked below. It is, therefore,
   - Lapack
     Linear Algebra PACKage    
     * http://www.netlib.org/lapack/
-  - Cuba 
-    A library for multidimensional numerical integration
-    * http://www.feynarts.de/cuba/
   - Extra (besides gsl's) minimization packages
-    - Levmar
-      Least squares minimization library.
-      * http://www.ics.forth.gr/~lourakis/levmar/
     - NLOpt
       Several general purpose minimization algorithms.
       * http://ab-initio.mit.edu/wiki/index.php/NLopt
