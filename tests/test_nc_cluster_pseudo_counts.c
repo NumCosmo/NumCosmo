@@ -65,6 +65,7 @@ main (gint argc, gchar *argv[])
   ncm_cfg_init ();
   ncm_cfg_enable_gsl_err_handler ();
 
+#ifdef HAVE_GSL_2_2
   g_test_add ("/nc/cluster_pseudo_counts/1p2_integral", TestNcClusterPseudoCounts, NULL,
               &test_nc_cluster_pseudo_counts_new,
               &test_nc_cluster_pseudo_counts_1p2_integral,
@@ -77,6 +78,7 @@ main (gint argc, gchar *argv[])
               &test_nc_cluster_pseudo_counts_new,
               &test_nc_cluster_pseudo_counts_m2lnL,
               &test_nc_cluster_pseudo_counts_free);
+#endif /* HAVE_GSL_2_2 */
 
   g_test_run ();
 }
