@@ -136,6 +136,23 @@ G_STMT_START { \
 #define mpz_clears ncm_mpz_clears
 #endif /* mpz_inits */
 
+/* Workaround on g_clear_pointer */
+#if ((GLIB_MAJOR_VERSION == 2) && (GLIB_MINOR_VERSION < 34))
+#define g_clear_pointer(ptr,freefunc) \
+G_STMT_START { \
+  if (*(ptr) != NULL) \
+  { \
+    (freefunc) (*(ptr)); \
+    *(ptr) = NULL; \
+  } \
+} G_STMT_END
+#endif /* Glib version < 2.34 */
+
+/* Workaround on g_clear_object. */
+#if ((GLIB_MAJOR_VERSION == 2) && (GLIB_MINOR_VERSION < 28))
+#define g_clear_object(obj) g_clear_pointer(ptr,g_object_unref)
+#endif /* Glib version < 2.28 */
+
 #define NCM_FITS_ERROR(status) \
 G_STMT_START { \
   if (status) \
