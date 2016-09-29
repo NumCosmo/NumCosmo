@@ -20,7 +20,6 @@ MY_CFLAGS = \
 	 $(CFITSIO_CFLAGS)    \
 	 $(NLOPT_CFLAGS)      \
 	 $(LIBCUBA_INCDIR)    \
-	 $(OPENMP_CFLAGS)     \
 	 -I$(PLC_DIR)         \
 	 -I$(PLC_DIR)/cldf    \
 	 -I$(PLC_DIR)/minipmc \
@@ -29,6 +28,7 @@ MY_CFLAGS = \
 
 AM_CFLAGS =    \
 	 -Wall \
+	 $(OPENMP_CFLAGS)     \
 	 $(MY_CFLAGS)
 
 SUBDIRS = $(MAYBE_LIBCUBA) levmar plc class .
