@@ -274,7 +274,9 @@ _nc_xcor_limber_kernel_lensing_add_noise (NcXcorLimberKernel *xclk, NcmVector *v
     g_error ("nc_xcor_limber_kernel_lensing_noise_spec : too high multipole");
 
 	ncm_vector_memcpy(vp2, vp1);
-	ncm_vector_add(vp2, ncm_vector_get_subvector(xclkl->Nl, lmin, ncm_vector_len(vp1)));
+	NcmVector* Nl_sub = ncm_vector_get_subvector(xclkl->Nl, lmin, ncm_vector_len(vp1));
+	ncm_vector_add(vp2, Nl_sub);
+	ncm_vector_free (Nl_sub);
 
 	// return ncm_vector_get (xclkl->Nl, l);
 }

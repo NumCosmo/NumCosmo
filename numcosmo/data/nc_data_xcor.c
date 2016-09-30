@@ -849,7 +849,7 @@ _nc_data_xcor_set_by_oa (NcDataXcor* dxc, NcmObjArray* oa)
 		for (b = 0; b < NC_DATA_XCOR_MAX; b++)
 		{
 			dxc->xcidx[a][b] = -1;
-			dxc->xcab[a][b] = NULL;
+			nc_xcor_AB_clear(&dxc->xcab[a][b]);
 		}
 	}
 
