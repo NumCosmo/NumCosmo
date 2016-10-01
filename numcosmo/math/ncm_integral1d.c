@@ -41,6 +41,7 @@
 
 #include "math/ncm_integral1d.h"
 #include "math/ncm_c.h"
+#include "math/ncm_cfg.h"
 #include <gsl/gsl_cdf.h>
 
 G_DEFINE_TYPE (NcmIntegral1d, ncm_integral1d, G_TYPE_OBJECT);

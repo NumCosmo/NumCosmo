@@ -2,7 +2,310 @@ CHANGELOG
 ----------------------
 
 [Current]
- * Last updates in examples.
+
+[v0.13.2]
+ * Fixed max redshift in example_ca.py.
+
+ * Updated examples.
+
+ * Improved docs.
+
+ * New ESMCMC example.
+
+ * Fixed conditional threads compiling.
+
+ * Missing ending string null.
+
+ * Align.
+
+ * Fall back to default files.
+
+ * Conditional usage of gsl >= 2.2 functions.
+
+ * Conditional use of gsl_sf_legendre_array_ functions.
+
+ * Fixed docs typos.
+
+ * Fixed doc typos. New catalog sampler NcmMSetTransKernCat. Removing warnings.
+
+ * Added missing GSL support for darkenergy, updated mset_gen to generate mset 
+     with models and submodels.
+
+ * Missing gsl link for mcat_analyze.
+
+ * Missing glib link to darkenergy.
+
+ * Explicity link to glib in tools.
+
+ * Test for files in cbe_precision.
+
+ * Add lock to fftw plans.
+
+ * Working on NcHIPertWKB (in progress, unstable).
+
+ * No modification in example_hiprim.py
+
+ * Fix for dlsym on macos
+
+ * Fixed header inclusion (new gsl stuff).
+
+ * Included sigma8 in NcmMSetFuncList. Small adjustements. Working in progress in
+     WKB.
+
+ * Updating WKB module (work in progress).
+
+ * Temporary debug prints.
+
+ * Small improvements.
+
+ * Finishing the alm2pix transform.
+
+ * Improving outsource compiling
+
+ * Improving outsource compiling
+
+ * Improving outsource compiling
+
+ * Improving outsource compiling.
+
+ * Removed unecessary comment.
+
+ * Reordered class and instance structs, now all objects declare first the class
+     struct and then the instance struct.
+
+ * Support for require maximum redshift in NcDistance.
+
+ * Changed the maxium redshift requirement of Halofit to match the maximum asked
+     not the maximum non-linear.
+
+ * mcat_analyse now outputs the full covariance when --info is enabled.
+
+ * Added skip in unbindable functions in nc_cluster_mass_plcl.c. Support for
+     including function in ESMCMC analysis through darkenergy. Added support for
+     evaluating NcmMSetFunc in fixed points.
+
+ * Many improvements and additions.
+
+     Extended Serialize to work with some instances in different places. 
+     Reworked NcmMSetFunc to be an object including description and symbols
+     related to the function it calculates. NcmMSetFuncList introduces an
+     generic catalog containing NcmMSetFunc from any observable. An initial list
+     from NcHICosmo and NcDistance was already created, more to come. Reworked
+     NcmPrior on top of NcmMSetFunc, now it can be serialized and saved to disk.
+     Now priors can be implemented directly in Python. New generic abstract
+     objects NcmPriorFlat and NcmPriorGauss. Improved TwoFluids objects and
+     examples to match last paper equations of motion arXiv:1510.06628 (Work in
+     progress). Moving all pixalization and spherical harmonics decomposition
+     related code to NcmSphereMapPix (Work in progress). New tests on
+     NcmSphereMapPix (test_ncm_sphere_map_pix). NcmObjArray now supports saving
+     and loading from disk. New NcmObjArray tests.
+
+     Several minor improvements.
+
+ * Create README.md listing and describing the scripts. Included script
+     mass_calibration_planck_clash.py (ref. arXiv:1608.05356).
+
+ * Updating TwoFluids perturbation object, working in progress.
+
+ * References included - documentation in progress.
+
+ * Finalizing NcmSphereMapPix (including spherical harmonics decomp).
+
+ * Peakfinder functions were rewritten in terms og GSL functions, therefore the
+     objects NcClusterMassPlCL and NcCluster PseudoCounts no longer depend on
+     the Levmar library.
+
+     Documentation in progress: README, dependencies.xml, NcmSpline,
+     NcmPowspecFilter, NcmFftlog.
+
+ * New reorganized NcmSphereMapPix object.
+
+ * Reorganizing quaternions and spherical map objects.
+
+ * Removed debug messages.
+
+ * Added support for ARB and included ARB calculation of NcmFFTLogTophatwin2.
+     Fixed minor bug in FFTLog.
+
+ * Documentation: work in progress.
+
+ * Removed debug print.
+
+ * Finalized the inclusion of NcPowspecMLNHaloFit and adaptating to
+     NcmPowspecFilter. Added support for derivatives in NcmSpline2dBicubic.
+
+ * Removed debug print from exaple_ps.py
+
+ * Growth function adjusted in NcPowspecMLTransfer (~1.0e-4 precision comparing
+     Class and EH at z = 0).
+
+ * Removed old powerspectrum from NcHICosmo and moved everthing to NcHIPrim. All
+     objects were adapted accordingly. (Work in progress!)
+
+ * Documentation: ncm_fftlog, ncm_fftlog_gausswin2, ncm_fftlog_tophatwin2
+
+ * Documentation: nc_cbe, nc_powspec, nc_powspec_ml, nc_powspec_ml_cbe,
+     nc_powspec_ml_transfer
+
+ * Updating NcHaloMassFunction to use the new NcmPowspec family.
+
+ * Renamed NcMassFunction to NcHaloMassFunction
+
+ * Reorganizing fftlog object, added calibration method to adjust the number of
+     knots. New PowspecFilter object to apply filters (curretly gaussian or
+     tophat) to any powerspectrum. Modifying example_ps.py (not ready yet).
+
+ * Functions implemented: nc_cluster)mass_plcl_pdf_only_lognormal and
+     nc_cluster_pseudo_counts_mf_lognormal_integral.
+
+ * Minimal README for the python example.
+
+ * Documenting python children objects.
+
+ * Better doc in python example.
+
+ * New Monte Carlo example. Relaxed Serialize to deal with python derived objects.
+     New GObject frontend to random number generation functions.
+
+ * Python mcmc example.
+
+ * New external code Faddeeva for error function calc. New python example.
+     Improved bandwidth in NcmStatsDist1dEPDF.
+
+ * Missing data file.
+
+ * New Hubble H_0 data Riess2016. Added helper function for CMB reparam.
+
+ * Updating documentation: README, dependencies and compiling
+
+ * New HIPrim models (broken power law and exponential cut).
+
+ * Pseudo counts parametrized in terms of lnMcut, instead of lnTx.
+
+ * Plot scripts update due to numpy modifications.
+
+     Cluster pseudo counts - new variable Tx (substituting the old one - Mcut).
+
+ * First tests with Planck polarization likelihood.
+
+ * Added support for TE EE data from Planck likelihood.
+
+ * Bug fix in ncm_fit_esmcmc_walker_stretch.
+
+ * Added missing object registry.
+
+ * New reparametrization nc_hicosmo_de_reparam_cmb and nc_hiprim_atan. Better
+     handling of border cases in ncm_fit_esmcmc_walker_stretch.
+
+ * Improved parallelization of NcMatterVar by removing a mutex. Fix bug in
+     NcClusterPseudoCounts. Improved border handling in
+     NcFitESMCMCWalkerStretch.
+
+ * Cleaning wrong annotations, added individual shrink factors calculation in
+     mcat.
+
+ * Update parameter in ncm_mset_catalog to improve the shrink factor calculation.
+
+ * Implemented selection function considering the relation between X-ray
+     temperature and true mass. Defined new parameter:
+     NC_CLUSTER_PSEUDO_COUNTS_LNTX_STAR_CUT
+
+     Example example_hiprim.py has a bug.
+
+ * Support for changing kmax and kmin in NcPowspecMLCBE.
+
+ * Missing file.
+
+ * New NcPowspecMLCBE for extracting linear matter power spectrum from CLASS.
+     Trying new walkers (and options) for ESMCMC. New options for ESMCMC added
+     to darkenergy. New example example_ps.py of how to use new NcPowspecML
+     objects. Organized code in NcTransferFuncEH.
+
+ * File simple corner.
+
+ * Removing pyc files.
+
+ * Fixing objects definition order (just cosmetics). Improving NcmMSetCatalog (now
+     supports printing ensemble time evolution). Designing new NcmCalc abstract
+     object.
+
+ * Added plot scripts.
+
+ * A typo and a leak.
+
+ * Restructured NcmFitESMCMC.
+
+     Now NcmFitESMCMC supports different walkers through NcmFitESMCMCWalker
+     interface. Both serial and parallel versions produce the same result.
+
+     mcat_analize calculates now the integrated autocorrelation time with the -i
+     option. darkenergy support for Planck data.
+
+ * Fixed bug in mcat_analyze.c.
+
+ * Imposed the same out-of-interval prior in both serial and parallel modes.
+
+ * Moved back the default value of the parameter A of NcmFitESMCMC to 2.
+
+ * Several fixes and improvements.
+
+     New quantile support in ncm_stats_vec (using gsl implementation). Improved
+     synchronization robustness for NcmMSetCatalog. Modified
+     ncm_stats_dist1d_epdf to use silverman's rule of thumb to calculate the
+     bandwidth. Added support to Planck likelihood usage through darkenergy. 
+     Made clik_gibbs_f90 thread safe to avoid multithread conflicts.
+
+ * Finished NcmIntegral1d first interfaces for Hermite and Leguerre like
+     integrals. Added a new test for NcmIntegral1d.
+
+ * Updated dependency on glib to version 2.32.0 and cleaned old legacy code.
+
+ * Added Gauss-Hermit integration to NcmIntegral1d.
+
+ * New NcPowspecML object for abstract linear matter powerspectrum. New
+     NcmIntegral1d object for generic one dimensional integration. Organized
+     NcTransferFuncBBKS internally.
+
+ * Fixed documentation.
+
+ * Bug fixed: normalization of the Planck and CLASH masses distributions are now
+     implemented considering M_PL >= 0 and M_CL >=0. Normalization is given in
+     terms of the error functions. This modification was done for the
+     computation of the 3D integral!!!
+
+ * Fixing examples. New example example_epdf1d.py added.
+
+ * Moved NcPowerSpectrum to NcmPowspec (more general base object).
+
+ * Added new abstract class for powerspectrum implementation.
+
+ * Finished gitignore organization.
+
+ * Organizing gitignore to clean the index.
+
+ * Adding .gitignore to the repo.
+
+ * Missing ChangeLog in libcuba.
+
+ * Updated example out filename.
+
+ * Added submodel support for NcmModelCtrl and finished the transition for
+     submodels in all derived objects.
+
+     Added tests for submodel in NcmModelCtrl.
+
+ * Added submodel concept in NcmModel. NcHIReion and NcHIPrim are now submodels of
+     NcHICosmo.
+
+ * Renamed submodel for stackpos (stack position) in NcmMSet internals.
+
+ * Finished resampling for NcDataPseudoCounts and its tests.
+
+ * Added set_cad function in DataClusterPseudoCounts.
+
+
+[v0.13.1]
+ * Last updates in examples. ChangeLog updated.
 
  * Fixed docs and updated ChangeLog.
 

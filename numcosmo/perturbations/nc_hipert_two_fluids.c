@@ -82,9 +82,10 @@
 #include <gsl/gsl_roots.h>
 #include <gsl/gsl_odeiv2.h>
 
+#ifdef HAVE_SUNDIALS_ARKODE
 #include <arkode/arkode.h>
 #include <arkode/arkode_dense.h>
-
+#endif /* HAVE_SUNDIALS_ARKODE */
 
 G_DEFINE_TYPE (NcHIPertTwoFluids, nc_hipert_two_fluids, NC_TYPE_HIPERT);
 
@@ -1313,31 +1314,25 @@ nc_hipert_two_fluids_set_init_cond (NcHIPertTwoFluids *ptf, NcHICosmo *cosmo, gd
   flag = CVodeSStolerances (pert->cvode, pert->reltol, 0.0);
   NCM_CVODE_CHECK (&flag, "CVodeSStolerances", 1,);
 
-#ifdef HAVE_SUNDIALS_ARKODE
-  flag = ARKodeSStolerances (ptf->arkode, pert->reltol, 0.0);
-  NCM_CVODE_CHECK (&flag, "ARKodeSStolerances", 1,);
-#endif /* HAVE_SUNDIALS_ARKODE */
-  
   flag = CVodeSetMaxNumSteps (pert->cvode, G_MAXUINT32);
   NCM_CVODE_CHECK (&flag, "CVodeSetMaxNumSteps", 1, );
-
-#ifdef HAVE_SUNDIALS_ARKODE
-  flag = ARKodeSetMaxNumSteps (ptf->arkode, G_MAXUINT32);
-  NCM_CVODE_CHECK (&flag, "ARKodeSetMaxNumSteps", 1, );
-#endif /* HAVE_SUNDIALS_ARKODE */
 
   flag = CVDense (pert->cvode, NC_HIPERT_ITWO_FLUIDS_VARS_LEN);
   NCM_CVODE_CHECK (&flag, "CVDense", 1, );
 
+#ifdef HAVE_SUNDIALS_ARKODE
+  flag = ARKodeSStolerances (ptf->arkode, pert->reltol, 0.0);
+  NCM_CVODE_CHECK (&flag, "ARKodeSStolerances", 1,);
+
+  flag = ARKodeSetMaxNumSteps (ptf->arkode, G_MAXUINT32);
+  NCM_CVODE_CHECK (&flag, "ARKodeSetMaxNumSteps", 1, );
+
   flag = ARKDense (ptf->arkode, NC_HIPERT_ITWO_FLUIDS_VARS_LEN);
   NCM_CVODE_CHECK (&flag, "ARKDense", 1, );
 
-#ifdef HAVE_SUNDIALS_ARKODE
   flag = ARKodeSetLinear (ptf->arkode, 1);
   NCM_CVODE_CHECK (&flag, "ARKodeSetLinear", 1, );
-#endif /* HAVE_SUNDIALS_ARKODE */
-  
-#ifdef HAVE_SUNDIALS_ARKODE
+
   flag = ARKDlsSetDenseJacFn (ptf->arkode, dfI_dy);
   NCM_CVODE_CHECK (&flag, "ARKDlsSetDenseJacFn", 1, );
 #endif /* HAVE_SUNDIALS_ARKODE */
