@@ -296,9 +296,11 @@ static void
 _nc_xcor_limber_cvode (NcXcor* xc, NcXcorLimberKernel* xclk1, NcXcorLimberKernel* xclk2, NcHICosmo* cosmo, guint lmin, guint lmax, gdouble zmin, gdouble zmax, gboolean isauto, NcmVector* vp)
 {
 	const guint nell = lmax - lmin + 1;
-	const gdouble init = 1e-10; //NCM_DEFAULT_PRECISION;
+	// const gdouble init = 1e-10; //NCM_DEFAULT_PRECISION;
+	const gdouble init = -1e-2 * (zmax - zmin) * NCM_DEFAULT_PRECISION; // minus sign because we start the integration backwards...
 	const gdouble zmid = exp ((log1p (zmin) + log1p (zmax)) / 2.0) - 1.0;
 	N_Vector yv = N_VNew_Serial (nell);
+	N_Vector yv0 = N_VNew_Serial (nell);
 	gpointer cvode = CVodeCreate (CV_ADAMS, CV_FUNCTIONAL);
 	gpointer cvodefunc = &_xcor_limber_cvode_int; //isauto ? &_xcor_limber_cvode_auto_int : &_xcor_limber_cvode_cross_int;
 	gdouble z;
@@ -306,18 +308,31 @@ _nc_xcor_limber_cvode (NcXcor* xc, NcXcorLimberKernel* xclk1, NcXcorLimberKernel
 	guint i;
 	NcmVector* k = ncm_vector_new (nell);
 	NcmVector* Pk = ncm_vector_new (nell);
-	ncm_vector_set_zero(k);
-	ncm_vector_set_zero(Pk);
+	ncm_vector_set_zero (k);
+	ncm_vector_set_zero (Pk);
 
-	for (i = 0; i < nell; i++)
-	{
-		NV_Ith_S (yv, i) = init;
-	}
+	// if (FALSE)
+	// {
+	// 	 const gdouble init = 1e-10; //NCM_DEFAULT_PRECISION;
+
+	// for (i = 0; i < nell; i++)
+	// {
+	// 	NV_Ith_S (yv, i) = init;
+	// }
 
 	xcor_limber_cvode xclc = { isauto, lmin, lmax, nell, k, Pk, xc, xclk1, xclk2, cosmo }; //, cons_factor };
 
+	/* Find initial value = y'(zmid)*init */
+	_xcor_limber_cvode_int (zmid, yv, yv0, &xclc);
+	for (i = 0; i < nell; i++)
+	{
+		NV_Ith_S (yv0, i) *= init;
+		// NV_Ith_S (yv, i) = NV_Ith_S (yv0, i);
+		// printf ("%g\n", NV_Ith_S (yv, i));
+	}
+
 	/* First integrate from zmid to zmin*/
-	flag = CVodeInit (cvode, cvodefunc, zmid, yv);
+	flag = CVodeInit (cvode, cvodefunc, zmid, yv0);
 	NCM_CVODE_CHECK (&flag, "CVodeInit", 1, );
 
 	flag = CVodeSStolerances (cvode, NCM_DEFAULT_PRECISION, 0.0);
@@ -332,7 +347,9 @@ _nc_xcor_limber_cvode (NcXcor* xc, NcXcorLimberKernel* xclk1, NcXcorLimberKernel
 
 	for (i = 0; i < nell; i++)
 	{
-		NV_Ith_S (yv, i) = -NV_Ith_S (yv, i) + init; //integration done backwards, hence the minus sign
+		NV_Ith_S (yv, i) -= NV_Ith_S (yv0, i);
+		NV_Ith_S (yv, i) *= -1;
+		// NV_Ith_S (yv, i) = -NV_Ith_S (yv, i) + NV_Ith_S (yv0, i);// init; //integration done backwards, hence the minus sign
 	}
 
 	/* Then integrate from zmid to zmax*/
@@ -353,9 +370,63 @@ _nc_xcor_limber_cvode (NcXcor* xc, NcXcorLimberKernel* xclk1, NcXcorLimberKernel
 	{
 		ncm_vector_set (vp, i, NV_Ith_S (yv, i));
 	}
+	// }
+
+	// else
+	// {
+	// 	const gdouble init = 1e-10; //1e-7 * NCM_DEFAULT_PRECISION;
+	// 	const gdouble dz = (zmax - zmin) * NCM_DEFAULT_PRECISION;
+	//
+	// 	for (i = 0; i < nell; i++)
+	// 	{
+	// 		NV_Ith_S (yv, i) = init;
+	// 	}
+	//
+	// 	xcor_limber_cvode xclc = { isauto, lmin, lmax, nell, k, Pk, xc, xclk1, xclk2, cosmo }; //, cons_factor };
+	//
+	// 	flag = CVodeInit (cvode, cvodefunc, zmin, yv);
+	// 	NCM_CVODE_CHECK (&flag, "CVodeInit", 1, );
+	//
+	// 	flag = CVodeSStolerances (cvode, NCM_DEFAULT_PRECISION, 0.0);
+	// 	NCM_CVODE_CHECK (&flag, "CVodeSStolerances", 1, );
+	// 	flag = CVodeSetMaxNumSteps (cvode, 100000);
+	// 	NCM_CVODE_CHECK (&flag, "CVodeSetMaxNumSteps", 1, );
+	// 	flag = CVodeSetUserData (cvode, &xclc);
+	// 	NCM_CVODE_CHECK (&flag, "CVodeSetUserData", 1, );
+	// 	// flag = CVodeSetMinStep (cvode, dz);
+	// 	// NCM_CVODE_CHECK (&flag, "CVodeSetMinStep", 1, );
+	// 	// flag = CVodeSetInitStep (cvode, dz);
+	// 	// NCM_CVODE_CHECK (&flag, "CVodeSetInitStep", 1, );
+	// 	flag = CVodeSetStopTime (cvode, zmax);
+	// 	NCM_CVODE_CHECK (&flag, "CVodeSetStopTime", 1, );
+	//
+	// 	printf("%g \n", zmax);
+	// 	i = 0;
+	// 	do
+	// 	{
+	// 		flag = CVode (cvode, zmax, yv, &z, CV_ONE_STEP);
+	// 		printf ("%6i %6i %15.10g\n", i, flag, z);
+	// 		i++;
+	// 		if (flag == -4)
+	// 		{
+	// 			z += 1.0;
+	// 			flag = CVodeReInit (cvode, z, yv);
+	// 			NCM_CVODE_CHECK (&flag, "CVodeReInit", 1, );
+	// 			// flag = 1;
+	// 		}
+	// 	} while (flag == 0);
+	// 	// flag = CVode (cvode, zmax, yv, &z, CV_NORMAL);
+	// 	// NCM_CVODE_CHECK (&flag, "CVode", 1, );
+	//
+	// 	for (i = 0; i < nell; i++)
+	// 	{
+	// 		ncm_vector_set (vp, i, NV_Ith_S (yv, i) - init);
+	// 	}
+	// }
 
 	CVodeFree (&cvode);
 	N_VDestroy (yv);
+	N_VDestroy (yv0);
 
 	ncm_vector_free (k);
 	ncm_vector_free (Pk);

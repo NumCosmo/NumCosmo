@@ -63,7 +63,7 @@ enum
 
 G_DEFINE_TYPE (NcDataXcor, nc_data_xcor, NCM_TYPE_DATA_GAUSS_COV);
 
-static void 
+static void
 _nc_data_xcor_sort (const gint a, const gint b, gint* aa, gint* bb)
 {
 	*aa = (a <= b) ? a : b;
@@ -85,6 +85,9 @@ nc_data_xcor_init (NcDataXcor* dxc)
 
 	dxc->X1 = NULL;
 	dxc->X2 = NULL;
+
+	dxc->pcl = NULL;
+	dxc->pcov = NULL;
 
 	dxc->xc = NULL;
 
@@ -248,6 +251,10 @@ nc_data_xcor_dispose (GObject* object)
 
 	ncm_matrix_clear (&dxc->X1);
 	ncm_matrix_clear (&dxc->X2);
+
+	ncm_matrix_clear (&dxc->pcov);
+	ncm_vector_clear (&dxc->pcl);
+
 	// ncm_matrix_clear (&dxc->mixing);
 	// ncm_matrix_clear (&dxc->clorder);
 	//
@@ -354,10 +361,16 @@ _nc_data_xcor_fast_update (NcDataXcor* dxc, NcXcorLimberKernel* xcl, guint a, Nc
 			// printf ("fast bias thingy\n");
 			// printf ("%g %g %g\n", *(xclkg->bias0), xclkg->oldbias, biasratio);
 
-			ncm_vector_add_constant (ncm_matrix_get_col (dxc->xcab[a][a]->cl_th, 0), -1.0 * xclkg->noise_bias_old);
-			ncm_vector_scale (ncm_matrix_get_col (dxc->xcab[a][a]->cl_th, 0), gsl_pow_2 (biasratio));
+			NcmVector* cl_th_0_aa = ncm_matrix_get_col (dxc->xcab[a][a]->cl_th, 0);
+			NcmVector* cl_th_1_aa = ncm_matrix_get_col (dxc->xcab[a][a]->cl_th, 1);
+
+			ncm_vector_add_constant (cl_th_0_aa, -1.0 * xclkg->noise_bias_old);
+			ncm_vector_scale (cl_th_0_aa, gsl_pow_2 (biasratio));
 			// ncm_vector_add_constant (ncm_matrix_get_col (dxc->xcab[a][a]->cl_th, 0), ncm_vector_get (NCM_MODEL (xclkg)->params, NC_XCOR_LIMBER_KERNEL_GAL_NOISE_BIAS));
-			nc_xcor_limber_kernel_add_noise (xcl, ncm_matrix_get_col (dxc->xcab[a][a]->cl_th, 0), ncm_matrix_get_col (dxc->xcab[a][a]->cl_th, 1), 0);
+			nc_xcor_limber_kernel_add_noise (xcl, cl_th_0_aa, cl_th_1_aa, 0);
+
+			ncm_vector_free(cl_th_0_aa);
+			ncm_vector_free(cl_th_1_aa);
 
 			const guint nobs = dxc->nobs;
 			guint b;
@@ -368,13 +381,25 @@ _nc_data_xcor_fast_update (NcDataXcor* dxc, NcXcorLimberKernel* xcl, guint a, Nc
 				{
 					if (a < b)
 					{
-						ncm_vector_scale (ncm_matrix_get_col (dxc->xcab[a][b]->cl_th, 0), biasratio);
-						ncm_vector_memcpy (ncm_matrix_get_col (dxc->xcab[a][b]->cl_th, 1), ncm_matrix_get_col (dxc->xcab[a][b]->cl_th, 0));
+						NcmVector* cl_th_0_ab = ncm_matrix_get_col (dxc->xcab[a][b]->cl_th, 0);
+						NcmVector* cl_th_1_ab = ncm_matrix_get_col (dxc->xcab[a][b]->cl_th, 1);
+
+						ncm_vector_scale (cl_th_0_ab, biasratio);
+						ncm_vector_memcpy (cl_th_1_ab, cl_th_0_ab);
+
+						ncm_vector_free(cl_th_0_ab);
+						ncm_vector_free(cl_th_1_ab);
 					}
 					else if (b < a)
 					{
-						ncm_vector_scale (ncm_matrix_get_col (dxc->xcab[b][a]->cl_th, 0), biasratio);
-						ncm_vector_memcpy (ncm_matrix_get_col (dxc->xcab[b][a]->cl_th, 1), ncm_matrix_get_col (dxc->xcab[b][a]->cl_th, 0));
+						NcmVector* cl_th_0_ba = ncm_matrix_get_col (dxc->xcab[b][a]->cl_th, 0);
+						NcmVector* cl_th_1_ba = ncm_matrix_get_col (dxc->xcab[b][a]->cl_th, 1);
+
+						ncm_vector_scale (cl_th_0_ba, biasratio);
+						ncm_vector_memcpy (cl_th_1_ba, cl_th_0_ba);
+
+						ncm_vector_free(cl_th_0_ba);
+						ncm_vector_free(cl_th_1_ba);
 					}
 				}
 			}
@@ -459,9 +484,15 @@ _nc_data_xcor_prepare (NcmData* data, NcmMSet* mset)
 
 		if (prep[a][a])
 		{
-			nc_xcor_limber (dxc->xc, xcl1, NULL, cosmo, 0, dxc->xcab[a][a]->ell_th_cut_off, ncm_matrix_get_col (dxc->xcab[a][a]->cl_th, 0), NC_XCOR_LIMBER_METHOD_CVODE);
+			NcmVector* cl_th_0_aa = ncm_matrix_get_col (dxc->xcab[a][a]->cl_th, 0);
+			NcmVector* cl_th_1_aa = ncm_matrix_get_col (dxc->xcab[a][a]->cl_th, 1);
 
-			nc_xcor_limber_kernel_add_noise (xcl1, ncm_matrix_get_col (dxc->xcab[a][a]->cl_th, 0), ncm_matrix_get_col (dxc->xcab[a][a]->cl_th, 1), 0);
+			nc_xcor_limber (dxc->xc, xcl1, NULL, cosmo, 0, dxc->xcab[a][a]->ell_th_cut_off, cl_th_0_aa, NC_XCOR_LIMBER_METHOD_CVODE);
+
+			nc_xcor_limber_kernel_add_noise (xcl1, cl_th_0_aa, cl_th_1_aa, 0);
+
+			ncm_vector_free(cl_th_0_aa);
+			ncm_vector_free(cl_th_1_aa);
 		}
 
 		if (nobs > 1)
@@ -473,9 +504,15 @@ _nc_data_xcor_prepare (NcmData* data, NcmMSet* mset)
 				{
 					NcXcorLimberKernel* xcl2 = NC_XCOR_LIMBER_KERNEL (ncm_mset_peek_pos (mset, nc_xcor_limber_kernel_id (), b));
 
-					nc_xcor_limber (dxc->xc, xcl1, xcl2, cosmo, 0, dxc->xcab[a][b]->ell_th_cut_off, ncm_matrix_get_col (dxc->xcab[a][b]->cl_th, 0), NC_XCOR_LIMBER_METHOD_CVODE);
+					NcmVector* cl_th_0_ab = ncm_matrix_get_col (dxc->xcab[a][b]->cl_th, 0);
+					NcmVector* cl_th_1_ab = ncm_matrix_get_col (dxc->xcab[a][b]->cl_th, 1);
 
-					ncm_vector_memcpy (ncm_matrix_get_col (dxc->xcab[a][b]->cl_th, 1), ncm_matrix_get_col (dxc->xcab[a][b]->cl_th, 0));
+					nc_xcor_limber (dxc->xc, xcl1, xcl2, cosmo, 0, dxc->xcab[a][b]->ell_th_cut_off, cl_th_0_ab, NC_XCOR_LIMBER_METHOD_CVODE);
+
+					ncm_vector_memcpy (cl_th_1_ab, cl_th_0_ab);
+
+					ncm_vector_free(cl_th_0_ab);
+					ncm_vector_free(cl_th_1_ab);
 				}
 			}
 		}
@@ -492,7 +529,7 @@ _nc_data_xcor_prepare (NcmData* data, NcmMSet* mset)
  * FIXME
  *
  */
-void 
+void
 nc_data_xcor_mean_func_ab (NcDataXcor* dxc, NcmVector* vp, guint a, guint b)
 {
 	guint ret;
@@ -597,7 +634,7 @@ _nc_data_xcor_mean_func (NcmDataGaussCov* gauss, NcmMSet* mset, NcmVector* vp)
  * FIXME
  *
  */
-void 
+void
 nc_data_xcor_cov_func_abcd (NcDataXcor* dxc, NcmMatrix* cov, guint a, guint b, guint c, guint d)
 {
 	gint aa = -1, bb = -1, cc = -1, dd = -1;
@@ -771,7 +808,7 @@ nc_data_xcor_new_full (const guint nobs, NcXcor* xc, const gboolean use_norma) /
  * FIXME
  *
  */
-void 
+void
 nc_data_xcor_set_AB (NcDataXcor* dxc, NcXcorAB* xcab)
 {
 	const guint a = xcab->a;
@@ -803,7 +840,7 @@ nc_data_xcor_set_AB (NcDataXcor* dxc, NcXcorAB* xcab)
 	dxc->xcab[a][b] = nc_xcor_AB_ref (xcab);
 }
 
-static void 
+static void
 _nc_data_xcor_set_by_oa (NcDataXcor* dxc, NcmObjArray* oa)
 {
 	guint a, b;
@@ -812,7 +849,7 @@ _nc_data_xcor_set_by_oa (NcDataXcor* dxc, NcmObjArray* oa)
 		for (b = 0; b < NC_DATA_XCOR_MAX; b++)
 		{
 			dxc->xcidx[a][b] = -1;
-			dxc->xcab[a][b] = NULL;
+			nc_xcor_AB_clear(&dxc->xcab[a][b]);
 		}
 	}
 
@@ -855,7 +892,7 @@ _nc_data_xcor_set_by_oa (NcDataXcor* dxc, NcmObjArray* oa)
  * FIXME
  *
  */
-void 
+void
 nc_data_xcor_set_3 (NcDataXcor* dxc)
 {
 	const guint ctr = dxc->xcidx_ctr;
@@ -945,7 +982,7 @@ nc_data_xcor_set_3 (NcDataXcor* dxc)
  * FIXME
  *
  */
-void 
+void
 nc_data_xcor_set_4 (NcDataXcor* dxc, guint a, guint b, guint c, guint d, const gchar* X1_filename, const gchar* X2_filename, guint X_filelength)
 {
 	if ((b < a) | (d < c))
@@ -1002,7 +1039,7 @@ nc_data_xcor_set_4 (NcDataXcor* dxc, guint a, guint b, guint c, guint d, const g
  * FIXME
  *
  */
-void 
+void
 nc_data_xcor_set_5 (NcDataXcor* dxc)
 {
 	NcmData *data = NCM_DATA (dxc);
@@ -1019,7 +1056,7 @@ nc_data_xcor_set_5 (NcDataXcor* dxc)
  * FIXME
  *
  */
-void 
+void
 nc_data_xcor_get_cl_obs (NcDataXcor* dxc, NcmVector* vp, guint a, guint b)
 {
 	ncm_vector_memcpy2 (vp, dxc->xcab[a][b]->cl_obs, 0, dxc->xcab[a][b]->ell_lik_min, dxc->xcab[a][b]->nell_lik);

@@ -258,7 +258,7 @@ _nc_xcor_limber_kernel_lensing_prepare (NcXcorLimberKernel *xclk, NcHICosmo *cos
 	// nc_recomb_prepare (xclkl->recomb, cosmo);
 	// gdouble lamb = nc_recomb_tau_zstar (xclkl->recomb, cosmo);
 
-	xclk->zmax = 1090.0; //exp (-lamb) - 1.0;
+	xclk->zmax = 200.0; //1090.0; //exp (-lamb) - 1.0;
 	xclk->zmin = 0.0;
 }
 
@@ -274,7 +274,9 @@ _nc_xcor_limber_kernel_lensing_add_noise (NcXcorLimberKernel *xclk, NcmVector *v
     g_error ("nc_xcor_limber_kernel_lensing_noise_spec : too high multipole");
 
 	ncm_vector_memcpy(vp2, vp1);
-	ncm_vector_add(vp2, ncm_vector_get_subvector(xclkl->Nl, lmin, ncm_vector_len(vp1)));
+	NcmVector* Nl_sub = ncm_vector_get_subvector(xclkl->Nl, lmin, ncm_vector_len(vp1));
+	ncm_vector_add(vp2, Nl_sub);
+	ncm_vector_free (Nl_sub);
 
 	// return ncm_vector_get (xclkl->Nl, l);
 }
