@@ -19,7 +19,7 @@ from py_sline_data import PySLineData
 #
 # Instantiating a new empty SLine data object.
 #
-sld = PySLineData ()
+sld = PySLineData (len = 5000)
 
 #
 # Instantiating a new SLine model object and setting

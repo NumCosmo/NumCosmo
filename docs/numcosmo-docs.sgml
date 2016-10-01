@@ -8,7 +8,7 @@
   <bookinfo>
     <title>NumCosmo Reference Manual</title>
     <releaseinfo>
-      for NumCosmo 0.13.1.
+      for NumCosmo 0.13.2.
       The latest version of this documentation can be found on-line at
       <ulink role="online-location" url="http://www.nongnu.org/numcosmo/manual/index.html">http://www.nongnu.org/numcosmo/manual/index.html</ulink>.
     </releaseinfo>
@@ -121,6 +121,7 @@
       <xi:include href="xml/ncm_mset_trans_kern.xml"/>
       <xi:include href="xml/ncm_mset_trans_kern_flat.xml"/>
       <xi:include href="xml/ncm_mset_trans_kern_gauss.xml"/>
+      <xi:include href="xml/ncm_mset_trans_kern_cat.xml"/>
       <xi:include href="xml/ncm_fit_state.xml"/>
       <xi:include href="xml/ncm_fit.xml"/>
       <xi:include href="xml/ncm_fit_nlopt.xml"/>

@@ -224,479 +224,525 @@ nc_cbe_precision_set_property (GObject* object, guint prop_id, const GValue* val
 	NcCBEPrecision* cbe_prec = NC_CBE_PRECISION (object);
 	g_return_if_fail (NC_IS_CBE_PRECISION (object));
 
-	switch (prop_id)
-	{
-	case PROP_A_INI_A_0:
-		cbe_prec->priv->ppr.a_ini_over_a_today_default = g_value_get_double (value);
-		break;
-	case PROP_BACK_INT_STEP:
-		cbe_prec->priv->ppr.back_integration_stepsize = g_value_get_double (value);
-		break;
-	case PROP_BACK_TOL:
-		cbe_prec->priv->ppr.tol_background_integration = g_value_get_double (value);
-		break;
-	case PROP_INITIAL_OMEGA_R_TOL:
-		cbe_prec->priv->ppr.tol_initial_Omega_r = g_value_get_double (value);
-		break;
-	case PROP_M_NCDM_TOL:
-		cbe_prec->priv->ppr.tol_M_ncdm = g_value_get_double (value);
-		break;
-	case PROP_NCDM_TOL:
-		cbe_prec->priv->ppr.tol_ncdm = g_value_get_double (value);
-		break;
-	case PROP_NCDM_SYNCHRONOUS_TOL:
-		cbe_prec->priv->ppr.tol_ncdm_synchronous = g_value_get_double (value);
-		break;
-	case PROP_NCDM_NEWTONIAN_TOL:
-		cbe_prec->priv->ppr.tol_ncdm_newtonian = g_value_get_double (value);
-		break;
-	case PROP_NCDM_BG_TOL:
-		cbe_prec->priv->ppr.tol_ncdm_bg = g_value_get_double (value);
-		break;
-	case PROP_NCDM_INITIAL_W_TOL:
-		cbe_prec->priv->ppr.tol_ncdm_initial_w = g_value_get_double (value);
-		break;
-	case PROP_SBBN_FILE:
-	{
-		const gchar* sBBN_file = g_value_get_string (value);
-		const guint sBBN_file_len = strlen (sBBN_file);
-		g_assert_cmpuint (sBBN_file_len, <=, _FILENAMESIZE_);
+  switch (prop_id)
+  {
+    case PROP_A_INI_A_0:
+      cbe_prec->priv->ppr.a_ini_over_a_today_default = g_value_get_double (value);
+      break;
+    case PROP_BACK_INT_STEP:
+      cbe_prec->priv->ppr.back_integration_stepsize  = g_value_get_double (value);
+      break;
+    case PROP_BACK_TOL:
+      cbe_prec->priv->ppr.tol_background_integration = g_value_get_double (value);
+      break;
+    case PROP_INITIAL_OMEGA_R_TOL:
+      cbe_prec->priv->ppr.tol_initial_Omega_r        = g_value_get_double (value);
+      break;
+    case PROP_M_NCDM_TOL:
+      cbe_prec->priv->ppr.tol_M_ncdm                 = g_value_get_double (value);
+      break;
+    case PROP_NCDM_TOL:
+      cbe_prec->priv->ppr.tol_ncdm                   = g_value_get_double (value);
+      break;
+    case PROP_NCDM_SYNCHRONOUS_TOL:
+      cbe_prec->priv->ppr.tol_ncdm_synchronous       = g_value_get_double (value);
+      break;
+    case PROP_NCDM_NEWTONIAN_TOL:
+      cbe_prec->priv->ppr.tol_ncdm_newtonian         = g_value_get_double (value);
+      break;
+    case PROP_NCDM_BG_TOL:
+      cbe_prec->priv->ppr.tol_ncdm_bg                = g_value_get_double (value);
+      break;
+    case PROP_NCDM_INITIAL_W_TOL:
+      cbe_prec->priv->ppr.tol_ncdm_initial_w         = g_value_get_double (value);
+      break;
+    case PROP_SBBN_FILE:
+    {
+      gchar *sBBN_file    = g_value_dup_string (value);
+      guint sBBN_file_len = strlen (sBBN_file);
 
-		g_assert (g_file_test (sBBN_file, G_FILE_TEST_EXISTS));
+      g_assert_cmpuint (sBBN_file_len, <= ,_FILENAMESIZE_);
 
-		memcpy (cbe_prec->priv->ppr.sBBN_file, sBBN_file, sBBN_file_len + 1);
-		break;
-	}
-	case PROP_RECFAST_Z_INI:
-		cbe_prec->priv->ppr.recfast_z_initial = g_value_get_double (value);
-		break;
-	case PROP_RECFAST_NZ0:
-		cbe_prec->priv->ppr.recfast_Nz0 = g_value_get_int (value);
-		break;
-	case PROP_THERMO_INTEGRATION_TOL:
-		cbe_prec->priv->ppr.tol_thermo_integration = g_value_get_double (value);
-		break;
-	case PROP_RECFAST_HE_SWITCH:
-		cbe_prec->priv->ppr.recfast_Heswitch = g_value_get_int (value);
-		break;
-	case PROP_RECFAST_FUDGE_HE:
-		cbe_prec->priv->ppr.recfast_fudge_He = g_value_get_double (value);
-		break;
-	case PROP_RECFAST_H_SWITCH:
-		cbe_prec->priv->ppr.recfast_Hswitch = g_value_get_int (value);
-		break;
-	case PROP_RECFAST_FUDGE_H:
-		cbe_prec->priv->ppr.recfast_fudge_H = g_value_get_double (value);
-		break;
-	case PROP_RECFAST_DELTA_FUDGE_H:
-		cbe_prec->priv->ppr.recfast_delta_fudge_H = g_value_get_double (value);
-		break;
-	case PROP_RECFAST_A_GAUSS_1:
-		cbe_prec->priv->ppr.recfast_AGauss1 = g_value_get_double (value);
-		break;
-	case PROP_RECFAST_A_GAUSS_2:
-		cbe_prec->priv->ppr.recfast_AGauss2 = g_value_get_double (value);
-		break;
-	case PROP_RECFAST_Z_GAUSS_1:
-		cbe_prec->priv->ppr.recfast_zGauss1 = g_value_get_double (value);
-		break;
-	case PROP_RECFAST_Z_GAUSS_2:
-		cbe_prec->priv->ppr.recfast_zGauss2 = g_value_get_double (value);
-		break;
-	case PROP_RECFAST_W_GAUSS_1:
-		cbe_prec->priv->ppr.recfast_wGauss1 = g_value_get_double (value);
-		break;
-	case PROP_RECFAST_W_GAUSS_2:
-		cbe_prec->priv->ppr.recfast_wGauss2 = g_value_get_double (value);
-		break;
-	case PROP_RECFAST_Z_HE_1:
-		cbe_prec->priv->ppr.recfast_z_He_1 = g_value_get_double (value);
-		break;
-	case PROP_RECFAST_DELTA_Z_HE_1:
-		cbe_prec->priv->ppr.recfast_delta_z_He_1 = g_value_get_double (value);
-		break;
-	case PROP_RECFAST_Z_HE_2:
-		cbe_prec->priv->ppr.recfast_z_He_2 = g_value_get_double (value);
-		break;
-	case PROP_RECFAST_DELTA_Z_HE_2:
-		cbe_prec->priv->ppr.recfast_delta_z_He_2 = g_value_get_double (value);
-		break;
-	case PROP_RECFAST_Z_HE_3:
-		cbe_prec->priv->ppr.recfast_z_He_3 = g_value_get_double (value);
-		break;
-	case PROP_RECFAST_DELTA_Z_HE_3:
-		cbe_prec->priv->ppr.recfast_delta_z_He_3 = g_value_get_double (value);
-		break;
-	case PROP_RECFAST_X_HE0_TRIGGER:
-		cbe_prec->priv->ppr.recfast_x_He0_trigger = g_value_get_double (value);
-		break;
-	case PROP_RECFAST_X_HE0_TRIGGER2:
-		cbe_prec->priv->ppr.recfast_x_He0_trigger2 = g_value_get_double (value);
-		break;
-	case PROP_RECFAST_X_HE0_TRIGGER_DELTA:
-		cbe_prec->priv->ppr.recfast_x_He0_trigger_delta = g_value_get_double (value);
-		break;
-	case PROP_RECFAST_X_H0_TRIGGER:
-		cbe_prec->priv->ppr.recfast_x_H0_trigger = g_value_get_double (value);
-		break;
-	case PROP_RECFAST_X_H0_TRIGGER2:
-		cbe_prec->priv->ppr.recfast_x_H0_trigger2 = g_value_get_double (value);
-		break;
-	case PROP_RECFAST_X_H0_TRIGGER_DELTA:
-		cbe_prec->priv->ppr.recfast_x_H0_trigger_delta = g_value_get_double (value);
-		break;
-	case PROP_RECFAST_H_FRAC:
-		cbe_prec->priv->ppr.recfast_H_frac = g_value_get_double (value);
-		break;
-	case PROP_HYREC_ALPHA_INF_FILE:
-	{
-		const gchar* Alpha_inf_file = g_value_get_string (value);
-		const guint Alpha_inf_file_len = strlen (Alpha_inf_file);
-		g_assert_cmpuint (Alpha_inf_file_len, <=, _FILENAMESIZE_);
+      if (!g_file_test (sBBN_file, G_FILE_TEST_EXISTS))
+      {
+        g_warning ("nc_cbe_precision_set_property: file `%s' not found, using default.", sBBN_file);
+        g_free (sBBN_file);
 
-		g_assert (g_file_test (Alpha_inf_file, G_FILE_TEST_EXISTS));
+        sBBN_file     = ncm_cfg_get_data_filename ("class_data"G_DIR_SEPARATOR_S"bbn"G_DIR_SEPARATOR_S"sBBN.dat", TRUE);
+        sBBN_file_len = strlen (sBBN_file);
+        g_assert_cmpuint (sBBN_file_len, <= ,_FILENAMESIZE_);
+      }
 
-		memcpy (cbe_prec->priv->ppr.hyrec_Alpha_inf_file, Alpha_inf_file, Alpha_inf_file_len + 1);
-		break;
-	}
-	case PROP_HYREC_R_INF_FILE:
-	{
-		const gchar* R_inf_file = g_value_get_string (value);
-		const guint R_inf_file_len = strlen (R_inf_file);
-		g_assert_cmpuint (R_inf_file_len, <=, _FILENAMESIZE_);
+      memcpy (cbe_prec->priv->ppr.sBBN_file, sBBN_file, sBBN_file_len + 1);
+      g_free (sBBN_file);
 
-		g_assert (g_file_test (R_inf_file, G_FILE_TEST_EXISTS));
+      break;
+    }
+    case PROP_RECFAST_Z_INI:
+      cbe_prec->priv->ppr.recfast_z_initial          = g_value_get_double (value);
+      break;
+    case PROP_RECFAST_NZ0:
+      cbe_prec->priv->ppr.recfast_Nz0                = g_value_get_int (value);
+      break;
+    case PROP_THERMO_INTEGRATION_TOL:
+      cbe_prec->priv->ppr.tol_thermo_integration     = g_value_get_double (value);
+      break;
+    case PROP_RECFAST_HE_SWITCH:
+      cbe_prec->priv->ppr.recfast_Heswitch           = g_value_get_int (value);
+      break;
+    case PROP_RECFAST_FUDGE_HE:
+      cbe_prec->priv->ppr.recfast_fudge_He           = g_value_get_double (value);
+      break;
+    case PROP_RECFAST_H_SWITCH:
+      cbe_prec->priv->ppr.recfast_Hswitch            = g_value_get_int (value);
+      break;
+    case PROP_RECFAST_FUDGE_H:
+      cbe_prec->priv->ppr.recfast_fudge_H            = g_value_get_double (value);
+      break;
+    case PROP_RECFAST_DELTA_FUDGE_H:
+      cbe_prec->priv->ppr.recfast_delta_fudge_H      = g_value_get_double (value);
+      break;
+    case PROP_RECFAST_A_GAUSS_1:
+      cbe_prec->priv->ppr.recfast_AGauss1            = g_value_get_double (value);
+      break;
+    case PROP_RECFAST_A_GAUSS_2:
+      cbe_prec->priv->ppr.recfast_AGauss2            = g_value_get_double (value);
+      break;
+    case PROP_RECFAST_Z_GAUSS_1:
+      cbe_prec->priv->ppr.recfast_zGauss1            = g_value_get_double (value);
+      break;
+    case PROP_RECFAST_Z_GAUSS_2:
+      cbe_prec->priv->ppr.recfast_zGauss2            = g_value_get_double (value);
+      break;
+    case PROP_RECFAST_W_GAUSS_1:
+      cbe_prec->priv->ppr.recfast_wGauss1            = g_value_get_double (value);
+      break;
+    case PROP_RECFAST_W_GAUSS_2:
+      cbe_prec->priv->ppr.recfast_wGauss2            = g_value_get_double (value);
+      break;
+    case PROP_RECFAST_Z_HE_1:
+      cbe_prec->priv->ppr.recfast_z_He_1             = g_value_get_double (value);
+      break;
+    case PROP_RECFAST_DELTA_Z_HE_1:
+      cbe_prec->priv->ppr.recfast_delta_z_He_1       = g_value_get_double (value);
+      break;
+    case PROP_RECFAST_Z_HE_2:
+      cbe_prec->priv->ppr.recfast_z_He_2             = g_value_get_double (value);
+      break;
+    case PROP_RECFAST_DELTA_Z_HE_2:
+      cbe_prec->priv->ppr.recfast_delta_z_He_2       = g_value_get_double (value);
+      break;
+    case PROP_RECFAST_Z_HE_3:
+      cbe_prec->priv->ppr.recfast_z_He_3             = g_value_get_double (value);
+      break;
+    case PROP_RECFAST_DELTA_Z_HE_3:
+      cbe_prec->priv->ppr.recfast_delta_z_He_3       = g_value_get_double (value);
+      break;
+    case PROP_RECFAST_X_HE0_TRIGGER:
+      cbe_prec->priv->ppr.recfast_x_He0_trigger      = g_value_get_double (value);
+      break;
+    case PROP_RECFAST_X_HE0_TRIGGER2:
+      cbe_prec->priv->ppr.recfast_x_He0_trigger2     = g_value_get_double (value);
+      break;
+    case PROP_RECFAST_X_HE0_TRIGGER_DELTA:
+      cbe_prec->priv->ppr.recfast_x_He0_trigger_delta = g_value_get_double (value);
+      break;
+    case PROP_RECFAST_X_H0_TRIGGER:
+      cbe_prec->priv->ppr.recfast_x_H0_trigger       = g_value_get_double (value);
+      break;
+    case PROP_RECFAST_X_H0_TRIGGER2:
+      cbe_prec->priv->ppr.recfast_x_H0_trigger2      = g_value_get_double (value);
+      break;
+    case PROP_RECFAST_X_H0_TRIGGER_DELTA:
+      cbe_prec->priv->ppr.recfast_x_H0_trigger_delta = g_value_get_double (value);
+      break;
+    case PROP_RECFAST_H_FRAC:
+      cbe_prec->priv->ppr.recfast_H_frac             = g_value_get_double (value);
+      break;
+    case PROP_HYREC_ALPHA_INF_FILE:
+    {
+      gchar *Alpha_inf_file    = g_value_dup_string (value);
+      guint Alpha_inf_file_len = strlen (Alpha_inf_file);
 
-		memcpy (cbe_prec->priv->ppr.hyrec_R_inf_file, R_inf_file, R_inf_file_len + 1);
-		break;
-	}
-	case PROP_HYREC_TWO_PHOTON_TABLES_FILE:
-	{
-		const gchar* two_photon_tables_file = g_value_get_string (value);
-		const guint two_photon_tables_file_len = strlen (two_photon_tables_file);
-		g_assert_cmpuint (two_photon_tables_file_len, <=, _FILENAMESIZE_);
+      g_assert_cmpuint (Alpha_inf_file_len, <= ,_FILENAMESIZE_);
 
-		g_assert (g_file_test (two_photon_tables_file, G_FILE_TEST_EXISTS));
+      if (!g_file_test (Alpha_inf_file, G_FILE_TEST_EXISTS))
+      {
+        g_warning ("nc_cbe_precision_set_property: file `%s' not found, using default.", Alpha_inf_file);
+        g_free (Alpha_inf_file);
+        
+        Alpha_inf_file     = ncm_cfg_get_data_filename ("class_data"G_DIR_SEPARATOR_S"hyrec"G_DIR_SEPARATOR_S"Alpha_inf.dat", TRUE);
+        Alpha_inf_file_len = strlen (Alpha_inf_file);
+        g_assert_cmpuint (Alpha_inf_file_len, <= ,_FILENAMESIZE_);
+      }
 
-		memcpy (cbe_prec->priv->ppr.hyrec_two_photon_tables_file, two_photon_tables_file, two_photon_tables_file_len + 1);
-		break;
-	}
-	case PROP_REION_Z_START_MAX:
-		cbe_prec->priv->ppr.reionization_z_start_max = g_value_get_double (value);
-		break;
-	case PROP_REION_SAMPLING:
-		cbe_prec->priv->ppr.reionization_sampling = g_value_get_double (value);
-		break;
-	case PROP_REION_OPT_DEPTH_TOL:
-		cbe_prec->priv->ppr.reionization_optical_depth_tol = g_value_get_double (value);
-		break;
-	case PROP_REION_START_FACTOR:
-		cbe_prec->priv->ppr.reionization_start_factor = g_value_get_double (value);
-		break;
-	case PROP_THERMO_RATE_SMOOTHING_RADIUS:
-		cbe_prec->priv->ppr.thermo_rate_smoothing_radius = g_value_get_int (value);
-		break;
-	case PROP_EVOLVER:
-		cbe_prec->priv->ppr.evolver = g_value_get_int (value);
-		break;
-	case PROP_K_MIN_TAU0:
-		cbe_prec->priv->ppr.k_min_tau0 = g_value_get_double (value);
-		break;
-	case PROP_K_MAX_TAU0_OVER_L_MAX:
-		cbe_prec->priv->ppr.k_max_tau0_over_l_max = g_value_get_double (value);
-		break;
-	case PROP_K_STEP_SUB:
-		cbe_prec->priv->ppr.k_step_sub = g_value_get_double (value);
-		break;
-	case PROP_K_STEP_SUPER:
-		cbe_prec->priv->ppr.k_step_super = g_value_get_double (value);
-		break;
-	case PROP_K_STEP_TRANSITION:
-		cbe_prec->priv->ppr.k_step_transition = g_value_get_double (value);
-		break;
-	case PROP_K_STEP_SUPER_REDUCTION:
-		cbe_prec->priv->ppr.k_step_super_reduction = g_value_get_double (value);
-		break;
-	case PROP_K_PER_DECADE_FOR_PK:
-		cbe_prec->priv->ppr.k_per_decade_for_pk = g_value_get_double (value);
-		break;
-	case PROP_K_PER_DECADE_FOR_BAO:
-		cbe_prec->priv->ppr.k_per_decade_for_bao = g_value_get_double (value);
-		break;
-	case PROP_K_BAO_CENTER:
-		cbe_prec->priv->ppr.k_bao_center = g_value_get_double (value);
-		break;
-	case PROP_K_BAO_WIDTH:
-		cbe_prec->priv->ppr.k_bao_width = g_value_get_double (value);
-		break;
-	case PROP_START_SMALL_K_AT_TAU_C_OVER_TAU_H:
-		cbe_prec->priv->ppr.start_small_k_at_tau_c_over_tau_h = g_value_get_double (value);
-		break;
-	case PROP_START_LARGE_K_AT_TAU_H_OVER_TAU_K:
-		cbe_prec->priv->ppr.start_large_k_at_tau_h_over_tau_k = g_value_get_double (value);
-		break;
-	case PROP_TIGHT_COUPLING_TRIGGER_TAU_C_OVER_TAU_H:
-		cbe_prec->priv->ppr.tight_coupling_trigger_tau_c_over_tau_h = g_value_get_double (value);
-		break;
-	case PROP_TIGHT_COUPLING_TRIGGER_TAU_C_OVER_TAU_K:
-		cbe_prec->priv->ppr.tight_coupling_trigger_tau_c_over_tau_k = g_value_get_double (value);
-		break;
-	case PROP_START_SOURCES_AT_TAU_C_OVER_TAU_H:
-		cbe_prec->priv->ppr.start_sources_at_tau_c_over_tau_h = g_value_get_double (value);
-		break;
-	case PROP_TIGHT_COUPLING_APPROXIMATION:
-		cbe_prec->priv->ppr.tight_coupling_approximation = g_value_get_int (value);
-		break;
-	case PROP_L_MAX_G:
-		cbe_prec->priv->ppr.l_max_g = g_value_get_int (value);
-		break;
-	case PROP_L_MAX_POL_G:
-		cbe_prec->priv->ppr.l_max_pol_g = g_value_get_int (value);
-		break;
-	case PROP_L_MAX_DR:
-		cbe_prec->priv->ppr.l_max_dr = g_value_get_int (value);
-		break;
-	case PROP_L_MAX_UR:
-		cbe_prec->priv->ppr.l_max_ur = g_value_get_int (value);
-		break;
-	case PROP_L_MAX_NCDM:
-		cbe_prec->priv->ppr.l_max_ncdm = g_value_get_int (value);
-		break;
-	case PROP_L_MAX_G_TEN:
-		cbe_prec->priv->ppr.l_max_g_ten = g_value_get_int (value);
-		break;
-	case PROP_L_MAX_POL_G_TEN:
-		cbe_prec->priv->ppr.l_max_pol_g_ten = g_value_get_int (value);
-		break;
-	case PROP_CURVATURE_INI:
-		cbe_prec->priv->ppr.curvature_ini = g_value_get_double (value);
-		break;
-	case PROP_ENTROPY_INI:
-		cbe_prec->priv->ppr.entropy_ini = g_value_get_double (value);
-		break;
-	case PROP_GW_INI:
-		cbe_prec->priv->ppr.gw_ini = g_value_get_double (value);
-		break;
-	case PROP_PERTURB_INTEGRATION_STEPSIZE:
-		cbe_prec->priv->ppr.perturb_integration_stepsize = g_value_get_double (value);
-		break;
-	case PROP_TOL_TAU_APPROX:
-		cbe_prec->priv->ppr.tol_tau_approx = g_value_get_double (value);
-		break;
-	case PROP_TOL_PERTURB_INTEGRATION:
-		cbe_prec->priv->ppr.tol_perturb_integration = g_value_get_double (value);
-		break;
-	case PROP_PERTURB_SAMPLING_STEPSIZE:
-		cbe_prec->priv->ppr.perturb_sampling_stepsize = g_value_get_double (value);
-		break;
-	case PROP_RADIATION_STREAMING_APPROXIMATION:
-		cbe_prec->priv->ppr.radiation_streaming_approximation = g_value_get_int (value);
-		break;
-	case PROP_RADIATION_STREAMING_TRIGGER_TAU_OVER_TAU_K:
-		cbe_prec->priv->ppr.radiation_streaming_trigger_tau_over_tau_k = g_value_get_double (value);
-		break;
-	case PROP_RADIATION_STREAMING_TRIGGER_TAU_C_OVER_TAU:
-		cbe_prec->priv->ppr.radiation_streaming_trigger_tau_c_over_tau = g_value_get_double (value);
-		break;
-	case PROP_UR_FLUID_APPROXIMATION:
-		cbe_prec->priv->ppr.ur_fluid_approximation = g_value_get_int (value);
-		break;
-	case PROP_UR_FLUID_TRIGGER_TAU_OVER_TAU_K:
-		cbe_prec->priv->ppr.ur_fluid_trigger_tau_over_tau_k = g_value_get_double (value);
-		break;
-	case PROP_NCDM_FLUID_APPROXIMATION:
-		cbe_prec->priv->ppr.ncdm_fluid_approximation = g_value_get_int (value);
-		break;
-	case PROP_NCDM_FLUID_TRIGGER_TAU_OVER_TAU_K:
-		cbe_prec->priv->ppr.ncdm_fluid_trigger_tau_over_tau_k = g_value_get_double (value);
-		break;
-	case PROP_NEGLECT_CMB_SOURCES_BELOW_VISIBILITY:
-		cbe_prec->priv->ppr.neglect_CMB_sources_below_visibility = g_value_get_double (value);
-		break;
-	case PROP_K_PER_DECADE_PRIMORDIAL:
-		cbe_prec->priv->ppr.k_per_decade_primordial = g_value_get_double (value);
-		break;
-	case PROP_PRIMORDIAL_INFLATION_RATIO_MIN:
-		cbe_prec->priv->ppr.primordial_inflation_ratio_min = g_value_get_double (value);
-		break;
-	case PROP_PRIMORDIAL_INFLATION_RATIO_MAX:
-		cbe_prec->priv->ppr.primordial_inflation_ratio_max = g_value_get_double (value);
-		break;
-	case PROP_PRIMORDIAL_INFLATION_PHI_INI_MAXIT:
-		cbe_prec->priv->ppr.primordial_inflation_phi_ini_maxit = g_value_get_int (value);
-		break;
-	case PROP_PRIMORDIAL_INFLATION_PT_STEPSIZE:
-		cbe_prec->priv->ppr.primordial_inflation_pt_stepsize = g_value_get_double (value);
-		break;
-	case PROP_PRIMORDIAL_INFLATION_BG_STEPSIZE:
-		cbe_prec->priv->ppr.primordial_inflation_bg_stepsize = g_value_get_double (value);
-		break;
-	case PROP_PRIMORDIAL_INFLATION_TOL_INTEGRATION:
-		cbe_prec->priv->ppr.primordial_inflation_tol_integration = g_value_get_double (value);
-		break;
-	case PROP_PRIMORDIAL_INFLATION_ATTRACTOR_PRECISION_PIVOT:
-		cbe_prec->priv->ppr.primordial_inflation_attractor_precision_pivot = g_value_get_double (value);
-		break;
-	case PROP_PRIMORDIAL_INFLATION_ATTRACTOR_PRECISION_INITIAL:
-		cbe_prec->priv->ppr.primordial_inflation_attractor_precision_initial = g_value_get_double (value);
-		break;
-	case PROP_PRIMORDIAL_INFLATION_ATTRACTOR_MAXIT:
-		cbe_prec->priv->ppr.primordial_inflation_attractor_maxit = g_value_get_int (value);
-		break;
-	case PROP_PRIMORDIAL_INFLATION_JUMP_INITIAL:
-		cbe_prec->priv->ppr.primordial_inflation_jump_initial = g_value_get_double (value);
-		break;
-	case PROP_PRIMORDIAL_INFLATION_TOL_CURVATURE:
-		cbe_prec->priv->ppr.primordial_inflation_tol_curvature = g_value_get_double (value);
-		break;
-	case PROP_PRIMORDIAL_INFLATION_AH_INI_TARGET:
-		cbe_prec->priv->ppr.primordial_inflation_aH_ini_target = g_value_get_double (value);
-		break;
-	case PROP_PRIMORDIAL_INFLATION_END_DPHI:
-		cbe_prec->priv->ppr.primordial_inflation_end_dphi = g_value_get_double (value);
-		break;
-	case PROP_PRIMORDIAL_INFLATION_END_LOGSTEP:
-		cbe_prec->priv->ppr.primordial_inflation_end_logstep = g_value_get_double (value);
-		break;
-	case PROP_PRIMORDIAL_INFLATION_SMALL_EPSILON:
-		cbe_prec->priv->ppr.primordial_inflation_small_epsilon = g_value_get_double (value);
-		break;
-	case PROP_PRIMORDIAL_INFLATION_SMALL_EPSILON_TOL:
-		cbe_prec->priv->ppr.primordial_inflation_small_epsilon_tol = g_value_get_double (value);
-		break;
-	case PROP_PRIMORDIAL_INFLATION_EXTRA_EFOLDS:
-		cbe_prec->priv->ppr.primordial_inflation_extra_efolds = g_value_get_double (value);
-		break;
-	case PROP_L_LOGSTEP:
-		cbe_prec->priv->ppr.l_logstep = g_value_get_double (value);
-		break;
-	case PROP_L_LINSTEP:
-		cbe_prec->priv->ppr.l_linstep = g_value_get_int (value);
-		break;
-	case PROP_HYPER_X_MIN:
-		cbe_prec->priv->ppr.hyper_x_min = g_value_get_double (value);
-		break;
-	case PROP_HYPER_SAMPLING_FLAT:
-		cbe_prec->priv->ppr.hyper_sampling_flat = g_value_get_double (value);
-		break;
-	case PROP_HYPER_SAMPLING_CURVED_LOW_NU:
-		cbe_prec->priv->ppr.hyper_sampling_curved_low_nu = g_value_get_double (value);
-		break;
-	case PROP_HYPER_SAMPLING_CURVED_HIGH_NU:
-		cbe_prec->priv->ppr.hyper_sampling_curved_high_nu = g_value_get_double (value);
-		break;
-	case PROP_HYPER_NU_SAMPLING_STEP:
-		cbe_prec->priv->ppr.hyper_nu_sampling_step = g_value_get_double (value);
-		break;
-	case PROP_HYPER_PHI_MIN_ABS:
-		cbe_prec->priv->ppr.hyper_phi_min_abs = g_value_get_double (value);
-		break;
-	case PROP_HYPER_X_TOL:
-		cbe_prec->priv->ppr.hyper_x_tol = g_value_get_double (value);
-		break;
-	case PROP_HYPER_FLAT_APPROXIMATION_NU:
-		cbe_prec->priv->ppr.hyper_flat_approximation_nu = g_value_get_double (value);
-		break;
-	case PROP_Q_LINSTEP:
-		cbe_prec->priv->ppr.q_linstep = g_value_get_double (value);
-		break;
-	case PROP_Q_LOGSTEP_SPLINE:
-		cbe_prec->priv->ppr.q_logstep_spline = g_value_get_double (value);
-		break;
-	case PROP_Q_LOGSTEP_OPEN:
-		cbe_prec->priv->ppr.q_logstep_open = g_value_get_double (value);
-		break;
-	case PROP_Q_LOGSTEP_TRAPZD:
-		cbe_prec->priv->ppr.q_logstep_trapzd = g_value_get_double (value);
-		break;
-	case PROP_Q_NUMSTEP_TRANSITION:
-		cbe_prec->priv->ppr.q_numstep_transition = g_value_get_double (value);
-		break;
-	case PROP_TRANSFER_NEGLECT_DELTA_K_S_T0:
-		cbe_prec->priv->ppr.transfer_neglect_delta_k_S_t0 = g_value_get_double (value);
-		break;
-	case PROP_TRANSFER_NEGLECT_DELTA_K_S_T1:
-		cbe_prec->priv->ppr.transfer_neglect_delta_k_S_t1 = g_value_get_double (value);
-		break;
-	case PROP_TRANSFER_NEGLECT_DELTA_K_S_T2:
-		cbe_prec->priv->ppr.transfer_neglect_delta_k_S_t2 = g_value_get_double (value);
-		break;
-	case PROP_TRANSFER_NEGLECT_DELTA_K_S_E:
-		cbe_prec->priv->ppr.transfer_neglect_delta_k_S_e = g_value_get_double (value);
-		break;
-	case PROP_TRANSFER_NEGLECT_DELTA_K_V_T1:
-		cbe_prec->priv->ppr.transfer_neglect_delta_k_V_t1 = g_value_get_double (value);
-		break;
-	case PROP_TRANSFER_NEGLECT_DELTA_K_V_T2:
-		cbe_prec->priv->ppr.transfer_neglect_delta_k_V_t2 = g_value_get_double (value);
-		break;
-	case PROP_TRANSFER_NEGLECT_DELTA_K_V_E:
-		cbe_prec->priv->ppr.transfer_neglect_delta_k_V_e = g_value_get_double (value);
-		break;
-	case PROP_TRANSFER_NEGLECT_DELTA_K_V_B:
-		cbe_prec->priv->ppr.transfer_neglect_delta_k_V_b = g_value_get_double (value);
-		break;
-	case PROP_TRANSFER_NEGLECT_DELTA_K_T_T2:
-		cbe_prec->priv->ppr.transfer_neglect_delta_k_T_t2 = g_value_get_double (value);
-		break;
-	case PROP_TRANSFER_NEGLECT_DELTA_K_T_E:
-		cbe_prec->priv->ppr.transfer_neglect_delta_k_T_e = g_value_get_double (value);
-		break;
-	case PROP_TRANSFER_NEGLECT_DELTA_K_T_B:
-		cbe_prec->priv->ppr.transfer_neglect_delta_k_T_b = g_value_get_double (value);
-		break;
-	case PROP_TRANSFER_NEGLECT_LATE_SOURCE:
-		cbe_prec->priv->ppr.transfer_neglect_late_source = g_value_get_double (value);
-		break;
-	case PROP_L_SWITCH_LIMBER:
-		cbe_prec->priv->ppr.l_switch_limber = g_value_get_double (value);
-		break;
-	case PROP_L_SWITCH_LIMBER_FOR_CL_DENSITY_OVER_Z:
-		cbe_prec->priv->ppr.l_switch_limber_for_cl_density_over_z = g_value_get_double (value);
-		break;
-	case PROP_SELECTION_CUT_AT_SIGMA:
-		cbe_prec->priv->ppr.selection_cut_at_sigma = g_value_get_double (value);
-		break;
-	case PROP_SELECTION_SAMPLING:
-		cbe_prec->priv->ppr.selection_sampling = g_value_get_double (value);
-		break;
-	case PROP_SELECTION_SAMPLING_BESSEL:
-		cbe_prec->priv->ppr.selection_sampling_bessel = g_value_get_double (value);
-		break;
-	case PROP_SELECTION_TOPHAT_EDGE:
-		cbe_prec->priv->ppr.selection_tophat_edge = g_value_get_double (value);
-		break;
-	case PROP_HALOFIT_DZ:
-		cbe_prec->priv->ppr.halofit_dz = g_value_get_double (value);
-		break;
-	case PROP_HALOFIT_MIN_K_NONLINEAR:
-		cbe_prec->priv->ppr.halofit_min_k_nonlinear = g_value_get_double (value);
-		break;
-	case PROP_HALOFIT_SIGMA_PRECISION:
-		cbe_prec->priv->ppr.halofit_sigma_precision = g_value_get_double (value);
-		break;
-	case PROP_HALOFIT_MIN_K_MAX:
-		cbe_prec->priv->ppr.halofit_min_k_max = g_value_get_double (value);
-		break;
-	case PROP_ACCURATE_LENSING:
-		cbe_prec->priv->ppr.accurate_lensing = g_value_get_int (value);
-		break;
-	case PROP_NUM_MU_MINUS_LMAX:
-		cbe_prec->priv->ppr.num_mu_minus_lmax = g_value_get_int (value);
-		break;
-	case PROP_DELTA_L_MAX:
-		cbe_prec->priv->ppr.delta_l_max = g_value_get_int (value);
-		break;
-	case PROP_SMALLEST_ALLOWED_VARIATION:
-		cbe_prec->priv->ppr.smallest_allowed_variation = g_value_get_double (value);
-		break;
-	case PROP_TOL_GAUSS_LEGENDRE:
-		cbe_prec->priv->ppr.tol_gauss_legendre = g_value_get_double (value);
-		break;
-	default:
-		G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-		break;
-	}
+      memcpy (cbe_prec->priv->ppr.hyrec_Alpha_inf_file, Alpha_inf_file, Alpha_inf_file_len + 1);
+      g_free (Alpha_inf_file);
+
+      break;
+    }
+    case PROP_HYREC_R_INF_FILE:
+    {
+      gchar *R_inf_file    = g_value_dup_string (value);
+      guint R_inf_file_len = strlen (R_inf_file);
+
+      g_assert_cmpuint (R_inf_file_len, <= ,_FILENAMESIZE_);
+
+      if (!g_file_test (R_inf_file, G_FILE_TEST_EXISTS))
+      {
+        g_warning ("nc_cbe_precision_set_property: file `%s' not found, using default.", R_inf_file);
+        g_free (R_inf_file);
+        
+        R_inf_file     = ncm_cfg_get_data_filename ("class_data"G_DIR_SEPARATOR_S"hyrec"G_DIR_SEPARATOR_S"R_inf.dat", TRUE);
+        R_inf_file_len = strlen (R_inf_file);
+        
+        g_assert_cmpuint (R_inf_file_len, <= ,_FILENAMESIZE_);
+      }
+
+      memcpy (cbe_prec->priv->ppr.hyrec_R_inf_file, R_inf_file, R_inf_file_len + 1);
+      g_free (R_inf_file);
+
+      break;
+    }
+    case PROP_HYREC_TWO_PHOTON_TABLES_FILE:
+    {
+      gchar *two_photon_tables_file    = g_value_dup_string (value);
+      guint two_photon_tables_file_len = strlen (two_photon_tables_file);
+
+      g_assert_cmpuint (two_photon_tables_file_len, <= ,_FILENAMESIZE_);
+
+      if (!g_file_test (two_photon_tables_file, G_FILE_TEST_EXISTS))
+      {
+        g_warning ("nc_cbe_precision_set_property: file `%s' not found, using default.", two_photon_tables_file);
+        g_free (two_photon_tables_file);
+
+        two_photon_tables_file     = ncm_cfg_get_data_filename ("class_data"G_DIR_SEPARATOR_S"hyrec"G_DIR_SEPARATOR_S"two_photon_tables.dat", TRUE);
+        two_photon_tables_file_len = strlen (two_photon_tables_file);
+        
+        g_assert_cmpuint (two_photon_tables_file_len, <= ,_FILENAMESIZE_);
+      }
+      
+      memcpy (cbe_prec->priv->ppr.hyrec_two_photon_tables_file, two_photon_tables_file, two_photon_tables_file_len + 1);
+
+      g_free (two_photon_tables_file);
+      break;
+    }
+    case PROP_REION_Z_START_MAX:
+      cbe_prec->priv->ppr.reionization_z_start_max   = g_value_get_double (value);
+      break;
+    case PROP_REION_SAMPLING:
+      cbe_prec->priv->ppr.reionization_sampling      = g_value_get_double (value);
+      break;
+    case PROP_REION_OPT_DEPTH_TOL:
+      cbe_prec->priv->ppr.reionization_optical_depth_tol = g_value_get_double (value);
+      break;
+    case PROP_REION_START_FACTOR:
+      cbe_prec->priv->ppr.reionization_start_factor  = g_value_get_double (value);
+      break;
+    case PROP_THERMO_RATE_SMOOTHING_RADIUS:
+      cbe_prec->priv->ppr.thermo_rate_smoothing_radius = g_value_get_int (value);
+      break;
+    case PROP_EVOLVER:
+      cbe_prec->priv->ppr.evolver                    = g_value_get_int (value);
+      break;
+    case PROP_K_MIN_TAU0:
+      cbe_prec->priv->ppr.k_min_tau0                 = g_value_get_double (value);
+      break;
+    case PROP_K_MAX_TAU0_OVER_L_MAX:
+      cbe_prec->priv->ppr.k_max_tau0_over_l_max      = g_value_get_double (value);
+      break;
+    case PROP_K_STEP_SUB:
+      cbe_prec->priv->ppr.k_step_sub                 = g_value_get_double (value);
+      break;
+    case PROP_K_STEP_SUPER:
+      cbe_prec->priv->ppr.k_step_super               = g_value_get_double (value);
+      break;
+    case PROP_K_STEP_TRANSITION:
+      cbe_prec->priv->ppr.k_step_transition          = g_value_get_double (value);
+      break;
+    case PROP_K_STEP_SUPER_REDUCTION:
+      cbe_prec->priv->ppr.k_step_super_reduction     = g_value_get_double (value);
+      break;
+    case PROP_K_PER_DECADE_FOR_PK:
+      cbe_prec->priv->ppr.k_per_decade_for_pk        = g_value_get_double (value);
+      break;
+    case PROP_K_PER_DECADE_FOR_BAO:
+      cbe_prec->priv->ppr.k_per_decade_for_bao       = g_value_get_double (value);
+      break;
+    case PROP_K_BAO_CENTER:
+      cbe_prec->priv->ppr.k_bao_center               = g_value_get_double (value);
+      break;
+    case PROP_K_BAO_WIDTH:
+      cbe_prec->priv->ppr.k_bao_width                = g_value_get_double (value);
+      break;
+    case PROP_START_SMALL_K_AT_TAU_C_OVER_TAU_H:
+      cbe_prec->priv->ppr.start_small_k_at_tau_c_over_tau_h       = g_value_get_double (value);
+      break;
+    case PROP_START_LARGE_K_AT_TAU_H_OVER_TAU_K:
+      cbe_prec->priv->ppr.start_large_k_at_tau_h_over_tau_k       = g_value_get_double (value);
+      break;
+    case PROP_TIGHT_COUPLING_TRIGGER_TAU_C_OVER_TAU_H:
+      cbe_prec->priv->ppr.tight_coupling_trigger_tau_c_over_tau_h = g_value_get_double (value);
+      break;
+    case PROP_TIGHT_COUPLING_TRIGGER_TAU_C_OVER_TAU_K:
+      cbe_prec->priv->ppr.tight_coupling_trigger_tau_c_over_tau_k = g_value_get_double (value);
+      break;
+    case PROP_START_SOURCES_AT_TAU_C_OVER_TAU_H:
+      cbe_prec->priv->ppr.start_sources_at_tau_c_over_tau_h       = g_value_get_double (value);
+      break;
+    case PROP_TIGHT_COUPLING_APPROXIMATION:
+      cbe_prec->priv->ppr.tight_coupling_approximation            = g_value_get_int (value);
+      break;
+    case PROP_L_MAX_G:
+      cbe_prec->priv->ppr.l_max_g                    = g_value_get_int (value);
+      break;
+    case PROP_L_MAX_POL_G:
+      cbe_prec->priv->ppr.l_max_pol_g                = g_value_get_int (value);
+      break;
+    case PROP_L_MAX_DR:
+      cbe_prec->priv->ppr.l_max_dr                   = g_value_get_int (value);
+      break;
+    case PROP_L_MAX_UR:
+      cbe_prec->priv->ppr.l_max_ur                   = g_value_get_int (value);
+      break;
+    case PROP_L_MAX_NCDM:
+      cbe_prec->priv->ppr.l_max_ncdm                 = g_value_get_int (value);
+      break;
+    case PROP_L_MAX_G_TEN:
+      cbe_prec->priv->ppr.l_max_g_ten                = g_value_get_int (value);
+      break;
+    case PROP_L_MAX_POL_G_TEN:
+      cbe_prec->priv->ppr.l_max_pol_g_ten            = g_value_get_int (value);
+      break;
+    case PROP_CURVATURE_INI:
+      cbe_prec->priv->ppr.curvature_ini              = g_value_get_double (value);
+      break;
+    case PROP_ENTROPY_INI:
+      cbe_prec->priv->ppr.entropy_ini                = g_value_get_double (value);
+      break;
+    case PROP_GW_INI:
+      cbe_prec->priv->ppr.gw_ini                     = g_value_get_double (value);
+      break;
+    case PROP_PERTURB_INTEGRATION_STEPSIZE:
+      cbe_prec->priv->ppr.perturb_integration_stepsize = g_value_get_double (value);
+      break;
+    case PROP_TOL_TAU_APPROX:
+      cbe_prec->priv->ppr.tol_tau_approx             = g_value_get_double (value);
+      break;
+    case PROP_TOL_PERTURB_INTEGRATION:
+      cbe_prec->priv->ppr.tol_perturb_integration    = g_value_get_double (value);
+      break;
+    case PROP_PERTURB_SAMPLING_STEPSIZE:
+      cbe_prec->priv->ppr.perturb_sampling_stepsize  = g_value_get_double (value);
+      break;
+    case PROP_RADIATION_STREAMING_APPROXIMATION:
+      cbe_prec->priv->ppr.radiation_streaming_approximation = g_value_get_int (value);
+      break;
+    case PROP_RADIATION_STREAMING_TRIGGER_TAU_OVER_TAU_K:
+      cbe_prec->priv->ppr.radiation_streaming_trigger_tau_over_tau_k = g_value_get_double (value);
+      break;
+    case PROP_RADIATION_STREAMING_TRIGGER_TAU_C_OVER_TAU:
+      cbe_prec->priv->ppr.radiation_streaming_trigger_tau_c_over_tau = g_value_get_double (value);
+      break;
+    case PROP_UR_FLUID_APPROXIMATION:
+      cbe_prec->priv->ppr.ur_fluid_approximation     = g_value_get_int (value);
+      break;
+    case PROP_UR_FLUID_TRIGGER_TAU_OVER_TAU_K:
+      cbe_prec->priv->ppr.ur_fluid_trigger_tau_over_tau_k = g_value_get_double (value);
+      break;
+    case PROP_NCDM_FLUID_APPROXIMATION:
+      cbe_prec->priv->ppr.ncdm_fluid_approximation   = g_value_get_int (value);
+      break;
+    case PROP_NCDM_FLUID_TRIGGER_TAU_OVER_TAU_K:
+      cbe_prec->priv->ppr.ncdm_fluid_trigger_tau_over_tau_k = g_value_get_double (value);
+      break;
+    case PROP_NEGLECT_CMB_SOURCES_BELOW_VISIBILITY:
+      cbe_prec->priv->ppr.neglect_CMB_sources_below_visibility = g_value_get_double (value);
+      break;
+    case PROP_K_PER_DECADE_PRIMORDIAL:
+      cbe_prec->priv->ppr.k_per_decade_primordial    = g_value_get_double (value);
+      break;
+    case PROP_PRIMORDIAL_INFLATION_RATIO_MIN:
+      cbe_prec->priv->ppr.primordial_inflation_ratio_min = g_value_get_double (value);
+      break;
+    case PROP_PRIMORDIAL_INFLATION_RATIO_MAX:
+      cbe_prec->priv->ppr.primordial_inflation_ratio_max = g_value_get_double (value);
+      break;
+    case PROP_PRIMORDIAL_INFLATION_PHI_INI_MAXIT:
+      cbe_prec->priv->ppr.primordial_inflation_phi_ini_maxit = g_value_get_int (value);
+      break;
+    case PROP_PRIMORDIAL_INFLATION_PT_STEPSIZE:
+      cbe_prec->priv->ppr.primordial_inflation_pt_stepsize = g_value_get_double (value);
+      break;
+    case PROP_PRIMORDIAL_INFLATION_BG_STEPSIZE:
+      cbe_prec->priv->ppr.primordial_inflation_bg_stepsize = g_value_get_double (value);
+      break;
+    case PROP_PRIMORDIAL_INFLATION_TOL_INTEGRATION:
+      cbe_prec->priv->ppr.primordial_inflation_tol_integration = g_value_get_double (value);
+      break;
+    case PROP_PRIMORDIAL_INFLATION_ATTRACTOR_PRECISION_PIVOT:
+      cbe_prec->priv->ppr.primordial_inflation_attractor_precision_pivot = g_value_get_double (value);
+      break;
+    case PROP_PRIMORDIAL_INFLATION_ATTRACTOR_PRECISION_INITIAL:
+      cbe_prec->priv->ppr.primordial_inflation_attractor_precision_initial = g_value_get_double (value);
+      break;
+    case PROP_PRIMORDIAL_INFLATION_ATTRACTOR_MAXIT:
+      cbe_prec->priv->ppr.primordial_inflation_attractor_maxit = g_value_get_int (value);
+      break;
+    case PROP_PRIMORDIAL_INFLATION_JUMP_INITIAL:
+      cbe_prec->priv->ppr.primordial_inflation_jump_initial = g_value_get_double (value);
+      break;
+    case PROP_PRIMORDIAL_INFLATION_TOL_CURVATURE:
+      cbe_prec->priv->ppr.primordial_inflation_tol_curvature = g_value_get_double (value);
+      break;
+    case PROP_PRIMORDIAL_INFLATION_AH_INI_TARGET:
+      cbe_prec->priv->ppr.primordial_inflation_aH_ini_target = g_value_get_double (value);
+      break;
+    case PROP_PRIMORDIAL_INFLATION_END_DPHI:
+      cbe_prec->priv->ppr.primordial_inflation_end_dphi = g_value_get_double (value);
+      break;
+    case PROP_PRIMORDIAL_INFLATION_END_LOGSTEP:
+      cbe_prec->priv->ppr.primordial_inflation_end_logstep = g_value_get_double (value);
+      break;
+    case PROP_PRIMORDIAL_INFLATION_SMALL_EPSILON:
+      cbe_prec->priv->ppr.primordial_inflation_small_epsilon = g_value_get_double (value);
+      break;
+    case PROP_PRIMORDIAL_INFLATION_SMALL_EPSILON_TOL:
+      cbe_prec->priv->ppr.primordial_inflation_small_epsilon_tol = g_value_get_double (value);
+      break;
+    case PROP_PRIMORDIAL_INFLATION_EXTRA_EFOLDS:
+      cbe_prec->priv->ppr.primordial_inflation_extra_efolds = g_value_get_double (value);
+      break;
+    case PROP_L_LOGSTEP:
+      cbe_prec->priv->ppr.l_logstep                  = g_value_get_double (value);
+      break;
+    case PROP_L_LINSTEP:
+      cbe_prec->priv->ppr.l_linstep                  = g_value_get_int (value);
+      break;
+    case PROP_HYPER_X_MIN:
+      cbe_prec->priv->ppr.hyper_x_min                = g_value_get_double (value);
+      break;
+    case PROP_HYPER_SAMPLING_FLAT:
+      cbe_prec->priv->ppr.hyper_sampling_flat        = g_value_get_double (value);
+      break;
+    case PROP_HYPER_SAMPLING_CURVED_LOW_NU:
+      cbe_prec->priv->ppr.hyper_sampling_curved_low_nu = g_value_get_double (value);
+      break;
+    case PROP_HYPER_SAMPLING_CURVED_HIGH_NU:
+      cbe_prec->priv->ppr.hyper_sampling_curved_high_nu = g_value_get_double (value);
+      break;
+    case PROP_HYPER_NU_SAMPLING_STEP:
+      cbe_prec->priv->ppr.hyper_nu_sampling_step     = g_value_get_double (value);
+      break;
+    case PROP_HYPER_PHI_MIN_ABS:
+      cbe_prec->priv->ppr.hyper_phi_min_abs          = g_value_get_double (value);
+      break;
+    case PROP_HYPER_X_TOL:
+      cbe_prec->priv->ppr.hyper_x_tol                = g_value_get_double (value);
+      break;
+    case PROP_HYPER_FLAT_APPROXIMATION_NU:
+      cbe_prec->priv->ppr.hyper_flat_approximation_nu = g_value_get_double (value);
+      break;
+    case PROP_Q_LINSTEP:
+      cbe_prec->priv->ppr.q_linstep                  = g_value_get_double (value);
+      break;
+    case PROP_Q_LOGSTEP_SPLINE:
+      cbe_prec->priv->ppr.q_logstep_spline           = g_value_get_double (value);
+      break;
+    case PROP_Q_LOGSTEP_OPEN:
+      cbe_prec->priv->ppr.q_logstep_open             = g_value_get_double (value);
+      break;
+    case PROP_Q_LOGSTEP_TRAPZD:
+      cbe_prec->priv->ppr.q_logstep_trapzd           = g_value_get_double (value);
+      break;
+    case PROP_Q_NUMSTEP_TRANSITION:
+      cbe_prec->priv->ppr.q_numstep_transition       = g_value_get_double (value);
+      break;
+    case PROP_TRANSFER_NEGLECT_DELTA_K_S_T0:
+      cbe_prec->priv->ppr.transfer_neglect_delta_k_S_t0 = g_value_get_double (value);
+      break;
+    case PROP_TRANSFER_NEGLECT_DELTA_K_S_T1:
+      cbe_prec->priv->ppr.transfer_neglect_delta_k_S_t1 = g_value_get_double (value);
+      break;
+    case PROP_TRANSFER_NEGLECT_DELTA_K_S_T2:
+      cbe_prec->priv->ppr.transfer_neglect_delta_k_S_t2 = g_value_get_double (value);
+      break;
+    case PROP_TRANSFER_NEGLECT_DELTA_K_S_E:
+      cbe_prec->priv->ppr.transfer_neglect_delta_k_S_e  = g_value_get_double (value);
+      break;
+    case PROP_TRANSFER_NEGLECT_DELTA_K_V_T1:
+      cbe_prec->priv->ppr.transfer_neglect_delta_k_V_t1 = g_value_get_double (value);
+      break;
+    case PROP_TRANSFER_NEGLECT_DELTA_K_V_T2:
+      cbe_prec->priv->ppr.transfer_neglect_delta_k_V_t2 = g_value_get_double (value);
+      break;
+    case PROP_TRANSFER_NEGLECT_DELTA_K_V_E:
+      cbe_prec->priv->ppr.transfer_neglect_delta_k_V_e  = g_value_get_double (value);
+      break;
+    case PROP_TRANSFER_NEGLECT_DELTA_K_V_B:
+      cbe_prec->priv->ppr.transfer_neglect_delta_k_V_b  = g_value_get_double (value);
+      break;
+    case PROP_TRANSFER_NEGLECT_DELTA_K_T_T2:
+      cbe_prec->priv->ppr.transfer_neglect_delta_k_T_t2 = g_value_get_double (value);
+      break;
+    case PROP_TRANSFER_NEGLECT_DELTA_K_T_E:
+      cbe_prec->priv->ppr.transfer_neglect_delta_k_T_e = g_value_get_double (value);
+      break;
+    case PROP_TRANSFER_NEGLECT_DELTA_K_T_B:
+      cbe_prec->priv->ppr.transfer_neglect_delta_k_T_b = g_value_get_double (value);
+      break;
+    case PROP_TRANSFER_NEGLECT_LATE_SOURCE:
+      cbe_prec->priv->ppr.transfer_neglect_late_source = g_value_get_double (value);
+      break;
+    case PROP_L_SWITCH_LIMBER:
+      cbe_prec->priv->ppr.l_switch_limber            = g_value_get_double (value);
+      break;
+    case PROP_L_SWITCH_LIMBER_FOR_CL_DENSITY_OVER_Z:
+      cbe_prec->priv->ppr.l_switch_limber_for_cl_density_over_z = g_value_get_double (value);
+      break;
+    case PROP_SELECTION_CUT_AT_SIGMA:
+      cbe_prec->priv->ppr.selection_cut_at_sigma     = g_value_get_double (value);
+      break;
+    case PROP_SELECTION_SAMPLING:
+      cbe_prec->priv->ppr.selection_sampling         = g_value_get_double (value);
+      break;
+    case PROP_SELECTION_SAMPLING_BESSEL:
+      cbe_prec->priv->ppr.selection_sampling_bessel  = g_value_get_double (value);
+      break;
+    case PROP_SELECTION_TOPHAT_EDGE:
+      cbe_prec->priv->ppr.selection_tophat_edge      = g_value_get_double (value);
+      break;
+    case PROP_HALOFIT_DZ:
+      cbe_prec->priv->ppr.halofit_dz                 = g_value_get_double (value);
+      break;
+    case PROP_HALOFIT_MIN_K_NONLINEAR:
+      cbe_prec->priv->ppr.halofit_min_k_nonlinear    = g_value_get_double (value);
+      break;
+    case PROP_HALOFIT_SIGMA_PRECISION:
+      cbe_prec->priv->ppr.halofit_sigma_precision    = g_value_get_double (value);
+      break;
+    case PROP_HALOFIT_MIN_K_MAX:
+      cbe_prec->priv->ppr.halofit_min_k_max          = g_value_get_double (value);
+      break;
+    case PROP_ACCURATE_LENSING:
+      cbe_prec->priv->ppr.accurate_lensing           = g_value_get_int (value);
+      break;
+    case PROP_NUM_MU_MINUS_LMAX:
+      cbe_prec->priv->ppr.num_mu_minus_lmax          = g_value_get_int (value);
+      break;
+    case PROP_DELTA_L_MAX:
+      cbe_prec->priv->ppr.delta_l_max                = g_value_get_int (value);
+      break;
+    case PROP_SMALLEST_ALLOWED_VARIATION:
+      cbe_prec->priv->ppr.smallest_allowed_variation = g_value_get_double (value);
+      break;
+    case PROP_TOL_GAUSS_LEGENDRE:
+      cbe_prec->priv->ppr.tol_gauss_legendre         = g_value_get_double (value);
+      break;
+    default:
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
+      break;
+  }
 }
 
 static void

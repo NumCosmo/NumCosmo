@@ -435,7 +435,7 @@ ncm_serialize_unset (NcmSerialize *ser, gpointer obj)
 }
 
 /**
- * ncm_serialize_unset:
+ * ncm_serialize_remove_ser:
  * @ser: a #NcmSerialize.
  * @obj: (type GObject): a #GObject.
  *

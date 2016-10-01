@@ -34,9 +34,9 @@ class PySLineData (Ncm.Data):
   #
   # The contructor assigns some default values and calls the father's constructor.
   # 
-  def __init__ (self):
+  def __init__ (self, len = 600):
     Ncm.Data.__init__ (self)
-    self.len  = 600
+    self.len  = len
     self.dof  = self.len - 2
     self.data = Ncm.Matrix.new (self.len, 3)
 

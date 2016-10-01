@@ -26,7 +26,7 @@ dnl ***************************************************************************
 
 m4_define([numcosmo_major_version], [0])
 m4_define([numcosmo_minor_version], [13])
-m4_define([numcosmo_micro_version], [1])
+m4_define([numcosmo_micro_version], [2])
 m4_define([numcosmo_interface_age], [0])
 m4_define([numcosmo_binary_age],
           [m4_eval(100 * numcosmo_minor_version + numcosmo_micro_version)])
@@ -44,6 +44,10 @@ m4_define([numcosmo_lt_current_minus_age],
           
 AC_INIT([numcosmo],[numcosmo_version],[https://savannah.nongnu.org/bugs/?func=additem&group=numcosmo],[numcosmo],[http://www.nongnu.org/numcosmo/])
 AC_CONFIG_SRCDIR([numcosmo/numcosmo.h])
+
+dnl ***************************************************************************
+dnl add the correct m4 directory location.
+dnl ***************************************************************************
 AC_CONFIG_MACRO_DIR([m4])
 
 AC_PREREQ([2.69])
@@ -91,11 +95,6 @@ AC_SUBST(LT_CURRENT_MINUS_AGE)
 AC_CONFIG_HEADERS([config.h])
 
 AM_MAINTAINER_MODE
-
-dnl ***************************************************************************
-dnl add the correct m4 directory location.
-dnl ***************************************************************************
-AC_CONFIG_MACRO_DIR([m4])
   
 dnl ***************************************************************************
 dnl Gobject Introspection
@@ -487,6 +486,7 @@ TEST_SHARED_CFLAGS="$TEST_SHARED_CFLAGS $GSL_CFLAGS"
 PKG_CHECK_EXISTS([gsl >= $GSL_GLF_REQUIRED_VERSION], [AC_DEFINE([HAVE_GSL_GLF],[1], [gsl support fixed gauss legendre rules])], [])
 PKG_CHECK_EXISTS([gsl >= $GSL_ODEIV2_REQUIRED_VERSION], [AC_DEFINE([HAVE_GSL_ODEIV2],[1], [gsl support odeiv2 ode algorightms])], [])
 PKG_CHECK_EXISTS([gsl >= 2.0], [AC_DEFINE([HAVE_GSL_2_0],[1], [gsl 2.0])], [])
+PKG_CHECK_EXISTS([gsl >= 2.2], [AC_DEFINE([HAVE_GSL_2_2],[1], [gsl 2.2])], [])
 
 dnl ***************************************************************************
 dnl Check for gmp and mpfr
@@ -794,7 +794,10 @@ AC_SUBST(SUNDIALS_CFLAGS)
 AC_CHECK_LIB([sundials_nvecserial],[N_VNew_Serial],[SUNDIALS_LIBS="$SUNDIALS_LIBS -lsundials_nvecserial"],[AC_MSG_ERROR([Cannot find library sundials_nvecserial, use SUNDIALS_LIBS="-L<path_to_SUNDIALS_libs>".])],[])
 dnl AC_CHECK_LIB([sundials_cvode],[CVodeCreate],[SUNDIALS_LIBS="$SUNDIALS_LIBS -lsundials_cvode"],[AC_MSG_ERROR([Cannot find library sundials_cvode, use SUNDIALS_LIBS="-L<path_to_SUNDIALS_libs>".])],[])
 AC_CHECK_LIB([sundials_cvodes],[CVodeCreate],[SUNDIALS_LIBS="$SUNDIALS_LIBS -lsundials_cvodes"],[AC_MSG_ERROR([Cannot find library sundials_cvodes, use SUNDIALS_LIBS="-L<path_to_SUNDIALS_libs>".])],[])
-AC_CHECK_LIB([sundials_arkode],[ARKodeCreate],[SUNDIALS_LIBS="$SUNDIALS_LIBS -lsundials_arkode"],[],[])
+AC_CHECK_LIB([sundials_arkode],[ARKodeCreate],[
+	SUNDIALS_LIBS="$SUNDIALS_LIBS -lsundials_arkode"
+	AC_DEFINE([HAVE_SUNDIALS_ARKODE],[1],[SUNDIALS has ARKode])
+	],[],[])
 
 SAVED_CFLAGS="$CFLAGS"
 CFLAGS="$CFLAGS $SUNDIALS_CFLAGS"

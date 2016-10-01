@@ -676,17 +676,23 @@ _nc_hipert_wkb_qgrw_zeta_get_mnu_dmnu (NcHIPertWKB *wkb, NcmModel *model, gdoubl
 static gdouble 
 _nc_hipert_wkb_qgrw_zeta_get_m (NcHIPertWKB *wkb, NcmModel *model, gdouble alpha, gdouble k)
 {
+  g_assert_not_reached ();
+
+  return 0.0;
 }
 
 static gdouble 
 _nc_hipert_wkb_qgrw_zeta_get_nu2 (NcHIPertWKB *wkb, NcmModel *model, gdouble alpha, gdouble k)
 {
+  g_assert_not_reached ();
+
+  return 0.0;
 }
 
 static gdouble 
 _nc_hipert_wkb_qgrw_zeta_get_dVnu2 (NcHIPertWKB *wkb, NcmModel *model, gdouble alpha, gdouble k)
 {
+  g_assert_not_reached ();
+
+  return 0.0;
 }
-
-
-

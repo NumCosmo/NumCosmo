@@ -35,8 +35,6 @@ cosmo.props.Omegab  = 0.05
 cosmo.props.Omegac  = 0.25
 cosmo.props.Omegax  = 0.70
 cosmo.props.Tgamma0 = 2.72
-cosmo.props.ns      = 1.0
-cosmo.props.sigma8  = 0.9
 cosmo.props.w       = -1.0
 
 #

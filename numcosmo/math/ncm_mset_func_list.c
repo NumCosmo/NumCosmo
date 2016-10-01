@@ -240,7 +240,7 @@ _ncm_mset_func_list_eval (NcmMSetFunc *func, NcmMSet *mset, const gdouble *x, gd
  * @desc: function description
  * @obj_type: object type
  * @func: (scope notified): function pointer
- * @nvar: number of parameters
+ * @nvar: number of variables
  * @dim: function dimension
  * 
  * Register a new function in the NcmMSetFuncList class.
@@ -290,12 +290,12 @@ ncm_mset_func_list_register (const gchar *name, const gchar *symbol, const gchar
  * @nvar: number of variables
  * @dim: function dimension
  * 
- * Selects the #NcmMSetFuncListStruct array containing the function
+ * Selects the NcmMSetFuncListStruct array containing the function
  * in the namespace @ns with @nvar and @dim. If @ns is NULL then 
  * gets from all namespaces, @nvar and/or @dim equals to -1 selects
  * any value. The contained strings must not be freed.
  * 
- * Returns: (transfer full) (element-type NcmMSetFuncListStruct): #NcmMSetFuncListStruct array.
+ * Returns: (transfer full) (element-type NcmMSetFuncListStruct): NcmMSetFuncListStruct array.
  */
 GArray *
 ncm_mset_func_list_select (const gchar *ns, gint nvar, gint dim)

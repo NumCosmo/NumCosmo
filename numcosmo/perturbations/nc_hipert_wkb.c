@@ -389,16 +389,16 @@ _nc_hipert_wkb_prepare_approx (NcHIPertWKB *wkb, NcmModel *model)
 static gint
 _nc_hipert_wkb_phase_f (realtype alpha, N_Vector y, N_Vector ydot, gpointer f_data)
 {
-  NcHIPertWKBArg *arg   = (NcHIPertWKBArg *) f_data;
-  gdouble nu = 0.0, V = 0.0;
+//  NcHIPertWKBArg *arg   = (NcHIPertWKBArg *) f_data;
+//  gdouble nu = 0.0, V = 0.0;
 
   //nc_hipert_wkb_get_nu_V (arg->wkb, arg->model, alpha, NC_HIPERT (arg->wkb)->k, &nu, &dnu_nu, &V);
   {
-    const gdouble rnu   = NV_Ith_S (y, 0);
+    //const gdouble rnu   = NV_Ith_S (y, 0);
     const gdouble U     = NV_Ith_S (y, 1);
-    const gdouble Rnu   = exp (rnu);
-    const gdouble Rnunu = Rnu / nu;
-    const gdouble nu2   = nu * nu;
+//    const gdouble Rnu   = exp (rnu);
+//    const gdouble Rnunu = Rnu / nu;
+//    const gdouble nu2   = nu * nu;
     
     NV_Ith_S (ydot, 0) = U;
     NV_Ith_S (ydot, 1) = U * U ;
@@ -865,6 +865,8 @@ nc_hipert_wkb_maxtime (NcHIPertWKB *wkb, NcmModel *model, gdouble alpha0, gdoubl
  * @wkb: a #NcHIPertWKB
  * @model: a #NcmModel
  * @cmp: Comparison type
+ * @alpha0: FIXME
+ * @alpha1: FIXME
  * 
  * Search for the instant at which the WKB approximation starts to fails within the asked precision. 
  * 

@@ -62,7 +62,7 @@ They also have versions optimized to some processors, however, ideally you shoul
 </listitem>
 <listitem>
 <simpara>
-The other packages sometimes can be found with the following package names: <emphasis>libnlopt-dev, libsundials-dev, libcfitsio3-dev, libcuba3-dev.</emphasis>
+The other packages sometimes can be found with the following package names: <emphasis>libnlopt-dev, libsundials-dev, libcfitsio3-dev.</emphasis>
 <simpara>The packages above also support the usual: configure; make; make install (however, see <link linkend="numcosmo:comp">NumCosmo compilation</link>)</simpara>
 </simpara>
 </listitem>
@@ -129,12 +129,12 @@ where the <emphasis>-j4</emphasis> tells make to run four parallel compilation. 
 <informalexample>
   <programlisting>make check</programlisting>
 </informalexample>
-and to install in your system
+It is possible to use the library without installing it (without the last "make install" step). The advantage is that doing so it is easier to work on the library and/or updating it without having to uninstall and install each version. See examples/README for instructions on how to use a non installed version of the library.
+Nonetheless if you want to install it in your system run
 <informalexample>
   <programlisting>make install</programlisting>
 </informalexample>
-note that, for the last command, the user must have root privileges to install the library in the system.
+note that, for the last command, the user must have root privileges to install the library in the system. 
 </simpara>
 </refsect1>
 </refentry>
-

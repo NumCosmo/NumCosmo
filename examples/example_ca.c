@@ -4,15 +4,15 @@
 gint
 main (gint argc, gchar *argv[])
 {
+  NcHIPrim  *prim;
   NcHIReion *reion;
   NcHICosmo *cosmo;
   NcDistance *dist;
-  NcWindow *wp;
   NcTransferFunc *tf;
-  NcMatterVar *vp;
-  NcGrowthFunc *gf;
   NcMultiplicityFunc *mulf;
-  NcMassFunction *mf;
+  NcHaloMassFunction *mf;
+  NcPowspecML *psml;
+  NcmPowspecFilter *psf;
   guint np = 50;
   gint i;
 
@@ -33,32 +33,40 @@ main (gint argc, gchar *argv[])
   reion = NC_HIREION (nc_hireion_camb_new ());
 
   /**************************************************************************** 
+   * New homogeneous and isotropic primordial object.
+   ****************************************************************************/  
+  prim  = NC_HIPRIM (nc_hiprim_power_law_new ());
+
+  /**************************************************************************** 
+   * Adding the submodels to the main cosmology model.
+   ****************************************************************************/  
+  ncm_model_add_submodel (NCM_MODEL (cosmo), NCM_MODEL (reion));
+  ncm_model_add_submodel (NCM_MODEL (cosmo), NCM_MODEL (prim));
+
+  /**************************************************************************** 
    * New cosmological distance objects optimizied to perform calculations
    * up to redshift 2.0.
    ****************************************************************************/  
   dist = nc_distance_new (2.0);
  
   /**************************************************************************** 
-   * New windown function 'NcWindowTophat'
-   ****************************************************************************/  
-  wp = nc_window_new_from_name ("NcWindowTophat");
-
-  /**************************************************************************** 
-   * New transfer function 'NcTransferFuncEH' using the Einsenstein, Hu
+   * New transfer function 'NcTransferFuncEH' using the Einsenstein and Hu
    * fitting formula.
    ****************************************************************************/  
   tf = nc_transfer_func_new_from_name ("NcTransferFuncEH");
 
   /**************************************************************************** 
-   * New matter variance object using FFT method for internal calculations and
-   * the window and transfer functions defined above.
+   * New linear matter power spectrum object based of the EH transfer function.
    ****************************************************************************/  
-  vp = nc_matter_var_new (NC_MATTER_VAR_FFT, wp, tf);
+  psml = NC_POWSPEC_ML (nc_powspec_ml_transfer_new (tf));
+  ncm_powspec_require_kmin (NCM_POWSPEC (psml), 1.0e-3);
+  ncm_powspec_require_kmax (NCM_POWSPEC (psml), 1.0e3);
 
   /**************************************************************************** 
-   * New growth function
-   ****************************************************************************/  
-  gf = nc_growth_func_new ();
+   * Apply a tophat filter to the psml object, set best output interval.
+   ****************************************************************************/     
+  psf = ncm_powspec_filter_new (NCM_POWSPEC (psml), NCM_POWSPEC_FILTER_TYPE_TOPHAT);
+  ncm_powspec_filter_set_best_lnr0 (psf);
 
   /**************************************************************************** 
    * New multiplicity function 'NcMultiplicityFuncTinkerMean'
@@ -68,7 +76,7 @@ main (gint argc, gchar *argv[])
   /**************************************************************************** 
    * New mass function object using the objects defined above.
    ****************************************************************************/  
-  mf = nc_mass_function_new (dist, vp, gf, mulf);
+  mf = nc_halo_mass_function_new (dist, psf, mulf);
 
   /**************************************************************************** 
    * Setting values for the cosmological model, those not set stay in the
@@ -80,8 +88,6 @@ main (gint argc, gchar *argv[])
   ncm_model_orig_param_set (NCM_MODEL (cosmo), NC_HICOSMO_DE_OMEGA_X,    0.7);
   ncm_model_orig_param_set (NCM_MODEL (cosmo), NC_HICOSMO_DE_T_GAMMA0,   1.0);
   ncm_model_orig_param_set (NCM_MODEL (cosmo), NC_HICOSMO_DE_OMEGA_B,    0.05);
-  ncm_model_orig_param_set (NCM_MODEL (cosmo), NC_HICOSMO_DE_SPECINDEX,  1.0);
-  ncm_model_orig_param_set (NCM_MODEL (cosmo), NC_HICOSMO_DE_SIGMA8,     0.9);
   ncm_model_orig_param_set (NCM_MODEL (cosmo), NC_HICOSMO_DE_XCDM_W,    -1.1);
 
   /**************************************************************************** 
@@ -94,29 +100,30 @@ main (gint argc, gchar *argv[])
    * Printing the growth function and its derivative with respect to z 
    * up to redshift 1.
    ****************************************************************************/ 
-  nc_growth_func_prepare (gf, cosmo);
+  ncm_powspec_prepare (NCM_POWSPEC (psml), NCM_MODEL (cosmo));
 
-  for (i = 0; i < np; i++)
   {
-    gdouble z = 1.0 / (np - 1.0) * i;
-    gdouble gfz = nc_growth_func_eval (gf, cosmo, z);
-    gdouble dgfz = nc_growth_func_eval_deriv (gf, cosmo, z);
-    printf ("% 10.8f % 20.15g % 20.15g\n", z, gfz, dgfz);
+    NcGrowthFunc *gf = nc_powspec_ml_transfer_peek_gf (NC_POWSPEC_ML_TRANSFER (psml));
+    for (i = 0; i < np; i++)
+    {
+      gdouble z = 1.0 / (np - 1.0) * i;
+      gdouble gfz  = nc_growth_func_eval (gf, cosmo, z);
+      gdouble dgfz = nc_growth_func_eval_deriv (gf, cosmo, z);
+      printf ("% 10.8f % 21.15g % 21.15g\n", z, gfz, dgfz);
+    }
+    printf ("\n\n");
   }
-  printf ("\n\n");
 
   /**************************************************************************** 
-   * Printing the transfer function and the matter power spectrum in the 
-   * kh (in unities of h/Mpc) interval [1e-3, 1e3] 
+   * Printing the matter power spectrum in the k (in unities of Mpc^-1) 
+   * interval [1e-3, 1e3] 
    ****************************************************************************/
-  nc_transfer_func_prepare (tf, reion, cosmo);
 
   for (i = 0; i < np; i++)
   {
-    gdouble lnkh = log (1e-3) + log (1e6) / (np - 1.0) * i;
-    gdouble tfkh = nc_transfer_func_eval (tf, cosmo, exp (lnkh));
-    gdouble Pmkh = nc_transfer_func_matter_powerspectrum (tf, cosmo, exp (lnkh));
-    printf ("% 10.8f % 20.15g % 20.15g\n", exp (lnkh), tfkh, Pmkh);
+    gdouble lnk = log (1e-3) + log (1e6) / (np - 1.0) * i;
+    gdouble Pmk = ncm_powspec_eval (NCM_POWSPEC (psml), NCM_MODEL (cosmo), 0.0, exp (lnk));
+    printf ("% 10.8f % 21.15g\n", exp (lnk), Pmk);
   }
   printf ("\n\n");
 
@@ -126,18 +133,14 @@ main (gint argc, gchar *argv[])
    * First calculates the growth function at z = 0.3 and then the spectrum
    * amplitude from the sigma8 parameter.
    ****************************************************************************/
-  nc_matter_var_prepare (vp, reion, cosmo);
+  ncm_powspec_filter_prepare (psf, NCM_MODEL (cosmo));
   {
-    gdouble Dz = nc_growth_func_eval (gf, cosmo, 0.3);
-    gdouble A = nc_matter_var_sigma8_sqrtvar0 (vp, cosmo);
-    gdouble prefac = Dz * Dz * A * A;
-    
     for (i = 0; i < np; i++)
     {
       gdouble lnR = log (5.0) + log (10.0) / (np - 1.0) * i;
-      gdouble sigma2 = prefac * nc_matter_var_var0 (vp, cosmo, lnR);
-      gdouble dsigma2_dlnR = nc_matter_var_dlnvar0_dlnR (vp, cosmo, lnR);
-      printf ("% 10.8f % 20.15g % 20.15g\n", exp (lnR), sigma2, dsigma2_dlnR);
+      gdouble sigma2       = ncm_powspec_filter_eval_var_lnr (psf, 0.0, lnR);
+      gdouble dsigma2_dlnR = ncm_powspec_filter_eval_dvar_dlnr (psf, 0.0, lnR);
+      printf ("% 10.8f % 21.15g % 21.15g\n", exp (lnR), sigma2, dsigma2_dlnR);
     }
     printf ("\n\n");
   }
@@ -146,15 +149,15 @@ main (gint argc, gchar *argv[])
    * Printing the mass function integrated in the mass interval [1e14, 1e16]
    * for the redhshifts in the interval [0, 2.0] and area 200 squared degree.
    ****************************************************************************/
-  nc_mass_function_set_area_sd (mf, 200.0);
-  nc_mass_function_set_eval_limits (mf, cosmo, log (1e14), log (1e16), 0.0, 2.0);
-  nc_mass_function_prepare (mf, reion, cosmo);
+  nc_halo_mass_function_set_area_sd (mf, 200.0);
+  nc_halo_mass_function_set_eval_limits (mf, cosmo, log (1e14), log (1e16), 0.0, 2.0);
+  nc_halo_mass_function_prepare (mf, cosmo);
 
   for (i = 0; i < np; i++)
   {
     gdouble z = 2.0 / (np - 1.0) * i;
-    gdouble dndz = nc_mass_function_dn_dz (mf, cosmo, log(1e14), log(1e16), z, FALSE);
-    printf ("% 10.8f % 20.15g\n", z, dndz);
+    gdouble dndz = nc_halo_mass_function_dn_dz (mf, cosmo, log (1.0e14), log (1.0e16), z, FALSE);
+    printf ("% 10.8f % 21.15g\n", z, dndz);
   }
   printf ("\n\n");
 
@@ -165,12 +168,11 @@ main (gint argc, gchar *argv[])
   nc_distance_free (dist);
   ncm_model_free (NCM_MODEL (cosmo));
   nc_hireion_free (reion);
-  nc_window_free (wp);
   nc_transfer_func_free (tf);
-  nc_matter_var_free (vp);
-  nc_growth_func_free (gf);
+  nc_powspec_ml_free (psml);
+  ncm_powspec_filter_free (psf);
   nc_multiplicity_func_free (mulf);
-  nc_mass_function_free (mf);
+  nc_halo_mass_function_free (mf);
 
   return 0;
 }

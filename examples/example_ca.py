@@ -26,7 +26,17 @@ cosmo = Nc.HICosmo.new_from_name (Nc.HICosmo, "NcHICosmoDEXcdm")
 #  New homogeneous and isotropic reionization object.
 #
 reion = Nc.HIReionCamb.new () 
+
+#
+#  New homogeneous and isotropic primordial object.
+#
+prim = Nc.HIPrimPowerLaw.new () 
+
+#
+# Adding submodels to the main cosmological model.
+#
 cosmo.add_submodel (reion)
+cosmo.add_submodel (prim)
 
 #
 #  New cosmological distance objects optimizied to perform calculations
@@ -35,26 +45,23 @@ cosmo.add_submodel (reion)
 dist = Nc.Distance.new (2.0)
 
 #
-# New windown function 'NcWindowTophat'
-#
-wp =  Nc.Window.new_from_name ("NcWindowTophat")
-
-#
 # New transfer function 'NcTransferFuncEH' using the Einsenstein, Hu
 # fitting formula.
 #
 tf = Nc.TransferFunc.new_from_name ("NcTransferFuncEH")
 
 #
-# New matter variance object using FFT method for internal calculations and
-# the window and transfer functions defined above.
-#
-vp = Nc.MatterVar.new (Nc.MatterVarStrategy.FFT, wp, tf)
+# New linear matter power spectrum object based of the EH transfer function.
+# 
+psml = Nc.PowspecMLTransfer.new (tf)
+psml.require_kmin (1.0e-3)
+psml.require_kmax (1.0e3)
 
 #
-# New growth function
+# Apply a tophat filter to the psml object, set best output interval.
 #
-gf = Nc.GrowthFunc.new ()
+psf = Ncm.PowspecFilter.new (psml, Ncm.PowspecFilterType.TOPHAT)
+psf.set_best_lnr0 ()
 
 #
 # New multiplicity function 'NcMultiplicityFuncTinkerMean'
@@ -64,7 +71,7 @@ mulf = Nc.MultiplicityFunc.new_from_name ("NcMultiplicityFuncTinkerMean")
 #
 # New mass function object using the objects defined above.
 #
-mf = Nc.MassFunction.new (dist, vp, gf, mulf)
+mf = Nc.HaloMassFunction.new (dist, psf, mulf)
 
 #
 #  Setting values for the cosmological model, those not set stay in the
@@ -76,8 +83,6 @@ cosmo.props.Omegab  = 0.05
 cosmo.props.Omegac  = 0.25
 cosmo.props.Omegax  = 0.70
 cosmo.props.Tgamma0 = 2.72
-cosmo.props.ns      = 1.0
-cosmo.props.sigma8  = 0.9
 cosmo.props.w       = -1.0
 
 #
@@ -100,10 +105,11 @@ za = []
 Da = []
 dDa = []
 
+gf = psml.peek_gf ()
 gf.prepare (cosmo)
 
 for i in range (0, np):
-  z = 1000.0 * divfac * i
+  z = 2.0 * divfac * i
   D = gf.eval (cosmo, z)
   dD = gf.eval_deriv (cosmo, z)
   za.append (z)
@@ -117,10 +123,10 @@ for i in range (0, np):
 
 plt.title ("Growth Function")
 plt.plot (za, Da, 'r', label="D")
-plt.plot (za, numpy.abs (dDa), 'b--', label="dD/dz")
+plt.plot (za, dDa, 'b--', label="dD/dz")
 plt.xlabel('$z$')
 plt.legend(loc=2)
-plt.yscale ('log')
+#plt.yscale ('log')
 
 plt.savefig ("growth_func.png")
 plt.clf ()
@@ -130,18 +136,18 @@ plt.clf ()
 # kh (in unities of h/Mpc) interval [1e-3, 1e3]
 #
 
-kha = []
+ka = []
 Ta = []
 Pma = []
 
-tf.prepare (cosmo)
+psml.prepare (cosmo)
 
 for i in range (0, np):
-  lnkh = log (1e-4) +  log (1e7) * divfac * i
-  kh = exp (lnkh)
-  T = tf.eval (cosmo, kh)
-  Pm = 1.0e3 / 7.0 * tf.matter_powerspectrum (cosmo, kh)
-  kha.append (kh)
+  lnk = log (1e-3) +  log (1e6) * divfac * i
+  k   = exp (lnk)
+  T   = tf.eval (cosmo, k)
+  Pm  = psml.eval (cosmo, 0.0, k)
+  ka.append (k)
   Ta.append (T)
   Pma.append (Pm)
 
@@ -150,9 +156,10 @@ for i in range (0, np):
 #
 
 plt.title ("Transfer Function and Matter Power Spectrum")
+plt.yscale('log')
 plt.xscale('log')
-plt.plot (kha, Ta, 'r', label="T(kh)")
-plt.plot (kha, Pma, 'b--', label="P_m(kh)")
+plt.plot (ka, Ta, 'r', label="T(kh)")
+plt.plot (ka, Pma, 'b--', label="P_m(kh)")
 plt.xlabel('$k$')
 plt.legend(loc=1)
 
@@ -165,22 +172,17 @@ plt.clf ()
 # First calculates the growth function at z = 0.3 and then the spectrum
 # amplitude from the sigma8 parameter.
 #
-
-vp.prepare (cosmo)
-
-Dz = gf.eval (cosmo, 0.3)
-A  = vp.sigma8_sqrtvar0 (cosmo)
-prefact = A * A * Dz * Dz
+psf.prepare (cosmo)
 
 Ra = []
 sigma2a = []
 dlnsigma2a = []
 
 for i in range (0, np):
-  lnR = log (5.0) +  log (10.0) * divfac * i
-  R = exp (lnR)
-  sigma2 = prefact * vp.var0 (cosmo, lnR)
-  dlnsigma2 = vp.dlnvar0_dlnR (cosmo, lnR) 
+  lnR       = log (5.0) +  log (10.0) * divfac * i
+  R         = exp (lnR)
+  sigma2    = psf.eval_var_lnr (0.0, lnR)
+  dlnsigma2 = psf.eval_dlnvar_dlnr (0.0, lnR) 
   Ra.append (R)
   sigma2a.append (sigma2)
   dlnsigma2a.append (dlnsigma2)
@@ -188,7 +190,6 @@ for i in range (0, np):
 #
 #  Ploting filtered matter variance
 #
-
 plt.title ("Variance and Variance Derivative")
 plt.plot (Ra, sigma2a, 'r', label='$\sigma^2(\ln(R))$')
 plt.plot (Ra, dlnsigma2a, 'b--', label='$d\ln(\sigma^2)/d\ln(R)$')
@@ -210,7 +211,7 @@ mf.prepare (cosmo)
 dndza = []
 
 for i in range (0, np):
-  dndz = mf.dn_dz (cosmo, log(1e14), log(1e16), za[i], True)
+  dndz = mf.dn_dz (cosmo, log (1.0e14), log (1.0e16), za[i], True)
   dndza.append (dndz)
 
 #
