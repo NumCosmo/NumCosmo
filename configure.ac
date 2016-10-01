@@ -44,6 +44,10 @@ m4_define([numcosmo_lt_current_minus_age],
           
 AC_INIT([numcosmo],[numcosmo_version],[https://savannah.nongnu.org/bugs/?func=additem&group=numcosmo],[numcosmo],[http://www.nongnu.org/numcosmo/])
 AC_CONFIG_SRCDIR([numcosmo/numcosmo.h])
+
+dnl ***************************************************************************
+dnl add the correct m4 directory location.
+dnl ***************************************************************************
 AC_CONFIG_MACRO_DIR([m4])
 
 AC_PREREQ([2.69])
@@ -91,11 +95,6 @@ AC_SUBST(LT_CURRENT_MINUS_AGE)
 AC_CONFIG_HEADERS([config.h])
 
 AM_MAINTAINER_MODE
-
-dnl ***************************************************************************
-dnl add the correct m4 directory location.
-dnl ***************************************************************************
-AC_CONFIG_MACRO_DIR([m4])
   
 dnl ***************************************************************************
 dnl Gobject Introspection
