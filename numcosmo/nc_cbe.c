@@ -364,7 +364,7 @@ nc_cbe_init (NcCBE *cbe)
   cbe->priv->ple.lensing_verbose        = 0;
 
   {
-    guint verbosity = 0;
+    guint verbosity = 1;
     cbe->bg_verbose       = verbosity;
     cbe->thermo_verbose   = verbosity;
     cbe->pert_verbose     = verbosity;

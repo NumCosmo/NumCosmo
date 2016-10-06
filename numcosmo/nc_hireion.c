@@ -217,7 +217,7 @@ nc_hireion_ref (NcHIReion *reion)
  * nc_hireion_free:
  * @reion: a #NcHIReion
  * 
- * Decreses the reference count of @reion by one.
+ * Decreases the reference count of @reion by one.
  * 
  */
 void 
