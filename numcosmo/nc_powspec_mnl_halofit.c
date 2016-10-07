@@ -343,7 +343,7 @@ _nc_powspec_mnl_halofit_linear_scale (NcPowspecMNLHaloFit* pshf, NcHICosmo* cosm
 	gdouble lnR = (-z / 2.0 < NC_POWSPEC_MNL_HALOFIT_LOGRMIN) ? NC_POWSPEC_MNL_HALOFIT_LOGRMIN : -z / 2.0 + NCM_DEFAULT_PRECISION;
 	const gdouble reltol = pshf->reltol / 10.0;
 	const gdouble res_min = 1. / ncm_powspec_get_kmax (NCM_POWSPEC (pshf->psml));
-	gdouble res = 0.0;
+	gdouble res = 0.0; /* res is used first to store the residual, and then the result */
 
 	gsl_function_fdf FDF;
 
@@ -370,10 +370,48 @@ _nc_powspec_mnl_halofit_linear_scale (NcPowspecMNLHaloFit* pshf, NcHICosmo* cosm
 
 	} while (status == GSL_CONTINUE && iter < max_iter);
 
-	if (iter >= max_iter)
-		g_warning ("_nc_powspec_mnl_halofit_linear_scale: maximum number of iteration reached (%u), giving up.", max_iter);
+	res = exp (lnR); // Now res is the result
 
-	res = exp (lnR);
+	if (iter >= max_iter)
+		g_warning ("_nc_powspec_mnl_halofit_linear_scale: maximum number of iteration reached (%u), non-linear scale found R(z=%.3f).", max_iter, z);
+
+	if (!(gsl_finite (res)))
+		g_warning ("_nc_powspec_mnl_halofit_linear_scale: non-linear scale found R(z=%.3f) not finite.", z);
+
+	if ((iter >= max_iter) || !(gsl_finite (res)))
+	{
+		g_message ("_nc_powspec_mnl_halofit_linear_scale: running the bracketing solver...");
+
+		iter = 0;
+
+		gsl_root_fsolver* s = gsl_root_fsolver_alloc (gsl_root_fsolver_brent);
+
+		gsl_function F;
+		F.function = &_nc_powspec_mnl_halofit_varm1;
+		F.params = &vps;
+
+		gdouble lnRlo = -z / 2. - 10.;
+		gdouble lnRhi = -z / 2. + 10.;
+
+		gsl_root_fsolver_set (s, &F, lnRlo, lnRhi);
+
+		do
+		{
+			iter++;
+			status = gsl_root_fsolver_iterate (s);
+
+			lnR = gsl_root_fsolver_root (s);
+			lnRlo = gsl_root_fsolver_x_lower (s);
+			lnRhi = gsl_root_fsolver_x_upper (s);
+
+			status = gsl_root_test_interval (lnRlo, lnRhi, reltol, 0.0); // dlnR = dR/R, so test with abstol
+
+		} while (status == GSL_CONTINUE && iter < max_iter);
+
+		gsl_root_fsolver_free (s);
+
+		res = exp (lnR);
+	}
 
 	if (res < res_min)
 	{
@@ -418,7 +456,7 @@ _nc_powspec_mnl_halofit_prepare_nl (NcPowspecMNLHaloFit* pshf, NcmModel* model)
 		F.function = &_nc_powspec_mnl_halofit_linear_scale_z;
 		F.params = &vps;
 
-		ncm_spline_set_func (pshf->Rsigma, NCM_SPLINE_FUNCTION_SPLINE, &F, 0.0, pshf->zmaxnl, 0, pshf->reltol);
+		ncm_spline_set_func (pshf->Rsigma, NCM_SPLINE_FUNCTION_SPLINE, &F, 0.0, pshf->zmaxnl, 5000, pshf->reltol);
 	}
 
 	{
