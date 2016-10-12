@@ -466,13 +466,13 @@ ncm_powspec_filter_prepare (NcmPowspecFilter *psf, NcmModel *model)
 
     g_assert_cmpuint (N_z, >, 0);
     g_assert_cmpuint (N_k, >, 0);
-
+/*
     printf ("# Calibrating in zmin % 20.15g zmax % 20.15g, rmin % 20.15g rmax % 20.15g, N_z = %u, N_k = %u\n",
             psf->zi, psf->zf, 
             ncm_powspec_filter_get_r_min (psf), 
             ncm_powspec_filter_get_r_max (psf), 
             N_z, N_k);
-    
+*/    
     lnvar   = ncm_matrix_new (N_z, N_k);
     dlnvar  = ncm_matrix_new (N_z, N_k);
     lnr_vec = ncm_fftlog_get_vector_lnr (psf->fftlog);
@@ -487,6 +487,8 @@ ncm_powspec_filter_prepare (NcmPowspecFilter *psf, NcmModel *model)
 
       ncm_vector_memcpy (var_z, ncm_fftlog_peek_output_vector (psf->fftlog, 0));
       ncm_vector_memcpy (dvar_z, ncm_fftlog_peek_output_vector (psf->fftlog, 1));
+
+      /*ncm_vector_log_vals (var_z, "NADA: ", "% 11.5e");*/
 
       ncm_vector_free (var_z);
       ncm_vector_free (dvar_z);
