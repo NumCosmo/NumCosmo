@@ -29,6 +29,7 @@ data_observational_DATA = \
 	nc_data_hubble_cabre.obj               \
 	nc_data_hubble_moresco2012_bc03.obj    \
 	nc_data_hubble_moresco2012_mastro.obj  \
+	nc_data_hubble_moresco2015.obj         \
 	nc_data_hubble_riess2008_hst.obj       \
 	nc_data_hubble_stern2009.obj           \
 	nc_data_hubble_simon2005.obj           \
