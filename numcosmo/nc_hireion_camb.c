@@ -402,7 +402,7 @@ nc_hireion_camb_set_z_from_tau (NcHIReionCamb *reion_camb, NcHICosmo *cosmo, con
  * @reion_camb: a #NcHIReionCamb
  * @cosmo: a #NcHICosmo
  * 
- * Changes the parametrization to use $\tau_\mathrm{reion}$ intead of $z_\mathrm{reion}$.
+ * Changes the parametrization to use $\tau_\mathrm{reion}$ instead of $z_\mathrm{reion}$.
  * 
  */
 void 

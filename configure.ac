@@ -813,8 +813,9 @@ if test "xno" = "xyes"; then
   AC_DEFINE([HAVE_SUNDIALS],[1],[SUNDIALS presence])
   AC_DEFINE([HAVE_SUNDIALS_2_5_0],[1],[SUNDIALS version])
   AC_DEFINE([HAVE_SUNDIALS_2_6_0],[1],[SUNDIALS version])
+  AC_DEFINE([HAVE_SUNDIALS_2_7_0],[1],[SUNDIALS version])
 fi
-m4_foreach([SUNDIALS_VERSION_V], [[2.5.0, HAVE_SUNDIALS_2_5_0], [2.6.0, HAVE_SUNDIALS_2_6_0], [2.6.1, HAVE_SUNDIALS_2_6_0], [2.6.2, HAVE_SUNDIALS_2_6_0]],
+m4_foreach([SUNDIALS_VERSION_V], [[2.5.0, HAVE_SUNDIALS_2_5_0], [2.6.0, HAVE_SUNDIALS_2_6_0], [2.6.1, HAVE_SUNDIALS_2_6_0], [2.6.2, HAVE_SUNDIALS_2_6_0], [2.7.0, HAVE_SUNDIALS_2_7_0]],
   [
     SUNDIALS_VERSION=m4_argn([1],SUNDIALS_VERSION_V)
     SUNDIALS_DEFINE=m4_argn([2],SUNDIALS_VERSION_V)
@@ -825,7 +826,7 @@ m4_foreach([SUNDIALS_VERSION_V], [[2.5.0, HAVE_SUNDIALS_2_5_0], [2.6.0, HAVE_SUN
       ],
       [
         if test "x$SUNDIALS_VERSION_FOUND" != "xnone"; then
-          AC_MSG_ERROR([Cannot identify SUNDIALS version (2.5.x|2.6.x) double match])
+          AC_MSG_ERROR([Cannot identify SUNDIALS version (2.5.x|2.6.x|2.7.x) double match])
         fi
         AC_MSG_RESULT([$SUNDIALS_VERSION])
         AC_DEFINE([HAVE_SUNDIALS], [1], [SUNDIALS presence])
@@ -835,7 +836,7 @@ m4_foreach([SUNDIALS_VERSION_V], [[2.5.0, HAVE_SUNDIALS_2_5_0], [2.6.0, HAVE_SUN
   ])dnl
 
 if test "x$SUNDIALS_VERSION_FOUND" = "xnone"; then
-  AC_MSG_ERROR([Cannot identify SUNDIALS version (2.5.x|2.6.x) none found])
+  AC_MSG_ERROR([Cannot identify SUNDIALS version (2.5.x|2.6.x|2.7.x) none found])
 fi
 
 AC_CHECK_TYPE([CVDlsDenseJacFn],[],[AC_MSG_ERROR([sundials too old, please install version >= 2.4.0])], [#include <cvodes/cvodes_direct.h>])
