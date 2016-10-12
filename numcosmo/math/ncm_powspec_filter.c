@@ -78,19 +78,20 @@ G_DEFINE_TYPE (NcmPowspecFilter, ncm_powspec_filter, G_TYPE_OBJECT);
 static void
 ncm_powspec_filter_init (NcmPowspecFilter *psf)
 {
-  psf->ps         = NULL;
-  psf->lnr0       = 0.0;
-  psf->lnk0       = 0.0;
-  psf->Lk         = 0.0;
-  psf->zi         = 0.0;
-  psf->zf         = 0.0;
-  psf->reltol     = 0.0;
-  psf->type       = NCM_POWSPEC_FILTER_TYPE_LEN;
-  psf->fftlog     = NULL;
-  psf->calibrated = FALSE;
-  psf->var        = ncm_spline2d_bicubic_notaknot_new ();
-  psf->dvar       = ncm_spline2d_bicubic_notaknot_new ();
-  psf->ctrl       = ncm_model_ctrl_new (NULL);
+  psf->ps          = NULL;
+  psf->lnr0        = 0.0;
+  psf->lnk0        = 0.0;
+  psf->Lk          = 0.0;
+  psf->zi          = 0.0;
+  psf->zf          = 0.0;
+  psf->reltol      = 0.0;
+  psf->type        = NCM_POWSPEC_FILTER_TYPE_LEN;
+  psf->fftlog      = NULL;
+  psf->calibrated  = FALSE;
+  psf->var         = ncm_spline2d_bicubic_notaknot_new ();
+  psf->dvar        = ncm_spline2d_bicubic_notaknot_new ();
+  psf->ctrl        = ncm_model_ctrl_new (NULL);
+  psf->constructed = FALSE;
 }
 
 static void
@@ -160,6 +161,22 @@ _ncm_powspec_filter_get_property (GObject *object, guint prop_id, GValue *value,
 }
 
 static void
+_ncm_powspec_filter_constructed (GObject *object)
+{
+  /* Chain up : start */
+  G_OBJECT_CLASS (ncm_powspec_filter_parent_class)->constructed (object);
+  {
+    NcmPowspecFilter *psf     = NCM_POWSPEC_FILTER (object);
+    NcmPowspecFilterType type = psf->type;
+
+    psf->constructed = TRUE;
+    psf->type        = NCM_POWSPEC_FILTER_TYPE_LEN;
+
+    ncm_powspec_filter_set_type (psf, type);
+  }
+}
+
+static void
 _ncm_powspec_filter_dispose (GObject *object)
 {
   NcmPowspecFilter *psf = NCM_POWSPEC_FILTER (object);
@@ -191,6 +208,7 @@ ncm_powspec_filter_class_init (NcmPowspecFilterClass *klass)
 
   object_class->set_property = &_ncm_powspec_filter_set_property;
   object_class->get_property = &_ncm_powspec_filter_get_property;
+  object_class->constructed  = &_ncm_powspec_filter_constructed;
   object_class->dispose      = &_ncm_powspec_filter_dispose;
   object_class->finalize     = &_ncm_powspec_filter_finalize;
 
@@ -310,7 +328,11 @@ ncm_powspec_filter_clear (NcmPowspecFilter **psf)
 void
 ncm_powspec_filter_set_type (NcmPowspecFilter *psf, NcmPowspecFilterType type)
 {
-  if (type != psf->type)
+  if (!psf->constructed)
+  {
+    psf->type = type;
+  }
+  else if (type != psf->type)
   {
     const gdouble lnk_min = log (ncm_powspec_get_kmin (psf->ps));
     const gdouble lnk_max = log (ncm_powspec_get_kmax (psf->ps));
