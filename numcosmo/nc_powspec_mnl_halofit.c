@@ -342,7 +342,7 @@ _nc_powspec_mnl_halofit_linear_scale (NcPowspecMNLHaloFit* pshf, NcHICosmo* cosm
 	gdouble lnR0 = 0.0;
 	gdouble lnR = (-z / 2.0 < NC_POWSPEC_MNL_HALOFIT_LOGRMIN) ? NC_POWSPEC_MNL_HALOFIT_LOGRMIN : -z / 2.0 + NCM_DEFAULT_PRECISION;
 	const gdouble reltol = pshf->reltol / 10.0;
-	const gdouble res_min = 1./ncm_powspec_get_kmax(NCM_POWSPEC(pshf->psml));
+	const gdouble res_min = 1. / ncm_powspec_get_kmax (NCM_POWSPEC (pshf->psml));
 	gdouble res = 0.0;
 
 	gsl_function_fdf FDF;
@@ -376,9 +376,10 @@ _nc_powspec_mnl_halofit_linear_scale (NcPowspecMNLHaloFit* pshf, NcHICosmo* cosm
 	res = exp (lnR);
 
 	if (res < res_min)
+	{
 		g_warning ("_nc_powspec_mnl_halofit_linear_scale: non-linear scale found R(z=%.3f)=%.2e was smaller than 1/k_max=%.2e", z, res, res_min);
 		res = res_min;
-
+	}
 	return res;
 }
 
