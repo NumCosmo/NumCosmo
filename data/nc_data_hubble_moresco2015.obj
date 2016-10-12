@@ -1,0 +1,13 @@
+{
+  'NcDataHubble', 
+  {
+    'desc':      <'Moresco 2015 -- arXiv:1503.01116'>, 
+    'long-desc': <''>, 
+    'init':      <true>, 
+    'n-points':  <uint32 2>, 
+    'w-mean':    <false>, 
+    'mean':      <[160.0, 186.5]>, 
+    'sigma':     <[ 33.6, 50.4 ]>, 
+    'z':         <[1.363, 1.965]>
+  } 
+}
