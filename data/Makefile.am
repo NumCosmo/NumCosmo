@@ -6,6 +6,8 @@ data_observational_DATA = \
 	BBN_spline2d.obj                       \
 	nc_data_bao_a_eisenstein2005.obj       \
 	nc_data_bao_dhr_dar_sdss_dr11_2015.obj \
+	nc_data_bao_dhr_dar_sdss_dr11_2015_LyaF_auto_cross.obj \
+	nc_data_bao_dmr_hr_sdss_dr12_2016.obj  \
 	nc_data_bao_dv_eisenstein2005.obj      \
 	nc_data_bao_dvdv_percival2007.obj      \
 	nc_data_bao_dvdv_percival2010.obj      \
