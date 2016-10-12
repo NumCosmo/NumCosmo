@@ -200,7 +200,7 @@ ncm_powspec_filter_class_init (NcmPowspecFilterClass *klass)
                                                         NULL,
                                                         "Output center value",
                                                         -G_MAXDOUBLE, G_MAXDOUBLE, 0.0,
-                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+                                                        G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
   g_object_class_install_property (object_class,
                                    PROP_ZI,
                                    g_param_spec_double ("zi",
@@ -228,7 +228,7 @@ ncm_powspec_filter_class_init (NcmPowspecFilterClass *klass)
                                                       NULL,
                                                       "Filter type",
                                                       NCM_TYPE_POWSPEC_FILTER_TYPE, NCM_POWSPEC_FILTER_TYPE_TOPHAT,
-                                                      G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+                                                      G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
   g_object_class_install_property (object_class,
                                    PROP_POWERSPECTRUM,
                                    g_param_spec_object ("powerspectrum",
@@ -337,6 +337,8 @@ ncm_powspec_filter_set_type (NcmPowspecFilter *psf, NcmPowspecFilterType type)
     ncm_fftlog_set_padding (psf->fftlog, 1.0);
     ncm_fftlog_set_nderivs (psf->fftlog, 1);
 
+    ncm_powspec_filter_set_best_lnr0 (psf);
+    
     ncm_model_ctrl_force_update (psf->ctrl);
     psf->calibrated = FALSE;
   }
@@ -442,13 +444,13 @@ ncm_powspec_filter_prepare (NcmPowspecFilter *psf, NcmModel *model)
 
     g_assert_cmpuint (N_z, >, 0);
     g_assert_cmpuint (N_k, >, 0);
-/*
+
     printf ("# Calibrating in zmin % 20.15g zmax % 20.15g, rmin % 20.15g rmax % 20.15g, N_z = %u, N_k = %u\n",
             psf->zi, psf->zf, 
             ncm_powspec_filter_get_r_min (psf), 
             ncm_powspec_filter_get_r_max (psf), 
             N_z, N_k);
-*/    
+    
     lnvar   = ncm_matrix_new (N_z, N_k);
     dlnvar  = ncm_matrix_new (N_z, N_k);
     lnr_vec = ncm_fftlog_get_vector_lnr (psf->fftlog);
