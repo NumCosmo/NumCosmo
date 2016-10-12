@@ -1,0 +1,16 @@
+{
+  'NcDataBaoDHrDAr', 
+  {
+    'desc'      : <'SDSS DR11 -- LyaF auto and cross-correlation -- Delubac et al.(2015), Font-Ribeira et al.(2014) and Aubourg et al.(2015), BAO Sample (D_H / r_sd, D_A / r_sd)'>, 
+    'init'      : <true>, 
+    'n-points'  : <4>, 
+    'mean'      : <[9.18, 11.27994012, 9.0, 10.8]>, 
+    'cov'       : <[
+                     [0.0784,   -0.07826, 0,      0],
+                     [-0.07826, 0.4225,   0,      0],
+                     [0,        0,        0.09,  -0.0468],
+                     [0,        0,       -0.0468, 0.16]
+                   ]>, 
+    'z'         : <[2.34, 2.34, 2.36, 2.36]>
+  }
+}

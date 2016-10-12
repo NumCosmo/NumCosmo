@@ -190,7 +190,7 @@ nc_hicosmo_de_set_wmap5_params (NcHICosmoDE *cosmo_de)
 
 /**
  * nc_hicosmo_de_omega_x2omega_k:
- * @cosmo_de: FIXME
+ * @cosmo_de: a #NcHICosmoDE
  *
  * FIXME
  *
@@ -205,7 +205,7 @@ nc_hicosmo_de_omega_x2omega_k (NcHICosmoDE *cosmo_de)
 
 /**
  * nc_hicosmo_de_cmb_params:
- * @cosmo_de: FIXME
+ * @cosmo_de: a #NcHICosmoDE
  *
  * FIXME
  *
@@ -220,7 +220,7 @@ nc_hicosmo_de_cmb_params (NcHICosmoDE *cosmo_de)
 
 /**
  * nc_hicosmo_de_new_add_bbn:
- * @lh: FIXME
+ * @lh: a #NcmLikelihood
  *
  * FIXME
  *

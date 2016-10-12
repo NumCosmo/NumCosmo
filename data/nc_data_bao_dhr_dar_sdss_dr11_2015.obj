@@ -1,7 +1,7 @@
 {
   'NcDataBaoDHrDAr', 
   {
-    'desc'      : <'SDSS DR11 -- Delubac (2015), BAO Sample (D_H / r_sd, D_A / r_sd)'>, 
+    'desc'      : <'SDSS DR11 -- Combined LyaF -- Delubac (2015) and Font-Ribeira (2014), BAO Sample (D_H / r_sd, D_A / r_sd)'>, 
     'init'      : <true>, 
     'n-points'  : <2>, 
     'mean'      : <[9.145, 10.9248502994]>, 
