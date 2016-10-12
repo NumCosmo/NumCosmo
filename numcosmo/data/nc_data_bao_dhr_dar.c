@@ -2,12 +2,12 @@
  *            nc_data_bao_dhr_dar.c
  *
  *  Sat May 23 14:38:48 2015
- *  Copyright  2015  Sandro Dias Pinto Vitenti
- *  <sandro@isoftware.com.br>
+ *  Copyright  2015  Sandro Dias Pinto Vitenti and Mariana Penna Lima
+ *  <sandro@isoftware.com.br>, <pennalima@gmail.com>
  ****************************************************************************/
 /*
  * nc_data_bao_dhr_dar.c
- * Copyright (C) 2015 Sandro Dias Pinto Vitenti <sandro@isoftware.com.br>
+ * Copyright (C) 2015 Sandro Dias Pinto Vitenti <sandro@isoftware.com.br>, Mariana Penna Lima <pennalima@gmail.com>
  *
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -58,7 +58,7 @@ G_DEFINE_TYPE (NcDataBaoDHrDAr, nc_data_bao_dhr_dar, NCM_TYPE_DATA_GAUSS_COV);
 static void
 nc_data_bao_dhr_dar_init (NcDataBaoDHrDAr *dhda)
 {
-  dhda->dist = nc_distance_new (2.0);
+  dhda->dist = nc_distance_new (3.0);
   dhda->x    = NULL;
 }
 
@@ -172,14 +172,23 @@ _nc_data_bao_dhr_dar_mean_func (NcmDataGaussCov *gauss, NcmMSet *mset, NcmVector
 {
   NcDataBaoDHrDAr *dhda = NC_DATA_BAO_DHR_DAR (gauss);
   NcHICosmo *cosmo      = NC_HICOSMO (ncm_mset_peek (mset, nc_hicosmo_id ()));
+  gint i;
 
-  const gdouble z1      = ncm_vector_get (dhda->x, 0);
-  const gdouble z2      = ncm_vector_get (dhda->x, 1);
-  const gdouble DH_r    = nc_distance_DH_r (dhda->dist, cosmo, z1);
-  const gdouble DA_r    = nc_distance_DA_r (dhda->dist, cosmo, z2);
+  for (i = 0; i < gauss->np; i++)
+  {
+    if (i % 2 == 0)
+    {
+      const gdouble z1      = ncm_vector_get (dhda->x, i);
+      const gdouble z2      = ncm_vector_get (dhda->x, i + 1);
+      const gdouble DH_r    = nc_distance_DH_r (dhda->dist, cosmo, z1);
+      const gdouble DA_r    = nc_distance_DA_r (dhda->dist, cosmo, z2);
 
-  ncm_vector_set (vp, 0, DH_r);
-  ncm_vector_set (vp, 1, DA_r);
+      ncm_vector_set (vp, i, DH_r);
+      ncm_vector_set (vp, i + 1, DA_r);
+    }
+    else
+      continue;
+  }
 }
 
 static void
@@ -232,6 +241,9 @@ nc_data_bao_dhr_dar_new_from_id (NcDistance *dist, NcDataBaoId id)
   {
     case NC_DATA_BAO_DHR_DAR_SDSS_DR11_2015:
       filename = ncm_cfg_get_data_filename ("nc_data_bao_dhr_dar_sdss_dr11_2015.obj", TRUE);
+      break;
+    case NC_DATA_BAO_DHR_DAR_SDSS_DR11_2015_LYAF_AUTO_CROSS:
+      filename = ncm_cfg_get_data_filename ("nc_data_bao_dhr_dar_sdss_dr11_2015_LyaF_auto_cross.obj", TRUE);
       break;
     default:
       g_error ("nc_data_bao_dhr_dar_new_from_id: id %d not recognized.", id);
