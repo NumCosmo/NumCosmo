@@ -1824,12 +1824,12 @@ ncm_mset_param_set_vector (NcmMSet *mset, NcmVector *params)
   guint i;
   guint j = 0;
 
-  g_assert (ncm_vector_len (params) == ncm_mset_total_len (mset));
+  g_assert_cmpuint (ncm_vector_len (params), ==, ncm_mset_total_len (mset));
 
   for (i = 0; i < mset->model_array->len; i++)
   {
     NcmMSetItem *item = g_ptr_array_index (mset->model_array, i);
-    if (item->dup)
+    if (item->dup || (item->added_total_params == 0))
       continue;
     else
     {
@@ -1860,7 +1860,7 @@ ncm_mset_param_get_vector (NcmMSet *mset, NcmVector *params)
   for (i = 0; i < mset->model_array->len; i++)
   {
     NcmMSetItem *item = g_ptr_array_index (mset->model_array, i);
-    if (item->dup)
+    if (item->dup || (item->added_total_params == 0))
       continue;
     else
     {
