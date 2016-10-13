@@ -85,6 +85,7 @@ struct _NcmPowspecFilter
   NcmSpline2d *var;
   NcmSpline2d *dvar;
   NcmModelCtrl *ctrl;
+  gboolean constructed;
 };
 
 GType ncm_powspec_filter_get_type (void) G_GNUC_CONST;
