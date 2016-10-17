@@ -1371,13 +1371,13 @@ ncm_fit_esmcmc_validate (NcmFitESMCMC *esmcmc, gulong pi, gulong pf)
       valid = FALSE;
       if (esmcmc->mtype > NCM_FIT_RUN_MSGS_SIMPLE)
       {
-        ncm_message ("# Catalogue row %5lu: m2lnL = %20.15g, recalculated to % 20.15g, diff = %8.5e <====== FAIL.\n",
+        ncm_message ("# Catalog row %5lu: m2lnL = %20.15g, recalculated to % 20.15g, diff = %8.5e <====== FAIL.\n",
                      k, row_m2lnL, m2lnL, diff);
       }
     }
     else if (esmcmc->mtype > NCM_FIT_RUN_MSGS_SIMPLE)
     {
-      ncm_message ("# Catalogue row %5lu: m2lnL = %20.15g, recalculated to % 20.15g, diff = %8.5e PASSED.\n",
+      ncm_message ("# Catalog row %5lu: m2lnL = %20.15g, recalculated to % 20.15g, diff = %8.5e PASSED.\n",
                    k, row_m2lnL, m2lnL, diff);
     }
   }
