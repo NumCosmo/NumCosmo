@@ -178,7 +178,9 @@ AC_FC_LINE_LENGTH([unlimited])
 
 AC_LANG_PUSH([Fortran])
 dnl  AX_APPEND_COMPILE_FLAGS([-finit-local-zero -finit-integer=0 -finit-real=zero -finit-logical=false -fno-automatic], [FCFLAGS])
-  AX_OPENMP()
+  AX_APPEND_COMPILE_FLAGS([-recursive -threads -automatic -fautomatic -frecursive], [FCFLAGS])
+  AC_OPENMP()
+  AC_SUBST(OPENMP_FCFLAGS)
 AC_LANG_POP([Fortran])
 
 dnl ***************************************************************************
@@ -356,9 +358,8 @@ else
   AC_DEFINE_UNQUOTED([NCM_THREAD_POOL_MAX],[$CPU_COUNT], [Number of threads in the pool])  
 fi
 
-AX_OPENMP()
+AC_OPENMP()
 AC_SUBST(OPENMP_CFLAGS)
-AC_SUBST(OPENMP_FCFLAGS)
 
 dnl ***************************************************************************
 dnl Check for backtrace support.
