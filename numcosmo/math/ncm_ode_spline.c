@@ -60,8 +60,6 @@ enum
 
 G_DEFINE_TYPE (NcmOdeSpline, ncm_ode_spline, G_TYPE_OBJECT);
 
-void _ncm_ode_spline_cvode_err (gint error_code, const gchar *module, const gchar *function, gchar *msg, gpointer eh_data);
-
 static void
 ncm_ode_spline_init (NcmOdeSpline *os)
 {
@@ -80,13 +78,7 @@ ncm_ode_spline_init (NcmOdeSpline *os)
   os->s_init     = FALSE;
   os->hnil       = FALSE;
   os->stop_hnil  = FALSE;
-  os->ctrl       = ncm_model_ctrl_new (NULL);
-
-  {
-    gint flag = CVodeSetErrHandlerFn (os->cvode, &_ncm_ode_spline_cvode_err, os);
-    NCM_CVODE_CHECK (&flag, "ncm_ode_spline_init[CVodeSetErrHandlerFn]", 1, );
-  }
-  
+  os->ctrl       = ncm_model_ctrl_new (NULL);  
 }
 
 static void
@@ -271,20 +263,6 @@ ncm_ode_spline_class_init (NcmOdeSplineClass *klass)
                                                          G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 }
 
-void 
-_ncm_ode_spline_cvode_err (gint error_code, const gchar *module, const gchar *function, gchar *msg, gpointer eh_data)
-{
-  NcmOdeSpline *os = NCM_ODE_SPLINE (eh_data);
-  if (error_code != CV_WARNING)
-  {
-    g_error ("NcmOdeSpline[%d]: %s[%s]: `%s'", error_code, module, function, msg);
-  }
-  else
-  {
-    os->hnil = TRUE;
-  }
-}
-
 typedef struct _NcmOdeSplineDydxData NcmOdeSplineDydxData;
 
 /**
@@ -363,16 +341,22 @@ ncm_ode_spline_prepare (NcmOdeSpline *os, gpointer userdata)
 {
   NcmOdeSplineDydxData f_data = {os->dydx, userdata};
   gdouble x, x0;
+  gint flag;
 
   NV_Ith_S (os->y, 0) = os->yi;
   
   if (!os->cvode_init)
   {
-    CVodeInit (os->cvode, &_ncm_ode_spline_f, os->xi, os->y);
+    flag = CVodeInit (os->cvode, &_ncm_ode_spline_f, os->xi, os->y);
+    NCM_CVODE_CHECK (&flag, "CVodeInit", 1, );
+    
     os->cvode_init = TRUE;
   }
   else
-    CVodeReInit (os->cvode, os->xi, os->y);
+  {
+    flag = CVodeReInit (os->cvode, os->xi, os->y);
+    NCM_CVODE_CHECK (&flag, "CVodeReInit", 1, );
+  }
 
   g_array_set_size (os->x_array, 0);
   g_array_set_size (os->y_array, 0);
@@ -380,10 +364,17 @@ ncm_ode_spline_prepare (NcmOdeSpline *os, gpointer userdata)
   g_array_append_val (os->x_array, os->xi);
   g_array_append_val (os->y_array, NV_Ith_S (os->y, 0));
 
-  CVodeSStolerances (os->cvode, os->reltol, os->abstol);
-  CVodeSetMaxNumSteps (os->cvode, NCM_INTEGRAL_PARTITION);
-  CVodeSetStopTime (os->cvode, os->xf);
-  CVodeSetUserData (os->cvode, &f_data);
+  flag = CVodeSStolerances (os->cvode, os->reltol, os->abstol);
+  NCM_CVODE_CHECK (&flag, "CVodeSStolerances", 1, );
+  
+  flag = CVodeSetMaxNumSteps (os->cvode, NCM_INTEGRAL_PARTITION);
+  NCM_CVODE_CHECK (&flag, "CVodeSetMaxNumSteps", 1, );
+  
+  flag = CVodeSetStopTime (os->cvode, os->xf);
+  NCM_CVODE_CHECK (&flag, "CVodeSetStopTime", 1, );
+  
+  flag = CVodeSetUserData (os->cvode, &f_data);
+  NCM_CVODE_CHECK (&flag, "CVodeSetUserData", 1, );
 
   x0 = os->xi;
   if (!gsl_finite (os->dydx (NV_Ith_S (os->y, 0), x0, f_data.userdata)))
@@ -392,7 +383,7 @@ ncm_ode_spline_prepare (NcmOdeSpline *os, gpointer userdata)
   os->hnil = FALSE;
   while (TRUE)
   {
-    gint flag = CVode (os->cvode, os->xf, os->y, &x, CV_ONE_STEP);
+    flag = CVode (os->cvode, os->xf, os->y, &x, CV_ONE_STEP);
     NCM_CVODE_CHECK (&flag, "ncm_ode_spline_prepare[CVode]", 1, );
 
     if (G_UNLIKELY (os->hnil))
