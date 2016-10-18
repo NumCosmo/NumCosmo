@@ -178,7 +178,19 @@ AC_FC_LINE_LENGTH([unlimited])
 
 AC_LANG_PUSH([Fortran])
 dnl  AX_APPEND_COMPILE_FLAGS([-finit-local-zero -finit-integer=0 -finit-real=zero -finit-logical=false -fno-automatic], [FCFLAGS])
-  AX_APPEND_COMPILE_FLAGS([-recursive -threads -automatic -fautomatic -frecursive], [FCFLAGS])
+dnl ***************************************************************************
+dnl For intel family compilers we must -diag-error=all to 
+dnl make it fails on bad flags
+dnl ***************************************************************************
+  FCFLAGS_CHECK=""
+  
+  case $FC in #(
+    *ifort*) 
+      AX_APPEND_COMPILE_FLAGS([-diag-error=all], [FCFLAGS_CHECK])
+    ;;
+  esac
+    
+  AX_APPEND_COMPILE_FLAGS([-reentrancy -recursive -threads -automatic -fautomatic -frecursive], [FCFLAGS], [$FCFLAGS_CHECK])
   AC_OPENMP()
   AC_SUBST(OPENMP_FCFLAGS)
 AC_LANG_POP([Fortran])
