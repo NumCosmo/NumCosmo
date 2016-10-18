@@ -43,6 +43,9 @@
 #include "math/ncm_cfg.h"
 #include "math/ncm_mset_func_list.h"
 
+#include <gsl/gsl_errno.h>
+#include <gsl/gsl_math.h>
+
 G_DEFINE_ABSTRACT_TYPE (NcHICosmo, nc_hicosmo, NCM_TYPE_MODEL);
 
 static void
@@ -50,6 +53,8 @@ nc_hicosmo_init (NcHICosmo *cosmo)
 {
   cosmo->prim  = NULL;
   cosmo->reion = NULL;
+  cosmo->T     = gsl_root_fsolver_brent;
+  cosmo->s     = gsl_root_fsolver_alloc (cosmo->T);
 }
 
 static void
@@ -67,7 +72,9 @@ nc_hicosmo_dispose (GObject *object)
 static void
 nc_hicosmo_finalize (GObject *object)
 {
-
+  NcHICosmo *cosmo = NC_HICOSMO (object);
+  gsl_root_fsolver_free (cosmo->s);
+  
   /* Chain up : end */
   G_OBJECT_CLASS (nc_hicosmo_parent_class)->finalize (object);
 }
@@ -304,7 +311,7 @@ NCM_MODEL_SET_IMPL_FUNC(NC_HICOSMO,NcHICosmo,nc_hicosmo,NcHICosmoFunc0,xb)
  * @model_class: a #NcmModelClass
  * @f: FIXME
  *
- * FIXME
+ * Normalized Hubble function squared, $E^2(z)$.
  *
  */
 NCM_MODEL_SET_IMPL_FUNC(NC_HICOSMO,NcHICosmo,nc_hicosmo,NcHICosmoFunc1Z,E2)
@@ -314,7 +321,7 @@ NCM_MODEL_SET_IMPL_FUNC(NC_HICOSMO,NcHICosmo,nc_hicosmo,NcHICosmoFunc1Z,E2)
  * @model_class: a #NcmModelClass
  * @f: FIXME
  *
- * FIXME
+ * First derivative with respect to the redshift of the normalized Hubble function squared, $\frac{dE^2(z)}{dz}$. 
  *
  */
 NCM_MODEL_SET_IMPL_FUNC(NC_HICOSMO,NcHICosmo,nc_hicosmo,NcHICosmoFunc1Z,dE2_dz)
@@ -324,7 +331,7 @@ NCM_MODEL_SET_IMPL_FUNC(NC_HICOSMO,NcHICosmo,nc_hicosmo,NcHICosmoFunc1Z,dE2_dz)
  * @model_class: a #NcmModelClass
  * @f: FIXME
  *
- * FIXME
+ * Second derivative with respect to the redshift of the normalized Hubble function squared, $\frac{d^2E^2(z)}{dz^2}$.
  *
  */
 NCM_MODEL_SET_IMPL_FUNC(NC_HICOSMO,NcHICosmo,nc_hicosmo,NcHICosmoFunc1Z,d2E2_dz2)
@@ -443,6 +450,86 @@ nc_hicosmo_log_all_models (GType parent)
 {
   g_message ("# Registred NcHICosmo:%s are:\n", g_type_name (parent));
   _nc_hicosmo_log_all_models_go (parent, 0);
+}
+
+typedef struct _zt_params
+{
+  NcHICosmo *cosmo;
+}zt_params;
+
+static gdouble
+_nc_hicosmo_zt_func (gdouble z, void *params)
+{
+  zt_params *p = (zt_params *) params;
+  return nc_hicosmo_q (p->cosmo, z);
+}
+
+/**
+ * nc_hicosmo_zt:
+ * @cosmo: a #NcHICosmo
+ * @z_max: maximum redshift
+ *
+ * Computes the deceleration-acceleration transition redshift, $z_t$.
+ * If $z_t$ is not found, i.e., $q(z) \neq 0$ in the entire redshift interval, 
+ * the function returns NAN. 
+ * 
+ * Redshift interval: $[0.0, @z_max]$.
+ *
+ * Returns: the transition redshift $z_t$
+ */
+gdouble
+nc_hicosmo_zt (NcHICosmo *cosmo, gdouble z_max)
+{
+  gint status;
+  gint iter = 0, max_iter = 100;
+  gdouble zt;
+  gdouble z_lo = 0.0;
+  gsl_function F;
+  zt_params params;
+
+  params.cosmo = cosmo;
+  
+  F.function = &_nc_hicosmo_zt_func;
+  F.params = &params;
+
+  gsl_root_fsolver_set (cosmo->s, &F, z_lo, z_max);
+
+  /*
+  printf ("using %s method\n", 
+          gsl_root_fsolver_name (cosmo->s));
+
+  printf ("%5s [%9s, %9s] %9s %10s %9s\n",
+          "iter", "lower", "upper", "root", 
+          "err", "err(est)");
+
+  printf ("zmin = %.5g zmax = %.5g\n", z_lo, z_max);
+  */
+  
+  do
+    {
+      iter++;
+      status = gsl_root_fsolver_iterate (cosmo->s);
+      zt = gsl_root_fsolver_root (cosmo->s);
+      z_lo = gsl_root_fsolver_x_lower (cosmo->s);
+      z_max = gsl_root_fsolver_x_upper (cosmo->s);
+      status = gsl_root_test_interval (z_lo, z_max,
+                                       0, 0.001);
+
+      /*
+      if (status == GSL_SUCCESS)
+        printf ("Converged:\n");
+
+      printf ("%5d [%.7f, %.7f] %.7f %.7f\n",
+              iter, z_lo, z_max,
+              zt, z_max - z_lo);
+      */
+    }
+  while (status == GSL_CONTINUE && iter < max_iter);
+
+  if (status != GSL_SUCCESS)
+    return GSL_NAN;
+  else
+    return zt;  
 }
 
 /*
