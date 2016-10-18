@@ -467,32 +467,45 @@ _nc_hicosmo_zt_func (gdouble z, void *params)
 /**
  * nc_hicosmo_zt:
  * @cosmo: a #NcHICosmo
- * @z_max: maximum redshift
+ * @z_max: maximum redshift $z_\mathrm{max}$
  *
- * Computes the deceleration-acceleration transition redshift, $z_t$.
+ * Computes the deceleration-acceleration transition redshift, $z_t$ (find 
+ * numerically the first root of $q(z)$ in the interval $[0,z_\mathrm{max}]$).
  * If $z_t$ is not found, i.e., $q(z) \neq 0$ in the entire redshift interval, 
- * the function returns NAN. 
+ * the function returns NAN.
  * 
  * Redshift interval: $[0.0, @z_max]$.
  *
- * Returns: the transition redshift $z_t$
+ * Returns: the transition redshift $z_t$ or NAN if not found.
  */
 gdouble
 nc_hicosmo_zt (NcHICosmo *cosmo, gdouble z_max)
 {
   gint status;
-  gint iter = 0, max_iter = 100;
+  gint iter = 0, max_iter = 10000;
   gdouble zt;
+  gdouble z_hi = 0.0;
   gdouble z_lo = 0.0;
+  const gdouble step   = (1.0e-1 > z_max) ? (z_max / 10.0) : 1.0e-1;
+  const gdouble reltol = 1.0e-7;
+  const gdouble q0     = nc_hicosmo_q (cosmo, z_lo);
   gsl_function F;
   zt_params params;
 
   params.cosmo = cosmo;
   
   F.function = &_nc_hicosmo_zt_func;
-  F.params = &params;
+  F.params   = &params;
 
-  gsl_root_fsolver_set (cosmo->s, &F, z_lo, z_max);
+  do
+  {
+    z_hi += step;
+  } while (q0 * nc_hicosmo_q (cosmo, z_hi) >= 0.0 && (z_hi < z_max));
+
+  if (z_hi > z_max)
+    return GSL_NAN;
+  
+  gsl_root_fsolver_set (cosmo->s, &F, z_lo, z_hi);
 
   /*
   printf ("using %s method\n", 
@@ -504,26 +517,26 @@ nc_hicosmo_zt (NcHICosmo *cosmo, gdouble z_max)
 
   printf ("zmin = %.5g zmax = %.5g\n", z_lo, z_max);
   */
-  
+
   do
-    {
-      iter++;
-      status = gsl_root_fsolver_iterate (cosmo->s);
-      zt = gsl_root_fsolver_root (cosmo->s);
-      z_lo = gsl_root_fsolver_x_lower (cosmo->s);
-      z_max = gsl_root_fsolver_x_upper (cosmo->s);
-      status = gsl_root_test_interval (z_lo, z_max,
-                                       0, 0.001);
+  {
+    iter++;
+    status = gsl_root_fsolver_iterate (cosmo->s);
 
-      /*
-      if (status == GSL_SUCCESS)
-        printf ("Converged:\n");
+    zt     = gsl_root_fsolver_root (cosmo->s);
+    z_lo   = gsl_root_fsolver_x_lower (cosmo->s);
+    z_hi   = gsl_root_fsolver_x_upper (cosmo->s);
+    status = gsl_root_test_interval (z_lo, z_hi, 0.0, reltol);
 
-      printf ("%5d [%.7f, %.7f] %.7f %.7f\n",
-              iter, z_lo, z_max,
-              zt, z_max - z_lo);
-      */
-    }
+    /*
+     if (status == GSL_SUCCESS)
+     printf ("Converged:\n");
+
+     printf ("%5d [%.7f, %.7f] %.7f %.7f\n",
+     iter, z_lo, z_max,
+     zt, z_max - z_lo);
+     */
+  }
   while (status == GSL_CONTINUE && iter < max_iter);
 
   if (status != GSL_SUCCESS)
@@ -1068,6 +1081,7 @@ _NC_HICOSMO_FUNC1_TO_FLIST (dec)
 _NC_HICOSMO_FUNC1_TO_FLIST (wec)
 _NC_HICOSMO_FUNC1_TO_FLIST (qp)
 _NC_HICOSMO_FUNC1_TO_FLIST (j)
+_NC_HICOSMO_FUNC1_TO_FLIST (zt)
 
 void
 _nc_hicosmo_register_functions (void)
@@ -1113,4 +1127,5 @@ _nc_hicosmo_register_functions (void)
   ncm_mset_func_list_register ("wec",         "\\mathrm{wec}",                   "NcHICosmo", "WEC violation function",                    G_TYPE_NONE, _nc_hicosmo_flist_wec,      1, 1);
   ncm_mset_func_list_register ("qp",          "\\mathrm{d}q/\\mathrm{d}z",       "NcHICosmo", "Derivative of the deceleration function",   G_TYPE_NONE, _nc_hicosmo_flist_qp,       1, 1);
   ncm_mset_func_list_register ("j",           "j",                               "NcHICosmo", "Jerk function",                             G_TYPE_NONE, _nc_hicosmo_flist_j,        1, 1);
+  ncm_mset_func_list_register ("zt",          "z_t",                             "NcHICosmo", "Transition redshift",                       G_TYPE_NONE, _nc_hicosmo_flist_zt,       1, 1);
 }

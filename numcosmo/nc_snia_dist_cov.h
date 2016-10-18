@@ -108,6 +108,7 @@ void nc_snia_dist_cov_free (NcSNIADistCov *dcov);
 void nc_snia_dist_cov_clear (NcSNIADistCov **dcov);
 
 void nc_snia_dist_cov_set_empty_fac (NcSNIADistCov *dcov, gboolean enable);
+void nc_snia_dist_cov_set_dist (NcSNIADistCov *dcov, NcDistance *dist);
 
 void nc_snia_dist_cov_prepare (NcSNIADistCov *dcov, NcmMSet *mset);
 void nc_snia_dist_cov_prepare_if_needed (NcSNIADistCov *dcov, NcmMSet *mset);
