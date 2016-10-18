@@ -71,3 +71,6 @@ dist = Nc.Distance.new (2000.0)
 dist.prepare (cosmo)
 
 print dist.theta100CMB (cosmo)
+print cosmo.zt (5.0)
+
+

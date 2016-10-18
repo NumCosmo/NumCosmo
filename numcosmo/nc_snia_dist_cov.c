@@ -65,7 +65,7 @@ G_DEFINE_TYPE (NcSNIADistCov, nc_snia_dist_cov, NCM_TYPE_MODEL);
 static void
 nc_snia_dist_cov_init (NcSNIADistCov *dcov)
 {
-  dcov->dist      = NULL;
+  dcov->dist      = nc_distance_new (2.0);
   dcov->var_int   = g_array_new (FALSE, FALSE, sizeof (gdouble));
   dcov->empty_fac = FALSE;
 }
@@ -112,10 +112,15 @@ _nc_snia_dist_cov_set_property (GObject * object, guint prop_id, const GValue * 
   switch (prop_id)
   {
     case PROP_DIST:
-      nc_distance_clear (&dcov->dist);
-      dcov->dist = g_value_dup_object (value);
-      g_assert (dcov->dist != NULL);
+    {
+      NcDistance *dist = g_value_dup_object (value);
+      if (dist != NULL)
+      {
+        nc_distance_clear (&dcov->dist);
+        dcov->dist = dist;
+      }
       break;
+    }
     case PROP_EMPTY_FAC:
       dcov->empty_fac = g_value_get_boolean (value);
       break;
@@ -320,6 +325,23 @@ void
 nc_snia_dist_cov_set_empty_fac (NcSNIADistCov *dcov, gboolean enable)
 {
   dcov->empty_fac = enable;
+}
+
+/**
+ * nc_snia_dist_cov_set_dist:
+ * @dcov: a #NcSNIADistCov
+ * @dist: a #NcDistance
+ *
+ * Sets the #NcDistance object to @dist.
+ *
+ */
+void 
+nc_snia_dist_cov_set_dist (NcSNIADistCov *dcov, NcDistance *dist)
+{
+  g_assert (dist != NULL);
+  nc_distance_clear (&dcov->dist);
+  
+  dcov->dist = nc_distance_ref (dist);
 }
 
 /**

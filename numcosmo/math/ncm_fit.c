@@ -2111,6 +2111,20 @@ ncm_fit_numdiff_m2lnL_lndet_covar (NcmFit *fit)
   return lndetC;
 }
 
+/**
+ * ncm_fit_get_covar:
+ * @fit: a #NcmFit
+ *
+ * Returns a copy of the covariance matrix (pre-calculated by, e.g, ncm_fit_numdiff_m2lnL_covar()).
+ *
+ * Returns: (transfer full): the covariance matrix
+ */
+NcmMatrix *
+ncm_fit_get_covar (NcmFit *fit)
+{
+  g_assert (fit->fstate->has_covar);
+  return ncm_matrix_dup (fit->fstate->covar);
+}
 
 /**
  * ncm_fit_residual_ks_test:
