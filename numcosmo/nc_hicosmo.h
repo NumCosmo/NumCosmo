@@ -34,6 +34,8 @@
 #include <numcosmo/math/ncm_likelihood.h>
 #include <numcosmo/math/ncm_powspec_filter.h>
 
+#include <gsl/gsl_roots.h>
+
 G_BEGIN_DECLS
 
 #define NC_TYPE_HICOSMO             (nc_hicosmo_get_type ())
@@ -177,6 +179,8 @@ struct _NcHICosmo
   gboolean is_eternal;
   NcHIPrim *prim;
   NcHIReion *reion;
+  const gsl_root_fsolver_type *T;
+  gsl_root_fsolver *s;
 };
 
 GType nc_hicosmo_get_type (void) G_GNUC_CONST;
@@ -208,6 +212,7 @@ void nc_hicosmo_free (NcHICosmo *cosmo);
 void nc_hicosmo_clear (NcHICosmo **cosmo);
 
 void nc_hicosmo_log_all_models (GType parent);
+gdouble nc_hicosmo_zt (NcHICosmo *cosmo, gdouble z_max);
 
 /*
  * Cosmological model constant functions
