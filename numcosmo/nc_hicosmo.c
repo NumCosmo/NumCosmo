@@ -962,6 +962,15 @@ nc_hicosmo_zt (NcHICosmo *cosmo, gdouble z_max)
  *
  * Returns: FIXME
  */
+/**
+ * nc_hicosmo_mqE2:
+ * @cosmo: a #NcHICosmo
+ * @z: redshift $z$
+ *
+ * Calculates $-q(z)E^2(z)$.
+ *
+ * Returns: $-q(z)E^2(z)$.
+ */
 
 /**
  * nc_hicosmo_abs_alpha:
@@ -1081,6 +1090,7 @@ _NC_HICOSMO_FUNC1_TO_FLIST (dec)
 _NC_HICOSMO_FUNC1_TO_FLIST (wec)
 _NC_HICOSMO_FUNC1_TO_FLIST (qp)
 _NC_HICOSMO_FUNC1_TO_FLIST (j)
+_NC_HICOSMO_FUNC1_TO_FLIST (mqE2)
 _NC_HICOSMO_FUNC1_TO_FLIST (zt)
 
 void
@@ -1127,5 +1137,6 @@ _nc_hicosmo_register_functions (void)
   ncm_mset_func_list_register ("wec",         "\\mathrm{wec}",                   "NcHICosmo", "WEC violation function",                    G_TYPE_NONE, _nc_hicosmo_flist_wec,      1, 1);
   ncm_mset_func_list_register ("qp",          "\\mathrm{d}q/\\mathrm{d}z",       "NcHICosmo", "Derivative of the deceleration function",   G_TYPE_NONE, _nc_hicosmo_flist_qp,       1, 1);
   ncm_mset_func_list_register ("j",           "j",                               "NcHICosmo", "Jerk function",                             G_TYPE_NONE, _nc_hicosmo_flist_j,        1, 1);
+  ncm_mset_func_list_register ("mqE2",        "-qE^2",                           "NcHICosmo", "Effective geometric OmegaL",                G_TYPE_NONE, _nc_hicosmo_flist_mqE2,     1, 1);
   ncm_mset_func_list_register ("zt",          "z_t",                             "NcHICosmo", "Transition redshift",                       G_TYPE_NONE, _nc_hicosmo_flist_zt,       1, 1);
 }

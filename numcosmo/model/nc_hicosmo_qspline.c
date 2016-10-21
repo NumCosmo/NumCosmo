@@ -54,9 +54,11 @@ _nc_hicosmo_qspline_prepare (NcHICosmoQSpline *qs)
 {
   if (!ncm_model_state_is_update (NCM_MODEL (qs)))
   {
+    /*static guint count = 0;*/
     ncm_spline_prepare (qs->q_z);
     ncm_model_state_set_update (NCM_MODEL (qs));
-    
+
+    /*printf ("Preparing! ==>(%20u)<==\n", count++);*/
     ncm_ode_spline_prepare (qs->E2_z, qs);
   }
   else
@@ -250,6 +252,9 @@ _nc_hicosmo_qspline_constructed (GObject *object)
       qspline->E2_z = ncm_ode_spline_new_full (s,
                                                _nc_hicosmo_qspline_dE2dz,
                                                1.0, 0.0, qspline->z_f);
+      ncm_ode_spline_set_reltol (qspline->E2_z, 1.0e-9);
+      ncm_ode_spline_set_abstol (qspline->E2_z, 0.0);
+      
       ncm_spline_free (s);
       ncm_vector_free (zv);
       ncm_vector_free (qv);

@@ -81,6 +81,7 @@ struct _NcmStatsDist1dEPDF
   guint n_obs;
   guint np_obs;
   GArray *obs;
+  GSequence *obs_seq;
   gdouble min;
   gdouble max;
   gboolean list_sorted;
@@ -94,6 +95,7 @@ struct _NcmStatsDist1dEPDF
   NcmVector *pv;
   gpointer fft_data_to_tilde; 
   gpointer fft_tilde_to_est;
+  NcmSpline *ph_spline;
   NcmSpline *p_spline;
   gboolean bw_set;
 };

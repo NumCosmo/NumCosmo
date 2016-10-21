@@ -42,7 +42,7 @@ def true_inv_cdf (u):
 def true_p (x):
   return 0.5 * (norm.pdf (x, peak1, sigma1) + norm.pdf (x, peak2, sigma2)) / rbnorm
 
-n = 3000000
+n = 8000000
 s = np.concatenate ((np.random.normal (peak1, sigma1, n), np.random.normal (peak2, sigma2, n)), axis = 0)
 
 sa = []
