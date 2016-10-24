@@ -49,8 +49,6 @@
 #endif /* NUMCOSMO_HAVE_FFTW3 */
 #include <gsl/gsl_sort.h>
 
-/*#define NCM_STATS_DIST1D_EPDF_USE_SEQ 1*/
-
 enum
 {
   PROP_0,
@@ -309,7 +307,6 @@ ncm_stats_dist1d_epdf_p_gk_func (gdouble x, gpointer epdf1d)
   return p;
 }
 
-#ifndef NCM_STATS_DIST1D_EPDF_USE_SEQ
 static void
 _ncm_stats_dist1d_epdf_compact_obs (NcmStatsDist1dEPDF *epdf1d)
 {
@@ -319,8 +316,6 @@ _ncm_stats_dist1d_epdf_compact_obs (NcmStatsDist1dEPDF *epdf1d)
   if (epdf1d->list_sorted)
     return;
 
-/*printf ("\n\nCompacting! %u %u\n", epdf1d->np_obs, epdf1d->max_obs);*/
-  
   g_array_sort (epdf1d->obs, _ncm_stats_dist1d_epdf_cmp_double);
   j = 0;
 
@@ -337,33 +332,10 @@ _ncm_stats_dist1d_epdf_compact_obs (NcmStatsDist1dEPDF *epdf1d)
       
       if (fabs (obs_j->x - obs_i->x) < min_dist)
       {
-#ifdef _NCM_STATS_DIST1D_EPDF_GROUPING_ALL  
-        gdouble wx = (obs_j->x * obs_j->w + obs_i->x * obs_i->w);
-        gdouble w  = obs_i->w + obs_j->w;
-        guint k;
-        obs_len--;
-        for (k = i + 1; k < epdf1d->obs->len; k++)
-        {
-          NcmStatsDist1dEPDFObs *obs_ik = &g_array_index (epdf1d->obs, NcmStatsDist1dEPDFObs, k);
-          if (fabs (obs_ik->x - obs_i->x) < min_dist)
-          {
-            wx += obs_ik->x * obs_ik->w;
-            w  += obs_ik->w;
-            obs_len--;
-            i++;
-            obs_i = obs_ik;
-          }
-          else
-            break;
-        }
-        obs_j->x = wx / w;
-        obs_j->w = w;
-#else
         obs_j->x = (obs_j->x * obs_j->w + obs_i->x * obs_i->w) / (obs_i->w + obs_j->w);
         obs_j->w = obs_i->w + obs_j->w;
 
         obs_len--;
-#endif /* _NCM_STATS_DIST1D_EPDF_GROUPING_ALL */
       }
       else
       {
@@ -381,7 +353,6 @@ _ncm_stats_dist1d_epdf_compact_obs (NcmStatsDist1dEPDF *epdf1d)
   g_array_set_size (epdf1d->obs, obs_len);
   epdf1d->list_sorted = TRUE;
 }
-#endif /* NCM_STATS_DIST1D_EPDF_USE_SEQ */
 
 static void
 _ncm_stats_dist1d_epdf_trim_outliers (NcmStatsDist1dEPDF *epdf1d)
@@ -425,7 +396,6 @@ _ncm_stats_dist1d_epdf_trim_outliers (NcmStatsDist1dEPDF *epdf1d)
   g_array_set_size (epdf1d->obs, obs_len);
 }
 
-#ifndef NCM_STATS_DIST1D_EPDF_USE_SEQ
 static guint 
 _ncm_stats_dist1d_epdf_bsearch (GArray *obs, const gdouble x, const guint l, const guint u)
 {
@@ -440,7 +410,6 @@ _ncm_stats_dist1d_epdf_bsearch (GArray *obs, const gdouble x, const guint l, con
   else
     return l;
 }
-#endif /* NCM_STATS_DIST1D_EPDF_USE_SEQ */
 
 static gdouble 
 _ncm_stats_dist1d_epdf_estimate_df2 (NcmVector *p_tilde2, NcmVector *Iv, const guint n, const guint l, const gdouble t)
@@ -549,25 +518,6 @@ _ncm_stats_dist1d_epdf_autobw (NcmStatsDist1dEPDF *epdf1d)
 
   ncm_vector_set_zero (epdf1d->p_data);
 
-#ifdef NCM_STATS_DIST1D_EPDF_USE_SEQ
-  j = 0;
-  {
-    GSequenceIter *elem = g_sequence_get_begin_iter (epdf1d->obs_seq);
-    do 
-    {
-      NcmStatsDist1dEPDFObs *obs = g_sequence_get (elem);
-
-      while (obs->x > xc)
-      {
-        j++;
-        xc += deltax;
-      }
-      ncm_vector_fast_addto (epdf1d->p_data, j, obs->w / epdf1d->n_obs);
-      
-      elem = g_sequence_iter_next (elem);
-    } while (!g_sequence_iter_is_end (elem));
-  }
-#else /* NCM_STATS_DIST1D_EPDF_USE_SEQ */
   j = 0;
   {
     const guint obs_len   = epdf1d->obs->len;
@@ -583,7 +533,6 @@ _ncm_stats_dist1d_epdf_autobw (NcmStatsDist1dEPDF *epdf1d)
       ncm_vector_fast_addto (epdf1d->p_data, j, obs_i->w / epdf1d->n_obs);
     }
   }
-#endif /* NCM_STATS_DIST1D_EPDF_USE_SEQ */
   
   fftw_execute (epdf1d->fft_data_to_tilde);
 
@@ -679,20 +628,6 @@ _ncm_stats_dist1d_epdf_set_bw (NcmStatsDist1dEPDF *epdf1d)
   }
 }
 
-#ifdef NCM_STATS_DIST1D_EPDF_USE_SEQ
-static gint 
-_ncm_stats_dist1d_epdf_cmp_double_data (gconstpointer a,
-                                        gconstpointer b,
-                                        gpointer user_data)
-{
-#define A (*((gdouble *)a))
-#define B (*((gdouble *)b))
-  return (A == B) ? 0.0 : ((A < B) ? -1 : 1);  
-}
-#undef A
-#undef B
-#endif /* NCM_STATS_DIST1D_EPDF_USE_SEQ */
-
 static gdouble 
 ncm_stats_dist1d_epdf_p_gk (NcmStatsDist1dEPDF *epdf1d, gdouble x)
 {
@@ -702,9 +637,7 @@ ncm_stats_dist1d_epdf_p_gk (NcmStatsDist1dEPDF *epdf1d, gdouble x)
   if (x < epdf1d->min || x > epdf1d->max)
     return 0.0;
 
-#ifndef NCM_STATS_DIST1D_EPDF_USE_SEQ
   _ncm_stats_dist1d_epdf_compact_obs (epdf1d);
-#endif /* NCM_STATS_DIST1D_EPDF_USE_SEQ */
   _ncm_stats_dist1d_epdf_set_bw (epdf1d);
 
   if (FALSE)
@@ -715,42 +648,6 @@ ncm_stats_dist1d_epdf_p_gk (NcmStatsDist1dEPDF *epdf1d, gdouble x)
     return phat / bias_corr;
   }
 
-#ifdef NCM_STATS_DIST1D_EPDF_USE_SEQ
-  {
-    NcmStatsDist1dEPDFObs obs = {x, 1.0, 1.0};
-    GSequenceIter *up   = g_sequence_search (epdf1d->obs_seq, &obs, &_ncm_stats_dist1d_epdf_cmp_double_data, NULL);
-    GSequenceIter *down = g_sequence_iter_prev (up);
-
-    while (!g_sequence_iter_is_end (up))
-    {
-      NcmStatsDist1dEPDFObs *obs = g_sequence_get (up);
-      const gdouble x_i      = obs->x;
-      const gdouble de_i     = (x - x_i) / epdf1d->h;
-      const gdouble de2_i    = de_i * de_i;
-      const gdouble wexp_i   = obs->w * exp (-de2_i * 0.5);
-      res += wexp_i;
-
-      if (wexp_i / res < GSL_DBL_EPSILON)
-        break;
-
-      up = g_sequence_iter_next (up);
-    }
-    while (!g_sequence_iter_is_begin (down))
-    {
-      NcmStatsDist1dEPDFObs *obs = g_sequence_get (down);
-      const gdouble x_i      = obs->x;
-      const gdouble de_i     = (x - x_i) / epdf1d->h;
-      const gdouble de2_i    = de_i * de_i;
-      const gdouble wexp_i   = obs->w * exp (-de2_i * 0.5);
-      res += wexp_i;
-
-      if (wexp_i / res < GSL_DBL_EPSILON)
-        break;
-
-      down = g_sequence_iter_prev (down);
-    }    
-  }
-#else /* NCM_STATS_DIST1D_EPDF_USE_SEQ */ 
   {
     gint s = _ncm_stats_dist1d_epdf_bsearch (epdf1d->obs, x, 0, epdf1d->obs->len - 1);
     gint i;
@@ -781,7 +678,6 @@ ncm_stats_dist1d_epdf_p_gk (NcmStatsDist1dEPDF *epdf1d, gdouble x)
         break;
     }
   }
-#endif /* NCM_STATS_DIST1D_EPDF_USE_SEQ */
   
   {
     const gdouble phat      = (res / (sqrt (2.0 * M_PI) * epdf1d->h) + 1.0 / (sd1->xf - sd1->xi)) / (epdf1d->n_obs + 1.0);
@@ -832,6 +728,7 @@ ncm_stats_dist1d_epdf_prepare (NcmStatsDist1d *sd1)
 {
   NcmStatsDist1dEPDF *epdf1d = NCM_STATS_DIST1D_EPDF (sd1);
 
+  _ncm_stats_dist1d_epdf_compact_obs (epdf1d);
   _ncm_stats_dist1d_epdf_set_bw (epdf1d);
   
   if (FALSE)
@@ -841,10 +738,6 @@ ncm_stats_dist1d_epdf_prepare (NcmStatsDist1d *sd1)
     sd1->xi = sd1->xf = epdf1d->min;
   else
     ncm_stats_dist1d_epdf_update_limits (epdf1d);
-
-#ifndef NCM_STATS_DIST1D_EPDF_USE_SEQ
-  _ncm_stats_dist1d_epdf_compact_obs (epdf1d);
-#endif /* NCM_STATS_DIST1D_EPDF_USE_SEQ */
 
   if (FALSE)
   {
@@ -924,13 +817,12 @@ ncm_stats_dist1d_epdf_add_obs (NcmStatsDist1dEPDF *epdf1d, gdouble x)
   }
 
   epdf1d->bw_set = FALSE;
-    
+
   ncm_stats_vec_set (epdf1d->obs_stats, 0, x);
   ncm_stats_vec_update (epdf1d->obs_stats);
 
   epdf1d->n_obs++;
 
-#ifndef NCM_STATS_DIST1D_EPDF_USE_SEQ
   g_array_append_val (epdf1d->obs, obs);
   epdf1d->list_sorted = FALSE;
   epdf1d->np_obs++;
@@ -942,72 +834,6 @@ ncm_stats_dist1d_epdf_add_obs (NcmStatsDist1dEPDF *epdf1d, gdouble x)
     epdf1d->np_obs  = 0;
   }
 
-#else /* NCM_STATS_DIST1D_EPDF_USE_SEQ */
-
-  {
-    GSequenceIter *next = g_sequence_search (epdf1d->obs_seq, &obs, &_ncm_stats_dist1d_epdf_cmp_double_data, NULL);
-    GSequenceIter *prev = g_sequence_iter_prev (next);
-    GSequenceIter *insert_here = NULL;
-    gdouble min_dist = 0.0;
-    gdouble sd_e;
-
-    if (epdf1d->obs_stats->nitens > 1)
-    {
-      sd_e     = ncm_stats_vec_get_sd (epdf1d->obs_stats, 0);
-      min_dist = sd_e * epdf1d->sd_min_scale;
-    }
-
-    /*printf ("Looking for min_dist % 21.15g x = % 21.15g\n", min_dist, obs.x);*/
-    
-    if (!g_sequence_iter_is_begin (prev))
-    {
-      NcmStatsDist1dEPDFObs *p_obs = g_sequence_get (prev);
-      const gdouble dist = fabs (p_obs->x - obs.x);
-        
-      if (dist <= min_dist)
-      {
-        min_dist = dist;
-        insert_here = prev;
-        /*printf ("Uhu!!!! A\n");*/
-      }
-      
-      /*printf ("Diff prev! [% 21.15g % 21.15g] <% 21.15g % 21.15g>\n", p_obs->x, obs.x, dist, min_dist);*/
-    }
-    
-    if (!g_sequence_iter_is_end (next))
-    {
-      NcmStatsDist1dEPDFObs *n_obs = g_sequence_get (next);
-      const gdouble dist = fabs (n_obs->x - obs.x);
-
-      if (dist <= min_dist)
-      {
-        min_dist = dist;
-        insert_here = next;
-        /*printf ("Uhu!!!! B\n");*/
-      }
-
-      /*printf ("Diff next! [% 21.15g % 21.15g] <% 21.15g % 21.15g>\n", obs.x, n_obs->x, dist, min_dist);*/
-    }
-
-    if (insert_here != NULL)
-    {
-      NcmStatsDist1dEPDFObs *i_obs = g_sequence_get (insert_here);
-
-      i_obs->x = (i_obs->x * i_obs->w + obs.x * obs.w) / (obs.w + i_obs->w);
-      i_obs->w = obs.w + i_obs->w;
-
-      /*printf ("Inserting Here! x = % 21.15g w = % 21.15g\n", i_obs->x, i_obs->w);*/
-    }
-    else
-    {
-      NcmStatsDist1dEPDFObs *nobs = g_slice_new (NcmStatsDist1dEPDFObs);
-      *nobs = obs;
-      
-      g_sequence_insert_before (next, nobs);
-    }
-  }
-#endif /* NCM_STATS_DIST1D_EPDF_USE_SEQ */
-  
   epdf1d->max = new_max;
   epdf1d->min = new_min;
 }

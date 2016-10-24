@@ -927,6 +927,15 @@ nc_hicosmo_zt (NcHICosmo *cosmo, gdouble z_max)
  * Returns: FIXME
  */
 /**
+ * nc_hicosmo_nec:
+ * @cosmo: a #NcHICosmo
+ * @z: redshift $z$
+ *
+ * FIXME
+ *
+ * Returns: FIXME
+ */
+/**
  * nc_hicosmo_dec:
  * @cosmo: a #NcHICosmo
  * @z: redshift $z$
@@ -1086,6 +1095,7 @@ _NC_HICOSMO_FUNC1_TO_FLIST (Em2)
 _NC_HICOSMO_FUNC1_TO_FLIST (dE2_dz)
 _NC_HICOSMO_FUNC1_TO_FLIST (d2E2_dz2)
 _NC_HICOSMO_FUNC1_TO_FLIST (q)
+_NC_HICOSMO_FUNC1_TO_FLIST (nec)
 _NC_HICOSMO_FUNC1_TO_FLIST (dec)
 _NC_HICOSMO_FUNC1_TO_FLIST (wec)
 _NC_HICOSMO_FUNC1_TO_FLIST (qp)
@@ -1132,9 +1142,10 @@ _nc_hicosmo_register_functions (void)
   ncm_mset_func_list_register ("Em2",         "E^{-2}",                          "NcHICosmo", "One over Hubble function over H_0 squared", G_TYPE_NONE, _nc_hicosmo_flist_Em2,      1, 1);
   ncm_mset_func_list_register ("dE2_dz",      "\\mathrm{d}E^2/\\mathrm{d}z",     "NcHICosmo", "First derivative of E2",                    G_TYPE_NONE, _nc_hicosmo_flist_dE2_dz,   1, 1);
   ncm_mset_func_list_register ("d2E2_dz2",    "\\mathrm{d}^2E^2/\\mathrm{d}z^2", "NcHICosmo", "Second derivative of E2",                   G_TYPE_NONE, _nc_hicosmo_flist_d2E2_dz2, 1, 1);
-  ncm_mset_func_list_register ("q",           "q",                               "NcHICosmo", "Deceleration function",                     G_TYPE_NONE, _nc_hicosmo_flist_q,        1, 1);
-  ncm_mset_func_list_register ("dec",         "\\mathrm{dec}",                   "NcHICosmo", "DEC violation function",                    G_TYPE_NONE, _nc_hicosmo_flist_dec,      1, 1);
-  ncm_mset_func_list_register ("wec",         "\\mathrm{wec}",                   "NcHICosmo", "WEC violation function",                    G_TYPE_NONE, _nc_hicosmo_flist_wec,      1, 1);
+  ncm_mset_func_list_register ("q",           "q",                               "NcHICosmo", "Deceleration function (also SEC >0)",       G_TYPE_NONE, _nc_hicosmo_flist_q,        1, 1);
+  ncm_mset_func_list_register ("nec",         "\\mathrm{nec}",                   "NcHICosmo", "NEC violation function (>0)",               G_TYPE_NONE, _nc_hicosmo_flist_nec,      1, 1);
+  ncm_mset_func_list_register ("dec",         "\\mathrm{dec}",                   "NcHICosmo", "DEC violation function (>0)",               G_TYPE_NONE, _nc_hicosmo_flist_dec,      1, 1);
+  ncm_mset_func_list_register ("wec",         "\\mathrm{wec}",                   "NcHICosmo", "WEC violation function (>0)",               G_TYPE_NONE, _nc_hicosmo_flist_wec,      1, 1);
   ncm_mset_func_list_register ("qp",          "\\mathrm{d}q/\\mathrm{d}z",       "NcHICosmo", "Derivative of the deceleration function",   G_TYPE_NONE, _nc_hicosmo_flist_qp,       1, 1);
   ncm_mset_func_list_register ("j",           "j",                               "NcHICosmo", "Jerk function",                             G_TYPE_NONE, _nc_hicosmo_flist_j,        1, 1);
   ncm_mset_func_list_register ("mqE2",        "-qE^2",                           "NcHICosmo", "Effective geometric OmegaL",                G_TYPE_NONE, _nc_hicosmo_flist_mqE2,     1, 1);

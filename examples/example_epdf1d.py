@@ -18,6 +18,7 @@ import math
 #  any other library function.
 #
 Ncm.cfg_init ()
+np.random.seed (0)
 
 #
 # n = number of points to reconstruct the distribution
@@ -104,9 +105,9 @@ for i in range (1000):
   inv_pdf_a.append (epdf.eval_inv_pdf (u))
   inv_pdf_rot_a.append (epdf_rot.eval_inv_pdf (u))
 
-  a1 = epdf.eval_inv_pdf (u)
-  a2 = beta.ppf (u, a = 2.0, b = 5.0)
-  print u, a1, a2, math.fabs ((a1 - a2) / a2)
+  #a1 = epdf.eval_inv_pdf (u)
+  #a2 = beta.ppf (u, a = 2.0, b = 5.0)
+  #print u, a1, a2, math.fabs ((a1 - a2) / a2)
 
 
 #

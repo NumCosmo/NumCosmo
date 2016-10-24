@@ -77,21 +77,19 @@ typedef enum
   NCM_STATS_VEC_TYPES_LEN, /*< skip >*/
 } NcmStatsVecType;
 
+typedef void (*NcmStatsVecUpdateFunc) (NcmStatsVec *svec, const gdouble w, NcmVector *x);
+
 struct _NcmStatsVec
 {
   /*< private >*/
   GObject parent_instance;
   NcmStatsVecType t;
+  NcmStatsVecUpdateFunc update;
   guint len;
   gboolean save_x;
   gdouble weight;
   gdouble weight2;
   gdouble bias_wt;
-#ifdef NCM_STATS_VEC_INC
-  gdouble mean_inc;
-  gdouble var_inc;
-  gdouble cov_inc;
-#endif /* NCM_STATS_VEC_INC */
   guint nitens;
   NcmVector *x;
   NcmVector *mean;
