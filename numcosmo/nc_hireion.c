@@ -56,6 +56,7 @@
 #include "math/ncm_cfg.h"
 #include "math/integral.h"
 #include "math/memory_pool.h"
+#include "math/ncm_mset_func_list.h"
 
 #include <gsl/gsl_integration.h>
 
@@ -318,4 +319,18 @@ gdouble
 nc_hireion_get_tau (NcHIReion *reion, NcHICosmo *cosmo)
 {
   return NC_HIREION_GET_CLASS (reion)->get_tau (reion, cosmo);
+}
+
+static void _nc_hireion_flist_tau (NcmMSetFuncList *flist, NcmMSet *mset, const gdouble *x, gdouble *res)
+{
+  NcHICosmo *cosmo = NC_HICOSMO (ncm_mset_peek (mset, nc_hicosmo_id ()));
+  NcHIReion *reion = NC_HIREION (ncm_mset_peek (mset, nc_hireion_id ()));
+
+  res[0] = nc_hireion_get_tau (reion, cosmo);
+}
+
+void
+_nc_hireion_register_functions (void)
+{
+  ncm_mset_func_list_register ("tau", "\\tau", "NcHIReion", "Reionization tau", G_TYPE_NONE, _nc_hireion_flist_tau, 0, 1);
 }
