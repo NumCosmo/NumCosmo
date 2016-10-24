@@ -259,6 +259,7 @@ void ncm_fit_numdiff_m2lnL_hessian (NcmFit *fit, NcmMatrix *H, gdouble reltol);
 void ncm_fit_numdiff_m2lnL_covar (NcmFit *fit);
 void ncm_fit_ls_covar (NcmFit *fit);
 gdouble ncm_fit_numdiff_m2lnL_lndet_covar (NcmFit *fit);
+NcmMatrix *ncm_fit_get_covar (NcmFit *fit);
 
 gdouble ncm_fit_covar_var (NcmFit *fit, NcmModelID mid, guint pid);
 gdouble ncm_fit_covar_sd (NcmFit *fit, NcmModelID mid, guint pid);
