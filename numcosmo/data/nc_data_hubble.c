@@ -253,6 +253,12 @@ nc_data_hubble_new_from_id (NcDataHubbleId id)
     case NC_DATA_HUBBLE_MORESCO2015:
       filename = ncm_cfg_get_data_filename ("nc_data_hubble_moresco2015.obj", TRUE);
       break;
+    case NC_DATA_HUBBLE_MORESCO2016_DR9_BC03:
+      filename = ncm_cfg_get_data_filename ("nc_data_hubble_moresco2016_DR9_bc03.obj", TRUE);
+      break;
+    case NC_DATA_HUBBLE_MORESCO2016_DR9_MASTRO:
+      filename = ncm_cfg_get_data_filename ("nc_data_hubble_moresco2016_DR9_mastro.obj", TRUE);
+      break;  
     case NC_DATA_HUBBLE_BUSCA2013_BAO_WMAP:
       filename = ncm_cfg_get_data_filename ("nc_data_hubble_busca2013_bao_wmap.obj", TRUE);
       break;
