@@ -226,6 +226,7 @@ void clencurt_gen (int M);
 
 void _nc_hicosmo_register_functions (void);
 void _nc_hicosmo_de_register_functions (void);
+void _nc_hireion_register_functions (void);
 void _nc_distance_register_functions (void);
 void _nc_planck_fi_cor_tt_register_functions (void);
 
@@ -440,7 +441,8 @@ ncm_cfg_init (void)
 
   _nc_hicosmo_register_functions ();
   _nc_hicosmo_de_register_functions ();
-  _nc_distance_register_functions ();
+  _nc_hireion_register_functions ();
+    _nc_distance_register_functions ();
   _nc_planck_fi_cor_tt_register_functions ();
 
   numcosmo_init = TRUE;
