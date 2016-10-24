@@ -476,6 +476,8 @@ ncm_stats_dist1d_eval_mode (NcmStatsDist1d *sd1)
   gdouble x0 = sd1->xi;
   gdouble x1 = sd1->xf;
   gdouble x  = 0.5 * (sd1->xf + sd1->xi);
+  gdouble last_x0 = x0;
+  gdouble last_x1 = x1;
 
   if (G_UNLIKELY (sd1->xi == sd1->xf))
     return sd1->xi;
@@ -494,7 +496,17 @@ ncm_stats_dist1d_eval_mode (NcmStatsDist1d *sd1)
     x0 = gsl_min_fminimizer_x_lower (sd1->fmin);
     x1 = gsl_min_fminimizer_x_upper (sd1->fmin);
 
+    if ((x0 == last_x0) && (x1 == last_x1))
+    {
+      g_warning ("ncm_stats_dist1d_eval_mode: minimization not improving, giving up...");
+      break;
+    }
+    
+    last_x0 = x0;
+    last_x1 = x1;
+
     status = gsl_min_test_interval (x0, x1, sd1->abstol, sd1->reltol);
+    
   } while (status == GSL_CONTINUE && iter < max_iter);
 
   return x;

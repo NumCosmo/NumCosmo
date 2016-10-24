@@ -1039,8 +1039,8 @@ nc_hicosmo_sigma8 (NcHICosmo *cosmo, NcmPowspecFilter *psf)
 #define _NC_HICOSMO_FUNC0_TO_FLIST(fname) \
 static void _nc_hicosmo_flist_##fname (NcmMSetFuncList *flist, NcmMSet *mset, const gdouble *x, gdouble *res) \
 { \
- NcHICosmo *cosmo = NC_HICOSMO (ncm_mset_peek (mset, nc_hicosmo_id ())); \
- res[0] = nc_hicosmo_##fname (cosmo); \
+  NcHICosmo *cosmo = NC_HICOSMO (ncm_mset_peek (mset, nc_hicosmo_id ())); \
+  res[0] = nc_hicosmo_##fname (cosmo); \
 }
 
 _NC_HICOSMO_FUNC0_TO_FLIST (H0)
