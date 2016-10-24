@@ -587,7 +587,7 @@ main (gint argc, gchar *argv[])
       gdouble v1 = (1.0 - gsl_cdf_chisq_P (1.0, 1.0)) * 0.5;
       gdouble v2 = (1.0 - gsl_cdf_chisq_P (4.0, 1.0)) * 0.5;
       gdouble v3 = (1.0 - gsl_cdf_chisq_P (9.0, 1.0)) * 0.5;
-      printf ("%.5g %.5g %.5g\n", v1, v2, v3);
+
       ncm_message ("# Computing median and 1-3 sigma asymmetric error bars - lower (l) and upper (u) bounds, respectively.\n");
 
       for (i = 0; i < nparams; i++)
