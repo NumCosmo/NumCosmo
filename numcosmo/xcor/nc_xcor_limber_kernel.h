@@ -28,6 +28,7 @@
 
 #include <glib-object.h>
 #include <glib.h>
+
 #include <numcosmo/build_cfg.h>
 #include <numcosmo/lss/nc_growth_func.h>
 #include <numcosmo/lss/nc_transfer_func.h>
@@ -65,11 +66,13 @@ typedef enum _NcXcorLimberKernelImpl
 
 #define NC_XCOR_LIMBER_KERNEL_IMPL_ALL (~0)
 
+typedef struct _NcXcorKinetic NcXcorKinetic;
+
 struct _NcXcorLimberKernelClass
 {
 	/*< private >*/
 	NcmModelClass parent_class;
-	gdouble (*eval) (NcXcorLimberKernel* xclk, NcHICosmo* cosmo, gdouble z, gint l);//, gdouble geo_z[]);
+	gdouble (*eval) (NcXcorLimberKernel* xclk, NcHICosmo* cosmo, gdouble z, const NcXcorKinetic *xck, gint l);//, gdouble geo_z[]);
 	void (*prepare) (NcXcorLimberKernel* xclk, NcHICosmo* cosmo);
 	void (*add_noise) (NcXcorLimberKernel* xclk, NcmVector* vp1, NcmVector* vp2, guint lmin);
 	guint (*obs_len) (NcXcorLimberKernel* xclk);
@@ -100,7 +103,7 @@ NcXcorLimberKernelImpl nc_xcor_limber_kernel_impl (NcXcorLimberKernel* xclk);
 guint nc_xcor_limber_kernel_obs_len (NcXcorLimberKernel* xclk);
 guint nc_xcor_limber_kernel_obs_params_len (NcXcorLimberKernel* xclk);
 
-gdouble nc_xcor_limber_kernel_eval (NcXcorLimberKernel* xclk, NcHICosmo* cosmo, gdouble z, gint l);//, gdouble geo_z[]);
+gdouble nc_xcor_limber_kernel_eval (NcXcorLimberKernel* xclk, NcHICosmo* cosmo, gdouble z, const NcXcorKinetic *xck, gint l);//, gdouble geo_z[]);
 void nc_xcor_limber_kernel_prepare (NcXcorLimberKernel* xclk, NcHICosmo* cosmo);
 // gdouble nc_xcor_limber_kernel_noise_spec (NcXcorLimberKernel* xclk, guint l);
 void nc_xcor_limber_kernel_add_noise (NcXcorLimberKernel* xclk, NcmVector* vp1, NcmVector* vp2, guint lmin);

@@ -270,10 +270,10 @@ nc_xcor_limber_kernel_obs_params_len (NcXcorLimberKernel *xclk)
  *
 */
 gdouble 
-nc_xcor_limber_kernel_eval (NcXcorLimberKernel *xclk, NcHICosmo *cosmo, gdouble z, gint l)
+nc_xcor_limber_kernel_eval (NcXcorLimberKernel *xclk, NcHICosmo *cosmo, gdouble z, const NcXcorKinetic *xck, gint l)
 {
-	if ((xclk->zmin < z) && (xclk->zmax > z))
-		return NC_XCOR_LIMBER_KERNEL_GET_CLASS (xclk)->eval (xclk, cosmo, z, l);
+	if ((xclk->zmin <= z) && (xclk->zmax >= z))
+		return NC_XCOR_LIMBER_KERNEL_GET_CLASS (xclk)->eval (xclk, cosmo, z, xck, l);
 	else
 		return 0.0;
 }

@@ -39,6 +39,7 @@
 
 #include "math/ncm_cfg.h"
 #include "xcor/nc_xcor_limber_kernel_gal.h"
+#include "xcor/nc_xcor.h"
 
 #include "math/integral.h"
 #include "math/ncm_spline_gsl.h"
@@ -245,7 +246,7 @@ _nc_xcor_limber_kernel_gal_finalize (GObject* object)
 	G_OBJECT_CLASS (nc_xcor_limber_kernel_gal_parent_class)->finalize (object);
 }
 
-static gdouble _nc_xcor_limber_kernel_gal_eval (NcXcorLimberKernel* xclk, NcHICosmo* cosmo, gdouble z, gint l);
+static gdouble _nc_xcor_limber_kernel_gal_eval (NcXcorLimberKernel* xclk, NcHICosmo* cosmo, gdouble z, const NcXcorKinetic *xck, gint l);
 static void _nc_xcor_limber_kernel_gal_prepare (NcXcorLimberKernel *xclk, NcHICosmo *cosmo);
 /*static gdouble _nc_xcor_limber_kernel_gal_noise_spec (NcXcorLimberKernel* xclk, guint l);*/
 static void _nc_xcor_limber_kernel_gal_add_noise (NcXcorLimberKernel *xclk, NcmVector *vp1, NcmVector *vp2, guint lmin);
@@ -473,40 +474,51 @@ _nc_xcor_limber_kernel_gal_prepare (NcXcorLimberKernel *xclk, NcHICosmo *cosmo)
 	if (xclkg->domagbias)
 	{
 		guint i;
-		if (xclkg->g_func == NULL)
+
+    if (xclkg->g_func == NULL)
 		{
+      NcmVector *gzv;
+      
 			xclkg->g_func = ncm_spline_cubic_notaknot_new ();
 			ncm_spline_set_len (xclkg->g_func, NC_XCOR_LIMBER_KERNEL_GAL_G_FUNC_LEN);
-			NcmVector* gzv = ncm_spline_get_xv (xclkg->g_func);
-			for (i = 0; i < NC_XCOR_LIMBER_KERNEL_GAL_G_FUNC_LEN; i++)
+
+      gzv = ncm_spline_get_xv (xclkg->g_func);
+
+      for (i = 0; i < NC_XCOR_LIMBER_KERNEL_GAL_G_FUNC_LEN; i++)
 			{
 				ncm_vector_set (gzv, i, xclk->zmin + (xclk->zmax - xclk->zmin) / (NC_XCOR_LIMBER_KERNEL_GAL_G_FUNC_LEN - 1) * i);
 			}
+
 			ncm_vector_free (gzv);
-			ncm_spline_acc (xclkg->g_func, TRUE);
+			/*ncm_spline_acc (xclkg->g_func, TRUE);*/
 		}
 
 		// ncm_spline_set_len(xclkg->g_func, 6);
 		// gsl_function F;
-		g_func_params ts;
 
-		ts.xclkg = xclkg;
-		ts.cosmo = cosmo;
 		//
 		// F.function = &_nc_xcor_limber_kernel_gal_g_func;
 		// F.params = &ts;
 		//
 		// ncm_spline_set_func (xclkg->g_func, NCM_SPLINE_FUNCTION_SPLINE, &F, xclk->zmin, xclk->zmax, 3000, 1e-4);
 
-		NcmVector* xv = ncm_spline_get_xv (xclkg->g_func);
-		NcmVector* yv = ncm_spline_get_yv (xclkg->g_func);
-		for (i = 0; i < NC_XCOR_LIMBER_KERNEL_GAL_G_FUNC_LEN; i++)
-		{
-			ncm_vector_set (yv, i, _nc_xcor_limber_kernel_gal_g_func (ncm_vector_get (xv, i), &ts));
-		}
-		ncm_vector_free (xv);
-		ncm_vector_free (yv);
+    {
+      g_func_params ts;
+      NcmVector *xv = ncm_spline_get_xv (xclkg->g_func);
+      NcmVector *yv = ncm_spline_get_yv (xclkg->g_func);
 
+      ts.xclkg = xclkg;
+      ts.cosmo = cosmo;
+      
+      for (i = 0; i < NC_XCOR_LIMBER_KERNEL_GAL_G_FUNC_LEN; i++)
+      {
+        ncm_vector_set (yv, i, _nc_xcor_limber_kernel_gal_g_func (ncm_vector_get (xv, i), &ts));
+      }
+
+      ncm_vector_free (xv);
+      ncm_vector_free (yv);
+    }
+    
 		ncm_spline_prepare (xclkg->g_func);
 	}
 }
@@ -547,7 +559,7 @@ _nc_xcor_limber_kernel_gal_bias (NcXcorLimberKernelGal* xclkg, gdouble z)
 }
 
 static gdouble 
-_nc_xcor_limber_kernel_gal_eval (NcXcorLimberKernel* xclk, NcHICosmo* cosmo, gdouble z, gint l)//, gdouble geo_z[])
+_nc_xcor_limber_kernel_gal_eval (NcXcorLimberKernel *xclk, NcHICosmo *cosmo, gdouble z, const NcXcorKinetic *xck, gint l)//, gdouble geo_z[])
 {
 	NcXcorLimberKernelGal* xclkg = NC_XCOR_LIMBER_KERNEL_GAL (xclk);
 	const gdouble dn_dz_z        = ncm_spline_eval (xclkg->dn_dz, z);
@@ -555,14 +567,12 @@ _nc_xcor_limber_kernel_gal_eval (NcXcorLimberKernel* xclk, NcHICosmo* cosmo, gdo
 	gdouble res                  = bias_z * dn_dz_z;
 
 	NCM_UNUSED (l);
-
+  
   if (xclkg->domagbias)
 	{
-		gdouble g_z = ncm_spline_eval (xclkg->g_func, z);
-		const gdouble E_z = nc_hicosmo_E (cosmo, z);
-		// const gdouble E_z = geo_z[1];
+    const gdouble g_z = ncm_spline_eval (xclkg->g_func, z);
 
-		res += 1.5 * nc_hicosmo_Omega_m0 (cosmo) * (5. * MAG_BIAS - 2.) * (1. + z) * g_z / E_z;
+		res += 1.5 * nc_hicosmo_Omega_m0 (cosmo) * (5. * MAG_BIAS - 2.) * (1.0 + z) * g_z / xck->E_z;
 	}
 
 	return res;
