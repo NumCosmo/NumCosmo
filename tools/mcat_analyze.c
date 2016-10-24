@@ -355,14 +355,21 @@ main (gint argc, gchar *argv[])
       for (i = 0; i < ndistribs; i++)
       {
         NcmMSetFunc *mset_func = NULL;
+        gdouble *x = NULL;
+        guint len;
         guint k;
+        gchar *func_name = ncm_util_function_params (distribs[i], &x, &len);
+        g_assert (func_name != NULL);
 
         if (mset_func == NULL)
         {
-          if (ncm_mset_func_list_has_ns_name ("NcHICosmo", distribs[i]))
+          if (ncm_mset_func_list_has_ns_name ("NcHICosmo", func_name))
           {
-            mset_func = NCM_MSET_FUNC (ncm_mset_func_list_new_ns_name ("NcHICosmo", distribs[i], NULL));
-            if (ncm_mset_func_get_dim (mset_func) != 1 || ncm_mset_func_get_nvar (mset_func) != 0)
+            mset_func = NCM_MSET_FUNC (ncm_mset_func_list_new_ns_name ("NcHICosmo", func_name, NULL));
+            if (len > 0)
+              ncm_mset_func_set_eval_x (mset_func, x, len);
+            
+            if (ncm_mset_func_get_dim (mset_func) != 1 || !ncm_mset_func_is_const (mset_func))
             {
               g_warning ("# Function `%s' is not constant, skipping.", ncm_mset_func_peek_name (mset_func));
               ncm_mset_func_clear (&mset_func);
@@ -374,10 +381,13 @@ main (gint argc, gchar *argv[])
         }
         if (mset_func == NULL)
         {
-          if (ncm_mset_func_list_has_ns_name ("NcDistance", distribs[i]))
+          if (ncm_mset_func_list_has_ns_name ("NcDistance", func_name))
           {
-            mset_func = NCM_MSET_FUNC (ncm_mset_func_list_new_ns_name ("NcDistance", distribs[i], G_OBJECT (dist)));
-            if (ncm_mset_func_get_dim (mset_func) != 1 || ncm_mset_func_get_nvar (mset_func) != 0)
+            mset_func = NCM_MSET_FUNC (ncm_mset_func_list_new_ns_name ("NcDistance", func_name, G_OBJECT (dist)));
+            if (len > 0)
+              ncm_mset_func_set_eval_x (mset_func, x, len);
+
+            if (ncm_mset_func_get_dim (mset_func) != 1 || !ncm_mset_func_is_const (mset_func))
             {
               g_warning ("# Function `%s' is not constant, skipping.", ncm_mset_func_peek_name (mset_func));
               ncm_mset_func_clear (&mset_func);
@@ -389,7 +399,7 @@ main (gint argc, gchar *argv[])
         }
         if (mset_func == NULL)
         {
-          g_warning ("# Function `%s' not found, skipping...\n", distribs[i]);
+          g_warning ("# Function `%s' not found, skipping...\n", func_name);
           continue;
         }
 
@@ -411,6 +421,7 @@ main (gint argc, gchar *argv[])
         }
         ncm_message ("\n\n");
 
+        g_free (func_name);
         ncm_mset_func_free (mset_func);
       }
       nc_distance_clear (&dist);

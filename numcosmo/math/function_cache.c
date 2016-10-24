@@ -177,6 +177,8 @@ static gint gdouble_search_near (gconstpointer a, gconstpointer b);
  * @x_found_ptr: FIXME
  * @v: FIXME
  * @type: a #NcmFunctionCacheSearchType
+ * 
+ * 
  */
 gboolean
 ncm_function_cache_get_near (NcmFunctionCache *cache, gdouble x, gdouble *x_found_ptr, gsl_vector **v, NcmFunctionCacheSearchType type)

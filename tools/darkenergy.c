@@ -697,6 +697,7 @@ main (gint argc, gchar *argv[])
       if (len > 0)
         ncm_mset_func_set_eval_x (func, x, len);
 
+      g_clear_pointer (&func_name, g_free);
       g_clear_pointer (&x, g_free);
 
       g_assert (ncm_mset_func_is_scalar (func));

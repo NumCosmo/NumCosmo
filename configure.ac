@@ -178,7 +178,21 @@ AC_FC_LINE_LENGTH([unlimited])
 
 AC_LANG_PUSH([Fortran])
 dnl  AX_APPEND_COMPILE_FLAGS([-finit-local-zero -finit-integer=0 -finit-real=zero -finit-logical=false -fno-automatic], [FCFLAGS])
-  AX_OPENMP()
+dnl ***************************************************************************
+dnl For intel family compilers we must -diag-error=all to 
+dnl make it fails on bad flags
+dnl ***************************************************************************
+  FCFLAGS_CHECK=""
+  
+  case $FC in #(
+    *ifort*) 
+      AX_APPEND_COMPILE_FLAGS([-diag-error=all], [FCFLAGS_CHECK])
+    ;;
+  esac
+    
+  AX_APPEND_COMPILE_FLAGS([-reentrancy -recursive -threads -automatic -fautomatic -frecursive], [FCFLAGS], [$FCFLAGS_CHECK])
+  AC_OPENMP()
+  AC_SUBST(OPENMP_FCFLAGS)
 AC_LANG_POP([Fortran])
 
 dnl ***************************************************************************
@@ -341,6 +355,14 @@ dnl Check for multi-thread.
 dnl ***************************************************************************
 
 AX_COUNT_CPUS()
+AC_MSG_CHECKING([Number of cores])
+if test "x$CPU_COUNT" = "x"; then
+  AC_MSG_RESULT([cannot detect, using default `4'])
+  CPU_COUNT=4
+else
+  AC_MSG_RESULT([$CPU_COUNT])
+fi
+
 AC_DEFINE_UNQUOTED([NCM_NCORES],[$CPU_COUNT], [Number of cores of the current machine])
 
 AC_ARG_WITH([thread-pool-max],
@@ -356,9 +378,8 @@ else
   AC_DEFINE_UNQUOTED([NCM_THREAD_POOL_MAX],[$CPU_COUNT], [Number of threads in the pool])  
 fi
 
-AX_OPENMP()
+AC_OPENMP()
 AC_SUBST(OPENMP_CFLAGS)
-AC_SUBST(OPENMP_FCFLAGS)
 
 dnl ***************************************************************************
 dnl Check for backtrace support.
@@ -967,5 +988,7 @@ echo "--------------------------------------------------------------------"
 echo "AM_CFLAGS = $AM_CFLAGS"
 echo "CFLAGS = $CFLAGS"
 echo "FCFLAGS = $FCFLAGS"
+echo "OPENMP_CFLAGS = $OPENMP_CFLAGS"
+echo "OPENMP_FCFLAGS = $OPENMP_FCFLAGS"
 echo "LIBS = $LIBS"
 echo "PLC_DEFINES = $PLC_DEFINES"
