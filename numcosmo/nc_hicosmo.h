@@ -263,10 +263,13 @@ G_INLINE_FUNC gdouble nc_hicosmo_bgp_cs2 (NcHICosmo *cosmo, gdouble z);
 G_INLINE_FUNC gdouble nc_hicosmo_Dc (NcHICosmo *cosmo, gdouble z);
 
 G_INLINE_FUNC gdouble nc_hicosmo_q (NcHICosmo *cosmo, gdouble z);
+G_INLINE_FUNC gdouble nc_hicosmo_nec (NcHICosmo *cosmo, gdouble z);
 G_INLINE_FUNC gdouble nc_hicosmo_dec (NcHICosmo *cosmo, gdouble z);
 G_INLINE_FUNC gdouble nc_hicosmo_wec (NcHICosmo *cosmo, gdouble z);
 G_INLINE_FUNC gdouble nc_hicosmo_qp (NcHICosmo *cosmo, gdouble z);
 G_INLINE_FUNC gdouble nc_hicosmo_j (NcHICosmo *cosmo, gdouble z);
+
+G_INLINE_FUNC gdouble nc_hicosmo_mqE2 (NcHICosmo *cosmo, gdouble z);
 
 G_INLINE_FUNC gdouble nc_hicosmo_abs_alpha (NcHICosmo *cosmo, gdouble x);
 G_INLINE_FUNC gdouble nc_hicosmo_x_alpha (NcHICosmo *cosmo, gdouble alpha);
@@ -473,6 +476,17 @@ nc_hicosmo_q (NcHICosmo *cosmo, gdouble z)
 }
 
 G_INLINE_FUNC gdouble
+nc_hicosmo_nec (NcHICosmo *cosmo, gdouble z)
+{
+  const gdouble x  = 1.0 + z;
+  const gdouble q  = nc_hicosmo_q (cosmo, z);
+  const gdouble E2 = nc_hicosmo_E2 (cosmo, z);
+  const gdouble Ok = nc_hicosmo_Omega_k0 (cosmo);
+
+  return (1.0 + q) * E2 - Ok * x * x;
+}
+
+G_INLINE_FUNC gdouble
 nc_hicosmo_dec (NcHICosmo *cosmo, gdouble z)
 {
   const gdouble x  = 1.0 + z;
@@ -480,7 +494,7 @@ nc_hicosmo_dec (NcHICosmo *cosmo, gdouble z)
   const gdouble E2 = nc_hicosmo_E2 (cosmo, z);
   const gdouble Ok = nc_hicosmo_Omega_k0 (cosmo);
 
-  return (2.0 * E2 - q * E2 - 2.0 * Ok * x * x) / 3.0;
+  return ((2.0 - q) * E2 - 2.0 * Ok * x * x) / 3.0;
 }
 
 G_INLINE_FUNC gdouble
@@ -512,6 +526,16 @@ nc_hicosmo_j (NcHICosmo *cosmo, gdouble z)
 
   return gsl_pow_2 (1.0 + z) * (d2E2_dz2 - 2.0 * dE2_dz / (1.0 + z)) / (2.0 * E2) + 1.0;
 }
+
+G_INLINE_FUNC gdouble
+nc_hicosmo_mqE2 (NcHICosmo *cosmo, gdouble z)
+{
+  const gdouble q        = nc_hicosmo_q (cosmo, z);
+  const gdouble E2       = nc_hicosmo_E2 (cosmo, z);
+
+  return -q * E2;
+}
+
 
 G_INLINE_FUNC gdouble
 nc_hicosmo_x_alpha (NcHICosmo *cosmo, gdouble alpha)

@@ -355,6 +355,14 @@ dnl Check for multi-thread.
 dnl ***************************************************************************
 
 AX_COUNT_CPUS()
+AC_MSG_CHECKING([Number of cores])
+if test "x$CPU_COUNT" = "x"; then
+  AC_MSG_RESULT([cannot detect, using default `4'])
+  CPU_COUNT=4
+else
+  AC_MSG_RESULT([$CPU_COUNT])
+fi
+
 AC_DEFINE_UNQUOTED([NCM_NCORES],[$CPU_COUNT], [Number of cores of the current machine])
 
 AC_ARG_WITH([thread-pool-max],
