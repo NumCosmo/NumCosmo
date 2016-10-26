@@ -262,13 +262,13 @@ nc_xcor_limber_kernel_obs_params_len (NcXcorLimberKernel *xclk)
  * @xclk: a #NcXcorLimberKernel
  * @cosmo: a #NcHICosmo
  * @z: a #gdouble
+ * @xck: a #NcXcorKinetic
  * @l: a #gint
  *
  * FIXME
  *
  * Returns: FIXME
- *
-*/
+ */
 gdouble 
 nc_xcor_limber_kernel_eval (NcXcorLimberKernel *xclk, NcHICosmo *cosmo, gdouble z, const NcXcorKinetic *xck, gint l)
 {
