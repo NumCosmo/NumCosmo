@@ -59,6 +59,7 @@ struct _NcPowspecMNLHaloFit
   NcPowspecMNL parent_instance;
   NcPowspecML* psml;
   gdouble zmaxnl;
+  gdouble znl;
   gdouble reltol;
   NcmSpline *Rsigma;
   NcmSpline *neff;

@@ -98,6 +98,8 @@ void ncm_complex_clear (NcmComplex **c);
 gdouble ncm_complex_Re (NcmComplex *c);
 gdouble ncm_complex_Im (NcmComplex *c);
 
+G_INLINE_FUNC gdouble ncm_util_smooth_trans (gdouble f0, gdouble f1, gdouble z0, gdouble dz, gdouble z);
+
 /* Macros */
 
 #ifndef HAVE_EXP10
@@ -281,8 +283,32 @@ G_STMT_START { \
 } G_STMT_END
 
 G_END_DECLS
-
 #endif /* _NCM_UTIL_H_ */
+
+#ifndef _NCM_UTIL_INLINE_H_
+#define _NCM_UTIL_INLINE_H_
+#ifdef NUMCOSMO_HAVE_INLINE
+
+G_BEGIN_DECLS
+
+G_INLINE_FUNC gdouble 
+ncm_util_smooth_trans (gdouble f0, gdouble f1, gdouble z0, gdouble dz, gdouble z)
+{
+  const gdouble C0      = 18.0;
+  const gdouble Delta   = 0.25 * dz / C0;
+  const gdouble a       = - z0 - 0.5 * dz;
+  const gdouble gz      = (z + a) / Delta;
+  const gdouble exp_gz  = exp (gz);
+  const gdouble exp_mgz = 1.0 / exp_gz;
+  const gdouble f       = f0 / (1.0 + exp_gz) + f1 / (1.0 + exp_mgz);
+
+  return f;
+}
+
+G_END_DECLS
+
+#endif /* NUMCOSMO_HAVE_INLINE */
+#endif /* _NCM_UTIL_INLINE_H_ */
 
 #ifndef KOLMOGOROVSMIRNOVDIST_H
 #define KOLMOGOROVSMIRNOVDIST_H
