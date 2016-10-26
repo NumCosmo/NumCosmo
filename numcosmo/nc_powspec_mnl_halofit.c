@@ -596,8 +596,8 @@ _nc_powspec_mnl_halofit_eval (NcmPowspec* powspec, NcmModel *model, const gdoubl
     const gdouble y            = k / pshf->priv->ksigma;
     const gdouble P_Q          = Pklin * (pow (1.0 + Delta_lin, pshf->priv->betan) / (1.0 + pshf->priv->alphan * Delta_lin)) * exp (-y / 4.0 - y * y / 8.0);
 
-		const gdouble Delta_Hprime = pshf->priv->an * pow (y, 3.0 * pshf->priv->f1) / (1.0 + pshf->priv->bn * pow (y, pshf->priv->f2) + pow (pshf->priv->cn * pshf->priv->f3 * y, 3.0 - pshf->priv->gamman));
-		const gdouble Delta_H = Delta_Hprime / (1.0 + pshf->priv->nun / (y * y));
+    const gdouble Delta_Hprime = pshf->priv->an * pow (y, 3.0 * pshf->priv->f1) / (1.0 + pshf->priv->bn * pow (y, pshf->priv->f2) + pow (pshf->priv->cn * pshf->priv->f3 * y, 3.0 - pshf->priv->gamman));
+    const gdouble Delta_H      = Delta_Hprime / (1.0 + pshf->priv->nun / (y * y));
 
     const gdouble P_H          = Delta_H / k3o2pi2;
 
