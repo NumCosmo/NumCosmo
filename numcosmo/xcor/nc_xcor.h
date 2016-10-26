@@ -83,13 +83,22 @@ typedef enum _NcXcorLimberMethod
 	NC_XCOR_LIMBER_METHOD_CVODE,
 } NcXcorLimberMethod;
 
-GType nc_xcor_get_type (void) G_GNUC_CONST;
+typedef struct _NcXcorKinetic
+{
+  gdouble xi_z;
+  gdouble E_z;
+} NcXcorKinetic;
 
+GType nc_xcor_get_type (void) G_GNUC_CONST;
+GType nc_xcor_kinetic_get_type (void) G_GNUC_CONST;
 
 NcXcor* nc_xcor_new (NcDistance *dist, NcmPowspec *ps);
 NcXcor* nc_xcor_ref (NcXcor *xc);
 void nc_xcor_free (NcXcor *xc);
 void nc_xcor_clear (NcXcor **xc);
+
+NcXcorKinetic *nc_xcor_kinetic_copy (NcXcorKinetic *xck);
+void nc_xcor_kinetic_free (NcXcorKinetic *xck);
 
 void nc_xcor_prepare (NcXcor *xc, NcHICosmo *cosmo);
 
@@ -102,7 +111,7 @@ void nc_xcor_prepare (NcXcor *xc, NcHICosmo *cosmo);
 // void nc_xcor_limber_cubature (NcXcor* xc, NcXcorLimberKernel* xclk1, NcXcorLimberKernel* xclk2, NcHICosmo* cosmo, guint lmin, guint lmax, NcmVector* vp );
 // void nc_xcor_limber_cvode (NcXcor* xc, NcXcorLimberKernel* xclk1, NcXcorLimberKernel* xclk2, NcHICosmo* cosmo, guint lmin, guint lmax, NcmVector* vp );
 
-void nc_xcor_limber (NcXcor* xc, NcXcorLimberKernel* xclk1, NcXcorLimberKernel* xclk2, NcHICosmo* cosmo, guint lmin, guint lmax, NcmVector* vp, NcXcorLimberMethod meth);
+void nc_xcor_limber (NcXcor *xc, NcXcorLimberKernel *xclk1, NcXcorLimberKernel *xclk2, NcHICosmo *cosmo, guint lmin, guint lmax, NcmVector *vp, NcXcorLimberMethod meth);
 
 G_END_DECLS
 

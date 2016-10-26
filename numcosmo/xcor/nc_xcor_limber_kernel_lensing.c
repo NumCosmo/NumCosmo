@@ -39,6 +39,7 @@
 
 #include "math/ncm_cfg.h"
 #include "xcor/nc_xcor_limber_kernel_lensing.h"
+#include "xcor/nc_xcor.h"
 #include <gsl/gsl_randist.h>
 
 G_DEFINE_TYPE (NcXcorLimberKernelLensing, nc_xcor_limber_kernel_lensing, NC_TYPE_XCOR_LIMBER_KERNEL);
@@ -132,7 +133,7 @@ _nc_xcor_limber_kernel_lensing_finalize (GObject *object)
 	G_OBJECT_CLASS (nc_xcor_limber_kernel_lensing_parent_class)->finalize (object);
 }
 
-static gdouble _nc_xcor_limber_kernel_lensing_eval (NcXcorLimberKernel *xclk, NcHICosmo *cosmo, gdouble z, gint l);
+static gdouble _nc_xcor_limber_kernel_lensing_eval (NcXcorLimberKernel *xclk, NcHICosmo *cosmo, gdouble z, const NcXcorKinetic *xck, gint l);
 static void _nc_xcor_limber_kernel_lensing_prepare (NcXcorLimberKernel *xclk, NcHICosmo *cosmo);
 static void _nc_xcor_limber_kernel_lensing_add_noise (NcXcorLimberKernel *xclk, NcmVector *vp1, NcmVector *vp2, guint lmin);
 static guint _nc_xcor_limber_kernel_lensing_obs_len (NcXcorLimberKernel *xclk);
@@ -145,32 +146,20 @@ nc_xcor_limber_kernel_lensing_class_init (NcXcorLimberKernelLensingClass *klass)
 	NcXcorLimberKernelClass* parent_class = NC_XCOR_LIMBER_KERNEL_CLASS (klass);
 	NcmModelClass* model_class = NCM_MODEL_CLASS (klass);
 
-	parent_class->eval = &_nc_xcor_limber_kernel_lensing_eval;
-	parent_class->prepare = &_nc_xcor_limber_kernel_lensing_prepare;
-	// parent_class->noise_spec = &_nc_xcor_limber_kernel_lensing_noise_spec;
-	parent_class->add_noise = &_nc_xcor_limber_kernel_lensing_add_noise;
-
-	parent_class->obs_len = &_nc_xcor_limber_kernel_lensing_obs_len;
-	parent_class->obs_params_len = &_nc_xcor_limber_kernel_lensing_obs_params_len;
-
-	parent_class->impl = NC_XCOR_LIMBER_KERNEL_IMPL_ALL;
-
-	object_class->finalize = &_nc_xcor_limber_kernel_lensing_finalize;
-	object_class->dispose = &_nc_xcor_limber_kernel_lensing_dispose;
-
-
+	object_class->finalize    = &_nc_xcor_limber_kernel_lensing_finalize;
+	object_class->dispose     = &_nc_xcor_limber_kernel_lensing_dispose;
 	model_class->set_property = &_nc_xcor_limber_kernel_lensing_set_property;
 	model_class->get_property = &_nc_xcor_limber_kernel_lensing_get_property;
 
 	ncm_model_class_set_name_nick (model_class, "Xcor lensing distribution", "Xcor-lensing");
 	ncm_model_class_add_params (model_class, 0, 0, PROP_SIZE);
 
-	/**
-     * NcXcorLimberKernelLensing:dist:
-     *
-     * FIXME Set correct values (limits)
-     */
-	g_object_class_install_property (object_class,
+  /**
+   * NcXcorLimberKernelLensing:dist:
+   *
+   * FIXME Set correct values (limits)
+   */
+  g_object_class_install_property (object_class,
 	                                 PROP_DIST,
 	                                 g_param_spec_object ("dist",
 	                                                      NULL,
@@ -178,12 +167,12 @@ nc_xcor_limber_kernel_lensing_class_init (NcXcorLimberKernelLensingClass *klass)
 	                                                      NC_TYPE_DISTANCE,
 	                                                      G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
-	/**
-	* NcXcorLimberKernelLensing:recomb:
-	*
-	* FIXME Set correct values (limits)
-	*/
-	g_object_class_install_property (object_class,
+  /**
+   * NcXcorLimberKernelLensing:recomb:
+   *
+   * FIXME Set correct values (limits)
+   */
+  g_object_class_install_property (object_class,
 	                                 PROP_RECOMB,
 	                                 g_param_spec_object ("recomb",
 	                                                      NULL,
@@ -191,12 +180,12 @@ nc_xcor_limber_kernel_lensing_class_init (NcXcorLimberKernelLensingClass *klass)
 	                                                      NC_TYPE_RECOMB,
 	                                                      G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
-	/**
-     * NcXcorLimberKernelLensing:Nl:
-     *
-     * FIXME Set correct values (limits)
-     */
-	g_object_class_install_property (object_class,
+  /**
+   * NcXcorLimberKernelLensing:Nl:
+   *
+   * FIXME Set correct values (limits)
+   */
+  g_object_class_install_property (object_class,
 	                                 PROP_NL,
 	                                 g_param_spec_object ("Nl",
 	                                                      NULL,
@@ -206,6 +195,16 @@ nc_xcor_limber_kernel_lensing_class_init (NcXcorLimberKernelLensingClass *klass)
 
 	/* Check for errors in parameters initialization */
 	ncm_model_class_check_params_info (model_class);
+
+	parent_class->eval       = &_nc_xcor_limber_kernel_lensing_eval;
+	parent_class->prepare    = &_nc_xcor_limber_kernel_lensing_prepare;
+	/*parent_class->noise_spec = &_nc_xcor_limber_kernel_lensing_noise_spec;*/
+	parent_class->add_noise  = &_nc_xcor_limber_kernel_lensing_add_noise;
+
+	parent_class->obs_len        = &_nc_xcor_limber_kernel_lensing_obs_len;
+	parent_class->obs_params_len = &_nc_xcor_limber_kernel_lensing_obs_params_len;
+
+	parent_class->impl = NC_XCOR_LIMBER_KERNEL_IMPL_ALL;
 }
 
 /**
@@ -218,7 +217,7 @@ nc_xcor_limber_kernel_lensing_class_init (NcXcorLimberKernelLensingClass *klass)
  *
  * Returns: FIXME
  *
-*/
+ */
 NcXcorLimberKernelLensing *
 nc_xcor_limber_kernel_lensing_new (NcDistance* dist, NcRecomb* recomb, NcmVector* Nl) //, gdouble zl, gdouble zu)
 {
@@ -231,18 +230,13 @@ nc_xcor_limber_kernel_lensing_new (NcDistance* dist, NcRecomb* recomb, NcmVector
 }
 
 static gdouble
-_nc_xcor_limber_kernel_lensing_eval (NcXcorLimberKernel* xclk, NcHICosmo* cosmo, gdouble z, gint l)//, gdouble geo_z[])
+_nc_xcor_limber_kernel_lensing_eval (NcXcorLimberKernel *xclk, NcHICosmo *cosmo, gdouble z, const NcXcorKinetic *xck, gint l)//, gdouble geo_z[])
 {
 	NcXcorLimberKernelLensing* xclkl = NC_XCOR_LIMBER_KERNEL_LENSING (xclk);
 
 	NCM_UNUSED (l);
-
-	const gdouble xi_z = nc_distance_comoving (xclkl->dist, cosmo, z);
-	const gdouble E_z  = nc_hicosmo_E (cosmo, z);
-	// const gdouble xi_z = geo_z[0];
-	// const gdouble E_z = geo_z[1];
-
-	return ((1.0 + z) * xi_z * (xclkl->xi_lss - xi_z)) / (E_z * xclkl->xi_lss);
+  
+	return ((1.0 + z) * xck->xi_z * (xclkl->xi_lss - xck->xi_z)) / (xck->E_z * xclkl->xi_lss);
 }
 
 static void
@@ -274,10 +268,13 @@ _nc_xcor_limber_kernel_lensing_add_noise (NcXcorLimberKernel *xclk, NcmVector *v
     g_error ("nc_xcor_limber_kernel_lensing_noise_spec : too high multipole");
 
 	ncm_vector_memcpy(vp2, vp1);
-	NcmVector* Nl_sub = ncm_vector_get_subvector(xclkl->Nl, lmin, ncm_vector_len(vp1));
-	ncm_vector_add(vp2, Nl_sub);
-	ncm_vector_free (Nl_sub);
 
+  {
+    NcmVector *Nl_sub = ncm_vector_get_subvector(xclkl->Nl, lmin, ncm_vector_len(vp1));
+
+    ncm_vector_add (vp2, Nl_sub);
+    ncm_vector_free (Nl_sub);
+  }
 	// return ncm_vector_get (xclkl->Nl, l);
 }
 
