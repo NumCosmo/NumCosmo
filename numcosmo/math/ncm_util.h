@@ -99,6 +99,7 @@ gdouble ncm_complex_Re (NcmComplex *c);
 gdouble ncm_complex_Im (NcmComplex *c);
 
 G_INLINE_FUNC gdouble ncm_util_smooth_trans (gdouble f0, gdouble f1, gdouble z0, gdouble dz, gdouble z);
+G_INLINE_FUNC void ncm_util_smooth_trans_get_theta (gdouble z0, gdouble dz, gdouble z, gdouble *theta0, gdouble *theta1);
 
 /* Macros */
 
@@ -303,6 +304,19 @@ ncm_util_smooth_trans (gdouble f0, gdouble f1, gdouble z0, gdouble dz, gdouble z
   const gdouble f       = f0 / (1.0 + exp_gz) + f1 / (1.0 + exp_mgz);
 
   return f;
+}
+
+G_INLINE_FUNC void 
+ncm_util_smooth_trans_get_theta (gdouble z0, gdouble dz, gdouble z, gdouble *theta0, gdouble *theta1)
+{
+  const gdouble C0      = 18.0;
+  const gdouble Delta   = 0.25 * dz / C0;
+  const gdouble a       = - z0 - 0.5 * dz;
+  const gdouble gz      = (z + a) / Delta;
+  const gdouble exp_gz  = exp (gz);
+  const gdouble exp_mgz = 1.0 / exp_gz;
+  theta0[0] = 1.0 / (1.0 + exp_gz);
+  theta1[0] = 1.0 / (1.0 + exp_mgz);
 }
 
 G_END_DECLS
