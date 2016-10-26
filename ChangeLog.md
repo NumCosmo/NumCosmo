@@ -2,6 +2,10 @@ CHANGELOG
 ----------------------
 
 [Current]
+
+[v0.13.3]
+ * New changelog file.
+
  * Version bumped to 0.13.3.
 
  * Added smoothing scale to eval by vector function.
