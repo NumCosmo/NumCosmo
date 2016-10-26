@@ -1,4 +1,4 @@
-/***************************************************************************
+	/***************************************************************************
  *            nc_cbe.c
  *
  *  Sat October 24 11:56:56 2015
@@ -1891,7 +1891,7 @@ nc_cbe_get_matter_ps (NcCBE *cbe)
   }
 
   {
-    const gdouble z_i = z_i_b * 0.99; /* Safeguard against interpolation error on CLASS near the end */
+    const gdouble z_i = z_i_b * (1.0 - 1.0e-14);//0.99; /* Safeguard against interpolation error on CLASS near the end */
 
     ncm_vector_set (z_v, m, z_i);
     spectra_pk_at_z (&cbe->priv->pba, &cbe->priv->psp, logarithmic, z_i, ncm_matrix_ptr (lnPk, m, 0), NULL);

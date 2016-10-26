@@ -359,7 +359,7 @@ _nc_data_xcor_fast_update (NcDataXcor* dxc, NcXcorLimberKernel* xcl, guint a, Nc
 		{
 			const gdouble biasratio = *(xclkg->bias) / xclkg->bias_old;
 			// printf ("fast bias thingy\n");
-			// printf ("%g %g %g\n", *(xclkg->bias0), xclkg->oldbias, biasratio);
+			// printf ("%g %g %g\n", *(xclkg->bias), xclkg->bias_old, biasratio);
 
 			NcmVector* cl_th_0_aa = ncm_matrix_get_col (dxc->xcab[a][a]->cl_th, 0);
 			NcmVector* cl_th_1_aa = ncm_matrix_get_col (dxc->xcab[a][a]->cl_th, 1);
