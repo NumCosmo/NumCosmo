@@ -1302,7 +1302,7 @@ ncm_mset_catalog_set_file (NcmMSetCatalog *mcat, const gchar *filename)
     mcat->file = g_strdup (filename);
   }
   
-  if (mcat->file != NULL && strcmp (mcat->file, filename) == 0)
+  if ((mcat->file != NULL) && (filename != NULL) && (strcmp (mcat->file, filename) == 0))
     return;
 
   _ncm_mset_catalog_close_file (mcat);
@@ -1957,12 +1957,26 @@ ncm_mset_catalog_len (NcmMSetCatalog *mcat)
  * Number of itens in the catalog divided by the number
  * of chains.
  *
- * Returns: number of itens in the catalog.
+ * Returns: number of ensembles in the catalog.
  */
 guint
 ncm_mset_catalog_max_time (NcmMSetCatalog *mcat)
 {
   return mcat->e_mean_array->len;
+}
+
+/**
+ * ncm_mset_catalog_nchains:
+ * @mcat: a #NcmMSetCatalog
+ *
+ * Number of chains in the catalog.
+ *
+ * Returns: number of chains in the catalog.
+ */
+guint 
+ncm_mset_catalog_nchains (NcmMSetCatalog *mcat)
+{
+  return mcat->nchains;
 }
 
 /**

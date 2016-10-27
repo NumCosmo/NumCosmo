@@ -156,6 +156,7 @@ gboolean ncm_mset_catalog_is_empty (NcmMSetCatalog *mcat);
 gdouble ncm_mset_catalog_largest_error (NcmMSetCatalog *mcat);
 guint ncm_mset_catalog_len (NcmMSetCatalog *mcat);
 guint ncm_mset_catalog_max_time (NcmMSetCatalog *mcat);
+guint ncm_mset_catalog_nchains (NcmMSetCatalog *mcat);
 
 void ncm_mset_catalog_set_burnin (NcmMSetCatalog *mcat, glong burnin);
 glong ncm_mset_catalog_get_burnin (NcmMSetCatalog *mcat);
