@@ -65,6 +65,7 @@
 #include "model/nc_hicosmo_de_pad.h"
 #include "model/nc_hicosmo_de_qe.h"
 #include "model/nc_hicosmo_qgrw.h"
+#include "model/nc_hicosmo_Vexp.h"
 #include "model/nc_hicosmo_de_reparam_ok.h"
 #include "model/nc_hicosmo_de_reparam_cmb.h"
 #include "model/nc_hiprim_power_law.h"
@@ -325,6 +326,7 @@ ncm_cfg_init (void)
   ncm_cfg_register_obj (NC_TYPE_HICOSMO_DE_PAD);
   ncm_cfg_register_obj (NC_TYPE_HICOSMO_DE_QE);
   ncm_cfg_register_obj (NC_TYPE_HICOSMO_QGRW);
+  ncm_cfg_register_obj (NC_TYPE_HICOSMO_VEXP);
 
   ncm_cfg_register_obj (NC_TYPE_HICOSMO_DE_REPARAM_OK);
   ncm_cfg_register_obj (NC_TYPE_HICOSMO_DE_REPARAM_CMB);

@@ -171,6 +171,7 @@
     <section>
       <title>Quantum Gravity Bounce</title>
       <xi:include href="xml/nc_hicosmo_qgrw.xml"/>
+      <xi:include href="xml/nc_hicosmo_Vexp.xml"/>
       <xi:include href="xml/quantum_gravity.xml"/>
     </section>
     <section>
