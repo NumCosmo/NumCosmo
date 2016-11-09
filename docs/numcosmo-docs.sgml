@@ -67,6 +67,10 @@
       <xi:include href="xml/ncm_powspec_filter.xml"/>
     </section>
     <section>
+      <title>Harmonic Oscillator</title>
+      <xi:include href="xml/ncm_hoaa.xml"/>
+    </section>
+    <section>
       <title>Special Functions</title>
       <xi:include href="xml/ncm_mpsf_trig_int.xml"/>
       <xi:include href="xml/ncm_mpsf_0F1.xml"/>

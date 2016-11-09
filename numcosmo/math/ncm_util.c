@@ -1247,7 +1247,6 @@ ncm_util_function_params (const gchar *func, gdouble **x, guint *len)
   return func_name;
 }
 
-
 void
 _ncm_util_set_destroyed (gpointer b)
 {

@@ -50,11 +50,13 @@ struct _NcHICosmoVexpClass
 
 /**
  * NcHICosmoVexpParams:
- * @NC_HICOSMO_VEXP_H0:      FIXME
+ * @NC_HICOSMO_VEXP_H0: FIXME
  * @NC_HICOSMO_VEXP_OMEGA_C: FIXME
- * @NC_HICOSMO_VEXP_SIGMA:   FIXME
- * @NC_HICOSMO_VEXP_C:       FIXME
- * @NC_HICOSMO_VEXP_ALPHA0:  FIXME
+ * @NC_HICOSMO_VEXP_OMEGA_L: FIXME
+ * @NC_HICOSMO_VEXP_SIGMA_PHI: FIXME
+ * @NC_HICOSMO_VEXP_D_PHI: FIXME
+ * @NC_HICOSMO_VEXP_ALPHA_B: FIXME
+ * @NC_HICOSMO_VEXP_X_B: FIXME
  *
  * FIXME
  * 
@@ -63,9 +65,11 @@ typedef enum _NcHICosmoVexpParams
 {
   NC_HICOSMO_VEXP_H0 = 0,
   NC_HICOSMO_VEXP_OMEGA_C,
+  NC_HICOSMO_VEXP_OMEGA_L,
   NC_HICOSMO_VEXP_SIGMA_PHI,
   NC_HICOSMO_VEXP_D_PHI,
-  NC_HICOSMO_VEXP_ALPHA_0,    /*< private >*/
+  NC_HICOSMO_VEXP_ALPHA_B,
+  NC_HICOSMO_VEXP_X_B,        /*< private >*/
   NC_HICOSMO_VEXP_SPARAM_LEN, /*< skip >*/
 } NcHICosmoVexpParams;
 
@@ -74,12 +78,29 @@ struct _NcHICosmoVexp
   /*< private >*/
   NcHICosmo parent_instance;
   gpointer cvode_qt;
-  gpointer cvode_cl;
+  gpointer cvode_clp;
+  gpointer cvode_clm;
   gboolean qt_init;
-  gboolean cl_init;
+  gboolean clm_init;
+  gboolean clp_init;
+  gboolean glue_de;
   N_Vector y_qt;
   N_Vector ydot_qt;
   N_Vector y_cl;
+  gint cl_bc, cl_be;
+  gdouble RH_lp;
+  gdouble alpha_b;
+  gdouble a_0de;
+  gdouble a_0c, a_0e;
+  gdouble qc, qe;
+  gdouble Ec, Ee;
+  gdouble alpha_qc, alpha_qe;
+  gdouble alpha_0c, alpha_0e;
+  gdouble c1c, c1e;
+  gdouble c2c, c2e;
+  GArray *evol_c;
+  GArray *evol_e;
+  NcmSpline *E_alpha_s;
 };
 
 GType nc_hicosmo_Vexp_get_type (void) G_GNUC_CONST;
@@ -88,9 +109,11 @@ NcHICosmoVexp *nc_hicosmo_Vexp_new (void);
 
 #define NC_HICOSMO_VEXP_DEFAULT_H0 (70.0)
 #define NC_HICOSMO_VEXP_DEFAULT_OMEGA_C (0.25)
+#define NC_HICOSMO_VEXP_DEFAULT_OMEGA_L (0.75)
 #define NC_HICOSMO_VEXP_DEFAULT_SIGMA_PHI (0.4)
 #define NC_HICOSMO_VEXP_DEFAULT_D_PHI (-0.3)
-#define NC_HICOSMO_VEXP_DEFAULT_ALPHA_0 (0.1)
+#define NC_HICOSMO_VEXP_DEFAULT_ALPHA_B (0.1)
+#define NC_HICOSMO_VEXP_DEFAULT_X_B (1.0e30)
 
 G_END_DECLS
 

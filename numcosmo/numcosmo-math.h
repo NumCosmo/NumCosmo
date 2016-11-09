@@ -56,6 +56,7 @@
 #include <numcosmo/math/ncm_spline2d_bicubic.h>
 #include <numcosmo/math/ncm_powspec.h>
 #include <numcosmo/math/ncm_powspec_filter.h>
+#include <numcosmo/math/ncm_hoaa.h>
 #include <numcosmo/math/ncm_func_eval.h>
 #include <numcosmo/math/grid_one.h>
 #include <numcosmo/math/ncm_mpsf_trig_int.h>

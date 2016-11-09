@@ -77,6 +77,7 @@ ncm_sources = \
 	math/ncm_spline2d_bicubic.c          \
 	math/ncm_powspec.c                   \
 	math/ncm_powspec_filter.c            \
+	math/ncm_hoaa.c                      \
 	math/ncm_func_eval.c                 \
 	math/ncm_mpsf_trig_int.c             \
 	math/ncm_mpsf_sbessel.c              \
@@ -182,6 +183,7 @@ ncm_headers =                                \
 	math/ncm_spline2d_bicubic.h          \
 	math/ncm_powspec.h                   \
 	math/ncm_powspec_filter.h            \
+	math/ncm_hoaa.h                      \
 	math/ncm_func_eval.h                 \
 	math/ncm_mpsf_trig_int.h             \
 	math/ncm_mpsf_sbessel.h              \

@@ -107,6 +107,12 @@ G_INLINE_FUNC void ncm_util_smooth_trans_get_theta (gdouble z0, gdouble dz, gdou
 #define exp10(x) (exp ((x) * M_LN10))
 #endif /* HAVE_EXP10 */
 
+#ifndef NUMCOSMO_GIR_SCAN
+#ifndef HAVE_SINCOS
+G_INLINE_FUNC void sincos (gdouble x, gdouble *s, gdouble *c);
+#endif
+#endif
+
 #define ncm_acb_get_complex(z) (arf_get_d (arb_midref (acb_realref (z)), ARF_RND_NEAR) + I * arf_get_d (arb_midref (acb_imagref (z)), ARF_RND_NEAR))
 
 #define ncm_util_exp10(x) (exp ((x) * M_LN10))
@@ -318,6 +324,17 @@ ncm_util_smooth_trans_get_theta (gdouble z0, gdouble dz, gdouble z, gdouble *the
   theta0[0] = 1.0 / (1.0 + exp_gz);
   theta1[0] = 1.0 / (1.0 + exp_mgz);
 }
+
+#ifndef NUMCOSMO_GIR_SCAN
+#ifndef HAVE_SINCOS
+G_INLINE_FUNC void 
+sincos (gdouble x, gdouble *s, gdouble *c)
+{
+  s[0] = sin (x);
+  c[0] = cos (x);
+}
+#endif
+#endif
 
 G_END_DECLS
 
