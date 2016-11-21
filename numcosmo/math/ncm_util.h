@@ -48,7 +48,13 @@ gdouble ncm_sum (gdouble *d, gulong n);
 gdouble ncm_numdiff_1 (gsl_function *F, const gdouble x, const gdouble ho, gdouble *err);
 gdouble ncm_numdiff_2 (gsl_function *F, gdouble *ofx, const gdouble x, const gdouble ho, gdouble *err);
 gdouble ncm_numdiff_2_err (gsl_function *F, gdouble *ofx, const gdouble x, const gdouble ho, gdouble err, gdouble *ferr);
-gdouble ncm_sqrt1px_m1 (gdouble x);
+
+G_INLINE_FUNC gdouble ncm_util_sqrt1px_m1 (const gdouble x);
+G_INLINE_FUNC gdouble ncm_util_1pcosx (const gdouble sinx, const gdouble cosx);
+G_INLINE_FUNC gdouble ncm_util_1mcosx (const gdouble sinx, const gdouble cosx);
+G_INLINE_FUNC gdouble ncm_util_1psinx (const gdouble sinx, const gdouble cosx);
+G_INLINE_FUNC gdouble ncm_util_1msinx (const gdouble sinx, const gdouble cosx);
+
 gdouble ncm_cmpdbl (const gdouble x, const gdouble y);
 gdouble ncm_exprel (const gdouble x);
 gdouble ncm_d1exprel (const gdouble x);
@@ -231,7 +237,7 @@ G_STMT_START { \
 } G_STMT_END
 
 /* Minumum version here is 2.38 but it segfault during tests so we start at 2.40. */
-#if ((GLIB_MAJOR_VERSION == 2) && (GLIB_MINOR_VERSION < 40))
+#if !GLIB_CHECK_VERSION(2,40,0)
 #define NCM_TEST_FAIL(cmd) \
 G_STMT_START { \
   if (g_test_trap_fork (0, G_TEST_TRAP_SILENCE_STDOUT | G_TEST_TRAP_SILENCE_STDERR)) \
@@ -281,7 +287,7 @@ G_STMT_START { \
     g_test_trap_assert_passed (); \
   } \
 } G_STMT_END
-#endif /* !((GLIB_MAJOR_VERSION == 2) && (GLIB_MINOR_VERSION < 38)) */
+#endif /* !GLIB_CHECK_VERSION(2,40,0) */
 
 #define NCM_CVODE_CHECK(chk,name,val,ret) \
 G_STMT_START { \
@@ -297,6 +303,48 @@ G_END_DECLS
 #ifdef NUMCOSMO_HAVE_INLINE
 
 G_BEGIN_DECLS
+
+G_INLINE_FUNC gdouble
+ncm_util_sqrt1px_m1 (const gdouble x)
+{
+  return x / (sqrt(1.0 + x) + 1.0);
+}
+
+G_INLINE_FUNC gdouble 
+ncm_util_1pcosx (const gdouble sinx, const gdouble cosx)
+{
+  if (cosx > -0.9)
+    return 1.0 + cosx;
+  else
+    return -ncm_util_sqrt1px_m1 (-sinx * sinx);
+}
+
+G_INLINE_FUNC gdouble 
+ncm_util_1mcosx (const gdouble sinx, const gdouble cosx)
+{
+  if (cosx < 0.9)
+    return 1.0 - cosx;
+  else
+    return -ncm_util_sqrt1px_m1 (-sinx * sinx);
+}
+
+G_INLINE_FUNC gdouble 
+ncm_util_1psinx (const gdouble sinx, const gdouble cosx)
+{
+  if (sinx > -0.9)
+    return 1.0 + sinx;
+  else
+    return -ncm_util_sqrt1px_m1 (-cosx * cosx);
+}
+
+G_INLINE_FUNC gdouble 
+ncm_util_1msinx (const gdouble sinx, const gdouble cosx)
+{
+  if (sinx < 0.9)
+    return 1.0 - sinx;
+  else
+    return -ncm_util_sqrt1px_m1 (-cosx * cosx);
+}
 
 G_INLINE_FUNC gdouble 
 ncm_util_smooth_trans (gdouble f0, gdouble f1, gdouble z0, gdouble dz, gdouble z)

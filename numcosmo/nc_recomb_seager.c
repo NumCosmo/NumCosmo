@@ -554,7 +554,7 @@ nc_recomb_seager_prepare (NcRecomb *recomb, NcHICosmo *cosmo)
 
 		Tm = T0 * x_HeIII;
 		XeXHeII_XHeI = nc_recomb_HeI_ion_saha (cosmo, x_HeIII);
-    XHeII        = (XeXHeII_XHeI + 1.0) * ncm_sqrt1px_m1 (4.0 * XHe * XeXHeII_XHeI / gsl_pow_2 (XeXHeII_XHeI + 1.0)) / 2.0;
+    XHeII        = (XeXHeII_XHeI + 1.0) * ncm_util_sqrt1px_m1 (4.0 * XHe * XeXHeII_XHeI / gsl_pow_2 (XeXHeII_XHeI + 1.0)) / 2.0;
     
 		NV_Ith_S (recomb_seager->y0, 0) = XHII;
 		NV_Ith_S (recomb_seager->y0, 1) = Tm;

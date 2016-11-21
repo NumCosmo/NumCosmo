@@ -274,7 +274,7 @@ ncm_cfg_init (void)
 
   gsl_err = gsl_set_error_handler_off ();
 
-#if (GLIB_MAJOR_VERSION == 2) && (GLIB_MINOR_VERSION < 36)
+#if !GLIB_CHECK_VERSION(2,36,0)
   g_type_init ();
 #endif
 
@@ -471,7 +471,7 @@ static uint nreg_model = 0;
 void
 ncm_cfg_register_obj (GType obj)
 {
-#if !((GLIB_MAJOR_VERSION == 2) && (GLIB_MINOR_VERSION < 34))
+#if GLIB_CHECK_VERSION(2,34,0)
   g_type_ensure (obj);
 #endif /* GLIB >= 2.34*/
   gpointer obj_class = g_type_class_ref (obj);

@@ -831,40 +831,54 @@ ncm_numdiff_2 (gsl_function *F, gdouble *ofx, const gdouble x, const gdouble ho,
 }
 
 /**
- * ncm_sqrt1px_m1:
+ * ncm_util_sqrt1px_m1:
  * @x: a real number $&gt;-1$
  *
  * Calculates $\sqrt{1+x}-1$ using the appropriated taylor series when
- * $x \approx 1$.
+ * $x \approx 0$.
  *
  * Returns: $\sqrt{1+x}-1$.
  */
-gdouble
-ncm_sqrt1px_m1 (gdouble x)
-{
-  gdouble binfact = 1.0;
-  gdouble res = 0;
-  gdouble xn = 1;
-  gint n = 0;
-
-  if (!gsl_finite (x))
-    return x;
-
-  if (fabs(x) > 1e-1)
-    return sqrt (1.0 + x) - 1.0;
-
-  while (TRUE)
-  {
-    binfact *= 3.0 / (2.0 * (1.0 + n++)) - 1.0;
-    xn *= x;
-    res += binfact * xn;
-
-    if (fabs (binfact * xn / res) < GSL_DBL_EPSILON)
-      break;
-  }
-
-  return res;
-}
+/**
+ * ncm_util_1pcosx:
+ * @sinx: a real number $\sin(x)$
+ * @cosx: a real number $\cos(x)$
+ *
+ * Calculates $1 + \cos(x)$ using the appropriated taylor series when
+ * $\cos(x) \approx -1$.
+ *
+ * Returns: $1 + \cos(x)$.
+ */
+/**
+ * ncm_util_1mcosx:
+ * @sinx: a real number $\sin(x)$
+ * @cosx: a real number $\cos(x)$
+ *
+ * Calculates $1 - \cos(x)$ using the appropriated taylor series when
+ * $\cos(x) \approx 1$.
+ *
+ * Returns: $1 - \cos(x)$.
+ */
+/**
+ * ncm_util_1psinx:
+ * @sinx: a real number $\sin(x)$
+ * @cosx: a real number $\cos(x)$
+ *
+ * Calculates $1 + \sin(x)$ using the appropriated taylor series when
+ * $\sin(x) \approx -1$.
+ *
+ * Returns: $1 + \sin(x)$.
+ */
+/**
+ * ncm_util_1msinx:
+ * @sinx: a real number $\sin(x)$
+ * @cosx: a real number $\cos(x)$
+ *
+ * Calculates $1 - \sin(x)$ using the appropriated taylor series when
+ * $\sin(x) \approx 1$.
+ *
+ * Returns: $1 - \sin(x)$.
+ */
 
 /**
  * ncm_cmpdbl:

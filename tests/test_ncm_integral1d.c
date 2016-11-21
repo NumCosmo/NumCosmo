@@ -106,7 +106,7 @@ main (gint argc, gchar *argv[])
               &test_ncm_integral1d_new_sinx,
               &test_ncm_integral1d_traps,
               &test_ncm_integral1d_free);
-#if !((GLIB_MAJOR_VERSION == 2) && (GLIB_MINOR_VERSION < 38))
+#if GLIB_CHECK_VERSION(2,38,0)
   g_test_add ("/ncm/integral1d/invalid/test/subprocess", TestNcmIntegral1d, NULL, 
               &test_ncm_integral1d_new_sinx, 
               &test_ncm_integral1d_invalid_test, 
@@ -301,7 +301,7 @@ test_ncm_integral1d_x5_2_sinx_laguerre (TestNcmIntegral1d *test, gconstpointer p
 void
 test_ncm_integral1d_traps (TestNcmIntegral1d *test, gconstpointer pdata)
 {
-#if !((GLIB_MAJOR_VERSION == 2) && (GLIB_MINOR_VERSION < 38))
+#if GLIB_CHECK_VERSION(2,38,0)
   g_test_trap_subprocess ("/ncm/integral1d/invalid/test/subprocess", 0, 0);
   g_test_trap_assert_failed ();
 #endif

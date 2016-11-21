@@ -86,8 +86,11 @@ typedef enum _NcHICosmoImpl
   NC_HICOSMO_IMPL_dE2_dz    = 1 << 13,
   NC_HICOSMO_IMPL_d2E2_dz2  = 1 << 14,
   NC_HICOSMO_IMPL_bgp_cs2   = 1 << 15,
-  NC_HICOSMO_IMPL_Dc        = 1 << 16, /*< private >*/
-  NC_HICOSMO_IMPL_LAST      = 1 << 18, /*< skip >*/
+  NC_HICOSMO_IMPL_m_zeta    = 1 << 16,
+  NC_HICOSMO_IMPL_nu_zeta   = 1 << 17,
+  NC_HICOSMO_IMPL_dmnu_zeta = 1 << 18,  
+  NC_HICOSMO_IMPL_Dc        = 1 << 19, /*< private >*/
+  NC_HICOSMO_IMPL_LAST      = 1 << 20, /*< skip >*/
 } NcHICosmoImpl;
 
 #define NC_HICOSMO_IMPL_RH_Mpc (NC_HICOSMO_IMPL_H0)

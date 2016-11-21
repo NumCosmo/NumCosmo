@@ -44,14 +44,54 @@ typedef struct _NcmHOAAClass NcmHOAAClass;
 typedef struct _NcmHOAA NcmHOAA;
 typedef struct _NcmHOAAPrivate NcmHOAAPrivate;
 
+/**
+ * NcmHOAAOpt:
+ * @NCM_HOAA_OPT_FULL: FIXME
+ * @NCM_HOAA_OPT_V_ONLY: FIXME
+ * @NCM_HOAA_OPT_DLNMNU_ONLY: FIXME
+ * 
+ * FIXME
+ * 
+ */
+typedef enum _NcmHOAAOpt
+{
+  NCM_HOAA_OPT_FULL = 0,
+  NCM_HOAA_OPT_V_ONLY,
+  NCM_HOAA_OPT_DLNMNU_ONLY,
+  NCM_HOAA_OPT_INVALID,
+} NcmHOAAOpt;
+
+/**
+ * NcmHOAASingType:
+ * @NCM_HOAA_SING_TYPE_ZERO: FIXME
+ * @NCM_HOAA_SING_TYPE_INF: FIXME
+ * @NCM_HOAA_SING_TYPE_INVALID: FIXME
+ * 
+ * FIXME
+ * 
+ */
+typedef enum _NcmHOAASingType
+{
+  NCM_HOAA_SING_TYPE_ZERO = 0,
+  NCM_HOAA_SING_TYPE_INF,
+  NCM_HOAA_SING_TYPE_INVALID,
+} NcmHOAASingType;
+
 struct _NcmHOAAClass
 {
   /*< private >*/
   GObjectClass parent_class;
-  gdouble (*eval_m) (NcmHOAA *hoaa, NcmModel *model, const gdouble t, const gdouble k);
+  gdouble (*eval_mnu) (NcmHOAA *hoaa, NcmModel *model, const gdouble t, const gdouble k);
   gdouble (*eval_nu) (NcmHOAA *hoaa, NcmModel *model, const gdouble t, const gdouble k);
+  gdouble (*eval_dlnmnu) (NcmHOAA *hoaa, NcmModel *model, const gdouble t, const gdouble k);
   gdouble (*eval_V) (NcmHOAA *hoaa, NcmModel *model, const gdouble t, const gdouble k);
-  void (*eval_system) (NcmHOAA *hoaa, NcmModel *model, const gdouble t, const gdouble k, gdouble *nu, gdouble *dlnmnu, gdouble *Vnu, gdouble *Nt);
+  void (*eval_system) (NcmHOAA *hoaa, NcmModel *model, const gdouble t, const gdouble k, gdouble *nu, gdouble *dlnmnu, gdouble *Vnu);
+  guint (*nsing) (NcmHOAA *hoaa, NcmModel *model, const gdouble k);
+  void (*get_sing_info) (NcmHOAA *hoaa, NcmModel *model, const gdouble k, const guint sing, gdouble *ts, NcmHOAASingType *st);
+  gdouble (*eval_sing_mnu) (NcmHOAA *hoaa, NcmModel *model, const gdouble t_m_ts, const gdouble k, const guint sing);
+  gdouble (*eval_sing_dlnmnu) (NcmHOAA *hoaa, NcmModel *model, const gdouble t_m_ts, const gdouble k, const guint sing);
+  gdouble (*eval_sing_V) (NcmHOAA *hoaa, NcmModel *model, const gdouble t_m_ts, const gdouble k, const guint sing);
+  void (*eval_sing_system) (NcmHOAA *hoaa, NcmModel *model, const gdouble t_m_ts, const gdouble k, const guint sing, gdouble *nu, gdouble *dlnmnu, gdouble *Vnu);
   void (*prepare) (NcmHOAA *hoaa, NcmModel *model);
 };
 
@@ -62,6 +102,28 @@ struct _NcmHOAA
   NcmHOAAPrivate *priv;
   gdouble k;
 };
+
+/**
+ * NcmHOAAVar:
+ * @NCM_HOAA_VAR_THETA: FIXME
+ * @NCM_HOAA_VAR_PSI: FIXME
+ * @NCM_HOAA_VAR_LNI: FIXME
+ * @NCM_HOAA_VAR_LNJ: FIXME
+ * @NCM_HOAA_SYS_SIZE: FIXME
+ * 
+ * FIXME
+ * 
+ */
+typedef enum _NcmHOAAVar
+{
+  NCM_HOAA_VAR_Q = 0,
+  NCM_HOAA_VAR_V,
+  NCM_HOAA_VAR_PQ,
+  NCM_HOAA_VAR_PV,
+//  NCM_HOAA_VAR_LNI_MNU,
+//  NCM_HOAA_VAR_LNJ_MNU,
+  NCM_HOAA_VAR_SYS_SIZE,  
+} NcmHOAAVar;
 
 GType ncm_hoaa_get_type (void) G_GNUC_CONST;
 
@@ -80,23 +142,27 @@ void ncm_hoaa_prepare (NcmHOAA *hoaa, NcmModel *model);
 
 void ncm_hoaa_get_t0_t1 (NcmHOAA *hoaa, NcmModel *model, gdouble *t0, gdouble *t1);
 
-void ncm_hoaa_eval_adiabatic_approx (NcmHOAA *hoaa, NcmModel *model, const gdouble t, gdouble *RQ, gdouble *IQ, gdouble *RLnI, gdouble *ILnI);
-void ncm_hoaa_eval_adiabatic_LnI_approx (NcmHOAA *hoaa, NcmModel *model, const gdouble t, const gdouble RQ, const gdouble IQ, gdouble *RLnI, gdouble *ILnI);
-void ncm_hoaa_eval_AA (NcmHOAA *hoaa, NcmModel *model, const gdouble t, gdouble *RQ, gdouble *IQ, gdouble *RLnI, gdouble *ILnI);
+void ncm_hoaa_eval_adiabatic_approx (NcmHOAA *hoaa, NcmModel *model, const gdouble t, gdouble *theta, gdouble *psi, gdouble *LnI, gdouble *LnJ);
+void ncm_hoaa_eval_adiabatic_LnI_approx (NcmHOAA *hoaa, NcmModel *model, const gdouble t, const gdouble theta, const gdouble psi, gdouble *LnI, gdouble *LnJ);
+void ncm_hoaa_eval_AA (NcmHOAA *hoaa, NcmModel *model, const gdouble t, gdouble *theta, gdouble *psi, gdouble *LnI, gdouble *LnJ);
+void ncm_hoaa_eval_AA2CV (NcmHOAA *hoaa, NcmModel *model, const gdouble t, const gdouble theta, const gdouble psi, const gdouble LnI, const gdouble LnJ, gdouble *Rphi, gdouble *Iphi, gdouble *RPphi, gdouble *IPphi);
+void ncm_hoaa_eval_CV2AA (NcmHOAA *hoaa, NcmModel *model, const gdouble t, const gdouble Rphi, const gdouble Iphi, const gdouble RPphi, const gdouble IPphi, gdouble *theta, gdouble *psi, gdouble *LnI, gdouble *LnJ);
 void ncm_hoaa_eval_CV (NcmHOAA *hoaa, NcmModel *model, const gdouble t, gdouble *Rphi, gdouble *Iphi, gdouble *RPphi, gdouble *IPphi);
 void ncm_hoaa_eval_Delta (NcmHOAA *hoaa, NcmModel *model, const gdouble t, gdouble *Delta_phi, gdouble *Delta_Pphi);
 
-G_INLINE_FUNC gdouble ncm_hoaa_eval_m (NcmHOAA *hoaa, NcmModel *model, const gdouble t, const gdouble k);
+G_INLINE_FUNC gdouble ncm_hoaa_eval_mnu (NcmHOAA *hoaa, NcmModel *model, const gdouble t, const gdouble k);
 G_INLINE_FUNC gdouble ncm_hoaa_eval_nu (NcmHOAA *hoaa, NcmModel *model, const gdouble t, const gdouble k);
 G_INLINE_FUNC gdouble ncm_hoaa_eval_V (NcmHOAA *hoaa, NcmModel *model, const gdouble t, const gdouble k);
-G_INLINE_FUNC void ncm_hoaa_eval_system (NcmHOAA *hoaa, NcmModel *model, const gdouble t, const gdouble k, gdouble *nu, gdouble *dlnmnu, gdouble *Vnu, gdouble *Nt);
+G_INLINE_FUNC void ncm_hoaa_eval_system (NcmHOAA *hoaa, NcmModel *model, const gdouble t, const gdouble k, gdouble *nu, gdouble *dlnmnu, gdouble *Vnu);
 
-#define NCM_HOAA_RQi      (0)
-#define NCM_HOAA_IQi      (1)
-#define NCM_HOAA_RLnIi    (2)
-#define NCM_HOAA_ILnIi    (3)
-#define NCM_HOAA_SYS_SIZE (4)
-#define NCM_HOAA_MAX_ANGLE (100.0)
+G_INLINE_FUNC guint ncm_hoaa_nsing (NcmHOAA *hoaa, NcmModel *model, const gdouble k);
+G_INLINE_FUNC void ncm_hoaa_get_sing_info (NcmHOAA *hoaa, NcmModel *model, const gdouble k, const guint sing, gdouble *ts, NcmHOAASingType *st);
+G_INLINE_FUNC gdouble ncm_hoaa_eval_sing_mnu (NcmHOAA *hoaa, NcmModel *model, const gdouble t_m_ts, const gdouble k, const guint sing);
+G_INLINE_FUNC gdouble ncm_hoaa_eval_sing_dlnmnu (NcmHOAA *hoaa, NcmModel *model, const gdouble t_m_ts, const gdouble k, const guint sing, gdouble *nu, gdouble *dlnmnu);
+G_INLINE_FUNC gdouble ncm_hoaa_eval_sing_V (NcmHOAA *hoaa, NcmModel *model, const gdouble t_m_ts, const gdouble k, const guint sing, gdouble *nu, gdouble *dlnmnu);
+G_INLINE_FUNC void ncm_hoaa_eval_sing_system (NcmHOAA *hoaa, NcmModel *model, const gdouble t_m_ts, const gdouble k, const guint sing, gdouble *nu, gdouble *dlnmnu, gdouble *Vnu);
+
+#define NCM_HOAA_MAX_ANGLE (1.0)
 
 G_END_DECLS
 
@@ -109,9 +175,9 @@ G_END_DECLS
 G_BEGIN_DECLS
 
 G_INLINE_FUNC gdouble 
-ncm_hoaa_eval_m (NcmHOAA *hoaa, NcmModel *model, const gdouble t, const gdouble k)
+ncm_hoaa_eval_mnu (NcmHOAA *hoaa, NcmModel *model, const gdouble t, const gdouble k)
 {
-  return NCM_HOAA_GET_CLASS (hoaa)->eval_m (hoaa, model, t, k);
+  return NCM_HOAA_GET_CLASS (hoaa)->eval_mnu (hoaa, model, t, k);
 }
 
 G_INLINE_FUNC gdouble 
@@ -121,15 +187,57 @@ ncm_hoaa_eval_nu (NcmHOAA *hoaa, NcmModel *model, const gdouble t, const gdouble
 }
 
 G_INLINE_FUNC gdouble 
+ncm_hoaa_eval_dlnmnu (NcmHOAA *hoaa, NcmModel *model, const gdouble t, const gdouble k)
+{
+  return NCM_HOAA_GET_CLASS (hoaa)->eval_dlnmnu (hoaa, model, t, k);
+}
+
+G_INLINE_FUNC gdouble 
 ncm_hoaa_eval_V (NcmHOAA *hoaa, NcmModel *model, const gdouble t, const gdouble k)
 {
   return NCM_HOAA_GET_CLASS (hoaa)->eval_V (hoaa, model, t, k);
 }
 
 G_INLINE_FUNC void 
-ncm_hoaa_eval_system (NcmHOAA *hoaa, NcmModel *model, const gdouble t, const gdouble k, gdouble *nu, gdouble *dlnmnu, gdouble *Vnu, gdouble *Nt)
+ncm_hoaa_eval_system (NcmHOAA *hoaa, NcmModel *model, const gdouble t, const gdouble k, gdouble *nu, gdouble *dlnmnu, gdouble *Vnu)
 {
-  NCM_HOAA_GET_CLASS (hoaa)->eval_system (hoaa, model, t, k, nu, dlnmnu, Vnu, Nt);
+  NCM_HOAA_GET_CLASS (hoaa)->eval_system (hoaa, model, t, k, nu, dlnmnu, Vnu);
+}
+
+G_INLINE_FUNC guint 
+ncm_hoaa_nsing (NcmHOAA *hoaa, NcmModel *model, const gdouble k)
+{
+  return NCM_HOAA_GET_CLASS (hoaa)->nsing (hoaa, model, k);
+}
+
+G_INLINE_FUNC void 
+ncm_hoaa_get_sing_info (NcmHOAA *hoaa, NcmModel *model, const gdouble k, const guint sing, gdouble *ts, NcmHOAASingType *st)
+{
+  return NCM_HOAA_GET_CLASS (hoaa)->get_sing_info (hoaa, model, k, sing, ts, st);
+}
+
+G_INLINE_FUNC gdouble 
+ncm_hoaa_eval_sing_mnu (NcmHOAA *hoaa, NcmModel *model, const gdouble t_m_ts, const gdouble k, const guint sing)
+{
+  return NCM_HOAA_GET_CLASS (hoaa)->eval_sing_mnu (hoaa, model, t_m_ts, k, sing);
+}
+
+G_INLINE_FUNC gdouble 
+ncm_hoaa_eval_sing_dlnmnu (NcmHOAA *hoaa, NcmModel *model, const gdouble t_m_ts, const gdouble k, const guint sing, gdouble *nu, gdouble *dlnmnu)
+{
+  return NCM_HOAA_GET_CLASS (hoaa)->eval_sing_dlnmnu (hoaa, model, t_m_ts, k, sing);
+}
+
+G_INLINE_FUNC gdouble 
+ncm_hoaa_eval_sing_V (NcmHOAA *hoaa, NcmModel *model, const gdouble t_m_ts, const gdouble k, const guint sing, gdouble *nu, gdouble *dlnmnu)
+{
+  return NCM_HOAA_GET_CLASS (hoaa)->eval_sing_V (hoaa, model, t_m_ts, k, sing);
+}
+
+G_INLINE_FUNC void 
+ncm_hoaa_eval_sing_system (NcmHOAA *hoaa, NcmModel *model, const gdouble t_m_ts, const gdouble k, const guint sing, gdouble *nu, gdouble *dlnmnu, gdouble *Vnu)
+{
+  NCM_HOAA_GET_CLASS (hoaa)->eval_sing_system (hoaa, model, t_m_ts, k, sing, nu, dlnmnu, Vnu);
 }
 
 G_END_DECLS

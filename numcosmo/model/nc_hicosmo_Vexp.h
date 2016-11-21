@@ -96,16 +96,23 @@ struct _NcHICosmoVexp
   gdouble Ec, Ee;
   gdouble alpha_qc, alpha_qe;
   gdouble alpha_0c, alpha_0e;
+  gdouble tau_x0;
   gdouble c1c, c1e;
   gdouble c2c, c2e;
   GArray *evol_c;
   GArray *evol_e;
-  NcmSpline *E_alpha_s;
+  NcmSpline *xtau_s;
+  NcmSpline *lnN_s;
+  NcmSpline *tau_dlnx_dtau_s;
+  NcmSpline *E2_s;
 };
 
 GType nc_hicosmo_Vexp_get_type (void) G_GNUC_CONST;
 
 NcHICosmoVexp *nc_hicosmo_Vexp_new (void);
+
+gdouble nc_hicosmo_Vexp_tau_min (NcHICosmoVexp *Vexp);
+gdouble nc_hicosmo_Vexp_tau_max (NcHICosmoVexp *Vexp);
 
 #define NC_HICOSMO_VEXP_DEFAULT_H0 (70.0)
 #define NC_HICOSMO_VEXP_DEFAULT_OMEGA_C (0.25)
