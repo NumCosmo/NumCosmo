@@ -316,7 +316,7 @@ ncm_util_1pcosx (const gdouble sinx, const gdouble cosx)
   if (cosx > -0.9)
     return 1.0 + cosx;
   else
-    return -ncm_util_sqrt1px_m1 (-sinx * sinx);
+    return sinx * sinx / (1.0 - cosx);
 }
 
 G_INLINE_FUNC gdouble 
@@ -325,7 +325,7 @@ ncm_util_1mcosx (const gdouble sinx, const gdouble cosx)
   if (cosx < 0.9)
     return 1.0 - cosx;
   else
-    return -ncm_util_sqrt1px_m1 (-sinx * sinx);
+    return sinx * sinx / (1.0 + cosx);
 }
 
 G_INLINE_FUNC gdouble 
@@ -334,7 +334,7 @@ ncm_util_1psinx (const gdouble sinx, const gdouble cosx)
   if (sinx > -0.9)
     return 1.0 + sinx;
   else
-    return -ncm_util_sqrt1px_m1 (-cosx * cosx);
+    return cosx * cosx / (1.0 - sinx);
 }
 
 G_INLINE_FUNC gdouble 
@@ -343,7 +343,7 @@ ncm_util_1msinx (const gdouble sinx, const gdouble cosx)
   if (sinx < 0.9)
     return 1.0 - sinx;
   else
-    return -ncm_util_sqrt1px_m1 (-cosx * cosx);
+    return cosx * cosx / (1.0 + sinx);
 }
 
 G_INLINE_FUNC gdouble 

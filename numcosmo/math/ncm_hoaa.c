@@ -76,7 +76,7 @@
 #include "math/ncm_rng.h"
 #include "ncm_enum_types.h"
 
-#undef HAVE_SUNDIALS_ARKODE
+/*#undef HAVE_SUNDIALS_ARKODE*/
 
 #ifndef HAVE_SUNDIALS_ARKODE
 #include <cvodes/cvodes.h>
@@ -125,6 +125,9 @@ struct _NcmHOAAPrivate
   gdouble tc;
   gdouble t_ad_0, t_ad_1;
   gdouble t_na_0, t_na_1;
+  gdouble sin_shift;
+  gdouble cos_shift;
+  gint shift;
   GArray *theta, *psi, *LnI, *LnJ, *tarray;
   NcmSpline *theta_s, *psi_s, *LnI_s, *LnJ_s;
 };
@@ -150,8 +153,8 @@ ncm_hoaa_init (NcmHOAA *hoaa)
   /* private properties */
   hoaa->priv                   = G_TYPE_INSTANCE_GET_PRIVATE (hoaa, NCM_TYPE_HOAA, NcmHOAAPrivate);
 #ifndef HAVE_SUNDIALS_ARKODE
-  hoaa->priv->cvode            = CVodeCreate (CV_BDF, CV_NEWTON); /*CVodeCreate (CV_BDF, CV_NEWTON);*/
-  hoaa->priv->cvode_sing       = CVodeCreate (CV_BDF, CV_NEWTON); /*CVodeCreate (CV_ADAMS, CV_FUNCTIONAL);*/
+  hoaa->priv->cvode            = CVodeCreate (CV_ADAMS, CV_FUNCTIONAL); /*CVodeCreate (CV_BDF, CV_NEWTON);*/
+  hoaa->priv->cvode_sing       = CVodeCreate (CV_ADAMS, CV_FUNCTIONAL); /*CVodeCreate (CV_ADAMS, CV_FUNCTIONAL);*/
   hoaa->priv->cvode_phase      = CVodeCreate (CV_ADAMS, CV_FUNCTIONAL); /*CVodeCreate (CV_BDF, CV_NEWTON);*/
   hoaa->priv->cvode_init       = FALSE;
   hoaa->priv->cvode_sing_init  = FALSE;
@@ -167,6 +170,9 @@ ncm_hoaa_init (NcmHOAA *hoaa)
   hoaa->priv->ti        = 0.0;
   hoaa->priv->tf        = 0.0;
   hoaa->priv->t_cur     = 0.0;
+  hoaa->priv->sin_shift = 0.0;
+  hoaa->priv->cos_shift = 0.0;
+  hoaa->priv->shift     = 0;
   hoaa->priv->save_evol = FALSE;
   hoaa->priv->sigma     = N_VNew_Serial (1);
   hoaa->priv->y         = N_VNew_Serial (NCM_HOAA_VAR_SYS_SIZE);
@@ -787,54 +793,41 @@ static gint
 _ncm_hoaa_dlnmnu_only_f (realtype t, N_Vector y, N_Vector ydot, gpointer f_data)
 {
   NcmHOAAArg *arg = (NcmHOAAArg *) f_data;
-
 /*
   const gdouble theta = NV_Ith_S (y, NCM_HOAA_VAR_THETA);
   const gdouble psi   = NV_Ith_S (y, NCM_HOAA_VAR_PSI);
-  */
 
   gdouble nu, dlnmnu, Vnu, sin_2theta, cos_2theta, sin_2psi, cos_2psi;
   ncm_hoaa_eval_system (arg->hoaa, arg->model, t, arg->hoaa->k, &nu, &dlnmnu, &Vnu);
-
-/*  
+  
   sincos (2.0 * theta, &sin_2theta, &cos_2theta);
   sincos (2.0 * psi,   &sin_2psi,   &cos_2psi);
-*/
-  const gdouble q          = NV_Ith_S (y, NCM_HOAA_VAR_Q);
-  const gdouble v          = NV_Ith_S (y, NCM_HOAA_VAR_V);
-  const gdouble Pq         = NV_Ith_S (y, NCM_HOAA_VAR_PQ);
-  const gdouble Pv         = NV_Ith_S (y, NCM_HOAA_VAR_PV);
-  const gdouble mnu        = ncm_hoaa_eval_mnu (arg->hoaa, arg->model, t, arg->hoaa->k);
-  const gdouble mnu2       = mnu * mnu;
-  const gdouble q2         = q * q;
-  const gdouble Pq2        = Pq * Pq;
-  const gdouble v2         = v * v;
-  const gdouble Pv2        = Pv * Pv;
-  const gdouble cos2_theta = Pq2 / (mnu2 * q2 + Pq2);
-  const gdouble cos2_psi   = Pv2 / (mnu2 * v2 + Pv2);
 
-/*
   NV_Ith_S (ydot, NCM_HOAA_VAR_THETA) = nu + 0.5 * dlnmnu * sin_2theta;
   NV_Ith_S (ydot, NCM_HOAA_VAR_PSI)   = nu + 0.5 * dlnmnu * sin_2psi;
-*/
-/*
-  NV_Ith_S (ydot, NCM_HOAA_VAR_SIN_2THETA) = +2.0 * cos_2theta * (nu + 0.5 * dlnmnu * sin_2theta);
-  NV_Ith_S (ydot, NCM_HOAA_VAR_COS_2THETA) = -2.0 * sin_2theta * (nu + 0.5 * dlnmnu * sin_2theta);
-  NV_Ith_S (ydot, NCM_HOAA_VAR_SIN_2PSI)   = +2.0 * cos_2psi   * (nu + 0.5 * dlnmnu * sin_2psi);
-  NV_Ith_S (ydot, NCM_HOAA_VAR_COS_2PSI)   = -2.0 * sin_2psi   * (nu + 0.5 * dlnmnu * sin_2psi);
-  */
-
-  NV_Ith_S (ydot, NCM_HOAA_VAR_Q)  = nu * Pq / mnu;
-  NV_Ith_S (ydot, NCM_HOAA_VAR_V)  = nu * Pv / mnu;
-  NV_Ith_S (ydot, NCM_HOAA_VAR_PQ) = -mnu * nu * q;
-  NV_Ith_S (ydot, NCM_HOAA_VAR_PV) = -mnu * nu * v;
   
-//  NV_Ith_S (ydot, NCM_HOAA_VAR_LNI_MNU) = - dlnmnu * 2.0 * cos2_theta * 0.0;
-//  NV_Ith_S (ydot, NCM_HOAA_VAR_LNJ_MNU) = - dlnmnu * 2.0 * cos2_psi * 0.0;
+  NV_Ith_S (ydot, NCM_HOAA_VAR_LNI)   = - dlnmnu * cos_2theta;
+  NV_Ith_S (ydot, NCM_HOAA_VAR_LNJ)   = - dlnmnu * cos_2psi;
+*/  
 
-/*printf ("% 21.15g % 21.15g % 21.15g | % 21.15g % 21.15g % 21.15g % 21.15g % 21.15g % 21.15g % 21.15g % 21.15g\n", t, mnu, nu, q, v, Pq, Pv,
-        nu * Pq / mnu, nu * Pv / mnu, -mnu * nu * q, -mnu * nu * v);
-*/
+  const gdouble thetab  = NV_Ith_S (y, NCM_HOAA_VAR_THETA);
+  const gdouble epsilon = NV_Ith_S (y, NCM_HOAA_VAR_PSI);
+
+  gdouble nu, dlnmnu, Vnu, sin_thetab, cos_thetab;
+  ncm_hoaa_eval_system (arg->hoaa, arg->model, t, arg->hoaa->k, &nu, &dlnmnu, &Vnu);
+  
+  sincos (thetab, &sin_thetab, &cos_thetab);
+
+  const gdouble sin_thetabf = sin_thetab * arg->hoaa->priv->cos_shift + cos_thetab * arg->hoaa->priv->sin_shift;
+  const gdouble cos_thetabf = cos_thetab * arg->hoaa->priv->cos_shift - sin_thetab * arg->hoaa->priv->sin_shift;
+
+  NV_Ith_S (ydot, NCM_HOAA_VAR_THETA) = 2.0 * nu + dlnmnu * tanh (epsilon) * sin_thetabf;
+  NV_Ith_S (ydot, NCM_HOAA_VAR_PSI)   = -dlnmnu * cos_thetabf;
+  
+  NV_Ith_S (ydot, NCM_HOAA_VAR_LNI)   = -2.0 * sin_thetabf / cosh (epsilon);
+  NV_Ith_S (ydot, NCM_HOAA_VAR_LNJ)   = 0.0;
+
+  /*printf ("# N % 21.15g % 21.15g % 21.15g\n", t, epsilon, - dlnmnu * cos_thetab);*/
   
   return 0;
 }
@@ -842,15 +835,22 @@ _ncm_hoaa_dlnmnu_only_f (realtype t, N_Vector y, N_Vector ydot, gpointer f_data)
 static gint
 _ncm_hoaa_dlnmnu_only_J (_NCM_SUNDIALS_INT_TYPE N, realtype t, N_Vector y, N_Vector fy, DlsMat J, gpointer jac_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3)
 {
-  NcmHOAAArg *arg   = (NcmHOAAArg *) jac_data;
-  const gdouble mnu = ncm_hoaa_eval_mnu (arg->hoaa, arg->model, t, arg->hoaa->k);
-  const gdouble nu  = ncm_hoaa_eval_nu (arg->hoaa, arg->model, t, arg->hoaa->k);
+  NcmHOAAArg *arg          = (NcmHOAAArg *) jac_data;
 
-  DENSE_ELEM (J, NCM_HOAA_VAR_Q, NCM_HOAA_VAR_PQ) = nu / mnu;
-  DENSE_ELEM (J, NCM_HOAA_VAR_V, NCM_HOAA_VAR_PV) = nu / mnu;
+  const gdouble theta = NV_Ith_S (y, NCM_HOAA_VAR_THETA);
+  const gdouble psi   = NV_Ith_S (y, NCM_HOAA_VAR_PSI);
 
-  DENSE_ELEM (J, NCM_HOAA_VAR_PQ, NCM_HOAA_VAR_Q) = -mnu * nu;
-  DENSE_ELEM (J, NCM_HOAA_VAR_PV, NCM_HOAA_VAR_V) = -mnu * nu;
+  gdouble nu, dlnmnu, Vnu, sin_2theta, cos_2theta, sin_2psi, cos_2psi;
+  ncm_hoaa_eval_system (arg->hoaa, arg->model, t, arg->hoaa->k, &nu, &dlnmnu, &Vnu);
+  
+  sincos (2.0 * theta, &sin_2theta, &cos_2theta);
+  sincos (2.0 * psi,   &sin_2psi,   &cos_2psi);
+
+  DENSE_ELEM (J, NCM_HOAA_VAR_THETA, NCM_HOAA_VAR_THETA) = dlnmnu * cos_2theta;
+  DENSE_ELEM (J, NCM_HOAA_VAR_LNI,   NCM_HOAA_VAR_THETA) = 2.0 * dlnmnu * sin_2theta;
+
+  DENSE_ELEM (J, NCM_HOAA_VAR_PSI,   NCM_HOAA_VAR_PSI)   = dlnmnu * cos_2psi;
+  DENSE_ELEM (J, NCM_HOAA_VAR_LNJ,   NCM_HOAA_VAR_PSI)   = 2.0 * dlnmnu * sin_2psi;
 
   return 0;
 }
@@ -860,68 +860,63 @@ _ncm_hoaa_dlnmnu_only_sing_f (realtype t_m_ts, N_Vector y, N_Vector ydot, gpoint
 {
   NcmHOAAArg *arg = (NcmHOAAArg *) f_data;
 
-/*
-  const gdouble theta = NV_Ith_S (y, NCM_HOAA_VAR_THETA);
+/*  const gdouble theta = NV_Ith_S (y, NCM_HOAA_VAR_THETA);
   const gdouble psi   = NV_Ith_S (y, NCM_HOAA_VAR_PSI);
-  */
 
-  gdouble nu, dlnmnu, Vnu, sin_2theta, cos_2theta, sin_2psi, cos_2psi;
+*/
+  gdouble nu, dlnmnu, Vnu, sin_thetab, cos_thetab;
   ncm_hoaa_eval_sing_system (arg->hoaa, arg->model, t_m_ts, arg->hoaa->k, arg->sing, &nu, &dlnmnu, &Vnu);
 
+  const gdouble thetab  = NV_Ith_S (y, NCM_HOAA_VAR_THETA);
+  const gdouble epsilon = NV_Ith_S (y, NCM_HOAA_VAR_PSI) + log (ncm_hoaa_eval_sing_mnu (arg->hoaa, arg->model, t_m_ts, arg->hoaa->k, arg->sing));
+  
 /*
   sincos (2.0 * theta, &sin_2theta, &cos_2theta);
   sincos (2.0 * psi,   &sin_2psi,   &cos_2psi);
 */
-  const gdouble q          = NV_Ith_S (y, NCM_HOAA_VAR_Q);
-  const gdouble v          = NV_Ith_S (y, NCM_HOAA_VAR_V);
-  const gdouble Pq         = NV_Ith_S (y, NCM_HOAA_VAR_PQ);
-  const gdouble Pv         = NV_Ith_S (y, NCM_HOAA_VAR_PV);
-  const gdouble mnu        = ncm_hoaa_eval_sing_mnu (arg->hoaa, arg->model, t_m_ts, arg->hoaa->k, arg->sing);
-  const gdouble mnu2       = mnu * mnu;
-  const gdouble q2         = q * q;
-  const gdouble Pq2        = Pq * Pq;
-  const gdouble v2         = v * v;
-  const gdouble Pv2        = Pv * Pv;
-  const gdouble cos2_theta = Pq2 / (mnu2 * q2 + Pq2);
-  const gdouble cos2_psi   = Pv2 / (mnu2 * v2 + Pv2);
 
-/*
-  NV_Ith_S (ydot, NCM_HOAA_VAR_THETA) = nu + 0.5 * dlnmnu * sin_2theta;
-  NV_Ith_S (ydot, NCM_HOAA_VAR_PSI)   = nu + 0.5 * dlnmnu * sin_2psi;
-*/
-/*
-  NV_Ith_S (ydot, NCM_HOAA_VAR_SIN_2THETA) = +2.0 * cos_2theta * (nu + 0.5 * dlnmnu * sin_2theta);
-  NV_Ith_S (ydot, NCM_HOAA_VAR_COS_2THETA) = -2.0 * sin_2theta * (nu + 0.5 * dlnmnu * sin_2theta);
-  NV_Ith_S (ydot, NCM_HOAA_VAR_SIN_2PSI)   = +2.0 * cos_2psi   * (nu + 0.5 * dlnmnu * sin_2psi);
-  NV_Ith_S (ydot, NCM_HOAA_VAR_COS_2PSI)   = -2.0 * sin_2psi   * (nu + 0.5 * dlnmnu * sin_2psi);
-*/
+  sincos (thetab, &sin_thetab, &cos_thetab);
 
+  const gdouble sin_thetabf = sin_thetab * arg->hoaa->priv->cos_shift + cos_thetab * arg->hoaa->priv->sin_shift;
+  const gdouble cos_thetabf = cos_thetab * arg->hoaa->priv->cos_shift - sin_thetab * arg->hoaa->priv->sin_shift;
+  
+  NV_Ith_S (ydot, NCM_HOAA_VAR_THETA) = 2.0 * nu + dlnmnu * tanh (epsilon) * sin_thetabf;
+  NV_Ith_S (ydot, NCM_HOAA_VAR_PSI)   = - dlnmnu * cos_thetabf;
+  NV_Ith_S (ydot, NCM_HOAA_VAR_LNI)   = -2.0 * sin_thetabf / cosh (epsilon);
+  NV_Ith_S (ydot, NCM_HOAA_VAR_LNJ)   = 0.0;
+
+  /*printf ("# S % 21.15g % 21.15g % 21.15g\n", t_m_ts, epsilon, - dlnmnu * cos_thetab);*/
+  
   switch (arg->st)
   {
     case NCM_HOAA_SING_TYPE_ZERO:
-      NV_Ith_S (ydot, NCM_HOAA_VAR_Q)  = dlnmnu * q + nu * Pq;
-      NV_Ith_S (ydot, NCM_HOAA_VAR_V)  = dlnmnu * v + nu * Pv;
-      NV_Ith_S (ydot, NCM_HOAA_VAR_PQ) = -nu * q;
-      NV_Ith_S (ydot, NCM_HOAA_VAR_PV) = -nu * v;
-      break;
+    {
+      NV_Ith_S (ydot, NCM_HOAA_VAR_PSI)   = - dlnmnu * ncm_util_1mcosx (sin_thetabf, cos_thetabf);
+
+/*      NV_Ith_S (ydot, NCM_HOAA_VAR_THETA) = nu + 0.5 * dlnmnu * sin_2theta;
+      NV_Ith_S (ydot, NCM_HOAA_VAR_PSI)   = nu + 0.5 * dlnmnu * sin_2psi;
+
+      NV_Ith_S (ydot, NCM_HOAA_VAR_LNI)   = + dlnmnu * ncm_util_1mcosx (sin_2theta, cos_2theta);
+      NV_Ith_S (ydot, NCM_HOAA_VAR_LNJ)   = + dlnmnu * ncm_util_1mcosx (sin_2psi,   cos_2psi);
+*/
+      
+    break;
+    }
     case NCM_HOAA_SING_TYPE_INF:
-      NV_Ith_S (ydot, NCM_HOAA_VAR_Q)  = nu * Pq;
-      NV_Ith_S (ydot, NCM_HOAA_VAR_V)  = nu * Pv;
-      NV_Ith_S (ydot, NCM_HOAA_VAR_PQ) = -dlnmnu * Pq - nu * q;
-      NV_Ith_S (ydot, NCM_HOAA_VAR_PV) = -dlnmnu * Pv - nu * v;      
+    {
+      NV_Ith_S (ydot, NCM_HOAA_VAR_PSI)   = - dlnmnu * ncm_util_1pcosx (sin_thetabf, cos_thetabf);
+/*      NV_Ith_S (ydot, NCM_HOAA_VAR_THETA) = nu + 0.5 * dlnmnu * sin_2theta;
+      NV_Ith_S (ydot, NCM_HOAA_VAR_PSI)   = nu + 0.5 * dlnmnu * sin_2psi;
+
+      NV_Ith_S (ydot, NCM_HOAA_VAR_LNI)   = - dlnmnu * ncm_util_1pcosx (sin_2theta, cos_2theta);
+      NV_Ith_S (ydot, NCM_HOAA_VAR_LNJ)   = - dlnmnu * ncm_util_1pcosx (sin_2psi,   cos_2psi);
+*/
       break;
+    }
     default:
       g_assert_not_reached ();
       break;
   }
-
-/*
-printf ("% 21.15g % 21.15g % 21.15g | % 21.15g % 21.15g % 21.15g % 21.15g\n", t_m_ts, mnu / (t_m_ts * t_m_ts), nu,
-        q, v, Pq, Pv);
-*/
-  
-//  NV_Ith_S (ydot, NCM_HOAA_VAR_LNI_MNU)   = - dlnmnu * 2.0 * cos2_theta * 0.0;
-//  NV_Ith_S (ydot, NCM_HOAA_VAR_LNJ_MNU)   = - dlnmnu * 2.0 * cos2_psi * 0.0;
 
   return 0;
 }
@@ -930,30 +925,30 @@ static gint
 _ncm_hoaa_dlnmnu_only_sing_J (_NCM_SUNDIALS_INT_TYPE N, realtype t_m_ts, N_Vector y, N_Vector fy, DlsMat J, gpointer jac_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3)
 {
   NcmHOAAArg *arg   = (NcmHOAAArg *) jac_data;
-  gdouble nu, dlnmnu, Vnu;
+  const gdouble theta = NV_Ith_S (y, NCM_HOAA_VAR_THETA);
+  const gdouble psi   = NV_Ith_S (y, NCM_HOAA_VAR_PSI);
+
+  gdouble nu, dlnmnu, Vnu, sin_2theta, cos_2theta, sin_2psi, cos_2psi;
   ncm_hoaa_eval_sing_system (arg->hoaa, arg->model, t_m_ts, arg->hoaa->k, arg->sing, &nu, &dlnmnu, &Vnu);
+  
+  sincos (2.0 * theta, &sin_2theta, &cos_2theta);
+  sincos (2.0 * psi,   &sin_2psi,   &cos_2psi);
 
   switch (arg->st)
   {
     case NCM_HOAA_SING_TYPE_ZERO:
-      DENSE_ELEM (J, NCM_HOAA_VAR_Q, NCM_HOAA_VAR_Q ) = dlnmnu;
-      DENSE_ELEM (J, NCM_HOAA_VAR_Q, NCM_HOAA_VAR_PQ) = nu;
+      DENSE_ELEM (J, NCM_HOAA_VAR_THETA, NCM_HOAA_VAR_THETA) = dlnmnu * cos_2theta;
+      DENSE_ELEM (J, NCM_HOAA_VAR_LNI,   NCM_HOAA_VAR_THETA) = 2.0 * dlnmnu * sin_2theta;
 
-      DENSE_ELEM (J, NCM_HOAA_VAR_V, NCM_HOAA_VAR_V ) = dlnmnu;
-      DENSE_ELEM (J, NCM_HOAA_VAR_V, NCM_HOAA_VAR_PV) = nu;
-
-      DENSE_ELEM (J, NCM_HOAA_VAR_PQ, NCM_HOAA_VAR_Q) = -nu;
-      DENSE_ELEM (J, NCM_HOAA_VAR_PV, NCM_HOAA_VAR_V) = -nu;
+      DENSE_ELEM (J, NCM_HOAA_VAR_PSI,   NCM_HOAA_VAR_PSI)   = dlnmnu * cos_2psi;
+      DENSE_ELEM (J, NCM_HOAA_VAR_LNJ,   NCM_HOAA_VAR_PSI)   = 2.0 * dlnmnu * sin_2psi;
       break;
     case NCM_HOAA_SING_TYPE_INF:
-      DENSE_ELEM (J, NCM_HOAA_VAR_Q, NCM_HOAA_VAR_PQ) = nu;
-      DENSE_ELEM (J, NCM_HOAA_VAR_V, NCM_HOAA_VAR_PV) = nu;
+      DENSE_ELEM (J, NCM_HOAA_VAR_THETA, NCM_HOAA_VAR_THETA) = dlnmnu * cos_2theta;
+      DENSE_ELEM (J, NCM_HOAA_VAR_LNI,   NCM_HOAA_VAR_THETA) = 2.0 * dlnmnu * sin_2theta;
 
-      DENSE_ELEM (J, NCM_HOAA_VAR_PQ, NCM_HOAA_VAR_PQ) = -dlnmnu;
-      DENSE_ELEM (J, NCM_HOAA_VAR_PQ, NCM_HOAA_VAR_Q ) = -nu;
-
-      DENSE_ELEM (J, NCM_HOAA_VAR_PV, NCM_HOAA_VAR_PV) = -dlnmnu;
-      DENSE_ELEM (J, NCM_HOAA_VAR_PV, NCM_HOAA_VAR_V ) = -nu;
+      DENSE_ELEM (J, NCM_HOAA_VAR_PSI,   NCM_HOAA_VAR_PSI)   = dlnmnu * cos_2psi;
+      DENSE_ELEM (J, NCM_HOAA_VAR_LNJ,   NCM_HOAA_VAR_PSI)   = 2.0 * dlnmnu * sin_2psi;
       break;
     default:
       g_assert_not_reached ();
@@ -1013,43 +1008,33 @@ _ncm_hoaa_set_init_cond (NcmHOAA *hoaa, NcmModel *model, const gdouble t0)
 
     /* t0 must match hoaa->priv->tc at this point! */
     ncm_hoaa_eval_adiabatic_approx (hoaa, model, t0, &Atheta, &Apsi, &ALnI, &ALnJ);
-    
 /*
     NV_Ith_S (hoaa->priv->y, NCM_HOAA_VAR_THETA) = Atheta;
     NV_Ith_S (hoaa->priv->y, NCM_HOAA_VAR_PSI)   = Apsi;
-  */
-/*
-    NV_Ith_S (hoaa->priv->y, NCM_HOAA_VAR_SIN_2THETA) = sin (2.0 * Atheta);
-    NV_Ith_S (hoaa->priv->y, NCM_HOAA_VAR_COS_2THETA) = cos (2.0 * Atheta);
-    NV_Ith_S (hoaa->priv->y, NCM_HOAA_VAR_SIN_2PSI)   = sin (2.0 * Apsi);
-    NV_Ith_S (hoaa->priv->y, NCM_HOAA_VAR_COS_2PSI)   = cos (2.0 * Apsi);
-  */
-    NV_Ith_S (hoaa->priv->y, NCM_HOAA_VAR_Q)       = M_SQRT2 * exp (0.5 * (ALnI - lnmnu)) * sin (Atheta);
-    NV_Ith_S (hoaa->priv->y, NCM_HOAA_VAR_V)       = M_SQRT2 * exp (0.5 * (ALnJ - lnmnu)) * sin (Apsi);
-    NV_Ith_S (hoaa->priv->y, NCM_HOAA_VAR_PQ)      = M_SQRT2 * exp (0.5 * (ALnI + lnmnu)) * cos (Atheta);
-    NV_Ith_S (hoaa->priv->y, NCM_HOAA_VAR_PV)      = M_SQRT2 * exp (0.5 * (ALnI + lnmnu)) * cos (Apsi);
-
-//    NV_Ith_S (hoaa->priv->y, NCM_HOAA_VAR_LNI_MNU) = ALnI - lnmnu;
-//    NV_Ith_S (hoaa->priv->y, NCM_HOAA_VAR_LNJ_MNU) = ALnJ - lnmnu;
-/*
-    NV_Ith_S (hoaa->priv->abstol_v, NCM_HOAA_VAR_THETA) = 0.0;
-    NV_Ith_S (hoaa->priv->abstol_v, NCM_HOAA_VAR_PSI)   = 0.0;
-  */
-/*
-    NV_Ith_S (hoaa->priv->abstol_v, NCM_HOAA_VAR_SIN_2THETA) = 0.0;
-    NV_Ith_S (hoaa->priv->abstol_v, NCM_HOAA_VAR_COS_2THETA) = 0.0;
-    NV_Ith_S (hoaa->priv->abstol_v, NCM_HOAA_VAR_SIN_2PSI)   = 0.0;
-    NV_Ith_S (hoaa->priv->abstol_v, NCM_HOAA_VAR_COS_2PSI)   = 0.0;
-  */  
+  
+    NV_Ith_S (hoaa->priv->y, NCM_HOAA_VAR_LNI)   = ALnI;
+    NV_Ith_S (hoaa->priv->y, NCM_HOAA_VAR_LNJ)   = ALnJ;
+*/
+printf ("# COND INI: % 21.15g % 21.15g % 21.15g % 21.15g\n", t0, Apsi + Atheta, acosh (1.0 / sin (Apsi - Atheta)), ALnI - ALnJ);
+    NV_Ith_S (hoaa->priv->y, NCM_HOAA_VAR_THETA) = Apsi + Atheta;
+    NV_Ith_S (hoaa->priv->y, NCM_HOAA_VAR_PSI)   = acosh (1.0 / sin (Apsi - Atheta));
+  
+    NV_Ith_S (hoaa->priv->y, NCM_HOAA_VAR_LNI)   = ALnI - ALnJ;
+    NV_Ith_S (hoaa->priv->y, NCM_HOAA_VAR_LNJ)   = 1.0;//ALnJ;
 }
 
 void 
 _ncm_hoaa_prepare_integrator (NcmHOAA *hoaa, NcmModel *model, const gdouble t0)
 {
   gint flag;
-  static gint (*J) (_NCM_SUNDIALS_INT_TYPE N, realtype t, N_Vector y, N_Vector fy, DlsMat J, gpointer jac_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3);
-  static gint (*f) (realtype t, N_Vector y, N_Vector ydot, gpointer f_data);
-
+#ifndef HAVE_SUNDIALS_ARKODE
+  CVRhsFn f;
+  CVDlsDenseJacFn J;  
+#else
+  ARKRhsFn f;
+  ARKDlsDenseJacFn J;    
+#endif /* HAVE_SUNDIALS_ARKODE */
+  
   switch (hoaa->priv->opt)
   {
     case NCM_HOAA_OPT_FULL:
@@ -1071,13 +1056,14 @@ _ncm_hoaa_prepare_integrator (NcmHOAA *hoaa, NcmModel *model, const gdouble t0)
       break;
   }
 
-  NV_Ith_S (hoaa->priv->abstol_v, NCM_HOAA_VAR_Q)  = 0.0;
-  NV_Ith_S (hoaa->priv->abstol_v, NCM_HOAA_VAR_V)  = 0.0;
-  NV_Ith_S (hoaa->priv->abstol_v, NCM_HOAA_VAR_PQ) = 0.0;
-  NV_Ith_S (hoaa->priv->abstol_v, NCM_HOAA_VAR_PV) = 0.0;
+  NV_Ith_S (hoaa->priv->abstol_v, NCM_HOAA_VAR_THETA) = 0.0;
+  NV_Ith_S (hoaa->priv->abstol_v, NCM_HOAA_VAR_PSI)   = 0.0;
+  NV_Ith_S (hoaa->priv->abstol_v, NCM_HOAA_VAR_LNI)   = 0.0;
+  NV_Ith_S (hoaa->priv->abstol_v, NCM_HOAA_VAR_LNJ)   = 0.0;
 
-//  NV_Ith_S (hoaa->priv->abstol_v, NCM_HOAA_VAR_LNI_MNU) = hoaa->priv->abstol;
-//  NV_Ith_S (hoaa->priv->abstol_v, NCM_HOAA_VAR_LNJ_MNU) = hoaa->priv->abstol;
+  hoaa->priv->cos_shift = 1.0;
+  hoaa->priv->sin_shift = 0.0;
+  hoaa->priv->shift     = 0;
   
 #ifndef HAVE_SUNDIALS_ARKODE
   if (!hoaa->priv->cvode_init)
@@ -1090,14 +1076,14 @@ _ncm_hoaa_prepare_integrator (NcmHOAA *hoaa, NcmModel *model, const gdouble t0)
     flag = CVodeSVtolerances (hoaa->priv->cvode, hoaa->priv->reltol, hoaa->priv->abstol_v);
     NCM_CVODE_CHECK (&flag, "CVodeSStolerances", 1, );
 
-    flag = CVodeSetMaxNumSteps (hoaa->priv->cvode, -1);
+    flag = CVodeSetMaxNumSteps (hoaa->priv->cvode, 0);
     NCM_CVODE_CHECK (&flag, "CVodeSetMaxNumSteps", 1, );
 
     flag = CVDense (hoaa->priv->cvode, NCM_HOAA_VAR_SYS_SIZE);
     NCM_CVODE_CHECK (&flag, "CVDense", 1, );
 
-    flag = CVDlsSetDenseJacFn (hoaa->priv->cvode, J);
-    NCM_CVODE_CHECK (&flag, "CVDlsSetDenseJacFn", 1, );
+    //flag = CVDlsSetDenseJacFn (hoaa->priv->cvode, J);
+    //NCM_CVODE_CHECK (&flag, "CVDlsSetDenseJacFn", 1, );
 
     flag = CVodeSetInitStep (hoaa->priv->cvode, fabs (t0) * hoaa->priv->reltol);
     NCM_CVODE_CHECK (&flag, "CVodeSetInitStep", 1, );
@@ -1105,8 +1091,8 @@ _ncm_hoaa_prepare_integrator (NcmHOAA *hoaa, NcmModel *model, const gdouble t0)
     flag = CVodeRootInit (hoaa->priv->cvode, 2, &_ncm_hoaa_sing_root);
     NCM_CVODE_CHECK (&flag, "CVodeRootInit", 1, );
 
-    flag = CVodeSetMaxStep (hoaa->priv->cvode, 1.0e-6);
-    NCM_CVODE_CHECK (&flag, "CVodeSetMaxStep", 1, );
+    //flag = CVodeSetMaxStep (hoaa->priv->cvode, 1.0e-5);
+    //NCM_CVODE_CHECK (&flag, "CVodeSetMaxStep", 1, );
 
     /* PHASE integrator */
     flag = CVodeInit (hoaa->priv->cvode_phase, _ncm_hoaa_phase_f, t0, hoaa->priv->sigma);
@@ -1115,12 +1101,12 @@ _ncm_hoaa_prepare_integrator (NcmHOAA *hoaa, NcmModel *model, const gdouble t0)
     flag = CVodeSStolerances (hoaa->priv->cvode_phase, hoaa->priv->reltol, 0.0);
     NCM_CVODE_CHECK (&flag, "CVodeSStolerances", 1, );
 
-    flag = CVodeSetMaxNumSteps (hoaa->priv->cvode_phase, -1);
+    flag = CVodeSetMaxNumSteps (hoaa->priv->cvode_phase, 0);
     NCM_CVODE_CHECK (&flag, "CVodeSetMaxNumSteps", 1, );
 
     flag = CVodeRootInit (hoaa->priv->cvode_phase, 1, &_ncm_hoaa_phase_root);
     NCM_CVODE_CHECK (&flag, "CVodeRootInit", 1, );
-
+    
     hoaa->priv->cvode_init = TRUE;
   }
   else
@@ -1136,8 +1122,8 @@ _ncm_hoaa_prepare_integrator (NcmHOAA *hoaa, NcmModel *model, const gdouble t0)
     flag = CVodeRootInit (hoaa->priv->cvode, 2, &_ncm_hoaa_sing_root);
     NCM_CVODE_CHECK (&flag, "CVodeRootInit", 1, );
 
-    flag = CVodeSetMaxStep (hoaa->priv->cvode, 1.0e-6);
-    NCM_CVODE_CHECK (&flag, "CVodeSetMaxStep", 1, );
+    //flag = CVodeSetMaxStep (hoaa->priv->cvode, 1.0e-5);
+    //NCM_CVODE_CHECK (&flag, "CVodeSetMaxStep", 1, );
 
     /* PHASE integrator */
     flag = CVodeReInit (hoaa->priv->cvode_phase, t0, hoaa->priv->sigma);
@@ -1154,22 +1140,22 @@ _ncm_hoaa_prepare_integrator (NcmHOAA *hoaa, NcmModel *model, const gdouble t0)
     flag = ARKodeSVtolerances (hoaa->priv->arkode, hoaa->priv->reltol, hoaa->priv->abstol_v);
     NCM_CVODE_CHECK (&flag, "ARKodeSVtolerances", 1, );
 
-    flag = ARKodeSetMaxNumSteps (hoaa->priv->arkode, -1);
+    flag = ARKodeSetMaxNumSteps (hoaa->priv->arkode, 0);
     NCM_CVODE_CHECK (&flag, "ARKodeSetMaxNumSteps", 1, );
 
     flag = ARKDense (hoaa->priv->arkode, NCM_HOAA_VAR_SYS_SIZE);
     NCM_CVODE_CHECK (&flag, "ARKDense", 1, );
 
-    flag = ARKDlsSetDenseJacFn (hoaa->priv->arkode, J);
-    NCM_CVODE_CHECK (&flag, "ARKDlsSetDenseJacFn", 1, );
+    //flag = ARKDlsSetDenseJacFn (hoaa->priv->arkode, J);
+    //NCM_CVODE_CHECK (&flag, "ARKDlsSetDenseJacFn", 1, );
     
     flag = ARKodeSetLinear (hoaa->priv->arkode, 1);
     NCM_CVODE_CHECK (&flag, "ARKodeSetLinear", 1, );
     
     //flag = ARKodeSetOrder (hoaa->priv->arkode, 5);
     //NCM_CVODE_CHECK (&flag, "ARKodeSetOrder", 1, );
-#define BTABLE FEHLBERG_13_7_8
-    flag = ARKodeSetERKTableNum (hoaa->priv->arkode, BTABLE);
+
+    flag = ARKodeSetERKTableNum (hoaa->priv->arkode, FEHLBERG_13_7_8);
     NCM_CVODE_CHECK (&flag, "ARKodeSetERKTableNum", 1, );
     
     //flag = ARKodeSetMaxStep (hoaa->priv->arkode, 1.0e-4);
@@ -1185,7 +1171,7 @@ _ncm_hoaa_prepare_integrator (NcmHOAA *hoaa, NcmModel *model, const gdouble t0)
     flag = ARKodeSStolerances (hoaa->priv->arkode_phase, hoaa->priv->reltol, 0.0);
     NCM_CVODE_CHECK (&flag, "ARKodeSStolerances", 1, );
     
-    flag = ARKodeSetMaxNumSteps (hoaa->priv->arkode_phase, -1);
+    flag = ARKodeSetMaxNumSteps (hoaa->priv->arkode_phase, 0);
     NCM_CVODE_CHECK (&flag, "ARKodeSetMaxNumSteps", 1, );
 
     flag = ARKodeSetOrder (hoaa->priv->arkode_phase, 4);
@@ -1217,12 +1203,21 @@ void
 _ncm_hoaa_prepare_integrator_sing (NcmHOAA *hoaa, NcmModel *model, const gdouble t_m_ts, const guint sing, const gdouble ts, const NcmHOAASingType st)
 {
   gint flag;
-  static gint (*J) (_NCM_SUNDIALS_INT_TYPE N, realtype t, N_Vector y, N_Vector fy, DlsMat J, gpointer jac_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3);
-  static gint (*f) (realtype t, N_Vector y, N_Vector ydot, gpointer f_data);
+#ifndef HAVE_SUNDIALS_ARKODE
+  CVRhsFn f;
+  CVDlsDenseJacFn J;  
+#else
+  ARKRhsFn f;
+  ARKDlsDenseJacFn J;    
+#endif /* HAVE_SUNDIALS_ARKODE */
   
   g_assert_cmpfloat (t_m_ts + ts, ==, hoaa->priv->t_cur);
   g_assert_cmpuint (sing, <, ncm_hoaa_nsing (hoaa, model, hoaa->k));
 
+  hoaa->priv->cos_shift = 1.0;
+  hoaa->priv->sin_shift = 0.0;
+  hoaa->priv->shift     = 0;
+  
   switch (hoaa->priv->opt)
   {
     case NCM_HOAA_OPT_FULL:
@@ -1234,8 +1229,8 @@ _ncm_hoaa_prepare_integrator_sing (NcmHOAA *hoaa, NcmModel *model, const gdouble
 //      J = _ncm_hoaa_V_only_sing_J;
       break;
     case NCM_HOAA_OPT_DLNMNU_ONLY:
-      f = _ncm_hoaa_dlnmnu_only_sing_f;
-      J = _ncm_hoaa_dlnmnu_only_sing_J;
+      f = &_ncm_hoaa_dlnmnu_only_sing_f;
+      J = &_ncm_hoaa_dlnmnu_only_sing_J;
       break;
     default:
       f = NULL;
@@ -1246,15 +1241,22 @@ _ncm_hoaa_prepare_integrator_sing (NcmHOAA *hoaa, NcmModel *model, const gdouble
 
   {
     const gdouble mnu = ncm_hoaa_eval_sing_mnu (hoaa, model, t_m_ts, hoaa->k, sing);
+    const gdouble nu  = ncm_hoaa_eval_nu (hoaa, model, ts + t_m_ts, hoaa->k);
+    printf ("prepare dLnIJ = % 21.15g\n", log (mnu));
+
     switch (st)
     {
       case NCM_HOAA_SING_TYPE_ZERO:
-        NV_Ith_S (hoaa->priv->y, NCM_HOAA_VAR_Q)  *= mnu;
-        NV_Ith_S (hoaa->priv->y, NCM_HOAA_VAR_V)  *= mnu;
+/*        NV_Ith_S (hoaa->priv->y, NCM_HOAA_VAR_LNI) += log (mnu);
+        NV_Ith_S (hoaa->priv->y, NCM_HOAA_VAR_LNJ) += log (mnu);
+*/
+        NV_Ith_S (hoaa->priv->y, NCM_HOAA_VAR_PSI) += log (mnu);
         break;
       case NCM_HOAA_SING_TYPE_INF:
-        NV_Ith_S (hoaa->priv->y, NCM_HOAA_VAR_PQ) /= mnu;
-        NV_Ith_S (hoaa->priv->y, NCM_HOAA_VAR_PV) /= mnu;
+/*        NV_Ith_S (hoaa->priv->y, NCM_HOAA_VAR_LNI) -= log (mnu);
+        NV_Ith_S (hoaa->priv->y, NCM_HOAA_VAR_LNJ) -= log (mnu);
+*/        
+        NV_Ith_S (hoaa->priv->y, NCM_HOAA_VAR_PSI) -= log (mnu);
         break;
       default:
         g_assert_not_reached ();
@@ -1271,20 +1273,26 @@ _ncm_hoaa_prepare_integrator_sing (NcmHOAA *hoaa, NcmModel *model, const gdouble
     flag = CVodeSVtolerances (hoaa->priv->cvode_sing, hoaa->priv->reltol, hoaa->priv->abstol_v);
     NCM_CVODE_CHECK (&flag, "CVodeSStolerances", 1, );
 
-    flag = CVodeSetMaxNumSteps (hoaa->priv->cvode_sing, -1);
+    flag = CVodeSetMaxNumSteps (hoaa->priv->cvode_sing, 0);
     NCM_CVODE_CHECK (&flag, "CVodeSetMaxNumSteps", 1, );
 
     flag = CVDense (hoaa->priv->cvode_sing, NCM_HOAA_VAR_SYS_SIZE);
     NCM_CVODE_CHECK (&flag, "CVDense", 1, );
 
-    flag = CVodeSetMaxStep (hoaa->priv->cvode_sing, 1.0e-6);
-    NCM_CVODE_CHECK (&flag, "CVodeSetMaxStep", 1, );
+    //flag = CVDlsSetDenseJacFn (hoaa->priv->cvode_sing, J);
+    //NCM_CVODE_CHECK (&flag, "CVDlsSetDenseJacFn", 1, );
 
-//    flag = CVDlsSetDenseJacFn (hoaa->priv->cvode_sing, J);
-//    NCM_CVODE_CHECK (&flag, "CVDlsSetDenseJacFn", 1, );
+    //flag = CVodeSetMaxStep (hoaa->priv->cvode_sing, 1.0e-6);
+    //NCM_CVODE_CHECK (&flag, "CVodeSetMaxStep", 1, );
 
     flag = CVodeSetInitStep (hoaa->priv->cvode_sing, fabs (t_m_ts) * hoaa->priv->reltol);
     NCM_CVODE_CHECK (&flag, "CVodeSetInitStep", 1, );
+
+    //flag = CVodeSetStabLimDet (hoaa->priv->cvode_sing, TRUE);
+    //NCM_CVODE_CHECK (&flag, "CVodeSetStabLimDet", 1, );
+
+    flag = CVodeSetMaxErrTestFails (hoaa->priv->cvode_sing, 100);
+    NCM_CVODE_CHECK (&flag, "CVodeSetMaxErrTestFails", 1, );
 
     hoaa->priv->cvode_sing_init = TRUE;
   }
@@ -1296,8 +1304,14 @@ _ncm_hoaa_prepare_integrator_sing (NcmHOAA *hoaa, NcmModel *model, const gdouble
     flag = CVodeSetInitStep (hoaa->priv->cvode_sing, fabs (t_m_ts) * hoaa->priv->reltol);
     NCM_CVODE_CHECK (&flag, "CVodeSetInitStep", 1, );
 
-    flag = CVodeSetMaxStep (hoaa->priv->cvode_sing, 1.0e-6);
-    NCM_CVODE_CHECK (&flag, "CVodeSetMaxStep", 1, );
+    //flag = CVodeSetMaxStep (hoaa->priv->cvode_sing, 1.0e-6);
+    //NCM_CVODE_CHECK (&flag, "CVodeSetMaxStep", 1, );
+
+    //flag = CVDlsSetDenseJacFn (hoaa->priv->cvode_sing, J);
+    //NCM_CVODE_CHECK (&flag, "CVDlsSetDenseJacFn", 1, );
+
+    //CVodeSetStabLimDet (hoaa->priv->cvode_sing, TRUE);
+    //NCM_CVODE_CHECK (&flag, "CVodeSetStabLimDet", 1, );
   }
 #else
   if (!hoaa->priv->arkode_sing_init)
@@ -1308,23 +1322,23 @@ _ncm_hoaa_prepare_integrator_sing (NcmHOAA *hoaa, NcmModel *model, const gdouble
     flag = ARKodeSVtolerances (hoaa->priv->arkode_sing, hoaa->priv->reltol, hoaa->priv->abstol_v);
     NCM_CVODE_CHECK (&flag, "ARKodeSVtolerances", 1, );
 
-    flag = ARKodeSetMaxNumSteps (hoaa->priv->arkode_sing, -1);
+    flag = ARKodeSetMaxNumSteps (hoaa->priv->arkode_sing, 0);
     NCM_CVODE_CHECK (&flag, "ARKodeSetMaxNumSteps", 1, );
 
     flag = ARKDense (hoaa->priv->arkode_sing, NCM_HOAA_VAR_SYS_SIZE);
     NCM_CVODE_CHECK (&flag, "ARKDense", 1, );
 
-    flag = ARKDlsSetDenseJacFn (hoaa->priv->arkode_sing, J);
-    NCM_CVODE_CHECK (&flag, "ARKDlsSetDenseJacFn", 1, );
+    //flag = ARKDlsSetDenseJacFn (hoaa->priv->arkode_sing, J);
+    //NCM_CVODE_CHECK (&flag, "ARKDlsSetDenseJacFn", 1, );
 
-    flag = ARKodeSetLinear (hoaa->priv->arkode_sing, 1);
-    NCM_CVODE_CHECK (&flag, "ARKodeSetLinear", 1, );
+    //flag = ARKodeSetLinear (hoaa->priv->arkode_sing, 1);
+    //NCM_CVODE_CHECK (&flag, "ARKodeSetLinear", 1, );
     
     //flag = ARKodeSetOrder (hoaa->priv->arkode_sing, 5);
     //NCM_CVODE_CHECK (&flag, "ARKodeSetOrder", 1, );
 
-    flag = ARKodeSetERKTableNum (hoaa->priv->arkode_sing, BTABLE);
-    NCM_CVODE_CHECK (&flag, "ARKodeSetERKTableNum", 1, );
+    //flag = ARKodeSetIRKTableNum (hoaa->priv->arkode_sing, ARK436L2SA_DIRK_6_3_4);
+    //NCM_CVODE_CHECK (&flag, "ARKodeSetERKTableNum", 1, );
 
     //flag = ARKodeSetMaxStep (hoaa->priv->arkode_sing, 1.0e-4);
     //NCM_CVODE_CHECK (&flag, "ARKodeSetMaxStep", 1, );
@@ -1561,8 +1575,6 @@ _ncm_hoaa_evol_save (NcmHOAA *hoaa, NcmModel *model, const gdouble tf)
   gdouble last_t      = -1.0e100;
   NcmHOAAArg arg      = {hoaa, model, 0.0, -1, NCM_HOAA_SING_TYPE_INVALID};
 
-  printf ("# => % 21.15g\n", tf);
-
   g_assert_cmpfloat (tf, >, hoaa->priv->t_cur);
 
 #ifndef HAVE_SUNDIALS_ARKODE
@@ -1590,53 +1602,87 @@ _ncm_hoaa_evol_save (NcmHOAA *hoaa, NcmModel *model, const gdouble tf)
     NCM_CVODE_CHECK (&flag, "ARKode[ncm_hoaa_prepare]", 1, );
 #endif /* HAVE_SUNDIALS_ARKODE */
     {
-      //          const gdouble theta  = NV_Ith_S (hoaa->priv->y, NCM_HOAA_VAR_THETA);
-      //          const gdouble psi    = NV_Ith_S (hoaa->priv->y, NCM_HOAA_VAR_PSI);
-      const gdouble LnI    = 0.0;//NV_Ith_S (hoaa->priv->y, NCM_HOAA_VAR_LNI_MNU);
-      const gdouble LnJ    = 0.0;//NV_Ith_S (hoaa->priv->y, NCM_HOAA_VAR_LNJ_MNU);
-      //          const gdouble Ftheta = theta + delta_theta;
-      //          const gdouble Fpsi   = psi + delta_psi;
+      const gdouble theta  = NV_Ith_S (hoaa->priv->y, NCM_HOAA_VAR_THETA);
+      const gdouble psi    = NV_Ith_S (hoaa->priv->y, NCM_HOAA_VAR_PSI);
+      const gdouble LnI    = NV_Ith_S (hoaa->priv->y, NCM_HOAA_VAR_LNI);
+      const gdouble LnJ    = NV_Ith_S (hoaa->priv->y, NCM_HOAA_VAR_LNJ);
+      const gdouble Ftheta = theta + delta_theta;
+      const gdouble Fpsi   = psi + delta_psi;
 
-      if (hoaa->priv->t_cur > last_t + fabs (last_t) * 0.0001 || (hoaa->priv->t_cur > 9.6479))
+      if (hoaa->priv->t_cur > last_t + fabs (last_t) * 0.0001 && TRUE)
       {
         gdouble Rphi, Iphi, RPphi, IPphi, nu, dlnmnu, Vnu;
 
         gdouble mnu = ncm_hoaa_eval_mnu (hoaa, model, hoaa->priv->t_cur, hoaa->k);
         ncm_hoaa_eval_system (hoaa, model, hoaa->priv->t_cur, hoaa->k, &nu, &dlnmnu, &Vnu);
 
-        printf ("% 21.15g % 21.15g % 21.15g % 21.15g % 21.15g % 21.15g % 21.15g % 21.15g % 21.15g % 21.15g % 21.15g\n",
+        printf ("% 21.15g % 21.15e % 21.15e % 21.15e % 21.15e % 21.15g % 21.15g % 21.15g % 21.15g % 21.15g % 21.15g\n",
                 hoaa->priv->t_cur,
-                NV_Ith_S (hoaa->priv->y, NCM_HOAA_VAR_Q),
-                NV_Ith_S (hoaa->priv->y, NCM_HOAA_VAR_V),
-                NV_Ith_S (hoaa->priv->y, NCM_HOAA_VAR_PQ),
-                NV_Ith_S (hoaa->priv->y, NCM_HOAA_VAR_PV),
+                NV_Ith_S (hoaa->priv->y, NCM_HOAA_VAR_THETA) / M_PI,
+                NV_Ith_S (hoaa->priv->y, NCM_HOAA_VAR_PSI),
+                NV_Ith_S (hoaa->priv->y, NCM_HOAA_VAR_LNI),
+                NV_Ith_S (hoaa->priv->y, NCM_HOAA_VAR_LNJ),
                 LnI, LnJ,
                 dlnmnu * hoaa->priv->t_cur,
-                mnu,
-                exp (LnI), 
-                0.5 * (gsl_pow_2 (NV_Ith_S (hoaa->priv->y, NCM_HOAA_VAR_Q)) + gsl_pow_2 (NV_Ith_S (hoaa->priv->y, NCM_HOAA_VAR_PQ) / mnu))
+                mnu * gsl_pow_2 (hoaa->priv->t_cur),
+                nu,
+                exp (0.5 * (LnI + LnJ)) * sin (theta - psi)
                 );
         last_t = hoaa->priv->t_cur;
       }          
-/*
-          if (theta >= NCM_HOAA_MAX_ANGLE * M_PI)
+
+          //if (fabs (theta) >= NCM_HOAA_MAX_ANGLE * M_PI)
+          if (fabs (theta) > 0.99 * 0.5 * M_PI)
           {
-            NV_Ith_S (hoaa->priv->y, NCM_HOAA_VAR_THETA) = fmod (theta, M_PI);
+            //NV_Ith_S (hoaa->priv->y, NCM_HOAA_VAR_THETA) = fmod (theta, M_PI);
+            /*NV_Ith_S (hoaa->priv->y, NCM_HOAA_VAR_THETA) = 0.5 *gsl_sf_angle_restrict_symm (2.0 * theta);*/
+            const gdouble theta_s = gsl_sf_angle_restrict_symm (theta);
+
+            if (fabs (theta_s) > 0.99 * 0.5 * M_PI)
+            {
+              hoaa->priv->shift = (hoaa->priv->shift + 1) % 4;
+              switch (hoaa->priv->shift)
+              {
+                case 0:
+                  hoaa->priv->cos_shift = +1.0;
+                  hoaa->priv->sin_shift = +0.0;
+                  break;
+                case 1:
+                  hoaa->priv->cos_shift = +0.0;
+                  hoaa->priv->sin_shift = +1.0;
+                  break;
+                case 2:
+                  hoaa->priv->cos_shift = -1.0;
+                  hoaa->priv->sin_shift = +0.0;
+                  break;
+                case 3:
+                  hoaa->priv->cos_shift = +0.0;
+                  hoaa->priv->sin_shift = -1.0;
+                  break;                  
+              }
+              NV_Ith_S (hoaa->priv->y, NCM_HOAA_VAR_THETA) = theta_s - GSL_SIGN (theta_s) * 0.5 * M_PI;
+              /*printf ("shift %d % 22.15g\n", hoaa->priv->shift, NV_Ith_S (hoaa->priv->y, NCM_HOAA_VAR_THETA));*/
+            }
+            else
+            {
+              NV_Ith_S (hoaa->priv->y, NCM_HOAA_VAR_THETA) = theta_s;
+            }
 
             delta_theta += (theta - NV_Ith_S (hoaa->priv->y, NCM_HOAA_VAR_THETA));
 
             restart = 1;
           }
-
+/*
           if (psi >= NCM_HOAA_MAX_ANGLE * M_PI)
           {
-            NV_Ith_S (hoaa->priv->y, NCM_HOAA_VAR_PSI) = fmod (psi, M_PI);
+            //NV_Ith_S (hoaa->priv->y, NCM_HOAA_VAR_PSI) = fmod (psi, M_PI);
+            NV_Ith_S (hoaa->priv->y, NCM_HOAA_VAR_PSI) = 0.5 * gsl_sf_angle_restrict_symm (2.0 * psi);
 
             delta_psi += (psi - NV_Ith_S (hoaa->priv->y, NCM_HOAA_VAR_PSI));
             
             restart = 1;
           }
-  */ 
+ */  
 #if 0
           if (FALSE)
           {
@@ -1731,8 +1777,6 @@ _ncm_hoaa_evol_sing_save (NcmHOAA *hoaa, NcmModel *model, const gdouble t_m_ts, 
   NcmHOAAArg arg      = {hoaa, model, 0.0, sing, st};
   gdouble tstep_m_ts;
 
-  printf ("# => % 21.15g % 21.15g\n", t_m_ts, ts + t_m_ts);
-
   g_assert_cmpfloat (t_m_ts + ts, >, hoaa->priv->t_cur);
 
 #ifndef HAVE_SUNDIALS_ARKODE
@@ -1763,12 +1807,12 @@ _ncm_hoaa_evol_sing_save (NcmHOAA *hoaa, NcmModel *model, const gdouble t_m_ts, 
     hoaa->priv->t_cur = ts + tstep_m_ts;
       
     {
-      //          const gdouble theta  = NV_Ith_S (hoaa->priv->y, NCM_HOAA_VAR_THETA);
-      //          const gdouble psi    = NV_Ith_S (hoaa->priv->y, NCM_HOAA_VAR_PSI);
-      const gdouble LnI    = 0.0;//NV_Ith_S (hoaa->priv->y, NCM_HOAA_VAR_LNI_MNU);
-      const gdouble LnJ    = 0.0;//NV_Ith_S (hoaa->priv->y, NCM_HOAA_VAR_LNJ_MNU);
-      //          const gdouble Ftheta = theta + delta_theta;
-      //          const gdouble Fpsi   = psi + delta_psi;
+      const gdouble theta  = NV_Ith_S (hoaa->priv->y, NCM_HOAA_VAR_THETA);
+      const gdouble psi    = NV_Ith_S (hoaa->priv->y, NCM_HOAA_VAR_PSI);
+      const gdouble LnI    = NV_Ith_S (hoaa->priv->y, NCM_HOAA_VAR_LNI);
+      const gdouble LnJ    = NV_Ith_S (hoaa->priv->y, NCM_HOAA_VAR_LNJ);
+      const gdouble Ftheta = theta + delta_theta;
+      const gdouble Fpsi   = psi + delta_psi;
 
       if (TRUE)
       {
@@ -1777,40 +1821,91 @@ _ncm_hoaa_evol_sing_save (NcmHOAA *hoaa, NcmModel *model, const gdouble t_m_ts, 
         const gdouble mnu = ncm_hoaa_eval_sing_mnu (hoaa, model, tstep_m_ts, hoaa->k, sing);
         ncm_hoaa_eval_sing_system (hoaa, model, tstep_m_ts, hoaa->k, sing, &nu, &dlnmnu, &Vnu);
 
-        printf ("% 21.15g % 21.15g % 21.15g % 21.15g % 21.15g % 21.15g % 21.15g % 21.15g % 21.15g % 21.15g % 21.15g % 21.15g\n",
-                hoaa->priv->t_cur,
-                NV_Ith_S (hoaa->priv->y, NCM_HOAA_VAR_Q) / mnu,
-                NV_Ith_S (hoaa->priv->y, NCM_HOAA_VAR_V) / mnu,
-                NV_Ith_S (hoaa->priv->y, NCM_HOAA_VAR_PQ),
-                NV_Ith_S (hoaa->priv->y, NCM_HOAA_VAR_PV),
-                LnI, LnJ,
-                tstep_m_ts,
-                dlnmnu * hoaa->priv->t_cur,
-                mnu,
-                exp (LnI), 
-                0.5 * (gsl_pow_2 (NV_Ith_S (hoaa->priv->y, NCM_HOAA_VAR_Q)) + gsl_pow_2 (NV_Ith_S (hoaa->priv->y, NCM_HOAA_VAR_PQ) / mnu))
-                );
+        switch (st)
+        {
+          case NCM_HOAA_SING_TYPE_ZERO:
+            printf ("QSING: % 21.15g % 21.15e % 21.15e % 21.15e % 21.15e % 21.15g % 21.15g % 21.15g\n",
+                    hoaa->priv->t_cur,
+                    theta / M_PI,
+                    psi,
+                    LnI,
+                    LnJ,
+                    tstep_m_ts,
+                    dlnmnu * hoaa->priv->t_cur,
+                    exp (LnI + LnJ) * sin (theta - psi)
+                    );
+            break;
+          case NCM_HOAA_SING_TYPE_INF:
+            printf ("PSING: % 21.15g % 21.15e % 21.15e % 21.15e % 21.15e % 21.15g % 21.15g % 21.15g\n",
+                    hoaa->priv->t_cur,
+                    theta / M_PI,
+                    psi,
+                    LnI,
+                    LnJ,
+                    tstep_m_ts,
+                    dlnmnu * hoaa->priv->t_cur,
+                    exp (0.5 * (LnI + LnJ)) * sin (theta - psi)
+                    );
+            break;
+          default:
+            g_assert_not_reached ();
+            break;
+        }
         last_t = hoaa->priv->t_cur;
       }          
+
+      if (fabs (theta) > 0.99 * 0.5 * M_PI)
+      {
+        //NV_Ith_S (hoaa->priv->y, NCM_HOAA_VAR_THETA) = fmod (theta, M_PI);
+            const gdouble theta_s = gsl_sf_angle_restrict_symm (theta);
+
+            if (fabs (theta_s) > 0.99 * 0.5 * M_PI)
+            {
+              hoaa->priv->shift = (hoaa->priv->shift + 1) % 4;
+              switch (hoaa->priv->shift)
+              {
+                case 0:
+                  hoaa->priv->cos_shift = +1.0;
+                  hoaa->priv->sin_shift = +0.0;
+                  break;
+                case 1:
+                  hoaa->priv->cos_shift = +0.0;
+                  hoaa->priv->sin_shift = +1.0;
+                  break;
+                case 2:
+                  hoaa->priv->cos_shift = -1.0;
+                  hoaa->priv->sin_shift = +0.0;
+                  break;
+                case 3:
+                  hoaa->priv->cos_shift = +0.0;
+                  hoaa->priv->sin_shift = -1.0;
+                  break;                  
+              }
+              NV_Ith_S (hoaa->priv->y, NCM_HOAA_VAR_THETA) = theta_s - GSL_SIGN (theta_s) * 0.5 * M_PI;
+              /*printf ("shift %d % 22.15g\n", hoaa->priv->shift, NV_Ith_S (hoaa->priv->y, NCM_HOAA_VAR_THETA));*/
+            }
+            else
+            {
+              NV_Ith_S (hoaa->priv->y, NCM_HOAA_VAR_THETA) = theta_s;
+            }
+
+
+
+        delta_theta += (theta - NV_Ith_S (hoaa->priv->y, NCM_HOAA_VAR_THETA));
+
+        restart = 1;
+      }
 /*
-          if (theta >= NCM_HOAA_MAX_ANGLE * M_PI)
-          {
-            NV_Ith_S (hoaa->priv->y, NCM_HOAA_VAR_THETA) = fmod (theta, M_PI);
+      if (psi >= NCM_HOAA_MAX_ANGLE * M_PI)
+      {
+        //NV_Ith_S (hoaa->priv->y, NCM_HOAA_VAR_PSI) = fmod (psi, M_PI);
+        NV_Ith_S (hoaa->priv->y, NCM_HOAA_VAR_PSI) = 0.5 * gsl_sf_angle_restrict_symm (2.0 * psi);
 
-            delta_theta += (theta - NV_Ith_S (hoaa->priv->y, NCM_HOAA_VAR_THETA));
+        delta_psi += (psi - NV_Ith_S (hoaa->priv->y, NCM_HOAA_VAR_PSI));
 
-            restart = 1;
-          }
-
-          if (psi >= NCM_HOAA_MAX_ANGLE * M_PI)
-          {
-            NV_Ith_S (hoaa->priv->y, NCM_HOAA_VAR_PSI) = fmod (psi, M_PI);
-
-            delta_psi += (psi - NV_Ith_S (hoaa->priv->y, NCM_HOAA_VAR_PSI));
-            
-            restart = 1;
-          }
-  */ 
+        restart = 1;
+      }
+  */    
 #if 0
           if (FALSE)
           {
@@ -1859,10 +1954,10 @@ _ncm_hoaa_evol_sing_save (NcmHOAA *hoaa, NcmModel *model, const gdouble t_m_ts, 
       if (restart)
       {
 #ifndef HAVE_SUNDIALS_ARKODE
-        flag = CVodeReInit (hoaa->priv->cvode, hoaa->priv->t_cur, hoaa->priv->y);
+        flag = CVodeReInit (hoaa->priv->cvode_sing, hoaa->priv->t_cur, hoaa->priv->y);
         NCM_CVODE_CHECK (&flag, "CVodeReInit", 1, );
 #else
-        flag = ARKodeResize (hoaa->priv->arkode, hoaa->priv->y, 1.0, hoaa->priv->t_cur, _ncm_hoaa_arkode_resize, NULL);
+        flag = ARKodeResize (hoaa->priv->arkode_sing, hoaa->priv->y, 1.0, hoaa->priv->t_cur, _ncm_hoaa_arkode_resize, NULL);
         NCM_CVODE_CHECK (&flag, "ARKodeResize", 1, );
 #endif /* HAVE_SUNDIALS_ARKODE */
         nrestarts++;
@@ -1873,15 +1968,21 @@ _ncm_hoaa_evol_sing_save (NcmHOAA *hoaa, NcmModel *model, const gdouble t_m_ts, 
 
   {
     const gdouble mnu = ncm_hoaa_eval_sing_mnu (hoaa, model, t_m_ts, hoaa->k, sing);
+    printf ("back dLnIJ = % 21.15g\n", log (mnu));
+    
     switch (st)
     {
       case NCM_HOAA_SING_TYPE_ZERO:
-        NV_Ith_S (hoaa->priv->y, NCM_HOAA_VAR_Q)  /= mnu;
-        NV_Ith_S (hoaa->priv->y, NCM_HOAA_VAR_V)  /= mnu;
+        NV_Ith_S (hoaa->priv->y, NCM_HOAA_VAR_PSI) -= log (mnu);
+/*        NV_Ith_S (hoaa->priv->y, NCM_HOAA_VAR_LNI) -= log (mnu);
+        NV_Ith_S (hoaa->priv->y, NCM_HOAA_VAR_LNJ) -= log (mnu);
+*/
         break;
       case NCM_HOAA_SING_TYPE_INF:
-        NV_Ith_S (hoaa->priv->y, NCM_HOAA_VAR_PQ) *= mnu;
-        NV_Ith_S (hoaa->priv->y, NCM_HOAA_VAR_PV) *= mnu;
+        NV_Ith_S (hoaa->priv->y, NCM_HOAA_VAR_PSI) += log (mnu);
+/*        NV_Ith_S (hoaa->priv->y, NCM_HOAA_VAR_LNI) += log (mnu);
+        NV_Ith_S (hoaa->priv->y, NCM_HOAA_VAR_LNJ) += log (mnu);
+*/
         break;
       default:
         g_assert_not_reached ();
@@ -1960,21 +2061,34 @@ ncm_hoaa_prepare (NcmHOAA *hoaa, NcmModel *model)
         guint i;
         for (i = 0; i < nsing; i++)
         {
-          gdouble ts;
+          gdouble ts, dts_i, dts_f;
           NcmHOAASingType st;
 
-          ncm_hoaa_get_sing_info (hoaa, model, hoaa->k, i, &ts, &st);
-          {
-            const gdouble t0_m_ts = - fabs (ts) * 0.1;
-            const gdouble t1_m_ts = + fabs (ts) * 0.1;
+          ncm_hoaa_get_sing_info (hoaa, model, hoaa->k, i, &ts, &dts_i, &dts_f, &st);
 
-            _ncm_hoaa_evol_save (hoaa, model, t0_m_ts + ts);
+          if (ts < hoaa->priv->t_cur)
+            continue;
 
-            _ncm_hoaa_prepare_integrator_sing (hoaa, model, t0_m_ts, i, ts, st);
-            _ncm_hoaa_evol_sing_save (hoaa, model, t1_m_ts, i, ts, st);
-
-            _ncm_hoaa_prepare_integrator (hoaa, model, t1_m_ts + ts);
-          }
+          _ncm_hoaa_evol_save (hoaa, model, dts_i + ts);
+/*
+          printf ("# Integrating over singularity %u, type `%s' [% 21.15g] (% 21.15g, % 21.15g).\n",
+                  i, st == NCM_HOAA_SING_TYPE_ZERO ? "zero" : "inf",
+                  ts,
+                  dts_i + ts,
+                  dts_f + ts);
+*/
+#define CUTOFF 1.0e-35
+          _ncm_hoaa_prepare_integrator_sing (hoaa, model, dts_i, i, ts, st);
+/*
+          printf ("AAA1!!\n");
+          _ncm_hoaa_evol_sing_save (hoaa, model, -CUTOFF, i, ts, st);
+          printf ("AAA2!!\n");
+          _ncm_hoaa_evol_sing_save (hoaa, model, +CUTOFF, i, ts, st);
+          printf ("AAA3!!\n");
+*/
+          _ncm_hoaa_evol_sing_save (hoaa, model, dts_f, i, ts, st);
+          printf ("AAA4!!\n");
+          _ncm_hoaa_prepare_integrator (hoaa, model, dts_f + ts);
         }
         _ncm_hoaa_evol_save (hoaa, model, t_ad_1);
       }

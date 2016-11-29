@@ -28,7 +28,6 @@
 #include <glib-object.h>
 #include <numcosmo/build_cfg.h>
 #include <numcosmo/nc_hicosmo.h>
-#include <nvector/nvector_serial.h>
 
 G_BEGIN_DECLS
 
@@ -41,6 +40,7 @@ G_BEGIN_DECLS
 
 typedef struct _NcHICosmoVexpClass NcHICosmoVexpClass;
 typedef struct _NcHICosmoVexp NcHICosmoVexp;
+typedef struct _NcHICosmoVexpPrivate NcHICosmoVexpPrivate;
 
 struct _NcHICosmoVexpClass
 {
@@ -77,34 +77,7 @@ struct _NcHICosmoVexp
 {
   /*< private >*/
   NcHICosmo parent_instance;
-  gpointer cvode_qt;
-  gpointer cvode_clp;
-  gpointer cvode_clm;
-  gboolean qt_init;
-  gboolean clm_init;
-  gboolean clp_init;
-  gboolean glue_de;
-  N_Vector y_qt;
-  N_Vector ydot_qt;
-  N_Vector y_cl;
-  gint cl_bc, cl_be;
-  gdouble RH_lp;
-  gdouble alpha_b;
-  gdouble a_0de;
-  gdouble a_0c, a_0e;
-  gdouble qc, qe;
-  gdouble Ec, Ee;
-  gdouble alpha_qc, alpha_qe;
-  gdouble alpha_0c, alpha_0e;
-  gdouble tau_x0;
-  gdouble c1c, c1e;
-  gdouble c2c, c2e;
-  GArray *evol_c;
-  GArray *evol_e;
-  NcmSpline *xtau_s;
-  NcmSpline *lnN_s;
-  NcmSpline *tau_dlnx_dtau_s;
-  NcmSpline *E2_s;
+  NcHICosmoVexpPrivate *priv;
 };
 
 GType nc_hicosmo_Vexp_get_type (void) G_GNUC_CONST;
@@ -113,6 +86,9 @@ NcHICosmoVexp *nc_hicosmo_Vexp_new (void);
 
 gdouble nc_hicosmo_Vexp_tau_min (NcHICosmoVexp *Vexp);
 gdouble nc_hicosmo_Vexp_tau_max (NcHICosmoVexp *Vexp);
+
+gdouble nc_hicosmo_Vexp_tau_qt_c (NcHICosmoVexp *Vexp);
+gdouble nc_hicosmo_Vexp_tau_qt_e (NcHICosmoVexp *Vexp);
 
 #define NC_HICOSMO_VEXP_DEFAULT_H0 (70.0)
 #define NC_HICOSMO_VEXP_DEFAULT_OMEGA_C (0.25)

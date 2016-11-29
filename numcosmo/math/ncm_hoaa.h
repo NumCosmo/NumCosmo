@@ -87,7 +87,7 @@ struct _NcmHOAAClass
   gdouble (*eval_V) (NcmHOAA *hoaa, NcmModel *model, const gdouble t, const gdouble k);
   void (*eval_system) (NcmHOAA *hoaa, NcmModel *model, const gdouble t, const gdouble k, gdouble *nu, gdouble *dlnmnu, gdouble *Vnu);
   guint (*nsing) (NcmHOAA *hoaa, NcmModel *model, const gdouble k);
-  void (*get_sing_info) (NcmHOAA *hoaa, NcmModel *model, const gdouble k, const guint sing, gdouble *ts, NcmHOAASingType *st);
+  void (*get_sing_info) (NcmHOAA *hoaa, NcmModel *model, const gdouble k, const guint sing, gdouble *ts, gdouble *dts_i, gdouble *dts_f, NcmHOAASingType *st);
   gdouble (*eval_sing_mnu) (NcmHOAA *hoaa, NcmModel *model, const gdouble t_m_ts, const gdouble k, const guint sing);
   gdouble (*eval_sing_dlnmnu) (NcmHOAA *hoaa, NcmModel *model, const gdouble t_m_ts, const gdouble k, const guint sing);
   gdouble (*eval_sing_V) (NcmHOAA *hoaa, NcmModel *model, const gdouble t_m_ts, const gdouble k, const guint sing);
@@ -116,12 +116,10 @@ struct _NcmHOAA
  */
 typedef enum _NcmHOAAVar
 {
-  NCM_HOAA_VAR_Q = 0,
-  NCM_HOAA_VAR_V,
-  NCM_HOAA_VAR_PQ,
-  NCM_HOAA_VAR_PV,
-//  NCM_HOAA_VAR_LNI_MNU,
-//  NCM_HOAA_VAR_LNJ_MNU,
+  NCM_HOAA_VAR_THETA = 0,
+  NCM_HOAA_VAR_PSI,
+  NCM_HOAA_VAR_LNI,
+  NCM_HOAA_VAR_LNJ,
   NCM_HOAA_VAR_SYS_SIZE,  
 } NcmHOAAVar;
 
@@ -156,13 +154,13 @@ G_INLINE_FUNC gdouble ncm_hoaa_eval_V (NcmHOAA *hoaa, NcmModel *model, const gdo
 G_INLINE_FUNC void ncm_hoaa_eval_system (NcmHOAA *hoaa, NcmModel *model, const gdouble t, const gdouble k, gdouble *nu, gdouble *dlnmnu, gdouble *Vnu);
 
 G_INLINE_FUNC guint ncm_hoaa_nsing (NcmHOAA *hoaa, NcmModel *model, const gdouble k);
-G_INLINE_FUNC void ncm_hoaa_get_sing_info (NcmHOAA *hoaa, NcmModel *model, const gdouble k, const guint sing, gdouble *ts, NcmHOAASingType *st);
+G_INLINE_FUNC void ncm_hoaa_get_sing_info (NcmHOAA *hoaa, NcmModel *model, const gdouble k, const guint sing, gdouble *ts, gdouble *dts_i, gdouble *dts_f, NcmHOAASingType *st);
 G_INLINE_FUNC gdouble ncm_hoaa_eval_sing_mnu (NcmHOAA *hoaa, NcmModel *model, const gdouble t_m_ts, const gdouble k, const guint sing);
 G_INLINE_FUNC gdouble ncm_hoaa_eval_sing_dlnmnu (NcmHOAA *hoaa, NcmModel *model, const gdouble t_m_ts, const gdouble k, const guint sing, gdouble *nu, gdouble *dlnmnu);
 G_INLINE_FUNC gdouble ncm_hoaa_eval_sing_V (NcmHOAA *hoaa, NcmModel *model, const gdouble t_m_ts, const gdouble k, const guint sing, gdouble *nu, gdouble *dlnmnu);
 G_INLINE_FUNC void ncm_hoaa_eval_sing_system (NcmHOAA *hoaa, NcmModel *model, const gdouble t_m_ts, const gdouble k, const guint sing, gdouble *nu, gdouble *dlnmnu, gdouble *Vnu);
 
-#define NCM_HOAA_MAX_ANGLE (1.0)
+#define NCM_HOAA_MAX_ANGLE (0.99)
 
 G_END_DECLS
 
@@ -211,9 +209,9 @@ ncm_hoaa_nsing (NcmHOAA *hoaa, NcmModel *model, const gdouble k)
 }
 
 G_INLINE_FUNC void 
-ncm_hoaa_get_sing_info (NcmHOAA *hoaa, NcmModel *model, const gdouble k, const guint sing, gdouble *ts, NcmHOAASingType *st)
+ncm_hoaa_get_sing_info (NcmHOAA *hoaa, NcmModel *model, const gdouble k, const guint sing, gdouble *ts, gdouble *dts_i, gdouble *dts_f, NcmHOAASingType *st)
 {
-  return NCM_HOAA_GET_CLASS (hoaa)->get_sing_info (hoaa, model, k, sing, ts, st);
+  return NCM_HOAA_GET_CLASS (hoaa)->get_sing_info (hoaa, model, k, sing, ts, dts_i, dts_f, st);
 }
 
 G_INLINE_FUNC gdouble 
