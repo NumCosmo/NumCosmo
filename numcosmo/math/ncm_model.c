@@ -772,7 +772,7 @@ ncm_model_class_set_property (GObject *object, guint prop_id, const GValue *valu
   else if (vparam_fit_id < model_class->vparam_len)
   {
     GVariant *var = g_value_get_variant (value);
-    gsize n = g_variant_n_children (var);
+    gsize n  = g_variant_n_children (var);
     gsize nv = g_array_index (model->vparam_len, guint, vparam_fit_id);
     guint i;
 
@@ -796,7 +796,9 @@ ncm_model_class_set_property (GObject *object, guint prop_id, const GValue *valu
       }
     }
     else if (n != nv)
-      g_error ("set_property: cannot set fit type of vector parameter, variant contains %zu childs but vector dimension is %u", n, g_array_index (model->vparam_len, guint, vparam_fit_id));
+    {
+      g_error ("set_property: cannot set fit type of vector parameter, variant contains %zu children but vector dimension is %u", n, g_array_index (model->vparam_len, guint, vparam_fit_id));
+    }
     else
     {
       if (g_variant_is_of_type (var, G_VARIANT_TYPE ("ab")))
