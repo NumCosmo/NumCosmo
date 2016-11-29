@@ -843,13 +843,50 @@ ncm_mset_is_subset (NcmMSet *mset, NcmMSet *sub_mset)
 
   for (i = 0; i < sub_nmodels; i++)
   {
-    NcmModelID mid = ncm_mset_get_mid_array_pos (sub_mset, i);
+    NcmModelID mid      = ncm_mset_get_mid_array_pos (sub_mset, i);
     NcmModel *sub_model = ncm_mset_peek_array_pos (sub_mset, i);
-    NcmModel *model = ncm_mset_peek (mset, mid);
+    NcmModel *model     = ncm_mset_peek (mset, mid);
     if (sub_model != model)
       return FALSE;
   }
   return TRUE;
+}
+
+/**
+ * ncm_mset_cmp_all:
+ * @mset0: a #NcmMSet
+ * @mset1: a #NcmMSet
+ *
+ * FIXME
+ *
+ * Returns: FIXME
+ */
+gint
+ncm_mset_cmp_all (NcmMSet *mset0, NcmMSet *mset1)
+{
+  guint sub_nmodels0 = ncm_mset_nmodels (mset0);
+  guint sub_nmodels1 = ncm_mset_nmodels (mset1);
+  guint i;
+
+  if (sub_nmodels0 != sub_nmodels1)
+    return sub_nmodels0 < sub_nmodels1 ? -1 : 1;
+  else
+  {
+    for (i = 0; i < sub_nmodels0; i++)
+    {
+      NcmModelID mid0  = ncm_mset_get_mid_array_pos (mset0, i);
+      NcmModelID mid1  = ncm_mset_get_mid_array_pos (mset1, i);
+      NcmModel *model0 = ncm_mset_peek_array_pos (mset0, i);
+      NcmModel *model1 = ncm_mset_peek_array_pos (mset1, i);
+
+      if (mid0 != mid1)
+        return mid0 < mid1 ? -1 : 1;
+      else if (!ncm_model_is_equal (model0, model1))
+        return ncm_model_len (model0) < ncm_model_len (model1) ? -1 : 1;
+    }
+  }
+
+  return 0;
 }
 
 /**

@@ -102,6 +102,9 @@ static gdouble _nc_hicosmo_d2E2_dz2 (NcHICosmo *cosmo, gdouble z);
 static gdouble _nc_hicosmo_bgp_cs2 (NcHICosmo *cosmo, gdouble z);
 static gdouble _nc_hicosmo_Dc (NcHICosmo *cosmo, gdouble z);
 
+static guint _nc_hicosmo_NMassNu (NcHICosmo *cosmo);
+static void _nc_hicosmo_MassNuInfo (NcHICosmo *cosmo, guint nu_i, gdouble *mass_eV, gdouble *T_0);
+
 static void
 nc_hicosmo_class_init (NcHICosmoClass *klass)
 {
@@ -126,23 +129,25 @@ nc_hicosmo_class_init (NcHICosmoClass *klass)
   model_class->valid        = &_nc_hicosmo_valid;
   model_class->add_submodel = &_nc_hicosmo_add_submodel;
 
-  klass->H0        = &_nc_hicosmo_H0;
-  klass->Omega_b0  = &_nc_hicosmo_Omega_b0;
-  klass->Omega_g0  = &_nc_hicosmo_Omega_g0;
-  klass->Omega_nu0 = &_nc_hicosmo_Omega_nu0;
-  klass->Omega_r0  = &_nc_hicosmo_Omega_r0;
-  klass->Omega_c0  = &_nc_hicosmo_Omega_c0;
-  klass->Omega_t0  = &_nc_hicosmo_Omega_t0;
-  klass->T_gamma0  = &_nc_hicosmo_T_gamma0;
-  klass->Yp_4He    = &_nc_hicosmo_Yp_4He;
-  klass->z_lss     = &_nc_hicosmo_z_lss;
-  klass->as_drag   = &_nc_hicosmo_as_drag;
-  klass->xb        = &_nc_hicosmo_xb;
-  klass->E2        = &_nc_hicosmo_E2;
-  klass->dE2_dz    = &_nc_hicosmo_dE2_dz;
-  klass->d2E2_dz2  = &_nc_hicosmo_d2E2_dz2;
-  klass->bgp_cs2   = &_nc_hicosmo_bgp_cs2;
-  klass->Dc        = &_nc_hicosmo_Dc;
+  klass->H0         = &_nc_hicosmo_H0;
+  klass->Omega_b0   = &_nc_hicosmo_Omega_b0;
+  klass->Omega_g0   = &_nc_hicosmo_Omega_g0;
+  klass->Omega_nu0  = &_nc_hicosmo_Omega_nu0;
+  klass->Omega_r0   = &_nc_hicosmo_Omega_r0;
+  klass->Omega_c0   = &_nc_hicosmo_Omega_c0;
+  klass->Omega_t0   = &_nc_hicosmo_Omega_t0;
+  klass->T_gamma0   = &_nc_hicosmo_T_gamma0;
+  klass->Yp_4He     = &_nc_hicosmo_Yp_4He;
+  klass->z_lss      = &_nc_hicosmo_z_lss;
+  klass->as_drag    = &_nc_hicosmo_as_drag;
+  klass->xb         = &_nc_hicosmo_xb;
+  klass->E2         = &_nc_hicosmo_E2;
+  klass->dE2_dz     = &_nc_hicosmo_dE2_dz;
+  klass->d2E2_dz2   = &_nc_hicosmo_d2E2_dz2;
+  klass->bgp_cs2    = &_nc_hicosmo_bgp_cs2;
+  klass->Dc         = &_nc_hicosmo_Dc;
+  klass->NMassNu    = &_nc_hicosmo_NMassNu;
+  klass->MassNuInfo = &_nc_hicosmo_MassNuInfo;
 }
 
 static gdouble _nc_hicosmo_H0 (NcHICosmo *cosmo)        { g_error ("nc_hicosmo_H0: model `%s' does not implement this function.", G_OBJECT_TYPE_NAME (cosmo)); return 0.0; }
@@ -163,6 +168,9 @@ static gdouble _nc_hicosmo_dE2_dz (NcHICosmo *cosmo, gdouble z)   { g_error ("nc
 static gdouble _nc_hicosmo_d2E2_dz2 (NcHICosmo *cosmo, gdouble z) { g_error ("nc_hicosmo_d2E2_dz2: model `%s' does not implement this function.", G_OBJECT_TYPE_NAME (cosmo)); return 0.0;  }
 static gdouble _nc_hicosmo_bgp_cs2 (NcHICosmo *cosmo, gdouble z)  { g_error ("nc_hicosmo_bgp_cs2: model `%s' does not implement this function.", G_OBJECT_TYPE_NAME (cosmo)); return 0.0;  }
 static gdouble _nc_hicosmo_Dc (NcHICosmo *cosmo, gdouble z)       { g_error ("nc_hicosmo_Dc: model `%s' does not implement this function.", G_OBJECT_TYPE_NAME (cosmo)); return 0.0;  }
+
+static guint _nc_hicosmo_NMassNu (NcHICosmo *cosmo) { return 0; }
+static void _nc_hicosmo_MassNuInfo (NcHICosmo *cosmo, guint nu_i, gdouble *mass_eV, gdouble *T_0) { g_error ("nc_hicosmo_NuMass: model `%s' does not implement massive neutrinos.", G_OBJECT_TYPE_NAME (cosmo)); }
 
 static gboolean
 _nc_hicosmo_valid (NcmModel *model)
@@ -355,6 +363,36 @@ NCM_MODEL_SET_IMPL_FUNC(NC_HICOSMO,NcHICosmo,nc_hicosmo,NcHICosmoFunc1Z,bgp_cs2)
  *
  */
 NCM_MODEL_SET_IMPL_FUNC(NC_HICOSMO,NcHICosmo,nc_hicosmo,NcHICosmoFunc1Z,Dc)
+
+/**
+ * nc_hicosmo_set_NMassNu_impl: (skip)
+ * @model_class: a #NcmModelClass
+ * @f: FIXME
+ *
+ * FIXME
+ *
+ */
+void
+nc_hicosmo_set_NMassNu_impl (NcHICosmoClass *model_class, NcHICosmoFuncNMassNu f)
+{
+  NCM_MODEL_CLASS (model_class)->impl |= NC_HICOSMO_IMPL_NMassNu;
+  model_class->NMassNu = f;
+}
+
+/**
+ * nc_hicosmo_set_MassNuInfo_impl: (skip)
+ * @model_class: a #NcmModelClass
+ * @f: FIXME
+ *
+ * FIXME
+ *
+ */
+void
+nc_hicosmo_set_MassNuInfo_impl (NcHICosmoClass *model_class, NcHICosmoFuncMassNuInfo f)
+{
+  NCM_MODEL_CLASS (model_class)->impl |= NC_HICOSMO_IMPL_MassNuInfo;
+  model_class->MassNuInfo = f;
+}
 
 /**
  * nc_hicosmo_new_from_name:

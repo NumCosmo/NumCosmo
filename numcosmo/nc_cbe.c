@@ -1025,18 +1025,38 @@ _nc_cbe_set_bg (NcCBE* cbe, NcHICosmo* cosmo)
 	cbe->priv->pba.Omega0_dcdmdr = 0.0;
 	cbe->priv->pba.Omega0_dcdm = 0.0;
 	cbe->priv->pba.Gamma_dcdm = 0.0;
-	cbe->priv->pba.N_ncdm = 0;
 	cbe->priv->pba.Omega0_ncdm_tot = 0.;
 	cbe->priv->pba.ksi_ncdm_default = 0.;
 	cbe->priv->pba.ksi_ncdm = NULL;
-	cbe->priv->pba.T_ncdm_default = 0.71611;
-	cbe->priv->pba.T_ncdm = NULL;
 	cbe->priv->pba.deg_ncdm_default = 1.0;
 	cbe->priv->pba.deg_ncdm = NULL;
 	cbe->priv->pba.ncdm_psd_parameters = NULL;
 	cbe->priv->pba.ncdm_psd_files = NULL;
 
-	cbe->priv->pba.Omega0_scf = 0.0;
+  if ((cbe->priv->pba.N_ncdm = nc_hicosmo_NMassNu (cosmo)) != 0)
+  {
+    guint nu_i;
+
+    cbe->priv->pba.T_ncdm       = (gdouble *) malloc (sizeof (gdouble) * cbe->priv->pba.N_ncdm);
+    cbe->priv->pba.m_ncdm_in_eV = (gdouble *) malloc (sizeof (gdouble) * cbe->priv->pba.N_ncdm);
+    
+    for (nu_i = 0; nu_i < cbe->priv->pba.N_ncdm; nu_i++)
+    {
+      nc_hicosmo_MassNuInfo (cosmo, nu_i, 
+                             &cbe->priv->pba.m_ncdm_in_eV[nu_i],
+                             &cbe->priv->pba.T_ncdm[nu_i]
+                             );
+    }
+  }
+  else
+  {
+    cbe->priv->pba.N_ncdm         = 0;
+    cbe->priv->pba.T_ncdm_default = 0.71611;
+    cbe->priv->pba.T_ncdm         = NULL;
+    cbe->priv->pba.m_ncdm_in_eV   = NULL;
+  }
+
+  cbe->priv->pba.Omega0_scf = 0.0;
 	cbe->priv->pba.attractor_ic_scf = _TRUE_;
 	cbe->priv->pba.scf_parameters = NULL;
 	cbe->priv->pba.scf_parameters_size = 0;
