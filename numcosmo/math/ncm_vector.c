@@ -1084,6 +1084,7 @@ _ncm_vector_nvector_free (N_Vector nv)
 
 static struct _generic_N_Vector_Ops _ncm_ops =
 {
+  NULL,
   &_ncm_nvclone,
   &_ncm_nvcloneempty,
   &_ncm_vector_nvector_free,
