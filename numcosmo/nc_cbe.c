@@ -1,4 +1,4 @@
-	/***************************************************************************
+/***************************************************************************
  *            nc_cbe.c
  *
  *  Sat October 24 11:56:56 2015
@@ -90,290 +90,293 @@ struct _NcCBEPrivate
 G_DEFINE_TYPE (NcCBE, nc_cbe, G_TYPE_OBJECT);
 
 static void
-nc_cbe_init (NcCBE *cbe)
+nc_cbe_init (NcCBE* cbe)
 {
-  cbe->priv           = G_TYPE_INSTANCE_GET_PRIVATE (cbe, NC_TYPE_CBE, NcCBEPrivate);
-  cbe->prec           = NULL;
-  cbe->ctrl_cosmo     = ncm_model_ctrl_new (NULL);
-  cbe->ctrl_prim      = ncm_model_ctrl_new (NULL);
-  cbe->a              = NULL;
+	cbe->priv = G_TYPE_INSTANCE_GET_PRIVATE (cbe, NC_TYPE_CBE, NcCBEPrivate);
+	cbe->prec = NULL;
+	cbe->ctrl_cosmo = ncm_model_ctrl_new (NULL);
+	cbe->ctrl_prim = ncm_model_ctrl_new (NULL);
+	cbe->a = NULL;
 
-  cbe->target_Cls     = 0;
-  cbe->calc_transfer  = FALSE;
-  cbe->use_lensed_Cls = FALSE;
-  cbe->use_tensor     = FALSE;
-  cbe->scalar_lmax    = 0;
-  cbe->vector_lmax    = 0;
-  cbe->tensor_lmax    = 0;
+	cbe->target_Cls = 0;
+	cbe->calc_transfer = FALSE;
+	cbe->use_lensed_Cls = FALSE;
+	cbe->use_tensor = FALSE;
+	cbe->scalar_lmax = 0;
+	cbe->vector_lmax = 0;
+	cbe->tensor_lmax = 0;
 
-  cbe->call               = NULL;
-  cbe->free               = NULL;
-  cbe->allocated          = FALSE;
-  cbe->thermodyn_prepared = FALSE;
+	cbe->call = NULL;
+	cbe->free = NULL;
+	cbe->allocated = FALSE;
+	cbe->thermodyn_prepared = FALSE;
 
-  cbe->priv->pba.h                    = 0.0;
-  cbe->priv->pba.H0                   = 0.0;
-  cbe->priv->pba.T_cmb                = 0.0;
-  cbe->priv->pba.Omega0_g             = 0.0;
-  cbe->priv->pba.Omega0_ur            = 0.0;
-  cbe->priv->pba.Omega0_b             = 0.0;
-  cbe->priv->pba.Omega0_cdm           = 0.0;
-  cbe->priv->pba.Omega0_dcdmdr        = 0.0;
-  cbe->priv->pba.Omega0_dcdm          = 0.0;
-  cbe->priv->pba.Gamma_dcdm           = 0.0;
-  cbe->priv->pba.N_ncdm               = 0;
-  cbe->priv->pba.Omega0_ncdm_tot      = 0.0;
-  cbe->priv->pba.ksi_ncdm_default     = 0.0;
-  cbe->priv->pba.ksi_ncdm             = NULL;
-  cbe->priv->pba.T_ncdm_default       = 0.0;
-  cbe->priv->pba.T_ncdm               = NULL;
-  cbe->priv->pba.deg_ncdm_default     = 0.0;
-  cbe->priv->pba.deg_ncdm             = NULL;
-  cbe->priv->pba.ncdm_psd_parameters  = NULL;
-  cbe->priv->pba.ncdm_psd_files       = NULL;
-  cbe->priv->pba.Omega0_scf           = 0.0;
-  cbe->priv->pba.attractor_ic_scf     = _FALSE_;
-  cbe->priv->pba.scf_parameters       = NULL;
-  cbe->priv->pba.scf_parameters_size  = 0;
-  cbe->priv->pba.scf_tuning_index     = 0;
-  cbe->priv->pba.phi_ini_scf          = 0;
-  cbe->priv->pba.phi_prime_ini_scf    = 0;
-  cbe->priv->pba.Omega0_k             = 0.0;
-  cbe->priv->pba.K                    = 0.0;
-  cbe->priv->pba.sgnK                 = 0;
-  cbe->priv->pba.Omega0_lambda        = 0.0;
-  cbe->priv->pba.Omega0_fld           = 0.0;
-  cbe->priv->pba.a_today              = 0.0;
-  cbe->priv->pba.w0_fld               = 0.0;
-  cbe->priv->pba.wa_fld               = 0.0;
-  cbe->priv->pba.cs2_fld              = 0.0;
+	/* background structure */
 
-  /* thermodynamics structure */
+	cbe->priv->pba.h = 0.0;
+	cbe->priv->pba.H0 = 0.0;
+	cbe->priv->pba.T_cmb = 0.0;
+	cbe->priv->pba.Omega0_g = 0.0;
+	cbe->priv->pba.Omega0_ur = 0.0;
+	cbe->priv->pba.Omega0_b = 0.0;
+	cbe->priv->pba.Omega0_cdm = 0.0;
+	cbe->priv->pba.Omega0_dcdmdr = 0.0;
+	cbe->priv->pba.Omega0_dcdm = 0.0;
+	cbe->priv->pba.Gamma_dcdm = 0.0;
+	cbe->priv->pba.N_ncdm = 0;
+	cbe->priv->pba.Omega0_ncdm_tot = 0.0;
+	cbe->priv->pba.ksi_ncdm_default = 0.0;
+	cbe->priv->pba.ksi_ncdm = NULL;
+	cbe->priv->pba.T_ncdm_default = 0.0;
+	cbe->priv->pba.T_ncdm = NULL;
+	cbe->priv->pba.deg_ncdm_default = 0.0;
+	cbe->priv->pba.deg_ncdm = NULL;
+	cbe->priv->pba.ncdm_psd_parameters = NULL;
+	cbe->priv->pba.ncdm_psd_files = NULL;
+	cbe->priv->pba.Omega0_scf = 0.0;
+	cbe->priv->pba.attractor_ic_scf = _FALSE_;
+	cbe->priv->pba.scf_parameters = NULL;
+	cbe->priv->pba.scf_parameters_size = 0;
+	cbe->priv->pba.scf_tuning_index = 0;
+	cbe->priv->pba.phi_ini_scf = 0;
+	cbe->priv->pba.phi_prime_ini_scf = 0;
+	cbe->priv->pba.Omega0_k = 0.0;
+	cbe->priv->pba.K = 0.0;
+	cbe->priv->pba.sgnK = 0;
+	cbe->priv->pba.Omega0_lambda = 0.0;
+	cbe->priv->pba.Omega0_fld = 0.0;
+	cbe->priv->pba.a_today = 0.0;
+	cbe->priv->pba.w0_fld = 0.0;
+	cbe->priv->pba.wa_fld = 0.0;
+	cbe->priv->pba.cs2_fld = 0.0;
 
-  cbe->priv->pth.YHe                      = 0;
-  cbe->priv->pth.recombination            = 0;
-  cbe->priv->pth.reio_parametrization     = 0;
-  cbe->priv->pth.reio_z_or_tau            = 0;
-  cbe->priv->pth.z_reio                   = 0.0;
-  cbe->priv->pth.tau_reio                 = 0.0;
-  cbe->priv->pth.reionization_exponent    = 0.0;
-  cbe->priv->pth.reionization_width       = 0.0;
-  cbe->priv->pth.helium_fullreio_redshift = 0.0;
-  cbe->priv->pth.helium_fullreio_width    = 0.0;
+	/* thermodynamics structure */
 
-  cbe->priv->pth.binned_reio_num            = 0;
-  cbe->priv->pth.binned_reio_z              = NULL;
-  cbe->priv->pth.binned_reio_xe             = NULL;
-  cbe->priv->pth.binned_reio_step_sharpness = 0.0;
+	cbe->priv->pth.YHe = 0;
+	cbe->priv->pth.recombination = 0;
+	cbe->priv->pth.reio_parametrization = 0;
+	cbe->priv->pth.reio_z_or_tau = 0;
+	cbe->priv->pth.z_reio = 0.0;
+	cbe->priv->pth.tau_reio = 0.0;
+	cbe->priv->pth.reionization_exponent = 0.0;
+	cbe->priv->pth.reionization_width = 0.0;
+	cbe->priv->pth.helium_fullreio_redshift = 0.0;
+	cbe->priv->pth.helium_fullreio_width = 0.0;
 
-  cbe->priv->pth.annihilation           = 0.0;
-  cbe->priv->pth.decay                  = 0.0;
-  cbe->priv->pth.annihilation_variation = 0.0;
-  cbe->priv->pth.annihilation_z         = 0.0;
-  cbe->priv->pth.annihilation_zmax      = 0.0;
-  cbe->priv->pth.annihilation_zmin      = 0.0;
-  cbe->priv->pth.annihilation_f_halo    = 0.0;
-  cbe->priv->pth.annihilation_z_halo    = 0.0;
-  cbe->priv->pth.has_on_the_spot        = _FALSE_;
+	cbe->priv->pth.binned_reio_num = 0;
+	cbe->priv->pth.binned_reio_z = NULL;
+	cbe->priv->pth.binned_reio_xe = NULL;
+	cbe->priv->pth.binned_reio_step_sharpness = 0.0;
 
-  cbe->priv->pth.compute_cb2_derivatives = _FALSE_;
+	cbe->priv->pth.annihilation = 0.0;
+	cbe->priv->pth.decay = 0.0;
+	cbe->priv->pth.annihilation_variation = 0.0;
+	cbe->priv->pth.annihilation_z = 0.0;
+	cbe->priv->pth.annihilation_zmax = 0.0;
+	cbe->priv->pth.annihilation_zmin = 0.0;
+	cbe->priv->pth.annihilation_f_halo = 0.0;
+	cbe->priv->pth.annihilation_z_halo = 0.0;
+	cbe->priv->pth.has_on_the_spot = _FALSE_;
 
-  /* perturbation structure */
+	cbe->priv->pth.compute_cb2_derivatives = _FALSE_;
 
-  cbe->priv->ppt.has_perturbations            = _FALSE_;
-  cbe->priv->ppt.has_cls                      = _FALSE_;
+	/* perturbation structure */
 
-  cbe->priv->ppt.has_cl_cmb_temperature       = _FALSE_;
-  cbe->priv->ppt.has_cl_cmb_polarization      = _FALSE_;
-  cbe->priv->ppt.has_cl_cmb_lensing_potential = _FALSE_;
-  cbe->priv->ppt.has_cl_number_count          = _FALSE_;
-  cbe->priv->ppt.has_cl_lensing_potential     = _FALSE_;
-  cbe->priv->ppt.has_pk_matter                = _FALSE_;
-  cbe->priv->ppt.has_density_transfers        = _FALSE_;
-  cbe->priv->ppt.has_velocity_transfers       = _FALSE_;
+	cbe->priv->ppt.has_perturbations = _FALSE_;
+	cbe->priv->ppt.has_cls = _FALSE_;
 
-  cbe->priv->ppt.has_nl_corrections_based_on_delta_m = _FALSE_;
+	cbe->priv->ppt.has_cl_cmb_temperature = _FALSE_;
+	cbe->priv->ppt.has_cl_cmb_polarization = _FALSE_;
+	cbe->priv->ppt.has_cl_cmb_lensing_potential = _FALSE_;
+	cbe->priv->ppt.has_cl_number_count = _FALSE_;
+	cbe->priv->ppt.has_cl_lensing_potential = _FALSE_;
+	cbe->priv->ppt.has_pk_matter = _FALSE_;
+	cbe->priv->ppt.has_density_transfers = _FALSE_;
+	cbe->priv->ppt.has_velocity_transfers = _FALSE_;
 
-  cbe->priv->ppt.has_nc_density = _FALSE_;
-  cbe->priv->ppt.has_nc_rsd     = _FALSE_;
-  cbe->priv->ppt.has_nc_lens    = _FALSE_;
-  cbe->priv->ppt.has_nc_gr      = _FALSE_;
+	cbe->priv->ppt.has_nl_corrections_based_on_delta_m = _FALSE_;
 
-  cbe->priv->ppt.switch_sw         = 0;
-  cbe->priv->ppt.switch_eisw       = 0;
-  cbe->priv->ppt.switch_lisw       = 0;
-  cbe->priv->ppt.switch_dop        = 0;
-  cbe->priv->ppt.switch_pol        = 0;
-  cbe->priv->ppt.eisw_lisw_split_z = 0;
+	cbe->priv->ppt.has_nc_density = _FALSE_;
+	cbe->priv->ppt.has_nc_rsd = _FALSE_;
+	cbe->priv->ppt.has_nc_lens = _FALSE_;
+	cbe->priv->ppt.has_nc_gr = _FALSE_;
 
-  cbe->priv->ppt.has_ad  = _FALSE_;
-  cbe->priv->ppt.has_bi  = _FALSE_;
-  cbe->priv->ppt.has_cdi = _FALSE_;
-  cbe->priv->ppt.has_nid = _FALSE_;
-  cbe->priv->ppt.has_niv = _FALSE_;
+	cbe->priv->ppt.switch_sw = 0;
+	cbe->priv->ppt.switch_eisw = 0;
+	cbe->priv->ppt.switch_lisw = 0;
+	cbe->priv->ppt.switch_dop = 0;
+	cbe->priv->ppt.switch_pol = 0;
+	cbe->priv->ppt.eisw_lisw_split_z = 0;
 
-  cbe->priv->ppt.has_perturbed_recombination = _FALSE_;
-  cbe->priv->ppt.tensor_method               = tm_massless_approximation;
-  cbe->priv->ppt.evolve_tensor_ur            = _FALSE_;
-  cbe->priv->ppt.evolve_tensor_ncdm          = _FALSE_;
+	cbe->priv->ppt.has_ad = _FALSE_;
+	cbe->priv->ppt.has_bi = _FALSE_;
+	cbe->priv->ppt.has_cdi = _FALSE_;
+	cbe->priv->ppt.has_nid = _FALSE_;
+	cbe->priv->ppt.has_niv = _FALSE_;
 
-  cbe->priv->ppt.has_scalars = _FALSE_;
-  cbe->priv->ppt.has_vectors = _FALSE_;
-  cbe->priv->ppt.has_tensors = _FALSE_;
+	cbe->priv->ppt.has_perturbed_recombination = _FALSE_;
+	cbe->priv->ppt.tensor_method = tm_massless_approximation;
+	cbe->priv->ppt.evolve_tensor_ur = _FALSE_;
+	cbe->priv->ppt.evolve_tensor_ncdm = _FALSE_;
 
-  cbe->priv->ppt.l_scalar_max = 0;
-  cbe->priv->ppt.l_vector_max = 0;
-  cbe->priv->ppt.l_tensor_max = 0;
-  cbe->priv->ppt.l_lss_max    = 0;
-  cbe->priv->ppt.k_max_for_pk = 0.0;
+	cbe->priv->ppt.has_scalars = _FALSE_;
+	cbe->priv->ppt.has_vectors = _FALSE_;
+	cbe->priv->ppt.has_tensors = _FALSE_;
 
-  cbe->priv->ppt.gauge = synchronous;
+	cbe->priv->ppt.l_scalar_max = 0;
+	cbe->priv->ppt.l_vector_max = 0;
+	cbe->priv->ppt.l_tensor_max = 0;
+	cbe->priv->ppt.l_lss_max = 0;
+	cbe->priv->ppt.k_max_for_pk = 0.0;
 
-  cbe->priv->ppt.k_output_values_num     = 0;
-  cbe->priv->ppt.store_perturbations     = _FALSE_;
-  cbe->priv->ppt.number_of_scalar_titles = 0;
-  cbe->priv->ppt.number_of_vector_titles = 0;
-  cbe->priv->ppt.number_of_tensor_titles = 0;
-  {
-    guint filenum;
-    for (filenum = 0; filenum<_MAX_NUMBER_OF_K_FILES_; filenum++){
-      cbe->priv->ppt.scalar_perturbations_data[filenum] = NULL;
-      cbe->priv->ppt.vector_perturbations_data[filenum] = NULL;
-      cbe->priv->ppt.tensor_perturbations_data[filenum] = NULL;
-    }
-  }
-  cbe->priv->ppt.index_k_output_values = NULL;
+	cbe->priv->ppt.gauge = synchronous;
 
-  /* primordial structure */
+	cbe->priv->ppt.k_output_values_num = 0;
+	cbe->priv->ppt.store_perturbations = _FALSE_;
+	cbe->priv->ppt.number_of_scalar_titles = 0;
+	cbe->priv->ppt.number_of_vector_titles = 0;
+	cbe->priv->ppt.number_of_tensor_titles = 0;
+	{
+		guint filenum;
+		for (filenum = 0; filenum < _MAX_NUMBER_OF_K_FILES_; filenum++)
+		{
+			cbe->priv->ppt.scalar_perturbations_data[filenum] = NULL;
+			cbe->priv->ppt.vector_perturbations_data[filenum] = NULL;
+			cbe->priv->ppt.tensor_perturbations_data[filenum] = NULL;
+		}
+	}
+	cbe->priv->ppt.index_k_output_values = NULL;
 
-  cbe->priv->ppm.primordial_spec_type = analytic_Pk;
-  cbe->priv->ppm.k_pivot              = 0.0;
-  cbe->priv->ppm.A_s                  = 0.0;
-  cbe->priv->ppm.n_s                  = 0.0;
-  cbe->priv->ppm.alpha_s              = 0.0;
-  cbe->priv->ppm.f_bi                 = 0.0;
-  cbe->priv->ppm.n_bi                 = 0.0;
-  cbe->priv->ppm.alpha_bi             = 0.0;
-  cbe->priv->ppm.f_cdi                = 0.0;
-  cbe->priv->ppm.n_cdi                = 0.0;
-  cbe->priv->ppm.alpha_cdi            = 0.0;
-  cbe->priv->ppm.f_nid                = 0.0;
-  cbe->priv->ppm.n_nid                = 0.0;
-  cbe->priv->ppm.alpha_nid            = 0.0;
-  cbe->priv->ppm.f_niv                = 0.0;
-  cbe->priv->ppm.n_niv                = 0.0;
-  cbe->priv->ppm.alpha_niv            = 0.0;
-  cbe->priv->ppm.c_ad_bi              = 0.0;
-  cbe->priv->ppm.n_ad_bi              = 0.0;
-  cbe->priv->ppm.alpha_ad_bi          = 0.0;
-  cbe->priv->ppm.c_ad_cdi             = 0.0;
-  cbe->priv->ppm.n_ad_cdi             = 0.0;
-  cbe->priv->ppm.alpha_ad_cdi         = 0.0;
-  cbe->priv->ppm.c_ad_nid             = 0.0;
-  cbe->priv->ppm.n_ad_nid             = 0.0;
-  cbe->priv->ppm.alpha_ad_nid         = 0.0;
-  cbe->priv->ppm.c_ad_niv             = 0.0;
-  cbe->priv->ppm.n_ad_niv             = 0.0;
-  cbe->priv->ppm.alpha_ad_niv         = 0.0;
-  cbe->priv->ppm.c_bi_cdi             = 0.0;
-  cbe->priv->ppm.n_bi_cdi             = 0.0;
-  cbe->priv->ppm.alpha_bi_cdi         = 0.0;
-  cbe->priv->ppm.c_bi_nid             = 0.0;
-  cbe->priv->ppm.n_bi_nid             = 0.0;
-  cbe->priv->ppm.alpha_bi_nid         = 0.0;
-  cbe->priv->ppm.c_bi_niv             = 0.0;
-  cbe->priv->ppm.n_bi_niv             = 0.0;
-  cbe->priv->ppm.alpha_bi_niv         = 0.0;
-  cbe->priv->ppm.c_cdi_nid            = 0.0;
-  cbe->priv->ppm.n_cdi_nid            = 0.0;
-  cbe->priv->ppm.alpha_cdi_nid        = 0.0;
-  cbe->priv->ppm.c_cdi_niv            = 0.0;
-  cbe->priv->ppm.n_cdi_niv            = 0.0;
-  cbe->priv->ppm.alpha_cdi_niv        = 0.0;
-  cbe->priv->ppm.c_nid_niv            = 0.0;
-  cbe->priv->ppm.n_nid_niv            = 0.0;
-  cbe->priv->ppm.alpha_nid_niv        = 0.0;
-  cbe->priv->ppm.r                    = 0.0;
-  cbe->priv->ppm.n_t                  = 0.0;
-  cbe->priv->ppm.alpha_t              = 0.0;
-  cbe->priv->ppm.potential            = 0;
-  cbe->priv->ppm.phi_end              = 0.0;
-  cbe->priv->ppm.ln_aH_ratio          = 0;
-  cbe->priv->ppm.V0                   = 0.0;
-  cbe->priv->ppm.V1                   = 0.0;
-  cbe->priv->ppm.V2                   = 0.0;
-  cbe->priv->ppm.V3                   = 0.0;
-  cbe->priv->ppm.V4                   = 0.0;
-  cbe->priv->ppm.H0                   = 0.0;
-  cbe->priv->ppm.H1                   = 0.0;
-  cbe->priv->ppm.H2                   = 0.0;
-  cbe->priv->ppm.H3                   = 0.0;
-  cbe->priv->ppm.H4                   = 0.0;
-  cbe->priv->ppm.command              = NULL;
-  cbe->priv->ppm.custom1              = 0.0;
-  cbe->priv->ppm.custom2              = 0.0;
-  cbe->priv->ppm.custom3              = 0.0;
-  cbe->priv->ppm.custom4              = 0.0;
-  cbe->priv->ppm.custom5              = 0.0;
-  cbe->priv->ppm.custom6              = 0.0;
-  cbe->priv->ppm.custom7              = 0.0;
-  cbe->priv->ppm.custom8              = 0.0;
-  cbe->priv->ppm.custom9              = 0.0;
-  cbe->priv->ppm.custom10             = 0.0;
+	/* primordial structure */
 
-  /* transfer structure */
+	cbe->priv->ppm.primordial_spec_type = analytic_Pk;
+	cbe->priv->ppm.k_pivot = 0.0;
+	cbe->priv->ppm.A_s = 0.0;
+	cbe->priv->ppm.n_s = 0.0;
+	cbe->priv->ppm.alpha_s = 0.0;
+	cbe->priv->ppm.f_bi = 0.0;
+	cbe->priv->ppm.n_bi = 0.0;
+	cbe->priv->ppm.alpha_bi = 0.0;
+	cbe->priv->ppm.f_cdi = 0.0;
+	cbe->priv->ppm.n_cdi = 0.0;
+	cbe->priv->ppm.alpha_cdi = 0.0;
+	cbe->priv->ppm.f_nid = 0.0;
+	cbe->priv->ppm.n_nid = 0.0;
+	cbe->priv->ppm.alpha_nid = 0.0;
+	cbe->priv->ppm.f_niv = 0.0;
+	cbe->priv->ppm.n_niv = 0.0;
+	cbe->priv->ppm.alpha_niv = 0.0;
+	cbe->priv->ppm.c_ad_bi = 0.0;
+	cbe->priv->ppm.n_ad_bi = 0.0;
+	cbe->priv->ppm.alpha_ad_bi = 0.0;
+	cbe->priv->ppm.c_ad_cdi = 0.0;
+	cbe->priv->ppm.n_ad_cdi = 0.0;
+	cbe->priv->ppm.alpha_ad_cdi = 0.0;
+	cbe->priv->ppm.c_ad_nid = 0.0;
+	cbe->priv->ppm.n_ad_nid = 0.0;
+	cbe->priv->ppm.alpha_ad_nid = 0.0;
+	cbe->priv->ppm.c_ad_niv = 0.0;
+	cbe->priv->ppm.n_ad_niv = 0.0;
+	cbe->priv->ppm.alpha_ad_niv = 0.0;
+	cbe->priv->ppm.c_bi_cdi = 0.0;
+	cbe->priv->ppm.n_bi_cdi = 0.0;
+	cbe->priv->ppm.alpha_bi_cdi = 0.0;
+	cbe->priv->ppm.c_bi_nid = 0.0;
+	cbe->priv->ppm.n_bi_nid = 0.0;
+	cbe->priv->ppm.alpha_bi_nid = 0.0;
+	cbe->priv->ppm.c_bi_niv = 0.0;
+	cbe->priv->ppm.n_bi_niv = 0.0;
+	cbe->priv->ppm.alpha_bi_niv = 0.0;
+	cbe->priv->ppm.c_cdi_nid = 0.0;
+	cbe->priv->ppm.n_cdi_nid = 0.0;
+	cbe->priv->ppm.alpha_cdi_nid = 0.0;
+	cbe->priv->ppm.c_cdi_niv = 0.0;
+	cbe->priv->ppm.n_cdi_niv = 0.0;
+	cbe->priv->ppm.alpha_cdi_niv = 0.0;
+	cbe->priv->ppm.c_nid_niv = 0.0;
+	cbe->priv->ppm.n_nid_niv = 0.0;
+	cbe->priv->ppm.alpha_nid_niv = 0.0;
+	cbe->priv->ppm.r = 0.0;
+	cbe->priv->ppm.n_t = 0.0;
+	cbe->priv->ppm.alpha_t = 0.0;
+	cbe->priv->ppm.potential = 0;
+	cbe->priv->ppm.phi_end = 0.0;
+	cbe->priv->ppm.ln_aH_ratio = 0;
+	cbe->priv->ppm.V0 = 0.0;
+	cbe->priv->ppm.V1 = 0.0;
+	cbe->priv->ppm.V2 = 0.0;
+	cbe->priv->ppm.V3 = 0.0;
+	cbe->priv->ppm.V4 = 0.0;
+	cbe->priv->ppm.H0 = 0.0;
+	cbe->priv->ppm.H1 = 0.0;
+	cbe->priv->ppm.H2 = 0.0;
+	cbe->priv->ppm.H3 = 0.0;
+	cbe->priv->ppm.H4 = 0.0;
+	cbe->priv->ppm.command = NULL;
+	cbe->priv->ppm.custom1 = 0.0;
+	cbe->priv->ppm.custom2 = 0.0;
+	cbe->priv->ppm.custom3 = 0.0;
+	cbe->priv->ppm.custom4 = 0.0;
+	cbe->priv->ppm.custom5 = 0.0;
+	cbe->priv->ppm.custom6 = 0.0;
+	cbe->priv->ppm.custom7 = 0.0;
+	cbe->priv->ppm.custom8 = 0.0;
+	cbe->priv->ppm.custom9 = 0.0;
+	cbe->priv->ppm.custom10 = 0.0;
 
-  cbe->priv->ppt.selection_num        = 0;
-  cbe->priv->ppt.selection            = 0;
-  cbe->priv->ppt.selection_mean[0]    = 0.0;
-  cbe->priv->ppt.selection_width[0]   = 0.0;
+	/* transfer structure */
 
-  cbe->priv->ptr.lcmb_rescale         = 0.0;
-  cbe->priv->ptr.lcmb_pivot           = 0.0;
-  cbe->priv->ptr.lcmb_tilt            = 0.0;
-  cbe->priv->ptr.initialise_HIS_cache = _FALSE_;
-  cbe->priv->ptr.has_nz_analytic      = _FALSE_;
-  cbe->priv->ptr.has_nz_file          = _FALSE_;
-  cbe->priv->ptr.has_nz_evo_analytic  = _FALSE_;
-  cbe->priv->ptr.has_nz_evo_file      = _FALSE_;
-  cbe->priv->ptr.bias                 = 0.0;
-  cbe->priv->ptr.s_bias               = 0.0;
+	cbe->priv->ppt.selection_num = 0;
+	cbe->priv->ppt.selection = 0;
+	cbe->priv->ppt.selection_mean[0] = 0.0;
+	cbe->priv->ppt.selection_width[0] = 0.0;
 
-  /* spectra structure */
+	cbe->priv->ptr.lcmb_rescale = 0.0;
+	cbe->priv->ptr.lcmb_pivot = 0.0;
+	cbe->priv->ptr.lcmb_tilt = 0.0;
+	cbe->priv->ptr.initialise_HIS_cache = _FALSE_;
+	cbe->priv->ptr.has_nz_analytic = _FALSE_;
+	cbe->priv->ptr.has_nz_file = _FALSE_;
+	cbe->priv->ptr.has_nz_evo_analytic = _FALSE_;
+	cbe->priv->ptr.has_nz_evo_file = _FALSE_;
+	cbe->priv->ptr.bias = 0.0;
+	cbe->priv->ptr.s_bias = 0.0;
 
-  cbe->priv->psp.z_max_pk = 0.0;
-  cbe->priv->psp.non_diag = 0;
+	/* spectra structure */
 
-  /* lensing structure */
+	cbe->priv->psp.z_max_pk = 0.0;
+	cbe->priv->psp.non_diag = 0;
 
-  cbe->priv->ple.has_lensed_cls = _FALSE_;
+	/* lensing structure */
 
-  /* nonlinear structure */
+	cbe->priv->ple.has_lensed_cls = _FALSE_;
 
-  cbe->priv->pnl.method = nl_none;
+	/* nonlinear structure */
 
-  /* all verbose parameters */
+	cbe->priv->pnl.method = nl_none;
 
-  cbe->priv->pba.background_verbose     = 0;
-  cbe->priv->pth.thermodynamics_verbose = 0;
-  cbe->priv->ppt.perturbations_verbose  = 0;
-  cbe->priv->ptr.transfer_verbose       = 0;
-  cbe->priv->ppm.primordial_verbose     = 0;
-  cbe->priv->psp.spectra_verbose        = 0;
-  cbe->priv->pnl.nonlinear_verbose      = 0;
-  cbe->priv->ple.lensing_verbose        = 0;
+	/* all verbose parameters */
 
-  {
-    guint verbosity = 0;
-    cbe->bg_verbose       = verbosity;
-    cbe->thermo_verbose   = verbosity;
-    cbe->pert_verbose     = verbosity;
-    cbe->transfer_verbose = verbosity;
-    cbe->prim_verbose     = verbosity;
-    cbe->spectra_verbose  = verbosity;
-    cbe->nonlin_verbose   = verbosity;
-    cbe->lensing_verbose  = verbosity;
-  }
+	cbe->priv->pba.background_verbose = 0;
+	cbe->priv->pth.thermodynamics_verbose = 0;
+	cbe->priv->ppt.perturbations_verbose = 0;
+	cbe->priv->ptr.transfer_verbose = 0;
+	cbe->priv->ppm.primordial_verbose = 0;
+	cbe->priv->psp.spectra_verbose = 0;
+	cbe->priv->pnl.nonlinear_verbose = 0;
+	cbe->priv->ple.lensing_verbose = 0;
+
+	{
+		guint verbosity = 0;
+		cbe->bg_verbose = verbosity;
+		cbe->thermo_verbose = verbosity;
+		cbe->pert_verbose = verbosity;
+		cbe->transfer_verbose = verbosity;
+		cbe->prim_verbose = verbosity;
+		cbe->spectra_verbose = verbosity;
+		cbe->nonlin_verbose = verbosity;
+		cbe->lensing_verbose = verbosity;
+	}
 }
 
 static void
@@ -1033,30 +1036,88 @@ _nc_cbe_set_bg (NcCBE* cbe, NcHICosmo* cosmo)
 	cbe->priv->pba.ncdm_psd_parameters = NULL;
 	cbe->priv->pba.ncdm_psd_files = NULL;
 
-  if ((cbe->priv->pba.N_ncdm = nc_hicosmo_NMassNu (cosmo)) != 0)
-  {
-    guint nu_i;
+	guint N_ncdm = nc_hicosmo_NMassNu (cosmo);
+	if (N_ncdm != 0)
+	{
+		cbe->priv->pba.N_ncdm = N_ncdm;
+		guint nu_i;
 
-    cbe->priv->pba.T_ncdm       = (gdouble *) malloc (sizeof (gdouble) * cbe->priv->pba.N_ncdm);
-    cbe->priv->pba.m_ncdm_in_eV = (gdouble *) malloc (sizeof (gdouble) * cbe->priv->pba.N_ncdm);
-    
-    for (nu_i = 0; nu_i < cbe->priv->pba.N_ncdm; nu_i++)
-    {
-      nc_hicosmo_MassNuInfo (cosmo, nu_i, 
-                             &cbe->priv->pba.m_ncdm_in_eV[nu_i],
-                             &cbe->priv->pba.T_ncdm[nu_i]
-                             );
-    }
-  }
-  else
-  {
-    cbe->priv->pba.N_ncdm         = 0;
-    cbe->priv->pba.T_ncdm_default = 0.71611;
-    cbe->priv->pba.T_ncdm         = NULL;
-    cbe->priv->pba.m_ncdm_in_eV   = NULL;
-  }
+		struct background* pba = &cbe->priv->pba;
 
-  cbe->priv->pba.Omega0_scf = 0.0;
+		pba->T_ncdm = (gdouble*)malloc (sizeof (gdouble) * N_ncdm);
+		pba->ksi_ncdm = (gdouble*)malloc (sizeof (gdouble) * N_ncdm);
+		pba->deg_ncdm = (gdouble*)malloc (sizeof (gdouble) * N_ncdm);
+		pba->Omega0_ncdm = (gdouble*)malloc (sizeof (gdouble) * N_ncdm);
+		pba->M_ncdm = (gdouble*)malloc (sizeof (gdouble) * N_ncdm);
+		pba->m_ncdm_in_eV = (gdouble*)malloc (sizeof (gdouble) * N_ncdm);
+		pba->got_files = (gboolean*)malloc (sizeof (gboolean) * N_ncdm);
+
+		for (nu_i = 0; nu_i < pba->N_ncdm; nu_i++)
+		{
+			pba->ksi_ncdm[nu_i] = pba->ksi_ncdm_default;
+			pba->deg_ncdm[nu_i] = pba->deg_ncdm_default;
+			pba->M_ncdm[nu_i] = 0.0;
+			pba->Omega0_ncdm[nu_i] = 0.0;
+			pba->M_ncdm[nu_i] = 0.0;
+			pba->got_files[nu_i] = _FALSE_;
+
+			nc_hicosmo_MassNuInfo (cosmo, nu_i, &pba->m_ncdm_in_eV[nu_i], &pba->T_ncdm[nu_i]);
+		}
+
+		struct precision* ppr = (struct precision*)cbe->prec->priv;
+
+		printf("tol_ncdm : %g\n", ppr->tol_ncdm);
+
+		/* From CLASS input.c */
+		/*---------------------------------------------------------*/
+		background_ncdm_init (ppr, &cbe->priv->pba);
+
+		/* We must calculate M from omega or vice versa if one of them is missing.
+		If both are present, we must update the degeneracy parameter to
+		reflect the implicit normalisation of the distribution function.*/
+		guint n;
+		gdouble rho_ncdm;
+		for (n = 0; n < N_ncdm; n++)
+		{
+			if (pba->m_ncdm_in_eV[n] != 0.0)
+			{
+				/* Case of only mass or mass and Omega/omega: */
+				pba->M_ncdm[n] = pba->m_ncdm_in_eV[n] / _k_B_ * _eV_ / pba->T_ncdm[n] / pba->T_cmb;
+				background_ncdm_momenta (pba->q_ncdm_bg[n],
+				                         pba->w_ncdm_bg[n],
+				                         pba->q_size_ncdm_bg[n],
+				                         pba->M_ncdm[n],
+				                         pba->factor_ncdm[n],
+				                         0.,
+				                         NULL,
+				                         &rho_ncdm,
+				                         NULL,
+				                         NULL,
+				                         NULL);
+
+				pba->Omega0_ncdm[n] = rho_ncdm / pba->H0 / pba->H0;
+			}
+			else
+			{
+				/* Case of only Omega/omega: */
+				background_ncdm_M_from_Omega (ppr, pba, n);
+				//printf("M_ncdm:%g\n",pba->M_ncdm[n]);
+				pba->m_ncdm_in_eV[n] = _k_B_ / _eV_ * pba->T_ncdm[n] * pba->M_ncdm[n] * pba->T_cmb;
+			}
+			pba->Omega0_ncdm_tot += pba->Omega0_ncdm[n];
+			//printf("Adding %g to total Omega..\n",pba->Omega0_ncdm[n]);
+		}
+		/*---------------------------------------------------------*/
+	}
+	else
+	{
+		cbe->priv->pba.N_ncdm = 0;
+		cbe->priv->pba.T_ncdm_default = 0.71611;
+		cbe->priv->pba.T_ncdm = NULL;
+		cbe->priv->pba.m_ncdm_in_eV = NULL;
+	}
+
+	cbe->priv->pba.Omega0_scf = 0.0;
 	cbe->priv->pba.attractor_ic_scf = _TRUE_;
 	cbe->priv->pba.scf_parameters = NULL;
 	cbe->priv->pba.scf_parameters_size = 0;
@@ -1714,13 +1775,13 @@ void nc_cbe_thermodyn_prepare_if_needed (NcCBE* cbe, NcHICosmo* cosmo)
  */
 void nc_cbe_prepare (NcCBE* cbe, NcHICosmo* cosmo)
 {
-  /*printf ("Preparing CLASS!\n");*/
-  if (cbe->allocated)
-  {
-    g_assert (cbe->free != NULL);
-    cbe->free (cbe);
-    cbe->allocated = FALSE;
-  }
+	/*printf ("Preparing CLASS!\n");*/
+	if (cbe->allocated)
+	{
+		g_assert (cbe->free != NULL);
+		cbe->free (cbe);
+		cbe->allocated = FALSE;
+	}
 
 	if (cbe->thermodyn_prepared)
 	{
@@ -1746,41 +1807,40 @@ void nc_cbe_prepare (NcCBE* cbe, NcHICosmo* cosmo)
  * Prepares all necessary Class structures.
  *
  */
-void
-nc_cbe_prepare_if_needed (NcCBE *cbe, NcHICosmo *cosmo)
+void nc_cbe_prepare_if_needed (NcCBE* cbe, NcHICosmo* cosmo)
 {
-  ncm_model_ctrl_update (cbe->ctrl_cosmo, NCM_MODEL (cosmo));
+	ncm_model_ctrl_update (cbe->ctrl_cosmo, NCM_MODEL (cosmo));
 
-  if (!ncm_model_ctrl_model_has_submodel (cbe->ctrl_cosmo, nc_hiprim_id ()))
-  {
-    g_error ("nc_cbe_prepare_if_needed: cosmo model must contain a NcHIPrim submodel.");
-  }
-  else
-  {
-    gboolean cosmo_up = ncm_model_ctrl_model_last_update (cbe->ctrl_cosmo);
-    gboolean prim_up  = ncm_model_ctrl_submodel_last_update (cbe->ctrl_cosmo, nc_hiprim_id ());
+	if (!ncm_model_ctrl_model_has_submodel (cbe->ctrl_cosmo, nc_hiprim_id ()))
+	{
+		g_error ("nc_cbe_prepare_if_needed: cosmo model must contain a NcHIPrim submodel.");
+	}
+	else
+	{
+		gboolean cosmo_up = ncm_model_ctrl_model_last_update (cbe->ctrl_cosmo);
+		gboolean prim_up = ncm_model_ctrl_submodel_last_update (cbe->ctrl_cosmo, nc_hiprim_id ());
 
-    /*printf ("cosmo_up %d prim_up %d [%p]\n", cosmo_up, prim_up, cosmo);*/
+		/*printf ("cosmo_up %d prim_up %d [%p]\n", cosmo_up, prim_up, cosmo);*/
 
-    if (cosmo_up)
-    {
-      nc_cbe_prepare (cbe, cosmo);
-    }
-    else if (prim_up)
-    {
-      if (cbe->allocated)
-      {
-        g_assert (cbe->free != NULL);
-        cbe->free (cbe);
-        cbe->allocated = FALSE;
-      }
-      if (cbe->call != NULL)
-      {
-        cbe->call (cbe, cosmo);
-        cbe->allocated = TRUE;
-      }
-    }
-  }
+		if (cosmo_up)
+		{
+			nc_cbe_prepare (cbe, cosmo);
+		}
+		else if (prim_up)
+		{
+			if (cbe->allocated)
+			{
+				g_assert (cbe->free != NULL);
+				cbe->free (cbe);
+				cbe->allocated = FALSE;
+			}
+			if (cbe->call != NULL)
+			{
+				cbe->call (cbe, cosmo);
+				cbe->allocated = TRUE;
+			}
+		}
+	}
 }
 
 /**
@@ -1825,113 +1885,113 @@ nc_cbe_thermodyn_get_Xe (NcCBE* cbe)
  *
  * Returns: (transfer full): a #NcmSpline2d for the logarithm base e of the matter power spectrum, $\ln P(\ln k, z)$.
  */
-NcmSpline2d *
-nc_cbe_get_matter_ps (NcCBE *cbe)
+NcmSpline2d*
+nc_cbe_get_matter_ps (NcCBE* cbe)
 {
-  const gint z_size  = cbe->priv->psp.ln_tau_size;
-  const gint partz   = 4;
-  const gint z_tsize = (z_size - 1) * partz + 1;
+	const gint z_size = cbe->priv->psp.ln_tau_size;
+	const gint partz = 4;
+	const gint z_tsize = (z_size - 1) * partz + 1;
 
-  NcmVector *lnk_v = ncm_vector_new (cbe->priv->psp.ln_k_size);
-  NcmVector *z_v   = ncm_vector_new (z_tsize);
-  NcmMatrix *lnPk  = ncm_matrix_new (z_tsize, cbe->priv->psp.ln_k_size);
-  gdouble *pvecback = g_new (gdouble, cbe->priv->pba.bg_size_short);
-  gdouble z_i_a, z_i_b = 0.0;
-  guint i, m;
+	NcmVector* lnk_v = ncm_vector_new (cbe->priv->psp.ln_k_size);
+	NcmVector* z_v = ncm_vector_new (z_tsize);
+	NcmMatrix* lnPk = ncm_matrix_new (z_tsize, cbe->priv->psp.ln_k_size);
+	gdouble* pvecback = g_new (gdouble, cbe->priv->pba.bg_size_short);
+	gdouble z_i_a, z_i_b = 0.0;
+	guint i, m;
 
-  for (i = 0; i < cbe->priv->psp.ln_k_size; i++)
-  {
-    ncm_vector_set (lnk_v, i, cbe->priv->psp.ln_k[i]);
-  }
+	for (i = 0; i < cbe->priv->psp.ln_k_size; i++)
+	{
+		ncm_vector_set (lnk_v, i, cbe->priv->psp.ln_k[i]);
+	}
 
-  m = 0;
-  i = 0;
-  {
-    gdouble ln_tau_i;
-    gint last_index_back;
-    guint j;
+	m = 0;
+	i = 0;
+	{
+		gdouble ln_tau_i;
+		gint last_index_back;
+		guint j;
 
-    z_i_a = 0.0;
+		z_i_a = 0.0;
 
-    ln_tau_i = cbe->priv->psp.ln_tau[z_size - i - 2];
-    background_at_tau (&cbe->priv->pba,
-                       exp (ln_tau_i),
-                       cbe->priv->pba.short_info,
-                       cbe->priv->pba.inter_normal,
-                       &last_index_back,
-                       pvecback);
-    z_i_b = cbe->priv->pba.a_today / pvecback[cbe->priv->pba.index_bg_a] - 1.0;
+		ln_tau_i = cbe->priv->psp.ln_tau[z_size - i - 2];
+		background_at_tau (&cbe->priv->pba,
+		                   exp (ln_tau_i),
+		                   cbe->priv->pba.short_info,
+		                   cbe->priv->pba.inter_normal,
+		                   &last_index_back,
+		                   pvecback);
+		z_i_b = cbe->priv->pba.a_today / pvecback[cbe->priv->pba.index_bg_a] - 1.0;
 
-    for (j = 0; j < partz; j++)
-    {
-      const gdouble z_i = z_i_a + (z_i_b - z_i_a) / (partz * 1.0) * j;
+		for (j = 0; j < partz; j++)
+		{
+			const gdouble z_i = z_i_a + (z_i_b - z_i_a) / (partz * 1.0) * j;
 
-      ncm_vector_set (z_v, m, z_i);
-      spectra_pk_at_z (&cbe->priv->pba, &cbe->priv->psp, logarithmic, z_i, ncm_matrix_ptr (lnPk, m, 0), NULL);
+			ncm_vector_set (z_v, m, z_i);
+			spectra_pk_at_z (&cbe->priv->pba, &cbe->priv->psp, logarithmic, z_i, ncm_matrix_ptr (lnPk, m, 0), NULL);
 
-      /*printf ("Redshift %d[%d] : % 21.15g!\n", m, z_tsize, z_i);*/
-      m++;
-    }
-  }
+			/*printf ("Redshift %d[%d] : % 21.15g!\n", m, z_tsize, z_i);*/
+			m++;
+		}
+	}
 
-  for (i = 1; i < z_size - 1; i++)
-  {
-    gdouble ln_tau_i;
-    gint last_index_back;
-    guint j;
+	for (i = 1; i < z_size - 1; i++)
+	{
+		gdouble ln_tau_i;
+		gint last_index_back;
+		guint j;
 
-    ln_tau_i = cbe->priv->psp.ln_tau[z_size - i - 1];
-    background_at_tau (&cbe->priv->pba,
-                       exp (ln_tau_i),
-                       cbe->priv->pba.short_info,
-                       cbe->priv->pba.inter_normal,
-                       &last_index_back,
-                       pvecback);
-    z_i_a = cbe->priv->pba.a_today / pvecback[cbe->priv->pba.index_bg_a] - 1.0;
+		ln_tau_i = cbe->priv->psp.ln_tau[z_size - i - 1];
+		background_at_tau (&cbe->priv->pba,
+		                   exp (ln_tau_i),
+		                   cbe->priv->pba.short_info,
+		                   cbe->priv->pba.inter_normal,
+		                   &last_index_back,
+		                   pvecback);
+		z_i_a = cbe->priv->pba.a_today / pvecback[cbe->priv->pba.index_bg_a] - 1.0;
 
-    ln_tau_i = cbe->priv->psp.ln_tau[z_size - i - 2];
-    background_at_tau (&cbe->priv->pba,
-                       exp (ln_tau_i),
-                       cbe->priv->pba.short_info,
-                       cbe->priv->pba.inter_normal,
-                       &last_index_back,
-                       pvecback);
-    z_i_b = cbe->priv->pba.a_today / pvecback[cbe->priv->pba.index_bg_a] - 1.0;
+		ln_tau_i = cbe->priv->psp.ln_tau[z_size - i - 2];
+		background_at_tau (&cbe->priv->pba,
+		                   exp (ln_tau_i),
+		                   cbe->priv->pba.short_info,
+		                   cbe->priv->pba.inter_normal,
+		                   &last_index_back,
+		                   pvecback);
+		z_i_b = cbe->priv->pba.a_today / pvecback[cbe->priv->pba.index_bg_a] - 1.0;
 
-    for (j = 0; j < partz; j++)
-    {
-      const gdouble z_i = z_i_a + (z_i_b - z_i_a) / (partz * 1.0) * j;
+		for (j = 0; j < partz; j++)
+		{
+			const gdouble z_i = z_i_a + (z_i_b - z_i_a) / (partz * 1.0) * j;
 
-      ncm_vector_set (z_v, m, z_i);
-      spectra_pk_at_z (&cbe->priv->pba, &cbe->priv->psp, logarithmic, z_i, ncm_matrix_ptr (lnPk, m, 0), NULL);
+			ncm_vector_set (z_v, m, z_i);
+			spectra_pk_at_z (&cbe->priv->pba, &cbe->priv->psp, logarithmic, z_i, ncm_matrix_ptr (lnPk, m, 0), NULL);
 
-      /*printf ("Redshift %d[%d] : % 21.15g!\n", m, z_tsize, z_i);*/
-      m++;
-    }
-  }
+			/*printf ("Redshift %d[%d] : % 21.15g!\n", m, z_tsize, z_i);*/
+			m++;
+		}
+	}
 
-  {
-    const gdouble z_i = (z_i_b * 0.99 + ncm_vector_get (z_v, m - 1) * 0.01); /* Safeguard against interpolation error on CLASS near the end */
+	{
+		const gdouble z_i = (z_i_b * 0.99 + ncm_vector_get (z_v, m - 1) * 0.01); /* Safeguard against interpolation error on CLASS near the end */
 
-    ncm_vector_set (z_v, m, z_i);
-    spectra_pk_at_z (&cbe->priv->pba, &cbe->priv->psp, logarithmic, z_i, ncm_matrix_ptr (lnPk, m, 0), NULL);
+		ncm_vector_set (z_v, m, z_i);
+		spectra_pk_at_z (&cbe->priv->pba, &cbe->priv->psp, logarithmic, z_i, ncm_matrix_ptr (lnPk, m, 0), NULL);
 
-    /*printf ("Redshift %d[%d] : % 21.15g!\n", m, z_tsize, z_i);*/
-    m++;
-  }
+		/*printf ("Redshift %d[%d] : % 21.15g!\n", m, z_tsize, z_i);*/
+		m++;
+	}
 
-  g_free (pvecback);
+	g_free (pvecback);
 
-  {
-    NcmSpline2d *lnPk_s = ncm_spline2d_bicubic_notaknot_new ();
-    ncm_spline2d_set (lnPk_s, lnk_v, z_v, lnPk, TRUE);
+	{
+		NcmSpline2d* lnPk_s = ncm_spline2d_bicubic_notaknot_new ();
+		ncm_spline2d_set (lnPk_s, lnk_v, z_v, lnPk, TRUE);
 
-    ncm_vector_free (z_v);
-    ncm_vector_free (lnk_v);
-    ncm_matrix_free (lnPk);
+		ncm_vector_free (z_v);
+		ncm_vector_free (lnk_v);
+		ncm_matrix_free (lnPk);
 
-    return lnPk_s;
-  }
+		return lnPk_s;
+	}
 }
 
 /**
@@ -2028,4 +2088,20 @@ void nc_cbe_get_all_Cls (NcCBE* cbe, NcmVector* TT_Cls, NcmVector* EE_Cls, NcmVe
 		}
 		g_free (all_Cls);
 	}
+}
+
+
+/**
+ * nc_cbe_debug_test:
+ * @cbe: a #NcCBE
+ *
+ * Temporary debug function
+ *
+ */
+void nc_cbe_debug_test (NcCBE* cbe)
+{
+	if (cbe->priv->pba.has_ncdm)
+		printf ("cbe->priv->pba.has_ncdm");
+	else
+		printf ("boooooooooo !\n");
 }
