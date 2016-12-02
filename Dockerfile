@@ -20,4 +20,4 @@ RUN cd && wget http://computation.llnl.gov/projects/sundials/download/sundials-2
 # NumCosmo (clone from dropbox)
 RUN cd && mkdir NumCosmo && cd NumCosmo
 COPY * ./
-RUN gtkdocize && ./autogen.sh && make -j12 && make install
+RUN ./autogen.sh && make -j12 && make install # gtkdocize && 
