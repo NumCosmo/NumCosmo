@@ -142,7 +142,8 @@
 #include "xcor/nc_xcor_AB.h"
 #include "xcor/nc_xcor_limber_kernel.h"
 #include "xcor/nc_xcor_limber_kernel_gal.h"
-#include "xcor/nc_xcor_limber_kernel_lensing.h"
+#include "xcor/nc_xcor_limber_kernel_CMB_lensing.h"
+#include "xcor/nc_xcor_limber_kernel_weak_lensing.h"
 
 #include <gio/gio.h>
 #ifdef NUMCOSMO_HAVE_FFTW3
@@ -434,7 +435,8 @@ ncm_cfg_init (void)
   ncm_cfg_register_obj (NC_TYPE_XCOR);
   ncm_cfg_register_obj (NC_TYPE_XCOR_LIMBER_KERNEL);
   ncm_cfg_register_obj (NC_TYPE_XCOR_LIMBER_KERNEL_GAL);
-  ncm_cfg_register_obj (NC_TYPE_XCOR_LIMBER_KERNEL_LENSING);
+  ncm_cfg_register_obj (NC_TYPE_XCOR_LIMBER_KERNEL_CMB_LENSING);
+  ncm_cfg_register_obj (NC_TYPE_XCOR_LIMBER_KERNEL_WEAK_LENSING);
   ncm_cfg_register_obj (NC_TYPE_DATA_XCOR);
   ncm_cfg_register_obj (NC_TYPE_XCOR_AB);
 
@@ -930,10 +932,10 @@ G_LOCK_DEFINE_STATIC (fftw_plan_lock);
  * FIXME
  *
  */
-void 
+void
 ncm_cfg_lock_plan_fftw (void)
 {
-  G_LOCK (fftw_plan_lock);  
+  G_LOCK (fftw_plan_lock);
 }
 
 /**
@@ -942,10 +944,10 @@ ncm_cfg_lock_plan_fftw (void)
  * FIXME
  *
  */
-void 
+void
 ncm_cfg_unlock_plan_fftw (void)
 {
-  G_UNLOCK (fftw_plan_lock);  
+  G_UNLOCK (fftw_plan_lock);
 }
 
 /**
@@ -967,7 +969,7 @@ ncm_cfg_load_fftw_wisdom (const gchar *filename, ...)
   g_assert (numcosmo_init);
 
   G_LOCK (fftw_saveload_lock);
-  
+
   va_start (ap, filename);
   file = g_strdup_vprintf (filename, ap);
   va_end (ap);
@@ -1003,7 +1005,7 @@ ncm_cfg_load_fftw_wisdom (const gchar *filename, ...)
   g_free (full_filename);
 
   G_UNLOCK (fftw_saveload_lock);
-  
+
   return ret;
 }
 
@@ -1054,7 +1056,7 @@ G_LOCK (fftw_saveload_lock);
   g_free (full_filename);
 
   G_UNLOCK (fftw_saveload_lock);
-  
+
   return TRUE;
 }
 #endif /* NUMCOSMO_HAVE_FFTW3 */
