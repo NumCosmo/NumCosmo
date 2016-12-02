@@ -11,13 +11,13 @@ RUN apt-get install -y python-healpy
 RUN apt-get install -y gtk-doc-tools gobject-introspection 
 
 # Install dependencies
-RUN apt-get install -y libglib2.0-dev libgsl-dev libgmp-dev libmpfr-dev libcfitsio-dev libfftw3-dev libnlopt-dev
+RUN apt-get install -y libglib2.0-dev libgsl-dev libgmp-dev libmpfr-dev libcfitsio-dev libfftw3-dev libnlopt-dev libatlas-dev liblapack-dev
 # sundials
 RUN cd && wget http://computation.llnl.gov/projects/sundials/download/sundials-2.7.0.tar.gz && \
 	tar -xvf sundials-2.7.0.tar.gz && \
 	mkdir sundials-build && cd sundials-build && cmake ../sundials-2.7.0 && make && make install
 
 # NumCosmo (clone from dropbox)
-RUN cd && mkdir NumCosmo && cd NumCosmo
-COPY * ./
-RUN ./autogen.sh && make -j12 && make install # gtkdocize && 
+RUN cd && mkdir NumCosmo
+COPY . /root/NumCosmo/
+RUN cd && cd NumCosmo && gtkdocize && ./autogen.sh && make -j12 && make install
