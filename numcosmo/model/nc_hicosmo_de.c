@@ -200,6 +200,13 @@ _nc_hicosmo_de_MassNuInfo (NcHICosmo *cosmo, guint nu_i, gdouble *mass_eV, gdoub
   }
 }
 
+static gdouble 
+_nc_hicosmo_Omega_mnu0 (NcHICosmo *cosmo, const guint nu_i, const gdouble z) 
+{ 
+  
+  return 0.0; 
+}
+
 void
 nc_hicosmo_de_set_wmap5_params (NcHICosmoDE *cosmo_de)
 {
@@ -402,6 +409,7 @@ nc_hicosmo_de_class_init (NcHICosmoDEClass *klass)
   nc_hicosmo_set_bgp_cs2_impl    (parent_class, &_nc_hicosmo_de_bgp_cs2);
   nc_hicosmo_set_NMassNu_impl    (parent_class, &_nc_hicosmo_de_NMassNu);
   nc_hicosmo_set_MassNuInfo_impl (parent_class, &_nc_hicosmo_de_MassNuInfo);
+  nc_hicosmo_set_Omega_mnu0_impl (parent_class, &_nc_hicosmo_Omega_mnu0);
 
   klass->E2Omega_de       = &_nc_hicosmo_de_E2Omega_de;
   klass->dE2Omega_de_dz   = &_nc_hicosmo_de_dE2Omega_de_dz;

@@ -218,10 +218,10 @@ ncm_integral1d_new_full (NcmIntegral1dF F, gdouble reltol, gdouble abstol, guint
 {
   NcmIntegral1d *int1d = g_object_new (NCM_TYPE_INTEGRAL1D,
                                        "integrand", F,
-                                       "reltol", reltol,
-                                       "abstol", abstol,
+                                       "reltol",    reltol,
+                                       "abstol",    abstol,
                                        "partition", partition,
-                                       "rule", rule,
+                                       "rule",      rule,
                                        NULL);
   return int1d;
 }
