@@ -1036,87 +1036,92 @@ _nc_cbe_set_bg (NcCBE* cbe, NcHICosmo* cosmo)
 	cbe->priv->pba.ncdm_psd_parameters = NULL;
 	cbe->priv->pba.ncdm_psd_files = NULL;
 
-	guint N_ncdm = nc_hicosmo_NMassNu (cosmo);
-	if (N_ncdm != 0)
-	{
-		cbe->priv->pba.N_ncdm = N_ncdm;
-		guint nu_i;
+  {
+    const guint N_ncdm = nc_hicosmo_NMassNu (cosmo);
 
-		struct background* pba = &cbe->priv->pba;
+    if (N_ncdm != 0)
+    {
+      struct background *pba = &cbe->priv->pba;
+      struct precision *ppr  = (struct precision *)cbe->prec->priv;
+      const gdouble T_gamma0 = nc_hicosmo_T_gamma0 (cosmo);
+      guint nu_i;
 
-		pba->T_ncdm = (gdouble*)malloc (sizeof (gdouble) * N_ncdm);
-		pba->ksi_ncdm = (gdouble*)malloc (sizeof (gdouble) * N_ncdm);
-		pba->deg_ncdm = (gdouble*)malloc (sizeof (gdouble) * N_ncdm);
-		pba->Omega0_ncdm = (gdouble*)malloc (sizeof (gdouble) * N_ncdm);
-		pba->M_ncdm = (gdouble*)malloc (sizeof (gdouble) * N_ncdm);
-		pba->m_ncdm_in_eV = (gdouble*)malloc (sizeof (gdouble) * N_ncdm);
-		pba->got_files = (gboolean*)malloc (sizeof (gboolean) * N_ncdm);
+      cbe->priv->pba.N_ncdm = N_ncdm;
 
-		for (nu_i = 0; nu_i < pba->N_ncdm; nu_i++)
-		{
-			pba->ksi_ncdm[nu_i] = pba->ksi_ncdm_default;
-			pba->deg_ncdm[nu_i] = pba->deg_ncdm_default;
-			pba->M_ncdm[nu_i] = 0.0;
-			pba->Omega0_ncdm[nu_i] = 0.0;
-			pba->M_ncdm[nu_i] = 0.0;
-			pba->got_files[nu_i] = _FALSE_;
+      pba->T_ncdm       = (gdouble *)malloc (sizeof (gdouble) * N_ncdm);
+      pba->ksi_ncdm     = (gdouble *)malloc (sizeof (gdouble) * N_ncdm);
+      pba->deg_ncdm     = (gdouble *)malloc (sizeof (gdouble) * N_ncdm);
+      pba->Omega0_ncdm  = (gdouble *)malloc (sizeof (gdouble) * N_ncdm);
+      pba->M_ncdm       = (gdouble *)malloc (sizeof (gdouble) * N_ncdm);
+      pba->m_ncdm_in_eV = (gdouble *)malloc (sizeof (gdouble) * N_ncdm);
+      pba->got_files    = (gboolean *)malloc (sizeof (gboolean) * N_ncdm);
 
-			nc_hicosmo_MassNuInfo (cosmo, nu_i, &pba->m_ncdm_in_eV[nu_i], &pba->T_ncdm[nu_i]);
-		}
+      pba->Omega0_ncdm_tot = 0.0;
+      
+      for (nu_i = 0; nu_i < pba->N_ncdm; nu_i++)
+      {
+        pba->ksi_ncdm[nu_i]    = pba->ksi_ncdm_default;
+        pba->deg_ncdm[nu_i]    = pba->deg_ncdm_default;
+        pba->got_files[nu_i]   = _FALSE_;
 
-		struct precision* ppr = (struct precision*)cbe->prec->priv;
+        nc_hicosmo_MassNuInfo (cosmo, nu_i, &pba->m_ncdm_in_eV[nu_i], &pba->T_ncdm[nu_i]);
 
-		printf("tol_ncdm : %g\n", ppr->tol_ncdm);
+        pba->M_ncdm[nu_i]      = pba->m_ncdm_in_eV[nu_i] * ncm_c_eV () / (ncm_c_kb () * pba->T_ncdm[nu_i] * T_gamma0);
+        pba->Omega0_ncdm[nu_i] = nc_hicosmo_Omega_mnu0 (cosmo, nu_i, 0.0);
 
-		/* From CLASS input.c */
-		/*---------------------------------------------------------*/
-		background_ncdm_init (ppr, &cbe->priv->pba);
+        pba->Omega0_ncdm_tot += pba->Omega0_ncdm[nu_i];
+      }
 
-		/* We must calculate M from omega or vice versa if one of them is missing.
-		If both are present, we must update the degeneracy parameter to
-		reflect the implicit normalisation of the distribution function.*/
-		guint n;
-		gdouble rho_ncdm;
-		for (n = 0; n < N_ncdm; n++)
-		{
-			if (pba->m_ncdm_in_eV[n] != 0.0)
-			{
-				/* Case of only mass or mass and Omega/omega: */
-				pba->M_ncdm[n] = pba->m_ncdm_in_eV[n] / _k_B_ * _eV_ / pba->T_ncdm[n] / pba->T_cmb;
-				background_ncdm_momenta (pba->q_ncdm_bg[n],
-				                         pba->w_ncdm_bg[n],
-				                         pba->q_size_ncdm_bg[n],
-				                         pba->M_ncdm[n],
-				                         pba->factor_ncdm[n],
-				                         0.,
-				                         NULL,
-				                         &rho_ncdm,
-				                         NULL,
-				                         NULL,
-				                         NULL);
+      /* From CLASS input.c */
+      /*---------------------------------------------------------*/
+      background_ncdm_init (ppr, &cbe->priv->pba);
 
-				pba->Omega0_ncdm[n] = rho_ncdm / pba->H0 / pba->H0;
-			}
-			else
-			{
-				/* Case of only Omega/omega: */
-				background_ncdm_M_from_Omega (ppr, pba, n);
-				//printf("M_ncdm:%g\n",pba->M_ncdm[n]);
-				pba->m_ncdm_in_eV[n] = _k_B_ / _eV_ * pba->T_ncdm[n] * pba->M_ncdm[n] * pba->T_cmb;
-			}
-			pba->Omega0_ncdm_tot += pba->Omega0_ncdm[n];
-			//printf("Adding %g to total Omega..\n",pba->Omega0_ncdm[n]);
-		}
-		/*---------------------------------------------------------*/
-	}
-	else
-	{
-		cbe->priv->pba.N_ncdm = 0;
-		cbe->priv->pba.T_ncdm_default = 0.71611;
-		cbe->priv->pba.T_ncdm = NULL;
-		cbe->priv->pba.m_ncdm_in_eV = NULL;
-	}
+      /* We must calculate M from omega or vice versa if one of them is missing.
+       If both are present, we must update the degeneracy parameter to
+       reflect the implicit normalisation of the distribution function.*/
+      guint n;
+      gdouble rho_ncdm;
+      for (n = 0; n < N_ncdm; n++)
+      {
+        if (pba->m_ncdm_in_eV[n] != 0.0)
+        {
+          /* Case of only mass or mass and Omega/omega: */
+          pba->M_ncdm[n] = pba->m_ncdm_in_eV[n] / _k_B_ * _eV_ / pba->T_ncdm[n] / pba->T_cmb;
+          background_ncdm_momenta (pba->q_ncdm_bg[n],
+                                   pba->w_ncdm_bg[n],
+                                   pba->q_size_ncdm_bg[n],
+                                   pba->M_ncdm[n],
+                                   pba->factor_ncdm[n],
+                                   0.,
+                                   NULL,
+                                   &rho_ncdm,
+                                   NULL,
+                                   NULL,
+                                   NULL);
 
+          pba->Omega0_ncdm[n] = rho_ncdm / pba->H0 / pba->H0;
+        }
+        else
+        {
+          /* Case of only Omega/omega: */
+          background_ncdm_M_from_Omega (ppr, pba, n);
+          //printf("M_ncdm:%g\n",pba->M_ncdm[n]);
+          pba->m_ncdm_in_eV[n] = _k_B_ / _eV_ * pba->T_ncdm[n] * pba->M_ncdm[n] * pba->T_cmb;
+        }
+        pba->Omega0_ncdm_tot += pba->Omega0_ncdm[n];
+        //printf("Adding %g to total Omega..\n",pba->Omega0_ncdm[n]);
+      }
+      /*---------------------------------------------------------*/
+    }
+    else
+    {
+      cbe->priv->pba.N_ncdm = 0;
+      cbe->priv->pba.T_ncdm_default = 0.71611;
+      cbe->priv->pba.T_ncdm = NULL;
+      cbe->priv->pba.m_ncdm_in_eV = NULL;
+    }
+  }
+  
 	cbe->priv->pba.Omega0_scf = 0.0;
 	cbe->priv->pba.attractor_ic_scf = _TRUE_;
 	cbe->priv->pba.scf_parameters = NULL;

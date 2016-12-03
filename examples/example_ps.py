@@ -25,7 +25,7 @@ Ncm.cfg_init ()
 #
 #  New homogeneous and isotropic cosmological model NcHICosmoDEXcdm 
 #
-cosmo = Nc.HICosmo.new_from_name (Nc.HICosmo, "NcHICosmoDEXcdm")
+cosmo = Nc.HICosmo.new_from_name (Nc.HICosmo, "NcHICosmoDEXcdm{'massnu-length':<1>, 'Tnu-length':<1>}")
 cosmo.omega_x2omega_k ()
 cosmo.param_set_by_name ("Omegak", 0.0)
 cosmo.param_set_by_name ("w", -1.0)
