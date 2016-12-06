@@ -101,7 +101,9 @@ typedef enum _NcHICosmoDEParams
 typedef enum _NcHICosmoDEVParams
 {
   NC_HICOSMO_DE_MASSNU_M = 0,
-  NC_HICOSMO_DE_MASSNU_T,    /*< private >*/
+  NC_HICOSMO_DE_MASSNU_T,
+  NC_HICOSMO_DE_MASSNU_XI,
+  NC_HICOSMO_DE_MASSNU_G,   /*< private >*/
   NC_HICOSMO_DE_VPARAM_LEN, /*< skip >*/
 } NcHICosmoDEVParams;
 
@@ -114,6 +116,8 @@ typedef enum _NcHICosmoDEVParams
 #define NC_HICOSMO_DE_DEFAULT_ENNU      (3.046)
 #define NC_HICOSMO_DE_DEFAULT_NU_MASS   (1.0e-5)
 #define NC_HICOSMO_DE_DEFAULT_NU_T      (0.71611)
+#define NC_HICOSMO_DE_DEFAULT_NU_XI     (0.0)
+#define NC_HICOSMO_DE_DEFAULT_NU_G      (1.0)
 
 struct _NcHICosmoDEClass
 {

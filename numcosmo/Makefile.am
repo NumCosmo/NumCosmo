@@ -60,6 +60,7 @@ ncm_sources = \
 	math/ncm_serialize.c                 \
 	math/ncm_obj_array.c                 \
 	math/ncm_integral1d.c                \
+	math/ncm_integral1d_ptr.c            \
 	math/ncm_rng.c                       \
 	math/ncm_stats_vec.c                 \
 	math/ncm_stats_dist1d.c              \
@@ -165,6 +166,7 @@ ncm_headers =                                \
 	math/ncm_serialize.h                 \
 	math/ncm_obj_array.h                 \
 	math/ncm_integral1d.h                \
+	math/ncm_integral1d_ptr.h            \
 	math/ncm_rng.h                       \
 	math/ncm_stats_vec.h                 \
 	math/ncm_stats_dist1d.h              \

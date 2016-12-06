@@ -129,7 +129,7 @@ typedef gdouble (*NcHICosmoFunc0) (NcHICosmo *cosmo);
 typedef gdouble (*NcHICosmoFunc1Z) (NcHICosmo *cosmo, gdouble z);
 typedef gdouble (*NcHICosmoFunc1K) (NcHICosmo *cosmo, gdouble k);
 typedef guint (*NcHICosmoFuncNMassNu) (NcHICosmo *cosmo);
-typedef void (*NcHICosmoFuncMassNuInfo) (NcHICosmo *cosmo, const guint nu_i, gdouble *mass_eV, gdouble *T_0);
+typedef void (*NcHICosmoFuncMassNuInfo) (NcHICosmo *cosmo, const guint nu_i, gdouble *mass_eV, gdouble *T_0, gdouble *xi, gdouble *g);
 typedef gdouble (*NcHICosmoFuncOmegaMassNu) (NcHICosmo *cosmo, const guint nu_i, const gdouble z);
 
 #ifndef __GTK_DOC_IGNORE__
@@ -281,7 +281,7 @@ G_INLINE_FUNC gdouble nc_hicosmo_bgp_cs2 (NcHICosmo *cosmo, gdouble z);
 G_INLINE_FUNC gdouble nc_hicosmo_Dc (NcHICosmo *cosmo, gdouble z);
 
 G_INLINE_FUNC guint nc_hicosmo_NMassNu (NcHICosmo *cosmo);
-G_INLINE_FUNC void nc_hicosmo_MassNuInfo (NcHICosmo *cosmo, guint nu_i, gdouble *mass_eV, gdouble *T_0);
+G_INLINE_FUNC void nc_hicosmo_MassNuInfo (NcHICosmo *cosmo, guint nu_i, gdouble *mass_eV, gdouble *T_0, gdouble *xi, gdouble *g);
 
 G_INLINE_FUNC gdouble nc_hicosmo_q (NcHICosmo *cosmo, gdouble z);
 G_INLINE_FUNC gdouble nc_hicosmo_nec (NcHICosmo *cosmo, gdouble z);
@@ -346,9 +346,9 @@ nc_hicosmo_NMassNu (NcHICosmo *cosmo)
 }
 
 G_INLINE_FUNC void
-nc_hicosmo_MassNuInfo (NcHICosmo *cosmo, guint nu_i, gdouble *mass_eV, gdouble *T_0)
+nc_hicosmo_MassNuInfo (NcHICosmo *cosmo, guint nu_i, gdouble *mass_eV, gdouble *T_0, gdouble *xi, gdouble *g)
 {
-  NC_HICOSMO_GET_CLASS (cosmo)->MassNuInfo (cosmo, nu_i, mass_eV, T_0);
+  NC_HICOSMO_GET_CLASS (cosmo)->MassNuInfo (cosmo, nu_i, mass_eV, T_0, xi, g);
 }
 
 G_INLINE_FUNC gdouble
