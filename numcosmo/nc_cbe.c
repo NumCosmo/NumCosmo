@@ -1060,11 +1060,9 @@ _nc_cbe_set_bg (NcCBE* cbe, NcHICosmo* cosmo)
       
       for (nu_i = 0; nu_i < pba->N_ncdm; nu_i++)
       {
-        pba->ksi_ncdm[nu_i]    = pba->ksi_ncdm_default;
-        pba->deg_ncdm[nu_i]    = pba->deg_ncdm_default;
         pba->got_files[nu_i]   = _FALSE_;
 
-        nc_hicosmo_MassNuInfo (cosmo, nu_i, &pba->m_ncdm_in_eV[nu_i], &pba->T_ncdm[nu_i]);
+        nc_hicosmo_MassNuInfo (cosmo, nu_i, &pba->m_ncdm_in_eV[nu_i], &pba->T_ncdm[nu_i], &pba->ksi_ncdm[nu_i], &pba->deg_ncdm[nu_i]);
 
         pba->M_ncdm[nu_i]      = pba->m_ncdm_in_eV[nu_i] * ncm_c_eV () / (ncm_c_kb () * pba->T_ncdm[nu_i] * T_gamma0);
         pba->Omega0_ncdm[nu_i] = nc_hicosmo_Omega_mnu0 (cosmo, nu_i, 0.0);

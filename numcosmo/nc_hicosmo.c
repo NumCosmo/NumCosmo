@@ -104,7 +104,7 @@ static gdouble _nc_hicosmo_bgp_cs2 (NcHICosmo *cosmo, gdouble z);
 static gdouble _nc_hicosmo_Dc (NcHICosmo *cosmo, gdouble z);
 
 static guint _nc_hicosmo_NMassNu (NcHICosmo *cosmo);
-static void _nc_hicosmo_MassNuInfo (NcHICosmo *cosmo, const guint nu_i, gdouble *mass_eV, gdouble *T_0);
+static void _nc_hicosmo_MassNuInfo (NcHICosmo *cosmo, const guint nu_i, gdouble *mass_eV, gdouble *T_0, gdouble *xi, gdouble *g);
 static gdouble _nc_hicosmo_Omega_mnu0 (NcHICosmo *cosmo, const guint nu_i, const gdouble z);
 
 static void
@@ -174,7 +174,7 @@ static gdouble _nc_hicosmo_bgp_cs2 (NcHICosmo *cosmo, gdouble z)  { g_error ("nc
 static gdouble _nc_hicosmo_Dc (NcHICosmo *cosmo, gdouble z)       { g_error ("nc_hicosmo_Dc: model `%s' does not implement this function.", G_OBJECT_TYPE_NAME (cosmo)); return 0.0;  }
 
 static guint _nc_hicosmo_NMassNu (NcHICosmo *cosmo) { return 0; }
-static void _nc_hicosmo_MassNuInfo (NcHICosmo *cosmo, const guint nu_i, gdouble *mass_eV, gdouble *T_0) { g_error ("nc_hicosmo_NuMass: model `%s' does not implement massive neutrinos.", G_OBJECT_TYPE_NAME (cosmo)); }
+static void _nc_hicosmo_MassNuInfo (NcHICosmo *cosmo, const guint nu_i, gdouble *mass_eV, gdouble *T_0, gdouble *xi, gdouble *g) { g_error ("nc_hicosmo_NuMass: model `%s' does not implement massive neutrinos.", G_OBJECT_TYPE_NAME (cosmo)); }
 
 static gboolean
 _nc_hicosmo_valid (NcmModel *model)

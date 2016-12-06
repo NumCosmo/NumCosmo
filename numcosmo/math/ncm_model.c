@@ -751,7 +751,8 @@ ncm_model_class_set_property (GObject *object, guint prop_id, const GValue *valu
   else if (vparam_len_id < model_class->vparam_len)
   {
     NcmModelClass *model_class = NCM_MODEL_GET_CLASS (model);
-    guint psize = g_value_get_uint (value);
+    guint psize                = g_value_get_uint (value);
+
     if (model->vparam_len->len == 0)
     {
       g_array_set_size (model->vparam_len, model_class->vparam_len);
@@ -987,10 +988,10 @@ ncm_model_class_set_vparam_obj (NcmModelClass *model_class, guint vparam_id, Ncm
                                                         NCM_TYPE_VECTOR,
                                                         G_PARAM_READWRITE));
   {
-    gchar *param_length_name = g_strdup_printf ("%s-length", ncm_vparam_name (vparam));
+    gchar *param_length_name   = g_strdup_printf ("%s-length", ncm_vparam_name (vparam));
     gchar *param_length_symbol = g_strdup_printf ("%s:length", ncm_vparam_symbol (vparam));
-    gchar *param_fit_name = g_strdup_printf ("%s-fit", ncm_vparam_name (vparam));
-    gchar *param_fit_symbol = g_strdup_printf ("%s:fit", ncm_vparam_symbol (vparam));
+    gchar *param_fit_name      = g_strdup_printf ("%s-fit", ncm_vparam_name (vparam));
+    gchar *param_fit_symbol    = g_strdup_printf ("%s:fit", ncm_vparam_symbol (vparam));
 
     g_object_class_install_property (object_class, prop_len_id,
                                      g_param_spec_uint (param_length_name,
