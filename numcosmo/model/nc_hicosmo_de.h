@@ -90,6 +90,23 @@ typedef enum _NcHICosmoDEParams
   NC_HICOSMO_DE_SPARAM_LEN, /*< skip >*/
 } NcHICosmoDEParams;
 
+/**
+ * NcHICosmoDEVParams:
+ * @NC_HICOSMO_DE_MASSNU_M: FIXME
+ * @NC_HICOSMO_DE_MASSNU_T: FIXME
+ * 
+ * FIXME
+ * 
+ */
+typedef enum _NcHICosmoDEVParams
+{
+  NC_HICOSMO_DE_MASSNU_M = 0,
+  NC_HICOSMO_DE_MASSNU_T,
+  NC_HICOSMO_DE_MASSNU_XI,
+  NC_HICOSMO_DE_MASSNU_G,   /*< private >*/
+  NC_HICOSMO_DE_VPARAM_LEN, /*< skip >*/
+} NcHICosmoDEVParams;
+
 #define NC_HICOSMO_DE_DEFAULT_H0        ncm_c_hubble_cte_wmap ()
 #define NC_HICOSMO_DE_DEFAULT_OMEGA_C   (0.2568)
 #define NC_HICOSMO_DE_DEFAULT_OMEGA_X   (0.70)
@@ -97,6 +114,10 @@ typedef enum _NcHICosmoDEParams
 #define NC_HICOSMO_DE_DEFAULT_T_GAMMA0  (2.7245)
 #define NC_HICOSMO_DE_DEFAULT_HE_YP     (0.24)
 #define NC_HICOSMO_DE_DEFAULT_ENNU      (3.046)
+#define NC_HICOSMO_DE_DEFAULT_NU_MASS   (1.0e-5)
+#define NC_HICOSMO_DE_DEFAULT_NU_T      (0.71611)
+#define NC_HICOSMO_DE_DEFAULT_NU_XI     (0.0)
+#define NC_HICOSMO_DE_DEFAULT_NU_G      (1.0)
 
 struct _NcHICosmoDEClass
 {

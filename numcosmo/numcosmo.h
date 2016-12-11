@@ -60,6 +60,7 @@
 #include <numcosmo/perturbations/nc_hipert_wkb.h>
 #include <numcosmo/perturbations/nc_hipert_itwo_fluids.h>
 #include <numcosmo/perturbations/nc_hipert_adiab.h>
+#include <numcosmo/perturbations/nc_hipert_gw.h>
 #include <numcosmo/perturbations/nc_hipert_two_fluids.h>
 #include <numcosmo/perturbations/nc_hipert_boltzmann.h>
 #include <numcosmo/perturbations/nc_hipert_boltzmann_std.h>

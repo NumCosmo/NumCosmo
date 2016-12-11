@@ -105,10 +105,9 @@ struct _NcmHOAA
 
 /**
  * NcmHOAAVar:
- * @NCM_HOAA_VAR_THETA: FIXME
- * @NCM_HOAA_VAR_PSI: FIXME
- * @NCM_HOAA_VAR_LNI: FIXME
- * @NCM_HOAA_VAR_LNJ: FIXME
+ * @NCM_HOAA_VAR_THETAB: FIXME
+ * @NCM_HOAA_VAR_EPSILON: FIXME
+ * @NCM_HOAA_VAR_GAMMA: FIXME
  * @NCM_HOAA_SYS_SIZE: FIXME
  * 
  * FIXME
@@ -116,10 +115,9 @@ struct _NcmHOAA
  */
 typedef enum _NcmHOAAVar
 {
-  NCM_HOAA_VAR_THETA = 0,
-  NCM_HOAA_VAR_PSI,
-  NCM_HOAA_VAR_LNI,
-  NCM_HOAA_VAR_LNJ,
+  NCM_HOAA_VAR_THETAB = 0,
+  NCM_HOAA_VAR_EPSILON,
+  NCM_HOAA_VAR_GAMMA,
   NCM_HOAA_VAR_SYS_SIZE,  
 } NcmHOAAVar;
 
@@ -140,7 +138,7 @@ void ncm_hoaa_prepare (NcmHOAA *hoaa, NcmModel *model);
 
 void ncm_hoaa_get_t0_t1 (NcmHOAA *hoaa, NcmModel *model, gdouble *t0, gdouble *t1);
 
-void ncm_hoaa_eval_adiabatic_approx (NcmHOAA *hoaa, NcmModel *model, const gdouble t, gdouble *theta, gdouble *psi, gdouble *LnI, gdouble *LnJ);
+void ncm_hoaa_eval_adiabatic_approx (NcmHOAA *hoaa, NcmModel *model, const gdouble t, gdouble *thetab, gdouble *epsilon, gdouble *gamma);
 void ncm_hoaa_eval_adiabatic_LnI_approx (NcmHOAA *hoaa, NcmModel *model, const gdouble t, const gdouble theta, const gdouble psi, gdouble *LnI, gdouble *LnJ);
 void ncm_hoaa_eval_AA (NcmHOAA *hoaa, NcmModel *model, const gdouble t, gdouble *theta, gdouble *psi, gdouble *LnI, gdouble *LnJ);
 void ncm_hoaa_eval_AA2CV (NcmHOAA *hoaa, NcmModel *model, const gdouble t, const gdouble theta, const gdouble psi, const gdouble LnI, const gdouble LnJ, gdouble *Rphi, gdouble *Iphi, gdouble *RPphi, gdouble *IPphi);

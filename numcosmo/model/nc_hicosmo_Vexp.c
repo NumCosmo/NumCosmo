@@ -38,6 +38,7 @@
 
 #include "model/nc_hicosmo_Vexp.h"
 #include "perturbations/nc_hipert_adiab.h"
+#include "perturbations/nc_hipert_gw.h"
 #include "math/ncm_spline_cubic_notaknot.h"
 
 #include <nvector/nvector_serial.h>
@@ -45,10 +46,13 @@
 #include <cvode/cvode_dense.h>
 
 static void nc_hipert_iadiab_interface_init (NcHIPertIAdiabInterface *iface);
+static void nc_hipert_igw_interface_init (NcHIPertIGWInterface *iface);
 
 G_DEFINE_TYPE_WITH_CODE (NcHICosmoVexp, nc_hicosmo_Vexp, NC_TYPE_HICOSMO,
                          G_IMPLEMENT_INTERFACE (NC_TYPE_HIPERT_IADIAB,
                                                 nc_hipert_iadiab_interface_init)
+                         G_IMPLEMENT_INTERFACE (NC_TYPE_HIPERT_IGW,
+                                                nc_hipert_igw_interface_init)
                          );
 
 struct _NcHICosmoVexpPrivate
@@ -265,6 +269,7 @@ _nc_hicosmo_Vexp_finalize (GObject *object)
 }
 
 static gdouble _nc_hicosmo_Vexp_H0 (NcHICosmo *cosmo);
+static gdouble _nc_hicosmo_Vexp_xb (NcHICosmo *cosmo);
 static gdouble _nc_hicosmo_Vexp_E2 (NcHICosmo *cosmo, gdouble z);
 static gdouble _nc_hicosmo_Vexp_dE2_dz (NcHICosmo *cosmo, gdouble z);
 static gdouble _nc_hicosmo_Vexp_d2E2_dz2 (NcHICosmo *cosmo, gdouble z);
@@ -297,12 +302,12 @@ nc_hicosmo_Vexp_class_init (NcHICosmoVexpClass *klass)
                                NCM_PARAM_TYPE_FREE);
   /* Set Omega_L0 param info */
   ncm_model_class_set_sparam (model_class, NC_HICOSMO_VEXP_OMEGA_L, "\\Omega_{\\Lambda0}", "OmegaL",
-                               1e-8,  10.0, 1.0e-2,
+                               1e-8,  1.0e100, 1.0e-2,
                                NC_HICOSMO_DEFAULT_PARAMS_ABSTOL, NC_HICOSMO_VEXP_DEFAULT_OMEGA_L,
                                NCM_PARAM_TYPE_FREE);
   /* Set sigmaphi param info */
   ncm_model_class_set_sparam (model_class, NC_HICOSMO_VEXP_SIGMA_PHI, "\\sigma_{\\phi}", "sigmaphi",
-                               1e-8,  10.0, 1.0e-2,
+                               1e-8,  100.0e10, 1.0e-2,
                                NC_HICOSMO_DEFAULT_PARAMS_ABSTOL, NC_HICOSMO_VEXP_DEFAULT_SIGMA_PHI,
                                NCM_PARAM_TYPE_FREE);
   /* Set cphi param info */
@@ -325,6 +330,7 @@ nc_hicosmo_Vexp_class_init (NcHICosmoVexpClass *klass)
   ncm_model_class_check_params_info (model_class);
 
   nc_hicosmo_set_H0_impl        (parent_class, &_nc_hicosmo_Vexp_H0);
+  nc_hicosmo_set_xb_impl        (parent_class, &_nc_hicosmo_Vexp_xb);
   nc_hicosmo_set_E2_impl        (parent_class, &_nc_hicosmo_Vexp_E2);
   nc_hicosmo_set_Omega_t0_impl  (parent_class, &_nc_hicosmo_Vexp_Omega_t0);
 
@@ -460,6 +466,32 @@ nc_hipert_iadiab_interface_init (NcHIPertIAdiabInterface *iface)
   iface->eval_sing_mnu    = &_nc_hicosmo_Vexp_zeta_eval_sing_mnu;
   iface->eval_sing_dlnmnu = &_nc_hicosmo_Vexp_zeta_eval_sing_dlnmnu;
   iface->eval_sing_system = &_nc_hicosmo_Vexp_zeta_eval_sing_system;
+}
+
+static gdouble _nc_hicosmo_Vexp_gw_eval_mnu (NcHIPertIGW *igw, const gdouble tau, const gdouble k);
+static gdouble _nc_hicosmo_Vexp_gw_eval_nu (NcHIPertIGW *igw, const gdouble tau, const gdouble k);
+static gdouble _nc_hicosmo_Vexp_gw_eval_dlnmnu (NcHIPertIGW *igw, const gdouble tau, const gdouble k);
+static void _nc_hicosmo_Vexp_gw_eval_system (NcHIPertIGW *igw, const gdouble tau, const gdouble k, gdouble *nu, gdouble *dlnmnu);
+
+static guint _nc_hicosmo_Vexp_gw_nsing (NcHIPertIGW *igw, const gdouble k);
+static void _nc_hicosmo_Vexp_gw_get_sing_info (NcHIPertIGW *igw, const gdouble k, const guint sing, gdouble *ts, gdouble *dts_i, gdouble *dts_f, NcmHOAASingType *st);
+static gdouble _nc_hicosmo_Vexp_gw_eval_sing_mnu (NcHIPertIGW *igw, const gdouble tau_m_taus, const gdouble k, guint sing);
+static gdouble _nc_hicosmo_Vexp_gw_eval_sing_dlnmnu (NcHIPertIGW *igw, const gdouble tau_m_taus, const gdouble k, guint sing);
+static void _nc_hicosmo_Vexp_gw_eval_sing_system (NcHIPertIGW *igw, const gdouble tau_m_taus, const gdouble k, guint sing, gdouble *nu, gdouble *dlnmnu);
+
+static void
+nc_hipert_igw_interface_init (NcHIPertIGWInterface *iface)
+{
+  iface->eval_mnu         = &_nc_hicosmo_Vexp_gw_eval_mnu;
+  iface->eval_nu          = &_nc_hicosmo_Vexp_gw_eval_nu;
+  iface->eval_dlnmnu      = &_nc_hicosmo_Vexp_gw_eval_dlnmnu;
+  iface->eval_system      = &_nc_hicosmo_Vexp_gw_eval_system;
+
+  iface->nsing            = &_nc_hicosmo_Vexp_gw_nsing;
+  iface->get_sing_info    = &_nc_hicosmo_Vexp_gw_get_sing_info;
+  iface->eval_sing_mnu    = &_nc_hicosmo_Vexp_gw_eval_sing_mnu;
+  iface->eval_sing_dlnmnu = &_nc_hicosmo_Vexp_gw_eval_sing_dlnmnu;
+  iface->eval_sing_system = &_nc_hicosmo_Vexp_gw_eval_sing_system;
 }
 
 static gdouble 
@@ -740,6 +772,10 @@ _nc_hicosmo_Vexp_a_0_by_ea (NcHICosmoVexp *Vexp, const gdouble tQ, const gdouble
     {
       const gdouble twoLp = pow (2.0, LAMBDAp);
       const gdouble a_0   = (a / pow (fabs (epsilon), LAMBDAm / 3.0)) * cbrt (2.0 * gsl_pow_2 (LAMBDAp) / twoLp);
+/*
+      printf ("A0 % 22.15g % 22.15g % 22.15g % 22.15g % 22.15g % 22.15g\n", 
+        tQ, epsilon, a, a, pow (fabs (epsilon), LAMBDAm / 3.0), cbrt (2.0 * gsl_pow_2 (LAMBDAp) / twoLp));
+*/
       return a_0;
     }
     else
@@ -752,7 +788,7 @@ _nc_hicosmo_Vexp_a_0_by_ea (NcHICosmoVexp *Vexp, const gdouble tQ, const gdouble
 }
 
 static gint 
-_nc_hicosmo_Vexp_qt_f (realtype tQ, N_Vector y_qt, N_Vector ydot_qt, void *f_data)
+_nc_hicosmo_Vexp_qt_f (realtype tQ, N_Vector y_qt, N_Vector ydot_qt, gpointer f_data)
 {
 	NcHICosmoVexp *Vexp = NC_HICOSMO_VEXP (f_data);
 	const gdouble alpha = NV_Ith_S (y_qt, 0) + Vexp->priv->alpha_b;
@@ -830,13 +866,17 @@ _nc_hicosmo_Vexp_qt_root (realtype tQ, N_Vector y_qt, realtype *gout, gpointer u
   gout[1] = log (_nc_hicosmo_Vexp_a_0_by_ea (Vexp, tQ, epsilon, exp (alpha), +1) / a_0p);
   gout[2] = log (_nc_hicosmo_Vexp_a_0_by_ea (Vexp, tQ, epsilon, exp (alpha), -1) / a_0m);
   gout[3] = log (fabs (H_lp * Vexp->priv->RH_lp * x));
-
+/*
+  printf ("RF % 22.15g % 22.15g % 22.15g % 22.15g % 22.15g\n", alpha, phi, epsilon, 
+          _nc_hicosmo_Vexp_a_0_by_ea (Vexp, tQ, epsilon, exp (alpha), -1),
+         a_0m);
+*/
   /*printf ("# gout % 21.15g % 21.15g % 21.15g\n", gout[0], gout[1], gout[1]);*/
 	return 0;
 } 
 
 static gint 
-_nc_hicosmo_Vexp_clp_f (realtype tQ, N_Vector y_clp, N_Vector ydot_clp, void *f_data)
+_nc_hicosmo_Vexp_clp_f (realtype tQ, N_Vector y_clp, N_Vector ydot_clp, gpointer f_data)
 {
 	const gdouble q = exp (NV_Ith_S (y_clp, 0));
   const gdouble E = NV_Ith_S (y_clp, 1);
@@ -849,7 +889,7 @@ _nc_hicosmo_Vexp_clp_f (realtype tQ, N_Vector y_clp, N_Vector ydot_clp, void *f_
 }
 
 static gint 
-_nc_hicosmo_Vexp_clm_f (realtype tQ, N_Vector y_clm, N_Vector ydot_clm, void *f_data)
+_nc_hicosmo_Vexp_clm_f (realtype tQ, N_Vector y_clm, N_Vector ydot_clm, gpointer f_data)
 {
 	const gdouble q = exp (NV_Ith_S (y_clm, 0));
   const gdouble E = NV_Ith_S (y_clm, 1);
@@ -915,6 +955,9 @@ _nc_hicosmo_Vexp_init_qt (NcHICosmoVexp *Vexp, const gdouble direction)
 
     flag = CVodeSetInitStep (Vexp->priv->cvode_qt, tQ_i * 1.0e-4);
     NCM_CVODE_CHECK (&flag, "CVodeSetInitStep", 1, );
+
+    flag = CVodeSetMaxStep (Vexp->priv->cvode_qt, 1.0);
+    NCM_CVODE_CHECK (&flag, "CVodeSetMaxStep", 1, );
   }
   else
   {
@@ -1041,12 +1084,19 @@ _nc_hicosmo_Vexp_evolve_qt (NcHICosmoVexp *Vexp, gdouble tQ_f)
         const gdouble sigma2   = sigma * sigma;
         const gdouble d        = D_PHI;
         const gdouble arg_trig = d * Vexp->priv->alpha_b;
+        const gdouble epsilon  = _nc_hicosmo_Vexp_epsilon (Vexp, tQ, alpha, phi);
+        gdouble H_lp, x;
 
-        printf ("% 22.15g % 22.15g % 22.15g % 22.15g % 22.15g % 22.15g\n", tQ, ralpha, 
+        _nc_hicosmo_Vexp_H_x (Vexp, tQ, alpha, phi, &H_lp, &x);
+
+        printf ("# Q % 22.15g % 22.15g % 22.15g % 22.15g % 22.15g % 22.15g % 22.15g % 22.15g % 22.15g\n", tQ, 
+                ralpha, 
                 0.125 * tQ * tQ * sigma2 * (d * Vexp->priv->alpha_b / gsl_pow_2 (cos (arg_trig)) + tan (arg_trig)) * (2.0 * d - Vexp->priv->alpha_b * sigma2 *  tan (arg_trig)),
                 phi,
                 0.5 * tQ * (2.0 * d - Vexp->priv->alpha_b * sigma2 *  tan (arg_trig)),
-                phi / tau
+                phi / tau, 
+                epsilon, 
+                H_lp * Vexp->priv->RH_lp, x
                 );
       }
       
@@ -1060,6 +1110,8 @@ _nc_hicosmo_Vexp_evolve_qt (NcHICosmoVexp *Vexp, gdouble tQ_f)
         flag = CVodeGetRootInfo (Vexp->priv->cvode_qt, rootsfound);
         NCM_CVODE_CHECK (&flag, "CVodeGetRootInfo", 1, );
 
+        /*printf ("ROOT: %d %d %d %d\n", rootsfound[0], rootsfound[1], rootsfound[2], rootsfound[3]);*/
+        
         if (rootsfound[3] != 0)
           g_error ("_nc_hicosmo_Vexp_evolve_qt: quantum phase is too long, unable to match with the classical phase.");
 
@@ -1143,7 +1195,7 @@ _nc_hicosmo_Vexp_evolve_qt (NcHICosmoVexp *Vexp, gdouble tQ_f)
 static void
 _nc_hicosmo_Vexp_evolve_cl_c (NcHICosmoVexp *Vexp)
 {
-  const gdouble alpha_f = 100.0 + Vexp->priv->alpha_0c;
+  const gdouble alpha_f = 150.0 + Vexp->priv->alpha_0c;
   gpointer cvode;
   gint flag;
   GArray *mtau_a = ncm_vector_get_array (Vexp->priv->lnqc_mtau->xv);
@@ -1199,11 +1251,11 @@ _nc_hicosmo_Vexp_evolve_cl_c (NcHICosmoVexp *Vexp)
         {
           if (found_lower)
           {
-            Vexp->priv->tau_x0_f = tau;
+            Vexp->priv->tau_x0_i = tau;
           }
           else
           {
-            Vexp->priv->tau_x0_i = tau;
+            Vexp->priv->tau_x0_f = tau;
             found_lower = TRUE;
           }
 
@@ -1215,11 +1267,11 @@ _nc_hicosmo_Vexp_evolve_cl_c (NcHICosmoVexp *Vexp)
         {
           if (found_lower)
           {
-            Vexp->priv->tau_x0_f = tau;
+            Vexp->priv->tau_x0_i = tau;
           }
           else
           {
-            Vexp->priv->tau_x0_i = tau;
+            Vexp->priv->tau_x0_f = tau;
             found_lower = TRUE;
           }
 
@@ -1254,7 +1306,7 @@ _nc_hicosmo_Vexp_evolve_cl_c (NcHICosmoVexp *Vexp)
 static void
 _nc_hicosmo_Vexp_evolve_cl_e (NcHICosmoVexp *Vexp)
 {
-  const gdouble alpha_f = 100.0 + Vexp->priv->alpha_0e;
+  const gdouble alpha_f = 150.0 + Vexp->priv->alpha_0e;
   gpointer cvode;
   gint flag;
   GArray *tau_a   = ncm_vector_get_array (Vexp->priv->lnqe_tau->xv);
@@ -1305,7 +1357,7 @@ _nc_hicosmo_Vexp_evolve_cl_e (NcHICosmoVexp *Vexp)
 
         flag = CVodeGetRootInfo (cvode, rootsfound);
         NCM_CVODE_CHECK (&flag, "CVodeGetRootInfo", 1, );
-
+        
         if (rootsfound[0])
         {
           Vexp->priv->tau_x0 = tau;
@@ -1418,6 +1470,8 @@ _nc_hicosmo_Vexp_prepare (NcHICosmoVexp *Vexp)
         const NcHICosmoVexpState s = g_array_index (Vexp->priv->evol_c, NcHICosmoVexpState, i);
         const gdouble phi_o_tau = s.phi / s.tau;
 
+        /*printf ("# tau_i = % 21.15g phi_i = % 21.15g [%8u]\n", s.tau, s.phi, tau_qt_a->len);*/
+        
         g_array_append_val (tau_qt_a, s.tau);
         g_array_append_val (phi_a,    phi_o_tau);
       }
@@ -1427,6 +1481,8 @@ _nc_hicosmo_Vexp_prepare (NcHICosmoVexp *Vexp)
         const NcHICosmoVexpState s = g_array_index (Vexp->priv->evol_e, NcHICosmoVexpState, i);
         const gdouble phi_o_tau = s.phi / s.tau;
 
+        /*printf ("# tau_i = % 21.15g phi_i = % 21.15g [%8u]\n", s.tau, s.phi, tau_qt_a->len);*/
+        
         g_array_append_val (tau_qt_a, s.tau);
         g_array_append_val (phi_a,    phi_o_tau);
       }
@@ -1486,6 +1542,7 @@ _nc_hicosmo_Vexp_d2E2_dz2 (NcHICosmo *cosmo, gdouble z)
  ****************************************************************************/
 static gdouble _nc_hicosmo_Vexp_H0 (NcHICosmo *cosmo) { return MACRO_H0; }
 static gdouble _nc_hicosmo_Vexp_Omega_t0 (NcHICosmo *cosmo) { return OMEGA_C; }
+static gdouble _nc_hicosmo_Vexp_xb (NcHICosmo *cosmo) { return X_B; }
 
 static gdouble 
 _nc_hicosmo_Vexp_zeta_eval_mnu (NcHIPertIAdiab *iad, const gdouble tau, const gdouble k)
@@ -2005,6 +2062,191 @@ _nc_hicosmo_Vexp_zeta_eval_sing_system (NcHIPertIAdiab *iad, const gdouble tau_m
   }
 }
 
+static gdouble 
+_nc_hicosmo_Vexp_gw_eval_mnu (NcHIPertIGW *igw, const gdouble tau, const gdouble k)
+{
+  NcHICosmoVexp *Vexp = NC_HICOSMO_VEXP (igw);
+  
+  _nc_hicosmo_Vexp_prepare (Vexp); 
+
+  {
+    const gdouble tau2   = tau * tau;
+    const gdouble lna_a0e = 0.5 * tau2 + Vexp->priv->alpha_b - Vexp->priv->alpha_0e;
+
+    return exp (2.0 * lna_a0e) * k;
+  }
+}
+
+static gdouble 
+_nc_hicosmo_Vexp_gw_eval_nu (NcHIPertIGW *igw, const gdouble tau, const gdouble k)
+{
+  NcHICosmoVexp *Vexp = NC_HICOSMO_VEXP (igw);
+  
+  _nc_hicosmo_Vexp_prepare (Vexp);
+
+  {
+    const gdouble tau2   = tau * tau;
+    const gdouble lna_a0e = 0.5 * tau2 + Vexp->priv->alpha_b - Vexp->priv->alpha_0e;
+    gdouble nu;
+    guint branch = 0;
+
+    if (tau > Vexp->priv->tau_qt_c)
+    {
+      branch++;
+      if (tau > Vexp->priv->tau_qt_e)
+        branch++;
+    }
+
+    switch (branch)
+    {
+      case 0: /* Classical contraction */
+      {
+        const gdouble lnq = ncm_spline_eval (Vexp->priv->lnqc_mtau, -tau);
+        const gdouble q   = exp (lnq);
+        const gdouble E   = _nc_hicosmo_Vexp_Hc_H0_q (Vexp, q, Vexp->priv->cl_bc);
+
+        nu = exp (- lna_a0e) * k * tau / E;
+
+        break;
+      }
+      case 1: /* Quantum phase */
+      {
+        const gdouble alpha = 0.5 * tau * tau + Vexp->priv->alpha_b;
+        const gdouble phi   = (fabs (tau) < 1.0e-10) ? _nc_hicosmo_Vexp_qt_phi_tau (Vexp, tau) : ncm_spline_eval (Vexp->priv->phi_tau, tau) * tau;
+        gdouble H_lp, xq;
+
+        _nc_hicosmo_Vexp_H_x (Vexp, 0.0, alpha, phi, &H_lp, &xq);
+
+        nu = exp (- lna_a0e) * k * tau / (H_lp * Vexp->priv->RH_lp);
+
+        break;
+      }
+      case 2: /* Classical expansion */
+      {
+        const gdouble lnq = ncm_spline_eval (Vexp->priv->lnqe_tau, tau);
+        const gdouble q   = exp (lnq);
+        const gdouble E   = _nc_hicosmo_Vexp_He_H0_q (Vexp, q, Vexp->priv->cl_be);
+
+        nu = exp (- lna_a0e) * k * tau / E;
+        
+        break;
+      }
+      default:
+        g_assert_not_reached ();
+        break;
+    }
+    return nu;
+  }
+}
+
+static gdouble 
+_nc_hicosmo_Vexp_gw_eval_dlnmnu (NcHIPertIGW *igw, const gdouble tau, const gdouble k)
+{
+  return 2.0 * tau;
+}
+
+static void 
+_nc_hicosmo_Vexp_gw_eval_system (NcHIPertIGW *igw, const gdouble tau, const gdouble k, gdouble *nu, gdouble *dlnmnu)
+{
+  NcHICosmoVexp *Vexp = NC_HICOSMO_VEXP (igw);
+  
+  _nc_hicosmo_Vexp_prepare (Vexp);
+
+  {
+    const gdouble tau2   = tau * tau;
+    const gdouble lna_a0e = 0.5 * tau2 + Vexp->priv->alpha_b - Vexp->priv->alpha_0e;
+    guint branch = 0;
+
+    if (tau > Vexp->priv->tau_qt_c)
+    {
+      branch++;
+      if (tau > Vexp->priv->tau_qt_e)
+        branch++;
+    }
+
+    switch (branch)
+    {
+      case 0: /* Classical contraction */
+      {
+        const gdouble lnq         = ncm_spline_eval (Vexp->priv->lnqc_mtau, -tau);
+        const gdouble q           = exp (lnq);
+        const gdouble E           = _nc_hicosmo_Vexp_Hc_H0_q (Vexp, q, Vexp->priv->cl_bc);
+
+        nu[0]     = exp (- lna_a0e) * k * tau / E;
+        dlnmnu[0] = 2.0 * tau;
+      
+        break;
+      }
+      case 1: /* Quantum phase */
+      {
+        const gdouble alpha = 0.5 * tau * tau + Vexp->priv->alpha_b;
+        const gdouble phi   = (fabs (tau) < 1.0e-10) ? _nc_hicosmo_Vexp_qt_phi_tau (Vexp, tau) : ncm_spline_eval (Vexp->priv->phi_tau, tau) * tau;
+        gdouble H_lp, xq;
+
+        _nc_hicosmo_Vexp_H_x (Vexp, 0.0, alpha, phi, &H_lp, &xq);
+
+        {
+          const gdouble E = H_lp * Vexp->priv->RH_lp;
+          
+          nu[0]     = exp (- lna_a0e) * k * tau / E;
+          dlnmnu[0] = 2.0 * tau;
+        }      
+        break;
+      }
+      case 2: /* Classical expansion */
+      {
+        const gdouble lnq         = ncm_spline_eval (Vexp->priv->lnqe_tau, tau);
+        const gdouble q           = exp (lnq);
+        const gdouble E           = _nc_hicosmo_Vexp_He_H0_q (Vexp, q, Vexp->priv->cl_be);
+
+        nu[0]     = exp (- lna_a0e) * k * tau / E;
+        dlnmnu[0] = 2.0 * tau;          
+
+        break;
+      }
+      default:
+        g_assert_not_reached ();
+        break;
+    }
+  }
+  return;
+}
+
+static guint 
+_nc_hicosmo_Vexp_gw_nsing (NcHIPertIGW *igw, const gdouble k)
+{
+  return 1;
+}
+
+static void 
+_nc_hicosmo_Vexp_gw_get_sing_info (NcHIPertIGW *igw, const gdouble k, const guint sing, gdouble *ts, gdouble *dts_i, gdouble *dts_f, NcmHOAASingType *st)
+{
+  g_assert_cmpuint (sing, ==, 0);
+
+  ts[0]    = +0.0;
+  dts_i[0] = -0.1;
+  dts_f[0] = +0.1;
+  st[0]    = NCM_HOAA_SING_TYPE_INF;
+}
+
+static gdouble 
+_nc_hicosmo_Vexp_gw_eval_sing_mnu (NcHIPertIGW *igw, const gdouble tau_m_taus, const gdouble k, guint sing)
+{
+  return _nc_hicosmo_Vexp_gw_eval_mnu (igw, tau_m_taus, k);
+}
+
+static gdouble 
+_nc_hicosmo_Vexp_gw_eval_sing_dlnmnu (NcHIPertIGW *igw, const gdouble tau_m_taus, const gdouble k, guint sing)
+{
+  return _nc_hicosmo_Vexp_gw_eval_dlnmnu (igw, tau_m_taus, k);
+}
+
+static void 
+_nc_hicosmo_Vexp_gw_eval_sing_system (NcHIPertIGW *igw, const gdouble tau_m_taus, const gdouble k, guint sing, gdouble *nu, gdouble *dlnmnu)
+{
+  _nc_hicosmo_Vexp_gw_eval_system (igw, tau_m_taus, k, nu, dlnmnu);
+}
+
 /**
  * nc_hicosmo_Vexp_new:
  *
@@ -2076,4 +2318,18 @@ gdouble
 nc_hicosmo_Vexp_tau_qt_e (NcHICosmoVexp *Vexp)
 {
   return Vexp->priv->tau_qt_e;
+}
+
+/**
+ * nc_hicosmo_Vexp_xbe:
+ * @Vexp: a #NcHICosmoVexp
+ *
+ * FIXME
+ *
+ * Returns: FIXME
+ */
+gdouble 
+nc_hicosmo_Vexp_xbe (NcHICosmoVexp *Vexp)
+{
+  return exp (-Vexp->priv->alpha_b + Vexp->priv->alpha_0e);
 }

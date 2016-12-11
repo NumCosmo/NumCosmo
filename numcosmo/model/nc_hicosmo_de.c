@@ -132,7 +132,6 @@ _nc_hicosmo_de_Yp_4He (NcHICosmo *cosmo)
     }
     else
     {
-      
       if (model->pkey != cosmo_de->HE4_Yp_key)
       {
         const gdouble Yp = ncm_spline2d_eval (NC_HICOSMO_DE (cosmo)->BBN_spline2d, wb, DENNU);
@@ -174,6 +173,56 @@ _nc_hicosmo_de_bgp_cs2 (NcHICosmo *cosmo, gdouble z)
   const gdouble nine_4   = 9.0 / 4.0;
   
   return 1.0 / (3.0 + nine_4 * Omega_b0 / (Omega_g0 * x));
+}
+
+static guint
+_nc_hicosmo_de_NMassNu (NcHICosmo *cosmo)
+{
+  return ncm_model_vparam_len (NCM_MODEL (cosmo), NC_HICOSMO_DE_MASSNU_M);
+}
+
+static void
+_nc_hicosmo_de_MassNuInfo (NcHICosmo *cosmo, guint nu_i, gdouble *mass_eV, gdouble *T_0, gdouble *xi, gdouble *g)
+{
+  NcmModel *model = NCM_MODEL (cosmo);
+
+  g_assert_cmpuint (nu_i, <, ncm_model_vparam_len (model, NC_HICOSMO_DE_MASSNU_T));
+
+  mass_eV[0] = ncm_model_orig_vparam_get (model, NC_HICOSMO_DE_MASSNU_M, nu_i);
+  
+  if (ncm_model_vparam_len (model, NC_HICOSMO_DE_MASSNU_T) == 1)
+  {
+    T_0[0] = ncm_model_orig_vparam_get (model, NC_HICOSMO_DE_MASSNU_T, 0);
+  }
+  else
+  {
+    T_0[0] = ncm_model_orig_vparam_get (model, NC_HICOSMO_DE_MASSNU_T, nu_i);
+  }
+
+  if (ncm_model_vparam_len (model, NC_HICOSMO_DE_MASSNU_XI) == 1)
+  {
+    xi[0] = ncm_model_orig_vparam_get (model, NC_HICOSMO_DE_MASSNU_XI, 0);
+  }
+  else
+  {
+    xi[0] = ncm_model_orig_vparam_get (model, NC_HICOSMO_DE_MASSNU_XI, nu_i);
+  }
+  
+  if (ncm_model_vparam_len (model, NC_HICOSMO_DE_MASSNU_G) == 1)
+  {
+    g[0] = ncm_model_orig_vparam_get (model, NC_HICOSMO_DE_MASSNU_G, 0);
+  }
+  else
+  {
+    g[0] = ncm_model_orig_vparam_get (model, NC_HICOSMO_DE_MASSNU_G, nu_i);
+  }  
+}
+
+static gdouble 
+_nc_hicosmo_Omega_mnu0 (NcHICosmo *cosmo, const guint nu_i, const gdouble z) 
+{ 
+  
+  return 0.0; 
 }
 
 void
@@ -259,7 +308,37 @@ nc_hicosmo_de_init (NcHICosmoDE *cosmo_de)
 }
 
 static void
-nc_hicosmo_de_dispose (GObject *object)
+_nc_hicosmo_de_constructed (GObject *object)
+{
+  /* Chain up : start */
+  G_OBJECT_CLASS (nc_hicosmo_de_parent_class)->constructed (object);
+  {
+    NcmModel *model = NCM_MODEL (object);
+    const guint m_len  = ncm_model_vparam_len (model, NC_HICOSMO_DE_MASSNU_M);
+    const guint T_len  = ncm_model_vparam_len (model, NC_HICOSMO_DE_MASSNU_T);
+    const guint xi_len = ncm_model_vparam_len (model, NC_HICOSMO_DE_MASSNU_XI);
+    const guint g_len  = ncm_model_vparam_len (model, NC_HICOSMO_DE_MASSNU_G);
+    
+    if (!((m_len == T_len) || (m_len > 0 && T_len == 1)))
+    {
+      g_error ("NcHICosmoDE: number of neutrinos masses must match the number of massive neutrino temperatures,\n"
+               " or the neutrino temperature vector must be of size one to use the same value for all massive neutrinos.");
+    }
+    if (!((m_len == xi_len) || (m_len > 0 && xi_len == 1)))
+    {
+      g_error ("NcHICosmoDE: number of neutrinos masses must match the number of massive neutrino relative chemical potential,\n"
+               " or the neutrino relative chemical potential vector must be of size one to use the same value for all massive neutrinos.");
+    }
+    if (!((m_len == g_len) || (m_len > 0 && g_len == 1)))
+    {
+      g_error ("NcHICosmoDE: number of neutrinos masses must match the number of massive neutrino degeneracy,\n"
+               " or the neutrino degeneracy vector must be of size one to use the same value for all massive neutrinos.");
+    }
+  }
+}
+
+static void
+_nc_hicosmo_de_dispose (GObject *object)
 {
   NcHICosmoDE *cosmo_de = NC_HICOSMO_DE (object);
 
@@ -270,7 +349,7 @@ nc_hicosmo_de_dispose (GObject *object)
 }
 
 static void
-nc_hicosmo_de_finalize (GObject *object)
+_nc_hicosmo_de_finalize (GObject *object)
 {
 
   /* Chain up : end */
@@ -289,11 +368,13 @@ nc_hicosmo_de_class_init (NcHICosmoDEClass *klass)
   NcHICosmoClass* parent_class = NC_HICOSMO_CLASS (klass);
   NcmModelClass *model_class   = NCM_MODEL_CLASS (klass);
 
-  object_class->dispose      = &nc_hicosmo_de_dispose;
-  object_class->finalize     = &nc_hicosmo_de_finalize;
+  object_class->constructed = &_nc_hicosmo_de_constructed;
+  object_class->dispose     = &_nc_hicosmo_de_dispose;
+  object_class->finalize    = &_nc_hicosmo_de_finalize;
 
   ncm_model_class_set_name_nick (model_class, "Darkenergy models abstract class", "NcHICosmoDE");
-  ncm_model_class_add_params (model_class, NC_HICOSMO_DE_SPARAM_LEN, 0, PROP_SIZE);
+  ncm_model_class_add_params (model_class, NC_HICOSMO_DE_SPARAM_LEN, NC_HICOSMO_DE_VPARAM_LEN, PROP_SIZE);
+
   /* Set H_0 param info */
   ncm_model_class_set_sparam (model_class, NC_HICOSMO_DE_H0, "H_0", "H0",
                               40.0, 120.0, 1.0,
@@ -329,22 +410,50 @@ nc_hicosmo_de_class_init (NcHICosmoDEClass *klass)
                               0.03,  0.05, 5.0e-4,
                               NC_HICOSMO_DEFAULT_PARAMS_ABSTOL, NC_HICOSMO_DE_DEFAULT_OMEGA_B,
                               NCM_PARAM_TYPE_FIXED);
+
+  /* Set massive neutrinos mass vector param */
+  ncm_model_class_set_vparam (model_class, NC_HICOSMO_DE_MASSNU_M, 0, "m_\\nu", "massnu", 
+                              0.0, 10.0, 0.01, 
+                              NC_HICOSMO_DEFAULT_PARAMS_ABSTOL, NC_HICOSMO_DE_DEFAULT_NU_MASS, 
+                              NCM_PARAM_TYPE_FIXED);
+
+  /* Set massive neutrinos temperature vector param */
+  ncm_model_class_set_vparam (model_class, NC_HICOSMO_DE_MASSNU_T, 0, "T_{\\nu0}", "Tnu", 
+                              0.0, 10.0, 0.01, 
+                              NC_HICOSMO_DEFAULT_PARAMS_ABSTOL, NC_HICOSMO_DE_DEFAULT_NU_T, 
+                              NCM_PARAM_TYPE_FIXED);
+
+  /* Set massive neutrinos relative chemical potential vector param */
+  ncm_model_class_set_vparam (model_class, NC_HICOSMO_DE_MASSNU_XI, 0, "\\xi_{\\nu}", "xinu", 
+                              -10.0, 10.0, 0.01, 
+                              NC_HICOSMO_DEFAULT_PARAMS_ABSTOL, NC_HICOSMO_DE_DEFAULT_NU_XI, 
+                              NCM_PARAM_TYPE_FIXED);
+
+  /* Set massive neutrinos degeneracy vector param */
+  ncm_model_class_set_vparam (model_class, NC_HICOSMO_DE_MASSNU_G, 0, "g_{\\nu}", "gnu", 
+                              0.0, 10.0, 0.01, 
+                              NC_HICOSMO_DEFAULT_PARAMS_ABSTOL, NC_HICOSMO_DE_DEFAULT_NU_G, 
+                              NCM_PARAM_TYPE_FIXED);
+
   /* Check for errors in parameters initialization */
   ncm_model_class_check_params_info (model_class);
 
-  nc_hicosmo_set_H0_impl        (parent_class, &_nc_hicosmo_de_H0);
-  nc_hicosmo_set_E2_impl        (parent_class, &_nc_hicosmo_de_E2);
-  nc_hicosmo_set_Omega_c0_impl  (parent_class, &_nc_hicosmo_de_Omega_c0);
-  nc_hicosmo_set_Omega_r0_impl  (parent_class, &_nc_hicosmo_de_Omega_r0);
-  nc_hicosmo_set_Omega_b0_impl  (parent_class, &_nc_hicosmo_de_Omega_b0);
-  nc_hicosmo_set_Omega_g0_impl  (parent_class, &_nc_hicosmo_de_Omega_g0);
-  nc_hicosmo_set_Omega_nu0_impl (parent_class, &_nc_hicosmo_de_Omega_nu0);
-  nc_hicosmo_set_Omega_t0_impl  (parent_class, &_nc_hicosmo_de_Omega_t0);
-  nc_hicosmo_set_T_gamma0_impl  (parent_class, &_nc_hicosmo_de_T_gamma0);
-  nc_hicosmo_set_Yp_4He_impl    (parent_class, &_nc_hicosmo_de_Yp_4He);
-  nc_hicosmo_set_dE2_dz_impl    (parent_class, &_nc_hicosmo_de_dE2_dz);
-  nc_hicosmo_set_d2E2_dz2_impl  (parent_class, &_nc_hicosmo_de_d2E2_dz2);
-  nc_hicosmo_set_bgp_cs2_impl   (parent_class, &_nc_hicosmo_de_bgp_cs2);
+  nc_hicosmo_set_H0_impl         (parent_class, &_nc_hicosmo_de_H0);
+  nc_hicosmo_set_E2_impl         (parent_class, &_nc_hicosmo_de_E2);
+  nc_hicosmo_set_Omega_c0_impl   (parent_class, &_nc_hicosmo_de_Omega_c0);
+  nc_hicosmo_set_Omega_r0_impl   (parent_class, &_nc_hicosmo_de_Omega_r0);
+  nc_hicosmo_set_Omega_b0_impl   (parent_class, &_nc_hicosmo_de_Omega_b0);
+  nc_hicosmo_set_Omega_g0_impl   (parent_class, &_nc_hicosmo_de_Omega_g0);
+  nc_hicosmo_set_Omega_nu0_impl  (parent_class, &_nc_hicosmo_de_Omega_nu0);
+  nc_hicosmo_set_Omega_t0_impl   (parent_class, &_nc_hicosmo_de_Omega_t0);
+  nc_hicosmo_set_T_gamma0_impl   (parent_class, &_nc_hicosmo_de_T_gamma0);
+  nc_hicosmo_set_Yp_4He_impl     (parent_class, &_nc_hicosmo_de_Yp_4He);
+  nc_hicosmo_set_dE2_dz_impl     (parent_class, &_nc_hicosmo_de_dE2_dz);
+  nc_hicosmo_set_d2E2_dz2_impl   (parent_class, &_nc_hicosmo_de_d2E2_dz2);
+  nc_hicosmo_set_bgp_cs2_impl    (parent_class, &_nc_hicosmo_de_bgp_cs2);
+  nc_hicosmo_set_NMassNu_impl    (parent_class, &_nc_hicosmo_de_NMassNu);
+  nc_hicosmo_set_MassNuInfo_impl (parent_class, &_nc_hicosmo_de_MassNuInfo);
+  nc_hicosmo_set_Omega_mnu0_impl (parent_class, &_nc_hicosmo_Omega_mnu0);
 
   klass->E2Omega_de       = &_nc_hicosmo_de_E2Omega_de;
   klass->dE2Omega_de_dz   = &_nc_hicosmo_de_dE2Omega_de_dz;

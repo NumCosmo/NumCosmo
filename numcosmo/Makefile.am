@@ -60,6 +60,7 @@ ncm_sources = \
 	math/ncm_serialize.c                 \
 	math/ncm_obj_array.c                 \
 	math/ncm_integral1d.c                \
+	math/ncm_integral1d_ptr.c            \
 	math/ncm_rng.c                       \
 	math/ncm_stats_vec.c                 \
 	math/ncm_stats_dist1d.c              \
@@ -166,6 +167,7 @@ ncm_headers =                                \
 	math/ncm_serialize.h                 \
 	math/ncm_obj_array.h                 \
 	math/ncm_integral1d.h                \
+	math/ncm_integral1d_ptr.h            \
 	math/ncm_rng.h                       \
 	math/ncm_stats_vec.h                 \
 	math/ncm_stats_dist1d.h              \
@@ -371,6 +373,7 @@ nc_headers = \
 	perturbations/nc_hipert_wkb.h          \
 	perturbations/nc_hipert_itwo_fluids.h  \
 	perturbations/nc_hipert_adiab.h        \
+	perturbations/nc_hipert_gw.h           \
 	perturbations/nc_hipert_two_fluids.h   \
 	perturbations/nc_hipert_boltzmann.h    \
 	perturbations/nc_hipert_boltzmann_std.h \
@@ -492,6 +495,7 @@ nc_sources = \
 	perturbations/nc_hipert_wkb.c          \
 	perturbations/nc_hipert_itwo_fluids.c  \
 	perturbations/nc_hipert_adiab.c        \
+	perturbations/nc_hipert_gw.c           \
 	perturbations/nc_hipert_two_fluids.c   \
 	perturbations/nc_hipert_boltzmann.c    \
 	perturbations/nc_hipert_boltzmann_std.c \

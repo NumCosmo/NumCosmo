@@ -90,6 +90,8 @@ gdouble nc_hicosmo_Vexp_tau_max (NcHICosmoVexp *Vexp);
 gdouble nc_hicosmo_Vexp_tau_qt_c (NcHICosmoVexp *Vexp);
 gdouble nc_hicosmo_Vexp_tau_qt_e (NcHICosmoVexp *Vexp);
 
+gdouble nc_hicosmo_Vexp_xbe (NcHICosmoVexp *Vexp);
+
 #define NC_HICOSMO_VEXP_DEFAULT_H0 (70.0)
 #define NC_HICOSMO_VEXP_DEFAULT_OMEGA_C (0.25)
 #define NC_HICOSMO_VEXP_DEFAULT_OMEGA_L (0.75)
