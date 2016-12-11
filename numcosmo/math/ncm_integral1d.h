@@ -29,8 +29,6 @@
 #include <glib.h>
 #include <glib-object.h>
 #include <numcosmo/build_cfg.h>
-#include <gsl/gsl_integration.h>
-#include <gsl/gsl_errno.h>
 
 G_BEGIN_DECLS
 
@@ -43,32 +41,27 @@ G_BEGIN_DECLS
 
 typedef struct _NcmIntegral1dClass NcmIntegral1dClass;
 typedef struct _NcmIntegral1d NcmIntegral1d;
+typedef struct _NcmIntegral1dPrivate NcmIntegral1dPrivate;
 
-typedef gdouble (*NcmIntegral1dF) (const gdouble x, gpointer userdata);
+typedef gdouble (*NcmIntegral1dF) (NcmIntegral1d *int1d, const gdouble x, const gdouble w);
 
 struct _NcmIntegral1dClass
 {
   /*< private >*/
   GObjectClass parent_class;
+  NcmIntegral1dF integrand;
+  gpointer padding[9];
 };
 
 struct _NcmIntegral1d
 {
   /*< private >*/
   GObject parent_instance;
-  NcmIntegral1dF F;
-  guint partition;
-  gdouble reltol;
-  gdouble abstol;
-  guint rule;
-  gsl_integration_workspace *ws;
-  gsl_integration_cquad_workspace *cquad_ws;
+  NcmIntegral1dPrivate *priv;
 };
 
 GType ncm_integral1d_get_type (void) G_GNUC_CONST;
 
-NcmIntegral1d *ncm_integral1d_new (NcmIntegral1dF F);
-NcmIntegral1d *ncm_integral1d_new_full (NcmIntegral1dF F, gdouble reltol, gdouble abstol, guint partition, guint rule);
 NcmIntegral1d *ncm_integral1d_ref (NcmIntegral1d *int1d);
 void ncm_integral1d_free (NcmIntegral1d *int1d);
 void ncm_integral1d_clear (NcmIntegral1d **int1d);
@@ -83,15 +76,16 @@ guint ncm_integral1d_get_rule (NcmIntegral1d *int1d);
 gdouble ncm_integral1d_get_reltol (NcmIntegral1d *int1d);
 gdouble ncm_integral1d_get_abstol (NcmIntegral1d *int1d);
 
-gdouble ncm_integral1d_eval (NcmIntegral1d *int1d, gdouble xi, gdouble xf, gpointer userdata, gdouble *err);
+G_INLINE_FUNC gdouble ncm_integral1d_integrand (NcmIntegral1d *int1d, const gdouble x, const gdouble w);
 
-gdouble ncm_integral1d_eval_gauss_hermite_p (NcmIntegral1d *int1d, gpointer userdata, gdouble *err);
-gdouble ncm_integral1d_eval_gauss_hermite (NcmIntegral1d *int1d, gpointer userdata, gdouble *err);
-gdouble ncm_integral1d_eval_gauss_hermite_r_p (NcmIntegral1d *int1d, gdouble r, gpointer userdata, gdouble *err);
-gdouble ncm_integral1d_eval_gauss_hermite_mur (NcmIntegral1d *int1d, gdouble r, gdouble mu, gpointer userdata, gdouble *err);
+gdouble ncm_integral1d_eval (NcmIntegral1d *int1d, const gdouble xi, const gdouble xf, gdouble *err);
+gdouble ncm_integral1d_eval_gauss_hermite_p (NcmIntegral1d *int1d, gdouble *err);
+gdouble ncm_integral1d_eval_gauss_hermite (NcmIntegral1d *int1d, gdouble *err);
+gdouble ncm_integral1d_eval_gauss_hermite_r_p (NcmIntegral1d *int1d, const gdouble r, gdouble *err);
+gdouble ncm_integral1d_eval_gauss_hermite_mur (NcmIntegral1d *int1d, const gdouble r, const gdouble mu, gdouble *err);
 
-gdouble ncm_integral1d_eval_gauss_laguerre (NcmIntegral1d *int1d, gpointer userdata, gdouble *err);
-gdouble ncm_integral1d_eval_gauss_laguerre_r (NcmIntegral1d *int1d, gdouble r, gpointer userdata, gdouble *err);
+gdouble ncm_integral1d_eval_gauss_laguerre (NcmIntegral1d *int1d, gdouble *err);
+gdouble ncm_integral1d_eval_gauss_laguerre_r (NcmIntegral1d *int1d, const gdouble r, gdouble *err);
 
 #define NCM_INTEGRAL1D_DEFAULT_PARTITION 100000
 #define NCM_INTEGRAL1D_DEFAULT_ALG 6
@@ -101,3 +95,21 @@ gdouble ncm_integral1d_eval_gauss_laguerre_r (NcmIntegral1d *int1d, gdouble r, g
 G_END_DECLS
 
 #endif /* _NCM_INTEGRAL1D_H_ */
+
+#ifndef _NCM_INTEGRAL1D_INLINE_H_
+#define _NCM_INTEGRAL1D_INLINE_H_
+#ifdef NUMCOSMO_HAVE_INLINE
+
+G_BEGIN_DECLS
+
+G_INLINE_FUNC gdouble 
+ncm_integral1d_integrand (NcmIntegral1d *int1d, const gdouble x, const gdouble w)
+{
+  return NCM_INTEGRAL1D_GET_CLASS (int1d)->integrand (int1d, x, w);  
+}
+
+G_END_DECLS
+
+#endif /* NUMCOSMO_HAVE_INLINE */
+#endif /* _NCM_INTEGRAL1D_INLINE_H_ */
+

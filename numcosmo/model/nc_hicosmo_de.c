@@ -182,7 +182,7 @@ _nc_hicosmo_de_NMassNu (NcHICosmo *cosmo)
 }
 
 static void
-_nc_hicosmo_de_MassNuInfo (NcHICosmo *cosmo, guint nu_i, gdouble *mass_eV, gdouble *T_0)
+_nc_hicosmo_de_MassNuInfo (NcHICosmo *cosmo, guint nu_i, gdouble *mass_eV, gdouble *T_0, gdouble *xi, gdouble *g)
 {
   NcmModel *model = NCM_MODEL (cosmo);
 
@@ -198,6 +198,31 @@ _nc_hicosmo_de_MassNuInfo (NcHICosmo *cosmo, guint nu_i, gdouble *mass_eV, gdoub
   {
     T_0[0] = ncm_model_orig_vparam_get (model, NC_HICOSMO_DE_MASSNU_T, nu_i);
   }
+
+  if (ncm_model_vparam_len (model, NC_HICOSMO_DE_MASSNU_XI) == 1)
+  {
+    xi[0] = ncm_model_orig_vparam_get (model, NC_HICOSMO_DE_MASSNU_XI, 0);
+  }
+  else
+  {
+    xi[0] = ncm_model_orig_vparam_get (model, NC_HICOSMO_DE_MASSNU_XI, nu_i);
+  }
+  
+  if (ncm_model_vparam_len (model, NC_HICOSMO_DE_MASSNU_G) == 1)
+  {
+    g[0] = ncm_model_orig_vparam_get (model, NC_HICOSMO_DE_MASSNU_G, 0);
+  }
+  else
+  {
+    g[0] = ncm_model_orig_vparam_get (model, NC_HICOSMO_DE_MASSNU_G, nu_i);
+  }  
+}
+
+static gdouble 
+_nc_hicosmo_Omega_mnu0 (NcHICosmo *cosmo, const guint nu_i, const gdouble z) 
+{ 
+  
+  return 0.0; 
 }
 
 void
@@ -285,17 +310,31 @@ nc_hicosmo_de_init (NcHICosmoDE *cosmo_de)
 static void
 _nc_hicosmo_de_constructed (GObject *object)
 {
-  NcmModel *model = NCM_MODEL (object);
-
-  if (!((ncm_model_vparam_len (model, NC_HICOSMO_DE_MASSNU_M) == ncm_model_vparam_len (model, NC_HICOSMO_DE_MASSNU_T)) ||
-        (ncm_model_vparam_len (model, NC_HICOSMO_DE_MASSNU_M) > 0 && ncm_model_vparam_len (model, NC_HICOSMO_DE_MASSNU_T) == 1)))
-  {
-    g_error ("NcHICosmoDE: number of neutrinos masses must match the number of massive neutrino temperatures,\n"
-             " or the neutrino temperature vector must be of size one to use the same temperature for all massive neutrinos.");
-  }
-
-  /* Chain up : end */
+  /* Chain up : start */
   G_OBJECT_CLASS (nc_hicosmo_de_parent_class)->constructed (object);
+  {
+    NcmModel *model = NCM_MODEL (object);
+    const guint m_len  = ncm_model_vparam_len (model, NC_HICOSMO_DE_MASSNU_M);
+    const guint T_len  = ncm_model_vparam_len (model, NC_HICOSMO_DE_MASSNU_T);
+    const guint xi_len = ncm_model_vparam_len (model, NC_HICOSMO_DE_MASSNU_XI);
+    const guint g_len  = ncm_model_vparam_len (model, NC_HICOSMO_DE_MASSNU_G);
+    
+    if (!((m_len == T_len) || (m_len > 0 && T_len == 1)))
+    {
+      g_error ("NcHICosmoDE: number of neutrinos masses must match the number of massive neutrino temperatures,\n"
+               " or the neutrino temperature vector must be of size one to use the same value for all massive neutrinos.");
+    }
+    if (!((m_len == xi_len) || (m_len > 0 && xi_len == 1)))
+    {
+      g_error ("NcHICosmoDE: number of neutrinos masses must match the number of massive neutrino relative chemical potential,\n"
+               " or the neutrino relative chemical potential vector must be of size one to use the same value for all massive neutrinos.");
+    }
+    if (!((m_len == g_len) || (m_len > 0 && g_len == 1)))
+    {
+      g_error ("NcHICosmoDE: number of neutrinos masses must match the number of massive neutrino degeneracy,\n"
+               " or the neutrino degeneracy vector must be of size one to use the same value for all massive neutrinos.");
+    }
+  }
 }
 
 static void
@@ -384,6 +423,18 @@ nc_hicosmo_de_class_init (NcHICosmoDEClass *klass)
                               NC_HICOSMO_DEFAULT_PARAMS_ABSTOL, NC_HICOSMO_DE_DEFAULT_NU_T, 
                               NCM_PARAM_TYPE_FIXED);
 
+  /* Set massive neutrinos relative chemical potential vector param */
+  ncm_model_class_set_vparam (model_class, NC_HICOSMO_DE_MASSNU_XI, 0, "\\xi_{\\nu}", "xinu", 
+                              -10.0, 10.0, 0.01, 
+                              NC_HICOSMO_DEFAULT_PARAMS_ABSTOL, NC_HICOSMO_DE_DEFAULT_NU_XI, 
+                              NCM_PARAM_TYPE_FIXED);
+
+  /* Set massive neutrinos degeneracy vector param */
+  ncm_model_class_set_vparam (model_class, NC_HICOSMO_DE_MASSNU_G, 0, "g_{\\nu}", "gnu", 
+                              0.0, 10.0, 0.01, 
+                              NC_HICOSMO_DEFAULT_PARAMS_ABSTOL, NC_HICOSMO_DE_DEFAULT_NU_G, 
+                              NCM_PARAM_TYPE_FIXED);
+
   /* Check for errors in parameters initialization */
   ncm_model_class_check_params_info (model_class);
 
@@ -402,6 +453,7 @@ nc_hicosmo_de_class_init (NcHICosmoDEClass *klass)
   nc_hicosmo_set_bgp_cs2_impl    (parent_class, &_nc_hicosmo_de_bgp_cs2);
   nc_hicosmo_set_NMassNu_impl    (parent_class, &_nc_hicosmo_de_NMassNu);
   nc_hicosmo_set_MassNuInfo_impl (parent_class, &_nc_hicosmo_de_MassNuInfo);
+  nc_hicosmo_set_Omega_mnu0_impl (parent_class, &_nc_hicosmo_Omega_mnu0);
 
   klass->E2Omega_de       = &_nc_hicosmo_de_E2Omega_de;
   klass->dE2Omega_de_dz   = &_nc_hicosmo_de_dE2Omega_de_dz;
