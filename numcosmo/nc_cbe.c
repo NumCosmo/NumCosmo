@@ -1057,7 +1057,7 @@ _nc_cbe_set_bg (NcCBE* cbe, NcHICosmo* cosmo)
       pba->got_files    = (gboolean *)malloc (sizeof (gboolean) * N_ncdm);
 
       pba->Omega0_ncdm_tot = 0.0;
-      
+
       for (nu_i = 0; nu_i < pba->N_ncdm; nu_i++)
       {
         pba->got_files[nu_i]   = _FALSE_;
@@ -1119,7 +1119,7 @@ _nc_cbe_set_bg (NcCBE* cbe, NcHICosmo* cosmo)
       cbe->priv->pba.m_ncdm_in_eV = NULL;
     }
   }
-  
+
 	cbe->priv->pba.Omega0_scf = 0.0;
 	cbe->priv->pba.attractor_ic_scf = _TRUE_;
 	cbe->priv->pba.scf_parameters = NULL;
@@ -1493,6 +1493,7 @@ _nc_cbe_call_bg (NcCBE* cbe, NcHICosmo* cosmo)
 			const gdouble RH_pow_m2 = 1.0 / (RH * RH);
 			const gdouble H_prime = -0.5 * nc_hicosmo_dE2_dz (cosmo, z) * RH_pow_m2;
 
+			/* This section needs the new implemenation for neutrinos */
 			const gdouble rho_g = nc_hicosmo_Omega_g0 (cosmo) * RH_pow_m2 * x4;
 			const gdouble rho_ur = nc_hicosmo_Omega_nu0 (cosmo) * RH_pow_m2 * x4;
 			const gdouble rho_b = nc_hicosmo_Omega_b0 (cosmo) * RH_pow_m2 * x3;
