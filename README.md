@@ -76,7 +76,7 @@ A pre-compiled version of NumCosmo can be found [here](https://build.opensuse.or
 
 Requirements:
 -------------
-
+ 
   - Glib >= 2.28.0
     Data structures, threads, portability, memory allocation, etc.
     * http://www.gtk.org/
@@ -92,6 +92,13 @@ Requirements:
   - Sundials >= 2.4.0
     ODE solver library. 
     * https://computation.llnl.gov/casc/sundials/main.html
+  - GObject-introspection
+    Middleware layer between C libraries (using GObject) and language bindings. 
+    *https://wiki.gnome.org/action/show/Projects/GObjectIntrospection?action=show&redirect=GObjectIntrospection
+    This package is optional but highly recommended.
+    To use NumCosmo from Python, for example, you also need PyGObject.
+    *https://wiki.gnome.org/action/show/Projects/PyGObject?action=show&redirect=PyGObject
+    Note that pygobject3 refers to the PyGObject version (not Python's version).
 
 Optional packages:
 ------------------
