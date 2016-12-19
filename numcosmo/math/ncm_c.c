@@ -310,6 +310,34 @@ ncm_c_class_init (NcmCClass *klass)
  *******************************************************************************/
 
 /**
+ * ncm_c_year:
+ * 
+ * One year ($365.25$ days) in seconds.
+ * 
+ * Returns: $1$ year $365.25 \times 24 \times 60 \times 60 \,\left[\mathrm{s}\right]$.
+ */
+/**
+ * ncm_c_lightyear:
+ * 
+ * One year times the speed of light ncm_c_c() in meters.
+ * 
+ * Returns: $1$ light-year $365.25 \times 24 \times 60 \times 60 \times c \,\left[\mathrm{m}\right]$.
+ */
+/**
+ * ncm_c_lightyear_pc:
+ * 
+ * One light-year in parsecs.
+ * 
+ * Returns: $1$ light-year $365.25 \times 24 \times 60 \times 60 \times c \,\left[\mathrm{pc}\right]$.
+ */
+/**
+ * ncm_c_Glightyear_Mpc:
+ * 
+ * One giga light-year in mega parsecs.
+ * 
+ * Returns: $1$ giga light-year $10^6 \times 365.25 \times 24 \times 60 \times 60 \times c \,\left[\mathrm{Mpc}\right]$.
+ */
+/**
  * ncm_c_hc:
  * 
  * Derived from CODATA values, see [description][NcmC.description].
@@ -1754,7 +1782,13 @@ ncm_c_class_init (NcmCClass *klass)
  * FIXME
  *
  * Returns: Blackbody energy density in ... units.
+ */
+/**
+ * ncm_c_blackbody_per_crit_density_h2:
  *
+ * FIXME
+ *
+ * Returns: Blackbody energy density over critical density times $h^2$.
  */
 /**
  * ncm_c_radiation_temp_to_h2Omega_r0:

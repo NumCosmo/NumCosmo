@@ -39,16 +39,16 @@
  *
  */
 
+#ifdef HAVE_CONFIG_H
+#  include "config.h"
+#endif /* HAVE_CONFIG_H */
+#include "build_cfg.h"
+
 /*
  * It must be include before anything else, several symbols clash
  * with the default includes.
  */
 #include "class/include/class.h"
-
-#ifdef HAVE_CONFIG_H
-#  include "config.h"
-#endif /* HAVE_CONFIG_H */
-#include "build_cfg.h"
 
 #include "nc_cbe_precision.h"
 #include "math/ncm_cfg.h"
@@ -156,7 +156,6 @@ enum
   PROP_PRIMORDIAL_INFLATION_ATTRACTOR_PRECISION_PIVOT,
   PROP_PRIMORDIAL_INFLATION_ATTRACTOR_PRECISION_INITIAL,
   PROP_PRIMORDIAL_INFLATION_ATTRACTOR_MAXIT,
-  PROP_PRIMORDIAL_INFLATION_JUMP_INITIAL,
   PROP_PRIMORDIAL_INFLATION_TOL_CURVATURE,
   PROP_PRIMORDIAL_INFLATION_AH_INI_TARGET,
   PROP_PRIMORDIAL_INFLATION_END_DPHI,
@@ -192,7 +191,8 @@ enum
   PROP_TRANSFER_NEGLECT_DELTA_K_T_B,
   PROP_TRANSFER_NEGLECT_LATE_SOURCE,
   PROP_L_SWITCH_LIMBER,
-  PROP_L_SWITCH_LIMBER_FOR_CL_DENSITY_OVER_Z,
+  PROP_L_SWITCH_LIMBER_FOR_NC_LOCAL_OVER_Z,
+  PROP_L_SWITCH_LIMBER_FOR_NC_LOS_OVER_Z,
   PROP_SELECTION_CUT_AT_SIGMA,
   PROP_SELECTION_SAMPLING,
   PROP_SELECTION_SAMPLING_BESSEL,
@@ -589,9 +589,6 @@ nc_cbe_precision_set_property (GObject *object, guint prop_id, const GValue *val
     case PROP_PRIMORDIAL_INFLATION_ATTRACTOR_MAXIT:
       cbe_prec->priv->ppr.primordial_inflation_attractor_maxit = g_value_get_int (value);
       break;
-    case PROP_PRIMORDIAL_INFLATION_JUMP_INITIAL:
-      cbe_prec->priv->ppr.primordial_inflation_jump_initial = g_value_get_double (value);
-      break;
     case PROP_PRIMORDIAL_INFLATION_TOL_CURVATURE:
       cbe_prec->priv->ppr.primordial_inflation_tol_curvature = g_value_get_double (value);
       break;
@@ -697,8 +694,11 @@ nc_cbe_precision_set_property (GObject *object, guint prop_id, const GValue *val
     case PROP_L_SWITCH_LIMBER:
       cbe_prec->priv->ppr.l_switch_limber            = g_value_get_double (value);
       break;
-    case PROP_L_SWITCH_LIMBER_FOR_CL_DENSITY_OVER_Z:
-      cbe_prec->priv->ppr.l_switch_limber_for_cl_density_over_z = g_value_get_double (value);
+    case PROP_L_SWITCH_LIMBER_FOR_NC_LOCAL_OVER_Z:
+      cbe_prec->priv->ppr.l_switch_limber_for_nc_local_over_z = g_value_get_double (value);
+      break;
+    case PROP_L_SWITCH_LIMBER_FOR_NC_LOS_OVER_Z:
+      cbe_prec->priv->ppr.l_switch_limber_for_nc_los_over_z   = g_value_get_double (value);
       break;
     case PROP_SELECTION_CUT_AT_SIGMA:
       cbe_prec->priv->ppr.selection_cut_at_sigma     = g_value_get_double (value);
@@ -1038,9 +1038,6 @@ nc_cbe_precision_get_property (GObject *object, guint prop_id, GValue *value, GP
     case PROP_PRIMORDIAL_INFLATION_ATTRACTOR_MAXIT:
       g_value_set_int (value, cbe_prec->priv->ppr.primordial_inflation_attractor_maxit);
       break;
-    case PROP_PRIMORDIAL_INFLATION_JUMP_INITIAL:
-      g_value_set_double (value, cbe_prec->priv->ppr.primordial_inflation_jump_initial);
-      break;
     case PROP_PRIMORDIAL_INFLATION_TOL_CURVATURE:
       g_value_set_double (value, cbe_prec->priv->ppr.primordial_inflation_tol_curvature);
       break;
@@ -1146,8 +1143,11 @@ nc_cbe_precision_get_property (GObject *object, guint prop_id, GValue *value, GP
     case PROP_L_SWITCH_LIMBER:
       g_value_set_double (value, cbe_prec->priv->ppr.l_switch_limber);
       break;
-    case PROP_L_SWITCH_LIMBER_FOR_CL_DENSITY_OVER_Z:
-      g_value_set_double (value, cbe_prec->priv->ppr.l_switch_limber_for_cl_density_over_z);
+    case PROP_L_SWITCH_LIMBER_FOR_NC_LOCAL_OVER_Z:
+      g_value_set_double (value, cbe_prec->priv->ppr.l_switch_limber_for_nc_local_over_z);
+      break;
+    case PROP_L_SWITCH_LIMBER_FOR_NC_LOS_OVER_Z:
+      g_value_set_double (value, cbe_prec->priv->ppr.l_switch_limber_for_nc_los_over_z);
       break;
     case PROP_SELECTION_CUT_AT_SIGMA:
       g_value_set_double (value, cbe_prec->priv->ppr.selection_cut_at_sigma);
@@ -1909,13 +1909,6 @@ nc_cbe_precision_class_init (NcCBEPrecisionClass *klass)
                                                      0, G_MAXINT, 10,
                                                      G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
   g_object_class_install_property (object_class,
-                                   PROP_PRIMORDIAL_INFLATION_JUMP_INITIAL,
-                                   g_param_spec_double ("primordial-inflation-jump-initial",
-                                                        NULL,
-                                                        "primordial inflation jump initial",
-                                                        0.0, G_MAXDOUBLE, 1.2,
-                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-  g_object_class_install_property (object_class,
                                    PROP_PRIMORDIAL_INFLATION_TOL_CURVATURE,
                                    g_param_spec_double ("primordial-inflation-tol-curvature",
                                                         NULL,
@@ -2164,10 +2157,17 @@ nc_cbe_precision_class_init (NcCBEPrecisionClass *klass)
                                                         0.0, G_MAXDOUBLE, 10.0,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
   g_object_class_install_property (object_class,
-                                   PROP_L_SWITCH_LIMBER_FOR_CL_DENSITY_OVER_Z,
-                                   g_param_spec_double ("l-switch-limber-for-cl-density-over-z",
+                                   PROP_L_SWITCH_LIMBER_FOR_NC_LOCAL_OVER_Z,
+                                   g_param_spec_double ("l-switch-limber-for-nc-local-over-z",
                                                         NULL,
-                                                        "when to use the Limber approximation for density cl's (relative to central redshift of each bin)",
+                                                        "when to use the Limber approximation for local number count contributions to cl's (relative to central redshift of each bin)",
+                                                        0.0, G_MAXDOUBLE, 100.0,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  g_object_class_install_property (object_class,
+                                   PROP_L_SWITCH_LIMBER_FOR_NC_LOS_OVER_Z,
+                                   g_param_spec_double ("l-switch-limber-for-nc-los-over-z",
+                                                        NULL,
+                                                        "when to use the Limber approximation for number count contributions to cl's integrated along the line-of-sight (relative to central redshift of each bin)",
                                                         0.0, G_MAXDOUBLE, 30.0,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
   g_object_class_install_property (object_class,
@@ -2451,7 +2451,6 @@ g_free (s2); \
   _CMP_DBL (primordial_inflation_attractor_precision_pivot);
   _CMP_DBL (primordial_inflation_attractor_precision_initial);
   _CMP_DBL (primordial_inflation_attractor_maxit);
-  _CMP_DBL (primordial_inflation_jump_initial);
   _CMP_DBL (primordial_inflation_tol_curvature);
   _CMP_DBL (primordial_inflation_aH_ini_target);
   _CMP_DBL (primordial_inflation_end_dphi);
@@ -2487,7 +2486,8 @@ g_free (s2); \
   _CMP_DBL (transfer_neglect_delta_k_T_b);
   _CMP_DBL (transfer_neglect_late_source);
   _CMP_DBL (l_switch_limber);
-  _CMP_DBL (l_switch_limber_for_cl_density_over_z);
+  _CMP_DBL (l_switch_limber_for_nc_local_over_z);
+  _CMP_DBL (l_switch_limber_for_nc_los_over_z);
   _CMP_DBL (selection_cut_at_sigma);
   _CMP_DBL (selection_sampling);
   _CMP_DBL (selection_sampling_bessel);

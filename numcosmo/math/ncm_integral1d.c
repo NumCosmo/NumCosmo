@@ -343,6 +343,7 @@ typedef struct _NcIntegral1dHermite
   NcmIntegral1d *int1d;
   gdouble mu;
   gdouble r;
+  guint neval;
 } NcIntegral1dHermite;
 
 static gdouble 
@@ -396,6 +397,8 @@ _ncm_integral1d_eval_gauss_laguerre (gdouble alpha, gpointer userdata)
   NcIntegral1dHermite *int1d_H = (NcIntegral1dHermite *) userdata;
   const gdouble x = - log (alpha);
 
+  int1d_H->neval++;
+  
   return ncm_integral1d_integrand (int1d_H->int1d, x, alpha);
 }
 
@@ -574,14 +577,14 @@ ncm_integral1d_eval_gauss_hermite_mur (NcmIntegral1d *int1d, const gdouble r, co
 gdouble 
 ncm_integral1d_eval_gauss_laguerre (NcmIntegral1d *int1d, gdouble *err)
 {
-  NcIntegral1dHermite int1d_H = {int1d, 0.0, 0.0};
+  NcIntegral1dHermite int1d_H = {int1d, 0.0, 0.0, 0};
   gdouble result = 0.0;
   gsl_function F;
   gint ret;
 
   F.function = &_ncm_integral1d_eval_gauss_laguerre;
   F.params   = &int1d_H;
-  
+
   ret = gsl_integration_qag (&F, 0.0, 1.0, int1d->priv->abstol, int1d->priv->reltol, int1d->priv->partition, int1d->priv->rule, int1d->priv->ws, &result, err);
   if (ret != GSL_SUCCESS)
     g_error ("ncm_integral1d_eval_gauss_laguerre: %s.", gsl_strerror (ret));

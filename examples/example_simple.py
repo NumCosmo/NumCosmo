@@ -17,7 +17,7 @@ Ncm.cfg_init ()
 #
 #  New homogeneous and isotropic cosmological model NcHICosmoDEXcdm 
 #
-cosmo = Nc.HICosmo.new_from_name (Nc.HICosmo, "NcHICosmoDEXcdm")
+cosmo = Nc.HICosmo.new_from_name (Nc.HICosmo, "NcHICosmoDEXcdm{'massnu-length':<1>}")
 cosmo.set_reparam (Nc.HICosmoDEReparamCMB.new (cosmo.len ()))
 
 #
@@ -68,9 +68,28 @@ for i in range (0, 10):
 
 dist = Nc.Distance.new (2000.0)
 
+cosmo.orig_vparam_set (Nc.HICosmoDEVParams.M, 0, 0.6)
+
 dist.prepare (cosmo)
+
+cbe = Nc.CBE.new ()
+cbe.peek_precision ().props.tol_ncdm_bg = 1.0e-4
+
+cbe.set_calc_transfer (True)
+
+reion = Nc.HIReionCamb.new ()
+prim  = Nc.HIPrimPowerLaw.new ()
+cosmo.add_submodel (reion)
+cosmo.add_submodel (prim)
+
+cbe.prepare (cosmo)
 
 print dist.theta100CMB (cosmo)
 print cosmo.zt (5.0)
+print cosmo.Omega_mnu0 (0, 0.0)
+print cosmo.Omega_mnu0 (0, 1.0e0)
+print cosmo.Omega_mnu0 (0, 209.053820220132)
+print cosmo.Omega_mnu0 (0, 99999999999999.0)
 
+print Ncm.C.Glightyear_Mpc ()
 

@@ -37,16 +37,16 @@
  *
  */
 
+#ifdef HAVE_CONFIG_H
+#  include "config.h"
+#endif /* HAVE_CONFIG_H */
+#include "build_cfg.h"
+
 /*
  * It must be include before anything else, several symbols clash
  * with the default includes.
  */
 #include "class/include/class.h"
-
-#ifdef HAVE_CONFIG_H
-#  include "config.h"
-#endif /* HAVE_CONFIG_H */
-#include "build_cfg.h"
 
 #include "nc_hiprim.h"
 #include "model/nc_hicosmo_de.h"
