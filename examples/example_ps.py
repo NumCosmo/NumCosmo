@@ -25,12 +25,14 @@ Ncm.cfg_init ()
 #
 #  New homogeneous and isotropic cosmological model NcHICosmoDEXcdm 
 #
-cosmo = Nc.HICosmo.new_from_name (Nc.HICosmo, "NcHICosmoDEXcdm")
+cosmo = Nc.HICosmo.new_from_name (Nc.HICosmo, "NcHICosmoDEXcdm{'massnu-length':<1>}")
 cosmo.omega_x2omega_k ()
-cosmo.param_set_by_name ("Omegak", 0.0)
-cosmo.param_set_by_name ("w", -1.0)
-cosmo.param_set_by_name ("Omegab", 0.04909244421)
-cosmo.param_set_by_name ("Omegac", 0.26580755578)
+cosmo.param_set_by_name ("Omegak",    0.0)
+cosmo.param_set_by_name ("w",        -1.0)
+cosmo.param_set_by_name ("Omegab",    0.04909244421)
+cosmo.param_set_by_name ("Omegac",    0.26580755578)
+cosmo.param_set_by_name ("massnu_0",  0.0006)
+cosmo.param_set_by_name ("ENnu",      2.0328)
 
 reion = Nc.HIReionCamb.new ()
 prim  = Nc.HIPrimPowerLaw.new ()
@@ -44,6 +46,13 @@ reion.param_set_by_name ("z_re", 9.9999)
 
 cosmo.add_submodel (reion)
 cosmo.add_submodel (prim)
+
+#
+#  Printing the parameters used.
+#
+print "# Model parameters: ", 
+cosmo.params_log_all ()
+print "# Omega_X0: % 22.15g" % (cosmo.E2Omega_de (0.0))
 
 ps_cbe  = Nc.PowspecMLCBE.new ()
 ps_eh   = Nc.PowspecMLTransfer.new (Nc.TransferFuncEH.new ())

@@ -59,6 +59,9 @@ cosmo.props.w       = -1.10
 massnu_v = Ncm.Vector.new_array ([0.6])
 cosmo.props.massnu  = massnu_v
 
+cosmo.omega_x2omega_k ()
+cosmo.param_set_by_name ("Omegak", 0.0)
+
 #
 #  Printing the parameters used.
 #
@@ -88,6 +91,7 @@ print "# theta100CMB % 22.15e" % (dist.theta100CMB (cosmo))
 print "# zt          % 22.15e" % (cosmo.zt (5.0))
 print "# Omega_mnu0  % 22.15e" % (cosmo.Omega_mnu0 ())
 print "# Press_mnu0  % 22.15e" % (cosmo.Press_mnu0 ())
+print "# Omega_k0    % 22.15e" % (cosmo.Omega_k0 ())
 
 ztest = 1.0e4
 print "# E2Omega_mnu   (% 22.15g) % 22.15e" % (ztest, cosmo.E2Omega_mnu (ztest))
