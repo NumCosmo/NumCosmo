@@ -555,7 +555,7 @@ _nc_powspec_mnl_halofit_preeval (NcPowspecMNLHaloFit* pshf, NcHICosmo* cosmo, co
 	const gdouble neff4  = neff2 * neff2;
 
 	const gdouble Omega_de_onepp = NC_IS_HICOSMO_DE (cosmo) ? nc_hicosmo_de_E2Omega_de_onepw (NC_HICOSMO_DE (cosmo), z) / E2 : 0.0;
-	const gdouble Omega_m        = nc_hicosmo_Omega_m (cosmo,z);
+	const gdouble Omega_m        = nc_hicosmo_E2Omega_m (cosmo, z) / E2;
 
 	pshf->priv->z = z;
 

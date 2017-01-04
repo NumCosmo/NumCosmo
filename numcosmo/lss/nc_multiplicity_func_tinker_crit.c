@@ -84,8 +84,8 @@ static gdouble
 _nc_multiplicity_func_tinker_crit_eval (NcMultiplicityFunc *mulf, NcHICosmo *cosmo, gdouble sigma, gdouble z)   /* $f(\sigma)$ Tinker: astro-ph/0803.2706 */
 {
   NcMultiplicityFuncTinkerCrit *mulf_tinker_crit = NC_MULTIPLICITY_FUNC_TINKER_CRIT (mulf);
-  const gdouble Omega_m = nc_hicosmo_Omega_m (cosmo, z);
-  // const gdouble E2 = nc_hicosmo_E2 (cosmo, z);
+  const gdouble E2      = nc_hicosmo_E2 (cosmo, z);
+  const gdouble Omega_m = nc_hicosmo_E2Omega_m (cosmo, z) / E2;
   const gdouble Delta_z = mulf_tinker_crit->Delta / Omega_m;
   const gdouble log10_Delta_z = log10 (Delta_z);
 /*
