@@ -432,11 +432,11 @@ _nc_powspec_mnl_halofit_prepare_nl (NcPowspecMNLHaloFit* pshf, NcmModel *model)
       gdouble z1     = z0 + step;
       gdouble R0     = _nc_powspec_mnl_halofit_linear_scale_z (z0, Fznl.params);
       gdouble R1     = _nc_powspec_mnl_halofit_linear_scale_z (z1, Fznl.params);
-      gboolean found = FALSE; 
+      gboolean found = FALSE;
 
       if (R0 < R_min)
         g_error ("_nc_powspec_mnl_halofit_prepare_nl: linear universe or too large R_min, in the latter case increase k_max (R0 == % 21.15g, R_min == % 21.15g).", R0, R_min);
-      
+
       while (R1 > R_min)
       {
         z0  = z1;
@@ -555,7 +555,7 @@ _nc_powspec_mnl_halofit_preeval (NcPowspecMNLHaloFit* pshf, NcHICosmo* cosmo, co
 	const gdouble neff4  = neff2 * neff2;
 
 	const gdouble Omega_de_onepp = NC_IS_HICOSMO_DE (cosmo) ? nc_hicosmo_de_E2Omega_de_onepw (NC_HICOSMO_DE (cosmo), z) / E2 : 0.0;
-	const gdouble Omega_m        = nc_hicosmo_Omega_m0 (cosmo) * gsl_pow_3 (1.0 + z) / E2;
+	const gdouble Omega_m        = nc_hicosmo_Omega_m (cosmo,z);
 
 	pshf->priv->z = z;
 
@@ -579,7 +579,7 @@ _nc_powspec_mnl_halofit_eval (NcmPowspec* powspec, NcmModel *model, const gdoubl
 {
 	NcHICosmo* cosmo = NC_HICOSMO (model);
 	NcPowspecMNLHaloFit* pshf  = NC_POWSPEC_MNL_HALOFIT (powspec);
-  const gboolean linscale    = (z       > pshf->znl); 
+  const gboolean linscale    = (z       > pshf->znl);
   const gboolean applysmooth = (z + 1.0 > pshf->znl);
   const gdouble zhf          = linscale ? pshf->znl : z;
 	const gdouble Pklin        = ncm_powspec_eval (NCM_POWSPEC (pshf->psml), model, z, k);
@@ -615,7 +615,7 @@ _nc_powspec_mnl_halofit_eval_vec (NcmPowspec* powspec, NcmModel *model, const gd
 {
 	NcHICosmo *cosmo           = NC_HICOSMO (model);
 	NcPowspecMNLHaloFit *pshf  = NC_POWSPEC_MNL_HALOFIT (powspec);
-  const gboolean linscale    = (z       > pshf->znl); 
+  const gboolean linscale    = (z       > pshf->znl);
   const gboolean applysmooth = (z + 1.0 > pshf->znl);
   const gdouble zhf          = linscale ? pshf->znl : z;
   gdouble theta0, theta1;
@@ -642,7 +642,7 @@ _nc_powspec_mnl_halofit_eval_vec (NcmPowspec* powspec, NcmModel *model, const gd
 			const gdouble Pklin        = ncm_vector_get (Pk, i);
 			const gdouble Delta_lin    = ki3o2pi2 * Pklin;
 			const gdouble y            = ki / pshf->priv->ksigma;
-      
+
 			const gdouble P_Q          = Pklin * (pow (1.0 + Delta_lin, pshf->priv->betan) / (1.0 + pshf->priv->alphan * Delta_lin)) * exp (-y / 4.0 - y * y / 8.0);
 			const gdouble Delta_Hprime = pshf->priv->an * pow (y, 3.0 * pshf->priv->f1) / (1.0 + pshf->priv->bn * pow (y, pshf->priv->f2) + pow (pshf->priv->cn * pshf->priv->f3 * y, 3.0 - pshf->priv->gamman));
 			const gdouble Delta_H      = Delta_Hprime / (1.0 + pshf->priv->nun / (y * y));

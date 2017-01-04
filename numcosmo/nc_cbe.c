@@ -1069,7 +1069,7 @@ _nc_cbe_set_bg (NcCBE* cbe, NcHICosmo* cosmo)
       pba->got_files    = (gboolean *)malloc (sizeof (gboolean) * N_ncdm);
 
       pba->Omega0_ncdm_tot = 0.0;
-      
+
       for (nu_i = 0; nu_i < pba->N_ncdm; nu_i++)
       {
         pba->got_files[nu_i]   = _FALSE_;
@@ -1135,7 +1135,8 @@ _nc_cbe_set_bg (NcCBE* cbe, NcHICosmo* cosmo)
 	cbe->priv->pba.Omega0_scf          = 0.0;
 	cbe->priv->pba.attractor_ic_scf    = _TRUE_;
 	cbe->priv->pba.scf_parameters      = NULL;
-	cbe->priv->pba.scf_parameters_size = 0;
+
+  cbe->priv->pba.scf_parameters_size = 0;
 	cbe->priv->pba.scf_tuning_index    = 0;
 	cbe->priv->pba.phi_ini_scf         = 1;
 	cbe->priv->pba.phi_prime_ini_scf   = 1;
@@ -1513,7 +1514,6 @@ _nc_cbe_call_bg (NcCBE* cbe, NcHICosmo* cosmo)
                          pba->inter_normal,
                          &last_index,
                          pvecback);
-
       {
         const gdouble eta        = pba->tau_table[i] / RH;
         const gdouble z          = 1.0 / pvecback[pba->index_bg_a] - 1.0;//nc_scalefactor_z_eta (cbe->a, eta);
@@ -1555,7 +1555,6 @@ _nc_cbe_call_bg (NcCBE* cbe, NcHICosmo* cosmo)
           const gdouble Omega_m0_diff   = fabs (Omega_m / pvecback[pba->index_bg_Omega_m] - 1.0);
           const gdouble Omega_r0_diff   = fabs (Omega_r / pvecback[pba->index_bg_Omega_r] - 1.0);
 
-          const gdouble rho_tot_diff    = fabs (rho_crit / pvecback[pba->index_bg_rho_tot] - 1.0);
           const gdouble rho_crit_diff   = fabs (rho_crit / pvecback[pba->index_bg_rho_crit] - 1.0);
 
           err = GSL_MAX (err, a_diff);

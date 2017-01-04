@@ -8,17 +8,17 @@
 /*
  * numcosmo
  * Copyright (C) Mariana Penna Lima 2012 <pennalima@gmail.com>
- * 
+ *
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * numcosmo is distributed in the hope that it will be useful, but
  * WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
  * See the GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License along
  * with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
@@ -48,8 +48,8 @@ enum
 
 /**
  * nc_multiplicity_func_tinker_crit_new:
- * @Delta: FIXME 
- *   
+ * @Delta: FIXME
+ *
  * FIXME
  *
  * Returns: A new #NcMultiplicityFunc.
@@ -71,8 +71,8 @@ calc_polynomial (const gdouble *d, gdouble x)
   const gdouble p0 = d[2];
   const gdouble p2 = d[3];
   const gdouble p3 = (d[5] - p2) / dx;
-  const gdouble p1 = (d[4] - p0 - (p2 + p3 * dx / 3.0) * dx2 / 2.0) / dx;	
-  const gdouble P = p0 + y * (p1 + y * (p2 + p3 * y / 3.0) / 2.0); 
+  const gdouble p1 = (d[4] - p0 - (p2 + p3 * dx / 3.0) * dx2 / 2.0) / dx;
+  const gdouble P = p0 + y * (p1 + y * (p2 + p3 * y / 3.0) / 2.0);
 
   //printf ("% 20.15g % 20.15g % 20.15g\n% 20.15g % 20.15g % 20.15g % 20.15g % 20.15g % 20.15g\n% 20.15g % 20.15g % 20.15g % 20.15g\n", x, y, dx, d[0], d[1], d[2], d[3], d[4], d[5],
   //        p0, y * p1, y*y/2.0*p2, y*y*y/6.0*p3);
@@ -84,9 +84,9 @@ static gdouble
 _nc_multiplicity_func_tinker_crit_eval (NcMultiplicityFunc *mulf, NcHICosmo *cosmo, gdouble sigma, gdouble z)   /* $f(\sigma)$ Tinker: astro-ph/0803.2706 */
 {
   NcMultiplicityFuncTinkerCrit *mulf_tinker_crit = NC_MULTIPLICITY_FUNC_TINKER_CRIT (mulf);
-  const gdouble Omega_m0 = nc_hicosmo_Omega_m0 (cosmo);
-  const gdouble E2 = nc_hicosmo_E2 (cosmo, z);
-  const gdouble Delta_z = mulf_tinker_crit->Delta * E2 / (Omega_m0 * gsl_pow_3 (1.0 + z));
+  const gdouble Omega_m = nc_hicosmo_Omega_m (cosmo, z);
+  // const gdouble E2 = nc_hicosmo_E2 (cosmo, z);
+  const gdouble Delta_z = mulf_tinker_crit->Delta / Omega_m;
   const gdouble log10_Delta_z = log10 (Delta_z);
 /*
   const gdouble log10_200  = 2.301029995663981195213738894724493026768; //log10 (200.0);
@@ -109,7 +109,7 @@ _nc_multiplicity_func_tinker_crit_eval (NcMultiplicityFunc *mulf, NcHICosmo *cos
 #define log10_1600 3.204119982655924780854955578897972107072 //log10 (1600.0);
 #define log10_2400 3.380211241711606022936244587428594389505 //log10 (2400.0);
 #define log10_3200 3.505149978319905976068694473622465133840 //log10 (3200.0);
-  
+
   static const gdouble coef_A[8][6] = {
     {log10_200, log10_300, 0.186, 0.0, 0.2, 0.5},
     {log10_300, log10_400, 0.2, 0.5, 0.212, -1.56},
@@ -170,7 +170,7 @@ _nc_multiplicity_func_tinker_crit_eval (NcMultiplicityFunc *mulf, NcHICosmo *cos
     {
       if (log10_Delta_z >= coef_A[i][1])
         continue;
-      else 
+      else
       {
         A0 = calc_polynomial (coef_A[i], log10_Delta_z);
         a0 = calc_polynomial (coef_a[i], log10_Delta_z);
@@ -292,4 +292,3 @@ nc_multiplicity_func_tinker_crit_class_init (NcMultiplicityFuncTinkerCritClass *
                                                         200.0, 3200.0, 200.0,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 }
-
