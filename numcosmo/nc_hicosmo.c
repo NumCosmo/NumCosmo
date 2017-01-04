@@ -1384,6 +1384,23 @@ nc_hicosmo_zt (NcHICosmo *cosmo, const gdouble z_max)
  */
 
 /**
+ * nc_hicosmo_Neff:
+ * @cosmo: a #NcHICosmo
+ *
+ * FIXME
+ *
+ * Returns: FIXME
+ */
+/**
+ * nc_hicosmo_E2Omega_k:
+ * @cosmo: a #NcHICosmo
+ * @z: redshift $z$
+ *
+ * FIXME
+ *
+ * Returns: FIXME
+ */
+/**
  * nc_hicosmo_q:
  * @cosmo: a #NcHICosmo
  * @z: redshift $z$
@@ -1573,6 +1590,7 @@ _NC_HICOSMO_FUNC1_TO_FLIST (E2)
 _NC_HICOSMO_FUNC1_TO_FLIST (Em2)
 _NC_HICOSMO_FUNC1_TO_FLIST (dE2_dz)
 _NC_HICOSMO_FUNC1_TO_FLIST (d2E2_dz2)
+_NC_HICOSMO_FUNC1_TO_FLIST (E2Omega_k)
 _NC_HICOSMO_FUNC1_TO_FLIST (q)
 _NC_HICOSMO_FUNC1_TO_FLIST (nec)
 _NC_HICOSMO_FUNC1_TO_FLIST (dec)
@@ -1625,6 +1643,7 @@ _nc_hicosmo_register_functions (void)
   ncm_mset_func_list_register ("E2Press_mnu",  "E^2P_{m\\nu}",               "NcHICosmo", "Massive neutrinos pressure",                G_TYPE_NONE, _nc_hicosmo_flist_E2Press_mnu,  1, 1);
   ncm_mset_func_list_register ("E2Omega_m",    "E^2\\Omega_m",               "NcHICosmo", "Total dust matter density",                 G_TYPE_NONE, _nc_hicosmo_flist_E2Omega_m,    1, 1);
   ncm_mset_func_list_register ("E2Omega_r",    "E^2\\Omega_r",               "NcHICosmo", "Total radiation density",                   G_TYPE_NONE, _nc_hicosmo_flist_E2Omega_r,    1, 1);
+  ncm_mset_func_list_register ("E2Omega_k",    "E^2\\Omega_k",               "NcHICosmo", "Spatial curvature",                         G_TYPE_NONE, _nc_hicosmo_flist_E2Omega_k,    1, 1);
   ncm_mset_func_list_register ("E2Omega_t",    "E^2\\Omega_t",               "NcHICosmo", "Total energy density",                      G_TYPE_NONE, _nc_hicosmo_flist_E2Omega_t,    1, 1);
 
   ncm_mset_func_list_register ("H",           "H",                               "NcHICosmo", "Hubble function",                           G_TYPE_NONE, _nc_hicosmo_flist_H,        1, 1);

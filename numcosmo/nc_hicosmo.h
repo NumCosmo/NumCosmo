@@ -362,7 +362,9 @@ G_INLINE_FUNC gdouble nc_hicosmo_Dc (NcHICosmo *cosmo, const gdouble z);
 
 G_INLINE_FUNC guint nc_hicosmo_NMassNu (NcHICosmo *cosmo);
 G_INLINE_FUNC void nc_hicosmo_MassNuInfo (NcHICosmo *cosmo, guint nu_i, gdouble *mass_eV, gdouble *T_0, gdouble *xi, gdouble *g);
+G_INLINE_FUNC gdouble nc_hicosmo_Neff (NcHICosmo *cosmo);
 
+G_INLINE_FUNC gdouble nc_hicosmo_E2Omega_k (NcHICosmo *cosmo, const gdouble z);
 G_INLINE_FUNC gdouble nc_hicosmo_q (NcHICosmo *cosmo, const gdouble z);
 G_INLINE_FUNC gdouble nc_hicosmo_nec (NcHICosmo *cosmo, const gdouble z);
 G_INLINE_FUNC gdouble nc_hicosmo_dec (NcHICosmo *cosmo, const gdouble z);
@@ -588,6 +590,22 @@ nc_hicosmo_dH_dz (NcHICosmo *cosmo, const gdouble z)
 {
   return nc_hicosmo_H0 (cosmo) *
 	nc_hicosmo_dE2_dz (cosmo, z) / (2.0 * sqrt (nc_hicosmo_E2 (cosmo, z)));
+}
+
+G_INLINE_FUNC gdouble 
+nc_hicosmo_Neff (NcHICosmo *cosmo)
+{
+  const gdouble conv = 7.0 / 8.0 * pow (4.0 / 11.0, 4.0 / 3.0);
+  const gdouble z    = (1.0e3 * ncm_c_eV () / ncm_c_kb ()) / nc_hicosmo_T_gamma0 (cosmo) - 1.0;
+  const gdouble Neff = (nc_hicosmo_E2Omega_nu (cosmo, z) + 3.0 * nc_hicosmo_E2Press_mnu (cosmo, z)) / (nc_hicosmo_E2Omega_g (cosmo, z) * conv);
+
+  return Neff;
+}
+
+G_INLINE_FUNC gdouble 
+nc_hicosmo_E2Omega_k (NcHICosmo *cosmo, const gdouble z)
+{
+  return nc_hicosmo_Omega_k0 (cosmo) * gsl_pow_2 (1.0 + z);
 }
 
 G_INLINE_FUNC gdouble

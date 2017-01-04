@@ -53,6 +53,7 @@
 #include "math/ncm_spline2d_bicubic.h"
 #include "math/ncm_spline_cubic_notaknot.h"
 #include "model/nc_hicosmo_de.h"
+#include "model/nc_hicosmo_de_xcdm.h"
 #include "nc_cbe.h"
 #include "nc_enum_types.h"
 #include "nc_hiprim.h"
@@ -72,6 +73,7 @@ enum
 	PROP_TENSOR_LMAX,
 	PROP_MATTER_PK_MAXZ,
 	PROP_MATTER_PK_MAXK,
+  PROP_VERBOSE
 };
 
 struct _NcCBEPrivate
@@ -379,7 +381,7 @@ nc_cbe_init (NcCBE *cbe)
 	cbe->priv->ple.lensing_verbose        = 0;
 
 	{
-		const guint verbosity = 1;
+		const guint verbosity = 0;
 		cbe->bg_verbose       = verbosity;
 		cbe->thermo_verbose   = verbosity;
 		cbe->pert_verbose     = verbosity;
@@ -432,6 +434,19 @@ _nc_cbe_set_property (GObject* object, guint prop_id, const GValue* value, GPara
 	case PROP_MATTER_PK_MAXK:
 		nc_cbe_set_max_matter_pk_k (cbe, g_value_get_double (value));
 		break;
+	case PROP_VERBOSE:
+  {
+    const guint verbosity = g_value_get_uint (value);
+		cbe->bg_verbose       = verbosity;
+		cbe->thermo_verbose   = verbosity;
+		cbe->pert_verbose     = verbosity;
+		cbe->transfer_verbose = verbosity;
+		cbe->prim_verbose     = verbosity;
+		cbe->spectra_verbose  = verbosity;
+		cbe->nonlin_verbose   = verbosity;
+		cbe->lensing_verbose  = verbosity;
+		break;
+  }
 	default:
 		G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
 		break;
@@ -478,6 +493,9 @@ _nc_cbe_get_property (GObject* object, guint prop_id, GValue* value, GParamSpec*
 		break;
 	case PROP_MATTER_PK_MAXK:
 		g_value_set_double (value, nc_cbe_get_max_matter_pk_k (cbe));
+		break;
+	case PROP_VERBOSE:
+		g_value_set_uint (value, cbe->bg_verbose);
 		break;
 	default:
 		G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -612,6 +630,13 @@ nc_cbe_class_init (NcCBEClass* klass)
 	                                                      "Maximum mode k for matter Pk",
 	                                                      0.0, G_MAXDOUBLE, 0.1,
 	                                                      G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+	g_object_class_install_property (object_class,
+	                                 PROP_VERBOSE,
+                                   g_param_spec_uint ("verbosity",
+                                                      NULL,
+                                                      "Verbosity",
+                                                      0, G_MAXUINT32, 0,
+                                                      G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 }
 
 /**
@@ -1147,7 +1172,6 @@ _nc_cbe_set_bg (NcCBE* cbe, NcHICosmo* cosmo)
 		cbe->priv->pba.a_today = 1.0;
 		cbe->priv->pba.K       = -cbe->priv->pba.Omega0_k * gsl_pow_2 (cbe->priv->pba.a_today * cbe->priv->pba.H0);
 		cbe->priv->pba.sgnK    = GSL_SIGN (cbe->priv->pba.K);
-    printf ("NOT FLAT\n!");
   }
 	else
 	{
@@ -1155,16 +1179,35 @@ _nc_cbe_set_bg (NcCBE* cbe, NcHICosmo* cosmo)
 		cbe->priv->pba.K        = 0.0;
 		cbe->priv->pba.sgnK     = 0;
 		cbe->priv->pba.a_today  = 1.0;
-    printf ("FLAT\n!");
 	}
-	cbe->priv->pba.Omega0_lambda   = ncm_model_orig_param_get (NCM_MODEL (cosmo), NC_HICOSMO_DE_OMEGA_X);
 
-	cbe->priv->pba.Omega0_fld      = 0.0;
-	cbe->priv->pba.w0_fld          = -1.0;
-	cbe->priv->pba.wa_fld          = 0.0;
-	cbe->priv->pba.cs2_fld         = 1.0;
+  if (NC_IS_HICOSMO_DE_XCDM (cosmo))
+  {
+    const gdouble w0       = ncm_model_orig_param_get (NCM_MODEL (cosmo), NC_HICOSMO_DE_XCDM_W);
+    const gdouble Omega_X0 = ncm_model_orig_param_get (NCM_MODEL (cosmo), NC_HICOSMO_DE_OMEGA_X);
+    if (w0 != -1.0)
+    {
+      cbe->priv->pba.Omega0_lambda   = 0.0;
+
+      cbe->priv->pba.Omega0_fld      = Omega_X0;
+      cbe->priv->pba.w0_fld          = w0;
+      cbe->priv->pba.wa_fld          = 0.0;
+      cbe->priv->pba.cs2_fld         = 1.0;      
+    }
+    else
+    {
+      cbe->priv->pba.Omega0_lambda   = Omega_X0;
+
+      cbe->priv->pba.Omega0_fld      = 0.0;
+      cbe->priv->pba.w0_fld          = -1.0;
+      cbe->priv->pba.wa_fld          = 0.0;
+      cbe->priv->pba.cs2_fld         = 1.0;
+    }
+  }
+  else
+    g_error ("_nc_cbe_set_bg: CLASS in not compatible with the model `%s'.", G_OBJECT_TYPE_NAME (cosmo));
+  
   cbe->priv->pba.shooting_failed = _FALSE_;
-
 	cbe->priv->pba.background_verbose = cbe->bg_verbose;
 }
 
@@ -1487,106 +1530,6 @@ _nc_cbe_call_bg (NcCBE* cbe, NcHICosmo* cosmo)
 	_nc_cbe_set_bg (cbe, cosmo);
 	if (background_init (ppr, &cbe->priv->pba) == _FAILURE_)
 		g_error ("_nc_cbe_call_bg: Error running background_init `%s'\n", cbe->priv->pba.error_message);
-
-	if (TRUE)
-	{
-		const gdouble RH = nc_hicosmo_RH_Mpc (cosmo);
-		const gdouble zf = 1.0 / ppr->a_ini_over_a_today_default;
-		struct background *pba = &cbe->priv->pba;
-
-		gdouble pvecback[pba->bg_size];
-		gdouble err = 0.0;
-		guint i;
-
-		if (cbe->a == NULL)
-			cbe->a = nc_scalefactor_new (NC_SCALEFACTOR_TIME_TYPE_COSMIC, zf, NULL);
-		else
-			nc_scalefactor_set_zf (cbe->a, zf);
-
-		nc_scalefactor_prepare_if_needed (cbe->a, cosmo);
-
-    for (i = 0; i < pba->bt_size; i++)
-    {
-      gint last_index = 0;
-      background_at_tau (pba,
-                         pba->tau_table[i],
-                         pba->long_info,
-                         pba->inter_normal,
-                         &last_index,
-                         pvecback);
-      {
-        const gdouble eta        = pba->tau_table[i] / RH;
-        const gdouble z          = 1.0 / pvecback[pba->index_bg_a] - 1.0;//nc_scalefactor_z_eta (cbe->a, eta);
-        const gdouble x          = 1.0 + z;
-        const gdouble x2         = x * x;
-        const gdouble x3         = x2 * x;
-        const gdouble x4         = x2 * x2;
-        const gdouble E2         = nc_hicosmo_E2 (cosmo, z);
-        const gdouble E          = sqrt (E2);
-        const gdouble H          = E / RH;
-        const gdouble RH_pow_m2  = 1.0 / (RH * RH);
-        const gdouble H_prime    = -0.5 * nc_hicosmo_dE2_dz (cosmo, z) * RH_pow_m2;
-
-        const gdouble rho_g      = nc_hicosmo_Omega_g0 (cosmo) * RH_pow_m2 * x4;
-        const gdouble rho_ur     = nc_hicosmo_Omega_nu0 (cosmo) * RH_pow_m2 * x4;
-        const gdouble rho_b      = nc_hicosmo_Omega_b0 (cosmo) * RH_pow_m2 * x3;
-        const gdouble rho_cdm    = nc_hicosmo_Omega_c0 (cosmo) * RH_pow_m2 * x3;
-        const gdouble rho_Lambda = ncm_model_orig_param_get (NCM_MODEL (cosmo), NC_HICOSMO_DE_OMEGA_X) * RH_pow_m2;
-
-        /* CLASS defines Omega_X = rho_X / rho_total */
-        const gdouble E2Omega_t  = nc_hicosmo_E2Omega_t (cosmo, z);
-        const gdouble Omega_r    = nc_hicosmo_Omega_r0 (cosmo) * x4 / E2Omega_t;
-        const gdouble Omega_m    = nc_hicosmo_Omega_m0 (cosmo) * x3 / E2Omega_t;
-
-        const gdouble rho_crit   = E2 * RH_pow_m2;
-
-        {
-
-          const gdouble a_diff          = fabs (nc_scalefactor_a_eta (cbe->a, eta) / pvecback[pba->index_bg_a] - 1.0);
-          const gdouble H_diff          = fabs (H / pvecback[pba->index_bg_H] - 1.0);
-          const gdouble Hprime_diff     = fabs (H_prime / pvecback[pba->index_bg_H_prime] - 1.0);
-
-          const gdouble rho_g_diff      = fabs (rho_g / pvecback[pba->index_bg_rho_g] - 1.0);
-          const gdouble rho_ur_diff     = fabs (rho_ur / pvecback[pba->index_bg_rho_ur] - 1.0);
-          const gdouble rho_b_diff      = fabs (rho_b / pvecback[pba->index_bg_rho_b] - 1.0);
-          const gdouble rho_cdm_diff    = fabs (rho_cdm / pvecback[pba->index_bg_rho_cdm] - 1.0);
-          const gdouble rho_Lambda_diff = fabs (rho_Lambda / pvecback[pba->index_bg_rho_lambda] - 1.0);
-
-          const gdouble Omega_m0_diff   = fabs (Omega_m / pvecback[pba->index_bg_Omega_m] - 1.0);
-          const gdouble Omega_r0_diff   = fabs (Omega_r / pvecback[pba->index_bg_Omega_r] - 1.0);
-
-          const gdouble rho_crit_diff   = fabs (rho_crit / pvecback[pba->index_bg_rho_crit] - 1.0);
-
-          err = GSL_MAX (err, a_diff);
-          err = GSL_MAX (err, H_diff);
-          err = GSL_MAX (err, Hprime_diff);
-          err = GSL_MAX (err, rho_g_diff);
-          err = GSL_MAX (err, rho_ur_diff);
-          err = GSL_MAX (err, rho_b_diff);
-          err = GSL_MAX (err, rho_cdm_diff);
-          err = GSL_MAX (err, rho_Lambda_diff);
-          err = GSL_MAX (err, Omega_r0_diff);
-          err = GSL_MAX (err, rho_crit_diff);
-
-          printf ("# eta = % 22.15g a = % 10.5e | % 10.5e % 10.5e % 10.5e % 10.5e % 10.5e % 10.5e % 10.5e % 10.5e % 10.5e % 10.5e % 10.5e [% 10.5e]\n", 
-                  eta, pvecback[pba->index_bg_a], 
-                  a_diff, 
-                  H_diff, 
-                  Hprime_diff, 
-                  rho_g_diff, 
-                  rho_ur_diff, 
-                  rho_b_diff, 
-                  rho_cdm_diff, 
-                  rho_Lambda_diff,
-                  Omega_r0_diff, 
-                  Omega_m0_diff, 
-                  rho_crit_diff,
-                  err);
-        }
-      }
-    }
-    printf ("# worst % 10.5e\n", err);
-  }
 }
 
 static void
@@ -1890,6 +1833,129 @@ void nc_cbe_prepare_if_needed (NcCBE* cbe, NcHICosmo* cosmo)
 		}
 	}
 }
+
+/**
+ * nc_cbe_compare_bg:
+ * @cbe: a #NcCBE
+ * @cosmo: a #NcHICosmo
+ * @log_cmp: whether to print the comparison
+ * 
+ * Compares CLASS and NumCosmo background calculations and returns the worst discrepancy.
+ * 
+ * Returns: worst error. 
+ */
+gdouble
+nc_cbe_compare_bg (NcCBE *cbe, NcHICosmo *cosmo, gboolean log_cmp)
+{
+  struct precision *ppr  = (struct precision *)cbe->prec->priv;
+  struct background *pba = &cbe->priv->pba;
+  const gdouble RH = nc_hicosmo_RH_Mpc (cosmo);
+  const gdouble zf = 1.0 / ppr->a_ini_over_a_today_default;
+
+  gdouble pvecback[pba->bg_size];
+  gdouble err = 0.0;
+  gboolean isLambda = NC_IS_HICOSMO_DE_XCDM (cosmo) && (ncm_model_orig_param_get (NCM_MODEL (cosmo), NC_HICOSMO_DE_OMEGA_X) == -1.0);
+  gboolean hasNcdm  = nc_hicosmo_Omega_mnu0 (cosmo) != 0.0;
+  guint i;
+
+  if (cbe->a == NULL)
+    cbe->a = nc_scalefactor_new (NC_SCALEFACTOR_TIME_TYPE_COSMIC, zf, NULL);
+  else
+    nc_scalefactor_set_zf (cbe->a, zf);
+
+  nc_scalefactor_prepare_if_needed (cbe->a, cosmo);
+
+  for (i = 0; i < pba->bt_size; i++)
+  {
+    gint last_index = 0;
+    background_at_tau (pba,
+                       pba->tau_table[i],
+                       pba->long_info,
+                       pba->inter_normal,
+                       &last_index,
+                       pvecback);
+    {
+      const gdouble eta        = pba->tau_table[i] / RH;
+      const gdouble a          = pvecback[pba->index_bg_a];
+      const gdouble z          = pba->a_today / a - 1.0;    /* nc_scalefactor_z_eta (cbe->a, eta); */
+      const gdouble E2         = nc_hicosmo_E2 (cosmo, z);
+      const gdouble E          = sqrt (E2);
+      const gdouble H          = E / RH;
+      const gdouble RH_pow_m2  = 1.0 / (RH * RH);
+      const gdouble H_prime    = -0.5 * nc_hicosmo_dE2_dz (cosmo, z) * RH_pow_m2;
+
+      const gdouble rho_g      = nc_hicosmo_E2Omega_g  (cosmo, z) * RH_pow_m2;
+      const gdouble rho_ur     = nc_hicosmo_E2Omega_nu (cosmo, z) * RH_pow_m2;
+      const gdouble rho_ncdm1  = hasNcdm ? nc_hicosmo_E2Omega_mnu_n (cosmo, 0, z) * RH_pow_m2 : 0.0;
+      const gdouble rho_b      = nc_hicosmo_E2Omega_b  (cosmo, z) * RH_pow_m2;
+      const gdouble rho_cdm    = nc_hicosmo_E2Omega_c  (cosmo, z) * RH_pow_m2;
+      const gdouble rho_Lambda = nc_hicosmo_de_E2Omega_de (NC_HICOSMO_DE (cosmo), z) * RH_pow_m2;
+      const gdouble rho_k      = nc_hicosmo_E2Omega_k (cosmo, z) * RH_pow_m2;
+
+      /* CLASS defines Omega_X = rho_X / rho_total */
+      const gdouble E2Omega_t  = nc_hicosmo_E2Omega_t (cosmo, z);
+      const gdouble Omega_r    = nc_hicosmo_E2Omega_r (cosmo, z) / E2Omega_t;
+      const gdouble Omega_m    = nc_hicosmo_E2Omega_m (cosmo, z) / E2Omega_t;
+
+      const gdouble rho_crit   = E2 * RH_pow_m2;
+
+      {
+        const gdouble a_diff          = fabs (nc_scalefactor_a_eta (cbe->a, eta) / pvecback[pba->index_bg_a] - 1.0);
+        const gdouble H_diff          = fabs (H / pvecback[pba->index_bg_H] - 1.0);
+        const gdouble Hprime_diff     = fabs (H_prime / pvecback[pba->index_bg_H_prime] - 1.0);
+
+        const gdouble rho_g_diff      = fabs (rho_g / pvecback[pba->index_bg_rho_g] - 1.0);
+        const gdouble rho_ur_diff     = fabs (rho_ur / pvecback[pba->index_bg_rho_ur] - 1.0);
+        const gdouble rho_ncdm_diff   = hasNcdm ? fabs (rho_ncdm1 / pvecback[pba->index_bg_rho_ncdm1] - 1.0) : 0.0;
+        const gdouble rho_b_diff      = fabs (rho_b / pvecback[pba->index_bg_rho_b] - 1.0);
+        const gdouble rho_cdm_diff    = fabs (rho_cdm / pvecback[pba->index_bg_rho_cdm] - 1.0);
+
+        const gdouble rho_Lambda_diff = isLambda ? fabs (rho_Lambda / pvecback[pba->index_bg_rho_lambda] - 1.0) : fabs (rho_Lambda / pvecback[pba->index_bg_rho_fld] - 1.0);
+
+        const gdouble Omega_m0_diff   = fabs (Omega_m / pvecback[pba->index_bg_Omega_m] - 1.0);
+        const gdouble Omega_r0_diff   = fabs (Omega_r / pvecback[pba->index_bg_Omega_r] - 1.0);
+
+        const gdouble Omega_k_diff    = fabs (rho_k / (-pba->K/a/a) - 1.0);
+        const gdouble rho_crit_diff   = fabs (rho_crit / pvecback[pba->index_bg_rho_crit] - 1.0);
+
+        err = GSL_MAX (err, a_diff);
+        err = GSL_MAX (err, H_diff);
+        err = GSL_MAX (err, Hprime_diff);
+        err = GSL_MAX (err, rho_g_diff);
+        err = GSL_MAX (err, rho_ur_diff);
+        err = GSL_MAX (err, rho_ncdm_diff);
+        err = GSL_MAX (err, rho_b_diff);
+        err = GSL_MAX (err, rho_cdm_diff);
+        err = GSL_MAX (err, rho_Lambda_diff);
+        err = GSL_MAX (err, Omega_r0_diff);
+        err = GSL_MAX (err, rho_crit_diff);
+
+        if (log_cmp)
+          printf ("# eta = % 22.15g a = % 10.5e | % 10.5e % 10.5e % 10.5e % 10.5e % 10.5e % 10.5e % 10.5e % 10.5e % 10.5e % 10.5e % 10.5e % 10.5e % 10.5e [% 10.5e]\n", 
+                  eta, pvecback[pba->index_bg_a], 
+                  a_diff,          /* 01 */
+                  H_diff,          /* 02 */
+                  Hprime_diff,     /* 03 */
+                  rho_g_diff,      /* 04 */
+                  rho_ur_diff,     /* 05 */
+                  rho_ncdm_diff,   /* 06 */
+                  rho_b_diff,      /* 07 */
+                  rho_cdm_diff,    /* 08 */
+                  rho_Lambda_diff, /* 09 */
+                  Omega_r0_diff,   /* 10 */
+                  Omega_m0_diff,   /* 11 */
+                  Omega_k_diff,    /* 12 */
+                  rho_crit_diff,   /* 13 */
+                  err);
+      }
+    }
+  }
+  if (log_cmp)
+    printf ("# worst error: % 10.5e\n", err);
+
+  return err;
+}
+
 
 /**
  * nc_cbe_thermodyn_get_Xe:

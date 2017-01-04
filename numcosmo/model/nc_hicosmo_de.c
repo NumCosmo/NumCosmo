@@ -142,8 +142,8 @@ _nc_hicosmo_de_constructed (GObject *object)
       cosmo_de->priv->nu_rho = ncm_integral1d_ptr_new (&_nc_hicosmo_de_neutrino_rho_integrand, NULL);
       cosmo_de->priv->nu_p   = ncm_integral1d_ptr_new (&_nc_hicosmo_de_neutrino_p_integrand, NULL);
 
-      ncm_integral1d_set_reltol (NCM_INTEGRAL1D (cosmo_de->priv->nu_rho), 1.0e-4);
-      ncm_integral1d_set_reltol (NCM_INTEGRAL1D (cosmo_de->priv->nu_p),   1.0e-4);
+      ncm_integral1d_set_reltol (NCM_INTEGRAL1D (cosmo_de->priv->nu_rho), 1.0e-3);
+      ncm_integral1d_set_reltol (NCM_INTEGRAL1D (cosmo_de->priv->nu_p),   1.0e-3);
 
       ncm_integral1d_set_rule (NCM_INTEGRAL1D (cosmo_de->priv->nu_rho), 1);
       ncm_integral1d_set_rule (NCM_INTEGRAL1D (cosmo_de->priv->nu_p), 1);
@@ -439,14 +439,14 @@ _nc_hicosmo_de_Yp_4He (NcHICosmo *cosmo)
 
   if (ncm_model_param_get_ftype (model, NC_HICOSMO_DE_DEFAULT_HE_YP) == NCM_PARAM_TYPE_FIXED)
   {
-    const gdouble wb = nc_hicosmo_Omega_b0h2 (cosmo);
-    const gdouble DENNU = ENNU - 3.046;
+    const gdouble wb    = nc_hicosmo_Omega_b0h2 (cosmo);
+    const gdouble DNeff = nc_hicosmo_Neff (cosmo) - 3.046;
 
     if (FALSE)
     {
       const gdouble wb2 = wb * wb;
-      const gdouble DENNU2 = DENNU * DENNU;
-      const gdouble Yp = 0.2311 + 0.9502 * wb - 11.27 * wb2 + DENNU * (0.01356 + 0.008581 * wb - 0.1810 * wb2) + DENNU2 * (-0.0009795 - 0.001370 * wb + 0.01746 * wb2);
+      const gdouble DNeff2 = DNeff * DNeff;
+      const gdouble Yp = 0.2311 + 0.9502 * wb - 11.27 * wb2 + DNeff * (0.01356 + 0.008581 * wb - 0.1810 * wb2) + DNeff2 * (-0.0009795 - 0.001370 * wb + 0.01746 * wb2);
       return Yp;
     }
 
@@ -455,10 +455,10 @@ _nc_hicosmo_de_Yp_4He (NcHICosmo *cosmo)
       if (model->pkey != cosmo_de->priv->HE4_Yp_key)
       {
         const gdouble Yp = ncm_spline2d_eval (NC_HICOSMO_DE (cosmo)->priv->BBN_spline2d,
-                                              wb, DENNU);
+                                              wb, DNeff);
         ncm_model_orig_param_set (model, NC_HICOSMO_DE_HE_YP, Yp);
         cosmo_de->priv->HE4_Yp_key = model->pkey;
-        /*printf ("# omega_b % 20.15g DeltaNnu % 20.15g Yp % 20.15g\n",  wb, DENNU, Yp); */
+        /*printf ("# omega_b % 20.15g DeltaNnu % 20.15g Yp % 20.15g\n",  wb, DNeff, Yp); */
       }
     }
   }
