@@ -658,10 +658,8 @@ _nc_cluster_abundance_lnM_intp_N (NcClusterAbundance *cad, NcHICosmo *cosmo, NcC
 static void
 _nc_cluster_abundance_funcs (NcClusterAbundance *cad, NcClusterRedshift *clusterz, NcClusterMass *clusterm)
 {
-  NcClusterRedshiftImpl z_impl = nc_cluster_redshift_impl (clusterz);
-  NcClusterMassImpl lnM_impl = nc_cluster_mass_impl (clusterm);
-  gboolean z_intp = z_impl & NC_CLUSTER_REDSHIFT_INTP;
-  gboolean lnM_intp = lnM_impl & NC_CLUSTER_MASS_INTP;
+  gboolean z_intp   = ncm_model_check_impl_opt (NCM_MODEL (clusterz), NC_CLUSTER_REDSHIFT_INTP);
+  gboolean lnM_intp = ncm_model_check_impl_opt (NCM_MODEL (clusterm), NC_CLUSTER_MASS_INTP);
 
   if (z_intp && lnM_intp)
   {

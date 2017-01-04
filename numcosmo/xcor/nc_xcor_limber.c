@@ -95,19 +95,6 @@ void nc_xcor_limber_clear (NcXcorLimber** xcl)
 }
 
 /**
- * nc_xcor_limber_impl:
- * @xcl: a #NcXcorLimber.
- *
- * FIXME
- *
- * Returns: FIXME
- */
-NcXcorLimberImpl nc_xcor_limber_impl (NcXcorLimber* xcl)
-{
-	return NC_XCOR_LIMBER_GET_CLASS (xcl)->impl;
-}
-
-/**
  * nc_xcor_limber_obs_len:
  * @xcl: a #NcXcorLimber.
  *

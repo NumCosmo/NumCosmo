@@ -151,18 +151,18 @@ _nc_xcor_limber_lensing_finalize (GObject* object)
 static void
 nc_xcor_limber_lensing_class_init (NcXcorLimberLensingClass* klass)
 {
-	GObjectClass* object_class = G_OBJECT_CLASS (klass);
+	GObjectClass* object_class      = G_OBJECT_CLASS (klass);
 	NcXcorLimberClass* parent_class = NC_XCOR_LIMBER_CLASS (klass);
-	NcmModelClass* model_class = NCM_MODEL_CLASS (klass);
+	NcmModelClass* model_class      = NCM_MODEL_CLASS (klass);
 
 	parent_class->eval_kernel = &_nc_xcor_limber_lensing_eval_kernel;
-	parent_class->prepare = &_nc_xcor_limber_lensing_prepare;
-	parent_class->noise_spec = &_nc_xcor_limber_lensing_noise_spec;
+	parent_class->prepare     = &_nc_xcor_limber_lensing_prepare;
+	parent_class->noise_spec  = &_nc_xcor_limber_lensing_noise_spec;
 
-	parent_class->obs_len = &_nc_xcor_limber_lensing_obs_len;
+	parent_class->obs_len        = &_nc_xcor_limber_lensing_obs_len;
 	parent_class->obs_params_len = &_nc_xcor_limber_lensing_obs_params_len;
 
-	parent_class->impl = NC_XCOR_LIMBER_IMPL_ALL;
+	ncm_model_class_add_impl_flag (model_class, NC_XCOR_LIMBER_IMPL_ALL);
 
 	object_class->finalize = &_nc_xcor_limber_lensing_finalize;
 

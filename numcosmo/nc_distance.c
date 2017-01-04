@@ -389,7 +389,7 @@ nc_distance_comoving (NcDistance *dist, NcHICosmo *cosmo, gdouble z)
 
   nc_distance_prepare_if_needed (dist, cosmo);
 
-  if (ncm_model_impl (NCM_MODEL (cosmo)) & NC_HICOSMO_IMPL_Dc)
+  if (ncm_model_check_impl_opt (NCM_MODEL (cosmo), NC_HICOSMO_IMPL_Dc))
     return nc_hicosmo_Dc (cosmo, z);
 
   if (z <= dist->zf)
@@ -726,7 +726,7 @@ gdouble
 nc_distance_decoupling_redshift (NcDistance *dist, NcHICosmo *cosmo)
 {
   NCM_UNUSED (dist);
-  if (ncm_model_impl (NCM_MODEL (cosmo)) & NC_HICOSMO_IMPL_z_lss)
+  if (ncm_model_check_impl_opt (NCM_MODEL (cosmo), NC_HICOSMO_IMPL_z_lss))
     return nc_hicosmo_z_lss (cosmo);
   else
   {
@@ -762,7 +762,7 @@ nc_distance_sound_horizon (NcDistance *dist, NcHICosmo *cosmo, gdouble z)
   gdouble result, error;
   gsl_function F;
 
-  g_assert (ncm_model_impl (NCM_MODEL (cosmo)) & NC_HICOSMO_IMPL_bgp_cs2);
+  g_assert (ncm_model_check_impl_opt (NCM_MODEL (cosmo), NC_HICOSMO_IMPL_bgp_cs2));
 
   F.function = &sound_horizon_integral_argument;
   F.params = cosmo;
@@ -955,7 +955,7 @@ nc_distance_r_zd (NcDistance *dist, NcHICosmo *cosmo)
 {
   gdouble r_zd;
 
-  if (ncm_model_impl (NCM_MODEL (cosmo)) & NC_HICOSMO_IMPL_as_drag)
+  if (ncm_model_check_impl_opt (NCM_MODEL (cosmo), NC_HICOSMO_IMPL_as_drag))
     r_zd = nc_hicosmo_as_drag (cosmo);
   else
   {

@@ -58,11 +58,11 @@ typedef struct _NcHICosmoDEPrivate NcHICosmoDEPrivate;
  */
 typedef enum _NcHICosmoDEImpl
 {
-  NC_HICOSMO_DE_IMPL_E2Omega_de       = NC_HICOSMO_IMPL_LAST << 0,
-  NC_HICOSMO_DE_IMPL_dE2Omega_de_dz   = NC_HICOSMO_IMPL_LAST << 1,
-  NC_HICOSMO_DE_IMPL_d2E2Omega_de_dz2 = NC_HICOSMO_IMPL_LAST << 2,
-  NC_HICOSMO_DE_IMPL_w_de             = NC_HICOSMO_IMPL_LAST << 3, /*< private >*/
-  NC_HICOSMO_DE_IMPL_LAST             = NC_HICOSMO_IMPL_LAST << 4, /*< skip >*/
+  NC_HICOSMO_DE_IMPL_E2Omega_de = NC_HICOSMO_IMPL_LAST,
+  NC_HICOSMO_DE_IMPL_dE2Omega_de_dz,
+  NC_HICOSMO_DE_IMPL_d2E2Omega_de_dz2,
+  NC_HICOSMO_DE_IMPL_w_de, /*< private >*/
+  NC_HICOSMO_DE_IMPL_LAST, /*< skip >*/
 } NcHICosmoDEImpl;
 
 typedef gdouble (*NcHICosmoDEFunc1) (NcHICosmoDE *cosmo_de, gdouble z);

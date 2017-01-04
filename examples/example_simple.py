@@ -17,7 +17,7 @@ Ncm.cfg_init ()
 #
 #  New homogeneous and isotropic cosmological model NcHICosmoDEXcdm 
 #
-cosmo = Nc.HICosmo.new_from_name (Nc.HICosmo, "NcHICosmoDEXcdm{'massnu-length':<1>}")
+cosmo = Nc.HICosmo.new_from_name (Nc.HICosmo, "NcHICosmoDEXcdm{'massnu-length':<0>}")
 cosmo.set_reparam (Nc.HICosmoDEReparamCMB.new (cosmo.len ()))
 
 #
@@ -68,7 +68,7 @@ for i in range (0, 10):
 
 dist = Nc.Distance.new (2000.0)
 
-cosmo.orig_vparam_set (Nc.HICosmoDEVParams.M, 0, 0.6)
+#cosmo.orig_vparam_set (Nc.HICosmoDEVParams.M, 0, 0.6)
 
 dist.prepare (cosmo)
 
@@ -86,10 +86,16 @@ cbe.prepare (cosmo)
 
 print dist.theta100CMB (cosmo)
 print cosmo.zt (5.0)
-print cosmo.Omega_mnu0 (0, 0.0)
-print cosmo.Omega_mnu0 (0, 1.0e0)
-print cosmo.Omega_mnu0 (0, 209.053820220132)
-print cosmo.Omega_mnu0 (0, 99999999999999.0)
+print cosmo.Omega_mnu0 ()
+print cosmo.Press_mnu0 ()
+
+ztest = 1.0e4
+
+print "% 22.15e" % (cosmo.E2Omega_mnu (ztest))
+print "% 22.15e" % (cosmo.E2Press_mnu (ztest))
+print "% 22.15e" % (cosmo.E2Omega_mnu (ztest) - 3.0 * cosmo.E2Press_mnu (ztest))
+print "% 22.15e" % (cosmo.E2Omega_b (ztest))
+print "% 22.15e" % (cosmo.E2Omega_c (ztest))
 
 print Ncm.C.Glightyear_Mpc ()
 

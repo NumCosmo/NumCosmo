@@ -142,9 +142,9 @@ static gboolean _nc_cluster_mass_benson_resample (NcClusterMass *clusterm, NcHIC
 static void
 nc_cluster_mass_benson_class_init (NcClusterMassBensonClass *klass)
 {
-  GObjectClass* object_class = G_OBJECT_CLASS (klass);
+  GObjectClass* object_class       = G_OBJECT_CLASS (klass);
   NcClusterMassClass* parent_class = NC_CLUSTER_MASS_CLASS (klass);
-  NcmModelClass *model_class = NCM_MODEL_CLASS (klass);
+  NcmModelClass *model_class       = NCM_MODEL_CLASS (klass);
 
   parent_class->P = &_nc_cluster_mass_benson_significance_m_p;
   parent_class->intP = &_nc_cluster_mass_benson_intp;
@@ -154,7 +154,7 @@ nc_cluster_mass_benson_class_init (NcClusterMassBensonClass *klass)
   parent_class->obs_len = &_nc_cluster_mass_benson_obs_len;
   parent_class->obs_params_len = &_nc_cluster_mass_benson_obs_params_len;
 
-  parent_class->impl = NC_CLUSTER_MASS_IMPL_ALL;
+  ncm_model_class_add_impl_flag (model_class, NC_CLUSTER_MASS_IMPL_ALL);
 
   model_class->set_property = &_nc_cluster_mass_benson_set_property;
   model_class->get_property = &_nc_cluster_mass_benson_get_property;

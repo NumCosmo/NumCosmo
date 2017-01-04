@@ -57,14 +57,14 @@ typedef struct _NcClusterRedshift NcClusterRedshift;
  */ 
 typedef enum _NcClusterRedshiftImpl
 {
-  NC_CLUSTER_REDSHIFT_P        = 1 << 0,
-  NC_CLUSTER_REDSHIFT_INTP     = 1 << 1,
-  NC_CLUSTER_REDSHIFT_RESAMPLE = 1 << 2,
-  NC_CLUSTER_REDSHIFT_P_LIMITS = 1 << 3,
-  NC_CLUSTER_REDSHIFT_N_LIMTS  = 1 << 4,
+  NC_CLUSTER_REDSHIFT_P = 0,
+  NC_CLUSTER_REDSHIFT_INTP,
+  NC_CLUSTER_REDSHIFT_RESAMPLE,
+  NC_CLUSTER_REDSHIFT_P_LIMITS,
+  NC_CLUSTER_REDSHIFT_N_LIMTS,
 } NcClusterRedshiftImpl;
 
-#define NC_CLUSTER_REDSHIFT_IMPL_ALL (~0)
+#define NC_CLUSTER_REDSHIFT_IMPL_ALL NCM_MODEL_CLASS_IMPL_ALL
 
 struct _NcClusterRedshiftClass
 {
@@ -77,7 +77,6 @@ struct _NcClusterRedshiftClass
   void (*N_limits) (NcClusterRedshift *clusterz, gdouble *z_lower, gdouble *z_upper);
   guint (*obs_len) (NcClusterRedshift *clusterz);
   guint (*obs_params_len) (NcClusterRedshift *clusterz);
-  NcClusterRedshiftImpl impl;
 };
 
 struct _NcClusterRedshift
@@ -94,8 +93,6 @@ NcClusterRedshift *nc_cluster_redshift_new_from_name (gchar *redshift_name);
 NcClusterRedshift *nc_cluster_redshift_ref (NcClusterRedshift *clusterz);
 void nc_cluster_redshift_free (NcClusterRedshift *clusterz);
 void nc_cluster_redshift_clear (NcClusterRedshift **clusterz);
-
-NcClusterRedshiftImpl nc_cluster_redshift_impl (NcClusterRedshift *clusterz);
 
 guint nc_cluster_redshift_obs_len (NcClusterRedshift *clusterz);
 guint nc_cluster_redshift_obs_params_len (NcClusterRedshift *clusterz);
