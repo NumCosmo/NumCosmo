@@ -12,6 +12,7 @@ examples_DATA = \
 	example_ps.py          \
 	example_simple.py      \
 	example_ca.py          \
+	example_cbe.py         \
 	example_recomb.py      \
 	example_fit_snia.py    \
 	example_rg_snia_bao.py \

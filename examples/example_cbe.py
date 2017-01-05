@@ -1,13 +1,10 @@
 #!/usr/bin/python2
 
-try:
-  import gi
-  gi.require_version('NumCosmo', '1.0')
-  gi.require_version('NumCosmoMath', '1.0')
-except:
-  pass
-
 import math
+import gi
+gi.require_version('NumCosmo', '1.0')
+gi.require_version('NumCosmoMath', '1.0')
+
 from gi.repository import NumCosmo as Nc
 from gi.repository import NumCosmoMath as Ncm
 
@@ -43,6 +40,7 @@ cosmo.orig_param_set (Nc.HICosmoDEParams.OMEGA_C,   0.25)
 cosmo.orig_param_set (Nc.HICosmoDEParams.OMEGA_X,   0.70)
 cosmo.orig_param_set (Nc.HICosmoDEParams.T_GAMMA0,  2.72)
 cosmo.orig_param_set (Nc.HICosmoDEParams.OMEGA_B,   0.05)
+cosmo.orig_param_set (Nc.HICosmoDEParams.ENNU,      2.0328)
 cosmo.orig_param_set (Nc.HICosmoDEXCDMParams.W,    -1.10)
 
 cosmo.orig_vparam_set (Nc.HICosmoDEVParams.M, 0, 0.6)
@@ -55,10 +53,14 @@ cosmo.props.Omegab  =  0.04
 cosmo.props.Omegac  =  0.25
 cosmo.props.Omegax  =  0.70
 cosmo.props.Tgamma0 =  2.72
+cosmo.props.ENnu    =  2.0328
 cosmo.props.w       = -1.10
 
 massnu_v = Ncm.Vector.new_array ([0.6])
 cosmo.props.massnu  = massnu_v
+
+cosmo.omega_x2omega_k ()
+cosmo.param_set_by_name ("Omegak", 0.0)
 
 #
 #  Printing the parameters used.
@@ -67,10 +69,40 @@ print "# Model parameters: ",
 cosmo.params_log_all ()
 
 #
-#  Printing some distances up to redshift 1.0.
+#  New CLASS backend object.
 #
-for i in range (0, 10):
-  z  = 1.0 / 9.0 * i
-  cd = cosmo.RH_Mpc () * dist.comoving (cosmo, z)
-  print "% 10.8f % 20.15g" % (z, cd)
+cbe = Nc.CBE.new ()
+cbe.set_calc_transfer (True)
+
+#
+# Submodels necessary for CLASS
+#
+reion = Nc.HIReionCamb.new ()
+prim  = Nc.HIPrimPowerLaw.new ()
+cosmo.add_submodel (reion)
+cosmo.add_submodel (prim)
+
+#
+# Preparing CLASS backend
+#
+cbe.prepare (cosmo)
+
+print "# theta100CMB % 22.15e" % (dist.theta100CMB (cosmo))
+print "# zt          % 22.15e" % (cosmo.zt (5.0))
+print "# Omega_mnu0  % 22.15e" % (cosmo.Omega_mnu0 ())
+print "# Press_mnu0  % 22.15e" % (cosmo.Press_mnu0 ())
+print "# Omega_k0    % 22.15e" % (cosmo.Omega_k0 ())
+
+ztest = 1.0e4
+print "# E2Omega_mnu   (% 22.15g) % 22.15e" % (ztest, cosmo.E2Omega_mnu (ztest))
+print "# E2Press_mnu   (% 22.15g) % 22.15e" % (ztest, cosmo.E2Press_mnu (ztest))
+print "# E2Omega_mnu_d (% 22.15g) % 22.15e" % (ztest, cosmo.E2Omega_mnu (ztest) - 3.0 * cosmo.E2Press_mnu (ztest))
+print "# E2Omega_b     (% 22.15g) % 22.15e" % (ztest, cosmo.E2Omega_b (ztest))
+print "# E2Omega_c     (% 22.15g) % 22.15e" % (ztest, cosmo.E2Omega_c (ztest))
+print "# Neff           % 22.15e" % (cosmo.Neff ())
+
+#
+# Printing comparison between CLASS and NumCosmo background
+#
+cbe.compare_bg (cosmo, True)
 

@@ -80,6 +80,7 @@ gboolean ncm_util_cvode_print_stats (gpointer cvode);
 
 gchar *ncm_util_basename_fits (const gchar *fits_filename); 
 gchar *ncm_util_function_params (const gchar *func, gdouble **x, guint *len);
+void ncm_util_print_bits (guint64 num);
 
 typedef struct _NcmComplex NcmComplex;
 

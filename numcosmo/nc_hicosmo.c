@@ -83,13 +83,19 @@ static gboolean _nc_hicosmo_valid (NcmModel *model);
 NCM_MSET_MODEL_REGISTER_ID (nc_hicosmo, NC_TYPE_HICOSMO);
 static void _nc_hicosmo_add_submodel (NcmModel *model, NcmModel *submodel);
 
+/* Methods without default implementation */
+
 static gdouble _nc_hicosmo_H0 (NcHICosmo *cosmo);
 static gdouble _nc_hicosmo_Omega_b0 (NcHICosmo *cosmo);
+static gdouble _nc_hicosmo_Omega_c0 (NcHICosmo *cosmo);
 static gdouble _nc_hicosmo_Omega_g0 (NcHICosmo *cosmo);
 static gdouble _nc_hicosmo_Omega_nu0 (NcHICosmo *cosmo);
-static gdouble _nc_hicosmo_Omega_mnu0 (NcHICosmo *cosmo, guint nu_i, const gdouble z);
+static gdouble _nc_hicosmo_Omega_mnu0 (NcHICosmo *cosmo);
+static gdouble _nc_hicosmo_Press_mnu0 (NcHICosmo *cosmo);
+static gdouble _nc_hicosmo_Omega_mnu0_n (NcHICosmo *cosmo, const guint n);
+static gdouble _nc_hicosmo_Press_mnu0_n (NcHICosmo *cosmo, const guint n);
+static gdouble _nc_hicosmo_Omega_m0 (NcHICosmo *cosmo);
 static gdouble _nc_hicosmo_Omega_r0 (NcHICosmo *cosmo);
-static gdouble _nc_hicosmo_Omega_c0 (NcHICosmo *cosmo);
 static gdouble _nc_hicosmo_Omega_t0 (NcHICosmo *cosmo);
 static gdouble _nc_hicosmo_T_gamma0 (NcHICosmo *cosmo);
 static gdouble _nc_hicosmo_Yp_4He (NcHICosmo *cosmo);
@@ -97,15 +103,33 @@ static gdouble _nc_hicosmo_z_lss (NcHICosmo *cosmo);
 static gdouble _nc_hicosmo_as_drag (NcHICosmo *cosmo);
 static gdouble _nc_hicosmo_xb (NcHICosmo *cosmo);
 
-static gdouble _nc_hicosmo_E2 (NcHICosmo *cosmo, gdouble z);
-static gdouble _nc_hicosmo_dE2_dz (NcHICosmo *cosmo, gdouble z);
-static gdouble _nc_hicosmo_d2E2_dz2 (NcHICosmo *cosmo, gdouble z);
-static gdouble _nc_hicosmo_bgp_cs2 (NcHICosmo *cosmo, gdouble z);
-static gdouble _nc_hicosmo_Dc (NcHICosmo *cosmo, gdouble z);
+static gdouble _nc_hicosmo_E2Omega_mnu (NcHICosmo *cosmo, const gdouble z);
+static gdouble _nc_hicosmo_E2Press_mnu (NcHICosmo *cosmo, const gdouble z);
+static gdouble _nc_hicosmo_E2Omega_mnu_n (NcHICosmo *cosmo, const guint n, const gdouble z);
+static gdouble _nc_hicosmo_E2Press_mnu_n (NcHICosmo *cosmo, const guint n, const gdouble z);
+static gdouble _nc_hicosmo_E2 (NcHICosmo *cosmo, const gdouble z);
+static gdouble _nc_hicosmo_dE2_dz (NcHICosmo *cosmo, const gdouble z);
+static gdouble _nc_hicosmo_d2E2_dz2 (NcHICosmo *cosmo, const gdouble z);
+static gdouble _nc_hicosmo_bgp_cs2 (NcHICosmo *cosmo, const gdouble z);
+static gdouble _nc_hicosmo_Dc (NcHICosmo *cosmo, const gdouble z);
 
 static guint _nc_hicosmo_NMassNu (NcHICosmo *cosmo);
 static void _nc_hicosmo_MassNuInfo (NcHICosmo *cosmo, const guint nu_i, gdouble *mass_eV, gdouble *T_0, gdouble *xi, gdouble *g);
-static gdouble _nc_hicosmo_Omega_mnu0 (NcHICosmo *cosmo, const guint nu_i, const gdouble z);
+
+/* Default implemented */
+
+static gdouble _nc_hicosmo_Omega_m0 (NcHICosmo *cosmo);
+static gdouble _nc_hicosmo_Omega_r0 (NcHICosmo *cosmo);
+
+static gdouble _nc_hicosmo_E2Omega_b (NcHICosmo *cosmo, const gdouble z);
+static gdouble _nc_hicosmo_E2Omega_c (NcHICosmo *cosmo, const gdouble z);
+static gdouble _nc_hicosmo_E2Omega_g (NcHICosmo *cosmo, const gdouble z);
+static gdouble _nc_hicosmo_E2Omega_nu (NcHICosmo *cosmo, const gdouble z);
+static gdouble _nc_hicosmo_E2Omega_m (NcHICosmo *cosmo, const gdouble z);
+static gdouble _nc_hicosmo_E2Omega_r (NcHICosmo *cosmo, const gdouble z);
+static gdouble _nc_hicosmo_E2Omega_t (NcHICosmo *cosmo, const gdouble z);
+
+/* End methods */
 
 static void
 nc_hicosmo_class_init (NcHICosmoClass *klass)
@@ -131,35 +155,55 @@ nc_hicosmo_class_init (NcHICosmoClass *klass)
   model_class->valid        = &_nc_hicosmo_valid;
   model_class->add_submodel = &_nc_hicosmo_add_submodel;
 
-  klass->H0         = &_nc_hicosmo_H0;
-  klass->Omega_b0   = &_nc_hicosmo_Omega_b0;
-  klass->Omega_g0   = &_nc_hicosmo_Omega_g0;
-  klass->Omega_nu0  = &_nc_hicosmo_Omega_nu0;
-  klass->Omega_mnu0 = &_nc_hicosmo_Omega_mnu0;
-  klass->Omega_r0   = &_nc_hicosmo_Omega_r0;
-  klass->Omega_c0   = &_nc_hicosmo_Omega_c0;
-  klass->Omega_t0   = &_nc_hicosmo_Omega_t0;
-  klass->T_gamma0   = &_nc_hicosmo_T_gamma0;
-  klass->Yp_4He     = &_nc_hicosmo_Yp_4He;
-  klass->z_lss      = &_nc_hicosmo_z_lss;
-  klass->as_drag    = &_nc_hicosmo_as_drag;
-  klass->xb         = &_nc_hicosmo_xb;
-  klass->E2         = &_nc_hicosmo_E2;
-  klass->dE2_dz     = &_nc_hicosmo_dE2_dz;
-  klass->d2E2_dz2   = &_nc_hicosmo_d2E2_dz2;
-  klass->bgp_cs2    = &_nc_hicosmo_bgp_cs2;
-  klass->Dc         = &_nc_hicosmo_Dc;
-  klass->NMassNu    = &_nc_hicosmo_NMassNu;
-  klass->MassNuInfo = &_nc_hicosmo_MassNuInfo;
+  klass->H0           = &_nc_hicosmo_H0;
+  klass->Omega_b0     = &_nc_hicosmo_Omega_b0;
+  klass->Omega_g0     = &_nc_hicosmo_Omega_g0;
+  klass->Omega_nu0    = &_nc_hicosmo_Omega_nu0;
+  klass->Omega_mnu0   = &_nc_hicosmo_Omega_mnu0;
+  klass->Press_mnu0   = &_nc_hicosmo_Press_mnu0;
+  klass->Omega_mnu0_n = &_nc_hicosmo_Omega_mnu0_n;
+  klass->Press_mnu0_n = &_nc_hicosmo_Press_mnu0_n;
+  klass->Omega_r0     = &_nc_hicosmo_Omega_r0;
+  klass->Omega_c0     = &_nc_hicosmo_Omega_c0;
+  klass->Omega_t0     = &_nc_hicosmo_Omega_t0;
+  klass->T_gamma0     = &_nc_hicosmo_T_gamma0;
+  klass->Yp_4He       = &_nc_hicosmo_Yp_4He;
+  klass->z_lss        = &_nc_hicosmo_z_lss;
+  klass->as_drag      = &_nc_hicosmo_as_drag;
+  klass->xb           = &_nc_hicosmo_xb;
+
+  klass->E2Omega_mnu   = &_nc_hicosmo_E2Omega_mnu;
+  klass->E2Press_mnu   = &_nc_hicosmo_E2Press_mnu;
+  klass->E2Omega_mnu_n = &_nc_hicosmo_E2Omega_mnu_n;
+  klass->E2Press_mnu_n = &_nc_hicosmo_E2Press_mnu_n;
+
+  klass->E2           = &_nc_hicosmo_E2;
+  klass->dE2_dz       = &_nc_hicosmo_dE2_dz;
+  klass->d2E2_dz2     = &_nc_hicosmo_d2E2_dz2;
+  klass->bgp_cs2      = &_nc_hicosmo_bgp_cs2;
+  klass->Dc           = &_nc_hicosmo_Dc;
+  klass->NMassNu      = &_nc_hicosmo_NMassNu;
+  klass->MassNuInfo   = &_nc_hicosmo_MassNuInfo;
+
+  nc_hicosmo_set_Omega_m0_impl (klass, &_nc_hicosmo_Omega_m0);
+  nc_hicosmo_set_Omega_r0_impl (klass, &_nc_hicosmo_Omega_r0);
+
+  nc_hicosmo_set_E2Omega_b_impl   (klass, &_nc_hicosmo_E2Omega_b);
+  nc_hicosmo_set_E2Omega_c_impl   (klass, &_nc_hicosmo_E2Omega_c);
+  nc_hicosmo_set_E2Omega_g_impl   (klass, &_nc_hicosmo_E2Omega_g);
+  nc_hicosmo_set_E2Omega_nu_impl  (klass, &_nc_hicosmo_E2Omega_nu);
+  nc_hicosmo_set_E2Omega_m_impl   (klass, &_nc_hicosmo_E2Omega_m);
+  nc_hicosmo_set_E2Omega_r_impl   (klass, &_nc_hicosmo_E2Omega_r);
+  nc_hicosmo_set_E2Omega_t_impl   (klass, &_nc_hicosmo_E2Omega_t);  
 }
 
 static gdouble _nc_hicosmo_H0 (NcHICosmo *cosmo)         { g_error ("nc_hicosmo_H0: model `%s' does not implement this function.", G_OBJECT_TYPE_NAME (cosmo)); return 0.0; }
 static gdouble _nc_hicosmo_Omega_b0 (NcHICosmo *cosmo)   { g_error ("nc_hicosmo_Omega_b0: model `%s' does not implement this function.", G_OBJECT_TYPE_NAME (cosmo)); return 0.0;  }
+static gdouble _nc_hicosmo_Omega_c0 (NcHICosmo *cosmo)   { g_error ("nc_hicosmo_Omega_c0: model `%s' does not implement this function.", G_OBJECT_TYPE_NAME (cosmo)); return 0.0;  }
 static gdouble _nc_hicosmo_Omega_g0 (NcHICosmo *cosmo)   { g_error ("nc_hicosmo_Omega_g0: model `%s' does not implement this function.", G_OBJECT_TYPE_NAME (cosmo)); return 0.0;  }
 static gdouble _nc_hicosmo_Omega_nu0 (NcHICosmo *cosmo)  { g_error ("nc_hicosmo_Omega_nu0: model `%s' does not implement this function.", G_OBJECT_TYPE_NAME (cosmo)); return 0.0;  }
-static gdouble _nc_hicosmo_Omega_mnu0 (NcHICosmo *cosmo, const guint nu_i, const gdouble z) { g_error ("nc_hicosmo_Omega_mnu0: model `%s' does not implement this function.", G_OBJECT_TYPE_NAME (cosmo)); return 0.0; }
-static gdouble _nc_hicosmo_Omega_r0 (NcHICosmo *cosmo)   { g_error ("nc_hicosmo_Omega_r0: model `%s' does not implement this function.", G_OBJECT_TYPE_NAME (cosmo)); return 0.0;  }
-static gdouble _nc_hicosmo_Omega_c0 (NcHICosmo *cosmo)   { g_error ("nc_hicosmo_Omega_c0: model `%s' does not implement this function.", G_OBJECT_TYPE_NAME (cosmo)); return 0.0;  }
+static gdouble _nc_hicosmo_Omega_mnu0 (NcHICosmo *cosmo) { g_error ("nc_hicosmo_Omega_mnu0: model `%s' does not implement this function.", G_OBJECT_TYPE_NAME (cosmo)); return 0.0; }
+static gdouble _nc_hicosmo_Press_mnu0 (NcHICosmo *cosmo) { g_error ("nc_hicosmo_Press_mnu0: model `%s' does not implement this function.", G_OBJECT_TYPE_NAME (cosmo)); return 0.0; }
 static gdouble _nc_hicosmo_Omega_t0 (NcHICosmo *cosmo)   { g_error ("nc_hicosmo_Omega_t0: model `%s' does not implement this function.", G_OBJECT_TYPE_NAME (cosmo)); return 0.0;  }
 static gdouble _nc_hicosmo_T_gamma0 (NcHICosmo *cosmo)   { g_error ("nc_hicosmo_T_gamma0: model `%s' does not implement this function.", G_OBJECT_TYPE_NAME (cosmo)); return 0.0;  }
 static gdouble _nc_hicosmo_Yp_4He (NcHICosmo *cosmo)     { g_error ("nc_hicosmo_Yp_4He: model `%s' does not implement this function.", G_OBJECT_TYPE_NAME (cosmo)); return 0.0;  }
@@ -167,14 +211,97 @@ static gdouble _nc_hicosmo_z_lss (NcHICosmo *cosmo)      { g_error ("nc_hicosmo_
 static gdouble _nc_hicosmo_as_drag (NcHICosmo *cosmo)    { g_error ("nc_hicosmo_as_drag: model `%s' does not implement this function.", G_OBJECT_TYPE_NAME (cosmo)); return 0.0;  }
 static gdouble _nc_hicosmo_xb (NcHICosmo *cosmo)         { g_error ("nc_hicosmo_xb: model `%s' does not implement this function.", G_OBJECT_TYPE_NAME (cosmo)); return 0.0;  }
 
-static gdouble _nc_hicosmo_E2 (NcHICosmo *cosmo, gdouble z)       { g_error ("nc_hicosmo_E2: model `%s' does not implement this function.", G_OBJECT_TYPE_NAME (cosmo)); return 0.0;  }
-static gdouble _nc_hicosmo_dE2_dz (NcHICosmo *cosmo, gdouble z)   { g_error ("nc_hicosmo_dE2_dz: model `%s' does not implement this function.", G_OBJECT_TYPE_NAME (cosmo)); return 0.0;  }
-static gdouble _nc_hicosmo_d2E2_dz2 (NcHICosmo *cosmo, gdouble z) { g_error ("nc_hicosmo_d2E2_dz2: model `%s' does not implement this function.", G_OBJECT_TYPE_NAME (cosmo)); return 0.0;  }
-static gdouble _nc_hicosmo_bgp_cs2 (NcHICosmo *cosmo, gdouble z)  { g_error ("nc_hicosmo_bgp_cs2: model `%s' does not implement this function.", G_OBJECT_TYPE_NAME (cosmo)); return 0.0;  }
-static gdouble _nc_hicosmo_Dc (NcHICosmo *cosmo, gdouble z)       { g_error ("nc_hicosmo_Dc: model `%s' does not implement this function.", G_OBJECT_TYPE_NAME (cosmo)); return 0.0;  }
+static gdouble _nc_hicosmo_Omega_mnu0_n (NcHICosmo *cosmo, const guint n) { g_error ("nc_hicosmo_Omega_mnu0_n: model `%s' does not implement this function.", G_OBJECT_TYPE_NAME (cosmo)); return 0.0; }
+static gdouble _nc_hicosmo_Press_mnu0_n (NcHICosmo *cosmo, const guint n) { g_error ("nc_hicosmo_Press_mnu0_n: model `%s' does not implement this function.", G_OBJECT_TYPE_NAME (cosmo)); return 0.0; }
+
+static gdouble _nc_hicosmo_E2Omega_mnu (NcHICosmo *cosmo, const gdouble z) { g_error ("nc_hicosmo_E2Omega_mnu: model `%s' does not implement this function.", G_OBJECT_TYPE_NAME (cosmo)); return 0.0;  }
+static gdouble _nc_hicosmo_E2Press_mnu (NcHICosmo *cosmo, const gdouble z) { g_error ("nc_hicosmo_E2Press_mnu: model `%s' does not implement this function.", G_OBJECT_TYPE_NAME (cosmo)); return 0.0;  }
+static gdouble _nc_hicosmo_E2 (NcHICosmo *cosmo, const gdouble z)          { g_error ("nc_hicosmo_E2: model `%s' does not implement this function.", G_OBJECT_TYPE_NAME (cosmo)); return 0.0;  }
+static gdouble _nc_hicosmo_dE2_dz (NcHICosmo *cosmo, const gdouble z)      { g_error ("nc_hicosmo_dE2_dz: model `%s' does not implement this function.", G_OBJECT_TYPE_NAME (cosmo)); return 0.0;  }
+static gdouble _nc_hicosmo_d2E2_dz2 (NcHICosmo *cosmo, const gdouble z)    { g_error ("nc_hicosmo_d2E2_dz2: model `%s' does not implement this function.", G_OBJECT_TYPE_NAME (cosmo)); return 0.0;  }
+static gdouble _nc_hicosmo_bgp_cs2 (NcHICosmo *cosmo, const gdouble z)     { g_error ("nc_hicosmo_bgp_cs2: model `%s' does not implement this function.", G_OBJECT_TYPE_NAME (cosmo)); return 0.0;  }
+static gdouble _nc_hicosmo_Dc (NcHICosmo *cosmo, const gdouble z)          { g_error ("nc_hicosmo_Dc: model `%s' does not implement this function.", G_OBJECT_TYPE_NAME (cosmo)); return 0.0;  }
+
+static gdouble _nc_hicosmo_E2Omega_mnu_n (NcHICosmo *cosmo, const guint n, const gdouble z) { g_error ("nc_hicosmo_E2Omega_mnu_n: model `%s' does not implement this function.", G_OBJECT_TYPE_NAME (cosmo)); return 0.0;  }
+static gdouble _nc_hicosmo_E2Press_mnu_n (NcHICosmo *cosmo, const guint n, const gdouble z) { g_error ("nc_hicosmo_E2Press_mnu_n: model `%s' does not implement this function.", G_OBJECT_TYPE_NAME (cosmo)); return 0.0;  }
 
 static guint _nc_hicosmo_NMassNu (NcHICosmo *cosmo) { return 0; }
 static void _nc_hicosmo_MassNuInfo (NcHICosmo *cosmo, const guint nu_i, gdouble *mass_eV, gdouble *T_0, gdouble *xi, gdouble *g) { g_error ("nc_hicosmo_NuMass: model `%s' does not implement massive neutrinos.", G_OBJECT_TYPE_NAME (cosmo)); }
+
+static gdouble
+_nc_hicosmo_Omega_m0 (NcHICosmo *cosmo)
+{
+  return (nc_hicosmo_Omega_b0 (cosmo) + nc_hicosmo_Omega_c0 (cosmo));
+}
+
+static gdouble
+_nc_hicosmo_Omega_r0 (NcHICosmo *cosmo)
+{
+  return (nc_hicosmo_Omega_g0 (cosmo) + nc_hicosmo_Omega_nu0 (cosmo));
+}
+
+static gdouble
+_nc_hicosmo_E2Omega_b (NcHICosmo *cosmo, const gdouble z)
+{
+  const gdouble Omega_b0 = nc_hicosmo_Omega_b0 (cosmo);
+  const gdouble x3       = gsl_pow_3 (1.0 + z);
+  
+  return Omega_b0 * x3;
+}
+
+static gdouble
+_nc_hicosmo_E2Omega_c (NcHICosmo *cosmo, const gdouble z)
+{
+  const gdouble Omega_c0 = nc_hicosmo_Omega_c0 (cosmo);
+  const gdouble x3       = gsl_pow_3 (1.0 + z);
+  
+  return Omega_c0 * x3;
+}
+
+static gdouble
+_nc_hicosmo_E2Omega_g (NcHICosmo *cosmo, const gdouble z)
+{
+  const gdouble Omega_g0 = nc_hicosmo_Omega_g0 (cosmo);
+  const gdouble x4       = gsl_pow_4 (1.0 + z);
+
+  return Omega_g0 * x4;
+}
+
+static gdouble
+_nc_hicosmo_E2Omega_nu (NcHICosmo *cosmo, const gdouble z)
+{
+  const gdouble Omega_nu0 = nc_hicosmo_Omega_nu0 (cosmo);
+  const gdouble x4        = gsl_pow_4 (1.0 + z);
+  
+  return Omega_nu0 * x4;
+}
+
+static gdouble
+_nc_hicosmo_E2Omega_m (NcHICosmo *cosmo, const gdouble z)
+{
+  const gdouble Omega_m0 = nc_hicosmo_Omega_m0 (cosmo);
+  const gdouble x3       = gsl_pow_3 (1.0 + z);
+
+  return Omega_m0 * x3;
+}
+
+static gdouble
+_nc_hicosmo_E2Omega_r (NcHICosmo *cosmo, const gdouble z)
+{
+  const gdouble Omega_r0 = nc_hicosmo_Omega_r0 (cosmo);
+  const gdouble x4       = gsl_pow_4 (1.0 + z);
+  
+  return Omega_r0 * x4;
+}
+
+static gdouble
+_nc_hicosmo_E2Omega_t (NcHICosmo *cosmo, const gdouble z)
+{
+  const gdouble Omega_k0 = nc_hicosmo_Omega_k0 (cosmo);
+  const gdouble x2       = gsl_pow_2 (1.0 + z);
+  
+  return nc_hicosmo_E2 (cosmo, z) - Omega_k0 * x2;
+}
 
 static gboolean
 _nc_hicosmo_valid (NcmModel *model)
@@ -216,6 +343,7 @@ _nc_hicosmo_add_submodel (NcmModel *model, NcmModel *submodel)
  *
  */
 NCM_MODEL_SET_IMPL_FUNC(NC_HICOSMO,NcHICosmo,nc_hicosmo,NcHICosmoFunc0,H0)
+
 /**
  * nc_hicosmo_set_Omega_b0_impl: (skip)
  * @model_class: a #NcmModelClass
@@ -225,6 +353,17 @@ NCM_MODEL_SET_IMPL_FUNC(NC_HICOSMO,NcHICosmo,nc_hicosmo,NcHICosmoFunc0,H0)
  *
  */
 NCM_MODEL_SET_IMPL_FUNC(NC_HICOSMO,NcHICosmo,nc_hicosmo,NcHICosmoFunc0,Omega_b0)
+
+/**
+ * nc_hicosmo_set_Omega_c0_impl: (skip)
+ * @model_class: a #NcmModelClass
+ * @f: FIXME
+ *
+ * FIXME
+ *
+ */
+NCM_MODEL_SET_IMPL_FUNC(NC_HICOSMO,NcHICosmo,nc_hicosmo,NcHICosmoFunc0,Omega_c0)
+
 /**
  * nc_hicosmo_set_Omega_g0_impl: (skip)
  * @model_class: a #NcmModelClass
@@ -234,6 +373,7 @@ NCM_MODEL_SET_IMPL_FUNC(NC_HICOSMO,NcHICosmo,nc_hicosmo,NcHICosmoFunc0,Omega_b0)
  *
  */
 NCM_MODEL_SET_IMPL_FUNC(NC_HICOSMO,NcHICosmo,nc_hicosmo,NcHICosmoFunc0,Omega_g0)
+
 /**
  * nc_hicosmo_set_Omega_nu0_impl: (skip)
  * @model_class: a #NcmModelClass
@@ -243,6 +383,7 @@ NCM_MODEL_SET_IMPL_FUNC(NC_HICOSMO,NcHICosmo,nc_hicosmo,NcHICosmoFunc0,Omega_g0)
  *
  */
 NCM_MODEL_SET_IMPL_FUNC(NC_HICOSMO,NcHICosmo,nc_hicosmo,NcHICosmoFunc0,Omega_nu0)
+
 /**
  * nc_hicosmo_set_Omega_mnu0_impl: (skip)
  * @model_class: a #NcmModelClass
@@ -251,12 +392,47 @@ NCM_MODEL_SET_IMPL_FUNC(NC_HICOSMO,NcHICosmo,nc_hicosmo,NcHICosmoFunc0,Omega_nu0
  * FIXME
  *
  */
-void
-nc_hicosmo_set_Omega_mnu0_impl (NcHICosmoClass *model_class, NcHICosmoFuncOmegaMassNu f)
-{
-  NCM_MODEL_CLASS (model_class)->impl |= NC_HICOSMO_IMPL_Omega_mnu0;
-  model_class->Omega_mnu0 = f;
-}
+NCM_MODEL_SET_IMPL_FUNC(NC_HICOSMO,NcHICosmo,nc_hicosmo,NcHICosmoFunc0,Omega_mnu0)
+
+/**
+ * nc_hicosmo_set_Press_mnu0_impl: (skip)
+ * @model_class: a #NcmModelClass
+ * @f: FIXME
+ *
+ * FIXME
+ *
+ */
+NCM_MODEL_SET_IMPL_FUNC(NC_HICOSMO,NcHICosmo,nc_hicosmo,NcHICosmoFunc0,Press_mnu0)
+
+/**
+ * nc_hicosmo_set_Omega_mnu0_n_impl: (skip)
+ * @model_class: a #NcmModelClass
+ * @f: FIXME
+ *
+ * FIXME
+ *
+ */
+NCM_MODEL_SET_IMPL_FUNC(NC_HICOSMO,NcHICosmo,nc_hicosmo,NcHICosmoVFunc0,Omega_mnu0_n)
+
+/**
+ * nc_hicosmo_set_Press_mnu0_n_impl: (skip)
+ * @model_class: a #NcmModelClass
+ * @f: FIXME
+ *
+ * FIXME
+ *
+ */
+NCM_MODEL_SET_IMPL_FUNC(NC_HICOSMO,NcHICosmo,nc_hicosmo,NcHICosmoVFunc0,Press_mnu0_n)
+
+/**
+ * nc_hicosmo_set_Omega_m0_impl: (skip)
+ * @model_class: a #NcmModelClass
+ * @f: FIXME
+ *
+ * FIXME
+ *
+ */
+NCM_MODEL_SET_IMPL_FUNC(NC_HICOSMO,NcHICosmo,nc_hicosmo,NcHICosmoFunc0,Omega_m0)
 
 /**
  * nc_hicosmo_set_Omega_r0_impl: (skip)
@@ -267,15 +443,7 @@ nc_hicosmo_set_Omega_mnu0_impl (NcHICosmoClass *model_class, NcHICosmoFuncOmegaM
  *
  */
 NCM_MODEL_SET_IMPL_FUNC(NC_HICOSMO,NcHICosmo,nc_hicosmo,NcHICosmoFunc0,Omega_r0)
-/**
- * nc_hicosmo_set_Omega_c0_impl: (skip)
- * @model_class: a #NcmModelClass
- * @f: FIXME
- *
- * FIXME
- *
- */
-NCM_MODEL_SET_IMPL_FUNC(NC_HICOSMO,NcHICosmo,nc_hicosmo,NcHICosmoFunc0,Omega_c0)
+
 /**
  * nc_hicosmo_set_Omega_t0_impl: (skip)
  * @model_class: a #NcmModelClass
@@ -285,6 +453,7 @@ NCM_MODEL_SET_IMPL_FUNC(NC_HICOSMO,NcHICosmo,nc_hicosmo,NcHICosmoFunc0,Omega_c0)
  *
  */
 NCM_MODEL_SET_IMPL_FUNC(NC_HICOSMO,NcHICosmo,nc_hicosmo,NcHICosmoFunc0,Omega_t0)
+
 /**
  * nc_hicosmo_set_T_gamma0_impl: (skip)
  * @model_class: a #NcmModelClass
@@ -294,6 +463,7 @@ NCM_MODEL_SET_IMPL_FUNC(NC_HICOSMO,NcHICosmo,nc_hicosmo,NcHICosmoFunc0,Omega_t0)
  *
  */
 NCM_MODEL_SET_IMPL_FUNC(NC_HICOSMO,NcHICosmo,nc_hicosmo,NcHICosmoFunc0,T_gamma0)
+
 /**
  * nc_hicosmo_set_Yp_4He_impl: (skip)
  * @model_class: a #NcmModelClass
@@ -303,6 +473,7 @@ NCM_MODEL_SET_IMPL_FUNC(NC_HICOSMO,NcHICosmo,nc_hicosmo,NcHICosmoFunc0,T_gamma0)
  *
  */
 NCM_MODEL_SET_IMPL_FUNC(NC_HICOSMO,NcHICosmo,nc_hicosmo,NcHICosmoFunc0,Yp_4He)
+
 /**
  * nc_hicosmo_set_z_lss_impl: (skip)
  * @model_class: a #NcmModelClass
@@ -332,6 +503,116 @@ NCM_MODEL_SET_IMPL_FUNC(NC_HICOSMO,NcHICosmo,nc_hicosmo,NcHICosmoFunc0,as_drag)
  *
  */
 NCM_MODEL_SET_IMPL_FUNC(NC_HICOSMO,NcHICosmo,nc_hicosmo,NcHICosmoFunc0,xb)
+
+/**
+ * nc_hicosmo_set_E2Omega_b_impl: (skip)
+ * @model_class: a #NcmModelClass
+ * @f: FIXME
+ *
+ * Baryonic density $E^2\Omega_{b} = \rho_b(z) / \rho_{\mathrm{crit}0}$.
+ *
+ */
+NCM_MODEL_SET_IMPL_FUNC(NC_HICOSMO,NcHICosmo,nc_hicosmo,NcHICosmoFunc1Z,E2Omega_b)
+
+/**
+ * nc_hicosmo_set_E2Omega_c_impl: (skip)
+ * @model_class: a #NcmModelClass
+ * @f: FIXME
+ *
+ * Cold dark matter density $E^2\Omega_{c} = \rho_c(z) / \rho_{\mathrm{crit}0}$.
+ *
+ */
+NCM_MODEL_SET_IMPL_FUNC(NC_HICOSMO,NcHICosmo,nc_hicosmo,NcHICosmoFunc1Z,E2Omega_c)
+
+/**
+ * nc_hicosmo_set_E2Omega_g_impl: (skip)
+ * @model_class: a #NcmModelClass
+ * @f: FIXME
+ *
+ * Photons density $E^2\Omega_{\gamma} = \rho_\gamma(z) / \rho_{\mathrm{crit}0}$.
+ *
+ */
+NCM_MODEL_SET_IMPL_FUNC(NC_HICOSMO,NcHICosmo,nc_hicosmo,NcHICosmoFunc1Z,E2Omega_g)
+
+/**
+ * nc_hicosmo_set_E2Omega_nu_impl: (skip)
+ * @model_class: a #NcmModelClass
+ * @f: FIXME
+ *
+ * Ultra-relativistic neutrinos density $E^2\Omega_{\nu} = \rho_\nu(z) / \rho_{\mathrm{crit}0}$.
+ *
+ */
+NCM_MODEL_SET_IMPL_FUNC(NC_HICOSMO,NcHICosmo,nc_hicosmo,NcHICosmoFunc1Z,E2Omega_nu)
+
+/**
+ * nc_hicosmo_set_E2Omega_mnu_impl: (skip)
+ * @model_class: a #NcmModelClass
+ * @f: FIXME
+ *
+ * Massive neutrinos density $E^2\Omega_{m\nu} = \rho_{m\nu}(z) / \rho_{\mathrm{crit}0}$.
+ *
+ */
+NCM_MODEL_SET_IMPL_FUNC(NC_HICOSMO,NcHICosmo,nc_hicosmo,NcHICosmoFunc1Z,E2Omega_mnu)
+
+/**
+ * nc_hicosmo_set_E2Press_mnu_impl: (skip)
+ * @model_class: a #NcmModelClass
+ * @f: FIXME
+ *
+ * Massive neutrinos density $E^2P_{m\nu} = p_{m\nu}(z) / \rho_{\mathrm{crit}0}$.
+ *
+ */
+NCM_MODEL_SET_IMPL_FUNC(NC_HICOSMO,NcHICosmo,nc_hicosmo,NcHICosmoFunc1Z,E2Press_mnu)
+
+/**
+ * nc_hicosmo_set_E2Omega_mnu_n_impl: (skip)
+ * @model_class: a #NcmModelClass
+ * @f: FIXME
+ *
+ * Massive neutrinos density $E^2\Omega_{m\nu,n} = \rho_{m\nu,n}(z) / \rho_{\mathrm{crit}0}$.
+ *
+ */
+NCM_MODEL_SET_IMPL_FUNC(NC_HICOSMO,NcHICosmo,nc_hicosmo,NcHICosmoVFunc1Z,E2Omega_mnu_n)
+
+/**
+ * nc_hicosmo_set_E2Press_mnu_n_impl: (skip)
+ * @model_class: a #NcmModelClass
+ * @f: FIXME
+ *
+ * Massive neutrinos density $E^2P_{m\nu,n} = p_{m\nu,n}(z) / \rho_{\mathrm{crit}0}$.
+ *
+ */
+NCM_MODEL_SET_IMPL_FUNC(NC_HICOSMO,NcHICosmo,nc_hicosmo,NcHICosmoVFunc1Z,E2Press_mnu_n)
+
+/**
+ * nc_hicosmo_set_E2Omega_m_impl: (skip)
+ * @model_class: a #NcmModelClass
+ * @f: FIXME
+ *
+ * Total matter density $E^2\Omega_{m} = \rho_m(z) / \rho_{\mathrm{crit}0}$.
+ *
+ */
+NCM_MODEL_SET_IMPL_FUNC(NC_HICOSMO,NcHICosmo,nc_hicosmo,NcHICosmoFunc1Z,E2Omega_m)
+
+/**
+ * nc_hicosmo_set_E2Omega_r_impl: (skip)
+ * @model_class: a #NcmModelClass
+ * @f: FIXME
+ *
+ * Total radiation density $\Omega_{r} = \rho_r(z) / \rho_{\mathrm{crit}0}$.
+ *
+ */
+NCM_MODEL_SET_IMPL_FUNC(NC_HICOSMO,NcHICosmo,nc_hicosmo,NcHICosmoFunc1Z,E2Omega_r)
+
+/**
+ * nc_hicosmo_set_E2Omega_t_impl: (skip)
+ * @model_class: a #NcmModelClass
+ * @f: FIXME
+ *
+ * Total density $E2\Omega_{t0} = \rho_t(z) / \rho_{\mathrm{crit}0}$.
+ *
+ */
+NCM_MODEL_SET_IMPL_FUNC(NC_HICOSMO,NcHICosmo,nc_hicosmo,NcHICosmoFunc1Z,E2Omega_t)
 
 /**
  * nc_hicosmo_set_E2_impl: (skip)
@@ -391,12 +672,7 @@ NCM_MODEL_SET_IMPL_FUNC(NC_HICOSMO,NcHICosmo,nc_hicosmo,NcHICosmoFunc1Z,Dc)
  * FIXME
  *
  */
-void
-nc_hicosmo_set_NMassNu_impl (NcHICosmoClass *model_class, NcHICosmoFuncNMassNu f)
-{
-  NCM_MODEL_CLASS (model_class)->impl |= NC_HICOSMO_IMPL_NMassNu;
-  model_class->NMassNu = f;
-}
+NCM_MODEL_SET_IMPL_FUNC(NC_HICOSMO,NcHICosmo,nc_hicosmo,NcHICosmoFuncNMassNu,NMassNu)
 
 /**
  * nc_hicosmo_set_MassNuInfo_impl: (skip)
@@ -406,12 +682,7 @@ nc_hicosmo_set_NMassNu_impl (NcHICosmoClass *model_class, NcHICosmoFuncNMassNu f
  * FIXME
  *
  */
-void
-nc_hicosmo_set_MassNuInfo_impl (NcHICosmoClass *model_class, NcHICosmoFuncMassNuInfo f)
-{
-  NCM_MODEL_CLASS (model_class)->impl |= NC_HICOSMO_IMPL_MassNuInfo;
-  model_class->MassNuInfo = f;
-}
+NCM_MODEL_SET_IMPL_FUNC(NC_HICOSMO,NcHICosmo,nc_hicosmo,NcHICosmoFuncMassNuInfo,MassNuInfo)
 
 /**
  * nc_hicosmo_new_from_name:
@@ -536,7 +807,7 @@ _nc_hicosmo_zt_func (gdouble z, void *params)
  * Returns: the transition redshift $z_t$ or NAN if not found.
  */
 gdouble
-nc_hicosmo_zt (NcHICosmo *cosmo, gdouble z_max)
+nc_hicosmo_zt (NcHICosmo *cosmo, const gdouble z_max)
 {
   gint status;
   gint iter = 0, max_iter = 10000;
@@ -688,12 +959,40 @@ nc_hicosmo_zt (NcHICosmo *cosmo, gdouble z_max)
 /**
  * nc_hicosmo_Omega_mnu0: (virtual Omega_mnu0)
  * @cosmo: a #NcHICosmo
- * @nu_i: massive neutrino index
  *
  * Dimensionless massive neutrinos density today $\Omega_{m\nu0} = \rho_{m\nu0} / \rho_{\mathrm{crit}0}$,
  * see nc_hicosmo_crit_density().
  *
  * Returns: $\Omega_{m\nu0}$
+ */
+/**
+ * nc_hicosmo_Press_mnu0: (virtual Press_mnu0)
+ * @cosmo: a #NcHICosmo
+ *
+ * Dimensionless massive neutrinos pressure today $P_{m\nu0} = p_{m\nu0} / \rho_{\mathrm{crit}0}$,
+ * see nc_hicosmo_crit_density().
+ *
+ * Returns: $P_{m\nu0}$
+ */
+/**
+ * nc_hicosmo_Omega_mnu0_n: (virtual Omega_mnu0_n)
+ * @cosmo: a #NcHICosmo
+ * @n: massive neutrino index
+ *
+ * The n-th dimensionless massive neutrinos density today $\Omega_{m\nu0,n} = \rho_{m\nu0,n} / \rho_{\mathrm{crit}0}$,
+ * see nc_hicosmo_crit_density().
+ *
+ * Returns: $\Omega_{m\nu0,n}$
+ */
+/**
+ * nc_hicosmo_Press_mnu0_n: (virtual Press_mnu0_n)
+ * @cosmo: a #NcHICosmo
+ * @n: massive neutrino index
+ *
+ * The n-th dimensionless massive neutrinos pressure today $P_{m\nu0,n} = p_{m\nu0,n} / \rho_{\mathrm{crit}0}$,
+ * see nc_hicosmo_crit_density().
+ *
+ * Returns: $P_{m\nu0,n}$
  */
 /**
  * nc_hicosmo_Omega_m0:
@@ -748,7 +1047,6 @@ nc_hicosmo_zt (NcHICosmo *cosmo, gdouble z_max)
 /**
  * nc_hicosmo_Omega_mnu0h2:
  * @cosmo: a #NcHICosmo
- * @nu_i: massive neutrino index
  *
  * Dimensionless massive neutrinos density today [nc_hicosmo_Omega_mnu0()] times $h^2$.
  *
@@ -890,15 +1188,107 @@ nc_hicosmo_zt (NcHICosmo *cosmo, gdouble z_max)
  */
 
 /**
- * nc_hicosmo_E2Omega_t:
+ * nc_hicosmo_E2Omega_b: (virtual E2Omega_b)
  * @cosmo: a #NcHICosmo
  * @z: redshift $z$
  *
- * The value of the normalized Hubble function square times
- * the total dimensionless density $\Omega_t$.
+ * Baryonic density $E^2\Omega_{b} = \rho_b(z) / \rho_{\mathrm{crit}0}$.
  *
- * Returns: $E^2\Omega_t$.
+ * Returns: $E^2\Omega_b$.
  */
+/**
+ * nc_hicosmo_E2Omega_c: (virtual E2Omega_c)
+ * @cosmo: a #NcHICosmo
+ * @z: redshift $z$
+ *
+ * Cold dark matter density $E^2\Omega_{c} = \rho_c(z) / \rho_{\mathrm{crit}0}$.
+ *
+ * Returns: $E^2\Omega_c$.
+ */
+/**
+ * nc_hicosmo_E2Omega_g: (virtual E2Omega_g)
+ * @cosmo: a #NcHICosmo
+ * @z: redshift $z$
+ *
+ * Photons density $E^2\Omega_{\gamma} = \rho_\gamma(z) / \rho_{\mathrm{crit}0}$.
+ *
+ * Returns: $E^2\Omega_\gamma$.
+ */
+/**
+ * nc_hicosmo_E2Omega_nu: (virtual E2Omega_nu)
+ * @cosmo: a #NcHICosmo
+ * @z: redshift $z$
+ *
+ * Ultra-relativistic neutrinos density $E^2\Omega_{\nu} = \rho_\nu(z) / \rho_{\mathrm{crit}0}$.
+ *
+ * Returns: $E^2\Omega_\nu$.
+ */
+/**
+ * nc_hicosmo_E2Omega_mnu: (virtual E2Omega_mnu)
+ * @cosmo: a #NcHICosmo
+ * @z: redshift $z$
+ *
+ * Massive neutrinos density $E^2\Omega_{m\nu} = \rho_{m\nu}(z) / \rho_{\mathrm{crit}0}$.
+ *
+ * Returns: $E^2\Omega_{m\nu}$.
+ */
+/**
+ * nc_hicosmo_E2Press_mnu: (virtual E2Press_mnu)
+ * @cosmo: a #NcHICosmo
+ * @z: redshift $z$
+ *
+ * Massive neutrinos density $E^2P_{m\nu} = p_{m\nu}(z) / \rho_{\mathrm{crit}0}$.
+ *
+ * Returns: $E^2\Omega_{m\nu}$.
+ */
+/**
+ * nc_hicosmo_E2Omega_mnu_n: (virtual E2Omega_mnu_n)
+ * @cosmo: a #NcHICosmo
+ * @n: massive neutrino index
+ * @z: redshift $z$
+ *
+ * The n-th massive neutrinos density $E^2\Omega_{m\nu,n} = \rho_{m\nu,n}(z) / \rho_{\mathrm{crit}0}$.
+ *
+ * Returns: $E^2\Omega_{m\nu,n}$.
+ */
+/**
+ * nc_hicosmo_E2Press_mnu_n: (virtual E2Press_mnu_n)
+ * @cosmo: a #NcHICosmo
+ * @n: massive neutrino index
+ * @z: redshift $z$
+ *
+ * The n-th massive neutrinos pressure $E^2P_{m\nu,n} = p_{m\nu,n}(z) / \rho_{\mathrm{crit}0}$.
+ *
+ * Returns: $E^2\Omega_{m\nu,n}$.
+ */
+/**
+ * nc_hicosmo_E2Omega_m: (virtual E2Omega_m)
+ * @cosmo: a #NcHICosmo
+ * @z: redshift $z$
+ *
+ * Total matter density $E^2\Omega_{m} = \rho_m(z) / \rho_{\mathrm{crit}0}$.
+ *
+ * Returns: $E^2\Omega_{m}$.
+ */
+/**
+ * nc_hicosmo_E2Omega_r: (virtual E2Omega_r)
+ * @cosmo: a #NcHICosmo
+ * @z: redshift $z$
+ *
+ * Total radiation density $\Omega_{r} = \rho_r(z) / \rho_{\mathrm{crit}0}$.
+ *
+ * Returns: $E^2\Omega_{r}$.
+ */
+/**
+ * nc_hicosmo_E2Omega_t: (virtual E2Omega_t)
+ * @cosmo: a #NcHICosmo
+ * @z: redshift $z$
+ *
+ * Total density $E2\Omega_{t0} = \rho_t(z) / \rho_{\mathrm{crit}0}$.
+ *
+ * Returns: $E^2\Omega_{t}$.
+ */
+
 /**
  * nc_hicosmo_H:
  * @cosmo: a #NcHICosmo
@@ -993,6 +1383,23 @@ nc_hicosmo_zt (NcHICosmo *cosmo, gdouble z_max)
  * Returns: FIXME
  */
 
+/**
+ * nc_hicosmo_Neff:
+ * @cosmo: a #NcHICosmo
+ *
+ * FIXME
+ *
+ * Returns: FIXME
+ */
+/**
+ * nc_hicosmo_E2Omega_k:
+ * @cosmo: a #NcHICosmo
+ * @z: redshift $z$
+ *
+ * FIXME
+ *
+ * Returns: FIXME
+ */
 /**
  * nc_hicosmo_q:
  * @cosmo: a #NcHICosmo
@@ -1128,6 +1535,8 @@ _NC_HICOSMO_FUNC0_TO_FLIST (Omega_b0)
 _NC_HICOSMO_FUNC0_TO_FLIST (Omega_c0)
 _NC_HICOSMO_FUNC0_TO_FLIST (Omega_g0)
 _NC_HICOSMO_FUNC0_TO_FLIST (Omega_nu0)
+_NC_HICOSMO_FUNC0_TO_FLIST (Omega_mnu0)
+_NC_HICOSMO_FUNC0_TO_FLIST (Press_mnu0)
 _NC_HICOSMO_FUNC0_TO_FLIST (Omega_m0)
 _NC_HICOSMO_FUNC0_TO_FLIST (Omega_r0)
 _NC_HICOSMO_FUNC0_TO_FLIST (Omega_t0)
@@ -1136,6 +1545,7 @@ _NC_HICOSMO_FUNC0_TO_FLIST (Omega_b0h2)
 _NC_HICOSMO_FUNC0_TO_FLIST (Omega_c0h2)
 _NC_HICOSMO_FUNC0_TO_FLIST (Omega_g0h2)
 _NC_HICOSMO_FUNC0_TO_FLIST (Omega_nu0h2)
+_NC_HICOSMO_FUNC0_TO_FLIST (Omega_mnu0h2)
 _NC_HICOSMO_FUNC0_TO_FLIST (Omega_m0h2)
 _NC_HICOSMO_FUNC0_TO_FLIST (Omega_r0h2)
 _NC_HICOSMO_FUNC0_TO_FLIST (T_gamma0)
@@ -1163,6 +1573,16 @@ static void _nc_hicosmo_flist_##fname (NcmMSetFuncList *flist, NcmMSet *mset, co
  res[0] = nc_hicosmo_##fname (cosmo, x[0]); \
 }
 
+_NC_HICOSMO_FUNC1_TO_FLIST (E2Omega_b)
+_NC_HICOSMO_FUNC1_TO_FLIST (E2Omega_c)
+_NC_HICOSMO_FUNC1_TO_FLIST (E2Omega_g)
+_NC_HICOSMO_FUNC1_TO_FLIST (E2Omega_nu)
+_NC_HICOSMO_FUNC1_TO_FLIST (E2Omega_mnu)
+_NC_HICOSMO_FUNC1_TO_FLIST (E2Press_mnu)
+_NC_HICOSMO_FUNC1_TO_FLIST (E2Omega_m)
+_NC_HICOSMO_FUNC1_TO_FLIST (E2Omega_r)
+_NC_HICOSMO_FUNC1_TO_FLIST (E2Omega_t)
+
 _NC_HICOSMO_FUNC1_TO_FLIST (H)
 _NC_HICOSMO_FUNC1_TO_FLIST (dH_dz)
 _NC_HICOSMO_FUNC1_TO_FLIST (E)
@@ -1170,6 +1590,7 @@ _NC_HICOSMO_FUNC1_TO_FLIST (E2)
 _NC_HICOSMO_FUNC1_TO_FLIST (Em2)
 _NC_HICOSMO_FUNC1_TO_FLIST (dE2_dz)
 _NC_HICOSMO_FUNC1_TO_FLIST (d2E2_dz2)
+_NC_HICOSMO_FUNC1_TO_FLIST (E2Omega_k)
 _NC_HICOSMO_FUNC1_TO_FLIST (q)
 _NC_HICOSMO_FUNC1_TO_FLIST (nec)
 _NC_HICOSMO_FUNC1_TO_FLIST (dec)
@@ -1191,6 +1612,8 @@ _nc_hicosmo_register_functions (void)
   ncm_mset_func_list_register ("Omega_c0",     "\\Omega_{c0}",               "NcHICosmo", "CDM density today",                         G_TYPE_NONE, _nc_hicosmo_flist_Omega_c0,     0, 1);
   ncm_mset_func_list_register ("Omega_g0",     "\\Omega_{\\gamma0}",         "NcHICosmo", "Photons density today",                     G_TYPE_NONE, _nc_hicosmo_flist_Omega_g0,     0, 1);
   ncm_mset_func_list_register ("Omega_nu0",    "\\Omega_{\\nu0}",            "NcHICosmo", "Ultra-relativistic neutrino density today", G_TYPE_NONE, _nc_hicosmo_flist_Omega_nu0,    0, 1);
+  ncm_mset_func_list_register ("Omega_mnu0",   "\\Omega_{m\\nu0}",           "NcHICosmo", "Massive neutrinos density today",           G_TYPE_NONE, _nc_hicosmo_flist_Omega_mnu0,   0, 1);
+  ncm_mset_func_list_register ("Press_mnu0",   "P_{m\\nu0}",                 "NcHICosmo", "Massive neutrinos pressure today",          G_TYPE_NONE, _nc_hicosmo_flist_Press_mnu0,   0, 1);
   ncm_mset_func_list_register ("Omega_m0",     "\\Omega_{m0}",               "NcHICosmo", "Total dust matter density today",           G_TYPE_NONE, _nc_hicosmo_flist_Omega_m0,     0, 1);
   ncm_mset_func_list_register ("Omega_r0",     "\\Omega_{r0}",               "NcHICosmo", "Total radiation density today",             G_TYPE_NONE, _nc_hicosmo_flist_Omega_r0,     0, 1);
   ncm_mset_func_list_register ("Omega_t0",     "\\Omega_{t0}",               "NcHICosmo", "Total energy density today",                G_TYPE_NONE, _nc_hicosmo_flist_Omega_t0,     0, 1);
@@ -1199,6 +1622,7 @@ _nc_hicosmo_register_functions (void)
   ncm_mset_func_list_register ("Omega_c0h2",   "\\Omega_{c0}h^2",            "NcHICosmo", "CDM density today times h^2",               G_TYPE_NONE, _nc_hicosmo_flist_Omega_c0h2,   0, 1);
   ncm_mset_func_list_register ("Omega_g0h2",   "\\Omega_{\\gamma0}h^2",      "NcHICosmo", "Photons density today times h^2",           G_TYPE_NONE, _nc_hicosmo_flist_Omega_g0h2,   0, 1);
   ncm_mset_func_list_register ("Omega_nu0h2",  "\\Omega_{\\mu0}h^2",         "NcHICosmo", "UR neutrinos density today times h^2",      G_TYPE_NONE, _nc_hicosmo_flist_Omega_nu0h2,  0, 1);
+  ncm_mset_func_list_register ("Omega_mnu0h2", "\\Omega_{m\\mu0}h^2",        "NcHICosmo", "Massive neutrinos density today times h^2", G_TYPE_NONE, _nc_hicosmo_flist_Omega_mnu0h2, 0, 1);
   ncm_mset_func_list_register ("Omega_m0h2",   "\\Omega_{m0}h^2",            "NcHICosmo", "Total dust matter density today times h^2", G_TYPE_NONE, _nc_hicosmo_flist_Omega_m0h2,   0, 1);
   ncm_mset_func_list_register ("Omega_r0h2",   "\\Omega_{r0}h^2",            "NcHICosmo", "Total radiation density today times h^2",   G_TYPE_NONE, _nc_hicosmo_flist_Omega_r0h2,   0, 1);
   ncm_mset_func_list_register ("T_gamma0",     "T_{\\gamma0}",               "NcHICosmo", "Photons temperature today",                 G_TYPE_NONE, _nc_hicosmo_flist_T_gamma0,     0, 1);
@@ -1209,8 +1633,19 @@ _nc_hicosmo_register_functions (void)
   ncm_mset_func_list_register ("as_drag",      "r_\\mathrm{adrag}",          "NcHICosmo", "As_drag",                                   G_TYPE_NONE, _nc_hicosmo_flist_as_drag,      0, 1);
   ncm_mset_func_list_register ("xb",           "x_b",                        "NcHICosmo", "Bounce scale",                              G_TYPE_NONE, _nc_hicosmo_flist_xb,           0, 1);
 
-  ncm_mset_func_list_register ("sigma8",      "\\sigma_8",                  "NcHICosmo", "sigma8",                                    NCM_TYPE_POWSPEC_FILTER, _nc_hicosmo_flist_sigma8,  0, 1);
+  ncm_mset_func_list_register ("sigma8",       "\\sigma_8",                  "NcHICosmo", "sigma8",                                    NCM_TYPE_POWSPEC_FILTER, _nc_hicosmo_flist_sigma8,  0, 1);
   
+  ncm_mset_func_list_register ("E2Omega_b",    "E^2\\Omega_b",               "NcHICosmo", "Baryons density",                           G_TYPE_NONE, _nc_hicosmo_flist_E2Omega_b,    1, 1);
+  ncm_mset_func_list_register ("E2Omega_c",    "E^2\\Omega_c",               "NcHICosmo", "CDM density",                               G_TYPE_NONE, _nc_hicosmo_flist_E2Omega_c,    1, 1);
+  ncm_mset_func_list_register ("E2Omega_g",    "E^2\\Omega_\\gamma",         "NcHICosmo", "Photons density",                           G_TYPE_NONE, _nc_hicosmo_flist_E2Omega_g,    1, 1);
+  ncm_mset_func_list_register ("E2Omega_nu",   "E^2\\Omega_\\nu",            "NcHICosmo", "UR neutrinos density",                      G_TYPE_NONE, _nc_hicosmo_flist_E2Omega_nu,   1, 1);
+  ncm_mset_func_list_register ("E2Omega_mnu",  "E^2\\Omega_{m\\nu}",         "NcHICosmo", "Massive neutrinos density",                 G_TYPE_NONE, _nc_hicosmo_flist_E2Omega_mnu,  1, 1);
+  ncm_mset_func_list_register ("E2Press_mnu",  "E^2P_{m\\nu}",               "NcHICosmo", "Massive neutrinos pressure",                G_TYPE_NONE, _nc_hicosmo_flist_E2Press_mnu,  1, 1);
+  ncm_mset_func_list_register ("E2Omega_m",    "E^2\\Omega_m",               "NcHICosmo", "Total dust matter density",                 G_TYPE_NONE, _nc_hicosmo_flist_E2Omega_m,    1, 1);
+  ncm_mset_func_list_register ("E2Omega_r",    "E^2\\Omega_r",               "NcHICosmo", "Total radiation density",                   G_TYPE_NONE, _nc_hicosmo_flist_E2Omega_r,    1, 1);
+  ncm_mset_func_list_register ("E2Omega_k",    "E^2\\Omega_k",               "NcHICosmo", "Spatial curvature",                         G_TYPE_NONE, _nc_hicosmo_flist_E2Omega_k,    1, 1);
+  ncm_mset_func_list_register ("E2Omega_t",    "E^2\\Omega_t",               "NcHICosmo", "Total energy density",                      G_TYPE_NONE, _nc_hicosmo_flist_E2Omega_t,    1, 1);
+
   ncm_mset_func_list_register ("H",           "H",                               "NcHICosmo", "Hubble function",                           G_TYPE_NONE, _nc_hicosmo_flist_H,        1, 1);
   ncm_mset_func_list_register ("dH_dz",       "\\mathrm{d}H/\\mathrm{d}z",       "NcHICosmo", "Derivative of the Hubble function",         G_TYPE_NONE, _nc_hicosmo_flist_dH_dz,    1, 1);
   ncm_mset_func_list_register ("E",           "E",                               "NcHICosmo", "Hubble function over H_0",                  G_TYPE_NONE, _nc_hicosmo_flist_E,        1, 1);

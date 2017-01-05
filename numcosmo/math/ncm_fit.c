@@ -80,8 +80,8 @@ G_DEFINE_BOXED_TYPE (NcmFitConstraint, ncm_fit_constraint, (GBoxedCopyFunc)&ncm_
 
 /**
  * ncm_fit_constraint_new:
- * @fit: FIXME
- * @func: FIXME
+ * @fit: a #NcmFit
+ * @func: a #NcmMSetFunc
  * @tot: FIXME
  *
  * FIXME
@@ -101,7 +101,7 @@ ncm_fit_constraint_new (NcmFit *fit, NcmMSetFunc *func, gdouble tot)
 
 /**
  * ncm_fit_constraint_dup:
- * @fitc: FIXME
+ * @fitc: a #NcmFitConstraint
  *
  * FIXME
  *
@@ -115,7 +115,7 @@ ncm_fit_constraint_dup (NcmFitConstraint *fitc)
 
 /**
  * ncm_fit_constraint_free:
- * @fitc: FIXME
+ * @fitc: a #NcmFitConstraint
  *
  * FIXME
  *
@@ -492,7 +492,7 @@ ncm_fit_new (NcmFitType ftype, gchar *algo_name, NcmLikelihood *lh, NcmMSet *mse
 
 /**
  * ncm_fit_ref:
- * @fit: a #NcmFit.
+ * @fit: a #NcmFit
  *
  * Increases the reference count of @fit.
  *
@@ -538,9 +538,10 @@ ncm_fit_dup (NcmFit *fit, NcmSerialize *ser)
 
 /**
  * ncm_fit_free:
- * @fit: a #NcmFit.
+ * @fit: a #NcmFit
  *
- * FIXME
+ * Atomically decrements the reference count of @fit by one. If the reference count drops to 0,
+ * all memory allocated by @fit is released.
  *
  */
 void
@@ -551,9 +552,9 @@ ncm_fit_free (NcmFit *fit)
 
 /**
  * ncm_fit_clear:
- * @fit: a #NcmFit.
+ * @fit: a #NcmFit
  *
- * FIXME
+ * The reference count of @fit is decreased and the pointer is set to NULL.
  *
  */
 void
@@ -652,8 +653,8 @@ static NcmFitGrad _ncm_fit_grad_numdiff_accurate = {
 
 /**
  * ncm_fit_set_grad_type:
- * @fit: a #NcmLikelihood.
- * @gtype: a #NcmFitGradType.
+ * @fit: a #NcmLikelihood
+ * @gtype: a #NcmFitGradType
  *
  * FIXME
  *
@@ -688,10 +689,11 @@ ncm_fit_set_grad_type (NcmFit *fit, NcmFitGradType gtype)
 
 /**
  * ncm_fit_set_maxiter:
- * @fit: a #NcmFit.
- * @maxiter: FIXME.
+ * @fit: a #NcmFit
+ * @maxiter: maximum number of interations
  *
- * FIXME
+ * Sets the maximum number of iterations.
+ * 
  */
 void
 ncm_fit_set_maxiter (NcmFit *fit, guint maxiter)
@@ -703,9 +705,9 @@ ncm_fit_set_maxiter (NcmFit *fit, guint maxiter)
  * ncm_fit_get_maxiter:
  * @fit: a #NcmFit.
  *
- * FIXME
+ * Gets the maximum number of iterations.
  *
- * Returns: FIXME
+ * Returns: a integer (maxiter) that corresponds to the maximum number of iterations.  
  */
 guint
 ncm_fit_get_maxiter (NcmFit *fit)
@@ -715,8 +717,8 @@ ncm_fit_get_maxiter (NcmFit *fit)
 
 /**
  * ncm_fit_set_m2lnL_reltol:
- * @fit: a #NcmFit.
- * @tol: FIXME.
+ * @fit: a #NcmFit
+ * @tol: relative tolarance
  *
  * FIXME
  */
@@ -728,11 +730,11 @@ ncm_fit_set_m2lnL_reltol (NcmFit *fit, gdouble tol)
 
 /**
  * ncm_fit_get_m2lnL_reltol:
- * @fit: a #NcmFit.
+ * @fit: a #NcmFit
  *
  * FIXME
  *
- * Returns: FIXME
+ * Returns: the relative tolerance (double).
  */
 gdouble
 ncm_fit_get_m2lnL_reltol (NcmFit *fit)
@@ -742,8 +744,8 @@ ncm_fit_get_m2lnL_reltol (NcmFit *fit)
 
 /**
  * ncm_fit_set_m2lnL_abstol:
- * @fit: a #NcmFit.
- * @tol: FIXME.
+ * @fit: a #NcmFit
+ * @tol: absolute tolerance
  *
  * FIXME
  */
@@ -755,11 +757,11 @@ ncm_fit_set_m2lnL_abstol (NcmFit *fit, gdouble tol)
 
 /**
  * ncm_fit_get_m2lnL_abstol:
- * @fit: a #NcmFit.
+ * @fit: a #NcmFit
  *
  * FIXME
  *
- * Returns: FIXME
+ * Returns: the absolute tolerance (double).
  */
 gdouble
 ncm_fit_get_m2lnL_abstol (NcmFit *fit)
@@ -769,8 +771,8 @@ ncm_fit_get_m2lnL_abstol (NcmFit *fit)
 
 /**
  * ncm_fit_set_params_reltol:
- * @fit: a #NcmFit.
- * @tol: FIXME.
+ * @fit: a #NcmFit
+ * @tol: relative tolerance
  *
  * FIXME
  */
@@ -782,7 +784,7 @@ ncm_fit_set_params_reltol (NcmFit *fit, gdouble tol)
 
 /**
  * ncm_fit_get_params_reltol:
- * @fit: a #NcmFit.
+ * @fit: a #NcmFit
  *
  * FIXME
  *
@@ -796,7 +798,7 @@ ncm_fit_get_params_reltol (NcmFit *fit)
 
 /**
  * ncm_fit_params_set_vector:
- * @fit: a #NcmFit.
+ * @fit: a #NcmFit
  * @x: a #NcmVector
  *
  * FIXME
@@ -804,7 +806,7 @@ ncm_fit_get_params_reltol (NcmFit *fit)
  */
 /**
  * ncm_fit_params_set_vector_offset:
- * @fit: a #NcmFit.
+ * @fit: a #NcmFit
  * @x: a #NcmVector
  * @offset: FIXME
  *
@@ -813,7 +815,7 @@ ncm_fit_get_params_reltol (NcmFit *fit)
  */
 /**
  * ncm_fit_params_set_array:
- * @fit: a #NcmFit.
+ * @fit: a #NcmFit
  * @x: an array of gdoubles
  *
  * FIXME
@@ -821,7 +823,7 @@ ncm_fit_get_params_reltol (NcmFit *fit)
  */
 /**
  * ncm_fit_params_set_gsl_vector: (skip)
- * @fit: a #NcmFit.
+ * @fit: a #NcmFit
  * @x: a gsl_vector
  *
  * FIXME
@@ -837,8 +839,8 @@ ncm_fit_get_params_reltol (NcmFit *fit)
 
 /**
  * ncm_fit_add_equality_constraint:
- * @fit: a #NcmFit.
- * @func: FIXME
+ * @fit: a #NcmFit
+ * @func: a #NcmMSetFunc
  * @tot: FIXME
  *
  * FIXME
@@ -853,8 +855,8 @@ ncm_fit_add_equality_constraint (NcmFit *fit, NcmMSetFunc *func, gdouble tot)
 
 /**
  * ncm_fit_add_inequality_constraint:
- * @fit: a #NcmFit.
- * @func: FIXME
+ * @fit: a #NcmFit
+ * @func: a #NcmMSetFunc
  * @tot: FIXME
  *
  * FIXME
@@ -869,7 +871,7 @@ ncm_fit_add_inequality_constraint (NcmFit *fit, NcmMSetFunc *func, gdouble tot)
 
 /**
  * ncm_fit_remove_equality_constraints:
- * @fit: a #NcmFit.
+ * @fit: a #NcmFit
  *
  * FIXME
  *
@@ -882,7 +884,7 @@ ncm_fit_remove_equality_constraints (NcmFit *fit)
 
 /**
  * ncm_fit_remove_inequality_constraints:
- * @fit: a #NcmFit.
+ * @fit: a #NcmFit
  *
  * FIXME
  *
@@ -895,7 +897,7 @@ ncm_fit_remove_inequality_constraints (NcmFit *fit)
 
 /**
  * ncm_fit_has_equality_constraints:
- * @fit: a #NcmFit.
+ * @fit: a #NcmFit
  *
  * FIXME
  *
@@ -909,7 +911,7 @@ ncm_fit_has_equality_constraints (NcmFit *fit)
 
 /**
  * ncm_fit_has_inequality_constraints:
- * @fit: a #NcmFit.
+ * @fit: a #NcmFit
  *
  * FIXME
  *
@@ -923,9 +925,10 @@ ncm_fit_has_inequality_constraints (NcmFit *fit)
 
 /**
  * ncm_fit_ls_covar:
- * @fit: a #NcmFit.
+ * @fit: a #NcmFit
  *
- * FIXME
+ * Computes the covariance matrix using the least squares method, 
+ * and fills up the internal structure matrix.
  *
  */
 void
@@ -940,12 +943,16 @@ ncm_fit_ls_covar (NcmFit *fit)
 
 /**
  * ncm_fit_covar_fparam_var:
- * @fit: a #NcmFit.
- * @fpi: FIXME
+ * @fit: a #NcmFit
+ * @fpi: index of a free parameter
  *
- * FIXME
+ * Computes the variance of the fitted parameter @fpi. 
+ * This index refers to the list of all FREE parameters set in the MSet.
+ * 
+ * See also the similar function ncm_fit_covar_var() to which one has to provide 
+ * the respective model of the parameter.
  *
- * Returns: FIXME
+ * Returns: the variance of the fitted parameter @fpi
  */
 gdouble
 ncm_fit_covar_fparam_var (NcmFit *fit, guint fpi)
@@ -956,12 +963,16 @@ ncm_fit_covar_fparam_var (NcmFit *fit, guint fpi)
 
 /**
  * ncm_fit_covar_fparam_sd:
- * @fit: a #NcmFit.
- * @fpi: FIXME
+ * @fit: a #NcmFit
+ * @fpi: index of a free parameter
  *
- * FIXME
+ * Computes the standard deviation of the fitted parameter @fpi. 
+ * This index refers to the list of all FREE parameters set in the MSet.
+ * 
+ * See also the similar function ncm_fit_covar_sd() to which one has to provide 
+ * the respective model of the parameter.
  *
- * Returns: FIXME
+ * Returns: the standard deviation of the fitted parameter @fpi
  */
 gdouble
 ncm_fit_covar_fparam_sd (NcmFit *fit, guint fpi)
@@ -971,13 +982,17 @@ ncm_fit_covar_fparam_sd (NcmFit *fit, guint fpi)
 
 /**
  * ncm_fit_covar_fparam_cov:
- * @fit: a #NcmFit.
- * @fpi1: FIXME
- * @fpi2: FIXME
+ * @fit: a #NcmFit
+ * @fpi1: index of a free parameter
+ * @fpi2: index of a free parameter
  *
- * FIXME
+ * Computes the covariance between the fitted parameters @fpi1 and @fpi2. 
+ * These indices refers to the list of all FREE parameters set in the MSet.
+ * 
+ * See also the similar function ncm_fit_covar_cov() to which one has to provide 
+ * the respective models of the parameters.
  *
- * Returns: FIXME
+ * Returns: the covariance between the fitted parameters @pdi1 and @fpdi2
  */
 gdouble
 ncm_fit_covar_fparam_cov (NcmFit *fit, guint fpi1, guint fpi2)
@@ -988,13 +1003,17 @@ ncm_fit_covar_fparam_cov (NcmFit *fit, guint fpi1, guint fpi2)
 
 /**
  * ncm_fit_covar_fparam_cor:
- * @fit: a #NcmFit.
- * @fpi1: FIXME
- * @fpi2: FIXME
+ * @fit: a #NcmFit
+ * @fpi1: index of a free parameter
+ * @fpi2: index of a free parameter
  *
- * FIXME
- *
- * Returns: FIXME
+ * Computes the correlation between the fitted parameters @fpi1 and @fpi2. 
+ * These indices refers to the list of all FREE parameters set in the MSet.
+ * 
+ * See also the similar function ncm_fit_covar_cor() to which one has to provide 
+ * the respective models of the parameters. 
+ * 
+ * Returns: the correlation between the fitted parameters @pdi1 and @fpdi2
  */
 gdouble
 ncm_fit_covar_fparam_cor (NcmFit *fit, guint fpi1, guint fpi2)
@@ -1004,13 +1023,13 @@ ncm_fit_covar_fparam_cor (NcmFit *fit, guint fpi1, guint fpi2)
 
 /**
  * ncm_fit_covar_var:
- * @fit: a #NcmFit.
- * @mid: a #NcmModelID.
- * @pid: FIXME
+ * @fit: a #NcmFit
+ * @mid: a #NcmModelID
+ * @pid: the parameter's index of the model @mid (integer)
  *
- * FIXME
+ * Computes the variance of the fitted parameter @pid of the model @mid.
  *
- * Returns: FIXME
+ * Returns: the variance of the fitted parameter @pid
  */
 gdouble
 ncm_fit_covar_var (NcmFit *fit, NcmModelID mid, guint pid)
@@ -1023,13 +1042,13 @@ ncm_fit_covar_var (NcmFit *fit, NcmModelID mid, guint pid)
 
 /**
  * ncm_fit_covar_sd:
- * @fit: a #NcmFit.
- * @mid: a #NcmModelID.
- * @pid: FIXME
+ * @fit: a #NcmFit
+ * @mid: a #NcmModelID
+ * @pid: the parameter's index of the model @mid (integer)
  *
- * FIXME
+ * Computes the standard deviation of the fitted parameter @pid of the model @mid.
  *
- * Returns: FIXME
+ * Returns: the standard deviation of the fitted parameter @pid
  */
 gdouble
 ncm_fit_covar_sd (NcmFit *fit, NcmModelID mid, guint pid)
@@ -1040,14 +1059,15 @@ ncm_fit_covar_sd (NcmFit *fit, NcmModelID mid, guint pid)
 /**
  * ncm_fit_covar_cov:
  * @fit: a #NcmFit
- * @mid1: a #NcmModelID.
- * @pid1: FIXME
- * @mid2: a #NcmModelID.
- * @pid2: FIXME
+ * @mid1: a #NcmModelID
+ * @pid1: the parameter's index of the model @mid1 (integer)
+ * @mid2: a #NcmModelID
+ * @pid2: the parameter's index of the model @mid1 (integer)
  *
- * FIXME
+ * Computes the covariance between the parameters @pid1 and @pid2 of the models 
+ * @mid1 and @mid2, respectively.
  *
- * Returns: FIXME
+ * Returns: the covariance between @pid1 and @pid2
  */
 gdouble
 ncm_fit_covar_cov (NcmFit *fit, NcmModelID mid1, guint pid1, NcmModelID mid2, guint pid2)
@@ -1064,14 +1084,15 @@ ncm_fit_covar_cov (NcmFit *fit, NcmModelID mid1, guint pid1, NcmModelID mid2, gu
 /**
  * ncm_fit_covar_cor:
  * @fit: a #NcmFit
- * @mid1: a #NcmModelID.
- * @pid1: FIXME
- * @mid2: a #NcmModelID.
- * @pid2: FIXME
+ * @mid1: a #NcmModelID
+ * @pid1: the parameter's index of the model @mid1 (integer)
+ * @mid2: a #NcmModelID
+ * @pid2: the parameter's index of the model @mid1 (integer)
  *
- * FIXME
+ * Computes the correlation between the parameters @pid1 and @pid2 of the models 
+ * @mid1 and @mid2, respectively. 
  *
- * Returns: FIXME
+ * Returns: the correlation between @pid1 and @pid2
  */
 gdouble
 ncm_fit_covar_cor (NcmFit *fit, NcmModelID mid1, guint pid1, NcmModelID mid2, guint pid2)
@@ -1156,7 +1177,7 @@ ncm_fit_run (NcmFit *fit, NcmFitRunMsgs mtype)
  * ncm_fit_is_least_squares:
  * @fit: a #NcmFit
  *
- * FIXME
+ * Indicates if the least squares fitting is being used (TRUE) or not (FALSE).
  *
  * Returns: whenever the fit object use a least squares method.
  */
@@ -1377,7 +1398,8 @@ ncm_fit_log_info (NcmFit *fit)
  * ncm_fit_log_covar:
  * @fit: a #NcmFit
  *
- * FIXME
+ * Prints to the log file the names and indices of the fitted parameters, their best-fit 
+ * values, standard deviations and correlation matrix.
  */
 void
 ncm_fit_log_covar (NcmFit *fit)

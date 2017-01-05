@@ -123,9 +123,9 @@ static void _nc_cluster_mass_lnnormal_n_limits (NcClusterMass *clusterm,  NcHICo
 static void
 nc_cluster_mass_lnnormal_class_init (NcClusterMassLnnormalClass *klass)
 {
-  GObjectClass* object_class = G_OBJECT_CLASS (klass);
+  GObjectClass* object_class       = G_OBJECT_CLASS (klass);
   NcClusterMassClass *parent_class = NC_CLUSTER_MASS_CLASS (klass);
-  NcmModelClass *model_class = NCM_MODEL_CLASS (klass);
+  NcmModelClass *model_class       = NCM_MODEL_CLASS (klass);
 
   parent_class->P              = &_nc_cluster_mass_lnnormal_p;
   parent_class->intP           = &_nc_cluster_mass_lnnormal_intp;
@@ -135,7 +135,7 @@ nc_cluster_mass_lnnormal_class_init (NcClusterMassLnnormalClass *klass)
   parent_class->obs_len        = &_nc_cluster_mass_lnnormal_obs_len;
   parent_class->obs_params_len = &_nc_cluster_mass_lnnormal_obs_params_len;
 
-  parent_class->impl = NC_CLUSTER_MASS_IMPL_ALL;
+  ncm_model_class_add_impl_flag (model_class, NC_CLUSTER_MASS_IMPL_ALL);
 
   object_class->finalize     = &_nc_cluster_mass_lnnormal_finalize;
 

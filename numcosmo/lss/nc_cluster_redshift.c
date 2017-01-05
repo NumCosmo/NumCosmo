@@ -102,20 +102,6 @@ nc_cluster_redshift_clear (NcClusterRedshift **clusterz)
 }
 
 /**
- * nc_cluster_redshift_impl:
- * @clusterz: a #NcClusterRedshift
- *
- * FIXME
- *
- * Returns: a #NcClusterRedshiftImpl
- */
-NcClusterRedshiftImpl
-nc_cluster_redshift_impl (NcClusterRedshift *clusterz)
-{
-  return NC_CLUSTER_REDSHIFT_GET_CLASS (clusterz)->impl;
-}
-
-/**
  * nc_cluster_redshift_obs_len:
  * @clusterz: a #NcClusterRedshift
  *

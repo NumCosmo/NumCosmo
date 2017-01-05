@@ -56,11 +56,11 @@ typedef struct _NcXcorLimber NcXcorLimber;
  */
 typedef enum _NcXcorLimberImpl
 {
-	NC_XCOR_LIMBER_EVAL_KERNEL = 1 << 0,
-	NC_XCOR_LIMBER_PREPARE = 1 << 1,
+	NC_XCOR_LIMBER_EVAL_KERNEL = 0,
+	NC_XCOR_LIMBER_PREPARE,
 } NcXcorLimberImpl;
 
-#define NC_XCOR_LIMBER_IMPL_ALL (~0)
+#define NC_XCOR_LIMBER_IMPL_ALL NCM_MODEL_CLASS_IMPL_ALL
 
 struct _NcXcorLimber
 {
@@ -80,7 +80,6 @@ struct _NcXcorLimberClass
 
 	guint (*obs_len)(NcXcorLimber* xcl);
 	guint (*obs_params_len)(NcXcorLimber* xcl);
-	NcXcorLimberImpl impl;
 };
 
 GType nc_xcor_limber_get_type (void) G_GNUC_CONST;
@@ -91,8 +90,6 @@ NcXcorLimber* nc_xcor_limber_new_from_name (gchar* xcor_name);
 NcXcorLimber* nc_xcor_limber_ref (NcXcorLimber* xcl);
 void nc_xcor_limber_free (NcXcorLimber* xcl);
 void nc_xcor_limber_clear (NcXcorLimber** xcl);
-
-NcXcorLimberImpl nc_xcor_limber_impl (NcXcorLimber* xcl);
 
 guint nc_xcor_limber_obs_len (NcXcorLimber* xcl);
 guint nc_xcor_limber_obs_params_len (NcXcorLimber* xcl);

@@ -1261,6 +1261,24 @@ ncm_util_function_params (const gchar *func, gdouble **x, guint *len)
   return func_name;
 }
 
+/**
+ * ncm_util_print_bits:
+ * @num: FIXME
+ * 
+ * FIXME
+ * 
+ */
+void 
+ncm_util_print_bits (guint64 num)
+{
+  gint bit;
+  for(bit = 0; bit < (sizeof (guint64) * 8); bit++)
+  {
+    printf("%lu ", num & 0x01);
+    num = num >> 1;
+  }
+}
+
 void
 _ncm_util_set_destroyed (gpointer b)
 {

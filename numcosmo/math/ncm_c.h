@@ -30,8 +30,6 @@
 #include <glib-object.h>
 #include <numcosmo/build_cfg.h>
 #include <numcosmo/math/ncm_util.h>
-#include <gsl/gsl_const_num.h>
-#include <gsl/gsl_math.h>
 #include <math.h>
 
 G_BEGIN_DECLS
@@ -109,6 +107,10 @@ G_INLINE_FUNC gdouble ncm_c_eV (void) G_GNUC_CONST;
  * Derived constants
  *******************************************************************************/
 
+G_INLINE_FUNC gdouble ncm_c_year (void) G_GNUC_CONST;
+G_INLINE_FUNC gdouble ncm_c_lightyear (void) G_GNUC_CONST;
+G_INLINE_FUNC gdouble ncm_c_lightyear_pc (void) G_GNUC_CONST;
+G_INLINE_FUNC gdouble ncm_c_Glightyear_Mpc (void) G_GNUC_CONST;
 G_INLINE_FUNC gdouble ncm_c_hc (void) G_GNUC_CONST;
 G_INLINE_FUNC gdouble ncm_c_fine_struct_square (void) G_GNUC_CONST;
 G_INLINE_FUNC gdouble ncm_c_AR (void) G_GNUC_CONST;
@@ -373,6 +375,7 @@ G_INLINE_FUNC gdouble ncm_c_crit_mass_density_h2_solar_mass_Mpc3 (void) G_GNUC_C
 G_INLINE_FUNC gdouble ncm_c_crit_number_density_p (void) G_GNUC_CONST;
 G_INLINE_FUNC gdouble ncm_c_crit_number_density_n (void) G_GNUC_CONST;
 G_INLINE_FUNC gdouble ncm_c_blackbody_energy_density (void) G_GNUC_CONST;
+G_INLINE_FUNC gdouble ncm_c_blackbody_per_crit_density_h2 (void) G_GNUC_CONST;
 G_INLINE_FUNC gdouble ncm_c_radiation_temp_to_h2omega_r (const gdouble T) G_GNUC_CONST;
 G_INLINE_FUNC gdouble ncm_c_radiation_h2Omega_r0_to_temp (const gdouble omr) G_GNUC_CONST;
 
@@ -431,16 +434,16 @@ G_INLINE_FUNC long double ncm_c_tan_1arcsec (void)
 { return 4.8481368111333441675396429478852853e-6L; }
 
 G_INLINE_FUNC gdouble ncm_c_degree_to_radian (const gdouble d)
-{ return d * M_PI / 180.0; }
+{ return d * ncm_c_pi () / 180.0; }
 
 G_INLINE_FUNC gdouble ncm_c_radian_to_degree (const gdouble r)
-{ return r * 180.0 / M_PI; }
+{ return r * 180.0 / ncm_c_pi (); }
 
 G_INLINE_FUNC gdouble ncm_c_radian_0_2pi (const gdouble r)
-{ return r - 2.0 * M_PI * floor (r / (2.0 * M_PI)); }
+{ return r - 2.0 * ncm_c_pi () * floor (r / (2.0 * ncm_c_pi ())); }
 
 G_INLINE_FUNC gdouble ncm_c_sign_sin (const gdouble r)
-{ return ncm_c_radian_0_2pi (r) < M_PI ? 1.0 : -1.0; }
+{ return ncm_c_radian_0_2pi (r) < ncm_c_pi () ? 1.0 : -1.0; }
 
 /*******************************************************************************
  * START: 2014 CODATA recommended values (see constants.txt)
@@ -504,6 +507,18 @@ G_INLINE_FUNC gdouble ncm_c_eV (void)
  * Derived constants
  *******************************************************************************/
 
+G_INLINE_FUNC gdouble ncm_c_year (void)
+{ return 365.25 * 24.0 * 60.0 * 60.0; }
+
+G_INLINE_FUNC gdouble ncm_c_lightyear (void)
+{ return ncm_c_c () * ncm_c_year (); }
+
+G_INLINE_FUNC gdouble ncm_c_lightyear_pc (void)
+{ return ncm_c_lightyear () / ncm_c_pc (); }
+
+G_INLINE_FUNC gdouble ncm_c_Glightyear_Mpc (void)
+{ return 1.0e3 * ncm_c_lightyear () / ncm_c_pc (); }
+
 G_INLINE_FUNC gdouble ncm_c_hc (void)
 { return ncm_c_h () * ncm_c_c (); }
 
@@ -535,15 +550,15 @@ G_INLINE_FUNC gdouble ncm_c_H_reduced_mass (void)
 { return ncm_c_mass_e () / (1.0 + ncm_c_mass_ratio_e_p ()); }
 
 G_INLINE_FUNC gdouble ncm_c_thermal_wl_e (void)
-{ return sqrt ((2.0 * M_PI * ncm_c_hbar () * ncm_c_hbar () ) /
+{ return sqrt ((2.0 * ncm_c_pi () * ncm_c_hbar () * ncm_c_hbar () ) /
                (ncm_c_mass_e () * ncm_c_kb ())); }
 
 G_INLINE_FUNC gdouble ncm_c_thermal_wl_p (void)
-{ return sqrt ((2.0 * M_PI * ncm_c_hbar () * ncm_c_hbar () ) /
+{ return sqrt ((2.0 * ncm_c_pi () * ncm_c_hbar () * ncm_c_hbar () ) /
                (ncm_c_mass_p () * ncm_c_kb ())); }
 
 G_INLINE_FUNC gdouble ncm_c_thermal_wl_n (void)
-{ return sqrt ((2.0 * M_PI * ncm_c_hbar () * ncm_c_hbar () ) /
+{ return sqrt ((2.0 * ncm_c_pi () * ncm_c_hbar () * ncm_c_hbar () ) /
                (ncm_c_mass_n () * ncm_c_kb ())); }
 
 G_INLINE_FUNC gdouble ncm_c_thermal_wn_e (void)
@@ -650,10 +665,10 @@ G_INLINE_FUNC gdouble ncm_c_pc (void)
 { return 3.0856775814913672789139379577965e16L; }
 
 G_INLINE_FUNC gdouble ncm_c_kpc (void)
-{ return GSL_CONST_NUM_KILO * ncm_c_pc (); }
+{ return 1.0e3 * ncm_c_pc (); }
 
 G_INLINE_FUNC gdouble ncm_c_Mpc (void)
-{ return GSL_CONST_NUM_MEGA * ncm_c_pc (); }
+{ return 1.0e6 * ncm_c_pc (); }
 
 G_INLINE_FUNC gdouble ncm_c_G_mass_solar (void)
 { return 1.3271244e20; }
@@ -736,16 +751,16 @@ G_INLINE_FUNC gdouble ncm_c_HI_Lyman_wl_2p_2Pmean (void)
 /* Lyman series factor: wl^3 / (8pi) */
 
 G_INLINE_FUNC gdouble ncm_c_HI_Lyman_wl3_8pi_2s_2S0_5 (void)
-{ return gsl_pow_3 (ncm_c_HI_Lyman_wl_2s_2S0_5 ()) / (8.0 * M_PI); }
+{ return gsl_pow_3 (ncm_c_HI_Lyman_wl_2s_2S0_5 ()) / (8.0 * ncm_c_pi ()); }
 
 G_INLINE_FUNC gdouble ncm_c_HI_Lyman_wl3_8pi_2p_2P0_5 (void)
-{ return gsl_pow_3 (ncm_c_HI_Lyman_wl_2p_2P0_5 ()) / (8.0 * M_PI); }
+{ return gsl_pow_3 (ncm_c_HI_Lyman_wl_2p_2P0_5 ()) / (8.0 * ncm_c_pi ()); }
 
 G_INLINE_FUNC gdouble ncm_c_HI_Lyman_wl3_8pi_2p_2P3_5 (void)
-{ return gsl_pow_3 (ncm_c_HI_Lyman_wl_2p_2P3_5 ()) / (8.0 * M_PI); }
+{ return gsl_pow_3 (ncm_c_HI_Lyman_wl_2p_2P3_5 ()) / (8.0 * ncm_c_pi ()); }
 
 G_INLINE_FUNC gdouble ncm_c_HI_Lyman_wl3_8pi_2p_2Pmean (void)
-{ return gsl_pow_3 (ncm_c_HI_Lyman_wl_2p_2Pmean ()) / (8.0 * M_PI); }
+{ return gsl_pow_3 (ncm_c_HI_Lyman_wl_2p_2Pmean ()) / (8.0 * ncm_c_pi ()); }
 
 /* Boltzmann factor */
 
@@ -878,25 +893,25 @@ G_INLINE_FUNC gdouble ncm_c_HeI_Lyman_wl_2p_3Pmean (void)
 /* Lyman series factor: wl^3 / (8pi) */
 
 G_INLINE_FUNC gdouble ncm_c_HeI_Lyman_wl3_8pi_2s_1S0 (void)
-{ return gsl_pow_3 (ncm_c_HeI_Lyman_wl_2s_1S0 ()) / (8.0 * M_PI); }
+{ return gsl_pow_3 (ncm_c_HeI_Lyman_wl_2s_1S0 ()) / (8.0 * ncm_c_pi ()); }
 
 G_INLINE_FUNC gdouble ncm_c_HeI_Lyman_wl3_8pi_2s_3S1 (void)
-{ return gsl_pow_3 (ncm_c_HeI_Lyman_wl_2s_3S1 ()) / (8.0 * M_PI); }
+{ return gsl_pow_3 (ncm_c_HeI_Lyman_wl_2s_3S1 ()) / (8.0 * ncm_c_pi ()); }
 
 G_INLINE_FUNC gdouble ncm_c_HeI_Lyman_wl3_8pi_2p_1P1 (void)
-{ return gsl_pow_3 (ncm_c_HeI_Lyman_wl_2p_1P1 ()) / (8.0 * M_PI); }
+{ return gsl_pow_3 (ncm_c_HeI_Lyman_wl_2p_1P1 ()) / (8.0 * ncm_c_pi ()); }
 
 G_INLINE_FUNC gdouble ncm_c_HeI_Lyman_wl3_8pi_2p_3P0 (void)
-{ return gsl_pow_3 (ncm_c_HeI_Lyman_wl_2p_3P0 ()) / (8.0 * M_PI); }
+{ return gsl_pow_3 (ncm_c_HeI_Lyman_wl_2p_3P0 ()) / (8.0 * ncm_c_pi ()); }
 
 G_INLINE_FUNC gdouble ncm_c_HeI_Lyman_wl3_8pi_2p_3P1 (void)
-{ return gsl_pow_3 (ncm_c_HeI_Lyman_wl_2p_3P1 ()) / (8.0 * M_PI); }
+{ return gsl_pow_3 (ncm_c_HeI_Lyman_wl_2p_3P1 ()) / (8.0 * ncm_c_pi ()); }
 
 G_INLINE_FUNC gdouble ncm_c_HeI_Lyman_wl3_8pi_2p_3P2 (void)
-{ return gsl_pow_3 (ncm_c_HeI_Lyman_wl_2p_3P2 ()) / (8.0 * M_PI); }
+{ return gsl_pow_3 (ncm_c_HeI_Lyman_wl_2p_3P2 ()) / (8.0 * ncm_c_pi ()); }
 
 G_INLINE_FUNC gdouble ncm_c_HeI_Lyman_wl3_8pi_2p_3Pmean (void)
-{ return gsl_pow_3 (ncm_c_HeI_Lyman_wl_2p_3Pmean ()) / (8.0 * M_PI); }
+{ return gsl_pow_3 (ncm_c_HeI_Lyman_wl_2p_3Pmean ()) / (8.0 * ncm_c_pi ()); }
 
 /* Boltzmann factor */
 
@@ -1034,10 +1049,10 @@ G_INLINE_FUNC gdouble ncm_c_hubble_radius_hm1_planck (void)
 { return ncm_c_hubble_radius_hm1_Mpc () * ncm_c_Mpc () / ncm_c_planck_length (); }
 
 G_INLINE_FUNC gdouble ncm_c_crit_density_h2 (void)
-{ return 3.0 * pow (ncm_c_c () / (10.0 * ncm_c_pc ()), 2.0) / (8.0 * M_PI * ncm_c_G ()); }
+{ return 3.0 * pow (ncm_c_c () / (10.0 * ncm_c_pc ()), 2.0) / (8.0 * ncm_c_pi () * ncm_c_G ()); }
 
 G_INLINE_FUNC gdouble ncm_c_crit_mass_density_h2 (void)
-{ return 3.0 * pow (1.0 / (10.0 * ncm_c_pc ()), 2.0) / (8.0 * M_PI * ncm_c_G ()); }
+{ return 3.0 * pow (1.0 / (10.0 * ncm_c_pc ()), 2.0) / (8.0 * ncm_c_pi () * ncm_c_G ()); }
 
 G_INLINE_FUNC gdouble ncm_c_crit_mass_density_h2_solar_mass_Mpc3 (void)
 { return ncm_c_crit_mass_density_h2 () / ncm_c_mass_solar () * gsl_pow_3 (ncm_c_Mpc ()); }
@@ -1049,13 +1064,16 @@ G_INLINE_FUNC gdouble ncm_c_crit_number_density_n (void)
 { return ncm_c_crit_density_h2 () / ncm_c_rest_energy_n (); }
 
 G_INLINE_FUNC gdouble ncm_c_blackbody_energy_density (void)
-{ return 4.0 * ncm_c_stefan_boltzmann () / ncm_c_c (); }
+{ return 4.0 * (gsl_pow_2 (ncm_c_pi ()) * gsl_pow_4 (ncm_c_kb ()) / (60.0 * gsl_pow_3 (ncm_c_h () / (2.0 * ncm_c_pi ())) * gsl_pow_2 (ncm_c_c ()))) / ncm_c_c (); }
+
+G_INLINE_FUNC gdouble ncm_c_blackbody_per_crit_density_h2 (void)
+{ return ncm_c_blackbody_energy_density () / ncm_c_crit_density_h2 (); }
 
 G_INLINE_FUNC gdouble ncm_c_radiation_temp_to_h2omega_r (const gdouble T)
-{ return ncm_c_blackbody_energy_density () * ((T * T) * (T * T)) / ncm_c_crit_density_h2 (); }
+{ return ncm_c_blackbody_per_crit_density_h2 () * gsl_pow_4 (T); }
 
 G_INLINE_FUNC gdouble ncm_c_radiation_h2Omega_r0_to_temp (const gdouble omr)
-{ return pow (ncm_c_crit_density_h2 () * omr / ncm_c_blackbody_energy_density (), 0.25); }
+{ return pow (omr / ncm_c_blackbody_per_crit_density_h2 (), 0.25); }
 
 /*******************************************************************************
  * END: Observational data

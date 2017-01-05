@@ -59,14 +59,14 @@ typedef struct _NcClusterMass NcClusterMass;
  */
 typedef enum _NcClusterMassImpl
 {
-  NC_CLUSTER_MASS_P        = 1 << 0,
-  NC_CLUSTER_MASS_INTP     = 1 << 1,
-  NC_CLUSTER_MASS_RESAMPLE = 1 << 2,
-  NC_CLUSTER_MASS_P_LIMITS = 1 << 3,
-  NC_CLUSTER_MASS_N_LIMITS = 1 << 4,
+  NC_CLUSTER_MASS_P = 0,
+  NC_CLUSTER_MASS_INTP,
+  NC_CLUSTER_MASS_RESAMPLE,
+  NC_CLUSTER_MASS_P_LIMITS,
+  NC_CLUSTER_MASS_N_LIMITS,
 } NcClusterMassImpl;
 
-#define NC_CLUSTER_MASS_IMPL_ALL (~0)
+#define NC_CLUSTER_MASS_IMPL_ALL NCM_MODEL_CLASS_IMPL_ALL
 
 struct _NcClusterMassClass
 {
@@ -79,7 +79,6 @@ struct _NcClusterMassClass
   void (*N_limits) (NcClusterMass *clusterm, NcHICosmo *cosmo, gdouble *lnM_lower, gdouble *lnM_upper);
   guint (*obs_len) (NcClusterMass *clusterm);
   guint (*obs_params_len) (NcClusterMass *clusterm);
-  NcClusterMassImpl impl;
 };
 
 struct _NcClusterMass
@@ -96,8 +95,6 @@ NcClusterMass *nc_cluster_mass_new_from_name (gchar *mass_name);
 NcClusterMass *nc_cluster_mass_ref (NcClusterMass *clusterm);
 void nc_cluster_mass_free (NcClusterMass *clusterm);
 void nc_cluster_mass_clear (NcClusterMass **clusterm);
-
-NcClusterMassImpl nc_cluster_mass_impl (NcClusterMass *clusterm);
 
 guint nc_cluster_mass_obs_len (NcClusterMass *clusterm);
 guint nc_cluster_mass_obs_params_len (NcClusterMass *clusterm);

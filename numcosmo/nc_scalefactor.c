@@ -842,7 +842,7 @@ dz_deta_f (realtype t, N_Vector y, N_Vector ydot, gpointer f_data)
   const gdouble E = nc_hicosmo_E (cosmo, z);
 
   NCM_UNUSED (t);
-  
+
   NV_Ith_S (ydot, 0) = - E;
   return 0;
 }

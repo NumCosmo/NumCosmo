@@ -184,7 +184,7 @@ _nc_data_hubble_bao_mean_func (NcmDataGaussDiag *diag, NcmMSet *mset, NcmVector 
   gdouble r_zd;
   guint i;
 
-  if (ncm_model_impl (NCM_MODEL (cosmo)) & NC_HICOSMO_IMPL_as_drag)
+  if (ncm_model_check_impl_opt (NCM_MODEL (cosmo), NC_HICOSMO_IMPL_as_drag))
     r_zd = nc_hicosmo_as_drag (cosmo);
   else
   {   

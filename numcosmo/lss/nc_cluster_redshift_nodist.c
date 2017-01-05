@@ -173,9 +173,9 @@ nc_cluster_redshift_nodist_finalize (GObject *object)
 static void
 nc_cluster_redshift_nodist_class_init (NcClusterRedshiftNodistClass *klass)
 {
-  GObjectClass* object_class = G_OBJECT_CLASS (klass);
+  GObjectClass* object_class           = G_OBJECT_CLASS (klass);
   NcClusterRedshiftClass* parent_class = NC_CLUSTER_REDSHIFT_CLASS (klass);
-  NcmModelClass *model_class = NCM_MODEL_CLASS (klass);
+  NcmModelClass *model_class           = NCM_MODEL_CLASS (klass);
 
   parent_class->P              = &_nc_cluster_redshift_nodist_p;
   parent_class->intP           = &_nc_cluster_redshift_nodist_intp;
@@ -185,7 +185,7 @@ nc_cluster_redshift_nodist_class_init (NcClusterRedshiftNodistClass *klass)
   parent_class->obs_len        = &_nc_cluster_redshift_nodist_obs_len;
   parent_class->obs_params_len = &_nc_cluster_redshift_nodist_obs_params_len;
 
-  parent_class->impl           = NC_CLUSTER_REDSHIFT_N_LIMTS | NC_CLUSTER_REDSHIFT_RESAMPLE;
+  ncm_model_class_add_impl_opts (model_class, NC_CLUSTER_REDSHIFT_N_LIMTS, NC_CLUSTER_REDSHIFT_RESAMPLE, -1);
 
   object_class->finalize    =  &nc_cluster_redshift_nodist_finalize;
   

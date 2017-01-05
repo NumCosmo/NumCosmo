@@ -511,7 +511,7 @@ _ncm_model_get_property (GObject *object, guint prop_id, GValue *value, GParamSp
       g_value_set_uint (value, model_class->vparam_len);
       break;
     case PROP_IMPLEMENTATION:
-      g_value_set_uint64 (value, model_class->impl);
+      g_value_set_uint64 (value, model_class->impl_flag);
       break;
     case PROP_REPARAM:
       g_value_set_object (value, model->reparam);
@@ -1119,6 +1119,47 @@ ncm_model_class_check_params_info (NcmModelClass *model_class)
 }
 
 /**
+ * ncm_model_class_add_impl_opts: (skip)
+ * @model_class: a #NcmModelClass
+ * @opt1: first option
+ * @...: other options, must end with -1
+ * 
+ * FIXME
+ *
+ */
+void 
+ncm_model_class_add_impl_opts (NcmModelClass *model_class, gint opt1, ...)
+{
+  gint opt_i;
+  va_list ap;
+
+  va_start (ap, opt1);
+
+  model_class->impl_flag = model_class->impl_flag | NCM_MODEL_OPT2IMPL (opt1);
+  
+  while ((opt_i = va_arg (ap, gint)) != -1)
+  {
+    model_class->impl_flag = model_class->impl_flag | NCM_MODEL_OPT2IMPL (opt_i);
+  }
+
+  va_end (ap);
+}
+
+/**
+ * ncm_model_class_add_impl_flag: (skip)
+ * @model_class: a #NcmModelClass
+ * @flag: implementation flag
+ * 
+ * FIXME
+ *
+ */
+void 
+ncm_model_class_add_impl_flag (NcmModelClass *model_class, guint64 flag)
+{
+  model_class->impl_flag = model_class->impl_flag | flag;
+}
+
+/**
  * ncm_model_dup:
  * @model: a #NcmModel
  * @ser: a #NcmSerialize
@@ -1525,6 +1566,57 @@ ncm_model_params_valid_bounds (NcmModel *model)
  *
  * Returns: FIXME
  */
+/**
+ * ncm_model_check_impl_flag:
+ * @model: a #NcmModel
+ * @impl: implementation flag
+ *
+ * FIXME
+ *
+ * Returns: FIXME
+ */
+/**
+ * ncm_model_check_impl_opt:
+ * @model: a #NcmModel
+ * @opt: implementation option
+ *
+ * FIXME
+ *
+ * Returns: FIXME
+ */
+
+/**
+ * ncm_model_check_impl_opts:
+ * @model: a #NcmModel
+ * @opt1: first implementation option
+ * @...: implementation options, must end with -1
+ *
+ * FIXME
+ *
+ * Returns: FIXME
+ */
+gboolean 
+ncm_model_check_impl_opts (NcmModel *model, gint opt1, ...)
+{
+  guint64 flag = 0;
+  gint opt_i;
+  
+  va_list ap;
+
+  va_start (ap, opt1);
+
+  flag = flag | NCM_MODEL_OPT2IMPL (opt1);
+  
+  while ((opt_i = va_arg (ap, gint)) != -1)
+  {
+    flag = flag | NCM_MODEL_OPT2IMPL (opt_i);
+  }
+
+  va_end (ap);
+
+  return ncm_model_check_impl_flag (model, flag);
+}
+
 /**
  * ncm_model_len:
  * @model: a #NcmModel
