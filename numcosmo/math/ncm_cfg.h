@@ -30,9 +30,6 @@
 #include <glib/gstdio.h>
 #include <glib-object.h>
 #include <numcosmo/build_cfg.h>
-#include <gsl/gsl_vector.h>
-#include <gsl/gsl_matrix.h>
-#include <gsl/gsl_spline.h>
 #include <gsl/gsl_rng.h>
 #ifndef NUMCOSMO_GIR_SCAN
 #include <gmp.h>
@@ -73,21 +70,6 @@ FILE *ncm_cfg_vfopen (const gchar *filename, const gchar *mode, va_list ap);
 
 gboolean ncm_cfg_load_spline (const gchar *filename, const gsl_interp_type *stype, NcmSpline **s, ...);
 gboolean ncm_cfg_save_spline (const gchar *filename, NcmSpline *s, ...);
-
-gboolean ncm_cfg_load_vector (const gchar *filename, gsl_vector *v, ...);
-gboolean ncm_cfg_save_vector (const gchar *filename, gsl_vector *v, ...);
-gboolean ncm_cfg_load_matrix (const gchar *filename, gsl_matrix *M, ...);
-gboolean ncm_cfg_save_matrix (const gchar *filename, gsl_matrix *M, ...);
-
-#define LOAD_SAVE_VECTOR_MATRIX_DEF(typen) \
-gboolean ncm_cfg_load_vector_##typen (gchar *filename, gsl_vector_##typen *v, ...); \
-gboolean ncm_cfg_save_vector_##typen (gchar *filename, gsl_vector_##typen *v, ...); \
-gboolean ncm_cfg_load_matrix_##typen (gchar *filename, gsl_matrix_##typen *M, ...); \
-gboolean ncm_cfg_save_matrix_##typen (gchar *filename, gsl_matrix_##typen *M, ...);
-
-LOAD_SAVE_VECTOR_MATRIX_DEF(int)
-LOAD_SAVE_VECTOR_MATRIX_DEF(float)
-LOAD_SAVE_VECTOR_MATRIX_DEF(complex)
 
 gchar *ncm_cfg_get_data_filename (const gchar *filename, gboolean must_exist);
 

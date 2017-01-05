@@ -47,11 +47,12 @@ typedef struct _NcHICosmoDEXcdm NcHICosmoDEXcdm;
  * @NC_HICOSMO_DE_XCDM_W: FIXME
  *
  * FIXME
+ * 
  */
 typedef enum _NcHICosmoDEXCDMParams
 {
   NC_HICOSMO_DE_XCDM_W = NC_HICOSMO_DE_SPARAM_LEN, /*< private >*/
-  NC_HICOSMO_DE_XCDM_SPARAM_LEN,                 /*< skip >*/
+  NC_HICOSMO_DE_XCDM_SPARAM_LEN,                   /*< skip >*/
 } NcHICosmoDEXCDMParams;
 
 #define NC_HICOSMO_DE_XCDM_DEFAULT_W0 (-1.0)

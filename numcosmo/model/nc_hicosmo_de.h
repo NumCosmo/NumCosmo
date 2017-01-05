@@ -31,6 +31,7 @@
 #include <numcosmo/nc_hicosmo.h>
 #include <numcosmo/math/ncm_likelihood.h>
 #include <numcosmo/math/ncm_spline2d.h>
+#include <numcosmo/math/ncm_integral1d_ptr.h>
 
 G_BEGIN_DECLS
 
@@ -43,6 +44,7 @@ G_BEGIN_DECLS
 
 typedef struct _NcHICosmoDEClass NcHICosmoDEClass;
 typedef struct _NcHICosmoDE NcHICosmoDE;
+typedef struct _NcHICosmoDEPrivate NcHICosmoDEPrivate;
 
 /**
  * NcHICosmoDEImpl:
@@ -50,17 +52,17 @@ typedef struct _NcHICosmoDE NcHICosmoDE;
  * @NC_HICOSMO_DE_IMPL_dE2Omega_de_dz: FIXME
  * @NC_HICOSMO_DE_IMPL_d2E2Omega_de_dz2: FIXME
  * @NC_HICOSMO_DE_IMPL_w_de: FIXME
- * 
+ *
  * FIXME
- * 
+ *
  */
 typedef enum _NcHICosmoDEImpl
 {
-  NC_HICOSMO_DE_IMPL_E2Omega_de       = NC_HICOSMO_IMPL_LAST << 0,
-  NC_HICOSMO_DE_IMPL_dE2Omega_de_dz   = NC_HICOSMO_IMPL_LAST << 1,
-  NC_HICOSMO_DE_IMPL_d2E2Omega_de_dz2 = NC_HICOSMO_IMPL_LAST << 2,
-  NC_HICOSMO_DE_IMPL_w_de             = NC_HICOSMO_IMPL_LAST << 3, /*< private >*/
-  NC_HICOSMO_DE_IMPL_LAST             = NC_HICOSMO_IMPL_LAST << 4, /*< skip >*/
+  NC_HICOSMO_DE_IMPL_E2Omega_de = NC_HICOSMO_IMPL_LAST,
+  NC_HICOSMO_DE_IMPL_dE2Omega_de_dz,
+  NC_HICOSMO_DE_IMPL_d2E2Omega_de_dz2,
+  NC_HICOSMO_DE_IMPL_w_de, /*< private >*/
+  NC_HICOSMO_DE_IMPL_LAST, /*< skip >*/
 } NcHICosmoDEImpl;
 
 typedef gdouble (*NcHICosmoDEFunc1) (NcHICosmoDE *cosmo_de, gdouble z);
@@ -76,7 +78,7 @@ typedef gdouble (*NcHICosmoDEFunc1) (NcHICosmoDE *cosmo_de, gdouble z);
  * @NC_HICOSMO_DE_OMEGA_B: FIXME
  *
  * FIXME
- * 
+ *
  */
 typedef enum _NcHICosmoDEParams
 {
@@ -94,15 +96,15 @@ typedef enum _NcHICosmoDEParams
  * NcHICosmoDEVParams:
  * @NC_HICOSMO_DE_MASSNU_M: FIXME
  * @NC_HICOSMO_DE_MASSNU_T: FIXME
- * 
+ *
  * FIXME
- * 
+ *
  */
 typedef enum _NcHICosmoDEVParams
 {
   NC_HICOSMO_DE_MASSNU_M = 0,
   NC_HICOSMO_DE_MASSNU_T,
-  NC_HICOSMO_DE_MASSNU_XI,
+  NC_HICOSMO_DE_MASSNU_MU,
   NC_HICOSMO_DE_MASSNU_G,   /*< private >*/
   NC_HICOSMO_DE_VPARAM_LEN, /*< skip >*/
 } NcHICosmoDEVParams;
@@ -116,7 +118,7 @@ typedef enum _NcHICosmoDEVParams
 #define NC_HICOSMO_DE_DEFAULT_ENNU      (3.046)
 #define NC_HICOSMO_DE_DEFAULT_NU_MASS   (1.0e-5)
 #define NC_HICOSMO_DE_DEFAULT_NU_T      (0.71611)
-#define NC_HICOSMO_DE_DEFAULT_NU_XI     (0.0)
+#define NC_HICOSMO_DE_DEFAULT_NU_MU     (0.0)
 #define NC_HICOSMO_DE_DEFAULT_NU_G      (1.0)
 
 struct _NcHICosmoDEClass
@@ -133,8 +135,7 @@ struct _NcHICosmoDE
 {
   /*< private >*/
   NcHICosmo parent_instance;
-  NcmSpline2d *BBN_spline2d;
-  guint64 HE4_Yp_key;
+  NcHICosmoDEPrivate *priv;
 };
 
 GType nc_hicosmo_de_get_type (void) G_GNUC_CONST;
@@ -170,7 +171,7 @@ NCM_MODEL_FUNC1_IMPL (NC_HICOSMO_DE,NcHICosmoDE,nc_hicosmo_de,dE2Omega_de_dz,z)
 NCM_MODEL_FUNC1_IMPL (NC_HICOSMO_DE,NcHICosmoDE,nc_hicosmo_de,d2E2Omega_de_dz2,z)
 NCM_MODEL_FUNC1_IMPL (NC_HICOSMO_DE,NcHICosmoDE,nc_hicosmo_de,w_de,z)
 
-G_INLINE_FUNC gdouble 
+G_INLINE_FUNC gdouble
 nc_hicosmo_de_E2Omega_de_onepw (NcHICosmoDE *cosmo_de, gdouble z)
 {
   return nc_hicosmo_de_E2Omega_de (cosmo_de, z) * (1.0 + nc_hicosmo_de_w_de (cosmo_de, z));

@@ -126,9 +126,9 @@ static void _nc_cluster_mass_plcl_n_limits (NcClusterMass *clusterm, NcHICosmo *
 static void
 nc_cluster_mass_plcl_class_init (NcClusterMassPlCLClass *klass)
 {
-  GObjectClass* object_class = G_OBJECT_CLASS (klass);
+  GObjectClass* object_class       = G_OBJECT_CLASS (klass);
   NcClusterMassClass* parent_class = NC_CLUSTER_MASS_CLASS (klass);
-  NcmModelClass *model_class = NCM_MODEL_CLASS (klass);
+  NcmModelClass *model_class       = NCM_MODEL_CLASS (klass);
 
   model_class->set_property = &_nc_cluster_mass_plcl_set_property;
   model_class->get_property = &_nc_cluster_mass_plcl_get_property;
@@ -228,15 +228,15 @@ nc_cluster_mass_plcl_class_init (NcClusterMassPlCLClass *klass)
   /* Check for errors in parameters initialization */
   ncm_model_class_check_params_info (model_class);  
 
-  parent_class->P = &_nc_cluster_mass_plcl_Msz_Ml_M500_p;
-  parent_class->intP = &_nc_cluster_mass_plcl_intp;
-  //parent_class->P_limits = &_nc_cluster_mass_plcl_p_limits;
-  parent_class->N_limits = &_nc_cluster_mass_plcl_n_limits;
-  parent_class->resample = &_nc_cluster_mass_plcl_resample;
-  parent_class->obs_len = &_nc_cluster_mass_plcl_obs_len;
+  parent_class->P              = &_nc_cluster_mass_plcl_Msz_Ml_M500_p;
+  parent_class->intP           = &_nc_cluster_mass_plcl_intp;
+  //parent_class->P_limits       = &_nc_cluster_mass_plcl_p_limits;
+  parent_class->N_limits       = &_nc_cluster_mass_plcl_n_limits;
+  parent_class->resample       = &_nc_cluster_mass_plcl_resample;
+  parent_class->obs_len        = &_nc_cluster_mass_plcl_obs_len;
   parent_class->obs_params_len = &_nc_cluster_mass_plcl_obs_params_len;
 
-  parent_class->impl = NC_CLUSTER_MASS_IMPL_ALL;
+  ncm_model_class_add_impl_flag (model_class, NC_CLUSTER_MASS_IMPL_ALL);
 }
 
 typedef struct _integrand_data

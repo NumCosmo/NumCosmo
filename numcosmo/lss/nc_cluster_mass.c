@@ -109,20 +109,6 @@ nc_cluster_mass_clear (NcClusterMass **clusterm)
 }
 
 /**
- * nc_cluster_mass_impl:
- * @clusterm: a #NcClusterMass
- *
- * FIXME
- *
- * Returns: FIXME
- */
-NcClusterMassImpl
-nc_cluster_mass_impl (NcClusterMass *clusterm)
-{
-  return NC_CLUSTER_MASS_GET_CLASS (clusterm)->impl;
-}
-
-/**
  * nc_cluster_mass_obs_len:
  * @clusterm: a #NcClusterMass
  *

@@ -62,7 +62,7 @@ struct _NcmModelClass
   gboolean is_submodel;
   gchar *name;
   gchar *nick;
-  guint64 impl;
+  guint64 impl_flag;
   guint nonparam_prop_len;
   guint sparam_len;
   guint vparam_len;
@@ -100,6 +100,10 @@ typedef gdouble (*NcmModelFunc0) (NcmModel *model);
 typedef gdouble (*NcmModelFunc1) (NcmModel *model, const gdouble x);
 typedef gdouble (*NcmModelFunc2) (NcmModel *model, const gdouble x, const gdouble y);
 
+typedef gdouble (*NcmModelVFunc0) (NcmModel *model, const guint n);
+typedef gdouble (*NcmModelVFunc1) (NcmModel *model, const guint n, const gdouble x);
+typedef gdouble (*NcmModelVFunc2) (NcmModel *model, const guint n, const gdouble x, const gdouble y);
+
 GType ncm_model_get_type (void) G_GNUC_CONST;
 
 /*void ncm_model_class_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec);*/
@@ -116,6 +120,9 @@ void ncm_model_class_set_vparam (NcmModelClass *model_class, guint vparam_id, gu
 
 void ncm_model_class_check_params_info (NcmModelClass *model_class);
 
+void ncm_model_class_add_impl_opts (NcmModelClass *model_class, gint opt1, ...);
+void ncm_model_class_add_impl_flag (NcmModelClass *model_class, guint64 flag);
+
 NcmModel *ncm_model_dup (NcmModel *model, NcmSerialize *ser);
 void ncm_model_free (NcmModel *model);
 void ncm_model_clear (NcmModel **model);
@@ -125,8 +132,9 @@ gboolean ncm_model_is_equal (NcmModel *model1, NcmModel *model2);
 G_INLINE_FUNC NcmModel *ncm_model_ref (NcmModel *model);
 G_INLINE_FUNC NcmModelID ncm_model_id (NcmModel *model);
 G_INLINE_FUNC NcmModelID ncm_model_id_by_type (GType model_type);
-G_INLINE_FUNC guint64 ncm_model_impl (NcmModel *model);
-G_INLINE_FUNC gboolean ncm_model_check_impl (NcmModel *model, guint64 impl);
+G_INLINE_FUNC gboolean ncm_model_check_impl_flag (NcmModel *model, guint64 impl);
+G_INLINE_FUNC gboolean ncm_model_check_impl_opt (NcmModel *model, gint opt);
+gboolean ncm_model_check_impl_opts (NcmModel *model, gint opt1, ...);
 G_INLINE_FUNC guint ncm_model_len (NcmModel *model);
 G_INLINE_FUNC gboolean ncm_model_state_is_update (NcmModel *model);
 G_INLINE_FUNC void ncm_model_state_set_update (NcmModel *model);
@@ -213,6 +221,12 @@ gint ncm_model_peek_submodel_pos_by_mid (NcmModel *model, NcmModelID mid);
 gboolean ncm_model_type_is_submodel (GType model_type);
 NcmModelID ncm_model_type_main_model (GType model_type);
 
+#define NCM_MODEL_CLASS_IMPL_ALL ((guint64)(~((guint64)0)))
+#define NCM_MODEL_OPT2IMPL(opt) (((guint64)1) << ((guint64)(opt)))
+#define NCM_MODEL_2OPT2IMPL(opt1,opt2) (NCM_MODEL_OPT2IMPL (opt1) | NCM_MODEL_OPT2IMPL (opt2))
+#define NCM_MODEL_3OPT2IMPL(opt1,opt2,opt3) (NCM_MODEL_2OPT2IMPL (opt1, opt2) | NCM_MODEL_OPT2IMPL (opt3))
+#define NCM_MODEL_4OPT2IMPL(opt1,opt2,opt3,opt4) (NCM_MODEL_2OPT2IMPL (opt1, opt2) | NCM_MODEL_2OPT2IMPL (opt3, opt4))
+
 /*
  * Model set functions
  */
@@ -220,7 +234,7 @@ NcmModelID ncm_model_type_main_model (GType model_type);
 void \
 ns_name##_set_##name##_impl (NsName##Class *model_class, type f) \
 { \
-  NCM_MODEL_CLASS (model_class)->impl |= NS_NAME##_IMPL_##name; \
+  ncm_model_class_add_impl_opts (NCM_MODEL_CLASS (model_class), NS_NAME##_IMPL_##name, -1); \
   model_class->name = f; \
 }
 
@@ -249,6 +263,33 @@ G_INLINE_FUNC gdouble ns_name##_##name (NsName *m, const gdouble var) \
 G_INLINE_FUNC gdouble ns_name##_##name (NsName *m, const gdouble x, const gdouble y) \
 { \
   return NS_NAME##_GET_CLASS (m)->name (NS_NAME (m), x, y); \
+}
+
+/*
+ * Constant model vector functions call accessor
+ */
+#define NCM_MODEL_VFUNC0_IMPL(NS_NAME,NsName,ns_name,name) \
+G_INLINE_FUNC gdouble ns_name##_##name (NsName *m, const guint n) \
+{ \
+  return NS_NAME##_GET_CLASS (m)->name (NS_NAME (m), n); \
+}
+
+/*
+ * Model vector functions call
+ */
+#define NCM_MODEL_VFUNC1_IMPL(NS_NAME,NsName,ns_name,name,var) \
+G_INLINE_FUNC gdouble ns_name##_##name (NsName *m, const guint n, const gdouble var) \
+{ \
+  return NS_NAME##_GET_CLASS (m)->name (NS_NAME (m), n, var); \
+}
+
+/*
+ * Model functions 2d call
+ */
+#define NCM_MODEL_VFUNC2_IMPL(NS_NAME,NsName,ns_name,name) \
+G_INLINE_FUNC gdouble ns_name##_##name (NsName *m, const guint n, const gdouble x, const gdouble y) \
+{ \
+  return NS_NAME##_GET_CLASS (m)->name (NS_NAME (m), n, x, y); \
 }
 
 G_END_DECLS
@@ -290,19 +331,21 @@ ncm_model_id_by_type (GType model_type)
   }
 }
 
-G_INLINE_FUNC guint64
-ncm_model_impl (NcmModel *model)
-{
-  return NCM_MODEL_GET_CLASS (model)->impl;
-}
-
 G_INLINE_FUNC gboolean
-ncm_model_check_impl (NcmModel *model, guint64 impl)
+ncm_model_check_impl_flag (NcmModel *model, guint64 impl)
 {
   if (impl == 0)
     return TRUE;
   else
-    return ((NCM_MODEL_GET_CLASS (model)->impl & impl) == impl);
+    return ((NCM_MODEL_GET_CLASS (model)->impl_flag & impl) != 0);
+}
+
+G_INLINE_FUNC gboolean 
+ncm_model_check_impl_opt (NcmModel *model, gint opt)
+{
+  guint64 flag = NCM_MODEL_OPT2IMPL (opt);
+
+  return ncm_model_check_impl_flag (model, flag);
 }
 
 G_INLINE_FUNC guint
