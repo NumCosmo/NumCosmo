@@ -404,12 +404,10 @@ ncm_sphere_mapsht_new (NcmSphereMap *map, NcmSphereMapAlm *mapalm, guint fftw_fl
     ncm_cfg_load_fftw_wisdom ("map_nside_%ld.wis", map->nside);
   }
 
-  if (!ncm_cfg_load_vector ("Plm_upper_limit_lmax_%d.dat", mapsht->sphPlm_upper_limit, mapalm->lmax))
   {
     gsl_vector_set_all (mapsht->sphPlm_upper_limit, 1.0);
     for (i = 20; i <= mapalm->lmax; i++)
       gsl_vector_set (mapsht->sphPlm_upper_limit, i, (ncm_sphPlm_x (mapalm->lmax, i, 20)));
-    ncm_cfg_save_vector ("Plm_upper_limit_lmax_%d.dat", mapsht->sphPlm_upper_limit, mapalm->lmax);
   }
 
   for (i = 0; i < mapsht->n_rings; i++)

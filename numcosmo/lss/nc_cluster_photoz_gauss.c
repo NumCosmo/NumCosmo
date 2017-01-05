@@ -216,9 +216,9 @@ _nc_cluster_photoz_gauss_get_property (GObject *object, guint prop_id, GValue *v
 static void
 nc_cluster_photoz_gauss_class_init (NcClusterPhotozGaussClass *klass)
 {
-  GObjectClass* object_class = G_OBJECT_CLASS (klass);
+  GObjectClass* object_class           = G_OBJECT_CLASS (klass);
   NcClusterRedshiftClass* parent_class = NC_CLUSTER_REDSHIFT_CLASS (klass);
-  NcmModelClass *model_class = NCM_MODEL_CLASS (klass);
+  NcmModelClass *model_class           = NCM_MODEL_CLASS (klass);
 
   parent_class->P              = &_nc_cluster_photoz_gauss_p;
   parent_class->intP           = &_nc_cluster_photoz_gauss_intp;
@@ -228,7 +228,7 @@ nc_cluster_photoz_gauss_class_init (NcClusterPhotozGaussClass *klass)
   parent_class->obs_len        = &_nc_cluster_photoz_gauss_obs_len;
   parent_class->obs_params_len = &_nc_cluster_photoz_gauss_obs_params_len;
 
-  parent_class->impl = NC_CLUSTER_REDSHIFT_IMPL_ALL;
+  ncm_model_class_add_impl_flag (model_class, NC_CLUSTER_REDSHIFT_IMPL_ALL);
 
   object_class->finalize = _nc_cluster_photoz_gauss_finalize;
 

@@ -1349,10 +1349,8 @@ _nc_data_cluster_ncount_m2lnL_val (NcmData *data, NcmMSet *mset, gdouble *m2lnL)
   }
   else
   {
-    NcClusterRedshiftImpl z_impl = nc_cluster_redshift_impl (clusterz);
-    NcClusterMassImpl lnM_impl   = nc_cluster_mass_impl (clusterm);
-    gboolean z_p                 = z_impl & NC_CLUSTER_REDSHIFT_P;
-    gboolean lnM_p               = lnM_impl & NC_CLUSTER_MASS_P;
+    gboolean z_p   = ncm_model_check_impl_opt (NCM_MODEL (clusterz), NC_CLUSTER_REDSHIFT_P);
+    gboolean lnM_p = ncm_model_check_impl_opt (NCM_MODEL (clusterm), NC_CLUSTER_MASS_P);
     
     if (z_p && lnM_p)
     {

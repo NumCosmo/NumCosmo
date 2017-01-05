@@ -456,70 +456,70 @@ _nc_powspec_mnl_halofit_prepare_nl (NcPowspecMNLHaloFit* pshf, NcmModel* model)
 	ncm_powspec_filter_prepare_if_needed (pshf->psml_gauss, model);
 
 	{
-		const gdouble R_min = ncm_powspec_filter_get_r_min (pshf->psml_gauss);
-		var_params vps = { pshf, cosmo, 0.0, R_min };
+    const gdouble R_min = ncm_powspec_filter_get_r_min (pshf->psml_gauss);
+		var_params vps = { pshf, cosmo, 0.0, R_min};
 
-		gsl_function Fznl;
+    gsl_function Fznl;
 
-		Fznl.function = &_nc_powspec_mnl_halofit_linear_scale_z_znl;
-		Fznl.params = &vps;
+    Fznl.function = &_nc_powspec_mnl_halofit_linear_scale_z_znl;
+    Fznl.params   = &vps;
 
-		if (_nc_powspec_mnl_halofit_linear_scale_z (pshf->zmaxnl, Fznl.params) > R_min)
-			pshf->znl = pshf->zmaxnl;
-		else
-		{
-			const gdouble step = 1.0;
-			gdouble z0 = 0.0;
-			gdouble z1 = z0 + step;
-			gdouble R0 = _nc_powspec_mnl_halofit_linear_scale_z (z0, Fznl.params);
-			gdouble R1 = _nc_powspec_mnl_halofit_linear_scale_z (z1, Fznl.params);
-			gboolean found = FALSE;
+    if (_nc_powspec_mnl_halofit_linear_scale_z (pshf->zmaxnl, Fznl.params) > R_min)
+      pshf->znl = pshf->zmaxnl;
+    else
+    {
+      const gdouble step = 1.0;
+      gdouble z0     = 0.0;
+      gdouble z1     = z0 + step;
+      gdouble R0     = _nc_powspec_mnl_halofit_linear_scale_z (z0, Fznl.params);
+      gdouble R1     = _nc_powspec_mnl_halofit_linear_scale_z (z1, Fznl.params);
+      gboolean found = FALSE;
 
-			if (R0 < R_min)
-				g_error ("_nc_powspec_mnl_halofit_prepare_nl: linear universe or too large R_min, in the latter case increase k_max (R0 == % 21.15g, R_min == % 21.15g).", R0, R_min);
+      if (R0 < R_min)
+        g_error ("_nc_powspec_mnl_halofit_prepare_nl: linear universe or too large R_min, in the latter case increase k_max (R0 == % 21.15g, R_min == % 21.15g).", R0, R_min);
 
-			while (R1 > R_min)
-			{
-				z0 = z1;
-				z1 += step;
-				R1 = _nc_powspec_mnl_halofit_linear_scale_z (z1, Fznl.params);
-				if (z1 > pshf->zmaxnl)
-				{
-					pshf->znl = pshf->zmaxnl;
-					found = TRUE;
-					break;
-				}
-			}
+      while (R1 > R_min)
+      {
+        z0  = z1;
+        z1 += step;
+        R1 = _nc_powspec_mnl_halofit_linear_scale_z (z1, Fznl.params);
+        if (z1 > pshf->zmaxnl)
+        {
+          pshf->znl = pshf->zmaxnl;
+          found = TRUE;
+          break;
+        }
+      }
 
-			if (!found)
-			{
-				gint status;
-				gint iter = 0, max_iter = 20000;
+      if (!found)
+      {
+        gint status;
+        gint iter = 0, max_iter = 20000;
 
-				gsl_root_fsolver_set (pshf->priv->znl_solver, &Fznl, z0, z1);
-				do
-				{
-					iter++;
-					status = gsl_root_fsolver_iterate (pshf->priv->znl_solver);
+        gsl_root_fsolver_set (pshf->priv->znl_solver, &Fznl, z0, z1);
+        do
+        {
+          iter++;
+          status = gsl_root_fsolver_iterate (pshf->priv->znl_solver);
 
-					pshf->znl = gsl_root_fsolver_root (pshf->priv->znl_solver);
-					z0 = gsl_root_fsolver_x_lower (pshf->priv->znl_solver);
-					z1 = gsl_root_fsolver_x_upper (pshf->priv->znl_solver);
-					status = gsl_root_test_interval (z0, z1, 0.0, 1.0e-3);
-				} while (status == GSL_CONTINUE && iter < max_iter);
+          pshf->znl = gsl_root_fsolver_root (pshf->priv->znl_solver);
+          z0        = gsl_root_fsolver_x_lower (pshf->priv->znl_solver);
+          z1        = gsl_root_fsolver_x_upper (pshf->priv->znl_solver);
+          status    = gsl_root_test_interval (z0, z1, 0.0, 1.0e-3);
+        } while (status == GSL_CONTINUE && iter < max_iter);
 
-				if (iter >= max_iter)
-					g_warning ("_nc_powspec_mnl_halofit_prepare_nl: maximum number of iteration reached (%u), giving up.", max_iter);
-			}
-		}
+        if (iter >= max_iter)
+          g_warning ("_nc_powspec_mnl_halofit_prepare_nl: maximum number of iteration reached (%u), giving up.", max_iter);
+      }
+    }
 
-		{
-			gsl_function F;
-			F.function = &_nc_powspec_mnl_halofit_linear_scale_z;
-			F.params = &vps;
+    {
+      gsl_function F;
+      F.function = &_nc_powspec_mnl_halofit_linear_scale_z;
+      F.params = &vps;
 
-			ncm_spline_set_func (pshf->Rsigma, NCM_SPLINE_FUNCTION_SPLINE, &F, 0.0, pshf->znl, 0, pshf->reltol);
-		}
+      ncm_spline_set_func (pshf->Rsigma, NCM_SPLINE_FUNCTION_SPLINE, &F, 0.0, pshf->znl, 0, pshf->reltol);
+    }
 	}
 
 	{
@@ -596,7 +596,7 @@ _nc_powspec_mnl_halofit_preeval (NcPowspecMNLHaloFit* pshf, NcHICosmo* cosmo, co
 	const gdouble neff4 = neff2 * neff2;
 
 	const gdouble Omega_de_onepp = NC_IS_HICOSMO_DE (cosmo) ? nc_hicosmo_de_E2Omega_de_onepw (NC_HICOSMO_DE (cosmo), z) / E2 : 0.0;
-	const gdouble Omega_m = nc_hicosmo_Omega_m0 (cosmo) * gsl_pow_3 (1.0 + z) / E2;
+	const gdouble Omega_m        = nc_hicosmo_E2Omega_m (cosmo, z) / E2;
 
 	pshf->priv->z = z;
 
@@ -619,47 +619,47 @@ static gdouble
 _nc_powspec_mnl_halofit_eval (NcmPowspec* powspec, NcmModel* model, const gdouble z, const gdouble k)
 {
 	NcHICosmo* cosmo = NC_HICOSMO (model);
-	NcPowspecMNLHaloFit* pshf = NC_POWSPEC_MNL_HALOFIT (powspec);
-	const gboolean linscale = (z > pshf->znl);
-	const gboolean applysmooth = (z + 1.0 > pshf->znl);
-	const gdouble zhf = linscale ? pshf->znl : z;
-	const gdouble Pklin = ncm_powspec_eval (NCM_POWSPEC (pshf->psml), model, z, k);
-	gdouble Pknln;
+	NcPowspecMNLHaloFit* pshf  = NC_POWSPEC_MNL_HALOFIT (powspec);
+  const gboolean linscale    = (z       > pshf->znl);
+  const gboolean applysmooth = (z + 1.0 > pshf->znl);
+  const gdouble zhf          = linscale ? pshf->znl : z;
+	const gdouble Pklin        = ncm_powspec_eval (NCM_POWSPEC (pshf->psml), model, z, k);
+  gdouble Pknln;
 
-	if (zhf != pshf->priv->z)
-	{
-		_nc_powspec_mnl_halofit_preeval (pshf, cosmo, zhf);
-	}
-	{
-		const gdouble k3 = gsl_pow_3 (k);
-		const gdouble k3o2pi2 = k3 / ncm_c_2_pi_2 ();
-		const gdouble Delta_lin = k3o2pi2 * Pklin;
-		const gdouble y = k / pshf->priv->ksigma;
-		const gdouble P_Q = Pklin * (pow (1.0 + Delta_lin, pshf->priv->betan) / (1.0 + pshf->priv->alphan * Delta_lin)) * exp (-y / 4.0 - y * y / 8.0);
+  if (zhf != pshf->priv->z)
+  {
+    _nc_powspec_mnl_halofit_preeval (pshf, cosmo, zhf);
+  }
+  {
+    const gdouble k3           = gsl_pow_3 (k);
+    const gdouble k3o2pi2      = k3 / ncm_c_2_pi_2 ();
+    const gdouble Delta_lin    = k3o2pi2 * Pklin;
+    const gdouble y            = k / pshf->priv->ksigma;
+    const gdouble P_Q          = Pklin * (pow (1.0 + Delta_lin, pshf->priv->betan) / (1.0 + pshf->priv->alphan * Delta_lin)) * exp (-y / 4.0 - y * y / 8.0);
 
-		const gdouble Delta_Hprime = pshf->priv->an * pow (y, 3.0 * pshf->priv->f1) / (1.0 + pshf->priv->bn * pow (y, pshf->priv->f2) + pow (pshf->priv->cn * pshf->priv->f3 * y, 3.0 - pshf->priv->gamman));
-		const gdouble Delta_H = Delta_Hprime / (1.0 + pshf->priv->nun / (y * y));
+    const gdouble Delta_Hprime = pshf->priv->an * pow (y, 3.0 * pshf->priv->f1) / (1.0 + pshf->priv->bn * pow (y, pshf->priv->f2) + pow (pshf->priv->cn * pshf->priv->f3 * y, 3.0 - pshf->priv->gamman));
+    const gdouble Delta_H      = Delta_Hprime / (1.0 + pshf->priv->nun / (y * y));
 
-		const gdouble P_H = Delta_H / k3o2pi2;
+    const gdouble P_H          = Delta_H / k3o2pi2;
 
-		Pknln = P_Q + P_H;
-	}
+    Pknln = P_Q + P_H;
+  }
 
-	if (applysmooth)
-		Pknln = ncm_util_smooth_trans (Pknln, Pklin, pshf->znl, 1.0, z);
+  if (applysmooth)
+    Pknln = ncm_util_smooth_trans (Pknln, Pklin, pshf->znl, 1.0, z);
 
-	return Pknln;
+  return Pknln;
 }
 
 static void
 _nc_powspec_mnl_halofit_eval_vec (NcmPowspec* powspec, NcmModel* model, const gdouble z, NcmVector* k, NcmVector* Pk)
 {
-	NcHICosmo* cosmo = NC_HICOSMO (model);
-	NcPowspecMNLHaloFit* pshf = NC_POWSPEC_MNL_HALOFIT (powspec);
-	const gboolean linscale = (z > pshf->znl);
-	const gboolean applysmooth = (z + 1.0 > pshf->znl);
-	const gdouble zhf = linscale ? pshf->znl : z;
-	gdouble theta0, theta1;
+	NcHICosmo *cosmo           = NC_HICOSMO (model);
+	NcPowspecMNLHaloFit *pshf  = NC_POWSPEC_MNL_HALOFIT (powspec);
+  const gboolean linscale    = (z       > pshf->znl);
+  const gboolean applysmooth = (z + 1.0 > pshf->znl);
+  const gdouble zhf          = linscale ? pshf->znl : z;
+  gdouble theta0, theta1;
 
 	ncm_powspec_eval_vec (NCM_POWSPEC (pshf->psml), model, z, k, Pk);
 
@@ -677,14 +677,14 @@ _nc_powspec_mnl_halofit_eval_vec (NcmPowspec* powspec, NcmModel* model, const gd
 
 		for (i = 0; i < len; i++)
 		{
-			const gdouble ki = ncm_vector_get (k, i);
-			const gdouble ki3 = gsl_pow_3 (ki);
-			const gdouble ki3o2pi2 = ki3 / ncm_c_2_pi_2 ();
-			const gdouble Pklin = ncm_vector_get (Pk, i);
-			const gdouble Delta_lin = ki3o2pi2 * Pklin;
-			const gdouble y = ki / pshf->priv->ksigma;
+			const gdouble ki           = ncm_vector_get (k, i);
+			const gdouble ki3          = gsl_pow_3 (ki);
+			const gdouble ki3o2pi2     = ki3 / ncm_c_2_pi_2 ();
+			const gdouble Pklin        = ncm_vector_get (Pk, i);
+			const gdouble Delta_lin    = ki3o2pi2 * Pklin;
+			const gdouble y            = ki / pshf->priv->ksigma;
 
-			const gdouble P_Q = Pklin * (pow (1.0 + Delta_lin, pshf->priv->betan) / (1.0 + pshf->priv->alphan * Delta_lin)) * exp (-y / 4.0 - y * y / 8.0);
+			const gdouble P_Q          = Pklin * (pow (1.0 + Delta_lin, pshf->priv->betan) / (1.0 + pshf->priv->alphan * Delta_lin)) * exp (-y / 4.0 - y * y / 8.0);
 			const gdouble Delta_Hprime = pshf->priv->an * pow (y, 3.0 * pshf->priv->f1) / (1.0 + pshf->priv->bn * pow (y, pshf->priv->f2) + pow (pshf->priv->cn * pshf->priv->f3 * y, 3.0 - pshf->priv->gamman));
 			const gdouble Delta_H = Delta_Hprime / (1.0 + pshf->priv->nun / (y * y));
 			const gdouble P_H = Delta_H / ki3o2pi2;
