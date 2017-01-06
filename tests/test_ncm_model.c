@@ -252,7 +252,7 @@ test_ncm_model_test_new (TestNcmModel *test, gconstpointer pdata)
 
   g_assert_cmpstr (ncm_model_name (model), ==, test->name);
   g_assert_cmpstr (ncm_model_nick (model), ==, test->nick);
-  g_assert (ncm_model_impl (model) == 0);
+
   g_assert (ncm_model_peek_reparam (model) == test->reparam);
 }
 

@@ -112,7 +112,7 @@ gdouble ncm_integral_fixed_integ_posdef_mult (NcmIntegralFixed *intf, gsl_functi
 #define NCM_INTEGRAL_PARTITION 100000
 #define NCM_INTEGRAL_ALG 6
 #define NCM_INTEGRAL_ERROR 1e-13
-#define NCM_INTEGRAL_ABS_ERROR 1e-13
+#define NCM_INTEGRAL_ABS_ERROR 0.0
 
 G_END_DECLS
 

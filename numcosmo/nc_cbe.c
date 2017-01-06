@@ -1853,7 +1853,7 @@ nc_cbe_compare_bg (NcCBE *cbe, NcHICosmo *cosmo, gboolean log_cmp)
 
   gdouble pvecback[pba->bg_size];
   gdouble err = 0.0;
-  gboolean isLambda = NC_IS_HICOSMO_DE_XCDM (cosmo) && (ncm_model_orig_param_get (NCM_MODEL (cosmo), NC_HICOSMO_DE_OMEGA_X) == -1.0);
+  gboolean isLambda = NC_IS_HICOSMO_DE_XCDM (cosmo) && (ncm_model_orig_param_get (NCM_MODEL (cosmo), NC_HICOSMO_DE_XCDM_W) == -1.0);
   gboolean hasNcdm  = nc_hicosmo_Omega_mnu0 (cosmo) != 0.0;
   guint i;
 

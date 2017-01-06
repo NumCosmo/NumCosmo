@@ -39,6 +39,7 @@ G_BEGIN_DECLS
  * @NCM_SPLINE_FUNCTION_2x2POINTS: FIXME
  * @NCM_SPLINE_FUNCTION_SPLINE: FIXME
  * @NCM_SPLINE_FUNCTION_SPLINE_LNKNOT: FIXME
+ * @NCM_SPLINE_FUNCTION_SPLINE_SINHKNOT: FIXME
  * 
  * FIXME
  */ 
@@ -48,6 +49,7 @@ typedef enum _NcmSplineFuncType
   NCM_SPLINE_FUNCTION_2x2POINTS,
   NCM_SPLINE_FUNCTION_SPLINE,
   NCM_SPLINE_FUNCTION_SPLINE_LNKNOT,
+  NCM_SPLINE_FUNCTION_SPLINE_SINHKNOT,
 } NcmSplineFuncType;
 
 void ncm_spline_set_func (NcmSpline *s, NcmSplineFuncType ftype, gsl_function *F, gdouble xi, gdouble xf, gsize max_nodes, gdouble rel_error);
