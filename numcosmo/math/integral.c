@@ -120,7 +120,7 @@ ncm_integral_locked_a_b (gsl_function *F, gdouble a, gdouble b, gdouble abstol, 
  * @error: a pointer to a gdouble in which the function stores the estimated error.
  *
  * This function uses a workspace from the pool and gsl_integration_qagiu function to perform
- * the numerical integration in the \f$ [a, \infty] \f$ interval.
+ * the numerical integration in the $[a, \infty]$ interval.
  *
  * Returns: the error code returned by gsl_integration_qagiu.
  */
@@ -128,13 +128,16 @@ gint
 ncm_integral_locked_a_inf (gsl_function *F, gdouble a, gdouble abstol, gdouble reltol, gdouble *result, gdouble *error)
 {
   gsl_integration_workspace **w = ncm_integral_get_workspace ();
-  gint error_code = gsl_integration_qagiu (F, a, abstol, reltol, NCM_INTEGRAL_PARTITION, *w, result, error);
+  gint error_code               = gsl_integration_qagiu (F, a, abstol, reltol, NCM_INTEGRAL_PARTITION, *w, result, error);
+
   ncm_memory_pool_return (w);
+  
   if (error_code != GSL_SUCCESS && error_code != GSL_EROUND)
   {
     g_warning ("ncm_integral_locked_a_inf: %s", gsl_strerror (error_code));
     *result = GSL_POSINF;
   }
+
   return error_code;
 }
 
@@ -188,11 +191,11 @@ ncm_integral_cached_0_x (NcmFunctionCache *cache, gsl_function *F, gdouble x, gd
  * @x: lower integration limit.
  * @result: a pointer to a gdouble in which the function stores the result.
  * @error: a pointer to a gdouble in which the function stores the estimated error.
- *
+ * 
  * This function searchs for the nearest x_near value previously chosed as the lower integration limit
- * and perform the integration at \f$ [x, x_{near}] \f$ interval. This result is summed to that
- * obtained at \f$ [x_{near}, \infty] \f$ and then it is saved in the cache.
- *
+ * and perform the integration at $[x, x_{near}]$ interval. This result is summed to that
+ * obtained at $[x_{near}, \infty]$ and then it is saved in the cache.
+ * 
  * Returns: the error code returned by gsl_integration_qagiu.
  */
 gint
@@ -206,11 +209,14 @@ ncm_integral_cached_x_inf (NcmFunctionCache *cache, gsl_function *F, gdouble x, 
   if (ncm_function_cache_get_near (cache, x, &x_found, &p_result, NC_FUNCTION_CACHE_SEARCH_BOTH))
   {
     if (x == x_found)
-      *result = gsl_vector_get(p_result, 0);
+    {
+      *result = gsl_vector_get (p_result, 0);
+    }
     else
     {
       error_code = ncm_integral_locked_a_b (F, x, x_found, cache->abstol, cache->reltol, result, error);
       *result += gsl_vector_get(p_result, 0);
+
       ncm_function_cache_insert (cache, x, *result);
     }
   }

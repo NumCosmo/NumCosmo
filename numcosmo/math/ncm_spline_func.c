@@ -19,7 +19,7 @@
  * See the GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License along
- * with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * with this program.  If not, see <http://www.gnu.org/licenses/>.  
  */
 
 /**
@@ -144,7 +144,7 @@ ncm_spline_new_function_4 (NcmSpline *s, gsl_function *F, gdouble xi, gdouble xf
   GArray *y_array;
   gsize n_elem;
 
-  NCM_UNUSED (max_nodes);
+  max_nodes = (max_nodes <= 0) ? G_MAXUINT64 : max_nodes;
 
   for (i = 0; i < 4; i++)
   {
@@ -200,7 +200,7 @@ ncm_spline_new_function_2x2 (NcmSpline *s, gsl_function *F, gdouble xi, gdouble 
   GArray *y_array;
   gsize n_elem;
 
-  NCM_UNUSED (max_nodes);
+  max_nodes = (max_nodes <= 0) ? G_MAXUINT64 : max_nodes;
 
   for (i = 0; i < 4; i++)
   {
@@ -256,8 +256,7 @@ ncm_spline_new_function_spline (NcmSpline *s, gsl_function *F, gdouble xi, gdoub
   
   g_assert (xf > xi);
 
-  if (max_nodes == 0)
-    max_nodes = NCM_SPLINE_FUNC_DEFAULT_MAX_NODES;
+  max_nodes = (max_nodes <= 0) ? G_MAXUINT64 : max_nodes;
 
   g_array_set_size (xt_array, n);
   g_array_set_size (yt_array, n);
@@ -346,20 +345,13 @@ ncm_spline_new_function_spline (NcmSpline *s, gsl_function *F, gdouble xi, gdoub
     SWAP_PTR (x_array, xt_array);
     SWAP_PTR (y_array, yt_array);
 
+    ncm_spline_set_array (s, x_array, y_array, TRUE);
     if (x_array->len > max_nodes)
     {
       g_warning ("ncm_spline_new_function_spline: cannot achive requested precision with at most %zu nodes", max_nodes);
-      for (i = 0; i < x_array->len; i++)
-      {
-        printf ("% 21.16g % 21.16g\n", 
-                g_array_index (x_array, gdouble, i), 
-                g_array_index (y_array, gdouble, i));
-      }
-      ncm_spline_set_array (s, x_array, y_array, TRUE);
       break;
     }
 
-    ncm_spline_set_array (s, x_array, y_array, TRUE);
     if (improves == 0)
       break;
   }
@@ -388,7 +380,7 @@ ncm_spline_new_function_spline_lnknot (NcmSpline *s, gsl_function *F, gdouble xi
 
   n = (n < 3) ? 3 : n;
   
-  NCM_UNUSED (max_nodes);
+  max_nodes = (max_nodes <= 0) ? G_MAXUINT64 : max_nodes;
 
   g_assert (xi > 0.0 && xf > xi);
 
@@ -424,18 +416,20 @@ ncm_spline_new_function_spline_lnknot (NcmSpline *s, gsl_function *F, gdouble xi
         continue;
       else
       {
-        const gdouble x0   = BIVEC_LIST_X(wnodes);
-        const gdouble x1   = BIVEC_LIST_X(wnodes->next);
-        const gdouble lnx0 = log (x0);
-        const gdouble lnx1 = log (x1);
-        const gdouble y0   = BIVEC_LIST_Y(wnodes);
-        const gdouble y1   = BIVEC_LIST_Y(wnodes->next);
-        const gdouble lnx  = (lnx0 + lnx1) / 2.0;
-        const gdouble x    = exp (lnx);
-        const gdouble y    = GSL_FN_EVAL (F, x);
-        const gdouble ys   = ncm_spline_eval (s, x);
-        const gdouble Iyc  = (x1 - x0) * (x1 * y1 + x0 * y0 + 4.0 * x * y) / 6.0;
-        const gdouble Iys  = ncm_spline_eval_integ (s, x0, x1);
+        const gdouble x0    = BIVEC_LIST_X(wnodes);
+        const gdouble x1    = BIVEC_LIST_X(wnodes->next);
+        const gdouble lnx0  = log (x0);
+        const gdouble lnx1  = log (x1);
+        const gdouble y0    = BIVEC_LIST_Y(wnodes);
+        const gdouble y1    = BIVEC_LIST_Y(wnodes->next);
+        const gdouble lnx   = (lnx0 + lnx1) / 2.0;
+        const gdouble x     = exp (lnx);
+        const gdouble y     = GSL_FN_EVAL (F, x);
+        const gdouble ys    = ncm_spline_eval (s, x);
+        const gdouble delta = (x - 0.5 * (x1 + x0)) / (0.5 * (x1 - x0));
+        const gdouble Iyc   = (x1 - x0) * (y1 * (3.0 - 2.0 / (1.0 - delta)) + y0 * (3.0 - 2.0 / (1.0 + delta)) + 4.0 * y / (1.0 - delta * delta)) / 6.0;
+        /*const gdouble Iyc   = (x1 - x0) * (x1 * y1 + x0 * y0 + 4.0 * x * y) / 6.0;*/
+        const gdouble Iys   = ncm_spline_eval_integ (s, x0, x1);
         const gboolean test_p = (TEST_CMP(y, ys) < rel_error);
         const gboolean test_I = (TEST_CMP(Iyc, Iys) < rel_error);
 #ifdef _NCM_SPLINE_TEST_DIFF
@@ -474,6 +468,135 @@ ncm_spline_new_function_spline_lnknot (NcmSpline *s, gsl_function *F, gdouble xi
     SWAP_PTR (y_array, yt_array);
 
     ncm_spline_set_array (s, x_array, y_array, TRUE);
+    if (x_array->len > max_nodes)
+    {
+      g_warning ("ncm_spline_new_function_spline: cannot achive requested precision with at most %zu nodes", max_nodes);
+      break;
+    }
+
+    if (improves == 0)
+      break;
+  }
+  g_list_free_full (nodes, _BIVec_free);
+
+  g_array_unref (x_array);
+  g_array_unref (xt_array);
+  g_array_unref (y_array);
+  g_array_unref (yt_array);
+
+  return;
+}
+
+static void
+ncm_spline_new_function_spline_sinhknot (NcmSpline *s, gsl_function *F, gdouble xi, gdouble xf, gsize max_nodes, const gdouble rel_error)
+{
+  GArray *x_array  = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), 1000);
+  GArray *y_array  = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), 1000);
+  GArray *xt_array = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), 1000);
+  GArray *yt_array = g_array_sized_new (FALSE, FALSE, sizeof (gdouble), 1000);
+  GList *nodes = NULL, *wnodes = NULL;
+  gsize n = ncm_spline_min_size (s);
+  guint i;
+  const gdouble axi = asinh (xi);
+  const gdouble axf = asinh (xf);
+
+  n = (n < 3) ? 3 : n;
+
+  max_nodes = (max_nodes <= 0) ? G_MAXUINT64 : max_nodes;
+
+  g_array_set_size (xt_array, n);
+  g_array_set_size (yt_array, n);
+
+  for (i = 0; i < n; i++)
+  {
+    gdouble x = sinh (axi + (axf - axi) / (n - 1.0) * i);
+    gdouble y = GSL_FN_EVAL (F, x);
+
+    BIVEC_LIST_APPEND (nodes, x, y);
+    BIVEC_LIST_OK (nodes) = 0;
+
+    g_array_append_val (x_array, x);
+    g_array_append_val (y_array, y);
+  }
+  ncm_spline_set_array (s, x_array, y_array, TRUE);
+
+#define TEST_CMP(a,b) ((a) != 0.0 ? fabs(((b)-(a))/(a)) : fabs((b)-(a)))
+#define SWAP_PTR(a,b) do { const gpointer tmp = (b); (b) = (a); (a) = tmp; } while (FALSE)
+
+  while (TRUE)
+  {
+    gsize improves = 0;
+    wnodes = nodes;
+    g_array_set_size (xt_array, 0);
+    g_array_set_size (yt_array, 0);
+
+    do
+    {
+      g_array_append_val (xt_array, BIVEC_LIST_X (wnodes));
+      g_array_append_val (yt_array, BIVEC_LIST_Y (wnodes));
+
+      if (BIVEC_LIST_OK (wnodes) == 1)
+        continue;
+      else
+      {
+        const gdouble x0    = BIVEC_LIST_X(wnodes);
+        const gdouble x1    = BIVEC_LIST_X(wnodes->next);
+        const gdouble ax0   = asinh (x0);
+        const gdouble ax1   = asinh (x1);
+        const gdouble y0    = BIVEC_LIST_Y(wnodes);
+        const gdouble y1    = BIVEC_LIST_Y(wnodes->next);
+        const gdouble ax    = (ax0 + ax1) / 2.0;
+        const gdouble x     = sinh (ax);
+        const gdouble y     = GSL_FN_EVAL (F, x);
+        const gdouble ys    = ncm_spline_eval (s, x);
+        const gdouble delta = (x - 0.5 * (x1 + x0)) / (0.5 * (x1 - x0));
+        const gdouble Iyc   = (x1 - x0) * (y1 * (3.0 - 2.0 / (1.0 - delta)) + y0 * (3.0 - 2.0 / (1.0 + delta)) + 4.0 * y / (1.0 - delta * delta)) / 6.0;
+        const gdouble Iys = ncm_spline_eval_integ (s, x0, x1);
+        /*printf ("NEW KNOT (% 22.15g % 22.15g % 22.15g) = [% 22.15g (% 22.15g <=> % 22.15g) % 22.15g] %e %e\n", x0, x, x1, y0, y, ys, y1, TEST_CMP(y, ys), TEST_CMP(Iyc, Iys));*/
+        const gboolean test_p = (TEST_CMP(y, ys) < rel_error);
+        const gboolean test_I = (TEST_CMP(Iyc, Iys) < rel_error);
+#ifdef _NCM_SPLINE_TEST_DIFF
+        const gdouble dyc = (y1 - y0) / (x1 - x0);
+        const gdouble dys = ncm_spline_eval_deriv (s, x);
+        const gboolean test_d = (TEST_CMP(dyc, dys) < rel_error);
+#endif /* _NCM_SPLINE_TEST_DIFF */
+
+        BIVEC_LIST_INSERT_BEFORE (nodes, wnodes->next, x, y);
+        wnodes = g_list_next (wnodes);
+        g_array_append_val(xt_array, BIVEC_LIST_X(wnodes));
+        g_array_append_val(yt_array, BIVEC_LIST_Y(wnodes));
+        BIVEC_LIST_OK(wnodes) = BIVEC_LIST_OK(wnodes->prev);
+
+#ifdef _NCM_SPLINE_TEST_DIFF
+        if (test_p && test_I && test_d)
+#else
+          if (test_p && test_I)
+#endif /* _NCM_SPLINE_TEST_DIFF */
+        {
+          BIVEC_LIST_OK(wnodes->prev)++;
+          BIVEC_LIST_OK(wnodes)++;
+        }
+        else
+          improves++;
+      }
+    } while ((wnodes = g_list_next (wnodes)) && wnodes->next);
+
+    if (wnodes != NULL)
+    {
+      g_array_append_val (xt_array, BIVEC_LIST_X (wnodes));
+      g_array_append_val (yt_array, BIVEC_LIST_Y (wnodes));
+    }
+    
+    SWAP_PTR (x_array, xt_array);
+    SWAP_PTR (y_array, yt_array);
+
+    ncm_spline_set_array (s, x_array, y_array, TRUE);
+    if (x_array->len > max_nodes)
+    {
+      g_warning ("ncm_spline_new_function_spline: cannot achive requested precision with at most %zu nodes", max_nodes);
+      break;
+    }
+
     if (improves == 0)
       break;
   }
@@ -517,6 +640,9 @@ ncm_spline_set_func (NcmSpline *s, NcmSplineFuncType ftype, gsl_function *F, gdo
       break;
     case NCM_SPLINE_FUNCTION_SPLINE_LNKNOT:
       ncm_spline_new_function_spline_lnknot (s, F, xi, xf, max_nodes, rel_error);
+      break;
+    case NCM_SPLINE_FUNCTION_SPLINE_SINHKNOT:
+      ncm_spline_new_function_spline_sinhknot (s, F, xi, xf, max_nodes, rel_error);
       break;
     default:
       g_assert_not_reached ();

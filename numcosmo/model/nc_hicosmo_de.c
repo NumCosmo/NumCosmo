@@ -37,26 +37,22 @@
 
 #include "math/ncm_mset_func_list.h"
 #include "math/ncm_prior_gauss_func.h"
+#include "math/ncm_spline_cubic_notaknot.h"
 #include "model/nc_hicosmo_de.h"
 #include "model/nc_hicosmo_de_reparam_cmb.h"
 #include "model/nc_hicosmo_de_reparam_ok.h"
 
 G_DEFINE_ABSTRACT_TYPE (NcHICosmoDE, nc_hicosmo_de, NC_TYPE_HICOSMO);
 
-typedef struct _NcHICosmoDENeutrino
-{
-  gdouble zmax;
-  NcmSpline *Omega_mnu;		/* energy density parameter of massive neutrinos (dust part) */
-  NcmSpline *Omega_rnu;		/* energy density parameter of massive neutrinos (radiation part) */
-} NcHICosmoDENeutrino;
-
 struct _NcHICosmoDEPrivate
 {
   NcmSpline2d *BBN_spline2d;
   guint64 HE4_Yp_key;
-  NcHICosmoDENeutrino *Nu;
   NcmIntegral1dPtr *nu_rho;
   NcmIntegral1dPtr *nu_p;
+  NcmSpline *nu_rho_s[10];
+  NcmSpline *nu_p_s[10];
+  gdouble zmax;
 };
 
 enum
@@ -70,6 +66,7 @@ nc_hicosmo_de_init (NcHICosmoDE *cosmo_de)
 {
   NcmSerialize *ser = ncm_serialize_new (NCM_SERIALIZE_OPT_NONE);
   gchar *filename   = ncm_cfg_get_data_filename ("BBN_spline2d.obj", TRUE);
+  gint i;
 
   cosmo_de->priv               = G_TYPE_INSTANCE_GET_PRIVATE (cosmo_de, NC_TYPE_HICOSMO_DE, NcHICosmoDEPrivate);
   cosmo_de->priv->BBN_spline2d = NCM_SPLINE2D (ncm_serialize_from_file (ser, filename));
@@ -77,6 +74,17 @@ nc_hicosmo_de_init (NcHICosmoDE *cosmo_de)
   g_assert (NCM_IS_SPLINE2D (cosmo_de->priv->BBN_spline2d));
   ncm_serialize_clear (&ser);
   cosmo_de->priv->HE4_Yp_key = NCM_MODEL (cosmo_de)->pkey - 1;
+
+  cosmo_de->priv->nu_rho   = NULL;
+  cosmo_de->priv->nu_p     = NULL;
+
+  for (i = 0; i < 10; i++)
+  {
+    cosmo_de->priv->nu_rho_s[i] = NULL;
+    cosmo_de->priv->nu_p_s[i]   = NULL;
+  }
+
+  cosmo_de->priv->zmax = 1.0e12;
 
   g_free (filename);
 }
@@ -138,15 +146,22 @@ _nc_hicosmo_de_constructed (GObject *object)
     if (m_len != 0)
     {
       NcHICosmoDE *cosmo_de  = NC_HICOSMO_DE (model);
+      gint i;
       
       cosmo_de->priv->nu_rho = ncm_integral1d_ptr_new (&_nc_hicosmo_de_neutrino_rho_integrand, NULL);
       cosmo_de->priv->nu_p   = ncm_integral1d_ptr_new (&_nc_hicosmo_de_neutrino_p_integrand, NULL);
 
-      ncm_integral1d_set_reltol (NCM_INTEGRAL1D (cosmo_de->priv->nu_rho), 1.0e-3);
-      ncm_integral1d_set_reltol (NCM_INTEGRAL1D (cosmo_de->priv->nu_p),   1.0e-3);
+      ncm_integral1d_set_reltol (NCM_INTEGRAL1D (cosmo_de->priv->nu_rho), 1.0e-6);
+      ncm_integral1d_set_reltol (NCM_INTEGRAL1D (cosmo_de->priv->nu_p),   1.0e-6);
 
       ncm_integral1d_set_rule (NCM_INTEGRAL1D (cosmo_de->priv->nu_rho), 1);
       ncm_integral1d_set_rule (NCM_INTEGRAL1D (cosmo_de->priv->nu_p), 1);
+
+      for (i = 0; i < m_len; i++)
+      {
+        cosmo_de->priv->nu_rho_s[i] = ncm_spline_cubic_notaknot_new ();
+        cosmo_de->priv->nu_p_s[i]   = ncm_spline_cubic_notaknot_new ();
+      }
     }
   }
 }
@@ -155,11 +170,18 @@ static void
 _nc_hicosmo_de_dispose (GObject *object)
 {
   NcHICosmoDE *cosmo_de = NC_HICOSMO_DE (object);
+  gint i;
 
   ncm_spline2d_clear (&cosmo_de->priv->BBN_spline2d);
 
   ncm_integral1d_ptr_clear (&cosmo_de->priv->nu_rho);
   ncm_integral1d_ptr_clear (&cosmo_de->priv->nu_p);
+
+  for (i = 0; i < 10; i++)
+  {
+    ncm_spline_clear (&cosmo_de->priv->nu_rho_s[i]);
+    ncm_spline_clear (&cosmo_de->priv->nu_p_s[i]);
+  }
   
   /* Chain up : end */
   G_OBJECT_CLASS (nc_hicosmo_de_parent_class)->dispose (object);
@@ -351,6 +373,92 @@ static gdouble _nc_hicosmo_de_Omega_gnu0 (NcHICosmo *cosmo);
 
 #define OMEGA_M (OMEGA_B + OMEGA_C)
 #define OMEGA_K (1.0 - (OMEGA_B + OMEGA_C + OMEGA_R + OMEGA_X + _nc_hicosmo_de_Omega_mnu0 (cosmo)))
+
+typedef struct _NcHICosmoDENuInt
+{
+  NcHICosmoDE *cosmo_de;
+  gdouble xi2_0;
+  gdouble yi;
+} NcHICosmoDENuInt;
+
+typedef struct _neutrino_int
+{
+  const gdouble xi2;
+  const gdouble yi;
+} neutrino_int;
+
+static gdouble
+_nc_hicosmo_de_nu_rho_f (gdouble z, gpointer userdata)
+{
+  NcHICosmoDENuInt *nu_int = (NcHICosmoDENuInt *) userdata;
+  neutrino_int nudata = { nu_int->xi2_0 / gsl_pow_2 (1.0 + z), nu_int->yi };
+
+  ncm_integral1d_ptr_set_userdata (nu_int->cosmo_de->priv->nu_rho, &nudata);
+
+  {
+    gdouble err = 0.0;
+    const gdouble int_rho = ncm_integral1d_eval_gauss_laguerre (NCM_INTEGRAL1D (nu_int->cosmo_de->priv->nu_rho), &err);
+
+    return int_rho;
+  }
+}
+
+static gdouble
+_nc_hicosmo_de_nu_p_f (gdouble z, gpointer userdata)
+{
+  NcHICosmoDENuInt *nu_int = (NcHICosmoDENuInt *) userdata;
+  neutrino_int nudata = { nu_int->xi2_0 / gsl_pow_2 (1.0 + z), nu_int->yi };
+
+  ncm_integral1d_ptr_set_userdata (nu_int->cosmo_de->priv->nu_p, &nudata);
+
+  {
+    gdouble err = 0.0;
+    const gdouble int_p = ncm_integral1d_eval_gauss_laguerre (NCM_INTEGRAL1D (nu_int->cosmo_de->priv->nu_p), &err);
+
+    return int_p;
+  }
+}
+
+static void
+_nc_hicosmo_de_prepare (NcHICosmoDE *cosmo_de)
+{
+  NcmModel *model = NCM_MODEL (cosmo_de);
+  if (!ncm_model_state_is_update (model))
+  {
+    const guint m_len  = ncm_model_vparam_len (model, NC_HICOSMO_DE_MASSNU_M);
+
+    if (m_len > 0)
+    {
+      gint n;
+
+      for (n = 0; n < m_len; n++)
+      {
+        const gdouble m       = ncm_model_orig_vparam_get (model, NC_HICOSMO_DE_MASSNU_M, n);
+        const gdouble Tgamma0 = nc_hicosmo_T_gamma0 (NC_HICOSMO (cosmo_de));
+        const gdouble T0      = ncm_model_orig_vparam_get (model, NC_HICOSMO_DE_MASSNU_T, n) * Tgamma0;
+        const gdouble yi      = ncm_model_orig_vparam_get (model, NC_HICOSMO_DE_MASSNU_MU, n);
+        const gdouble xi_0    = m * ncm_c_eV () / (ncm_c_kb () * T0);
+        const gdouble xi2_0   = xi_0 * xi_0;
+
+        NcHICosmoDENuInt nu_int = {cosmo_de, xi2_0, yi};
+        gsl_function F;
+
+        F.params   = &nu_int;
+
+        F.function = &_nc_hicosmo_de_nu_rho_f;
+        ncm_spline_set_func (cosmo_de->priv->nu_rho_s[n], NCM_SPLINE_FUNCTION_SPLINE_SINHKNOT, &F, 0.0, cosmo_de->priv->zmax, 0, 1.0e-6);
+
+        F.function = &_nc_hicosmo_de_nu_p_f;
+        ncm_spline_set_func (cosmo_de->priv->nu_p_s[n], NCM_SPLINE_FUNCTION_SPLINE_SINHKNOT, &F, 0.0, cosmo_de->priv->zmax, 0, 1.0e-6);
+      }
+    }
+
+    ncm_model_state_set_update (model);
+  }
+  else
+    return;
+}
+
 
 /****************************************************************************
  *Normalized Hubble function
@@ -583,12 +691,6 @@ _nc_hicosmo_de_MassNuInfo (NcHICosmo *cosmo, guint nu_i, gdouble *mass_eV, gdoub
   }
 }
 
-typedef struct _neutrino_int
-{
-  const gdouble xi2;
-  const gdouble yi;
-} neutrino_int;
-
 static gdouble
 _nc_hicosmo_de_neutrino_rho_integrand (gpointer userdata, const gdouble u, const gdouble w)
 {
@@ -651,22 +753,16 @@ _nc_hicosmo_de_E2Omega_mnu_n (NcHICosmo *cosmo, const guint n, const gdouble z)
   NcmModel *model       = NCM_MODEL (cosmo);
   const gdouble h2      = nc_hicosmo_h2 (cosmo);
   const gdouble ffac    = 15.0 / (2.0 * gsl_pow_4 (M_PI)); 
-  const gdouble m       = ncm_model_orig_vparam_get (model, NC_HICOSMO_DE_MASSNU_M, n);
   const gdouble Tgamma  = (1.0 + z) * nc_hicosmo_T_gamma0 (cosmo);
   const gdouble T       = ncm_model_orig_vparam_get (model, NC_HICOSMO_DE_MASSNU_T, n) * Tgamma;
-  const gdouble mu      = ncm_model_orig_vparam_get (model, NC_HICOSMO_DE_MASSNU_MU, n);
   const gdouble g       = ncm_model_orig_vparam_get (model, NC_HICOSMO_DE_MASSNU_G, n);
-  const gdouble xi      = m * ncm_c_eV () / (ncm_c_kb () * T);
-  const gdouble xi2     = xi * xi;
-  const gdouble yi      = mu / T;
 
-  neutrino_int nudata = { xi2, yi };
-  ncm_integral1d_ptr_set_userdata (cosmo_de->priv->nu_rho, &nudata);
+  _nc_hicosmo_de_prepare (NC_HICOSMO_DE (cosmo_de));
 
   {
-    gdouble err;
-    const gdouble int_Ef       = ncm_integral1d_eval_gauss_laguerre (NCM_INTEGRAL1D (cosmo_de->priv->nu_rho), &err);
+    const gdouble int_Ef       = ncm_spline_eval (cosmo_de->priv->nu_rho_s[n], z);
     const gdouble Omega_mnu0_n = ffac * g * gsl_pow_4 (T) * ncm_c_blackbody_per_crit_density_h2 () / h2 * int_Ef;
+    
     return Omega_mnu0_n;
   }
 }
@@ -678,22 +774,16 @@ _nc_hicosmo_de_E2Press_mnu_n (NcHICosmo *cosmo, const guint n, const gdouble z)
   NcmModel *model       = NCM_MODEL (cosmo);
   const gdouble h2      = nc_hicosmo_h2 (cosmo);
   const gdouble ffac    = 15.0 / (2.0 * gsl_pow_4 (M_PI)); 
-  const gdouble m       = ncm_model_orig_vparam_get (model, NC_HICOSMO_DE_MASSNU_M, n);
   const gdouble Tgamma  = (1.0 + z) * nc_hicosmo_T_gamma0 (cosmo);
   const gdouble T       = ncm_model_orig_vparam_get (model, NC_HICOSMO_DE_MASSNU_T, n) * Tgamma;
-  const gdouble mu      = ncm_model_orig_vparam_get (model, NC_HICOSMO_DE_MASSNU_MU, n);
   const gdouble g       = ncm_model_orig_vparam_get (model, NC_HICOSMO_DE_MASSNU_G, n);
-  const gdouble xi      = m * ncm_c_eV () / (ncm_c_kb () * T);
-  const gdouble xi2     = xi * xi;
-  const gdouble yi      = mu / T;
 
-  neutrino_int nudata = { xi2, yi };
-  ncm_integral1d_ptr_set_userdata (cosmo_de->priv->nu_p, &nudata);
+  _nc_hicosmo_de_prepare (NC_HICOSMO_DE (cosmo_de));
 
   {
-    gdouble err;
-    const gdouble int_pf       = ncm_integral1d_eval_gauss_laguerre (NCM_INTEGRAL1D (cosmo_de->priv->nu_p), &err);
+    const gdouble int_pf       = ncm_spline_eval (cosmo_de->priv->nu_p_s[n], z);
     const gdouble Press_mnu0_n = ffac * g * gsl_pow_4 (T) * ncm_c_blackbody_per_crit_density_h2 () / h2 * int_pf;
+
     return Press_mnu0_n;
   }
 }
@@ -709,29 +799,18 @@ _nc_hicosmo_de_E2Omega_mnu (NcHICosmo *cosmo, const gdouble z)
   const gdouble Tgamma  = (1.0 + z) * nc_hicosmo_T_gamma0 (cosmo);
   gdouble Omega_mnu0    = 0.0;
 
-  guint nu_i;
+  guint n;
 
-  for (nu_i = 0; nu_i < nmassnu; nu_i++)
+  _nc_hicosmo_de_prepare (NC_HICOSMO_DE (cosmo_de));
+  
+  for (n = 0; n < nmassnu; n++)
   {
-    const gdouble m       = ncm_model_orig_vparam_get (model, NC_HICOSMO_DE_MASSNU_M, nu_i);
-    const gdouble T       = ncm_model_orig_vparam_get (model, NC_HICOSMO_DE_MASSNU_T, nu_i) * Tgamma;
-    const gdouble mu      = ncm_model_orig_vparam_get (model, NC_HICOSMO_DE_MASSNU_MU, nu_i);
-    const gdouble g       = ncm_model_orig_vparam_get (model, NC_HICOSMO_DE_MASSNU_G, nu_i);
-    const gdouble xi      = m * ncm_c_eV () / (ncm_c_kb () * T);
-    const gdouble xi2     = xi * xi;
-    const gdouble yi      = mu / T;
+    const gdouble T            = ncm_model_orig_vparam_get (model, NC_HICOSMO_DE_MASSNU_T, n) * Tgamma;
+    const gdouble g            = ncm_model_orig_vparam_get (model, NC_HICOSMO_DE_MASSNU_G, n);
+    const gdouble int_Ef       = ncm_spline_eval (cosmo_de->priv->nu_rho_s[n], z);
+    const gdouble Omega_mnu0_n = ffac * g * gsl_pow_4 (T) * ncm_c_blackbody_per_crit_density_h2 () / h2 * int_Ef;
 
-    neutrino_int nudata = { xi2, yi };
-
-    ncm_integral1d_ptr_set_userdata (cosmo_de->priv->nu_rho, &nudata);
-
-    {
-      gdouble err;
-      const gdouble int_E        = ncm_integral1d_eval_gauss_laguerre (NCM_INTEGRAL1D (cosmo_de->priv->nu_rho), &err);
-      const gdouble Omega_mnu0_n = ffac * g * gsl_pow_4 (T) * ncm_c_blackbody_per_crit_density_h2 () / h2 * int_E;
-
-      Omega_mnu0 += Omega_mnu0_n;
-    }
+    Omega_mnu0 += Omega_mnu0_n;
   }
 
   return Omega_mnu0;
@@ -747,29 +826,18 @@ _nc_hicosmo_de_E2Press_mnu (NcHICosmo *cosmo, const gdouble z)
   const gdouble h2      = nc_hicosmo_h2 (cosmo);
   const gdouble ffac    = 15.0 / (2.0 * gsl_pow_4 (M_PI)); 
   gdouble Press_mnu0    = 0.0;
-  guint nu_i;
+  guint n;
 
-  for (nu_i = 0; nu_i < nmassnu; nu_i++)
+  _nc_hicosmo_de_prepare (NC_HICOSMO_DE (cosmo_de));
+  
+  for (n = 0; n < nmassnu; n++)
   {
-    const gdouble m       = ncm_model_orig_vparam_get (model, NC_HICOSMO_DE_MASSNU_M, nu_i);
-    const gdouble T       = ncm_model_orig_vparam_get (model, NC_HICOSMO_DE_MASSNU_T, nu_i) * Tgamma;
-    const gdouble mu      = ncm_model_orig_vparam_get (model, NC_HICOSMO_DE_MASSNU_MU, nu_i);
-    const gdouble g       = ncm_model_orig_vparam_get (model, NC_HICOSMO_DE_MASSNU_G, nu_i);
-    const gdouble xi      = m * ncm_c_eV () / (ncm_c_kb () * T);
-    const gdouble xi2     = xi * xi;
-    const gdouble yi      = mu / T;
+    const gdouble T            = ncm_model_orig_vparam_get (model, NC_HICOSMO_DE_MASSNU_T, n) * Tgamma;
+    const gdouble g            = ncm_model_orig_vparam_get (model, NC_HICOSMO_DE_MASSNU_G, n);
+    const gdouble int_pf       = ncm_spline_eval (cosmo_de->priv->nu_p_s[n], z);
+    const gdouble Press_mnu0_n = ffac * g * gsl_pow_4 (T) * ncm_c_blackbody_per_crit_density_h2 () / h2 * int_pf;
 
-    neutrino_int nudata = { xi2, yi };
-
-    ncm_integral1d_ptr_set_userdata (cosmo_de->priv->nu_p,   &nudata);
-
-    {
-      gdouble err;
-      const gdouble int_pf       = ncm_integral1d_eval_gauss_laguerre (NCM_INTEGRAL1D (cosmo_de->priv->nu_p), &err);
-      const gdouble Press_mnu0_n = ffac * g * gsl_pow_4 (T) * ncm_c_blackbody_per_crit_density_h2 () / h2 * int_pf;
-
-      Press_mnu0 += Press_mnu0_n;
-    }
+    Press_mnu0 += Press_mnu0_n;
   }
   return Press_mnu0;
 }
