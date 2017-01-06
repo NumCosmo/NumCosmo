@@ -1031,12 +1031,21 @@ nc_distance_DA_r (NcDistance *dist, NcHICosmo *cosmo, gdouble z)
  ****************************************************************************/
 
 static gdouble
-_nc_time_integrand (gdouble z, gpointer p)
+_nc_distance_cosmic_time_integrand (gdouble logx, gpointer p)
 {
-  NcHICosmo *cosmo = NC_HICOSMO (p);
-  const gdouble x = 1.0 + z;
-  const gdouble E = sqrt (nc_hicosmo_E2 (cosmo, z));
-  return 1.0 / (x * E);
+  if (logx > GSL_LOG_DBL_MAX)
+    return 0.0;
+  else
+  {
+    NcHICosmo *cosmo = NC_HICOSMO (p);
+    const gdouble z = expm1 (logx);
+    const gdouble E = sqrt (nc_hicosmo_E2 (cosmo, z));
+
+    if (gsl_finite (E))
+      return 1.0 / E;
+    else
+      return 0.0;
+  }
 }
 
 /**
@@ -1053,13 +1062,13 @@ nc_distance_cosmic_time (NcDistance *dist, NcHICosmo *cosmo, gdouble z)
 {
   gdouble result, error;
   gsl_function F;
-  F.function = &_nc_time_integrand;
+  F.function = &_nc_distance_cosmic_time_integrand;
   F.params = cosmo;
 
   if (dist->use_cache)
-    ncm_integral_cached_x_inf (dist->time_cache, &F, z, &result, &error);
+    ncm_integral_cached_x_inf (dist->time_cache, &F, log1p (z), &result, &error);
   else
-    ncm_integral_locked_a_inf (&F, z, NCM_INTEGRAL_ABS_ERROR, NCM_INTEGRAL_ERROR, &result, &error);
+    ncm_integral_locked_a_inf (&F, log1p (z), NCM_INTEGRAL_ABS_ERROR, NCM_INTEGRAL_ERROR, &result, &error);
 
   return result;
 }
@@ -1078,13 +1087,13 @@ nc_distance_lookback_time (NcDistance *dist, NcHICosmo *cosmo, gdouble z)
 {
   gdouble result, error;
   gsl_function F;
-  F.function = &_nc_time_integrand;
+  F.function = &_nc_distance_cosmic_time_integrand;
   F.params = cosmo;
 
   if (dist->use_cache)
-    ncm_integral_cached_0_x (dist->lookback_time_cache, &F, z, &result, &error);
+    ncm_integral_cached_0_x (dist->lookback_time_cache, &F, log1p (z), &result, &error);
   else
-    ncm_integral_locked_a_b (&F, 0.0, z, 0.0, NCM_INTEGRAL_ERROR, &result, &error);
+    ncm_integral_locked_a_b (&F, 0.0, log1p (z), 0.0, NCM_INTEGRAL_ERROR, &result, &error);
 
   return result;
 }
@@ -1105,7 +1114,7 @@ nc_distance_conformal_lookback_time (NcDistance *dist, NcHICosmo *cosmo, gdouble
 }
 
 static gdouble
-nc_conformal_time_integrand (gdouble logx, gpointer p)
+_nc_distance_conformal_time_integrand (gdouble logx, gpointer p)
 {
   if (logx > GSL_LOG_DBL_MAX)
     return 0.0;
@@ -1116,10 +1125,10 @@ nc_conformal_time_integrand (gdouble logx, gpointer p)
     const gdouble x = 1.0 + z;
     const gdouble E = sqrt (nc_hicosmo_E2 (cosmo, z));
 
-    if (!gsl_finite (E))
-      return 0.0;
-    else
+    if (gsl_finite (E))    
       return x / E;
+    else
+      return 0.0;
   }
 }
 
@@ -1138,7 +1147,7 @@ nc_distance_conformal_time (NcDistance *dist, NcHICosmo *cosmo, gdouble z)
   gdouble result, error;
   gsl_function F;
 
-  F.function = &nc_conformal_time_integrand;
+  F.function = &_nc_distance_conformal_time_integrand;
   F.params = cosmo;
 
   if (dist->use_cache)
