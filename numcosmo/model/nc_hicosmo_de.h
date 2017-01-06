@@ -96,7 +96,9 @@ typedef enum _NcHICosmoDEParams
  * NcHICosmoDEVParams:
  * @NC_HICOSMO_DE_MASSNU_M: FIXME
  * @NC_HICOSMO_DE_MASSNU_T: FIXME
- *
+ * @NC_HICOSMO_DE_MASSNU_MU: FIXME
+ * @NC_HICOSMO_DE_MASSNU_G: FIXME
+ * 
  * FIXME
  *
  */
