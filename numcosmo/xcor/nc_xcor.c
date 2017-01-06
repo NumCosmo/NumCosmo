@@ -425,6 +425,12 @@ _xcor_limber_gsl_auto_int (gdouble z, gpointer ptr)
 	const gdouble power_spec = ncm_powspec_eval (NCM_POWSPEC (xclki->ps), NCM_MODEL (xclki->cosmo), z, k);
 	const gdouble k1z        = nc_xcor_limber_kernel_eval (xclki->xclk1, xclki->cosmo, z, &xck, xclki->l);
 
+	if (gsl_isnan ( E_z * gsl_pow_2 (k1z / xi_z) * power_spec))
+	{
+		printf("%g %g %g %g %g %g\n", xi_z, xi_z_phys, E_z, k, power_spec, k1z);
+		g_error("_xcor_limber_gsl_auto_int");
+	}
+
 	return E_z * gsl_pow_2 (k1z / xi_z) * power_spec;
 }
 
@@ -462,7 +468,7 @@ _nc_xcor_limber_gsl (NcXcor* xc, NcXcorLimberKernel* xclk1, NcXcorLimberKernel* 
 		xclki.l = lmin + i;
 		ret = gsl_integration_qag (&F, zmin, zmax, 0.0, NCM_DEFAULT_PRECISION, NCM_INTEGRAL_PARTITION, 6, *w, &r, &err);
 		if (ret != GSL_SUCCESS)
-		  g_warning ("_nc_xcor_limber_gsl: %s.", gsl_strerror (ret));
+		  g_error ("_nc_xcor_limber_gsl: %s.", gsl_strerror (ret));
 
 		ncm_vector_set (vp, i, r);
 	}

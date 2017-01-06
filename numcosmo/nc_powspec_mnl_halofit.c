@@ -600,7 +600,7 @@ _nc_powspec_mnl_halofit_preeval (NcPowspecMNLHaloFit* pshf, NcHICosmo* cosmo, co
 	const gdouble Omega_de_onepp = NC_IS_HICOSMO_DE (cosmo) ? nc_hicosmo_de_E2Omega_de_onepw (NC_HICOSMO_DE (cosmo), z) / E2 : 0.0;
 	const gdouble Omega_m = nc_hicosmo_E2Omega_m (cosmo, z) / E2;
 	const gdouble fnu = nc_hicosmo_E2Omega_mnu (cosmo, z) / nc_hicosmo_E2Omega_m (cosmo, z);
-	const gdouble frac = nc_hicosmo_de_E2Omega_de (NC_HICOSMO_DE (cosmo), z) / (1.0 - nc_hicosmo_E2Omega_m (cosmo, z));
+	const gdouble frac = nc_hicosmo_de_E2Omega_de (NC_HICOSMO_DE (cosmo), z) / (E2 - nc_hicosmo_E2Omega_m (cosmo, z));
 
 	pshf->priv->z = z;
 
@@ -638,6 +638,13 @@ static gdouble _nc_powspec_mnl_halofit_Pklin2Pknln (NcPowspecMNLHaloFit* pshf, N
 	const gdouble Delta_H = Delta_Hprime / (1.0 + pshf->priv->nun / (y * y)) * pshf->priv->mnu_corr_halo;
 
 	const gdouble P_H = Delta_H / k3o2pi2;
+
+	// if (gsl_isnan (P_Q + P_H))
+	// {
+	// 	printf("%g %g %g %g %g %g %g %g %g %g\n", kh2, k3, k3o2pi2, Delta_lin, y, Delta_lin_nu, P_Q, Delta_Hprime, Delta_H, P_H);
+	// 	g_error("_xcor_limber_gsl_auto_int");
+	// }
+
 
 	return P_Q + P_H;
 }
