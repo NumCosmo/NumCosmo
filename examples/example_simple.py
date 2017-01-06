@@ -42,7 +42,7 @@ cosmo.orig_param_set (Nc.HICosmoDEParams.T_GAMMA0,  2.72)
 cosmo.orig_param_set (Nc.HICosmoDEParams.OMEGA_B,   0.05)
 cosmo.orig_param_set (Nc.HICosmoDEXCDMParams.W,    -1.10)
 
-cosmo.orig_vparam_set (Nc.HICosmoDEVParams.M, 0, 0.6)
+cosmo.orig_vparam_set (Nc.HICosmoDEVParams.M, 0, 0.06)
 
 #
 # OO-like
@@ -54,7 +54,7 @@ cosmo.props.Omegax  =  0.70
 cosmo.props.Tgamma0 =  2.72
 cosmo.props.w       = -1.10
 
-massnu_v = Ncm.Vector.new_array ([0.6])
+massnu_v = Ncm.Vector.new_array ([0.06])
 cosmo.props.massnu  = massnu_v
 
 #

@@ -31,7 +31,7 @@ cosmo.param_set_by_name ("Omegak",    0.0)
 cosmo.param_set_by_name ("w",        -1.0)
 cosmo.param_set_by_name ("Omegab",    0.04909244421)
 cosmo.param_set_by_name ("Omegac",    0.26580755578)
-cosmo.param_set_by_name ("massnu_0",  0.0006)
+cosmo.param_set_by_name ("massnu_0",  0.06)
 cosmo.param_set_by_name ("ENnu",      2.0328)
 
 reion = Nc.HIReionCamb.new ()
