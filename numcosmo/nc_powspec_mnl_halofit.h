@@ -74,9 +74,12 @@ NcPowspecMNLHaloFit *nc_powspec_mnl_halofit_new (NcPowspecML *psml, gdouble zmax
 
 void nc_powspec_mnl_halofit_set_kbounds_from_ml (NcPowspecMNLHaloFit *pshf);
 
-#define NC_POWSPEC_MNL_HALOFIT_F1POW   (-0.0307)
-#define NC_POWSPEC_MNL_HALOFIT_F2POW   (-0.0585)
-#define NC_POWSPEC_MNL_HALOFIT_F3POW   (0.0743)
+#define NC_POWSPEC_MNL_HALOFIT_F1aPOW   (-0.0732)
+#define NC_POWSPEC_MNL_HALOFIT_F2aPOW   (-0.1423)
+#define NC_POWSPEC_MNL_HALOFIT_F3aPOW   (0.0725)
+#define NC_POWSPEC_MNL_HALOFIT_F1bPOW   (-0.0307)
+#define NC_POWSPEC_MNL_HALOFIT_F2bPOW   (-0.0585)
+#define NC_POWSPEC_MNL_HALOFIT_F3bPOW   (0.0743)
 #define NC_POWSPEC_MNL_HALOFIT_LOGRMIN (-35.0)
 
 G_END_DECLS

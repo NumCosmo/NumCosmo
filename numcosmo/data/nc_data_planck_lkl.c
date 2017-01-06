@@ -408,11 +408,14 @@ _nc_data_planck_lkl_m2lnL_val (NcmData *data, NcmMSet *mset, gdouble *m2lnL)
     if (clik->cmb_data & NC_DATA_CMB_TYPE_EB)
       nc_hipert_boltzmann_get_EB_Cls (clik->pb, clik->data_EB);
   }
-
-  /*printf ("[%p] %d %u %d %d\n", data, cosmo_up, clik->nparams, pfi_up, pfi_model_up);*/
-  
+/*
+  ncm_mset_pretty_log (mset);
+  printf ("# data[%p] cosmo_up:%d nparams:%u pfi_up:%d pfi_model_up:%d is_lensing:%d \n", data, cosmo_up, clik->nparams, pfi_up, pfi_model_up, clik->is_lensing);
+*/  
   if (cosmo_up || (clik->nparams > 0 && (pfi_up || pfi_model_up)))
   {
+    /*ncm_vector_log_vals (clik->data_params, "cl and vals: ", "% 22.15g");*/
+    
     if (clik->is_lensing)
     {
       *m2lnL = -2.0 * clik_lensing_compute (clik->obj, cl_and_pars, &err);
@@ -424,6 +427,7 @@ _nc_data_planck_lkl_m2lnL_val (NcmData *data, NcmMSet *mset, gdouble *m2lnL)
       CLIK_CHECK_ERROR ("_nc_data_planck_lkl_m2lnL_val[clik_compute]", err);
 
     }
+    /*printf ("# m2lnL % 22.15g\n", *m2lnL);*/
     clik->cm2lnL = *m2lnL;
   }
   else
