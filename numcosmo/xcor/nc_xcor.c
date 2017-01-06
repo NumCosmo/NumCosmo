@@ -243,7 +243,7 @@ nc_xcor_kinetic_copy (NcXcorKinetic *xck)
  * FIXME
  *
  */
-void 
+void
 nc_xcor_kinetic_free (NcXcorKinetic *xck)
 {
   g_free (xck);
@@ -296,9 +296,9 @@ _xcor_limber_cvode_int (realtype z, N_Vector y, N_Vector ydot, gpointer params)
   if (G_UNLIKELY (z == 0.0))
   {
     N_VConst (0.0, ydot);
-    return 0;  
+    return 0;
   }
-  
+
 	if (xclc->isauto)
 	{
 		geoW1W2 = E_z * gsl_pow_2 (k1z / xi_z);
@@ -435,6 +435,7 @@ _nc_xcor_limber_gsl (NcXcor* xc, NcXcorLimberKernel* xclk1, NcXcorLimberKernel* 
 	gdouble r, err;
 	gsl_function F;
 	guint i;
+	gint ret;
 
 	xclki.xclk1 = xclk1;
 	xclki.xclk2 = xclk2;
@@ -459,12 +460,16 @@ _nc_xcor_limber_gsl (NcXcor* xc, NcXcorLimberKernel* xclk1, NcXcorLimberKernel* 
 	for (i = 0; i < lmax - lmin + 1; i++)
 	{
 		xclki.l = lmin + i;
-		gsl_integration_qag (&F, zmin, zmax, 0.0, NCM_DEFAULT_PRECISION, NCM_INTEGRAL_PARTITION, 6, *w, &r, &err);
+		ret = gsl_integration_qag (&F, zmin, zmax, 0.0, NCM_DEFAULT_PRECISION, NCM_INTEGRAL_PARTITION, 6, *w, &r, &err);
+		if (ret != GSL_SUCCESS)
+		  g_warning ("_nc_xcor_limber_gsl: %s.", gsl_strerror (ret));
+
 		ncm_vector_set (vp, i, r);
 	}
 
 	ncm_memory_pool_return (w);
 }
+
 
 /**
  * nc_xcor_limber:
@@ -480,7 +485,7 @@ _nc_xcor_limber_gsl (NcXcor* xc, NcXcorLimberKernel* xclk1, NcXcorLimberKernel* 
  * FIXME
  *
  */
-void 
+void
 nc_xcor_limber (NcXcor *xc, NcXcorLimberKernel *xclk1, NcXcorLimberKernel *xclk2, NcHICosmo *cosmo, guint lmin, guint lmax, NcmVector *vp, NcXcorLimberMethod meth)
 {
 	const guint nell          = ncm_vector_len (vp);

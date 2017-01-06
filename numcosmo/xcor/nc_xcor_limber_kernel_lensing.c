@@ -235,7 +235,7 @@ _nc_xcor_limber_kernel_lensing_eval (NcXcorLimberKernel *xclk, NcHICosmo *cosmo,
 	NcXcorLimberKernelLensing* xclkl = NC_XCOR_LIMBER_KERNEL_LENSING (xclk);
 
 	NCM_UNUSED (l);
-  
+
 	return ((1.0 + z) * xck->xi_z * (xclkl->xi_lss - xck->xi_z)) / (xck->E_z * xclkl->xi_lss);
 }
 
@@ -252,7 +252,7 @@ _nc_xcor_limber_kernel_lensing_prepare (NcXcorLimberKernel *xclk, NcHICosmo *cos
 	// nc_recomb_prepare (xclkl->recomb, cosmo);
 	// gdouble lamb = nc_recomb_tau_zstar (xclkl->recomb, cosmo);
 
-	xclk->zmax = 200.0; //1090.0; //exp (-lamb) - 1.0;
+	xclk->zmax = 1090.0; //exp (-lamb) - 1.0;
 	xclk->zmin = 0.0;
 }
 
