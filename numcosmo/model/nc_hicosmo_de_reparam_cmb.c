@@ -108,7 +108,7 @@ _nc_hicosmo_de_reparam_cmb_old2new (NcmReparam *reparam, NcmModel *model)
   ncm_vector_set (reparam->new_params, NC_HICOSMO_DE_OMEGA_B, omega_b0);
   ncm_vector_set (reparam->new_params, NC_HICOSMO_DE_OMEGA_C, omega_c0);
   ncm_vector_set (reparam->new_params, NC_HICOSMO_DE_OMEGA_X, Omega_k0);
-
+  
   return TRUE;
 }
 
@@ -119,19 +119,24 @@ _nc_hicosmo_de_reparam_cmb_new2old (NcmReparam *reparam, NcmModel *model)
   ncm_vector_memcpy (params, reparam->new_params);
 
   {
-    NcHICosmo *cosmo = NC_HICOSMO (model);
-    const gdouble h2 = nc_hicosmo_h2 (cosmo);
+    NcHICosmo *cosmo       = NC_HICOSMO (model);
+    const gdouble h2       = nc_hicosmo_h2 (cosmo);
     const gdouble Omega_c0 = ncm_vector_get (reparam->new_params, NC_HICOSMO_DE_OMEGA_C) / h2;
     const gdouble Omega_b0 = ncm_vector_get (reparam->new_params, NC_HICOSMO_DE_OMEGA_B) / h2;
     const gdouble Omega_k0 = ncm_vector_get (reparam->new_params, NC_HICOSMO_DE_OMEGA_X);
-    const gdouble Omega_r0 = nc_hicosmo_Omega_r0 (cosmo);
-    const gdouble Omega_m0 = nc_hicosmo_Omega_m0 (cosmo); //Omega_c0 + Omega_b0;
-    const gdouble Omega_x0 = 1.0 - (Omega_m0 + Omega_r0 + Omega_k0);
 
     ncm_vector_set (params, NC_HICOSMO_DE_OMEGA_C, Omega_c0);
     ncm_vector_set (params, NC_HICOSMO_DE_OMEGA_B, Omega_b0);
-    ncm_vector_set (params, NC_HICOSMO_DE_OMEGA_X, Omega_x0);
+
+    {
+      const gdouble Omega_r0 = nc_hicosmo_Omega_r0 (cosmo);
+      const gdouble Omega_m0 = nc_hicosmo_Omega_m0 (cosmo);
+      const gdouble Omega_x0 = 1.0 - (Omega_m0 + Omega_r0 + Omega_k0);
+
+      ncm_vector_set (params, NC_HICOSMO_DE_OMEGA_X, Omega_x0);
+    }
   }
+
   return TRUE;
 }
 
