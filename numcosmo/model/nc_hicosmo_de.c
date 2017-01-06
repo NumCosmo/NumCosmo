@@ -92,6 +92,8 @@ nc_hicosmo_de_init (NcHICosmoDE *cosmo_de)
 static gdouble _nc_hicosmo_de_neutrino_rho_integrand (gpointer userdata, const gdouble v, const gdouble w);
 static gdouble _nc_hicosmo_de_neutrino_p_integrand (gpointer userdata, const gdouble v, const gdouble w);
 
+#define _NC_HICOSMO_DE_MNU_PREC (1.0e-6)
+
 static void
 _nc_hicosmo_de_constructed (GObject *object)
 {
@@ -151,8 +153,8 @@ _nc_hicosmo_de_constructed (GObject *object)
       cosmo_de->priv->nu_rho = ncm_integral1d_ptr_new (&_nc_hicosmo_de_neutrino_rho_integrand, NULL);
       cosmo_de->priv->nu_p   = ncm_integral1d_ptr_new (&_nc_hicosmo_de_neutrino_p_integrand, NULL);
 
-      ncm_integral1d_set_reltol (NCM_INTEGRAL1D (cosmo_de->priv->nu_rho), 1.0e-6);
-      ncm_integral1d_set_reltol (NCM_INTEGRAL1D (cosmo_de->priv->nu_p),   1.0e-6);
+      ncm_integral1d_set_reltol (NCM_INTEGRAL1D (cosmo_de->priv->nu_rho), _NC_HICOSMO_DE_MNU_PREC);
+      ncm_integral1d_set_reltol (NCM_INTEGRAL1D (cosmo_de->priv->nu_p),   _NC_HICOSMO_DE_MNU_PREC);
 
       ncm_integral1d_set_rule (NCM_INTEGRAL1D (cosmo_de->priv->nu_rho), 1);
       ncm_integral1d_set_rule (NCM_INTEGRAL1D (cosmo_de->priv->nu_p), 1);
@@ -446,10 +448,10 @@ _nc_hicosmo_de_prepare (NcHICosmoDE *cosmo_de)
         F.params   = &nu_int;
 
         F.function = &_nc_hicosmo_de_nu_rho_f;
-        ncm_spline_set_func (cosmo_de->priv->nu_rho_s[n], NCM_SPLINE_FUNCTION_SPLINE_SINHKNOT, &F, 0.0, cosmo_de->priv->zmax, 0, 1.0e-6);
+        ncm_spline_set_func (cosmo_de->priv->nu_rho_s[n], NCM_SPLINE_FUNCTION_SPLINE_SINHKNOT, &F, 0.0, cosmo_de->priv->zmax, 0, _NC_HICOSMO_DE_MNU_PREC);
 
         F.function = &_nc_hicosmo_de_nu_p_f;
-        ncm_spline_set_func (cosmo_de->priv->nu_p_s[n], NCM_SPLINE_FUNCTION_SPLINE_SINHKNOT, &F, 0.0, cosmo_de->priv->zmax, 0, 1.0e-6);
+        ncm_spline_set_func (cosmo_de->priv->nu_p_s[n], NCM_SPLINE_FUNCTION_SPLINE_SINHKNOT, &F, 0.0, cosmo_de->priv->zmax, 0, _NC_HICOSMO_DE_MNU_PREC);
       }
     }
 
@@ -760,7 +762,7 @@ _nc_hicosmo_de_E2Omega_mnu_n (NcHICosmo *cosmo, const guint n, const gdouble z)
   _nc_hicosmo_de_prepare (NC_HICOSMO_DE (cosmo_de));
 
   {
-    const gdouble int_Ef       = ncm_spline_eval (cosmo_de->priv->nu_rho_s[n], z);
+    const gdouble int_Ef       = ncm_spline_eval (cosmo_de->priv->nu_rho_s[n], z > cosmo_de->priv->zmax ? cosmo_de->priv->zmax : z);
     const gdouble Omega_mnu0_n = ffac * g * gsl_pow_4 (T) * ncm_c_blackbody_per_crit_density_h2 () / h2 * int_Ef;
     
     return Omega_mnu0_n;
@@ -781,7 +783,7 @@ _nc_hicosmo_de_E2Press_mnu_n (NcHICosmo *cosmo, const guint n, const gdouble z)
   _nc_hicosmo_de_prepare (NC_HICOSMO_DE (cosmo_de));
 
   {
-    const gdouble int_pf       = ncm_spline_eval (cosmo_de->priv->nu_p_s[n], z);
+    const gdouble int_pf       = ncm_spline_eval (cosmo_de->priv->nu_p_s[n], z > cosmo_de->priv->zmax ? cosmo_de->priv->zmax : z);
     const gdouble Press_mnu0_n = ffac * g * gsl_pow_4 (T) * ncm_c_blackbody_per_crit_density_h2 () / h2 * int_pf;
 
     return Press_mnu0_n;
@@ -807,7 +809,7 @@ _nc_hicosmo_de_E2Omega_mnu (NcHICosmo *cosmo, const gdouble z)
   {
     const gdouble T            = ncm_model_orig_vparam_get (model, NC_HICOSMO_DE_MASSNU_T, n) * Tgamma;
     const gdouble g            = ncm_model_orig_vparam_get (model, NC_HICOSMO_DE_MASSNU_G, n);
-    const gdouble int_Ef       = ncm_spline_eval (cosmo_de->priv->nu_rho_s[n], z);
+    const gdouble int_Ef       = ncm_spline_eval (cosmo_de->priv->nu_rho_s[n], z > cosmo_de->priv->zmax ? cosmo_de->priv->zmax : z);
     const gdouble Omega_mnu0_n = ffac * g * gsl_pow_4 (T) * ncm_c_blackbody_per_crit_density_h2 () / h2 * int_Ef;
 
     Omega_mnu0 += Omega_mnu0_n;
@@ -834,7 +836,7 @@ _nc_hicosmo_de_E2Press_mnu (NcHICosmo *cosmo, const gdouble z)
   {
     const gdouble T            = ncm_model_orig_vparam_get (model, NC_HICOSMO_DE_MASSNU_T, n) * Tgamma;
     const gdouble g            = ncm_model_orig_vparam_get (model, NC_HICOSMO_DE_MASSNU_G, n);
-    const gdouble int_pf       = ncm_spline_eval (cosmo_de->priv->nu_p_s[n], z);
+    const gdouble int_pf       = ncm_spline_eval (cosmo_de->priv->nu_p_s[n], z > cosmo_de->priv->zmax ? cosmo_de->priv->zmax : z);
     const gdouble Press_mnu0_n = ffac * g * gsl_pow_4 (T) * ncm_c_blackbody_per_crit_density_h2 () / h2 * int_pf;
 
     Press_mnu0 += Press_mnu0_n;
