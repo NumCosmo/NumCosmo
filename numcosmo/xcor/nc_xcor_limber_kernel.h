@@ -59,12 +59,12 @@ typedef struct _NcXcorLimberKernel NcXcorLimberKernel;
  */
 typedef enum _NcXcorLimberKernelImpl
 {
-	NC_XCOR_LIMBER_KERNEL_IMPL_EVAL      = 1 << 0,
-	NC_XCOR_LIMBER_KERNEL_IMPL_PREPARE   = 1 << 1,
-	NC_XCOR_LIMBER_KERNEL_IMPL_ADD_NOISE = 1 << 2, /*< private >*/
+	NC_XCOR_LIMBER_KERNEL_IMPL_EVAL = 0,
+	NC_XCOR_LIMBER_KERNEL_IMPL_PREPARE,
+	NC_XCOR_LIMBER_KERNEL_IMPL_ADD_NOISE, /*< private >*/
 } NcXcorLimberKernelImpl;
 
-#define NC_XCOR_LIMBER_KERNEL_IMPL_ALL (~0)
+#define NC_XCOR_LIMBER_KERNEL_IMPL_ALL NCM_MODEL_CLASS_IMPL_ALL
 
 typedef struct _NcXcorKinetic NcXcorKinetic;
 
@@ -77,7 +77,6 @@ struct _NcXcorLimberKernelClass
 	void (*add_noise) (NcXcorLimberKernel* xclk, NcmVector* vp1, NcmVector* vp2, guint lmin);
 	guint (*obs_len) (NcXcorLimberKernel* xclk);
 	guint (*obs_params_len) (NcXcorLimberKernel* xclk);
-	NcXcorLimberKernelImpl impl;
 };
 
 struct _NcXcorLimberKernel
@@ -97,8 +96,6 @@ NcXcorLimberKernel* nc_xcor_limber_kernel_ref (NcXcorLimberKernel* xclk);
 void nc_xcor_limber_kernel_free (NcXcorLimberKernel* xclk);
 void nc_xcor_limber_kernel_clear (NcXcorLimberKernel** xclk);
 // void nc_xcor_limber_kernel_constructed (NcXcorLimberKernel** xclk);
-
-NcXcorLimberKernelImpl nc_xcor_limber_kernel_impl (NcXcorLimberKernel* xclk);
 
 guint nc_xcor_limber_kernel_obs_len (NcXcorLimberKernel* xclk);
 guint nc_xcor_limber_kernel_obs_params_len (NcXcorLimberKernel* xclk);

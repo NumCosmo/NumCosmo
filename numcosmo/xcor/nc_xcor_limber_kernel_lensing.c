@@ -204,7 +204,7 @@ nc_xcor_limber_kernel_lensing_class_init (NcXcorLimberKernelLensingClass *klass)
 	parent_class->obs_len        = &_nc_xcor_limber_kernel_lensing_obs_len;
 	parent_class->obs_params_len = &_nc_xcor_limber_kernel_lensing_obs_params_len;
 
-	parent_class->impl = NC_XCOR_LIMBER_KERNEL_IMPL_ALL;
+	ncm_model_class_add_impl_flag (model_class, NC_XCOR_LIMBER_KERNEL_IMPL_ALL);
 }
 
 /**

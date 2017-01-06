@@ -217,20 +217,6 @@ nc_xcor_limber_kernel_clear (NcXcorLimberKernel **xclk)
 }
 
 /**
- * nc_xcor_limber_kernel_impl:
- * @xclk: a #NcXcorLimberKernel
- *
- * FIXME
- *
- * Returns: FIXME
- */
-NcXcorLimberKernelImpl 
-nc_xcor_limber_kernel_impl (NcXcorLimberKernel *xclk)
-{
-	return NC_XCOR_LIMBER_KERNEL_GET_CLASS (xclk)->impl;
-}
-
-/**
  * nc_xcor_limber_kernel_obs_len: (virtual obs_len)
  * @xclk: a #NcXcorLimberKernel
  *
