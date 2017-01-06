@@ -80,9 +80,8 @@ G_BEGIN_DECLS
  * @NC_HICOSMO_IMPL_d2E2_dz2: Second derivative of the dimensionless Hubble function squared.
  * @NC_HICOSMO_IMPL_bgp_cs2: Baryon-photon plasma speed of sound squared $c_s^2$.
  * @NC_HICOSMO_IMPL_Dc: Comoving distance
- * @NC_HICOSMO_IMPL_ENNU: Effective number of massless neutrinos
  * @NC_HICOSMO_IMPL_NMassNu: Number of massive neutrinos
- * @NC_HICOSMO_IMPL_NuInfo: Massive neutrino info
+ * @NC_HICOSMO_IMPL_MassNuInfo: Massive neutrino info
  *
  * Flags defining the implementation options of the NcHICosmo abstract object. 
  * 
