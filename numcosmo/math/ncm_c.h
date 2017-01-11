@@ -74,6 +74,7 @@ G_INLINE_FUNC long double ncm_c_lnpi (void) G_GNUC_CONST;
 G_INLINE_FUNC long double ncm_c_pi (void) G_GNUC_CONST;
 G_INLINE_FUNC long double ncm_c_2_pi_2 (void) G_GNUC_CONST;
 G_INLINE_FUNC long double ncm_c_tan_1arcsec (void) G_GNUC_CONST;
+G_INLINE_FUNC long double ncm_c_deg2_steradian (void) G_GNUC_CONST;
 
 G_INLINE_FUNC gdouble ncm_c_degree_to_radian (const gdouble d) G_GNUC_CONST;
 G_INLINE_FUNC gdouble ncm_c_radian_to_degree (const gdouble r) G_GNUC_CONST;
@@ -432,6 +433,9 @@ G_INLINE_FUNC long double ncm_c_2_pi_2 (void)
 
 G_INLINE_FUNC long double ncm_c_tan_1arcsec (void)
 { return 4.8481368111333441675396429478852853e-6L; }
+
+G_INLINE_FUNC long double ncm_c_deg2_steradian (void)
+{ return 3.0461741978670859934674354937889355e-4L; }
 
 G_INLINE_FUNC gdouble ncm_c_degree_to_radian (const gdouble d)
 { return d * ncm_c_pi () / 180.0; }
