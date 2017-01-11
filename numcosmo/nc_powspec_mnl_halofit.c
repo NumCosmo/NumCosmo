@@ -151,7 +151,8 @@ static void
 _nc_powspec_mnl_halofit_constructed (GObject* object)
 {
 	/* Chain up : start */
-	G_OBJECT_CLASS (nc_powspec_mnl_halofit_parent_class)->constructed (object);
+	G_OBJECT_CLASS (nc_powspec_mnl_halofit_parent_class)
+	->constructed (object);
 	{
 		NcPowspecMNLHaloFit* pshf = NC_POWSPEC_MNL_HALOFIT (object);
 
@@ -179,7 +180,8 @@ _nc_powspec_mnl_halofit_dispose (GObject* object)
 	ncm_powspec_filter_clear (&pshf->psml_gauss);
 
 	/* Chain up : end */
-	G_OBJECT_CLASS (nc_powspec_mnl_halofit_parent_class)->dispose (object);
+	G_OBJECT_CLASS (nc_powspec_mnl_halofit_parent_class)
+	->dispose (object);
 }
 
 static void
@@ -191,7 +193,8 @@ _nc_powspec_mnl_halofit_finalize (GObject* object)
 	gsl_root_fsolver_free (pshf->priv->znl_solver);
 
 	/* Chain up : end */
-	G_OBJECT_CLASS (nc_powspec_mnl_halofit_parent_class)->finalize (object);
+	G_OBJECT_CLASS (nc_powspec_mnl_halofit_parent_class)
+	->finalize (object);
 }
 
 static void _nc_powspec_mnl_halofit_prepare (NcmPowspec* powspec, NcmModel* model);
@@ -372,10 +375,48 @@ _nc_powspec_mnl_halofit_linear_scale (NcPowspecMNLHaloFit* pshf, NcHICosmo* cosm
 
 	} while (status == GSL_CONTINUE && iter < max_iter);
 
-	if (iter >= max_iter)
-		g_warning ("_nc_powspec_mnl_halofit_linear_scale: maximum number of iteration reached (%u), giving up.", max_iter);
+	res = exp (lnR); // Now res is the result
 
-	res = exp (lnR);
+	if (iter >= max_iter)
+		g_warning ("_nc_powspec_mnl_halofit_linear_scale: maximum number of iteration reached (%u), non-linear scale found R(z=%.3f).", max_iter, z);
+
+	if (!(gsl_finite (res)))
+		g_warning ("_nc_powspec_mnl_halofit_linear_scale: non-linear scale found R(z=%.3f) not finite.", z);
+
+	if ((iter >= max_iter) || !(gsl_finite (res)))
+	{
+		g_message ("_nc_powspec_mnl_halofit_linear_scale: running the bracketing solver...");
+
+		iter = 0;
+
+		gsl_root_fsolver* s = gsl_root_fsolver_alloc (gsl_root_fsolver_brent);
+
+		gsl_function F;
+		F.function = &_nc_powspec_mnl_halofit_varm1;
+		F.params = &vps;
+
+		gdouble lnRlo = -z / 2. - 10.;
+		gdouble lnRup = -z / 2. + 10.;
+
+		gsl_root_fsolver_set (s, &F, lnRlo, lnRup);
+
+		do
+		{
+			iter++;
+			status = gsl_root_fsolver_iterate (s);
+
+			lnR = gsl_root_fsolver_root (s);
+			lnRlo = gsl_root_fsolver_x_lower (s);
+			lnRup = gsl_root_fsolver_x_upper (s);
+
+			status = gsl_root_test_interval (lnRlo, lnRup, reltol, 0.0); // dlnR = dR/R, so test with abstol
+
+		} while (status == GSL_CONTINUE && iter < max_iter);
+
+		gsl_root_fsolver_free (s);
+
+		res = exp (lnR);
+	}
 
 	return res;
 }
@@ -559,7 +600,7 @@ _nc_powspec_mnl_halofit_preeval (NcPowspecMNLHaloFit* pshf, NcHICosmo* cosmo, co
 	const gdouble Omega_de_onepp = NC_IS_HICOSMO_DE (cosmo) ? nc_hicosmo_de_E2Omega_de_onepw (NC_HICOSMO_DE (cosmo), z) / E2 : 0.0;
 	const gdouble Omega_m = nc_hicosmo_E2Omega_m (cosmo, z) / E2;
 	const gdouble fnu = nc_hicosmo_E2Omega_mnu (cosmo, z) / nc_hicosmo_E2Omega_m (cosmo, z);
-	const gdouble frac = nc_hicosmo_de_E2Omega_de (NC_HICOSMO_DE (cosmo), z) / (1.0 - nc_hicosmo_E2Omega_m (cosmo, z));
+	const gdouble frac = nc_hicosmo_de_E2Omega_de (NC_HICOSMO_DE (cosmo), z) / (E2 - nc_hicosmo_E2Omega_m (cosmo, z));
 
 	pshf->priv->z = z;
 
@@ -597,6 +638,13 @@ static gdouble _nc_powspec_mnl_halofit_Pklin2Pknln (NcPowspecMNLHaloFit* pshf, N
 	const gdouble Delta_H = Delta_Hprime / (1.0 + pshf->priv->nun / (y * y)) * pshf->priv->mnu_corr_halo;
 
 	const gdouble P_H = Delta_H / k3o2pi2;
+
+	// if (gsl_isnan (P_Q + P_H))
+	// {
+	// 	printf("%g %g %g %g %g %g %g %g %g %g\n", kh2, k3, k3o2pi2, Delta_lin, y, Delta_lin_nu, P_Q, Delta_Hprime, Delta_H, P_H);
+	// 	g_error("_xcor_limber_gsl_auto_int");
+	// }
+
 
 	return P_Q + P_H;
 }
