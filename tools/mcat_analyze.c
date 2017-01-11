@@ -96,6 +96,7 @@ main (gint argc, gchar *argv[])
   gchar **mode_errors = NULL;
   gchar **median_errors = NULL;
   gchar **bestfit_errors = NULL;
+  gchar **funcs_pvalue = NULL;
   guint i;
   
   GError *error = NULL;
@@ -121,7 +122,8 @@ main (gint argc, gchar *argv[])
     { "parameter-evol", 'P', 0, G_OPTION_ARG_STRING_ARRAY, &params_evol,    "Calculate the time evolution of the parameter.", NULL},
     { "mode-error",     'o', 0, G_OPTION_ARG_STRING_ARRAY, &mode_errors,    "Print mode and 1-3 sigma asymmetric error bars of the model parameters' to be analyzed.", NULL},
     { "median-error",   'e', 0, G_OPTION_ARG_STRING_ARRAY, &median_errors,  "Print median and 1-3 sigma asymmetric error bars of the model parameters' to be analyzed.", NULL},
-    { "bestfit-error",  's', 0, G_OPTION_ARG_STRING_ARRAY, &bestfit_errors,  "Print best fit and 1-3 sigma asymmetric error bars of the model parameters' to be analyzed.", NULL},
+    { "bestfit-error",  's', 0, G_OPTION_ARG_STRING_ARRAY, &bestfit_errors, "Print best fit and 1-3 sigma asymmetric error bars of the model parameters' to be analyzed.", NULL},
+    { "funcs-pvalue",   'F', 0, G_OPTION_ARG_STRING_ARRAY, &funcs_pvalue,   "Print the p-value of the function at each redshift, giving the upper integration limits." },
     { NULL }
   };
 
@@ -708,10 +710,102 @@ main (gint argc, gchar *argv[])
         }
       }
     }
-    
+
+    /*********************************************************************************************************
+    * 
+    * P-values of the Functions at each readshift 
+    * 
+    *********************************************************************************************************/
+    if (funcs_pvalue != NULL)
+    {
+      guint nfuncs_pv = g_strv_length (funcs_pvalue);
+      NcmVector *z_vec = ncm_vector_new (nsteps);
+      NcDistance *dist = nc_distance_new (zf + 0.2);
+
+      for (i = 0; i < nsteps; i++)
+      {
+        const gdouble z = zi + (zf - zi) / (nsteps - 1.0) * i;
+        ncm_vector_set (z_vec, i, z);
+      }
+      
+      for (i = 0; i < nfuncs_pv; i++)
+      {
+        NcmMSetFunc *mset_func = NULL;
+        NcmMatrix *res = NULL;
+        gdouble *x = NULL;
+        guint len;
+        guint j,k;
+        gchar *func_name = ncm_util_function_params (funcs_pvalue[i], &x, &len);
+        GArray *lims = g_array_new (FALSE, FALSE, sizeof (gdouble));
+
+        g_assert (func_name != NULL);
+        g_assert_cmpuint (len, !=, 0);
+
+        g_array_append_vals (lims, x, len);
+        
+        if (mset_func == NULL)
+        {
+          if (ncm_mset_func_list_has_ns_name ("NcHICosmo", func_name))
+          {
+            mset_func = NCM_MSET_FUNC (ncm_mset_func_list_new_ns_name ("NcHICosmo", func_name, NULL));
+            if (ncm_mset_func_get_dim (mset_func) != 1 || ncm_mset_func_get_nvar (mset_func) != 1)
+            {
+              g_warning ("# Function `%s' is not R => R, skipping.", ncm_mset_func_peek_name (mset_func));
+              ncm_mset_func_clear (&mset_func);
+              continue;
+            }
+            ncm_cfg_msg_sepa ();
+            g_message ("# Printing NcHICosmo z function: `%s' in [% 20.15g % 20.15g].\n", ncm_mset_func_peek_desc (mset_func), zi, zf);
+          }
+        }
+        if (mset_func == NULL)
+        {
+          if (ncm_mset_func_list_has_ns_name ("NcDistance", func_name))
+          {
+            mset_func = NCM_MSET_FUNC (ncm_mset_func_list_new_ns_name ("NcDistance", func_name, G_OBJECT (dist)));
+            if (ncm_mset_func_get_dim (mset_func) != 1 || ncm_mset_func_get_nvar (mset_func) != 1)
+            {
+              g_warning ("# Function `%s' is not R => R, skipping.", ncm_mset_func_peek_name (mset_func));
+              ncm_mset_func_clear (&mset_func);
+              continue;
+            }
+            ncm_cfg_msg_sepa ();
+            g_message ("# Printing NcDistance z function: `%s' in [% 20.15g % 20.15g].\n", ncm_mset_func_peek_desc (mset_func), zi, zf);
+          }
+        }       
+        if (mset_func == NULL)
+        {
+          g_warning ("# Function `%s' not found, skipping...\n", func_name);
+          continue;
+        }        
+
+        res = ncm_mset_catalog_calc_pvalue (mcat, mset_func, z_vec, lims, 100, NCM_FIT_RUN_MSGS_SIMPLE);
+
+        for (k = 0; k < nsteps; k++)
+        {
+          ncm_message ("% 20.15g", ncm_vector_get (z_vec, k)); 
+          for (j = 0; j < len; j++)
+          {
+            ncm_message (" % 20.15g", ncm_matrix_get (res, k, j));
+          }
+          ncm_message ("\n");
+        }
+        ncm_message ("\n\n");
+
+        ncm_mset_func_free (mset_func);
+        ncm_matrix_free (res);
+        g_free (func_name);
+        g_free (x);
+        g_array_unref (lims);
+      }
+      
+      ncm_vector_clear (&z_vec);
+      nc_distance_clear (&dist);
+    }
+
     ncm_mset_clear (&mset);
     ncm_mset_catalog_clear (&mcat);
-  }
+  } 
 
   return 0;
 }
