@@ -2,12 +2,12 @@
  *            ncm_mset_catalog.c
  *
  *  Tue February 18 10:49:26 2014
- *  Copyright  2014  Sandro Dias Pinto Vitenti
- *  <sandro@isoftware.com.br>
+ *  Copyright  2014  Sandro Dias Pinto Vitenti & Mariana Penna Lima (January 2017)
+ *  <sandro@isoftware.com.br>, <pennalima@gmail.com>
  ****************************************************************************/
 /*
  * ncm_mset_catalog.c
- * Copyright (C) 2014 Sandro Dias Pinto Vitenti <sandro@isoftware.com.br>
+ * Copyright (C) 2014 Sandro Dias Pinto Vitenti <sandro@isoftware.com.br> & Mariana Penna Lima
  *
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -2859,7 +2859,7 @@ ncm_mset_catalog_calc_ci_direct (NcmMSetCatalog *mcat, NcmMSetFunc *func, NcmVec
  * @mtype: #NcmFitRunMsgs log level
  *
  * Calculates the mean and the confidence interval (CI) for the value of @func
- * for each p-value in @p_val. It stores the results in a #NcmVector, where the
+ * for each p-value in @p_val. It stores the results in a #NcmMatrix, where the
  * first element contains the mean and the following contain the lower and
  * upper bounds for each p-value in @p_val.
  *
@@ -2875,7 +2875,7 @@ ncm_mset_catalog_calc_ci_direct (NcmMSetCatalog *mcat, NcmMSetFunc *func, NcmVec
  * and upper bounds, respectively. Then, the fourth and fifth elements the
  * lower and upper bounds of $2\sigma$ CI.
  *
- * Returns: (transfer full): a #NcmVector containing the mean and lower/upper bound of the confidence interval for @func.
+ * Returns: (transfer full): a #NcmMatrix containing the mean and lower/upper bound of the confidence interval for @func.
  */
 NcmMatrix *
 ncm_mset_catalog_calc_ci_interp (NcmMSetCatalog *mcat, NcmMSetFunc *func, NcmVector *x_v, GArray *p_val, guint nodes, NcmFitRunMsgs mtype)
@@ -2970,6 +2970,130 @@ ncm_mset_catalog_calc_ci_interp (NcmMSetCatalog *mcat, NcmMSetFunc *func, NcmVec
 
         ncm_matrix_set (res, i, 1 + j * 2 + 0, lb);
         ncm_matrix_set (res, i, 1 + j * 2 + 1, ub);
+      }
+    }
+
+    g_ptr_array_unref (epdf_a);
+    ncm_mset_fparams_set_vector (mcat->mset, save_params);
+    ncm_vector_free (save_params);
+    return res;
+  }
+}
+
+/**
+ * ncm_mset_catalog_calc_pvalue:
+ * @mcat: a #NcmMSetCatalog
+ * @func: a #NcmMSetFunc of type n-n
+ * @x_v: #NcmVector of arguments of @func
+ * @lim: (element-type double): integration limits to compute the p-value
+ * @nodes: number of nodes in the distribution approximations
+ * @mtype: #NcmFitRunMsgs log level
+ *
+ * Calculates the p-values for the value of @func
+ * for each limit in @lim, integrating the probability distribution function from 
+ * the left tail to @lim. It stores the results in a #NcmMatrix, where the
+ * first element contains the p-value with respect to the first @lim, and so on.
+ *
+ * The #NcmMSetFunc @func must be of dimension one.
+ *
+ * # Example: #
+ *
+ * Returns: (transfer full): a #NcmMatrix containing the p-values for @func.
+ */
+NcmMatrix *
+ncm_mset_catalog_calc_pvalue (NcmMSetCatalog *mcat, NcmMSetFunc *func, NcmVector *x_v, GArray *lim, guint nodes, NcmFitRunMsgs mtype)
+{
+  const guint dim = ncm_vector_len (x_v);
+
+  g_assert_cmpuint (lim->len, >, 1);
+  {
+    const guint nelem = lim->len * 2 + 1;
+    NcmMatrix *res = ncm_matrix_new (dim, nelem);
+    NcmVector *save_params = ncm_vector_new (ncm_mset_fparams_len (mcat->mset));
+    const guint cat_len = ncm_mset_catalog_len (mcat);
+    GPtrArray *epdf_a = g_ptr_array_sized_new (dim);
+    guint i, j;
+
+    ncm_mset_fparams_get_vector (mcat->mset, save_params);
+
+    if (mcat->quantile_ws == NULL)
+    {
+      mcat->quantile_ws = ncm_vector_new (dim);
+    }
+    else if (ncm_vector_len (mcat->quantile_ws) != dim)
+    {
+      ncm_vector_clear (&mcat->quantile_ws);
+      mcat->quantile_ws = ncm_vector_new (dim);
+    }
+
+    g_ptr_array_set_free_func (epdf_a, (GDestroyNotify) ncm_stats_dist1d_free);
+    for (i = 0; i < dim; i++)
+    {
+      NcmStatsDist1dEPDF *epdf = ncm_stats_dist1d_epdf_new (NCM_MSET_CATALOG_DIST_EST_SD_SCALE);
+      g_ptr_array_add (epdf_a, epdf);
+    }
+
+    if (mtype > NCM_FIT_RUN_MSGS_NONE)
+    {
+      ncm_message ("# Calculating %u models in catalog: \n# - |", cat_len);
+      for (i = 0; i < 100; i++)
+        ncm_message ("-");
+      ncm_message ("|\n# - |");
+    }
+
+    for (i = 0; i < cat_len; i++)
+    {
+      NcmVector *row = ncm_mset_catalog_peek_row (mcat, i);
+
+      ncm_mset_fparams_set_vector_offset (mcat->mset, row, mcat->nadd_vals);
+
+      ncm_mset_func_eval_vector (func, mcat->mset, x_v, mcat->quantile_ws);
+
+      for (j = 0; j < dim; j++)
+      {
+        NcmStatsDist1dEPDF *epdf = g_ptr_array_index (epdf_a, j);
+        ncm_stats_dist1d_epdf_add_obs (epdf, ncm_vector_get (mcat->quantile_ws, j));
+      }
+      if (i % (cat_len / 100) == 0)
+      {
+        if (mtype > NCM_FIT_RUN_MSGS_NONE)
+        {
+          ncm_message ("=");
+        }
+      }
+    }
+    if (mtype > NCM_FIT_RUN_MSGS_NONE)
+    {
+      if (i % (cat_len / 100) != 0)
+        ncm_message ("=");
+      ncm_message ("|\n", cat_len);
+      ncm_message ("# - |", cat_len);
+      for (i = 0; i < 100; i++)
+        ncm_message ("-");
+      ncm_message ("|\n");
+    }
+
+    for (i = 0; i < dim; i++)
+    {
+      NcmStatsDist1dEPDF *epdf = g_ptr_array_index (epdf_a, i);
+      NcmStatsDist1d *dist1d   = NCM_STATS_DIST1D (epdf);
+      ncm_stats_dist1d_prepare (dist1d);
+
+      for (j = 0; j < lim->len; j++)
+      {
+        const gdouble l = g_array_index (lim, gdouble, j);
+        gdouble pvalue;
+
+        if (l < dist1d->xi)
+          pvalue = 0.0;
+
+        else if (l > dist1d->xf)
+          pvalue = 1.0;
+
+        else  
+          pvalue = ncm_stats_dist1d_eval_pdf (dist1d, l);
+
+        ncm_matrix_set (res, i, j, pvalue);
       }
     }
 
