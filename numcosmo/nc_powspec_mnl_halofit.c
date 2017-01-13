@@ -568,14 +568,15 @@ _nc_powspec_mnl_halofit_prepare_nl (NcPowspecMNLHaloFit* pshf, NcmModel* model)
 
 				ncm_vector_set (neffv, i, -3.0 - d1);
 				ncm_vector_set (Curv, i, -d2);
-
+/*
 				printf ("# z = % 20.15g, R = % 20.15g | % 20.15g % 20.15g % 20.15g | %e %e %e\n",
 				        z, R,
 				        sigma2_0, d1, d2,
 				        fabs ((ncm_powspec_filter_eval_var (pshf->psml_gauss, z, R) - sigma2_0) / sigma2_0),
 				        fabs ((ncm_powspec_filter_eval_dlnvar_dlnr (pshf->psml_gauss, z, log (R)) - d1) / d1),
 				        fabs ((ncm_powspec_filter_eval_dnlnvar_dlnrn (pshf->psml_gauss, z, log (R), 2) - d2) / d2));
-			}
+*/
+      }
 			else
 			{
 				const gdouble z = ncm_vector_get (pshf->Rsigma->xv, i);
@@ -651,7 +652,7 @@ _nc_powspec_mnl_halofit_preeval (NcPowspecMNLHaloFit* pshf, NcHICosmo* cosmo, co
     gdouble wa;
     if (pshf->priv->pkequal && NC_IS_HICOSMO_DE_LINDER (cosmo) && ((wa = ncm_model_orig_param_get (NCM_MODEL (cosmo), NC_HICOSMO_DE_LINDER_W1)) != 0.0) )
     {
-      printf ("Using pkequal!\n");
+      /*printf ("Using pkequal!\n");*/
       if (pshf->priv->linder == NULL)
       {
         pshf->priv->linder      = NC_HICOSMO (nc_hicosmo_de_linder_new ());
@@ -709,7 +710,7 @@ _nc_powspec_mnl_halofit_preeval (NcPowspecMNLHaloFit* pshf, NcHICosmo* cosmo, co
     }
     else
     {
-      printf ("Not using pkequal!\n");
+      /*printf ("Not using pkequal!\n");*/
       Omega_de_onepw = nc_hicosmo_de_E2Omega_de_onepw (NC_HICOSMO_DE (cosmo), z) / E2;
     }
   }

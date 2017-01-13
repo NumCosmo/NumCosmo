@@ -198,13 +198,13 @@ _ncm_spline_cubic_deriv2 (const NcmSpline *s, const gdouble x)
 
 	{
 		const gdouble delx = x - ncm_vector_get (s->xv, i);
-		const gdouble c2_i = ncm_vector_fast_get (sc->c, i);
-		const gdouble d6_i = ncm_vector_fast_get (sc->d, i);
+		const gdouble c2_i = 2.0 * ncm_vector_fast_get (sc->c, i);
+		const gdouble d6_i = 6.0 * ncm_vector_fast_get (sc->d, i);
 
 #ifdef HAVE_FMA
     return fma (delx, d6_i, c2_i);
 #else
-		return 2.0 * c2_i + 6.0 * delx * d6_i;
+		return c2_i + delx * d6_i;
 #endif /* HAVE_FMA */
 	}
 }
