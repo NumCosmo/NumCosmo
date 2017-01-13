@@ -301,6 +301,7 @@ _nc_hipert_gw_eval_sing_system (NcmHOAA *hoaa, NcmModel *model, const gdouble t_
  * @igw: a #NcHIPertIGW
  * @tau_m_taus: $\tau - \tau_s$ 
  * @k: $k$
+ * @sing: singularity index
  *
  * FIXME
  *
@@ -311,6 +312,7 @@ _nc_hipert_gw_eval_sing_system (NcmHOAA *hoaa, NcmModel *model, const gdouble t_
  * @igw: a #NcHIPertIGW
  * @tau_m_taus: $\tau - \tau_s$ 
  * @k: $k$
+ * @sing: singularity index
  *
  * FIXME
  *
@@ -321,6 +323,7 @@ _nc_hipert_gw_eval_sing_system (NcmHOAA *hoaa, NcmModel *model, const gdouble t_
  * @igw: a #NcHIPertIGW
  * @tau_m_taus: $\tau - \tau_s$ 
  * @k: $k$
+ * @sing: singularity index
  * @nu: (out): FIXME
  * @dlnmnu: (out): FIXME
  *

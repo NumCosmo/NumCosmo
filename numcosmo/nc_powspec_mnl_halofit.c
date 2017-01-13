@@ -873,7 +873,7 @@ void nc_powspec_mnl_halofit_set_kbounds_from_ml (NcPowspecMNLHaloFit* pshf)
  * @pshf: a #NcPowspecMNLHaloFit
  * @on: a boolean
  *
- * Whether to use PKEqual to adjust the HaloFit formula when using a #NcHICosmoLinder
+ * Whether to use PKEqual to adjust the HaloFit formula when using a #NcHICosmoDELinder
  * model, see [Casarini et al. (2009)][XCasarini2009] and [Casarini et al. (2016)][XCasarini2016].
  *
  */

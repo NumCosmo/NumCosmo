@@ -148,7 +148,7 @@ enum
 };
 
 G_DEFINE_ABSTRACT_TYPE (NcmHOAA, ncm_hoaa, G_TYPE_OBJECT);
-
+/*
 static gdouble
 _ncm_hoaa_sin_thetabf (NcmHOAA *hoaa, const gdouble sin_thetab, const gdouble cos_thetab)
 {
@@ -160,7 +160,7 @@ _ncm_hoaa_cos_thetabf (NcmHOAA *hoaa, const gdouble sin_thetab, const gdouble co
 {
   return cos_thetab * hoaa->priv->cos_shift - sin_thetab * hoaa->priv->sin_shift;
 }
-
+*/
 static void
 _ncm_hoaa_update_shift (NcmHOAA *hoaa, const gint shift_d)
 {
@@ -1541,8 +1541,8 @@ _ncm_hoaa_evol_save (NcmHOAA *hoaa, NcmModel *model, const gdouble tf)
   guint nrestarts            = 0;
   gdouble last_t             = -1.0e100;
   NcmHOAAArg arg             = {hoaa, model, 0.0, -1, NCM_HOAA_SING_TYPE_INVALID};
-  const gdouble sin_table[8] = {0.0, 1.0 / M_SQRT2, 1.0, +1.0 / M_SQRT2, +0.0, -1.0 / M_SQRT2, -1.0, -1.0 / M_SQRT2};
-  const gdouble cos_table[8] = {1.0, 1.0 / M_SQRT2, 0.0, -1.0 / M_SQRT2, -1.0, -1.0 / M_SQRT2, +0.0, +1.0 / M_SQRT2};
+  /*const gdouble sin_table[8] = {0.0, 1.0 / M_SQRT2, 1.0, +1.0 / M_SQRT2, +0.0, -1.0 / M_SQRT2, -1.0, -1.0 / M_SQRT2};*/
+  /*const gdouble cos_table[8] = {1.0, 1.0 / M_SQRT2, 0.0, -1.0 / M_SQRT2, -1.0, -1.0 / M_SQRT2, +0.0, +1.0 / M_SQRT2};*/
 
   if (hoaa->priv->sigma0 == 0.0)
     hoaa->priv->sigma0 = 0.125 * M_PI - hoaa->k * hoaa->priv->t_cur;
@@ -1584,7 +1584,7 @@ _ncm_hoaa_evol_save (NcmHOAA *hoaa, NcmModel *model, const gdouble tf)
       {
         const gdouble mnu          = ncm_hoaa_eval_mnu (hoaa, model, hoaa->priv->t_cur, hoaa->k);
         const gdouble lnmnu        = log (mnu);
-        const glong n              = hoaa->priv->shift_t % 8;
+        /*const glong n              = hoaa->priv->shift_t % 8;*/
         const gdouble cos_thetab_2 = cos (0.5 * thetab);
         const gdouble sin_thetab_2 = sin (0.5 * thetab);
         const gdouble q            = - exp (0.5 * (+ gamma - epsilon - lnmnu)) * cos_thetab_2 + exp (0.5 * (+ gamma + epsilon - lnmnu)) * sin_thetab_2;
@@ -1692,8 +1692,8 @@ _ncm_hoaa_evol_sing_save (NcmHOAA *hoaa, NcmModel *model, const gdouble t_m_ts, 
   guint nrestarts            = 0;
   gdouble last_t             = -1.0e100;
   NcmHOAAArg arg             = {hoaa, model, 0.0, sing, st};
-  const gdouble sin_table[8] = {0.0, 1.0 / M_SQRT2, 1.0, +1.0 / M_SQRT2, +0.0, -1.0 / M_SQRT2, -1.0, -1.0 / M_SQRT2};
-  const gdouble cos_table[8] = {1.0, 1.0 / M_SQRT2, 0.0, -1.0 / M_SQRT2, -1.0, -1.0 / M_SQRT2, +0.0, +1.0 / M_SQRT2};
+  /*const gdouble sin_table[8] = {0.0, 1.0 / M_SQRT2, 1.0, +1.0 / M_SQRT2, +0.0, -1.0 / M_SQRT2, -1.0, -1.0 / M_SQRT2};*/
+  /*const gdouble cos_table[8] = {1.0, 1.0 / M_SQRT2, 0.0, -1.0 / M_SQRT2, -1.0, -1.0 / M_SQRT2, +0.0, +1.0 / M_SQRT2};*/
   gdouble tstep_m_ts;
 
   g_assert_cmpfloat (t_m_ts + ts, >, hoaa->priv->t_cur);
@@ -1749,7 +1749,7 @@ _ncm_hoaa_evol_sing_save (NcmHOAA *hoaa, NcmModel *model, const gdouble t_m_ts, 
       
       if (tstep_m_ts > last_t + fabs (last_t) * 0.01)
       {
-        const glong n              = hoaa->priv->shift_t % 8;
+        /*const glong n              = hoaa->priv->shift_t % 8;*/
         const gdouble cos_thetab_2 = cos (0.5 * thetab);
         const gdouble sin_thetab_2 = sin (0.5 * thetab);
         
@@ -2583,7 +2583,7 @@ ncm_hoaa_eval_Delta (NcmHOAA *hoaa, NcmModel *model, const gdouble t, gdouble *D
  * @hoaa: a #NcmHOAA
  * @model: a #NcmModel
  * @k: mode $k$
- * @sing: singularity number
+ * @sing: singularity index
  * @ts: (out): singularity time $t_s$
  * @dts_i: (out): FIXME
  * @dts_f: (out): FIXME
@@ -2598,6 +2598,7 @@ ncm_hoaa_eval_Delta (NcmHOAA *hoaa, NcmModel *model, const gdouble t, gdouble *D
  * @model: a #NcmModel
  * @t_m_ts: time $t - t_s$
  * @k: mode $k$
+ * @sing: singularity index
  *
  * Evaluates the mass term at $t$ and $k$.
  *
@@ -2620,6 +2621,7 @@ ncm_hoaa_eval_Delta (NcmHOAA *hoaa, NcmModel *model, const gdouble t, gdouble *D
  * @model: a #NcmModel
  * @t_m_ts: time $t - t_s$
  * @k: mode $k$
+ * @sing: singularity index
  *
  * Evaluates the potential term at $t$ and $k$.
  *
@@ -2631,6 +2633,7 @@ ncm_hoaa_eval_Delta (NcmHOAA *hoaa, NcmModel *model, const gdouble t, gdouble *D
  * @model: a #NcmModel
  * @t_m_ts: time $t - t_s$
  * @k: mode $k$
+ * @sing: singularity index
  *
  * Evaluates the derivative $\mathrm{d}(m\nu)/\mathrm{d}t$ term at $t$ and $k$.
  *
@@ -2642,6 +2645,7 @@ ncm_hoaa_eval_Delta (NcmHOAA *hoaa, NcmModel *model, const gdouble t, gdouble *D
  * @model: (allow-none): a #NcmModel
  * @t_m_ts: time $t - t_s$
  * @k: mode $k$
+ * @sing: singularity index
  * @nu: (out): the frequency $\nu$
  * @dlnmnu: (out): the derivative $\mathrm{d}(m\nu)/\mathrm{d}t$
  * @Vnu: (out): the potential over frequency term $V/\nu$

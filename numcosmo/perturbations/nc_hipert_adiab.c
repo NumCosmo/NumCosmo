@@ -301,7 +301,8 @@ _nc_hipert_adiab_eval_sing_system (NcmHOAA *hoaa, NcmModel *model, const gdouble
  * @iad: a #NcHIPertIAdiab
  * @tau_m_taus: $\tau - \tau_s$ 
  * @k: $k$
- *
+ * @sing: singularity index
+ * 
  * FIXME
  *
  * Returns: FIXME.
@@ -311,6 +312,7 @@ _nc_hipert_adiab_eval_sing_system (NcmHOAA *hoaa, NcmModel *model, const gdouble
  * @iad: a #NcHIPertIAdiab
  * @tau_m_taus: $\tau - \tau_s$ 
  * @k: $k$
+ * @sing: singularity index
  *
  * FIXME
  *
@@ -321,6 +323,7 @@ _nc_hipert_adiab_eval_sing_system (NcmHOAA *hoaa, NcmModel *model, const gdouble
  * @iad: a #NcHIPertIAdiab
  * @tau_m_taus: $\tau - \tau_s$ 
  * @k: $k$
+ * @sing: singularity index
  * @nu: (out): FIXME
  * @dlnmnu: (out): FIXME
  *
