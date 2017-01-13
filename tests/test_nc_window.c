@@ -83,7 +83,7 @@ test_nc_window_new_tophat (void)
 
   test_nc_window_free ();
 
-#if !((GLIB_MAJOR_VERSION == 2) && (GLIB_MINOR_VERSION < 30))
+#if GLIB_CHECK_VERSION(2,30,0)
   wf = nc_window_new_from_name ("NcWindowTophat");
 #else
   wf = nc_window_tophat_new ();
@@ -101,7 +101,7 @@ test_nc_window_new_gaussian (void)
 
   test_nc_window_free();
 
-#if !((GLIB_MAJOR_VERSION == 2) && (GLIB_MINOR_VERSION < 30))
+#if GLIB_CHECK_VERSION(2,30,0)
   wf = nc_window_new_from_name ("NcWindowGaussian");
 #else
   wf = nc_window_gaussian_new ();

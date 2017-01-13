@@ -1,10 +1,17 @@
 #!/usr/bin/python2
 
-from gi.repository import NumCosmo as Nc
-from gi.repository import NumCosmoMath as Ncm
+try:
+  import gi
+  gi.require_version('NumCosmo', '1.0')
+  gi.require_version('NumCosmoMath', '1.0')
+except:
+  pass
+
 import time
 import cProfile
 import math
+from gi.repository import NumCosmo as Nc
+from gi.repository import NumCosmoMath as Ncm
 
 #
 #  Initializing the library objects, this must be called before 

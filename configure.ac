@@ -113,6 +113,11 @@ dnl ***************************************************************************
 AC_CANONICAL_HOST
 
 dnl ***************************************************************************
+dnl Enable gnu extensions when available
+dnl ***************************************************************************
+AC_GNU_SOURCE
+
+dnl ***************************************************************************
 dnl Checks for programs.
 dnl ***************************************************************************
 AC_LANG(C)
@@ -261,7 +266,7 @@ AC_DEFINE_UNQUOTED(PACKAGE_SOURCE_DIR, "${packagesrcdir}",[PACKAGE_SOURCE_DIR])
 dnl ***************************************************************************
 dnl Dependencies
 dnl ***************************************************************************
-GLIB_REQUIRED_VERSION=2.32.0
+GLIB_REQUIRED_VERSION=2.38.0
 GSL_REQUIRED_VERSION=1.13
 GSL_GLF_REQUIRED_VERSION=1.15
 GSL_ODEIV2_REQUIRED_VERSION=1.15
@@ -414,7 +419,7 @@ dnl ***************************************************************************
 
 AC_CHECK_HEADERS([math.h],, AC_MSG_ERROR([math.h header files missing]))
 AC_CHECK_LIB([m],[cos])
-AC_CHECK_FUNCS([cos sin erf powl exp10])
+AC_CHECK_FUNCS([cos sin sincos erf powl exp10 fma])
 
 dnl ***************************************************************************
 dnl Check for dlfcn.h
@@ -796,9 +801,9 @@ if test "x$have_nlopt_support" != "x"; then
 
 PKG_CHECK_EXISTS([nlopt >= 2.2], [
 AC_DEFINE([HAVE_NLOPT_2_2],[1], [If nlopt version is bigger than 2.2])
-AC_CHECK_LIB([nlopt],[nlopt_create],,[AC_MSG_ERROR([Can't link to -lnlopt. The nlopt library is probably compiled with c++ support, recompile the C version.])],[])
+AC_CHECK_LIB([nlopt],[nlopt_create],,[AC_MSG_ERROR([Can't link to -lnlopt. The nlopt library is probably compiled with c++ support, recompile the C version.])],[$NLOPT_LIBS])
 ],[
-AC_CHECK_LIB([nlopt],[nlopt_minimize_constrained],,[AC_MSG_ERROR([Can't link to -lnlopt. The nlopt library is probably compiled with C++ support, recompile the C version.])],[])
+AC_CHECK_LIB([nlopt],[nlopt_minimize_constrained],,[AC_MSG_ERROR([Can't link to -lnlopt. The nlopt library is probably compiled with C++ support, recompile the C version.])],[$NLOPT_LIBS])
 ])
 
 fi
@@ -812,13 +817,13 @@ AC_ARG_VAR([SUNDIALS_CFLAGS], [linker flags for SUNDIALS])
 AC_SUBST(SUNDIALS_LIBS)
 AC_SUBST(SUNDIALS_CFLAGS)
 
-AC_CHECK_LIB([sundials_nvecserial],[N_VNew_Serial],[SUNDIALS_LIBS="$SUNDIALS_LIBS -lsundials_nvecserial"],[AC_MSG_ERROR([Cannot find library sundials_nvecserial, use SUNDIALS_LIBS="-L<path_to_SUNDIALS_libs>".])],[])
-dnl AC_CHECK_LIB([sundials_cvode],[CVodeCreate],[SUNDIALS_LIBS="$SUNDIALS_LIBS -lsundials_cvode"],[AC_MSG_ERROR([Cannot find library sundials_cvode, use SUNDIALS_LIBS="-L<path_to_SUNDIALS_libs>".])],[])
-AC_CHECK_LIB([sundials_cvodes],[CVodeCreate],[SUNDIALS_LIBS="$SUNDIALS_LIBS -lsundials_cvodes"],[AC_MSG_ERROR([Cannot find library sundials_cvodes, use SUNDIALS_LIBS="-L<path_to_SUNDIALS_libs>".])],[])
+AC_CHECK_LIB([sundials_nvecserial],[N_VNew_Serial],[SUNDIALS_LIBS="$SUNDIALS_LIBS -lsundials_nvecserial"],[AC_MSG_ERROR([Cannot find library sundials_nvecserial, use SUNDIALS_LIBS="-L<path_to_SUNDIALS_libs>".])],[$SUNDIALS_LIBS])
+dnl AC_CHECK_LIB([sundials_cvode],[CVodeCreate],[SUNDIALS_LIBS="$SUNDIALS_LIBS -lsundials_cvode"],[AC_MSG_ERROR([Cannot find library sundials_cvode, use SUNDIALS_LIBS="-L<path_to_SUNDIALS_libs>".])],[$SUNDIALS_LIBS])
+AC_CHECK_LIB([sundials_cvodes],[CVodeCreate],[SUNDIALS_LIBS="$SUNDIALS_LIBS -lsundials_cvodes"],[AC_MSG_ERROR([Cannot find library sundials_cvodes, use SUNDIALS_LIBS="-L<path_to_SUNDIALS_libs>".])],[$SUNDIALS_LIBS])
 AC_CHECK_LIB([sundials_arkode],[ARKodeCreate],[
 	SUNDIALS_LIBS="$SUNDIALS_LIBS -lsundials_arkode"
 	AC_DEFINE([HAVE_SUNDIALS_ARKODE],[1],[SUNDIALS has ARKode])
-	],[],[])
+	],[],[$SUNDIALS_LIBS])
 
 SAVED_CFLAGS="$CFLAGS"
 CFLAGS="$CFLAGS $SUNDIALS_CFLAGS"

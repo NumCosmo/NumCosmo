@@ -582,9 +582,9 @@ G_INLINE_FUNC gdouble ncm_c_H_bind (const gdouble n, const gdouble j)
   const gdouble j_1_2            = j + 0.5;
   const gdouble j_1_2_pow_2      = gsl_pow_2 (j_1_2);
   const gdouble alpha2           = ncm_c_fine_struct_square ();
-  const gdouble d_j              = j_1_2 * (- ncm_sqrt1px_m1 (- alpha2 / j_1_2_pow_2)); /*(1.0 - sqrt (1.0 - alpha2 / j_1_2_pow_2))*/
+  const gdouble d_j              = j_1_2 * (- ncm_util_sqrt1px_m1 (- alpha2 / j_1_2_pow_2)); /*(1.0 - sqrt (1.0 - alpha2 / j_1_2_pow_2))*/
   const gdouble f_arg            = ncm_c_fine_struct_square () / gsl_pow_2 (n - d_j);
-  const gdouble f_nj_m_one       = -ncm_sqrt1px_m1 (f_arg) / sqrt (1.0 + f_arg); /*(1.0 - sqrt (1.0 + f_arg))*/
+  const gdouble f_nj_m_one       = -ncm_util_sqrt1px_m1 (f_arg) / sqrt (1.0 + f_arg); /*(1.0 - sqrt (1.0 + f_arg))*/
   const gdouble r                = ncm_c_mass_ratio_e_p ();
   const gdouble E_binding        = ncm_c_H_reduced_energy () * f_nj_m_one * (1.0 - 0.5 * f_nj_m_one * r / gsl_pow_2 (1.0 + r)); 
   return - E_binding;

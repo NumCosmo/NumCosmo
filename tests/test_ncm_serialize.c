@@ -94,7 +94,7 @@ main (gint argc, gchar *argv[])
               &test_ncm_serialize_new,
               &test_ncm_serialize_traps,
               &test_ncm_serialize_free);
-#if !((GLIB_MAJOR_VERSION == 2) && (GLIB_MINOR_VERSION < 38))
+#if GLIB_CHECK_VERSION(2,38,0)
   g_test_add ("/ncm/serialize/invalid/from_string/syntax/subprocess", TestNcmSerialize, NULL,
               &test_ncm_serialize_new,
               &test_ncm_serialize_global_invalid_from_string_syntax,
@@ -333,7 +333,7 @@ test_ncm_serialize_from_string_nest_samename (TestNcmSerialize *test, gconstpoin
 void
 test_ncm_serialize_traps (TestNcmSerialize *test, gconstpointer pdata)
 {
-#if !((GLIB_MAJOR_VERSION == 2) && (GLIB_MINOR_VERSION < 38))
+#if GLIB_CHECK_VERSION(2,38,0)
   g_test_trap_subprocess ("/ncm/serialize/invalid/from_string/syntax/subprocess", 0, 0);
   g_test_trap_assert_failed ();
 

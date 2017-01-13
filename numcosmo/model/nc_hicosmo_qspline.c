@@ -44,152 +44,6 @@
 
 G_DEFINE_TYPE (NcHICosmoQSpline, nc_hicosmo_qspline, NC_TYPE_HICOSMO);
 
-#define VECTOR     (NCM_MODEL (cosmo)->params)
-#define QSPLINE_H0 (ncm_vector_get (VECTOR, NC_HICOSMO_QSPLINE_H0))
-#define OMEGA_T    (ncm_vector_get (VECTOR, NC_HICOSMO_QSPLINE_OMEGA_T))
-#define AS_DRAG    (ncm_vector_get (VECTOR, NC_HICOSMO_QSPLINE_AS_DRAG))
-
-static void
-_nc_hicosmo_qspline_prepare (NcHICosmoQSpline *qs)
-{
-  if (!ncm_model_state_is_update (NCM_MODEL (qs)))
-  {
-    /*static guint count = 0;*/
-    ncm_spline_prepare (qs->q_z);
-    ncm_model_state_set_update (NCM_MODEL (qs));
-
-    /*printf ("Preparing! ==>(%20u)<==\n", count++);*/
-    ncm_ode_spline_prepare (qs->E2_z, qs);
-  }
-  else
-    return;
-}
-
-static gdouble
-_nc_hicosmo_qspline_dE2dz (gdouble E2, gdouble z, gpointer userdata)
-{
-  NcHICosmoQSpline *qs = NC_HICOSMO_QSPLINE (userdata);
-  gdouble q;
-
-  _nc_hicosmo_qspline_prepare (qs);
-
-  if (z > qs->z_f)
-    q = ncm_spline_eval (qs->q_z, qs->z_f);
-  else
-    q = ncm_spline_eval (qs->q_z, z);
-
-  return 2.0 * E2 * (q + 1.0) / (1.0 + z);
-}
-
-static gdouble
-_nc_hicosmo_qspline_E2 (NcHICosmo *cosmo, gdouble z)
-{
-  NcHICosmoQSpline *qs = NC_HICOSMO_QSPLINE (cosmo);
-
-  _nc_hicosmo_qspline_prepare (qs);
-  
-  if (z > qs->z_f)
-  {
-    gdouble q = ncm_spline_eval (qs->q_z, qs->z_f);
-    return ncm_spline_eval (qs->E2_z->s, qs->z_f) * pow ((1.0 + z) / (1.0 + qs->z_f), 2.0 * (q + 1.0));
-  }
-  else
-    return ncm_spline_eval (qs->E2_z->s, z);
-}
-
-static gdouble
-_nc_hicosmo_qspline_dE2_dz (NcHICosmo *cosmo, gdouble z)
-{
-  NcHICosmoQSpline *qs = NC_HICOSMO_QSPLINE (cosmo);
-  _nc_hicosmo_qspline_prepare (qs);
-  if (z > qs->z_f)
-  {
-    const gdouble q = ncm_spline_eval (qs->q_z, qs->z_f);
-    const gdouble x = 1.0 + z;
-    
-    return ncm_spline_eval (qs->E2_z->s, qs->z_f) *
-      pow (x / (1.0 + qs->z_f), 2.0 * (q + 1.0)) *
-      2.0 * (q + 1.0) / x;
-  }
-  else
-    return ncm_spline_eval_deriv (qs->E2_z->s, z);
-}
-
-static gdouble
-_nc_hicosmo_qspline_d2E2_dz2 (NcHICosmo *cosmo, gdouble z)
-{
-  NcHICosmoQSpline *qs = NC_HICOSMO_QSPLINE (cosmo);
-  _nc_hicosmo_qspline_prepare (qs);
-  if (z > qs->z_f)
-  {
-    const gdouble q = ncm_spline_eval (qs->q_z, qs->z_f);
-    const gdouble x = 1.0 + z;
-    const gdouble x2 = x * x;
-    
-    return ncm_spline_eval (qs->E2_z->s, qs->z_f) *
-      pow (x / (1.0 + qs->z_f), 2.0 * (q + 1.0)) *
-      2.0 * (q + 1.0) * (2.0 * q + 1.0) / x2;
-  }
-  else
-    return ncm_spline_eval_deriv2 (qs->E2_z->s, z);
-}
-
-/****************************************************************************
- * Hubble constant
- ****************************************************************************/
-static gdouble _nc_hicosmo_qspline_H0 (NcHICosmo *cosmo) { return QSPLINE_H0; }
-static gdouble _nc_hicosmo_qspline_Omega_t0 (NcHICosmo *cosmo) { return OMEGA_T; }
-static gdouble _nc_hicosmo_qspline_as_drag (NcHICosmo *cosmo) { return AS_DRAG; }
-
-/**
- * nc_hicosmo_qspline_new:
- * @s: FIXME
- * @np: FIXME
- * @z_f: FIXME
- *
- * FIXME
- *
- * Returns: FIXME
- */
-NcHICosmoQSpline *
-nc_hicosmo_qspline_new (NcmSpline *s, gsize np, gdouble z_f)
-{
-  NcHICosmoQSpline *qspline = g_object_new (NC_TYPE_HICOSMO_QSPLINE,
-                                            "spline", s,
-                                            "zf", z_f,
-                                            "qparam-length", np,
-                                            NULL);
-  return qspline;
-}
-
-/**
- * nc_hicosmo_qspline_add_continuity_priors:
- * @qspline: a #NcHICosmoQSpline
- * @lh: a #NcmLikelihood
- * @sigma: FIXME
- * @abstol: FIXME
- *
- * FIXME
- *
- * Returns: (transfer full): FIXME
- */
-NcHICosmoQSplineContPrior *
-nc_hicosmo_qspline_add_continuity_priors (NcHICosmoQSpline *qspline, NcmLikelihood *lh, gdouble sigma, gdouble abstol)
-{
-  g_assert (sigma > 0 && qspline->nknots > 2);
-  {
-    NcHICosmoQSplineContPrior *qspline_cp = nc_hicosmo_qspline_cont_prior_new (qspline->nknots - 2);
-    NcPriorQSplineCont *prior_qz_cont     = nc_prior_qspline_cont_new ();
-
-    nc_hicosmo_qspline_cont_prior_set_all_lnsigma (qspline_cp, log (sigma));
-    nc_hicosmo_qspline_cont_prior_set_abstol (qspline_cp, abstol);
-
-    ncm_likelihood_priors_add (lh, NCM_PRIOR (prior_qz_cont));
-
-    return qspline_cp;
-  }
-}
-
 enum {
   PROP_0,
   PROP_SPLINE,
@@ -207,6 +61,8 @@ nc_hicosmo_qspline_init (NcHICosmoQSpline *qspline)
   qspline->q_z      = NULL;
   qspline->E2_z     = NULL;
 }
+
+static gdouble _nc_hicosmo_qspline_dE2dz (gdouble E2, gdouble z, gpointer userdata);
 
 static void
 _nc_hicosmo_qspline_constructed (GObject *object)
@@ -312,7 +168,7 @@ _nc_hicosmo_qspline_set_property (GObject *object, guint prop_id, const GValue *
 }
 
 static void
-nc_hicosmo_qspline_dispose (GObject *object)
+_nc_hicosmo_qspline_dispose (GObject *object)
 {
   NcHICosmoQSpline *qspline = NC_HICOSMO_QSPLINE (object);
 
@@ -324,26 +180,32 @@ nc_hicosmo_qspline_dispose (GObject *object)
 }
 
 static void
-nc_hicosmo_qspline_finalize (GObject *object)
+_nc_hicosmo_qspline_finalize (GObject *object)
 {
 
   /* Chain up : end */
   G_OBJECT_CLASS (nc_hicosmo_qspline_parent_class)->finalize (object);
 }
 
+static gdouble _nc_hicosmo_qspline_H0 (NcHICosmo *cosmo);
+static gdouble _nc_hicosmo_qspline_E2 (NcHICosmo *cosmo, gdouble z);
+static gdouble _nc_hicosmo_qspline_dE2_dz (NcHICosmo *cosmo, gdouble z);
+static gdouble _nc_hicosmo_qspline_d2E2_dz2 (NcHICosmo *cosmo, gdouble z);
+static gdouble _nc_hicosmo_qspline_Omega_t0 (NcHICosmo *cosmo);
+static gdouble _nc_hicosmo_qspline_as_drag (NcHICosmo *cosmo);
+
 static void
 nc_hicosmo_qspline_class_init (NcHICosmoQSplineClass *klass)
 {
-  GObjectClass* object_class = G_OBJECT_CLASS (klass);
+  GObjectClass* object_class   = G_OBJECT_CLASS (klass);
   NcHICosmoClass* parent_class = NC_HICOSMO_CLASS (klass);
-  NcmModelClass *model_class = NCM_MODEL_CLASS (klass);
-
-  object_class->constructed  = &_nc_hicosmo_qspline_constructed;
-  object_class->dispose      = &nc_hicosmo_qspline_dispose;
-  object_class->finalize     = &nc_hicosmo_qspline_finalize;
+  NcmModelClass *model_class   = NCM_MODEL_CLASS (klass);
 
   model_class->set_property = &_nc_hicosmo_qspline_set_property;
   model_class->get_property = &_nc_hicosmo_qspline_get_property;
+  object_class->constructed = &_nc_hicosmo_qspline_constructed;
+  object_class->dispose     = &_nc_hicosmo_qspline_dispose;
+  object_class->finalize    = &_nc_hicosmo_qspline_finalize;
 
   ncm_model_class_set_name_nick (model_class, "Q Spline", "qspline");
   ncm_model_class_add_params (model_class, NC_HICOSMO_QSPLINE_SPARAM_LEN, NC_HICOSMO_QSPLINE_VPARAM_LEN, PROP_SIZE);
@@ -433,8 +295,151 @@ nc_hicosmo_qspline_class_init (NcHICosmoQSplineClass *klass)
   nc_hicosmo_set_E2_impl       (parent_class, &_nc_hicosmo_qspline_E2);
   nc_hicosmo_set_dE2_dz_impl   (parent_class, &_nc_hicosmo_qspline_dE2_dz);
   nc_hicosmo_set_d2E2_dz2_impl (parent_class, &_nc_hicosmo_qspline_d2E2_dz2);
-  nc_hicosmo_set_Omega_t0_impl  (parent_class, &_nc_hicosmo_qspline_Omega_t0);
+  nc_hicosmo_set_Omega_t0_impl (parent_class, &_nc_hicosmo_qspline_Omega_t0);
   nc_hicosmo_set_as_drag_impl  (parent_class, &_nc_hicosmo_qspline_as_drag);
+}
+
+#define VECTOR     (NCM_MODEL (cosmo)->params)
+#define QSPLINE_H0 (ncm_vector_get (VECTOR, NC_HICOSMO_QSPLINE_H0))
+#define OMEGA_T    (ncm_vector_get (VECTOR, NC_HICOSMO_QSPLINE_OMEGA_T))
+#define AS_DRAG    (ncm_vector_get (VECTOR, NC_HICOSMO_QSPLINE_AS_DRAG))
+
+static void
+_nc_hicosmo_qspline_prepare (NcHICosmoQSpline *qs)
+{
+  if (!ncm_model_state_is_update (NCM_MODEL (qs)))
+  {
+    /*static guint count = 0;*/
+    ncm_spline_prepare (qs->q_z);
+    ncm_model_state_set_update (NCM_MODEL (qs));
+
+    /*printf ("Preparing! ==>(%20u)<==\n", count++);*/
+    ncm_ode_spline_prepare (qs->E2_z, qs);
+  }
+  else
+    return;
+}
+
+static gdouble
+_nc_hicosmo_qspline_E2 (NcHICosmo *cosmo, gdouble z)
+{
+  NcHICosmoQSpline *qs = NC_HICOSMO_QSPLINE (cosmo);
+
+  _nc_hicosmo_qspline_prepare (qs);
+  
+  if (z > qs->z_f)
+  {
+    gdouble q = ncm_spline_eval (qs->q_z, qs->z_f);
+    return ncm_spline_eval (qs->E2_z->s, qs->z_f) * pow ((1.0 + z) / (1.0 + qs->z_f), 2.0 * (q + 1.0));
+  }
+  else
+    return ncm_spline_eval (qs->E2_z->s, z);
+}
+
+static gdouble
+_nc_hicosmo_qspline_dE2dz (gdouble E2, gdouble z, gpointer userdata)
+{
+  NcHICosmoQSpline *qs = NC_HICOSMO_QSPLINE (userdata);
+  gdouble q;
+
+  _nc_hicosmo_qspline_prepare (qs);
+
+  if (z > qs->z_f)
+    q = ncm_spline_eval (qs->q_z, qs->z_f);
+  else
+    q = ncm_spline_eval (qs->q_z, z);
+
+  return 2.0 * E2 * (q + 1.0) / (1.0 + z);
+}
+
+static gdouble
+_nc_hicosmo_qspline_dE2_dz (NcHICosmo *cosmo, gdouble z)
+{
+  NcHICosmoQSpline *qs = NC_HICOSMO_QSPLINE (cosmo);
+  _nc_hicosmo_qspline_prepare (qs);
+  if (z > qs->z_f)
+  {
+    const gdouble q = ncm_spline_eval (qs->q_z, qs->z_f);
+    const gdouble x = 1.0 + z;
+    
+    return ncm_spline_eval (qs->E2_z->s, qs->z_f) *
+      pow (x / (1.0 + qs->z_f), 2.0 * (q + 1.0)) *
+      2.0 * (q + 1.0) / x;
+  }
+  else
+    return ncm_spline_eval_deriv (qs->E2_z->s, z);
+}
+
+static gdouble
+_nc_hicosmo_qspline_d2E2_dz2 (NcHICosmo *cosmo, gdouble z)
+{
+  NcHICosmoQSpline *qs = NC_HICOSMO_QSPLINE (cosmo);
+  _nc_hicosmo_qspline_prepare (qs);
+  if (z > qs->z_f)
+  {
+    const gdouble q = ncm_spline_eval (qs->q_z, qs->z_f);
+    const gdouble x = 1.0 + z;
+    const gdouble x2 = x * x;
+    
+    return ncm_spline_eval (qs->E2_z->s, qs->z_f) *
+      pow (x / (1.0 + qs->z_f), 2.0 * (q + 1.0)) *
+      2.0 * (q + 1.0) * (2.0 * q + 1.0) / x2;
+  }
+  else
+    return ncm_spline_eval_deriv2 (qs->E2_z->s, z);
+}
+
+static gdouble _nc_hicosmo_qspline_H0 (NcHICosmo *cosmo) { return QSPLINE_H0; }
+static gdouble _nc_hicosmo_qspline_Omega_t0 (NcHICosmo *cosmo) { return OMEGA_T; }
+static gdouble _nc_hicosmo_qspline_as_drag (NcHICosmo *cosmo) { return AS_DRAG; }
+
+/**
+ * nc_hicosmo_qspline_new:
+ * @s: FIXME
+ * @np: FIXME
+ * @z_f: FIXME
+ *
+ * FIXME
+ *
+ * Returns: FIXME
+ */
+NcHICosmoQSpline *
+nc_hicosmo_qspline_new (NcmSpline *s, gsize np, gdouble z_f)
+{
+  NcHICosmoQSpline *qspline = g_object_new (NC_TYPE_HICOSMO_QSPLINE,
+                                            "spline", s,
+                                            "zf", z_f,
+                                            "qparam-length", np,
+                                            NULL);
+  return qspline;
+}
+
+/**
+ * nc_hicosmo_qspline_add_continuity_priors:
+ * @qspline: a #NcHICosmoQSpline
+ * @lh: a #NcmLikelihood
+ * @sigma: FIXME
+ * @abstol: FIXME
+ *
+ * FIXME
+ *
+ * Returns: (transfer full): FIXME
+ */
+NcHICosmoQSplineContPrior *
+nc_hicosmo_qspline_add_continuity_priors (NcHICosmoQSpline *qspline, NcmLikelihood *lh, gdouble sigma, gdouble abstol)
+{
+  g_assert (sigma > 0 && qspline->nknots > 2);
+  {
+    NcHICosmoQSplineContPrior *qspline_cp = nc_hicosmo_qspline_cont_prior_new (qspline->nknots - 2);
+    NcPriorQSplineCont *prior_qz_cont     = nc_prior_qspline_cont_new ();
+
+    nc_hicosmo_qspline_cont_prior_set_all_lnsigma (qspline_cp, log (sigma));
+    nc_hicosmo_qspline_cont_prior_set_abstol (qspline_cp, abstol);
+
+    ncm_likelihood_priors_add (lh, NCM_PRIOR (prior_qz_cont));
+
+    return qspline_cp;
+  }
 }
 
 /****************************** Continuity Prior Model ******************************/
@@ -454,7 +459,7 @@ nc_hicosmo_qspline_cont_prior_init (NcHICosmoQSplineContPrior *qspline_cp)
 }
 
 static void
-nc_hicosmo_qspline_cont_prior_constructed (GObject *object)
+_nc_hicosmo_qspline_cont_prior_constructed (GObject *object)
 {
   /* Chain up : start */
   G_OBJECT_CLASS (nc_hicosmo_qspline_cont_prior_parent_class)->constructed (object);
@@ -464,7 +469,7 @@ nc_hicosmo_qspline_cont_prior_constructed (GObject *object)
 }
 
 static void
-nc_hicosmo_qspline_cont_prior_dispose (GObject *object)
+_nc_hicosmo_qspline_cont_prior_dispose (GObject *object)
 {
 
   /* Chain up : end */
@@ -472,7 +477,7 @@ nc_hicosmo_qspline_cont_prior_dispose (GObject *object)
 }
 
 static void
-nc_hicosmo_qspline_cont_prior_finalize (GObject *object)
+_nc_hicosmo_qspline_cont_prior_finalize (GObject *object)
 {
 
   /* Chain up : end */
@@ -480,7 +485,7 @@ nc_hicosmo_qspline_cont_prior_finalize (GObject *object)
 }
 
 static void
-nc_hicosmo_qspline_cont_prior_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
+_nc_hicosmo_qspline_cont_prior_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
 {
 /*  NcHICosmoQSplineContPrior *qspline_cp = NC_HICOSMO_QSPLINE_CONT_PRIOR (object); */
   g_return_if_fail (NC_IS_HICOSMO_QSPLINE_CONT_PRIOR (object));
@@ -495,7 +500,7 @@ nc_hicosmo_qspline_cont_prior_set_property (GObject *object, guint prop_id, cons
 }
 
 static void
-nc_hicosmo_qspline_cont_prior_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
+_nc_hicosmo_qspline_cont_prior_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
 {
 /*  NcHICosmoQSplineContPrior *qspline_cp = NC_HICOSMO_QSPLINE_CONT_PRIOR (object); */
   g_return_if_fail (NC_IS_HICOSMO_QSPLINE_CONT_PRIOR (object));
@@ -518,12 +523,12 @@ nc_hicosmo_qspline_cont_prior_class_init (NcHICosmoQSplineContPriorClass *klass)
   GObjectClass* object_class = G_OBJECT_CLASS (klass);
   NcmModelClass *model_class = NCM_MODEL_CLASS (klass);
 
-  object_class->constructed  = nc_hicosmo_qspline_cont_prior_constructed;
-  object_class->dispose      = nc_hicosmo_qspline_cont_prior_dispose;
-  object_class->finalize     = nc_hicosmo_qspline_cont_prior_finalize;
+  object_class->constructed  = &_nc_hicosmo_qspline_cont_prior_constructed;
+  object_class->dispose      = &_nc_hicosmo_qspline_cont_prior_dispose;
+  object_class->finalize     = &_nc_hicosmo_qspline_cont_prior_finalize;
 
-  model_class->set_property  = nc_hicosmo_qspline_cont_prior_set_property;
-  model_class->get_property  = nc_hicosmo_qspline_cont_prior_get_property;
+  model_class->set_property  = &_nc_hicosmo_qspline_cont_prior_set_property;
+  model_class->get_property  = &_nc_hicosmo_qspline_cont_prior_get_property;
 
   ncm_model_class_set_name_nick (model_class, "Q Spline Cont Prior", "qspline_cp");
   ncm_model_class_add_params (model_class, 1, 1, PROP_CP_SIZE);

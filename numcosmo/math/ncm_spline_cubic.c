@@ -38,8 +38,58 @@
 #include "build_cfg.h"
 
 #include "math/ncm_spline_cubic.h"
+#include <math.h>
 
 G_DEFINE_ABSTRACT_TYPE (NcmSplineCubic, ncm_spline_cubic, NCM_TYPE_SPLINE);
+
+static void
+ncm_spline_cubic_init (NcmSplineCubic *sc)
+{
+	sc->init    = FALSE;
+
+	sc->b       = NULL;
+	sc->c       = NULL;
+	sc->d       = NULL;
+
+	sc->g       = NULL;
+	sc->diag    = NULL;
+	sc->offdiag = NULL;
+}
+
+static void _ncm_spline_cubic_free (NcmSplineCubic *sc);
+
+static void
+ncm_spline_cubic_finalize (GObject *object)
+{
+	NcmSplineCubic *sc = NCM_SPLINE_CUBIC (object);
+	_ncm_spline_cubic_free (sc);
+
+  /* Chain up : end */
+	G_OBJECT_CLASS (ncm_spline_cubic_parent_class)->finalize (object);
+}
+
+static void _ncm_spline_cubic_reset (NcmSpline *s);
+static gdouble _ncm_spline_cubic_eval (const NcmSpline *s, const gdouble x);
+static gdouble _ncm_spline_cubic_deriv (const NcmSpline *s, const gdouble x);
+static gdouble _ncm_spline_cubic_deriv2 (const NcmSpline *s, const gdouble x);
+static gdouble _ncm_spline_cubic_deriv_nmax (const NcmSpline *s, const gdouble x);
+static gdouble _ncm_spline_cubic_integ (const NcmSpline *s, const gdouble x0, const gdouble x1);
+
+static void
+ncm_spline_cubic_class_init (NcmSplineCubicClass *klass)
+{
+	GObjectClass* object_class = G_OBJECT_CLASS (klass);
+	NcmSplineClass* s_class = NCM_SPLINE_CLASS (klass);
+
+	object_class->finalize = ncm_spline_cubic_finalize;
+
+  s_class->reset        = &_ncm_spline_cubic_reset;
+	s_class->eval         = &_ncm_spline_cubic_eval;
+	s_class->deriv        = &_ncm_spline_cubic_deriv;
+	s_class->deriv2       = &_ncm_spline_cubic_deriv2;
+  s_class->deriv_nmax   = &_ncm_spline_cubic_deriv_nmax;
+	s_class->integ        = &_ncm_spline_cubic_integ;
+}
 
 static void
 _ncm_spline_cubic_alloc (NcmSplineCubic *sc, gsize n)
@@ -108,11 +158,15 @@ _ncm_spline_cubic_eval (const NcmSpline *s, const gdouble x)
 
 	{
 		const gdouble delx = x - ncm_vector_get (s->xv, i);
-		const gdouble b_i = ncm_vector_fast_get (sc->b, i);
-		const gdouble c_i = ncm_vector_fast_get (sc->c, i);
-		const gdouble d_i = ncm_vector_fast_get (sc->d, i);
-
-		return ncm_vector_get (s->yv, i) + delx * (b_i + delx * (c_i + delx * d_i));
+    const gdouble a_i  = ncm_vector_get (s->yv, i);
+		const gdouble b_i  = ncm_vector_fast_get (sc->b, i);
+		const gdouble c_i  = ncm_vector_fast_get (sc->c, i);
+		const gdouble d_i  = ncm_vector_fast_get (sc->d, i);
+#ifdef HAVE_FMA
+    return fma (fma (fma (d_i, delx, c_i), delx, b_i), delx, a_i);
+#else
+    return a_i + delx * (b_i + delx * (c_i + delx * d_i));
+#endif /* HAVE_FMA */
 	}
 }
 
@@ -124,11 +178,15 @@ _ncm_spline_cubic_deriv (const NcmSpline *s, const gdouble x)
 
 	{
 		const gdouble delx = x - ncm_vector_get (s->xv, i);
-		const gdouble b_i = ncm_vector_fast_get (sc->b, i);
-		const gdouble c_i = ncm_vector_fast_get (sc->c, i);
-		const gdouble d_i = ncm_vector_fast_get (sc->d, i);
+		const gdouble b_i  = ncm_vector_fast_get (sc->b, i);
+		const gdouble c2_i = 2.0 * ncm_vector_fast_get (sc->c, i);
+		const gdouble d3_i = 3.0 * ncm_vector_fast_get (sc->d, i);
 
-		return b_i + delx * (2.0 * c_i + 3.0 * delx * d_i);
+#ifdef HAVE_FMA
+    return fma (fma (delx, d3_i, c2_i), delx, b_i);
+#else
+		return b_i + delx * (c2_i + delx * d3_i);
+#endif /* HAVE_FMA */
 	}
 }
 
@@ -140,10 +198,14 @@ _ncm_spline_cubic_deriv2 (const NcmSpline *s, const gdouble x)
 
 	{
 		const gdouble delx = x - ncm_vector_get (s->xv, i);
-		const gdouble c_i = ncm_vector_fast_get (sc->c, i);
-		const gdouble d_i = ncm_vector_fast_get (sc->d, i);
+		const gdouble c2_i = ncm_vector_fast_get (sc->c, i);
+		const gdouble d6_i = ncm_vector_fast_get (sc->d, i);
 
-		return 2.0 * c_i + 6.0 * delx * d_i;
+#ifdef HAVE_FMA
+    return fma (delx, d6_i, c2_i);
+#else
+		return 2.0 * c2_i + 6.0 * delx * d6_i;
+#endif /* HAVE_FMA */
 	}
 }
 
@@ -194,44 +256,4 @@ _ncm_spline_cubic_integ (const NcmSpline *s, const gdouble x0, const gdouble x1)
 	}
 
 	return result;
-}
-
-static void
-ncm_spline_cubic_init (NcmSplineCubic *sc)
-{
-	sc->init = FALSE;
-
-	sc->b = NULL;
-	sc->c = NULL;
-	sc->d = NULL;
-
-	sc->g = NULL;
-	sc->diag = NULL;
-	sc->offdiag = NULL;
-}
-
-static void
-ncm_spline_cubic_finalize (GObject *object)
-{
-	NcmSplineCubic *sc = NCM_SPLINE_CUBIC (object);
-	_ncm_spline_cubic_free (sc);
-
-  /* Chain up : end */
-	G_OBJECT_CLASS (ncm_spline_cubic_parent_class)->finalize (object);
-}
-
-static void
-ncm_spline_cubic_class_init (NcmSplineCubicClass *klass)
-{
-	GObjectClass* object_class = G_OBJECT_CLASS (klass);
-	NcmSplineClass* s_class = NCM_SPLINE_CLASS (klass);
-
-	s_class->reset        = &_ncm_spline_cubic_reset;
-	s_class->eval         = &_ncm_spline_cubic_eval;
-	s_class->deriv        = &_ncm_spline_cubic_deriv;
-	s_class->deriv2       = &_ncm_spline_cubic_deriv2;
-  s_class->deriv_nmax   = &_ncm_spline_cubic_deriv_nmax;
-	s_class->integ        = &_ncm_spline_cubic_integ;
-
-	object_class->finalize = ncm_spline_cubic_finalize;
 }

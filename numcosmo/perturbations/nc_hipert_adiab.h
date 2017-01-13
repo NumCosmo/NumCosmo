@@ -31,10 +31,32 @@
 #include <numcosmo/build_cfg.h>
 #include <numcosmo/math/ncm_ode_spline.h>
 #include <numcosmo/nc_hicosmo.h>
-#include <numcosmo/perturbations/nc_hipert.h>
-#include <numcosmo/perturbations/nc_hipert_wkb.h>
+#include <numcosmo/math/ncm_hoaa.h>
 
 G_BEGIN_DECLS
+
+#define NC_TYPE_HIPERT_IADIAB               (nc_hipert_iadiab_get_type ())
+#define NC_HIPERT_IADIAB(obj)               (G_TYPE_CHECK_INSTANCE_CAST ((obj), NC_TYPE_HIPERT_IADIAB, NcHIPertIAdiab))
+#define NC_IS_HIPERT_IADIAB(obj)            (G_TYPE_CHECK_INSTANCE_TYPE ((obj), NC_TYPE_HIPERT_IADIAB))
+#define NC_HIPERT_IADIAB_GET_INTERFACE(obj) (G_TYPE_INSTANCE_GET_INTERFACE ((obj), NC_TYPE_HIPERT_IADIAB, NcHIPertIAdiabInterface))
+
+typedef struct _NcHIPertIAdiab NcHIPertIAdiab;
+typedef struct _NcHIPertIAdiabInterface NcHIPertIAdiabInterface;
+
+struct _NcHIPertIAdiabInterface
+{
+  /*< private >*/
+  GTypeInterface parent;
+  gdouble (*eval_mnu) (NcHIPertIAdiab *iad, const gdouble tau, const gdouble k);
+  gdouble (*eval_nu) (NcHIPertIAdiab *iad, const gdouble tau, const gdouble k);
+  gdouble (*eval_dlnmnu) (NcHIPertIAdiab *iad, const gdouble tau, const gdouble k);
+  void (*eval_system) (NcHIPertIAdiab *iad, const gdouble tau, const gdouble k, gdouble *nu, gdouble *dlnmnu);
+  guint (*nsing) (NcHIPertIAdiab *iad, const gdouble k);
+  void (*get_sing_info) (NcHIPertIAdiab *iad, const gdouble k, const guint sing, gdouble *ts, gdouble *dts_i, gdouble *dts_f, NcmHOAASingType *st);
+  gdouble (*eval_sing_mnu) (NcHIPertIAdiab *iad, const gdouble tau_m_taus, const gdouble k, const guint sing);
+  gdouble (*eval_sing_dlnmnu) (NcHIPertIAdiab *iad, const gdouble tau_m_taus, const gdouble k, const guint sing);
+  void (*eval_sing_system) (NcHIPertIAdiab *iad, const gdouble tau_m_taus, const gdouble k, const guint sing, gdouble *nu, gdouble *dlnmnu);
+};
 
 #define NC_TYPE_HIPERT_ADIAB             (nc_hipert_adiab_get_type ())
 #define NC_HIPERT_ADIAB(obj)             (G_TYPE_CHECK_INSTANCE_CAST ((obj), NC_TYPE_HIPERT_ADIAB, NcHIPertAdiab))
@@ -49,7 +71,7 @@ typedef struct _NcHIPertAdiab NcHIPertAdiab;
 struct _NcHIPertAdiabClass
 {
   /*< private >*/
-  NcHIPertClass parent_class;
+  NcmHOAAClass parent_class;
 };
 
 /**
@@ -73,31 +95,93 @@ typedef enum _NcHIPertAdiabVars
 struct _NcHIPertAdiab
 {
   /*< private >*/
-  NcHIPert parent_instance;
-  NcHIPertWKB *wkb;
+  NcmHOAA parent_instance;
 };
 
+GType nc_hipert_iadiab_get_type (void) G_GNUC_CONST;
 GType nc_hipert_adiab_get_type (void) G_GNUC_CONST;
+
+G_INLINE_FUNC gdouble nc_hipert_iadiab_eval_mnu (NcHIPertIAdiab *iad, const gdouble tau, const gdouble k);
+G_INLINE_FUNC gdouble nc_hipert_iadiab_eval_nu (NcHIPertIAdiab *iad, const gdouble tau, const gdouble k);
+G_INLINE_FUNC gdouble nc_hipert_iadiab_eval_dlnmnu (NcHIPertIAdiab *iad, const gdouble tau, const gdouble k);
+G_INLINE_FUNC void nc_hipert_iadiab_eval_system (NcHIPertIAdiab *iad, const gdouble tau, const gdouble k, gdouble *nu, gdouble *dlnmnu);
+
+G_INLINE_FUNC guint nc_hipert_iadiab_nsing (NcHIPertIAdiab *iad, const gdouble k);
+G_INLINE_FUNC void nc_hipert_iadiab_get_sing_info (NcHIPertIAdiab *iad, const gdouble k, const guint sing, gdouble *ts, gdouble *dts_i, gdouble *dts_f, NcmHOAASingType *st);
+G_INLINE_FUNC gdouble nc_hipert_iadiab_eval_sing_mnu (NcHIPertIAdiab *iad, const gdouble tau_m_taus, const gdouble k, const guint sing);
+G_INLINE_FUNC gdouble nc_hipert_iadiab_eval_sing_dlnmnu (NcHIPertIAdiab *iad, const gdouble tau_m_taus, const gdouble k, const guint sing);
+G_INLINE_FUNC void nc_hipert_iadiab_eval_sing_system (NcHIPertIAdiab *iad, const gdouble tau_m_taus, const gdouble k, const guint sing, gdouble *nu, gdouble *dlnmnu);
 
 NcHIPertAdiab *nc_hipert_adiab_new (void);
 NcHIPertAdiab *nc_hipert_adiab_ref (NcHIPertAdiab *pa);
 void nc_hipert_adiab_free (NcHIPertAdiab *pa);
 void nc_hipert_adiab_clear (NcHIPertAdiab **pa);
 
-void nc_hipert_adiab_prepare_wkb (NcHIPertAdiab *pa, NcHICosmo *cosmo, gdouble prec, gdouble alpha_i, gdouble alpha_f);
-
-void nc_hipert_adiab_wkb_zeta (NcHIPertAdiab *pa, NcHICosmo *cosmo, gdouble alpha, gdouble *Re_zeta, gdouble *Im_zeta);
-void nc_hipert_adiab_wkb_zeta_Pzeta (NcHIPertAdiab *pa, NcHICosmo *cosmo, gdouble alpha, gdouble *Re_zeta, gdouble *Im_zeta, gdouble *Re_Pzeta, gdouble *Im_Pzeta);
-
-void nc_hipert_adiab_wkb_v (NcHIPertAdiab *pa, NcHICosmo *cosmo, gdouble alpha, gdouble *Re_v, gdouble *Im_v);
-gdouble nc_hipert_adiab_wkb_maxtime (NcHIPertAdiab *pa, NcHICosmo *cosmo, gdouble alpha0, gdouble alpha1);
-gdouble nc_hipert_adiab_wkb_maxtime_prec (NcHIPertAdiab *pa, NcHICosmo *cosmo, NcHIPertWKBCmp cmp, gdouble prec, gdouble alpha0, gdouble alpha1);
-
-void nc_hipert_adiab_set_init_cond (NcHIPertAdiab *pa, NcHICosmo *cosmo, gdouble alpha_i, gdouble Re_zeta, gdouble Im_zeta, gdouble Re_Pzeta, gdouble Im_Pzeta);
-void nc_hipert_adiab_set_init_cond_wkb (NcHIPertAdiab *pa, NcHICosmo *cosmo, gdouble alpha_i);
-void nc_hipert_adiab_evolve (NcHIPertAdiab *pa, NcHICosmo *cosmo, gdouble alphaf);
-void nc_hipert_adiab_get_values (NcHIPertAdiab *pa, gdouble *alpha_i, gdouble *Re_zeta, gdouble *Im_zeta, gdouble *Re_Pzeta, gdouble *Im_Pzeta);
-
 G_END_DECLS
 
 #endif /* _NC_HIPERT_ADIAB_H_ */
+
+#ifndef _NC_HIPERT_ADIAB_INLINE_H_
+#define _NC_HIPERT_ADIAB_INLINE_H_
+#ifdef NUMCOSMO_HAVE_INLINE
+
+G_BEGIN_DECLS
+
+G_INLINE_FUNC gdouble
+nc_hipert_iadiab_eval_mnu (NcHIPertIAdiab *iad, const gdouble tau, const gdouble k)
+{
+  return NC_HIPERT_IADIAB_GET_INTERFACE (iad)->eval_mnu (iad, tau, k);
+}
+
+G_INLINE_FUNC gdouble
+nc_hipert_iadiab_eval_nu (NcHIPertIAdiab *iad, const gdouble tau, const gdouble k)
+{
+  return NC_HIPERT_IADIAB_GET_INTERFACE (iad)->eval_nu (iad, tau, k);
+}
+
+G_INLINE_FUNC gdouble
+nc_hipert_iadiab_eval_dlnmnu (NcHIPertIAdiab *iad, const gdouble tau, const gdouble k)
+{
+  return NC_HIPERT_IADIAB_GET_INTERFACE (iad)->eval_dlnmnu (iad, tau, k);
+}
+
+G_INLINE_FUNC void
+nc_hipert_iadiab_eval_system (NcHIPertIAdiab *iad, const gdouble tau, const gdouble k, gdouble *nu, gdouble *dlnmnu)
+{
+  NC_HIPERT_IADIAB_GET_INTERFACE (iad)->eval_system (iad, tau, k, nu, dlnmnu);
+}
+
+G_INLINE_FUNC guint 
+nc_hipert_iadiab_nsing (NcHIPertIAdiab *iad, const gdouble k)
+{
+  return NC_HIPERT_IADIAB_GET_INTERFACE (iad)->nsing (iad, k);
+}
+
+G_INLINE_FUNC void
+nc_hipert_iadiab_get_sing_info (NcHIPertIAdiab *iad, const gdouble k, const guint sing, gdouble *ts, gdouble *dts_i, gdouble *dts_f, NcmHOAASingType *st)
+{
+  NC_HIPERT_IADIAB_GET_INTERFACE (iad)->get_sing_info (iad, k, sing, ts, dts_i, dts_f, st);
+}
+
+G_INLINE_FUNC gdouble 
+nc_hipert_iadiab_eval_sing_mnu (NcHIPertIAdiab *iad, const gdouble tau_m_taus, const gdouble k, const guint sing)
+{
+  return NC_HIPERT_IADIAB_GET_INTERFACE (iad)->eval_sing_mnu (iad, tau_m_taus, k, sing);
+}
+
+G_INLINE_FUNC gdouble 
+nc_hipert_iadiab_eval_sing_dlnmnu (NcHIPertIAdiab *iad, const gdouble tau_m_taus, const gdouble k, const guint sing)
+{
+  return NC_HIPERT_IADIAB_GET_INTERFACE (iad)->eval_sing_dlnmnu (iad, tau_m_taus, k, sing);
+}
+
+G_INLINE_FUNC void 
+nc_hipert_iadiab_eval_sing_system (NcHIPertIAdiab *iad, const gdouble tau_m_taus, const gdouble k, const guint sing, gdouble *nu, gdouble *dlnmnu)
+{
+  NC_HIPERT_IADIAB_GET_INTERFACE (iad)->eval_sing_system (iad, tau_m_taus, k, sing, nu, dlnmnu);
+}
+
+G_END_DECLS
+
+#endif /* NUMCOSMO_HAVE_INLINE */
+#endif /* _NC_HIPERT_ADIAB_INLINE_H_ */

@@ -89,7 +89,7 @@ main (gint argc, gchar *argv[])
               &test_ncm_sparam_new,
               &test_ncm_sparam_traps,
               &test_ncm_sparam_free);
-#if !((GLIB_MAJOR_VERSION == 2) && (GLIB_MINOR_VERSION < 38))
+#if GLIB_CHECK_VERSION(2,38,0)
   g_test_add ("/ncm/sparam/invalid/lower_bound/subprocess", TestNcmSparam, NULL,
               &test_ncm_sparam_new,
               &test_ncm_sparam_invalid_lower_bound,
@@ -295,7 +295,7 @@ test_ncm_sparam_setget_default_value (TestNcmSparam *test, gconstpointer pdata)
 void
 test_ncm_sparam_traps (TestNcmSparam *test, gconstpointer pdata)
 {
-#if !((GLIB_MAJOR_VERSION == 2) && (GLIB_MINOR_VERSION < 38))
+#if GLIB_CHECK_VERSION(2,38,0)
   g_test_trap_subprocess ("/ncm/sparam/invalid/lower_bound/subprocess", 0, 0);
   g_test_trap_assert_failed ();
 
