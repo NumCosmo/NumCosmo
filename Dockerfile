@@ -25,4 +25,4 @@ ENV GI_TYPELIB_PATH=/usr/local/lib/girepository-1.0
 ENV CUBACORES=1
 ENV OMP_NUM_THREADS=1
 ENV OMP_THREAD_LIMIT=1
-RUN cd && cd NumCosmo && gtkdocize && ./autogen.sh --with-thread-pool-max=100 && make -j12 && make install #
+RUN cd && cd NumCosmo && gtkdocize && ./autogen.sh --with-thread-pool-max=100 --enable-opt-cflags && make -j12 && make install #
