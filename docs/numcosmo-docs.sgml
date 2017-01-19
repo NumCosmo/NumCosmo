@@ -68,6 +68,10 @@
       <xi:include href="xml/ncm_powspec_filter.xml"/>
     </section>
     <section>
+      <title>Harmonic Oscillator</title>
+      <xi:include href="xml/ncm_hoaa.xml"/>
+    </section>
+    <section>
       <title>Special Functions</title>
       <xi:include href="xml/ncm_mpsf_trig_int.xml"/>
       <xi:include href="xml/ncm_mpsf_0F1.xml"/>
@@ -172,6 +176,7 @@
     <section>
       <title>Quantum Gravity Bounce</title>
       <xi:include href="xml/nc_hicosmo_qgrw.xml"/>
+      <xi:include href="xml/nc_hicosmo_Vexp.xml"/>
       <xi:include href="xml/quantum_gravity.xml"/>
     </section>
     <section>
@@ -227,6 +232,7 @@
     <xi:include href="xml/nc_hipert.xml"/>
     <xi:include href="xml/nc_hipert_wkb.xml"/>
     <xi:include href="xml/nc_hipert_adiab.xml"/>
+    <xi:include href="xml/nc_hipert_gw.xml"/>
     <xi:include href="xml/nc_hipert_two_fluids.xml"/>
     <xi:include href="xml/nc_hipert_boltzmann.xml"/>
     <xi:include href="xml/nc_hipert_boltzmann_std.xml"/>

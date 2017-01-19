@@ -46,6 +46,8 @@ static void test_ncm_serialize_from_string_params_named (TestNcmSerialize *test,
 static void test_ncm_serialize_from_string_nest_named (TestNcmSerialize *test, gconstpointer pdata);
 static void test_ncm_serialize_from_string_nest_samename (TestNcmSerialize *test, gconstpointer pdata);
 
+static void test_ncm_serialize_reset_autosave_only (TestNcmSerialize *test, gconstpointer pdata);
+
 static void test_ncm_serialize_traps (TestNcmSerialize *test, gconstpointer pdata);
 static void test_ncm_serialize_global_invalid_from_string_syntax (TestNcmSerialize *test, gconstpointer pdata);
 static void test_ncm_serialize_global_invalid_from_string_nonexist (TestNcmSerialize *test, gconstpointer pdata);
@@ -89,12 +91,16 @@ main (gint argc, gchar *argv[])
               &test_ncm_serialize_new,
               &test_ncm_serialize_from_string_nest_samename,
               &test_ncm_serialize_free);
-
+  g_test_add ("/ncm/serialize/from_string/plain/reset/autosave_only", TestNcmSerialize, NULL,
+              &test_ncm_serialize_new,
+              &test_ncm_serialize_reset_autosave_only,
+              &test_ncm_serialize_free);
+  
   g_test_add ("/ncm/serialize/traps", TestNcmSerialize, NULL,
               &test_ncm_serialize_new,
               &test_ncm_serialize_traps,
               &test_ncm_serialize_free);
-#if !((GLIB_MAJOR_VERSION == 2) && (GLIB_MINOR_VERSION < 38))
+#if GLIB_CHECK_VERSION(2,38,0)
   g_test_add ("/ncm/serialize/invalid/from_string/syntax/subprocess", TestNcmSerialize, NULL,
               &test_ncm_serialize_new,
               &test_ncm_serialize_global_invalid_from_string_syntax,
@@ -229,9 +235,56 @@ test_ncm_serialize_from_string_plain_named (TestNcmSerialize *test, gconstpointe
   g_free (obj_new_ser);
   g_object_unref (obj_new);
 
-  ncm_serialize_clear_instances (test->ser);
+  ncm_serialize_clear_instances (test->ser, FALSE);
   
   NCM_TEST_FREE (nc_hicosmo_free, hic);
+}
+
+static void 
+test_ncm_serialize_reset_autosave_only (TestNcmSerialize *test, gconstpointer pdata)
+{
+  /* Deserialized from string, since it is named it will be automatically added to the saved instances. */
+  GObject *obj1   = ncm_serialize_from_string (test->ser, "NcHICosmoLCDM[myname:is]");
+  /* Deserialized from string, since it is *not* named it will *not* be automatically added to the saved instances.*/
+  GObject *obj2   = ncm_serialize_from_string (test->ser, "NcPowspecMLTransfer{'transfer':<{'NcTransferFuncEH',@a{sv} {}}>}");
+
+  /* Serializing from object */
+  gchar *obj_ser1 = ncm_serialize_to_string (test->ser, obj1, FALSE);
+  /* Serializing from object, all objects will receive a name */
+  gchar *obj_ser2 = ncm_serialize_to_string (test->ser, obj2, FALSE);
+
+  g_assert_cmpuint (ncm_serialize_count_instances (test->ser), ==, 1);
+  g_assert_cmpuint (ncm_serialize_count_saved_serializations (test->ser), >=, 2);
+
+  {
+    GObject *obj1_ref2 = ncm_serialize_from_string (test->ser, obj_ser1);
+    GObject *obj2_ref2 = ncm_serialize_from_string (test->ser, obj_ser2);
+
+    g_assert (obj1_ref2 == obj1);
+    g_assert (obj2_ref2 != obj2);
+
+    g_object_unref (obj1_ref2);
+    g_object_unref (obj2_ref2);
+    
+    g_free (obj_ser1);
+    g_free (obj_ser2);
+  }
+
+  g_assert_cmpuint (ncm_serialize_count_instances (test->ser), >, 1);
+  g_assert_cmpuint (ncm_serialize_count_saved_serializations (test->ser), >=, 2);
+  
+  ncm_serialize_reset (test->ser, TRUE);
+
+  g_assert_cmpuint (ncm_serialize_count_instances (test->ser), ==, 1);
+  g_assert_cmpuint (ncm_serialize_count_saved_serializations (test->ser), ==, 0);
+
+  ncm_serialize_reset (test->ser, FALSE);
+
+  g_assert_cmpuint (ncm_serialize_count_instances (test->ser), ==, 0);
+  g_assert_cmpuint (ncm_serialize_count_saved_serializations (test->ser), ==, 0);
+
+  NCM_TEST_FREE (g_object_unref, obj1);
+  NCM_TEST_FREE (g_object_unref, obj2);
 }
 
 void
@@ -241,14 +294,14 @@ test_ncm_serialize_from_string_params_named (TestNcmSerialize *test, gconstpoint
   ncm_assert_cmpdouble (ncm_model_param_get (m, NC_HICOSMO_DE_H0), ==, 12.3);
   ncm_assert_cmpdouble (ncm_model_param_get (m, NC_HICOSMO_DE_OMEGA_C), ==, 0.2);
 
-  ncm_serialize_clear_instances (test->ser);
+  ncm_serialize_clear_instances (test->ser, FALSE);
   NCM_TEST_FREE (ncm_model_free, m);
 
   m = NCM_MODEL (ncm_serialize_from_string (test->ser, "{'NcHICosmoLCDM[T1]', {'H0':<12.3>,'Omegac':<0.2>}}"));
   ncm_assert_cmpdouble (ncm_model_param_get (m, NC_HICOSMO_DE_H0), ==, 12.3);
   ncm_assert_cmpdouble (ncm_model_param_get (m, NC_HICOSMO_DE_OMEGA_C), ==, 0.2);
 
-  ncm_serialize_clear_instances (test->ser);
+  ncm_serialize_clear_instances (test->ser, FALSE);
   NCM_TEST_FREE (ncm_model_free, m);
 }
 
@@ -284,7 +337,7 @@ test_ncm_serialize_from_string_nest_named (TestNcmSerialize *test, gconstpointer
   g_assert_cmpstr (ncm_serialize_peek_name (test->ser, NC_POWSPEC_ML_TRANSFER (ps_ml)->tf), ==, "T1");
   g_assert_cmpstr (ncm_serialize_peek_name (test->ser, ps_ml), ==, "T0");
 
-  ncm_serialize_clear_instances (test->ser);
+  ncm_serialize_clear_instances (test->ser, FALSE);
   NCM_TEST_FREE (nc_powspec_ml_free, ps_ml);
 }
 
@@ -300,12 +353,12 @@ test_ncm_serialize_from_string_nest_samename (TestNcmSerialize *test, gconstpoin
   gchar *obj_ser, *obj_new_ser;
   GObject *obj_new;
 
-  ncm_serialize_clear_instances (test->ser);
+  ncm_serialize_clear_instances (test->ser, FALSE);
 
   obj_ser     = ncm_serialize_to_string (test->ser, obj, TRUE);
   obj_new     = ncm_serialize_from_string (test->ser, obj_ser);
 
-  ncm_serialize_reset (test->ser);
+  ncm_serialize_reset (test->ser, FALSE);
 
   obj_new_ser = ncm_serialize_to_string (test->ser, obj_new, TRUE);
 
@@ -315,10 +368,10 @@ test_ncm_serialize_from_string_nest_samename (TestNcmSerialize *test, gconstpoin
   g_free (obj_ser);
   g_free (obj_new_ser);
 
-  ncm_serialize_reset (test->ser);
+  ncm_serialize_reset (test->ser, FALSE);
   obj_ser     = ncm_serialize_to_string (test->ser, obj, FALSE);
 
-  ncm_serialize_reset (test->ser);
+  ncm_serialize_reset (test->ser, FALSE);
   obj_new_ser = ncm_serialize_to_string (test->ser, obj_new, FALSE);
   
   g_assert_cmpstr (obj_ser, ==, obj_new_ser);
@@ -326,14 +379,14 @@ test_ncm_serialize_from_string_nest_samename (TestNcmSerialize *test, gconstpoin
   g_free (obj_new_ser);
   g_object_unref (obj_new);
 
-  ncm_serialize_clear_instances (test->ser);
+  ncm_serialize_clear_instances (test->ser, FALSE);
   NCM_TEST_FREE (ncm_spline_free, s);
 }
 
 void
 test_ncm_serialize_traps (TestNcmSerialize *test, gconstpointer pdata)
 {
-#if !((GLIB_MAJOR_VERSION == 2) && (GLIB_MINOR_VERSION < 38))
+#if GLIB_CHECK_VERSION(2,38,0)
   g_test_trap_subprocess ("/ncm/serialize/invalid/from_string/syntax/subprocess", 0, 0);
   g_test_trap_assert_failed ();
 

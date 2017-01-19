@@ -1132,7 +1132,7 @@ main (gint argc, gchar *argv[])
 
   ncm_serialize_clear (&ser);
   ncm_mset_catalog_clear (&mcat);
-  ncm_serialize_global_reset ();
+  ncm_serialize_global_reset (FALSE);
   ncm_model_free (NCM_MODEL (cosmo));
   ncm_mset_free (mset);
   ncm_fit_free (fit);

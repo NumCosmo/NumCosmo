@@ -124,16 +124,11 @@ nc_hicosmo_de_linder_finalize (GObject *object)
 static void
 nc_hicosmo_de_linder_class_init (NcHICosmoDELinderClass *klass)
 {
-  GObjectClass* object_class = G_OBJECT_CLASS (klass);
+  GObjectClass* object_class     = G_OBJECT_CLASS (klass);
   NcHICosmoDEClass* parent_class = NC_HICOSMO_DE_CLASS (klass);
-  NcmModelClass *model_class = NCM_MODEL_CLASS (klass);
+  NcmModelClass *model_class     = NCM_MODEL_CLASS (klass);
 
   object_class->finalize     = &nc_hicosmo_de_linder_finalize;
-
-  nc_hicosmo_de_set_E2Omega_de_impl (parent_class, &_nc_hicosmo_de_linder_E2Omega_de);
-  nc_hicosmo_de_set_dE2Omega_de_dz_impl (parent_class, &_nc_hicosmo_de_linder_dE2Omega_de_dz);
-  nc_hicosmo_de_set_d2E2Omega_de_dz2_impl (parent_class, &_nc_hicosmo_de_linder_d2E2Omega_de_dz2);
-  nc_hicosmo_de_set_w_de_impl (parent_class, &_nc_hicosmo_de_linder_w_de);
 
   ncm_model_class_set_name_nick (model_class, "Chevalier-Polarski-Linder parametrization", "CPL");
   ncm_model_class_add_params (model_class, 2, 0, PROP_SIZE);
@@ -149,4 +144,9 @@ nc_hicosmo_de_linder_class_init (NcHICosmoDELinderClass *klass)
                                NCM_PARAM_TYPE_FREE);
   /* Check for errors in parameters initialization */
   ncm_model_class_check_params_info (model_class);
+
+  nc_hicosmo_de_set_E2Omega_de_impl (parent_class,       &_nc_hicosmo_de_linder_E2Omega_de);
+  nc_hicosmo_de_set_dE2Omega_de_dz_impl (parent_class,   &_nc_hicosmo_de_linder_dE2Omega_de_dz);
+  nc_hicosmo_de_set_d2E2Omega_de_dz2_impl (parent_class, &_nc_hicosmo_de_linder_d2E2Omega_de_dz2);
+  nc_hicosmo_de_set_w_de_impl (parent_class,             &_nc_hicosmo_de_linder_w_de);
 }

@@ -424,7 +424,7 @@ _ncm_fit_esmcmc_worker_dup (gpointer userdata)
     else
       fw->funcs_array = NULL;
 
-    ncm_serialize_reset (esmcmc->ser);
+    ncm_serialize_reset (esmcmc->ser, TRUE);
     
     G_UNLOCK (dup_thread);
 
@@ -1302,6 +1302,20 @@ ncm_fit_esmcmc_mean_covar (NcmFitESMCMC *esmcmc)
   ncm_mset_catalog_get_covar (esmcmc->mcat, &esmcmc->fit->fstate->covar);
   ncm_mset_fparams_set_vector (esmcmc->mcat->mset, esmcmc->fit->fstate->fparams);
   esmcmc->fit->fstate->has_covar = TRUE;
+}
+
+/**
+ * ncm_fit_esmcmc_peek_ser:
+ * @esmcmc: a #NcmFitESMCMC
+ *
+ * Peeks the internal #NcmSerialize object from @esmcmc.
+ * 
+ * Returns: (transfer none): the internal #NcmSerialize object.
+ */
+NcmSerialize *
+ncm_fit_esmcmc_peek_ser (NcmFitESMCMC *esmcmc)
+{
+  return esmcmc->ser;
 }
 
 /**

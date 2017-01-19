@@ -458,7 +458,7 @@ nc_recomb_He_fully_ionized_Xe (NcHICosmo *cosmo, gdouble x)
   const gdouble XHe = nc_hicosmo_XHe (cosmo);
   const gdouble XHeIIIXe_XHeII = nc_recomb_HeII_ion_saha (cosmo, x);
   const gdouble arg = XHe * (XHe + (2.0 + 6.0 * XHeIIIXe_XHeII)) / ((1.0 + XHeIIIXe_XHeII) * (1.0 + XHeIIIXe_XHeII));
-  const gdouble Xe = (2.0 + XHe + (1.0 + XHeIIIXe_XHeII) * ncm_sqrt1px_m1 (arg)) / 2.0;
+  const gdouble Xe = (2.0 + XHe + (1.0 + XHeIIIXe_XHeII) * ncm_util_sqrt1px_m1 (arg)) / 2.0;
   return Xe;
 }
 

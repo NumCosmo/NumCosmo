@@ -54,6 +54,7 @@
 #include "math/ncm_spline_cubic_notaknot.h"
 #include "model/nc_hicosmo_de.h"
 #include "model/nc_hicosmo_de_xcdm.h"
+#include "model/nc_hicosmo_de_linder.h"
 #include "nc_cbe.h"
 #include "nc_enum_types.h"
 #include "nc_hiprim.h"
@@ -1202,6 +1203,19 @@ _nc_cbe_set_bg (NcCBE* cbe, NcHICosmo* cosmo)
       cbe->priv->pba.wa_fld          = 0.0;
       cbe->priv->pba.cs2_fld         = 1.0;
     }
+  }
+  else if (NC_IS_HICOSMO_DE_LINDER (cosmo))
+  {
+    const gdouble w0       = ncm_model_orig_param_get (NCM_MODEL (cosmo), NC_HICOSMO_DE_LINDER_W0);
+    const gdouble w1       = ncm_model_orig_param_get (NCM_MODEL (cosmo), NC_HICOSMO_DE_LINDER_W1);
+    const gdouble Omega_X0 = ncm_model_orig_param_get (NCM_MODEL (cosmo), NC_HICOSMO_DE_OMEGA_X);
+
+    cbe->priv->pba.Omega0_lambda   = 0.0;
+
+    cbe->priv->pba.Omega0_fld      = Omega_X0;
+    cbe->priv->pba.w0_fld          = w0;
+    cbe->priv->pba.wa_fld          = w1;
+    cbe->priv->pba.cs2_fld         = 1.0;
   }
   else
     g_error ("_nc_cbe_set_bg: CLASS in not compatible with the model `%s'.", G_OBJECT_TYPE_NAME (cosmo));

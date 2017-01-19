@@ -723,7 +723,7 @@ _ncm_fit_mcmc_dup_fit (gpointer userdata)
   g_mutex_lock (&mcmc->dup_fit);
   {
     NcmFit *fit = ncm_fit_dup (mcmc->fit, mcmc->ser);
-    ncm_serialize_clear_instances (mcmc->ser);
+    ncm_serialize_clear_instances (mcmc->ser, TRUE);
     g_mutex_unlock (&mcmc->dup_fit);
     return fit;
   }

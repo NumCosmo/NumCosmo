@@ -1102,7 +1102,9 @@ _ncm_vector_nvector_free (N_Vector nv)
 
 static struct _generic_N_Vector_Ops _ncm_ops =
 {
+#ifdef HAVE_SUNDIALS_2_7_0
   NULL,
+#endif /* HAVE_SUNDIALS_2_7_0 */
   &_ncm_nvclone,
   &_ncm_nvcloneempty,
   &_ncm_vector_nvector_free,

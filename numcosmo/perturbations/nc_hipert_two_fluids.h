@@ -37,7 +37,6 @@
 #include <numcosmo/perturbations/nc_hipert.h>
 #include <numcosmo/perturbations/nc_hipert_wkb.h>
 #include <numcosmo/perturbations/nc_hipert_itwo_fluids.h>
-#include <gsl/gsl_odeiv2.h>
 
 G_BEGIN_DECLS
 
