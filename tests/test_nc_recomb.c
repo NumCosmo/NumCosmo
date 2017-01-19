@@ -65,7 +65,7 @@ test_nc_recomb_seager_new ()
 
   NCM_TEST_FREE (nc_recomb_free, recomb);
 
-#if !((GLIB_MAJOR_VERSION == 2) && (GLIB_MINOR_VERSION < 30))
+#if GLIB_CHECK_VERSION(2,30,0)
   recomb = nc_recomb_new_from_name ("NcRecombSeager{'prec':<2e-7>}");
 #else
   recomb = nc_recomb_seager_new_full (1.0e-11, NC_PERTURBATION_START_X, 2e-7);

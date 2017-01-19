@@ -38,6 +38,7 @@
 #include "build_cfg.h"
 
 #include "perturbations/nc_hipert.h"
+#include "math/ncm_cfg.h"
 
 #include <cvodes/cvodes.h>
 #include <cvodes/cvodes_dense.h>
@@ -183,7 +184,7 @@ nc_hipert_class_init (NcHIPertClass *klass)
                                    g_param_spec_double ("reltol",
                                                         NULL,
                                                         "Relative tolerance",
-                                                        0.0, 1.0, 1e-7,
+                                                        0.0, 1.0, NCM_DEFAULT_PRECISION,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   g_object_class_install_property (object_class,

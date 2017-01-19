@@ -55,7 +55,9 @@ struct _NcmIntegral1dPrivate
   gdouble abstol;
   guint rule;
   gsl_integration_workspace *ws;
+#ifdef HAVE_GSL_GLF  
   gsl_integration_cquad_workspace *cquad_ws;
+#endif /* HAVE_GSL_GLF */
 };
 
 enum
@@ -78,7 +80,9 @@ ncm_integral1d_init (NcmIntegral1d *int1d)
   int1d->priv->reltol    = 0.0;
   int1d->priv->abstol    = 0.0;
   int1d->priv->ws        = NULL;
+#ifdef HAVE_GSL_GLF  
   int1d->priv->cquad_ws  = NULL;
+#endif /* #ifdef HAVE_GSL_GLF */
 }
 
 static void
@@ -139,7 +143,9 @@ ncm_integral1d_finalize (GObject *object)
   NcmIntegral1d *int1d = NCM_INTEGRAL1D (object);
 
   g_clear_pointer (&int1d->priv->ws,       gsl_integration_workspace_free);
+#ifdef HAVE_GSL_GLF  
   g_clear_pointer (&int1d->priv->cquad_ws, gsl_integration_cquad_workspace_free);
+#endif /* #ifdef HAVE_GSL_GLF */
   
   /* Chain up : end */
   G_OBJECT_CLASS (ncm_integral1d_parent_class)->finalize (object);

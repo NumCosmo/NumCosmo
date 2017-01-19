@@ -68,7 +68,7 @@ main (gint argc, gchar *argv[])
               &test_ncm_obj_array_new,
               &test_ncm_obj_array_traps,
               &test_ncm_obj_array_free);
-#if !((GLIB_MAJOR_VERSION == 2) && (GLIB_MINOR_VERSION < 38))
+#if GLIB_CHECK_VERSION(2,38,0)
   g_test_add ("/ncm/obj_array/invalid/add/subprocess", TestNcmObjArray, NULL,
               &test_ncm_obj_array_new,
               &test_ncm_obj_array_invalid_add,
@@ -155,7 +155,7 @@ test_ncm_obj_array_saveload (TestNcmObjArray *test, gconstpointer pdata)
 void
 test_ncm_obj_array_traps (TestNcmObjArray *test, gconstpointer pdata)
 {
-#if !((GLIB_MAJOR_VERSION == 2) && (GLIB_MINOR_VERSION < 38))
+#if GLIB_CHECK_VERSION(2,38,0)
   g_test_trap_subprocess ("/ncm/obj_array/invalid/add/subprocess", 0, 0);
   g_test_trap_assert_failed ();
 

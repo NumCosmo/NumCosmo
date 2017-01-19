@@ -100,7 +100,7 @@ main (gint argc, gchar *argv[])
               &test_ncm_mset_new, 
               &test_ncm_mset_traps, 
               &test_ncm_mset_free);
-#if !((GLIB_MAJOR_VERSION == 2) && (GLIB_MINOR_VERSION < 38))
+#if GLIB_CHECK_VERSION(2,38,0)
   g_test_add ("/ncm/mset/invalid/get/subprocess", TestNcmMSet, NULL, 
               &test_ncm_mset_new, 
               &test_ncm_mset_invalid_get, 
@@ -512,7 +512,7 @@ test_ncm_mset_saveload (TestNcmMSet *test, gconstpointer pdata)
 void
 test_ncm_mset_traps (TestNcmMSet *test, gconstpointer pdata)
 {
-#if !((GLIB_MAJOR_VERSION == 2) && (GLIB_MINOR_VERSION < 38))
+#if GLIB_CHECK_VERSION(2,38,0)
   g_test_trap_subprocess ("/ncm/mset/invalid/get/subprocess", 0, 0);
   g_test_trap_assert_failed ();
 

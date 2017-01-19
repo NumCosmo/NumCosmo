@@ -727,7 +727,7 @@ ncm_abc_start_run (NcmABC *abc)
 
   ncm_dataset_clear (&abc->dset_mock);
   abc->dset_mock = ncm_dataset_dup (abc->dset, abc->ser);
-  ncm_serialize_clear_instances (abc->ser);
+  ncm_serialize_clear_instances (abc->ser, TRUE);
 
   abc->ntotal = 0;
   abc->naccepted = 0;
@@ -943,7 +943,7 @@ _ncm_abc_dup_thread (gpointer userdata)
 
     ncm_rng_set_seed (abct->rng, gsl_rng_get (abc->mcat->rng->r));
 
-    ncm_serialize_clear_instances (abc->ser);
+    ncm_serialize_clear_instances (abc->ser, TRUE);
 
     G_UNLOCK (dup_thread);
     return abct;
@@ -1178,7 +1178,7 @@ ncm_abc_start_update (NcmABC *abc)
 
   ncm_dataset_clear (&abc->dset_mock);
   abc->dset_mock = ncm_dataset_dup (abc->dset, abc->ser);
-  ncm_serialize_clear_instances (abc->ser);
+  ncm_serialize_clear_instances (abc->ser, TRUE);
 
   abc->dists_sorted = FALSE;
   abc->started_up = TRUE;

@@ -78,6 +78,7 @@ ncm_sources = \
 	math/ncm_spline2d_bicubic.c          \
 	math/ncm_powspec.c                   \
 	math/ncm_powspec_filter.c            \
+	math/ncm_hoaa.c                      \
 	math/ncm_func_eval.c                 \
 	math/ncm_mpsf_trig_int.c             \
 	math/ncm_mpsf_sbessel.c              \
@@ -184,6 +185,7 @@ ncm_headers =                                \
 	math/ncm_spline2d_bicubic.h          \
 	math/ncm_powspec.h                   \
 	math/ncm_powspec_filter.h            \
+	math/ncm_hoaa.h                      \
 	math/ncm_func_eval.h                 \
 	math/ncm_mpsf_trig_int.h             \
 	math/ncm_mpsf_sbessel.h              \
@@ -298,6 +300,7 @@ nc_headers = \
 	model/nc_hicosmo_qlinear.h    \
 	model/nc_hicosmo_qspline.h    \
 	model/nc_hicosmo_qgrw.h       \
+	model/nc_hicosmo_Vexp.h       \
 	model/nc_hiprim_power_law.h   \
 	model/nc_hiprim_atan.h        \
 	model/nc_hiprim_expc.h        \
@@ -371,6 +374,7 @@ nc_headers = \
 	perturbations/nc_hipert_wkb.h          \
 	perturbations/nc_hipert_itwo_fluids.h  \
 	perturbations/nc_hipert_adiab.h        \
+	perturbations/nc_hipert_gw.h           \
 	perturbations/nc_hipert_two_fluids.h   \
 	perturbations/nc_hipert_boltzmann.h    \
 	perturbations/nc_hipert_boltzmann_std.h \
@@ -421,6 +425,7 @@ nc_sources = \
 	model/nc_hicosmo_qlinear.c    \
 	model/nc_hicosmo_qspline.c    \
 	model/nc_hicosmo_qgrw.c       \
+	model/nc_hicosmo_Vexp.c       \
 	model/nc_hiprim_power_law.c   \
 	model/nc_hiprim_atan.c        \
 	model/nc_hiprim_expc.c        \
@@ -494,6 +499,7 @@ nc_sources = \
 	perturbations/nc_hipert_wkb.c          \
 	perturbations/nc_hipert_itwo_fluids.c  \
 	perturbations/nc_hipert_adiab.c        \
+	perturbations/nc_hipert_gw.c           \
 	perturbations/nc_hipert_two_fluids.c   \
 	perturbations/nc_hipert_boltzmann.c    \
 	perturbations/nc_hipert_boltzmann_std.c \
