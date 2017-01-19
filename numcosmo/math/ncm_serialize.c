@@ -225,37 +225,79 @@ ncm_serialize_clear (NcmSerialize **ser)
   g_clear_object (ser);
 }
 
+static gboolean
+_ncm_serialize_reset_remove_autosaved_name_key (gpointer key, gpointer value, gpointer user_data)
+{
+  gchar *name = (gchar *) key;
+  return g_regex_match_simple ("^S[\\d]+$", name, 0, 0);
+}
+
+static gboolean
+_ncm_serialize_reset_remove_autosaved_name_val (gpointer key, gpointer value, gpointer user_data)
+{
+  gchar *name = (gchar *) value;
+  return g_regex_match_simple ("^S[\\d]+$", name, 0, 0);
+}
+
 /**
  * ncm_serialize_reset:
- * @ser: a #NcmSerialize.
+ * @ser: a #NcmSerialize
+ * @autosave_only: a boolean
  *
  * Releases all objects in @ser and erase all serialized
- * objects.
+ * objects. If @autosave_only is TRUE it will release only
+ * autosaved objects.
  *
  */
 void
-ncm_serialize_reset (NcmSerialize *ser)
+ncm_serialize_reset (NcmSerialize *ser, gboolean autosave_only)
 {
-  ncm_serialize_clear_instances (ser);
+  ncm_serialize_clear_instances (ser, autosave_only);
 
-  g_hash_table_remove_all (ser->saved_ptr_name);
-  g_hash_table_remove_all (ser->saved_name_ser);
+  if (autosave_only)
+  {
+    g_hash_table_foreach_remove (ser->saved_ptr_name, 
+                                 &_ncm_serialize_reset_remove_autosaved_name_val, 
+                                 NULL);    
+    g_hash_table_foreach_remove (ser->saved_name_ser, 
+                                 &_ncm_serialize_reset_remove_autosaved_name_key, 
+                                 NULL);
+  }
+  else
+  {
+    g_hash_table_remove_all (ser->saved_ptr_name);
+    g_hash_table_remove_all (ser->saved_name_ser);
+  }
 
   ser->autosave_count = 0;
 }
 
 /**
  * ncm_serialize_clear_instances:
- * @ser: a #NcmSerialize.
+ * @ser: a #NcmSerialize
+ * @autosave_only: a boolean
  *
- * Releases all objects in @ser.
+ * Releases all objects in @ser. If @autosave_only is TRUE 
+ * it will release only autosaved objects.
  *
  */
 void
-ncm_serialize_clear_instances (NcmSerialize *ser)
+ncm_serialize_clear_instances (NcmSerialize *ser, gboolean autosave_only)
 {
-  g_hash_table_remove_all (ser->name_ptr);
-  g_hash_table_remove_all (ser->ptr_name);
+  if (autosave_only)
+  {
+    g_hash_table_foreach_remove (ser->ptr_name, 
+                                 &_ncm_serialize_reset_remove_autosaved_name_val, 
+                                 NULL);    
+    g_hash_table_foreach_remove (ser->name_ptr, 
+                                 _ncm_serialize_reset_remove_autosaved_name_key, 
+                                 NULL);
+  }
+  else
+  {
+    g_hash_table_remove_all (ser->name_ptr);
+    g_hash_table_remove_all (ser->ptr_name);
+  }
 }
 
 /**
@@ -319,6 +361,20 @@ guint
 ncm_serialize_count_instances (NcmSerialize *ser)
 {
   return g_hash_table_size (ser->name_ptr);
+}
+
+/**
+ * ncm_serialize_count_saved_serializations:
+ * @ser: a #NcmSerialize.
+ *
+ * Counts the number of instances registered in @ser.
+ *
+ * Returns: the number of instances in @ser.
+ */
+guint
+ncm_serialize_count_saved_serializations (NcmSerialize *ser)
+{
+  return g_hash_table_size (ser->saved_name_ser);
 }
 
 /**
@@ -817,8 +873,17 @@ ncm_serialize_from_name_params (NcmSerialize *ser, const gchar *obj_name, GVaria
 
   g_match_info_free (match_info);
 
-  if ((name != NULL) && ncm_serialize_contain_name (ser, name))
-    obj = ncm_serialize_get_by_name (ser, name);
+  if (name != NULL)
+  {
+/*
+    if (g_hash_table_lookup (ser->saved_name_ser, name) != NULL)
+      g_error ("ncm_serialize_from_name_params: deserializing object named `%s' but it is present in the list of saved serializations.",
+               name);
+    else 
+*/
+    if (ncm_serialize_contain_name (ser, name))
+      obj = ncm_serialize_get_by_name (ser, name);
+  }
 
   if (obj != NULL)
   {
@@ -1153,7 +1218,6 @@ ncm_serialize_to_variant (NcmSerialize *ser, GObject *obj)
       name = g_strdup_printf (NCM_SERIALIZE_AUTOSAVE_NAME NCM_SERIALIZE_AUTOSAVE_NFORMAT, ser->autosave_count);
 
       obj_name = g_strdup_printf ("%s[%s]", tmp, name);
-
       g_free (tmp);
 
       ser->autosave_count++;
@@ -1324,30 +1388,32 @@ ncm_serialize_global (void)
 
 /**
  * ncm_serialize_global_reset:
+ * @autosave_only: a boolean
  *
  * Releases all objects in global #NcmSerialize and erase
  * all serialized objects.
  *
  */
 void
-ncm_serialize_global_reset (void)
+ncm_serialize_global_reset (gboolean autosave_only)
 {
   NcmSerialize *ser = ncm_serialize_global ();
-  ncm_serialize_reset (ser);
+  ncm_serialize_reset (ser, autosave_only);
   ncm_serialize_unref (ser);
 }
 
 /**
  * ncm_serialize_global_clear_instances:
+ * @autosave_only: a boolean
  *
  * Releases all objects in global #NcmSerialize.
  *
  */
 void
-ncm_serialize_global_clear_instances (void)
+ncm_serialize_global_clear_instances (gboolean autosave_only)
 {
   NcmSerialize *ser = ncm_serialize_global ();
-  ncm_serialize_clear_instances (ser);
+  ncm_serialize_clear_instances (ser, autosave_only);
   ncm_serialize_unref (ser);
 }
 
@@ -1411,6 +1477,22 @@ ncm_serialize_global_count_instances (void)
 {
   NcmSerialize *ser = ncm_serialize_global ();
   guint ret = ncm_serialize_count_instances (ser);
+  ncm_serialize_unref (ser);
+  return ret;
+}
+
+/**
+ * ncm_serialize_global_count_saved_serializations:
+ *
+ * Global version of ncm_serialize_count_saved_serializations().
+ *
+ * Returns: the number of instances in @ser.
+ */
+guint
+ncm_serialize_global_count_saved_serializations (void)
+{
+  NcmSerialize *ser = ncm_serialize_global ();
+  guint ret = ncm_serialize_count_saved_serializations (ser);
   ncm_serialize_unref (ser);
   return ret;
 }
