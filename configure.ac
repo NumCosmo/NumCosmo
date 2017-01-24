@@ -801,9 +801,9 @@ if test "x$have_nlopt_support" != "x"; then
 
 PKG_CHECK_EXISTS([nlopt >= 2.2], [
 AC_DEFINE([HAVE_NLOPT_2_2],[1], [If nlopt version is bigger than 2.2])
-AC_CHECK_LIB([$NLOPT_LIBS],[nlopt_create],,[AC_MSG_ERROR([Can't link to -lnlopt. The nlopt library is probably compiled with c++ support, recompile the C version.])],[])
+AC_CHECK_LIB([m],[nlopt_create],,[AC_MSG_ERROR([Can't link to -lnlopt. The nlopt library is probably compiled with c++ support, recompile the C version.])],[$NLOPT_LIBS])
 ],[
-AC_CHECK_LIB([$NLOPT_LIBS],[nlopt_minimize_constrained],,[AC_MSG_ERROR([Can't link to -lnlopt. The nlopt library is probably compiled with C++ support, recompile the C version.])],[])
+AC_CHECK_LIB([m],[nlopt_minimize_constrained],,[AC_MSG_ERROR([Can't link to -lnlopt. The nlopt library is probably compiled with C++ support, recompile the C version.])],[$NLOPT_LIBS])
 ])
 
 fi
