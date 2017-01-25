@@ -182,7 +182,7 @@ void ncm_mset_catalog_get_covar (NcmMSetCatalog *mcat, NcmMatrix **cov);
 void ncm_mset_catalog_get_full_covar (NcmMSetCatalog *mcat, NcmMatrix **cov);
 void ncm_mset_catalog_log_full_covar (NcmMSetCatalog *mcat);
 
-void ncm_mset_catalog_estimate_autocorrelation_tau (NcmMSetCatalog *mcat);
+void ncm_mset_catalog_estimate_autocorrelation_tau (NcmMSetCatalog *mcat, gboolean force_single_chain);
 NcmVector *ncm_mset_catalog_peek_autocorrelation_tau (NcmMSetCatalog *mcat);
 gdouble ncm_mset_catalog_get_param_shrink_factor (NcmMSetCatalog *mcat, guint p);
 gdouble ncm_mset_catalog_get_shrink_factor (NcmMSetCatalog *mcat);

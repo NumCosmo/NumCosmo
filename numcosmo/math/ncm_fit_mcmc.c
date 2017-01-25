@@ -822,7 +822,7 @@ ncm_fit_mcmc_run_lre (NcmFitMCMC *mcmc, guint prerun, gdouble lre)
     ncm_fit_mcmc_run (mcmc, prerun);
   }
 
-  ncm_mset_catalog_estimate_autocorrelation_tau (mcmc->mcat);
+  ncm_mset_catalog_estimate_autocorrelation_tau (mcmc->mcat, FALSE);
   lerror = ncm_mset_catalog_largest_error (mcmc->mcat);
 
   while (lerror > lre)
@@ -838,7 +838,7 @@ ncm_fit_mcmc_run_lre (NcmFitMCMC *mcmc, guint prerun, gdouble lre)
       g_message ("# NcmFitMCMC: Running more %u runs...\n", runs);
     }
     ncm_fit_mcmc_run (mcmc, mcmc->cur_sample_id + runs + 1);
-    ncm_mset_catalog_estimate_autocorrelation_tau (mcmc->mcat);
+    ncm_mset_catalog_estimate_autocorrelation_tau (mcmc->mcat, FALSE);
     lerror = ncm_mset_catalog_largest_error (mcmc->mcat);
   }
 
