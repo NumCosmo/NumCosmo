@@ -78,7 +78,7 @@ test_nc_transfer_func_new_bbks (void)
 
   test_nc_transfer_func_free ();
 
-#if !((GLIB_MAJOR_VERSION == 2) && (GLIB_MINOR_VERSION < 30))
+#if GLIB_CHECK_VERSION(2,30,0)
   tf = nc_transfer_func_new_from_name ("NcTransferFuncBBKS");
 #else
   tf = nc_transfer_func_bbks_new ();
@@ -99,7 +99,7 @@ test_nc_transfer_func_new_eh (void)
 
   test_nc_transfer_func_free ();
 
-#if !((GLIB_MAJOR_VERSION == 2) && (GLIB_MINOR_VERSION < 30))
+#if GLIB_CHECK_VERSION(2,30,0)
   tf = nc_transfer_func_new_from_name ("NcTransferFuncEH");
 #else
   tf = nc_transfer_func_eh_new ();

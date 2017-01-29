@@ -76,7 +76,7 @@ main (gint argc, gchar *argv[])
               &test_ncm_model_ctrl_new,
               &test_ncm_model_ctrl_traps,
               &test_ncm_model_ctrl_free);
-#if !((GLIB_MAJOR_VERSION == 2) && (GLIB_MINOR_VERSION < 38))
+#if GLIB_CHECK_VERSION(2,38,0)
   g_test_add ("/ncm/model_ctrl/invalid/submodel_last_update/subprocess", TestNcmModelCtrl, NULL, 
               &test_ncm_model_ctrl_new, 
               &test_ncm_model_ctrl_invalid_submodel_last_update, 
@@ -287,7 +287,7 @@ test_ncm_model_ctrl_submodel_update (TestNcmModelCtrl *test, gconstpointer pdata
 void
 test_ncm_model_ctrl_traps (TestNcmModelCtrl *test, gconstpointer pdata)
 {
-#if !((GLIB_MAJOR_VERSION == 2) && (GLIB_MINOR_VERSION < 38))
+#if GLIB_CHECK_VERSION(2,38,0)
   g_test_trap_subprocess ("/ncm/model_ctrl/invalid/submodel_last_update/subprocess", 0, 0);
   g_test_trap_assert_failed ();
 #endif

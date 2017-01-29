@@ -88,14 +88,15 @@ NcmSerialize *ncm_serialize_ref (NcmSerialize *ser);
 void ncm_serialize_free (NcmSerialize *ser);
 void ncm_serialize_unref (NcmSerialize *ser);
 void ncm_serialize_clear (NcmSerialize **ser);
-void ncm_serialize_reset (NcmSerialize *ser);
-void ncm_serialize_clear_instances (NcmSerialize *ser);
+void ncm_serialize_reset (NcmSerialize *ser, gboolean autosave_only);
+void ncm_serialize_clear_instances (NcmSerialize *ser, gboolean autosave_only);
 
 void ncm_serialize_log_stats (NcmSerialize *ser);
 
 gboolean ncm_serialize_contain_instance (NcmSerialize *ser, gpointer obj);
 gboolean ncm_serialize_contain_name (NcmSerialize *ser, const gchar *name);
 guint ncm_serialize_count_instances (NcmSerialize *ser);
+guint ncm_serialize_count_saved_serializations (NcmSerialize *ser);
 gpointer ncm_serialize_peek_by_name (NcmSerialize *ser, const gchar *name);
 gpointer ncm_serialize_get_by_name (NcmSerialize *ser, const gchar *name);
 
@@ -121,14 +122,15 @@ GObject *ncm_serialize_dup_obj (NcmSerialize *ser, GObject *obj);
 /* Global NcmSerialize object */
 
 NcmSerialize *ncm_serialize_global (void);
-void ncm_serialize_global_reset (void);
-void ncm_serialize_global_clear_instances (void);
+void ncm_serialize_global_reset (gboolean autosave_only);
+void ncm_serialize_global_clear_instances (gboolean autosave_only);
 
 void ncm_serialize_global_log_stats (void);
 
 gboolean ncm_serialize_global_contain_instance (gpointer obj);
 gboolean ncm_serialize_global_contain_name (const gchar *name);
 guint ncm_serialize_global_count_instances (void);
+guint ncm_serialize_global_count_saved_serializations (void);
 gpointer ncm_serialize_global_get_by_name (const gchar *name);
 gchar *ncm_serialize_global_global_peek_name (gpointer obj);
 void ncm_serialize_global_set (gpointer obj, const gchar *name, gboolean overwrite);

@@ -73,6 +73,7 @@ GType nc_powspec_mnl_halofit_get_type (void) G_GNUC_CONST;
 NcPowspecMNLHaloFit *nc_powspec_mnl_halofit_new (NcPowspecML *psml, gdouble zmaxnl, gdouble reltol);
 
 void nc_powspec_mnl_halofit_set_kbounds_from_ml (NcPowspecMNLHaloFit *pshf);
+void nc_powspec_mnl_halofit_pkequal (NcPowspecMNLHaloFit *pshf, gboolean on);
 
 #define NC_POWSPEC_MNL_HALOFIT_F1aPOW   (-0.0732)
 #define NC_POWSPEC_MNL_HALOFIT_F2aPOW   (-0.1423)

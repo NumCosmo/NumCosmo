@@ -89,7 +89,7 @@ main (gint argc, gchar *argv[])
               &test_ncm_sphere_map_pix_traps,
               &test_ncm_sphere_map_pix_free);
 
-#if !((GLIB_MAJOR_VERSION == 2) && (GLIB_MINOR_VERSION < 38))
+#if GLIB_CHECK_VERSION(2,38,0)
   g_test_add ("/ncm/sphere_map_pix/invalid/nside/subprocess", TestNcmSphereMapPix, NULL,
               &test_ncm_sphere_map_pix_new,
               &test_ncm_sphere_map_pix_invalid_nside,
@@ -282,7 +282,7 @@ test_ncm_sphere_map_pix_pix2alm2pix (TestNcmSphereMapPix *test, gconstpointer pd
 void
 test_ncm_sphere_map_pix_traps (TestNcmSphereMapPix *test, gconstpointer pdata)
 {
-#if !((GLIB_MAJOR_VERSION == 2) && (GLIB_MINOR_VERSION < 38))
+#if GLIB_CHECK_VERSION(2,38,0)
   g_test_trap_subprocess ("/ncm/sphere_map_pix/invalid/nside/subprocess", 0, 0);
   g_test_trap_assert_failed ();
 #endif

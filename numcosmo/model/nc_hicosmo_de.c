@@ -547,7 +547,7 @@ _nc_hicosmo_de_Yp_4He (NcHICosmo *cosmo)
   NcmModel *model = NCM_MODEL (cosmo);
   NcHICosmoDE *cosmo_de = NC_HICOSMO_DE (cosmo);
 
-  if (ncm_model_param_get_ftype (model, NC_HICOSMO_DE_DEFAULT_HE_YP) == NCM_PARAM_TYPE_FIXED)
+  if (ncm_model_param_get_ftype (model, NC_HICOSMO_DE_HE_YP) == NCM_PARAM_TYPE_FIXED)
   {
     const gdouble wb    = nc_hicosmo_Omega_b0h2 (cosmo);
     const gdouble DNeff = nc_hicosmo_Neff (cosmo) - 3.046;
@@ -1025,6 +1025,7 @@ NCM_MODEL_SET_IMPL_FUNC (NC_HICOSMO_DE, NcHICosmoDE, nc_hicosmo_de, NcHICosmoDEF
  *
  * Returns: FIXME
  */
+
 static void 
 _nc_hicosmo_de_flist_w0 (NcmMSetFuncList *flist, NcmMSet *mset, const gdouble *x, gdouble *f)
 {

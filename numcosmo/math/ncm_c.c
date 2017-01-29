@@ -146,10 +146,17 @@ ncm_c_class_init (NcmCClass *klass)
  */
 /**
  * ncm_c_tan_1arcsec:
- *
+ * 
+ * 
  * Returns: $\tan(2 \pi/ (360 \times 60 \times 60))$.
  */
-
+/**
+ * ncm_c_deg2_steradian:
+ * 
+ * The convertion factor from degrees squared to steradian.
+ * 
+ * Returns: $\pi^2/(180)^2$.
+ */
 /**
  * ncm_c_degree_to_radian:
  * @d: angle in degrees.

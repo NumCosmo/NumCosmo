@@ -80,7 +80,9 @@
 #include <cvodes/cvodes_band.h>
 #include <nvector/nvector_serial.h> 
 #include <gsl/gsl_roots.h>
+#ifdef HAVE_GSL_ODEIV2
 #include <gsl/gsl_odeiv2.h>
+#endif /* HAVE_GSL_ODEIV2 */
 
 #ifdef HAVE_SUNDIALS_ARKODE
 #include <arkode/arkode.h>
