@@ -99,6 +99,7 @@
 #include "lss/nc_cluster_mass_benson.h"
 #include "lss/nc_cluster_mass_benson_xray.h"
 #include "lss/nc_cluster_mass_plcl.h"
+#include "lss/nc_cluster_mass_ascaso.h"
 #include "lss/nc_cluster_redshift.h"
 #include "lss/nc_cluster_redshift_nodist.h"
 #include "lss/nc_cluster_photoz_gauss_global.h"
