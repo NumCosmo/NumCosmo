@@ -841,6 +841,48 @@ ncm_serialize_from_file (NcmSerialize *ser, const gchar *filename)
 }
 
 /**
+ * ncm_serialize_from_binfile:
+ * @ser: a #NcmSerialize.
+ * @filename: File containing the binary serialized version of the object.
+ *
+ * Parses the serialized binary data in @filename and returns the newly created object.
+ *
+ * Returns: (transfer full): A new #GObject.
+ */
+GObject *
+ncm_serialize_from_binfile (NcmSerialize *ser, const gchar *filename)
+{
+  GError *error = NULL;
+  gchar *file   = NULL;
+  gsize length  = 0;
+  GObject *obj  = NULL;
+
+  g_assert (filename != NULL);
+  
+  if (!g_file_get_contents (filename, &file, &length, &error))
+    g_error ("_nc_data_snia_cov_load_matrix: cannot open file %s: %s",
+             filename, error->message);
+
+  g_assert_cmpint (length, >, 0);
+
+  {
+    GVariant *obj_ser = g_variant_new_from_data (G_VARIANT_TYPE (NCM_SERIALIZE_OBJECT_TYPE),
+                                                 file,
+                                                 length,
+                                                 TRUE,
+                                                 g_free,
+                                                 file
+                                                 );
+
+    obj = ncm_serialize_from_variant (ser, obj_ser);
+
+    g_variant_unref (obj_ser);
+  }
+
+  return obj;
+}
+
+/**
  * ncm_serialize_from_name_params:
  * @ser: a #NcmSerialize.
  * @obj_name: string containing the object name.
@@ -1222,7 +1264,7 @@ ncm_serialize_to_variant (NcmSerialize *ser, GObject *obj)
 
       ser->autosave_count++;
     }
-    
+
     if (n_properties == 0)
     {
       g_free (prop);
@@ -1242,7 +1284,7 @@ ncm_serialize_to_variant (NcmSerialize *ser, GObject *obj)
 
         if ((prop[i]->flags & G_PARAM_READWRITE) != G_PARAM_READWRITE)
           continue;
-
+        
         g_value_init (&val, prop[i]->value_type);
         g_object_get_property (obj, prop[i]->name, &val);
 
@@ -1346,6 +1388,30 @@ ncm_serialize_to_file (NcmSerialize *ser, GObject *obj, const gchar *filename)
   g_free (obj_ser);
 }
 
+/**
+ * ncm_serialize_to_binfile:
+ * @ser: a #NcmSerialize
+ * @obj: a #GObject
+ * @filename: File where to save the serialized version of the object
+ * 
+ * Serializes @obj and saves the binary in @filename.
+ * 
+ */
+void
+ncm_serialize_to_binfile (NcmSerialize *ser, GObject *obj, const gchar *filename)
+{
+  GError *error     = NULL;
+  GVariant *obj_ser = ncm_serialize_to_variant (ser, obj);
+  gsize length      = g_variant_get_size (obj_ser);
+
+  g_assert (filename != NULL);
+
+  if (!g_file_set_contents (filename, g_variant_get_data (obj_ser), length, &error))
+    g_error ("ncm_serialize_to_file: cannot save to file %s: %s",
+             filename, error->message);
+
+  g_variant_unref (obj_ser);
+}
 
 /**
  * ncm_serialize_dup_obj:
@@ -1681,6 +1747,23 @@ ncm_serialize_global_from_file (const gchar *filename)
 }
 
 /**
+ * ncm_serialize_global_from_binfile:
+ * @filename: File containing the serialized version of the object.
+ *
+ * Global version of ncm_serialize_from_binfile().
+ *
+ * Returns: (transfer full): A new #GObject.
+ */
+GObject *
+ncm_serialize_global_from_binfile (const gchar *filename)
+{
+  NcmSerialize *ser = ncm_serialize_global ();
+  GObject *ret = ncm_serialize_from_binfile (ser, filename);
+  ncm_serialize_unref (ser);
+  return ret;
+}
+
+/**
  * ncm_serialize_global_from_name_params:
  * @obj_name: string containing the object name.
  * @params: a #GVariant containing the object parameters.
@@ -1763,6 +1846,22 @@ ncm_serialize_global_to_file (GObject *obj, const gchar *filename)
 {
   NcmSerialize *ser = ncm_serialize_global ();
   ncm_serialize_to_file (ser, obj, filename);
+  ncm_serialize_unref (ser);
+}
+
+/**
+ * ncm_serialize_global_to_binfile:
+ * @obj: a #GObject.
+ * @filename: File where to save the serialized version of the object
+ * 
+ * Global version of ncm_serialize_to_binfile().
+ * 
+ */
+void
+ncm_serialize_global_to_binfile (GObject *obj, const gchar *filename)
+{
+  NcmSerialize *ser = ncm_serialize_global ();
+  ncm_serialize_to_binfile (ser, obj, filename);
   ncm_serialize_unref (ser);
 }
 

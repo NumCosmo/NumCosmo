@@ -1,5 +1,6 @@
 #!/usr/bin/python2
 
+import sys
 import gi
 import math
 import numpy as np
@@ -15,6 +16,7 @@ from gi.repository import NumCosmoMath as Ncm
 
 from py_sline_model import PySLineModel
 from py_sline_data import PySLineData
+from py_sline_gauss import PySLineGauss
 
 #
 # Instantiating a new empty SLine data object.
@@ -39,20 +41,16 @@ mset.param_set_all_ftype (Ncm.ParamType.FREE)
 mset.prepare_fparam_map ()
 
 #
-# Creating a new Serialization object, with a data
-# file does not exists, generate a new sample using
-# mset as fiducial model and save it to data_file.
-# 
-# If data_file already exists, reload sld from it.
+# Creating a new Serialization object, and load
+# the data file.
 #
-ser = Ncm.Serialize.new (0)
 data_file = "example_data.obj"
+ser = Ncm.Serialize.new (0)
 if not os.path.exists (data_file):
-  rng = Ncm.RNG.new ()
-  sld.resample (mset, rng)
-  ser.to_file (sld, data_file)
+  print "data file does not exists, run example_create_data.py first."
+  sys.exit (-1)
 else:
-  sld = ser.from_file (data_file)
+  sld = ser.from_binfile (data_file)
 
 #
 # New data set object with sld added.

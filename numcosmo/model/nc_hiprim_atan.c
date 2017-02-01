@@ -105,6 +105,11 @@ nc_hiprim_atan_class_init (NcHIPrimAtanClass *klass)
                               0.5, 1.5, 1.0e-1,
                               NC_HIPRIM_DEFAULT_PARAMS_ABSTOL, NC_HIPRIM_ATAN_DEFAULT_C3,
                               NCM_PARAM_TYPE_FIXED);
+  /* Set c3 param info */
+  ncm_model_class_set_sparam (model_class, NC_HIPRIM_ATAN_LAMBDA, "\\lambda", "lambda",
+                              0.01, 5.0, 1.0e-1,
+                              NC_HIPRIM_DEFAULT_PARAMS_ABSTOL, NC_HIPRIM_ATAN_DEFAULT_LAMBDA,
+                              NCM_PARAM_TYPE_FIXED);
 
   /* Check for errors in parameters initialization */
   ncm_model_class_check_params_info (model_class);
@@ -133,6 +138,7 @@ nc_hiprim_atan_new (void)
 #define LNKC       (ncm_vector_get (VECTOR, NC_HIPRIM_ATAN_LNKC))
 #define C2         (ncm_vector_get (VECTOR, NC_HIPRIM_ATAN_C2))
 #define C3         (ncm_vector_get (VECTOR, NC_HIPRIM_ATAN_C3))
+#define LAMBDA     (ncm_vector_get (VECTOR, NC_HIPRIM_ATAN_LAMBDA))
 
 /****************************************************************************
  * Power spectrum
@@ -143,14 +149,15 @@ _nc_hiprim_atan_lnSA_powespec_lnk (NcHIPrim *prim, const gdouble lnk)
 {
   const gdouble ln_ka     = lnk - prim->lnk_pivot;
   const gdouble ln_k_kc   = lnk - LNKC;
-  const gdouble k_kc      = exp (ln_k_kc);
+  const gdouble lambda    = LAMBDA;
+  const gdouble k_kc_l    = exp (lambda * ln_k_kc);
   const gdouble c2        = C2;
   const gdouble c3        = C3;
   const gdouble pi_2      = ncm_c_pi () * 0.5;
   const gdouble pi_2_m_c3 = pi_2 - c3;
   const gdouble tc2       = c2 + tan (pi_2_m_c3);
 
-  const gdouble atan_fac    = atan2 (k_kc + tc2, 1.0) - pi_2_m_c3;
+  const gdouble atan_fac    = atan2 (k_kc_l + tc2, 1.0) - pi_2_m_c3;
   const gdouble ln_atan_fac = log (atan_fac / c3);
 
   return (N_SA - 1.0) * ln_ka + LN10E10ASA - 10.0 * M_LN10 + ln_atan_fac;

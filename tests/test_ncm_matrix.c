@@ -419,7 +419,6 @@ test_ncm_matrix_add_mul (void)
   NCM_TEST_FREE (ncm_matrix_free, sm);
 }
 
-
 void
 test_ncm_matrix_serialization (void)
 {

@@ -583,9 +583,8 @@ _nc_data_planck_lkl_set_filename (NcDataPlanckLKL *plik, const gchar *filename)
       gdouble *chkp       = NULL;
 
       clik_get_check_param (plik->obj, plik->filename, &chkp, &check_value, &npar_out, &err);
-      g_assert_cmpint (npar_out, ==, ncm_vector_len (plik->data_params));
 
-      ncm_vector_set_array (plik->data_params, chkp);
+      ncm_vector_set_data (plik->data_params, chkp, npar_out);
       ncm_vector_clear (&plik->check_data_params);
 
       plik->check_data_params = ncm_vector_dup (plik->data_params);

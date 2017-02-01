@@ -214,6 +214,7 @@ ncm_data_gauss_cov_class_init (NcmDataGaussCovClass *klass)
   data_class->bootstrap          = TRUE;
   
   data_class->get_length         = &_ncm_data_gauss_cov_get_length;
+  data_class->get_dof            = NULL;
   data_class->begin              = NULL;
 
   data_class->resample           = &_ncm_data_gauss_cov_resample;

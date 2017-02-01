@@ -61,7 +61,8 @@ typedef enum _NcHIPrimAtanParams
   NC_HIPRIM_ATAN_N_SA,
   NC_HIPRIM_ATAN_LNKC,
   NC_HIPRIM_ATAN_C2,
-  NC_HIPRIM_ATAN_C3,         /*< private >*/
+  NC_HIPRIM_ATAN_C3,
+  NC_HIPRIM_ATAN_LAMBDA,     /*< private >*/
   NC_HIPRIM_ATAN_SPARAM_LEN, /*< skip >*/
 } NcHIPrimAtanParams;
 
@@ -86,6 +87,7 @@ NcHIPrimAtan *nc_hiprim_atan_new (void);
 #define NC_HIPRIM_ATAN_DEFAULT_LNKC (-5.3)
 #define NC_HIPRIM_ATAN_DEFAULT_C2 (1.0)
 #define NC_HIPRIM_ATAN_DEFAULT_C3 (1.0)
+#define NC_HIPRIM_ATAN_DEFAULT_LAMBDA (1.0)
 
 G_END_DECLS
 

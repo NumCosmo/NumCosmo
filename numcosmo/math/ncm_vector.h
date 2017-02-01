@@ -130,7 +130,8 @@ G_INLINE_FUNC void ncm_vector_fast_subfrom (NcmVector *cv, const guint i, const 
 G_INLINE_FUNC void ncm_vector_mulby (NcmVector *cv, const guint i, const gdouble val);
 G_INLINE_FUNC void ncm_vector_fast_mulby (NcmVector *cv, const guint i, const gdouble val);
 G_INLINE_FUNC void ncm_vector_set_all (NcmVector *cv, const gdouble val);
-G_INLINE_FUNC void ncm_vector_set_array (NcmVector *cv, const gdouble *array);
+G_INLINE_FUNC void ncm_vector_set_data (NcmVector *cv, const gdouble *array, guint size);
+G_INLINE_FUNC void ncm_vector_set_array (NcmVector *cv, GArray *array);
 G_INLINE_FUNC void ncm_vector_scale (NcmVector *cv, const gdouble val);
 G_INLINE_FUNC void ncm_vector_add_constant (NcmVector *cv, const gdouble val);
 G_INLINE_FUNC void ncm_vector_div (NcmVector *cv1, const NcmVector *cv2);
@@ -271,12 +272,27 @@ ncm_vector_set_all (NcmVector *cv, const gdouble val)
 }
 
 G_INLINE_FUNC void
-ncm_vector_set_array (NcmVector *cv, const gdouble *array)
+ncm_vector_set_data (NcmVector *cv, const gdouble *array, guint size)
 {
   register guint i;
-  const guint size = ncm_vector_len (cv);
+  const guint vsize = ncm_vector_len (cv);
+
+  g_assert_cmpuint (vsize, ==, size);
+  
   for (i = 0; i < size; i++)
     ncm_vector_set (cv, i, array[i]);
+}
+
+G_INLINE_FUNC void
+ncm_vector_set_array (NcmVector *cv, GArray *array)
+{
+  register guint i;
+  const guint vsize = ncm_vector_len (cv);
+
+  g_assert_cmpuint (vsize, ==, array->len);
+  
+  for (i = 0; i < vsize; i++)
+    ncm_vector_set (cv, i, g_array_index (array, gdouble, i));
 }
 
 G_INLINE_FUNC void
