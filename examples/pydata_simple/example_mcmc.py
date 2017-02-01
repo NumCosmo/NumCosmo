@@ -19,11 +19,6 @@ from py_sline_data import PySLineData
 from py_sline_gauss import PySLineGauss
 
 #
-# Instantiating a new empty SLine data object.
-#
-sld = PySLineData ()
-
-#
 # Instantiating a new SLine model object and setting
 # some values for its parameters.
 #
@@ -44,6 +39,7 @@ mset.prepare_fparam_map ()
 # Creating a new Serialization object, and load
 # the data file.
 #
+sld = None
 data_file = "example_data.obj"
 ser = Ncm.Serialize.new (0)
 if not os.path.exists (data_file):

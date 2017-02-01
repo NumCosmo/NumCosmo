@@ -38,6 +38,8 @@ class PySLineGauss (Ncm.DataGaussCov):
       self.xv = Ncm.Vector.new (self.np)
     else:
       self.xv = None
+    
+    self.cov_init = False
 
     #
     # Initializing to sane values
@@ -74,7 +76,7 @@ class PySLineGauss (Ncm.DataGaussCov):
   # to be able to calculate the likelihood afterwards.
   #
   def do_prepare (self, mset):
-    self.dof  = self.np - mset.fparams_len ()
+    self.dof = self.np - mset.fparams_len ()
     return
 
   #
@@ -85,11 +87,59 @@ class PySLineGauss (Ncm.DataGaussCov):
   def do_mean_func (self, mset, vp):
     mid = mset.get_id_by_ns ("NcPySLineModel")
     slm = mset.peek (mid)
+
+    #print self.np, slm.props.b, slm.props.m, vp.len ()
     
     for i in range (self.np):
       x = self.xv.get (i)
+      #print slm.props.m, slm.props.b, x, slm.props.m * x + slm.props.b
       vp.set (i, slm.props.m * x + slm.props.b)
+
     return
+
+  #
+  # Implements the virtual method `cov_func'.
+  # This method should compute the covariance matrix for the gaussian
+  # distribution.
+  # 
+  # It has an internal flag to assert if the covariance matrix was 
+  # already initialized.
+  #
+  def do_cov_func (self, mset, cov):
+    if not self.cov_init:
+      f = 0.9
+      d = 1.0e-1
+      
+      cov.set_zero ()
+    
+      for i in range (self.np):
+        x       = self.xv.get (i)
+        sigma_i = math.fabs (x * f) + d
+        
+        cov.set (i, i, + sigma_i)
+        
+        if i + 1 < self.np:
+          xp1       = self.xv.get (i + 1)
+          sigma_ip1 = math.fabs (xp1 * f) + d
+          
+          cov.set (i,     i + 1, + i * math.sqrt (sigma_i * sigma_ip1) / self.np)
+          cov.set (i + 1, i,     + i * math.sqrt (sigma_i * sigma_ip1) / self.np)
+      
+      #
+      # sets cov = cov * cov
+      # to guarantee that it is posdef 
+      #
+      tmp1 = cov.dup ()
+      tmp1.dsymm ('U', 1.0, tmp1, 0.0, cov)
+
+      # Remove to print the covariance matrix
+      # cov.log_vals ("# COV: ", "% 15.8g")
+      
+      self.cov_init = True      
+      
+      return True
+    else:
+      return False
 
 #
 # Register our new Python class PySLineGauss

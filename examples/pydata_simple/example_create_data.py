@@ -18,7 +18,6 @@ from py_sline_model import PySLineModel
 from py_sline_data import PySLineData
 from py_sline_gauss import PySLineGauss
 
-
 #
 # Instantiating a new empty SLine data object.
 #
@@ -37,8 +36,8 @@ else:
 # some values for its parameters.
 #
 slm = PySLineModel ()
-slm.props.m = 0.9
-slm.props.b = 0.1
+slm.props.m = 0.987
+slm.props.b = 0.123
 
 #
 # New Model set object including slm with parameters
@@ -59,6 +58,7 @@ mset.prepare_fparam_map ()
 ser = Ncm.Serialize.new (0)
 data_file = "example_data.obj"
 rng = Ncm.RNG.new ()
+rng.set_random_seed (False)
 sld.resample (mset, rng)
 ser.to_binfile (sld, data_file)
 
