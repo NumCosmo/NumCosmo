@@ -34,7 +34,7 @@
 #include <gsl/gsl_randist.h>
 #include <gsl/gsl_statistics_double.h>
 
-#define _TEST_NCM_VECTOR_STATIC_SIZE 100
+#define _TEST_NCM_VECTOR_STATIC_SIZE 20
 #define _TEST_NCM_VECTOR_MIN_SIZE 5
 #define _TEST_NCM_STATS_VEC_PREC (1.0e-9)
 #define _TEST_NCM_STATS_VEC_COV_PREC (1.0e-9)

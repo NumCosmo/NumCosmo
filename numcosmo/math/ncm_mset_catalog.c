@@ -170,7 +170,7 @@ _ncm_mset_catalog_constructed_alloc_chains (NcmMSetCatalog *mcat)
     mcat->chain_sM_ws   = gsl_eigen_nonsymm_alloc (free_params_len);
     mcat->chain_sM_ev   = gsl_vector_complex_alloc (free_params_len);
   }
-  mcat->tau = ncm_vector_new (free_params_len);
+  mcat->tau = ncm_vector_new (total);
   ncm_vector_set_all (mcat->tau, 1.0);
 }
 
@@ -1912,7 +1912,7 @@ ncm_mset_catalog_largest_error (NcmMSetCatalog *mcat)
       const gdouble mu = ncm_stats_vec_get_mean (mcat->pstats, i);
       const gdouble sd = ncm_stats_vec_get_sd (mcat->pstats, i);
       gdouble lerror_i = fabs (sd / (mu * sqrt_n));
-      lerror_i *= sqrt (ncm_vector_get (mcat->tau, i - fpi));
+      lerror_i *= sqrt (ncm_vector_get (mcat->tau, i));
 
       lerror = GSL_MAX (lerror, lerror_i);
     }
@@ -1928,7 +1928,7 @@ ncm_mset_catalog_largest_error (NcmMSetCatalog *mcat)
       if (lerror_i_truc == 1)
         lerror_i = fabs (sd / sqrt_n);
 
-      lerror_i *= sqrt (ncm_vector_get (mcat->tau, i - fpi));
+      lerror_i *= sqrt (ncm_vector_get (mcat->tau, i));
 
       lerror = GSL_MAX (lerror, lerror_i);
     }
@@ -2180,20 +2180,14 @@ static gdouble
 _fmeanvar (gdouble v_i, guint i, gpointer user_data)
 {
   NcmMSetCatalog *mcat = NCM_MSET_CATALOG (user_data);
-  if (i < mcat->nadd_vals)
-    return sqrt (v_i * mcat->pstats->bias_wt / mcat->pstats->nitens);
-  else
-    return sqrt (v_i * mcat->pstats->bias_wt * ncm_vector_get (mcat->tau, i - mcat->nadd_vals) / mcat->pstats->nitens);
+  return sqrt (v_i * mcat->pstats->bias_wt * ncm_vector_get (mcat->tau, i) / mcat->pstats->nitens);
 }
 
 static gdouble
 _ftau (gdouble v_i, guint i, gpointer user_data)
 {
   NcmMSetCatalog *mcat = NCM_MSET_CATALOG (user_data);
-  if (i < mcat->nadd_vals)
-    return 1.0;
-  else
-    return ncm_vector_get (mcat->tau, i - mcat->nadd_vals);
+  return ncm_vector_get (mcat->tau, i);
 }
 
 
@@ -2497,29 +2491,30 @@ ncm_mset_catalog_log_full_covar (NcmMSetCatalog *mcat)
 /**
  * ncm_mset_catalog_estimate_autocorrelation_tau:
  * @mcat: a #NcmMSetCatalog
+ * @force_single_chain: whether to force the catalog to be treated as a single chain
  *
  * Updates the internal estimates of the integrate autocorrelation time.
  *
  */
 void
-ncm_mset_catalog_estimate_autocorrelation_tau (NcmMSetCatalog *mcat)
+ncm_mset_catalog_estimate_autocorrelation_tau (NcmMSetCatalog *mcat, gboolean force_single_chain)
 {
-  guint fparams_len = ncm_mset_fparams_len (mcat->mset);
+  const guint total = ncm_vector_len (mcat->tau);
   guint p;
 
-  if (mcat->nchains == 1)
+  if (mcat->nchains == 1 || force_single_chain)
   {
-    for (p = 0; p < fparams_len; p++)
+    for (p = 0; p < total; p++)
     {
-      gdouble tau = ncm_stats_vec_get_autocorr_tau (mcat->pstats, p + mcat->nadd_vals, 0, 0.0);
+      const gdouble tau = ncm_stats_vec_get_autocorr_tau (mcat->pstats, p, 0, 0.0);
       ncm_vector_set (mcat->tau, p, tau);
     }
   }
   else
   {
-    for (p = 0; p < fparams_len; p++)
+    for (p = 0; p < total; p++)
     {
-      gdouble tau = ncm_stats_vec_get_subsample_autocorr_tau (mcat->pstats, p + mcat->nadd_vals, mcat->nchains, 0, 0.0);
+      const gdouble tau = ncm_stats_vec_get_subsample_autocorr_tau (mcat->pstats, p, mcat->nchains, 0, 0.0);
       ncm_vector_set (mcat->tau, p, tau);
     }
   }

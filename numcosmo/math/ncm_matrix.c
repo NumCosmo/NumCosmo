@@ -526,13 +526,16 @@ void
 ncm_matrix_set_from_variant (NcmMatrix *cm, GVariant *var)
 {
   if (!g_variant_is_of_type (var, G_VARIANT_TYPE ("aad")))
-    g_error ("ncm_matrix_set_from_variant: Cannot convert `%s' variant to an array of arrays of doubles", g_variant_get_type_string (var));
+  {
+    g_error ("ncm_matrix_set_from_variant: Cannot convert `%s' variant to an array of arrays of doubles", 
+             g_variant_get_type_string (var));
+  }
   else
   {
     GVariant *row = g_variant_get_child_value (var, 0);
     guint nrows = g_variant_n_children (var);
     guint ncols = g_variant_n_children (row);
-    guint i, j;
+    guint i;
     g_variant_unref (row);
 
     /* Sometimes we receive a NcmMatrix in the process of instantiation. */
@@ -547,14 +550,18 @@ ncm_matrix_set_from_variant (NcmMatrix *cm, GVariant *var)
 
     for (i = 0; i < nrows; i++)
     {
+      NcmVector *m_row = ncm_matrix_get_row (cm, i);
       row = g_variant_get_child_value (var, i);
-      for (j = 0; j < ncols; j++)
+      
       {
-        gdouble val = 0.0;
-        g_variant_get_child (row, j, "d", &val);
-        ncm_matrix_set (cm, i, j, val);
+        gsize v_ncols = 0;
+        const gdouble *row_data = g_variant_get_fixed_array (row, &v_ncols, sizeof (gdouble));
+        g_assert_cmpuint (v_ncols, ==, ncols);
+        ncm_vector_set_data (m_row, row_data, ncols);
+
+        g_variant_unref (row);
+        ncm_vector_free (m_row);
       }
-      g_variant_unref (row);
     }
   }
 }
@@ -570,23 +577,18 @@ ncm_matrix_set_from_variant (NcmMatrix *cm, GVariant *var)
 GVariant *
 ncm_matrix_get_variant (NcmMatrix *cm)
 {
-  guint nrows = ncm_matrix_nrows (cm);
-  guint ncols = ncm_matrix_ncols (cm);
+  const guint nrows     = ncm_matrix_nrows (cm);
+  const guint ncols     = ncm_matrix_ncols (cm);
+  GVariant **rows       = g_new (GVariant *, nrows);
   GVariant *var;
-  GVariant **row_i_vals = g_new (GVariant *, ncols);
-  GVariant **rows = g_new (GVariant *, nrows);
-  guint i, j;
+  guint i;
 
   for (i = 0; i < nrows; i++)
   {
-    for (j = 0; j < ncols; j++)
-    {
-      row_i_vals[j] = g_variant_new_double (ncm_matrix_get (cm, i, j));
-    }
-    rows[i] = g_variant_new_array (G_VARIANT_TYPE ("d"), row_i_vals, ncols);
+    rows[i] = g_variant_new_fixed_array (G_VARIANT_TYPE ("d"), ncm_matrix_ptr (cm, i, 0), ncols, sizeof (gdouble));
   }
+
   var = g_variant_new_array (G_VARIANT_TYPE ("ad"), rows, nrows);
-  g_free (row_i_vals);
   g_free (rows);
   g_variant_ref_sink (var);
   return var;

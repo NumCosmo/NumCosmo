@@ -78,6 +78,7 @@ main (gint argc, gchar *argv[])
 {
   gchar *cat_filename = NULL;
   gboolean info           = FALSE;
+  gboolean info_scf       = FALSE;
   gboolean chain_evol     = FALSE;
   gboolean list_all       = FALSE;
   gboolean list_hicosmo   = FALSE;
@@ -105,6 +106,7 @@ main (gint argc, gchar *argv[])
   {
     { "catalog",        'c', 0, G_OPTION_ARG_FILENAME,     &cat_filename,   "Catalog filename.", NULL },
     { "info",           'i', 0, G_OPTION_ARG_NONE,         &info,           "Print catalog information.", NULL },
+    { "info-scor-full", 'C', 0, G_OPTION_ARG_NONE,         &info_scf,       "Calculates the selfcorrelation time using the full sample not the ensemble averages.", NULL },
     { "chain-evol",     'I', 0, G_OPTION_ARG_NONE,         &chain_evol,     "Print chain evolution.", NULL },
     { "list",           'l', 0, G_OPTION_ARG_NONE,         &list_all,       "Print all available functions.", NULL },
     { "list-hicosmo",     0, 0, G_OPTION_ARG_NONE,         &list_hicosmo,   "Print available constant functions from NcHICosmo.", NULL },
@@ -206,7 +208,7 @@ main (gint argc, gchar *argv[])
   {
     NcmMSetCatalog *mcat = ncm_mset_catalog_new_from_file_ro (cat_filename, burnin);
     NcmMSet *mset = ncm_mset_catalog_get_mset (mcat);
-    ncm_mset_catalog_estimate_autocorrelation_tau (mcat);
+    ncm_mset_catalog_estimate_autocorrelation_tau (mcat, info_scf);
     
     if (info)
     {

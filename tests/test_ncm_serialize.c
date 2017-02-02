@@ -35,6 +35,7 @@ typedef struct _TestNcmSerialize
 } TestNcmSerialize;
 
 static void test_ncm_serialize_new (TestNcmSerialize *test, gconstpointer pdata);
+void test_ncm_serialize_new_noclean_dup (TestNcmSerialize *test, gconstpointer pdata);
 static void test_ncm_serialize_free (TestNcmSerialize *test, gconstpointer pdata);
 
 static void test_ncm_serialize_global_from_string_plain (TestNcmSerialize *test, gconstpointer pdata);
@@ -45,6 +46,9 @@ static void test_ncm_serialize_from_string_plain_named (TestNcmSerialize *test, 
 static void test_ncm_serialize_from_string_params_named (TestNcmSerialize *test, gconstpointer pdata);
 static void test_ncm_serialize_from_string_nest_named (TestNcmSerialize *test, gconstpointer pdata);
 static void test_ncm_serialize_from_string_nest_samename (TestNcmSerialize *test, gconstpointer pdata);
+
+static void test_ncm_serialize_to_file_from_file (TestNcmSerialize *test, gconstpointer pdata);
+static void test_ncm_serialize_to_binfile_from_binfile (TestNcmSerialize *test, gconstpointer pdata);
 
 static void test_ncm_serialize_reset_autosave_only (TestNcmSerialize *test, gconstpointer pdata);
 
@@ -95,7 +99,15 @@ main (gint argc, gchar *argv[])
               &test_ncm_serialize_new,
               &test_ncm_serialize_reset_autosave_only,
               &test_ncm_serialize_free);
-  
+  g_test_add ("/ncm/serialize/to_file/from_file", TestNcmSerialize, NULL,
+              &test_ncm_serialize_new_noclean_dup,
+              &test_ncm_serialize_to_file_from_file,
+              &test_ncm_serialize_free);
+  g_test_add ("/ncm/serialize/to_binfile/from_binfile", TestNcmSerialize, NULL,
+              &test_ncm_serialize_new_noclean_dup,
+              &test_ncm_serialize_to_binfile_from_binfile,
+              &test_ncm_serialize_free);
+
   g_test_add ("/ncm/serialize/traps", TestNcmSerialize, NULL,
               &test_ncm_serialize_new,
               &test_ncm_serialize_traps,
@@ -134,6 +146,12 @@ void
 test_ncm_serialize_new (TestNcmSerialize *test, gconstpointer pdata)
 {
   test->ser = ncm_serialize_new (NCM_SERIALIZE_OPT_CLEAN_DUP);
+}
+
+void 
+test_ncm_serialize_new_noclean_dup (TestNcmSerialize *test, gconstpointer pdata)
+{
+  test->ser = ncm_serialize_new (0);
 }
 
 void
@@ -381,6 +399,72 @@ test_ncm_serialize_from_string_nest_samename (TestNcmSerialize *test, gconstpoin
 
   ncm_serialize_clear_instances (test->ser, FALSE);
   NCM_TEST_FREE (ncm_spline_free, s);
+}
+
+static void 
+test_ncm_serialize_to_file_from_file (TestNcmSerialize *test, gconstpointer pdata)
+{
+  GObject *obj       = ncm_serialize_from_string (test->ser, "NcHICosmoDEXcdm{'w':<-2.0>}");
+  NcHICosmo *hic     = NC_HICOSMO (obj);
+  gchar *obj_ser     = ncm_serialize_to_string (test->ser, obj, TRUE);
+
+  ncm_serialize_to_file (test->ser, obj, "test-serialize-file.obj");
+  
+  {
+    GObject *obj_new   = ncm_serialize_from_file (test->ser, "test-serialize-file.obj");
+    gchar *obj_new_ser = ncm_serialize_to_string (test->ser, obj_new, TRUE);
+
+    g_assert (G_OBJECT_TYPE (obj) == G_OBJECT_TYPE (obj_new));
+    g_assert_cmpstr (obj_ser, ==, obj_new_ser);
+    g_free (obj_ser);
+    g_free (obj_new_ser);
+
+    obj_ser     = ncm_serialize_to_string (test->ser, obj, FALSE);
+    obj_new_ser = ncm_serialize_to_string (test->ser, obj_new, FALSE);
+
+    g_assert_cmpstr (obj_ser, ==, obj_new_ser);
+
+    g_free (obj_ser);
+    g_free (obj_new_ser);
+    g_object_unref (obj_new);
+
+    ncm_serialize_clear_instances (test->ser, FALSE);
+
+    NCM_TEST_FREE (nc_hicosmo_free, hic);
+  }
+}
+
+static void 
+test_ncm_serialize_to_binfile_from_binfile (TestNcmSerialize *test, gconstpointer pdata)
+{
+  GObject *obj       = ncm_serialize_from_string (test->ser, "NcHICosmoDEXcdm{'w':<-2.0>}");
+  NcHICosmo *hic     = NC_HICOSMO (obj);
+  gchar *obj_ser     = ncm_serialize_to_string (test->ser, obj, TRUE);
+
+  ncm_serialize_to_binfile (test->ser, obj, "test-serialize-binfile.obj");
+  
+  {
+    GObject *obj_new   = ncm_serialize_from_binfile (test->ser, "test-serialize-binfile.obj");
+    gchar *obj_new_ser = ncm_serialize_to_string (test->ser, obj_new, TRUE);
+
+    g_assert (G_OBJECT_TYPE (obj) == G_OBJECT_TYPE (obj_new));
+    g_assert_cmpstr (obj_ser, ==, obj_new_ser);
+    g_free (obj_ser);
+    g_free (obj_new_ser);
+
+    obj_ser     = ncm_serialize_to_string (test->ser, obj, FALSE);
+    obj_new_ser = ncm_serialize_to_string (test->ser, obj_new, FALSE);
+
+    g_assert_cmpstr (obj_ser, ==, obj_new_ser);
+
+    g_free (obj_ser);
+    g_free (obj_new_ser);
+    g_object_unref (obj_new);
+
+    ncm_serialize_clear_instances (test->ser, FALSE);
+
+    NCM_TEST_FREE (nc_hicosmo_free, hic);
+  }
 }
 
 void
