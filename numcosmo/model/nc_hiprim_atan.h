@@ -51,6 +51,7 @@ typedef struct _NcHIPrimAtan NcHIPrimAtan;
  * @NC_HIPRIM_ATAN_LNKC: Arctan parameter $\ln(k_c)$
  * @NC_HIPRIM_ATAN_C2: Arctan parameter $c_2$
  * @NC_HIPRIM_ATAN_C3: Arctan parameter $c_3$
+ * @NC_HIPRIM_ATAN_LAMBDA: Arctan parameter $\lambda$
  *
  * FIXME
  * 

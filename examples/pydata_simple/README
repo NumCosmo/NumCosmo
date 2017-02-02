@@ -4,6 +4,7 @@ See ../README about how to run the python examples.
 
 - py_sline_model.py      : Implements a simple straigth line model
 - py_sline_data.py       : Uses the model above to construct the likelihood 
+- py_sline_gauss.py      : Uses the model above to construct the likelihood using NcmDataGauss as base
 - example_create_data.py : Creates the data file to be used by the scripts below
 - example_fit.py         : Simple best-fit finding example
 - example_mcmc.py        : Running a full MCMC analysis of the model+data.
