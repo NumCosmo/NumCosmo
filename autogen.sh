@@ -22,6 +22,14 @@ fi
     exit 1
 }
 
+(gtkdocize --srcdir $srcdir) < /dev/null > /dev/null 2>&1 || {
+  echo
+  echo "**Error**: You must have \`gtk-doc' installed."
+  echo "Download the appropriate package for your distribution,"
+  echo "or get the source tarball at https://www.gtk.org/gtk-doc/"
+  DIE=1
+}
+
 (autoconf --version) < /dev/null > /dev/null 2>&1 || {
   echo
   echo "**Error**: You must have \`autoconf' installed."
