@@ -49,7 +49,6 @@ G_DEFINE_TYPE (NcClusterMassAscaso, nc_cluster_mass_ascaso, NC_TYPE_CLUSTER_MASS
 #define P2 (ncm_vector_get (VECTOR, NC_CLUSTER_MASS_ASCASO_P2))
 #define SIGMA  (ncm_vector_get (VECTOR, NC_CLUSTER_MASS_ASCASO_SIGMA))
 
-
 enum
 {
   PROP_0,
@@ -101,13 +100,13 @@ _nc_cluster_mass_ascaso_get_property (GObject *object, guint prop_id, GValue *va
   switch (prop_id)
   {
     case PROP_M0:
-      g_value_set_double (value, ascaso->lnMobs_min);
+      g_value_set_double (value, ascaso->lnRichness_min);
       break;
     case PROP_LNRICHNESS_MIN:
-      g_value_set_double (value, ascaso->lnMobs_min);
+      g_value_set_double (value, ascaso->lnRichness_min);
       break;
     case PROP_LNRICHNESS_MAX:
-      g_value_set_double (value, ascaso->lnMobs_max);
+      g_value_set_double (value, ascaso->lnRichness_max);
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -202,9 +201,31 @@ nc_cluster_mass_ascaso_class_init (NcClusterMassAscasoClass *klass)
    * Distribution's bias.
    * FIXME Set correct values (limits)
    */
-  ncm_model_class_set_sparam (model_class, NC_CLUSTER_MASS_ASCASO_BIAS, "p0", "p0",
+  ncm_model_class_set_sparam (model_class, NC_CLUSTER_MASS_ASCASO_P0, "p_0", "p0",
                               0.0,  10.0, 1.0e-2,
-                              NC_CLUSTER_MASS_ASCASO_DEFAULT_PARAMS_ABSTOL, NC_CLUSTER_MASS_ASCASO_DEFAULT_BIAS,
+                              NC_CLUSTER_MASS_ASCASO_DEFAULT_PARAMS_ABSTOL, NC_CLUSTER_MASS_ASCASO_DEFAULT_P0,
+                              NCM_PARAM_TYPE_FIXED);
+
+  /**
+   * NcClusterMassAscaso:P1:
+   * 
+   * Distribution's bias.
+   * FIXME Set correct values (limits)
+   */
+  ncm_model_class_set_sparam (model_class, NC_CLUSTER_MASS_ASCASO_P1, "p_1", "p1",
+                              0.0,  10.0, 1.0e-2,
+                              NC_CLUSTER_MASS_ASCASO_DEFAULT_PARAMS_ABSTOL, NC_CLUSTER_MASS_ASCASO_DEFAULT_P1,
+                              NCM_PARAM_TYPE_FIXED);
+
+  /**
+   * NcClusterMassAscaso:P2:
+   * 
+   * Distribution's bias.
+   * FIXME Set correct values (limits)
+   */
+  ncm_model_class_set_sparam (model_class, NC_CLUSTER_MASS_ASCASO_P2, "p_2", "p2",
+                              0.0,  10.0, 1.0e-2,
+                              NC_CLUSTER_MASS_ASCASO_DEFAULT_PARAMS_ABSTOL, NC_CLUSTER_MASS_ASCASO_DEFAULT_P2,
                               NCM_PARAM_TYPE_FIXED);
 
   /**
@@ -213,7 +234,7 @@ nc_cluster_mass_ascaso_class_init (NcClusterMassAscasoClass *klass)
    * Distribution's standard deviation, $\sigma \in [10^{-4}, 10]$.
    *
    */
-  ncm_model_class_set_sparam (model_class, NC_CLUSTER_MASS_ASCASO_SIGMA, "sigma", "sigma",
+  ncm_model_class_set_sparam (model_class, NC_CLUSTER_MASS_ASCASO_SIGMA, "\\sigma", "sigma",
                               1.0e-4,  10.0, 1.0e-2,
                               NC_CLUSTER_MASS_ASCASO_DEFAULT_PARAMS_ABSTOL, NC_CLUSTER_MASS_ASCASO_DEFAULT_SIGMA,
                               NCM_PARAM_TYPE_FIXED);
@@ -229,7 +250,7 @@ _nc_cluster_mass_ascaso_p (NcClusterMass *clusterm,  NcHICosmo *cosmo, gdouble l
   NcClusterMassAscaso *ascaso = NC_CLUSTER_MASS_ASCASO (clusterm);
   const gdouble lnMobs = lnM_obs[0];
   const gdouble sqrt2_sigma = M_SQRT2 * SIGMA;
-  const gdouble x = (lnMobs - lnM - BIAS) / sqrt2_sigma;
+  const gdouble x = (lnMobs - lnM - P0) / sqrt2_sigma;
 
   NCM_UNUSED (cosmo);
   NCM_UNUSED (z);
@@ -242,8 +263,8 @@ _nc_cluster_mass_ascaso_intp (NcClusterMass *clusterm,  NcHICosmo *cosmo, gdoubl
 {
   NcClusterMassAscaso *ascaso = NC_CLUSTER_MASS_ASCASO (clusterm);
   const gdouble sqrt2_sigma = M_SQRT2 * SIGMA;
-  const gdouble x_min = (lnM - ascaso->lnMobs_min) / sqrt2_sigma;
-  const gdouble x_max = (lnM - ascaso->lnMobs_max) / sqrt2_sigma;
+  const gdouble x_min = (lnM - ascaso->lnRichness_min) / sqrt2_sigma;
+  const gdouble x_max = (lnM - ascaso->lnRichness_max) / sqrt2_sigma;
 
   NCM_UNUSED (cosmo);
   NCM_UNUSED (z);
@@ -263,16 +284,16 @@ _nc_cluster_mass_ascaso_resample (NcClusterMass *clusterm,  NcHICosmo *cosmo, gd
   NCM_UNUSED (z);
   
   ncm_rng_lock (rng);
-  lnM_obs[0] = lnM + BIAS + gsl_ran_gaussian (rng->r, SIGMA);
+  lnM_obs[0] = lnM + P0 + gsl_ran_gaussian (rng->r, SIGMA);
   ncm_rng_unlock (rng);
-  return (lnM_obs[0] <= ascaso->lnMobs_max) && (lnM_obs[0] >= ascaso->lnMobs_min);
+  return (lnM_obs[0] <= ascaso->lnRichness_max) && (lnM_obs[0] >= ascaso->lnRichness_min);
 }
 
 static void
 _nc_cluster_mass_ascaso_p_limits (NcClusterMass *clusterm,  NcHICosmo *cosmo, const gdouble *lnM_obs, const gdouble *lnM_obs_params, gdouble *lnM_lower, gdouble *lnM_upper)
 {
   NcClusterMassAscaso *ascaso = NC_CLUSTER_MASS_ASCASO (clusterm);
-  const gdouble mean = lnM_obs[0] - BIAS;
+  const gdouble mean = lnM_obs[0] - P0;
   const gdouble lnMl = mean - 7.0 * SIGMA;
   const gdouble lnMu = mean + 7.0 * SIGMA;
 
@@ -288,8 +309,8 @@ static void
 _nc_cluster_mass_ascaso_n_limits (NcClusterMass *clusterm,  NcHICosmo *cosmo, gdouble *lnM_lower, gdouble *lnM_upper)
 {
   NcClusterMassAscaso *ascaso = NC_CLUSTER_MASS_ASCASO (clusterm);
-  const gdouble lnMl = ascaso->lnMobs_min - 7.0 * SIGMA;
-  const gdouble lnMu = ascaso->lnMobs_max + 7.0 * SIGMA;
+  const gdouble lnMl = ascaso->lnRichness_min - 7.0 * SIGMA;
+  const gdouble lnMu = ascaso->lnRichness_max + 7.0 * SIGMA;
 
   NCM_UNUSED (cosmo);
   
