@@ -365,6 +365,12 @@ ncm_spline_set (NcmSpline *s, NcmVector *xv, NcmVector *yv, gboolean init)
 	if (init)
 		ncm_spline_prepare (s);
 
+  if (s->acc != NULL)
+  {
+    ncm_spline_acc (s, FALSE);
+    ncm_spline_acc (s, TRUE);
+  }
+
 	return s;
 }
 
