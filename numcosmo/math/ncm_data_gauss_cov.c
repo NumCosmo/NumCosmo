@@ -172,63 +172,64 @@ static void _ncm_data_gauss_cov_lnNorma2_bs (NcmDataGaussCov* gauss, NcmMSet* ms
 static void
 ncm_data_gauss_cov_class_init (NcmDataGaussCovClass* klass)
 {
-	GObjectClass* object_class = G_OBJECT_CLASS (klass);
-	NcmDataClass* data_class = NCM_DATA_CLASS (klass);
-	NcmDataGaussCovClass* gauss_cov_class = NCM_DATA_GAUSS_COV_CLASS (klass);
+  GObjectClass* object_class     = G_OBJECT_CLASS (klass);
+  NcmDataClass *data_class       = NCM_DATA_CLASS (klass);
+  NcmDataGaussCovClass *gauss_cov_class = NCM_DATA_GAUSS_COV_CLASS (klass);
 
-	object_class->constructed = &_ncm_data_gauss_cov_constructed;
-	object_class->set_property = &_ncm_data_gauss_cov_set_property;
-	object_class->get_property = &_ncm_data_gauss_cov_get_property;
-	object_class->dispose = &_ncm_data_gauss_cov_dispose;
-	object_class->finalize = &_ncm_data_gauss_cov_finalize;
+  object_class->constructed  = &_ncm_data_gauss_cov_constructed;
+  object_class->set_property = &_ncm_data_gauss_cov_set_property;
+  object_class->get_property = &_ncm_data_gauss_cov_get_property;
+  object_class->dispose      = &_ncm_data_gauss_cov_dispose;
+  object_class->finalize     = &_ncm_data_gauss_cov_finalize;
 
-	g_object_class_install_property (object_class,
-	                                 PROP_NPOINTS,
-	                                 g_param_spec_uint ("n-points",
-	                                                    NULL,
-	                                                    "Data sample size",
-	                                                    0, G_MAXUINT, 0,
-	                                                    G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  g_object_class_install_property (object_class,
+                                   PROP_NPOINTS,
+                                   g_param_spec_uint ("n-points",
+                                                      NULL,
+                                                      "Data sample size",
+                                                      0, G_MAXUINT, 0,
+                                                      G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
-	g_object_class_install_property (object_class,
-	                                 PROP_USE_NORMA,
-	                                 g_param_spec_boolean ("use-norma",
-	                                                       NULL,
-	                                                       "Use the likelihood normalization to calculate -2lnL",
-	                                                       FALSE,
-	                                                       G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  g_object_class_install_property (object_class,
+                                   PROP_USE_NORMA,
+                                   g_param_spec_boolean ("use-norma",
+                                                         NULL,
+                                                         "Use the likelihood normalization to calculate -2lnL",
+                                                         FALSE,
+                                                         G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
-	g_object_class_install_property (object_class,
-	                                 PROP_MEAN,
-	                                 g_param_spec_object ("mean",
-	                                                      NULL,
-	                                                      "Data mean",
-	                                                      NCM_TYPE_VECTOR,
-	                                                      G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  g_object_class_install_property (object_class,
+                                   PROP_MEAN,
+                                   g_param_spec_object ("mean",
+                                                        NULL,
+                                                        "Data mean",
+                                                        NCM_TYPE_VECTOR,
+                                                        G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
-	g_object_class_install_property (object_class,
-	                                 PROP_COV,
-	                                 g_param_spec_object ("cov",
-	                                                      NULL,
-	                                                      "Data covariance",
-	                                                      NCM_TYPE_MATRIX,
-	                                                      G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  g_object_class_install_property (object_class,
+                                   PROP_COV,
+                                   g_param_spec_object ("cov",
+                                                        NULL,
+                                                        "Data covariance",
+                                                        NCM_TYPE_MATRIX,
+                                                        G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  
+  data_class->bootstrap          = TRUE;
+  
+  data_class->get_length         = &_ncm_data_gauss_cov_get_length;
+  data_class->get_dof            = NULL;
+  data_class->begin              = NULL;
 
-	data_class->bootstrap = TRUE;
+  data_class->resample           = &_ncm_data_gauss_cov_resample;
+  data_class->m2lnL_val          = &_ncm_data_gauss_cov_m2lnL_val;
+  data_class->leastsquares_f     = &_ncm_data_gauss_cov_leastsquares_f;
 
-	data_class->get_length = &_ncm_data_gauss_cov_get_length;
-	data_class->begin = NULL;
-
-	data_class->resample = &_ncm_data_gauss_cov_resample;
-	data_class->m2lnL_val = &_ncm_data_gauss_cov_m2lnL_val;
-	data_class->leastsquares_f = &_ncm_data_gauss_cov_leastsquares_f;
-
-	gauss_cov_class->mean_func = NULL;
-	gauss_cov_class->cov_func = NULL;
-	gauss_cov_class->lnNorma2 = &_ncm_data_gauss_cov_lnNorma2;
-	gauss_cov_class->lnNorma2_bs = &_ncm_data_gauss_cov_lnNorma2_bs;
-	gauss_cov_class->set_size = &_ncm_data_gauss_cov_set_size;
-	gauss_cov_class->get_size = &_ncm_data_gauss_cov_get_size;
+  gauss_cov_class->mean_func    = NULL;
+  gauss_cov_class->cov_func     = NULL;
+  gauss_cov_class->lnNorma2     = &_ncm_data_gauss_cov_lnNorma2;
+  gauss_cov_class->lnNorma2_bs  = &_ncm_data_gauss_cov_lnNorma2_bs;
+  gauss_cov_class->set_size     = &_ncm_data_gauss_cov_set_size;
+  gauss_cov_class->get_size     = &_ncm_data_gauss_cov_get_size;
 }
 
 static guint
