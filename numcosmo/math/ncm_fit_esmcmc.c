@@ -721,6 +721,7 @@ _ncm_fit_esmcmc_update (NcmFitESMCMC *esmcmc, guint ki, guint kf)
         ncm_timer_task_log_elapsed (esmcmc->nt);
         ncm_timer_task_log_mean_time (esmcmc->nt);
         ncm_timer_task_log_time_left (esmcmc->nt);
+        ncm_timer_task_log_cur_datetime (esmcmc->nt);
         ncm_timer_task_log_end_datetime (esmcmc->nt);
       }
       break;
@@ -749,6 +750,7 @@ _ncm_fit_esmcmc_update (NcmFitESMCMC *esmcmc, guint ki, guint kf)
         ncm_timer_task_log_elapsed (esmcmc->nt);
         ncm_timer_task_log_mean_time (esmcmc->nt);
         ncm_timer_task_log_time_left (esmcmc->nt);
+        ncm_timer_task_log_cur_datetime (esmcmc->nt);
         ncm_timer_task_log_end_datetime (esmcmc->nt);
       }
       break;

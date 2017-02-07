@@ -578,7 +578,7 @@ ncm_timer_task_time_left (NcmTimer *nt)
  * 
  * Returns: (transfer none): FIXME
  */
-gchar *
+const gchar *
 ncm_timer_task_elapsed_str (NcmTimer *nt)
 {
   g_assert (nt->task_len != 0);
@@ -603,7 +603,7 @@ ncm_timer_task_elapsed_str (NcmTimer *nt)
  * 
  * Returns: (transfer none): FIXME
  */
-gchar *
+const gchar *
 ncm_timer_task_mean_time_str (NcmTimer *nt)
 {
   g_assert (nt->task_len != 0);
@@ -635,7 +635,7 @@ ncm_timer_task_mean_time_str (NcmTimer *nt)
  * 
  * Returns: (transfer none): FIXME
  */
-gchar *
+const gchar *
 ncm_timer_task_time_left_str (NcmTimer *nt)
 {
   g_assert (nt->task_len != 0);
@@ -669,7 +669,7 @@ ncm_timer_task_time_left_str (NcmTimer *nt)
  * 
  * Returns: (transfer none): FIXME
  */
-gchar *
+const gchar *
 ncm_timer_task_start_datetime_str (NcmTimer *nt)
 {
   GDateTime *dt_now = g_date_time_new_now_local ();
@@ -695,19 +695,19 @@ ncm_timer_task_start_datetime_str (NcmTimer *nt)
  * 
  * Returns: (transfer none): FIXME
  */
-gchar *
+const gchar *
 ncm_timer_task_end_datetime_str (NcmTimer *nt)
 {
-  GDateTime *dt_now = g_date_time_new_now_local ();
-  const gdouble mean_time = ncm_stats_vec_get_mean (nt->time_stats, 0);
-  const gdouble sigma_time = ncm_stats_vec_get_sd (nt->time_stats, 0) / sqrt (nt->task_pos);
-  const guint task_left = nt->task_len - nt->task_pos;
-  const gdouble mean_time_left = mean_time * task_left;
+  GDateTime *dt_now             = g_date_time_new_now_local ();
+  const gdouble mean_time       = ncm_stats_vec_get_mean (nt->time_stats, 0);
+  const gdouble sigma_time      = ncm_stats_vec_get_sd (nt->time_stats, 0) / sqrt (nt->task_pos);
+  const guint task_left         = nt->task_len - nt->task_pos;
+  const gdouble mean_time_left  = mean_time * task_left;
   const gdouble sigma_time_left = sigma_time * task_left;
+  GDateTime *dt_end             = g_date_time_add_seconds (dt_now, mean_time_left);
+  gchar *end_str                = g_date_time_format (dt_end, "%a %b %d %Y, %T");
   guint day, hour, min;
   gdouble sec;
-  GDateTime *dt_end = g_date_time_add_seconds (dt_now, mean_time_left);
-  gchar *end_str = g_date_time_format (dt_end, "%a %b %d %Y, %T");
 
   _ncm_timer_sec_to_dhms (sigma_time_left, &day, &hour, &min, &sec);
   _ncm_timer_dhms_to_string (nt->msg_tmp1, day, hour, min, sec);
@@ -721,6 +721,30 @@ ncm_timer_task_end_datetime_str (NcmTimer *nt)
   g_free (end_str);
   return nt->msg->str;
 }
+
+/**
+ * ncm_timer_task_cur_datetime_str:
+ * @nt: FIXME
+ * 
+ * FIXME
+ * 
+ * Returns: (transfer none): FIXME
+ */
+const gchar *
+ncm_timer_task_cur_datetime_str (NcmTimer *nt)
+{
+  GDateTime *dt_now = g_date_time_new_now_local ();
+  gchar *now_str    = g_date_time_format (dt_now, "%a %b %d %Y, %T");
+
+  g_string_printf (nt->msg,
+                   "# Task:%s, current time:        %s", 
+                   nt->name, now_str);
+  
+  g_date_time_unref (dt_now);
+  g_free (now_str);
+  return nt->msg->str;
+}
+
 
 /**
  * ncm_timer_task_log_elapsed:
@@ -779,6 +803,20 @@ ncm_timer_task_log_start_datetime (NcmTimer *nt)
 }
 
 /**
+ * ncm_timer_task_log_cur_datetime:
+ * @nt: FIXME
+ * 
+ * FIXME
+ * 
+ */
+void 
+ncm_timer_task_log_cur_datetime (NcmTimer *nt)
+{
+  g_message ("%s\n", ncm_timer_task_cur_datetime_str (nt));
+  nt->last_log_time = nt->pos_time;
+}
+
+/**
  * ncm_timer_task_log_end_datetime:
  * @nt: FIXME
  * 
@@ -791,4 +829,3 @@ ncm_timer_task_log_end_datetime (NcmTimer *nt)
   g_message ("%s\n", ncm_timer_task_end_datetime_str (nt));
   nt->last_log_time = nt->pos_time;
 }
-
