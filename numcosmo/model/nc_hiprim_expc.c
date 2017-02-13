@@ -97,7 +97,7 @@ nc_hiprim_expc_class_init (NcHIPrimExpcClass *klass)
                               NCM_PARAM_TYPE_FIXED);
   /* Set c param info */
   ncm_model_class_set_sparam (model_class, NC_HIPRIM_EXPC_C, "c", "c",
-                              0.0, 5.0, 1.0e-1,
+                              0.0, 0.99, 1.0e-1,
                               NC_HIPRIM_DEFAULT_PARAMS_ABSTOL, NC_HIPRIM_EXPC_DEFAULT_C,
                               NCM_PARAM_TYPE_FIXED);
 
@@ -141,7 +141,7 @@ _nc_hiprim_expc_lnSA_powespec_lnk (NcHIPrim *prim, const gdouble lnk)
   const gdouble lnk_c    = LNKC;
   const gdouble c        = C;
 
-  const gdouble k_kc_lambda_c = exp (lambda_c * (lnk - lnk_c)) + c * c;
+  const gdouble k_kc_lambda_c = exp (lambda_c * (lnk - lnk_c)) - log1p (-c);
 
   gdouble ln_expc_fac;
 

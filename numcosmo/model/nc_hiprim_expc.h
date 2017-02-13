@@ -85,7 +85,7 @@ NcHIPrimExpc *nc_hiprim_expc_new (void);
 #define NC_HIPRIM_EXPC_DEFAULT_N_SA (0.9742)
 #define NC_HIPRIM_EXPC_DEFAULT_LAMBDAC (0.5)
 #define NC_HIPRIM_EXPC_DEFAULT_LNKC (-7.98)
-#define NC_HIPRIM_EXPC_DEFAULT_C (0.0)
+#define NC_HIPRIM_EXPC_DEFAULT_C (0.5)
 
 G_END_DECLS
 
