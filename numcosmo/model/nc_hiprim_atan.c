@@ -97,15 +97,15 @@ nc_hiprim_atan_class_init (NcHIPrimAtanClass *klass)
                               NCM_PARAM_TYPE_FIXED);
   /* Set c2 param info */
   ncm_model_class_set_sparam (model_class, NC_HIPRIM_ATAN_C2, "c_2", "c2",
-                              0.0, 5.0, 0.5,
+                              0.0, 0.99, 1.0e-1,
                               NC_HIPRIM_DEFAULT_PARAMS_ABSTOL, NC_HIPRIM_ATAN_DEFAULT_C2,
                               NCM_PARAM_TYPE_FIXED);
   /* Set c3 param info */
   ncm_model_class_set_sparam (model_class, NC_HIPRIM_ATAN_C3, "c_3", "c3",
-                              0.5, 1.5, 1.0e-1,
+                              0.5, 2.0, 1.0e-1,
                               NC_HIPRIM_DEFAULT_PARAMS_ABSTOL, NC_HIPRIM_ATAN_DEFAULT_C3,
                               NCM_PARAM_TYPE_FIXED);
-  /* Set c3 param info */
+  /* Set lambda param info */
   ncm_model_class_set_sparam (model_class, NC_HIPRIM_ATAN_LAMBDA, "\\lambda", "lambda",
                               0.01, 5.0, 1.0e-1,
                               NC_HIPRIM_DEFAULT_PARAMS_ABSTOL, NC_HIPRIM_ATAN_DEFAULT_LAMBDA,
@@ -155,7 +155,7 @@ _nc_hiprim_atan_lnSA_powespec_lnk (NcHIPrim *prim, const gdouble lnk)
   const gdouble c3        = C3;
   const gdouble pi_2      = ncm_c_pi () * 0.5;
   const gdouble pi_2_m_c3 = pi_2 - c3;
-  const gdouble tc2       = c2 + tan (pi_2_m_c3);
+  const gdouble tc2       = tan (pi_2_m_c3 + c3 * c2);
 
   const gdouble atan_fac    = atan2 (k_kc_l + tc2, 1.0) - pi_2_m_c3;
   const gdouble ln_atan_fac = log (atan_fac / c3);

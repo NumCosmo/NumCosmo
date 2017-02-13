@@ -80,6 +80,7 @@ struct _NcmStatsDist1dEPDF
   gdouble h;
   guint n_obs;
   guint np_obs;
+  gdouble WT;
   GArray *obs;
   GSequence *obs_seq;
   gdouble min;
@@ -105,8 +106,12 @@ GType ncm_stats_dist1d_epdf_get_type (void) G_GNUC_CONST;
 NcmStatsDist1dEPDF *ncm_stats_dist1d_epdf_new_full (guint max_obs, NcmStatsDist1dEPDFBw bw, gdouble h_fixed, gdouble sd_min_scale);
 NcmStatsDist1dEPDF *ncm_stats_dist1d_epdf_new (gdouble sd_min_scale);
 
-void ncm_stats_dist1d_epdf_add_obs (NcmStatsDist1dEPDF *epdf1d, gdouble x);
+void ncm_stats_dist1d_epdf_add_obs_weight (NcmStatsDist1dEPDF *epdf1d, const gdouble x, const gdouble w);
+void ncm_stats_dist1d_epdf_add_obs (NcmStatsDist1dEPDF *epdf1d, const gdouble x);
 void ncm_stats_dist1d_epdf_reset (NcmStatsDist1dEPDF *epdf1d);
+
+void ncm_stats_dist1d_epdf_set_min (NcmStatsDist1dEPDF *epdf1d, const gdouble min);
+void ncm_stats_dist1d_epdf_set_max (NcmStatsDist1dEPDF *epdf1d, const gdouble max);
 
 gdouble ncm_stats_dist1d_epdf_get_obs_mean (NcmStatsDist1dEPDF *epdf1d);
 
