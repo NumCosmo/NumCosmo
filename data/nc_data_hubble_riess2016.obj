@@ -6,8 +6,8 @@
     'init':      <true>, 
     'n-points':  <uint32 1>, 
     'w-mean':    <false>, 
-    'mean':      <[73.0]>, 
-    'sigma':     <[ 1.75]>, 
+    'mean':      <[73.24]>, 
+    'sigma':     <[ 1.74]>, 
     'z':         <[ 0.0]>
   }
 }

@@ -87,7 +87,7 @@ nc_hiprim_bpl_class_init (NcHIPrimBPLClass *klass)
 
   /* Set lambdac param info */
   ncm_model_class_set_sparam (model_class, NC_HIPRIM_BPL_DELTA, "\\delta", "delta",
-                              0.0, 2.0, 1.0e-1,
+                              0.0, 8.0, 1.0e-1,
                               NC_HIPRIM_DEFAULT_PARAMS_ABSTOL, NC_HIPRIM_BPL_DEFAULT_DELTA,
                               NCM_PARAM_TYPE_FIXED);
   /* Set lnkc param info */
