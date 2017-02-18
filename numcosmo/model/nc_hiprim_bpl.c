@@ -75,24 +75,24 @@ nc_hiprim_bpl_class_init (NcHIPrimBPLClass *klass)
 
   /* Set ln10e10ASA param info */
   ncm_model_class_set_sparam (model_class, NC_HIPRIM_BPL_LN10E10ASA, "\\log(10^{10}A_{SA})", "ln10e10ASA",
-                              0.0, 5.0, 1.0e-1,
+                              0.0, 5.0, 1.0e0,
                               NC_HIPRIM_DEFAULT_PARAMS_ABSTOL, NC_HIPRIM_BPL_DEFAULT_LN10E10ASA,
                               NCM_PARAM_TYPE_FIXED);
 
   /* Set N_SA param info */
   ncm_model_class_set_sparam (model_class, NC_HIPRIM_BPL_N_SA, "n_{SA}", "n_SA",
-                              0.5, 1.5, 1.0e-2,
+                              0.5, 1.5, 1.0e-1,
                               NC_HIPRIM_DEFAULT_PARAMS_ABSTOL, NC_HIPRIM_BPL_DEFAULT_N_SA,
                               NCM_PARAM_TYPE_FIXED);
 
   /* Set lambdac param info */
   ncm_model_class_set_sparam (model_class, NC_HIPRIM_BPL_DELTA, "\\delta", "delta",
-                              0.0, 8.0, 1.0e-1,
+                              0.0, 8.0, 1.0,
                               NC_HIPRIM_DEFAULT_PARAMS_ABSTOL, NC_HIPRIM_BPL_DEFAULT_DELTA,
                               NCM_PARAM_TYPE_FIXED);
   /* Set lnkc param info */
   ncm_model_class_set_sparam (model_class, NC_HIPRIM_BPL_LNKB, "\\ln(k_b)", "lnkb",
-                              -12.0, -3.0, 1.0e-1,
+                              -12.0, -3.0, 1.0,
                               NC_HIPRIM_DEFAULT_PARAMS_ABSTOL, NC_HIPRIM_BPL_DEFAULT_LNKB,
                               NCM_PARAM_TYPE_FIXED);
 
