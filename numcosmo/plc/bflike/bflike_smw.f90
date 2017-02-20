@@ -512,11 +512,11 @@ contains
     call ftclos(myunit, err)
     if (err > 0) call printerror(err)
 
-    write(*,*) 'BFLike Ntemp  =',ntemp
-    write(*,*) 'BFLike Nq     =',nq
-    write(*,*) 'BFLike Nu     =',nu
-    write(*,*) 'BFLike Nside  =',nside
-    write(*,*) 'BFLike Nwrite =',nwrite
+    !write(*,*) 'BFLike Ntemp  =',ntemp
+    !write(*,*) 'BFLike Nq     =',nq
+    !write(*,*) 'BFLike Nu     =',nu
+    !write(*,*) 'BFLike Nside  =',nside
+    !write(*,*) 'BFLike Nwrite =',nwrite
 
     allocate(evec(0:nwrite-1,1))
     call read_dbintab(trim(clik_bflike_dir)//datafile, evec, nwrite, 1, nullval, anynull)
@@ -684,7 +684,7 @@ contains
     allocate(auxdt(lbound(dt,1):ubound(dt,1), lbound(dt,2):ubound(dt,2)), source=dt)
 
     call dpotrs('L',ntot,neigen,NCVM,ntot,evec,ntot,info)
-    write(*,*) 'info = ',info
+    !write(*,*) 'info = ',info
 
     deallocate(NCVM) ;allocate(NCVM(neigen,neigen))
     call dgemm('T','N', neigen, neigen, ntot, 1.d0, S, &
@@ -1620,8 +1620,8 @@ contains
     end if
     read(unit,*,iostat=istat) idum,cls(2,1:4)
     if(istat .eq. 0) then
-       write(*,*) 'cls file appears to have 5+ columns'
-       write(*,*) 'assuming it is a CAMB file with l, TT, EE, BB, TE'
+       !write(*,*) 'cls file appears to have 5+ columns'
+       !write(*,*) 'assuming it is a CAMB file with l, TT, EE, BB, TE'
        do l=3,lmax
           read(unit,*,iostat=istat) idum,cls(l,1:4)
        end do
@@ -1629,8 +1629,8 @@ contains
        rewind(unit)
        read(unit,*,iostat=istat) idum,cls(2,smwTT),cls(2,smwEE),cls(2,smwTE)
        if(istat .eq.0) then
-          write(*,*) 'cls file appears to have 4 columns'
-          write(*,*) 'assuming it is a CAMB file with l, TT, EE, TE'
+          !write(*,*) 'cls file appears to have 4 columns'
+          !write(*,*) 'assuming it is a CAMB file with l, TT, EE, TE'
           do l=3,lmax
              read(unit,*,iostat=istat) idum,cls(l,smwTT),cls(l,smwEE),cls(l,smwTE)
           end do
