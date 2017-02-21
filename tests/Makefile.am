@@ -126,57 +126,109 @@ check_PROGRAMS =  \
 
 # TEST_PROGS += $(check_PROGRAMS)
 
-test_ncm_sparam_LDADD = $(top_builddir)/numcosmo/libnumcosmo.la 
+test_ncm_sparam_LDADD = \
+	$(top_builddir)/numcosmo/libnumcosmo.la \
+	$(GLIB_LIBS)
 
-test_ncm_vector_LDADD = $(top_builddir)/numcosmo/libnumcosmo.la 
+test_ncm_vector_LDADD = \
+	$(top_builddir)/numcosmo/libnumcosmo.la \
+	$(GLIB_LIBS)
 
-test_ncm_matrix_LDADD = $(top_builddir)/numcosmo/libnumcosmo.la 
+test_ncm_matrix_LDADD = \
+	$(top_builddir)/numcosmo/libnumcosmo.la \
+	$(GLIB_LIBS)
 
-test_ncm_stats_vec_LDADD = $(top_builddir)/numcosmo/libnumcosmo.la 
+test_ncm_stats_vec_LDADD = \
+	$(top_builddir)/numcosmo/libnumcosmo.la \
+	$(GLIB_LIBS)
 
-test_ncm_stats_dist1d_epdf_LDADD = $(top_builddir)/numcosmo/libnumcosmo.la 
+test_ncm_stats_dist1d_epdf_LDADD = \
+	$(top_builddir)/numcosmo/libnumcosmo.la \
+	$(GLIB_LIBS)
 
-test_ncm_spline_LDADD = $(top_builddir)/numcosmo/libnumcosmo.la
+test_ncm_spline_LDADD = \
+	$(top_builddir)/numcosmo/libnumcosmo.la \
+	$(GLIB_LIBS)
 
-test_ncm_spline2d_LDADD = $(top_builddir)/numcosmo/libnumcosmo.la
+test_ncm_spline2d_LDADD = \
+	$(top_builddir)/numcosmo/libnumcosmo.la \
+	$(GLIB_LIBS)
 
-test_ncm_integral1d_LDADD = $(top_builddir)/numcosmo/libnumcosmo.la
+test_ncm_integral1d_LDADD = \
+	$(top_builddir)/numcosmo/libnumcosmo.la \
+	$(GLIB_LIBS)
 
-test_ncm_sf_sbessel_LDADD = $(top_builddir)/numcosmo/libnumcosmo.la
+test_ncm_sf_sbessel_LDADD = \
+	$(top_builddir)/numcosmo/libnumcosmo.la \
+	$(GLIB_LIBS)
 
-test_ncm_model_LDADD = $(top_builddir)/numcosmo/libnumcosmo.la
+test_ncm_model_LDADD = \
+	$(top_builddir)/numcosmo/libnumcosmo.la \
+	$(GLIB_LIBS)
 
-test_ncm_model_ctrl_LDADD = $(top_builddir)/numcosmo/libnumcosmo.la
+test_ncm_model_ctrl_LDADD = \
+	$(top_builddir)/numcosmo/libnumcosmo.la \
+	$(GLIB_LIBS)
 
-test_ncm_mset_LDADD = $(top_builddir)/numcosmo/libnumcosmo.la
+test_ncm_mset_LDADD = \
+	$(top_builddir)/numcosmo/libnumcosmo.la \
+	$(GLIB_LIBS)
 
-test_ncm_obj_array_LDADD = $(top_builddir)/numcosmo/libnumcosmo.la
+test_ncm_obj_array_LDADD = \
+	$(top_builddir)/numcosmo/libnumcosmo.la \
+	$(GLIB_LIBS)
 
-test_ncm_serialize_LDADD = $(top_builddir)/numcosmo/libnumcosmo.la
+test_ncm_serialize_LDADD = \
+	$(top_builddir)/numcosmo/libnumcosmo.la \
+	$(GLIB_LIBS)
 
-test_ncm_data_gauss_cov_LDADD = $(top_builddir)/numcosmo/libnumcosmo.la
+test_ncm_data_gauss_cov_LDADD = \
+	$(top_builddir)/numcosmo/libnumcosmo.la \
+	$(GLIB_LIBS)
 
-test_ncm_func_eval_LDADD = $(top_builddir)/numcosmo/libnumcosmo.la 
+test_ncm_func_eval_LDADD = \
+	$(top_builddir)/numcosmo/libnumcosmo.la \
+	$(GLIB_LIBS)
 
-test_ncm_sphere_map_pix_LDADD = $(top_builddir)/numcosmo/libnumcosmo.la 
+test_ncm_sphere_map_pix_LDADD = \
+	$(top_builddir)/numcosmo/libnumcosmo.la \
+	$(GLIB_LIBS)
 
-test_nc_hicosmo_de_LDADD = $(top_builddir)/numcosmo/libnumcosmo.la
+test_nc_hicosmo_de_LDADD = \
+	$(top_builddir)/numcosmo/libnumcosmo.la \
+	$(GLIB_LIBS)
 
-test_nc_window_LDADD = $(top_builddir)/numcosmo/libnumcosmo.la
+test_nc_window_LDADD = \
+	$(top_builddir)/numcosmo/libnumcosmo.la \
+	$(GLIB_LIBS)
 
-test_nc_transfer_func_LDADD = $(top_builddir)/numcosmo/libnumcosmo.la
+test_nc_transfer_func_LDADD = \
+	$(top_builddir)/numcosmo/libnumcosmo.la \
+	$(GLIB_LIBS)
 
-test_nc_galaxy_acf_LDADD = $(top_builddir)/numcosmo/libnumcosmo.la 
+test_nc_galaxy_acf_LDADD = \
+	$(top_builddir)/numcosmo/libnumcosmo.la \
+	$(GLIB_LIBS)
 
-test_nc_recomb_LDADD = $(top_builddir)/numcosmo/libnumcosmo.la 
+test_nc_recomb_LDADD = \
+	$(top_builddir)/numcosmo/libnumcosmo.la \
+	$(GLIB_LIBS)
 
-test_nc_cbe_LDADD = $(top_builddir)/numcosmo/libnumcosmo.la 
+test_nc_cbe_LDADD = \
+	$(top_builddir)/numcosmo/libnumcosmo.la \
+	$(GLIB_LIBS)
 
-test_nc_data_bao_rdv_LDADD = $(top_builddir)/numcosmo/libnumcosmo.la
+test_nc_data_bao_rdv_LDADD = \
+	$(top_builddir)/numcosmo/libnumcosmo.la \
+	$(GLIB_LIBS)
 
-test_nc_data_bao_dvdv_LDADD = $(top_builddir)/numcosmo/libnumcosmo.la
+test_nc_data_bao_dvdv_LDADD = \
+	$(top_builddir)/numcosmo/libnumcosmo.la \
+	$(GLIB_LIBS)
 
-test_nc_cluster_pseudo_counts_LDADD = $(top_builddir)/numcosmo/libnumcosmo.la
+test_nc_cluster_pseudo_counts_LDADD = \
+	$(top_builddir)/numcosmo/libnumcosmo.la \
+	$(GLIB_LIBS)
 
 TESTS = $(check_PROGRAMS)
 
