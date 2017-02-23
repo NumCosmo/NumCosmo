@@ -326,6 +326,7 @@ nc_headers = \
 	lss/nc_multiplicity_func_tinker_mean.h \
 	lss/nc_multiplicity_func_tinker_crit.h \
 	lss/nc_multiplicity_func_tinker_mean_normalized.h \
+	lss/nc_multiplicity_func_crocce.h      \
 	lss/nc_halo_mass_function.h            \
         lss/nc_halo_bias_type.h                \
         lss/nc_halo_bias_type_ps.h             \
@@ -366,6 +367,7 @@ nc_headers = \
 	data/nc_data_cmb.h                     \
 	data/nc_data_cluster_ncount.h          \
 	data/nc_data_cluster_poisson.h         \
+	data/nc_data_cluster_counts_box_poisson.h \
 	data/nc_data_cluster_pseudo_counts.h   \
 	data/nc_data_planck_lkl.h              \
 	abc/nc_abc_cluster_ncount.h            \
@@ -449,6 +451,7 @@ nc_sources = \
 	lss/nc_multiplicity_func_tinker_mean.c \
 	lss/nc_multiplicity_func_tinker_crit.c \
 	lss/nc_multiplicity_func_tinker_mean_normalized.c \
+	lss/nc_multiplicity_func_crocce.c      \
 	lss/nc_halo_mass_function.c            \
 	lss/nc_halo_bias_type.c                \
 	lss/nc_halo_bias_type_ps.c             \
@@ -489,6 +492,7 @@ nc_sources = \
 	data/nc_data_cmb.c                     \
 	data/nc_data_cluster_ncount.c          \
 	data/nc_data_cluster_poisson.c         \
+	data/nc_data_cluster_counts_box_poisson.c \
 	data/nc_data_cluster_pseudo_counts.c   \
 	data/nc_data_planck_lkl.c              \
 	abc/nc_abc_cluster_ncount.c            \

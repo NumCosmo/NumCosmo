@@ -91,6 +91,7 @@
 #include "lss/nc_multiplicity_func_tinker_mean.h"
 #include "lss/nc_multiplicity_func_tinker_crit.h"
 #include "lss/nc_multiplicity_func_tinker_mean_normalized.h"
+#include "lss/nc_multiplicity_func_crocce.h"
 #include "lss/nc_halo_mass_function.h"
 #include "lss/nc_galaxy_acf.h"
 #include "lss/nc_cluster_mass.h"
@@ -136,6 +137,7 @@
 #include "data/nc_data_bao_dmr_hr.h"
 #include "data/nc_data_dist_mu.h"
 #include "data/nc_data_cluster_pseudo_counts.h"
+#include "data/nc_data_cluster_counts_box_poisson.h"
 #include "data/nc_data_cmb_shift_param.h"
 #include "data/nc_data_cmb_dist_priors.h"
 #include "data/nc_data_hubble.h"
@@ -363,6 +365,7 @@ ncm_cfg_init (void)
   ncm_cfg_register_obj (NC_TYPE_MULTIPLICITY_FUNC_TINKER_MEAN);
   ncm_cfg_register_obj (NC_TYPE_MULTIPLICITY_FUNC_TINKER_CRIT);
   ncm_cfg_register_obj (NC_TYPE_MULTIPLICITY_FUNC_TINKER_MEAN_NORMALIZED);
+  ncm_cfg_register_obj (NC_TYPE_MULTIPLICITY_FUNC_CROCCE);	
 
   ncm_cfg_register_obj (NC_TYPE_HALO_MASS_FUNCTION);
 
@@ -428,6 +431,7 @@ ncm_cfg_init (void)
 
   ncm_cfg_register_obj (NC_TYPE_DATA_HUBBLE);
 
+  ncm_cfg_register_obj (NC_TYPE_DATA_CLUSTER_COUNTS_BOX_POISSON);
   ncm_cfg_register_obj (NC_TYPE_DATA_CLUSTER_PSEUDO_COUNTS);
 
   ncm_cfg_register_obj (NC_TYPE_DATA_CMB_SHIFT_PARAM);

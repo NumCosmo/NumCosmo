@@ -289,6 +289,7 @@
       <xi:include href="xml/nc_multiplicity_func_tinker_mean.xml"/>
       <xi:include href="xml/nc_multiplicity_func_tinker_crit.xml"/>
       <xi:include href="xml/nc_multiplicity_func_tinker_mean_normalized.xml"/>
+      <xi:include href="xml/nc_multiplicity_func_crocce.xml"/>
     </section>
     <xi:include href="xml/nc_halo_mass_function.xml"/>
     <section>

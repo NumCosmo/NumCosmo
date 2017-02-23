@@ -209,7 +209,7 @@ nc_cluster_mass_ascaso_class_init (NcClusterMassAscasoClass *klass)
   /**
    * NcClusterMassAscaso:P1:
    * 
-   * Distribution's bias.
+   * Distribution's slope with respect to the mass.
    * FIXME Set correct values (limits)
    */
   ncm_model_class_set_sparam (model_class, NC_CLUSTER_MASS_ASCASO_P1, "p_1", "p1",
@@ -220,7 +220,7 @@ nc_cluster_mass_ascaso_class_init (NcClusterMassAscasoClass *klass)
   /**
    * NcClusterMassAscaso:P2:
    * 
-   * Distribution's bias.
+   * Distribution's slope with respect to the redshift.
    * FIXME Set correct values (limits)
    */
   ncm_model_class_set_sparam (model_class, NC_CLUSTER_MASS_ASCASO_P2, "p_2", "p2",
@@ -245,29 +245,30 @@ nc_cluster_mass_ascaso_class_init (NcClusterMassAscasoClass *klass)
 
 
 static gdouble
-_nc_cluster_mass_ascaso_p (NcClusterMass *clusterm,  NcHICosmo *cosmo, gdouble lnM, gdouble z, const gdouble *lnM_obs, const gdouble *lnM_obs_params)
+_nc_cluster_mass_ascaso_p (NcClusterMass *clusterm,  NcHICosmo *cosmo, gdouble logM, gdouble z, const gdouble *logM_obs, const gdouble *logM_obs_params)
 {
   NcClusterMassAscaso *ascaso = NC_CLUSTER_MASS_ASCASO (clusterm);
-  const gdouble lnMobs = lnM_obs[0];
+  const gdouble logM0 = log10 (ascaso->M0);
+  const gdouble logRichness_true = P0 + P1 * (logM - logM0) + P2 * log10(1.0 + z);
   const gdouble sqrt2_sigma = M_SQRT2 * SIGMA;
-  const gdouble x = (lnMobs - lnM - P0) / sqrt2_sigma;
+  const gdouble x = (logM_obs[0] - logRichness_true) / sqrt2_sigma;
 
   NCM_UNUSED (cosmo);
-  NCM_UNUSED (z);
 
   return M_2_SQRTPI / (2.0 * M_SQRT2) * exp (- x * x) / (SIGMA);
 }
 
 static gdouble
-_nc_cluster_mass_ascaso_intp (NcClusterMass *clusterm,  NcHICosmo *cosmo, gdouble lnM, gdouble z)
+_nc_cluster_mass_ascaso_intp (NcClusterMass *clusterm,  NcHICosmo *cosmo, gdouble logM, gdouble z)
 {
   NcClusterMassAscaso *ascaso = NC_CLUSTER_MASS_ASCASO (clusterm);
+  const gdouble logM0 = log10 (ascaso->M0);	
   const gdouble sqrt2_sigma = M_SQRT2 * SIGMA;
-  const gdouble x_min = (lnM - ascaso->lnRichness_min) / sqrt2_sigma;
-  const gdouble x_max = (lnM - ascaso->lnRichness_max) / sqrt2_sigma;
+  const gdouble logRichness_true = P0 + P1 * (logM - logM0) + P2 * log10(1.0 + z);	
+  const gdouble x_min = (logRichness_true- ascaso->lnRichness_min) / sqrt2_sigma;
+  const gdouble x_max = (logRichness_true - ascaso->lnRichness_max) / sqrt2_sigma;
 
   NCM_UNUSED (cosmo);
-  NCM_UNUSED (z);
     
   if (x_max > 4.0)
     return -(erfc (x_min) - erfc (x_max)) / 2.0;
@@ -276,15 +277,16 @@ _nc_cluster_mass_ascaso_intp (NcClusterMass *clusterm,  NcHICosmo *cosmo, gdoubl
 }
 
 static gboolean
-_nc_cluster_mass_ascaso_resample (NcClusterMass *clusterm,  NcHICosmo *cosmo, gdouble lnM, gdouble z, gdouble *lnM_obs, const gdouble *lnM_obs_params, NcmRNG *rng)
+_nc_cluster_mass_ascaso_resample (NcClusterMass *clusterm,  NcHICosmo *cosmo, gdouble logM, gdouble z, gdouble *lnM_obs, const gdouble *lnM_obs_params, NcmRNG *rng)
 {
   NcClusterMassAscaso *ascaso = NC_CLUSTER_MASS_ASCASO (clusterm);
-
+  gdouble logRichness_true;
+  const gdouble logM0 = log10 (ascaso->M0);
   NCM_UNUSED (cosmo);
-  NCM_UNUSED (z);
-  
+    
   ncm_rng_lock (rng);
-  lnM_obs[0] = lnM + P0 + gsl_ran_gaussian (rng->r, SIGMA);
+  logRichness_true = P0 + P1 * (logM - logM0) + P2 * log10(1.0 + z);	
+  lnM_obs[0] =  logRichness_true + gsl_ran_gaussian (rng->r, SIGMA);
   ncm_rng_unlock (rng);
   return (lnM_obs[0] <= ascaso->lnRichness_max) && (lnM_obs[0] >= ascaso->lnRichness_min);
 }
@@ -293,14 +295,14 @@ static void
 _nc_cluster_mass_ascaso_p_limits (NcClusterMass *clusterm,  NcHICosmo *cosmo, const gdouble *lnM_obs, const gdouble *lnM_obs_params, gdouble *lnM_lower, gdouble *lnM_upper)
 {
   NcClusterMassAscaso *ascaso = NC_CLUSTER_MASS_ASCASO (clusterm);
-  const gdouble mean = lnM_obs[0] - P0;
-  const gdouble lnMl = mean - 7.0 * SIGMA;
-  const gdouble lnMu = mean + 7.0 * SIGMA;
+  const gdouble mean = lnM_obs[0] - P0; // - P2 * log10(1.0 + z);  FIX This!!!! What is the mean richeness?
+  const gdouble logRichnessl = mean - 7.0 * SIGMA;
+  const gdouble logRichnessu = mean + 7.0 * SIGMA;
 
   NCM_UNUSED (cosmo);
   
-  *lnM_lower = lnMl;
-  *lnM_upper = lnMu;
+  *lnM_lower = logRichnessl;
+  *lnM_upper = logRichnessu;
 
   return;
 }
