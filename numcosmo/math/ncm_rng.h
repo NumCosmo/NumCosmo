@@ -90,6 +90,8 @@ G_INLINE_FUNC gdouble ncm_rng_gaussian_tail_gen (NcmRNG *rng, const gdouble a, c
 G_INLINE_FUNC gdouble ncm_rng_exponential_gen (NcmRNG *rng, const gdouble mu);
 G_INLINE_FUNC gdouble ncm_rng_laplace_gen (NcmRNG *rng, const gdouble a);
 G_INLINE_FUNC gdouble ncm_rng_exppow_gen (NcmRNG *rng, const gdouble a, const gdouble b);
+G_INLINE_FUNC gdouble ncm_rng_beta_gen (NcmRNG *rng, const gdouble a, const gdouble b);
+G_INLINE_FUNC gdouble ncm_rng_gamma_gen (NcmRNG *rng, const gdouble a, const gdouble b);
 
 G_END_DECLS
 
@@ -107,6 +109,8 @@ G_INLINE_FUNC gdouble ncm_rng_gaussian_tail_gen (NcmRNG *rng, const gdouble a, c
 G_INLINE_FUNC gdouble ncm_rng_exponential_gen (NcmRNG *rng, const gdouble mu)                       { return gsl_ran_exponential (rng->r, mu);         }
 G_INLINE_FUNC gdouble ncm_rng_laplace_gen (NcmRNG *rng, const gdouble a)                            { return gsl_ran_laplace (rng->r, a);              }
 G_INLINE_FUNC gdouble ncm_rng_exppow_gen (NcmRNG *rng, const gdouble a, const gdouble b)            { return gsl_ran_exppow (rng->r, a, b);            }
+G_INLINE_FUNC gdouble ncm_rng_beta_gen (NcmRNG *rng, const gdouble a, const gdouble b)              { return gsl_ran_beta (rng->r, a, b);              } 
+G_INLINE_FUNC gdouble ncm_rng_gamma_gen (NcmRNG *rng, const gdouble a, const gdouble b)             { return gsl_ran_gamma (rng->r, a, b);             } 
 
 G_END_DECLS
 

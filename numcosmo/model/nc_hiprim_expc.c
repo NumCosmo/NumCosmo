@@ -75,29 +75,29 @@ nc_hiprim_expc_class_init (NcHIPrimExpcClass *klass)
 
   /* Set ln10e10ASA param info */
   ncm_model_class_set_sparam (model_class, NC_HIPRIM_EXPC_LN10E10ASA, "\\log(10^{10}A_{SA})", "ln10e10ASA",
-                              0.0, 5.0, 1.0e-1,
+                              0.0, 5.0, 1.0e0,
                               NC_HIPRIM_DEFAULT_PARAMS_ABSTOL, NC_HIPRIM_EXPC_DEFAULT_LN10E10ASA,
                               NCM_PARAM_TYPE_FIXED);
 
   /* Set N_SA param info */
   ncm_model_class_set_sparam (model_class, NC_HIPRIM_EXPC_N_SA, "n_{SA}", "n_SA",
-                              0.5, 1.5, 1.0e-2,
+                              0.5, 1.5, 1.0e-1,
                               NC_HIPRIM_DEFAULT_PARAMS_ABSTOL, NC_HIPRIM_EXPC_DEFAULT_N_SA,
                               NCM_PARAM_TYPE_FIXED);
 
   /* Set lambdac param info */
   ncm_model_class_set_sparam (model_class, NC_HIPRIM_EXPC_LAMBDAC, "\\lambda_c", "lambdac",
-                              0.0, 10.0, 1.0e-1,
+                              0.0, 10.0, 1.0,
                               NC_HIPRIM_DEFAULT_PARAMS_ABSTOL, NC_HIPRIM_EXPC_DEFAULT_LAMBDAC,
                               NCM_PARAM_TYPE_FIXED);
   /* Set lnkc param info */
   ncm_model_class_set_sparam (model_class, NC_HIPRIM_EXPC_LNKC, "\\ln(k_c)", "lnkc",
-                              -12.0, -3.0, 1.0e-1,
+                              -12.0, -3.0, 1.0e0,
                               NC_HIPRIM_DEFAULT_PARAMS_ABSTOL, NC_HIPRIM_EXPC_DEFAULT_LNKC,
                               NCM_PARAM_TYPE_FIXED);
   /* Set c param info */
   ncm_model_class_set_sparam (model_class, NC_HIPRIM_EXPC_C, "c", "c",
-                              0.0, 5.0, 1.0e-1,
+                              0.0, 0.99, 2.0e-1,
                               NC_HIPRIM_DEFAULT_PARAMS_ABSTOL, NC_HIPRIM_EXPC_DEFAULT_C,
                               NCM_PARAM_TYPE_FIXED);
 
@@ -141,7 +141,7 @@ _nc_hiprim_expc_lnSA_powespec_lnk (NcHIPrim *prim, const gdouble lnk)
   const gdouble lnk_c    = LNKC;
   const gdouble c        = C;
 
-  const gdouble k_kc_lambda_c = exp (lambda_c * (lnk - lnk_c)) + c * c;
+  const gdouble k_kc_lambda_c = exp (lambda_c * (lnk - lnk_c)) - log1p (-c);
 
   gdouble ln_expc_fac;
 

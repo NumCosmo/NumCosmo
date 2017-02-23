@@ -549,3 +549,21 @@ ncm_rng_pool_get (const gchar *name)
  * FIXME
  * 
  */
+/**
+ * ncm_rng_beta_gen:
+ * @rng: a #NcmRNG
+ * @a: FIXME
+ * @b: FIXME
+ * 
+ * FIXME
+ * 
+ */
+/**
+ * ncm_rng_gamma_gen:
+ * @rng: a #NcmRNG
+ * @a: FIXME
+ * @b: FIXME
+ * 
+ * FIXME
+ * 
+ */

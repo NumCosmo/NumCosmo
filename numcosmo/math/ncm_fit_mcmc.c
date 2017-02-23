@@ -411,6 +411,7 @@ _ncm_fit_mcmc_update (NcmFitMCMC *mcmc, NcmFit *fit)
         ncm_timer_task_log_elapsed (mcmc->nt);
         ncm_timer_task_log_mean_time (mcmc->nt);
         ncm_timer_task_log_time_left (mcmc->nt);
+        ncm_timer_task_log_cur_datetime (mcmc->nt);
         ncm_timer_task_log_end_datetime (mcmc->nt);
       }
       break;
@@ -425,6 +426,7 @@ _ncm_fit_mcmc_update (NcmFitMCMC *mcmc, NcmFit *fit)
       ncm_timer_task_log_elapsed (mcmc->nt);
       ncm_timer_task_log_mean_time (mcmc->nt);
       ncm_timer_task_log_time_left (mcmc->nt);
+      ncm_timer_task_log_cur_datetime (mcmc->nt);
       ncm_timer_task_log_end_datetime (mcmc->nt);
       break;      
   }

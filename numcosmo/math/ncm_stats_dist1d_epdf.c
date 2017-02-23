@@ -66,7 +66,6 @@ typedef struct _NcmStatsDist1dEPDFObs
 {
   gdouble x;
   gdouble w;
-  gdouble n;
 } NcmStatsDist1dEPDFObs;
 
 static void 
@@ -87,6 +86,7 @@ ncm_stats_dist1d_epdf_init (NcmStatsDist1dEPDF *epdf1d)
   epdf1d->h                  = 0.0;
   epdf1d->n_obs              = 0;
   epdf1d->np_obs             = 0;
+  epdf1d->WT                 = 0.0;
   epdf1d->obs                = NULL;
   epdf1d->obs_seq            = g_sequence_new (_ncm_stats_dist1d_epdf_free_double_slice);
   epdf1d->min                = GSL_POSINF;
@@ -530,7 +530,7 @@ _ncm_stats_dist1d_epdf_autobw (NcmStatsDist1dEPDF *epdf1d)
         j++;
         xc += deltax;
       }
-      ncm_vector_fast_addto (epdf1d->p_data, j, obs_i->w / epdf1d->n_obs);
+      ncm_vector_fast_addto (epdf1d->p_data, j, obs_i->w / epdf1d->WT);
     }
   }
   
@@ -680,7 +680,7 @@ ncm_stats_dist1d_epdf_p_gk (NcmStatsDist1dEPDF *epdf1d, gdouble x)
   }
   
   {
-    const gdouble phat      = (res / (sqrt (2.0 * M_PI) * epdf1d->h) + 1.0 / (sd1->xf - sd1->xi)) / (epdf1d->n_obs + 1.0);
+    const gdouble phat      = (res / (sqrt (2.0 * M_PI) * epdf1d->h) + 1.0 / (sd1->xf - sd1->xi)) / (epdf1d->WT + 1.0);
     const gdouble bias_corr = 0.5 * (erf ((x - epdf1d->min) / (M_SQRT2 * epdf1d->h)) + erf ((epdf1d->max - x) / (M_SQRT2 * epdf1d->h)));
 
     return phat / bias_corr;
@@ -707,7 +707,7 @@ static void
 ncm_stats_dist1d_epdf_update_limits (NcmStatsDist1dEPDF *epdf1d)
 {
   NcmStatsDist1d *sd1    = NCM_STATS_DIST1D (epdf1d);
-  const gdouble lnNorma2 = 2.0 * log (1.0 * epdf1d->n_obs) + log (M_PI) + 2.0 * log (epdf1d->h);
+  const gdouble lnNorma2 = 2.0 * log (1.0 * epdf1d->WT) + log (M_PI) + 2.0 * log (epdf1d->h);
   const gdouble exp_b    = -2.0 * NCM_STATS_DIST1D (epdf1d)->reltol - lnNorma2;
 
   if (exp_b < 0.0)
@@ -795,33 +795,38 @@ ncm_stats_dist1d_epdf_new (gdouble sd_min_scale)
 }
 
 /**
- * ncm_stats_dist1d_epdf_add_obs:
+ * ncm_stats_dist1d_epdf_add_obs_weight:
  * @epdf1d: a #NcmStatsDist1dEPDF
  * @x: an observation
+ * @w: observation weight
  * 
- * Adds a new observation @x to the @epdf1d updating the internal
- * approximation of the EPDF when necessary.
+ * Adds a new observation @x with weight @w to the @epdf1d updating 
+ * the internal approximation of the EPDF when necessary.
  * 
  */
 void
-ncm_stats_dist1d_epdf_add_obs (NcmStatsDist1dEPDF *epdf1d, gdouble x)
+ncm_stats_dist1d_epdf_add_obs_weight (NcmStatsDist1dEPDF *epdf1d, const gdouble x, const gdouble w)
 {
-  NcmStatsDist1dEPDFObs obs = {x, 1.0, 1.0};
+  NcmStatsDist1dEPDFObs obs = {x, w};
   const gdouble new_max = GSL_MAX (epdf1d->max, x);
   const gdouble new_min = GSL_MIN (epdf1d->min, x);
 
-  if (!gsl_finite (x))
+  if (!gsl_finite (x) || (w < 0.0))
   {
-    g_warning ("# non-finite observation number %u [%g], skipping...\n", epdf1d->n_obs, x);
+    g_warning ("ncm_stats_dist1d_epdf_add_obs_weight: invalid observation %u [x = %g, w = %g], skipping...\n", epdf1d->n_obs, x, w);
     return;
   }
+
+  if (w == 0.0)
+    return;
 
   epdf1d->bw_set = FALSE;
 
   ncm_stats_vec_set (epdf1d->obs_stats, 0, x);
-  ncm_stats_vec_update (epdf1d->obs_stats);
+  ncm_stats_vec_update_weight (epdf1d->obs_stats, w);
 
   epdf1d->n_obs++;
+  epdf1d->WT += w;
 
   g_array_append_val (epdf1d->obs, obs);
   epdf1d->list_sorted = FALSE;
@@ -839,6 +844,21 @@ ncm_stats_dist1d_epdf_add_obs (NcmStatsDist1dEPDF *epdf1d, gdouble x)
 }
 
 /**
+ * ncm_stats_dist1d_epdf_add_obs:
+ * @epdf1d: a #NcmStatsDist1dEPDF
+ * @x: an observation
+ * 
+ * Adds a new observation @x (weight 1.0) to the @epdf1d updating 
+ * the internal approximation of the EPDF when necessary.
+ * 
+ */
+void
+ncm_stats_dist1d_epdf_add_obs (NcmStatsDist1dEPDF *epdf1d, gdouble x)
+{
+  ncm_stats_dist1d_epdf_add_obs_weight (epdf1d, x, 1.0);
+}
+
+/**
  * ncm_stats_dist1d_epdf_reset:
  * @epdf1d: a #NcmStatsDist1dEPDF
  * 
@@ -853,8 +873,37 @@ ncm_stats_dist1d_epdf_reset (NcmStatsDist1dEPDF *epdf1d)
   
   epdf1d->n_obs  = 0;
   epdf1d->np_obs = 0;
+  epdf1d->WT     = 0.0;
   epdf1d->min    = GSL_POSINF;
   epdf1d->max    = GSL_NEGINF;
+}
+
+/**
+ * ncm_stats_dist1d_epdf_set_min:
+ * @epdf1d: a #NcmStatsDist1dEPDF
+ * @min: sets min observation value
+ * 
+ * Empty the object @epdf1d discarding all observations.
+ * 
+ */
+void 
+ncm_stats_dist1d_epdf_set_min (NcmStatsDist1dEPDF *epdf1d, const gdouble min)
+{
+  epdf1d->min = min;
+}
+
+/**
+ * ncm_stats_dist1d_epdf_set_max:
+ * @epdf1d: a #NcmStatsDist1dEPDF
+ * @max: sets max observation value
+ * 
+ * Empty the object @epdf1d discarding all observations.
+ * 
+ */
+void 
+ncm_stats_dist1d_epdf_set_max (NcmStatsDist1dEPDF *epdf1d, const gdouble max)
+{
+  epdf1d->max = max;
 }
 
 /**

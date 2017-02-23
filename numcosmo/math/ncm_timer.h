@@ -90,16 +90,18 @@ gboolean ncm_timer_task_end (NcmTimer *nt);
 gdouble ncm_timer_task_mean_time (NcmTimer *nt);
 gdouble ncm_timer_task_time_left (NcmTimer *nt);
 
-gchar *ncm_timer_task_elapsed_str (NcmTimer *nt);
-gchar *ncm_timer_task_mean_time_str (NcmTimer *nt);
-gchar *ncm_timer_task_time_left_str (NcmTimer *nt);
-gchar *ncm_timer_task_start_datetime_str (NcmTimer *nt);
-gchar *ncm_timer_task_end_datetime_str (NcmTimer *nt);
+const gchar *ncm_timer_task_elapsed_str (NcmTimer *nt);
+const gchar *ncm_timer_task_mean_time_str (NcmTimer *nt);
+const gchar *ncm_timer_task_time_left_str (NcmTimer *nt);
+const gchar *ncm_timer_task_start_datetime_str (NcmTimer *nt);
+const gchar *ncm_timer_task_cur_datetime_str (NcmTimer *nt);
+const gchar *ncm_timer_task_end_datetime_str (NcmTimer *nt);
 
 void ncm_timer_task_log_elapsed (NcmTimer *nt);
 void ncm_timer_task_log_mean_time (NcmTimer *nt);
 void ncm_timer_task_log_time_left (NcmTimer *nt);
 void ncm_timer_task_log_start_datetime (NcmTimer *nt);
+void ncm_timer_task_log_cur_datetime (NcmTimer *nt);
 void ncm_timer_task_log_end_datetime (NcmTimer *nt);
 
 #define NCM_TIMER_SEC_FORMAT "%07.4f"
