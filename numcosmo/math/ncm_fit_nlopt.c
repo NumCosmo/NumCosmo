@@ -379,8 +379,17 @@ _ncm_fit_nlopt_run (NcmFit *fit, NcmFitRunMsgs mtype)
   }
 #endif
 
-  ncm_fit_state_set_m2lnL_curval (fit->fstate, minf);
-  ncm_fit_params_set_vector (fit, fit->fstate->fparams);
+  {
+    gdouble m2lnL = 0.0;
+
+    ncm_fit_params_set_vector (fit, fit->fstate->fparams);
+    ncm_fit_m2lnL_val (fit, &m2lnL);
+
+    ncm_assert_cmpdouble_e (m2lnL, ==, minf, fit->fstate->m2lnL_prec);
+    
+    ncm_fit_state_set_m2lnL_curval (fit->fstate, minf);
+    
+  }
 
   return TRUE;
 }
