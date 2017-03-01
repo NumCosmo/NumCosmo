@@ -235,9 +235,9 @@ nc_planck_fi_cor_tt_add_calib_priors (NcmLikelihood *lh, NcmVector *mean, NcmVec
 void
 nc_planck_fi_cor_tt_add_default_calib_priors (NcmLikelihood *lh)
 {
-  gdouble mean[3]  = {0.999, 0.995, 1.0000};
-  gdouble sigma[3] = {0.001, 0.002, 0.0025};
-  NcmVector *mean_vec = ncm_vector_new_data_static (mean, 3, 1);
+  gdouble mean[3]  = {0.9990004, 0.99501, 1.0000};
+  gdouble sigma[3] = {0.001,     0.002,   0.0025};
+  NcmVector *mean_vec  = ncm_vector_new_data_static (mean, 3, 1);
   NcmVector *sigma_vec = ncm_vector_new_data_static (sigma, 3, 1);
 
   nc_planck_fi_cor_tt_add_calib_priors (lh, mean_vec, sigma_vec);

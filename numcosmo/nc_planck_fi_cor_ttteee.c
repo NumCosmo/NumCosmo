@@ -472,7 +472,7 @@ void
 nc_planck_fi_cor_ttteee_add_default_galf_priors (NcmLikelihood *lh)
 {
   gdouble mean[12]  = {0.060, 0.050, 0.110, 0.10, 0.240, 0.72, 0.140, 0.120, 0.30, 0.240, 0.600, 1.80};
-  gdouble sigma[12] = {0.012, 0.015, 0.033, 0.02, 0.048, 0.14, 0.042, 0.036, 0.09, 0.072, 0.018, 0.54};
+  gdouble sigma[12] = {0.012, 0.015, 0.033, 0.02, 0.048, 0.14, 0.042, 0.036, 0.09, 0.072, 0.180, 0.54};
   NcmVector *mean_vec = ncm_vector_new_data_static (mean, 12, 1);
   NcmVector *sigma_vec = ncm_vector_new_data_static (sigma, 12, 1);
 
