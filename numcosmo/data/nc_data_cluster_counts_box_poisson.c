@@ -225,17 +225,15 @@ _nc_data_cluster_counts_box_poisson_prepare (NcmData *data, NcmMSet *mset)
 static void 
 _nc_data_cluster_counts_box_poisson_set_size (NcmDataPoisson *poisson, guint nbins)
 {
-  NcDataClusterCountsBoxPoisson *cpoisson = NC_DATA_CLUSTER_COUNTS_BOX_POISSON (poisson);
-
-  if (nbins != poisson->nbins)
-	{
-    ncm_vector_clear (&cpoisson->mass_knots);
-    if (nbins > 0)
-      cpoisson->mass_knots = ncm_vector_new (nbins + 1);
-	}
-	
-  /* Chain up : end */
+  /* Chain up : start */
   NCM_DATA_POISSON_CLASS (nc_data_cluster_counts_box_poisson_parent_class)->set_size (poisson, nbins);
+
+	{
+		NcDataClusterCountsBoxPoisson *cpoisson = NC_DATA_CLUSTER_COUNTS_BOX_POISSON (poisson);
+		ncm_vector_clear (&cpoisson->mass_knots);
+		if (nbins > 0)
+		  cpoisson->mass_knots = ncm_vector_new_data_static (poisson->h->range, nbins + 1, 1);
+	}
 }
 
 static gdouble 
