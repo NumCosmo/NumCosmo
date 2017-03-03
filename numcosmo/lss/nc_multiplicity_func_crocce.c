@@ -71,7 +71,7 @@ nc_multiplicity_func_crocce_new (gdouble A0, gdouble a0, gdouble b0, gdouble c0)
   return g_object_new (NC_TYPE_MULTIPLICITY_FUNC_CROCCE,
                        "A0", A0,
                        "a0", a0,
-                       "b0", b0, 
+                       "b0", b0,
                        "c0", c0,
                        NULL);
 }
@@ -80,11 +80,11 @@ static gdouble
 _nc_multiplicity_func_crocce_eval (NcMultiplicityFunc *mulf, NcHICosmo *cosmo, gdouble sigma, gdouble z)   
 {
   NcMultiplicityFuncCrocce *mulf_crocce = NC_MULTIPLICITY_FUNC_CROCCE (mulf);
-  const gdouble A = mulf_crocce->A0 * pow(1.0 + z, -0.13);
-  const gdouble a = mulf_crocce->a0 * pow(1.0 + z, -0.15);
-  const gdouble b = mulf_crocce->b0 * pow(1.0 + z, -0.084);
-  const gdouble c = mulf_crocce->c0 * pow(1.0 + z, -0.024);	
-  const gdouble f_crocce = A * (pow(sigma, -a) + b) * exp(-c / (sigma * sigma));	
+  const gdouble A = mulf_crocce->A0 * pow (1.0 + z, -0.13);
+  const gdouble a = mulf_crocce->a0 * pow (1.0 + z, -0.15);
+  const gdouble b = mulf_crocce->b0 * pow (1.0 + z, -0.084);
+  const gdouble c = mulf_crocce->c0 * pow (1.0 + z, -0.024);	
+  const gdouble f_crocce = A * (pow (sigma, -a) + b) * exp (- c / (sigma * sigma));	
 
   NCM_UNUSED (cosmo);
   
@@ -104,7 +104,7 @@ _nc_multiplicity_func_crocce_eval (NcMultiplicityFunc *mulf, NcHICosmo *cosmo, g
 void
 nc_multiplicity_func_crocce_set_A0 (NcMultiplicityFuncCrocce *mulf_crocce, gdouble A0)
 {
-  g_assert (A0 >= 0);
+  g_assert_cmpfloat (A0, >=, 0);
   mulf_crocce->A0 = A0;
 }
 
@@ -204,11 +204,10 @@ nc_multiplicity_func_crocce_get_c0 (const NcMultiplicityFuncCrocce *mulf_crocce)
 static void
 nc_multiplicity_func_crocce_init (NcMultiplicityFuncCrocce *mulf_crocce)
 {
-  /* TODO: Add initialization code here */
-  mulf_crocce->A0 = 0.58;
-  mulf_crocce->a0 = 1.37;
-  mulf_crocce->b0 = 0.3;
-  mulf_crocce->c0 = 1.036;
+  mulf_crocce->A0 = 0.0;
+  mulf_crocce->a0 = 0.0;
+  mulf_crocce->b0 = 0.0;
+  mulf_crocce->c0 = 0.0;
 }
 
 static void
@@ -225,24 +224,24 @@ _nc_multiplicity_func_crocce_set_property (GObject * object, guint prop_id, cons
   NcMultiplicityFuncCrocce *mulf_crocce = NC_MULTIPLICITY_FUNC_CROCCE (object);
   g_return_if_fail (NC_IS_MULTIPLICITY_FUNC_CROCCE (object));
 
-  switch (prop_id)
-  {
-	case PROP_A0:
-	  mulf_crocce->A0 = g_value_get_double (value);
-	  break;
-	case PROP_A1:
-	  mulf_crocce->a0 = g_value_get_double (value);
-	  break;
-	case PROP_B0:
-	  mulf_crocce->b0 = g_value_get_double (value);
-	  break;
-	case PROP_C0:
-	  mulf_crocce->c0 = g_value_get_double (value);
-	  break;
-	default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
-  }
+	switch (prop_id)
+	{
+		case PROP_A0:
+			mulf_crocce->A0 = g_value_get_double (value);
+			break;
+		case PROP_A1:
+			mulf_crocce->a0 = g_value_get_double (value);
+			break;
+		case PROP_B0:
+			mulf_crocce->b0 = g_value_get_double (value);
+			break;
+		case PROP_C0:
+			mulf_crocce->c0 = g_value_get_double (value);
+			break;
+		default:
+			G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
+			break;
+	}
 }
 
 static void
@@ -251,24 +250,24 @@ _nc_multiplicity_func_crocce_get_property (GObject * object, guint prop_id, GVal
   NcMultiplicityFuncCrocce *mulf_crocce = NC_MULTIPLICITY_FUNC_CROCCE (object);
   g_return_if_fail (NC_IS_MULTIPLICITY_FUNC_CROCCE (object));
 
-  switch (prop_id)
-  {
-	case PROP_A0:
-	  g_value_set_double (value, mulf_crocce->A0);
-	  break;
-	case PROP_A1:
-	  g_value_set_double (value, mulf_crocce->a0);
-	  break;
-	case PROP_B0:
-	  g_value_set_double (value, mulf_crocce->b0);
-	  break;
-	case PROP_C0:
-	  g_value_set_double (value, mulf_crocce->c0);
-	  break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
-  }
+	switch (prop_id)
+	{
+		case PROP_A0:
+			g_value_set_double (value, mulf_crocce->A0);
+			break;
+		case PROP_A1:
+			g_value_set_double (value, mulf_crocce->a0);
+			break;
+		case PROP_B0:
+			g_value_set_double (value, mulf_crocce->b0);
+			break;
+		case PROP_C0:
+			g_value_set_double (value, mulf_crocce->c0);
+			break;
+		default:
+			G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
+			break;
+	}
 }
 
 static void
@@ -277,12 +276,12 @@ nc_multiplicity_func_crocce_class_init (NcMultiplicityFuncCrocceClass *klass)
   GObjectClass* object_class = G_OBJECT_CLASS (klass);
   NcMultiplicityFuncClass* parent_class = NC_MULTIPLICITY_FUNC_CLASS (klass);
 
+  object_class->set_property = &_nc_multiplicity_func_crocce_set_property;
+  object_class->get_property = &_nc_multiplicity_func_crocce_get_property;
+  object_class->finalize     = &_nc_multiplicity_func_crocce_finalize;
+
   parent_class->eval = &_nc_multiplicity_func_crocce_eval;
-
-  object_class->finalize = _nc_multiplicity_func_crocce_finalize;
-  object_class->set_property = _nc_multiplicity_func_crocce_set_property;
-  object_class->get_property = _nc_multiplicity_func_crocce_get_property;
-
+	
   /**
    * NcMultiplicityFuncCrocce:A0:
    *
@@ -319,7 +318,7 @@ nc_multiplicity_func_crocce_class_init (NcMultiplicityFuncCrocceClass *klass)
                                                         NULL,
                                                         "b0",
                                                         -G_MAXDOUBLE, G_MAXDOUBLE, 0.3,
-                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY |G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
   /**
    * NcMultiplicityFuncCrocce:c0:
    *

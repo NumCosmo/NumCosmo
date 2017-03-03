@@ -35,7 +35,9 @@
 enum
 {
   PROP_0,
-  PROP_NBIN_MASS,
+	PROP_MASS_FUNC, 
+  PROP_MASS_KNOTS,
+	PROP_REDSHIFT, 
   PROP_VOLUME,
   PROP_SIZE,
 };
@@ -48,58 +50,81 @@ enum
 #include "data/nc_data_cluster_counts_box_poisson.h"
 #include "lss/nc_halo_mass_function.h"
 #include "math/ncm_util.h"
+#include "math/ncm_spline_cubic_notaknot.h"
 
 G_DEFINE_TYPE (NcDataClusterCountsBoxPoisson, nc_data_cluster_counts_box_poisson, NCM_TYPE_DATA_POISSON);
 
 static void
-nc_data_cluster_counts_box_poisson_init (NcDataClusterCountsBoxPoisson *cluster_poisson)
+nc_data_cluster_counts_box_poisson_init (NcDataClusterCountsBoxPoisson *cpoisson)
 {
-  cluster_poisson->mfp = NULL;
+  cpoisson->mfp        = NULL;
+	cpoisson->mass_knots = NULL;
+	cpoisson->redshift   = 0.0;
+	cpoisson->volume     = 0.0;
+	cpoisson->dndlog10M  = ncm_spline_cubic_notaknot_new ();
 }
 
 static void
 nc_data_cluster_counts_box_poisson_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
 {
-  NcDataClusterCountsBoxPoisson *poisson = C_DATA_CLUSTER_COUNTS_BOX_POISSON (object);
-  g_return_if_fail (NC_IS_DATA_CLUSTER_POISSON (object));
+  NcDataClusterCountsBoxPoisson *cpoisson = NC_DATA_CLUSTER_COUNTS_BOX_POISSON (object);
+  g_return_if_fail (NC_IS_DATA_CLUSTER_COUNTS_BOX_POISSON (object));
 
   switch (prop_id)
   {
-    case PROP_NBIN_MASS:
-      g_value_set_int (&poisson->nbin_mass);
-      poisson->nbin_mass = g_value_dup_object (value);
-      break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
-  }
+		case PROP_MASS_FUNC:
+			cpoisson->mfp = g_value_dup_object (value);
+			g_assert (cpoisson->mfp != NULL);
+			break;
+		case PROP_MASS_KNOTS:
+			ncm_vector_memcpy (cpoisson->mass_knots, g_value_get_object (value));
+			break;
+		case PROP_REDSHIFT:
+			cpoisson->redshift = g_value_get_double (value);
+			break;	
+		case PROP_VOLUME:
+			cpoisson->volume = g_value_get_double (value);
+			break;	  
+		default:
+			G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
+			break;
+	}
 }
 
 static void
 nc_data_cluster_counts_box_poisson_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
 {
-  NcDataClusterCountsBoxPoisson *poisson = C_DATA_CLUSTER_COUNTS_BOX_POISSON (object);
+	NcDataClusterCountsBoxPoisson *cpoisson = NC_DATA_CLUSTER_COUNTS_BOX_POISSON (object);
+	g_return_if_fail (NC_IS_DATA_CLUSTER_COUNTS_BOX_POISSON (object));
 
-  g_return_if_fail (NC_IS_DATA_CLUSTER_POISSON (object));
-
-  switch (prop_id)
-  {
-    case PROP_NBIN_MASS:
-	  g_value_set_int (value, poisson->nbin_mass);
-      break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
-  }
+	switch (prop_id)
+	{
+		case PROP_MASS_FUNC:
+			g_value_set_object (value, cpoisson->mfp);
+			break;
+		case PROP_MASS_KNOTS:
+			g_value_set_object (value, cpoisson->mass_knots);
+			break;
+		case PROP_REDSHIFT:
+			g_value_set_double (value, cpoisson->redshift);
+			break;	
+		case PROP_VOLUME:
+			g_value_set_double (value, cpoisson->volume);
+			break;	  
+		default:
+			G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
+			break;
+	}
 }
 
 static void
 nc_data_cluster_counts_box_poisson_dispose (GObject *object)
 {
-  NcDataClusterCountsBoxPoisson *cluster_poisson = C_DATA_CLUSTER_COUNTS_BOX_POISSON (object);
-  
-  nc_halo_mass_function_clear (&cluster_poisson->mfp);
-  
+  NcDataClusterCountsBoxPoisson *cpoisson = NC_DATA_CLUSTER_COUNTS_BOX_POISSON (object);
+
+	nc_halo_mass_function_clear (&cpoisson->mfp);
+	ncm_spline_clear (&cpoisson->dndlog10M); 
+	
   /* Chain up : end */
   G_OBJECT_CLASS (nc_data_cluster_counts_box_poisson_parent_class)->dispose (object);
 }
@@ -113,95 +138,158 @@ nc_data_cluster_counts_box_poisson_finalize (GObject *object)
 }
 
 static void _nc_data_cluster_counts_box_poisson_prepare (NcmData *data, NcmMSet *mset);
-static void _nc_data_cluster_counts_box_poisson_resample (NcmData *data, NcmMSet *mset, NcmRNG *rng);
+static void _nc_data_cluster_counts_box_poisson_set_size (NcmDataPoisson *poisson, guint nbins);
+static gdouble _nc_data_cluster_counts_box_poisson_mean_func (NcmDataPoisson *poisson, NcmMSet *mset, guint n);
 
 static void
 nc_data_cluster_counts_box_poisson_class_init (NcDataClusterCountsBoxPoissonClass *klass)
 {
-  GObjectClass* object_class = G_OBJECT_CLASS (klass);
-  NcmDataClass *data_class   = NCM_DATA_CLASS (klass);
+  GObjectClass* object_class         = G_OBJECT_CLASS (klass);
+  NcmDataClass *data_class           = NCM_DATA_CLASS (klass);
+	NcmDataPoissonClass *poisson_class = NCM_DATA_POISSON_CLASS (klass);
 
   object_class->set_property = &nc_data_cluster_counts_box_poisson_set_property;
   object_class->get_property = &nc_data_cluster_counts_box_poisson_get_property;
   object_class->dispose      = &nc_data_cluster_counts_box_poisson_dispose;
   object_class->finalize     = &nc_data_cluster_counts_box_poisson_finalize;
 
-  g_object_class_install_property (object_class,
-                                   PROP_NBIN_MASS,
-                                   g_param_spec_object ("nbin-mass",
+	g_object_class_install_property (object_class,
+	                                 PROP_MASS_FUNC,
+	                                 g_param_spec_object ("mass-function",
+	                                                      NULL,
+	                                                      "Halo mass function",
+	                                                      NC_TYPE_HALO_MASS_FUNCTION,
+	                                                      G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+	g_object_class_install_property (object_class,
+	                                 PROP_MASS_KNOTS,
+	                                 g_param_spec_object ("mass-knots",
+	                                                      NULL,
+	                                                      "The mass knots",
+	                                                      NCM_TYPE_VECTOR,
+	                                                      G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+	g_object_class_install_property (object_class,
+                                   PROP_REDSHIFT,
+                                   g_param_spec_double ("redshift",
                                                         NULL,
-                                                        "Number of mass bins",
-                                                        0, 1000, 20,
+                                                        "Redshift",
+                                                        0.0, 2.0, 0.0,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
+	g_object_class_install_property (object_class,
+                                   PROP_VOLUME,
+                                   g_param_spec_double ("volume",
+                                                        NULL,
+                                                        "Volume of the box [Mpc^3 / h^3](simulation)",
+                                                        10, 1.0e13, 452984832000.0,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
   
-  data_class->prepare    = &_nc_data_cluster_counts_box_poisson_prepare;
-  data_class->resample   = &_nc_data_cluster_counts_box_poisson_resample;
+  data_class->prepare      = &_nc_data_cluster_counts_box_poisson_prepare;
+	poisson_class->set_size  = &_nc_data_cluster_counts_box_poisson_set_size;
+	poisson_class->mean_func = &_nc_data_cluster_counts_box_poisson_mean_func;
 }
 
-static void
+typedef struct _NcDataClusterCountsBoxPoissonArg
+{
+  NcDataClusterCountsBoxPoisson *cpoisson;
+	NcHICosmo *cosmo;
+} NcDataClusterCountsBoxPoissonArg;
+
+static gdouble 
+_nc_data_cluster_counts_box_poisson_dndlog10M (gdouble log10M, gpointer userdata)
+{
+  NcDataClusterCountsBoxPoissonArg *arg = (NcDataClusterCountsBoxPoissonArg *) userdata;
+	const gdouble lnM = log10M * M_LN10;
+	return M_LN10 * nc_halo_mass_function_dn_dlnM (arg->cpoisson->mfp, arg->cosmo, lnM, arg->cpoisson->redshift);
+}
+
+static void 
 _nc_data_cluster_counts_box_poisson_prepare (NcmData *data, NcmMSet *mset)
 {
-  NcDataClusterCountsBoxPoisson *cpoisson = C_DATA_CLUSTER_COUNTS_BOX_POISSON (data);
-  ncm_data_prepare (NCM_DATA (cpoisson->ncount), mset);
+  NcDataClusterCountsBoxPoisson *cpoisson = NC_DATA_CLUSTER_COUNTS_BOX_POISSON (data);
+  NcHICosmo *cosmo = NC_HICOSMO (ncm_mset_peek (mset, nc_hicosmo_id ()));
+	NcDataClusterCountsBoxPoissonArg arg = {cpoisson, cosmo};
+  const gdouble log10Ml = ncm_vector_get (cpoisson->mass_knots, 0);
+	const gdouble log10Mu = ncm_vector_get (cpoisson->mass_knots, ncm_vector_len (cpoisson->mass_knots) - 1);
+	gsl_function F;
+
+  g_assert (cpoisson->mfp != NULL);
+	
+  nc_halo_mass_function_prepare_if_needed (cpoisson->mfp, cosmo);
+
+	F.function = &_nc_data_cluster_counts_box_poisson_dndlog10M;
+	F.params   = &arg;
+	
+  ncm_spline_set_func (cpoisson->dndlog10M, NCM_SPLINE_FUNCTION_SPLINE, &F, log10Ml, log10Mu, 0, 1.0e-9);
 }
 
-static void
-_nc_data_cluster_counts_box_poisson_resample (NcmData *data, NcmMSet *mset, NcmRNG *rng)
+static void 
+_nc_data_cluster_counts_box_poisson_set_size (NcmDataPoisson *poisson, guint nbins)
 {
-  NcDataClusterCountsBoxPoisson *cpoisson = C_DATA_CLUSTER_COUNTS_BOX_POISSON (data);
-  NcDataClusterNCount *ncount = cpoisson->ncount;
-  NcClusterAbundance *cad = ncount->cad;
-  NcmDataPoisson *poisson = NCM_DATA_POISSON (cpoisson);
-  guint i;
+  NcDataClusterCountsBoxPoisson *cpoisson = NC_DATA_CLUSTER_COUNTS_BOX_POISSON (poisson);
 
-  ncm_data_resample (NCM_DATA (cpoisson->ncount), mset, rng);
-  
-  nc_cluster_abundance_prepare_inv_dNdz (cad, NC_HICOSMO (ncm_mset_peek (mset, nc_hicosmo_id ())),
-                                         cad->lnMi);
-
-  gsl_histogram_reset (poisson->h);
-
-  for (i = 0; i < ncount->np; i++)
-  {
-    g_assert_not_reached ();
-    /* FIXME */
-  }
+  if (nbins != poisson->nbins)
+	{
+    ncm_vector_clear (&cpoisson->mass_knots);
+    if (nbins > 0)
+      cpoisson->mass_knots = ncm_vector_new (nbins + 1);
+	}
+	
+  /* Chain up : end */
+  NCM_DATA_POISSON_CLASS (nc_data_cluster_counts_box_poisson_parent_class)->set_size (poisson, nbins);
 }
 
+static gdouble 
+_nc_data_cluster_counts_box_poisson_mean_func (NcmDataPoisson *poisson, NcmMSet *mset, guint n)
+{
+  NcDataClusterCountsBoxPoisson *cpoisson = NC_DATA_CLUSTER_COUNTS_BOX_POISSON (poisson);
+  /*NcHICosmo *cosmo = NC_HICOSMO (ncm_mset_peek (mset, nc_hicosmo_id ()));*/
+  const gdouble log10Mn   = ncm_vector_get (cpoisson->mass_knots, n);
+	const gdouble log10Mnp1 = ncm_vector_get (cpoisson->mass_knots, n + 1);
+
+  return ncm_spline_eval_integ (cpoisson->dndlog10M, log10Mn, log10Mnp1) * cpoisson->volume;
+}
 
 /**
  * nc_data_cluster_counts_box_poisson_new:
- * @ncount: a #NcClusterAbundance.
- *
+ * @mfp: a #NcHaloMassFunction
+ * 
  * FIXME
  *
  * Returns: FIXME
  */
-NcmData *
-nc_data_cluster_counts_box_poisson_new (NcDataClusterNCount *ncount)
+NcDataClusterCountsBoxPoisson *
+nc_data_cluster_counts_box_poisson_new (NcHaloMassFunction *mfp)
 {
-  NcDataClusterCountsBoxPoisson *cpoisson = g_object_new (NC_TYPE_DATA_CLUSTER_POISSON, 
-                                                 "data-cluster-ncount", ncount,
-                                                 NULL);  
-
-  return NCM_DATA (cpoisson);
+	NcDataClusterCountsBoxPoisson *cpoisson = g_object_new (NC_TYPE_DATA_CLUSTER_COUNTS_BOX_POISSON,
+	                                                        "mass-function", mfp,
+	                                                        NULL);
+	return cpoisson;
 }
 
 /**
- * nc_data_cluster_counts_box_poisson_new_cad:
- * @cad: a #NcClusterAbundance.
+ * nc_data_cluster_counts_box_poisson_init_from_sampling:
+ * @cpoisson: a #NcDataClusterCountsBoxPoisson
+ * @mset: a #NcmMSet
+ * @mass_knots: a #NcmVector containing the histogram knots
+ * @volume: box volume
+ * @redshift: box redshift
+ * @rng: a #NcmRNG
  *
  * FIXME
  *
- * Returns: FIXME
  */
-NcmData *
-nc_data_cluster_counts_box_poisson_new_cad (NcClusterAbundance *cad)
+void
+nc_data_cluster_counts_box_poisson_init_from_sampling (NcDataClusterCountsBoxPoisson *cpoisson, NcmMSet *mset, NcmVector *mass_knots, const gdouble volume, const gdouble redshift, NcmRNG *rng)
 {
-  NcDataClusterNCount *ncount = nc_data_cluster_ncount_new (cad);
-  NcmData *data = nc_data_cluster_counts_box_poisson_new (ncount);  
+  const gint nbins = ncm_vector_len (mass_knots) - 1;
+	
+	g_assert_cmpuint (nbins, >, 0);
 
-  ncm_data_free (NCM_DATA (ncount));
-  return data;
+	ncm_data_poisson_set_size (NCM_DATA_POISSON (cpoisson), nbins);
+  ncm_vector_memcpy (cpoisson->mass_knots, mass_knots);
+
+	cpoisson->redshift = redshift;
+	cpoisson->volume   = volume;
+
+	ncm_data_resample (NCM_DATA (cpoisson), mset, rng);
 }
-

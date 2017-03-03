@@ -410,9 +410,9 @@ nc_halo_mass_function_dn_dlnR (NcHaloMassFunction *mfp, NcHICosmo *cosmo, gdoubl
 gdouble
 nc_halo_mass_function_dn_dlnM (NcHaloMassFunction *mfp, NcHICosmo *cosmo, gdouble lnM, gdouble z)
 {
-  const gdouble lnR         = nc_halo_mass_function_lnM_to_lnR (mfp, cosmo, lnM);
-  const gdouble dn_dlnR     = nc_halo_mass_function_dn_dlnR (mfp, cosmo, lnR, z);
-  const gdouble dn_dlnM     = dn_dlnR / 3.0;
+  const gdouble lnR     = nc_halo_mass_function_lnM_to_lnR (mfp, cosmo, lnM);
+  const gdouble dn_dlnR = nc_halo_mass_function_dn_dlnR (mfp, cosmo, lnR, z);
+  const gdouble dn_dlnM = dn_dlnR / 3.0;
 
   return dn_dlnM;
 }

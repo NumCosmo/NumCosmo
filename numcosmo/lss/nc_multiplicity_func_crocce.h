@@ -61,7 +61,7 @@ struct _NcMultiplicityFuncCrocce
 
 GType nc_multiplicity_func_crocce_get_type (void) G_GNUC_CONST;
 
-NcMultiplicityFunc *nc_multiplicity_func_crocce_new (gdouble A0, gdouble a0, gdouble b0, gdouble c);
+NcMultiplicityFunc *nc_multiplicity_func_crocce_new (gdouble A0, gdouble a0, gdouble b0, gdouble c0);
 void nc_multiplicity_func_crocce_set_A0 (NcMultiplicityFuncCrocce *mulf_crocce, gdouble A0);
 gdouble nc_multiplicity_func_crocce_get_A0 (const NcMultiplicityFuncCrocce *mulf_crocce);
 void nc_multiplicity_func_crocce_set_a0 (NcMultiplicityFuncCrocce *mulf_crocce, gdouble a0);

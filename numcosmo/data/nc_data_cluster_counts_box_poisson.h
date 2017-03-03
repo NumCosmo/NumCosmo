@@ -54,13 +54,17 @@ struct _NcDataClusterCountsBoxPoisson
 {
   /*< private >*/
   NcmDataPoisson parent_instance;
-  NcHaloMassFunction *mfp;	
+  NcHaloMassFunction *mfp;
+  NcmVector *mass_knots;
+	gdouble redshift;
+  gdouble volume;
+	NcmSpline *dndlog10M;
 };
 
 GType nc_data_cluster_counts_box_poisson_get_type (void) G_GNUC_CONST;
 
-NcmData *nc_data_cluster_counts_box_poisson_new_cad (NcClusterAbundance *cad);
-NcmData *nc_data_cluster_counts_box_poisson_new (NcDataClusterNCount *ncount);
+NcDataClusterCountsBoxPoisson *nc_data_cluster_counts_box_poisson_new (NcHaloMassFunction *mfp);
+void nc_data_cluster_counts_box_poisson_init_from_sampling (NcDataClusterCountsBoxPoisson *cpoisson, NcmMSet *mset, NcmVector *mass_knots, const gdouble volume, const gdouble redshift, NcmRNG *rng);
 
 G_END_DECLS
 
