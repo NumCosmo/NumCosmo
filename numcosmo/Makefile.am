@@ -288,6 +288,7 @@ nc_headers = \
 	nc_planck_fi_cor_ttteee.h     \
 	nc_cbe_precision.h            \
 	nc_cbe.h                      \
+	model/nc_hicosmo_gcg.h        \
 	model/nc_hicosmo_de.h         \
 	model/nc_hicosmo_de_reparam_ok.h \
 	model/nc_hicosmo_de_reparam_cmb.h \
@@ -413,6 +414,7 @@ nc_sources = \
 	nc_planck_fi_cor_ttteee.c     \
 	nc_cbe_precision.c            \
 	nc_cbe.c                      \
+	model/nc_hicosmo_gcg.c        \
 	model/nc_hicosmo_de.c         \
 	model/nc_hicosmo_de_reparam_ok.c \
 	model/nc_hicosmo_de_reparam_cmb.c \

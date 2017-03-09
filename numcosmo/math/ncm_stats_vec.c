@@ -1160,6 +1160,14 @@ ncm_stats_vec_get_subsample_autocorr_tau (NcmStatsVec *svec, guint p, guint subs
  *
  */
 /**
+ * ncm_stats_vec_len:
+ * @svec: a #NcmStatsVec.
+ *
+ * Gets @svec length.
+ * 
+ * Returns: number of variables in @svec.
+ */
+/**
  * ncm_stats_vec_get_mean:
  * @svec: a #NcmStatsVec
  * @i: a variable index

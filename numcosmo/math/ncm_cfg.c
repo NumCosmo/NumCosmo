@@ -60,6 +60,7 @@
 #include "model/nc_hicosmo_qlinear.h"
 #include "model/nc_hicosmo_qspline.h"
 #include "model/nc_hicosmo_lcdm.h"
+#include "model/nc_hicosmo_gcg.h"
 #include "model/nc_hicosmo_de_xcdm.h"
 #include "model/nc_hicosmo_de_linder.h"
 #include "model/nc_hicosmo_de_pad.h"
@@ -324,6 +325,7 @@ ncm_cfg_init (void)
   ncm_cfg_register_obj (NC_TYPE_HICOSMO_QSPLINE);
   ncm_cfg_register_obj (NC_TYPE_HICOSMO_QSPLINE_CONT_PRIOR);
   ncm_cfg_register_obj (NC_TYPE_HICOSMO_LCDM);
+  ncm_cfg_register_obj (NC_TYPE_HICOSMO_GCG);
   ncm_cfg_register_obj (NC_TYPE_HICOSMO_DE_XCDM);
   ncm_cfg_register_obj (NC_TYPE_HICOSMO_DE_LINDER);
   ncm_cfg_register_obj (NC_TYPE_HICOSMO_DE_PAD);
@@ -334,6 +336,9 @@ ncm_cfg_init (void)
   ncm_cfg_register_obj (NC_TYPE_HICOSMO_DE_REPARAM_OK);
   ncm_cfg_register_obj (NC_TYPE_HICOSMO_DE_REPARAM_CMB);
 
+  ncm_cfg_register_obj (NC_TYPE_HICOSMO_GCG_REPARAM_OK);
+  ncm_cfg_register_obj (NC_TYPE_HICOSMO_GCG_REPARAM_CMB);
+  
   ncm_cfg_register_obj (NC_TYPE_HIPRIM_POWER_LAW);
   ncm_cfg_register_obj (NC_TYPE_HIPRIM_ATAN);
   ncm_cfg_register_obj (NC_TYPE_HIPRIM_EXPC);
