@@ -140,6 +140,7 @@ G_INLINE_FUNC NcmVector *ncm_stats_vec_peek_x (NcmStatsVec *svec);
 G_INLINE_FUNC void ncm_stats_vec_set (NcmStatsVec *svec, guint i, gdouble x_i);
 G_INLINE_FUNC gdouble ncm_stats_vec_get (NcmStatsVec *svec, guint i);
 G_INLINE_FUNC void ncm_stats_vec_update (NcmStatsVec *svec);
+G_INLINE_FUNC guint ncm_stats_vec_len (NcmStatsVec *svec);
 G_INLINE_FUNC gdouble ncm_stats_vec_get_mean (NcmStatsVec *svec, guint i);
 G_INLINE_FUNC gdouble ncm_stats_vec_get_var (NcmStatsVec *svec, guint i);
 G_INLINE_FUNC gdouble ncm_stats_vec_get_sd (NcmStatsVec *svec, guint i);
@@ -186,6 +187,12 @@ G_INLINE_FUNC void
 ncm_stats_vec_update (NcmStatsVec *svec)
 {
   ncm_stats_vec_update_weight (svec, 1.0);
+}
+
+G_INLINE_FUNC guint 
+ncm_stats_vec_len (NcmStatsVec *svec)
+{
+  return svec->len;
 }
 
 G_INLINE_FUNC gdouble 

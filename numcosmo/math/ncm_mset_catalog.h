@@ -200,6 +200,8 @@ NcmStatsDist1d *ncm_mset_catalog_calc_add_param_distrib (NcmMSetCatalog *mcat, g
 void ncm_mset_catalog_calc_param_ensemble_evol (NcmMSetCatalog *mcat, const NcmMSetPIndex *pi, guint nsteps, NcmFitRunMsgs mtype, NcmVector **pval, NcmMatrix **t_evol);
 void ncm_mset_catalog_calc_add_param_ensemble_evol (NcmMSetCatalog *mcat, guint add_param, guint nsteps, NcmFitRunMsgs mtype, NcmVector **pval, NcmMatrix **t_evol);
 
+NcmVector *ncm_mset_catalog_calc_params_chi2 (NcmMSetCatalog *mcat, guint *r);
+
 #define NCM_MSET_CATALOG_EXTNAME "NcmMSetCatalog:DATA"
 #define NCM_MSET_CATALOG_M2LNL_COLNAME "NcmFit:m2lnL"
 #define NCM_MSET_CATALOG_M2LNL_SYMBOL "-2\\ln(L)"

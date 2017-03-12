@@ -3274,7 +3274,7 @@ _ncm_mset_catalog_calc_ensemble_evol (NcmMSetCatalog *mcat, guint vi, guint nste
   NcmVector *pv       = ncm_vector_new (nsteps);
   const gdouble pmin  = ncm_vector_get (mcat->params_min, vi);
   const gdouble pmax  = ncm_vector_get (mcat->params_max, vi);
-  
+
   guint i, t;
 
   *pval   = pv;
@@ -3381,4 +3381,58 @@ ncm_mset_catalog_calc_add_param_ensemble_evol (NcmMSetCatalog *mcat, guint add_p
 {
   g_assert_cmpuint (add_param, <, mcat->nadd_vals);
   _ncm_mset_catalog_calc_ensemble_evol (mcat, add_param, nsteps, mtype, pval, t_evol);
+}
+
+
+/**
+ * ncm_mset_catalog_calc_params_chi2:
+ * @mcat: a #NcmMSetCatalog
+ * @r: (out): $\chi^2_r$ dimension 
+ *
+ * Calculates the $\chi^2$ of the ensemble means from last ensemble to the first.
+ *
+ * Returns: (transfer full): a #NcmVector containing the $\chi^2$ values.
+ */
+NcmVector *
+ncm_mset_catalog_calc_params_chi2 (NcmMSetCatalog *mcat, guint *r)
+{
+  gint last_t           = ncm_mset_catalog_max_time (mcat);
+  const guint len       = ncm_stats_vec_len (mcat->e_stats);
+  NcmStatsVec *part_e   = ncm_stats_vec_new (len, NCM_STATS_VEC_VAR, FALSE);
+  NcmVector *chi2       = ncm_vector_new (len);
+  gint i;
+
+  r[0] = len;
+  
+  for (i = last_t - 1; i >= 0; i--)
+  {
+    NcmVector *e_mean_i = ncm_mset_catalog_peek_e_mean_t (mcat, i);
+    gint j;
+
+    ncm_stats_vec_append (part_e, e_mean_i, FALSE);
+
+    if (i < last_t - 10)
+    {
+      ncm_vector_set_zero (chi2);
+
+      for (j = last_t - 1; j >= i; j--)
+      {
+        NcmVector *e_mean_j = ncm_mset_catalog_peek_e_mean_t (mcat, j);
+        guint k;
+
+        for (k = 0; k < len; k++)
+        {
+          const gdouble e_mean_jk    = ncm_vector_get (e_mean_j, k);
+          const gdouble e_mean_to_ik = ncm_stats_vec_get_mean (part_e, k);
+          const gdouble e_var_to_ik  = ncm_stats_vec_get_var (part_e, k);
+          
+          ncm_vector_addto (chi2, k, gsl_pow_2 (e_mean_jk - e_mean_to_ik) / e_var_to_ik);
+     if (k == 0){     
+          //printf ("% 22.15g % 22.15g % 22.15g % 22.15g % 22.15g\n", e_mean_jk, e_mean_to_ik, e_var_to_ik, ncm_stats_vec_get_sd (part_e, k), gsl_pow_2 (e_mean_jk - e_mean_to_ik) / e_var_to_ik);
+          ncm_vector_log_vals (chi2, "partial chi2: ", "%f");}
+        }
+      }
+      ncm_vector_log_vals (chi2, "chi2: ", "%f");
+    }
+  }
 }
