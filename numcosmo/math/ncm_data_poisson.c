@@ -474,3 +474,53 @@ ncm_data_poisson_get_sum (NcmDataPoisson *poisson)
 
 	return hsum;
 }
+
+/**
+ * ncm_data_poisson_get_hist_vals:
+ * @poisson: a #NcmDataPoisson
+ *
+ * Gets the vector containing the bins values.
+ * 
+ * Returns: (transfer full): vector containing the bins values.
+ */
+NcmVector *
+ncm_data_poisson_get_hist_vals (NcmDataPoisson *poisson)
+{
+	guint i;
+	NcmVector *v = ncm_vector_new (poisson->h->n);
+
+	for (i = 0; i < poisson->h->n; i++)
+	{
+		const gdouble N_i = gsl_histogram_get (poisson->h, i);
+		ncm_vector_set (v, i, N_i);
+	}
+
+	return v;
+}
+
+/**
+ * ncm_data_poisson_get_hist_means:
+ * @poisson: a #NcmDataPoisson
+ * @mset: a #NcmMSet
+ *
+ * Gets the vector containing the bins values.
+ * 
+ * Returns: (transfer full): vector containing the bins values.
+ */
+NcmVector *
+ncm_data_poisson_get_hist_means (NcmDataPoisson *poisson, NcmMSet *mset)
+{
+  NcmDataPoissonClass *poisson_class = NCM_DATA_POISSON_GET_CLASS (poisson);
+	NcmVector *v = ncm_vector_new (poisson->h->n);
+  guint i;
+
+	ncm_data_prepare (NCM_DATA (poisson), mset);
+
+	for (i = 0; i < poisson->h->n; i++)
+	{
+    const gdouble lambda_i = poisson_class->mean_func (poisson, mset, i);
+		ncm_vector_set (v, i, lambda_i);
+	}
+
+	return v;
+}
