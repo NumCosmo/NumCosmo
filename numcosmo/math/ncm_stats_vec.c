@@ -889,12 +889,11 @@ static void
 _ncm_stats_vec_get_autocorr_alloc (NcmStatsVec *svec, guint size)
 {
 #ifdef NUMCOSMO_HAVE_FFTW3
-  guint effsize = 2 * size;
+  const guint effsize  = ncm_util_fact_size (2 * size);
+  
   if (!svec->save_x)
     g_error ("_ncm_stats_vec_get_autocorr_alloc: NcmStatsVec must have saved data to calculate autocorrelation.");
-
-  effsize = exp2 (ceil (log2 (effsize)));
-
+  
   if (svec->fft_size < effsize)
   {
     g_clear_pointer (&svec->param_fft,  fftw_free);
@@ -950,6 +949,7 @@ _ncm_stats_vec_get_autocov (NcmStatsVec *svec, guint p, guint subsample, guint p
       {
         guint j;
         gdouble e_mean = 0.0;
+
         for (j = 0; j < subsample; j++)
         {
           e_mean += ncm_vector_get (g_ptr_array_index (svec->saved_x, (i + pad) * subsample + j), p);
@@ -966,7 +966,7 @@ _ncm_stats_vec_get_autocov (NcmStatsVec *svec, guint p, guint subsample, guint p
         svec->param_data[i] = (ncm_vector_get (g_ptr_array_index (svec->saved_x, i + pad), p) - mean);
       }
     }
-
+    
     fftw_execute (svec->param_r2c);
 
     for (i = 0; i < svec->fft_plan_size / 2 + 1; i++)
@@ -1044,7 +1044,6 @@ ncm_stats_vec_get_subsample_autocorr (NcmStatsVec *svec, guint p, guint subsampl
  * @svec: a #NcmStatsVec
  * @p: parameter id
  * @max_lag: max lag in the computation
- * @min_rho: minimum autocorrelation to be considered in the sum
  *
  * Calculates the integrated autocorrelation time for the parameter @p
  * using all rows of data.
@@ -1055,23 +1054,26 @@ ncm_stats_vec_get_subsample_autocorr (NcmStatsVec *svec, guint p, guint subsampl
  * Returns: the integrated autocorrelation time of the whole data.
  */
 gdouble
-ncm_stats_vec_get_autocorr_tau (NcmStatsVec *svec, guint p, guint max_lag, const gdouble min_rho)
+ncm_stats_vec_get_autocorr_tau (NcmStatsVec *svec, const guint p, const guint max_lag)
 {
 #ifdef NUMCOSMO_HAVE_FFTW3
   guint i;
   gdouble tau = 0.0;
+  const guint Imax_lag = (max_lag == 0) ? svec->nitens / 10 : max_lag;
+  const guint Fmax_lag = (Imax_lag > 1000) ? 1000 : Imax_lag;
 
   _ncm_stats_vec_get_autocov (svec, p, 1, 0);
-  if (max_lag == 0 || max_lag > svec->nitens)
-    max_lag = svec->nitens;
 
-  for (i = 1; i < max_lag; i++)
+  g_assert_cmpuint (Fmax_lag, >, 0);
+  g_assert_cmpuint (Fmax_lag, <, svec->nitens);
+
   {
-    gdouble rho_i = svec->param_data[i] / svec->param_data[0];
-    if (rho_i < min_rho)
-      break;
-    /*printf ("# self cor %u % 20.15g\n", i, rho_i);*/
-    tau += rho_i;
+    
+    for (i = 1; i < Fmax_lag + 1; i++)
+    {
+      const gdouble rho_i = svec->param_data[i] / svec->param_data[0];
+      tau += rho_i;
+    }
   }
 
   tau = 1.0 + 2.0 * tau;
@@ -1089,7 +1091,6 @@ ncm_stats_vec_get_autocorr_tau (NcmStatsVec *svec, guint p, guint max_lag, const
  * @p: parameter id
  * @subsample: size of the subsample ($>0$)
  * @max_lag: max lag in the computation
- * @min_rho: minimum autocorrelation to be considered in the sum
  *
  * Calculates the integrated autocorrelation time for the parameter @p
  * using the @subsample parameter.
@@ -1097,22 +1098,24 @@ ncm_stats_vec_get_autocorr_tau (NcmStatsVec *svec, guint p, guint max_lag, const
  * Returns: the integrated autocorrelation time of data with @subsample.
  */
 gdouble
-ncm_stats_vec_get_subsample_autocorr_tau (NcmStatsVec *svec, guint p, guint subsample, guint max_lag, const gdouble min_rho)
+ncm_stats_vec_get_subsample_autocorr_tau (NcmStatsVec *svec, const guint p, const guint subsample, const guint max_lag)
 {
 #ifdef NUMCOSMO_HAVE_FFTW3
   guint i;
   gdouble tau = 0.0;
   guint eff_nitens = svec->nitens / subsample;
+  const guint Imax_lag = (max_lag == 0) ? eff_nitens / 10 : max_lag;
+  const guint Fmax_lag = (Imax_lag > 1000) ? 1000 : Imax_lag;
 
   _ncm_stats_vec_get_autocov (svec, p, subsample, 0);
-  if (max_lag == 0 || max_lag > eff_nitens)
-    max_lag = eff_nitens;
 
-  for (i = 1; i < max_lag; i++)
+  g_assert_cmpuint (Fmax_lag, >, 0);
+  g_assert_cmpuint (Fmax_lag, <, eff_nitens);
+
+  for (i = 1; i < Fmax_lag + 1; i++)
   {
-    gdouble rho_i = svec->param_data[i] / svec->param_data[0];
-    if (rho_i < min_rho)
-      break;
+    const gdouble rho_i = svec->param_data[i] / svec->param_data[0];
+
     tau += rho_i;
   }
 

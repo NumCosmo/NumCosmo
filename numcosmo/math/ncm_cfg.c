@@ -248,8 +248,10 @@ void
 ncm_cfg_init (void)
 {
   const gchar *home;
+
   if (numcosmo_init)
     return;
+  
   home = g_get_home_dir ();
   numcosmo_path = g_build_filename (home, ".numcosmo", NULL);
   if (!g_file_test (numcosmo_path, G_FILE_TEST_EXISTS))
@@ -278,6 +280,13 @@ ncm_cfg_init (void)
 
   gsl_err = gsl_set_error_handler_off ();
 
+#ifdef NUMCOSMO_HAVE_FFTW3
+  fftw_set_timelimit (10.0);
+#endif /* NUMCOSMO_HAVE_FFTW3 */
+#ifdef HAVE_FFTW3F
+  fftwf_set_timelimit (10.0);
+#endif /* HAVE_FFTW3F */
+  
 #if !GLIB_CHECK_VERSION(2,36,0)
   g_type_init ();
 #endif
@@ -451,7 +460,7 @@ ncm_cfg_init (void)
   _nc_hicosmo_register_functions ();
   _nc_hicosmo_de_register_functions ();
   _nc_hireion_register_functions ();
-    _nc_distance_register_functions ();
+  _nc_distance_register_functions ();
   _nc_planck_fi_cor_tt_register_functions ();
 
   numcosmo_init = TRUE;
@@ -1426,18 +1435,30 @@ ncm_cfg_array_to_variant (GArray *a, const GVariantType *etype)
   return g_variant_ref_sink (vvar);
 }
 
-guint fftw_default_flags = FFTW_PATIENT; /* FFTW_ESTIMATE, FFTW_MEASURE, FFTW_PATIENT, FFTW_EXHAUSTIVE */
+gdouble fftw_default_timeout = 10.0;
+
+#ifdef NUMCOSMO_HAVE_FFTW3
+guint fftw_default_flags = FFTW_EXHAUSTIVE; /* FFTW_ESTIMATE, FFTW_MEASURE, FFTW_PATIENT, FFTW_EXHAUSTIVE */
 
 /**
  * ncm_cfg_set_fftw_default_flag:
- * @flag: a FFTW library flag.
+ * @flag: a FFTW library flag
+ * @timeout: planner time out in seconds
  *
  * Sets the default FFTW flag (FFTW_ESTIMATE, FFTW_MEASURE, FFTW_PATIENT, FFTW_EXHAUSTIVE)
- * to be used when building plans.
+ * to be used when building plans. The variable @timeout sets the maximum time spended on
+ * planners. 
  *
  */
 void
-ncm_cfg_set_fftw_default_flag (guint flag)
+ncm_cfg_set_fftw_default_flag (guint flag, const gdouble timeout)
 {
   fftw_default_flags = flag;
+  fftw_set_timelimit (10.0);
+#ifdef HAVE_FFTW3F
+  fftwf_set_timelimit (10.0);
+#endif /* HAVE_FFTW3F */
 }
+#else
+guint fftw_default_flags = 0;
+#endif /* NUMCOSMO_HAVE_FFTW3 */

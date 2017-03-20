@@ -2506,7 +2506,7 @@ ncm_mset_catalog_estimate_autocorrelation_tau (NcmMSetCatalog *mcat, gboolean fo
   {
     for (p = 0; p < total; p++)
     {
-      const gdouble tau = ncm_stats_vec_get_autocorr_tau (mcat->pstats, p, 0, 0.0);
+      const gdouble tau = ncm_stats_vec_get_autocorr_tau (mcat->pstats, p, 0);
       ncm_vector_set (mcat->tau, p, tau);
     }
   }
@@ -2514,7 +2514,7 @@ ncm_mset_catalog_estimate_autocorrelation_tau (NcmMSetCatalog *mcat, gboolean fo
   {
     for (p = 0; p < total; p++)
     {
-      const gdouble tau = ncm_stats_vec_get_subsample_autocorr_tau (mcat->pstats, p, mcat->nchains, 0, 0.0);
+      const gdouble tau = ncm_stats_vec_get_subsample_autocorr_tau (mcat->pstats, p, mcat->nchains, 0);
       ncm_vector_set (mcat->tau, p, tau);
     }
   }

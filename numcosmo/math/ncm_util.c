@@ -1279,6 +1279,54 @@ ncm_util_print_bits (guint64 num)
   }
 }
 
+/**
+ * ncm_util_fact_size:
+ * @n: a unsigned long integer
+ * 
+ * Calculate the smallest factorization of @n such that
+ * $n_f = 2^\mu \times 3^\nu \times 5^\alpha \times 7^\beta$
+ * and $n_f \geq n$.
+ * 
+ * This functions is useful to find a fft size such that fftw
+ * can optimized it more easily.
+ * 
+ * Returns: $n_f$
+ */
+gulong
+ncm_util_fact_size (const gulong n)
+{
+  if (n == 1)
+    return 0;
+  else
+  {
+    const gulong r2 = n % 2;
+    const gulong r3 = n % 3;
+    const gulong r5 = n % 5;
+    const gulong r7 = n % 7;
+    gulong m = 1;
+
+    if (r2 == 0)
+      m *= 2;
+    if (r3 == 0)
+      m *= 3;
+    if (r5 == 0)
+      m *= 5;
+    if (r7 == 0)
+      m *= 7;
+
+    if (m != 1)
+    {
+      if (n / m == 1)
+        return m;
+      else
+        return m * ncm_util_fact_size (n / m);
+    }
+    else
+      return ncm_util_fact_size (n + 1);
+  }
+}
+
+
 void
 _ncm_util_set_destroyed (gpointer b)
 {

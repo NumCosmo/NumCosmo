@@ -133,8 +133,8 @@ gdouble ncm_stats_vec_get_quantile_spread (NcmStatsVec *svec, guint i);
 
 NcmVector *ncm_stats_vec_get_autocorr (NcmStatsVec *svec, guint p);
 NcmVector *ncm_stats_vec_get_subsample_autocorr (NcmStatsVec *svec, guint p, guint subsample);
-gdouble ncm_stats_vec_get_autocorr_tau (NcmStatsVec *svec, guint p, guint max_lag, const gdouble min_rho);
-gdouble ncm_stats_vec_get_subsample_autocorr_tau (NcmStatsVec *svec, guint p, guint subsample, guint max_lag, const gdouble min_rho);
+gdouble ncm_stats_vec_get_autocorr_tau (NcmStatsVec *svec, guint p, const guint max_lag);
+gdouble ncm_stats_vec_get_subsample_autocorr_tau (NcmStatsVec *svec, guint p, guint subsample, const guint max_lag);
 
 G_INLINE_FUNC NcmVector *ncm_stats_vec_peek_x (NcmStatsVec *svec);
 G_INLINE_FUNC void ncm_stats_vec_set (NcmStatsVec *svec, guint i, gdouble x_i);

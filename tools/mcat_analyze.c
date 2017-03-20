@@ -86,6 +86,7 @@ main (gint argc, gchar *argv[])
   gboolean list_dist      = FALSE;
   gboolean list_dist_z    = FALSE;
   gboolean use_direct     = FALSE;
+  gboolean dump           = FALSE;
   gdouble zi = 0.0;
   gdouble zf = 1.0;
   gint nsteps = 100;
@@ -126,6 +127,7 @@ main (gint argc, gchar *argv[])
     { "median-error",   'e', 0, G_OPTION_ARG_STRING_ARRAY, &median_errors,  "Print median and 1-3 sigma asymmetric error bars of the model parameters' to be analyzed.", NULL},
     { "bestfit-error",  's', 0, G_OPTION_ARG_STRING_ARRAY, &bestfit_errors, "Print best fit and 1-3 sigma asymmetric error bars of the model parameters' to be analyzed.", NULL},
     { "funcs-pvalue",   'F', 0, G_OPTION_ARG_STRING_ARRAY, &funcs_pvalue,   "Print the p-value of the function at each redshift, giving the upper integration limits." },
+    { "dump",           'D', 0, G_OPTION_ARG_NONE,         &dump,           "Print all chains interweaved." },
     { NULL }
   };
 
@@ -805,6 +807,18 @@ main (gint argc, gchar *argv[])
       nc_distance_clear (&dist);
     }
 
+    if (dump)
+    {
+      const guint cat_size = ncm_mset_catalog_len (mcat);
+      guint i;
+
+      for (i = 0; i < cat_size; i++)
+      {
+        NcmVector *vec = ncm_mset_catalog_peek_row (mcat, i);
+        ncm_vector_log_vals (vec, "", "% 22.15g");
+      }
+    }
+    
     ncm_mset_clear (&mset);
     ncm_mset_catalog_clear (&mcat);
   } 
