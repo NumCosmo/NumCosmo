@@ -91,6 +91,9 @@ void ncm_data_poisson_set_size (NcmDataPoisson *poisson, guint nbins);
 guint ncm_data_poisson_get_size (NcmDataPoisson *poisson);
 gdouble ncm_data_poisson_get_sum (NcmDataPoisson *poisson);
 
+NcmVector *ncm_data_poisson_get_hist_vals (NcmDataPoisson *poisson);
+NcmVector *ncm_data_poisson_get_hist_means (NcmDataPoisson *poisson, NcmMSet *mset);
+
 G_END_DECLS
 
 #endif /* _NCM_DATA_POISSON_H_ */
