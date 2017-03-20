@@ -4,4 +4,10 @@ compiler:
   - clang
   - gcc
 
-before_install: ./autogen.sh
+before_install:
+  - sudo apt-get -qq update
+  - sudo apt-get install -y autotools-dev libtool 
+  - sudo apt-get install -y gtk-doc-tools gobject-introspection gir1.2-glib-2.0 libgirepository1.0-dev 
+  - sudo apt-get install -y pkg-config libglib2.0-dev libgmp3-dev libmpfr-dev libgsl0-dev libfftw3-dev
+  - ./autogen.sh
+
