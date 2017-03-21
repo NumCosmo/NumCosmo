@@ -40,12 +40,15 @@ compiler:
   - gcc
 
 before_install:
-  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew update                           ; fi
-  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew tap homebrew/science             ; fi
-  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew install gobject-introspection    ; fi
-  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew install gcc gsl gtk-doc gmp mpfr ; fi
-  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew install fftw cfitsio sundials    ; fi
-  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew install nlopt                    ; fi
+  - if [[ "$CC" = "gcc" ]];              then export CXX="g++-4.8" CC="gcc-4.8"   ; fi
+  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then export PATH="/usr/local/bin:$PATH"  ; fi
+  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew update                         ; fi
+  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew tap homebrew/science           ; fi
+  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew install gcc --without-multilib ; fi
+  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew install gobject-introspection  ; fi
+  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew install gsl gtk-doc gmp mpfr   ; fi
+  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew install fftw cfitsio sundials  ; fi
+  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew install nlopt                  ; fi
   - NOCONFIGURE=yes ./autogen.sh
 
 script: 
