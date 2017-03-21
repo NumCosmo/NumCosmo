@@ -23,6 +23,10 @@ addons:
     - libcfitsio3-dev
     - libsundials-serial-dev
     - libnlopt-dev
+    - texlive
+    - texlive-bibtex-extra
+    - texlive-science
+    - tex4ht
 
 compiler:
   - clang
