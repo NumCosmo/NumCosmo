@@ -256,8 +256,7 @@ typedef double complex cmplx;
 #    define Inf (1./0.) 
 #    define NaN (0./0.) 
 #  endif
-
-#ifndef USE_CONTINUED_FRACTION
+/*
 static inline cmplx cpolar(double r, double t)
 {
   if (r == 0.0 && !isnan(t))
@@ -265,8 +264,7 @@ static inline cmplx cpolar(double r, double t)
   else
     return C(r * cos(t), r * sin(t));
 }
-#endif
-
+*/
 #endif // !__cplusplus, i.e. pure C (requires C99 features)
 
 /////////////////////////////////////////////////////////////////////////

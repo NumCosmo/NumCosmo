@@ -834,7 +834,7 @@ _xn_jl_finite_x (gint l, guint j, mpq_t q, mpz_t sum_sin, mpz_t sum_cos, mpz_t c
 
   for (n = 0; n + 1 < j; n++)
   {
-    glong wsum = abs ((glong)l - ((glong)n + 1) - 1) % 2;
+    glong wsum = labs ((glong)l - ((glong)n + 1) - 1) % 2;
     mpz_ptr lsum = (wsum == 0) ? sum_sin : sum_cos;
     mpz_mul_ui (term, term, (l - n) * (1L + l + n));
     mpz_divexact_ui (term, term, 2L * (1L + n));
