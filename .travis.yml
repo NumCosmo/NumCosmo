@@ -42,7 +42,7 @@ compiler:
 before_install:
   - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew update                        ; fi
   - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew install gobject-introspection ; fi
-  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew install gfortran ; fi
+  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew install gcc ; fi
   - NOCONFIGURE=yes ./autogen.sh
 
 script: 
