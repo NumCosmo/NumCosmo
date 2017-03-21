@@ -23,6 +23,7 @@ AM_CFLAGS = \
 	 -Wno-unused-variable \
 	 -Wno-unused-but-set-variable \
 	 -Wno-maybe-uninitialized \
+	 $(PLC_NOWARN_FLAGS)
 	 $(MY_CFLAGS)
 
 AM_FCFLAGS = \
