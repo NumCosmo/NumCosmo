@@ -2,6 +2,8 @@ language: c
 
 addons:
   apt:
+    sources:
+    - lucid
     packages:
     - gfortran
     - autotools-dev
