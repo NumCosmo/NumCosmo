@@ -39,5 +39,6 @@ before_install:
 script: 
   - ./configure --enable-man --enable-gtk-doc
   - make V=1
+  - echo docs/references.xml.htlatex.log
   - make check
 
