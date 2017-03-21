@@ -43,7 +43,9 @@ G_BEGIN_DECLS
 #define NC_HIPRIM_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS ((obj), NC_TYPE_HIPRIM, NcHIPrimClass))
 
 typedef struct _NcHIPrimClass NcHIPrimClass;
+#ifndef _NC_HICOSMO_H_
 typedef struct _NcHIPrim NcHIPrim;
+#endif /* _NC_HICOSMO_H_ */
 
 /**
  * NcHIPrimImpl:
