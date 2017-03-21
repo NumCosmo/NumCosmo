@@ -28,8 +28,11 @@ compiler:
   - clang
   - gcc
 
-
 before_install:
   - sudo apt-get -qq update
   - NOCONFIGURE=yes ./autogen.sh
+
+script: ./configure && make && make check
+
+
 
