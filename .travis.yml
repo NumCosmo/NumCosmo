@@ -46,7 +46,7 @@ before_install:
 script: 
   - ./configure --enable-man --enable-gtk-doc
   - make V=1
-  - make check
-  - make dist
+  - make check V=1
+  - make dist V=1
 
 
