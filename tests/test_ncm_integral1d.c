@@ -228,7 +228,7 @@ test_ncm_integral1d_sinx_laguerre (TestNcmIntegral1d *test, gconstpointer pdata)
   ncm_integral1d_set_abstol (test->int1d, 0.0);
   result = ncm_integral1d_eval_gauss_laguerre (test->int1d, &err);
   NCM_INTEGRAL1D_TESTCMP (0.5L);
-  g_assert_cmpfloat (fabs (result - (0.5L)), <=, prec);
+  g_assert_cmpfloat (fabs (result - (0.5)), <=, prec);
 
   result = ncm_integral1d_eval_gauss_laguerre_r (test->int1d, 8.0, &err);
   NCM_INTEGRAL1D_TESTCMP (0.0153846153846153846153846153846L);
