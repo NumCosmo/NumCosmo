@@ -23,7 +23,8 @@ compiler:
   - clang
   - gcc
 
+#  - sudo apt-get -qq update
+
 before_install:
-  - sudo apt-get -qq update
   - NOCONFIGURE=yes ./autogen.sh
 
