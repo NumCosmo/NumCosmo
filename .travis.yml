@@ -32,7 +32,8 @@ before_install:
   - sudo apt-get -qq update
   - NOCONFIGURE=yes ./autogen.sh
 
-script: ./configure && make && make check
-
-
+script: 
+  - ./configure --enable-man --enable-gtk-doc
+  - make 
+  - make check
 
