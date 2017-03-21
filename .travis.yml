@@ -40,7 +40,6 @@ compiler:
   - gcc
 
 before_install:
-  - if [[ "$CC" = "gcc" ]];              then export CXX="g++-4.8" CC="gcc-4.8"   ; fi
   - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then export PATH="/usr/local/bin:$PATH"  ; fi
   - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew update                         ; fi
   - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew tap homebrew/science           ; fi
