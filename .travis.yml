@@ -20,6 +20,9 @@ addons:
     - libmpfr-dev
     - libgsl0-dev
     - libfftw3-dev
+    - libcfitsio3-dev
+    - libsundials-serial-dev
+    - libnlopt-dev
 
 compiler:
   - clang
