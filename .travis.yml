@@ -1,10 +1,21 @@
+language: c
+
 addons:
   apt:
     packages:
-    - gcc-4.8
-    - gfortran-4.8
-
-language: c
+    - gfortran
+    - autotools-dev
+    - libtool
+    - gtk-doc-tools
+    - gobject-introspection
+    - gir1.2-glib-2.0
+    - libgirepository1.0-dev
+    - pkg-config
+    - libglib2.0-dev
+    - libgmp3-dev
+    - libmpfr-dev
+    - libgsl0-dev
+    - libfftw3-dev
 
 compiler:
   - clang
@@ -12,8 +23,5 @@ compiler:
 
 before_install:
   - sudo apt-get -qq update
-  - sudo apt-get install -y autotools-dev libtool 
-  - sudo apt-get install -y gtk-doc-tools gobject-introspection gir1.2-glib-2.0 libgirepository1.0-dev 
-  - sudo apt-get install -y pkg-config libglib2.0-dev libgmp3-dev libmpfr-dev libgsl0-dev libfftw3-dev
   - NOCONFIGURE=yes ./autogen.sh
 
