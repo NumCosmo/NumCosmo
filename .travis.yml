@@ -38,6 +38,6 @@ before_install:
 
 script: 
   - ./configure --enable-man --enable-gtk-doc
-  - make 
+  - make V=1
   - make check
 
