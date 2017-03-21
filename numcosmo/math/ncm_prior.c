@@ -122,9 +122,8 @@ ncm_prior_clear (NcmPrior **prior)
  * ncm_prior_is_m2lnL:
  * @prior: a #NcmPrior
  * 
- * Returns true if the prior calculates $-2\ln(L_\mathrm{prior})$ and false
+ * Returns: TRUE if the prior calculates $-2\ln(L_\mathrm{prior})$ and FALSE
  * if it returns $f$ such that $-2\ln(L_\mathrm{prior}) = f^2$.
- * 
  */
 gboolean 
 ncm_prior_is_m2lnL (NcmPrior *prior)

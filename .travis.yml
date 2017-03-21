@@ -1,6 +1,10 @@
 dist: trusty
 sudo: required
 
+os:
+  - linux
+  - osx
+
 language: c
 
 addons:
@@ -36,7 +40,7 @@ compiler:
   - gcc
 
 before_install:
-  - sudo apt-get -qq update
+  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew update          ; fi
   - NOCONFIGURE=yes ./autogen.sh
 
 script: 
