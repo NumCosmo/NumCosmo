@@ -41,9 +41,11 @@ compiler:
 
 before_install:
   - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew update                           ; fi
+  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew tap homebrew/science             ; fi
   - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew install gobject-introspection    ; fi
   - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew install gcc gsl gtk-doc gmp mpfr ; fi
-  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew install fftw                     ; fi
+  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew install fftw cfitsio sundials    ; fi
+  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew install nlopt                    ; fi
   - NOCONFIGURE=yes ./autogen.sh
 
 script: 
