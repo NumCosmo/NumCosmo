@@ -26,6 +26,7 @@ addons:
     - texlive
     - texlive-bibtex-extra
     - texlive-science
+    - texlive-publishers
     - tex4ht
 
 compiler:
