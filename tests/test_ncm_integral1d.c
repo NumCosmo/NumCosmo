@@ -167,7 +167,7 @@ test_ncm_integral1d_free (TestNcmIntegral1d *test, gconstpointer pdata)
 }
 
 #define NCM_INTEGRAL1D_TESTCMP_ABS g_assert_cmpfloat (fabs (result), <=, prec)
-#define NCM_INTEGRAL1D_TESTCMP(d) g_assert_cmpfloat (fabs ((result - (d)) / result), <=, prec)
+#define NCM_INTEGRAL1D_TESTCMP(d) g_assert_cmpfloat (fabs ((result - ((gdouble)d)) / result), <=, prec)
 
 void
 test_ncm_integral1d_sinx_eval (TestNcmIntegral1d *test, gconstpointer pdata)
@@ -184,7 +184,7 @@ test_ncm_integral1d_sinx_eval (TestNcmIntegral1d *test, gconstpointer pdata)
   ncm_integral1d_set_reltol (test->int1d, prec);
   ncm_integral1d_set_abstol (test->int1d, 0.0);
   result = ncm_integral1d_eval (test->int1d, 0.0, 3.0 * ncm_c_pi (), &err);
-  NCM_INTEGRAL1D_TESTCMP (2.0);
+  NCM_INTEGRAL1D_TESTCMP (2.0L);
 }
 
 void
