@@ -193,7 +193,7 @@ BUILT_EXTRA_DIST = $(man_MANS)
 
 CLEANFILES += bibfile.stamp addmathjax.stamp
 
-dist-hook-local: dist-local-check-mans-enabled numcosmo-docs-clean all-local
+dist-hook-local: dist-local-check-mans-enabled all-local
 
 numcosmo-docs-clean: clean
 	cd $(srcdir) && rm -rf xml html
