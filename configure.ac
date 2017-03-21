@@ -175,9 +175,9 @@ dnl  AX_CHECK_COMPILE_FLAG([-Wunreachable-code],[NC_CFLAGS="$NC_CFLAGS -Wunreach
 fi
 
 PLC_NOWARN_FLAGS=""
-AX_CHECK_COMPILE_FLAG([-Wno-unused-variable],        [PLC_NOWARN_FLAGS="$PLC_NOWARN_FLAGS -Wno-unused-variable])
-AX_CHECK_COMPILE_FLAG([-Wno-unused-but-set-variable],[PLC_NOWARN_FLAGS="$PLC_NOWARN_FLAGS -Wno-unused-but-set-variable])
-AX_CHECK_COMPILE_FLAG([-Wno-maybe-uninitialized],    [PLC_NOWARN_FLAGS="$PLC_NOWARN_FLAGS -Wno-maybe-uninitialized])
+AX_CHECK_COMPILE_FLAG([-Wno-unused-variable],        [PLC_NOWARN_FLAGS="$PLC_NOWARN_FLAGS -Wno-unused-variable"])
+AX_CHECK_COMPILE_FLAG([-Wno-unused-but-set-variable],[PLC_NOWARN_FLAGS="$PLC_NOWARN_FLAGS -Wno-unused-but-set-variable"])
+AX_CHECK_COMPILE_FLAG([-Wno-maybe-uninitialized],    [PLC_NOWARN_FLAGS="$PLC_NOWARN_FLAGS -Wno-maybe-uninitialized"])
 AC_SUBST(PLC_NOWARN_FLAGS)
 
 dnl ***************************************************************************
