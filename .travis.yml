@@ -28,6 +28,8 @@ addons:
     - texlive-science
     - texlive-publishers
     - tex4ht
+    - perl
+    - libxml-libxml-perl
 
 compiler:
   - clang
@@ -41,5 +43,6 @@ script:
   - ./configure --enable-man --enable-gtk-doc
   - make V=1
   - cat docs/references.xml.htlatex.log
+  - cat docs/references.xml.xmltogtk.log
   - make check
 
