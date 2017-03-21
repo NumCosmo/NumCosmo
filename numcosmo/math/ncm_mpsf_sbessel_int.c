@@ -834,7 +834,7 @@ _xn_jl_finite_x (gint l, guint j, mpq_t q, mpz_t sum_sin, mpz_t sum_cos, mpz_t c
 
   for (n = 0; n + 1 < j; n++)
   {
-    glong wsum = abs (l - (n + 1) - 1) % 2;
+    glong wsum = abs ((glong)l - ((glong)n + 1) - 1) % 2;
     mpz_ptr lsum = (wsum == 0) ? sum_sin : sum_cos;
     mpz_mul_ui (term, term, (l - n) * (1L + l + n));
     mpz_divexact_ui (term, term, 2L * (1L + n));
@@ -849,7 +849,7 @@ _xn_jl_finite_x (gint l, guint j, mpq_t q, mpz_t sum_sin, mpz_t sum_cos, mpz_t c
     ((signs[wsum]++) % 2 == 0) ? mpz_add (lsum, lsum, sum) : mpz_sub (lsum, lsum, sum);
   }
 
-  if (abs (l-j-2) % 2 == 0) /* Last index n = j - 1 */
+  if (abs ((gint)l - (gint)j - 2) % 2 == 0) /* Last index n = j - 1 */
     mpz_mul (sum_cos, sum_cos, mpq_numref(q));
   else
     mpz_mul (sum_sin, sum_sin, mpq_numref(q));
@@ -955,7 +955,7 @@ _xn_jl_finite_inverse_x (gint l, guint j, mpq_t q, mpz_t sum_sin, mpz_t sum_cos,
   for (n = 0; n < l-j-1; n++)
   {
     gulong k = n + 1L;
-    wsum = (abs(2 + j - (k + 1) - l) % 2);
+    wsum = (labs(2 + (glong)j - ((glong)k + 1) - (glong)l) % 2);
     suml = (wsum == 0) ? sum_sin : sum_cos;
 
     if (have_sum)
@@ -1006,7 +1006,7 @@ _xn_jl_finite_inverse_x (gint l, guint j, mpq_t q, mpz_t sum_sin, mpz_t sum_cos,
     }
   }
 
-  if (last_k[0] && last_k[1] && (abs (last_k[0] - last_k[1]) != 1))
+  if (last_k[0] && last_k[1] && (labs ((glong)last_k[0] - (glong)last_k[1]) != 1))
     g_error ("Series for sin and cos dont converge together %lu %lu.", last_k[0], last_k[1]);
 
   if (last_k[1] > last_k[0])
@@ -1071,7 +1071,7 @@ _xn_jl_finite (guint l, guint j, mpq_t q, mpfr_t res, mp_rnd_t rnd)
       mpz_pow_ui (qd_jm1, mpq_denref(q), j-1);
       mpz_divexact (cor, cor, qd_jm1);
     }
-    if ((abs((l-j-1) / 2) ) % 2 == 1)
+    if ((labs(((glong)l-(glong)j-1) / 2) ) % 2 == 1)
       mpz_neg (cor, cor);
 
   }

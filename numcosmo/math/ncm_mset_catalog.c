@@ -3435,4 +3435,6 @@ ncm_mset_catalog_calc_params_chi2 (NcmMSetCatalog *mcat, guint *r)
       ncm_vector_log_vals (chi2, "chi2: ", "%f");
     }
   }
+
+  return NULL;
 }

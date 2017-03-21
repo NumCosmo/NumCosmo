@@ -166,12 +166,8 @@ typedef guint (*NcHICosmoFuncNMassNu) (NcHICosmo *cosmo);
 typedef void (*NcHICosmoFuncMassNuInfo) (NcHICosmo *cosmo, const guint nu_i, gdouble *mass_eV, gdouble *T_0, gdouble *xi, gdouble *g);
 
 #ifndef __GTK_DOC_IGNORE__
-#  ifndef _NC_HIPRIM_H_
 typedef struct _NcHIPrim NcHIPrim;
-#  endif /* _NC_HIPRIM_H_ */
-#  ifndef _NC_HIREION_H_
 typedef struct _NcHIReion NcHIReion;
-#  endif /* _NC_HIREION_H_ */
 #endif
 
 typedef struct _NcHICosmoFuncZ

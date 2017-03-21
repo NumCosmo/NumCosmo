@@ -44,9 +44,7 @@ G_BEGIN_DECLS
 #define NC_HIREION_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS ((obj), NC_TYPE_HIREION, NcHIReionClass))
 
 typedef struct _NcHIReionClass NcHIReionClass;
-#ifndef _NC_HICOSMO_H_
-typedef struct _NcHIReion NcHIReion;
-#endif /* _NC_HICOSMO_H_ */
+/*typedef struct _NcHIReion NcHIReion;*/ /* already defined in nc_hicosmo.h! */
 
 struct _NcHIReionClass
 {

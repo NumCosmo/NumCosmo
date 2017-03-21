@@ -29,6 +29,7 @@
 #include <glib.h>
 #include <glib-object.h>
 #include <numcosmo/build_cfg.h>
+#include <numcosmo/nc_hicosmo.h>
 #include <numcosmo/math/ncm_c.h>
 #include <numcosmo/math/ncm_model.h>
 #include <numcosmo/math/ncm_mset_func.h>
@@ -43,9 +44,7 @@ G_BEGIN_DECLS
 #define NC_HIPRIM_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS ((obj), NC_TYPE_HIPRIM, NcHIPrimClass))
 
 typedef struct _NcHIPrimClass NcHIPrimClass;
-#ifndef _NC_HICOSMO_H_
-typedef struct _NcHIPrim NcHIPrim;
-#endif /* _NC_HICOSMO_H_ */
+/*typedef struct _NcHIPrim NcHIPrim;*/ /* already defined in nc_hicosmo.h! */
 
 /**
  * NcHIPrimImpl:
