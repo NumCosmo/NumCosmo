@@ -41,8 +41,8 @@ before_install:
 
 script: 
   - ./configure --enable-man --enable-gtk-doc
-  - make V=1
-  - cat docs/references.xml.htlatex.log
-  - cat docs/references.xml.xmltogtk.log
+  - make
   - make check
+  - make dist
+
 
