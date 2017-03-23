@@ -227,7 +227,8 @@ contains
          planck_format=.false.
          status=0
        endif
-       allocate(clin_file(0:lmax_min),stat=status)
+       !allocate(clin_file(0:lmax_min),stat=status)
+       allocate(clin_file(0:lmax_min))
        clin = 0.0_KCL                         ! modification by EH
        if (planck_format) then
          do column = 1, MIN(ncl, ncl_file-1) ! modification by EH

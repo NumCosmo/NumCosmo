@@ -201,9 +201,10 @@ dnl ***************************************************************************
     ;;
   esac
     
-  AX_APPEND_COMPILE_FLAGS([-reentrancy -recursive -threads -automatic -fautomatic -frecursive], [FCFLAGS], [$FCFLAGS_CHECK])
+  AX_APPEND_COMPILE_FLAGS([-reentrancy -recursive -threads -automatic -fautomatic -frecursive -Wno-tabs -Wno-unused-variable -Wno-unused-dummy-argument -Wno-unused-function -Wno-conversion], [FCFLAGS], [$FCFLAGS_CHECK])
   AC_OPENMP()
   AC_SUBST(OPENMP_FCFLAGS)
+
 AC_LANG_POP([Fortran])
 
 dnl ***************************************************************************
@@ -278,6 +279,7 @@ GSL_GLF_REQUIRED_VERSION=1.15
 GSL_ODEIV2_REQUIRED_VERSION=1.15
 FFTW3_REQUIRED_VERSION=3.1.2
 FFTW3_ALLOC_VERSION=3.3.2
+CFITSIO_REQUIRED_VERSION=3.25
 
 AC_SUBST(GLIB_REQUIRED_VERSION)
 AC_SUBST(GSL_REQUIRED_VERSION)
@@ -702,7 +704,7 @@ dnl ***************************************************************************
 dnl Check for cfitsio
 dnl ***************************************************************************
 
-PKG_CHECK_MODULES(CFITSIO, [cfitsio >= 3.25],[
+PKG_CHECK_MODULES(CFITSIO, [cfitsio >= $CFITSIO_REQUIRED_VERSION],[
   AC_DEFINE([HAVE_CFITSIO],[1], [Have the cfitsio package])
   have_cfitsio_support="#define NUMCOSMO_HAVE_CFITSIO 1"])
 AC_SUBST(CFITSIO_CFLAGS)
@@ -1004,3 +1006,4 @@ echo "OPENMP_FCFLAGS = $OPENMP_FCFLAGS"
 echo "LIBS = $LIBS"
 echo "PLC_DEFINES = $PLC_DEFINES"
 echo "PLC_NOWARN_FLAGS = $PLC_NOWARN_FLAGS"
+echo "PLC_FC_NOWARN_FLAGS = $PLC_FC_NOWARN_FLAGS"

@@ -222,6 +222,8 @@ contains
     real(dp), allocatable, dimension(:)   :: W
     real(dp), allocatable, dimension(:,:) :: C, invC_d, V, map
 
+    comm_lowl_compute_lnL = 0.d0
+
     if (present(ierr)) ierr = 0
     id = 1; if (present(handle)) id = handle
     enf_pos_def = .true.; if (present(enforce_pos_def)) enf_pos_def = enforce_pos_def

@@ -156,7 +156,7 @@ MODULE spt_keisler_likelihood
 
     like_sptk = like_sptk+chi2(1,1)/2.d0
 
-   10  continue
+!   10  continue
     
   end SUBROUTINE spt_keisler_likelihood_compute  
   !===============================================================================
