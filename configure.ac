@@ -95,6 +95,8 @@ AC_SUBST(LT_CURRENT_MINUS_AGE)
 AC_CONFIG_HEADERS([config.h])
 
 AM_MAINTAINER_MODE
+
+AX_CODE_COVERAGE
   
 dnl ***************************************************************************
 dnl Gobject Introspection

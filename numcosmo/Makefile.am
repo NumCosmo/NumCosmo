@@ -1,5 +1,7 @@
 ## Process this file with automake to produce Makefile.in
 
+@CODE_COVERAGE_RULES@
+
 if USE_INTERNAL_LIBCUBA
   MAYBE_LIBCUBA  = libcuba
   LIBCUBA_PLACE  = libcuba/libcuba.la
@@ -24,7 +26,8 @@ MY_CFLAGS = \
 	 -I$(PLC_DIR)/cldf    \
 	 -I$(PLC_DIR)/minipmc \
 	 -I$(PLC_DIR)/plik    \
-	 -I$(top_srcdir)
+	 -I$(top_srcdir)      \
+	 $(CODE_COVERAGE_CFLAGS)
 
 AM_CFLAGS =    \
 	 -Wall \
@@ -35,17 +38,18 @@ SUBDIRS = $(MAYBE_LIBCUBA) levmar plc class .
 
 lib_LTLIBRARIES = libnumcosmo.la
 
-libnumcosmo_la_LIBADD =     \
-	$(SUNDIALS_LIBS)    \
-	$(FFTW3_LIBS)       \
-	$(FFTW3F_LIBS)      \
-	$(GLIB_LIBS)        \
-	$(NLOPT_LIBS)       \
-	$(GSL_LIBS)         \
-	$(CFITSIO_LIBS)     \
-	$(LIBCUBA_PLACE)    \
-	plc/libclik.la      \
-	levmar/liblevmar.la \
+libnumcosmo_la_LIBADD =       \
+	$(SUNDIALS_LIBS)      \
+	$(FFTW3_LIBS)         \
+	$(FFTW3F_LIBS)        \
+	$(GLIB_LIBS)          \
+	$(NLOPT_LIBS)         \
+	$(GSL_LIBS)           \
+	$(CFITSIO_LIBS)       \
+	$(LIBCUBA_PLACE)      \
+	$(CODE_COVERAGE_LIBS) \
+	plc/libclik.la        \
+	levmar/liblevmar.la   \
 	class/libclass.la
 
 ncm_sources = \
