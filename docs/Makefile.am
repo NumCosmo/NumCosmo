@@ -115,7 +115,8 @@ IGNORE_HFILES=linear_internal.h         \
               class			\
               class/source		\
               class/hyrec		\
-              class/include
+              class/include             \
+              toeplitz
 
 # Images to copy into HTML directory.
 # e.g. HTML_IMAGES=$(top_srcdir)/gtk/stock-icons/stock_about_24.png
