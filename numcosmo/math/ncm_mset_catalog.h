@@ -92,7 +92,7 @@ struct _NcmMSetCatalog
   GPtrArray *chain_pstats;
   NcmStatsVec *mean_pstats;
   NcmStatsVec *e_stats;
-  GPtrArray *e_mean_array;
+  NcmStatsVec *e_mean_stats;
   GPtrArray *e_var_array;
   NcmVector *chain_means;
   NcmVector *chain_vars;
@@ -151,12 +151,16 @@ void ncm_mset_catalog_erase_data (NcmMSetCatalog *mcat);
 
 const gchar *ncm_mset_catalog_peek_filename (NcmMSetCatalog *mcat);
 NcmRNG *ncm_mset_catalog_get_rng (NcmMSetCatalog *mcat);
+NcmRNG *ncm_mset_catalog_peek_rng (NcmMSetCatalog *mcat);
 
 gboolean ncm_mset_catalog_is_empty (NcmMSetCatalog *mcat);
 gdouble ncm_mset_catalog_largest_error (NcmMSetCatalog *mcat);
 guint ncm_mset_catalog_len (NcmMSetCatalog *mcat);
 guint ncm_mset_catalog_max_time (NcmMSetCatalog *mcat);
 guint ncm_mset_catalog_nchains (NcmMSetCatalog *mcat);
+guint ncm_mset_catalog_get_row_from_time (NcmMSetCatalog *mcat, gint t);
+gint ncm_mset_catalog_get_first_id (NcmMSetCatalog *mcat);
+gint ncm_mset_catalog_get_cur_id (NcmMSetCatalog *mcat);
 
 void ncm_mset_catalog_set_burnin (NcmMSetCatalog *mcat, glong burnin);
 glong ncm_mset_catalog_get_burnin (NcmMSetCatalog *mcat);
@@ -200,7 +204,8 @@ NcmStatsDist1d *ncm_mset_catalog_calc_add_param_distrib (NcmMSetCatalog *mcat, g
 void ncm_mset_catalog_calc_param_ensemble_evol (NcmMSetCatalog *mcat, const NcmMSetPIndex *pi, guint nsteps, NcmFitRunMsgs mtype, NcmVector **pval, NcmMatrix **t_evol);
 void ncm_mset_catalog_calc_add_param_ensemble_evol (NcmMSetCatalog *mcat, guint add_param, guint nsteps, NcmFitRunMsgs mtype, NcmVector **pval, NcmMatrix **t_evol);
 
-NcmVector *ncm_mset_catalog_calc_params_chi2 (NcmMSetCatalog *mcat, guint *r);
+guint ncm_mset_catalog_calc_max_ess_time (NcmMSetCatalog *mcat, guint div, gdouble *max_ess);
+void ncm_mset_catalog_trim_by_max_ess_time (NcmMSetCatalog *mcat, guint div);
 
 #define NCM_MSET_CATALOG_EXTNAME "NcmMSetCatalog:DATA"
 #define NCM_MSET_CATALOG_M2LNL_COLNAME "NcmFit:m2lnL"

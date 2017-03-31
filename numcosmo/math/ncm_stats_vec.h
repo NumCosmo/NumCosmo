@@ -85,6 +85,7 @@ struct _NcmStatsVec
   GObject parent_instance;
   NcmStatsVecType t;
   NcmStatsVecUpdateFunc update;
+  NcmStatsVec *tmp;
   guint len;
   gboolean save_x;
   gdouble weight;
@@ -107,6 +108,25 @@ struct _NcmStatsVec
   fftw_plan param_c2r;
 #endif /* NUMCOSMO_HAVE_FFTW3 */
 };
+
+/**
+ * NcmStatsVecARType:
+ * @NCM_STATS_VEC_AR_NONE: Calculates using the required order.
+ * @NCM_STATS_VEC_AR_FPE: Uses the FPE criterium to choose the ar order.
+ * @NCM_STATS_VEC_AR_AIC: Uses the AIC criterium to choose the ar order.
+ * @NCM_STATS_VEC_AR_AICC: Uses the AICc criterium to choose the ar order.
+ * 
+ * FIXME
+ * 
+ */
+typedef enum 
+{
+  NCM_STATS_VEC_AR_NONE = 0,
+  NCM_STATS_VEC_AR_FPE,
+  NCM_STATS_VEC_AR_AIC,
+  NCM_STATS_VEC_AR_AICC, /*< private >*/
+  NCM_STATS_VEC_AR_LEN,  /*< skip >*/
+} NcmStatsVecARType;
 
 GType ncm_stats_vec_get_type (void) G_GNUC_CONST;
 
@@ -135,6 +155,11 @@ NcmVector *ncm_stats_vec_get_autocorr (NcmStatsVec *svec, guint p);
 NcmVector *ncm_stats_vec_get_subsample_autocorr (NcmStatsVec *svec, guint p, guint subsample);
 gdouble ncm_stats_vec_get_autocorr_tau (NcmStatsVec *svec, guint p, const guint max_lag);
 gdouble ncm_stats_vec_get_subsample_autocorr_tau (NcmStatsVec *svec, guint p, guint subsample, const guint max_lag);
+
+void ncm_stats_vec_fit_ar_model (NcmStatsVec *svec, guint p, const guint order, NcmStatsVecARType ar_crit, NcmVector **rho, NcmVector **pacf, gdouble *ivar, guint *c_order);
+gdouble ncm_stats_vec_ar_ess (NcmStatsVec *svec, guint p, NcmStatsVecARType ar_crit, gdouble *spec0);
+
+GPtrArray *ncm_stats_vec_dup_saved_x (NcmStatsVec *svec);
 
 G_INLINE_FUNC NcmVector *ncm_stats_vec_peek_x (NcmStatsVec *svec);
 G_INLINE_FUNC void ncm_stats_vec_set (NcmStatsVec *svec, guint i, gdouble x_i);

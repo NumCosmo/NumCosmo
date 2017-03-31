@@ -188,6 +188,7 @@ dnl ***************************************************************************
 
 AC_FC_FREEFORM()
 AC_FC_LINE_LENGTH([unlimited])
+AC_F77_WRAPPERS()
 
 AC_LANG_PUSH([Fortran])
 dnl  AX_APPEND_COMPILE_FLAGS([-finit-local-zero -finit-integer=0 -finit-real=zero -finit-logical=false -fno-automatic], [FCFLAGS])
@@ -960,6 +961,7 @@ numcosmo/libcuba/suave/Makefile
 numcosmo/libcuba/vegas/Makefile
 numcosmo/plc/Makefile
 numcosmo/class/Makefile
+numcosmo/toeplitz/Makefile
 tools/Makefile
 tests/Makefile
 docs/Makefile

@@ -70,6 +70,8 @@ struct _NcmFitESMCMC
   NcmTimer *nt;
   NcmSerialize *ser;
   NcmFitESMCMCWalker *walker;
+  gboolean auto_trim;
+  guint auto_trim_div;
   GPtrArray *full_theta;
   GPtrArray *full_thetastar;
   GPtrArray *theta;
@@ -109,6 +111,8 @@ void ncm_fit_esmcmc_set_sampler (NcmFitESMCMC *esmcmc, NcmMSetTransKern *sampler
 void ncm_fit_esmcmc_set_mtype (NcmFitESMCMC *esmcmc, NcmFitRunMsgs mtype);
 void ncm_fit_esmcmc_set_nthreads (NcmFitESMCMC *esmcmc, guint nthreads);
 void ncm_fit_esmcmc_set_rng (NcmFitESMCMC *esmcmc, NcmRNG *rng);
+void ncm_fit_esmcmc_set_auto_trim (NcmFitESMCMC *esmcmc, gboolean enable);
+void ncm_fit_esmcmc_set_auto_trim_div (NcmFitESMCMC *esmcmc, guint div);
 
 gdouble ncm_fit_esmcmc_get_accept_ratio (NcmFitESMCMC *esmcmc);
 gdouble ncm_fit_esmcmc_get_offboard_ratio (NcmFitESMCMC *esmcmc);

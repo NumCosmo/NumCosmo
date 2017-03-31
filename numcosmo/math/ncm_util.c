@@ -1006,7 +1006,6 @@ NcmComplex *
 ncm_complex_dup (NcmComplex *c)
 {
   NcmComplex *cc = ncm_complex_new ();
-printf ("Nhaca %p\n", c);
   cc->z = c->z;
   return cc;
 }
@@ -1021,7 +1020,6 @@ printf ("Nhaca %p\n", c);
 void
 ncm_complex_free (NcmComplex *c)
 {
-printf ("Nhoco %p\n", c);
   g_free (c);
 }
 
@@ -1063,7 +1061,6 @@ ncm_complex_Re (NcmComplex *c)
 gdouble
 ncm_complex_Im (NcmComplex *c)
 {
-  printf ("Huga %p\n", c);
   return cimag (c->z);
 }
 
