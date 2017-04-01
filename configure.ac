@@ -180,11 +180,12 @@ dnl  AX_CHECK_COMPILE_FLAG([-Wunreachable-code],[NC_CFLAGS="$NC_CFLAGS -Wunreach
 fi
 
 PLC_NOWARN_FLAGS=""
-AX_CHECK_COMPILE_FLAG([-Wno-unused-variable],        [PLC_NOWARN_FLAGS="$PLC_NOWARN_FLAGS -Wno-unused-variable"])
-AX_CHECK_COMPILE_FLAG([-Wno-maybe-uninitialized],    [PLC_NOWARN_FLAGS="$PLC_NOWARN_FLAGS -Wno-maybe-uninitialized"])
+AX_CHECK_COMPILE_FLAG([-Wno-unused-variable], [PLC_NOWARN_FLAGS="$PLC_NOWARN_FLAGS -Wno-unused-variable"])
+AX_CHECK_COMPILE_FLAG([-Wno-unused-result],   [PLC_NOWARN_FLAGS="$PLC_NOWARN_FLAGS -Wno-unused-result"])
 
 case $ax_cv_c_compiler_vendor in #(
   gnu) 
+    AX_CHECK_COMPILE_FLAG([-Wno-maybe-uninitialized],    [PLC_NOWARN_FLAGS="$PLC_NOWARN_FLAGS -Wno-maybe-uninitialized"])
     AX_CHECK_COMPILE_FLAG([-Wno-unused-but-set-variable],[PLC_NOWARN_FLAGS="$PLC_NOWARN_FLAGS -Wno-unused-but-set-variable"])
   ;;
 esac
@@ -237,7 +238,6 @@ dnl ***************************************************************************
 AC_ARG_ENABLE(vapi,
               [AS_HELP_STRING([--enable-vapi],[Generate vala bindings, experimental [default=no]])],enable_vapi=yes,
               enable_vapi=no)
-
 
 if test "${enable_vapi}" != no; then
   AC_PATH_PROG(VAPIGEN, vapigen, [no])
