@@ -53,6 +53,7 @@ before_install:
   - if [[ "$TRAVIS_OS_NAME" == "osx"   ]]; then brew install gobject-introspection              ; fi
   - if [[ "$TRAVIS_OS_NAME" == "osx"   ]]; then brew install gsl gtk-doc gmp mpfr               ; fi
   - if [[ "$TRAVIS_OS_NAME" == "osx"   ]]; then brew install fftw cfitsio sundials              ; fi
+  - if [[ "$TRAVIS_OS_NAME" == "osx"   ]]; then brew install sundials --without-suite-sparse    ; fi
   - if [[ "$TRAVIS_OS_NAME" == "osx"   ]]; then brew install nlopt                              ; fi
   - NOCONFIGURE=yes ./autogen.sh
 
