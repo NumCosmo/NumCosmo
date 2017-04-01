@@ -2,9 +2,9 @@ os:
   - linux
   - osx
 
-matrix:
-  allow_failures:
-    - os: osx
+#matrix:
+#  allow_failures:
+#    - os: osx
 
 dist: trusty
 sudo: required
