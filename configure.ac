@@ -136,6 +136,9 @@ dnl LT_INIT([disable-shared])
 dnl AC_DISABLE_SHARED
 LT_INIT
 
+AX_COMPILER_VENDOR()
+AX_COMPILER_VERSION()
+
 dnl ***************************************************************************
 dnl Makefile.decl variable dependency (here glib_native_win32 is null)
 dnl ***************************************************************************
@@ -178,17 +181,28 @@ fi
 
 PLC_NOWARN_FLAGS=""
 AX_CHECK_COMPILE_FLAG([-Wno-unused-variable],        [PLC_NOWARN_FLAGS="$PLC_NOWARN_FLAGS -Wno-unused-variable"])
-AX_CHECK_COMPILE_FLAG([-Wno-unused-but-set-variable],[PLC_NOWARN_FLAGS="$PLC_NOWARN_FLAGS -Wno-unused-but-set-variable"])
 AX_CHECK_COMPILE_FLAG([-Wno-maybe-uninitialized],    [PLC_NOWARN_FLAGS="$PLC_NOWARN_FLAGS -Wno-maybe-uninitialized"])
+
+case $ax_cv_c_compiler_vendor in #(
+  gnu) 
+    AX_CHECK_COMPILE_FLAG([-Wno-unused-but-set-variable],[PLC_NOWARN_FLAGS="$PLC_NOWARN_FLAGS -Wno-unused-but-set-variable"])
+  ;;
+esac
+
 AC_SUBST(PLC_NOWARN_FLAGS)
 
 dnl ***************************************************************************
 dnl Fortran flags
 dnl ***************************************************************************
 
+AX_GFORTRAN_VERSION()
 AC_FC_FREEFORM()
 AC_FC_LINE_LENGTH([unlimited])
 AC_F77_WRAPPERS()
+
+if test x$GFORTRAN_VERSION != x; then
+  GFORTRAN_VERSION_MAJOR=$(echo $GFORTRAN_VERSION | cut -d. -f1)
+fi
 
 AC_LANG_PUSH([Fortran])
 dnl  AX_APPEND_COMPILE_FLAGS([-finit-local-zero -finit-integer=0 -finit-real=zero -finit-logical=false -fno-automatic], [FCFLAGS])
@@ -204,7 +218,14 @@ dnl ***************************************************************************
     ;;
   esac
     
-  AX_APPEND_COMPILE_FLAGS([-reentrancy -recursive -threads -automatic -fautomatic -frecursive -Wno-tabs -Wno-unused-variable -Wno-unused-dummy-argument -Wno-unused-function -Wno-conversion], [FCFLAGS], [$FCFLAGS_CHECK])
+  AX_APPEND_COMPILE_FLAGS([-reentrancy -recursive -threads -automatic -fautomatic -frecursive -Wno-unused-variable -Wno-unused-dummy-argument -Wno-unused-function -Wno-conversion], [FCFLAGS], [$FCFLAGS_CHECK])
+
+  if test $GFORTRAN_VERSION_MAJOR -gt 4; then
+    AX_APPEND_COMPILE_FLAGS([-Wno-tabs], [FCFLAGS], [$FCFLAGS_CHECK])
+  else
+    AX_APPEND_COMPILE_FLAGS([-Wtabs], [FCFLAGS], [$FCFLAGS_CHECK])  
+  fi
+
   AC_OPENMP()
   AC_SUBST(OPENMP_FCFLAGS)
 
@@ -219,12 +240,10 @@ AC_ARG_ENABLE(vapi,
 
 
 if test "${enable_vapi}" != no; then
-
-AC_PATH_PROG(VAPIGEN, vapigen, [no])
-AC_SUBST(VAPIGEN)
-VAPIDIR="${datadir}/vala/vapi"
-AC_SUBST(VAPIDIR)
-
+  AC_PATH_PROG(VAPIGEN, vapigen, [no])
+  AC_SUBST(VAPIGEN)
+  VAPIDIR="${datadir}/vala/vapi"
+  AC_SUBST(VAPIDIR)
 fi
 
 AM_CONDITIONAL(HAVE_VAPIGEN, [test "x$VAPIGEN" != xno -a x$enable_vapi != xno])
