@@ -680,8 +680,8 @@ main (gint argc, gchar *argv[])
       ncm_fit_fishermatrix_print (fit, f_MF, full_cmd_line);
       fclose (f_MF);
 
-      ncm_message ("#---------------------------------------------------------------------------------- \n", mfile);
-      ncm_message ("# FM file: %s \n", mfile);
+      ncm_message ("#---------------------------------------------------------------------------------- \n");
+      ncm_message ("# FM file: %s\n", mfile);
 
       g_free (mfile);
 

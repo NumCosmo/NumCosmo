@@ -84,6 +84,7 @@
 
 #include <math.h>
 #include <gsl/gsl_math.h>
+#include <gsl/gsl_sf_bessel.h>
 
 #include "toeplitz/solvers/toeplitz.h"
 
@@ -762,7 +763,7 @@ ncm_stats_vec_prepend_data (NcmStatsVec *svec, GPtrArray *data, gboolean dup)
 
   if (svec->save_x)
   {
-    const guint cp_len = data->len;
+    const guint cp_len  = data->len;
     const guint old_len = svec->saved_x->len;
     const guint new_len = old_len + cp_len;
 
@@ -1066,9 +1067,9 @@ ncm_stats_vec_get_subsample_autocorr (NcmStatsVec *svec, guint p, guint subsampl
  * If order is zero the value of floor $\left[10 log_{10}(s) \right]$, where $s$ 
  * is the number of points.
  * 
- * 
+ * Returns: TRUE if @c_order is equal to @order.
  */
-void
+gboolean
 ncm_stats_vec_fit_ar_model (NcmStatsVec *svec, guint p, const guint order, NcmStatsVecARType ar_crit, NcmVector **rho, NcmVector **pacf, gdouble *ivar, guint *c_order)
 {
 #ifdef NUMCOSMO_HAVE_FFTW3
@@ -1134,8 +1135,8 @@ ncm_stats_vec_fit_ar_model (NcmStatsVec *svec, guint p, const guint order, NcmSt
             if (crit < min_crit)
             {
               c_order[0] = i + 1;
-              min_crit = crit;
-              ivar[0] = var;
+              min_crit   = crit;
+              ivar[0]    = var;
             }
           }
           break;
@@ -1154,8 +1155,8 @@ ncm_stats_vec_fit_ar_model (NcmStatsVec *svec, guint p, const guint order, NcmSt
             if (crit < min_crit)
             {
               c_order[0] = i + 1;
-              min_crit = crit;
-              ivar[0] = var;
+              min_crit   = crit;
+              ivar[0]    = var;
             }
           }
           break;
@@ -1175,8 +1176,8 @@ ncm_stats_vec_fit_ar_model (NcmStatsVec *svec, guint p, const guint order, NcmSt
             if (crit < min_crit)
             {
               c_order[0] = i + 1;
-              min_crit = crit;
-              ivar[0] = var;
+              min_crit   = crit;
+              ivar[0]    = var;
             }
           }
           break;
@@ -1189,24 +1190,30 @@ ncm_stats_vec_fit_ar_model (NcmStatsVec *svec, guint p, const guint order, NcmSt
       ivar[0] *= (n - 1.0) / (n - (c_order[0] + 1.0));
     }
 
-    if (c_order[0] != aorder)
+    if ((c_order[0] != aorder) && (c_order[0] > 0))
     {
-      ncm_vector_set_zero (*rho);
-      ncm_vector_set_zero (*pacf);
+      NcmVector *c_rho  = ncm_vector_get_subvector (*rho,  0, c_order[0]);
+      NcmVector *c_pacf = ncm_vector_get_subvector (*pacf, 0, c_order[0]);
+      
+      ncm_vector_clear (rho);
+      ncm_vector_clear (pacf);
 
-      d_lev_inner (ncm_vector_data (*rho), 
+      *rho  = c_rho;
+      *pacf = c_pacf;
+
+      d_lev_inner (ncm_vector_data (c_rho), 
                    ncm_vector_ptr (M, aorder), 
                    c_order[0], svec->param_data + 1, dlev_tol, dlev_tol, 6, 0, 
-                   ncm_vector_data (*pacf));
+                   ncm_vector_data (c_pacf));
     }
-    
+
     ncm_vector_free (M);
     
-    return;
+    return (aorder == c_order[0]);
   }
 #else
   g_error ("ncm_stats_vec_get_autocorr: recompile NumCosmo with fftw support.");
-  return NULL;
+  return FALSE;
 #endif /* NUMCOSMO_HAVE_FFTW3 */
 }
 
@@ -1216,26 +1223,273 @@ ncm_stats_vec_fit_ar_model (NcmStatsVec *svec, guint p, const guint order, NcmSt
  * @p: parameter id
  * @ar_crit: a #NcmStatsVecARType
  * @spec0: (out): spectral density at zero
+ * @c_order: (out): @ar_crit determined order
  *
  * Calculates the effective sample size for the parameter @p.
  *
  * Returns: the effective sample size.
  */
 gdouble 
-ncm_stats_vec_ar_ess (NcmStatsVec *svec, guint p, NcmStatsVecARType ar_crit, gdouble *spec0)
+ncm_stats_vec_ar_ess (NcmStatsVec *svec, guint p, NcmStatsVecARType ar_crit, gdouble *spec0, guint *c_order)
 {
   NcmVector *rho = NULL, *pacf = NULL;
   gdouble ivar  = 0.0;
-  guint c_order = 0;
+  guint order = 0;
   
-  ncm_stats_vec_fit_ar_model (svec, p, 0, ar_crit, &rho, &pacf, &ivar, &c_order);
+  while (ncm_stats_vec_fit_ar_model (svec, p, order, ar_crit, &rho, &pacf, &ivar, c_order) && (2 * c_order[0] + 1 < svec->nitens))
+  {
+    ncm_vector_clear (&rho);
+    ncm_vector_clear (&pacf);
 
-  spec0[0] = ivar / gsl_pow_2 (1.0 - ncm_vector_sum_cpts (rho));
+    order = 2 * c_order[0];
+  }
+
+  spec0[0] = ivar;
+  if (c_order[0] > 0)
+    spec0[0] *= 1.0 / gsl_pow_2 (1.0 - ncm_vector_sum_cpts (rho));
 
   ncm_vector_clear (&rho);
   ncm_vector_clear (&pacf);
-  
+
   return svec->nitens * ncm_stats_vec_get_var (svec, p) / spec0[0];
+}
+
+static gdouble
+_ncm_stats_vec_heidel_diag_pcramer (const gdouble q)
+{
+  const gdouble pi_32 = sqrt (gsl_pow_3 (M_PI));
+  const gint maxiter  = 100;
+  const gdouble ffac  = 1.0 / (pi_32 * sqrt (q));
+  gdouble p = 0.0;
+  guint i   = 0;
+
+  g_assert_cmpfloat (q, >=, 0.0);
+  
+  for (i = 0; i < maxiter; i++)
+  {
+    gint sig = 0;
+    const gdouble lnf = lgamma_r (i + 0.5, &sig) - lgamma_r (i + 1.0, &sig);
+    const gdouble z   = sqrt (4.0 * i + 1.0);
+    const gdouble u   = gsl_pow_2 (4.0 * i + 1.0) / (16.0 * q);
+    const gdouble ti  = z * exp (-u + lnf + gsl_sf_bessel_lnKnu (0.25, u));
+
+    p += ti;
+
+    if (fabs (ti / p) < GSL_DBL_EPSILON)
+      break;
+  }
+
+  return GSL_MIN (GSL_MAX (p * ffac, 0.0), 1.0);
+}
+
+/**
+ * ncm_stats_vec_heidel_diag:
+ * @svec: a #NcmStatsVec
+ * @ntests: number of tests
+ * @pvalue: required p-value
+ * @bindex: (out): index of the best p-values
+ * @wp: (out): worst parameter index
+ * @wp_order: (out): worst parameter AR fit order
+ * @wp_pvalue: (out): worst parameter p-value
+ *
+ * Applies the Heidelberger and Welch’s convergence diagnostic
+ * applying @ntests Schruben tests sequentially, if @ntests == 0
+ * it will use the default 10 tests. The variable @bindex will 
+ * contains the smallest index where all p-values are smaller than
+ * @pvalue, if @pvalue is zero it used the default value of $0.05$.
+ * 
+ * If the test is not satisfied by any index @bindex will contain
+ * -1 and the return vector the p-values considering the whole system.
+ * 
+ * See: 
+ * - [Heidelberger (1981)][XHeidelberger1981]
+ * - [Schruben (1982)][XSchruben1982]
+ * - [Heidelberger (1983)][XHeidelberger1983]
+ * 
+ * Returns: (transfer full): a #NcmVector containing the best p-values.
+ */
+NcmVector *
+ncm_stats_vec_heidel_diag (NcmStatsVec *svec, const guint ntests, const gdouble pvalue, gint *bindex, guint *wp, guint *wp_order, gdouble *wp_pvalue)
+{
+  NcmStatsVec *chunk   = ncm_stats_vec_new (svec->len, NCM_STATS_VEC_VAR, TRUE);
+  const gint half_size = svec->nitens / 2;
+  const gint block     = (ntests == 0) ? ((half_size - 1) / 10 + 1) : ((half_size - 1) / ntests + 1);
+  const gdouble onepv  = (pvalue == 0.0) ? 0.95 : (1.0 - pvalue);
+  NcmVector *pvals     = ncm_vector_new (svec->len);
+  NcmVector *Ivals     = ncm_vector_new (svec->len);
+  NcmVector *spec0     = ncm_vector_new (svec->len);
+  NcmVector *cumsum    = ncm_vector_new (svec->len);
+  GArray *ar_order     = g_array_new (FALSE, FALSE, sizeof (guint));
+  guint c_order        = 0;
+  gint i;
+  
+  g_assert_cmpuint (svec->nitens, >=, 10);
+  g_assert_cmpfloat (pvalue, <, 1.0);
+  g_assert (svec->save_x);
+
+  for (i = svec->nitens - 1; i >= half_size; i--)
+  {
+    NcmVector *row = ncm_stats_vec_peek_row (svec, i);
+    ncm_stats_vec_append (chunk, row, FALSE);
+  }
+
+  for (i = 0; i < svec->len; i++)
+  {
+    ncm_stats_vec_ar_ess (chunk, i, NCM_STATS_VEC_AR_AICC, ncm_vector_ptr (spec0, i), &c_order);
+    g_array_append_val (ar_order, c_order);
+  }
+
+  bindex[0] = -1;
+  wp[0]     = 0;
+  
+  for (i = half_size - 1; i >= 0; i--)
+  {
+    NcmVector *row = ncm_stats_vec_peek_row (svec, i);
+    ncm_stats_vec_append (chunk, row, FALSE);
+
+    if ((i % block) == 0)
+    {
+      const guint nitens = svec->nitens - i;
+      gint j, p;
+
+      ncm_vector_set_zero (cumsum);
+      ncm_vector_set_zero (Ivals);
+
+      for (j = svec->nitens - 1; j >= i; j--)
+      {
+        NcmVector *row  = ncm_stats_vec_peek_row (svec, j);
+        const gdouble n = (svec->nitens - j);
+
+        for (p = 0; p < svec->len; p++)
+        {
+          const gdouble mean_p_n = ncm_stats_vec_get_mean (chunk, p) * n;
+          const gdouble cumsum_p = ncm_vector_get (cumsum, p) + ncm_vector_get (row, p);
+
+          ncm_vector_set (cumsum, p, cumsum_p);
+          ncm_vector_addto (Ivals, p, gsl_pow_2 (cumsum_p - mean_p_n));
+        }
+      }
+
+      {
+        gdouble max_pval = 0.0;
+        gint lwp = 0;
+
+        for (p = 0; p < svec->len; p++)
+        {
+          const gdouble Ival_p = ncm_vector_get (Ivals, p) / (gsl_pow_2 (nitens) * ncm_vector_get (spec0, p));
+          const gdouble pval_p = _ncm_stats_vec_heidel_diag_pcramer (Ival_p);
+
+          ncm_vector_set (Ivals, p, pval_p);
+          if (pval_p > max_pval)
+          {
+            max_pval = pval_p;
+            lwp      = p;
+          }
+        }
+
+        if (max_pval <= onepv)
+        {
+          bindex[0] = i;
+          wp[0]     = lwp;
+
+          ncm_vector_memcpy (pvals, Ivals);
+        }
+      }
+    }
+  }
+
+  if (bindex[0] == -1)
+  {
+    ncm_vector_memcpy (pvals, Ivals);
+    wp[0] = ncm_vector_get_max_index (pvals);
+  }
+
+  wp_pvalue[0] = ncm_vector_get (pvals, wp[0]);
+  wp_order[0]  = g_array_index (ar_order, guint, wp[0]);
+  
+  ncm_vector_clear (&spec0);
+  ncm_vector_clear (&cumsum);
+  ncm_vector_clear (&Ivals);
+  
+  ncm_stats_vec_clear (&chunk);
+
+  return pvals;
+}
+
+/**
+ * ncm_stats_vec_max_ess_time:
+ * @svec: a #NcmStatsVec
+ * @ntests: number of tests
+ * @bindex: (out): time index of the best ESS's
+ * @wp: (out): worst parameter index
+ * @wp_order: (out): worst parameter AR fit order
+ * @wp_ess: (out): worst parameter ESS
+ *
+ * Calculates the time $t_m$ that maximizes the Effective Sample Size (ESS). 
+ * The variable @ntests control the number of divisions where the ESS
+ * will be calculated, if it is zero the default 10 tests will be used.
+ * 
+ * Returns: (transfer full): a #NcmVector containing the best ess.
+ */
+NcmVector *
+ncm_stats_vec_max_ess_time (NcmStatsVec *svec, const guint ntests, gint *bindex, guint *wp, guint *wp_order, gdouble *wp_ess)
+{
+  NcmStatsVec *chunk  = ncm_stats_vec_new (svec->len, NCM_STATS_VEC_VAR, TRUE);
+  const gint size     = svec->nitens;
+  const gint block    = (ntests == 0) ? ((size - 1) / 10 + 1) : ((size - 1) / ntests + 1);
+  NcmVector *esss_tmp = ncm_vector_new (svec->len);
+  NcmVector *esss     = ncm_vector_new (svec->len);
+  gdouble max_t_ess   = 0.0;
+  gint i, j = 0;
+  
+  g_assert_cmpuint (svec->nitens, >=, 10);
+  g_assert (svec->save_x);
+
+  bindex[0] = -1;
+  for (i = size - 1; i >= 0; i--)
+  {
+    NcmVector *row_i = ncm_stats_vec_peek_row (svec, i);
+    ncm_stats_vec_append (chunk, row_i, FALSE);
+
+    if ((i == 0) || ((i % block == 0) && (j >= 99)))
+    {
+      gdouble min_ess = GSL_POSINF;
+      guint cur_size  = size - i;
+      guint lwp_order = 0;
+      guint k, lwp    = 0;
+
+      for (k = 0; k < svec->len; k++)
+      {
+        gdouble spec0       = 0.0;
+        const gdouble ess   = ncm_stats_vec_ar_ess (chunk, k, NCM_STATS_VEC_AR_AICC, &spec0, &lwp_order);
+        const gdouble c_ess = GSL_MIN (cur_size, ess);
+
+        ncm_vector_set (esss_tmp, k, ess);
+        if (c_ess < min_ess)
+        {
+          min_ess = c_ess;
+          lwp     = k;
+        }
+      }
+      if (min_ess > max_t_ess)
+      {
+        max_t_ess   = min_ess;
+        bindex[0]   = i;
+        wp_order[0] = lwp_order;
+        wp[0]       = lwp;
+
+        ncm_vector_memcpy (esss, esss_tmp);
+      }
+    }
+    j++;
+  }
+
+  wp_ess[0] = ncm_vector_get (esss, wp[0]);
+
+  ncm_vector_clear (&esss_tmp);
+  ncm_stats_vec_clear (&chunk);
+
+  return esss;
 }
 
 /**
@@ -1505,6 +1759,14 @@ ncm_stats_vec_get_subsample_autocorr_tau (NcmStatsVec *svec, const guint p, cons
  * was not created with save_x == TRUE;
  *
  * Returns: the number of saved rows.
+ */
+/**
+ * ncm_stats_vec_nitens:
+ * @svec: a #NcmStatsVec
+ *
+ * Gets the number of itens added to the object;
+ *
+ * Returns: the number of itens added.
  */
 /**
  * ncm_stats_vec_peek_row:

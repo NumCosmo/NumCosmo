@@ -1435,10 +1435,10 @@ ncm_cfg_array_to_variant (GArray *a, const GVariantType *etype)
   return g_variant_ref_sink (vvar);
 }
 
-gdouble fftw_default_timeout = 10.0;
+gdouble fftw_default_timeout = 60.0;
 
 #ifdef NUMCOSMO_HAVE_FFTW3
-guint fftw_default_flags = FFTW_EXHAUSTIVE; /* FFTW_ESTIMATE, FFTW_MEASURE, FFTW_PATIENT, FFTW_EXHAUSTIVE */
+guint fftw_default_flags = FFTW_MEASURE; /* FFTW_ESTIMATE, FFTW_MEASURE, FFTW_PATIENT, FFTW_EXHAUSTIVE */
 
 /**
  * ncm_cfg_set_fftw_default_flag:

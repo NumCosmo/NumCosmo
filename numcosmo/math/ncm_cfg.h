@@ -60,7 +60,7 @@ void ncm_cfg_logfile (gboolean on);
 void ncm_cfg_logfile_flush (gboolean on);
 void ncm_cfg_logfile_flush_now (void);
 
-void ncm_message (const gchar *msg, ...);
+void ncm_message (const gchar *msg, ...) G_GNUC_PRINTF (1, 2);
 gchar *ncm_string_ww (const gchar *msg, const gchar *first, const gchar *rest, guint ncols);
 void ncm_message_ww (const gchar *msg, const gchar *first, const gchar *rest, guint ncols);
 void ncm_cfg_msg_sepa (void);
