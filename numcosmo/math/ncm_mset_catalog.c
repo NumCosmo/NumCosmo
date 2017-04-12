@@ -3534,6 +3534,7 @@ ncm_mset_catalog_calc_add_param_ensemble_evol (NcmMSetCatalog *mcat, guint add_p
 
 /**
  * ncm_mset_catalog_trim:
+ * @mcat: a #NcmMSetCatalog
  * @tc: time divisor $t_c$
  *
  * Drops all points in the catalog such that $t < t_c$. This function 
@@ -3720,6 +3721,7 @@ ncm_mset_catalog_calc_heidel_diag (NcmMSetCatalog *mcat, const guint ntests, con
 
 /**
  * ncm_mset_catalog_trim_by_type:
+ * @mcat: a #NcmMSetCatalog
  * @ntests: number of tests
  * @trim_type: the trimming type to apply #NcmMSetCatalogTrimType
  * @mtype: #NcmFitRunMsgs log level
