@@ -99,11 +99,6 @@ AM_MAINTAINER_MODE
 AX_CODE_COVERAGE
   
 dnl ***************************************************************************
-dnl Gobject Introspection
-dnl ***************************************************************************
-GOBJECT_INTROSPECTION_CHECK([0.6.7])
-
-dnl ***************************************************************************
 dnl things required by automake
 dnl AC_ARG_PROGRAM
 dnl ***************************************************************************
@@ -117,20 +112,66 @@ AC_CANONICAL_HOST
 dnl ***************************************************************************
 dnl Enable gnu extensions when available
 dnl ***************************************************************************
-AC_GNU_SOURCE
+dnl AC_GNU_SOURCE
+
+dnl ***************************************************************************
+dnl Compilers
+dnl ***************************************************************************
+dnl If --with-mpi=auto is used, try to find MPI, but use standard C compiler if it is not found.
+dnl If --with-mpi=yes is used, try to find MPI and fail if it isn't found.
+dnl If --with-mpi=no is used, use a standard C compiler instead.
+AC_LANG(C)
+
+echo xxx${CC}xxx
+echo xxx${MPICC}xxx
+
+AC_ARG_WITH([mpi], [AS_HELP_STRING([--with-mpi],
+  [compile with MPI (parallelization) support. If none is found,
+  MPI is not used. Default: no])
+  ],,[with_mpi=no])
+
+echo xxx${CC}xxx
+echo xxx${MPICC}xxx
+
+AX_PROG_CC_MPI([test x"$with_mpi" != xno],[use_mpi=yes],[
+  use_mpi=no
+  if test x"$with_mpi" = xyes; then
+    AC_MSG_FAILURE([MPI compiler requested, but couldn't use MPI.])
+  else
+    AC_MSG_WARN([No MPI compiler found, won't use MPI.])
+  fi
+])
+
+echo xxx${CC}xxx
+echo xxx${MPICC}xxx
+
+AX_PROG_FC_MPI([test x"$with_mpi" != xno],[use_mpi=yes],[
+  use_mpi=no
+  if test x"$with_mpi" = xyes; then
+    AC_MSG_FAILURE([MPI compiler requested, but couldn't use MPI.])
+  else
+    AC_MSG_WARN([No MPI compiler found, won't use MPI.])
+  fi
+])
+
+echo xxx${CC}xxx
+echo xxx${MPICC}xxx
+
+AC_PROG_CC_C99
+dnl AC_PROG_FC
+AC_PROG_F77
+
+echo xxx${CC}xxx
+echo xxx${MPICC}xxx
 
 dnl ***************************************************************************
 dnl Checks for programs.
 dnl ***************************************************************************
-AC_LANG(C)
-AC_PROG_CC_C99
-AC_PROG_F77
 AC_PROG_INSTALL   
 AC_PROG_LN_S
 AC_PROG_CC_STDC
 AC_PROG_GREP
 AC_PROG_SED
-AC_PROG_FC
 AM_PROG_VALAC
 dnl LT_INIT([disable-shared])
 dnl AC_DISABLE_SHARED
@@ -143,6 +184,11 @@ dnl ***************************************************************************
 dnl Makefile.decl variable dependency (here glib_native_win32 is null)
 dnl ***************************************************************************
 AM_CONDITIONAL(OS_UNIX, [test "$glib_native_win32" != "yes"])
+
+dnl ***************************************************************************
+dnl Gobject Introspection
+dnl ***************************************************************************
+GOBJECT_INTROSPECTION_CHECK([0.6.7])
 
 dnl ***************************************************************************
 dnl Compiler flags for C
