@@ -110,28 +110,31 @@ dnl ***************************************************************************
 AC_CANONICAL_HOST
 
 dnl ***************************************************************************
-dnl Enable gnu extensions when available
-dnl ***************************************************************************
-dnl AC_GNU_SOURCE
-
-dnl ***************************************************************************
-dnl Compilers
+dnl Checking from mpi support 
 dnl ***************************************************************************
 dnl If --with-mpi=auto is used, try to find MPI, but use standard C compiler if it is not found.
 dnl If --with-mpi=yes is used, try to find MPI and fail if it isn't found.
 dnl If --with-mpi=no is used, use a standard C compiler instead.
-AC_LANG(C)
-
-echo xxx${CC}xxx
-echo xxx${MPICC}xxx
 
 AC_ARG_WITH([mpi], [AS_HELP_STRING([--with-mpi],
   [compile with MPI (parallelization) support. If none is found,
   MPI is not used. Default: no])
   ],,[with_mpi=no])
 
-echo xxx${CC}xxx
-echo xxx${MPICC}xxx
+if test x$with_mpi != "xno"; then
+  AC_CHECK_TOOLS([CC], [mpicc mpixlc_r mpixlc hcc mpxlc_r mpxlc sxmpicc mpifcc mpgcc mpcc cmpicc cc gcc])
+  AC_CHECK_TOOLS([FC], [mpif95 mpxlf95_r mpxlf95 ftn mpif90 mpxlf90_r mpxlf90 mpf90 cmpif90c sxmpif90 mpif77 hf77 mpxlf_r mpxlf mpifrt mpf77 cmpifc xlf95 pgf95 pathf95 ifort g95 f95 fort ifc efc openf95 sunf95 crayftn gfortran lf95 ftn xlf90 f90 pgf90 pghpf pathf90 epcf90 sxf90 openf90 sunf90 xlf f77 frt pgf77 pathf77 g77 cf77 fort77 fl32 af77])
+fi
+
+dnl ***************************************************************************
+dnl Enable gnu extensions when available
+dnl ***************************************************************************
+AC_USE_SYSTEM_EXTENSIONS
+
+dnl ***************************************************************************
+dnl Compilers
+dnl ***************************************************************************
+AC_LANG(C)
 
 AX_PROG_CC_MPI([test x"$with_mpi" != xno],[use_mpi=yes],[
   use_mpi=no
@@ -142,9 +145,6 @@ AX_PROG_CC_MPI([test x"$with_mpi" != xno],[use_mpi=yes],[
   fi
 ])
 
-echo xxx${CC}xxx
-echo xxx${MPICC}xxx
-
 AX_PROG_FC_MPI([test x"$with_mpi" != xno],[use_mpi=yes],[
   use_mpi=no
   if test x"$with_mpi" = xyes; then
@@ -154,15 +154,12 @@ AX_PROG_FC_MPI([test x"$with_mpi" != xno],[use_mpi=yes],[
   fi
 ])
 
-echo xxx${CC}xxx
-echo xxx${MPICC}xxx
+if test x$use_mpi != "xno"; then
+  AC_DEFINE(HAVE_MPI,1,[Define if you have the MPI library.])
+fi
 
 AC_PROG_CC_C99
-dnl AC_PROG_FC
 AC_PROG_F77
-
-echo xxx${CC}xxx
-echo xxx${MPICC}xxx
 
 dnl ***************************************************************************
 dnl Checks for programs.

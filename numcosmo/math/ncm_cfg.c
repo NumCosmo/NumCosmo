@@ -154,6 +154,10 @@
 #endif /* NUMCOSMO_HAVE_FFTW3 */
 #include <cuba.h>
 
+#ifdef HAVE_MPI
+#include <mpi.h>
+#endif /* HAVE_MPI */
+
 #ifndef G_VALUE_INIT
 #define G_VALUE_INIT {0}
 #endif
@@ -234,6 +238,10 @@ void _nc_hireion_register_functions (void);
 void _nc_distance_register_functions (void);
 void _nc_planck_fi_cor_tt_register_functions (void);
 
+static gint _ncm_mpi_rank = 0;
+static gint _ncm_mpi_size = 0;
+static void _ncm_cfg_mpi_main_loop (void);
+
 /**
  * ncm_cfg_init:
  *
@@ -279,7 +287,7 @@ ncm_cfg_init (void)
 #endif
 
   gsl_err = gsl_set_error_handler_off ();
-
+  
 #ifdef NUMCOSMO_HAVE_FFTW3
   fftw_set_timelimit (10.0);
 #endif /* NUMCOSMO_HAVE_FFTW3 */
@@ -464,10 +472,61 @@ ncm_cfg_init (void)
   _nc_planck_fi_cor_tt_register_functions ();
 
   numcosmo_init = TRUE;
+
+#ifdef HAVE_MPI
+  MPI_Init (NULL, NULL);
+  {
+    gchar mpi_hostname[MPI_MAX_PROCESSOR_NAME];
+    gint len = 0;
+    
+    MPI_Comm_size (MPI_COMM_WORLD, &_ncm_mpi_size);
+    MPI_Comm_rank (MPI_COMM_WORLD, &_ncm_mpi_rank);
+    MPI_Get_processor_name (mpi_hostname, &len);
+
+    /*printf ("We have %d mpi process!! My rank is %d and I'm running on `%s'.\n", _ncm_mpi_size, _ncm_mpi_rank, mpi_hostname);*/
+
+    if (_ncm_mpi_rank > 0)
+    {
+      _ncm_cfg_mpi_main_loop ();
+    }
+  }
+#endif /* HAVE_MPI */
   return;
 }
 
-/**
+static gboolean _ncm_cfg_mpi_cmd_handler (gpointer user_data);
+
+static void
+_ncm_cfg_mpi_main_loop (void)
+{
+  GMainLoop *mpi_ml = g_main_loop_new (NULL, FALSE);
+  /*printf ("#[%d %d] Starting slave !\n", _ncm_mpi_size, _ncm_mpi_rank);*/
+
+  g_timeout_add (100, &_ncm_cfg_mpi_cmd_handler, NULL);
+  
+  g_main_loop_run (mpi_ml);
+  
+  g_main_loop_unref (mpi_ml);
+
+  MPI_Finalize ();
+  exit (0);
+}
+
+
+static gboolean 
+_ncm_cfg_mpi_cmd_handler (gpointer user_data)
+{
+  guint cmd = 0;
+  MPI_Request irreq;
+  /*printf ("#[%d %d] Waiting for command...\n", _ncm_mpi_size, _ncm_mpi_rank);*/
+  MPI_Irecv (&cmd, 1, MPI_INT, 0, 0, MPI_COMM_WORLD, &irreq);
+  /*printf ("#[%d %d] Recevied %d\n", _ncm_mpi_size, _ncm_mpi_rank, cmd);*/
+  
+  return TRUE;
+}
+
+
+/** 
  * ncm_cfg_enable_gsl_err_handler:
  *
  * FIXME
