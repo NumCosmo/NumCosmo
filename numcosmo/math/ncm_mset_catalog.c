@@ -71,6 +71,7 @@ enum
   PROP_WEIGHTED,
   PROP_NCHAINS,
   PROP_BURNIN,
+  PROP_TAU_METHOD,
   PROP_RNG,
   PROP_FILE,
   PROP_RUN_TYPE_STR,
@@ -96,11 +97,10 @@ ncm_mset_catalog_init (NcmMSetCatalog *mcat)
   mcat->chain_pstats   = g_ptr_array_new ();
   g_ptr_array_set_free_func (mcat->chain_pstats, (GDestroyNotify) &ncm_stats_vec_free);
   mcat->mean_pstats    = NULL;
-  mcat->e_mean_array   = g_ptr_array_new ();
-  g_ptr_array_set_free_func (mcat->e_mean_array, (GDestroyNotify) &ncm_vector_free);
   mcat->e_var_array    = g_ptr_array_new ();
   g_ptr_array_set_free_func (mcat->e_var_array, (GDestroyNotify) &ncm_vector_free);
   mcat->e_stats        = NULL;
+  mcat->e_mean_stats   = NULL;
   mcat->chain_means    = NULL;
   mcat->chain_vars     = NULL;
   mcat->chain_cov      = NULL;
@@ -112,10 +112,10 @@ ncm_mset_catalog_init (NcmMSetCatalog *mcat)
   mcat->rng_inis       = NULL;
   mcat->rng_stat       = NULL;
   mcat->sync_timer    = g_timer_new ();
-  mcat->cur_id         = -1; /* Represents that no elements in the catalog. */
-  mcat->first_id       = 0;  /* The element to be in the catalog will be the one with index == 0 */
-  mcat->file_cur_id    = -1; /* Represents that no elements in the catalog file. */
-  mcat->file_first_id  = 0;  /* The element to be in the catalog file will be the one with index == 0 */
+  mcat->cur_id         = -1; /* Represents that there are no elements in the catalog, i.e., the id of the last added row. */
+  mcat->first_id       = 0;  /* The element to be in the catalog will be the one with index == 0, cross catalog index */
+  mcat->file_cur_id    = -1; /* Represents that no elements in the catalog file, i.e., the id of the last added row. */
+  mcat->file_first_id  = 0;  /* The element to be in the catalog file will be the one with index == 0, cross catalog index */
   mcat->burnin         = 0;  /* Number of elements to ignore when reading a catalog */
   mcat->file           = NULL;
   mcat->mset_file      = NULL;
@@ -143,7 +143,7 @@ static void
 _ncm_mset_catalog_constructed_alloc_chains (NcmMSetCatalog *mcat)
 {
   const guint free_params_len = ncm_mset_fparams_len (mcat->mset);
-  const guint total = free_params_len + mcat->nadd_vals + (mcat->weighted ? 1 : 0);
+  const guint total           = free_params_len + mcat->nadd_vals + (mcat->weighted ? 1 : 0);
   guint i;
 
   mcat->pstats     = ncm_stats_vec_new (total, NCM_STATS_VEC_COV, TRUE);
@@ -157,11 +157,12 @@ _ncm_mset_catalog_constructed_alloc_chains (NcmMSetCatalog *mcat)
   {
     for (i = 0; i < mcat->nchains; i++)
     {
-      NcmStatsVec *pstats = ncm_stats_vec_new (total, NCM_STATS_VEC_COV, FALSE);
+      NcmStatsVec *pstats = ncm_stats_vec_new (total, NCM_STATS_VEC_COV, TRUE);
       g_ptr_array_add (mcat->chain_pstats, pstats);
     }
     mcat->mean_pstats   = ncm_stats_vec_new (free_params_len, NCM_STATS_VEC_COV, FALSE);
     mcat->e_stats       = ncm_stats_vec_new (total, NCM_STATS_VEC_VAR, FALSE);
+    mcat->e_mean_stats  = ncm_stats_vec_new (total, NCM_STATS_VEC_VAR, TRUE);
     
     mcat->chain_means   = ncm_vector_new (mcat->nchains);
     mcat->chain_vars    = ncm_vector_new (mcat->nchains);
@@ -287,6 +288,9 @@ _ncm_mset_catalog_set_property (GObject *object, guint prop_id, const GValue *va
     case PROP_BURNIN:
       ncm_mset_catalog_set_burnin (mcat, g_value_get_long (value));
       break;
+    case PROP_TAU_METHOD:
+      ncm_mset_catalog_set_tau_method (mcat, g_value_get_enum (value));
+      break;
     case PROP_RNG:
       ncm_mset_catalog_set_rng (mcat, g_value_get_object (value));
       break;
@@ -364,6 +368,9 @@ _ncm_mset_catalog_get_property (GObject *object, guint prop_id, GValue *value, G
     case PROP_BURNIN:
       g_value_set_long (value, ncm_mset_catalog_get_burnin (mcat));
       break;
+    case PROP_TAU_METHOD:
+      g_value_set_enum (value, ncm_mset_catalog_get_tau_method (mcat));
+      break;
     case PROP_RNG:
       g_value_set_object (value, mcat->rng);
       break;
@@ -408,8 +415,8 @@ _ncm_mset_catalog_dispose (GObject *object)
   g_clear_pointer (&mcat->chain_pstats, g_ptr_array_unref);
   ncm_stats_vec_clear (&mcat->mean_pstats);
   ncm_stats_vec_clear (&mcat->e_stats);
+  ncm_stats_vec_clear (&mcat->e_mean_stats);
 
-  g_clear_pointer (&mcat->e_mean_array, g_ptr_array_unref);
   g_clear_pointer (&mcat->e_var_array, g_ptr_array_unref);
   
   ncm_vector_clear (&mcat->chain_means);
@@ -523,6 +530,14 @@ ncm_mset_catalog_class_init (NcmMSetCatalogClass *klass)
                                                       NULL,
                                                       "Burn-in size",
                                                       0, G_MAXINT64, 0,
+                                                      G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
+  g_object_class_install_property (object_class,
+                                   PROP_TAU_METHOD,
+                                   g_param_spec_enum ("tau-method",
+                                                      NULL,
+                                                      "Method used to calculate the autocorrelation time",
+                                                      NCM_TYPE_MSET_CATALOG_TAU_METHOD, NCM_MSET_CATALOG_TAU_METHOD_AR_MODEL,
                                                       G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
   
   g_object_class_install_property (object_class,
@@ -821,16 +836,17 @@ static void
 _ncm_fits_update_key_int (fitsfile *fptr, gchar *keyname, gint value, gchar *comment, gboolean overwrite)
 {
   gint status = 0;
+  glong lvalue = value;
   if (overwrite)
   {
-    fits_update_key_log (fptr, keyname, value, comment, &status);
+    fits_update_key_lng (fptr, keyname, lvalue, comment, &status);
     NCM_FITS_ERROR (status);
   }
   else
   {
-    gint key_value;
+    glong key_value;
     gchar comment_text[FLEN_COMMENT];
-    fits_read_key_log (fptr, keyname, &key_value, comment_text, &status);
+    fits_read_key_lng (fptr, keyname, &key_value, comment_text, &status);
 
     if (status == 0)
     {
@@ -841,7 +857,7 @@ _ncm_fits_update_key_int (fitsfile *fptr, gchar *keyname, gint value, gchar *com
     else if (status == KEY_NO_EXIST)
     {
       status = 0;
-      fits_update_key_log (fptr, keyname, value, comment, &status);
+      fits_update_key_lng (fptr, keyname, lvalue, comment, &status);
       NCM_FITS_ERROR (status);
     }
     else
@@ -1043,13 +1059,14 @@ _ncm_mset_catalog_open_create_file (NcmMSetCatalog *mcat, gboolean load_from_cat
                      mcat->file_first_id, mcat->first_id);
         mcat->file_first_id = mcat->first_id;
       }
-      else if (mcat->cur_id < mcat->first_id)
+      else if (ncm_mset_catalog_is_empty (mcat))
       {
         if (mcat->first_id != 0)
           g_warning ("_ncm_mset_catalog_open_create_file: Empty memory catalog with first_id different from "NCM_MSET_CATALOG_FIRST_ID_LABEL": %d != %d. Setting to "NCM_MSET_CATALOG_FIRST_ID_LABEL".\n",
                      mcat->first_id, mcat->file_first_id);
+
         mcat->first_id = mcat->file_first_id;
-        mcat->cur_id = mcat->file_first_id - 1;
+        mcat->cur_id   = mcat->file_first_id - 1;
       }
     }
     mcat->file_cur_id = mcat->file_first_id + nrows - 1;
@@ -1217,8 +1234,8 @@ _ncm_mset_catalog_open_create_file (NcmMSetCatalog *mcat, gboolean load_from_cat
       g_free (fsymb_desc);
     }
 
-    mcat->file_first_id = 0;
-    mcat->file_cur_id   = -1;
+    mcat->file_first_id = mcat->first_id;
+    mcat->file_cur_id   = mcat->first_id - 1;
 
     g_ptr_array_unref (ttype_array);
     g_ptr_array_unref (tform_array);
@@ -1375,9 +1392,9 @@ ncm_mset_catalog_set_first_id (NcmMSetCatalog *mcat, gint first_id)
     return;
 
   g_assert_cmpint (mcat->file_first_id, ==, mcat->first_id);
-  g_assert_cmpint (mcat->file_cur_id, ==, mcat->cur_id);
+  g_assert_cmpint (mcat->file_cur_id,   ==, mcat->cur_id);
 
-  if (mcat->cur_id != mcat->first_id - 1)
+  if (!ncm_mset_catalog_is_empty (mcat))
     g_error ("ncm_mset_catalog_set_first_id: cannot modify first_id to %d in a non-empty catalog, catalog first id: %d, catalog current id: %d.",
              first_id, mcat->first_id, mcat->cur_id);
 
@@ -1412,7 +1429,7 @@ ncm_mset_catalog_set_run_type (NcmMSetCatalog *mcat, const gchar *rtype_str)
   {
     if (strcmp (mcat->rtype_str, rtype_str) != 0)
     {
-      if (mcat->cur_id + 1 != mcat->first_id)
+      if (!ncm_mset_catalog_is_empty (mcat))
         g_error ("ncm_mset_catalog_set_run_type: cannot change run type string in a non-empty catalog, actual: `%s' new: `%s'.",
                  mcat->rtype_str, rtype_str);
       else
@@ -1444,7 +1461,7 @@ ncm_mset_catalog_set_run_type (NcmMSetCatalog *mcat, const gchar *rtype_str)
 void
 ncm_mset_catalog_set_rng (NcmMSetCatalog *mcat, NcmRNG *rng)
 {
-  if (mcat->cur_id + 1 != mcat->first_id)
+  if (!ncm_mset_catalog_is_empty (mcat))
     g_warning ("ncm_mset_catalog_set_rng: setting RNG in a non-empty catalog, catalog first id: %d, catalog current id: %d.",
              mcat->first_id, mcat->cur_id);
 
@@ -1504,6 +1521,8 @@ _ncm_mset_catalog_close_file (NcmMSetCatalog *mcat)
     fits_close_file (mcat->fptr, &status);
     NCM_FITS_ERROR (status);
     mcat->fptr = NULL;
+    
+    g_clear_pointer (&mcat->file, g_free);
   }
 }
 
@@ -1543,7 +1562,7 @@ _ncm_mset_catalog_read_row (NcmMSetCatalog *mcat, NcmVector *row, guint row_inde
 }
 #endif /* NUMCOSMO_HAVE_CFITSIO */
 
-static void _ncm_mset_catalog_post_update (NcmMSetCatalog *mcat);
+static void _ncm_mset_catalog_post_update (NcmMSetCatalog *mcat, NcmVector *x);
 
 /**
  * ncm_mset_catalog_sync:
@@ -1693,9 +1712,10 @@ ncm_mset_catalog_sync (NcmMSetCatalog *mcat, gboolean check)
       mcat->smode = NCM_MSET_CATALOG_SYNC_DISABLE;
       for (i = 0; i < rows_to_add; i++)
       {
-        NcmVector *row = ncm_stats_vec_peek_x (mcat->pstats);
+        NcmVector *row = ncm_vector_new (mcat->pstats->len);
         _ncm_mset_catalog_read_row (mcat, row, offset + i + 1);
-        _ncm_mset_catalog_post_update (mcat);
+        _ncm_mset_catalog_post_update (mcat, row);
+        ncm_vector_free (row);
       }
       mcat->smode = smode;
       
@@ -1765,6 +1785,7 @@ ncm_mset_catalog_reset_stats (NcmMSetCatalog *mcat)
     }
     ncm_stats_vec_reset (mcat->mean_pstats, FALSE);
     ncm_stats_vec_reset (mcat->e_stats, FALSE);
+    ncm_stats_vec_reset (mcat->e_mean_stats, FALSE);
   }
   ncm_vector_set_all (mcat->params_max, GSL_NEGINF);
   ncm_vector_set_all (mcat->params_min, GSL_POSINF);
@@ -1794,7 +1815,8 @@ ncm_mset_catalog_reset (NcmMSetCatalog *mcat)
       ncm_stats_vec_reset (pstats, TRUE);
     }
     ncm_stats_vec_reset (mcat->mean_pstats, TRUE);
-    ncm_stats_vec_reset (mcat->e_stats, FALSE);
+    ncm_stats_vec_reset (mcat->e_stats, TRUE);
+    ncm_stats_vec_reset (mcat->e_mean_stats, TRUE);
   }
 
   ncm_vector_set_all (mcat->params_max, GSL_NEGINF);
@@ -1869,6 +1891,21 @@ ncm_mset_catalog_get_rng (NcmMSetCatalog *mcat)
 }
 
 /**
+ * ncm_mset_catalog_peek_rng:
+ * @mcat: a #NcmMSetCatalog
+ *
+ * This function checks if any pseudo random number generator (RNG) is registred in the catalog.
+ * If so, it returns it or NULL.
+ *
+ * Returns: (transfer none) (allow-none): the registered #NcmRNG in the catalog or NULL.
+ */
+NcmRNG *
+ncm_mset_catalog_peek_rng (NcmMSetCatalog *mcat)
+{
+  return mcat->rng;
+}
+
+/**
  * ncm_mset_catalog_is_empty:
  * @mcat: a #NcmMSetCatalog
  *
@@ -1877,8 +1914,7 @@ ncm_mset_catalog_get_rng (NcmMSetCatalog *mcat)
 gboolean
 ncm_mset_catalog_is_empty (NcmMSetCatalog *mcat)
 {
-  return (mcat->cur_id < mcat->first_id) &&
-    (mcat->file_cur_id < mcat->file_first_id);
+  return (mcat->cur_id < mcat->first_id);
 }
 
 /**
@@ -1962,7 +1998,10 @@ ncm_mset_catalog_len (NcmMSetCatalog *mcat)
 guint
 ncm_mset_catalog_max_time (NcmMSetCatalog *mcat)
 {
-  return mcat->e_mean_array->len;
+  if (mcat->nchains > 1)
+    return mcat->e_mean_stats->nitens;
+  else
+    return mcat->pstats->nitens;
 }
 
 /**
@@ -1977,6 +2016,49 @@ guint
 ncm_mset_catalog_nchains (NcmMSetCatalog *mcat)
 {
   return mcat->nchains;
+}
+
+/**
+ * ncm_mset_catalog_get_row_from_time:
+ * @mcat: a #NcmMSetCatalog
+ * @t: time $t$
+ * 
+ * 
+ * Returns: row number of time $t$ step.
+ */
+guint 
+ncm_mset_catalog_get_row_from_time (NcmMSetCatalog *mcat, gint t)
+{
+  const guint row_n = t - mcat->first_id;
+  
+  g_assert_cmpint (t, >=, mcat->first_id);
+  g_assert_cmpuint (row_n, <, mcat->pstats->nitens);
+
+  return row_n;
+}
+
+/**
+ * ncm_mset_catalog_get_first_id:
+ * @mcat: a #NcmMSetCatalog
+ *
+ * Returns: the id of the first row in this catalog.
+ */
+gint 
+ncm_mset_catalog_get_first_id (NcmMSetCatalog *mcat)
+{
+  return mcat->first_id;
+}
+
+/**
+ * ncm_mset_catalog_get_cur_id:
+ * @mcat: a #NcmMSetCatalog
+ *
+ * Returns: the id of the last row added (-1 if empty).
+ */
+gint 
+ncm_mset_catalog_get_cur_id (NcmMSetCatalog *mcat)
+{
+  return mcat->cur_id;
 }
 
 /**
@@ -2015,18 +2097,43 @@ ncm_mset_catalog_get_burnin (NcmMSetCatalog *mcat)
   return mcat->burnin;
 }
 
-static void
-_ncm_mset_catalog_post_update (NcmMSetCatalog *mcat)
+/**
+ * ncm_mset_catalog_set_tau_method:
+ * @mcat: a #NcmMSetCatalog
+ * @tau_method: a #NcmMSetCatalogTauMethod
+ * 
+ * Sets the autocorrelation time method to @tau_method.
+ *
+ */
+void 
+ncm_mset_catalog_set_tau_method (NcmMSetCatalog *mcat, NcmMSetCatalogTauMethod tau_method)
 {
+  mcat->tau_method = tau_method;
+}
+
+/**
+ * ncm_mset_catalog_get_tau_method:
+ * @mcat: a #NcmMSetCatalog
+ * 
+ * Returns: the autocorrelation time method used by @mcat.
+ */
+NcmMSetCatalogTauMethod 
+ncm_mset_catalog_get_tau_method (NcmMSetCatalog *mcat)
+{
+  return mcat->tau_method;
+}
+
+static void
+_ncm_mset_catalog_post_update (NcmMSetCatalog *mcat, NcmVector *x)
+{
+  const guint len = mcat->pstats->len;
   guint i;
-  guint len = mcat->pstats->len;
-  NcmVector *x = ncm_stats_vec_peek_x (mcat->pstats);
 
   for (i = 0; i < len; i++)
   {
-    gdouble p_i = ncm_vector_get (x, i);
-    gdouble cur_max_p_i = ncm_vector_get (mcat->params_max, i);
-    gdouble cur_min_p_i = ncm_vector_get (mcat->params_min, i);
+    const gdouble p_i         = ncm_vector_get (x, i);
+    const gdouble cur_max_p_i = ncm_vector_get (mcat->params_max, i);
+    const gdouble cur_min_p_i = ncm_vector_get (mcat->params_min, i);
 
     ncm_vector_set (mcat->params_max, i, GSL_MAX (p_i, cur_max_p_i));
     ncm_vector_set (mcat->params_min, i, GSL_MIN (p_i, cur_min_p_i));
@@ -2038,11 +2145,12 @@ _ncm_mset_catalog_post_update (NcmMSetCatalog *mcat)
     {
       guint chain_id = (mcat->cur_id + 1) % mcat->nchains;
       NcmStatsVec *pstats = g_ptr_array_index (mcat->chain_pstats, chain_id);
-      ncm_vector_memcpy (ncm_stats_vec_peek_x (pstats), x);
-      ncm_stats_vec_update_weight (pstats, ncm_vector_get (x, mcat->nadd_vals - 1));
+
+      ncm_stats_vec_append_weight (pstats,        x, ncm_vector_get (x, mcat->nadd_vals - 1), FALSE);
       ncm_stats_vec_append_weight (mcat->e_stats, x, ncm_vector_get (x, mcat->nadd_vals - 1), FALSE);
     }
-    ncm_stats_vec_update_weight (mcat->pstats, ncm_vector_get (x, mcat->nadd_vals - 1));
+
+    ncm_stats_vec_append_weight (mcat->pstats, x, ncm_vector_get (x, mcat->nadd_vals - 1), FALSE);
   }
   else
   {
@@ -2050,11 +2158,11 @@ _ncm_mset_catalog_post_update (NcmMSetCatalog *mcat)
     {
       guint chain_id = (mcat->cur_id + 1) % mcat->nchains;
       NcmStatsVec *pstats = g_ptr_array_index (mcat->chain_pstats, chain_id);
-      ncm_vector_memcpy (ncm_stats_vec_peek_x (pstats), x);
-      ncm_stats_vec_update (pstats);
+      
+      ncm_stats_vec_append (pstats,        x, FALSE);
       ncm_stats_vec_append (mcat->e_stats, x, FALSE);
     }
-    ncm_stats_vec_update (mcat->pstats);
+    ncm_stats_vec_append (mcat->pstats, x, FALSE);
   }
 
   mcat->cur_id++;
@@ -2062,16 +2170,17 @@ _ncm_mset_catalog_post_update (NcmMSetCatalog *mcat)
   {
     if ((mcat->cur_id + 1) % mcat->nchains + 1 == mcat->nchains)
     {
-      NcmVector *e_mean = ncm_vector_dup (ncm_stats_vec_peek_mean (mcat->e_stats));
-      const guint len = ncm_vector_len (e_mean);
+      NcmVector *e_mean = ncm_stats_vec_peek_mean (mcat->e_stats);
+      const guint len   = ncm_vector_len (e_mean);
       NcmVector *e_var  = ncm_vector_new (len);
       guint i;
+
       for (i = 0; i < len; i++)
       {
         ncm_vector_set (e_var, i, ncm_stats_vec_get_var (mcat->e_stats, i));
       }
 
-      g_ptr_array_add (mcat->e_mean_array, e_mean);
+      ncm_stats_vec_append (mcat->e_mean_stats, e_mean, TRUE);
       g_ptr_array_add (mcat->e_var_array, e_var);
 
       ncm_stats_vec_reset (mcat->e_stats, FALSE);
@@ -2108,7 +2217,7 @@ _ncm_mset_catalog_post_update (NcmMSetCatalog *mcat)
 void
 ncm_mset_catalog_add_from_mset (NcmMSetCatalog *mcat, NcmMSet *mset, ...)
 {
-  NcmVector *row_i = ncm_stats_vec_peek_x (mcat->pstats);
+  NcmVector *row_i = ncm_vector_new (mcat->pstats->len);
   va_list ap;
   guint i;
 
@@ -2124,7 +2233,8 @@ ncm_mset_catalog_add_from_mset (NcmMSetCatalog *mcat, NcmMSet *mset, ...)
 
   ncm_mset_fparams_get_vector_offset (mset, row_i, mcat->nadd_vals);
 
-  _ncm_mset_catalog_post_update (mcat);
+  _ncm_mset_catalog_post_update (mcat, row_i);
+  ncm_vector_free (row_i);
 }
 
 /**
@@ -2141,7 +2251,7 @@ ncm_mset_catalog_add_from_mset (NcmMSetCatalog *mcat, NcmMSet *mset, ...)
 void
 ncm_mset_catalog_add_from_mset_array (NcmMSetCatalog *mcat, NcmMSet *mset, gdouble *ax)
 {
-  NcmVector *row_i = ncm_stats_vec_peek_x (mcat->pstats);
+  NcmVector *row_i = ncm_vector_new (mcat->pstats->len);
   guint i;
 
   for (i = 0; i < mcat->nadd_vals; i++)
@@ -2149,7 +2259,8 @@ ncm_mset_catalog_add_from_mset_array (NcmMSetCatalog *mcat, NcmMSet *mset, gdoub
 
   ncm_mset_fparams_get_vector_offset (mset, row_i, mcat->nadd_vals);
 
-  _ncm_mset_catalog_post_update (mcat);
+  _ncm_mset_catalog_post_update (mcat, row_i);
+  ncm_vector_free (row_i);
 }
 
 /**
@@ -2164,9 +2275,9 @@ ncm_mset_catalog_add_from_mset_array (NcmMSetCatalog *mcat, NcmMSet *mset, gdoub
 void
 ncm_mset_catalog_add_from_vector (NcmMSetCatalog *mcat, NcmVector *vals)
 {
-  NcmVector *row_i = ncm_stats_vec_peek_x (mcat->pstats);
-  ncm_vector_memcpy (row_i, vals);
-  _ncm_mset_catalog_post_update (mcat);
+  NcmVector *row_i = ncm_vector_dup (vals);
+  _ncm_mset_catalog_post_update (mcat, row_i);
+  ncm_vector_free (row_i);
 }
 
 static gdouble
@@ -2190,7 +2301,6 @@ _ftau (gdouble v_i, guint i, gpointer user_data)
   return ncm_vector_get (mcat->tau, i);
 }
 
-
 /**
  * ncm_mset_catalog_log_current_stats:
  * @mcat: a #NcmMSetCatalog
@@ -2201,7 +2311,7 @@ _ftau (gdouble v_i, guint i, gpointer user_data)
 void
 ncm_mset_catalog_log_current_stats (NcmMSetCatalog *mcat)
 {
-  ncm_vector_log_vals (mcat->pstats->mean,     "# NcmMSetCatalog: Current mean:  ", "% -12.5g");
+  ncm_vector_log_vals (mcat->pstats->mean,     "# NcmMSetCatalog: Current mean:  ", "% -12.5g", TRUE);
   ncm_vector_log_vals_func (mcat->pstats->var, "# NcmMSetCatalog: Current msd:   ", "% -12.5g", &_fmeanvar, mcat);
   ncm_vector_log_vals_func (mcat->pstats->var, "# NcmMSetCatalog: Current sd:    ", "% -12.5g", &_fvar, mcat->pstats);
   ncm_vector_log_vals_avpb (mcat->pstats->var, "# NcmMSetCatalog: Current var:   ", "% -12.5g", mcat->pstats->bias_wt, 0.0);
@@ -2261,7 +2371,7 @@ ncm_mset_catalog_log_current_chain_stats (NcmMSetCatalog *mcat)
     }
     g_message ("\n");
     
-    g_message ("# NcmMSetCatalog: Maximal  Shrink factor = % 20.15g\n", shrink_factor);
+    g_message ("# NcmMSetCatalog: Maximal Shrink factor =  % 20.15g\n", shrink_factor);
   }
 }
 
@@ -2312,9 +2422,9 @@ ncm_mset_catalog_peek_current_row (NcmMSetCatalog *mcat)
 NcmVector *
 ncm_mset_catalog_peek_current_e_mean (NcmMSetCatalog *mcat)
 {
-  if (mcat->e_mean_array->len > 0)
+  if (mcat->e_mean_stats->nitens > 0)
   {
-    return g_ptr_array_index (mcat->e_mean_array, mcat->e_mean_array->len - 1);
+    return ncm_stats_vec_peek_row (mcat->e_mean_stats, mcat->e_mean_stats->nitens - 1);
   }
   else
     return NULL;
@@ -2351,8 +2461,13 @@ ncm_mset_catalog_peek_current_e_var (NcmMSetCatalog *mcat)
 NcmVector *
 ncm_mset_catalog_peek_e_mean_t (NcmMSetCatalog *mcat, guint t)
 {
-  g_assert_cmpuint (t, <, mcat->e_mean_array->len);
-  return g_ptr_array_index (mcat->e_mean_array, t);
+  if (mcat->nchains > 1)
+  {
+    g_assert_cmpuint (t, <, mcat->e_mean_stats->nitens);
+    return ncm_stats_vec_peek_row (mcat->e_mean_stats, t);
+  }
+  else
+    return NULL;
 }
 
 /**
@@ -2501,21 +2616,55 @@ ncm_mset_catalog_estimate_autocorrelation_tau (NcmMSetCatalog *mcat, gboolean fo
 {
   const guint total = ncm_vector_len (mcat->tau);
   guint p;
-
+  
   if (mcat->nchains == 1 || force_single_chain)
   {
-    for (p = 0; p < total; p++)
+    switch (mcat->tau_method)
     {
-      const gdouble tau = ncm_stats_vec_get_autocorr_tau (mcat->pstats, p, 0, 0.0);
-      ncm_vector_set (mcat->tau, p, tau);
+      case NCM_MSET_CATALOG_TAU_METHOD_ACOR:
+        for (p = 0; p < total; p++)
+        {
+          const gdouble tau = ncm_stats_vec_get_autocorr_tau (mcat->pstats, p, 0);
+          ncm_vector_set (mcat->tau, p, tau);
+        }
+        break;
+      case NCM_MSET_CATALOG_TAU_METHOD_AR_MODEL:
+        for (p = 0; p < total; p++)
+        {
+          gdouble spec0;
+          guint c_order = 0;
+          const gdouble ess = ncm_stats_vec_ar_ess (mcat->pstats, p, NCM_STATS_VEC_AR_AICC, &spec0, &c_order);
+          ncm_vector_set (mcat->tau, p, mcat->pstats->nitens / ess);
+        }
+        break;
+      default:
+        g_assert_not_reached ();
+        break;
     }
   }
   else
   {
-    for (p = 0; p < total; p++)
+    switch (mcat->tau_method)
     {
-      const gdouble tau = ncm_stats_vec_get_subsample_autocorr_tau (mcat->pstats, p, mcat->nchains, 0, 0.0);
-      ncm_vector_set (mcat->tau, p, tau);
+      case NCM_MSET_CATALOG_TAU_METHOD_ACOR:
+        for (p = 0; p < total; p++)
+        {
+          const gdouble tau = ncm_stats_vec_get_subsample_autocorr_tau (mcat->pstats, p, mcat->nchains, 0);
+          ncm_vector_set (mcat->tau, p, tau);
+        }
+        break;
+      case NCM_MSET_CATALOG_TAU_METHOD_AR_MODEL:
+        for (p = 0; p < total; p++)
+        {
+          gdouble spec0;
+          guint c_order = 0;
+          const gdouble ess = ncm_stats_vec_ar_ess (mcat->e_mean_stats, p, NCM_STATS_VEC_AR_AICC, &spec0, &c_order);
+          ncm_vector_set (mcat->tau, p, mcat->pstats->nitens / (ess * mcat->nchains));
+        }
+        break;
+      default:
+        g_assert_not_reached ();
+        break;
     }
   }
 }
@@ -2722,15 +2871,15 @@ ncm_mset_catalog_param_pdf (NcmMSetCatalog *mcat, guint i)
 /**
  * ncm_mset_catalog_param_pdf_pvalue:
  * @mcat: a #NcmMSetCatalog
- * @pval: parameter value
+ * @pvalue: parameter value
  * @both: one or both sides p-value
  *
- * Calculates the p-value associated with the parameter value @pval.
+ * Calculates the p-value associated with the parameter value @pvalue.
  *
  * Returns: the p-value.
  */
 gdouble
-ncm_mset_catalog_param_pdf_pvalue (NcmMSetCatalog *mcat, gdouble pval, gboolean both)
+ncm_mset_catalog_param_pdf_pvalue (NcmMSetCatalog *mcat, gdouble pvalue, gboolean both)
 {
   g_assert_cmpint (mcat->pdf_i, >=, 0);
   g_assert (mcat->h_pdf != NULL);
@@ -2741,13 +2890,13 @@ ncm_mset_catalog_param_pdf_pvalue (NcmMSetCatalog *mcat, gdouble pval, gboolean 
     gsize i = 0;
 
     NCM_UNUSED (both);
-    if (pval < p_min || pval > p_max)
+    if (pvalue < p_min || pvalue > p_max)
     {
       g_warning ("ncm_mset_catalog_param_pdf_pvalue: value % 20.15g outside mc obtained interval [% 20.15g % 20.15g]. Assuming 0 pvalue.",
-                 pval, p_min, p_max);
+                 pvalue, p_min, p_max);
       return 0.0;
     }
-    gsl_histogram_find (mcat->h, pval, &i);
+    gsl_histogram_find (mcat->h, pvalue, &i);
     g_assert_cmpint (i, <=, mcat->h_pdf->n);
     if (i == 0)
       return 1.0;
@@ -2791,10 +2940,10 @@ ncm_mset_catalog_calc_ci_direct (NcmMSetCatalog *mcat, NcmMSetFunc *func, NcmVec
   
   g_assert_cmpuint (p_val->len, >, 1);
   {
-    const guint nelem = p_val->len * 2 + 1;
-    NcmMatrix *res = ncm_matrix_new (dim, nelem);
+    const guint nelem      = p_val->len * 2 + 1;
+    NcmMatrix *res         = ncm_matrix_new (dim, nelem);
     NcmVector *save_params = ncm_vector_new (ncm_mset_fparams_len (mcat->mset));
-    const guint cat_len = ncm_mset_catalog_len (mcat);
+    const guint cat_len    = ncm_mset_catalog_len (mcat);
     guint i, j;
 
     ncm_mset_fparams_get_vector (mcat->mset, save_params);
@@ -2879,11 +3028,11 @@ ncm_mset_catalog_calc_ci_interp (NcmMSetCatalog *mcat, NcmMSetFunc *func, NcmVec
 
   g_assert_cmpuint (p_val->len, >, 1);
   {
-    const guint nelem = p_val->len * 2 + 1;
-    NcmMatrix *res = ncm_matrix_new (dim, nelem);
+    const guint nelem      = p_val->len * 2 + 1;
+    NcmMatrix *res         = ncm_matrix_new (dim, nelem);
     NcmVector *save_params = ncm_vector_new (ncm_mset_fparams_len (mcat->mset));
-    const guint cat_len = ncm_mset_catalog_len (mcat);
-    GPtrArray *epdf_a = g_ptr_array_sized_new (dim);
+    const guint cat_len    = ncm_mset_catalog_len (mcat);
+    GPtrArray *epdf_a      = g_ptr_array_sized_new (dim);
     guint i, j;
 
     ncm_mset_fparams_get_vector (mcat->mset, save_params);
@@ -2938,8 +3087,8 @@ ncm_mset_catalog_calc_ci_interp (NcmMSetCatalog *mcat, NcmMSetFunc *func, NcmVec
     {
       if (i % (cat_len / 100) != 0)
         ncm_message ("=");
-      ncm_message ("|\n", cat_len);
-      ncm_message ("# - |", cat_len);
+      ncm_message ("|\n");
+      ncm_message ("# - |");
       for (i = 0; i < 100; i++)
         ncm_message ("-");
       ncm_message ("|\n");
@@ -3002,11 +3151,11 @@ ncm_mset_catalog_calc_pvalue (NcmMSetCatalog *mcat, NcmMSetFunc *func, NcmVector
 
   g_assert_cmpuint (lim->len, >, 1);
   {
-    const guint nelem = lim->len * 2 + 1;
-    NcmMatrix *res = ncm_matrix_new (dim, nelem);
+    const guint nelem      = lim->len * 2 + 1;
+    NcmMatrix *res         = ncm_matrix_new (dim, nelem);
     NcmVector *save_params = ncm_vector_new (ncm_mset_fparams_len (mcat->mset));
-    const guint cat_len = ncm_mset_catalog_len (mcat);
-    GPtrArray *epdf_a = g_ptr_array_sized_new (dim);
+    const guint cat_len    = ncm_mset_catalog_len (mcat);
+    GPtrArray *epdf_a      = g_ptr_array_sized_new (dim);
     guint i, j;
 
     ncm_mset_fparams_get_vector (mcat->mset, save_params);
@@ -3061,8 +3210,8 @@ ncm_mset_catalog_calc_pvalue (NcmMSetCatalog *mcat, NcmMSetFunc *func, NcmVector
     {
       if (i % (cat_len / 100) != 0)
         ncm_message ("=");
-      ncm_message ("|\n", cat_len);
-      ncm_message ("# - |", cat_len);
+      ncm_message ("|\n");
+      ncm_message ("# - |");
       for (i = 0; i < 100; i++)
         ncm_message ("-");
       ncm_message ("|\n");
@@ -3154,8 +3303,8 @@ ncm_mset_catalog_calc_distrib (NcmMSetCatalog *mcat, NcmMSetFunc *func, NcmFitRu
     {
       if (i % (cat_len / 100) != 0)
         ncm_message ("=");
-      ncm_message ("|\n", cat_len);
-      ncm_message ("# - |", cat_len);
+      ncm_message ("|\n");
+      ncm_message ("# - |");
       for (i = 0; i < 100; i++)
         ncm_message ("-");
       ncm_message ("|\n");
@@ -3206,8 +3355,8 @@ _ncm_mset_catalog_calc_distrib (NcmMSetCatalog *mcat, guint vi, NcmFitRunMsgs mt
   {
     if (i % (cat_len / 100) != 0)
       ncm_message ("=");
-    ncm_message ("|\n", cat_len);
-    ncm_message ("# - |", cat_len);
+    ncm_message ("|\n");
+    ncm_message ("# - |");
     for (i = 0; i < 100; i++)
       ncm_message ("-");
     ncm_message ("|\n");
@@ -3274,7 +3423,7 @@ _ncm_mset_catalog_calc_ensemble_evol (NcmMSetCatalog *mcat, guint vi, guint nste
   NcmVector *pv       = ncm_vector_new (nsteps);
   const gdouble pmin  = ncm_vector_get (mcat->params_min, vi);
   const gdouble pmax  = ncm_vector_get (mcat->params_max, vi);
-  
+
   guint i, t;
 
   *pval   = pv;
@@ -3330,8 +3479,8 @@ _ncm_mset_catalog_calc_ensemble_evol (NcmMSetCatalog *mcat, guint vi, guint nste
   {
     if (t % (max_t / 100) != 0)
       ncm_message ("=");
-    ncm_message ("|\n", max_t);
-    ncm_message ("# - |", max_t);
+    ncm_message ("|\n");
+    ncm_message ("# - |");
     for (i = 0; i < 100; i++)
       ncm_message ("-");
     ncm_message ("|\n");
@@ -3381,4 +3530,522 @@ ncm_mset_catalog_calc_add_param_ensemble_evol (NcmMSetCatalog *mcat, guint add_p
 {
   g_assert_cmpuint (add_param, <, mcat->nadd_vals);
   _ncm_mset_catalog_calc_ensemble_evol (mcat, add_param, nsteps, mtype, pval, t_evol);
+}
+
+/**
+ * ncm_mset_catalog_trim:
+ * @mcat: a #NcmMSetCatalog
+ * @tc: time divisor $t_c$
+ *
+ * Drops all points in the catalog such that $t < t_c$. This function 
+ * does nothing if $t_c = 0$. This function trims the first $t_c \times n_\mathrm{chains}$ 
+ * points from the catalog.
+ *
+ */
+void 
+ncm_mset_catalog_trim (NcmMSetCatalog *mcat, const guint tc)
+{
+  if (tc > 0)
+  {
+    GPtrArray *rows      = ncm_stats_vec_dup_saved_x (mcat->pstats);
+    gchar *file          = g_strdup (ncm_mset_catalog_peek_filename (mcat));
+    guint t;
+
+    ncm_mset_catalog_set_file (mcat, NULL);
+    ncm_mset_catalog_reset (mcat);
+
+    ncm_mset_catalog_set_first_id (mcat, mcat->first_id + tc * mcat->nchains);
+
+    for (t = tc * mcat->nchains; t < rows->len; t++)
+    {
+      NcmVector *row_t = g_ptr_array_index (rows, t);
+      _ncm_mset_catalog_post_update (mcat, row_t);
+    }
+
+    {
+      guint bak_n = 0;
+      while (TRUE)
+      {
+        gchar *bak_name = g_strdup_printf ("%s.%d.bak", file, bak_n);
+
+        if (!g_file_test (bak_name, G_FILE_TEST_EXISTS))
+        {
+          g_rename (file, bak_name);
+          ncm_mset_catalog_set_file (mcat, file);
+          g_free (bak_name);
+
+          break;
+        }
+
+        g_free (bak_name);
+        bak_n++;
+      }
+    }
+
+    g_ptr_array_unref (rows);
+    g_free (file);
+  }
+}
+
+/**
+ * ncm_mset_catalog_calc_max_ess_time:
+ * @mcat: a #NcmMSetCatalog
+ * @ntests: number of tests
+ * @max_ess: (out): the maximum effective sample size (ESS)
+ * @mtype: #NcmFitRunMsgs log level
+ *
+ * Calculates the time $t_m$ that maximizes the ESS for all 
+ * elements of the catalog. If the number of chains in the catalog is larger 
+ * than one, it considers the whole catalog otherwise it considers the ensemble
+ * means. The variable @ntests control the number of divisions where the ESS
+ * will be calculated, if it is zero the default 10 tests will be used.
+ *
+ * Returns: The lowest time $t_m$.
+ */
+guint 
+ncm_mset_catalog_calc_max_ess_time (NcmMSetCatalog *mcat, const guint ntests, gdouble *max_ess, NcmFitRunMsgs mtype)
+{
+  NcmStatsVec *pstats = (mcat->nchains == 1) ? mcat->pstats : mcat->e_mean_stats;
+  const gint last_t   = ncm_stats_vec_nrows (pstats);
+  NcmVector *esss     = NULL;
+  gdouble wp_ess      = 0.0;
+  gint bindex         = 0;
+  guint wp_order      = 0;
+  guint wp            = 0;
+
+  if (mtype > NCM_FIT_RUN_MSGS_NONE)
+  {
+    ncm_cfg_msg_sepa ();
+    ncm_message ("# NcmMSetCatalog: Calculating catalog effective sample size from chain %d => 0 using %u blocks:\n", last_t, ntests);
+  }
+
+  esss = ncm_stats_vec_max_ess_time (pstats, ntests, &bindex, &wp, &wp_order, &wp_ess);
+  
+  if (mtype > NCM_FIT_RUN_MSGS_NONE)
+  {
+    const gchar *name = NULL;
+
+    if (wp < mcat->nadd_vals)  
+      name = g_ptr_array_index (mcat->add_vals_names, wp);
+    else
+      name = ncm_mset_fparam_full_name (mcat->mset, wp - mcat->nadd_vals);
+
+    ncm_message ("# NcmMSetCatalog: - best cutoff time:         %-4u\n", bindex);
+    if (mcat->nchains > 1)
+    {
+      ncm_message ("# NcmMSetCatalog: - total number of points:   %-4u (%04u)\n", last_t, last_t * mcat->nchains);
+      ncm_message ("# NcmMSetCatalog: - number of points left:    %-4u (%04u)\n", last_t - bindex, (last_t - bindex) * mcat->nchains);
+    }
+    else
+    {
+      ncm_message ("# NcmMSetCatalog: - total number of points:   %-4u\n", last_t);
+      ncm_message ("# NcmMSetCatalog: - number of points left:    %-4u\n", last_t - bindex);
+    }
+    ncm_message ("# NcmMSetCatalog: - worst parameter:          %s[%02u]\n", name, wp);
+    ncm_message ("# NcmMSetCatalog: - worst parameter ess:      %-.2f\n", wp_ess);
+    ncm_message ("# NcmMSetCatalog: - worst parameter ar order: %-4u\n", wp_order);
+    ncm_vector_log_vals (esss, "# NcmMSetCatalog: - ess's:                    ", "%-.2f", TRUE);
+  }
+
+  ncm_vector_clear (&esss);
+
+  return bindex;
+}
+
+static gdouble
+_fonempval (gdouble v_i, guint i, gpointer user_data)
+{
+  return (1.0 - v_i) * 100.0;
+}
+
+/**
+ * ncm_mset_catalog_calc_heidel_diag:
+ * @mcat: a #NcmMSetCatalog
+ * @ntests: number of tests
+ * @pvalue: the required Schruben test p-value
+ * @mtype: #NcmFitRunMsgs log level
+ *
+ * Applies the Heidelberger and Welch's convergence diagnostic to the catalog,
+ * see ncm_stats_vec_heidel_diag() for mode details. If the number of chains in 
+ * the catalog is larger than one, it considers the whole catalog otherwise it 
+ * considers the ensemble means. The variable @ntests control the number of 
+ * divisions where the test will be applied, if it is zero the default 10 tests 
+ * will be used.
+ *
+ * Returns: The lowest time $t_m$ where all parameters pass the test with @pvalue or zero
+ * if all tests fail.
+ */
+guint 
+ncm_mset_catalog_calc_heidel_diag (NcmMSetCatalog *mcat, const guint ntests, const gdouble pvalue, NcmFitRunMsgs mtype)
+{
+  NcmStatsVec *pstats = (mcat->nchains == 1) ? mcat->pstats : mcat->e_mean_stats;
+  const gdouble pvalue_lef = (pvalue == 0.0) ? NCM_STATS_VEC_HEIDEL_PVAL_COR (0.05, ncm_mset_fparams_len (mcat->mset)) : pvalue;
+  gint bindex = 0;
+  guint wp = 0, wp_order = 0;
+  gdouble wp_pvalue = 0.0;
+  NcmVector *pvals = ncm_stats_vec_heidel_diag (pstats, ntests, pvalue_lef, &bindex, &wp, &wp_order, &wp_pvalue);
+
+  if (mtype > NCM_FIT_RUN_MSGS_NONE)
+  {
+    const gchar *name = NULL;
+
+    if (wp < mcat->nadd_vals)  
+      name = g_ptr_array_index (mcat->add_vals_names, wp);
+    else
+      name = ncm_mset_fparam_full_name (mcat->mset, wp - mcat->nadd_vals);
+
+    ncm_cfg_msg_sepa ();
+    ncm_message ("# NcmMSetCatalog: Applying the Heidelberger and Welch's convergence diagnostic from chain %d => 0 using %u blocks:\n", 
+                 ncm_stats_vec_nrows (pstats), ntests);
+    if (bindex < 0)
+    {
+      if (ntests > 1)
+        ncm_message ("# NcmMSetCatalog: - test failed at all points.\n");
+      else
+        ncm_message ("# NcmMSetCatalog: - test failed for the full catalog.\n");
+    }
+    else
+    {
+      ncm_message ("# NcmMSetCatalog: - best cutoff time:         %-4u\n", bindex);
+    }
+    ncm_message ("# NcmMSetCatalog: - worst parameter:          %s[%02u]\n", name, wp);
+    ncm_message ("# NcmMSetCatalog: - worst parameter pvalue:   %5.2f%%\n", (1.0 - wp_pvalue) * 100.0);
+    ncm_message ("# NcmMSetCatalog: - worst parameter ar order: %-4u\n", wp_order);
+    ncm_message ("# NcmMSetCatalog: - target pvalue:            %5.2f%%\n", pvalue_lef * 100.0);
+    ncm_vector_log_vals_func (pvals, "# NcmMSetCatalog: - pvalues:                  ", "%5.2f%%", &_fonempval, NULL);
+  }
+
+  ncm_vector_free (pvals);
+  return (bindex >= 0) ? bindex : 0;
+}
+
+/**
+ * ncm_mset_catalog_trim_by_type:
+ * @mcat: a #NcmMSetCatalog
+ * @ntests: number of tests
+ * @trim_type: the trimming type to apply #NcmMSetCatalogTrimType
+ * @mtype: #NcmFitRunMsgs log level
+ *
+ * Calculates the time $t_m$ that satisfies all trimming options
+ * in @trim_type. Then drops all elements of the catalog and drops 
+ * all points $t < t_m$.
+ * 
+ */
+void 
+ncm_mset_catalog_trim_by_type (NcmMSetCatalog *mcat, const guint ntests, NcmMSetCatalogTrimType trim_type, NcmFitRunMsgs mtype)
+{
+  guint t_c = 0;
+
+  if (trim_type & NCM_MSET_CATALOG_TRIM_TYPE_ESS)
+  {
+    gdouble max_ess_time = 0.0;
+    const guint t_c_ess = ncm_mset_catalog_calc_max_ess_time (mcat, ntests, &max_ess_time, mtype);
+    t_c = GSL_MAX (t_c, t_c_ess);
+  }
+
+  if (trim_type & NCM_MSET_CATALOG_TRIM_TYPE_HEIDEL)
+  {
+    const guint t_c_heidel = ncm_mset_catalog_calc_heidel_diag (mcat, ntests, 0.0, mtype);
+    t_c = GSL_MAX (t_c, t_c_heidel);
+  }
+
+  if ((t_c > 0) && (mtype >= NCM_FIT_RUN_MSGS_SIMPLE))
+  {
+    g_message ("# NcmMSetCatalog: Trimming the catalog at: %u.\n", t_c);
+  }
+
+  ncm_mset_catalog_trim (mcat, t_c);  
+}
+
+typedef struct _NcmMSetCatalogESSRes
+{
+  guint chain_n;
+  gint best_cutoff;
+  guint size;
+  guint size_left;
+  guint wp;
+  guint wp_order;
+  gdouble wp_ess;
+} NcmMSetCatalogESSRes;
+
+static gint
+_ess_res_cmp (gconstpointer a, gconstpointer b)
+{
+  const NcmMSetCatalogESSRes *res_a = a;
+  const NcmMSetCatalogESSRes *res_b = b;
+
+  if (res_a->best_cutoff < 0)
+  {
+    if (res_b->best_cutoff < 0)
+    {
+      if (res_a->wp_ess > res_b->wp_ess)
+        return -1;
+      else if (res_a->wp_ess == res_b->wp_ess)
+        return 0;
+      else
+        return 1;
+    }
+    else
+    {
+      return -1;
+    }
+  }
+  else if (res_b->best_cutoff < 0)
+  {
+    return 1;
+  }
+  
+  if (res_a->best_cutoff > res_b->best_cutoff)
+    return -1;
+  else if (res_a->best_cutoff == res_b->best_cutoff)
+    return 0;
+  else
+    return 1;
+}
+
+/**
+ * ncm_mset_catalog_max_ess_time_by_chain:
+ * @mcat: a #NcmMSetCatalog
+ * @ntests: number of tests
+ * @max_ess: (out): the maximum effective sample size (ESS)
+ * @mtype: #NcmFitRunMsgs log level
+ *
+ * Calculates the time $t_m$ that maximizes the ESS for each chain of the catalog. 
+ * The variable @ntests control the number of divisions where the ESS
+ * will be calculated, if it is zero the default 10 tests will be used.
+ * 
+ * Returns: The lowest time $t_m$.
+ */
+guint 
+ncm_mset_catalog_max_ess_time_by_chain (NcmMSetCatalog *mcat, const guint ntests, gdouble *max_ess, NcmFitRunMsgs mtype)
+{
+  if (mcat->nchains == 1)
+  {
+    return ncm_mset_catalog_calc_max_ess_time (mcat, ntests, max_ess, mtype);
+  }
+  else
+  {
+    gint tbindex = -1;
+    guint twp = 0, twp_order = 0;
+    gdouble twp_ess = 0.0;
+    guint i, ti = 0;
+    GArray *res_a = g_array_new (FALSE, FALSE, sizeof (NcmMSetCatalogESSRes));
+    
+    if (mtype > NCM_FIT_RUN_MSGS_NONE)
+    {
+      ncm_cfg_msg_sepa ();
+      ncm_message ("# NcmMSetCatalog: Computing max ESS for all %u chains in the catalog:\n", mcat->nchains);
+    }
+    
+    for (i = 0; i < mcat->nchains; i++)
+    {
+      gint bindex = 0;
+      guint wp = 0, wp_order = 0;
+      gdouble wp_ess = 0.0;
+      NcmStatsVec *pstats = g_ptr_array_index (mcat->chain_pstats, i);
+      NcmVector *esss     = ncm_stats_vec_max_ess_time (pstats, ntests, &bindex, &wp, &wp_order, &wp_ess);
+      guint size          = ncm_stats_vec_nitens (pstats);
+      
+      if (mtype > NCM_FIT_RUN_MSGS_SIMPLE)
+      {
+        NcmMSetCatalogESSRes res_i;
+
+        res_i.chain_n     = i;
+        res_i.best_cutoff = bindex;
+        res_i.size        = size;
+        res_i.size_left   = size - bindex;
+        res_i.wp          = wp;
+        res_i.wp_order    = wp_order;
+        res_i.wp_ess      = wp_ess;
+
+        g_array_append_val (res_a, res_i);
+      }
+
+      if (bindex > tbindex)
+      {
+        tbindex   = bindex;
+        twp       = wp;
+        twp_order = wp_order;
+        twp_ess   = wp_ess;
+        ti        = i;
+      }
+
+      ncm_vector_free (esss);
+    }
+
+    if (mtype > NCM_FIT_RUN_MSGS_SIMPLE)
+    {
+      g_array_sort (res_a, &_ess_res_cmp);
+
+      ncm_message ("# NcmMSetCatalog: Chains results from worst to best:\n");
+      for (i = 0; i < mcat->nchains; i++)
+      {
+        NcmMSetCatalogESSRes *res_i = &g_array_index (res_a, NcmMSetCatalogESSRes, i);
+        ncm_cfg_msg_sepa ();
+        ncm_message ("# NcmMSetCatalog: - chain index:              %-4u\n", res_i->chain_n);
+        ncm_message ("# NcmMSetCatalog: - best cutoff time:         %-4u\n", res_i->best_cutoff);
+        ncm_message ("# NcmMSetCatalog: - total number of points:   %-4u\n", res_i->size);
+        ncm_message ("# NcmMSetCatalog: - number of points left:    %-4u\n", res_i->size_left);
+        ncm_message ("# NcmMSetCatalog: - worst parameter:          %-4u\n", res_i->wp);
+        ncm_message ("# NcmMSetCatalog: - worst parameter order:    %-4u\n", res_i->wp_order);
+        ncm_message ("# NcmMSetCatalog: - worst parameter ESS:      %-.2f\n", res_i->wp_ess);
+      }
+    }
+    
+    g_array_unref (res_a);
+    
+    if (mtype > NCM_FIT_RUN_MSGS_NONE)
+    {
+      guint size = ncm_stats_vec_nitens (g_ptr_array_index (mcat->chain_pstats, ti));
+      
+      ncm_cfg_msg_sepa ();
+      ncm_message ("# NcmMSetCatalog: - Worst chain:\n");
+      ncm_cfg_msg_sepa ();
+      ncm_message ("# NcmMSetCatalog: - worst chain no:           %-4u\n", ti);
+      ncm_message ("# NcmMSetCatalog: - best cutoff time:         %-4d\n", tbindex);
+      ncm_message ("# NcmMSetCatalog: - total number of points:   %-4u\n", size);
+      ncm_message ("# NcmMSetCatalog: - number of points left:    %-4u\n", size - tbindex);
+      ncm_message ("# NcmMSetCatalog: - worst parameter:          %-4u\n", twp);
+      ncm_message ("# NcmMSetCatalog: - worst parameter order:    %-4u\n", twp_order);
+      ncm_message ("# NcmMSetCatalog: - worst parameter ESS:      %-.2f\n", twp_ess);
+    }
+
+    max_ess[0] = twp_ess;
+    
+    return tbindex;
+  }
+}
+
+/**
+ * ncm_mset_catalog_heidel_diag_by_chain:
+ * @mcat: a #NcmMSetCatalog
+ * @ntests: number of tests
+ * @pvalue: required p-value
+ * @wp_pvalue: (out): worst parameter p-value
+ * @mtype: #NcmFitRunMsgs log level
+ *
+ * Calculates the lowest time $t_m$ where all chains satisfy the Heidelberger 
+ * and Welch's convergence diagnostic. The variable @ntests control the number 
+ * of divisions where the test will be calculated, if it is zero the default 
+ * 10 tests will be used.
+ * 
+ * Returns: The lowest time $t_m$.
+ */
+guint 
+ncm_mset_catalog_heidel_diag_by_chain (NcmMSetCatalog *mcat, const guint ntests, const gdouble pvalue, gdouble *wp_pvalue, NcmFitRunMsgs mtype)
+{
+  if (mcat->nchains == 1)
+  {
+    return ncm_mset_catalog_calc_heidel_diag (mcat, ntests, pvalue, mtype);
+  }
+  else
+  {
+    const gdouble pvalue_lef = (pvalue == 0.0) ? NCM_STATS_VEC_HEIDEL_PVAL_COR (0.05, ncm_mset_fparams_len (mcat->mset)) : pvalue;
+    gint tbindex = -1;
+    guint twp = 0, twp_order = 0;
+    gdouble twp_pvalue = 0.0;
+    guint i, ti = 0;
+    GArray *res_a = g_array_new (FALSE, FALSE, sizeof (NcmMSetCatalogESSRes));
+    
+    if (mtype > NCM_FIT_RUN_MSGS_NONE)
+    {
+      ncm_cfg_msg_sepa ();
+      ncm_message ("# NcmMSetCatalog: Computing Heidelberger and Welch's convergence diagnostic for all %u chains in the catalog:\n", mcat->nchains);
+    }
+    
+    for (i = 0; i < mcat->nchains; i++)
+    {
+      gint bindex = 0;
+      guint wp = 0, wp_order = 0;
+      gdouble lwp_pvalue = 0.0;
+      NcmStatsVec *pstats = g_ptr_array_index (mcat->chain_pstats, i);
+      NcmVector *pvals     = ncm_stats_vec_heidel_diag (pstats, ntests, pvalue_lef, &bindex, &wp, &wp_order, &lwp_pvalue);
+      guint size          = ncm_stats_vec_nitens (pstats);
+      
+      if (mtype > NCM_FIT_RUN_MSGS_SIMPLE)
+      {
+        NcmMSetCatalogESSRes res_i;
+
+        res_i.chain_n     = i;
+        res_i.best_cutoff = bindex;
+        res_i.size        = size;
+        res_i.size_left   = size - bindex;
+        res_i.wp          = wp;
+        res_i.wp_order    = wp_order;
+        res_i.wp_ess      = lwp_pvalue;
+
+        g_array_append_val (res_a, res_i);
+      }
+
+      if ((i == 0) || ((tbindex >= 0) && (bindex > tbindex)) || ((bindex == -1) && (tbindex >= 0)) || ((bindex == -1) && (lwp_pvalue > twp_pvalue)))
+      {
+        tbindex    = bindex;
+        twp        = wp;
+        twp_order  = wp_order;
+        twp_pvalue = lwp_pvalue;
+        ti         = i;
+      }
+
+      ncm_vector_free (pvals);
+    }
+
+    if (mtype > NCM_FIT_RUN_MSGS_SIMPLE)
+    {
+      g_array_sort (res_a, &_ess_res_cmp);
+
+      ncm_message ("# NcmMSetCatalog: Chains results from worst to best:\n");
+      for (i = 0; i < mcat->nchains; i++)
+      {
+        NcmMSetCatalogESSRes *res_i = &g_array_index (res_a, NcmMSetCatalogESSRes, i);
+        ncm_cfg_msg_sepa ();
+        ncm_message ("# NcmMSetCatalog: - chain index:              %-4u\n", res_i->chain_n);
+        if (res_i->best_cutoff == -1)
+        {
+          ncm_message ("# NcmMSetCatalog: - best cutoff time:         not satisfied!\n");
+          ncm_message ("# NcmMSetCatalog: - total number of points:   %-4u\n", res_i->size);
+          ncm_message ("# NcmMSetCatalog: - number of points left:    %-4u\n", 0);
+        }
+        else
+        {
+          ncm_message ("# NcmMSetCatalog: - best cutoff time:         %-4u\n", res_i->best_cutoff);
+          ncm_message ("# NcmMSetCatalog: - total number of points:   %-4u\n", res_i->size);
+          ncm_message ("# NcmMSetCatalog: - number of points left:    %-4u\n", res_i->size_left);
+        }
+        ncm_message ("# NcmMSetCatalog: - worst parameter:          %-4u\n", res_i->wp);
+        ncm_message ("# NcmMSetCatalog: - worst parameter order:    %-4u\n", res_i->wp_order);
+        ncm_message ("# NcmMSetCatalog: - worst parameter pvalue:   %6.2f%%\n", (1.0 - res_i->wp_ess) * 100.0);
+      }
+    }
+    
+    g_array_unref (res_a);
+    
+    if (mtype > NCM_FIT_RUN_MSGS_NONE)
+    {
+      guint size = ncm_stats_vec_nitens (g_ptr_array_index (mcat->chain_pstats, ti));
+      
+      ncm_cfg_msg_sepa ();
+      ncm_message ("# NcmMSetCatalog: - Worst chain:\n");
+      ncm_cfg_msg_sepa ();
+      ncm_message ("# NcmMSetCatalog: - worst chain index:        %-4u\n", ti);
+      if (tbindex == -1)
+      {
+        ncm_message ("# NcmMSetCatalog: - best cutoff time:         not satisfied!\n");
+        ncm_message ("# NcmMSetCatalog: - total number of points:   %-4u\n", size);
+        ncm_message ("# NcmMSetCatalog: - number of points left:    %-4u\n", 0);
+      }
+      else
+      {
+        ncm_message ("# NcmMSetCatalog: - best cutoff time:         %-4u\n", tbindex);
+        ncm_message ("# NcmMSetCatalog: - total number of points:   %-4u\n", size);
+        ncm_message ("# NcmMSetCatalog: - number of points left:    %-4u\n", size - tbindex);
+      }
+      ncm_message ("# NcmMSetCatalog: - worst parameter:          %-4u\n", twp);
+      ncm_message ("# NcmMSetCatalog: - worst parameter order:    %-4u\n", twp_order);
+      ncm_message ("# NcmMSetCatalog: - worst parameter pvalue:   %6.2f%%\n", (1.0 - twp_pvalue) * 100.0);
+    }
+
+    wp_pvalue[0] = twp_pvalue;
+    
+    return tbindex;
+  }
 }

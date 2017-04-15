@@ -1,5 +1,7 @@
 ## Process this file with automake to produce Makefile.in
 
+@CODE_COVERAGE_RULES@
+
 if USE_INTERNAL_LIBCUBA
   MAYBE_LIBCUBA  = libcuba
   LIBCUBA_PLACE  = libcuba/libcuba.la
@@ -24,29 +26,32 @@ MY_CFLAGS = \
 	 -I$(PLC_DIR)/cldf    \
 	 -I$(PLC_DIR)/minipmc \
 	 -I$(PLC_DIR)/plik    \
-	 -I$(top_srcdir)
+	 -I$(top_srcdir)      \
+	 $(CODE_COVERAGE_CFLAGS)
 
 AM_CFLAGS =    \
 	 -Wall \
 	 $(OPENMP_CFLAGS)     \
 	 $(MY_CFLAGS)
 
-SUBDIRS = $(MAYBE_LIBCUBA) levmar plc class .
+SUBDIRS = $(MAYBE_LIBCUBA) levmar plc class toeplitz .
 
 lib_LTLIBRARIES = libnumcosmo.la
 
-libnumcosmo_la_LIBADD =     \
-	$(SUNDIALS_LIBS)    \
-	$(FFTW3_LIBS)       \
-	$(FFTW3F_LIBS)      \
-	$(GLIB_LIBS)        \
-	$(NLOPT_LIBS)       \
-	$(GSL_LIBS)         \
-	$(CFITSIO_LIBS)     \
-	$(LIBCUBA_PLACE)    \
-	plc/libclik.la      \
-	levmar/liblevmar.la \
-	class/libclass.la
+libnumcosmo_la_LIBADD =         \
+	$(SUNDIALS_LIBS)        \
+	$(FFTW3_LIBS)           \
+	$(FFTW3F_LIBS)          \
+	$(GLIB_LIBS)            \
+	$(NLOPT_LIBS)           \
+	$(GSL_LIBS)             \
+	$(CFITSIO_LIBS)         \
+	$(LIBCUBA_PLACE)        \
+	$(CODE_COVERAGE_LIBS)   \
+	plc/libclik.la          \
+	levmar/liblevmar.la     \
+	class/libclass.la       \
+	toeplitz/libtoeplitz.la
 
 ncm_sources = \
 	ncm_build_inline.c                   \
@@ -288,6 +293,7 @@ nc_headers = \
 	nc_planck_fi_cor_ttteee.h     \
 	nc_cbe_precision.h            \
 	nc_cbe.h                      \
+	model/nc_hicosmo_gcg.h        \
 	model/nc_hicosmo_de.h         \
 	model/nc_hicosmo_de_reparam_ok.h \
 	model/nc_hicosmo_de_reparam_cmb.h \
@@ -326,6 +332,7 @@ nc_headers = \
 	lss/nc_multiplicity_func_tinker_mean.h  \
 	lss/nc_multiplicity_func_tinker_crit.h  \
 	lss/nc_multiplicity_func_tinker_mean_normalized.h \
+	lss/nc_multiplicity_func_crocce.h      \
 	lss/nc_halo_mass_function.h            \
         lss/nc_halo_bias_type.h                \
         lss/nc_halo_bias_type_ps.h             \
@@ -366,6 +373,7 @@ nc_headers = \
 	data/nc_data_cmb.h                     \
 	data/nc_data_cluster_ncount.h          \
 	data/nc_data_cluster_poisson.h         \
+	data/nc_data_cluster_counts_box_poisson.h \
 	data/nc_data_cluster_pseudo_counts.h   \
 	data/nc_data_planck_lkl.h              \
 	data/nc_data_xcor.h                    \
@@ -414,6 +422,7 @@ nc_sources = \
 	nc_planck_fi_cor_ttteee.c     \
 	nc_cbe_precision.c            \
 	nc_cbe.c                      \
+	model/nc_hicosmo_gcg.c        \
 	model/nc_hicosmo_de.c         \
 	model/nc_hicosmo_de_reparam_ok.c \
 	model/nc_hicosmo_de_reparam_cmb.c \
@@ -452,6 +461,7 @@ nc_sources = \
 	lss/nc_multiplicity_func_tinker_mean.c  \
 	lss/nc_multiplicity_func_tinker_crit.c  \
 	lss/nc_multiplicity_func_tinker_mean_normalized.c \
+	lss/nc_multiplicity_func_crocce.c      \
 	lss/nc_halo_mass_function.c            \
 	lss/nc_halo_bias_type.c                \
 	lss/nc_halo_bias_type_ps.c             \
@@ -492,6 +502,7 @@ nc_sources = \
 	data/nc_data_cmb.c                     \
 	data/nc_data_cluster_ncount.c          \
 	data/nc_data_cluster_poisson.c         \
+	data/nc_data_cluster_counts_box_poisson.c \
 	data/nc_data_cluster_pseudo_counts.c   \
 	data/nc_data_planck_lkl.c              \
 	data/nc_data_xcor.c                    \

@@ -106,7 +106,7 @@ NcmVector *ncm_vector_get_subvector (NcmVector *cv, const gsize k, const gsize s
 GVariant *ncm_vector_get_variant (const NcmVector *v);
 GVariant *ncm_vector_peek_variant (const NcmVector *v);
 
-void ncm_vector_log_vals (const NcmVector *v, const gchar *prestr, const gchar *format);
+void ncm_vector_log_vals (const NcmVector *v, const gchar *prestr, const gchar *format, gboolean cr);
 void ncm_vector_log_vals_avpb (const NcmVector *v, const gchar *prestr, const gchar *format, const gdouble a, const gdouble b);
 void ncm_vector_log_vals_func (const NcmVector *v, const gchar *prestr, const gchar *format, NcmVectorCompFunc f, gpointer user_data);
 
@@ -150,7 +150,13 @@ G_INLINE_FUNC const gsl_vector *ncm_vector_const_gsl (const NcmVector *cv);
 G_INLINE_FUNC guint ncm_vector_len (const NcmVector *cv);
 G_INLINE_FUNC guint ncm_vector_stride (const NcmVector *cv);
 
-void ncm_vector_get_minmax (const NcmVector *cv, gdouble *min, gdouble *max);
+G_INLINE_FUNC gdouble ncm_vector_get_max (const NcmVector *cv);
+G_INLINE_FUNC gdouble ncm_vector_get_min (const NcmVector *cv);
+G_INLINE_FUNC gsize ncm_vector_get_max_index (const NcmVector *cv);
+G_INLINE_FUNC gsize ncm_vector_get_min_index (const NcmVector *cv);
+
+G_INLINE_FUNC void ncm_vector_get_minmax (const NcmVector *cv, gdouble *min, gdouble *max);
+
 void ncm_vector_get_absminmax (const NcmVector *cv, gdouble *absmin, gdouble *absmax);
 
 NcmVector *ncm_vector_dup (const NcmVector *cv);
@@ -394,6 +400,36 @@ G_INLINE_FUNC guint
 ncm_vector_stride (const NcmVector *cv)
 {
   return cv->vv.vector.stride;
+}
+
+G_INLINE_FUNC gdouble 
+ncm_vector_get_max (const NcmVector *cv)
+{
+  return gsl_vector_max (ncm_vector_const_gsl (cv));
+}
+
+G_INLINE_FUNC gdouble 
+ncm_vector_get_min (const NcmVector *cv)
+{
+  return gsl_vector_min (ncm_vector_const_gsl (cv));
+}
+
+G_INLINE_FUNC gsize 
+ncm_vector_get_max_index (const NcmVector *cv)
+{
+  return gsl_vector_max_index (ncm_vector_const_gsl (cv));
+}
+
+G_INLINE_FUNC gsize 
+ncm_vector_get_min_index (const NcmVector *cv)
+{
+  return gsl_vector_min_index (ncm_vector_const_gsl (cv));
+}
+
+G_INLINE_FUNC void 
+ncm_vector_get_minmax (const NcmVector *cv, gdouble *min, gdouble *max)
+{
+  gsl_vector_minmax (ncm_vector_const_gsl (cv), min, max);
 }
 
 G_END_DECLS

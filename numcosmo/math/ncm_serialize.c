@@ -430,7 +430,10 @@ ncm_serialize_peek_name (NcmSerialize *ser, gpointer obj)
 {
   g_assert (G_IS_OBJECT (obj));
   if (!ncm_serialize_contain_instance (ser, obj))
+  {
     g_error ("ncm_serialize_peek_name: Cannot peek name of object %p, it is not a named instance.", obj);
+    return NULL;
+  }
   else
     return g_hash_table_lookup (ser->ptr_name, obj);
 }

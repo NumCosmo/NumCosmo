@@ -46,8 +46,9 @@
 enum
 {
   PROP_0,
-  PROP_NPOINTS,
-  PROP_MEAN,
+  PROP_NBINS,
+  PROP_MEANS,
+  PROP_KNOTS,	 
   PROP_SIZE,
 };
 
@@ -56,8 +57,9 @@ G_DEFINE_ABSTRACT_TYPE (NcmDataPoisson, ncm_data_poisson, NCM_TYPE_DATA);
 static void
 ncm_data_poisson_init (NcmDataPoisson *poisson)
 {
-  poisson->np       = 0;
+  poisson->nbins       = 0;
   poisson->h        = NULL;
+	poisson->means    = NULL;
   poisson->log_Nfac = NULL;
 }
 
@@ -78,16 +80,12 @@ ncm_data_poisson_set_property (GObject *object, guint prop_id, const GValue *val
 
   switch (prop_id)
   {
-    case PROP_NPOINTS:
+    case PROP_NBINS:
       ncm_data_poisson_set_size (poisson, g_value_get_uint (value));
       break;
-    case PROP_MEAN:
-    {
-      NcmVector *v = ncm_vector_new_data_static (poisson->h->bin, poisson->h->n, 1); 
-      ncm_vector_memcpy (v, g_value_get_object (value));
-      ncm_vector_free (v);
+    case PROP_MEANS:
+      ncm_vector_memcpy (poisson->means, g_value_get_object (value));
       break;
-    }
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
       break;
@@ -102,15 +100,12 @@ ncm_data_poisson_get_property (GObject *object, guint prop_id, GValue *value, GP
 
   switch (prop_id)
   {
-    case PROP_NPOINTS:
-      g_value_set_uint (value, poisson->np);
+    case PROP_NBINS:
+      g_value_set_uint (value, poisson->nbins);
       break;
-    case PROP_MEAN:
-    {
-      NcmVector *v = ncm_vector_new_data_static (poisson->h->bin, poisson->h->n, 1); 
-      g_value_take_object (value, v);
+    case PROP_MEANS:
+      g_value_set_object (value, poisson->means);
       break;
-    }
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
       break;
@@ -142,7 +137,7 @@ static void _ncm_data_poisson_begin (NcmData *data);
 static void _ncm_data_poisson_resample (NcmData *data, NcmMSet *mset, NcmRNG *rng);
 static void _ncm_data_poisson_m2lnL_val (NcmData *data, NcmMSet *mset, gdouble *m2lnL);
 static void _ncm_data_poisson_leastsquares_f (NcmData *data, NcmMSet *mset, NcmVector *v);
-static void _ncm_data_poisson_set_size (NcmDataPoisson *poisson, guint np);
+static void _ncm_data_poisson_set_size (NcmDataPoisson *poisson, guint nbins);
 static guint _ncm_data_poisson_get_size (NcmDataPoisson *poisson);
 
 static void
@@ -160,15 +155,15 @@ ncm_data_poisson_class_init (NcmDataPoissonClass *klass)
   object_class->finalize     = &ncm_data_poisson_finalize;
 
   g_object_class_install_property (object_class,
-                                   PROP_NPOINTS,
-                                   g_param_spec_uint ("n-points",
+                                   PROP_NBINS,
+                                   g_param_spec_uint ("n-bins",
                                                       NULL,
-                                                      "Data sample size",
+                                                      "Number of bins",
                                                       0, G_MAXUINT, 0,
                                                       G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   g_object_class_install_property (object_class,
-                                   PROP_MEAN,
+                                   PROP_MEANS,
                                    g_param_spec_object ("mean",
                                                         NULL,
                                                         "Data mean",
@@ -191,7 +186,7 @@ ncm_data_poisson_class_init (NcmDataPoissonClass *klass)
 static guint 
 _ncm_data_poisson_get_length (NcmData *data) 
 { 
-  return NCM_DATA_POISSON (data)->np; 
+  return NCM_DATA_POISSON (data)->nbins; 
 }
 
 static void
@@ -202,7 +197,7 @@ _ncm_data_poisson_begin (NcmData *data)
 
   for (i = 0; i < poisson->h->n; i++)
   {
-    const gulong N_i = gsl_histogram_get (poisson->h, i);
+    const gdouble N_i = gsl_histogram_get (poisson->h, i);
     ncm_vector_fast_set (poisson->log_Nfac, i, lgamma (N_i + 1.0));
   }
 }
@@ -218,11 +213,12 @@ _ncm_data_poisson_resample (NcmData *data, NcmMSet *mset, NcmRNG *rng)
   for (i = 0; i < poisson->h->n; i++)
   {
     const gdouble lambda_i = poisson_class->mean_func (poisson, mset, i);
-    const gulong N_i = gsl_ran_poisson (rng->r, lambda_i);
+    const gdouble N_i      = gsl_ran_poisson (rng->r, lambda_i);
     
 		poisson->h->bin[i] = N_i;
   }
-  ncm_rng_unlock (rng);
+
+	ncm_rng_unlock (rng);
 }
 
 static void
@@ -237,10 +233,13 @@ _ncm_data_poisson_m2lnL_val (NcmData *data, NcmMSet *mset, gdouble *m2lnL)
   {
     for (i = 0; i < poisson->h->n; i++)
     {
-      const gdouble lambda_i = poisson_class->mean_func (poisson, mset, i);
-      const gulong N_i = gsl_histogram_get (poisson->h, i);
-      const gdouble log_Nfac_i = ncm_vector_fast_get (poisson->log_Nfac, i);
-      *m2lnL += -2.0 * ( N_i * log (lambda_i) - lambda_i - log_Nfac_i);
+      const gdouble lambda_i   = poisson_class->mean_func (poisson, mset, i);
+      const gdouble N_i        = gsl_histogram_get (poisson->h, i);
+
+			if (N_i > 0.0)
+        *m2lnL += -2.0 * ( N_i * log (lambda_i / N_i) - lambda_i + N_i);
+			else
+				*m2lnL += -2.0 * ( - lambda_i);
     }
   }
   else
@@ -248,11 +247,14 @@ _ncm_data_poisson_m2lnL_val (NcmData *data, NcmMSet *mset, gdouble *m2lnL)
     const guint bsize = ncm_bootstrap_get_bsize (data->bstrap);
     for (i = 0; i < bsize; i++)
     {
-      guint k = ncm_bootstrap_get (data->bstrap, i);
+      guint k                = ncm_bootstrap_get (data->bstrap, i);
       const gdouble lambda_k = poisson_class->mean_func (poisson, mset, k);
-      const gulong N_k = gsl_histogram_get (poisson->h, k);
-      const gdouble log_Nfac_k = ncm_vector_fast_get (poisson->log_Nfac, k);
-      *m2lnL += -2.0 * ( N_k * log (lambda_k) - lambda_k - log_Nfac_k);
+      const gdouble N_k      = gsl_histogram_get (poisson->h, k);
+			
+			if (N_k > 0.0)
+				*m2lnL += -2.0 * ( N_k * log (lambda_k / N_k) - lambda_k + N_k);
+			else
+				*m2lnL += -2.0 * ( - lambda_k);
     }
   }
   return;
@@ -271,50 +273,56 @@ _ncm_data_poisson_leastsquares_f (NcmData *data, NcmMSet *mset, NcmVector *v)
   for (i = 0; i < poisson->h->n; i++)
   {
     const gdouble lambda_i = poisson_class->mean_func (poisson, mset, i);
-    const gulong N_i = gsl_histogram_get (poisson->h, i);
-
-		ncm_vector_set (v, i, (lambda_i - N_i) / sqrt (lambda_i));
+    const gdouble N_i      = gsl_histogram_get (poisson->h, i);
+		const gdouble m2lnL_i  = (N_i == 0.0) ? 2.0 * lambda_i : (-2.0 * ( N_i * log (lambda_i / N_i) - lambda_i + N_i));
+		
+		ncm_vector_set (v, i, sqrt (m2lnL_i));
   }
 }
 
 static void 
-_ncm_data_poisson_set_size (NcmDataPoisson *poisson, guint np)
+_ncm_data_poisson_set_size (NcmDataPoisson *poisson, guint nbins)
 {
   NcmData *data = NCM_DATA (poisson);
-  if ((np == 0) || (np != poisson->np))
+	
+  if (nbins != poisson->nbins)
   {
-    poisson->np = 0;
+    poisson->nbins = 0;
     ncm_vector_clear (&poisson->log_Nfac);
     if (poisson->h != NULL)
     {
       gsl_histogram_free (poisson->h);
       poisson->h = NULL;
     }
+		ncm_vector_clear (&poisson->means);
     data->init = FALSE;
-  }
-  if ((np != 0) && (np != poisson->np))
-  {
-    poisson->np       = np;
-    poisson->log_Nfac = ncm_vector_new (poisson->np);
-    poisson->h        = gsl_histogram_alloc (poisson->np);
-    if (ncm_data_bootstrap_enabled (data))
-    {
-      ncm_bootstrap_set_fsize (data->bstrap, np);
-      ncm_bootstrap_set_bsize (data->bstrap, np);
-    }
-    data->init = FALSE;
+
+		if (nbins > 0)
+		{
+			poisson->nbins    = nbins;
+			poisson->log_Nfac = ncm_vector_new (poisson->nbins);
+			poisson->h        = gsl_histogram_alloc (poisson->nbins);
+			poisson->means    = ncm_vector_new_data_static (poisson->h->bin, poisson->h->n, 1); 
+
+			if (ncm_data_bootstrap_enabled (data))
+			{
+				ncm_bootstrap_set_fsize (data->bstrap, nbins);
+				ncm_bootstrap_set_bsize (data->bstrap, nbins);
+			}
+			data->init = FALSE;
+		}		
   }
 }
 
 static guint 
 _ncm_data_poisson_get_size (NcmDataPoisson *poisson)
 {
-  return poisson->np;
+  return poisson->nbins;
 }
 
 /**
- * ncm_data_poisson_init_from_vector: (skip)
- * @data: FIXME
+ * ncm_data_poisson_init_from_vector:
+ * @poisson: a #NcmDataPoisson
  * @nodes: FIXME
  * @N: FIXME
  *
@@ -322,54 +330,86 @@ _ncm_data_poisson_get_size (NcmDataPoisson *poisson)
  *
  */
 void
-ncm_data_poisson_init_from_vector (NcmData *data, NcmVector *nodes, gsl_vector_ulong *N)
+ncm_data_poisson_init_from_vector (NcmDataPoisson *poisson, NcmVector *nodes, NcmVector *N)
 {
-  NcmDataPoisson *poisson = NCM_DATA_POISSON (data);
-	guint i;
+  guint i;
 
   ncm_data_poisson_set_size (poisson, ncm_vector_len (nodes) - 1);
+
+	g_assert_cmpuint (ncm_vector_len (nodes), ==, ncm_vector_len (N) + 1);
   
 	poisson->h->range[0] = ncm_vector_get (nodes, 0);
-	for (i = 0; i < N->size; i++)
+	
+	for (i = 0; i < ncm_vector_len (N); i++)
 	{
 		poisson->h->range[i + 1] = ncm_vector_get (nodes, i + 1);
-		poisson->h->bin[i] = gsl_vector_ulong_get (N, i);
+		poisson->h->bin[i]       = ncm_vector_get (N, i);
 	}
 
-  ncm_data_set_init (data, TRUE);
+  ncm_data_set_init (NCM_DATA (poisson), TRUE);
 }
 
 /**
+ * ncm_data_poisson_init_from_binning:
+ * @poisson: a #NcmDataPoisson
+ * @nodes: FIXME
+ * @x: FIXME
+ *
+ * FIXME
+ *
+ */
+void
+ncm_data_poisson_init_from_binning (NcmDataPoisson *poisson, NcmVector *nodes, NcmVector *x)
+{
+  guint i;
+
+  ncm_data_poisson_set_size (poisson, ncm_vector_len (nodes) - 1);
+
+	if (ncm_vector_stride (nodes) == 1)
+	{
+		gsl_histogram_set_ranges (poisson->h, ncm_vector_data (nodes), ncm_vector_len (nodes));
+	}
+	else
+	{
+		for (i = 0; i < ncm_vector_len (nodes); i++)
+			poisson->h->range[i] = ncm_vector_get (nodes, i);
+	}
+
+	for (i = 0; i < ncm_vector_len (x); i++)
+		gsl_histogram_increment (poisson->h, ncm_vector_get (x, i));
+	
+  ncm_data_set_init (NCM_DATA (poisson), TRUE);
+}
+
+
+/**
  * ncm_data_poisson_init_from_histogram: (skip)
- * @data: FIXME
+ * @poisson: a #NcmDataPoisson
  * @h: FIXME
  *
  * FIXME
  *
  */
 void
-ncm_data_poisson_init_from_histogram (NcmData *data, gsl_histogram *h)
+ncm_data_poisson_init_from_histogram (NcmDataPoisson *poisson, gsl_histogram *h)
 {
-  NcmDataPoisson *poisson = NCM_DATA_POISSON (data);
-
   ncm_data_poisson_set_size (poisson, h->n);
   gsl_histogram_memcpy (poisson->h, h);
 
-  ncm_data_set_init (data, TRUE);
+  ncm_data_set_init (NCM_DATA (poisson), TRUE);
 }
 
 /**
  * ncm_data_poisson_init_zero: (skip)
- * @data: FIXME
- * @nodes: FIXME
+ * @poisson: a #NcmDataPoisson
+ * @nodes: a #NcmVector
  *
  * FIXME
  *
  */
 void
-ncm_data_poisson_init_zero (NcmData *data, NcmVector *nodes)
+ncm_data_poisson_init_zero (NcmDataPoisson *poisson, NcmVector *nodes)
 {
-  NcmDataPoisson *poisson = NCM_DATA_POISSON (data);
 	guint i;
 
   ncm_data_poisson_set_size (poisson, ncm_vector_len (nodes) - 1);
@@ -379,21 +419,21 @@ ncm_data_poisson_init_zero (NcmData *data, NcmVector *nodes)
 		poisson->h->range[i + 1] = ncm_vector_get (nodes, i + 1);
 	gsl_histogram_reset (poisson->h);
 
-  ncm_data_set_init (data, TRUE);
+  ncm_data_set_init (NCM_DATA (poisson), TRUE);
 }
 
 /**
  * ncm_data_poisson_set_size: (virtual set_size)
  * @poisson: a #NcmDataPoisson
- * @np: data size.
+ * @nbins: number of bins.
  *
- * Sets the data size to @np.
+ * Sets the number of bins to @nbins.
  * 
  */
 void 
-ncm_data_poisson_set_size (NcmDataPoisson *poisson, guint np)
+ncm_data_poisson_set_size (NcmDataPoisson *poisson, guint nbins)
 {
-  NCM_DATA_POISSON_GET_CLASS (poisson)->set_size (poisson, np);
+  NCM_DATA_POISSON_GET_CLASS (poisson)->set_size (poisson, nbins);
 }
 
 /**
@@ -409,4 +449,78 @@ guint
 ncm_data_poisson_get_size (NcmDataPoisson *poisson)
 {
   return NCM_DATA_POISSON_GET_CLASS (poisson)->get_size (poisson);
+}
+
+/**
+ * ncm_data_poisson_get_sum:
+ * @poisson: a #NcmDataPoisson
+ *
+ * Gets the sum of all bins.
+ * 
+ * Returns: Sum of all bins.
+ * 
+ */
+gdouble 
+ncm_data_poisson_get_sum (NcmDataPoisson *poisson)
+{
+	guint i;
+	gdouble hsum = 0.0;
+
+	for (i = 0; i < poisson->h->n; i++)
+	{
+		const gdouble N_i = gsl_histogram_get (poisson->h, i);
+		hsum += N_i;
+	}
+
+	return hsum;
+}
+
+/**
+ * ncm_data_poisson_get_hist_vals:
+ * @poisson: a #NcmDataPoisson
+ *
+ * Gets the vector containing the bins values.
+ * 
+ * Returns: (transfer full): vector containing the bins values.
+ */
+NcmVector *
+ncm_data_poisson_get_hist_vals (NcmDataPoisson *poisson)
+{
+	guint i;
+	NcmVector *v = ncm_vector_new (poisson->h->n);
+
+	for (i = 0; i < poisson->h->n; i++)
+	{
+		const gdouble N_i = gsl_histogram_get (poisson->h, i);
+		ncm_vector_set (v, i, N_i);
+	}
+
+	return v;
+}
+
+/**
+ * ncm_data_poisson_get_hist_means:
+ * @poisson: a #NcmDataPoisson
+ * @mset: a #NcmMSet
+ *
+ * Gets the vector containing the bins values.
+ * 
+ * Returns: (transfer full): vector containing the bins values.
+ */
+NcmVector *
+ncm_data_poisson_get_hist_means (NcmDataPoisson *poisson, NcmMSet *mset)
+{
+  NcmDataPoissonClass *poisson_class = NCM_DATA_POISSON_GET_CLASS (poisson);
+	NcmVector *v = ncm_vector_new (poisson->h->n);
+  guint i;
+
+	ncm_data_prepare (NCM_DATA (poisson), mset);
+
+	for (i = 0; i < poisson->h->n; i++)
+	{
+    const gdouble lambda_i = poisson_class->mean_func (poisson, mset, i);
+		ncm_vector_set (v, i, lambda_i);
+	}
+
+	return v;
 }

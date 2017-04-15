@@ -60,6 +60,7 @@
 #include "model/nc_hicosmo_qlinear.h"
 #include "model/nc_hicosmo_qspline.h"
 #include "model/nc_hicosmo_lcdm.h"
+#include "model/nc_hicosmo_gcg.h"
 #include "model/nc_hicosmo_de_xcdm.h"
 #include "model/nc_hicosmo_de_linder.h"
 #include "model/nc_hicosmo_de_pad.h"
@@ -91,6 +92,7 @@
 #include "lss/nc_multiplicity_func_tinker_mean.h"
 #include "lss/nc_multiplicity_func_tinker_crit.h"
 #include "lss/nc_multiplicity_func_tinker_mean_normalized.h"
+#include "lss/nc_multiplicity_func_crocce.h"
 #include "lss/nc_halo_mass_function.h"
 #include "lss/nc_galaxy_acf.h"
 #include "lss/nc_cluster_mass.h"
@@ -136,6 +138,7 @@
 #include "data/nc_data_bao_dmr_hr.h"
 #include "data/nc_data_dist_mu.h"
 #include "data/nc_data_cluster_pseudo_counts.h"
+#include "data/nc_data_cluster_counts_box_poisson.h"
 #include "data/nc_data_cmb_shift_param.h"
 #include "data/nc_data_cmb_dist_priors.h"
 #include "data/nc_data_hubble.h"
@@ -247,8 +250,10 @@ void
 ncm_cfg_init (void)
 {
   const gchar *home;
+
   if (numcosmo_init)
     return;
+  
   home = g_get_home_dir ();
   numcosmo_path = g_build_filename (home, ".numcosmo", NULL);
   if (!g_file_test (numcosmo_path, G_FILE_TEST_EXISTS))
@@ -277,6 +282,13 @@ ncm_cfg_init (void)
 
   gsl_err = gsl_set_error_handler_off ();
 
+#ifdef NUMCOSMO_HAVE_FFTW3
+  fftw_set_timelimit (10.0);
+#endif /* NUMCOSMO_HAVE_FFTW3 */
+#ifdef HAVE_FFTW3F
+  fftwf_set_timelimit (10.0);
+#endif /* HAVE_FFTW3F */
+  
 #if !GLIB_CHECK_VERSION(2,36,0)
   g_type_init ();
 #endif
@@ -324,6 +336,7 @@ ncm_cfg_init (void)
   ncm_cfg_register_obj (NC_TYPE_HICOSMO_QSPLINE);
   ncm_cfg_register_obj (NC_TYPE_HICOSMO_QSPLINE_CONT_PRIOR);
   ncm_cfg_register_obj (NC_TYPE_HICOSMO_LCDM);
+  ncm_cfg_register_obj (NC_TYPE_HICOSMO_GCG);
   ncm_cfg_register_obj (NC_TYPE_HICOSMO_DE_XCDM);
   ncm_cfg_register_obj (NC_TYPE_HICOSMO_DE_LINDER);
   ncm_cfg_register_obj (NC_TYPE_HICOSMO_DE_PAD);
@@ -334,6 +347,9 @@ ncm_cfg_init (void)
   ncm_cfg_register_obj (NC_TYPE_HICOSMO_DE_REPARAM_OK);
   ncm_cfg_register_obj (NC_TYPE_HICOSMO_DE_REPARAM_CMB);
 
+  ncm_cfg_register_obj (NC_TYPE_HICOSMO_GCG_REPARAM_OK);
+  ncm_cfg_register_obj (NC_TYPE_HICOSMO_GCG_REPARAM_CMB);
+  
   ncm_cfg_register_obj (NC_TYPE_HIPRIM_POWER_LAW);
   ncm_cfg_register_obj (NC_TYPE_HIPRIM_ATAN);
   ncm_cfg_register_obj (NC_TYPE_HIPRIM_EXPC);
@@ -365,6 +381,7 @@ ncm_cfg_init (void)
   ncm_cfg_register_obj (NC_TYPE_MULTIPLICITY_FUNC_TINKER_MEAN);
   ncm_cfg_register_obj (NC_TYPE_MULTIPLICITY_FUNC_TINKER_CRIT);
   ncm_cfg_register_obj (NC_TYPE_MULTIPLICITY_FUNC_TINKER_MEAN_NORMALIZED);
+  ncm_cfg_register_obj (NC_TYPE_MULTIPLICITY_FUNC_CROCCE);	
 
   ncm_cfg_register_obj (NC_TYPE_HALO_MASS_FUNCTION);
 
@@ -430,6 +447,7 @@ ncm_cfg_init (void)
 
   ncm_cfg_register_obj (NC_TYPE_DATA_HUBBLE);
 
+  ncm_cfg_register_obj (NC_TYPE_DATA_CLUSTER_COUNTS_BOX_POISSON);
   ncm_cfg_register_obj (NC_TYPE_DATA_CLUSTER_PSEUDO_COUNTS);
 
   ncm_cfg_register_obj (NC_TYPE_DATA_CMB_SHIFT_PARAM);
@@ -447,7 +465,7 @@ ncm_cfg_init (void)
   _nc_hicosmo_register_functions ();
   _nc_hicosmo_de_register_functions ();
   _nc_hireion_register_functions ();
-    _nc_distance_register_functions ();
+  _nc_distance_register_functions ();
   _nc_planck_fi_cor_tt_register_functions ();
 
   numcosmo_init = TRUE;
@@ -1422,18 +1440,30 @@ ncm_cfg_array_to_variant (GArray *a, const GVariantType *etype)
   return g_variant_ref_sink (vvar);
 }
 
-guint fftw_default_flags = FFTW_PATIENT; /* FFTW_ESTIMATE, FFTW_MEASURE, FFTW_PATIENT, FFTW_EXHAUSTIVE */
+gdouble fftw_default_timeout = 60.0;
+
+#ifdef NUMCOSMO_HAVE_FFTW3
+guint fftw_default_flags = FFTW_MEASURE; /* FFTW_ESTIMATE, FFTW_MEASURE, FFTW_PATIENT, FFTW_EXHAUSTIVE */
 
 /**
  * ncm_cfg_set_fftw_default_flag:
- * @flag: a FFTW library flag.
+ * @flag: a FFTW library flag
+ * @timeout: planner time out in seconds
  *
  * Sets the default FFTW flag (FFTW_ESTIMATE, FFTW_MEASURE, FFTW_PATIENT, FFTW_EXHAUSTIVE)
- * to be used when building plans.
+ * to be used when building plans. The variable @timeout sets the maximum time spended on
+ * planners. 
  *
  */
 void
-ncm_cfg_set_fftw_default_flag (guint flag)
+ncm_cfg_set_fftw_default_flag (guint flag, const gdouble timeout)
 {
   fftw_default_flags = flag;
+  fftw_set_timelimit (10.0);
+#ifdef HAVE_FFTW3F
+  fftwf_set_timelimit (10.0);
+#endif /* HAVE_FFTW3F */
 }
+#else
+guint fftw_default_flags = 0;
+#endif /* NUMCOSMO_HAVE_FFTW3 */

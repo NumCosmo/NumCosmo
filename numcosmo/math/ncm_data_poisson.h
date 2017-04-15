@@ -61,7 +61,7 @@ struct _NcmDataPoissonClass
   /* < private > */
   NcmDataClass parent_class;
   gdouble (*mean_func) (NcmDataPoisson *poisson, NcmMSet *mset, guint n);
-  void (*set_size) (NcmDataPoisson *poisson, guint np);
+  void (*set_size) (NcmDataPoisson *poisson, guint nbins);
   guint (*get_size) (NcmDataPoisson *poisson);
 };
 
@@ -75,18 +75,24 @@ struct _NcmDataPoisson
   /* < private > */
   NcmData parent_instance;
   gsl_histogram *h;
+	NcmVector *means;
   NcmVector *log_Nfac;
-  guint np;
+  guint nbins;
 };
 
 GType ncm_data_poisson_get_type (void) G_GNUC_CONST;
 
-void ncm_data_poisson_init_from_vector (NcmData *data, NcmVector *nodes, gsl_vector_ulong *N);
-void ncm_data_poisson_init_from_histogram (NcmData *data, gsl_histogram *h);
-void ncm_data_poisson_init_zero (NcmData *data, NcmVector *nodes);
+void ncm_data_poisson_init_from_vector (NcmDataPoisson *poisson, NcmVector *nodes, NcmVector *N);
+void ncm_data_poisson_init_from_histogram (NcmDataPoisson *poisson, gsl_histogram *h);
+void ncm_data_poisson_init_zero (NcmDataPoisson *poisson, NcmVector *nodes);
+void ncm_data_poisson_init_from_binning (NcmDataPoisson *poisson, NcmVector *nodes, NcmVector *x);
 
-void ncm_data_poisson_set_size (NcmDataPoisson *poisson, guint np);
+void ncm_data_poisson_set_size (NcmDataPoisson *poisson, guint nbins);
 guint ncm_data_poisson_get_size (NcmDataPoisson *poisson);
+gdouble ncm_data_poisson_get_sum (NcmDataPoisson *poisson);
+
+NcmVector *ncm_data_poisson_get_hist_vals (NcmDataPoisson *poisson);
+NcmVector *ncm_data_poisson_get_hist_means (NcmDataPoisson *poisson, NcmMSet *mset);
 
 G_END_DECLS
 

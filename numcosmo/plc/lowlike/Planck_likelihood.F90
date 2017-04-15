@@ -104,7 +104,7 @@ SUBROUTINE planck_lowlike_compute(cltt,clte,clee,clbb,like)
   endif
 
 
-10 continue
+!10 continue
 
 end SUBROUTINE
 

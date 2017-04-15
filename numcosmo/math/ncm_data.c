@@ -484,11 +484,18 @@ ncm_data_resample (NcmData *data, NcmMSet *mset, NcmRNG *rng)
     g_error ("ncm_data_resample: The data (%s) does not implement resample.", 
              ncm_data_get_desc (data));
 
+	data->begin = TRUE;
   _ncm_data_prepare (data, mset);
   
   NCM_DATA_GET_CLASS (data)->resample (data, mset, rng);
   data->begin = FALSE;
 
+  if (NCM_DATA_GET_CLASS (data)->begin != NULL && !data->begin)
+  {
+    NCM_DATA_GET_CLASS (data)->begin (data);
+    data->begin = TRUE;
+  }
+	
   ncm_data_set_init (data, TRUE);
 }
 

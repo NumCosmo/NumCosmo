@@ -1,5 +1,7 @@
 ## Process this file with automake to produce Makefile.in
 
+@CODE_COVERAGE_RULES@
+
 SUBDIRS = numcosmo tools data docs tests examples
 
 pkgconfigdir = $(libdir)/pkgconfig
@@ -33,3 +35,4 @@ dist-hook:
 			cp -p $$specfile $(distdir); \
 		fi \
 	done
+

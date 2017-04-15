@@ -62,6 +62,7 @@ main (gint argc, gchar *argv[])
   gchar *full_cmd_line = NULL;
   gchar *runconf_cmd_line = NULL;
   gboolean is_de = FALSE;
+  gboolean is_gcg = FALSE;
   NcmRNG *rng = ncm_rng_pool_get ("darkenergy");
   NcmMSetCatalog *mcat = NULL;
   NcmSerialize *ser = ncm_serialize_global ();
@@ -274,6 +275,8 @@ main (gint argc, gchar *argv[])
 
   if (g_type_is_a (G_OBJECT_TYPE (cosmo), NC_TYPE_HICOSMO_DE))
     is_de = TRUE;
+  else if (g_type_is_a (G_OBJECT_TYPE (cosmo), NC_TYPE_HICOSMO_GCG))
+    is_gcg = TRUE;
 
   if (de_model.help_names)
   {
@@ -288,25 +291,49 @@ main (gint argc, gchar *argv[])
 
   if (de_model.flat)
   {
-    if (!is_de)
+    if (is_de)
+    {
+      nc_hicosmo_de_omega_x2omega_k (NC_HICOSMO_DE (cosmo));
+      ncm_model_param_set (NCM_MODEL (cosmo), NC_HICOSMO_DE_OMEGA_X, 0.0);
+      ncm_mset_param_set_ftype (mset, nc_hicosmo_id (), NC_HICOSMO_DE_OMEGA_X, NCM_PARAM_TYPE_FIXED);
+    }
+    else if (is_gcg)
+    {
+      nc_hicosmo_gcg_omega_x2omega_k (NC_HICOSMO_GCG (cosmo));
+      ncm_model_param_set (NCM_MODEL (cosmo), NC_HICOSMO_GCG_OMEGA_X, 0.0);
+      ncm_mset_param_set_ftype (mset, nc_hicosmo_id (), NC_HICOSMO_GCG_OMEGA_X, NCM_PARAM_TYPE_FIXED);
+    }
+    else
       g_error ("flat option is valid only for darkenergy models");
-    nc_hicosmo_de_omega_x2omega_k (NC_HICOSMO_DE (cosmo));
-    ncm_model_param_set (NCM_MODEL (cosmo), NC_HICOSMO_DE_OMEGA_X, 0.0);
-    ncm_mset_param_set_ftype (mset, nc_hicosmo_id (), NC_HICOSMO_DE_OMEGA_X, NCM_PARAM_TYPE_FIXED);
   }
   else if (de_model.Omega_k)
   {
-    if (!is_de)
+    if (is_de)
+    {
+      nc_hicosmo_de_omega_x2omega_k (NC_HICOSMO_DE (cosmo));
+      ncm_mset_param_set_ftype (mset, nc_hicosmo_id (), NC_HICOSMO_DE_OMEGA_X, NCM_PARAM_TYPE_FREE);
+    }
+    else if (is_gcg)
+    {
+      nc_hicosmo_gcg_omega_x2omega_k (NC_HICOSMO_GCG (cosmo));
+      ncm_mset_param_set_ftype (mset, nc_hicosmo_id (), NC_HICOSMO_GCG_OMEGA_X, NCM_PARAM_TYPE_FREE);
+    }
+    else
       g_error ("omegak option is valid only for darkenergy models");
-    nc_hicosmo_de_omega_x2omega_k (NC_HICOSMO_DE (cosmo));
-    ncm_mset_param_set_ftype (mset, nc_hicosmo_id (), NC_HICOSMO_DE_OMEGA_X, NCM_PARAM_TYPE_FREE);
   }
 
   if (de_model.pos_Omega_x)
   {
-    if (!is_de)
+    if (is_de)
+    {
+      ncm_likelihood_priors_add_flat_param (lh, nc_hicosmo_id (), NC_HICOSMO_DE_OMEGA_X, 0.0, HUGE_VAL, 1.0);
+    }
+    else if (is_gcg)
+    {
+      ncm_likelihood_priors_add_flat_param (lh, nc_hicosmo_id (), NC_HICOSMO_GCG_OMEGA_X, 0.0, HUGE_VAL, 1.0);
+    }
+    else
       g_error ("omegak > 0 option is valid only for darkenergy models");
-    ncm_likelihood_priors_add_flat_param (lh, nc_hicosmo_id (), NC_HICOSMO_DE_OMEGA_X, 0.0, HUGE_VAL, 1.0);
   }
   
   if (de_data_simple.snia_id != NULL)
@@ -653,8 +680,8 @@ main (gint argc, gchar *argv[])
       ncm_fit_fishermatrix_print (fit, f_MF, full_cmd_line);
       fclose (f_MF);
 
-      ncm_message ("#---------------------------------------------------------------------------------- \n", mfile);
-      ncm_message ("# FM file: %s \n", mfile);
+      ncm_message ("#---------------------------------------------------------------------------------- \n");
+      ncm_message ("# FM file: %s\n", mfile);
 
       g_free (mfile);
 

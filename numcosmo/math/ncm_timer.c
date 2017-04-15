@@ -467,6 +467,21 @@ ncm_timer_task_accumulate (NcmTimer *nt, guint nitens)
 }
 
 /**
+ * ncm_timer_task_estimate_by_time:
+ * @nt: FIXME
+ * @sec: time in seconds
+ * 
+ * Estimate how many task points would take @sec seconds.
+ * 
+ * Returns: the estimated number of points.
+ */
+guint 
+ncm_timer_task_estimate_by_time (NcmTimer *nt, gdouble sec)
+{
+  return ceil (sec / ncm_timer_task_mean_time (nt)); 
+}
+
+/**
  * ncm_timer_task_pause:
  * @nt: FIXME
  * 

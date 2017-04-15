@@ -60,7 +60,7 @@ void ncm_cfg_logfile (gboolean on);
 void ncm_cfg_logfile_flush (gboolean on);
 void ncm_cfg_logfile_flush_now (void);
 
-void ncm_message (const gchar *msg, ...);
+void ncm_message (const gchar *msg, ...) G_GNUC_PRINTF (1, 2);
 gchar *ncm_string_ww (const gchar *msg, const gchar *first, const gchar *rest, guint ncols);
 void ncm_message_ww (const gchar *msg, const gchar *first, const gchar *rest, guint ncols);
 void ncm_cfg_msg_sepa (void);
@@ -85,7 +85,7 @@ GArray *ncm_cfg_variant_to_array (GVariant *var, gsize esize);
 void ncm_cfg_array_set_variant (GArray *a, GVariant *var);
 GVariant *ncm_cfg_array_to_variant (GArray *a, const GVariantType *etype);
 
-void ncm_cfg_set_fftw_default_flag (guint flag);
+void ncm_cfg_set_fftw_default_flag (guint flag, const gdouble timeout);
 
 extern guint fftw_default_flags;
 

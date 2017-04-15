@@ -95,6 +95,8 @@ AC_SUBST(LT_CURRENT_MINUS_AGE)
 AC_CONFIG_HEADERS([config.h])
 
 AM_MAINTAINER_MODE
+
+AX_CODE_COVERAGE
   
 dnl ***************************************************************************
 dnl Gobject Introspection
@@ -133,6 +135,9 @@ AM_PROG_VALAC
 dnl LT_INIT([disable-shared])
 dnl AC_DISABLE_SHARED
 LT_INIT
+
+AX_COMPILER_VENDOR()
+AX_COMPILER_VERSION()
 
 dnl ***************************************************************************
 dnl Makefile.decl variable dependency (here glib_native_win32 is null)
@@ -174,12 +179,31 @@ dnl  AX_CHECK_COMPILE_FLAG([-Wwrite-strings],[NC_CFLAGS="$NC_CFLAGS -Wwrite-stri
 dnl  AX_CHECK_COMPILE_FLAG([-Wunreachable-code],[NC_CFLAGS="$NC_CFLAGS -Wunreachable-code"])
 fi
 
+PLC_NOWARN_FLAGS=""
+AX_CHECK_COMPILE_FLAG([-Wno-unused-variable], [PLC_NOWARN_FLAGS="$PLC_NOWARN_FLAGS -Wno-unused-variable"])
+AX_CHECK_COMPILE_FLAG([-Wno-unused-result],   [PLC_NOWARN_FLAGS="$PLC_NOWARN_FLAGS -Wno-unused-result"])
+
+case $ax_cv_c_compiler_vendor in #(
+  gnu) 
+    AX_CHECK_COMPILE_FLAG([-Wno-maybe-uninitialized],    [PLC_NOWARN_FLAGS="$PLC_NOWARN_FLAGS -Wno-maybe-uninitialized"])
+    AX_CHECK_COMPILE_FLAG([-Wno-unused-but-set-variable],[PLC_NOWARN_FLAGS="$PLC_NOWARN_FLAGS -Wno-unused-but-set-variable"])
+  ;;
+esac
+
+AC_SUBST(PLC_NOWARN_FLAGS)
+
 dnl ***************************************************************************
 dnl Fortran flags
 dnl ***************************************************************************
 
+AX_GFORTRAN_VERSION()
 AC_FC_FREEFORM()
 AC_FC_LINE_LENGTH([unlimited])
+AC_F77_WRAPPERS()
+
+if test x$GFORTRAN_VERSION != x; then
+  GFORTRAN_VERSION_MAJOR=$(echo $GFORTRAN_VERSION | cut -d. -f1)
+fi
 
 AC_LANG_PUSH([Fortran])
 dnl  AX_APPEND_COMPILE_FLAGS([-finit-local-zero -finit-integer=0 -finit-real=zero -finit-logical=false -fno-automatic], [FCFLAGS])
@@ -195,9 +219,17 @@ dnl ***************************************************************************
     ;;
   esac
     
-  AX_APPEND_COMPILE_FLAGS([-reentrancy -recursive -threads -automatic -fautomatic -frecursive], [FCFLAGS], [$FCFLAGS_CHECK])
+  AX_APPEND_COMPILE_FLAGS([-reentrancy -recursive -threads -automatic -fautomatic -frecursive -Wno-unused-variable -Wno-unused-dummy-argument -Wno-unused-function -Wno-conversion], [FCFLAGS], [$FCFLAGS_CHECK])
+
+  if test $GFORTRAN_VERSION_MAJOR -gt 4; then
+    AX_APPEND_COMPILE_FLAGS([-Wno-tabs], [FCFLAGS], [$FCFLAGS_CHECK])
+  else
+    AX_APPEND_COMPILE_FLAGS([-Wtabs], [FCFLAGS], [$FCFLAGS_CHECK])  
+  fi
+
   AC_OPENMP()
   AC_SUBST(OPENMP_FCFLAGS)
+
 AC_LANG_POP([Fortran])
 
 dnl ***************************************************************************
@@ -207,14 +239,11 @@ AC_ARG_ENABLE(vapi,
               [AS_HELP_STRING([--enable-vapi],[Generate vala bindings, experimental [default=no]])],enable_vapi=yes,
               enable_vapi=no)
 
-
 if test "${enable_vapi}" != no; then
-
-AC_PATH_PROG(VAPIGEN, vapigen, [no])
-AC_SUBST(VAPIGEN)
-VAPIDIR="${datadir}/vala/vapi"
-AC_SUBST(VAPIDIR)
-
+  AC_PATH_PROG(VAPIGEN, vapigen, [no])
+  AC_SUBST(VAPIGEN)
+  VAPIDIR="${datadir}/vala/vapi"
+  AC_SUBST(VAPIDIR)
 fi
 
 AM_CONDITIONAL(HAVE_VAPIGEN, [test "x$VAPIGEN" != xno -a x$enable_vapi != xno])
@@ -272,6 +301,7 @@ GSL_GLF_REQUIRED_VERSION=1.15
 GSL_ODEIV2_REQUIRED_VERSION=1.15
 FFTW3_REQUIRED_VERSION=3.1.2
 FFTW3_ALLOC_VERSION=3.3.2
+CFITSIO_REQUIRED_VERSION=3.25
 
 AC_SUBST(GLIB_REQUIRED_VERSION)
 AC_SUBST(GSL_REQUIRED_VERSION)
@@ -419,7 +449,8 @@ dnl ***************************************************************************
 
 AC_CHECK_HEADERS([math.h],, AC_MSG_ERROR([math.h header files missing]))
 AC_CHECK_LIB([m],[cos])
-AC_CHECK_FUNCS([cos sin sincos erf powl exp10 fma])
+AC_CHECK_FUNCS([cos sin sincos erf powl exp10 fma finite])
+AC_CHECK_DECLS([isfinite],[],[],[[#include <math.h>]])
 
 dnl ***************************************************************************
 dnl Check for dlfcn.h
@@ -696,7 +727,7 @@ dnl ***************************************************************************
 dnl Check for cfitsio
 dnl ***************************************************************************
 
-PKG_CHECK_MODULES(CFITSIO, [cfitsio >= 3.25],[
+PKG_CHECK_MODULES(CFITSIO, [cfitsio >= $CFITSIO_REQUIRED_VERSION],[
   AC_DEFINE([HAVE_CFITSIO],[1], [Have the cfitsio package])
   have_cfitsio_support="#define NUMCOSMO_HAVE_CFITSIO 1"])
 AC_SUBST(CFITSIO_CFLAGS)
@@ -949,6 +980,7 @@ numcosmo/libcuba/suave/Makefile
 numcosmo/libcuba/vegas/Makefile
 numcosmo/plc/Makefile
 numcosmo/class/Makefile
+numcosmo/toeplitz/Makefile
 tools/Makefile
 tests/Makefile
 docs/Makefile
@@ -997,3 +1029,5 @@ echo "OPENMP_CFLAGS = $OPENMP_CFLAGS"
 echo "OPENMP_FCFLAGS = $OPENMP_FCFLAGS"
 echo "LIBS = $LIBS"
 echo "PLC_DEFINES = $PLC_DEFINES"
+echo "PLC_NOWARN_FLAGS = $PLC_NOWARN_FLAGS"
+echo "PLC_FC_NOWARN_FLAGS = $PLC_FC_NOWARN_FLAGS"

@@ -275,7 +275,7 @@ contains
 
     like_acts = like_acts+chi2(1,1)/2.d0
 
-10  continue
+!10  continue
     
 #ifdef TIMING
     call act_south_timing_end()

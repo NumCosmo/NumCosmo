@@ -67,6 +67,7 @@
 #include <numcosmo/perturbations/nc_hipert_boltzmann_cbe.h>
 
 /* Model implementations */
+#include <numcosmo/model/nc_hicosmo_gcg.h>
 #include <numcosmo/model/nc_hicosmo_de.h>
 #include <numcosmo/model/nc_hicosmo_de_reparam_ok.h>
 #include <numcosmo/model/nc_hicosmo_de_reparam_cmb.h>
@@ -108,6 +109,7 @@
 #include <numcosmo/lss/nc_multiplicity_func_tinker_mean.h>
 #include <numcosmo/lss/nc_multiplicity_func_tinker_crit.h>
 #include <numcosmo/lss/nc_multiplicity_func_tinker_mean_normalized.h>
+#include <numcosmo/lss/nc_multiplicity_func_crocce.h>
 #include <numcosmo/lss/nc_halo_mass_function.h>
 #include <numcosmo/lss/nc_halo_bias_type.h>
 #include <numcosmo/lss/nc_halo_bias_type_ps.h>
@@ -150,6 +152,7 @@
 #include <numcosmo/data/nc_data_cmb.h>
 #include <numcosmo/data/nc_data_cluster_ncount.h>
 #include <numcosmo/data/nc_data_cluster_poisson.h>
+#include <numcosmo/data/nc_data_cluster_counts_box_poisson.h>
 #include <numcosmo/data/nc_data_cluster_pseudo_counts.h>
 #include <numcosmo/data/nc_data_planck_lkl.h>
 #include <numcosmo/data/nc_data_xcor.h>

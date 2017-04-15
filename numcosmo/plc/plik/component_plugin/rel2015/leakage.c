@@ -38,7 +38,7 @@ double bleak_apply_t2pmatrix(double e,double b, int nk, double *cl) {
      /* apply matrix coupling TT, EE, ... spectra because of beam mismatch at line nk
        cf Eq 11 of  http://hfilfi.planck.fr/index.php/WG/CorrectingPolClFromBeamMismatch */
   int i,j;
-  double blatrix;
+  double blatrix = 0.0;
 
   //_DEBUGHERE_("%g %g %d %g",e,b,nk,cl[0])
   if (nk==1) {
@@ -146,7 +146,7 @@ parametric *bleak_init(int ndet_T, int ndet_P, int *has_TEB, double *detlist, in
       u1=2;
     }
     for (mf1=0;mf1<4;mf1++) {
-      if (abs(dfreq[mf1]-egl->freqlist[i])<1e-6) {
+      if (fabs(dfreq[mf1]-egl->freqlist[i])<1e-6) {
         break;
       }
     }
@@ -162,7 +162,7 @@ parametric *bleak_init(int ndet_T, int ndet_P, int *has_TEB, double *detlist, in
         u2=2;
       }
       for (mf2=0;mf2<4;mf2++) {
-        if (abs(dfreq[mf2]-egl->freqlist[j])<1e-6) {
+        if (fabs(dfreq[mf2]-egl->freqlist[j])<1e-6) {
           break;
         }
       }
