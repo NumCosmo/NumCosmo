@@ -16,13 +16,11 @@ MY_CFLAGS = \
 	 -I$(PLC_DIR)/minipmc \
 	 -I$(PLC_DIR)/plik    \
 	 $(PLC_DEFINES)       \
+	 $(PLC_NOWARN_FLAGS)  \
 	 $(OPENMP_CFLAGS)
 
 AM_CFLAGS = \
 	 -Wall \
-	 -Wno-unused-variable \
-	 -Wno-unused-but-set-variable \
-	 -Wno-maybe-uninitialized \
 	 $(MY_CFLAGS)
 
 AM_FCFLAGS = \

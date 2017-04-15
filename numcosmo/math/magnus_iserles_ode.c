@@ -163,7 +163,7 @@ printf ("I: (% .15Lg, % .15Lg, % .15Lg)\n", Icos, Isin, I1);
     long double B = (-Icos + I1) * 2.0 / omega2;
     long double C = -(Icos + I1) / 2.0;
     long double Delta2 = (A2 + B * C);
-    long double Delta = sqrt(fabs(Delta2));
+    long double Delta = sqrtl (fabsl (Delta2));
     long double sinn_Delta_Delta;
     long double cosn_Delta;
     //gdouble sinn_Delta_2_2;

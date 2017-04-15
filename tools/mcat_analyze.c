@@ -76,9 +76,11 @@ _nc_bestfit_error (NcmStatsDist1d *sd1, gdouble Pa, gdouble center, gchar *cente
 gint
 main (gint argc, gchar *argv[])
 {
-  gchar *cat_filename = NULL;
+  gchar *cat_filename     = NULL;
+  gboolean auto_trim      = FALSE;
   gboolean info           = FALSE;
   gboolean info_scf       = FALSE;
+  gboolean diag_chains    = FALSE;
   gboolean chain_evol     = FALSE;
   gboolean list_all       = FALSE;
   gboolean list_hicosmo   = FALSE;
@@ -86,10 +88,14 @@ main (gint argc, gchar *argv[])
   gboolean list_dist      = FALSE;
   gboolean list_dist_z    = FALSE;
   gboolean use_direct     = FALSE;
+  gboolean dump           = FALSE;
+  gint dump_chain         = -1;
+  gint trim               = -1;
   gdouble zi = 0.0;
   gdouble zf = 1.0;
   gint nsteps = 100;
   gint burnin = 0;
+  gint ntests = 100;
   gchar **funcs = NULL;
   gchar **distribs = NULL;
   gchar **params = NULL;
@@ -105,8 +111,11 @@ main (gint argc, gchar *argv[])
   GOptionEntry entries[] =
   {
     { "catalog",        'c', 0, G_OPTION_ARG_FILENAME,     &cat_filename,   "Catalog filename.", NULL },
+    { "auto-trim",      'a', 0, G_OPTION_ARG_NONE,         &auto_trim,      "Auto trim the catalog.", NULL },
     { "info",           'i', 0, G_OPTION_ARG_NONE,         &info,           "Print catalog information.", NULL },
     { "info-scor-full", 'C', 0, G_OPTION_ARG_NONE,         &info_scf,       "Calculates the selfcorrelation time using the full sample not the ensemble averages.", NULL },
+    { "diag-chains",      0, 0, G_OPTION_ARG_NONE,         &diag_chains,    "Applies diagnostics to all chains.", NULL },
+    { "ntests",         'n', 0, G_OPTION_ARG_INT,          &ntests,         "Number of tests to use in the diagnostics.", NULL },
     { "chain-evol",     'I', 0, G_OPTION_ARG_NONE,         &chain_evol,     "Print chain evolution.", NULL },
     { "list",           'l', 0, G_OPTION_ARG_NONE,         &list_all,       "Print all available functions.", NULL },
     { "list-hicosmo",     0, 0, G_OPTION_ARG_NONE,         &list_hicosmo,   "Print available constant functions from NcHICosmo.", NULL },
@@ -125,7 +134,10 @@ main (gint argc, gchar *argv[])
     { "mode-error",     'o', 0, G_OPTION_ARG_STRING_ARRAY, &mode_errors,    "Print mode and 1-3 sigma asymmetric error bars of the model parameters' to be analyzed.", NULL},
     { "median-error",   'e', 0, G_OPTION_ARG_STRING_ARRAY, &median_errors,  "Print median and 1-3 sigma asymmetric error bars of the model parameters' to be analyzed.", NULL},
     { "bestfit-error",  's', 0, G_OPTION_ARG_STRING_ARRAY, &bestfit_errors, "Print best fit and 1-3 sigma asymmetric error bars of the model parameters' to be analyzed.", NULL},
-    { "funcs-pvalue",   'F', 0, G_OPTION_ARG_STRING_ARRAY, &funcs_pvalue,   "Print the p-value of the function at each redshift, giving the upper integration limits." },
+    { "funcs-pvalue",   'F', 0, G_OPTION_ARG_STRING_ARRAY, &funcs_pvalue,   "Print the p-value of the function at each redshift, giving the upper integration limits.", NULL },
+    { "dump",           'D', 0, G_OPTION_ARG_NONE,         &dump,           "Print all chains interweaved.", NULL },
+    { "dump-chain",       0, 0, G_OPTION_ARG_NONE,         &dump_chain,     "Print all points from the N-th chain.", "N"},
+    { "trim",           't', 0, G_OPTION_ARG_INT,          &trim,           "Trim the catalog at T.", "T" },
     { NULL }
   };
 
@@ -208,8 +220,19 @@ main (gint argc, gchar *argv[])
   {
     NcmMSetCatalog *mcat = ncm_mset_catalog_new_from_file_ro (cat_filename, burnin);
     NcmMSet *mset = ncm_mset_catalog_get_mset (mcat);
+
+    if (auto_trim)
+    {
+      ncm_mset_catalog_trim_by_type (mcat, ntests, NCM_MSET_CATALOG_TRIM_TYPE_ESS, NCM_FIT_RUN_MSGS_FULL);
+      if (trim > 0)
+        g_warning ("mcat_analize: --auto-trim enabled ignoring --trim");
+    }
+    else if (trim > 0)
+    {
+      ncm_mset_catalog_trim (mcat, trim);
+    }
+
     ncm_mset_catalog_estimate_autocorrelation_tau (mcat, info_scf);
-    
     if (info)
     {
       /*NcmMatrix *cov = NULL;*/
@@ -221,6 +244,13 @@ main (gint argc, gchar *argv[])
       g_message ("# Catalog nadd-vals: %u.\n", mcat->nadd_vals);
       g_message ("# Catalog weighted:  %s.\n", mcat->weighted ? "yes" : "no");
       ncm_mset_catalog_log_current_chain_stats (mcat);
+
+      {
+        gdouble max_ess = 0.0;
+        ncm_mset_catalog_calc_max_ess_time (mcat, ntests, &max_ess, NCM_FIT_RUN_MSGS_FULL);
+        ncm_mset_catalog_calc_heidel_diag (mcat, ntests, 0.0, NCM_FIT_RUN_MSGS_FULL);
+      }
+      
       g_message ("#\n");
       
       ncm_mset_pretty_log (mset);
@@ -229,6 +259,15 @@ main (gint argc, gchar *argv[])
       ncm_mset_catalog_log_full_covar (mcat);
       /*ncm_matrix_clear (&cov);*/
       ncm_mset_catalog_log_current_stats (mcat);
+    }
+
+    if (diag_chains)
+    {
+      gdouble max_ess   = 0.0;
+      gdouble wp_pvalue = 0.0;
+      
+      ncm_mset_catalog_max_ess_time_by_chain (mcat, ntests, &max_ess, NCM_FIT_RUN_MSGS_FULL);
+      ncm_mset_catalog_heidel_diag_by_chain (mcat, ntests, 0.0, &wp_pvalue, NCM_FIT_RUN_MSGS_FULL);
     }
 
     if (chain_evol)
@@ -245,7 +284,7 @@ main (gint argc, gchar *argv[])
         const guint len = ncm_vector_len (e_mean);
         guint j;
         
-        ncm_message ("% 10u", i);
+        ncm_message ("%10u", i);
         for (j = 0; j < len; j++)
         {
           const gdouble mean_j = ncm_stats_vec_get_mean (mcat->pstats, j);
@@ -805,6 +844,38 @@ main (gint argc, gchar *argv[])
       nc_distance_clear (&dist);
     }
 
+    if (dump)
+    {
+      const guint cat_size = ncm_mset_catalog_len (mcat);
+      guint i;
+
+      for (i = 0; i < cat_size; i++)
+      {
+        NcmVector *vec = ncm_mset_catalog_peek_row (mcat, i);
+        ncm_vector_log_vals (vec, "", "% 22.15g", TRUE);
+      }
+    }
+
+    if (dump_chain >= 0)
+    {
+      if (dump_chain >= mcat->nchains)
+      {
+        g_error ("# Chain number %d does not exists, the catalog contains %u chains!", dump_chain, mcat->nchains);
+      }
+      else
+      {
+        NcmStatsVec *chain = g_ptr_array_index (mcat->chain_pstats, dump_chain);
+        guint nitens = ncm_stats_vec_nitens (chain);
+        guint i;
+
+        for (i = 0; i < nitens; i++)
+        {
+          NcmVector *vec = ncm_stats_vec_peek_row (chain, i);
+          ncm_vector_log_vals (vec, "", "% 22.15g", TRUE);
+        }
+      }
+    }
+    
     ncm_mset_clear (&mset);
     ncm_mset_catalog_clear (&mcat);
   } 

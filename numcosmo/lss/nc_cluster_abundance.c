@@ -194,7 +194,7 @@ nc_cluster_abundance_class_init (NcClusterAbundanceClass *klass)
   /**
    * NcClusterAbundance:halo-mass-function:
    *
-   * FIXME
+   * Number  density of halos with mass [M, M + dM].
    */
   g_object_class_install_property (object_class,
                                    PROP_MASS_FUNCTION,

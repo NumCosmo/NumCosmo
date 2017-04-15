@@ -84,6 +84,7 @@ void ncm_timer_task_continue (NcmTimer *nt);
 void ncm_timer_task_add_tasks (NcmTimer *nt, guint ptasks);
 void ncm_timer_task_increment (NcmTimer *nt);
 void ncm_timer_task_accumulate (NcmTimer *nt, guint nitens);
+guint ncm_timer_task_estimate_by_time (NcmTimer *nt, gdouble sec);
 gboolean ncm_timer_task_is_running (NcmTimer *nt);
 gboolean ncm_timer_task_end (NcmTimer *nt);
 

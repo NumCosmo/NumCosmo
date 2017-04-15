@@ -70,6 +70,11 @@ struct _NcmFitESMCMC
   NcmTimer *nt;
   NcmSerialize *ser;
   NcmFitESMCMCWalker *walker;
+  gboolean auto_trim;
+  guint auto_trim_div;
+  NcmMSetCatalogTrimType trim_type;
+  guint min_runs;
+  gdouble max_runs_time;
   GPtrArray *full_theta;
   GPtrArray *full_thetastar;
   GPtrArray *theta;
@@ -109,6 +114,12 @@ void ncm_fit_esmcmc_set_sampler (NcmFitESMCMC *esmcmc, NcmMSetTransKern *sampler
 void ncm_fit_esmcmc_set_mtype (NcmFitESMCMC *esmcmc, NcmFitRunMsgs mtype);
 void ncm_fit_esmcmc_set_nthreads (NcmFitESMCMC *esmcmc, guint nthreads);
 void ncm_fit_esmcmc_set_rng (NcmFitESMCMC *esmcmc, NcmRNG *rng);
+void ncm_fit_esmcmc_set_auto_trim (NcmFitESMCMC *esmcmc, gboolean enable);
+void ncm_fit_esmcmc_set_auto_trim_div (NcmFitESMCMC *esmcmc, guint div);
+void ncm_fit_esmcmc_set_min_runs (NcmFitESMCMC *esmcmc, guint min_runs);
+void ncm_fit_esmcmc_set_max_runs_time (NcmFitESMCMC *esmcmc, gdouble max_runs_time);
+
+gboolean ncm_fit_esmcmc_has_rng (NcmFitESMCMC *esmcmc);
 
 gdouble ncm_fit_esmcmc_get_accept_ratio (NcmFitESMCMC *esmcmc);
 gdouble ncm_fit_esmcmc_get_offboard_ratio (NcmFitESMCMC *esmcmc);

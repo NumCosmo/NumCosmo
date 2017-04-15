@@ -115,7 +115,8 @@ IGNORE_HFILES=linear_internal.h         \
               class			\
               class/source		\
               class/hyrec		\
-              class/include
+              class/include             \
+              toeplitz
 
 # Images to copy into HTML directory.
 # e.g. HTML_IMAGES=$(top_srcdir)/gtk/stock-icons/stock_about_24.png
@@ -193,7 +194,7 @@ BUILT_EXTRA_DIST = $(man_MANS)
 
 CLEANFILES += bibfile.stamp addmathjax.stamp
 
-dist-hook-local: dist-local-check-mans-enabled numcosmo-docs-clean all-local
+dist-hook-local: dist-local-check-mans-enabled all-local
 
 numcosmo-docs-clean: clean
 	cd $(srcdir) && rm -rf xml html

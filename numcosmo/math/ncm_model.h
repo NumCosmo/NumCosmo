@@ -466,7 +466,7 @@ ncm_model_param_set_default (NcmModel *model, guint n)
 G_INLINE_FUNC NcmSParam *
 ncm_model_orig_param_peek_desc (NcmModel *model, guint n)
 {
-  g_assert (n < model->total_len);
+  g_assert_cmpuint (n, <, model->total_len);
   return g_ptr_array_index (model->sparams, n);
 }
 
@@ -474,7 +474,7 @@ G_INLINE_FUNC NcmSParam *
 ncm_model_param_peek_desc (NcmModel *model, guint n)
 {
   NcmReparam *reparam = ncm_model_peek_reparam (model);
-  g_assert (n < model->total_len);
+  g_assert_cmpuint (n, <, model->total_len);
   if (reparam != NULL)
   {
     NcmSParam *sp = ncm_reparam_peek_param_desc (reparam, n);

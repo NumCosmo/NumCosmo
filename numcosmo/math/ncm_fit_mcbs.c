@@ -318,7 +318,7 @@ ncm_fit_mcbs_run (NcmFitMCBS *mcbs, NcmMSet *fiduc, guint ni, guint nf, guint nb
     ncm_dataset_bootstrap_set (mcbs->fit->lh->dset, NCM_DATASET_BSTRAP_DISABLE);
     //ncm_fit_mc_set_first_sample_id (mcbs->mc_resample, i + 1);
     ncm_fit_mc_run (mcbs->mc_resample, i + 1);
-    ncm_dataset_bootstrap_set (mcbs->fit->lh->dset, rtype);
+    ncm_dataset_bootstrap_set (mcbs->fit->lh->dset, NCM_DATASET_BSTRAP_TOTAL); /* FIXME */
     
     if (mcbs->base_name != NULL)
     {

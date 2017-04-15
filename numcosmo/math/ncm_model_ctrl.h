@@ -207,6 +207,7 @@ ncm_model_ctrl_model_has_submodel (NcmModelCtrl *ctrl, NcmModelID mid)
   if (ctrl_model == NULL)
   {
     g_error ("ncm_model_ctrl_model_has_submodel: empty ctrl object.");
+    return FALSE;
   }
   else
   {
@@ -229,6 +230,7 @@ ncm_model_ctrl_submodel_last_update (NcmModelCtrl *ctrl, NcmModelID mid)
   if (ctrl_model == NULL)
   {
     g_error ("ncm_model_ctrl_submodel_last_update: empty ctrl object.");
+    return FALSE;
   }
   else
   {
