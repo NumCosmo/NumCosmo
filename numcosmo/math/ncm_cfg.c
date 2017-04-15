@@ -238,9 +238,11 @@ void _nc_hireion_register_functions (void);
 void _nc_distance_register_functions (void);
 void _nc_planck_fi_cor_tt_register_functions (void);
 
+#ifdef HAVE_MPI
 static gint _ncm_mpi_rank = 0;
 static gint _ncm_mpi_size = 0;
 static void _ncm_cfg_mpi_main_loop (void);
+#endif /* HAVE_MPI */
 
 /**
  * ncm_cfg_init:
@@ -494,6 +496,8 @@ ncm_cfg_init (void)
   return;
 }
 
+#ifdef HAVE_MPI
+
 static gboolean _ncm_cfg_mpi_cmd_handler (gpointer user_data);
 
 static void
@@ -512,7 +516,6 @@ _ncm_cfg_mpi_main_loop (void)
   exit (0);
 }
 
-
 static gboolean 
 _ncm_cfg_mpi_cmd_handler (gpointer user_data)
 {
@@ -525,6 +528,7 @@ _ncm_cfg_mpi_cmd_handler (gpointer user_data)
   return TRUE;
 }
 
+#endif /* HAVE_MPI */
 
 /** 
  * ncm_cfg_enable_gsl_err_handler:
