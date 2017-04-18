@@ -973,6 +973,8 @@ _ncm_mset_catalog_open_create_file (NcmMSetCatalog *mcat, gboolean load_from_cat
     GPtrArray *remap_remove = g_ptr_array_new ();
     glong nrows;
 
+    g_ptr_array_set_free_func (remap_remove, g_free);
+
     if (mcat->readonly)
     {
       fits_open_file (&mcat->fptr, mcat->file, READONLY, &status);
@@ -1194,7 +1196,7 @@ _ncm_mset_catalog_open_create_file (NcmMSetCatalog *mcat, gboolean load_from_cat
       if (fits_get_colnum (mcat->fptr, CASESEN, (gchar *)fparam_fullname, &g_array_index (mcat->porder, gint, i + mcat->nadd_vals), &status))
       {                /* I don't like this too ^^^^^^^^^  */
         g_warning ("_ncm_mset_catalog_open_create_file: Parameter `%s' set free in mset but not found on the fits file, setting it to NCM_PARAM_TYPE_FIXED.", fparam_fullname);
-        g_ptr_array_add (remap_remove, (gpointer)fparam_fullname);
+        g_ptr_array_add (remap_remove, (gpointer) g_strdup (fparam_fullname));
         remap = TRUE;
       }
     }
