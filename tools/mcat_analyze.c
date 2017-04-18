@@ -136,7 +136,7 @@ main (gint argc, gchar *argv[])
     { "bestfit-error",  's', 0, G_OPTION_ARG_STRING_ARRAY, &bestfit_errors, "Print best fit and 1-3 sigma asymmetric error bars of the model parameters' to be analyzed.", NULL},
     { "funcs-pvalue",   'F', 0, G_OPTION_ARG_STRING_ARRAY, &funcs_pvalue,   "Print the p-value of the function at each redshift, giving the upper integration limits.", NULL },
     { "dump",           'D', 0, G_OPTION_ARG_NONE,         &dump,           "Print all chains interweaved.", NULL },
-    { "dump-chain",       0, 0, G_OPTION_ARG_NONE,         &dump_chain,     "Print all points from the N-th chain.", "N"},
+    { "dump-chain",       0, 0, G_OPTION_ARG_INT,          &dump_chain,     "Print all points from the N-th chain.", "N"},
     { "trim",           't', 0, G_OPTION_ARG_INT,          &trim,           "Trim the catalog at T.", "T" },
     { NULL }
   };
