@@ -55,10 +55,10 @@ G_DEFINE_TYPE (NcmFitGSLMMS, ncm_fit_gsl_mms, NCM_TYPE_FIT);
 static void
 ncm_fit_gsl_mms_init (NcmFitGSLMMS *fit_gsl_mms)
 {
-  fit_gsl_mms->mms = NULL;
+  fit_gsl_mms->mms  = NULL;
   fit_gsl_mms->algo = 0;
   fit_gsl_mms->desc = NULL;
-  fit_gsl_mms->ss = NULL;
+  fit_gsl_mms->ss   = NULL;
 }
 
 static gdouble nc_residual_multimin_f (const gsl_vector *x, gpointer p);
@@ -198,9 +198,12 @@ _ncm_fit_gsl_mms_run (NcmFit *fit, NcmFitRunMsgs mtype)
 {
   NcmFitGSLMMS *fit_gsl_mms = NCM_FIT_GSL_MMS (fit);
   gint status;
-  gdouble prec = NCM_FIT_DEFAULT_M2LNL_RELTOL;
-  gdouble last_size = 1e300;
+  const gdouble prec = ncm_fit_get_params_reltol (fit);
+  gdouble last_size  = 1e300;
+  gdouble last_min   = GSL_POSINF;
   gulong still_count = 0;
+  guint restart      = 10;
+  const gdouble rfac = 0.99;
 
   if (ncm_fit_has_equality_constraints (fit) || ncm_fit_has_inequality_constraints (fit))
     g_error ("_ncm_fit_gsl_mms_run: GSL algorithms do not support constraints.");
@@ -216,7 +219,7 @@ _ncm_fit_gsl_mms_run (NcmFit *fit, NcmFitRunMsgs mtype)
     fit->fstate->niter++;
     status = gsl_multimin_fminimizer_iterate (fit_gsl_mms->mms);
 
-    if (fit->fstate->niter == 1 && !gsl_finite(fit_gsl_mms->mms->fval))
+    if ((fit->fstate->niter == 1) && !gsl_finite (fit_gsl_mms->mms->fval))
     {
       ncm_fit_params_set_vector (fit, fit->fstate->fparams);
       return FALSE;
@@ -243,18 +246,31 @@ _ncm_fit_gsl_mms_run (NcmFit *fit, NcmFitRunMsgs mtype)
     else
     {
       still_count = 0;
-      last_size = size;
-      status = gsl_multimin_test_size (size, prec);
+      last_size   = size;
+      status      = gsl_multimin_test_size (size, prec);
+
       if (status == GSL_ETOL)
         status = GSL_CONTINUE;
     }
+    if ((restart > 0) && (status == GSL_SUCCESS))
+    {
+      if (fit_gsl_mms->mms->fval < (last_min * rfac))
+      {
+        ncm_mset_fparams_get_vector (fit->mset, fit->fstate->fparams);
+        gsl_multimin_fminimizer_set (fit_gsl_mms->mms, &fit_gsl_mms->f, ncm_vector_gsl (fit->fstate->fparams), ncm_vector_gsl (fit_gsl_mms->ss));
+        status = GSL_CONTINUE;
+        restart--;
+        last_min = fit_gsl_mms->mms->fval;
+      }
+    }
     ncm_fit_state_set_m2lnL_curval (fit->fstate, fit_gsl_mms->mms->fval);
-    ncm_fit_log_step (fit);
+    ncm_fit_log_step (fit);    
   }
   while ( (status == GSL_CONTINUE) && (fit->fstate->niter < fit->maxiter) );
 
   ncm_fit_params_set_gsl_vector (fit, fit_gsl_mms->mms->x);
 
+  ncm_mset_fparams_get_vector (fit->mset, fit->fstate->fparams);
   ncm_fit_state_set_m2lnL_curval (fit->fstate, fit_gsl_mms->mms->fval);
   ncm_fit_state_set_m2lnL_prec (fit->fstate, last_size);
 
@@ -269,7 +285,7 @@ nc_residual_multimin_f (const gsl_vector *x, gpointer p)
   
   ncm_fit_params_set_gsl_vector (fit, x);
   if (!ncm_mset_params_valid (fit->mset))
-    return GSL_NAN;
+    return GSL_POSINF;
 
   ncm_fit_m2lnL_val (fit, &result);
   return result;
