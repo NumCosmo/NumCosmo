@@ -1226,12 +1226,13 @@ _ncm_mset_catalog_open_create_file (NcmMSetCatalog *mcat, gboolean load_from_cat
 
       g_array_set_size (mcat->porder, total);
 
+      status = 0;
       for (i = 0; i < fparam_len; i++)
       {
         const gchar *fparam_fullname = ncm_mset_fparam_full_name (mcat->mset, i);
         if (fits_get_colnum (mcat->fptr, CASESEN, (gchar *)fparam_fullname, &g_array_index (mcat->porder, gint, i + mcat->nadd_vals), &status))
         {                /* I don't like this too ^^^^^^^^^  */
-          g_error ("_ncm_mset_catalog_open_create_file: Parameter `%s' set free in mset but not found on the fits file, should never happen.", fparam_fullname);
+          g_error ("_ncm_mset_catalog_open_create_file: Parameter `%s' set free in mset but not found on the fits file, this should never happen!", fparam_fullname);
         }
       }
 
