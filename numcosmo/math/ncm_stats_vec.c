@@ -1078,6 +1078,7 @@ ncm_stats_vec_fit_ar_model (NcmStatsVec *svec, guint p, const guint order, NcmSt
     const guint aorder = (order == 0) ? GSL_MIN (svec->nitens - 1, floor (10 * log10 (svec->nitens))) : order;
     NcmVector *M = ncm_vector_new (2 * aorder + 1);
     const gdouble dlev_tol = 1.0e-3;
+    gboolean allocated_here[2] = {FALSE, FALSE}; 
     gint i;
 
     g_assert_cmpuint (svec->nitens, >, order + 1);
@@ -1085,12 +1086,18 @@ ncm_stats_vec_fit_ar_model (NcmStatsVec *svec, guint p, const guint order, NcmSt
     if (*rho != NULL)
       g_assert_cmpuint (ncm_vector_len (*rho), >=, aorder);
     else
+    {
       *rho = ncm_vector_new (aorder);
+      allocated_here[0] = TRUE;
+    }
 
     if (*pacf != NULL)
       g_assert_cmpuint (ncm_vector_len (*pacf), >=, aorder);
     else
+    {
       *pacf = ncm_vector_new (aorder);
+      allocated_here[1] = TRUE;
+    }
 
     ncm_vector_fast_set (M, aorder, svec->param_data[0]);
 
@@ -1126,6 +1133,7 @@ ncm_stats_vec_fit_ar_model (NcmStatsVec *svec, guint p, const guint order, NcmSt
           gdouble crit     = var;
           gdouble min_crit = crit;
 
+          c_order[0] = 0;          
           for (i = 0; i < aorder; i++)
           {
             const gdouble p = 1.0 + i;
@@ -1145,6 +1153,8 @@ ncm_stats_vec_fit_ar_model (NcmStatsVec *svec, guint p, const guint order, NcmSt
         {          
           gdouble crit     = n * log (var) + 2.0;
           gdouble min_crit = crit;
+
+          c_order[0] = 0;
           for (i = 0; i < aorder; i++)
           {
             const gdouble p = 1.0 + i;
@@ -1166,6 +1176,7 @@ ncm_stats_vec_fit_ar_model (NcmStatsVec *svec, guint p, const guint order, NcmSt
           gdouble crit     = n * log (var) + 2.0 * n / (n - 2.0);
           gdouble min_crit = crit;
 
+          c_order[0] = 0;
           for (i = 0; i < aorder; i++)
           {
             const gdouble p = 1.0 + i;
@@ -1190,7 +1201,14 @@ ncm_stats_vec_fit_ar_model (NcmStatsVec *svec, guint p, const guint order, NcmSt
       ivar[0] *= (n - 1.0) / (n - (c_order[0] + 1.0));
     }
 
-    if ((c_order[0] != aorder) && (c_order[0] > 0))
+    if (c_order[0] == 0)
+    {
+      if (allocated_here[0])
+        ncm_vector_clear (rho);
+      if (allocated_here[1])
+        ncm_vector_clear (pacf);
+    }
+    else if (c_order[0] != aorder)
     {
       NcmVector *c_rho  = ncm_vector_get_subvector (*rho,  0, c_order[0]);
       NcmVector *c_pacf = ncm_vector_get_subvector (*pacf, 0, c_order[0]);
