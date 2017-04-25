@@ -880,7 +880,7 @@ main (gint argc, gchar *argv[])
             const gdouble mean_n   = mean * (k + 1.0);
             const gdouble cumsum_k = ncm_vector_get (cumsum, k);
 
-            ncm_message ("%f % 20.15g % 20.15g % 20.15g\n", 
+            ncm_message ("%f % 20.15e % 20.15e % 20.15e\n", 
                          (gdouble)k + 1.0, 
                          cumsum_k,
                          mean_n,
