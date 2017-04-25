@@ -872,7 +872,7 @@ main (gint argc, gchar *argv[])
           gint fpi          = (pi != NULL) ? (ncm_mset_fparam_get_fpi (mset, pi->mid, pi->pid) + mcat->nadd_vals) : add_param;
           gdouble mean      = 0.0;
           gdouble var       = 0.0;
-          NcmVector *cumsum = ncm_stats_vec_visual_heidel_diag (mcat->pstats, fpi, 0, &mean, &var);
+          NcmVector *cumsum = ncm_stats_vec_visual_heidel_diag (mcat->nchains > 1 ? mcat->e_mean_stats : mcat->pstats, fpi, 0, &mean, &var);
           const gdouble sd  = sqrt (var);
 
           for (k = 0; k < ncm_vector_len (cumsum); k++)
@@ -882,8 +882,8 @@ main (gint argc, gchar *argv[])
 
             ncm_message ("%f % 20.15g % 20.15g % 20.15g\n", 
                          (gdouble)k + 1.0, 
-                         mean_n,
                          cumsum_k,
+                         mean_n,
                          sd);
           }
           ncm_vector_free (cumsum);
