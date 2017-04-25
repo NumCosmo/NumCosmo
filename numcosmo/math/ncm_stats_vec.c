@@ -1435,6 +1435,59 @@ ncm_stats_vec_heidel_diag (NcmStatsVec *svec, const guint ntests, const gdouble 
 }
 
 /**
+ * ncm_stats_vec_visual_heidel_diag:
+ * @svec: a #NcmStatsVec
+ * @p: vector index
+ * @fi: first index
+ * @mean: (out): mean
+ * @var: (out): test's variance
+ * 
+ * Computes the empirical cumulative and the mean used to build 
+ * the Heidelberger and Welch’s convergence diagnostic.
+ * 
+ * See ncm_stats_vec_heidel_diag().
+ * 
+ * Returns: (transfer full): a #NcmVector containing the empirical cumulative distribution.
+ */
+NcmVector *
+ncm_stats_vec_visual_heidel_diag (NcmStatsVec *svec, const guint p, const guint fi, gdouble *mean, gdouble *var)
+{
+  NcmStatsVec *chunk  = ncm_stats_vec_new (1, NCM_STATS_VEC_VAR, TRUE);
+  const guint nitens  = svec->nitens - fi;
+  gdouble spec0       = 0.0;
+  guint c_order       = 0;
+  gdouble cumsum      = 0.0;
+  NcmVector *cumsum_v = ncm_vector_new (nitens);
+  gint i, j = 0;
+  
+  g_assert_cmpuint (svec->nitens, >=, 10);
+  g_assert_cmpuint (fi, <, svec->nitens);
+  g_assert (svec->save_x);
+
+  for (i = svec->nitens - 1; i >= (gint)fi; i--)
+  {
+    NcmVector *row      = ncm_stats_vec_peek_row (svec, i);
+    const gdouble p_val = ncm_vector_get (row, p);
+
+    cumsum += p_val;
+    ncm_vector_set (cumsum_v, j, cumsum);
+    j++;
+
+    ncm_stats_vec_set (chunk, 0, p_val);
+    ncm_stats_vec_update (chunk);
+  }
+
+  ncm_stats_vec_ar_ess (chunk, p, NCM_STATS_VEC_AR_AICC, &spec0, &c_order);
+
+  mean[0] = ncm_stats_vec_get_mean (chunk, 0);
+  var[0]  = spec0 * nitens;
+
+  ncm_stats_vec_clear (&chunk);
+
+  return cumsum_v;
+}
+
+/**
  * ncm_stats_vec_max_ess_time:
  * @svec: a #NcmStatsVec
  * @ntests: number of tests
