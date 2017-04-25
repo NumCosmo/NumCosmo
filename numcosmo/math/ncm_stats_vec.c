@@ -1253,6 +1253,8 @@ ncm_stats_vec_ar_ess (NcmStatsVec *svec, guint p, NcmStatsVecARType ar_crit, gdo
   NcmVector *rho = NULL, *pacf = NULL;
   gdouble ivar  = 0.0;
   guint order = 0;
+
+  g_assert_cmpuint (p, <, svec->len);
   
   while (ncm_stats_vec_fit_ar_model (svec, p, order, ar_crit, &rho, &pacf, &ivar, c_order) && (2 * c_order[0] + 1 < svec->nitens))
   {
@@ -1477,7 +1479,7 @@ ncm_stats_vec_visual_heidel_diag (NcmStatsVec *svec, const guint p, const guint 
     ncm_stats_vec_update (chunk);
   }
 
-  ncm_stats_vec_ar_ess (chunk, p, NCM_STATS_VEC_AR_AICC, &spec0, &c_order);
+  ncm_stats_vec_ar_ess (chunk, 0, NCM_STATS_VEC_AR_AICC, &spec0, &c_order);
 
   mean[0] = ncm_stats_vec_get_mean (chunk, 0);
   var[0]  = spec0 * nitens;
