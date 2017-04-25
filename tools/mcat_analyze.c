@@ -96,14 +96,15 @@ main (gint argc, gchar *argv[])
   gint nsteps = 100;
   gint burnin = 0;
   gint ntests = 100;
-  gchar **funcs = NULL;
-  gchar **distribs = NULL;
-  gchar **params = NULL;
-  gchar **params_evol = NULL;
-  gchar **mode_errors = NULL;
-  gchar **median_errors = NULL;
+  gchar **funcs          = NULL;
+  gchar **distribs       = NULL;
+  gchar **params         = NULL;
+  gchar **params_evol    = NULL;
+  gchar **mode_errors    = NULL;
+  gchar **median_errors  = NULL;
   gchar **bestfit_errors = NULL;
-  gchar **funcs_pvalue = NULL;
+  gchar **funcs_pvalue   = NULL;
+  gchar **visual_hw      = NULL;
   guint i;
   
   GError *error = NULL;
@@ -135,6 +136,7 @@ main (gint argc, gchar *argv[])
     { "median-error",   'e', 0, G_OPTION_ARG_STRING_ARRAY, &median_errors,  "Print median and 1-3 sigma asymmetric error bars of the model parameters' to be analyzed.", NULL},
     { "bestfit-error",  's', 0, G_OPTION_ARG_STRING_ARRAY, &bestfit_errors, "Print best fit and 1-3 sigma asymmetric error bars of the model parameters' to be analyzed.", NULL},
     { "funcs-pvalue",   'F', 0, G_OPTION_ARG_STRING_ARRAY, &funcs_pvalue,   "Print the p-value of the function at each redshift, giving the upper integration limits.", NULL },
+    { "visual-hw",      'V', 0, G_OPTION_ARG_STRING_ARRAY, &visual_hw,      "Print the points to the visual HW test.", NULL },
     { "dump",           'D', 0, G_OPTION_ARG_NONE,         &dump,           "Print all chains interweaved.", NULL },
     { "dump-chain",       0, 0, G_OPTION_ARG_INT,          &dump_chain,     "Print all points from the N-th chain.", "N"},
     { "trim",           't', 0, G_OPTION_ARG_INT,          &trim,           "Trim the catalog at T.", "T" },
@@ -842,6 +844,52 @@ main (gint argc, gchar *argv[])
       
       ncm_vector_clear (&z_vec);
       nc_distance_clear (&dist);
+    }
+
+    /*********************************************************************************************************
+     * 
+     * Visual HW test
+     * 
+     *********************************************************************************************************/
+    if (visual_hw != NULL)
+    {
+      guint nparams = g_strv_length (visual_hw);
+
+      for (i = 0; i < nparams; i++)
+      {
+        const NcmMSetPIndex *pi = ncm_mset_fparam_get_pi_by_name (mset, visual_hw[i]);
+        gchar *end_ptr          = NULL;
+        glong add_param         = strtol (visual_hw[i], &end_ptr, 10);
+        guint k;
+
+        if (pi == NULL && (visual_hw[i] == end_ptr))
+        {
+          g_warning ("# Parameter `%s' not found for the HW test, skipping...\n", visual_hw[i]);
+          continue;
+        }
+
+        {
+          gint fpi          = (pi != NULL) ? (ncm_mset_fparam_get_fpi (mset, pi->mid, pi->pid) + mcat->nadd_vals) : add_param;
+          gdouble mean      = 0.0;
+          gdouble var       = 0.0;
+          NcmVector *cumsum = ncm_stats_vec_visual_heidel_diag (mcat->pstats, fpi, 0, &mean, &var);
+          const gdouble sd  = sqrt (var);
+
+          for (k = 0; k < ncm_vector_len (cumsum); k++)
+          {
+            const gdouble mean_n   = mean * (k + 1.0);
+            const gdouble cumsum_k = ncm_vector_get (cumsum, k);
+
+            ncm_message ("%f % 20.15g % 20.15g % 20.15g\n", 
+                         (gdouble)k + 1.0, 
+                         mean_n,
+                         cumsum_k,
+                         sd);
+          }
+          ncm_vector_free (cumsum);
+        }
+        ncm_message ("\n\n");
+      }
     }
 
     if (dump)
