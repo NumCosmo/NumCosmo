@@ -30,26 +30,26 @@ libtoeplitz_la_LIBADD = \
 libtoeplitz_la_SOURCES = \
 	solvers/dcommonsub.c  \
 	solvers/dlevcl.c      \
-	solvers/dopt_k.h      \
 	solvers/dschur.c      \
 	solvers/dschurlev.c   \
-	solvers/fblas.h       \
 	solvers/polytool.c    \
-	solvers/dcommonsub.h  \
 	solvers/dlevin.c      \
 	solvers/drefine.c     \
 	solvers/dschurin.c    \
 	solvers/dschurlevin.c \
-	solvers/polytool.h    \
 	solvers/toetool.c     \
 	solvers/dlev.c        \
 	solvers/dopt_k.c      \
-	solvers/drefine.h     \
 	solvers/dschurinup.c  \
 	solvers/dschurup.c    \
+	solvers/dcommonsub.h  \
+	solvers/dopt_k.h      \
+	solvers/drefine.h     \
+	solvers/fblas.h       \
+	solvers/ftypes.h      \
+	solvers/polytool.h    \
 	solvers/toeplitz.h    \
 	solvers/toetool.h
-
 
 EXTRA_DIST = \
 	COPYING \
