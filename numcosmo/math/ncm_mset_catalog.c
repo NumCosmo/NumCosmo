@@ -1193,12 +1193,12 @@ _ncm_mset_catalog_open_create_file (NcmMSetCatalog *mcat, gboolean load_from_cat
     for (i = 0; i < fparam_len; i++)
     {
       const gchar *fparam_fullname = ncm_mset_fparam_full_name (mcat->mset, i);
-      status = 0;
       if (fits_get_colnum (mcat->fptr, CASESEN, (gchar *)fparam_fullname, &g_array_index (mcat->porder, gint, i + mcat->nadd_vals), &status))
       {                /* I don't like this too ^^^^^^^^^  */
         g_warning ("_ncm_mset_catalog_open_create_file: Parameter `%s' set free in mset but not found on the fits file, setting it to NCM_PARAM_TYPE_FIXED.", fparam_fullname);
         g_ptr_array_add (remap_remove, (gpointer) g_strdup (fparam_fullname));
-        remap = TRUE;
+        remap  = TRUE;
+        status = 0;
       }
     }
 
@@ -1227,7 +1227,6 @@ _ncm_mset_catalog_open_create_file (NcmMSetCatalog *mcat, gboolean load_from_cat
 
       g_array_set_size (mcat->porder, total);
 
-      status = 0;
       for (i = 0; i < fparam_len; i++)
       {
         const gchar *fparam_fullname = ncm_mset_fparam_full_name (mcat->mset, i);
