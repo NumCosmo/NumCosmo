@@ -201,7 +201,10 @@ _ncm_fit_gsl_mm_run (NcmFit *fit, NcmFitRunMsgs mtype)
 {
   NcmFitGSLMM *fit_gsl_mm = NCM_FIT_GSL_MM (fit);
   gint status;
-  gdouble prec = NCM_FIT_DEFAULT_M2LNL_RELTOL;
+  const gdouble prec = ncm_fit_get_params_reltol (fit);
+  gdouble last_min   = GSL_POSINF;
+  guint restart      = 10;
+  const gdouble rfac = 0.99;
 
   if (ncm_fit_has_equality_constraints (fit) || ncm_fit_has_inequality_constraints (fit))
     g_error ("_ncm_fit_gsl_mm_run: GSL algorithms do not support constraints.");
@@ -218,7 +221,7 @@ _ncm_fit_gsl_mm_run (NcmFit *fit, NcmFitRunMsgs mtype)
     status = gsl_multimin_fdfminimizer_iterate (fit_gsl_mm->mm);
     pscale = prec * (fit_gsl_mm->mm->f != 0.0 ? fit_gsl_mm->mm->f : 1.0);
 
-    if (fit->fstate->niter == 1 && !gsl_finite(fit_gsl_mm->mm->f))
+    if ((fit->fstate->niter == 1) && !gsl_finite(fit_gsl_mm->mm->f))
     {
       ncm_fit_params_set_vector (fit, fit->fstate->fparams);
       return FALSE;
@@ -232,11 +235,24 @@ _ncm_fit_gsl_mm_run (NcmFit *fit, NcmFitRunMsgs mtype)
     }
     else
       status = gsl_multimin_test_gradient (fit_gsl_mm->mm->gradient, pscale);
+
+    if ((restart > 0) && (status == GSL_SUCCESS))
+    {
+      if (fit_gsl_mm->mm->f < (last_min * rfac))
+      {
+        gsl_multimin_fdfminimizer_restart (fit_gsl_mm->mm);
+        status = GSL_CONTINUE;
+        restart--;
+        last_min = fit_gsl_mm->mm->f;
+      }
+    }
+
     ncm_fit_state_set_m2lnL_curval (fit->fstate, fit_gsl_mm->mm->f);
     ncm_fit_log_step (fit);
   }
   while ( (status == GSL_CONTINUE) && (fit->fstate->niter < fit->maxiter) );
 
+  ncm_mset_fparams_get_vector (fit->mset, fit->fstate->fparams);
   ncm_fit_state_set_m2lnL_curval (fit->fstate, fit_gsl_mm->mm->f);
   ncm_fit_state_set_m2lnL_prec (fit->fstate, gsl_blas_dnrm2 (fit_gsl_mm->mm->gradient) / fit_gsl_mm->mm->f);
 

@@ -421,7 +421,7 @@ ncm_vector_get_subvector (NcmVector *cv, gsize k, gsize size)
   NcmVector *scv = g_object_new (NCM_TYPE_VECTOR, NULL);
 
   g_assert_cmpuint (size, >, 0);
-  g_assert_cmpuint (size - k, <=, ncm_vector_len (cv));
+  g_assert_cmpuint (size + k, <=, ncm_vector_len (cv));
 
   scv->vv    = gsl_vector_subvector (ncm_vector_gsl (cv), k, size);
   scv->type  = NCM_VECTOR_DERIVED;

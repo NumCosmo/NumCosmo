@@ -1078,6 +1078,7 @@ ncm_stats_vec_fit_ar_model (NcmStatsVec *svec, guint p, const guint order, NcmSt
     const guint aorder = (order == 0) ? GSL_MIN (svec->nitens - 1, floor (10 * log10 (svec->nitens))) : order;
     NcmVector *M = ncm_vector_new (2 * aorder + 1);
     const gdouble dlev_tol = 1.0e-3;
+    gboolean allocated_here[2] = {FALSE, FALSE}; 
     gint i;
 
     g_assert_cmpuint (svec->nitens, >, order + 1);
@@ -1085,12 +1086,18 @@ ncm_stats_vec_fit_ar_model (NcmStatsVec *svec, guint p, const guint order, NcmSt
     if (*rho != NULL)
       g_assert_cmpuint (ncm_vector_len (*rho), >=, aorder);
     else
+    {
       *rho = ncm_vector_new (aorder);
+      allocated_here[0] = TRUE;
+    }
 
     if (*pacf != NULL)
       g_assert_cmpuint (ncm_vector_len (*pacf), >=, aorder);
     else
+    {
       *pacf = ncm_vector_new (aorder);
+      allocated_here[1] = TRUE;
+    }
 
     ncm_vector_fast_set (M, aorder, svec->param_data[0]);
 
@@ -1126,6 +1133,7 @@ ncm_stats_vec_fit_ar_model (NcmStatsVec *svec, guint p, const guint order, NcmSt
           gdouble crit     = var;
           gdouble min_crit = crit;
 
+          c_order[0] = 0;          
           for (i = 0; i < aorder; i++)
           {
             const gdouble p = 1.0 + i;
@@ -1145,6 +1153,8 @@ ncm_stats_vec_fit_ar_model (NcmStatsVec *svec, guint p, const guint order, NcmSt
         {          
           gdouble crit     = n * log (var) + 2.0;
           gdouble min_crit = crit;
+
+          c_order[0] = 0;
           for (i = 0; i < aorder; i++)
           {
             const gdouble p = 1.0 + i;
@@ -1166,6 +1176,7 @@ ncm_stats_vec_fit_ar_model (NcmStatsVec *svec, guint p, const guint order, NcmSt
           gdouble crit     = n * log (var) + 2.0 * n / (n - 2.0);
           gdouble min_crit = crit;
 
+          c_order[0] = 0;
           for (i = 0; i < aorder; i++)
           {
             const gdouble p = 1.0 + i;
@@ -1190,7 +1201,14 @@ ncm_stats_vec_fit_ar_model (NcmStatsVec *svec, guint p, const guint order, NcmSt
       ivar[0] *= (n - 1.0) / (n - (c_order[0] + 1.0));
     }
 
-    if ((c_order[0] != aorder) && (c_order[0] > 0))
+    if (c_order[0] == 0)
+    {
+      if (allocated_here[0])
+        ncm_vector_clear (rho);
+      if (allocated_here[1])
+        ncm_vector_clear (pacf);
+    }
+    else if (c_order[0] != aorder)
     {
       NcmVector *c_rho  = ncm_vector_get_subvector (*rho,  0, c_order[0]);
       NcmVector *c_pacf = ncm_vector_get_subvector (*pacf, 0, c_order[0]);
@@ -1235,6 +1253,8 @@ ncm_stats_vec_ar_ess (NcmStatsVec *svec, guint p, NcmStatsVecARType ar_crit, gdo
   NcmVector *rho = NULL, *pacf = NULL;
   gdouble ivar  = 0.0;
   guint order = 0;
+
+  g_assert_cmpuint (p, <, svec->len);
   
   while (ncm_stats_vec_fit_ar_model (svec, p, order, ar_crit, &rho, &pacf, &ivar, c_order) && (2 * c_order[0] + 1 < svec->nitens))
   {
@@ -1414,6 +1434,59 @@ ncm_stats_vec_heidel_diag (NcmStatsVec *svec, const guint ntests, const gdouble 
   ncm_stats_vec_clear (&chunk);
 
   return pvals;
+}
+
+/**
+ * ncm_stats_vec_visual_heidel_diag:
+ * @svec: a #NcmStatsVec
+ * @p: vector index
+ * @fi: first index
+ * @mean: (out): mean
+ * @var: (out): test's variance
+ * 
+ * Computes the empirical cumulative and the mean used to build 
+ * the Heidelberger and Welch’s convergence diagnostic.
+ * 
+ * See ncm_stats_vec_heidel_diag().
+ * 
+ * Returns: (transfer full): a #NcmVector containing the empirical cumulative distribution.
+ */
+NcmVector *
+ncm_stats_vec_visual_heidel_diag (NcmStatsVec *svec, const guint p, const guint fi, gdouble *mean, gdouble *var)
+{
+  NcmStatsVec *chunk  = ncm_stats_vec_new (1, NCM_STATS_VEC_VAR, TRUE);
+  const guint nitens  = svec->nitens - fi;
+  gdouble spec0       = 0.0;
+  guint c_order       = 0;
+  gdouble cumsum      = 0.0;
+  NcmVector *cumsum_v = ncm_vector_new (nitens);
+  gint i, j = 0;
+  
+  g_assert_cmpuint (svec->nitens, >=, 10);
+  g_assert_cmpuint (fi, <, svec->nitens);
+  g_assert (svec->save_x);
+
+  for (i = svec->nitens - 1; i >= (gint)fi; i--)
+  {
+    NcmVector *row      = ncm_stats_vec_peek_row (svec, i);
+    const gdouble p_val = ncm_vector_get (row, p);
+
+    cumsum += p_val;
+    ncm_vector_set (cumsum_v, j, cumsum);
+    j++;
+
+    ncm_stats_vec_set (chunk, 0, p_val);
+    ncm_stats_vec_update (chunk);
+  }
+
+  ncm_stats_vec_ar_ess (chunk, 0, NCM_STATS_VEC_AR_AICC, &spec0, &c_order);
+
+  mean[0] = ncm_stats_vec_get_mean (chunk, 0);
+  var[0]  = spec0 * nitens;
+
+  ncm_stats_vec_clear (&chunk);
+
+  return cumsum_v;
 }
 
 /**

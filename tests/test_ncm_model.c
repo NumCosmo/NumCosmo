@@ -378,18 +378,19 @@ void
 test_ncm_model_test_setget (TestNcmModel *test, gconstpointer pdata)
 {
   NcmModelTest *tm = test->tm;
-  NcmModel *model = NCM_MODEL (tm);
-  guint model_len = ncm_model_len (model);
-  NcmVector *tmp = ncm_vector_new (model_len);
+  NcmModel *model  = NCM_MODEL (tm);
+  guint model_len  = ncm_model_len (model);
+  NcmVector *tmp   = ncm_vector_new (model_len);
   guint i;
 
   /* ncm_model_param_get / ncm_model_param_set */
 
   for (i = 0; i < model_len; i++)
   {
-    gdouble lb = ncm_model_param_get_lower_bound (model, i);
-    gdouble ub = ncm_model_param_get_upper_bound (model, i);
+    const gdouble lb = ncm_model_param_get_lower_bound (model, i);
+    const gdouble ub = ncm_model_param_get_upper_bound (model, i);
     gdouble val;
+    
     while ((val = g_test_rand_double_range (lb, ub)))
     {
       if (val != ncm_model_param_get (model, i))
