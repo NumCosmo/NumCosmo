@@ -100,6 +100,14 @@ nwalkers = 50
 stretch = Ncm.FitESMCMCWalkerStretch.new (nwalkers, mset.fparams_len ())
 
 #
+# The methods below set the walk scale, which controls the size of the
+# step done between two walkers and circumscribe the walkers inside
+# the box defined by the parameters inside the mset object.
+#
+stretch.set_scale (2.5)
+stretch.set_box_mset (mset)
+
+#
 # Initialize the ESMCMC object using the objects above. It will
 # use 50 walkers, i.e., each point in the MCMC chain contains
 # 50 points in the parametric space. Each step uses the last point
@@ -107,6 +115,17 @@ stretch = Ncm.FitESMCMCWalkerStretch.new (nwalkers, mset.fparams_len ())
 # proposal points.
 #
 esmcmc  = Ncm.FitESMCMC.new (fit, nwalkers, init_sampler, stretch, Ncm.FitRunMsgs.SIMPLE)
+
+#
+# These methods enable the auto-trim options on ESMCMC. This option 
+# makes the sampler check the chains' health and trim any unnecessary 
+# burn-in part. We set the number of divisions to 100 so we test the
+# chains in blocks of n/100. The last method asserts that each 2min
+# the catalog will be checked.
+#
+esmcmc.set_auto_trim (True)
+esmcmc.set_auto_trim_div (100)
+esmcmc.set_max_runs_time (2.0 * 60.0)
 
 #
 # Using `example_esmcmc_out.fits' as the catalog file, if there
@@ -124,7 +143,7 @@ esmcmc.set_data_file ("example_esmcmc_out.fits")
 # 
 #
 esmcmc.start_run ()
-esmcmc.run_lre (1000, 1.0e-3)
+esmcmc.run_lre (10, 1.0e-3)
 esmcmc.end_run ()
 
 #

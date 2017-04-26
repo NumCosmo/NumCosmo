@@ -966,10 +966,14 @@ _ncm_mset_catalog_open_create_file (NcmMSetCatalog *mcat, gboolean load_from_cat
 
   if (g_file_test (mcat->file, G_FILE_TEST_EXISTS))
   {
-    gboolean weighted = FALSE;
-    gint nchains   = 0;
-    gint nadd_vals = 0;
+    gboolean weighted       = FALSE;
+    gint nchains            = 0;
+    gint nadd_vals          = 0;
+    gboolean remap          = FALSE;
+    GPtrArray *remap_remove = g_ptr_array_new ();
     glong nrows;
+
+    g_ptr_array_set_free_func (remap_remove, g_free);
 
     if (mcat->readonly)
     {
@@ -1087,36 +1091,57 @@ _ncm_mset_catalog_open_create_file (NcmMSetCatalog *mcat, gboolean load_from_cat
 
         status = 0;
 
-        g_ptr_array_add (mcat->add_vals_names, d_colname);
-        g_array_index (mcat->porder, gint, i) = cindex;
-
+        if (i < mcat->nadd_vals)
         {
-          gchar symbol_s[FLEN_VALUE];
-          gchar *symbol;
-          gchar *asymbi = g_strdup_printf ("%s%d", NCM_MSET_CATALOG_ASYMB_LABEL, i + 1);
-          
-          fits_read_key (mcat->fptr, TSTRING, asymbi, &symbol_s, NULL, &status);
-          if (status == KEY_NO_EXIST)
+          g_ptr_array_add (mcat->add_vals_names, d_colname);
+          g_array_index (mcat->porder, gint, i) = cindex;
+
           {
-            symbol = g_strdup ("no-symbol");
-            status = 0;
+            gchar symbol_s[FLEN_VALUE];
+            gchar *symbol;
+            gchar *asymbi = g_strdup_printf ("%s%d", NCM_MSET_CATALOG_ASYMB_LABEL, i + 1);
+
+            fits_read_key (mcat->fptr, TSTRING, asymbi, &symbol_s, NULL, &status);
+            if (status == KEY_NO_EXIST)
+            {
+              symbol = g_strdup ("no-symbol");
+              status = 0;
+            }
+            else
+            {
+              symbol = g_strdup (symbol_s);
+              NCM_FITS_ERROR (status);
+            }
+
+            g_ptr_array_add (mcat->add_vals_symbs, symbol);
+
+            g_free (asymbi);
+          }  
+        }
+        else
+        {
+          NcmMSetPIndex *pi = ncm_mset_param_get_by_full_name (mcat->mset, d_colname);
+          if (pi == NULL)
+          {
+            g_error ("_ncm_mset_catalog_open_create_file: cannot find parameter `%s' in mset file.", d_colname);
           }
           else
           {
-            symbol = g_strdup (symbol_s);
-            NCM_FITS_ERROR (status);
+            NcmParamType ftype = ncm_mset_param_get_ftype (mcat->mset, pi->mid, pi->pid);
+            if (ftype != NCM_PARAM_TYPE_FREE)
+            {
+              g_warning ("_ncm_mset_catalog_open_create_file: parameter `%s' found but not free on the catalog, setting it to NCM_PARAM_TYPE_FREE.",
+                         d_colname);
+              ncm_mset_param_set_ftype (mcat->mset, pi->mid, pi->pid, NCM_PARAM_TYPE_FREE);
+              remap = TRUE;
+            }
+            ncm_mset_pindex_free (pi);
           }
-
-          g_ptr_array_add (mcat->add_vals_symbs, symbol);
-
-          g_free (asymbi);
+          g_free (d_colname);
         }
 
         status = COL_NOT_UNIQUE;
-
         i++;
-        if (i >= mcat->nadd_vals)
-          break;
       }
       status = 0;
     }
@@ -1152,14 +1177,69 @@ _ncm_mset_catalog_open_create_file (NcmMSetCatalog *mcat, gboolean load_from_cat
       }
     }
 
+    if (remap)
+    {
+      guint total;
+
+      ncm_mset_prepare_fparam_map (mcat->mset);
+      
+      fparam_len = ncm_mset_fparam_len (mcat->mset);
+      total      = fparam_len + mcat->nadd_vals + (mcat->weighted ? 1 : 0);
+
+      g_array_set_size (mcat->porder, total);
+      remap = FALSE;
+    }
+
     for (i = 0; i < fparam_len; i++)
     {
       const gchar *fparam_fullname = ncm_mset_fparam_full_name (mcat->mset, i);
       if (fits_get_colnum (mcat->fptr, CASESEN, (gchar *)fparam_fullname, &g_array_index (mcat->porder, gint, i + mcat->nadd_vals), &status))
       {                /* I don't like this too ^^^^^^^^^  */
-        g_error ("_ncm_mset_catalog_open_create_file: Column %s not found, invalid fits file.", fparam_fullname);
+        g_warning ("_ncm_mset_catalog_open_create_file: Parameter `%s' set free in mset but not found on the fits file, setting it to NCM_PARAM_TYPE_FIXED.", fparam_fullname);
+        g_ptr_array_add (remap_remove, (gpointer) g_strdup (fparam_fullname));
+        remap  = TRUE;
+        status = 0;
       }
     }
+
+    if (remap)
+    {
+      guint total;
+      for (i = 0; i < remap_remove->len; i++)
+      {
+        NcmMSetPIndex *pi = ncm_mset_param_get_by_full_name (mcat->mset, g_ptr_array_index (remap_remove, i));
+        if (pi == NULL)
+        {
+          g_error ("_ncm_mset_catalog_open_create_file: unknown error should never happen! Cannot find parameter `%s' in mset file.", 
+                   (gchar *)g_ptr_array_index (remap_remove, i));
+        }
+        else
+        {
+          ncm_mset_param_set_ftype (mcat->mset, pi->mid, pi->pid, NCM_PARAM_TYPE_FIXED);
+          ncm_mset_pindex_free (pi);
+        }
+      }
+
+      ncm_mset_prepare_fparam_map (mcat->mset);
+      
+      fparam_len = ncm_mset_fparam_len (mcat->mset);
+      total      = fparam_len + mcat->nadd_vals + (mcat->weighted ? 1 : 0);
+
+      g_array_set_size (mcat->porder, total);
+
+      for (i = 0; i < fparam_len; i++)
+      {
+        const gchar *fparam_fullname = ncm_mset_fparam_full_name (mcat->mset, i);
+        if (fits_get_colnum (mcat->fptr, CASESEN, (gchar *)fparam_fullname, &g_array_index (mcat->porder, gint, i + mcat->nadd_vals), &status))
+        {                /* I don't like this too ^^^^^^^^^  */
+          g_error ("_ncm_mset_catalog_open_create_file: Parameter `%s' set free in mset but not found on the fits file, this should never happen!", fparam_fullname);
+        }
+      }
+
+      remap = FALSE;      
+    }
+
+    g_ptr_array_unref (remap_remove);
   }
   else
   {
