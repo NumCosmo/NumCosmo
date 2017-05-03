@@ -1151,7 +1151,7 @@ _ncm_mset_catalog_open_create_file (NcmMSetCatalog *mcat, gboolean load_from_cat
       {
         const gchar *cname   = g_ptr_array_index (mcat->add_vals_names, i);
         const gchar *csymbol = g_ptr_array_index (mcat->add_vals_symbs, i);
-        gchar *asymbi      = g_strdup_printf ("%s%d", NCM_MSET_CATALOG_ASYMB_LABEL, i + 1);
+        gchar *asymbi        = g_strdup_printf ("%s%d", NCM_MSET_CATALOG_ASYMB_LABEL, i + 1);
         gchar symbol_s[FLEN_VALUE];
         gint cindex = 0;
         
