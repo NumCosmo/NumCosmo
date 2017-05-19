@@ -879,6 +879,16 @@ ncm_numdiff_2 (gsl_function *F, gdouble *ofx, const gdouble x, const gdouble ho,
  *
  * Returns: $1 - \sin(x)$.
  */
+/**
+ * ncm_util_cos2x:
+ * @sinx: a real number $\sin(x)$
+ * @cosx: a real number $\cos(x)$
+ *
+ * Calculates $\cos(2x)$ using the appropriated taylor series when
+ * $\sin(x) \approx 1$.
+ *
+ * Returns: $1 - \sin(x)$.
+ */
 
 /**
  * ncm_cmpdbl:
