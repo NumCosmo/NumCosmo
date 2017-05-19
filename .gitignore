@@ -34,6 +34,7 @@ examples/*.dat
 examples/*.fits
 examples/*.pyc
 examples/.libs/*
+examples/pydata_simple/*.pyc
 docs/gtkdoc-check.trs
 docs/numcosmo-overrides.txt
 docs/numcosmo.types

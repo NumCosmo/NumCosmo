@@ -1043,7 +1043,7 @@ ncm_cfg_save_fftw_wisdom (const gchar *filename, ...)
 
   g_assert (numcosmo_init);
 
-G_LOCK (fftw_saveload_lock);
+  G_LOCK (fftw_saveload_lock);
 
   va_start (ap, filename);
   file = g_strdup_vprintf (filename, ap);
