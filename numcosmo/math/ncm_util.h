@@ -54,6 +54,7 @@ G_INLINE_FUNC gdouble ncm_util_1pcosx (const gdouble sinx, const gdouble cosx);
 G_INLINE_FUNC gdouble ncm_util_1mcosx (const gdouble sinx, const gdouble cosx);
 G_INLINE_FUNC gdouble ncm_util_1psinx (const gdouble sinx, const gdouble cosx);
 G_INLINE_FUNC gdouble ncm_util_1msinx (const gdouble sinx, const gdouble cosx);
+G_INLINE_FUNC gdouble ncm_util_cos2x (const gdouble sinx, const gdouble cosx);
 
 gdouble ncm_cmpdbl (const gdouble x, const gdouble y);
 gdouble ncm_exprel (const gdouble x);
@@ -347,6 +348,12 @@ ncm_util_1msinx (const gdouble sinx, const gdouble cosx)
     return 1.0 - sinx;
   else
     return cosx * cosx / (1.0 + sinx);
+}
+
+G_INLINE_FUNC gdouble 
+ncm_util_cos2x (const gdouble sinx, const gdouble cosx)
+{
+  return (cosx - sinx) * (cosx + sinx);
 }
 
 G_INLINE_FUNC gdouble 
