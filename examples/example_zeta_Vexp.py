@@ -26,16 +26,16 @@ gw    = Nc.HIPertGW.new ()
 Vexp  = Nc.HICosmoVexp.new ()
 
 Vexp.props.alphab   = +1.0e-30
-Vexp.props.sigmaphi = +6.0e-1
-Vexp.props.dphi     = -3.0e-1
-Vexp.props.xb       = 1.0e37
+Vexp.props.sigmaphi = +8.0e1
+Vexp.props.dphi     = -5.0e-2
+Vexp.props.xb       = 2.0e38
 Vexp.props.OmegaL   = 1.0
 Vexp.props.Omegac   = 1.0
 Vexp.props.H0       = 67.8
 
 print "# (t0, t1) = (% 21.15e, % 21.15e)" % (Vexp.tau_min (), Vexp.tau_max ())
 
-k = 1.0e0
+k = 1.0e-2
 
 adiab.set_ti (Vexp.tau_min ())
 adiab.set_tf (Vexp.tau_max ())
