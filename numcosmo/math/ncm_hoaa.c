@@ -1569,7 +1569,7 @@ _ncm_hoaa_evol_sing_save (NcmHOAA *hoaa, NcmModel *model, const gdouble t_m_ts, 
       const gdouble gamma      = NV_Ith_S (hoaa->priv->y, NCM_HOAA_VAR_GAMMA);
       gdouble epsilon;
       
-      if (tstep_m_ts > last_t + fabs (last_t) * NCM_HOAA_TIME_FRAC)
+      if (hoaa->priv->t_cur > last_t + fabs (last_t) * NCM_HOAA_TIME_FRAC)
       {
         switch (st)
         {
@@ -1590,7 +1590,7 @@ _ncm_hoaa_evol_sing_save (NcmHOAA *hoaa, NcmModel *model, const gdouble t_m_ts, 
         g_array_append_val (hoaa->priv->sin_thetab, sin_thetab);
         g_array_append_val (hoaa->priv->cos_thetab, cos_thetab);
         
-        last_t = tstep_m_ts;
+        last_t = hoaa->priv->t_cur;
       }          
 
       if (tstep_m_ts == t_m_ts)
@@ -2151,12 +2151,12 @@ ncm_hoaa_eval_Delta (NcmHOAA *hoaa, NcmModel *model, const gdouble t, gdouble *D
 {
   const gdouble twopi2  = 2.0 * gsl_pow_2 (M_PI);
   const gdouble k3_2pi2 = gsl_pow_3 (hoaa->k) / twopi2;
-  gdouble Rphi, Iphi, RPphi, IPphi;
+  gdouble q = 0.0, v = 0.0, Pq = 0.0, Pv = 0.0;
     
-  ncm_hoaa_eval_QV (hoaa, model, t, &Rphi, &Iphi, &RPphi, &IPphi);
+  ncm_hoaa_eval_QV (hoaa, model, t, &q, &v, &Pq, &Pv);
 
-  Delta_phi[0]  = k3_2pi2 * (Rphi  * Rphi  + Iphi  * Iphi);
-  Delta_Pphi[0] = k3_2pi2 * (RPphi * RPphi + IPphi * IPphi);
+  Delta_phi[0]  = k3_2pi2 * 0.25 * (q  * q  + v  * v);
+  Delta_Pphi[0] = k3_2pi2 * 0.25 * (Pq * Pq + Pv * Pv);
 }
 
 /**
