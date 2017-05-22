@@ -1195,7 +1195,7 @@ _nc_hicosmo_Vexp_evolve_qt (NcHICosmoVexp *Vexp, gdouble tQ_f)
 static void
 _nc_hicosmo_Vexp_evolve_cl_c (NcHICosmoVexp *Vexp)
 {
-  const gdouble alpha_f = 150.0 + Vexp->priv->alpha_0c;
+  const gdouble alpha_f = 200.0 + Vexp->priv->alpha_0c;
   gpointer cvode;
   gint flag;
   GArray *mtau_a = ncm_vector_get_array (Vexp->priv->lnqc_mtau->xv);
@@ -1306,7 +1306,7 @@ _nc_hicosmo_Vexp_evolve_cl_c (NcHICosmoVexp *Vexp)
 static void
 _nc_hicosmo_Vexp_evolve_cl_e (NcHICosmoVexp *Vexp)
 {
-  const gdouble alpha_f = 150.0 + Vexp->priv->alpha_0e;
+  const gdouble alpha_f = 200.0 + Vexp->priv->alpha_0e;
   gpointer cvode;
   gint flag;
   GArray *tau_a   = ncm_vector_get_array (Vexp->priv->lnqe_tau->xv);
