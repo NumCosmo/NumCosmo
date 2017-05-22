@@ -352,6 +352,8 @@ _ncm_hoaa_finalize (GObject *object)
   G_OBJECT_CLASS (ncm_hoaa_parent_class)->finalize (object);
 }
 
+static gdouble _ncm_hoaa_eval_powspec_factor (NcmHOAA *hoaa, NcmModel *model);
+
 static void
 ncm_hoaa_class_init (NcmHOAAClass *klass)
 {
@@ -426,6 +428,15 @@ ncm_hoaa_class_init (NcmHOAAClass *klass)
   klass->eval_sing_V      = NULL;
 
   klass->prepare          = NULL;
+
+	klass->eval_powspec_factor = &_ncm_hoaa_eval_powspec_factor;
+}
+
+static gdouble 
+_ncm_hoaa_eval_powspec_factor (NcmHOAA *hoaa, NcmModel *model)
+{
+	const gdouble one_2pi2 = 1.0 / (2.0 * gsl_pow_2 (M_PI));
+  return one_2pi2;
 }
 
 /**
@@ -1507,7 +1518,9 @@ _ncm_hoaa_evol_save (NcmHOAA *hoaa, NcmModel *model, const gdouble tf)
       const gdouble cos_thetab = NV_Ith_S (hoaa->priv->y, NCM_HOAA_VAR_COS_THETAB);
       const gdouble epsilon    = NV_Ith_S (hoaa->priv->y, NCM_HOAA_VAR_EPSILON);
       const gdouble gamma      = NV_Ith_S (hoaa->priv->y, NCM_HOAA_VAR_GAMMA);
-      
+
+printf ("% 22.15g % 22.15g % 22.15g % 22.15g % 22.15g\n", hoaa->priv->t_cur, epsilon, gamma, sin_thetab, cos_thetab);
+			
       if (hoaa->priv->t_cur > last_t + fabs (last_t) * NCM_HOAA_TIME_FRAC)
       {
         g_array_append_val (hoaa->priv->t,          hoaa->priv->t_cur);
@@ -1568,7 +1581,21 @@ _ncm_hoaa_evol_sing_save (NcmHOAA *hoaa, NcmModel *model, const gdouble t_m_ts, 
       const gdouble cos_thetab = NV_Ith_S (hoaa->priv->y, NCM_HOAA_VAR_COS_THETAB);
       const gdouble gamma      = NV_Ith_S (hoaa->priv->y, NCM_HOAA_VAR_GAMMA);
       gdouble epsilon;
-      
+
+        switch (st)
+        {
+          case NCM_HOAA_SING_TYPE_ZERO:
+            epsilon = NV_Ith_S (hoaa->priv->y, NCM_HOAA_VAR_EPSILON) - lnmnu;
+            break;
+          case NCM_HOAA_SING_TYPE_INF:
+            epsilon = NV_Ith_S (hoaa->priv->y, NCM_HOAA_VAR_EPSILON) + lnmnu;
+            break;
+          default:
+            g_assert_not_reached ();
+            break;
+        }
+printf ("% 22.15g % 22.15g % 22.15g % 22.15g % 22.15g\n", tstep_m_ts, epsilon, gamma, sin_thetab, cos_thetab);
+			
       if (hoaa->priv->t_cur > last_t + fabs (last_t) * NCM_HOAA_TIME_FRAC)
       {
         switch (st)
@@ -1683,6 +1710,9 @@ ncm_hoaa_prepare (NcmHOAA *hoaa, NcmModel *model)
 
           if (ts < hoaa->priv->t_cur)
             continue;
+
+					if (ts > t_ad_1)
+						break;
 
           _ncm_hoaa_evol_save (hoaa, model, dts_i + ts);
 
@@ -2149,8 +2179,8 @@ ncm_hoaa_eval_QV (NcmHOAA *hoaa, NcmModel *model, const gdouble t, gdouble *q, g
 void 
 ncm_hoaa_eval_Delta (NcmHOAA *hoaa, NcmModel *model, const gdouble t, gdouble *Delta_phi, gdouble *Delta_Pphi)
 {
-  const gdouble twopi2  = 2.0 * gsl_pow_2 (M_PI);
-  const gdouble k3_2pi2 = gsl_pow_3 (hoaa->k) / twopi2;
+  const gdouble factor  = ncm_hoaa_eval_powspec_factor (hoaa, model);
+  const gdouble k3_2pi2 = gsl_pow_3 (hoaa->k) * factor;
   gdouble q = 0.0, v = 0.0, Pq = 0.0, Pv = 0.0;
     
   ncm_hoaa_eval_QV (hoaa, model, t, &q, &v, &Pq, &Pv);
@@ -2184,17 +2214,6 @@ ncm_hoaa_eval_solution (NcmHOAA *hoaa, NcmModel *model, const gdouble t, const g
 }
 
 /**
- * ncm_hoaa_eval_mnu: (virtual eval_mnu)
- * @hoaa: a #NcmHOAA
- * @model: a #NcmModel
- * @t: time $t$
- * @k: mode $k$
- *
- * Evaluates the mass term at $t$ and $k$.
- *
- * Returns: the mass $m$.
- */
-/**
  * ncm_hoaa_eval_nu: (virtual eval_nu)
  * @hoaa: a #NcmHOAA
  * @model: a #NcmModel
@@ -2206,15 +2225,15 @@ ncm_hoaa_eval_solution (NcmHOAA *hoaa, NcmModel *model, const gdouble t, const g
  * Returns: the frequency $\nu$.
  */
 /**
- * ncm_hoaa_eval_V: (virtual eval_V)
+ * ncm_hoaa_eval_mnu: (virtual eval_mnu)
  * @hoaa: a #NcmHOAA
  * @model: a #NcmModel
  * @t: time $t$
  * @k: mode $k$
  *
- * Evaluates the potential term at $t$ and $k$.
+ * Evaluates the mass term at $t$ and $k$.
  *
- * Returns: the potential $V$.
+ * Returns: the mass $m$.
  */
 /**
  * ncm_hoaa_eval_dlnmnu: (virtual eval_dlnmnu)
@@ -2226,6 +2245,17 @@ ncm_hoaa_eval_solution (NcmHOAA *hoaa, NcmModel *model, const gdouble t, const g
  * Evaluates the derivative $\mathrm{d}(m\nu)/\mathrm{d}t$ term at $t$ and $k$.
  *
  * Returns: the potential $\mathrm{d}(m\nu)/\mathrm{d}t$.
+ */
+/**
+ * ncm_hoaa_eval_V: (virtual eval_V)
+ * @hoaa: a #NcmHOAA
+ * @model: a #NcmModel
+ * @t: time $t$
+ * @k: mode $k$
+ *
+ * Evaluates the potential term at $t$ and $k$.
+ *
+ * Returns: the potential $V$.
  */
 /**
  * ncm_hoaa_eval_system: (virtual eval_system)
@@ -2278,17 +2308,6 @@ ncm_hoaa_eval_solution (NcmHOAA *hoaa, NcmModel *model, const gdouble t, const g
  * Returns: the mass $m$.
  */
 /**
- * ncm_hoaa_eval_sing_nu: (virtual eval_sing_nu)
- * @hoaa: a #NcmHOAA
- * @model: a #NcmModel
- * @t_m_ts: time $t - t_s$
- * @k: mode $k$
- *
- * Evaluates the frequency term at $t$ and $k$.
- *
- * Returns: the frequency $\nu$.
- */
-/**
  * ncm_hoaa_eval_sing_V: (virtual eval_sing_V)
  * @hoaa: a #NcmHOAA
  * @model: a #NcmModel
@@ -2325,4 +2344,13 @@ ncm_hoaa_eval_solution (NcmHOAA *hoaa, NcmModel *model, const gdouble t, const g
  *
  * Evaluates the system functions at $t$ and $k$.
  *
+ */
+/**
+ * ncm_hoaa_eval_powspec_factor: (virtual eval_powspec_factor)
+ * @hoaa: a #NcmHOAA
+ * @model: (allow-none): a #NcmModel
+ * 
+ * Evaluates the power spectrum constant factor.
+ * Default is: $1/(2\pi^2)$.
+ * 
  */
