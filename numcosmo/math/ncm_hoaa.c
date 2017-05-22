@@ -31,7 +31,7 @@
  * This object represents a generic time dependent harmonic oscillator for the variables
  * $q$ and its momentum $p$. The Hamiltonian of the system is given by 
  * \begin{equation}\label{eq:H}
- * H = \frac{p^2}{2m} + \frac{m(\nu^2 - V)q^2}{2},
+ * H = \frac{P_q^2}{2m} + \frac{m(\nu^2 - V)q^2}{2},
  * \end{equation}
  * where the mass $m$, frequency $\nu$ and the potential $V$ are functions of the time $t$
  * and mode $k$. The mass $m$ and frequency $\nu$ are assumed to be positive definite functions.
@@ -44,7 +44,7 @@
  * The Action Angle variables are defined through
  * \begin{align}
  * q &= \sqrt{\frac{2I}{m\nu}}\sin\theta, \\\\
- * p &= \sqrt{2Im\nu}\cos\theta.
+ * P_q &= \sqrt{2Im\nu}\cos\theta.
  * \end{align}
  * Therefore, the new Hamiltonian is
  * \begin{equation}\label{eq:HAA}
