@@ -253,7 +253,7 @@ nc_hicosmo_gcg_class_init (NcHICosmoGCGClass *klass)
 
   /* Set Omega_c0 param info */
   ncm_model_class_set_sparam (model_class, NC_HICOSMO_GCG_OMEGA_C, "\\Omega_{c0}", "Omegac",
-                              1e-8, 1.2, 1.0e-2,
+                              1e-8, 0.90, 1.0e-2,
                               NC_HICOSMO_DEFAULT_PARAMS_ABSTOL, NC_HICOSMO_GCG_DEFAULT_OMEGA_C,
                               NCM_PARAM_TYPE_FREE);
 
@@ -289,7 +289,7 @@ nc_hicosmo_gcg_class_init (NcHICosmoGCGClass *klass)
 
   /* Set Omega_b0 param info */
   ncm_model_class_set_sparam (model_class, NC_HICOSMO_GCG_ALPHA, "\\alpha", "alpha",
-                              -5.0e-1, +5.0e-1, 0.05,
+                              -1.5, +1.5, 0.05,
                               NC_HICOSMO_DEFAULT_PARAMS_ABSTOL, NC_HICOSMO_GCG_DEFAULT_ALPHA,
                               NCM_PARAM_TYPE_FIXED);
 
@@ -660,8 +660,6 @@ _nc_hicosmo_gcg_bgp_cs2 (NcHICosmo *cosmo, gdouble z)
   const gdouble Omega_g0 = _nc_hicosmo_gcg_Omega_g0 (cosmo);
   const gdouble Omega_b0 = _nc_hicosmo_gcg_Omega_b0 (cosmo);
   const gdouble nine_4   = 9.0 / 4.0;
-
-g_assert_not_reached ();
   
   return 1.0 / (3.0 + nine_4 * Omega_b0 / (Omega_g0 * x));
 }

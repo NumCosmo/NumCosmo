@@ -1195,7 +1195,7 @@ _nc_hicosmo_Vexp_evolve_qt (NcHICosmoVexp *Vexp, gdouble tQ_f)
 static void
 _nc_hicosmo_Vexp_evolve_cl_c (NcHICosmoVexp *Vexp)
 {
-  const gdouble alpha_f = 150.0 + Vexp->priv->alpha_0c;
+  const gdouble alpha_f = 200.0 + Vexp->priv->alpha_0c;
   gpointer cvode;
   gint flag;
   GArray *mtau_a = ncm_vector_get_array (Vexp->priv->lnqc_mtau->xv);
@@ -1306,7 +1306,7 @@ _nc_hicosmo_Vexp_evolve_cl_c (NcHICosmoVexp *Vexp)
 static void
 _nc_hicosmo_Vexp_evolve_cl_e (NcHICosmoVexp *Vexp)
 {
-  const gdouble alpha_f = 150.0 + Vexp->priv->alpha_0e;
+  const gdouble alpha_f = 200.0 + Vexp->priv->alpha_0e;
   gpointer cvode;
   gint flag;
   GArray *tau_a   = ncm_vector_get_array (Vexp->priv->lnqe_tau->xv);
@@ -2215,7 +2215,7 @@ _nc_hicosmo_Vexp_gw_eval_system (NcHIPertIGW *igw, const gdouble tau, const gdou
 static guint 
 _nc_hicosmo_Vexp_gw_nsing (NcHIPertIGW *igw, const gdouble k)
 {
-  return 1;
+  return 0;
 }
 
 static void 
@@ -2303,6 +2303,7 @@ nc_hicosmo_Vexp_tau_max (NcHICosmoVexp *Vexp)
 gdouble 
 nc_hicosmo_Vexp_tau_qt_c (NcHICosmoVexp *Vexp)
 {
+	_nc_hicosmo_Vexp_prepare (Vexp);
   return Vexp->priv->tau_qt_c;
 }
 
@@ -2317,6 +2318,7 @@ nc_hicosmo_Vexp_tau_qt_c (NcHICosmoVexp *Vexp)
 gdouble 
 nc_hicosmo_Vexp_tau_qt_e (NcHICosmoVexp *Vexp)
 {
+	_nc_hicosmo_Vexp_prepare (Vexp);
   return Vexp->priv->tau_qt_e;
 }
 
@@ -2331,5 +2333,69 @@ nc_hicosmo_Vexp_tau_qt_e (NcHICosmoVexp *Vexp)
 gdouble 
 nc_hicosmo_Vexp_xbe (NcHICosmoVexp *Vexp)
 {
+	_nc_hicosmo_Vexp_prepare (Vexp);
   return exp (-Vexp->priv->alpha_b + Vexp->priv->alpha_0e);
+}
+
+/**
+ * nc_hicosmo_Vexp_x_tau:
+ * @Vexp: a #NcHICosmoVexp
+ * @tau: $\tau$
+ *
+ * FIXME
+ *
+ * Returns: $x$.
+ */
+gdouble 
+nc_hicosmo_Vexp_x_tau (NcHICosmoVexp *Vexp, const gdouble tau)
+{
+	_nc_hicosmo_Vexp_prepare (Vexp);
+	{
+		const gdouble alpha = Vexp->priv->alpha_b + 0.5 * tau * tau;
+
+		if (tau < 0.0)
+			return exp (Vexp->priv->alpha_0c - alpha);
+		else
+			return exp (Vexp->priv->alpha_0e - alpha);
+	}
+}
+
+/**
+ * nc_hicosmo_Vexp_tau_xe:
+ * @Vexp: a #NcHICosmoVexp
+ * @xe: $x_e$
+ *
+ * FIXME
+ *
+ * Returns: $\tau$.
+ */
+gdouble 
+nc_hicosmo_Vexp_tau_xe (NcHICosmoVexp *Vexp, const gdouble xe)
+{
+	_nc_hicosmo_Vexp_prepare (Vexp);
+	{
+		const gdouble log_xe = log (xe);
+		const gdouble alpha  = Vexp->priv->alpha_0e - log_xe;
+		return +sqrt (2.0 * (alpha - Vexp->priv->alpha_b));
+	}
+}
+
+/**
+ * nc_hicosmo_Vexp_tau_xc:
+ * @Vexp: a #NcHICosmoVexp
+ * @xc: $x_c$
+ *
+ * FIXME
+ *
+ * Returns: $\tau$.
+ */
+gdouble 
+nc_hicosmo_Vexp_tau_xc (NcHICosmoVexp *Vexp, const gdouble xc)
+{
+	_nc_hicosmo_Vexp_prepare (Vexp);
+	{
+		const gdouble log_xc = log (xc);
+		const gdouble alpha  = Vexp->priv->alpha_0c - log_xc;
+		return -sqrt (2.0 * (alpha - Vexp->priv->alpha_b));
+	}
 }

@@ -16,8 +16,8 @@ col_name_att = {}
 while len (sys.argv) > 2:
 
   fitsfile      = sys.argv.pop (0)
-  padding_cols  = int (sys.argv.pop (0))
   burning_in    = int (sys.argv.pop (0))
+  high_prec     = int (sys.argv.pop (0))
   (prefix, ext) = os.path.splitext (fitsfile)
   pindex = []
   if (len (sys.argv) > 0):
@@ -31,6 +31,7 @@ while len (sys.argv) > 2:
   col_names = []
   col_symbols = []
   col_data = []
+  padding_cols = hdulist[1].header["NADDVAL"]
   print ("# Number of columns %d padding columns %d burning in %d." % (ncols, padding_cols, burning_in))
   if (len (pindex) == 0):
     pindex = range (ncols)
@@ -44,14 +45,14 @@ while len (sys.argv) > 2:
     col_symbol = None
     
     if i < padding_cols:
-      col_symbol = col_name
+      col_symbol = r'$%s$' % hdulist[1].header["ASYMB%d" % (i + 1)]
     else:
       col_symbol = r'$%s$' % hdulist[1].header["FSYMB%d" % (i - padding_cols + 1)]
     col_symbols.append (col_symbol)
 
     epsilon = 1.e-7
-    col_min = np.percentile(col, epsilon) # range is defined computing the 6\sigma confidence interval
-    col_max = np.percentile(col, 100.0 - epsilon) 
+    col_min = np.percentile (col, epsilon) # range is defined computing the 6\sigma confidence interval
+    col_max = np.percentile (col, 100.0 - epsilon) 
 
     #col_min = min (col)
     #col_max = max (col)
@@ -72,7 +73,7 @@ while len (sys.argv) > 2:
   col_data = col_data[~np.all (np.abs (col_data) < 1e-6, axis=1)]
   print col_data.shape
   
-  files.append ({'fitsfile' : fitsfile, 'pad' : padding_cols, 'prefix' : prefix, 'ncols' : len (pindex), 'cols' : col_data, 'col_names' : col_names, 'col_symbols' : col_symbols})
+  files.append ({'fitsfile' : fitsfile, 'pad' : padding_cols, 'prefix' : prefix, 'ncols' : len (pindex), 'cols' : col_data, 'col_names' : col_names, 'col_symbols' : col_symbols, 'high_prec' : high_prec})
   hdulist.close()
   del hdulist
   del fitsfile
@@ -101,9 +102,12 @@ for file in files:
   #print len (params_range)
   #print file['cols'].shape
   #print params_range
-  
-  #fig = corner.corner (cols, labels = col_symbols, range = params_range, show_titles=True)
-  fig = plotCorner (cols, bins = 50, labels = col_symbols, label_size = 20, range = params_range)
+
+  fig = None
+  if file['high_prec'] == 0:  
+    fig = corner.corner (cols, labels = col_symbols, range = params_range, show_titles=True)
+  else:
+    fig = plotCorner (cols, bins = 50, labels = col_symbols, label_size = 20, range = params_range)
 
   figfile = "%s_corner.pdf" % (file['prefix'])
   print ("#  Saving figure: %s." % figfile)

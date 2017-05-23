@@ -75,20 +75,23 @@ static void _nc_hipert_iadiab_get_sing_info (NcHIPertIAdiab *iad, const gdouble 
 static gdouble _nc_hipert_iadiab_eval_sing_mnu (NcHIPertIAdiab *iad, const gdouble tau_m_taus, const gdouble k, const guint sing) { g_error ("_nc_hipert_iadiab_eval_sing_mnu: no singularity implemented."); return 0.0; }
 static gdouble _nc_hipert_iadiab_eval_sing_dlnmnu (NcHIPertIAdiab *iad, const gdouble tau_m_taus, const gdouble k, const guint sing) { g_error ("_nc_hipert_iadiab_eval_sing_dlnmnu: no singularity implemented."); return 0.0; }
 static void _nc_hipert_iadiab_eval_sing_system (NcHIPertIAdiab *iad, const gdouble tau_m_taus, const gdouble k, const guint sing, gdouble *nu, gdouble *dlnmnu) { g_error ("_nc_hipert_iadiab_eval_sing_system: no singularity implemented."); }
+static gdouble _nc_hipert_iadiab_eval_powspec_factor (NcHIPertIAdiab *iad);
 
 static void
 nc_hipert_iadiab_default_init (NcHIPertIAdiabInterface *iface)
 {
-  iface->eval_mnu         = NULL;
-  iface->eval_nu          = NULL;
-  iface->eval_dlnmnu      = NULL;
-  iface->eval_system      = NULL;
+  iface->eval_mnu            = NULL;
+  iface->eval_nu             = NULL;
+  iface->eval_dlnmnu         = NULL;
+  iface->eval_system         = NULL;
 
-  iface->nsing            = &_nc_hipert_iadiab_nsing;
-  iface->get_sing_info    = &_nc_hipert_iadiab_get_sing_info;
-  iface->eval_sing_mnu    = &_nc_hipert_iadiab_eval_sing_mnu;
-  iface->eval_sing_dlnmnu = &_nc_hipert_iadiab_eval_sing_dlnmnu;
-  iface->eval_sing_system = &_nc_hipert_iadiab_eval_sing_system;
+  iface->nsing               = &_nc_hipert_iadiab_nsing;
+  iface->get_sing_info       = &_nc_hipert_iadiab_get_sing_info;
+  iface->eval_sing_mnu       = &_nc_hipert_iadiab_eval_sing_mnu;
+  iface->eval_sing_dlnmnu    = &_nc_hipert_iadiab_eval_sing_dlnmnu;
+  iface->eval_sing_system    = &_nc_hipert_iadiab_eval_sing_system;
+
+	iface->eval_powspec_factor = &_nc_hipert_iadiab_eval_powspec_factor;
 }
 
 G_DEFINE_TYPE (NcHIPertAdiab, nc_hipert_adiab, NCM_TYPE_HOAA);
@@ -165,6 +168,8 @@ static gdouble _nc_hipert_adiab_eval_sing_mnu (NcmHOAA *hoaa, NcmModel *model, c
 static gdouble _nc_hipert_adiab_eval_sing_dlnmnu (NcmHOAA *hoaa, NcmModel *model, const gdouble t_m_ts, const gdouble k, const guint sing);
 static void _nc_hipert_adiab_eval_sing_system (NcmHOAA *hoaa, NcmModel *model, const gdouble t_m_ts, const gdouble k, const guint sing, gdouble *nu, gdouble *dlnmnu, gdouble *Vnu);
 
+static gdouble _nc_hipert_adiab_eval_powspec_factor (NcmHOAA *hoaa, NcmModel *model);
+
 static void _nc_hipert_adiab_prepare (NcmHOAA *hoaa, NcmModel *model);
 
 static void
@@ -191,6 +196,8 @@ nc_hipert_adiab_class_init (NcHIPertAdiabClass *klass)
   hoaa_class->eval_sing_dlnmnu = &_nc_hipert_adiab_eval_sing_dlnmnu;
   hoaa_class->eval_sing_V      = NULL;
   hoaa_class->eval_sing_system = &_nc_hipert_adiab_eval_sing_system;
+
+	hoaa_class->eval_powspec_factor = &_nc_hipert_adiab_eval_powspec_factor;
 }
 
 static gdouble 
@@ -253,6 +260,23 @@ _nc_hipert_adiab_eval_sing_system (NcmHOAA *hoaa, NcmModel *model, const gdouble
 {
   Vnu[0] = 0.0;
   nc_hipert_iadiab_eval_sing_system (NC_HIPERT_IADIAB (model), t_m_ts, k, sing, nu, dlnmnu);
+}
+
+static gdouble
+_nc_hipert_adiab_eval_powspec_factor (NcmHOAA *hoaa, NcmModel *model)
+{
+	return nc_hipert_iadiab_eval_powspec_factor (NC_HIPERT_IADIAB (model));
+}
+
+static gdouble 
+_nc_hipert_iadiab_eval_powspec_factor (NcHIPertIAdiab *iad) 
+{ 
+	g_assert (NC_IS_HICOSMO (iad));
+	{
+		NcHICosmo *cosmo    = NC_HICOSMO (iad);
+		const gdouble RH_lp = nc_hicosmo_RH_planck (cosmo);
+		return 4.0 / (3.0 * M_PI * gsl_pow_2 (RH_lp));
+	}
 }
 
 /**

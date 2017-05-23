@@ -1,0 +1,146 @@
+*****************************************************************************
+
+     	   Toeplitz solvers README FILE, VERSION 1.0
+
+*****************************************************************************
+
+IMPORTANT
+      Before going any further, please read and accept the terms in
+      the file COPYING.
+
+
+WHAT IT IS ALL ABOUT:
+
+      We have implemented look-ahead Levinson and Schur algorithms
+      described in
+
+      [1] M. H. Gutknecht and M. Hochbruck, Optimized look-ahead
+          recurrences for adjacent rows in the Pad\'e table.
+          BIT 36, pages 264--286, 1996
+      [2] M. Hochbruck, Further optimized look-ahead recurrences for
+	  adjacent rows in the  Pad\'e table and Toeplitz matrix 
+	  factorizations.
+          J. Comp. Appl. Math. 86, pages 219--236, 1997.
+      [3] M. Hochbruck, The Pad\'e table and its Relation to
+          Certain Numerical Algorithms. 
+          Habilitationsschrift, Mathematische Fakultaet, 
+          Universitaet Tuebingen, November 1996.
+
+      Numerical experiments with this package and a description
+      of look-ahead strategies and solution options can be found in
+
+      [4] M. Hochbruck, A numerical comparison of look-ahead Levinson and   
+          Schur algorithms for non-Hermitian Toeplitz systems.
+          Technical Report, Universit\"at T\"ubingen, December 1996.
+          To appear in: Special issue on 
+          ``High Performance Algorithms for Structured Linear Systems''
+          in the series ``Advances in the Theory of Computation and
+          Computational Mathematics'' edited by P.~Arbenz, M.~Paprzycki, 
+          and A.~Sameh.
+
+      You will find these papers and the latest version of the code at
+ 
+             http://na.uni-tuebingen.de
+
+INSTALLATION:
+
+    - gunzip toeplitz.tar.gz (or gzip -d toeplitz.tar.gz)
+    - tar xvf toeplitz.tar
+      This yields a directory "toeplitz" containing all the files.
+    - Make sure that you have LAPACK and BLAS libraries installed (we
+      need the FORTRAN versions).
+    - Change to the directory toeplitz/examples.
+    - Try
+        make all
+      If this fails, check the instructions in Makefile (we NEED a
+      standard ANSI C compiler, e.g. "gcc -ansi").
+    - You will get two programs called "simple" and "advanced".
+
+    - simple solves one (default) example with a variant of the
+      look-ahead Levinson algorithm described in [1]. Just replace
+      the line
+        d_toe_ill(n,matrix,max(1,min(n/2,50)),&cond,0);
+      by a call to a subroutine providing your Toeplitz matrix. See
+      the file "examples.c" to learn how to construct the vector
+      containing the entries of the Toeplitz matrix.
+
+    - advanced allows to choose the solver, the example, and some
+      parameters used for the look-ahead strategy. We have implemented
+      the following variants:
+        
+      Levinson:      look-ahead Levinson algorithm from [1],     (lev)
+                     (product form)
+      LevinsonInner: look-ahead Levinson algorithm from [2],     (levin)
+                     (using inner FBOPs)
+      classical Levinson: Levinson algorithm without look-ahead  (levcl)
+  
+      Schur:         look-ahead Schur algorithm from [1],        (schur)
+                     (product form, requires O(N^2) storage)
+      SchurInner:    look-ahead Schur algorithm from [2],        (schurin)
+                     (using inner FBOPs, requires O(N^2) storage)
+      SchurUpdate:   look-ahead Schur algorithm from [1],        (schurup)
+                     (product form, only O(N) storage)
+      SchurInnerUpdate: look-ahead Schur algorithm from [2],     (schurinup)
+                     (using inner FBOPs, only O(N) storage)
+      SchurLev:      look-ahead Schur algorithm from [1],        (schurlev)
+                     (product form + Levinson rec.)
+      SchurLevInner: look-ahead Schur algorithm from [2],        (schurlevin)
+                     (using inner FBOPs + Levinson rec.)
+
+     See [3] and [4] for more details on the different variants
+
+     
+     - For more details on the available examples see examples.c
+
+
+GETTING STARTED:
+
+      Go to the examples directory, edit the Makefile to your personal
+      needs and type make on the command line.
+      This will compile two example programs 'simple' and 'advanced'
+      which will run the toeplitz solvers with various examples.
+
+DOCUMENTATION:
+
+      For a description on usage of these solver routines, see the
+      file toeplitz.h in the solvers subdirectory.
+
+SOME FURTHER REMARKS ON THE TOEPLITZ CODE:
+
+      Read the solvers/Makefile for further options and information.
+
+
+WHAT OUR MAKEFILES DO (in the solvers directory):
+
+    - First the Makefile will enter the directory ftypes and make the
+      file "ftypes.h". This file contains some typedef commands which
+      are needed for calling f77 compiled routines from C (we have
+      encountered some compatibility problems when using f2c.h due to
+      inexact type definitions or sloppy installations). For further
+      details see the ftypes/README file.
+    - Next the static library toesolver.a is compiled.
+    - The solvers/Makefile contains __NO__ CFLAGS. You have to specify
+      them in the command line of make. Therefore: To use the toeplitz
+      solvers on your problem, include the following line in your Makefile:
+      "cd /path/to/solvers; $(MAKE) CC="$(CC)" CFLAGS="$(CFLAGS)" toesolver.a",
+      where "/path/to/solvers" is to be replaced by the actual path of
+      the toeplitz solver directory.
+
+
+PROBLEMS:
+
+    - There might be unresolved symbols. They are caused by the use of
+      F77 compiled LAPACK and BLAS routines. Try linking with f77 or
+      add the F77 and I77 libraries to FLIBS in examples/Makefile (see
+      the comment there).
+ 
+    - We know about a bug in a LAPACK function, which leads to
+      negative singular values in some patholigical cases which occur
+      in the freund0 example. We got a bugfix from the LAPACK team but
+      this was not going into the public distribution up to now.
+      
+
+For comments and questions feel free to send an e-mail to:
+
+		       marlis@na.uni-tuebingen.de
+

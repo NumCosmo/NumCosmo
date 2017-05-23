@@ -74,6 +74,37 @@ typedef enum _NcmMSetCatalogSync
   NCM_MSET_CATALOG_SYNC_LEN,   /*< skip >*/
 } NcmMSetCatalogSync;
 
+/**
+ * NcmMSetCatalogTrimType:
+ * @NCM_MSET_CATALOG_TRIM_TYPE_ESS: trim the catalog using the maximum ess criterium.
+ * @NCM_MSET_CATALOG_TRIM_TYPE_HEIDEL: trim the catalog using the Heidelberger and Welch’s convergence diagnostic.
+ * @NCM_MSET_CATALOG_TRIM_TYPE_ALL: trim the catalog using all tests above.
+ * 
+ * See ncm_mset_catalog_calc_max_ess_time() and ncm_mset_catalog_calc_heidel_diag().
+ * 
+ */
+typedef enum _NcmMSetCatalogTrimType
+{
+  NCM_MSET_CATALOG_TRIM_TYPE_ESS    = 1 << 0,
+  NCM_MSET_CATALOG_TRIM_TYPE_HEIDEL = 1 << 1,
+  NCM_MSET_CATALOG_TRIM_TYPE_ALL    = (1 << 2) - 1,
+} NcmMSetCatalogTrimType;
+
+/**
+ * NcmMSetCatalogTauMethod:
+ * @NCM_MSET_CATALOG_TAU_METHOD_ACOR: uses the autocorrelation to estimate $\tau$.
+ * @NCM_MSET_CATALOG_TAU_METHOD_AR_MODEL: uses an autoregressive model fitting to estimate $\tau$.
+ * 
+ * Method used to estimate the autocorrelation time $\tau$.
+ * 
+ */
+typedef enum _NcmMSetCatalogTauMethod
+{
+  NCM_MSET_CATALOG_TAU_METHOD_ACOR = 0,
+  NCM_MSET_CATALOG_TAU_METHOD_AR_MODEL, /*< private >*/
+  NCM_MSET_CATALOG_TAU_METHOD_LEN,      /*< skip >*/
+} NcmMSetCatalogTauMethod;
+
 struct _NcmMSetCatalog
 {
   /*< private >*/
@@ -92,7 +123,7 @@ struct _NcmMSetCatalog
   GPtrArray *chain_pstats;
   NcmStatsVec *mean_pstats;
   NcmStatsVec *e_stats;
-  GPtrArray *e_mean_array;
+  NcmStatsVec *e_mean_stats;
   GPtrArray *e_var_array;
   NcmVector *chain_means;
   NcmVector *chain_vars;
@@ -100,6 +131,7 @@ struct _NcmMSetCatalog
   NcmMatrix *chain_sM;
   gsl_eigen_nonsymm_workspace *chain_sM_ws;
   gsl_vector_complex *chain_sM_ev;
+  NcmMSetCatalogTauMethod tau_method;
   NcmVector *tau;
   gchar *rng_inis;
   gchar *rng_stat;
@@ -151,15 +183,22 @@ void ncm_mset_catalog_erase_data (NcmMSetCatalog *mcat);
 
 const gchar *ncm_mset_catalog_peek_filename (NcmMSetCatalog *mcat);
 NcmRNG *ncm_mset_catalog_get_rng (NcmMSetCatalog *mcat);
+NcmRNG *ncm_mset_catalog_peek_rng (NcmMSetCatalog *mcat);
 
 gboolean ncm_mset_catalog_is_empty (NcmMSetCatalog *mcat);
 gdouble ncm_mset_catalog_largest_error (NcmMSetCatalog *mcat);
 guint ncm_mset_catalog_len (NcmMSetCatalog *mcat);
 guint ncm_mset_catalog_max_time (NcmMSetCatalog *mcat);
 guint ncm_mset_catalog_nchains (NcmMSetCatalog *mcat);
+guint ncm_mset_catalog_get_row_from_time (NcmMSetCatalog *mcat, gint t);
+gint ncm_mset_catalog_get_first_id (NcmMSetCatalog *mcat);
+gint ncm_mset_catalog_get_cur_id (NcmMSetCatalog *mcat);
 
 void ncm_mset_catalog_set_burnin (NcmMSetCatalog *mcat, glong burnin);
 glong ncm_mset_catalog_get_burnin (NcmMSetCatalog *mcat);
+
+void ncm_mset_catalog_set_tau_method (NcmMSetCatalog *mcat, NcmMSetCatalogTauMethod tau_method);
+NcmMSetCatalogTauMethod ncm_mset_catalog_get_tau_method (NcmMSetCatalog *mcat);
 
 void ncm_mset_catalog_add_from_mset (NcmMSetCatalog *mcat, NcmMSet *mset, ...) G_GNUC_NULL_TERMINATED;
 void ncm_mset_catalog_add_from_mset_array (NcmMSetCatalog *mcat, NcmMSet *mset, gdouble *ax);
@@ -188,7 +227,7 @@ gdouble ncm_mset_catalog_get_param_shrink_factor (NcmMSetCatalog *mcat, guint p)
 gdouble ncm_mset_catalog_get_shrink_factor (NcmMSetCatalog *mcat);
 
 void ncm_mset_catalog_param_pdf (NcmMSetCatalog *mcat, guint i);
-gdouble ncm_mset_catalog_param_pdf_pvalue (NcmMSetCatalog *mcat, gdouble pval, gboolean both);
+gdouble ncm_mset_catalog_param_pdf_pvalue (NcmMSetCatalog *mcat, gdouble pvalue, gboolean both);
 
 NcmMatrix *ncm_mset_catalog_calc_ci_direct (NcmMSetCatalog *mcat, NcmMSetFunc *func, NcmVector *x_v, GArray *p_val);
 NcmMatrix *ncm_mset_catalog_calc_ci_interp (NcmMSetCatalog *mcat, NcmMSetFunc *func, NcmVector *x_v, GArray *p_val, guint nodes, NcmFitRunMsgs mtype);
@@ -200,7 +239,15 @@ NcmStatsDist1d *ncm_mset_catalog_calc_add_param_distrib (NcmMSetCatalog *mcat, g
 void ncm_mset_catalog_calc_param_ensemble_evol (NcmMSetCatalog *mcat, const NcmMSetPIndex *pi, guint nsteps, NcmFitRunMsgs mtype, NcmVector **pval, NcmMatrix **t_evol);
 void ncm_mset_catalog_calc_add_param_ensemble_evol (NcmMSetCatalog *mcat, guint add_param, guint nsteps, NcmFitRunMsgs mtype, NcmVector **pval, NcmMatrix **t_evol);
 
-NcmVector *ncm_mset_catalog_calc_params_chi2 (NcmMSetCatalog *mcat, guint *r);
+void ncm_mset_catalog_trim (NcmMSetCatalog *mcat, const guint tc);
+
+guint ncm_mset_catalog_calc_max_ess_time (NcmMSetCatalog *mcat, const guint ntests, gdouble *max_ess, NcmFitRunMsgs mtype);
+guint ncm_mset_catalog_calc_heidel_diag (NcmMSetCatalog *mcat, const guint ntests, const gdouble pvalue, NcmFitRunMsgs mtype);
+
+void ncm_mset_catalog_trim_by_type (NcmMSetCatalog *mcat, guint ntests, NcmMSetCatalogTrimType trim_type, NcmFitRunMsgs mtype);
+
+guint ncm_mset_catalog_max_ess_time_by_chain (NcmMSetCatalog *mcat, const guint ntests, gdouble *max_ess, NcmFitRunMsgs mtype);
+guint ncm_mset_catalog_heidel_diag_by_chain (NcmMSetCatalog *mcat, const guint ntests, const gdouble pvalue, gdouble *wp_pvalue, NcmFitRunMsgs mtype);
 
 #define NCM_MSET_CATALOG_EXTNAME "NcmMSetCatalog:DATA"
 #define NCM_MSET_CATALOG_M2LNL_COLNAME "NcmFit:m2lnL"

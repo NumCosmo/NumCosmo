@@ -54,6 +54,7 @@ G_INLINE_FUNC gdouble ncm_util_1pcosx (const gdouble sinx, const gdouble cosx);
 G_INLINE_FUNC gdouble ncm_util_1mcosx (const gdouble sinx, const gdouble cosx);
 G_INLINE_FUNC gdouble ncm_util_1psinx (const gdouble sinx, const gdouble cosx);
 G_INLINE_FUNC gdouble ncm_util_1msinx (const gdouble sinx, const gdouble cosx);
+G_INLINE_FUNC gdouble ncm_util_cos2x (const gdouble sinx, const gdouble cosx);
 
 gdouble ncm_cmpdbl (const gdouble x, const gdouble y);
 gdouble ncm_exprel (const gdouble x);
@@ -81,6 +82,8 @@ gboolean ncm_util_cvode_print_stats (gpointer cvode);
 gchar *ncm_util_basename_fits (const gchar *fits_filename); 
 gchar *ncm_util_function_params (const gchar *func, gdouble **x, guint *len);
 void ncm_util_print_bits (guint64 num);
+
+gulong ncm_util_fact_size (const gulong n);
 
 typedef struct _NcmComplex NcmComplex;
 
@@ -345,6 +348,12 @@ ncm_util_1msinx (const gdouble sinx, const gdouble cosx)
     return 1.0 - sinx;
   else
     return cosx * cosx / (1.0 + sinx);
+}
+
+G_INLINE_FUNC gdouble 
+ncm_util_cos2x (const gdouble sinx, const gdouble cosx)
+{
+  return (cosx - sinx) * (cosx + sinx);
 }
 
 G_INLINE_FUNC gdouble 

@@ -1865,7 +1865,7 @@ nc_hicosmo_qg_modefunc_evolve (NcHICosmoQGMode *qgmode)
           printf ("% .6Le % .6Le % .6Le % .6Le % .6Le % .6Le % .6Le % .6e %.15Le %.15Le %.15e %.15Le\n",
                   expl (mi_ode->xi), mi_ode->xi, mi_ode->psi,
                   h[0], h[1], h1[0], h1[1],
-                  fabs(1.0 - h1[0] / h[0]), hypotl (h[0], h[2]), hypotl (h[1], h[3]),
+                  fabs (1.0 - (gdouble)h1[0] / (gdouble)h[0]), hypotl (h[0], h[2]), hypotl (h[1], h[3]),
                   nc_hicosmo_qg_pert_powerspectrum (qgmode, mi_ode->xi, tmp),
                   qgmode->k);
         }

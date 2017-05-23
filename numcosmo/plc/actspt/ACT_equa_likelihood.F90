@@ -263,7 +263,7 @@ contains
 
     like_acte = like_acte+chi2(1,1)/2.d0
 
-10  continue
+!10  continue
     
 #ifdef TIMING
     call act_equa_timing_end()

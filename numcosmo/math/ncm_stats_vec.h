@@ -85,6 +85,7 @@ struct _NcmStatsVec
   GObject parent_instance;
   NcmStatsVecType t;
   NcmStatsVecUpdateFunc update;
+  NcmStatsVec *tmp;
   guint len;
   gboolean save_x;
   gdouble weight;
@@ -107,6 +108,25 @@ struct _NcmStatsVec
   fftw_plan param_c2r;
 #endif /* NUMCOSMO_HAVE_FFTW3 */
 };
+
+/**
+ * NcmStatsVecARType:
+ * @NCM_STATS_VEC_AR_NONE: Calculates using the required order.
+ * @NCM_STATS_VEC_AR_FPE: Uses the FPE criterium to choose the ar order.
+ * @NCM_STATS_VEC_AR_AIC: Uses the AIC criterium to choose the ar order.
+ * @NCM_STATS_VEC_AR_AICC: Uses the AICc criterium to choose the ar order.
+ * 
+ * FIXME
+ * 
+ */
+typedef enum 
+{
+  NCM_STATS_VEC_AR_NONE = 0,
+  NCM_STATS_VEC_AR_FPE,
+  NCM_STATS_VEC_AR_AIC,
+  NCM_STATS_VEC_AR_AICC, /*< private >*/
+  NCM_STATS_VEC_AR_LEN,  /*< skip >*/
+} NcmStatsVecARType;
 
 GType ncm_stats_vec_get_type (void) G_GNUC_CONST;
 
@@ -133,8 +153,17 @@ gdouble ncm_stats_vec_get_quantile_spread (NcmStatsVec *svec, guint i);
 
 NcmVector *ncm_stats_vec_get_autocorr (NcmStatsVec *svec, guint p);
 NcmVector *ncm_stats_vec_get_subsample_autocorr (NcmStatsVec *svec, guint p, guint subsample);
-gdouble ncm_stats_vec_get_autocorr_tau (NcmStatsVec *svec, guint p, guint max_lag, const gdouble min_rho);
-gdouble ncm_stats_vec_get_subsample_autocorr_tau (NcmStatsVec *svec, guint p, guint subsample, guint max_lag, const gdouble min_rho);
+gdouble ncm_stats_vec_get_autocorr_tau (NcmStatsVec *svec, guint p, const guint max_lag);
+gdouble ncm_stats_vec_get_subsample_autocorr_tau (NcmStatsVec *svec, guint p, guint subsample, const guint max_lag);
+
+gboolean ncm_stats_vec_fit_ar_model (NcmStatsVec *svec, guint p, const guint order, NcmStatsVecARType ar_crit, NcmVector **rho, NcmVector **pacf, gdouble *ivar, guint *c_order);
+gdouble ncm_stats_vec_ar_ess (NcmStatsVec *svec, guint p, NcmStatsVecARType ar_crit, gdouble *spec0, guint *c_order);
+
+NcmVector *ncm_stats_vec_max_ess_time (NcmStatsVec *svec, const guint ntests, gint *bindex, guint *wp, guint *wp_order, gdouble *wp_ess);
+NcmVector *ncm_stats_vec_heidel_diag (NcmStatsVec *svec, const guint ntests, const gdouble pvalue, gint *bindex, guint *wp, guint *wp_order, gdouble *wp_pvalue);
+NcmVector *ncm_stats_vec_visual_heidel_diag (NcmStatsVec *svec, const guint p, const guint fi, gdouble *mean, gdouble *var);
+
+GPtrArray *ncm_stats_vec_dup_saved_x (NcmStatsVec *svec);
 
 G_INLINE_FUNC NcmVector *ncm_stats_vec_peek_x (NcmStatsVec *svec);
 G_INLINE_FUNC void ncm_stats_vec_set (NcmStatsVec *svec, guint i, gdouble x_i);
@@ -152,8 +181,11 @@ G_INLINE_FUNC NcmVector *ncm_stats_vec_peek_mean (NcmStatsVec *svec);
 G_INLINE_FUNC void ncm_stats_vec_get_cov_matrix (NcmStatsVec *svec, NcmMatrix *m, guint offset);
 G_INLINE_FUNC NcmMatrix *ncm_stats_vec_peek_cov_matrix (NcmStatsVec *svec, guint offset);
 G_INLINE_FUNC guint ncm_stats_vec_nrows (NcmStatsVec *svec);
+G_INLINE_FUNC guint ncm_stats_vec_nitens (NcmStatsVec *svec);
 G_INLINE_FUNC NcmVector *ncm_stats_vec_peek_row (NcmStatsVec *svec, guint i);
 G_INLINE_FUNC gdouble ncm_stats_vec_get_param_at (NcmStatsVec *svec, guint i, guint p);
+
+#define NCM_STATS_VEC_HEIDEL_PVAL_COR(pvalue,n) (1.0 - pow (1.0 - (pvalue), 1.0 / ((gdouble)(n))))
 
 G_END_DECLS
 
@@ -301,6 +333,12 @@ ncm_stats_vec_nrows (NcmStatsVec *svec)
 {
   g_assert (svec->save_x);
   return svec->saved_x->len;
+}
+
+G_INLINE_FUNC guint 
+ncm_stats_vec_nitens (NcmStatsVec *svec)
+{
+  return svec->nitens;
 }
 
 G_INLINE_FUNC NcmVector *

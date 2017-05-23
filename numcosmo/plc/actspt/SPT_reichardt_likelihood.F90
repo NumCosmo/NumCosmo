@@ -274,7 +274,7 @@ MODULE spt_reichardt_likelihood
     like_sptr = like_sptr+chi2(1,1)/2.d0
 
 
-   10  continue
+!   10  continue
     
 #ifdef TIMING
        call spt_timing_end()

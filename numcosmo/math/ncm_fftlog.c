@@ -81,6 +81,7 @@
 
 #include "math/ncm_fftlog.h"
 #include "math/ncm_cfg.h"
+#include "math/ncm_util.h"
 #include "math/ncm_spline_cubic_notaknot.h"
 
 #include <math.h>
@@ -492,43 +493,6 @@ ncm_fftlog_get_lnk0 (NcmFftlog *fftlog)
   return fftlog->lnk0;
 }
 
-static gulong
-_ncm_fftlog_fact_size (gulong n)
-{
-  if (n == 1)
-    return 0;
-  else
-  {
-    gulong r3 = n % 3;
-    gulong r5 = n % 5;
-    gulong r7 = n % 7;
-    gulong m = 1;
-
-    if (r3 == 0)
-      m *= 3;
-    if (r5 == 0)
-      m *= 5;
-    if (r7 == 0)
-      m *= 7;
-
-    if (m != 1)
-    {
-      if (n / m == 1)
-        return m;
-      else
-        return m * _ncm_fftlog_fact_size (n / m);
-    }
-    else
-    {
-      const gulong d3 = 3 - r3;
-      const gulong d5 = 5 - r5;
-      const gulong d7 = 7 - r7;
-
-      return _ncm_fftlog_fact_size (n + GSL_MIN (d3, GSL_MIN (d5, d7)));
-    }
-  }
-}
-
 /**
  * ncm_fftlog_set_size:
  * @fftlog: a #NcmFftlog
@@ -546,7 +510,7 @@ ncm_fftlog_set_size (NcmFftlog *fftlog, guint n)
 
   fftlog->Nr = n;
 
-  nt = _ncm_fftlog_fact_size (nt);
+  nt = ncm_util_fact_size (nt);
   fftlog->pad = nt * fftlog->pad_p * 0.5 / (1.0 + fftlog->pad_p);
   n = nt - 2 * fftlog->pad;
   

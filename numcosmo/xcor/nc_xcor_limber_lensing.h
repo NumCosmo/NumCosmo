@@ -47,12 +47,14 @@ typedef struct _NcXcorLimberLensing NcXcorLimberLensing;
 
 /**
  * NcXcorLimberLensingParams:
+ * @NC_XCOR_LIMBER_LENSING_SPARAM_PLACEHOLDER: FIXME
  * @NC_XCOR_LIMBER_LENSING_SPARAM_LEN: FIXME
  *
  * FIXME
  */
 typedef enum _NcXcorLimberLensingParams
 {
+  NC_XCOR_LIMBER_LENSING_SPARAM_PLACEHOLDER,
 	NC_XCOR_LIMBER_LENSING_SPARAM_LEN, /*< skip >*/
 } NcXcorLimberLensingParams;
 

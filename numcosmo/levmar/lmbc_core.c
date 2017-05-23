@@ -429,13 +429,13 @@ const int nm=n*m;
 struct FUNC_STATE fstate;
 LM_REAL alpha=LM_CNST(1e-4), beta=LM_CNST(0.9), gamma=LM_CNST(0.99995), rho=LM_CNST(1e-8);
 LM_REAL t, t0, jacTeDp;
-LM_REAL tmin=LM_CNST(1e-12), tming=LM_CNST(1e-18); /* minimum step length for LS and PG steps */
+LM_REAL /*tmin=LM_CNST(1e-12),*/ tming=LM_CNST(1e-18); /* minimum step length for LS and PG steps */
 const LM_REAL tini=LM_CNST(1.0); /* initial step length for LS and PG steps */
 int nLMsteps=0, nLSsteps=0, nPGsteps=0, gprevtaken=0;
 int numactive;
 int (*linsolver)(LM_REAL *A, LM_REAL *B, LM_REAL *x, int m)=NULL;
 
-  mu=jacTe_inf=t=0.0;  tmin=tmin; /* -Wall */
+  mu=jacTe_inf=t=0.0;  /* tmin=tmin; -Wall */
 
   if(n<m){
     fprintf(stderr, LCAT(LEVMAR_BC_DER, "(): cannot solve a problem with fewer measurements [%d] than unknowns [%d]\n"), n, m);

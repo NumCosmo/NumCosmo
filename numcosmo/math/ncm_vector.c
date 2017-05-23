@@ -420,8 +420,11 @@ ncm_vector_get_subvector (NcmVector *cv, gsize k, gsize size)
 {
   NcmVector *scv = g_object_new (NCM_TYPE_VECTOR, NULL);
 
-  scv->vv = gsl_vector_subvector (ncm_vector_gsl (cv), k, size);
-  scv->type = NCM_VECTOR_DERIVED;
+  g_assert_cmpuint (size, >, 0);
+  g_assert_cmpuint (size + k, <=, ncm_vector_len (cv));
+
+  scv->vv    = gsl_vector_subvector (ncm_vector_gsl (cv), k, size);
+  scv->type  = NCM_VECTOR_DERIVED;
   scv->pdata = ncm_vector_ref (cv);
   scv->pfree = (GDestroyNotify) &ncm_vector_free;
 
@@ -487,15 +490,16 @@ ncm_vector_peek_variant (const NcmVector *v)
 
 /**
  * ncm_vector_log_vals:
- * @v: a #NcmVector.
- * @prestr: initial string.
- * @format: float format.
- *
+ * @v: a #NcmVector
+ * @prestr: initial string
+ * @format: float format
+ * @cr: whether to include a cariage return
+ * 
  * Log the vector values using @prestr and @format.
  *
  */
 void 
-ncm_vector_log_vals (const NcmVector *v, const gchar *prestr, const gchar *format)
+ncm_vector_log_vals (const NcmVector *v, const gchar *prestr, const gchar *format, gboolean cr)
 {
   guint i = 0;
   const guint len = ncm_vector_len (v);
@@ -507,7 +511,8 @@ ncm_vector_log_vals (const NcmVector *v, const gchar *prestr, const gchar *forma
     g_message (" ");
     g_message (format, ncm_vector_get (v, i));
   }
-  g_message ("\n");
+  if (cr)
+    g_message ("\n");
 }
 
 /**
@@ -824,8 +829,38 @@ ncm_vector_log_vals_func (const NcmVector *v, const gchar *prestr, const gchar *
  *
  * Returns: FIXME
  */
-
-
+/**
+ * ncm_vector_get_max: 
+ * @cv: a @NcmVector.
+ * 
+ * Gets the maximum value of the vector components.
+ * 
+ * Returns: the maximum value of the vector components.
+ */
+/**
+ * ncm_vector_get_min: 
+ * @cv: a @NcmVector.
+ * 
+ * Gets the minimum value of the vector components.
+ * 
+ * Returns: the minimum value of the vector components.
+ */
+/**
+ * ncm_vector_get_max_index: 
+ * @cv: a @NcmVector.
+ * 
+ * Gets the index of the maximal vector component.
+ * 
+ * Returns: the index of the maximal component.
+ */
+/**
+ * ncm_vector_get_min_index: 
+ * @cv: a @NcmVector.
+ * 
+ * Gets the index of the minimal vector component.
+ * 
+ * Returns: the index of the minimal component.
+ */
 /**
  * ncm_vector_get_minmax: 
  * @cv: a @NcmVector.
@@ -835,21 +870,6 @@ ncm_vector_log_vals_func (const NcmVector *v, const gchar *prestr, const gchar *
  * Gets the minimum/maximum value of the vector components.
  * 
  */
-void 
-ncm_vector_get_minmax (const NcmVector *cv, gdouble *min, gdouble *max)
-{
-  guint size = ncm_vector_len (cv);
-  guint i;
-
-  *min = HUGE_VAL;
-  *max = -HUGE_VAL;
-  for (i = 0; i < size; i++)
-  {
-    const gdouble v = ncm_vector_get (cv, i);
-    *min = GSL_MIN (*min, v);
-    *max = GSL_MAX (*max, v);
-  }
-}
 
 /**
  * ncm_vector_get_absminmax: 

@@ -1809,7 +1809,9 @@ _ncm_sphere_map_pix_get_alm_from_circle (NcmSphereMapPix *pix, gint64 r_i, gbool
   const gint64 ring_size_2 = ring_size / 2;
   const gint64 ring_fi     = ncm_sphere_map_pix_get_ring_first_index (pix, r_i);
   const _fft_complex *Fim  = &((_fft_complex *)pix->fft_pvec)[ring_fi];
-  const gdouble pix_area   = 4.0 * M_PI / pix->npix;
+#ifdef HAVE_GSL_2_2
+  const gdouble pix_area = 4.0 * M_PI / pix->npix;
+#endif /* HAVE_GSL_2_2 */
   gdouble theta_i = 0.0, phi_0 = 0.0, x = 0.0;
   gint64 m;
 
@@ -1827,7 +1829,6 @@ _ncm_sphere_map_pix_get_alm_from_circle (NcmSphereMapPix *pix, gint64 r_i, gbool
   {
     for (m = 0; m <= pix->lmax; m++)
     {
-      gint64 l;
       gint fft_ring_index = m % ring_size;
 
       _fft_complex phase = cexp (-I * phi_0 * m);
@@ -1838,11 +1839,15 @@ _ncm_sphere_map_pix_get_alm_from_circle (NcmSphereMapPix *pix, gint64 r_i, gbool
         phase *= conj (Fim[ring_size - fft_ring_index]);
 
 #ifdef HAVE_GSL_2_2
-      for (l = m; l <= pix->lmax; l++)
       {
-        gsize lm_index = gsl_sf_legendre_array_index (l, m);
-        const complex double alm = ncm_vector_fast_get (pix->Ylm, lm_index) * phase * pix_area;        
-        ncm_vector_fast_addto (pix->Cl, l, creal (alm * conj (alm)));
+        gint64 l;
+
+        for (l = m; l <= pix->lmax; l++)
+        {
+          gsize lm_index = gsl_sf_legendre_array_index (l, m);
+          const complex double alm = ncm_vector_fast_get (pix->Ylm, lm_index) * phase * pix_area;        
+          ncm_vector_fast_addto (pix->Cl, l, creal (alm * conj (alm)));
+        }
       }
 #endif /* HAVE_GSL_2_2 */
     }
@@ -1855,7 +1860,6 @@ _ncm_sphere_map_pix_get_alm_from_circle (NcmSphereMapPix *pix, gint64 r_i, gbool
     
     for (m = 0; m <= pix->lmax; m++)
     {
-      gint64 l;
       gint fft_ring_index = m % ring_size;
       _fft_complex Fim_i;
 
@@ -1865,18 +1869,22 @@ _ncm_sphere_map_pix_get_alm_from_circle (NcmSphereMapPix *pix, gint64 r_i, gbool
         Fim_i = conj (Fim[ring_size - fft_ring_index]);
 
 #ifdef HAVE_GSL_2_2
-      for (l = m; l <= pix->lmax; l++)
       {
-        gsize lm_index = gsl_sf_legendre_array_index (l, m);
+        gint64 l;
 
-        /*printf ("%ld %ld %ld\n", l, m, lm_index);*/
+        for (l = m; l <= pix->lmax; l++)
+        {
+          gsize lm_index = gsl_sf_legendre_array_index (l, m);
+
+          /*printf ("%ld %ld %ld\n", l, m, lm_index);*/
         
-        const complex double alm = ncm_vector_fast_get (pix->Ylm, lm_index) * Fim_i * phase * pix_area;
+          const complex double alm = ncm_vector_fast_get (pix->Ylm, lm_index) * Fim_i * phase * pix_area;
 
-        ncm_vector_fast_addto (pix->alm, 2 * lm_index + 0, creal (alm));
-        ncm_vector_fast_addto (pix->alm, 2 * lm_index + 1, cimag (alm));
+          ncm_vector_fast_addto (pix->alm, 2 * lm_index + 0, creal (alm));
+          ncm_vector_fast_addto (pix->alm, 2 * lm_index + 1, cimag (alm));
 
-        ncm_vector_fast_addto (pix->Cl, l, creal (alm * conj (alm)));
+          ncm_vector_fast_addto (pix->Cl, l, creal (alm * conj (alm)));
+        }
       }
 #endif /* HAVE_GSL_2_2 */
       phase *= emIphi_0;
@@ -2071,17 +2079,19 @@ ncm_sphere_map_pix_add_noise (NcmSphereMapPix *pix, const gdouble sd, NcmRNG *rn
 static complex double
 _ncm_sphere_map_pix_get_D_m (NcmSphereMapPix *pix, const gdouble phi_0, const gint64 ring_size, const gint64 m)
 {
-  gint64 l;
   complex double D_m = 0.0;
   _fft_complex phase = cexp (I * phi_0 * m);
 
 #ifdef HAVE_GSL_2_2
-  for (l = m; l <= pix->lmax; l++)
   {
-    gsize lm_index            = gsl_sf_legendre_array_index (l, m);
-    const complex double alm  = ncm_vector_fast_get (pix->alm, 2 * lm_index + 0) + I * ncm_vector_fast_get (pix->alm, 2 * lm_index + 1);
-    const complex double d_lm = alm * ncm_vector_fast_get (pix->Ylm, lm_index);
-    D_m += d_lm;
+    gint64 l;
+    for (l = m; l <= pix->lmax; l++)
+    {
+      gsize lm_index            = gsl_sf_legendre_array_index (l, m);
+      const complex double alm  = ncm_vector_fast_get (pix->alm, 2 * lm_index + 0) + I * ncm_vector_fast_get (pix->alm, 2 * lm_index + 1);
+      const complex double d_lm = alm * ncm_vector_fast_get (pix->Ylm, lm_index);
+      D_m += d_lm;
+    }
   }
 #endif /* HAVE_GSL_2_2 */
   

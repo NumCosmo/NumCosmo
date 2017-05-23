@@ -22,13 +22,20 @@ fi
     exit 1
 }
 
-(gtkdocize --srcdir $srcdir) < /dev/null > /dev/null 2>&1 || {
+GTKDOCIZE=$(which gtkdocize 2>/dev/null) 
+if test -z $GTKDOCIZE; then
   echo
-  echo "**Error**: You must have \`gtk-doc' installed."
+  echo "**Warning**: You must have \`gtk-doc' installed to build documentation."
   echo "Download the appropriate package for your distribution,"
   echo "or get the source tarball at https://www.gtk.org/gtk-doc/"
-  DIE=1
-}
+  rm -f $srcdir/gtk-doc.make
+  cat > $srcdir/gtk-doc.make <<EOF
+EXTRA_DIST =
+CLEANFILES =
+EOF
+else
+  gtkdocize --srcdir $srcdir 2>/dev/null || gtkdocize || exit $?
+fi
 
 (autoconf --version) < /dev/null > /dev/null 2>&1 || {
   echo

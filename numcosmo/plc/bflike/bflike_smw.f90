@@ -1607,6 +1607,7 @@ contains
 
     lmax = size(cls(:,1)) +1
 
+    unit = 99
     cls = 0._dp
     ok = .false.
 
