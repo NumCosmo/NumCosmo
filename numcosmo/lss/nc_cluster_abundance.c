@@ -332,10 +332,10 @@ _nc_cluster_abundance_z_p_lnM_p_d2n_integrand (gdouble lnM, gdouble z, gpointer 
  * @cosmo: a #NcHICosmo
  * @clusterz: a #NcClusterRedshift
  * @clusterm: a #NcClusterMass
- * @lnM_obs: logarithm base e of the observed mass
- * @lnM_obs_params: FIXME
- * @z_obs: observed redshift
- * @z_obs_params: FIXME
+ * @lnM_obs: (array) (element-type gdouble): logarithm base e of the observed mass
+ * @lnM_obs_params: (array) (element-type gdouble): FIXME
+ * @z_obs: (array) (element-type gdouble): observed redshift
+ * @z_obs_params: (array) (element-type gdouble): FIXME
  *
  * This function computes /f$ \int_0^\infty dz \int_0^\infty d\ln M \frac{d^2N(\ln M, z)}{dzd\ln M} * P(z^{phot}|z) *
  * P(\ln M^{obs}|\ln M, z) /f$. We studied the convergence of this integral to optimize this function. We verified
@@ -389,8 +389,8 @@ _nc_cluster_abundance_z_p_d2n_integrand (gdouble z, gpointer params)
  * @clusterz: a #NcClusterRedshift
  * @clusterm: a #NcClusterMass
  * @lnM: the logarithm base e of the mass (gdouble)
- * @z_obs: observed redshift
- * @z_obs_params: FIXME
+ * @z_obs: (array) (element-type gdouble): observed redshift
+ * @z_obs_params: (array) (element-type gdouble): FIXME
  *
  * This function computes /f$ \int_{z_{phot} - 10\sigma_{phot}}^{z_{phot} + 10\sigma_{phot}} dz \,
  * \frac{d^2N}{dzdlnM} * P(z^{photo}|z) /f$. The integral limits were determined requiring a precision
@@ -455,8 +455,8 @@ _nc_cluster_abundance_lnM_p_d2n_integrand (gdouble lnM, gpointer params)
  * @cosmo: a #NcHICosmo
  * @clusterz: a #NcClusterRedshift
  * @clusterm: a #NcClusterMass 
- * @lnM_obs: logarithm base e of the observed mass
- * @lnM_obs_params: other information of the observed mass, such as its error
+ * @lnM_obs: (array) (element-type gdouble): logarithm base e of the observed mass
+ * @lnM_obs_params: (array) (element-type gdouble): other information of the observed mass, such as its error
  * @z: redshift
    *
  * This function computes /f$ \int_{\ln M^{obs} - 7\sigma_{\ln M}}^{\ln M^{obs} + 7\sigma_{\ln M}} d\ln M \,
