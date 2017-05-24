@@ -209,8 +209,8 @@ nc_cluster_mass_resample (NcClusterMass *clusterm, NcHICosmo *cosmo, gdouble lnM
  * nc_cluster_mass_p_limits:
  * @clusterm: a #NcClusterMass.
  * @cosmo: a #NcHICosmo.
- * @lnM_obs: observed mass.
- * @lnM_obs_params: observed mass params.
+ * @lnM_obs: (array) (element-type gdouble): observed mass.
+ * @lnM_obs_params: (array) (element-type gdouble): observed mass params.
  * @lnM_lower: (out): pointer to the lower limit of the real mass integration.
  * @lnM_upper: (out): pointer to the upper limit of the real mass integration.
  *

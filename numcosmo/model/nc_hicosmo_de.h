@@ -48,10 +48,10 @@ typedef struct _NcHICosmoDEPrivate NcHICosmoDEPrivate;
 
 /**
  * NcHICosmoDEImpl:
- * @NC_HICOSMO_DE_IMPL_E2Omega_de: FIXME
- * @NC_HICOSMO_DE_IMPL_dE2Omega_de_dz: FIXME
- * @NC_HICOSMO_DE_IMPL_d2E2Omega_de_dz2: FIXME
- * @NC_HICOSMO_DE_IMPL_w_de: FIXME
+ * @NC_HICOSMO_DE_IMPL_E2Omega_de: dark energy (DE) component of the normalized Hubble function (squared) $E^2(z)$
+ * @NC_HICOSMO_DE_IMPL_dE2Omega_de_dz: DE component of the first derivative of $E^2(z)$ with respect to the redshift $z$ 
+ * @NC_HICOSMO_DE_IMPL_d2E2Omega_de_dz2: DE component of the second derivative of $E^2(z)$ with respect to $z$
+ * @NC_HICOSMO_DE_IMPL_w_de: DE equation of state
  *
  * FIXME
  *
@@ -69,13 +69,13 @@ typedef gdouble (*NcHICosmoDEFunc1) (NcHICosmoDE *cosmo_de, gdouble z);
 
 /**
  * NcHICosmoDEParams:
- * @NC_HICOSMO_DE_H0: FIXME
- * @NC_HICOSMO_DE_OMEGA_C: FIXME
- * @NC_HICOSMO_DE_OMEGA_X: FIXME
- * @NC_HICOSMO_DE_T_GAMMA0: FIXME
- * @NC_HICOSMO_DE_HE_YP: FIXME
- * @NC_HICOSMO_DE_ENNU: FIXME
- * @NC_HICOSMO_DE_OMEGA_B: FIXME
+ * @NC_HICOSMO_DE_H0: Hubble constant [km/(s Mpc)]
+ * @NC_HICOSMO_DE_OMEGA_C: cold dark matter density parameter
+ * @NC_HICOSMO_DE_OMEGA_X: dark energy density parameter
+ * @NC_HICOSMO_DE_T_GAMMA0: CMB temperature today
+ * @NC_HICOSMO_DE_HE_YP: primordial helium abundance
+ * @NC_HICOSMO_DE_ENNU: effective number of neutrinos
+ * @NC_HICOSMO_DE_OMEGA_B: baryon density parameter
  *
  * FIXME
  *
@@ -94,10 +94,10 @@ typedef enum _NcHICosmoDEParams
 
 /**
  * NcHICosmoDEVParams:
- * @NC_HICOSMO_DE_MASSNU_M: FIXME
- * @NC_HICOSMO_DE_MASSNU_T: FIXME
- * @NC_HICOSMO_DE_MASSNU_MU: FIXME
- * @NC_HICOSMO_DE_MASSNU_G: FIXME
+ * @NC_HICOSMO_DE_MASSNU_M: neutrino masses
+ * @NC_HICOSMO_DE_MASSNU_T: massive neutrino temperatures
+ * @NC_HICOSMO_DE_MASSNU_MU: massive neutrino chemical potentials
+ * @NC_HICOSMO_DE_MASSNU_G: massive neutrino degeneracy factors
  * 
  * FIXME
  *
