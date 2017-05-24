@@ -397,6 +397,7 @@ ncm_ode_spline_prepare (NcmOdeSpline *os, gpointer userdata)
     }
 
     /*if (((x0 != 0.0) ? fabs ((x - x0) / x0) : fabs (x - x0)) > NCM_ODE_SPLINE_MIN_STEP)*/
+    if (x > x0 + fabs (x0) * NCM_ODE_SPLINE_MIN_STEP)
     {
       g_array_append_val (os->x_array, x);
       g_array_append_val (os->y_array, NV_Ith_S (os->y, 0));

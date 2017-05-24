@@ -71,6 +71,7 @@
 #include "math/ncm_model_ctrl.h"
 #include "math/ncm_spline_func.h"
 #include "math/ncm_spline_cubic_notaknot.h"
+#include "math/ncm_ode_spline.h"
 #include "math/ncm_cfg.h"
 #include "math/ncm_util.h"
 #include "math/ncm_rng.h"
@@ -846,6 +847,18 @@ _ncm_hoaa_dlnmnu_only_sing_f (realtype t_m_ts, N_Vector y, N_Vector ydot, gpoint
     NV_Ith_S (ydot, NCM_HOAA_VAR_COS_THETAB) = - nu * sin_thetab - dlnmnu * tanh_epsilon * gsl_pow_2 (sin_thetab) * cos_thetab;
     NV_Ith_S (ydot, NCM_HOAA_VAR_GAMMA)      = - 2.0 * dlnmnu * sin_thetab * cos_thetab / cosh_epsilon;
 
+/*    if (fabs (t_m_ts) < 5.0 && FALSE)
+      printf ("% 22.15g % 22.15g % 22.15g % 22.15g % 22.15g % 22.15g % 22.15g % 22.15g\n", 
+              t_m_ts, 
+              sin_thetab, 
+              cos_thetab,
+              nu,
+              tanh_epsilon, 
+              nu * cos_thetab, 
+              dlnmnu * tanh_epsilon * sin_thetab * gsl_pow_2 (cos_thetab),
+              nu * cos_thetab / (dlnmnu * tanh_epsilon * sin_thetab * gsl_pow_2 (cos_thetab)));
+*/
+    
     switch (arg->st)
     {
       case NCM_HOAA_SING_TYPE_ZERO:
@@ -1110,11 +1123,11 @@ _ncm_hoaa_prepare_integrator (NcmHOAA *hoaa, NcmModel *model, const gdouble t0)
     flag = ARKodeSStolerances (hoaa->priv->arkode_phase, hoaa->priv->reltol, 0.0);
     NCM_CVODE_CHECK (&flag, "ARKodeSStolerances", 1, );
     
-    flag = ARKodeSetMaxNumSteps (hoaa->priv->arkode_phase, 0);
+    flag = ARKodeSetMaxNumSteps (hoaa->priv->arkode_phase, 1.0e9);
     NCM_CVODE_CHECK (&flag, "ARKodeSetMaxNumSteps", 1, );
 
-    flag = ARKodeSetOrder (hoaa->priv->arkode_phase, 7);
-    NCM_CVODE_CHECK (&flag, "ARKodeSetOrder", 1, );
+    //flag = ARKodeSetOrder (hoaa->priv->arkode_phase, 7);
+    //NCM_CVODE_CHECK (&flag, "ARKodeSetOrder", 1, );
     
     hoaa->priv->arkode_init = TRUE;
   }
@@ -1503,7 +1516,7 @@ _ncm_hoaa_evol_save (NcmHOAA *hoaa, NcmModel *model, const gdouble tf)
   flag = ARKodeSetUserData (hoaa->priv->arkode, &arg);
   NCM_CVODE_CHECK (&flag, "ARKodeSetUserData", 1, );
 #endif /* HAVE_SUNDIALS_ARKODE */
-
+  
   while (TRUE)
   {
 #ifndef HAVE_SUNDIALS_ARKODE
@@ -1518,8 +1531,8 @@ _ncm_hoaa_evol_save (NcmHOAA *hoaa, NcmModel *model, const gdouble tf)
       const gdouble cos_thetab = NV_Ith_S (hoaa->priv->y, NCM_HOAA_VAR_COS_THETAB);
       const gdouble epsilon    = NV_Ith_S (hoaa->priv->y, NCM_HOAA_VAR_EPSILON);
       const gdouble gamma      = NV_Ith_S (hoaa->priv->y, NCM_HOAA_VAR_GAMMA);
-
-printf ("% 22.15g % 22.15g % 22.15g % 22.15g % 22.15g\n", hoaa->priv->t_cur, epsilon, gamma, sin_thetab, cos_thetab);
+      
+/*printf ("% 22.15g % 22.15g % 22.15g % 22.15g % 22.15g % 22.15g % 22.15g\n", hoaa->priv->t_cur, epsilon, gamma, sin_thetab, cos_thetab, sqrt (cosh (epsilon)) * sin_thetab, sqrt (cosh (epsilon)) * cos_thetab);*/
 			
       if (hoaa->priv->t_cur > last_t + fabs (last_t) * NCM_HOAA_TIME_FRAC)
       {
@@ -1594,7 +1607,14 @@ _ncm_hoaa_evol_sing_save (NcmHOAA *hoaa, NcmModel *model, const gdouble t_m_ts, 
             g_assert_not_reached ();
             break;
         }
-printf ("% 22.15g % 22.15g % 22.15g % 22.15g % 22.15g\n", tstep_m_ts, epsilon, gamma, sin_thetab, cos_thetab);
+printf ("% 22.15g % 22.15g % 22.15g % 22.15g % 22.15g % 22.15g % 22.15g\n", 
+        tstep_m_ts, 
+        NV_Ith_S (hoaa->priv->y, NCM_HOAA_VAR_EPSILON), 
+        gamma, 
+        exp (0.0 * lnmnu) * sin_thetab, 
+        exp (0.5 * lnmnu) * cos_thetab, 
+        sqrt (cosh (epsilon)) * sin_thetab, 
+        sqrt (cosh (epsilon)) * cos_thetab);
 			
       if (hoaa->priv->t_cur > last_t + fabs (last_t) * NCM_HOAA_TIME_FRAC)
       {
@@ -1643,6 +1663,25 @@ printf ("% 22.15g % 22.15g % 22.15g % 22.15g % 22.15g\n", tstep_m_ts, epsilon, g
   }
 }
 
+gdouble 
+_ncm_hoaa_phase_nu (gdouble y, gdouble x, gpointer userdata)
+{
+  NcmHOAAArg *arg  = (NcmHOAAArg *) userdata;
+  const gdouble nu = ncm_hoaa_eval_nu (arg->hoaa, arg->model, x, arg->hoaa->k);
+  return nu;
+}
+
+gdouble 
+_ncm_hoaa_phase_mnu2 (gdouble y, gdouble x, gpointer userdata)
+{
+  NcmHOAAArg *arg   = (NcmHOAAArg *) userdata;
+  const gdouble nu  = ncm_hoaa_eval_nu (arg->hoaa, arg->model, x, arg->hoaa->k);
+  const gdouble mnu = ncm_hoaa_eval_mnu (arg->hoaa, arg->model, x, arg->hoaa->k);
+
+printf ("% 22.15g % 22.15g % 22.15g % 22.15g\n", x, y, mnu, nu);
+  return GSL_MAX (mnu * nu, 1.0e100);
+}
+
 
 /**
  * ncm_hoaa_prepare: (virtual prepare)
@@ -1674,6 +1713,59 @@ ncm_hoaa_prepare (NcmHOAA *hoaa, NcmModel *model)
     hoaa->priv->t_na_0 = t_na_0;
     hoaa->priv->t_na_1 = t_na_1;
 
+    if (FALSE)
+    {
+      NcmHOAAArg arg     = {hoaa, model, 0.0, -1, NCM_HOAA_SING_TYPE_INVALID};
+      NcmSpline *s       = ncm_spline_cubic_notaknot_new ();
+      NcmOdeSpline *nu_s = ncm_ode_spline_new (s, _ncm_hoaa_phase_nu);
+      gint i;
+
+      ncm_ode_spline_set_xi (nu_s, -1.0);
+      ncm_ode_spline_set_xf (nu_s, +2.0);
+
+      ncm_ode_spline_set_yi (nu_s, 0.0);
+
+      ncm_ode_spline_set_reltol (nu_s, 1.0e-13);
+      ncm_ode_spline_set_abstol (nu_s, 1.0e-60);
+      
+      ncm_ode_spline_prepare (nu_s, &arg);
+
+      printf ("# GO!\n");
+      for (i = 0; i < 10000; i++)      
+      {
+        const gdouble t = -1.0 + 2.0 / (10000.0 - 1.0) * i;
+        printf ("% 22.15g % 22.15g\n", t, ncm_spline_eval (nu_s->s, t));
+      } 
+      printf ("\n\n");
+    }
+
+    if (FALSE)
+    {
+      NcmHOAAArg arg       = {hoaa, model, 0.0, -1, NCM_HOAA_SING_TYPE_INVALID};
+      NcmSpline *s         = ncm_spline_cubic_notaknot_new ();
+      NcmOdeSpline *mnu2_s = ncm_ode_spline_new (s, _ncm_hoaa_phase_mnu2);
+      gint i;
+
+      ncm_ode_spline_set_xi (mnu2_s, -1.0);
+      ncm_ode_spline_set_xf (mnu2_s, +2.0);
+
+      ncm_ode_spline_set_yi (mnu2_s, 0.0);
+
+      ncm_ode_spline_set_reltol (mnu2_s, 1.0e-13);
+      ncm_ode_spline_set_abstol (mnu2_s, 1.0e-70);
+
+      ncm_ode_spline_prepare (mnu2_s, &arg);
+
+      printf ("# GO!\n");
+      for (i = 0; i < 10000; i++)      
+      {
+        const gdouble t = -1.0 + 2.0 / (10000.0 - 1.0) * i;
+        printf ("% 22.15g % 22.15g\n", t, ncm_spline_eval (mnu2_s->s, t));
+      } 
+      printf ("\n\n");
+    }
+
+    
     _ncm_hoaa_set_init_cond (hoaa, model, t_ad_0);
     
     _ncm_hoaa_prepare_integrator (hoaa, model, t_ad_0);
@@ -1715,7 +1807,6 @@ ncm_hoaa_prepare (NcmHOAA *hoaa, NcmModel *model)
 						break;
 
           _ncm_hoaa_evol_save (hoaa, model, dts_i + ts);
-
           _ncm_hoaa_prepare_integrator_sing (hoaa, model, dts_i, sing_a[i], ts, st);
           _ncm_hoaa_evol_sing_save (hoaa, model, dts_f, sing_a[i], ts, st);
 
@@ -2060,7 +2151,7 @@ ncm_hoaa_eval_AA (NcmHOAA *hoaa, NcmModel *model, const gdouble t, gdouble *epsi
   {
     g_error ("ncm_hoaa_eval_adiabatic_approx: save_evol must be enables.");
   }
-  else if ((t < hoaa->priv->t_ad_0) || (t > hoaa->priv->t_ad_1))
+  else if (t < hoaa->priv->t_ad_0)
   {
     gdouble Athetab, Aepsilon, Agamma;
     
@@ -2073,6 +2164,9 @@ ncm_hoaa_eval_AA (NcmHOAA *hoaa, NcmModel *model, const gdouble t, gdouble *epsi
   }
   else
   {
+    if (t > hoaa->priv->t_ad_1)
+      g_warning ("ncm_hoaa_eval_AA: extrapolating solution, max time = % 22.15g, t = % 22.15g.", hoaa->priv->t_ad_1, t);
+    
     epsilon[0]    = ncm_spline_eval (hoaa->priv->epsilon_s, t);
     gamma[0]      = ncm_spline_eval (hoaa->priv->gamma_s, t);
     sin_thetab[0] = ncm_spline_eval (hoaa->priv->sin_thetab_s, t);
@@ -2184,7 +2278,7 @@ ncm_hoaa_eval_Delta (NcmHOAA *hoaa, NcmModel *model, const gdouble t, gdouble *D
   gdouble q = 0.0, v = 0.0, Pq = 0.0, Pv = 0.0;
     
   ncm_hoaa_eval_QV (hoaa, model, t, &q, &v, &Pq, &Pv);
-
+  
   Delta_phi[0]  = k3_2pi2 * 0.25 * (q  * q  + v  * v);
   Delta_Pphi[0] = k3_2pi2 * 0.25 * (Pq * Pq + Pv * Pv);
 }
