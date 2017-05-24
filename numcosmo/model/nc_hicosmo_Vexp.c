@@ -1576,7 +1576,7 @@ static gdouble _nc_hicosmo_Vexp_H0 (NcHICosmo *cosmo) { return MACRO_H0; }
 static gdouble _nc_hicosmo_Vexp_Omega_t0 (NcHICosmo *cosmo) { return OMEGA_C; }
 static gdouble _nc_hicosmo_Vexp_xb (NcHICosmo *cosmo) { return X_B; }
 
-#define _NC_HICOSMO_VEXP_PHIA (1.0e-30)
+#define _NC_HICOSMO_VEXP_PHIA (1.0e-80)
 
 static gdouble 
 _nc_hicosmo_Vexp_zeta_eval_mnu (NcHIPertIAdiab *iad, const gdouble tau, const gdouble k)
@@ -1891,8 +1891,8 @@ _nc_hicosmo_Vexp_zeta_get_sing_info (NcHIPertIAdiab *iad, const gdouble k, const
   {
     case 0:
       ts[0]    =  0.0;
-      dts_i[0] = -0.1;
-      dts_f[0] = +0.1;
+      dts_i[0] = -0.1e-2;
+      dts_f[0] = +0.1e-2;
       st[0]    = NCM_HOAA_SING_TYPE_INF;
       break;
     case 1:

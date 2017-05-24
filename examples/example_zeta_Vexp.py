@@ -53,11 +53,11 @@ gw.set_reltol (1.0e-14)
 #  print n, If (n), If (-n)
 #exit ()
 
-print "# Preparing GW"
-gw.prepare (Vexp)
-
 print "# Preparing ADIAB"
 adiab.prepare (Vexp)
+
+print "# Preparing GW"
+gw.prepare (Vexp)
 
 #(t0, t1) = adiab.get_t0_t1 (Vexp)
 (t0, t1) = gw.get_t0_t1 (Vexp)
@@ -157,21 +157,21 @@ Pzeta_b_a = np.array (Pzeta_b_a)
 #plt.plot (t_a, Delta_zeta, lw=mylw, label = r'$\Delta_{\zeta}$')
 #plt.plot (t_a, Delta_h,    lw=mylw, label = r'$\Delta_{h}$')
 
-#plt.plot (t_a, zeta_a_a, lw=mylw, label = r'$\tilde{\zeta}^a$')
-#plt.plot (t_a, zeta_b_a, lw=mylw, label = r'$\tilde{\zeta}^b$')
-#plt.plot (t_a, h_a_a,    lw=mylw, label = r'$\tilde{h}^a$')
-#plt.plot (t_a, h_b_a,    lw=mylw, label = r'$\tilde{h}^b$')
+plt.plot (t_a, zeta_a_a, lw=mylw, label = r'$\tilde{\zeta}^a$')
+plt.plot (t_a, zeta_b_a, lw=mylw, label = r'$\tilde{\zeta}^b$')
+plt.plot (t_a, h_a_a,    lw=mylw, label = r'$\tilde{h}^a$')
+plt.plot (t_a, h_b_a,    lw=mylw, label = r'$\tilde{h}^b$')
 
 #plt.plot (t_a, epsilon_a,    lw=mylw, label = r'$\epsilon$')
 #plt.plot (t_a, gamma_a,      lw=mylw, label = r'$\gamma$')
 #plt.plot (t_a, sin_thetab_a, lw=mylw, label = r'$\sin(\theta_b)$')
 #plt.plot (t_a, cos_thetab_a, lw=mylw, label = r'$\cos(\theta_b)$')
 
-plt.plot (t_a, nu_a,     lw=mylw, label = r'$\nu_h$')
-plt.plot (t_a, m_a,      lw=mylw, label = r'$m_h$')
-plt.plot (t_a, mnu_a,    lw=mylw, label = r'$m_h\nu_h$')
-plt.plot (t_a, 1.0 / (np.array (mnu_a)),    lw=mylw, label = r'$(m_h\nu_h)^{-1}$')
-plt.plot (t_a, dlnmnu_a, lw=mylw, label = r'$d\ln(m_h\nu_h)$')
+#plt.plot (t_a, nu_a,     lw=mylw, label = r'$\nu_h$')
+#plt.plot (t_a, m_a,      lw=mylw, label = r'$m_h$')
+#plt.plot (t_a, mnu_a,    lw=mylw, label = r'$m_h\nu_h$')
+#plt.plot (t_a, 1.0 / (np.array (mnu_a)),    lw=mylw, label = r'$(m_h\nu_h)^{-1}$')
+#plt.plot (t_a, dlnmnu_a, lw=mylw, label = r'$d\ln(m_h\nu_h)$')
 
 #plt.plot (t_a, (Ph_a_a * h_b_a), lw=mylw, label = r't_1')
 #plt.plot (t_a, (Ph_b_a * h_a_a), lw=mylw, label = r't_2')
