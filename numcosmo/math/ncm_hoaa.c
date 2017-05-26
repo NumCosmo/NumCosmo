@@ -758,7 +758,9 @@ _ncm_hoaa_dlnmnu_only_f (realtype t, N_Vector y, N_Vector ydot, gpointer f_data)
 
   gdouble nu, dlnmnu, Vnu;
   ncm_hoaa_eval_system (arg->hoaa, arg->model, t, arg->hoaa->k, &nu, &dlnmnu, &Vnu);
-  
+
+	const gdouble mnu = ncm_hoaa_eval_mnu (arg->hoaa, arg->model, t, arg->hoaa->k);
+	
   {
     const gdouble tanh_epsilon = tanh (epsilon);
     const gdouble cosh_epsilon = cosh (epsilon);
@@ -769,13 +771,15 @@ _ncm_hoaa_dlnmnu_only_f (realtype t, N_Vector y, N_Vector ydot, gpointer f_data)
     NV_Ith_S (ydot, NCM_HOAA_VAR_EPSILON) = - 0.5 * dlnmnu * ncm_util_cos2x (Ts, Tc) / cosh_epsilon;
     NV_Ith_S (ydot, NCM_HOAA_VAR_GAMMA)   = - dlnmnu * Ts * Tc / gsl_pow_2 (cosh_epsilon);
 
-		printf ("STEP % 22.15g % 22.15g % 22.15g % 22.15g % 22.15g % 22.15g % 22.15g % 22.15g % 22.15g\n", 
+		printf ("STEP % 22.15g % 22.15g % 22.15g % 22.15g % 22.15g % 22.15g % 22.15g % 22.15g % 22.15g % 22.15g % 22.15g % 22.15g % 22.15g\n", 
 		        t, 
 		        Ts, Tc, epsilon, NV_Ith_S (y, NCM_HOAA_VAR_GAMMA), 
 		        NV_Ith_S (ydot, NCM_HOAA_VAR_TS),
 		        NV_Ith_S (ydot, NCM_HOAA_VAR_TC),
 		        NV_Ith_S (ydot, NCM_HOAA_VAR_EPSILON),
-		        NV_Ith_S (ydot, NCM_HOAA_VAR_GAMMA)
+		        NV_Ith_S (ydot, NCM_HOAA_VAR_GAMMA),
+		        ncm_util_cos2x (Ts, Tc), cosh_epsilon,
+		        cosh_epsilon * mnu, Tc * sqrt(mnu)
 		        );
 		
 
@@ -855,34 +859,37 @@ _ncm_hoaa_dlnmnu_only_sing_f (realtype t_m_ts, N_Vector y, N_Vector ydot, gpoint
     const gdouble tanh_epsilon    = tanh (epsilon);
     const gdouble cosh_epsilon    = cosh (epsilon);
 		const gdouble tanh_epsilon_m1 = - exp (-epsilon) / cosh_epsilon;
+		const gdouble tanh_epsilon_p1 = + exp (+epsilon) / cosh_epsilon;
 
     switch (arg->st)
     {
       case NCM_HOAA_SING_TYPE_ZERO:
-				NV_Ith_S (ydot, NCM_HOAA_VAR_TS)      = + nu * Tc * exp (-0.5 * lnmnu) + 0.5 * dlnmnu * tanh_epsilon    * Ts;
-				NV_Ith_S (ydot, NCM_HOAA_VAR_TC)      = - nu * Ts * exp (+0.5 * lnmnu) - 0.5 * dlnmnu * tanh_epsilon_m1 * Tc;
-				NV_Ith_S (ydot, NCM_HOAA_VAR_EPSILON) = + dlnmnu * gsl_pow_2 (Ts) / cosh_epsilon;
-				NV_Ith_S (ydot, NCM_HOAA_VAR_GAMMA)   = - dlnmnu * Ts * Tc * exp (-0.5 * lnmnu) / gsl_pow_2 (cosh_epsilon);
+				NV_Ith_S (ydot, NCM_HOAA_VAR_TS)      = + nu * Tc + 0.5 * dlnmnu * tanh_epsilon_p1 * Ts;
+				NV_Ith_S (ydot, NCM_HOAA_VAR_TC)      = - nu * Ts - 0.5 * dlnmnu * tanh_epsilon_m1 * Tc;
+				NV_Ith_S (ydot, NCM_HOAA_VAR_EPSILON) = + dlnmnu * gsl_pow_2 (Ts) * exp (-lnmnu) / cosh_epsilon;
+				NV_Ith_S (ydot, NCM_HOAA_VAR_GAMMA)   = - dlnmnu * Ts * Tc * exp (-lnmnu) / gsl_pow_2 (cosh_epsilon);
 				break;
       case NCM_HOAA_SING_TYPE_INF:
-				NV_Ith_S (ydot, NCM_HOAA_VAR_TS)      = + nu * Tc * exp (-0.5 * lnmnu) + 0.5 * dlnmnu * tanh_epsilon_m1 * Ts;
-				NV_Ith_S (ydot, NCM_HOAA_VAR_TC)      = - nu * Ts * exp (+0.5 * lnmnu) - 0.5 * dlnmnu * tanh_epsilon    * Tc;				
-        NV_Ith_S (ydot, NCM_HOAA_VAR_EPSILON) = - dlnmnu * gsl_pow_2 (Tc) / cosh_epsilon;
-				NV_Ith_S (ydot, NCM_HOAA_VAR_GAMMA)   = - dlnmnu * Ts * Tc * exp (+0.5 * lnmnu) / gsl_pow_2 (cosh_epsilon);
+				NV_Ith_S (ydot, NCM_HOAA_VAR_TS)      = + nu * Tc + 0.5 * dlnmnu * tanh_epsilon_m1 * Ts;
+				NV_Ith_S (ydot, NCM_HOAA_VAR_TC)      = - nu * Ts - 0.5 * dlnmnu * tanh_epsilon_p1 * Tc;				
+        NV_Ith_S (ydot, NCM_HOAA_VAR_EPSILON) = - dlnmnu * gsl_pow_2 (Tc) * exp (+lnmnu) / cosh_epsilon;
+				NV_Ith_S (ydot, NCM_HOAA_VAR_GAMMA)   = - dlnmnu * Ts * Tc * exp (+lnmnu) / gsl_pow_2 (cosh_epsilon);
         break;
       default:
         g_assert_not_reached ();
         break;
     }
-  }
 
 /*printf ("STEP % 22.15g % 22.15g % 22.15g % 22.15g % 22.15g % 22.15g % 22.15g % 22.15g\n", 
         t_m_ts, Ts, Tc, NV_Ith_S (ydot, NCM_HOAA_VAR_TS), NV_Ith_S (ydot, NCM_HOAA_VAR_TC), epsilon,
         nu * Tc * exp (-0.5 * lnmnu), 0.5 * dlnmnu * tanh (epsilon)    * Ts);
 */
-	printf ("STEP % 22.15g % 22.15g % 22.15g % 22.15g % 22.15g % 22.15g % 22.15g % 22.15g\n", 
+	printf ("STEP % 22.15g % 22.15g % 22.15g % 22.15g % 22.15g % 22.15g % 22.15g % 22.15g % 22.15g % 22.15g\n", 
         t_m_ts, Ts, Tc, NV_Ith_S (ydot, NCM_HOAA_VAR_TS), NV_Ith_S (ydot, NCM_HOAA_VAR_TC), epsilon,
-        - nu * Ts * exp (+0.5 * lnmnu), - 0.5 * dlnmnu * tanh (epsilon)    * Tc);
+        - dlnmnu, gsl_pow_2 (Tc), exp (+lnmnu), cosh_epsilon);
+  }
+
+
   return 0;
 }
 
@@ -917,49 +924,50 @@ _ncm_hoaa_dlnmnu_only_sing_J (_NCM_SUNDIALS_INT_TYPE N, realtype t_m_ts, N_Vecto
     const gdouble tanh_epsilon    = tanh (epsilon);
     const gdouble cosh_epsilon    = cosh (epsilon);
 		const gdouble tanh_epsilon_m1 = - exp (-epsilon) / cosh_epsilon;
+		const gdouble tanh_epsilon_p1 = + exp (+epsilon) / cosh_epsilon;
 
     switch (arg->st)
     {
       case NCM_HOAA_SING_TYPE_ZERO:
-				/* + nu * Tc * exp (-0.5 * lnmnu) + 0.5 * dlnmnu * tanh_epsilon    * Ts */
-				DENSE_ELEM (J, NCM_HOAA_VAR_TS,      NCM_HOAA_VAR_TS)      = + 0.5 * dlnmnu * tanh_epsilon;
-				DENSE_ELEM (J, NCM_HOAA_VAR_TS,      NCM_HOAA_VAR_TC)      = + nu * exp (-0.5 * lnmnu);
+				/* + nu * Tc + 0.5 * dlnmnu * tanh_epsilon_p1 * Ts */
+				DENSE_ELEM (J, NCM_HOAA_VAR_TS,      NCM_HOAA_VAR_TS)      = + 0.5 * dlnmnu * tanh_epsilon_p1;
+				DENSE_ELEM (J, NCM_HOAA_VAR_TS,      NCM_HOAA_VAR_TC)      = + nu;
 				DENSE_ELEM (J, NCM_HOAA_VAR_TS,      NCM_HOAA_VAR_EPSILON) = + 0.5 * dlnmnu * Ts / gsl_pow_2 (cosh_epsilon);
 
-				/* - nu * Ts * exp (+0.5 * lnmnu) - 0.5 * dlnmnu * tanh_epsilon_m1 * Tc */
+				/* - nu * Ts - 0.5 * dlnmnu * tanh_epsilon_m1 * Tc */
 				DENSE_ELEM (J, NCM_HOAA_VAR_TC,      NCM_HOAA_VAR_TC)      = - 0.5 * dlnmnu * tanh_epsilon_m1;
-				DENSE_ELEM (J, NCM_HOAA_VAR_TC,      NCM_HOAA_VAR_TS)      = - nu * exp (+0.5 * lnmnu);
+				DENSE_ELEM (J, NCM_HOAA_VAR_TC,      NCM_HOAA_VAR_TS)      = - nu;
 				DENSE_ELEM (J, NCM_HOAA_VAR_TC,      NCM_HOAA_VAR_EPSILON) = - 0.5 * dlnmnu * Tc / gsl_pow_2 (cosh_epsilon);
 
-				/* + dlnmnu * gsl_pow_2 (Ts) / cosh_epsilon */
-				DENSE_ELEM (J, NCM_HOAA_VAR_EPSILON, NCM_HOAA_VAR_TS)      = + 2.0 * dlnmnu * Ts / cosh_epsilon;
-				DENSE_ELEM (J, NCM_HOAA_VAR_EPSILON, NCM_HOAA_VAR_EPSILON) = - dlnmnu * gsl_pow_2 (Ts) * tanh_epsilon / cosh_epsilon;
+				/* + dlnmnu * gsl_pow_2 (Ts) * exp (-lnmnu) / cosh_epsilon */
+				DENSE_ELEM (J, NCM_HOAA_VAR_EPSILON, NCM_HOAA_VAR_TS)      = + 2.0 * dlnmnu * Ts * exp (-lnmnu) / cosh_epsilon;
+				DENSE_ELEM (J, NCM_HOAA_VAR_EPSILON, NCM_HOAA_VAR_EPSILON) = - dlnmnu * gsl_pow_2 (Ts) * exp (-lnmnu) * tanh_epsilon / cosh_epsilon;
 
-				/* - dlnmnu * Ts * Tc * exp (-0.5 * lnmnu) / gsl_pow_2 (cosh_epsilon) */
-				DENSE_ELEM (J, NCM_HOAA_VAR_GAMMA,   NCM_HOAA_VAR_TS)      = - dlnmnu * Tc * exp (-0.5 * lnmnu) / gsl_pow_2 (cosh_epsilon);
-				DENSE_ELEM (J, NCM_HOAA_VAR_GAMMA,   NCM_HOAA_VAR_TC)      = - dlnmnu * Ts * exp (-0.5 * lnmnu) / gsl_pow_2 (cosh_epsilon);
-				DENSE_ELEM (J, NCM_HOAA_VAR_GAMMA,   NCM_HOAA_VAR_EPSILON) = + 2.0 * dlnmnu * tanh_epsilon * exp (-0.5 * lnmnu) * Ts * Tc / cosh_epsilon;
-				
+				/* - dlnmnu * Ts * Tc * exp (-lnmnu) / gsl_pow_2 (cosh_epsilon) */
+				DENSE_ELEM (J, NCM_HOAA_VAR_GAMMA,   NCM_HOAA_VAR_TS)      = - dlnmnu * Tc * exp (-lnmnu) / gsl_pow_2 (cosh_epsilon);
+				DENSE_ELEM (J, NCM_HOAA_VAR_GAMMA,   NCM_HOAA_VAR_TC)      = - dlnmnu * Ts * exp (-lnmnu) / gsl_pow_2 (cosh_epsilon);
+				DENSE_ELEM (J, NCM_HOAA_VAR_GAMMA,   NCM_HOAA_VAR_EPSILON) = + 2.0 * dlnmnu * tanh_epsilon * exp (-lnmnu) * Ts * Tc / gsl_pow_2 (cosh_epsilon);
+
 				break;
       case NCM_HOAA_SING_TYPE_INF:
-				/* + nu * Tc * exp (-0.5 * lnmnu) + 0.5 * dlnmnu * tanh_epsilon_m1 * Ts */
+				/* + nu * Tc + 0.5 * dlnmnu * tanh_epsilon_m1 * Ts */
 				DENSE_ELEM (J, NCM_HOAA_VAR_TS,      NCM_HOAA_VAR_TS)      = + 0.5 * dlnmnu * tanh_epsilon_m1;
-				DENSE_ELEM (J, NCM_HOAA_VAR_TS,      NCM_HOAA_VAR_TC)      = + nu * exp (-0.5 * lnmnu);
+				DENSE_ELEM (J, NCM_HOAA_VAR_TS,      NCM_HOAA_VAR_TC)      = + nu;
 				DENSE_ELEM (J, NCM_HOAA_VAR_TS,      NCM_HOAA_VAR_EPSILON) = + 0.5 * dlnmnu * Ts / gsl_pow_2 (cosh_epsilon);
 
-				/* - nu * Ts * exp (+0.5 * lnmnu) - 0.5 * dlnmnu * tanh_epsilon    * Tc */
-				DENSE_ELEM (J, NCM_HOAA_VAR_TC,      NCM_HOAA_VAR_TC)      = - 0.5 * dlnmnu * tanh_epsilon;
-				DENSE_ELEM (J, NCM_HOAA_VAR_TC,      NCM_HOAA_VAR_TS)      = - nu * exp (+0.5 * lnmnu);
+				/* - nu * Ts - 0.5 * dlnmnu * tanh_epsilon_p1 * Tc */
+				DENSE_ELEM (J, NCM_HOAA_VAR_TC,      NCM_HOAA_VAR_TC)      = - 0.5 * dlnmnu * tanh_epsilon_p1;
+				DENSE_ELEM (J, NCM_HOAA_VAR_TC,      NCM_HOAA_VAR_TS)      = - nu;
 				DENSE_ELEM (J, NCM_HOAA_VAR_TC,      NCM_HOAA_VAR_EPSILON) = - 0.5 * dlnmnu * Tc / gsl_pow_2 (cosh_epsilon);
 
-        /* - dlnmnu * gsl_pow_2 (Tc) / cosh_epsilon */
-        DENSE_ELEM (J, NCM_HOAA_VAR_EPSILON, NCM_HOAA_VAR_TC)      = - 2.0 * dlnmnu * Tc / cosh_epsilon;
-				DENSE_ELEM (J, NCM_HOAA_VAR_EPSILON, NCM_HOAA_VAR_EPSILON) = + dlnmnu * gsl_pow_2 (Tc) * tanh_epsilon / cosh_epsilon;
+        /* - dlnmnu * gsl_pow_2 (Tc) * exp (+lnmnu) / cosh_epsilon */
+        DENSE_ELEM (J, NCM_HOAA_VAR_EPSILON, NCM_HOAA_VAR_TC)      = - 2.0 * dlnmnu * Tc * exp (+lnmnu) / cosh_epsilon;
+				DENSE_ELEM (J, NCM_HOAA_VAR_EPSILON, NCM_HOAA_VAR_EPSILON) = + dlnmnu * gsl_pow_2 (Tc) * exp (+lnmnu) * tanh_epsilon / cosh_epsilon;
 
-				/* - dlnmnu * Ts * Tc * exp (+0.5 * lnmnu) / gsl_pow_2 (cosh_epsilon) */
-				DENSE_ELEM (J, NCM_HOAA_VAR_GAMMA,   NCM_HOAA_VAR_TS)      = - dlnmnu * Tc * exp (+0.5 * lnmnu) / gsl_pow_2 (cosh_epsilon);
-				DENSE_ELEM (J, NCM_HOAA_VAR_GAMMA,   NCM_HOAA_VAR_TC)      = - dlnmnu * Ts * exp (+0.5 * lnmnu) / gsl_pow_2 (cosh_epsilon);
-				DENSE_ELEM (J, NCM_HOAA_VAR_GAMMA,   NCM_HOAA_VAR_EPSILON) = + 2.0 * dlnmnu * tanh_epsilon * exp (+0.5 * lnmnu) * Ts * Tc / cosh_epsilon;
+				/* - dlnmnu * Ts * Tc * exp (+lnmnu) / gsl_pow_2 (cosh_epsilon) */
+				DENSE_ELEM (J, NCM_HOAA_VAR_GAMMA,   NCM_HOAA_VAR_TS)      = - dlnmnu * Tc * exp (+lnmnu) / gsl_pow_2 (cosh_epsilon);
+				DENSE_ELEM (J, NCM_HOAA_VAR_GAMMA,   NCM_HOAA_VAR_TC)      = - dlnmnu * Ts * exp (+lnmnu) / gsl_pow_2 (cosh_epsilon);
+				DENSE_ELEM (J, NCM_HOAA_VAR_GAMMA,   NCM_HOAA_VAR_EPSILON) = + 2.0 * dlnmnu * tanh_epsilon * exp (+0.5 * lnmnu) * Ts * Tc / gsl_pow_2 (cosh_epsilon);
 				break;
       default:
         g_assert_not_reached ();
@@ -1224,11 +1232,13 @@ _ncm_hoaa_prepare_integrator_sing (NcmHOAA *hoaa, NcmModel *model, const gdouble
     {
       case NCM_HOAA_SING_TYPE_ZERO:
         NV_Ith_S (hoaa->priv->y, NCM_HOAA_VAR_EPSILON) += lnmnu;
+				NV_Ith_S (hoaa->priv->y, NCM_HOAA_VAR_TS)      *= exp (+0.5 * lnmnu);
 				NV_Ith_S (hoaa->priv->y, NCM_HOAA_VAR_TC)      *= exp (+0.5 * lnmnu);
         break;
       case NCM_HOAA_SING_TYPE_INF:
         NV_Ith_S (hoaa->priv->y, NCM_HOAA_VAR_EPSILON) -= lnmnu;
 				NV_Ith_S (hoaa->priv->y, NCM_HOAA_VAR_TS)      *= exp (-0.5 * lnmnu);
+				NV_Ith_S (hoaa->priv->y, NCM_HOAA_VAR_TC)      *= exp (-0.5 * lnmnu);
         break;
       default:
         g_assert_not_reached ();
@@ -1288,8 +1298,8 @@ _ncm_hoaa_prepare_integrator_sing (NcmHOAA *hoaa, NcmModel *model, const gdouble
     flag = ARKDense (hoaa->priv->arkode_sing, NCM_HOAA_VAR_SYS_SIZE);
     NCM_CVODE_CHECK (&flag, "ARKDense", 1, );
 
-    //flag = ARKDlsSetDenseJacFn (hoaa->priv->arkode_sing, J);
-    //NCM_CVODE_CHECK (&flag, "ARKDlsSetDenseJacFn", 1, );
+    flag = ARKDlsSetDenseJacFn (hoaa->priv->arkode_sing, J);
+    NCM_CVODE_CHECK (&flag, "ARKDlsSetDenseJacFn", 1, );
     
     flag = ARKodeSetOrder (hoaa->priv->arkode_sing, 4);
     NCM_CVODE_CHECK (&flag, "ARKodeSetOrder", 1, );
@@ -1569,14 +1579,17 @@ _ncm_hoaa_evol_save (NcmHOAA *hoaa, NcmModel *model, const gdouble tf)
 /*printf ("% 22.15g % 22.15g % 22.15g % 22.15g % 22.15g % 22.15g % 22.15g\n", hoaa->priv->t_cur, epsilon, gamma, Ts, Tc, sqrt (cosh (epsilon)) * Ts, sqrt (cosh (epsilon)) * Tc);*/
       const gdouble mnu   = ncm_hoaa_eval_mnu (hoaa, model, hoaa->priv->t_cur, hoaa->k);
       const gdouble lnmnu = log (mnu);
-				printf ("% 22.15g % 22.15g % 22.15g % 22.15g % 22.15g % 22.15g % 22.15g\n", 
+				printf ("% 22.15g % 22.15g % 22.15g % 22.15g % 22.15g % 22.15g % 22.15g % 22.15g % 22.15g\n", 
 				        hoaa->priv->t_cur, 
 				        epsilon, 
 				        gamma,
 				        Ts, 
 				        Tc,
 				        lnmnu,
-				        hypot (Ts, Tc) / sqrt (2.0 * cosh (epsilon)));
+				        hypot (Ts, Tc) / sqrt (2.0 * cosh (epsilon)),
+				        Ts / sqrt (2.0 * cosh (epsilon)),
+				        Tc / sqrt (2.0 * cosh (epsilon))
+				        );
 
 			
       if (hoaa->priv->t_cur > last_t + fabs (last_t) * NCM_HOAA_TIME_FRAC)
@@ -1644,13 +1657,13 @@ _ncm_hoaa_evol_sing_save (NcmHOAA *hoaa, NcmModel *model, const gdouble t_m_ts, 
 				{
 					case NCM_HOAA_SING_TYPE_ZERO:
 						epsilon = NV_Ith_S (hoaa->priv->y, NCM_HOAA_VAR_EPSILON) - lnmnu;
-						Ts      = NV_Ith_S (hoaa->priv->y, NCM_HOAA_VAR_TS);
+						Ts      = NV_Ith_S (hoaa->priv->y, NCM_HOAA_VAR_TS) * exp (-0.5 * lnmnu);
 						Tc      = NV_Ith_S (hoaa->priv->y, NCM_HOAA_VAR_TC) * exp (-0.5 * lnmnu);
 						break;
 					case NCM_HOAA_SING_TYPE_INF:
 						epsilon = NV_Ith_S (hoaa->priv->y, NCM_HOAA_VAR_EPSILON) + lnmnu;
 						Ts      = NV_Ith_S (hoaa->priv->y, NCM_HOAA_VAR_TS) * exp (+0.5 * lnmnu);
-						Tc      = NV_Ith_S (hoaa->priv->y, NCM_HOAA_VAR_TC);
+						Tc      = NV_Ith_S (hoaa->priv->y, NCM_HOAA_VAR_TC) * exp (+0.5 * lnmnu);
 						break;
 					default:
 						g_assert_not_reached ();
@@ -1672,13 +1685,13 @@ _ncm_hoaa_evol_sing_save (NcmHOAA *hoaa, NcmModel *model, const gdouble t_m_ts, 
         {
           case NCM_HOAA_SING_TYPE_ZERO:
             epsilon = NV_Ith_S (hoaa->priv->y, NCM_HOAA_VAR_EPSILON) - lnmnu;
-						Ts      = NV_Ith_S (hoaa->priv->y, NCM_HOAA_VAR_TS);
+						Ts      = NV_Ith_S (hoaa->priv->y, NCM_HOAA_VAR_TS) * exp (-0.5 * lnmnu);
 						Tc      = NV_Ith_S (hoaa->priv->y, NCM_HOAA_VAR_TC) * exp (-0.5 * lnmnu);
             break;
           case NCM_HOAA_SING_TYPE_INF:
             epsilon = NV_Ith_S (hoaa->priv->y, NCM_HOAA_VAR_EPSILON) + lnmnu;
 						Ts      = NV_Ith_S (hoaa->priv->y, NCM_HOAA_VAR_TS) * exp (+0.5 * lnmnu);
-						Tc      = NV_Ith_S (hoaa->priv->y, NCM_HOAA_VAR_TC);
+						Tc      = NV_Ith_S (hoaa->priv->y, NCM_HOAA_VAR_TC) * exp (+0.5 * lnmnu);
             break;
           default:
             g_assert_not_reached ();
@@ -1707,11 +1720,13 @@ _ncm_hoaa_evol_sing_save (NcmHOAA *hoaa, NcmModel *model, const gdouble t_m_ts, 
     {
       case NCM_HOAA_SING_TYPE_ZERO:
         NV_Ith_S (hoaa->priv->y, NCM_HOAA_VAR_EPSILON) -= lnmnu;
+				NV_Ith_S (hoaa->priv->y, NCM_HOAA_VAR_TS)      *= exp (-0.5 * lnmnu);
 				NV_Ith_S (hoaa->priv->y, NCM_HOAA_VAR_TC)      *= exp (-0.5 * lnmnu);
         break;
       case NCM_HOAA_SING_TYPE_INF:
         NV_Ith_S (hoaa->priv->y, NCM_HOAA_VAR_EPSILON) += lnmnu;
 				NV_Ith_S (hoaa->priv->y, NCM_HOAA_VAR_TS)      *= exp (+0.5 * lnmnu);
+				NV_Ith_S (hoaa->priv->y, NCM_HOAA_VAR_TC)      *= exp (+0.5 * lnmnu);
         break;
       default:
         g_assert_not_reached ();

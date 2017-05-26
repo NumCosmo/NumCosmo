@@ -1891,9 +1891,9 @@ _nc_hicosmo_Vexp_zeta_get_sing_info (NcHIPertIAdiab *iad, const gdouble k, const
   {
     case 0:
       ts[0]    =  0.0;
-      dts_i[0] = -0.1e-2;
-      dts_f[0] = +0.1e-2;
-      st[0]    = NCM_HOAA_SING_TYPE_INF;
+      dts_i[0] = -0.1e+1;
+      dts_f[0] = +0.1e+1;
+      st[0]    = NCM_HOAA_SING_TYPE_ZERO;
       break;
     case 1:
       ts[0]    = Vexp->priv->tau_x0;
