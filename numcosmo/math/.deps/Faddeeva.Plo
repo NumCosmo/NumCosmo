@@ -1,0 +1,28 @@
+math/Faddeeva.lo: math/Faddeeva.c ../config.h math/Faddeeva.h \
+ /usr/include/complex.h /usr/include/sys/cdefs.h \
+ /usr/include/sys/_symbol_aliasing.h \
+ /usr/include/sys/_posix_availability.h \
+ /usr/local/lib/gcc/x86_64-apple-darwin16.5.0/7.1.0/include/float.h \
+ /usr/local/lib/gcc/x86_64-apple-darwin16.5.0/7.1.0/include-fixed/math.h \
+ /usr/include/Availability.h \
+ /usr/local/lib/gcc/x86_64-apple-darwin16.5.0/7.1.0/include-fixed/AvailabilityInternal.h
+
+../config.h:
+
+math/Faddeeva.h:
+
+/usr/include/complex.h:
+
+/usr/include/sys/cdefs.h:
+
+/usr/include/sys/_symbol_aliasing.h:
+
+/usr/include/sys/_posix_availability.h:
+
+/usr/local/lib/gcc/x86_64-apple-darwin16.5.0/7.1.0/include/float.h:
+
+/usr/local/lib/gcc/x86_64-apple-darwin16.5.0/7.1.0/include-fixed/math.h:
+
+/usr/include/Availability.h:
+
+/usr/local/lib/gcc/x86_64-apple-darwin16.5.0/7.1.0/include-fixed/AvailabilityInternal.h:

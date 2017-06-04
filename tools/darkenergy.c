@@ -63,6 +63,7 @@ main (gint argc, gchar *argv[])
   gchar *runconf_cmd_line = NULL;
   gboolean is_de = FALSE;
   gboolean is_gcg = FALSE;
+  gboolean is_idem2 = FALSE;  
   NcmRNG *rng = ncm_rng_pool_get ("darkenergy");
   NcmMSetCatalog *mcat = NULL;
   NcmSerialize *ser = ncm_serialize_global ();
@@ -277,6 +278,8 @@ main (gint argc, gchar *argv[])
     is_de = TRUE;
   else if (g_type_is_a (G_OBJECT_TYPE (cosmo), NC_TYPE_HICOSMO_GCG))
     is_gcg = TRUE;
+  else if (g_type_is_a (G_OBJECT_TYPE (cosmo), NC_TYPE_HICOSMO_IDEM2))
+    is_idem2 = TRUE;
 
   if (de_model.help_names)
   {
@@ -303,6 +306,12 @@ main (gint argc, gchar *argv[])
       ncm_model_param_set (NCM_MODEL (cosmo), NC_HICOSMO_GCG_OMEGA_X, 0.0);
       ncm_mset_param_set_ftype (mset, nc_hicosmo_id (), NC_HICOSMO_GCG_OMEGA_X, NCM_PARAM_TYPE_FIXED);
     }
+    else if (is_idem2)
+    {
+      nc_hicosmo_idem2_omega_x2omega_k (NC_HICOSMO_IDEM2 (cosmo));
+      ncm_model_param_set (NCM_MODEL (cosmo), NC_HICOSMO_IDEM2_OMEGA_X, 0.0);
+      ncm_mset_param_set_ftype (mset, nc_hicosmo_id (), NC_HICOSMO_IDEM2_OMEGA_X, NCM_PARAM_TYPE_FIXED);
+    }
     else
       g_error ("flat option is valid only for darkenergy models");
   }
@@ -318,6 +327,11 @@ main (gint argc, gchar *argv[])
       nc_hicosmo_gcg_omega_x2omega_k (NC_HICOSMO_GCG (cosmo));
       ncm_mset_param_set_ftype (mset, nc_hicosmo_id (), NC_HICOSMO_GCG_OMEGA_X, NCM_PARAM_TYPE_FREE);
     }
+    else if (is_idem2)
+    {
+      nc_hicosmo_idem2_omega_x2omega_k (NC_HICOSMO_IDEM2 (cosmo));
+      ncm_mset_param_set_ftype (mset, nc_hicosmo_id (), NC_HICOSMO_IDEM2_OMEGA_X, NCM_PARAM_TYPE_FREE);
+    }    
     else
       g_error ("omegak option is valid only for darkenergy models");
   }
@@ -331,6 +345,10 @@ main (gint argc, gchar *argv[])
     else if (is_gcg)
     {
       ncm_likelihood_priors_add_flat_param (lh, nc_hicosmo_id (), NC_HICOSMO_GCG_OMEGA_X, 0.0, HUGE_VAL, 1.0);
+    }
+    else if (is_idem2)
+    {
+      ncm_likelihood_priors_add_flat_param (lh, nc_hicosmo_id (), NC_HICOSMO_IDEM2_OMEGA_X, 0.0, HUGE_VAL, 1.0);
     }
     else
       g_error ("omegak > 0 option is valid only for darkenergy models");
