@@ -26,26 +26,38 @@ adiab = Nc.HIPertAdiab.new ()
 gw    = Nc.HIPertGW.new ()
 Vexp  = Nc.HICosmoVexp.new ()
 
-Vexp.props.alphab   = +1.0e-30
-Vexp.props.sigmaphi = +5.0e-1
-Vexp.props.dphi     = -5.0e-2
-Vexp.props.xb       = 1.0e38
-Vexp.props.OmegaL   = 1.0
-Vexp.props.Omegac   = 1.0
-Vexp.props.H0       = 67.8
+if False: # Boa!
+  Vexp.props.alphab   = +11.0e-2
+  Vexp.props.sigmaphi = +6.8e0
+  Vexp.props.dphi     = -5.0e-2
+  Vexp.props.xb       = 4.8e37
+  Vexp.props.OmegaL   = 1.0
+  Vexp.props.Omegac   = 1.0
+  Vexp.props.H0       = 67.8
+else:
+  Vexp.props.alphab   = +1.0e-20
+  Vexp.props.sigmaphi = +8.0e-1
+  Vexp.props.dphi     = -5.0e-1
+  Vexp.props.xb       = 2.0e38
+  Vexp.props.OmegaL   = 1.0
+  Vexp.props.Omegac   = 1.0
+  Vexp.props.H0       = 67.8
 
-k = 1.0e-2
+
+
+k = 1.0e0
 tc = Vexp.tau_xe (1.0e15)
+reltol = 1.0e-14
 
 adiab.set_ti (Vexp.tau_min ())
 adiab.set_tf (tc)
 adiab.set_k (k)
-adiab.set_reltol (1.0e-14)
+adiab.set_reltol (reltol)
 
 gw.set_ti (Vexp.tau_min ())
 gw.set_tf (tc)
 gw.set_k (k)
-gw.set_reltol (1.0e-14)
+gw.set_reltol (reltol)
 
 #If = lambda x: gw.eval_nu (Vexp, x, k) / gw.eval_mnu (Vexp, x, k)
 #print integrate.quad (If, -2.0, 2.0)
@@ -55,6 +67,8 @@ gw.set_reltol (1.0e-14)
 
 print "# Preparing ADIAB"
 adiab.prepare (Vexp)
+
+#exit ()
 
 print "# Preparing GW"
 gw.prepare (Vexp)

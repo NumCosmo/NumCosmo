@@ -25,12 +25,22 @@ Ncm.cfg_init ()
 #
 cosmo = Nc.HICosmo.new_from_name (Nc.HICosmo, "NcHICosmoVexp")
 
-cosmo.props.alphab   = +1.0e-30
-cosmo.props.sigmaphi = +6.0e0
-cosmo.props.dphi     = -3.0e-1
-cosmo.props.xb       = 1.0e40
-cosmo.props.OmegaL   = 1.0
-cosmo.props.Omegac   = 1.0
+if False: # Boa!
+  cosmo.props.alphab   = +11.0e-2
+  cosmo.props.sigmaphi = +6.8e0
+  cosmo.props.dphi     = -5.0e-2
+  cosmo.props.xb       = 4.8e37
+  cosmo.props.OmegaL   = 1.0
+  cosmo.props.Omegac   = 1.0
+  cosmo.props.H0       = 67.8
+else:
+  cosmo.props.alphab   = +1.0e-20
+  cosmo.props.sigmaphi = +8.0e-1
+  cosmo.props.dphi     = -5.0e-1
+  cosmo.props.xb       = 2.0e38
+  cosmo.props.OmegaL   = 1.0
+  cosmo.props.Omegac   = 1.0
+  cosmo.props.H0       = 67.8
 
 #
 #  New cosmological distance objects optimizied to perform calculations
@@ -80,7 +90,7 @@ mylw = 1
 print "# tau_qt_c % 21.15g % 21.15g" % (cosmo.tau_qt_c (), cosmo.tau_qt_e ())
 
 #plt.plot (alpha_a, nu_a,     lw=mylw, label = r'$\nu$')
-#plt.plot (alpha_a, mnu_a,    lw=mylw, label = r'$m\nu$')
+plt.plot (alpha_a, mnu_a,    lw=mylw, label = r'$m\nu$')
 plt.plot (alpha_a, dlnmnu_a, lw=mylw, label = r'$\mathrm{d}\ln(m\nu)/\mathrm{d}\tau$')
 plt.plot (alpha_a, dlnmnu_gw_a, lw=mylw, label = r'$\mathrm{d}\ln(m\nu)_{gw}/\mathrm{d}\tau$')
 plt.plot (alpha_a, Eaa0_a, lw=mylw, label = r'$E$')

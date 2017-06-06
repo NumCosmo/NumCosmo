@@ -312,7 +312,7 @@ G_BEGIN_DECLS
 G_INLINE_FUNC gdouble
 ncm_util_sqrt1px_m1 (const gdouble x)
 {
-  return x / (sqrt(1.0 + x) + 1.0);
+  return x / (sqrt (1.0 + x) + 1.0);
 }
 
 G_INLINE_FUNC gdouble 
