@@ -26,11 +26,12 @@ adiab = Nc.HIPertAdiab.new ()
 gw    = Nc.HIPertGW.new ()
 Vexp  = Nc.HICosmoVexp.new ()
 
-if False: # Boa!
-  Vexp.props.alphab   = +11.0e-2
+if True: # Boa!
+  Vexp.props.alphab   = +1.1007e-1
   Vexp.props.sigmaphi = +6.8e0
   Vexp.props.dphi     = -5.0e-2
-  Vexp.props.xb       = 4.8e37
+#  Vexp.props.xb       = 4.8e37
+  Vexp.props.xb       = 1.0e37
   Vexp.props.OmegaL   = 1.0
   Vexp.props.Omegac   = 1.0
   Vexp.props.H0       = 67.8
@@ -42,8 +43,6 @@ else:
   Vexp.props.OmegaL   = 1.0
   Vexp.props.Omegac   = 1.0
   Vexp.props.H0       = 67.8
-
-
 
 k = 1.0e0
 tc = Vexp.tau_xe (1.0e15)
@@ -87,7 +86,8 @@ print "# Power spectrum at tau_c: PS_ADIAB  = % 21.15e" % Delta_zeta_c
 print "# Power spectrum at tau_c: PS_GW     = % 21.15e" % Delta_h_c
 print "# Power spectrum at tau_c: r         = % 21.15e" % (2.0 * Delta_h_c / Delta_zeta_c)
 
-t_a = np.linspace (t0, t1, 1000000)
+t_a     = np.linspace (t0, t1, 100000)
+alpha_a = []
 
 Delta_zeta  = []
 Delta_Pzeta = []
@@ -119,8 +119,8 @@ for t in t_a:
   (Delta_zeta_v, Delta_Pzeta_v) = adiab.eval_Delta (Vexp, t) 
   (Delta_h_v, Delta_Ph_v)       = gw.eval_Delta (Vexp, t) 
 
-  (zeta_a_v, zeta_b_v, Pzeta_a_v, Pzeta_b_v)  = adiab.eval_QV (Vexp, t) 
-  (h_a_v, h_b_v, Ph_a_v, Ph_b_v)              = gw.eval_QV (Vexp, t) 
+  (zeta_a_v, zeta_b_v, Pzeta_a_v, Pzeta_b_v) = adiab.eval_QV (Vexp, t) 
+  (h_a_v, h_b_v, Ph_a_v, Ph_b_v)             = gw.eval_QV (Vexp, t) 
 
   (epsilon_v, gamma_v, sin_thetab_v, cos_thetab_v) = gw.eval_AA (Vexp, t) 
 
@@ -133,6 +133,14 @@ for t in t_a:
   mnu_adiab    = adiab.eval_mnu (Vexp, t, k)
   m_adiab      = mnu_adiab / nu_adiab
   dlnmnu_adiab = math.fabs (adiab.eval_dlnmnu (Vexp, t, k))
+
+  alpha = 0
+  if t > 0.0:
+    alpha = + 0.5 * t**2 / math.log (10.0)
+  else:
+    alpha = - 0.5 * t**2 / math.log (10.0)
+
+  alpha_a.append (alpha)
 
   nu_a.append (nu_adiab)
   m_a.append (m_adiab)
@@ -168,27 +176,27 @@ zeta_b_a  = np.array (zeta_b_a)
 Pzeta_a_a = np.array (Pzeta_a_a)
 Pzeta_b_a = np.array (Pzeta_b_a)
 
-#plt.plot (t_a, Delta_zeta, lw=mylw, label = r'$\Delta_{\zeta}$')
-#plt.plot (t_a, Delta_h,    lw=mylw, label = r'$\Delta_{h}$')
+#plt.plot (alpha_a, Delta_zeta, lw=mylw, label = r'$\Delta_{\zeta}$')
+#plt.plot (alpha_a, Delta_h,    lw=mylw, label = r'$\Delta_{h}$')
 
-plt.plot (t_a, zeta_a_a, lw=mylw, label = r'$\tilde{\zeta}^a$')
-plt.plot (t_a, zeta_b_a, lw=mylw, label = r'$\tilde{\zeta}^b$')
-plt.plot (t_a, h_a_a,    lw=mylw, label = r'$\tilde{h}^a$')
-plt.plot (t_a, h_b_a,    lw=mylw, label = r'$\tilde{h}^b$')
+plt.plot (alpha_a, zeta_a_a, lw=mylw, label = r'$\tilde{\zeta}^a$')
+plt.plot (alpha_a, zeta_b_a, lw=mylw, label = r'$\tilde{\zeta}^b$')
+plt.plot (alpha_a, h_a_a,    lw=mylw, label = r'$\tilde{h}^a$')
+plt.plot (alpha_a, h_b_a,    lw=mylw, label = r'$\tilde{h}^b$')
 
-#plt.plot (t_a, epsilon_a,    lw=mylw, label = r'$\epsilon$')
-#plt.plot (t_a, gamma_a,      lw=mylw, label = r'$\gamma$')
-#plt.plot (t_a, sin_thetab_a, lw=mylw, label = r'$\sin(\theta_b)$')
-#plt.plot (t_a, cos_thetab_a, lw=mylw, label = r'$\cos(\theta_b)$')
+#plt.plot (alpha_a, epsilon_a,    lw=mylw, label = r'$\epsilon$')
+#plt.plot (alpha_a, gamma_a,      lw=mylw, label = r'$\gamma$')
+#plt.plot (alpha_a, sin_thetab_a, lw=mylw, label = r'$\sin(\theta_b)$')
+#plt.plot (alpha_a, cos_thetab_a, lw=mylw, label = r'$\cos(\theta_b)$')
 
-#plt.plot (t_a, nu_a,     lw=mylw, label = r'$\nu_h$')
-#plt.plot (t_a, m_a,      lw=mylw, label = r'$m_h$')
-#plt.plot (t_a, mnu_a,    lw=mylw, label = r'$m_h\nu_h$')
-#plt.plot (t_a, 1.0 / (np.array (mnu_a)),    lw=mylw, label = r'$(m_h\nu_h)^{-1}$')
-#plt.plot (t_a, dlnmnu_a, lw=mylw, label = r'$d\ln(m_h\nu_h)$')
+#plt.plot (alpha_a, nu_a,     lw=mylw, label = r'$\nu_h$')
+#plt.plot (alpha_a, m_a,      lw=mylw, label = r'$m_h$')
+#plt.plot (alpha_a, mnu_a,    lw=mylw, label = r'$m_h\nu_h$')
+#plt.plot (alpha_a, 1.0 / (np.array (mnu_a)),    lw=mylw, label = r'$(m_h\nu_h)^{-1}$')
+#plt.plot (alpha_a, dlnmnu_a, lw=mylw, label = r'$d\ln(m_h\nu_h)$')
 
-#plt.plot (t_a, (Ph_a_a * h_b_a), lw=mylw, label = r't_1')
-#plt.plot (t_a, (Ph_b_a * h_a_a), lw=mylw, label = r't_2')
+#plt.plot (alpha_a, (Ph_a_a * h_b_a), lw=mylw, label = r't_1')
+#plt.plot (alpha_a, (Ph_b_a * h_a_a), lw=mylw, label = r't_2')
 
 plt.grid (b=True, which='both', linestyle=':', color='0.75', linewidth=0.5)
 leg = plt.legend (loc="upper left")

@@ -129,7 +129,7 @@ struct _NcmHOAAPrivate
   gdouble tc;
   gdouble t_ad_0, t_ad_1;
   gdouble t_na_0, t_na_1;
-  GArray *t, *t_m_ts, *upsilon, *gamma, *qbar, *pbar;
+  GArray *t, *t_m_ts, *sing_qbar, *sing_pbar, *upsilon, *gamma, *qbar, *pbar;
   NcmSpline *upsilon_s, *gamma_s, *qbar_s, *pbar_s;
   gdouble sigma0;
 };
@@ -183,6 +183,8 @@ ncm_hoaa_init (NcmHOAA *hoaa)
 
   hoaa->priv->t         = g_array_new (TRUE, TRUE, sizeof (gdouble));
   hoaa->priv->t_m_ts    = g_array_new (TRUE, TRUE, sizeof (gdouble));
+  hoaa->priv->sing_qbar = g_array_new (TRUE, TRUE, sizeof (gdouble));
+  hoaa->priv->sing_pbar = g_array_new (TRUE, TRUE, sizeof (gdouble));
   hoaa->priv->upsilon   = g_array_new (TRUE, TRUE, sizeof (gdouble));
   hoaa->priv->gamma     = g_array_new (TRUE, TRUE, sizeof (gdouble));
   hoaa->priv->qbar      = g_array_new (TRUE, TRUE, sizeof (gdouble));
@@ -283,12 +285,14 @@ _ncm_hoaa_dispose (GObject *object)
   ncm_spline_clear (&hoaa->priv->qbar_s);
   ncm_spline_clear (&hoaa->priv->pbar_s);
   
-  g_clear_pointer (&hoaa->priv->t,       (GDestroyNotify) g_array_unref);
-  g_clear_pointer (&hoaa->priv->t_m_ts,  (GDestroyNotify) g_array_unref);
-  g_clear_pointer (&hoaa->priv->upsilon, (GDestroyNotify) g_array_unref);
-  g_clear_pointer (&hoaa->priv->gamma,   (GDestroyNotify) g_array_unref);
-  g_clear_pointer (&hoaa->priv->qbar,    (GDestroyNotify) g_array_unref);
-  g_clear_pointer (&hoaa->priv->pbar,    (GDestroyNotify) g_array_unref);
+  g_clear_pointer (&hoaa->priv->t,         (GDestroyNotify) g_array_unref);
+  g_clear_pointer (&hoaa->priv->t_m_ts,    (GDestroyNotify) g_array_unref);
+  g_clear_pointer (&hoaa->priv->sing_qbar, (GDestroyNotify) g_array_unref);
+  g_clear_pointer (&hoaa->priv->sing_pbar, (GDestroyNotify) g_array_unref);
+  g_clear_pointer (&hoaa->priv->upsilon,   (GDestroyNotify) g_array_unref);
+  g_clear_pointer (&hoaa->priv->gamma,     (GDestroyNotify) g_array_unref);
+  g_clear_pointer (&hoaa->priv->qbar,      (GDestroyNotify) g_array_unref);
+  g_clear_pointer (&hoaa->priv->pbar,      (GDestroyNotify) g_array_unref);
   
   /* Chain up : end */
   G_OBJECT_CLASS (ncm_hoaa_parent_class)->dispose (object);
@@ -1581,14 +1585,12 @@ _ncm_hoaa_evol_save (NcmHOAA *hoaa, NcmModel *model, const gdouble tf)
       const gdouble upsilon = NV_Ith_S (hoaa->priv->y, NCM_HOAA_VAR_UPSILON);
       const gdouble gamma   = NV_Ith_S (hoaa->priv->y, NCM_HOAA_VAR_GAMMA);
 
-      if (FALSE)
+      if (NCM_HOAA_DEBUG_EVOL)
       {
-        /*printf ("% 22.15g % 22.15g % 22.15g % 22.15g % 22.15g % 22.15g % 22.15g\n", hoaa->priv->t_cur, upsilon, gamma, qbar, pbar, sqrt (cosh (upsilon)) * qbar, sqrt (cosh (upsilon)) * pbar);*/
         const gdouble mnu         = ncm_hoaa_eval_mnu (hoaa, model, hoaa->priv->t_cur, hoaa->k);
         const gdouble lnmnu       = log (mnu);
         const gdouble ch_lnmnu    = cosh (lnmnu);
         const gdouble pbar2_qbar2 = hypot (upsilon, 1.0 / ch_lnmnu);
-
         gdouble q, v, Pq, Pv;
 
         ncm_hoaa_eval_AA2QV (hoaa, model, hoaa->priv->t_cur, upsilon, gamma, qbar, pbar, &q, &v, &Pq, &Pv);
@@ -1631,7 +1633,7 @@ _ncm_hoaa_find_parabolic_cut (NcmVector *x_v, NcmVector *y_v, const gdouble tol,
   gdouble c0, c1, cov00, cov01, cov11, sumsq, sigma;
   const gint n         = ncm_vector_len (x_v);
   gint lb              = 0;
-  gint ub              = n - 4;
+  gint ub              = n - NCM_HOAA_PARABOLIC_MIN_POINTS;
   const gdouble sigmab = _ncm_hoaa_find_parabolic_cut_sigma (x_v, y_v, n, ub, &c0, &c1, &cov00, &cov01, &cov11, &sumsq);
 
   best_i[0] = ub;
@@ -1647,10 +1649,12 @@ _ncm_hoaa_find_parabolic_cut (NcmVector *x_v, NcmVector *y_v, const gdouble tol,
 
     sigma = _ncm_hoaa_find_parabolic_cut_sigma (x_v, y_v, n, i, &c0, &c1, &cov00, &cov01, &cov11, &sumsq);
 
-    if (sigma < sigmab * 1.0e1)
+    if (sigma < tol)
     {
-      /*printf ("#  PASS [%d %d] => [%d %d] (% 22.15g % 22.15g)\n", lb, ub, lb, i, sigma, sigmab);*/
-      ub = i;
+			if (NCM_HOAA_DEBUG_SING)
+				printf ("#  PASS [%d %d] => [%d %d] (% 22.15g % 22.15g)\n", lb, ub, lb, i, sigma, sigmab);
+
+			ub = i;
 
       best_i[0] = i;
       bc0[0]    = c0;
@@ -1658,7 +1662,9 @@ _ncm_hoaa_find_parabolic_cut (NcmVector *x_v, NcmVector *y_v, const gdouble tol,
     }
     else
     {
-      /*printf ("# !PASS [%d %d] => [%d %d] (% 22.15g % 22.15g)\n", lb, ub, i, ub, sigma, sigmab);*/
+			if (NCM_HOAA_DEBUG_SING)
+				printf ("# !PASS [%d %d] => [%d %d] (% 22.15g % 22.15g)\n", lb, ub, i, ub, sigma, sigmab);
+			
       lb = i;
     }
 
@@ -1683,7 +1689,7 @@ _ncm_hoaa_find_parabolic_cut_sigma (NcmVector *x_v, NcmVector *y_v, const gint n
     sigma2 += gsl_pow_2 ((c0[0] + ncm_vector_get (x_v, i + j) * c1[0]) / ncm_vector_get (y_v, i + j) - 1.0);
   }
   
-  if (FALSE)
+  if (NCM_HOAA_DEBUG_SING)
   {
     const gdouble ti = ncm_vector_get (x_v, i);
     printf ("# FIT: %d % 22.15g % 22.15g % 22.15g % 22.15g % 22.15g % 22.15g % 22.15g % 22.15e % 22.15e % 22.15e\n", 
@@ -1699,13 +1705,11 @@ _ncm_hoaa_find_parabolic_cut_sigma (NcmVector *x_v, NcmVector *y_v, const gint n
 void
 _ncm_hoaa_evol_sing_save (NcmHOAA *hoaa, NcmModel *model, const gdouble t_m_ts, const guint sing, const gdouble ts, const NcmHOAASingType st)
 {
-  NcmHOAAArg arg = {hoaa, model, 0.0, sing, st};
-  gdouble last_t = -1.0e100;
+  NcmHOAAArg arg         = {hoaa, model, 0.0, sing, st};
+  gdouble last_t         = -1.0e100;
+  gboolean check_turning = TRUE;
   gdouble tstep_m_ts;
   gint flag;
-  const gint first_point = hoaa->priv->t->len;
-  gint last_neg_point;
-  gboolean check_turning = TRUE;
 
   g_assert_cmpfloat (t_m_ts + ts, >, hoaa->priv->t_cur);
 
@@ -1723,7 +1727,9 @@ _ncm_hoaa_evol_sing_save (NcmHOAA *hoaa, NcmModel *model, const gdouble t_m_ts, 
   NCM_CVODE_CHECK (&flag, "ARKodeSetUserData", 1, );
 #endif /* HAVE_SUNDIALS_ARKODE */
 
-  g_array_set_size (hoaa->priv->t_m_ts, 0);
+  g_array_set_size (hoaa->priv->t_m_ts,    0);
+	g_array_set_size (hoaa->priv->sing_qbar, 0);
+  g_array_set_size (hoaa->priv->sing_pbar, 0);
   
   while (TRUE)
   {
@@ -1745,47 +1751,45 @@ _ncm_hoaa_evol_sing_save (NcmHOAA *hoaa, NcmModel *model, const gdouble t_m_ts, 
       const gdouble upsilon = NV_Ith_S (hoaa->priv->y, NCM_HOAA_VAR_UPSILON);
       const gdouble gamma   = NV_Ith_S (hoaa->priv->y, NCM_HOAA_VAR_GAMMA);
 
-      if (tstep_m_ts > 0.0 && check_turning)
+      if ((tstep_m_ts > 0.0) && check_turning)
       {
-        //const gdouble fpt_m_ts = tstep_m_ts;
-        gint n;
+        gint n = hoaa->priv->t_m_ts->len;
 
-        last_neg_point = hoaa->priv->t->len - 1;
-        
-        if ((n = (last_neg_point - first_point)) > 10)
+        if (n > NCM_HOAA_PARABOLIC_MIN_POINTS)
         {
           const gdouble hypot_qbar_pbar = hypot (qbar, pbar);
           const gdouble sin_thetab      = qbar / hypot_qbar_pbar;
           const gdouble cos_thetab      = pbar / hypot_qbar_pbar;
-          gdouble *x                    = &g_array_index (hoaa->priv->t_m_ts, gdouble, 0);
-          gdouble *y                    = NULL;
+          GArray *x                     = hoaa->priv->t_m_ts;
+          GArray *y                     = NULL;
           gboolean cos_dom              = FALSE;
 
-          if (fabs (cos_thetab) > 0.999)
+          if (fabs (cos_thetab) > NCM_HOAA_PARABOLIC_TRIG_ONE)
           {
-            y       = &g_array_index (hoaa->priv->qbar, gdouble, first_point);
+            y       = hoaa->priv->sing_qbar;
             cos_dom = TRUE;
           }
-          else if (fabs (sin_thetab) > 0.999)
+          else if (fabs (sin_thetab) > NCM_HOAA_PARABOLIC_TRIG_ONE)
           {
-            y       = &g_array_index (hoaa->priv->pbar, gdouble, first_point);
+            y       = hoaa->priv->sing_pbar;
             cos_dom = FALSE;
           }
 
           if (y != NULL)
           {
-            NcmVector *x_v = ncm_vector_new_data_static (x, n, 1); 
-            NcmVector *y_v = ncm_vector_new_data_dup (y, n, 1); 
+            NcmVector *x_v = ncm_vector_new_array (x); 
+            NcmVector *y_v = ncm_vector_new_array (y); 
             gint best_i;
             gdouble bc0, bc1;
             
             ncm_vector_div (y_v, x_v);
 
-            if (_ncm_hoaa_find_parabolic_cut (x_v, y_v, hoaa->priv->reltol * 1.0e2, &best_i, &bc0, &bc1))
+            if (_ncm_hoaa_find_parabolic_cut (x_v, y_v, hoaa->priv->reltol * 1.0e3, &best_i, &bc0, &bc1))
             {
               const gdouble tfp_m_ts = GSL_MIN (-g_array_index (hoaa->priv->t_m_ts, gdouble, best_i), t_m_ts);
 
-              printf ("# Skipping from % 22.15g to % 22.15g\n", tstep_m_ts, tfp_m_ts);
+							if (NCM_HOAA_DEBUG_SING)
+								printf ("# Skipping from % 22.15g to % 22.15g\n", tstep_m_ts, tfp_m_ts);
               
               if (cos_dom)
                 NV_Ith_S (hoaa->priv->y, NCM_HOAA_VAR_QBAR) = tfp_m_ts * (tfp_m_ts * bc1 + bc0);
@@ -1801,8 +1805,23 @@ _ncm_hoaa_evol_sing_save (NcmHOAA *hoaa, NcmModel *model, const gdouble t_m_ts, 
         }
         check_turning = FALSE;
       }
-      
-			if (FALSE)
+
+			g_array_append_val (hoaa->priv->t_m_ts,    tstep_m_ts);
+			g_array_append_val (hoaa->priv->sing_qbar, qbar);
+			g_array_append_val (hoaa->priv->sing_pbar, pbar);
+
+      if (hoaa->priv->t_cur > last_t + fabs (last_t) * NCM_HOAA_TIME_FRAC)
+      {
+        g_array_append_val (hoaa->priv->t,       hoaa->priv->t_cur);
+        g_array_append_val (hoaa->priv->upsilon, upsilon);
+        g_array_append_val (hoaa->priv->gamma,   gamma);
+        g_array_append_val (hoaa->priv->qbar,    qbar);
+        g_array_append_val (hoaa->priv->pbar,    pbar);
+        
+        last_t = hoaa->priv->t_cur;
+      }          
+
+			if (NCM_HOAA_DEBUG_EVOL_SING)
 			{
         const gdouble ch_lnmnu    = cosh (lnmnu);
         const gdouble pbar2_qbar2 = hypot (upsilon, 1.0 / ch_lnmnu);
@@ -1826,25 +1845,15 @@ _ncm_hoaa_evol_sing_save (NcmHOAA *hoaa, NcmModel *model, const gdouble t_m_ts, 
                 (2.0 * nu * qbar * dlnmnu + pbar * gsl_pow_2 (dlnmnu) )
                 );
       }
-      
-      if (hoaa->priv->t_cur > last_t + fabs (last_t) * NCM_HOAA_TIME_FRAC)
-      {
-        g_array_append_val (hoaa->priv->t,       hoaa->priv->t_cur);
-        g_array_append_val (hoaa->priv->t_m_ts,  tstep_m_ts);
-        g_array_append_val (hoaa->priv->upsilon, upsilon);
-        g_array_append_val (hoaa->priv->gamma,   gamma);
-        g_array_append_val (hoaa->priv->qbar,    qbar);
-        g_array_append_val (hoaa->priv->pbar,    pbar);
-        
-        last_t = hoaa->priv->t_cur;
-      }          
-
+			
       if (tstep_m_ts == t_m_ts)
         break;
     }
   }
 
-  g_array_set_size (hoaa->priv->t_m_ts, 0);
+	g_array_set_size (hoaa->priv->t_m_ts,    0);
+	g_array_set_size (hoaa->priv->sing_qbar, 0);
+  g_array_set_size (hoaa->priv->sing_pbar, 0);
 }
 
 gdouble 
