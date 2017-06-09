@@ -168,7 +168,7 @@ G_INLINE_FUNC gdouble ncm_hoaa_eval_powspec_factor (NcmHOAA *hoaa, NcmModel *mod
 
 #define NCM_HOAA_TIME_FRAC (1.0e-13)
 #define NCM_HOAA_DEBUG_EVOL (FALSE)
-#define NCM_HOAA_DEBUG_SING (TRUE)
+#define NCM_HOAA_DEBUG_SING (FALSE)
 #define NCM_HOAA_DEBUG_EVOL_SING (FALSE)
 #define NCM_HOAA_PARABOLIC_MIN_POINTS (4)
 #define NCM_HOAA_PARABOLIC_TRIG_ONE (0.999)

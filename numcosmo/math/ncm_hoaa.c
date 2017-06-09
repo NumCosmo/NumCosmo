@@ -829,7 +829,7 @@ _ncm_hoaa_dlnmnu_only_f (realtype t, N_Vector y, N_Vector ydot, gpointer f_data)
     NV_Ith_S (ydot, NCM_HOAA_VAR_UPSILON) = - 2.0 * dlnmnu * (pbar2 / one_p_ch_v_ch_u - qbar2 / one_p_ch_u_ch_v);
     NV_Ith_S (ydot, NCM_HOAA_VAR_GAMMA)   = - 2.0 * dlnmnu * qbar * pbar * exp (lnch_lnmnu - 2.0 * lnch_epsilon);
 	}
-  
+
   return 0;
 }
 

@@ -97,6 +97,9 @@ gdouble nc_hicosmo_Vexp_x_tau (NcHICosmoVexp *Vexp, const gdouble tau);
 gdouble nc_hicosmo_Vexp_tau_xe (NcHICosmoVexp *Vexp, const gdouble xe);
 gdouble nc_hicosmo_Vexp_tau_xc (NcHICosmoVexp *Vexp, const gdouble xc);
 
+gdouble nc_hicosmo_Vexp_alpha (NcHICosmoVexp *Vexp, const gdouble tau);
+gdouble nc_hicosmo_Vexp_phi (NcHICosmoVexp *Vexp, const gdouble tau);
+gdouble nc_hicosmo_Vexp_Ricci_scale (NcHICosmoVexp *Vexp, const gdouble tau);
 void nc_hicosmo_Vexp_x_y (NcHICosmoVexp *Vexp, const gdouble tau, gdouble *x, gdouble *y);
 
 #define NC_HICOSMO_VEXP_DEFAULT_H0 (70.0)

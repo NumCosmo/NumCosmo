@@ -1641,6 +1641,13 @@ ncm_model_check_impl_opts (NcmModel *model, gint opt1, ...)
  *
  */
 /**
+ * ncm_model_state_mark_outdated:
+ * @model: a #NcmModel
+ *
+ * FIXME
+ *
+ */
+/**
  * ncm_model_sparam_len:
  * @model: a #NcmModel
  *
