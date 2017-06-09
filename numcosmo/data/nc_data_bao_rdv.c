@@ -289,6 +289,9 @@ nc_data_bao_rdv_new_from_id (NcDistance *dist, NcDataBaoId id)
     case NC_DATA_BAO_RDV_KAZIN2014:
       filename = ncm_cfg_get_data_filename ("nc_data_bao_rdv_kazin2014.obj", TRUE);
       break;
+    case NC_DATA_BAO_RDV_BOSS_QSO_ATA2017:
+      filename = ncm_cfg_get_data_filename ("nc_data_bao_rdv_boss_qso_ata2017.obj", TRUE);
+      break;
     default:
       g_error ("nc_data_bao_rdv_new_from_id: id %d not recognized.", id);
       break;

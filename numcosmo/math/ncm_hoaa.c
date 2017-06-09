@@ -1270,7 +1270,7 @@ _ncm_hoaa_prepare_integrator_sing (NcmHOAA *hoaa, NcmModel *model, const gdouble
     flag = CVDlsSetDenseJacFn (hoaa->priv->cvode_sing, J);
     NCM_CVODE_CHECK (&flag, "CVDlsSetDenseJacFn", 1, );
 
--    flag = CVodeSetMaxErrTestFails (hoaa->priv->cvode_sing, 100);
+    flag = CVodeSetMaxErrTestFails (hoaa->priv->cvode_sing, 100);
     NCM_CVODE_CHECK (&flag, "CVodeSetMaxErrTestFails", 1, );
 
     hoaa->priv->cvode_sing_init = TRUE;
