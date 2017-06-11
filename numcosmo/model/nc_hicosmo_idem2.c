@@ -2,12 +2,12 @@
  *            nc_hicosmo_idem2.c
  *
  *  Wed March 08 13:48:46 2017
- *  Copyright  2017  Sandro Dias Pinto Vitenti
- *  <sandro@isoftware.com.br>
+ *  Copyright  2017  Rodrigo vom Marttens
+ *  <rodrigovonmarttens@gmail.com>
  ****************************************************************************/
 /*
  * numcosmo
- * Copyright (C) Sandro Dias Pinto Vitenti 2017 <sandro@isoftware.com.br>
+ * Copyright (C) Rodrigo vom Marttens 2017 <rodrigovonmarttens@gmail.com>
  * numcosmo is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or

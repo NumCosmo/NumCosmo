@@ -57,7 +57,7 @@ typedef gdouble (*NcHICosmoGCGFunc1) (NcHICosmoGCG *cosmo_gcg, gdouble z);
  * @NC_HICOSMO_GCG_HE_YP: FIXME
  * @NC_HICOSMO_GCG_ENNU: FIXME
  * @NC_HICOSMO_GCG_OMEGA_B: FIXME
- * @NC_HICOSMO_GCG_ALPHA: FIXME
+ * @NC_HICOSMO_GCG_GAMMA: FIXME
  *
  * FIXME
  *
@@ -71,7 +71,7 @@ typedef enum _NcHICosmoGCGParams
   NC_HICOSMO_GCG_HE_YP,
   NC_HICOSMO_GCG_ENNU,
   NC_HICOSMO_GCG_OMEGA_B,    
-  NC_HICOSMO_GCG_ALPHA,    /*< private >*/
+  NC_HICOSMO_GCG_GAMMA,    /*< private >*/
   NC_HICOSMO_GCG_SPARAM_LEN, /*< skip >*/
 } NcHICosmoGCGParams;
 
@@ -101,7 +101,7 @@ typedef enum _NcHICosmoGCGVParams
 #define NC_HICOSMO_GCG_DEFAULT_T_GAMMA0  (2.7245)
 #define NC_HICOSMO_GCG_DEFAULT_HE_YP     (0.24)
 #define NC_HICOSMO_GCG_DEFAULT_ENNU      (3.046)
-#define NC_HICOSMO_GCG_DEFAULT_ALPHA     (0.0)
+#define NC_HICOSMO_GCG_DEFAULT_GAMMA     (0.0)
 #define NC_HICOSMO_GCG_DEFAULT_NU_MASS   (1.0e-5)
 #define NC_HICOSMO_GCG_DEFAULT_NU_T      (0.71611)
 #define NC_HICOSMO_GCG_DEFAULT_NU_MU     (0.0)
