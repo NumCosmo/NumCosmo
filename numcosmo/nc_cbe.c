@@ -1914,7 +1914,7 @@ nc_cbe_compare_bg (NcCBE *cbe, NcHICosmo *cosmo, gboolean log_cmp)
       const gdouble rho_crit   = E2 * RH_pow_m2;
 
       {
-        const gdouble a_diff          = fabs (nc_scalefactor_a_eta (cbe->a, eta) / pvecback[pba->index_bg_a] - 1.0);
+        const gdouble a_diff          = fabs (nc_scalefactor_eval_a_eta (cbe->a, eta) / pvecback[pba->index_bg_a] - 1.0);
         const gdouble H_diff          = fabs (H / pvecback[pba->index_bg_H] - 1.0);
         const gdouble Hprime_diff     = fabs (H_prime / pvecback[pba->index_bg_H_prime] - 1.0);
 

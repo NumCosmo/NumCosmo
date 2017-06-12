@@ -608,7 +608,7 @@ nc_scalefactor_init_cvode (NcScalefactor *a, NcHICosmo *cosmo)
 }
 
 /**
- * nc_scalefactor_z_eta:
+ * nc_scalefactor_eval_z_eta:
  * @a: a #NcScalefactor
  * @eta: conformal time $\eta$
  *
@@ -618,13 +618,13 @@ nc_scalefactor_init_cvode (NcScalefactor *a, NcHICosmo *cosmo)
  * Returns: $z(\eta)$.
  */
 gdouble
-nc_scalefactor_z_eta (NcScalefactor *a, const gdouble eta)
+nc_scalefactor_eval_z_eta (NcScalefactor *a, const gdouble eta)
 {
   return -ncm_spline_eval (a->a_eta, eta);
 }
 
 /**
- * nc_scalefactor_eta_z:
+ * nc_scalefactor_eval_eta_z:
  * @a: a #NcScalefactor
  * @z: redshift $z$
  *
@@ -634,13 +634,13 @@ nc_scalefactor_z_eta (NcScalefactor *a, const gdouble eta)
  * Returns: $\eta(z)$.
  */
 gdouble
-nc_scalefactor_eta_z (NcScalefactor *a, const gdouble z)
+nc_scalefactor_eval_eta_z (NcScalefactor *a, const gdouble z)
 {
   return ncm_spline_eval (a->eta_a, - z);
 }
 
 /**
- * nc_scalefactor_eta_x:
+ * nc_scalefactor_eval_eta_x:
  * @a: a #NcScalefactor
  * @x: redshift x variable $x = 1 + z$
  *
@@ -650,13 +650,13 @@ nc_scalefactor_eta_z (NcScalefactor *a, const gdouble z)
  * Returns: $\eta(z(x))$.
  */
 gdouble
-nc_scalefactor_eta_x (NcScalefactor *a, const gdouble x)
+nc_scalefactor_eval_eta_x (NcScalefactor *a, const gdouble x)
 {
   return ncm_spline_eval (a->eta_a, -(x - 1.0));
 }
 
 /**
- * nc_scalefactor_a_eta:
+ * nc_scalefactor_eval_a_eta:
  * @a: a #NcScalefactor
  * @eta: conformal time $\eta$
  *
@@ -666,7 +666,7 @@ nc_scalefactor_eta_x (NcScalefactor *a, const gdouble x)
  * Returns: $a(\eta)$.
  */
 gdouble
-nc_scalefactor_a_eta (NcScalefactor *a, const gdouble eta)
+nc_scalefactor_eval_a_eta (NcScalefactor *a, const gdouble eta)
 {
   gdouble mz;
   mz = ncm_spline_eval (a->a_eta, eta);
@@ -674,7 +674,7 @@ nc_scalefactor_a_eta (NcScalefactor *a, const gdouble eta)
 }
 
 /**
- * nc_scalefactor_t_eta:
+ * nc_scalefactor_eval_t_eta:
  * @a: a #NcScalefactor
  * @eta: conformal time $\eta$
  *
@@ -684,13 +684,13 @@ nc_scalefactor_a_eta (NcScalefactor *a, const gdouble eta)
  * Returns: $t(\eta)$.
  */
 gdouble 
-nc_scalefactor_t_eta (NcScalefactor *a, const gdouble eta)
+nc_scalefactor_eval_t_eta (NcScalefactor *a, const gdouble eta)
 {
   return ncm_spline_eval (a->t_eta, eta);
 }
 
 /**
- * nc_scalefactor_eta_t:
+ * nc_scalefactor_eval_eta_t:
  * @a: a #NcScalefactor
  * @t: cosmic time $t$
  *
@@ -700,7 +700,7 @@ nc_scalefactor_t_eta (NcScalefactor *a, const gdouble eta)
  * Returns: $\eta(t)$.
  */
 gdouble 
-nc_scalefactor_eta_t (NcScalefactor *a, const gdouble t)
+nc_scalefactor_eval_eta_t (NcScalefactor *a, const gdouble t)
 {
   return ncm_spline_eval (a->eta_t, t);
 }

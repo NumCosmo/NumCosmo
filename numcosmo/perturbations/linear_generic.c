@@ -548,7 +548,7 @@ printf ("%.15g %.15g %.15g %.15g %.15g %.15g %.15g %.15g %.15g\n",
 #ifdef _NC_USE_CUTOFF
     if (_NC_USE_CUTOFF_TEST)
     {
-      const gdouble keta = pert->pws->k * nc_scalefactor_eta_x (pert->a, x);
+      const gdouble keta = pert->pws->k * nc_scalefactor_eval_eta_x (pert->a, x);
       _NC_DTHETA(i) = kx_E * (_NC_THETA(i-1) - (i + 1.0) * _NC_THETA(i) / keta) + taubar * _NC_THETA(i);
       _NC_DTHETA_P(i) = kx_E * (_NC_THETA_P(i-1) - (i + 1.0) * _NC_THETA_P(i) / keta) + taubar * _NC_THETA_P(i);
     }
@@ -566,7 +566,7 @@ printf ("%.15g %.15g %.15g %.15g %.15g %.15g %.15g %.15g %.15g\n",
 
   if (FALSE)
   {
-    const gdouble eta = nc_scalefactor_eta_x (pert->a, x);
+    const gdouble eta = nc_scalefactor_eval_eta_x (pert->a, x);
     const gdouble keta = pert->pws->k * eta;
 
     guint n = 16;
@@ -766,7 +766,7 @@ LINEAR_NAME_SUFFIX (band_J) (LINEAR_JAC_PARAMS)
 #ifdef _NC_USE_CUTOFF
     if (_NC_USE_CUTOFF_TEST)
     {
-      const gdouble keta = pert->pws->k * nc_scalefactor_eta_x (pert->a, x);
+      const gdouble keta = pert->pws->k * nc_scalefactor_eval_eta_x (pert->a, x);
 
       LINEAR_MATRIX_E (J, NC_PERT_THETA(i), NC_PERT_THETA(i-1)) = kx_E;
       LINEAR_MATRIX_E (J, NC_PERT_THETA(i), NC_PERT_THETA(i))   = -(i + 1.0) * kx_E / keta + taubar;
