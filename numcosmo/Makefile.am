@@ -420,7 +420,7 @@ nc_sources = \
 	nc_planck_fi_cor_ttteee.c     \
 	nc_cbe_precision.c            \
 	nc_cbe.c                      \
-	model/nc_hicosmo_idem2.c      \	
+	model/nc_hicosmo_idem2.c      \
 	model/nc_hicosmo_gcg.c        \
 	model/nc_hicosmo_de.c         \
 	model/nc_hicosmo_de_reparam_ok.c \
