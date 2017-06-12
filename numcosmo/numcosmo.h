@@ -67,6 +67,7 @@
 #include <numcosmo/perturbations/nc_hipert_boltzmann_cbe.h>
 
 /* Model implementations */
+#include <numcosmo/model/nc_hicosmo_idem2.h>
 #include <numcosmo/model/nc_hicosmo_gcg.h>
 #include <numcosmo/model/nc_hicosmo_de.h>
 #include <numcosmo/model/nc_hicosmo_de_reparam_ok.h>
