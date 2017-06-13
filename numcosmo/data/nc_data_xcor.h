@@ -67,37 +67,37 @@ typedef struct _NcDataXcor NcDataXcor;
 
 struct _NcDataXcor
 {
-	/*< private >*/
-	NcmDataGaussCov parent_instance;
+  /*< private >*/
+  NcmDataGaussCov parent_instance;
 
-	guint nobs;
+  guint nobs;
 
-	NcXcorAB* xcab[NC_DATA_XCOR_MAX][NC_DATA_XCOR_MAX];
+  NcXcorAB* xcab[NC_DATA_XCOR_MAX][NC_DATA_XCOR_MAX];
 
-	NcmObjArray* xcab_oa;
-	// guint xcab_oa_idx[NC_DATA_XCOR_MAX * NC_DATA_XCOR_MAX][2];
-	// guint xcab_oa_ctr;
+  NcmObjArray* xcab_oa;
+  // guint xcab_oa_idx[NC_DATA_XCOR_MAX * NC_DATA_XCOR_MAX][2];
+  // guint xcab_oa_ctr;
 
-	gint xcidx[NC_DATA_XCOR_MAX][NC_DATA_XCOR_MAX];
-	guint xcidx_ctr;
+  gint xcidx[NC_DATA_XCOR_MAX][NC_DATA_XCOR_MAX];
+  guint xcidx_ctr;
 
-	// gboolean X_init;
-	NcmMatrix* X1; //[NC_DATA_XCOR_MAX_NOBS][NC_DATA_XCOR_MAX_NOBS][NC_DATA_XCOR_MAX_NOBS][NC_DATA_XCOR_MAX_NOBS];
-	NcmMatrix* X2; //[NC_DATA_XCOR_MAX_NOBS][NC_DATA_XCOR_MAX_NOBS][NC_DATA_XCOR_MAX_NOBS][NC_DATA_XCOR_MAX_NOBS]; /* X matrices (=mask dependent, cosmology independent part of the covariances <C_l^{a,b}C_l'^{c,d}>) */
+  // gboolean X_init;
+  NcmMatrix* X1; //[NC_DATA_XCOR_MAX_NOBS][NC_DATA_XCOR_MAX_NOBS][NC_DATA_XCOR_MAX_NOBS][NC_DATA_XCOR_MAX_NOBS];
+  NcmMatrix* X2; //[NC_DATA_XCOR_MAX_NOBS][NC_DATA_XCOR_MAX_NOBS][NC_DATA_XCOR_MAX_NOBS][NC_DATA_XCOR_MAX_NOBS]; /* X matrices (=mask dependent, cosmology independent part of the covariances <C_l^{a,b}C_l'^{c,d}>) */
 
-	NcmVector* pcl;
-	NcmMatrix* pcov;
+  NcmVector* pcl;
+  NcmMatrix* pcov;
 
-	NcXcor* xc;
+  NcXcor* xc;
 
-	NcmModelCtrl* cosmo_ctrl;
-	GPtrArray* xclk_ctrl;
+  NcmModelCtrl* cosmo_ctrl;
+  GPtrArray* xclk_ctrl;
 };
 
 struct _NcDataXcorClass
 {
-	/*< private >*/
-	NcmDataGaussCovClass parent_class;
+  /*< private >*/
+  NcmDataGaussCovClass parent_class;
 };
 
 GType nc_data_xcor_get_type (void) G_GNUC_CONST;

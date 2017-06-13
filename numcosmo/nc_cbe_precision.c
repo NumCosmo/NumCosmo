@@ -27,7 +27,7 @@
  * SECTION:nc_cbe_precision
  * @title: NcCBEPrecision
  * @short_description: CLASS (Cosmic Linear Anisotropy Solving System) backend for perturbations
- *
+   *
  * This object provides a front-end for CLASS precision structure.
  *
  * If you use this object please cite: [Blas (2011) CLASS II][XBlas2011],
@@ -56,8 +56,8 @@
 
 struct _NcCBEPrecisionPrivate
 {
-	struct precision ppr;
-};
+     struct precision ppr;
+   };
 
 enum
 {
@@ -210,20 +210,19 @@ enum
   PROP_SIZE
 };
 
-
 G_DEFINE_TYPE (NcCBEPrecision, nc_cbe_precision, G_TYPE_OBJECT);
 
 static void
 nc_cbe_precision_init (NcCBEPrecision* cbe_prec)
 {
-	cbe_prec->priv = G_TYPE_INSTANCE_GET_PRIVATE (cbe_prec, NC_TYPE_CBE_PRECISION, NcCBEPrecisionPrivate);
+  cbe_prec->priv = G_TYPE_INSTANCE_GET_PRIVATE (cbe_prec, NC_TYPE_CBE_PRECISION, NcCBEPrecisionPrivate);
 }
 
 static void
 nc_cbe_precision_set_property (GObject* object, guint prop_id, const GValue* value, GParamSpec* pspec)
 {
-	NcCBEPrecision* cbe_prec = NC_CBE_PRECISION (object);
-	g_return_if_fail (NC_IS_CBE_PRECISION (object));
+  NcCBEPrecision* cbe_prec = NC_CBE_PRECISION (object);
+  g_return_if_fail (NC_IS_CBE_PRECISION (object));
 
   switch (prop_id)
   {
@@ -371,7 +370,7 @@ nc_cbe_precision_set_property (GObject* object, guint prop_id, const GValue* val
       {
         g_warning ("nc_cbe_precision_set_property: file `%s' not found, using default.", Alpha_inf_file);
         g_free (Alpha_inf_file);
-        
+
         Alpha_inf_file     = ncm_cfg_get_data_filename ("class_data"G_DIR_SEPARATOR_S"hyrec"G_DIR_SEPARATOR_S"Alpha_inf.dat", TRUE);
         Alpha_inf_file_len = strlen (Alpha_inf_file);
         g_assert_cmpuint (Alpha_inf_file_len, <= ,_FILENAMESIZE_);
@@ -393,10 +392,10 @@ nc_cbe_precision_set_property (GObject* object, guint prop_id, const GValue* val
       {
         g_warning ("nc_cbe_precision_set_property: file `%s' not found, using default.", R_inf_file);
         g_free (R_inf_file);
-        
+
         R_inf_file     = ncm_cfg_get_data_filename ("class_data"G_DIR_SEPARATOR_S"hyrec"G_DIR_SEPARATOR_S"R_inf.dat", TRUE);
         R_inf_file_len = strlen (R_inf_file);
-        
+
         g_assert_cmpuint (R_inf_file_len, <= ,_FILENAMESIZE_);
       }
 
@@ -419,10 +418,10 @@ nc_cbe_precision_set_property (GObject* object, guint prop_id, const GValue* val
 
         two_photon_tables_file     = ncm_cfg_get_data_filename ("class_data"G_DIR_SEPARATOR_S"hyrec"G_DIR_SEPARATOR_S"two_photon_tables.dat", TRUE);
         two_photon_tables_file_len = strlen (two_photon_tables_file);
-        
+
         g_assert_cmpuint (two_photon_tables_file_len, <= ,_FILENAMESIZE_);
       }
-      
+
       memcpy (cbe_prec->priv->ppr.hyrec_two_photon_tables_file, two_photon_tables_file, two_photon_tables_file_len + 1);
 
       g_free (two_photon_tables_file);
@@ -749,8 +748,8 @@ nc_cbe_precision_set_property (GObject* object, guint prop_id, const GValue* val
 static void
 nc_cbe_precision_get_property (GObject* object, guint prop_id, GValue* value, GParamSpec* pspec)
 {
-	NcCBEPrecision* cbe_prec = NC_CBE_PRECISION (object);
-	g_return_if_fail (NC_IS_CBE_PRECISION (object));
+  NcCBEPrecision* cbe_prec = NC_CBE_PRECISION (object);
+  g_return_if_fail (NC_IS_CBE_PRECISION (object));
 
   switch (prop_id)
   {
@@ -1199,645 +1198,644 @@ static void
 nc_cbe_precision_finalize (GObject* object)
 {
 
-	/* Chain up : end */
-	G_OBJECT_CLASS (nc_cbe_precision_parent_class)
-	->finalize (object);
+  /* Chain up : end */
+  G_OBJECT_CLASS (nc_cbe_precision_parent_class)->finalize (object);
 }
 
 static void
 nc_cbe_precision_class_init (NcCBEPrecisionClass* klass)
 {
-	GObjectClass* object_class = G_OBJECT_CLASS (klass);
+  GObjectClass* object_class = G_OBJECT_CLASS (klass);
 
-	g_type_class_add_private (klass, sizeof (NcCBEPrecisionPrivate));
+  g_type_class_add_private (klass, sizeof (NcCBEPrecisionPrivate));
 
-	object_class->set_property = nc_cbe_precision_set_property;
-	object_class->get_property = nc_cbe_precision_get_property;
-	object_class->finalize = nc_cbe_precision_finalize;
+  object_class->set_property = &nc_cbe_precision_set_property;
+  object_class->get_property = &nc_cbe_precision_get_property;
+  object_class->finalize     = &nc_cbe_precision_finalize;
 
-	/*
+  /*
    * Background related parameters.
    */
-	g_object_class_install_property (object_class,
-	                                 PROP_A_INI_A_0,
-	                                 g_param_spec_double ("a-ini-over-a-today-default",
-	                                                      NULL,
-	                                                      "default initial value of scale factor in background integration, in units of scale factor today",
-	                                                      0.0, G_MAXDOUBLE, 1.0e-14,
-	                                                      G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-	g_object_class_install_property (object_class,
-	                                 PROP_BACK_INT_STEP,
-	                                 g_param_spec_double ("back-integration-stepsize",
-	                                                      NULL,
-	                                                      "default step d tau in background integration, in units of conformal Hubble time ($d \\tau$ = back_integration_stepsize / aH )",
-	                                                      0.0, G_MAXDOUBLE, 7.0e-3,
-	                                                      G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-	g_object_class_install_property (object_class,
-	                                 PROP_BACK_TOL,
-	                                 g_param_spec_double ("tol-background-integration",
-	                                                      NULL,
-	                                                      "parameter controlling precision of background integration",
-	                                                      0.0, G_MAXDOUBLE, 1.0e-2,
-	                                                      G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-	g_object_class_install_property (object_class,
-	                                 PROP_INITIAL_OMEGA_R_TOL,
-	                                 g_param_spec_double ("tol-initial-Omega-r",
-	                                                      NULL,
-	                                                      "parameter controlling how deep inside radiation domination must the initial time be chosen",
-	                                                      0.0, G_MAXDOUBLE, 1.0e-4,
-	                                                      G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-	g_object_class_install_property (object_class,
-	                                 PROP_M_NCDM_TOL,
-	                                 g_param_spec_double ("tol-M-ncdm",
-	                                                      NULL,
-	                                                      "parameter controlling relative precision of ncdm mass for given ncdm current density",
-	                                                      0.0, G_MAXDOUBLE, 1.0e-7,
-	                                                      G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-	g_object_class_install_property (object_class,
-	                                 PROP_NCDM_TOL,
-	                                 g_param_spec_double ("tol-ncdm",
-	                                                      NULL,
-	                                                      "parameter controlling relative precision of integrals over ncdm phase-space distribution during perturbation calculation",
-	                                                      0.0, G_MAXDOUBLE, 1.0e-3,
-	                                                      G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-	g_object_class_install_property (object_class,
-	                                 PROP_NCDM_SYNCHRONOUS_TOL,
-	                                 g_param_spec_double ("tol-ncdm-synchronous",
-	                                                      NULL,
-	                                                      "parameter controlling relative precision of integrals over ncdm phase-space distribution during perturbation calculation - synchronous",
-	                                                      0.0, G_MAXDOUBLE, 1.0e-3,
-	                                                      G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-	g_object_class_install_property (object_class,
-	                                 PROP_NCDM_NEWTONIAN_TOL,
-	                                 g_param_spec_double ("tol-ncdm-newtonian",
-	                                                      NULL,
-	                                                      "parameter controlling relative precision of integrals over ncdm phase-space distribution during perturbation calculation - newtonian",
-	                                                      0.0, G_MAXDOUBLE, 1.0e-5,
-	                                                      G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-	g_object_class_install_property (object_class,
-	                                 PROP_NCDM_BG_TOL,
-	                                 g_param_spec_double ("tol-ncdm-bg",
-	                                                      NULL,
-	                                                      "parameter controlling relative precision of integrals over ncdm phase-space distribution during background evolution",
-	                                                      0.0, G_MAXDOUBLE, 1.0e-5,
-	                                                      G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-	g_object_class_install_property (object_class,
-	                                 PROP_NCDM_INITIAL_W_TOL,
-	                                 g_param_spec_double ("tol-ncdm-initial-w",
-	                                                      NULL,
-	                                                      "parameter controlling how relativistic must non-cold relics be at initial time",
-	                                                      0.0, G_MAXDOUBLE, 1.0e-3,
-	                                                      G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-	/*
+  g_object_class_install_property (object_class,
+                                   PROP_A_INI_A_0,
+                                   g_param_spec_double ("a-ini-over-a-today-default",
+                                                        NULL,
+                                                        "default initial value of scale factor in background integration, in units of scale factor today",
+                                                        0.0, G_MAXDOUBLE, 1.0e-14,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  g_object_class_install_property (object_class,
+                                   PROP_BACK_INT_STEP,
+                                   g_param_spec_double ("back-integration-stepsize",
+                                                        NULL,
+                                                        "default step d tau in background integration, in units of conformal Hubble time ($d \\tau$ = back_integration_stepsize / aH )",
+                                                        0.0, G_MAXDOUBLE, 7.0e-3,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  g_object_class_install_property (object_class,
+                                   PROP_BACK_TOL,
+                                   g_param_spec_double ("tol-background-integration",
+                                                        NULL,
+                                                        "parameter controlling precision of background integration",
+                                                        0.0, G_MAXDOUBLE, 1.0e-2,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  g_object_class_install_property (object_class,
+                                   PROP_INITIAL_OMEGA_R_TOL,
+                                   g_param_spec_double ("tol-initial-Omega-r",
+                                                        NULL,
+                                                        "parameter controlling how deep inside radiation domination must the initial time be chosen",
+                                                        0.0, G_MAXDOUBLE, 1.0e-4,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  g_object_class_install_property (object_class,
+                                   PROP_M_NCDM_TOL,
+                                   g_param_spec_double ("tol-M-ncdm",
+                                                        NULL,
+                                                        "parameter controlling relative precision of ncdm mass for given ncdm current density",
+                                                        0.0, G_MAXDOUBLE, 1.0e-7,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  g_object_class_install_property (object_class,
+                                   PROP_NCDM_TOL,
+                                   g_param_spec_double ("tol-ncdm",
+                                                        NULL,
+                                                        "parameter controlling relative precision of integrals over ncdm phase-space distribution during perturbation calculation",
+                                                        0.0, G_MAXDOUBLE, 1.0e-3,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  g_object_class_install_property (object_class,
+                                   PROP_NCDM_SYNCHRONOUS_TOL,
+                                   g_param_spec_double ("tol-ncdm-synchronous",
+                                                        NULL,
+                                                        "parameter controlling relative precision of integrals over ncdm phase-space distribution during perturbation calculation - synchronous",
+                                                        0.0, G_MAXDOUBLE, 1.0e-3,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  g_object_class_install_property (object_class,
+                                   PROP_NCDM_NEWTONIAN_TOL,
+                                   g_param_spec_double ("tol-ncdm-newtonian",
+                                                        NULL,
+                                                        "parameter controlling relative precision of integrals over ncdm phase-space distribution during perturbation calculation - newtonian",
+                                                        0.0, G_MAXDOUBLE, 1.0e-5,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  g_object_class_install_property (object_class,
+                                   PROP_NCDM_BG_TOL,
+                                   g_param_spec_double ("tol-ncdm-bg",
+                                                        NULL,
+                                                        "parameter controlling relative precision of integrals over ncdm phase-space distribution during background evolution",
+                                                        0.0, G_MAXDOUBLE, 1.0e-5,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  g_object_class_install_property (object_class,
+                                   PROP_NCDM_INITIAL_W_TOL,
+                                   g_param_spec_double ("tol-ncdm-initial-w",
+                                                        NULL,
+                                                        "parameter controlling how relativistic must non-cold relics be at initial time",
+                                                        0.0, G_MAXDOUBLE, 1.0e-3,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  /*
    * Thermodynamics related parameters
    */
-	{
-		gchar* sBBN_file = ncm_cfg_get_data_filename ("class_data" G_DIR_SEPARATOR_S "bbn" G_DIR_SEPARATOR_S "sBBN.dat", TRUE);
-		g_object_class_install_property (object_class,
-		                                 PROP_SBBN_FILE,
-		                                 g_param_spec_string ("sBBN-file",
-		                                                      NULL,
-		                                                      "SBBN filename",
-		                                                      sBBN_file,
-		                                                      G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-		g_free (sBBN_file);
-	}
-	g_object_class_install_property (object_class,
-	                                 PROP_RECFAST_Z_INI,
-	                                 g_param_spec_double ("recfast-z-initial",
-	                                                      NULL,
-	                                                      "initial redshift in recfast",
-	                                                      0.0, G_MAXDOUBLE, 1.0e4,
-	                                                      G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-	g_object_class_install_property (object_class,
-	                                 PROP_RECFAST_NZ0,
-	                                 g_param_spec_int ("recfast-Nz0",
-	                                                   NULL,
-	                                                   "number of integration steps",
-	                                                   0, G_MAXINT, 20000,
-	                                                   G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-	g_object_class_install_property (object_class,
-	                                 PROP_THERMO_INTEGRATION_TOL,
-	                                 g_param_spec_double ("tol-thermo-integration",
-	                                                      NULL,
-	                                                      "precision of each integration step",
-	                                                      0.0, G_MAXDOUBLE, 1.0e-2,
-	                                                      G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-	g_object_class_install_property (object_class,
-	                                 PROP_RECFAST_HE_SWITCH,
-	                                 g_param_spec_int ("recfast-Heswitch",
-	                                                   NULL,
-	                                                   "Recfast He switch",
-	                                                   0, G_MAXINT, 6,
-	                                                   G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-	g_object_class_install_property (object_class,
-	                                 PROP_RECFAST_FUDGE_HE,
-	                                 g_param_spec_double ("recfast-fudge-He",
-	                                                      NULL,
-	                                                      "Recfast fudge He",
-	                                                      0.0, G_MAXDOUBLE, 0.86,
-	                                                      G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-	g_object_class_install_property (object_class,
-	                                 PROP_RECFAST_H_SWITCH,
-	                                 g_param_spec_int ("recfast-Hswitch",
-	                                                   NULL,
-	                                                   "recfast 1.5 switching parameter",
-	                                                   0, G_MAXINT, _TRUE_,
-	                                                   G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-	g_object_class_install_property (object_class,
-	                                 PROP_RECFAST_FUDGE_H,
-	                                 g_param_spec_double ("recfast-fudge-H",
-	                                                      NULL,
-	                                                      "H fudge factor when recfast_Hswitch set to false (v1.4 fudging)",
-	                                                      0.0, G_MAXDOUBLE, 1.14,
-	                                                      G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-	g_object_class_install_property (object_class,
-	                                 PROP_RECFAST_DELTA_FUDGE_H,
-	                                 g_param_spec_double ("recfast-delta-fudge-H",
-	                                                      NULL,
-	                                                      "correction to H fudge factor in v1.5",
-	                                                      -G_MAXDOUBLE, G_MAXDOUBLE, -0.015,
-	                                                      G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-	g_object_class_install_property (object_class,
-	                                 PROP_RECFAST_A_GAUSS_1,
-	                                 g_param_spec_double ("recfast-AGauss1",
-	                                                      NULL,
-	                                                      "Amplitude of 1st Gaussian",
-	                                                      -G_MAXDOUBLE, G_MAXDOUBLE, -0.14,
-	                                                      G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-	g_object_class_install_property (object_class,
-	                                 PROP_RECFAST_A_GAUSS_2,
-	                                 g_param_spec_double ("recfast-AGauss2",
-	                                                      NULL,
-	                                                      "Amplitude of 2st Gaussian",
-	                                                      -G_MAXDOUBLE, G_MAXDOUBLE, 0.079,
-	                                                      G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-	g_object_class_install_property (object_class,
-	                                 PROP_RECFAST_Z_GAUSS_1,
-	                                 g_param_spec_double ("recfast-zGauss1",
-	                                                      NULL,
-	                                                      "ln(1+z) of 1st Gaussian",
-	                                                      -G_MAXDOUBLE, G_MAXDOUBLE, 7.28,
-	                                                      G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-	g_object_class_install_property (object_class,
-	                                 PROP_RECFAST_Z_GAUSS_2,
-	                                 g_param_spec_double ("recfast-zGauss2",
-	                                                      NULL,
-	                                                      "ln(1+z) of 2st Gaussian",
-	                                                      -G_MAXDOUBLE, G_MAXDOUBLE, 6.73,
-	                                                      G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-	g_object_class_install_property (object_class,
-	                                 PROP_RECFAST_W_GAUSS_1,
-	                                 g_param_spec_double ("recfast-wGauss1",
-	                                                      NULL,
-	                                                      "Width of 2st Gaussian",
-	                                                      -G_MAXDOUBLE, G_MAXDOUBLE, 0.18,
-	                                                      G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-	g_object_class_install_property (object_class,
-	                                 PROP_RECFAST_W_GAUSS_2,
-	                                 g_param_spec_double ("recfast-wGauss2",
-	                                                      NULL,
-	                                                      "Width of 2st Gaussian",
-	                                                      -G_MAXDOUBLE, G_MAXDOUBLE, 0.33,
-	                                                      G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-	g_object_class_install_property (object_class,
-	                                 PROP_RECFAST_Z_HE_1,
-	                                 g_param_spec_double ("recfast-z-He-1",
-	                                                      NULL,
-	                                                      "down to which redshift Helium fully ionized",
-	                                                      0.0, G_MAXDOUBLE, 8000.0,
-	                                                      G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-	g_object_class_install_property (object_class,
-	                                 PROP_RECFAST_DELTA_Z_HE_1,
-	                                 g_param_spec_double ("recfast-delta-z-He-1",
-	                                                      NULL,
-	                                                      "z range over which transition is smoothed",
-	                                                      0.0, G_MAXDOUBLE, 50.0,
-	                                                      G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-	g_object_class_install_property (object_class,
-	                                 PROP_RECFAST_Z_HE_2,
-	                                 g_param_spec_double ("recfast-z-He-2",
-	                                                      NULL,
-	                                                      "down to which redshift first Helium recombination not complete",
-	                                                      0.0, G_MAXDOUBLE, 5000.0,
-	                                                      G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-	g_object_class_install_property (object_class,
-	                                 PROP_RECFAST_DELTA_Z_HE_2,
-	                                 g_param_spec_double ("recfast-delta-z-He-2",
-	                                                      NULL,
-	                                                      "z range over which transition is smoothed",
-	                                                      0.0, G_MAXDOUBLE, 100.0,
-	                                                      G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-	g_object_class_install_property (object_class,
-	                                 PROP_RECFAST_Z_HE_3,
-	                                 g_param_spec_double ("recfast-z-He-3",
-	                                                      NULL,
-	                                                      "down to which redshift Helium singly ionized",
-	                                                      0.0, G_MAXDOUBLE, 3500.0,
-	                                                      G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-	g_object_class_install_property (object_class,
-	                                 PROP_RECFAST_DELTA_Z_HE_3,
-	                                 g_param_spec_double ("recfast-delta-z-He-3",
-	                                                      NULL,
-	                                                      "z range over which transition is smoothed",
-	                                                      0.0, G_MAXDOUBLE, 50.0,
-	                                                      G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-	g_object_class_install_property (object_class,
-	                                 PROP_RECFAST_X_HE0_TRIGGER,
-	                                 g_param_spec_double ("recfast-x-He0-trigger",
-	                                                      NULL,
-	                                                      "value below which recfast uses the full equation for Helium",
-	                                                      0.0, G_MAXDOUBLE, 0.995,
-	                                                      G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-	g_object_class_install_property (object_class,
-	                                 PROP_RECFAST_X_HE0_TRIGGER2,
-	                                 g_param_spec_double ("recfast-x-He0-trigger2",
-	                                                      NULL,
-	                                                      "a second threshold used in derivative routine",
-	                                                      0.0, G_MAXDOUBLE, 0.995,
-	                                                      G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-	g_object_class_install_property (object_class,
-	                                 PROP_RECFAST_X_HE0_TRIGGER_DELTA,
-	                                 g_param_spec_double ("recfast-x-He0-trigger-delta",
-	                                                      NULL,
-	                                                      "x_He range over which transition is smoothed",
-	                                                      0.0, G_MAXDOUBLE, 0.05,
-	                                                      G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-	g_object_class_install_property (object_class,
-	                                 PROP_RECFAST_X_H0_TRIGGER,
-	                                 g_param_spec_double ("recfast-x-H0-trigger",
-	                                                      NULL,
-	                                                      "value below which recfast uses the full equation for Hydrogen",
-	                                                      0.0, G_MAXDOUBLE, 0.995,
-	                                                      G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-	g_object_class_install_property (object_class,
-	                                 PROP_RECFAST_X_H0_TRIGGER2,
-	                                 g_param_spec_double ("recfast-x-H0-trigger2",
-	                                                      NULL,
-	                                                      "a second threshold used in derivative routine",
-	                                                      0.0, G_MAXDOUBLE, 0.995,
-	                                                      G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-	g_object_class_install_property (object_class,
-	                                 PROP_RECFAST_X_H0_TRIGGER_DELTA,
-	                                 g_param_spec_double ("recfast-x-H0-trigger-delta",
-	                                                      NULL,
-	                                                      "x_H range over which transition is smoothed",
-	                                                      0.0, G_MAXDOUBLE, 0.05,
-	                                                      G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-	g_object_class_install_property (object_class,
-	                                 PROP_RECFAST_H_FRAC,
-	                                 g_param_spec_double ("recfast-H-frac",
-	                                                      NULL,
-	                                                      "governs time at which full equation of evolution for Tmat is used",
-	                                                      0.0, G_MAXDOUBLE, 1.0e-3,
-	                                                      G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-	{
-		gchar* hyrec_Alpha_inf_file = ncm_cfg_get_data_filename ("class_data" G_DIR_SEPARATOR_S "hyrec" G_DIR_SEPARATOR_S "Alpha_inf.dat", TRUE);
-		g_object_class_install_property (object_class,
-		                                 PROP_HYREC_ALPHA_INF_FILE,
-		                                 g_param_spec_string ("hyrec-Alpha-inf-file",
-		                                                      NULL,
-		                                                      "Hyrec Alpha inf file",
-		                                                      hyrec_Alpha_inf_file,
-		                                                      G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-		g_free (hyrec_Alpha_inf_file);
-	}
-	{
-		gchar* hyrec_R_inf_file = ncm_cfg_get_data_filename ("class_data" G_DIR_SEPARATOR_S "hyrec" G_DIR_SEPARATOR_S "R_inf.dat", TRUE);
-		g_object_class_install_property (object_class,
-		                                 PROP_HYREC_R_INF_FILE,
-		                                 g_param_spec_string ("hyrec-R-inf-file",
-		                                                      NULL,
-		                                                      "Hyrec R inf file",
-		                                                      hyrec_R_inf_file,
-		                                                      G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-		g_free (hyrec_R_inf_file);
-	}
-	{
-		gchar* hyrec_two_photon_tables_file = ncm_cfg_get_data_filename ("class_data" G_DIR_SEPARATOR_S "hyrec" G_DIR_SEPARATOR_S "two_photon_tables.dat", TRUE);
-		g_object_class_install_property (object_class,
-		                                 PROP_HYREC_TWO_PHOTON_TABLES_FILE,
-		                                 g_param_spec_string ("hyrec-two-photon-tables-file",
-		                                                      NULL,
-		                                                      "Hyrec two photon tables file",
-		                                                      hyrec_two_photon_tables_file,
-		                                                      G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-		g_free (hyrec_two_photon_tables_file);
-	}
-	/* for reionization */
-	g_object_class_install_property (object_class,
-	                                 PROP_REION_Z_START_MAX,
-	                                 g_param_spec_double ("reionization-z-start-max",
-	                                                      NULL,
-	                                                      "maximum redshift at which reionization should start. If not, return an error",
-	                                                      0.0, G_MAXDOUBLE, 50.0,
-	                                                      G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-	g_object_class_install_property (object_class,
-	                                 PROP_REION_SAMPLING,
-	                                 g_param_spec_double ("reionization-sampling",
-	                                                      NULL,
-	                                                      "control stepsize in z during reionization",
-	                                                      0.0, G_MAXDOUBLE, 5.0e-2,
-	                                                      G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-	g_object_class_install_property (object_class,
-	                                 PROP_REION_OPT_DEPTH_TOL,
-	                                 g_param_spec_double ("reionization-optical-depth-tol",
-	                                                      NULL,
-	                                                      "fractional error on optical_depth",
-	                                                      0.0, G_MAXDOUBLE, 1.0e-4,
-	                                                      G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-	g_object_class_install_property (object_class,
-	                                 PROP_REION_START_FACTOR,
-	                                 g_param_spec_double ("reionization-start-factor",
-	                                                      NULL,
-	                                                      "parameter for CAMB-like parametrization",
-	                                                      0.0, G_MAXDOUBLE, 8.0,
-	                                                      G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-	/* general */
-	g_object_class_install_property (object_class,
-	                                 PROP_THERMO_RATE_SMOOTHING_RADIUS,
-	                                 g_param_spec_int ("thermo-rate-smoothing-radius",
-	                                                   NULL,
-	                                                   "plays a minor (almost aesthetic) role in the definition of the variation rate of thermodynamical quantities",
-	                                                   0, G_MAXINT, 50,
-	                                                   G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-	/*
+  {
+    gchar *sBBN_file = ncm_cfg_get_data_filename ("class_data" G_DIR_SEPARATOR_S "bbn" G_DIR_SEPARATOR_S "sBBN.dat", TRUE);
+    g_object_class_install_property (object_class,
+                                     PROP_SBBN_FILE,
+                                     g_param_spec_string ("sBBN-file",
+                                                          NULL,
+                                                          "SBBN filename",
+                                                          sBBN_file,
+                                                          G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+    g_free (sBBN_file);
+  }
+  g_object_class_install_property (object_class,
+                                   PROP_RECFAST_Z_INI,
+                                   g_param_spec_double ("recfast-z-initial",
+                                                        NULL,
+                                                        "initial redshift in recfast",
+                                                        0.0, G_MAXDOUBLE, 1.0e4,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  g_object_class_install_property (object_class,
+                                   PROP_RECFAST_NZ0,
+                                   g_param_spec_int ("recfast-Nz0",
+                                                     NULL,
+                                                     "number of integration steps",
+                                                     0, G_MAXINT, 20000,
+                                                     G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  g_object_class_install_property (object_class,
+                                   PROP_THERMO_INTEGRATION_TOL,
+                                   g_param_spec_double ("tol-thermo-integration",
+                                                        NULL,
+                                                        "precision of each integration step",
+                                                        0.0, G_MAXDOUBLE, 1.0e-2,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  g_object_class_install_property (object_class,
+                                   PROP_RECFAST_HE_SWITCH,
+                                   g_param_spec_int ("recfast-Heswitch",
+                                                     NULL,
+                                                     "Recfast He switch",
+                                                     0, G_MAXINT, 6,
+                                                     G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  g_object_class_install_property (object_class,
+                                   PROP_RECFAST_FUDGE_HE,
+                                   g_param_spec_double ("recfast-fudge-He",
+                                                        NULL,
+                                                        "Recfast fudge He",
+                                                        0.0, G_MAXDOUBLE, 0.86,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  g_object_class_install_property (object_class,
+                                   PROP_RECFAST_H_SWITCH,
+                                   g_param_spec_int ("recfast-Hswitch",
+                                                     NULL,
+                                                     "recfast 1.5 switching parameter",
+                                                     0, G_MAXINT, _TRUE_,
+                                                     G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  g_object_class_install_property (object_class,
+                                   PROP_RECFAST_FUDGE_H,
+                                   g_param_spec_double ("recfast-fudge-H",
+                                                        NULL,
+                                                        "H fudge factor when recfast_Hswitch set to false (v1.4 fudging)",
+                                                        0.0, G_MAXDOUBLE, 1.14,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  g_object_class_install_property (object_class,
+                                   PROP_RECFAST_DELTA_FUDGE_H,
+                                   g_param_spec_double ("recfast-delta-fudge-H",
+                                                        NULL,
+                                                        "correction to H fudge factor in v1.5",
+                                                        -G_MAXDOUBLE, G_MAXDOUBLE, -0.015,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  g_object_class_install_property (object_class,
+                                   PROP_RECFAST_A_GAUSS_1,
+                                   g_param_spec_double ("recfast-AGauss1",
+                                                        NULL,
+                                                        "Amplitude of 1st Gaussian",
+                                                        -G_MAXDOUBLE, G_MAXDOUBLE, -0.14,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  g_object_class_install_property (object_class,
+                                   PROP_RECFAST_A_GAUSS_2,
+                                   g_param_spec_double ("recfast-AGauss2",
+                                                        NULL,
+                                                        "Amplitude of 2st Gaussian",
+                                                        -G_MAXDOUBLE, G_MAXDOUBLE, 0.079,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  g_object_class_install_property (object_class,
+                                   PROP_RECFAST_Z_GAUSS_1,
+                                   g_param_spec_double ("recfast-zGauss1",
+                                                        NULL,
+                                                        "ln(1+z) of 1st Gaussian",
+                                                        -G_MAXDOUBLE, G_MAXDOUBLE, 7.28,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  g_object_class_install_property (object_class,
+                                   PROP_RECFAST_Z_GAUSS_2,
+                                   g_param_spec_double ("recfast-zGauss2",
+                                                        NULL,
+                                                        "ln(1+z) of 2st Gaussian",
+                                                        -G_MAXDOUBLE, G_MAXDOUBLE, 6.73,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  g_object_class_install_property (object_class,
+                                   PROP_RECFAST_W_GAUSS_1,
+                                   g_param_spec_double ("recfast-wGauss1",
+                                                        NULL,
+                                                        "Width of 2st Gaussian",
+                                                        -G_MAXDOUBLE, G_MAXDOUBLE, 0.18,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  g_object_class_install_property (object_class,
+                                   PROP_RECFAST_W_GAUSS_2,
+                                   g_param_spec_double ("recfast-wGauss2",
+                                                        NULL,
+                                                        "Width of 2st Gaussian",
+                                                        -G_MAXDOUBLE, G_MAXDOUBLE, 0.33,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  g_object_class_install_property (object_class,
+                                   PROP_RECFAST_Z_HE_1,
+                                   g_param_spec_double ("recfast-z-He-1",
+                                                        NULL,
+                                                        "down to which redshift Helium fully ionized",
+                                                        0.0, G_MAXDOUBLE, 8000.0,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  g_object_class_install_property (object_class,
+                                   PROP_RECFAST_DELTA_Z_HE_1,
+                                   g_param_spec_double ("recfast-delta-z-He-1",
+                                                        NULL,
+                                                        "z range over which transition is smoothed",
+                                                        0.0, G_MAXDOUBLE, 50.0,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  g_object_class_install_property (object_class,
+                                   PROP_RECFAST_Z_HE_2,
+                                   g_param_spec_double ("recfast-z-He-2",
+                                                        NULL,
+                                                        "down to which redshift first Helium recombination not complete",
+                                                        0.0, G_MAXDOUBLE, 5000.0,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  g_object_class_install_property (object_class,
+                                   PROP_RECFAST_DELTA_Z_HE_2,
+                                   g_param_spec_double ("recfast-delta-z-He-2",
+                                                        NULL,
+                                                        "z range over which transition is smoothed",
+                                                        0.0, G_MAXDOUBLE, 100.0,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  g_object_class_install_property (object_class,
+                                   PROP_RECFAST_Z_HE_3,
+                                   g_param_spec_double ("recfast-z-He-3",
+                                                        NULL,
+                                                        "down to which redshift Helium singly ionized",
+                                                        0.0, G_MAXDOUBLE, 3500.0,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  g_object_class_install_property (object_class,
+                                   PROP_RECFAST_DELTA_Z_HE_3,
+                                   g_param_spec_double ("recfast-delta-z-He-3",
+                                                        NULL,
+                                                        "z range over which transition is smoothed",
+                                                        0.0, G_MAXDOUBLE, 50.0,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  g_object_class_install_property (object_class,
+                                   PROP_RECFAST_X_HE0_TRIGGER,
+                                   g_param_spec_double ("recfast-x-He0-trigger",
+                                                        NULL,
+                                                        "value below which recfast uses the full equation for Helium",
+                                                        0.0, G_MAXDOUBLE, 0.995,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  g_object_class_install_property (object_class,
+                                   PROP_RECFAST_X_HE0_TRIGGER2,
+                                   g_param_spec_double ("recfast-x-He0-trigger2",
+                                                        NULL,
+                                                        "a second threshold used in derivative routine",
+                                                        0.0, G_MAXDOUBLE, 0.995,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  g_object_class_install_property (object_class,
+                                   PROP_RECFAST_X_HE0_TRIGGER_DELTA,
+                                   g_param_spec_double ("recfast-x-He0-trigger-delta",
+                                                        NULL,
+                                                        "x_He range over which transition is smoothed",
+                                                        0.0, G_MAXDOUBLE, 0.05,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  g_object_class_install_property (object_class,
+                                   PROP_RECFAST_X_H0_TRIGGER,
+                                   g_param_spec_double ("recfast-x-H0-trigger",
+                                                        NULL,
+                                                        "value below which recfast uses the full equation for Hydrogen",
+                                                        0.0, G_MAXDOUBLE, 0.995,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  g_object_class_install_property (object_class,
+                                   PROP_RECFAST_X_H0_TRIGGER2,
+                                   g_param_spec_double ("recfast-x-H0-trigger2",
+                                                        NULL,
+                                                        "a second threshold used in derivative routine",
+                                                        0.0, G_MAXDOUBLE, 0.995,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  g_object_class_install_property (object_class,
+                                   PROP_RECFAST_X_H0_TRIGGER_DELTA,
+                                   g_param_spec_double ("recfast-x-H0-trigger-delta",
+                                                        NULL,
+                                                        "x_H range over which transition is smoothed",
+                                                        0.0, G_MAXDOUBLE, 0.05,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  g_object_class_install_property (object_class,
+                                   PROP_RECFAST_H_FRAC,
+                                   g_param_spec_double ("recfast-H-frac",
+                                                        NULL,
+                                                        "governs time at which full equation of evolution for Tmat is used",
+                                                        0.0, G_MAXDOUBLE, 1.0e-3,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  {
+    gchar *hyrec_Alpha_inf_file = ncm_cfg_get_data_filename ("class_data" G_DIR_SEPARATOR_S "hyrec" G_DIR_SEPARATOR_S "Alpha_inf.dat", TRUE);
+    g_object_class_install_property (object_class,
+                                     PROP_HYREC_ALPHA_INF_FILE,
+                                     g_param_spec_string ("hyrec-Alpha-inf-file",
+                                                          NULL,
+                                                          "Hyrec Alpha inf file",
+                                                          hyrec_Alpha_inf_file,
+                                                          G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+    g_free (hyrec_Alpha_inf_file);
+  }
+  {
+    gchar *hyrec_R_inf_file = ncm_cfg_get_data_filename ("class_data" G_DIR_SEPARATOR_S "hyrec" G_DIR_SEPARATOR_S "R_inf.dat", TRUE);
+    g_object_class_install_property (object_class,
+                                     PROP_HYREC_R_INF_FILE,
+                                     g_param_spec_string ("hyrec-R-inf-file",
+                                                          NULL,
+                                                          "Hyrec R inf file",
+                                                          hyrec_R_inf_file,
+                                                          G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+    g_free (hyrec_R_inf_file);
+  }
+  {
+    gchar *hyrec_two_photon_tables_file = ncm_cfg_get_data_filename ("class_data" G_DIR_SEPARATOR_S "hyrec" G_DIR_SEPARATOR_S "two_photon_tables.dat", TRUE);
+    g_object_class_install_property (object_class,
+                                     PROP_HYREC_TWO_PHOTON_TABLES_FILE,
+                                     g_param_spec_string ("hyrec-two-photon-tables-file",
+                                                          NULL,
+                                                          "Hyrec two photon tables file",
+                                                          hyrec_two_photon_tables_file,
+                                                          G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+    g_free (hyrec_two_photon_tables_file);
+  }
+  /* for reionization */
+  g_object_class_install_property (object_class,
+                                   PROP_REION_Z_START_MAX,
+                                   g_param_spec_double ("reionization-z-start-max",
+                                                        NULL,
+                                                        "maximum redshift at which reionization should start. If not, return an error",
+                                                        0.0, G_MAXDOUBLE, 50.0,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  g_object_class_install_property (object_class,
+                                   PROP_REION_SAMPLING,
+                                   g_param_spec_double ("reionization-sampling",
+                                                        NULL,
+                                                        "control stepsize in z during reionization",
+                                                        0.0, G_MAXDOUBLE, 5.0e-2,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  g_object_class_install_property (object_class,
+                                   PROP_REION_OPT_DEPTH_TOL,
+                                   g_param_spec_double ("reionization-optical-depth-tol",
+                                                        NULL,
+                                                        "fractional error on optical_depth",
+                                                        0.0, G_MAXDOUBLE, 1.0e-4,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  g_object_class_install_property (object_class,
+                                   PROP_REION_START_FACTOR,
+                                   g_param_spec_double ("reionization-start-factor",
+                                                        NULL,
+                                                        "parameter for CAMB-like parametrization",
+                                                        0.0, G_MAXDOUBLE, 8.0,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  /* general */
+  g_object_class_install_property (object_class,
+                                   PROP_THERMO_RATE_SMOOTHING_RADIUS,
+                                   g_param_spec_int ("thermo-rate-smoothing-radius",
+                                                     NULL,
+                                                     "plays a minor (almost aesthetic) role in the definition of the variation rate of thermodynamical quantities",
+                                                     0, G_MAXINT, 50,
+                                                     G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  /*
    * Perturbations parameters
    */
-	g_object_class_install_property (object_class,
-	                                 PROP_EVOLVER,
-	                                 g_param_spec_int ("evolver",
-	                                                   NULL,
-	                                                   "which type of evolver for integrating perturbations (Runge-Kutta? Stiff?...)",
-	                                                   0, G_MAXINT, ndf15,
-	                                                   G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-	g_object_class_install_property (object_class,
-	                                 PROP_K_MIN_TAU0,
-	                                 g_param_spec_double ("k-min-tau0",
-	                                                      NULL,
-	                                                      "number defining k_min for the computation of Cl's and P(k)'s (dimensionless): (k_min tau_0), usually chosen much smaller than one",
-	                                                      0.0, G_MAXDOUBLE, 0.1,
-	                                                      G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-	g_object_class_install_property (object_class,
-	                                 PROP_K_MAX_TAU0_OVER_L_MAX,
-	                                 g_param_spec_double ("k-max-tau0-over-l-max",
-	                                                      NULL,
-	                                                      "number defining k_max for the computation of Cl's (dimensionless): (k_max tau_0)/l_max, usually chosen around two (very relevant for accuracy of lensed ClTT at highest l's)",
-	                                                      0.0, G_MAXDOUBLE, 2.4,
-	                                                      G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-	g_object_class_install_property (object_class,
-	                                 PROP_K_STEP_SUB,
-	                                 g_param_spec_double ("k-step-sub",
-	                                                      NULL,
-	                                                      "step in k space, in units of one period of acoustic oscillation at decoupling, for scales inside sound horizon at decoupling",
-	                                                      0.0, G_MAXDOUBLE, 0.05,
-	                                                      G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-	g_object_class_install_property (object_class,
-	                                 PROP_K_STEP_SUPER,
-	                                 g_param_spec_double ("k-step-super",
-	                                                      NULL,
-	                                                      "step in k space, in units of one period of acoustic oscillation at decoupling, for scales above sound horizon at decoupling",
-	                                                      0.0, G_MAXDOUBLE, 0.002,
-	                                                      G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-	g_object_class_install_property (object_class,
-	                                 PROP_K_STEP_TRANSITION,
-	                                 g_param_spec_double ("k-step-transition",
-	                                                      NULL,
-	                                                      "dimensionless number regulating the transition from 'sub' steps to 'super' steps. Decrease for more precision",
-	                                                      0.0, G_MAXDOUBLE, 0.2,
-	                                                      G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-	g_object_class_install_property (object_class,
-	                                 PROP_K_STEP_SUPER_REDUCTION,
-	                                 g_param_spec_double ("k-step-super-reduction",
-	                                                      NULL,
-	                                                      "the step k_step_super is reduced by this amount in the k-->0 limit (below scale of Hubble and/or curvature radius)",
-	                                                      0.0, G_MAXDOUBLE, 0.1,
-	                                                      G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-	g_object_class_install_property (object_class,
-	                                 PROP_K_PER_DECADE_FOR_PK,
-	                                 g_param_spec_double ("k-per-decade-for-pk",
-	                                                      NULL,
-	                                                      "if values needed between kmax inferred from k_oscillations and k_kmax_for_pk, this gives the number of k per decade outside the BAO region",
-	                                                      0.0, G_MAXDOUBLE, 10.0,
-	                                                      G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-	g_object_class_install_property (object_class,
-	                                 PROP_K_PER_DECADE_FOR_BAO,
-	                                 g_param_spec_double ("k-per-decade-for-bao",
-	                                                      NULL,
-	                                                      "if values needed between kmax inferred from k_oscillations and k_kmax_for_pk, this gives the number of k per decade inside the BAO region (for finer sampling)",
-	                                                      0.0, G_MAXDOUBLE, 70.0,
-	                                                      G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-	g_object_class_install_property (object_class,
-	                                 PROP_K_BAO_CENTER,
-	                                 g_param_spec_double ("k-bao-center",
-	                                                      NULL,
-	                                                      "in ln(k) space, the central value of the BAO region where sampling is finer is defined as k_rec times this number (recommended: 3, i.e. finest sampling near 3rd BAO peak)",
-	                                                      0.0, G_MAXDOUBLE, 3.0,
-	                                                      G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-	g_object_class_install_property (object_class,
-	                                 PROP_K_BAO_WIDTH,
-	                                 g_param_spec_double ("k-bao-width",
-	                                                      NULL,
-	                                                      "in ln(k) space, width of the BAO region where sampling is finer: this number gives roughly the number of BAO oscillations well resolved on both sides of the central value (recommended: 4, i.e. finest sampling from before first up to 3+4=7th peak)",
-	                                                      0.0, G_MAXDOUBLE, 4.0,
-	                                                      G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-	g_object_class_install_property (object_class,
-	                                 PROP_START_SMALL_K_AT_TAU_C_OVER_TAU_H,
-	                                 g_param_spec_double ("start-small-k-at-tau-c-over-tau-h",
-	                                                      NULL,
-	                                                      "largest wavelengths start being sampled when universe is sufficiently opaque. This is quantified in terms of the ratio of thermo to hubble time scales, $\tau_c/\tau_H$. Start when start_largek_at_tau_c_over_tau_h equals this ratio. Decrease this value to start integrating the wavenumbers earlier in time.",
-	                                                      0.0, G_MAXDOUBLE, 0.0015,
-	                                                      G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-	g_object_class_install_property (object_class,
-	                                 PROP_START_LARGE_K_AT_TAU_H_OVER_TAU_K,
-	                                 g_param_spec_double ("start-large-k-at-tau-h-over-tau-k",
-	                                                      NULL,
-	                                                      "largest wavelengths start being sampled when mode is sufficiently outside Hibble scale. This is quantified in terms of the ratio of hubble time scale to wavenumber time scale, $\tau_h/\tau_k$ wich is roughly equal to (k*tau). Start when this ratio equals start_large_k_at_tau_k_over_tau_h. Decrease this value to start integrating the wavenumbers earlier in time.",
-	                                                      0.0, G_MAXDOUBLE, 0.07,
-	                                                      G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-	g_object_class_install_property (object_class,
-	                                 PROP_TIGHT_COUPLING_TRIGGER_TAU_C_OVER_TAU_H,
-	                                 g_param_spec_double ("tight-coupling-trigger-tau-c-over-tau-h",
-	                                                      NULL,
-	                                                      "when to switch off tight-coupling approximation: first condition: $\\tau_c/\\tau_H$ > tight_coupling_trigger_tau_c_over_tau_h. Decrease this value to switch off earlier in time.  If this number is larger than start_sources_at_tau_c_over_tau_h, the code returns an error, because the source computation requires tight-coupling to be switched off.",
-	                                                      0.0, G_MAXDOUBLE, 0.015,
-	                                                      G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-	g_object_class_install_property (object_class,
-	                                 PROP_TIGHT_COUPLING_TRIGGER_TAU_C_OVER_TAU_K,
-	                                 g_param_spec_double ("tight-coupling-trigger-tau-c-over-tau-k",
-	                                                      NULL,
-	                                                      "when to switch off tight-coupling approximation: second condition: $\\tau_c/\\tau_k \\equiv k \\tau_c$ < tight_coupling_trigger_tau_c_over_tau_k. Decrease this value to switch off earlier in time.",
-	                                                      0.0, G_MAXDOUBLE, 0.01,
-	                                                      G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-	g_object_class_install_property (object_class,
-	                                 PROP_START_SOURCES_AT_TAU_C_OVER_TAU_H,
-	                                 g_param_spec_double ("start-sources-at-tau-c-over-tau-h",
-	                                                      NULL,
-	                                                      "sources start being sampled when universe is sufficiently opaque. This is quantified in terms of the ratio of thermo to hubble time scales, $\\tau_c/\\tau_H$. Start when start_sources_at_tau_c_over_tau_h equals this ratio. Decrease this value to start sampling the sources earlier in time.",
-	                                                      0.0, G_MAXDOUBLE, 0.008,
-	                                                      G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-	g_object_class_install_property (object_class,
-	                                 PROP_TIGHT_COUPLING_APPROXIMATION,
-	                                 g_param_spec_int ("tight-coupling-approximation",
-	                                                   NULL,
-	                                                   "Tight coupling approximation scheme",
-	                                                   0, G_MAXINT, (gint)compromise_CLASS,
-	                                                   G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-	g_object_class_install_property (object_class,
-	                                 PROP_L_MAX_G,
-	                                 g_param_spec_int ("l-max-g",
-	                                                   NULL,
-	                                                   "number of momenta in Boltzmann hierarchy for photon temperature (scalar)",
-	                                                   4, G_MAXINT, 12,
-	                                                   G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-	g_object_class_install_property (object_class,
-	                                 PROP_L_MAX_POL_G,
-	                                 g_param_spec_int ("l-max-pol-g",
-	                                                   NULL,
-	                                                   "number of momenta in Boltzmann hierarchy for photon polarisation (scalar)",
-	                                                   4, G_MAXINT, 10,
-	                                                   G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-	g_object_class_install_property (object_class,
-	                                 PROP_L_MAX_DR,
-	                                 g_param_spec_int ("l-max-dr",
-	                                                   NULL,
-	                                                   "number of momenta in Boltzmann hierarchy for decay radiation",
-	                                                   4, G_MAXINT, 17,
-	                                                   G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-	g_object_class_install_property (object_class,
-	                                 PROP_L_MAX_UR,
-	                                 g_param_spec_int ("l-max-ur",
-	                                                   NULL,
-	                                                   "number of momenta in Boltzmann hierarchy for relativistic neutrino/relics (scalar)",
-	                                                   4, G_MAXINT, 17,
-	                                                   G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-	g_object_class_install_property (object_class,
-	                                 PROP_L_MAX_NCDM,
-	                                 g_param_spec_int ("l-max-ncdm",
-	                                                   NULL,
-	                                                   "number of momenta in Boltzmann hierarchy for relativistic neutrino/relics (scalar)",
-	                                                   4, G_MAXINT, 17,
-	                                                   G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-	g_object_class_install_property (object_class,
-	                                 PROP_L_MAX_G_TEN,
-	                                 g_param_spec_int ("l-max-g-ten",
-	                                                   NULL,
-	                                                   "number of momenta in Boltzmann hierarchy for photon temperature (tensor)",
-	                                                   4, G_MAXINT, 5,
-	                                                   G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-	g_object_class_install_property (object_class,
-	                                 PROP_L_MAX_POL_G_TEN,
-	                                 g_param_spec_int ("l-max-pol-g-ten",
-	                                                   NULL,
-	                                                   "number of momenta in Boltzmann hierarchy for photon polarisation (tensor)",
-	                                                   4, G_MAXINT, 5,
-	                                                   G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-	g_object_class_install_property (object_class,
-	                                 PROP_CURVATURE_INI,
-	                                 g_param_spec_double ("curvature-ini",
-	                                                      NULL,
-	                                                      "initial curvature; used to fix adiabatic initial conditions; must remain fixed to one as long as the primordial adiabatic spectrum stands for the curvature power spectrum",
-	                                                      0.0, G_MAXDOUBLE, 1.0,
-	                                                      G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-	g_object_class_install_property (object_class,
-	                                 PROP_ENTROPY_INI,
-	                                 g_param_spec_double ("entropy-ini",
-	                                                      NULL,
-	                                                      "initial entropy; used to fix isocurvature initial conditions; must remain fixed to one as long as the primordial isocurvature spectrum stands for an entropy power spectrum",
-	                                                      0.0, G_MAXDOUBLE, 1.0,
-	                                                      G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-	g_object_class_install_property (object_class,
-	                                 PROP_GW_INI,
-	                                 g_param_spec_double ("gw-ini",
-	                                                      NULL,
-	                                                      "initial condition for tensor metric perturbation h",
-	                                                      0.0, G_MAXDOUBLE, 1.0,
-	                                                      G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-	g_object_class_install_property (object_class,
-	                                 PROP_PERTURB_INTEGRATION_STEPSIZE,
-	                                 g_param_spec_double ("perturb-integration-stepsize",
-	                                                      NULL,
-	                                                      "default step $d \\tau$ in perturbation integration, in units of the timescale involved in the equations (usally, the min of $1/k$, $1/aH$, $1/\\dot{\\kappa}$)",
-	                                                      0.0, G_MAXDOUBLE, 0.5,
-	                                                      G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-	g_object_class_install_property (object_class,
-	                                 PROP_TOL_TAU_APPROX,
-	                                 g_param_spec_double ("tol-tau-approx",
-	                                                      NULL,
-	                                                      "precision with which the code should determine (by bisection) the times at which sources start being sampled, and at which approximations must be switched on/off (units of Mpc)",
-	                                                      0.0, G_MAXDOUBLE, 1.0e-10,
-	                                                      G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-	g_object_class_install_property (object_class,
-	                                 PROP_TOL_PERTURB_INTEGRATION,
-	                                 g_param_spec_double ("tol-perturb-integration",
-	                                                      NULL,
-	                                                      "control parameter for the precision of the perturbation integration",
-	                                                      0.0, G_MAXDOUBLE, 1.0e-5,
-	                                                      G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-	g_object_class_install_property (object_class,
-	                                 PROP_PERTURB_SAMPLING_STEPSIZE,
-	                                 g_param_spec_double ("perturb-sampling-stepsize",
-	                                                      NULL,
-	                                                      "default step $d \\tau$ for sampling the source function, in units of the timescale involved in the sources: $(\\dot{\\kappa}- \\ddot{\\kappa}/\\dot{\\kappa})^{-1}$",
-	                                                      0.0, G_MAXDOUBLE, 0.10,
-	                                                      G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-	g_object_class_install_property (object_class,
-	                                 PROP_RADIATION_STREAMING_APPROXIMATION,
-	                                 g_param_spec_int ("radiation-streaming-approximation",
-	                                                   NULL,
-	                                                   "method for switching off photon perturbations",
-	                                                   0, G_MAXINT, rsa_MD_with_reio,
-	                                                   G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-	g_object_class_install_property (object_class,
-	                                 PROP_RADIATION_STREAMING_TRIGGER_TAU_OVER_TAU_K,
-	                                 g_param_spec_double ("radiation-streaming-trigger-tau-over-tau-k",
-	                                                      NULL,
-	                                                      "when to switch off photon perturbations, ie when to switch on photon free-streaming approximation (keep density and thtau, set shear and higher momenta to zero): first condition: $k \tau$ > radiation_streaming_trigger_tau_h_over_tau_k",
-	                                                      0.0, G_MAXDOUBLE, 45.0,
-	                                                      G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-	g_object_class_install_property (object_class,
-	                                 PROP_RADIATION_STREAMING_TRIGGER_TAU_C_OVER_TAU,
-	                                 g_param_spec_double ("radiation-streaming-trigger-tau-c-over-tau",
-	                                                      NULL,
-	                                                      "when to switch off photon perturbations, ie when to switch on photon free-streaming approximation (keep density and theta, set shear and higher momenta to zero): second condition:",
-	                                                      0.0, G_MAXDOUBLE, 5.0,
-	                                                      G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-	g_object_class_install_property (object_class,
-	                                 PROP_UR_FLUID_APPROXIMATION,
-	                                 g_param_spec_int ("ur-fluid-approximation",
-	                                                   NULL,
-	                                                   "UR fluid approximation scheme",
-	                                                   0, G_MAXINT, ufa_CLASS,
-	                                                   G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-	g_object_class_install_property (object_class,
-	                                 PROP_UR_FLUID_TRIGGER_TAU_OVER_TAU_K,
-	                                 g_param_spec_double ("ur-fluid-trigger-tau-over-tau-k",
-	                                                      NULL,
-	                                                      "when to switch off ur (massless neutrinos / ultra-relativistic relics) fluid approximation",
-	                                                      0.0, G_MAXDOUBLE, 30.0,
-	                                                      G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-	g_object_class_install_property (object_class,
-	                                 PROP_NCDM_FLUID_APPROXIMATION,
-	                                 g_param_spec_int ("ncdm-fluid-approximation",
-	                                                   NULL,
-	                                                   "NCDM fluid approximation scheme",
-	                                                   0, G_MAXINT, ncdmfa_CLASS,
-	                                                   G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-	g_object_class_install_property (object_class,
-	                                 PROP_NCDM_FLUID_TRIGGER_TAU_OVER_TAU_K,
-	                                 g_param_spec_double ("ncdm-fluid-trigger-tau-over-tau-k",
-	                                                      NULL,
-	                                                      "when to switch off ncdm (massive neutrinos / non-cold relics) fluid approximation",
-	                                                      0.0, G_MAXDOUBLE, 31.0,
-	                                                      G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-	g_object_class_install_property (object_class,
-	                                 PROP_NEGLECT_CMB_SOURCES_BELOW_VISIBILITY,
-	                                 g_param_spec_double ("neglect-CMB-sources-below-visibility",
-	                                                      NULL,
-	                                                      "neglect CMB sources below visibility",
-	                                                      0.0, G_MAXDOUBLE, 1.0e-3,
-	                                                      G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-	/*
+  g_object_class_install_property (object_class,
+                                   PROP_EVOLVER,
+                                   g_param_spec_int ("evolver",
+                                                     NULL,
+                                                     "which type of evolver for integrating perturbations (Runge-Kutta? Stiff?...)",
+                                                     0, G_MAXINT, ndf15,
+                                                     G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  g_object_class_install_property (object_class,
+                                   PROP_K_MIN_TAU0,
+                                   g_param_spec_double ("k-min-tau0",
+                                                        NULL,
+                                                        "number defining k_min for the computation of Cl's and P(k)'s (dimensionless): (k_min tau_0), usually chosen much smaller than one",
+                                                        0.0, G_MAXDOUBLE, 0.1,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  g_object_class_install_property (object_class,
+                                   PROP_K_MAX_TAU0_OVER_L_MAX,
+                                   g_param_spec_double ("k-max-tau0-over-l-max",
+                                                        NULL,
+                                                        "number defining k_max for the computation of Cl's (dimensionless): (k_max tau_0)/l_max, usually chosen around two (very relevant for accuracy of lensed ClTT at highest l's)",
+                                                        0.0, G_MAXDOUBLE, 2.4,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  g_object_class_install_property (object_class,
+                                   PROP_K_STEP_SUB,
+                                   g_param_spec_double ("k-step-sub",
+                                                        NULL,
+                                                        "step in k space, in units of one period of acoustic oscillation at decoupling, for scales inside sound horizon at decoupling",
+                                                        0.0, G_MAXDOUBLE, 0.05,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  g_object_class_install_property (object_class,
+                                   PROP_K_STEP_SUPER,
+                                   g_param_spec_double ("k-step-super",
+                                                        NULL,
+                                                        "step in k space, in units of one period of acoustic oscillation at decoupling, for scales above sound horizon at decoupling",
+                                                        0.0, G_MAXDOUBLE, 0.002,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  g_object_class_install_property (object_class,
+                                   PROP_K_STEP_TRANSITION,
+                                   g_param_spec_double ("k-step-transition",
+                                                        NULL,
+                                                        "dimensionless number regulating the transition from 'sub' steps to 'super' steps. Decrease for more precision",
+                                                        0.0, G_MAXDOUBLE, 0.2,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  g_object_class_install_property (object_class,
+                                   PROP_K_STEP_SUPER_REDUCTION,
+                                   g_param_spec_double ("k-step-super-reduction",
+                                                        NULL,
+                                                        "the step k_step_super is reduced by this amount in the k-->0 limit (below scale of Hubble and/or curvature radius)",
+                                                        0.0, G_MAXDOUBLE, 0.1,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  g_object_class_install_property (object_class,
+                                   PROP_K_PER_DECADE_FOR_PK,
+                                   g_param_spec_double ("k-per-decade-for-pk",
+                                                        NULL,
+                                                        "if values needed between kmax inferred from k_oscillations and k_kmax_for_pk, this gives the number of k per decade outside the BAO region",
+                                                        0.0, G_MAXDOUBLE, 10.0,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  g_object_class_install_property (object_class,
+                                   PROP_K_PER_DECADE_FOR_BAO,
+                                   g_param_spec_double ("k-per-decade-for-bao",
+                                                        NULL,
+                                                        "if values needed between kmax inferred from k_oscillations and k_kmax_for_pk, this gives the number of k per decade inside the BAO region (for finer sampling)",
+                                                        0.0, G_MAXDOUBLE, 70.0,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  g_object_class_install_property (object_class,
+                                   PROP_K_BAO_CENTER,
+                                   g_param_spec_double ("k-bao-center",
+                                                        NULL,
+                                                        "in ln(k) space, the central value of the BAO region where sampling is finer is defined as k_rec times this number (recommended: 3, i.e. finest sampling near 3rd BAO peak)",
+                                                        0.0, G_MAXDOUBLE, 3.0,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  g_object_class_install_property (object_class,
+                                   PROP_K_BAO_WIDTH,
+                                   g_param_spec_double ("k-bao-width",
+                                                        NULL,
+                                                        "in ln(k) space, width of the BAO region where sampling is finer: this number gives roughly the number of BAO oscillations well resolved on both sides of the central value (recommended: 4, i.e. finest sampling from before first up to 3+4=7th peak)",
+                                                        0.0, G_MAXDOUBLE, 4.0,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  g_object_class_install_property (object_class,
+                                   PROP_START_SMALL_K_AT_TAU_C_OVER_TAU_H,
+                                   g_param_spec_double ("start-small-k-at-tau-c-over-tau-h",
+                                                        NULL,
+                                                        "largest wavelengths start being sampled when universe is sufficiently opaque. This is quantified in terms of the ratio of thermo to hubble time scales, $\tau_c/\tau_H$. Start when start_largek_at_tau_c_over_tau_h equals this ratio. Decrease this value to start integrating the wavenumbers earlier in time.",
+                                                        0.0, G_MAXDOUBLE, 0.0015,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  g_object_class_install_property (object_class,
+                                   PROP_START_LARGE_K_AT_TAU_H_OVER_TAU_K,
+                                   g_param_spec_double ("start-large-k-at-tau-h-over-tau-k",
+                                                        NULL,
+                                                        "largest wavelengths start being sampled when mode is sufficiently outside Hibble scale. This is quantified in terms of the ratio of hubble time scale to wavenumber time scale, $\tau_h/\tau_k$ wich is roughly equal to (k*tau). Start when this ratio equals start_large_k_at_tau_k_over_tau_h. Decrease this value to start integrating the wavenumbers earlier in time.",
+                                                        0.0, G_MAXDOUBLE, 0.07,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  g_object_class_install_property (object_class,
+                                   PROP_TIGHT_COUPLING_TRIGGER_TAU_C_OVER_TAU_H,
+                                   g_param_spec_double ("tight-coupling-trigger-tau-c-over-tau-h",
+                                                        NULL,
+                                                        "when to switch off tight-coupling approximation: first condition: $\\tau_c/\\tau_H$ > tight_coupling_trigger_tau_c_over_tau_h. Decrease this value to switch off earlier in time.  If this number is larger than start_sources_at_tau_c_over_tau_h, the code returns an error, because the source computation requires tight-coupling to be switched off.",
+                                                        0.0, G_MAXDOUBLE, 0.015,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  g_object_class_install_property (object_class,
+                                   PROP_TIGHT_COUPLING_TRIGGER_TAU_C_OVER_TAU_K,
+                                   g_param_spec_double ("tight-coupling-trigger-tau-c-over-tau-k",
+                                                        NULL,
+                                                        "when to switch off tight-coupling approximation: second condition: $\\tau_c/\\tau_k \\equiv k \\tau_c$ < tight_coupling_trigger_tau_c_over_tau_k. Decrease this value to switch off earlier in time.",
+                                                        0.0, G_MAXDOUBLE, 0.01,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  g_object_class_install_property (object_class,
+                                   PROP_START_SOURCES_AT_TAU_C_OVER_TAU_H,
+                                   g_param_spec_double ("start-sources-at-tau-c-over-tau-h",
+                                                        NULL,
+                                                        "sources start being sampled when universe is sufficiently opaque. This is quantified in terms of the ratio of thermo to hubble time scales, $\\tau_c/\\tau_H$. Start when start_sources_at_tau_c_over_tau_h equals this ratio. Decrease this value to start sampling the sources earlier in time.",
+                                                        0.0, G_MAXDOUBLE, 0.008,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  g_object_class_install_property (object_class,
+                                   PROP_TIGHT_COUPLING_APPROXIMATION,
+                                   g_param_spec_int ("tight-coupling-approximation",
+                                                     NULL,
+                                                     "Tight coupling approximation scheme",
+                                                     0, G_MAXINT, (gint)compromise_CLASS,
+                                                     G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  g_object_class_install_property (object_class,
+                                   PROP_L_MAX_G,
+                                   g_param_spec_int ("l-max-g",
+                                                     NULL,
+                                                     "number of momenta in Boltzmann hierarchy for photon temperature (scalar)",
+                                                     4, G_MAXINT, 12,
+                                                     G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  g_object_class_install_property (object_class,
+                                   PROP_L_MAX_POL_G,
+                                   g_param_spec_int ("l-max-pol-g",
+                                                     NULL,
+                                                     "number of momenta in Boltzmann hierarchy for photon polarisation (scalar)",
+                                                     4, G_MAXINT, 10,
+                                                     G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  g_object_class_install_property (object_class,
+                                   PROP_L_MAX_DR,
+                                   g_param_spec_int ("l-max-dr",
+                                                     NULL,
+                                                     "number of momenta in Boltzmann hierarchy for decay radiation",
+                                                     4, G_MAXINT, 17,
+                                                     G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  g_object_class_install_property (object_class,
+                                   PROP_L_MAX_UR,
+                                   g_param_spec_int ("l-max-ur",
+                                                     NULL,
+                                                     "number of momenta in Boltzmann hierarchy for relativistic neutrino/relics (scalar)",
+                                                     4, G_MAXINT, 17,
+                                                     G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  g_object_class_install_property (object_class,
+                                   PROP_L_MAX_NCDM,
+                                   g_param_spec_int ("l-max-ncdm",
+                                                     NULL,
+                                                     "number of momenta in Boltzmann hierarchy for relativistic neutrino/relics (scalar)",
+                                                     4, G_MAXINT, 17,
+                                                     G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  g_object_class_install_property (object_class,
+                                   PROP_L_MAX_G_TEN,
+                                   g_param_spec_int ("l-max-g-ten",
+                                                     NULL,
+                                                     "number of momenta in Boltzmann hierarchy for photon temperature (tensor)",
+                                                     4, G_MAXINT, 5,
+                                                     G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  g_object_class_install_property (object_class,
+                                   PROP_L_MAX_POL_G_TEN,
+                                   g_param_spec_int ("l-max-pol-g-ten",
+                                                     NULL,
+                                                     "number of momenta in Boltzmann hierarchy for photon polarisation (tensor)",
+                                                     4, G_MAXINT, 5,
+                                                     G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  g_object_class_install_property (object_class,
+                                   PROP_CURVATURE_INI,
+                                   g_param_spec_double ("curvature-ini",
+                                                        NULL,
+                                                        "initial curvature; used to fix adiabatic initial conditions; must remain fixed to one as long as the primordial adiabatic spectrum stands for the curvature power spectrum",
+                                                        0.0, G_MAXDOUBLE, 1.0,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  g_object_class_install_property (object_class,
+                                   PROP_ENTROPY_INI,
+                                   g_param_spec_double ("entropy-ini",
+                                                        NULL,
+                                                        "initial entropy; used to fix isocurvature initial conditions; must remain fixed to one as long as the primordial isocurvature spectrum stands for an entropy power spectrum",
+                                                        0.0, G_MAXDOUBLE, 1.0,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  g_object_class_install_property (object_class,
+                                   PROP_GW_INI,
+                                   g_param_spec_double ("gw-ini",
+                                                        NULL,
+                                                        "initial condition for tensor metric perturbation h",
+                                                        0.0, G_MAXDOUBLE, 1.0,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  g_object_class_install_property (object_class,
+                                   PROP_PERTURB_INTEGRATION_STEPSIZE,
+                                   g_param_spec_double ("perturb-integration-stepsize",
+                                                        NULL,
+                                                        "default step $d \\tau$ in perturbation integration, in units of the timescale involved in the equations (usally, the min of $1/k$, $1/aH$, $1/\\dot{\\kappa}$)",
+                                                        0.0, G_MAXDOUBLE, 0.5,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  g_object_class_install_property (object_class,
+                                   PROP_TOL_TAU_APPROX,
+                                   g_param_spec_double ("tol-tau-approx",
+                                                        NULL,
+                                                        "precision with which the code should determine (by bisection) the times at which sources start being sampled, and at which approximations must be switched on/off (units of Mpc)",
+                                                        0.0, G_MAXDOUBLE, 1.0e-10,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  g_object_class_install_property (object_class,
+                                   PROP_TOL_PERTURB_INTEGRATION,
+                                   g_param_spec_double ("tol-perturb-integration",
+                                                        NULL,
+                                                        "control parameter for the precision of the perturbation integration",
+                                                        0.0, G_MAXDOUBLE, 1.0e-5,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  g_object_class_install_property (object_class,
+                                   PROP_PERTURB_SAMPLING_STEPSIZE,
+                                   g_param_spec_double ("perturb-sampling-stepsize",
+                                                        NULL,
+                                                        "default step $d \\tau$ for sampling the source function, in units of the timescale involved in the sources: $(\\dot{\\kappa}- \\ddot{\\kappa}/\\dot{\\kappa})^{-1}$",
+                                                        0.0, G_MAXDOUBLE, 0.10,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  g_object_class_install_property (object_class,
+                                   PROP_RADIATION_STREAMING_APPROXIMATION,
+                                   g_param_spec_int ("radiation-streaming-approximation",
+                                                     NULL,
+                                                     "method for switching off photon perturbations",
+                                                     0, G_MAXINT, rsa_MD_with_reio,
+                                                     G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  g_object_class_install_property (object_class,
+                                   PROP_RADIATION_STREAMING_TRIGGER_TAU_OVER_TAU_K,
+                                   g_param_spec_double ("radiation-streaming-trigger-tau-over-tau-k",
+                                                        NULL,
+                                                        "when to switch off photon perturbations, ie when to switch on photon free-streaming approximation (keep density and thtau, set shear and higher momenta to zero): first condition: $k \tau$ > radiation_streaming_trigger_tau_h_over_tau_k",
+                                                        0.0, G_MAXDOUBLE, 45.0,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  g_object_class_install_property (object_class,
+                                   PROP_RADIATION_STREAMING_TRIGGER_TAU_C_OVER_TAU,
+                                   g_param_spec_double ("radiation-streaming-trigger-tau-c-over-tau",
+                                                        NULL,
+                                                        "when to switch off photon perturbations, ie when to switch on photon free-streaming approximation (keep density and theta, set shear and higher momenta to zero): second condition:",
+                                                        0.0, G_MAXDOUBLE, 5.0,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  g_object_class_install_property (object_class,
+                                   PROP_UR_FLUID_APPROXIMATION,
+                                   g_param_spec_int ("ur-fluid-approximation",
+                                                     NULL,
+                                                     "UR fluid approximation scheme",
+                                                     0, G_MAXINT, ufa_CLASS,
+                                                     G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  g_object_class_install_property (object_class,
+                                   PROP_UR_FLUID_TRIGGER_TAU_OVER_TAU_K,
+                                   g_param_spec_double ("ur-fluid-trigger-tau-over-tau-k",
+                                                        NULL,
+                                                        "when to switch off ur (massless neutrinos / ultra-relativistic relics) fluid approximation",
+                                                        0.0, G_MAXDOUBLE, 30.0,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  g_object_class_install_property (object_class,
+                                   PROP_NCDM_FLUID_APPROXIMATION,
+                                   g_param_spec_int ("ncdm-fluid-approximation",
+                                                     NULL,
+                                                     "NCDM fluid approximation scheme",
+                                                     0, G_MAXINT, ncdmfa_CLASS,
+                                                     G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  g_object_class_install_property (object_class,
+                                   PROP_NCDM_FLUID_TRIGGER_TAU_OVER_TAU_K,
+                                   g_param_spec_double ("ncdm-fluid-trigger-tau-over-tau-k",
+                                                        NULL,
+                                                        "when to switch off ncdm (massive neutrinos / non-cold relics) fluid approximation",
+                                                        0.0, G_MAXDOUBLE, 31.0,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  g_object_class_install_property (object_class,
+                                   PROP_NEGLECT_CMB_SOURCES_BELOW_VISIBILITY,
+                                   g_param_spec_double ("neglect-CMB-sources-below-visibility",
+                                                        NULL,
+                                                        "neglect CMB sources below visibility",
+                                                        0.0, G_MAXDOUBLE, 1.0e-3,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  /*
    * Primordial spectra parameters
    */
   g_object_class_install_property (object_class,
@@ -2203,76 +2201,76 @@ nc_cbe_precision_class_init (NcCBEPrecisionClass* klass)
   /*
    * Nonlinear module parameters
    */
-	g_object_class_install_property (object_class,
-	                                 PROP_HALOFIT_DZ,
-	                                 g_param_spec_double ("halofit-dz",
-	                                                      NULL,
-	                                                      "spacing in redshift space defining values of z at which HALOFIT will be used. Intermediate values will be obtained by interpolation. Decrease for more precise interpolations, at the expense of increasing time spent in nonlinear_init()",
-	                                                      0.0, G_MAXDOUBLE, 0.1,
-	                                                      G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-	g_object_class_install_property (object_class,
-	                                 PROP_HALOFIT_MIN_K_NONLINEAR,
-	                                 g_param_spec_double ("halofit-min-k-nonlinear",
-	                                                      NULL,
-	                                                      "value of k in 1/Mpc above which non-linear corrections will be computed",
-	                                                      0.0, G_MAXDOUBLE, 0.0035,
-	                                                      G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-	g_object_class_install_property (object_class,
-	                                 PROP_HALOFIT_SIGMA_PRECISION,
-	                                 g_param_spec_double ("halofit-sigma-precision",
-	                                                      NULL,
-	                                                      "a smaller value will lead to a more precise halofit result at the highest requested redshift, at the expense of requiring a larger k_max",
-	                                                      0.0, G_MAXDOUBLE, 0.05,
-	                                                      G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-	g_object_class_install_property (object_class,
-	                                 PROP_HALOFIT_MIN_K_MAX,
-	                                 g_param_spec_double ("halofit-min-k-max",
-	                                                      NULL,
-	                                                      "when halofit is used, k_max must be at least equal to this value (otherwise halofit could not find the scale of non-linearity)",
-	                                                      0.0, G_MAXDOUBLE, 5.0,
-	                                                      G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-	/*
+  g_object_class_install_property (object_class,
+                                   PROP_HALOFIT_DZ,
+                                   g_param_spec_double ("halofit-dz",
+                                                        NULL,
+                                                        "spacing in redshift space defining values of z at which HALOFIT will be used. Intermediate values will be obtained by interpolation. Decrease for more precise interpolations, at the expense of increasing time spent in nonlinear_init()",
+                                                        0.0, G_MAXDOUBLE, 0.1,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  g_object_class_install_property (object_class,
+                                   PROP_HALOFIT_MIN_K_NONLINEAR,
+                                   g_param_spec_double ("halofit-min-k-nonlinear",
+                                                        NULL,
+                                                        "value of k in 1/Mpc above which non-linear corrections will be computed",
+                                                        0.0, G_MAXDOUBLE, 0.0035,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  g_object_class_install_property (object_class,
+                                   PROP_HALOFIT_SIGMA_PRECISION,
+                                   g_param_spec_double ("halofit-sigma-precision",
+                                                        NULL,
+                                                        "a smaller value will lead to a more precise halofit result at the highest requested redshift, at the expense of requiring a larger k_max",
+                                                        0.0, G_MAXDOUBLE, 0.05,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  g_object_class_install_property (object_class,
+                                   PROP_HALOFIT_MIN_K_MAX,
+                                   g_param_spec_double ("halofit-min-k-max",
+                                                        NULL,
+                                                        "when halofit is used, k_max must be at least equal to this value (otherwise halofit could not find the scale of non-linearity)",
+                                                        0.0, G_MAXDOUBLE, 5.0,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  /*
    * parameter related to lensing
    */
-	g_object_class_install_property (object_class,
-	                                 PROP_ACCURATE_LENSING,
-	                                 g_param_spec_int ("accurate-lensing",
-	                                                   NULL,
-	                                                   "switch between Gauss-Legendre quadrature integration and simple quadrature on a subdomain of angles",
-	                                                   0.0, G_MAXINT, _FALSE_,
-	                                                   G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-	g_object_class_install_property (object_class,
-	                                 PROP_NUM_MU_MINUS_LMAX,
-	                                 g_param_spec_int ("num-mu-minus-lmax",
-	                                                   NULL,
-	                                                   "difference between num_mu and l_max, increase for more precision",
-	                                                   0.0, G_MAXINT, 70,
-	                                                   G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-	g_object_class_install_property (object_class,
-	                                 PROP_DELTA_L_MAX,
-	                                 g_param_spec_int ("delta-l-max",
-	                                                   NULL,
-	                                                   "difference between l_max in unlensed and lensed spectra",
-	                                                   0.0, G_MAXINT, 500,
-	                                                   G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-	/*
+  g_object_class_install_property (object_class,
+                                   PROP_ACCURATE_LENSING,
+                                   g_param_spec_int ("accurate-lensing",
+                                                     NULL,
+                                                     "switch between Gauss-Legendre quadrature integration and simple quadrature on a subdomain of angles",
+                                                     0.0, G_MAXINT, _FALSE_,
+                                                     G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  g_object_class_install_property (object_class,
+                                   PROP_NUM_MU_MINUS_LMAX,
+                                   g_param_spec_int ("num-mu-minus-lmax",
+                                                     NULL,
+                                                     "difference between num_mu and l_max, increase for more precision",
+                                                     0.0, G_MAXINT, 70,
+                                                     G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  g_object_class_install_property (object_class,
+                                   PROP_DELTA_L_MAX,
+                                   g_param_spec_int ("delta-l-max",
+                                                     NULL,
+                                                     "difference between l_max in unlensed and lensed spectra",
+                                                     0.0, G_MAXINT, 500,
+                                                     G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  /*
    * general precision parameters
    */
 
-	g_object_class_install_property (object_class,
-	                                 PROP_SMALLEST_ALLOWED_VARIATION,
-	                                 g_param_spec_double ("smallest-allowed-variation",
-	                                                      NULL,
-	                                                      "machine-dependent, defined by the implementation",
-	                                                      0.0, G_MAXDOUBLE, DBL_EPSILON,
-	                                                      G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-	g_object_class_install_property (object_class,
-	                                 PROP_TOL_GAUSS_LEGENDRE,
-	                                 g_param_spec_double ("tol-gauss-legendre",
-	                                                      NULL,
-	                                                      "tolerance with which quadrature points are found: must be very small for an accurate integration (if not entered manually, set automatically to match implementation precision)",
-	                                                      0.0, G_MAXDOUBLE, DBL_EPSILON,
-	                                                      G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  g_object_class_install_property (object_class,
+                                   PROP_SMALLEST_ALLOWED_VARIATION,
+                                   g_param_spec_double ("smallest-allowed-variation",
+                                                        NULL,
+                                                        "machine-dependent, defined by the implementation",
+                                                        0.0, G_MAXDOUBLE, DBL_EPSILON,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  g_object_class_install_property (object_class,
+                                   PROP_TOL_GAUSS_LEGENDRE,
+                                   g_param_spec_double ("tol-gauss-legendre",
+                                                        NULL,
+                                                        "tolerance with which quadrature points are found: must be very small for an accurate integration (if not entered manually, set automatically to match implementation precision)",
+                                                        0.0, G_MAXDOUBLE, DBL_EPSILON,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 }
 
 
@@ -2286,9 +2284,9 @@ nc_cbe_precision_class_init (NcCBEPrecisionClass* klass)
 NcCBEPrecision*
 nc_cbe_precision_new (void)
 {
-	NcCBEPrecision* cbe_prec = g_object_new (NC_TYPE_CBE_PRECISION,
-	                                         NULL);
-	return cbe_prec;
+  NcCBEPrecision* cbe_prec = g_object_new (NC_TYPE_CBE_PRECISION,
+                                           NULL);
+  return cbe_prec;
 }
 
 /**
@@ -2302,7 +2300,7 @@ nc_cbe_precision_new (void)
 NcCBEPrecision*
 nc_cbe_precision_ref (NcCBEPrecision* cbe_prec)
 {
-	return g_object_ref (cbe_prec);
+  return g_object_ref (cbe_prec);
 }
 
 /**
@@ -2314,7 +2312,7 @@ nc_cbe_precision_ref (NcCBEPrecision* cbe_prec)
  */
 void nc_cbe_precision_free (NcCBEPrecision* cbe_prec)
 {
-	g_object_unref (cbe_prec);
+  g_object_unref (cbe_prec);
 }
 
 /**
@@ -2326,7 +2324,7 @@ void nc_cbe_precision_free (NcCBEPrecision* cbe_prec)
  */
 void nc_cbe_precision_clear (NcCBEPrecision** cbe_prec)
 {
-	g_clear_object (cbe_prec);
+  g_clear_object (cbe_prec);
 }
 
 /**
@@ -2338,27 +2336,26 @@ void nc_cbe_precision_clear (NcCBEPrecision** cbe_prec)
  */
 void nc_cbe_precision_assert_default (NcCBEPrecision* cbe_prec)
 {
-	struct precision ppr;
-	input_default_precision (&ppr);
+  struct precision ppr;
+  input_default_precision (&ppr);
 
 #define _CMP_DBL(name) g_assert_cmpfloat (ppr.name, ==, cbe_prec->priv->ppr.name)
-#define _CMP_STR(name)                                              \
-	G_STMT_START                                                    \
-	{                                                               \
-		gchar* s1 = g_path_get_basename (ppr.name);                 \
-		gchar* s2 = g_path_get_basename (cbe_prec->priv->ppr.name); \
-		g_assert_cmpstr (s1, ==, s2);                               \
-		/*printf ("`%s'\n", ppr.name);*/                            \
-		g_free (s1);                                                \
-		g_free (s2);                                                \
-	}                                                               \
-	G_STMT_END
+#define _CMP_STR(name)                                        \
+G_STMT_START                                                  \
+{                                                             \
+  gchar *s1 = g_path_get_basename (ppr.name);                 \
+  gchar *s2 = g_path_get_basename (cbe_prec->priv->ppr.name); \
+  g_assert_cmpstr (s1, ==, s2);                               \
+  /*printf ("`%s'\n", ppr.name);*/                            \
+  g_free (s1);                                                \
+  g_free (s2);                                                \
+}                                                             \
+G_STMT_END
 
-
-	_CMP_STR (sBBN_file);
-	_CMP_STR (hyrec_Alpha_inf_file);
-	_CMP_STR (hyrec_R_inf_file);
-	_CMP_STR (hyrec_two_photon_tables_file);
+  _CMP_STR (sBBN_file);
+  _CMP_STR (hyrec_Alpha_inf_file);
+  _CMP_STR (hyrec_R_inf_file);
+  _CMP_STR (hyrec_two_photon_tables_file);
 
   _CMP_DBL (a_ini_over_a_today_default);
   _CMP_DBL (back_integration_stepsize);

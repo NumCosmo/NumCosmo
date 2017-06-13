@@ -431,9 +431,9 @@ _ncm_data_gauss_cov_set_size (NcmDataGaussCov* gauss, guint np)
   }
   if ((np != 0) && (np != gauss->np))
   {
-    gauss->np = np;
-    gauss->y = ncm_vector_new (gauss->np);
-    gauss->v = ncm_vector_new (gauss->np);
+    gauss->np  = np;
+    gauss->y   = ncm_vector_new (gauss->np);
+    gauss->v   = ncm_vector_new (gauss->np);
     gauss->cov = ncm_matrix_new (gauss->np, gauss->np);
     if (ncm_data_bootstrap_enabled (data))
     {
