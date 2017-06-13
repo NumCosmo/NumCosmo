@@ -22,4 +22,7 @@ RUN cd && mkdir NumCosmo
 COPY . /root/NumCosmo/
 ENV LD_LIBRARY_PATH=/usr/local/lib
 ENV GI_TYPELIB_PATH=/usr/local/lib/girepository-1.0
-RUN cd && cd NumCosmo && gtkdocize && ./autogen.sh && make -j12 && make install #
+ENV CUBACORES=1
+ENV OMP_NUM_THREADS=1
+ENV OMP_THREAD_LIMIT=1
+RUN cd && cd NumCosmo && gtkdocize && ./autogen.sh --with-thread-pool-max=4 && make -j12 && make install #

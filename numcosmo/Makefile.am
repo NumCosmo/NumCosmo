@@ -325,13 +325,13 @@ nc_headers = \
 	lss/nc_density_profile_nfw.h  \
 	lss/nc_galaxy_acf.h           \
 	lss/nc_multiplicity_func.h    \
-	lss/nc_multiplicity_func_ps.h          \
-	lss/nc_multiplicity_func_st.h          \
-	lss/nc_multiplicity_func_jenkins.h     \
-	lss/nc_multiplicity_func_warren.h      \
-	lss/nc_multiplicity_func_tinker.h      \
-	lss/nc_multiplicity_func_tinker_mean.h \
-	lss/nc_multiplicity_func_tinker_crit.h \
+	lss/nc_multiplicity_func_ps.h           \
+	lss/nc_multiplicity_func_st.h           \
+	lss/nc_multiplicity_func_jenkins.h      \
+	lss/nc_multiplicity_func_warren.h       \
+	lss/nc_multiplicity_func_tinker.h       \
+	lss/nc_multiplicity_func_tinker_mean.h  \
+	lss/nc_multiplicity_func_tinker_crit.h  \
 	lss/nc_multiplicity_func_tinker_mean_normalized.h \
 	lss/nc_multiplicity_func_crocce.h      \
 	lss/nc_halo_mass_function.h            \
@@ -377,6 +377,7 @@ nc_headers = \
 	data/nc_data_cluster_counts_box_poisson.h \
 	data/nc_data_cluster_pseudo_counts.h   \
 	data/nc_data_planck_lkl.h              \
+	data/nc_data_xcor.h                    \
 	abc/nc_abc_cluster_ncount.h            \
 	model/quantum_gravity.h                \
 	perturbations/nc_hipert.h              \
@@ -390,12 +391,12 @@ nc_headers = \
 	perturbations/nc_hipert_boltzmann_cbe.h \
 	perturbations/linear.h                  \
 	perturbations/covariance.h              \
-	perturbations/linear_internal.h        \
-	xcor/nc_xcor.h                         \
-	xcor/nc_xcor_limber.h                  \
-	xcor/nc_xcor_limber_gal.h              \
-	xcor/nc_xcor_limber_lensing.h          \
-	xcor/nc_data_xcor.h
+	perturbations/linear_internal.h         \
+	xcor/nc_xcor.h                          \
+	xcor/nc_xcor_AB.h                       \
+	xcor/nc_xcor_limber_kernel.h            \
+	xcor/nc_xcor_limber_kernel_gal.h        \
+	xcor/nc_xcor_limber_kernel_lensing.h
 
 nc_sources = \
 	nc_hicosmo.c                  \
@@ -452,13 +453,13 @@ nc_sources = \
 	lss/nc_density_profile_nfw.c  \
 	lss/nc_galaxy_acf.c           \
 	lss/nc_multiplicity_func.c    \
-	lss/nc_multiplicity_func_ps.c          \
-	lss/nc_multiplicity_func_st.c          \
-	lss/nc_multiplicity_func_jenkins.c     \
-	lss/nc_multiplicity_func_warren.c      \
-	lss/nc_multiplicity_func_tinker.c      \
-	lss/nc_multiplicity_func_tinker_mean.c \
-	lss/nc_multiplicity_func_tinker_crit.c \
+	lss/nc_multiplicity_func_ps.c           \
+	lss/nc_multiplicity_func_st.c           \
+	lss/nc_multiplicity_func_jenkins.c      \
+	lss/nc_multiplicity_func_warren.c       \
+	lss/nc_multiplicity_func_tinker.c       \
+	lss/nc_multiplicity_func_tinker_mean.c  \
+	lss/nc_multiplicity_func_tinker_crit.c  \
 	lss/nc_multiplicity_func_tinker_mean_normalized.c \
 	lss/nc_multiplicity_func_crocce.c      \
 	lss/nc_halo_mass_function.c            \
@@ -504,6 +505,7 @@ nc_sources = \
 	data/nc_data_cluster_counts_box_poisson.c \
 	data/nc_data_cluster_pseudo_counts.c   \
 	data/nc_data_planck_lkl.c              \
+	data/nc_data_xcor.c                    \
 	abc/nc_abc_cluster_ncount.c            \
 	model/quantum_gravity.c                \
 	perturbations/nc_hipert.c              \
@@ -520,11 +522,11 @@ nc_sources = \
 	perturbations/linear_cvodes.c           \
 	perturbations/linear_gsl_ode.c          \
 	perturbations/linear_gsl_ode2.c         \
-	xcor/nc_xcor.c                         \
-	xcor/nc_xcor_limber.c                  \
-	xcor/nc_xcor_limber_gal.c              \
-	xcor/nc_xcor_limber_lensing.c          \
-	xcor/nc_data_xcor.c
+	xcor/nc_xcor.c                          \
+	xcor/nc_xcor_AB.c                       \
+	xcor/nc_xcor_limber_kernel.c            \
+	xcor/nc_xcor_limber_kernel_gal.c        \
+	xcor/nc_xcor_limber_kernel_lensing.c
 
 libnumcosmo_la_LDFLAGS = -version-info $(LT_CURRENT):$(LT_REVISION):$(LT_AGE)
 

@@ -27,7 +27,7 @@
  * SECTION:nc_cbe_precision
  * @title: NcCBEPrecision
  * @short_description: CLASS (Cosmic Linear Anisotropy Solving System) backend for perturbations
- *
+   *
  * This object provides a front-end for CLASS precision structure.
  *
  * If you use this object please cite: [Blas (2011) CLASS II][XBlas2011],
@@ -52,11 +52,12 @@
 
 #include "nc_cbe_precision.h"
 #include "math/ncm_cfg.h"
+#include "nc_cbe_precision.h"
 
 struct _NcCBEPrecisionPrivate
 {
-  struct precision ppr;
-};
+     struct precision ppr;
+   };
 
 enum
 {
@@ -209,19 +210,18 @@ enum
   PROP_SIZE
 };
 
-
 G_DEFINE_TYPE (NcCBEPrecision, nc_cbe_precision, G_TYPE_OBJECT);
 
 static void
-nc_cbe_precision_init (NcCBEPrecision *cbe_prec)
+nc_cbe_precision_init (NcCBEPrecision* cbe_prec)
 {
   cbe_prec->priv = G_TYPE_INSTANCE_GET_PRIVATE (cbe_prec, NC_TYPE_CBE_PRECISION, NcCBEPrecisionPrivate);
 }
 
 static void
-nc_cbe_precision_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
+nc_cbe_precision_set_property (GObject* object, guint prop_id, const GValue* value, GParamSpec* pspec)
 {
-  NcCBEPrecision *cbe_prec = NC_CBE_PRECISION (object);
+  NcCBEPrecision* cbe_prec = NC_CBE_PRECISION (object);
   g_return_if_fail (NC_IS_CBE_PRECISION (object));
 
   switch (prop_id)
@@ -370,7 +370,7 @@ nc_cbe_precision_set_property (GObject *object, guint prop_id, const GValue *val
       {
         g_warning ("nc_cbe_precision_set_property: file `%s' not found, using default.", Alpha_inf_file);
         g_free (Alpha_inf_file);
-        
+
         Alpha_inf_file     = ncm_cfg_get_data_filename ("class_data"G_DIR_SEPARATOR_S"hyrec"G_DIR_SEPARATOR_S"Alpha_inf.dat", TRUE);
         Alpha_inf_file_len = strlen (Alpha_inf_file);
         g_assert_cmpuint (Alpha_inf_file_len, <= ,_FILENAMESIZE_);
@@ -392,10 +392,10 @@ nc_cbe_precision_set_property (GObject *object, guint prop_id, const GValue *val
       {
         g_warning ("nc_cbe_precision_set_property: file `%s' not found, using default.", R_inf_file);
         g_free (R_inf_file);
-        
+
         R_inf_file     = ncm_cfg_get_data_filename ("class_data"G_DIR_SEPARATOR_S"hyrec"G_DIR_SEPARATOR_S"R_inf.dat", TRUE);
         R_inf_file_len = strlen (R_inf_file);
-        
+
         g_assert_cmpuint (R_inf_file_len, <= ,_FILENAMESIZE_);
       }
 
@@ -418,10 +418,10 @@ nc_cbe_precision_set_property (GObject *object, guint prop_id, const GValue *val
 
         two_photon_tables_file     = ncm_cfg_get_data_filename ("class_data"G_DIR_SEPARATOR_S"hyrec"G_DIR_SEPARATOR_S"two_photon_tables.dat", TRUE);
         two_photon_tables_file_len = strlen (two_photon_tables_file);
-        
+
         g_assert_cmpuint (two_photon_tables_file_len, <= ,_FILENAMESIZE_);
       }
-      
+
       memcpy (cbe_prec->priv->ppr.hyrec_two_photon_tables_file, two_photon_tables_file, two_photon_tables_file_len + 1);
 
       g_free (two_photon_tables_file);
@@ -746,9 +746,9 @@ nc_cbe_precision_set_property (GObject *object, guint prop_id, const GValue *val
 }
 
 static void
-nc_cbe_precision_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
+nc_cbe_precision_get_property (GObject* object, guint prop_id, GValue* value, GParamSpec* pspec)
 {
-  NcCBEPrecision *cbe_prec = NC_CBE_PRECISION (object);
+  NcCBEPrecision* cbe_prec = NC_CBE_PRECISION (object);
   g_return_if_fail (NC_IS_CBE_PRECISION (object));
 
   switch (prop_id)
@@ -1195,7 +1195,7 @@ nc_cbe_precision_get_property (GObject *object, guint prop_id, GValue *value, GP
 }
 
 static void
-nc_cbe_precision_finalize (GObject *object)
+nc_cbe_precision_finalize (GObject* object)
 {
 
   /* Chain up : end */
@@ -1203,15 +1203,15 @@ nc_cbe_precision_finalize (GObject *object)
 }
 
 static void
-nc_cbe_precision_class_init (NcCBEPrecisionClass *klass)
+nc_cbe_precision_class_init (NcCBEPrecisionClass* klass)
 {
   GObjectClass* object_class = G_OBJECT_CLASS (klass);
 
   g_type_class_add_private (klass, sizeof (NcCBEPrecisionPrivate));
 
-  object_class->set_property = nc_cbe_precision_set_property;
-  object_class->get_property = nc_cbe_precision_get_property;
-  object_class->finalize     = nc_cbe_precision_finalize;
+  object_class->set_property = &nc_cbe_precision_set_property;
+  object_class->get_property = &nc_cbe_precision_get_property;
+  object_class->finalize     = &nc_cbe_precision_finalize;
 
   /*
    * Background related parameters.
@@ -1290,7 +1290,7 @@ nc_cbe_precision_class_init (NcCBEPrecisionClass *klass)
    * Thermodynamics related parameters
    */
   {
-    gchar *sBBN_file = ncm_cfg_get_data_filename ("class_data"G_DIR_SEPARATOR_S"bbn"G_DIR_SEPARATOR_S"sBBN.dat", TRUE);
+    gchar *sBBN_file = ncm_cfg_get_data_filename ("class_data" G_DIR_SEPARATOR_S "bbn" G_DIR_SEPARATOR_S "sBBN.dat", TRUE);
     g_object_class_install_property (object_class,
                                      PROP_SBBN_FILE,
                                      g_param_spec_string ("sBBN-file",
@@ -1490,7 +1490,7 @@ nc_cbe_precision_class_init (NcCBEPrecisionClass *klass)
                                                         0.0, G_MAXDOUBLE, 1.0e-3,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
   {
-    gchar *hyrec_Alpha_inf_file = ncm_cfg_get_data_filename ("class_data"G_DIR_SEPARATOR_S"hyrec"G_DIR_SEPARATOR_S"Alpha_inf.dat", TRUE);
+    gchar *hyrec_Alpha_inf_file = ncm_cfg_get_data_filename ("class_data" G_DIR_SEPARATOR_S "hyrec" G_DIR_SEPARATOR_S "Alpha_inf.dat", TRUE);
     g_object_class_install_property (object_class,
                                      PROP_HYREC_ALPHA_INF_FILE,
                                      g_param_spec_string ("hyrec-Alpha-inf-file",
@@ -1501,7 +1501,7 @@ nc_cbe_precision_class_init (NcCBEPrecisionClass *klass)
     g_free (hyrec_Alpha_inf_file);
   }
   {
-    gchar *hyrec_R_inf_file = ncm_cfg_get_data_filename ("class_data"G_DIR_SEPARATOR_S"hyrec"G_DIR_SEPARATOR_S"R_inf.dat", TRUE);
+    gchar *hyrec_R_inf_file = ncm_cfg_get_data_filename ("class_data" G_DIR_SEPARATOR_S "hyrec" G_DIR_SEPARATOR_S "R_inf.dat", TRUE);
     g_object_class_install_property (object_class,
                                      PROP_HYREC_R_INF_FILE,
                                      g_param_spec_string ("hyrec-R-inf-file",
@@ -1512,7 +1512,7 @@ nc_cbe_precision_class_init (NcCBEPrecisionClass *klass)
     g_free (hyrec_R_inf_file);
   }
   {
-    gchar *hyrec_two_photon_tables_file = ncm_cfg_get_data_filename ("class_data"G_DIR_SEPARATOR_S"hyrec"G_DIR_SEPARATOR_S"two_photon_tables.dat", TRUE);
+    gchar *hyrec_two_photon_tables_file = ncm_cfg_get_data_filename ("class_data" G_DIR_SEPARATOR_S "hyrec" G_DIR_SEPARATOR_S "two_photon_tables.dat", TRUE);
     g_object_class_install_property (object_class,
                                      PROP_HYREC_TWO_PHOTON_TABLES_FILE,
                                      g_param_spec_string ("hyrec-two-photon-tables-file",
@@ -2271,7 +2271,6 @@ nc_cbe_precision_class_init (NcCBEPrecisionClass *klass)
                                                         "tolerance with which quadrature points are found: must be very small for an accurate integration (if not entered manually, set automatically to match implementation precision)",
                                                         0.0, G_MAXDOUBLE, DBL_EPSILON,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-
 }
 
 
@@ -2282,11 +2281,11 @@ nc_cbe_precision_class_init (NcCBEPrecisionClass *klass)
  *
  * Returns: (transfer full): a new #NcCBEPrecision
  */
-NcCBEPrecision *
+NcCBEPrecision*
 nc_cbe_precision_new (void)
 {
-  NcCBEPrecision *cbe_prec = g_object_new (NC_TYPE_CBE_PRECISION,
-                                            NULL);
+  NcCBEPrecision* cbe_prec = g_object_new (NC_TYPE_CBE_PRECISION,
+                                           NULL);
   return cbe_prec;
 }
 
@@ -2298,8 +2297,8 @@ nc_cbe_precision_new (void)
  *
  * Returns: (transfer full): @cbe_prec.
  */
-NcCBEPrecision *
-nc_cbe_precision_ref (NcCBEPrecision *cbe_prec)
+NcCBEPrecision*
+nc_cbe_precision_ref (NcCBEPrecision* cbe_prec)
 {
   return g_object_ref (cbe_prec);
 }
@@ -2311,8 +2310,7 @@ nc_cbe_precision_ref (NcCBEPrecision *cbe_prec)
  * Decreases the reference count of @cbe_prec.
  *
  */
-void
-nc_cbe_precision_free (NcCBEPrecision *cbe_prec)
+void nc_cbe_precision_free (NcCBEPrecision* cbe_prec)
 {
   g_object_unref (cbe_prec);
 }
@@ -2324,8 +2322,7 @@ nc_cbe_precision_free (NcCBEPrecision *cbe_prec)
  * Decreases the reference count of *@cbe_prec and sets *@cbe_prec to NULL.
  *
  */
-void
-nc_cbe_precision_clear (NcCBEPrecision **cbe_prec)
+void nc_cbe_precision_clear (NcCBEPrecision** cbe_prec)
 {
   g_clear_object (cbe_prec);
 }
@@ -2337,23 +2334,23 @@ nc_cbe_precision_clear (NcCBEPrecision **cbe_prec)
  * Check agaist CLASS default values.
  *
  */
-void
-nc_cbe_precision_assert_default (NcCBEPrecision *cbe_prec)
+void nc_cbe_precision_assert_default (NcCBEPrecision* cbe_prec)
 {
   struct precision ppr;
   input_default_precision (&ppr);
 
 #define _CMP_DBL(name) g_assert_cmpfloat (ppr.name, ==, cbe_prec->priv->ppr.name)
-#define _CMP_STR(name) \
-G_STMT_START { \
-gchar *s1 = g_path_get_basename (ppr.name); \
-gchar *s2 = g_path_get_basename (cbe_prec->priv->ppr.name); \
-g_assert_cmpstr (s1, ==, s2); \
-/*printf ("`%s'\n", ppr.name);*/ \
-g_free (s1); \
-g_free (s2); \
-} G_STMT_END
-
+#define _CMP_STR(name)                                        \
+G_STMT_START                                                  \
+{                                                             \
+  gchar *s1 = g_path_get_basename (ppr.name);                 \
+  gchar *s2 = g_path_get_basename (cbe_prec->priv->ppr.name); \
+  g_assert_cmpstr (s1, ==, s2);                               \
+  /*printf ("`%s'\n", ppr.name);*/                            \
+  g_free (s1);                                                \
+  g_free (s2);                                                \
+}                                                             \
+G_STMT_END
 
   _CMP_STR (sBBN_file);
   _CMP_STR (hyrec_Alpha_inf_file);

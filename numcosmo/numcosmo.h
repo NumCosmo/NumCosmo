@@ -156,15 +156,16 @@
 #include <numcosmo/data/nc_data_cluster_counts_box_poisson.h>
 #include <numcosmo/data/nc_data_cluster_pseudo_counts.h>
 #include <numcosmo/data/nc_data_planck_lkl.h>
+#include <numcosmo/data/nc_data_xcor.h>
 
 /* ABC */
 #include <numcosmo/abc/nc_abc_cluster_ncount.h>
 
 /* Cross-correlations */
 #include <numcosmo/xcor/nc_xcor.h>
-#include <numcosmo/xcor/nc_xcor_limber.h>
-#include <numcosmo/xcor/nc_xcor_limber_gal.h>
-#include <numcosmo/xcor/nc_xcor_limber_lensing.h>
-#include <numcosmo/xcor/nc_data_xcor.h>
+#include <numcosmo/xcor/nc_xcor_AB.h>
+#include <numcosmo/xcor/nc_xcor_limber_kernel.h>
+#include <numcosmo/xcor/nc_xcor_limber_kernel_gal.h>
+#include <numcosmo/xcor/nc_xcor_limber_kernel_lensing.h>
 
 #endif /* _NUMCOSMO_H */
