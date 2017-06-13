@@ -240,6 +240,7 @@ void ncm_mset_catalog_calc_param_ensemble_evol (NcmMSetCatalog *mcat, const NcmM
 void ncm_mset_catalog_calc_add_param_ensemble_evol (NcmMSetCatalog *mcat, guint add_param, guint nsteps, NcmFitRunMsgs mtype, NcmVector **pval, NcmMatrix **t_evol);
 
 void ncm_mset_catalog_trim (NcmMSetCatalog *mcat, const guint tc);
+void ncm_mset_catalog_remove_last_ensemble (NcmMSetCatalog *mcat);
 
 guint ncm_mset_catalog_calc_max_ess_time (NcmMSetCatalog *mcat, const guint ntests, gdouble *max_ess, NcmFitRunMsgs mtype);
 guint ncm_mset_catalog_calc_heidel_diag (NcmMSetCatalog *mcat, const guint ntests, const gdouble pvalue, NcmFitRunMsgs mtype);
