@@ -287,10 +287,10 @@ nc_hicosmo_gcg_class_init (NcHICosmoGCGClass *klass)
                               NC_HICOSMO_DEFAULT_PARAMS_ABSTOL, NC_HICOSMO_GCG_DEFAULT_OMEGA_B,
                               NCM_PARAM_TYPE_FIXED);
 
-  /* Set Omega_b0 param info */
-  ncm_model_class_set_sparam (model_class, NC_HICOSMO_GCG_ALPHA, "\\alpha", "alpha",
+  /* Set Gamma param info */
+  ncm_model_class_set_sparam (model_class, NC_HICOSMO_GCG_GAMMA, "\\gamma", "gamma",
                               -1.5, +1.5, 0.05,
-                              NC_HICOSMO_DEFAULT_PARAMS_ABSTOL, NC_HICOSMO_GCG_DEFAULT_ALPHA,
+                              NC_HICOSMO_DEFAULT_PARAMS_ABSTOL, NC_HICOSMO_GCG_DEFAULT_GAMMA,
                               NCM_PARAM_TYPE_FIXED);
 
   /* Set massive neutrinos mass vector param */
@@ -367,7 +367,7 @@ static gdouble _nc_hicosmo_gcg_Omega_gnu0 (NcHICosmo *cosmo);
 #define ENNU (ncm_vector_get (VECTOR, NC_HICOSMO_GCG_ENNU))
 #define OMEGA_R (_nc_hicosmo_gcg_Omega_gnu0 (NC_HICOSMO (cosmo)))
 #define OMEGA_B (ncm_vector_get (VECTOR, NC_HICOSMO_GCG_OMEGA_B))
-#define ALPHA (ncm_vector_get (VECTOR, NC_HICOSMO_GCG_ALPHA))
+#define GAMMA (ncm_vector_get (VECTOR, NC_HICOSMO_GCG_GAMMA))
 
 #define OMEGA_M (OMEGA_B + OMEGA_C)
 #define OMEGA_K (1.0 - (OMEGA_B + OMEGA_C + OMEGA_R + OMEGA_X + _nc_hicosmo_gcg_Omega_mnu0 (cosmo)))
@@ -465,20 +465,21 @@ _nc_hicosmo_gcg_prepare (NcHICosmoGCG *cosmo_de)
 static gdouble
 _nc_hicosmo_gcg_E2 (NcHICosmo *cosmo, gdouble z)
 {
-  const gdouble Omega_k = OMEGA_K;
-  const gdouble Omega_c = OMEGA_C;
-  const gdouble Omega_x = OMEGA_X;
-  const gdouble x       = 1.0 + z;
-  const gdouble x2      = x * x;
-  const gdouble x3      = x2 * x;
-  const gdouble x4      = x3 * x;
+  const gdouble Omega_k         = OMEGA_K;
+  const gdouble Omega_c         = OMEGA_C;
+  const gdouble Omega_x         = OMEGA_X;
+  const gdouble x               = 1.0 + z;
+  const gdouble x2              = x * x;
+  const gdouble x3              = x2 * x;
+  const gdouble x4              = x3 * x;
 
-  const gdouble alpha   = ALPHA;
-  const gdouble arg     = ( Omega_x + Omega_c * pow (x3, 1.0 + alpha)) / (Omega_x + Omega_c);
+  const gdouble gamma           = GAMMA;
+  const gdouble x3_1_p_gamma    = pow (x3, 1.0 + gamma);
+  const gdouble arg             = (Omega_x + Omega_c * x3_1_p_gamma) / (Omega_x + Omega_c);
   
   const gdouble E2 = 
     OMEGA_R * x4 + OMEGA_B * x3 + Omega_k * x2 +
-    (Omega_x + Omega_c) * pow (arg, 1.0 / (1.0 + alpha))
+    (Omega_x + Omega_c) * pow (arg, 1.0 / (1.0 + gamma))
     + _nc_hicosmo_gcg_E2Omega_mnu (cosmo, z);
   
   return E2;
@@ -498,12 +499,13 @@ _nc_hicosmo_gcg_dE2_dz (NcHICosmo *cosmo, gdouble z)
   const gdouble x2              = x * x;
   const gdouble x3              = x2 * x;
   const gdouble dE2Omega_mnu_dz = 3.0 * (_nc_hicosmo_gcg_E2Omega_mnu (cosmo, z) + _nc_hicosmo_gcg_E2Press_mnu (cosmo, z)) / x;
-  const gdouble alpha           = ALPHA;
-  const gdouble x3_1_p_alpha    = pow (x3, 1.0 + alpha);
-  const gdouble arg             = ( Omega_x + Omega_c * x3_1_p_alpha) / (Omega_x + Omega_c);
+
+  const gdouble gamma           = GAMMA;
+  const gdouble x3_1_p_gamma    = pow (x3, 1.0 + gamma);
+  const gdouble arg             = (Omega_x + Omega_c * x3_1_p_gamma) / (Omega_x + Omega_c);
 
   return (4.0 * OMEGA_R * x3 + 3.0 * OMEGA_B * x2 + 2.0 * Omega_k * x)
-    + 3.0 * Omega_c * (x3_1_p_alpha / x) * pow (arg, -alpha / (1.0 + alpha))
+    + 3.0 * Omega_c * (x3_1_p_gamma / x) * pow (arg, -gamma / (1.0 + gamma))
     + dE2Omega_mnu_dz;
 }
 
@@ -515,12 +517,21 @@ static gdouble
 _nc_hicosmo_gcg_d2E2_dz2 (NcHICosmo *cosmo, gdouble z)
 {
   const gdouble omega_k = OMEGA_K;
+  const gdouble Omega_c = OMEGA_C;
+  const gdouble Omega_x = OMEGA_X;
   const gdouble x       = 1.0 + z;
   const gdouble x2      = x * x;
+  const gdouble x3      = x2 * x;
+
+  const gdouble gamma           = GAMMA;
+  const gdouble x3_1_p_gamma    = pow (x3, 1.0 + gamma);
+  const gdouble arg             = (Omega_x + Omega_c * x3_1_p_gamma) / (Omega_x + Omega_c);
 
 g_assert_not_reached ();
   
-  return 12.0 * OMEGA_R * x2 + 6.0 * OMEGA_M * x + 2.0 * omega_k;
+  return (12.0 * OMEGA_R * x2 + 6.0 * OMEGA_B * x + 2.0 * omega_k)
+    - 9.0 * (pow(x3_1_p_gamma, 2.0) / x2) * gamma * pow(Omega_c, 2.0) * pow(arg, -2.0 + 1.0 / (1.0 + gamma)) / (Omega_c + Omega_x)
+    + 3.0 * (x3_1_p_gamma / x2) * (2.0 + 3.0 * gamma) * Omega_c * pow(arg, -gamma / (1.0 + gamma));
 }
 
 /****************************************************************************
@@ -642,9 +653,9 @@ _nc_hicosmo_gcg_E2Omega_m (NcHICosmo *cosmo, const gdouble z)
   const gdouble Omega_mnu_d = _nc_hicosmo_gcg_E2Omega_mnu (cosmo, z) - Omega_mnu_r;
   const gdouble Omega_c     = OMEGA_C;
   const gdouble Omega_x     = OMEGA_X;
-  const gdouble alpha       = ALPHA;
+  const gdouble gamma       = GAMMA;
 
-  return OMEGA_B * x3 + OMEGA_C * x3 * pow ((Omega_c + Omega_x * pow (x3, (1.0 + alpha)))/ (Omega_c + Omega_x), -alpha / (1.0 + alpha)) + Omega_mnu_d;
+  return OMEGA_B * x3 + OMEGA_C * x3 * pow ((Omega_c + Omega_x * pow (x3, (1.0 + gamma)))/ (Omega_c + Omega_x), -gamma / (1.0 + gamma)) + Omega_mnu_d;
 }
 
 static gdouble

@@ -138,8 +138,8 @@ nc_cluster_redshift_obs_params_len (NcClusterRedshift *clusterz)
  * @clusterz: a #NcClusterRedshift
  * @z: true redshift
  * @lnM: true mass
- * @z_obs: measured redshift
- * @z_obs_params: measured redshift params
+ * @z_obs: (array) (element-type gdouble): measured redshift
+ * @z_obs_params: (array) (element-type gdouble): measured redshift params
  *
  * It computes the probability density function (pdf) of the cluster redshift distribution @clusterz
  * given @z, @lnM and the measured redshit @z_obs and its parameter(s) @z_obs_params.
@@ -193,8 +193,8 @@ nc_cluster_redshift_resample (NcClusterRedshift *clusterz, gdouble lnM, gdouble 
 /**
  * nc_cluster_redshift_p_limits:
  * @clusterz: a #NcClusterRedshift
- * @z_obs: observed redshift
- * @z_obs_params: observed redshift params
+ * @z_obs: (array) (element-type gdouble): observed redshift
+ * @z_obs_params: (array) (element-type gdouble): observed redshift params
  * @z_lower: (out): pointer to the lower limit of the true redshift integration
  * @z_upper: (out): pointer to the upper limit of the true redshift integration
  *

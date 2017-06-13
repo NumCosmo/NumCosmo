@@ -1079,8 +1079,8 @@ _nc_cbe_set_bg (NcCBE* cbe, NcHICosmo* cosmo)
 
     if (N_ncdm != 0)
     {
-      struct background *pba = &cbe->priv->pba;
-      struct precision *ppr  = (struct precision *)cbe->prec->priv;
+      struct background* pba = &cbe->priv->pba;
+      struct precision* ppr  = (struct precision*)cbe->prec->priv;
       const gdouble T_gamma0 = nc_hicosmo_T_gamma0 (cosmo);
       guint nu_i;
 
@@ -1095,17 +1095,15 @@ _nc_cbe_set_bg (NcCBE* cbe, NcHICosmo* cosmo)
       pba->got_files    = (gboolean *)malloc (sizeof (gboolean) * N_ncdm);
 
       pba->Omega0_ncdm_tot = 0.0;
-
       for (nu_i = 0; nu_i < pba->N_ncdm; nu_i++)
       {
-        pba->got_files[nu_i]   = _FALSE_;
+        pba->got_files[nu_i] = _FALSE_;
 
         nc_hicosmo_MassNuInfo (cosmo, nu_i, &pba->m_ncdm_in_eV[nu_i], &pba->T_ncdm[nu_i], &pba->ksi_ncdm[nu_i], &pba->deg_ncdm[nu_i]);
-
         pba->M_ncdm[nu_i]      = pba->m_ncdm_in_eV[nu_i] * ncm_c_eV () / (ncm_c_kb () * pba->T_ncdm[nu_i] * T_gamma0);
         pba->Omega0_ncdm[nu_i] = nc_hicosmo_Omega_mnu0_n (cosmo, nu_i);
 
-        pba->Omega0_ncdm_tot += pba->Omega0_ncdm[nu_i];
+        pba->Omega0_ncdm_tot  += pba->Omega0_ncdm[nu_i];
       }
 
       /* From CLASS input.c */
@@ -1113,8 +1111,9 @@ _nc_cbe_set_bg (NcCBE* cbe, NcHICosmo* cosmo)
       background_ncdm_init (ppr, &cbe->priv->pba);
 
       /* We must calculate M from omega or vice versa if one of them is missing.
-       If both are present, we must update the degeneracy parameter to
-       reflect the implicit normalisation of the distribution function.*/
+         If both are present, we must update the degeneracy parameter to
+         reflect the implicit normalisation of the distribution function.*/
+      
       guint n;
       gdouble rho_ncdm;
       for (n = 0; n < N_ncdm; n++)
@@ -1157,8 +1156,8 @@ _nc_cbe_set_bg (NcCBE* cbe, NcHICosmo* cosmo)
       cbe->priv->pba.m_ncdm_in_eV   = NULL;
     }
   }
-  
-	cbe->priv->pba.Omega0_scf          = 0.0;
+
+  cbe->priv->pba.Omega0_scf          = 0.0;
 	cbe->priv->pba.attractor_ic_scf    = _TRUE_;
 	cbe->priv->pba.scf_parameters      = NULL;
 
@@ -1914,7 +1913,7 @@ nc_cbe_compare_bg (NcCBE *cbe, NcHICosmo *cosmo, gboolean log_cmp)
       const gdouble rho_crit   = E2 * RH_pow_m2;
 
       {
-        const gdouble a_diff          = fabs (nc_scalefactor_a_eta (cbe->a, eta) / pvecback[pba->index_bg_a] - 1.0);
+        const gdouble a_diff          = fabs (nc_scalefactor_eval_a_eta (cbe->a, eta) / pvecback[pba->index_bg_a] - 1.0);
         const gdouble H_diff          = fabs (H / pvecback[pba->index_bg_H] - 1.0);
         const gdouble Hprime_diff     = fabs (H_prime / pvecback[pba->index_bg_H_prime] - 1.0);
 

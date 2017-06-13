@@ -138,6 +138,7 @@ gboolean ncm_model_check_impl_opts (NcmModel *model, gint opt1, ...);
 G_INLINE_FUNC guint ncm_model_len (NcmModel *model);
 G_INLINE_FUNC gboolean ncm_model_state_is_update (NcmModel *model);
 G_INLINE_FUNC void ncm_model_state_set_update (NcmModel *model);
+G_INLINE_FUNC void ncm_model_state_mark_outdated (NcmModel *model);
 
 G_INLINE_FUNC guint ncm_model_sparam_len (NcmModel *model);
 G_INLINE_FUNC guint ncm_model_vparam_array_len (NcmModel *model);
@@ -364,6 +365,12 @@ G_INLINE_FUNC void
 ncm_model_state_set_update (NcmModel *model)
 {
   model->skey = model->pkey;
+}
+
+G_INLINE_FUNC void 
+ncm_model_state_mark_outdated (NcmModel *model)
+{
+  model->pkey++;
 }
 
 G_INLINE_FUNC guint

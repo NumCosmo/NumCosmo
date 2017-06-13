@@ -991,6 +991,7 @@ ncm_fit_esmcmc_start_run (NcmFitESMCMC *esmcmc)
 {
   const gint mcat_cur_id = ncm_mset_catalog_get_cur_id (esmcmc->mcat);
   gboolean init_point_task = FALSE;
+	gboolean read_from_cat   = FALSE;
   
   if (esmcmc->started)
     g_error ("ncm_fit_esmcmc_start_run: run already started, run ncm_fit_esmcmc_end_run() first.");
@@ -1067,7 +1068,8 @@ ncm_fit_esmcmc_start_run (NcmFitESMCMC *esmcmc)
       NcmVector *cur_row      = ncm_mset_catalog_peek_row (esmcmc->mcat, k);
       NcmVector *full_theta_k = g_ptr_array_index (esmcmc->full_theta, k);
       g_assert (cur_row != NULL);
-      
+
+			read_from_cat = TRUE;
       ncm_vector_memcpy (full_theta_k, cur_row);
     }
     _ncm_fit_esmcmc_gen_init_points (esmcmc);
@@ -1080,9 +1082,9 @@ ncm_fit_esmcmc_start_run (NcmFitESMCMC *esmcmc)
   }
   else
   {
-    guint t   = (esmcmc->cur_sample_id + 1) / esmcmc->nwalkers;
-    guint ki  = (esmcmc->cur_sample_id + 1) % esmcmc->nwalkers;
-    guint tm1 = t - 1;
+    const guint t   = (esmcmc->cur_sample_id + 1) / esmcmc->nwalkers;
+    const guint ki  = (esmcmc->cur_sample_id + 1) % esmcmc->nwalkers;
+    const guint tm1 = t - 1;
     gint k;
 
     for (k = 0; k < ki; k++)
@@ -1093,6 +1095,7 @@ ncm_fit_esmcmc_start_run (NcmFitESMCMC *esmcmc)
 
       g_assert (cur_row != NULL);
 
+			read_from_cat = TRUE;
       ncm_vector_memcpy (full_theta_k, cur_row);
     }
 
@@ -1104,9 +1107,30 @@ ncm_fit_esmcmc_start_run (NcmFitESMCMC *esmcmc)
 
       g_assert (cur_row != NULL);
 
+			read_from_cat = TRUE;
       ncm_vector_memcpy (full_theta_k, cur_row);
     }
   }
+
+	if (read_from_cat)
+	{
+		const guint len = ncm_mset_catalog_len (esmcmc->mcat);
+		if (!ncm_fit_esmcmc_validate (esmcmc, len - esmcmc->nwalkers, len))
+		{
+			if (esmcmc->mtype > NCM_FIT_RUN_MSGS_NONE)
+			{
+				ncm_cfg_msg_sepa ();
+				g_message ("# NcmFitESMCMC: Last ensemble failed in the m2lnL check, the catalog may be corrupted, removing last ensemble and retrying...\n");
+			}
+
+			ncm_mset_catalog_remove_last_ensemble (esmcmc->mcat);
+
+			esmcmc->cur_sample_id -= esmcmc->nwalkers;
+			esmcmc->started        = FALSE;
+
+			ncm_fit_esmcmc_start_run (esmcmc);
+		}
+	}
 
   if (init_point_task)
     ncm_timer_task_pause (esmcmc->nt);
@@ -1508,6 +1532,62 @@ ncm_fit_esmcmc_get_catalog (NcmFitESMCMC *esmcmc)
   return ncm_mset_catalog_ref (esmcmc->mcat);
 }
 
+static void 
+_ncm_fit_esmcmc_validade_mt_eval (glong i, glong f, gpointer data)
+{
+  NcmFitESMCMC *esmcmc        = NCM_FIT_ESMCMC (data);
+  NcmFitESMCMCWorker **fk_ptr = ncm_memory_pool_get (esmcmc->walker_pool);
+  NcmFit *fit_k               = fk_ptr[0]->fit;
+  glong k;
+
+  for (k = i; k < f; k++)
+  {
+    NcmVector *cur_row      = ncm_mset_catalog_peek_row (esmcmc->mcat, k);
+    const gdouble row_m2lnL = ncm_vector_get (cur_row, NCM_FIT_ESMCMC_M2LNL_ID);
+    gdouble m2lnL           = 0.0;
+    gdouble diff;
+    
+    g_assert (cur_row != NULL);
+
+    ncm_mset_fparams_set_vector_offset (fit_k->mset, cur_row, esmcmc->nadd_vals);
+
+    ncm_fit_m2lnL_val (fit_k, &m2lnL);
+
+    diff = fabs ((row_m2lnL - m2lnL) / row_m2lnL);
+    
+    if (diff > 1.0e-3)
+    {
+      if (esmcmc->mtype >= NCM_FIT_RUN_MSGS_SIMPLE)
+      {
+				g_mutex_lock (&esmcmc->resample_lock);
+        ncm_message ("# NcmFitESMCMC: Catalog row %5lu: m2lnL = %20.15g, recalculated to % 20.15g, diff = %8.5e <====== FAILED.\n",
+                     k, row_m2lnL, m2lnL, diff);
+				ncm_message ("# NcmFitESMCMC: row %5lu values: ", k);
+				ncm_vector_log_vals (cur_row, "", "%22.15g", TRUE);
+				g_mutex_unlock (&esmcmc->resample_lock);
+      }
+
+			g_mutex_lock (&esmcmc->update_lock);
+			g_array_index (esmcmc->accepted, gboolean, 0) = FALSE;
+			g_mutex_unlock (&esmcmc->update_lock);
+		}
+    else if (esmcmc->mtype >= NCM_FIT_RUN_MSGS_SIMPLE)
+    {
+			g_mutex_lock (&esmcmc->resample_lock);
+      ncm_message ("# NcmFitESMCMC: Catalog row %5lu: m2lnL = %20.15g, recalculated to % 20.15g, diff = %8.5e, SUCCEEDED!\n",
+                   k, row_m2lnL, m2lnL, diff);
+			if (esmcmc->mtype >= NCM_FIT_RUN_MSGS_FULL)
+			{
+				ncm_message ("# NcmFitESMCMC: row %5lu values:", k);
+				ncm_vector_log_vals (cur_row, "", "%22.15g", TRUE);
+			}
+			g_mutex_unlock (&esmcmc->resample_lock);
+    }
+  }
+
+  ncm_memory_pool_return (fk_ptr);
+}
+
 /**
  * ncm_fit_esmcmc_validate:
  * @esmcmc: a #NcmFitESMCMC
@@ -1518,58 +1598,39 @@ ncm_fit_esmcmc_get_catalog (NcmFitESMCMC *esmcmc)
  * with the values found in the catalog. This function
  * is particularly useful to check if any problem occured
  * during a multithread evaluation of the likelihood.
+ *
+ * Choosing @pf == 0 performs the validation from  @pi to the end.
  * 
  * Returns: Whether the validation was TRUE or FALSE.
  */
 gboolean
 ncm_fit_esmcmc_validate (NcmFitESMCMC *esmcmc, gulong pi, gulong pf)
 {
-  gulong k;
   gulong len;
-  gboolean valid = TRUE;
   
   ncm_mset_catalog_sync (esmcmc->mcat, TRUE);
 
   len = ncm_mset_catalog_len (esmcmc->mcat);
 
+	if (pf == 0)
+		pf = len;
+
   g_assert_cmpuint (pi, <, pf);
-  g_assert_cmpuint (pf, <, len);
+  g_assert_cmpuint (pf, <=, len);
 
-  if (esmcmc->mtype > NCM_FIT_RUN_MSGS_SIMPLE || TRUE)
+  if (esmcmc->mtype >= NCM_FIT_RUN_MSGS_SIMPLE)
   {
-    ncm_fit_log_info (esmcmc->fit);
-  }
-  
-  for (k = pi; k < pf; k++)
-  {
-    NcmVector *cur_row      = ncm_mset_catalog_peek_row (esmcmc->mcat, k);
-    const gdouble row_m2lnL = ncm_vector_get (cur_row, NCM_FIT_ESMCMC_M2LNL_ID);
-    gdouble m2lnL           = 0.0;
-    gdouble diff;
-    
-    g_assert (cur_row != NULL);
+    ncm_cfg_msg_sepa ();
+    g_message ("# NcmFitESMCMC: validating catalog rows [%lu, %lu)\n", pi, pf);
+		if (esmcmc->mtype >= NCM_FIT_RUN_MSGS_FULL)
+			ncm_fit_log_info (esmcmc->fit);
+	}
 
-    ncm_mset_fparams_set_vector_offset (esmcmc->fit->mset, cur_row, esmcmc->nadd_vals);
+	g_array_index (esmcmc->accepted, gboolean, 0) = TRUE;
+  if (esmcmc->nthreads > 1)
+    ncm_func_eval_threaded_loop_full (&_ncm_fit_esmcmc_validade_mt_eval, pi, pf, esmcmc);
+  else
+    _ncm_fit_esmcmc_validade_mt_eval (pi, pf, esmcmc);
 
-    ncm_fit_m2lnL_val (esmcmc->fit, &m2lnL);
-
-    diff = fabs ((row_m2lnL - m2lnL)/row_m2lnL);
-    
-    if (diff > 1.0e-3)
-    {
-      valid = FALSE;
-      if (esmcmc->mtype > NCM_FIT_RUN_MSGS_SIMPLE)
-      {
-        ncm_message ("# Catalog row %5lu: m2lnL = %20.15g, recalculated to % 20.15g, diff = %8.5e <====== FAIL.\n",
-                     k, row_m2lnL, m2lnL, diff);
-      }
-    }
-    else if (esmcmc->mtype > NCM_FIT_RUN_MSGS_SIMPLE)
-    {
-      ncm_message ("# Catalog row %5lu: m2lnL = %20.15g, recalculated to % 20.15g, diff = %8.5e PASSED.\n",
-                   k, row_m2lnL, m2lnL, diff);
-    }
-  }
-  
-  return valid;
+  return g_array_index (esmcmc->accepted, gboolean, 0);
 }

@@ -50,10 +50,12 @@ gdouble ncm_numdiff_2 (gsl_function *F, gdouble *ofx, const gdouble x, const gdo
 gdouble ncm_numdiff_2_err (gsl_function *F, gdouble *ofx, const gdouble x, const gdouble ho, gdouble err, gdouble *ferr);
 
 G_INLINE_FUNC gdouble ncm_util_sqrt1px_m1 (const gdouble x);
+G_INLINE_FUNC gdouble ncm_util_ln1pexpx (const gdouble x);
 G_INLINE_FUNC gdouble ncm_util_1pcosx (const gdouble sinx, const gdouble cosx);
 G_INLINE_FUNC gdouble ncm_util_1mcosx (const gdouble sinx, const gdouble cosx);
 G_INLINE_FUNC gdouble ncm_util_1psinx (const gdouble sinx, const gdouble cosx);
 G_INLINE_FUNC gdouble ncm_util_1msinx (const gdouble sinx, const gdouble cosx);
+G_INLINE_FUNC gdouble ncm_util_cos2x (const gdouble sinx, const gdouble cosx);
 
 gdouble ncm_cmpdbl (const gdouble x, const gdouble y);
 gdouble ncm_exprel (const gdouble x);
@@ -310,7 +312,21 @@ G_BEGIN_DECLS
 G_INLINE_FUNC gdouble
 ncm_util_sqrt1px_m1 (const gdouble x)
 {
-  return x / (sqrt(1.0 + x) + 1.0);
+  return x / (sqrt (1.0 + x) + 1.0);
+}
+
+G_INLINE_FUNC gdouble 
+ncm_util_ln1pexpx (const gdouble x)
+{
+	if (x > - GSL_LOG_DBL_EPSILON)
+		return x;
+	else
+	{
+		if (x > 0.0)
+			return x + log1p (exp (-x));
+		else
+			return log1p (exp (x));
+	}
 }
 
 G_INLINE_FUNC gdouble 
@@ -347,6 +363,12 @@ ncm_util_1msinx (const gdouble sinx, const gdouble cosx)
     return 1.0 - sinx;
   else
     return cosx * cosx / (1.0 + sinx);
+}
+
+G_INLINE_FUNC gdouble 
+ncm_util_cos2x (const gdouble sinx, const gdouble cosx)
+{
+  return (cosx - sinx) * (cosx + sinx);
 }
 
 G_INLINE_FUNC gdouble 

@@ -677,7 +677,6 @@ nc_hicosmo_mqE2 (NcHICosmo *cosmo, const gdouble z)
   return -q * E2;
 }
 
-
 G_INLINE_FUNC gdouble
 nc_hicosmo_x_alpha (NcHICosmo *cosmo, gdouble alpha)
 {

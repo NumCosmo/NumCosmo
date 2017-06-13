@@ -155,7 +155,7 @@ nc_pert_linear_new (NcHICosmo *cosmo, NcRecomb *recomb, guint lmax, gdouble tc_r
                                    &pert->lambda_rec_10m2_max[1]);
   pert->lambda_opt_cutoff = nc_recomb_tau_cutoff (pert->recomb, cosmo);
   
-  pert->eta0 = nc_scalefactor_eta_z (pert->a, 0.0);
+  pert->eta0 = nc_scalefactor_eval_eta_z (pert->a, 0.0);
 
   pert->lmax = lmax;
 
@@ -433,14 +433,14 @@ _nc_pert_linear_prepare_deta_grid (NcLinearPert *pert, gdouble *deta_grid, glong
   for (i = 0; i < ni; i++)
   {
     gdouble x_i = x_opt_cutoff + (x_rec_10m2_max1 - x_opt_cutoff) / (ni - 1.0) * i;
-    gdouble deta_i = pert->eta0 - nc_scalefactor_eta_x (pert->a, x_i);
+    gdouble deta_i = pert->eta0 - nc_scalefactor_eval_eta_x (pert->a, x_i);
     deta_grid[n - 1 - i] = deta_i;
   }
 
   for (i = 0; i < nc; i++)
   {
     gdouble x_i = x_rec_10m2_max1 + (x_rec_10m2_max0 - x_rec_10m2_max1) / (nc * 1.0) * (i + 1.0);
-    gdouble deta_i = pert->eta0 - nc_scalefactor_eta_x (pert->a, x_i);
+    gdouble deta_i = pert->eta0 - nc_scalefactor_eval_eta_x (pert->a, x_i);
     deta_grid[n - 1 - (i + ni)] = deta_i;
   }
   last_eta = deta_grid[n - nc - ni];
@@ -558,7 +558,7 @@ nc_pert_linear_prepare_splines (NcLinearPertSplines *pspline)
         gdouble S0, S1, S2;
         gint jj = pspline->n_deta - 1 - j;
         gdouble detaj = ncm_vector_get (pspline->ga, jj);
-        gdouble xj = nc_scalefactor_z_eta (pert->a, pert->eta0 - detaj) + 1.0;
+        gdouble xj = nc_scalefactor_eval_z_eta (pert->a, pert->eta0 - detaj) + 1.0;
         gdouble lambdaj = -log(xj);
 
         pert->solver->evol (pert, lambdaj);

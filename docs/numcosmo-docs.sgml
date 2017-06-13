@@ -164,6 +164,7 @@
     <xi:include href="xml/nc_hicosmo_priors.xml"/>
     <xi:include href="xml/nc_hicosmo_lcdm.xml"/>
     <xi:include href="xml/nc_hicosmo_gcg.xml"/>
+    <xi:include href="xml/nc_hicosmo_idem2.xml"/>
     <section>
       <title>Darkenergy</title>
       <xi:include href="xml/nc_hicosmo_de.xml"/>
@@ -324,10 +325,10 @@
     <section>
       <title>Cross-correlations</title>
       <xi:include href="xml/nc_xcor.xml"/>
-      <xi:include href="xml/nc_xcor_limber.xml"/>
-      <xi:include href="xml/nc_xcor_limber_gal.xml"/>
-      <xi:include href="xml/nc_xcor_limber_lensing.xml"/>
-      <xi:include href="xml/nc_data_xcor.xml"/>
+      <xi:include href="xml/nc_xcor_AB.xml"/>
+      <xi:include href="xml/nc_xcor_limber_kernel.xml"/>
+      <xi:include href="xml/nc_xcor_limber_kernel_gal.xml"/>
+      <xi:include href="xml/nc_xcor_limber_kernel_lensing.xml"/>
     </section>
     <xi:include href="xml/nc_cluster_abundance.xml"/>
     <xi:include href="xml/nc_cluster_pseudo_counts.xml"/>
@@ -357,6 +358,7 @@
     <xi:include href="xml/nc_data_cluster_pseudo_counts.xml"/>
     <xi:include href="xml/nc_data_cluster_counts_box_poisson.xml"/>
     <xi:include href="xml/nc_data_planck_lkl.xml"/>
+    <xi:include href="xml/nc_data_xcor.xml"/>
     <section>
       <title>ABC analysis</title>
         <xi:include href="xml/nc_abc_cluster_ncount.xml"/>

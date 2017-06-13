@@ -56,6 +56,7 @@ struct _NcHIPertIGWInterface
   gdouble (*eval_sing_mnu) (NcHIPertIGW *igw, const gdouble tau_m_taus, const gdouble k, const guint sing);
   gdouble (*eval_sing_dlnmnu) (NcHIPertIGW *igw, const gdouble tau_m_taus, const gdouble k, const guint sing);
   void (*eval_sing_system) (NcHIPertIGW *igw, const gdouble tau_m_taus, const gdouble k, const guint sing, gdouble *nu, gdouble *dlnmnu);
+	gdouble (*eval_powspec_factor) (NcHIPertIGW *igw);
 };
 
 #define NC_TYPE_HIPERT_GW             (nc_hipert_gw_get_type ())
@@ -111,6 +112,8 @@ G_INLINE_FUNC void nc_hipert_igw_get_sing_info (NcHIPertIGW *igw, const gdouble 
 G_INLINE_FUNC gdouble nc_hipert_igw_eval_sing_mnu (NcHIPertIGW *igw, const gdouble tau_m_taus, const gdouble k, const guint sing);
 G_INLINE_FUNC gdouble nc_hipert_igw_eval_sing_dlnmnu (NcHIPertIGW *igw, const gdouble tau_m_taus, const gdouble k, const guint sing);
 G_INLINE_FUNC void nc_hipert_igw_eval_sing_system (NcHIPertIGW *igw, const gdouble tau_m_taus, const gdouble k, const guint sing, gdouble *nu, gdouble *dlnmnu);
+
+G_INLINE_FUNC gdouble nc_hipert_igw_eval_powspec_factor (NcHIPertIGW *igw);
 
 NcHIPertGW *nc_hipert_gw_new (void);
 NcHIPertGW *nc_hipert_gw_ref (NcHIPertGW *pa);
@@ -179,6 +182,12 @@ G_INLINE_FUNC void
 nc_hipert_igw_eval_sing_system (NcHIPertIGW *igw, const gdouble tau_m_taus, const gdouble k, const guint sing, gdouble *nu, gdouble *dlnmnu)
 {
   NC_HIPERT_IGW_GET_INTERFACE (igw)->eval_sing_system (igw, tau_m_taus, k, sing, nu, dlnmnu);
+}
+
+G_INLINE_FUNC gdouble 
+nc_hipert_igw_eval_powspec_factor (NcHIPertIGW *igw)
+{
+  return NC_HIPERT_IGW_GET_INTERFACE (igw)->eval_powspec_factor (igw);
 }
 
 G_END_DECLS

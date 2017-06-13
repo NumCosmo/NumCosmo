@@ -1151,7 +1151,7 @@ _ncm_mset_catalog_open_create_file (NcmMSetCatalog *mcat, gboolean load_from_cat
       {
         const gchar *cname   = g_ptr_array_index (mcat->add_vals_names, i);
         const gchar *csymbol = g_ptr_array_index (mcat->add_vals_symbs, i);
-        gchar *asymbi      = g_strdup_printf ("%s%d", NCM_MSET_CATALOG_ASYMB_LABEL, i + 1);
+        gchar *asymbi        = g_strdup_printf ("%s%d", NCM_MSET_CATALOG_ASYMB_LABEL, i + 1);
         gchar symbol_s[FLEN_VALUE];
         gint cindex = 0;
         
@@ -3619,7 +3619,7 @@ ncm_mset_catalog_calc_add_param_ensemble_evol (NcmMSetCatalog *mcat, guint add_p
  *
  * Drops all points in the catalog such that $t < t_c$. This function 
  * does nothing if $t_c = 0$. This function trims the first $t_c \times n_\mathrm{chains}$ 
- * points from the catalog.
+ * points from the catalog. Creates a backup of the original file.
  *
  */
 void 
@@ -3665,6 +3665,68 @@ ncm_mset_catalog_trim (NcmMSetCatalog *mcat, const guint tc)
     g_ptr_array_unref (rows);
     g_free (file);
   }
+}
+
+/**
+ * ncm_mset_catalog_remove_last_ensemble:
+ * @mcat: a #NcmMSetCatalog
+ *
+ * Removes the last ensemble point in the catalog, i.e.,
+ * removes the last 'number of chains' points of the
+ * catalog. Creates a backup of the original file.
+ *
+ */
+void 
+ncm_mset_catalog_remove_last_ensemble (NcmMSetCatalog *mcat)
+{
+	const gint last_t = ncm_stats_vec_nrows (mcat->pstats);
+	if (last_t > 0)
+	{
+		const guint nrows_to_remove   = (last_t % mcat->nchains == 0) ? mcat->nchains : (last_t % mcat->nchains);
+		const guint new_len           = last_t  - nrows_to_remove;
+
+		g_assert_cmpuint (new_len, <, last_t);
+
+		{
+			GPtrArray *rows = ncm_stats_vec_dup_saved_x (mcat->pstats);
+			gchar *file     = g_strdup (ncm_mset_catalog_peek_filename (mcat));
+			guint t;
+
+			ncm_mset_catalog_set_file (mcat, NULL);
+			ncm_mset_catalog_reset (mcat);
+
+			for (t = 0; t < new_len; t++)
+			{
+				NcmVector *row_t = g_ptr_array_index (rows, t);
+				_ncm_mset_catalog_post_update (mcat, row_t);
+			}
+
+			{
+				guint bak_n = 0;
+				while (TRUE)
+				{
+					gchar *bak_name = g_strdup_printf ("%s.%d.bak", file, bak_n);
+
+					if (!g_file_test (bak_name, G_FILE_TEST_EXISTS))
+					{
+						g_rename (file, bak_name);
+						ncm_mset_catalog_set_file (mcat, file);
+						g_free (bak_name);
+
+						break;
+					}
+
+					g_free (bak_name);
+					bak_n++;
+				}
+			}
+
+			g_ptr_array_unref (rows);
+			g_free (file);
+		}
+	}
+  else
+		g_warning ("ncm_mset_catalog_remove_last_ensemble: called on an empty catalog.");
 }
 
 /**

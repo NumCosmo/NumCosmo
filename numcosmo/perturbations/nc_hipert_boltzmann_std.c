@@ -569,7 +569,7 @@ _nc_hipert_boltzmann_std_step (realtype lambda, N_Vector y, N_Vector ydot, gpoin
 
   if (FALSE)
   {
-    const gdouble eta = nc_scalefactor_eta_x (pb->a, x);
+    const gdouble eta = nc_scalefactor_eval_eta_x (pb->a, x);
     const gdouble keta = pert->k * eta;
 
     guint n = 16;

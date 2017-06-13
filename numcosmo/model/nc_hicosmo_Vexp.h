@@ -92,6 +92,16 @@ gdouble nc_hicosmo_Vexp_tau_qt_e (NcHICosmoVexp *Vexp);
 
 gdouble nc_hicosmo_Vexp_xbe (NcHICosmoVexp *Vexp);
 
+gdouble nc_hicosmo_Vexp_x_tau (NcHICosmoVexp *Vexp, const gdouble tau);
+
+gdouble nc_hicosmo_Vexp_tau_xe (NcHICosmoVexp *Vexp, const gdouble xe);
+gdouble nc_hicosmo_Vexp_tau_xc (NcHICosmoVexp *Vexp, const gdouble xc);
+
+gdouble nc_hicosmo_Vexp_alpha (NcHICosmoVexp *Vexp, const gdouble tau);
+gdouble nc_hicosmo_Vexp_phi (NcHICosmoVexp *Vexp, const gdouble tau);
+gdouble nc_hicosmo_Vexp_Ricci_scale (NcHICosmoVexp *Vexp, const gdouble tau);
+void nc_hicosmo_Vexp_x_y (NcHICosmoVexp *Vexp, const gdouble tau, gdouble *x, gdouble *y);
+
 #define NC_HICOSMO_VEXP_DEFAULT_H0 (70.0)
 #define NC_HICOSMO_VEXP_DEFAULT_OMEGA_C (0.25)
 #define NC_HICOSMO_VEXP_DEFAULT_OMEGA_L (0.75)
@@ -99,6 +109,9 @@ gdouble nc_hicosmo_Vexp_xbe (NcHICosmoVexp *Vexp);
 #define NC_HICOSMO_VEXP_DEFAULT_D_PHI (-0.3)
 #define NC_HICOSMO_VEXP_DEFAULT_ALPHA_B (0.1)
 #define NC_HICOSMO_VEXP_DEFAULT_X_B (1.0e30)
+
+#define NC_HICOSMO_VEXP_DEBUG_EVOL_QT (FALSE)
+#define NC_HICOSMO_VEXP_DEBUG_EVOL_CL (FALSE)
 
 G_END_DECLS
 

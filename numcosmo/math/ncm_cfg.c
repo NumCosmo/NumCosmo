@@ -61,6 +61,7 @@
 #include "model/nc_hicosmo_qspline.h"
 #include "model/nc_hicosmo_lcdm.h"
 #include "model/nc_hicosmo_gcg.h"
+#include "model/nc_hicosmo_idem2.h"
 #include "model/nc_hicosmo_de_xcdm.h"
 #include "model/nc_hicosmo_de_linder.h"
 #include "model/nc_hicosmo_de_pad.h"
@@ -142,11 +143,12 @@
 #include "data/nc_data_cmb_shift_param.h"
 #include "data/nc_data_cmb_dist_priors.h"
 #include "data/nc_data_hubble.h"
+#include "data/nc_data_xcor.h"
 #include "xcor/nc_xcor.h"
-#include "xcor/nc_xcor_limber.h"
-#include "xcor/nc_xcor_limber_gal.h"
-#include "xcor/nc_xcor_limber_lensing.h"
-#include "xcor/nc_data_xcor.h"
+#include "xcor/nc_xcor_AB.h"
+#include "xcor/nc_xcor_limber_kernel.h"
+#include "xcor/nc_xcor_limber_kernel_gal.h"
+#include "xcor/nc_xcor_limber_kernel_lensing.h"
 
 #include <gio/gio.h>
 #ifdef NUMCOSMO_HAVE_FFTW3
@@ -324,7 +326,7 @@ ncm_cfg_init (void)
 
   ncm_cfg_register_obj (NCM_TYPE_POWSPEC);
   ncm_cfg_register_obj (NCM_TYPE_POWSPEC_FILTER);
-  
+
   ncm_cfg_register_obj (NCM_TYPE_MODEL);
   ncm_cfg_register_obj (NCM_TYPE_MODEL_CTRL);
   ncm_cfg_register_obj (NCM_TYPE_MODEL_BUILDER);
@@ -338,13 +340,14 @@ ncm_cfg_init (void)
   ncm_cfg_register_obj (NCM_TYPE_FIT_ESMCMC_WALKER_STRETCH);
 
   ncm_cfg_register_obj (NCM_TYPE_DATA);
-  
+
   ncm_cfg_register_obj (NC_TYPE_HICOSMO_QCONST);
   ncm_cfg_register_obj (NC_TYPE_HICOSMO_QLINEAR);
   ncm_cfg_register_obj (NC_TYPE_HICOSMO_QSPLINE);
   ncm_cfg_register_obj (NC_TYPE_HICOSMO_QSPLINE_CONT_PRIOR);
   ncm_cfg_register_obj (NC_TYPE_HICOSMO_LCDM);
   ncm_cfg_register_obj (NC_TYPE_HICOSMO_GCG);
+  ncm_cfg_register_obj (NC_TYPE_HICOSMO_IDEM2);  
   ncm_cfg_register_obj (NC_TYPE_HICOSMO_DE_XCDM);
   ncm_cfg_register_obj (NC_TYPE_HICOSMO_DE_LINDER);
   ncm_cfg_register_obj (NC_TYPE_HICOSMO_DE_PAD);
@@ -358,6 +361,9 @@ ncm_cfg_init (void)
   ncm_cfg_register_obj (NC_TYPE_HICOSMO_GCG_REPARAM_OK);
   ncm_cfg_register_obj (NC_TYPE_HICOSMO_GCG_REPARAM_CMB);
   
+  ncm_cfg_register_obj (NC_TYPE_HICOSMO_IDEM2_REPARAM_OK);
+  ncm_cfg_register_obj (NC_TYPE_HICOSMO_IDEM2_REPARAM_CMB);
+    
   ncm_cfg_register_obj (NC_TYPE_HIPRIM_POWER_LAW);
   ncm_cfg_register_obj (NC_TYPE_HIPRIM_ATAN);
   ncm_cfg_register_obj (NC_TYPE_HIPRIM_EXPC);
@@ -462,10 +468,12 @@ ncm_cfg_init (void)
   ncm_cfg_register_obj (NC_TYPE_DATA_CMB_DIST_PRIORS);
 
   ncm_cfg_register_obj (NC_TYPE_XCOR);
-  ncm_cfg_register_obj (NC_TYPE_XCOR_LIMBER);
-  ncm_cfg_register_obj (NC_TYPE_XCOR_LIMBER_GAL);
-  ncm_cfg_register_obj (NC_TYPE_XCOR_LIMBER_LENSING);
+  ncm_cfg_register_obj (NC_TYPE_XCOR_LIMBER_KERNEL);
+  ncm_cfg_register_obj (NC_TYPE_XCOR_LIMBER_KERNEL_GAL);
+  ncm_cfg_register_obj (NC_TYPE_XCOR_LIMBER_KERNEL_LENSING);
   ncm_cfg_register_obj (NC_TYPE_DATA_XCOR);
+  ncm_cfg_register_obj (NC_TYPE_XCOR_AB);
+
 
   _nc_hicosmo_register_functions ();
   _nc_hicosmo_de_register_functions ();
@@ -1055,7 +1063,7 @@ ncm_cfg_load_fftw_wisdom (const gchar *filename, ...)
 
   g_free (file);
   file = g_strdup ("ncm_cfg_wisdom"); /* overwrite, unifying wisdom */
-  
+
   file_ext      = g_strdup_printf ("%s.fftw3", file);
   full_filename = g_build_filename (numcosmo_path, file_ext, NULL);
 
@@ -1068,7 +1076,7 @@ ncm_cfg_load_fftw_wisdom (const gchar *filename, ...)
 #ifdef HAVE_FFTW3F
   g_free (file_ext);
   g_free (full_filename);
-  
+
   file_ext      = g_strdup_printf ("%s.fftw3f", file);
   full_filename = g_build_filename (numcosmo_path, file_ext, NULL);
 
@@ -1106,7 +1114,7 @@ ncm_cfg_save_fftw_wisdom (const gchar *filename, ...)
 
   g_assert (numcosmo_init);
 
-G_LOCK (fftw_saveload_lock);
+  G_LOCK (fftw_saveload_lock);
 
   va_start (ap, filename);
   file = g_strdup_vprintf (filename, ap);
@@ -1123,13 +1131,13 @@ G_LOCK (fftw_saveload_lock);
 #ifdef HAVE_FFTW3F
   g_free (file_ext);
   g_free (full_filename);
-  
+
   file_ext      = g_strdup_printf ("%s.fftw3f", file);
   full_filename = g_build_filename (numcosmo_path, file_ext, NULL);
 
   fftwf_export_wisdom_to_filename (full_filename);
 #endif
-  
+
   g_free (file);
   g_free (file_ext);
   g_free (full_filename);

@@ -19,6 +19,7 @@ data_observational_DATA = \
 	nc_data_bao_rdv_blake2012.obj           \
 	nc_data_bao_rdv_anderson2012.obj        \
 	nc_data_bao_rdv_kazin2014.obj           \
+	nc_data_bao_rdv_boss_qso_ata2017.obj    \
 	nc_data_cmb_wmap3_shift_param.obj       \
 	nc_data_cmb_wmap5_shift_param.obj       \
 	nc_data_cmb_wmap7_shift_param.obj       \

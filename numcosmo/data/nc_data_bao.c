@@ -79,6 +79,7 @@ nc_data_bao_create (NcDistance *dist, NcDataBaoId id)
     case NC_DATA_BAO_RDV_ANDERSON2012:
     case NC_DATA_BAO_RDV_BLAKE2012:
     case NC_DATA_BAO_RDV_KAZIN2014:  
+    case NC_DATA_BAO_RDV_BOSS_QSO_ATA2017:
       data = NCM_DATA (nc_data_bao_rdv_new_from_id (dist, id));
       break;
     case NC_DATA_BAO_EMPIRICAL_FIT_ROSS2015:  

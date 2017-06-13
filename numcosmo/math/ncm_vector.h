@@ -177,7 +177,7 @@ G_END_DECLS
 
 G_BEGIN_DECLS
 
-G_INLINE_FUNC gdouble 
+G_INLINE_FUNC gdouble
 ncm_vector_sum_cpts (const NcmVector *cv)
 {
   guint i;

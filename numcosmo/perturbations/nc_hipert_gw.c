@@ -75,6 +75,7 @@ static void _nc_hipert_igw_get_sing_info (NcHIPertIGW *igw, const gdouble k, con
 static gdouble _nc_hipert_igw_eval_sing_mnu (NcHIPertIGW *igw, const gdouble tau_m_taus, const gdouble k, const guint sing) { g_error ("_nc_hipert_igw_eval_sing_mnu: no singularity implemented."); return 0.0; }
 static gdouble _nc_hipert_igw_eval_sing_dlnmnu (NcHIPertIGW *igw, const gdouble tau_m_taus, const gdouble k, const guint sing) { g_error ("_nc_hipert_igw_eval_sing_dlnmnu: no singularity implemented."); return 0.0; }
 static void _nc_hipert_igw_eval_sing_system (NcHIPertIGW *igw, const gdouble tau_m_taus, const gdouble k, const guint sing, gdouble *nu, gdouble *dlnmnu) { g_error ("_nc_hipert_igw_eval_sing_system: no singularity implemented."); }
+static gdouble _nc_hipert_igw_eval_powspec_factor (NcHIPertIGW *igw);
 
 static void
 nc_hipert_igw_default_init (NcHIPertIGWInterface *iface)
@@ -89,6 +90,8 @@ nc_hipert_igw_default_init (NcHIPertIGWInterface *iface)
   iface->eval_sing_mnu    = &_nc_hipert_igw_eval_sing_mnu;
   iface->eval_sing_dlnmnu = &_nc_hipert_igw_eval_sing_dlnmnu;
   iface->eval_sing_system = &_nc_hipert_igw_eval_sing_system;
+
+	iface->eval_powspec_factor = &_nc_hipert_igw_eval_powspec_factor;
 }
 
 G_DEFINE_TYPE (NcHIPertGW, nc_hipert_gw, NCM_TYPE_HOAA);
@@ -165,6 +168,8 @@ static gdouble _nc_hipert_gw_eval_sing_mnu (NcmHOAA *hoaa, NcmModel *model, cons
 static gdouble _nc_hipert_gw_eval_sing_dlnmnu (NcmHOAA *hoaa, NcmModel *model, const gdouble t_m_ts, const gdouble k, const guint sing);
 static void _nc_hipert_gw_eval_sing_system (NcmHOAA *hoaa, NcmModel *model, const gdouble t_m_ts, const gdouble k, const guint sing, gdouble *nu, gdouble *dlnmnu, gdouble *Vnu);
 
+static gdouble _nc_hipert_adiab_eval_powspec_factor (NcmHOAA *hoaa, NcmModel *model);
+
 static void _nc_hipert_gw_prepare (NcmHOAA *hoaa, NcmModel *model);
 
 static void
@@ -191,6 +196,8 @@ nc_hipert_gw_class_init (NcHIPertGWClass *klass)
   hoaa_class->eval_sing_dlnmnu = &_nc_hipert_gw_eval_sing_dlnmnu;
   hoaa_class->eval_sing_V      = NULL;
   hoaa_class->eval_sing_system = &_nc_hipert_gw_eval_sing_system;
+
+	hoaa_class->eval_powspec_factor = &_nc_hipert_adiab_eval_powspec_factor;
 }
 
 static gdouble 
@@ -253,6 +260,23 @@ _nc_hipert_gw_eval_sing_system (NcmHOAA *hoaa, NcmModel *model, const gdouble t_
 {
   Vnu[0] = 0.0;
   nc_hipert_igw_eval_sing_system (NC_HIPERT_IGW (model), t_m_ts, k, sing, nu, dlnmnu);
+}
+
+static gdouble
+_nc_hipert_adiab_eval_powspec_factor (NcmHOAA *hoaa, NcmModel *model)
+{
+	return nc_hipert_igw_eval_powspec_factor (NC_HIPERT_IGW (model));
+}
+
+static gdouble 
+_nc_hipert_igw_eval_powspec_factor (NcHIPertIGW *igw) 
+{ 
+	g_assert (NC_IS_HICOSMO (igw));
+	{
+		NcHICosmo *cosmo    = NC_HICOSMO (igw);
+		const gdouble RH_lp = nc_hicosmo_RH_planck (cosmo);
+		return 16.0 / (M_PI * gsl_pow_2 (RH_lp));
+	}
 }
 
 /**

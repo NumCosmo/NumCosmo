@@ -834,10 +834,18 @@ ncm_numdiff_2 (gsl_function *F, gdouble *ofx, const gdouble x, const gdouble ho,
  * ncm_util_sqrt1px_m1:
  * @x: a real number $&gt;-1$
  *
- * Calculates $\sqrt{1+x}-1$ using the appropriated taylor series when
- * $x \approx 0$.
+ * Calculates $\sqrt{1+x}-1$ using the appropriated expression 
+ * to avoid round-off when $x \approx 0$.
  *
  * Returns: $\sqrt{1+x}-1$.
+ */
+/**
+ * ncm_util_ln1pexpx:
+ * @x: a real number $x$
+ *
+ * Calculates $\ln[1+\exp(x)]$.
+ *
+ * Returns: $\ln[1+\exp(x)]$.
  */
 /**
  * ncm_util_1pcosx:
@@ -875,6 +883,16 @@ ncm_numdiff_2 (gsl_function *F, gdouble *ofx, const gdouble x, const gdouble ho,
  * @cosx: a real number $\cos(x)$
  *
  * Calculates $1 - \sin(x)$ using the appropriated taylor series when
+ * $\sin(x) \approx 1$.
+ *
+ * Returns: $1 - \sin(x)$.
+ */
+/**
+ * ncm_util_cos2x:
+ * @sinx: a real number $\sin(x)$
+ * @cosx: a real number $\cos(x)$
+ *
+ * Calculates $\cos(2x)$ using the appropriated taylor series when
  * $\sin(x) \approx 1$.
  *
  * Returns: $1 - \sin(x)$.

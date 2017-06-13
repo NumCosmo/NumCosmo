@@ -115,14 +115,14 @@ gdouble nc_scalefactor_get_reltol (NcScalefactor *a);
 gdouble nc_scalefactor_get_abstol (NcScalefactor *a);
 NcScalefactorTimeType nc_scalefactor_get_time_type (NcScalefactor *a);
 
-gdouble nc_scalefactor_z_eta (NcScalefactor *a, const gdouble eta);
-gdouble nc_scalefactor_a_eta (NcScalefactor *a, const gdouble eta);
+gdouble nc_scalefactor_eval_z_eta (NcScalefactor *a, const gdouble eta);
+gdouble nc_scalefactor_eval_a_eta (NcScalefactor *a, const gdouble eta);
 
-gdouble nc_scalefactor_eta_z (NcScalefactor *a, const gdouble z);
-gdouble nc_scalefactor_eta_x (NcScalefactor *a, const gdouble x);
+gdouble nc_scalefactor_eval_eta_z (NcScalefactor *a, const gdouble z);
+gdouble nc_scalefactor_eval_eta_x (NcScalefactor *a, const gdouble x);
 
-gdouble nc_scalefactor_t_eta (NcScalefactor *a, const gdouble eta);
-gdouble nc_scalefactor_eta_t (NcScalefactor *a, const gdouble t);
+gdouble nc_scalefactor_eval_t_eta (NcScalefactor *a, const gdouble eta);
+gdouble nc_scalefactor_eval_eta_t (NcScalefactor *a, const gdouble t);
 
 #define NC_SCALEFACTOR_DEFAULT_ZF (1.0e14)
 #define NC_SCALEFACTOR_DEFAULT_A0 (1.0)
