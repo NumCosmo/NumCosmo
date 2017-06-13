@@ -1124,7 +1124,10 @@ ncm_fit_esmcmc_start_run (NcmFitESMCMC *esmcmc)
 			}
 
 			ncm_mset_catalog_remove_last_ensemble (esmcmc->mcat);
+
 			esmcmc->cur_sample_id -= esmcmc->nwalkers;
+			esmcmc->started        = FALSE;
+
 			ncm_fit_esmcmc_start_run (esmcmc);
 		}
 	}
@@ -1554,16 +1557,13 @@ _ncm_fit_esmcmc_validade_mt_eval (glong i, glong f, gpointer data)
     
     if (diff > 1.0e-3)
     {
-      if (esmcmc->mtype > NCM_FIT_RUN_MSGS_SIMPLE)
+      if (esmcmc->mtype >= NCM_FIT_RUN_MSGS_SIMPLE)
       {
 				g_mutex_lock (&esmcmc->resample_lock);
-        ncm_message ("# Catalog row %5lu: m2lnL = %20.15g, recalculated to % 20.15g, diff = %8.5e <====== FAILED.\n",
+        ncm_message ("# NcmFitESMCMC: Catalog row %5lu: m2lnL = %20.15g, recalculated to % 20.15g, diff = %8.5e <====== FAILED.\n",
                      k, row_m2lnL, m2lnL, diff);
-				if (esmcmc->mtype >= NCM_FIT_RUN_MSGS_FULL)
-				{
-					ncm_message ("# row %5lu values:", k);
-					ncm_vector_log_vals (cur_row, "", "%22.15g", TRUE);
-				}
+				ncm_message ("# NcmFitESMCMC: row %5lu values: ", k);
+				ncm_vector_log_vals (cur_row, "", "%22.15g", TRUE);
 				g_mutex_unlock (&esmcmc->resample_lock);
       }
 
@@ -1571,14 +1571,14 @@ _ncm_fit_esmcmc_validade_mt_eval (glong i, glong f, gpointer data)
 			g_array_index (esmcmc->accepted, gboolean, 0) = FALSE;
 			g_mutex_unlock (&esmcmc->update_lock);
 		}
-    else if (esmcmc->mtype > NCM_FIT_RUN_MSGS_SIMPLE)
+    else if (esmcmc->mtype >= NCM_FIT_RUN_MSGS_SIMPLE)
     {
 			g_mutex_lock (&esmcmc->resample_lock);
-      ncm_message ("# Catalog row %5lu: m2lnL = %20.15g, recalculated to % 20.15g, diff = %8.5e, SUCCEEDED!\n",
+      ncm_message ("# NcmFitESMCMC: Catalog row %5lu: m2lnL = %20.15g, recalculated to % 20.15g, diff = %8.5e, SUCCEEDED!\n",
                    k, row_m2lnL, m2lnL, diff);
 			if (esmcmc->mtype >= NCM_FIT_RUN_MSGS_FULL)
 			{
-				ncm_message ("# row %5lu values:", k);
+				ncm_message ("# NcmFitESMCMC: row %5lu values:", k);
 				ncm_vector_log_vals (cur_row, "", "%22.15g", TRUE);
 			}
 			g_mutex_unlock (&esmcmc->resample_lock);
@@ -1598,6 +1598,8 @@ _ncm_fit_esmcmc_validade_mt_eval (glong i, glong f, gpointer data)
  * with the values found in the catalog. This function
  * is particularly useful to check if any problem occured
  * during a multithread evaluation of the likelihood.
+ *
+ * Choosing @pf == 0 performs the validation from  @pi to the end.
  * 
  * Returns: Whether the validation was TRUE or FALSE.
  */
@@ -1610,13 +1612,19 @@ ncm_fit_esmcmc_validate (NcmFitESMCMC *esmcmc, gulong pi, gulong pf)
 
   len = ncm_mset_catalog_len (esmcmc->mcat);
 
+	if (pf == 0)
+		pf = len;
+
   g_assert_cmpuint (pi, <, pf);
   g_assert_cmpuint (pf, <=, len);
 
-  if (esmcmc->mtype > NCM_FIT_RUN_MSGS_SIMPLE)
+  if (esmcmc->mtype >= NCM_FIT_RUN_MSGS_SIMPLE)
   {
-    ncm_fit_log_info (esmcmc->fit);
-  }
+    ncm_cfg_msg_sepa ();
+    g_message ("# NcmFitESMCMC: validating catalog rows [%lu, %lu)\n", pi, pf);
+		if (esmcmc->mtype >= NCM_FIT_RUN_MSGS_FULL)
+			ncm_fit_log_info (esmcmc->fit);
+	}
 
 	g_array_index (esmcmc->accepted, gboolean, 0) = TRUE;
   if (esmcmc->nthreads > 1)
