@@ -54,7 +54,7 @@ typedef struct _NcXcorLimberKernelLensing NcXcorLimberKernelLensing;
  */
 typedef enum _NcXcorLimberKernelLensingParams
 {
-	NC_XCOR_LIMBER_KERNEL_LENSING_SPARAM_LEN, /*< skip >*/
+	NC_XCOR_LIMBER_KERNEL_LENSING_SPARAM_LEN,
 } NcXcorLimberKernelLensingParams;
 
 #define NC_XCOR_LIMBER_KERNEL_LENSING_DEFAULT_PARAMS_ABSTOL (0.0)
