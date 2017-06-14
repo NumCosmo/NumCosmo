@@ -27,9 +27,9 @@
  * SECTION:nc_xcor_limber_kernel_gal
  * @title: Cross-correlations Galaxy Kernel
  * @short_description: Galaxy implementation of NcNcXcorLimberKernel
- * 
+ *
  * FIXME
- * 
+ *
  */
 
 #ifdef HAVE_CONFIG_H
@@ -154,13 +154,13 @@ _nc_xcor_limber_kernel_gal_constructed (GObject* object)
     NcXcorLimberKernel *xclk     = NC_XCOR_LIMBER_KERNEL (xclkg);
     NcmModel *model              = NCM_MODEL (xclkg);
     guint i;
-    
+
     // Initialize g function spline for magnification bias
     if (xclkg->domagbias)
     {
       NcmVector *gzv;
       ncm_spline_clear (&xclkg->g_func);
-      
+
       xclkg->g_func = ncm_spline_cubic_notaknot_new ();
       ncm_spline_set_len (xclkg->g_func, NC_XCOR_LIMBER_KERNEL_GAL_G_FUNC_LEN);
       gzv = ncm_spline_get_xv (xclkg->g_func);
@@ -178,7 +178,7 @@ _nc_xcor_limber_kernel_gal_constructed (GObject* object)
     ncm_spline_prepare (xclkg->dn_dz);
     gdouble ngal  = ncm_spline_eval_integ (xclkg->dn_dz, xclk->zmin, xclk->zmax);
     NcmVector *yv = ncm_spline_get_yv (xclkg->dn_dz);
-    
+
     ncm_vector_scale (yv, 1.0 / ngal);
     ncm_spline_prepare (xclkg->dn_dz);
     ncm_vector_free (yv);
@@ -402,7 +402,7 @@ _nc_xcor_limber_kernel_gal_g_func_integrand (gdouble zz, gpointer params)
 	int_g_func_params* ts = (int_g_func_params*)params;
 	const gdouble a       = 1.0 - ts->chiz / nc_distance_comoving (ts->dist, ts->cosmo, zz);
 	const gdouble dn_dz_z = ncm_spline_eval (ts->dn_dz, zz);
-  
+
 	return a * dn_dz_z;
 }
 
@@ -448,7 +448,7 @@ static gdouble _nc_xcor_limber_kernel_gal_g_func (gdouble z, gpointer params)
 	return result * chiz;
 }
 
-static void 
+static void
 _nc_xcor_limber_kernel_gal_prepare (NcXcorLimberKernel *xclk, NcHICosmo *cosmo)
 {
 	NcXcorLimberKernelGal *xclkg = NC_XCOR_LIMBER_KERNEL_GAL (xclk);
@@ -478,7 +478,7 @@ _nc_xcor_limber_kernel_gal_prepare (NcXcorLimberKernel *xclk, NcHICosmo *cosmo)
     if (xclkg->g_func == NULL)
 		{
       NcmVector *gzv;
-      
+
 			xclkg->g_func = ncm_spline_cubic_notaknot_new ();
 			ncm_spline_set_len (xclkg->g_func, NC_XCOR_LIMBER_KERNEL_GAL_G_FUNC_LEN);
 
@@ -509,7 +509,7 @@ _nc_xcor_limber_kernel_gal_prepare (NcXcorLimberKernel *xclk, NcHICosmo *cosmo)
 
       ts.xclkg = xclkg;
       ts.cosmo = cosmo;
-      
+
       for (i = 0; i < NC_XCOR_LIMBER_KERNEL_GAL_G_FUNC_LEN; i++)
       {
         ncm_vector_set (yv, i, _nc_xcor_limber_kernel_gal_g_func (ncm_vector_get (xv, i), &ts));
@@ -518,7 +518,7 @@ _nc_xcor_limber_kernel_gal_prepare (NcXcorLimberKernel *xclk, NcHICosmo *cosmo)
       ncm_vector_free (xv);
       ncm_vector_free (yv);
     }
-    
+
 		ncm_spline_prepare (xclkg->g_func);
 	}
 }
@@ -534,7 +534,7 @@ _nc_xcor_limber_kernel_gal_prepare (NcXcorLimberKernel *xclk, NcHICosmo *cosmo)
 //  * Returns: FIXME
 //  *
 // */
-// void 
+// void
 // nc_xcor_limber_kernel_gal_set_dndz (NcXcorLimberKernelGal* xclkg, GArray* z, GArray* dn_dz_array)
 // {
 // 	ncm_spline_set_array (xclkg->dn_dz, z, dn_dz_array, TRUE);
@@ -544,7 +544,7 @@ _nc_xcor_limber_kernel_gal_prepare (NcXcorLimberKernel *xclk, NcHICosmo *cosmo)
 // 	// xclk->zmax = g_array_index (z, gdouble, z->len - 1);
 // }
 
-static gdouble 
+static gdouble
 _nc_xcor_limber_kernel_gal_bias (NcXcorLimberKernelGal* xclkg, gdouble z)
 {
 	switch (xclkg->nknots)
@@ -567,7 +567,7 @@ _nc_xcor_limber_kernel_gal_eval (NcXcorLimberKernel *xclk, NcHICosmo *cosmo, gdo
 	gdouble res                  = bias_z * dn_dz_z;
 
 	NCM_UNUSED (l);
-  
+
   if (xclkg->domagbias)
 	{
     const gdouble g_z = ncm_spline_eval (xclkg->g_func, z);
@@ -578,7 +578,7 @@ _nc_xcor_limber_kernel_gal_eval (NcXcorLimberKernel *xclk, NcHICosmo *cosmo, gdo
 	return res;
 }
 
-// static gdouble 
+// static gdouble
 // _nc_xcor_limber_kernel_gal_noise_spec (NcXcorLimberKernel* xclk, guint l)
 // {
 // 	NcXcorLimberKernelGal* xclkg = NC_XCOR_LIMBER_KERNEL_GAL (xclk);
@@ -586,7 +586,7 @@ _nc_xcor_limber_kernel_gal_eval (NcXcorLimberKernel *xclk, NcHICosmo *cosmo, gdo
 // 	return xclkg->nbarm1 + NOISE_BIAS;
 // }
 
-static void 
+static void
 _nc_xcor_limber_kernel_gal_add_noise (NcXcorLimberKernel *xclk, NcmVector *vp1, NcmVector *vp2, guint lmin)
 {
 	NcXcorLimberKernelGal *xclkg = NC_XCOR_LIMBER_KERNEL_GAL (xclk);
@@ -596,14 +596,14 @@ _nc_xcor_limber_kernel_gal_add_noise (NcXcorLimberKernel *xclk, NcmVector *vp1, 
 	ncm_vector_add_constant (vp2, xclkg->nbarm1);
 }
 
-guint 
+guint
 _nc_xcor_limber_kernel_gal_obs_len (NcXcorLimberKernel* xclk)
 {
 	NCM_UNUSED (xclk);
 	return 2;
 }
 
-guint 
+guint
 _nc_xcor_limber_kernel_gal_obs_params_len (NcXcorLimberKernel* xclk)
 {
 	NCM_UNUSED (xclk);

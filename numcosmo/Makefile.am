@@ -7,7 +7,7 @@ if USE_INTERNAL_LIBCUBA
   LIBCUBA_PLACE  = libcuba/libcuba.la
   LIBCUBA_INCDIR = -I$(top_srcdir)/numcosmo/libcuba
 else
-  
+
 endif
 
 PLC_DIR = $(top_srcdir)/numcosmo/plc
@@ -268,7 +268,7 @@ ncm_headers =                                \
 ncm_headers_nogi = \
 	math/Faddeeva.h
 
-ncm_headers_internal = 
+ncm_headers_internal =
 
 nc_headers = \
 	nc_hicosmo.h                  \
@@ -396,7 +396,9 @@ nc_headers = \
 	xcor/nc_xcor_AB.h                       \
 	xcor/nc_xcor_limber_kernel.h            \
 	xcor/nc_xcor_limber_kernel_gal.h        \
-	xcor/nc_xcor_limber_kernel_lensing.h
+	xcor/nc_xcor_limber_kernel_CMB_lensing.h \
+    xcor/nc_xcor_limber_kernel_weak_lensing.h
+
 
 nc_sources = \
 	nc_hicosmo.c                  \
@@ -526,7 +528,9 @@ nc_sources = \
 	xcor/nc_xcor_AB.c                       \
 	xcor/nc_xcor_limber_kernel.c            \
 	xcor/nc_xcor_limber_kernel_gal.c        \
-	xcor/nc_xcor_limber_kernel_lensing.c
+	xcor/nc_xcor_limber_kernel_CMB_lensing.c \
+    xcor/nc_xcor_limber_kernel_weak_lensing.c
+
 
 libnumcosmo_la_LDFLAGS = -version-info $(LT_CURRENT):$(LT_REVISION):$(LT_AGE)
 
@@ -545,9 +549,9 @@ ncm_enum_types_sources = \
 	ncm_enum_types.c
 
 nc_enum_types_sources = \
-	nc_enum_types.c 
+	nc_enum_types.c
 
-ncm_cond_sources = 
+ncm_cond_sources =
 
 ncm_cond_headers =
 
@@ -664,12 +668,12 @@ CLEANFILES = $(BUILT_SOURCES)
 -include $(INTROSPECTION_MAKEFILE)
 INTROSPECTION_SCANNER_ENV = CC="$(CC)"
 INTROSPECTION_GIRS =
-INTROSPECTION_SCANNER_ARGS = --add-include-path=$(srcdir) -I$(srcdir)/../ -I$(top_builddir) --warn-all 
+INTROSPECTION_SCANNER_ARGS = --add-include-path=$(srcdir) -I$(srcdir)/../ -I$(top_builddir) --warn-all
 
 INTROSPECTION_COMPILER_ARGS = --includedir=$(srcdir)
 
 if HAVE_INTROSPECTION
-                        
+
 ncm_introspection_sources = \
 	ncm_gir_scan.h            \
 	$(ncm_sources)            \
@@ -715,10 +719,10 @@ INTROSPECTION_GIRS += NumCosmo-1.0.gir
 
 girdir = $(datadir)/gir-1.0
 gir_DATA = $(INTROSPECTION_GIRS)
-  
+
 typelibdir = $(libdir)/girepository-1.0
 typelib_DATA = $(INTROSPECTION_GIRS:.gir=.typelib)
-      
+
 CLEANFILES += $(gir_DATA) $(typelib_DATA)
 EXTRA_DIST += $(gir_DATA) $(typelib_DATA)
 
@@ -753,4 +757,3 @@ EXTRA_DIST += $(vapi_DATA)
 endif # HAVE_INTROSPECTION
 
 endif # HAVE_VAPIGEN
-
