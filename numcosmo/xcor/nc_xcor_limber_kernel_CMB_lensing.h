@@ -1,5 +1,5 @@
 /***************************************************************************
- *            nc_xcor_limber_kernel_cmb_lensing.h
+ *            nc_xcor_limber_kernel_CMB_lensing.h
  *
  *  Tue July 14 12:00:00 2015
  *  Copyright  2015  Cyrille Doux
@@ -54,35 +54,34 @@ typedef struct _NcXcorLimberKernelCMBLensing NcXcorLimberKernelCMBLensing;
  */
 typedef enum _NcXcorLimberKernelCMBLensingParams
 {
-	NC_XCOR_LIMBER_KERNEL_CMB_LENSING_SPARAM_LEN, /*< skip >*/
+  NC_XCOR_LIMBER_KERNEL_CMB_LENSING_SPARAM_LEN,
 } NcXcorLimberKernelCMBLensingParams;
 
 #define NC_XCOR_LIMBER_KERNEL_CMB_LENSING_DEFAULT_PARAMS_ABSTOL (0.0)
 
 struct _NcXcorLimberKernelCMBLensing
 {
-	/*< private >*/
-	NcXcorLimberKernel parent_instance;
+  /*< private >*/
+  NcXcorLimberKernel parent_instance;
 
-	NcDistance* dist;
-	NcRecomb* recomb;
+  NcDistance* dist;
+  NcRecomb* recomb;
 
-	NcmVector* Nl;
-	guint Nlmax;
+  NcmVector* Nl;
+  guint Nlmax;
 
-	gdouble xi_lss;
+  gdouble xi_lss;
 };
 
 struct _NcXcorLimberKernelCMBLensingClass
 {
-	/*< private >*/
-	NcXcorLimberKernelClass parent_class;
+  /*< private >*/
+  NcXcorLimberKernelClass parent_class;
 };
 
 GType nc_xcor_limber_kernel_cmb_lensing_get_type (void) G_GNUC_CONST;
 
 NcXcorLimberKernelCMBLensing* nc_xcor_limber_kernel_cmb_lensing_new (NcDistance* dist, NcRecomb* recomb, NcmVector* Nl);
-
 
 G_END_DECLS
 

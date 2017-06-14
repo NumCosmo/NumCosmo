@@ -328,7 +328,8 @@
       <xi:include href="xml/nc_xcor_AB.xml"/>
       <xi:include href="xml/nc_xcor_limber_kernel.xml"/>
       <xi:include href="xml/nc_xcor_limber_kernel_gal.xml"/>
-      <xi:include href="xml/nc_xcor_limber_kernel_lensing.xml"/>
+      <xi:include href="xml/nc_xcor_limber_kernel_CMB_lensing.xml"/>
+      <xi:include href="xml/nc_xcor_limber_kernel_weak_lensing.xml"/>
     </section>
     <xi:include href="xml/nc_cluster_abundance.xml"/>
     <xi:include href="xml/nc_cluster_pseudo_counts.xml"/>

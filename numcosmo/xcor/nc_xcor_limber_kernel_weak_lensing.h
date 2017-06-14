@@ -47,52 +47,54 @@ typedef struct _NcXcorLimberKernelWeakLensing NcXcorLimberKernelWeakLensing;
 
 /**
  * NcXcorLimberKernelWeakLensingSParams:
+ * @NC_XCOR_LIMBER_KERNEL_WEAK_LENSING_SPARAM_LEN: FIXME
  *
  */
 typedef enum _NcXcorLimberKernelWeakLensingSParams
 {
-	NC_XCOR_LIMBER_KERNEL_WEAK_LENSING_SPARAM_LEN, /*< skip >*/
+  NC_XCOR_LIMBER_KERNEL_WEAK_LENSING_SPARAM_LEN,
 } NcXcorLimberKernelWeakLensingSParams;
 
 /**
  * NcXcorLimberKernelWeakLensingVParams:
+ * @NC_XCOR_LIMBER_KERNEL_WEAK_LENSING_VPARAM_LEN: FIXME
  *
  */
 typedef enum _NcXcorLimberKernelWeakLensingVParams
 {
-	NC_XCOR_LIMBER_KERNEL_WEAK_LENSING_VPARAM_LEN, /*< skip >*/
+  NC_XCOR_LIMBER_KERNEL_WEAK_LENSING_VPARAM_LEN,
 } NcXcorLimberKernelWeakLensingVParams;
 
 struct _NcXcorLimberKernelWeakLensing
 {
-	/*< private >*/
-	NcXcorLimberKernel parent_instance;
+  /*< private >*/
+  NcXcorLimberKernel parent_instance;
 
-	NcmSpline* dn_dz;
+  NcmSpline* dn_dz;
 
-	// NcmSpline* bias_spline;
-	// guint nknots;
-	// gdouble* bias;
+  // NcmSpline* bias_spline;
+  // guint nknots;
+  // gdouble* bias;
 
-	NcDistance* dist;
+  NcDistance* dist;
 
-	NcmSpline* src_int;
-	// gboolean domagbias;
+  NcmSpline* src_int;
+  // gboolean domagbias;
 
-	// gboolean fast_update;
-	// gdouble bias_old;
-	// gdouble noise_bias_old;
+  // gboolean fast_update;
+  // gdouble bias_old;
+  // gdouble noise_bias_old;
 
-	gdouble nbar;
-	gdouble intr_shear;
+  gdouble nbar;
+  gdouble intr_shear;
 
-	gdouble noise;
+  gdouble noise;
 };
 
 struct _NcXcorLimberKernelWeakLensingClass
 {
-	/*< private >*/
-	NcXcorLimberKernelClass parent_class;
+  /*< private >*/
+  NcXcorLimberKernelClass parent_class;
 };
 
 // #define NC_XCOR_LIMBER_KERNEL_WEAK_LENSING_BIAS_DEFAULT_LEN (1)

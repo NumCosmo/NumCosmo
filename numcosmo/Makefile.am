@@ -375,29 +375,29 @@ nc_headers = \
 	data/nc_data_cluster_ncount.h          \
 	data/nc_data_cluster_poisson.h         \
 	data/nc_data_cluster_counts_box_poisson.h \
-	data/nc_data_cluster_pseudo_counts.h   \
-	data/nc_data_planck_lkl.h              \
-	data/nc_data_xcor.h                    \
-	abc/nc_abc_cluster_ncount.h            \
-	model/quantum_gravity.h                \
-	perturbations/nc_hipert.h              \
-	perturbations/nc_hipert_wkb.h          \
-	perturbations/nc_hipert_itwo_fluids.h  \
-	perturbations/nc_hipert_adiab.h        \
-	perturbations/nc_hipert_gw.h           \
-	perturbations/nc_hipert_two_fluids.h   \
-	perturbations/nc_hipert_boltzmann.h    \
-	perturbations/nc_hipert_boltzmann_std.h \
-	perturbations/nc_hipert_boltzmann_cbe.h \
-	perturbations/linear.h                  \
-	perturbations/covariance.h              \
-	perturbations/linear_internal.h         \
-	xcor/nc_xcor.h                          \
-	xcor/nc_xcor_AB.h                       \
-	xcor/nc_xcor_limber_kernel.h            \
-	xcor/nc_xcor_limber_kernel_gal.h        \
-	xcor/nc_xcor_limber_kernel_CMB_lensing.h \
-    xcor/nc_xcor_limber_kernel_weak_lensing.h
+	data/nc_data_cluster_pseudo_counts.h      \
+	data/nc_data_planck_lkl.h                 \
+	data/nc_data_xcor.h                       \
+	abc/nc_abc_cluster_ncount.h               \
+	model/quantum_gravity.h                   \
+	perturbations/nc_hipert.h                 \
+	perturbations/nc_hipert_wkb.h             \
+	perturbations/nc_hipert_itwo_fluids.h     \
+	perturbations/nc_hipert_adiab.h           \
+	perturbations/nc_hipert_gw.h              \
+	perturbations/nc_hipert_two_fluids.h      \
+	perturbations/nc_hipert_boltzmann.h       \
+	perturbations/nc_hipert_boltzmann_std.h   \
+	perturbations/nc_hipert_boltzmann_cbe.h   \
+	perturbations/linear.h                    \
+	perturbations/covariance.h                \
+	perturbations/linear_internal.h           \
+	xcor/nc_xcor.h                            \
+	xcor/nc_xcor_AB.h                         \
+	xcor/nc_xcor_limber_kernel.h              \
+	xcor/nc_xcor_limber_kernel_gal.h          \
+	xcor/nc_xcor_limber_kernel_CMB_lensing.h  \
+	xcor/nc_xcor_limber_kernel_weak_lensing.h
 
 
 nc_sources = \
@@ -505,31 +505,31 @@ nc_sources = \
 	data/nc_data_cluster_ncount.c          \
 	data/nc_data_cluster_poisson.c         \
 	data/nc_data_cluster_counts_box_poisson.c \
-	data/nc_data_cluster_pseudo_counts.c   \
-	data/nc_data_planck_lkl.c              \
-	data/nc_data_xcor.c                    \
-	abc/nc_abc_cluster_ncount.c            \
-	model/quantum_gravity.c                \
-	perturbations/nc_hipert.c              \
-	perturbations/nc_hipert_wkb.c          \
-	perturbations/nc_hipert_itwo_fluids.c  \
-	perturbations/nc_hipert_adiab.c        \
-	perturbations/nc_hipert_gw.c           \
-	perturbations/nc_hipert_two_fluids.c   \
-	perturbations/nc_hipert_boltzmann.c    \
-	perturbations/nc_hipert_boltzmann_std.c \
-	perturbations/nc_hipert_boltzmann_cbe.c \
-	perturbations/linear.c                  \
-	perturbations/covariance.c              \
-	perturbations/linear_cvodes.c           \
-	perturbations/linear_gsl_ode.c          \
-	perturbations/linear_gsl_ode2.c         \
-	xcor/nc_xcor.c                          \
-	xcor/nc_xcor_AB.c                       \
-	xcor/nc_xcor_limber_kernel.c            \
-	xcor/nc_xcor_limber_kernel_gal.c        \
-	xcor/nc_xcor_limber_kernel_CMB_lensing.c \
-    xcor/nc_xcor_limber_kernel_weak_lensing.c
+	data/nc_data_cluster_pseudo_counts.c      \
+	data/nc_data_planck_lkl.c                 \
+	data/nc_data_xcor.c                       \
+	abc/nc_abc_cluster_ncount.c               \
+	model/quantum_gravity.c                   \
+	perturbations/nc_hipert.c                 \
+	perturbations/nc_hipert_wkb.c             \
+	perturbations/nc_hipert_itwo_fluids.c     \
+	perturbations/nc_hipert_adiab.c           \
+	perturbations/nc_hipert_gw.c              \
+	perturbations/nc_hipert_two_fluids.c      \
+	perturbations/nc_hipert_boltzmann.c       \
+	perturbations/nc_hipert_boltzmann_std.c   \
+	perturbations/nc_hipert_boltzmann_cbe.c   \
+	perturbations/linear.c                    \
+	perturbations/covariance.c                \
+	perturbations/linear_cvodes.c             \
+	perturbations/linear_gsl_ode.c            \
+	perturbations/linear_gsl_ode2.c           \
+	xcor/nc_xcor.c                            \
+	xcor/nc_xcor_AB.c                         \
+	xcor/nc_xcor_limber_kernel.c              \
+	xcor/nc_xcor_limber_kernel_gal.c          \
+	xcor/nc_xcor_limber_kernel_CMB_lensing.c  \
+	xcor/nc_xcor_limber_kernel_weak_lensing.c
 
 
 libnumcosmo_la_LDFLAGS = -version-info $(LT_CURRENT):$(LT_REVISION):$(LT_AGE)
