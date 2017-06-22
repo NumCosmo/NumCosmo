@@ -59,9 +59,9 @@ typedef struct _NcXcorLimberKernel NcXcorLimberKernel;
  */
 typedef enum _NcXcorLimberKernelImpl
 {
-	NC_XCOR_LIMBER_KERNEL_IMPL_EVAL = 0,
-	NC_XCOR_LIMBER_KERNEL_IMPL_PREPARE,
-	NC_XCOR_LIMBER_KERNEL_IMPL_ADD_NOISE, /*< private >*/
+  NC_XCOR_LIMBER_KERNEL_IMPL_EVAL = 0,
+  NC_XCOR_LIMBER_KERNEL_IMPL_PREPARE,
+  NC_XCOR_LIMBER_KERNEL_IMPL_ADD_NOISE, /*< private >*/
 } NcXcorLimberKernelImpl;
 
 #define NC_XCOR_LIMBER_KERNEL_IMPL_ALL NCM_MODEL_CLASS_IMPL_ALL
@@ -70,21 +70,21 @@ typedef struct _NcXcorKinetic NcXcorKinetic;
 
 struct _NcXcorLimberKernelClass
 {
-	/*< private >*/
-	NcmModelClass parent_class;
-	gdouble (*eval) (NcXcorLimberKernel* xclk, NcHICosmo* cosmo, gdouble z, const NcXcorKinetic *xck, gint l);//, gdouble geo_z[]);
-	void (*prepare) (NcXcorLimberKernel* xclk, NcHICosmo* cosmo);
-	void (*add_noise) (NcXcorLimberKernel* xclk, NcmVector* vp1, NcmVector* vp2, guint lmin);
-	guint (*obs_len) (NcXcorLimberKernel* xclk);
-	guint (*obs_params_len) (NcXcorLimberKernel* xclk);
+  /*< private >*/
+  NcmModelClass parent_class;
+  gdouble (*eval) (NcXcorLimberKernel* xclk, NcHICosmo* cosmo, gdouble z, const NcXcorKinetic *xck, gint l);//, gdouble geo_z[]);
+  void (*prepare) (NcXcorLimberKernel* xclk, NcHICosmo* cosmo);
+  void (*add_noise) (NcXcorLimberKernel* xclk, NcmVector* vp1, NcmVector* vp2, guint lmin);
+  guint (*obs_len) (NcXcorLimberKernel* xclk);
+  guint (*obs_params_len) (NcXcorLimberKernel* xclk);
 };
 
 struct _NcXcorLimberKernel
 {
-	/*< private >*/
-	NcmModel parent_instance;
-	gdouble cons_factor;
-	gdouble zmin, zmax;
+  /*< private >*/
+  NcmModel parent_instance;
+  gdouble cons_factor;
+  gdouble zmin, zmax;
 };
 
 GType nc_xcor_limber_kernel_get_type (void) G_GNUC_CONST;
@@ -106,7 +106,6 @@ void nc_xcor_limber_kernel_prepare (NcXcorLimberKernel* xclk, NcHICosmo* cosmo);
 void nc_xcor_limber_kernel_add_noise (NcXcorLimberKernel* xclk, NcmVector* vp1, NcmVector* vp2, guint lmin);
 
 void nc_xcor_limber_kernel_log_all_models (void);
-
 
 G_END_DECLS
 

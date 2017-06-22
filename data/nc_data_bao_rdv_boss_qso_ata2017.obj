@@ -1,12 +1,12 @@
 {
-  'NcDataBaoRDV', 
+  'NcDataBaoRDV',
   {
-    'desc'      : <'BOSS DR14 QSO -- Ata et al. (2017), BAO Sample Dv_r'>, 
-    'init'      : <true>, 
-    'n-points'  : <uint32 3>, 
-    'mean'      : <[26.0861]>, 
-    'sigma'     : <[1.15]>,
-    'z'         : <[1.52]>, 
+    'desc'      : <'BOSS DR14 QSO -- Ata et al. (2017), BAO Sample Dv_r'>,
+    'init'      : <true>,
+    'n-points'  : <uint32 1>,
+    'mean'      : <[26.0860738936]>,
+    'inv-cov'   : <[[0.75567226297]]>,
+    'z'         : <[1.52]>,
     'is-rDV'    : <false>,
     'long-desc' : <'BAO BOSS DR14 QSO, Ata et al. (2017) arXiv:1705.06373 -
     r_s,fid = 147.78. Data point is Dv(z=1.52) = (3855 +/- 170)r_d/r_d,fid *
