@@ -106,7 +106,7 @@ for i in range (10000):
   v_tau = recomb.v_tau (cosmo, alpha)
   dv_tau_dlambda = recomb.dv_tau_dlambda (cosmo, alpha)
   d2v_tau_dlambda2 = recomb.d2v_tau_dlambda2 (cosmo, alpha)
-  
+
   x_a.append (x)
   Xe_a.append (Xe)
   Xefi_a.append (Xefi)

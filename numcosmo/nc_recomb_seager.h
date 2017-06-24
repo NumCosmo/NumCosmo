@@ -127,9 +127,6 @@ gdouble nc_recomb_seager_hummer_HeI_case_B_dTm (NcRecombSeager *recomb_seager, N
 gdouble nc_recomb_seager_hummer_HeI_case_B_trip (NcRecombSeager *recomb_seager, NcHICosmo *cosmo, const gdouble Tm);
 gdouble nc_recomb_seager_hummer_HeI_case_B_trip_dTm (NcRecombSeager *recomb_seager, NcHICosmo *cosmo, const gdouble Tm);
 
-gdouble nc_recomb_seager_XHII (NcRecombSeager* recomb_seager, NcHICosmo* cosmo, const gdouble lambda);
-gdouble nc_recomb_seager_XHeII (NcRecombSeager* recomb_seager, NcHICosmo* cosmo, const gdouble lambda);
-
 #define NC_RECOMB_SEAGER_HUMMER_HEI_CASE_B_T1 (pow (10.0, 5.114))
 #define NC_RECOMB_SEAGER_HUMMER_HEI_CASE_B_T2 (pow (10.0, 0.477121))
 #define NC_RECOMB_SEAGER_HUMMER_HEI_CASE_B_P (0.711)
