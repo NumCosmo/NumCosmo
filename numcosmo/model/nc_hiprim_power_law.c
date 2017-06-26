@@ -52,7 +52,7 @@ nc_hiprim_power_law_init (NcHIPrimPowerLaw *nc_hiprim_power_law)
 }
 
 static void
-nc_hiprim_power_law_finalize (GObject *object)
+_nc_hiprim_power_law_finalize (GObject *object)
 {
 
   /* Chain up : end */
@@ -69,7 +69,7 @@ nc_hiprim_power_law_class_init (NcHIPrimPowerLawClass *klass)
   NcHIPrimClass *prim_class  = NC_HIPRIM_CLASS (klass);
   NcmModelClass *model_class = NCM_MODEL_CLASS (klass);
 
-  object_class->finalize = nc_hiprim_power_law_finalize;
+  object_class->finalize = &_nc_hiprim_power_law_finalize;
 
   ncm_model_class_set_name_nick (model_class, "Power Law model for primordial spectra", "PowerLaw");
   ncm_model_class_add_params (model_class, NC_HIPRIM_POWER_LAW_SPARAM_LEN, 0, PROP_SIZE);
@@ -81,8 +81,8 @@ nc_hiprim_power_law_class_init (NcHIPrimPowerLawClass *klass)
                               NCM_PARAM_TYPE_FIXED);
 
   /* Set T_SA_ratio param info */
-  ncm_model_class_set_sparam (model_class, NC_HIPRIM_POWER_LAW_T_SA_RATIO, "A_{SA}/A_T", "T_SA_ratio",
-                              0.0, 1.0, 1.0e-4,
+  ncm_model_class_set_sparam (model_class, NC_HIPRIM_POWER_LAW_T_SA_RATIO, "A_T/A_{SA}", "T_SA_ratio",
+                              0.0, 1.0e1, 1.0e-4,
                               NC_HIPRIM_DEFAULT_PARAMS_ABSTOL, NC_HIPRIM_POWER_LAW_DEFAULT_T_SA_RATIO,
                               NCM_PARAM_TYPE_FIXED);
 
@@ -140,6 +140,6 @@ _nc_hiprim_power_law_lnSA_powespec_lnk (NcHIPrim *prim, const gdouble lnk)
 static gdouble
 _nc_hiprim_power_law_lnT_powespec_lnk (NcHIPrim *prim, const gdouble lnk)
 {
-  const gdouble ln_ka = lnk - prim->lnk_pivot;
+  const gdouble ln_ka = lnk - prim->lnk_pivot;  
   return N_T * ln_ka + LN10E10ASA - 10.0 * M_LN10 + log (T_SA_RATIO);
 }

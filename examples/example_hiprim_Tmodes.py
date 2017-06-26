@@ -15,8 +15,6 @@ from gi.repository import GObject
 from gi.repository import NumCosmo as Nc
 from gi.repository import NumCosmoMath as Ncm
 
-from py_hiprim_example import PyHIPrimExample
-
 #
 #  Initializing the library objects, this must be called before
 #  any other library function.
@@ -29,13 +27,10 @@ Ncm.cfg_init ()
 lmax = 2500
 
 #
-# Creating a new instance of PyHIPrimExample
+# Creating a new instance of HIPrimPowerLaw
 #
-prim = PyHIPrimExample ()
-
-print "# As        = ", prim.props.As
-print "# P (k = 1) = ", prim.SA_powspec_k (1.0)
-print "# (a, b, c) = ( ", prim.props.a, ", ", prim.props.b, ", ", prim.props.c, " )"
+prim = Nc.HIPrimPowerLaw.new ()
+prim.props.T_SA_ratio = 2.0e-1
 
 #
 #  New CLASS backend precision object
@@ -62,6 +57,7 @@ Bcbe = Nc.HIPertBoltzmannCBE.full_new (cbe)
 Bcbe.set_TT_lmax (lmax)
 Bcbe.set_target_Cls (Nc.DataCMBDataType.TT)
 Bcbe.set_lensed_Cls (True)
+Bcbe.set_tensor (True)
 
 #
 # Makes sure that Bcbe contain the default values
@@ -97,7 +93,7 @@ Cls2 = Ncm.Vector.new (lmax + 1)
 
 Bcbe.get_TT_Cls (Cls1)
 
-prim.props.a = 0
+prim.props.T_SA_ratio = 1.0e-15
 Bcbe.prepare (cosmo)
 Bcbe.get_TT_Cls (Cls2)
 
@@ -116,15 +112,15 @@ Cls2_a = ell * (ell + 1.0) * Cls2_a
 #  Ploting ionization history.
 #
 
-plt.title (r'Modified and non-modified $C_\ell$')
+plt.title (r'With and without tensor contribution to $C_\ell$')
 plt.xscale('log')
-plt.plot (ell, Cls1_a, 'r', label="Modified")
-plt.plot (ell, Cls2_a, 'b--', label="Non-modified")
+plt.plot (ell, Cls1_a, 'r', label="with-T")
+plt.plot (ell, Cls2_a, 'b--', label="wouthout-T")
 
 plt.xlabel(r'$\ell$')
 plt.ylabel(r'$C_\ell$')
 plt.legend(loc=2)
 
-plt.savefig ("hiprim_Cls.png")
+plt.savefig ("hiprim_tensor_Cls.png")
 
 plt.clf ()

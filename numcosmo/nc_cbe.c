@@ -696,7 +696,8 @@ nc_cbe_ref (NcCBE* cbe)
  * Decreases the reference count of @cbe.
  *
  */
-void nc_cbe_free (NcCBE* cbe)
+void 
+nc_cbe_free (NcCBE* cbe)
 {
 	g_object_unref (cbe);
 }
@@ -708,7 +709,8 @@ void nc_cbe_free (NcCBE* cbe)
  * Decreases the reference count of *@cbe and sets *@cbe to NULL.
  *
  */
-void nc_cbe_clear (NcCBE** cbe)
+void 
+nc_cbe_clear (NcCBE** cbe)
 {
 	g_clear_object (cbe);
 }
@@ -721,7 +723,8 @@ void nc_cbe_clear (NcCBE** cbe)
  * Sets the @cbe_prec as the precision object.
  *
  */
-void nc_cbe_set_precision (NcCBE* cbe, NcCBEPrecision* cbe_prec)
+void 
+nc_cbe_set_precision (NcCBE* cbe, NcCBEPrecision* cbe_prec)
 {
 	nc_cbe_precision_clear (&cbe->prec);
 	cbe->prec = nc_cbe_precision_ref (cbe_prec);
@@ -738,7 +741,8 @@ static void _nc_cbe_update_callbacks (NcCBE* cbe);
  * Sets the @target_Cls target.
  *
  */
-void nc_cbe_set_target_Cls (NcCBE* cbe, NcDataCMBDataType target_Cls)
+void 
+nc_cbe_set_target_Cls (NcCBE* cbe, NcDataCMBDataType target_Cls)
 {
 	if (cbe->target_Cls != target_Cls)
 	{
@@ -755,7 +759,8 @@ void nc_cbe_set_target_Cls (NcCBE* cbe, NcDataCMBDataType target_Cls)
  * Sets whether it should calculate the transfer function.
  *
  */
-void nc_cbe_set_calc_transfer (NcCBE* cbe, gboolean calc_transfer)
+void 
+nc_cbe_set_calc_transfer (NcCBE* cbe, gboolean calc_transfer)
 {
 	if ((calc_transfer && !cbe->calc_transfer) || (!calc_transfer && cbe->calc_transfer))
 	{
@@ -772,7 +777,8 @@ void nc_cbe_set_calc_transfer (NcCBE* cbe, gboolean calc_transfer)
  * Sets whether it should use lensed Cl's.
  *
  */
-void nc_cbe_set_lensed_Cls (NcCBE* cbe, gboolean use_lensed_Cls)
+void 
+nc_cbe_set_lensed_Cls (NcCBE* cbe, gboolean use_lensed_Cls)
 {
 	cbe->use_lensed_Cls = use_lensed_Cls;
 	_nc_cbe_update_callbacks (cbe);
@@ -786,7 +792,8 @@ void nc_cbe_set_lensed_Cls (NcCBE* cbe, gboolean use_lensed_Cls)
  * Sets whether it should use tensor contribution.
  *
  */
-void nc_cbe_set_tensor (NcCBE* cbe, gboolean use_tensor)
+void 
+nc_cbe_set_tensor (NcCBE* cbe, gboolean use_tensor)
 {
 	cbe->use_tensor = use_tensor;
 	ncm_model_ctrl_force_update (cbe->ctrl_cosmo);
@@ -800,7 +807,8 @@ void nc_cbe_set_tensor (NcCBE* cbe, gboolean use_tensor)
  * Sets whether it should use the thermodynamics module.
  *
  */
-void nc_cbe_set_thermodyn (NcCBE* cbe, gboolean use_thermodyn)
+void 
+nc_cbe_set_thermodyn (NcCBE* cbe, gboolean use_thermodyn)
 {
 	cbe->use_thermodyn = use_thermodyn;
 	ncm_model_ctrl_force_update (cbe->ctrl_cosmo);
@@ -815,7 +823,8 @@ void nc_cbe_set_thermodyn (NcCBE* cbe, gboolean use_thermodyn)
  * angular power spectrum $C_{\ell}$ of the scalar mode is computed.
  *
  */
-void nc_cbe_set_scalar_lmax (NcCBE* cbe, guint scalar_lmax)
+void 
+nc_cbe_set_scalar_lmax (NcCBE* cbe, guint scalar_lmax)
 {
 	if (cbe->scalar_lmax != scalar_lmax)
 	{
@@ -833,7 +842,8 @@ void nc_cbe_set_scalar_lmax (NcCBE* cbe, guint scalar_lmax)
  * angular power spectrum $C_{\ell}$ of the vector mode is computed.
  *
  */
-void nc_cbe_set_vector_lmax (NcCBE* cbe, guint vector_lmax)
+void 
+nc_cbe_set_vector_lmax (NcCBE* cbe, guint vector_lmax)
 {
 	if (cbe->vector_lmax != vector_lmax)
 	{
@@ -851,7 +861,8 @@ void nc_cbe_set_vector_lmax (NcCBE* cbe, guint vector_lmax)
  * angular power spectrum $C_{\ell}$ of the tensor mode is computed.
  *
  */
-void nc_cbe_set_tensor_lmax (NcCBE* cbe, guint tensor_lmax)
+void 
+nc_cbe_set_tensor_lmax (NcCBE* cbe, guint tensor_lmax)
 {
 	if (cbe->tensor_lmax != tensor_lmax)
 	{
@@ -868,7 +879,8 @@ void nc_cbe_set_tensor_lmax (NcCBE* cbe, guint tensor_lmax)
  * Sets $z_\mathrm{max}$ for (until?) which the matter power spectrum $P(k, z)$ is evaluated.
  *
  */
-void nc_cbe_set_max_matter_pk_z (NcCBE* cbe, gdouble zmax)
+void 
+nc_cbe_set_max_matter_pk_z (NcCBE* cbe, gdouble zmax)
 {
 	if (cbe->priv->psp.z_max_pk != zmax)
 	{
@@ -1397,8 +1409,8 @@ _nc_cbe_set_prim (NcCBE* cbe, NcHICosmo* cosmo)
 	cbe->priv->ppm.primordial_spec_type = external_Pk_callback;
 	/*cbe->priv->ppm.primordial_spec_type = analytic_Pk;*/
 	cbe->priv->ppm.external_Pk_callback_pks = &_external_Pk_callback_pks;
-  
-	if (cbe->use_tensor)
+
+  if (cbe->use_tensor)
 	{
 		g_assert (ncm_model_check_impl_opt (NCM_MODEL (prim), NC_HIPRIM_IMPL_lnT_powspec_lnk));
 		cbe->priv->ppm.external_Pk_callback_pkt = &_external_Pk_callback_pkt;
