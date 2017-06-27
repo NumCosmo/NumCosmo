@@ -104,7 +104,7 @@ nc_hiprim_expc_class_init (NcHIPrimExpcClass *klass)
 
   /* Set T_SA_ratio param info */
   ncm_model_class_set_sparam (model_class, NC_HIPRIM_EXPC_T_SA_RATIO, "A_T/A_{SA}", "T_SA_ratio",
-                              0.0, 1.0, 1.0e-4,
+                              0.0, 10.0, 1.0e-1,
                               NC_HIPRIM_DEFAULT_PARAMS_ABSTOL, NC_HIPRIM_EXPC_DEFAULT_T_SA_RATIO,
                               NCM_PARAM_TYPE_FIXED);
   
