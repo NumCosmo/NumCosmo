@@ -51,6 +51,8 @@ typedef struct _NcHIPrimExpc NcHIPrimExpc;
  * @NC_HIPRIM_EXPC_LAMBDAC: Exp parameter $\lambda_c$
  * @NC_HIPRIM_EXPC_LNKC: Exp parameter $\ln(k_c)$
  * @NC_HIPRIM_EXPC_C: Exp cut parameter $c$
+ * @NC_HIPRIM_EXPC_T_SA_RATIO: Tensor-to-scalar ratio
+ * @NC_HIPRIM_EXPC_N_T: Tensor spectral index
  * 
  * FIXME
  * 

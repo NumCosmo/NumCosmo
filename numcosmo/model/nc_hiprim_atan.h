@@ -52,6 +52,8 @@ typedef struct _NcHIPrimAtan NcHIPrimAtan;
  * @NC_HIPRIM_ATAN_C2: Arctan parameter $c_2$
  * @NC_HIPRIM_ATAN_C3: Arctan parameter $c_3$
  * @NC_HIPRIM_ATAN_LAMBDA: Arctan parameter $\lambda$
+ * @NC_HIPRIM_ATAN_T_SA_RATIO: Tensor-to-scalar ratio
+ * @NC_HIPRIM_ATAN_N_T: Tensor spectral index
  *
  * FIXME
  * 

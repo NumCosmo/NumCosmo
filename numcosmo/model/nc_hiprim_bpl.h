@@ -50,6 +50,8 @@ typedef struct _NcHIPrimBPL NcHIPrimBPL;
  * @NC_HIPRIM_BPL_N_SA: Adiabatic scalar spectral index
  * @NC_HIPRIM_BPL_DELTA: Exp parameter $\delta$
  * @NC_HIPRIM_BPL_LNKB: Exp parameter $\ln(k_b)$
+ * @NC_HIPRIM_BPL_T_SA_RATIO: Tensor-to-scalar ratio
+ * @NC_HIPRIM_BPL_N_T: Tensor spectral index
  * 
  * FIXME
  * 
