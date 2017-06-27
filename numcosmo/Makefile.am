@@ -283,6 +283,7 @@ nc_headers = \
 	nc_hireion_camb.h             \
 	nc_hireion_camb_reparam_tau.h \
 	nc_powspec_ml.h               \
+	nc_powspec_ml_fix_spline.h    \
 	nc_powspec_ml_transfer.h      \
 	nc_powspec_ml_cbe.h           \
 	nc_powspec_mnl.h              \
@@ -413,6 +414,7 @@ nc_sources = \
 	nc_hireion_camb.c             \
 	nc_hireion_camb_reparam_tau.c \
 	nc_powspec_ml.c               \
+	nc_powspec_ml_fix_spline.c    \
 	nc_powspec_ml_transfer.c      \
 	nc_powspec_ml_cbe.c           \
 	nc_powspec_mnl.c              \

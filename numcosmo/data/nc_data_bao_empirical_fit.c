@@ -51,6 +51,7 @@ enum
   PROP_Z,
   PROP_M2LNP,
   PROP_DIST,
+	PROP_SIZE 
 };
 
 G_DEFINE_TYPE (NcDataBaoEmpiricalFit, nc_data_bao_empirical_fit, NCM_TYPE_DATA_DIST1D);

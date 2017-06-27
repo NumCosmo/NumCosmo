@@ -162,7 +162,7 @@ for z in np.arange (z_min, z_max, (z_max - z_min) * zdiv):
     sigma_eh_a.append (psf_eh.eval_sigma_lnr (z, lnR))
 
   plt.plot (Rh_a, sigma_cbe_a, label = r'$\sigma$ CLASS $z = %.2f$' % (z))
-  plt.plot (Rh_a, sigma_cbe_a, label = r'$\sigma$ EH    $z = %.2f$' % (z))
+  plt.plot (Rh_a, sigma_eh_a, label = r'$\sigma$ EH    $z = %.2f$' % (z))
 
 plt.legend (loc="lower left")
 plt.xscale('log')

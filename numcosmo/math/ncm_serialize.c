@@ -814,8 +814,8 @@ ncm_serialize_from_string (NcmSerialize *ser, const gchar *obj_ser)
 
 /**
  * ncm_serialize_from_file:
- * @ser: a #NcmSerialize.
- * @filename: File containing the serialized version of the object.
+ * @ser: a #NcmSerialize
+ * @filename: File containing the serialized version of the object
  *
  * Parses the serialized string in @filename and returns the newly created object.
  *
@@ -831,7 +831,7 @@ ncm_serialize_from_file (NcmSerialize *ser, const gchar *filename)
 
   g_assert (filename != NULL);
   if (!g_file_get_contents (filename, &file, &length, &error))
-    g_error ("_nc_data_snia_cov_load_matrix: cannot open file %s: %s",
+    g_error ("ncm_serialize_from_file: cannot open file %s: %s",
              filename, error->message);
 
   g_assert_cmpint (length, >, 0);
