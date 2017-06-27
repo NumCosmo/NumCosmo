@@ -56,7 +56,7 @@ enum
 {
   PROP_0,
   PROP_NCLUSTERS,
-  PROP_SIZE,
+  PROP_SIZE
 };
 
 static void

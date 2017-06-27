@@ -51,6 +51,7 @@ enum
   PROP_MULTIPLICITY,
   PROP_AREA,
   PROP_PREC,
+	PROP_SIZE,
 };
 
 G_DEFINE_TYPE (NcHaloMassFunction, nc_halo_mass_function, G_TYPE_OBJECT);

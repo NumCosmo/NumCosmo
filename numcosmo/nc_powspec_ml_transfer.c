@@ -49,7 +49,8 @@ enum
 {
   PROP_0,
   PROP_TRANSFER,
-  PROP_GROWTH
+  PROP_GROWTH,
+	PROP_SIZE
 };
 
 G_DEFINE_TYPE (NcPowspecMLTransfer, nc_powspec_ml_transfer, NC_TYPE_POWSPEC_ML);

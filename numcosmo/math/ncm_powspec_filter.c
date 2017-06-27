@@ -70,7 +70,8 @@ enum
   PROP_ZI,
   PROP_ZF,
   PROP_RELTOL,
-  PROP_POWERSPECTRUM
+  PROP_POWERSPECTRUM,
+	PROP_SIZE,
 };
 
 G_DEFINE_TYPE (NcmPowspecFilter, ncm_powspec_filter, G_TYPE_OBJECT);
