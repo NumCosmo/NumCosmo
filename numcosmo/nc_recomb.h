@@ -60,6 +60,8 @@ struct _NcRecombClass
   /*< private >*/
   GObjectClass parent_class;
   void (*prepare) (NcRecomb *recomb, NcHICosmo *cosmo);
+  gdouble (*XHII) (NcRecomb *recomb, NcHICosmo *cosmo, const gdouble lambda);
+  gdouble (*XHeII) (NcRecomb *recomb, NcHICosmo *cosmo, const gdouble lambda); 
 };
 
 struct _NcRecomb
@@ -111,6 +113,9 @@ gdouble nc_recomb_log_v_tau (NcRecomb *recomb, NcHICosmo *cosmo, const gdouble l
 gdouble nc_recomb_v_tau (NcRecomb *recomb, NcHICosmo *cosmo, const gdouble lambda);
 gdouble nc_recomb_dv_tau_dlambda (NcRecomb *recomb, NcHICosmo *cosmo, const gdouble lambda);
 gdouble nc_recomb_d2v_tau_dlambda2 (NcRecomb *recomb, NcHICosmo *cosmo, const gdouble lambda);
+
+gdouble nc_recomb_XHII (NcRecomb *recomb, NcHICosmo *cosmo, const gdouble lambda);
+gdouble nc_recomb_XHeII (NcRecomb *recomb, NcHICosmo *cosmo, const gdouble lambda);
 
 gdouble nc_recomb_v_tau_lambda_mode (NcRecomb *recomb, NcHICosmo *cosmo);
 void nc_recomb_v_tau_lambda_features (NcRecomb *recomb, NcHICosmo *cosmo, gdouble logref, gdouble *lambda_max, gdouble *lambda_l, gdouble *lambda_u);

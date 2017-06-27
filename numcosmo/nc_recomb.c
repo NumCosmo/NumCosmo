@@ -263,6 +263,9 @@ nc_recomb_get_property (GObject *object, guint prop_id, GValue *value, GParamSpe
   }
 }
 
+static gdouble _nc_recomb_XHII (NcRecomb *recomb, NcHICosmo *cosmo, const gdouble lambda);
+static gdouble _nc_recomb_XHeII (NcRecomb *recomb, NcHICosmo *cosmo, const gdouble lambda); 
+
 static void
 nc_recomb_class_init (NcRecombClass *klass)
 {
@@ -312,7 +315,27 @@ nc_recomb_class_init (NcRecombClass *klass)
                                                         "Precision for recombination calculations",
                                                         0.0, 1.0, 1e-7,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
+  klass->prepare = NULL;
+  klass->XHII    = &_nc_recomb_XHII;
+  klass->XHeII   = &_nc_recomb_XHeII;
 }
+
+static gdouble 
+_nc_recomb_XHII (NcRecomb *recomb, NcHICosmo *cosmo, const gdouble lambda)
+{
+  g_error ("_nc_recomb_XHII: not implemented by `%s'", G_OBJECT_TYPE_NAME (recomb));
+  return 0.0;
+}
+
+static gdouble 
+_nc_recomb_XHeII (NcRecomb *recomb, NcHICosmo *cosmo, const gdouble lambda)
+{
+  g_error ("_nc_recomb_XHeII: not implemented by `%s'", G_OBJECT_TYPE_NAME (recomb));
+  return 0.0;
+}
+
+static gdouble _nc_recomb_XHeII (NcRecomb *recomb, NcHICosmo *cosmo, const gdouble lambda); 
 
 static gdouble _nc_recomb_root (NcRecomb *recomb, gsl_function *F, gdouble x0, gdouble x1);
 static gdouble _nc_recomb_min (NcRecomb *recomb, gsl_function *F, gdouble x0, gdouble x1, gdouble x);
@@ -520,6 +543,8 @@ nc_recomb_equilibrium_Xe (NcRecomb *recomb, NcHICosmo *cosmo, const gdouble x)
   gsl_function F;
 
   F.params = &XHe_p;
+
+  g_assert_cmpfloat (x, >=, 0.0);
 
   XHe_p.cosmo  = cosmo;
   XHe_p.fHI    = nc_recomb_HI_ion_saha (cosmo, x);
@@ -989,6 +1014,38 @@ nc_recomb_d2v_tau_dlambda2 (NcRecomb *recomb, NcHICosmo *cosmo, const gdouble la
                                  - 3.0 * dtau_dlambda * d2tau_dlambda2));
 }
 
+/**
+ * nc_recomb_XHII:
+ * @recomb: a #NcRecomb
+ * @cosmo: a #NcHICosmo.
+ * @lambda: $\lambda$.
+ *
+ * Calculates the value of $X_\HyII$ at $x$.
+ *
+ * Returns: $X_\HyII$.
+ */
+gdouble 
+nc_recomb_XHII (NcRecomb *recomb, NcHICosmo *cosmo, const gdouble lambda)
+{
+  return NC_RECOMB_GET_CLASS (recomb)->XHII (recomb, cosmo, lambda);
+}
+
+/**
+ * nc_recomb_XHeII:
+ * @recomb: a #NcRecomb
+ * @cosmo: a #NcHICosmo.
+ * @lambda: $\lambda$.
+ *
+ * Calculates the value of $X_\HeII$ at $x$.
+ *
+ * Returns: $X_\HeII$.
+ */
+gdouble 
+nc_recomb_XHeII (NcRecomb *recomb, NcHICosmo *cosmo, const gdouble lambda)
+{
+  return NC_RECOMB_GET_CLASS (recomb)->XHeII (recomb, cosmo, lambda);
+}
+
 static gdouble
 _nc_recomb_root (NcRecomb *recomb, gsl_function *F, gdouble x0, gdouble x1)
 {
@@ -1003,7 +1060,6 @@ _nc_recomb_root (NcRecomb *recomb, gsl_function *F, gdouble x0, gdouble x1)
     status = gsl_root_fsolver_iterate (recomb->fsol);
     if (status)
       g_error ("_nc_recomb_root_brent: Cannot find root (%s)", gsl_strerror (status));
-
     x = gsl_root_fsolver_root (recomb->fsol);
     x0 = gsl_root_fsolver_x_lower (recomb->fsol);
     x1 = gsl_root_fsolver_x_upper (recomb->fsol);

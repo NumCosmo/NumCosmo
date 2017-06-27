@@ -570,7 +570,7 @@ NcmVector *
 ncm_spline_get_xv (NcmSpline *s)
 {
 	if (s->xv != NULL)
-    return g_object_ref (s->xv);
+    return ncm_vector_ref (s->xv);
   else
     return NULL;
 }
@@ -587,7 +587,7 @@ NcmVector *
 ncm_spline_get_yv (NcmSpline *s)
 {
   if (s->yv != NULL)
-    return g_object_ref (s->yv);
+    return ncm_vector_ref (s->yv);
   else
     return NULL;
 }

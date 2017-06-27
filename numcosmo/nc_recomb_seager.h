@@ -58,9 +58,9 @@ struct _NcRecombSeagerClass
  * @NC_RECOM_SEAGER_OPT_HEII_SOBOLEV_3P012: Includes Sobolev scape probability for the $2p\,{}^3\\!P_{0,1,2} \to 1s\,{}^1\\!S_{0}$.
  * @NC_RECOM_SEAGER_OPT_HEII_SOBOLEV_3P012_CO: Also includes the continum opacity effect due to H.
  * @NC_RECOM_SEAGER_OPT_ALL: All options.
- * 
+ *
  * FIXME
- * 
+ *
  */
 typedef enum _NcRecombSeagerOpt
 {
@@ -104,6 +104,8 @@ struct _NcRecombSeager
   N_Vector y;
   N_Vector abstol;
   guint n;
+  NcmSpline* XHII_s;
+  NcmSpline* XHeII_s;
 };
 
 GType nc_recomb_seager_get_type (void) G_GNUC_CONST;

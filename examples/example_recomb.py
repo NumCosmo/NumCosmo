@@ -106,7 +106,7 @@ for i in range (10000):
   v_tau = recomb.v_tau (cosmo, alpha)
   dv_tau_dlambda = recomb.dv_tau_dlambda (cosmo, alpha)
   d2v_tau_dlambda2 = recomb.d2v_tau_dlambda2 (cosmo, alpha)
-  
+
   x_a.append (x)
   Xe_a.append (Xe)
   Xefi_a.append (Xefi)
@@ -139,13 +139,17 @@ for i in range (10000):
 
 plt.title ("Ionization History")
 plt.xscale('log')
+plt.yscale('log')
 plt.plot (x_a, Xe_a, 'r', label="Recombination")
 plt.plot (x_a, Xefi_a, 'b--', label="Equilibrium")
 plt.xlabel('$x$')
 plt.ylabel('$X_{e^-}$')
 plt.legend(loc=2)
+plt.xlim(1e4, 1e2)
+plt.ylim(1e-4,2)
 
 plt.savefig ("recomb_Xe.png")
+
 
 plt.clf ()
 
@@ -155,6 +159,7 @@ plt.clf ()
 
 plt.title ("Fractions Equilibrium History")
 plt.xscale('log')
+# plt.yscale('log')
 plt.plot (x_a, XHI_a, 'r', label=r'$X_\mathrm{HI}$')
 plt.plot (x_a, XHII_a, 'g', label=r'$X_\mathrm{HII}$')
 plt.plot (x_a, XHeI_a, 'b', label=r'$X_\mathrm{HeI}$')
@@ -164,7 +169,8 @@ plt.xlabel(r'$x$')
 plt.ylabel(r'$X_*$')
 plt.legend(loc=6)
 
-plt.ylim([-0.1,1.1])
+# plt.ylim([1e-24,1.1])
+plt.xlim(1e4,1e2)
 
 plt.savefig ("recomb_eq_fractions.png")
 
