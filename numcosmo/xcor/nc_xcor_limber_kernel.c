@@ -23,14 +23,20 @@
  * with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-/**
- * SECTION:nc_xcor_limber_kernel
- * @title: Cross-correlations Kernel
- * @short_description: Abstract object for the cross-spectra Kernels
- *
- * FIXME
- * 
- */
+
+ /**
+  * SECTION:nc_xcor_limber_kernel
+  * @title: NcXcorLimberKernel
+  * @short_description: Abstract object for the kernels of projected observables used in cross-correlations.
+  *
+  * The projected field and its kernel are linked by
+  * \begin{equation}
+  * $A(\hat{\mathbf{n}}) = \int_0^\infty dz \ W^A(z) \ \delta(\chi(z)\hat{\mathbf{n}}, z)$
+  * \end{equation}
+  * where $\delta$ is the matter density field.
+  *
+  * Kernels also implement the nosie power spectrum.
+  */
 
 #ifdef HAVE_CONFIG_H
 #include "config.h"
@@ -61,7 +67,7 @@ nc_xcor_limber_kernel_init (NcXcorLimberKernel* xclk)
   xclk->zmax        = 0.0;
 }
 
-static void 
+static void
 _nc_xcor_limber_kernel_dispose (GObject* object)
 {
 
@@ -69,7 +75,7 @@ _nc_xcor_limber_kernel_dispose (GObject* object)
   G_OBJECT_CLASS (nc_xcor_limber_kernel_parent_class)->dispose (object);
 }
 
-static void 
+static void
 _nc_xcor_limber_kernel_finalize (GObject* object)
 {
 
@@ -197,7 +203,7 @@ nc_xcor_limber_kernel_ref (NcXcorLimberKernel* xclk)
  * FIXME
  *
  */
-void 
+void
 nc_xcor_limber_kernel_free (NcXcorLimberKernel* xclk)
 {
   g_object_unref (xclk);
@@ -210,7 +216,7 @@ nc_xcor_limber_kernel_free (NcXcorLimberKernel* xclk)
  * FIXME
  *
  */
-void 
+void
 nc_xcor_limber_kernel_clear (NcXcorLimberKernel **xclk)
 {
   g_clear_object (xclk);
@@ -237,7 +243,7 @@ guint nc_xcor_limber_kernel_obs_len (NcXcorLimberKernel *xclk)
  *
  * Returns: FIXME
  */
-guint 
+guint
 nc_xcor_limber_kernel_obs_params_len (NcXcorLimberKernel *xclk)
 {
   return NC_XCOR_LIMBER_KERNEL_GET_CLASS (xclk)->obs_params_len (xclk);
@@ -255,7 +261,7 @@ nc_xcor_limber_kernel_obs_params_len (NcXcorLimberKernel *xclk)
  *
  * Returns: FIXME
  */
-gdouble 
+gdouble
 nc_xcor_limber_kernel_eval (NcXcorLimberKernel *xclk, NcHICosmo *cosmo, gdouble z, const NcXcorKinetic *xck, gint l)
 {
   if ((xclk->zmin <= z) && (xclk->zmax >= z))
@@ -274,7 +280,7 @@ nc_xcor_limber_kernel_eval (NcXcorLimberKernel *xclk, NcHICosmo *cosmo, gdouble 
  * vp2 = vp1 + noise spectrum
  *
  */
-void 
+void
 nc_xcor_limber_kernel_add_noise (NcXcorLimberKernel *xclk, NcmVector *vp1, NcmVector *vp2, guint lmin)
 {
   NC_XCOR_LIMBER_KERNEL_GET_CLASS (xclk)-> add_noise (xclk, vp1, vp2, lmin);
@@ -288,13 +294,13 @@ nc_xcor_limber_kernel_add_noise (NcXcorLimberKernel *xclk, NcmVector *vp1, NcmVe
  * FIXME
  *
  */
-void 
+void
 nc_xcor_limber_kernel_prepare (NcXcorLimberKernel *xclk, NcHICosmo *cosmo)
 {
   return NC_XCOR_LIMBER_KERNEL_GET_CLASS (xclk)->prepare (xclk, cosmo);
 }
 
-static void 
+static void
 _nc_xcor_limber_kernel_log_all_models_go (GType model_type, guint n)
 {
   guint nc, i, j;
@@ -322,7 +328,7 @@ _nc_xcor_limber_kernel_log_all_models_go (GType model_type, guint n)
  * FIXME
  *
  */
-void 
+void
 nc_xcor_limber_kernel_log_all_models (void)
 {
   g_message ("# Registred NcXcorLimberKernel:%s are:\n",

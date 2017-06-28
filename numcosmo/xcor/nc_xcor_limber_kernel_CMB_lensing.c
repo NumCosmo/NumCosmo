@@ -25,10 +25,13 @@
 
 /**
  * SECTION:nc_xcor_limber_kernel_CMB_lensing
- * @title: Cross-correlations Lensing Kernel
- * @short_description: Lensing implementation of NcNcXcorLimberKernel
+ * @title: NcXcorLimberKernelCMBLensing
+ * @short_description: implementation of #NcNcXcorLimberKernel for CMB lensing
  *
- * FIXME
+ * The kernel is given by
+ * \begin{equation}
+ *    W^{\kappa_\mathrm{CMB}} (z) = \frac{3}{2} \frac{\Omega_m H_0^2}{c} \frac{(1+z)}{H(z)} \chi(z) \frac{\chi(z_*) - \chi(z)}{\chi(z_*)}.
+ * \end{equation}
  *
  */
 

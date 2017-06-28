@@ -25,10 +25,20 @@
 
 /**
  * SECTION:nc_xcor_limber_kernel_gal
- * @title: Cross-correlations Galaxy Kernel
- * @short_description: Galaxy implementation of NcNcXcorLimberKernel
+ * @title: NcXcorLimberKernelGal
+ * @short_description: implementation of #NcNcXcorLimberKernel for galaxy density
  *
- * FIXME
+ * The kernel is given by
+ * \begin{equation}
+ *     W^g (z) = b(z) \frac{dn}{dz} + \frac{3\Omega_m}{2c} \frac{H^2_0}{H(z)} (1+ z) \, \chi(z) \, (5s-2) \, g(z)
+ * \end{equation}
+ * where
+ * \begin{equation}
+ * g(z) = \int_z^{z_{*}} dz^\prime \left( 1 - \frac{\chi(z)}{\chi(z^\prime)}\right) \frac{dn}{dz^\prime}$.
+ * \end{equation}
+ *
+ * $\frac{dn}{dz}$ is the (automatically normalized) redshift distribution of galaxies (implemented as a #NcmSpline), $ b(z)$ is the large-scale clustering bias and $s$ is the magnification bias. $b(z)$ can be a single number or a #NcmSpline.
+ *
  *
  */
 
@@ -558,7 +568,7 @@ _nc_xcor_limber_kernel_gal_bias (NcXcorLimberKernelGal* xclkg, gdouble z)
   }
 }
 
-static gdouble 
+static gdouble
 _nc_xcor_limber_kernel_gal_eval (NcXcorLimberKernel *xclk, NcHICosmo *cosmo, gdouble z, const NcXcorKinetic *xck, gint l)//, gdouble geo_z[])
 {
   NcXcorLimberKernelGal* xclkg = NC_XCOR_LIMBER_KERNEL_GAL (xclk);

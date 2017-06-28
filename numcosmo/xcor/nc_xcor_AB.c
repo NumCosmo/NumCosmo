@@ -1,5 +1,5 @@
 /***************************************************************************
- *            nc_xcor_AB.h
+ *            nc_xcor_AB.c
  *
  *  Tue July 14 12:00:00 2015
  *  Copyright  2015  Cyrille Doux
@@ -23,14 +23,14 @@
  * with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-/**
- * SECTION:nc_xcor_AB
- * @title: Cross-correlations Matrices
- * @short_description: Cross-spectra Matrices
- *
- * FIXME
- * 
- */
+ /**
+  * SECTION:nc_xcor_AB
+  * @title: NcXcorAB
+  * @short_description: Cross-correlations data storage object.
+  *
+  * This object stores information for observables $A$ and $B$ for use with a #NcDataXcor likelihood object.
+  *
+  */
 
 #ifdef HAVE_CONFIG_H
 #include "config.h"
@@ -59,7 +59,7 @@ enum
 
 G_DEFINE_TYPE (NcXcorAB, nc_xcor_AB, G_TYPE_OBJECT);
 
-static void 
+static void
 nc_xcor_AB_init (NcXcorAB* xcab)
 {
 	xcab->a = 99;
@@ -153,7 +153,7 @@ _nc_xcor_AB_get_property (GObject* object, guint prop_id, GValue* value, GParamS
   }
 }
 
-static void 
+static void
 _nc_xcor_AB_dispose (GObject* object)
 {
 	NcXcorAB* xcab = NC_XCOR_AB (object);
@@ -166,10 +166,10 @@ _nc_xcor_AB_dispose (GObject* object)
 	G_OBJECT_CLASS (nc_xcor_AB_parent_class)->dispose (object);
 }
 
-static void 
+static void
 _nc_xcor_AB_finalize (GObject* object)
 {
-  
+
 	/* Chain up : end */
 	G_OBJECT_CLASS (nc_xcor_AB_parent_class)->finalize (object);
 }
@@ -249,14 +249,14 @@ nc_xcor_AB_class_init (NcXcorABClass* klass)
 
 /**
  * nc_xcor_AB_new:
- * @a: a #guint
- * @b: a #guint
- * @ell_th_cut_off: a #guint
- * @ell_lik_min: a #guint
- * @ell_lik_max: a #guint
- * @clobs_filename: a #gchar
- * @mixing_filename: a #gchar
- * @mixing_filelength: a #guint
+ * @a: a #guint, the index of observable $A$
+ * @b: a #guint, the index of observable $B$
+ * @ell_th_cut_off: a #guint, the cut-off for the computation of the theoretical full-sky angular power spectrum
+ * @ell_lik_min: a #guint, the minimum multipole to be included in the likelihood
+ * @ell_lik_max: a #guint, the maximum multipole to be included in the likelihood
+ * @clobs_filename: a #gchar, the name of the file containing the observed pseudo spectrum (should start at zero, even if not used in the likelihod)
+ * @mixing_filename: a #gchar, the name of the file containing the mixing matrix
+ * @mixing_filelength: a #guint, the size of the matrix in @mixing_filename (in case it is larger than @ell_th_cut_off)
  *
  * FIXME
  *
@@ -287,7 +287,7 @@ nc_xcor_AB_new (guint a, guint b, guint ell_th_cut_off, guint ell_lik_min, guint
 	{
 		NcmMatrix *mixing_full = ncm_matrix_new (mixing_filelength, mixing_filelength);
 		FILE* g = fopen (mixing_filename, "r");
-    
+
 		gsl_matrix_fscanf (g, ncm_matrix_gsl (mixing_full));
 
     fclose (g);
