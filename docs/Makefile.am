@@ -201,7 +201,7 @@ numcosmo-docs-clean: clean
 
 bibfile.stamp: $(top_srcdir)/docs/references.bib
 	-$(GTK_DOC_V_SETUP)if test "$(abs_srcdir)" != "$(abs_builddir)" ; then \
-	    cp -pu $(top_srcdir)/docs/references.bib $(DOC_TARGET_DIR); \
+	    cp -p $(top_srcdir)/docs/references.bib $(DOC_TARGET_DIR); \
 	fi
 	$(AM_V_at)touch bibfile.stamp
 
@@ -223,7 +223,7 @@ endif
 addmathjax.stamp: html-build.stamp
 	$(AM_V_at)echo "  DOC   Adding support to MathJax"
 	$(AM_V_at)$(top_srcdir)/docs/addmathjax.pl $(DOC_TARGET_DIR)/html/*.html > $(@F).addmathjax.log 2>&1
-	$(AM_V_at)cp -pu $(top_srcdir)/docs/container.css $(DOC_TARGET_DIR)/html/
+	$(AM_V_at)cp -p $(top_srcdir)/docs/container.css $(DOC_TARGET_DIR)/html/
 	$(AM_V_at)touch addmathjax.stamp
 
 -include $(top_srcdir)/git.mk
