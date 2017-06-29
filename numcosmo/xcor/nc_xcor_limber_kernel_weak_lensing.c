@@ -26,7 +26,7 @@
 /**
  * SECTION:nc_xcor_limber_kernel_weak_lensing
  * @title: NcXcorLimberKernelWeakLensing
- * @short_description: implementation of #NcNcXcorLimberKernel for galaxy weak lensing
+ * @short_description: implementation of #NcXcorLimberKernel for galaxy weak lensing
  *
  * The kernel is given by
  * \begin{equation}

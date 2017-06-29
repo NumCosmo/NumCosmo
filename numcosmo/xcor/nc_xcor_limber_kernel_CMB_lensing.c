@@ -26,7 +26,7 @@
 /**
  * SECTION:nc_xcor_limber_kernel_CMB_lensing
  * @title: NcXcorLimberKernelCMBLensing
- * @short_description: implementation of #NcNcXcorLimberKernel for CMB lensing
+ * @short_description: implementation of #NcXcorLimberKernel for CMB lensing
  *
  * The kernel is given by
  * \begin{equation}
