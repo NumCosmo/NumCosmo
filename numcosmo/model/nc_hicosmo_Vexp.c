@@ -25,7 +25,7 @@
 /**
  * SECTION:nc_hicosmo_Vexp
  * @title: NcHICosmoVexp
- * @short_description: $\Lambda$CDM model.
+ * @short_description: $\Lambda$CDM model
  *
  * FIXME
  *

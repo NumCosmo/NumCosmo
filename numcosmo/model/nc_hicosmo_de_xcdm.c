@@ -25,9 +25,9 @@
 /**
  * SECTION:nc_hicosmo_de_xcdm
  * @title: NcHICosmoDEXcdm
- * @short_description: Dark Energy -- constant dark energy equation of state model.
+ * @short_description: Dark Energy -- constant equation of state
  *
- * FIXME
+ * $w(z) = w$, where $w$ is constant.
  *
  */
 

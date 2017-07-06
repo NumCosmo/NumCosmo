@@ -26,7 +26,7 @@
 /**
  * SECTION:nc_hicosmo_de_reparam_ok
  * @title: NcHICosmoDEReparamOk
- * @short_description: Darkenergy model reparametrization $\Omega_{x0} \to \Omega_{k0}$.
+ * @short_description: Dark Energy -- reparametrization $\Omega_{x0} \to \Omega_{k0}$
  *
  * Object implementing a reparametrization for darkenergy models. It changes
  * $\Omega_{x0} \to \Omega_{k0}$.

@@ -25,7 +25,7 @@
 /**
  * SECTION:nc_hicosmo_de_qe
  * @title: NcHICosmoDEQe
- * @short_description: Dark Energy -- quintessence (inspired).
+ * @short_description: Dark Energy -- quintessence (inspired)
  *
  *
  * FIXME

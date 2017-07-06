@@ -25,7 +25,7 @@
 /**
  * SECTION:nc_hicosmo_qlinear
  * @title: NcHICosmoQLinear
- * @short_description: Linear deceleration parameter kinetic model.
+ * @short_description: Kinetic model -- Linear deceleration function
  *
  * FIXME
  *
@@ -59,8 +59,8 @@ Dc_th_int_integrand (gdouble z, gpointer p)
   gdouble *params = (gdouble *)p;
   gdouble z1 = params[0];
   gdouble q  = params[1];
-  gdouble qp  = params[2];
-  gdouble qq = qq = (1.0 + z1)*qp - q;
+  gdouble qp = params[2];
+  gdouble qq = (1.0 + z1)*qp - q;
   gsl_sf_result result;
 
   gsl_sf_exp_mult_e (qp * (z1 - z), pow ((1.0 + z)/(1.0 + z1), (qq - 1.0) ), &result);
@@ -98,18 +98,20 @@ _nc_hicosmo_qlinear_Dc (NcHICosmo *cosmo, gdouble z)
 }
 
 /**
- * nc_hicosmo_qlinear_dE:
- * @z2: FIXME
- * @z1: FIXME
- * @q: FIXME
- * @qp: FIXME
+ * nc_hicosmo_qlinear_E:
+ * @z2: final redshift
+ * @z1: initial redshift
+ * @q: constant parameter
+ * @qp: constant parameter that multiplies (z - z1)
  *
- * FIXME
- *
- * Returns: FIXME
+ * This function returns the normalized Hubble function 
+ * $$ E(z) = \exp \int_{z_1}^{z_2} \frac{1 + q(z^\prime)}{1 + z^\prime} dz^\prime, $$	 
+ * where $q(z) = q_0 + q_1 (z - z_1)$, being $q_0$ = @q, $q_1$ = @qp and $z_1$ = @z1.
+ * 
+ * Returns: the normalized Hubble function $E(z) = \left(\frac{1+z_2}{1+z_1}\right)^{1 + q_0 - q_1(1 + z_1)} e^{q_1 (z_2 - z_1)}$.
  */
 gdouble
-nc_hicosmo_qlinear_dE (gdouble z2, gdouble z1, gdouble q, gdouble qp)
+nc_hicosmo_qlinear_E (gdouble z2, gdouble z1, gdouble q, gdouble qp)
 {
   gdouble x1 = 1.0 + z1;
   gdouble x2 = 1.0 + z2;

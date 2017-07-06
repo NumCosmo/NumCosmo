@@ -25,9 +25,12 @@
 /**
  * SECTION:nc_hicosmo_qconst
  * @title: NcHICosmoQConst
- * @short_description: Constant deceleration parameter kinetic model.
+ * @short_description:  Kinetic model -- Constant deceleration function
  *
- * FIXME
+ * The deceleration function is defined as a constant, $q(z) = q_0$.  
+ * The normalized Hubble function and the comoving distance are, respectively,
+ * $$E(z) = \exp \int_{z_1}^{z} \frac{1 + q_0}{1 + z^\prime} dz^\prime,$$
+ * $$D_c(z) = $$	 
  */
 
 #ifdef HAVE_CONFIG_H

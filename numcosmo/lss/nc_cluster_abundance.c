@@ -25,7 +25,7 @@
 /**
  * SECTION:nc_cluster_abundance
  * @title: NcClusterAbundance
- * @short_description: Cluster abundance distribution.
+ * @short_description: Cluster abundance distribution
  *
  * FIXME
  */
@@ -337,12 +337,12 @@ _nc_cluster_abundance_z_p_lnM_p_d2n_integrand (gdouble lnM, gdouble z, gpointer 
  * @z_obs: (array) (element-type gdouble): observed redshift
  * @z_obs_params: (array) (element-type gdouble): FIXME
  *
- * This function computes /f$ \int_0^\infty dz \int_0^\infty d\ln M \frac{d^2N(\ln M, z)}{dzd\ln M} * P(z^{phot}|z) *
- * P(\ln M^{obs}|\ln M, z) /f$. We studied the convergence of this integral to optimize this function. We verified
- * that it converges to 5 decimal places at the redshift interval /f$ [z^{phot} - 10\sigma^{phot}, z^{phot} +
-   * 10\sigma^{phot}] /f$ and the mass interval /f$ [\ln M^{obs} - 7\sigma_{\ln M}, \ln M^{obs} + 7\sigma_{\ln M}] /f$.
+ * This function computes $ \int_0^\infty dz \int_0^\infty d\ln M \frac{d^2N(\ln M, z)}{dzd\ln M} * P(z^{phot}|z) *
+ * P(\ln M^{obs}|\ln M, z) $. We studied the convergence of this integral to optimize this function. We verified
+ * that it converges to 5 decimal places at the redshift interval $ [z^{phot} - 10\sigma^{phot}, z^{phot} +
+   * 10\sigma^{phot}] $ and the mass interval $ [\ln M^{obs} - 7\sigma_{\ln M}, \ln M^{obs} + 7\sigma_{\ln M}] $.
  *
- * Returns: a gdouble which represents /f$ \frac{d^2N(\ln M^{obs}, z^{phot})}{dzd\lnM} /f$.
+ * Returns: a gdouble which represents $ \frac{d^2N(\ln M^{obs}, z^{phot})}{dzd\lnM} $.
  */
 gdouble
 nc_cluster_abundance_z_p_lnM_p_d2n (NcClusterAbundance *cad, NcHICosmo *cosmo, NcClusterRedshift *clusterz, NcClusterMass *clusterm, gdouble *lnM_obs, gdouble *lnM_obs_params, gdouble *z_obs, gdouble *z_obs_params)
@@ -392,12 +392,12 @@ _nc_cluster_abundance_z_p_d2n_integrand (gdouble z, gpointer params)
  * @z_obs: (array) (element-type gdouble): observed redshift
  * @z_obs_params: (array) (element-type gdouble): FIXME
  *
- * This function computes /f$ \int_{z_{phot} - 10\sigma_{phot}}^{z_{phot} + 10\sigma_{phot}} dz \,
- * \frac{d^2N}{dzdlnM} * P(z^{photo}|z) /f$. The integral limits were determined requiring a precision
+ * This function computes $ \int_{z_{phot} - 10\sigma_{phot}}^{z_{phot} + 10\sigma_{phot}} dz \,
+ * \frac{d^2N}{dzdlnM} * P(z^{photo}|z) $. The integral limits were determined requiring a precision
  * to five decimal places.
  *
- * Returns: a gdouble which corresponds to /f$ \int_{z_{phot} - 10\sigma_{phot}}^{z_{phot} + 10\sigma_{phot}} dz \,
- * \frac{d^2N}{dzdlnM} * P(z^{photo}|z) /f$.
+ * Returns: a gdouble which corresponds to $ \int_{z_{phot} - 10\sigma_{phot}}^{z_{phot} + 10\sigma_{phot}} dz \,
+ * \frac{d^2N}{dzdlnM} * P(z^{photo}|z) $.
  */
 gdouble
 nc_cluster_abundance_z_p_d2n (NcClusterAbundance *cad, NcHICosmo *cosmo, NcClusterRedshift *clusterz, NcClusterMass *clusterm, gdouble lnM, gdouble *z_obs, gdouble *z_obs_params)
@@ -459,12 +459,12 @@ _nc_cluster_abundance_lnM_p_d2n_integrand (gdouble lnM, gpointer params)
  * @lnM_obs_params: (array) (element-type gdouble): other information of the observed mass, such as its error
  * @z: redshift
    *
- * This function computes /f$ \int_{\ln M^{obs} - 7\sigma_{\ln M}}^{\ln M^{obs} + 7\sigma_{\ln M}} d\ln M \,
- * \frac{d^2N}{dzdlnM} * P(\ln M^{obs}|\ln M) /f$. The integral limits were determined requiring a precision
+ * This function computes $ \int_{\ln M^{obs} - 7\sigma_{\ln M}}^{\ln M^{obs} + 7\sigma_{\ln M}} d\ln M \,
+ * \frac{d^2N}{dzdlnM} * P(\ln M^{obs}|\ln M) $. The integral limits were determined requiring a precision
  * to five decimal places.
  *
- * Returns: a gdouble which corresponds to /f$ \int_{\ln M^{obs} - 7\sigma_{\ln M}}^{\ln M^{obs} + 7\sigma_{\ln M}} d\ln M \,
- * \frac{d^2N}{dzdlnM} * P(\ln M^{obs}|\ln M) /f$.
+ * Returns: a gdouble which corresponds to $ \int_{\ln M^{obs} - 7\sigma_{\ln M}}^{\ln M^{obs} + 7\sigma_{\ln M}} d\ln M \,
+ * \frac{d^2N}{dzdlnM} * P(\ln M^{obs}|\ln M) $.
  */
 gdouble
 nc_cluster_abundance_lnM_p_d2n (NcClusterAbundance *cad, NcHICosmo *cosmo, NcClusterRedshift *clusterz, NcClusterMass *clusterm, gdouble *lnM_obs, gdouble *lnM_obs_params, gdouble z)
@@ -523,12 +523,12 @@ if (FALSE)
  * @lnM: true mass
  * @z: true redshift
  *
- * This function computes /f$ \int_{\ln M^{obs} - 7\sigma_{\ln M}}^{\ln M^{obs} + 7\sigma_{\ln M}} d\ln M \,
- * \frac{d^2N}{dzdlnM} * P(\ln M^{obs}|\ln M) /f$. The integral limits were determined requiring a precision
+ * This function computes $ \int_{\ln M^{obs} - 7\sigma_{\ln M}}^{\ln M^{obs} + 7\sigma_{\ln M}} d\ln M \,
+ * \frac{d^2N}{dzdlnM} * P(\ln M^{obs}|\ln M) $. The integral limits were determined requiring a precision
  * to five decimal places.
  *
- * Returns: a gdouble which corresponds to /f$ \int_{\ln M^{obs} - 7\sigma_{\ln M}}^{\ln M^{obs} + 7\sigma_{\ln M}} d\ln M \,
- * \frac{d^2N}{dzdlnM} * P(\ln M^{obs}|\ln M) /f$.
+ * Returns: a gdouble which corresponds to $ \int_{\ln M^{obs} - 7\sigma_{\ln M}}^{\ln M^{obs} + 7\sigma_{\ln M}} d\ln M \,
+ * \frac{d^2N}{dzdlnM} * P(\ln M^{obs}|\ln M) $.
  */
 gdouble
 nc_cluster_abundance_d2n (NcClusterAbundance *cad, NcHICosmo *cosmo, NcClusterRedshift *clusterz, NcClusterMass *clusterm, gdouble lnM, gdouble z)

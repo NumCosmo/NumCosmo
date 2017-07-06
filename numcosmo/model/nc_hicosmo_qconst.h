@@ -44,12 +44,12 @@ typedef struct _NcHICosmoQConst NcHICosmoQConst;
 
 /**
  * NcHICosmoQConstParams:
- * @NC_HICOSMO_QCONST_H0: FIXME
- * @NC_HICOSMO_QCONST_OMEGA_T: FIXME
- * @NC_HICOSMO_QCONST_CD: FIXME
- * @NC_HICOSMO_QCONST_E: FIXME
- * @NC_HICOSMO_QCONST_Q: FIXME
- * @NC_HICOSMO_QCONST_Z1: FIXME
+ * @NC_HICOSMO_QCONST_H0: Hubble constant
+ * @NC_HICOSMO_QCONST_OMEGA_T: total energy density of the universe
+ * @NC_HICOSMO_QCONST_CD: comoving distance
+ * @NC_HICOSMO_QCONST_E: normalized Hubble function
+ * @NC_HICOSMO_QCONST_Q: constant vlaue of the deceleration function
+ * @NC_HICOSMO_QCONST_Z1: initial redshift
  *
  */
 typedef enum _NcHICosmoQConstParams

@@ -50,8 +50,8 @@ typedef struct _NcHICosmoQSplineContPrior NcHICosmoQSplineContPrior;
 
 /**
  * NcHICosmoQSplineSParams:
- * @NC_HICOSMO_QSPLINE_H0: FIXME
- * @NC_HICOSMO_QSPLINE_OMEGA_T: FIXME
+ * @NC_HICOSMO_QSPLINE_H0: Hubble constant
+ * @NC_HICOSMO_QSPLINE_OMEGA_T: Total energy density of the universe
  * @NC_HICOSMO_QSPLINE_AS_DRAG: FIXME
  *
  */

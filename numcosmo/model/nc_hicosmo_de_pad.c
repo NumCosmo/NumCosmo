@@ -25,9 +25,9 @@
 /**
  * SECTION:nc_hicosmo_de_pad
  * @title: NcHICosmoDEPad
- * @short_description: Dark Energy -- Jassal-Bagla-Padmanabhan of state parametrization.
+ * @short_description: Dark Energy -- Jassal-Bagla-Padmanabhan equation of state
  *
- * See [Jassal et al. (2005)][XJassal2005].
+ * See [Jassal et al. (2005)][XJassal2005]: $w(z) = w_0 + w_1 \frac{z}{(1.0 + z)^2}$.
  *
  */
 

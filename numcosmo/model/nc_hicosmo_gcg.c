@@ -25,7 +25,7 @@
 /**
  * SECTION:nc_hicosmo_gcg
  * @title: NcHICosmoGCG
- * @short_description: GCG desc.
+ * @short_description: Generalized Chaplygin Gas
  *
  * FIXME
  * 

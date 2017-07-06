@@ -25,9 +25,9 @@
 /**
  * SECTION:nc_hicosmo_de_linder
  * @title: NcHICosmoDELinder
- * @short_description: Dark Energy -- Linder equation of state parametrization.
+ * @short_description: Dark Energy -- Linder equation of state
  *
- * See [Linder (2003)][XLinder2003].
+ * See [Linder (2003)][XLinder2003]: $ w(z) = w_0 + w_1 \frac{z}{1.0 + z}$.
  *
  */
 
