@@ -1194,10 +1194,10 @@ ncm_fit_run_restart (NcmFit *fit, NcmFitRunMsgs mtype, const gdouble abstol, con
   NcmMSet *mset_out      = (save_mset == NULL) ? fit->mset : save_mset;
   NcmSerialize *ser      = ncm_serialize_new (NCM_SERIALIZE_OPT_NONE);
 
+  fit->mtype = mtype;
+
   if (ncm_mset_fparam_len (fit->mset) == 0)
-  {
-    fit->mtype = mtype;
-    
+  {    
     ncm_fit_reset (fit);
     ncm_fit_log_start (fit);
 
