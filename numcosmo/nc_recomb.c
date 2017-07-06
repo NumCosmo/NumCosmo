@@ -149,6 +149,7 @@
 #include "math/ncm_serialize.h"
 #include "math/ncm_cfg.h"
 #include "math/ncm_spline_func.h"
+#include "math/ncm_spline_cubic_notaknot.h"
 #include "perturbations/linear.h"
 
 #include <gsl/gsl_sf_exp.h>
@@ -168,9 +169,15 @@ enum
   PROP_SIZE,
 };
 
+static gdouble _nc_recomb_mdtau_dlambda (gdouble y, gdouble x, gpointer userdata);
+static gdouble _nc_recomb_mdtau_drag_dlambda (gdouble y, gdouble x, gpointer userdata);
+
 static void
 nc_recomb_init (NcRecomb *recomb)
 {
+  NcmSpline *tau_s       = ncm_spline_cubic_notaknot_new ();
+  NcmSpline *tau_drag_s  = ncm_spline_cubic_notaknot_new ();
+
   recomb->zi             = 0.0;
   recomb->prec           = 0.0;
   recomb->lambdai        = 0.0;
@@ -181,8 +188,18 @@ nc_recomb_init (NcRecomb *recomb)
   recomb->Xe_s           = NULL;
   recomb->dtau_dlambda_s = NULL;
   recomb->tau_s          = NULL;
+  recomb->tau_ode_s      = ncm_ode_spline_new (tau_s, &_nc_recomb_mdtau_dlambda);
+  recomb->tau_drag_ode_s = ncm_ode_spline_new (tau_drag_s, &_nc_recomb_mdtau_drag_dlambda);
   recomb->ctrl_cosmo     = ncm_model_ctrl_new (NULL);
   recomb->ctrl_reion     = ncm_model_ctrl_new (NULL);
+
+  recomb->v_tau_max_z    = 0.0;
+  recomb->tau_z          = 0.0;
+  recomb->tau_drag_z     = 0.0;
+  recomb->tau_cutoff_z   = 0.0;
+  
+  ncm_spline_free (tau_s);
+  ncm_spline_free (tau_drag_s);
 }
 
 static void
@@ -193,6 +210,9 @@ nc_recomb_dispose (GObject *object)
   ncm_spline_clear (&recomb->Xe_s);
   ncm_spline_clear (&recomb->dtau_dlambda_s);
   ncm_spline_clear (&recomb->tau_s);
+
+  ncm_ode_spline_clear (&recomb->tau_ode_s);
+  ncm_ode_spline_clear (&recomb->tau_drag_ode_s);
 
   ncm_model_ctrl_clear (&recomb->ctrl_cosmo);
   ncm_model_ctrl_clear (&recomb->ctrl_reion);
@@ -915,7 +935,24 @@ gdouble
 nc_recomb_tau (NcRecomb *recomb, NcHICosmo *cosmo, const gdouble lambda)
 {
   NCM_UNUSED (cosmo);
-  return ncm_spline_eval (recomb->tau_s, lambda);
+  return ncm_spline_eval (recomb->tau_s, -lambda);
+}
+
+/**
+ * nc_recomb_tau_drag:
+ * @recomb: a #NcRecomb.
+ * @cosmo: a #NcHICosmo.
+ * @lambda: $\lambda$.
+ *
+ * FIXME
+ *
+ * Returns: $\tau_\mathrm{drag}$.
+ */
+gdouble
+nc_recomb_tau_drag (NcRecomb *recomb, NcHICosmo *cosmo, const gdouble lambda)
+{
+  NCM_UNUSED (cosmo);
+  return ncm_spline_eval (recomb->tau_drag_ode_s->s, -lambda);
 }
 
 /**
@@ -933,8 +970,8 @@ gdouble
 nc_recomb_tau_lambda0_lambda1 (NcRecomb *recomb, NcHICosmo *cosmo, const gdouble lambda0, const gdouble lambda1)
 {
   NCM_UNUSED (cosmo);
-  return ncm_spline_eval (recomb->tau_s, lambda1) -
-    ncm_spline_eval (recomb->tau_s, lambda0);
+  return ncm_spline_eval (recomb->tau_s, -lambda1) -
+    ncm_spline_eval (recomb->tau_s, -lambda0);
 }
 
 /**
@@ -950,7 +987,7 @@ nc_recomb_tau_lambda0_lambda1 (NcRecomb *recomb, NcHICosmo *cosmo, const gdouble
 gdouble
 nc_recomb_log_v_tau (NcRecomb *recomb, NcHICosmo *cosmo, const gdouble lambda)
 {
-  const gdouble tau = nc_recomb_tau (recomb, cosmo, lambda);
+  const gdouble tau          = nc_recomb_tau (recomb, cosmo, lambda);
   const gdouble dtau_dlambda = nc_recomb_dtau_dlambda (recomb, cosmo, lambda);
 
   return - tau + log (fabs (dtau_dlambda));
@@ -1116,46 +1153,17 @@ typedef struct __nc_recomb_func
 } _nc_recomb_func;
 
 static gdouble
-_nc_recomb_v_tau_min (gdouble lambda, gpointer params)
-{
-  _nc_recomb_func *func = (_nc_recomb_func *) params;
-  return -nc_recomb_log_v_tau (func->recomb, func->cosmo, lambda);
-}
-
-/**
- * nc_recomb_v_tau_lambda_mode:
- * @recomb: a #NcRecomb.
- * @cosmo: a #NcHICosmo.
- *
- * Calculate the maximum of the visibility function [Eq \eqref{eq:def:vtau}],
- * the value of $\lambda_\text{max}$ where
- * $dv_\tau(\lambda_\text{max})/d\lambda = 0$.
- *
- * Returns: $\lambda_\text{max}$.
- */
-gdouble
-nc_recomb_v_tau_lambda_mode (NcRecomb *recomb, NcHICosmo *cosmo)
-{
-  _nc_recomb_func func;
-  gsl_function F;
-  const gdouble cmb_ref_z = 1090.0;
-  const gdouble lambda_ref = -log (10.0 * cmb_ref_z + 10.0);
-  const gdouble lambda_try = -log (cmb_ref_z + 1.0);
-
-  F.function = &_nc_recomb_v_tau_min;
-  F.params = &func;
-
-  func.recomb = recomb;
-  func.cosmo  = cosmo;
-
-  return _nc_recomb_min (recomb, &F, lambda_ref, recomb->lambdaf, lambda_try);
-}
-
-static gdouble
 _nc_recomb_v_tau_features (gdouble lambda, gpointer params)
 {
   _nc_recomb_func *func = (_nc_recomb_func *) params;
   return nc_recomb_log_v_tau (func->recomb, func->cosmo, lambda) - func->ref;
+}
+
+static gdouble
+_nc_recomb_v_tau_min (gdouble lambda, gpointer params)
+{
+  _nc_recomb_func *func = (_nc_recomb_func *) params;
+  return -nc_recomb_log_v_tau (func->recomb, func->cosmo, lambda);
 }
 
 /**
@@ -1181,12 +1189,12 @@ nc_recomb_v_tau_lambda_features (NcRecomb *recomb, NcHICosmo *cosmo, gdouble log
   gsl_function F;
   gdouble log_v_tau_max;
   gdouble log_v_tau_f;
-  const gdouble cmb_ref_z = 1090.0;
+  const gdouble cmb_ref_z  = 1090.0;
   const gdouble lambda_ref = -log (10.0 * cmb_ref_z + 10.0);
   const gdouble lambda_try = -log (cmb_ref_z + 1.0);
 
   F.function = &_nc_recomb_v_tau_min;
-  F.params = &func;
+  F.params   = &func;
 
   func.recomb = recomb;
   func.cosmo  = cosmo;
@@ -1194,15 +1202,15 @@ nc_recomb_v_tau_lambda_features (NcRecomb *recomb, NcHICosmo *cosmo, gdouble log
   *lambda_max = _nc_recomb_min (recomb, &F, lambda_ref, recomb->lambdaf, lambda_try);
 
   log_v_tau_max = -_nc_recomb_v_tau_min (*lambda_max, &func);
-  log_v_tau_f = -_nc_recomb_v_tau_min (recomb->lambdaf, &func);
-  func.ref = log_v_tau_max - logref;
+  log_v_tau_f   = -_nc_recomb_v_tau_min (recomb->lambdaf, &func);
+  func.ref      = log_v_tau_max - logref;
 
-  func.ref = GSL_MAX (func.ref, (log_v_tau_max + log_v_tau_f) * 0.5);
+  func.ref      = GSL_MAX (func.ref, (log_v_tau_max + log_v_tau_f) * 0.5);
 
-  F.function = &_nc_recomb_v_tau_features;
+  F.function    = &_nc_recomb_v_tau_features;
 
-  *lambda_l = _nc_recomb_root (recomb, &F, lambda_ref, *lambda_max);
-  *lambda_u = _nc_recomb_root (recomb, &F, *lambda_max, recomb->lambdaf);
+  *lambda_l     = _nc_recomb_root (recomb, &F, lambda_ref, *lambda_max);
+  *lambda_u     = _nc_recomb_root (recomb, &F, *lambda_max, recomb->lambdaf);
 }
 
 static gdouble
@@ -1212,8 +1220,26 @@ _nc_recomb_tau_ref (gdouble lambda, gpointer params)
   return nc_recomb_tau (func->recomb, func->cosmo, lambda) - func->ref;
 }
 
+static gdouble
+_nc_recomb_tau_drag_ref (gdouble lambda, gpointer params)
+{
+  _nc_recomb_func *func = (_nc_recomb_func *) params;
+  return nc_recomb_tau_drag (func->recomb, func->cosmo, lambda) - func->ref;
+}
+
 /**
- * nc_recomb_tau_zstar:
+ * nc_recomb_get_v_tau_max_lambda:
+ * @recomb: a #NcRecomb.
+ * @cosmo: a #NcHICosmo.
+ *
+ * Calculate the maximum of the visibility function [Eq. \eqref{eq:def:vtau}],
+ * the value of $\lambda_\text{max}$ where
+ * $dv_\tau(\lambda_\text{max})/d\lambda = 0$.
+ *
+ * Returns: $\lambda_\text{max}$.
+ */
+/**
+ * nc_recomb_get_tau_lambda:
  * @recomb: a #NcRecomb.
  * @cosmo: a #NcHICosmo.
  *
@@ -1222,71 +1248,72 @@ _nc_recomb_tau_ref (gdouble lambda, gpointer params)
  *
  * Returns: $\lambda^\star$.
  */
-gdouble
-nc_recomb_tau_zstar (NcRecomb *recomb, NcHICosmo *cosmo)
-{
-  _nc_recomb_func func;
-  gsl_function F;
-  const gdouble cmb_ref_z = 1090.0;
-
-  F.function = &_nc_recomb_tau_ref;
-  F.params = &func;
-
-  func.recomb = recomb;
-  func.cosmo  = cosmo;
-  func.ref    = 1.0;
-
-  return _nc_recomb_root (recomb, &F,
-                          -log (10.0 * cmb_ref_z + 10.0),
-                          recomb->lambdaf);
-}
-
 /**
- * nc_recomb_tau_cutoff:
+ * nc_recomb_get_tau_drag_lambda:
+ * @recomb: a #NcRecomb.
+ * @cosmo: a #NcHICosmo.
+ *
+ * Calculate the value of $\lambda$ where the optical depth times $R$
+ * [Eq. \eqref{eq:def:tau}] is equal to one, i.e., $\tau_\mathrm{drag}(\lambda^\star) = 1$.
+ *
+ * Returns: $\lambda^\star$.
+ */
+/**
+ * nc_recomb_get_tau_cutoff_lambda:
  * @recomb: a #NcRecomb.
  * @cosmo: a #NcHICosmo.
  *
  * Calculate the value of $\lambda$ where the optical depth
  * [Eq \eqref{eq:def:tau}] attains a value such that
  * $e^{-\tau(\lambda_\text{cutoff})} = \epsilon_\text{double}$, i.e.,
- * is equal to the minimum value of a double which add to one.
+ * is equal to the smallest value of a double which add to one.
  *
  * Returns: $\lambda_\text{cutoff}$.
  */
-gdouble
-nc_recomb_tau_cutoff (NcRecomb *recomb, NcHICosmo *cosmo)
-{
-  _nc_recomb_func func;
-  gsl_function F;
-
-  F.function = &_nc_recomb_tau_ref;
-  F.params = &func;
-
-  func.recomb = recomb;
-  func.cosmo  = cosmo;
-  func.ref    = -GSL_LOG_DBL_EPSILON;
-
-  return _nc_recomb_root (recomb, &F, 
-                          recomb->lambdai,
-                          recomb->lambdaf);
-}
 
 /**
- * nc_recomb_tau_zdrag:
+ * nc_recomb_get_v_tau_max_z:
  * @recomb: a #NcRecomb.
  * @cosmo: a #NcHICosmo.
  *
- * FIXME
+ * Calculate the maximum of the visibility function [Eq. \eqref{eq:def:vtau}],
+ * the value of $z(\lambda_\text{max})$ where
+ * $dv_\tau(\lambda_\text{max})/d\lambda = 0$.
  *
- * Returns: FIXME.
+ * Returns: $z(\lambda_\text{max})$.
  */
-gdouble
-nc_recomb_tau_zdrag (NcRecomb *recomb, NcHICosmo *cosmo)
-{
-  NCM_UNUSED (recomb);
-  NCM_UNUSED (cosmo);
-  g_assert_not_reached ();
-}
+/**
+ * nc_recomb_get_tau_z:
+ * @recomb: a #NcRecomb.
+ * @cosmo: a #NcHICosmo.
+ *
+ * Calculate the value of $z(\lambda)$ where the optical depth
+ * [Eq \eqref{eq:def:tau}] is equal to one, i.e., $\tau(\lambda^\star) = 1$.
+ *
+ * Returns: $z(\lambda^\star)$.
+ */
+/**
+ * nc_recomb_get_tau_drag_z:
+ * @recomb: a #NcRecomb.
+ * @cosmo: a #NcHICosmo.
+ *
+ * Calculate the value of $z(\lambda)$ where the optical depth times $R$
+ * [Eq. \eqref{eq:def:tau}] is equal to one, i.e., $\tau_\mathrm{drag}(\lambda^\star) = 1$.
+ *
+ * Returns: $z(\lambda^\star)$.
+ */
+/**
+ * nc_recomb_get_tau_cutoff_z:
+ * @recomb: a #NcRecomb.
+ * @cosmo: a #NcHICosmo.
+ *
+ * Calculate the value of $z(\lambda)$ where the optical depth
+ * [Eq \eqref{eq:def:tau}] attains a value such that
+ * $e^{-\tau(\lambda_\text{cutoff})} = \epsilon_\text{double}$, i.e.,
+ * is equal to the smallest value of a double which add to one.
+ *
+ * Returns: $z(\lambda_\text{cutoff})$.
+ */
 
 static gdouble
 _nc_recomb_dtau_dlambda (gdouble lambda, gpointer p)
@@ -1297,12 +1324,22 @@ _nc_recomb_dtau_dlambda (gdouble lambda, gpointer p)
     nc_recomb_dtau_dlambda_Xe (func->cosmo, lambda);
 }
 
-static gdouble
-_nc_recomb_tau (gdouble lambda, gpointer p)
+static gdouble 
+_nc_recomb_mdtau_dlambda (gdouble y, gdouble x, gpointer userdata)
 {
-  _nc_recomb_func *func = (_nc_recomb_func *) p;
+  const gdouble lambda = - x;  
+  return - _nc_recomb_dtau_dlambda (lambda, userdata);
+}
 
-  return -ncm_spline_eval_integ (func->recomb->dtau_dlambda_s, lambda, func->recomb->lambdaf);
+static gdouble 
+_nc_recomb_mdtau_drag_dlambda (gdouble y, gdouble x, gpointer userdata)
+{
+  _nc_recomb_func *func = (_nc_recomb_func *) userdata;
+  const gdouble lambda = - x;
+  const gdouble z      = expm1 (x);
+  const gdouble R      = 4.0 / 3.0 * nc_hicosmo_E2Omega_g (func->cosmo, z) / nc_hicosmo_E2Omega_b (func->cosmo, z);
+  
+  return -R * _nc_recomb_dtau_dlambda (lambda, userdata);
 }
 
 void
@@ -1325,29 +1362,100 @@ _nc_recomb_prepare_tau_splines (NcRecomb *recomb, NcHICosmo *cosmo)
   ncm_spline_set_func (recomb->dtau_dlambda_s, NCM_SPLINE_FUNCTION_SPLINE,
                        &F, recomb->lambdai, recomb->lambdaf, 0, recomb->prec);
 
-  if (TRUE)
-  {
-    gint i = ncm_vector_len (recomb->dtau_dlambda_s->xv);
-    NcmVector *tauv = ncm_vector_new (i);
-    gdouble lambdal = ncm_vector_fast_get (recomb->dtau_dlambda_s->xv, i - 1);
-    gdouble tau = -ncm_spline_eval_integ (recomb->dtau_dlambda_s, lambdal, recomb->lambdaf);
-    ncm_vector_fast_set (tauv, i - 1, tau);
+  ncm_ode_spline_set_interval (recomb->tau_ode_s, 0.0, -recomb->lambdaf, -recomb->lambdai);
+  ncm_ode_spline_prepare (recomb->tau_ode_s, &func);
 
-    for (i--; i >= 0; i--)
-    {
-      const gdouble lambdai = ncm_vector_fast_get (recomb->dtau_dlambda_s->xv, i);
-      tau += -ncm_spline_eval_integ (recomb->dtau_dlambda_s, lambdai, lambdal);
-      lambdal = lambdai;
-      //_nc_recomb_tau (lambdai, &func);
-      ncm_vector_fast_set (tauv, i, tau);
-    }
-    ncm_spline_set (recomb->tau_s, recomb->dtau_dlambda_s->xv, tauv, TRUE);
-    ncm_vector_free (tauv);
-  }
-  else
-  {
-    F.function = &_nc_recomb_tau;
-    ncm_spline_set_func (recomb->tau_s, NCM_SPLINE_FUNCTION_SPLINE,
-                         &F, recomb->lambdai, recomb->lambdaf, 0, recomb->prec);
-  }
+  ncm_ode_spline_set_interval (recomb->tau_drag_ode_s, 0.0, -recomb->lambdaf, -recomb->lambdai);
+  ncm_ode_spline_prepare (recomb->tau_drag_ode_s, &func);
+  
+  ncm_spline_clear (&recomb->tau_s);
+  recomb->tau_s = ncm_spline_ref (recomb->tau_ode_s->s);
+}
+
+static gdouble
+_nc_recomb_v_tau_max_lambda (NcRecomb *recomb, NcHICosmo *cosmo)
+{
+  _nc_recomb_func func;
+  gsl_function F;
+  const gdouble cmb_ref_z  = 1090.0;
+  const gdouble lambda_ref = -log (10.0 * cmb_ref_z + 10.0);
+  const gdouble lambda_try = -log (cmb_ref_z + 1.0);
+
+  F.function = &_nc_recomb_v_tau_min;
+  F.params   = &func;
+
+  func.recomb = recomb;
+  func.cosmo  = cosmo;
+
+  return _nc_recomb_min (recomb, &F, lambda_ref, recomb->lambdaf, lambda_try);
+}
+
+static gdouble
+_nc_recomb_tau_lambda (NcRecomb *recomb, NcHICosmo *cosmo)
+{
+  _nc_recomb_func func;
+  gsl_function F;
+  const gdouble cmb_ref_z = 1090.0;
+
+  F.function = &_nc_recomb_tau_ref;
+  F.params   = &func;
+
+  func.recomb = recomb;
+  func.cosmo  = cosmo;
+  func.ref    = 1.0;
+
+  return _nc_recomb_root (recomb, &F,
+                          -log (10.0 * cmb_ref_z + 10.0),
+                          recomb->lambdaf);
+}
+
+static gdouble
+_nc_recomb_tau_drag_lambda (NcRecomb *recomb, NcHICosmo *cosmo)
+{
+  _nc_recomb_func func;
+  gsl_function F;
+  const gdouble cmb_ref_z = 1060.0;
+
+  F.function = &_nc_recomb_tau_drag_ref;
+  F.params   = &func;
+
+  func.recomb = recomb;
+  func.cosmo  = cosmo;
+  func.ref    = 1.0;
+
+  return _nc_recomb_root (recomb, &F,
+                          -log (10.0 * cmb_ref_z + 10.0),
+                          recomb->lambdaf);
+}
+
+static gdouble
+_nc_recomb_tau_cutoff_lambda (NcRecomb *recomb, NcHICosmo *cosmo)
+{
+  _nc_recomb_func func;
+  gsl_function F;
+
+  F.function = &_nc_recomb_tau_ref;
+  F.params = &func;
+
+  func.recomb = recomb;
+  func.cosmo  = cosmo;
+  func.ref    = -GSL_LOG_DBL_EPSILON;
+
+  return _nc_recomb_root (recomb, &F, 
+                          recomb->lambdai,
+                          recomb->lambdaf);
+}
+
+void
+_nc_recomb_prepare_redshifts (NcRecomb *recomb, NcHICosmo *cosmo)
+{
+  recomb->v_tau_max_lambda  = _nc_recomb_v_tau_max_lambda (recomb, cosmo);
+  recomb->tau_lambda        = _nc_recomb_tau_lambda (recomb, cosmo);
+  recomb->tau_drag_lambda   = _nc_recomb_tau_drag_lambda (recomb, cosmo);
+  recomb->tau_cutoff_lambda = _nc_recomb_tau_cutoff_lambda (recomb, cosmo);
+
+  recomb->v_tau_max_z       = expm1 (-recomb->v_tau_max_lambda);
+  recomb->tau_z             = expm1 (-recomb->tau_lambda);
+  recomb->tau_drag_z        = expm1 (-recomb->tau_drag_lambda);
+  recomb->tau_cutoff_z      = expm1 (-recomb->tau_cutoff_lambda);
 }

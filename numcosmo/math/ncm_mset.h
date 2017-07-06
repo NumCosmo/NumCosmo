@@ -215,6 +215,7 @@ void ncm_mset_param_set_all_but_mid_ftype (NcmMSet *mset, NcmModelID mid, NcmPar
 void ncm_mset_param_set_ftype_from_fmap (NcmMSet *mset);
 void ncm_mset_param_set_vector (NcmMSet *mset, NcmVector *params);
 void ncm_mset_param_get_vector (NcmMSet *mset, NcmVector *params);
+void ncm_mset_param_set_mset (NcmMSet *mset_dest, NcmMSet *mset_src);
 gdouble ncm_mset_param_get_scale (NcmMSet *mset, NcmModelID mid, guint pid);
 gdouble ncm_mset_param_get_lower_bound (NcmMSet *mset, NcmModelID mid, guint pid);
 gdouble ncm_mset_param_get_upper_bound (NcmMSet *mset, NcmModelID mid, guint pid);

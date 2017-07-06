@@ -153,6 +153,18 @@ nc_recomb_cbe_prepare (NcRecomb *recomb, NcHICosmo *cosmo)
 	recomb->dtau_dlambda_s = ncm_spline_copy_empty (recomb->Xe_s);
 
 	_nc_recomb_prepare_tau_splines (recomb, cosmo);
+
+  recomb->v_tau_max_z       = nc_cbe_thermodyn_v_tau_max_z (recomb_cbe->cbe);
+  recomb->tau_drag_z        = nc_cbe_thermodyn_z_d (recomb_cbe->cbe);
+
+  recomb->v_tau_max_lambda  = -log1p (recomb->v_tau_max_z);
+  recomb->tau_drag_lambda   = -log1p (recomb->tau_drag_z);
+
+  recomb->tau_lambda        = GSL_NAN;
+  recomb->tau_z             = GSL_NAN;
+  
+  recomb->tau_cutoff_lambda = GSL_NAN;
+  recomb->tau_cutoff_z      = GSL_NAN;
 }
 
 /**

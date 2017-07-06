@@ -153,7 +153,7 @@ nc_pert_linear_new (NcHICosmo *cosmo, NcRecomb *recomb, guint lmax, gdouble tc_r
                                    &pert->lambda_rec, 
                                    &pert->lambda_rec_10m2_max[0], 
                                    &pert->lambda_rec_10m2_max[1]);
-  pert->lambda_opt_cutoff = nc_recomb_tau_cutoff (pert->recomb, cosmo);
+  pert->lambda_opt_cutoff = nc_recomb_get_tau_cutoff_lambda (pert->recomb, cosmo);
   
   pert->eta0 = nc_scalefactor_eval_eta_z (pert->a, 0.0);
 

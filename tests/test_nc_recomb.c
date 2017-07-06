@@ -91,14 +91,14 @@ test_nc_recomb_seager_wmap_zstar (void)
 
   nc_recomb_prepare_if_needed (recomb, cosmo);
   {
-    const gdouble zstar = exp (-nc_recomb_tau_zstar (recomb, cosmo)) - 1.0;
+    const gdouble zstar = nc_recomb_get_tau_z (recomb, cosmo);
     ncm_assert_cmpdouble_e (zstar, ==, 1088.76, 1e-4);
   }
 
   ncm_model_orig_param_set (NCM_MODEL (cosmo), NC_HICOSMO_DE_T_GAMMA0,  2.2250);
   nc_recomb_prepare_if_needed (recomb, cosmo);
   {
-    const gdouble zstar = exp (-nc_recomb_tau_zstar (recomb, cosmo)) - 1.0;
+    const gdouble zstar = nc_recomb_get_tau_z (recomb, cosmo);
     ncm_assert_cmpdouble_e (zstar, ==, 1325.06, 1e-4);
   }
 

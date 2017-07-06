@@ -665,7 +665,10 @@ main (gint argc, gchar *argv[])
   if (de_fit.fit)
   {
     ncm_fit_set_maxiter (fit, de_fit.max_iter);
-    ncm_fit_run (fit, de_fit.msg_level);
+    if (de_fit.restart)
+      ncm_fit_run_restart (fit, de_fit.msg_level, de_fit.restart_abstol, de_fit.restart_reltol, NULL, de_fit.save_mset);
+    else
+      ncm_fit_run (fit, de_fit.msg_level);
     
     ncm_fit_log_info (fit);
   }

@@ -450,6 +450,8 @@ ncm_ode_spline_clear (NcmOdeSpline **os)
 void 
 ncm_ode_spline_set_interval (NcmOdeSpline *os, gdouble yi, gdouble xi, gdouble xf)
 {
+  g_assert_cmpfloat (xf, >, xi);
+  
   ncm_ode_spline_set_xi (os, xi);
   ncm_ode_spline_set_xf (os, xf);
   ncm_ode_spline_set_yi (os, yi);
