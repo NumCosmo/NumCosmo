@@ -2001,7 +2001,7 @@ nc_cbe_thermodyn_get_Xe (NcCBE* cbe)
 
 	for (i = 0; i < size; i++)
 	{
-		const gdouble z_i = cbe->priv->pth.z_table[i];
+		const gdouble z_i  = cbe->priv->pth.z_table[i];
 		const gdouble Xe_i = cbe->priv->pth.thermodynamics_table[cbe->priv->pth.th_size * i + cbe->priv->pth.index_th_xe];
 
 		ncm_vector_fast_set (z_v, size - 1 - i, -log (z_i + 1.0));
@@ -2014,6 +2014,34 @@ nc_cbe_thermodyn_get_Xe (NcCBE* cbe)
 	ncm_spline_prepare (Xe_s);
 
 	return Xe_s;
+}
+
+/**
+ * nc_cbe_thermodyn_v_tau_max_z:
+ * @cbe: a #NcCBE
+ *
+ * Gets the redshift of the maximum visibility function.
+ *
+ * Returns: $z_\mathrm{rec}$.
+ */
+gdouble 
+nc_cbe_thermodyn_v_tau_max_z (NcCBE *cbe)
+{
+  return cbe->priv->pth.z_rec;
+}
+
+/**
+ * nc_cbe_thermodyn_z_d:
+ * @cbe: a #NcCBE
+ *
+ * Gets drag redshift.
+ *
+ * Returns: $z_d$.
+ */
+gdouble 
+nc_cbe_thermodyn_z_d (NcCBE *cbe)
+{
+  return cbe->priv->pth.z_d;
 }
 
 /**

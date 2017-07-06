@@ -764,6 +764,7 @@ _nc_recomb_seager_prepare (NcRecomb *recomb, NcHICosmo *cosmo)
   recomb->dtau_dlambda_s = ncm_spline_copy_empty (recomb->Xe_s);
 
   _nc_recomb_prepare_tau_splines (recomb, cosmo);
+  _nc_recomb_prepare_redshifts (recomb, cosmo);
 }
 
 static gdouble

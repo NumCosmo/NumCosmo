@@ -1174,6 +1174,92 @@ ncm_fit_run (NcmFit *fit, NcmFitRunMsgs mtype)
 }
 
 /**
+ * ncm_fit_run_restart:
+ * @fit: a #NcmFit
+ * @mtype: a #NcmFitRunMsgs
+ * @abstol: restart absolute tolerance
+ * @reltol: restart relative tolarence
+ * @save_mset: (nullable): the #NcmMSet used to save progress
+ * @mset_file: (nullable): the file name to save progress
+ * 
+ * Re-runs the fit until the difference between fits are less
+ * than the required tolerance, i.e., 
+ * $$ m2lnL_{i-1} - m2lnL_i < \mathrm{abstol} + \mathrm{reltol}\vert m2lnL_{i-1}\vert. $$
+ *
+ */
+void
+ncm_fit_run_restart (NcmFit *fit, NcmFitRunMsgs mtype, const gdouble abstol, const gdouble reltol, NcmMSet *save_mset, const gchar *mset_file)
+{
+  gboolean save_progress = (mset_file == NULL) ? FALSE : TRUE;
+  NcmMSet *mset_out      = (save_mset == NULL) ? fit->mset : save_mset;
+  NcmSerialize *ser      = ncm_serialize_new (NCM_SERIALIZE_OPT_NONE);
+
+  if (ncm_mset_fparam_len (fit->mset) == 0)
+  {
+    fit->mtype = mtype;
+    
+    ncm_fit_reset (fit);
+    ncm_fit_log_start (fit);
+
+    g_timer_start (fit->timer);
+    _ncm_fit_run_empty (fit, mtype);
+
+    fit->fstate->elapsed_time = g_timer_elapsed (fit->timer, NULL);
+    fit->fstate->is_best_fit  = TRUE;
+
+    ncm_fit_log_end (fit);
+    return;
+  }
+  else
+  {
+    gboolean restart;
+    gdouble last_m2lnL = 0.0, m2lnL = 0.0;
+    gint n = 0;
+    
+    ncm_fit_run (fit, mtype);
+    last_m2lnL = ncm_fit_state_get_m2lnL_curval (fit->fstate);
+
+    if (save_progress)
+    {
+      if (fit->mset != mset_out)
+        ncm_mset_param_set_mset (mset_out, fit->mset);
+      ncm_mset_save (mset_out, ser, mset_file, TRUE);
+    }
+    
+    do
+    {
+      ncm_fit_run (fit, mtype);
+
+      m2lnL   = ncm_fit_state_get_m2lnL_curval (fit->fstate);
+      restart = (last_m2lnL - m2lnL) >= (abstol + reltol * fabs (last_m2lnL));
+      
+      if (save_progress)
+      {
+        if (fit->mset != mset_out)
+          ncm_mset_param_set_mset (mset_out, fit->mset);
+        ncm_mset_save (mset_out, ser, mset_file, TRUE);
+      }
+
+      if (fit->mtype > NCM_FIT_RUN_MSGS_NONE)
+      {
+        ncm_cfg_msg_sepa ();
+        g_message ("# Restarting:              %s\n", restart ? "yes" : "no");
+        g_message ("#  - absolute improvement: %-22.15g\n", (last_m2lnL - m2lnL));
+        g_message ("#  - relative improvement: %-22.15g\n", (last_m2lnL - m2lnL) / last_m2lnL);
+        g_message ("#  - m2lnL_%-3d:            %-22.15g\n", n,     last_m2lnL);
+        g_message ("#  - m2lnL_%-3d:            %-22.15g\n", n + 1, m2lnL);
+      }
+
+      last_m2lnL = m2lnL;
+      
+      n++;
+    } while (restart);
+  }
+
+  ncm_serialize_free (ser);
+}
+
+/**
  * ncm_fit_is_least_squares:
  * @fit: a #NcmFit
  *

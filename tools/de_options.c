@@ -209,6 +209,7 @@ nc_de_opt_get_fit_group (NcDEFitEntries *de_fit, GOptionEntry **de_fit_entries)
   {
     { "out",              0, 0, G_OPTION_ARG_FILENAME,     &de_fit->file_out,         "Output filename", "output.dat" },
     { "fit",              0, 0, G_OPTION_ARG_NONE,         &de_fit->fit,              "Fit model using the selected data", NULL},
+    { "fit-restart",      0, 0, G_OPTION_ARG_NONE,         &de_fit->restart,          "Restart fit", NULL},
     { "mc",               0, 0, G_OPTION_ARG_NONE,         &de_fit->mc,               "Resample the original data 'Monte Carlo' times", NULL},
     { "mcbs",             0, 0, G_OPTION_ARG_NONE,         &de_fit->mcbs,             "Resample the original data 'Monte Carlo' times intercalating with mcbs bootstraps", NULL},
     { "mcmc",             0, 0, G_OPTION_ARG_NONE,         &de_fit->mcmc,             "Run a Markov Chain Monte Carlo analysis", NULL},
@@ -223,6 +224,8 @@ nc_de_opt_get_fit_group (NcDEFitEntries *de_fit, GOptionEntry **de_fit_entries)
     { "fit-reltol",       0, 0, G_OPTION_ARG_DOUBLE,       &de_fit->fit_reltol,       "Fitting relative tolerance for the minimum", NULL },
     { "fit-params-reltol",0, 0, G_OPTION_ARG_DOUBLE,       &de_fit->fit_params_reltol,"Fitting relative tolerance for the parameters", NULL },
     { "fit-list",         0, G_OPTION_FLAG_NO_ARG, G_OPTION_ARG_CALLBACK, &_nc_de_print_fit_list,  "Print all the minimization/differentiation objects avaliable", NULL },    
+    { "restart-abstol",   0, 0, G_OPTION_ARG_DOUBLE,       &de_fit->restart_abstol,   "Restart absolute tolerance", NULL },
+    { "restart-reltol",   0, 0, G_OPTION_ARG_DOUBLE,       &de_fit->restart_reltol,   "Restart relative tolerance", NULL },
     { "max-iter",         0, 0, G_OPTION_ARG_INT,          &de_fit->max_iter,         "Max number of iterations used by the minimization algorithms", NULL },
     { "n-sigma",          0, 0, G_OPTION_ARG_INT,          &de_fit->nsigma,           "Confidence region probability 1, 2 or 3 sigmas. A zero value calculate all three confidence regions", NULL },
     { "n-sigma-fisher",   0, 0, G_OPTION_ARG_INT,          &de_fit->nsigma_fisher,    "Confidence region (Fisher matrix) probability 1, 2 or 3 sigmas. A zero value calculate all three confidence regions", NULL },

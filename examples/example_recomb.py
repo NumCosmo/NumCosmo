@@ -103,8 +103,8 @@ for i in range (10000):
   XHeII_i  = recomb.equilibrium_XHeII (cosmo, x)
   XHeIII_i = recomb.equilibrium_XHeIII (cosmo, x)
 
-  v_tau = recomb.v_tau (cosmo, alpha)
-  dv_tau_dlambda = recomb.dv_tau_dlambda (cosmo, alpha)
+  v_tau            = recomb.v_tau (cosmo, alpha)
+  dv_tau_dlambda   = recomb.dv_tau_dlambda (cosmo, alpha)
   d2v_tau_dlambda2 = recomb.d2v_tau_dlambda2 (cosmo, alpha)
 
   x_a.append (x)
@@ -124,10 +124,10 @@ for i in range (10000):
 for i in range (10000):
   alpha = -log (1.0e10) + (log (1.0e10) - log (1.0e2)) / 9999.0 * i
   x = exp (-alpha)
-  dtau_dlambda = abs(recomb.dtau_dlambda (cosmo, alpha))
+  dtau_dlambda = abs (recomb.dtau_dlambda (cosmo, alpha))
   x_E = x / sqrt (cosmo.E2 (x))
   x_E_taub = x_E / dtau_dlambda
-  
+
   x_dtau_a.append (x)
   x_E_a.append (x_E)
   x_Etaub_a.append (x_E_taub)
@@ -213,10 +213,10 @@ plt.annotate (r'$v_\tau=10^{-2}v_\tau^{max}$, $z=%5.2f$' % (exp(-lambdal)-1), xy
               arrowprops=dict(facecolor='black', shrink=0.05))
 
 #
-#  Annotating value of zstar.
+#  Annotating value of lambda (tau == 1).
 #
 
-lambdastar = recomb.tau_zstar (cosmo)
+lambdastar = recomb.get_tau_lambda (cosmo)
 
 plt.annotate (r'$z^\star=%5.2f$' % (exp(-lambdastar)-1), 
               xy=(0.65, 0.95), xycoords='axes fraction')

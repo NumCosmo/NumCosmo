@@ -29,6 +29,7 @@
 #include <glib-object.h>
 #include <numcosmo/build_cfg.h>
 #include <numcosmo/nc_hicosmo.h>
+#include <numcosmo/nc_recomb.h>
 #include <numcosmo/math/ncm_ode_spline.h>
 #include <numcosmo/math/ncm_model_ctrl.h>
 #include <numcosmo/math/function_cache.h>
@@ -66,6 +67,7 @@ struct _NcDistance
   NcmModelCtrl *ctrl;
   gdouble zf;
   gboolean use_cache;
+  NcRecomb *recomb;
 };
 
 typedef struct _NcDistanceFunc
@@ -90,6 +92,7 @@ NcDistance *nc_distance_new (gdouble zf);
 NcDistance *nc_distance_ref (NcDistance *dist);
 
 void nc_distance_require_zf (NcDistance *dist, const gdouble zf);
+void nc_distance_set_recomb (NcDistance *dist, NcRecomb *recomb);
 
 void nc_distance_prepare (NcDistance *dist, NcHICosmo *cosmo);
 G_INLINE_FUNC void nc_distance_prepare_if_needed (NcDistance *dist, NcHICosmo *cosmo);
