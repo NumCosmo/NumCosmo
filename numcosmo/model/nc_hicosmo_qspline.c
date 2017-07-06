@@ -395,8 +395,8 @@ static gdouble _nc_hicosmo_qspline_as_drag (NcHICosmo *cosmo) { return AS_DRAG; 
 
 /**
  * nc_hicosmo_qspline_new:
- * @s: FIXME
- * @np: FIXME
+ * @s: a #NcmSpline
+ * @np: number of knots
  * @z_f: FIXME
  *
  * FIXME
@@ -613,7 +613,7 @@ nc_hicosmo_qspline_cont_prior_new (guint npriors)
 
 /**
  * nc_hicosmo_qspline_cont_prior_ref:
- * @qspline_cp: FIXME
+ * @qspline_cp: a #NcHICosmoQSplineContPrior
  *
  * FIXME
  *
@@ -627,7 +627,7 @@ nc_hicosmo_qspline_cont_prior_ref (NcHICosmoQSplineContPrior *qspline_cp)
 
 /**
  * nc_hicosmo_qspline_cont_prior_free:
- * @qspline_cp: FIXME
+ * @qspline_cp: a #NcHICosmoQSplineContPrior
  *
  * FIXME
  *
@@ -640,7 +640,7 @@ nc_hicosmo_qspline_cont_prior_free (NcHICosmoQSplineContPrior *qspline_cp)
 
 /**
  * nc_hicosmo_qspline_cont_prior_set_lnsigma:
- * @qspline_cp: FIXME
+ * @qspline_cp: a #NcHICosmoQSplineContPrior
  * @i: FIXME
  * @ln_sigma: FIXME
  *
@@ -659,7 +659,7 @@ nc_hicosmo_qspline_cont_prior_set_lnsigma (NcHICosmoQSplineContPrior *qspline_cp
 
 /**
  * nc_hicosmo_qspline_cont_prior_set_all_lnsigma:
- * @qspline_cp: FIXME
+ * @qspline_cp: a #NcHICosmoQSplineContPrior
  * @ln_sigma: FIXME
  *
  * FIXME
@@ -678,7 +678,7 @@ nc_hicosmo_qspline_cont_prior_set_all_lnsigma (NcHICosmoQSplineContPrior *qsplin
 
 /**
  * nc_hicosmo_qspline_cont_prior_get_lnsigma:
- * @qspline_cp: FIXME
+ * @qspline_cp: a #NcHICosmoQSplineContPrior
  * @i: FIXME
  *
  * FIXME
@@ -698,7 +698,7 @@ nc_hicosmo_qspline_cont_prior_get_lnsigma (NcHICosmoQSplineContPrior *qspline_cp
 
 /**
  * nc_hicosmo_qspline_cont_prior_set_abstol:
- * @qspline_cp: FIXME
+ * @qspline_cp: a #NcHICosmoQSplineContPrior
  * @abstol: FIXME
  *
  * FIXME
@@ -714,7 +714,7 @@ nc_hicosmo_qspline_cont_prior_set_abstol (NcHICosmoQSplineContPrior *qspline_cp,
 
 /**
  * nc_hicosmo_qspline_cont_prior_get_abstol:
- * @qspline_cp: FIXME
+ * @qspline_cp: a #NcHICosmoQSplineContPrior
  *
  * FIXME
  *
