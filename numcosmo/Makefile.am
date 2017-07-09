@@ -301,7 +301,6 @@ nc_headers = \
 	model/nc_hicosmo_de_reparam_cmb.h \
 	model/nc_hicosmo_de_linder.h  \
 	model/nc_hicosmo_de_pad.h     \
-	model/nc_hicosmo_de_qe.h      \
 	model/nc_hicosmo_de_xcdm.h    \
 	model/nc_hicosmo_lcdm.h       \
 	model/nc_hicosmo_qconst.h     \
@@ -432,7 +431,6 @@ nc_sources = \
 	model/nc_hicosmo_de_reparam_cmb.c \
 	model/nc_hicosmo_de_linder.c  \
 	model/nc_hicosmo_de_pad.c     \
-	model/nc_hicosmo_de_qe.c      \
 	model/nc_hicosmo_de_xcdm.c    \
 	model/nc_hicosmo_lcdm.c       \
 	model/nc_hicosmo_qconst.c     \

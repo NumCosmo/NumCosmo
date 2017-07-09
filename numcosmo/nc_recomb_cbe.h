@@ -56,6 +56,7 @@ struct _NcRecombCBE
   /*< private >*/
   NcRecomb parent_instance;
   NcCBE *cbe;
+  NcmSpline *Xe_s;
 };
 
 GType nc_recomb_cbe_get_type (void) G_GNUC_CONST;

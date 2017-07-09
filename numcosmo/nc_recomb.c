@@ -185,7 +185,6 @@ nc_recomb_init (NcRecomb *recomb)
   recomb->init_frac      = 0.0;
   recomb->fsol           = gsl_root_fsolver_alloc (gsl_root_fsolver_brent);
   recomb->fmin           = gsl_min_fminimizer_alloc (gsl_min_fminimizer_brent);
-  recomb->Xe_s           = NULL;
   recomb->dtau_dlambda_s = NULL;
   recomb->tau_s          = NULL;
   recomb->tau_ode_s      = ncm_ode_spline_new (tau_s, &_nc_recomb_mdtau_dlambda);
@@ -207,7 +206,6 @@ nc_recomb_dispose (GObject *object)
 {
   NcRecomb *recomb = NC_RECOMB (object);
 
-  ncm_spline_clear (&recomb->Xe_s);
   ncm_spline_clear (&recomb->dtau_dlambda_s);
   ncm_spline_clear (&recomb->tau_s);
 
@@ -283,6 +281,7 @@ nc_recomb_get_property (GObject *object, guint prop_id, GValue *value, GParamSpe
   }
 }
 
+static gdouble _nc_recomb_Xe (NcRecomb *recomb, NcHICosmo *cosmo, const gdouble lambda);
 static gdouble _nc_recomb_XHII (NcRecomb *recomb, NcHICosmo *cosmo, const gdouble lambda);
 static gdouble _nc_recomb_XHeII (NcRecomb *recomb, NcHICosmo *cosmo, const gdouble lambda); 
 
@@ -337,8 +336,16 @@ nc_recomb_class_init (NcRecombClass *klass)
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   klass->prepare = NULL;
+  klass->Xe      = &_nc_recomb_Xe;
   klass->XHII    = &_nc_recomb_XHII;
   klass->XHeII   = &_nc_recomb_XHeII;
+}
+
+static gdouble 
+_nc_recomb_Xe (NcRecomb *recomb, NcHICosmo *cosmo, const gdouble lambda)
+{
+  g_error ("_nc_recomb_Xe: not implemented by `%s'", G_OBJECT_TYPE_NAME (recomb));
+  return 0.0;
 }
 
 static gdouble 
@@ -837,23 +844,6 @@ nc_recomb_prepare (NcRecomb *recomb, NcHICosmo *cosmo)
  */
 
 /**
- * nc_recomb_Xe:
- * @recomb: a #NcRecomb
- * @cosmo: a #NcHICosmo.
- * @lambda: $\lambda$.
- *
- * Calculates the value of $X_\e$ at $x$.
- *
- * Returns: $X_\e$.
- */
-gdouble
-nc_recomb_Xe (NcRecomb *recomb, NcHICosmo *cosmo, const gdouble lambda)
-{
-  NCM_UNUSED (cosmo);
-  return ncm_spline_eval (recomb->Xe_s, lambda);
-}
-
-/**
  * nc_recomb_dtau_dx:
  * @recomb: a #NcRecomb.
  * @cosmo: a #NcHICosmo.
@@ -1006,8 +996,9 @@ nc_recomb_log_v_tau (NcRecomb *recomb, NcHICosmo *cosmo, const gdouble lambda)
 gdouble
 nc_recomb_v_tau (NcRecomb *recomb, NcHICosmo *cosmo, const gdouble lambda)
 {
-  const gdouble tau = nc_recomb_tau (recomb, cosmo, lambda);
+  const gdouble tau          = nc_recomb_tau (recomb, cosmo, lambda);
   const gdouble dtau_dlambda = nc_recomb_dtau_dlambda (recomb, cosmo, lambda);
+
   return gsl_sf_exp_mult (-tau, dtau_dlambda);
 }
 
@@ -1052,7 +1043,17 @@ nc_recomb_d2v_tau_dlambda2 (NcRecomb *recomb, NcHICosmo *cosmo, const gdouble la
 }
 
 /**
- * nc_recomb_XHII:
+ * nc_recomb_Xe: (virtual Xe)
+ * @recomb: a #NcRecomb
+ * @cosmo: a #NcHICosmo.
+ * @lambda: $\lambda$.
+ *
+ * Calculates the value of $X_\e$ at $x$.
+ *
+ * Returns: $X_\e$.
+ */
+/**
+ * nc_recomb_XHII: (virtual XHII)
  * @recomb: a #NcRecomb
  * @cosmo: a #NcHICosmo.
  * @lambda: $\lambda$.
@@ -1061,14 +1062,8 @@ nc_recomb_d2v_tau_dlambda2 (NcRecomb *recomb, NcHICosmo *cosmo, const gdouble la
  *
  * Returns: $X_\HyII$.
  */
-gdouble 
-nc_recomb_XHII (NcRecomb *recomb, NcHICosmo *cosmo, const gdouble lambda)
-{
-  return NC_RECOMB_GET_CLASS (recomb)->XHII (recomb, cosmo, lambda);
-}
-
 /**
- * nc_recomb_XHeII:
+ * nc_recomb_XHeII: (virtual XHeII)
  * @recomb: a #NcRecomb
  * @cosmo: a #NcHICosmo.
  * @lambda: $\lambda$.
@@ -1077,11 +1072,6 @@ nc_recomb_XHII (NcRecomb *recomb, NcHICosmo *cosmo, const gdouble lambda)
  *
  * Returns: $X_\HeII$.
  */
-gdouble 
-nc_recomb_XHeII (NcRecomb *recomb, NcHICosmo *cosmo, const gdouble lambda)
-{
-  return NC_RECOMB_GET_CLASS (recomb)->XHeII (recomb, cosmo, lambda);
-}
 
 static gdouble
 _nc_recomb_root (NcRecomb *recomb, gsl_function *F, gdouble x0, gdouble x1)
@@ -1319,9 +1309,9 @@ static gdouble
 _nc_recomb_dtau_dlambda (gdouble lambda, gpointer p)
 {
   _nc_recomb_func *func = (_nc_recomb_func *) p;
+  const gdouble Xe      = nc_recomb_Xe (func->recomb, func->cosmo, lambda);
 
-  return ncm_spline_eval (func->recomb->Xe_s, lambda) *
-    nc_recomb_dtau_dlambda_Xe (func->cosmo, lambda);
+  return Xe * nc_recomb_dtau_dlambda_Xe (func->cosmo, lambda);
 }
 
 static gdouble 
@@ -1348,10 +1338,11 @@ _nc_recomb_prepare_tau_splines (NcRecomb *recomb, NcHICosmo *cosmo)
   _nc_recomb_func func;
   gsl_function F;
 
-  g_assert (recomb->Xe_s != NULL);
-  g_assert (recomb->tau_s != NULL);
-  g_assert (recomb->dtau_dlambda_s != NULL);
-  g_assert (!ncm_spline_is_empty (recomb->Xe_s));
+  if (recomb->tau_s == NULL)
+    recomb->tau_s = ncm_spline_cubic_notaknot_new ();
+
+  if (recomb->dtau_dlambda_s == NULL)
+    recomb->dtau_dlambda_s = ncm_spline_cubic_notaknot_new ();
 
   func.recomb = recomb;
   func.cosmo  = cosmo;

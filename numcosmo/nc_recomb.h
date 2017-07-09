@@ -61,6 +61,7 @@ struct _NcRecombClass
   /*< private >*/
   GObjectClass parent_class;
   void (*prepare) (NcRecomb *recomb, NcHICosmo *cosmo);
+  gdouble (*Xe) (NcRecomb *recomb, NcHICosmo *cosmo, const gdouble lambda);
   gdouble (*XHII) (NcRecomb *recomb, NcHICosmo *cosmo, const gdouble lambda);
   gdouble (*XHeII) (NcRecomb *recomb, NcHICosmo *cosmo, const gdouble lambda); 
 };
@@ -73,7 +74,6 @@ struct _NcRecomb
   gdouble init_frac;
   gsl_min_fminimizer *fmin;
   gsl_root_fsolver *fsol;
-  NcmSpline *Xe_s;
   NcmSpline *dtau_dlambda_s;
   NcmSpline *tau_s;
   NcmOdeSpline *tau_ode_s;
@@ -93,7 +93,12 @@ NcRecomb *nc_recomb_ref (NcRecomb *recomb);
 void nc_recomb_free (NcRecomb *recomb);
 void nc_recomb_clear (NcRecomb **recomb);
 void nc_recomb_prepare (NcRecomb *recomb, NcHICosmo *cosmo);
+
 G_INLINE_FUNC void nc_recomb_prepare_if_needed (NcRecomb *recomb, NcHICosmo *cosmo);
+
+G_INLINE_FUNC gdouble nc_recomb_Xe (NcRecomb *recomb, NcHICosmo *cosmo, const gdouble lambda);
+G_INLINE_FUNC gdouble nc_recomb_XHII (NcRecomb *recomb, NcHICosmo *cosmo, const gdouble lambda);
+G_INLINE_FUNC gdouble nc_recomb_XHeII (NcRecomb *recomb, NcHICosmo *cosmo, const gdouble lambda);
 
 gdouble nc_recomb_HI_ion_saha (NcHICosmo *cosmo, const gdouble x);
 gdouble nc_recomb_HeI_ion_saha (NcHICosmo *cosmo, const gdouble x);
@@ -109,7 +114,6 @@ gdouble nc_recomb_equilibrium_XHeI (NcRecomb *recomb, NcHICosmo *cosmo, const gd
 gdouble nc_recomb_equilibrium_XHeII (NcRecomb *recomb, NcHICosmo *cosmo, const gdouble x);
 gdouble nc_recomb_equilibrium_XHeIII (NcRecomb *recomb, NcHICosmo *cosmo, const gdouble x);
 
-gdouble nc_recomb_Xe (NcRecomb *recomb, NcHICosmo *cosmo, const gdouble lambda);
 gdouble nc_recomb_dtau_dx (NcRecomb *recomb, NcHICosmo *cosmo, const gdouble lambda);
 gdouble nc_recomb_dtau_dlambda (NcRecomb *recomb, NcHICosmo *cosmo, const gdouble lambda);
 gdouble nc_recomb_d2tau_dlambda2 (NcRecomb *recomb, NcHICosmo *cosmo, const gdouble lambda);
@@ -121,9 +125,6 @@ gdouble nc_recomb_log_v_tau (NcRecomb *recomb, NcHICosmo *cosmo, const gdouble l
 gdouble nc_recomb_v_tau (NcRecomb *recomb, NcHICosmo *cosmo, const gdouble lambda);
 gdouble nc_recomb_dv_tau_dlambda (NcRecomb *recomb, NcHICosmo *cosmo, const gdouble lambda);
 gdouble nc_recomb_d2v_tau_dlambda2 (NcRecomb *recomb, NcHICosmo *cosmo, const gdouble lambda);
-
-gdouble nc_recomb_XHII (NcRecomb *recomb, NcHICosmo *cosmo, const gdouble lambda);
-gdouble nc_recomb_XHeII (NcRecomb *recomb, NcHICosmo *cosmo, const gdouble lambda);
 
 void nc_recomb_v_tau_lambda_features (NcRecomb *recomb, NcHICosmo *cosmo, gdouble logref, gdouble *lambda_max, gdouble *lambda_l, gdouble *lambda_u);
 
@@ -161,6 +162,24 @@ nc_recomb_prepare_if_needed (NcRecomb *recomb, NcHICosmo *cosmo)
 
   if (cosmo_up)
     nc_recomb_prepare (recomb, cosmo);
+}
+
+G_INLINE_FUNC gdouble 
+nc_recomb_Xe (NcRecomb *recomb, NcHICosmo *cosmo, const gdouble lambda)
+{
+  return NC_RECOMB_GET_CLASS (recomb)->Xe (recomb, cosmo, lambda);
+}
+
+G_INLINE_FUNC gdouble 
+nc_recomb_XHII (NcRecomb *recomb, NcHICosmo *cosmo, const gdouble lambda)
+{
+  return NC_RECOMB_GET_CLASS (recomb)->XHII (recomb, cosmo, lambda);
+}
+
+G_INLINE_FUNC gdouble 
+nc_recomb_XHeII (NcRecomb *recomb, NcHICosmo *cosmo, const gdouble lambda)
+{
+  return NC_RECOMB_GET_CLASS (recomb)->XHeII (recomb, cosmo, lambda);
 }
 
 G_INLINE_FUNC gdouble

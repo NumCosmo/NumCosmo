@@ -1,8 +1,7 @@
 ## Process this file with automake to produce Makefile.in
 
 # Local xml files
-XML_FILES=dependencies.xml \
-          compiling.xml    \
+XML_FILES= \
           introduction.xml \
           darkenergy.xml   \
           refs.xml         \
