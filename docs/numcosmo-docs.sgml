@@ -17,8 +17,6 @@
   <chapter>
     <title>NumCosmo Overview</title>
     <xi:include href="introduction.xml"/>
-    <xi:include href="dependencies.xml"/>
-    <xi:include href="compiling.xml"/>
     <xi:include href="refs.xml"/>
     <xi:include href="xml/build_cfg.xml"/>
     <xi:include href="gobject_introd.xml"/>
@@ -173,7 +171,6 @@
       <xi:include href="xml/nc_hicosmo_de_xcdm.xml"/>
       <xi:include href="xml/nc_hicosmo_de_linder.xml"/>
       <xi:include href="xml/nc_hicosmo_de_pad.xml"/>
-      <xi:include href="xml/nc_hicosmo_de_qe.xml"/>
     </section>
     <section>
       <title>Quantum Gravity Bounce</title>
@@ -182,7 +179,7 @@
       <xi:include href="xml/quantum_gravity.xml"/>
     </section>
     <section>
-      <title>Kinematical</title>
+      <title>Kinematic Models</title>
       <xi:include href="xml/nc_hicosmo_qconst.xml"/>
       <xi:include href="xml/nc_hicosmo_qlinear.xml"/>
       <xi:include href="xml/nc_hicosmo_qspline.xml"/>

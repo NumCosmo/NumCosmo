@@ -75,7 +75,6 @@
 #include <numcosmo/model/nc_hicosmo_de_reparam_cmb.h>
 #include <numcosmo/model/nc_hicosmo_de_linder.h>
 #include <numcosmo/model/nc_hicosmo_de_pad.h>
-#include <numcosmo/model/nc_hicosmo_de_qe.h>
 #include <numcosmo/model/nc_hicosmo_de_xcdm.h>
 #include <numcosmo/model/nc_hicosmo_lcdm.h>
 #include <numcosmo/model/nc_hicosmo_qconst.h>

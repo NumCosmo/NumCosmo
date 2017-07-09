@@ -104,8 +104,11 @@ struct _NcRecombSeager
   N_Vector y;
   N_Vector abstol;
   guint n;
-  NcmSpline* XHII_s;
-  NcmSpline* XHeII_s;
+  NcmSpline *Xe_s;
+  NcmSpline *Xe_reion_s;
+  NcmSpline *Xe_recomb_s;
+  NcmSpline *XHII_s;
+  NcmSpline *XHeII_s;
 };
 
 GType nc_recomb_seager_get_type (void) G_GNUC_CONST;

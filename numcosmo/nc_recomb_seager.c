@@ -141,8 +141,6 @@ static void _nc_recomb_seager_KX_HeI_2p_3Pmean_sobolev_cont_grad (NcRecombSeager
 static void
 nc_recomb_seager_init (NcRecombSeager *recomb_seager)
 {
-  NcRecomb *recomb = NC_RECOMB (recomb_seager);
-
   recomb_seager->cvode = CVodeCreate (CV_BDF, CV_NEWTON);
   NCM_CVODE_CHECK ((void*)recomb_seager->cvode, "CVodeCreate", 0, );
 
@@ -179,8 +177,9 @@ nc_recomb_seager_init (NcRecombSeager *recomb_seager)
   recomb_seager->y                     = N_VNew_Serial (recomb_seager->n);
   recomb_seager->abstol                = N_VNew_Serial (recomb_seager->n);
 
-  recomb->Xe_s                         = ncm_spline_cubic_notaknot_new ();
-
+  recomb_seager->Xe_s                  = ncm_spline_cubic_notaknot_new ();
+  recomb_seager->Xe_reion_s            = ncm_spline_cubic_notaknot_new ();
+  recomb_seager->Xe_recomb_s           = ncm_spline_cubic_notaknot_new ();
   recomb_seager->XHII_s                = ncm_spline_cubic_notaknot_new ();
   recomb_seager->XHeII_s               = ncm_spline_cubic_notaknot_new ();
 }
@@ -233,6 +232,9 @@ _nc_recomb_seager_dispose (GObject* object)
 {
   NcRecombSeager *recomb_seager = NC_RECOMB_SEAGER (object);
 
+  ncm_spline_clear (&recomb_seager->Xe_s);
+  ncm_spline_clear (&recomb_seager->Xe_reion_s);
+  ncm_spline_clear (&recomb_seager->Xe_recomb_s);
   ncm_spline_clear (&recomb_seager->XHII_s);
   ncm_spline_clear (&recomb_seager->XHeII_s);
 
@@ -256,6 +258,7 @@ _nc_recomb_seager_finalize (GObject* object)
 }
 
 static void _nc_recomb_seager_prepare (NcRecomb *recomb, NcHICosmo *cosmo);
+static gdouble _nc_recomb_seager_Xe (NcRecomb *recomb, NcHICosmo *cosmo, const gdouble lambda);
 static gdouble _nc_recomb_seager_XHII (NcRecomb *recomb, NcHICosmo *cosmo, const gdouble lambda);
 static gdouble _nc_recomb_seager_XHeII (NcRecomb *recomb, NcHICosmo *cosmo, const gdouble lambda);
 
@@ -286,8 +289,16 @@ nc_recomb_seager_class_init (NcRecombSeagerClass *klass)
                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   recomb_class->prepare = &_nc_recomb_seager_prepare;
+  recomb_class->Xe      = &_nc_recomb_seager_Xe;
   recomb_class->XHII    = &_nc_recomb_seager_XHII;
   recomb_class->XHeII   = &_nc_recomb_seager_XHeII;  
+}
+
+static gdouble
+_nc_recomb_seager_Xe (NcRecomb *recomb, NcHICosmo *cosmo, const gdouble lambda)
+{
+  NCM_UNUSED (cosmo);
+  return ncm_spline_eval (NC_RECOMB_SEAGER (recomb)->Xe_s, lambda);
 }
 
 static gdouble
@@ -559,6 +570,20 @@ _nc_recomb_He_fully_ionized_Xe (gdouble lambda, gpointer p)
   return nc_recomb_He_fully_ionized_Xe (cosmo, exp (-lambda));
 }
 
+static gdouble
+_nc_recomb_Xe_reion (gdouble lambda, gpointer p)
+{
+  gpointer *m = (gpointer *) p;
+  NcRecombSeager *recomb_seager = NC_RECOMB_SEAGER (m[0]);
+  NcHICosmo *cosmo              = NC_HICOSMO (m[1]);
+  NcHIReion *reion              = NC_HIREION (m[2]);
+  
+  const gdouble Xe_recomb = ncm_spline_eval (recomb_seager->Xe_recomb_s, lambda);
+  const gdouble Xe_reion  = nc_hireion_get_Xe (reion, cosmo, lambda, Xe_recomb);
+
+  return Xe_reion;
+}
+
 static void
 _nc_recomb_seager_prepare (NcRecomb *recomb, NcHICosmo *cosmo)
 {
@@ -568,13 +593,14 @@ _nc_recomb_seager_prepare (NcRecomb *recomb, NcHICosmo *cosmo)
   const gdouble lambdai      = recomb->lambdai;
   const gdouble lambda_HeIII = -log (x_HeIII);
   const gdouble lambdaf      = -log (1.0);
+  NcHIReion *reion           = NC_HIREION (ncm_model_peek_submodel_by_mid (NCM_MODEL (cosmo), nc_hireion_id ()));
   NcRecombSeagerParams pparams = { recomb_seager, cosmo };
   gsl_function F;
 
   F.function = &_nc_recomb_He_fully_ionized_Xe;
   F.params   = cosmo;
 
-  ncm_spline_set_func (recomb->Xe_s, NCM_SPLINE_FUNCTION_SPLINE,
+  ncm_spline_set_func (recomb_seager->Xe_recomb_s, NCM_SPLINE_FUNCTION_SPLINE,
                        &F, lambdai, lambda_HeIII, 0, recomb->prec);
 
   /*****************************************************************************
@@ -638,8 +664,8 @@ _nc_recomb_seager_prepare (NcRecomb *recomb, NcHICosmo *cosmo)
   }
 
   {
-    NcmVector *lambda_v = ncm_spline_get_xv (recomb->Xe_s);
-    NcmVector *Xe_v     = ncm_spline_get_yv (recomb->Xe_s);
+    NcmVector *lambda_v = ncm_spline_get_xv (recomb_seager->Xe_recomb_s);
+    NcmVector *Xe_v     = ncm_spline_get_yv (recomb_seager->Xe_recomb_s);
     GArray *lambda_a    = ncm_vector_get_array (lambda_v);
     GArray *Xe_a        = ncm_vector_get_array (Xe_v);
     gdouble lambda_last = lambda_HeIII;
@@ -677,7 +703,7 @@ _nc_recomb_seager_prepare (NcRecomb *recomb, NcHICosmo *cosmo)
     }
     
     {
-      const guint lenXe = ncm_spline_get_len (recomb->Xe_s);
+      const guint lenXe = ncm_spline_get_len (recomb_seager->Xe_recomb_s);
       guint i;
 
       for (i = 0; i < lenXe; i++)
@@ -702,12 +728,6 @@ _nc_recomb_seager_prepare (NcRecomb *recomb, NcHICosmo *cosmo)
         const gdouble XHII  = NV_Ith_S (recomb_seager->y, 0);
         const gdouble XHeII = NV_Ith_S (recomb_seager->y, 2);
         const gdouble Xe    = XHII + XHeII;
-        /*
-         printf ("% 20.15g % 20.15g % 20.15g % 20.15g\n", expm1 (-lambda_i),
-         NV_Ith_S (recomb_seager->y, 0),
-         NV_Ith_S (recomb_seager->y, 1),
-         NV_Ith_S (recomb_seager->y, 2));
-         */
 
         if (fabs ((lambda_last - lambda_i) / lambda_last) > 1e-7)
         {
@@ -725,43 +745,35 @@ _nc_recomb_seager_prepare (NcRecomb *recomb, NcHICosmo *cosmo)
       }
     }
 
-    if (FALSE)
+    ncm_spline_set_array (recomb_seager->Xe_recomb_s, lambda_a, Xe_a, TRUE);
+    ncm_spline_set_array (recomb_seager->XHII_s,      lambda_a, XHII_a, TRUE);
+    ncm_spline_set_array (recomb_seager->XHeII_s,     lambda_a, XHeII_a, TRUE);
+
+    if (reion != NULL)
     {
-      ncm_util_cvode_print_stats (recomb_seager->cvode);
+      gpointer m[3] = {recomb, cosmo, reion};
+
+      F.function = &_nc_recomb_Xe_reion;
+      F.params   = m;
+            
+      ncm_spline_set_func (recomb_seager->Xe_reion_s, NCM_SPLINE_FUNCTION_SPLINE,
+                           &F, lambdai, lambdaf, 0, recomb->prec);
+
+      recomb_seager->Xe_s = ncm_spline_ref (recomb_seager->Xe_reion_s);
     }
-
-    ncm_spline_set_array (recomb->Xe_s, lambda_a, Xe_a, TRUE);
-    ncm_spline_set_array (recomb_seager->XHII_s, lambda_a, XHII_a, TRUE);
-    ncm_spline_set_array (recomb_seager->XHeII_s, lambda_a, XHeII_a, TRUE);
-
+    else
+    {
+      recomb_seager->Xe_s = ncm_spline_ref (recomb_seager->Xe_recomb_s);
+    }  
+    
     g_array_unref (lambda_a);
     g_array_unref (Xe_a);
     g_array_unref (XHII_a);
     g_array_unref (XHeII_a);
   }
 
-
-  if (FALSE)
-  {
-    guint i;
-    printf ("# Xe spline len %u\n", ncm_vector_len (recomb->Xe_s->xv));
-
-    for (i = 0; i < ncm_vector_len (recomb->Xe_s->xv); i++)
-    {
-      printf ("% 20.15g % 20.15g\n", ncm_vector_get (recomb->Xe_s->xv, i),
-              ncm_vector_get (recomb->Xe_s->yv, i));
-    }
-
-    for (i = 0; i < 30000; i++)
-    {
-      gdouble lambda = recomb->lambdai + (recomb->lambdaf - recomb->lambdai) / (30000.0 - 1.0) * i;
-      printf ("% 20.15g % 20.15g\n", lambda,
-              ncm_spline_eval (recomb->Xe_s, lambda));
-    }
-  }
-
-  recomb->tau_s          = ncm_spline_copy_empty (recomb->Xe_s);
-  recomb->dtau_dlambda_s = ncm_spline_copy_empty (recomb->Xe_s);
+  recomb->tau_s          = ncm_spline_copy_empty (recomb_seager->Xe_s);
+  recomb->dtau_dlambda_s = ncm_spline_copy_empty (recomb_seager->Xe_s);
 
   _nc_recomb_prepare_tau_splines (recomb, cosmo);
   _nc_recomb_prepare_redshifts (recomb, cosmo);
