@@ -27,7 +27,11 @@
  * @title: NcHICosmoQLinear
  * @short_description: Kinetic model -- Linear deceleration function
  *
- * FIXME
+ * The deceleration function is defined as a linear function, $q(z) = q_0 + q_1 (z - z_1)$.  
+ * The comoving distance in units of the Hubble radius today is
+ * 
+ * $$D_c(z) =  \frac{1}{E} \int_{z_1}^{z} e^{q_1(z_1 - z^\prime)} \left(\frac{1+z^\prime}{1+z_1}\right)^{(1+z_1)q_1 - q_0 -1} \mathrm{d}z^\prime,$$
+ * where E is the normalized Hubble function at $z_1$.
  *
  */
 
@@ -53,6 +57,34 @@ G_DEFINE_TYPE (NcHICosmoQLinear, nc_hicosmo_qlinear, NC_TYPE_HICOSMO);
 #define QLIN_QP  (ncm_vector_get (VECTOR, NC_HICOSMO_QLINEAR_QP))
 #define QLIN_Z1  (ncm_vector_get (VECTOR, NC_HICOSMO_QLINEAR_Z1))
 
+enum {
+  PROP_0,
+  PROP_SIZE,
+};
+
+static void
+nc_hicosmo_qlinear_init (NcHICosmoQLinear *qlinear)
+{
+  NCM_UNUSED (qlinear);
+}
+
+static void
+nc_hicosmo_qlinear_finalize (GObject *object)
+{
+
+  /* Chain up : end */
+  G_OBJECT_CLASS (nc_hicosmo_qlinear_parent_class)->finalize (object);
+}
+
+/****************************************************************************
+ * Hubble constant
+ ****************************************************************************/
+static gdouble _nc_hicosmo_qlinear_H0 (NcHICosmo *cosmo) { return MACRO_H0; }
+static gdouble _nc_hicosmo_qlinear_Omega_t0 (NcHICosmo *cosmo) { return OMEGA_T; }
+
+/****************************************************************************
+ * Comoving Distance
+ ****************************************************************************/
 static gdouble
 Dc_th_int_integrand (gdouble z, gpointer p)
 {
@@ -86,78 +118,15 @@ Dc_th_int (gdouble z2, gdouble z1, gdouble E, gdouble q, gdouble qp)
   return res/E;
 }
 
-/****************************************************************************
- * Comoving Distance
- ****************************************************************************/
 static gdouble
 _nc_hicosmo_qlinear_Dc (NcHICosmo *cosmo, gdouble z)
 {
   if (QLIN_Z1 == z)
-	return QLIN_CD;
-  return QLIN_CD + Dc_th_int (z, QLIN_Z1, QLIN_E, QLIN_Q, QLIN_QP);
+  	return QLIN_CD;
+
+	return QLIN_CD + Dc_th_int (z, QLIN_Z1, QLIN_E, QLIN_Q, QLIN_QP);
 }
 
-/**
- * nc_hicosmo_qlinear_E:
- * @z2: final redshift
- * @z1: initial redshift
- * @q: constant parameter
- * @qp: constant parameter that multiplies (z - z1)
- *
- * This function returns the normalized Hubble function 
- * $$ E(z) = \exp \int_{z_1}^{z_2} \frac{1 + q(z^\prime)}{1 + z^\prime} dz^\prime, $$	 
- * where $q(z) = q_0 + q_1 (z - z_1)$, being $q_0$ = @q, $q_1$ = @qp and $z_1$ = @z1.
- * 
- * Returns: the normalized Hubble function $E(z) = \left(\frac{1+z_2}{1+z_1}\right)^{1 + q_0 - q_1(1 + z_1)} e^{q_1 (z_2 - z_1)}$.
- */
-gdouble
-nc_hicosmo_qlinear_E (gdouble z2, gdouble z1, gdouble q, gdouble qp)
-{
-  gdouble x1 = 1.0 + z1;
-  gdouble x2 = 1.0 + z2;
-  gdouble delta = z2 - z1;
-  gdouble qq = x1 * qp - q;
-  return gsl_sf_exp_mult (qp * delta, pow (x2 / x1, 1.0 - qq));
-}
-
-/****************************************************************************
- * Hubble constant
- ****************************************************************************/
-static gdouble _nc_hicosmo_qlinear_H0 (NcHICosmo *cosmo) { return MACRO_H0; }
-static gdouble _nc_hicosmo_qlinear_Omega_t0 (NcHICosmo *cosmo) { return OMEGA_T; }
-
-/**
- * nc_hicosmo_qlinear_new:
- *
- * FIXME
- *
- * Returns: FIXME
- */
-NcHICosmoQLinear *
-nc_hicosmo_qlinear_new (void)
-{
-  NcHICosmoQLinear *qlinear = g_object_new (NC_TYPE_HICOSMO_QLINEAR, NULL);
-  return qlinear;
-}
-
-enum {
-  PROP_0,
-  PROP_SIZE,
-};
-
-static void
-nc_hicosmo_qlinear_init (NcHICosmoQLinear *qlinear)
-{
-  NCM_UNUSED (qlinear);
-}
-
-static void
-nc_hicosmo_qlinear_finalize (GObject *object)
-{
-
-  /* Chain up : end */
-  G_OBJECT_CLASS (nc_hicosmo_qlinear_parent_class)->finalize (object);
-}
 
 static void
 nc_hicosmo_qlinear_class_init (NcHICosmoQLinearClass *klass)
@@ -213,3 +182,41 @@ nc_hicosmo_qlinear_class_init (NcHICosmoQLinearClass *klass)
   nc_hicosmo_set_Dc_impl (parent_class, &_nc_hicosmo_qlinear_Dc);
   nc_hicosmo_set_Omega_t0_impl (parent_class, &_nc_hicosmo_qlinear_Omega_t0);
 }
+
+/**
+ * nc_hicosmo_qlinear_dE:
+ * @z2: final redshift
+ * @z1: initial redshift
+ * @q: constant parameter
+ * @qp: constant parameter that multiplies (z - z1)
+ *
+ * This function returns the difference of the normalized Hubble function computed at @z1 and @z2: 
+ * $$ \Delta E(z) = \exp \int_{z_1}^{z_2} \frac{1 + q(z^\prime)}{1 + z^\prime} dz^\prime, $$	 
+ * where $q(z) = q_0 + q_1 (z - z_1)$, being $q_0$ = @q, $q_1$ = @qp and $z_1$ = @z1.
+ * 
+ * Returns: $\Delta E(z) = \left(\frac{1+z_2}{1+z_1}\right)^{1 + q_0 - q_1(1 + z_1)} e^{q_1 (z_2 - z_1)}$
+ */
+gdouble
+nc_hicosmo_qlinear_dE (gdouble z2, gdouble z1, gdouble q, gdouble qp)
+{
+  gdouble x1 = 1.0 + z1;
+  gdouble x2 = 1.0 + z2;
+  gdouble delta = z2 - z1;
+  gdouble qq = x1 * qp - q;
+  return gsl_sf_exp_mult (qp * delta, pow (x2 / x1, 1.0 - qq));
+}
+
+/**
+ * nc_hicosmo_qlinear_new:
+ *
+ * This function creates a new #NcHICosmoQLinear.
+ *
+ * Returns: A new #NcHICosmoQLinear
+ */
+NcHICosmoQLinear *
+nc_hicosmo_qlinear_new (void)
+{
+  NcHICosmoQLinear *qlinear = g_object_new (NC_TYPE_HICOSMO_QLINEAR, NULL);
+  return qlinear;
+}
+

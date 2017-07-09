@@ -45,8 +45,8 @@ typedef struct _NcHICosmoQLinear NcHICosmoQLinear;
  * NcHICosmoQLinearParams:
  * @NC_HICOSMO_QLINEAR_H0: Hubble constant
  * @NC_HICOSMO_QLINEAR_OMEGA_T: total energy density of the universe
- * @NC_HICOSMO_QLINEAR_CD: comoving distance
- * @NC_HICOSMO_QLINEAR_E: normalized Hubble function
+ * @NC_HICOSMO_QLINEAR_CD: comoving distance in units of the Hubble radius today
+ * @NC_HICOSMO_QLINEAR_E: normalized Hubble function at Z1
  * @NC_HICOSMO_QLINEAR_Q: q-intercept term of the linear function
  * @NC_HICOSMO_QLINEAR_QP: slope of the linear function
  * @NC_HICOSMO_QLINEAR_Z1: initial redshift
@@ -87,7 +87,7 @@ struct _NcHICosmoQLinear
 GType nc_hicosmo_qlinear_get_type (void) G_GNUC_CONST;
 
 NcHICosmoQLinear *nc_hicosmo_qlinear_new (void);
-gdouble nc_hicosmo_qlinear_E (gdouble z2, gdouble z1, gdouble q, gdouble qp);
+gdouble nc_hicosmo_qlinear_dE (gdouble z2, gdouble z1, gdouble q, gdouble qp);
 
 G_END_DECLS
 

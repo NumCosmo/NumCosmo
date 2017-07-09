@@ -28,9 +28,10 @@
  * @short_description:  Kinetic model -- Constant deceleration function
  *
  * The deceleration function is defined as a constant, $q(z) = q_0$.  
- * The normalized Hubble function and the comoving distance are, respectively,
- * $$E(z) = \exp \int_{z_1}^{z} \frac{1 + q_0}{1 + z^\prime} dz^\prime,$$
- * $$D_c(z) = $$	 
+ * The comoving distance in units of the Hubble radius today is
+ * 
+ * $$D_c(z) = CD + \frac{(1+ z_1)^{-q_0}}{q_0} \left[ 1 - \left( \frac{1+z}{1+z_1} \right)^{-q_0} \right],$$
+ * where 	CD is the comoving distance from 0 to $z_1$.
  */
 
 #ifdef HAVE_CONFIG_H
