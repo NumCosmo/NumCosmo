@@ -25,7 +25,7 @@
 /**
  * SECTION:nc_hicosmo_qspline
  * @title: NcHICosmoQSpline
- * @short_description: Spline deceleration parameter kinetic model
+ * @short_description: Kinetic model -- Spline deceleration function
  *
  * FIXME
  *
