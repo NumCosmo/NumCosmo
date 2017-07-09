@@ -63,8 +63,8 @@
 #include "model/nc_hicosmo_gcg.h"
 #include "model/nc_hicosmo_idem2.h"
 #include "model/nc_hicosmo_de_xcdm.h"
-#include "model/nc_hicosmo_de_linder.h"
-#include "model/nc_hicosmo_de_pad.h"
+#include "model/nc_hicosmo_de_cpl.h"
+#include "model/nc_hicosmo_de_jbp.h"
 #include "model/nc_hicosmo_qgrw.h"
 #include "model/nc_hicosmo_Vexp.h"
 #include "model/nc_hicosmo_de_reparam_ok.h"
@@ -339,8 +339,8 @@ ncm_cfg_init (void)
   ncm_cfg_register_obj (NC_TYPE_HICOSMO_GCG);
   ncm_cfg_register_obj (NC_TYPE_HICOSMO_IDEM2);  
   ncm_cfg_register_obj (NC_TYPE_HICOSMO_DE_XCDM);
-  ncm_cfg_register_obj (NC_TYPE_HICOSMO_DE_LINDER);
-  ncm_cfg_register_obj (NC_TYPE_HICOSMO_DE_PAD);
+  ncm_cfg_register_obj (NC_TYPE_HICOSMO_DE_CPL);
+  ncm_cfg_register_obj (NC_TYPE_HICOSMO_DE_JBP);
   ncm_cfg_register_obj (NC_TYPE_HICOSMO_QGRW);
   ncm_cfg_register_obj (NC_TYPE_HICOSMO_VEXP);
 

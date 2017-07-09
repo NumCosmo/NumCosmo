@@ -51,7 +51,7 @@ typedef struct _NcHIPrimClass NcHIPrimClass;
  * @NC_HIPRIM_IMPL_lnSA_powspec_lnk: Logarithm of the Scalar Adiabatic power spectrum as a function of $\ln(k\mathrm{Mpc})$
  * @NC_HIPRIM_IMPL_lnT_powspec_lnk: Logarithm of the Tensor power spectrum as a function of $\ln(k\mathrm{Mpc})$
  *
- * FIXME
+ * Methods to be implementd by every primordial model.
  */
 typedef enum _NcHIPrimImpl
 {

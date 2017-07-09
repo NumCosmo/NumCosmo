@@ -122,8 +122,7 @@ static gdouble
 _nc_hicosmo_qlinear_Dc (NcHICosmo *cosmo, gdouble z)
 {
   if (QLIN_Z1 == z)
-  	return QLIN_CD;
-
+  return QLIN_CD;
 	return QLIN_CD + Dc_th_int (z, QLIN_Z1, QLIN_E, QLIN_Q, QLIN_QP);
 }
 

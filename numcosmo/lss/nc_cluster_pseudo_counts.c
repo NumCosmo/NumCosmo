@@ -209,8 +209,7 @@ nc_cluster_pseudo_counts_class_init (NcClusterPseudoCountsClass *klass)
  * nc_cluster_pseudo_counts_new: 
  * @nclusters: total number of clusters (resample)
  *
- * This function allocates memory for a new #NcClusterPseudoCounts object and sets its properties to the values from
- * the input argument.
+ * This function instantiates a new object of type #NcClusterPseudoCounts.
  *
  * Returns: A new #NcClusterPseudoCounts.
  */

@@ -169,8 +169,8 @@
       <xi:include href="xml/nc_hicosmo_de_reparam_ok.xml"/>
       <xi:include href="xml/nc_hicosmo_de_reparam_cmb.xml"/>
       <xi:include href="xml/nc_hicosmo_de_xcdm.xml"/>
-      <xi:include href="xml/nc_hicosmo_de_linder.xml"/>
-      <xi:include href="xml/nc_hicosmo_de_pad.xml"/>
+      <xi:include href="xml/nc_hicosmo_de_cpl.xml"/>
+      <xi:include href="xml/nc_hicosmo_de_jbp.xml"/>
     </section>
     <section>
       <title>Quantum Gravity Bounce</title>

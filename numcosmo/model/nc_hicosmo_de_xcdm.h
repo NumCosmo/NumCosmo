@@ -44,9 +44,9 @@ typedef struct _NcHICosmoDEXcdm NcHICosmoDEXcdm;
 
 /**
  * NcHICosmoDEXCDMParams:
- * @NC_HICOSMO_DE_XCDM_W: FIXME
+ * @NC_HICOSMO_DE_XCDM_W: constant parameter
  *
- * FIXME
+ * Dark Energy equation of state: $w(z) = w$.
  * 
  */
 typedef enum _NcHICosmoDEXCDMParams

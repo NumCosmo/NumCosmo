@@ -28,7 +28,11 @@
  * @title: NcHIPrimPowerLaw
  * @short_description: Power law implementation for primordial spectra.
  *
- * FIXME
+ * Primordial adiabatic scalar power spectrum:
+ * $$ \mathcal{P}_{SA}(k) = \mathcal{A}_\mathrm{s}\left(\frac{k}{k_\star}\right)^{n_s -1 }.$$
+ * 
+ * Primordial tensor power spectrum:
+ * $$ \mathcal{P}_T(k) = r \mathcal{A}_\mathrm{s} \left(\frac{k}{k_\star}\right)^{n_T -1 }.$$
  *
  */
 
@@ -108,9 +112,9 @@ nc_hiprim_power_law_class_init (NcHIPrimPowerLawClass *klass)
 /**
  * nc_hiprim_power_law_new: (constructor)
  *
- * FIXME
+ * This function instantiates a new object of type #NcHIPrimPowerLaw.
  *
- * Returns: (transfer full): FIXME
+ * Returns: (transfer full): A new #NcHIPrimPowerLaw
  */
 NcHIPrimPowerLaw *
 nc_hiprim_power_law_new (void)

@@ -1,5 +1,5 @@
 /***************************************************************************
- *            nc_hicosmo_de_linder.c
+ *            nc_hicosmo_de_cpl.c
  *
  *  Tue Jul 31 01:37:57 2007
  *  Copyright  2007  Mariana Penna Lima
@@ -23,11 +23,11 @@
  */
 
 /**
- * SECTION:nc_hicosmo_de_linder
- * @title: NcHICosmoDELinder
- * @short_description: Dark Energy -- Linder equation of state
+ * SECTION:nc_hicosmo_de_cpl
+ * @title: NcHICosmoDECpl
+ * @short_description: Dark Energy -- Chevallier–Polarski–Linder equation of state
  *
- * See [Linder (2003)][XLinder2003]: $ w(z) = w_0 + w_1 \frac{z}{1.0 + z}$.
+ * See [Chevallier (2001)][XChevallier2001] and [Linder (2003)][XLinder2003]: $ w(z) = w_0 + w_1 \frac{z}{1.0 + z}$.
  *
  */
 
@@ -36,17 +36,17 @@
 #endif /* HAVE_CONFIG_H */
 #include "build_cfg.h"
 
-#include "model/nc_hicosmo_de_linder.h"
+#include "model/nc_hicosmo_de_cpl.h"
 
-G_DEFINE_TYPE (NcHICosmoDELinder, nc_hicosmo_de_linder, NC_TYPE_HICOSMO_DE);
+G_DEFINE_TYPE (NcHICosmoDECpl, nc_hicosmo_de_cpl, NC_TYPE_HICOSMO_DE);
 
 #define VECTOR  (NCM_MODEL (cosmo_de)->params)
 #define OMEGA_X (ncm_vector_get (VECTOR, NC_HICOSMO_DE_OMEGA_X))
-#define OMEGA_0 (ncm_vector_get (VECTOR, NC_HICOSMO_DE_LINDER_W0))
-#define OMEGA_1 (ncm_vector_get (VECTOR, NC_HICOSMO_DE_LINDER_W1))
+#define OMEGA_0 (ncm_vector_get (VECTOR, NC_HICOSMO_DE_CPL_W0))
+#define OMEGA_1 (ncm_vector_get (VECTOR, NC_HICOSMO_DE_CPL_W1))
 
 static gdouble
-_nc_hicosmo_de_linder_E2Omega_de (NcHICosmoDE *cosmo_de, gdouble z)
+_nc_hicosmo_de_cpl_E2Omega_de (NcHICosmoDE *cosmo_de, gdouble z)
 {
   gdouble x = 1.0 + z;
   gdouble lnx = log1p (z);
@@ -54,7 +54,7 @@ _nc_hicosmo_de_linder_E2Omega_de (NcHICosmoDE *cosmo_de, gdouble z)
 }
 
 static gdouble
-_nc_hicosmo_de_linder_dE2Omega_de_dz (NcHICosmoDE *cosmo_de, gdouble z)
+_nc_hicosmo_de_cpl_dE2Omega_de_dz (NcHICosmoDE *cosmo_de, gdouble z)
 {
   const gdouble x = 1.0 + z;
   const gdouble x2 = x * x;
@@ -65,7 +65,7 @@ _nc_hicosmo_de_linder_dE2Omega_de_dz (NcHICosmoDE *cosmo_de, gdouble z)
 }
 
 static gdouble
-_nc_hicosmo_de_linder_d2E2Omega_de_dz2 (NcHICosmoDE *cosmo_de, gdouble z)
+_nc_hicosmo_de_cpl_d2E2Omega_de_dz2 (NcHICosmoDE *cosmo_de, gdouble z)
 {
   const gdouble x    = 1.0 + z;
   const gdouble x2   = x * x;
@@ -80,7 +80,7 @@ _nc_hicosmo_de_linder_d2E2Omega_de_dz2 (NcHICosmoDE *cosmo_de, gdouble z)
 }
 
 static gdouble
-_nc_hicosmo_de_linder_w_de (NcHICosmoDE *cosmo_de, gdouble z)
+_nc_hicosmo_de_cpl_w_de (NcHICosmoDE *cosmo_de, gdouble z)
 {
   const gdouble w0   = OMEGA_0;
   const gdouble w1   = OMEGA_1;
@@ -89,17 +89,17 @@ _nc_hicosmo_de_linder_w_de (NcHICosmoDE *cosmo_de, gdouble z)
 }
 
 /**
- * nc_hicosmo_de_linder_new:
+ * nc_hicosmo_de_cpl_new:
  *
- * FIXME
+ * This function instantiates a new object of type #NcHICosmoDECpl.
  *
- * Returns: FIXME
+ * Returns: A new #NcHICosmoDECpl
  */
-NcHICosmoDELinder *
-nc_hicosmo_de_linder_new (void)
+NcHICosmoDECpl *
+nc_hicosmo_de_cpl_new (void)
 {
-  NcHICosmoDELinder *linder = g_object_new (NC_TYPE_HICOSMO_DE_LINDER, NULL);
-  return linder;
+  NcHICosmoDECpl *cpl = g_object_new (NC_TYPE_HICOSMO_DE_CPL, NULL);
+  return cpl;
 }
 
 enum {
@@ -108,45 +108,45 @@ enum {
 };
 
 static void
-nc_hicosmo_de_linder_init (NcHICosmoDELinder *linder)
+nc_hicosmo_de_cpl_init (NcHICosmoDECpl *cpl)
 {
-  NCM_UNUSED (linder);
+  NCM_UNUSED (cpl);
 }
 
 static void
-nc_hicosmo_de_linder_finalize (GObject *object)
+nc_hicosmo_de_cpl_finalize (GObject *object)
 {
 
   /* Chain up : end */
-  G_OBJECT_CLASS (nc_hicosmo_de_linder_parent_class)->finalize (object);
+  G_OBJECT_CLASS (nc_hicosmo_de_cpl_parent_class)->finalize (object);
 }
 
 static void
-nc_hicosmo_de_linder_class_init (NcHICosmoDELinderClass *klass)
+nc_hicosmo_de_cpl_class_init (NcHICosmoDECplClass *klass)
 {
   GObjectClass* object_class     = G_OBJECT_CLASS (klass);
   NcHICosmoDEClass* parent_class = NC_HICOSMO_DE_CLASS (klass);
   NcmModelClass *model_class     = NCM_MODEL_CLASS (klass);
 
-  object_class->finalize     = &nc_hicosmo_de_linder_finalize;
+  object_class->finalize     = &nc_hicosmo_de_cpl_finalize;
 
   ncm_model_class_set_name_nick (model_class, "Chevalier-Polarski-Linder parametrization", "CPL");
   ncm_model_class_add_params (model_class, 2, 0, PROP_SIZE);
   /* Set w_0 param info */
-  ncm_model_class_set_sparam (model_class, NC_HICOSMO_DE_LINDER_W0, "w_0", "w0",
+  ncm_model_class_set_sparam (model_class, NC_HICOSMO_DE_CPL_W0, "w_0", "w0",
                                -10.0, 1.0, 1.0e-2,
-                               NC_HICOSMO_DEFAULT_PARAMS_ABSTOL, NC_HICOSMO_DE_LINDER_DEFAULT_W0,
+                               NC_HICOSMO_DEFAULT_PARAMS_ABSTOL, NC_HICOSMO_DE_CPL_DEFAULT_W0,
                                NCM_PARAM_TYPE_FREE);
   /* Set w_1 param info */
-  ncm_model_class_set_sparam (model_class, NC_HICOSMO_DE_LINDER_W1, "w_1", "w1",
+  ncm_model_class_set_sparam (model_class, NC_HICOSMO_DE_CPL_W1, "w_1", "w1",
                                -5.0, 5.0, 1.0e-1,
-                               NC_HICOSMO_DEFAULT_PARAMS_ABSTOL, NC_HICOSMO_DE_LINDER_DEFAULT_W1,
+                               NC_HICOSMO_DEFAULT_PARAMS_ABSTOL, NC_HICOSMO_DE_CPL_DEFAULT_W1,
                                NCM_PARAM_TYPE_FREE);
   /* Check for errors in parameters initialization */
   ncm_model_class_check_params_info (model_class);
 
-  nc_hicosmo_de_set_E2Omega_de_impl (parent_class,       &_nc_hicosmo_de_linder_E2Omega_de);
-  nc_hicosmo_de_set_dE2Omega_de_dz_impl (parent_class,   &_nc_hicosmo_de_linder_dE2Omega_de_dz);
-  nc_hicosmo_de_set_d2E2Omega_de_dz2_impl (parent_class, &_nc_hicosmo_de_linder_d2E2Omega_de_dz2);
-  nc_hicosmo_de_set_w_de_impl (parent_class,             &_nc_hicosmo_de_linder_w_de);
+  nc_hicosmo_de_set_E2Omega_de_impl (parent_class,       &_nc_hicosmo_de_cpl_E2Omega_de);
+  nc_hicosmo_de_set_dE2Omega_de_dz_impl (parent_class,   &_nc_hicosmo_de_cpl_dE2Omega_de_dz);
+  nc_hicosmo_de_set_d2E2Omega_de_dz2_impl (parent_class, &_nc_hicosmo_de_cpl_d2E2Omega_de_dz2);
+  nc_hicosmo_de_set_w_de_impl (parent_class,             &_nc_hicosmo_de_cpl_w_de);
 }

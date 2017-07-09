@@ -27,7 +27,7 @@
  * @title: NcHICosmoDEXcdm
  * @short_description: Dark Energy -- constant equation of state
  *
- * $w(z) = w$, where $w$ is constant.
+ * Dark Energy equation of state: $w(z) = w$, where $w$ is constant.
  *
  */
 
@@ -37,7 +37,7 @@
 #include "build_cfg.h"
 
 #include "model/nc_hicosmo_de_xcdm.h"
-#include "model/nc_hicosmo_de_linder.h"
+#include "model/nc_hicosmo_de_cpl.h"
 
 G_DEFINE_TYPE (NcHICosmoDEXcdm, nc_hicosmo_de_xcdm, NC_TYPE_HICOSMO_DE);
 
@@ -77,9 +77,9 @@ static gdouble _nc_hicosmo_de_xcdm_w_de (NcHICosmoDE *cosmo_de, gdouble z) { ret
 /**
  * nc_hicosmo_de_xcdm_new:
  *
- * FIXME
+ * This function instantiates a new object of type #NcHICosmoDEXcdm.
  *
- * Returns: FIXME
+ * Returns: A new #NcHICosmoDEXcdm
  */
 NcHICosmoDEXcdm *
 nc_hicosmo_de_xcdm_new (void)
@@ -126,7 +126,7 @@ nc_hicosmo_de_xcdm_class_init (NcHICosmoDEXcdmClass *klass)
   /* Set w_0 param info */
   ncm_model_class_set_sparam (model_class, NC_HICOSMO_DE_XCDM_W, "w", "w",
                                -5.0, 0.0, 1.0e-2,
-                               NC_HICOSMO_DEFAULT_PARAMS_ABSTOL, NC_HICOSMO_DE_LINDER_DEFAULT_W0,
+                               NC_HICOSMO_DEFAULT_PARAMS_ABSTOL, NC_HICOSMO_DE_CPL_DEFAULT_W0,
                                NCM_PARAM_TYPE_FREE);
   /* Check for errors in parameters initialization */
   ncm_model_class_check_params_info (model_class);

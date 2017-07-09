@@ -134,9 +134,9 @@ nc_hiprim_atan_class_init (NcHIPrimAtanClass *klass)
 /**
  * nc_hiprim_atan_new: (constructor)
  *
- * FIXME
+ * This function instantiates a new object of type #NcHIPrimAtan.
  *
- * Returns: (transfer full): FIXME
+ * Returns: (transfer full): A new #NcHIPrimAtan
  */
 NcHIPrimAtan *
 nc_hiprim_atan_new (void)

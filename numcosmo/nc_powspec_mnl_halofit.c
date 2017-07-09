@@ -44,7 +44,7 @@
 #include "nc_powspec_mnl_halofit.h"
 
 #include "model/nc_hicosmo_de.h"
-#include "model/nc_hicosmo_de_linder.h"
+#include "model/nc_hicosmo_de_cpl.h"
 #include "nc_distance.h"
 
 #include "math/integral.h"
@@ -74,8 +74,8 @@ struct _NcPowspecMNLHaloFitPrivate
 	gsl_root_fdfsolver* linear_scale_solver;
 	gsl_root_fsolver* znl_solver;
   gboolean pkequal;
-  NcHICosmo *linder;
-  NcDistance *linder_dist;
+  NcHICosmo *cpl;
+  NcDistance *cpl_dist;
 };
 
 enum
@@ -108,8 +108,8 @@ nc_powspec_mnl_halofit_init (NcPowspecMNLHaloFit* pshf)
 
 	pshf->priv->z           = HUGE_VAL;
   pshf->priv->pkequal     = FALSE;
-  pshf->priv->linder      = NULL;
-  pshf->priv->linder_dist = NULL;
+  pshf->priv->cpl      = NULL;
+  pshf->priv->cpl_dist = NULL;
 }
 
 static void
@@ -196,8 +196,8 @@ _nc_powspec_mnl_halofit_dispose (GObject* object)
 
 	ncm_powspec_filter_clear (&pshf->psml_gauss);
 
-  nc_hicosmo_clear (&pshf->priv->linder);
-  nc_distance_clear (&pshf->priv->linder_dist);
+  nc_hicosmo_clear (&pshf->priv->cpl);
+  nc_distance_clear (&pshf->priv->cpl_dist);
 
 	/* Chain up : end */
 	G_OBJECT_CLASS (nc_powspec_mnl_halofit_parent_class)->dispose (object);
@@ -615,12 +615,12 @@ _nc_powspec_mnl_halofit_xi_cmp (gdouble w, gpointer params)
 {
 	var_params *vps = (var_params *)params;
 
-  ncm_model_orig_param_set (NCM_MODEL (vps->cosmo), NC_HICOSMO_DE_LINDER_W0, w);
+  ncm_model_orig_param_set (NCM_MODEL (vps->cosmo), NC_HICOSMO_DE_CPL_W0, w);
   /*ncm_model_params_log_all (NCM_MODEL (vps->cosmo));*/
 
   {
-    gdouble zdrag = nc_distance_drag_redshift (vps->pshf->priv->linder_dist, vps->cosmo);
-    gdouble xi    = nc_distance_comoving (vps->pshf->priv->linder_dist, vps->cosmo, zdrag) - nc_distance_comoving (vps->pshf->priv->linder_dist, vps->cosmo, vps->z);
+    gdouble zdrag = nc_distance_drag_redshift (vps->pshf->priv->cpl_dist, vps->cosmo);
+    gdouble xi    = nc_distance_comoving (vps->pshf->priv->cpl_dist, vps->cosmo, zdrag) - nc_distance_comoving (vps->pshf->priv->cpl_dist, vps->cosmo, vps->z);
 
     /*printf ("CMP % 22.15g % 22.15g | % 22.15g % 22.15g\n", vps->z, zdrag, xi, vps->R_min);*/
 
@@ -650,27 +650,27 @@ _nc_powspec_mnl_halofit_preeval (NcPowspecMNLHaloFit* pshf, NcHICosmo* cosmo, co
   if (NC_IS_HICOSMO_DE (cosmo))
   {
     gdouble wa;
-    if (pshf->priv->pkequal && NC_IS_HICOSMO_DE_LINDER (cosmo) && ((wa = ncm_model_orig_param_get (NCM_MODEL (cosmo), NC_HICOSMO_DE_LINDER_W1)) != 0.0) )
+    if (pshf->priv->pkequal && NC_IS_HICOSMO_DE_CPL (cosmo) && ((wa = ncm_model_orig_param_get (NCM_MODEL (cosmo), NC_HICOSMO_DE_CPL_W1)) != 0.0) )
     {
       /*printf ("Using pkequal!\n");*/
-      if (pshf->priv->linder == NULL)
+      if (pshf->priv->cpl == NULL)
       {
-        pshf->priv->linder      = NC_HICOSMO (nc_hicosmo_de_linder_new ());
-        pshf->priv->linder_dist = nc_distance_new (1.0);
+        pshf->priv->cpl      = NC_HICOSMO (nc_hicosmo_de_cpl_new ());
+        pshf->priv->cpl_dist = nc_distance_new (1.0);
       }
 
-      ncm_vector_memcpy (ncm_model_orig_params_peek_vector (NCM_MODEL (pshf->priv->linder)), ncm_model_orig_params_peek_vector (NCM_MODEL (cosmo)));
-      ncm_model_orig_param_set (NCM_MODEL (pshf->priv->linder), NC_HICOSMO_DE_LINDER_W1, 0.0);
+      ncm_vector_memcpy (ncm_model_orig_params_peek_vector (NCM_MODEL (pshf->priv->cpl)), ncm_model_orig_params_peek_vector (NCM_MODEL (cosmo)));
+      ncm_model_orig_param_set (NCM_MODEL (pshf->priv->cpl), NC_HICOSMO_DE_CPL_W1, 0.0);
       
       {
         gdouble zdrag_cosmo, xi_cosmo; 
-        nc_distance_prepare (pshf->priv->linder_dist, cosmo);
+        nc_distance_prepare (pshf->priv->cpl_dist, cosmo);
 
-        zdrag_cosmo = nc_distance_drag_redshift (pshf->priv->linder_dist, cosmo);
-        xi_cosmo    = nc_distance_comoving (pshf->priv->linder_dist, cosmo, zdrag_cosmo) - nc_distance_comoving (pshf->priv->linder_dist, cosmo, z);
+        zdrag_cosmo = nc_distance_drag_redshift (pshf->priv->cpl_dist, cosmo);
+        xi_cosmo    = nc_distance_comoving (pshf->priv->cpl_dist, cosmo, zdrag_cosmo) - nc_distance_comoving (pshf->priv->cpl_dist, cosmo, z);
 
         {
-          var_params vps = { pshf, pshf->priv->linder, z, xi_cosmo };
+          var_params vps = { pshf, pshf->priv->cpl, z, xi_cosmo };
 
           gsl_function Fxi;
 
@@ -693,17 +693,17 @@ _nc_powspec_mnl_halofit_preeval (NcPowspecMNLHaloFit* pshf, NcHICosmo* cosmo, co
             status = gsl_root_test_interval (w0, w1, 0.0, 1.0e-6);
           } while (status == GSL_CONTINUE && iter < max_iter);
 
-          ncm_model_orig_param_set (NCM_MODEL (pshf->priv->linder), NC_HICOSMO_DE_LINDER_W0, wfinal);
+          ncm_model_orig_param_set (NCM_MODEL (pshf->priv->cpl), NC_HICOSMO_DE_CPL_W0, wfinal);
           if (iter >= max_iter)
             g_warning ("_nc_powspec_mnl_halofit_preeval: maximum number of iteration reached (%u), giving up.", max_iter);
 /*
           printf ("# for z = % 22.15g, using wequiv = % 22.15g vs (w0 = % 22.15g, w1 = % 22.15g)\n", 
                   z, wfinal, 
-                  ncm_model_orig_param_get (NCM_MODEL (cosmo), NC_HICOSMO_DE_LINDER_W0),
-                  ncm_model_orig_param_get (NCM_MODEL (cosmo), NC_HICOSMO_DE_LINDER_W1)
+                  ncm_model_orig_param_get (NCM_MODEL (cosmo), NC_HICOSMO_DE_CPL_W0),
+                  ncm_model_orig_param_get (NCM_MODEL (cosmo), NC_HICOSMO_DE_CPL_W1)
                   );
 */          
-          Omega_de_onepw = nc_hicosmo_de_E2Omega_de_onepw (NC_HICOSMO_DE (pshf->priv->linder), z) / nc_hicosmo_E2 (pshf->priv->linder, z);
+          Omega_de_onepw = nc_hicosmo_de_E2Omega_de_onepw (NC_HICOSMO_DE (pshf->priv->cpl), z) / nc_hicosmo_E2 (pshf->priv->cpl, z);
         }        
         
       }
@@ -874,7 +874,7 @@ void nc_powspec_mnl_halofit_set_kbounds_from_ml (NcPowspecMNLHaloFit* pshf)
  * @pshf: a #NcPowspecMNLHaloFit
  * @on: a boolean
  *
- * Whether to use PKEqual to adjust the HaloFit formula when using a #NcHICosmoDELinder
+ * Whether to use PKEqual to adjust the HaloFit formula when using a #NcHICosmoDECpl
  * model, see [Casarini et al. (2009)][XCasarini2009] and [Casarini et al. (2016)][XCasarini2016].
  *
  */
