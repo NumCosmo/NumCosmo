@@ -179,7 +179,7 @@
       <xi:include href="xml/quantum_gravity.xml"/>
     </section>
     <section>
-      <title>Kinematical</title>
+      <title>Kinematic Models</title>
       <xi:include href="xml/nc_hicosmo_qconst.xml"/>
       <xi:include href="xml/nc_hicosmo_qlinear.xml"/>
       <xi:include href="xml/nc_hicosmo_qspline.xml"/>
