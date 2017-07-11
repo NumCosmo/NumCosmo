@@ -6,7 +6,6 @@ main (gint argc, gchar *argv[])
 {
   NcHICosmo *cosmo;
   NcDistance *dist;
-  gint i;
 
   /**************************************************************************** 
    * Initializing the library objects, this must be called before 
@@ -46,18 +45,25 @@ main (gint argc, gchar *argv[])
   /**************************************************************************** 
    * Printing some distances up to redshift 1.0.
    ****************************************************************************/ 
-  for (i = 0; i < 10; i++)
   {
-    gdouble z = 1.0 / 9.0 * i;
-    gdouble cd = nc_hicosmo_RH_Mpc (cosmo) * nc_distance_comoving (dist, cosmo, z);
-    printf ("% 10.8f % 20.15g\n", z, cd);
+    const guint N        = 20;
+    const gdouble RH_Mpc = nc_hicosmo_RH_Mpc (cosmo); /* Hubble radius in Mpc */
+    gint i;
+    
+    for (i = 0; i < N; i++)
+    {
+      const gdouble z  = 1.0 / (N - 1.0) * i;
+      const gdouble Dc = nc_distance_comoving (dist, cosmo, z); /* Comoving distance in Hubble radius */
+      const gdouble dc = RH_Mpc * Dc;                           /* Comoving distance in Mpc           */
+      printf ("% 10.8f % 22.15g [c/H0] % 22.15g [Mpc]\n", z, Dc, dc);
+    }
   }
 
   /**************************************************************************** 
    * Freeing objects.
    ****************************************************************************/ 
   nc_distance_free (dist);
-  ncm_model_free (NCM_MODEL (cosmo));
+  nc_hicosmo_free (cosmo);
 
   return 0;
 }

@@ -10,7 +10,7 @@
     <releaseinfo>
       for NumCosmo 0.13.3.
       The latest version of this documentation can be found on-line at
-      <ulink role="online-location" url="http://www.nongnu.org/numcosmo/manual/index.html">http://www.nongnu.org/numcosmo/manual/index.html</ulink>.
+      <ulink role="online-location" url="https://numcosmo.github.io/manual/index.html">https://numcosmo.github.io//manual/index.html</ulink>.
     </releaseinfo>
   </bookinfo>
 
@@ -19,7 +19,6 @@
     <xi:include href="introduction.xml"/>
     <xi:include href="refs.xml"/>
     <xi:include href="xml/build_cfg.xml"/>
-    <xi:include href="gobject_introd.xml"/>
   </chapter>
 
   <chapter>

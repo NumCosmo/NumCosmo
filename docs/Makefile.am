@@ -4,8 +4,7 @@
 XML_FILES= \
           introduction.xml \
           darkenergy.xml   \
-          refs.xml         \
-          gobject_introd.xml
+          refs.xml
 
 # Generated xml files
 XML_GEN_FILES=references.xml
