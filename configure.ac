@@ -985,6 +985,7 @@ tools/Makefile
 tests/Makefile
 docs/Makefile
 examples/Makefile
+examples/model_mcmc/Makefile
 examples/pydata_simple/Makefile
 data/Makefile
 numcosmo/build_cfg.h

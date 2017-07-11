@@ -1,6 +1,6 @@
 ## Process this file with automake to produce Makefile.in
 
-SUBDIRS = pydata_simple
+SUBDIRS = pydata_simple model_mcmc
 
 examplesdir = \
 	$(pkgdatadir)-$(VERSION)/examples

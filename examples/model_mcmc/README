@@ -1,0 +1,33 @@
+## Model MCMC example
+
+This is a complete example of how to create an abstract model, one 
+implementation, data and run a mcmc analysis. 
+
+In this example our abstract model **NcCurve** represent a single curve 
+$f(x)$ defined at the iterval $[x_l, x_u]$. The first implementation
+of this model is **NcCurveLinear** which is a simple linear parametrization
+for the curve, i.e., $f(x) = a + b x$. The second implementation of this
+model is **NcCurveSpline** that models this same curve as a n-knots spline.
+
+- nc_curve.h
+- nc_curve.c
+- nc_curve_linear.h
+- nc_curve_linear.c
+- nc_curve_spline.h
+- nc_curve_spline.c
+
+As our likelihood, we create a child of **NcmDataGaussDiag** to represent
+a set of measures $f^\mathrm{obs}_i \pm \sigma_i$ at points $x_i$ for 
+$i \in (1, N)$.
+
+- nc_data_curve.h
+- nc_data_curve.c
+
+Finally we create a set of simple C program to generate a new data from
+the model and then to find the best-fit, observed fisher matrix and run
+a complete MCMC analysis.
+
+- curve_generate.c
+- curve_fit.c
+- curve_mcmc.c
+
