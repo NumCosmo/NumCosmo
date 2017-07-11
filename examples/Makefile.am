@@ -6,19 +6,19 @@ examplesdir = \
 	$(pkgdatadir)-$(VERSION)/examples
 
 examples_DATA = \
-	README                 \
-	example_simple.c       \
-	example_ca.c           \
-	example_ps.py          \
-	example_simple.py      \
-	example_ca.py          \
-	example_cbe.py         \
-	example_recomb.py      \
-	example_fit_snia.py    \
-	example_rg_snia_bao.py \
-	example_ca_sampling.py \
-	example_ode_spline.py  \
-	example_hiprim.py      \
+	README                        \
+	example_simple.c              \
+	example_ca.c                  \
+	example_ps.py                 \
+	example_simple.py             \
+	example_halo_mass_function.py \
+	example_cbe.py                \
+	example_recomb.py             \
+	example_fit_snia.py           \
+	example_rg_snia_bao.py        \
+	example_ca_sampling.py        \
+	example_ode_spline.py         \
+	example_hiprim.py             \
 	py_hiprim_example.py
 
 EXTRA_DIST = \
