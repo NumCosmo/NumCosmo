@@ -8,7 +8,7 @@ except:
   pass
 
 import numpy
-from math import *
+import math 
 import matplotlib.pyplot as plt
 from gi.repository import GObject
 from gi.repository import NumCosmo as Nc
@@ -125,13 +125,13 @@ for i in range (0, np):
 #
 
 plt.title ("Growth Function")
-plt.plot (za, Da, 'r', label="D")
+plt.plot (za, Da, 'r', label="D(z)")
 plt.plot (za, dDa, 'b--', label="dD/dz")
 plt.xlabel('$z$')
-plt.legend(loc=2)
+plt.legend(loc=1)
 #plt.yscale ('log')
 
-plt.savefig ("growth_func.png")
+plt.savefig ("hmf_growth_func.svg")
 plt.clf ()
 
 #
@@ -146,8 +146,8 @@ Pma = []
 psml.prepare (cosmo)
 
 for i in range (0, np):
-  lnk = log (1e-3) +  log (1e6) * divfac * i
-  k   = exp (lnk)
+  lnk = math.log (1e-3) +  math.log (1e6) * divfac * i
+  k   = math.exp (lnk)
   T   = tf.eval (cosmo, k)
   Pm  = psml.eval (cosmo, 0.0, k)
   ka.append (k)
@@ -158,15 +158,15 @@ for i in range (0, np):
 #  Ploting transfer and matter power spectrum
 #
 
-plt.title ("Transfer Function and Matter Power Spectrum")
+plt.title ("Transfer Function and Linear Matter Power Spectrum")
 plt.yscale('log')
 plt.xscale('log')
-plt.plot (ka, Ta, 'r', label="T(kh)")
-plt.plot (ka, Pma, 'b--', label="P_m(kh)")
-plt.xlabel('$k$')
+plt.plot (ka, Ta, 'r', label="$T(k)$")
+plt.plot (ka, Pma, 'b--', label="$P_m(k)$")
+plt.xlabel('$k \; [\mathrm{Mpc}^{-1}]$')
 plt.legend(loc=1)
 
-plt.savefig ("transfer_func.png")
+plt.savefig ("hmf_transfer_func.svg")
 plt.clf ()
 
 #
@@ -182,8 +182,8 @@ sigma2a = []
 dlnsigma2a = []
 
 for i in range (0, np):
-  lnR       = log (5.0) +  log (10.0) * divfac * i
-  R         = exp (lnR)
+  lnR       = math.log (5.0) +  math.log (10.0) * divfac * i
+  R         = math.exp (lnR)
   sigma2    = psf.eval_var_lnr (0.0, lnR)
   dlnsigma2 = psf.eval_dlnvar_dlnr (0.0, lnR) 
   Ra.append (R)
@@ -193,38 +193,60 @@ for i in range (0, np):
 #
 #  Ploting filtered matter variance
 #
-plt.title ("Variance and Variance Derivative")
+plt.title ("Variance and its derivative")
 plt.plot (Ra, sigma2a, 'r', label='$\sigma^2(\ln(R))$')
 plt.plot (Ra, dlnsigma2a, 'b--', label='$d\ln(\sigma^2)/d\ln(R)$')
-plt.xlabel('$R$')
+plt.xlabel('$R \; [\mathrm{Mpc}]$')
 plt.legend(loc=1)
 
-plt.savefig ("matter_var.png")
+plt.savefig ("hmf_matter_variance.svg")
 plt.clf ()
 
 #
-# Calculating the mass function integrated in the mass interval [1e14, 1e16]
-# for the redhshifts in the interval [0, 2.0] and area 200 squared degree.
+# Calculating the halo mass function at z = 0.7, and integrated in the mass interval [1e14, 1e16]
+# for the redhshifts in the interval [0, 2.0] and area 200 squared degrees.
 #
 
 mf.set_area_sd (200.0)
-mf.set_eval_limits (cosmo, log (1e14), log(1e16), 0.0, 2.0)
+mf.set_eval_limits (cosmo, math.log (1e14), math.log(1e16), 0.0, 2.0)
 mf.prepare (cosmo)
 
+lnMa = []
+dn_dlnMdza = []
 dndza = []
 
 for i in range (0, np):
-  dndz = mf.dn_dz (cosmo, log (1.0e14), log (1.0e16), za[i], True)
+  lnM = math.log (1e14) + math.log (1e2) * divfac * i
+  dn_dlnMdz = mf.dn_dlnM (cosmo, lnM, 0.7)
+  dndz = mf.dn_dz (cosmo, math.log (1.0e14), math.log (1.0e16), za[i], True)
+  lnMa.append (lnM)
+  dn_dlnMdza.append (dn_dlnMdz)
   dndza.append (dndz)
 
 #
 #  Ploting the mass function
 #
 
-plt.title ("Mass Function")
-plt.plot (za, dndza, 'r', label='$dn/dz$')
-plt.xlabel('$z$')
+plt.title ("Halo Mass Function")
+plt.plot (lnMa, dn_dlnMdza, 'b', label='$z = 0.7$')
+plt.yscale('log')
+#plt.xscale('log')
+plt.xlabel('$\ln M \; [\mathrm{M}_\odot]$')
+plt.ylabel('${\mathrm{d}^2n}/{\mathrm{d}z \mathrm{d}\ln M}$')
 plt.legend(loc=1)
 
-plt.savefig ("mass_function.png")
+plt.savefig ("hmf_mass_function.svg")
+plt.clf ()
+
+#
+#  Ploting the mass function
+#
+
+plt.title ("Number of halos per redshift")
+plt.plot (za, dndza, 'b', label='$M \in [10^{14}, 10^{16}], \; A = 200 \; [\mathrm{deg}^2]$')
+plt.xlabel('$z$')
+plt.ylabel('${\mathrm{d}N}/{\mathrm{d}z}$')
+plt.legend(loc=1)
+
+plt.savefig ("hmf_halos_redshift.svg")
 plt.clf ()
