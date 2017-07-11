@@ -19,6 +19,7 @@ Ncm.cfg_init ()
 
 #
 #  New homogeneous and isotropic cosmological model NcHICosmoDEXcdm 
+#  with one massive neutrino.
 #
 cosmo = Nc.HICosmo.new_from_name (Nc.HICosmo, "NcHICosmoDEXcdm{'massnu-length':<1>}")
 cosmo.set_reparam (Nc.HICosmoDEReparamCMB.new (cosmo.len ()))
@@ -63,14 +64,20 @@ cosmo.props.massnu  = massnu_v
 #
 #  Printing the parameters used.
 #
-print "# Model parameters: ", 
+print "# Model parameters: "
 cosmo.params_log_all ()
 
 #
 #  Printing some distances up to redshift 1.0.
 #
-for i in range (0, 10):
-  z  = 1.0 / 9.0 * i
-  cd = cosmo.RH_Mpc () * dist.comoving (cosmo, z)
-  print "% 10.8f % 20.15g" % (z, cd)
+N      = 20
+RH_Mpc = cosmo.RH_Mpc ()
+
+for i in range (0, N):
+  z  = 1.0 / (N - 1.0) * i
+  Dc = dist.comoving (cosmo, z)
+  dc = RH_Mpc * Dc
+  
+  print "% 10.8f % 22.15g [c/H0] % 22.15g [Mpc]" % (z, Dc, dc)
+
 

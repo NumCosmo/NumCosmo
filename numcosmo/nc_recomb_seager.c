@@ -759,10 +759,12 @@ _nc_recomb_seager_prepare (NcRecomb *recomb, NcHICosmo *cosmo)
       ncm_spline_set_func (recomb_seager->Xe_reion_s, NCM_SPLINE_FUNCTION_SPLINE,
                            &F, lambdai, lambdaf, 0, recomb->prec);
 
+      ncm_spline_clear (&recomb_seager->Xe_s);
       recomb_seager->Xe_s = ncm_spline_ref (recomb_seager->Xe_reion_s);
     }
     else
     {
+      ncm_spline_clear (&recomb_seager->Xe_s);
       recomb_seager->Xe_s = ncm_spline_ref (recomb_seager->Xe_recomb_s);
     }  
     

@@ -30,7 +30,9 @@ while (my $file = shift(@ARGV)) {
                 });
 //]]>
 </script>
-<script type="text/javascript" src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS_HTML"></script> 
+<script type="text/javascript" async="async"
+  src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS_HTML">
+</script>
 ENDSCRIPT
   my $mathjax = $parser->parse_balanced_chunk ($mathjax_chunk);
   $heads[0]->appendChild ($mathjax);
