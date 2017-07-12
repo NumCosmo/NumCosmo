@@ -142,13 +142,13 @@ plt.xscale('log')
 plt.yscale('log')
 plt.plot (x_a, Xe_a, 'r', label="Recombination")
 plt.plot (x_a, Xefi_a, 'b--', label="Equilibrium")
-plt.xlabel('$x$')
+plt.xlabel('$1+z$')
 plt.ylabel('$X_{e^-}$')
-plt.legend(loc=2)
+plt.legend(loc=3)
 plt.xlim(1e4, 1e2)
 plt.ylim(1e-4,2)
 
-plt.savefig ("recomb_Xe.png")
+plt.savefig ("recomb_Xe.svg")
 
 
 plt.clf ()
@@ -165,14 +165,13 @@ plt.plot (x_a, XHII_a, 'g', label=r'$X_\mathrm{HII}$')
 plt.plot (x_a, XHeI_a, 'b', label=r'$X_\mathrm{HeI}$')
 plt.plot (x_a, XHeII_a, 'y', label=r'$X_\mathrm{HeII}$')
 plt.plot (x_a, XHeIII_a, 'm', label=r'$X_\mathrm{HeIII}$')
-plt.xlabel(r'$x$')
+plt.xlabel(r'$1+z$')
 plt.ylabel(r'$X_*$')
 plt.legend(loc=6)
 
-# plt.ylim([1e-24,1.1])
 plt.xlim(1e4,1e2)
 
-plt.savefig ("recomb_eq_fractions.png")
+plt.savefig ("recomb_eq_fractions.svg")
 
 plt.clf ()
 
@@ -183,7 +182,8 @@ plt.clf ()
 (lambdam, lambdal, lambdau) = recomb.v_tau_lambda_features (cosmo, 2.0 * log (10.0))
 
 plt.title ("Visibility Function and Derivatives")
-plt.xscale('log')
+plt.xscale ('log')
+plt.xlabel ('$1+z$')
 plt.plot (x_a, v_tau_a, 'r', label=r'$v_\tau$')
 plt.plot (x_a, dv_tau_dlambda_a, 'b-', label=r'$\frac{1}{10}\frac{dv_\tau}{d\lambda}$')
 plt.plot (x_a, d2v_tau_dlambda2_a, 'g--', label=r'$\frac{1}{200}\frac{d^2v_\tau}{d\lambda^2}$')
@@ -209,19 +209,19 @@ plt.annotate (r'$v_\tau=10^{-2}v_\tau^{max}$, $z=%5.2f$' % (exp(-lambdau)-1), xy
 v_tau_l = -recomb.v_tau (cosmo, lambdal)
 
 plt.annotate (r'$v_\tau=10^{-2}v_\tau^{max}$, $z=%5.2f$' % (exp(-lambdal)-1), xy=(exp(-lambdal), v_tau_l),  xycoords='data',
-              xytext=(0.65, 0.25), textcoords='axes fraction',
+              xytext=(0.60, 0.25), textcoords='axes fraction',
               arrowprops=dict(facecolor='black', shrink=0.05))
 
 #
 #  Annotating value of lambda (tau == 1).
 #
 
-lambdastar = recomb.get_tau_lambda (cosmo)
+lambdastar = recomb.get_tau_drag_lambda (cosmo)
 
 plt.annotate (r'$z^\star=%5.2f$' % (exp(-lambdastar)-1), 
               xy=(0.65, 0.95), xycoords='axes fraction')
 
-plt.savefig ("recomb_v_tau.png")
+plt.savefig ("recomb_v_tau.svg")
 
 plt.clf ()
 
@@ -233,11 +233,12 @@ plt.title (r'$d\tau/d\lambda$')
 plt.xscale('log')
 plt.yscale('log')
 plt.plot (x_dtau_a, dtau_dlambda_a, 'r', label=r'$\vert\mathrm{d}\tau/\mathrm{d}\lambda\vert$')
-plt.plot (x_dtau_a, x_E_a, 'b', label=r'$x/E$')
-plt.plot (x_dtau_a, (x_Etaub_a), 'g', label=r'$x/(E\bar{\tau})$')
+plt.plot (x_dtau_a, x_E_a, 'b', label=r'$(1+z)/E(z)$')
+plt.plot (x_dtau_a, (x_Etaub_a), 'g', label=r'$(1+z)/(E(z)\bar{\tau})$')
 
+plt.xlabel ('$1 + z$')
 plt.legend()
 plt.legend(loc=2)
 
-plt.savefig ("recomb_dtau_dlambda.png")
+plt.savefig ("recomb_dtau_dlambda.svg")
 
