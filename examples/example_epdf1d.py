@@ -21,11 +21,12 @@ from gi.repository import NumCosmoMath as Ncm
 #  any other library function.
 #
 Ncm.cfg_init ()
+
 np.random.seed (0)
 
 #
 # n = number of points to reconstruct the distribution
-# Sampling from a beta distribution
+# Sampling from a Gaussian distribution
 #
 cut_l  = -0.4
 cut_u  =  0.4
@@ -34,15 +35,17 @@ sigma1 =  0.2
 peak2  = -0.5
 sigma2 =  0.2
 
+# Cumulative distribution function
 def true_cdf (x):
   return 0.5 * (norm.cdf (x, peak1, sigma1) + norm.cdf (x, peak2, sigma2))
 
-cdf_cut = true_cdf (cut_l) + 1.0 - true_cdf (cut_u)
+
+cdf_cut_l = true_cdf (cut_l)
+cdf_cut_u = 1.0 - true_cdf (cut_u)
+cdf_cut   = cdf_cut_l + cdf_cut_u
 rbnorm = 1.0 - cdf_cut
 
-def true_inv_cdf (u):
-  return norm.ppf (u, 0.0, 1.0)
-  
+# Probability density function  
 def true_p (x):
   return 0.5 * (norm.pdf (x, peak1, sigma1) + norm.pdf (x, peak2, sigma2)) / rbnorm
 
@@ -108,39 +111,34 @@ for i in range (1000):
   inv_pdf_a.append (epdf.eval_inv_pdf (u))
   inv_pdf_rot_a.append (epdf_rot.eval_inv_pdf (u))
 
-  #a1 = epdf.eval_inv_pdf (u)
-  #a2 = beta.ppf (u, a = 2.0, b = 5.0)
-  #print u, a1, a2, math.fabs ((a1 - a2) / a2)
-
-
 #
-# Plotting the cumulative distribution.
+# Plotting the probability density function.
 #
 fig = plot.subplot ()
 plot.title ("PDF")
-fig.plot (x_a, p_a, label = "autobw")
-fig.plot (x_a, p_rot_a, label = "rotbw")
+fig.plot (x_a, p_a, label = "auto-bw")
+fig.plot (x_a, p_rot_a, label = "RoT-bw")
 fig.plot (x_a, true_p (x_a), label = "true dist")
 
-fig.legend(loc = "upper right")
+fig.legend(loc = "upper center")
 
-plot.savefig ("epdf1d_pdf.pdf")
+plot.savefig ("epdf1d_pdf.svg")
 plot.clf ()
 
 #
-# Plotting the cumulative distribution.
+# Plotting the relative difference of the reconstructed distributions and the true one.
 #
 fig = plot.subplot ()
-plot.title ("PDF diff")
-fig.plot (x_a, np.abs (np.array ((p_a - true_p (x_a)) / true_p (x_a))), label = "autobw")
-fig.plot (x_a, np.abs (np.array ((p_rot_a - true_p (x_a)) / true_p (x_a))), label = "rotbw")
+plot.title ("PDF relative difference with respect to the true distribution")
+fig.plot (x_a, np.abs (np.array ((p_a - true_p (x_a)) / true_p (x_a))), label = "auto-bw")
+fig.plot (x_a, np.abs (np.array ((p_rot_a - true_p (x_a)) / true_p (x_a))), label = "RoT-bw")
 fig.set_ylim ([1.0e-6, 1.0e1])
 fig.grid ()
 
 fig.legend(loc = "upper right")
 fig.set_yscale ("log")
 
-plot.savefig ("epdf1d_pdf_diff.pdf")
+plot.savefig ("epdf1d_pdf_diff.svg")
 plot.clf ()
 
 #
@@ -148,13 +146,28 @@ plot.clf ()
 #
 fig = plot.subplot ()
 plot.title ("CDF")
-fig.plot (x_a, pdf_a, label = "autobw")
-fig.plot (x_a, pdf_rot_a, label = "rotbw")
-fig.plot (x_a, (true_cdf (x_a) - cdf_cut) / rbnorm, label = "true dist")
+fig.plot (x_a, pdf_a, label = "auto-bw")
+fig.plot (x_a, pdf_rot_a, label = "RoT-bw")
+fig.plot (x_a, (true_cdf (x_a) - cdf_cut_l) / rbnorm, label = "true dist")
+
+fig.legend(loc = "upper left")
+
+plot.savefig ("epdf1d_cdf.svg")
+plot.clf ()
+
+#
+# Plotting the relative difference of the reconstructed cumulative distributions and the true one.
+#
+fig = plot.subplot ()
+plot.title ("CDF relative difference with respect to the true distribution")
+fig.plot (x_a, np.abs (pdf_a     / ( (true_cdf (x_a) - cdf_cut_l) / rbnorm ) - 1.0), label = "auto-bw")
+fig.plot (x_a, np.abs (pdf_rot_a / ( (true_cdf (x_a) - cdf_cut_l) / rbnorm ) - 1.0), label = "RoT-bw")
+fig.grid ()
 
 fig.legend(loc = "upper right")
+fig.set_yscale ("log")
 
-plot.savefig ("epdf1d_cdf.pdf")
+plot.savefig ("epdf1d_cdf_diff.svg")
 plot.clf ()
 
 #
@@ -162,12 +175,11 @@ plot.clf ()
 #
 fig = plot.subplot ()
 plot.title ("Inverse CDF")
-fig.plot (u_a, inv_pdf_a, label = "autobw")
-fig.plot (u_a, inv_pdf_rot_a, label = "rotbw")
-fig.plot (u_a, beta.ppf (u_a, a = 2.0, b = 5.0), label = "true dist")
+fig.plot (u_a, inv_pdf_a, label = "auto-bw")
+fig.plot (u_a, inv_pdf_rot_a, label = "RoT-bw")
 
-fig.legend(loc = "upper right")
+fig.legend(loc = "upper left")
 
-plot.savefig ("epdf1d_invcdf.pdf")
+plot.savefig ("epdf1d_invcdf.svg")
 plot.clf ()
 
