@@ -9,7 +9,7 @@ except:
 
 import sys
 import time
-from math import *
+import math
 import numpy as np
 import matplotlib
 import matplotlib.pyplot as plt
@@ -60,10 +60,12 @@ print "# Omega_X0: % 22.15g" % (cosmo.E2Omega_de (0.0))
 ps_cbe  = Nc.PowspecMLCBE.new ()
 ps_eh   = Nc.PowspecMLTransfer.new (Nc.TransferFuncEH.new ())
 
+# Redshift bounds
 z_min = 0.0
 z_max = 2.0
 zdiv  = 0.49999999999
 
+# Mode bounds
 k_min = 1.0e-5
 k_max = 1.0e3
 
@@ -90,43 +92,47 @@ for z in np.arange (z_min, z_max, (z_max - z_min) * zdiv):
   k_a = []
   Pk_eh_a = []
   Pk_cbe_a = []
-  for lnk in np.arange (log (ps_cbe.props.kmin), log (ps_cbe.props.kmax), log (k_max / k_min) / nk):
-    k = exp (lnk)
+  for lnk in np.arange (math.log (ps_cbe.props.kmin), math.log (ps_cbe.props.kmax), math.log (k_max / k_min) / nk):
+    k = math.exp (lnk)
     k2 = k * k
     k3 = k2 * k
     k_a.append (k)
     Pk_cbe_a.append (k3 * ps_cbe.eval (cosmo, z, k))
     Pk_eh_a.append (k3 * ps_eh.eval (cosmo, z, k))
-    #print k, ps_eh.eval (cosmo, z, k) / ps_cbe.eval (cosmo, z, k)
   
   plt.plot (k_a, Pk_cbe_a, label = r'CLASS $z = %.2f$' % (z))
   plt.plot (k_a, Pk_eh_a, label  = r'EH    $z = %.2f$' % (z))
 
+plt.xlabel ('$k \; [\mathrm{Mpc}^{-1}]$')
+plt.ylabel ('$k^3P(k, z)$')
 plt.legend (loc="lower right")
-plt.xscale('log')
-plt.yscale('log')
-plt.savefig ("ps_cbe_eh.png")
+plt.xscale ('log')
+plt.yscale ('log')
+plt.title ('Linear Matter Power Spectrum')  
+plt.savefig ("ps_cbe_eh.svg")
 plt.clf ()
 
 for z in np.arange (z_min, z_max, (z_max - z_min) * zdiv * 0.5):
   k_a = []
   Pk_eh_a = []
   Pk_cbe_a = []
-  for lnk in np.arange (log (ps_cbe.props.kmin), log (ps_cbe.props.kmax), log (k_max / k_min) / nk):
-    k = exp (lnk)
+  for lnk in np.arange (math.log (ps_cbe.props.kmin), math.log (ps_cbe.props.kmax), math.log (k_max / k_min) / nk):
+    k = math.exp (lnk)
     k2 = k * k
     k3 = k2 * k
     k_a.append (k)
     Pk_cbe_a.append (k3 * ps_cbe.eval (cosmo, z, k))
     Pk_eh_a.append (k3 * ps_eh.eval (cosmo, z, k))
-    #print k, ps_eh.eval (cosmo, z, k) / ps_cbe.eval (cosmo, z, k)
-  
-  plt.plot (k_a, np.abs (1.0 - np.array (Pk_eh_a) / np.array (Pk_cbe_a)), label = r'CLASS EH cmp $z = %.2f$' % (z))
+ 
+  plt.plot (k_a, np.abs (1.0 - np.array (Pk_eh_a) / np.array (Pk_cbe_a)), label = r'$z = %.2f$' % (z))
 
+plt.xlabel ('$k \; [\mathrm{Mpc}^{-1}]$')
+plt.ylabel ('$1 - P_{EH}(k, z)/P_{CLASS}(k, z)$')
 plt.legend (loc="lower right")
-plt.xscale('log')
-plt.yscale('log')
-plt.savefig ("ps_diff_cbe_eh.png")
+plt.xscale ('log')
+plt.yscale ('log')
+plt.title ('Relative difference between the EH and CLASS PS')
+plt.savefig ("ps_diff_cbe_eh.svg")
 plt.clf ()
 
 #
@@ -146,49 +152,59 @@ print "# CBE sigma8 = % 20.15g, EH sigma8 = % 20.15g" % (psf_cbe.eval_sigma (0.0
 print "# kmin % 20.15g kmax % 20.15g" % (ps_cbe.props.kmin, ps_cbe.props.kmax)
 print "# Rmin % 20.15g Rmax % 20.15g" % (psf_cbe.get_r_min (), psf_cbe.get_r_max ())
 
-lnRmin = log (psf_cbe.get_r_min ())
-lnRmax = log (psf_cbe.get_r_max ())
+lnRmin = math.log (psf_cbe.get_r_min ())
+lnRmax = math.log (psf_cbe.get_r_max ())
 
+# Variance of the matter density contrast
 for z in np.arange (z_min, z_max, (z_max - z_min) * zdiv):
   Rh_a = []
   sigma_eh_a  = []
   sigma_cbe_a = []
   for lnR in np.arange (lnRmin, lnRmax, (lnRmax - lnRmin) / nR):
-    R  = exp (lnR)
+    R  = math.exp (lnR)
     Rh = R * cosmo.h ()
     
     Rh_a.append (Rh)
     sigma_cbe_a.append (psf_cbe.eval_sigma_lnr (z, lnR))
     sigma_eh_a.append (psf_eh.eval_sigma_lnr (z, lnR))
 
-  plt.plot (Rh_a, sigma_cbe_a, label = r'$\sigma$ CLASS $z = %.2f$' % (z))
-  plt.plot (Rh_a, sigma_eh_a, label = r'$\sigma$ EH    $z = %.2f$' % (z))
+  plt.plot (Rh_a, sigma_cbe_a, label = r'CLASS $z = %.2f$' % (z))
+  plt.plot (Rh_a, sigma_eh_a, label = r'EH $z = %.2f$' % (z))
 
+plt.xlabel ('$R \; [h^{-1}\mathrm{Mpc}]$')
+plt.ylabel ('$\sigma_M (R, z)$')
 plt.legend (loc="lower left")
 plt.xscale('log')
 plt.yscale('log')
-plt.savefig ("ps_var_cbe_eh.png")
+plt.title ('Variance of the matter density contrast')
+plt.savefig ("ps_var_cbe_eh.svg")
 plt.clf ()
 
+# Derivative of the variance of the matter density contrast with respect to the scale R
 for z in np.arange (z_min, z_max, (z_max - z_min) * zdiv):
   Rh_a = []
   dvar_eh_a   = []
   dvar_cbe_a  = []
   for lnR in np.arange (lnRmin, lnRmax, (lnRmax - lnRmin) / nR):
-    R  = exp (lnR)
+    R  = math.exp (lnR)
     Rh = R * cosmo.h ()
     
     Rh_a.append (Rh)
     dvar_cbe_a.append (psf_cbe.eval_dlnvar_dlnr (z, lnR))
     dvar_eh_a.append (psf_eh.eval_dlnvar_dlnr (z, lnR))
 
-  plt.plot (Rh_a, dvar_cbe_a, label  = r'$\frac{\mathrm{d}\ln\sigma^2}{\mathrm{d}\ln{}R}$ CLASS $z = %.2f$' % (z))
-  plt.plot (Rh_a, dvar_eh_a, label   = r'$\frac{\mathrm{d}\ln\sigma^2}{\mathrm{d}\ln{}R}$ EH    $z = %.2f$' % (z))
+  plt.plot (Rh_a, dvar_cbe_a, label  = r'CLASS $z = %.2f$' % (z))
+  plt.plot (Rh_a, dvar_eh_a, label   = r'EH    $z = %.2f$' % (z))
 
+plt.xlabel (r'$R \; [h^{-1}\mathrm{Mpc}]$')
+plt.ylabel (r'$\frac{\mathrm{d}\ln\sigma^2_M(R,z)}{\mathrm{d}\ln{}R}$')
+plt.title ("Derivative of the matter density contrast")
 plt.legend (loc="lower left")
 plt.xscale('log')
-plt.savefig ("ps_dvar_cbe_eh.png")
+plt.savefig ("ps_dvar_cbe_eh.svg")
 plt.clf ()
+
+# Non-linear matter power spectrum: HALOFIT
 
 zmaxnl = 10.0
 z_max  = zmaxnl
@@ -205,8 +221,8 @@ for z in np.arange (z_min, z_max, (z_max - z_min) * zdiv):
   k_a = []
   Pk_cbe_a = []
   Pknl_cbe_a = []
-  for lnk in np.arange (log (ps_cbe.props.kmin), log (ps_cbe.props.kmax), log (k_max / k_min) / nk):
-    k = exp (lnk)
+  for lnk in np.arange (math.log (ps_cbe.props.kmin), math.log (ps_cbe.props.kmax), math.log (k_max / k_min) / nk):
+    k = math.exp (lnk)
     k2 = k * k
     k3 = k2 * k
     k_a.append (k)
@@ -216,10 +232,13 @@ for z in np.arange (z_min, z_max, (z_max - z_min) * zdiv):
   plt.plot (k_a, Pk_cbe_a, label = r'CLASS $z = %.2f$' % (z))
   plt.plot (k_a, Pknl_cbe_a, label  = r'CLASS+HaloFit $z = %.2f$' % (z))
 
+plt.xlabel (r'$k \; [\mathrm{Mpc}^{-1}]$')
+plt.ylabel (r'$k^3 P(k, z)$')
+plt.title ("Linear and nonlinear matter power spectrum")
 plt.legend (loc="lower right")
 plt.xscale('log')
 plt.yscale('log')
-plt.savefig ("ps_cbe_halofit.png")
+plt.savefig ("ps_cbe_halofit.svg")
 plt.clf ()
 
 psf_cbenl = Ncm.PowspecFilter.new (pshf, Ncm.PowspecFilterType.TOPHAT)
