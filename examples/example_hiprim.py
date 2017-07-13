@@ -79,7 +79,6 @@ cosmo.add_submodel (prim)
 #
 # Preparing the Class backend object
 #
-#Bcbe.prepare (prim, reion, cosmo)
 Bcbe.prepare (cosmo)
 
 Cls1 = Ncm.Vector.new (lmax + 1)
@@ -103,7 +102,7 @@ Cls1_a = ell * (ell + 1.0) * Cls1_a
 Cls2_a = ell * (ell + 1.0) * Cls2_a
 
 #
-#  Ploting ionization history.
+#  Ploting the TT angular power spcetrum
 #
 
 plt.title (r'Modified and non-modified $C_\ell$')
