@@ -79,7 +79,7 @@ typedef gdouble (*NcCurveF) (NcCurve *curve, const gdouble x);
 
 /*
  * The class struct contains just one element `f' that must be assigned
- * by implementations. The first item is just the parent object structure.
+ * by implementations. The first item is just the parent class structure.
  * 
  */
 struct _NcCurveClass
