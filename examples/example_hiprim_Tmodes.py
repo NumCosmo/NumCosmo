@@ -22,8 +22,9 @@ from gi.repository import NumCosmoMath as Ncm
 Ncm.cfg_init ()
 
 #
-# Script params
+# Script parameters
 #
+# Maximum multipole
 lmax = 2500
 
 #
@@ -46,23 +47,16 @@ cbe_prec.props.k_per_decade_primordial = 50.0
 cbe = Nc.CBE.prec_new (cbe_prec)
 
 #
-#  Set precision parameters
-#
-#ser.set_property_from_key_file (cbe_prec, "cl_ref.pre")
-
-#
 #  New CLASS backend object
 #
 Bcbe = Nc.HIPertBoltzmannCBE.full_new (cbe)
 Bcbe.set_TT_lmax (lmax)
+# Setting which CMB data to use
 Bcbe.set_target_Cls (Nc.DataCMBDataType.TT)
+# Setting if the lensed Cl's are going to be used or not.
 Bcbe.set_lensed_Cls (True)
+# Setting if the tensor contribution is going to be used or not. 
 Bcbe.set_tensor (True)
-
-#
-# Makes sure that Bcbe contain the default values
-#
-#Bcbe.props.precision.assert_default ()
 
 #
 #  New homogeneous and isotropic cosmological model NcHICosmoDEXcdm
@@ -85,7 +79,6 @@ cosmo.add_submodel (prim)
 #
 # Preparing the Class backend object
 #
-#Bcbe.prepare (prim, reion, cosmo)
 Bcbe.prepare (cosmo)
 
 Cls1 = Ncm.Vector.new (lmax + 1)
@@ -109,18 +102,18 @@ Cls1_a = ell * (ell + 1.0) * Cls1_a
 Cls2_a = ell * (ell + 1.0) * Cls2_a
 
 #
-#  Ploting ionization history.
+#  Ploting the TT angular power spcetrum
 #
 
 plt.title (r'With and without tensor contribution to $C_\ell$')
 plt.xscale('log')
 plt.plot (ell, Cls1_a, 'r', label="with-T")
-plt.plot (ell, Cls2_a, 'b--', label="wouthout-T")
+plt.plot (ell, Cls2_a, 'b--', label="without-T")
 
 plt.xlabel(r'$\ell$')
 plt.ylabel(r'$C_\ell$')
 plt.legend(loc=2)
 
-plt.savefig ("hiprim_tensor_Cls.png")
+plt.savefig ("hiprim_tensor_Cls.svg")
 
 plt.clf ()

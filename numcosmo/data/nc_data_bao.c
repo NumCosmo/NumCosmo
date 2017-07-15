@@ -26,7 +26,7 @@
 /**
  * SECTION:nc_data_bao
  * @title: NcDataBao
- * @short_description: Helper functions for instantiating BAO data.
+ * @short_description: Helper functions for instantiating BAO data
  *
  * FIXME
  * 
