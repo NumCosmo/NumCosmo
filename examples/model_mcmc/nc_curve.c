@@ -96,48 +96,7 @@ nc_curve_init (NcCurve *curve)
    * 
    */
   curve->priv->xl = 0.0;
-  curve->priv->xu = 0.0;
-  
-}
-
-/*
- * Here we must de-allocate any memory allocated *inside* gobject framework,
- * i.e., we must unref any outside object contained in our object.
- * 
- * Nothing to do!
- * 
- */
-static void
-_nc_curve_dispose (GObject *object)
-{
-
-  /* 
-   * The following comment is always included to remark that at this point the parent
-   * method must be called, chaining down the function call, i.e., first we finalize
-   * the properties of the child, if any, then the parent and parent's parent, etc.
-   * 
-   */
-  /* Chain up : end */
-  G_OBJECT_CLASS (nc_curve_parent_class)->dispose (object);
-}
-
-/*
- * Here we must de-allocate any memory allocated *outside* gobject framework.
- * Nothing to do!
- * 
- */
-static void
-_nc_curve_finalize (GObject *object)
-{
-
-  /* 
-   * The following comment is always included to remark that at this point the parent
-   * method must be called, chaining down the function call, i.e., first we finalize
-   * the properties of the child, if any, then the parent and parent's parent, etc.
-   * 
-   */
-  /* Chain up : end */
-  G_OBJECT_CLASS (nc_curve_parent_class)->finalize (object);
+  curve->priv->xu = 0.0;  
 }
 
 /*
@@ -186,6 +145,46 @@ _nc_curve_get_property (GObject *object, guint prop_id, GValue *value, GParamSpe
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
       break;
   }
+}
+
+/*
+ * Here we must de-allocate any memory allocated *inside* gobject framework,
+ * i.e., we must unref any outside object contained in our object.
+ * 
+ * Nothing to do!
+ * 
+ */
+static void
+_nc_curve_dispose (GObject *object)
+{
+
+  /* 
+   * The following comment is always included to remark that at this point the parent
+   * method must be called, chaining down the function call, i.e., first we finalize
+   * the properties of the child, if any, then the parent and parent's parent, etc.
+   * 
+   */
+  /* Chain up : end */
+  G_OBJECT_CLASS (nc_curve_parent_class)->dispose (object);
+}
+
+/*
+ * Here we must de-allocate any memory allocated *outside* gobject framework.
+ * Nothing to do!
+ * 
+ */
+static void
+_nc_curve_finalize (GObject *object)
+{
+
+  /* 
+   * The following comment is always included to remark that at this point the parent
+   * method must be called, chaining down the function call, i.e., first we finalize
+   * the properties of the child, if any, then the parent and parent's parent, etc.
+   * 
+   */
+  /* Chain up : end */
+  G_OBJECT_CLASS (nc_curve_parent_class)->finalize (object);
 }
 
 /*
@@ -276,7 +275,7 @@ nc_curve_class_init (NcCurveClass *klass)
                                                         NULL,
                                                         "x lower bound",
                                                         -G_MAXDOUBLE, G_MAXDOUBLE, 0.0,
-                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
   /*
    * The property PROP_XU is allowed in range [-G_MAXDOUBLE, G_MAXDOUBLE]
    * and its default value is 1.0. This property can be set only during
@@ -289,7 +288,7 @@ nc_curve_class_init (NcCurveClass *klass)
                                                         NULL,
                                                         "x upper bound",
                                                         -G_MAXDOUBLE, G_MAXDOUBLE, 1.0,
-                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   /* 
    * Check for errors in parameters initialization.
@@ -297,7 +296,7 @@ nc_curve_class_init (NcCurveClass *klass)
    */
   ncm_model_class_check_params_info (model_class);
 
-  nc_curve_set_f_impl (klass, _nc_curve_f);
+  curve_class = &_nc_curve_f;
 }
 
 /*
@@ -308,7 +307,8 @@ nc_curve_class_init (NcCurveClass *klass)
 static gdouble 
 _nc_curve_f (NcCurve *curve, const gdouble x)
 {
-  g_error ("nc_curve_f: model `%s' does not implement this function.", G_OBJECT_TYPE_NAME (curve)); 
+  g_error ("nc_curve_f: model `%s' does not implement this function.", 
+           G_OBJECT_TYPE_NAME (curve)); 
   return 0.0;
 }
 
@@ -325,7 +325,7 @@ _nc_curve_f (NcCurve *curve, const gdouble x)
  * Sets the implementation of the curve $f(x)$.
  *
  */
-NCM_MODEL_SET_IMPL_FUNC(NC_CURVE, NcCurve, nc_curve, NcCurveF, f)
+NCM_MODEL_SET_IMPL_FUNC (NC_CURVE, NcCurve, nc_curve, NcCurveF, f)
 
 /*
  * This defines a generic constructor for the subclasses 
