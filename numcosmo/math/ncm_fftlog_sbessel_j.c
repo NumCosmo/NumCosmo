@@ -170,7 +170,7 @@ _ncm_fftlog_sbessel_j_get_Ym (NcmFftlog *fftlog, gpointer Ym_0)
 
     U = cexp ((lngamma_rho_up.val - lngamma_rho_dw.val) + I * (lngamma_theta_up.val - lngamma_theta_dw.val));
 
-    printf ("% 22.15g % 22.15g % 22.15g % 22.15g\n", lngamma_rho_up.val, lngamma_rho_dw.val, lngamma_theta_up.val, lngamma_theta_dw.val);
+    /*printf ("% 22.15g % 22.15g % 22.15g % 22.15g\n", lngamma_rho_up.val, lngamma_rho_dw.val, lngamma_theta_up.val, lngamma_theta_dw.val);*/
     
     Ym_base[i] = pi_sqrt * two_x_m1 * U;
   }
