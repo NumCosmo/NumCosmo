@@ -61,6 +61,8 @@ struct _NcmFftlogClass
   void (*get_Ym) (NcmFftlog *fftlog, gpointer Ym_0);
 };
 
+typedef gdouble (*NcmFftlogFunc) (const gdouble x, gpointer user_data);
+
 struct _NcmFftlog
 {
   /*< private >*/
@@ -119,7 +121,8 @@ gdouble ncm_fftlog_get_padding (NcmFftlog *fftlog);
 void ncm_fftlog_set_length (NcmFftlog *fftlog, gdouble Lk);
 
 void ncm_fftlog_eval_by_vector (NcmFftlog *fftlog, NcmVector *Fk);
-void ncm_fftlog_eval_by_function (NcmFftlog *fftlog, gsl_function *Fk);
+void ncm_fftlog_eval_by_function (NcmFftlog *fftlog, NcmFftlogFunc Fk, gpointer user_data);
+void ncm_fftlog_eval_by_gsl_function (NcmFftlog *fftlog, gsl_function *Fk);
 
 void ncm_fftlog_prepare_splines (NcmFftlog *fftlog);
 
@@ -130,7 +133,8 @@ NcmSpline *ncm_fftlog_peek_spline_Gr (NcmFftlog *fftlog, guint nderiv);
 
 gdouble ncm_fftlog_eval_output (NcmFftlog *fftlog, guint nderiv, const gdouble lnr);
 
-void ncm_fftlog_calibrate_size (NcmFftlog *fftlog, gsl_function *Fk, gdouble reltol);
+void ncm_fftlog_calibrate_size (NcmFftlog *fftlog, NcmFftlogFunc Fk, gpointer user_data, const gdouble reltol);
+void ncm_fftlog_calibrate_size_gsl (NcmFftlog *fftlog, gsl_function *Fk, const gdouble reltol);
 
 G_INLINE_FUNC guint ncm_fftlog_get_size (NcmFftlog *fftlog);
 G_INLINE_FUNC gint ncm_fftlog_get_full_size (NcmFftlog *fftlog);

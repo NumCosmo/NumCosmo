@@ -2436,6 +2436,21 @@ nc_hicosmo_Vexp_xbe (NcHICosmoVexp *Vexp)
 }
 
 /**
+ * nc_hicosmo_Vexp_xbc:
+ * @Vexp: a #NcHICosmoVexp
+ *
+ * FIXME
+ *
+ * Returns: FIXME
+ */
+gdouble 
+nc_hicosmo_Vexp_xbc (NcHICosmoVexp *Vexp)
+{
+	_nc_hicosmo_Vexp_prepare (Vexp);
+  return exp (-Vexp->priv->alpha_b + Vexp->priv->alpha_0c);
+}
+
+/**
  * nc_hicosmo_Vexp_x_tau:
  * @Vexp: a #NcHICosmoVexp
  * @tau: $\tau$

@@ -91,6 +91,7 @@ gdouble nc_hicosmo_Vexp_tau_qt_c (NcHICosmoVexp *Vexp);
 gdouble nc_hicosmo_Vexp_tau_qt_e (NcHICosmoVexp *Vexp);
 
 gdouble nc_hicosmo_Vexp_xbe (NcHICosmoVexp *Vexp);
+gdouble nc_hicosmo_Vexp_xbc (NcHICosmoVexp *Vexp);
 
 gdouble nc_hicosmo_Vexp_x_tau (NcHICosmoVexp *Vexp, const gdouble tau);
 

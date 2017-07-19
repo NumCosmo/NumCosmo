@@ -92,6 +92,7 @@ ncm_sources = \
 	math/ncm_mpsf_sbessel_int.c          \
 	math/ncm_mpsf_0F1.c                  \
 	math/ncm_fftlog.c                    \
+	math/ncm_fftlog_sbessel_j.c          \
 	math/ncm_fftlog_tophatwin2.c         \
 	math/ncm_fftlog_gausswin2.c          \
 	math/ncm_sparam.c                    \
@@ -199,6 +200,7 @@ ncm_headers =                                \
 	math/ncm_mpsf_sbessel_int.h          \
 	math/ncm_mpsf_0F1.h                  \
 	math/ncm_fftlog.h                    \
+	math/ncm_fftlog_sbessel_j.h          \
 	math/ncm_fftlog_tophatwin2.h         \
 	math/ncm_fftlog_gausswin2.h          \
 	math/ncm_sparam.h                    \

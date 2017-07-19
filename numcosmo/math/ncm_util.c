@@ -796,7 +796,7 @@ ncm_numdiff_2 (gsl_function *F, gdouble *ofx, const gdouble x, const gdouble ho,
   else
     fx = *ofx;
 
-  if (h == 0.0)
+  if (h <= 0.0)
     g_error ("ncm_numdiff_2: Step h too small");
 
   hh = h;
