@@ -47,10 +47,8 @@ mset = Ncm.MSet ()
 mset.set (cosmo)
 
 #
-#  Setting parameters Omega_c and w to be fitted and change parameter
-#  Omega_x -> Omega_k.
+#  Setting parameters Omega_c and w to be fitted.
 #
-##cosmo.de_omega_x2omega_k ()
 cosmo.props.Omegac_fit = True
 cosmo.props.w_fit = True
 
