@@ -35,6 +35,11 @@
  * (This is a gtk-doc comment, which always start with two **)
  */
 
+#ifdef HAVE_CONFIG_H
+#  include "config.h"
+#endif /* HAVE_CONFIG_H */
+#include "build_cfg.h"
+
 #include "nc_curve.h"
 
 /*
@@ -53,7 +58,8 @@ struct _NcCurvePrivate
 /*
  * Properties enumerator, note that we added a last item PROP_SIZE,
  * this is useful to obtain the actual number of properties in the
- * object without hard coding it.
+ * object without hard coding it. PROP_0 is a special property of
+ * the GObject system we should always be there.
  * 
  */
 enum
@@ -71,7 +77,7 @@ enum
  * ABSTRACT version of the macro creates a GType that cannot be instantiated
  * this means that to use this object we *must* define a child. 
  * 
- * The last argument 
+ * The last argument provides the GType of the parent object.
  * 
  */
 G_DEFINE_ABSTRACT_TYPE (NcCurve, nc_curve, NCM_TYPE_MODEL);
@@ -90,48 +96,7 @@ nc_curve_init (NcCurve *curve)
    * 
    */
   curve->priv->xl = 0.0;
-  curve->priv->xu = 0.0;
-  
-}
-
-/*
- * Here we must de-allocate any memory allocated *inside* gobject framework,
- * i.e., we must unref any outside object contained in our object.
- * 
- * Nothing to do!
- * 
- */
-static void
-_nc_curve_dispose (GObject *object)
-{
-
-  /* 
-   * The following comment is always included to remark that at this point the parent
-   * method must be called, chaining down the function call, i.e., first we finalize
-   * the properties of the child, if any, then the parent and parent's parent, etc.
-   * 
-   */
-  /* Chain up : end */
-  G_OBJECT_CLASS (nc_curve_parent_class)->dispose (object);
-}
-
-/*
- * Here we must de-allocate any memory allocated *outside* gobject framework.
- * Nothing to do!
- * 
- */
-static void
-_nc_curve_finalize (GObject *object)
-{
-
-  /* 
-   * The following comment is always included to remark that at this point the parent
-   * method must be called, chaining down the function call, i.e., first we finalize
-   * the properties of the child, if any, then the parent and parent's parent, etc.
-   * 
-   */
-  /* Chain up : end */
-  G_OBJECT_CLASS (nc_curve_parent_class)->finalize (object);
+  curve->priv->xu = 0.0;  
 }
 
 /*
@@ -181,6 +146,52 @@ _nc_curve_get_property (GObject *object, guint prop_id, GValue *value, GParamSpe
       break;
   }
 }
+
+/*
+ * Here we must de-allocate any memory allocated *inside* gobject framework,
+ * i.e., we must unref any outside object contained in our object.
+ * 
+ * Nothing to do!
+ * 
+ */
+static void
+_nc_curve_dispose (GObject *object)
+{
+
+  /* 
+   * The following comment is always included to remark that at this point the parent
+   * method must be called, chaining down the function call, i.e., first we finalize
+   * the properties of the child, if any, then the parent and parent's parent, etc.
+   * 
+   */
+  /* Chain up : end */
+  G_OBJECT_CLASS (nc_curve_parent_class)->dispose (object);
+}
+
+/*
+ * Here we must de-allocate any memory allocated *outside* gobject framework.
+ * Nothing to do!
+ * 
+ */
+static void
+_nc_curve_finalize (GObject *object)
+{
+
+  /* 
+   * The following comment is always included to remark that at this point the parent
+   * method must be called, chaining down the function call, i.e., first we finalize
+   * the properties of the child, if any, then the parent and parent's parent, etc.
+   * 
+   */
+  /* Chain up : end */
+  G_OBJECT_CLASS (nc_curve_parent_class)->finalize (object);
+}
+
+/*
+ * Registry the ID in NumCosmo model system.
+ * 
+ */
+NCM_MSET_MODEL_REGISTER_ID (nc_curve, NC_TYPE_CURVE);
 
 /*
  * Prototype of the default implementation.
@@ -264,7 +275,7 @@ nc_curve_class_init (NcCurveClass *klass)
                                                         NULL,
                                                         "x lower bound",
                                                         -G_MAXDOUBLE, G_MAXDOUBLE, 0.0,
-                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
   /*
    * The property PROP_XU is allowed in range [-G_MAXDOUBLE, G_MAXDOUBLE]
    * and its default value is 1.0. This property can be set only during
@@ -277,7 +288,7 @@ nc_curve_class_init (NcCurveClass *klass)
                                                         NULL,
                                                         "x upper bound",
                                                         -G_MAXDOUBLE, G_MAXDOUBLE, 1.0,
-                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
   /* 
    * Check for errors in parameters initialization.
@@ -285,7 +296,7 @@ nc_curve_class_init (NcCurveClass *klass)
    */
   ncm_model_class_check_params_info (model_class);
 
-  nc_curve_set_f_impl (klass, _nc_curve_f);
+  curve_class = &_nc_curve_f;
 }
 
 /*
@@ -296,7 +307,8 @@ nc_curve_class_init (NcCurveClass *klass)
 static gdouble 
 _nc_curve_f (NcCurve *curve, const gdouble x)
 {
-  g_error ("nc_curve_f: model `%s' does not implement this function.", G_OBJECT_TYPE_NAME (curve)); 
+  g_error ("nc_curve_f: model `%s' does not implement this function.", 
+           G_OBJECT_TYPE_NAME (curve)); 
   return 0.0;
 }
 
@@ -313,5 +325,222 @@ _nc_curve_f (NcCurve *curve, const gdouble x)
  * Sets the implementation of the curve $f(x)$.
  *
  */
-NCM_MODEL_SET_IMPL_FUNC(NC_CURVE, NcCurve, nc_curve, NcCurveF, f)
+NCM_MODEL_SET_IMPL_FUNC (NC_CURVE, NcCurve, nc_curve, NcCurveF, f)
 
+/*
+ * This defines a generic constructor for the subclasses 
+ * 
+ */ 
+/**
+ * nc_curve_new_from_name:
+ * @curve_name: #NcCurve child type name
+ * 
+ * Creates a new #NcCurve of the type described by @curve_name.
+ * 
+ * Returns: (transfer full): a new #NcCurve
+ */ 
+NcCurve *
+nc_curve_new_from_name (const gchar *curve_name)
+{
+  /* 
+   * We use the serialization object to transform a string into an instance.
+   * This also allows us to chose the parameters through the string.
+   * 
+   */
+  GObject *obj     = ncm_serialize_global_from_string (curve_name);
+  /*
+   * This gets the GType of this new instance.
+   * 
+   */
+  GType curve_type = G_OBJECT_TYPE (obj);
+
+  /*
+   * Check if the string represent an actual child of #NcCurve.
+   * 
+   */
+  if (!g_type_is_a (curve_type, NC_TYPE_CLUSTER_MASS))
+    g_error ("nc_curve_new_from_name: NcCurve `%s' do not descend from `%s'.", 
+             curve_name, g_type_name (NC_TYPE_CURVE));
+
+  /*
+   * Returns the correct cast.
+   * 
+   */
+  return NC_CURVE (obj);
+}
+
+/*
+ * The reference increasing function
+ * 
+ */
+/**
+ * nc_curve_ref:
+ * @curve: a #NcCurve
+ * 
+ * Increase reference count by one.
+ * 
+ * Returns: (transfer full): @curve.
+ */
+NcCurve *
+nc_curve_ref (NcCurve *curve)
+{
+  return g_object_ref (curve);
+}
+
+/*
+ * The reference decreasing function
+ * 
+ */
+/**
+ * nc_curve_free:
+ * @curve: a #NcCurve
+ * 
+ * Decrease reference count by one.
+ * 
+ */
+void 
+nc_curve_free (NcCurve *curve)
+{
+  g_object_unref (curve);
+}
+
+/*
+ * This function decreases the reference count
+ * by one only if *curve != NULL, and in that case
+ * it sets *curve to NULL after decreasing the 
+ * reference count. It is useful to use these 
+ * functions in the dispose hooks.
+ * 
+ * 
+ */
+/**
+ * nc_curve_clear:
+ * @curve: a #NcCurve
+ * 
+ * Decrease reference count by one if *@curve != NULL
+ * and sets @curve to NULL. 
+ * 
+ */
+void 
+nc_curve_clear (NcCurve **curve)
+{
+  g_clear_object (curve);
+}
+
+/*
+ * Below we implement the accessor functions.
+ * 
+ */
+
+/**
+ * nc_curve_set_xl:
+ * @curve: a #NcCurve
+ * @xl: new $x$ lower bound
+ * 
+ * Sets $x$ lower bound to @xl. 
+ * 
+ */
+void 
+nc_curve_set_xl (NcCurve *curve, const gdouble xl)
+{
+  /*
+   * Checking if the object is still in the unintitalized state,
+   * if that's the case just assign the value to the private
+   * struct.
+   * 
+   */
+  if ((curve->priv->xl == 0.0) && (curve->priv->xl == curve->priv->xu))
+    curve->priv->xl = xl;
+  else
+  {
+    /*
+     * Otherwise assert that xl will be less than xu.
+     * 
+     */
+    g_assert_cmpfloat (xl, <, curve->priv->xu);
+    curve->priv->xl = xl;
+  }
+}
+
+/**
+ * nc_curve_set_xu:
+ * @curve: a #NcCurve
+ * @xu: new $x$ upper bound
+ * 
+ * Sets $x$ upper bound to @xu. 
+ * 
+ */
+void 
+nc_curve_set_xu (NcCurve *curve, const gdouble xu)
+{
+  /*
+   * Checking if the object is still in the unintitalized state,
+   * if that's the case just assign the value to the private
+   * struct.
+   * 
+   */
+  if ((curve->priv->xl == 0.0) && (curve->priv->xl == curve->priv->xu))
+    curve->priv->xu = xu;
+  else
+  {
+    /*
+     * Otherwise assert that xl will be less than xu.
+     * 
+     */
+    g_assert_cmpfloat (curve->priv->xl, <, xu);
+    curve->priv->xu = xu;
+  }
+}
+
+/**
+ * nc_curve_get_xl:
+ * @curve: a #NcCurve
+ * 
+ * Sets $x$ lower bound. 
+ * 
+ * Returns: $x_l$.
+ */
+gdouble 
+nc_curve_get_xl (NcCurve *curve)
+{
+  return curve->priv->xl;
+}
+
+/**
+ * nc_curve_get_xu:
+ * @curve: a #NcCurve
+ * 
+ * Sets $x$ lower bound. 
+ * 
+ * Returns: $x_l$.
+ */
+gdouble 
+nc_curve_get_xu (NcCurve *curve)
+{
+  return curve->priv->xu;
+}
+
+/*
+ * Finally, we implement the generic caller for the
+ * virtual function `f'.
+ * 
+ */
+/**
+ * nc_curve_f: (virtual f)
+ * @curve: a #NcCurve
+ * @x: $x$
+ * 
+ * Computes $f(x)$.
+ * 
+ * Returns: the value of $f(x)$.
+ */
+gdouble 
+nc_curve_f (NcCurve *curve, const gdouble x)
+{
+  /*
+   * This function call by pointer guarantees that
+   * the correct virtual function will be called.
+   * 
+   */
+  return NC_CURVE_GET_CLASS (curve)->f (curve, x);
+}

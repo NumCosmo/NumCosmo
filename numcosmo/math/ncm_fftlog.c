@@ -64,7 +64,7 @@
  * which can be decomposed as $N_f \leq N_f^\prime = N^\prime (1 + \mathrm{padding}) = 3^a 5^b 7^c$, where $a$, 
  * $b$ and $c$ are positive integers. 
  * - The function $F(k)$ can be provided as:
- * 1. a gsl_function - ncm_fftlog_eval_by_function() - whose values are computed at the knots 
+ * 1. a gsl_function - ncm_fftlog_eval_by_gsl_function() - whose values are computed at the knots 
  * within the fundamental interval, and set to zero within the padding intervals. 
  * 2. as a vector - ncm_fftlog_eval_by_vector() - first one must get the vector of $\ln k$ knots, ncm_fftlog_get_vector_lnr(), 
  * and then pass a vector containing the values of the function computed at each knot. 
@@ -300,10 +300,10 @@ ncm_fftlog_class_init (NcmFftlogClass *klass)
   g_object_class_install_property (object_class,
                                    PROP_PAD,
                                    g_param_spec_double ("padding",
-                                                      NULL,
-                                                      "Padding percentage",
-                                                      0, G_MAXDOUBLE, 1.0,
-                                                      G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+                                                        NULL,
+                                                        "Padding percentage",
+                                                        0.0, G_MAXDOUBLE, 1.0,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
   g_object_class_install_property (object_class,
                                    PROP_NAME,
                                    g_param_spec_string ("name",
@@ -725,7 +725,7 @@ ncm_fftlog_eval_by_vector (NcmFftlog *fftlog, NcmVector *Fk)
 }
 
 /**
- * ncm_fftlog_eval_by_function: (skip)
+ * ncm_fftlog_eval_by_gsl_function: (skip)
  * @fftlog: a #NcmFftlog
  * @Fk: Fk function pointer
  * 
@@ -733,7 +733,7 @@ ncm_fftlog_eval_by_vector (NcmFftlog *fftlog, NcmVector *Fk)
  * 
  */
 void 
-ncm_fftlog_eval_by_function (NcmFftlog *fftlog, gsl_function *Fk)
+ncm_fftlog_eval_by_gsl_function (NcmFftlog *fftlog, gsl_function *Fk)
 {
 #ifdef NUMCOSMO_HAVE_FFTW3
   gint i;
@@ -752,6 +752,26 @@ ncm_fftlog_eval_by_function (NcmFftlog *fftlog, gsl_function *Fk)
   
   _ncm_fftlog_eval (fftlog);
 #endif /* NUMCOSMO_HAVE_FFTW3 */
+}
+
+/**
+ * ncm_fftlog_eval_by_function:
+ * @fftlog: a #NcmFftlog
+ * @Fk: (scope call): a #NcmFftlogFunc
+ * @user_data: @Fk user data
+ * 
+ * Evaluates the function @Fk at each knot $\ln k_m$.
+ * 
+ */
+void 
+ncm_fftlog_eval_by_function (NcmFftlog *fftlog, NcmFftlogFunc Fk, gpointer user_data)
+{
+  gsl_function F;
+
+  F.function = Fk;
+  F.params   = user_data;
+
+  ncm_fftlog_eval_by_gsl_function (fftlog, &F);
 }
 
 /**
@@ -840,7 +860,7 @@ ncm_fftlog_eval_output (NcmFftlog *fftlog, guint nderiv, const gdouble lnr)
 }
 
 /**
- * ncm_fftlog_calibrate_size: (skip)
+ * ncm_fftlog_calibrate_size_gsl: (skip)
  * @fftlog: a #NcmFftlog
  * @Fk: Fk function pointer
  * @reltol: relative tolerance
@@ -850,13 +870,13 @@ ncm_fftlog_eval_output (NcmFftlog *fftlog, guint nderiv, const gdouble lnr)
  * 
  */
 void 
-ncm_fftlog_calibrate_size (NcmFftlog *fftlog, gsl_function *Fk, gdouble reltol)
+ncm_fftlog_calibrate_size_gsl (NcmFftlog *fftlog, gsl_function *Fk, const gdouble reltol)
 {
   NcmSpline **s = g_new0 (NcmSpline *, fftlog->nderivs + 1);
   guint nd, size;
   gdouble lreltol = 0.0;
 
-  ncm_fftlog_eval_by_function (fftlog, Fk);
+  ncm_fftlog_eval_by_gsl_function (fftlog, Fk);
   ncm_fftlog_prepare_splines (fftlog);
 
   for (nd = 0; nd <= fftlog->nderivs; nd++)
@@ -867,7 +887,7 @@ ncm_fftlog_calibrate_size (NcmFftlog *fftlog, gsl_function *Fk, gdouble reltol)
   /*printf ("# Initial size %u [%u].\n", fftlog->N, fftlog->pad);*/
   ncm_fftlog_set_size (fftlog, fftlog->N * 1.2);
   /*printf ("# Trying size %u [%u].\n", fftlog->N, fftlog->pad);*/
-  ncm_fftlog_eval_by_function (fftlog, Fk);
+  ncm_fftlog_eval_by_gsl_function (fftlog, Fk);
   ncm_fftlog_prepare_splines (fftlog);
 
   size = ncm_spline_get_len (g_ptr_array_index (fftlog->Gr_s, 0));
@@ -898,7 +918,29 @@ ncm_fftlog_calibrate_size (NcmFftlog *fftlog, gsl_function *Fk, gdouble reltol)
   g_clear_pointer (&s, g_free);
 
   if (lreltol > reltol)
-    ncm_fftlog_calibrate_size (fftlog, Fk, reltol);
+    ncm_fftlog_calibrate_size_gsl (fftlog, Fk, reltol);
+}
+
+/**
+ * ncm_fftlog_calibrate_size:
+ * @fftlog: a #NcmFftlog
+ * @Fk: (scope call): a #NcmFftlogFunc
+ * @user_data: @Fk user data
+ * @reltol: relative tolerance
+ * 
+ * Increases the original (input) number of knots until the $G(r)$ splines reach 
+ * the required precision @reltol.  
+ * 
+ */
+void 
+ncm_fftlog_calibrate_size (NcmFftlog *fftlog, NcmFftlogFunc Fk, gpointer user_data, const gdouble reltol)
+{
+  gsl_function F;
+
+  F.function = Fk;
+  F.params   = user_data;
+
+  ncm_fftlog_calibrate_size_gsl (fftlog, &F, reltol);
 }
 
 /**
