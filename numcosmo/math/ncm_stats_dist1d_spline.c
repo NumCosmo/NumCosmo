@@ -26,9 +26,9 @@
 /**
  * SECTION:ncm_stats_dist1d_spline
  * @title: NcmStatsDist1dSpline
- * @short_description: One dimensional probability distribution based on a spline.
+ * @short_description: One dimensional probability distribution based on a spline
  * 
- * FIXME
+ * Reconstruction of an arbitrary one dimensional probability distribution based on a spline.
  * 
  */
 

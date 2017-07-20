@@ -26,9 +26,9 @@
 /**
  * SECTION:ncm_stats_dist1d
  * @title: NcmStatsDist1d
- * @short_description: Abstract class for implementing 1d probability distributions.
+ * @short_description: Abstract class for implementing one dimensional probability distributions
  *
- * FIXME
+ * Abstract class to reconstruct an arbitrary one dimensional probability distribution.
  * 
  */
 
@@ -49,6 +49,7 @@ enum
   PROP_RELTOL,
   PROP_ABSTOL,
   PROP_MAX_PROB, 
+	PROP_SIZE,
 };
 
 G_DEFINE_ABSTRACT_TYPE (NcmStatsDist1d, ncm_stats_dist1d, G_TYPE_OBJECT);
