@@ -86,6 +86,7 @@
 #include <numcosmo/model/nc_hiprim_atan.h>
 #include <numcosmo/model/nc_hiprim_expc.h>
 #include <numcosmo/model/nc_hiprim_bpl.h>
+#include <numcosmo/model/nc_hiprim_sbpl.h>
 #include <numcosmo/model/quantum_gravity.h>
 
 /* Large Scale Structure / Structure Formation */
