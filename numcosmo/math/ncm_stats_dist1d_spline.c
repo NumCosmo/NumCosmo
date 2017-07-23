@@ -44,6 +44,7 @@ enum
   PROP_0,
   PROP_M2LNP,
   PROP_TAIL_SIGMA,
+	PROP_SIZE,
 };
 
 G_DEFINE_TYPE (NcmStatsDist1dSpline, ncm_stats_dist1d_spline, NCM_TYPE_STATS_DIST1D);
