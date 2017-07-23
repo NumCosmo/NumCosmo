@@ -318,6 +318,7 @@ nc_headers = \
 	model/nc_hiprim_atan.h        \
 	model/nc_hiprim_expc.h        \
 	model/nc_hiprim_bpl.h         \
+	model/nc_hiprim_sbpl.h        \
 	lss/nc_window.h               \
 	lss/nc_window_tophat.h        \
 	lss/nc_window_gaussian.h      \
@@ -448,6 +449,7 @@ nc_sources = \
 	model/nc_hiprim_atan.c        \
 	model/nc_hiprim_expc.c        \
 	model/nc_hiprim_bpl.c         \
+	model/nc_hiprim_sbpl.c        \
 	lss/nc_window.c               \
 	lss/nc_window_tophat.c        \
 	lss/nc_window_gaussian.c      \
