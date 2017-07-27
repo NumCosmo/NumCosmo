@@ -227,7 +227,7 @@ ncm_stats_dist2d_eval_cdf (NcmStatsDist2d *sd2, gdouble x, gdouble y)
 }
 
 /**
- * ncm_stats_dist2d_eval_inv_pdf:
+ * ncm_stats_dist2d_eval_marginal:
  * @sd2: a #NcmStatsDist2d
  * @u: a number between [0, 1]
  *
