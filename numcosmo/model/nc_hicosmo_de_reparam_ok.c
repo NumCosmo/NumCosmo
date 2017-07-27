@@ -90,6 +90,7 @@ _nc_hicosmo_de_reparam_ok_old2new (NcmReparam *reparam, NcmModel *model)
   const gdouble Omega_k0 = nc_hicosmo_Omega_k0 (NC_HICOSMO (model));
   ncm_vector_memcpy (reparam->new_params, params);
   ncm_vector_set (reparam->new_params, NC_HICOSMO_DE_OMEGA_X, Omega_k0);
+
   return TRUE;
 }
 

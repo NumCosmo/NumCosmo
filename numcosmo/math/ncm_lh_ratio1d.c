@@ -67,6 +67,12 @@ ncm_lh_ratio1d_init (NcmLHRatio1d *lhr1d)
   lhr1d->pi.pid      = 0;
   lhr1d->constraint  = NULL;
   lhr1d->chisquare   = 0.0;
+  lhr1d->lb          = 0.0;
+  lhr1d->ub          = 0.0;
+  lhr1d->bf          = 0.0;
+  lhr1d->niter       = 0;
+  lhr1d->func_eval   = 0;
+  lhr1d->grad_eval   = 0;
   lhr1d->mtype       = NCM_FIT_RUN_MSGS_NONE;
   lhr1d->rtype       = NCM_LH_RATIO1D_ROOT_BRACKET;
 }
@@ -337,7 +343,7 @@ ncm_lh_ratio1d_log_root_start (NcmLHRatio1d *lhr1d, gdouble pl, gdouble pu)
       g_message ("\n");
       _ncm_lh_ratio1d_log_dot = FALSE;
     }
-    g_message ("#  looking root in interval [% 12.8g % 12.8g]:\n", 
+    g_message ("#  looking for root in interval [% 12.8g % 12.8g]:\n", 
                lhr1d->bf + pl, lhr1d->bf + pu);
     if (lhr1d->mtype == NCM_FIT_RUN_MSGS_SIMPLE)
     {
@@ -580,12 +586,21 @@ ncm_lh_ratio1d_find_bounds (NcmLHRatio1d *lhr1d, gdouble clevel, NcmFitRunMsgs m
   g_assert_cmpfloat (clevel, <, 1.0);
 
   lhr1d->chisquare = gsl_cdf_chisq_Qinv (1.0 - clevel, 1.0);
+
   scale = sqrt (lhr1d->chisquare) * 
     ncm_fit_covar_sd (lhr1d->fit, lhr1d->pi.mid, lhr1d->pi.pid);
+
   r = 0.0;
+
   r_min = -scale;
   r_max =  scale;
-    
+
+  if ((lhr1d->bf + r_min) < lhr1d->lb)
+    r_min = lhr1d->lb - lhr1d->bf;
+
+  if ((lhr1d->bf + r_max) > lhr1d->ub)
+    r_max = lhr1d->ub - lhr1d->bf;
+
   switch (lhr1d->rtype)
   {
     case NCM_LH_RATIO1D_ROOT_BRACKET:

@@ -478,7 +478,7 @@ _nc_hicosmo_de_E2 (NcHICosmo *cosmo, gdouble z)
   const gdouble E2Omega_mnu = _nc_hicosmo_de_E2Omega_mnu (cosmo, z);
   
   const gdouble E2          = OMEGA_R * x4 + OMEGA_M * x3 + Omega_k * x2 + E2Omega_de + E2Omega_mnu;
-
+  
   return E2;
 }
 

@@ -200,7 +200,7 @@ ncm_diff_class_init (NcmDiffClass *klass)
                                    g_param_spec_double ("round-off-pad",
                                                       NULL,
                                                       "Round off padding",
-                                                      1.1, G_MAXDOUBLE, 1.0e1,
+                                                      1.1, G_MAXDOUBLE, 1.0e2,
                                                       G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 }
 
@@ -208,8 +208,8 @@ NcmDiffTable *
 _ncm_diff_table_new (const guint n)
 {
   NcmDiffTable *dtable = g_new (NcmDiffTable, 1);
-  dtable->h      = ncm_vector_new (n);
-  dtable->lambda = ncm_vector_new (n);
+  dtable->h            = ncm_vector_new (n);
+  dtable->lambda       = ncm_vector_new (n);
 
   return dtable;
 }
@@ -230,8 +230,10 @@ void
 _ncm_diff_table_free (gpointer dtable_ptr)
 {
   NcmDiffTable *dtable = (NcmDiffTable *) dtable_ptr; 
+
   ncm_vector_free (dtable->h);
   ncm_vector_free (dtable->lambda);
+  g_free (dtable);
 }
 
 static void

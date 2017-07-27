@@ -31,6 +31,7 @@
 #include <numcosmo/build_cfg.h>
 #include <numcosmo/math/ncm_vector.h>
 #include <numcosmo/math/ncm_matrix.h>
+#include <numcosmo/math/ncm_diff.h>
 #include <numcosmo/math/ncm_model.h>
 #include <numcosmo/math/ncm_mset.h>
 #include <numcosmo/math/ncm_mset_func.h>
@@ -161,6 +162,7 @@ struct _NcmFit
   GPtrArray *equality_constraints;
   GPtrArray *inequality_constraints;
   NcmFit *sub_fit;
+  NcmDiff *diff;
 };
 
 struct _NcmFitConstraint
@@ -249,11 +251,13 @@ G_INLINE_FUNC void ncm_fit_ls_J (NcmFit *fit, NcmMatrix *J);
 void ncm_fit_ls_J_an (NcmFit *fit, NcmMatrix *J);
 void ncm_fit_ls_J_nd_fo (NcmFit *fit, NcmMatrix *J);
 void ncm_fit_ls_J_nd_ce (NcmFit *fit, NcmMatrix *J);
+void ncm_fit_ls_J_nd_ac (NcmFit *fit, NcmMatrix *J);
 
 G_INLINE_FUNC void ncm_fit_ls_f_J (NcmFit *fit, NcmVector *f, NcmMatrix *J);
 void ncm_fit_ls_f_J_an (NcmFit *fit, NcmVector *f, NcmMatrix *J);
 void ncm_fit_ls_f_J_nd_fo (NcmFit *fit, NcmVector *f, NcmMatrix *J);
 void ncm_fit_ls_f_J_nd_ce (NcmFit *fit, NcmVector *f, NcmMatrix *J);
+void ncm_fit_ls_f_J_nd_ac (NcmFit *fit, NcmVector *f, NcmMatrix *J);
 
 void ncm_fit_numdiff_m2lnL_hessian (NcmFit *fit, NcmMatrix *H, gdouble reltol);
 void ncm_fit_numdiff_m2lnL_covar (NcmFit *fit);

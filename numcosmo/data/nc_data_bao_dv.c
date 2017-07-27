@@ -173,7 +173,7 @@ _nc_data_bao_dv_mean_func (NcmDataGaussDiag *diag, NcmMSet *mset, NcmVector *vp)
   for (i = 0; i < diag->np; i++)
   {
     const gdouble z = ncm_vector_get (bao_dv->x, i);
-    const gdouble DV = nc_distance_dilation_scale (bao_dv->dist, cosmo, z);
+    const gdouble DV = nc_distance_dilation_scale (bao_dv->dist, cosmo, z) * nc_hicosmo_RH_Mpc (cosmo);
     ncm_vector_set (vp, i, DV);
   }
 }

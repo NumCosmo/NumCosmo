@@ -958,11 +958,12 @@ main (gint argc, gchar *argv[])
 
   if (de_fit.onedim_cr != NULL)
   {
-    while (de_fit.onedim_cr[0] != NULL)
+    gchar **onedim_cr = de_fit.onedim_cr;
+    while (onedim_cr[0] != NULL)
     {
-      const gchar *pname = de_fit.onedim_cr[0];
-      const NcmMSetPIndex *pi = ncm_mset_fparam_get_pi_by_name (mset, de_fit.onedim_cr[0]);
-      de_fit.onedim_cr = &de_fit.onedim_cr[1];
+      const gchar *pname = onedim_cr[0];
+      const NcmMSetPIndex *pi = ncm_mset_fparam_get_pi_by_name (mset, onedim_cr[0]);
+      onedim_cr = &onedim_cr[1];
 
       if (pi == NULL)
       {

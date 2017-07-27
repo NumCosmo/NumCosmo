@@ -78,55 +78,6 @@ enum
 G_DEFINE_ABSTRACT_TYPE (NcmFit, ncm_fit, G_TYPE_OBJECT);
 G_DEFINE_BOXED_TYPE (NcmFitConstraint, ncm_fit_constraint, (GBoxedCopyFunc)&ncm_fit_constraint_dup, (GBoxedFreeFunc)&ncm_fit_constraint_free);
 
-/**
- * ncm_fit_constraint_new:
- * @fit: a #NcmFit
- * @func: a #NcmMSetFunc
- * @tot: FIXME
- *
- * FIXME
- *
- * Returns: (transfer full): FIXME
- */
-NcmFitConstraint *
-ncm_fit_constraint_new (NcmFit *fit, NcmMSetFunc *func, gdouble tot)
-{
-  NcmFitConstraint *fitc = g_new (NcmFitConstraint, 1);
-  g_assert (ncm_mset_func_is_scalar (func) && ncm_mset_func_is_const (func));
-  fitc->fit = ncm_fit_ref (fit);
-  fitc->func = ncm_mset_func_ref (func);
-  fitc->tot = tot;
-  return fitc;
-}
-
-/**
- * ncm_fit_constraint_dup:
- * @fitc: a #NcmFitConstraint
- *
- * FIXME
- *
- * Returns: (transfer full): FIXME
- */
-NcmFitConstraint *
-ncm_fit_constraint_dup (NcmFitConstraint *fitc)
-{
-  return ncm_fit_constraint_new (fitc->fit, fitc->func, fitc->tot);
-}
-
-/**
- * ncm_fit_constraint_free:
- * @fitc: a #NcmFitConstraint
- *
- * FIXME
- *
- */
-void
-ncm_fit_constraint_free (NcmFitConstraint *fitc)
-{
-  ncm_mset_func_free (fitc->func);
-  g_free (fitc);
-}
-
 static void
 ncm_fit_init (NcmFit *fit)
 {
@@ -144,49 +95,7 @@ ncm_fit_init (NcmFit *fit)
   g_ptr_array_set_free_func (fit->inequality_constraints, (GDestroyNotify) &ncm_fit_constraint_free);
 
   fit->sub_fit = NULL;
-}
-
-static void
-_ncm_fit_constructed (GObject *object)
-{
-  /* Chain up : start */
-  G_OBJECT_CLASS (ncm_fit_parent_class)->constructed (object);
-  {
-    NcmFit *fit = NCM_FIT (object);
-    gint n = ncm_dataset_get_n (fit->lh->dset);
-    gint n_priors = ncm_likelihood_priors_length_f (fit->lh) +
-      ncm_likelihood_priors_length_m2lnL (fit->lh);
-    gint data_dof = ncm_dataset_get_dof (fit->lh->dset);
-
-    g_assert (ncm_dataset_all_init (fit->lh->dset));
-
-    if (!fit->mset->valid_map)
-      ncm_mset_prepare_fparam_map (fit->mset);
-
-    /*
-     * It is no longer an error to fit 0 parameters, it just sets the value
-     * of m2lnL in the fit object.
-     *
-     * if (ncm_mset_fparam_len (fit->mset) == 0)
-     * g_warning ("ncm_fit_new: mset object has 0 free parameters");
-     *
-     */
-
-    {
-      guint data_len   = n + n_priors;
-      guint fparam_len = ncm_mset_fparam_len (fit->mset);
-      gint dof         = data_dof + n_priors - fparam_len;
-
-      if (fit->fstate == NULL)
-        fit->fstate = ncm_fit_state_new (data_len, fparam_len, dof,
-                                         NCM_FIT_GET_CLASS (fit)->is_least_squares);
-      else
-        ncm_fit_state_set_all (fit->fstate, data_len, fparam_len, dof,
-                               NCM_FIT_GET_CLASS (fit)->is_least_squares);
-
-      g_assert (data_len > 0);
-    }
-  }
+  fit->diff    = ncm_diff_new ();
 }
 
 static void
@@ -303,6 +212,49 @@ _ncm_fit_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec
 }
 
 static void
+_ncm_fit_constructed (GObject *object)
+{
+  /* Chain up : start */
+  G_OBJECT_CLASS (ncm_fit_parent_class)->constructed (object);
+  {
+    NcmFit *fit = NCM_FIT (object);
+    gint n = ncm_dataset_get_n (fit->lh->dset);
+    gint n_priors = ncm_likelihood_priors_length_f (fit->lh) +
+      ncm_likelihood_priors_length_m2lnL (fit->lh);
+    gint data_dof = ncm_dataset_get_dof (fit->lh->dset);
+
+    g_assert (ncm_dataset_all_init (fit->lh->dset));
+
+    if (!fit->mset->valid_map)
+      ncm_mset_prepare_fparam_map (fit->mset);
+
+    /*
+     * It is no longer an error to fit 0 parameters, it just sets the value
+     * of m2lnL in the fit object.
+     *
+     * if (ncm_mset_fparam_len (fit->mset) == 0)
+     * g_warning ("ncm_fit_new: mset object has 0 free parameters");
+     *
+     */
+
+    {
+      guint data_len   = n + n_priors;
+      guint fparam_len = ncm_mset_fparam_len (fit->mset);
+      gint dof         = data_dof + n_priors - fparam_len;
+
+      if (fit->fstate == NULL)
+        fit->fstate = ncm_fit_state_new (data_len, fparam_len, dof,
+                                         NCM_FIT_GET_CLASS (fit)->is_least_squares);
+      else
+        ncm_fit_state_set_all (fit->fstate, data_len, fparam_len, dof,
+                               NCM_FIT_GET_CLASS (fit)->is_least_squares);
+
+      g_assert (data_len > 0);
+    }
+  }
+}
+
+static void
 ncm_fit_dispose (GObject *object)
 {
   NcmFit *fit = NCM_FIT (object);
@@ -315,6 +267,8 @@ ncm_fit_dispose (GObject *object)
   g_clear_pointer (&fit->inequality_constraints, g_ptr_array_unref);
 
   ncm_fit_clear (&fit->sub_fit);
+
+  ncm_diff_clear (&fit->diff);
 
   /* Chain up : end */
   G_OBJECT_CLASS (ncm_fit_parent_class)->dispose (object);
@@ -448,6 +402,55 @@ _ncm_fit_reset (NcmFit *fit)
                            NCM_FIT_GET_CLASS (fit)->is_least_squares);
     ncm_fit_state_reset (fit->fstate);
   }
+}
+
+/**
+ * ncm_fit_constraint_new:
+ * @fit: a #NcmFit
+ * @func: a #NcmMSetFunc
+ * @tot: FIXME
+ *
+ * FIXME
+ *
+ * Returns: (transfer full): FIXME
+ */
+NcmFitConstraint *
+ncm_fit_constraint_new (NcmFit *fit, NcmMSetFunc *func, gdouble tot)
+{
+  NcmFitConstraint *fitc = g_new (NcmFitConstraint, 1);
+  g_assert (ncm_mset_func_is_scalar (func) && ncm_mset_func_is_const (func));
+  fitc->fit = ncm_fit_ref (fit);
+  fitc->func = ncm_mset_func_ref (func);
+  fitc->tot = tot;
+  return fitc;
+}
+
+/**
+ * ncm_fit_constraint_dup:
+ * @fitc: a #NcmFitConstraint
+ *
+ * FIXME
+ *
+ * Returns: (transfer full): FIXME
+ */
+NcmFitConstraint *
+ncm_fit_constraint_dup (NcmFitConstraint *fitc)
+{
+  return ncm_fit_constraint_new (fitc->fit, fitc->func, fitc->tot);
+}
+
+/**
+ * ncm_fit_constraint_free:
+ * @fitc: a #NcmFitConstraint
+ *
+ * FIXME
+ *
+ */
+void
+ncm_fit_constraint_free (NcmFitConstraint *fitc)
+{
+  ncm_mset_func_free (fitc->func);
+  g_free (fitc);
 }
 
 /**
@@ -645,8 +648,8 @@ static NcmFitGrad _ncm_fit_grad_numdiff_central = {
 static NcmFitGrad _ncm_fit_grad_numdiff_accurate = {
   NCM_FIT_GRAD_NUMDIFF_ACCURATE,
   "Numerical differentiantion (Richardson extrapolation)",
-  &ncm_fit_ls_J_nd_ce,
-  &ncm_fit_ls_f_J_nd_ce,
+  &ncm_fit_ls_J_nd_ac,
+  &ncm_fit_ls_f_J_nd_ac,
   &ncm_fit_m2lnL_grad_nd_ac,
   &ncm_fit_m2lnL_val_grad_nd_ac,
 };
@@ -1577,6 +1580,9 @@ ncm_fit_fishermatrix_print (NcmFit *fit, FILE *out, gchar *header)
  * FIXME
  */
 
+static gdouble _ncm_fit_numdiff_m2lnL_val (NcmVector *x, gpointer user_data);
+static void _ncm_fit_numdiff_ls_f (NcmVector *x, NcmVector *y, gpointer user_data);
+
 /**
  * ncm_fit_m2lnL_grad_an:
  * @fit: a #NcmFit
@@ -1659,9 +1665,9 @@ ncm_fit_m2lnL_grad_nd_ce (NcmFit *fit, NcmVector *grad)
 void
 ncm_fit_m2lnL_hessian_nd_ce (NcmFit *fit, NcmMatrix *hessian)
 {
-  guint i;
   guint fparam_len = ncm_mset_fparam_len (fit->mset);
   NcmVector *tmp = ncm_vector_new (fparam_len);
+  guint i;
 
   for (i = 0; i < fparam_len; i++)
   {
@@ -1692,22 +1698,6 @@ ncm_fit_m2lnL_hessian_nd_ce (NcmFit *fit, NcmMatrix *hessian)
   fit->fstate->grad_eval++;
 }
 
-typedef struct __ncm_fit_numdiff_1
-{
-  NcmFit *fit;
-  guint n;
-} __ncm_fit_numdiff_1;
-
-static gdouble
-_ncm_fit_numdiff_1_m2lnL (gdouble x, gpointer userdata)
-{
-  gdouble res;
-  __ncm_fit_numdiff_1 *nd = (__ncm_fit_numdiff_1 *)userdata;
-  ncm_fit_params_set (nd->fit, nd->n, x);
-  ncm_fit_m2lnL_val (nd->fit, &res);
-  return res;
-}
-
 /**
  * ncm_fit_m2lnL_grad_nd_ac:
  * @fit: a #NcmFit
@@ -1719,25 +1709,23 @@ _ncm_fit_numdiff_1_m2lnL (gdouble x, gpointer userdata)
 void
 ncm_fit_m2lnL_grad_nd_ac (NcmFit *fit, NcmVector *grad)
 {
-  gsl_function F;
-  __ncm_fit_numdiff_1 nd;
-  guint fparam_len = ncm_mset_fparam_len (fit->mset);
-  guint i;
+  const guint free_params_len = ncm_mset_fparams_len (fit->mset);
+  GArray *x_a                 = g_array_new (FALSE, FALSE, sizeof (gdouble));
+  NcmVector *x                = NULL;
+  GArray *grad_a              = NULL;
 
-  nd.fit = fit;
-  F.params = &nd;
-  F.function = &_ncm_fit_numdiff_1_m2lnL;
+  g_array_set_size (x_a, free_params_len);
+  x = ncm_vector_new_array (x_a);
 
-  for (i = 0; i < fparam_len; i++)
-  {
-    const gdouble p = ncm_mset_fparam_get (fit->mset, i);
-    const gdouble p_scale = ncm_mset_fparam_get_scale (fit->mset, i);
-    gdouble err, diff;
-    nd.n = i;
-    diff = ncm_numdiff_1 (&F, p, p_scale, &err);
-    ncm_vector_set (grad, i, diff);
-    ncm_fit_params_set (fit, i, p);
-  }
+  ncm_mset_fparams_get_vector (fit->mset, x);
+  grad_a = ncm_diff_rf_d1_N_to_1 (fit->diff, x_a, _ncm_fit_numdiff_m2lnL_val, fit, NULL);
+
+  ncm_vector_set_array (grad, grad_a);
+  ncm_mset_fparams_set_vector (fit->mset, x);
+
+  g_array_unref (x_a);
+  g_array_unref (grad_a);
+  ncm_vector_free (x);
 
   fit->fstate->grad_eval++;
 }
@@ -1906,8 +1894,8 @@ ncm_fit_ls_J_nd_fo (NcmFit *fit, NcmMatrix *J)
 void
 ncm_fit_ls_J_nd_ce (NcmFit *fit, NcmMatrix *J)
 {
-  guint i;
   guint fparam_len = ncm_mset_fparam_len (fit->mset);
+  guint i;
 
   for (i = 0; i < fparam_len; i++)
   {
@@ -1934,6 +1922,39 @@ ncm_fit_ls_J_nd_ce (NcmFit *fit, NcmMatrix *J)
     ncm_fit_params_set (fit, i, p);
     ncm_vector_free (J_col_i);
   }
+
+  fit->fstate->grad_eval++;
+}
+
+/**
+ * ncm_fit_ls_J_nd_ac:
+ * @fit: a #NcmFit
+ * @J: a #NcmMatrix
+ *
+ * FIXME
+ *
+ */
+void
+ncm_fit_ls_J_nd_ac (NcmFit *fit, NcmMatrix *J)
+{
+  const guint fparam_len = ncm_mset_fparam_len (fit->mset);
+  const guint data_len   = ncm_fit_state_get_data_len (fit->fstate);
+  GArray *x_a            = g_array_new (FALSE, FALSE, sizeof (gdouble));
+  NcmVector *x           = NULL;
+  GArray *J_a            = NULL;
+
+  g_array_set_size (x_a, fparam_len);
+  x = ncm_vector_new_array (x_a);
+
+  ncm_mset_fparams_get_vector (fit->mset, x);
+  J_a = ncm_diff_rf_d1_N_to_M (fit->diff, x_a, data_len, _ncm_fit_numdiff_ls_f, fit, NULL);
+
+  ncm_matrix_set_from_array (J, J_a);
+  ncm_mset_fparams_set_vector (fit->mset, x);
+
+  g_array_unref (x_a);
+  g_array_unref (J_a);
+  ncm_vector_free (x);
 
   fit->fstate->grad_eval++;
 }
@@ -1996,31 +2017,40 @@ ncm_fit_ls_f_J_nd_ce (NcmFit *fit, NcmVector *f, NcmMatrix *J)
   ncm_fit_ls_J_nd_ce (fit, J);
 }
 
-typedef struct __ncm_fit_numdiff_2
+/**
+ * ncm_fit_ls_f_J_nd_ac:
+ * @fit: a #NcmFit
+ * @f: a #NcmVector
+ * @J: a #NcmMatrix
+ *
+ * FIXME
+ */
+void
+ncm_fit_ls_f_J_nd_ac (NcmFit *fit, NcmVector *f, NcmMatrix *J)
 {
-  NcmFit *fit;
-  guint n1;
-  guint n2;
-  gdouble v;
-  gdouble p1_scale;
-  gdouble p2_scale;
-} _ncm_fit_numdiff_2;
+  ncm_fit_ls_f (fit, f);
+  ncm_fit_ls_J_nd_ac (fit, J);
+}
 
-static gdouble
-_ncm_fit_numdiff_2_m2lnL (gdouble u, gpointer userdata)
+static gdouble 
+_ncm_fit_numdiff_m2lnL_val (NcmVector *x, gpointer user_data)
 {
-  gdouble res;
-  _ncm_fit_numdiff_2 *nd = (_ncm_fit_numdiff_2 *)userdata;
-  if (nd->n1 == nd->n2)
-    ncm_mset_fparam_set (nd->fit->mset, nd->n1, u);
-  else
-  {
-    ncm_mset_fparam_set (nd->fit->mset, nd->n1, (u + nd->v) / nd->p1_scale);
-    ncm_mset_fparam_set (nd->fit->mset, nd->n2, (u - nd->v) / nd->p2_scale);
-  }
-  ncm_likelihood_m2lnL_val (nd->fit->lh, nd->fit->mset, &res);
-  /*ncm_fit_m2lnL_val (nd->fit, &res);*/
+  NcmFit *fit = NCM_FIT (user_data);
+  gdouble res = 0.0;
+  ncm_mset_fparams_set_vector (fit->mset, x);
+
+  ncm_likelihood_m2lnL_val (fit->lh, fit->mset, &res);
   return res;
+}
+
+static void
+_ncm_fit_numdiff_ls_f (NcmVector *x, NcmVector *y, gpointer user_data)
+{
+  NcmFit *fit = NCM_FIT (user_data);
+
+  ncm_mset_fparams_set_vector (fit->mset, x);
+
+  ncm_fit_ls_f (fit, y);
 }
 
 /**
@@ -2029,86 +2059,29 @@ _ncm_fit_numdiff_2_m2lnL (gdouble u, gpointer userdata)
  * @H: a #NcmMatrix
  * @reltol: relative tolerance.
  *
- * FIXME
+ * Calculates the Hessian of $-2\ln(L)$ with respect to the free parameters. 
+ * 
  */
 void
 ncm_fit_numdiff_m2lnL_hessian (NcmFit *fit, NcmMatrix *H, gdouble reltol)
 {
-  gsl_function F;
-  _ncm_fit_numdiff_2 nd;
-  guint i, j;
-  gdouble fx;
-  const gdouble target_err = reltol;
-  guint free_params_len = ncm_mset_fparams_len (fit->mset);
+  const guint free_params_len = ncm_mset_fparams_len (fit->mset);
+  GArray *x_a                 = g_array_new (FALSE, FALSE, sizeof (gdouble));
+  NcmVector *x                = NULL;
+  GArray *H_a                 = NULL;
 
-  ncm_likelihood_m2lnL_val (fit->lh, fit->mset, &fx);
-  /*ncm_fit_m2lnL_val (fit, &fx);*/
+  g_array_set_size (x_a, free_params_len);
+  x = ncm_vector_new_array (x_a);
 
-  nd.fit = fit;
-  F.params = &nd;
-  F.function = &_ncm_fit_numdiff_2_m2lnL;
+  ncm_mset_fparams_get_vector (fit->mset, x);
+  H_a = ncm_diff_rf_Hessian_N_to_1 (fit->diff, x_a, _ncm_fit_numdiff_m2lnL_val, fit, NULL);
 
-  /* Diagonal */
-  for (i = 0; i < free_params_len; i++)
-  {
-    const gdouble p = ncm_mset_fparam_get (fit->mset, i);
-    gdouble p_scale = ncm_mset_fparam_get_scale (fit->mset, i);
-    gdouble err, diff;
-    gint tries = 10;
-    nd.n1 = i;
-    nd.n2 = i;
-    diff = ncm_numdiff_2_err (&F, &fx, p, p_scale, target_err, &err);
+  ncm_matrix_set_from_array (H, H_a);
+  ncm_mset_fparams_set_vector (fit->mset, x);
 
-    while (diff == 0.0 && tries > 0)
-    {
-      ncm_fit_params_set (fit, i, p);
-      p_scale *= 1.0e2;
-      diff = ncm_numdiff_2_err (&F, &fx, p, p_scale, target_err, &err);
-      tries--;
-      ncm_mset_fparam_set_scale (fit->mset, i, p_scale);
-    }
-
-    if (fabs(err / diff) > target_err)
-      g_warning ("ncm_fit_numdiff_m2lnL_hessian: effective error on second derivative with respect to parameter %u is (% 20.15e) larger than the required (% 20.15e)", i, fabs(err / diff), target_err);
-    if (diff == 0.0)
-      g_warning ("ncm_fit_numdiff_m2lnL_hessian: the second derivatinve with respect to parameter %u is zero.", i);
-
-    ncm_matrix_set (H, i, i, diff);
-    ncm_fit_params_set (fit, i, p);
-  }
-
-  for (i = 0; i < free_params_len; i++)
-  {
-    for (j = i + 1; j < free_params_len; j++)
-    {
-      const gdouble p1_scale = 1.0 / ncm_mset_fparam_get_scale (fit->mset, i);
-      const gdouble p2_scale = 1.0 / ncm_mset_fparam_get_scale (fit->mset, j);
-      const gdouble p1 = ncm_mset_fparam_get (fit->mset, i);
-      const gdouble p2 = ncm_mset_fparam_get (fit->mset, j);
-      const gdouble u = (p1_scale * p1 + p2_scale * p2) / 2.0;
-      const gdouble v = (p1_scale * p1 - p2_scale * p2) / 2.0;
-      const gdouble u_scale = 1.0;
-      gdouble err, diff;
-      nd.n1 = i;
-      nd.n2 = j;
-      nd.v = v;
-      nd.p1_scale = p1_scale;
-      nd.p2_scale = p2_scale;
-      diff = ncm_numdiff_2_err (&F, &fx, u, u_scale, target_err, &err);
-      if (fabs(err / diff) > target_err)
-        g_warning ("ncm_fit_numdiff_m2lnL_hessian: effective error on the %u-%u derivative is (% 20.15e) larger than the required (% 20.15e)", i, j, fabs(err / diff), target_err);
-      ncm_matrix_set (H, i, j,
-                      0.5 * ( p1_scale * p2_scale * diff -
-                             (p2_scale / p1_scale) * ncm_matrix_get (H, i, i) -
-                             (p1_scale / p2_scale) * ncm_matrix_get (H, j, j)
-                             )
-                      );
-      ncm_matrix_set (H, j, i, ncm_matrix_get (H, i, j));
-      //printf ("d2[%d %d] = % 20.15g\n", i, j, (diff - gsl_matrix_get (H, k, k) - gsl_matrix_get (H, l, l)) / 2.0);
-      ncm_fit_params_set (fit, i, p1);
-      ncm_fit_params_set (fit, j, p2);
-    }
-  }
+  g_array_unref (x_a);
+  g_array_unref (H_a);
+  ncm_vector_free (x);
 }
 
 /**

@@ -1329,8 +1329,7 @@ test_ncm_diff_rc_d2_1_to_M_all (TestNcmDiff *test, gconstpointer pdata)
 
     g_array_unref (df_a);
     g_array_unref (Adf_a);
-    g_array_unref (err_a);
-    
+    g_array_unref (err_a);    
   }
 }
 
@@ -1389,6 +1388,7 @@ test_ncm_diff_rf_d1_N_to_1_all (TestNcmDiff *test, gconstpointer pdata)
       g_array_unref (err_a);
     }    
   }
+  g_array_unref (x_a);
 }
 
 void
@@ -1441,6 +1441,7 @@ test_ncm_diff_rc_d1_N_to_1_all (TestNcmDiff *test, gconstpointer pdata)
       g_array_unref (err_a);
     }    
   }
+  g_array_unref (x_a);
 }
 
 void
@@ -1493,6 +1494,7 @@ test_ncm_diff_rc_d2_N_to_1_all (TestNcmDiff *test, gconstpointer pdata)
       g_array_unref (err_a);
     }    
   }
+  g_array_unref (x_a);
 }
 
 
@@ -1546,6 +1548,7 @@ test_ncm_diff_rf_Hessian_N_to_1_all (TestNcmDiff *test, gconstpointer pdata)
       g_array_unref (err_a);
     }    
   }
+  g_array_unref (x_a);
 }
 
 /*
@@ -1604,6 +1607,7 @@ test_ncm_diff_rf_d1_N_to_M_all (TestNcmDiff *test, gconstpointer pdata)
       g_array_unref (err_a);
     }    
   }
+  g_array_unref (x_a);
 }
 
 void
@@ -1657,6 +1661,7 @@ test_ncm_diff_rc_d1_N_to_M_all (TestNcmDiff *test, gconstpointer pdata)
       g_array_unref (err_a);
     }    
   }
+  g_array_unref (x_a);
 }
 
 void
@@ -1710,6 +1715,7 @@ test_ncm_diff_rc_d2_N_to_M_all (TestNcmDiff *test, gconstpointer pdata)
       g_array_unref (err_a);
     }    
   }
+  g_array_unref (x_a);
 }
 
 void

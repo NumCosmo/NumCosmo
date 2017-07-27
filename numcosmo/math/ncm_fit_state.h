@@ -93,6 +93,7 @@ G_INLINE_FUNC void ncm_fit_state_set_m2lnL_prec (NcmFitState *fstate, gdouble pr
 G_INLINE_FUNC gdouble ncm_fit_state_get_m2lnL_prec (NcmFitState *fstate);
 G_INLINE_FUNC void ncm_fit_state_set_params_prec (NcmFitState *fstate, gdouble prec);
 G_INLINE_FUNC gdouble ncm_fit_state_get_params_prec (NcmFitState *fstate);
+G_INLINE_FUNC guint ncm_fit_state_get_data_len (NcmFitState *fstate);
 
 G_END_DECLS
 
@@ -166,6 +167,12 @@ G_INLINE_FUNC gdouble
 ncm_fit_state_get_params_prec (NcmFitState *fstate)
 {
   return fstate->params_prec;
+}
+
+G_INLINE_FUNC guint 
+ncm_fit_state_get_data_len (NcmFitState *fstate)
+{
+  return fstate->data_len;
 }
 
 G_END_DECLS
