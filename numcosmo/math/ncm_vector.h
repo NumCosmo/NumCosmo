@@ -113,6 +113,10 @@ void ncm_vector_log_vals_func (const NcmVector *v, const gchar *prestr, const gc
 void ncm_vector_set_from_variant (NcmVector *cv, GVariant *var);
 
 gdouble ncm_vector_dnrm2 (const NcmVector *cv);
+void ncm_vector_axpy (NcmVector *cv1, const gdouble alpha, const NcmVector *cv2);
+void ncm_vector_cmp (NcmVector *cv1, const NcmVector *cv2);
+void ncm_vector_sub_round_off (NcmVector *cv1, const NcmVector *cv2);
+void ncm_vector_reciprocal (NcmVector *cv);
 
 G_INLINE_FUNC gdouble ncm_vector_sum_cpts (const NcmVector *cv);
 G_INLINE_FUNC const NcmVector *ncm_vector_const_new_gsl (const gsl_vector *v);
@@ -134,6 +138,7 @@ G_INLINE_FUNC void ncm_vector_set_data (NcmVector *cv, const gdouble *array, gui
 G_INLINE_FUNC void ncm_vector_set_array (NcmVector *cv, GArray *array);
 G_INLINE_FUNC void ncm_vector_scale (NcmVector *cv, const gdouble val);
 G_INLINE_FUNC void ncm_vector_add_constant (NcmVector *cv, const gdouble val);
+G_INLINE_FUNC void ncm_vector_mul (NcmVector *cv1, const NcmVector *cv2);
 G_INLINE_FUNC void ncm_vector_div (NcmVector *cv1, const NcmVector *cv2);
 G_INLINE_FUNC void ncm_vector_add (NcmVector *cv1, const NcmVector *cv2);
 G_INLINE_FUNC void ncm_vector_sub (NcmVector *cv1, const NcmVector *cv2);
@@ -314,9 +319,15 @@ ncm_vector_add_constant (NcmVector *cv, const gdouble val)
 }
 
 G_INLINE_FUNC void
+ncm_vector_mul (NcmVector *cv1, const NcmVector *cv2)
+{
+  gsl_vector_mul (ncm_vector_gsl (cv1), ncm_vector_const_gsl (cv2));
+}
+
+G_INLINE_FUNC void
 ncm_vector_div (NcmVector *cv1, const NcmVector *cv2)
 {
-  gsl_vector_div (ncm_vector_gsl(cv1), ncm_vector_const_gsl(cv2));
+  gsl_vector_div (ncm_vector_gsl (cv1), ncm_vector_const_gsl (cv2));
 }
 
 G_INLINE_FUNC void

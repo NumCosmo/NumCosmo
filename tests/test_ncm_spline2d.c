@@ -389,7 +389,7 @@ test_ncm_spline2d_eval (void)
         gdouble f = F_linear (x, y, d);
         gdouble fs = ncm_spline2d_eval (s2d, x, y);
 
-        ncm_assert_cmpdouble_e (fs, ==, f, test_error);
+        ncm_assert_cmpdouble_e (fs, ==, f, test_error, 0.0);
       }
     }
     ncm_spline2d_free (s2d);
@@ -425,7 +425,7 @@ test_ncm_spline2d_eval (void)
         gdouble f = F_poly (x, y, d);
         gdouble fs = ncm_spline2d_eval (s2d, x, y);
 
-        ncm_assert_cmpdouble_e (fs, ==, f, test_error);
+        ncm_assert_cmpdouble_e (fs, ==, f, test_error, 0.0);
       }
     }
     ncm_spline2d_free (s2d);
@@ -471,7 +471,7 @@ test_ncm_spline2d_eval (void)
         gdouble f = F_func (x, y, d);
         gdouble fs = ncm_spline2d_eval (s2d, x, y);
 
-        ncm_assert_cmpdouble_e (fs, ==, f, test_error);
+        ncm_assert_cmpdouble_e (fs, ==, f, test_error, 0.0);
       }
     }
     ncm_spline2d_free (s2d);
@@ -520,7 +520,7 @@ test_ncm_spline2d_eval_integ_dx (void)
         gdouble f = F_linear_intx (x, y, d) - F_linear_intx (_NCM_SPLINE2D_TEST_XI, y, d);
         gdouble fs = ncm_spline2d_integ_dx (s2d, _NCM_SPLINE2D_TEST_XI, x, y);
 
-        ncm_assert_cmpdouble_e (fs, ==, f, test_error);
+        ncm_assert_cmpdouble_e (fs, ==, f, test_error, 0.0);
       }
     }
     ncm_spline2d_free (s2d);
@@ -556,7 +556,7 @@ test_ncm_spline2d_eval_integ_dx (void)
         gdouble f = F_poly_intx (x, y, d) - F_poly_intx (_NCM_SPLINE2D_TEST_XI, y, d);
         gdouble fs = ncm_spline2d_integ_dx (s2d, _NCM_SPLINE2D_TEST_XI, x, y);
 
-        ncm_assert_cmpdouble_e (fs, ==, f, test_error);
+        ncm_assert_cmpdouble_e (fs, ==, f, test_error, 0.0);
       }
     }
     ncm_spline2d_free (s2d);
@@ -604,7 +604,7 @@ test_ncm_spline2d_eval_integ_dy (void)
         gdouble f = F_linear_inty (x, y, d) - F_linear_inty (x, _NCM_SPLINE2D_TEST_YI, d);
         gdouble fs = ncm_spline2d_integ_dy (s2d, x, _NCM_SPLINE2D_TEST_YI, y);
 
-        ncm_assert_cmpdouble_e (fs, ==, f, test_error);
+        ncm_assert_cmpdouble_e (fs, ==, f, test_error, 0.0);
       }
     }
     ncm_spline2d_free (s2d);
@@ -640,7 +640,7 @@ test_ncm_spline2d_eval_integ_dy (void)
         gdouble f = F_poly_inty (x, y, d) - F_poly_inty (x, _NCM_SPLINE2D_TEST_YI, d);
         gdouble fs = ncm_spline2d_integ_dy (s2d, x, _NCM_SPLINE2D_TEST_YI, y);
 
-        ncm_assert_cmpdouble_e (fs, ==, f, test_error);
+        ncm_assert_cmpdouble_e (fs, ==, f, test_error, 0.0);
       }
     }
     ncm_spline2d_free (s2d);
@@ -688,7 +688,7 @@ test_ncm_spline2d_eval_integ_dxdy (void)
         gdouble f = F_linear_intxy (x, y, d) - F_linear_intxy (_NCM_SPLINE2D_TEST_XI, y, d) - F_linear_intxy (x, _NCM_SPLINE2D_TEST_YI, d) + F_linear_intxy (_NCM_SPLINE2D_TEST_XI, _NCM_SPLINE2D_TEST_YI, d);
         gdouble fs = ncm_spline2d_integ_dxdy (s2d, _NCM_SPLINE2D_TEST_XI, x, _NCM_SPLINE2D_TEST_YI, y);
 
-        ncm_assert_cmpdouble_e (fs, ==, f, test_error);
+        ncm_assert_cmpdouble_e (fs, ==, f, test_error, 0.0);
       }
     }
     ncm_spline2d_free (s2d);
@@ -724,7 +724,7 @@ test_ncm_spline2d_eval_integ_dxdy (void)
         gdouble f = F_poly_intxy (x, y, d) - F_poly_intxy (_NCM_SPLINE2D_TEST_XI, y, d) - F_poly_intxy (x, _NCM_SPLINE2D_TEST_YI, d) + F_poly_intxy (_NCM_SPLINE2D_TEST_XI, _NCM_SPLINE2D_TEST_YI, d);
         gdouble fs = ncm_spline2d_integ_dxdy (s2d, _NCM_SPLINE2D_TEST_XI, x, _NCM_SPLINE2D_TEST_YI, y);
 
-        ncm_assert_cmpdouble_e (fs, ==, f, test_error);
+        ncm_assert_cmpdouble_e (fs, ==, f, test_error, 0.0);
       }
     }
     ncm_spline2d_free (s2d);
@@ -779,10 +779,10 @@ test_ncm_spline2d_eval_integ_x_y_xy_spline (void)
         gdouble fs_x = ncm_spline2d_integ_dxdy_spline_x (s2d, _NCM_SPLINE2D_TEST_XI, x, _NCM_SPLINE2D_TEST_YI, y);
         gdouble fs_y = ncm_spline2d_integ_dxdy_spline_y (s2d, _NCM_SPLINE2D_TEST_XI, x, _NCM_SPLINE2D_TEST_YI, y);
 
-        ncm_assert_cmpdouble_e (f_int_x, ==, f_int_sx, test_error);
-        ncm_assert_cmpdouble_e (f_int_y, ==, f_int_sy, test_error);
-        ncm_assert_cmpdouble_e (f_int_xy, ==, fs_x, test_error);
-        ncm_assert_cmpdouble_e (f_int_xy, ==, fs_y, test_error);
+        ncm_assert_cmpdouble_e (f_int_x, ==, f_int_sx, test_error, 0.0);
+        ncm_assert_cmpdouble_e (f_int_y, ==, f_int_sy, test_error, 0.0);
+        ncm_assert_cmpdouble_e (f_int_xy, ==, fs_x, test_error, 0.0);
+        ncm_assert_cmpdouble_e (f_int_xy, ==, fs_y, test_error, 0.0);
       }
     }
     ncm_spline2d_free (s2d);
@@ -837,10 +837,10 @@ test_ncm_spline2d_eval_integ_x_y_xy_spline (void)
 
         gdouble fs_y = ncm_spline2d_integ_dxdy_spline_y (s2d, _NCM_SPLINE2D_TEST_XI, x, _NCM_SPLINE2D_TEST_YI, y);
 
-        ncm_assert_cmpdouble_e (f_int_sx, ==, f_int_x, test_error);
-        ncm_assert_cmpdouble_e (f_int_sy, ==, f_int_y, test_error);
-        ncm_assert_cmpdouble_e (f_int_xy, ==, fs_x, test_error);
-        ncm_assert_cmpdouble_e (f_int_xy, ==, fs_y, test_error);
+        ncm_assert_cmpdouble_e (f_int_sx, ==, f_int_x, test_error, 0.0);
+        ncm_assert_cmpdouble_e (f_int_sy, ==, f_int_y, test_error, 0.0);
+        ncm_assert_cmpdouble_e (f_int_xy, ==, fs_x, test_error, 0.0);
+        ncm_assert_cmpdouble_e (f_int_xy, ==, fs_y, test_error, 0.0);
       }
     }
     ncm_spline2d_free (s2d);

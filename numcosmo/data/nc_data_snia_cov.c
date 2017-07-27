@@ -1266,7 +1266,7 @@ nc_data_snia_cov_load_txt (NcDataSNIACov *snia_cov, const gchar *filename)
       {
         const gdouble cov_ij = ncm_matrix_get (snia_cov->cov_full, i, j);
         const gdouble cov_ji = ncm_matrix_get (snia_cov->cov_full, j, i);
-        if (((i / mu_len) == (j / mu_len)) && ncm_cmp (cov_ij, cov_ji, NC_DATA_SNIA_COV_SYMM_TOL) != 0)
+        if (((i / mu_len) == (j / mu_len)) && ncm_cmp (cov_ij, cov_ji, NC_DATA_SNIA_COV_SYMM_TOL, 0.0) != 0)
         {
           g_error ("nc_data_snia_cov_load_txt: full covariance matrix is not symmetric in %ld %ld [% 20.15g != % 20.15g]\n", 
                    i, j, cov_ij, cov_ji);

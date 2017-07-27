@@ -70,12 +70,12 @@ gsize ncm_mpq_inp_raw (mpq_t q, FILE *f);
 
 gulong ncm_random_seed (void);
 
-gint ncm_cmp (gdouble x, gdouble y, gdouble reltol);
+gint ncm_cmp (gdouble x, gdouble y, const gdouble reltol, const gdouble abstol);
 
 void ncm_rational_coarce_double (gdouble x, mpq_t q);
 void ncm_mpz_inits (mpz_t z, ...) G_GNUC_NULL_TERMINATED;
 void ncm_mpz_clears (mpz_t z, ...) G_GNUC_NULL_TERMINATED;
-void _ncm_assertion_message_cmpdouble (const gchar *domain, const gchar *file, gint line, const gchar *func, const gchar *expr, gdouble arg1, const gchar *cmp, gdouble arg2);
+void _ncm_assertion_message_cmpdouble (const gchar *domain, const gchar *file, gint line, const gchar *func, const gchar *expr, gdouble arg1, const gchar *cmp, gdouble arg2, const gdouble reltol, const gdouble abstol);
 
 gboolean ncm_util_cvode_check_flag (gpointer flagvalue, const gchar *funcname, gint opt);
 gboolean ncm_util_cvode_print_stats (gpointer cvode);
@@ -144,16 +144,16 @@ memcpy ((dest)->data, (src)->data, (src)->len * g_array_get_element_size (src));
 
 #define ncm_assert_cmpdouble(n1,cmp,n2) \
 do { \
-  if (ncm_cmp ((n1), (n2), GSL_DBL_EPSILON) cmp 0) ; else \
+  if (ncm_cmp ((n1), (n2), GSL_DBL_EPSILON, 0.0) cmp 0) ; else \
     _ncm_assertion_message_cmpdouble (G_LOG_DOMAIN, __FILE__, __LINE__, G_STRFUNC, \
-                                      #n1 " " #cmp " " #n2, (n1), #cmp, (n2)); \
+                                      #n1 " " #cmp " " #n2, (n1), #cmp, (n2), GSL_DBL_EPSILON, 0.0); \
 } while (0)
 
-#define ncm_assert_cmpdouble_e(n1,cmp,n2,epsilon) \
+#define ncm_assert_cmpdouble_e(n1,cmp,n2,epsilon,abstol) \
 do { \
-  if (ncm_cmp ((n1), (n2), (epsilon)) cmp 0) ; else \
+  if (ncm_cmp ((n1), (n2), (epsilon), (abstol)) cmp 0) ; else \
     _ncm_assertion_message_cmpdouble (G_LOG_DOMAIN, __FILE__, __LINE__, G_STRFUNC, \
-                                      #n1 " " #cmp " " #n2, (n1), #cmp, (n2)); \
+                                      #n1 " " #cmp " " #n2, (n1), #cmp, (n2), (epsilon), (abstol)); \
 } while (0)
 
 #define NCM_RETURN_IF_INF(a) if (gsl_isinf(a)) return a

@@ -495,14 +495,14 @@ _ncm_lh_ratio2d_inside_interval (gdouble *p, const gdouble lb, const gdouble ub,
   NCM_UNUSED (prec);
   if (p[0] < lb)
   {
-    if (ncm_cmp (p[0], lb, 1e-4) == 0)
+    if (ncm_cmp (p[0], lb, 1e-4, 0.0) == 0)
       p[0] = lb;
     else
       return FALSE;
   }
   else if (p[0] > ub)
   {
-    if (ncm_cmp (p[0], ub, 1e-4) == 0)
+    if (ncm_cmp (p[0], ub, 1e-4, 0.0) == 0)
       p[0] = ub;
     else
       return FALSE;

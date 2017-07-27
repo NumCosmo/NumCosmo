@@ -221,7 +221,7 @@ test_nc_cluster_pseudo_counts_1p2_integral (TestNcClusterPseudoCounts *test, gco
   I1p2 = nc_cluster_pseudo_counts_posterior_numerator (cpc, mfp, clusterm, cosmo, test->z, test->Mobs, test->Mobs_params);
   I3d = nc_cluster_pseudo_counts_posterior_numerator_plcl (cpc, mfp, clusterm, cosmo, test->z, test->Mobs[0], test->Mobs[1], test->Mobs_params[0], test->Mobs_params[1]);
 
-  ncm_assert_cmpdouble_e (I1p2, ==, I3d, 1.0e-2);
+  ncm_assert_cmpdouble_e (I1p2, ==, I3d, 1.0e-2, 0.0);
 }
 
 void
@@ -237,7 +237,7 @@ test_nc_cluster_pseudo_counts_3d_integral (TestNcClusterPseudoCounts *test, gcon
   I1p2 = nc_cluster_pseudo_counts_posterior_numerator (cpc, mfp, clusterm, cosmo, test->z, test->Mobs, test->Mobs_params);
   I3d = nc_cluster_pseudo_counts_posterior_numerator_plcl (cpc, mfp, clusterm, cosmo, test->z, test->Mobs[0], test->Mobs[1], test->Mobs_params[0], test->Mobs_params[1]);
 
-  ncm_assert_cmpdouble_e (I1p2, ==, I3d, 1.0e-2);
+  ncm_assert_cmpdouble_e (I1p2, ==, I3d, 1.0e-2, 0.0);
 }
 
 void
