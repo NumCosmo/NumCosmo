@@ -45,9 +45,6 @@ gdouble ncm_topology_sigma_comoving_a0_lss (guint n, gdouble alpha, gdouble sigm
 gdouble ncm_sphPlm_x (gint l, gint m, gint order);
 gdouble ncm_sphPlm_test_theta (gdouble theta, gint lmax, gint *lmin_data);
 gdouble ncm_sum (gdouble *d, gulong n);
-gdouble ncm_numdiff_1 (gsl_function *F, const gdouble x, const gdouble ho, gdouble *err);
-gdouble ncm_numdiff_2 (gsl_function *F, gdouble *ofx, const gdouble x, const gdouble ho, gdouble *err);
-gdouble ncm_numdiff_2_err (gsl_function *F, gdouble *ofx, const gdouble x, const gdouble ho, gdouble err, gdouble *ferr);
 
 G_INLINE_FUNC gdouble ncm_util_sqrt1px_m1 (const gdouble x);
 G_INLINE_FUNC gdouble ncm_util_ln1pexpx (const gdouble x);

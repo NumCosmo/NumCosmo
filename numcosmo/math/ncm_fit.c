@@ -2557,10 +2557,13 @@ ncm_fit_function_error (NcmFit *fit, NcmMSetFunc *func, gdouble *x, gboolean pre
   }
   else
   {
-    NcmVector *v = ncm_mset_func_numdiff_fparams (func, fit->mset, x, NULL);
-    NcmVector *tmp1 = ncm_vector_dup (v);
+    NcmVector *v    = NULL;
+    NcmVector *tmp1 = NULL;
     gdouble result;
     gint ret;
+
+    ncm_mset_func_numdiff_fparams (func, fit->mset, x, &v);
+    tmp1 = ncm_vector_dup (v);
 
     if (fit->fstate->covar == NULL)
       g_error ("ncm_fit_function_error: called without any covariance matrix calculated.");

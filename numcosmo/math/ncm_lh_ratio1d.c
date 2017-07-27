@@ -343,7 +343,7 @@ ncm_lh_ratio1d_log_root_start (NcmLHRatio1d *lhr1d, gdouble pl, gdouble pu)
       g_message ("\n");
       _ncm_lh_ratio1d_log_dot = FALSE;
     }
-    g_message ("#  looking for root in interval [% 12.8g % 12.8g]:\n", 
+    g_message ("#  looking for a root in interval [% 12.8g % 12.8g]:\n", 
                lhr1d->bf + pl, lhr1d->bf + pu);
     if (lhr1d->mtype == NCM_FIT_RUN_MSGS_SIMPLE)
     {
@@ -490,11 +490,10 @@ ncm_lh_ratio1d_root_brent (NcmLHRatio1d *lhr1d, gdouble x0, gdouble x)
 static gdouble
 ncm_lh_ratio1d_numdiff_df (gdouble x, gpointer p)
 {
-  gsl_function F;
+  NcmLHRatio1d *lhr1d = NCM_LH_RATIO1D (p);
   gdouble res, err;
-  F.function = &ncm_lh_ratio1d_f;
-  F.params = p;
-  res = ncm_numdiff_1 (&F, x, x * 1e-5, &err);
+
+  res = ncm_diff_rf_d1_1_to_1 (lhr1d->fit->diff, x, ncm_lh_ratio1d_f, p, &err);
 
   return res;
 }
