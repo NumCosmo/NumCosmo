@@ -21,7 +21,7 @@ from gi.repository import NumCosmoMath as Ncm
 Ncm.cfg_init ()
 
 #
-#  New homogeneous and isotropic cosmological model NcHICosmoDEXcdm 
+#  New homogeneous and isotropic cosmological model: NcHICosmoVexp 
 #
 cosmo1 = Nc.HICosmo.new_from_name (Nc.HICosmo, "NcHICosmoVexp")
 cosmo2 = Nc.HICosmo.new_from_name (Nc.HICosmo, "NcHICosmoVexp")

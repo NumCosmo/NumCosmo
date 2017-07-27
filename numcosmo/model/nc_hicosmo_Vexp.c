@@ -25,9 +25,10 @@
 /**
  * SECTION:nc_hicosmo_Vexp
  * @title: NcHICosmoVexp
- * @short_description: $\Lambda$CDM model
+ * @short_description: Single scalar field with an exponential potential
  *
- * FIXME
+ * Bounce cosmological model assuming a single scalar field with an exponential potential. 
+ * For details see [Bacalhau et al. (2017)][XBacalhau2017]. 
  *
  */
 
@@ -2348,9 +2349,9 @@ _nc_hicosmo_Vexp_gw_eval_sing_system (NcHIPertIGW *igw, const gdouble tau_m_taus
 /**
  * nc_hicosmo_Vexp_new:
  *
- * FIXME
+ * This function instantiates a new object of type #NcHICosmoVexp.
  *
- * Returns: FIXME
+ * Returns: A new #NcHICosmoVexp
  */
 NcHICosmoVexp *
 nc_hicosmo_Vexp_new (void)
@@ -2363,9 +2364,9 @@ nc_hicosmo_Vexp_new (void)
  * nc_hicosmo_Vexp_tau_min:
  * @Vexp: a #NcHICosmoVexp
  *
- * FIXME
+ * The minimum value of the time variable suitable to describe the bounce, $\tau_{min}$.
  *
- * Returns: FIXME
+ * Returns: $\tau_{min}$
  */
 gdouble 
 nc_hicosmo_Vexp_tau_min (NcHICosmoVexp *Vexp)
@@ -2378,9 +2379,9 @@ nc_hicosmo_Vexp_tau_min (NcHICosmoVexp *Vexp)
  * nc_hicosmo_Vexp_tau_max:
  * @Vexp: a #NcHICosmoVexp
  *
- * FIXME
+ * The maximum value of the time variable suitable to describe the bounce, $\tau_{max}$.
  *
- * Returns: FIXME
+ * Returns: $\tau_{max}$
  */
 gdouble 
 nc_hicosmo_Vexp_tau_max (NcHICosmoVexp *Vexp)
@@ -2525,7 +2526,7 @@ nc_hicosmo_Vexp_tau_xc (NcHICosmoVexp *Vexp, const gdouble xc)
  * @Vexp: a #NcHICosmoVexp
  * @tau: $\tau$
  *
- * FIXME
+ * Computes $\alpha = \ln a$, where $a$ is the scale factor, at time @tau.
  * 
  * Returns: $\alpha(\tau)$.
  */
@@ -2541,7 +2542,7 @@ nc_hicosmo_Vexp_alpha (NcHICosmoVexp *Vexp, const gdouble tau)
  * @Vexp: a #NcHICosmoVexp
  * @tau: $\tau$
  *
- * FIXME
+ * Computes the scalar field $\phi$ at time @tau.
  * 
  * Returns: $\phi(\tau)$.
  */
