@@ -2137,7 +2137,7 @@ _ncm_hoaa_dangle (NcmHOAA *hoaa, const gdouble R, const gdouble F, const gdouble
 void 
 ncm_hoaa_eval_adiabatic_approx (NcmHOAA *hoaa, NcmModel *model, const gdouble t, gdouble *thetab, gdouble *upsilon, gdouble *gamma)
 {
-  if (ncm_cmp (t, hoaa->priv->tc, hoaa->priv->reltol) != 0)
+  if (ncm_cmp (t, hoaa->priv->tc, hoaa->priv->reltol, 0.0) != 0)
   {
     gint flag;
     gdouble t_step;

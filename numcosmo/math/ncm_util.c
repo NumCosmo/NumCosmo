@@ -651,39 +651,37 @@ ncm_sum (gdouble *d, gulong n)
 gdouble
 ncm_numdiff_1 (gsl_function *F, const gdouble x, const gdouble ho, gdouble *err)
 {
-  const gint ntab = 20;
-  const gdouble con = 2.0;
-  const gdouble con2 = (con * con);
-  const gdouble big = 1e300;
-  const gdouble safe = 2.0;
+  const gint ntab       = 20;
+  const gdouble con     = 2.0;
+  const gdouble con2    = (con * con);
+  const gdouble big     = 1e300;
+  const gdouble safe    = 2.0;
   volatile gdouble temp = x + ho;
-  const gdouble h = temp - x;
+  const gdouble h       = temp - x;
   gint i,j;
   gdouble errt, fac, hh, ans;
   gdouble a[ntab * ntab];
-  //  guint count = 0;
 
   if (h == 0.0)
     g_error ("ncm_numdiff_1: Step h too small");
 
   hh = h;
 
-  a[ntab * 0 + 0] = ans = (F->function (x + hh, F->params) - F->function (x - hh, F->params)) / (2.0*hh);
-  //  count += 2;
+  a[ntab * 0 + 0] = ans = (F->function (x + hh, F->params) - F->function (x - hh, F->params)) / (2.0 * hh);
   *err = big;
 
   for (i = 1; i < ntab; i++)
   {
     hh /= con;
     a[0 * ntab + i] = (F->function (x + hh, F->params) - F->function (x - hh, F->params)) / (2.0 * hh);
-    //    count += 2;
     fac = con2;
 
     for (j = 1; j <= i; j++)
     {
       a[j * ntab + i] = (a[(j-1) * ntab + i] * fac - a[(j-1) * ntab + i - 1]) / (fac - 1.0);
-      fac = con2 * fac;
+      fac  = con2 * fac;
       errt = GSL_MAX (fabs (a[j * ntab + i] - a[(j-1) * ntab + i]), fabs (a[j * ntab + i] - a[(j-1) * ntab + i - 1]));
+      
       if (errt <= *err)
       {
         *err = errt;
@@ -693,7 +691,7 @@ ncm_numdiff_1 (gsl_function *F, const gdouble x, const gdouble ho, gdouble *err)
     if (fabs (a[i*ntab + i] - a[(i-1) * ntab + i - 1]) >= safe * (*err))
       break;
   }
-  //  printf ("# Count %u\n", count);
+
   return ans;
 }
 
@@ -974,15 +972,17 @@ ncm_d3exprel (const gdouble x)
  * Returns: -1, 0, 1.
  */
 gint
-ncm_cmp (gdouble x, gdouble y, gdouble reltol)
+ncm_cmp (gdouble x, gdouble y, const gdouble reltol, const gdouble abstol)
 {
   if (G_UNLIKELY (x == 0.0 && y == 0.0))
     return 0;
   else
   {
     const gdouble delta = (x - y);
-    const gdouble mean  = G_UNLIKELY (x == 0 || y == 0) ? 1.0 : 0.5 * fabs (x + y);
-    if (fabs (delta / mean) < reltol)
+    const gdouble abs_x = fabs (x);
+    const gdouble abs_y = fabs (y);
+    const gdouble mean  = G_UNLIKELY (x == 0.0 || y == 0.0) ? 1.0 : GSL_MAX (abs_x, abs_y);
+    if (fabs (delta) <= reltol * mean + abstol)
       return 0;
     else
       return delta < 0 ? -1 : 1;
@@ -990,9 +990,14 @@ ncm_cmp (gdouble x, gdouble y, gdouble reltol)
 }
 
 void
-_ncm_assertion_message_cmpdouble (const gchar *domain, const gchar *file, gint line, const gchar *func, const gchar *expr, gdouble arg1, const gchar *cmp, gdouble arg2)
+_ncm_assertion_message_cmpdouble (const gchar *domain, const gchar *file, gint line, const gchar *func, const gchar *expr, gdouble arg1, const gchar *cmp, gdouble arg2, const gdouble reltol, const gdouble abstol)
 {
-  gchar *s = g_strdup_printf ("assertion failed (%s): (%.17g %s %.17g)", expr, arg1, cmp, arg2);
+  gchar *s = g_strdup_printf ("assertion failed (%s): (%.17g %s %.17g) (reltol %.17g diff_rel %.17g, abstol %.17g diff %.17g)", 
+                              expr, arg1, cmp, arg2, reltol,
+                              fabs (arg1) > fabs (arg2) ? fabs (arg2 / arg1 - 1.0) : fabs (arg1 / arg2 - 1.0),
+                              abstol,
+                              fabs (arg1 - arg2) 
+                              );
   g_assertion_message (domain, file, line, func, s);
   g_free (s);
 }

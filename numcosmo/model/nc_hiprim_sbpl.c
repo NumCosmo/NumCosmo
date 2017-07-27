@@ -184,7 +184,7 @@ _nc_hiprim_sbpl_lnSA_powespec_lnk (NcHIPrim *prim, const gdouble lnk)
   }
 
   {
-    const gdouble lnxi    = log (ra * exp (delta * ln_ka) * one_1px_plambda + one_1px_mlambda);
+    const gdouble lnxi = log (ra * exp (delta * ln_ka) * one_1px_plambda + one_1px_mlambda);
     return lnxi + lnPplaw;
   }
 }

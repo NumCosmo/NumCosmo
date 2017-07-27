@@ -719,6 +719,15 @@ ncm_vector_log_vals_func (const NcmVector *v, const gchar *prestr, const gchar *
  *
  */
 /**
+ * ncm_vector_mul:
+ * @cv1: a #NcmVector, numerator
+ * @cv2: a #NcmVector, denominator
+ *
+ * This function multiplies the components of the vector @cv1 by the components of the vector @cv2.
+ * The two vectors must have the same length.
+ *
+ */
+/**
  * ncm_vector_div:
  * @cv1: a #NcmVector, numerator
  * @cv2: a #NcmVector, denominator
@@ -968,6 +977,113 @@ ncm_vector_dnrm2 (const NcmVector *cv)
   return cblas_dnrm2 (ncm_vector_len (cv),
                       ncm_vector_const_ptr (cv, 0),
                       ncm_vector_stride (cv));
+}
+
+/**
+ * ncm_vector_axpy:
+ * @cv1: a #NcmVector $y$
+ * @alpha: a double $\alpha$
+ * @cv2: a #NcmVector $x$
+ * 
+ * Performs the operation $y = \alpha x + y$.
+ *
+ */
+void 
+ncm_vector_axpy (NcmVector *cv1, const gdouble alpha, const NcmVector *cv2)
+{
+  const guint len = ncm_vector_len (cv1);
+  g_assert_cmpuint (len, ==, ncm_vector_len (cv2));
+
+  cblas_daxpy (len, alpha, ncm_vector_const_data (cv2), ncm_vector_stride (cv2), ncm_vector_data (cv1), ncm_vector_stride (cv1));
+}
+
+/**
+ * ncm_vector_cmp:
+ * @cv1: a #NcmVector $x_1$
+ * @cv2: a #NcmVector $x_2$
+ * 
+ * Performs a comparison, component-wise, of the two vectors and 
+ * puts the weighted difference in @cv1.
+ *
+ */
+void 
+ncm_vector_cmp (NcmVector *cv1, const NcmVector *cv2)
+{
+  const guint len = ncm_vector_len (cv1);
+  guint i;
+
+  for (i = 0; i < len; i++)
+  {
+    const gdouble x1_i = ncm_vector_get (cv1, i);
+    const gdouble x2_i = ncm_vector_get (cv2, i);
+
+    if (G_UNLIKELY ((x1_i == 0.0) && (x2_i == 0.0)))
+    {
+      ncm_vector_set (cv1, i, 0.0);
+    }
+    else
+    {
+      const gdouble abs_x1_i  = fabs (x1_i);
+      const gdouble abs_x2_i  = fabs (x2_i);
+      const gdouble max_x12_i = GSL_MAX (abs_x1_i, abs_x2_i);
+      ncm_vector_set (cv1, i, fabs ((x1_i - x2_i) / max_x12_i));
+    }
+  }
+}
+
+/**
+ * ncm_vector_sub_round_off:
+ * @cv1: a #NcmVector $x_1$
+ * @cv2: a #NcmVector $x_2$
+ * 
+ * Estimate the round-off error component wise in the
+ * subtraction of @cv1 by @cv2.
+ *
+ */
+void 
+ncm_vector_sub_round_off (NcmVector *cv1, const NcmVector *cv2)
+{
+  const guint len = ncm_vector_len (cv1);
+  guint i;
+
+  for (i = 0; i < len; i++)
+  {
+    const gdouble x1_i        = ncm_vector_get (cv1, i);
+    const gdouble x2_i        = ncm_vector_get (cv2, i);
+    const gdouble abs_x1_i    = fabs (x1_i);
+    const gdouble abs_x2_i    = fabs (x2_i);
+    const gdouble x2_i_m_x1_i = fabs (x2_i - x1_i);
+    
+    if (G_UNLIKELY (x2_i_m_x1_i == 0.0))
+    {
+      ncm_vector_set (cv1, i, 1.0);
+    }
+    else
+    {
+      const gdouble max_x12_i = GSL_MAX (abs_x1_i, abs_x2_i);
+      ncm_vector_set (cv1, i, max_x12_i * GSL_DBL_EPSILON / x2_i_m_x1_i );
+    }
+  }
+}
+
+/**
+ * ncm_vector_reciprocal:
+ * @cv: a #NcmVector
+ * 
+ * Calculates the reciprocal of @cv1.
+ *
+ */
+void 
+ncm_vector_reciprocal (NcmVector *cv)
+{
+  const guint len = ncm_vector_len (cv);
+  guint i;
+
+  for (i = 0; i < len; i++)
+  {
+    const gdouble x_i = ncm_vector_get (cv, i);
+    ncm_vector_set (cv, i, 1.0 / x_i);
+  }
 }
 
 /**

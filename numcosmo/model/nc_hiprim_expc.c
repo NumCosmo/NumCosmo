@@ -88,7 +88,7 @@ nc_hiprim_expc_class_init (NcHIPrimExpcClass *klass)
 
   /* Set lambdac param info */
   ncm_model_class_set_sparam (model_class, NC_HIPRIM_EXPC_LAMBDAC, "\\lambda_c", "lambdac",
-                              0.0, 10.0, 1.0,
+                              0.0, 30.0, 1.0,
                               NC_HIPRIM_DEFAULT_PARAMS_ABSTOL, NC_HIPRIM_EXPC_DEFAULT_LAMBDAC,
                               NCM_PARAM_TYPE_FIXED);
   /* Set lnkc param info */

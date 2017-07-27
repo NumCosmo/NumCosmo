@@ -530,7 +530,7 @@ test_ncm_spline_eval (TestNcmSpline *test, gconstpointer pdata)
       gdouble f = GSL_FN_EVAL (&F, xval);
       gdouble fs = ncm_spline_eval (s, xval);
 
-      ncm_assert_cmpdouble_e (fs, ==, f, test->error);
+      ncm_assert_cmpdouble_e (fs, ==, f, test->error, 0.0);
     }
     
     ncm_spline_free (s);
@@ -547,7 +547,7 @@ test_ncm_spline_eval (TestNcmSpline *test, gconstpointer pdata)
       gdouble f = GSL_FN_EVAL (&F, x);
       gdouble fs = ncm_spline_eval (s, x);
 
-      ncm_assert_cmpdouble_e (fs, ==, f, test->error);
+      ncm_assert_cmpdouble_e (fs, ==, f, test->error, 0.0);
     }
     ncm_spline_free (s);
   }
@@ -563,7 +563,7 @@ test_ncm_spline_eval (TestNcmSpline *test, gconstpointer pdata)
       gdouble f = GSL_FN_EVAL (&F, x);
       gdouble fs = ncm_spline_eval (s, x);
 
-      ncm_assert_cmpdouble_e (fs, ==, f, test->error);
+      ncm_assert_cmpdouble_e (fs, ==, f, test->error, 0.0);
     }
     ncm_spline_free (s);
   }
@@ -579,7 +579,7 @@ test_ncm_spline_eval (TestNcmSpline *test, gconstpointer pdata)
       gdouble f = GSL_FN_EVAL (&F, x);
       gdouble fs = ncm_spline_eval (s, x);
 
-      ncm_assert_cmpdouble_e (fs, ==, f, test->error);
+      ncm_assert_cmpdouble_e (fs, ==, f, test->error, 0.0);
     }
     ncm_spline_free (s);
   }
@@ -610,7 +610,7 @@ test_ncm_spline_eval_deriv (TestNcmSpline *test, gconstpointer pdata)
       gdouble df = GSL_FN_EVAL (&F_deriv, x);
       gdouble dfs = ncm_spline_eval_deriv (s, x);
 
-      ncm_assert_cmpdouble_e (dfs, ==, df, test->error);
+      ncm_assert_cmpdouble_e (dfs, ==, df, test->error, 0.0);
     }
     ncm_spline_free (s);
   }
@@ -628,7 +628,7 @@ test_ncm_spline_eval_deriv (TestNcmSpline *test, gconstpointer pdata)
       gdouble df = GSL_FN_EVAL (&F_deriv, x);
       gdouble dfs = ncm_spline_eval_deriv (s, x);
 
-      ncm_assert_cmpdouble_e (dfs, ==, df, test->error_d1);
+      ncm_assert_cmpdouble_e (dfs, ==, df, test->error_d1, 0.0);
     }
     ncm_spline_free (s);
   }
@@ -646,7 +646,7 @@ test_ncm_spline_eval_deriv (TestNcmSpline *test, gconstpointer pdata)
       gdouble df = GSL_FN_EVAL (&F_deriv, x);
       gdouble dfs = ncm_spline_eval_deriv (s, x);
 
-      ncm_assert_cmpdouble_e (dfs, ==, df, test->error_d1);
+      ncm_assert_cmpdouble_e (dfs, ==, df, test->error_d1, 0.0);
     }
     ncm_spline_free (s);
   }
@@ -678,7 +678,7 @@ test_ncm_spline_eval_deriv2 (TestNcmSpline *test, gconstpointer pdata)
       gdouble d2f = GSL_FN_EVAL (&F_deriv2, x);
       gdouble d2fs = ncm_spline_eval_deriv2 (s, x);
 
-      ncm_assert_cmpdouble_e (d2fs, ==, d2f, test->error_d2);
+      ncm_assert_cmpdouble_e (d2fs, ==, d2f, test->error_d2, 0.0);
     }
     ncm_spline_free (s);
   }
@@ -697,7 +697,7 @@ test_ncm_spline_eval_deriv2 (TestNcmSpline *test, gconstpointer pdata)
       gdouble d2f = GSL_FN_EVAL (&F_deriv2, x);
       gdouble d2fs = ncm_spline_eval_deriv2 (s, x);
 
-      ncm_assert_cmpdouble_e (d2fs, ==, d2f, test->error_d2);
+      ncm_assert_cmpdouble_e (d2fs, ==, d2f, test->error_d2, 0.0);
     }
     ncm_spline_free (s);
   }
@@ -716,7 +716,7 @@ test_ncm_spline_eval_deriv2 (TestNcmSpline *test, gconstpointer pdata)
       gdouble d2f = GSL_FN_EVAL (&F_deriv2, x);
       gdouble d2fs = ncm_spline_eval_deriv2 (s, x);
 
-      ncm_assert_cmpdouble_e (d2fs, ==, d2f, test->error_d2);
+      ncm_assert_cmpdouble_e (d2fs, ==, d2f, test->error_d2, 0.0);
     }
     ncm_spline_free (s);
   }
@@ -748,7 +748,7 @@ test_ncm_spline_eval_int (TestNcmSpline *test, gconstpointer pdata)
       gdouble If = GSL_FN_EVAL (&F_int, x) - GSL_FN_EVAL (&F_int, xi);
       gdouble Ifs = ncm_spline_eval_integ (s, xi, x);
 
-      ncm_assert_cmpdouble_e (Ifs, ==, If, test->error);
+      ncm_assert_cmpdouble_e (Ifs, ==, If, test->error, 0.0);
     }
     ncm_spline_free (s);
   }
@@ -767,7 +767,7 @@ test_ncm_spline_eval_int (TestNcmSpline *test, gconstpointer pdata)
       gdouble If = GSL_FN_EVAL (&F_int, x) - GSL_FN_EVAL (&F_int, xi);
       gdouble Ifs = ncm_spline_eval_integ (s, xi, x);
 
-      ncm_assert_cmpdouble_e (Ifs, ==, If, test->error);
+      ncm_assert_cmpdouble_e (Ifs, ==, If, test->error, 0.0);
     }
     ncm_spline_free (s);
   }

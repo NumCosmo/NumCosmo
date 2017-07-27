@@ -58,6 +58,7 @@ ncm_sources = \
 	math/ncm_c.c                         \
 	math/ncm_cfg.c                       \
 	math/ncm_util.c                      \
+	math/ncm_diff.c                      \
 	math/ncm_timer.c                     \
 	math/ncm_lapack.c                    \
 	math/ncm_vector.c                    \
@@ -168,6 +169,7 @@ ncm_headers =                                \
 	math/ncm_c.h                         \
 	math/ncm_cfg.h                       \
 	math/ncm_util.h                      \
+	math/ncm_diff.h                      \
 	math/ncm_timer.h                     \
 	math/ncm_lapack.h                    \
 	math/ncm_vector.h                    \

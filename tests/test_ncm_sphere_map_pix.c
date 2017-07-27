@@ -223,7 +223,7 @@ test_ncm_sphere_map_pix_ring (TestNcmSphereMapPix *test, gconstpointer pdata)
       else
       {
         g_assert_cmpfloat (phi_i, >, last_phi);
-        ncm_assert_cmpdouble_e (phi_i - last_phi, ==, 2.0 * M_PI / r_i_size, 1.0e-10);
+        ncm_assert_cmpdouble_e (phi_i - last_phi, ==, 2.0 * M_PI / r_i_size, 1.0e-10, 0.0);
       }
 
       last_phi = phi_i;

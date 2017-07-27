@@ -23,6 +23,9 @@ COVLIBS = \
 test_ncm_sparam_SOURCES =  \
 	test_ncm_sparam.c
 
+test_ncm_diff_SOURCES =  \
+	test_ncm_diff.c
+
 test_ncm_vector_SOURCES =  \
 	test_ncm_vector.c
 
@@ -113,6 +116,7 @@ check_PROGRAMS =  \
 	test_ncm_sf_sbessel           \
 	test_ncm_func_eval            \
 	test_ncm_sparam               \
+	test_ncm_diff                 \
 	test_ncm_model                \
 	test_ncm_model_ctrl           \
 	test_ncm_serialize            \
@@ -133,6 +137,12 @@ check_PROGRAMS =  \
 # TEST_PROGS += $(check_PROGRAMS)
 
 test_ncm_sparam_LDADD = \
+	$(top_builddir)/numcosmo/libnumcosmo.la \
+	$(GLIB_LIBS) \
+	$(GSL_LIBS) \
+	$(COVLIBS)
+
+test_ncm_diff_LDADD = \
 	$(top_builddir)/numcosmo/libnumcosmo.la \
 	$(GLIB_LIBS) \
 	$(GSL_LIBS) \

@@ -217,7 +217,7 @@ test_ncm_stats_vec_mean_test (TestNcmStatsVec *test, gconstpointer pdata)
                                             ncm_matrix_ptr (test->xs, 0, k), test->v_size, 
                                             i + 1);
         gdouble svec_mean = ncm_stats_vec_get_mean (test->svec, k);
-        ncm_assert_cmpdouble_e (gsl_mean, ==, svec_mean, _TEST_NCM_STATS_VEC_PREC);
+        ncm_assert_cmpdouble_e (gsl_mean, ==, svec_mean, _TEST_NCM_STATS_VEC_PREC, 0.0);
       }
       
     }
@@ -264,8 +264,8 @@ test_ncm_stats_vec_var_test (TestNcmStatsVec *test, gconstpointer pdata)
                                                i + 1);
         gdouble svec_mean = ncm_stats_vec_get_mean (test->svec, k);
         gdouble svec_var = ncm_stats_vec_get_var (test->svec, k);
-        ncm_assert_cmpdouble_e (gsl_mean, ==, svec_mean, _TEST_NCM_STATS_VEC_PREC);
-        ncm_assert_cmpdouble_e (gsl_var, ==, svec_var, _TEST_NCM_STATS_VEC_PREC);
+        ncm_assert_cmpdouble_e (gsl_mean, ==, svec_mean, _TEST_NCM_STATS_VEC_PREC, 0.0);
+        ncm_assert_cmpdouble_e (gsl_var, ==, svec_var, _TEST_NCM_STATS_VEC_PREC, 0.0);
       }
     }
   }
@@ -316,8 +316,8 @@ test_ncm_stats_vec_cov_test (TestNcmStatsVec *test, gconstpointer pdata)
         gdouble svec_mean = ncm_stats_vec_get_mean (test->svec, k);
         gdouble svec_var = ncm_stats_vec_get_var (test->svec, k);
         guint l;
-        ncm_assert_cmpdouble_e (gsl_mean, ==, svec_mean, _TEST_NCM_STATS_VEC_PREC);
-        ncm_assert_cmpdouble_e (gsl_var, ==, svec_var, _TEST_NCM_STATS_VEC_PREC);
+        ncm_assert_cmpdouble_e (gsl_mean, ==, svec_mean, _TEST_NCM_STATS_VEC_PREC, 0.0);
+        ncm_assert_cmpdouble_e (gsl_var, ==, svec_var, _TEST_NCM_STATS_VEC_PREC, 0.0);
         for (l = k + 1; l < test->v_size; l++)
         {
           const gdouble gsl_cov_kl = gsl_stats_covariance (ncm_matrix_ptr (test->xs, 0, k), test->v_size, 
@@ -326,7 +326,7 @@ test_ncm_stats_vec_cov_test (TestNcmStatsVec *test, gconstpointer pdata)
           const gdouble svec_cov_kl = ncm_stats_vec_get_cov (test->svec, k, l);
           const gdouble svec_cov_lk = ncm_stats_vec_get_cov (test->svec, l, k);
           ncm_assert_cmpdouble (svec_cov_kl, ==, svec_cov_lk);
-          ncm_assert_cmpdouble_e (gsl_cov_kl + 1.0, ==, svec_cov_kl + 1.0, _TEST_NCM_STATS_VEC_COV_PREC);
+          ncm_assert_cmpdouble_e (gsl_cov_kl + 1.0, ==, svec_cov_kl + 1.0, _TEST_NCM_STATS_VEC_COV_PREC, 0.0);
         }
       }
     }
@@ -373,8 +373,8 @@ test_ncm_stats_vec_autocorr_test (TestNcmStatsVec *test, gconstpointer pdata)
     const gdouble svec_mean = ncm_stats_vec_get_mean (test->svec, i);
     const gdouble svec_var = ncm_stats_vec_get_var (test->svec, i);
 
-    ncm_assert_cmpdouble_e (gsl_mean, ==, svec_mean, _TEST_NCM_STATS_VEC_PREC);
-    ncm_assert_cmpdouble_e (gsl_var, ==, svec_var, _TEST_NCM_STATS_VEC_PREC);
+    ncm_assert_cmpdouble_e (gsl_mean, ==, svec_mean, _TEST_NCM_STATS_VEC_PREC, 0.0);
+    ncm_assert_cmpdouble_e (gsl_var, ==, svec_var, _TEST_NCM_STATS_VEC_PREC, 0.0);
 
     {
       NcmVector *ac = ncm_stats_vec_get_autocorr (test->svec, i);
@@ -384,7 +384,7 @@ test_ncm_stats_vec_autocorr_test (TestNcmStatsVec *test, gconstpointer pdata)
       {
         if (ncm_vector_get (ac, j) < 0.0)
           break;
-        ncm_assert_cmpdouble_e (ncm_vector_get (ac, j), ==, pow (a, j), 1.0e-1);
+        ncm_assert_cmpdouble_e (ncm_vector_get (ac, j), ==, pow (a, j), 1.0e-1, 0.0);
       }
       ncm_vector_free (ac);
     }
@@ -435,8 +435,8 @@ test_ncm_stats_vec_subsample_autocorr_test (TestNcmStatsVec *test, gconstpointer
     const gdouble svec_mean = ncm_stats_vec_get_mean (test->svec, i);
     const gdouble svec_var = ncm_stats_vec_get_var (test->svec, i);
 
-    ncm_assert_cmpdouble_e (gsl_mean, ==, svec_mean, _TEST_NCM_STATS_VEC_PREC);
-    ncm_assert_cmpdouble_e (gsl_var, ==, svec_var, _TEST_NCM_STATS_VEC_PREC);
+    ncm_assert_cmpdouble_e (gsl_mean, ==, svec_mean, _TEST_NCM_STATS_VEC_PREC, 0.0);
+    ncm_assert_cmpdouble_e (gsl_var, ==, svec_var, _TEST_NCM_STATS_VEC_PREC, 0.0);
 
     {
       NcmVector *ac = ncm_stats_vec_get_subsample_autocorr (test->svec, i, nchains);
@@ -446,7 +446,7 @@ test_ncm_stats_vec_subsample_autocorr_test (TestNcmStatsVec *test, gconstpointer
       {
         if (ncm_vector_get (ac, j) < 0.0)
           break;
-        ncm_assert_cmpdouble_e (ncm_vector_get (ac, j), ==, pow (a, j), 1.0e-1);
+        ncm_assert_cmpdouble_e (ncm_vector_get (ac, j), ==, pow (a, j), 1.0e-1, 0.0);
       }
       ncm_vector_free (ac);
     }

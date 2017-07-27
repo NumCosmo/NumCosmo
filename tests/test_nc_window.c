@@ -136,7 +136,7 @@ test_nc_window_eval_fourier_tophat (void)
       gdouble w1 = nc_window_eval_fourier (wf, k, R);
       gdouble w2 = 3.0 * gsl_sf_bessel_j1 (kR) / kR;
 
-      ncm_assert_cmpdouble_e (w1, ==, w2, 1e-8);
+      ncm_assert_cmpdouble_e (w1, ==, w2, 1e-8, 0.0);
     }
   }
 }
@@ -155,7 +155,7 @@ test_nc_window_deriv_fourier_tophat (void)
       gdouble w1 = nc_window_deriv_fourier (wf, k, R);
       gdouble w2 = -3.0 * gsl_sf_bessel_j2 (k * R) / R;
 
-      ncm_assert_cmpdouble_e (w1, ==, w2, 1e-11);
+      ncm_assert_cmpdouble_e (w1, ==, w2, 1e-11, 0.0);
     }
   }
 }
@@ -179,7 +179,7 @@ test_nc_window_eval_real_tophat (void)
       else
         w2 = 0.0;
 
-      ncm_assert_cmpdouble_e (w1, ==, w2, 1e-11);
+      ncm_assert_cmpdouble_e (w1, ==, w2, 1e-11, 0.0);
     }
   }
 }
@@ -200,7 +200,7 @@ test_nc_window_eval_fourier_gaussian (void)
       gdouble w1 = nc_window_eval_fourier (wf, k, R);
       gdouble w2 = exp (-kR2 / 2.0);
 
-      ncm_assert_cmpdouble_e (w1, ==, w2, 1e-11);
+      ncm_assert_cmpdouble_e (w1, ==, w2, 1e-11, 0.0);
     }
   }
 }
@@ -221,7 +221,7 @@ test_nc_window_deriv_fourier_gaussian (void)
       gdouble w1 = nc_window_deriv_fourier (wf, k, R);
       gdouble w2 = -k2R * exp (-kR2 / 2.0);
 
-      ncm_assert_cmpdouble_e (w1, ==, w2, 1.0e-15);
+      ncm_assert_cmpdouble_e (w1, ==, w2, 1.0e-15, 0.0);
     }
   }
 }
@@ -241,7 +241,7 @@ test_nc_window_eval_real_gaussian (void)
       gdouble w1 = nc_window_eval_realspace (wf, r, R);
       gdouble w2 = 1.0 / gsl_pow_3 (sqrt (2 * M_PI * R * R)) * exp (-r_R2 / 2.0);
 
-      ncm_assert_cmpdouble_e (w1, ==, w2, 1e-11);
+      ncm_assert_cmpdouble_e (w1, ==, w2, 1e-11, 0.0);
     }
   }
 }
