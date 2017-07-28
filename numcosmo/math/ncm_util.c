@@ -771,9 +771,10 @@ ncm_d3exprel (const gdouble x)
 
 /**
  * ncm_cmp:
- * @x: a double.
- * @y: a double.
- * @reltol: relative precision.
+ * @x: a double
+ * @y: a double
+ * @reltol: relative precision
+ * @abstol: the absolute precision
  *
  * Compare x and y and return -1 if x < y, 0 if x == y and 1 if x > y,
  * all comparisons are done with precision @prec.
