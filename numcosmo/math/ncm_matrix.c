@@ -860,29 +860,82 @@ ncm_matrix_copy_triangle (NcmMatrix *cm, gchar UL)
  * ncm_matrix_dsymm:
  * @cm: a #NcmMatrix
  * @UL: char indicating 'U'pper or 'L'ower matrix 
- * @alpha: FIXME
- * @b: FIXME
- * @beta: FIXME
- * @c: FIXME
- *
+ * @alpha: $\alpha$
+ * @A: a #NcmMatrix $A$
+ * @B: a #NcmMatrix $B$
+ * @beta: $\beta$
+ * 
  * FIXME
  *
  */
 void 
-ncm_matrix_dsymm (NcmMatrix *cm, gchar UL, const gdouble alpha, NcmMatrix *b, const gdouble beta, NcmMatrix *c)
+ncm_matrix_dsymm (NcmMatrix *cm, gchar UL, const gdouble alpha, NcmMatrix *A, NcmMatrix *B, const gdouble beta)
 {
   g_assert (UL == 'U' || UL == 'L');
-  g_assert_cmpuint (ncm_matrix_ncols (cm), ==, ncm_matrix_ncols (b));
-  g_assert_cmpuint (ncm_matrix_nrows (cm), ==, ncm_matrix_nrows (b));
-  g_assert_cmpuint (ncm_matrix_ncols (cm), ==, ncm_matrix_ncols (c));
-  g_assert_cmpuint (ncm_matrix_nrows (cm), ==, ncm_matrix_nrows (c));
+  g_assert_cmpuint (ncm_matrix_ncols (A), ==, ncm_matrix_ncols (B));
+  g_assert_cmpuint (ncm_matrix_nrows (A), ==, ncm_matrix_nrows (B));
+  g_assert_cmpuint (ncm_matrix_ncols (A), ==, ncm_matrix_ncols (cm));
+  g_assert_cmpuint (ncm_matrix_nrows (A), ==, ncm_matrix_nrows (cm));
 
   cblas_dsymm (CblasRowMajor, CblasLeft, (UL == 'U') ? CblasUpper : CblasLower, ncm_matrix_nrows (cm), ncm_matrix_ncols (cm), 
                alpha, 
-               ncm_matrix_data (cm), ncm_matrix_gsl (cm)->tda,
-               ncm_matrix_data (b), ncm_matrix_gsl (b)->tda, 
+               ncm_matrix_data (A), ncm_matrix_tda (A),
+               ncm_matrix_data (B), ncm_matrix_tda (B), 
                beta,
-               ncm_matrix_data (c), ncm_matrix_gsl (c)->tda);
+               ncm_matrix_data (cm), ncm_matrix_tda (cm));
+}
+
+enum CBLAS_ORDER
+_ncm_matrix_check_trans (const gchar *func_name, gchar T)
+{
+  switch (T)
+  {
+    case 'C':
+    case 'T':
+      return CblasTrans;
+    case 'N':
+      return CblasNoTrans;
+      break;
+    default:
+      g_error ("%s: Unknown Trans type %c.", func_name, T);
+      return 0;
+  }
+}
+
+/**
+ * ncm_matrix_dgemm:
+ * @cm: a #NcmMatrix $C$
+ * @TransA: char indicating 'T'ranspose or 'N'ot transposed matrix 
+ * @TransB: char indicating 'T'ranspose or 'N'ot transposed matrix 
+ * @alpha: $\alpha$
+ * @A: a #NcmMatrix $A$
+ * @B: a #NcmMatrix $B$
+ * @beta: $\beta$
+ *
+ * Calculates $C = \alpha\mathrm{op}(A)\mathrm{op}(B) + \beta C$.
+ *
+ */
+void 
+ncm_matrix_dgemm (NcmMatrix *cm, gchar TransA, gchar TransB, const gdouble alpha, NcmMatrix *A, NcmMatrix *B, const gdouble beta)
+{
+  enum CBLAS_TRANSPOSE cblas_TransA = _ncm_matrix_check_trans ("ncm_matrix_dgemm", TransA);
+  enum CBLAS_TRANSPOSE cblas_TransB = _ncm_matrix_check_trans ("ncm_matrix_dgemm", TransB);
+  const gsize opA_nrows             = (cblas_TransA == CblasNoTrans) ? ncm_matrix_nrows (A) : ncm_matrix_ncols (A);
+  const gsize opA_ncols             = (cblas_TransA == CblasNoTrans) ? ncm_matrix_ncols (A) : ncm_matrix_nrows (A);
+  const gsize opB_nrows             = (cblas_TransB == CblasNoTrans) ? ncm_matrix_nrows (B) : ncm_matrix_ncols (B);
+  const gsize opB_ncols             = (cblas_TransB == CblasNoTrans) ? ncm_matrix_ncols (B) : ncm_matrix_nrows (B);
+
+  g_assert_cmpuint (opA_ncols, ==, opB_nrows);
+
+  g_assert_cmpuint (opA_nrows, ==, ncm_matrix_nrows (cm));
+  g_assert_cmpuint (opB_ncols, ==, ncm_matrix_ncols (cm));
+  
+  cblas_dgemm (CblasRowMajor, cblas_TransA, cblas_TransB, opA_nrows, opB_ncols, opA_ncols, 
+               alpha,
+               ncm_matrix_data (A), ncm_matrix_tda (A),
+               ncm_matrix_data (B), ncm_matrix_tda (B),
+               beta, 
+               ncm_matrix_data (cm), ncm_matrix_tda (cm));
 }
 
 /**
@@ -1034,6 +1087,43 @@ ncm_matrix_log_vals (NcmMatrix *cm, gchar *prefix, gchar *format)
  * This function sets all the elements of the matrix @cm to @val.
  *
  */
+
+/**
+ * ncm_matrix_add:
+ * @cm1: a #NcmMatrix
+ * @cm2: a #NcmMatrix
+ *
+ * This function adds the elements of the matrices @cm1 and @cm2.
+ * The two matrices must have the same size.
+ *
+ */
+/**
+ * ncm_matrix_sub:
+ * @cm1: a #NcmMatrix
+ * @cm2: a #NcmMatrix
+ *
+ * This function subtracts the elements of the matrices @cm1 and @cm2.
+ * The two matrices must have the same size.
+ *
+ */
+/**
+ * ncm_matrix_mul_elements:
+ * @cm1: a #NcmMatrix
+ * @cm2: a #NcmMatrix
+ *
+ * This function multiplies the elements of the matrices @cm1 and @cm2.
+ * The two matrices must have the same size.
+ *
+ */
+/**
+ * ncm_matrix_div_elements:
+ * @cm1: a #NcmMatrix
+ * @cm2: a #NcmMatrix
+ *
+ * This function divides the elements of the matrices @cm1 and @cm2.
+ * The two matrices must have the same size.
+ *
+ */
 /**
  * ncm_matrix_scale:
  * @cm: a #NcmMatrix
@@ -1043,6 +1133,34 @@ ncm_matrix_log_vals (NcmMatrix *cm, gchar *prefix, gchar *format)
  * The result is stored in @cm.
  *
  */
+/**
+ * ncm_matrix_add_constant:
+ * @cm: a #NcmMatrix
+ * @val: a double
+ *
+ * This function adds the the constant factor @val to the elements of the matrix @cm.
+ * The result is stored in @cm.
+ *
+ */
+/**
+ * ncm_matrix_mul_row:
+ * @cm: a #NcmMatrix
+ * @row_i: row index
+ * @val: a double
+ *
+ * This function multiplies row @row_i elements by @val.
+ *
+ */
+/**
+ * ncm_matrix_mul_col:
+ * @cm: a #NcmMatrix
+ * @col_i: column index
+ * @val: a double
+ *
+ * This function multiplies column @col_i elements by @val.
+ *
+ */
+
 /**
  * ncm_matrix_memcpy:
  * @cm1: a #NcmMatrix

@@ -981,38 +981,6 @@ ncm_dataset_m2lnL_vec (NcmDataset *dset, NcmMSet *mset, NcmVector *m2lnL_v)
 }
 
 /**
- * ncm_dataset_m2lnL_i_val:
- * @dset: a #NcmLikelihood
- * @mset: a #NcmMSet
- * @i: an integer
- * @m2lnL_i: (out): FIXME
- *
- * Get the value of the @i-th data in the dataset.
- *
- */
-void
-ncm_dataset_m2lnL_i_val (NcmDataset *dset, NcmMSet *mset, guint i, gdouble *m2lnL_i)
-{
-  *m2lnL_i = 0.0;
-
-  g_assert_cmpuint (i, <, dset->oa->len);
-  {
-    NcmData *data = ncm_dataset_peek_data (dset, i);
-
-    if (!NCM_DATA_GET_CLASS (data)->m2lnL_val)
-      g_error ("ncm_dataset_m2lnL_val: %s dont implement m2lnL", G_OBJECT_TYPE_NAME (data));
-    else
-    {
-      ncm_data_prepare (data, mset);
-      NCM_DATA_GET_CLASS (data)->m2lnL_val (data, mset, m2lnL_i);
-    }
-  }
-
-  return;
-}
-
-
-/**
  * ncm_dataset_m2lnL_grad:
  * @dset: a #NcmLikelihood.
  * @mset: a #NcmMSet.
@@ -1023,9 +991,9 @@ ncm_dataset_m2lnL_i_val (NcmDataset *dset, NcmMSet *mset, guint i, gdouble *m2ln
 void
 ncm_dataset_m2lnL_grad (NcmDataset *dset, NcmMSet *mset, NcmVector *grad)
 {
+  const guint fparams_len = ncm_mset_fparams_len (mset);
+  NcmVector *grad_i       = ncm_vector_new (fparams_len);
   guint i;
-  guint free_params_len = ncm_mset_fparams_len (mset);
-  NcmVector *grad_i = ncm_vector_new (free_params_len);
 
   ncm_vector_set_zero (grad);
 
@@ -1060,9 +1028,9 @@ ncm_dataset_m2lnL_grad (NcmDataset *dset, NcmMSet *mset, NcmVector *grad)
 void
 ncm_dataset_m2lnL_val_grad (NcmDataset *dset, NcmMSet *mset, gdouble *m2lnL, NcmVector *grad)
 {
+  const guint fparams_len = ncm_mset_fparams_len (mset);
+  NcmVector *grad_i       = ncm_vector_new (fparams_len);
   guint i;
-  guint free_params_len = ncm_mset_fparams_len (mset);
-  NcmVector *grad_i = ncm_vector_new (free_params_len);
 
   ncm_vector_set_zero (grad);
   *m2lnL = 0.0;
@@ -1089,4 +1057,65 @@ ncm_dataset_m2lnL_val_grad (NcmDataset *dset, NcmMSet *mset, gdouble *m2lnL, Ncm
   }
 
   ncm_vector_free (grad_i);
+}
+
+/**
+ * ncm_dataset_m2lnL_i_val:
+ * @dset: a #NcmLikelihood
+ * @mset: a #NcmMSet
+ * @i: an integer
+ * @m2lnL_i: (out): FIXME
+ *
+ * Get the value of the @i-th data in the dataset.
+ *
+ */
+void
+ncm_dataset_m2lnL_i_val (NcmDataset *dset, NcmMSet *mset, guint i, gdouble *m2lnL_i)
+{
+  *m2lnL_i = 0.0;
+
+  g_assert_cmpuint (i, <, dset->oa->len);
+  {
+    NcmData *data = ncm_dataset_peek_data (dset, i);
+
+    if (!NCM_DATA_GET_CLASS (data)->m2lnL_val)
+      g_error ("ncm_dataset_m2lnL_val: %s dont implement m2lnL", G_OBJECT_TYPE_NAME (data));
+    else
+    {
+      ncm_data_prepare (data, mset);
+      NCM_DATA_GET_CLASS (data)->m2lnL_val (data, mset, m2lnL_i);
+    }
+  }
+
+  return;
+}
+
+/**
+ * ncm_dataset_fisher_matrix:
+ * @dset: a #NcmDataset
+ * @mset: a #NcmMSet
+ * @IM: (out): The fisher matrix
+ *
+ * Calculates the Fisher-information matrix @I adding
+ * the individual ones from each #NcmData in @dset.
+ * 
+ */
+void 
+ncm_dataset_fisher_matrix (NcmDataset *dset, NcmMSet *mset, NcmMatrix **IM)
+{
+  const guint fparams_len = ncm_mset_fparams_len (mset);
+  NcmMatrix *IM0          = ncm_matrix_new (fparams_len, fparams_len);
+  guint i;
+
+  *IM = ncm_matrix_new (fparams_len, fparams_len);
+
+  ncm_matrix_set_zero (*IM);
+
+  for (i = 0; i < dset->oa->len; i++)
+  {
+    NcmData *data = ncm_dataset_peek_data (dset, i);
+    ncm_data_fisher_matrix (data, mset, &IM0);
+
+    ncm_matrix_add (*IM, IM0);
+  }
 }

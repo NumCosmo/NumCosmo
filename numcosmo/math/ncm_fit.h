@@ -259,6 +259,10 @@ void ncm_fit_ls_f_J_nd_fo (NcmFit *fit, NcmVector *f, NcmMatrix *J);
 void ncm_fit_ls_f_J_nd_ce (NcmFit *fit, NcmVector *f, NcmMatrix *J);
 void ncm_fit_ls_f_J_nd_ac (NcmFit *fit, NcmVector *f, NcmMatrix *J);
 
+void ncm_fit_fisher_to_covar (NcmFit *fit, NcmMatrix *fisher);
+void ncm_fit_obs_fisher (NcmFit *fit);
+void ncm_fit_fisher (NcmFit *fit);
+
 void ncm_fit_numdiff_m2lnL_hessian (NcmFit *fit, NcmMatrix *H, gdouble reltol);
 void ncm_fit_numdiff_m2lnL_covar (NcmFit *fit);
 void ncm_fit_ls_covar (NcmFit *fit);

@@ -2085,28 +2085,30 @@ ncm_fit_numdiff_m2lnL_hessian (NcmFit *fit, NcmMatrix *H, gdouble reltol)
 }
 
 /**
- * ncm_fit_numdiff_m2lnL_covar:
+ * ncm_fit_fisher_to_covar:
  * @fit: a #NcmFit
- *
- * FIXME
+ * @fisher: a #NcmMatrix
+ * 
+ * Inverts the matrix @fisher and sets as the covariance matrix
+ * of @fit. The Fisher matrix used can be both the Fisher or the
+ * observed Fisher matrices.
+ * 
  */
 void
-ncm_fit_numdiff_m2lnL_covar (NcmFit *fit)
+ncm_fit_fisher_to_covar (NcmFit *fit, NcmMatrix *fisher)
 {
   gint ret;
   if (ncm_mset_fparam_len (fit->mset) == 0)
-    g_error ("ncm_fit_numdiff_m2lnL_covar: mset object has 0 free parameters");
+    g_error ("ncm_fit_fisher_to_covar: mset object has 0 free parameters");
 
-  ncm_fit_numdiff_m2lnL_hessian (fit, fit->fstate->hessian, fit->params_reltol);
-  ncm_matrix_memcpy (fit->fstate->covar, fit->fstate->hessian);
-  ncm_matrix_scale (fit->fstate->covar, 0.5);
+  ncm_matrix_memcpy (fit->fstate->covar, fisher);
 
   ret = ncm_matrix_cholesky_decomp (fit->fstate->covar, 'U');
   if (ret == 0)
   {
     ret = ncm_matrix_cholesky_inverse (fit->fstate->covar, 'U');
     if (ret != 0)
-      g_error ("ncm_fit_numdiff_m2lnL_covar[ncm_matrix_cholesky_decomp]: %d.", ret);
+      g_error ("ncm_fit_fisher_to_covar[ncm_matrix_cholesky_decomp]: %d.", ret);
     ncm_matrix_copy_triangle (fit->fstate->covar, 'U');
   }
   else if (ret > 0)
@@ -2118,21 +2120,77 @@ ncm_fit_numdiff_m2lnL_covar (NcmFit *fit)
 
     ncm_matrix_scale (LU, 0.5);
 
-    g_warning ("ncm_fit_numdiff_m2lnL_covar: covariance matrix not positive definite, errors are not trustworthy.");
+    g_warning ("ncm_fit_fisher_to_covar: covariance matrix not positive definite, errors are not trustworthy.");
 
     ret1 = gsl_linalg_LU_decomp (ncm_matrix_gsl (LU), p, &signum);
-    NCM_TEST_GSL_RESULT ("ncm_fit_numdiff_m2lnL_covar[gsl_linalg_LU_decomp]", ret1);
+    NCM_TEST_GSL_RESULT ("ncm_fit_fisher_to_covar[gsl_linalg_LU_decomp]", ret1);
 
     ret1 = gsl_linalg_LU_invert (ncm_matrix_gsl (LU), p, ncm_matrix_gsl (fit->fstate->covar));
-    NCM_TEST_GSL_RESULT ("ncm_fit_numdiff_m2lnL_covar[gsl_linalg_LU_invert]", ret1);
+    NCM_TEST_GSL_RESULT ("ncm_fit_fisher_to_covar[gsl_linalg_LU_invert]", ret1);
 
     gsl_permutation_free (p);
     ncm_matrix_free (LU);
   }
   else
-    g_error ("ncm_fit_numdiff_m2lnL_covar[ncm_matrix_cholesky_decomp]: %d.", ret);
+    g_error ("ncm_fit_fisher_to_covar[ncm_matrix_cholesky_decomp]: %d.", ret);
 
   fit->fstate->has_covar = TRUE;
+}
+
+/**
+ * ncm_fit_obs_fisher:
+ * @fit: a #NcmFit
+ *
+ * Calculates the covariance from the observed Fisher 
+ * matrix, see ncm_fit_numdiff_m2lnL_covar().
+ * 
+ */
+void
+ncm_fit_obs_fisher (NcmFit *fit)
+{
+  ncm_fit_numdiff_m2lnL_covar (fit);
+}
+
+/**
+ * ncm_fit_fisher:
+ * @fit: a #NcmFit
+ *
+ * Calculates the covariance from the Fisher matrix, see 
+ * ncm_dataset_fisher_matrix().
+ * 
+ */
+void
+ncm_fit_fisher (NcmFit *fit)
+{
+  NcmMatrix *IM = NULL;
+  if ((ncm_likelihood_priors_length_f (fit->lh) > 0) || (ncm_likelihood_priors_length_m2lnL (fit->lh) > 0))
+    g_warning ("ncm_fit_fisher: the analysis contains priors which are ignored in the Fisher matrix calculation.");
+
+  ncm_dataset_fisher_matrix (fit->lh->dset, fit->mset, &IM);
+  ncm_fit_fisher_to_covar (fit, IM);
+
+  ncm_matrix_clear (&IM);
+}
+
+/**
+ * ncm_fit_numdiff_m2lnL_covar:
+ * @fit: a #NcmFit
+ *
+ * Calcualtes the covariance matrix using the inverse of the 
+ * Hessian matrix $\partial_i\partial_j -\ln(L)$, where
+ * the derivatives are taken with respect to the free parameters. 
+ * 
+ */
+void
+ncm_fit_numdiff_m2lnL_covar (NcmFit *fit)
+{
+  if (ncm_mset_fparam_len (fit->mset) == 0)
+    g_error ("ncm_fit_numdiff_m2lnL_covar: mset object has 0 free parameters");
+
+  ncm_fit_numdiff_m2lnL_hessian (fit, fit->fstate->hessian, fit->params_reltol);
+  ncm_matrix_scale (fit->fstate->hessian, 0.5);
+
+  ncm_fit_fisher_to_covar (fit, fit->fstate->hessian);
 }
 
 /**

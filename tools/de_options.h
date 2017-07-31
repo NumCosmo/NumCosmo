@@ -165,7 +165,7 @@ struct _NcDEFitEntries
   gboolean esmcmc_walk;
   gboolean esmcmc_sbox;
   gboolean esmcmc_ms;
-  gboolean fisher;
+  gint fisher;
   gboolean qspline_cp;
   gdouble qspline_cp_sigma;
   gboolean save_fisher;
@@ -173,7 +173,7 @@ struct _NcDEFitEntries
   gchar *save_mset;
 };
 
-#define NC_DE_FIT_ENTRIES { NULL, NULL, NULL, NULL, 1e-8, 1e-5, -1, -1, {NULL, NULL}, NULL, NULL, 1.0e-5, NCM_FIT_DEFAULT_MAXITER, FALSE, NCM_FIT_RUN_MSGS_SIMPLE, NCM_FIT_MC_RESAMPLE_FROM_MODEL, 0, 0, -1, 100, 0, 100, 1.0e3, NULL, NULL, FALSE, FALSE, FALSE, 0.0, 1.0e-4, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, 1.0, FALSE, FALSE, NULL}
+#define NC_DE_FIT_ENTRIES { NULL, NULL, NULL, NULL, 1e-8, 1e-5, -1, -1, {NULL, NULL}, NULL, NULL, 1.0e-5, NCM_FIT_DEFAULT_MAXITER, FALSE, NCM_FIT_RUN_MSGS_SIMPLE, NCM_FIT_MC_RESAMPLE_FROM_MODEL, 0, 0, -1, 100, 0, 100, 1.0e3, NULL, NULL, FALSE, FALSE, FALSE, 0.0, 1.0e-4, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, 0, FALSE, 1.0, FALSE, FALSE, NULL}
 
 GOptionGroup *nc_de_opt_get_run_group (NcDERunEntries *de_run);
 GOptionGroup *nc_de_opt_get_model_group (NcDEModelEntries *de_model, GOptionEntry **de_model_entries);
