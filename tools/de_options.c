@@ -223,13 +223,10 @@ _nc_de_print_fisher_type (const gchar *option_name, const gchar *value, gpointer
                    value);
       return FALSE;
     }
-    
-    printf ("# COM VALOR! [%d]\n", fisher[0]);
   }
   else
   {
     fisher[0] = 1;
-    printf ("# SEM VALOR! [%d]\n", fisher[0]);
   }
   
   return TRUE;

@@ -868,6 +868,8 @@ nc_hicosmo_de_omega_x2omega_k (NcHICosmoDE *cosmo_de)
 {
   NcHICosmoDEReparamOk *de_reparam_ok = nc_hicosmo_de_reparam_ok_new (ncm_model_len (NCM_MODEL (cosmo_de)));
   ncm_model_set_reparam (NCM_MODEL (cosmo_de), NCM_REPARAM (de_reparam_ok));
+
+  ncm_reparam_free (NCM_REPARAM (de_reparam_ok));
   return;
 }
 
@@ -883,6 +885,8 @@ nc_hicosmo_de_cmb_params (NcHICosmoDE *cosmo_de)
 {
   NcHICosmoDEReparamCMB *de_reparam_cmb = nc_hicosmo_de_reparam_cmb_new (ncm_model_len (NCM_MODEL (cosmo_de)));
   ncm_model_set_reparam (NCM_MODEL (cosmo_de), NCM_REPARAM (de_reparam_cmb));
+
+  ncm_reparam_free (NCM_REPARAM (de_reparam_cmb));
   return;
 }
 
