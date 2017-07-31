@@ -125,7 +125,6 @@ _ncm_reparam_constructed (GObject *object)
     reparam->new_params = ncm_vector_new (reparam->length);
 
     reparam->sparams = g_ptr_array_sized_new (reparam->length);
-    g_ptr_array_set_free_func (reparam->sparams, (GDestroyNotify)ncm_sparam_free);
     
     g_ptr_array_set_size (reparam->sparams, reparam->length);
   }
@@ -135,6 +134,14 @@ static void
 _ncm_reparam_finalize (GObject *object)
 {
   NcmReparam *reparam = NCM_REPARAM (object);
+  guint i;
+
+  for (i = 0; i < reparam->sparams->len; i++)
+  {
+    NcmSParam *sp_i = g_ptr_array_index (reparam->sparams, i);
+    if (sp_i != NULL)
+      ncm_sparam_free (sp_i);
+  }
 
   g_clear_pointer (&reparam->sparams_name_id, g_hash_table_unref);
   g_clear_pointer (&reparam->sparams, g_ptr_array_unref);
