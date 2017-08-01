@@ -80,8 +80,8 @@ typedef void (*NcmDataFisherMatrix) (NcmData *data, NcmMSet *mset, NcmMatrix **I
  * parameters in @mset.
  * @m2lnL_val_grad: evaluate the value and the gradient of $-2\ln(L)$.
  * @mean_vector: evaluate the Gaussian mean (approximation or not)
- * @sigma_vector: evaluate the Gaussian standard deviation (approximation or not)
  * @inv_cov_UH: evaluate the Gaussian inverse covariance matrix (approximation or not)
+ * @fisher_matrix: calculates the Fisher matrix (based on a Gaussian approximation when it is the case) 
  * 
  * Virtual table for the #NcmData abstract class.
  * 
