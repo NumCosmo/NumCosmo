@@ -66,10 +66,11 @@ ncm_data_init (NcmData *data)
   data->long_desc = NULL;
   data->init      = FALSE;
   data->begin     = FALSE;
+  data->diff      = ncm_diff_new ();
 }
 
 static void
-ncm_data_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
+_ncm_data_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
 {
   NcmData *data = NCM_DATA (object);
   g_return_if_fail (NCM_IS_DATA (object));
@@ -99,7 +100,7 @@ ncm_data_set_property (GObject *object, guint prop_id, const GValue *value, GPar
 }
 
 static void
-ncm_data_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
+_ncm_data_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
 {
   NcmData *data = NCM_DATA (object);
   NcmDataClass *data_class = NCM_DATA_GET_CLASS (object);
@@ -132,18 +133,30 @@ ncm_data_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec
 }
 
 static void
-ncm_data_finalize (GObject *object)
+_ncm_data_dispose (GObject *object)
+{
+  NcmData *data = NCM_DATA (object);
+
+  ncm_bootstrap_clear (&data->bstrap);
+  ncm_diff_clear (&data->diff);
+  
+  /* Chain up : end */
+  G_OBJECT_CLASS (ncm_data_parent_class)->dispose (object);
+}
+
+static void
+_ncm_data_finalize (GObject *object)
 {
   NcmData *data = NCM_DATA (object);
 
   g_clear_pointer (&data->desc, g_free);
   g_clear_pointer (&data->long_desc, g_free);
 
-  ncm_bootstrap_clear (&data->bstrap);
-  
   /* Chain up : end */
   G_OBJECT_CLASS (ncm_data_parent_class)->finalize (object);
 }
+
+static void _ncm_data_fisher_matrix (NcmData *data, NcmMSet *mset, NcmMatrix **IM);
 
 static void
 ncm_data_class_init (NcmDataClass *klass)
@@ -151,9 +164,10 @@ ncm_data_class_init (NcmDataClass *klass)
   GObjectClass* object_class = G_OBJECT_CLASS (klass);
   NcmDataClass* data_class = NCM_DATA_CLASS (klass);
 
-  object_class->set_property = &ncm_data_set_property;
-  object_class->get_property = &ncm_data_get_property;
-  object_class->finalize     = &ncm_data_finalize;
+  object_class->set_property = &_ncm_data_set_property;
+  object_class->get_property = &_ncm_data_get_property;
+  object_class->dispose      = &_ncm_data_dispose;
+  object_class->finalize     = &_ncm_data_finalize;
 
   /**
    * NcmData:name:
@@ -223,17 +237,71 @@ ncm_data_class_init (NcmDataClass *klass)
                                                         "Data bootstrap object",
                                                         NCM_TYPE_BOOTSTRAP,
                                                         G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-  data_class->name               = NULL;
-  data_class->get_length         = NULL;
-  data_class->begin              = NULL;
-  data_class->prepare            = NULL;
-  data_class->resample           = NULL;
-  data_class->leastsquares_f     = NULL;
-  data_class->leastsquares_J     = NULL;
-  data_class->leastsquares_f_J   = NULL;
-  data_class->m2lnL_val          = NULL;
-  data_class->m2lnL_grad         = NULL;
-  data_class->m2lnL_val_grad     = NULL;
+  data_class->name             = NULL;
+  data_class->get_length       = NULL;
+  data_class->begin            = NULL;
+  data_class->prepare          = NULL;
+  data_class->resample         = NULL;
+  data_class->leastsquares_f   = NULL;
+  data_class->leastsquares_J   = NULL;
+  data_class->leastsquares_f_J = NULL;
+  data_class->m2lnL_val        = NULL;
+  data_class->m2lnL_grad       = NULL;
+  data_class->m2lnL_val_grad   = NULL;
+
+  data_class->mean_vector      = NULL;
+  data_class->inv_cov_UH       = NULL;
+  
+  data_class->fisher_matrix    = &_ncm_data_fisher_matrix;
+}
+
+typedef struct _NcmDataDiffArg
+{
+  NcmMSet *mset;
+  NcmData *data;
+} NcmDataDiffArg;
+
+void 
+_ncm_data_diff_f (NcmVector *x, NcmVector *y, gpointer user_data)
+{
+  NcmDataDiffArg *arg = (NcmDataDiffArg *) user_data;
+  ncm_mset_fparams_set_vector (arg->mset, x);  
+  ncm_data_mean_vector (arg->data, arg->mset, y);
+}
+
+static void 
+_ncm_data_fisher_matrix (NcmData *data, NcmMSet *mset, NcmMatrix **IM)
+{
+  const guint fparams_len = ncm_mset_fparams_len (mset);
+  NcmVector *x_v          = ncm_vector_new (fparams_len);
+  NcmDataDiffArg arg      = {mset, data};
+  const guint dim         = ncm_data_get_length (data);
+
+  if (*IM == NULL)
+  {
+    *IM = ncm_matrix_new (fparams_len, fparams_len);
+  }
+  else
+  {
+    g_assert_cmpuint (ncm_matrix_ncols (*IM), ==, ncm_matrix_nrows (*IM));
+    g_assert_cmpuint (ncm_matrix_ncols (*IM), ==, fparams_len);
+  }
+
+  ncm_mset_fparams_get_vector (mset, x_v);
+  {
+    GArray *x_a    = ncm_vector_dup_array (x_v);
+    GArray *dmu_a  = ncm_diff_rf_d1_N_to_M (data->diff, x_a, dim, _ncm_data_diff_f, &arg, NULL);
+    NcmMatrix *dmu = ncm_matrix_new_array (dmu_a, dim);
+
+    ncm_data_inv_cov_UH (data, mset, dmu);
+
+    ncm_matrix_dgemm (*IM, 'N', 'T', 1.0, dmu, dmu, 0.0);
+    
+    g_array_unref (dmu_a);
+    g_array_unref (x_a);
+  }
+  ncm_mset_fparams_set_vector (mset, x_v);
+  ncm_vector_free (x_v);
 }
 
 /**
@@ -730,4 +798,71 @@ void ncm_data_m2lnL_val_grad (NcmData *data, NcmMSet *mset, gdouble *m2lnL, NcmV
              ncm_data_get_desc (data));
 
   NCM_DATA_GET_CLASS (data)->m2lnL_val_grad (data, mset, m2lnL, grad);
+}
+
+/**
+ * ncm_data_mean_vector: (virtual mean_vector)
+ * @data: a #NcmData
+ * @mset: a #NcmMSet
+ * @mu: the mean output #NcmVector
+ *
+ * Calculates the Gaussian mean vector (for non-Gaussian distribution
+ * it should calculate the Gaussian approximated mean of the actual 
+ * distribution).
+ * 
+ */
+void 
+ncm_data_mean_vector (NcmData *data, NcmMSet *mset, NcmVector *mu)
+{
+  ncm_data_prepare (data, mset);
+
+  if (NCM_DATA_GET_CLASS (data)->mean_vector == NULL)
+    g_error ("ncm_data_mean_vector: The data (%s) does not implement mean_vector.", 
+             ncm_data_get_desc (data));
+
+  NCM_DATA_GET_CLASS (data)->mean_vector (data, mset, mu);  
+}
+
+/**
+ * ncm_data_inv_cov_UH: (virtual inv_cov_UH)
+ * @data: a #NcmData
+ * @mset: a #NcmMSet
+ * @H: a #NcmMatrix
+ * 
+ * 
+ * Given the Cholesky decomposition of the inverse covariance $C^{-1} = L\cdotU$
+ * this function returns in-place the product $U\cdotH$.
+ * 
+ */
+void 
+ncm_data_inv_cov_UH (NcmData *data, NcmMSet *mset, NcmMatrix *H)
+{
+  ncm_data_prepare (data, mset);
+
+  if (NCM_DATA_GET_CLASS (data)->inv_cov_UH == NULL)
+    g_error ("ncm_data_inv_cov_UH: The data (%s) does not implement inv_cov_UH.", 
+             ncm_data_get_desc (data));
+
+  NCM_DATA_GET_CLASS (data)->inv_cov_UH (data, mset, H);  
+}
+
+/**
+ * ncm_data_fisher_matrix: (virtual fisher_matrix)
+ * @data: a #NcmData
+ * @mset: a #NcmMSet
+ * @IM: (out): The fisher matrix
+ *
+ * Calculates the Fisher-information matrix @I.
+ * 
+ */
+void 
+ncm_data_fisher_matrix (NcmData *data, NcmMSet *mset, NcmMatrix **IM)
+{
+  ncm_data_prepare (data, mset);
+
+  if (NCM_DATA_GET_CLASS (data)->fisher_matrix == NULL)
+    g_error ("ncm_data_fisher_matrix: The data (%s) does not implement fisher_matrix.", 
+             ncm_data_get_desc (data));
+
+  NCM_DATA_GET_CLASS (data)->fisher_matrix (data, mset, IM);
 }

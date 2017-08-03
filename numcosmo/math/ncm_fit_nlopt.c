@@ -451,7 +451,7 @@ _ncm_fit_nlopt_func_constraint (guint n, const gdouble *x, gdouble *grad, gpoint
   if (grad != NULL)
   {
     NcmVector *gradv = ncm_vector_new_data_static (grad, n, 1);
-    ncm_mset_func_numdiff_fparams (fitc->func, fit->mset, NULL, gradv);
+    ncm_mset_func_numdiff_fparams (fitc->func, fit->mset, NULL, &gradv);
     ncm_vector_scale (gradv, 2.0 * constraint);
     ncm_vector_free (gradv);
   }

@@ -30,6 +30,7 @@
 #include <glib-object.h>
 #include <numcosmo/build_cfg.h>
 #include <numcosmo/math/ncm_mset.h>
+#include <numcosmo/math/ncm_diff.h>
 
 G_BEGIN_DECLS
 
@@ -65,6 +66,7 @@ struct _NcmMSetFunc
   gchar *desc;
   gchar *uname;
   gchar *usymbol;
+  NcmDiff *diff;
 };
 
 GType ncm_mset_func_get_type (void) G_GNUC_CONST;
@@ -101,7 +103,7 @@ const gchar *ncm_mset_func_peek_desc (NcmMSetFunc *func);
 const gchar *ncm_mset_func_peek_uname (NcmMSetFunc *func);
 const gchar *ncm_mset_func_peek_usymbol (NcmMSetFunc *func);
 
-NcmVector *ncm_mset_func_numdiff_fparams (NcmMSetFunc *func, NcmMSet *mset, const gdouble *x, NcmVector *out);
+void ncm_mset_func_numdiff_fparams (NcmMSetFunc *func, NcmMSet *mset, const gdouble *x, NcmVector **out);
 
 G_END_DECLS
 

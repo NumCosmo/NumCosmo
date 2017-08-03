@@ -1017,15 +1017,22 @@ ncm_vector_cmp (NcmVector *cv1, const NcmVector *cv2)
     const gdouble x1_i = ncm_vector_get (cv1, i);
     const gdouble x2_i = ncm_vector_get (cv2, i);
 
-    if (G_UNLIKELY ((x1_i == 0.0) && (x2_i == 0.0)))
+    if (G_UNLIKELY (x1_i == 0.0))
     {
-      ncm_vector_set (cv1, i, 0.0);
+      if (G_UNLIKELY (x2_i == 0.0))
+        ncm_vector_set (cv1, i, 0.0);
+      else
+        ncm_vector_set (cv1, i, fabs (x2_i));
+    }
+    else if (G_UNLIKELY (x2_i == 0.0))
+    {
+      ncm_vector_set (cv1, i, fabs (x1_i));
     }
     else
     {
       const gdouble abs_x1_i  = fabs (x1_i);
       const gdouble abs_x2_i  = fabs (x2_i);
-      const gdouble max_x12_i = GSL_MAX (abs_x1_i, abs_x2_i);
+      const gdouble max_x12_i = GSL_MIN (abs_x1_i, abs_x2_i);
       ncm_vector_set (cv1, i, fabs ((x1_i - x2_i) / max_x12_i));
     }
   }

@@ -2882,7 +2882,7 @@ ncm_mset_catalog_get_shrink_factor (NcmMSetCatalog *mcat)
         if (ret != 0)
           break;
 
-        ncm_matrix_dsymm (mcat->chain_cov, 'U', 1.0, cov, 0.0, mcat->chain_sM);
+        ncm_matrix_dsymm (mcat->chain_sM, 'U', 1.0, mcat->chain_cov, cov, 0.0);
 
         gsl_eigen_nonsymm_params (0, 1, mcat->chain_sM_ws);
         gsl_eigen_nonsymm (ncm_matrix_gsl (mcat->chain_sM), mcat->chain_sM_ev, mcat->chain_sM_ws);

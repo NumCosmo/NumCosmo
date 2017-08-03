@@ -202,6 +202,36 @@ _nc_de_print_fit_list (const gchar *option_name, const gchar *value, gpointer da
   return TRUE;
 }
 
+static gboolean
+_nc_de_print_fisher_type (const gchar *option_name, const gchar *value, gpointer data, GError **error)
+{
+  gint *fisher = (gpointer) data;
+
+  if (value != NULL)
+  {
+    if (g_ascii_strcasecmp (value, "O") == 0)
+      fisher[0] = 1;
+    else if (g_ascii_strcasecmp (value, "E") == 0)
+      fisher[0] = 2;
+    else
+    {
+      GQuark error_quark = g_quark_from_static_string ("nc-darkenergy-error");
+      g_set_error (error,
+                   error_quark,
+                   G_OPTION_ERROR_FAILED,
+                   "Invalid option for --fisher: `%s', the valid options are O or E", 
+                   value);
+      return FALSE;
+    }
+  }
+  else
+  {
+    fisher[0] = 1;
+  }
+  
+  return TRUE;
+}
+
 GOptionGroup *
 nc_de_opt_get_fit_group (NcDEFitEntries *de_fit, GOptionEntry **de_fit_entries)
 {
@@ -217,7 +247,7 @@ nc_de_opt_get_fit_group (NcDEFitEntries *de_fit, GOptionEntry **de_fit_entries)
     { "esmcmc-walk",      0, 0, G_OPTION_ARG_NONE,         &de_fit->esmcmc_walk,      "Uses walk move instead of stretch move in ESMCMC", NULL},
     { "esmcmc-sbox",      0, 0, G_OPTION_ARG_NONE,         &de_fit->esmcmc_sbox,      "Uses stretch move never leaving the bounding box", NULL},
     { "esmcmc-ms",        0, 0, G_OPTION_ARG_NONE,         &de_fit->esmcmc_ms,        "Uses multi-stretchs in one step", NULL},
-    { "fisher",           0, 0, G_OPTION_ARG_NONE,         &de_fit->fisher,           "Calculated the Fisher matrix", NULL},
+    { "fisher",           0, G_OPTION_FLAG_OPTIONAL_ARG, G_OPTION_ARG_CALLBACK,     &_nc_de_print_fisher_type, "Calculated the Fisher matrix, where T=E or T=O uses the expected or observed Fisher matrix", "=T"},
     { "fit-type",         0, 0, G_OPTION_ARG_STRING,       &de_fit->fit_type,         "Fitting object to be used", NULL },
     { "fit-diff",         0, 0, G_OPTION_ARG_STRING,       &de_fit->fit_diff,         "Fitting differentiation algorithim method", NULL },
     { "fit-algo",         0, 0, G_OPTION_ARG_STRING,       &de_fit->fit_algo,         "Fitting algorithim", NULL },
@@ -254,7 +284,7 @@ nc_de_opt_get_fit_group (NcDEFitEntries *de_fit, GOptionEntry **de_fit_entries)
     { "save-mset",        0, 0, G_OPTION_ARG_STRING,       &de_fit->save_mset,        "Save NcmMSet to a file for future usage", NULL},
     { NULL }
   };
-  GOptionGroup *fit_group = g_option_group_new ("fit", " - Choices of statistical analysis", "Show help options related to model fitting", NULL, NULL);
+  GOptionGroup *fit_group = g_option_group_new ("fit", " - Choices of statistical analysis", "Show help options related to model fitting", &de_fit->fisher, NULL);
 
   *de_fit_entries = g_new (GOptionEntry, G_N_ELEMENTS (fit_entries));
   memcpy (*de_fit_entries, fit_entries, sizeof (fit_entries));

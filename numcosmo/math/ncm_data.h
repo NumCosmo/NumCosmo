@@ -31,6 +31,7 @@
 #include <numcosmo/build_cfg.h>
 #include <numcosmo/math/ncm_vector.h>
 #include <numcosmo/math/ncm_matrix.h>
+#include <numcosmo/math/ncm_diff.h>
 #include <numcosmo/math/ncm_mset.h>
 #include <numcosmo/math/ncm_rng.h>
 #include <numcosmo/math/ncm_bootstrap.h>
@@ -46,6 +47,17 @@ G_BEGIN_DECLS
 
 typedef struct _NcmDataClass NcmDataClass;
 typedef struct _NcmData NcmData;
+
+/**
+ * NcmDataFisherMatrix:
+ * @data: a #NcmData
+ * @mset: a #NcmMSet
+ * @IM: (out): The fisher matrix
+ * 
+ * Calculates the Fisher-information matrix @I.
+ * 
+ */
+typedef void (*NcmDataFisherMatrix) (NcmData *data, NcmMSet *mset, NcmMatrix **IM);
 
 /**
  * NcmDataClass:
@@ -67,8 +79,12 @@ typedef struct _NcmData NcmData;
  * @m2lnL_grad: evaluate the gradient of $-2\ln(L)$ with respect to the free
  * parameters in @mset.
  * @m2lnL_val_grad: evaluate the value and the gradient of $-2\ln(L)$.
+ * @mean_vector: evaluate the Gaussian mean (approximation or not)
+ * @inv_cov_UH: evaluate the Gaussian inverse covariance matrix (approximation or not)
+ * @fisher_matrix: calculates the Fisher matrix (based on a Gaussian approximation when it is the case) 
  * 
  * Virtual table for the #NcmData abstract class.
+ * 
  * 
  */
 struct _NcmDataClass
@@ -89,6 +105,9 @@ struct _NcmDataClass
   void (*m2lnL_val) (NcmData *data, NcmMSet *mset, gdouble *m2lnL);
   void (*m2lnL_grad) (NcmData *data, NcmMSet *mset, NcmVector *grad);
   void (*m2lnL_val_grad) (NcmData *data, NcmMSet *mset, gdouble *m2lnL, NcmVector *grad);
+  void (*mean_vector) (NcmData *data, NcmMSet *mset, NcmVector *mu);
+  void (*inv_cov_UH) (NcmData *data, NcmMSet *mset, NcmMatrix *H);
+  NcmDataFisherMatrix fisher_matrix;
 };
 
 struct _NcmData
@@ -100,6 +119,7 @@ struct _NcmData
   gboolean init;
   gboolean begin;
   NcmBootstrap *bstrap;
+  NcmDiff *diff;
 };
 
 GType ncm_data_get_type (void) G_GNUC_CONST;
@@ -135,6 +155,12 @@ void ncm_data_leastsquares_f_J (NcmData *data, NcmMSet *mset, NcmVector *f, NcmM
 void ncm_data_m2lnL_val (NcmData *data, NcmMSet *mset, gdouble *m2lnL);
 void ncm_data_m2lnL_grad (NcmData *data, NcmMSet *mset, NcmVector *grad);
 void ncm_data_m2lnL_val_grad (NcmData *data, NcmMSet *mset, gdouble *m2lnL, NcmVector *grad);
+
+void ncm_data_mean_vector (NcmData *data, NcmMSet *mset, NcmVector *mu);
+void ncm_data_sigma_vector (NcmData *data, NcmMSet *mset, NcmVector *sigma);
+void ncm_data_inv_cov_UH (NcmData *data, NcmMSet *mset, NcmMatrix *H);
+
+void ncm_data_fisher_matrix (NcmData *data, NcmMSet *mset, NcmMatrix **IM);
 
 #define NCM_DATA_RESAMPLE_RNG_NAME "data_resample"
 

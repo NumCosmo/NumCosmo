@@ -75,6 +75,7 @@
 #include "math/ncm_cfg.h"
 #include "math/ncm_util.h"
 #include "math/ncm_rng.h"
+#include "math/ncm_diff.h"
 #include "ncm_enum_types.h"
 
 /*#undef HAVE_SUNDIALS_ARKODE*/
@@ -132,6 +133,7 @@ struct _NcmHOAAPrivate
   GArray *t, *t_m_ts, *sing_qbar, *sing_pbar, *upsilon, *gamma, *qbar, *pbar;
   NcmSpline *upsilon_s, *gamma_s, *qbar_s, *pbar_s;
   gdouble sigma0;
+  NcmDiff *diff;
 };
 
 enum
@@ -195,7 +197,9 @@ ncm_hoaa_init (NcmHOAA *hoaa)
   hoaa->priv->qbar_s    = ncm_spline_cubic_notaknot_new ();
   hoaa->priv->pbar_s    = ncm_spline_cubic_notaknot_new ();
 
-  hoaa->priv->sigma0 = 0.0;
+  hoaa->priv->sigma0    = 0.0;
+
+  hoaa->priv->diff      = ncm_diff_new ();
   
   ncm_rng_set_random_seed (hoaa->priv->rng, TRUE);
 }
@@ -2202,7 +2206,6 @@ ncm_hoaa_eval_adiabatic_approx (NcmHOAA *hoaa, NcmModel *model, const gdouble t,
     const gdouble mnu       = ncm_hoaa_eval_mnu (hoaa, model, t, hoaa->k);
     const gdouble lnmnu     = log (mnu);
     gdouble nu, dlnmnu, Vnu;
-    gsl_function F_F, F_G;
     NcmHOAAArg arg;
 
     ncm_hoaa_eval_system (hoaa, model, t, hoaa->k, &nu, &dlnmnu, &Vnu);
@@ -2211,18 +2214,12 @@ ncm_hoaa_eval_adiabatic_approx (NcmHOAA *hoaa, NcmModel *model, const gdouble t,
     arg.hoaa  = hoaa;
     arg.prec  = 0.0;
 
-    F_F.params   = &arg;
-    F_G.params   = &arg;
-
-    F_F.function = &_ncm_hoaa_F;
-    F_G.function = &_ncm_hoaa_G;
-    
     {
       gdouble err;
       const gdouble F  = 0.5 * Vnu / nu;
       const gdouble G  = 0.5 * dlnmnu / nu;
-      const gdouble dF = ncm_numdiff_1 (&F_F, t, fabs (t) * 0.1, &err);
-      const gdouble dG = ncm_numdiff_1 (&F_G, t, fabs (t) * 0.1, &err); 
+      const gdouble dF = ncm_diff_rf_d1_1_to_1 (hoaa->priv->diff, t, _ncm_hoaa_F, &arg, &err);
+      const gdouble dG = ncm_diff_rf_d1_1_to_1 (hoaa->priv->diff, t, _ncm_hoaa_G, &arg, &err); 
       const gdouble F2 = F * F;
       const gdouble G2 = G * G;
 
@@ -2298,7 +2295,6 @@ void
 ncm_hoaa_eval_adiabatic_LnI_approx (NcmHOAA *hoaa, NcmModel *model, const gdouble t, const gdouble theta, const gdouble psi, gdouble *LnI, gdouble *LnJ)
 {
   gdouble nu, dlnmnu, Vnu;
-  gsl_function F_F, F_G;
   NcmHOAAArg arg;
 
   ncm_hoaa_eval_system (hoaa, model, t, hoaa->k, &nu, &dlnmnu, &Vnu);
@@ -2307,18 +2303,12 @@ ncm_hoaa_eval_adiabatic_LnI_approx (NcmHOAA *hoaa, NcmModel *model, const gdoubl
   arg.hoaa  = hoaa;
   arg.prec  = 0.0;
 
-  F_F.params   = &arg;
-  F_G.params   = &arg;
-
-  F_F.function = &_ncm_hoaa_F;
-  F_G.function = &_ncm_hoaa_G;
-
   {
     gdouble err;
     const gdouble F  = 0.5 * Vnu / nu;
     const gdouble G  = 0.5 * dlnmnu / nu;
-    const gdouble dF = ncm_numdiff_1 (&F_F, t, fabs (t) * 0.1, &err);
-    const gdouble dG = ncm_numdiff_1 (&F_G, t, fabs (t) * 0.1, &err); 
+    const gdouble dF = ncm_diff_rf_d1_1_to_1 (hoaa->priv->diff, t, _ncm_hoaa_F, &arg, &err);
+    const gdouble dG = ncm_diff_rf_d1_1_to_1 (hoaa->priv->diff, t, _ncm_hoaa_G, &arg, &err);  
     const gdouble F2 = F * F;
     const gdouble G2 = G * G;
     gdouble sin_2theta, cos_2theta, sin_2psi, cos_2psi;

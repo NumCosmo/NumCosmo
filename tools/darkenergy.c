@@ -658,7 +658,7 @@ main (gint argc, gchar *argv[])
     ncm_dataset_resample (dset, fiduc, rng);
   }
 
-  de_fit.fisher        = (de_fit.fisher || (de_fit.nsigma_fisher != -1) || (de_fit.nsigma != -1) || (de_fit.onedim_cr != NULL));
+  de_fit.fisher        = !de_fit.fisher && ((de_fit.nsigma_fisher != -1) || (de_fit.nsigma != -1) || (de_fit.onedim_cr != NULL)) ? 1 : de_fit.fisher;
   de_fit.fit           = (de_fit.fit || de_fit.fisher);
   de_fit.save_best_fit = (de_fit.save_best_fit || de_fit.save_fisher);
 
@@ -690,8 +690,21 @@ main (gint argc, gchar *argv[])
 
   if (de_fit.fisher)
   {
-    ncm_fit_numdiff_m2lnL_covar (fit);
+    switch (de_fit.fisher)
+    {
+      case 1:
+        ncm_fit_obs_fisher (fit);
+        break;
+      case 2:
+        ncm_fit_fisher (fit);
+        break;
+      default:
+        g_assert_not_reached ();
+        break;
+    }
+
     ncm_fit_log_covar (fit);
+    
     if (de_fit.save_fisher)
     {
       FILE *f_MF;
@@ -958,11 +971,12 @@ main (gint argc, gchar *argv[])
 
   if (de_fit.onedim_cr != NULL)
   {
-    while (de_fit.onedim_cr[0] != NULL)
+    gchar **onedim_cr = de_fit.onedim_cr;
+    while (onedim_cr[0] != NULL)
     {
-      const gchar *pname = de_fit.onedim_cr[0];
-      const NcmMSetPIndex *pi = ncm_mset_fparam_get_pi_by_name (mset, de_fit.onedim_cr[0]);
-      de_fit.onedim_cr = &de_fit.onedim_cr[1];
+      const gchar *pname = onedim_cr[0];
+      const NcmMSetPIndex *pi = ncm_mset_fparam_get_pi_by_name (mset, onedim_cr[0]);
+      onedim_cr = &onedim_cr[1];
 
       if (pi == NULL)
       {
