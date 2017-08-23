@@ -43,6 +43,7 @@ enum
 {
   PROP_0,
   PROP_M2LNL,
+  PROP_MARGINAL_X, 
 	PROP_SIZE,
 };
 
@@ -52,6 +53,7 @@ static void
 ncm_stats_dist2d_spline_init (NcmStatsDist2dSpline *sd2s)
 {
   sd2s->m2lnL      = NULL;
+  sd2s->marginal_x = TRUE; 
 }
 
 static void
@@ -85,6 +87,9 @@ ncm_stats_dist2d_spline_set_property (GObject *object, guint prop_id, const GVal
       ncm_spline2d_clear (&sd2s->m2lnL);
       sd2s->m2lnL = g_value_dup_object (value);
       break;
+    case PROP_MARGINAL_X:
+      sd2s->marginal_x = g_value_get_boolean (value);
+      break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
       break;
@@ -101,6 +106,9 @@ ncm_stats_dist2d_spline_get_property (GObject *object, guint prop_id, GValue *va
   {
     case PROP_M2LNL:
       g_value_set_object (value, sd2s->m2lnL);
+      break;
+    case PROP_MARGINAL_X:
+      g_value_set_boolean (value, sd2s->marginal_x);
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -135,6 +143,13 @@ ncm_stats_dist2d_spline_class_init (NcmStatsDist2dSplineClass *klass)
                                                         "m2lnL",
                                                         NCM_TYPE_SPLINE2D,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  g_object_class_install_property (object_class,
+                                   PROP_MARGINAL_X,
+                                   g_param_spec_boolean ("marginal-x",
+                                                         NULL,
+                                                         "Compute marginal with respect to x if True, and y if False.",
+                                                         TRUE,
+                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
 	sd2_class->xbounds  = &ncm_stats_dist2d_spline_xbounds;
 	sd2_class->ybounds  = &ncm_stats_dist2d_spline_ybounds;

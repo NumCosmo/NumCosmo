@@ -116,6 +116,7 @@
 #include "lss/nc_cluster_abundance.h"
 #include "lss/nc_cluster_pseudo_counts.h"
 #include "lss/nc_cor_cluster_cmb_lens_limber.h"
+#include "lss/nc_wl_surface_mass_density.h"
 #include "nc_distance.h"
 #include "nc_recomb.h"
 #include "nc_recomb_seager.h"
@@ -418,6 +419,8 @@ ncm_cfg_init (void)
   ncm_cfg_register_obj (NC_TYPE_CLUSTER_PSEUDO_COUNTS);
 
   ncm_cfg_register_obj (NC_TYPE_COR_CLUSTER_CMB_LENS_LIMBER);
+
+  ncm_cfg_register_obj (NC_TYPE_WL_SURFACE_MASS_DENSITY);
 
   ncm_cfg_register_obj (NC_TYPE_DISTANCE);
 

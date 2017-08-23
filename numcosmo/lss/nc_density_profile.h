@@ -28,6 +28,7 @@
 
 #include <glib-object.h>
 #include <numcosmo/build_cfg.h>
+#include <numcosmo/math/ncm_model.h>
 #include <numcosmo/nc_hicosmo.h>
 
 G_BEGIN_DECLS
@@ -45,23 +46,33 @@ typedef struct _NcDensityProfile NcDensityProfile;
 struct _NcDensityProfileClass
 {
   /*< private >*/
-  GObjectClass parent_class;
+  NcmModelClass parent_class;
+  gdouble (*eval_density) (NcDensityProfile *dp, NcHICosmo *cosmo, const gdouble r, const gdouble z);
+  gdouble (*integral_density_los) (NcDensityProfile *dp, NcHICosmo *cosmo, const gdouble R, const gdouble z);
+  gdouble (*integral_density_2d) (NcDensityProfile *dp, NcHICosmo *cosmo, const gdouble R, const gdouble z);
   gdouble (*eval_fourier) (NcDensityProfile *dp, NcHICosmo *model, const gdouble k, const gdouble M, const gdouble z);
 };
 
 struct _NcDensityProfile
 {
   /*< private >*/
-  GObject parent_instance;
+  NcmModel parent_instance;
 
 };
 
 GType nc_density_profile_get_type (void) G_GNUC_CONST;
 
+NCM_MSET_MODEL_DECLARE_ID (nc_density_profile);
+
 NcDensityProfile *nc_density_profile_new_from_name (gchar *density_profile_name);
-gdouble nc_density_profile_eval_fourier (NcDensityProfile *dp, NcHICosmo *model, const gdouble k, const gdouble M, const gdouble z); 
+NcDensityProfile *nc_density_profile_ref (NcDensityProfile *dp);
 void nc_density_profile_free (NcDensityProfile *dp);
 void nc_density_profile_clear (NcDensityProfile **dp);
+
+gdouble nc_density_profile_eval_density (NcDensityProfile *dp, NcHICosmo *cosmo, const gdouble r, const gdouble z);
+gdouble nc_density_profile_integral_density_los (NcDensityProfile *dp, NcHICosmo *cosmo, const gdouble R, const gdouble z);
+gdouble nc_density_profile_integral_density_2d (NcDensityProfile *dp, NcHICosmo *cosmo, const gdouble R, const gdouble z);
+gdouble nc_density_profile_eval_fourier (NcDensityProfile *dp, NcHICosmo *cosmo, const gdouble k, const gdouble M, const gdouble z);
 
 G_END_DECLS
 
