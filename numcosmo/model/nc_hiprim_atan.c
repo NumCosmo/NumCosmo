@@ -108,7 +108,7 @@ nc_hiprim_atan_class_init (NcHIPrimAtanClass *klass)
                               NCM_PARAM_TYPE_FIXED);
   /* Set lambda param info */
   ncm_model_class_set_sparam (model_class, NC_HIPRIM_ATAN_LAMBDA, "\\lambda", "lambda",
-                              0.0, 30.0, 1.0,
+                              0.0, 60.0, 1.0,
                               NC_HIPRIM_DEFAULT_PARAMS_ABSTOL, NC_HIPRIM_ATAN_DEFAULT_LAMBDA,
                               NCM_PARAM_TYPE_FIXED);
 

@@ -2265,10 +2265,8 @@ void nc_cbe_get_all_Cls (NcCBE* cbe, NcmVector* TT_Cls, NcmVector* EE_Cls, NcmVe
  * Temporary debug function
  *
  */
-void nc_cbe_debug_test (NcCBE* cbe)
+void nc_cbe_debug_test (NcCBE *cbe)
 {
-	if (cbe->priv->pba.has_ncdm)
-		printf ("cbe->priv->pba.has_ncdm");
-	else
-		printf ("boooooooooo !\n");
+	NCM_UNUSED (cbe);
+	g_assert_not_reached ();
 }

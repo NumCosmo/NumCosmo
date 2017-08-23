@@ -241,9 +241,9 @@ static gdouble
 _nc_hireion_camb_get_Xe (NcHIReion *reion, NcHICosmo *cosmo, const gdouble lambda, const gdouble Xe_recomb)
 {
   NcHIReionCamb *reion_camb = NC_HIREION_CAMB (reion);
-  const gdouble XHe = nc_hicosmo_XHe (cosmo);
-  const gdouble XH_XHe = 1.0 + XHe;
-  gdouble Xe = 0.0;
+  const gdouble XHe         = nc_hicosmo_XHe (cosmo);
+  const gdouble XH_XHe      = 1.0 + XHe;
+  gdouble Xe                = 0.0;
 
   _nc_hireion_camb_prepare_if_needed (reion, cosmo);
 
