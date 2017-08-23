@@ -134,6 +134,7 @@
 #include <numcosmo/lss/nc_cluster_abundance.h>
 #include <numcosmo/lss/nc_cluster_pseudo_counts.h>
 #include <numcosmo/lss/nc_cor_cluster_cmb_lens_limber.h>
+#include <numcosmo/lss/nc_wl_surface_mass_density.h>
 
 /* Observable data */
 #include <numcosmo/data/nc_data_snia.h>
