@@ -238,7 +238,7 @@ nc_wl_surface_mass_density_new (gdouble zf)
 
 /**
  * nc_wl_surface_mass_density_ref:
- * @dist: a #NcWLSurfaceMassDensity
+ * @smd: a #NcWLSurfaceMassDensity
  *
  * FIXME
  *

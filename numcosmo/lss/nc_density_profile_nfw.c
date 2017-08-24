@@ -174,7 +174,7 @@ nc_density_profile_nfw_class_init (NcDensityProfileNFWClass *klass)
    * FIXME Set correct values (limits)
    */
   ncm_model_class_set_sparam (model_class, NC_DENSITY_PROFILE_NFW_C_DELTA, "c_{\\Delta}", "cDelta",
-                              0.5,  1.5, 1.0e-1,
+                              0.5,  10.0, 1.0e-1,
                               NC_DENSITY_PROFILE_NFW_DEFAULT_PARAMS_ABSTOL, NC_DENSITY_PROFILE_NFW_DEFAULT_C_DELTA,
                               NCM_PARAM_TYPE_FIXED);
 

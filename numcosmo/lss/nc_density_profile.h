@@ -50,7 +50,7 @@ struct _NcDensityProfileClass
   gdouble (*eval_density) (NcDensityProfile *dp, NcHICosmo *cosmo, const gdouble r, const gdouble z);
   gdouble (*integral_density_los) (NcDensityProfile *dp, NcHICosmo *cosmo, const gdouble R, const gdouble z);
   gdouble (*integral_density_2d) (NcDensityProfile *dp, NcHICosmo *cosmo, const gdouble R, const gdouble z);
-  gdouble (*eval_fourier) (NcDensityProfile *dp, NcHICosmo *model, const gdouble k, const gdouble M, const gdouble z);
+  gdouble (*eval_fourier) (NcDensityProfile *dp, NcHICosmo *cosmo, const gdouble k, const gdouble M, const gdouble z);
 };
 
 struct _NcDensityProfile
