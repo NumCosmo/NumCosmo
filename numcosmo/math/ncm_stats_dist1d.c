@@ -59,7 +59,7 @@ _ncm_stats_dist1d_inv_P_dydx (gdouble y, gdouble x, gpointer userdata)
 {
   NcmStatsDist1d *sd1 = NCM_STATS_DIST1D (userdata);
   /*printf ("P % 20.15g % 20.15g % 20.15g\n", x, y, sd1->norma / ncm_stats_dist1d_eval_p (sd1, y));*/
-  return sd1->norma / NCM_STATS_DIST1D_GET_CLASS (sd1)->p (sd1, y);
+  return sd1->norma / (NCM_STATS_DIST1D_GET_CLASS (sd1)->p (sd1, y) * gsl_pow_2 (cosh (x)));
 }
 
 static gdouble 
@@ -311,7 +311,12 @@ ncm_stats_dist1d_prepare (NcmStatsDist1d *sd1)
     ncm_ode_spline_set_abstol (sd1->inv_Q, sd1->abstol);
     ncm_ode_spline_set_abstol (sd1->pdf, GSL_DBL_EPSILON * 10.0); /* Avoid too much accuracy problems. */
 
-    ncm_ode_spline_set_interval (sd1->inv_P, sd1->xi, 0.0, 0.5);
+    /*ncm_ode_spline_set_interval (sd1->inv_P, sd1->xi, 0.0, 0.5);*/
+
+		ncm_ode_spline_set_xi (sd1->inv_P, 0.0);
+		ncm_ode_spline_set_yi (sd1->inv_P, sd1->xi);
+		ncm_ode_spline_set_yf (sd1->inv_P, sd1->xf);
+		
     ncm_ode_spline_set_interval (sd1->inv_Q, sd1->xf, 0.0, 0.5);
     ncm_ode_spline_set_interval (sd1->pdf, 0.0, sd1->xi, sd1->xf);
 
@@ -497,18 +502,18 @@ ncm_stats_dist1d_eval_mode (NcmStatsDist1d *sd1)
     x0 = gsl_min_fminimizer_x_lower (sd1->fmin);
     x1 = gsl_min_fminimizer_x_upper (sd1->fmin);
 
-    if ((x0 == last_x0) && (x1 == last_x1))
+    status = gsl_min_test_interval (x0, x1, sd1->abstol, sd1->reltol);
+    
+    if ((status == GSL_CONTINUE) && (x0 == last_x0) && (x1 == last_x1))
     {
       g_warning ("ncm_stats_dist1d_eval_mode: minimization not improving, giving up...");
       break;
     }
-    
+
     last_x0 = x0;
     last_x1 = x1;
 
-    status = gsl_min_test_interval (x0, x1, sd1->abstol, sd1->reltol);
-    
-  } while (status == GSL_CONTINUE && iter < max_iter);
+	} while (status == GSL_CONTINUE && iter < max_iter);
 
   return x;
 }
