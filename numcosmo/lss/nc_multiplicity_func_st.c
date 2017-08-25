@@ -84,8 +84,8 @@ _nc_multiplicity_func_st_eval (NcMultiplicityFunc *mulf, NcHICosmo *cosmo, gdoub
   gdouble x = mulf_st->delta_c / sigma;
   gdouble x2 = x * x;
   gdouble b2 = b * b;
-  //gdouble f_ST = A * bc1 * (1.0 + pow(x2 * b, -p)) * exp(-(b * x2) / 2.0) * x; // Jenkin's paper
-  gdouble f_ST = A * bc1 * (1.0 + pow(x * b, -p)) * exp(-(b2 * x2) / 2.0) * x; // Evrard' s paper
+  gdouble f_ST = A * bc1 * (1.0 + pow(x2 * b, -p)) * exp(-(b * x2) / 2.0) * x; // Jenkin's and Crocce's paper
+  //gdouble f_ST = A * bc1 * (1.0 + pow(x * b, -p)) * exp(-(b2 * x2) / 2.0) * x; // Evrard' s paper
 
   NCM_UNUSED (cosmo);
   NCM_UNUSED (z);
