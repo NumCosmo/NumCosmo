@@ -64,8 +64,7 @@ struct _NcmStatsDist1d
   gdouble reltol;
   gdouble abstol;
   gdouble max_prob;
-  NcmOdeSpline *inv_P;
-  NcmOdeSpline *inv_Q;
+  NcmOdeSpline *inv_cdf;
   NcmOdeSpline *pdf;
   gsl_min_fminimizer *fmin;
 };

@@ -55,8 +55,11 @@ gint
 main (gint argc, gchar *argv[])
 {
   g_test_init (&argc, &argv, NULL);
+
   ncm_cfg_init ();
   ncm_cfg_enable_gsl_err_handler ();
+
+  g_test_set_nonfatal_assertions ();
 
   g_test_add ("/ncm/stats_dist1d/epdf/gauss", TestNcmStatsDist1dEPDF, NULL, 
               &test_ncm_stats_dist1d_epdf_new, 
@@ -87,7 +90,7 @@ main (gint argc, gchar *argv[])
   
   g_test_add ("/ncm/stats_dist1d/epdf/traps", TestNcmStatsDist1dEPDF, NULL, 
               &test_ncm_stats_dist1d_epdf_new, 
-              &test_ncm_stats_dist1d_epdf_traps, 
+              &test_ncm_stats_dist1d_epdf_traps,
               &test_ncm_stats_dist1d_epdf_free);
 
   g_test_run ();
@@ -126,9 +129,26 @@ test_ncm_stats_dist1d_epdf_gauss (TestNcmStatsDist1dEPDF *test, gconstpointer pd
     const gdouble apdf_i = gsl_cdf_gaussian_P (xi - mu, sigma);
 
     /*printf ("% 22.15g % 22.15g % 22.15g %e % 22.15g % 22.15g %e\n", xi, ep_i, ap_i, fabs (ep_i / ap_i - 1.0), epdf_i, apdf_i, fabs (epdf_i / apdf_i - 1.0));*/
-    g_assert_cmpfloat (fabs (epdf_i / apdf_i - 1.0), <, 5.0e-1);
-    g_assert_cmpfloat (fabs (ep_i / ap_i - 1.0), <, 5.0e-1);
+    ncm_assert_cmpdouble_e (epdf_i, ==, apdf_i, 5.0e-1, 0.0);
+    ncm_assert_cmpdouble_e (ep_i,   ==, ap_i,   5.0e-1, 0.0);
   }
+
+  for (i = 0; i < ntest; i++)
+  {
+    const gdouble ui = 1.0 / (1.0 * ntest - 1.0) * i;
+
+    const gdouble einv_cdf_i  = ncm_stats_dist1d_eval_inv_pdf (sd1, ui);
+    const gdouble ainv_cdf_i  = mu + gsl_cdf_gaussian_Pinv (ui, sigma);
+
+    const gdouble einv_cdft_i = ncm_stats_dist1d_eval_inv_pdf_tail (sd1, ui);
+    const gdouble ainv_cdft_i = mu + gsl_cdf_gaussian_Qinv (ui, sigma);
+
+    /*printf ("[% 22.15g % 22.15g] % 22.15g: % 22.15g % 22.15g | % 22.15g % 22.15g\n", mu, sigma, ui, einv_cdf_i, ainv_cdf_i, einv_cdft_i, ainv_cdft_i);*/
+    
+    /*ncm_assert_cmpdouble_e (einv_cdf_i,  ==, ainv_cdf_i,  9.0e-1, 0.0);*/
+    /*ncm_assert_cmpdouble_e (einv_cdft_i, ==, ainv_cdft_i, 9.0e-1, 0.0);*/
+  }
+
   
   NCM_TEST_FREE (ncm_rng_free, rng);
 }
