@@ -153,10 +153,10 @@ ncm_stats_dist1d_get_property (GObject *object, guint prop_id, GValue *value, GP
   switch (prop_id)
   {
     case PROP_XI:
-      g_value_set_double (value, sd1->xi);
+      g_value_set_double (value, ncm_stats_dist1d_get_xi (sd1));
       break;
     case PROP_XF:
-      g_value_set_double (value, sd1->xf);
+      g_value_set_double (value, ncm_stats_dist1d_get_xf (sd1));
       break;
     case PROP_NORMA:
       g_value_set_double (value, sd1->norma);
@@ -312,6 +312,30 @@ ncm_stats_dist1d_prepare (NcmStatsDist1d *sd1)
 
     ncm_ode_spline_prepare (sd1->inv_cdf, sd1);
   }
+}
+
+/**
+ * ncm_stats_dist1d_get_xi:
+ * @sd1: a #NcmStatsDist1d
+ * 
+ * Returns: the lower bound of the distribution $x_i$.
+ */ 
+gdouble 
+ncm_stats_dist1d_get_xi (NcmStatsDist1d *sd1)
+{
+	return sd1->xi;
+}
+
+/**
+ * ncm_stats_dist1d_get_xf:
+ * @sd1: a #NcmStatsDist1d
+ * 
+ * Returns: the upper bound of the distribution $x_f$.
+ */ 
+gdouble 
+ncm_stats_dist1d_get_xf (NcmStatsDist1d *sd1)
+{
+	return sd1->xf;
 }
 
 /**

@@ -77,6 +77,9 @@ void ncm_stats_dist1d_clear (NcmStatsDist1d **sd1);
 
 void ncm_stats_dist1d_prepare (NcmStatsDist1d *sd1);
 
+gdouble ncm_stats_dist1d_get_xi (NcmStatsDist1d *sd1);
+gdouble ncm_stats_dist1d_get_xf (NcmStatsDist1d *sd1);
+
 gdouble ncm_stats_dist1d_eval_p (NcmStatsDist1d *sd1, gdouble x);
 gdouble ncm_stats_dist1d_eval_m2lnp (NcmStatsDist1d *sd1, gdouble x);
 gdouble ncm_stats_dist1d_eval_pdf (NcmStatsDist1d *sd1, gdouble x);
