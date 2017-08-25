@@ -56,6 +56,8 @@ struct _NcmStatsDist2dSpline
   NcmStatsDist2d parent_instance;
   NcmSpline2d *m2lnp;
   gboolean marginal_x;
+	gdouble norma;
+	gdouble m2lnnorma;
 };
 
 GType ncm_stats_dist2d_spline_get_type (void) G_GNUC_CONST;

@@ -55,7 +55,39 @@ ncm_stats_dist2d_init (NcmStatsDist2d *sd2)
 }
 
 static void
-ncm_stats_dist2d_dispose (GObject *object)
+_ncm_stats_dist2d_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
+{
+  NcmStatsDist2d *sd2 = NCM_STATS_DIST2D (object);
+  g_return_if_fail (NCM_IS_STATS_DIST2D (object));
+
+	NCM_UNUSED (sd2);
+	
+  switch (prop_id)
+  {
+    default:
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
+      break;
+  }
+}
+
+static void
+_ncm_stats_dist2d_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
+{
+  NcmStatsDist2d *sd2 = NCM_STATS_DIST2D (object);
+  g_return_if_fail (NCM_IS_STATS_DIST2D (object));
+
+	NCM_UNUSED (sd2);
+	
+  switch (prop_id)
+  {
+    default:
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
+      break;
+  }
+}
+
+static void
+_ncm_stats_dist2d_dispose (GObject *object)
 {
   
   /* Chain up : end */
@@ -63,7 +95,7 @@ ncm_stats_dist2d_dispose (GObject *object)
 }
 
 static void
-ncm_stats_dist2d_finalize (GObject *object)
+_ncm_stats_dist2d_finalize (GObject *object)
 {
   
   /* Chain up : end */
@@ -71,46 +103,14 @@ ncm_stats_dist2d_finalize (GObject *object)
 }
 
 static void
-ncm_stats_dist2d_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
-{
-  NcmStatsDist2d *sd2 = NCM_STATS_DIST2D (object);
-  g_return_if_fail (NCM_IS_STATS_DIST2D (object));
-
-	NCM_UNUSED (sd2);
-	
-  switch (prop_id)
-  {
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
-  }
-}
-
-static void
-ncm_stats_dist2d_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
-{
-  NcmStatsDist2d *sd2 = NCM_STATS_DIST2D (object);
-  g_return_if_fail (NCM_IS_STATS_DIST2D (object));
-
-	NCM_UNUSED (sd2);
-	
-  switch (prop_id)
-  {
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
-  }
-}
-
-static void
 ncm_stats_dist2d_class_init (NcmStatsDist2dClass *klass)
 {
   GObjectClass* object_class = G_OBJECT_CLASS (klass);
 
-  object_class->dispose      = ncm_stats_dist2d_dispose;
-  object_class->finalize     = ncm_stats_dist2d_finalize;
-  object_class->set_property = ncm_stats_dist2d_set_property;
-  object_class->get_property = ncm_stats_dist2d_get_property;
+  object_class->dispose      = &_ncm_stats_dist2d_dispose;
+  object_class->finalize     = &_ncm_stats_dist2d_finalize;
+  object_class->set_property = &_ncm_stats_dist2d_set_property;
+  object_class->get_property = &_ncm_stats_dist2d_get_property;
 
   klass->xbounds          = NULL;
 	klass->ybounds          = NULL;
@@ -165,7 +165,7 @@ ncm_stats_dist2d_clear (NcmStatsDist2d **sd2)
 }
 
 /**
- * ncm_stats_dist2d_prepare:
+ * ncm_stats_dist2d_prepare: (virtual prepare):
  * @sd2: a #NcmStatsDist2d
  *
  * Prepares the object for calculations.
@@ -181,7 +181,37 @@ ncm_stats_dist2d_prepare (NcmStatsDist2d *sd2)
 }
 
 /**
- * ncm_stats_dist2d_eval_pdf:
+ * ncm_stats_dist2d_xbounds: (virtual xbounds):
+ * @sd2: a #NcmStatsDist2d
+ * @xi: (out): x lower bound
+ * @xf: (out): x upper bound
+ * 
+ * FIXME
+ * 
+ */
+void 
+ncm_stats_dist2d_xbounds (NcmStatsDist2d *sd2, gdouble *xi, gdouble *xf)
+{
+	NCM_STATS_DIST2D_GET_CLASS (sd2)->xbounds (sd2, xi, xf);
+}
+
+/**
+ * ncm_stats_dist2d_ybounds: (virtual ybounds):
+ * @sd2: a #NcmStatsDist2d
+ * @yi: (out): y lower bound
+ * @yf: (out): y upper bound
+ * 
+ * FIXME
+ * 
+ */
+void 
+ncm_stats_dist2d_ybounds (NcmStatsDist2d *sd2, gdouble *yi, gdouble *yf)
+{
+	NCM_STATS_DIST2D_GET_CLASS (sd2)->xbounds (sd2, yi, yf);
+}
+
+/**
+ * ncm_stats_dist2d_eval_pdf: (virtual pdf):
  * @sd2: a #NcmStatsDist2d
  * @x: random variable value
  * @y: random variable value
@@ -191,29 +221,29 @@ ncm_stats_dist2d_prepare (NcmStatsDist2d *sd2)
  * Returns: the PDF value at @x and @y
  */
 gdouble 
-ncm_stats_dist2d_eval_pdf (NcmStatsDist2d *sd2, gdouble x, gdouble y)
+ncm_stats_dist2d_eval_pdf (NcmStatsDist2d *sd2, const gdouble x, const gdouble y)
 {
 	return NCM_STATS_DIST2D_GET_CLASS (sd2)->pdf (sd2, x, y);
 }
 
 /**
- * ncm_stats_dist2d_eval_m2lnp:
+ * ncm_stats_dist2d_eval_m2lnp: (virtual m2lnp):
  * @sd2: a #NcmStatsDist2d
  * @x: random variable value
  * @y: random variable value 
  *
- * Calculates the value of the $-2\ln(L(x, y))$ for the probability density function.
+ * Calculates the value of the $-2\ln(p(x, y))$ for the probability density function.
  * 
- * Returns: the value of $-2\ln(L(x, y))$.
+ * Returns: the value of $-2\ln(p(x, y))$.
  */
 gdouble 
-ncm_stats_dist2d_eval_m2lnp (NcmStatsDist2d *sd2, gdouble x, gdouble y)
+ncm_stats_dist2d_eval_m2lnp (NcmStatsDist2d *sd2, const gdouble x, const gdouble y)
 {
   return NCM_STATS_DIST2D_GET_CLASS (sd2)->m2lnp (sd2, x, y);
 }
 
 /**
- * ncm_stats_dist2d_eval_cdf:
+ * ncm_stats_dist2d_eval_cdf: (virtual cdf):
  * @sd2: a #NcmStatsDist2d
  * @x: random variable value
  * @y: random variable value
@@ -223,7 +253,7 @@ ncm_stats_dist2d_eval_m2lnp (NcmStatsDist2d *sd2, gdouble x, gdouble y)
  * Returns: the CDF value given the intervals [x_i, @x] and [y_i, @y]
  */
 gdouble 
-ncm_stats_dist2d_eval_cdf (NcmStatsDist2d *sd2, gdouble x, gdouble y)
+ncm_stats_dist2d_eval_cdf (NcmStatsDist2d *sd2, const gdouble x, const gdouble y)
 {
   return NCM_STATS_DIST2D_GET_CLASS (sd2)->cdf (sd2, x, y);
 }
@@ -234,32 +264,42 @@ ncm_stats_dist2d_eval_cdf (NcmStatsDist2d *sd2, gdouble x, gdouble y)
  * @xy: x or y
  *
  * FIXME 
- * Calculates the value of the random variable $x$ for which the cumulative
- * distribution satisfy $\int_{x_i}^x\mathrm{d}x^\prime p(x^\prime) = u$.
  * 
- * Returns: the value of y.
+ * Returns: FIXME
  */
 gdouble
-ncm_stats_dist2d_eval_marginal_pdf (NcmStatsDist2d *sd2, gdouble xy)
+ncm_stats_dist2d_eval_marginal_pdf (NcmStatsDist2d *sd2, const gdouble xy)
 {
 	return NCM_STATS_DIST2D_GET_CLASS (sd2)->marginal_pdf (sd2, xy);
+}
+
+/**
+ * ncm_stats_dist2d_eval_marginal_cdf: (virtual marginal_pdf)
+ * @sd2: a #NcmStatsDist2d
+ * @xy: x or y
+ *
+ * FIXME 
+ * 
+ * Returns: FIXME
+ */
+gdouble
+ncm_stats_dist2d_eval_marginal_cdf (NcmStatsDist2d *sd2, const gdouble xy)
+{
+	return NCM_STATS_DIST2D_GET_CLASS (sd2)->marginal_cdf (sd2, xy);
 }
 
 /**
  * ncm_stats_dist2d_eval_inv_cond: (virtual inv_cond)
  * @sd2: a #NcmStatsDist2d
  * @u: a number between [0, 1]
- * @yx: y or x
+ * @xy: x or y
  *
  * FIXME 
- * Calculates the value of the random variable $x$ for which the cumulative
- * distribution satisfy $\int_{x_i}^x\mathrm{d}x^\prime p(x^\prime) = u$.
  * 
- * Returns: the value of x.
+ * Returns: FIXME
  */
 gdouble
-ncm_stats_dist2d_eval_inv_cond (NcmStatsDist2d *sd2, gdouble u, gdouble yx)
+ncm_stats_dist2d_eval_inv_cond (NcmStatsDist2d *sd2, const gdouble u, const gdouble xy)
 {
-	return NCM_STATS_DIST2D_GET_CLASS (sd2)->inv_cond (sd2, u, yx);
+	return NCM_STATS_DIST2D_GET_CLASS (sd2)->inv_cond (sd2, u, xy);
 }
-
