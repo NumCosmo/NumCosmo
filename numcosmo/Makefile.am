@@ -365,6 +365,7 @@ nc_headers = \
         lss/nc_cluster_abundance.h             \
         lss/nc_cluster_pseudo_counts.h         \
         lss/nc_cor_cluster_cmb_lens_limber.h   \
+        lss/nc_wl_surface_mass_density.h       \
 	data/nc_data_snia.h                    \
 	data/nc_data_dist_mu.h                 \
 	data/nc_data_snia_cov.h                \
@@ -496,6 +497,7 @@ nc_sources = \
 	lss/nc_cluster_abundance.c             \
 	lss/nc_cluster_pseudo_counts.c         \
 	lss/nc_cor_cluster_cmb_lens_limber.c   \
+	lss/nc_wl_surface_mass_density.c       \
 	data/nc_data_snia.c                    \
 	data/nc_data_dist_mu.c                 \
 	data/nc_data_snia_cov.c                \

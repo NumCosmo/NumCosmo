@@ -112,14 +112,16 @@ ncm_stats_dist2d_class_init (NcmStatsDist2dClass *klass)
   object_class->set_property = ncm_stats_dist2d_set_property;
   object_class->get_property = ncm_stats_dist2d_get_property;
 
-  klass->xbounds  = NULL;
-	klass->ybounds  = NULL;
-	klass->pdf      = NULL;
-	klass->m2lnL    = NULL;
-	klass->cdf      = NULL;
-  klass->marginal = NULL;
-	klass->inv_pdf  = NULL;
-	klass->prepare  = NULL;
+  klass->xbounds          = NULL;
+	klass->ybounds          = NULL;
+	klass->pdf              = NULL;
+	klass->m2lnp            = NULL;
+	klass->cdf              = NULL;
+  klass->marginal_pdf     = NULL;
+  klass->marginal_cdf     = NULL;
+  klass->marginal_inv_cdf = NULL;
+	klass->inv_cond         = NULL;
+	klass->prepare          = NULL;
 }
 
 /**
@@ -207,7 +209,7 @@ ncm_stats_dist2d_eval_pdf (NcmStatsDist2d *sd2, gdouble x, gdouble y)
 gdouble 
 ncm_stats_dist2d_eval_m2lnp (NcmStatsDist2d *sd2, gdouble x, gdouble y)
 {
-  return NCM_STATS_DIST2D_GET_CLASS (sd2)->m2lnL (sd2, x, y);
+  return NCM_STATS_DIST2D_GET_CLASS (sd2)->m2lnp (sd2, x, y);
 }
 
 /**
@@ -227,9 +229,9 @@ ncm_stats_dist2d_eval_cdf (NcmStatsDist2d *sd2, gdouble x, gdouble y)
 }
 
 /**
- * ncm_stats_dist2d_eval_marginal:
+ * ncm_stats_dist2d_eval_marginal_pdf: (virtual marginal_pdf)
  * @sd2: a #NcmStatsDist2d
- * @u: a number between [0, 1]
+ * @xy: x or y
  *
  * FIXME 
  * Calculates the value of the random variable $x$ for which the cumulative
@@ -238,16 +240,16 @@ ncm_stats_dist2d_eval_cdf (NcmStatsDist2d *sd2, gdouble x, gdouble y)
  * Returns: the value of y.
  */
 gdouble
-ncm_stats_dist2d_eval_marginal (NcmStatsDist2d *sd2, gdouble u)
+ncm_stats_dist2d_eval_marginal_pdf (NcmStatsDist2d *sd2, gdouble xy)
 {
-	return NCM_STATS_DIST2D_GET_CLASS (sd2)->marginal (sd2, u);
+	return NCM_STATS_DIST2D_GET_CLASS (sd2)->marginal_pdf (sd2, xy);
 }
 
 /**
- * ncm_stats_dist2d_eval_inv_pdf:
+ * ncm_stats_dist2d_eval_inv_cond: (virtual inv_cond)
  * @sd2: a #NcmStatsDist2d
  * @u: a number between [0, 1]
- * @y: FIXME
+ * @yx: y or x
  *
  * FIXME 
  * Calculates the value of the random variable $x$ for which the cumulative
@@ -256,8 +258,8 @@ ncm_stats_dist2d_eval_marginal (NcmStatsDist2d *sd2, gdouble u)
  * Returns: the value of x.
  */
 gdouble
-ncm_stats_dist2d_eval_inv_pdf (NcmStatsDist2d *sd2, gdouble u, gdouble y)
+ncm_stats_dist2d_eval_inv_cond (NcmStatsDist2d *sd2, gdouble u, gdouble yx)
 {
-	return NCM_STATS_DIST2D_GET_CLASS (sd2)->inv_pdf (sd2, u, y);
+	return NCM_STATS_DIST2D_GET_CLASS (sd2)->inv_cond (sd2, u, yx);
 }
 

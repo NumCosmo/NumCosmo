@@ -1,7 +1,7 @@
 {
   'NcDataBaoDHrDAr', 
   {
-    'desc'      : <'SDSS DR11 -- LyaF auto and cross-correlation -- Delubac et al.(2015), Font-Ribeira et al.(2014) and Aubourg et al.(2015), BAO Sample (D_H / r_sd, D_A / r_sd)'>, 
+    'desc'      : <'SDSS DR11 -- LyaF auto and cross-correlation -- Delubac et al.(2015) arXiv:1404.1801, Font-Ribeira et al.(2014) arXiv:1311.1767 and Aubourg et al.(2015) arXiv:1411.1074, BAO Sample (D_H / r_sd, D_A / r_sd)'>, 
     'init'      : <true>, 
     'n-points'  : <4>, 
     'mean'      : <[9.18, 11.27994012, 9.0, 10.8]>, 

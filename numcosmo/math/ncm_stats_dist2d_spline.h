@@ -54,12 +54,13 @@ struct _NcmStatsDist2dSpline
 {
   /*< private >*/
   NcmStatsDist2d parent_instance;
-  NcmSpline2d *m2lnL;
+  NcmSpline2d *m2lnp;
+  gboolean marginal_x;
 };
 
 GType ncm_stats_dist2d_spline_get_type (void) G_GNUC_CONST;
 
-NcmStatsDist2dSpline *ncm_stats_dist2d_spline_new (NcmSpline2d *m2lnL);
+NcmStatsDist2dSpline *ncm_stats_dist2d_spline_new (NcmSpline2d *m2lnp);
 
 G_END_DECLS
 

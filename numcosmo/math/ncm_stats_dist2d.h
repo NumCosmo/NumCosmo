@@ -52,10 +52,12 @@ struct _NcmStatsDist2dClass
 	void (*xbounds) (NcmStatsDist2d *sd2, gdouble *xi, gdouble *xf);
 	void (*ybounds) (NcmStatsDist2d *sd2, gdouble *yi, gdouble *yf);
   gdouble (*pdf) (NcmStatsDist2d *sd2, gdouble x, gdouble y);
-	gdouble (*m2lnL) (NcmStatsDist2d *sd2, gdouble x, gdouble y);
+	gdouble (*m2lnp) (NcmStatsDist2d *sd2, gdouble x, gdouble y);
 	gdouble (*cdf) (NcmStatsDist2d *sd2, gdouble x, gdouble y);
-	gdouble (*marginal) (NcmStatsDist2d *sd2, gdouble u);
-	gdouble (*inv_pdf) (NcmStatsDist2d *sd2, gdouble u, gdouble y);
+	gdouble (*marginal_pdf) (NcmStatsDist2d *sd2, gdouble xy);
+	gdouble (*marginal_cdf) (NcmStatsDist2d *sd2, gdouble xy);
+	gdouble (*marginal_inv_cdf) (NcmStatsDist2d *sd2, gdouble u);
+	gdouble (*inv_cond) (NcmStatsDist2d *sd2, gdouble u, gdouble yx);
   void (*prepare) (NcmStatsDist2d *sd2);
 };
 
@@ -75,7 +77,7 @@ void ncm_stats_dist2d_clear (NcmStatsDist2d **sd2);
 void ncm_stats_dist2d_prepare (NcmStatsDist2d *sd2);
 
 gdouble ncm_stats_dist2d_eval_pdf (NcmStatsDist2d *sd2, gdouble x, gdouble y);
-gdouble ncm_stats_dist2d_eval_m2lnL (NcmStatsDist2d *sd2, gdouble x, gdouble y);
+gdouble ncm_stats_dist2d_eval_m2lnp (NcmStatsDist2d *sd2, gdouble x, gdouble y);
 gdouble ncm_stats_dist2d_eval_cdf (NcmStatsDist2d *sd2, gdouble x, gdouble y);
 gdouble ncm_stats_dist2d_eval_inv_pdf (NcmStatsDist2d *sd2, gdouble u, gdouble y);
 

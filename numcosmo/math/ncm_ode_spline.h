@@ -62,6 +62,7 @@ struct _NcmOdeSpline
   gdouble xi;
   gdouble xf;
   gdouble yi;
+	gdouble yf;
   gdouble reltol;
   gdouble abstol;
   NcmOdeSplineDydx dydx;
@@ -87,6 +88,7 @@ void ncm_ode_spline_set_abstol (NcmOdeSpline *os, gdouble abstol);
 void ncm_ode_spline_set_xi (NcmOdeSpline *os, gdouble xi);
 void ncm_ode_spline_set_xf (NcmOdeSpline *os, gdouble xf);
 void ncm_ode_spline_set_yi (NcmOdeSpline *os, gdouble yi);
+void ncm_ode_spline_set_yf (NcmOdeSpline *os, gdouble yf);
 
 #define NCM_ODE_SPLINE_DEFAULT_RELTOL (1.0e-13)
 #define NCM_ODE_SPLINE_DEFAULT_ABSTOL (1.0e-80)
