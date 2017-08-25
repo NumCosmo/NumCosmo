@@ -1140,7 +1140,7 @@ ncm_diff_Hessian_by_step_algo (NcmDiff *diff, NcmDiffHessianStepAlgo Hstep_algo,
  * @user_data: (nullable): function user data
  * @Eerr: (array) (element-type double) (out) (transfer full): estimated errors
  * 
- * Calculates the gradient of @f $\nabla f$ using the forward method plus 
+ * Calculates the first derivative of @f: $\partial_i f$ using the forward method plus 
  * Richardson extrapolation. The function $f$ is considered as a $f:\mathbb{R}^N\to \mathbb{R}^M$,
  * where $N = $ length of @x_a and $M = $ @dim.
  * 
@@ -1161,7 +1161,7 @@ ncm_diff_rf_d1_N_to_M (NcmDiff *diff, GArray *x_a, const guint dim, NcmDiffFuncN
  * @user_data: (nullable): function user data
  * @Eerr: (array) (element-type double) (out) (transfer full): estimated errors
  * 
- * Calculates the gradient of @f $\nabla f$ using the central method plus 
+ * Calculates the first derivative of @f: $\partial_i f$ using the central method plus 
  * Richardson extrapolation. The function $f$ is considered as a $f:\mathbb{R}^N\to \mathbb{R}^M$,
  * where $N = $ length of @x_a and $M = $ @dim.
  * 
@@ -1182,7 +1182,7 @@ ncm_diff_rc_d1_N_to_M (NcmDiff *diff, GArray *x_a, const guint dim, NcmDiffFuncN
  * @user_data: (nullable): function user data
  * @Eerr: (array) (element-type double) (out) (transfer full): estimated errors
  * 
- * Calculates the Laplacian of @f $\nabla^2 f$ using the central method plus 
+ * Calculates the second derivative of @f: $\partial_i^2 f$ using the central method plus 
  * Richardson extrapolation. The function $f$ is considered as a $f:\mathbb{R}^N\to \mathbb{R}^M$,
  * where $N = $ length of @x_a and $M = $ @dim.
  * 
@@ -1232,7 +1232,7 @@ _ncm_diff_trans_1_to_1 (NcmVector *x, NcmVector *y, gpointer user_data)
  * @user_data: (nullable): function user data
  * @Eerr: (array) (element-type double) (out) (transfer full): estimated errors
  * 
- * Calculates the gradient of @f $\nabla f$ using the forward method plus 
+ * Calculates the first derivative of @f: $\partial_i f$ using the forward method plus 
  * Richardson extrapolation. The function $f$ is considered as a $f:\mathbb{R}^N \to \mathbb{R}$,
  * where $N = $ length of @x_a.
  * 
@@ -1264,7 +1264,7 @@ ncm_diff_rf_d1_1_to_M (NcmDiff *diff, const gdouble x, const guint dim, NcmDiffF
  * @user_data: (nullable): function user data
  * @Eerr: (array) (element-type double) (out) (transfer full): estimated errors
  * 
- * Calculates the gradient of @f $\nabla f$ using the central method plus 
+ * Calculates the first derivative of @f: $\partial_i f$ using the central method plus 
  * Richardson extrapolation. The function $f$ is considered as a $f:\mathbb{R}^N \to \mathbb{R}$,
  * where $N = $ length of @x_a.
  * 
@@ -1295,7 +1295,7 @@ ncm_diff_rc_d1_1_to_M (NcmDiff *diff, const gdouble x, const guint dim, NcmDiffF
  * @user_data: (nullable): function user data
  * @Eerr: (array) (element-type double) (out) (transfer full): estimated errors
  * 
- * Calculates the Laplacian of @f $\nabla^2 f$ using the central method plus 
+ * Calculates the second derivative of @f: $\partial_i^2 f$ using the central method plus 
  * Richardson extrapolation. The function $f$ is considered as a $f:\mathbb{R}^N \to \mathbb{R}$,
  * where $N = $ length of @x_a.
  * 
@@ -1325,7 +1325,7 @@ ncm_diff_rc_d2_1_to_M (NcmDiff *diff, const gdouble x, const guint dim, NcmDiffF
  * @user_data: (nullable): function user data
  * @Eerr: (array) (element-type double) (out) (transfer full): estimated errors
  * 
- * Calculates the gradient of @f $\nabla f$ using the forward method plus 
+ * Calculates the first derivative of @f: $\partial_i f$ using the forward method plus 
  * Richardson extrapolation. The function $f$ is considered as a $f:\mathbb{R}^N \to \mathbb{R}$,
  * where $N = $ length of @x_a.
  * 
@@ -1347,7 +1347,7 @@ ncm_diff_rf_d1_N_to_1 (NcmDiff *diff, GArray *x_a, NcmDiffFuncNto1 f, gpointer u
  * @user_data: (nullable): function user data
  * @Eerr: (array) (element-type double) (out) (transfer full): estimated errors
  * 
- * Calculates the gradient of @f $\nabla f$ using the central method plus 
+ * Calculates the first derivative of @f: $\partial_i f$ using the central method plus 
  * Richardson extrapolation. The function $f$ is considered as a $f:\mathbb{R}^N \to \mathbb{R}$,
  * where $N = $ length of @x_a.
  * 
@@ -1369,7 +1369,7 @@ ncm_diff_rc_d1_N_to_1 (NcmDiff *diff, GArray *x_a, NcmDiffFuncNto1 f, gpointer u
  * @user_data: (nullable): function user data
  * @Eerr: (array) (element-type double) (out) (transfer full): estimated errors
  * 
- * Calculates the Laplacian of @f $\nabla^2 f$ using the central method plus 
+ * Calculates the second derivative of @f: $\partial_i^2 f$ using the central method plus 
  * Richardson extrapolation. The function $f$ is considered as a $f:\mathbb{R}^N \to \mathbb{R}$,
  * where $N = $ length of @x_a.
  * 
@@ -1433,7 +1433,7 @@ ncm_diff_rf_Hessian_N_to_1 (NcmDiff *diff, GArray *x_a, NcmDiffFuncNto1 f, gpoin
  * @user_data: (nullable): function user data
  * @err: (out) (nullable): estimated error
  * 
- * Calculates the gradient of @f $\nabla f$ using the forward method plus 
+ * Calculates the first derivative of @f: $\partial_i f$ using the forward method plus 
  * Richardson extrapolation. The function $f$ is considered as a $f:\mathbb{R} \to \mathbb{R}$.
  * 
  * Returns: The derivative of @f at @x.
@@ -1472,7 +1472,7 @@ ncm_diff_rf_d1_1_to_1 (NcmDiff *diff, const gdouble x, NcmDiffFunc1to1 f, gpoint
  * @user_data: (nullable): function user data
  * @err: (out) (nullable): estimated error
  * 
- * Calculates the gradient of @f $\nabla f$ using the central method plus 
+ * Calculates the first derivative of @f: $\partial_i f$ using the central method plus 
  * Richardson extrapolation. The function $f$ is considered as a $f:\mathbb{R} \to \mathbb{R}$.
  * 
  * Returns: The derivative of @f at @x.
@@ -1511,7 +1511,7 @@ ncm_diff_rc_d1_1_to_1 (NcmDiff *diff, const gdouble x, NcmDiffFunc1to1 f, gpoint
  * @user_data: (nullable): function user data
  * @err: (out) (nullable): estimated error
  * 
- * Calculates the Laplacian of @f $\nabla^2 f$ using the central method plus 
+ * Calculates the second derivative of @f: $\partial_i^2 f$ using the central method plus 
  * Richardson extrapolation. The function $f$ is considered as a $f:\mathbb{R} \to \mathbb{R}$.
  * 
  * Returns: The derivative of @f at @x.
