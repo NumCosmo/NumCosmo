@@ -72,7 +72,7 @@ main (gint argc, gchar *argv[])
   ncm_cfg_enable_gsl_err_handler ();
 
   g_test_set_nonfatal_assertions ();
-  
+
   g_test_add ("/ncm/fftlog/tophatwin2/eval", TestNcmFftlog, NULL,
               &test_ncm_fftlog_tophatwin2_new,
               &test_ncm_fftlog_eval,
@@ -117,7 +117,10 @@ main (gint argc, gchar *argv[])
               &test_ncm_fftlog_invalid_st,
               &test_ncm_fftlog_free);
 #endif
+
+#ifdef NUMCOSMO_HAVE_FFTW3  
   g_test_run ();
+#endif
 }
 
 typedef struct _TestNcmFftlogPlaw
