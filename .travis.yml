@@ -49,7 +49,8 @@ before_install:
   - if [[ "$TRAVIS_OS_NAME" == "osx"   ]]; then brew install gsl gtk-doc gmp mpfr               ; fi
   - if [[ "$TRAVIS_OS_NAME" == "osx"   ]]; then brew install fftw cfitsio                       ; fi
   - if [[ "$TRAVIS_OS_NAME" == "osx"   ]]; then brew install sundials --without-suite-sparse    ; fi
-  - if [[ "$TRAVIS_OS_NAME" == "osx"   ]]; then brew install numpy --overwrite                  ; fi
+  - if [[ "$TRAVIS_OS_NAME" == "osx"   ]]; then rm -f /usr/local/bin/f2py                       ; fi
+  - if [[ "$TRAVIS_OS_NAME" == "osx"   ]]; then brew install numpy                              ; fi
   - if [[ "$TRAVIS_OS_NAME" == "osx"   ]]; then brew install nlopt                              ; fi
   - if [[ "$TRAVIS_OS_NAME" == "osx"   ]]; then for gcc_name in gcc gcc-4 gcc-5 gcc-6 gcc-7 gcc-8; do loc=$($gcc_name --version); if test $? = 0; then export CC=$gcc_name; echo $loc; fi ; done ; fi
   - NOCONFIGURE=yes ./autogen.sh
