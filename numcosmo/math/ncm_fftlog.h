@@ -79,6 +79,7 @@ struct _NcmFftlog
   gdouble Lk;
   gdouble Lk_N;
   gdouble pad_p;
+  gboolean noring;
   gboolean prepared;
   gboolean evaluated;
   NcmVector *lnr_vec;
@@ -118,8 +119,12 @@ void ncm_fftlog_set_size (NcmFftlog *fftlog, guint n);
 void ncm_fftlog_set_padding (NcmFftlog *fftlog, gdouble pad_p);
 gdouble ncm_fftlog_get_padding (NcmFftlog *fftlog);
 
+void ncm_fftlog_set_noring (NcmFftlog *fftlog, gboolean active);
+gboolean ncm_fftlog_get_noring (NcmFftlog *fftlog);
+
 void ncm_fftlog_set_length (NcmFftlog *fftlog, gdouble Lk);
 
+void ncm_fftlog_get_lnk_vector (NcmFftlog *fftlog, NcmVector *lnk);
 void ncm_fftlog_eval_by_vector (NcmFftlog *fftlog, NcmVector *Fk);
 void ncm_fftlog_eval_by_function (NcmFftlog *fftlog, NcmFftlogFunc Fk, gpointer user_data);
 void ncm_fftlog_eval_by_gsl_function (NcmFftlog *fftlog, gsl_function *Fk);
@@ -143,6 +148,7 @@ G_INLINE_FUNC gdouble ncm_fftlog_get_length (NcmFftlog *fftlog);
 G_INLINE_FUNC gdouble ncm_fftlog_get_full_length (NcmFftlog *fftlog);
 
 G_INLINE_FUNC gint ncm_fftlog_get_mode_index (NcmFftlog *fftlog, gint i);
+G_INLINE_FUNC gint ncm_fftlog_get_array_index (NcmFftlog *fftlog, gint phys_i);
 
 G_INLINE_FUNC NcmVector *ncm_fftlog_peek_output_vector (NcmFftlog *fftlog, guint nderiv);
 
@@ -190,6 +196,12 @@ G_INLINE_FUNC gint
 ncm_fftlog_get_mode_index (NcmFftlog *fftlog, gint i)
 {
   return (i > fftlog->Nf_2) ? i - fftlog->Nf : i;
+}
+
+G_INLINE_FUNC gint 
+ncm_fftlog_get_array_index (NcmFftlog *fftlog, gint phys_i)
+{
+  return (phys_i < 0) ? phys_i + fftlog->Nf : phys_i;
 }
 
 G_INLINE_FUNC NcmVector *

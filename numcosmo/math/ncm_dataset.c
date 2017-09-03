@@ -390,7 +390,7 @@ ncm_dataset_get_data (NcmDataset *dset, guint n)
 NcmData *
 ncm_dataset_peek_data (NcmDataset *dset, guint n)
 {
-  g_assert (n < dset->oa->len);
+  g_assert_cmpuint (n, <, dset->oa->len);
   return NCM_DATA (ncm_obj_array_peek (dset->oa, n));
 }
 
@@ -960,7 +960,7 @@ ncm_dataset_m2lnL_vec (NcmDataset *dset, NcmMSet *mset, NcmVector *m2lnL_v)
 {
   guint i;
 
-  g_assert (ncm_vector_len (m2lnL_v) >= dset->oa->len);
+  g_assert_cmpuint (ncm_vector_len (m2lnL_v), >=, dset->oa->len);
 
   for (i = 0; i < dset->oa->len; i++)
   {

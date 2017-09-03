@@ -473,8 +473,8 @@ _nc_abc_cluster_ncount_data_summary (NcmABC *abc)
 static gdouble 
 _nc_abc_cluster_ncount_mock_distance (NcmABC *abc, NcmDataset *dset, NcmVector *theta, NcmVector *thetastar, NcmRNG *rng)
 {
-  NcABCClusterNCount *abcnc = NC_ABC_CLUSTER_NCOUNT (abc);
-  NcmData *data = ncm_dataset_peek_data (dset, 0);
+  NcABCClusterNCount *abcnc   = NC_ABC_CLUSTER_NCOUNT (abc);
+  NcmData *data               = ncm_dataset_peek_data (dset, 0);
   NcDataClusterNCount *ncount = NC_DATA_CLUSTER_NCOUNT (data);
   gdouble res;
 

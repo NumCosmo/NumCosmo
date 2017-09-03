@@ -165,7 +165,7 @@ ncm_stats_dist2d_clear (NcmStatsDist2d **sd2)
 }
 
 /**
- * ncm_stats_dist2d_prepare: (virtual prepare):
+ * ncm_stats_dist2d_prepare: (virtual prepare)
  * @sd2: a #NcmStatsDist2d
  *
  * Prepares the object for calculations.
@@ -181,7 +181,7 @@ ncm_stats_dist2d_prepare (NcmStatsDist2d *sd2)
 }
 
 /**
- * ncm_stats_dist2d_xbounds: (virtual xbounds):
+ * ncm_stats_dist2d_xbounds: (virtual xbounds)
  * @sd2: a #NcmStatsDist2d
  * @xi: (out): x lower bound
  * @xf: (out): x upper bound
@@ -196,7 +196,7 @@ ncm_stats_dist2d_xbounds (NcmStatsDist2d *sd2, gdouble *xi, gdouble *xf)
 }
 
 /**
- * ncm_stats_dist2d_ybounds: (virtual ybounds):
+ * ncm_stats_dist2d_ybounds: (virtual ybounds)
  * @sd2: a #NcmStatsDist2d
  * @yi: (out): y lower bound
  * @yf: (out): y upper bound
@@ -211,7 +211,7 @@ ncm_stats_dist2d_ybounds (NcmStatsDist2d *sd2, gdouble *yi, gdouble *yf)
 }
 
 /**
- * ncm_stats_dist2d_eval_pdf: (virtual pdf):
+ * ncm_stats_dist2d_eval_pdf: (virtual pdf)
  * @sd2: a #NcmStatsDist2d
  * @x: random variable value
  * @y: random variable value
@@ -227,7 +227,7 @@ ncm_stats_dist2d_eval_pdf (NcmStatsDist2d *sd2, const gdouble x, const gdouble y
 }
 
 /**
- * ncm_stats_dist2d_eval_m2lnp: (virtual m2lnp):
+ * ncm_stats_dist2d_eval_m2lnp: (virtual m2lnp)
  * @sd2: a #NcmStatsDist2d
  * @x: random variable value
  * @y: random variable value 
@@ -243,7 +243,7 @@ ncm_stats_dist2d_eval_m2lnp (NcmStatsDist2d *sd2, const gdouble x, const gdouble
 }
 
 /**
- * ncm_stats_dist2d_eval_cdf: (virtual cdf):
+ * ncm_stats_dist2d_eval_cdf: (virtual cdf)
  * @sd2: a #NcmStatsDist2d
  * @x: random variable value
  * @y: random variable value
