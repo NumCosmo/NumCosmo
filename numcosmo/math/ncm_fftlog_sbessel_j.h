@@ -5,6 +5,13 @@
  *  Copyright  2017  Fernando de Simoni
  *  <fernando.saliby@gmail.com>
  ****************************************************************************/
+/***************************************************************************
+ *            ncm_fftlog_sbessel_j.h
+ *
+ *  Sat September 02 18:11:24 2017
+ *  Copyright  2017  Sandro Dias Pinto Vitenti
+ *  <sandro@isoftware.com.br>
+ ****************************************************************************/
 /*
  * ncm_fftlog_sbessel_j.h
  *
@@ -70,6 +77,9 @@ NcmFftlogSBesselJ *ncm_fftlog_sbessel_j_new (guint ell, gdouble lnr0, gdouble ln
 
 void ncm_fftlog_sbessel_j_set_ell (NcmFftlogSBesselJ *fftlog_jl, const guint ell);
 guint ncm_fftlog_sbessel_j_get_ell (NcmFftlogSBesselJ *fftlog_jl);
+
+void ncm_fftlog_sbessel_j_set_q (NcmFftlogSBesselJ *fftlog_jl, const gdouble q);
+gdouble ncm_fftlog_sbessel_j_get_q (NcmFftlogSBesselJ *fftlog_jl);
 
 void ncm_fftlog_sbessel_j_set_best_lnr0 (NcmFftlogSBesselJ *fftlog_jl);
 void ncm_fftlog_sbessel_j_set_best_lnk0 (NcmFftlogSBesselJ *fftlog_jl);

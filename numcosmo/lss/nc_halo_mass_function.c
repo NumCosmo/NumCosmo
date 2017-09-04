@@ -754,7 +754,7 @@ _encapsulated_z (gdouble z, gpointer p)
   gdouble A = args->mfp->area_survey *
     nc_halo_mass_function_dv_dzdomega (args->mfp, args->cosmo, z) *
     nc_halo_mass_function_dn_dlnM (args->mfp, args->cosmo, args->lnM, z);
-
+  /*printf ("z   % 22.15g % 22.15g\n", z, A);*/
   return A;
 }
 
@@ -764,7 +764,7 @@ _encapsulated_lnM (gdouble lnM, gpointer p)
   _encapsulated_function_args *args = (_encapsulated_function_args *) p;
 
   gdouble A = args->dVdz * nc_halo_mass_function_dn_dlnM (args->mfp, args->cosmo, lnM, args->z);
-
+  /*printf ("lnM % 22.15g % 22.15g\n", lnM, A);*/
   return A;
 }
 
@@ -789,7 +789,7 @@ _nc_halo_mass_function_generate_2Dspline_knots (NcHaloMassFunction *mfp, NcHICos
 
   Fy.function = _encapsulated_z;
   Fy.params = &args;
-
+  /*ncm_model_orig_params_log_all (NCM_MODEL (cosmo));*/
   mfp->d2NdzdlnM = ncm_spline2d_bicubic_notaknot_new ();
   ncm_spline2d_set_function (mfp->d2NdzdlnM,
                              NCM_SPLINE_FUNCTION_SPLINE, &Fx, &Fy, mfp->lnMi, mfp->lnMf, mfp->zi, mfp->zf, rel_error);

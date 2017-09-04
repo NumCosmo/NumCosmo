@@ -39,16 +39,37 @@
  *
  * $$F(k) = \sum_{n} c_n e^{\frac{2\pi i n}{L} \ln\left(\frac{k}{k_0}\right)}.$$
  * Substituting $F(k)$ in Eq. \eqref{eq:Gr} and changing the variable $k \rightarrow t = kr$, thus 
- * \begin{eqnarray}\label{eq:Gr_decomp}
- * r G(r) &=& \sum_n c_n \int_0^\infty \frac{k}{k_0}^{\frac{2\pi i n}{L}} K(kr)^2 d(kr) \\
- * &=& \sum_n c_n  \int_0^\infty \frac{t}{k_0 r}^{\frac{2\pi i n}{L}} K(t) dt \\
- * &=& \sum_n c_n e^{-\frac{2\pi i n}{L} \ln\left(\frac{r}{r_0}\right)} e^{-\frac{2\pi i n}{L} \ln(k_0 r_0)} Y_n, 
- * \end{eqnarray}
+ * \begin{align}\label{eq:Gr_decomp}
+ * r G(r) &= \sum_n c_n \int_0^\infty \frac{k}{k_0}^{\frac{2\pi i n}{L}} K(kr)^2 d(kr) \\
+ * &= \sum_n c_n  \int_0^\infty \frac{t}{k_0 r}^{\frac{2\pi i n}{L}} K(t) dt \\
+ * &= \sum_n c_n e^{-\frac{2\pi i n}{L} \ln\left(\frac{r}{r_0}\right)} e^{-\frac{2\pi i n}{L} \ln(k_0 r_0)} Y_n, 
+ * \end{align}
  * where 
  * $$Y_n = \int_0^\infty t^{\frac{2\pi i n}{L}} K(t) dt,$$
  * and the Fourier coefficients are
  * $$c_n = \frac{1}{N} \sum_m F(k_m) e^{- \frac{2\pi i nm}{N}}.$$
- * The total number of points $N$ corresponds to the number of knots in the fundamental interval, which is equally spaced.    
+ * The total number of points $N$ corresponds to the number of knots in the fundamental interval, which is equally spaced.
+ *
+ * The variables discretization is different depending whether $N$ is even or odd, in general
+ * $$ k_n = k_0 \mathrm{e}^{n L / N}, \qquad r_m = r_0 \mathrm{e}^{m L / N}. $$
+ * If $N$ is odd, $n$ and $m$ runs from $[-\lfloor N/2\rfloor, \lfloor N/2\rfloor]$, 
+ * where $\lfloor N/2\rfloor$  is the round-down (largest integer smaller than $N/2$) 
+ * of $N/2$. In this case 
+ * \begin{align}
+ * \ln\left(k_{-\lfloor N/2\rfloor}\right) = \ln(k_0) - \frac{(N-1)}{N} \frac{L}{2}, \\
+ * \ln\left(k_{+\lfloor N/2\rfloor}\right) = \ln(k_0) + \frac{(N-1)}{N} \frac{L}{2}.
+ * \end{align}
+ * This means that for odd $N$ the values of $k_n$ (and $r_n$) never touches the borders $\ln(k_0) \pm L/2$
+ * and $\ln(r_0) \pm L/2$. On the other hand if $N$ is even ($\lfloor N/2\rfloor = N/2$) 
+ * \begin{align}
+ * \ln\left(k_{-\lfloor N/2\rfloor}\right) = \ln(k_0) - \frac{L}{2}, \\
+ * \ln\left(k_{+\lfloor N/2\rfloor}\right) = \ln(k_0) + \frac{L}{2}.
+ * \end{align}
+ * However, since we are assuming that these functions are periodic with period $L$ these two 
+ * points refer to the same value of the functions. Thus, we do not need to include both points and in 
+ * the case of even $N$ we include the point $\ln(k_0) - \frac{L}{2}$ only. In the original [FFTLog][XHamilton2000] 
+ * paper they include both points but give them a $1/2$ weight, here we avoid this complication by using the lower 
+ * end point only.
  * 
  * The user must provide the following input values: $\ln k_0$ - ncm_fftlog_set_lnk0(), $\ln r_0$ - ncm_fftlog_set_lnr0(), 
  * $L$ - ncm_fftlog_set_length(), padding percentage - ncm_fftlog_set_padding(), $N$ - ncm_fftlog_set_size(), 
@@ -61,12 +82,12 @@
  * - $N$ knots are equally distributed in the fundamental interval and $N \times \mathrm{padding}$ knots are distributed in 
  * in the two simetric intervals as mentioned above. 
  * - For the sake of optimization, the final number of points $N_f$ is substituted by the smallest number $N_f^\prime$ (bigger than $N_f$) 
- * which can be decomposed as $N_f \leq N_f^\prime = N^\prime (1 + \mathrm{padding}) = 3^a 5^b 7^c$, where $a$, 
- * $b$ and $c$ are positive integers. 
+ * which can be decomposed as $N_f \leq N_f^\prime = N^\prime (1 + \mathrm{padding}) = 2^a 3^b 5^c 7^d$, where $a$, 
+ * $b$, $c$ and $d$ are positive integers. 
  * - The function $F(k)$ can be provided as:
  * 1. a gsl_function - ncm_fftlog_eval_by_gsl_function() - whose values are computed at the knots 
  * within the fundamental interval, and set to zero within the padding intervals. 
- * 2. as a vector - ncm_fftlog_eval_by_vector() - first one must get the vector of $\ln k$ knots, ncm_fftlog_get_vector_lnr(), 
+ * 2. as a vector - ncm_fftlog_eval_by_vector() - first one must get the vector of $\ln k$ knots, ncm_fftlog_get_lnk_vector(), 
  * and then pass a vector containing the values of the function computed at each knot. 
  * 
  * - Regarding $Y_n$, see the different implementations of #NcmFftlog, e.g., #NcmFftlogTophatwin2 and #NcmFftlogGausswin2.
@@ -102,6 +123,7 @@ enum
   PROP_LR,
   PROP_N,
   PROP_PAD,
+  PROP_NORING,
   PROP_NAME,
 };
 
@@ -121,6 +143,7 @@ ncm_fftlog_init (NcmFftlog *fftlog)
   fftlog->Nf    = 0;
   fftlog->Nf_2  = 0;
   fftlog->pad   = 0;
+  fftlog->noring    = FALSE;
   fftlog->prepared  = FALSE;
   fftlog->evaluated = FALSE;
 
@@ -171,6 +194,9 @@ _ncm_fftlog_set_property (GObject *object, guint prop_id, const GValue *value, G
     case PROP_PAD:
       ncm_fftlog_set_padding (fftlog, g_value_get_double (value));
       break;
+    case PROP_NORING:
+      ncm_fftlog_set_noring (fftlog, g_value_get_boolean (value));
+      break;
     case PROP_NAME:
       g_assert_not_reached ();
       break;
@@ -206,6 +232,9 @@ _ncm_fftlog_get_property (GObject *object, guint prop_id, GValue *value, GParamS
       break;
     case PROP_PAD:
       g_value_set_double (value, ncm_fftlog_get_padding (fftlog));
+      break;
+    case PROP_NORING:
+      g_value_set_boolean (value, ncm_fftlog_get_noring (fftlog));
       break;
     case PROP_NAME:
       g_value_set_string (value, NCM_FFTLOG_GET_CLASS (fftlog)->name);
@@ -304,6 +333,13 @@ ncm_fftlog_class_init (NcmFftlogClass *klass)
                                                         "Padding percentage",
                                                         0.0, G_MAXDOUBLE, 1.0,
                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  g_object_class_install_property (object_class,
+                                   PROP_NORING,
+                                   g_param_spec_boolean ("no-ringing",
+                                                         NULL,
+                                                         "No ringing",
+                                                         TRUE,
+                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
   g_object_class_install_property (object_class,
                                    PROP_NAME,
                                    g_param_spec_string ("name",
@@ -519,8 +555,8 @@ ncm_fftlog_set_size (NcmFftlog *fftlog, guint n)
     guint i;
     
     fftlog->N    = n;
-    fftlog->Lk_N = fftlog->Lk / (1.0 * fftlog->N - 1.0);
-    fftlog->N_2  = (fftlog->N - 1) / 2;
+    fftlog->N_2  = fftlog->N / 2;
+    fftlog->Lk_N = fftlog->Lk / (1.0 * fftlog->N);
 
     fftlog->Nf   = fftlog->N + 2 * fftlog->pad;
     fftlog->Nf_2 = fftlog->N_2 + fftlog->pad;
@@ -600,6 +636,38 @@ ncm_fftlog_get_padding (NcmFftlog *fftlog)
 }
 
 /**
+ * ncm_fftlog_set_noring:
+ * @fftlog: a #NcmFftlog
+ * @active: whether to use the no-ringing adjustment of $\ln(r_0)$
+ * 
+ * Sets whether to use the no-ringing adjustment of $\ln(r_0)$.
+ * 
+ */
+void 
+ncm_fftlog_set_noring (NcmFftlog *fftlog, gboolean active)
+{
+  if ((!fftlog->noring && active) || (fftlog->noring && !active))
+  {
+    fftlog->noring    = active;
+    fftlog->prepared  = FALSE;
+    fftlog->evaluated = FALSE;
+  }
+}
+
+/**
+ * ncm_fftlog_get_noring:
+ * @fftlog: a #NcmFftlog
+ * 
+ * 
+ * Returns: whether no-ringing condition is activated.
+ */
+gboolean 
+ncm_fftlog_get_noring (NcmFftlog *fftlog)
+{
+  return fftlog->noring;
+}
+
+/**
  * ncm_fftlog_set_length:
  * @fftlog: a #NcmFftlog
  * @Lk: period in the logarithmic space
@@ -613,7 +681,7 @@ ncm_fftlog_set_length (NcmFftlog *fftlog, gdouble Lk)
   if (fftlog->Lk != Lk)
   {
     fftlog->Lk        = Lk;
-    fftlog->Lk_N      = fftlog->Lk / (1.0 * fftlog->N - 1.0);
+    fftlog->Lk_N      = fftlog->Lk / (1.0 * fftlog->N);
     fftlog->prepared  = FALSE;
     fftlog->evaluated = FALSE;
   }
@@ -630,18 +698,36 @@ _ncm_fftlog_eval (NcmFftlog *fftlog)
   
   if (!fftlog->prepared)
   {
-    const gdouble twopi_Lt = 2.0 * M_PI / ncm_fftlog_get_full_length (fftlog);
+    const gdouble Lt       = ncm_fftlog_get_full_length (fftlog);
+    const gdouble twopi_Lt = 2.0 * M_PI / Lt;
     fftw_complex *Ym_0     = g_ptr_array_index (fftlog->Ym, 0);
+    gdouble lnr0k0         = fftlog->lnk0 + fftlog->lnr0;
     fftw_complex *Ym_ndm1;
     
     NCM_FFTLOG_GET_CLASS (fftlog)->get_Ym (fftlog, Ym_0);
+
+    if (fftlog->noring)
+    {
+      gint i;
+      for (i = 0; i < 5; i++)
+      {
+      fftw_complex YNf_2_0 = Ym_0[fftlog->Nf / 2];
+      const gdouble theta  = carg (YNf_2_0);
+      const gdouble M      = (fftlog->Nf / Lt) * lnr0k0 - theta / M_PI;
+      const glong M_round  = M;
+      const gdouble dM     = M - M_round;
+
+      lnr0k0       -= (Lt / fftlog->Nf) * dM;
+      fftlog->lnr0 -= (Lt / fftlog->Nf) * dM;
+      }
+    }
 
     for (i = 0; i < fftlog->Nf; i++)
     {
       const gint phys_i      = ncm_fftlog_get_mode_index (fftlog, i);
       const complex double a = twopi_Lt * phys_i * I;
       
-      Ym_0[i] *= cexp (- a * (fftlog->lnk0 + fftlog->lnr0));
+      Ym_0[i] *= cexp (- a * lnr0k0);
 
       Ym_ndm1 = Ym_0;
       for (nd = 1; nd <= fftlog->nderivs; nd++)
@@ -651,6 +737,18 @@ _ncm_fftlog_eval (NcmFftlog *fftlog)
         Ym_ndm1  = Ym_nd;
       }
     }
+
+    if ((fftlog->Nf % 2) == 0)
+    {
+      const gint Nf_2_index = ncm_fftlog_get_array_index (fftlog, +fftlog->Nf / 2);
+      
+      for (nd = 0; nd <= fftlog->nderivs; nd++)
+      {
+        fftw_complex *Ym_nd = g_ptr_array_index (fftlog->Ym, nd);
+        Ym_nd[Nf_2_index] = creal (Ym_nd[Nf_2_index]);
+      }
+    }
+    
     fftlog->prepared = TRUE;
   }
 
@@ -700,6 +798,29 @@ _ncm_fftlog_eval (NcmFftlog *fftlog)
 #endif /* NUMCOSMO_HAVE_FFTW3 */
 
 /**
+ * ncm_fftlog_get_lnk_vector:
+ * @fftlog: a #NcmFftlog
+ * @lnk: a #NcmVector
+ * 
+ * Computes the $\ln k$ vector.
+ * 
+ */
+void 
+ncm_fftlog_get_lnk_vector (NcmFftlog *fftlog, NcmVector *lnk)
+{
+  gint i;
+  g_assert_cmpuint (fftlog->N, ==, ncm_vector_len (lnk));
+  
+  for (i = 0; i < fftlog->N; i++)
+  {
+    const gint phys_i   = i - fftlog->N_2;
+    const gdouble lnk_i = fftlog->lnk0 + fftlog->Lk_N * phys_i;
+
+    ncm_vector_set (lnk, i, lnk_i);
+  }
+}
+
+/**
  * ncm_fftlog_eval_by_vector:
  * @fftlog: a #NcmFftlog
  * @Fk: a #NcmVector
@@ -712,6 +833,8 @@ ncm_fftlog_eval_by_vector (NcmFftlog *fftlog, NcmVector *Fk)
 {
 #ifdef NUMCOSMO_HAVE_FFTW3
   gint i;
+
+  g_assert_cmpuint (fftlog->N, ==, ncm_vector_len (Fk));
 
   memset (fftlog->Fk, 0, sizeof (complex double) * fftlog->Nf);
   
@@ -804,7 +927,9 @@ ncm_fftlog_prepare_splines (NcmFftlog *fftlog)
 NcmVector *
 ncm_fftlog_get_vector_lnr (NcmFftlog *fftlog)
 {
-  return ncm_vector_ref (fftlog->lnr_vec);
+  if (!fftlog->prepared)
+    g_warning ("ncm_fftlog_get_vector_lnr: returning the lnr vector without preparing evaluating, the vector may change after evaluation.");
+  return (fftlog->lnr_vec != NULL) ? ncm_vector_ref (fftlog->lnr_vec) : NULL;
 }
 
 /**
@@ -991,9 +1116,19 @@ ncm_fftlog_calibrate_size (NcmFftlog *fftlog, NcmFftlogFunc Fk, gpointer user_da
  * @i: index
  * 
  * Gets the index of the mode @i of the Fourier decomposition. This index corresponds 
- * to the lable $n$ in Eq. \eqref{eq:Gr_decomp}.
+ * to the label $n$ in Eq. \eqref{eq:Gr_decomp}.
  * 
  * Returns: the index of the mode
+ */
+/**
+ * ncm_fftlog_get_array_index:
+ * @fftlog: a #NcmFftlog
+ * @phys_i: index
+ * 
+ * Gets the array index @i of the Fourier decomposition. This index corresponds the position
+ * in the fft array of the element $n$ in Eq. \eqref{eq:Gr_decomp}.
+ * 
+ * Returns: the array index corresponding to @phys_i 
  */
 /**
  * ncm_fftlog_peek_output_vector:
