@@ -253,7 +253,7 @@ _nc_data_bao_empirical_fit_2d_inv_pdf (NcmDataDist2d *dist2d, NcmMSet *mset, gdo
 
 /**
  * nc_data_bao_empirical_fit_2d_new:
- * @m2lnp: a #NcmSpline2D containing $-2\ln (p)$
+ * @m2lnp: a #NcmSpline2d containing $-2\ln (p)$
  * @Dh_rd_fiduc: fiducial $D_H/r_d$
  * @Dt_rd_fiduc: fiducial $D_t/r_d$
  * @z: data redshift
