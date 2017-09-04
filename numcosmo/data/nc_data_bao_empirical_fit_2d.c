@@ -64,7 +64,6 @@ nc_data_bao_empirical_fit_2d_init (NcDataBaoEmpiricalFit2d *bao_ef)
   bao_ef->z        = 0.0;
   bao_ef->m2lnp    = NULL;
   bao_ef->p        = NULL;
-  bao_ef->p_mode   = 0.0;
   bao_ef->dist     = nc_distance_new (2.0);
 }
 
@@ -77,8 +76,7 @@ nc_data_bao_empirical_fit_2d_constructed (GObject *object)
     NcDataBaoEmpiricalFit2d *bao_ef = NC_DATA_BAO_EMPIRICAL_FIT_2D (object);
 
     ncm_stats_dist2d_prepare (bao_ef->p);
-    //bao_ef->p_mode = ncm_stats_dist1d_eval_mode (bao_ef->p);
-
+    
     ncm_data_set_init (NCM_DATA (bao_ef), TRUE);
   }
 }
@@ -229,15 +227,20 @@ static gdouble
 _nc_data_bao_empirical_fit_2d_m2lnL_val (NcmDataDist2d *dist2d, NcmMSet *mset, gdouble x, gdouble y)
 {
   NcDataBaoEmpiricalFit2d *bao_ef = NC_DATA_BAO_EMPIRICAL_FIT_2D (dist2d);
-  const gdouble alpha_par  = nc_data_bao_empirical_fit_2d_get_alpha_parallel (bao_ef, mset);
-  const gdouble alpha_per  = nc_data_bao_empirical_fit_2d_get_alpha_perpendicular (bao_ef, mset);
-  const gdouble alphax = alpha_per - x;
-  const gdouble alphay = alpha_par - y; 
-  gdouble m2lnL = ncm_stats_dist2d_eval_m2lnp (bao_ef->p, alphax, alphay);
+  const gdouble alpha_par         = nc_data_bao_empirical_fit_2d_get_alpha_parallel (bao_ef, mset);
+  const gdouble alpha_per         = nc_data_bao_empirical_fit_2d_get_alpha_perpendicular (bao_ef, mset);
+  const gdouble alphax            = alpha_per - x;
+  const gdouble alphay            = alpha_par - y; 
+  gdouble m2lnL                   = ncm_stats_dist2d_eval_m2lnp (bao_ef->p, alphax, alphay);
+  gdouble xl, xu, yl, yu;
 
-  printf ("alphax = %.5g alphay = %.5g x = %.5g y = %.5g eval = %.5g\n", alphax, alphay, x, y, m2lnL);
-  
-  return m2lnL;
+  ncm_stats_dist2d_xbounds (bao_ef->p, &xl, &xu);
+  ncm_stats_dist2d_ybounds (bao_ef->p, &yl, &yu);
+
+  if (((alphax < xl) || (alphax > xu)) || ((alphay < yl) || (alphay > yu)))
+    return GSL_POSINF;
+  else
+    return m2lnL;  
 }
 
 static void 
@@ -248,7 +251,6 @@ _nc_data_bao_empirical_fit_2d_inv_pdf (NcmDataDist2d *dist2d, NcmMSet *mset, gdo
   NCM_UNUSED (bao_ef);
   g_assert_not_reached ();
   
-  //ncm_stats_dist2d_eval_inv_pdf (bao_ef->p, u, v, x, y) - bao_ef->p_mode;
 }
 
 /**
@@ -333,20 +335,6 @@ nc_data_bao_empirical_fit_2d_new_from_id (NcDistance *dist, NcDataBaoId id)
   g_assert (NCM_IS_DATA (bao_ef));
    
   return bao_ef;
-}
-
-/**
- * nc_data_bao_empirical_fit_2d_get_mode:
- * @bao_ef: a #NcDataBaoEmpiricalFit2d
- * 
- * Calculates the mode of the empirical distribution.
- * 
- * Returns: the mode of the distribution.
- */
-gdouble 
-nc_data_bao_empirical_fit_2d_get_mode (NcDataBaoEmpiricalFit2d *bao_ef)
-{
-  return bao_ef->p_mode;
 }
 
 /**

@@ -76,7 +76,6 @@ _ncm_data_dist2d_set_property (GObject *object, guint prop_id, const GValue *val
       ncm_data_dist2d_set_size (dist2d, g_value_get_uint (value));
       break;
     case PROP_MATRIX:
-      printf ("cols orig = %d", ncm_matrix_col_len (dist2d->m));
       ncm_matrix_substitute (&dist2d->m, g_value_get_object (value), TRUE);
       break;
     default:
