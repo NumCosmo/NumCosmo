@@ -199,6 +199,27 @@ dnl ***************************************************************************
 AX_GFORTRAN_VERSION()
 AC_FC_FREEFORM()
 AC_FC_LINE_LENGTH([unlimited])
+
+AC_F77_LIBRARY_LDFLAGS()
+AC_FC_LIBRARY_LDFLAGS()
+
+if test "x$FLIBS" != x; then
+  FLIBS_WL="-Wl"
+  for fc_opt in $FLIBS; do
+    FLIBS_WL="$FLIBS_WL,${fc_opt}"
+  done
+  FLIBS="$FLIBS_WL"
+fi
+
+if test "x$FCLIBS" != x; then
+  FCLIBS_WL="-Wl"
+  for fc_opt in $FCLIBS; do
+    FCLIBS_WL="$FCLIBS_WL,${fc_opt}"
+  done
+  FCLIBS="$FCLIBS_WL"
+  LIBS="$FCLIBS $LIBS"
+fi
+
 AC_F77_WRAPPERS()
 
 if test x$GFORTRAN_VERSION != x; then
@@ -422,26 +443,6 @@ dnl ***************************************************************************
 AC_CHECK_HEADERS([execinfo.h],[
 		 AC_CHECK_FUNCS([backtrace backtrace_symbols])
 ],[])
-
-dnl ***************************************************************************
-dnl Check for fortran lib.
-dnl ***************************************************************************
-AC_F77_LIBRARY_LDFLAGS
-AC_FC_LIBRARY_LDFLAGS
-if test "x$FCLIBS" != x; then
-  FCLIBS_WL="-Wl"
-  for fc_opt in $FCLIBS; do
-    FCLIBS_WL="$FCLIBS_WL,${fc_opt}"
-  done
-  FLIBS_WL="-Wl"
-  for fc_opt in $FLIBS; do
-    FLIBS_WL="$FLIBS_WL,${fc_opt}"
-  done
-
-  FLIBS="$FLIBS_WL"
-  FCLIBS="$FCLIBS_WL"
-  LIBS="$FCLIBS $LIBS"
-fi
 
 dnl ***************************************************************************
 dnl Check for math.h
