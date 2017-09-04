@@ -61,7 +61,6 @@ struct _NcDataBaoEmpiricalFit2d
   gdouble z;
   NcmSpline2d *m2lnp;
   NcmStatsDist2d *p;
-  gdouble p_mode;
   NcDistance *dist;
 };
 
