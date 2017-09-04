@@ -191,7 +191,7 @@ static gdouble
 _ncm_stats_dist2d_spline_m2lnp (NcmStatsDist2d *sd2, const gdouble x, const gdouble y)
 {
   NcmStatsDist2dSpline *sd2s = NCM_STATS_DIST2D_SPLINE (sd2);
-  return ncm_spline2d_eval (sd2s->m2lnp, x, y) / sd2s->norma;
+  return ncm_spline2d_eval (sd2s->m2lnp, x, y) - sd2s->m2lnnorma;
 }
 
 static gdouble 
@@ -259,8 +259,8 @@ _ncm_stats_dist2d_spline_prepare (NcmStatsDist2d *sd2)
 		_ncm_stats_dist2d_spline_xbounds (sd2, &xi, &xf);
 		_ncm_stats_dist2d_spline_ybounds (sd2, &yi, &yf);
 
-		sd2s->norma     = ncm_spline2d_integ_dxdy (sd2s->m2lnp, xi, xf, yi, yf);
-		sd2s->m2lnnorma = -2.0 * log (sd2s->norma);
+		sd2s->norma     = 1.0; //ncm_spline2d_integ_dxdy (sd2s->m2lnp, xi, xf, yi, yf);
+		sd2s->m2lnnorma = 0.0; //-2.0 * log (sd2s->norma);
 	}
 	
 }

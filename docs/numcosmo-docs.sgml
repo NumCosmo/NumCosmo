@@ -109,6 +109,7 @@
       <xi:include href="xml/ncm_data_gauss_cov.xml"/>
       <xi:include href="xml/ncm_data_poisson.xml"/>    
       <xi:include href="xml/ncm_data_dist1d.xml"/>
+      <xi:include href="xml/ncm_data_dist2d.xml"/>
     </section>
     <section>
     <title>Statistical Analysis</title>
@@ -359,6 +360,7 @@
     <xi:include href="xml/nc_data_bao_rdv.xml"/>
     <xi:include href="xml/nc_data_bao_dvdv.xml"/>
     <xi:include href="xml/nc_data_bao_empirical_fit.xml"/>
+    <xi:include href="xml/nc_data_bao_empirical_fit_2d.xml"/>
     <xi:include href="xml/nc_data_bao_dhr_dar.xml"/>
     <xi:include href="xml/nc_data_bao_dmr_hr.xml"/>
     <xi:include href="xml/nc_data_snia.xml"/>
