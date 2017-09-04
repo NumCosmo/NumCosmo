@@ -147,6 +147,7 @@
 #include <numcosmo/data/nc_data_bao_rdv.h>
 #include <numcosmo/data/nc_data_bao_dvdv.h>
 #include <numcosmo/data/nc_data_bao_empirical_fit.h>
+#include <numcosmo/data/nc_data_bao_empirical_fit_2d.h>
 #include <numcosmo/data/nc_data_bao_dhr_dar.h>
 #include <numcosmo/data/nc_data_bao_dmr_hr.h>
 #include <numcosmo/data/nc_data_bao.h>

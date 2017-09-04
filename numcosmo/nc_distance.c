@@ -1029,9 +1029,10 @@ nc_distance_bao_r_Dv (NcDistance *dist, NcHICosmo *cosmo, gdouble z)
  * @cosmo: a #NcHICosmo
  * @z: the redshift $z$
  *
- * $H(z) / (c r_{z_d})$.
+ * Computes the ratio between the Hubble (distance) radius and the sound horizon at the drag epoch, 
+ * $$\frac{R_H}{r_s(z_d)} = c / (H(z) r_d).$$  
  *
- * Returns: FIXME
+ * Returns: $R_H/r_d = c / (H(z) r_d)$
  */
 gdouble
 nc_distance_DH_r (NcDistance *dist, NcHICosmo *cosmo, gdouble z)
@@ -1047,9 +1048,9 @@ nc_distance_DH_r (NcDistance *dist, NcHICosmo *cosmo, gdouble z)
  * @cosmo: a #NcHICosmo
  * @z: the redshift $z$
  *
- * $D_A(z) / (c r_{z_d})$.
+ * Computes the ratio between the angular-diameter distance and the sound horizon at the drag epoch, $$D_A(z) / (c r_s(z_d)).$$
  *
- * Returns: FIXME
+ * Returns: $D_A(z) / (c r_d)$
  */
 gdouble
 nc_distance_DA_r (NcDistance *dist, NcHICosmo *cosmo, gdouble z)

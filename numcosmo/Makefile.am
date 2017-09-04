@@ -112,6 +112,7 @@ ncm_sources = \
 	math/ncm_reparam_linear.c            \
 	math/ncm_data.c                      \
 	math/ncm_data_dist1d.c               \
+	math/ncm_data_dist2d.c               \
 	math/ncm_data_gauss.c                \
 	math/ncm_data_gauss_cov.c            \
 	math/ncm_data_gauss_diag.c           \
@@ -223,6 +224,7 @@ ncm_headers =                                \
 	math/ncm_reparam_linear.h            \
 	math/ncm_data.h                      \
 	math/ncm_data_dist1d.h               \
+	math/ncm_data_dist2d.h               \
 	math/ncm_data_gauss.h                \
 	math/ncm_data_gauss_cov.h            \
 	math/ncm_data_gauss_diag.h           \
@@ -376,6 +378,7 @@ nc_headers = \
 	data/nc_data_bao_a.h                   \
 	data/nc_data_bao_dv.h                  \
 	data/nc_data_bao_empirical_fit.h       \
+	data/nc_data_bao_empirical_fit_2d.h    \
 	data/nc_data_bao_dhr_dar.h             \
 	data/nc_data_bao_dmr_hr.h              \
 	data/nc_data_bao.h                     \
@@ -508,6 +511,7 @@ nc_sources = \
 	data/nc_data_bao_a.c                   \
 	data/nc_data_bao_dv.c                  \
 	data/nc_data_bao_empirical_fit.c       \
+	data/nc_data_bao_empirical_fit_2d.c    \
 	data/nc_data_bao_dhr_dar.c             \
 	data/nc_data_bao_dmr_hr.c              \
 	data/nc_data_bao.c                     \

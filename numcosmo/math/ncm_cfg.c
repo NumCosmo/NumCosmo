@@ -136,6 +136,7 @@
 #include "data/nc_data_bao_dvdv.h"
 #include "data/nc_data_bao_rdv.h"
 #include "data/nc_data_bao_empirical_fit.h"
+#include "data/nc_data_bao_empirical_fit_2d.h"
 #include "data/nc_data_bao_dhr_dar.h"
 #include "data/nc_data_bao_dmr_hr.h"
 #include "data/nc_data_dist_mu.h"
@@ -448,6 +449,7 @@ ncm_cfg_init (void)
   ncm_cfg_register_obj (NC_TYPE_DATA_BAO_DVDV);
   ncm_cfg_register_obj (NC_TYPE_DATA_BAO_RDV);
   ncm_cfg_register_obj (NC_TYPE_DATA_BAO_EMPIRICAL_FIT);
+  ncm_cfg_register_obj (NC_TYPE_DATA_BAO_EMPIRICAL_FIT_2D);
   ncm_cfg_register_obj (NC_TYPE_DATA_BAO_DHR_DAR);
   ncm_cfg_register_obj (NC_TYPE_DATA_BAO_DMR_HR);
 

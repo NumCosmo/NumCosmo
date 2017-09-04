@@ -44,6 +44,7 @@
 #include "data/nc_data_bao_rdv.h"
 #include "data/nc_data_bao_dvdv.h"
 #include "data/nc_data_bao_empirical_fit.h"
+#include "data/nc_data_bao_empirical_fit_2d.h"
 #include "data/nc_data_bao_dhr_dar.h"
 #include "data/nc_data_bao_dmr_hr.h"
 
@@ -84,6 +85,10 @@ nc_data_bao_create (NcDistance *dist, NcDataBaoId id)
       break;
     case NC_DATA_BAO_EMPIRICAL_FIT_ROSS2015:  
       data = NCM_DATA (nc_data_bao_empirical_fit_new_from_id (dist, id));
+      break;
+    case NC_DATA_BAO_EMPIRICAL_FIT_2D_BAUTISTA2017:
+      printf ("Aqui1\n");
+      data = NCM_DATA (nc_data_bao_empirical_fit_2d_new_from_id (dist, id));
       break;
     case NC_DATA_BAO_DHR_DAR_SDSS_DR11_2015: 
     case NC_DATA_BAO_DHR_DAR_SDSS_DR11_2015_LYAF_AUTO_CROSS:  

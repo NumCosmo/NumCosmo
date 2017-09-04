@@ -29,7 +29,7 @@
  * @short_description: Baryon oscillation data -- $D_V / r_s$ empirical likelihood.
  * 
  * This object implements the BAO data when its likelihood function is provided, 
- * e.g., [Ross et al. (2015)][XRoss2014].
+ * e.g., [Ross et al. (2015)][XRoss2015].
  * 
  */
 
