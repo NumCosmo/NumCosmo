@@ -62,7 +62,7 @@ def plotCorner (xs, bins=50, labels=None, label_size=9, range=None, fig=None, ma
                                        "dimensions than samples!"
                                        
     if range is None:
-        if "extents" in hist2d_kwargs:
+        if "extents" in styleArgs:
             logging.warn("Deprecated keyword argument 'extents'. "
                          "Use 'range' instead.")
             range = hist2d_kwargs.pop("extents")

@@ -118,7 +118,16 @@ G_BEGIN_DECLS
 G_INLINE_FUNC void
 ncm_mset_func_eval (NcmMSetFunc *func, NcmMSet *mset, const gdouble *x, gdouble *res)
 {
-  NCM_MSET_FUNC_GET_CLASS (func)->eval (func, mset, x, res);
+  if (func->eval_x != NULL)
+  {
+    if (x != NULL)
+      g_warning ("ncm_mset_func_eval: function called with arguments while an eval x was already used, ignoring argument.");
+    NCM_MSET_FUNC_GET_CLASS (func)->eval (func, mset, ncm_vector_data (func->eval_x), res);
+  }
+  else
+  {
+    NCM_MSET_FUNC_GET_CLASS (func)->eval (func, mset, x, res);
+  }
 }
 
 G_INLINE_FUNC gdouble
