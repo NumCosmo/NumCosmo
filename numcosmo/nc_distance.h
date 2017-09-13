@@ -114,6 +114,7 @@ gdouble nc_distance_theta100CMB (NcDistance *dist, NcHICosmo *cosmo);
 gdouble nc_distance_Omega_k0 (NcDistance *dist, NcHICosmo *cosmo);
 gdouble nc_distance_angular_diameter_curvature_scale (NcDistance *dist, NcHICosmo *cosmo);
 gdouble nc_distance_r_zd (NcDistance *dist, NcHICosmo *cosmo);
+gdouble nc_distance_r_zd_Mpc (NcDistance *dist, NcHICosmo *cosmo);
 
 /***************************************************************************
  * Redshift dependent 'distances'
