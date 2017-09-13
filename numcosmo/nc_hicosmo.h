@@ -35,6 +35,7 @@
 #include <numcosmo/math/ncm_powspec_filter.h>
 
 #include <gsl/gsl_roots.h>
+#include <gsl/gsl_min.h>
 
 G_BEGIN_DECLS
 
@@ -242,6 +243,8 @@ struct _NcHICosmo
   NcHIReion *reion;
   const gsl_root_fsolver_type *T;
   gsl_root_fsolver *s;
+  const gsl_min_fminimizer_type *Tmin;
+  gsl_min_fminimizer *smin;
 };
 
 GType nc_hicosmo_get_type (void) G_GNUC_CONST;
@@ -293,6 +296,9 @@ void nc_hicosmo_clear (NcHICosmo **cosmo);
 
 void nc_hicosmo_log_all_models (GType parent);
 gdouble nc_hicosmo_zt (NcHICosmo *cosmo, const gdouble z_max);
+
+void nc_hicosmo_mqE2_max (NcHICosmo *cosmo, const gdouble z_max, gdouble *zm, gdouble *mqE2m);
+void nc_hicosmo_dec_min (NcHICosmo *cosmo, const gdouble z_max, gdouble *zm, gdouble *mqE2m);
 
 /*
  * Cosmological model constant functions

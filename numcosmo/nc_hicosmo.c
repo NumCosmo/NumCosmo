@@ -55,6 +55,8 @@ nc_hicosmo_init (NcHICosmo *cosmo)
   cosmo->reion = NULL;
   cosmo->T     = gsl_root_fsolver_brent;
   cosmo->s     = gsl_root_fsolver_alloc (cosmo->T);
+  cosmo->Tmin  = gsl_min_fminimizer_brent;
+  cosmo->smin  = gsl_min_fminimizer_alloc (cosmo->Tmin);
 }
 
 static void
@@ -73,7 +75,9 @@ static void
 nc_hicosmo_finalize (GObject *object)
 {
   NcHICosmo *cosmo = NC_HICOSMO (object);
+
   gsl_root_fsolver_free (cosmo->s);
+  gsl_min_fminimizer_free (cosmo->smin);
   
   /* Chain up : end */
   G_OBJECT_CLASS (nc_hicosmo_parent_class)->finalize (object);
@@ -783,7 +787,7 @@ nc_hicosmo_log_all_models (GType parent)
 typedef struct _zt_params
 {
   NcHICosmo *cosmo;
-}zt_params;
+} zt_params;
 
 static gdouble
 _nc_hicosmo_zt_func (gdouble z, void *params)
@@ -872,6 +876,197 @@ nc_hicosmo_zt (NcHICosmo *cosmo, const gdouble z_max)
   else
     return zt;  
 }
+
+typedef struct _qE2_max_params
+{
+  NcHICosmo *cosmo;
+} qE2_max_params;
+
+static gdouble
+_nc_hicosmo_qE2_max_func (gdouble z, void *params)
+{
+  qE2_max_params *p = (qE2_max_params *) params;
+  return -nc_hicosmo_mqE2 (p->cosmo, z);
+}
+
+/**
+ * nc_hicosmo_mqE2_max:
+ * @cosmo: a #NcHICosmo
+ * @z_max: maximum redshift $z_\mathrm{max}$
+ * @zm: (out): redshift of the maximum $z_m$
+ * @mqE2m: (out): $-q(z_m)E^2(z_m)$redshift of the maximum
+ *
+ * Computes the maximum of $-qE^2$ in the redshift interval: $[0.0, @z_max]$.
+ */
+void
+nc_hicosmo_mqE2_max (NcHICosmo *cosmo, const gdouble z_max, gdouble *zm, gdouble *mqE2m)
+{
+  gint status;
+  gint iter = 0, max_iter = 10000;
+  const gdouble step      = (1.0e-3 > z_max) ? (z_max * 1.0e-3) : 1.0e-3;
+  const gdouble reltol    = 1.0e-7;
+  gdouble z_lo            = 0.0;
+  gdouble z_hi            = step;
+  gsl_function F;
+  zt_params params;
+  gdouble zm_0, qE2_0, zi;
+
+  params.cosmo = cosmo;
+
+  F.function = &_nc_hicosmo_qE2_max_func;
+  F.params   = &params;
+
+  zm_0  = z_lo;
+  qE2_0 = - nc_hicosmo_mqE2 (cosmo, zm_0);
+
+  zi = z_lo;
+  do
+  {
+    const gdouble zm_try  = zi = zi + step;
+    const gdouble qE2_try = - nc_hicosmo_mqE2 (cosmo, zm_try);
+    
+    if (qE2_try < qE2_0)
+    {
+      zm_0  = zm_try;
+      qE2_0 = qE2_try;
+
+      z_lo  = ((zm_try - step) < 0.0)   ? 0.0   : (zm_try - step);
+      z_hi  = ((zm_try + step) > z_max) ? z_max : (zm_try + step);
+    }
+    /*printf ("% 22.15g % 22.15g % 22.15g % 22.15g\n", zm_try, qE2_try, zm_0, qE2_0);*/
+  } while (zi < z_max);
+
+  if ((zm_0 <= z_lo) || (zm_0 >= z_hi))
+    zm_0 = 0.5 * (z_lo + z_hi);
+  
+  gsl_min_fminimizer_set (cosmo->smin, &F, zm_0, z_lo, z_hi);
+
+  do
+  {
+    iter++;
+    status = gsl_min_fminimizer_iterate (cosmo->smin);
+
+    zm_0   = gsl_min_fminimizer_x_minimum (cosmo->smin);
+    z_lo   = gsl_min_fminimizer_x_lower (cosmo->smin);
+    z_hi   = gsl_min_fminimizer_x_upper (cosmo->smin);
+    status = gsl_min_test_interval (z_lo, z_hi, 0.0, reltol);
+
+    if (z_hi < 1.0e-10)
+    {
+      zm_0   = 0.0;
+      status = GSL_SUCCESS;
+    }
+    /*printf ("%d % 22.15g % 22.15g % 22.15g %d\n", iter, zm_0, z_lo, z_hi, status);*/
+  }
+  while (status == GSL_CONTINUE && iter < max_iter);
+
+  if (status != GSL_SUCCESS)
+  {
+    zm[0]    = GSL_NAN;
+    mqE2m[0] = GSL_NAN;
+  }
+  else
+  {
+    zm[0]    = zm_0;
+    mqE2m[0] = nc_hicosmo_mqE2 (cosmo, zm_0);
+  }
+}
+
+typedef struct _dec_min_params
+{
+  NcHICosmo *cosmo;
+} dec_min_params;
+
+static gdouble
+_nc_hicosmo_dec_min_func (gdouble z, void *params)
+{
+  dec_min_params *p = (dec_min_params *) params;
+  return nc_hicosmo_dec (p->cosmo, z);
+}
+
+/**
+ * nc_hicosmo_dec_min:
+ * @cosmo: a #NcHICosmo
+ * @z_max: maximum redshift $z_\mathrm{max}$
+ * @zm: (out): redshift of the maximum $z_m$
+ * @mqE2m: (out): $-q(z_m)E^2(z_m)$redshift of the maximum
+ *
+ * Computes the maximum of dec (nc_hicosmo_dec()) in the redshift interval: $[0.0, @z_max]$.
+ */
+void
+nc_hicosmo_dec_min (NcHICosmo *cosmo, const gdouble z_max, gdouble *zm, gdouble *decm)
+{
+  gint status;
+  gint iter = 0, max_iter = 10000;
+  const gdouble step      = (1.0e-3 > z_max) ? (z_max * 1.0e-3) : 1.0e-3;
+  const gdouble reltol    = 1.0e-7;
+  gdouble z_lo            = 0.0;
+  gdouble z_hi            = step;
+  gsl_function F;
+  zt_params params;
+  gdouble zm_0, dec_0, zi;
+
+  params.cosmo = cosmo;
+
+  F.function = &_nc_hicosmo_dec_min_func;
+  F.params   = &params;
+
+  zm_0  = z_lo;
+  dec_0 = nc_hicosmo_dec (cosmo, zm_0);
+
+  zi = z_lo;
+  do
+  {
+    const gdouble zm_try  = zi = zi + step;
+    const gdouble dec_try = nc_hicosmo_dec (cosmo, zm_try);
+    
+    if (dec_try < dec_0)
+    {
+      zm_0  = zm_try;
+      dec_0 = dec_try;
+
+      z_lo  = ((zm_try - step) < 0.0)   ? 0.0   : (zm_try - step);
+      z_hi  = ((zm_try + step) > z_max) ? z_max : (zm_try + step);
+    }
+    /*printf ("% 22.15g % 22.15g % 22.15g % 22.15g\n", zm_try, dec_try, zm_0, dec_0);*/
+  } while (zi < z_max);
+
+  if ((zm_0 <= z_lo) || (zm_0 >= z_hi))
+    zm_0 = 0.5 * (z_lo + z_hi);
+  
+  gsl_min_fminimizer_set (cosmo->smin, &F, zm_0, z_lo, z_hi);
+
+  do
+  {
+    iter++;
+    status = gsl_min_fminimizer_iterate (cosmo->smin);
+
+    zm_0   = gsl_min_fminimizer_x_minimum (cosmo->smin);
+    z_lo   = gsl_min_fminimizer_x_lower (cosmo->smin);
+    z_hi   = gsl_min_fminimizer_x_upper (cosmo->smin);
+    status = gsl_min_test_interval (z_lo, z_hi, 0.0, reltol);
+
+    if (z_hi < 1.0e-10)
+    {
+      zm_0   = 0.0;
+      status = GSL_SUCCESS;
+    }
+    /*printf ("%d % 22.15g % 22.15g % 22.15g %d\n", iter, zm_0, z_lo, z_hi, status);*/
+  }
+  while (status == GSL_CONTINUE && iter < max_iter);
+
+  if (status != GSL_SUCCESS)
+  {
+    zm[0]   = GSL_NAN;
+    decm[0] = GSL_NAN;
+  }
+  else
+  {
+    zm[0]   = zm_0;
+    decm[0] = nc_hicosmo_dec (cosmo, zm_0);
+  }
+}
+
 
 /*
  * Inlined functions
@@ -1600,6 +1795,16 @@ _NC_HICOSMO_FUNC1_TO_FLIST (j)
 _NC_HICOSMO_FUNC1_TO_FLIST (mqE2)
 _NC_HICOSMO_FUNC1_TO_FLIST (zt)
 
+#define _NC_HICOSMO_FUNC1R2_TO_FLIST(fname) \
+static void _nc_hicosmo_flist_##fname (NcmMSetFuncList *flist, NcmMSet *mset, const gdouble *x, gdouble *res) \
+{ \
+ NcHICosmo *cosmo = NC_HICOSMO (ncm_mset_peek (mset, nc_hicosmo_id ())); \
+ nc_hicosmo_##fname (cosmo, x[0], &res[0], &res[1]); \
+}
+
+_NC_HICOSMO_FUNC1R2_TO_FLIST (mqE2_max)
+_NC_HICOSMO_FUNC1R2_TO_FLIST (dec_min)
+
 void
 _nc_hicosmo_register_functions (void)
 {
@@ -1661,4 +1866,7 @@ _nc_hicosmo_register_functions (void)
   ncm_mset_func_list_register ("j",           "j",                               "NcHICosmo", "Jerk function",                             G_TYPE_NONE, _nc_hicosmo_flist_j,        1, 1);
   ncm_mset_func_list_register ("mqE2",        "-qE^2",                           "NcHICosmo", "Effective geometric OmegaL",                G_TYPE_NONE, _nc_hicosmo_flist_mqE2,     1, 1);
   ncm_mset_func_list_register ("zt",          "z_t",                             "NcHICosmo", "Transition redshift",                       G_TYPE_NONE, _nc_hicosmo_flist_zt,       1, 1);
+
+  ncm_mset_func_list_register ("mqE2_max",    "\\mathrm{max}(-qE^2)",            "NcHICosmo", "Maximum of mqE2",                           G_TYPE_NONE, _nc_hicosmo_flist_mqE2_max, 1, 2);
+  ncm_mset_func_list_register ("dec_min",     "\\mathrm{min}(dec)",              "NcHICosmo", "Minimum of dec",                            G_TYPE_NONE, _nc_hicosmo_flist_dec_min,  1, 2);
 }
