@@ -28,7 +28,7 @@
  * @title: NcmDataDist2d
  * @short_description: Abstract class for two-variables distribution data.
  *
- * FIXME
+ * This object is designate to data that is described by a bivariate and arbitrary distribution.
  * 
  */
 
