@@ -40,10 +40,12 @@
 #include "math/ncm_data_gauss_diag.h"
 #include "math/ncm_cfg.h"
 
+#ifndef NUMCOSMO_GIR_SCAN
 #include <gsl/gsl_linalg.h>
 #include <gsl/gsl_blas.h>
 #include <gsl/gsl_randist.h>
 #include <gsl/gsl_statistics_double.h>
+#endif /* NUMCOSMO_GIR_SCAN */
 
 enum
 {

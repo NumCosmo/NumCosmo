@@ -42,8 +42,10 @@
 #include "math/ncm_cfg.h"
 #include "math/ncm_util.h"
 
+#ifndef NUMCOSMO_GIR_SCAN
 #include <gsl/gsl_math.h>
 #include <mpfr.h>
+#endif /* NUMCOSMO_GIR_SCAN */
 
 /**
  * ncm_sf_sbessel_jl_xj_integral_recur_new: (skip)

@@ -43,6 +43,7 @@
 #include "math/ncm_vector.h"
 #include "math/ncm_matrix.h"
 #include "ncm_enum_types.h"
+
 #include <gio/gio.h>
 
 enum

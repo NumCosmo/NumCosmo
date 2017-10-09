@@ -57,7 +57,8 @@ typedef enum _NcClusterMassBensonParams
   NC_CLUSTER_MASS_BENSON_A_SZ = 0,
   NC_CLUSTER_MASS_BENSON_B_SZ,
   NC_CLUSTER_MASS_BENSON_C_SZ,
-  NC_CLUSTER_MASS_BENSON_D_SZ, /*< private >*/
+  NC_CLUSTER_MASS_BENSON_D_SZ, 
+  /*< private >*/
   NC_CLUSTER_MASS_BENSON_SPARAM_LEN, /*< skip >*/
 } NcClusterMassBensonParams;
 

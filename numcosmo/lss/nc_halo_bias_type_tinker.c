@@ -40,8 +40,6 @@
 #include "math/ncm_cfg.h"
 #include "math/ncm_util.h"
 
-#include <math.h>
-
 G_DEFINE_TYPE (NcHaloBiasTypeTinker, nc_halo_bias_type_tinker, NC_TYPE_HALO_BIAS_TYPE);
 
 enum

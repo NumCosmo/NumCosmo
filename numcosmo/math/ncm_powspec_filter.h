@@ -64,7 +64,8 @@ struct _NcmPowspecFilterClass
 typedef enum _NcmPowspecFilterType
 {
   NCM_POWSPEC_FILTER_TYPE_TOPHAT = 0,
-  NCM_POWSPEC_FILTER_TYPE_GAUSS, /*< private >*/
+  NCM_POWSPEC_FILTER_TYPE_GAUSS, 
+  /*< private >*/
   NCM_POWSPEC_FILTER_TYPE_LEN,   /*< skip >*/
 } NcmPowspecFilterType;
 

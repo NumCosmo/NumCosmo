@@ -56,8 +56,10 @@
 #include "math/ncm_func_eval.h"
 #include "ncm_enum_types.h"
 
+#ifndef NUMCOSMO_GIR_SCAN
 #include <gsl/gsl_statistics_double.h>
 #include <gsl/gsl_sort.h>
+#endif /* NUMCOSMO_GIR_SCAN */
 
 G_DEFINE_TYPE (NcmMSetCatalog, ncm_mset_catalog, G_TYPE_OBJECT);
 

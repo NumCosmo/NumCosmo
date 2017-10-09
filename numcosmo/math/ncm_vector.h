@@ -25,12 +25,15 @@
 #ifndef _NCM_VECTOR_H_
 #define _NCM_VECTOR_H_
 
-#include <string.h>
 #include <glib.h>
 #include <glib-object.h>
 #include <numcosmo/build_cfg.h>
+
+#ifndef NUMCOSMO_GIR_SCAN
+#include <string.h>
 #include <gsl/gsl_vector.h>
 #include <sundials/sundials_nvector.h>
+#endif /* NUMCOSMO_GIR_SCAN */
 
 G_BEGIN_DECLS
 

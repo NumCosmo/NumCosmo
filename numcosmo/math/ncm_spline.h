@@ -28,8 +28,11 @@
 #include <glib.h>
 #include <glib-object.h>
 #include <numcosmo/build_cfg.h>
-#include <gsl/gsl_spline.h>
 #include <numcosmo/math/ncm_vector.h>
+
+#ifndef NUMCOSMO_GIR_SCAN
+#include <gsl/gsl_spline.h>
+#endif /* NUMCOSMO_GIR_SCAN */
 
 G_BEGIN_DECLS
 

@@ -42,9 +42,12 @@
 #include "math/ncm_integral1d.h"
 #include "math/ncm_c.h"
 #include "math/ncm_cfg.h"
+
+#ifndef NUMCOSMO_GIR_SCAN
 #include <gsl/gsl_cdf.h>
 #include <gsl/gsl_integration.h>
 #include <gsl/gsl_errno.h>
+#endif /* NUMCOSMO_GIR_SCAN */
 
 G_DEFINE_ABSTRACT_TYPE (NcmIntegral1d, ncm_integral1d, G_TYPE_OBJECT);
 

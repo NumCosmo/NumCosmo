@@ -29,13 +29,13 @@
 #include <glib-object.h>
 #include <numcosmo/build_cfg.h>
 
+#ifndef NUMCOSMO_GIR_SCAN
 #include <gsl/gsl_rng.h>
 #include <gsl/gsl_min.h>
-#ifndef NUMCOSMO_GIR_SCAN
 #include <complex.h>
 #include <gmp.h>
 #include <mpfr.h>
-#endif
+#endif /* NUMCOSMO_GIR_SCAN */
 
 G_BEGIN_DECLS
 

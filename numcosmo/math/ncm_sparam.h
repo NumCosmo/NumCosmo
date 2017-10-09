@@ -25,6 +25,7 @@
 #ifndef _NCM_SPARAM_H_
 #define _NCM_SPARAM_H_
 
+#include <glib.h>
 #include <glib-object.h>
 #include <numcosmo/build_cfg.h>
 

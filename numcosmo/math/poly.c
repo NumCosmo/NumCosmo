@@ -37,7 +37,9 @@
 
 #include "math/poly.h"
 
+#ifndef NUMCOSMO_GIR_SCAN
 #include <gsl/gsl_sf_log.h>
+#endif /* NUMCOSMO_GIR_SCAN */
 
 /**
  * ncm_poly_new: (skip)

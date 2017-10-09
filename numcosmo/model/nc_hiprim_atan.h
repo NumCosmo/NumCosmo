@@ -75,7 +75,8 @@ typedef enum _NcHIPrimAtanParams
   NC_HIPRIM_ATAN_C3,
   NC_HIPRIM_ATAN_LAMBDA,     
   NC_HIPRIM_ATAN_T_SA_RATIO,
-  NC_HIPRIM_ATAN_N_T,        /*< private >*/
+  NC_HIPRIM_ATAN_N_T,
+  /*< private >*/
   NC_HIPRIM_ATAN_SPARAM_LEN, /*< skip >*/
 } NcHIPrimAtanParams;
 

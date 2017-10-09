@@ -35,8 +35,11 @@
 #include <numcosmo/lss/nc_cluster_abundance.h>
 #include <numcosmo/lss/nc_cluster_mass.h>
 #include <numcosmo/lss/nc_cluster_mass_plcl.h>
+
+#ifndef NUMCOSMO_GIR_SCAN
 #include <gsl/gsl_rng.h>
 #include <gsl/gsl_multifit_nlin.h>
+#endif /* NUMCOSMO_GIR_SCAN */
 
 G_BEGIN_DECLS
 
@@ -64,7 +67,8 @@ typedef enum _NcClusterPseudoCountsParams
   NC_CLUSTER_PSEUDO_COUNTS_LNMCUT = 0, 
   NC_CLUSTER_PSEUDO_COUNTS_SD_MCUT, 
   NC_CLUSTER_PSEUDO_COUNTS_ZMIN, 
-  NC_CLUSTER_PSEUDO_COUNTS_DELTAZ, /*< private >*/
+  NC_CLUSTER_PSEUDO_COUNTS_DELTAZ, 
+  /*< private >*/
   NC_CLUSTER_PSEUDO_COUNTS_SPARAM_LEN, /*< skip >*/
 } NcClusterPseudoCountsParams;
 

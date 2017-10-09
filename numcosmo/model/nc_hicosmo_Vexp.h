@@ -69,7 +69,8 @@ typedef enum _NcHICosmoVexpParams
   NC_HICOSMO_VEXP_SIGMA_PHI,
   NC_HICOSMO_VEXP_D_PHI,
   NC_HICOSMO_VEXP_ALPHA_B,
-  NC_HICOSMO_VEXP_X_B,        /*< private >*/
+  NC_HICOSMO_VEXP_X_B,        
+  /*< private >*/
   NC_HICOSMO_VEXP_SPARAM_LEN, /*< skip >*/
 } NcHICosmoVexpParams;
 

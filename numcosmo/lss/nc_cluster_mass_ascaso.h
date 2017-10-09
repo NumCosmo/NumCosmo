@@ -57,7 +57,8 @@ typedef enum _NcClusterMassAscasoParams
   NC_CLUSTER_MASS_ASCASO_P0 = 0,
   NC_CLUSTER_MASS_ASCASO_P1,
   NC_CLUSTER_MASS_ASCASO_P2,
-  NC_CLUSTER_MASS_ASCASO_SIGMA,  /*< private >*/
+  NC_CLUSTER_MASS_ASCASO_SIGMA,  
+  /*< private >*/
   NC_CLUSTER_MASS_ASCASO_SPARAM_LEN, /*< skip >*/
 } NcClusterMassAscasoParams;
 

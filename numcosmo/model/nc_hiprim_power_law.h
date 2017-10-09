@@ -63,7 +63,8 @@ typedef enum _NcHIPrimPowerLawParams
   NC_HIPRIM_POWER_LAW_LN10E10ASA,
   NC_HIPRIM_POWER_LAW_T_SA_RATIO,
   NC_HIPRIM_POWER_LAW_N_SA,
-  NC_HIPRIM_POWER_LAW_N_T, /*< private >*/
+  NC_HIPRIM_POWER_LAW_N_T, 
+  /*< private >*/
   NC_HIPRIM_POWER_LAW_SPARAM_LEN, /*< skip >*/
 } NcHIPrimPowerLawParams;
 

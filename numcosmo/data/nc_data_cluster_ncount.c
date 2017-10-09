@@ -44,6 +44,7 @@
 #include "math/ncm_serialize.h"
 #include "math/ncm_cfg.h"
 
+#ifndef NUMCOSMO_GIR_SCAN
 #include <glib/gstdio.h>
 #include <gsl/gsl_randist.h>
 #include <gsl/gsl_sort.h>
@@ -51,6 +52,7 @@
 #ifdef NUMCOSMO_HAVE_CFITSIO
 #include <fitsio.h>
 #endif /* NUMCOSMO_HAVE_CFITSIO */
+#endif /* NUMCOSMO_GIR_SCAN */
 
 enum
 {

@@ -44,6 +44,7 @@
 #include "math/ncm_util.h"
 #include "math/ncm_rng.h"
 
+#ifndef NUMCOSMO_GIR_SCAN
 #include <string.h>
 #include <gsl/gsl_randist.h>
 #include <gsl/gsl_math.h>
@@ -52,6 +53,7 @@
 #ifdef NUMCOSMO_HAVE_CFITSIO
 #include <fitsio.h>
 #endif /* NUMCOSMO_HAVE_CFITSIO */
+#endif /* NUMCOSMO_GIR_SCAN */
 
 enum
 {

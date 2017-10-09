@@ -56,7 +56,8 @@ typedef struct _NcHIPrimClass NcHIPrimClass;
 typedef enum _NcHIPrimImpl
 {
   NC_HIPRIM_IMPL_lnSA_powspec_lnk = 1 << 0,
-  NC_HIPRIM_IMPL_lnT_powspec_lnk  = 1 << 1, /*< private >*/
+  NC_HIPRIM_IMPL_lnT_powspec_lnk  = 1 << 1, 
+  /*< private >*/
   NC_HIPRIM_IMPL_LAST             = 1 << 2, /*< skip >*/
 } NcHIPrimImpl;
 

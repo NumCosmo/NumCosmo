@@ -32,8 +32,9 @@
 #include <numcosmo/math/ncm_vector.h>
 #include <numcosmo/math/ncm_quaternion.h>
 #include <numcosmo/math/ncm_timer.h>
-#include <gsl/gsl_vector_float.h>
+
 #ifndef NUMCOSMO_GIR_SCAN
+#include <gsl/gsl_vector_float.h>
 #include <complex.h>
 #endif /* NUMCOSMO_GIR_SCAN */
 
@@ -66,7 +67,8 @@ struct _NcmSphereMapPixClass
 typedef enum _NcmSphereMapPixOrder
 {
   NCM_SPHERE_MAP_PIX_ORDER_NEST,
-  NCM_SPHERE_MAP_PIX_ORDER_RING, /*< private >*/
+  NCM_SPHERE_MAP_PIX_ORDER_RING, 
+  /*< private >*/
   NCM_SPHERE_MAP_PIX_ORDER_LEN,  /*< skip >*/
 } NcmSphereMapPixOrder;
 
@@ -83,8 +85,9 @@ typedef enum _NcmSphereMapPixCoordSys
 {
   NCM_SPHERE_MAP_PIX_COORD_SYS_GALACTIC  = 'G',
   NCM_SPHERE_MAP_PIX_COORD_SYS_ECLIPTIC  = 'E',
-  NCM_SPHERE_MAP_PIX_COORD_SYS_CELESTIAL = 'C', /*< private >*/
-  NCM_SPHERE_MAP_PIX_COORD_SYS_LEN,             /*< skip >*/
+  NCM_SPHERE_MAP_PIX_COORD_SYS_CELESTIAL = 'C', 
+  /*< private >*/
+  NCM_SPHERE_MAP_PIX_COORD_SYS_LEN, /*< skip >*/
 } NcmSphereMapPixCoordSys;
 
 struct _NcmSphereMapPix

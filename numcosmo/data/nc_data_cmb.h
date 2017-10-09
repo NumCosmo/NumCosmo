@@ -60,8 +60,9 @@ typedef enum _NcDataCMBDataType
   NC_DATA_CMB_TYPE_TB     = 1 << 4,
   NC_DATA_CMB_TYPE_EB     = 1 << 5,
   NC_DATA_CMB_TYPE_PHIPHI = 1 << 6,
-  NC_DATA_CMB_TYPE_ALL    = (1 << 7) - 1, /*< private >*/
-  NC_DATA_CMB_TYPE_LEN,                   /*< skip >*/
+  NC_DATA_CMB_TYPE_ALL    = (1 << 7) - 1, 
+  /*< private >*/
+  NC_DATA_CMB_TYPE_LEN, /*< skip >*/
 } NcDataCMBDataType;
 
 /**
@@ -91,8 +92,9 @@ typedef enum _NcDataCMBId
   NC_DATA_CMB_SHIFT_PARAM_WMAP7,
   NC_DATA_CMB_DIST_PRIORS_WMAP5,
   NC_DATA_CMB_DIST_PRIORS_WMAP7,
-  NC_DATA_CMB_DIST_PRIORS_WMAP9,     /*< private >*/
-  NC_DATA_CMB_NSAMPLES,  /*< skip >*/
+  NC_DATA_CMB_DIST_PRIORS_WMAP9,
+  /*< private >*/
+  NC_DATA_CMB_NSAMPLES, /*< skip >*/
 } NcDataCMBId;
 
 NcmData *nc_data_cmb_create (NcDistance *dist, NcDataCMBId id);

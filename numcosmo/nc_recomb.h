@@ -37,12 +37,12 @@
 #include <numcosmo/math/ncm_ode_spline.h>
 #include <numcosmo/math/function_cache.h>
 
+#ifndef NUMCOSMO_GIR_SCAN
 #include <gsl/gsl_min.h>
 #include <gsl/gsl_roots.h>
-#ifndef NUMCOSMO_GIR_SCAN
 #include <cvodes/cvodes.h>
 #include <cvodes/cvodes_dense.h>
-#endif
+#endif /* NUMCOSMO_GIR_SCAN */
 
 G_BEGIN_DECLS
 

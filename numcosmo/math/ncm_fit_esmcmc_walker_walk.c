@@ -42,7 +42,9 @@
 
 #include "math/ncm_fit_esmcmc.h"
 
+#ifndef NUMCOSMO_GIR_SCAN
 #include <gsl/gsl_math.h>
+#endif /* NUMCOSMO_GIR_SCAN */
 
 enum
 {

@@ -40,7 +40,9 @@
 #include "math/ncm_fit_gsl_ls.h"
 #include "math/ncm_fit_state.h"
 
+#ifndef NUMCOSMO_GIR_SCAN
 #include <gsl/gsl_blas.h>
+#endif /* NUMCOSMO_GIR_SCAN */
 
 G_DEFINE_TYPE (NcmFitGSLLS, ncm_fit_gsl_ls, NCM_TYPE_FIT);
 

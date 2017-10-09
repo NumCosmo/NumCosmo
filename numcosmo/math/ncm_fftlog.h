@@ -31,15 +31,14 @@
 #include <numcosmo/build_cfg.h>
 #include <numcosmo/math/ncm_vector.h>
 #include <numcosmo/math/ncm_spline.h>
+
+#ifndef NUMCOSMO_GIR_SCAN
 #include <gsl/gsl_math.h>
-#ifndef NUMCOSMO_GIR_SCAN
 #include <complex.h>
-#endif /* NUMCOSMO_GIR_SCAN */
-#ifndef NUMCOSMO_GIR_SCAN
 #ifdef NUMCOSMO_HAVE_FFTW3
 #include <fftw3.h>
 #endif /* NUMCOSMO_HAVE_FFTW3 */
-#endif
+#endif /* NUMCOSMO_GIR_SCAN */
 
 G_BEGIN_DECLS
 

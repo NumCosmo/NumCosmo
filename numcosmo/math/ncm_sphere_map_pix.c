@@ -43,9 +43,9 @@
 #include "math/ncm_timer.h"
 #include "ncm_enum_types.h"
 
+#ifndef NUMCOSMO_GIR_SCAN
 #include <gsl/gsl_sf_legendre.h>
 
-#include <math.h>
 #ifdef NUMCOSMO_HAVE_CFITSIO
 #include <fitsio.h>
 #endif /* NUMCOSMO_HAVE_CFITSIO */
@@ -53,6 +53,7 @@
 #ifdef NUMCOSMO_HAVE_FFTW3 
 #include <fftw3.h>
 #endif /* NUMCOSMO_HAVE_FFTW3 */
+#endif /* NUMCOSMO_GIR_SCAN */
 
 #ifndef HAVE_FFTW3_ALLOC
 #define fftwf_alloc_real(n) (double *) fftwf_malloc (sizeof(double) * (n))
@@ -84,7 +85,9 @@
 #endif
 #define _fft_vec_idx(v,i) (*_fft_vec_ptr(v,i))
 
+#ifndef NUMCOSMO_GIR_SCAN
 #include <gsl/gsl_sf_trig.h>
+#endif /* NUMCOSMO_GIR_SCAN */
 
 enum
 {

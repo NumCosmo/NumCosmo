@@ -53,10 +53,11 @@
 #include "math/ncm_cfg.h"
 #include "math/ncm_c.h"
 
-#include <math.h>
+#ifndef NUMCOSMO_GIR_SCAN
 #include <gsl/gsl_sf_result.h>
 #include <gsl/gsl_sf_gamma.h>
 #include <gsl/gsl_sf_trig.h>
+#endif /* NUMCOSMO_GIR_SCAN */
 
 struct _NcmFftlogSBesselJPrivate
 {

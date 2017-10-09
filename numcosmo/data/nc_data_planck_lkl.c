@@ -41,7 +41,10 @@
 #include "nc_planck_fi.h"
 #include "nc_planck_fi_cor_tt.h"
 #include "data/nc_data_planck_lkl.h"
+
+#ifndef NUMCOSMO_GIR_SCAN
 #include "plc/clik.h"
+#endif /* NUMCOSMO_GIR_SCAN */
 
 enum
 {

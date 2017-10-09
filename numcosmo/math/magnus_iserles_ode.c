@@ -37,8 +37,9 @@
 #include "build_cfg.h"
 
 #include "math/magnus_iserles_ode.h"
-
+#ifndef NUMCOSMO_GIR_SCAN
 #include <math.h>
+#endif /* NUMCOSMO_GIR_SCAN */
 
 /**
  * ncm_magnus_iserles_ode_new: (skip)

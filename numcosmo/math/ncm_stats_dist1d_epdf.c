@@ -43,11 +43,13 @@
 #include "math/ncm_c.h"
 #include "ncm_enum_types.h"
 
+#ifndef NUMCOSMO_GIR_SCAN
 #include <complex.h>
 #ifdef NUMCOSMO_HAVE_FFTW3
 #include <fftw3.h>
 #endif /* NUMCOSMO_HAVE_FFTW3 */
 #include <gsl/gsl_sort.h>
+#endif /* NUMCOSMO_GIR_SCAN */
 
 enum
 {

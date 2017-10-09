@@ -70,7 +70,8 @@ typedef enum _NcRecombSeagerOpt
   NC_RECOM_SEAGER_OPT_HEII_SOBOLEV_1P1_CO   = 1 << 3,
   NC_RECOM_SEAGER_OPT_HEII_SOBOLEV_3P012    = 1 << 4,
   NC_RECOM_SEAGER_OPT_HEII_SOBOLEV_3P012_CO = 1 << 5,
-  NC_RECOM_SEAGER_OPT_ALL                   = (1 << 6) - 1, /*< private >*/
+  NC_RECOM_SEAGER_OPT_ALL                   = (1 << 6) - 1, 
+  /*< private >*/
   NC_RECOM_SEAGER_OPT_LEN,                                  /*< skip >*/
 } NcRecombSeagerOpt;
 

@@ -48,7 +48,9 @@
  * It must be include before anything else, several symbols clash
  * with the default includes.
  */
+#ifndef NUMCOSMO_GIR_SCAN
 #include "class/include/class.h"
+#endif /* NUMCOSMO_GIR_SCAN */
 
 #include "math/ncm_spline2d_bicubic.h"
 #include "math/ncm_spline_cubic_notaknot.h"

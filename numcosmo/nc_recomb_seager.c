@@ -105,9 +105,11 @@
 #include "nc_recomb.h"
 #include "nc_recomb_seager.h"
 
+#ifndef NUMCOSMO_GIR_SCAN
 #include <gsl/gsl_sf_exp.h>
 #include <gsl/gsl_sf_hyperg.h>
 #include <nvector/nvector_serial.h>
+#endif /* NUMCOSMO_GIR_SCAN */
 
 G_DEFINE_TYPE (NcRecombSeager, nc_recomb_seager, NC_TYPE_RECOMB);
 

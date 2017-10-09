@@ -49,6 +49,7 @@
 #include "math/ncm_fit_nlopt.h"
 #include "ncm_enum_types.h"
 
+#ifndef NUMCOSMO_GIR_SCAN
 #include <gsl/gsl_blas.h>
 #include <gsl/gsl_rng.h>
 #include <gsl/gsl_cdf.h>
@@ -57,6 +58,7 @@
 #include <gsl/gsl_machine.h>
 #include <gsl/gsl_statistics_double.h>
 #include <gsl/gsl_sort_vector.h>
+#endif /* NUMCOSMO_GIR_SCAN */
 
 enum
 {

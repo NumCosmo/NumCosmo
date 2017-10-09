@@ -34,8 +34,10 @@
 #include <numcosmo/math/ncm_likelihood.h>
 #include <numcosmo/math/ncm_powspec_filter.h>
 
+#ifndef NUMCOSMO_GIR_SCAN
 #include <gsl/gsl_roots.h>
 #include <gsl/gsl_min.h>
+#endif /* NUMCOSMO_GIR_SCAN */
 
 G_BEGIN_DECLS
 
@@ -123,7 +125,8 @@ typedef enum _NcHICosmoImpl
   NC_HICOSMO_IMPL_bgp_cs2,
   NC_HICOSMO_IMPL_Dc,
   NC_HICOSMO_IMPL_NMassNu,
-  NC_HICOSMO_IMPL_MassNuInfo, /*< private >*/
+  NC_HICOSMO_IMPL_MassNuInfo, 
+  /*< private >*/
   NC_HICOSMO_IMPL_LAST,       /*< skip >*/
 } NcHICosmoImpl;
 

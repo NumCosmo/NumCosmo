@@ -52,7 +52,8 @@ typedef struct _NcHICosmoDECpl NcHICosmoDECpl;
 typedef enum _NcHICosmoDECplParams
 {
   NC_HICOSMO_DE_CPL_W0 = NC_HICOSMO_DE_SPARAM_LEN,
-  NC_HICOSMO_DE_CPL_W1,         /*< private >*/
+  NC_HICOSMO_DE_CPL_W1,         
+  /*< private >*/
   NC_HICOSMO_DE_CPL_SPARAM_LEN, /*< skip >*/
 } NcHICosmoDECplParams;
 
