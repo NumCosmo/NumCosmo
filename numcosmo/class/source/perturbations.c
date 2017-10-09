@@ -6974,7 +6974,7 @@ int perturb_derivs(double tau,
         +metric_euler;
 
     }
-
+    
     /** - ---> photon temperature higher momenta and photon polarization (depend on tight-coupling approximation) */
 
     if (ppw->approx[ppw->index_ap_rsa] == (int)rsa_off) {
@@ -7067,6 +7067,47 @@ int perturb_derivs(double tau,
       }
     }
 
+  /*aqui*/
+    if (ppw->approx[ppw->index_ap_rsa] == rsa_off)
+    {
+      if (ppw->approx[ppw->index_ap_tca] == tca_on)
+        shear_g = ppw->tca_shear_g;
+      else
+        shear_g = y[pv->index_pt_shear_g];
+    }
+    else
+      shear_g = 0.0;
+    
+/*  
+      dy[pv->index_pt_theta_b] =
+        - a_prime_over_a*theta_b
+        + metric_euler
+        + k2*cb2*(delta_b+delta_temp)
+        + R*pvecthermo[pth->index_th_dkappa]*(theta_g-theta_b);
+
+        dy[pv->index_pt_theta_g] =
+          k2*(delta_g/4.-s2_squared*y[pv->index_pt_shear_g])
+          + metric_euler
+          + pvecthermo[pth->index_th_dkappa]*(theta_b-theta_g);
+        
+     */
+    
+  printf ("%d %d % 22.15e % 22.15e % 22.15e % 22.15e % 22.15e % 22.15e % 22.15e | % 22.15e == % 22.15e == % 22.15e == % 22.15e\n", 
+          ppw->approx[ppw->index_ap_tca], ppw->approx[ppw->index_ap_rsa],
+          k,
+          tau,
+          0.25 * k2 * delta_g, 
+          cb2  * k2 * delta_b,
+          k2 * s2_squared * shear_g,
+          a_prime_over_a * theta_b,
+          (1.0 + R) * pvecthermo[pth->index_th_dkappa] * (theta_g-theta_b),
+          0.25 * k2 * delta_g - cb2  * k2 * delta_b - k2 * s2_squared * shear_g + a_prime_over_a * theta_b,
+          0.25 * k2 * delta_g - cb2  * k2 * delta_b - k2 * s2_squared * shear_g + a_prime_over_a * theta_b - (1.0 + R) * pvecthermo[pth->index_th_dkappa] * (theta_g-theta_b),
+          ppw->tca_slip,
+          dy[pv->index_pt_theta_g] - dy[pv->index_pt_theta_b]
+          );
+
+    
     /** - ---> cdm */
 
     if (pba->has_cdm == _TRUE_) {
@@ -8031,7 +8072,6 @@ int perturb_tca_slip_and_shear(double * y,
 
   ppw->tca_shear_g = shear_g;
   ppw->tca_slip = slip;
-
 
   return _SUCCESS_;
 

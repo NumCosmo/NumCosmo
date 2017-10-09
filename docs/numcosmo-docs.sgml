@@ -244,6 +244,7 @@
     <xi:include href="xml/nc_hipert_two_fluids.xml"/>
     <xi:include href="xml/nc_hipert_boltzmann.xml"/>
     <xi:include href="xml/nc_hipert_boltzmann_std.xml"/>
+    <xi:include href="xml/nc_hipert_first_order.xml"/>
     <section>
       <title>CLASS Backend</title>
         <xi:include href="xml/nc_cbe_precision.xml"/>
