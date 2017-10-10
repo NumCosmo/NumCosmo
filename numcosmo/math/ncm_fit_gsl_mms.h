@@ -56,7 +56,7 @@ typedef enum _NcmFitGSLMMSAlgos
   NCM_FIT_GSL_MMS_NMSIMPLEX2 = 0,
   NCM_FIT_GSL_MMS_NMSIMPLEX,
   NCM_FIT_GSL_MMS_NMSIMPLEX2RAND, 
-  /*< private >*/
+  /* < private > */
   NCM_FIT_GSL_MMS_NUM_ALGOS,      /*< skip >*/
 } NcmFitGSLMMSAlgos;
 

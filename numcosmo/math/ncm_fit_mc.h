@@ -67,7 +67,7 @@ typedef enum _NcmFitMCResampleType
   NCM_FIT_MC_RESAMPLE_FROM_MODEL = 0,
   NCM_FIT_MC_RESAMPLE_BOOTSTRAP_NOMIX,
   NCM_FIT_MC_RESAMPLE_BOOTSTRAP_MIX, 
-  /*< private >*/
+  /* < private > */
   NCM_FIT_MC_RESAMPLE_BOOTSTRAP_LEN, /*< skip >*/
 } NcmFitMCResampleType;
 

@@ -74,7 +74,7 @@ typedef enum _NcmMSetCatalogSync
   NCM_MSET_CATALOG_SYNC_DISABLE,
   NCM_MSET_CATALOG_SYNC_AUTO,
   NCM_MSET_CATALOG_SYNC_TIMED, 
-  /*< private >*/
+  /* < private > */
   NCM_MSET_CATALOG_SYNC_LEN, /*< skip >*/
 } NcmMSetCatalogSync;
 
@@ -106,7 +106,7 @@ typedef enum _NcmMSetCatalogTauMethod
 {
   NCM_MSET_CATALOG_TAU_METHOD_ACOR = 0,
   NCM_MSET_CATALOG_TAU_METHOD_AR_MODEL, 
-  /*< private >*/
+  /* < private > */
   NCM_MSET_CATALOG_TAU_METHOD_LEN, /*< skip >*/
 } NcmMSetCatalogTauMethod;
 

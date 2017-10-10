@@ -74,7 +74,7 @@ typedef enum
   NCM_STATS_VEC_MEAN = 0,
   NCM_STATS_VEC_VAR,
   NCM_STATS_VEC_COV,       
-  /*< private >*/
+  /* < private > */
   NCM_STATS_VEC_TYPES_LEN, /*< skip >*/
 } NcmStatsVecType;
 
@@ -126,7 +126,7 @@ typedef enum
   NCM_STATS_VEC_AR_FPE,
   NCM_STATS_VEC_AR_AIC,
   NCM_STATS_VEC_AR_AICC, 
-  /*< private >*/
+  /* < private > */
   NCM_STATS_VEC_AR_LEN,  /*< skip >*/
 } NcmStatsVecARType;
 
