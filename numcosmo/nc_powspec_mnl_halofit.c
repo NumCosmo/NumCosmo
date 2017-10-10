@@ -51,9 +51,11 @@
 #include "math/memory_pool.h"
 #include "math/ncm_spline_cubic_notaknot.h"
 
+#ifndef NUMCOSMO_GIR_SCAN
 #include <gsl/gsl_math.h>
 #include <gsl/gsl_roots.h>
 #include <gsl/gsl_sf_exp.h>
+#endif /* NUMCOSMO_GIR_SCAN */
 
 struct _NcPowspecMNLHaloFitPrivate
 {

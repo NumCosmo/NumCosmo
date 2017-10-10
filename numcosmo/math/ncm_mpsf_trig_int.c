@@ -41,8 +41,6 @@
 #include "math/ncm_cfg.h"
 #include "math/ncm_util.h"
 
-#include <math.h>
-
 #define NC_BINSPLIT_EVAL_NAME binsplit_sin_integral_taylor
 #define _mx2 (((mpq_ptr)data))
 

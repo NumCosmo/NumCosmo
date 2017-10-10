@@ -41,7 +41,9 @@
 #include "math/function_cache.h"
 #include "math/ncm_util.h"
 
+#ifndef NUMCOSMO_GIR_SCAN
 #include <gsl/gsl_math.h>
+#endif /* NUMCOSMO_GIR_SCAN */
 
 /***************************************************************************
  *

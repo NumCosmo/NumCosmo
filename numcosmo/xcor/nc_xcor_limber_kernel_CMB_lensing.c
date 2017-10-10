@@ -43,7 +43,10 @@
 #include "math/ncm_cfg.h"
 #include "xcor/nc_xcor_limber_kernel_CMB_lensing.h"
 #include "xcor/nc_xcor.h"
+
+#ifndef NUMCOSMO_GIR_SCAN
 #include <gsl/gsl_randist.h>
+#endif /* NUMCOSMO_GIR_SCAN */
 
 G_DEFINE_TYPE (NcXcorLimberKernelCMBLensing, nc_xcor_limber_kernel_cmb_lensing, NC_TYPE_XCOR_LIMBER_KERNEL);
 

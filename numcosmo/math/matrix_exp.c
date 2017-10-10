@@ -37,8 +37,9 @@
 
 #include "math/matrix_exp.h"
 
-#include <math.h>
+#ifndef NUMCOSMO_GIR_SCAN
 #include <gsl/gsl_math.h>
+#endif /* NUMCOSMO_GIR_SCAN */
 
 /**
  * ncm_matrix_exp_2x2: (skip)

@@ -59,8 +59,9 @@ typedef enum _NcmFitGSLMMAlgos
   NCM_FIT_GSL_MM_CONJUGATE_PR,
   NCM_FIT_GSL_MM_VECTOR_BFGS,
   NCM_FIT_GSL_MM_VECTOR_BFGS2,
-  NCM_FIT_GSL_MM_STEEPEST_DESCENT,  /*< private >*/
-  NCM_FIT_GSL_MM_NUM_ALGOS,         /*< skip >*/
+  NCM_FIT_GSL_MM_STEEPEST_DESCENT,  
+  /*< private >*/
+  NCM_FIT_GSL_MM_NUM_ALGOS, /*< skip >*/
 } NcmFitGSLMMAlgos;
 
 struct _NcmFitGSLMMClass

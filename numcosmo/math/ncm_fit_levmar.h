@@ -58,7 +58,8 @@ typedef enum _NcmFitLevmarAlgos
   NCM_FIT_LEVMAR_DER = 0,
   NCM_FIT_LEVMAR_DIF,
   NCM_FIT_LEVMAR_BC_DER,
-  NCM_FIT_LEVMAR_BC_DIF,    /*< private >*/
+  NCM_FIT_LEVMAR_BC_DIF,    
+  /*< private >*/
   NCM_FIT_LEVMAR_NUM_ALGOS, /*< skip >*/
 } NcmFitLevmarAlgos;
 

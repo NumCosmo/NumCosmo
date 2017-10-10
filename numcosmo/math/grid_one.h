@@ -28,10 +28,11 @@
 #include <glib.h>
 #include <glib-object.h>
 #include <numcosmo/build_cfg.h>
-#include <stdio.h>
+
 #ifndef NUMCOSMO_GIR_SCAN
+#include <stdio.h>
 #include <gmp.h>
-#endif
+#endif /* NUMCOSMO_GIR_SCAN */
 
 G_BEGIN_DECLS
 

@@ -28,10 +28,13 @@
 #include <glib.h>
 #include <glib-object.h>
 #include <numcosmo/build_cfg.h>
-#include <gsl/gsl_math.h>
 #include <numcosmo/math/ncm_sparam.h>
 #include <numcosmo/math/ncm_vparam.h>
 #include <numcosmo/math/ncm_reparam.h>
+
+#ifndef NUMCOSMO_GIR_SCAN
+#include <gsl/gsl_math.h>
+#endif /* NUMCOSMO_GIR_SCAN */
 
 G_BEGIN_DECLS
 

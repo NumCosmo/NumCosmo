@@ -33,8 +33,11 @@
 #include <numcosmo/lss/nc_halo_bias_func.h>
 #include <numcosmo/lss/nc_cluster_redshift.h>
 #include <numcosmo/lss/nc_cluster_mass.h>
+
+#ifndef NUMCOSMO_GIR_SCAN
 #include <gsl/gsl_histogram2d.h>
 #include <gsl/gsl_rng.h>
+#endif /* NUMCOSMO_GIR_SCAN */
 
 G_BEGIN_DECLS
 

@@ -32,7 +32,9 @@
 #include <numcosmo/math/ncm_model.h>
 #include <numcosmo/math/ncm_obj_array.h>
 
+#ifndef NUMCOSMO_GIR_SCAN
 #include <stdio.h>
+#endif /* NUMCOSMO_GIR_SCAN */
 
 G_BEGIN_DECLS
 

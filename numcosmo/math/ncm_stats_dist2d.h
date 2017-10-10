@@ -31,7 +31,10 @@
 #include <numcosmo/build_cfg.h>
 #include <numcosmo/math/ncm_ode_spline.h>
 #include <numcosmo/math/ncm_rng.h>
+
+#ifndef NUMCOSMO_GIR_SCAN
 #include <gsl/gsl_min.h>
+#endif /* NUMCOSMO_GIR_SCAN */
 
 G_BEGIN_DECLS
 

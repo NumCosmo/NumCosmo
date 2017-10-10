@@ -30,7 +30,10 @@
 #include <glib-object.h>
 #include <numcosmo/build_cfg.h>
 #include <numcosmo/lss/nc_cluster_mass.h>
+
+#ifndef NUMCOSMO_GIR_SCAN
 #include <gsl/gsl_multifit_nlin.h>
+#endif /* NUMCOSMO_GIR_SCAN */
 
 G_BEGIN_DECLS
 
@@ -64,7 +67,8 @@ typedef enum _NcClusterMassPlCLParams
   NC_CLUSTER_MASS_PLCL_A_L,
   NC_CLUSTER_MASS_PLCL_B_L,
   NC_CLUSTER_MASS_PLCL_SD_L, 
-  NC_CLUSTER_MASS_PLCL_COR, /*< private >*/
+  NC_CLUSTER_MASS_PLCL_COR, 
+  /* < private > */
   NC_CLUSTER_MASS_PLCL_SPARAM_LEN, /*< skip >*/
 } NcClusterMassPlCLParams;
 

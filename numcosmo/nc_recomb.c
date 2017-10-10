@@ -152,9 +152,11 @@
 #include "math/ncm_spline_cubic_notaknot.h"
 #include "perturbations/linear.h"
 
+#ifndef NUMCOSMO_GIR_SCAN
 #include <gsl/gsl_sf_exp.h>
 #include <gsl/gsl_sf_lambert.h>
 #include <stdlib.h>
+#endif /* NUMCOSMO_GIR_SCAN */
 
 #define X_TODAY 1.0
 

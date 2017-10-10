@@ -31,8 +31,6 @@
 #include <numcosmo/build_cfg.h>
 #include <numcosmo/math/ncm_fftlog.h>
 
-#include <glib-object.h>
-
 G_BEGIN_DECLS
 
 #define NCM_TYPE_FFTLOG_GAUSSWIN2             (ncm_fftlog_gausswin2_get_type ())

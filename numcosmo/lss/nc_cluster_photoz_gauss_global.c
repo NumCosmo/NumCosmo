@@ -40,9 +40,10 @@
 #include "math/ncm_rng.h"
 #include "math/ncm_cfg.h"
 
-#include <math.h>
+#ifndef NUMCOSMO_GIR_SCAN
 #include <gsl/gsl_randist.h>
 #include <gsl/gsl_math.h>
+#endif /* NUMCOSMO_GIR_SCAN */
 
 #define VECTOR (model->params)
 #define Z_BIAS (ncm_vector_get (VECTOR, NC_CLUSTER_PHOTOZ_GAUSS_GLOBAL_Z_BIAS))

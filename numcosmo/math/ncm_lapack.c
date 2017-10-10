@@ -44,6 +44,7 @@
 #include "math/ncm_matrix.h"
 #include "math/ncm_util.h"
 
+#ifndef NUMCOSMO_GIR_SCAN
 #include <string.h>
 #include <gsl/gsl_vector.h>
 
@@ -76,6 +77,7 @@ void dpotri_ (const char *uplo, const gint *n, double *a, const gint *lda, gint 
 void dggglm_ (const gint *N, const gint *M, const gint *P, gdouble *X, const gint *LDA, gdouble *L, const gint *LDB, 
               gdouble *d, gdouble *p, gdouble *y, gdouble *work, const gint *lwork, gint *info);
 #endif /* HAVE_LAPACK */
+#endif /* NUMCOSMO_GIR_SCAN */
 
 #define _NCM_LAPACK_CONV_UPLO(uplo) (uplo == 'L' ? 'U' : 'L')
 #define _NCM_LAPACK_CONV_TRANS(trans) (trans == 'N' ? 'T' : 'N')

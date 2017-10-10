@@ -57,7 +57,7 @@
 #include "math/ncm_c.h"
 #include "math/ncm_cfg.h"
 
-#include <math.h>
+#ifndef NUMCOSMO_GIR_SCAN
 #include <gsl/gsl_sf_result.h>
 #include <gsl/gsl_sf_gamma.h>
 #include <gsl/gsl_sf_trig.h>
@@ -65,6 +65,7 @@
 #ifdef HAVE_ACB_H
 #include <acb.h>
 #endif /* HAVE_ACB_H */
+#endif /* NUMCOSMO_GIR_SCAN */
 
 G_DEFINE_TYPE (NcmFftlogTophatwin2, ncm_fftlog_tophatwin2, NCM_TYPE_FFTLOG);
 

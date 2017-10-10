@@ -55,7 +55,8 @@ typedef enum _NcmDatasetBStrapType
 {
   NCM_DATASET_BSTRAP_DISABLE = 0,
   NCM_DATASET_BSTRAP_PARTIAL,
-  NCM_DATASET_BSTRAP_TOTAL, /*< private >*/
+  NCM_DATASET_BSTRAP_TOTAL, 
+  /*< private >*/
   NCM_DATASET_BSTRAP_LEN,   /*< skip >*/
 } NcmDatasetBStrapType;
 

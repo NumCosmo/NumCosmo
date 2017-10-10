@@ -43,6 +43,7 @@
 #include "math/ncm_cfg.h"
 #include "math/ncm_util.h"
 
+#ifndef NUMCOSMO_GIR_SCAN
 #ifdef HAVE_BLAS
 #  ifdef HAVE_MKL_CBLAS_H
 #    include <mkl_cblas.h>
@@ -57,6 +58,7 @@
 #ifdef NUMCOSMO_HAVE_FFTW3
 #include <fftw3.h>
 #endif /* NUMCOSMO_HAVE_FFTW3 */
+#endif /* NUMCOSMO_GIR_SCAN */
 
 enum
 {

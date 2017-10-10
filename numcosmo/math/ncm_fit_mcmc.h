@@ -34,10 +34,13 @@
 #include <numcosmo/math/ncm_mset_trans_kern.h>
 #include <numcosmo/math/ncm_timer.h>
 #include <numcosmo/math/memory_pool.h>
+
+#ifndef NUMCOSMO_GIR_SCAN
 #include <gsl/gsl_histogram.h>
 #ifdef NUMCOSMO_HAVE_CFITSIO
 #include <fitsio.h>
 #endif /* NUMCOSMO_HAVE_CFITSIO */
+#endif /* NUMCOSMO_GIR_SCAN */
 
 G_BEGIN_DECLS
 

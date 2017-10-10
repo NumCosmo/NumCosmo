@@ -43,9 +43,11 @@
 #include "math/ncm_cfg.h"
 #include "math/ncm_util.h"
 
+#ifndef NUMCOSMO_GIR_SCAN
 #include <gsl/gsl_cdf.h>
 #include <gsl/gsl_roots.h>
 #include <gsl/gsl_deriv.h>
+#endif /* NUMCOSMO_GIR_SCAN */
 
 enum
 {

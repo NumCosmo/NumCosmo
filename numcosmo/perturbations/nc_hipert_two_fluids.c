@@ -75,6 +75,7 @@
 #include "perturbations/nc_hipert_two_fluids.h"
 #include "perturbations/nc_hipert_itwo_fluids.h"
 
+#ifndef NUMCOSMO_GIR_SCAN
 #include <cvodes/cvodes.h>
 #include <cvodes/cvodes_dense.h>
 #include <cvodes/cvodes_band.h>
@@ -88,6 +89,7 @@
 #include <arkode/arkode.h>
 #include <arkode/arkode_dense.h>
 #endif /* HAVE_SUNDIALS_ARKODE */
+#endif /* NUMCOSMO_GIR_SCAN */
 
 G_DEFINE_TYPE (NcHIPertTwoFluids, nc_hipert_two_fluids, NC_TYPE_HIPERT);
 

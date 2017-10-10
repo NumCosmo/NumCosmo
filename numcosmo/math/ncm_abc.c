@@ -40,7 +40,9 @@
 #include "math/ncm_abc.h"
 #include "math/ncm_func_eval.h"
 
+#ifndef NUMCOSMO_GIR_SCAN
 #include <gsl/gsl_statistics_double.h>
+#endif /* NUMCOSMO_GIR_SCAN */
 
 enum
 {
