@@ -52,7 +52,7 @@ typedef struct _NcHICosmoDEXcdm NcHICosmoDEXcdm;
 typedef enum _NcHICosmoDEXCDMParams
 {
   NC_HICOSMO_DE_XCDM_W = NC_HICOSMO_DE_SPARAM_LEN, 
-  /*< private >*/
+  /* < private > */
   NC_HICOSMO_DE_XCDM_SPARAM_LEN,                   /*< skip >*/
 } NcHICosmoDEXCDMParams;
 

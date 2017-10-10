@@ -55,7 +55,7 @@ typedef enum _NcXcorLimberKernelGalSParams
 {
   NC_XCOR_LIMBER_KERNEL_GAL_MAG_BIAS = 0,
   NC_XCOR_LIMBER_KERNEL_GAL_NOISE_BIAS, 
-  /*< private >*/
+  /* < private > */
   NC_XCOR_LIMBER_KERNEL_GAL_SPARAM_LEN, /*< skip >*/
 } NcXcorLimberKernelGalSParams;
 
@@ -67,7 +67,7 @@ typedef enum _NcXcorLimberKernelGalSParams
 typedef enum _NcXcorLimberKernelGalVParams
 {
   NC_XCOR_LIMBER_KERNEL_GAL_BIAS, 
-  /*< private >*/
+  /* < private > */
   NC_XCOR_LIMBER_KERNEL_GAL_VPARAM_LEN, /*< skip >*/
 } NcXcorLimberKernelGalVParams;
 

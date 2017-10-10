@@ -121,7 +121,7 @@ typedef enum _NcHIPertBoltzmannVars
   NC_HIPERT_BOLTZMANN_THETA_P0,
   NC_HIPERT_BOLTZMANN_THETA_P1,
   NC_HIPERT_BOLTZMANN_THETA_P2, 
-  /*< private >*/
+  /* < private > */
   NC_HIPERT_BOLTZMANN_LEN,      /*< skip >*/
 } NcHIPertBoltzmannVars;
 

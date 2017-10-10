@@ -85,7 +85,7 @@ typedef enum _NcPlanckFICorTTParams
   NC_PLANCK_FI_COR_TT_calib_100T,
   NC_PLANCK_FI_COR_TT_calib_217T,
   NC_PLANCK_FI_COR_TT_A_planck,   
-  /*< private >*/
+  /* < private > */
   NC_PLANCK_FI_COR_TT_SPARAM_LEN, /*< skip >*/
 } NcPlanckFICorTTParams;
 

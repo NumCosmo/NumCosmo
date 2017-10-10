@@ -62,7 +62,7 @@ typedef enum _NcXcorLimberKernelImpl
   NC_XCOR_LIMBER_KERNEL_IMPL_EVAL = 0,
   NC_XCOR_LIMBER_KERNEL_IMPL_PREPARE,
   NC_XCOR_LIMBER_KERNEL_IMPL_ADD_NOISE, 
-  /*< private >*/
+  /* < private > */
 } NcXcorLimberKernelImpl;
 
 #define NC_XCOR_LIMBER_KERNEL_IMPL_ALL NCM_MODEL_CLASS_IMPL_ALL

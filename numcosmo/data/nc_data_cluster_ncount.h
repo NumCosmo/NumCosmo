@@ -64,7 +64,7 @@ typedef enum _NcDataClusterAbundanceId
   NC_DATA_CLUSTER_ABUNDANCE_FIT,
   NC_DATA_CLUSTER_ABUNDANCE_TXT,
   NC_DATA_CLUSTER_ABUNDANCE_SAMPLING, 
-  /*< private >*/
+  /* < private > */
   NC_DATA_CLUSTER_ABUNDANCE_NSAMPLES, /*< skip >*/
 } NcDataClusterAbundanceId;
 

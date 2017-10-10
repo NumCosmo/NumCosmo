@@ -74,7 +74,7 @@ typedef enum _NcDataHubbleId
   NC_DATA_HUBBLE_RIESS2008_HST,
   NC_DATA_HUBBLE_ZHANG2012,
   NC_DATA_HUBBLE_RIESS2016_HST_WFC3, 
-  /*< private >*/
+  /* < private > */
   NC_DATA_HUBBLE_NSAMPLES,           /*< skip >*/
 } NcDataHubbleId;
 

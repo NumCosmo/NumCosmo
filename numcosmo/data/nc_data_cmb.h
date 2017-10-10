@@ -61,7 +61,7 @@ typedef enum _NcDataCMBDataType
   NC_DATA_CMB_TYPE_EB     = 1 << 5,
   NC_DATA_CMB_TYPE_PHIPHI = 1 << 6,
   NC_DATA_CMB_TYPE_ALL    = (1 << 7) - 1, 
-  /*< private >*/
+  /* < private > */
   NC_DATA_CMB_TYPE_LEN, /*< skip >*/
 } NcDataCMBDataType;
 
@@ -93,7 +93,7 @@ typedef enum _NcDataCMBId
   NC_DATA_CMB_DIST_PRIORS_WMAP5,
   NC_DATA_CMB_DIST_PRIORS_WMAP7,
   NC_DATA_CMB_DIST_PRIORS_WMAP9,
-  /*< private >*/
+  /* < private > */
   NC_DATA_CMB_NSAMPLES, /*< skip >*/
 } NcDataCMBId;
 

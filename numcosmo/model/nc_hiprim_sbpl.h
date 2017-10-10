@@ -68,7 +68,7 @@ typedef enum _NcHIPrimSBPLParams
   NC_HIPRIM_SBPL_LAMBDA,
   NC_HIPRIM_SBPL_T_SA_RATIO,
   NC_HIPRIM_SBPL_N_T,        
-  /*< private >*/
+  /* < private > */
   NC_HIPRIM_SBPL_SPARAM_LEN, /*< skip >*/
 } NcHIPrimSBPLParams;
 

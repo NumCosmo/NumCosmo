@@ -62,7 +62,7 @@ typedef enum _NcHICosmoDEImpl
   NC_HICOSMO_DE_IMPL_dE2Omega_de_dz,
   NC_HICOSMO_DE_IMPL_d2E2Omega_de_dz2,
   NC_HICOSMO_DE_IMPL_w_de, 
-  /*< private >*/
+  /* < private > */
   NC_HICOSMO_DE_IMPL_LAST, /*< skip >*/
 } NcHICosmoDEImpl;
 
@@ -89,8 +89,8 @@ typedef enum _NcHICosmoDEParams
   NC_HICOSMO_DE_T_GAMMA0,
   NC_HICOSMO_DE_HE_YP,
   NC_HICOSMO_DE_ENNU,
-  NC_HICOSMO_DE_OMEGA_B,    
-  /*< private >*/
+  NC_HICOSMO_DE_OMEGA_B,
+  /* < private > */
   NC_HICOSMO_DE_SPARAM_LEN, /*< skip >*/
 } NcHICosmoDEParams;
 
@@ -109,8 +109,8 @@ typedef enum _NcHICosmoDEVParams
   NC_HICOSMO_DE_MASSNU_M = 0,
   NC_HICOSMO_DE_MASSNU_T,
   NC_HICOSMO_DE_MASSNU_MU,
-  NC_HICOSMO_DE_MASSNU_G,
-  /*< private >*/
+  NC_HICOSMO_DE_MASSNU_G,   
+  /* < private > */
   NC_HICOSMO_DE_VPARAM_LEN, /*< skip >*/
 } NcHICosmoDEVParams;
 

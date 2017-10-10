@@ -68,7 +68,7 @@ typedef enum _NcClusterPseudoCountsParams
   NC_CLUSTER_PSEUDO_COUNTS_SD_MCUT, 
   NC_CLUSTER_PSEUDO_COUNTS_ZMIN, 
   NC_CLUSTER_PSEUDO_COUNTS_DELTAZ, 
-  /*< private >*/
+  /* < private > */
   NC_CLUSTER_PSEUDO_COUNTS_SPARAM_LEN, /*< skip >*/
 } NcClusterPseudoCountsParams;
 

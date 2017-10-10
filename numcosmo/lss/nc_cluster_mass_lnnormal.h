@@ -54,7 +54,7 @@ typedef enum _NcClusterMassLnnormalParams
 {
   NC_CLUSTER_MASS_LNNORMAL_BIAS = 0,
   NC_CLUSTER_MASS_LNNORMAL_SIGMA,  
-  /*< private >*/
+  /* < private > */
   NC_CLUSTER_MASS_LNNORMAL_SPARAM_LEN, /*< skip >*/
 } NcClusterMassLnnormalParams;
 

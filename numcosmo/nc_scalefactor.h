@@ -57,7 +57,7 @@ typedef struct _NcScalefactor NcScalefactor;
 typedef enum _NcScalefactorTimeType
 {
   NC_SCALEFACTOR_TIME_TYPE_COSMIC = 1 << 0, 
-  /*< private >*/
+  /* < private > */
   NC_SCALEFACTOR_TIME_TYPE_ALL    = (1 << 1) - 1, /*< skip >*/  
 } NcScalefactorTimeType;
 

@@ -68,7 +68,7 @@ typedef enum _NcDataClusterPseudoCountsObs
   NC_DATA_CLUSTER_PSEUDO_COUNTS_MCL,
   NC_DATA_CLUSTER_PSEUDO_COUNTS_SD_MPL,
   NC_DATA_CLUSTER_PSEUDO_COUNTS_SD_MCL, 
-  /*< private >*/
+  /* < private > */
   NC_DATA_CLUSTER_PSEUDO_COUNTS_LEN, /*< skip >*/
 } NcDataClusterPseudoCountsObs;
 

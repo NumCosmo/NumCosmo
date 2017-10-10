@@ -102,7 +102,7 @@ typedef enum _NcHIPertITwoFluidsVars
   NC_HIPERT_ITWO_FLUIDS_VARS_S_I,
   NC_HIPERT_ITWO_FLUIDS_VARS_PZETA_I,
   NC_HIPERT_ITWO_FLUIDS_VARS_PS_I,  
-  /*< private >*/
+  /* < private > */
   NC_HIPERT_ITWO_FLUIDS_VARS_LEN,   /*< skip >*/
 } NcHIPertITwoFluidsVars;
 

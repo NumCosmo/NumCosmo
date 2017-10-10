@@ -94,7 +94,7 @@ typedef enum _NcDataSNIACovData
   NC_DATA_SNIA_COV_VAR_MAG_WIDTH,
   NC_DATA_SNIA_COV_VAR_MAG_COLOUR,
   NC_DATA_SNIA_COV_VAR_WIDTH_COLOUR,
-  /*< private >*/
+  /* < private > */
   NC_DATA_SNIA_COV_TOTAL_LENGTH, /*< skip >*/
 } NcDataSNIACovData;
 
@@ -138,7 +138,7 @@ typedef enum _NcDataSNIACovDataV1
   NC_DATA_SNIA_COV_V1_WIDTH_WIDTH,
   NC_DATA_SNIA_COV_V1_WIDTH_COLOUR,
   NC_DATA_SNIA_COV_V1_COLOUR_COLOUR,
-  /*< private >*/
+  /* < private > */
   NC_DATA_SNIA_COV_V1_TOTAL_LENGTH, /*< skip >*/
 } NcDataSNIACovDataV1;
 
@@ -202,7 +202,7 @@ typedef enum _NcDataSNIACovOrder
   NC_DATA_SNIA_COV_ORDER_WIDTH_WIDTH,
   NC_DATA_SNIA_COV_ORDER_WIDTH_COLOUR,
   NC_DATA_SNIA_COV_ORDER_COLOUR_COLOUR,
-  /*< private >*/
+  /* < private > */
   NC_DATA_SNIA_COV_ORDER_LENGTH, /*< skip >*/
 } NcDataSNIACovOrder;
 

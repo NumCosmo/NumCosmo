@@ -72,7 +72,7 @@ typedef enum _NcHICosmoIDEM2Params
   NC_HICOSMO_IDEM2_ENNU,
   NC_HICOSMO_IDEM2_OMEGA_B,    
   NC_HICOSMO_IDEM2_GAMMA,    
-  /*< private >*/
+  /* < private > */
   NC_HICOSMO_IDEM2_SPARAM_LEN, /*< skip >*/
 } NcHICosmoIDEM2Params;
 
@@ -92,7 +92,7 @@ typedef enum _NcHICosmoIDEM2VParams
   NC_HICOSMO_IDEM2_MASSNU_T,
   NC_HICOSMO_IDEM2_MASSNU_MU,
   NC_HICOSMO_IDEM2_MASSNU_G,
-  /*< private >*/
+  /* < private > */
   NC_HICOSMO_IDEM2_VPARAM_LEN, /*< skip >*/
 } NcHICosmoIDEM2VParams;
 

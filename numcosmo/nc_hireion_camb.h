@@ -66,7 +66,7 @@ typedef enum _NcHIReionCambParams
 {
   NC_HIREION_CAMB_HII_HEII_Z = 0,
   NC_HIREION_CAMB_HEIII_Z,    
-  /*< private >*/
+  /* < private > */
   NC_HIREION_CAMB_SPARAM_LEN, /*< skip >*/
 } NcHIReionCambParams;
 

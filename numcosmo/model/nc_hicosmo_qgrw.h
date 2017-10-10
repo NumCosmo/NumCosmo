@@ -63,7 +63,7 @@ typedef enum _NcHICosmoQGRWParams
   NC_HICOSMO_QGRW_OMEGA_W,
   NC_HICOSMO_QGRW_W,  
   NC_HICOSMO_QGRW_X_B,    
-  /*< private >*/
+  /* < private > */
   NC_HICOSMO_QGRW_SPARAM_LEN, /*< skip >*/
 } NcHICosmoQGRWParams;
 

@@ -68,7 +68,7 @@ typedef enum _NcClusterMassPlCLParams
   NC_CLUSTER_MASS_PLCL_B_L,
   NC_CLUSTER_MASS_PLCL_SD_L, 
   NC_CLUSTER_MASS_PLCL_COR, 
-  /*< private >*/
+  /* < private > */
   NC_CLUSTER_MASS_PLCL_SPARAM_LEN, /*< skip >*/
 } NcClusterMassPlCLParams;
 

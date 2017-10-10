@@ -53,7 +53,7 @@ typedef struct _NcDataHubbleBao NcDataHubbleBao;
 typedef enum _NcDataHubbleBaoId
 {
   NC_DATA_HUBBLE_BAO_BUSCA2013, 
-  /*< private >*/
+  /* < private > */
   NC_DATA_HUBBLE_BAO_NSAMPLES,  /*< skip >*/
 } NcDataHubbleBaoId;
 

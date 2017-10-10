@@ -126,7 +126,7 @@ typedef enum _NcHICosmoImpl
   NC_HICOSMO_IMPL_Dc,
   NC_HICOSMO_IMPL_NMassNu,
   NC_HICOSMO_IMPL_MassNuInfo, 
-  /*< private >*/
+  /* < private > */
   NC_HICOSMO_IMPL_LAST,       /*< skip >*/
 } NcHICosmoImpl;
 

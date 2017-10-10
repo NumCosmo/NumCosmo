@@ -58,7 +58,7 @@ typedef enum _NcClusterMassBensonXRayParams
   NC_CLUSTER_MASS_BENSON_XRAY_B_X,
   NC_CLUSTER_MASS_BENSON_XRAY_C_X,
   NC_CLUSTER_MASS_BENSON_XRAY_D_X, 
-  /*< private >*/
+  /* < private > */
   NC_CLUSTER_MASS_BENSON_XRAY_SPARAM_LEN, /*< skip >*/
 } NcClusterMassBensonXRayParams;
 

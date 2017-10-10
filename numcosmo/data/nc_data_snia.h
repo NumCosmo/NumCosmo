@@ -69,7 +69,7 @@ typedef enum _NcDataSNIAId
   NC_DATA_SNIA_COV_SNLS3_STAT_ONLY,
   NC_DATA_SNIA_COV_JLA_SNLS3_SDSS_SYS_STAT,
   NC_DATA_SNIA_COV_JLA_SNLS3_SDSS_SYS_STAT_CMPL, 
-  /*< private >*/
+  /* < private > */
   NC_DATA_SNIA_LEN, /*< skip >*/
 } NcDataSNIAId;
 

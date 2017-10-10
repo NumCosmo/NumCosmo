@@ -71,7 +71,7 @@ typedef enum _NcABCClusterNCountSummary
   NC_ABC_CLUSTER_NCOUNT_SUMMARY_BIN_QUANTILE,
   NC_ABC_CLUSTER_NCOUNT_SUMMARY_BIN_NODES,  
   NC_ABC_CLUSTER_NCOUNT_SUMMARY_GAUSS_RBF,
-  /*< private >*/
+  /* < private > */
   NC_ABC_CLUSTER_NCOUNT_SUMMARY_NTYPES, /*< skip >*/
 } NcABCClusterNCountSummary;
 
@@ -87,7 +87,7 @@ typedef enum _NcABCClusterNCountEpsilonUpdate
 {
   NC_ABC_CLUSTER_NCOUNT_EPSILON_UPDATE_UNIFORM = 0, 
   NC_ABC_CLUSTER_NCOUNT_EPSILON_UPDATE_QUANTILE, 
-  /*< private >*/
+  /* < private > */
   NC_ABC_CLUSTER_NCOUNT_EPSILON_UPDATE_NTYPE, /*< skip >*/
 }NcABCClusterNCountEpsilonUpdate;
 

@@ -75,7 +75,7 @@ typedef enum _NcDataBaoId
   NC_DATA_BAO_DHR_DAR_SDSS_DR11_2015, 
   NC_DATA_BAO_DHR_DAR_SDSS_DR11_2015_LYAF_AUTO_CROSS, 
   NC_DATA_BAO_DMR_HR_SDSS_DR12_2016, 
-  /*< private >*/
+  /* < private > */
   NC_DATA_BAO_NSAMPLES, /*< skip >*/
 } NcDataBaoId;
 

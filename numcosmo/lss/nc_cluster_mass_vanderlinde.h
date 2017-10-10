@@ -58,7 +58,7 @@ typedef enum _NcClusterMassVanderlindeParams
   NC_CLUSTER_MASS_VANDERLINDE_B_SZ,
   NC_CLUSTER_MASS_VANDERLINDE_C_SZ,
   NC_CLUSTER_MASS_VANDERLINDE_D_SZ, 
-  /*< private >*/
+  /* < private > */
   NC_CLUSTER_MASS_VANDERLINDE_SPARAM_LEN, /*< skip >*/
 } NcClusterMassVanderlindeParams;
 

@@ -62,7 +62,7 @@ typedef enum _NcHICosmoQSplineSParams
   NC_HICOSMO_QSPLINE_H0 = 0,
   NC_HICOSMO_QSPLINE_OMEGA_T,    
   NC_HICOSMO_QSPLINE_AS_DRAG,    
-  /*< private >*/
+  /* < private > */
   NC_HICOSMO_QSPLINE_SPARAM_LEN, /*< skip >*/
 } NcHICosmoQSplineSParams;
 
@@ -74,7 +74,7 @@ typedef enum _NcHICosmoQSplineSParams
 typedef enum _NcHICosmoQSplineVParams
 {
   NC_HICOSMO_QSPLINE_Q,          
-  /*< private >*/
+  /* < private > */
   NC_HICOSMO_QSPLINE_VPARAM_LEN, /*< skip >*/
 } NcHICosmoQSplineVParams;
 
