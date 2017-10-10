@@ -67,7 +67,7 @@ typedef enum _NcmSplineGslType
   NCM_SPLINE_GSL_CSPLINE_PERIODIC,
   NCM_SPLINE_GSL_AKIMA,
   NCM_SPLINE_GSL_AKIMA_PERIODIC, 
-  /*< private >*/
+  /* < private > */
   NCM_SPLINE_GSL_TYPES_LEN, /*< skip >*/
 } NcmSplineGslType;
 

@@ -68,7 +68,7 @@ typedef enum _NcmSphereMapPixOrder
 {
   NCM_SPHERE_MAP_PIX_ORDER_NEST,
   NCM_SPHERE_MAP_PIX_ORDER_RING, 
-  /*< private >*/
+  /* < private > */
   NCM_SPHERE_MAP_PIX_ORDER_LEN,  /*< skip >*/
 } NcmSphereMapPixOrder;
 
@@ -86,7 +86,7 @@ typedef enum _NcmSphereMapPixCoordSys
   NCM_SPHERE_MAP_PIX_COORD_SYS_GALACTIC  = 'G',
   NCM_SPHERE_MAP_PIX_COORD_SYS_ECLIPTIC  = 'E',
   NCM_SPHERE_MAP_PIX_COORD_SYS_CELESTIAL = 'C', 
-  /*< private >*/
+  /* < private > */
   NCM_SPHERE_MAP_PIX_COORD_SYS_LEN, /*< skip >*/
 } NcmSphereMapPixCoordSys;
 
