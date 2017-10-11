@@ -403,6 +403,7 @@ nc_headers = \
 	perturbations/nc_hipert_boltzmann_std.h   \
 	perturbations/nc_hipert_boltzmann_cbe.h   \
 	perturbations/nc_hipert_first_order.h     \
+	perturbations/nc_hipert_comp.h            \
 	perturbations/linear.h                    \
 	perturbations/covariance.h                \
 	perturbations/linear_internal.h           \
@@ -537,6 +538,7 @@ nc_sources = \
 	perturbations/nc_hipert_boltzmann_std.c   \
 	perturbations/nc_hipert_boltzmann_cbe.c   \
 	perturbations/nc_hipert_first_order.c     \
+	perturbations/nc_hipert_comp.c            \
 	perturbations/linear.c                    \
 	perturbations/covariance.c                \
 	perturbations/linear_cvodes.c             \

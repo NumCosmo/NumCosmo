@@ -41,6 +41,7 @@
 
 struct _NcHIPertFirstOrderPrivate
 {
+  gint a;
 };
 
 enum
