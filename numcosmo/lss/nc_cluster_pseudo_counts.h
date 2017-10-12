@@ -62,7 +62,7 @@ typedef struct _NcClusterPseudoCounts NcClusterPseudoCounts;
  * 
  * FIXME
  */
-typedef enum _NcClusterPseudoCountsParams
+typedef enum /*< enum,underscore_name=NC_CLUSTER_PSEUDO_COUNTS_SPARAMS >*/
 {
   NC_CLUSTER_PSEUDO_COUNTS_LNMCUT = 0, 
   NC_CLUSTER_PSEUDO_COUNTS_SD_MCUT, 
@@ -70,7 +70,7 @@ typedef enum _NcClusterPseudoCountsParams
   NC_CLUSTER_PSEUDO_COUNTS_DELTAZ, 
   /* < private > */
   NC_CLUSTER_PSEUDO_COUNTS_SPARAM_LEN, /*< skip >*/
-} NcClusterPseudoCountsParams;
+} NcClusterPseudoCountsSParams;
 
 #define NC_CLUSTER_PSEUDO_COUNTS_DEFAULT_LNMCUT  (33.0)
 #define NC_CLUSTER_PSEUDO_COUNTS_DEFAULT_SD_MCUT (0.206)

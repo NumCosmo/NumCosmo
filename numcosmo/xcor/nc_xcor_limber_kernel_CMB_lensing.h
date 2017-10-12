@@ -52,10 +52,10 @@ typedef struct _NcXcorLimberKernelCMBLensing NcXcorLimberKernelCMBLensing;
  *
  * FIXME
  */
-typedef enum _NcXcorLimberKernelCMBLensingParams
+typedef enum /*< enum,underscore_name=NC_XCOR_LIMBER_KERNEL_CMB_LENSING_SPARAMS >*/
 {
   NC_XCOR_LIMBER_KERNEL_CMB_LENSING_SPARAM_LEN,
-} NcXcorLimberKernelCMBLensingParams;
+} NcXcorLimberKernelCMBLensingSParams;
 
 #define NC_XCOR_LIMBER_KERNEL_CMB_LENSING_DEFAULT_PARAMS_ABSTOL (0.0)
 

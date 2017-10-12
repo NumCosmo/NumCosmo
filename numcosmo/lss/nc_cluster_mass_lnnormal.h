@@ -50,13 +50,13 @@ typedef struct _NcClusterMassLnnormal NcClusterMassLnnormal;
  *
  * FIXME
  */
-typedef enum _NcClusterMassLnnormalParams
+typedef enum /*< enum,underscore_name=NC_CLUSTER_MASS_LNNORMAL_SPARAMS >*/
 {
   NC_CLUSTER_MASS_LNNORMAL_BIAS = 0,
   NC_CLUSTER_MASS_LNNORMAL_SIGMA,  
   /* < private > */
   NC_CLUSTER_MASS_LNNORMAL_SPARAM_LEN, /*< skip >*/
-} NcClusterMassLnnormalParams;
+} NcClusterMassLnnormalSParams;
 
 #define NC_CLUSTER_MASS_LNNORMAL_DEFAULT_BIAS  (0.0)
 #define NC_CLUSTER_MASS_LNNORMAL_DEFAULT_SIGMA  (0.04)

@@ -61,7 +61,7 @@ struct _NcHICosmoVexpClass
  * FIXME
  * 
  */
-typedef enum _NcHICosmoVexpParams
+typedef enum /*< enum,underscore_name=NC_HICOSMO_VEXP_SPARAMS >*/
 {
   NC_HICOSMO_VEXP_H0 = 0,
   NC_HICOSMO_VEXP_OMEGA_C,
@@ -72,7 +72,7 @@ typedef enum _NcHICosmoVexpParams
   NC_HICOSMO_VEXP_X_B,        
   /* < private > */
   NC_HICOSMO_VEXP_SPARAM_LEN, /*< skip >*/
-} NcHICosmoVexpParams;
+} NcHICosmoVexpSParams;
 
 struct _NcHICosmoVexp
 {

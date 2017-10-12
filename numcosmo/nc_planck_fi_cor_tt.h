@@ -67,7 +67,7 @@ typedef struct _NcPlanckFICorTT NcPlanckFICorTT;
  * releases (see [Planck 2015 results XI (2015)][XPlanckCollaboration2015a]).
  *
  */
-typedef enum _NcPlanckFICorTTParams
+typedef enum /*< enum,underscore_name=NC_PLANCK_FI_COR_TT_SPARAMS >*/
 {
   NC_PLANCK_FI_COR_TT_A_cib_217 = 0,
   NC_PLANCK_FI_COR_TT_cib_index,
@@ -87,7 +87,7 @@ typedef enum _NcPlanckFICorTTParams
   NC_PLANCK_FI_COR_TT_A_planck,   
   /* < private > */
   NC_PLANCK_FI_COR_TT_SPARAM_LEN, /*< skip >*/
-} NcPlanckFICorTTParams;
+} NcPlanckFICorTTSParams;
 
 #define NC_PLANCK_FI_COR_TT_DEFAULT_A_cib_217        (100.0)
 #define NC_PLANCK_FI_COR_TT_DEFAULT_cib_index        (-1.3)

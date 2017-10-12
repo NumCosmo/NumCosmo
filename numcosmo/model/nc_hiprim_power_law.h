@@ -58,7 +58,7 @@ typedef struct _NcHIPrimPowerLaw NcHIPrimPowerLaw;
  * $$ \mathcal{P}_T(k) = r \mathcal{A}_\mathrm{s} \left(\frac{k}{k_\star}\right)^{n_T -1 }.$$
  *
  */
-typedef enum _NcHIPrimPowerLawParams
+typedef enum /*< enum,underscore_name=NC_HIPRIM_POWER_LAW_SPARAMS >*/
 {
   NC_HIPRIM_POWER_LAW_LN10E10ASA,
   NC_HIPRIM_POWER_LAW_T_SA_RATIO,
@@ -66,7 +66,7 @@ typedef enum _NcHIPrimPowerLawParams
   NC_HIPRIM_POWER_LAW_N_T, 
   /* < private > */
   NC_HIPRIM_POWER_LAW_SPARAM_LEN, /*< skip >*/
-} NcHIPrimPowerLawParams;
+} NcHIPrimPowerLawSParams;
 
 struct _NcHIPrimPowerLawClass
 {

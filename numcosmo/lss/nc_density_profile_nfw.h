@@ -50,13 +50,13 @@ typedef struct _NcDensityProfileNFW NcDensityProfileNFW;
  *
  * FIXME
  */
-typedef enum _NcDensityProfileNFWParams
+typedef enum /*< enum,underscore_name=NC_DENSITY_PROFILE_NFW_SPARAMS >*/
 {
   NC_DENSITY_PROFILE_NFW_C_DELTA = 0,
   NC_DENSITY_PROFILE_NFW_M_DELTA, 
   /* < private > */
   NC_DENSITY_PROFILE_NFW_SPARAM_LEN, /*< skip >*/
-} NcDensityProfileNFWParams;
+} NcDensityProfileNFWSParams;
 
 #define NC_DENSITY_PROFILE_NFW_DEFAULT_C_DELTA  (4.0)
 #define NC_DENSITY_PROFILE_NFW_DEFAULT_M_DELTA  (2.0e14)

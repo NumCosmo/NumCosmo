@@ -53,9 +53,9 @@ enum
 G_DEFINE_TYPE (NcHIPertFirstOrder, nc_hipert_first_order, NC_TYPE_HIPERT_BOLTZMANN);
 
 static void
-nc_hipert_first_order_init (NcHIPertFirstOrder *nc_hipert_first_order)
+nc_hipert_first_order_init (NcHIPertFirstOrder *fo)
 {
-  nc_hipert_first_order->priv = G_TYPE_INSTANCE_GET_PRIVATE (nc_hipert_first_order, NC_TYPE_HIPERT_FIRST_ORDER, NcHIPertFirstOrderPrivate);
+  fo->priv = G_TYPE_INSTANCE_GET_PRIVATE (fo, NC_TYPE_HIPERT_FIRST_ORDER, NcHIPertFirstOrderPrivate);
 }
 
 static void

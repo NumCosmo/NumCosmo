@@ -62,13 +62,13 @@ struct _NcHIReionCambClass
  * FIXME
  * 
  */
-typedef enum _NcHIReionCambParams
+typedef enum /*< enum,underscore_name=NC_HIREION_CAMB_SPARAMS >*/
 {
   NC_HIREION_CAMB_HII_HEII_Z = 0,
   NC_HIREION_CAMB_HEIII_Z,    
   /* < private > */
   NC_HIREION_CAMB_SPARAM_LEN, /*< skip >*/
-} NcHIReionCambParams;
+} NcHIReionCambSParams;
 
 
 struct _NcHIReionCamb

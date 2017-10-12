@@ -92,7 +92,7 @@ struct _NcHIPertITwoFluidsEOM
  * FIXME
  * 
  */
-typedef enum _NcHIPertITwoFluidsVars
+typedef enum /*< enum,underscore_name=NC_HIPERT_ITWO_FLUIDS_VARS >*/
 {
   NC_HIPERT_ITWO_FLUIDS_VARS_ZETA_R = 0,
   NC_HIPERT_ITWO_FLUIDS_VARS_S_R,

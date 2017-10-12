@@ -92,7 +92,7 @@ gdouble nc_hicosmo_qg_V_lambda (NcmModel *model, gdouble lambda, gboolean deriv)
  * 
  * FIXME
  */
-typedef enum _NcHICosmoQGPertType
+typedef enum /*< enum,underscore_name=NC_HICOSMO_QG_PERT_TYPE >*/
 {
   NC_HICOSMO_QG_PERT_CURVATURE = 0,
   NC_HICOSMO_QG_PERT_H,  

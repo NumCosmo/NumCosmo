@@ -56,7 +56,7 @@ typedef struct _NcHIPrimBPL NcHIPrimBPL;
  * FIXME
  * 
  */
-typedef enum _NcHIPrimBPLParams
+typedef enum /*< enum,underscore_name=NC_HIPRIM_BPL_SPARAMS >*/
 {
   NC_HIPRIM_BPL_LN10E10ASA,
   NC_HIPRIM_BPL_N_SA,
@@ -66,7 +66,7 @@ typedef enum _NcHIPrimBPLParams
   NC_HIPRIM_BPL_N_T,        
   /* < private > */
   NC_HIPRIM_BPL_SPARAM_LEN, /*< skip >*/
-} NcHIPrimBPLParams;
+} NcHIPrimBPLSParams;
 
 struct _NcHIPrimBPLClass
 {

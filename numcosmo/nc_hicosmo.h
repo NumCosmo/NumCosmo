@@ -1,4 +1,4 @@
-/***************************************************************************
+  /***************************************************************************
  *            nc_hicosmo.h
  *
  *  Mon Jul 16 18:03:42 2007
@@ -89,7 +89,7 @@ G_BEGIN_DECLS
  * Flags defining the implementation options of the NcHICosmo abstract object. 
  * 
  */
-typedef enum _NcHICosmoImpl
+typedef enum /*< flags,underscore_name=NC_HICOSMO_IMPL >*/
 {
   NC_HICOSMO_IMPL_H0 = 0, 
   NC_HICOSMO_IMPL_Omega_b0,

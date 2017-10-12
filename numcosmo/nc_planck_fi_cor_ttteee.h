@@ -129,7 +129,7 @@ typedef struct _NcPlanckFICorTTTEEE NcPlanckFICorTTTEEE;
  * releases (see [Planck 2015 results XI (2015)][XPlanckCollaboration2015a]).
  * 
  */
-typedef enum _NcPlanckFICorTTTEEEParams
+typedef enum /*< enum,underscore_name=NC_PLANCK_FI_COR_TTTEEE_SPARAMS >*/
 {
   NC_PLANCK_FI_COR_TTTEEE_galf_EE_A_100 = NC_PLANCK_FI_COR_TT_SPARAM_LEN,
   NC_PLANCK_FI_COR_TTTEEE_galf_EE_A_100_143,
@@ -211,7 +211,7 @@ typedef enum _NcPlanckFICorTTTEEEParams
   NC_PLANCK_FI_COR_TTTEEE_A_pol,      
   /* < private > */
   NC_PLANCK_FI_COR_TTTEEE_SPARAM_LEN, /*< skip >*/
-} NcPlanckFICorTTTEEEParams;
+} NcPlanckFICorTTTEEESParams;
 
 #define NC_PLANCK_FI_COR_TTTEEE_DEFAULT_galf_EE_A_100     ( 0.060)
 #define NC_PLANCK_FI_COR_TTTEEE_DEFAULT_galf_EE_A_100_143 ( 0.050)

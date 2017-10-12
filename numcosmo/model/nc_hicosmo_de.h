@@ -56,7 +56,7 @@ typedef struct _NcHICosmoDEPrivate NcHICosmoDEPrivate;
  * FIXME
  *
  */
-typedef enum _NcHICosmoDEImpl
+typedef enum /*< flags,underscore_name=NC_HICOSMO_DE_IMPL >*/
 {
   NC_HICOSMO_DE_IMPL_E2Omega_de = NC_HICOSMO_IMPL_LAST,
   NC_HICOSMO_DE_IMPL_dE2Omega_de_dz,
@@ -81,7 +81,7 @@ typedef gdouble (*NcHICosmoDEFunc1) (NcHICosmoDE *cosmo_de, gdouble z);
  * FIXME
  *
  */
-typedef enum _NcHICosmoDEParams
+typedef enum /*< enum,underscore_name=NC_HICOSMO_DE_SPARAMS >*/
 {
   NC_HICOSMO_DE_H0 = 0,
   NC_HICOSMO_DE_OMEGA_C,
@@ -92,7 +92,7 @@ typedef enum _NcHICosmoDEParams
   NC_HICOSMO_DE_OMEGA_B,
   /* < private > */
   NC_HICOSMO_DE_SPARAM_LEN, /*< skip >*/
-} NcHICosmoDEParams;
+} NcHICosmoDESParams;
 
 /**
  * NcHICosmoDEVParams:
@@ -104,7 +104,7 @@ typedef enum _NcHICosmoDEParams
  * FIXME
  *
  */
-typedef enum _NcHICosmoDEVParams
+typedef enum /*< enum,underscore_name=NC_HICOSMO_DE_VPARAMS >*/
 {
   NC_HICOSMO_DE_MASSNU_M = 0,
   NC_HICOSMO_DE_MASSNU_T,
