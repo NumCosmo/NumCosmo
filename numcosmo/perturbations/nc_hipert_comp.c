@@ -51,10 +51,11 @@ enum
   PROP_DIM
 };
 
-G_DEFINE_BOXED_TYPE (NcHIPertCompTScalar, nc_hipert_comp_T_scalar, nc_hipert_comp_T_scalar_dup, nc_hipert_comp_T_scalar_free);
-G_DEFINE_BOXED_TYPE (NcHIPertCompTVector, nc_hipert_comp_T_vector, nc_hipert_comp_T_vector_dup, nc_hipert_comp_T_vector_free);
-G_DEFINE_BOXED_TYPE (NcHIPertCompTTensor, nc_hipert_comp_T_tensor, nc_hipert_comp_T_tensor_dup, nc_hipert_comp_T_tensor_free);
-G_DEFINE_TYPE (NcHIPertComp, nc_hipert_comp, G_TYPE_OBJECT);
+G_DEFINE_BOXED_TYPE (NcHIPertCompTScalar,  nc_hipert_comp_T_scalar, nc_hipert_comp_T_scalar_dup, nc_hipert_comp_T_scalar_free);
+G_DEFINE_BOXED_TYPE (NcHIPertCompTVector,  nc_hipert_comp_T_vector, nc_hipert_comp_T_vector_dup, nc_hipert_comp_T_vector_free);
+G_DEFINE_BOXED_TYPE (NcHIPertCompTTensor,  nc_hipert_comp_T_tensor, nc_hipert_comp_T_tensor_dup, nc_hipert_comp_T_tensor_free);
+G_DEFINE_BOXED_TYPE (NcHIPertCompCoupling, nc_hipert_comp_coupling, nc_hipert_comp_coupling_dup, nc_hipert_comp_coupling_free);
+G_DEFINE_ABSTRACT_TYPE (NcHIPertComp, nc_hipert_comp, G_TYPE_OBJECT);
 
 static void
 nc_hipert_comp_init (NcHIPertComp *comp)
@@ -129,6 +130,66 @@ nc_hipert_comp_class_init (NcHIPertCompClass *klass)
                                                       G_MAXUINT,
                                                       2,
                                                       G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
+  klass->bg_var_id = -1;
+}
+
+G_LOCK_DEFINE_STATIC (last_bg_var_id);
+
+/**
+ * nc_hipert_comp_register_bg_var_id: (skip)
+ * @comp_class: a #NcHIPertCompClass
+ * @cstruct_size: component struct size
+ * @ns: component namespace
+ * @desc: short description
+ * @long_desc: long description
+ *
+ * FIXME
+ *
+ */
+void
+nc_hipert_comp_register_bg_var_id (NcHIPertCompClass *comp_class, guint cstruct_size, const gchar *ns, const gchar *desc, const gchar *long_desc)
+{
+  static NcHIPertBGVarID last_bg_var_id = 0;
+  NcHIPertBGVarClass *bg_var_class     = g_type_class_ref (NC_TYPE_HIPERT_BG_VAR);
+  NcHIPertBGVarDesc *bg_var_desc       = NULL;
+  guint id;
+
+  G_LOCK (last_bg_var_id);
+
+  comp_class->bg_var_id = last_bg_var_id;
+  id                    = last_bg_var_id;
+
+  last_bg_var_id++;
+  
+  g_array_set_size (bg_var_class->bg_var_desc_array, last_bg_var_id);
+
+  bg_var_desc       = &g_array_index (bg_var_class->bg_var_desc_array, NcHIPertBGVarDesc, id);
+  bg_var_desc->init = TRUE;
+
+  if (ns == NULL)
+    g_error ("Cannot register background variables without a namespace.");
+  if (desc == NULL)
+    g_error ("Cannot register background variables without a description.");
+
+  bg_var_desc->ns           = g_strdup (ns);
+  bg_var_desc->desc         = g_strdup (desc);
+  bg_var_desc->cstruct_size = cstruct_size;
+
+  if (long_desc != NULL)
+    bg_var_desc->long_desc = g_strdup (long_desc);
+  else
+    bg_var_desc->long_desc = NULL;
+
+  if (g_hash_table_lookup (bg_var_class->ns_table, ns) != NULL)
+    g_error ("Background variable namespace <%s> already registered.", ns);
+
+  g_hash_table_insert (bg_var_class->ns_table, bg_var_desc->ns, GINT_TO_POINTER (comp_class->bg_var_id));
+
+  G_UNLOCK (last_bg_var_id);
+  g_type_class_unref (bg_var_class);
+  
+  return;
 }
 
 /**
@@ -250,3 +311,98 @@ nc_hipert_comp_class_init (NcHIPertCompClass *klass)
  * Sets all @Tt entries to zero.
  * 
  */
+
+/**
+ * nc_hipert_comp_coupling_new:
+ * 
+ * Creates a new #NcHIPertCompCoupling with all
+ * entries set to zero.
+ * 
+ * Returns: (transfer full): a new #NcHIPertCompCoupling.
+ */
+/**
+ * nc_hipert_comp_coupling_dup:
+ * @c: a #NcHIPertCompCoupling
+ * 
+ * Duplicates @c.
+ * 
+ * Returns: (transfer full): a copy of @c.
+ */
+/**
+ * nc_hipert_comp_coupling_free:
+ * @c: a #NcHIPertCompCoupling
+ * 
+ * Frees @c.
+ * 
+ */
+
+/**
+ * nc_hipert_comp_ref:
+ * @comp: a #NcHIPertComp
+ *
+ * Increases the reference count of @comp.
+ *
+ * Returns: (transfer full): @comp.
+ */
+NcHIPertComp *
+nc_hipert_comp_ref (NcHIPertComp *comp)
+{
+  return g_object_ref (comp);
+}
+
+/**
+ * nc_hipert_comp_free:
+ * @comp: a #NcHIPertComp
+ *
+ * Decreases the reference count of @comp.
+ *
+ */
+void 
+nc_hipert_comp_free (NcHIPertComp *comp)
+{
+  g_object_unref (comp);
+}
+
+/**
+ * nc_hipert_comp_clear:
+ * @comp: a #NcHIPertComp
+ *
+ * Decreases the reference count of *@comp and sets the pointer *@comp to NULL.
+ *
+ */
+void 
+nc_hipert_comp_clear (NcHIPertComp **comp)
+{
+  g_clear_object (comp);
+}
+
+/**
+ * nc_hipert_comp_get_id:
+ * @comp: a #NcHIPertComp
+ *
+ * Returns: the #NcHIPertBGVar id tied to this component.
+ */
+
+/**
+ * nc_hipert_comp_ndyn_var: (virtual ndyn_var)
+ * @comp: a #NcHIPertComp
+ *
+ * Returns: the number of dynamical components in @comp.
+ */
+guint 
+nc_hipert_comp_ndyn_var (NcHIPertComp *comp)
+{
+  return NC_HIPERT_COMP_GET_CLASS (comp)->ndyn_var (comp);
+}
+
+/**
+ * nc_hipert_comp_coupling_graph: (virtual cgraph)
+ * @comp: a #NcHIPertComp
+ *
+ * Returns: (transfer full) (array) (element-type NcHIPertCompCoupling): the number of dynamical components in @comp.
+ */
+GArray *
+nc_hipert_comp_coupling_graph (NcHIPertComp *comp)
+{
+  return NC_HIPERT_COMP_GET_CLASS (comp)->cgraph (comp);
+}

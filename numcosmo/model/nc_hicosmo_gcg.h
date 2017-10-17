@@ -49,7 +49,7 @@ typedef struct _NcHICosmoGCGPrivate NcHICosmoGCGPrivate;
 typedef gdouble (*NcHICosmoGCGFunc1) (NcHICosmoGCG *cosmo_gcg, gdouble z);
 
 /**
- * NcHICosmoGCGParams:
+ * NcHICosmoGCGSParams:
  * @NC_HICOSMO_GCG_H0: FIXME
  * @NC_HICOSMO_GCG_OMEGA_C: FIXME
  * @NC_HICOSMO_GCG_OMEGA_X: FIXME

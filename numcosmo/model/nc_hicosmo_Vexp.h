@@ -49,7 +49,7 @@ struct _NcHICosmoVexpClass
 };
 
 /**
- * NcHICosmoVexpParams:
+ * NcHICosmoVexpSParams:
  * @NC_HICOSMO_VEXP_H0: Hubble constant
  * @NC_HICOSMO_VEXP_OMEGA_C: scalar field energy density when in a dust-like phase
  * @NC_HICOSMO_VEXP_OMEGA_L: scalar field energy density when in a dark energy-like phase

@@ -30,6 +30,7 @@
 #include <glib.h>
 #include <glib-object.h>
 #include <numcosmo/build_cfg.h>
+#include <numcosmo/perturbations/nc_hipert_comp.h>
 
 G_BEGIN_DECLS
 
@@ -44,14 +45,37 @@ typedef struct _NcHIPertGravClass NcHIPertGravClass;
 typedef struct _NcHIPertGrav NcHIPertGrav;
 typedef struct _NcHIPertGravPrivate NcHIPertGravPrivate;
 
+typedef struct _NcHIPertGravScalar
+{
+  gdouble phi;
+  gdouble dsigma;
+  gdouble psi;
+} NcHIPertGravScalar;
+
+typedef struct _NcHIPertGravVector
+{
+  gdouble dsigma[2];
+} NcHIPertGravVector;
+
+typedef struct _NcHIPertGravTensor
+{
+  gdouble h[2];
+} NcHIPertGravTensor;
+
+typedef void (*NcHIPertGravScalarConstraints) (NcHIPertGrav *grav, NcHIPertBGVar *bg_var, const NcHIPertCompTScalar *Ts, NcHIPertGravScalar *gs);
+typedef void (*NcHIPertGravVectorConstraints) (NcHIPertGrav *grav, NcHIPertBGVar *bg_var, const NcHIPertCompTVector *Tv, NcHIPertGravScalar *gs);
+typedef void (*NcHIPertGravTensorConstraints) (NcHIPertGrav *grav, NcHIPertBGVar *bg_var, const NcHIPertCompTVector *Tt, NcHIPertGravScalar *gs);
+
 struct _NcHIPertGravClass
 {
-  GObjectClass parent_class;
+  /*< private >*/
+  NcHIPertCompClass parent_class;
 };
 
 struct _NcHIPertGrav
 {
-  GObject parent_instance;
+  /*< private >*/
+  NcHIPertComp parent_instance;
   NcHIPertGravPrivate *priv;
 };
 
@@ -59,21 +83,153 @@ struct _NcHIPertGrav
  * NcHIPertGravGauge:
  * @NC_HIPERT_GRAV_GAUGE_NEWTONIAN: Newtonian gauge
  * @NC_HIPERT_GRAV_GAUGE_SYNCHRONOUS: Synchronous gauge
+ * @NC_HIPERT_GRAV_GAUGE_CONST_CURV: Constant curvature gauge
  * 
  * FIXME
  * 
  */
 typedef enum /*< enum,underscore_name=NC_HIPERT_GRAV_GAUGE >*/
 {
-  NC_HIPERT_GRAV_GAUGE_NEWTONIAN,
   NC_HIPERT_GRAV_GAUGE_SYNCHRONOUS,
+  NC_HIPERT_GRAV_GAUGE_NEWTONIAN,
+  NC_HIPERT_GRAV_GAUGE_CONST_CURV,
   /* < private > */
   NC_HIPERT_GRAV_GAUGE_LEN, /*< skip >*/
 } NcHIPertGravGauge;
 
+GType nc_hipert_grav_scalar_get_type (void) G_GNUC_CONST;
+GType nc_hipert_grav_vector_get_type (void) G_GNUC_CONST;
+GType nc_hipert_grav_tensor_get_type (void) G_GNUC_CONST;
 GType nc_hipert_grav_get_type (void) G_GNUC_CONST;
+
+G_INLINE_FUNC NcHIPertGravScalar *nc_hipert_grav_scalar_new (void);
+G_INLINE_FUNC NcHIPertGravScalar *nc_hipert_grav_scalar_dup (NcHIPertGravScalar *gs);
+G_INLINE_FUNC void nc_hipert_grav_scalar_free (NcHIPertGravScalar *gs);
+G_INLINE_FUNC void nc_hipert_grav_scalar_set_zero (NcHIPertGravScalar *gs);
+
+G_INLINE_FUNC NcHIPertGravVector *nc_hipert_grav_vector_new (void);
+G_INLINE_FUNC NcHIPertGravVector *nc_hipert_grav_vector_dup (NcHIPertGravVector *gv);
+G_INLINE_FUNC void nc_hipert_grav_vector_free (NcHIPertGravVector *gv);
+G_INLINE_FUNC void nc_hipert_grav_vector_set_zero (NcHIPertGravVector *gv);
+
+G_INLINE_FUNC NcHIPertGravTensor *nc_hipert_grav_tensor_new (void);
+G_INLINE_FUNC NcHIPertGravTensor *nc_hipert_grav_tensor_dup (NcHIPertGravTensor *gt);
+G_INLINE_FUNC void nc_hipert_grav_tensor_free (NcHIPertGravTensor *gt);
+G_INLINE_FUNC void nc_hipert_grav_tensor_set_zero (NcHIPertGravTensor *gt);
+
+NcHIPertGrav *nc_hipert_grav_ref (NcHIPertGrav *grav);
+void nc_hipert_grav_free (NcHIPertGrav *grav);
+void nc_hipert_grav_clear (NcHIPertGrav **grav);
+
+G_INLINE_FUNC NcHIPertBGVarID nc_hipert_grav_get_id (NcHIPertGrav *grav);
 
 G_END_DECLS
 
 #endif /* _NC_HIPERT_GRAV_H_ */
 
+#ifndef _NC_HIPERT_GRAV_INLINE_H_
+#define _NC_HIPERT_GRAV_INLINE_H_
+#ifdef NUMCOSMO_HAVE_INLINE
+
+G_BEGIN_DECLS
+
+G_INLINE_FUNC NcHIPertGravScalar *
+nc_hipert_grav_scalar_new (void)
+{
+  return g_new0 (NcHIPertGravScalar, 1);
+}
+
+G_INLINE_FUNC NcHIPertGravScalar *
+nc_hipert_grav_scalar_dup (NcHIPertGravScalar *gs)
+{
+  NcHIPertGravScalar *gs_dup = g_new0 (NcHIPertGravScalar, 1);
+
+  gs_dup[0] = gs[0];
+
+  return gs_dup;
+}
+
+G_INLINE_FUNC void
+nc_hipert_grav_scalar_free (NcHIPertGravScalar *gs)
+{
+  g_free (gs);
+}
+
+G_INLINE_FUNC void
+nc_hipert_grav_scalar_set_zero (NcHIPertGravScalar *gs)
+{
+  gs->phi    = 0.0;
+  gs->dsigma = 0.0;
+  gs->psi    = 0.0;
+}
+
+G_INLINE_FUNC NcHIPertGravVector *
+nc_hipert_grav_vector_new (void)
+{
+  return g_new0 (NcHIPertGravVector, 1);
+}
+
+G_INLINE_FUNC NcHIPertGravVector *
+nc_hipert_grav_vector_dup (NcHIPertGravVector *gv)
+{
+  NcHIPertGravVector *gv_dup = g_new0 (NcHIPertGravVector, 1);
+
+  gv_dup[0] = gv[0];
+
+  return gv_dup;
+}
+
+G_INLINE_FUNC void
+nc_hipert_grav_vector_free (NcHIPertGravVector *gv)
+{
+  g_free (gv);
+}
+
+G_INLINE_FUNC void
+nc_hipert_grav_vector_set_zero (NcHIPertGravVector *gv)
+{
+  gv->dsigma[0] = 0.0;
+  gv->dsigma[1] = 0.0;
+}
+
+G_INLINE_FUNC NcHIPertGravTensor *
+nc_hipert_grav_tensor_new (void)
+{
+  return g_new0 (NcHIPertGravTensor, 1);
+}
+
+G_INLINE_FUNC NcHIPertGravTensor *
+nc_hipert_grav_tensor_dup (NcHIPertGravTensor *gt)
+{
+  NcHIPertGravTensor *gt_dup = g_new0 (NcHIPertGravTensor, 1);
+
+  gt_dup[0] = gt[0];
+
+  return gt_dup;
+}
+
+G_INLINE_FUNC void
+nc_hipert_grav_tensor_free (NcHIPertGravTensor *gt)
+{
+  g_free (gt);
+}
+
+G_INLINE_FUNC void
+nc_hipert_grav_tensor_set_zero (NcHIPertGravTensor *gt)
+{
+  gt->h[0] = 0.0;
+  gt->h[1] = 0.0;
+}
+
+G_INLINE_FUNC NcHIPertBGVarID 
+nc_hipert_grav_get_id (NcHIPertGrav *grav)
+{
+  const NcHIPertBGVarID id = NC_HIPERT_COMP_CLASS (NC_HIPERT_GRAV_GET_CLASS (grav))->bg_var_id;
+  g_assert_cmpint (id, >=, 0);
+  return id;
+}
+
+G_END_DECLS
+
+#endif /* NUMCOSMO_HAVE_INLINE */
+#endif /* _NC_HIPERT_GRAV_INLINE_H_ */

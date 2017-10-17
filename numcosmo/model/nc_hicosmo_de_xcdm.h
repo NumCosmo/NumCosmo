@@ -43,7 +43,7 @@ typedef struct _NcHICosmoDEXcdmClass NcHICosmoDEXcdmClass;
 typedef struct _NcHICosmoDEXcdm NcHICosmoDEXcdm;
 
 /**
- * NcHICosmoDEXCDMParams:
+ * NcHICosmoDEXCDMSParams:
  * @NC_HICOSMO_DE_XCDM_W: constant parameter
  *
  * Dark Energy equation of state: $w(z) = w$.

@@ -44,7 +44,7 @@ typedef struct _NcClusterMassBensonClass NcClusterMassBensonClass;
 typedef struct _NcClusterMassBenson NcClusterMassBenson;
 
 /**
- * NcClusterMassBensonParams:
+ * NcClusterMassBensonSParams:
  * @NC_CLUSTER_MASS_BENSON_A_SZ: normalization of the mass-observable relation
  * @NC_CLUSTER_MASS_BENSON_B_SZ: FIXME
  * @NC_CLUSTER_MASS_BENSON_C_SZ: FIXME

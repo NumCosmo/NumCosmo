@@ -42,7 +42,7 @@ typedef struct _NcHICosmoQLinearClass NcHICosmoQLinearClass;
 typedef struct _NcHICosmoQLinear NcHICosmoQLinear;
 
 /**
- * NcHICosmoQLinearParams:
+ * NcHICosmoQLinearSParams:
  * @NC_HICOSMO_QLINEAR_H0: Hubble constant
  * @NC_HICOSMO_QLINEAR_OMEGA_T: total energy density of the universe
  * @NC_HICOSMO_QLINEAR_CD: comoving distance in units of the Hubble radius today

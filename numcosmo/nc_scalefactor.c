@@ -269,17 +269,20 @@ static gint dt_deta (realtype eta, N_Vector y, N_Vector yQdot, gpointer user_dat
  * Returns: (transfer full): a new #NcScalefactor.
  */
 NcScalefactor *
-nc_scalefactor_new (NcScalefactorTimeType ttype, gdouble zf, NcDistance *dist)
+nc_scalefactor_new (NcScalefactorTimeType ttype, const gdouble zf, NcDistance *dist)
 {
   NcScalefactor *a;
+
   if (dist == NULL)
-    dist = nc_distance_new (1.0);
+    dist = nc_distance_new (zf);
+
   a = g_object_new (NC_TYPE_SCALEFACTOR,
-                                     "time-type", ttype,
-                                     "zf", zf,
-                                     "dist", dist,
-                                     NULL);
+                    "time-type", ttype,
+                    "zf", zf,
+                    "dist", dist,
+                    NULL);
   nc_distance_free (dist);
+
   return a;
 }
 
@@ -375,6 +378,28 @@ nc_scalefactor_set_zf (NcScalefactor *a, const gdouble zf)
   {
     a->zf = zf;
     ncm_model_ctrl_force_update (a->ctrl);
+    if (a->dist != NULL)
+      nc_distance_require_zf (a->dist, zf);
+  }
+}
+
+/**
+ * nc_scalefactor_require_zf:
+ * @a: a #NcScalefactor
+ * @zf: maximum redshift required
+ *
+ * Requires the final redshift of at least $z_f$ = @zf.
+ *
+ */
+void 
+nc_scalefactor_require_zf (NcScalefactor *a, const gdouble zf)
+{
+  if (zf > a->zf)
+  {
+    a->zf = zf;
+    ncm_model_ctrl_force_update (a->ctrl);
+    if (a->dist != NULL)
+      nc_distance_require_zf (a->dist, zf);
   }
 }
 

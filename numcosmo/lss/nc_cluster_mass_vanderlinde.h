@@ -44,7 +44,7 @@ typedef struct _NcClusterMassVanderlindeClass NcClusterMassVanderlindeClass;
 typedef struct _NcClusterMassVanderlinde NcClusterMassVanderlinde;
 
 /**
- * NcClusterMassVanderlindeParams:
+ * NcClusterMassVanderlindeSParams:
  * @NC_CLUSTER_MASS_VANDERLINDE_A_SZ: normalization of the mass-observable relation
  * @NC_CLUSTER_MASS_VANDERLINDE_B_SZ: FIXME
  * @NC_CLUSTER_MASS_VANDERLINDE_C_SZ: FIXME

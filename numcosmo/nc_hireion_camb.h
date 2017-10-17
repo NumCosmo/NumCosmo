@@ -55,7 +55,7 @@ struct _NcHIReionCambClass
 };
 
 /**
- * NcHIReionCambParams:
+ * NcHIReionCambSParams:
  * @NC_HIREION_CAMB_HII_HEII_Z: FIXME
  * @NC_HIREION_CAMB_HEIII_Z: FIXME
  *

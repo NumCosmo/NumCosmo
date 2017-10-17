@@ -1,5 +1,5 @@
 /***************************************************************************
- *            scalefactor.h
+ *            nc_scalefactor.h
  *
  *  Wed Nov 12 14:46:40 2008
  *  Copyright  2008  Sandro Dias Pinto Vitenti
@@ -33,7 +33,7 @@
 #ifndef NUMCOSMO_GIR_SCAN
 #include <cvodes/cvodes.h>
 #include <cvodes/cvodes_dense.h>
-#endif
+#endif /* NUMCOSMO_GIR_SCAN */
 
 G_BEGIN_DECLS
 
@@ -99,10 +99,13 @@ NcScalefactor *nc_scalefactor_new (NcScalefactorTimeType ttype, const gdouble zf
 NcScalefactor *nc_scalefactor_ref (NcScalefactor *a);
 void nc_scalefactor_free (NcScalefactor *a);
 void nc_scalefactor_clear (NcScalefactor **a);
+
 void nc_scalefactor_prepare (NcScalefactor *a, NcHICosmo *cosmo);
 void nc_scalefactor_prepare_if_needed (NcScalefactor *a, NcHICosmo *cosmo);
 
 void nc_scalefactor_set_zf (NcScalefactor *a, const gdouble zf);
+void nc_scalefactor_require_zf (NcScalefactor *a, const gdouble zf);
+
 void nc_scalefactor_set_a0 (NcScalefactor *a, const gdouble a0);
 void nc_scalefactor_set_reltol (NcScalefactor *a, const gdouble reltol);
 void nc_scalefactor_set_abstol (NcScalefactor *a, const gdouble abstol);

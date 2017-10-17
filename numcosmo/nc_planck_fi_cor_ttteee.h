@@ -45,7 +45,7 @@ typedef struct _NcPlanckFICorTTTEEEClass NcPlanckFICorTTTEEEClass;
 typedef struct _NcPlanckFICorTTTEEE NcPlanckFICorTTTEEE;
 
 /**
- * NcPlanckFICorTTTEEEParams:
+ * NcPlanckFICorTTTEEESParams:
  * @NC_PLANCK_FI_COR_TTTEEE_galf_EE_A_100: EE amplitude of Galactic dust power at $\ell = 500$ at $100\,$GHz (in $\mu\mathrm{K}^2$)
  * @NC_PLANCK_FI_COR_TTTEEE_galf_EE_A_100_143: EE amplitude of Galactic dust power at $\ell = 500$ at $100 \times 143\,$GHz (in $\mu\mathrm{K}^2$)
  * @NC_PLANCK_FI_COR_TTTEEE_galf_EE_A_100_217: EE amplitude of Galactic dust power at $\ell = 500$ at $100 \times 217\,$GHz (in $\mu\mathrm{K}^2$)

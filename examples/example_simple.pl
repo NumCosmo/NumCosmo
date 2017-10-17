@@ -34,7 +34,7 @@ $dist = new Nc::Distance (2.0);
 #  default values. Remember to use the _orig_ version to set the original
 #  parameters when a reparametrization is used.
 #
-my $h0 = Glib::Object::Introspection->convert_sv_to_enum ("Nc::HICosmoDEParams", "h0");
+my $h0 = Glib::Object::Introspection->convert_sv_to_enum ("Nc::HICosmoDESParams", "h0");
 
 
 #

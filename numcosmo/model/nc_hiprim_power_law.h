@@ -45,7 +45,7 @@ typedef struct _NcHIPrimPowerLawClass NcHIPrimPowerLawClass;
 typedef struct _NcHIPrimPowerLaw NcHIPrimPowerLaw;
 
 /**
- * NcHIPrimPowerLawParams:
+ * NcHIPrimPowerLawSParams:
  * @NC_HIPRIM_POWER_LAW_LN10E10ASA: Amplitude of the adiabatic scalar mode $\ln(10^{10}\mathcal{A}_\mathrm{s})$
  * @NC_HIPRIM_POWER_LAW_T_SA_RATIO: Tensor-to-scalar ratio $r$
  * @NC_HIPRIM_POWER_LAW_N_SA: Adiabatic scalar spectral index $n_s$

@@ -54,7 +54,7 @@ typedef struct _NcClusterPseudoCountsClass NcClusterPseudoCountsClass;
 typedef struct _NcClusterPseudoCounts NcClusterPseudoCounts;
 
 /**
- * NcClusterPseudoCountsParams:
+ * NcClusterPseudoCountsSParams:
  * @NC_CLUSTER_PSEUDO_COUNTS_LNMCUT: logarithm base e of the mass cut-off
  * @NC_CLUSTER_PSEUDO_COUNTS_SD_MCUT: standard deviation of mass cut-off
  * @NC_CLUSTER_PSEUDO_COUNTS_ZMIN: minimum redshift

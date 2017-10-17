@@ -42,7 +42,7 @@ typedef struct _NcHICosmoDEJbpClass NcHICosmoDEJbpClass;
 typedef struct _NcHICosmoDEJbp NcHICosmoDEJbp;
 
 /**
- * NcHICosmoDEJbpParams:
+ * NcHICosmoDEJbpSParams:
  * @NC_HICOSMO_DE_JBP_W0: constant parameter
  * @NC_HICOSMO_DE_JBP_W1: constant parameter which multiplies the redshift term
  *

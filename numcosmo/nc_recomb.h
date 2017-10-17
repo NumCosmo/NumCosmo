@@ -92,9 +92,13 @@ NcRecomb *nc_recomb_new_from_name (const gchar *recomb_name);
 NcRecomb *nc_recomb_ref (NcRecomb *recomb);
 void nc_recomb_free (NcRecomb *recomb);
 void nc_recomb_clear (NcRecomb **recomb);
-void nc_recomb_prepare (NcRecomb *recomb, NcHICosmo *cosmo);
 
+void nc_recomb_prepare (NcRecomb *recomb, NcHICosmo *cosmo);
 G_INLINE_FUNC void nc_recomb_prepare_if_needed (NcRecomb *recomb, NcHICosmo *cosmo);
+
+void nc_recomb_set_zi (NcRecomb *recomb, const gdouble zi);
+void nc_recomb_require_zi (NcRecomb *recomb, const gdouble zi);
+gdouble nc_recomb_get_zi (NcRecomb *recomb);
 
 G_INLINE_FUNC gdouble nc_recomb_Xe (NcRecomb *recomb, NcHICosmo *cosmo, const gdouble lambda);
 G_INLINE_FUNC gdouble nc_recomb_XHII (NcRecomb *recomb, NcHICosmo *cosmo, const gdouble lambda);

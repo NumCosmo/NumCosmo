@@ -45,7 +45,7 @@ typedef struct _NcHIPrimBPLClass NcHIPrimBPLClass;
 typedef struct _NcHIPrimBPL NcHIPrimBPL;
 
 /**
- * NcHIPrimBPLParams:
+ * NcHIPrimBPLSParams:
  * @NC_HIPRIM_BPL_LN10E10ASA: Amplitude of the adiabatic scalar mode $\ln(10^10A_{SA})$
  * @NC_HIPRIM_BPL_N_SA: Adiabatic scalar spectral index
  * @NC_HIPRIM_BPL_DELTA: Exp parameter $\delta$

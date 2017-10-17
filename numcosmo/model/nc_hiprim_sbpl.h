@@ -45,7 +45,7 @@ typedef struct _NcHIPrimSBPLClass NcHIPrimSBPLClass;
 typedef struct _NcHIPrimSBPL NcHIPrimSBPL;
 
 /**
- * NcHIPrimSBPLParams:
+ * NcHIPrimSBPLSParams:
  * @NC_HIPRIM_SBPL_LN10E10ASA: Amplitude of the adiabatic scalar mode $\ln(10^10A_{SA})$
  * @NC_HIPRIM_SBPL_N_SA: Adiabatic scalar spectral index
  * @NC_HIPRIM_SBPL_DELTA: Exp parameter $\delta$
@@ -70,7 +70,7 @@ typedef enum /*< enum,underscore_name=NC_HIPRIM_SBPL_SPARAMS >*/
   NC_HIPRIM_SBPL_N_T,        
   /* < private > */
   NC_HIPRIM_SBPL_SPARAM_LEN, /*< skip >*/
-} NcHIPrimSBPLParams;
+} NcHIPrimSBPLSParams;
 
 struct _NcHIPrimSBPLClass
 {

@@ -42,7 +42,7 @@ typedef struct _NcHICosmoDECplClass NcHICosmoDECplClass;
 typedef struct _NcHICosmoDECpl NcHICosmoDECpl;
 
 /**
- * NcHICosmoDECplParams:
+ * NcHICosmoDECplSParams:
  * @NC_HICOSMO_DE_CPL_W0: constant parameter
  * @NC_HICOSMO_DE_CPL_W1: constant parameter which multiplies the redshift term
  *

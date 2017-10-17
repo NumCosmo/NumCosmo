@@ -44,7 +44,7 @@ typedef struct _NcClusterMassAscasoClass NcClusterMassAscasoClass;
 typedef struct _NcClusterMassAscaso NcClusterMassAscaso;
 
 /**
- * NcClusterMassAscasoParams:
+ * NcClusterMassAscasoSParams:
  * @NC_CLUSTER_MASS_ASCASO_P0: bias 
  * @NC_CLUSTER_MASS_ASCASO_P1: slope 
  * @NC_CLUSTER_MASS_ASCASO_P2: redshift dependency

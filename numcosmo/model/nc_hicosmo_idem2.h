@@ -49,7 +49,7 @@ typedef struct _NcHICosmoIDEM2Private NcHICosmoIDEM2Private;
 typedef gdouble (*NcHICosmoIDEM2Func1) (NcHICosmoIDEM2 *cosmo_idem2, gdouble z);
 
 /**
- * NcHICosmoIDEM2Params:
+ * NcHICosmoIDEM2SParams:
  * @NC_HICOSMO_IDEM2_H0: FIXME
  * @NC_HICOSMO_IDEM2_OMEGA_C: FIXME
  * @NC_HICOSMO_IDEM2_OMEGA_X: FIXME

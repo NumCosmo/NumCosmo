@@ -45,7 +45,7 @@ typedef struct _NcHIPrimAtanClass NcHIPrimAtanClass;
 typedef struct _NcHIPrimAtan NcHIPrimAtan;
 
 /**
- * NcHIPrimAtanParams:
+ * NcHIPrimAtanSParams:
  * @NC_HIPRIM_ATAN_LN10E10ASA: Amplitude of the adiabatic scalar mode $\ln(10^{10}\mathcal{A}_{\mathrm{s}})$
  * @NC_HIPRIM_ATAN_N_SA: Adiabatic scalar spectral index $n_s$
  * @NC_HIPRIM_ATAN_LNKC: Arctan parameter $\ln(k_c)$

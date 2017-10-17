@@ -43,7 +43,7 @@ typedef struct _NcClusterPhotozGaussGlobalClass NcClusterPhotozGaussGlobalClass;
 typedef struct _NcClusterPhotozGaussGlobal NcClusterPhotozGaussGlobal;
 
 /**
- * NcClusterPhotozGaussGlobalParams:
+ * NcClusterPhotozGaussGlobalSParams:
  * @NC_CLUSTER_PHOTOZ_GAUSS_GLOBAL_Z_BIAS: FIXME
  * @NC_CLUSTER_PHOTOZ_GAUSS_GLOBAL_SIGMA0: standard deviation of the gaussian distribution
  *

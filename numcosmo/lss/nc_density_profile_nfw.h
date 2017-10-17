@@ -44,7 +44,7 @@ typedef struct _NcDensityProfileNFWClass NcDensityProfileNFWClass;
 typedef struct _NcDensityProfileNFW NcDensityProfileNFW;
 
 /**
- * NcDensityProfileNFWParams:
+ * NcDensityProfileNFWSParams:
  * @NC_DENSITY_PROFILE_NFW_C_DELTA: concentration parameter
  * @NC_DENSITY_PROFILE_NFW_M_DELTA: halo mass
  *

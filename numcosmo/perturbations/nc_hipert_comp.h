@@ -30,7 +30,9 @@
 #include <glib.h>
 #include <glib-object.h>
 #include <numcosmo/build_cfg.h>
-#include <numcosmo/nc_hicosmo.h>
+#include <numcosmo/math/ncm_vector.h>
+#include <numcosmo/math/ncm_matrix.h>
+#include <numcosmo/perturbations/nc_hipert_bg_var.h>
 
 G_BEGIN_DECLS
 
@@ -64,17 +66,28 @@ typedef struct _NcHIPertCompTTensor
   gdouble a;
 } NcHIPertCompTTensor;
 
-typedef void (*NcHIPertCompCalcDY) (NcHIPertComp *comp, NcHICosmo *cosmo, gconstpointer *bg_vals, const NcmVector *y, NcmVector *dy);
-typedef void (*NcHIPertCompCalcJ) (NcHIPertComp *comp, NcHICosmo *cosmo, gconstpointer *bg_vals, const NcmVector *y, NcmMatrix *J);
-typedef void (*NcHIPertCompCalcDYJ) (NcHIPertComp *comp, NcHICosmo *cosmo, gconstpointer *bg_vals, const NcmVector *y, NcmVector *dy, NcmMatrix *J);
-typedef void (*NcHIPertCompCalcTScalar) (NcHIPertComp *comp, NcHICosmo *cosmo, gconstpointer *bg_vals, const NcmVector *y, NcHIPertCompTScalar *TScalar);
-typedef void (*NcHIPertCompCalcTVector) (NcHIPertComp *comp, NcHICosmo *cosmo, gconstpointer *bg_vals, const NcmVector *y, NcHIPertCompTScalar *TVector);
-typedef void (*NcHIPertCompCalcTTensor) (NcHIPertComp *comp, NcHICosmo *cosmo, gconstpointer *bg_vals, const NcmVector *y, NcHIPertCompTScalar *TTensor);
+typedef struct _NcHIPertCompCoupling
+{
+  gint c_a;
+  gint c_b;
+} NcHIPertCompCoupling;
+
+typedef guint (*NcHIPertCompNDynVar) (NcHIPertComp *comp);
+typedef GArray *(*NcHIPertCompCouplingGraph) (NcHIPertComp *comp);
+typedef void (*NcHIPertCompCalcDY) (NcHIPertComp *comp, NcHIPertBGVar *bg_var, const NcmVector *y, NcmVector *dy);
+typedef void (*NcHIPertCompCalcJ) (NcHIPertComp *comp, NcHIPertBGVar *bg_var, const NcmVector *y, NcmMatrix *J);
+typedef void (*NcHIPertCompCalcDYJ) (NcHIPertComp *comp, NcHIPertBGVar *bg_var, const NcmVector *y, NcmVector *dy, NcmMatrix *J);
+typedef void (*NcHIPertCompCalcTScalar) (NcHIPertComp *comp, NcHIPertBGVar *bg_var, const NcmVector *y, NcHIPertCompTScalar *TScalar);
+typedef void (*NcHIPertCompCalcTVector) (NcHIPertComp *comp, NcHIPertBGVar *bg_var, const NcmVector *y, NcHIPertCompTScalar *TVector);
+typedef void (*NcHIPertCompCalcTTensor) (NcHIPertComp *comp, NcHIPertBGVar *bg_var, const NcmVector *y, NcHIPertCompTScalar *TTensor);
 
 struct _NcHIPertCompClass
 {
   /*< private >*/
   GObjectClass parent_class;
+  NcHIPertBGVarID bg_var_id;
+  NcHIPertCompNDynVar ndyn_var;
+  NcHIPertCompCouplingGraph cgraph;
   NcHIPertCompCalcDY dy;
   NcHIPertCompCalcJ J;
   NcHIPertCompCalcDYJ dy_J;
@@ -93,7 +106,49 @@ struct _NcHIPertComp
 GType nc_hipert_comp_T_scalar_get_type (void) G_GNUC_CONST;
 GType nc_hipert_comp_T_vector_get_type (void) G_GNUC_CONST;
 GType nc_hipert_comp_T_tensor_get_type (void) G_GNUC_CONST;
+GType nc_hipert_comp_coupling_get_type (void) G_GNUC_CONST;
 GType nc_hipert_comp_get_type (void) G_GNUC_CONST;
+
+void nc_hipert_comp_register_bg_var_id (NcHIPertCompClass *comp_class, guint cstruct_size, const gchar *ns, const gchar *desc, const gchar *long_desc);
+
+/**
+ * NC_HIPERT_COMP_BG_VAR_ID_FUNC: (skip)
+ * @comp_ns: FIXME
+ *
+ * FIXME
+ *
+ */
+#define NC_HIPERT_COMP_BG_VAR_ID_FUNC(comp_ns) comp_ns##_id
+
+/**
+ * NC_HIPERT_COMP_DECLARE_BG_VAR_ID: (skip)
+ * @comp_ns: FIXME
+ *
+ * FIXME
+ *
+ */
+#define NC_HIPERT_COMP_DECLARE_BG_VAR_ID(comp_ns) gint32 NC_HIPERT_COMP_BG_VAR_ID_FUNC(comp_ns) (void) G_GNUC_CONST
+
+/**
+ * NC_HIPERT_COMP_REGISTER_BG_VAR_ID: (skip)
+ * @comp_ns: FIXME
+ * @typemacro: FIXME
+ *
+ * FIXME
+ *
+ */
+#define NC_HIPERT_COMP_REGISTER_BG_VAR_ID(comp_ns,typemacro) \
+NcHIPertBGVarID NC_HIPERT_COMP_BG_VAR_ID_FUNC(comp_ns) (void) \
+{ \
+  static NcHIPertBGVarID id = -1; \
+  if (id == -1) \
+  { \
+    NcHIPertCompClass *comp_class = g_type_class_ref (typemacro); \
+    id = comp_class->bg_var_id; \
+    g_type_class_unref (comp_class); \
+  } \
+  return id; \
+}
 
 G_INLINE_FUNC NcHIPertCompTScalar *nc_hipert_comp_T_scalar_new (void);
 G_INLINE_FUNC NcHIPertCompTScalar *nc_hipert_comp_T_scalar_dup (NcHIPertCompTScalar *Ts);
@@ -113,6 +168,19 @@ G_INLINE_FUNC void nc_hipert_comp_T_tensor_free (NcHIPertCompTTensor *Tt);
 G_INLINE_FUNC void nc_hipert_comp_T_tensor_add (NcHIPertCompTTensor *Tt, const NcHIPertCompTTensor *Tt1, const NcHIPertCompTTensor *Tt2);
 G_INLINE_FUNC void nc_hipert_comp_T_tensor_set_zero (NcHIPertCompTTensor *Tt);
 
+G_INLINE_FUNC NcHIPertCompCoupling *nc_hipert_comp_coupling_new (void);
+G_INLINE_FUNC NcHIPertCompCoupling *nc_hipert_comp_coupling_dup (NcHIPertCompCoupling *c);
+G_INLINE_FUNC void nc_hipert_comp_coupling_free (NcHIPertCompCoupling *c);
+
+NcHIPertComp *nc_hipert_comp_ref (NcHIPertComp *comp);
+void nc_hipert_comp_free (NcHIPertComp *comp);
+void nc_hipert_comp_clear (NcHIPertComp **comp);
+
+G_INLINE_FUNC NcHIPertBGVarID nc_hipert_comp_get_id (NcHIPertComp *comp);
+
+guint nc_hipert_comp_ndyn_var (NcHIPertComp *comp);
+GArray *nc_hipert_comp_coupling_graph (NcHIPertComp *comp);
+
 G_END_DECLS
 
 #endif /* _NC_HIPERT_COMP_H_ */
@@ -123,13 +191,13 @@ G_END_DECLS
 
 G_BEGIN_DECLS
 
-NcHIPertCompTScalar *
+G_INLINE_FUNC NcHIPertCompTScalar *
 nc_hipert_comp_T_scalar_new (void)
 {
   return g_new0 (NcHIPertCompTScalar, 1);
 }
 
-NcHIPertCompTScalar *
+G_INLINE_FUNC NcHIPertCompTScalar *
 nc_hipert_comp_T_scalar_dup (NcHIPertCompTScalar *Ts)
 {
   NcHIPertCompTScalar *Ts_dup = g_new0 (NcHIPertCompTScalar, 1);
@@ -139,13 +207,13 @@ nc_hipert_comp_T_scalar_dup (NcHIPertCompTScalar *Ts)
   return Ts_dup;
 }
 
-void
+G_INLINE_FUNC void
 nc_hipert_comp_T_scalar_free (NcHIPertCompTScalar *Ts)
 {
   g_free (Ts);
 }
 
-void
+G_INLINE_FUNC void
 nc_hipert_comp_T_scalar_add (NcHIPertCompTScalar *Ts, const NcHIPertCompTScalar *Ts1, const NcHIPertCompTScalar *Ts2)
 {
   Ts->drho_m_Aphi = Ts1->drho_m_Aphi + Ts2->drho_m_Aphi;
@@ -155,7 +223,7 @@ nc_hipert_comp_T_scalar_add (NcHIPertCompTScalar *Ts, const NcHIPertCompTScalar 
   Ts->Pi          = Ts1->Pi          + Ts2->Pi;
 }
 
-void
+G_INLINE_FUNC void
 nc_hipert_comp_T_scalar_set_zero (NcHIPertCompTScalar *Ts)
 {
   Ts->drho_m_Aphi = 0.0;
@@ -165,13 +233,13 @@ nc_hipert_comp_T_scalar_set_zero (NcHIPertCompTScalar *Ts)
   Ts->Pi          = 0.0;
 }
 
-NcHIPertCompTVector *
+G_INLINE_FUNC NcHIPertCompTVector *
 nc_hipert_comp_T_vector_new (void)
 {
   return g_new0 (NcHIPertCompTVector, 1);
 }
 
-NcHIPertCompTVector *
+G_INLINE_FUNC NcHIPertCompTVector *
 nc_hipert_comp_T_vector_dup (NcHIPertCompTVector *Tv)
 {
   NcHIPertCompTVector *Tv_dup = g_new0 (NcHIPertCompTVector, 1);
@@ -181,31 +249,31 @@ nc_hipert_comp_T_vector_dup (NcHIPertCompTVector *Tv)
   return Tv_dup;
 }
 
-void
+G_INLINE_FUNC void
 nc_hipert_comp_T_vector_free (NcHIPertCompTVector *Tv)
 {
   g_free (Tv);
 }
 
-void
+G_INLINE_FUNC void
 nc_hipert_comp_T_vector_add (NcHIPertCompTVector *Tv, const NcHIPertCompTVector *Tv1, const NcHIPertCompTVector *Tv2)
 {
   Tv->a = Tv1->a + Tv2->a;
 }
 
-void
+G_INLINE_FUNC void
 nc_hipert_comp_T_vector_set_zero (NcHIPertCompTVector *Tv)
 {
   Tv->a = 0.0;
 }
 
-NcHIPertCompTTensor *
+G_INLINE_FUNC NcHIPertCompTTensor *
 nc_hipert_comp_T_tensor_new (void)
 {
   return g_new0 (NcHIPertCompTTensor, 1);
 }
 
-NcHIPertCompTTensor *
+G_INLINE_FUNC NcHIPertCompTTensor *
 nc_hipert_comp_T_tensor_dup (NcHIPertCompTTensor *Tt)
 {
   NcHIPertCompTTensor *Tt_dup = g_new0 (NcHIPertCompTTensor, 1);
@@ -215,22 +283,52 @@ nc_hipert_comp_T_tensor_dup (NcHIPertCompTTensor *Tt)
   return Tt_dup;
 }
 
-void
+G_INLINE_FUNC void
 nc_hipert_comp_T_tensor_free (NcHIPertCompTTensor *Tt)
 {
   g_free (Tt);
 }
 
-void
+G_INLINE_FUNC void
 nc_hipert_comp_T_tensor_add (NcHIPertCompTTensor *Tt, const NcHIPertCompTTensor *Tt1, const NcHIPertCompTTensor *Tt2)
 {
   Tt->a = Tt1->a + Tt2->a;
 }
 
-void
+G_INLINE_FUNC void
 nc_hipert_comp_T_tensor_set_zero (NcHIPertCompTTensor *Tt)
 {
   Tt->a = 0.0;
+}
+
+G_INLINE_FUNC NcHIPertCompCoupling *
+nc_hipert_comp_coupling_new (void)
+{
+  return g_new0 (NcHIPertCompCoupling, 1);
+}
+
+G_INLINE_FUNC NcHIPertCompCoupling *
+nc_hipert_comp_coupling_dup (NcHIPertCompCoupling *c)
+{
+  NcHIPertCompCoupling *c_dup = g_new0 (NcHIPertCompCoupling, 1);
+
+  c_dup[0] = c[0];
+
+  return c_dup;
+}
+
+G_INLINE_FUNC void
+nc_hipert_comp_coupling_free (NcHIPertCompCoupling *c)
+{
+  g_free (c);
+}
+
+G_INLINE_FUNC NcHIPertBGVarID 
+nc_hipert_comp_get_id (NcHIPertComp *comp)
+{
+  const NcHIPertBGVarID id = NC_HIPERT_COMP_GET_CLASS (comp)->bg_var_id;
+  g_assert_cmpint (id, >=, 0);
+  return id;
 }
 
 G_END_DECLS

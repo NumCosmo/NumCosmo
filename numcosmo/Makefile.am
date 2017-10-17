@@ -164,7 +164,8 @@ ncm_sources = \
 	sphere/healpix.c
 
 ncm_sources_nogi = \
-	math/Faddeeva.c
+	math/Faddeeva.c \
+	math/rcm.c
 
 ncm_headers =                                \
 	math/ncm_c.h                         \
@@ -276,7 +277,8 @@ ncm_headers =                                \
 	sphere/healpix.h
 
 ncm_headers_nogi = \
-	math/Faddeeva.h
+	math/Faddeeva.h \
+	math/rcm.h
 
 ncm_headers_internal =
 
@@ -394,6 +396,7 @@ nc_headers = \
 	abc/nc_abc_cluster_ncount.h               \
 	model/quantum_gravity.h                   \
 	perturbations/nc_hipert.h                 \
+	perturbations/nc_hipert_bg_var.h          \
 	perturbations/nc_hipert_wkb.h             \
 	perturbations/nc_hipert_itwo_fluids.h     \
 	perturbations/nc_hipert_adiab.h           \
@@ -404,7 +407,9 @@ nc_headers = \
 	perturbations/nc_hipert_boltzmann_cbe.h   \
 	perturbations/nc_hipert_first_order.h     \
 	perturbations/nc_hipert_grav.h            \
+	perturbations/nc_hipert_grav_einstein.h   \
 	perturbations/nc_hipert_comp.h            \
+	perturbations/nc_hipert_comp_pb.h         \
 	perturbations/linear.h                    \
 	perturbations/covariance.h                \
 	perturbations/linear_internal.h           \
@@ -530,6 +535,7 @@ nc_sources = \
 	abc/nc_abc_cluster_ncount.c               \
 	model/quantum_gravity.c                   \
 	perturbations/nc_hipert.c                 \
+	perturbations/nc_hipert_bg_var.c          \
 	perturbations/nc_hipert_wkb.c             \
 	perturbations/nc_hipert_itwo_fluids.c     \
 	perturbations/nc_hipert_adiab.c           \
@@ -540,7 +546,9 @@ nc_sources = \
 	perturbations/nc_hipert_boltzmann_cbe.c   \
 	perturbations/nc_hipert_first_order.c     \
 	perturbations/nc_hipert_grav.c            \
+	perturbations/nc_hipert_grav_einstein.c   \
 	perturbations/nc_hipert_comp.c            \
+	perturbations/nc_hipert_comp_pb.c         \
 	perturbations/linear.c                    \
 	perturbations/covariance.c                \
 	perturbations/linear_cvodes.c             \

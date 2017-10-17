@@ -46,7 +46,7 @@ typedef struct _NcHICosmoQGRWClass NcHICosmoQGRWClass;
 typedef struct _NcHICosmoQGRW NcHICosmoQGRW;
 
 /**
- * NcHICosmoQGRWParams:
+ * NcHICosmoQGRWSParams:
  * @NC_HICOSMO_QGRW_H0: Hubble constant.
  * @NC_HICOSMO_QGRW_OMEGA_R: Radiation density at $a_0$.
  * @NC_HICOSMO_QGRW_OMEGA_W: $w$-fluid density at $a_0$.

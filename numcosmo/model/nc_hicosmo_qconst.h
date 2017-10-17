@@ -43,7 +43,7 @@ typedef struct _NcHICosmoQConstClass NcHICosmoQConstClass;
 typedef struct _NcHICosmoQConst NcHICosmoQConst;
 
 /**
- * NcHICosmoQConstParams:
+ * NcHICosmoQConstSParams:
  * @NC_HICOSMO_QCONST_H0: Hubble constant
  * @NC_HICOSMO_QCONST_OMEGA_T: total energy density of the universe
  * @NC_HICOSMO_QCONST_CD: comoving distance in units of the Hubble radius today

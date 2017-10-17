@@ -26,7 +26,7 @@
 
 /**
  * SECTION:nc_hipert_grav
- * @title: NcHIPertComp
+ * @title: NcHIPertGrav
  * @short_description: Abstract class describing a general first order gravitation theory.
  *
  * FIXME
@@ -52,7 +52,10 @@ enum
   PROP_GAUGE
 };
 
-G_DEFINE_TYPE (NcHIPertGrav, nc_hipert_grav, G_TYPE_OBJECT);
+G_DEFINE_BOXED_TYPE (NcHIPertGravScalar, nc_hipert_grav_scalar, nc_hipert_grav_scalar_dup, nc_hipert_grav_scalar_free);
+G_DEFINE_BOXED_TYPE (NcHIPertGravVector, nc_hipert_grav_vector, nc_hipert_grav_vector_dup, nc_hipert_grav_vector_free);
+G_DEFINE_BOXED_TYPE (NcHIPertGravTensor, nc_hipert_grav_tensor, nc_hipert_grav_tensor_dup, nc_hipert_grav_tensor_free);
+G_DEFINE_TYPE (NcHIPertGrav, nc_hipert_grav, NC_TYPE_HIPERT_COMP);
 
 static void
 nc_hipert_grav_init (NcHIPertGrav *grav)
@@ -94,6 +97,7 @@ static void
 _nc_hipert_grav_dispose (GObject *object)
 {
 
+  /* Chain up : end */
   G_OBJECT_CLASS (nc_hipert_grav_parent_class)->dispose (object);
 }
 
@@ -101,6 +105,7 @@ static void
 _nc_hipert_grav_finalize (GObject *object)
 {
 
+  /* Chain up : end */
   G_OBJECT_CLASS (nc_hipert_grav_parent_class)->finalize (object);
 }
 
@@ -127,3 +132,142 @@ nc_hipert_grav_class_init (NcHIPertGravClass *klass)
 }
 
 
+/**
+ * nc_hipert_grav_scalar_new:
+ * 
+ * Creates a new #NcHIPertGravScalar with all
+ * entries set to zero.
+ * 
+ * Returns: (transfer full): a new #NcHIPertGravScalar.
+ */
+/**
+ * nc_hipert_grav_scalar_dup:
+ * @gs: a #NcHIPertGravScalar
+ * 
+ * Duplicates @gs.
+ * 
+ * Returns: (transfer full): a copy of @gs.
+ */
+/**
+ * nc_hipert_grav_scalar_free:
+ * @gs: a #NcHIPertGravScalar
+ * 
+ * Frees @gs.
+ * 
+ */
+/**
+ * nc_hipert_grav_scalar_set_zero:
+ * @gs: a #NcHIPertGravScalar
+ * 
+ * Sets all @gs entries to zero.
+ * 
+ */
+
+/**
+ * nc_hipert_grav_vector_new:
+ * 
+ * Creates a new #NcHIPertGravVector with all
+ * entries set to zero.
+ * 
+ * Returns: (transfer full): a new #NcHIPertGravVector.
+ */
+/**
+ * nc_hipert_grav_vector_dup:
+ * @gv: a #NcHIPertGravVector
+ * 
+ * Duplicates @gv.
+ * 
+ * Returns: (transfer full): a copy of @gv.
+ */
+/**
+ * nc_hipert_grav_vector_free:
+ * @gv: a #NcHIPertGravVector
+ * 
+ * Frees @gv.
+ * 
+ */
+/**
+ * nc_hipert_grav_vector_set_zero:
+ * @gv: a #NcHIPertGravVector
+ * 
+ * Sets all @gv entries to zero.
+ * 
+ */
+
+/**
+ * nc_hipert_grav_tensor_new:
+ * 
+ * Creates a new #NcHIPertGravTensor with all
+ * entries set to zero.
+ * 
+ * Returns: (transfer full): a new #NcHIPertGravTensor.
+ */
+/**
+ * nc_hipert_grav_tensor_dup:
+ * @gt: a #NcHIPertGravTensor
+ * 
+ * Duplicates @gt.
+ * 
+ * Returns: (transfer full): a copy of @gt.
+ */
+/**
+ * nc_hipert_grav_tensor_free:
+ * @gt: a #NcHIPertGravTensor
+ * 
+ * Frees @gt.
+ * 
+ */
+/**
+ * nc_hipert_grav_tensor_set_zero:
+ * @gt: a #NcHIPertGravTensor
+ * 
+ * Sets all @gt entries to zero.
+ * 
+ */
+
+/**
+ * nc_hipert_grav_ref:
+ * @grav: a #NcHIPertGrav
+ *
+ * Increases the reference count of @grav.
+ *
+ * Returns: (transfer full): @grav.
+ */
+NcHIPertGrav *
+nc_hipert_grav_ref (NcHIPertGrav *grav)
+{
+  return g_object_ref (grav);
+}
+
+/**
+ * nc_hipert_grav_free:
+ * @grav: a #NcHIPertGrav
+ *
+ * Decreases the reference count of @grav.
+ *
+ */
+void 
+nc_hipert_grav_free (NcHIPertGrav *grav)
+{
+  g_object_unref (grav);
+}
+
+/**
+ * nc_hipert_grav_clear:
+ * @grav: a #NcHIPertGrav
+ *
+ * Decreases the reference count of *@grav and sets the pointer *@grav to NULL.
+ *
+ */
+void 
+nc_hipert_grav_clear (NcHIPertGrav **grav)
+{
+  g_clear_object (grav);
+}
+
+/**
+ * nc_hipert_grav_get_id:
+ * @grav: a #NcHIPertGrav
+ *
+ * Returns: the #NcHIPertBGVar id tied to this gravitation object.
+ */

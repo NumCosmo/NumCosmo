@@ -47,7 +47,7 @@ typedef struct _NcXcorLimberKernelCMBLensingClass NcXcorLimberKernelCMBLensingCl
 typedef struct _NcXcorLimberKernelCMBLensing NcXcorLimberKernelCMBLensing;
 
 /**
- * NcXcorLimberKernelCMBLensingParams:
+ * NcXcorLimberKernelCMBLensingSParams:
  * @NC_XCOR_LIMBER_KERNEL_CMB_LENSING_SPARAM_LEN: FIXME
  *
  * FIXME

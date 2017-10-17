@@ -44,7 +44,7 @@ typedef struct _NcClusterMassBensonXRayClass NcClusterMassBensonXRayClass;
 typedef struct _NcClusterMassBensonXRay NcClusterMassBensonXRay;
 
 /**
- * NcClusterMassBensonXRayParams:
+ * NcClusterMassBensonXRaySParams:
  * @NC_CLUSTER_MASS_BENSON_XRAY_A_X: normalization of the X-ray mass-observable relation
  * @NC_CLUSTER_MASS_BENSON_XRAY_B_X: FIXME
  * @NC_CLUSTER_MASS_BENSON_XRAY_C_X: FIXME

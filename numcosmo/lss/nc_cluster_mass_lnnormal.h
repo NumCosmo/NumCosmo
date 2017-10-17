@@ -44,7 +44,7 @@ typedef struct _NcClusterMassLnnormalClass NcClusterMassLnnormalClass;
 typedef struct _NcClusterMassLnnormal NcClusterMassLnnormal;
 
 /**
- * NcClusterMassLnnormalParams:
+ * NcClusterMassLnnormalSParams:
  * @NC_CLUSTER_MASS_LNNORMAL_BIAS: FIXME
  * @NC_CLUSTER_MASS_LNNORMAL_SIGMA: standard deviation of the log-normal distribution
  *

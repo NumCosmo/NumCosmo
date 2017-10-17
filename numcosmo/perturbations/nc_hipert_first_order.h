@@ -30,6 +30,8 @@
 #include <glib-object.h>
 #include <numcosmo/build_cfg.h>
 #include <numcosmo/perturbations/nc_hipert_boltzmann.h>
+#include <numcosmo/perturbations/nc_hipert_grav.h>
+#include <numcosmo/perturbations/nc_hipert_comp.h>
 
 G_BEGIN_DECLS
 
@@ -58,6 +60,19 @@ struct _NcHIPertFirstOrder
 };
 
 GType nc_hipert_first_order_get_type (void) G_GNUC_CONST;
+
+NcHIPertFirstOrder *nc_hipert_first_order_new (void);
+NcHIPertFirstOrder *nc_hipert_first_order_new_full (NcDistance *dist, NcRecomb *recomb, NcScalefactor *a);
+NcHIPertFirstOrder *nc_hipert_first_order_ref (NcHIPertFirstOrder *fo);
+
+void nc_hipert_first_order_free (NcHIPertFirstOrder *fo);
+void nc_hipert_first_order_clear (NcHIPertFirstOrder **fo);
+
+void nc_hipert_first_order_set_grav (NcHIPertFirstOrder *fo, NcHIPertGrav *grav);
+NcHIPertGrav *nc_hipert_first_order_get_grav (NcHIPertFirstOrder *fo);
+NcHIPertGrav *nc_hipert_first_order_peek_grav (NcHIPertFirstOrder *fo);
+
+void nc_hipert_first_order_add_comp (NcHIPertFirstOrder *fo, NcHIPertComp *comp);
 
 G_END_DECLS
 

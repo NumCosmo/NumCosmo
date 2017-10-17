@@ -45,7 +45,7 @@ typedef struct _NcPlanckFICorTTClass NcPlanckFICorTTClass;
 typedef struct _NcPlanckFICorTT NcPlanckFICorTT;
 
 /**
- * NcPlanckFICorTTParams:
+ * NcPlanckFICorTTSParams:
  * @NC_PLANCK_FI_COR_TT_A_cib_217: Contribution of CIB power to $\mathcal{D}^{217}_{3000}$ at the Planck CMB frequency for $217\,$GHz (in $\mu\mathrm{K}^2$)
  * @NC_PLANCK_FI_COR_TT_cib_index: The effective slope of the CIB spectrum
  * @NC_PLANCK_FI_COR_TT_xi_sz_cib: Correlation coefficient between the CIB and tSZ

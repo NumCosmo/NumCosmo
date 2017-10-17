@@ -48,7 +48,7 @@ typedef struct _NcClusterMassPlCLClass NcClusterMassPlCLClass;
 typedef struct _NcClusterMassPlCL NcClusterMassPlCL;
 
 /**
- * NcClusterMassPlCLParams:
+ * NcClusterMassPlCLSParams:
  * @NC_CLUSTER_MASS_PLCL_A_SZ: slope of the mass-SZ relation
  * @NC_CLUSTER_MASS_PLCL_B_SZ: FIXME
  * @NC_CLUSTER_MASS_PLCL_SD_SZ: standard deviation of the mass-SZ relation

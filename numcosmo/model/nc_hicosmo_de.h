@@ -69,7 +69,7 @@ typedef enum /*< flags,underscore_name=NC_HICOSMO_DE_IMPL >*/
 typedef gdouble (*NcHICosmoDEFunc1) (NcHICosmoDE *cosmo_de, gdouble z);
 
 /**
- * NcHICosmoDEParams:
+ * NcHICosmoDESParams:
  * @NC_HICOSMO_DE_H0: Hubble constant [km/(s Mpc)]
  * @NC_HICOSMO_DE_OMEGA_C: cold dark matter density parameter
  * @NC_HICOSMO_DE_OMEGA_X: dark energy density parameter

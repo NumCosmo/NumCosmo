@@ -45,7 +45,7 @@ typedef struct _NcHIPrimExpcClass NcHIPrimExpcClass;
 typedef struct _NcHIPrimExpc NcHIPrimExpc;
 
 /**
- * NcHIPrimExpcParams:
+ * NcHIPrimExpcSParams:
  * @NC_HIPRIM_EXPC_LN10E10ASA: Amplitude of the adiabatic scalar mode $\ln(10^10A_{SA})$
  * @NC_HIPRIM_EXPC_N_SA: Adiabatic scalar spectral index
  * @NC_HIPRIM_EXPC_LAMBDAC: Exp parameter $\lambda_c$
