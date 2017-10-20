@@ -60,7 +60,7 @@ struct _NcHIPertGravEinstein
 
 GType nc_hipert_grav_einstein_get_type (void) G_GNUC_CONST;
 
-NC_HIPERT_COMP_DECLARE_BG_VAR_ID (nc_hipert_grav_einstein);
+NC_HIPERT_BG_VAR_ID_FUNC_DECL (nc_hipert_grav_einstein);
 
 NcHIPertGravEinstein *nc_hipert_grav_einstein_new (void);
 NcHIPertGravEinstein *nc_hipert_grav_einstein_ref (NcHIPertGravEinstein *gr);

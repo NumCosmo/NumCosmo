@@ -64,6 +64,7 @@ struct _NcHIPertBGVarClass
 {
   /*< private >*/
   GObjectClass parent_class;
+  NcHIPertBGVarID bg_var_id_len;
   GHashTable *ns_table;
   GArray *bg_var_desc_array;
 };
@@ -85,6 +86,49 @@ struct _NcHIPertBGVar
 };
 
 GType nc_hipert_bg_var_get_type (void) G_GNUC_CONST;
+
+void nc_hipert_bg_var_class_register_id (const gchar *ns, const gchar *desc, const gchar *long_desc, guint cstruct_size);
+NcHIPertBGVarID nc_hipert_bg_var_class_get_id_by_gtype (GType gt);
+NcHIPertBGVarID nc_hipert_bg_var_class_get_id_by_ns (const gchar *ns);
+
+/**
+ * NC_HIPERT_BG_VAR_ID_FUNC: (skip)
+ * @obj_ns: object namespace
+ *
+ * FIXME
+ *
+ */
+#define NC_HIPERT_BG_VAR_ID_FUNC(obj_ns) obj_ns##_id
+
+/**
+ * NC_HIPERT_BG_VAR_ID_FUNC_DECL: (skip)
+ * @obj_ns: object namespace
+ *
+ * Declare the id function associated with @obj_ns.
+ *
+ */
+#define NC_HIPERT_BG_VAR_ID_FUNC_DECL(obj_ns) NcHIPertBGVarID NC_HIPERT_BG_VAR_ID_FUNC(obj_ns) (void) G_GNUC_CONST
+
+/**
+ * NC_HIPERT_BG_VAR_ID_FUNC_IMPL: (skip)
+ * @obj_ns: object namespace
+ * @ns: namespace
+ *
+ * The implementation of the id function associated with @obj_ns.
+ *
+ */
+#define NC_HIPERT_BG_VAR_ID_FUNC_IMPL(obj_ns,ns) \
+NcHIPertBGVarID NC_HIPERT_BG_VAR_ID_FUNC(obj_ns) (void) \
+{ \
+  static NcHIPertBGVarID id = -1; \
+  if (id == -1) \
+  { \
+    NcHIPertBGVarClass *bg_var_class = g_type_class_ref (NC_TYPE_HIPERT_BG_VAR); \
+    id = nc_hipert_bg_var_class_get_id_by_ns (#ns); \
+    g_type_class_unref (bg_var_class); \
+  } \
+  return id; \
+}
 
 NcHIPertBGVar *nc_hipert_bg_var_new (void);
 NcHIPertBGVar *nc_hipert_bg_var_new_full (NcDistance *dist, NcRecomb *recomb, NcScalefactor *a);
@@ -113,8 +157,8 @@ gdouble nc_hipert_bg_var_get_zf (NcHIPertBGVar *bg_var);
 
 guint nc_hipert_bg_var_len (NcHIPertBGVar *bg_var);
 
-void nc_hipert_bg_var_register_comp (NcHIPertBGVar *bg_var, ...);
-void nc_hipert_bg_var_register_comp_array (NcHIPertBGVar *bg_var, GArray *ids);
+void nc_hipert_bg_var_activate_id (NcHIPertBGVar *bg_var, ...);
+void nc_hipert_bg_var_activate_id_array (NcHIPertBGVar *bg_var, GArray *ids);
 
 #define NC_HIPERT_BG_VAR_DEFAULT_ZF (1.0e9)
 

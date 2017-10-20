@@ -105,13 +105,15 @@ _nc_hipert_grav_einstein_finalize (GObject *object)
   G_OBJECT_CLASS (nc_hipert_grav_einstein_parent_class)->finalize (object);
 }
 
-NC_HIPERT_COMP_REGISTER_BG_VAR_ID (nc_hipert_grav_einstein, NC_TYPE_HIPERT_GRAV_EINSTEIN);
+NC_HIPERT_BG_VAR_ID_FUNC_IMPL (nc_hipert_grav_einstein, NcHIPertGravEinstein)
+
+static guint _nc_hipert_grav_einstein_ndyn_var (NcHIPertGrav *grav);
+static GArray *_nc_hipert_grav_cgraph (NcHIPertGrav *grav);
 
 static void
 nc_hipert_grav_einstein_class_init (NcHIPertGravEinsteinClass *klass)
 {
-  GObjectClass* object_class    = G_OBJECT_CLASS (klass);
-  NcHIPertCompClass *comp_class = NC_HIPERT_COMP_CLASS (klass);
+  GObjectClass* object_class = G_OBJECT_CLASS (klass);
 
   g_type_class_add_private (klass, sizeof (NcHIPertGravEinsteinPrivate));
 
@@ -130,13 +132,47 @@ nc_hipert_grav_einstein_class_init (NcHIPertGravEinsteinClass *klass)
                                                      0,
                                                      G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
-  nc_hipert_comp_register_bg_var_id (comp_class, 
-                                     0, 
-                                     "NcHIPertGravEinstein", 
-                                     "First order Einstein equations background variables", 
-                                     NULL);
+  nc_hipert_bg_var_class_register_id ("NcHIPertGravEinstein", 
+                                      "First order Einstein equations background variables", 
+                                      NULL,
+                                      0);  
 }
 
+static guint 
+_nc_hipert_grav_einstein_ndyn_var (NcHIPertGrav *grav)
+{
+  guint ndyn = 0;
+  switch (nc_hipert_grav_get_gauge (grav))
+  {
+    case NC_HIPERT_GRAV_GAUGE_SYNCHRONOUS:
+    case NC_HIPERT_GRAV_GAUGE_NEWTONIAN:
+    case NC_HIPERT_GRAV_GAUGE_CONST_CURV:
+      ndyn = 1;
+      break;
+    default:
+      g_assert_not_reached ();
+      break;
+  }
+
+  return ndyn;
+}
+
+static GArray *
+_nc_hipert_grav_cgraph (NcHIPertGrav *grav)
+{
+  switch (nc_hipert_grav_get_gauge (grav))
+  {
+    case NC_HIPERT_GRAV_GAUGE_SYNCHRONOUS:
+    case NC_HIPERT_GRAV_GAUGE_NEWTONIAN:
+    case NC_HIPERT_GRAV_GAUGE_CONST_CURV:
+      break;
+    default:
+      g_assert_not_reached ();
+      break;
+  }
+
+  return NULL;
+}
 
 /**
  * nc_hipert_grav_einstein_new:

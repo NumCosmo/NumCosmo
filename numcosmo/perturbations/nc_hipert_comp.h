@@ -33,6 +33,7 @@
 #include <numcosmo/math/ncm_vector.h>
 #include <numcosmo/math/ncm_matrix.h>
 #include <numcosmo/perturbations/nc_hipert_bg_var.h>
+#include <numcosmo/perturbations/nc_hipert_grav.h>
 
 G_BEGIN_DECLS
 
@@ -74,6 +75,12 @@ typedef struct _NcHIPertCompCoupling
 
 typedef guint (*NcHIPertCompNDynVar) (NcHIPertComp *comp);
 typedef GArray *(*NcHIPertCompCouplingGraph) (NcHIPertComp *comp);
+
+typedef void (*NcHIPertCompSetGauge) (NcHIPertComp *comp, NcHIPertCompGauge gauge);
+typedef NcHIPertCompGauge (*NcHIPertCompGetGauge) (NcHIPertComp *comp);
+
+typedef void (*NcHIPertCompGetTScalarCoupling) (NcHIPertComp *comp, GArray **drho, GArray **v, GArray **dp, GArray **Pi);
+
 typedef void (*NcHIPertCompCalcDY) (NcHIPertComp *comp, NcHIPertBGVar *bg_var, const NcmVector *y, NcmVector *dy);
 typedef void (*NcHIPertCompCalcJ) (NcHIPertComp *comp, NcHIPertBGVar *bg_var, const NcmVector *y, NcmMatrix *J);
 typedef void (*NcHIPertCompCalcDYJ) (NcHIPertComp *comp, NcHIPertBGVar *bg_var, const NcmVector *y, NcmVector *dy, NcmMatrix *J);
@@ -85,15 +92,17 @@ struct _NcHIPertCompClass
 {
   /*< private >*/
   GObjectClass parent_class;
-  NcHIPertBGVarID bg_var_id;
   NcHIPertCompNDynVar ndyn_var;
   NcHIPertCompCouplingGraph cgraph;
+  NcHIPertCompSetGauge set_gauge;
+  NcHIPertCompGetGauge get_gauge;
+  NcHIPertCompGetTScalarCoupling get_Tscalar_coupling;
   NcHIPertCompCalcDY dy;
   NcHIPertCompCalcJ J;
   NcHIPertCompCalcDYJ dy_J;
-  NcHIPertCompCalcTScalar TScalar;
-  NcHIPertCompCalcTVector TVector;
-  NcHIPertCompCalcTTensor TTensor;
+  NcHIPertCompCalcTScalar Tscalar;
+  NcHIPertCompCalcTVector Tvector;
+  NcHIPertCompCalcTTensor Ttensor;
 };
 
 struct _NcHIPertComp
@@ -108,47 +117,6 @@ GType nc_hipert_comp_T_vector_get_type (void) G_GNUC_CONST;
 GType nc_hipert_comp_T_tensor_get_type (void) G_GNUC_CONST;
 GType nc_hipert_comp_coupling_get_type (void) G_GNUC_CONST;
 GType nc_hipert_comp_get_type (void) G_GNUC_CONST;
-
-void nc_hipert_comp_register_bg_var_id (NcHIPertCompClass *comp_class, guint cstruct_size, const gchar *ns, const gchar *desc, const gchar *long_desc);
-
-/**
- * NC_HIPERT_COMP_BG_VAR_ID_FUNC: (skip)
- * @comp_ns: FIXME
- *
- * FIXME
- *
- */
-#define NC_HIPERT_COMP_BG_VAR_ID_FUNC(comp_ns) comp_ns##_id
-
-/**
- * NC_HIPERT_COMP_DECLARE_BG_VAR_ID: (skip)
- * @comp_ns: FIXME
- *
- * FIXME
- *
- */
-#define NC_HIPERT_COMP_DECLARE_BG_VAR_ID(comp_ns) gint32 NC_HIPERT_COMP_BG_VAR_ID_FUNC(comp_ns) (void) G_GNUC_CONST
-
-/**
- * NC_HIPERT_COMP_REGISTER_BG_VAR_ID: (skip)
- * @comp_ns: FIXME
- * @typemacro: FIXME
- *
- * FIXME
- *
- */
-#define NC_HIPERT_COMP_REGISTER_BG_VAR_ID(comp_ns,typemacro) \
-NcHIPertBGVarID NC_HIPERT_COMP_BG_VAR_ID_FUNC(comp_ns) (void) \
-{ \
-  static NcHIPertBGVarID id = -1; \
-  if (id == -1) \
-  { \
-    NcHIPertCompClass *comp_class = g_type_class_ref (typemacro); \
-    id = comp_class->bg_var_id; \
-    g_type_class_unref (comp_class); \
-  } \
-  return id; \
-}
 
 G_INLINE_FUNC NcHIPertCompTScalar *nc_hipert_comp_T_scalar_new (void);
 G_INLINE_FUNC NcHIPertCompTScalar *nc_hipert_comp_T_scalar_dup (NcHIPertCompTScalar *Ts);
@@ -177,6 +145,11 @@ void nc_hipert_comp_free (NcHIPertComp *comp);
 void nc_hipert_comp_clear (NcHIPertComp **comp);
 
 G_INLINE_FUNC NcHIPertBGVarID nc_hipert_comp_get_id (NcHIPertComp *comp);
+
+void nc_hipert_comp_set_gauge (NcHIPertComp *comp, NcHIPertCompGauge gauge);
+NcHIPertCompGauge nc_hipert_comp_get_gauge (NcHIPertComp *comp);
+
+void nc_hipert_comp_get_Tscalar_coupling (NcHIPertComp *comp, GArray **drho, GArray **v, GArray **dp, GArray **Pi);
 
 guint nc_hipert_comp_ndyn_var (NcHIPertComp *comp);
 GArray *nc_hipert_comp_coupling_graph (NcHIPertComp *comp);
@@ -326,7 +299,7 @@ nc_hipert_comp_coupling_free (NcHIPertCompCoupling *c)
 G_INLINE_FUNC NcHIPertBGVarID 
 nc_hipert_comp_get_id (NcHIPertComp *comp)
 {
-  const NcHIPertBGVarID id = NC_HIPERT_COMP_GET_CLASS (comp)->bg_var_id;
+  const NcHIPertBGVarID id = nc_hipert_bg_var_class_get_id_by_ns (G_OBJECT_TYPE_NAME (comp));
   g_assert_cmpint (id, >=, 0);
   return id;
 }

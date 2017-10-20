@@ -60,7 +60,7 @@ struct _NcHIPertCompPB
 
 GType nc_hipert_comp_pb_get_type (void) G_GNUC_CONST;
 
-NC_HIPERT_COMP_DECLARE_BG_VAR_ID (nc_hipert_comp_pb);
+NC_HIPERT_BG_VAR_ID_FUNC_DECL (nc_hipert_comp_pb);
 
 NcHIPertCompPB *nc_hipert_comp_pb_new (void);
 NcHIPertCompPB *nc_hipert_comp_pb_ref (NcHIPertCompPB *pb);

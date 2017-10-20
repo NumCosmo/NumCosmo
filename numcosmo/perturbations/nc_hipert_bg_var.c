@@ -181,9 +181,114 @@ nc_hipert_bg_var_class_init (NcHIPertBGVarClass *klass)
                                                         "Maximum redshift",
                                                         1.0, G_MAXDOUBLE, NC_HIPERT_BG_VAR_DEFAULT_ZF,
                                                         G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-  
+  klass->bg_var_id_len     = 0;
   klass->ns_table          = g_hash_table_new (g_str_hash, g_str_equal);
   klass->bg_var_desc_array = g_array_new (FALSE, TRUE, sizeof (NcHIPertBGVarDesc));
+}
+
+G_LOCK_DEFINE_STATIC (last_bg_var_id);
+
+/**
+ * nc_hipert_comp_register_bg_var_id: (skip)
+ * @cstruct_size: component struct size
+ * @ns: object namespace
+ * @desc: short description
+ * @long_desc: long description
+ *
+ * FIXME
+ *
+ */
+void
+nc_hipert_bg_var_class_register_id (const gchar *ns, const gchar *desc, const gchar *long_desc, guint cstruct_size)
+{
+  NcHIPertBGVarClass *bg_var_class = g_type_class_ref (NC_TYPE_HIPERT_BG_VAR);
+  NcHIPertBGVarDesc *bg_var_desc   = NULL;
+  NcHIPertBGVarID id;
+
+  G_LOCK (last_bg_var_id);
+
+  id = bg_var_class->bg_var_id_len;
+
+  bg_var_class->bg_var_id_len++;
+  
+  g_array_set_size (bg_var_class->bg_var_desc_array, bg_var_class->bg_var_id_len);
+
+  bg_var_desc       = &g_array_index (bg_var_class->bg_var_desc_array, NcHIPertBGVarDesc, id);
+  bg_var_desc->init = TRUE;
+
+  if (ns == NULL)
+    g_error ("Cannot register background variables without a namespace.");
+  if (desc == NULL)
+    g_error ("Cannot register background variables without a description.");
+
+  bg_var_desc->ns           = g_strdup (ns);
+  bg_var_desc->desc         = g_strdup (desc);
+  bg_var_desc->cstruct_size = cstruct_size;
+
+  if (long_desc != NULL)
+    bg_var_desc->long_desc = g_strdup (long_desc);
+  else
+    bg_var_desc->long_desc = NULL;
+
+  if (g_hash_table_lookup (bg_var_class->ns_table, ns) != NULL)
+    g_error ("Background variable namespace <%s> already registered.", ns);
+
+  g_hash_table_insert (bg_var_class->ns_table, bg_var_desc->ns, GINT_TO_POINTER (id));
+
+  G_UNLOCK (last_bg_var_id);
+  g_type_class_unref (bg_var_class);
+  
+  return;
+}
+
+/**
+ * nc_hipert_bg_var_class_get_id_by_gtype: (skip)
+ * @gt: a #GType
+ *
+ * Gets the id associated with the GType @gt.
+ * 
+ * Returns: the id of @gt.
+ */
+NcHIPertBGVarID 
+nc_hipert_bg_var_class_get_id_by_gtype (GType gt)
+{
+  NcHIPertBGVarClass *bg_var_class = g_type_class_ref (NC_TYPE_HIPERT_BG_VAR);
+  gpointer id_ptr = NULL;
+  gboolean has_it = FALSE;
+  
+  G_LOCK (last_bg_var_id);
+
+  has_it = g_hash_table_lookup_extended (bg_var_class->ns_table, g_type_name (gt), NULL, &id_ptr);
+
+  G_UNLOCK (last_bg_var_id);
+
+  g_type_class_unref (bg_var_class);
+  return has_it ? GPOINTER_TO_INT (id_ptr) : -1;
+}
+
+/**
+ * nc_hipert_bg_var_class_get_id_by_ns: (skip)
+ * @ns: an object namespace
+ *
+ * Gets the id associated with the namespace @ns.
+ * 
+ * Returns: the id of @ns.
+ */
+NcHIPertBGVarID 
+nc_hipert_bg_var_class_get_id_by_ns (const gchar *ns)
+{
+  NcHIPertBGVarClass *bg_var_class = g_type_class_ref (NC_TYPE_HIPERT_BG_VAR);
+  gpointer id_ptr = NULL;
+  gboolean has_it = FALSE;
+  
+  G_LOCK (last_bg_var_id);
+
+  has_it = g_hash_table_lookup_extended (bg_var_class->ns_table, ns, NULL, &id_ptr);
+
+  G_UNLOCK (last_bg_var_id);
+
+  g_type_class_unref (bg_var_class);
+  return has_it ? GPOINTER_TO_INT (id_ptr) : -1;
 }
 
 /**
@@ -440,7 +545,7 @@ nc_hipert_bg_var_cstruct_len (NcHIPertBGVar *bg_var, NcHIPertBGVarID id)
 }
 
 static void
-_nc_hipert_bg_var_activate_comp (NcHIPertBGVar *bg_var, NcHIPertBGVarID id)
+_nc_hipert_bg_var_activate_id (NcHIPertBGVar *bg_var, NcHIPertBGVarID id)
 {
   const guint len =  nc_hipert_bg_var_len (bg_var);
 
@@ -449,13 +554,13 @@ _nc_hipert_bg_var_activate_comp (NcHIPertBGVar *bg_var, NcHIPertBGVarID id)
   g_ptr_array_set_size (bg_var->cstructs, len);
 
   if (g_ptr_array_index (bg_var->cstructs, id) != NULL)
-    g_warning ("_nc_hipert_bg_var_activate_comp: component %d already activated, ignoring...", id);
+    g_warning ("_nc_hipert_bg_var_activate_id: component %d already activated, ignoring...", id);
   else
     g_ptr_array_index (bg_var->cstructs, id) = g_malloc0 (nc_hipert_bg_var_cstruct_len (bg_var, id));
 }
 
 /**
- * nc_hipert_bg_var_register_comp: (skip)
+ * nc_hipert_bg_var_activate_id: (skip)
  * @bg_var: a #NcHIPertBGVar
  * @...: a list of background ids
  *
@@ -464,7 +569,7 @@ _nc_hipert_bg_var_activate_comp (NcHIPertBGVar *bg_var, NcHIPertBGVarID id)
  *
  */
 void
-nc_hipert_bg_var_register_comp (NcHIPertBGVar *bg_var, ...)
+nc_hipert_bg_var_activate_id (NcHIPertBGVar *bg_var, ...)
 {
   NcHIPertBGVarID id; 
   va_list ap;
@@ -473,14 +578,14 @@ nc_hipert_bg_var_register_comp (NcHIPertBGVar *bg_var, ...)
 
   while ((id = va_arg (ap, NcHIPertBGVarID)) >= 0)
   {
-    _nc_hipert_bg_var_activate_comp (bg_var, id);
+    _nc_hipert_bg_var_activate_id (bg_var, id);
   }
   
   va_end (ap);
 }
 
 /**
- * nc_hipert_bg_var_register_comp_array:
+ * nc_hipert_bg_var_activate_id_array:
  * @bg_var: a #NcHIPertBGVar
  * @ids: (array) (element-type NcHIPertBGVarID): an array of background ids
  *
@@ -489,7 +594,7 @@ nc_hipert_bg_var_register_comp (NcHIPertBGVar *bg_var, ...)
  *
  */
 void
-nc_hipert_bg_var_register_comp_array (NcHIPertBGVar *bg_var, GArray *ids)
+nc_hipert_bg_var_activate_id_array (NcHIPertBGVar *bg_var, GArray *ids)
 {
   NcHIPertBGVarID id;
   guint i;
@@ -497,6 +602,6 @@ nc_hipert_bg_var_register_comp_array (NcHIPertBGVar *bg_var, GArray *ids)
   for (i = 0; i < ids->len; i++)
   {
     id = g_array_index (ids, NcHIPertBGVarID, i);
-    _nc_hipert_bg_var_activate_comp (bg_var, id);
+    _nc_hipert_bg_var_activate_id (bg_var, id);
   }
 }

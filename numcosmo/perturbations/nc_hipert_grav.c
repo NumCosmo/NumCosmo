@@ -43,36 +43,41 @@
 
 struct _NcHIPertGravPrivate
 {
-  gint a;
+  NcHIPertCompGauge gauge;
 };
 
 enum
 {
   PROP_0,
-  PROP_GAUGE
+  PROP_GAUGE,
+  PROP_LEN
 };
 
 G_DEFINE_BOXED_TYPE (NcHIPertGravScalar, nc_hipert_grav_scalar, nc_hipert_grav_scalar_dup, nc_hipert_grav_scalar_free);
 G_DEFINE_BOXED_TYPE (NcHIPertGravVector, nc_hipert_grav_vector, nc_hipert_grav_vector_dup, nc_hipert_grav_vector_free);
 G_DEFINE_BOXED_TYPE (NcHIPertGravTensor, nc_hipert_grav_tensor, nc_hipert_grav_tensor_dup, nc_hipert_grav_tensor_free);
-G_DEFINE_TYPE (NcHIPertGrav, nc_hipert_grav, NC_TYPE_HIPERT_COMP);
+G_DEFINE_TYPE (NcHIPertGrav, nc_hipert_grav, G_TYPE_OBJECT);
 
 static void
 nc_hipert_grav_init (NcHIPertGrav *grav)
 {
   grav->priv = G_TYPE_INSTANCE_GET_PRIVATE (grav, NC_TYPE_HIPERT_GRAV, NcHIPertGravPrivate);
+
+  grav->priv->gauge = NC_HIPERT_GRAV_GAUGE_LEN;
 }
 
 static void
 _nc_hipert_grav_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
 {
+  NcHIPertGrav *grav = NC_HIPERT_GRAV (object);
   g_return_if_fail (NC_IS_HIPERT_GRAV (object));
 
   switch (prop_id)
   {
     case PROP_GAUGE:
+      nc_hipert_grav_set_gauge (grav, g_value_get_enum (value));
       break;
-    default:
+   default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
       break;
   }
@@ -81,11 +86,13 @@ _nc_hipert_grav_set_property (GObject *object, guint prop_id, const GValue *valu
 static void
 _nc_hipert_grav_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
 {
+  NcHIPertGrav *grav = NC_HIPERT_GRAV (object);
   g_return_if_fail (NC_IS_HIPERT_GRAV (object));
 
   switch (prop_id)
   {
     case PROP_GAUGE:
+      g_value_set_enum (value, nc_hipert_grav_get_gauge (grav));
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -109,6 +116,9 @@ _nc_hipert_grav_finalize (GObject *object)
   G_OBJECT_CLASS (nc_hipert_grav_parent_class)->finalize (object);
 }
 
+static void _nc_hipert_grav_set_gauge (NcHIPertGrav *grav, NcHIPertCompGauge gauge);
+static NcHIPertCompGauge _nc_hipert_grav_get_gauge (NcHIPertGrav *grav);
+
 static void
 nc_hipert_grav_class_init (NcHIPertGravClass *klass)
 {
@@ -128,9 +138,23 @@ nc_hipert_grav_class_init (NcHIPertGravClass *klass)
                                                       "gauge",
                                                       NC_TYPE_HIPERT_GRAV_GAUGE,
                                                       NC_HIPERT_GRAV_GAUGE_SYNCHRONOUS,
-                                                      G_PARAM_READABLE | G_PARAM_WRITABLE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+                                                      G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+
+  klass->set_gauge = &_nc_hipert_grav_set_gauge;
+  klass->get_gauge = &_nc_hipert_grav_get_gauge;
 }
 
+static void 
+_nc_hipert_grav_set_gauge (NcHIPertGrav *grav, NcHIPertCompGauge gauge)
+{
+  grav->priv->gauge = gauge;
+}
+
+static NcHIPertCompGauge 
+_nc_hipert_grav_get_gauge (NcHIPertGrav *grav)
+{
+  return grav->priv->gauge;
+}
 
 /**
  * nc_hipert_grav_scalar_new:
@@ -271,3 +295,32 @@ nc_hipert_grav_clear (NcHIPertGrav **grav)
  *
  * Returns: the #NcHIPertBGVar id tied to this gravitation object.
  */
+
+/**
+ * nc_hipert_grav_set_gauge: (virtual set_gauge)
+ * @grav: a #NcHIPertGrav
+ * @gauge: a #NcHIPertCompGauge
+ * 
+ * Sets the gauge #NcHIPertCompGauge that @grav should use.
+ * 
+ */
+void 
+nc_hipert_grav_set_gauge (NcHIPertGrav *grav, NcHIPertCompGauge gauge)
+{
+  NC_HIPERT_GRAV_GET_CLASS (grav)->set_gauge (grav, gauge);
+}
+
+/**
+ * nc_hipert_grav_get_gauge: (virtual get_gauge)
+ * @grav: a #NcHIPertGrav
+ * 
+ * Gets the gauge #NcHIPertCompGauge used by the gravonent @grav.
+ * 
+ * Returns: current gauge of @grav.
+ */
+NcHIPertCompGauge 
+nc_hipert_grav_get_gauge (NcHIPertGrav *grav)
+{
+  return NC_HIPERT_GRAV_GET_CLASS (grav)->get_gauge (grav);
+}
+

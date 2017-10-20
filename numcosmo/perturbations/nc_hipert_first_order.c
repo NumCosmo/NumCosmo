@@ -39,6 +39,7 @@
 
 #include "perturbations/nc_hipert_first_order.h"
 #include "nc_recomb_seager.h"
+#include "nc_enum_types.h"
 
 #ifndef NUMCOSMO_GIR_SCAN
 #include "math/rcm.h"
@@ -49,11 +50,13 @@ struct _NcHIPertFirstOrderPrivate
   NcHIPertGrav *grav;
   GPtrArray *comps;
   NcHIPertBGVar *bg_var;
+  NcHIPertCompGauge gauge;
 };
 
 enum
 {
   PROP_0,
+  PROP_GAUGE,
   PROP_GRAV,
   PROP_CARRAY,
   PROP_DIST,
@@ -71,6 +74,7 @@ nc_hipert_first_order_init (NcHIPertFirstOrder *fo)
   fo->priv->grav   = NULL;
   fo->priv->comps  = g_ptr_array_new ();
   fo->priv->bg_var = nc_hipert_bg_var_new ();
+  fo->priv->gauge  = NC_HIPERT_GRAV_GAUGE_LEN;
 
   if (FALSE)
   {
@@ -135,9 +139,7 @@ nc_hipert_first_order_init (NcHIPertFirstOrder *fo)
     g_free (adj_row);
     g_free (perm);
     g_free (perm_inv);
-
   }
-  
 }
 
 static void
@@ -148,6 +150,9 @@ _nc_hipert_first_order_set_property (GObject *object, guint prop_id, const GValu
 
   switch (prop_id)
   {
+    case PROP_GAUGE:
+      nc_hipert_first_order_set_gauge (fo, g_value_get_enum (value));
+      break;    
     case PROP_GRAV:
       nc_hipert_first_order_set_grav (fo, g_value_get_object (value));
       break;    
@@ -188,6 +193,9 @@ _nc_hipert_first_order_get_property (GObject *object, guint prop_id, GValue *val
 
   switch (prop_id)
   {
+    case PROP_GAUGE:
+      g_value_set_enum (value, nc_hipert_first_order_get_gauge (fo));
+      break;    
     case PROP_GRAV:
       g_value_take_object (value, nc_hipert_first_order_get_grav (fo));
       break;    
@@ -266,6 +274,13 @@ nc_hipert_first_order_class_init (NcHIPertFirstOrderClass *klass)
   object_class->dispose      = &_nc_hipert_first_order_dispose;
   object_class->finalize     = &_nc_hipert_first_order_finalize;
 
+  g_object_class_install_property (object_class,
+                                   PROP_GAUGE,
+                                   g_param_spec_enum ("gauge",
+                                                      NULL,
+                                                      "Gauge",
+                                                      NC_TYPE_HIPERT_GRAV_GAUGE, NC_HIPERT_GRAV_GAUGE_SYNCHRONOUS, 
+                                                      G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
   g_object_class_install_property (object_class,
                                    PROP_GRAV,
                                    g_param_spec_object ("grav",
@@ -388,6 +403,83 @@ nc_hipert_first_order_clear (NcHIPertFirstOrder **fo)
   g_clear_object (fo);
 }
 
+static void
+_nc_hipert_first_order_prepare_internal (NcHIPertFirstOrder *fo)
+{
+  if (fo->priv->grav != NULL)
+  {
+    GArray *grav_drho = NULL, *grav_v = NULL, *grav_dp = NULL, *grav_Pi = NULL;
+    guint i;
+    
+    nc_hipert_comp_get_Tscalar_coupling (NC_HIPERT_COMP (fo->priv->grav), &grav_drho, &grav_v, &grav_dp, &grav_Pi);
+
+    for (i = 0; i < fo->priv->comps->len; i++)
+    {
+      NcHIPertComp *comp = NC_HIPERT_COMP (g_ptr_array_index (fo->priv->comps, i));
+      if (comp != NULL)
+      {
+        GArray *drho_i = NULL, *v_i = NULL, *dp_i = NULL, *Pi_i = NULL;
+        nc_hipert_comp_get_Tscalar_coupling (comp, &drho_i, &v_i, &dp_i, &Pi_i);
+
+        g_clear_pointer (&drho_i, g_array_unref);
+        g_clear_pointer (&v_i,    g_array_unref);
+        g_clear_pointer (&dp_i,   g_array_unref);
+        g_clear_pointer (&Pi_i,   g_array_unref);
+      }
+    }
+
+
+    
+    g_clear_pointer (&grav_drho, g_array_unref);
+    g_clear_pointer (&grav_v,    g_array_unref);
+    g_clear_pointer (&grav_dp,   g_array_unref);
+    g_clear_pointer (&grav_Pi,   g_array_unref);
+  }
+}
+
+/**
+ * nc_hipert_first_order_set_gauge:
+ * @fo: a #NcHIPertFirstOrder
+ * @gauge: a #NcHIPertCompGauge
+ *
+ * Sets the gauge to be used in the first order system.
+ *
+ */
+void 
+nc_hipert_first_order_set_gauge (NcHIPertFirstOrder *fo, NcHIPertCompGauge gauge)
+{
+  if (gauge != fo->priv->gauge)
+  {
+    guint i;
+    if (fo->priv->grav != NULL)
+      nc_hipert_comp_set_gauge (NC_HIPERT_COMP (fo->priv->grav), gauge);
+
+    for (i = 0; i < fo->priv->comps->len; i++)
+    {
+      NcHIPertComp *comp = NC_HIPERT_COMP (g_ptr_array_index (fo->priv->comps, i));
+      if (comp != NULL)
+        nc_hipert_comp_set_gauge (comp, gauge);
+    }
+
+    fo->priv->gauge = gauge;
+    _nc_hipert_first_order_prepare_internal (fo);
+  }
+}
+
+/**
+ * nc_hipert_first_order_get_gauge:
+ * @fo: a #NcHIPertFirstOrder
+ * 
+ * Gets the gauge used by @fo.
+ * 
+ * Returns: the gauge used by @fo
+ */
+NcHIPertCompGauge 
+nc_hipert_first_order_get_gauge (NcHIPertFirstOrder *fo)
+{
+  return fo->priv->gauge;
+}
+
 /**
  * nc_hipert_first_order_set_grav:
  * @fo: a #NcHIPertFirstOrder
@@ -401,7 +493,11 @@ nc_hipert_first_order_set_grav (NcHIPertFirstOrder *fo, NcHIPertGrav *grav)
 {
   nc_hipert_grav_clear (&fo->priv->grav);
   if (grav != NULL)
-    fo->priv->grav = nc_hipert_grav_ref (grav);  
+  {
+    fo->priv->grav = nc_hipert_grav_ref (grav);
+    nc_hipert_comp_set_gauge (NC_HIPERT_COMP (fo->priv->grav), fo->priv->gauge);
+    _nc_hipert_first_order_prepare_internal (fo);
+  }
 }
 
 /**
@@ -446,6 +542,9 @@ nc_hipert_first_order_add_comp (NcHIPertFirstOrder *fo, NcHIPertComp *comp)
   const guint len    = nc_hipert_bg_var_len (fo->priv->bg_var);
   NcHIPertBGVarID id = nc_hipert_comp_get_id (comp);
 
+  if (NC_IS_HIPERT_GRAV (comp))
+    g_error ("nc_hipert_first_order_add_comp: the gravitation component should be added using `nc_hipert_first_order_set_grav'.");
+
   g_assert_cmpint (id, >=, 0);
   g_assert_cmpint (id, <, len);
   g_ptr_array_set_size (fo->priv->comps, len);
@@ -453,5 +552,9 @@ nc_hipert_first_order_add_comp (NcHIPertFirstOrder *fo, NcHIPertComp *comp)
   if (g_ptr_array_index (fo->priv->comps, id) != NULL)
     g_warning ("nc_hipert_first_order_add_comp: component with `%d' (%s) already included, ignoring...", id, G_OBJECT_TYPE_NAME (comp));
   else
+  {
     g_ptr_array_index (fo->priv->comps, id) = nc_hipert_comp_ref (comp);
+    nc_hipert_comp_set_gauge (comp, fo->priv->gauge);
+    _nc_hipert_first_order_prepare_internal (fo);
+  }
 }

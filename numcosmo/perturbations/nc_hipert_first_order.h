@@ -68,6 +68,9 @@ NcHIPertFirstOrder *nc_hipert_first_order_ref (NcHIPertFirstOrder *fo);
 void nc_hipert_first_order_free (NcHIPertFirstOrder *fo);
 void nc_hipert_first_order_clear (NcHIPertFirstOrder **fo);
 
+void nc_hipert_first_order_set_gauge (NcHIPertFirstOrder *fo, NcHIPertCompGauge gauge);
+NcHIPertCompGauge nc_hipert_first_order_get_gauge (NcHIPertFirstOrder *fo);
+
 void nc_hipert_first_order_set_grav (NcHIPertFirstOrder *fo, NcHIPertGrav *grav);
 NcHIPertGrav *nc_hipert_first_order_get_grav (NcHIPertFirstOrder *fo);
 NcHIPertGrav *nc_hipert_first_order_peek_grav (NcHIPertFirstOrder *fo);

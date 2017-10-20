@@ -30,7 +30,7 @@
 #include <glib.h>
 #include <glib-object.h>
 #include <numcosmo/build_cfg.h>
-#include <numcosmo/perturbations/nc_hipert_comp.h>
+#include <numcosmo/perturbations/nc_hipert_bg_var.h>
 
 G_BEGIN_DECLS
 
@@ -62,27 +62,10 @@ typedef struct _NcHIPertGravTensor
   gdouble h[2];
 } NcHIPertGravTensor;
 
-typedef void (*NcHIPertGravScalarConstraints) (NcHIPertGrav *grav, NcHIPertBGVar *bg_var, const NcHIPertCompTScalar *Ts, NcHIPertGravScalar *gs);
-typedef void (*NcHIPertGravVectorConstraints) (NcHIPertGrav *grav, NcHIPertBGVar *bg_var, const NcHIPertCompTVector *Tv, NcHIPertGravScalar *gs);
-typedef void (*NcHIPertGravTensorConstraints) (NcHIPertGrav *grav, NcHIPertBGVar *bg_var, const NcHIPertCompTVector *Tt, NcHIPertGravScalar *gs);
-
-struct _NcHIPertGravClass
-{
-  /*< private >*/
-  NcHIPertCompClass parent_class;
-};
-
-struct _NcHIPertGrav
-{
-  /*< private >*/
-  NcHIPertComp parent_instance;
-  NcHIPertGravPrivate *priv;
-};
-
 /**
- * NcHIPertGravGauge:
- * @NC_HIPERT_GRAV_GAUGE_NEWTONIAN: Newtonian gauge
+ * NcHIPertCompGauge:
  * @NC_HIPERT_GRAV_GAUGE_SYNCHRONOUS: Synchronous gauge
+ * @NC_HIPERT_GRAV_GAUGE_NEWTONIAN: Newtonian gauge
  * @NC_HIPERT_GRAV_GAUGE_CONST_CURV: Constant curvature gauge
  * 
  * FIXME
@@ -95,7 +78,25 @@ typedef enum /*< enum,underscore_name=NC_HIPERT_GRAV_GAUGE >*/
   NC_HIPERT_GRAV_GAUGE_CONST_CURV,
   /* < private > */
   NC_HIPERT_GRAV_GAUGE_LEN, /*< skip >*/
-} NcHIPertGravGauge;
+} NcHIPertCompGauge;
+
+typedef void (*NcHIPertGravSetGauge) (NcHIPertGrav *grav, NcHIPertCompGauge gauge);
+typedef NcHIPertCompGauge (*NcHIPertGravGetGauge) (NcHIPertGrav *grav);
+
+struct _NcHIPertGravClass
+{
+  /*< private >*/
+  GObjectClass parent_class;
+  NcHIPertGravSetGauge set_gauge;
+  NcHIPertGravGetGauge get_gauge;
+};
+
+struct _NcHIPertGrav
+{
+  /*< private >*/
+  GObject parent_instance;
+  NcHIPertGravPrivate *priv;
+};
 
 GType nc_hipert_grav_scalar_get_type (void) G_GNUC_CONST;
 GType nc_hipert_grav_vector_get_type (void) G_GNUC_CONST;
@@ -122,6 +123,9 @@ void nc_hipert_grav_free (NcHIPertGrav *grav);
 void nc_hipert_grav_clear (NcHIPertGrav **grav);
 
 G_INLINE_FUNC NcHIPertBGVarID nc_hipert_grav_get_id (NcHIPertGrav *grav);
+
+void nc_hipert_grav_set_gauge (NcHIPertGrav *grav, NcHIPertCompGauge gauge);
+NcHIPertCompGauge nc_hipert_grav_get_gauge (NcHIPertGrav *grav);
 
 G_END_DECLS
 
@@ -224,7 +228,7 @@ nc_hipert_grav_tensor_set_zero (NcHIPertGravTensor *gt)
 G_INLINE_FUNC NcHIPertBGVarID 
 nc_hipert_grav_get_id (NcHIPertGrav *grav)
 {
-  const NcHIPertBGVarID id = NC_HIPERT_COMP_CLASS (NC_HIPERT_GRAV_GET_CLASS (grav))->bg_var_id;
+  const NcHIPertBGVarID id = nc_hipert_bg_var_class_get_id_by_ns (G_OBJECT_TYPE_NAME (grav));
   g_assert_cmpint (id, >=, 0);
   return id;
 }

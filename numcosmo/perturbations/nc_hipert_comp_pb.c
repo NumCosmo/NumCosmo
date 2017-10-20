@@ -105,13 +105,12 @@ _nc_hipert_comp_pb_finalize (GObject *object)
   G_OBJECT_CLASS (nc_hipert_comp_pb_parent_class)->finalize (object);
 }
 
-NC_HIPERT_COMP_REGISTER_BG_VAR_ID (nc_hipert_comp_pb, NC_TYPE_HIPERT_COMP_PB);
+NC_HIPERT_BG_VAR_ID_FUNC_IMPL (nc_hipert_comp_pb, NcHIPertCompPB);
 
 static void
 nc_hipert_comp_pb_class_init (NcHIPertCompPBClass *klass)
 {
   GObjectClass* object_class    = G_OBJECT_CLASS (klass);
-  NcHIPertCompClass *comp_class = NC_HIPERT_COMP_CLASS (klass);
 
   g_type_class_add_private (klass, sizeof (NcHIPertCompPBPrivate));
 
@@ -130,11 +129,10 @@ nc_hipert_comp_pb_class_init (NcHIPertCompPBClass *klass)
                                                      0,
                                                      G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
-  nc_hipert_comp_register_bg_var_id (comp_class, 
-                                     0,
-                                     "NcHIPertCompPB", 
-                                     "First order Photon-Baryons background variables", 
-                                     NULL);
+  nc_hipert_bg_var_class_register_id ("NcHIPertCompPB", 
+                                      "First order Photon-Baryons background variables", 
+                                      NULL,
+                                      0);
 }
 
 /**
