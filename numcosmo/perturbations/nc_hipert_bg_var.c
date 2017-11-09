@@ -55,6 +55,7 @@ enum
   PROP_LEN,
 };
 
+G_DEFINE_BOXED_TYPE (NcHIPertBGVarYDY, nc_hipert_bg_var_ydy, nc_hipert_bg_var_ydy_dup, nc_hipert_bg_var_ydy_free);
 G_DEFINE_TYPE (NcHIPertBGVar, nc_hipert_bg_var, G_TYPE_OBJECT);
 
 static void
@@ -290,6 +291,56 @@ nc_hipert_bg_var_class_get_id_by_ns (const gchar *ns)
   g_type_class_unref (bg_var_class);
   return has_it ? GPOINTER_TO_INT (id_ptr) : -1;
 }
+
+/**
+ * nc_hipert_bg_var_ydy_new:
+ * 
+ * Creates a new #NcHIPertBGVarYDY with all
+ * entries set to zero.
+ * 
+ * Returns: (transfer full): a new #NcHIPertBGVarYDY.
+ */
+/**
+ * nc_hipert_bg_var_ydy_dup:
+ * @ydy: a #NcHIPertBGVarYDY
+ * 
+ * Duplicates @ydy.
+ * 
+ * Returns: (transfer full): a copy of @ydy.
+ */
+/**
+ * nc_hipert_bg_var_ydy_free:
+ * @ydy: a #NcHIPertBGVarYDY
+ * 
+ * Frees @ydy.
+ * 
+ */
+/**
+ * nc_hipert_bg_var_ydy_get_y_i:
+ * @ydy: a #NcHIPertBGVarYDY
+ * @i: variable index
+ * 
+ * Gets the @i-th variable.
+ * 
+ * Returns: the value of the @i-th variable.
+ */
+/**
+ * nc_hipert_bg_var_ydy_set_dy_i:
+ * @ydy: a #NcHIPertBGVarYDY
+ * @i: variable index
+ * @dy_i: the value of the @i-th variable derivative
+ * 
+ * Sets the @i-th variable derivative to @dy_i.
+ */
+/**
+ * nc_hipert_bg_var_ydy_get_dy_i:
+ * @ydy: a #NcHIPertBGVarYDY
+ * @i: variable index
+ * 
+ * Gets the @i-th variable derivative.
+ * 
+ * Returns: the value of the @i-th variable derivative.
+ */
 
 /**
  * nc_hipert_bg_var_new:

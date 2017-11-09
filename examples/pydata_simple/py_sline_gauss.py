@@ -22,7 +22,6 @@ Ncm.cfg_init ()
 # Creating a new class implementing our object Ncm.Data
 #
 class PySLineGauss (Ncm.DataGaussCov):
-
   #
   # We need one vector property to save the independent variables x
   #
@@ -130,7 +129,7 @@ class PySLineGauss (Ncm.DataGaussCov):
       # to guarantee that it is posdef 
       #
       tmp1 = cov.dup ()
-      cov.dsymm('U', 1.0, tmp1, tmp1, 0.0);
+      cov.dsymm (ord ('U'), 1.0, tmp1, tmp1, 0.0);
 
       # Remove to print the covariance matrix
       # cov.log_vals ("# COV: ", "% 15.8g")

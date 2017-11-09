@@ -59,6 +59,22 @@ struct _NcHIPertFirstOrder
   NcHIPertFirstOrderPrivate *priv;
 };
 
+/**
+ * NcHIPertFirstOrderInteg:
+ * @NC_HIPERT_FIRST_ORDER_INTEG_CVODE: CVode integrator
+ * @NC_HIPERT_FIRST_ORDER_INTEG_ARKODE: ARKode integrator
+ * 
+ * ODE integrators.
+ * 
+ */
+typedef enum /*< enum,underscore_name=NC_HIPERT_FIRST_ORDER_INTEG >*/
+{
+  NC_HIPERT_FIRST_ORDER_INTEG_CVODE,
+  NC_HIPERT_FIRST_ORDER_INTEG_ARKODE,
+  /* < private > */
+  NC_HIPERT_FIRST_ORDER_INTEG_LEN, /*< skip >*/
+} NcHIPertFirstOrderInteg;
+
 GType nc_hipert_first_order_get_type (void) G_GNUC_CONST;
 
 NcHIPertFirstOrder *nc_hipert_first_order_new (void);
@@ -68,14 +84,24 @@ NcHIPertFirstOrder *nc_hipert_first_order_ref (NcHIPertFirstOrder *fo);
 void nc_hipert_first_order_free (NcHIPertFirstOrder *fo);
 void nc_hipert_first_order_clear (NcHIPertFirstOrder **fo);
 
-void nc_hipert_first_order_set_gauge (NcHIPertFirstOrder *fo, NcHIPertCompGauge gauge);
-NcHIPertCompGauge nc_hipert_first_order_get_gauge (NcHIPertFirstOrder *fo);
+void nc_hipert_first_order_set_gauge (NcHIPertFirstOrder *fo, NcHIPertGravGauge gauge);
+NcHIPertGravGauge nc_hipert_first_order_get_gauge (NcHIPertFirstOrder *fo);
+
+void nc_hipert_first_order_set_reltol (NcHIPertFirstOrder *fo, const gdouble reltol);
+void nc_hipert_first_order_set_abstol (NcHIPertFirstOrder *fo, const gdouble abstol);
+gdouble nc_hipert_first_order_get_reltol (NcHIPertFirstOrder *fo);
+gdouble nc_hipert_first_order_get_abstol (NcHIPertFirstOrder *fo);
+
+void nc_hipert_first_order_set_integ (NcHIPertFirstOrder *fo, NcHIPertFirstOrderInteg integ);
+NcHIPertFirstOrderInteg nc_hipert_first_order_get_integ (NcHIPertFirstOrder *fo);
 
 void nc_hipert_first_order_set_grav (NcHIPertFirstOrder *fo, NcHIPertGrav *grav);
 NcHIPertGrav *nc_hipert_first_order_get_grav (NcHIPertFirstOrder *fo);
 NcHIPertGrav *nc_hipert_first_order_peek_grav (NcHIPertFirstOrder *fo);
 
 void nc_hipert_first_order_add_comp (NcHIPertFirstOrder *fo, NcHIPertComp *comp);
+
+void nc_hipert_first_order_prepare (NcHIPertFirstOrder *fo, NcHICosmo *cosmo);
 
 G_END_DECLS
 

@@ -43,7 +43,7 @@
 
 struct _NcHIPertGravPrivate
 {
-  NcHIPertCompGauge gauge;
+  NcHIPertGravGauge gauge;
 };
 
 enum
@@ -53,9 +53,17 @@ enum
   PROP_LEN
 };
 
-G_DEFINE_BOXED_TYPE (NcHIPertGravScalar, nc_hipert_grav_scalar, nc_hipert_grav_scalar_dup, nc_hipert_grav_scalar_free);
-G_DEFINE_BOXED_TYPE (NcHIPertGravVector, nc_hipert_grav_vector, nc_hipert_grav_vector_dup, nc_hipert_grav_vector_free);
-G_DEFINE_BOXED_TYPE (NcHIPertGravTensor, nc_hipert_grav_tensor, nc_hipert_grav_tensor_dup, nc_hipert_grav_tensor_free);
+G_DEFINE_BOXED_TYPE (NcHIPertGravScalar,  nc_hipert_grav_scalar,   nc_hipert_grav_scalar_dup,   nc_hipert_grav_scalar_free);
+G_DEFINE_BOXED_TYPE (NcHIPertGravVector,  nc_hipert_grav_vector,   nc_hipert_grav_vector_dup,   nc_hipert_grav_vector_free);
+G_DEFINE_BOXED_TYPE (NcHIPertGravTensor,  nc_hipert_grav_tensor,   nc_hipert_grav_tensor_dup,   nc_hipert_grav_tensor_free);
+
+G_DEFINE_BOXED_TYPE (NcHIPertGravTScalar, nc_hipert_grav_T_scalar, nc_hipert_grav_T_scalar_dup, nc_hipert_grav_T_scalar_free);
+G_DEFINE_BOXED_TYPE (NcHIPertGravTVector, nc_hipert_grav_T_vector, nc_hipert_grav_T_vector_dup, nc_hipert_grav_T_vector_free);
+G_DEFINE_BOXED_TYPE (NcHIPertGravTTensor, nc_hipert_grav_T_tensor, nc_hipert_grav_T_tensor_dup, nc_hipert_grav_T_tensor_free);
+
+G_DEFINE_BOXED_TYPE (NcHIPertGravInfo,        nc_hipert_grav_info,          nc_hipert_grav_info_dup,          nc_hipert_grav_info_free);
+G_DEFINE_BOXED_TYPE (NcHIPertGravTScalarInfo, nc_hipert_grav_T_scalar_info, nc_hipert_grav_T_scalar_info_dup, nc_hipert_grav_T_scalar_info_free);
+
 G_DEFINE_TYPE (NcHIPertGrav, nc_hipert_grav, G_TYPE_OBJECT);
 
 static void
@@ -116,8 +124,14 @@ _nc_hipert_grav_finalize (GObject *object)
   G_OBJECT_CLASS (nc_hipert_grav_parent_class)->finalize (object);
 }
 
-static void _nc_hipert_grav_set_gauge (NcHIPertGrav *grav, NcHIPertCompGauge gauge);
-static NcHIPertCompGauge _nc_hipert_grav_get_gauge (NcHIPertGrav *grav);
+static guint _nc_hipert_grav_ndyn_var (NcHIPertGrav *grav);
+static GArray *_nc_hipert_grav_get_deps (NcHIPertGrav *grav, guint vindex);
+
+static void _nc_hipert_grav_set_gauge (NcHIPertGrav *grav, NcHIPertGravGauge gauge);
+static NcHIPertGravGauge _nc_hipert_grav_get_gauge (NcHIPertGrav *grav);
+static NcHIPertGravInfo *_nc_hipert_grav_get_G_scalar_info (NcHIPertGrav *grav);
+static void _nc_hipert_grav_get_G_scalar (NcHIPertGrav *grav, NcHIPertBGVar *bg_var, NcHIPertBGVarYDY *ydy, NcHIPertGravTScalar *T_scalar, NcHIPertGravScalar *G_scalar);
+static void _nc_hipert_grav_get_dy_scalar (NcHIPertGrav *grav, NcHIPertBGVar *bg_var, NcHIPertBGVarYDY *ydy, NcHIPertGravTScalar *T_scalar, NcHIPertGravScalar *G_scalar);
 
 static void
 nc_hipert_grav_class_init (NcHIPertGravClass *klass)
@@ -140,21 +154,34 @@ nc_hipert_grav_class_init (NcHIPertGravClass *klass)
                                                       NC_HIPERT_GRAV_GAUGE_SYNCHRONOUS,
                                                       G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 
-  klass->set_gauge = &_nc_hipert_grav_set_gauge;
-  klass->get_gauge = &_nc_hipert_grav_get_gauge;
+  klass->ndyn_var          = &_nc_hipert_grav_ndyn_var;
+  klass->get_deps          = &_nc_hipert_grav_get_deps;
+
+  klass->set_gauge         = &_nc_hipert_grav_set_gauge;
+  klass->get_gauge         = &_nc_hipert_grav_get_gauge;
+  klass->get_G_scalar_info = &_nc_hipert_grav_get_G_scalar_info;
+  klass->get_G_scalar      = &_nc_hipert_grav_get_G_scalar;
+  klass->get_dy_scalar     = &_nc_hipert_grav_get_dy_scalar;
 }
 
+static guint _nc_hipert_grav_ndyn_var (NcHIPertGrav *grav) { g_error ("_nc_hipert_grav_ndyn_var: not implemented by `%s'.", G_OBJECT_TYPE_NAME (grav)); return 0; }
+static GArray *_nc_hipert_grav_get_deps (NcHIPertGrav *grav, guint vindex) { g_error ("_nc_hipert_grav_get_deps: not implemented by `%s'.", G_OBJECT_TYPE_NAME (grav)); return NULL; }
+
 static void 
-_nc_hipert_grav_set_gauge (NcHIPertGrav *grav, NcHIPertCompGauge gauge)
+_nc_hipert_grav_set_gauge (NcHIPertGrav *grav, NcHIPertGravGauge gauge)
 {
   grav->priv->gauge = gauge;
 }
 
-static NcHIPertCompGauge 
+static NcHIPertGravGauge 
 _nc_hipert_grav_get_gauge (NcHIPertGrav *grav)
 {
   return grav->priv->gauge;
 }
+
+static NcHIPertGravInfo *_nc_hipert_grav_get_G_scalar_info (NcHIPertGrav *grav) { g_error ("_nc_hipert_grav_get_G_scalar_info: not implemented by `%s'.", G_OBJECT_TYPE_NAME (grav)); return NULL; }
+static void _nc_hipert_grav_get_G_scalar (NcHIPertGrav *grav, NcHIPertBGVar *bg_var, NcHIPertBGVarYDY *ydy, NcHIPertGravTScalar *T_scalar, NcHIPertGravScalar *G_scalar) { g_error ("_nc_hipert_grav_get_G_scalar: not implemented by `%s'.", G_OBJECT_TYPE_NAME (grav)); }
+static void _nc_hipert_grav_get_dy_scalar (NcHIPertGrav *grav, NcHIPertBGVar *bg_var, NcHIPertBGVarYDY *ydy, NcHIPertGravTScalar *T_scalar, NcHIPertGravScalar *G_scalar) { g_error ("_nc_hipert_grav_get_dy_scalar: not implemented by `%s'.", G_OBJECT_TYPE_NAME (grav)); }
 
 /**
  * nc_hipert_grav_scalar_new:
@@ -215,7 +242,7 @@ _nc_hipert_grav_get_gauge (NcHIPertGrav *grav)
  * @gv: a #NcHIPertGravVector
  * 
  * Sets all @gv entries to zero.
- * 
+ *  
  */
 
 /**
@@ -247,6 +274,209 @@ _nc_hipert_grav_get_gauge (NcHIPertGrav *grav)
  * 
  * Sets all @gt entries to zero.
  * 
+ */
+
+/**
+ * nc_hipert_grav_T_scalar_new:
+ * 
+ * Creates a new #NcHIPertGravTScalar with all
+ * entries set to zero.
+ * 
+ * Returns: (transfer full): a new #NcHIPertGravTScalar.
+ */
+/**
+ * nc_hipert_grav_T_scalar_dup:
+ * @Ts: a #NcHIPertGravTScalar
+ * 
+ * Duplicates @Ts.
+ * 
+ * Returns: (transfer full): a copy of @Ts.
+ */
+/**
+ * nc_hipert_grav_T_scalar_free:
+ * @Ts: a #NcHIPertGravTScalar
+ * 
+ * Frees @Ts.
+ * 
+ */
+/**
+ * nc_hipert_grav_T_scalar_add:
+ * @Ts: a #NcHIPertGravTScalar
+ * @Ts1: a #NcHIPertGravTScalar
+ * @Ts2: a #NcHIPertGravTScalar
+ * 
+ * Sums @Ts1 and @Ts2 and attribute the result to @Ts.
+ * 
+ */
+/**
+ * nc_hipert_grav_T_scalar_set_zero:
+ * @Ts: a #NcHIPertGravTScalar
+ * 
+ * Sets all @Ts entries to zero.
+ * 
+ */
+
+/**
+ * nc_hipert_grav_T_vector_new:
+ * 
+ * Creates a new #NcHIPertGravTVector with all
+ * entries set to zero.
+ * 
+ * Returns: (transfer full): a new #NcHIPertGravTVector.
+ */
+/**
+ * nc_hipert_grav_T_vector_dup:
+ * @Tv: a #NcHIPertGravTVector
+ * 
+ * Duplicates @Tv.
+ * 
+ * Returns: (transfer full): a copy of @Tv.
+ */
+/**
+ * nc_hipert_grav_T_vector_free:
+ * @Tv: a #NcHIPertGravTVector
+ * 
+ * Frees @Tv.
+ * 
+ */
+/**
+ * nc_hipert_grav_T_vector_add:
+ * @Tv: a #NcHIPertGravTVector
+ * @Tv1: a #NcHIPertGravTVector
+ * @Tv2: a #NcHIPertGravTVector
+ * 
+ * Sums @Tv1 and @Tv2 and attribute the result to @Tv.
+ * 
+ */
+/**
+ * nc_hipert_grav_T_vector_set_zero:
+ * @Tv: a #NcHIPertGravTVector
+ * 
+ * Sets all @Tv entries to zero.
+ * 
+ */
+
+/**
+ * nc_hipert_grav_T_tensor_new:
+ * 
+ * Creates a new #NcHIPertGravTTensor with all
+ * entries set to zero.
+ * 
+ * Returns: (transfer full): a new #NcHIPertGravTTensor.
+ */
+/**
+ * nc_hipert_grav_T_tensor_dup:
+ * @Tt: a #NcHIPertGravTTensor
+ * 
+ * Duplicates @Tt.
+ * 
+ * Returns: (transfer full): a copy of @Tt.
+ */
+/**
+ * nc_hipert_grav_T_tensor_free:
+ * @Tt: a #NcHIPertGravTTensor
+ * 
+ * Frees @Tt.
+ * 
+ */
+/**
+ * nc_hipert_grav_T_tensor_add:
+ * @Tt: a #NcHIPertGravTTensor
+ * @Tt1: a #NcHIPertGravTTensor
+ * @Tt2: a #NcHIPertGravTTensor
+ * 
+ * Sums @Tt1 and @Tt2 and attribute the result to @Tt.
+ * 
+ */
+/**
+ * nc_hipert_grav_T_tensor_set_zero:
+ * @Tt: a #NcHIPertGravTTensor
+ * 
+ * Sets all @Tt entries to zero.
+ * 
+ */
+
+/**
+ * nc_hipert_grav_info_new:
+ * 
+ * Creates a new #NcHIPertGravInfo with all
+ * entries set to zero.
+ * 
+ * Returns: (transfer full): a new #NcHIPertGravInfo.
+ */
+/**
+ * nc_hipert_grav_info_dup:
+ * @ginfo: a #NcHIPertGravInfo
+ * 
+ * Duplicates @ginfo.
+ * 
+ * Returns: (transfer full): a copy of @ginfo.
+ */
+/**
+ * nc_hipert_grav_info_free:
+ * @ginfo: a #NcHIPertGravInfo
+ * 
+ * Frees @ginfo.
+ * 
+ */
+/**
+ * nc_hipert_grav_info_set_zero:
+ * @ginfo: a #NcHIPertGravInfo
+ * 
+ * Sets all @ginfo entries to zero.
+ * 
+ */
+/**
+ * nc_hipert_grav_info_set_phi_deps:
+ * @ginfo: a #NcHIPertGravInfo
+ * @phi_deps: (array) (element-type gint): the $\phi$ dependencies
+ * 
+ * Sets $\phi$ dependencies to @phi_deps.
+ */
+/**
+ * nc_hipert_grav_info_set_dsigma_deps:
+ * @ginfo: a #NcHIPertGravInfo
+ * @dsigma_deps: (array) (element-type gint): the $\dsigma$ dependencies
+ * 
+ * Sets $\delta\sigma$ dependencies to @dsigma_deps.
+ */
+/**
+ * nc_hipert_grav_info_set_psi_deps:
+ * @ginfo: a #NcHIPertGravInfo
+ * @psi_deps: (array) (element-type gint): the $\psi$ dependencies
+ * 
+ * Sets $\psi$ dependencies to @psi_deps.
+ */
+/**
+ * nc_hipert_grav_info_set_dotpsi_deps:
+ * @ginfo: a #NcHIPertGravInfo
+ * @dotpsi_deps: (array) (element-type gint): the $\dotpsi$ dependencies
+ * 
+ * Sets $\dot\psi$ dependencies to @dotpsi_deps.
+ */
+/**
+ * nc_hipert_grav_info_get_phi_deps:
+ * @ginfo: a #NcHIPertGravInfo
+ * 
+ * Returns: (array) (element-type gint) (transfer full): the $\phi$ dependencies
+ */
+/**
+ * nc_hipert_grav_info_get_dsigma_deps:
+ * @ginfo: a #NcHIPertGravInfo
+ * 
+ * Returns: (array) (element-type gint) (transfer full): the $\dsigma$ dependencies
+ */
+/**
+ * nc_hipert_grav_info_get_psi_deps:
+ * @ginfo: a #NcHIPertGravInfo
+ * 
+ * Returns: (array) (element-type gint) (transfer full): the $\psi$ dependencies
+ */
+/**
+ * nc_hipert_grav_info_get_dotpsi_deps:
+ * @ginfo: a #NcHIPertGravInfo
+ * 
+ * Returns: (array) (element-type gint) (transfer full): the $\dotpsi$ dependencies
  */
 
 /**
@@ -297,30 +527,55 @@ nc_hipert_grav_clear (NcHIPertGrav **grav)
  */
 
 /**
+ * nc_hipert_grav_ndyn_var: (virtual ndyn_var)
+ * @grav: a #NcHIPertGrav
+ *
+ * Returns: the number of dynamical components in @grav.
+ */
+/**
+ * nc_hipert_grav_get_deps: (virtual get_deps)
+ * @grav: a #NcHIPertGrav
+ * @vindex: a variable index
+ *
+ * Returns: (transfer full) (array) (element-type gint): the array of dependencies of variable @vindex in @grav.
+ */
+/**
  * nc_hipert_grav_set_gauge: (virtual set_gauge)
  * @grav: a #NcHIPertGrav
- * @gauge: a #NcHIPertCompGauge
+ * @gauge: a #NcHIPertGravGauge
  * 
- * Sets the gauge #NcHIPertCompGauge that @grav should use.
+ * Sets the gauge #NcHIPertGravGauge that @grav should use.
  * 
  */
-void 
-nc_hipert_grav_set_gauge (NcHIPertGrav *grav, NcHIPertCompGauge gauge)
-{
-  NC_HIPERT_GRAV_GET_CLASS (grav)->set_gauge (grav, gauge);
-}
-
 /**
  * nc_hipert_grav_get_gauge: (virtual get_gauge)
  * @grav: a #NcHIPertGrav
  * 
- * Gets the gauge #NcHIPertCompGauge used by the gravonent @grav.
+ * Gets the gauge #NcHIPertGravGauge used by the gravonent @grav.
  * 
  * Returns: current gauge of @grav.
  */
-NcHIPertCompGauge 
-nc_hipert_grav_get_gauge (NcHIPertGrav *grav)
-{
-  return NC_HIPERT_GRAV_GET_CLASS (grav)->get_gauge (grav);
-}
-
+/**
+ * nc_hipert_grav_get_G_scalar_info: (virtual get_G_scalar_info)
+ * @grav: a #NcHIPertGrav
+ * 
+ * Gets the determination type and dependencies for each gravitation pontential.
+ * 
+ * Returns: a #NcHIPertGravInfo describing the scalar sector.
+ */
+/**
+ * nc_hipert_grav_get_G_scalar: (virtual get_G_scalar)
+ * @grav: a #NcHIPertGrav
+ * @G_scalar: a #NcHIPertGravScalar
+ * 
+ * Gets the scalar part of the gravitation potentials.
+ * 
+ */
+/**
+ * nc_hipert_grav_get_dy_scalar: (virtual get_dy_scalar)
+ * @grav: a #NcHIPertGrav
+ * @G_scalar: a #NcHIPertGravScalar
+ * 
+ * Gets the scalar part of the gravitation potentials.
+ * 
+ */

@@ -58,6 +58,30 @@ struct _NcHIPertCompPB
   NcHIPertCompPBPrivate *priv;
 };
 
+/**
+ * NcHIPertCompPBVar:
+ * @NC_HIPERT_COMP_PB_VAR_DB: $\delta_b+3\psi$
+ * @NC_HIPERT_COMP_PB_VAR_VB: $\mathcal{V}_b$
+ * @NC_HIPERT_COMP_PB_VAR_DG: $\delta_\gamma+3\psi$
+ * @NC_HIPERT_COMP_PB_VAR_VG: $\mathcal{V}_\gamma$
+ * 
+ * Photon-baryon component variables
+ * 
+ */
+typedef enum /*< enum,underscore_name=NC_HIPERT_COMP_PB_VAR >*/
+{
+  NC_HIPERT_COMP_PB_VAR_DELTA_B,
+  NC_HIPERT_COMP_PB_VAR_V_B,
+  NC_HIPERT_COMP_PB_VAR_DELTA_G,
+  NC_HIPERT_COMP_PB_VAR_V_G,
+  NC_HIPERT_COMP_PB_VAR_SIGMA_G,
+  NC_HIPERT_COMP_PB_VAR_F_G3,
+  /* < private > */
+  NC_HIPERT_COMP_PB_VAR_LEN, /*< skip >*/
+} NcHIPertCompPBVar;
+
+#define NC_HIPERT_COMP_PB_VAR_F_G(ell) (NC_HIPERT_COMP_PB_VAR_F_G3 + (ell) - 3)
+
 GType nc_hipert_comp_pb_get_type (void) G_GNUC_CONST;
 
 NC_HIPERT_BG_VAR_ID_FUNC_DECL (nc_hipert_comp_pb);
@@ -67,6 +91,9 @@ NcHIPertCompPB *nc_hipert_comp_pb_ref (NcHIPertCompPB *pb);
 
 void nc_hipert_comp_pb_free (NcHIPertCompPB *pb);
 void nc_hipert_comp_pb_clear (NcHIPertCompPB **pb);
+
+void nc_hipert_comp_pb_set_lmax (NcHIPertCompPB *pb, guint lmax);
+guint nc_hipert_comp_pb_get_lmax (NcHIPertCompPB *pb);
 
 G_END_DECLS
 

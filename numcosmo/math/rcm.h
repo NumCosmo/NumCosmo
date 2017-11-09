@@ -7,6 +7,8 @@ gboolean adj_contains_ij (gint node_num, gint adj_num, gint adj_row[], gint adj[
 
 void adj_insert_ij ( gint node_num, gint adj_max, gint *adj_num, gint adj_row[], gint adj[], gint i, gint j );
 gint adj_perm_bandwidth ( gint node_num, gint adj_num, gint adj_row[], gint adj[], gint perm[], gint perm_inv[] );
+void adj_perm_bandwidth_low_up ( gint node_num, gint adj_num, gint adj_row[], gint adj[],
+  gint perm[], gint perm_inv[], gint *band_hi, gint *band_lo);
 void adj_perm_show ( gint node_num, gint adj_num, gint adj_row[], gint adj[], gint perm[], gint perm_inv[] );
 void adj_print ( gint node_num, gint adj_num, gint adj_row[], gint adj[], gchar *title );
 void adj_print_some ( gint node_num, gint node_lo, gint node_hi, gint adj_num, gint adj_row[], gint adj[], gchar *title );

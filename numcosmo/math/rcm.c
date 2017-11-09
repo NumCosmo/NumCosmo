@@ -348,6 +348,27 @@ gint adj_perm_bandwidth ( gint node_num, gint adj_num, gint adj_row[], gint adj[
 }
 //****************************************************************************80
 
+void adj_perm_bandwidth_low_up ( gint node_num, gint adj_num, gint adj_row[], gint adj[],
+  gint perm[], gint perm_inv[], gint *band_hi, gint *band_lo)
+{
+  gint col;
+  gint i;
+  gint j;
+
+  *band_hi = 0;
+  *band_lo = 0;
+
+  for ( i = 0; i < node_num; i++ )
+  {
+    for ( j = adj_row[perm[i]-1]; j <= adj_row[perm[i]]-1; j++ )
+    {
+      col = perm_inv[adj[j-1]-1];
+      *band_lo = i4_max ( *band_lo, i - col );
+      *band_hi = i4_max ( *band_hi, col - i );
+    }
+  }
+}
+
 void adj_perm_show ( gint node_num, gint adj_num, gint adj_row[], gint adj[],
   gint perm[], gint perm_inv[] )
 
@@ -581,7 +602,7 @@ void adj_print_some ( gint node_num, gint node_lo, gint node_hi, gint adj_num,
 
     if ( jmax < jmin )
     {
-      g_message ("#    %4d %4d %4d\n", i, jmin, jmax);
+      g_message ("#    %4d %4d %4d |\n", i, jmin, jmax);
     }
     else
     {
@@ -591,7 +612,7 @@ void adj_print_some ( gint node_num, gint node_lo, gint node_hi, gint adj_num,
 
         if ( jlo == jmin )
         {
-          g_message ("#    %4d %4d %4d ", i, jmin, jmax);
+          g_message ("#    %4d %4d %4d |", i, jmin, jmax);
           for ( j = jlo; j <= jhi; j++ )
           {
             g_message (" %4d", adj[j-1]);
@@ -600,7 +621,7 @@ void adj_print_some ( gint node_num, gint node_lo, gint node_hi, gint adj_num,
         }
         else
         {
-          g_message ("                     ");
+          g_message ("#                   |");
           for ( j = jlo; j <= jhi; j++ )
           {
             g_message (" %4d", adj[j-1]);
@@ -680,12 +701,14 @@ void adj_set ( gint node_num, gint adj_max, gint *adj_num, gint adj_row[],
 //
   if ( irow < 0 || jcol < 0 )
   {
-    g_message ("#  ADJ_SET - Note:\n"
-               "#    Initializing adjacency information.\n"
-               "#    Number of nodes NODE_NUM =  %d\n"
-               "#    Maximum adjacency ADJ_MAX = %d\n",
-               node_num, adj_max);
-
+    if (FALSE)
+    {
+      g_message ("#  ADJ_SET - Note:\n"
+                 "#    Initializing adjacency information.\n"
+                 "#    Number of nodes NODE_NUM =  %d\n"
+                 "#    Maximum adjacency ADJ_MAX = %d\n",
+                 node_num, adj_max);
+    }
     *adj_num = 0;
     for ( i = 0; i < node_num + 1; i++ )
     {

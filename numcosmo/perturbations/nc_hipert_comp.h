@@ -48,61 +48,33 @@ typedef struct _NcHIPertCompClass NcHIPertCompClass;
 typedef struct _NcHIPertComp NcHIPertComp;
 typedef struct _NcHIPertCompPrivate NcHIPertCompPrivate;
 
-typedef struct _NcHIPertCompTScalar
-{
-  gdouble drho_m_Aphi;
-  gdouble A;
-  gdouble rhopp_v;
-  gdouble dp;
-  gdouble Pi;
-} NcHIPertCompTScalar;
-
-typedef struct _NcHIPertCompTVector
-{
-  gdouble a;
-} NcHIPertCompTVector;
-
-typedef struct _NcHIPertCompTTensor
-{
-  gdouble a;
-} NcHIPertCompTTensor;
-
-typedef struct _NcHIPertCompCoupling
-{
-  gint c_a;
-  gint c_b;
-} NcHIPertCompCoupling;
-
 typedef guint (*NcHIPertCompNDynVar) (NcHIPertComp *comp);
-typedef GArray *(*NcHIPertCompCouplingGraph) (NcHIPertComp *comp);
+typedef GArray *(*NcHIPertCompDeps) (NcHIPertComp *comp, guint vindex);
 
-typedef void (*NcHIPertCompSetGauge) (NcHIPertComp *comp, NcHIPertCompGauge gauge);
-typedef NcHIPertCompGauge (*NcHIPertCompGetGauge) (NcHIPertComp *comp);
+typedef void (*NcHIPertCompSetGauge) (NcHIPertComp *comp, NcHIPertGravGauge gauge);
+typedef NcHIPertGravGauge (*NcHIPertCompGetGauge) (NcHIPertComp *comp);
 
-typedef void (*NcHIPertCompGetTScalarCoupling) (NcHIPertComp *comp, GArray **drho, GArray **v, GArray **dp, GArray **Pi);
+typedef NcHIPertGravTScalarInfo *(*NcHIPertCompGetTScalarInfo) (NcHIPertComp *comp);
 
-typedef void (*NcHIPertCompCalcDY) (NcHIPertComp *comp, NcHIPertBGVar *bg_var, const NcmVector *y, NcmVector *dy);
-typedef void (*NcHIPertCompCalcJ) (NcHIPertComp *comp, NcHIPertBGVar *bg_var, const NcmVector *y, NcmMatrix *J);
-typedef void (*NcHIPertCompCalcDYJ) (NcHIPertComp *comp, NcHIPertBGVar *bg_var, const NcmVector *y, NcmVector *dy, NcmMatrix *J);
-typedef void (*NcHIPertCompCalcTScalar) (NcHIPertComp *comp, NcHIPertBGVar *bg_var, const NcmVector *y, NcHIPertCompTScalar *TScalar);
-typedef void (*NcHIPertCompCalcTVector) (NcHIPertComp *comp, NcHIPertBGVar *bg_var, const NcmVector *y, NcHIPertCompTScalar *TVector);
-typedef void (*NcHIPertCompCalcTTensor) (NcHIPertComp *comp, NcHIPertBGVar *bg_var, const NcmVector *y, NcHIPertCompTScalar *TTensor);
+typedef void (*NcHIPertCompGetTScalar) (NcHIPertComp *comp, NcHIPertBGVar *bg_var, NcHIPertBGVarYDY *ydy, NcHIPertGravTScalar *T_scalar);
+typedef void (*NcHIPertCompGetTVector) (NcHIPertComp *comp, NcHIPertBGVar *bg_var, NcHIPertBGVarYDY *ydy, NcHIPertGravTVector *T_vector);
+typedef void (*NcHIPertCompGetTTensor) (NcHIPertComp *comp, NcHIPertBGVar *bg_var, NcHIPertBGVarYDY *ydy, NcHIPertGravTTensor *T_tensor);
+
+typedef void (*NcHIPertCompGetDYScalar) (NcHIPertComp *comp, NcHIPertBGVar *bg_var, NcHIPertBGVarYDY *ydy, NcHIPertGravTScalar *T_scalar, NcHIPertGravScalar *G_scalar);
 
 struct _NcHIPertCompClass
 {
   /*< private >*/
   GObjectClass parent_class;
   NcHIPertCompNDynVar ndyn_var;
-  NcHIPertCompCouplingGraph cgraph;
+  NcHIPertCompDeps get_deps;
   NcHIPertCompSetGauge set_gauge;
   NcHIPertCompGetGauge get_gauge;
-  NcHIPertCompGetTScalarCoupling get_Tscalar_coupling;
-  NcHIPertCompCalcDY dy;
-  NcHIPertCompCalcJ J;
-  NcHIPertCompCalcDYJ dy_J;
-  NcHIPertCompCalcTScalar Tscalar;
-  NcHIPertCompCalcTVector Tvector;
-  NcHIPertCompCalcTTensor Ttensor;
+  NcHIPertCompGetTScalarInfo get_T_scalar_info;
+  NcHIPertCompGetTScalar get_T_scalar;
+  NcHIPertCompGetTVector get_T_vector;
+  NcHIPertCompGetTTensor get_T_tensor;
+  NcHIPertCompGetDYScalar get_dy_scalar;
 };
 
 struct _NcHIPertComp
@@ -112,33 +84,7 @@ struct _NcHIPertComp
   NcHIPertCompPrivate *priv;
 };
 
-GType nc_hipert_comp_T_scalar_get_type (void) G_GNUC_CONST;
-GType nc_hipert_comp_T_vector_get_type (void) G_GNUC_CONST;
-GType nc_hipert_comp_T_tensor_get_type (void) G_GNUC_CONST;
-GType nc_hipert_comp_coupling_get_type (void) G_GNUC_CONST;
 GType nc_hipert_comp_get_type (void) G_GNUC_CONST;
-
-G_INLINE_FUNC NcHIPertCompTScalar *nc_hipert_comp_T_scalar_new (void);
-G_INLINE_FUNC NcHIPertCompTScalar *nc_hipert_comp_T_scalar_dup (NcHIPertCompTScalar *Ts);
-G_INLINE_FUNC void nc_hipert_comp_T_scalar_free (NcHIPertCompTScalar *Ts);
-G_INLINE_FUNC void nc_hipert_comp_T_scalar_add (NcHIPertCompTScalar *Ts, const NcHIPertCompTScalar *Ts1, const NcHIPertCompTScalar *Ts2);
-G_INLINE_FUNC void nc_hipert_comp_T_scalar_set_zero (NcHIPertCompTScalar *Ts);
-
-G_INLINE_FUNC NcHIPertCompTVector *nc_hipert_comp_T_vector_new (void);
-G_INLINE_FUNC NcHIPertCompTVector *nc_hipert_comp_T_vector_dup (NcHIPertCompTVector *Tv);
-G_INLINE_FUNC void nc_hipert_comp_T_vector_free (NcHIPertCompTVector *Tv);
-G_INLINE_FUNC void nc_hipert_comp_T_vector_add (NcHIPertCompTVector *Tv, const NcHIPertCompTVector *Tv1, const NcHIPertCompTVector *Tv2);
-G_INLINE_FUNC void nc_hipert_comp_T_vector_set_zero (NcHIPertCompTVector *Tv);
-
-G_INLINE_FUNC NcHIPertCompTTensor *nc_hipert_comp_T_tensor_new (void);
-G_INLINE_FUNC NcHIPertCompTTensor *nc_hipert_comp_T_tensor_dup (NcHIPertCompTTensor *Tt);
-G_INLINE_FUNC void nc_hipert_comp_T_tensor_free (NcHIPertCompTTensor *Tt);
-G_INLINE_FUNC void nc_hipert_comp_T_tensor_add (NcHIPertCompTTensor *Tt, const NcHIPertCompTTensor *Tt1, const NcHIPertCompTTensor *Tt2);
-G_INLINE_FUNC void nc_hipert_comp_T_tensor_set_zero (NcHIPertCompTTensor *Tt);
-
-G_INLINE_FUNC NcHIPertCompCoupling *nc_hipert_comp_coupling_new (void);
-G_INLINE_FUNC NcHIPertCompCoupling *nc_hipert_comp_coupling_dup (NcHIPertCompCoupling *c);
-G_INLINE_FUNC void nc_hipert_comp_coupling_free (NcHIPertCompCoupling *c);
 
 NcHIPertComp *nc_hipert_comp_ref (NcHIPertComp *comp);
 void nc_hipert_comp_free (NcHIPertComp *comp);
@@ -146,13 +92,16 @@ void nc_hipert_comp_clear (NcHIPertComp **comp);
 
 G_INLINE_FUNC NcHIPertBGVarID nc_hipert_comp_get_id (NcHIPertComp *comp);
 
-void nc_hipert_comp_set_gauge (NcHIPertComp *comp, NcHIPertCompGauge gauge);
-NcHIPertCompGauge nc_hipert_comp_get_gauge (NcHIPertComp *comp);
-
-void nc_hipert_comp_get_Tscalar_coupling (NcHIPertComp *comp, GArray **drho, GArray **v, GArray **dp, GArray **Pi);
-
 guint nc_hipert_comp_ndyn_var (NcHIPertComp *comp);
-GArray *nc_hipert_comp_coupling_graph (NcHIPertComp *comp);
+GArray *nc_hipert_comp_get_deps (NcHIPertComp *comp, guint vindex);
+
+void nc_hipert_comp_set_gauge (NcHIPertComp *comp, NcHIPertGravGauge gauge);
+NcHIPertGravGauge nc_hipert_comp_get_gauge (NcHIPertComp *comp);
+
+NcHIPertGravTScalarInfo *nc_hipert_comp_get_T_scalar_info (NcHIPertComp *comp);
+
+G_INLINE_FUNC void nc_hipert_comp_get_T_scalar (NcHIPertComp *comp, NcHIPertBGVar *bg_var, NcHIPertBGVarYDY *ydy, NcHIPertGravTScalar *T_scalar);
+G_INLINE_FUNC void nc_hipert_comp_get_dy_scalar (NcHIPertComp *comp, NcHIPertBGVar *bg_var, NcHIPertBGVarYDY *ydy, NcHIPertGravTScalar *T_scalar, NcHIPertGravScalar *G_scalar);
 
 G_END_DECLS
 
@@ -164,144 +113,24 @@ G_END_DECLS
 
 G_BEGIN_DECLS
 
-G_INLINE_FUNC NcHIPertCompTScalar *
-nc_hipert_comp_T_scalar_new (void)
-{
-  return g_new0 (NcHIPertCompTScalar, 1);
-}
-
-G_INLINE_FUNC NcHIPertCompTScalar *
-nc_hipert_comp_T_scalar_dup (NcHIPertCompTScalar *Ts)
-{
-  NcHIPertCompTScalar *Ts_dup = g_new0 (NcHIPertCompTScalar, 1);
-
-  Ts_dup[0] = Ts[0];
-
-  return Ts_dup;
-}
-
-G_INLINE_FUNC void
-nc_hipert_comp_T_scalar_free (NcHIPertCompTScalar *Ts)
-{
-  g_free (Ts);
-}
-
-G_INLINE_FUNC void
-nc_hipert_comp_T_scalar_add (NcHIPertCompTScalar *Ts, const NcHIPertCompTScalar *Ts1, const NcHIPertCompTScalar *Ts2)
-{
-  Ts->drho_m_Aphi = Ts1->drho_m_Aphi + Ts2->drho_m_Aphi;
-  Ts->A           = Ts1->A           + Ts2->A;
-  Ts->rhopp_v     = Ts1->rhopp_v     + Ts2->rhopp_v;
-  Ts->dp          = Ts1->dp          + Ts2->dp;
-  Ts->Pi          = Ts1->Pi          + Ts2->Pi;
-}
-
-G_INLINE_FUNC void
-nc_hipert_comp_T_scalar_set_zero (NcHIPertCompTScalar *Ts)
-{
-  Ts->drho_m_Aphi = 0.0;
-  Ts->A           = 0.0;
-  Ts->rhopp_v     = 0.0;
-  Ts->dp          = 0.0;
-  Ts->Pi          = 0.0;
-}
-
-G_INLINE_FUNC NcHIPertCompTVector *
-nc_hipert_comp_T_vector_new (void)
-{
-  return g_new0 (NcHIPertCompTVector, 1);
-}
-
-G_INLINE_FUNC NcHIPertCompTVector *
-nc_hipert_comp_T_vector_dup (NcHIPertCompTVector *Tv)
-{
-  NcHIPertCompTVector *Tv_dup = g_new0 (NcHIPertCompTVector, 1);
-
-  Tv_dup[0] = Tv[0];
-
-  return Tv_dup;
-}
-
-G_INLINE_FUNC void
-nc_hipert_comp_T_vector_free (NcHIPertCompTVector *Tv)
-{
-  g_free (Tv);
-}
-
-G_INLINE_FUNC void
-nc_hipert_comp_T_vector_add (NcHIPertCompTVector *Tv, const NcHIPertCompTVector *Tv1, const NcHIPertCompTVector *Tv2)
-{
-  Tv->a = Tv1->a + Tv2->a;
-}
-
-G_INLINE_FUNC void
-nc_hipert_comp_T_vector_set_zero (NcHIPertCompTVector *Tv)
-{
-  Tv->a = 0.0;
-}
-
-G_INLINE_FUNC NcHIPertCompTTensor *
-nc_hipert_comp_T_tensor_new (void)
-{
-  return g_new0 (NcHIPertCompTTensor, 1);
-}
-
-G_INLINE_FUNC NcHIPertCompTTensor *
-nc_hipert_comp_T_tensor_dup (NcHIPertCompTTensor *Tt)
-{
-  NcHIPertCompTTensor *Tt_dup = g_new0 (NcHIPertCompTTensor, 1);
-
-  Tt_dup[0] = Tt[0];
-
-  return Tt_dup;
-}
-
-G_INLINE_FUNC void
-nc_hipert_comp_T_tensor_free (NcHIPertCompTTensor *Tt)
-{
-  g_free (Tt);
-}
-
-G_INLINE_FUNC void
-nc_hipert_comp_T_tensor_add (NcHIPertCompTTensor *Tt, const NcHIPertCompTTensor *Tt1, const NcHIPertCompTTensor *Tt2)
-{
-  Tt->a = Tt1->a + Tt2->a;
-}
-
-G_INLINE_FUNC void
-nc_hipert_comp_T_tensor_set_zero (NcHIPertCompTTensor *Tt)
-{
-  Tt->a = 0.0;
-}
-
-G_INLINE_FUNC NcHIPertCompCoupling *
-nc_hipert_comp_coupling_new (void)
-{
-  return g_new0 (NcHIPertCompCoupling, 1);
-}
-
-G_INLINE_FUNC NcHIPertCompCoupling *
-nc_hipert_comp_coupling_dup (NcHIPertCompCoupling *c)
-{
-  NcHIPertCompCoupling *c_dup = g_new0 (NcHIPertCompCoupling, 1);
-
-  c_dup[0] = c[0];
-
-  return c_dup;
-}
-
-G_INLINE_FUNC void
-nc_hipert_comp_coupling_free (NcHIPertCompCoupling *c)
-{
-  g_free (c);
-}
-
 G_INLINE_FUNC NcHIPertBGVarID 
 nc_hipert_comp_get_id (NcHIPertComp *comp)
 {
   const NcHIPertBGVarID id = nc_hipert_bg_var_class_get_id_by_ns (G_OBJECT_TYPE_NAME (comp));
   g_assert_cmpint (id, >=, 0);
   return id;
+}
+
+G_INLINE_FUNC void 
+nc_hipert_comp_get_T_scalar (NcHIPertComp *comp, NcHIPertBGVar *bg_var, NcHIPertBGVarYDY *ydy, NcHIPertGravTScalar *T_scalar)
+{
+  return NC_HIPERT_COMP_GET_CLASS (comp)->get_T_scalar (comp, bg_var, ydy, T_scalar);
+}
+
+G_INLINE_FUNC void 
+nc_hipert_comp_get_dy_scalar (NcHIPertComp *comp, NcHIPertBGVar *bg_var, NcHIPertBGVarYDY *ydy, NcHIPertGravTScalar *T_scalar, NcHIPertGravScalar *G_scalar)
+{
+  return NC_HIPERT_COMP_GET_CLASS (comp)->get_dy_scalar (comp, bg_var, ydy, T_scalar, G_scalar);
 }
 
 G_END_DECLS

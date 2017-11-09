@@ -125,7 +125,8 @@ typedef enum /*< flags,underscore_name=NC_HICOSMO_IMPL >*/
   NC_HICOSMO_IMPL_bgp_cs2,
   NC_HICOSMO_IMPL_Dc,
   NC_HICOSMO_IMPL_NMassNu,
-  NC_HICOSMO_IMPL_MassNuInfo, 
+  NC_HICOSMO_IMPL_MassNuInfo,
+  NC_HICOSMO_IMPL_get_bg_var,
   /* < private > */
   NC_HICOSMO_IMPL_LAST,       /*< skip >*/
 } NcHICosmoImpl;
@@ -172,7 +173,10 @@ typedef void (*NcHICosmoFuncMassNuInfo) (NcHICosmo *cosmo, const guint nu_i, gdo
 #ifndef __GTK_DOC_IGNORE__
 typedef struct _NcHIPrim NcHIPrim;
 typedef struct _NcHIReion NcHIReion;
+typedef struct _NcHIPertBGVar NcHIPertBGVar;
 #endif
+
+typedef void (*NcHICosmoGetBGVar) (NcHICosmo *cosmo, const gdouble t, NcHIPertBGVar *bg_var);
 
 typedef struct _NcHICosmoFuncZ
 {
@@ -229,6 +233,7 @@ struct _NcHICosmoClass
   NcHICosmoVFunc1Z E2Press_mnu_n;
   NcHICosmoFuncNMassNu NMassNu;
   NcHICosmoFuncMassNuInfo MassNuInfo;
+  NcHICosmoGetBGVar get_bg_var;
 };
 
 /**
@@ -291,6 +296,8 @@ void nc_hicosmo_set_bgp_cs2_impl (NcHICosmoClass *model_class, NcHICosmoFunc1Z f
 void nc_hicosmo_set_Dc_impl (NcHICosmoClass *model_class, NcHICosmoFunc1Z f);
 void nc_hicosmo_set_NMassNu_impl (NcHICosmoClass *model_class, NcHICosmoFuncNMassNu f);
 void nc_hicosmo_set_MassNuInfo_impl (NcHICosmoClass *model_class, NcHICosmoFuncMassNuInfo f);
+
+void nc_hicosmo_set_get_bg_var_impl (NcHICosmoClass *model_class, NcHICosmoGetBGVar f);
 
 NcHICosmo *nc_hicosmo_new_from_name (GType parent_type, gchar *cosmo_name);
 NcHICosmo *nc_hicosmo_ref (NcHICosmo *cosmo);
@@ -373,6 +380,8 @@ G_INLINE_FUNC guint nc_hicosmo_NMassNu (NcHICosmo *cosmo);
 G_INLINE_FUNC void nc_hicosmo_MassNuInfo (NcHICosmo *cosmo, guint nu_i, gdouble *mass_eV, gdouble *T_0, gdouble *xi, gdouble *g);
 G_INLINE_FUNC gdouble nc_hicosmo_Neff (NcHICosmo *cosmo);
 
+G_INLINE_FUNC void nc_hicosmo_get_bg_var (NcHICosmo *cosmo, const gdouble t, NcHIPertBGVar *bg_var);
+
 G_INLINE_FUNC gdouble nc_hicosmo_E2Omega_k (NcHICosmo *cosmo, const gdouble z);
 G_INLINE_FUNC gdouble nc_hicosmo_q (NcHICosmo *cosmo, const gdouble z);
 G_INLINE_FUNC gdouble nc_hicosmo_nec (NcHICosmo *cosmo, const gdouble z);
@@ -454,6 +463,12 @@ G_INLINE_FUNC void
 nc_hicosmo_MassNuInfo (NcHICosmo *cosmo, guint nu_i, gdouble *mass_eV, gdouble *T_0, gdouble *xi, gdouble *g)
 {
   NC_HICOSMO_GET_CLASS (cosmo)->MassNuInfo (cosmo, nu_i, mass_eV, T_0, xi, g);
+}
+
+G_INLINE_FUNC void 
+nc_hicosmo_get_bg_var (NcHICosmo *cosmo, const gdouble t, NcHIPertBGVar *bg_var)
+{
+  NC_HICOSMO_GET_CLASS (cosmo)->get_bg_var (cosmo, t, bg_var);
 }
 
 G_INLINE_FUNC gdouble

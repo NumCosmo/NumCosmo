@@ -688,7 +688,7 @@ ncm_vector_log_vals_func (const NcmVector *v, const gchar *prestr, const gchar *
 /**
  * ncm_vector_set_data:
  * @cv: a #NcmVector.
- * @array: (array length=size) (element-type double): a pointer to a double array
+ * @array: (array) (array length=size) (element-type double): a pointer to a double array
  * @size: data array size
  * 
  * This function sets all the components of the vector @cv using the data array @array,
@@ -698,7 +698,7 @@ ncm_vector_log_vals_func (const NcmVector *v, const gchar *prestr, const gchar *
 /**
  * ncm_vector_set_array:
  * @cv: a #NcmVector.
- * @array: (element-type double): a pointer to a double #GArray
+ * @array: (array) (element-type double): a pointer to a double #GArray
  * 
  * This function sets all the components of the vector @cv using the data array @array,
  * @array->len must match the vector size.
