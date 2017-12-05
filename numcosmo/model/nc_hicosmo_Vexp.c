@@ -42,9 +42,11 @@
 #include "perturbations/nc_hipert_gw.h"
 #include "math/ncm_spline_cubic_notaknot.h"
 
+#ifndef NUMCOSMO_GIR_SCAN
 #include <nvector/nvector_serial.h>
 #include <cvode/cvode.h>
 #include <cvode/cvode_dense.h>
+#endif /* NUMCOSMO_GIR_SCAN */
 
 static void nc_hipert_iadiab_interface_init (NcHIPertIAdiabInterface *iface);
 static void nc_hipert_igw_interface_init (NcHIPertIGWInterface *iface);

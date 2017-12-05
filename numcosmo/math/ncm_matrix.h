@@ -31,7 +31,10 @@
 #include <numcosmo/math/ncm_cfg.h>
 #include <numcosmo/math/ncm_util.h>
 #include <numcosmo/math/ncm_vector.h>
+
+#ifndef NUMCOSMO_GIR_SCAN
 #include <gsl/gsl_matrix.h>
+#endif /* NUMCOSMO_GIR_SCAN */
 
 G_BEGIN_DECLS
 

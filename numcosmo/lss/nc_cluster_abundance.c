@@ -43,7 +43,9 @@
 #include "math/memory_pool.h"
 #include "math/ncm_cfg.h"
 
+#ifndef NUMCOSMO_GIR_SCAN
 #include <gsl/gsl_histogram.h>
+#endif /* NUMCOSMO_GIR_SCAN */
 
 enum
 {

@@ -40,8 +40,11 @@
 #include "build_cfg.h"
 
 #include "model/nc_hicosmo_qconst.h"
+
+#ifndef NUMCOSMO_GIR_SCAN
 #include <gsl/gsl_sf_exp.h>
 #include <gsl/gsl_sf_log.h>
+#endif /* NUMCOSMO_GIR_SCAN */
 
 G_DEFINE_TYPE (NcHICosmoQConst, nc_hicosmo_qconst, NC_TYPE_HICOSMO);
 

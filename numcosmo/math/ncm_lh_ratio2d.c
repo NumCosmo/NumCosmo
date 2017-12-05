@@ -44,10 +44,12 @@
 #include "math/ncm_matrix.h"
 #include "math/ncm_util.h"
 
+#ifndef NUMCOSMO_GIR_SCAN
 #include <gsl/gsl_cdf.h>
 #include <gsl/gsl_roots.h>
 #include <gsl/gsl_deriv.h>
 #include <gsl/gsl_eigen.h>
+#endif /* NUMCOSMO_GIR_SCAN */
 
 enum
 {

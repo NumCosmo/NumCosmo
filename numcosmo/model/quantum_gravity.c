@@ -39,12 +39,13 @@
 #include "math/ncm_spline_gsl.h"
 #include "math/magnus_iserles_ode.h"
 
+#ifndef NUMCOSMO_GIR_SCAN
 #include <gsl/gsl_sf_hyperg.h>
 #include <gsl/gsl_sf_exp.h>
 #include <gsl/gsl_sf_bessel.h>
 #include <gsl/gsl_poly.h>
 #include <nvector/nvector_serial.h>
-
+#endif /* NUMCOSMO_GIR_SCAN */
 
 typedef struct _NcHICosmoQG
 {

@@ -34,8 +34,10 @@
 #include <numcosmo/math/ncm_likelihood.h>
 #include <numcosmo/math/ncm_powspec_filter.h>
 
+#ifndef NUMCOSMO_GIR_SCAN
 #include <gsl/gsl_roots.h>
 #include <gsl/gsl_min.h>
+#endif /* NUMCOSMO_GIR_SCAN */
 
 G_BEGIN_DECLS
 
@@ -123,7 +125,8 @@ typedef enum _NcHICosmoImpl
   NC_HICOSMO_IMPL_bgp_cs2,
   NC_HICOSMO_IMPL_Dc,
   NC_HICOSMO_IMPL_NMassNu,
-  NC_HICOSMO_IMPL_MassNuInfo, /*< private >*/
+  NC_HICOSMO_IMPL_MassNuInfo, 
+  /* < private > */
   NC_HICOSMO_IMPL_LAST,       /*< skip >*/
 } NcHICosmoImpl;
 
@@ -298,7 +301,8 @@ void nc_hicosmo_log_all_models (GType parent);
 gdouble nc_hicosmo_zt (NcHICosmo *cosmo, const gdouble z_max);
 
 void nc_hicosmo_mqE2_max (NcHICosmo *cosmo, const gdouble z_max, gdouble *zm, gdouble *mqE2m);
-void nc_hicosmo_dec_min (NcHICosmo *cosmo, const gdouble z_max, gdouble *zm, gdouble *mqE2m);
+void nc_hicosmo_dec_min (NcHICosmo *cosmo, const gdouble z_max, gdouble *zm, gdouble *decm);
+void nc_hicosmo_q_min (NcHICosmo *cosmo, const gdouble z_max, gdouble *zm, gdouble *qm);
 
 /*
  * Cosmological model constant functions
@@ -376,6 +380,7 @@ G_INLINE_FUNC gdouble nc_hicosmo_dec (NcHICosmo *cosmo, const gdouble z);
 G_INLINE_FUNC gdouble nc_hicosmo_wec (NcHICosmo *cosmo, const gdouble z);
 G_INLINE_FUNC gdouble nc_hicosmo_qp (NcHICosmo *cosmo, const gdouble z);
 G_INLINE_FUNC gdouble nc_hicosmo_j (NcHICosmo *cosmo, const gdouble z);
+G_INLINE_FUNC gdouble nc_hicosmo_kinetic_w (NcHICosmo *cosmo, const gdouble z);
 
 G_INLINE_FUNC gdouble nc_hicosmo_mqE2 (NcHICosmo *cosmo, const gdouble z);
 
@@ -672,6 +677,17 @@ nc_hicosmo_j (NcHICosmo *cosmo, const gdouble z)
   const gdouble d2E2_dz2 = nc_hicosmo_d2E2_dz2 (cosmo, z);
 
   return gsl_pow_2 (1.0 + z) * (d2E2_dz2 - 2.0 * dE2_dz / (1.0 + z)) / (2.0 * E2) + 1.0;
+}
+
+G_INLINE_FUNC gdouble
+nc_hicosmo_kinetic_w (NcHICosmo *cosmo, const gdouble z)
+{
+  const gdouble E2      = nc_hicosmo_E2 (cosmo, z);
+  const gdouble Omega_k = nc_hicosmo_E2Omega_k (cosmo, z);
+  const gdouble q       = nc_hicosmo_q (cosmo, z);
+  const gdouble kw      = (2.0 * q / (1.0 + Omega_k / E2) - 1.0) / 3.0;
+
+  return kw;
 }
 
 G_INLINE_FUNC gdouble

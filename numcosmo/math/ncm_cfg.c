@@ -153,6 +153,7 @@
 #include "xcor/nc_xcor_limber_kernel_CMB_lensing.h"
 #include "xcor/nc_xcor_limber_kernel_weak_lensing.h"
 
+#ifndef NUMCOSMO_GIR_SCAN
 #include <gio/gio.h>
 #ifdef NUMCOSMO_HAVE_FFTW3
 #include <fftw3.h>
@@ -166,6 +167,7 @@
 #ifdef HAVE_EXECINFO_H
 #include <execinfo.h>
 #endif /* HAVE_EXECINFO_H */
+#endif /* NUMCOSMO_GIR_SCAN */
 
 static gchar *numcosmo_path = NULL;
 static gboolean numcosmo_init = FALSE;

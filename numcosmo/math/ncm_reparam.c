@@ -39,7 +39,9 @@
 #include "math/ncm_model.h"
 #include "math/ncm_cfg.h"
 
+#ifndef NUMCOSMO_GIR_SCAN
 #include <gsl/gsl_blas.h>
+#endif /* NUMCOSMO_GIR_SCAN */
 
 G_DEFINE_ABSTRACT_TYPE (NcmReparam, ncm_reparam, G_TYPE_OBJECT);
 

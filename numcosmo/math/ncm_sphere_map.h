@@ -37,7 +37,7 @@
 #ifdef NUMCOSMO_HAVE_FFTW3
 #include <fftw3.h>
 #endif /* NUMCOSMO_HAVE_FFTW3 */
-#endif
+#endif /* NUMCOSMO_GIR_SCAN */
 
 G_BEGIN_DECLS
 

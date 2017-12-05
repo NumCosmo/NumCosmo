@@ -105,10 +105,12 @@
 #include "math/ncm_util.h"
 #include "math/ncm_spline_cubic_notaknot.h"
 
-#include <math.h>
+#ifndef NUMCOSMO_GIR_SCAN
 #ifdef NUMCOSMO_HAVE_FFTW3 
 #include <fftw3.h>
 #endif /* NUMCOSMO_HAVE_FFTW3 */
+#endif /* NUMCOSMO_GIR_SCAN */
+
 #ifndef HAVE_FFTW3_ALLOC
 #define fftw_alloc_real(n) (double *) fftw_malloc (sizeof (double) * (n))
 #define fftw_alloc_complex(n) (fftw_complex *) fftw_malloc (sizeof (fftw_complex) * (n))

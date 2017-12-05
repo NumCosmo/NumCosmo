@@ -42,7 +42,9 @@
 #include "math/ncm_cfg.h"
 #include "math/ncm_util.h"
 
+#ifndef NUMCOSMO_GIR_SCAN
 #include <gsl/gsl_poly.h>
+#endif /* NUMCOSMO_GIR_SCAN */
 
 typedef struct { gdouble x; gdouble y; gint ok; } _BIVec;
 

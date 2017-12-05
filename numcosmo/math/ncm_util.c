@@ -39,6 +39,7 @@
 #include "math/ncm_util.h"
 #include "math/memory_pool.h"
 
+#ifndef NUMCOSMO_GIR_SCAN
 #include <gsl/gsl_sf_legendre.h>
 #include <gsl/gsl_roots.h>
 #include <gsl/gsl_randist.h>
@@ -56,6 +57,7 @@
 #ifdef NUMCOSMO_HAVE_CFITSIO
 #include <fitsio.h>
 #endif /* NUMCOSMO_HAVE_CFITSIO */
+#endif /* NUMCOSMO_GIR_SCAN */
 
 /**
  * ncm_random_seed:
@@ -1191,7 +1193,6 @@ _ncm_util_set_destroyed (gpointer b)
 
  =====================================================================*/
 
-#include <math.h>
 #include <stdlib.h>
 
 #define num_Pi     3.14159265358979323846 /* PI */

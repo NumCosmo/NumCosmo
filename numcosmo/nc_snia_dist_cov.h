@@ -64,7 +64,8 @@ typedef enum _NcSNIADistCovSParams
   NC_SNIA_DIST_COV_M1,
   NC_SNIA_DIST_COV_M2,         
   NC_SNIA_DIST_COV_LNSIGMA_PECZ,
-  NC_SNIA_DIST_COV_LNSIGMA_LENS, /*< private >*/
+  NC_SNIA_DIST_COV_LNSIGMA_LENS, 
+  /* < private > */
   NC_SNIA_DIST_COV_SPARAM_LEN,   /*< skip >*/
 } NcSNIADistCovSParams;
 
@@ -79,7 +80,8 @@ typedef enum _NcSNIADistCovSParams
 typedef enum _NcSNIADistCovVParams
 {
   NC_SNIA_DIST_COV_LNSIGMA_INT = 0,
-  NC_SNIA_DIST_COV_MU,            /*< private >*/
+  NC_SNIA_DIST_COV_MU,            
+  /* < private > */
   NC_SNIA_DIST_COV_VPARAM_LEN,    /*< skip >*/
 } NcSNIADistCovVParams;
 

@@ -67,8 +67,10 @@
 #include "math/ncm_cfg.h"
 #include "math/ncm_util.h"
 #include "math/integral.h"
+
+#ifndef NUMCOSMO_GIR_SCAN
 #include <gsl/gsl_sf_expint.h>
-#include <math.h>
+#endif /* NUMCOSMO_GIR_SCAN */
 
 G_DEFINE_TYPE (NcDensityProfileNFW, nc_density_profile_nfw, NC_TYPE_DENSITY_PROFILE);
 

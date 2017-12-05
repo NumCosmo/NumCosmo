@@ -40,11 +40,13 @@
 #include "nc_enum_types.h"
 #include "perturbations/nc_hipert_boltzmann.h"
 
+#ifndef NUMCOSMO_GIR_SCAN
 #include <cvodes/cvodes.h>
 #include <cvodes/cvodes_dense.h>
 #include <cvodes/cvodes_band.h>
 #include <nvector/nvector_serial.h>
 #include <gsl/gsl_roots.h>
+#endif /* NUMCOSMO_GIR_SCAN */
 
 G_DEFINE_ABSTRACT_TYPE (NcHIPertBoltzmann, nc_hipert_boltzmann, NC_TYPE_HIPERT);
 

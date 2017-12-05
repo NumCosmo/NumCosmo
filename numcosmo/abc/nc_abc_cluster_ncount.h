@@ -32,7 +32,9 @@
 #include <numcosmo/math/ncm_abc.h>
 #include <numcosmo/data/nc_data_cluster_ncount.h>
 
+#ifndef NUMCOSMO_GIR_SCAN
 #include <gsl/gsl_histogram2d.h>
+#endif /* NUMCOSMO_GIR_SCAN */
 
 G_BEGIN_DECLS
 
@@ -68,8 +70,9 @@ typedef enum _NcABCClusterNCountSummary
   NC_ABC_CLUSTER_NCOUNT_SUMMARY_BIN_UNIFORM = 0,
   NC_ABC_CLUSTER_NCOUNT_SUMMARY_BIN_QUANTILE,
   NC_ABC_CLUSTER_NCOUNT_SUMMARY_BIN_NODES,  
-  NC_ABC_CLUSTER_NCOUNT_SUMMARY_GAUSS_RBF, /*< private >*/
-  NC_ABC_CLUSTER_NCOUNT_SUMMARY_NTYPES,    /*< skip >*/
+  NC_ABC_CLUSTER_NCOUNT_SUMMARY_GAUSS_RBF,
+  /* < private > */
+  NC_ABC_CLUSTER_NCOUNT_SUMMARY_NTYPES, /*< skip >*/
 } NcABCClusterNCountSummary;
 
 /**
@@ -83,8 +86,9 @@ typedef enum _NcABCClusterNCountSummary
 typedef enum _NcABCClusterNCountEpsilonUpdate 
 {
   NC_ABC_CLUSTER_NCOUNT_EPSILON_UPDATE_UNIFORM = 0, 
-  NC_ABC_CLUSTER_NCOUNT_EPSILON_UPDATE_QUANTILE, /*< private >*/
-  NC_ABC_CLUSTER_NCOUNT_EPSILON_UPDATE_NTYPE,    /*< skip >*/
+  NC_ABC_CLUSTER_NCOUNT_EPSILON_UPDATE_QUANTILE, 
+  /* < private > */
+  NC_ABC_CLUSTER_NCOUNT_EPSILON_UPDATE_NTYPE, /*< skip >*/
 }NcABCClusterNCountEpsilonUpdate;
 
 struct _NcABCClusterNCount

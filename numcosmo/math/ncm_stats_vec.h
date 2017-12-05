@@ -32,15 +32,15 @@
 #include <numcosmo/math/ncm_vector.h>
 #include <numcosmo/math/ncm_matrix.h>
 
-#include <math.h>
 #ifndef NUMCOSMO_GIR_SCAN
+#include <math.h>
 #include <complex.h>
 #endif /* NUMCOSMO_GIR_SCAN */
 #ifndef NUMCOSMO_GIR_SCAN
 #ifdef NUMCOSMO_HAVE_FFTW3
 #include <fftw3.h>
 #endif /* NUMCOSMO_HAVE_FFTW3 */
-#endif
+#endif /* NUMCOSMO_GIR_SCAN */
 
 G_BEGIN_DECLS
 
@@ -73,7 +73,8 @@ typedef enum
 {
   NCM_STATS_VEC_MEAN = 0,
   NCM_STATS_VEC_VAR,
-  NCM_STATS_VEC_COV,       /*< private >*/
+  NCM_STATS_VEC_COV,       
+  /* < private > */
   NCM_STATS_VEC_TYPES_LEN, /*< skip >*/
 } NcmStatsVecType;
 
@@ -124,7 +125,8 @@ typedef enum
   NCM_STATS_VEC_AR_NONE = 0,
   NCM_STATS_VEC_AR_FPE,
   NCM_STATS_VEC_AR_AIC,
-  NCM_STATS_VEC_AR_AICC, /*< private >*/
+  NCM_STATS_VEC_AR_AICC, 
+  /* < private > */
   NCM_STATS_VEC_AR_LEN,  /*< skip >*/
 } NcmStatsVecARType;
 

@@ -63,7 +63,8 @@ typedef enum _NcmStatsDist1dEPDFBw
 {
   NCM_STATS_DIST1D_EPDF_BW_FIXED = 0,
   NCM_STATS_DIST1D_EPDF_BW_RoT,
-  NCM_STATS_DIST1D_EPDF_BW_AUTO, /*< private >*/
+  NCM_STATS_DIST1D_EPDF_BW_AUTO, 
+  /* < private > */
   NCM_STATS_DIST1D_EPDF_BW_LEN,  /*< skip >*/
 } NcmStatsDist1dEPDFBw;
 

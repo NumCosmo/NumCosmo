@@ -43,8 +43,10 @@
 #include "math/memory_pool.h"
 #include "math/ncm_cfg.h"
 
+#ifndef NUMCOSMO_GIR_SCAN
 #include <gsl/gsl_randist.h>
 #include <gsl/gsl_roots.h>
+#endif /* NUMCOSMO_GIR_SCAN */
 
 G_DEFINE_TYPE (NcClusterMassPlCL, nc_cluster_mass_plcl, NC_TYPE_CLUSTER_MASS);
 

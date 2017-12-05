@@ -41,8 +41,6 @@
 #include "math/ncm_spline2d_bicubic.h"
 #include "math/ncm_cfg.h"
 
-#include <gsl/gsl_integration.h>
-
 enum
 {
   PROP_0,

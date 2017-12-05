@@ -39,11 +39,13 @@
 #include "math/ncm_ode_spline.h"
 #include "math/integral.h"
 
+#ifndef NUMCOSMO_GIR_SCAN
 #include <cvodes/cvodes.h>
 #include <cvodes/cvodes_dense.h>
 #include <cvodes/cvodes_band.h>
 #include <nvector/nvector_serial.h> 
 #include <gsl/gsl_linalg.h>
+#endif /* NUMCOSMO_GIR_SCAN */
 
 enum
 {

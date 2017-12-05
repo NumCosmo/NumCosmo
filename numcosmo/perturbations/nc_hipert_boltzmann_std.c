@@ -39,10 +39,12 @@
 
 #include "nc_hipert_boltzmann_std.h"
 
+#ifndef NUMCOSMO_GIR_SCAN
 #include <cvodes/cvodes_diag.h>
 #include <cvodes/cvodes_band.h>
 #include <cvodes/cvodes_bandpre.h>
 #include <cvodes/cvodes_spbcgs.h>
+#endif /* NUMCOSMO_GIR_SCAN */
 
 enum
 {

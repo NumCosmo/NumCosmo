@@ -40,7 +40,9 @@
 #include "math/ncm_spline_cubic_notaknot.h"
 #include "math/ncm_spline_gsl.h"
 
+#ifndef NUMCOSMO_GIR_SCAN
 #include <gsl/gsl_fit.h>
+#endif /* NUMCOSMO_GIR_SCAN */
 
 G_DEFINE_TYPE (NcHICosmoQSpline, nc_hicosmo_qspline, NC_TYPE_HICOSMO);
 

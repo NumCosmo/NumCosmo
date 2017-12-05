@@ -42,7 +42,9 @@
 #include "ncm_enum_types.h"
 #include "levmar/levmar.h"
 
+#ifndef NUMCOSMO_GIR_SCAN
 #include <gsl/gsl_blas.h>
+#endif /* NUMCOSMO_GIR_SCAN */
 
 enum
 {

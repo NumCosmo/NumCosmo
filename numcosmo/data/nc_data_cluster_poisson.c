@@ -48,7 +48,9 @@ enum
 #include "data/nc_data_cluster_ncount.h"
 #include "math/ncm_util.h"
 
+#ifndef NUMCOSMO_GIR_SCAN
 #include <gsl/gsl_randist.h>
+#endif /* NUMCOSMO_GIR_SCAN */
 
 G_DEFINE_TYPE (NcDataClusterPoisson, nc_data_cluster_poisson, NCM_TYPE_DATA_POISSON);
 

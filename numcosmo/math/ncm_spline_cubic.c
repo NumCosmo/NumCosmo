@@ -38,7 +38,10 @@
 #include "build_cfg.h"
 
 #include "math/ncm_spline_cubic.h"
+
+#ifndef NUMCOSMO_GIR_SCAN
 #include <math.h>
+#endif /* NUMCOSMO_GIR_SCAN */
 
 G_DEFINE_ABSTRACT_TYPE (NcmSplineCubic, ncm_spline_cubic, NCM_TYPE_SPLINE);
 

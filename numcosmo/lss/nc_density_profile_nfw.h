@@ -53,7 +53,8 @@ typedef struct _NcDensityProfileNFW NcDensityProfileNFW;
 typedef enum _NcDensityProfileNFWParams
 {
   NC_DENSITY_PROFILE_NFW_C_DELTA = 0,
-  NC_DENSITY_PROFILE_NFW_M_DELTA, /*< private >*/
+  NC_DENSITY_PROFILE_NFW_M_DELTA, 
+  /* < private > */
   NC_DENSITY_PROFILE_NFW_SPARAM_LEN, /*< skip >*/
 } NcDensityProfileNFWParams;
 

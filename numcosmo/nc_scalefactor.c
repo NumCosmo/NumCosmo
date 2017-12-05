@@ -46,7 +46,9 @@
 #include "nc_enum_types.h"
 #include "math/ncm_spline_cubic_notaknot.h"
 
+#ifndef NUMCOSMO_GIR_SCAN
 #include <nvector/nvector_serial.h>
+#endif /* NUMCOSMO_GIR_SCAN */
 
 enum
 {

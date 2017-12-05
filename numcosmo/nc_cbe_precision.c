@@ -56,8 +56,8 @@
 
 struct _NcCBEPrecisionPrivate
 {
-     struct precision ppr;
-   };
+  struct precision ppr;
+};
 
 enum
 {

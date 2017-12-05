@@ -39,11 +39,11 @@
 #include <numcosmo/build_cfg.h>
 #include <numcosmo/math/ncm_fftlog.h>
 
+#ifndef NUMCOSMO_GIR_SCAN
 #ifdef HAVE_ACB_H
 #include <acb.h>
 #endif /* HAVE_ACB_H */
-
-#include <glib-object.h>
+#endif /* NUMCOSMO_GIR_SCAN */
 
 G_BEGIN_DECLS
 

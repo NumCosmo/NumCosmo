@@ -32,12 +32,15 @@
 #include <numcosmo/math/ncm_fit.h>
 #include <numcosmo/math/ncm_stats_vec.h>
 #include <numcosmo/math/ncm_stats_dist1d_epdf.h>
+
+#ifndef NUMCOSMO_GIR_SCAN
 #include <gsl/gsl_histogram.h>
 #include <gsl/gsl_eigen.h>
 #include <gsl/gsl_vector_complex.h>
 #ifdef NUMCOSMO_HAVE_CFITSIO
 #include <fitsio.h>
 #endif /* NUMCOSMO_HAVE_CFITSIO */
+#endif /* NUMCOSMO_GIR_SCAN */
 
 G_BEGIN_DECLS
 
@@ -70,8 +73,9 @@ typedef enum _NcmMSetCatalogSync
 {
   NCM_MSET_CATALOG_SYNC_DISABLE,
   NCM_MSET_CATALOG_SYNC_AUTO,
-  NCM_MSET_CATALOG_SYNC_TIMED, /*< private >*/
-  NCM_MSET_CATALOG_SYNC_LEN,   /*< skip >*/
+  NCM_MSET_CATALOG_SYNC_TIMED, 
+  /* < private > */
+  NCM_MSET_CATALOG_SYNC_LEN, /*< skip >*/
 } NcmMSetCatalogSync;
 
 /**
@@ -101,8 +105,9 @@ typedef enum _NcmMSetCatalogTrimType
 typedef enum _NcmMSetCatalogTauMethod
 {
   NCM_MSET_CATALOG_TAU_METHOD_ACOR = 0,
-  NCM_MSET_CATALOG_TAU_METHOD_AR_MODEL, /*< private >*/
-  NCM_MSET_CATALOG_TAU_METHOD_LEN,      /*< skip >*/
+  NCM_MSET_CATALOG_TAU_METHOD_AR_MODEL, 
+  /* < private > */
+  NCM_MSET_CATALOG_TAU_METHOD_LEN, /*< skip >*/
 } NcmMSetCatalogTauMethod;
 
 struct _NcmMSetCatalog

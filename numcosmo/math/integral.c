@@ -42,8 +42,10 @@
 #include "math/memory_pool.h"
 #include "math/ncm_util.h"
 
+#ifndef NUMCOSMO_GIR_SCAN
 #include <gsl/gsl_integration.h>
 #include <cuba.h>
+#endif /* NUMCOSMO_GIR_SCAN */
 
 static gpointer
 _integral_ws_alloc (gpointer userdata)

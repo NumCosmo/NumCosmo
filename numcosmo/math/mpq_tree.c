@@ -40,7 +40,9 @@
 #include "math/ncm_cfg.h"
 #include "math/ncm_util.h"
 
+#ifndef NUMCOSMO_GIR_SCAN
 #include <gmp.h>
+#endif /* NUMCOSMO_GIR_SCAN */
 
 static void
 _slice_mpq_free (gpointer q)

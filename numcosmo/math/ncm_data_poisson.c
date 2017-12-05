@@ -40,8 +40,10 @@
 #include "ncm_data_poisson.h"
 #include "math/ncm_cfg.h"
 
+#ifndef NUMCOSMO_GIR_SCAN
 #include <gsl/gsl_randist.h>
 #include <gsl/gsl_sf_gamma.h>
+#endif /* NUMCOSMO_GIR_SCAN */
 
 enum
 {

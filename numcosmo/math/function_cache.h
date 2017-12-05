@@ -29,7 +29,10 @@
 #include <glib-object.h>
 #include <numcosmo/build_cfg.h>
 #include <numcosmo/math/ncm_cfg.h>
+
+#ifndef NUMCOSMO_GIR_SCAN
 #include <gsl/gsl_vector.h>
+#endif /* NUMCOSMO_GIR_SCAN */
 
 G_BEGIN_DECLS
 

@@ -44,8 +44,10 @@
 #include "math/ncm_spline_gsl.h"
 #include "math/ncm_mpsf_trig_int.h"
 
+#ifndef NUMCOSMO_GIR_SCAN
 #include <gsl/gsl_math.h>
 #include <gsl/gsl_poly.h>
+#endif /* NUMCOSMO_GIR_SCAN */
 
 /**
  * ncm_mpsf_sbessel_jl_xj_integral_recur_new: (skip)

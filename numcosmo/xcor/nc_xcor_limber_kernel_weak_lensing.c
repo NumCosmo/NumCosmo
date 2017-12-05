@@ -48,10 +48,12 @@
 
 #include "math/integral.h"
 #include "math/ncm_spline_gsl.h"
+#include "math/ncm_spline_func.h"
+
+#ifndef NUMCOSMO_GIR_SCAN
 #include <gsl/gsl_math.h>
 #include <gsl/gsl_randist.h>
-
-#include "math/ncm_spline_func.h"
+#endif /* NUMCOSMO_GIR_SCAN */
 
 G_DEFINE_TYPE (NcXcorLimberKernelWeakLensing, nc_xcor_limber_kernel_weak_lensing, NC_TYPE_XCOR_LIMBER_KERNEL);
 

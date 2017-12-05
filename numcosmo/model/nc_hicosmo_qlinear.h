@@ -60,7 +60,8 @@ typedef enum _NcHICosmoQLinearParams
   NC_HICOSMO_QLINEAR_E,
   NC_HICOSMO_QLINEAR_Q,
   NC_HICOSMO_QLINEAR_QP,
-  NC_HICOSMO_QLINEAR_Z1,         /*< private >*/
+  NC_HICOSMO_QLINEAR_Z1,         
+  /* < private > */
   NC_HICOSMO_QLINEAR_SPARAM_LEN, /*< skip >*/
 } NcHICosmoQLinearParams;
 

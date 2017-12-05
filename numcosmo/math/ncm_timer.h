@@ -26,6 +26,7 @@
 #ifndef _NCM_TIMER_H_
 #define _NCM_TIMER_H_
 
+#include <glib.h>
 #include <glib-object.h>
 #include <numcosmo/build_cfg.h>
 #include <numcosmo/math/ncm_stats_vec.h>

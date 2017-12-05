@@ -44,12 +44,15 @@
 #include "math/ncm_cfg.h"
 
 #include <glib/gstdio.h>
+
+#ifndef NUMCOSMO_GIR_SCAN
 #ifdef NUMCOSMO_HAVE_CFITSIO
 #include <fitsio.h>
 #endif /* NUMCOSMO_HAVE_CFITSIO */
 
 #include <gsl/gsl_blas.h>
 #include <gsl/gsl_multifit.h>
+#endif /* NUMCOSMO_GIR_SCAN */
 
 enum
 {

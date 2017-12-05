@@ -28,7 +28,10 @@
 #include <glib.h>
 #include <glib-object.h>
 #include <numcosmo/build_cfg.h>
+
+#ifndef NUMCOSMO_GIR_SCAN
 #include <gsl/gsl_matrix_long_double.h>
+#endif /* NUMCOSMO_GIR_SCAN */
 
 G_BEGIN_DECLS
 
