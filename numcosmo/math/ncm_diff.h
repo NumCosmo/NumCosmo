@@ -83,10 +83,12 @@ void ncm_diff_clear (NcmDiff **diff);
 guint ncm_diff_get_max_order (NcmDiff *diff);
 gdouble ncm_diff_get_richardson_step (NcmDiff *diff);
 gdouble ncm_diff_get_round_off_pad (NcmDiff *diff);
+gdouble ncm_diff_get_ini_h (NcmDiff *diff);
 
 void ncm_diff_set_max_order (NcmDiff *diff, const guint maxorder);
 void ncm_diff_set_richardson_step (NcmDiff *diff, const gdouble rs);
 void ncm_diff_set_round_off_pad (NcmDiff *diff, const gdouble roff_pad);
+void ncm_diff_set_ini_h (NcmDiff *diff, const gdouble ini_h);
 
 void ncm_diff_log_central_tables (NcmDiff *diff);
 void ncm_diff_log_forward_tables (NcmDiff *diff);

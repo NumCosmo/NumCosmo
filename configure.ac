@@ -140,6 +140,13 @@ AX_COMPILER_VENDOR()
 AX_COMPILER_VERSION()
 
 dnl ***************************************************************************
+dnl C keywords
+dnl ***************************************************************************
+AC_C_CONST()
+AC_C_RESTRICT()
+AC_C_VOLATILE()
+
+dnl ***************************************************************************
 dnl Makefile.decl variable dependency (here glib_native_win32 is null)
 dnl ***************************************************************************
 AM_CONDITIONAL(OS_UNIX, [test "$glib_native_win32" != "yes"])
@@ -191,6 +198,12 @@ case $ax_cv_c_compiler_vendor in #(
 esac
 
 AC_SUBST(PLC_NOWARN_FLAGS)
+
+AX_EXT()
+AC_SUBST(SIMD_FLAGS)
+AC_SUBST(CPUEXT_FLAGS)
+
+CFLAGS="$CFLAGS $SIMD_FLAGS $CPUEXT_FLAGS"
 
 dnl ***************************************************************************
 dnl Fortran flags

@@ -31,6 +31,7 @@
 #include <numcosmo/build_cfg.h>
 #include <numcosmo/math/ncm_vector.h>
 #include <numcosmo/math/ncm_quaternion.h>
+#include <numcosmo/math/ncm_sf_spherical_harmonics.h>
 #include <numcosmo/math/ncm_timer.h>
 
 #ifndef NUMCOSMO_GIR_SCAN
@@ -114,6 +115,7 @@ struct _NcmSphereMapPix
   NcmVector *alm;
   NcmVector *Cl;
   NcmTimer *t;
+	NcmSFSphericalHarmonics *spha;
 };
 
 GType ncm_sphere_map_pix_get_type (void) G_GNUC_CONST;
