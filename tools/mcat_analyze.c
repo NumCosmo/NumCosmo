@@ -373,12 +373,10 @@ main (gint argc, gchar *argv[])
 
         for (k = 0; k < nsteps; k++)
         {
-          ncm_message ("% 20.15g % 20.15g % 20.15g % 20.15g % 20.15g % 20.15g % 20.15g % 20.15g\n", 
-                       ncm_vector_get (z_vec, k), 
-                       ncm_matrix_get (res, k, 0), 
-                       ncm_matrix_get (res, k, 1), ncm_matrix_get (res, k, 2), 
-                       ncm_matrix_get (res, k, 3), ncm_matrix_get (res, k, 4), 
-                       ncm_matrix_get (res, k, 5), ncm_matrix_get (res, k, 6));
+          NcmVector *row = ncm_matrix_get_row (res, k);
+          ncm_message ("% 22.15g ", ncm_vector_get (z_vec, k));
+          ncm_vector_log_vals (row, "", "% 22.15g", TRUE);
+          ncm_vector_clear (&row);
         }
         ncm_message ("\n\n");
 
