@@ -48,7 +48,7 @@ enum
 {
 	PROP_0,
 	PROP_LMAX,
-	PROP_X,
+	PROP_ABSTOL,
 };
 
 G_DEFINE_TYPE (NcmSFSphericalHarmonics, ncm_sf_spherical_harmonics, G_TYPE_OBJECT);
@@ -56,11 +56,18 @@ G_DEFINE_TYPE (NcmSFSphericalHarmonics, ncm_sf_spherical_harmonics, G_TYPE_OBJEC
 static void
 ncm_sf_spherical_harmonics_init (NcmSFSphericalHarmonics *spha)
 {
-	spha->lmax   = 0;
-	spha->l      = 0;
-	spha->m      = 0;
-	spha->sqrt_n = g_array_new (FALSE, FALSE, sizeof (gdouble));
-	spha->x      = 0.0;
+	spha->lmax     = 0;
+	spha->l        = 0;
+	spha->l0       = 0;
+	spha->m        = 0;
+	spha->sqrt_n   = g_array_new (FALSE, FALSE, sizeof (gdouble));
+	spha->sqrtm1_n = g_array_new (FALSE, FALSE, sizeof (gdouble));
+	spha->x        = 0.0;
+	spha->sqrt1mx2 = 0.0;
+	spha->Pl0m     = 0.0;
+	spha->Plm      = 0.0;
+	spha->Plp1m    = 0.0;
+	spha->abstol   = 0.0;	
 }
 
 static void
@@ -73,6 +80,9 @@ _ncm_sf_spherical_harmonics_set_property (GObject *object, guint prop_id, const 
 	{
 		case PROP_LMAX:
 			ncm_sf_spherical_harmonics_set_lmax (spha, g_value_get_uint (value));
+			break;
+		case PROP_ABSTOL:
+			ncm_sf_spherical_harmonics_set_abstol (spha, g_value_get_double (value));
 			break;
 		default:
 			G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -91,6 +101,9 @@ _ncm_sf_spherical_harmonics_get_property (GObject *object, guint prop_id, GValue
 		case PROP_LMAX:
 			g_value_set_uint (value, ncm_sf_spherical_harmonics_get_lmax (spha));
 			break;
+		case PROP_ABSTOL:
+			g_value_set_double (value, ncm_sf_spherical_harmonics_get_abstol (spha));
+			break;
 		default:
 			G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
 			break;
@@ -103,6 +116,7 @@ _ncm_sf_spherical_harmonics_dispose (GObject *object)
 	NcmSFSphericalHarmonics *spha = NCM_SF_SPHERICAL_HARMONICS (object);
 
 	g_clear_pointer (&spha->sqrt_n, g_array_unref);
+	g_clear_pointer (&spha->sqrtm1_n, g_array_unref);
 	
 	/* Chain up : end */
 	G_OBJECT_CLASS (ncm_sf_spherical_harmonics_parent_class)->dispose (object);
@@ -133,6 +147,13 @@ ncm_sf_spherical_harmonics_class_init (NcmSFSphericalHarmonicsClass *klass)
 	                                                    "max l",
 	                                                    0, G_MAXUINT, 1024,
 	                                                    G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+	g_object_class_install_property (object_class,
+	                                 PROP_ABSTOL,
+	                                 g_param_spec_double ("abstol",
+	                                                      NULL,
+	                                                      "abstol",
+	                                                      GSL_DBL_MIN, GSL_DBL_MAX, 1.0e-20,
+	                                                      G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 }
 
 /**
@@ -206,13 +227,19 @@ ncm_sf_spherical_harmonics_set_lmax (NcmSFSphericalHarmonics *spha, const guint 
 {
 	if (lmax != spha->lmax)
 	{
-		const guint nmax = 2 * lmax + 1;
+		const gint nmax_old = 2 * spha->lmax;
+		const gint nmax     = 2 * lmax + 1;
 		guint n;
 
-		g_array_set_size (spha->sqrt_n, nmax + 1);
+		g_array_set_size (spha->sqrt_n,   nmax + 1);
+		g_array_set_size (spha->sqrtm1_n, nmax + 1);
 
-		for (n = 0; n <= nmax; n++)
-			g_array_index (spha->sqrt_n, gdouble, n) = sqrt (n);
+		for (n = nmax_old; n <= nmax; n++)
+		{
+			const gdouble sqrt_n = sqrt (n);
+			g_array_index (spha->sqrt_n, gdouble, n)   = sqrt_n;
+			g_array_index (spha->sqrtm1_n, gdouble, n) = 1.0 / sqrt_n;
+		}
 
 		spha->lmax = lmax;
 	}
@@ -230,6 +257,32 @@ guint
 ncm_sf_spherical_harmonics_get_lmax (NcmSFSphericalHarmonics *spha)
 {
 	return spha->lmax;
+}
+
+/**
+ * ncm_sf_spherical_harmonics_set_abstol:
+ * @spha: a #NcmSFSphericalHarmonics
+ * @abstol: the absolute tolerance
+ *
+ * Sets the absolute tolerance to @abstol.
+ * 
+ */
+void 
+ncm_sf_spherical_harmonics_set_abstol (NcmSFSphericalHarmonics *spha, const gdouble abstol)
+{
+	spha->abstol = abstol;
+}
+
+/**
+ * ncm_sf_spherical_harmonics_get_abstol:
+ * @spha: a #NcmSFSphericalHarmonics
+ *
+ * Returns: the current abstol.
+ */
+gdouble 
+ncm_sf_spherical_harmonics_get_abstol (NcmSFSphericalHarmonics *spha)
+{
+	return spha->abstol;
 }
 
 /**

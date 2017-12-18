@@ -57,13 +57,17 @@ struct _NcmSFSphericalHarmonics
 	GObject parent_instance;
 	guint lmax;
 	guint l;
+	guint l0;
 	guint m;
 	GArray *sqrt_n;
+	GArray *sqrtm1_n;
 	gdouble x;
 	gdouble sqrt1mx2;
-	gdouble Pll;
+	gdouble Pl0m;
+	gdouble Pl0p1m;
 	gdouble Plm;
 	gdouble Plp1m;
+	gdouble abstol;
 };
 
 GType ncm_sf_spherical_harmonics_get_type (void) G_GNUC_CONST;
@@ -75,6 +79,9 @@ void ncm_sf_spherical_harmonics_clear (NcmSFSphericalHarmonics **spha);
 
 void ncm_sf_spherical_harmonics_set_lmax (NcmSFSphericalHarmonics *spha, const guint lmax);
 guint ncm_sf_spherical_harmonics_get_lmax (NcmSFSphericalHarmonics *spha);
+
+void ncm_sf_spherical_harmonics_set_abstol (NcmSFSphericalHarmonics *spha, const gdouble abstol);
+gdouble ncm_sf_spherical_harmonics_get_abstol (NcmSFSphericalHarmonics *spha);
 
 G_INLINE_FUNC void ncm_sf_spherical_harmonics_start_rec (NcmSFSphericalHarmonics *spha, const gdouble x, const gdouble sqrt1mx2);
 G_INLINE_FUNC void ncm_sf_spherical_harmonics_next_l (NcmSFSphericalHarmonics *spha);
@@ -96,7 +103,8 @@ G_END_DECLS
 
 G_BEGIN_DECLS
 
-#define SN(n) g_array_index (spha->sqrt_n, gdouble, (n))
+#define SN(n)   g_array_index (spha->sqrt_n, gdouble, (n))
+#define SNM1(n) g_array_index (spha->sqrtm1_n, gdouble, (n))
 
 G_INLINE_FUNC void 
 ncm_sf_spherical_harmonics_start_rec (NcmSFSphericalHarmonics *spha, const gdouble x, const gdouble sqrt1mx2)
@@ -104,10 +112,12 @@ ncm_sf_spherical_harmonics_start_rec (NcmSFSphericalHarmonics *spha, const gdoub
 	spha->x        = x;
 	spha->sqrt1mx2 = sqrt1mx2;
 	spha->l     	 = 0;
+	spha->l0    	 = 0;
 	spha->m     	 = 0;
-	spha->Pll      = ncm_c_sqrt_1_4pi ();
-	spha->Plm      = spha->Pll;
-	spha->Plp1m    = x * SN (2 * spha->l + 3) * spha->Pll;
+	spha->Pl0m     = ncm_c_sqrt_1_4pi ();
+	spha->Pl0p1m   = x * SN (2 * spha->l + 3) * spha->Pl0m;
+	spha->Plm      = spha->Pl0m;
+	spha->Plp1m    = spha->Pl0p1m;
 }
 
 G_INLINE_FUNC void 
@@ -119,7 +129,10 @@ ncm_sf_spherical_harmonics_next_l (NcmSFSphericalHarmonics *spha)
 	const gint m        = spha->m;
 	const gint lmm      = l - m;
 	const gint lpm      = l + m;
-	const gdouble Plp2m = SN (twol + 5) / (SN (lpm + 2) * SN (lmm + 2)) * ( x * SN (twol + 3) * spha->Plp1m - SN (lmm + 1) * SN (lpm + 1) * spha->Plm / SN (twol + 1));
+	const gdouble pref  = SN (twol + 5) * SNM1 (lpm + 2) * SNM1 (lmm + 2);
+	const gdouble Klp1  = pref * SN (twol + 3);
+	const gdouble Kl    = pref * SN (lmm + 1) * SN (lpm + 1) * SNM1 (twol + 1);
+	const gdouble Plp2m = Klp1 * x * spha->Plp1m - Kl * spha->Plm;
 
 	spha->Plm           = spha->Plp1m;
 	spha->Plp1m         = Plp2m;
@@ -131,15 +144,56 @@ ncm_sf_spherical_harmonics_next_m (NcmSFSphericalHarmonics *spha)
 {
 	const gdouble sqrt1mx2 = spha->sqrt1mx2;
 	const gdouble x        = spha->x;
-	const gint l           = spha->m;
 
-	spha->m++;
+	if (spha->m == spha->l0)
+	{
+		const gint l0 = spha->m;
 
-	spha->Pll   = - sqrt1mx2 * SN (2 * l + 3) / SN (2 * l + 2) * spha->Pll;
-	spha->l     = spha->m;
-	spha->Plm   = spha->Pll;
+		spha->Pl0m    = - sqrt1mx2 * SN (2 * l0 + 3) * SNM1 (2 * l0 + 2) * spha->Pl0m;
+		spha->Pl0p1m  = x * SN (2 * l0 + 5) * spha->Pl0m;
 
-	spha->Plp1m = x * SN (2 * spha->l + 3) * spha->Pll;
+		spha->m++;
+		spha->l0      = spha->m;
+		
+		spha->l       = spha->l0;
+		
+		spha->Plm     = spha->Pl0m;
+		spha->Plp1m   = spha->Pl0p1m;
+	}
+	else
+	{
+		const gdouble sqrt1mx2 = spha->sqrt1mx2;
+		const gdouble x        = spha->x;
+		const gint l0          = spha->l0;
+		const gint twol0       = 2 * l0;
+		const gint m           = spha->m;
+		const gint l0mm        = l0 - m;
+		const gint l0pm        = l0 + m;
+		const gdouble Pl0p1m   = spha->Pl0p1m;
+		const gdouble Pl0m     = spha->Pl0m;
+		
+		spha->Pl0m  = (SN (twol0 + 1) * SN (l0mm + 1)   * SNM1 (twol0 + 3) * SNM1 (l0mm)     * Pl0p1m - SN (l0pm + 1)  * SNM1 (l0mm)                                        * x * Pl0m) / sqrt1mx2;
+		spha->Plp1m = (SN (l0mm + 1)  * SNM1 (l0pm + 2)                                  * x * Pl0p1m - SN (twol0 + 3) * SN (l0pm + 1) * SNM1 (twol0 + 1) * SNM1 (l0pm + 2)     * Pl0m) / sqrt1mx2;
+		spha->Plm   = spha->Pl0m;
+
+		spha->m++;
+
+		spha->l     = spha->l0;
+	}
+
+	/*printf ("#(%6d, %6d)[% 22.15g]:", spha->l0, spha->m, fabs (spha->Plm));*/
+	if (fabs (spha->Plm) < spha->abstol)
+	{
+		do {
+		ncm_sf_spherical_harmonics_next_l (spha);
+		/*printf (".");*/
+	} while (fabs (spha->Plm) < spha->abstol);
+
+		spha->l0     = ncm_sf_spherical_harmonics_get_l (spha);
+		spha->Pl0m   = spha->Plm;
+		spha->Pl0p1m = spha->Plp1m;
+	}
+	/*printf ("\n");*/
 }
 
 G_INLINE_FUNC gdouble 

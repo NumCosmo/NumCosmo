@@ -199,11 +199,16 @@ esac
 
 AC_SUBST(PLC_NOWARN_FLAGS)
 
-AX_EXT()
-AC_SUBST(SIMD_FLAGS)
-AC_SUBST(CPUEXT_FLAGS)
-
-CFLAGS="$CFLAGS $SIMD_FLAGS $CPUEXT_FLAGS"
+AC_ARG_ENABLE([simd-ext-flags], 
+  [AS_HELP_STRING([--enable-simd-ext-flags  Enable all SIMD and extension flags])], 
+  [enable_simd_ext_flags="yes"],[])
+  
+if test x$enable_simd_ext_flags = "xyes"; then
+  AX_EXT()
+  AC_SUBST(SIMD_FLAGS)
+  AC_SUBST(CPUEXT_FLAGS)
+  CFLAGS="$CFLAGS $SIMD_FLAGS $CPUEXT_FLAGS"
+fi
 
 dnl ***************************************************************************
 dnl Fortran flags

@@ -112,7 +112,8 @@ struct _NcmSphereMapPix
   GPtrArray *fft_plan_c2r;
   guint lmax;
   NcmVector *Ylm;
-  NcmVector *alm;
+  GArray *alm;
+  NcmVector *alm_v;
   NcmVector *Cl;
   NcmTimer *t;
 	NcmSFSphericalHarmonics *spha;
@@ -207,6 +208,9 @@ G_STMT_START { \
 
 #define NCM_SPHERE_MAP_PIX_ALM_SIZE(lmax) (((lmax)*(lmax) + 3*(lmax) + 2)/2) 
 #define NCM_SPHERE_MAP_PIX_M_START(lmax,m) ((2*(lmax)*(m)-(m)*(m)+3*(m))/2)
+
+/*#define NCM_SPHERE_MAP_PIX_ALM_INDEX(l,m) ((l * (l + 1)) / 2 + m)*/
+#define NCM_SPHERE_MAP_PIX_ALM_INDEX(lmax,l,m) ((l) + ((1 + 2 * (lmax) - (m)) * (m)) / 2)
 
 G_END_DECLS
 
