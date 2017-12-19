@@ -51,6 +51,12 @@ struct _NcmSFSphericalHarmonicsClass
 	GObjectClass parent_class;
 };
 
+typedef struct _NcmSFSphericalHarmonicsK
+{
+	gdouble l;
+	gdouble lp1;
+} NcmSFSphericalHarmonicsK;
+
 struct _NcmSFSphericalHarmonics
 {
 	/*< private >*/
@@ -59,8 +65,10 @@ struct _NcmSFSphericalHarmonics
 	guint l;
 	guint l0;
 	guint m;
+	NcmSFSphericalHarmonicsK * restrict Klm;
 	GArray *sqrt_n;
 	GArray *sqrtm1_n;
+	GPtrArray *K_array;
 	gdouble x;
 	gdouble sqrt1mx2;
 	gdouble Pl0m;
@@ -109,11 +117,14 @@ G_BEGIN_DECLS
 G_INLINE_FUNC void 
 ncm_sf_spherical_harmonics_start_rec (NcmSFSphericalHarmonics *spha, const gdouble x, const gdouble sqrt1mx2)
 {
+	GArray *Km_array = g_ptr_array_index (spha->K_array, 0);
+	
 	spha->x        = x;
 	spha->sqrt1mx2 = sqrt1mx2;
 	spha->l     	 = 0;
 	spha->l0    	 = 0;
 	spha->m     	 = 0;
+	spha->Klm      = &g_array_index (Km_array, NcmSFSphericalHarmonicsK, 0);
 	spha->Pl0m     = ncm_c_sqrt_1_4pi ();
 	spha->Pl0p1m   = x * SN (2 * spha->l + 3) * spha->Pl0m;
 	spha->Plm      = spha->Pl0m;
@@ -124,19 +135,12 @@ G_INLINE_FUNC void
 ncm_sf_spherical_harmonics_next_l (NcmSFSphericalHarmonics *spha)
 {
 	const gdouble x     = spha->x;
-	const gint l        = spha->l;
-	const gint twol     = 2 * l;
-	const gint m        = spha->m;
-	const gint lmm      = l - m;
-	const gint lpm      = l + m;
-	const gdouble pref  = SN (twol + 5) * SNM1 (lpm + 2) * SNM1 (lmm + 2);
-	const gdouble Klp1  = pref * SN (twol + 3);
-	const gdouble Kl    = pref * SN (lmm + 1) * SN (lpm + 1) * SNM1 (twol + 1);
-	const gdouble Plp2m = Klp1 * x * spha->Plp1m - Kl * spha->Plm;
+	const gdouble Plp2m = spha->Klm->lp1 * x * spha->Plp1m - spha->Klm->l * spha->Plm;
 
 	spha->Plm           = spha->Plp1m;
 	spha->Plp1m         = Plp2m;
 	spha->l++;
+	spha->Klm++;
 }
 
 G_INLINE_FUNC void 
@@ -181,13 +185,18 @@ ncm_sf_spherical_harmonics_next_m (NcmSFSphericalHarmonics *spha)
 		spha->l     = spha->l0;
 	}
 
+	{
+		GArray *Km_array = g_ptr_array_index (spha->K_array, spha->m);
+		spha->Klm = &g_array_index (Km_array, NcmSFSphericalHarmonicsK, spha->l - spha->m);
+	}
+	
 	/*printf ("#(%6d, %6d)[% 22.15g]:", spha->l0, spha->m, fabs (spha->Plm));*/
 	if (fabs (spha->Plm) < spha->abstol)
 	{
 		do {
-		ncm_sf_spherical_harmonics_next_l (spha);
-		/*printf (".");*/
-	} while (fabs (spha->Plm) < spha->abstol);
+		  ncm_sf_spherical_harmonics_next_l (spha);
+		  /*printf (".");*/
+	  } while (fabs (spha->Plm) < spha->abstol);
 
 		spha->l0     = ncm_sf_spherical_harmonics_get_l (spha);
 		spha->Pl0m   = spha->Plm;

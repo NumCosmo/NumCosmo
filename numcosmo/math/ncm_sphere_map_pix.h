@@ -111,7 +111,6 @@ struct _NcmSphereMapPix
   GPtrArray *fft_plan_r2c;
   GPtrArray *fft_plan_c2r;
   guint lmax;
-  NcmVector *Ylm;
   GArray *alm;
   NcmVector *alm_v;
   NcmVector *Cl;

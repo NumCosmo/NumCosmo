@@ -60,14 +60,18 @@ ncm_sf_spherical_harmonics_init (NcmSFSphericalHarmonics *spha)
 	spha->l        = 0;
 	spha->l0       = 0;
 	spha->m        = 0;
+	spha->Klm      = NULL;
 	spha->sqrt_n   = g_array_new (FALSE, FALSE, sizeof (gdouble));
 	spha->sqrtm1_n = g_array_new (FALSE, FALSE, sizeof (gdouble));
+	spha->K_array  = g_ptr_array_new ();
 	spha->x        = 0.0;
 	spha->sqrt1mx2 = 0.0;
 	spha->Pl0m     = 0.0;
 	spha->Plm      = 0.0;
 	spha->Plp1m    = 0.0;
-	spha->abstol   = 0.0;	
+	spha->abstol   = 0.0;
+
+	g_ptr_array_set_free_func (spha->K_array, (GDestroyNotify) g_array_unref);
 }
 
 static void
@@ -79,7 +83,7 @@ _ncm_sf_spherical_harmonics_set_property (GObject *object, guint prop_id, const 
 	switch (prop_id)
 	{
 		case PROP_LMAX:
-			ncm_sf_spherical_harmonics_set_lmax (spha, g_value_get_uint (value));
+			ncm_sf_spherical_harmonics_set_lmax (spha, g_value_get_int (value));
 			break;
 		case PROP_ABSTOL:
 			ncm_sf_spherical_harmonics_set_abstol (spha, g_value_get_double (value));
@@ -99,7 +103,7 @@ _ncm_sf_spherical_harmonics_get_property (GObject *object, guint prop_id, GValue
 	switch (prop_id)
 	{
 		case PROP_LMAX:
-			g_value_set_uint (value, ncm_sf_spherical_harmonics_get_lmax (spha));
+			g_value_set_int (value, ncm_sf_spherical_harmonics_get_lmax (spha));
 			break;
 		case PROP_ABSTOL:
 			g_value_set_double (value, ncm_sf_spherical_harmonics_get_abstol (spha));
@@ -117,6 +121,7 @@ _ncm_sf_spherical_harmonics_dispose (GObject *object)
 
 	g_clear_pointer (&spha->sqrt_n, g_array_unref);
 	g_clear_pointer (&spha->sqrtm1_n, g_array_unref);
+	g_clear_pointer (&spha->K_array, g_ptr_array_unref);
 	
 	/* Chain up : end */
 	G_OBJECT_CLASS (ncm_sf_spherical_harmonics_parent_class)->dispose (object);
@@ -142,11 +147,11 @@ ncm_sf_spherical_harmonics_class_init (NcmSFSphericalHarmonicsClass *klass)
 
 	g_object_class_install_property (object_class,
 	                                 PROP_LMAX,
-	                                 g_param_spec_uint ("lmax",
-	                                                    NULL,
-	                                                    "max l",
-	                                                    0, G_MAXUINT, 1024,
-	                                                    G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+	                                 g_param_spec_int ("lmax",
+	                                                   NULL,
+	                                                   "max l",
+	                                                   0, G_MAXINT, 1024,
+	                                                   G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 	g_object_class_install_property (object_class,
 	                                 PROP_ABSTOL,
 	                                 g_param_spec_double ("abstol",
@@ -204,7 +209,7 @@ ncm_sf_spherical_harmonics_free (NcmSFSphericalHarmonics *spha)
  * ncm_sf_spherical_harmonics_clear:
  * @spha: a #NcmSFSphericalHarmonics
  *
- * Decrease the reference count of @spha by one, and sets the pointer *spha to
+ * Decrease the reference count of @spha by one, and sets the pointer *@spha to
  * NULL.
  *
  */
@@ -213,6 +218,9 @@ ncm_sf_spherical_harmonics_clear (NcmSFSphericalHarmonics **spha)
 {
   g_clear_object (spha);
 }
+
+#define SN(n)   g_array_index (spha->sqrt_n, gdouble, (n))
+#define SNM1(n) g_array_index (spha->sqrtm1_n, gdouble, (n))
 
 /**
  * ncm_sf_spherical_harmonics_set_lmax:
@@ -227,9 +235,9 @@ ncm_sf_spherical_harmonics_set_lmax (NcmSFSphericalHarmonics *spha, const guint 
 {
 	if (lmax != spha->lmax)
 	{
-		const gint nmax_old = 2 * spha->lmax;
-		const gint nmax     = 2 * lmax + 1;
-		guint n;
+		const gint nmax_old = spha->sqrt_n->len;
+		const gint nmax     = 2 * lmax + 3;
+		gint n;
 
 		g_array_set_size (spha->sqrt_n,   nmax + 1);
 		g_array_set_size (spha->sqrtm1_n, nmax + 1);
@@ -239,6 +247,41 @@ ncm_sf_spherical_harmonics_set_lmax (NcmSFSphericalHarmonics *spha, const guint 
 			const gdouble sqrt_n = sqrt (n);
 			g_array_index (spha->sqrt_n, gdouble, n)   = sqrt_n;
 			g_array_index (spha->sqrtm1_n, gdouble, n) = 1.0 / sqrt_n;
+		}
+
+		for (n = 0; n <= lmax; n++)
+		{
+			GArray *Km_array = NULL;
+			gint l;
+
+			if (n < spha->K_array->len)
+			{
+				Km_array = g_ptr_array_index (spha->K_array, n);
+			}
+			else if (n == spha->K_array->len)
+			{
+				Km_array = g_array_new (TRUE, TRUE, sizeof (NcmSFSphericalHarmonicsK));
+				g_ptr_array_add (spha->K_array, Km_array);
+			}
+			else
+			{
+				g_assert_not_reached ();
+			}
+
+			for (l = Km_array->len + n; l < lmax; l++)
+			{
+				NcmSFSphericalHarmonicsK Km;
+				const gint m       = n;
+				const gint twol    = 2 * l;
+				const gint lmm     = l - m;
+				const gint lpm     = l + m;
+				const gdouble pref = SN (twol + 5) * SNM1 (lpm + 2) * SNM1 (lmm + 2);
+
+				Km.lp1  = pref * SN (twol + 3);
+				Km.l    = pref * SN (lmm + 1) * SN (lpm + 1) * SNM1 (twol + 1);
+
+				g_array_append_val (Km_array, Km);
+			}
 		}
 
 		spha->lmax = lmax;
