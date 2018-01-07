@@ -58,12 +58,15 @@
 #define fftwf_alloc_complex(n) (fftwf_complex *) fftwf_malloc (sizeof(fftw_complex) * (n))
 #endif /* HAVE_FFTW3_ALLOC */
 
+/*#undef HAVE_FFTW3F*/
+
 #ifdef HAVE_FFTW3F
 #  define _fft_vec_alloc fftwf_alloc_real 
 #  define _fft_complex complex float 
 #  define _fft_vec_alloc_complex fftwf_alloc_complex
 #  define _fft_vec_free  fftwf_free
 #  define _fft_vec_set_zero(v,s) memset ((v), 0, sizeof (gfloat) * (s))
+#  define _fft_vec_set_zero_complex(v,s) memset ((v), 0, sizeof (_fft_complex) * (s))
 #  define _fft_vec_memcpy(dest,orig,s) memcpy ((dest), (orig), sizeof (gfloat) * (s))
 #  define _fft_vec_ptr(v,i) (&((gfloat *)(v))[i])
 #elif defined (HAVE_FFTW3)
@@ -72,12 +75,14 @@
 #  define _fft_vec_alloc_complex fftw_alloc_complex 
 #  define _fft_vec_free  fftw_free
 #  define _fft_vec_set_zero(v,s) memset ((v), 0, sizeof (gdouble) * (s))
+#  define _fft_vec_set_zero_complex(v,s) memset ((v), 0, sizeof (_fft_complex) * (s))
 #  define _fft_vec_memcpy(dest,orig,s) memcpy ((dest), (orig), sizeof (gdouble) * (s))
 #  define _fft_vec_ptr(v,i) (&((gdouble *)(v))[i])
 #else
 #  define _fft_vec_alloc gsl_vector_float_alloc 
 #  define _fft_vec_free  gsl_vector_float_free
 #  define _fft_vec_set_zero(v,s) gsl_vector_float_set_zero (v)
+#  define _fft_vec_set_zero_complex(v,s)
 #  define _fft_vec_memcpy(dest,orig,s) gsl_vector_float_memcpy ((dest),(orig))
 #  define _fft_vec_ptr(v,i) (gsl_vector_float_ptr ((v),(i)))
 #endif
@@ -1686,6 +1691,7 @@ _ncm_sphere_map_pix_prepare_fft (NcmSphereMapPix *pix)
 #  ifdef HAVE_FFTW3F
 
     pix->fft_pvec = fftwf_alloc_complex (npix);
+    _fft_vec_set_zero_complex (pix->fft_pvec, npix);
 
     _fft_vec_memcpy (temp_pix, pix->pvec, pix->npix);
 
@@ -1750,6 +1756,7 @@ _ncm_sphere_map_pix_prepare_fft (NcmSphereMapPix *pix)
 #  else
 
     pix->fft_pvec = fftw_alloc_complex (npix);
+    _fft_vec_set_zero_complex (pix->fft_pvec, npix);
 
     ncm_cfg_lock_plan_fftw ();
     
@@ -1815,42 +1822,72 @@ _ncm_sphere_map_pix_prepare_fft (NcmSphereMapPix *pix)
 #endif
 }
 
+#define step (10)
+#define stepm2 ((step) - 2)
+
 static void 
-_ncm_sphere_map_pix_run_over_l (NcmSphereMapPix *pix, const gint si, const gint l0, const gint m, const _fft_complex Fim_i)
+_ncm_sphere_map_pix_run_over_l (NcmSphereMapPix *pix, NcmSFSphericalHarmonicsY *sphaY, const gint si, const gint l0, const gint m, const _fft_complex Fim_i)
 {
 	const gdouble Re_Fim_i     = creal (Fim_i);
 	const gdouble Im_Fim_i     = cimag (Fim_i);
-	const gint lmaxm1          = pix->lmax - 1;
+  const gint lmax            = pix->lmax;
+  const gint lmaxm1          = pix->lmax - 1;
+	const gint lmaxmstepm2     = pix->lmax - stepm2;
 	ncm_cdouble * restrict alm = &g_array_index (pix->alm, ncm_cdouble, si + l0);
+  gdouble Ylm[step]          = {0.0, };
+  gint l = l0;
 
-	while (TRUE) 
+  while (l < lmaxmstepm2) 
+  {
+    gint i;
+    ncm_sf_spherical_harmonics_Y_next_l2pn (sphaY, Ylm, stepm2);
+
+    for (i = 0; i < step; i++)
+    {
+      const gdouble Re_alm = Ylm[i] * Re_Fim_i;
+      const gdouble Im_alm = Ylm[i] * Im_Fim_i;
+      alm[i][0] += Re_alm;
+      alm[i][1] += Im_alm;
+    }
+
+    alm += step;
+    l = ncm_sf_spherical_harmonics_Y_get_l (sphaY);
+  }
+  
+  while (l < lmax) 
+  {
+    gint i;
+    ncm_sf_spherical_harmonics_Y_next_l2 (sphaY, Ylm);
+
+    for (i = 0; i < 2; i++)
+    {
+      const gdouble Re_alm = Ylm[i] * Re_Fim_i;
+      const gdouble Im_alm = Ylm[i] * Im_Fim_i;
+      alm[i][0] += Re_alm;
+      alm[i][1] += Im_alm;
+    }
+
+    alm += 2;
+    l = ncm_sf_spherical_harmonics_Y_get_l (sphaY);
+  }
+  
+	if (l == lmaxm1)
 	{
-		const gdouble Ylm    = ncm_sf_spherical_harmonics_get_Yblm (pix->spha);
-		const gdouble Re_alm = Ylm * Re_Fim_i;
-		const gdouble Im_alm = Ylm * Im_Fim_i;
-		const gint l         = ncm_sf_spherical_harmonics_get_l (pix->spha);
-
-		(*alm)[0] += Re_alm;
-		(*alm)[1] += Im_alm;
-		++alm;
-		/*ncm_vector_fast_addto (pix->Cl, l, Re_alm * Re_alm + Im_alm * Im_alm);*/
-
-		if (l >= lmaxm1)
-			break;
-		else		
-			ncm_sf_spherical_harmonics_next_l (pix->spha);
-	}
-	
-	if (G_LIKELY (ncm_sf_spherical_harmonics_get_l (pix->spha) == lmaxm1))
-	{
-    const gdouble Ylm    = ncm_sf_spherical_harmonics_get_Yblp1m (pix->spha);
+    const gdouble Ylm    = ncm_sf_spherical_harmonics_Y_get_lp1m (sphaY);
     const gdouble Re_alm = Ylm * Re_Fim_i;
     const gdouble Im_alm = Ylm * Im_Fim_i;
 
-		(*alm)[0] += Re_alm;
-		(*alm)[1] += Im_alm;
-		
-    /*ncm_vector_fast_addto (pix->Cl, l, Re_alm * Re_alm + Im_alm * Im_alm);*/
+		alm[0][0] += Re_alm;
+		alm[0][1] += Im_alm;
+  }  
+  else if (l == lmax)
+	{
+    const gdouble Ylm    = ncm_sf_spherical_harmonics_Y_get_lm (sphaY);
+    const gdouble Re_alm = Ylm * Re_Fim_i;
+    const gdouble Im_alm = Ylm * Im_Fim_i;
+
+		alm[0][0] += Re_alm;
+		alm[0][1] += Im_alm;
   }  
 }
 
@@ -1858,17 +1895,17 @@ _ncm_sphere_map_pix_run_over_l (NcmSphereMapPix *pix, const gint si, const gint 
 static void
 _ncm_sphere_map_pix_get_alm_from_circle (NcmSphereMapPix *pix, gint64 r_i, gboolean Cl_only)
 {
-  const gint64 ring_size      = ncm_sphere_map_pix_get_ring_size (pix, r_i);
-  const gint64 ring_size_2    = ring_size / 2;
-  const gint64 ring_fi        = ncm_sphere_map_pix_get_ring_first_index (pix, r_i);
-  _fft_complex * restrict Fim = &((_fft_complex *)pix->fft_pvec)[ring_fi];
-  const gdouble pix_area      = 4.0 * M_PI / pix->npix;
-  gdouble theta_i = 0.0, phi_0 = 0.0, x = 0.0, sqrt1mx2 = 0.0;
+  const gint64 ring_size          = ncm_sphere_map_pix_get_ring_size (pix, r_i);
+  const gint64 ring_size_2        = ring_size / 2;
+  const gint64 ring_fi            = ncm_sphere_map_pix_get_ring_first_index (pix, r_i);
+  _fft_complex * restrict Fim     = &((_fft_complex *)pix->fft_pvec)[ring_fi];
+  const gdouble pix_area          = 4.0 * M_PI / pix->npix;
+  NcmSFSphericalHarmonicsY *sphaY = ncm_sf_spherical_harmonics_Y_new (pix->spha);
+  gdouble theta_i                 = 0.0;
+  gdouble phi_0                   = 0.0; 
   gint m, si;
 
   ncm_sphere_map_pix_pix2ang_ring (pix, ring_fi, &theta_i, &phi_0);
-
-  sincos (theta_i, &sqrt1mx2, &x);
 
   if (Cl_only)
   {
@@ -1907,12 +1944,14 @@ _ncm_sphere_map_pix_get_alm_from_circle (NcmSphereMapPix *pix, gint64 r_i, gbool
 			phase *= emIphi_0;
 		}
 		
-    ncm_sf_spherical_harmonics_start_rec (pix->spha, x, sqrt1mx2);
+    ncm_sf_spherical_harmonics_start_rec (pix->spha, sphaY, theta_i);
 
     m  = 0;
     si = 0;
+    while (TRUE)
 		{
-			gint fft_ring_index = m % ring_size;
+      const gint l0             = ncm_sf_spherical_harmonics_Y_get_l (sphaY);
+			const gint fft_ring_index = m % ring_size;
 			_fft_complex Fim_i;
 
 			if (fft_ring_index <= ring_size_2)
@@ -1921,35 +1960,26 @@ _ncm_sphere_map_pix_get_alm_from_circle (NcmSphereMapPix *pix, gint64 r_i, gbool
 				Fim_i = conj (Fim[ring_size - fft_ring_index]);
 
 			/*printf ("%ld %ld % 22.15g % 22.15g (% 22.15g % 22.15g)\n", m, ring_size, phi_0, fmod (m * phi_0, 2.0 * M_PI), creal (Fim_i), cimag (Fim_i));*/
+      
+      _ncm_sphere_map_pix_run_over_l (pix, sphaY, si, l0, m, Fim_i);
 
-			_ncm_sphere_map_pix_run_over_l (pix, 0, m, m, Fim_i);
-		}
-
-    for (m = 1; m <= pix->lmax; m++)
-		{
-			gint fft_ring_index = m % ring_size;
-			_fft_complex Fim_i;
-
-			if (fft_ring_index <= ring_size_2)
-				Fim_i = Fim[fft_ring_index];
-			else
-				Fim_i = conj (Fim[ring_size - fft_ring_index]);
-
-			/*printf ("%ld %ld % 22.15g % 22.15g (% 22.15g % 22.15g)\n", m, ring_size, phi_0, fmod (m * phi_0, 2.0 * M_PI), creal (Fim_i), cimag (Fim_i));*/
-
-      ncm_sf_spherical_harmonics_next_m (pix->spha);
-
+      if (m < pix->lmax)
       {
-        const gint l0 = ncm_sf_spherical_harmonics_get_l (pix->spha);
+        ncm_sf_spherical_harmonics_Y_next_m (sphaY);
         if (l0 > pix->lmax)
           break;
-        si += pix->lmax - m + 1;
-        _ncm_sphere_map_pix_run_over_l (pix, si, l0, m, Fim_i);
       }
-		}
-		
+      else
+        break;
+
+      m++;
+      si += pix->lmax - m + 1;      
+    }
+
     /*printf ("# Loop?!F % 21.15g\n", ncm_timer_elapsed (pix->t));fflush (stdout);*/
   }
+
+  ncm_sf_spherical_harmonics_Y_free (sphaY);
 }
 #endif
 

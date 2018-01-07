@@ -51,24 +51,17 @@ enum
 	PROP_ABSTOL,
 };
 
+G_DEFINE_BOXED_TYPE (NcmSFSphericalHarmonicsY, ncm_sf_spherical_harmonics_Y, ncm_sf_spherical_harmonics_Y_dup, ncm_sf_spherical_harmonics_Y_free);
+G_DEFINE_BOXED_TYPE (NcmSFSphericalHarmonicsYArray, ncm_sf_spherical_harmonics_Y_array, ncm_sf_spherical_harmonics_Y_array_dup, ncm_sf_spherical_harmonics_Y_array_free);
 G_DEFINE_TYPE (NcmSFSphericalHarmonics, ncm_sf_spherical_harmonics, G_TYPE_OBJECT);
 
 static void
 ncm_sf_spherical_harmonics_init (NcmSFSphericalHarmonics *spha)
 {
 	spha->lmax     = 0;
-	spha->l        = 0;
-	spha->l0       = 0;
-	spha->m        = 0;
-	spha->Klm      = NULL;
 	spha->sqrt_n   = g_array_new (FALSE, FALSE, sizeof (gdouble));
 	spha->sqrtm1_n = g_array_new (FALSE, FALSE, sizeof (gdouble));
 	spha->K_array  = g_ptr_array_new ();
-	spha->x        = 0.0;
-	spha->sqrt1mx2 = 0.0;
-	spha->Pl0m     = 0.0;
-	spha->Plm      = 0.0;
-	spha->Plp1m    = 0.0;
 	spha->abstol   = 0.0;
 
 	g_ptr_array_set_free_func (spha->K_array, (GDestroyNotify) g_array_unref);
@@ -162,6 +155,202 @@ ncm_sf_spherical_harmonics_class_init (NcmSFSphericalHarmonicsClass *klass)
 }
 
 /**
+ * ncm_sf_spherical_harmonics_Y_new:
+ * @spha: a #NcmSFSphericalHarmonics
+ *
+ * FIXME 	
+ *
+ * Returns: FIXME
+ */
+NcmSFSphericalHarmonicsY *
+ncm_sf_spherical_harmonics_Y_new (NcmSFSphericalHarmonics *spha)
+{
+  NcmSFSphericalHarmonicsY *sphaY = g_slice_new0 (NcmSFSphericalHarmonicsY);
+	
+  sphaY->x        = 0.0;
+  sphaY->sqrt1mx2 = 0.0;
+
+	sphaY->l        = 0;
+	sphaY->l0       = 0;
+	sphaY->m        = 0;
+	sphaY->Klm      = NULL;
+	sphaY->Pl0m     = 0.0;
+	sphaY->Pl0p1m   = 0.0;
+	sphaY->Plm      = 0.0;
+	sphaY->Plp1m    = 0.0;
+
+	sphaY->spha     = ncm_sf_spherical_harmonics_ref (spha);
+
+  return sphaY;
+}
+
+/**
+ * ncm_sf_spherical_harmonics_Y_dup:
+ * @sphaY: a #NcmSFSphericalHarmonicsY
+ *
+ * FIXME
+ *
+ * Returns: (transfer full): FIXME
+ */
+NcmSFSphericalHarmonicsY *
+ncm_sf_spherical_harmonics_Y_dup (NcmSFSphericalHarmonicsY *sphaY)
+{
+  NcmSFSphericalHarmonicsY *sphaY_dup = ncm_sf_spherical_harmonics_Y_new (sphaY->spha);
+	sphaY_dup[0] = sphaY[0];
+  return sphaY_dup;
+}
+
+/**
+ * ncm_sf_spherical_harmonics_Y_free:
+ * @sphaY: a #NcmSFSphericalHarmonicsY
+ *
+ * FIXME
+ *
+ */
+void
+ncm_sf_spherical_harmonics_Y_free (NcmSFSphericalHarmonicsY *sphaY)
+{
+	ncm_sf_spherical_harmonics_clear (&sphaY->spha);
+  g_slice_free (NcmSFSphericalHarmonicsY, sphaY);
+}
+
+/**
+ * ncm_sf_spherical_harmonics_Y_array_new:
+ * @spha: a #NcmSFSphericalHarmonics
+ *
+ * FIXME 	
+ *
+ * Returns: FIXME
+ */
+NcmSFSphericalHarmonicsYArray *
+ncm_sf_spherical_harmonics_Y_array_new (NcmSFSphericalHarmonics *spha, const guint len)
+{
+  NcmSFSphericalHarmonicsYArray *sphaYa = g_slice_new0 (NcmSFSphericalHarmonicsYArray);
+
+	sphaYa->l        = 0;
+	sphaYa->l0       = 0;
+	sphaYa->m        = 0;
+	sphaYa->Klm      = NULL;
+	sphaYa->len      = len;
+	sphaYa->P        = g_new0 (NcmSFSphericalHarmonicsP, len);
+
+	sphaYa->spha = ncm_sf_spherical_harmonics_ref (spha);
+
+  return sphaYa;
+}
+
+/**
+ * ncm_sf_spherical_harmonics_Y_array_dup:
+ * @sphaYa: a #NcmSFSphericalHarmonicsYArray
+ *
+ * FIXME
+ *
+ * Returns: (transfer full): FIXME
+ */
+NcmSFSphericalHarmonicsYArray *
+ncm_sf_spherical_harmonics_Y_array_dup (NcmSFSphericalHarmonicsYArray *sphaYa)
+{
+  NcmSFSphericalHarmonicsYArray *sphaYa_dup = ncm_sf_spherical_harmonics_Y_array_new (sphaYa->spha, sphaYa->len);
+	NcmSFSphericalHarmonicsP *P               = sphaYa_dup->P;
+
+	sphaYa_dup[0] = sphaYa[0];
+	sphaYa_dup->P = P;
+
+	memcpy (P, sphaYa->P, sizeof (NcmSFSphericalHarmonicsP) * sphaYa->len);
+	
+  return sphaYa_dup;
+}
+
+/**
+ * ncm_sf_spherical_harmonics_Y_array_free:
+ * @sphaYa: a #NcmSFSphericalHarmonicsYArray
+ *
+ * FIXME
+ *
+ */
+void
+ncm_sf_spherical_harmonics_Y_array_free (NcmSFSphericalHarmonicsYArray *sphaYa)
+{
+	ncm_sf_spherical_harmonics_clear (&sphaYa->spha);
+	
+	g_free (sphaYa->P);
+  g_slice_free (NcmSFSphericalHarmonicsYArray, sphaYa);
+}
+
+/**
+ * ncm_sf_spherical_harmonics_Y_next_l:
+ * @sphaY: a #NcmSFSphericalHarmonicsY
+ * 
+ * Move the recursion for $x$ to $l = l + 1$.
+ *
+ */
+/**
+ * ncm_sf_spherical_harmonics_Y_next_l2:
+ * @sphaY: a #NcmSFSphericalHarmonicsY
+ * @Yblm: (array fixed-size=2) (element-type gdouble) (out caller-allocates): the four Yblm from l to l + 2  
+ * 
+ * Move the recursion for $x$ to $l = l + 2$.
+ *
+ */
+/**
+ * ncm_sf_spherical_harmonics_Y_next_l4:
+ * @sphaY: a #NcmSFSphericalHarmonicsY
+ * @Yblm: (array fixed-size=4) (element-type gdouble) (out caller-allocates): the four Yblm from l to l + 3  
+ * 
+ * Move the recursion for $x$ to $l = l + 4$.
+ *
+ */
+/**
+ * ncm_sf_spherical_harmonics_Y_next_lnp2:
+ * @sphaY: a #NcmSFSphericalHarmonicsY
+ * @Yblm: (array length=n) (element-type gdouble) (out caller-allocates): the four Yblm from l to l + n + 2
+ * @n: an integer 
+ * 
+ * Move the recursion for $x$ to $l = l + n + 2$.
+ *
+ */
+/**
+ * ncm_sf_spherical_harmonics_Y_next_m:
+ * @sphaY: a #NcmSFSphericalHarmonicsY
+ * 
+ * Restart the recursion for $x$ at $l = m + 1,\; m = m + 1$.
+ * If the value of $Ybll < a$ where $a$ is the absolute tolerance,
+ * advance $l$ until the tolerance is reached.
+ *
+ */
+
+/**
+ * ncm_sf_spherical_harmonics_Y_get_lm:
+ * @sphaY: a #NcmSFSphericalHarmonicsY
+ *
+ * Returns: the current value of $\bar{Y}_l^m (x)$.
+ */
+/**
+ * ncm_sf_spherical_harmonics_Y_get_lp1m:
+ * @sphaY: a #NcmSFSphericalHarmonicsY
+ *
+ * Returns: the current value of $\bar{Y}_{l+1}^m (x)$.
+ */
+/**
+ * ncm_sf_spherical_harmonics_Y_get_x:
+ * @sphaY: a #NcmSFSphericalHarmonicsY
+ *
+ * Returns: the current value of $x$.
+ */
+/**
+ * ncm_sf_spherical_harmonics_Y_get_l:
+ * @sphaY: a #NcmSFSphericalHarmonicsY
+ *
+ * Returns: the current value of $l$.
+ */
+/**
+ * ncm_sf_spherical_harmonics_Y_get_m:
+ * @sphaY: a #NcmSFSphericalHarmonicsY
+ *
+ * Returns: the current value of $m$.
+ */
+
+/**
  * ncm_sf_spherical_harmonics_new:
  * 
  * Creates a new #NcmSFSphericalHarmonics object.
@@ -176,7 +365,6 @@ ncm_sf_spherical_harmonics_new (const guint lmax)
 	                                              NULL);
 	return spha;
 }
-
 
 /**
  * ncm_sf_spherical_harmonics_ref:
@@ -331,54 +519,20 @@ ncm_sf_spherical_harmonics_get_abstol (NcmSFSphericalHarmonics *spha)
 /**
  * ncm_sf_spherical_harmonics_start_rec:
  * @spha: a #NcmSFSphericalHarmonics
- * @x: $x$
- * @sqrt1mx2: $\sqrt{1-x^2}$
+ * @sphaY: a #NcmSFSphericalHarmonicsY
+ * @theta: $\theta \in [0, \pi]$
  * 
- * Start recursion for $x$ at $l = 0,\; m = 0$.
+ * Start recursion for $\theta$ at $l = 0,\; m = 0$.
  *
  */
 /**
- * ncm_sf_spherical_harmonics_next_l:
+ * ncm_sf_spherical_harmonics_start_rec_array:
  * @spha: a #NcmSFSphericalHarmonics
+ * @sphaYa: a #NcmSFSphericalHarmonicsYArray
+ * @len: array length
+ * @theta: (array length=len) (element-type gdouble): array of angles $\theta_i \in [0, \pi]$
  * 
- * Move the recursion for $x$ to $l = l + 1$.
+ * Start recursion for the array $\theta_i$ at $l = 0,\; m = 0$. The array @theta must have
+ * length @len.
  *
- */
-/**
- * ncm_sf_spherical_harmonics_next_m:
- * @spha: a #NcmSFSphericalHarmonics
- * 
- * Restart the recursion for $x$ at $l = m + 1,\; m = m + 1$.
- *
- */
-
-/**
- * ncm_sf_spherical_harmonics_get_Yblm:
- * @spha: a #NcmSFSphericalHarmonics
- *
- * Returns: the current value of $\bar{Y}_l^m (x)$.
- */
-/**
- * ncm_sf_spherical_harmonics_get_Yblp1m:
- * @spha: a #NcmSFSphericalHarmonics
- *
- * Returns: the current value of $\bar{Y}_{l+1}^m (x)$.
- */
-/**
- * ncm_sf_spherical_harmonics_get_x:
- * @spha: a #NcmSFSphericalHarmonics
- *
- * Returns: the current value of $x$.
- */
-/**
- * ncm_sf_spherical_harmonics_get_l:
- * @spha: a #NcmSFSphericalHarmonics
- *
- * Returns: the current value of $l$.
- */
-/**
- * ncm_sf_spherical_harmonics_get_m:
- * @spha: a #NcmSFSphericalHarmonics
- *
- * Returns: the current value of $m$.
  */
