@@ -92,6 +92,7 @@ ncm_sources = \
 	math/ncm_mpsf_sbessel.c              \
 	math/ncm_sf_sbessel.c                \
 	math/ncm_sf_sbessel_int.c            \
+	math/ncm_sf_spherical_harmonics.c    \
 	math/ncm_mpsf_sbessel_int.c          \
 	math/ncm_mpsf_0F1.c                  \
 	math/ncm_fftlog.c                    \
@@ -204,6 +205,7 @@ ncm_headers =                                \
 	math/ncm_mpsf_sbessel.h              \
 	math/ncm_sf_sbessel.h                \
 	math/ncm_sf_sbessel_int.h            \
+	math/ncm_sf_spherical_harmonics.h    \
 	math/ncm_mpsf_sbessel_int.h          \
 	math/ncm_mpsf_0F1.h                  \
 	math/ncm_fftlog.h                    \

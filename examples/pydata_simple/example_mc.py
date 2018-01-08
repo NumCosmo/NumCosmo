@@ -93,6 +93,7 @@ fit.log_covar ()
 # run.
 #
 mc = Ncm.FitMC.new (fit, Ncm.FitMCResampleType.FROM_MODEL, Ncm.FitRunMsgs.SIMPLE)
+mc.set_nthreads (2)
 
 #
 # Using `example_mcmc_out.fits' as the catalog file, if there

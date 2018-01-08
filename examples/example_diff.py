@@ -12,6 +12,10 @@ from gi.repository import NumCosmo as Nc
 from gi.repository import NumCosmoMath as Ncm
 
 import numpy as np
+import numdifftools as nd
+
+import statsmodels.api as sm
+import statsmodels.tools as st
 
 #
 #  Initializing the library objects, this must be called before 
@@ -23,6 +27,9 @@ Ncm.cfg_init ()
 # New diff object
 #
 diff = Ncm.Diff.new ()
+#diff.set_ini_h (2.0)
+roffpad = 0.0
+x0_a = np.array ([3.0, 1.01234])
 
 #
 # Functions to be differentiated 
@@ -32,9 +39,14 @@ def ftest (x_v, y_v, *args):
   x_a = x_v.dup_array ()
   
   y_v.set (0, math.sin (math.pi * x_a[0] * x_a[1]))
-  y_v.set (1, math.cos (math.pi * x_a[0] / x_a[1]))
+  y_v.set (1, roffpad + math.cos (math.pi * x_a[0] / x_a[1]))
   y_v.set (2, math.exp (x_a[0] * L))
   y_v.set (3, (x_a[0] - 10.0)**(3.0))
+
+def ftest_py (x_a, *args):
+  L   = args[0]
+  #print ((x_a - x0_a)/x0_a)
+  return np.array ([math.sin (math.pi * x_a[0] * x_a[1]), roffpad + math.cos (math.pi * x_a[0] / x_a[1]), math.exp (x_a[0] * L), (x_a[0] - 10.0)**(3.0)])
   
 def ftest2 (x_v, *args):
   x_a = x_v.dup_array ()  
@@ -53,7 +65,7 @@ def cmp_array (a, b, err, title = None):
   for a_i, b_i, err_i in zip (a, b, err):
     eerr = 0.0
     aerr = 0.0
-    if b_i == 0:
+    if b_i == 0.0:
       aerr = math.fabs (a_i)
       eerr = err_i
     else:
@@ -65,7 +77,7 @@ def cmp_array (a, b, err, title = None):
 #
 # Point where to calculate the derivative + function parameters
 # 
-x0_a = [3.0, 1.01]
+#x0_a = [3.12345, 1.012345]
 L    = 1.0e-2
 
 # 
@@ -77,7 +89,14 @@ df_a, err_a = diff.rf_d1_N_to_M (x0_a, 4, ftest, L)
 dfE_a  = [math.pi * x0_a[1] * math.cos (math.pi * x0_a[0] * x0_a[1]), - math.pi / x0_a[1] * math.sin (math.pi * x0_a[0] / x0_a[1]),              L * math.exp (x0_a[0] * L), 3.0 * (x0_a[0] - 10.0)**2, 
           math.pi * x0_a[0] * math.cos (math.pi * x0_a[0] * x0_a[1]), + math.pi * x0_a[0] / x0_a[1]**2 * math.sin (math.pi * x0_a[0] / x0_a[1]),                        0.0,                       0.0]
 
+print (np.log1p (x0_a).clip(1.0) * 2.0)
 cmp_array (df_a, dfE_a, err_a, "First derivative: Forward method + Richardson extrapolation")
+
+flatten = lambda l: [item for sublist in l for item in sublist]
+jac = nd.Jacobian (ftest_py)
+cmp_array (flatten (np.transpose (jac (x0_a, L))), dfE_a, err_a)
+
+exit ()
 
 # 
 # First derivative: Central method + Richardson extrapolation

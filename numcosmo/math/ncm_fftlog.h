@@ -155,8 +155,8 @@ G_END_DECLS
 
 #endif /* _NCM_FFTLOG_H_ */
 
-#ifndef _NC_FFTLOG_INLINE_H_
-#define _NC_FFTLOG_INLINE_H_
+#ifndef _NCM_FFTLOG_INLINE_H_
+#define _NCM_FFTLOG_INLINE_H_
 #ifdef NUMCOSMO_HAVE_INLINE
 
 G_BEGIN_DECLS
@@ -212,4 +212,4 @@ ncm_fftlog_peek_output_vector (NcmFftlog *fftlog, guint nderiv)
 G_END_DECLS
 
 #endif /* NUMCOSMO_HAVE_INLINE */
-#endif /* _NC_FFTLOG_INLINE_H_ */
+#endif /* _NCM_FFTLOG_INLINE_H_ */
