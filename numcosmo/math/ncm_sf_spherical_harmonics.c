@@ -48,7 +48,6 @@ enum
 {
 	PROP_0,
 	PROP_LMAX,
-	PROP_ABSTOL,
 };
 
 G_DEFINE_BOXED_TYPE (NcmSFSphericalHarmonicsY, ncm_sf_spherical_harmonics_Y, ncm_sf_spherical_harmonics_Y_dup, ncm_sf_spherical_harmonics_Y_free);
@@ -62,7 +61,6 @@ ncm_sf_spherical_harmonics_init (NcmSFSphericalHarmonics *spha)
 	spha->sqrt_n   = g_array_new (FALSE, FALSE, sizeof (gdouble));
 	spha->sqrtm1_n = g_array_new (FALSE, FALSE, sizeof (gdouble));
 	spha->K_array  = g_ptr_array_new ();
-	spha->abstol   = 0.0;
 
 	g_ptr_array_set_free_func (spha->K_array, (GDestroyNotify) g_array_unref);
 }
@@ -77,9 +75,6 @@ _ncm_sf_spherical_harmonics_set_property (GObject *object, guint prop_id, const 
 	{
 		case PROP_LMAX:
 			ncm_sf_spherical_harmonics_set_lmax (spha, g_value_get_int (value));
-			break;
-		case PROP_ABSTOL:
-			ncm_sf_spherical_harmonics_set_abstol (spha, g_value_get_double (value));
 			break;
 		default:
 			G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -97,9 +92,6 @@ _ncm_sf_spherical_harmonics_get_property (GObject *object, guint prop_id, GValue
 	{
 		case PROP_LMAX:
 			g_value_set_int (value, ncm_sf_spherical_harmonics_get_lmax (spha));
-			break;
-		case PROP_ABSTOL:
-			g_value_set_double (value, ncm_sf_spherical_harmonics_get_abstol (spha));
 			break;
 		default:
 			G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -145,25 +137,19 @@ ncm_sf_spherical_harmonics_class_init (NcmSFSphericalHarmonicsClass *klass)
 	                                                   "max l",
 	                                                   0, G_MAXINT, 1024,
 	                                                   G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
-	g_object_class_install_property (object_class,
-	                                 PROP_ABSTOL,
-	                                 g_param_spec_double ("abstol",
-	                                                      NULL,
-	                                                      "abstol",
-	                                                      GSL_DBL_MIN, GSL_DBL_MAX, 1.0e-20,
-	                                                      G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 }
 
 /**
  * ncm_sf_spherical_harmonics_Y_new:
  * @spha: a #NcmSFSphericalHarmonics
+ * @abstol: absolute tolerance
  *
  * FIXME 	
  *
  * Returns: FIXME
  */
 NcmSFSphericalHarmonicsY *
-ncm_sf_spherical_harmonics_Y_new (NcmSFSphericalHarmonics *spha)
+ncm_sf_spherical_harmonics_Y_new (NcmSFSphericalHarmonics *spha, const gdouble abstol)
 {
   NcmSFSphericalHarmonicsY *sphaY = g_slice_new0 (NcmSFSphericalHarmonicsY);
 	
@@ -180,6 +166,7 @@ ncm_sf_spherical_harmonics_Y_new (NcmSFSphericalHarmonics *spha)
 	sphaY->Plp1m    = 0.0;
 
 	sphaY->spha     = ncm_sf_spherical_harmonics_ref (spha);
+	sphaY->abstol   = abstol;
 
   return sphaY;
 }
@@ -195,7 +182,7 @@ ncm_sf_spherical_harmonics_Y_new (NcmSFSphericalHarmonics *spha)
 NcmSFSphericalHarmonicsY *
 ncm_sf_spherical_harmonics_Y_dup (NcmSFSphericalHarmonicsY *sphaY)
 {
-  NcmSFSphericalHarmonicsY *sphaY_dup = ncm_sf_spherical_harmonics_Y_new (sphaY->spha);
+  NcmSFSphericalHarmonicsY *sphaY_dup = ncm_sf_spherical_harmonics_Y_new (sphaY->spha, sphaY->abstol);
 	sphaY_dup[0] = sphaY[0];
   return sphaY_dup;
 }
@@ -217,13 +204,14 @@ ncm_sf_spherical_harmonics_Y_free (NcmSFSphericalHarmonicsY *sphaY)
 /**
  * ncm_sf_spherical_harmonics_Y_array_new:
  * @spha: a #NcmSFSphericalHarmonics
- *
+ * @abstol: absolute tolerance
+ * 
  * FIXME 	
  *
  * Returns: FIXME
  */
 NcmSFSphericalHarmonicsYArray *
-ncm_sf_spherical_harmonics_Y_array_new (NcmSFSphericalHarmonics *spha, const guint len)
+ncm_sf_spherical_harmonics_Y_array_new (NcmSFSphericalHarmonics *spha, const guint len, const gdouble abstol)
 {
   NcmSFSphericalHarmonicsYArray *sphaYa = g_slice_new0 (NcmSFSphericalHarmonicsYArray);
 
@@ -234,7 +222,8 @@ ncm_sf_spherical_harmonics_Y_array_new (NcmSFSphericalHarmonics *spha, const gui
 	sphaYa->len      = len;
 	sphaYa->P        = g_new0 (NcmSFSphericalHarmonicsP, len);
 
-	sphaYa->spha = ncm_sf_spherical_harmonics_ref (spha);
+	sphaYa->spha     = ncm_sf_spherical_harmonics_ref (spha);
+	sphaYa->abstol   = abstol;
 
   return sphaYa;
 }
@@ -250,7 +239,7 @@ ncm_sf_spherical_harmonics_Y_array_new (NcmSFSphericalHarmonics *spha, const gui
 NcmSFSphericalHarmonicsYArray *
 ncm_sf_spherical_harmonics_Y_array_dup (NcmSFSphericalHarmonicsYArray *sphaYa)
 {
-  NcmSFSphericalHarmonicsYArray *sphaYa_dup = ncm_sf_spherical_harmonics_Y_array_new (sphaYa->spha, sphaYa->len);
+  NcmSFSphericalHarmonicsYArray *sphaYa_dup = ncm_sf_spherical_harmonics_Y_array_new (sphaYa->spha, sphaYa->len, sphaYa->abstol);
 	NcmSFSphericalHarmonicsP *P               = sphaYa_dup->P;
 
 	sphaYa_dup[0] = sphaYa[0];
@@ -488,32 +477,6 @@ guint
 ncm_sf_spherical_harmonics_get_lmax (NcmSFSphericalHarmonics *spha)
 {
 	return spha->lmax;
-}
-
-/**
- * ncm_sf_spherical_harmonics_set_abstol:
- * @spha: a #NcmSFSphericalHarmonics
- * @abstol: the absolute tolerance
- *
- * Sets the absolute tolerance to @abstol.
- * 
- */
-void 
-ncm_sf_spherical_harmonics_set_abstol (NcmSFSphericalHarmonics *spha, const gdouble abstol)
-{
-	spha->abstol = abstol;
-}
-
-/**
- * ncm_sf_spherical_harmonics_get_abstol:
- * @spha: a #NcmSFSphericalHarmonics
- *
- * Returns: the current abstol.
- */
-gdouble 
-ncm_sf_spherical_harmonics_get_abstol (NcmSFSphericalHarmonics *spha)
-{
-	return spha->abstol;
 }
 
 /**

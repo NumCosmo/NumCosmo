@@ -1900,7 +1900,7 @@ _ncm_sphere_map_pix_get_alm_from_circle (NcmSphereMapPix *pix, gint64 r_i, gbool
   const gint64 ring_fi            = ncm_sphere_map_pix_get_ring_first_index (pix, r_i);
   _fft_complex * restrict Fim     = &((_fft_complex *)pix->fft_pvec)[ring_fi];
   const gdouble pix_area          = 4.0 * M_PI / pix->npix;
-  NcmSFSphericalHarmonicsY *sphaY = ncm_sf_spherical_harmonics_Y_new (pix->spha);
+  NcmSFSphericalHarmonicsY *sphaY = ncm_sf_spherical_harmonics_Y_new (pix->spha, NCM_SF_SPHERICAL_HARMONICS_DEFAULT_ABSTOL);
   gdouble theta_i                 = 0.0;
   gdouble phi_0                   = 0.0; 
   gint m, si;
