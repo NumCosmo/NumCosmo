@@ -159,6 +159,8 @@ G_INLINE_FUNC void ncm_sf_spherical_harmonics_start_rec_array (NcmSFSphericalHar
 #define NCM_SF_SPHERICAL_HARMONICS_ARRAY_DEFAULT_ABSTOL (1.0e-40)
 #define NCM_SF_SPHERICAL_HARMONICS_EPS (1.0e-280)
 #define NCM_SF_SPHERICAL_HARMONICS_LATERAL_MOVE 1
+#define NCM_SF_SPHERICAL_HARMONICS_ARRAY_INDEX(ai,li,len,n) ((li) * (len) + (ai))
+/*#define NCM_SF_SPHERICAL_HARMONICS_ARRAY_INDEX(ai,li,len,n) ((li) + (ai) * (n))*/
 
 G_END_DECLS
 
@@ -409,12 +411,12 @@ ncm_sf_spherical_harmonics_Y_array_next_l2 (NcmSFSphericalHarmonicsYArray *sphaY
 	for (i = 0; i < len; i++)
 	{
 		const gdouble x = sphaYa->P[i].x;
+		
+		Yblm[NCM_SF_SPHERICAL_HARMONICS_ARRAY_INDEX (i, 0, len, 2)]   = sphaYa->P[i].lm;
+		Yblm[NCM_SF_SPHERICAL_HARMONICS_ARRAY_INDEX (i, 1, len, 2)]   = sphaYa->P[i].lp1m;
 
-		Yblm[len * 0 + i]   = sphaYa->P[i].lm;
-		Yblm[len * 1 + i]   = sphaYa->P[i].lp1m;
-
-		sphaYa->P[i].lm   = sphaYa->Klm[0].lp1 * x * Yblm[len * 1 + i] - sphaYa->Klm[0].l * Yblm[len * 0 + i];
-		sphaYa->P[i].lp1m = sphaYa->Klm[1].lp1 * x * sphaYa->P[i].lm   - sphaYa->Klm[1].l * Yblm[len * 1 + i];
+		sphaYa->P[i].lm   = sphaYa->Klm[0].lp1 * x * Yblm[NCM_SF_SPHERICAL_HARMONICS_ARRAY_INDEX (i, 1, len, 2)] - sphaYa->Klm[0].l * Yblm[NCM_SF_SPHERICAL_HARMONICS_ARRAY_INDEX (i, 0, len, 2)];
+		sphaYa->P[i].lp1m = sphaYa->Klm[1].lp1 * x * sphaYa->P[i].lm                                             - sphaYa->Klm[1].l * Yblm[NCM_SF_SPHERICAL_HARMONICS_ARRAY_INDEX (i, 1, len, 2)];
 	}
 
 	sphaYa->l            += 2;
@@ -424,17 +426,20 @@ ncm_sf_spherical_harmonics_Y_array_next_l2 (NcmSFSphericalHarmonicsYArray *sphaY
 G_INLINE_FUNC void 
 ncm_sf_spherical_harmonics_Y_array_next_l4 (NcmSFSphericalHarmonicsYArray *sphaYa, const guint len, gdouble *Yblm)
 {
+	NcmSFSphericalHarmonicsK * restrict Klm = sphaYa->Klm;
+	NcmSFSphericalHarmonicsP * restrict P   = sphaYa->P;
 	guint i;
+
 	for (i = 0; i < len; i++)
 	{	
-		const gdouble x = sphaYa->P[i].x;
+		const gdouble x = P[i].x;
 
-		Yblm[len * 0 + i] = sphaYa->P[i].lm;
-		Yblm[len * 1 + i] = sphaYa->P[i].lp1m;
-		Yblm[len * 2 + i] = sphaYa->Klm[0].lp1 * x * Yblm[len * 1 + i] - sphaYa->Klm[0].l * Yblm[len * 0 + i];
-		Yblm[len * 3 + i] = sphaYa->Klm[1].lp1 * x * Yblm[len * 2 + i] - sphaYa->Klm[1].l * Yblm[len * 1 + i];
-		sphaYa->P[i].lm   = sphaYa->Klm[2].lp1 * x * Yblm[len * 3 + i] - sphaYa->Klm[2].l * Yblm[len * 2 + i];
-		sphaYa->P[i].lp1m = sphaYa->Klm[3].lp1 * x * sphaYa->P[i].lm   - sphaYa->Klm[3].l * Yblm[len * 3 + i];
+		Yblm[NCM_SF_SPHERICAL_HARMONICS_ARRAY_INDEX (i, 0, len, 4)] = P[i].lm;
+		Yblm[NCM_SF_SPHERICAL_HARMONICS_ARRAY_INDEX (i, 1, len, 4)] = P[i].lp1m;
+		Yblm[NCM_SF_SPHERICAL_HARMONICS_ARRAY_INDEX (i, 2, len, 4)] = Klm[0].lp1 * x * Yblm[NCM_SF_SPHERICAL_HARMONICS_ARRAY_INDEX (i, 1, len, 4)] - Klm[0].l * Yblm[NCM_SF_SPHERICAL_HARMONICS_ARRAY_INDEX (i, 0, len, 4)];
+		Yblm[NCM_SF_SPHERICAL_HARMONICS_ARRAY_INDEX (i, 3, len, 4)] = Klm[1].lp1 * x * Yblm[NCM_SF_SPHERICAL_HARMONICS_ARRAY_INDEX (i, 2, len, 4)] - Klm[1].l * Yblm[NCM_SF_SPHERICAL_HARMONICS_ARRAY_INDEX (i, 1, len, 4)];
+		P[i].lm                                                     = Klm[2].lp1 * x * Yblm[NCM_SF_SPHERICAL_HARMONICS_ARRAY_INDEX (i, 3, len, 4)] - Klm[2].l * Yblm[NCM_SF_SPHERICAL_HARMONICS_ARRAY_INDEX (i, 2, len, 4)];
+		P[i].lp1m                                                   = Klm[3].lp1 * x * P[i].lm                                                     - Klm[3].l * Yblm[NCM_SF_SPHERICAL_HARMONICS_ARRAY_INDEX (i, 3, len, 4)];
 	}
 	
 	sphaYa->l    += 4;
@@ -444,30 +449,31 @@ ncm_sf_spherical_harmonics_Y_array_next_l4 (NcmSFSphericalHarmonicsYArray *sphaY
 G_INLINE_FUNC void 
 ncm_sf_spherical_harmonics_Y_array_next_l2pn (NcmSFSphericalHarmonicsYArray *sphaYa, const guint len, gdouble *Yblm, const gint n)
 {
+	NcmSFSphericalHarmonicsK * restrict Klm = sphaYa->Klm;
+	NcmSFSphericalHarmonicsP * restrict P   = sphaYa->P;
 	const gint np2  = n + 2;
 	guint i, j;
 
 	for (i = 0; i < len; i++)
 	{	
-		Yblm[len * 0 + i] = sphaYa->P[i].lm;
-		Yblm[len * 1 + i] = sphaYa->P[i].lp1m;
+		Yblm[NCM_SF_SPHERICAL_HARMONICS_ARRAY_INDEX (i, 0, len, np2)] = P[i].lm;
+		Yblm[NCM_SF_SPHERICAL_HARMONICS_ARRAY_INDEX (i, 1, len, np2)] = P[i].lp1m;
 	}
 	
 	for (j = 0; j < n; j++)
 	{
-		const NcmSFSphericalHarmonicsK *Klm = &sphaYa->Klm[j];
 		for (i = 0; i < len; i++)
 		{	
-			const gdouble x = sphaYa->P[i].x;
-			Yblm[len * (j + 2) + i] = Klm->lp1 * x * Yblm[len * (j + 1) + i] - Klm->l * Yblm[len * (j + 0) + i];
+			const gdouble x = P[i].x;
+			Yblm[NCM_SF_SPHERICAL_HARMONICS_ARRAY_INDEX (i, j + 2, len, np2)] = Klm[j].lp1 * x * Yblm[NCM_SF_SPHERICAL_HARMONICS_ARRAY_INDEX (i, j + 1, len, np2)] - Klm[j].l * Yblm[NCM_SF_SPHERICAL_HARMONICS_ARRAY_INDEX (i, j + 0, len, np2)];
 		}
 	}
 
 	for (i = 0; i < len; i++)
 	{	
-		const gdouble x = sphaYa->P[i].x;
-		sphaYa->P[i].lm   = sphaYa->Klm[j].lp1     * x * Yblm[len * (j + 1) + i] - sphaYa->Klm[j].l     * Yblm[len * (j + 0) + i];
-		sphaYa->P[i].lp1m = sphaYa->Klm[j + 1].lp1 * x * sphaYa->P[i].lm         - sphaYa->Klm[j + 1].l * Yblm[len * (j + 1) + i];
+		const gdouble x = P[i].x;
+		P[i].lm   = Klm[n + 0].lp1 * x * Yblm[NCM_SF_SPHERICAL_HARMONICS_ARRAY_INDEX (i, j + 1, len, np2)] - Klm[n + 0].l * Yblm[NCM_SF_SPHERICAL_HARMONICS_ARRAY_INDEX (i, j + 0, len, np2)];
+		P[i].lp1m = Klm[n + 1].lp1 * x * sphaYa->P[i].lm                                                   - Klm[n + 1].l * Yblm[NCM_SF_SPHERICAL_HARMONICS_ARRAY_INDEX (i, j + 1, len, np2)];
 	}
 
 	sphaYa->l    += np2;

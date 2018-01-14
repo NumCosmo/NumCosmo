@@ -173,8 +173,10 @@ void ncm_sphere_map_pix_prepare_Cl (NcmSphereMapPix *pix);
 
 void ncm_sphere_map_pix_get_alm (NcmSphereMapPix *pix, guint l, guint m, gdouble *Re_alm, gdouble *Im_alm);
 gdouble ncm_sphere_map_pix_get_Cl (NcmSphereMapPix *pix, guint l);
+gdouble ncm_sphere_map_pix_get_pix (NcmSphereMapPix *pix, guint i);
 
 void ncm_sphere_map_pix_add_noise (NcmSphereMapPix *pix, const gdouble sd, NcmRNG *rng);
+void ncm_sphere_map_pix_set_map (NcmSphereMapPix *pix, GArray *map);
 
 void ncm_sphere_map_pix_alm2map (NcmSphereMapPix *pix);
 

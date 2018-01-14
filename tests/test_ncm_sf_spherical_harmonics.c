@@ -476,7 +476,7 @@ test_ncm_sf_spherical_harmonics_array_rec2 (TestNcmSFSphericalHarmonics *test, g
         for (i = 0; i < len; i++)
         {
           const gdouble Ygsl = Yblm[i][lm_index];
-          const gdouble Ync  = Ylm[len * j + i];
+          const gdouble Ync  = Ylm[NCM_SF_SPHERICAL_HARMONICS_ARRAY_INDEX (i, j, len, 2)];
 
           /*printf ("[%d] %6d %6d %6d % 22.15g % 22.15g % 22.15g %e\n", i, lmax, l, m, theta[i] / M_PI, Ygsl, Ync, fabs (Ync / Ygsl - Ygsl / Ync));*/
 
@@ -555,7 +555,7 @@ test_ncm_sf_spherical_harmonics_array_rec4 (TestNcmSFSphericalHarmonics *test, g
         for (i = 0; i < len; i++)
         {
           const gdouble Ygsl = Yblm[i][lm_index];
-          const gdouble Ync  = Ylm[len * j + i];
+          const gdouble Ync  = Ylm[NCM_SF_SPHERICAL_HARMONICS_ARRAY_INDEX (i, j, len, 4)];
 
           /*printf ("[%d] %6d %6d %6d % 22.15g % 22.15g % 22.15g %e\n", i, lmax, l, m, theta[i] / M_PI, Ygsl, Ync, fabs (Ync / Ygsl - Ygsl / Ync));*/
 
@@ -635,7 +635,7 @@ test_ncm_sf_spherical_harmonics_array_recn (TestNcmSFSphericalHarmonics *test, g
         for (i = 0; i < len; i++)
         {
           const gdouble Ygsl = Yblm[i][lm_index];
-          const gdouble Ync  = Ylm[len * j + i];
+          const gdouble Ync  = Ylm[NCM_SF_SPHERICAL_HARMONICS_ARRAY_INDEX (i, j, len, n + 2)];
 
           /*printf ("[%d] %6d %6d %6d % 22.15g % 22.15g % 22.15g %e\n", i, lmax, l, m, theta[i] / M_PI, Ygsl, Ync, fabs (Ync / Ygsl - Ygsl / Ync));*/
 
