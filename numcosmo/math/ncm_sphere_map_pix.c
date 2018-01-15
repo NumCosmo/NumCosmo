@@ -91,6 +91,8 @@
 #define _fft_vec_idx(v,i) (*_fft_vec_ptr(v,i))
 
 #ifndef NUMCOSMO_GIR_SCAN
+#include <gsl/gsl_complex.h>
+#include <gsl/gsl_complex_math.h>
 #include <gsl/gsl_sf_trig.h>
 #endif /* NUMCOSMO_GIR_SCAN */
 
@@ -109,8 +111,6 @@ enum
 };
 
 G_DEFINE_TYPE (NcmSphereMapPix, ncm_sphere_map_pix, G_TYPE_OBJECT);
-
-typedef gdouble ncm_cdouble[2]; 
 
 static void
 ncm_sphere_map_pix_init (NcmSphereMapPix *pix)
@@ -139,7 +139,7 @@ ncm_sphere_map_pix_init (NcmSphereMapPix *pix)
   g_ptr_array_set_free_func (pix->fft_plan_c2r, (GDestroyNotify)fftw_destroy_plan);
 #  endif
 #endif
-  pix->alm  = g_array_new (FALSE, FALSE, sizeof (ncm_cdouble));
+  pix->alm  = g_array_new (FALSE, FALSE, sizeof (gsl_complex));
   pix->Cl   = NULL;
   pix->t    = ncm_timer_new ();
 	pix->spha = ncm_sf_spherical_harmonics_new (1 << 12);
@@ -660,8 +660,8 @@ ncm_sphere_map_pix_set_lmax (NcmSphereMapPix *pix, guint lmax)
         gint lm;
         for (lm = 0; lm < pix->alm->len; lm++)
         {
-          g_array_index (pix->alm, ncm_cdouble, lm)[0] = 0.0;
-          g_array_index (pix->alm, ncm_cdouble, lm)[1] = 0.0;
+          GSL_REAL (g_array_index (pix->alm, gsl_complex, lm)) = 0.0;
+          GSL_IMAG (g_array_index (pix->alm, gsl_complex, lm)) = 0.0;
         }
       }
       
@@ -1829,7 +1829,7 @@ _ncm_sphere_map_pix_run_over_l (NcmSphereMapPix *pix, NcmSFSphericalHarmonicsY *
   const gint lmax                            = pix->lmax;
   const gint lmaxm1                          = pix->lmax - 1;
 	const gint lmaxmstepm2                     = pix->lmax - NCM_SPHERE_MAP_PIX_BLOCK_STEPM2;
-	ncm_cdouble * restrict alm                 = &g_array_index (pix->alm, ncm_cdouble, si + l0);
+	gsl_complex * restrict alm                 = &g_array_index (pix->alm, gsl_complex, si + l0);
   gdouble Ylm[NCM_SPHERE_MAP_PIX_BLOCK_STEP];
   
   gint l = l0;
@@ -1844,8 +1844,8 @@ _ncm_sphere_map_pix_run_over_l (NcmSphereMapPix *pix, NcmSFSphericalHarmonicsY *
     {
       const gdouble Re_alm = Ylm[i] * Re_Fim_i;
       const gdouble Im_alm = Ylm[i] * Im_Fim_i;
-      alm[i][0] += Re_alm;
-      alm[i][1] += Im_alm;
+      GSL_REAL (alm[i]) += Re_alm;
+      GSL_IMAG (alm[i]) += Im_alm;
     }
 
     alm += NCM_SPHERE_MAP_PIX_BLOCK_STEP;
@@ -1861,8 +1861,8 @@ _ncm_sphere_map_pix_run_over_l (NcmSphereMapPix *pix, NcmSFSphericalHarmonicsY *
     {
       const gdouble Re_alm = Ylm[i] * Re_Fim_i;
       const gdouble Im_alm = Ylm[i] * Im_Fim_i;
-      alm[i][0] += Re_alm;
-      alm[i][1] += Im_alm;
+      GSL_REAL (alm[i]) += Re_alm;
+      GSL_IMAG (alm[i]) += Im_alm;
     }
 
     alm += 2;
@@ -1875,8 +1875,8 @@ _ncm_sphere_map_pix_run_over_l (NcmSphereMapPix *pix, NcmSFSphericalHarmonicsY *
     const gdouble Re_alm = Ylm * Re_Fim_i;
     const gdouble Im_alm = Ylm * Im_Fim_i;
 
-		alm[0][0] += Re_alm;
-		alm[0][1] += Im_alm;
+    GSL_REAL (alm[0]) += Re_alm;
+    GSL_IMAG (alm[0]) += Im_alm;
   }  
   else if (l == lmax)
 	{
@@ -1884,8 +1884,8 @@ _ncm_sphere_map_pix_run_over_l (NcmSphereMapPix *pix, NcmSFSphericalHarmonicsY *
     const gdouble Re_alm = Ylm * Re_Fim_i;
     const gdouble Im_alm = Ylm * Im_Fim_i;
 
-		alm[0][0] += Re_alm;
-		alm[0][1] += Im_alm;
+    GSL_REAL (alm[0]) += Re_alm;
+    GSL_IMAG (alm[0]) += Im_alm;
   }  
 }
 
@@ -1895,7 +1895,7 @@ _ncm_sphere_map_pix_run_over_l_array (NcmSphereMapPix *pix, NcmSFSphericalHarmon
   const gint lmax            = pix->lmax;
   const gint lmaxm1          = pix->lmax - 1;
 	const gint lmaxmstepm2     = pix->lmax - NCM_SPHERE_MAP_PIX_BLOCK_STEPM2;
-	ncm_cdouble * restrict alm = &g_array_index (pix->alm, ncm_cdouble, si + l0);
+	gsl_complex * restrict alm = &g_array_index (pix->alm, gsl_complex, si + l0);
   gdouble Ylm[NCM_SPHERE_MAP_PIX_BLOCK_STEP * NCM_SPHERE_MAP_PIX_BLOCK_NCT];
   gint l = l0;
   
@@ -1912,8 +1912,8 @@ _ncm_sphere_map_pix_run_over_l_array (NcmSphereMapPix *pix, NcmSFSphericalHarmon
         const gdouble Re_alm = Ylm_bj * Re_Fim_i[j];
         const gdouble Im_alm = Ylm_bj * Im_Fim_i[j];
 
-        alm[i][0] += Re_alm;
-        alm[i][1] += Im_alm;
+        GSL_REAL (alm[i]) += Re_alm;
+        GSL_IMAG (alm[i]) += Im_alm;
       }
     }
     
@@ -1933,8 +1933,9 @@ _ncm_sphere_map_pix_run_over_l_array (NcmSphereMapPix *pix, NcmSFSphericalHarmon
         const gdouble Ylm_bj = Ylm[NCM_SF_SPHERICAL_HARMONICS_ARRAY_INDEX (j, i, NCM_SPHERE_MAP_PIX_BLOCK_NCT, 2)];
         const gdouble Re_alm = Ylm_bj * Re_Fim_i[j];
         const gdouble Im_alm = Ylm_bj * Im_Fim_i[j];
-        alm[i][0] += Re_alm;
-        alm[i][1] += Im_alm;
+
+        GSL_REAL (alm[i]) += Re_alm;
+        GSL_IMAG (alm[i]) += Im_alm;
       }
     }
     
@@ -1951,8 +1952,8 @@ _ncm_sphere_map_pix_run_over_l_array (NcmSphereMapPix *pix, NcmSFSphericalHarmon
       const gdouble Re_alm = Ylm * Re_Fim_i[j];
       const gdouble Im_alm = Ylm * Im_Fim_i[j];
 
-      alm[0][0] += Re_alm;
-      alm[0][1] += Im_alm;
+      GSL_REAL (alm[0]) += Re_alm;
+      GSL_IMAG (alm[0]) += Im_alm;
     }
   }  
   else if (l == lmax)
@@ -1964,8 +1965,8 @@ _ncm_sphere_map_pix_run_over_l_array (NcmSphereMapPix *pix, NcmSFSphericalHarmon
       const gdouble Re_alm = Ylm * Re_Fim_i[j];
       const gdouble Im_alm = Ylm * Im_Fim_i[j];
 
-      alm[0][0] += Re_alm;
-      alm[0][1] += Im_alm;
+      GSL_REAL (alm[0]) += Re_alm;
+      GSL_IMAG (alm[0]) += Im_alm;
     }
   }  
 }
@@ -2207,14 +2208,14 @@ ncm_sphere_map_pix_prepare_alm (NcmSphereMapPix *pix)
     gint64 r_i;
 
     /*ncm_vector_set_zero (pix->alm);*/
-    memset (&g_array_index (pix->alm, ncm_cdouble, 0), 0, sizeof (ncm_cdouble) * pix->alm->len);
+    memset (&g_array_index (pix->alm, gsl_complex, 0), 0, sizeof (gsl_complex) * pix->alm->len);
     if (FALSE)
     {
       gint lm;
       for (lm = 0; lm < pix->alm->len; lm++)
       {
-        g_array_index (pix->alm, ncm_cdouble, lm)[0] = 0.0;
-        g_array_index (pix->alm, ncm_cdouble, lm)[1] = 0.0;
+        GSL_REAL (g_array_index (pix->alm, gsl_complex, lm)) = 0.0;
+        GSL_IMAG (g_array_index (pix->alm, gsl_complex, lm)) = 0.0;
       }
     }
     ncm_vector_set_zero (pix->Cl);
@@ -2245,8 +2246,8 @@ ncm_sphere_map_pix_prepare_alm (NcmSphereMapPix *pix)
       m = 0;
       for (l = m; l <= pix->lmax; l++)
       {
-        const gdouble Re_alm = g_array_index (pix->alm, ncm_cdouble, lm_index)[0];
-        const gdouble Im_alm = g_array_index (pix->alm, ncm_cdouble, lm_index)[1];
+        const gdouble Re_alm = GSL_REAL (g_array_index (pix->alm, gsl_complex, lm_index));
+        const gdouble Im_alm = GSL_IMAG (g_array_index (pix->alm, gsl_complex, lm_index));
 
         lm_index++;
         ncm_vector_fast_addto (pix->Cl, l, 1.0 * (Re_alm * Re_alm + Im_alm * Im_alm));
@@ -2256,8 +2257,8 @@ ncm_sphere_map_pix_prepare_alm (NcmSphereMapPix *pix)
       {
         for (l = m; l <= pix->lmax; l++)
         {
-          const gdouble Re_alm = g_array_index (pix->alm, ncm_cdouble, lm_index)[0];
-          const gdouble Im_alm = g_array_index (pix->alm, ncm_cdouble, lm_index)[1];
+          const gdouble Re_alm = GSL_REAL (g_array_index (pix->alm, gsl_complex, lm_index));
+          const gdouble Im_alm = GSL_IMAG (g_array_index (pix->alm, gsl_complex, lm_index));
 
           lm_index++;
           ncm_vector_fast_addto (pix->Cl, l, 2.0 * (Re_alm * Re_alm + Im_alm * Im_alm));
@@ -2344,8 +2345,8 @@ ncm_sphere_map_pix_get_alm (NcmSphereMapPix *pix, guint l, guint m, gdouble *Re_
 
   /*Re_alm[0] = ncm_vector_fast_get (pix->alm, lm_index + 0);*/
   /*Im_alm[0] = ncm_vector_fast_get (pix->alm, lm_index + 1);*/
-  Re_alm[0] = g_array_index (pix->alm, ncm_cdouble, lm_index)[0];
-  Im_alm[0] = g_array_index (pix->alm, ncm_cdouble, lm_index)[1];
+  Re_alm[0] = GSL_REAL (g_array_index (pix->alm, gsl_complex, lm_index));
+  Im_alm[0] = GSL_IMAG (g_array_index (pix->alm, gsl_complex, lm_index));
 }
 
 /**
@@ -2423,51 +2424,72 @@ ncm_sphere_map_pix_set_map (NcmSphereMapPix *pix, GArray *map)
 }
 
 #ifdef NUMCOSMO_HAVE_FFTW3
-static complex double
-_ncm_sphere_map_pix_get_D_m (NcmSphereMapPix *pix, NcmSFSphericalHarmonicsY *sphaY, ncm_cdouble **alm_ptr, const gdouble phi_0, const gint64 ring_size, const gint m)
+static void
+_ncm_sphere_map_pix_get_D_m (NcmSphereMapPix *pix, NcmSFSphericalHarmonicsY *sphaY, gsl_complex * restrict * restrict alm_ptr, const gdouble phi_0, const gint ring_size, const gint m, gsl_complex *D_m)
 {
-  complex double D_m = 0.0;
-  _fft_complex phase = cexp (I * phi_0 * m);
+	const gint lmaxmstepm2 = pix->lmax - NCM_SPHERE_MAP_PIX_BLOCK_STEPM2;
+  gdouble Ylm[NCM_SPHERE_MAP_PIX_BLOCK_STEP];
   gint l;
 
   l = ncm_sf_spherical_harmonics_Y_get_l (sphaY);
-
   alm_ptr[0] += (l - m);
 
-  while (TRUE)
+  while (l < lmaxmstepm2)
   {
-    const complex double alm  = alm_ptr[0][0][0] + I * alm_ptr[0][0][1];
-    const complex double d_lm = alm * ncm_sf_spherical_harmonics_Y_get_lm (sphaY);
-    D_m += d_lm;
+    gint i;
+    ncm_sf_spherical_harmonics_Y_next_l2pn (sphaY, Ylm, NCM_SPHERE_MAP_PIX_BLOCK_STEPM2);
 
-    alm_ptr[0]++;
-    
-    if (l < pix->lmax)
+    for (i = 0; i < NCM_SPHERE_MAP_PIX_BLOCK_STEP; i++)
     {
-      ncm_sf_spherical_harmonics_Y_next_l (sphaY);
-      l = ncm_sf_spherical_harmonics_Y_get_l (sphaY);
+      NCM_COMPLEX_INC_MUL_REAL (*D_m, alm_ptr[0][i], Ylm[i]);
     }
-    else
-      break;      
+
+    alm_ptr[0] += NCM_SPHERE_MAP_PIX_BLOCK_STEP;
+    l = ncm_sf_spherical_harmonics_Y_get_l (sphaY);
+  }
+
+  if (l <= pix->lmax)
+  {
+    while (TRUE)
+    {
+      const gdouble Ylm = ncm_sf_spherical_harmonics_Y_get_lm (sphaY);
+      
+      NCM_COMPLEX_INC_MUL_REAL (*D_m, alm_ptr[0][0], Ylm);
+
+      alm_ptr[0]++;
+
+      if (l < pix->lmax)
+      {
+        ncm_sf_spherical_harmonics_Y_next_l (sphaY);
+        l = ncm_sf_spherical_harmonics_Y_get_l (sphaY);
+      }
+      else
+        break;      
+    }
   }
   
-  return D_m * phase;  
+  return;  
 }
 
 static void
 _ncm_sphere_map_pix_get_circle_from_alm (NcmSphereMapPix *pix, gint64 r_i)
 {
   NcmSFSphericalHarmonicsY *sphaY = ncm_sf_spherical_harmonics_Y_new (pix->spha, NCM_SF_SPHERICAL_HARMONICS_DEFAULT_ABSTOL);
-  const gint64 ring_size  = ncm_sphere_map_pix_get_ring_size (pix, r_i);
-  const gint64 ring_fi    = ncm_sphere_map_pix_get_ring_first_index (pix, r_i);
+  const gint ring_size    = ncm_sphere_map_pix_get_ring_size (pix, r_i);
+  const gint ring_fi      = ncm_sphere_map_pix_get_ring_first_index (pix, r_i);
   _fft_complex *Fim       = &((_fft_complex *)pix->fft_pvec)[ring_fi];
   gdouble theta_i         = 0.0, phi_0 = 0.0;
-  gint64 ring_size_2      = ring_size / 2;
-  ncm_cdouble *alm_ptr    = &g_array_index (pix->alm, ncm_cdouble, 0);
+  gint ring_size_2        = ring_size / 2;
+  gsl_complex *alm_ptr    = &g_array_index (pix->alm, gsl_complex, 0);
+  gsl_complex Iphi, expIphi, phase;
   gint m, l0;
 
   ncm_sphere_map_pix_pix2ang_ring (pix, ring_fi, &theta_i, &phi_0);
 
+  Iphi    = gsl_complex_rect (0.0, phi_0);
+  expIphi = gsl_complex_exp (Iphi);
+  phase   = expIphi;
+  
   ncm_sf_spherical_harmonics_start_rec (pix->spha, sphaY, theta_i);
 
   memset (Fim, 0, sizeof (_fft_complex) * ring_size);
@@ -2475,29 +2497,36 @@ _ncm_sphere_map_pix_get_circle_from_alm (NcmSphereMapPix *pix, gint64 r_i)
   m  = ncm_sf_spherical_harmonics_Y_get_m (sphaY);
   l0 = ncm_sf_spherical_harmonics_Y_get_l (sphaY);
   {
-    complex double D_m = _ncm_sphere_map_pix_get_D_m (pix, sphaY, &alm_ptr, phi_0, ring_size, m);
-    Fim[m] += creal (D_m);
+    gsl_complex D_m = NCM_COMPLEX_ZERO;
+     _ncm_sphere_map_pix_get_D_m (pix, sphaY, &alm_ptr, phi_0, ring_size, m, &D_m);
+    Fim[m] += GSL_REAL (D_m);
   }
 
   ncm_sf_spherical_harmonics_Y_next_m (sphaY);
   m  = ncm_sf_spherical_harmonics_Y_get_m (sphaY);
   l0 = ncm_sf_spherical_harmonics_Y_get_l (sphaY);
+
   while (TRUE)
   {
     const gint fft_ring_index = m % ring_size;
-    complex double D_m        = _ncm_sphere_map_pix_get_D_m (pix, sphaY, &alm_ptr, phi_0, ring_size, m);
+    gsl_complex D_m           = NCM_COMPLEX_ZERO;
+
+    _ncm_sphere_map_pix_get_D_m (pix, sphaY, &alm_ptr, phi_0, ring_size, m, &D_m);
+
+    NCM_COMPLEX_MUL (D_m, phase);
+    NCM_COMPLEX_MUL (phase, expIphi);
 
     if ((fft_ring_index == 0) || (fft_ring_index == ring_size_2))
     {
-      Fim[fft_ring_index] += 2.0 * creal (D_m);
+      Fim[fft_ring_index] += 2.0 * GSL_REAL (D_m);
     }
     else if (fft_ring_index < ring_size_2)
     {
-      Fim[fft_ring_index] += D_m;
+      Fim[fft_ring_index] += GSL_REAL (D_m) + I * GSL_IMAG (D_m);
     }
     else if (fft_ring_index > ring_size_2)
     {
-      Fim[ring_size - fft_ring_index] += conj (D_m);
+      Fim[ring_size - fft_ring_index] += GSL_REAL (D_m) - I * GSL_IMAG (D_m);
     }
 
     if (m < pix->lmax)
@@ -2540,9 +2569,18 @@ ncm_sphere_map_pix_alm2map (NcmSphereMapPix *pix)
     return;
   }
 
+  printf ("# Preparing ffts!\n");
+	fflush (stdout);
+  ncm_timer_start (pix->t);
+	
   _ncm_sphere_map_pix_prepare_fft (pix);
 
   pix->order = NCM_SPHERE_MAP_PIX_ORDER_RING;
+
+	printf ("# preparing fft plans, elapsed % 22.15g\n", ncm_timer_elapsed (pix->t));
+	printf ("# Transforming rings\n");
+  fflush (stdout);
+  ncm_timer_start (pix->t);
 
   {
     const gint64 nrings = ncm_sphere_map_pix_get_nrings (pix);
@@ -2552,8 +2590,12 @@ ncm_sphere_map_pix_alm2map (NcmSphereMapPix *pix)
     {
       _ncm_sphere_map_pix_get_circle_from_alm (pix, r_i);
     }
+    printf ("# %ld rings transformed, elapsed % 22.15g\n", nrings, ncm_timer_elapsed (pix->t));
   }
-
+   
+  printf ("# Peforming ffts!\n");
+	fflush (stdout);
+  ncm_timer_start (pix->t);
   for (i = 0; i < pix->fft_plan_c2r->len; i++)
   {
 #  ifdef HAVE_FFTW3F
@@ -2562,13 +2604,7 @@ ncm_sphere_map_pix_alm2map (NcmSphereMapPix *pix)
     fftw_execute (g_ptr_array_index (pix->fft_plan_c2r, i));
 #endif
   } 
-
-/*
-  for (i = 0; i < pix->npix; i++)
-  {
-    printf ("%u % 13.7g % 13.7g\n", i, temp_pix[i], pixels[i]);
-  }
-*/
+  printf ("# Peforming ffts, elapsed % 22.15g\n", ncm_timer_elapsed (pix->t));
 
 #else
   g_error ("ncm_sphere_map_pix_alm2map: no fftw3 support, to use this function recompile NumCosmo with fftw.");
