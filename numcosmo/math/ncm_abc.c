@@ -40,7 +40,9 @@
 #include "math/ncm_abc.h"
 #include "math/ncm_func_eval.h"
 
+#ifndef NUMCOSMO_GIR_SCAN
 #include <gsl/gsl_statistics_double.h>
+#endif /* NUMCOSMO_GIR_SCAN */
 
 enum
 {
@@ -727,7 +729,7 @@ ncm_abc_start_run (NcmABC *abc)
 
   ncm_dataset_clear (&abc->dset_mock);
   abc->dset_mock = ncm_dataset_dup (abc->dset, abc->ser);
-  ncm_serialize_clear_instances (abc->ser, TRUE);
+  ncm_serialize_reset (abc->ser, TRUE);
 
   abc->ntotal = 0;
   abc->naccepted = 0;
@@ -940,10 +942,10 @@ _ncm_abc_dup_thread (gpointer userdata)
     abct->dset      = ncm_dataset_dup (abc->dset, abc->ser);
     abct->thetastar = ncm_vector_dup (abc->thetastar);
     abct->rng       = ncm_rng_new (NULL);
-
+    
     ncm_rng_set_seed (abct->rng, gsl_rng_get (abc->mcat->rng->r));
 
-    ncm_serialize_clear_instances (abc->ser, TRUE);
+    ncm_serialize_reset (abc->ser, TRUE);
 
     G_UNLOCK (dup_thread);
     return abct;
@@ -1178,7 +1180,7 @@ ncm_abc_start_update (NcmABC *abc)
 
   ncm_dataset_clear (&abc->dset_mock);
   abc->dset_mock = ncm_dataset_dup (abc->dset, abc->ser);
-  ncm_serialize_clear_instances (abc->ser, TRUE);
+  ncm_serialize_reset (abc->ser, TRUE);
 
   abc->dists_sorted = FALSE;
   abc->started_up = TRUE;

@@ -46,7 +46,9 @@
  * It must be include before anything else, several symbols clash
  * with the default includes.
  */
+#ifndef NUMCOSMO_GIR_SCAN
 #include "class/include/class.h"
+#endif /* NUMCOSMO_GIR_SCAN */
 
 #include "nc_hiprim.h"
 #include "model/nc_hicosmo_de.h"

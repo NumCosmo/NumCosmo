@@ -134,6 +134,7 @@
 #include <numcosmo/lss/nc_cluster_abundance.h>
 #include <numcosmo/lss/nc_cluster_pseudo_counts.h>
 #include <numcosmo/lss/nc_cor_cluster_cmb_lens_limber.h>
+#include <numcosmo/lss/nc_wl_surface_mass_density.h>
 
 /* Observable data */
 #include <numcosmo/data/nc_data_snia.h>
@@ -146,6 +147,7 @@
 #include <numcosmo/data/nc_data_bao_rdv.h>
 #include <numcosmo/data/nc_data_bao_dvdv.h>
 #include <numcosmo/data/nc_data_bao_empirical_fit.h>
+#include <numcosmo/data/nc_data_bao_empirical_fit_2d.h>
 #include <numcosmo/data/nc_data_bao_dhr_dar.h>
 #include <numcosmo/data/nc_data_bao_dmr_hr.h>
 #include <numcosmo/data/nc_data_bao.h>

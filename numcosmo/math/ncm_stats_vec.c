@@ -82,14 +82,15 @@
 #include "math/ncm_cfg.h"
 #include "ncm_enum_types.h"
 
-#include <math.h>
+#include "math/gsl_rstat.h"
+#include "math/rquantile.c"
+
+#ifndef NUMCOSMO_GIR_SCAN
 #include <gsl/gsl_math.h>
 #include <gsl/gsl_sf_bessel.h>
 
 #include "toeplitz/solvers/toeplitz.h"
-
-#include "math/gsl_rstat.h"
-#include "math/rquantile.c"
+#endif /* NUMCOSMO_GIR_SCAN */
 
 enum
 {

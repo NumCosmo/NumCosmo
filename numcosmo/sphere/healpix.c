@@ -43,10 +43,13 @@
 #include "math/ncm_util.h"
 
 #include <glib/gstdio.h>
+
+#ifndef NUMCOSMO_GIR_SCAN
 #include <gsl/gsl_math.h>
 #ifdef NUMCOSMO_HAVE_CFITSIO
 #include <fitsio.h>
 #endif /* NUMCOSMO_HAVE_CFITSIO */
+#endif /* NUMCOSMO_GIR_SCAN */
 
 /***************************************************************************
  *

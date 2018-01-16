@@ -30,11 +30,12 @@
 #include <glib/gstdio.h>
 #include <glib-object.h>
 #include <numcosmo/build_cfg.h>
-#include <gsl/gsl_rng.h>
+#include <numcosmo/math/ncm_spline.h>
+
 #ifndef NUMCOSMO_GIR_SCAN
+#include <gsl/gsl_rng.h>
 #include <gmp.h>
 #endif /* NUMCOSMO_GIR_SCAN */
-#include <numcosmo/math/ncm_spline.h>
 
 G_BEGIN_DECLS
 

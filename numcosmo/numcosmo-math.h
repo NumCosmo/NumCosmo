@@ -67,6 +67,7 @@
 #include <numcosmo/math/ncm_mpsf_sbessel_int.h>
 #include <numcosmo/math/ncm_sf_sbessel.h>
 #include <numcosmo/math/ncm_sf_sbessel_int.h>
+#include <numcosmo/math/ncm_sf_spherical_harmonics.h>
 #include <numcosmo/math/ncm_mpsf_0F1.h>
 #include <numcosmo/math/ncm_fftlog.h>
 #include <numcosmo/math/ncm_fftlog_sbessel_j.h>

@@ -31,9 +31,11 @@
 #include <numcosmo/build_cfg.h>
 #include <numcosmo/math/ncm_vector.h>
 #include <numcosmo/math/ncm_quaternion.h>
+#include <numcosmo/math/ncm_sf_spherical_harmonics.h>
 #include <numcosmo/math/ncm_timer.h>
-#include <gsl/gsl_vector_float.h>
+
 #ifndef NUMCOSMO_GIR_SCAN
+#include <gsl/gsl_vector_float.h>
 #include <complex.h>
 #endif /* NUMCOSMO_GIR_SCAN */
 
@@ -66,7 +68,8 @@ struct _NcmSphereMapPixClass
 typedef enum _NcmSphereMapPixOrder
 {
   NCM_SPHERE_MAP_PIX_ORDER_NEST,
-  NCM_SPHERE_MAP_PIX_ORDER_RING, /*< private >*/
+  NCM_SPHERE_MAP_PIX_ORDER_RING, 
+  /* < private > */
   NCM_SPHERE_MAP_PIX_ORDER_LEN,  /*< skip >*/
 } NcmSphereMapPixOrder;
 
@@ -83,8 +86,9 @@ typedef enum _NcmSphereMapPixCoordSys
 {
   NCM_SPHERE_MAP_PIX_COORD_SYS_GALACTIC  = 'G',
   NCM_SPHERE_MAP_PIX_COORD_SYS_ECLIPTIC  = 'E',
-  NCM_SPHERE_MAP_PIX_COORD_SYS_CELESTIAL = 'C', /*< private >*/
-  NCM_SPHERE_MAP_PIX_COORD_SYS_LEN,             /*< skip >*/
+  NCM_SPHERE_MAP_PIX_COORD_SYS_CELESTIAL = 'C', 
+  /* < private > */
+  NCM_SPHERE_MAP_PIX_COORD_SYS_LEN, /*< skip >*/
 } NcmSphereMapPixCoordSys;
 
 struct _NcmSphereMapPix
@@ -107,10 +111,11 @@ struct _NcmSphereMapPix
   GPtrArray *fft_plan_r2c;
   GPtrArray *fft_plan_c2r;
   guint lmax;
-  NcmVector *Ylm;
-  NcmVector *alm;
+  GArray *alm;
+  NcmVector *alm_v;
   NcmVector *Cl;
   NcmTimer *t;
+	NcmSFSphericalHarmonics *spha;
 };
 
 GType ncm_sphere_map_pix_get_type (void) G_GNUC_CONST;
@@ -168,8 +173,10 @@ void ncm_sphere_map_pix_prepare_Cl (NcmSphereMapPix *pix);
 
 void ncm_sphere_map_pix_get_alm (NcmSphereMapPix *pix, guint l, guint m, gdouble *Re_alm, gdouble *Im_alm);
 gdouble ncm_sphere_map_pix_get_Cl (NcmSphereMapPix *pix, guint l);
+gdouble ncm_sphere_map_pix_get_pix (NcmSphereMapPix *pix, guint i);
 
 void ncm_sphere_map_pix_add_noise (NcmSphereMapPix *pix, const gdouble sd, NcmRNG *rng);
+void ncm_sphere_map_pix_set_map (NcmSphereMapPix *pix, GArray *map);
 
 void ncm_sphere_map_pix_alm2map (NcmSphereMapPix *pix);
 
@@ -202,6 +209,9 @@ G_STMT_START { \
 
 #define NCM_SPHERE_MAP_PIX_ALM_SIZE(lmax) (((lmax)*(lmax) + 3*(lmax) + 2)/2) 
 #define NCM_SPHERE_MAP_PIX_M_START(lmax,m) ((2*(lmax)*(m)-(m)*(m)+3*(m))/2)
+
+/*#define NCM_SPHERE_MAP_PIX_ALM_INDEX(l,m) ((l * (l + 1)) / 2 + m)*/
+#define NCM_SPHERE_MAP_PIX_ALM_INDEX(lmax,l,m) ((l) + ((1 + 2 * (lmax) - (m)) * (m)) / 2)
 
 G_END_DECLS
 

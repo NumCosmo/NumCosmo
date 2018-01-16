@@ -55,19 +55,10 @@ enum
 G_DEFINE_ABSTRACT_TYPE (NcmStatsDist1d, ncm_stats_dist1d, G_TYPE_OBJECT);
 
 static gdouble 
-_ncm_stats_dist1d_inv_P_dydx (gdouble y, gdouble x, gpointer userdata)
+_ncm_stats_dist1d_inv_cdf_dydx (gdouble y, gdouble x, gpointer userdata)
 {
   NcmStatsDist1d *sd1 = NCM_STATS_DIST1D (userdata);
-  /*printf ("P % 20.15g % 20.15g % 20.15g\n", x, y, sd1->norma / ncm_stats_dist1d_eval_p (sd1, y));*/
-  return sd1->norma / NCM_STATS_DIST1D_GET_CLASS (sd1)->p (sd1, y);
-}
-
-static gdouble 
-_ncm_stats_dist1d_inv_Q_dydx (gdouble y, gdouble x, gpointer userdata)
-{
-  NcmStatsDist1d *sd1 = NCM_STATS_DIST1D (userdata);
-  /*printf ("Q % 20.15g % 20.15g % 20.15g\n", x, y, -sd1->norma / ncm_stats_dist1d_eval_p (sd1, y));*/
-  return -sd1->norma / NCM_STATS_DIST1D_GET_CLASS (sd1)->p (sd1, y);
+  return sd1->norma / (NCM_STATS_DIST1D_GET_CLASS (sd1)->p (sd1, y) * gsl_pow_2 (cosh (x)));
 }
 
 static gdouble 
@@ -89,8 +80,7 @@ ncm_stats_dist1d_init (NcmStatsDist1d *sd1)
   sd1->norma    = 0.0;
   sd1->reltol   = 0.0;
   sd1->max_prob = 0.0;
-  sd1->inv_P    = ncm_ode_spline_new (s1, _ncm_stats_dist1d_inv_P_dydx);
-  sd1->inv_Q    = ncm_ode_spline_new (s2, _ncm_stats_dist1d_inv_Q_dydx);
+  sd1->inv_cdf  = ncm_ode_spline_new (s1, _ncm_stats_dist1d_inv_cdf_dydx);
   sd1->pdf      = ncm_ode_spline_new (s3, _ncm_stats_dist1d_pdf_dydx);
   sd1->fmin     = gsl_min_fminimizer_alloc (gsl_min_fminimizer_brent);
 
@@ -107,8 +97,7 @@ ncm_stats_dist1d_dispose (GObject *object)
 {
   NcmStatsDist1d *sd1 = NCM_STATS_DIST1D (object);
   
-  ncm_ode_spline_clear (&sd1->inv_P);
-  ncm_ode_spline_clear (&sd1->inv_Q);
+  ncm_ode_spline_clear (&sd1->inv_cdf);
   ncm_ode_spline_clear (&sd1->pdf);
   
   /* Chain up : end */
@@ -164,10 +153,10 @@ ncm_stats_dist1d_get_property (GObject *object, guint prop_id, GValue *value, GP
   switch (prop_id)
   {
     case PROP_XI:
-      g_value_set_double (value, sd1->xi);
+      g_value_set_double (value, ncm_stats_dist1d_get_xi (sd1));
       break;
     case PROP_XF:
-      g_value_set_double (value, sd1->xf);
+      g_value_set_double (value, ncm_stats_dist1d_get_xf (sd1));
       break;
     case PROP_NORMA:
       g_value_set_double (value, sd1->norma);
@@ -303,26 +292,50 @@ ncm_stats_dist1d_prepare (NcmStatsDist1d *sd1)
 
   if (G_LIKELY (sd1->xi != sd1->xf))
   {
-    ncm_ode_spline_set_reltol (sd1->inv_P, sd1->reltol);
-    ncm_ode_spline_set_reltol (sd1->inv_Q, sd1->reltol);
+    ncm_ode_spline_set_reltol (sd1->inv_cdf, sd1->reltol);
     ncm_ode_spline_set_reltol (sd1->pdf, sd1->reltol);
 
-    ncm_ode_spline_set_abstol (sd1->inv_P, sd1->abstol);
-    ncm_ode_spline_set_abstol (sd1->inv_Q, sd1->abstol);
+    ncm_ode_spline_set_abstol (sd1->inv_cdf, sd1->abstol);
     ncm_ode_spline_set_abstol (sd1->pdf, GSL_DBL_EPSILON * 10.0); /* Avoid too much accuracy problems. */
 
-    ncm_ode_spline_set_interval (sd1->inv_P, sd1->xi, 0.0, 0.5);
-    ncm_ode_spline_set_interval (sd1->inv_Q, sd1->xf, 0.0, 0.5);
+    /*ncm_ode_spline_set_interval (sd1->inv_P, sd1->xi, 0.0, 0.5);*/
+
+		ncm_ode_spline_set_xi (sd1->inv_cdf, 0.0);
+		ncm_ode_spline_set_yi (sd1->inv_cdf, sd1->xi);
+		ncm_ode_spline_set_yf (sd1->inv_cdf, sd1->xf);
+		
     ncm_ode_spline_set_interval (sd1->pdf, 0.0, sd1->xi, sd1->xf);
 
     sd1->norma = 1.0;
     ncm_ode_spline_prepare (sd1->pdf, sd1);
     sd1->norma = ncm_spline_eval (sd1->pdf->s, sd1->xf);
 
-    ncm_ode_spline_prepare (sd1->inv_P, sd1);
-    ncm_ode_spline_prepare (sd1->inv_Q, sd1);
-
+    ncm_ode_spline_prepare (sd1->inv_cdf, sd1);
   }
+}
+
+/**
+ * ncm_stats_dist1d_get_xi:
+ * @sd1: a #NcmStatsDist1d
+ * 
+ * Returns: the lower bound of the distribution $x_i$.
+ */ 
+gdouble 
+ncm_stats_dist1d_get_xi (NcmStatsDist1d *sd1)
+{
+	return sd1->xi;
+}
+
+/**
+ * ncm_stats_dist1d_get_xf:
+ * @sd1: a #NcmStatsDist1d
+ * 
+ * Returns: the upper bound of the distribution $x_f$.
+ */ 
+gdouble 
+ncm_stats_dist1d_get_xf (NcmStatsDist1d *sd1)
+{
+	return sd1->xf;
 }
 
 /**
@@ -406,14 +419,16 @@ ncm_stats_dist1d_eval_norma (NcmStatsDist1d *sd1)
  * Returns: the value of x.
  */
 gdouble
-ncm_stats_dist1d_eval_inv_pdf (NcmStatsDist1d *sd1, gdouble u)
+ncm_stats_dist1d_eval_inv_pdf (NcmStatsDist1d *sd1, const gdouble u)
 {
   if (G_UNLIKELY (sd1->xi == sd1->xf))
     return sd1->xi;
-  else if (u < 0.5)
-    return ncm_spline_eval (sd1->inv_P->s, u);
+  else if (G_UNLIKELY (u <= 0.0))
+    return sd1->xi;
+  else if (G_UNLIKELY (u >= 1.0))
+    return sd1->xf;
   else
-    return ncm_spline_eval (sd1->inv_Q->s, 1.0 - u);
+    return ncm_spline_eval (sd1->inv_cdf->s, atanh (u));
 }
 
 /**
@@ -427,14 +442,19 @@ ncm_stats_dist1d_eval_inv_pdf (NcmStatsDist1d *sd1, gdouble u)
  * Returns: the value of x.
  */
 gdouble
-ncm_stats_dist1d_eval_inv_pdf_tail (NcmStatsDist1d *sd1, gdouble v)
+ncm_stats_dist1d_eval_inv_pdf_tail (NcmStatsDist1d *sd1, const gdouble v)
 {
   if (G_UNLIKELY (sd1->xi == sd1->xf))
     return sd1->xi;
-  else if (v < 0.5)
-    return ncm_spline_eval (sd1->inv_Q->s, v);
+  else if (G_UNLIKELY (v <= 0.0))
+    return sd1->xf;
+  else if (G_UNLIKELY (v >= 1.0))
+    return sd1->xi;
   else
-    return ncm_spline_eval (sd1->inv_P->s, 1.0 - v);
+  {
+    const gdouble atan_1mv = 0.5 * (M_LN2 + log1p (- 0.5 * v) - log (v));
+    return ncm_spline_eval (sd1->inv_cdf->s, atan_1mv);
+  }
 }
 
 /**
@@ -497,18 +517,18 @@ ncm_stats_dist1d_eval_mode (NcmStatsDist1d *sd1)
     x0 = gsl_min_fminimizer_x_lower (sd1->fmin);
     x1 = gsl_min_fminimizer_x_upper (sd1->fmin);
 
-    if ((x0 == last_x0) && (x1 == last_x1))
+    status = gsl_min_test_interval (x0, x1, sd1->abstol, sd1->reltol);
+    
+    if ((status == GSL_CONTINUE) && (x0 == last_x0) && (x1 == last_x1))
     {
       g_warning ("ncm_stats_dist1d_eval_mode: minimization not improving, giving up...");
       break;
     }
-    
+
     last_x0 = x0;
     last_x1 = x1;
 
-    status = gsl_min_test_interval (x0, x1, sd1->abstol, sd1->reltol);
-    
-  } while (status == GSL_CONTINUE && iter < max_iter);
+	} while (status == GSL_CONTINUE && iter < max_iter);
 
   return x;
 }

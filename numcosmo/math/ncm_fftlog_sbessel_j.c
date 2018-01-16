@@ -5,6 +5,13 @@
  *  Copyright  2017  Fernando de Simoni
  *  <fernando.saliby@gmail.com>
  ****************************************************************************/
+/***************************************************************************
+ *            ncm_fftlog_sbessel_j.c
+ *
+ *  Sat September 02 18:11:00 2017
+ *  Copyright  2017  Sandro Dias Pinto Vitenti
+ *  <sandro@isoftware.com.br>
+ ****************************************************************************/
 /*
  * ncm_fftlog_sbessel_j.c
  *
@@ -32,7 +39,7 @@
  *
  * This object computes the function (see #NcmFftlog)
  * $$Y_n = \int_0^\infty t^{\frac{2\pi i n}{L}} K(t) dt,$$
- * where the kernel are the spherical bessel function of the first kind $K(t) = j_{\ell}(t)$.
+ * where the kernel are the spherical bessel function of the first kind $K(t) = t^q j_{\ell}(t)$.
  * 
  * 
  */
@@ -46,20 +53,23 @@
 #include "math/ncm_cfg.h"
 #include "math/ncm_c.h"
 
-#include <math.h>
+#ifndef NUMCOSMO_GIR_SCAN
 #include <gsl/gsl_sf_result.h>
 #include <gsl/gsl_sf_gamma.h>
 #include <gsl/gsl_sf_trig.h>
+#endif /* NUMCOSMO_GIR_SCAN */
 
 struct _NcmFftlogSBesselJPrivate
 {
   guint ell;
+  gdouble q;
 };
 
 enum
 {
   PROP_0,
   PROP_ELL,
+  PROP_Q,
   PROP_SIZE,
 };
 
@@ -70,6 +80,7 @@ ncm_fftlog_sbessel_j_init (NcmFftlogSBesselJ *fftlog_jl)
 {
   fftlog_jl->priv      = G_TYPE_INSTANCE_GET_PRIVATE (fftlog_jl, NCM_TYPE_FFTLOG_SBESSEL_J, NcmFftlogSBesselJPrivate);
   fftlog_jl->priv->ell = 0;
+  fftlog_jl->priv->q   = 0.0;
 }
 
 static void
@@ -82,6 +93,9 @@ _ncm_fftlog_sbessel_j_set_property (GObject *object, guint prop_id, const GValue
   {
     case PROP_ELL:
       ncm_fftlog_sbessel_j_set_ell (fftlog_jl, g_value_get_uint (value));
+      break;
+    case PROP_Q:
+      ncm_fftlog_sbessel_j_set_q (fftlog_jl, g_value_get_double (value));
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -99,6 +113,9 @@ _ncm_fftlog_sbessel_j_get_property (GObject *object, guint prop_id, GValue *valu
   {
     case PROP_ELL:
       g_value_set_uint (value, ncm_fftlog_sbessel_j_get_ell (fftlog_jl));
+      break;
+    case PROP_Q:
+      g_value_set_double (value, ncm_fftlog_sbessel_j_get_q (fftlog_jl));
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -135,6 +152,13 @@ ncm_fftlog_sbessel_j_class_init (NcmFftlogSBesselJClass *klass)
                                                       "Spherical Bessel integer order",
                                                       0, G_MAXUINT32, 0,
                                                       G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+  g_object_class_install_property (object_class,
+                                   PROP_Q,
+                                   g_param_spec_double ("q",
+                                                        NULL,
+                                                        "Spherical Bessel power",
+                                                        -G_MAXDOUBLE, G_MAXDOUBLE, 0.0,
+                                                        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
   
   fftlog_class->name     = "sbessel_j";
   fftlog_class->get_Ym   = &_ncm_fftlog_sbessel_j_get_Ym;
@@ -152,27 +176,51 @@ _ncm_fftlog_sbessel_j_get_Ym (NcmFftlog *fftlog, gpointer Ym_0)
   fftw_complex *Ym_base = (fftw_complex *) Ym_0;
   gint i;
 
-  for (i = 0; i < Nf; i++)
+  if (fftlog_jl->priv->q == 0.5)
   {
-    const gint phys_i            = ncm_fftlog_get_mode_index (fftlog, i);
-    const complex double a       = twopi_Lt * phys_i * I;
-    const complex double A       = a + 0.0/*fftlog->nu*/;
-    const complex xup            = 0.5 * (1.0 + 1.0 * fftlog_jl->priv->ell + A);
-    const complex xdw            = 0.5 * (2.0 + 1.0 * fftlog_jl->priv->ell - A);
-    const complex two_x_m1       = cpow (2.0, A - 1.0);
-    complex double U;
-    
-    gsl_sf_result lngamma_rho_up, lngamma_theta_up;
-    gsl_sf_result lngamma_rho_dw, lngamma_theta_dw;
+    for (i = 0; i < Nf; i++)
+    {
+      const gint phys_i            = ncm_fftlog_get_mode_index (fftlog, i);
+      const complex double a       = twopi_Lt * phys_i * I;
+      const complex double A       = a + 0.5;
+      const complex xup            = 0.5 * (1.0 + 1.0 * fftlog_jl->priv->ell + A);
+      const complex two_x_m1       = cpow (2.0, A - 1.0);
+      complex double U;
 
-    gsl_sf_lngamma_complex_e (creal (xup), cimag (xup), &lngamma_rho_up, &lngamma_theta_up);
-    gsl_sf_lngamma_complex_e (creal (xdw), cimag (xdw), &lngamma_rho_dw, &lngamma_theta_dw);
+      gsl_sf_result lngamma_rho_up, lngamma_theta_up;
 
-    U = cexp ((lngamma_rho_up.val - lngamma_rho_dw.val) + I * (lngamma_theta_up.val - lngamma_theta_dw.val));
+      gsl_sf_lngamma_complex_e (creal (xup), cimag (xup), &lngamma_rho_up, &lngamma_theta_up);
 
-    /*printf ("% 22.15g % 22.15g % 22.15g % 22.15g\n", lngamma_rho_up.val, lngamma_rho_dw.val, lngamma_theta_up.val, lngamma_theta_dw.val);*/
-    
-    Ym_base[i] = pi_sqrt * two_x_m1 * U;
+      U = cexp (2.0 * I * lngamma_theta_up.val);
+
+      Ym_base[i] = pi_sqrt * two_x_m1 * U;
+    }
+  }
+  else
+  {
+    const gdouble q = fftlog_jl->priv->q;
+    for (i = 0; i < Nf; i++)
+    {
+      const gint phys_i            = ncm_fftlog_get_mode_index (fftlog, i);
+      const complex double a       = twopi_Lt * phys_i * I;
+      const complex double A       = a + q;
+      const complex xup            = 0.5 * (1.0 + 1.0 * fftlog_jl->priv->ell + A);
+      const complex xdw            = 0.5 * (2.0 + 1.0 * fftlog_jl->priv->ell - A);
+      const complex two_x_m1       = cpow (2.0, A - 1.0);
+      complex double U;
+
+      gsl_sf_result lngamma_rho_up, lngamma_theta_up;
+      gsl_sf_result lngamma_rho_dw, lngamma_theta_dw;
+
+      gsl_sf_lngamma_complex_e (creal (xup), cimag (xup), &lngamma_rho_up, &lngamma_theta_up);
+      gsl_sf_lngamma_complex_e (creal (xdw), cimag (xdw), &lngamma_rho_dw, &lngamma_theta_dw);
+
+      U = cexp ((lngamma_rho_up.val - lngamma_rho_dw.val) + I * (lngamma_theta_up.val - lngamma_theta_dw.val));
+
+      /*printf ("% 22.15g % 22.15g % 22.15g % 22.15g\n", lngamma_rho_up.val, lngamma_rho_dw.val, lngamma_theta_up.val, lngamma_theta_dw.val);*/
+
+      Ym_base[i] = pi_sqrt * two_x_m1 * U;
+    }
   }
 #endif /* NUMCOSMO_HAVE_FFTW3 */
 }
@@ -237,6 +285,39 @@ ncm_fftlog_sbessel_j_get_ell (NcmFftlogSBesselJ *fftlog_jl)
 }
 
 /**
+ * ncm_fftlog_set_q:
+ * @fftlog_jl: a #NcmFftlogSBesselJ
+ * @ell: Spherical Bessel integer order $\ell$
+ * 
+ * Sets @q as the Spherical Bessel power $q$.
+ * 
+ */
+void 
+ncm_fftlog_sbessel_j_set_q (NcmFftlogSBesselJ *fftlog_jl, const gdouble q)
+{
+  if (fftlog_jl->priv->q != q)
+  {
+    NcmFftlog *fftlog = NCM_FFTLOG (fftlog_jl);
+
+    fftlog_jl->priv->q = q;
+    fftlog->prepared   = FALSE;
+    fftlog->evaluated  = FALSE;
+  }
+}
+
+/**
+ * ncm_fftlog_sbessel_j_get_q:
+ * @fftlog_jl: a #NcmFftlogSBesselJ
+ * 
+ * Returns: the current Spherical Bessel power $q$.
+ */
+gdouble 
+ncm_fftlog_sbessel_j_get_q (NcmFftlogSBesselJ *fftlog_jl)
+{
+  return fftlog_jl->priv->q;
+}
+
+/**
  * ncm_fftlog_sbessel_j_set_best_lnr0:
  * @fftlog_jl: a #NcmFftlogSBesselJ
  * 
@@ -256,7 +337,7 @@ ncm_fftlog_sbessel_j_set_best_lnr0 (NcmFftlogSBesselJ *fftlog_jl)
   const gdouble lnk0      = ncm_fftlog_get_lnk0 (fftlog);
   const gdouble Lk        = ncm_fftlog_get_length (fftlog);
   const gdouble ell       = fftlog_jl->priv->ell;
-  const gdouble lnc0      = ((ell - 1.0) * Lk + 2.0 * (ell + 1.0) * M_LN2 - ncm_c_lnpi () + 2.0 * lgamma_r (1.5 + ell, &signp)) / (2.0 * (1.0 + ell));
+  const gdouble lnc0      = (ell == 0) ? 0.0 : ((ell - 1.0) * Lk + 2.0 * (ell + 1.0) * M_LN2 - ncm_c_lnpi () + 2.0 * lgamma_r (1.5 + ell, &signp)) / (2.0 * (1.0 + ell));
   const gdouble best_lnr0 = - lnk0 + lnc0;
 
   ncm_fftlog_set_lnr0 (fftlog, best_lnr0);
@@ -282,7 +363,7 @@ ncm_fftlog_sbessel_j_set_best_lnk0 (NcmFftlogSBesselJ *fftlog_jl)
   const gdouble lnr0      = ncm_fftlog_get_lnr0 (fftlog);
   const gdouble Lk        = ncm_fftlog_get_length (fftlog);
   const gdouble ell       = fftlog_jl->priv->ell;
-  const gdouble lnc0      = ((ell - 1.0) * Lk + 2.0 * (ell + 1.0) * M_LN2 - ncm_c_lnpi () + 2.0 * lgamma_r (1.5 + ell, &signp)) / (2.0 * (1.0 + ell));
+  const gdouble lnc0      = (ell == 0) ? 0.0 : ((ell - 1.0) * Lk + 2.0 * (ell + 1.0) * M_LN2 - ncm_c_lnpi () + 2.0 * lgamma_r (1.5 + ell, &signp)) / (2.0 * (1.0 + ell));
   const gdouble best_lnk0 = - lnr0 + lnc0;
 
   ncm_fftlog_set_lnk0 (fftlog, best_lnk0);

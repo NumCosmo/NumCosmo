@@ -30,7 +30,9 @@
 #include "perturbations/linear.h"
 
 #ifdef HAVE_GSL_ODEIV2
+#ifndef NUMCOSMO_GIR_SCAN
 #include <gsl/gsl_odeiv2.h>
+#endif /* NUMCOSMO_GIR_SCAN */
 
 #include "linear_internal.h"
 

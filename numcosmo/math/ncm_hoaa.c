@@ -78,6 +78,7 @@
 #include "math/ncm_diff.h"
 #include "ncm_enum_types.h"
 
+#ifndef NUMCOSMO_GIR_SCAN
 /*#undef HAVE_SUNDIALS_ARKODE*/
 
 #ifndef HAVE_SUNDIALS_ARKODE
@@ -96,6 +97,7 @@
 #include <gsl/gsl_sf_bessel.h>
 #include <gsl/gsl_sf_exp.h>
 #include <gsl/gsl_fit.h>
+#endif /* NUMCOSMO_GIR_SCAN */
 
 struct _NcmHOAAPrivate
 {

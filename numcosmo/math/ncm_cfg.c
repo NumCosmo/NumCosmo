@@ -116,6 +116,7 @@
 #include "lss/nc_cluster_abundance.h"
 #include "lss/nc_cluster_pseudo_counts.h"
 #include "lss/nc_cor_cluster_cmb_lens_limber.h"
+#include "lss/nc_wl_surface_mass_density.h"
 #include "nc_distance.h"
 #include "nc_recomb.h"
 #include "nc_recomb_seager.h"
@@ -135,6 +136,7 @@
 #include "data/nc_data_bao_dvdv.h"
 #include "data/nc_data_bao_rdv.h"
 #include "data/nc_data_bao_empirical_fit.h"
+#include "data/nc_data_bao_empirical_fit_2d.h"
 #include "data/nc_data_bao_dhr_dar.h"
 #include "data/nc_data_bao_dmr_hr.h"
 #include "data/nc_data_dist_mu.h"
@@ -151,6 +153,7 @@
 #include "xcor/nc_xcor_limber_kernel_CMB_lensing.h"
 #include "xcor/nc_xcor_limber_kernel_weak_lensing.h"
 
+#ifndef NUMCOSMO_GIR_SCAN
 #include <gio/gio.h>
 #ifdef NUMCOSMO_HAVE_FFTW3
 #include <fftw3.h>
@@ -164,6 +167,7 @@
 #ifdef HAVE_EXECINFO_H
 #include <execinfo.h>
 #endif /* HAVE_EXECINFO_H */
+#endif /* NUMCOSMO_GIR_SCAN */
 
 static gchar *numcosmo_path = NULL;
 static gboolean numcosmo_init = FALSE;
@@ -419,6 +423,8 @@ ncm_cfg_init (void)
 
   ncm_cfg_register_obj (NC_TYPE_COR_CLUSTER_CMB_LENS_LIMBER);
 
+  ncm_cfg_register_obj (NC_TYPE_WL_SURFACE_MASS_DENSITY);
+
   ncm_cfg_register_obj (NC_TYPE_DISTANCE);
 
   ncm_cfg_register_obj (NC_TYPE_RECOMB);
@@ -445,6 +451,7 @@ ncm_cfg_init (void)
   ncm_cfg_register_obj (NC_TYPE_DATA_BAO_DVDV);
   ncm_cfg_register_obj (NC_TYPE_DATA_BAO_RDV);
   ncm_cfg_register_obj (NC_TYPE_DATA_BAO_EMPIRICAL_FIT);
+  ncm_cfg_register_obj (NC_TYPE_DATA_BAO_EMPIRICAL_FIT_2D);
   ncm_cfg_register_obj (NC_TYPE_DATA_BAO_DHR_DAR);
   ncm_cfg_register_obj (NC_TYPE_DATA_BAO_DMR_HR);
 

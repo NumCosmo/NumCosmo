@@ -52,7 +52,8 @@ typedef struct _NcHICosmoDEJbp NcHICosmoDEJbp;
 typedef enum _NcHICosmoDEJbpParams
 {
   NC_HICOSMO_DE_JBP_W0 = NC_HICOSMO_DE_SPARAM_LEN,
-  NC_HICOSMO_DE_JBP_W1,         /*< private >*/
+  NC_HICOSMO_DE_JBP_W1,         
+  /* < private > */
   NC_HICOSMO_DE_JBP_SPARAM_LEN, /*< skip >*/
 } NcHICosmoDEJbpParams;
 

@@ -40,12 +40,14 @@
 #include "math/ncm_matrix.h"
 #include "math/ncm_lapack.h"
 
+#ifndef NUMCOSMO_GIR_SCAN
 #if (defined HAVE_CLAPACK_H) && (defined HAVE_CLAPACK_DPOTRF)
 #include <clapack.h>
 #else
 #include <gsl/gsl_cblas.h>
 #include <gsl/gsl_linalg.h>
 #endif
+#endif /* NUMCOSMO_GIR_SCAN */
 
 enum
 {

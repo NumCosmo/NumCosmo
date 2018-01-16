@@ -52,9 +52,11 @@
 #include "xcor/nc_xcor.h"
 #include "nc_enum_types.h"
 
+#ifndef NUMCOSMO_GIR_SCAN
 #include <cuba.h>
 #include <cvodes/cvodes.h>
 #include <nvector/nvector_serial.h>
+#endif /* NUMCOSMO_GIR_SCAN */
 
 enum
 {

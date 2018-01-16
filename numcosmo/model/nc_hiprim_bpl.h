@@ -63,7 +63,8 @@ typedef enum _NcHIPrimBPLParams
   NC_HIPRIM_BPL_DELTA,
   NC_HIPRIM_BPL_LNKB,       
   NC_HIPRIM_BPL_T_SA_RATIO,
-  NC_HIPRIM_BPL_N_T,        /*< private >*/
+  NC_HIPRIM_BPL_N_T,        
+  /* < private > */
   NC_HIPRIM_BPL_SPARAM_LEN, /*< skip >*/
 } NcHIPrimBPLParams;
 

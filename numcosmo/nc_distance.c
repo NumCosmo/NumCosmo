@@ -1006,6 +1006,21 @@ nc_distance_r_zd (NcDistance *dist, NcHICosmo *cosmo)
 }
 
 /**
+ * nc_distance_r_zd_Mpc:
+ * @dist: a #NcDistance
+ * @cosmo: a #NcHICosmo
+ *
+ * $r (z_d) R_H\, [\mathrm{Mpc}]$.
+ *
+ * Returns: FIXME
+ */
+gdouble
+nc_distance_r_zd_Mpc (NcDistance *dist, NcHICosmo *cosmo)
+{
+  return nc_distance_r_zd (dist, cosmo) * nc_hicosmo_RH_Mpc (cosmo);
+}
+
+/**
  * nc_distance_bao_r_Dv:
  * @dist: a #NcDistance
  * @cosmo: a #NcHICosmo
@@ -1029,9 +1044,10 @@ nc_distance_bao_r_Dv (NcDistance *dist, NcHICosmo *cosmo, gdouble z)
  * @cosmo: a #NcHICosmo
  * @z: the redshift $z$
  *
- * $H(z) / (c r_{z_d})$.
+ * Computes the ratio between the Hubble (distance) radius and the sound horizon at the drag epoch, 
+ * $$\frac{R_H}{r_s(z_d)} = c / (H(z) r_d).$$  
  *
- * Returns: FIXME
+ * Returns: $R_H/r_d = c / (H(z) r_d)$
  */
 gdouble
 nc_distance_DH_r (NcDistance *dist, NcHICosmo *cosmo, gdouble z)
@@ -1047,9 +1063,9 @@ nc_distance_DH_r (NcDistance *dist, NcHICosmo *cosmo, gdouble z)
  * @cosmo: a #NcHICosmo
  * @z: the redshift $z$
  *
- * $D_A(z) / (c r_{z_d})$.
+ * Computes the ratio between the angular-diameter distance and the sound horizon at the drag epoch, $$D_A(z) / (c r_s(z_d)).$$
  *
- * Returns: FIXME
+ * Returns: $D_A(z) / (c r_d)$
  */
 gdouble
 nc_distance_DA_r (NcDistance *dist, NcHICosmo *cosmo, gdouble z)
@@ -1212,6 +1228,7 @@ _NC_DISTANCE_FUNC0_TO_FLIST (acoustic_scale)
 _NC_DISTANCE_FUNC0_TO_FLIST (theta100CMB)
 _NC_DISTANCE_FUNC0_TO_FLIST (angular_diameter_curvature_scale)
 _NC_DISTANCE_FUNC0_TO_FLIST (r_zd)
+_NC_DISTANCE_FUNC0_TO_FLIST (r_zd_Mpc)
 
 #define _NC_DISTANCE_FUNC1_TO_FLIST(fname) \
 static void _nc_distance_flist_##fname (NcmMSetFuncList *flist, NcmMSet *mset, const gdouble *x, gdouble *res) \
@@ -1244,7 +1261,8 @@ _nc_distance_register_functions (void)
   ncm_mset_func_list_register ("acoustic_scale",                   "r_\\mathrm{ac}",           "NcDistance", "Acoustic scale at lss",            NC_TYPE_DISTANCE, _nc_distance_flist_acoustic_scale,                   0, 1);
   ncm_mset_func_list_register ("theta100CMB",                      "100\\theta_\\mathrm{CMB}", "NcDistance", "CMB angular scale times 100",      NC_TYPE_DISTANCE, _nc_distance_flist_theta100CMB,                      0, 1);
   ncm_mset_func_list_register ("angular_diameter_curvature_scale", "z_\\mathrm{dec}",          "NcDistance", "Angular diameter curvature scale", NC_TYPE_DISTANCE, _nc_distance_flist_angular_diameter_curvature_scale, 0, 1);
-  ncm_mset_func_list_register ("r_zd",                             "z_\\mathrm{dec}",          "NcDistance", "Sound horizon at drag redshift",   NC_TYPE_DISTANCE, _nc_distance_flist_r_zd,                             0, 1);
+  ncm_mset_func_list_register ("r_zd",                             "r_\\mathrm{dec}",          "NcDistance", "Sound horizon at drag redshift",   NC_TYPE_DISTANCE, _nc_distance_flist_r_zd,                             0, 1);
+  ncm_mset_func_list_register ("r_zd_Mpc",                         "r_\\mathrm{dec}R_H",       "NcDistance", "Sound horizon at drag redshift in Mpc", NC_TYPE_DISTANCE, _nc_distance_flist_r_zd_Mpc,                    0, 1);
 
   ncm_mset_func_list_register ("comoving",         "d_\\mathrm{c}",               "NcDistance", "Comoving distance",          NC_TYPE_DISTANCE, _nc_distance_flist_comoving,         1, 1);
   ncm_mset_func_list_register ("transverse",       "d_\\mathrm{t}",               "NcDistance", "Transverse distance",        NC_TYPE_DISTANCE, _nc_distance_flist_transverse,       1, 1);

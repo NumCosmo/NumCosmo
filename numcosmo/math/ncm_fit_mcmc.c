@@ -44,7 +44,9 @@
 #include "math/ncm_func_eval.h"
 #include "ncm_enum_types.h"
 
+#ifndef NUMCOSMO_GIR_SCAN
 #include <gsl/gsl_statistics_double.h>
+#endif /* NUMCOSMO_GIR_SCAN */
 
 enum
 {
@@ -725,7 +727,7 @@ _ncm_fit_mcmc_dup_fit (gpointer userdata)
   g_mutex_lock (&mcmc->dup_fit);
   {
     NcmFit *fit = ncm_fit_dup (mcmc->fit, mcmc->ser);
-    ncm_serialize_clear_instances (mcmc->ser, TRUE);
+    ncm_serialize_reset (mcmc->ser, TRUE);
     g_mutex_unlock (&mcmc->dup_fit);
     return fit;
   }

@@ -12,6 +12,7 @@ data_observational_DATA = \
 	nc_data_bao_dvdv_percival2007.obj       \
 	nc_data_bao_dvdv_percival2010.obj       \
 	nc_data_bao_empirical_fit_ross2015.obj  \
+	nc_data_bao_empirical_fit_2d_bautista2017.obj \
 	nc_data_bao_rdv_percival2007.obj        \
 	nc_data_bao_rdv_percival2010.obj        \
 	nc_data_bao_rdv_beutler2011.obj         \

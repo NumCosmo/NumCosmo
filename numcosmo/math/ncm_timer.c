@@ -41,8 +41,6 @@
 #include "math/ncm_cfg.h"
 #include "math/ncm_util.h"
 
-#include <math.h>
-
 enum
 {
   PROP_0,

@@ -43,6 +43,26 @@ G_BEGIN_DECLS
 typedef struct _NcDensityProfileNFWClass NcDensityProfileNFWClass;
 typedef struct _NcDensityProfileNFW NcDensityProfileNFW;
 
+/**
+ * NcDensityProfileNFWParams:
+ * @NC_DENSITY_PROFILE_NFW_C_DELTA: concentration parameter
+ * @NC_DENSITY_PROFILE_NFW_M_DELTA: halo mass
+ *
+ * FIXME
+ */
+typedef enum _NcDensityProfileNFWParams
+{
+  NC_DENSITY_PROFILE_NFW_C_DELTA = 0,
+  NC_DENSITY_PROFILE_NFW_M_DELTA, 
+  /* < private > */
+  NC_DENSITY_PROFILE_NFW_SPARAM_LEN, /*< skip >*/
+} NcDensityProfileNFWParams;
+
+#define NC_DENSITY_PROFILE_NFW_DEFAULT_C_DELTA  (4.0)
+#define NC_DENSITY_PROFILE_NFW_DEFAULT_M_DELTA  (2.0e14)
+
+#define NC_DENSITY_PROFILE_NFW_DEFAULT_PARAMS_ABSTOL (0.0)
+
 struct _NcDensityProfileNFWClass
 {
   /*< private > */
@@ -54,6 +74,7 @@ struct _NcDensityProfileNFW
   /*< private > */
   NcDensityProfile parent_instance;
   gdouble Delta;
+  gdouble r_Delta;
 };
 
 GType nc_density_profile_nfw_get_type (void) G_GNUC_CONST;

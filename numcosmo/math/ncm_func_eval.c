@@ -38,7 +38,10 @@
 #include "math/ncm_func_eval.h"
 #include "math/ncm_cfg.h"
 #include "math/ncm_util.h"
+
+#ifndef NUMCOSMO_GIR_SCAN
 #include <stdio.h>
+#endif /* NUMCOSMO_GIR_SCAN */
 
 typedef struct _NcmFuncEvalCtrl
 {

@@ -43,6 +43,7 @@
 #include "math/ncm_vector.h"
 #include "math/ncm_matrix.h"
 #include "ncm_enum_types.h"
+
 #include <gio/gio.h>
 
 enum
@@ -1022,7 +1023,25 @@ ncm_serialize_from_name_params (NcmSerialize *ser, const gchar *obj_name, GVaria
       g_variant_unref (var);
     }
 
+#if GLIB_CHECK_VERSION(2,54,0)
+    {
+      const gchar **names = g_new (const gchar *, nprop);
+      GValue *values      = g_new (GValue, nprop);
+  
+      for (i = 0; i < nprop; i++)
+      {
+        names[i]  = gprop[i].name;
+        values[i] = gprop[i].value;
+      }
+  
+      obj = g_object_new_with_properties (gtype, nprop, names, values);
+
+      g_free (names);
+      g_free (values);
+    }
+#else
     obj = g_object_newv (gtype, nprop, gprop);
+#endif /* GLIB_CHECK_VERSION(2,54,0) */
     for (i = 0; i < nprop; i++)
       g_value_unset (&gprop[i].value);
 

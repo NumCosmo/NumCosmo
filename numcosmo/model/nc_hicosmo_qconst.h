@@ -59,7 +59,8 @@ typedef enum _NcHICosmoQConstParams
   NC_HICOSMO_QCONST_CD,
   NC_HICOSMO_QCONST_E,
   NC_HICOSMO_QCONST_Q,
-  NC_HICOSMO_QCONST_Z1,         /*< private >*/
+  NC_HICOSMO_QCONST_Z1,         
+  /* < private > */
   NC_HICOSMO_QCONST_SPARAM_LEN, /*< skip >*/
 } NcHICosmoQConstParams;
 

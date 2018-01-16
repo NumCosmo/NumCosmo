@@ -31,7 +31,10 @@
 #include <numcosmo/build_cfg.h>
 #include <numcosmo/math/ncm_fit.h>
 #ifdef NUMCOSMO_HAVE_NLOPT
+
+#ifndef NUMCOSMO_GIR_SCAN
 #include <nlopt.h>
+#endif /* NUMCOSMO_GIR_SCAN */
 
 G_BEGIN_DECLS
 

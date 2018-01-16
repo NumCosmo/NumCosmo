@@ -29,13 +29,13 @@
 #include <glib-object.h>
 #include <numcosmo/build_cfg.h>
 
+#ifndef NUMCOSMO_GIR_SCAN
 #include <gsl/gsl_rng.h>
 #include <gsl/gsl_min.h>
-#ifndef NUMCOSMO_GIR_SCAN
 #include <complex.h>
 #include <gmp.h>
 #include <mpfr.h>
-#endif
+#endif /* NUMCOSMO_GIR_SCAN */
 
 G_BEGIN_DECLS
 
@@ -161,6 +161,8 @@ do { \
 
 #define NCM_TEST_GSL_RESULT(func,ret) if (ret != GSL_SUCCESS) g_error ("%s: %s", func, gsl_strerror (ret))
 
+#define NCM_COMPLEX_ZERO {{0.0, 0.0}}
+
 #define NCM_COMPLEX_INC_MUL_REAL_TEST(a,b,c) \
 ((fabs(GSL_REAL((b))*(c)/GSL_REAL((a))) < 1e-16) && (fabs(GSL_IMAG((b))*(c)/GSL_IMAG((a))) < 1e-16))
 
@@ -190,7 +192,7 @@ G_STMT_START { \
 
 #define NCM_COMPLEX_MUL(a,b) \
 G_STMT_START { \
-  gdouble temp = GSL_REAL((a)) * GSL_REAL((b)) - GSL_IMAG((a)) * GSL_IMAG((b)); \
+  const gdouble temp = GSL_REAL((a)) * GSL_REAL((b)) - GSL_IMAG((a)) * GSL_IMAG((b)); \
   GSL_IMAG(a) = GSL_REAL((a)) * GSL_IMAG((b)) + GSL_IMAG((a)) * GSL_REAL((b)); \
   GSL_REAL(a) = temp; \
 } G_STMT_END
@@ -203,7 +205,7 @@ G_STMT_START { \
 
 #define NCM_COMPLEX_MUL_CONJUGATE(a,b) \
 G_STMT_START { \
-  gdouble temp = GSL_REAL((a)) * GSL_REAL((b)) + GSL_IMAG((a)) * GSL_IMAG((b)); \
+  const gdouble temp = GSL_REAL((a)) * GSL_REAL((b)) + GSL_IMAG((a)) * GSL_IMAG((b)); \
   GSL_IMAG(a) = - GSL_REAL((a)) * GSL_IMAG((b)) + GSL_IMAG((a)) * GSL_REAL((b)); \
   GSL_REAL(a) = temp; \
 } G_STMT_END

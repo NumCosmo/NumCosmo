@@ -71,7 +71,8 @@ typedef enum _NcHICosmoGCGParams
   NC_HICOSMO_GCG_HE_YP,
   NC_HICOSMO_GCG_ENNU,
   NC_HICOSMO_GCG_OMEGA_B,    
-  NC_HICOSMO_GCG_GAMMA,    /*< private >*/
+  NC_HICOSMO_GCG_GAMMA,   
+  /* < private > */
   NC_HICOSMO_GCG_SPARAM_LEN, /*< skip >*/
 } NcHICosmoGCGParams;
 
@@ -90,7 +91,8 @@ typedef enum _NcHICosmoGCGVParams
   NC_HICOSMO_GCG_MASSNU_M = 0,
   NC_HICOSMO_GCG_MASSNU_T,
   NC_HICOSMO_GCG_MASSNU_MU,
-  NC_HICOSMO_GCG_MASSNU_G,   /*< private >*/
+  NC_HICOSMO_GCG_MASSNU_G,   
+  /* < private > */
   NC_HICOSMO_GCG_VPARAM_LEN, /*< skip >*/
 } NcHICosmoGCGVParams;
 

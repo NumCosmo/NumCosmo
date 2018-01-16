@@ -56,8 +56,10 @@
 #include "math/ncm_func_eval.h"
 #include "ncm_enum_types.h"
 
+#ifndef NUMCOSMO_GIR_SCAN
 #include <gsl/gsl_statistics_double.h>
 #include <gsl/gsl_sort.h>
+#endif /* NUMCOSMO_GIR_SCAN */
 
 G_DEFINE_TYPE (NcmMSetCatalog, ncm_mset_catalog, G_TYPE_OBJECT);
 
@@ -3108,7 +3110,7 @@ ncm_mset_catalog_calc_ci_interp (NcmMSetCatalog *mcat, NcmMSetFunc *func, NcmVec
 
   g_assert_cmpuint (p_val->len, >, 1);
   {
-    const guint nelem      = p_val->len * 2 + 1;
+    const guint nelem      = p_val->len * 4 + 1;
     NcmMatrix *res         = ncm_matrix_new (dim, nelem);
     NcmVector *save_params = ncm_vector_new (ncm_mset_fparams_len (mcat->mset));
     const guint cat_len    = ncm_mset_catalog_len (mcat);
@@ -3181,6 +3183,7 @@ ncm_mset_catalog_calc_ci_interp (NcmMSetCatalog *mcat, NcmMSetFunc *func, NcmVec
       ncm_stats_dist1d_prepare (NCM_STATS_DIST1D (epdf));
 
       ncm_matrix_set (res, i, 0, mean);
+
       for (j = 0; j < p_val->len; j++)
       {
         const gdouble p = g_array_index (p_val, gdouble, j);
@@ -3194,6 +3197,19 @@ ncm_mset_catalog_calc_ci_interp (NcmMSetCatalog *mcat, NcmMSetFunc *func, NcmVec
 
         ncm_matrix_set (res, i, 1 + j * 2 + 0, lb);
         ncm_matrix_set (res, i, 1 + j * 2 + 1, ub);
+      }
+
+      for (j = 0; j < p_val->len; j++)
+      {
+        const gdouble p = g_array_index (p_val, gdouble, j);
+        const gdouble lb = ncm_stats_dist1d_eval_inv_pdf (NCM_STATS_DIST1D (epdf), p);
+        const gdouble ub = ncm_stats_dist1d_eval_inv_pdf_tail (NCM_STATS_DIST1D (epdf), p);
+
+        g_assert_cmpfloat (p, >, 0.0);
+        g_assert_cmpfloat (p, <, 1.0);
+
+        ncm_matrix_set (res, i, 1 + 2 * p_val->len + j * 2 + 0, lb);
+        ncm_matrix_set (res, i, 1 + 2 * p_val->len + j * 2 + 1, ub);
       }
     }
 

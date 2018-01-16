@@ -65,7 +65,8 @@ typedef enum _NcHIPrimExpcParams
   NC_HIPRIM_EXPC_LNKC,
   NC_HIPRIM_EXPC_C,          
   NC_HIPRIM_EXPC_T_SA_RATIO,
-  NC_HIPRIM_EXPC_N_T,        /*< private >*/
+  NC_HIPRIM_EXPC_N_T,        
+  /* < private > */
   NC_HIPRIM_EXPC_SPARAM_LEN, /*< skip >*/
 } NcHIPrimExpcParams;
 

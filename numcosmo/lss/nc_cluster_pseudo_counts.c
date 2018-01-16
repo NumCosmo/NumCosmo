@@ -42,7 +42,9 @@
 #include "math/integral.h"
 #include "math/memory_pool.h"
 
+#ifndef NUMCOSMO_GIR_SCAN
 #include <gsl/gsl_roots.h>
+#endif /* NUMCOSMO_GIR_SCAN */
 
 G_DEFINE_TYPE (NcClusterPseudoCounts, nc_cluster_pseudo_counts, NCM_TYPE_MODEL);
 

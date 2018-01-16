@@ -44,6 +44,7 @@ struct _NcmDiffPrivate
   guint maxorder;
   gdouble rs;
   gdouble roff_pad;
+	gdouble ini_h;
   GPtrArray *central_tables;
   GPtrArray *forward_tables;
   GPtrArray *backward_tables;
@@ -65,6 +66,7 @@ enum
   PROP_MAXORDER,
   PROP_RS,
   PROP_ROFF_PAD,
+	PROP_INI_H,
   PROP_SIZE,
 };
 
@@ -77,6 +79,7 @@ ncm_diff_init (NcmDiff *diff)
   diff->priv->maxorder = 0;
   diff->priv->rs       = 0.0;
   diff->priv->roff_pad = 0.0;
+	diff->priv->ini_h    = 0.0;
 
   diff->priv->central_tables  = g_ptr_array_new ();
   diff->priv->forward_tables  = g_ptr_array_new ();
@@ -104,6 +107,9 @@ _ncm_diff_set_property (GObject *object, guint prop_id, const GValue *value, GPa
     case PROP_ROFF_PAD:
       ncm_diff_set_round_off_pad (diff, g_value_get_double (value));
       break;
+    case PROP_INI_H:
+      ncm_diff_set_ini_h (diff, g_value_get_double (value));
+      break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
       break;
@@ -126,6 +132,9 @@ _ncm_diff_get_property (GObject *object, guint prop_id, GValue *value, GParamSpe
       break;
     case PROP_ROFF_PAD:
       g_value_set_double (value, ncm_diff_get_round_off_pad (diff));
+      break;
+    case PROP_INI_H:
+      g_value_set_double (value, ncm_diff_get_ini_h (diff));
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -202,6 +211,13 @@ ncm_diff_class_init (NcmDiffClass *klass)
                                                       "Round off padding",
                                                       1.1, G_MAXDOUBLE, 1.0e2,
                                                       G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
+	g_object_class_install_property (object_class,
+	                                 PROP_INI_H,
+	                                 g_param_spec_double ("ini-h",
+	                                                      NULL,
+	                                                      "Initial h",
+	                                                      GSL_DBL_EPSILON, G_MAXDOUBLE, pow (GSL_DBL_EPSILON, 1.0 / 8.0),
+	                                                      G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB));
 }
 
 NcmDiffTable *
@@ -420,14 +436,28 @@ ncm_diff_get_richardson_step (NcmDiff *diff)
  * ncm_diff_get_round_off_pad:
  * @diff: a #NcmDiff
  *
- * Gets the current round-off padding used in the tables.
+ * Gets the current round-off padding used in calculations.
  * 
- * Returns: the maximum order.
+ * Returns: the round-off padding.
  */
 gdouble 
 ncm_diff_get_round_off_pad (NcmDiff *diff)
 {
   return diff->priv->roff_pad;
+}
+
+/**
+ * ncm_diff_get_ini_h:
+ * @diff: a #NcmDiff
+ *
+ * Gets the current initial step used in calculations.
+ * 
+ * Returns: the initial step.
+ */
+gdouble 
+ncm_diff_get_ini_h (NcmDiff *diff)
+{
+  return diff->priv->ini_h;
 }
 
 /**
@@ -464,7 +494,7 @@ ncm_diff_set_max_order (NcmDiff *diff, const guint maxorder)
 void 
 ncm_diff_set_richardson_step (NcmDiff *diff, const gdouble rs)
 {
-  g_assert_cmpuint (rs, >, 1.1);
+  g_assert_cmpfloat (rs, >, 1.1);
 
   if (rs != diff->priv->rs)
   {
@@ -487,8 +517,23 @@ ncm_diff_set_richardson_step (NcmDiff *diff, const gdouble rs)
 void 
 ncm_diff_set_round_off_pad (NcmDiff *diff, const gdouble roff_pad)
 {
-  g_assert_cmpuint (roff_pad, >, 1.1);
+  g_assert_cmpfloat (roff_pad, >, 1.1);
   diff->priv->roff_pad = roff_pad;
+}
+
+/**
+ * ncm_diff_set_ini_h:
+ * @diff: a #NcmDiff
+ * @ini_h: the new initial step
+ *
+ * Sets the initial step used in the calculations.
+ * 
+ */
+void 
+ncm_diff_set_ini_h (NcmDiff *diff, const gdouble ini_h)
+{
+  g_assert_cmpfloat (ini_h, >, GSL_DBL_EPSILON);
+  diff->priv->ini_h = ini_h;
 }
 
 /**
@@ -746,7 +791,7 @@ ncm_diff_by_step_algo (NcmDiff *diff, NcmDiffStepAlgo step_algo, guint po, GArra
   {
     const gdouble x       = g_array_index (x_a, gdouble, a);
     const gdouble scale   = (x == 0.0) ? 1.0 : fabs (x);
-    const gdouble h0      = 1.0e-2 * scale;
+    const gdouble h0      = diff->priv->ini_h * scale;
     const guint ntry_conv = 3;
     NcmDiffTable *ldtable = NULL;
     guint order_index;
@@ -963,7 +1008,7 @@ ncm_diff_Hessian_by_step_algo (NcmDiff *diff, NcmDiffHessianStepAlgo Hstep_algo,
   x_v  = ncm_vector_new_array (x_a);
 
   fval = f (x_v, user_data);
-  
+
   for (a = 0; a < x_a->len; a++)
   {
     guint b;
@@ -974,8 +1019,8 @@ ncm_diff_Hessian_by_step_algo (NcmDiff *diff, NcmDiffHessianStepAlgo Hstep_algo,
       const gdouble y       = g_array_index (x_a, gdouble, b);
       const gdouble scale_x = (x == 0.0) ? 1.0 : fabs (x);
       const gdouble scale_y = (y == 0.0) ? 1.0 : fabs (y);
-      const gdouble hx0     = 1.0e-2 * scale_x;
-      const gdouble hy0     = 1.0e-2 * scale_y;
+      const gdouble hx0     = diff->priv->ini_h * scale_x;
+      const gdouble hy0     = diff->priv->ini_h * scale_y;
       NcmDiffTable *ldtable = NULL;
       gdouble ferr          = GSL_POSINF;
       gdouble err           = 0.0;
@@ -1140,7 +1185,7 @@ ncm_diff_Hessian_by_step_algo (NcmDiff *diff, NcmDiffHessianStepAlgo Hstep_algo,
  * @user_data: (nullable): function user data
  * @Eerr: (array) (element-type double) (out) (transfer full): estimated errors
  * 
- * Calculates the gradient of @f $\nabla f$ using the forward method plus 
+ * Calculates the first derivative of @f: $\partial_i f$ using the forward method plus 
  * Richardson extrapolation. The function $f$ is considered as a $f:\mathbb{R}^N\to \mathbb{R}^M$,
  * where $N = $ length of @x_a and $M = $ @dim.
  * 
@@ -1161,7 +1206,7 @@ ncm_diff_rf_d1_N_to_M (NcmDiff *diff, GArray *x_a, const guint dim, NcmDiffFuncN
  * @user_data: (nullable): function user data
  * @Eerr: (array) (element-type double) (out) (transfer full): estimated errors
  * 
- * Calculates the gradient of @f $\nabla f$ using the central method plus 
+ * Calculates the first derivative of @f: $\partial_i f$ using the central method plus 
  * Richardson extrapolation. The function $f$ is considered as a $f:\mathbb{R}^N\to \mathbb{R}^M$,
  * where $N = $ length of @x_a and $M = $ @dim.
  * 
@@ -1182,7 +1227,7 @@ ncm_diff_rc_d1_N_to_M (NcmDiff *diff, GArray *x_a, const guint dim, NcmDiffFuncN
  * @user_data: (nullable): function user data
  * @Eerr: (array) (element-type double) (out) (transfer full): estimated errors
  * 
- * Calculates the Laplacian of @f $\nabla^2 f$ using the central method plus 
+ * Calculates the second derivative of @f: $\partial_i^2 f$ using the central method plus 
  * Richardson extrapolation. The function $f$ is considered as a $f:\mathbb{R}^N\to \mathbb{R}^M$,
  * where $N = $ length of @x_a and $M = $ @dim.
  * 
@@ -1232,7 +1277,7 @@ _ncm_diff_trans_1_to_1 (NcmVector *x, NcmVector *y, gpointer user_data)
  * @user_data: (nullable): function user data
  * @Eerr: (array) (element-type double) (out) (transfer full): estimated errors
  * 
- * Calculates the gradient of @f $\nabla f$ using the forward method plus 
+ * Calculates the first derivative of @f: $\partial_i f$ using the forward method plus 
  * Richardson extrapolation. The function $f$ is considered as a $f:\mathbb{R}^N \to \mathbb{R}$,
  * where $N = $ length of @x_a.
  * 
@@ -1264,7 +1309,7 @@ ncm_diff_rf_d1_1_to_M (NcmDiff *diff, const gdouble x, const guint dim, NcmDiffF
  * @user_data: (nullable): function user data
  * @Eerr: (array) (element-type double) (out) (transfer full): estimated errors
  * 
- * Calculates the gradient of @f $\nabla f$ using the central method plus 
+ * Calculates the first derivative of @f: $\partial_i f$ using the central method plus 
  * Richardson extrapolation. The function $f$ is considered as a $f:\mathbb{R}^N \to \mathbb{R}$,
  * where $N = $ length of @x_a.
  * 
@@ -1295,7 +1340,7 @@ ncm_diff_rc_d1_1_to_M (NcmDiff *diff, const gdouble x, const guint dim, NcmDiffF
  * @user_data: (nullable): function user data
  * @Eerr: (array) (element-type double) (out) (transfer full): estimated errors
  * 
- * Calculates the Laplacian of @f $\nabla^2 f$ using the central method plus 
+ * Calculates the second derivative of @f: $\partial_i^2 f$ using the central method plus 
  * Richardson extrapolation. The function $f$ is considered as a $f:\mathbb{R}^N \to \mathbb{R}$,
  * where $N = $ length of @x_a.
  * 
@@ -1325,7 +1370,7 @@ ncm_diff_rc_d2_1_to_M (NcmDiff *diff, const gdouble x, const guint dim, NcmDiffF
  * @user_data: (nullable): function user data
  * @Eerr: (array) (element-type double) (out) (transfer full): estimated errors
  * 
- * Calculates the gradient of @f $\nabla f$ using the forward method plus 
+ * Calculates the first derivative of @f: $\partial_i f$ using the forward method plus 
  * Richardson extrapolation. The function $f$ is considered as a $f:\mathbb{R}^N \to \mathbb{R}$,
  * where $N = $ length of @x_a.
  * 
@@ -1347,7 +1392,7 @@ ncm_diff_rf_d1_N_to_1 (NcmDiff *diff, GArray *x_a, NcmDiffFuncNto1 f, gpointer u
  * @user_data: (nullable): function user data
  * @Eerr: (array) (element-type double) (out) (transfer full): estimated errors
  * 
- * Calculates the gradient of @f $\nabla f$ using the central method plus 
+ * Calculates the first derivative of @f: $\partial_i f$ using the central method plus 
  * Richardson extrapolation. The function $f$ is considered as a $f:\mathbb{R}^N \to \mathbb{R}$,
  * where $N = $ length of @x_a.
  * 
@@ -1369,7 +1414,7 @@ ncm_diff_rc_d1_N_to_1 (NcmDiff *diff, GArray *x_a, NcmDiffFuncNto1 f, gpointer u
  * @user_data: (nullable): function user data
  * @Eerr: (array) (element-type double) (out) (transfer full): estimated errors
  * 
- * Calculates the Laplacian of @f $\nabla^2 f$ using the central method plus 
+ * Calculates the second derivative of @f: $\partial_i^2 f$ using the central method plus 
  * Richardson extrapolation. The function $f$ is considered as a $f:\mathbb{R}^N \to \mathbb{R}$,
  * where $N = $ length of @x_a.
  * 
@@ -1433,7 +1478,7 @@ ncm_diff_rf_Hessian_N_to_1 (NcmDiff *diff, GArray *x_a, NcmDiffFuncNto1 f, gpoin
  * @user_data: (nullable): function user data
  * @err: (out) (nullable): estimated error
  * 
- * Calculates the gradient of @f $\nabla f$ using the forward method plus 
+ * Calculates the first derivative of @f: $\partial_i f$ using the forward method plus 
  * Richardson extrapolation. The function $f$ is considered as a $f:\mathbb{R} \to \mathbb{R}$.
  * 
  * Returns: The derivative of @f at @x.
@@ -1472,7 +1517,7 @@ ncm_diff_rf_d1_1_to_1 (NcmDiff *diff, const gdouble x, NcmDiffFunc1to1 f, gpoint
  * @user_data: (nullable): function user data
  * @err: (out) (nullable): estimated error
  * 
- * Calculates the gradient of @f $\nabla f$ using the central method plus 
+ * Calculates the first derivative of @f: $\partial_i f$ using the central method plus 
  * Richardson extrapolation. The function $f$ is considered as a $f:\mathbb{R} \to \mathbb{R}$.
  * 
  * Returns: The derivative of @f at @x.
@@ -1511,7 +1556,7 @@ ncm_diff_rc_d1_1_to_1 (NcmDiff *diff, const gdouble x, NcmDiffFunc1to1 f, gpoint
  * @user_data: (nullable): function user data
  * @err: (out) (nullable): estimated error
  * 
- * Calculates the Laplacian of @f $\nabla^2 f$ using the central method plus 
+ * Calculates the second derivative of @f: $\partial_i^2 f$ using the central method plus 
  * Richardson extrapolation. The function $f$ is considered as a $f:\mathbb{R} \to \mathbb{R}$.
  * 
  * Returns: The derivative of @f at @x.

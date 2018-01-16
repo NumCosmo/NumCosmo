@@ -29,6 +29,7 @@
 
 #include "perturbations/linear.h"
 
+#ifndef NUMCOSMO_GIR_SCAN
 #include <cvodes/cvodes_diag.h>
 #include <cvodes/cvodes_band.h>
 #include <cvodes/cvodes_bandpre.h>
@@ -44,6 +45,7 @@
 #    include <cvodes/cvodes_lapack.h>      /* prototype for CVBand */
 #  endif /* SUNDIALS_BLAS_LAPACK == 1 */
 #endif /* HAVE_SUNDIALS_2_5_0 */
+#endif /* NUMCOSMO_GIR_SCAN */
 
 #include "linear_internal.h"
 

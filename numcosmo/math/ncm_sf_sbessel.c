@@ -42,8 +42,11 @@
 #include "math/ncm_spline_func.h"
 #include "math/ncm_cfg.h"
 #include "math/ncm_util.h"
+
+#ifndef NUMCOSMO_GIR_SCAN
 #include <gsl/gsl_math.h>
 #include <mpfr.h>
+#endif /* NUMCOSMO_GIR_SCAN */
 
 /**
  * ncm_sf_sbessel_recur_new: (skip)
