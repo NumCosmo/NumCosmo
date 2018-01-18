@@ -169,7 +169,6 @@ void ncm_sphere_map_pix_save_fits (NcmSphereMapPix *pix, const gchar *fits_file,
 void ncm_sphere_map_pix_load_from_fits_catalog (NcmSphereMapPix *pix, const gchar *fits_file, const gchar *RA, const gchar *DEC, const gchar *S);
 
 void ncm_sphere_map_pix_prepare_alm (NcmSphereMapPix *pix);
-void ncm_sphere_map_pix_prepare_Cl (NcmSphereMapPix *pix);
 
 void ncm_sphere_map_pix_get_alm (NcmSphereMapPix *pix, guint l, guint m, gdouble *Re_alm, gdouble *Im_alm);
 gdouble ncm_sphere_map_pix_get_Cl (NcmSphereMapPix *pix, guint l);

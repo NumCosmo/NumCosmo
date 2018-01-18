@@ -2180,19 +2180,21 @@ ncm_sphere_map_pix_prepare_alm (NcmSphereMapPix *pix)
     g_warning ("ncm_sphere_map_pix_prepare_alm: lmax equal to zero, returning...");
     return;
   }
-	
+#ifdef _NCM_SPHERE_MAP_PIX_MEASURE
   printf ("# Preparing ffts!\n");
 	fflush (stdout);
   ncm_timer_start (pix->t);
-	
+#endif /* _NCM_SPHERE_MAP_PIX_MEASURE */	
   _ncm_sphere_map_pix_prepare_fft (pix);
 
   ncm_sphere_map_pix_set_order (pix, NCM_SPHERE_MAP_PIX_ORDER_RING);
 
+#ifdef _NCM_SPHERE_MAP_PIX_MEASURE
 	printf ("# preparing fft plans, elapsed % 22.15g\n", ncm_timer_elapsed (pix->t));
   printf ("# Peforming ffts!\n");
 	fflush (stdout);
   ncm_timer_start (pix->t);
+#endif /* _NCM_SPHERE_MAP_PIX_MEASURE */	
     
   for (i = 0; i < pix->fft_plan_r2c->len; i++)
   {
@@ -2203,9 +2205,11 @@ ncm_sphere_map_pix_prepare_alm (NcmSphereMapPix *pix)
 #endif
   }
   
+#ifdef _NCM_SPHERE_MAP_PIX_MEASURE
   printf ("# Peforming ffts, elapsed % 22.15g\n", ncm_timer_elapsed (pix->t));
 	printf ("# Transforming rings\n");
   fflush (stdout);
+#endif /* _NCM_SPHERE_MAP_PIX_MEASURE */	
 
   {
     const gint64 nrings   = ncm_sphere_map_pix_get_nrings (pix);
@@ -2276,59 +2280,12 @@ ncm_sphere_map_pix_prepare_alm (NcmSphereMapPix *pix)
       }      
     }
 
+#ifdef _NCM_SPHERE_MAP_PIX_MEASURE
     printf ("# %ld rings transformed, elapsed % 22.15g\n", nrings, ncm_timer_elapsed (pix->t));
+#endif /* _NCM_SPHERE_MAP_PIX_MEASURE */	
   }
 #else
   g_error ("ncm_sphere_map_pix_prepare_alm: no fftw3 support, to use this function recompile NumCosmo with fftw.");
-#endif
-}
-
-/**
- * ncm_sphere_map_pix_prepare_Cl:
- * @pix: a #NcmSphereMapPix
- *
- * Calculates the $C_{\ell}$ from the map @pix, using $\ell_\mathrm{max}$
- * set by ncm_sphere_map_pix_set_lmax(). If $\ell_\mathrm{max} = 0$
- * nothing is done. Note that this function will not save the values of $a_{\ell{}m}$.
- * 
- */
-void
-ncm_sphere_map_pix_prepare_Cl (NcmSphereMapPix *pix)
-{
-#ifdef NUMCOSMO_HAVE_FFTW3
-  gint i;
-
-  if (pix->lmax == 0)
-  {
-    g_warning ("ncm_sphere_map_pix_prepare_alm: lmax equal to zero, returning...");
-    return;
-  }
-
-  _ncm_sphere_map_pix_prepare_fft (pix);
-
-  ncm_sphere_map_pix_set_order (pix, NCM_SPHERE_MAP_PIX_ORDER_RING);
-  
-  for (i = 0; i < pix->fft_plan_r2c->len; i++)
-  {
-#  ifdef HAVE_FFTW3F
-    fftwf_execute (g_ptr_array_index (pix->fft_plan_r2c, i));    
-#  else
-    fftw_execute (g_ptr_array_index (pix->fft_plan_r2c, i));
-#endif
-  } 
-  {
-    const gint64 nrings = ncm_sphere_map_pix_get_nrings (pix);
-    gint64 r_i;
-
-    ncm_vector_set_zero (pix->Cl);
-    
-    for (r_i = 0; r_i < nrings; r_i++)
-    {
-      _ncm_sphere_map_pix_get_alm_from_circle (pix, r_i);
-    }
-  }
-#else
-  g_error ("ncm_sphere_map_pix_prepare_Cl: no fftw3 support, to use this function recompile NumCosmo with fftw.");
 #endif
 }
 
@@ -2728,18 +2685,22 @@ ncm_sphere_map_pix_alm2map (NcmSphereMapPix *pix)
     return;
   }
 
+#ifdef _NCM_SPHERE_MAP_PIX_MEASURE
   printf ("# Preparing ffts!\n");
 	fflush (stdout);
   ncm_timer_start (pix->t);
+#endif /* _NCM_SPHERE_MAP_PIX_MEASURE */	
 	
   _ncm_sphere_map_pix_prepare_fft (pix);
 
   pix->order = NCM_SPHERE_MAP_PIX_ORDER_RING;
 
+#ifdef _NCM_SPHERE_MAP_PIX_MEASURE
 	printf ("# preparing fft plans, elapsed % 22.15g\n", ncm_timer_elapsed (pix->t));
 	printf ("# Transforming rings\n");
   fflush (stdout);
   ncm_timer_start (pix->t);
+#endif /* _NCM_SPHERE_MAP_PIX_MEASURE */	
 
   {
     const gint64 nrings   = ncm_sphere_map_pix_get_nrings (pix);
@@ -2764,13 +2725,18 @@ ncm_sphere_map_pix_alm2map (NcmSphereMapPix *pix)
 			_ncm_sphere_map_pix_get_circle_from_alm (pix, r_i);
     }
 
+#ifdef _NCM_SPHERE_MAP_PIX_MEASURE
     printf ("# %ld rings transformed, elapsed % 22.15g\n", nrings, ncm_timer_elapsed (pix->t));
+#endif /* _NCM_SPHERE_MAP_PIX_MEASURE */	
   }
    
+#ifdef _NCM_SPHERE_MAP_PIX_MEASURE
   printf ("# Peforming ffts!\n");
 	fflush (stdout);
   ncm_timer_start (pix->t);
-  for (i = 0; i < pix->fft_plan_c2r->len; i++)
+#endif /* _NCM_SPHERE_MAP_PIX_MEASURE */	
+
+	for (i = 0; i < pix->fft_plan_c2r->len; i++)
   {
 #  ifdef HAVE_FFTW3F
     fftwf_execute (g_ptr_array_index (pix->fft_plan_c2r, i));    
@@ -2778,7 +2744,9 @@ ncm_sphere_map_pix_alm2map (NcmSphereMapPix *pix)
     fftw_execute (g_ptr_array_index (pix->fft_plan_c2r, i));
 #endif
   } 
+#ifdef _NCM_SPHERE_MAP_PIX_MEASURE
   printf ("# Peforming ffts, elapsed % 22.15g\n", ncm_timer_elapsed (pix->t));
+#endif /* _NCM_SPHERE_MAP_PIX_MEASURE */	
 
 #else
   g_error ("ncm_sphere_map_pix_alm2map: no fftw3 support, to use this function recompile NumCosmo with fftw.");

@@ -42,6 +42,7 @@ typedef struct _TestNcmSFSphericalHarmonics
 } TestNcmSFSphericalHarmonics;
 
 #define TEST_RELTOL (1.0e-7)
+#ifdef HAVE_GSL_2_0
 
 static void test_ncm_sf_spherical_harmonics_new (TestNcmSFSphericalHarmonics *test, gconstpointer pdata);
 static void test_ncm_sf_spherical_harmonics_free (TestNcmSFSphericalHarmonics *test, gconstpointer pdata);
@@ -59,6 +60,8 @@ static void test_ncm_sf_spherical_harmonics_array_recn (TestNcmSFSphericalHarmon
 static void test_ncm_sf_spherical_harmonics_traps (TestNcmSFSphericalHarmonics *test, gconstpointer pdata);
 static void test_ncm_sf_spherical_harmonics_invalid_test (TestNcmSFSphericalHarmonics *test, gconstpointer pdata);
 
+#endif /* HAVE_GSL_2_0 */
+
 gint
 main (gint argc, gchar *argv[])
 {
@@ -68,6 +71,7 @@ main (gint argc, gchar *argv[])
 
   g_test_set_nonfatal_assertions ();
 
+#ifdef HAVE_GSL_2_0
   g_test_add ("/ncm/sf/spherical_harmonics/single_rec", TestNcmSFSphericalHarmonics, NULL,
               &test_ncm_sf_spherical_harmonics_new,
               &test_ncm_sf_spherical_harmonics_single_rec,
@@ -112,9 +116,12 @@ main (gint argc, gchar *argv[])
               &test_ncm_sf_spherical_harmonics_invalid_test,
               &test_ncm_sf_spherical_harmonics_free);
 #endif
-  g_test_run ();
+#endif /* HAVE_GSL_2_0 */
+
+	g_test_run ();
 }
 
+#ifdef HAVE_GSL_2_0
 static void
 test_ncm_sf_spherical_harmonics_new (TestNcmSFSphericalHarmonics *test, gconstpointer pdata)
 {
@@ -683,3 +690,4 @@ test_ncm_sf_spherical_harmonics_invalid_test (TestNcmSFSphericalHarmonics *test,
 {
   g_assert_not_reached ();
 }
+#endif /* HAVE_GSL_2_0 */
