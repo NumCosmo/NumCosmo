@@ -40,7 +40,7 @@ compiler:
   - gcc
 
 before_install:
-  - if [[ "$CC"             == "clang" ]]; then export CFLAGS="-Qunused-arguments"              ; fi
+  - if [[ "$CC"             == "clang" ]]; then export CFLAGS="-O2 -g -Qunused-arguments -fopenmp" ; fi
   - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then export CONFDOCS="--enable-man --enable-gtk-doc" ; fi
   - if [[ "$TRAVIS_OS_NAME" == "osx"   ]]; then hash -r                                         ; fi
   - if [[ "$TRAVIS_OS_NAME" == "osx"   ]]; then brew update                                     ; fi
