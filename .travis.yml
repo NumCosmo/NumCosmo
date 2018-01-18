@@ -59,10 +59,9 @@ before_install:
 
 script:
   - "./configure $CONFDOCS"
-  - if [[ "$CC" == "clang" ]]; then make V=1 CFLAGS="-fopenmp=libomp" ; else make V=1; fi
+  - if [[ "$CC" == "clang" ]]; then make V=1 CFLAGS="-fopenmp" LDFLAGS="-fopenmp=libiomp5" ; else make V=1; fi
   - make check
   - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then make dist ; fi
-
 
 deploy:
   provider: releases
