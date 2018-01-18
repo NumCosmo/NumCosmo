@@ -40,7 +40,7 @@ compiler:
   - gcc
 
 before_install:
-  - if [[ "$CC"             == "clang" ]]; then export CFLAGS="-O2 -g -Qunused-arguments -fopenmp=libomp" ; fi
+  - if [[ "$CC"             == "clang" ]]; then export CFLAGS="-O2 -g -Qunused-arguments"       ; fi
   - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then export CONFDOCS="--enable-man --enable-gtk-doc" ; fi
   - if [[ "$TRAVIS_OS_NAME" == "osx"   ]]; then hash -r                                         ; fi
   - if [[ "$TRAVIS_OS_NAME" == "osx"   ]]; then brew update                                     ; fi
@@ -59,7 +59,7 @@ before_install:
 
 script:
   - "./configure $CONFDOCS"
-  - make V=1
+  - if [[ "$CC" == "clang" ]]; then make V=1 CFLAGS="-fopenmp=libomp" ; else make V=1; fi
   - make check
   - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then make dist ; fi
 
