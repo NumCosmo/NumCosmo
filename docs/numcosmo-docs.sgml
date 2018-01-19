@@ -155,7 +155,7 @@
     </section>
     <section>
       <title>Spherical maps and Healpix</title>
-      <xi:include href="xml/ncm_sphere_map_pix.xml"/>
+      <xi:include href="xml/ncm_sphere_map.xml"/>
     </section>   
     <section>
       <title>GObject introspection compatibility</title>

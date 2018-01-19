@@ -145,6 +145,6 @@
 #include <numcosmo/math/dividedifference.h>
 
 /* Spherical maps, HEALPIX implementation */
-#include <numcosmo/math/ncm_sphere_map_pix.h>
+#include <numcosmo/math/ncm_sphere_map.h>
 
 #endif /* _NUMCOSMO_MATH_H */

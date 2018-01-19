@@ -149,7 +149,7 @@ ncm_sources = \
 	math/ncm_lh_ratio2d.c                \
 	math/ncm_abc.c                       \
 	math/ncm_quaternion.c                \
-	math/ncm_sphere_map_pix.c            \
+	math/ncm_sphere_map.c                \
 	math/poly.c               \
 	math/integral.c           \
 	math/function_cache.c     \
@@ -260,7 +260,7 @@ ncm_headers =                                \
 	math/ncm_lh_ratio2d.h                \
 	math/ncm_abc.h                       \
 	math/ncm_quaternion.h                \
-	math/ncm_sphere_map_pix.h            \
+	math/ncm_sphere_map.h                \
 	math/function_cache.h     \
 	math/integral.h           \
 	math/magnus_iserles_ode.h \
