@@ -45,7 +45,7 @@
 
 #undef HAVE_FFTW3F
 
-#define _NCM_SPHERE_MAP_MEASURE 1
+/*#define _NCM_SPHERE_MAP_MEASURE 1*/
 
 #ifndef NUMCOSMO_GIR_SCAN
 #ifdef NUMCOSMO_HAVE_CFITSIO
@@ -100,7 +100,7 @@
 
 #define NCM_SPHERE_MAP_BLOCK_NC 2
 #define NCM_SPHERE_MAP_BLOCK_NCT (2 * NCM_SPHERE_MAP_BLOCK_NC)
-#define NCM_SPHERE_MAP_BLOCK_STEP 10
+#define NCM_SPHERE_MAP_BLOCK_STEP 8
 #define NCM_SPHERE_MAP_BLOCK_STEPM2 (NCM_SPHERE_MAP_BLOCK_STEP - 2)
 
 #define NCM_SPHERE_MAP_BLOCK_INV_NC 3
@@ -1924,7 +1924,7 @@ ncm_sphere_map_prepare_alm (NcmSphereMap *pix)
   ncm_timer_start (pix->t);
 #endif /* _NCM_SPHERE_MAP_MEASURE */	
 
-  _ncm_sphere_map_map2alm_run_10_2 (pix);  
+  NCM_SPHERE_MAP_BLOCK_DEC (_ncm_sphere_map_map2alm_run) (pix);  
 #ifdef _NCM_SPHERE_MAP_MEASURE
   printf ("# %ld rings transformed, elapsed % 22.15g\n", ncm_sphere_map_get_nrings (pix), ncm_timer_elapsed (pix->t));
 #endif /* _NCM_SPHERE_MAP_MEASURE */	
@@ -2074,7 +2074,7 @@ ncm_sphere_map_alm2map (NcmSphereMap *pix)
   ncm_timer_start (pix->t);
 #endif /* _NCM_SPHERE_MAP_MEASURE */	
 
-  _ncm_sphere_map_alm2map_run_10_3 (pix);
+  NCM_SPHERE_MAP_BLOCK_INV_DEC (_ncm_sphere_map_alm2map_run) (pix);
 #ifdef _NCM_SPHERE_MAP_MEASURE
   printf ("# %ld rings transformed, elapsed % 22.15g\n", ncm_sphere_map_get_nrings (pix), ncm_timer_elapsed (pix->t));
 #endif /* _NCM_SPHERE_MAP_MEASURE */	
