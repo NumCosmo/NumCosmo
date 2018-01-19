@@ -160,9 +160,7 @@ ncm_sources = \
 	math/mpq_tree.c           \
 	math/grid_one.c           \
 	math/dividedifference.c   \
-	math/memory_pool.c        \
-	math/ncm_sphere_map.c     \
-	sphere/healpix.c
+	math/memory_pool.c
 
 ncm_sources_nogi = \
 	math/Faddeeva.c
@@ -273,9 +271,7 @@ ncm_headers =                                \
 	math/mpq_tree.h           \
 	math/grid_one.h           \
 	math/dividedifference.h   \
-	math/memory_pool.h        \
-	math/ncm_sphere_map.h     \
-	sphere/healpix.h
+	math/memory_pool.h
 
 ncm_headers_nogi = \
 	math/Faddeeva.h
