@@ -37,7 +37,6 @@ DOC_SOURCE_DIR=$(top_srcdir)/numcosmo \
 	       $(top_srcdir)/numcosmo/model \
 	       $(top_srcdir)/numcosmo/data \
 	       $(top_srcdir)/numcosmo/perturbations \
-	       $(top_srcdir)/numcosmo/sphere \
 	       $(top_srcdir)/numcosmo/xcor \
 	       $(top_builddir)/numcosmo
 
@@ -76,8 +75,7 @@ HFILE_GLOB=$(top_srcdir)/numcosmo/*.h \
 	   $(top_srcdir)/numcosmo/math/*.h \
 	   $(top_srcdir)/numcosmo/model/*.h \
 	   $(top_srcdir)/numcosmo/data/*.h \
-	   $(top_srcdir)/numcosmo/perturbations/*.h \
-	   $(top_srcdir)/numcosmo/sphere/*.h
+	   $(top_srcdir)/numcosmo/perturbations/*.h
 
 CFILE_GLOB=$(top_srcdir)/numcosmo/*.c \
 	   $(top_srcdir)/numcosmo/lss/*.c \
@@ -85,8 +83,7 @@ CFILE_GLOB=$(top_srcdir)/numcosmo/*.c \
 	   $(top_srcdir)/numcosmo/math/*.c \
 	   $(top_srcdir)/numcosmo/model/*.c \
 	   $(top_srcdir)/numcosmo/data/*.c \
-	   $(top_srcdir)/numcosmo/perturbations/*.c \
-	   $(top_srcdir)/numcosmo/sphere/*.c
+	   $(top_srcdir)/numcosmo/perturbations/*.c
 
 # Extra header to include when scanning, which are not under DOC_SOURCE_DIR
 # e.g. EXTRA_HFILES=$(top_srcdir}/contrib/extra.h
@@ -103,6 +100,7 @@ endif
 IGNORE_HFILES=linear_internal.h         \
               config.h                  \
               ncm_fit_nlopt_enum_meta.h \
+              ncm_sphere_map_block.c    \
               gsl_rstat.h               \
               rquantile.c               \
               $(ignore_nlopt)           \

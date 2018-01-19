@@ -674,6 +674,7 @@ EXTRA_DIST = \
 	nc_enum_types.c.template        \
 	ncm_gir_scan.h                  \
 	ncm_fit_nlopt_enum_meta.c       \
+	math/ncm_sphere_map_block.c     \
 	math/rquantile.c                \
 	math/gsl_rstat.h
 
