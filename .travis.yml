@@ -36,11 +36,9 @@ addons:
     - libxml-libxml-perl
 
 compiler:
-  - clang
   - gcc
 
 before_install:
-  - if [[ "$CC"             == "clang" ]]; then export CFLAGS="-O2 -g -Qunused-arguments"       ; fi
   - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then export CONFDOCS="--enable-man --enable-gtk-doc" ; fi
   - if [[ "$TRAVIS_OS_NAME" == "osx"   ]]; then hash -r                                         ; fi
   - if [[ "$TRAVIS_OS_NAME" == "osx"   ]]; then brew update                                     ; fi
@@ -59,7 +57,7 @@ before_install:
 
 script:
   - "./configure $CONFDOCS"
-  - if [[ "$CC" == "clang" ]]; then make V=1 CFLAGS="-fopenmp" LDFLAGS="-fopenmp=libiomp5" ; else make V=1; fi
+  - make V=1 
   - make check
   - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then make dist ; fi
 
